@@ -198,7 +198,7 @@ public:
 	 * What the rig's tear-down says about the counters it checks, as sentences -- empty when all of
 	 * them are settled. The destructor calls it with the live values (the rig world's layout pass and
 	 * desired-size memo depths, read from its layout context once the tree is gone and before the
-	 * world is; UDreamUIManagerObject's compiling flag) and reports every sentence against the bound
+	 * world is; UDreamGUIEditorSubsystem's recompiling flag) and reports every sentence against the bound
 	 * test.
 	 *
 	 * Taken apart and public because the state it exists to catch -- a layout pass entered and never
@@ -238,7 +238,7 @@ private:
 	 * The editor's Blueprint compile announcements, heard for the session from the first rig on (the
 	 * listener lives in the .cpp), and the compiling flag as this rig found it.
 	 *
-	 * UDreamUIManagerObject's compiling flag, checked at tear-down, is set on every pre-compile and
+	 * UDreamGUIEditorSubsystem's recompiling flag, checked at tear-down, is set on a widget class's pre-compile and
 	 * cleared on the announcement that the compile is over, which the editor makes for every compile,
 	 * failed ones included -- so a flag still set at tear-down is always a compile the editor never
 	 * announced as finished. It is process state, and what left it set has as often as not happened
@@ -246,7 +246,7 @@ private:
 	 * says which Blueprint it was.
 	 */
 	void WatchBlueprintCompiles();
-	/** Whether UDreamUIManagerObject believed a Blueprint was compiling when the rig was built. */
+	/** Whether UDreamGUIEditorSubsystem believed a widget class was recompiling when the rig was built. */
 	bool bBlueprintCompilingWhenBuilt = false;
 	/** GFrameCounter when the rig was built, for the report. */
 	uint64 BuiltAtFrame = 0;

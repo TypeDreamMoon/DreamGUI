@@ -58,6 +58,10 @@ void UDreamUIManagerWorldSubsystem::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 #if WITH_EDITOR
+	if (!GetWorld()->IsGameWorld() && EditorTick.IsBound())
+	{
+		EditorTick.Broadcast(DeltaTime);
+	}
 	if (bShouldTickInEditor)
 #endif
 	{

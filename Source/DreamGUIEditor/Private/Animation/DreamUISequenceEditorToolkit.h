@@ -6,6 +6,7 @@
 #include "CoreMinimal.h"
 #include "Toolkits/AssetEditorToolkit.h"
 #include "UObject/StrongObjectPtr.h"
+#include "DreamGUIEditorSubsystem.h"
 
 class ISequencer;
 class UDreamUISequence;
@@ -22,8 +23,16 @@ class SDreamUISequencePreviewViewport;
  */
 class FDreamUISequenceEditorToolkit
 	: public FAssetEditorToolkit
+	, public IDreamRecompilePreview
 {
 public:
+	// IDreamRecompilePreview: a recompile of the preview's class takes the preview tree down before the
+	// reinstancer can copy it and builds it again after -- stepping the sequencer out and back in the way
+	// every other rebuild of the tree does.
+	virtual bool UsesClass(const UClass* InClass) const override;
+	virtual void ReleaseForRecompile() override;
+	virtual void RebuildAfterRecompile() override;
+
 	/** Out of line with the destructor: PreviewScene is a TUniquePtr over a forward-declared type. */
 	FDreamUISequenceEditorToolkit();
 	~FDreamUISequenceEditorToolkit();

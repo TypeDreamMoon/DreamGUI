@@ -40,6 +40,7 @@ public class DreamGUIEditor : ModuleRules
                 "SlateCore",
                 "Engine",
                 "UnrealEd",
+                "EditorSubsystem",//UDreamGUIEditorSubsystem
                 "PropertyEditor",
                 "RenderCore",
                 "RHI",

@@ -795,7 +795,7 @@ void UDreamCanvas::EnsureDataForRebuild()
 			}
 		}
 	};
-	UDreamUIManagerObject::AddOneShotTickFunction([WeakThis = MakeWeakObjectPtr(this)]() {
+	DreamUI::DeferToLaterTick([WeakThis = MakeWeakObjectPtr(this)]() {
 		if (WeakThis.IsValid())
 		{
 			LOCAL::RecheckRootCanvasRecursive(WeakThis.Get());
@@ -3106,14 +3106,14 @@ void UDreamCanvas::RegisterCanvasScaler()
 #if WITH_EDITOR
 	if (GetWorld() && !GetWorld()->IsGameWorld() && this->IsRootCanvas())
 	{
-		if (auto DreamUIManagerObject = UDreamUIManagerObject::GetInstance(true))
+		if (auto WorldManager = UDreamUIManagerWorldSubsystem::GetInstance(GetWorld()))
 		{
 			if (EditorTickDelegateHandle.IsValid())
 			{
-				DreamUIManagerObject->GetEditorTickDelegate().Remove(EditorTickDelegateHandle);
+				WorldManager->GetEditorTickDelegate().Remove(EditorTickDelegateHandle);
 				EditorTickDelegateHandle.Reset();
 			}
-			EditorTickDelegateHandle = DreamUIManagerObject->GetEditorTickDelegate().AddWeakLambda(this, [this](float deltaTime) {
+			EditorTickDelegateHandle = WorldManager->GetEditorTickDelegate().AddWeakLambda(this, [this](float deltaTime) {
 				this->OnEditorTick(deltaTime);
 				});
 		}
@@ -3160,9 +3160,9 @@ void UDreamCanvas::UnregisterCanvasScaler()
 #if WITH_EDITOR
 	if (EditorTickDelegateHandle.IsValid())
 	{
-		if (auto DreamUIManagerObject = UDreamUIManagerObject::GetInstance(false))
+		if (auto WorldManager = UDreamUIManagerWorldSubsystem::GetInstance(GetWorld()))
 		{
-			DreamUIManagerObject->GetEditorTickDelegate().Remove(EditorTickDelegateHandle);
+			WorldManager->GetEditorTickDelegate().Remove(EditorTickDelegateHandle);
 		}
 		//reset whether or not the manager was still there to remove it from: a handle kept after
 		//unregistering reads as "still bound", so the next RegisterCanvasScaler overwrites it and any

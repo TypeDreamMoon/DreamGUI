@@ -6,6 +6,7 @@
 #include "Core/Components/DreamVisualEmpty.h"
 #include "Core/Components/DreamWidget.h"
 #include "Core/DreamUIManager.h"
+#include "DreamGUIEditorSubsystem.h"
 #include "Editor.h"
 #include "Engine/Blueprint.h"
 #include "Engine/GameInstance.h"
@@ -277,8 +278,8 @@ namespace DreamDriverRigCompileLog
 	/**
 	 * What was heard, said for a compiling flag found set at tear-down -- which is always a leak.
 	 *
-	 * UDreamUIManagerObject sets the flag on OnBlueprintPreCompile and clears it on OnBlueprintCompiled
-	 * itself, and the editor pairs the two for every compile, failed ones included. So a flag still set
+	 * UDreamGUIEditorSubsystem sets the flag on the OnBlueprintPreCompile of a widget class and clears it
+	 * on OnBlueprintCompiled itself, and the editor pairs the two for every compile, failed ones included. So a flag still set
 	 * once the rig is down is a compile the editor never announced as finished, and the sentence names
 	 * the Blueprint that began it, the frame and the test it came in, whether the flag was already set
 	 * when the rig was built -- a compile left open by an earlier test -- and the announcements before.
@@ -289,19 +290,19 @@ namespace DreamDriverRigCompileLog
 		FString Why;
 		if (Last == nullptr)
 		{
-			Why = FString::Printf(TEXT("The editor's Blueprint compiling flag is set and no compile has been announced since the rigs began listening at frame %llu."),
+			Why = FString::Printf(TEXT("DreamGUI's recompiling flag is set and no compile has been announced since the rigs began listening at frame %llu."),
 				ListeningSinceFrame);
 		}
 		else if (Last->bFinished)
 		{
 			// Not expected: the clear runs inside the very broadcast recorded here. Said as it is, so a
 			// change to that ordering shows up as itself rather than as a mystery.
-			Why = FString::Printf(TEXT("The editor's Blueprint compiling flag is set although the last announcement heard, at frame %llu during %s, was a compile finishing."),
+			Why = FString::Printf(TEXT("DreamGUI's recompiling flag is set although the last announcement heard, at frame %llu during %s, was a compile finishing."),
 				Last->Frame, *Last->DuringTest);
 		}
 		else
 		{
-			Why = FString::Printf(TEXT("The editor's Blueprint compiling flag is set: %s began compiling at frame %llu, during %s, and no compile has been announced finished since."),
+			Why = FString::Printf(TEXT("DreamGUI's recompiling flag is set: %s began compiling at frame %llu, during %s, and no compile has been announced finished since."),
 				*Last->Blueprint, Last->Frame, *Last->DuringTest);
 		}
 		TArray<FString> Heard;
@@ -314,6 +315,13 @@ namespace DreamDriverRigCompileLog
 			Heard.Num() > 0 ? *FString::Join(Heard, TEXT("; ")) : TEXT("nothing"));
 		return Why;
 	}
+
+	/** Whether the editor's DreamGUI subsystem believes a widget class is recompiling. */
+	bool IsRecompiling()
+	{
+		const UDreamGUIEditorSubsystem* EditorSubsystem = UDreamGUIEditorSubsystem::Get();
+		return EditorSubsystem != nullptr && EditorSubsystem->IsRecompiling();
+	}
 }
 #endif
 
@@ -321,7 +329,7 @@ void FDreamDriverRig::WatchBlueprintCompiles()
 {
 #if WITH_EDITOR
 	DreamDriverRigCompileLog::EnsureListening();
-	bBlueprintCompilingWhenBuilt = UDreamUIManagerObject::GetIsBlueprintCompiling();
+	bBlueprintCompilingWhenBuilt = DreamDriverRigCompileLog::IsRecompiling();
 	BuiltAtFrame = GFrameCounter;
 #endif
 }
@@ -339,7 +347,7 @@ TArray<FString> FDreamDriverRig::DescribeUnsettledProcessState(int32 InLayoutPas
 	}
 	if (bInBlueprintCompiling)
 	{
-		Complaints.Add(TEXT("UDreamUIManagerObject still believes a Blueprint is compiling after the rig was torn down; everything that defers itself during a compile will keep deferring"));
+		Complaints.Add(TEXT("UDreamGUIEditorSubsystem still believes a widget class is recompiling after the rig was torn down; a compile it never heard finish leaves the trees it let go of unbuilt"));
 	}
 	return Complaints;
 }
@@ -407,15 +415,15 @@ void FDreamDriverRig::RestoreAndVerifyProcessState(FAutomationTestBase* InTest, 
 	// Last, once the tree and the world are both gone. The layout counters were read from the world's
 	// layout context before the world went (the destructor hands them in): a layout pass or a
 	// desired-size memo scope entered and never left. They die with the world, so they cannot reach the
-	// next test, but one still open is a pass that never ended in this one. The compile flag is the
-	// editor object's and does outlive worlds: a compile it never heard finish would keep everything that
-	// defers itself during a compile deferring in every later test.
+	// next test, but one still open is a pass that never ended in this one. The recompiling flag is the
+	// editor subsystem's and does outlive worlds: a compile it never heard finish is one whose released
+	// trees nothing builds again.
 	bool bCompiling = false;
 #if WITH_EDITOR
-	// Set at all is the leak: the editor object clears it on the announcement that a compile is over,
+	// Set at all is the leak: the editor subsystem clears it on the announcement that a compile is over,
 	// so nothing is still queued by now. Reported, with what was heard and in which test, whether the
 	// compile began while the rig was up or before it was built (DreamDriverRigCompileLog).
-	if (UDreamUIManagerObject::GetIsBlueprintCompiling())
+	if (DreamDriverRigCompileLog::IsRecompiling())
 	{
 		bCompiling = true;
 		const FString Why = DreamDriverRigCompileLog::DescribeSetFlag(bBlueprintCompilingWhenBuilt, BuiltAtFrame);

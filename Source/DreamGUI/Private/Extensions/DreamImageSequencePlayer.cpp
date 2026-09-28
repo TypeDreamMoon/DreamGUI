@@ -30,9 +30,9 @@ void UDreamImageSequencePlayer::OnRegister()
 #if WITH_EDITOR
 	if (DreamUI::IsEditingWorld(this))
 	{
-		if (auto DreamUIManagerObject = UDreamUIManagerObject::GetInstance(true))
+		if (auto WorldManager = UDreamUIManagerWorldSubsystem::GetInstance(GetWorld()))
 		{
-			EditorPlayDelegateHandle = DreamUIManagerObject->GetEditorTickDelegate().AddWeakLambda(this, [this](float deltaTime) {
+			EditorPlayDelegateHandle = WorldManager->GetEditorTickDelegate().AddWeakLambda(this, [this](float deltaTime) {
 				if (!bPreviewInEditor)return;
 				EnforceFrameRate();
 				if (!CanPlay())return;
@@ -50,9 +50,9 @@ void UDreamImageSequencePlayer::OnUnregister()
 #if WITH_EDITOR
 	if (EditorPlayDelegateHandle.IsValid())
 	{
-		if (auto DreamUIManagerObject = UDreamUIManagerObject::GetInstance(false))
+		if (auto WorldManager = UDreamUIManagerWorldSubsystem::GetInstance(GetWorld()))
 		{
-			DreamUIManagerObject->GetEditorTickDelegate().Remove(EditorPlayDelegateHandle);
+			WorldManager->GetEditorTickDelegate().Remove(EditorPlayDelegateHandle);
 		}
 	}
 #endif

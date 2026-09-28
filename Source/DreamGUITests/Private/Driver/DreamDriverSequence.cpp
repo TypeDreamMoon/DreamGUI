@@ -338,11 +338,11 @@ void FDreamDriverContext::PumpOneFrame(float InDeltaSeconds)
 	/*
 	 * What this pump deliberately does NOT drive, so nobody goes looking for it here:
 	 *
-	 *  - UDreamUIManagerObject, the plugin's other FTickableGameObject. It is editor-only
-	 *    (IsEditorOnly, IsTickable only for the singleton instance) and owns editor concerns -- the
-	 *    Blueprint-compiling flag, one-shot editor callbacks, the editor tick delegate the designer
-	 *    listens to -- none of which exists in a game, so a rig that ticked it would be driving the
-	 *    editor, not a game. The editor's own loop ticks it between tests anyway.
+	 *  - UDreamGUIEditorSubsystem, and the editor tick each manager broadcasts from Tick (which this
+	 *    pump does not call; it calls TickDreamUI). Both are editor concerns -- a recompile's release
+	 *    and rebuild, a designer preview animating -- none of which exists in a game, so a rig that
+	 *    drove them would be driving the editor, not a game. The rebuild after a recompile runs on the
+	 *    core ticker, below.
 	 *  - UWorld::MovieSceneSequenceTick, which drives UMovieSceneSequenceTickManager and therefore
 	 *    Sequencer-based widget animations (UDreamWidgetAnimationComponent). The delegate is private to
 	 *    UWorld and only UWorld::Tick broadcasts it, so under this pump those animations stand still;

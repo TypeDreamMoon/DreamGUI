@@ -3,6 +3,7 @@
 #if WITH_DEV_AUTOMATION_TESTS && WITH_EDITOR
 
 #include "Misc/AutomationTest.h"
+#include "DreamGUIEditorSubsystem.h"
 
 #include "DreamWidgetBlueprint.h"
 #include "DreamUIEditorTools.h"
@@ -554,8 +555,8 @@ bool FDreamDesignerDeleteWarnsAboutGraphUseTest::RunTest(const FString&)
 	Getter->PostPlacedNewNode();
 	Getter->AllocateDefaultPins();
 
-	// Compiling reinstances the generated class, so the preview instance built from the old one is
-	// trashed and the name map points at nothing. Republish before asking it for anything.
+	// Compiling takes the preview down before the reinstancer can copy it -- it is built again a tick
+	// later -- so the name map points at nothing. Republish before asking it for anything.
 	Scoped.Rebuild();
 	UDreamWidget* UsedPreview = Scoped.Designer->GetPreviewHost()->FindPreviewForTemplate(Scoped.FindTemplate(TEXT("UsedByGraph")));
 	UDreamWidget* UnusedPreview = Scoped.Designer->GetPreviewHost()->FindPreviewForTemplate(Scoped.FindTemplate(TEXT("NobodyReadsThis")));
@@ -981,9 +982,9 @@ bool FDreamDesignerRecompileDoesNotOrphanThePreviewTest::RunTest(const FString&)
 	}
 	TestTrue(TEXT("Which is registered in the preview world"), PreviewBefore->HasRegistered());
 
-	// A recompile reinstances the preview along with every other instance of the class. Nothing here
-	// asks the designer for anything afterwards, deliberately: the claim is about the object left
-	// BEHIND, which no reachable pointer names any more.
+	// A recompile would reinstance the preview along with every other instance of the class; the
+	// preview is taken down before it can. Nothing here asks the designer for anything afterwards,
+	// deliberately: the claim is about the object left BEHIND, which no reachable pointer names any more.
 	FKismetEditorUtilities::CompileBlueprint(Scoped.Blueprint, EBlueprintCompileOptions::SkipGarbageCollection);
 
 	// Registered and unowned is the defect. Left that way it survives until GC, and then reports
@@ -1836,14 +1837,13 @@ bool FDreamDesignerSelectionHandoverTest::RunTest(const FString&)
 
 /*
  * The New Widget Blueprint dialog, answered with None for the root panel, then Compile with the
- * designer open. The editor died on the next tick:
- *
- *   UDreamWidget::CollectChildrenWidgets  <-  RegisterDreamWidgetHierarchy
- *   <-  UDreamUserWidget::ReinitializeFromArchetype  <-  UDreamUIManagerObject::OnBlueprintCompiled
+ * designer open. The editor once died on the next tick, rebuilding the reinstancer's copy of the preview
+ * through a hole the compile's collection had left in it. A compile no longer leaves the preview to the
+ * reinstancer at all: the preview is let go before the compile and built again from the class after it.
  *
  * The compile here collects garbage, as the toolbar button's does -- every other compile in this file
- * skips it, which is exactly why none of them ever reached this. And the manager is ticked by hand,
- * because the repair it queues runs from its tick and an automation test has no editor loop.
+ * skips it. The rebuild a tick after the compile is asked for by hand: an automation test has no editor
+ * loop to tick it.
  */
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamDesignerRecompileWithAPanellessRootTest,
@@ -1861,56 +1861,32 @@ bool FDreamDesignerRecompileWithAPanellessRootTest::RunTest(const FString& Param
 	}
 	TestNotNull(TEXT("The asset has a root"), Scoped.TemplateRoot());
 	TestNull(TEXT("and the root carries no panel"), Scoped.TemplateRoot() != nullptr ? Scoped.TemplateRoot()->GetLayoutContainer() : nullptr);
-
-	FKismetEditorUtilities::CompileBlueprint(Scoped.Blueprint, EBlueprintCompileOptions::None);
-
-	// What the post-compile scan met in the editor, built by hand so it does not depend on which of the
-	// reinstancer's leftovers happens to survive the collection in a headless run: an instance of the
-	// GENERATED class -- so the class does have a hierarchy to rebuild from -- that was never
-	// initialized, has no tree, and holds a hole where a destroyed child was.
-	UDreamUserWidget* Husk = NewObject<UDreamUserWidget>(GetTransientPackage(), Scoped.Blueprint->GeneratedClass, NAME_None, RF_Transient);
-	{
-		FArrayProperty* ChildrenProperty = FindFProperty<FArrayProperty>(UDreamWidget::StaticClass(), TEXT("Children"));
-		if (!TestNotNull(TEXT("UDreamWidget::Children is still reflected"), ChildrenProperty))
-		{
-			return false;
-		}
-		FScriptArrayHelper Helper(ChildrenProperty, ChildrenProperty->ContainerPtrToValuePtr<void>(Husk));
-		Helper.AddValue();
-	}
-	TestEqual(TEXT("The copy's array has an entry"), Husk->GetChildrenCount(), 1);
-	TestFalse(TEXT("but an entry that is a hole is not contents, so the scan leaves the copy alone"), Husk->NeedsReinitializeFromClass());
-
-	UDreamUIManagerObject* Manager = UDreamUIManagerObject::GetInstance(true);
-	if (!TestNotNull(TEXT("The editor-side manager exists"), Manager))
+	UDreamGUIEditorSubsystem* EditorSubsystem = UDreamGUIEditorSubsystem::Get();
+	if (!TestNotNull(TEXT("The editor's DreamGUI subsystem exists"), EditorSubsystem))
 	{
 		return false;
 	}
-	// Twice: the repair is queued for the tick after the compile, and the refresh it ends with queues
-	// work of its own for the one after that.
-	Manager->Tick(0.016f);
-	Manager->Tick(0.016f);
+	TestNotNull(TEXT("The designer shows a preview"), Scoped.PreviewRoot());
+
+	FKismetEditorUtilities::CompileBlueprint(Scoped.Blueprint, EBlueprintCompileOptions::None);
+
+	TestFalse(TEXT("The compile is over"), EditorSubsystem->IsRecompiling());
+	TestNull(TEXT("The preview was let go for the compile rather than handed to the reinstancer"), Scoped.PreviewRoot());
+	TestTrue(TEXT("and is waiting to be built again"), EditorSubsystem->HasPendingRebuild());
+
+	// What the tick after the compile does, then the toolkit's own tick.
+	EditorSubsystem->RebuildReleasedTrees();
 	FSlateApplication::Get().Tick();
-
-	// Still here. What is left to say is that the designer came through with something to show. The
-	// compile only INVALIDATES the preview; the toolkit's own tick is what rebuilds it, and a headless
-	// run has no such tick, so ask for the rebuild the way that tick would.
-	Scoped.Rebuild();
-	TestNotNull(TEXT("The preview has a root again after the recompile"), Scoped.PreviewRoot());
-
-	// A direct caller may still ask the copy to rebuild, and that is the call the editor died in: it
-	// skipped the hole, left it in the array, and registered the hierarchy straight through it.
-	Husk->ReinitializeFromClass();
+	TestFalse(TEXT("Nothing is left waiting to be built"), EditorSubsystem->HasPendingRebuild());
+	UDreamWidget* Rebuilt = Scoped.PreviewRoot();
+	if (!TestNotNull(TEXT("The preview has a root again after the recompile"), Rebuilt))
 	{
-		int32 HuskHoles = 0;
-		for (const UDreamWidget* Child : Husk->GetChildren())
-		{
-			HuskHoles += Child == nullptr ? 1 : 0;
-		}
-		TestEqual(TEXT("The rebuilt copy holds no hole"), HuskHoles, 0);
-		TestNotNull(TEXT("and it has the class's hierarchy under it"), Husk->GetWidgetTree());
+		return false;
 	}
-	Husk->DestroyWidget();
+	TestTrue(TEXT("and it is registered"), Rebuilt->HasRegistered());
+	const UDreamWidget* PreviewInstance = Rebuilt->GetParent();
+	TestTrue(TEXT("under an instance of the class as it is now"),
+		PreviewInstance != nullptr && PreviewInstance->GetClass() == Scoped.Blueprint->GeneratedClass);
 
 	// No live user widget may be left holding a hole where a child was: that hole is what the walk
 	// fell into, and any other walk over the same array would fall into it the same way.
@@ -2360,6 +2336,7 @@ bool FDreamDesignerDropIntoANamedHoleTest::RunTest(const FString&)
 	}
 	return true;
 }
+
 
 
 #endif

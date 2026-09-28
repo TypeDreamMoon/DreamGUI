@@ -511,7 +511,7 @@ bool UDreamUIRenderTargetGeometrySource::CheckStaticMesh()const
 #if WITH_EDITOR
 						if (!DreamUI::IsGameWorld(this))
 						{
-							UDreamUIManagerObject::AddOneShotTickFunction([WeakThis = TWeakObjectPtr<const UDreamUIRenderTargetGeometrySource>(this)] {
+							DreamUI::DeferToLaterTick([WeakThis = TWeakObjectPtr<const UDreamUIRenderTargetGeometrySource>(this)] {
 								if (WeakThis.IsValid() && WeakThis->StaticMeshComp.IsValid())
 								{
 									WeakThis->StaticMeshComp->SetMaterial(0, WeakThis->MaterialInstance);
@@ -1203,7 +1203,7 @@ void UDreamUIRenderTargetGeometrySource::UpdateMaterialInstance()
 #if WITH_EDITOR
 					if (!DreamUI::IsGameWorld(this))
 					{
-						UDreamUIManagerObject::AddOneShotTickFunction([WeakThis = TWeakObjectPtr<UDreamUIRenderTargetGeometrySource>(this)] {
+						DreamUI::DeferToLaterTick([WeakThis = TWeakObjectPtr<UDreamUIRenderTargetGeometrySource>(this)] {
 							if (WeakThis.IsValid() && WeakThis->StaticMeshComp.IsValid())
 							{
 								WeakThis->StaticMeshComp->SetMaterial(0, WeakThis->MaterialInstance);

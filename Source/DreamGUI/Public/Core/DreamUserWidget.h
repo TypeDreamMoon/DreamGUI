@@ -215,43 +215,6 @@ public:
 	void InitializeAsDuplicate(UDreamWidget* InContentRoot);
 
 	/**
-	 * Rebuild this instance's contents from its (just recompiled) class.
-	 *
-	 * Recompiling a Blueprint replaces every live instance with a fresh copy of the new class, and the
-	 * copy arrives HALF DEAD: WidgetTree is DuplicateTransient so it comes across null, bInitialized
-	 * and the resolved bindings are plain members that come across empty, and the old contents are
-	 * still hanging underneath because Children is Instanced. Nothing re-ran Initialize, so the widget
-	 * on screen had contents, a null content root, no bindings and silently inert animation verbs --
-	 * and a later Initialize would have hung a SECOND hierarchy on it.
-	 *
-	 * What survives on purpose is NamedSlotContent, which is a persistent Instanced map: the host's
-	 * widgets are the host's and are re-attached rather than thrown away. Everything else under this
-	 * widget came from the old class's tree and is destroyed, because the new class is what the author
-	 * just asked for -- the same choice UMG makes when it rebuilds its preview from the new class.
-	 *
-	 * Editor-only in practice (it is the recompile path), idempotent, and a no-op on a class template
-	 * or on a class that declares no hierarchy -- destroying contents it cannot rebuild would turn a
-	 * widget that still works into an empty one.
-	 */
-	void ReinitializeFromClass();
-
-	/**
-	 * ReinitializeFromClass against a NAMED hierarchy rather than the one the class resolves to.
-	 *
-	 * The same split, and for the same reason, as Initialize / InitializeFromArchetype: the designer
-	 * rebuilds its preview from the Blueprint's authoring tree, which is not what the class holds
-	 * until the next compile, and a test can prove the whole road before a generated class exists.
-	 */
-	void ReinitializeFromArchetype(UDreamWidgetTree* InArchetype);
-
-	/**
-	 * Whether this instance is in the half-dead state ReinitializeFromClass repairs: it has contents
-	 * but no tree and has not been initialized.
-	 */
-	UFUNCTION(BlueprintPure, Category = "DreamGUI|UserWidget")
-	bool NeedsReinitializeFromClass() const;
-
-	/**
 	 * The tree exists and every by-name widget binding points into it; nothing has read this widget's
 	 * own data yet.
 	 *

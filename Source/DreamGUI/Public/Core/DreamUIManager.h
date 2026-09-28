@@ -46,65 +46,6 @@ struct FDreamParkedWidgetEntry
 	double ParkedAtSeconds = 0.0;
 };
 
-/**
- * This manager is a single instance, mainly for manage DreamUI in Editor
- */
-UCLASS(NotBlueprintable, NotBlueprintType, Transient, NotPlaceable)
-class DREAMGUI_API UDreamUIManagerObject :public UObject, public FTickableGameObject
-{
-	GENERATED_BODY()
-
-public:
-	UDreamUIManagerObject();
-	virtual void BeginDestroy()override;
-public:
-	//begin TickableEditorObject interface
-	virtual void Tick(float DeltaTime)override;
-	virtual bool IsTickable() const { return Instance == this; }
-	virtual bool IsTickableInEditor()const { return Instance == this; }
-	virtual TStatId GetStatId() const override;
-	virtual bool IsEditorOnly()const override { return true; }
-	//end TickableEditorObject interface
-private:
-	static UDreamUIManagerObject* Instance;
-#if WITH_EDITORONLY_DATA
-	static bool bIsBlueprintCompiling;
-	FDreamUIEditorTickMulticastDelegate EditorTick;
-	TArray<TTuple<int, TFunction<void()>>> OneShotFunctionsToExecuteInTick;
-public:
-	static void AddOneShotTickFunction(const TFunction<void()>& InFunction, int InDelayFrameCount = 0);
-	FDreamUIEditorTickMulticastDelegate& GetEditorTickDelegate();
-
-#endif
-#if WITH_EDITOR
-	/**
-	 * True from the editor's announcement that a Blueprint began compiling (OnBlueprintPreCompile) to
-	 * its announcement that the compile is over (OnBlueprintCompiled, broadcast whether or not the
-	 * compile had errors). Nothing between the two: the flag is cleared on the announcement itself.
-	 */
-	static bool GetIsBlueprintCompiling(){return bIsBlueprintCompiling;}
-private:
-	static bool InitCheck();
-public:
-	static UDreamUIManagerObject* GetInstance(bool CreateIfNotValid = false);
-private:
-	FDelegateHandle OnBlueprintPreCompileDelegateHandle;
-	FDelegateHandle OnBlueprintCompiledDelegateHandle;
-	void OnBlueprintPreCompile(UBlueprint* InBlueprint);
-	void OnBlueprintCompiled();
-private:
-	FDelegateHandle OnAssetReimportDelegateHandle;
-	void OnAssetReimport(UObject* Asset);
-	FDelegateHandle OnMapOpenedDelegateHandle;
-	void OnMapOpened(const FString& FileName, bool AsTemplate);
-	FDelegateHandle OnPackageReloadedDelegateHandle;
-	void OnPackageReloaded(EPackageReloadPhase Phase, FPackageReloadedEvent* Event);
-	FDelegateHandle OnObjectsReplacedDelegateHandle;
-	/** Unregisters every registered widget tree a reinstancing replaced; see the definition. */
-	void OnObjectsReplaced(const TMap<UObject*, UObject*>& InReplacementMap);
-#endif
-};
-
 UCLASS(NotBlueprintable, NotBlueprintType, Transient)
 class DREAMGUI_API UDreamUISelection : public UObject
 {
@@ -213,6 +154,12 @@ public:
 
 	static UDreamUIManagerWorldSubsystem* GetInstance(UWorld* InWorld);
 #if WITH_EDITOR
+	/**
+	 * Broadcast on every editor tick of a world nobody plays -- the level editor's, a preview's -- for what
+	 * animates there without play: a canvas scaler following its viewport, an image sequence previewing, a
+	 * UMG widget shown in the editor. It is this world's, and goes with it.
+	 */
+	FDreamUIEditorTickMulticastDelegate& GetEditorTickDelegate() { return EditorTick; }
 	bool bShouldTickInEditor = false;
 	UDreamUISelection* GetSelection()const;
 	FSimpleMulticastDelegate OnDeinitialize;
@@ -231,6 +178,7 @@ private:
 private:
 #if WITH_EDITOR
 	FTSTicker::FDelegateHandle EditorTickDelegateHandle;
+	FDreamUIEditorTickMulticastDelegate EditorTick;
 #endif
 
 #if WITH_EDITORONLY_DATA

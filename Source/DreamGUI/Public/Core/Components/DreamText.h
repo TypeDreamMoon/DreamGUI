@@ -56,6 +56,10 @@ public:
 	{
 		return GET_MEMBER_NAME_CHECKED(UDreamText, Text);
 	}
+	static FName GetPropertyName_Font()
+	{
+		return GET_MEMBER_NAME_CHECKED(UDreamText, Font);
+	}
 	static FName GetPropertyName_OverrideMaterial()
 	{
 		return GET_MEMBER_NAME_CHECKED(UDreamText, OverrideMaterial);

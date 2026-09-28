@@ -3,6 +3,7 @@
 #include "Text/DreamUISourceWatcher.h"
 
 #include "DreamGUI.h"
+#include "DreamGUIEditorSubsystem.h"
 #include "DreamWidgetBlueprint.h"
 #include "Core/DreamTextUserWidget.h"
 #include "Designer/DreamUITextAuthoringGate.h"
@@ -16,6 +17,7 @@
 #include "DirectoryWatcherModule.h"
 #include "Editor.h"
 #include "Editor/Transactor.h"
+#include "Framework/Application/SlateApplication.h"
 #include "Framework/Notifications/NotificationManager.h"
 #include "HAL/PlatformProcess.h"
 #include "IDirectoryWatcher.h"
@@ -46,36 +48,12 @@ namespace DreamUISourceWatcherLocal
 	 */
 	constexpr int32 BulkThreshold = 8;
 
-	TMap<FString, FDelegateHandle> GWatchHandles;
-	FTSTicker::FDelegateHandle GTickerHandle;
-	TSet<FString> GPendingFiles;
-	/**
-	 * Files the watcher saw GO AWAY, which used to be dropped where the event arrived.
-	 *
-	 * A deletion or a rename is the one change to a .dui that leaves its class with no way to notice:
-	 * there is nothing to recompile from, so the class keeps the tree it last built and stays wrong
-	 * until somebody presses Compile by hand and finally meets DUI6001 -- by which time the file has
-	 * been gone long enough that nothing connects the two. Kept in their own set rather than in
-	 * GPendingFiles because the answer is a report, not a rebuild.
-	 */
-	TSet<FString> GPendingRemovals;
-	double GLastChangeTime = 0.0;
-
-	/** A batch too large to compile unasked. Held rather than dropped -- see OfferDeferredBatch. */
-	TSet<FString> GDeferredBulkFiles;
-
-	/** Set by an explicit command; a plain save leaves it false and stays quiet when it worked. */
-	bool GAnnounceSuccess = false;
-
-	/**
-	 * True for the span of a rebuild caused by a change on DISK rather than by the designer.
-	 *
-	 * Read by the compiler through FDreamUISourceWatcher::IsCompilingFromExternalChange. A flag
-	 * rather than a parameter because the question is asked five frames down a call chain that runs
-	 * through FKismetEditorUtilities and the compilation manager, neither of which has anywhere to
-	 * carry it.
-	 */
-	bool GbCompilingFromExternalChange = false;
+	/** This editor session's watcher state, or null outside a session. */
+	FDreamUISourceWatcherState* Session()
+	{
+		UDreamGUIEditorSubsystem* EditorSubsystem = UDreamGUIEditorSubsystem::Get();
+		return EditorSubsystem != nullptr ? &EditorSubsystem->GetSourceWatcher() : nullptr;
+	}
 
 	/** What one drained queue did, and where to send the author when it did not work. */
 	struct FBatchResult
@@ -181,7 +159,7 @@ namespace DreamUISourceWatcherLocal
 		}
 	}
 
-	void RecompileFor(const FString& InFilePath, FBatchResult& OutBatch)
+	void RecompileFor(FDreamUISourceWatcherState& State, const FString& InFilePath, FBatchResult& OutBatch)
 	{
 		TArray<UDreamWidgetBlueprint*> Blueprints;
 		FindBlueprints(InFilePath, Blueprints);
@@ -200,7 +178,7 @@ namespace DreamUISourceWatcherLocal
 		// Everything from here on is "the file on disk won". The compiler asks, and skips the flush that
 		// would otherwise push the designer's unsaved preview values back over the text that just
 		// arrived -- see FDreamUISourceWatcher::IsCompilingFromExternalChange.
-		TGuardValue<bool> ExternalChangeGuard(GbCompilingFromExternalChange, true);
+		TGuardValue<bool> ExternalChangeGuard(State.bCompilingFromExternalChange, true);
 
 		// The document first, and only when one is open. The designer's write-back compares the tree
 		// against the text it believes is on disk; leaving it believing the old text would make the
@@ -262,18 +240,12 @@ namespace DreamUISourceWatcherLocal
 		}
 	}
 
-	/** import (normalized, lowercased) -> importer (same spelling RecompileFor expects). */
-	TMultiMap<FString, FString> GImportEdges;
-
 	FString NormalizeImportKey(const FString& InPath)
 	{
 		FString Key = InPath;
 		FPaths::NormalizeFilename(Key);
 		return Key.ToLower();
 	}
-
-	/** False until the on-disk sweep below has run once this session. */
-	bool GbImportIndexSeeded = false;
 
 	/**
 	 * Every `use "..."` spelling in one file's text, without parsing it.
@@ -400,13 +372,13 @@ namespace DreamUISourceWatcherLocal
 	 * Lazy rather than at Register(), so the cost lands on the first save rather than on editor
 	 * startup, and so a DUI root created after startup (Open Workspace does this) is included.
 	 */
-	void EnsureImportIndexSeeded()
+	void EnsureImportIndexSeeded(FDreamUISourceWatcherState& State)
 	{
-		if (GbImportIndexSeeded)
+		if (State.bImportIndexSeeded)
 		{
 			return;
 		}
-		GbImportIndexSeeded = true;
+		State.bImportIndexSeeded = true;
 
 		TArray<FString> Sources;
 		DreamUIPaths::FindSourceFiles(Sources);
@@ -416,7 +388,7 @@ namespace DreamUISourceWatcherLocal
 			// authoritative one (it comes from a real parse, with `use` failures resolved the way the
 			// build resolved them), and replacing it with a text scan would be a downgrade.
 			bool bAlreadyKnown = false;
-			for (auto It = GImportEdges.CreateConstIterator(); It; ++It)
+			for (auto It = State.ImportEdges.CreateConstIterator(); It; ++It)
 			{
 				if (It.Value().Equals(Source, ESearchCase::IgnoreCase))
 				{
@@ -448,7 +420,7 @@ namespace DreamUISourceWatcherLocal
 			if (FPaths::FileExists(File))
 			{
 				// Back already: a save-through-rename, or an author who undid the delete inside the
-				// debounce window. The change event for the new contents is in GPendingFiles.
+				// debounce window. The change event for the new contents is in PendingFiles.
 				continue;
 			}
 			TArray<UDreamWidgetBlueprint*> Blueprints;
@@ -485,17 +457,17 @@ namespace DreamUISourceWatcherLocal
 		}
 	}
 
-	void DrainQueue()
+	void DrainQueue(FDreamUISourceWatcherState& State)
 	{
-		TArray<FString> Files = GPendingFiles.Array();
-		GPendingFiles.Reset();
+		TArray<FString> Files = State.PendingFiles.Array();
+		State.PendingFiles.Reset();
 		Files.Sort();
 
-		const TArray<FString> Removed = GPendingRemovals.Array();
-		GPendingRemovals.Reset();
+		const TArray<FString> Removed = State.PendingRemovals.Array();
+		State.PendingRemovals.Reset();
 
 		// Before the table is read, never at Register(): see EnsureImportIndexSeeded.
-		EnsureImportIndexSeeded();
+		EnsureImportIndexSeeded(State);
 		// And re-read the edges of the files that just changed, because a `use` line added to a file
 		// with no class of its own is published by nobody -- the compiler only republishes for files
 		// it compiles, and that file is never compiled.
@@ -507,8 +479,8 @@ namespace DreamUISourceWatcherLocal
 			}
 		}
 
-		const bool bAnnounceSuccess = GAnnounceSuccess;
-		GAnnounceSuccess = false;
+		const bool bAnnounceSuccess = State.bAnnounceSuccess;
+		State.bAnnounceSuccess = false;
 
 		// A changed file recompiles its importers too, transitively: saving the style library IS
 		// saving every screen that wears it, as far as the classes are concerned. The worklist
@@ -523,7 +495,7 @@ namespace DreamUISourceWatcherLocal
 		for (int32 Index = 0; Index < Worklist.Num(); ++Index)
 		{
 			TArray<FString> Importers;
-			GImportEdges.MultiFind(NormalizeImportKey(Worklist[Index]), Importers);
+			State.ImportEdges.MultiFind(NormalizeImportKey(Worklist[Index]), Importers);
 			for (const FString& Importer : Importers)
 			{
 				bool bAlreadyVisited = false;
@@ -546,7 +518,7 @@ namespace DreamUISourceWatcherLocal
 			{
 				continue;
 			}
-			RecompileFor(File, Batch);
+			RecompileFor(State, File, Batch);
 		}
 		ReportBatch(Batch, bAnnounceSuccess);
 		// After the rebuilds, so a rename whose two halves landed in one batch reports the new file's
@@ -560,23 +532,29 @@ namespace DreamUISourceWatcherLocal
 	 * The files are kept rather than dropped: dropping them leaves every one of those classes stale
 	 * with nothing to say so, which is the failure this watcher exists to end -- just quieter.
 	 */
-	void OfferDeferredBatch()
+	void OfferDeferredBatch(const FDreamUISourceWatcherState& State)
 	{
 		FNotificationInfo Info(FText::Format(
 			LOCTEXT("DreamUIBulkBacklog",
 				"DreamUI: {0} source files changed at once. Rebuilding them all now would queue that "
 				"many Blueprint compiles."),
-			FText::AsNumber(GDeferredBulkFiles.Num())));
+			FText::AsNumber(State.DeferredBulkFiles.Num())));
 		Info.ExpireDuration = 30.0f;
 		Info.bFireAndForget = true;
 		Info.Hyperlink = FSimpleDelegate::CreateLambda([]
 		{
-			GPendingFiles.Append(GDeferredBulkFiles);
-			GDeferredBulkFiles.Reset();
+			// The session's as it is when the link is clicked, which may be a while after the toast.
+			FDreamUISourceWatcherState* Clicked = Session();
+			if (Clicked == nullptr)
+			{
+				return;
+			}
+			Clicked->PendingFiles.Append(Clicked->DeferredBulkFiles);
+			Clicked->DeferredBulkFiles.Reset();
 			// Say so when it finishes, and skip the debounce: the author just asked for this, and
 			// another three quarters of a second only makes the click feel broken.
-			GAnnounceSuccess = true;
-			GLastChangeTime = 0.0;
+			Clicked->bAnnounceSuccess = true;
+			Clicked->LastChangeTime = 0.0;
 		});
 		Info.HyperlinkText = LOCTEXT("DreamUIRebuildBacklog", "Rebuild them now");
 
@@ -589,7 +567,8 @@ namespace DreamUISourceWatcherLocal
 
 	bool Tick(float /*DeltaTime*/)
 	{
-		if (GPendingFiles.Num() == 0 && GPendingRemovals.Num() == 0)
+		FDreamUISourceWatcherState* State = Session();
+		if (State == nullptr || (State->PendingFiles.Num() == 0 && State->PendingRemovals.Num() == 0))
 		{
 			return true;
 		}
@@ -604,7 +583,15 @@ namespace DreamUISourceWatcherLocal
 		{
 			return true;
 		}
-		if (FPlatformTime::Seconds() - GLastChangeTime < DebounceSeconds)
+		// Nor in the middle of something the compile would pull out from under the author: a drag in
+		// flight holds widgets of the very preview a compile rebuilds, and an open transaction would take
+		// the compile's changes into the edit it is recording. Both end on their own; the queue waits.
+		if ((FSlateApplication::IsInitialized() && FSlateApplication::Get().IsDragDropping())
+			|| (GEditor != nullptr && GEditor->IsTransactionActive()))
+		{
+			return true;
+		}
+		if (FPlatformTime::Seconds() - State->LastChangeTime < DebounceSeconds)
 		{
 			return true;
 		}
@@ -613,15 +600,15 @@ namespace DreamUISourceWatcherLocal
 		// measured this exact question and found no startup replay at all -- the watcher begins
 		// watching at registration, so changes made while the editor was closed produce nothing. The
 		// batch that hurts is a bulk change while the editor is open.
-		if (!GAnnounceSuccess && GPendingFiles.Num() > BulkThreshold)
+		if (!State->bAnnounceSuccess && State->PendingFiles.Num() > BulkThreshold)
 		{
-			GDeferredBulkFiles.Append(GPendingFiles);
-			GPendingFiles.Reset();
-			OfferDeferredBatch();
+			State->DeferredBulkFiles.Append(State->PendingFiles);
+			State->PendingFiles.Reset();
+			OfferDeferredBatch(*State);
 			return true;
 		}
 
-		DrainQueue();
+		DrainQueue(*State);
 		return true;
 	}
 
@@ -632,10 +619,15 @@ namespace DreamUISourceWatcherLocal
 	 * registering a directory twice delivers every change to the queue twice, and the second handle
 	 * is one nothing unregisters.
 	 */
-	void WatchRoot(const FString& InDirectory);
+	void WatchRoot(FDreamUISourceWatcherState& State, const FString& InDirectory);
 
 	void OnDirectoryChanged(const TArray<FFileChangeData>& InChanges)
 	{
+		FDreamUISourceWatcherState* State = Session();
+		if (State == nullptr)
+		{
+			return;
+		}
 		for (const FFileChangeData& Change : InChanges)
 		{
 			if (!FPaths::GetExtension(Change.Filename, /*bIncludeDot*/true)
@@ -650,25 +642,25 @@ namespace DreamUISourceWatcherLocal
 			// class still naming that path is a class whose next compile cannot work.
 			if (Change.Action == FFileChangeData::FCA_Removed)
 			{
-				GPendingRemovals.Add(FDreamUIDocumentRegistry::NormalizePath(Change.Filename));
+				State->PendingRemovals.Add(FDreamUIDocumentRegistry::NormalizePath(Change.Filename));
 				continue;
 			}
 			const FString Normalized = FDreamUIDocumentRegistry::NormalizePath(Change.Filename);
 			// A rename shows up as removed-then-added within one batch often enough that dropping the
 			// stale removal here is worth the two lines: reporting a file gone and rebuilt in the same
 			// drain would be a warning about nothing.
-			GPendingRemovals.Remove(Normalized);
-			GPendingFiles.Add(Normalized);
+			State->PendingRemovals.Remove(Normalized);
+			State->PendingFiles.Add(Normalized);
 		}
-		if (GPendingFiles.Num() > 0 || GPendingRemovals.Num() > 0)
+		if (State->PendingFiles.Num() > 0 || State->PendingRemovals.Num() > 0)
 		{
-			GLastChangeTime = FPlatformTime::Seconds();
+			State->LastChangeTime = FPlatformTime::Seconds();
 		}
 	}
 
-	void WatchRoot(const FString& InDirectory)
+	void WatchRoot(FDreamUISourceWatcherState& State, const FString& InDirectory)
 	{
-		if (GWatchHandles.Contains(InDirectory))
+		if (State.WatchHandles.Contains(InDirectory))
 		{
 			return;
 		}
@@ -686,7 +678,7 @@ namespace DreamUISourceWatcherLocal
 			Handle,
 			IDirectoryWatcher::WatchOptions::IncludeDirectoryChanges))
 		{
-			GWatchHandles.Add(InDirectory, Handle);
+			State.WatchHandles.Add(InDirectory, Handle);
 			UE_LOG(DreamGUI, Display, TEXT("[%s].%d Watching '%s' for .dui changes."),
 				ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *InDirectory);
 		}
@@ -696,9 +688,14 @@ namespace DreamUISourceWatcherLocal
 void FDreamUISourceWatcher::NoteImports(const FString& InImporter, const TArray<FString>& InImports)
 {
 	using namespace DreamUISourceWatcherLocal;
+	FDreamUISourceWatcherState* State = Session();
+	if (State == nullptr)
+	{
+		return;
+	}
 	// Replace, not append: a file that dropped a `use` line must stop recompiling on that library's
 	// saves, and the compiler republished the WHOLE current list.
-	for (auto It = GImportEdges.CreateIterator(); It; ++It)
+	for (auto It = State->ImportEdges.CreateIterator(); It; ++It)
 	{
 		if (It.Value() == InImporter)
 		{
@@ -707,65 +704,60 @@ void FDreamUISourceWatcher::NoteImports(const FString& InImporter, const TArray<
 	}
 	for (const FString& Import : InImports)
 	{
-		GImportEdges.Add(NormalizeImportKey(Import), InImporter);
+		State->ImportEdges.Add(NormalizeImportKey(Import), InImporter);
 	}
 }
 
-void FDreamUISourceWatcher::Register()
+void FDreamUISourceWatcher::Register(FDreamUISourceWatcherState& InState)
 {
 	using namespace DreamUISourceWatcherLocal;
 
 	for (const FDreamUISourceRoot& Root : DreamUIPaths::GetSourceRoots())
 	{
-		WatchRoot(Root.Directory);
+		WatchRoot(InState, Root.Directory);
 	}
 
 	// The ticker drains the queue, so it exists even with nothing watched: a project with no DUI
 	// directory yet still has menu commands that queue through this same path, and a queue with no
 	// drain is a command that silently does nothing.
-	GTickerHandle = FTSTicker::GetCoreTicker().AddTicker(
+	InState.TickerHandle = FTSTicker::GetCoreTicker().AddTicker(
 		FTickerDelegate::CreateStatic(&Tick), /*InDelay=*/0.25f);
 }
 
-void FDreamUISourceWatcher::Unregister()
+void FDreamUISourceWatcher::Unregister(FDreamUISourceWatcherState& InState)
 {
 	using namespace DreamUISourceWatcherLocal;
 
-	if (GTickerHandle.IsValid())
+	if (InState.TickerHandle.IsValid())
 	{
-		FTSTicker::GetCoreTicker().RemoveTicker(GTickerHandle);
-		GTickerHandle.Reset();
+		FTSTicker::GetCoreTicker().RemoveTicker(InState.TickerHandle);
+		InState.TickerHandle.Reset();
 	}
 	if (FDirectoryWatcherModule* Module =
 		FModuleManager::GetModulePtr<FDirectoryWatcherModule>(TEXT("DirectoryWatcher")))
 	{
 		if (IDirectoryWatcher* Watcher = Module->Get())
 		{
-			for (const TPair<FString, FDelegateHandle>& Entry : GWatchHandles)
+			for (const TPair<FString, FDelegateHandle>& Entry : InState.WatchHandles)
 			{
 				Watcher->UnregisterDirectoryChangedCallback_Handle(Entry.Key, Entry.Value);
 			}
 		}
 	}
-	GWatchHandles.Reset();
-	GPendingFiles.Reset();
-	GPendingRemovals.Reset();
-	GDeferredBulkFiles.Reset();
-	GAnnounceSuccess = false;
-	// So a module reload re-reads the dependency table from disk. The edges themselves are kept:
-	// the compiler republishes its own on every parse, and dropping them here would put the editor
-	// back in exactly the state the seed exists to fix.
-	GbImportIndexSeeded = false;
+	// The dependency table goes with the session that built it: the next session seeds its own from
+	// disk before its first drain.
+	InState = FDreamUISourceWatcherState();
 }
 
 void FDreamUISourceWatcher::EnsureWatching(const FString& InDirectory)
 {
 	using namespace DreamUISourceWatcherLocal;
 
-	if (!GTickerHandle.IsValid())
+	FDreamUISourceWatcherState* State = Session();
+	if (State == nullptr || !State->TickerHandle.IsValid())
 	{
 		// Nothing drains the queue, so nothing would come of watching: either Register has not run
-		// yet (it will, and it will pick this root up itself) or the module is shutting down.
+		// yet (it will, and it will pick this root up itself) or the session is ending.
 		return;
 	}
 
@@ -784,7 +776,7 @@ void FDreamUISourceWatcher::EnsureWatching(const FString& InDirectory)
 		FPaths::NormalizeDirectoryName(RootDirectory);
 		if (RootDirectory.Equals(Wanted, ESearchCase::IgnoreCase))
 		{
-			WatchRoot(Root.Directory);
+			WatchRoot(*State, Root.Directory);
 			return;
 		}
 	}
@@ -792,31 +784,42 @@ void FDreamUISourceWatcher::EnsureWatching(const FString& InDirectory)
 
 bool FDreamUISourceWatcher::IsCompilingFromExternalChange()
 {
-	return DreamUISourceWatcherLocal::GbCompilingFromExternalChange;
+	const FDreamUISourceWatcherState* State = DreamUISourceWatcherLocal::Session();
+	return State != nullptr && State->bCompilingFromExternalChange;
 }
 
 void FDreamUISourceWatcher::QueueFile(const FString& InFilePath, const bool bAnnounceSuccess)
 {
 	using namespace DreamUISourceWatcherLocal;
-
-	GPendingFiles.Add(FDreamUIDocumentRegistry::NormalizePath(InFilePath));
-	GLastChangeTime = FPlatformTime::Seconds();
-	GAnnounceSuccess |= bAnnounceSuccess;
+	FDreamUISourceWatcherState* State = Session();
+	if (State == nullptr)
+	{
+		return;
+	}
+	State->PendingFiles.Add(FDreamUIDocumentRegistry::NormalizePath(InFilePath));
+	State->LastChangeTime = FPlatformTime::Seconds();
+	State->bAnnounceSuccess |= bAnnounceSuccess;
 }
 
 void FDreamUISourceWatcher::QueueRemoval(const FString& InFilePath)
 {
 	using namespace DreamUISourceWatcherLocal;
-
-	GPendingRemovals.Add(FDreamUIDocumentRegistry::NormalizePath(InFilePath));
-	GLastChangeTime = FPlatformTime::Seconds();
+	FDreamUISourceWatcherState* State = Session();
+	if (State == nullptr)
+	{
+		return;
+	}
+	State->PendingRemovals.Add(FDreamUIDocumentRegistry::NormalizePath(InFilePath));
+	State->LastChangeTime = FPlatformTime::Seconds();
 }
 
 void FDreamUISourceWatcher::FlushPending()
 {
 	using namespace DreamUISourceWatcherLocal;
-
-	GLastChangeTime = 0.0;
+	if (FDreamUISourceWatcherState* State = Session())
+	{
+		State->LastChangeTime = 0.0;
+	}
 	Tick(0.0f);
 }
 

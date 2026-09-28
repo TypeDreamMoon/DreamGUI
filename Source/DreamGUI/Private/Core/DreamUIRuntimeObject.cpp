@@ -1,6 +1,7 @@
 // Copyright 2019-Present LexLiu. All Rights Reserved.
 
 #include "Core/DreamUIRuntimeObject.h"
+#include "Containers/Ticker.h"
 #include "DreamGUI.h"
 #include "Core/DreamUIBehaviour.h"
 #include "Core/DreamWidgetPresenterComponentBase.h"
@@ -104,6 +105,21 @@ EObjectFlags DreamUI::TransactionalFlagFor(const UObject* InOuter)
 		return RF_NoFlags;
 	}
 	return RF_Transactional;
+}
+
+void DreamUI::DeferToLaterTick(TFunction<void()> InFunction, int32 InTicks)
+{
+	FTSTicker::GetCoreTicker().AddTicker(TEXT("DreamUIDeferred"), 0.0f,
+		[Function = MoveTemp(InFunction), Remaining = FMath::Max(0, InTicks)](float) mutable
+		{
+			if (Remaining > 0)
+			{
+				--Remaining;
+				return true;
+			}
+			Function();
+			return false;
+		});
 }
 
 TArray<DreamUI::FTreeBridge> DreamUI::FindTreeBridges(const UWorld& InWorld)

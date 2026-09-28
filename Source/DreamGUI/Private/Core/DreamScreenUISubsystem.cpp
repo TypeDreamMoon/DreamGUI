@@ -521,6 +521,79 @@ UDreamWidget* UDreamScreenUISubsystem::ShowWidgetOfClass(FName InName, TSubclass
 	return Page;
 }
 
+int32 UDreamScreenUISubsystem::ReleasePagesUsing(const UClass* InClass)
+{
+	int32 Released = 0;
+	TArray<FName> Names;
+	Entries.GetKeys(Names);
+	for (const FName& Name : Names)
+	{
+		FEntry* Entry = Entries.Find(Name);
+		UDreamWidget* Root = Entry != nullptr ? Entry->Root.Get() : nullptr;
+		if (!IsUsablePage(Root))
+		{
+			continue;
+		}
+		TArray<UDreamWidget*> Widgets;
+		UDreamWidget::CollectChildrenWidgets(Root, Widgets, true);
+		if (!Widgets.ContainsByPredicate([InClass](const UDreamWidget* Widget) { return Widget->IsA(InClass); }))
+		{
+			continue;
+		}
+		// The entry stays -- its name, its place in the stack, its sort order and player -- with nothing in
+		// it for the moment; the page is what goes.
+		if (Root->IsA<UDreamUserWidget>())
+		{
+			ReleasedPages.Add(Name, TPair<TWeakObjectPtr<UClass>, bool>(Root->GetClass(), Entry->State == EDreamUIScreenPageState::Active));
+		}
+		else
+		{
+			UE_LOG(DreamGUI, Warning, TEXT("Recompiling %s took screen page '%s' down; it is not a user widget, so nothing can build it again."),
+				*InClass->GetName(), *Name.ToString());
+		}
+		Entry->Root = nullptr;
+		Entry->State = EDreamUIScreenPageState::Inactive;
+		Root->DestroyWidget();
+		++Released;
+	}
+	return Released;
+}
+
+void UDreamScreenUISubsystem::RebuildReleasedPages()
+{
+	TMap<FName, TPair<TWeakObjectPtr<UClass>, bool>> ToRebuild = MoveTemp(ReleasedPages);
+	ReleasedPages.Reset();
+	TSet<int32> Players;
+	for (const TPair<FName, TPair<TWeakObjectPtr<UClass>, bool>>& Released : ToRebuild)
+	{
+		FEntry* Entry = Entries.Find(Released.Key);
+		UClass* PageClass = Released.Value.Key.Get();
+		// Removed while it was down, or its class gone with the compile: nothing to build.
+		if (Entry == nullptr || Entry->Root.IsValid() || PageClass == nullptr || !PageClass->IsChildOf(UDreamUserWidget::StaticClass()))
+		{
+			continue;
+		}
+		UDreamWidget* Root = GetOrCreateScreenRootForIndex(Entry->PlayerIndex);
+		UDreamWidget* Page = Root != nullptr ? CreateDreamWidget(GetWorld(), PageClass, Root) : nullptr;
+		if (Page == nullptr)
+		{
+			continue;
+		}
+		Entry->Root = Page;
+		ConfigurePage(Page, Entry->SortOrder, Entry->PlayerIndex, Entry->bCustomPlacement);
+		Page->SetVisibility(EDreamWidgetVisibility::Collapsed);
+		OnPageCreated.Broadcast(Released.Key, Page);
+		// Back in the state it was taken down in: showing, or there and switched off.
+		SetPageActive(Released.Key, Released.Value.Value);
+		Players.Add(Entry->PlayerIndex);
+	}
+	// The stack decides again what shows, now that its pages are back.
+	for (const int32 PlayerIndex : Players)
+	{
+		RefreshStack(PlayerIndex, GetTopUIForIndex(PlayerIndex));
+	}
+}
+
 UDreamWidget* UDreamScreenUISubsystem::GetUI(FName InName) const
 {
 	if (const FEntry* Entry = Entries.Find(InName))
@@ -672,7 +745,8 @@ int32 UDreamScreenUISubsystem::PruneDeadEntries()
 	TArray<FName> DeadNames;
 	for (const TPair<FName, FEntry>& Pair : Entries)
 	{
-		if (!IsUsablePage(Pair.Value.Root.Get()))
+		// A page a recompile took down is not dead: it is built again from its class a tick later.
+		if (!IsUsablePage(Pair.Value.Root.Get()) && !ReleasedPages.Contains(Pair.Key))
 		{
 			DeadNames.Add(Pair.Key);
 		}
@@ -1086,7 +1160,7 @@ void UDreamScreenUISubsystem::RefreshStack(int32 InPlayerIndex, FName InPrevious
 		PruneDeadEntries();
 		for (int32 Index = Stack.Num() - 1; Index >= 0; --Index)
 		{
-			if (!GetUI(Stack[Index]))
+			if (!GetUI(Stack[Index]) && !ReleasedPages.Contains(Stack[Index]))
 			{
 				Stack.RemoveAt(Index);
 			}

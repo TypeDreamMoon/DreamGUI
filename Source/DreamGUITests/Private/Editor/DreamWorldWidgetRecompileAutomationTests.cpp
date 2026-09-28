@@ -4,6 +4,7 @@
 
 #include "Misc/AutomationTest.h"
 
+#include "DreamGUIEditorSubsystem.h"
 #include "DreamWidgetBlueprint.h"
 #include "Core/DreamUIManager.h"
 #include "Core/DreamUserWidget.h"
@@ -22,16 +23,17 @@
 /*
  * Recompiling the class of a widget placed in a level.
  *
- * The reinstancer replaces the placed tree with a copy and marks the original -- and everything outered
- * to it, its canvas and the materials the canvas made among them -- as garbage while it is still
- * registered. The copy takes over the host and the compile's repair brings it up. The canvas's mesh is
- * outered to the host actor instead, so nothing swept it along: it went on drawing the old tree beside
- * the new one, and the collection that ends the compile freed the materials its sections still pointed
- * at. That was a crash in the level viewport on the first frame after saving the Blueprint in its
+ * The reinstancer replaces every live instance of a recompiled class with a property copy and marks the
+ * original -- and everything outered to it, its canvas and the materials the canvas made among them -- as
+ * garbage. A widget tree does not come through that: the copy is a husk, and the original's canvas mesh,
+ * outered to the host actor, went on drawing the old tree with materials the compile's collection then
+ * freed. That was a crash in the level viewport on the first frame after saving the Blueprint in its
  * designer.
  *
- * What this pins: the replaced tree is unregistered before any collection, its mesh with it, and what is
- * left afterwards is the copy alone -- one tree, one mesh -- through a collection as well.
+ * So the tree does not wait for the reinstancer. What this pins: the placed tree is let go before the
+ * compile, its mesh with it and before any collection; the host holds nothing while the class compiles;
+ * and a tick after the compile it holds a tree built fresh from the new class -- one tree, one mesh, no
+ * copy of the old one -- through a collection as well.
  */
 namespace DreamWorldWidgetRecompileTestLocal
 {
@@ -85,13 +87,14 @@ namespace DreamWorldWidgetRecompileTestLocal
 		return Meshes;
 	}
 
-	/** Registered, live instances of InClass in InWorld -- the trees that are on screen there. */
-	int32 CountRegisteredInstances(const UWorld* InWorld, const UClass* InClass)
+	/** Live instances of InClass in InWorld, registered or not -- a reinstancer's copy among them if there were one. */
+	int32 CountLiveInstances(const UWorld* InWorld, const UClass* InClass, bool bRegisteredOnly)
 	{
 		int32 Count = 0;
 		for (TObjectIterator<UDreamUserWidget> It; It; ++It)
 		{
-			if (IsValid(*It) && It->GetClass() == InClass && It->HasRegistered() && It->GetWorld() == InWorld)
+			if (IsValid(*It) && !It->IsTemplate() && It->GetClass() == InClass && It->GetWorld() == InWorld
+				&& (!bRegisteredOnly || It->HasRegistered()))
 			{
 				++Count;
 			}
@@ -115,6 +118,8 @@ bool FDreamWorldWidgetRecompileTest::RunTest(const FString& Parameters)
 	Class.Compile();
 	UClass* GeneratedClass = Class.Blueprint->GeneratedClass;
 	if (!TestNotNull(TEXT("and compiled"), GeneratedClass))return false;
+	UDreamGUIEditorSubsystem* EditorSubsystem = UDreamGUIEditorSubsystem::Get();
+	if (!TestNotNull(TEXT("the editor's DreamGUI subsystem"), EditorSubsystem))return false;
 
 	// An editor world: the level the class was dragged into, where the tree is built on register.
 	FScopedWorld TestWorld(EWorldType::Editor);
@@ -129,40 +134,42 @@ bool FDreamWorldWidgetRecompileTest::RunTest(const FString& Parameters)
 	if (!TestNotNull(TEXT("with a root canvas"), FirstCanvas))return false;
 	UDreamUIMeshComponent* FirstMesh = FirstCanvas->GetUIMesh();
 	if (!TestNotNull(TEXT("that has a mesh"), FirstMesh))return false;
-	TestEqual(TEXT("owned by the host actor, which is why nothing else takes it down"), FirstMesh->GetOwner(), static_cast<AActor*>(Actor));
+	TestEqual(TEXT("owned by the host actor, which is why the tree has to take it down itself"), FirstMesh->GetOwner(), static_cast<AActor*>(Actor));
 	const TWeakObjectPtr<UDreamUIMeshComponent> FirstMeshWatch = FirstMesh;
 
 	Class.Compile();
 
 	// Before any collection: the mesh has to be gone by the time one could free what it draws with.
-	TestFalse(TEXT("the replaced tree's mesh went with it"), FirstMeshWatch.IsValid());
+	TestFalse(TEXT("the placed tree's mesh went with it"), FirstMeshWatch.IsValid());
 	TestEqual(TEXT("so nothing is left drawing the old tree"), RegisteredMeshesIn(TestWorld.World).Num(), 0);
-	UDreamWidget* Copy = Component->GetLoadedWidget();
-	if (!TestNotNull(TEXT("the host holds the reinstancer's copy"), Copy))return false;
-	TestTrue(TEXT("a different object"), Copy != FirstTree);
-	TestTrue(TEXT("of the recompiled class"), Copy->GetClass() == GeneratedClass);
+	TestFalse(TEXT("the placed tree was destroyed, not handed to the reinstancer"), IsValid(FirstTree));
+	TestNull(TEXT("the host holds no tree while the class compiles"), Component->GetLoadedWidget());
+	TestEqual(TEXT("and the reinstancer made no copy of it"), CountLiveInstances(TestWorld.World, GeneratedClass, /*bRegisteredOnly*/false), 0);
+	TestFalse(TEXT("the compile is over"), EditorSubsystem->IsRecompiling());
+	TestTrue(TEXT("and the host is waiting to build again"), EditorSubsystem->HasPendingRebuild());
 
-	// The compile's repair runs a tick later, on the editor manager's queue, and brings the copy up.
-	if (UDreamUIManagerObject* Manager = UDreamUIManagerObject::GetInstance(/*CreateIfNotValid*/ true))
-	{
-		Manager->Tick(0.0f);
-		Manager->Tick(0.0f);
-	}
-	TestTrue(TEXT("the copy is registered in its place"), Copy->HasRegistered());
-	TestEqual(TEXT("and it is the only tree of the class on screen"), CountRegisteredInstances(TestWorld.World, GeneratedClass), 1);
-	UDreamCanvas* CopyCanvas = Component->GetLoadedCanvas();
-	if (!TestNotNull(TEXT("the copy has a root canvas"), CopyCanvas))return false;
-	UDreamUIMeshComponent* CopyMesh = CopyCanvas->GetUIMesh();
-	if (!TestNotNull(TEXT("with a mesh"), CopyMesh))return false;
-	TestEqual(TEXT("owned by the same actor"), CopyMesh->GetOwner(), static_cast<AActor*>(Actor));
+	// What the tick after the compile does.
+	EditorSubsystem->RebuildReleasedTrees();
+	TestFalse(TEXT("nothing is left waiting"), EditorSubsystem->HasPendingRebuild());
+	UDreamWidget* Rebuilt = Component->GetLoadedWidget();
+	if (!TestNotNull(TEXT("the host built its tree again"), Rebuilt))return false;
+	TestTrue(TEXT("a new one"), Rebuilt != FirstTree);
+	TestTrue(TEXT("of the recompiled class"), Rebuilt->GetClass() == GeneratedClass);
+	TestTrue(TEXT("registered in its place"), Rebuilt->HasRegistered());
+	TestEqual(TEXT("and it is the only tree of the class there, registered or not"), CountLiveInstances(TestWorld.World, GeneratedClass, false), 1);
+	UDreamCanvas* RebuiltCanvas = Component->GetLoadedCanvas();
+	if (!TestNotNull(TEXT("the new tree has a root canvas"), RebuiltCanvas))return false;
+	UDreamUIMeshComponent* RebuiltMesh = RebuiltCanvas->GetUIMesh();
+	if (!TestNotNull(TEXT("with a mesh"), RebuiltMesh))return false;
+	TestEqual(TEXT("owned by the same actor"), RebuiltMesh->GetOwner(), static_cast<AActor*>(Actor));
 	TestEqual(TEXT("and it is the only mesh drawing there"), RegisteredMeshesIn(TestWorld.World).Num(), 1);
 
-	// The moment the crash happened: the collection that frees the replaced tree and its materials.
+	// The moment the crash happened: the collection that frees the old tree and its materials.
 	CollectGarbage(GARBAGE_COLLECTION_KEEPFLAGS, /*bPerformFullPurge*/ true);
 	const TArray<UDreamUIMeshComponent*> Surviving = RegisteredMeshesIn(TestWorld.World);
 	TestEqual(TEXT("after a collection one mesh is still drawing"), Surviving.Num(), 1);
-	TestTrue(TEXT("the copy's, whose canvas is alive"), Surviving.Num() == 1 && Surviving[0] == CopyMesh && IsValid(CopyCanvas));
-	TestTrue(TEXT("and the host still holds a live tree"), IsValid(Component->GetLoadedWidget()));
+	TestTrue(TEXT("the new tree's, whose canvas is alive"), Surviving.Num() == 1 && Surviving[0] == RebuiltMesh && IsValid(RebuiltCanvas));
+	TestTrue(TEXT("and the host still holds that tree"), Component->GetLoadedWidget() == Rebuilt && IsValid(Rebuilt));
 	return true;
 }
 

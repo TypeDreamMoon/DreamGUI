@@ -88,4 +88,12 @@ namespace DreamUI
 	 * clone part of a tree. One into another actor's tree is the kind a paste leaves behind.
 	 */
 	DREAMGUI_API TArray<FTreeBridge> FindTreeBridges(const UWorld& InWorld);
+
+	/**
+	 * Run InFunction on the engine's core ticker after InTicks more ticks -- 0 is the next one. The deferral
+	 * an editor edit needs -- until the property change, the drag or the compile under way has finished --
+	 * held by the ticker rather than by anything of DreamGUI's own. Capture weakly: what the function works on
+	 * may be gone by the time it runs.
+	 */
+	DREAMGUI_API void DeferToLaterTick(TFunction<void()> InFunction, int32 InTicks = 0);
 }

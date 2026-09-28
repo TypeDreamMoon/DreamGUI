@@ -387,9 +387,9 @@ void UDreamUMGWidget::SetComponentTickEnabled(bool bEnable)
 #if WITH_EDITOR
 			if (!DreamUI::IsGameWorld(this))
 			{
-				if (auto DreamUIManagerObject = UDreamUIManagerObject::GetInstance(true))
+				if (auto WorldManager = UDreamUIManagerWorldSubsystem::GetInstance(GetWorld()))
 				{
-					EditorTickHandle = DreamUIManagerObject->GetEditorTickDelegate().AddUObject(this, &UDreamUMGWidget::TickComponent);
+					EditorTickHandle = WorldManager->GetEditorTickDelegate().AddUObject(this, &UDreamUMGWidget::TickComponent);
 				}
 			}
 			else
@@ -405,9 +405,9 @@ void UDreamUMGWidget::SetComponentTickEnabled(bool bEnable)
 			{
 				if (EditorTickHandle.IsValid())
 				{
-					if (auto DreamUIManagerObject = UDreamUIManagerObject::GetInstance(false))
+					if (auto WorldManager = UDreamUIManagerWorldSubsystem::GetInstance(GetWorld()))
 					{
-						DreamUIManagerObject->GetEditorTickDelegate().Remove(EditorTickHandle);
+						WorldManager->GetEditorTickDelegate().Remove(EditorTickHandle);
 					}
 				}
 			}

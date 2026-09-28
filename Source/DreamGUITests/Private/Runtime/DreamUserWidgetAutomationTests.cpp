@@ -285,131 +285,36 @@ bool FDreamUserWidgetDestroyedStopsBeingPolledTest::RunTest(const FString& Param
 }
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
-	FDreamUserWidgetRebuildsFromRecompiledClassTest,
-	"DreamGUI.UserWidget.ARecompiledInstanceRebuildsItsContentsInsteadOfStayingHalfDead",
+	FDreamUserWidgetWalkStepsOverHolesTest,
+	"DreamGUI.UserWidget.TheSharedWalkStepsOverAHoleInAWidgetsChildren",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
 
-bool FDreamUserWidgetRebuildsFromRecompiledClassTest::RunTest(const FString& Parameters)
+bool FDreamUserWidgetWalkStepsOverHolesTest::RunTest(const FString& Parameters)
 {
 	using namespace DreamUserWidgetTestLocal;
 	FScopedGameWorld TestWorld;
 
-	// Recompiling a Blueprint hands every live instance to a fresh copy of the new class, and the copy
-	// arrives with its old contents still attached, WidgetTree null (DuplicateTransient) and
-	// bInitialized false. Nothing re-ran Initialize, so the widget had contents, a null content root
-	// and no resolved bindings -- and the next Initialize would have hung a SECOND tree on it.
-	//
-	// Driven through the named-archetype road, exactly as the tests above drive InitializeWidgetStatic:
-	// this fixture is a NATIVE class, so there is no generated class to resolve a hierarchy from, and
-	// the whole rebuild is provable before a Blueprint compiler exists to produce one.
-	TStrongObjectPtr<UDreamWidgetTree> Template(BuildTemplate(GetTransientPackage()));
-	TStrongObjectPtr<UDreamUserWidgetBindFixture> UserWidget(
+	// A widget whose only child entry is a hole -- what a collection leaves where a destroyed child was
+	// held by something that did not take it out of the array. The editor once died walking one:
+	// registration, the compiler, the write-back and the editor tools all share this walk.
+	TStrongObjectPtr<UDreamUserWidgetBindFixture> Holder(
 		NewObject<UDreamUserWidgetBindFixture>(TestWorld.World, UDreamUserWidgetBindFixture::StaticClass()));
-	AddExpectedError(TEXT("matches property 'Mismatched'"), EAutomationExpectedErrorFlags::Contains, 0);
-	UDreamWidgetGeneratedClass::InitializeWidgetStatic(UserWidget.Get(), UDreamUserWidgetBindFixture::StaticClass(), Template.Get());
-	UserWidget->OnRegister();
-
-	UDreamWidget* OriginalContentRoot = UserWidget->GetContentRoot();
-	if (!TestNotNull(TEXT("the instance starts with contents"), OriginalContentRoot))
+	PunchAHoleInChildren(Holder.Get());
+	if (!TestEqual(TEXT("the fixture really holds a hole"), CountHolesInChildren(Holder.Get()), 1))
 	{
 		return false;
 	}
-	TestFalse(TEXT("a healthy instance needs no rebuild"), UserWidget->NeedsReinitializeFromClass());
+	TestEqual(TEXT("which the array counts as an entry"), Holder->GetChildrenCount(), 1);
 
-	// Exactly what reinstancing leaves behind: the contents are still there, the tree object is not.
-	UserWidget->WidgetTree = nullptr;
-	TestNull(TEXT("and with the tree gone it has no content root at all"), UserWidget->GetContentRoot());
+	TArray<UDreamWidget*> Collected;
+	UDreamWidget::CollectChildrenWidgets(Holder.Get(), Collected, /*IncludeTarget*/true);
+	TestEqual(TEXT("the shared walk steps over the hole and still reports the widget itself"), Collected.Num(), 1);
 
-	// A class with no hierarchy to rebuild from must be LEFT ALONE. Emptying a widget that still works
-	// is strictly worse than the half-dead state this repairs, and this fixture's native class is
-	// exactly that case, so it is the one to prove it on.
-	AddExpectedError(TEXT("has no hierarchy to rebuild from"), EAutomationExpectedErrorFlags::Contains, 1);
-	UserWidget->ReinitializeFromClass();
-	TestEqual(TEXT("a rebuild with nothing to rebuild from keeps the contents it had"),
-		UserWidget->GetChildrenCount(), 1);
-	TestNull(TEXT("and does not invent a tree"), UserWidget->GetWidgetTree());
+	TArray<UDreamWidget*> FromNothing;
+	UDreamWidget::CollectChildrenWidgets(nullptr, FromNothing, /*IncludeTarget*/true);
+	TestEqual(TEXT("and asked to start from nothing, collects nothing"), FromNothing.Num(), 0);
 
-	UserWidget->ReinitializeFromArchetype(Template.Get());
-
-	if (!TestNotNull(TEXT("the rebuild gave it a tree again"), UserWidget->GetWidgetTree()))
-	{
-		return false;
-	}
-	UDreamWidget* RebuiltRoot = UserWidget->GetContentRoot();
-	if (!TestNotNull(TEXT("and a content root"), RebuiltRoot))
-	{
-		return false;
-	}
-	TestNotEqual(TEXT("built fresh from the class rather than the stale one kept"),
-		(const UDreamWidget*)RebuiltRoot, (const UDreamWidget*)OriginalContentRoot);
-	TestEqual(TEXT("the whole template came across once, not twice"), UserWidget->GetWidgetTree()->CountWidgets(), 4);
-	// The one that would have shown a second hierarchy: the user widget has exactly one child, the
-	// rebuilt content root, and not the old one beside it.
-	TestEqual(TEXT("and the instance has one set of contents under it"), UserWidget->GetChildrenCount(), 1);
-	TestTrue(TEXT("the by-name binding resolved against the new tree"),
-		UserWidget->Header != nullptr && UserWidget->Header->IsIn(UserWidget->GetWidgetTree()));
-
-	UserWidget->DestroyWidget();
-	return true;
-}
-
-IMPLEMENT_SIMPLE_AUTOMATION_TEST(
-	FDreamUserWidgetRebuildSurvivesHolesTest,
-	"DreamGUI.UserWidget.ARebuildStepsOverTheHolesAReinstancedCopyArrivesWith",
-	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
-
-bool FDreamUserWidgetRebuildSurvivesHolesTest::RunTest(const FString& Parameters)
-{
-	using namespace DreamUserWidgetTestLocal;
-	FScopedGameWorld TestWorld;
-
-	// The editor died here, one tick after Compile with a designer open:
-	//
-	//   UDreamWidget::CollectChildrenWidgets  <-  RegisterDreamWidgetHierarchy
-	//   <-  UDreamUserWidget::ReinitializeFromArchetype  <-  UDreamUIManagerObject::OnBlueprintCompiled
-	//
-	// The reinstancer's copy of the preview widget shares the original's children. The designer tears
-	// the ORIGINAL down rather than adopting the copy, which destroys those children, and the
-	// collection that ends the compile nulls the copy's entries. What the post-compile scan then finds
-	// is a never-initialized widget, no tree, and an array whose only entry is a hole.
-	TStrongObjectPtr<UDreamWidgetTree> Template(BuildTemplate(GetTransientPackage()));
-	TStrongObjectPtr<UDreamUserWidgetBindFixture> Copy(
-		NewObject<UDreamUserWidgetBindFixture>(TestWorld.World, UDreamUserWidgetBindFixture::StaticClass()));
-	PunchAHoleInChildren(Copy.Get());
-	if (!TestEqual(TEXT("the fixture really holds a hole"), CountHolesInChildren(Copy.Get()), 1))
-	{
-		return false;
-	}
-	TestEqual(TEXT("which the array counts as an entry"), Copy->GetChildrenCount(), 1);
-
-	// A hole is not contents: there is nothing on screen to repair, and nobody owns this copy.
-	TestFalse(TEXT("so the copy is not something the post-compile scan should rebuild"), Copy->NeedsReinitializeFromClass());
-
-	// The walk registration, the compiler, the write-back and the editor tools all share.
-	{
-		TArray<UDreamWidget*> Collected;
-		UDreamWidget::CollectChildrenWidgets(Copy.Get(), Collected, /*IncludeTarget*/true);
-		TestEqual(TEXT("the shared walk steps over the hole and still reports the widget itself"), Collected.Num(), 1);
-
-		TArray<UDreamWidget*> FromNothing;
-		UDreamWidget::CollectChildrenWidgets(nullptr, FromNothing, /*IncludeTarget*/true);
-		TestEqual(TEXT("and asked to start from nothing, collects nothing"), FromNothing.Num(), 0);
-	}
-
-	// And the rebuild itself, which a direct caller can still ask for. This is the call that took the
-	// editor down: it skipped the hole, left it in the array, and registered straight through it.
-	AddExpectedError(TEXT("matches property 'Mismatched'"), EAutomationExpectedErrorFlags::Contains, 0);
-	Copy->ReinitializeFromArchetype(Template.Get());
-
-	if (!TestNotNull(TEXT("the rebuild went through and gave it a tree"), Copy->GetWidgetTree()))
-	{
-		return false;
-	}
-	TestEqual(TEXT("no hole is left behind"), CountHolesInChildren(Copy.Get()), 0);
-	TestEqual(TEXT("and the rebuilt root is the only thing under it"), Copy->GetChildrenCount(), 1);
-	TestNotNull(TEXT("which is the content root"), Copy->GetContentRoot());
-
-	Copy->DestroyWidget();
+	Holder->DestroyWidget();
 	return true;
 }
 

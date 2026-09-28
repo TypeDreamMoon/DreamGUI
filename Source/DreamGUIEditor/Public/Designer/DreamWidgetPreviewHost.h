@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "UObject/GCObject.h"
 #include "Designer/DreamWidgetReference.h"
+#include "DreamGUIEditorSubsystem.h"
 
 class FDreamWidgetDesignerScene;
 class UDreamUserWidget;
@@ -53,8 +54,15 @@ struct FPropertyChangedEvent;
 class DREAMGUIEDITOR_API FDreamWidgetPreviewHost
 	: public FGCObject
 	, public TSharedFromThis<FDreamWidgetPreviewHost>
+	, public IDreamRecompilePreview
 {
 public:
+	// IDreamRecompilePreview: a recompile of a class the preview uses takes the preview down first and
+	// builds it again after, instead of leaving the reinstancer to copy it.
+	virtual bool UsesClass(const UClass* InClass) const override;
+	virtual void ReleaseForRecompile() override;
+	virtual void RebuildAfterRecompile() override;
+
 	FDreamWidgetPreviewHost();
 	virtual ~FDreamWidgetPreviewHost() override;
 

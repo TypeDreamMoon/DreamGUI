@@ -8,6 +8,7 @@
 #include "Core/Components/DreamCanvas.h"
 #include "Core/DreamUISettings.h"
 #include "Core/DreamUIManager.h"
+#include "Core/DreamUIRuntimeObject.h"
 #include "Core/DreamScreenUISubsystem.h"
 #include "Engine/World.h"
 #include "DreamTweenManager.h"
@@ -295,7 +296,7 @@ void UDreamWidget::PostEditChangeProperty(FPropertyChangedEvent& PropertyChanged
 			};
 			LOCAL::MarkDirty(this);
 		}
-		UDreamUIManagerObject::AddOneShotTickFunction([WeakThis = MakeWeakObjectPtr(this)]()
+		DreamUI::DeferToLaterTick([WeakThis = MakeWeakObjectPtr(this)]()
 		{
 			if (WeakThis.IsValid())
 			{

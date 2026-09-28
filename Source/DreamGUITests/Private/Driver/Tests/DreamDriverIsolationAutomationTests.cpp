@@ -7,6 +7,7 @@
 #include "Controls/DreamTextInput.h"
 #include "Core/Components/DreamWidget.h"
 #include "Core/DreamUIManager.h"
+#include "DreamGUIEditorSubsystem.h"
 #include "Interaction/UITextInput.h"
 
 #include "Driver/DreamDriver.h"
@@ -145,7 +146,8 @@ bool FDreamDriverIsolationCounterGuardTest::RunTest(const FString& Parameters)
 		TestEqual(TEXT("Between frames no widget is still recorded as writing layout"), LayoutContext.GetWriterCount(), 0);
 		TestEqual(TEXT("and no desired size is remembered past its pass"), LayoutContext.GetRecordedDesiredSizeCount(), 0);
 	}
-	TestFalse(TEXT("And the editor object does not think a Blueprint is compiling"), UDreamUIManagerObject::GetIsBlueprintCompiling());
+	const UDreamGUIEditorSubsystem* EditorSubsystem = UDreamGUIEditorSubsystem::Get();
+	TestFalse(TEXT("And the editor does not think a widget class is recompiling"), EditorSubsystem != nullptr && EditorSubsystem->IsRecompiling());
 	return true;
 }
 

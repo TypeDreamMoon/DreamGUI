@@ -278,6 +278,16 @@ public:
 	UFUNCTION(BlueprintPure, Category = "DreamGUI|Screen|Stack", meta = (AdvancedDisplay = "InOwningPlayer"))
 	TArray<FName> GetUIStack(APlayerController* InOwningPlayer = nullptr) const;
 
+	/**
+	 * Take down every page whose tree holds an instance of InClass, keeping its name, place in the stack,
+	 * sort order, player and state: InClass is about to be recompiled, and the copies the reinstancer would
+	 * make of those trees are husks. RebuildReleasedPages shows them again from their classes. A page that
+	 * is not a user widget has no class to be built from and is only taken down. Returns how many went.
+	 */
+	int32 ReleasePagesUsing(const UClass* InClass);
+	/** Build again, from their classes as they are now, the pages ReleasePagesUsing took down. */
+	void RebuildReleasedPages();
+
 private:
 	struct FEntry
 	{
@@ -320,6 +330,8 @@ private:
 	bool bTornDownForWorld = false;
 
 	TMap<FName, FEntry> Entries;
+	/** Pages a recompile took down, by name, with the class each is built again from; see ReleasePagesUsing. */
+	TMap<FName, TPair<TWeakObjectPtr<UClass>, bool>> ReleasedPages;
 	TMap<FName, FPageDefinition> PageDefinitions;
 	TMap<FName, FPendingPageLoad> PendingPageLoads;
 	/**

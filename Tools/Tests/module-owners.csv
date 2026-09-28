@@ -101,7 +101,7 @@ Source/DreamGUI/Private/Core/DreamUIInputServices.cpp,DreamGUI,the core's one ch
 Source/DreamGUI/Private/Core/DreamUIManager_DebugDraw.cpp,DreamGUI,core: manager debug drawing
 Source/DreamGUI/Private/Core/DreamUIManager_Interaction.cpp,DreamGUI,core: manager input registry
 Source/DreamGUI/Private/Core/DreamUIManager_Lifecycle.cpp,DreamGUI,core: manager lifecycle
-Source/DreamGUI/Private/Core/DreamUIManager_ManagerObject.cpp,DreamGUI,core: manager object and selection
+Source/DreamGUI/Private/Core/DreamUIManager_Selection.cpp,DreamGUI,core: the designer's selection
 Source/DreamGUI/Private/Core/DreamUIManager_Registry.cpp,DreamGUI,core: manager registries
 Source/DreamGUI/Private/Core/DreamUIManager_Tick.cpp,DreamGUI,core: manager tick and layout scheduling
 Source/DreamGUIRenderer/Private/DreamUIRender/DreamUIGizmoMesh.cpp,DreamGUIRenderer,gizmo mesh drawn by the renderer

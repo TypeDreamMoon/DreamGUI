@@ -89,7 +89,6 @@ void UDreamUIManagerWorldSubsystem::Initialize(FSubsystemCollectionBase& Collect
 	}
 	FCoreDelegates::OnEndFrame.AddUObject(this, &UDreamUIManagerWorldSubsystem::OnEndOfFrame);
 	FCoreDelegates::OnEnginePreExit.AddUObject(this, &UDreamUIManagerWorldSubsystem::OnEnginePreExit);
-	UDreamUIManagerObject::GetInstance(true);//make sure it is created
 #endif
 	//localization
 	OnCultureChangedDelegateHandle = FInternationalization::Get().OnCultureChanged().AddUObject(this, &UDreamUIManagerWorldSubsystem::OnCultureChanged);
