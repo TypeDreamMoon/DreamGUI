@@ -1,6 +1,7 @@
 // Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
 
 #include "Interaction/DreamUIInputAction.h"
+#include "Engine/Texture2D.h"
 
 FKey FDreamUIInputActionData::GetKeyForDevice(EDreamUIInputDevice InDevice) const
 {

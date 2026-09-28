@@ -6,6 +6,7 @@
 #include "Core/DreamUIGeometry.h"
 #include "Core/DreamUICustomMeshSource.h"
 #include "Core/Components/DreamTextureBase.h"
+#include "Engine/Texture2D.h"
 
 #define LOCTEXT_NAMESPACE "UICustomMesh"
 

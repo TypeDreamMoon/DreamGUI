@@ -5,6 +5,7 @@
 #include "EntitySystem/BuiltInComponentTypes.h"
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(MovieSceneDreamUIMaterialTrack)
+#include "EntitySystem/MovieSceneEntitySystemLinker.h"
 
 UMovieSceneDreamUIMaterialTrack::UMovieSceneDreamUIMaterialTrack(const FObjectInitializer& ObjectInitializer)
 : Super(ObjectInitializer)

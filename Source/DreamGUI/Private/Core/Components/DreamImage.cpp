@@ -10,6 +10,7 @@
 #include "Slate/SlateTextureAtlasInterface.h"
 #include "Utils/DreamUIUtils.h"
 #include "Core/DreamUIWidgetRegistry.h"
+#include "Materials/MaterialInterface.h"
 
 // A Filled brush reaches the same geometry builders UDreamSprite fills with, so the two elements cut
 // an image the same way. The brush carries its own enum rather than including a component header for

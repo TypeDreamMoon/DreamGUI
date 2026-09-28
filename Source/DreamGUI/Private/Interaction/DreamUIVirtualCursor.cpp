@@ -14,6 +14,7 @@
 #include "Engine/GameViewportClient.h"
 #include "Engine/World.h"
 #include "GameFramework/PlayerController.h"
+#include "Components/InputComponent.h"
 
 namespace
 {

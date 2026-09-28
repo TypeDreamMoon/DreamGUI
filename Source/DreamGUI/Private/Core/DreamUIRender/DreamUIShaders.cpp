@@ -7,6 +7,7 @@
 #include "PrimitiveUniformShaderParameters.h"
 #include "MeshBatch.h"
 #include "MaterialDomain.h"
+#include "Materials/MaterialRenderProxy.h"
 
 IMPLEMENT_MATERIAL_SHADER_TYPE(, FDreamUIScreenRenderVS, TEXT("/Plugin/DreamGUI/Private/DreamUIShader.usf"), TEXT("MainVS"), SF_Vertex);
 IMPLEMENT_MATERIAL_SHADER_TYPE(, FDreamUIScreenRenderPS, TEXT("/Plugin/DreamGUI/Private/DreamUIShader.usf"), TEXT("MainPS"), SF_Pixel);

@@ -3,6 +3,7 @@
 #include "Core/DreamUIWidgetRegistry.h"
 
 #include "Algo/Sort.h"
+#include "UObject/Class.h"
 
 namespace DreamUIWidgetRegistryLocal
 {

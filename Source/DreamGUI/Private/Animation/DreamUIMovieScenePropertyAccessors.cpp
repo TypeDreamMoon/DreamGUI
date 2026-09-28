@@ -5,6 +5,7 @@
 #include "Core/DreamWidgetPresenterComponentBase.h"
 #include "MovieSceneTracksComponentTypes.h"
 #include "MovieSceneTracksPropertyTypes.h"
+#include "Misc/CommandLine.h"
 
 namespace DreamUI
 {

@@ -2,6 +2,7 @@
 
 #include "Core/DreamUIRender/DreamUIPostProcessVertex.h"
 #include "RHI.h"
+#include "RHICommandList.h"
 
 
 void FDreamUIPostProcessVertexDeclaration::InitRHI(FRHICommandListBase& RHICmdList)

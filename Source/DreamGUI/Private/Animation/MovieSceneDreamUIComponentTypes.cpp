@@ -7,6 +7,7 @@
 #include "EntitySystem/MovieScenePropertyComponentHandler.h"
 #include "Core/Components/DreamImage.h"
 #include "Core/Components/DreamText.h"
+#include "Materials/MaterialInterface.h"
 
 namespace UE
 {

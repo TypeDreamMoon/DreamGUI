@@ -4,6 +4,7 @@
 
 #include "Core/Components/DreamPanelLayouts.h"
 #include "Event/DreamPointerEventData.h"
+#include "Engine/World.h"
 
 bool UDreamScrollBoxInputHandler::ApplyScroll(float PrimaryDelta) const
 {

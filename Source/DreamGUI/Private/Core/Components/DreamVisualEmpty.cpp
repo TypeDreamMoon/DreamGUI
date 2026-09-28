@@ -5,6 +5,7 @@
 #include "Utils/DreamUIUtils.h"
 #include "Core/DreamUIWidgetRegistry.h"
 #include "Engine/Texture2D.h"
+#include "Materials/MaterialInterface.h"
 
 #if WITH_EDITOR
 void UDreamVisualEmpty::PreEditChange(FProperty* PropertyAboutToChange)

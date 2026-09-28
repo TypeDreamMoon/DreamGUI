@@ -8,6 +8,7 @@
 #include "Core/Components/DreamWidget.h"
 #include "Engine/TextureRenderTarget2D.h"
 #include "Core/DreamUIWidgetRegistry.h"
+#include "Materials/MaterialInterface.h"
 
 void UDreamCanvasRenderTargetPreviewer::BeginPlay()
 {

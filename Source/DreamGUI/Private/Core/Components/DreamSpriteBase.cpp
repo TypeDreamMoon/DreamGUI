@@ -6,6 +6,7 @@
 #include "Core/DreamUISpriteData.h"
 #include "Core/DreamUISpriteData_BaseObject.h"
 #include "Core/Components/DreamWidget.h"
+#include "Materials/MaterialInterface.h"
 
 UDreamSpriteBase::UDreamSpriteBase(const FObjectInitializer& ObjectInitializer):Super(ObjectInitializer)
 {
