@@ -215,7 +215,7 @@ UDreamDriverWorldSpaceRaycaster* DreamDriverWorld::AttachWorldPointer(FDreamDriv
 	}
 	const int32 UserIndex = IsValid(InContext.EventSystem) ? InContext.EventSystem->GetUserIndex() : 0;
 
-	// One world pointer per player. A second one -- the manager's own, made by EnsureInteractionForPlayer
+	// One world pointer per player. A second one -- the input subsystem's, made by EnsureInteractionForPlayer
 	// for a world widget that began play, or an earlier call to this -- would trace the same panels from
 	// a different eye, and which of the two answered a click would be decided by list order.
 	if (UDreamUIManagerWorldSubsystem* Manager = UDreamUIManagerWorldSubsystem::GetInstance(InContext.World))
@@ -226,7 +226,7 @@ UDreamDriverWorldSpaceRaycaster* DreamDriverWorld::AttachWorldPointer(FDreamDriv
 			if (IsValid(Existing) && Existing->GetUserIndex() == UserIndex && Existing->IsA<UDreamWorldSpaceRaycaster>())
 			{
 				ReportFailure(&InContext, FString::Printf(
-					TEXT("Player %d already has a world-space raycaster (%s); attach the driver's before anything asks the manager to ensure interaction, and only once."),
+					TEXT("Player %d already has a world-space raycaster (%s); attach the driver's before anything asks the input subsystem to ensure interaction, and only once."),
 					UserIndex, *Existing->GetPathName()));
 				return nullptr;
 			}

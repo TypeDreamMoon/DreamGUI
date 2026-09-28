@@ -9,6 +9,7 @@
 #include "Engine/World.h"
 #include "Event/DreamEventSystem.h"
 #include "Event/DreamPointerEventData.h"
+#include "Event/DreamUIInputSubsystem.h"
 #include "Event/DreamUIInputModeLibrary.h"
 #include "Event/InputModule/DreamStandaloneInputModule.h"
 #include "GameFramework/Actor.h"
@@ -60,7 +61,7 @@ namespace DreamEventSystemLifecycleTestLocal
 		bool IsUsable()const{ return Host != nullptr && EventSystem != nullptr && Module != nullptr; }
 	};
 
-	/** An event system on its own actor, not registered with the manager -- that is what the test does. */
+	/** An event system on its own actor, not registered with the input subsystem -- that is what the test does. */
 	UDreamEventSystem* MakeEventSystem(UWorld* World)
 	{
 		AActor* Host = World->SpawnActor<AActor>();
@@ -139,8 +140,8 @@ bool FDreamEventSystemStaleRegistrationTest::RunTest(const FString& Parameters)
 	{
 		return false;
 	}
-	UDreamUIManagerWorldSubsystem* Manager = UDreamUIManagerWorldSubsystem::GetInstance(Scope.World);
-	if (!TestNotNull(TEXT("The UI manager subsystem exists"), Manager))
+	UDreamUIInputSubsystem* InputSubsystem = UDreamUIInputSubsystem::Get(Scope.World);
+	if (!TestNotNull(TEXT("The input subsystem exists"), InputSubsystem))
 	{
 		return false;
 	}
@@ -152,25 +153,25 @@ bool FDreamEventSystemStaleRegistrationTest::RunTest(const FString& Parameters)
 		return false;
 	}
 
-	Manager->AddEventSystem(First);
-	TestEqual(TEXT("The first one is the one the player gets"), Manager->GetEventSystemByUserIndex(0), First);
+	InputSubsystem->AddEventSystem(First);
+	TestEqual(TEXT("The first one is the one the player gets"), InputSubsystem->GetEventSystemByUserIndex(0), First);
 
-	// What a level reload looks like from the manager's side: the component is gone but the map still
+	// What a level reload looks like from the registry's side: the component is gone but the map still
 	// holds its weak pointer. Reading an owner off that entry to name it in a duplicate-registration
 	// error was a null dereference, and reporting the duplicate at all meant the new level's event
 	// system was never registered -- "reload the level and the UI stops responding".
 	First->DestroyComponent();
-	Manager->AddEventSystem(Second);
+	InputSubsystem->AddEventSystem(Second);
 	TestEqual(TEXT("A dead registration is replaced rather than defended"),
-		Manager->GetEventSystemByUserIndex(0), Second);
+		InputSubsystem->GetEventSystemByUserIndex(0), Second);
 
 	// And the unregister that arrives afterwards belongs to the dead one, not to the index.
-	Manager->RemoveEventSystem(First);
+	InputSubsystem->RemoveEventSystem(First);
 	TestEqual(TEXT("A late unregister from the old one does not evict the live one"),
-		Manager->GetEventSystemByUserIndex(0), Second);
+		InputSubsystem->GetEventSystemByUserIndex(0), Second);
 
-	Manager->RemoveEventSystem(Second);
-	TestNull(TEXT("The live one unregisters itself normally"), Manager->GetEventSystemByUserIndex(0));
+	InputSubsystem->RemoveEventSystem(Second);
+	TestNull(TEXT("The live one unregisters itself normally"), InputSubsystem->GetEventSystemByUserIndex(0));
 	return true;
 }
 
@@ -317,13 +318,13 @@ bool FDreamEventSystemUserIndexPipelineTest::RunTest(const FString& Parameters)
 	{
 		return false;
 	}
-	UDreamUIManagerWorldSubsystem* Manager = UDreamUIManagerWorldSubsystem::GetInstance(Scope.World);
+	UDreamUIInputSubsystem* InputSubsystem = UDreamUIInputSubsystem::Get(Scope.World);
 	FScopedInputRig Rig(Scope.World);
-	if (!TestTrue(TEXT("The rig came up"), Rig.IsUsable() && Manager != nullptr))
+	if (!TestTrue(TEXT("The rig came up"), Rig.IsUsable() && InputSubsystem != nullptr))
 	{
 		return false;
 	}
-	Manager->AddEventSystem(Rig.EventSystem);
+	InputSubsystem->AddEventSystem(Rig.EventSystem);
 
 	TestEqual(TEXT("An event system starts out speaking for player 0"), Rig.EventSystem->GetUserIndex(), 0);
 	UDreamPointerEventData* PlayerZeroPointer = Rig.EventSystem->GetPointerEventData(0, true);
@@ -333,13 +334,13 @@ bool FDreamEventSystemUserIndexPipelineTest::RunTest(const FString& Parameters)
 	}
 	TestEqual(TEXT("...stamped with player 0"), PlayerZeroPointer->UserIndex, 0);
 
-	// The field used to be settable only by an author in the Details panel, while the manager's map was
+	// The field used to be settable only by an author in the Details panel, while the registry was
 	// keyed by it -- so moving an event system to another player meant it was registered under the
 	// player it used to serve and findable under neither.
 	Rig.EventSystem->SetUserIndex(1);
 	TestEqual(TEXT("It now speaks for player 1"), Rig.EventSystem->GetUserIndex(), 1);
-	TestNull(TEXT("...and is no longer what player 0 finds"), Manager->GetEventSystemByUserIndex(0));
-	TestEqual(TEXT("...and is what player 1 finds"), Manager->GetEventSystemByUserIndex(1), Rig.EventSystem);
+	TestNull(TEXT("...and is no longer what player 0 finds"), InputSubsystem->GetEventSystemByUserIndex(0));
+	TestEqual(TEXT("...and is what player 1 finds"), InputSubsystem->GetEventSystemByUserIndex(1), Rig.EventSystem);
 	TestEqual(TEXT("...which is also what the world-context lookup answers"),
 		UDreamEventSystem::GetDreamEventSystemInstance(Scope.World, 1), Rig.EventSystem);
 

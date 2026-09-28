@@ -17,7 +17,7 @@
 #include "Core/Components/DreamPanelLayouts.h"
 #include "Core/Components/DreamPanelSlot.h"
 #include "Core/Components/DreamVisual.h"
-#include "Event/DreamEventSystem.h"
+#include "Core/DreamUIInputServices.h"
 #if WITH_ACCESSIBILITY
 #include "Framework/Application/SlateApplication.h"
 #include "Widgets/Accessibility/SlateAccessibleMessageHandler.h"
@@ -29,7 +29,6 @@
 #include "Core/DreamWidgetTree.h"
 #include "Engine/GameInstance.h"
 #include "Engine/LocalPlayer.h"
-#include "Event/DreamPointerEventData.h"
 #include "GameFramework/PlayerController.h"
 // FLayoutLocalization, for the Culture flow-direction preference. SlateCore is already a public
 // dependency; this is the one header of it that answers "which way does the running culture read".
@@ -61,37 +60,23 @@ bool UDreamWidget::SetFocus(int32 UserIndex, int32 PointerId)
 	{
 		return false;
 	}
-	if (UDreamEventSystem* EventSystem = UDreamEventSystem::GetDreamEventSystemInstance(this, UserIndex))
-	{
-		UDreamBaseEventData* EventData = EventSystem->GetPointerEventData(PointerId, true);
-		EventSystem->SetSelectWidget(this, EventData);
-		// The navigation cursor has to move with focus, or the next directional press starts from
-		// wherever focus USED to be and appears to teleport. UDreamUINavigationStack::FocusSelectable
-		// already does both halves for the same reason; this entry point only ever did the first.
-		EventSystem->SetHighlightedComponentForNavigation(this, PointerId);
-		return true;
-	}
-	return false;
+	// The input system moves the navigation cursor with the focus, so the next directional press starts
+	// from here rather than from wherever focus used to be.
+	UDreamUIInputServices* Services = UDreamUIInputServices::Get(this);
+	return Services != nullptr && Services->SetFocus(this, UserIndex, PointerId);
 }
 
 bool UDreamWidget::HasFocus(int32 UserIndex, int32 PointerId) const
 {
-	if (UDreamEventSystem* EventSystem = UDreamEventSystem::GetDreamEventSystemInstance(const_cast<UDreamWidget*>(this), UserIndex))
-	{
-		return EventSystem->GetCurrentSelectedComponent(PointerId) == this;
-	}
-	return false;
+	const UDreamUIInputServices* Services = UDreamUIInputServices::Get(this);
+	return Services != nullptr && Services->HasFocus(this, UserIndex, PointerId);
 }
 
 void UDreamWidget::ClearFocus(int32 UserIndex, int32 PointerId)
 {
-	if (UDreamEventSystem* EventSystem = UDreamEventSystem::GetDreamEventSystemInstance(this, UserIndex))
+	if (UDreamUIInputServices* Services = UDreamUIInputServices::Get(this))
 	{
-		UDreamBaseEventData* EventData = EventSystem->GetPointerEventData(PointerId, false);
-		if (EventData && EventData->SelectedComponent == this)
-		{
-			EventSystem->SetSelectWidget(nullptr, EventData);
-		}
+		Services->ClearFocus(this, UserIndex, PointerId);
 	}
 }
 
@@ -239,23 +224,10 @@ bool UDreamWidget::HasAnyUserFocus() const
 
 bool UDreamWidget::HasFocusedDescendantForUser(int32 InUserIndex) const
 {
-	UDreamEventSystem* EventSystem =
-		UDreamEventSystem::GetDreamEventSystemInstance(const_cast<UDreamWidget*>(this), InUserIndex);
-	if (EventSystem == nullptr)
-	{
-		return false;
-	}
-	for (const TPair<int, TObjectPtr<UDreamPointerEventData>>& Entry : EventSystem->GetPointerEventDataMap())
-	{
-		UDreamWidget* Focused = EventSystem->GetCurrentSelectedComponent(Entry.Key);
-		// Descendants, not "this or its descendants" -- UMG draws the same line, and a widget asking
-		// whether something INSIDE it has focus already knows whether it has focus itself.
-		if (IsValid(Focused) && Focused != this && Focused->IsChildOf(this))
-		{
-			return true;
-		}
-	}
-	return false;
+	// Descendants, not "this or its descendants" -- UMG draws the same line, and a widget asking whether
+	// something INSIDE it has focus already knows whether it has focus itself.
+	const UDreamUIInputServices* Services = UDreamUIInputServices::Get(this);
+	return Services != nullptr && Services->HasFocusedDescendant(this, InUserIndex);
 }
 
 bool UDreamWidget::HasFocusedDescendants() const
@@ -278,35 +250,10 @@ bool UDreamWidget::HasUserFocusedDescendants(APlayerController* InPlayerControll
 
 bool UDreamWidget::IsHovered() const
 {
-	UDreamEventSystem* EventSystem =
-		UDreamEventSystem::GetDreamEventSystemInstance(const_cast<UDreamWidget*>(this), GetOwningPlayerIndex());
-	if (EventSystem == nullptr)
-	{
-		return false;
-	}
-	for (const TPair<int, TObjectPtr<UDreamPointerEventData>>& Entry : EventSystem->GetPointerEventDataMap())
-	{
-		const UDreamPointerEventData* PointerEvent = Entry.Value;
-		if (!IsValid(PointerEvent))
-		{
-			continue;
-		}
-		if (PointerEvent->EnterWidget.Get() == this)
-		{
-			return true;
-		}
-		// The enter STACK as well, so a button still reads as hovered while the pointer is over its
-		// own label. Slate gets that for free because hover propagates to parents; here the stack is
-		// where that fact lives.
-		for (const TObjectPtr<UDreamWidget>& Entered : PointerEvent->EnterWidgetStack)
-		{
-			if (Entered.Get() == this)
-			{
-				return true;
-			}
-		}
-	}
-	return false;
+	// Over this widget or anything inside it: a button still reads as hovered while the pointer is over its
+	// own label, the way hover propagates to parents in Slate.
+	const UDreamUIInputServices* Services = UDreamUIInputServices::Get(this);
+	return Services != nullptr && Services->IsHovered(this, GetOwningPlayerIndex());
 }
 
 bool UDreamWidget::HasMouseCapture() const
@@ -316,31 +263,10 @@ bool UDreamWidget::HasMouseCapture() const
 
 bool UDreamWidget::HasMouseCaptureByUser(int32 InUserIndex, int32 InPointerIndex) const
 {
-	UDreamEventSystem* EventSystem =
-		UDreamEventSystem::GetDreamEventSystemInstance(const_cast<UDreamWidget*>(this), InUserIndex);
-	if (EventSystem == nullptr)
-	{
-		return false;
-	}
-	for (const TPair<int, TObjectPtr<UDreamPointerEventData>>& Entry : EventSystem->GetPointerEventDataMap())
-	{
-		if (InPointerIndex >= 0 && Entry.Key != InPointerIndex)
-		{
-			continue;
-		}
-		const UDreamPointerEventData* PointerEvent = Entry.Value;
-		if (!IsValid(PointerEvent))
-		{
-			continue;
-		}
-		// Held down AND pressed on this widget: that pointer's drag and its release go here whatever
-		// it travels over in between, which is the whole of what capture buys a caller.
-		if (PointerEvent->bNowIsTriggerPressed && PointerEvent->PressWidget.Get() == this)
-		{
-			return true;
-		}
-	}
-	return false;
+	// Held down and pressed on this widget: that pointer's drag and its release come here whatever it
+	// travels over in between.
+	const UDreamUIInputServices* Services = UDreamUIInputServices::Get(this);
+	return Services != nullptr && Services->HasMouseCapture(this, InUserIndex, InPointerIndex);
 }
 
 UDreamWidgetNavigation* UDreamWidget::GetNavigation() const

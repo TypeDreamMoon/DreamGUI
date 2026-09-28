@@ -8,6 +8,7 @@
 #include "Controls/DreamUIControl.h"
 #include "DreamInputKeySelector.generated.h"
 
+class AActor;
 class UDreamWidget;
 class UUIButton;
 

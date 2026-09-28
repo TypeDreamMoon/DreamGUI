@@ -16,6 +16,7 @@
 #include "EnhancedPlayerInput.h"
 #include "Event/DreamEventSystem.h"
 #include "Event/DreamPointerEventData.h"
+#include "Event/DreamUIInputSubsystem.h"
 #include "Event/InputModule/DreamStandaloneInputModule.h"
 #include "GameFramework/PlayerController.h"
 #include "GameFramework/PlayerInput.h"
@@ -176,9 +177,9 @@ bool FDreamGameHostProbeStructureTest::RunTest(const FString& Parameters)
 		UDreamEventSystem* EventSystem = Rig.EventSystem();
 		TestTrue(FString::Printf(TEXT("[%s] 16. The rig's event system is the actor's own"), Case.Name),
 			EventSystemActor != nullptr && EventSystem != nullptr && EventSystemActor->GetEventSystem() == EventSystem);
-		UDreamUIManagerWorldSubsystem* Manager = UDreamUIManagerWorldSubsystem::GetInstance(Rig.GetWorld());
-		TestTrue(FString::Printf(TEXT("[%s] 17. It is enrolled with the UI manager as player 0's"), Case.Name),
-			Manager != nullptr && EventSystem != nullptr && Manager->GetEventSystemByUserIndex(0) == EventSystem);
+		const UDreamUIInputSubsystem* InputSubsystem = UDreamUIInputSubsystem::Get(Rig.GetWorld());
+		TestTrue(FString::Printf(TEXT("[%s] 17. It is enrolled with the input subsystem as player 0's"), Case.Name),
+			InputSubsystem != nullptr && EventSystem != nullptr && InputSubsystem->GetEventSystemByUserIndex(0) == EventSystem);
 		TestTrue(FString::Printf(TEXT("[%s] 18. The driver module is the one registered with it"), Case.Name),
 			EventSystem != nullptr && EventSystem->GetCurrentInputModule() == Module);
 		TestTrue(FString::Printf(TEXT("[%s] 19. Its own lookup (game instance, local player 0, the world's controller) finds the same controller"), Case.Name),

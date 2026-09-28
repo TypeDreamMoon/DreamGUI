@@ -12,6 +12,7 @@
 #include "Engine/GameInstance.h"
 #include "Engine/World.h"
 #include "Event/DreamEventSystem.h"
+#include "Event/DreamUIInputSubsystem.h"
 #include "Event/DreamScreenSpaceRaycaster.h"
 #include "GameFramework/Actor.h"
 #include "GameFramework/PlayerController.h"
@@ -458,14 +459,16 @@ void FDreamDriverRig::OpenBeginPlayGate()
 	}
 
 	// The event system's half: what UDreamEventSystem::BeginPlay does when a world begins play is
-	// enrol with the UI manager, and that enrolment is all it does. It is done here directly rather
-	// than by calling the component's BeginPlay, which would also mark it begun in a world that is not
-	// -- and it is guarded, so EnsureGameInputHost, which makes the same call, stays a no-op after it.
+	// enrol with the world's input subsystem, and that enrolment is all it does. It is done here
+	// directly rather than by calling the component's BeginPlay, which would also mark it begun in a
+	// world that is not -- and it is guarded, so EnsureGameInputHost, which makes the same call, stays a
+	// no-op after it.
 	UDreamEventSystem* HostEventSystem = DriverContext->EventSystem;
-	if (IsValid(HostEventSystem)
-		&& HostManager->GetEventSystemByUserIndex(HostEventSystem->GetUserIndex()) != HostEventSystem)
+	UDreamUIInputSubsystem* HostInput = UDreamUIInputSubsystem::Get(HostWorld);
+	if (IsValid(HostEventSystem) && HostInput != nullptr
+		&& HostInput->GetEventSystemByUserIndex(HostEventSystem->GetUserIndex()) != HostEventSystem)
 	{
-		HostManager->AddEventSystem(HostEventSystem);
+		HostInput->AddEventSystem(HostEventSystem);
 	}
 
 	// The UI manager's half: OnWorldBeginPlay begins every registered widget that has not begun,
@@ -693,15 +696,15 @@ void FDreamDriverRig::EnsureGameInputHost()
 	}
 	UWorld* HostWorld = DriverContext->World;
 
-	UDreamUIManagerWorldSubsystem* HostManager = DriverContext->Manager;
+	UDreamUIInputSubsystem* HostInput = UDreamUIInputSubsystem::Get(HostWorld);
 	UDreamEventSystem* HostEventSystem = DriverContext->EventSystem;
-	if (IsValid(HostManager) && IsValid(HostEventSystem)
-		&& HostManager->GetEventSystemByUserIndex(HostEventSystem->GetUserIndex()) != HostEventSystem)
+	if (HostInput != nullptr && IsValid(HostEventSystem)
+		&& HostInput->GetEventSystemByUserIndex(HostEventSystem->GetUserIndex()) != HostEventSystem)
 	{
 		// The same call UDreamEventSystem::BeginPlay makes. Not BeginPlay itself: that would also mark
 		// the component as having begun play in a world that never did, and nothing here needs the
 		// rest of what that means.
-		HostManager->AddEventSystem(HostEventSystem);
+		HostInput->AddEventSystem(HostEventSystem);
 	}
 
 	// The context's controller first: an input host (or a PIE rig) has already given the world its

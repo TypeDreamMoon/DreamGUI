@@ -7,48 +7,6 @@
   ],
   "edges": [
     {
-      "file": "Source/DreamGUI/Private/Core/Components/DreamWidget_Focus.cpp",
-      "include": "Source/DreamGUI/Public/Event/DreamEventSystem.h",
-      "owner": "DreamGUI",
-      "includedOwner": "DreamGUIInput"
-    },
-    {
-      "file": "Source/DreamGUI/Private/Core/DreamScreenUISubsystem.cpp",
-      "include": "Source/DreamGUI/Public/Event/DreamScreenSpaceRaycaster.h",
-      "owner": "DreamGUI",
-      "includedOwner": "DreamGUIInput"
-    },
-    {
-      "file": "Source/DreamGUI/Private/Core/DreamUIManager_DebugDraw.cpp",
-      "include": "Source/DreamGUI/Public/Interaction/UISelectable.h",
-      "owner": "DreamGUI",
-      "includedOwner": "DreamGUIInput"
-    },
-    {
-      "file": "Source/DreamGUI/Private/Core/DreamUIManager_Interaction.cpp",
-      "include": "Source/DreamGUI/Public/Event/DreamEventSystem.h",
-      "owner": "DreamGUI",
-      "includedOwner": "DreamGUIInput"
-    },
-    {
-      "file": "Source/DreamGUI/Private/Core/DreamUIManager_Interaction.cpp",
-      "include": "Source/DreamGUI/Public/Event/DreamScreenSpaceRaycaster.h",
-      "owner": "DreamGUI",
-      "includedOwner": "DreamGUIInput"
-    },
-    {
-      "file": "Source/DreamGUI/Private/Core/DreamUIManager_Interaction.cpp",
-      "include": "Source/DreamGUI/Public/Event/DreamWorldSpaceRaycaster.h",
-      "owner": "DreamGUI",
-      "includedOwner": "DreamGUIInput"
-    },
-    {
-      "file": "Source/DreamGUI/Private/Core/DreamUIManager_Interaction.cpp",
-      "include": "Source/DreamGUI/Public/Interaction/UISelectable.h",
-      "owner": "DreamGUI",
-      "includedOwner": "DreamGUIInput"
-    },
-    {
       "file": "Source/DreamGUI/Private/Core/DreamUIRender/DreamUIRenderer.cpp",
       "include": "Source/DreamGUI/Public/Core/Components/DreamCanvas.h",
       "owner": "DreamGUIRenderer",
@@ -67,44 +25,14 @@
       "includedOwner": "DreamGUI"
     },
     {
-      "file": "Source/DreamGUI/Private/Core/DreamUserWidget.cpp",
-      "include": "Source/DreamGUI/Public/Event/DreamEventSystem.h",
-      "owner": "DreamGUI",
-      "includedOwner": "DreamGUIInput"
-    },
-    {
-      "file": "Source/DreamGUI/Private/Core/DreamUserWidget.cpp",
-      "include": "Source/DreamGUI/Public/Interaction/DreamUINavigationScope.h",
-      "owner": "DreamGUI",
-      "includedOwner": "DreamGUIInput"
-    },
-    {
-      "file": "Source/DreamGUI/Private/Core/DreamWidgetNavigation.cpp",
-      "include": "Source/DreamGUI/Public/Interaction/UISelectable.h",
-      "owner": "DreamGUI",
-      "includedOwner": "DreamGUIInput"
-    },
-    {
       "file": "Source/DreamGUI/Private/DreamUIBPLibrary.cpp",
       "include": "Source/DreamGUI/Public/Event/DreamScreenSpaceRaycaster.h",
       "owner": "DreamGUI",
       "includedOwner": "DreamGUIInput"
     },
     {
-      "file": "Source/DreamGUI/Private/DreamUIWidgetLibrary.cpp",
-      "include": "Source/DreamGUI/Public/Interaction/DreamUIDragDrop.h",
-      "owner": "DreamGUI",
-      "includedOwner": "DreamGUIInput"
-    },
-    {
       "file": "Source/DreamGUI/Private/Preview/DreamWidgetDesignerScene.cpp",
       "include": "Source/DreamGUI/Public/Event/DreamScreenSpaceRaycaster.h",
-      "owner": "DreamGUI",
-      "includedOwner": "DreamGUIInput"
-    },
-    {
-      "file": "Source/DreamGUI/Public/Core/DreamUserWidget.h",
-      "include": "Source/DreamGUI/Public/Interaction/DreamUIActionRouter.h",
       "owner": "DreamGUI",
       "includedOwner": "DreamGUIInput"
     }

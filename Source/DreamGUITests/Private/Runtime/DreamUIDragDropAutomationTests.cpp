@@ -6,6 +6,7 @@
 
 #include "Core/Components/DreamWidget.h"
 #include "Core/DreamUIManager.h"
+#include "Event/DreamUIInputSubsystem.h"
 #include "Engine/World.h"
 #include "Event/DreamEventSystem.h"
 #include "Event/DreamPointerEventData.h"
@@ -282,12 +283,12 @@ bool FDreamUIDragPerPointerTest::RunTest(const FString& Parameters)
 	// Registered by hand rather than by BeginPlay: a bare test world has not begun play, and driving
 	// the actor through BeginPlay would have it warn about the InputComponent no PlayerController
 	// created for it. The subsystem only needs to be able to FIND an event system for user 0.
-	UDreamUIManagerWorldSubsystem* Manager = UDreamUIManagerWorldSubsystem::GetInstance(TestWorld.World);
-	if (!TestNotNull(TEXT("...and a manager it can register with"), Manager))
+	UDreamUIInputSubsystem* InputSubsystem = UDreamUIInputSubsystem::Get(TestWorld.World);
+	if (!TestNotNull(TEXT("...and an input subsystem it can register with"), InputSubsystem))
 	{
 		return false;
 	}
-	Manager->AddEventSystem(EventSystem);
+	InputSubsystem->AddEventSystem(EventSystem);
 	TestEqual(TEXT("the event system is the one for user 0"),
 		UDreamEventSystem::GetDreamEventSystemInstance(TestWorld.World, 0), EventSystem);
 	DragDrop->Tick(0.0f);

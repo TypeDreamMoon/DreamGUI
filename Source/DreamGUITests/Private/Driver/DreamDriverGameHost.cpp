@@ -16,6 +16,7 @@
 #include "Event/DreamBaseEventData.h"
 #include "Event/DreamEventSystem.h"
 #include "Event/DreamPointerEventData.h"
+#include "Event/DreamUIInputSubsystem.h"
 #include "GameFramework/InputSettings.h"
 #include "GameFramework/PlayerController.h"
 #include "GameFramework/PlayerInput.h"
@@ -500,16 +501,16 @@ bool DreamDriverGameHost::AttachInputActor(FDreamDriverContext& InContext, APlay
 		OutWhyNot = TEXT("the player controller is in a different world from the context's");
 		return false;
 	}
-	UDreamUIManagerWorldSubsystem* Manager = UDreamUIManagerWorldSubsystem::GetInstance(World);
-	if (Manager == nullptr)
+	UDreamUIInputSubsystem* InputSubsystem = UDreamUIInputSubsystem::Get(World);
+	if (InputSubsystem == nullptr)
 	{
 		// UDreamEventSystem::BeginPlay checks for one; better said here than hit there.
-		OutWhyNot = TEXT("the world has no DreamUI manager for the input actor's event system to enrol with");
+		OutWhyNot = TEXT("the world has no DreamUI input subsystem for the input actor's event system to enrol with");
 		return false;
 	}
-	if (UDreamEventSystem* Existing = Manager->GetEventSystemByUserIndex(0))
+	if (UDreamEventSystem* Existing = InputSubsystem->GetEventSystemByUserIndex(0))
 	{
-		OutWhyNot = FString::Printf(TEXT("the world already has an event system for player 0 (%s), and the UI manager refuses a second one for the same player"),
+		OutWhyNot = FString::Printf(TEXT("the world already has an event system for player 0 (%s), and the input subsystem refuses a second one for the same player"),
 			*Existing->GetPathName());
 		return false;
 	}

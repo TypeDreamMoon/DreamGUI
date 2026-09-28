@@ -4,6 +4,7 @@
 
 #include "Core/Components/DreamPanelLayouts.h"
 #include "Core/Components/DreamWidget.h"
+#include "Core/DreamUIInputServices.h"
 #include "Core/DreamUIManager.h"
 #include "Engine/Engine.h"
 #include "Engine/GameViewportClient.h"
@@ -12,10 +13,10 @@
 #include "Framework/Application/SlateApplication.h"
 #include "GameFramework/PlayerController.h"
 #include "Interaction/DreamDragDropOperation.h"
-#include "Interaction/DreamUIDragDrop.h"
 #include "Event/DreamPointerEventData.h"
 #include "Materials/MaterialInstanceDynamic.h"
 #include "Materials/MaterialInterface.h"
+#include "UObject/Interface.h"
 #include "UObject/UObjectIterator.h"
 
 namespace DreamUIWidgetLibraryLocal
@@ -118,20 +119,20 @@ UDreamDragDropOperation* UDreamUIWidgetLibrary::CreateDragDropOperation(
 
 bool UDreamUIWidgetLibrary::IsDragDropping(UObject* WorldContextObject)
 {
-	UDreamUIDragDropSubsystem* DragDrop = UDreamUIDragDropSubsystem::Get(WorldContextObject);
-	return DragDrop != nullptr && DragDrop->IsDragInProgress();
+	const UDreamUIInputServices* Services = UDreamUIInputServices::Get(WorldContextObject);
+	return Services != nullptr && Services->IsDragDropping();
 }
 
 UDreamDragDropOperation* UDreamUIWidgetLibrary::GetDragDroppingContent(UObject* WorldContextObject, int32 InPointerID)
 {
-	UDreamUIDragDropSubsystem* DragDrop = UDreamUIDragDropSubsystem::Get(WorldContextObject);
-	return DragDrop != nullptr ? DragDrop->GetDragOperationForPointer(InPointerID) : nullptr;
+	const UDreamUIInputServices* Services = UDreamUIInputServices::Get(WorldContextObject);
+	return Services != nullptr ? Services->GetDragOperationForPointer(InPointerID) : nullptr;
 }
 
 bool UDreamUIWidgetLibrary::CancelDragDrop(UObject* WorldContextObject)
 {
-	UDreamUIDragDropSubsystem* DragDrop = UDreamUIDragDropSubsystem::Get(WorldContextObject);
-	return DragDrop != nullptr && DragDrop->CancelActiveDrag();
+	UDreamUIInputServices* Services = UDreamUIInputServices::Get(WorldContextObject);
+	return Services != nullptr && Services->CancelActiveDrag();
 }
 
 bool UDreamUIWidgetLibrary::BeginDragWithOperation(UDreamPointerEventData* InPointerEvent,

@@ -14,6 +14,7 @@
 #include "Event/Interface/DreamPointerDragDropInterface.h"
 #include "Event/Interface/DreamPointerSelectDeselectInterface.h"
 #include "Core/DreamUIManager.h"
+#include "Event/DreamUIInputSubsystem.h"
 #include "Core/DreamUIWorldContext.h"
 #include "Event/DreamPointerEventData.h"
 #include "Event/InputModule/DreamBaseInputModule.h"
@@ -44,9 +45,9 @@ UDreamEventSystem* UDreamEventSystem::GetDreamEventSystemInstance(UObject* World
 {
 	if (auto World = GEngine->GetWorldFromContextObject(WorldContextObject, EGetWorldErrorMode::LogAndReturnNull))
 	{
-		if (auto DreamUIManager = UDreamUIManagerWorldSubsystem::GetInstance(World))
+		if (UDreamUIInputSubsystem* InputSubsystem = World->GetSubsystem<UDreamUIInputSubsystem>())
 		{
-			return DreamUIManager->GetEventSystemByUserIndex(UserIndex);
+			return InputSubsystem->GetEventSystemByUserIndex(UserIndex);
 		}
 	}
 	return nullptr;
@@ -54,27 +55,27 @@ UDreamEventSystem* UDreamEventSystem::GetDreamEventSystemInstance(UObject* World
 void UDreamEventSystem::BeginPlay()
 {
 	Super::BeginPlay();
-	auto DreamUIManager = UDreamUIManagerWorldSubsystem::GetInstance(this->GetWorld());
-	if (!ensureMsgf(DreamUIManager != nullptr, TEXT("%s: began play in a world without a DreamUI manager; it will route nothing."), *GetPathName()))
+	UDreamUIInputSubsystem* InputSubsystem = UDreamUIInputSubsystem::Get(this);
+	if (!ensureMsgf(InputSubsystem != nullptr, TEXT("%s: began play in a world without DreamUI input; it will route nothing."), *GetPathName()))
 	{
 		return;
 	}
-	RegisteredManager = DreamUIManager;
-	DreamUIManager->AddEventSystem(this);
+	RegisteredInputSubsystem = InputSubsystem;
+	InputSubsystem->AddEventSystem(this);
 }
 
-void UDreamEventSystem::UnregisterFromManager()
+void UDreamEventSystem::UnregisterFromInputSubsystem()
 {
 	// Remembered at registration rather than looked up again. By BeginDestroy GetWorld() is routinely
 	// null -- the component has already been detached from its actor -- so the lookup that used to
 	// stand in for unregistering simply did nothing, and a level reload left a dead event system in the
-	// manager's map. The next level's system was then refused as a duplicate and its UI never
-	// responded, which is the "reload the level and the UI is deaf" report.
-	if (UDreamUIManagerWorldSubsystem* Manager = RegisteredManager.Get())
+	// registry. The next level's system was then refused as a duplicate and its UI never responded,
+	// which is the "reload the level and the UI is deaf" report.
+	if (UDreamUIInputSubsystem* InputSubsystem = RegisteredInputSubsystem.Get())
 	{
-		Manager->RemoveEventSystem(this);
+		InputSubsystem->RemoveEventSystem(this);
 	}
-	RegisteredManager.Reset();
+	RegisteredInputSubsystem.Reset();
 }
 
 void UDreamEventSystem::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
@@ -108,34 +109,34 @@ void UDreamEventSystem::SetRaycastEnable(bool bEnable, bool bClearEvent)
 void UDreamEventSystem::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
 	//the symmetric half of BeginPlay, and the only one that runs while the world is still whole
-	UnregisterFromManager();
+	UnregisterFromInputSubsystem();
 	Super::EndPlay(EndPlayReason);
 }
 void UDreamEventSystem::BeginDestroy()
 {
 	//a backstop for a component destroyed without an EndPlay; a second call is a no-op
-	UnregisterFromManager();
+	UnregisterFromInputSubsystem();
 	Super::BeginDestroy();
 }
 
 void UDreamEventSystem::SetUserIndex(int Value)
 {
 	if (UserIndex == Value)return;
-	// The manager's map is keyed by user index, so the entry has to move with the field. Writing the
-	// field alone would leave this event system registered under the player it used to serve and
-	// unfindable under the one it now serves -- which is the whole point of the index.
+	// The registry is keyed by user index, so the entry has to move with the field. Writing the field
+	// alone would leave this event system registered under the player it used to serve and unfindable
+	// under the one it now serves -- which is the whole point of the index.
 	//
-	// The manager is looked up rather than only read from RegisteredManager, because that back-pointer
-	// is set in BeginPlay and this is legitimately called before it: the preset actor points its event
-	// system at the right player as soon as it knows which one that is.
-	UDreamUIManagerWorldSubsystem* Manager = RegisteredManager.IsValid()
-		? RegisteredManager.Get()
-		: UDreamUIManagerWorldSubsystem::GetInstance(GetWorld());
+	// The input subsystem is looked up rather than only read from RegisteredInputSubsystem, because that
+	// back-pointer is set in BeginPlay and this is legitimately called before it: the preset actor points
+	// its event system at the right player as soon as it knows which one that is.
+	UDreamUIInputSubsystem* InputSubsystem = RegisteredInputSubsystem.IsValid()
+		? RegisteredInputSubsystem.Get()
+		: UDreamUIInputSubsystem::Get(this);
 	//"registered" means the map really holds THIS one under the old index, not merely that a map exists
-	const bool bWasRegistered = Manager != nullptr && Manager->GetEventSystemByUserIndex(UserIndex) == this;
+	const bool bWasRegistered = InputSubsystem != nullptr && InputSubsystem->GetEventSystemByUserIndex(UserIndex) == this;
 	if (bWasRegistered)
 	{
-		Manager->RemoveEventSystem(this);
+		InputSubsystem->RemoveEventSystem(this);
 	}
 	UserIndex = Value;
 	// Pointers born under the old index carry it; they belong to the player who was using them, and
@@ -144,8 +145,8 @@ void UDreamEventSystem::SetUserIndex(int Value)
 	PointerWorldTargetMap.Reset();
 	if (bWasRegistered)
 	{
-		Manager->AddEventSystem(this);
-		RegisteredManager = Manager;
+		InputSubsystem->AddEventSystem(this);
+		RegisteredInputSubsystem = InputSubsystem;
 	}
 }
 

@@ -14,7 +14,7 @@
 class UDreamPointerEventData;
 class UDreamGestureEventData;
 class UDreamBaseInputModule;
-class UDreamUIManagerWorldSubsystem;
+class UDreamUIInputSubsystem;
 class APlayerController;
 class ULocalPlayer;
 
@@ -80,13 +80,13 @@ protected:
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 	virtual void BeginDestroy()override;
 
-	/** Drop this event system's registration from the UI manager. Idempotent; called from both ends. */
-	void UnregisterFromManager();
+	/** Drop this event system's registration from the world's input subsystem. Idempotent; called from both ends. */
+	void UnregisterFromInputSubsystem();
 	/**
-	 * The manager this registered with. Remembered rather than looked up again on the way out, because
-	 * GetWorld() is routinely null by BeginDestroy and the lookup would silently find nothing.
+	 * The input subsystem this registered with. Remembered rather than looked up again on the way out,
+	 * because GetWorld() is routinely null by BeginDestroy and the lookup would silently find nothing.
 	 */
-	TWeakObjectPtr<UDreamUIManagerWorldSubsystem> RegisteredManager;
+	TWeakObjectPtr<UDreamUIInputSubsystem> RegisteredInputSubsystem;
 
 protected:
 

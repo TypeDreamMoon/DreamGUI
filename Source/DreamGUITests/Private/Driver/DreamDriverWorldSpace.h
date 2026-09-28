@@ -61,7 +61,7 @@ public:
  *
  * Everything here builds through the runtime's own verbs -- UDreamUIBPLibrary::ConstructWidget and
  * AttachWidgetToSceneComponent for a panel, the geometry source's SetCanvas for a render-target surface,
- * the raycaster registered the way UDreamUIManagerWorldSubsystem::EnsureInteractionForPlayer registers
+ * the raycaster registered the way UDreamUIInputSubsystem::EnsureInteractionForPlayer registers
  * one -- so what a test drives is what a game would have built, not a fixture's idea of it.
  *
  * CONTROLS ON A PANEL are made with the rig's own MakeControl / MakeWidget, passing the panel's root as
@@ -116,7 +116,7 @@ namespace DreamDriverWorld
 	 * (the rig's own screen raycaster is enrolled the same way). Enrolled, it is the answer
 	 * EnsureInteractionForPlayer finds when anything later asks for a world pointer for this player, so it
 	 * is never doubled. Attach it BEFORE anything that would ask -- a UDreamWorldWidgetComponent beginning
-	 * play -- because if the manager has already made one, two rays would trace for one player; that case
+	 * play -- because if the input subsystem has already made one, two rays would trace for one player; that case
 	 * is reported to the running test and nothing is attached.
 	 */
 	UDreamDriverWorldSpaceRaycaster* AttachWorldPointer(FDreamDriverRig& InRig, const FMinimalViewInfo& InView, EDreamWorldPointerSource InSource);

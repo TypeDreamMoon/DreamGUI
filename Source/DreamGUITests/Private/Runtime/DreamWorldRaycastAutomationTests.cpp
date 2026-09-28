@@ -10,6 +10,7 @@
 #include "Core/Components/DreamVisualEmpty.h"
 #include "Core/Components/DreamWidget.h"
 #include "Core/DreamUIManager.h"
+#include "Event/DreamUIInputSubsystem.h"
 #include "DreamUIBPLibrary.h"
 #include "Engine/World.h"
 #include "Event/DreamEventSystem.h"
@@ -338,8 +339,8 @@ bool FDreamWorldRaycastEnsureInteractionIsIdempotentTest::RunTest(const FString&
 	{
 		return false;
 	}
-	UDreamUIManagerWorldSubsystem* Manager = UDreamUIManagerWorldSubsystem::GetInstance(Scope.World);
-	if (!TestNotNull(TEXT("A manager for it"), Manager))
+	UDreamUIInputSubsystem* InputSubsystem = UDreamUIInputSubsystem::Get(Scope.World);
+	if (!TestNotNull(TEXT("An input subsystem for it"), InputSubsystem))
 	{
 		return false;
 	}
@@ -350,10 +351,10 @@ bool FDreamWorldRaycastEnsureInteractionIsIdempotentTest::RunTest(const FString&
 
 	// Called on every world-space host's BeginPlay, so "twice" is the ordinary case rather than a
 	// pathological one: two panels in a level means two calls before the first frame is drawn.
-	Manager->EnsureInteractionForPlayer(0, EDreamInteractionKind::World);
-	Manager->EnsureInteractionForPlayer(0, EDreamInteractionKind::World);
+	InputSubsystem->EnsureInteractionForPlayer(0, EDreamInteractionKind::World);
+	InputSubsystem->EnsureInteractionForPlayer(0, EDreamInteractionKind::World);
 
-	AActor* Host = Manager->GetInteractionHost(0);
+	AActor* Host = InputSubsystem->GetInteractionHost(0);
 	if (!TestNotNull(TEXT("A host actor was made for player 0"), Host))
 	{
 		return false;
@@ -365,8 +366,8 @@ bool FDreamWorldRaycastEnsureInteractionIsIdempotentTest::RunTest(const FString&
 
 	// The other kind shares the host. A player pointing at both a screen UI and a world panel is one
 	// player, so two actors that mean the same thing would be one too many.
-	Manager->EnsureInteractionForPlayer(0, EDreamInteractionKind::Screen);
-	TestEqual(TEXT("The screen raycaster joins the same host"), Manager->GetInteractionHost(0), Host);
+	InputSubsystem->EnsureInteractionForPlayer(0, EDreamInteractionKind::Screen);
+	TestEqual(TEXT("The screen raycaster joins the same host"), InputSubsystem->GetInteractionHost(0), Host);
 	TestEqual(TEXT("...and the host now carries one of each"),
 		CountComponentsOfClass(Host, UDreamScreenSpaceRaycaster::StaticClass()), 1);
 	TestEqual(TEXT("...without a second world one appearing"),
@@ -377,8 +378,8 @@ bool FDreamWorldRaycastEnsureInteractionIsIdempotentTest::RunTest(const FString&
 	// non-first player never gets one spawned for them in any case -- two copies of the default actor
 	// would carry the same index and make each player read the other's input.
 	PlaceEventSystem(Scope.World, 1);
-	Manager->EnsureInteractionForPlayer(1, EDreamInteractionKind::World);
-	AActor* SecondHost = Manager->GetInteractionHost(1);
+	InputSubsystem->EnsureInteractionForPlayer(1, EDreamInteractionKind::World);
+	AActor* SecondHost = InputSubsystem->GetInteractionHost(1);
 	if (TestNotNull(TEXT("A host actor for player 1"), SecondHost))
 	{
 		TestNotEqual(TEXT("...which is not player 0's"), SecondHost, Host);
@@ -402,8 +403,8 @@ bool FDreamWorldRaycastAuthoredRaycasterWinsTest::RunTest(const FString& Paramet
 	{
 		return false;
 	}
-	UDreamUIManagerWorldSubsystem* Manager = UDreamUIManagerWorldSubsystem::GetInstance(Scope.World);
-	if (!TestNotNull(TEXT("A manager for it"), Manager))
+	UDreamUIInputSubsystem* InputSubsystem = UDreamUIInputSubsystem::Get(Scope.World);
+	if (!TestNotNull(TEXT("An input subsystem for it"), InputSubsystem))
 	{
 		return false;
 	}
@@ -431,13 +432,13 @@ bool FDreamWorldRaycastAuthoredRaycasterWinsTest::RunTest(const FString& Paramet
 	// InitializeComponents activates it before any BeginPlay, which is the state this stands in for.
 	Placed->ActivateRaycaster();
 
-	Manager->EnsureInteractionForPlayer(0, EDreamInteractionKind::World);
+	InputSubsystem->EnsureInteractionForPlayer(0, EDreamInteractionKind::World);
 	TestNull(TEXT("No host is made when the player already has a world raycaster"),
-		Manager->GetInteractionHost(0));
+		InputSubsystem->GetInteractionHost(0));
 
 	// It is the KIND that is matched, not "any raycaster": the same player still needs a screen one.
-	Manager->EnsureInteractionForPlayer(0, EDreamInteractionKind::Screen);
-	AActor* Host = Manager->GetInteractionHost(0);
+	InputSubsystem->EnsureInteractionForPlayer(0, EDreamInteractionKind::Screen);
+	AActor* Host = InputSubsystem->GetInteractionHost(0);
 	if (TestNotNull(TEXT("A host is made for the kind that is missing"), Host))
 	{
 		TestEqual(TEXT("...carrying the screen raycaster"),

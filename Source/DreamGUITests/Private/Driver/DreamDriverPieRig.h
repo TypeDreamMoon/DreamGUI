@@ -314,7 +314,7 @@ public:
 	/**
 	 * The production world-space raycaster, for the rig's player, on the rig's host actor: the one that
 	 * deprojects the pointer through ULocalPlayer::GetProjectionData. Placed rather than left to
-	 * UDreamUIManagerWorldSubsystem::EnsureInteractionForPlayer, which is only asked by world widget
+	 * UDreamUIInputSubsystem::EnsureInteractionForPlayer, which is only asked by world widget
 	 * components and screen pages -- neither of which a test's hand-built panel is.
 	 */
 	UDreamWorldSpaceRaycaster* AddWorldPointer();

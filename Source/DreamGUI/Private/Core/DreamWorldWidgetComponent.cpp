@@ -4,6 +4,7 @@
 
 #include "DreamGUI.h"
 #include "DreamUIBPLibrary.h"
+#include "Core/DreamUIInputServices.h"
 #include "Core/DreamUIManager.h"
 #include "Core/DreamUIRuntimeObject.h"
 #include "Core/DreamUserWidget.h"
@@ -22,8 +23,8 @@ void UDreamWorldWidgetComponent::BeginPlay()
 	{
 		return;
 	}
-	UDreamUIManagerWorldSubsystem* Manager = UDreamUIManagerWorldSubsystem::GetInstance(World);
-	if (Manager == nullptr)
+	UDreamUIInputServices* Services = UDreamUIInputServices::Get(World);
+	if (Services == nullptr)
 	{
 		return;
 	}
@@ -43,12 +44,12 @@ void UDreamWorldWidgetComponent::BeginPlay()
 		// No local player yet: a world built in code, or one whose players arrive after this. Player 0
 		// is the answer the screen subsystem gives when no controller is named, so the objects created
 		// under that index are the ones the first player to arrive will find.
-		Manager->EnsureInteractionForPlayer(0, EDreamInteractionKind::World);
+		Services->EnsureInteractionForPlayer(0, EDreamInteractionKind::World);
 		return;
 	}
 	for (int32 PlayerIndex = 0; PlayerIndex < LocalPlayerCount; ++PlayerIndex)
 	{
-		Manager->EnsureInteractionForPlayer(PlayerIndex, EDreamInteractionKind::World);
+		Services->EnsureInteractionForPlayer(PlayerIndex, EDreamInteractionKind::World);
 	}
 }
 

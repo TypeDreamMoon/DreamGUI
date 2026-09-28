@@ -4,15 +4,14 @@
 #include "Core/DreamUIEachBindingHandler.h"
 #include "Core/DreamWidgetTree.h"
 #include "Core/DreamWidgetGeneratedClass.h"
+#include "Core/DreamUIInputServices.h"
 #include "Core/DreamUIManager.h"
 #include "Core/DreamUIRuntimeObject.h"
 #include "Core/DreamScreenUISubsystem.h"
 #include "Core/Components/DreamCanvas.h"
-#include "Event/DreamEventSystem.h"
 #include "Event/DreamGestureEventData.h"
 #include "Event/DreamKeyEventData.h"
 #include "Interaction/DreamDragDropOperation.h"
-#include "Interaction/DreamUINavigationScope.h"
 #include "Kismet/GameplayStatics.h"
 #include "Sound/SoundBase.h"
 #include "Animation/DreamWidgetAnimation.h"
@@ -841,22 +840,16 @@ FDreamUIActionHandle UDreamUserWidget::ListenForInputAction(const FDataTableRowH
 	FDreamUIActionExecutedDelegate InCallback, bool bDisplayInActionBar)
 {
 	FDreamUIActionHandle Handle;
-	UDreamUIActionRouter* Router = UDreamUIActionRouter::Get(this);
-	if (Router == nullptr)
+	UDreamUIInputServices* Services = UDreamUIInputServices::Get(this);
+	if (Services == nullptr || !Services->CanListenForActions())
 	{
 		UE_LOG(DreamGUI, Warning, TEXT("[%s].%d No action router in this world; '%s' heard nothing."),
 			ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *GetPathDisplayName());
 		return Handle;
 	}
-	// Scoped to the screen this widget is inside, so the binding is live only while that screen is in
-	// front. A widget with no scope above it binds globally, which is the honest reading of "there is
-	// no screen this belongs to".
-	UDreamUINavigationScope* Scope = nullptr;
-	for (UDreamWidget* Walker = this; IsValid(Walker) && Scope == nullptr; Walker = Walker->GetParent())
-	{
-		Scope = Walker->GetComponent<UDreamUINavigationScope>();
-	}
-	Handle = Router->RegisterAction(Scope, InAction, InCallback, GetOwningPlayerIndex(), bDisplayInActionBar);
+	// Scoped by the input system to the screen this widget is inside, so the binding is live only while
+	// that screen is in front; with no screen above it, it binds globally.
+	Handle = Services->RegisterWidgetAction(this, InAction, InCallback, GetOwningPlayerIndex(), bDisplayInActionBar);
 	if (Handle.IsValidHandle())
 	{
 		ListenedInputActions.Add(Handle);
@@ -866,26 +859,26 @@ FDreamUIActionHandle UDreamUserWidget::ListenForInputAction(const FDataTableRowH
 
 void UDreamUserWidget::StopListeningForInputAction(const FDreamUIActionHandle& InHandle)
 {
-	if (UDreamUIActionRouter* Router = UDreamUIActionRouter::Get(this))
+	if (UDreamUIInputServices* Services = UDreamUIInputServices::Get(this))
 	{
-		Router->UnregisterAction(InHandle);
+		Services->UnregisterAction(InHandle);
 	}
 	ListenedInputActions.RemoveAll([&InHandle](const FDreamUIActionHandle& Held) { return Held == InHandle; });
 }
 
 void UDreamUserWidget::StopListeningForAllInputActions()
 {
-	UDreamUIActionRouter* Router = UDreamUIActionRouter::Get(this);
+	UDreamUIInputServices* Services = UDreamUIInputServices::Get(this);
 	// A copy: UnregisterAction is free to do anything, and the array is this widget's own bookkeeping.
 	const TArray<FDreamUIActionHandle> Held = ListenedInputActions;
 	ListenedInputActions.Reset();
-	if (Router == nullptr)
+	if (Services == nullptr)
 	{
 		return;
 	}
 	for (const FDreamUIActionHandle& Handle : Held)
 	{
-		Router->UnregisterAction(Handle);
+		Services->UnregisterAction(Handle);
 	}
 }
 
@@ -1381,9 +1374,8 @@ void UDreamUserWidgetEventBridge::TickPointerMoveWatch()
 		bHasWatchedPointerPoint = false;
 		return;
 	}
-	UDreamEventSystem* EventSystem = UDreamEventSystem::GetDreamEventSystemInstance(
-		UserWidget, UserWidget->GetOwningPlayerIndex());
-	UDreamPointerEventData* PointerEvent = IsValid(EventSystem) ? EventSystem->GetPointerEventData(0, false) : nullptr;
+	const UDreamUIInputServices* Services = UDreamUIInputServices::Get(UserWidget);
+	UDreamPointerEventData* PointerEvent = Services != nullptr ? Services->FindPointer(UserWidget->GetOwningPlayerIndex(), 0) : nullptr;
 	// Over this widget means over it or anything inside it, which is what the enter stack records and
 	// what "the mouse is over my button" means to the widget that owns the button.
 	const bool bIsOverThisWidget = PointerEvent != nullptr

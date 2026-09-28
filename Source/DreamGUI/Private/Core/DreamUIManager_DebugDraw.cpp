@@ -13,7 +13,6 @@
 #include "Core/Components/DreamCanvas.h"
 #include "Event/DreamBaseRaycaster.h"
 #include "Engine/World.h"
-#include "Interaction/UISelectable.h"
 #include "Core/DreamUISettings.h"
 #include "Core/DreamUIFontData_FreeTypeRender.h"
 #include "Core/Components/DreamVisual.h"
@@ -177,165 +176,6 @@ void UDreamUIManagerWorldSubsystem::DrawNavigationArrow(UWorld* InWorld, const T
 		LineMesh->LocalToWorldMatrix = FMatrix::Identity;
 		LineMesh->UpdateLocalBounds();
 		LineMesh->Render(ViewExtension, ScreenOrWorld);
-	}
-}
-
-void UDreamUIManagerWorldSubsystem::DrawNavigationVisualizerOnUISelectable(UWorld* InWorld, UUISelectable* InSelectable, bool IsScreenSpace)
-{
-	auto SourceWidget = InSelectable->GetWidget();
-	if (!IsValid(SourceWidget))return;
-	const FColor Color = GetSelection()->IsSelected(SourceWidget) ? FColor(255, 255, 0, 255) : FColor(140, 140, 0, 255);
-	constexpr float Offset = 2;
-	constexpr float ArrowSize = 5;
-	
-	auto GetArrowSizeScaledByDistanceToCamera = [=, this](FVector WorldPoint)
-	{
-		if (this->GetWorld()->IsGameWorld())
-		{
-			if (auto PC = this->GetWorld()->GetFirstPlayerController())
-			{
-				if (auto CameraManager = PC->PlayerCameraManager)
-				{
-					auto ViewLocation = CameraManager->GetCameraLocation();
-					float Distance = FVector::Distance(WorldPoint, ViewLocation);
-					return Distance * 0.01f;
-				}
-			}
-		}
-		else
-		{
-			if (auto ViewportClient = GetEditorViewportClient())
-			{
-				if (ViewportClient->IsOrtho())
-				{
-					return ViewportClient->GetOrthoZoom() * 0.001f; 
-				}
-				else
-				{
-					auto ViewLocation = ViewportClient->GetViewLocation();
-					float Distance = FVector::Distance(WorldPoint, ViewLocation);
-					return Distance * 0.01f;
-				}
-			}
-		}
-		return ArrowSize;
-	};
-
-	if (auto ToLeftComp = InSelectable->FindSelectableOnLeft())
-	{
-		if (ToLeftComp != InSelectable)
-		{
-			auto SourceLeftPoint = FVector(0, SourceWidget->GetLocalSpaceLeft(), 0.5f * (SourceWidget->GetLocalSpaceTop() + SourceWidget->GetLocalSpaceBottom()) + Offset);
-			SourceLeftPoint = SourceWidget->GetWorldTransform().TransformPosition(SourceLeftPoint);
-			auto DestWidget = ToLeftComp->GetWidget();
-			auto LocalDestRightPoint = FVector(0, DestWidget->GetLocalSpaceRight(), 0.5f * (DestWidget->GetLocalSpaceTop() + DestWidget->GetLocalSpaceBottom()) + Offset);
-			auto DestRightPoint = DestWidget->GetWorldTransform().TransformPosition(LocalDestRightPoint);
-			float Distance = FVector::Distance(SourceLeftPoint, DestRightPoint);
-			Distance *= 0.2f;
-			auto ScaledArrowSize = ArrowSize;
-			if (!IsScreenSpace)
-			{
-				ScaledArrowSize = GetArrowSizeScaledByDistanceToCamera(DestRightPoint);
-			}
-			auto ArrowPointA = DestWidget->GetWorldTransform().TransformPosition(LocalDestRightPoint + FVector(0, ScaledArrowSize, ScaledArrowSize));
-			auto ArrowPointB = DestWidget->GetWorldTransform().TransformPosition(LocalDestRightPoint + FVector(0, ScaledArrowSize, -ScaledArrowSize));
-			DrawNavigationArrow(InWorld
-				, {
-					SourceLeftPoint,
-					SourceLeftPoint - SourceWidget->GetRightVector() * Distance,
-					DestRightPoint + DestWidget->GetRightVector() * Distance,
-					DestRightPoint,
-				}
-				, ArrowPointA, ArrowPointB
-				, Color, InSelectable, FString::Printf(TEXT("%s.NavigationLeft"), *InSelectable->GetWidget()->GetDisplayName()), IsScreenSpace);
-		}
-	}
-	if (auto ToRightComp = InSelectable->FindSelectableOnRight())
-	{
-		if (ToRightComp != InSelectable)
-		{
-			auto SourceRightPoint = FVector(0, SourceWidget->GetLocalSpaceRight(), 0.5f * (SourceWidget->GetLocalSpaceTop() + SourceWidget->GetLocalSpaceBottom()) - Offset);
-			SourceRightPoint = SourceWidget->GetWorldTransform().TransformPosition(SourceRightPoint);
-			auto DestWidget = ToRightComp->GetWidget();
-			auto LocalDestLeftPoint = FVector(0, DestWidget->GetLocalSpaceLeft(), 0.5f * (DestWidget->GetLocalSpaceTop() + DestWidget->GetLocalSpaceBottom()) - Offset);
-			auto DestLeftPoint = DestWidget->GetWorldTransform().TransformPosition(LocalDestLeftPoint);
-			float Distance = FVector::Distance(SourceRightPoint, DestLeftPoint);
-			Distance *= 0.2f;
-			auto ScaledArrowSize = ArrowSize;
-			if (!IsScreenSpace)
-			{
-				ScaledArrowSize = GetArrowSizeScaledByDistanceToCamera(DestLeftPoint);
-			}
-			auto ArrowPointA = DestWidget->GetWorldTransform().TransformPosition(LocalDestLeftPoint + FVector(0, -ScaledArrowSize, ScaledArrowSize));
-			auto ArrowPointB = DestWidget->GetWorldTransform().TransformPosition(LocalDestLeftPoint + FVector(0, -ScaledArrowSize, -ScaledArrowSize));
-			DrawNavigationArrow(InWorld
-				, {
-					SourceRightPoint,
-					SourceRightPoint + SourceWidget->GetRightVector() * Distance,
-					DestLeftPoint - DestWidget->GetRightVector() * Distance,
-					DestLeftPoint,
-				}
-				, ArrowPointA, ArrowPointB
-				, Color, InSelectable, FString::Printf(TEXT("%s.NavigationRight"), *InSelectable->GetWidget()->GetDisplayName()), IsScreenSpace);
-		}
-	}
-	if (auto ToDownComp = InSelectable->FindSelectableOnDown())
-	{
-		if (ToDownComp != InSelectable)
-		{
-			auto SourceDownPoint = FVector(0, 0.5f * (SourceWidget->GetLocalSpaceLeft() + SourceWidget->GetLocalSpaceRight()) - Offset, SourceWidget->GetLocalSpaceBottom());
-			SourceDownPoint = SourceWidget->GetWorldTransform().TransformPosition(SourceDownPoint);
-			auto DestWidget = ToDownComp->GetWidget();
-			auto LocalDestUpPoint = FVector(0, 0.5f * (DestWidget->GetLocalSpaceLeft() + DestWidget->GetLocalSpaceRight()) - Offset, DestWidget->GetLocalSpaceTop());
-			auto DestUpPoint = DestWidget->GetWorldTransform().TransformPosition(LocalDestUpPoint);
-			float Distance = FVector::Distance(SourceDownPoint, DestUpPoint);
-			Distance *= 0.2f;
-			auto ScaledArrowSize = ArrowSize;
-			if (!IsScreenSpace)
-			{
-				ScaledArrowSize = GetArrowSizeScaledByDistanceToCamera(DestUpPoint);
-			}
-			auto ArrowPointA = DestWidget->GetWorldTransform().TransformPosition(LocalDestUpPoint + FVector(0, ScaledArrowSize, ScaledArrowSize));
-			auto ArrowPointB = DestWidget->GetWorldTransform().TransformPosition(LocalDestUpPoint + FVector(0, -ScaledArrowSize, ScaledArrowSize));
-			DrawNavigationArrow(InWorld
-				, {
-					SourceDownPoint,
-					SourceDownPoint - SourceWidget->GetUpVector() * Distance,
-					DestUpPoint + DestWidget->GetUpVector() * Distance,
-					DestUpPoint,
-				}
-				, ArrowPointA, ArrowPointB
-				, Color, InSelectable, FString::Printf(TEXT("%s.NavigationDown"), *InSelectable->GetWidget()->GetDisplayName()), IsScreenSpace);
-		}
-	}
-	if (auto ToUpComp = InSelectable->FindSelectableOnUp())
-	{
-		if (ToUpComp != InSelectable)
-		{
-			auto SourceUpPoint = FVector(0, 0.5f * (SourceWidget->GetLocalSpaceLeft() + SourceWidget->GetLocalSpaceRight()) + Offset, SourceWidget->GetLocalSpaceTop());
-			SourceUpPoint = SourceWidget->GetWorldTransform().TransformPosition(SourceUpPoint);
-			auto DestWidget = ToUpComp->GetWidget();
-			auto LocalDestDownPoint = FVector(0, 0.5f * (DestWidget->GetLocalSpaceLeft() + DestWidget->GetLocalSpaceRight()) + Offset, DestWidget->GetLocalSpaceBottom());
-			auto DestDownPoint = DestWidget->GetWorldTransform().TransformPosition(LocalDestDownPoint);
-			float Distance = FVector::Distance(SourceUpPoint, DestDownPoint);
-			Distance *= 0.2f;
-			auto ScaledArrowSize = ArrowSize;
-			if (!IsScreenSpace)
-			{
-				ScaledArrowSize = GetArrowSizeScaledByDistanceToCamera(DestDownPoint);
-			}
-			auto ArrowPointA = DestWidget->GetWorldTransform().TransformPosition(LocalDestDownPoint + FVector(0, ScaledArrowSize, -ScaledArrowSize));
-			auto ArrowPointB = DestWidget->GetWorldTransform().TransformPosition(LocalDestDownPoint + FVector(0, -ScaledArrowSize, -ScaledArrowSize));
-			DrawNavigationArrow(InWorld
-				, {
-					SourceUpPoint,
-					SourceUpPoint + SourceWidget->GetUpVector() * Distance,
-					DestDownPoint - DestWidget->GetUpVector() * Distance,
-					DestDownPoint,
-				}
-				, ArrowPointA, ArrowPointB
-				, Color, InSelectable, FString::Printf(TEXT("%s.NavigationUp"), *InSelectable->GetWidget()->GetDisplayName()), IsScreenSpace);
-		}
 	}
 }
 
@@ -622,26 +462,9 @@ void UDreamUIManagerWorldSubsystem::DrawHelperGizmo()
 		}
 	}
 
-	if (Settings->bDrawSelectableNavigationVisualizer)
-	{
-		for (auto& Selectable : AllSelectableArray)
-		{
-			if (!Selectable.IsValid())continue;
-			if (!IsValid(Selectable->GetWorld()))continue;
-			if (!IsValid(Selectable->GetWidget()))continue;
-			if (!IsValid(Selectable->GetWidget()->GetRenderCanvas()))continue;
-			if (!Selectable->GetWidget()->GetInteractableInHierarchy())continue;
-
-			bool bIsScreenSpace = false;
-			if (DreamUI::IsGameWorld(Selectable.Get()))
-			{
-				auto RenderCanvas = Selectable->GetWidget()->GetRenderCanvas();
-				bIsScreenSpace = RenderCanvas->IsRenderToScreenSpace() || RenderCanvas->IsRenderToRenderTarget();
-			}
-			DrawNavigationVisualizerOnUISelectable(Selectable->GetWorld(), Selectable.Get()
-				, bIsScreenSpace);
-		}
-	}
+	// The rest of the helpers belong to whoever knows what they show: the selectables' navigation arrows
+	// are the input system's.
+	OnDrawHelperGizmo.Broadcast(this);
 }
 #endif
 

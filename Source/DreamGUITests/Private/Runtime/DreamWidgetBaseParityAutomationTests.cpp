@@ -7,6 +7,7 @@
 #include "Core/Components/DreamPanelLayouts.h"
 #include "Core/Components/DreamWidget.h"
 #include "Core/DreamUIManager.h"
+#include "Event/DreamUIInputSubsystem.h"
 #include "Core/DreamUserWidget.h"
 #include "Engine/World.h"
 #include "Event/DreamEventSystem.h"
@@ -94,7 +95,7 @@ namespace DreamWidgetBaseParityTestLocal
 	};
 
 	/**
-	 * An event system registered with the manager, which is what the hover and capture queries look
+	 * An event system registered with the input subsystem, which is what the hover and capture queries look
 	 * up. Registered by hand: a world built for a test never begins play, registration is the part
 	 * of BeginPlay these queries depend on, and BeginPlay itself is not a test's to call.
 	 */
@@ -103,9 +104,9 @@ namespace DreamWidgetBaseParityTestLocal
 		AActor* Host = World->SpawnActor<AActor>();
 		UDreamEventSystem* EventSystem = NewObject<UDreamEventSystem>(Host);
 		EventSystem->RegisterComponent();
-		if (UDreamUIManagerWorldSubsystem* Manager = UDreamUIManagerWorldSubsystem::GetInstance(World))
+		if (UDreamUIInputSubsystem* InputSubsystem = UDreamUIInputSubsystem::Get(World))
 		{
-			Manager->AddEventSystem(EventSystem);
+			InputSubsystem->AddEventSystem(EventSystem);
 		}
 		return EventSystem;
 	}

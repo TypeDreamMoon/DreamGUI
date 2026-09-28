@@ -106,22 +106,6 @@ void UDreamUIManagerWorldSubsystem::Deinitialize()
 	FCoreDelegates::OnEnginePreExit.RemoveAll(this);
 	OnDeinitialize.Broadcast();
 #endif
-	// The interaction objects this subsystem spawned are its to take away again. They are transient,
-	// so a level change would not carry them anyway; destroying them here is what keeps a PIE session
-	// that starts and stops repeatedly from leaving a host actor behind on every run.
-	for (TPair<int32, TObjectPtr<AActor>>& HostPair : InteractionHosts)
-	{
-		if (IsValid(HostPair.Value))
-		{
-			HostPair.Value->Destroy();
-		}
-	}
-	InteractionHosts.Reset();
-	if (IsValid(CreatedEventSystemActor))
-	{
-		CreatedEventSystemActor->Destroy();
-		CreatedEventSystemActor = nullptr;
-	}
 	DestroyRegisteredWidgetTrees();
 	if (MainViewportViewExtension.IsValid())
 	{

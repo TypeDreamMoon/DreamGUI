@@ -350,8 +350,8 @@ private:
 	void ExecuteLoadCallbacks(FName InName, FPendingPageLoad& InPendingLoad, UDreamWidget* InPage, bool bSuccess);
 	void DestroyPage(UDreamWidget* InRoot);
 	/**
-	 * Make sure this player can point at their screen: the manager supplies the event system and the
-	 * screen raycaster, and this binds that raycaster to InRootCanvas.
+	 * Make sure this player can point at their screen: the input system supplies the event system and the
+	 * screen raycaster and binds that raycaster to InRootCanvas (UDreamUIInputServices::PrepareScreenInteraction).
 	 */
 	void EnsureInteractionObjects(UDreamCanvas* InRootCanvas, int32 InPlayerIndex);
 

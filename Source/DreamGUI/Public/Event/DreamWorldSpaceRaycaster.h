@@ -24,7 +24,7 @@ enum class EDreamWorldPointerSource : uint8
  * matches. Adding, moving or destroying a panel is therefore nothing this component has to be told
  * about, and a panel is not required to carry an interaction component of its own.
  *
- * UDreamUIManagerWorldSubsystem::EnsureInteractionForPlayer creates one on a transient
+ * UDreamUIInputSubsystem::EnsureInteractionForPlayer creates one on a transient
  * "DreamInteractionHost_P%d" actor for any player that needs it. Placing one by hand on any actor
  * overrides that: the manager sees a world-space raycaster already speaking for that UserIndex and
  * leaves it alone, so an authored raycaster with its own pointer source, ray length, world occlusion
@@ -79,7 +79,7 @@ protected:
 	 *
 	 * On by default. Off, a world pointer clicked straight through walls into panels the player could
 	 * not see -- one in the next room, one behind a pillar -- and never reached a render-target surface
-	 * at all; and the raycaster UDreamUIManagerWorldSubsystem::EnsureInteractionForPlayer makes for a
+	 * at all; and the raycaster UDreamUIInputSubsystem::EnsureInteractionForPlayer makes for a
 	 * player is a default one, so a project that relied on it had both problems and no setting in sight
 	 * to explain them. The price is that one trace per pointer per frame.
 	 *

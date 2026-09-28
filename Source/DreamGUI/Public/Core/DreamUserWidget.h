@@ -26,9 +26,11 @@
 // FDreamUIAnimationHandle is passed and returned by value below, so it is a definition here rather
 // than a forward declaration.
 #include "Animation/DreamWidgetAnimationComponent.h"
-// FDreamUIActionHandle and FDreamUIActionExecutedDelegate cross the ListenForInputAction surface by
-// value, so definitions rather than forward declarations.
-#include "Interaction/DreamUIActionRouter.h"
+// FDreamUIActionHandle, FDreamUIActionExecutedDelegate and FDataTableRowHandle cross the
+// ListenForInputAction surface by value, so definitions rather than forward declarations. The router
+// that resolves the action is the input system's, reached through UDreamUIInputServices.
+#include "Core/DreamUIActionTypes.h"
+#include "Engine/DataTable.h"
 #include "DreamUserWidget.generated.h"
 
 class UDreamWidgetTree;

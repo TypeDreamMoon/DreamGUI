@@ -5,12 +5,12 @@
 
 #include "Core/Components/DreamCanvas.h"
 #include "Core/Components/DreamWidget.h"
+#include "Core/DreamUIInputServices.h"
 #include "Core/DreamUIManager.h"
 #include "Engine/AssetManager.h"
 #include "Engine/Engine.h"
 #include "Engine/StreamableManager.h"
 #include "Engine/World.h"
-#include "Event/DreamScreenSpaceRaycaster.h"
 #include "GameFramework/Actor.h"
 #include "GameFramework/PlayerController.h"
 #include "DreamGUI.h"
@@ -240,41 +240,11 @@ void UDreamScreenUISubsystem::EnsureInteractionObjects(UDreamCanvas* InRootCanva
 	{
 		return;
 	}
-	UDreamUIManagerWorldSubsystem* Manager = UDreamUIManagerWorldSubsystem::GetInstance(GetWorld());
-	if (Manager == nullptr)
+	// The event system and the raycaster are the input system's to create -- a world-space host needs the
+	// same pair -- and so is pointing this player's screen raycaster at the canvas it projects through.
+	if (UDreamUIInputServices* Services = UDreamUIInputServices::Get(this))
 	{
-		return;
-	}
-	// Creating the event system and the raycaster is the manager's job, because a world-space host
-	// needs exactly the same pair and neither of them is anything to do with a screen. What is left
-	// here is the part that IS: telling this player's screen raycaster which canvas it projects
-	// through, which the manager has no way to know.
-	Manager->EnsureInteractionForPlayer(InPlayerIndex, EDreamInteractionKind::Screen);
-
-	for (const TWeakObjectPtr<UDreamBaseRaycaster>& Raycaster : Manager->GetAllRaycasterArray())
-	{
-		UDreamScreenSpaceRaycaster* ScreenRaycaster = Cast<UDreamScreenSpaceRaycaster>(Raycaster.Get());
-		// Only a raycaster that speaks for THIS player. A second player's raycaster carries its own
-		// UserIndex and must keep pointing at its own canvas; retargeting every screen raycaster at
-		// whichever root was built last is what made split screen impossible.
-		if (ScreenRaycaster != nullptr && ScreenRaycaster->GetUserIndex() == InPlayerIndex)
-		{
-			ScreenRaycaster->SetRootCanvas(InRootCanvas);
-		}
-	}
-	// The one the manager has just created is on its host actor and has not necessarily enrolled --
-	// enrolment happens on activation, which a world that has not begun play never performs -- so it
-	// would otherwise be left without a canvas until the first frame of play.
-	if (const AActor* Host = Manager->GetInteractionHost(InPlayerIndex))
-	{
-		for (UActorComponent* Component : Host->GetComponents())
-		{
-			if (UDreamScreenSpaceRaycaster* ScreenRaycaster = Cast<UDreamScreenSpaceRaycaster>(Component);
-				ScreenRaycaster != nullptr && ScreenRaycaster->GetUserIndex() == InPlayerIndex)
-			{
-				ScreenRaycaster->SetRootCanvas(InRootCanvas);
-			}
-		}
+		Services->PrepareScreenInteraction(InRootCanvas, InPlayerIndex);
 	}
 }
 

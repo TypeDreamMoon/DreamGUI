@@ -10,20 +10,18 @@
 
 struct FDreamUIHelperGizmoRenderParameter;
 struct FDreamUIHelperGizmoVertex;
-class AActor;
 class UMaterialInterface;
 class FEditorViewportClient;
-class UDreamEventSystem;
 class UDreamWidget;
 class UDreamVisualBatchMesh;
 class UDreamVisual;
 class UDreamCanvas;
 class UDreamBaseRaycaster;
-class UUISelectable;
 class UDreamUIBehaviour;
-class UDreamBaseInputModule;
 
 DECLARE_MULTICAST_DELEGATE_OneParam(FDreamUIEditorTickMulticastDelegate, float);
+class UDreamUIManagerWorldSubsystem;
+DECLARE_MULTICAST_DELEGATE_OneParam(FDreamUIDrawHelperGizmoDelegate, UDreamUIManagerWorldSubsystem* /*Manager*/);
 
 /**
  * A widget that has been created but not yet added to anything -- the state a UMG-style
@@ -136,7 +134,7 @@ private:
 class IDreamUICultureChangedInterface;
 enum class EDreamRenderMode : uint8;
 
-/** Which kind of pointer a player needs a raycaster for. See EnsureInteractionForPlayer. */
+/** Which kind of pointer a player needs a raycaster for. See UDreamUIInputServices::EnsureInteractionForPlayer. */
 UENUM()
 enum class EDreamInteractionKind : uint8
 {
@@ -192,6 +190,11 @@ public:
 	FSimpleMulticastDelegate OnDeinitialize;
 	FSimpleMulticastDelegate OnEndPlay;
 	FSimpleMulticastDelegate OnDreamUIWidgetOutlinerChanged;
+	/**
+	 * Broadcast at the end of DrawHelperGizmo, for the editor helpers that belong to someone else: the
+	 * input system draws the selectables' navigation arrows from here, with DrawNavigationArrow.
+	 */
+	FDreamUIDrawHelperGizmoDelegate OnDrawHelperGizmo;
 	void MarkDreamUIWidgetOutlinerChanged();
 private:
 	bool bDreamUIWidgetOutlinerChanged = true;
@@ -217,8 +220,12 @@ private:
 
 	UPROPERTY(VisibleAnywhere, Category = "DreamGUI")
 		TArray<TWeakObjectPtr<UDreamBaseRaycaster>> AllRaycasterArray;
+	/**
+	 * Every registered selectable, as the behaviour it is. The navigation scan and the input system walk
+	 * it; neither needs the core to know the selectable class, which belongs to the input system.
+	 */
 	UPROPERTY(VisibleAnywhere, Category = "DreamGUI")
-		TArray<TWeakObjectPtr<UUISelectable>> AllSelectableArray;
+		TArray<TWeakObjectPtr<UDreamUIBehaviour>> AllSelectableArray;
 	UPROPERTY(VisibleAnywhere, Category = "DreamGUI")
 		TArray<TWeakObjectPtr<UObject>> AllCultureChangedArray;
 
@@ -237,22 +244,6 @@ public:
 private:
 	/** Weak, and swept as it is walked: a widget can be destroyed between two frames. */
 	TArray<TWeakObjectPtr<class UDreamUserWidget>> PropertyBindingUsers;
-
-	UPROPERTY(VisibleAnywhere, Category = "DreamGUI")
-	TMap<int, TWeakObjectPtr<UDreamEventSystem>> MapUserIndexToEventSystem;
-
-	/**
-	 * One transient actor per local player, carrying whichever raycasters were created for them.
-	 *
-	 * Per PLAYER rather than per kind, so a player pointing at both a screen UI and a world-space
-	 * panel has one host with two raycasters on it instead of two actors that mean the same thing.
-	 */
-	UPROPERTY(Transient)
-	TMap<int32, TObjectPtr<AActor>> InteractionHosts;
-
-	/** The event system spawned from project settings, if one had to be. Never more than one. */
-	UPROPERTY(Transient)
-	TObjectPtr<AActor> CreatedEventSystemActor;
 
 	UPROPERTY(VisibleAnywhere, Category = "DreamGUI")
 		TArray<TWeakObjectPtr<UDreamUIBehaviour>> DreamUIBehavioursForTick;
@@ -376,32 +367,9 @@ public:
 	static void AddRaycaster(UDreamBaseRaycaster* InRaycaster);
 	static void RemoveRaycaster(UDreamBaseRaycaster* InRaycaster);
 
-	const TArray<TWeakObjectPtr<UUISelectable>>& GetAllSelectableArray() { return AllSelectableArray; }
-	static void AddSelectable(UUISelectable* InSelectable);
-	static void RemoveSelectable(UUISelectable* InSelectable);
-
-	const TMap<int, TWeakObjectPtr<UDreamEventSystem>>& GetMapUserIndexToEventSystem() { return MapUserIndexToEventSystem; }
-	UDreamEventSystem* GetEventSystemByUserIndex(int UserIndex = 0);
-	void AddEventSystem(UDreamEventSystem* InEventSystem);
-	void RemoveEventSystem(UDreamEventSystem* InEventSystem);
-
-	/**
-	 * Give local player InUserIndex what it takes to point at DreamUI: an event system, and a
-	 * raycaster of InKind.
-	 *
-	 * The event system half is per world, not per player -- only the first local player gets one
-	 * spawned from UDreamGUISettings::EventSystemActorClass, because a second copy would carry the
-	 * same UserIndex and make each player read the other's input; a second player's event system has
-	 * to be placed deliberately, and not having one is a warning rather than a guess.
-	 *
-	 * The raycaster half is skipped when that player already has one of that kind, wherever it was
-	 * placed, which is what lets an authored raycaster override the default. Otherwise one is added
-	 * to a transient "DreamInteractionHost_P%d" actor. Idempotent: calling it on every world-space
-	 * host's BeginPlay, and again from the screen subsystem, is the expected usage.
-	 */
-	void EnsureInteractionForPlayer(int32 InUserIndex, EDreamInteractionKind InKind);
-	/** The host actor carrying InUserIndex's auto-created raycasters, or null if none was needed. */
-	AActor* GetInteractionHost(int32 InUserIndex)const;
+	const TArray<TWeakObjectPtr<UDreamUIBehaviour>>& GetAllSelectableArray() { return AllSelectableArray; }
+	static void AddSelectable(UDreamUIBehaviour* InSelectable);
+	static void RemoveSelectable(UDreamUIBehaviour* InSelectable);
 	
 #if WITH_EDITOR
 	/**
@@ -419,7 +387,6 @@ public:
 	);
 	void DrawFrameOnWidget(UDreamWidget* InItem, bool ScreenOrWorld = false);
 	void DrawNavigationArrow(UWorld* InWorld, const TArray<FVector>& InControlPoints, const FVector& InArrowPointA, const FVector& InArrowPointB, FColor const& InColor, void* Object, const FString& DebugName, bool ScreenOrWorld = false);
-	void DrawNavigationVisualizerOnUISelectable(UWorld* InWorld, UUISelectable* InSelectable, bool IsScreenSpace = false);
 	FEditorViewportClient* GetEditorViewportClient();
 	
 	static void DrawDebugRect(UWorld* InWorld, const FVector& Center, const FMatrix& LocalToWorld, FVector2D const& Rect, FColor const& Color, void* Object, const FString& DebugName, bool ScreenOrWorld);

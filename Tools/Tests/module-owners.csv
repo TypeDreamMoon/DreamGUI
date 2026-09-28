@@ -98,6 +98,7 @@ Source/DreamGUI/Private/Core/DreamUIFontData_FreeTypeRender.cpp,DreamGUI,core
 Source/DreamGUI/Private/Core/DreamUIFontEmojiData.cpp,DreamGUI,core
 Source/DreamGUI/Private/Core/DreamUIGeometry.cpp,DreamGUI,CPU geometry of a visual + builders (needs sprites/text/canvas)
 Source/DreamGUI/Private/Core/DreamUIImageBrush.cpp,DreamGUI,core
+Source/DreamGUI/Private/Core/DreamUIInputServices.cpp,DreamGUI,the core's one channel to the input system: an abstract world subsystem Input implements
 Source/DreamGUI/Private/Core/DreamUIManager_DebugDraw.cpp,DreamGUI,core: manager debug drawing
 Source/DreamGUI/Private/Core/DreamUIManager_Interaction.cpp,DreamGUI,core: manager input registry
 Source/DreamGUI/Private/Core/DreamUIManager_Lifecycle.cpp,DreamGUI,core: manager lifecycle
@@ -160,6 +161,7 @@ Source/DreamGUI/Private/Event/DreamScreenSpaceRaycaster.cpp,DreamGUIInput,screen
 Source/DreamGUI/Private/Event/DreamStandaloneInputEventSystemActor.cpp,DreamGUIInput,standalone event system actor
 Source/DreamGUI/Private/Event/DreamUIEventDelegate.cpp,DreamGUI,"contract: FDreamUIEventDelegate serialized event binding (used by PlayTween, text builder, BP library)"
 Source/DreamGUI/Private/Event/DreamUIInputModeLibrary.cpp,DreamGUIInput,input-mode BP library
+Source/DreamGUI/Private/Event/DreamUIInputSubsystem.cpp,DreamGUIInput,"the input system's side of the services; event-system registry, interaction setup"
 Source/DreamGUI/Private/Event/DreamWorldSpaceRaycaster.cpp,DreamGUIInput,world raycaster
 Source/DreamGUI/Private/Event/InputModule/DreamBaseInputModule.cpp,DreamGUIInput,input modules
 Source/DreamGUI/Private/Event/InputModule/DreamPointerInputModule.cpp,DreamGUIInput,input modules
@@ -343,6 +345,7 @@ Source/DreamGUI/Public/Core/DreamUIFontData_FreeTypeRender.h,DreamGUI,core
 Source/DreamGUI/Public/Core/DreamUIFontEmojiData.h,DreamGUI,core
 Source/DreamGUI/Public/Core/DreamUIGeometry.h,DreamGUI,CPU geometry of a visual + builders (needs sprites/text/canvas)
 Source/DreamGUI/Public/Core/DreamUIImageBrush.h,DreamGUI,core
+Source/DreamGUI/Public/Core/DreamUIInputServices.h,DreamGUI,the core's one channel to the input system: an abstract world subsystem Input implements
 Source/DreamGUI/Public/Core/DreamUIManager.h,DreamGUI,core
 Source/DreamGUI/Public/Core/DreamUIMesh/DreamUIGizmoMesh.h,DreamGUIRenderer,gizmo mesh drawn by the renderer
 Source/DreamGUI/Public/Core/DreamUIMesh/DreamUIMeshComponent.h,DreamGUI,OVERRIDE(03): stays in core for R-1; implements the renderer's IDreamUIRendererPrimitive (core->renderer is allowed); DefaultMeshType is a serialized TSubclassOf; shrinks to the UE-renderer primitive in R-2.4
@@ -410,6 +413,7 @@ Source/DreamGUI/Public/Event/DreamStandaloneInputEventSystemActor.h,DreamGUIInpu
 Source/DreamGUI/Public/Event/DreamUIEventDelegate.h,DreamGUI,"contract: FDreamUIEventDelegate serialized event binding (used by PlayTween, text builder, BP library)"
 Source/DreamGUI/Public/Event/DreamUIEventDelegate_PresetParameter.h,DreamGUI,contract: typed FDreamUIEventDelegate structs used by BP library
 Source/DreamGUI/Public/Event/DreamUIInputModeLibrary.h,DreamGUIInput,input-mode BP library
+Source/DreamGUI/Public/Event/DreamUIInputSubsystem.h,DreamGUIInput,"the input system's side of the services; event-system registry, interaction setup"
 Source/DreamGUI/Public/Event/DreamWorldSpaceRaycaster.h,DreamGUIInput,world raycaster
 Source/DreamGUI/Public/Event/InputModule/DreamBaseInputModule.h,DreamGUIInput,input modules
 Source/DreamGUI/Public/Event/InputModule/DreamPointerInputModule.h,DreamGUIInput,input modules

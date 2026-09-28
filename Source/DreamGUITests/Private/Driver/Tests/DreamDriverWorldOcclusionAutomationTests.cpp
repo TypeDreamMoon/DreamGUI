@@ -13,6 +13,7 @@
 #include "Engine/EngineTypes.h"
 #include "Engine/World.h"
 #include "Event/DreamEventSystem.h"
+#include "Event/DreamUIInputSubsystem.h"
 #include "Event/DreamWorldSpaceRaycaster.h"
 #include "Extensions/DreamUIRenderTargetInteraction.h"
 #include "GameFramework/Actor.h"
@@ -38,7 +39,7 @@
  * wins on distance, so a solid object between the eye and a panel takes the pointer off the panel; and
  * the actor behind the hit is sent the pointer's events, which is the only road a render-target surface
  * has to its pointer. It is on by default, and these tests pin what "by default" covers: the raycaster
- * UDreamUIManagerWorldSubsystem::EnsureInteractionForPlayer makes for a player, and the driver's world
+ * UDreamUIInputSubsystem::EnsureInteractionForPlayer makes for a player, and the driver's world
  * pointer left exactly as it was attached, both trace the world with nobody setting the flag. Turned
  * off, a click goes straight through the object to the panel -- the old default, and what a project
  * gets back by unticking it.
@@ -178,8 +179,8 @@ bool FDreamDriverWorldOcclusionManagerDefaultTest::RunTest(const FString& Parame
 	{
 		return false;
 	}
-	UDreamUIManagerWorldSubsystem* Manager = UDreamUIManagerWorldSubsystem::GetInstance(Scope.World);
-	if (!TestNotNull(TEXT("A manager for it"), Manager))
+	UDreamUIInputSubsystem* InputSubsystem = UDreamUIInputSubsystem::Get(Scope.World);
+	if (!TestNotNull(TEXT("An input subsystem for it"), InputSubsystem))
 	{
 		return false;
 	}
@@ -196,9 +197,9 @@ bool FDreamDriverWorldOcclusionManagerDefaultTest::RunTest(const FString& Parame
 	EventSystem->RegisterComponent();
 
 	// What a world widget component asks for when it begins play.
-	Manager->EnsureInteractionForPlayer(0, EDreamInteractionKind::World);
+	InputSubsystem->EnsureInteractionForPlayer(0, EDreamInteractionKind::World);
 	UDreamWorldSpaceRaycaster* Made = nullptr;
-	if (AActor* InteractionHost = Manager->GetInteractionHost(0))
+	if (AActor* InteractionHost = InputSubsystem->GetInteractionHost(0))
 	{
 		for (UActorComponent* Component : InteractionHost->GetComponents())
 		{

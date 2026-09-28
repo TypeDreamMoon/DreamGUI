@@ -10,6 +10,7 @@
 #include "Core/DreamUIManager.h"
 #include "Core/DreamUIRuntimeObject.h"
 #include "Core/DreamScreenUISubsystem.h"
+#include "Engine/Engine.h"
 #include "Engine/World.h"
 #include "DreamTweenManager.h"
 #include "Core/DreamUIClipData.h"

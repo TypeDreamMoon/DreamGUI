@@ -952,11 +952,12 @@ UUISelectable* UUISelectable::FindDefaultSelectableIn(UObject* WorldContextObjec
 			UUISelectable* Selectable = nullptr;
 			for (int i = 0; i < SelectableArray.Num(); i++)
 			{
-				auto SelectableItem = SelectableArray[i];
-				if (SelectableItem.IsValid() && SelectableItem->IsInteractable() && SelectableItem->GetCanNavigateHere()
-					&& IsInsideParent(SelectableItem.Get()))
+				// The manager's registry holds behaviours; every entry this class adds is a selectable.
+				UUISelectable* SelectableItem = Cast<UUISelectable>(SelectableArray[i].Get());
+				if (SelectableItem != nullptr && SelectableItem->IsInteractable() && SelectableItem->GetCanNavigateHere()
+					&& IsInsideParent(SelectableItem))
 				{
-					Selectable = SelectableItem.Get();//find a interactable one
+					Selectable = SelectableItem;//find a interactable one
 					break;
 				}
 			}
