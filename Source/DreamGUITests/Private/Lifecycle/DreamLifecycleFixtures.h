@@ -5,9 +5,13 @@
 #include "CoreMinimal.h"
 #include "Engine/EngineTypes.h"
 
+class AActor;
 class ADreamWorldWidgetActor;
 class UClass;
+class UDreamUIRenderTargetGeometrySource;
+class UDreamWidget;
 class UDreamWidgetBlueprint;
+class ULevel;
 class UMaterialInstanceDynamic;
 class UMeshComponent;
 class UPackage;
@@ -43,8 +47,47 @@ namespace DreamTests::Lifecycle
 		UClass* GetClass() const;
 	};
 
+	/** The registered hierarchy roots of InWorld. */
+	TArray<UDreamWidget*> RegisteredRoots(UWorld* InWorld);
+
+	/** The object a root is held by: the outer of the tree it roots, or its own outer. */
+	const UObject* HolderOf(const UDreamWidget* InRoot);
+
 	/** A panel of InClass placed in InWorld as a level designer places one, drawn twice so its canvas has made its materials. */
 	ADreamWorldWidgetActor* PlacePanel(UWorld* InWorld, UClass* InClass);
+
+	/** A background blur under InParent with a canvas of its own under it, as a tree holds one. Null when none was made. */
+	UDreamWidget* AddBackgroundBlur(UWorld* InWorld, UDreamWidget* InParent);
+
+	/**
+	 * A render-target surface put where a level's script puts one at run time: an actor in InLevel (the current
+	 * level when null) whose surface shows a canvas the world holds -- a free widget drawing to a render target,
+	 * hung on the actor. With bInAlsoOnAStaticMesh a static mesh the actor keeps shows the surface's material too,
+	 * as the surface's static mesh mode hands it over.
+	 */
+	UDreamUIRenderTargetGeometrySource* PlaceSurface(UWorld* InWorld, ULevel* InLevel, UDreamWidget*& OutCanvasRoot, bool bInAlsoOnAStaticMesh = false);
+
+	/**
+	 * Whether InSurface shows its canvas: registered, with the canvas's render target -- and, where there is a
+	 * renderer, its own material instance showing it, which the surface makes with its scene proxy.
+	 */
+	bool ShowsItsCanvas(const UDreamUIRenderTargetGeometrySource* InSurface);
+
+	/**
+	 * One of each world-space kind, placed as a level designer places them and drawn: a panel drawn by DreamUI's
+	 * renderer with a background blur in its tree, a panel drawn by the engine's, and -- with bInWithSurface -- a
+	 * render-target surface whose material a static mesh shows as well.
+	 */
+	struct FWorldSpaceKinds
+	{
+		ADreamWorldWidgetActor* DreamRendered = nullptr;
+		ADreamWorldWidgetActor* EngineRendered = nullptr;
+		UDreamUIRenderTargetGeometrySource* Surface = nullptr;
+		UDreamWidget* SurfaceCanvasRoot = nullptr;
+		/** The actors placed. */
+		TArray<AActor*> Actors() const;
+	};
+	FWorldSpaceKinds PlaceEveryWorldSpaceKind(UWorld* InWorld, UClass* InPanelClass, bool bInWithSurface = true);
 
 	/** The first material instance on InMesh that reads a dynamic texture -- one of a canvas's data textures. */
 	UMaterialInstanceDynamic* FindMaterialReadingADynamicTexture(const UMeshComponent* InMesh);

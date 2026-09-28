@@ -5,6 +5,9 @@
 #if WITH_EDITOR
 
 #include "Components/MeshComponent.h"
+#include "Components/SceneComponent.h"
+#include "Components/StaticMeshComponent.h"
+#include "Core/Components/DreamCanvas.h"
 #include "Core/Components/DreamRectBlock.h"
 #include "Core/Components/DreamWidget.h"
 #include "Core/DreamUIManager.h"
@@ -13,12 +16,18 @@
 #include "Core/DreamWidgetTree.h"
 #include "Core/DreamWorldWidgetActor.h"
 #include "Core/DreamWorldWidgetComponent.h"
+#include "DreamUIBPLibrary.h"
 #include "DreamWidgetBlueprint.h"
+#include "Engine/Level.h"
 #include "Engine/Texture2DDynamic.h"
+#include "Engine/TextureRenderTarget2D.h"
 #include "Engine/World.h"
+#include "Extensions/DreamUIRenderTargetGeometrySource.h"
+#include "Extensions/Effects/DreamBackgroundBlur.h"
 #include "Kismet2/KismetEditorUtilities.h"
 #include "Lifecycle/DreamLifecycleProbe.h"
 #include "Materials/MaterialInstanceDynamic.h"
+#include "Misc/App.h"
 #include "UObject/Package.h"
 
 namespace DreamTests::Lifecycle
@@ -86,6 +95,34 @@ namespace DreamTests::Lifecycle
 		return Blueprint != nullptr ? Blueprint->GeneratedClass.Get() : nullptr;
 	}
 
+	/** The registered hierarchy roots of InWorld. */
+	TArray<UDreamWidget*> RegisteredRoots(UWorld* InWorld)
+	{
+		TArray<UDreamWidget*> Roots;
+		if (UDreamUIManagerWorldSubsystem* Manager = UDreamUIManagerWorldSubsystem::GetInstance(InWorld))
+		{
+			for (UDreamWidget* Widget : Manager->GetRegisteredWidgets())
+			{
+				if (Widget->GetParent() == nullptr)
+				{
+					Roots.Add(Widget);
+				}
+			}
+		}
+		return Roots;
+	}
+
+	/** The object a root is held by: the outer of the tree it roots, or its own outer. */
+	const UObject* HolderOf(const UDreamWidget* InRoot)
+	{
+		const UObject* Owner = InRoot != nullptr ? InRoot->GetOuter() : nullptr;
+		if (const UDreamWidgetTree* Tree = Cast<UDreamWidgetTree>(Owner); Tree != nullptr && Tree->RootWidget == InRoot)
+		{
+			Owner = Tree->GetOuter();
+		}
+		return Owner;
+	}
+
 	ADreamWorldWidgetActor* PlacePanel(UWorld* InWorld, UClass* InClass)
 	{
 		ADreamWorldWidgetActor* Actor = InWorld->SpawnActor<ADreamWorldWidgetActor>();
@@ -95,6 +132,123 @@ namespace DreamTests::Lifecycle
 			DrawFrames(InWorld, 2);
 		}
 		return Actor;
+	}
+
+	UDreamWidget* AddBackgroundBlur(UWorld* InWorld, UDreamWidget* InParent)
+	{
+		if (InWorld == nullptr || InParent == nullptr)
+		{
+			return nullptr;
+		}
+		UDreamWidget* Blur = UDreamUIBPLibrary::ConstructWidget(InWorld, TEXT("Blur"), UDreamBackgroundBlur::StaticClass());
+		if (Blur != nullptr)
+		{
+			Blur->SetWidth(64.0f);
+			Blur->SetHeight(64.0f);
+			Blur->TrySetParent(InParent, false);
+			Blur->AddComponent<UDreamCanvas>();
+		}
+		return Blur;
+	}
+
+	UDreamUIRenderTargetGeometrySource* PlaceSurface(UWorld* InWorld, ULevel* InLevel, UDreamWidget*& OutCanvasRoot, bool bInAlsoOnAStaticMesh)
+	{
+		OutCanvasRoot = nullptr;
+		if (InWorld == nullptr)
+		{
+			return nullptr;
+		}
+		FActorSpawnParameters Params;
+		Params.OverrideLevel = InLevel;
+		AActor* Actor = InWorld->SpawnActor<AActor>(AActor::StaticClass(), FTransform::Identity, Params);
+		if (Actor == nullptr)
+		{
+			return nullptr;
+		}
+		USceneComponent* Anchor = NewObject<USceneComponent>(Actor, TEXT("Anchor"), RF_Transactional);
+		Actor->SetRootComponent(Anchor);
+		Actor->AddInstanceComponent(Anchor);
+		Anchor->RegisterComponent();
+
+		UDreamWidget* Root = UDreamUIBPLibrary::ConstructWidget(InWorld, TEXT("SurfaceCanvas"), nullptr);
+		UDreamCanvas* Canvas = Root != nullptr ? Root->AddComponent<UDreamCanvas>() : nullptr;
+		if (Canvas == nullptr)
+		{
+			if (Root != nullptr)
+			{
+				Root->DestroyWidget();
+			}
+			return nullptr;
+		}
+		Canvas->SetRenderMode(EDreamRenderMode::RenderTarget);
+		UDreamUIBPLibrary::AttachWidgetToSceneComponent(Root, Anchor);
+		if (!InWorld->IsGameWorld())
+		{
+			// An edited world has nothing to poll the canvas with until it has its target, so it draws first; a
+			// playing world's surface polls for the target itself.
+			DrawFrames(InWorld, 2);
+		}
+		UDreamUIRenderTargetGeometrySource* Surface = NewObject<UDreamUIRenderTargetGeometrySource>(Actor, TEXT("Surface"), RF_Transactional);
+		Surface->SetCanvas(Canvas);
+		Surface->SetupAttachment(Anchor);
+		Actor->AddInstanceComponent(Surface);
+		Surface->RegisterComponent();
+		if (bInAlsoOnAStaticMesh)
+		{
+			UStaticMeshComponent* Shown = NewObject<UStaticMeshComponent>(Actor, TEXT("ShowsTheSurface"), RF_Transactional);
+			Shown->SetupAttachment(Anchor);
+			Actor->AddInstanceComponent(Shown);
+			Shown->RegisterComponent();
+			Shown->SetMaterial(0, Surface->GetMaterialInstance());
+		}
+		OutCanvasRoot = Root;
+		return Surface;
+	}
+
+	bool ShowsItsCanvas(const UDreamUIRenderTargetGeometrySource* InSurface)
+	{
+		const UDreamCanvas* Canvas = InSurface != nullptr ? InSurface->GetCanvas() : nullptr;
+		return InSurface != nullptr && InSurface->IsRegistered() && Canvas != nullptr && Canvas->GetRenderTarget() != nullptr
+			&& (!FApp::CanEverRender() || InSurface->GetMaterialInstance() != nullptr);
+	}
+
+	TArray<AActor*> FWorldSpaceKinds::Actors() const
+	{
+		TArray<AActor*> Placed;
+		for (AActor* Actor : { static_cast<AActor*>(DreamRendered), static_cast<AActor*>(EngineRendered), Surface != nullptr ? Surface->GetOwner() : nullptr })
+		{
+			if (Actor != nullptr)
+			{
+				Placed.Add(Actor);
+			}
+		}
+		return Placed;
+	}
+
+	FWorldSpaceKinds PlaceEveryWorldSpaceKind(UWorld* InWorld, UClass* InPanelClass, bool bInWithSurface)
+	{
+		FWorldSpaceKinds Kinds;
+		if (InWorld == nullptr)
+		{
+			return Kinds;
+		}
+		Kinds.DreamRendered = PlacePanel(InWorld, InPanelClass);
+		if (Kinds.DreamRendered != nullptr)
+		{
+			AddBackgroundBlur(InWorld, Kinds.DreamRendered->GetWidgetComponent()->GetLoadedWidget());
+		}
+		Kinds.EngineRendered = InWorld->SpawnActor<ADreamWorldWidgetActor>(FVector(0.0, 400.0, 0.0), FRotator::ZeroRotator);
+		if (Kinds.EngineRendered != nullptr)
+		{
+			Kinds.EngineRendered->GetWidgetComponent()->SetBackend(EDreamWorldWidgetBackend::UERenderer);
+			Kinds.EngineRendered->GetWidgetComponent()->SetWidgetClass(InPanelClass);
+		}
+		if (bInWithSurface)
+		{
+			Kinds.Surface = PlaceSurface(InWorld, nullptr, Kinds.SurfaceCanvasRoot, /*bInAlsoOnAStaticMesh*/ true);
+		}
+		DrawFrames(InWorld, 2);
+		return Kinds;
 	}
 
 	UMaterialInstanceDynamic* FindMaterialReadingADynamicTexture(const UMeshComponent* InMesh)
