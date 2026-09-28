@@ -39,8 +39,8 @@ Source/DreamGUI/Private/Controls/DreamToggle.cpp,DreamGUIControls,control librar
 Source/DreamGUI/Private/Controls/DreamTreeView.cpp,DreamGUIControls,control library
 Source/DreamGUI/Private/Controls/DreamUIControl.cpp,DreamGUIControls,control library
 Source/DreamGUI/Private/Controls/DreamUIStyleSheet.cpp,DreamGUIControls,control library
-Source/DreamGUI/Private/Core/Components/DreamBackgroundBlur.cpp,DreamGUIExtensions,post-process effect visual (+ its proxy)
-Source/DreamGUI/Private/Core/Components/DreamBackgroundPixelate.cpp,DreamGUIExtensions,post-process effect visual (+ its proxy)
+Source/DreamGUIExtensions/Private/Core/Components/DreamBackgroundBlur.cpp,DreamGUIExtensions,post-process effect visual (+ its proxy)
+Source/DreamGUIExtensions/Private/Core/Components/DreamBackgroundPixelate.cpp,DreamGUIExtensions,post-process effect visual (+ its proxy)
 Source/DreamGUI/Private/Core/Components/DreamCanvas.cpp,DreamGUI,core
 Source/DreamGUI/Private/Core/Components/DreamCustomMesh.cpp,DreamGUI,core
 Source/DreamGUI/Private/Core/Components/DreamImage.cpp,DreamGUI,core
@@ -49,8 +49,8 @@ Source/DreamGUI/Private/Core/Components/DreamLayoutSelfAspectRatio.cpp,DreamGUI,
 Source/DreamGUI/Private/Core/Components/DreamLayoutSelfAuthoredSurface.cpp,DreamGUI,core
 Source/DreamGUI/Private/Core/Components/DreamPanelLayouts.cpp,DreamGUI,core
 Source/DreamGUI/Private/Core/Components/DreamPanelSlot.cpp,DreamGUI,core
-Source/DreamGUI/Private/Core/Components/DreamPixelSort.cpp,DreamGUIExtensions,post-process effect visual
-Source/DreamGUI/Private/Core/Components/DreamPixelSortRenderProxy.h,DreamGUIExtensions,private render proxy of UDreamPixelSort (needs its enums)
+Source/DreamGUIExtensions/Private/Core/Components/DreamPixelSort.cpp,DreamGUIExtensions,post-process effect visual
+Source/DreamGUIExtensions/Private/Core/Components/DreamPixelSortRenderProxy.h,DreamGUIExtensions,private render proxy of UDreamPixelSort (needs its enums)
 Source/DreamGUI/Private/Core/Components/DreamRectBlock.cpp,DreamGUI,core
 Source/DreamGUI/Private/Core/Components/DreamRingSectorRaycast.cpp,DreamGUI,custom raycast shape; used by DreamRingMenu (Controls) so it must sit below Controls
 Source/DreamGUI/Private/Core/Components/DreamScrollBoxInputHandler.cpp,DreamGUI,drives the core scroll-box layout; only implements Core contract interfaces
@@ -162,28 +162,28 @@ Source/DreamGUI/Private/Event/DreamWorldSpaceRaycaster.cpp,DreamGUIInput,world r
 Source/DreamGUI/Private/Event/InputModule/DreamBaseInputModule.cpp,DreamGUIInput,input modules
 Source/DreamGUI/Private/Event/InputModule/DreamPointerInputModule.cpp,DreamGUIInput,input modules
 Source/DreamGUI/Private/Event/InputModule/DreamStandaloneInputModule.cpp,DreamGUIInput,input modules
-Source/DreamGUI/Private/Extensions/2DLineRenderer/Dream2DLineChildrenAsPoints.cpp,DreamGUIExtensions,extension
-Source/DreamGUI/Private/Extensions/2DLineRenderer/Dream2DLineRaw.cpp,DreamGUIExtensions,extension
-Source/DreamGUI/Private/Extensions/2DLineRenderer/Dream2DLineRendererBase.cpp,DreamGUIExtensions,extension
-Source/DreamGUI/Private/Extensions/DreamCanvasRenderTargetPreviewer.cpp,DreamGUIExtensions,extension
+Source/DreamGUIExtensions/Private/Extensions/2DLineRenderer/Dream2DLineChildrenAsPoints.cpp,DreamGUIExtensions,extension
+Source/DreamGUIExtensions/Private/Extensions/2DLineRenderer/Dream2DLineRaw.cpp,DreamGUIExtensions,extension
+Source/DreamGUIExtensions/Private/Extensions/2DLineRenderer/Dream2DLineRendererBase.cpp,DreamGUIExtensions,extension
+Source/DreamGUIExtensions/Private/Extensions/DreamCanvasRenderTargetPreviewer.cpp,DreamGUIExtensions,extension
 Source/DreamGUI/Private/Extensions/DreamGameViewportClient.cpp,DreamGUIInput,routes InputChar to the active text field (needs an Input-level text-input registry) | CONDITIONAL(05): Input only if plugin-ini CoreRedirects are verified in MS-0; otherwise stays in core as a thin adapter
 Source/DreamGUI/Private/Extensions/DreamImageSequencePlayer.cpp,DreamGUI,base of UUISpriteSequencePlayer
-Source/DreamGUI/Private/Extensions/DreamPolygon.cpp,DreamGUIExtensions,extension
-Source/DreamGUI/Private/Extensions/DreamPolygonLine.cpp,DreamGUIExtensions,extension
-Source/DreamGUI/Private/Extensions/DreamPostProcessRenderElement.cpp,DreamGUIExtensions,extension
-Source/DreamGUI/Private/Extensions/DreamPostProcessRenderElement_Text.cpp,DreamGUIExtensions,extension
-Source/DreamGUI/Private/Extensions/DreamRetainerBox.cpp,DreamGUIExtensions,extension
-Source/DreamGUI/Private/Extensions/DreamRing.cpp,DreamGUIExtensions,extension
-Source/DreamGUI/Private/Extensions/DreamStaticMesh.cpp,DreamGUIExtensions,extension
-Source/DreamGUI/Private/Extensions/DreamUIRenderTargetGeometrySource.cpp,DreamGUIExtensions,extension
-Source/DreamGUI/Private/Extensions/DreamUIRenderTargetInteraction.cpp,DreamGUIExtensions,extension
+Source/DreamGUIExtensions/Private/Extensions/DreamPolygon.cpp,DreamGUIExtensions,extension
+Source/DreamGUIExtensions/Private/Extensions/DreamPolygonLine.cpp,DreamGUIExtensions,extension
+Source/DreamGUIExtensions/Private/Extensions/DreamPostProcessRenderElement.cpp,DreamGUIExtensions,extension
+Source/DreamGUIExtensions/Private/Extensions/DreamPostProcessRenderElement_Text.cpp,DreamGUIExtensions,extension
+Source/DreamGUIExtensions/Private/Extensions/DreamRetainerBox.cpp,DreamGUIExtensions,extension
+Source/DreamGUIExtensions/Private/Extensions/DreamRing.cpp,DreamGUIExtensions,extension
+Source/DreamGUIExtensions/Private/Extensions/DreamStaticMesh.cpp,DreamGUIExtensions,extension
+Source/DreamGUIExtensions/Private/Extensions/DreamUIRenderTargetGeometrySource.cpp,DreamGUIExtensions,extension
+Source/DreamGUIExtensions/Private/Extensions/DreamUIRenderTargetInteraction.cpp,DreamGUIExtensions,extension
 Source/DreamGUI/Private/Extensions/DreamUMGWidget.cpp,DreamGUIControls,UMG interop visual; used by DreamNativeWidgetHost
 Source/DreamGUI/Private/Extensions/DreamUMGWidgetInteraction.cpp,DreamGUIControls,UMG interop input forwarding; used by DreamNativeWidgetHost
-Source/DreamGUI/Private/Extensions/DreamVisualCustomRaycastExtensions.cpp,DreamGUIExtensions,extension
-Source/DreamGUI/Private/Extensions/Lyrics/DreamLyricsData.cpp,DreamGUIExtensions,extension
-Source/DreamGUI/Private/Extensions/Lyrics/DreamLyricsView.cpp,DreamGUIExtensions,extension
+Source/DreamGUIExtensions/Private/Extensions/DreamVisualCustomRaycastExtensions.cpp,DreamGUIExtensions,extension
+Source/DreamGUIExtensions/Private/Extensions/Lyrics/DreamLyricsData.cpp,DreamGUIExtensions,extension
+Source/DreamGUIExtensions/Private/Extensions/Lyrics/DreamLyricsView.cpp,DreamGUIExtensions,extension
 Source/DreamGUI/Private/Extensions/UISpriteSequencePlayer.cpp,DreamGUI,"animated emoji / rich-text images (DreamUIFontEmojiData, DreamUIRichTextImageData) add it"
-Source/DreamGUI/Private/Extensions/UISpriteSheetTexturePlayer.cpp,DreamGUIExtensions,extension
+Source/DreamGUIExtensions/Private/Extensions/UISpriteSheetTexturePlayer.cpp,DreamGUIExtensions,extension
 Source/DreamGUI/Private/Interaction/DreamContentWidget.cpp,DreamGUI,"named-slot hosting used by UDreamUserWidget, panel layouts and the .dui builder"
 Source/DreamGUI/Private/Interaction/DreamResponsiveBinding.cpp,DreamGUI,data binding / responsive rules; no input
 Source/DreamGUI/Private/Interaction/DreamUIActionBar.cpp,DreamGUIControls,action-hint bar control
@@ -216,15 +216,15 @@ Source/DreamGUI/Private/Interaction/UITextInput.cpp,DreamGUIControls,control beh
 Source/DreamGUI/Private/Interaction/UIToggle.cpp,DreamGUIControls,control behaviour
 Source/DreamGUI/Private/Interaction/UIToggleGroup.cpp,DreamGUIControls,control behaviour
 Source/DreamGUI/Private/MeshModifier/DreamMeshModifierBase.cpp,DreamGUI,base modifier + UDreamVisualBatchMeshModifierHelper; invoked by UDreamVisualBatchMesh
-Source/DreamGUI/Private/MeshModifier/DreamMeshModifierGradientColor.cpp,DreamGUIExtensions,mesh modifier
-Source/DreamGUI/Private/MeshModifier/DreamMeshModifierLongShadow.cpp,DreamGUIExtensions,mesh modifier
-Source/DreamGUI/Private/MeshModifier/DreamMeshModifierOutline.cpp,DreamGUIExtensions,mesh modifier
-Source/DreamGUI/Private/MeshModifier/DreamMeshModifierPositionAsUV.cpp,DreamGUIExtensions,mesh modifier
-Source/DreamGUI/Private/MeshModifier/DreamMeshModifierShadow.cpp,DreamGUIExtensions,mesh modifier
-Source/DreamGUI/Private/MeshModifier/DreamMeshModifierTextAnimation.cpp,DreamGUIExtensions,mesh modifier
-Source/DreamGUI/Private/MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_PropertyWithEase.cpp,DreamGUIExtensions,mesh modifier
-Source/DreamGUI/Private/MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_PropertyWithWave.cpp,DreamGUIExtensions,mesh modifier
-Source/DreamGUI/Private/MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_Selector.cpp,DreamGUIExtensions,mesh modifier
+Source/DreamGUIExtensions/Private/MeshModifier/DreamMeshModifierGradientColor.cpp,DreamGUIExtensions,mesh modifier
+Source/DreamGUIExtensions/Private/MeshModifier/DreamMeshModifierLongShadow.cpp,DreamGUIExtensions,mesh modifier
+Source/DreamGUIExtensions/Private/MeshModifier/DreamMeshModifierOutline.cpp,DreamGUIExtensions,mesh modifier
+Source/DreamGUIExtensions/Private/MeshModifier/DreamMeshModifierPositionAsUV.cpp,DreamGUIExtensions,mesh modifier
+Source/DreamGUIExtensions/Private/MeshModifier/DreamMeshModifierShadow.cpp,DreamGUIExtensions,mesh modifier
+Source/DreamGUIExtensions/Private/MeshModifier/DreamMeshModifierTextAnimation.cpp,DreamGUIExtensions,mesh modifier
+Source/DreamGUIExtensions/Private/MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_PropertyWithEase.cpp,DreamGUIExtensions,mesh modifier
+Source/DreamGUIExtensions/Private/MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_PropertyWithWave.cpp,DreamGUIExtensions,mesh modifier
+Source/DreamGUIExtensions/Private/MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_Selector.cpp,DreamGUIExtensions,mesh modifier
 Source/DreamGUI/Private/PlayTween/DreamUIPlayTween.cpp,DreamGUI,play-tween behaviours
 Source/DreamGUI/Private/PlayTween/DreamUIPlayTweenComponent.cpp,DreamGUI,play-tween behaviours
 Source/DreamGUI/Private/PlayTween/DreamUIPlayTweenSequenceComponent.cpp,DreamGUI,play-tween behaviours
@@ -279,8 +279,8 @@ Source/DreamGUI/Public/Controls/DreamToggle.h,DreamGUIControls,control library
 Source/DreamGUI/Public/Controls/DreamTreeView.h,DreamGUIControls,control library
 Source/DreamGUI/Public/Controls/DreamUIControl.h,DreamGUIControls,control library
 Source/DreamGUI/Public/Controls/DreamUIStyleSheet.h,DreamGUIControls,control library
-Source/DreamGUI/Public/Core/Components/DreamBackgroundBlur.h,DreamGUIExtensions,post-process effect visual (+ its proxy)
-Source/DreamGUI/Public/Core/Components/DreamBackgroundPixelate.h,DreamGUIExtensions,post-process effect visual (+ its proxy)
+Source/DreamGUIExtensions/Public/Core/Components/DreamBackgroundBlur.h,DreamGUIExtensions,post-process effect visual (+ its proxy)
+Source/DreamGUIExtensions/Public/Core/Components/DreamBackgroundPixelate.h,DreamGUIExtensions,post-process effect visual (+ its proxy)
 Source/DreamGUI/Public/Core/Components/DreamCanvas.h,DreamGUI,core
 Source/DreamGUI/Public/Core/Components/DreamCustomMesh.h,DreamGUI,core
 Source/DreamGUI/Public/Core/Components/DreamImage.h,DreamGUI,core
@@ -290,7 +290,7 @@ Source/DreamGUI/Public/Core/Components/DreamLayoutSelfAspectRatio.h,DreamGUI,cor
 Source/DreamGUI/Public/Core/Components/DreamLayoutSelfAuthoredSurface.h,DreamGUI,core
 Source/DreamGUI/Public/Core/Components/DreamPanelLayouts.h,DreamGUI,core
 Source/DreamGUI/Public/Core/Components/DreamPanelSlot.h,DreamGUI,core
-Source/DreamGUI/Public/Core/Components/DreamPixelSort.h,DreamGUIExtensions,post-process effect visual
+Source/DreamGUIExtensions/Public/Core/Components/DreamPixelSort.h,DreamGUIExtensions,post-process effect visual
 Source/DreamGUI/Public/Core/Components/DreamRectBlock.h,DreamGUI,core
 Source/DreamGUI/Public/Core/Components/DreamRingSectorRaycast.h,DreamGUI,custom raycast shape; used by DreamRingMenu (Controls) so it must sit below Controls
 Source/DreamGUI/Public/Core/Components/DreamScrollBoxInputHandler.h,DreamGUI,drives the core scroll-box layout; only implements Core contract interfaces
@@ -418,28 +418,28 @@ Source/DreamGUI/Public/Event/Interface/DreamPointerGestureInterface.h,DreamGUI,c
 Source/DreamGUI/Public/Event/Interface/DreamPointerLongPressInterface.h,DreamGUI,contract: pointer/key/navigation interface (implemented by core UDreamUserWidgetEventBridge)
 Source/DreamGUI/Public/Event/Interface/DreamPointerScrollInterface.h,DreamGUI,contract: pointer/key/navigation interface (implemented by core UDreamUserWidgetEventBridge)
 Source/DreamGUI/Public/Event/Interface/DreamPointerSelectDeselectInterface.h,DreamGUI,contract: pointer/key/navigation interface (implemented by core UDreamUserWidgetEventBridge)
-Source/DreamGUI/Public/Extensions/2DLineRenderer/Dream2DLineChildrenAsPoints.h,DreamGUIExtensions,extension
-Source/DreamGUI/Public/Extensions/2DLineRenderer/Dream2DLineRaw.h,DreamGUIExtensions,extension
-Source/DreamGUI/Public/Extensions/2DLineRenderer/Dream2DLineRendererBase.h,DreamGUIExtensions,extension
-Source/DreamGUI/Public/Extensions/DreamCanvasRenderTargetPreviewer.h,DreamGUIExtensions,extension
+Source/DreamGUIExtensions/Public/Extensions/2DLineRenderer/Dream2DLineChildrenAsPoints.h,DreamGUIExtensions,extension
+Source/DreamGUIExtensions/Public/Extensions/2DLineRenderer/Dream2DLineRaw.h,DreamGUIExtensions,extension
+Source/DreamGUIExtensions/Public/Extensions/2DLineRenderer/Dream2DLineRendererBase.h,DreamGUIExtensions,extension
+Source/DreamGUIExtensions/Public/Extensions/DreamCanvasRenderTargetPreviewer.h,DreamGUIExtensions,extension
 Source/DreamGUI/Public/Extensions/DreamGameViewportClient.h,DreamGUIInput,routes InputChar to the active text field (needs an Input-level text-input registry) | CONDITIONAL(05): Input only if plugin-ini CoreRedirects are verified in MS-0; otherwise stays in core as a thin adapter
 Source/DreamGUI/Public/Extensions/DreamImageSequencePlayer.h,DreamGUI,base of UUISpriteSequencePlayer
-Source/DreamGUI/Public/Extensions/DreamPolygon.h,DreamGUIExtensions,extension
-Source/DreamGUI/Public/Extensions/DreamPolygonLine.h,DreamGUIExtensions,extension
-Source/DreamGUI/Public/Extensions/DreamPostProcessRenderElement.h,DreamGUIExtensions,extension
-Source/DreamGUI/Public/Extensions/DreamPostProcessRenderElement_Text.h,DreamGUIExtensions,extension
-Source/DreamGUI/Public/Extensions/DreamRetainerBox.h,DreamGUIExtensions,extension
-Source/DreamGUI/Public/Extensions/DreamRing.h,DreamGUIExtensions,extension
-Source/DreamGUI/Public/Extensions/DreamStaticMesh.h,DreamGUIExtensions,extension
-Source/DreamGUI/Public/Extensions/DreamUIRenderTargetGeometrySource.h,DreamGUIExtensions,extension
-Source/DreamGUI/Public/Extensions/DreamUIRenderTargetInteraction.h,DreamGUIExtensions,extension
+Source/DreamGUIExtensions/Public/Extensions/DreamPolygon.h,DreamGUIExtensions,extension
+Source/DreamGUIExtensions/Public/Extensions/DreamPolygonLine.h,DreamGUIExtensions,extension
+Source/DreamGUIExtensions/Public/Extensions/DreamPostProcessRenderElement.h,DreamGUIExtensions,extension
+Source/DreamGUIExtensions/Public/Extensions/DreamPostProcessRenderElement_Text.h,DreamGUIExtensions,extension
+Source/DreamGUIExtensions/Public/Extensions/DreamRetainerBox.h,DreamGUIExtensions,extension
+Source/DreamGUIExtensions/Public/Extensions/DreamRing.h,DreamGUIExtensions,extension
+Source/DreamGUIExtensions/Public/Extensions/DreamStaticMesh.h,DreamGUIExtensions,extension
+Source/DreamGUIExtensions/Public/Extensions/DreamUIRenderTargetGeometrySource.h,DreamGUIExtensions,extension
+Source/DreamGUIExtensions/Public/Extensions/DreamUIRenderTargetInteraction.h,DreamGUIExtensions,extension
 Source/DreamGUI/Public/Extensions/DreamUMGWidget.h,DreamGUIControls,UMG interop visual; used by DreamNativeWidgetHost
 Source/DreamGUI/Public/Extensions/DreamUMGWidgetInteraction.h,DreamGUIControls,UMG interop input forwarding; used by DreamNativeWidgetHost
-Source/DreamGUI/Public/Extensions/DreamVisualCustomRaycastExtensions.h,DreamGUIExtensions,extension
-Source/DreamGUI/Public/Extensions/Lyrics/DreamLyricsData.h,DreamGUIExtensions,extension
-Source/DreamGUI/Public/Extensions/Lyrics/DreamLyricsView.h,DreamGUIExtensions,extension
+Source/DreamGUIExtensions/Public/Extensions/DreamVisualCustomRaycastExtensions.h,DreamGUIExtensions,extension
+Source/DreamGUIExtensions/Public/Extensions/Lyrics/DreamLyricsData.h,DreamGUIExtensions,extension
+Source/DreamGUIExtensions/Public/Extensions/Lyrics/DreamLyricsView.h,DreamGUIExtensions,extension
 Source/DreamGUI/Public/Extensions/UISpriteSequencePlayer.h,DreamGUI,"animated emoji / rich-text images (DreamUIFontEmojiData, DreamUIRichTextImageData) add it"
-Source/DreamGUI/Public/Extensions/UISpriteSheetTexturePlayer.h,DreamGUIExtensions,extension
+Source/DreamGUIExtensions/Public/Extensions/UISpriteSheetTexturePlayer.h,DreamGUIExtensions,extension
 Source/DreamGUI/Public/Interaction/DreamContentWidget.h,DreamGUI,"named-slot hosting used by UDreamUserWidget, panel layouts and the .dui builder"
 Source/DreamGUI/Public/Interaction/DreamDragDropOperation.h,DreamGUI,contract: drag payload in UDreamUserWidget drag events and UDreamPointerEventData::DragOperation
 Source/DreamGUI/Public/Interaction/DreamResponsiveBinding.h,DreamGUI,data binding / responsive rules; no input
@@ -474,15 +474,15 @@ Source/DreamGUI/Public/Interaction/UITextInput.h,DreamGUIControls,control behavi
 Source/DreamGUI/Public/Interaction/UIToggle.h,DreamGUIControls,control behaviour
 Source/DreamGUI/Public/Interaction/UIToggleGroup.h,DreamGUIControls,control behaviour
 Source/DreamGUI/Public/MeshModifier/DreamMeshModifierBase.h,DreamGUI,base modifier + UDreamVisualBatchMeshModifierHelper; invoked by UDreamVisualBatchMesh
-Source/DreamGUI/Public/MeshModifier/DreamMeshModifierGradientColor.h,DreamGUIExtensions,mesh modifier
-Source/DreamGUI/Public/MeshModifier/DreamMeshModifierLongShadow.h,DreamGUIExtensions,mesh modifier
-Source/DreamGUI/Public/MeshModifier/DreamMeshModifierOutline.h,DreamGUIExtensions,mesh modifier
-Source/DreamGUI/Public/MeshModifier/DreamMeshModifierPositionAsUV.h,DreamGUIExtensions,mesh modifier
-Source/DreamGUI/Public/MeshModifier/DreamMeshModifierShadow.h,DreamGUIExtensions,mesh modifier
-Source/DreamGUI/Public/MeshModifier/DreamMeshModifierTextAnimation.h,DreamGUIExtensions,mesh modifier
-Source/DreamGUI/Public/MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_PropertyWithEase.h,DreamGUIExtensions,mesh modifier
-Source/DreamGUI/Public/MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_PropertyWithWave.h,DreamGUIExtensions,mesh modifier
-Source/DreamGUI/Public/MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_Selector.h,DreamGUIExtensions,mesh modifier
+Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierGradientColor.h,DreamGUIExtensions,mesh modifier
+Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierLongShadow.h,DreamGUIExtensions,mesh modifier
+Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierOutline.h,DreamGUIExtensions,mesh modifier
+Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierPositionAsUV.h,DreamGUIExtensions,mesh modifier
+Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierShadow.h,DreamGUIExtensions,mesh modifier
+Source/DreamGUIExtensions/Public/MeshModifier/DreamMeshModifierTextAnimation.h,DreamGUIExtensions,mesh modifier
+Source/DreamGUIExtensions/Public/MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_PropertyWithEase.h,DreamGUIExtensions,mesh modifier
+Source/DreamGUIExtensions/Public/MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_PropertyWithWave.h,DreamGUIExtensions,mesh modifier
+Source/DreamGUIExtensions/Public/MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_Selector.h,DreamGUIExtensions,mesh modifier
 Source/DreamGUI/Public/PlayTween/DreamUIPlayTween.h,DreamGUI,play-tween behaviours
 Source/DreamGUI/Public/PlayTween/DreamUIPlayTweenComponent.h,DreamGUI,play-tween behaviours
 Source/DreamGUI/Public/PlayTween/DreamUIPlayTweenSequenceComponent.h,DreamGUI,play-tween behaviours

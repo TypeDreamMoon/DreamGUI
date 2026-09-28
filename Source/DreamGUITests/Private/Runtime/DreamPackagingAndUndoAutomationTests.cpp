@@ -32,6 +32,7 @@
 #include "DreamCrosscuttingTestTypes.h"
 #include "UObject/CoreRedirects.h"
 #include "UObject/Package.h"
+#include "UObject/UObjectHash.h"
 #include "Utils/DreamUIUtils.h"
 
 /*
@@ -188,6 +189,15 @@ namespace DreamPackagingTestLocal
 	 */
 	const UFunction* FindRedirectedFunction(const FString& InName)
 	{
+		// A global delegate's signature is a function of the package itself, and its name says so directly:
+		// "/Script/DreamGUIExtensions.DreamLyricsLineChangedEvent__DelegateSignature".
+		if (InName.StartsWith(TEXT("/")))
+		{
+			if (const UFunction* OfThePackage = FindObject<UFunction>(nullptr, *InName))
+			{
+				return OfThePackage;
+			}
+		}
 		FString Owner;
 		FString Function;
 		if (!InName.Split(TEXT("."), &Owner, &Function, ESearchCase::CaseSensitive, ESearchDir::FromEnd))
@@ -440,6 +450,89 @@ bool FDreamRedirectTargetsExistTest::RunTest(const FString& Parameters)
 	}
 	// A parser that quietly stopped matching would otherwise pass this test by checking nothing.
 	TestTrue(TEXT("and the file still has targets in this plugin to check"), NumChecked > 0);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamSplitOffTypesAnswerToTheirOldPathTest,
+	"DreamGUI.Packaging.EveryTypeInASplitOffModuleAnswersToItsOldCorePath",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamSplitOffTypesAnswerToTheirOldPathTest::RunTest(const FString& Parameters)
+{
+	// A runtime module split off the core takes with it types that assets, configs and .dui files have been
+	// naming as /Script/DreamGUI.<Name> -- and every one of them needs a redirect from that path, or whatever
+	// named it stops loading, "because its class does not exist", on the day of the split. The tests above
+	// check the entries the file has; this one checks the entries it ought to have, by walking the types each
+	// split-off module actually holds and asking the engine where the old path leads.
+	//
+	// A type born in one of those modules, which never lived in the core, has no old path to answer to; it is
+	// listed here instead, by its full path.
+	static const TSet<FString> BornOutsideTheCore;
+	const FName Core(TEXT("/Script/DreamGUI"));
+	int32 NumModules = 0;
+	int32 NumChecked = 0;
+	for (const FName PackageName : DreamUI::GetRuntimeScriptPackages())
+	{
+		if (PackageName == Core)
+		{
+			continue;
+		}
+		++NumModules;
+		UPackage* Package = FindObject<UPackage>(nullptr, *PackageName.ToString());
+		if (!TestNotNull(*FString::Printf(TEXT("%s is loaded"), *PackageName.ToString()), Package))
+		{
+			continue;
+		}
+		// The package's own objects only: a delegate declared inside a class moves with its class and has no
+		// entry of its own, and a default object is not a type.
+		ForEachObjectWithPackage(Package, [this, &NumChecked](UObject* Object)
+		{
+			ECoreRedirectFlags Flag = ECoreRedirectFlags::None;
+			if (Object->HasAnyFlags(RF_ClassDefaultObject))
+			{
+				return true;
+			}
+			if (Object->IsA<UClass>())
+			{
+				Flag = ECoreRedirectFlags::Type_Class;
+			}
+			else if (Object->IsA<UScriptStruct>())
+			{
+				Flag = ECoreRedirectFlags::Type_Struct;
+			}
+			else if (Object->IsA<UEnum>())
+			{
+				Flag = ECoreRedirectFlags::Type_Enum;
+			}
+			else if (Object->IsA<UFunction>())
+			{
+				Flag = ECoreRedirectFlags::Type_Function;
+			}
+			if (Flag == ECoreRedirectFlags::None || BornOutsideTheCore.Contains(Object->GetPathName()))
+			{
+				return true;
+			}
+			++NumChecked;
+			const FString OldPath = FString::Printf(TEXT("/Script/DreamGUI.%s"), *Object->GetName());
+			TestEqual(*FString::Printf(TEXT("'%s' leads to where the type lives now"), *OldPath),
+				FCoreRedirects::GetRedirectedName(Flag, FCoreRedirectObjectName(OldPath)).ToString(), Object->GetPathName());
+			// A global delegate's signature is looked up as an object as well as a function: a delegate property
+			// names it as the former, a Blueprint pin as the latter.
+			if (Flag == ECoreRedirectFlags::Type_Function)
+			{
+				TestEqual(*FString::Printf(TEXT("'%s' leads there as an object too"), *OldPath),
+					FCoreRedirects::GetRedirectedName(ECoreRedirectFlags::Type_Object, FCoreRedirectObjectName(OldPath)).ToString(),
+					Object->GetPathName());
+			}
+			return true;
+		}, /*bIncludeNestedObjects*/ false);
+	}
+	AddInfo(FString::Printf(TEXT("%d split-off modules, %d types checked"), NumModules, NumChecked));
+	if (NumModules > 0)
+	{
+		TestTrue(TEXT("the split-off modules hold types to check"), NumChecked > 0);
+	}
 	return true;
 }
 

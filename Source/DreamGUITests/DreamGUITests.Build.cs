@@ -46,11 +46,12 @@ public class DreamGUITests : ModuleRules
 				// and only this module is told where they live.
 				Path.Combine(ModuleDirectory, "..", "DreamGUI", "Private"),
 				Path.Combine(ModuleDirectory, "..", "DreamGUIEditor", "Private"),
+				Path.Combine(ModuleDirectory, "..", "DreamGUIExtensions", "Private"),
 				Path.Combine(ModuleDirectory, "..", "DreamGUIK2Nodes", "Private"),
 				Path.Combine(ModuleDirectory, "..", "DreamTween", "Private"),
 			});
 
-		// The union of what the four modules under test depend on, plus the four themselves. A test
+		// The union of what the modules under test depend on, plus those modules themselves. A test
 		// compiles against the same headers its subject does, so anything the subject's public
 		// surface names has to be reachable from here too.
 		PublicDependencyModuleNames.AddRange(
@@ -72,6 +73,7 @@ public class DreamGUITests : ModuleRules
 				"DirectoryWatcher",
 				"DreamGUI",
 				"DreamGUIEditor",
+				"DreamGUIExtensions",
 				"DreamGUIK2Nodes",
 				"DreamTween",
 				"EditorFramework",
