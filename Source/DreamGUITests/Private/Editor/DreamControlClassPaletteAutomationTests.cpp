@@ -355,4 +355,65 @@ bool FDreamUniqueNameSanitisesTest::RunTest(const FString& Parameters)
 	return true;
 }
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamRecipePartsAreBornWithIdsTest,
+	"DreamGUI.Palette.EveryWidgetARecipeBuildsIsBornWithItsOwnId",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamRecipePartsAreBornWithIdsTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamControlClassPaletteTestsLocal;
+
+	// The recipes that build parts -- the progress bar's fill, the list's viewport, content and entry
+	// template, the scroll box's content -- make those widgets themselves instead of asking the tree for
+	// them. Each part is a widget the author then edits like any other, so each needs the id the designer
+	// pairs its preview by. One saved without it came back holding a different id after every load.
+	int32 RecipesWithParts = 0;
+	for (const FDreamUIControlDescriptor& Descriptor : FDreamUIControlRegistry::Get().GetDescriptors())
+	{
+		if (!Descriptor.BehaviourClass.IsValid() || !Descriptor.NativeConfigure)
+		{
+			continue;
+		}
+		UDreamWidgetTree* Tree = nullptr;
+		UDreamWidget* Root = MakeRoot(Tree);
+		if (Descriptor.VisualClass.IsValid())
+		{
+			Root->CreateNewVisual(Descriptor.VisualClass.Get());
+		}
+		Root->AddComponent(Descriptor.BehaviourClass.Get());
+		Descriptor.NativeConfigure(Root);
+
+		TArray<UDreamWidget*> Widgets = { Root };
+		for (int32 Index = 0; Index < Widgets.Num(); ++Index)
+		{
+			for (UDreamWidget* Child : Widgets[Index]->GetChildren())
+			{
+				if (IsValid(Child))
+				{
+					Widgets.Add(Child);
+				}
+			}
+		}
+		if (Widgets.Num() > 1)
+		{
+			++RecipesWithParts;
+		}
+		TSet<FGuid> Ids;
+		for (const UDreamWidget* Widget : Widgets)
+		{
+			const FString What = FString::Printf(TEXT("%s's '%s'"), *Descriptor.Name.ToString(), *Widget->GetDisplayName());
+			if (TestTrue(*FString::Printf(TEXT("%s has an id"), *What), Widget->GetWidgetGuid().IsValid()))
+			{
+				bool bAlreadySeen = false;
+				Ids.Add(Widget->GetWidgetGuid(), &bAlreadySeen);
+				TestFalse(*FString::Printf(TEXT("%s has its own"), *What), bAlreadySeen);
+			}
+		}
+	}
+	// The progress bar, the scroll box and the three list views.
+	TestTrue(TEXT("there were recipes that build parts"), RecipesWithParts >= 5);
+	return true;
+}
+
 #endif

@@ -95,6 +95,9 @@ namespace DreamUIControlRegistryLocal
 	static UDreamWidget* CreateChild(UDreamWidget* Parent, const TCHAR* Name, UClass* VisualClass = nullptr)
 	{
 		UDreamWidget* Child = NewObject<UDreamWidget>(Parent->GetOuter(), UDreamWidget::StaticClass(), NAME_None, RF_Public | RF_Transactional);
+		// A part is a widget the author edits like any other, born here rather than in the tree's
+		// ConstructWidget, so it takes its identity here too. Without one it was saved without one.
+		Child->AssignNewWidgetGuid();
 		Child->SetDisplayName(Name);
 		Child->OnRegister();
 		Child->SetParent(Parent, false);
