@@ -6,7 +6,7 @@
 #include "Core/Components/DreamImage.h"
 #include "Core/Components/DreamScrollBoxInputHandler.h"
 #include "Interaction/DreamContentWidget.h"
-#include "Interaction/UIScrollbar.h"
+#include "Core/Components/DreamUIScrollbarInterface.h"
 #include "Core/Components/DreamWidget.h"
 #include "Core/Components/DreamVisual.h"
 #include "Framework/Application/SlateApplication.h"
@@ -2946,17 +2946,24 @@ void UDreamLayoutContainerScrollBox::SetNavigationScrollPadding(float Value)
 	NavigationScrollPadding = FMath::Max(0.0f, DreamPanelLayoutLocal::FiniteOrZero(Value));
 }
 
-void UDreamLayoutContainerScrollBox::SetScrollbar(UUIScrollbar* Value)
+void UDreamLayoutContainerScrollBox::SetScrollbar(UDreamUIBehaviour* Value)
 {
 	if (Scrollbar.Get() == Value)
 	{
 		return;
 	}
+	// The property can hold any behaviour, and a Blueprint can hand one in; only a bar can be driven.
+	if (Value != nullptr && !Value->Implements<UDreamUIScrollbarInterface>())
+	{
+		UE_LOG(DreamGUI, Warning, TEXT("[%s].%d '%s' is not a scrollbar (it does not implement IDreamUIScrollbarInterface); the scroll box keeps the bar it has."),
+			ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *Value->GetPathName());
+		return;
+	}
 	// The old bar's subscription belongs to the old bar: leaving it attached means two boxes driving
 	// one handle, and the handle would jitter between whichever of them moved last.
-	if (UUIScrollbar* Previous = Scrollbar.Get(); IsValid(Previous) && ScrollbarChangedHandle.IsValid())
+	if (IDreamUIScrollbarInterface* Previous = Cast<IDreamUIScrollbarInterface>(Scrollbar.Get()); Previous != nullptr && ScrollbarChangedHandle.IsValid())
 	{
-		Previous->GetOnValueChangedEvent().Remove(ScrollbarChangedHandle);
+		Previous->GetScrollValueChangedEvent().Remove(ScrollbarChangedHandle);
 	}
 	ScrollbarChangedHandle.Reset();
 	Scrollbar = Value;
@@ -3029,14 +3036,14 @@ void UDreamLayoutContainerScrollBox::SetOverscrollLimit(float Value)
 
 void UDreamLayoutContainerScrollBox::EnsureScrollbarBound()
 {
-	UUIScrollbar* Bar = Scrollbar.Get();
-	if (!IsValid(Bar) || ScrollbarChangedHandle.IsValid())
+	IDreamUIScrollbarInterface* Bar = Cast<IDreamUIScrollbarInterface>(Scrollbar.Get());
+	if (Bar == nullptr || ScrollbarChangedHandle.IsValid())
 	{
 		return;
 	}
 	// Bound lazily rather than in OnRegister: the reference is a serialized pointer to another
 	// component, which need not have been loaded yet when this one registers.
-	ScrollbarChangedHandle = Bar->GetOnValueChangedEvent().AddUObject(
+	ScrollbarChangedHandle = Bar->GetScrollValueChangedEvent().AddUObject(
 		this, &UDreamLayoutContainerScrollBox::HandleScrollbarValueChanged);
 }
 
@@ -3047,8 +3054,9 @@ void UDreamLayoutContainerScrollBox::SyncScrollbar()
 		return;//the bar told us; telling it back is the loop
 	}
 	EnsureScrollbarBound();
-	UUIScrollbar* Bar = Scrollbar.Get();
-	if (!IsValid(Bar))
+	UDreamUIBehaviour* BarBehaviour = Scrollbar.Get();
+	IDreamUIScrollbarInterface* Bar = Cast<IDreamUIScrollbarInterface>(BarBehaviour);
+	if (!IsValid(BarBehaviour) || Bar == nullptr)
 	{
 		return;
 	}
@@ -3056,7 +3064,7 @@ void UDreamLayoutContainerScrollBox::SyncScrollbar()
 	const bool bEverythingFits = MaxScrollOffset <= KINDA_SMALL_NUMBER;
 	if (ScrollbarVisibility == EDreamScrollBoxScrollbarVisibility::AutoHide)
 	{
-		if (UDreamWidget* BarWidget = Bar->GetWidget(); IsValid(BarWidget))
+		if (UDreamWidget* BarWidget = BarBehaviour->GetWidget(); IsValid(BarWidget))
 		{
 			BarWidget->SetWidgetActive(!bEverythingFits);
 		}
@@ -3067,7 +3075,7 @@ void UDreamLayoutContainerScrollBox::SyncScrollbar()
 	// Non-notifying on purpose: this is the push direction, and letting it fire would arrive back
 	// as a pull. The parity box needs no axis inversion -- its offset grows the same way on both
 	// axes, so the raw fraction is fed and the bar's DirectionType decides which end is zero.
-	Bar->SetValueAndSize(GetViewOffsetFraction(), SafeSize, false);
+	Bar->SetScrollValueAndSize(GetViewOffsetFraction(), SafeSize, false);
 }
 
 void UDreamLayoutContainerScrollBox::HandleScrollbarValueChanged(float InValue)

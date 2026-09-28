@@ -4,6 +4,7 @@
 
 #include "Misc/AutomationTest.h"
 
+#include "Core/Components/DreamPanelLayouts.h"
 #include "Core/Components/DreamVisual.h"
 #include "Core/Components/DreamWidget.h"
 #include "Core/DreamUserWidget.h"
@@ -11,6 +12,7 @@
 #include "Core/DreamWidgetPropertyBinding.h"
 #include "Core/DreamWidgetTree.h"
 #include "Engine/World.h"
+#include "Interaction/UIScrollbar.h"
 #include "Interaction/UISelectable.h"
 #include "Interaction/UISlider.h"
 #include "Text/DreamUIAst.h"
@@ -513,6 +515,53 @@ bool FDreamNodeReferenceSurvivesInstancingTest::RunTest(const FString& Parameter
 				(UObject*)ArchetypeSelectable->GetTransitionTarget(), (UObject*)ArchetypeGlow->GetVisual());
 		}
 	}
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamNodeReferenceInterfaceTypedTest,
+	"DreamGUI.Text.NodeReference.ABehaviourPropertyThatNamesAnInterfaceTakesTheBehaviourImplementingIt",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamNodeReferenceInterfaceTypedTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamNodeReferenceTestLocal;
+
+	// The scroll box layout's Scrollbar is typed as the behaviour base and names, through MustImplement,
+	// the interface a bar implements. 'Bar' carries a selectable FIRST: were the property's own type the
+	// whole story, the reference would land on the selectable, the first behaviour of the node.
+	FDreamUINode Root = MakeNode(TEXT("Widget"), TEXT("Root"));
+
+	FDreamUIComponent Box = MakeComponent(TEXT("DreamLayoutContainerScrollBox"));
+	Box.Properties.Add(AssignNodeId(TEXT("Scrollbar"), TEXT("Bar")));
+	Root.Children.Add(MakeNodeCarrying(TEXT("List"), MoveTemp(Box)));
+
+	FDreamUINode BarNode = MakeNode(TEXT("Widget"), TEXT("Bar"));
+	BarNode.Components.Add(MakeComponent(TEXT("UISelectable")));
+	BarNode.Components.Add(MakeComponent(TEXT("UIScrollbar")));
+	Root.Children.Add(MoveTemp(BarNode));
+
+	const FBuildOutcome Outcome = BuildFrom(AstWith(Root));
+	if (!TestNotNull(TEXT("the tree built"), Outcome.Tree.Get()))
+	{
+		return false;
+	}
+	TestFalse(TEXT("and built clean"), Outcome.Diagnostics.HasErrors());
+
+	UDreamWidget* List = Outcome.Find(TEXT("List"));
+	UDreamWidget* Bar = Outcome.Find(TEXT("Bar"));
+	if (!TestNotNull(TEXT("the list node exists"), List) || !TestNotNull(TEXT("the bar node exists"), Bar))
+	{
+		return false;
+	}
+	UDreamLayoutContainerScrollBox* ScrollBox = Cast<UDreamLayoutContainerScrollBox>(List->GetLayoutContainer());
+	UUIScrollbar* BarBehaviour = Bar->GetComponent<UUIScrollbar>();
+	if (!TestNotNull(TEXT("the list is a scroll box"), ScrollBox) || !TestNotNull(TEXT("the bar node has its bar"), BarBehaviour))
+	{
+		return false;
+	}
+	TestEqual(TEXT("the reference takes the node's bar, not its first behaviour"),
+		(UObject*)ScrollBox->GetScrollbar(), (UObject*)BarBehaviour);
 	return true;
 }
 

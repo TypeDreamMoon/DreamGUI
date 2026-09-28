@@ -2014,7 +2014,18 @@ namespace DreamUITextBuilderLocal
 			}
 			else if (Wanted->IsChildOf(UDreamUIBehaviour::StaticClass()))
 			{
-				Resolved = Named->GetComponent(Wanted);
+				// A property typed as the behaviour base can name, through MustImplement, the interface
+				// its behaviour has to implement instead -- the scroll box's Scrollbar is one. The part of
+				// the node meant is then the behaviour that implements it, not whichever comes first. The
+				// metadata is editor-only, and so is the one caller that builds from text.
+				UClass* Interface = nullptr;
+#if WITH_EDITORONLY_DATA
+				if (const FString* MustImplement = Pending.Property->FindMetaData(TEXT("MustImplement")))
+				{
+					Interface = FindObject<UClass>(nullptr, **MustImplement);
+				}
+#endif
+				Resolved = Interface != nullptr ? Named->GetComponentByInterface(Interface) : Named->GetComponent(Wanted);
 				MissingPartAdvice = TEXT("add that behaviour to the node with '+'");
 			}
 			else

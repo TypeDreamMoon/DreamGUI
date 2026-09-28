@@ -7,12 +7,6 @@
   ],
   "edges": [
     {
-      "file": "Source/DreamGUI/Private/Core/Components/DreamPanelLayouts.cpp",
-      "include": "Source/DreamGUI/Public/Interaction/UIScrollbar.h",
-      "owner": "DreamGUI",
-      "includedOwner": "DreamGUIControls"
-    },
-    {
       "file": "Source/DreamGUI/Private/Core/Components/DreamWidget_Focus.cpp",
       "include": "Source/DreamGUI/Public/Event/DreamEventSystem.h",
       "owner": "DreamGUI",

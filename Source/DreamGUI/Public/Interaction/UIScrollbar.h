@@ -7,6 +7,7 @@
 #include "UISelectable.h"
 #include "Event/DreamUIEventDelegate.h"
 #include "Event/DreamDelegateDeclaration.h"
+#include "Core/Components/DreamUIScrollbarInterface.h"
 #include "UIScrollbar.generated.h"
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FUIScrollbarValueChangedEvent, float, Value);
@@ -53,7 +54,7 @@ enum class EUIScrollbarDirectionType:uint8
  * UDreamScrollBar) and both numbers become the view's: progress in, progress out.
  */
 UCLASS(ClassGroup = (DreamGUI), Blueprintable, meta = (BlueprintSpawnableComponent))
-class DREAMGUI_API UUIScrollbar : public UUISelectable, public IDreamPointerDragInterface
+class DREAMGUI_API UUIScrollbar : public UUISelectable, public IDreamPointerDragInterface, public IDreamUIScrollbarInterface
 {
 	GENERATED_BODY()
 
@@ -110,6 +111,10 @@ protected:
 	float PressValue = 0;
 public:
 	FDreamUIMulticastDelegateFloat& GetOnValueChangedEvent(){return OnValueChangedCPP;}
+
+	//~ IDreamUIScrollbarInterface: how the core's scroll box layout drives this bar and hears it back
+	virtual void SetScrollValueAndSize(float InValue, float InSize, bool bInFireEvent) override { SetValueAndSize(InValue, InSize, bInFireEvent); }
+	virtual FDreamUIMulticastDelegateFloat& GetScrollValueChangedEvent() override { return GetOnValueChangedEvent(); }
 
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Scrollbar")
 		float GetValue()const { return Value; }

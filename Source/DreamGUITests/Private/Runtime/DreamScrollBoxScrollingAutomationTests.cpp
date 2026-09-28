@@ -7,6 +7,9 @@
 #include "Core/Components/DreamPanelLayouts.h"
 #include "Core/Components/DreamWidget.h"
 #include "Engine/World.h"
+#include "Interaction/UIScrollbar.h"
+#include "Interaction/UISelectable.h"
+#include "Misc/ScopeExit.h"
 #include "DreamScopedWorld.h"
 
 /*
@@ -555,6 +558,50 @@ bool FDreamScrollBoxEaseCurveScrollTest::RunTest(const FString& Parameters)
 	TestEqual(TEXT("An unbound curve falls back to a linear blend and still arrives"),
 		Fixture.ScrollBox->GetScrollOffset(), 90.0f, 0.001f);
 	TestFalse(TEXT("...without leaving the box animating"), Fixture.ScrollBox->IsAnimatingScroll());
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamScrollBoxLinkedBarTest,
+	"DreamGUI.Layout.ScrollBox.ALinkedScrollbarFollowsTheBoxAndMovesItBack",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamScrollBoxLinkedBarTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamScrollBoxScrollingTestLocal;
+	FScrollFixture Fixture;
+	Fixture.Arrange();
+
+	// The bar can sit anywhere in the hierarchy; a widget of its own is enough. The box names it through
+	// IDreamUIScrollbarInterface, so this is also the test that the control library's bar still answers.
+	UDreamWidget* BarWidget = MakeWidget(Fixture.TestWorld.World, nullptr, TEXT("Bar"), 20.0f, 120.0f);
+	ON_SCOPE_EXIT
+	{
+		BarWidget->DestroyWidget();
+	};
+	UUIScrollbar* Bar = BarWidget->AddComponent<UUIScrollbar>();
+	if (!TestNotNull(TEXT("the bar was added"), Bar))
+	{
+		return false;
+	}
+	Fixture.ScrollBox->SetScrollbar(Bar);
+	TestEqual(TEXT("the box holds the bar"), (UObject*)Fixture.ScrollBox->GetScrollbar(), (UObject*)Bar);
+
+	// Box to bar: half of the 180 range scrolled, and 120 of 300 in view.
+	Fixture.ScrollBox->SetScrollOffset(90.0f);
+	TestEqual(TEXT("the bar shows where the box is"), Bar->GetValue(), 0.5f, 0.001f);
+	TestEqual(TEXT("and how much of the content is in view"), Bar->GetSize(), 0.4f, 0.001f);
+
+	// Bar to box: dragging the bar to its end scrolls the box to its end.
+	Bar->SetValue(1.0f);
+	TestEqual(TEXT("moving the bar scrolls the box"), Fixture.ScrollBox->GetScrollOffset(), 180.0f, 0.01f);
+
+	// The property holds any behaviour, and a Blueprint can hand one in; only a bar is taken.
+	UUISelectable* NotABar = BarWidget->AddComponent<UUISelectable>();
+	AddExpectedMessagePlain(TEXT("is not a scrollbar"), ELogVerbosity::Warning);
+	Fixture.ScrollBox->SetScrollbar(NotABar);
+	TestEqual(TEXT("a behaviour that is not a bar is refused, and the bar stays linked"),
+		(UObject*)Fixture.ScrollBox->GetScrollbar(), (UObject*)Bar);
 	return true;
 }
 

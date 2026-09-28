@@ -794,19 +794,23 @@ public:
 	FDreamScrollBoxUserScrolledEvent OnUserScrolled;
 
 	/**
-	 * A UUIScrollbar to keep in step with this box, both ways. Assign the component from a
-	 * scrollbar prefab (/DreamGUI/Prefabs/VerticalScrollbar or HorizontalScrollbar) placed anywhere in
-	 * the hierarchy -- it does not have to be a child of this box. Which end of the bar means zero
-	 * is the BAR's business: this box always feeds the raw 0..1 fraction and the bar's own
-	 * DirectionType decides the mapping.
+	 * A scrollbar behaviour to keep in step with this box, both ways -- a UUIScrollbar, or anything else
+	 * that implements IDreamUIScrollbarInterface. Assign the component from a scrollbar prefab
+	 * (/DreamGUI/Prefabs/VerticalScrollbar or HorizontalScrollbar) placed anywhere in the hierarchy -- it
+	 * does not have to be a child of this box. Which end of the bar means zero is the BAR's business:
+	 * this box always feeds the raw 0..1 fraction and the bar's own DirectionType decides the mapping.
+	 *
+	 * Typed as the behaviour base, with MustImplement naming the interface, because the scrollbar is the
+	 * control library's and the core does not name its types. What is saved is the component's path,
+	 * so an asset that linked a UUIScrollbar before loads the same link.
 	 *
 	 * The one knob on this box with no BlueprintSetter, and the reason is the TYPE: a BlueprintSetter
 	 * has to take the property's own type, and a weak pointer is not something a UFUNCTION parameter
 	 * can be. SetScrollbar below takes the raw pointer a caller actually has, and is the Blueprint
 	 * road; the exception is registered rather than left to be noticed.
 	 */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "ScrollBox")
-	TWeakObjectPtr<class UUIScrollbar> Scrollbar;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "ScrollBox", meta = (MustImplement = "/Script/DreamGUI.DreamUIScrollbarInterface"))
+	TWeakObjectPtr<class UDreamUIBehaviour> Scrollbar;
 	/** Whether that bar hides itself when the content already fits. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetScrollbarVisibility", BlueprintSetter = "SetScrollbarVisibility", Category = "ScrollBox")
 	EDreamScrollBoxScrollbarVisibility ScrollbarVisibility = EDreamScrollBoxScrollbarVisibility::AutoHide;
@@ -885,9 +889,10 @@ public:
 	void SetAnalogMouseWheelKey(FKey Value) { AnalogMouseWheelKey = Value; }
 	/** The bar this box drives. Takes the raw pointer, because the stored form is a weak one. */
 	UFUNCTION(BlueprintPure, Category = "ScrollBox")
-	UUIScrollbar* GetScrollbar() const { return Scrollbar.Get(); }
+	UDreamUIBehaviour* GetScrollbar() const { return Scrollbar.Get(); }
+	/** Link a scrollbar behaviour; one that does not implement IDreamUIScrollbarInterface is refused. */
 	UFUNCTION(BlueprintCallable, Category = "ScrollBox")
-	void SetScrollbar(UUIScrollbar* Value);
+	void SetScrollbar(UDreamUIBehaviour* Value);
 	UFUNCTION(BlueprintPure, Category = "ScrollBox")
 	EDreamScrollBoxScrollbarVisibility GetScrollbarVisibility() const { return ScrollbarVisibility; }
 	UFUNCTION(BlueprintCallable, Category = "ScrollBox")
