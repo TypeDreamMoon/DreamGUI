@@ -110,6 +110,25 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "DreamGUI")
 		TObjectPtr<UDreamBaseRaycaster> PressRaycaster;
 	/**
+	 * The press raycaster's ray for THIS pointer, as of the latest frame it was traced.
+	 *
+	 * A raycaster keeps only the ray it generated last (UDreamBaseRaycaster::GetRayOrigin), for whichever
+	 * pointer that was, so two pointers pressed through one raycaster -- two fingers on a screen -- read
+	 * each other's ray from it, and a drag followed the wrong finger. The input system writes this every
+	 * frame it traces the pointer; the drag helpers below read it, and fall back to the raycaster's own
+	 * ray only for event data nobody traced (bHasPressRaycasterRay).
+	 */
+	FVector PressRaycasterRayOrigin = FVector::ZeroVector;
+	FVector PressRaycasterRayDirection = FVector(1, 0, 0);
+	bool bHasPressRaycasterRay = false;
+	/** Record InOrigin/InDirection as the press raycaster's ray for this pointer. */
+	void SetPressRaycasterRay(const FVector& InOrigin, const FVector& InDirection)
+	{
+		PressRaycasterRayOrigin = InOrigin;
+		PressRaycasterRayDirection = InDirection;
+		bHasPressRaycasterRay = true;
+	}
+	/**
 	 * The three timestamps below all start at zero, meaning "the thing they date has not happened
 	 * yet". They were the only fields on this class without an initialiser, which was survivable
 	 * only for as long as nobody read one before writing it -- and PressTime IS read that way:

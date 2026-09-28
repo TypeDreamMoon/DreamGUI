@@ -391,6 +391,8 @@ void UDreamWidget::OnRenderCanvasChanged(UDreamCanvas* OldCanvas, UDreamCanvas* 
 
 void UDreamWidget::CalculateWidgetActive_Recursive()
 {
+	// What a ray can hit changes with it; see UDreamUIManagerWorldSubsystem::GetHitTestGeneration.
+	UDreamUIManagerWorldSubsystem::BumpHitTestGenerationFor(this);
 	// MarkRebuildAllLayoutTree empties the WHOLE MapWidgetToLayoutTree, so it says nothing about which
 	// widget raised it and one call covers every change this walk can make. It used to be raised from
 	// inside the recursion, once per descendant whose cached value moved: deactivating a page of a few
@@ -448,6 +450,7 @@ void UDreamWidget::CalculateWidgetActive_Recursive()
 
 void UDreamWidget::CalculateVisibility_Recursive()
 {
+	UDreamUIManagerWorldSubsystem::BumpHitTestGenerationFor(this);
 	/** The same hoist as in CalculateWidgetActive_Recursive, and for the same reason. */
 	bool bAnyLayoutVisibilityChanged = false;
 	struct FVisibilityCalculator
@@ -521,6 +524,7 @@ void UDreamWidget::CalculateVisibility_Recursive()
 }
 void UDreamWidget::CalculateInteractable_Recursive()
 {
+	UDreamUIManagerWorldSubsystem::BumpHitTestGenerationFor(this);
 	struct LOCAL
 	{
 		static void CalculateInteractable(UDreamWidget* Widget)
@@ -575,6 +579,7 @@ void UDreamWidget::CalculateInteractable_Recursive()
 }
 void UDreamWidget::CalculateRaycastable_Recursive()
 {
+	UDreamUIManagerWorldSubsystem::BumpHitTestGenerationFor(this);
 	struct LOCAL
 	{
 		static void CalculateRaycastable(UDreamWidget* Widget)

@@ -39,6 +39,7 @@ void UDreamUIManagerWorldSubsystem::AddRaycaster(UDreamBaseRaycaster* InRaycaste
 		auto& AllRaycasterArray = Instance->AllRaycasterArray;
 		if (AllRaycasterArray.Contains(InRaycaster))return;
 		AllRaycasterArray.Add(InRaycaster);
+		Instance->BumpHitTestGeneration();
 	}
 }
 void UDreamUIManagerWorldSubsystem::RemoveRaycaster(UDreamBaseRaycaster* InRaycaster)
@@ -49,7 +50,17 @@ void UDreamUIManagerWorldSubsystem::RemoveRaycaster(UDreamBaseRaycaster* InRayca
 		if (Instance->AllRaycasterArray.Find(InRaycaster, index))
 		{
 			Instance->AllRaycasterArray.RemoveAt(index);
+			Instance->BumpHitTestGeneration();
 		}
+	}
+}
+
+void UDreamUIManagerWorldSubsystem::BumpHitTestGenerationFor(const UObject* InWorldContext)
+{
+	UWorld* World = InWorldContext != nullptr ? InWorldContext->GetWorld() : nullptr;
+	if (UDreamUIManagerWorldSubsystem* Instance = World != nullptr ? GetInstance(World) : nullptr)
+	{
+		Instance->BumpHitTestGeneration();
 	}
 }
 

@@ -130,6 +130,18 @@ public:
 	/** See LastLayoutPassCount. One is the only healthy value. */
 	int32 GetLastLayoutPassCount()const{return LastLayoutPassCount;}
 
+	/**
+	 * Moves on whenever what a ray would hit in this world may have changed: a canvas updating (layout,
+	 * transform, visibility, geometry and sort all reach the draw calls through one), a canvas or a
+	 * raycaster coming or going, a widget's active, visible, raycastable or interactable state being
+	 * worked out again. The input system traces a pointer that has not moved again only when this has
+	 * moved since its last trace -- an idle screen costs no raycasts.
+	 */
+	uint64 GetHitTestGeneration()const{ return HitTestGeneration; }
+	void BumpHitTestGeneration(){ ++HitTestGeneration; }
+	/** BumpHitTestGeneration on InWorldContext's manager, when it has one. */
+	static void BumpHitTestGenerationFor(const UObject* InWorldContext);
+
 	/** The layout-pass state of this world's widgets; see UDreamWidget::GetLayoutPassContext. */
 	FDreamLayoutPassContext& GetLayoutPassContext() { return LayoutPassContext; }
 	const FDreamLayoutPassContext& GetLayoutPassContext() const { return LayoutPassContext; }
@@ -261,6 +273,8 @@ private:
 	 * eight times and happened to agree" was unobservable in a normal build.
 	 */
 	int32 LastLayoutPassCount = 0;
+	/** See GetHitTestGeneration. */
+	uint64 HitTestGeneration = 0;
 	/** The writer stack, pass depth and desired-size memo every layout pass in this world shares. */
 	FDreamLayoutPassContext LayoutPassContext;
 	struct FWorldServiceEntry

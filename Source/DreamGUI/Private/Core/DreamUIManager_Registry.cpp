@@ -97,6 +97,7 @@ void UDreamUIManagerWorldSubsystem::AddCanvas(UDreamCanvas* InCanvas)
 	}
 #endif
 	this->AllCanvasArray.AddUnique(InCanvas);
+	BumpHitTestGeneration();
 }
 
 void UDreamUIManagerWorldSubsystem::RemoveCanvas(UDreamCanvas* InCanvas)
@@ -109,6 +110,7 @@ void UDreamUIManagerWorldSubsystem::RemoveCanvas(UDreamCanvas* InCanvas)
 	}
 #endif
 	this->AllCanvasArray.RemoveSingle(InCanvas);
+	BumpHitTestGeneration();
 }
 
 int32 UDreamUIManagerWorldSubsystem::CountCompetingScreenSpaceOverlayCanvases()const

@@ -1504,6 +1504,9 @@ void UDreamCanvas::UpdateCanvasDrawCall()
 	{
 		bCanTickUpdate = false;
 		RootCanvas->bAnythingChangedForRenderTarget = true;
+		// Whatever made this canvas update -- layout, a transform, geometry, a sort -- may have moved what a
+		// ray would hit on it.
+		UDreamUIManagerWorldSubsystem::BumpHitTestGenerationFor(this);
 		CheckUIMesh();
 		struct LOCAL
 		{
