@@ -136,29 +136,31 @@ bool FDreamLifecycleHostUndoTest::RunTest(const FString& Parameters)
 	FScopedPanelClass Panel(TEXT("HostUndo"));
 	if (!TestNotNull(TEXT("the panel class compiled"), Panel.GetClass()))return false;
 	FScopedWorld Level(EWorldType::Editor);
-	ADreamWorldWidgetActor* Actor = PlacePanel(Level.World, Panel.GetClass());
-	if (!TestNotNull(TEXT("the panel was placed"), Actor))return false;
-	UDreamWorldWidgetComponent* Host = Actor->GetWidgetComponent();
-	UDreamWidget* FirstRoot = Host->GetLoadedWidget();
-	if (!TestNotNull(TEXT("with its tree"), FirstRoot))return false;
+	// Held weakly across the collections below: the tree the deletion takes down is freed by them, and
+	// nothing else keeps it -- the component's hold on its tree is not undo's to record.
+	const TWeakObjectPtr<ADreamWorldWidgetActor> Actor = PlacePanel(Level.World, Panel.GetClass());
+	if (!TestTrue(TEXT("the panel was placed"), Actor.IsValid()))return false;
+	const TWeakObjectPtr<UDreamWorldWidgetComponent> Host = Actor->GetWidgetComponent();
+	const TWeakObjectPtr<UDreamWidget> FirstRoot = Host->GetLoadedWidget();
+	if (!TestTrue(TEXT("with its tree"), FirstRoot.IsValid()))return false;
 
 	// Deleted in a transaction, the way the level editor deletes: the host goes, and its tree with it.
 	GEditor->BeginTransaction(FText::FromString(TEXT("Delete the panel")));
-	Level.World->EditorDestroyActor(Actor, true);
+	Level.World->EditorDestroyActor(Actor.Get(), true);
 	GEditor->EndTransaction();
 	Collect();
-	TestFalse(TEXT("Deleting the host destroyed its tree"), IsValid(FirstRoot));
+	TestFalse(TEXT("Deleting the host destroyed its tree"), FirstRoot.IsValid());
 	TestEqual(TEXT("...and left no tree in the world"), RegisteredRoots(Level.World).Num(), 0);
 
 	// Undone: the host comes back, and builds its tree again -- one tree, its own.
 	GEditor->UndoTransaction();
 	DrawFrames(Level.World, 2);
-	if (!TestTrue(TEXT("Undoing the deletion brings the host back"), IsValid(Actor) && IsValid(Host)))return false;
+	if (!TestTrue(TEXT("Undoing the deletion brings the host back"), Actor.IsValid() && Host.IsValid()))return false;
 	const TArray<UDreamWidget*> AfterUndo = RegisteredRoots(Level.World);
 	TestEqual(TEXT("...with exactly one tree in the world"), AfterUndo.Num(), 1);
 	TestTrue(TEXT("...which is the host's, outered to it"),
-		AfterUndo.Num() == 1 && Host->GetLoadedWidget() == AfterUndo[0] && HolderOf(AfterUndo[0]) == Host);
-	TestFalse(TEXT("...and is not the tree the deletion destroyed"), AfterUndo.Contains(FirstRoot));
+		AfterUndo.Num() == 1 && Host->GetLoadedWidget() == AfterUndo[0] && HolderOf(AfterUndo[0]) == Host.Get());
+	TestFalse(TEXT("...and is not the tree the deletion destroyed"), FirstRoot.IsValid() && AfterUndo.Contains(FirstRoot.Get()));
 
 	// Redone: the host is gone again, and its tree with it -- nothing registered, nothing hostless.
 	GEditor->RedoTransaction();
