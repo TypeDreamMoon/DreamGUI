@@ -427,8 +427,7 @@ void UDreamUIManagerWorldSubsystem::DrawHelperGizmo()
 		if (this->GetWorld()->WorldType == EWorldType::Game
 			|| this->GetWorld()->WorldType == EWorldType::PIE
 			|| this->GetWorld()->WorldType == EWorldType::Editor
-			// || this->GetWorld()->WorldType == EWorldType::EditorPreview
-			)
+			|| this->GetWorld()->WorldType == EWorldType::EditorPreview)
 		{
 			struct LOCAL
 			{

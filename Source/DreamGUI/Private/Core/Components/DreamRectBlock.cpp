@@ -2,6 +2,7 @@
 // Modified by TypeDreamMoon.
 
 #include "Core/Components/DreamRectBlock.h"
+#include "Core/DreamUIWorldContext.h"
 #include "Core/DreamGUISettings.h"
 #include "DreamGUI.h"
 #include "Core/DreamUIGeometry.h"
@@ -375,7 +376,7 @@ void UDreamRectBlock::OnRegister()
 		UE_LOG(DreamGUI, Error, TEXT("[%s].%d %s has no RectBlockData, so it cannot upload its block and will draw with the canvas default material."), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *this->GetPathName());
 	}
 #if WITH_EDITOR
-	if (this->GetWorld() && this->GetWorld()->WorldType == EWorldType::Editor)
+	if (DreamUI::IsEditingWorld(this))
 	{
 		if (!bHasAddToSprite)
 		{
@@ -408,7 +409,7 @@ void UDreamRectBlock::OnUnregister()
 		OnDataTextureChangedDelegateHandle.Reset();
 	}
 #if WITH_EDITOR
-	if (this->GetWorld() && this->GetWorld()->WorldType == EWorldType::Editor)
+	if (DreamUI::IsEditingWorld(this))
 	{
 		if (bHasAddToSprite)
 		{

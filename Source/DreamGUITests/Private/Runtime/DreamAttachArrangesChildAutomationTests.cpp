@@ -134,7 +134,7 @@ bool FDreamAttachRestoredSubtreeTest::RunTest(const FString& Parameters)
 	Manager->TickDreamUI(0.016f);
 
 	// WidgetSerializer_Deserialize builds the whole subtree unregistered, parents the created root into
-	// the target, and only then walks AllWidgetArray calling OnRegister. A palette Button is exactly this
+	// the target, and only then walks the registered widgets calling OnRegister. A palette Button is exactly this
 	// shape: a root with one Text child.
 	UDreamWidget* Button = NewObject<UDreamWidget>(Root);
 	Button->SetWidth(100.0f);
@@ -271,13 +271,13 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 
 bool FDreamAttachInEditorWorldTest::RunTest(const FString& Parameters)
 {
-	// FDreamWidgetPreviewScene builds its world as EWorldType::Editor (DreamWidgetDesignerScene.cpp:30), and several
-	// DreamGUI paths branch on IsGameWorld. Same fixture, the world type the designer actually uses.
-	UWorld* World = UWorld::CreateWorld(EWorldType::Editor, false);
+	// FDreamWidgetPreviewScene builds its world as EWorldType::EditorPreview, and several DreamGUI paths
+	// branch on IsGameWorld. Same fixture, the world type the designer actually uses.
+	UWorld* World = UWorld::CreateWorld(EWorldType::EditorPreview, false);
 	ON_SCOPE_EXIT{ if (World) { World->DestroyWorld(false); } };
 
 	UDreamUIManagerWorldSubsystem* Manager = UDreamUIManagerWorldSubsystem::GetInstance(World);
-	if (!TestNotNull(TEXT("DreamUI manager subsystem exists in an editor world"), Manager))
+	if (!TestNotNull(TEXT("DreamUI manager subsystem exists in an editor preview world"), Manager))
 	{
 		return false;
 	}

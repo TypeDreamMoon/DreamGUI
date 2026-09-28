@@ -1,6 +1,7 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
 #include "Core/Components/DreamSpriteBase.h"
+#include "Core/DreamUIWorldContext.h"
 #include "DreamGUI.h"
 #include "Core/DreamUIGeometry.h"
 #include "Core/DreamUISpriteData.h"
@@ -152,7 +153,7 @@ void UDreamSpriteBase::OnRegister()
 {
 	Super::OnRegister();
 #if WITH_EDITOR
-	if (this->GetWorld() && this->GetWorld()->WorldType == EWorldType::Editor)
+	if (DreamUI::IsEditingWorld(this))
 	{
 		if (!bHasAddToSprite)
 		{
@@ -169,7 +170,7 @@ void UDreamSpriteBase::OnUnregister()
 {
 	Super::OnUnregister();
 #if WITH_EDITOR
-	if (this->GetWorld() && this->GetWorld()->WorldType == EWorldType::Editor)
+	if (DreamUI::IsEditingWorld(this))
 	{
 		if (bHasAddToSprite)
 		{

@@ -3,6 +3,7 @@
 #include "Extensions/DreamImageSequencePlayer.h"
 #include "DreamTweenBPLibrary.h"
 #include "Core/DreamUIManager.h"
+#include "Core/DreamUIWorldContext.h"
 #include "Core/Components/DreamTexture.h"
 
 UDreamImageSequencePlayer::UDreamImageSequencePlayer()
@@ -27,7 +28,7 @@ void UDreamImageSequencePlayer::OnRegister()
 {
 	Super::OnRegister();
 #if WITH_EDITOR
-	if (GetWorld() && GetWorld()->WorldType == EWorldType::Editor)
+	if (DreamUI::IsEditingWorld(this))
 	{
 		if (auto DreamUIManagerObject = UDreamUIManagerObject::GetInstance(true))
 		{

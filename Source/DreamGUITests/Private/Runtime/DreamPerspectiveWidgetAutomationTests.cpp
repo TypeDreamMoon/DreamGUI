@@ -40,9 +40,9 @@ namespace DreamPerspectiveWidgetTestLocal
 	 * configuration no author will ever have. In an editor world GetViewportSize() derives from the
 	 * widget itself, so the authored size survives every later projection setter.
 	 *
-	 * UDreamUIManagerWorldSubsystem is still present -- UWorldSubsystem::DoesSupportWorldType admits
-	 * Editor by default and it does not override that -- so layout still rebuilds. Only
-	 * UDreamScreenUISubsystem opts out of editor worlds, and nothing here goes through the viewport.
+	 * UDreamUIManagerWorldSubsystem is still present -- its DoesSupportWorldType admits Editor -- so
+	 * layout still rebuilds. Only UDreamScreenUISubsystem opts out of editor worlds, and nothing here
+	 * goes through the viewport.
 	 */
 	using DreamTests::FScopedGameWorld;
 

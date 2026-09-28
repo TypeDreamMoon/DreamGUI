@@ -1,6 +1,7 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
 #include "DetailCustomization/DreamRectBlockCustomization.h"
+#include "Core/DreamUIWorldContext.h"
 #include "DreamDetailsMultiSelect.h"
 #include "DreamDetailsTemplateMirror.h"
 #include "DreamUIEditorUtils.h"
@@ -38,7 +39,7 @@ void FDreamRectBlockCustomization::CustomizeDetails(IDetailLayoutBuilder& Detail
 		if (auto validItem = Cast<UDreamRectBlock>(item.Get()))
 		{
 			TargetScriptArray.Add(TWeakObjectPtr<UDreamRectBlock>(validItem));
-			if (validItem->GetWorld() && validItem->GetWorld()->WorldType == EWorldType::Editor)
+			if (DreamUI::IsEditingWorld(validItem))
 			{
 				validItem->GetWidget()->MarkCanvasUpdate(true);
 			}

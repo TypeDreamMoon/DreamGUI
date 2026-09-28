@@ -1,6 +1,7 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
 #include "DetailCustomization/DreamSpriteBaseCustomization.h"
+#include "Core/DreamUIWorldContext.h"
 #include "DreamUIEditorUtils.h"
 #include "DreamDetailsTemplateMirror.h"
 #include "DreamGUIEditorModule.h"
@@ -35,7 +36,7 @@ void FDreamSpriteBaseCustomization::CustomizeDetails(IDetailLayoutBuilder& Detai
 		if (auto validItem = Cast<UDreamSpriteBase>(item.Get()))
 		{
 			TargetScriptArray.Add(TWeakObjectPtr<UDreamSpriteBase>(validItem));
-			if (validItem->GetWorld() && validItem->GetWorld()->WorldType == EWorldType::Editor)
+			if (DreamUI::IsEditingWorld(validItem))
 			{
 				validItem->CheckSpriteData();
 				validItem->GetWidget()->MarkCanvasUpdate(true);
