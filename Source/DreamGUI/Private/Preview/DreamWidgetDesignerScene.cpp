@@ -6,7 +6,6 @@
 #include "Components/DirectionalLightComponent.h"
 #include "Core/Components/DreamWidget.h"
 #include "Engine/TextureCube.h"
-#include "Event/DreamScreenSpaceRaycaster.h"
 #include "GameFramework/Actor.h"
 #include "Materials/MaterialInstanceConstant.h"
 

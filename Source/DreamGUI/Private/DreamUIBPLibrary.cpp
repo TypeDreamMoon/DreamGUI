@@ -2,6 +2,7 @@
 // Modified by TypeDreamMoon.
 
 #include "DreamUIBPLibrary.h"
+#include "Components/SceneComponent.h"
 #include "Engine/Engine.h"
 
 #include "DreamUIDelegateHandleWrapper.h"
@@ -13,7 +14,6 @@
 #include "Core/DreamUIRuntimeObject.h"
 #include "Core/Components/DreamVisual.h"
 #include "Core/Components/DreamCanvas.h"
-#include "Event/DreamScreenSpaceRaycaster.h"
 
 
 namespace DreamUICreateLocal
