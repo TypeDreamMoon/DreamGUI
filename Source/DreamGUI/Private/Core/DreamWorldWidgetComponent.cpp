@@ -78,6 +78,13 @@ void UDreamWorldWidgetComponent::LoadWidget()
 	{
 		return;
 	}
+	// Setting the class on a panel in a level that is still being made -- by the level editor, or by a
+	// script that places panels and saves -- builds nothing: the panel builds when it registers in a world
+	// that runs it (IsInAWorldThatRunsTrees).
+	if (!IsInAWorldThatRunsTrees())
+	{
+		return;
+	}
 
 	UDreamWidgetTree* NewTree = nullptr;
 	LoadedWidget = CreateDreamWidgetForHost(*this, WidgetClass, NewTree, [this](UDreamUserWidget* RootWidget)

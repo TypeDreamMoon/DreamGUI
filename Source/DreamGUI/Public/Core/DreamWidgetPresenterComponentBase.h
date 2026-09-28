@@ -45,6 +45,13 @@ protected:
 	 * honest answer for one that has no notion of what it would build.
 	 */
 	virtual bool IsLoadedWidgetCurrent() const { return false; }
+	/**
+	 * Whether a tree built now would be in a world that runs trees. Not in an Inactive or typeless world:
+	 * that is a package being made or preloaded -- a level the level editor is creating, one a script fills
+	 * before saving it, a map loaded ahead of the command that opens it -- and a tree built there has no
+	 * manager to lay it out, draw it or take it down, and is found by the collector still registered.
+	 */
+	bool IsInAWorldThatRunsTrees() const;
 	/** Tear the loaded tree down and forget it. Safe to call twice, and on a tree GC already took. */
 	void DestroyLoadedWidget();
 #if WITH_EDITOR

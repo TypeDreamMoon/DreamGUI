@@ -63,6 +63,12 @@ void UDreamWidgetPresenterComponentBase::EndPlay(const EEndPlayReason::Type EndP
 	RootCanvas = nullptr;
 }
 
+bool UDreamWidgetPresenterComponentBase::IsInAWorldThatRunsTrees() const
+{
+	const UWorld* World = GetWorld();
+	return World != nullptr && World->WorldType != EWorldType::Inactive && World->WorldType != EWorldType::None;
+}
+
 void UDreamWidgetPresenterComponentBase::OnRegister()
 {
 	Super::OnRegister();
@@ -70,7 +76,7 @@ void UDreamWidgetPresenterComponentBase::OnRegister()
 	// An Inactive (or typeless) world is a package being preloaded -- double-clicking a map asset
 	// loads it before the map command runs. A tree built there answers to no manager and is reaped
 	// by the next GC through the BeginDestroy fallback, mid-purge; building it is pure liability.
-	if (World == nullptr || World->WorldType == EWorldType::Inactive || World->WorldType == EWorldType::None)
+	if (!IsInAWorldThatRunsTrees())
 	{
 		return;
 	}
