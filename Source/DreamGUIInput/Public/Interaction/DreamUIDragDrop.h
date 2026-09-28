@@ -8,6 +8,7 @@
 #include "Event/Interface/DreamPointerDragDropInterface.h"
 #include "Interaction/DreamDragDropOperation.h" // FDreamUIDragDropOperationEvent
 #include "Subsystems/WorldSubsystem.h"
+#include "Core/DreamUIWorldService.h"
 #include "DreamUIDragDrop.generated.h"
 
 class UDreamDragDropOperation;
@@ -153,7 +154,7 @@ namespace DreamUIDragDropPolicy
  * subsystem rather than in the pipeline.
  */
 UCLASS()
-class DREAMGUIINPUT_API UDreamUIDragDropSubsystem : public UTickableWorldSubsystem
+class DREAMGUIINPUT_API UDreamUIDragDropSubsystem : public UTickableWorldSubsystem, public IDreamUIWorldService
 {
 	GENERATED_BODY()
 
@@ -163,7 +164,10 @@ public:
 
 	virtual bool ShouldCreateSubsystem(UObject* Outer) const override;
 	virtual bool DoesSupportWorldType(const EWorldType::Type WorldType) const override;
+	virtual void Initialize(FSubsystemCollectionBase& Collection) override;
 	virtual void Deinitialize() override;
+	virtual int32 GetTeardownPriority() const override { return DreamUI::WorldServiceTeardownPriority::Input; }
+	virtual void TeardownForWorld(UWorld& InWorld) override;
 	virtual void Tick(float DeltaTime) override;
 	virtual TStatId GetStatId() const override;
 	/**
@@ -237,4 +241,6 @@ private:
 	TWeakObjectPtr<UDreamEventSystem> SubscribedEventSystem;
 	/** Pointer id to the drag it is carrying. Empty when nothing is being dragged. */
 	TMap<int32, FFollowedDrag> FollowedDrags;
+	/** Set by TeardownForWorld, which runs once. */
+	bool bTornDownForWorld = false;
 };

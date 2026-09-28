@@ -1,6 +1,7 @@
 // Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
 
 #include "Interaction/DreamUIVirtualCursor.h"
+#include "Core/DreamUIManager.h"
 
 #include "Core/DreamGUISettings.h"
 #include "Core/DreamScreenUISubsystem.h"
@@ -40,10 +41,37 @@ bool UDreamUIVirtualCursorSubsystem::DoesSupportWorldType(const EWorldType::Type
 	return WorldType == EWorldType::Game || WorldType == EWorldType::PIE;
 }
 
+void UDreamUIVirtualCursorSubsystem::Initialize(FSubsystemCollectionBase& Collection)
+{
+	Super::Initialize(Collection);
+	DreamUI::EnrolWorldService(Collection, *this, *this);
+}
+
 void UDreamUIVirtualCursorSubsystem::Deinitialize()
 {
-	DeactivateVirtualCursor();
+	// Passive: the world's teardown has taken this service down already (TeardownForWorld), unless the
+	// world had no manager to take it.
+	if (!bTornDownForWorld && GetWorld() != nullptr)
+	{
+		TeardownForWorld(*GetWorld());
+	}
 	Super::Deinitialize();
+}
+
+void UDreamUIVirtualCursorSubsystem::TeardownForWorld(UWorld& InWorld)
+{
+	if (bTornDownForWorld)
+	{
+		return;
+	}
+	bTornDownForWorld = true;
+	DeactivateVirtualCursor();
+	if (UDreamEventSystem* EventSystem = AutoModeEventSystem.Get())
+	{
+		EventSystem->GetInputDeviceChangedEvent().RemoveAll(this);
+	}
+	AutoModeEventSystem.Reset();
+	bAutoModeSubscribed = false;
 }
 
 TStatId UDreamUIVirtualCursorSubsystem::GetStatId() const
@@ -69,6 +97,7 @@ void UDreamUIVirtualCursorSubsystem::EnsureAutoModeSubscribed()
 		return;
 	}
 	EventSystem->GetInputDeviceChangedEvent().AddUObject(this, &UDreamUIVirtualCursorSubsystem::HandleInputDeviceChanged);
+	AutoModeEventSystem = EventSystem;
 	bAutoModeSubscribed = true;
 	// The device the player is already holding counts too, not just the next switch.
 	HandleInputDeviceChanged(EventSystem->GetCurrentInputDevice());

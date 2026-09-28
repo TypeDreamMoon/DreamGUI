@@ -57,14 +57,36 @@ void UDreamUIInputSubsystem::PostInitialize()
 #endif
 }
 
+void UDreamUIInputSubsystem::Initialize(FSubsystemCollectionBase& Collection)
+{
+	Super::Initialize(Collection);
+	DreamUI::EnrolWorldService(Collection, *this, *this);
+}
+
 void UDreamUIInputSubsystem::Deinitialize()
 {
+	// Passive: the world's teardown has taken this service down already (TeardownForWorld), unless the
+	// world had no manager to take it.
+	if (!bTornDownForWorld && GetWorld() != nullptr)
+	{
+		TeardownForWorld(*GetWorld());
+	}
 #if WITH_EDITOR
 	if (UDreamUIManagerWorldSubsystem* Manager = UDreamUIManagerWorldSubsystem::GetInstance(GetWorld()))
 	{
 		Manager->OnDrawHelperGizmo.RemoveAll(this);
 	}
 #endif
+	Super::Deinitialize();
+}
+
+void UDreamUIInputSubsystem::TeardownForWorld(UWorld& InWorld)
+{
+	if (bTornDownForWorld)
+	{
+		return;
+	}
+	bTornDownForWorld = true;
 	// The interaction objects this subsystem spawned are its to take away again. They are transient, so a
 	// level change would not carry them anyway; destroying them here is what keeps a PIE session that
 	// starts and stops repeatedly from leaving a host actor behind on every run.
@@ -81,7 +103,6 @@ void UDreamUIInputSubsystem::Deinitialize()
 		CreatedEventSystemActor->Destroy();
 		CreatedEventSystemActor = nullptr;
 	}
-	Super::Deinitialize();
 }
 
 #pragma region EventSystemRegistry

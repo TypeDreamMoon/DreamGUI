@@ -4,11 +4,13 @@
 
 #include "CoreMinimal.h"
 #include "Subsystems/WorldSubsystem.h"
+#include "Core/DreamUIWorldService.h"
 #include "DreamUIVirtualCursor.generated.h"
 
 class UDreamWidget;
 class UDreamUserWidget;
 class UDreamStandaloneInputModule;
+class UDreamEventSystem;
 enum class EDreamUIInputDevice : uint8;
 
 /**
@@ -23,7 +25,7 @@ enum class EDreamUIInputDevice : uint8;
  * it again.
  */
 UCLASS()
-class DREAMGUIINPUT_API UDreamUIVirtualCursorSubsystem : public UTickableWorldSubsystem
+class DREAMGUIINPUT_API UDreamUIVirtualCursorSubsystem : public UTickableWorldSubsystem, public IDreamUIWorldService
 {
 	GENERATED_BODY()
 
@@ -33,7 +35,10 @@ public:
 
 	virtual bool ShouldCreateSubsystem(UObject* Outer) const override;
 	virtual bool DoesSupportWorldType(const EWorldType::Type WorldType) const override;
+	virtual void Initialize(FSubsystemCollectionBase& Collection) override;
 	virtual void Deinitialize() override;
+	virtual int32 GetTeardownPriority() const override { return DreamUI::WorldServiceTeardownPriority::Input; }
+	virtual void TeardownForWorld(UWorld& InWorld) override;
 	virtual void Tick(float DeltaTime) override;
 	virtual TStatId GetStatId() const override;
 	/**
@@ -78,6 +83,10 @@ private:
 
 	bool bActive = false;
 	bool bAutoModeSubscribed = false;
+	/** Set by TeardownForWorld, which runs once. */
+	bool bTornDownForWorld = false;
+	/** The event system EnsureAutoModeSubscribed listens to, so the teardown can stop listening. */
+	TWeakObjectPtr<UDreamEventSystem> AutoModeEventSystem;
 	/** Viewport-space cursor position, top-left origin, integrated from the stick. */
 	FVector2D CursorPosition = FVector2D::ZeroVector;
 	/** Confirm-button state we last pushed, so press/release edges are delivered exactly once. */

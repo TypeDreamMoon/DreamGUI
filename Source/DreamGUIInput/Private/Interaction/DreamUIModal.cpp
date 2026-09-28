@@ -1,6 +1,7 @@
 ﻿// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
 
 #include "Interaction/DreamUIModal.h"
+#include "Core/DreamUIManager.h"
 
 #include "Core/DreamGUISettings.h"
 #include "Core/DreamScreenUISubsystem.h"
@@ -62,10 +63,34 @@ bool UDreamUIModalSubsystem::DoesSupportWorldType(const EWorldType::Type WorldTy
 	return WorldType == EWorldType::Game || WorldType == EWorldType::PIE;
 }
 
+void UDreamUIModalSubsystem::Initialize(FSubsystemCollectionBase& Collection)
+{
+	Super::Initialize(Collection);
+	DreamUI::EnrolWorldService(Collection, *this, *this);
+}
+
 void UDreamUIModalSubsystem::Deinitialize()
 {
+	// Passive: the world's teardown has taken this service down already (TeardownForWorld), unless the
+	// world had no manager to take it.
+	if (!bTornDownForWorld && GetWorld() != nullptr)
+	{
+		TeardownForWorld(*GetWorld());
+	}
+	Super::Deinitialize();
+}
+
+void UDreamUIModalSubsystem::TeardownForWorld(UWorld& InWorld)
+{
+	if (bTornDownForWorld)
+	{
+		return;
+	}
+	bTornDownForWorld = true;
 	// No results are delivered on teardown: the world these callbacks would run in is going away,
-	// and a dialog that never got an answer is the honest outcome of a world ending under it.
+	// and a dialog that never got an answer is the honest outcome of a world ending under it. Nor are
+	// the scopes popped: popping activates what is underneath and restores focus into it, in trees that
+	// are coming down, and the navigation stack forgets every scope in its own teardown.
 	for (TPair<int32, TArray<FActiveModal>>& Pair : ModalStacks)
 	{
 		for (int32 Index = Pair.Value.Num() - 1; Index >= 0; --Index)
@@ -74,7 +99,6 @@ void UDreamUIModalSubsystem::Deinitialize()
 		}
 	}
 	ModalStacks.Reset();
-	Super::Deinitialize();
 }
 
 TArray<UDreamUIModalSubsystem::FActiveModal>& UDreamUIModalSubsystem::FindOrAddStack(int32 InUserIndex)

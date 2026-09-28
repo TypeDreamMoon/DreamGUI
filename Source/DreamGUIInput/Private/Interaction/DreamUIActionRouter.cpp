@@ -1,6 +1,7 @@
 // Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
 
 #include "Interaction/DreamUIActionRouter.h"
+#include "Core/DreamUIManager.h"
 #include "Interaction/DreamUINavigationScope.h"
 #include "Interaction/DreamUINavigationStack.h"
 #include "Core/Components/DreamWidget.h"
@@ -21,10 +22,31 @@ bool UDreamUIActionRouter::ShouldCreateSubsystem(UObject* Outer) const
 	return !IsRunningCommandlet() && !IsRunningDedicatedServer() && Super::ShouldCreateSubsystem(Outer);
 }
 
+void UDreamUIActionRouter::Initialize(FSubsystemCollectionBase& Collection)
+{
+	Super::Initialize(Collection);
+	DreamUI::EnrolWorldService(Collection, *this, *this);
+}
+
 void UDreamUIActionRouter::Deinitialize()
 {
-	Bindings.Reset();
+	// Passive: the world's teardown has taken this service down already (TeardownForWorld), unless the
+	// world had no manager to take it.
+	if (!bTornDownForWorld && GetWorld() != nullptr)
+	{
+		TeardownForWorld(*GetWorld());
+	}
 	Super::Deinitialize();
+}
+
+void UDreamUIActionRouter::TeardownForWorld(UWorld& InWorld)
+{
+	if (bTornDownForWorld)
+	{
+		return;
+	}
+	bTornDownForWorld = true;
+	Bindings.Reset();
 }
 
 TStatId UDreamUIActionRouter::GetStatId() const

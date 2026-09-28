@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Subsystems/WorldSubsystem.h"
+#include "Core/DreamUIWorldService.h"
 #include "Core/DreamUIActionTypes.h"
 #include "Interaction/DreamUIInputAction.h"
 #include "DreamUIActionRouter.generated.h"
@@ -43,12 +44,15 @@ struct DREAMGUIINPUT_API FDreamUIActionBinding
  * Ticks, because a hold has to fire when the time is up rather than when the player lets go.
  */
 UCLASS()
-class DREAMGUIINPUT_API UDreamUIActionRouter : public UTickableWorldSubsystem
+class DREAMGUIINPUT_API UDreamUIActionRouter : public UTickableWorldSubsystem, public IDreamUIWorldService
 {
 	GENERATED_BODY()
 public:
 	virtual bool ShouldCreateSubsystem(UObject* Outer)const override;
+	virtual void Initialize(FSubsystemCollectionBase& Collection) override;
 	virtual void Deinitialize()override;
+	virtual int32 GetTeardownPriority() const override { return DreamUI::WorldServiceTeardownPriority::Input; }
+	virtual void TeardownForWorld(UWorld& InWorld) override;
 	virtual void Tick(float DeltaTime)override;
 	virtual TStatId GetStatId()const override;
 	/**
@@ -153,6 +157,8 @@ private:
 	};
 
 	TArray<FBindingEntry> Bindings;
+	/** Set by TeardownForWorld, which runs once. */
+	bool bTornDownForWorld = false;
 	int32 NextId = 0;
 	/** Keys already reported as claimed by both an action row and an Input Action. One warning each. */
 	TSet<FKey> ReportedInputActionConflictKeys;

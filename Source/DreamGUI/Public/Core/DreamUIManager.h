@@ -7,6 +7,7 @@
 #include "Tickable.h"
 #include "Containers/Ticker.h"
 #include "Core/DreamLayoutPassContext.h"
+#include "Core/DreamUIWorldService.h"
 #include "DreamUIManager.generated.h"
 
 struct FDreamUIHelperGizmoRenderParameter;
@@ -188,6 +189,24 @@ public:
 	FDreamLayoutPassContext& GetLayoutPassContext() { return LayoutPassContext; }
 	const FDreamLayoutPassContext& GetLayoutPassContext() const { return LayoutPassContext; }
 
+	/**
+	 * Enrol a DreamGUI service of this world for the world's teardown (IDreamUIWorldService). Every service
+	 * does it from its Initialize, through DreamUI::EnrolWorldService, whichever module it lives in. Kept
+	 * weakly: a service already gone when the teardown comes is skipped.
+	 */
+	void RegisterWorldService(UObject* InServiceObject, IDreamUIWorldService* InService);
+	void UnregisterWorldService(const UObject* InServiceObject);
+	/** Whether InServiceObject is enrolled for this world's teardown and has not been taken down yet. */
+	bool HasWorldService(const UObject* InServiceObject) const;
+	/**
+	 * The one path this world's DreamGUI comes down by, taken once: every enrolled service, highest
+	 * priority first; then every widget tree still registered; then the manager's own state. A game
+	 * world's EndPlay takes it, and any world's cleanup takes it when nothing did before -- which is how
+	 * an editor or preview world comes down. Deinitialize only checks that it was taken.
+	 */
+	void TeardownWorld();
+	bool HasTornDownWorld() const { return bWorldTornDown; }
+
 	static UDreamUIManagerWorldSubsystem* GetInstance(UWorld* InWorld);
 #if WITH_EDITOR
 	bool bShouldTickInEditor = false;
@@ -207,7 +226,6 @@ private:
 	
 private:
 #if WITH_EDITOR
-	static TArray<UDreamUIManagerWorldSubsystem*> InstanceArray;
 	FTSTicker::FDelegateHandle EditorTickDelegateHandle;
 #endif
 
@@ -278,6 +296,15 @@ private:
 	int32 LastLayoutPassCount = 0;
 	/** The writer stack, pass depth and desired-size memo every layout pass in this world shares. */
 	FDreamLayoutPassContext LayoutPassContext;
+	struct FWorldServiceEntry
+	{
+		TWeakObjectPtr<UObject> Object;
+		IDreamUIWorldService* Service = nullptr;
+	};
+	/** What TeardownWorld takes down, in the order the services enrolled. */
+	TArray<FWorldServiceEntry> WorldServices;
+	bool bWorldTornDown = false;
+	void HandleWorldCleanup(UWorld* InWorld, bool bInSessionEnded, bool bInCleanupResources);
 	int32 CurrentExecutingTickIndex = -1;
 	UPROPERTY(Transient) TArray<UDreamUIBehaviour*> DreamUIBehavioursNeedToRemoveFromTick;
 #if !UE_BUILD_SHIPPING
@@ -414,3 +441,13 @@ public:
 	static void AddDreamUIBehavioursForStart(UDreamUIBehaviour* InComp);
 	static void RemoveDreamUIBehavioursFromStart(UDreamUIBehaviour* InComp);
 };
+
+namespace DreamUI
+{
+	/**
+	 * What a world service's Initialize does to take part in its world's teardown: enrol with the world's
+	 * manager, making the manager first if it is not yet. False where the world has no manager -- a
+	 * commandlet's, a game preview's -- and the service then takes itself down in its own Deinitialize.
+	 */
+	DREAMGUI_API bool EnrolWorldService(FSubsystemCollectionBase& InCollection, UObject& InServiceObject, IDreamUIWorldService& InService);
+}

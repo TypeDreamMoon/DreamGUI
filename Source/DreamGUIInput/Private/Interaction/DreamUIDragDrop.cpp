@@ -1,6 +1,7 @@
 ﻿// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
 
 #include "Interaction/DreamUIDragDrop.h"
+#include "Core/DreamUIManager.h"
 
 #include "Core/DreamScreenUISubsystem.h"
 #include "Core/DreamUserWidget.h"
@@ -175,8 +176,30 @@ bool UDreamUIDragDropSubsystem::DoesSupportWorldType(const EWorldType::Type Worl
 	return WorldType == EWorldType::Game || WorldType == EWorldType::PIE;
 }
 
+void UDreamUIDragDropSubsystem::Initialize(FSubsystemCollectionBase& Collection)
+{
+	Super::Initialize(Collection);
+	DreamUI::EnrolWorldService(Collection, *this, *this);
+}
+
 void UDreamUIDragDropSubsystem::Deinitialize()
 {
+	// Passive: the world's teardown has taken this service down already (TeardownForWorld), unless the
+	// world had no manager to take it.
+	if (!bTornDownForWorld && GetWorld() != nullptr)
+	{
+		TeardownForWorld(*GetWorld());
+	}
+	Super::Deinitialize();
+}
+
+void UDreamUIDragDropSubsystem::TeardownForWorld(UWorld& InWorld)
+{
+	if (bTornDownForWorld)
+	{
+		return;
+	}
+	bTornDownForWorld = true;
 	if (UDreamEventSystem* EventSystem = SubscribedEventSystem.Get())
 	{
 		EventSystem->GetInputEvent().RemoveAll(this);
@@ -189,7 +212,6 @@ void UDreamUIDragDropSubsystem::Deinitialize()
 		StopFollowingDrag(PointerID);
 	}
 	FollowedDrags.Reset();
-	Super::Deinitialize();
 }
 
 TStatId UDreamUIDragDropSubsystem::GetStatId() const

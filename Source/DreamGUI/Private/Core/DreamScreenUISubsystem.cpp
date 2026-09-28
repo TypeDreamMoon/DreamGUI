@@ -37,11 +37,27 @@ bool UDreamScreenUISubsystem::DoesSupportWorldType(EWorldType::Type WorldType) c
 void UDreamScreenUISubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {
 	Super::Initialize(Collection);
-	Collection.InitializeDependency<UDreamUIManagerWorldSubsystem>();
+	DreamUI::EnrolWorldService(Collection, *this, *this);
 }
 
 void UDreamScreenUISubsystem::Deinitialize()
 {
+	// Passive: the world's teardown has taken this service down already (TeardownForWorld), unless the
+	// world had no manager to take it.
+	if (!bTornDownForWorld && GetWorld() != nullptr)
+	{
+		TeardownForWorld(*GetWorld());
+	}
+	Super::Deinitialize();
+}
+
+void UDreamScreenUISubsystem::TeardownForWorld(UWorld& InWorld)
+{
+	if (bTornDownForWorld)
+	{
+		return;
+	}
+	bTornDownForWorld = true;
 	for (TPair<FName, FPendingPageLoad>& Pair : PendingPageLoads)
 	{
 		if (Pair.Value.Handle.IsValid())
@@ -62,8 +78,6 @@ void UDreamScreenUISubsystem::Deinitialize()
 	}
 	ScreenRoots.Reset();
 	OwnedScreenRoots.Reset();
-
-	Super::Deinitialize();
 }
 
 bool UDreamScreenUISubsystem::IsUsablePage(const UDreamWidget* InRoot) const

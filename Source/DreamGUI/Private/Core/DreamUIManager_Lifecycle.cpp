@@ -25,6 +25,7 @@
 #include "CoreGlobals.h"
 #include "EngineUtils.h"
 #include "GameFramework/Actor.h"
+#include "UObject/UObjectIterator.h"
 #if WITH_EDITOR
 #include "Editor.h"
 #include "EditorViewportClient.h"
@@ -54,8 +55,11 @@ bool UDreamUIManagerWorldSubsystem::ShouldCreateSubsystem(UObject* Outer) const
 void UDreamUIManagerWorldSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {
 	Super::Initialize(Collection);
+	// Every world comes down through its cleanup, whether or not it ever played: the one moment an
+	// editor or preview world announces that it is going, and the fallback for a game world that ended
+	// without EndPlay reaching this manager. See TeardownWorld.
+	FWorldDelegates::OnWorldCleanup.AddUObject(this, &UDreamUIManagerWorldSubsystem::HandleWorldCleanup);
 #if WITH_EDITOR
-	InstanceArray.Add(this);
 	if (this->GetWorld()->WorldType == EWorldType::EditorPreview//EditorPreview world don't tick, so manually tick it
 		|| this->GetWorld()->WorldType == EWorldType::Editor)
 	{
@@ -90,8 +94,23 @@ void UDreamUIManagerWorldSubsystem::PostInitialize()
 }
 void UDreamUIManagerWorldSubsystem::Deinitialize()
 {
+	// Passive. The engine broadcasts a world's cleanup before it deinitializes the world's subsystems,
+	// and the cleanup has taken everything down (HandleWorldCleanup). A manager deinitialized without
+	// that is one whose world came down in an order nobody chose; it is still taken down here, and said
+	// so unless the whole engine is on its way out.
+	if (!bWorldTornDown)
+	{
+		if (IsEngineExitRequested())
+		{
+			UE_LOG(DreamGUI, Log, TEXT("%s: deinitialized at exit before its world was torn down; tearing it down now."), *GetPathName());
+		}
+		else
+		{
+			ensureMsgf(false, TEXT("%s: deinitialized before its world was torn down; tearing it down now."), *GetPathName());
+		}
+		TeardownWorld();
+	}
 #if WITH_EDITOR
-	InstanceArray.Remove(this);
 	if (EditorTickDelegateHandle.IsValid())
 	{
 		FTSTicker::GetCoreTicker().RemoveTicker(EditorTickDelegateHandle);
@@ -106,7 +125,6 @@ void UDreamUIManagerWorldSubsystem::Deinitialize()
 	FCoreDelegates::OnEnginePreExit.RemoveAll(this);
 	OnDeinitialize.Broadcast();
 #endif
-	DestroyRegisteredWidgetTrees();
 	if (MainViewportViewExtension.IsValid())
 	{
 		MainViewportViewExtension.Reset();
@@ -116,14 +134,111 @@ void UDreamUIManagerWorldSubsystem::Deinitialize()
 		FInternationalization::Get().OnCultureChanged().Remove(OnCultureChangedDelegateHandle);
 	}
 	FWorldDelegates::OnWorldPreSendAllEndOfFrameUpdates.RemoveAll(this);
+	FWorldDelegates::OnWorldCleanup.RemoveAll(this);
 	Super::Deinitialize();
 }
 
 void UDreamUIManagerWorldSubsystem::BeginDestroy()
 {
-	check(!IsInitialized());
-	DestroyRegisteredWidgetTrees();
+	// Nothing is taken down here: this runs inside a collection, and a world's DreamGUI comes down on
+	// TeardownWorld, outside one. Reaching it still initialized means the engine collected the world's
+	// subsystems without deinitializing them -- it says so itself -- and any tree still registered then
+	// is reported by the widgets' own BeginDestroy.
+	UE_CLOG(IsInitialized(), DreamGUI, Warning, TEXT("%s: collected without having been deinitialized."), *GetPathName());
 	Super::BeginDestroy();
+}
+
+void UDreamUIManagerWorldSubsystem::RegisterWorldService(UObject* InServiceObject, IDreamUIWorldService* InService)
+{
+	if (!ensureMsgf(InServiceObject != nullptr && InService != nullptr, TEXT("%s: a world service enrolled as nothing."), *GetPathName()))
+	{
+		return;
+	}
+	// Late is a mistake worth saying: the teardown this enrols for has already run, so nothing will
+	// ever take this service down but its own Deinitialize.
+	ensureMsgf(!bWorldTornDown, TEXT("%s: %s enrolled for a teardown that has already happened."), *GetPathName(), *InServiceObject->GetPathName());
+	if (WorldServices.ContainsByPredicate([InServiceObject](const FWorldServiceEntry& Entry) { return Entry.Object.Get() == InServiceObject; }))
+	{
+		return;
+	}
+	WorldServices.Add({ InServiceObject, InService });
+}
+
+void UDreamUIManagerWorldSubsystem::UnregisterWorldService(const UObject* InServiceObject)
+{
+	WorldServices.RemoveAll([InServiceObject](const FWorldServiceEntry& Entry)
+	{
+		return !Entry.Object.IsValid() || Entry.Object.Get() == InServiceObject;
+	});
+}
+
+bool UDreamUIManagerWorldSubsystem::HasWorldService(const UObject* InServiceObject) const
+{
+	return InServiceObject != nullptr && WorldServices.ContainsByPredicate([InServiceObject](const FWorldServiceEntry& Entry)
+	{
+		return Entry.Object.Get() == InServiceObject;
+	});
+}
+
+void UDreamUIManagerWorldSubsystem::TeardownWorld()
+{
+	if (bWorldTornDown)
+	{
+		return;
+	}
+	bWorldTornDown = true;
+	UWorld* World = GetWorld();
+
+	// The services, highest priority first: the input services stop captures, drags and the cursor
+	// before the layers let go of their roots, and all of it before any tree comes down under them.
+	// The list is taken whole first, because a service's teardown is free to reach this manager.
+	TArray<IDreamUIWorldService*> Services;
+	for (const FWorldServiceEntry& Entry : WorldServices)
+	{
+		if (Entry.Object.IsValid() && Entry.Service != nullptr)
+		{
+			Services.Add(Entry.Service);
+		}
+	}
+	WorldServices.Reset();
+	DreamUI::SortForTeardown(Services);
+	if (World != nullptr)
+	{
+		for (IDreamUIWorldService* Service : Services)
+		{
+			Service->TeardownForWorld(*World);
+		}
+	}
+
+	// Then every tree still registered: the hosts' trees, and any tree nobody owned.
+	DestroyRegisteredWidgetTrees();
+
+	// Last, what the manager kept for those trees. Unregistering took nearly all of it with it; a layout
+	// pass still open is the one thing that could have outlived them, and it is a bug to say so about.
+	ensureMsgf(LayoutPassContext.IsBalanced(), TEXT("%s: a layout pass was still open when its world was torn down (depth %d, memo depth %d, %d writer(s))."),
+		*GetPathName(), LayoutPassContext.GetPassDepth(), LayoutPassContext.GetMemoDepth(), LayoutPassContext.GetWriterCount());
+	ParkedWidgets.Reset();
+}
+
+void UDreamUIManagerWorldSubsystem::HandleWorldCleanup(UWorld* InWorld, bool bInSessionEnded, bool bInCleanupResources)
+{
+	// Only a cleanup that releases the world's resources: that one is followed by Deinitialize. One
+	// that keeps them leaves the world standing, and its trees with it.
+	if (InWorld != nullptr && InWorld == GetWorld() && bInCleanupResources)
+	{
+		TeardownWorld();
+	}
+}
+
+bool DreamUI::EnrolWorldService(FSubsystemCollectionBase& InCollection, UObject& InServiceObject, IDreamUIWorldService& InService)
+{
+	UDreamUIManagerWorldSubsystem* Manager = InCollection.InitializeDependency<UDreamUIManagerWorldSubsystem>();
+	if (Manager == nullptr)
+	{
+		return false;
+	}
+	Manager->RegisterWorldService(&InServiceObject, &InService);
+	return true;
 }
 
 UDreamUIManagerWorldSubsystem* UDreamUIManagerWorldSubsystem::GetInstance(UWorld* InWorld)
@@ -177,27 +292,39 @@ void UDreamUIManagerWorldSubsystem::OnWorldEndPlay(UWorld& InWorld)
 	if (this->GetWorld()->IsGameWorld())//game mode should deinit when EndPlay
 #endif
 	{
-		DestroyRegisteredWidgetTrees();
+		// Every actor has ended play by now, so every host has let its tree go; what the teardown finds
+		// still registered is what the services hold, and what nobody did.
+		TeardownWorld();
 	}
 	Super::OnWorldEndPlay(InWorld);
 }
 
 #if WITH_EDITOR
-TArray<UDreamUIManagerWorldSubsystem*> UDreamUIManagerWorldSubsystem::InstanceArray;
-#endif
-#if WITH_EDITOR
 void UDreamUIManagerWorldSubsystem::RefreshAllUI(UWorld* InWorld)
 {
-	for (auto InstanceItem : InstanceArray)
+	// InWorld's manager, or every live one. Found by asking for the objects rather than kept in a list
+	// of our own: a static list of subsystems was process-wide state, and it held on to a manager past
+	// its world whenever a Deinitialize was skipped.
+	TArray<UDreamUIManagerWorldSubsystem*> Managers;
+	if (InWorld != nullptr)
 	{
-		if (InstanceItem != nullptr)
+		if (UDreamUIManagerWorldSubsystem* Manager = GetInstance(InWorld))
 		{
-			if (InWorld != nullptr && InstanceItem->GetWorld() != InWorld)
+			Managers.Add(Manager);
+		}
+	}
+	else
+	{
+		for (TObjectIterator<UDreamUIManagerWorldSubsystem> It(RF_ClassDefaultObject, true, EInternalObjectFlags::Garbage); It; ++It)
+		{
+			if (It->IsInitialized() && !It->HasTornDownWorld())
 			{
-				continue;
+				Managers.Add(*It);
 			}
 		}
-		auto Instance = InstanceItem;
+	}
+	for (UDreamUIManagerWorldSubsystem* Instance : Managers)
+	{
 		for (const TWeakObjectPtr<UDreamCanvas>& Canvas : Instance->SnapshotCanvases())
 		{
 			if (!Instance->IsCanvasStillRegistered(Canvas))continue;

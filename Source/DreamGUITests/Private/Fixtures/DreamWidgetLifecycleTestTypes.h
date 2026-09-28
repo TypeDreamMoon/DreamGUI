@@ -3,6 +3,7 @@
 #pragma once
 
 #include "Core/DreamUIBehaviour.h"
+#include "Core/DreamUIWorldService.h"
 #include "Core/DreamWidgetTreeHost.h"
 #include "Core/Components/DreamImage.h"
 #include "DreamWidgetLifecycleTestTypes.generated.h"
@@ -96,6 +97,27 @@ protected:
 
 private:
 	void Record(const TCHAR* InStep) const;
+};
+
+/** A world service that only records that its world took it down, and when, into a log the test hands it. */
+UCLASS()
+class UDreamWorldServiceProbe : public UObject, public IDreamUIWorldService
+{
+	GENERATED_BODY()
+
+public:
+	int32 Priority = 0;
+	FString Label;
+	TSharedPtr<TArray<FString>> Log;
+
+	virtual int32 GetTeardownPriority() const override { return Priority; }
+	virtual void TeardownForWorld(UWorld& InWorld) override
+	{
+		if (Log.IsValid())
+		{
+			Log->Add(Label);
+		}
+	}
 };
 
 /** A tree host that owns no tree and records what it is asked, for the tests of the contract itself. */

@@ -6,6 +6,7 @@
 #include "Core/DreamUserWidget.h"
 #include "Interaction/DreamUINavigationScope.h"
 #include "Subsystems/WorldSubsystem.h"
+#include "Core/DreamUIWorldService.h"
 #include "Templates/SubclassOf.h"
 #include "DreamUIModal.generated.h"
 
@@ -53,7 +54,7 @@ public:
  * CloseTopModal with whatever result name they mean ("Confirm", "Cancel", ...).
  */
 UCLASS()
-class DREAMGUIINPUT_API UDreamUIModalSubsystem : public UWorldSubsystem
+class DREAMGUIINPUT_API UDreamUIModalSubsystem : public UWorldSubsystem, public IDreamUIWorldService
 {
 	GENERATED_BODY()
 
@@ -63,7 +64,10 @@ public:
 
 	virtual bool ShouldCreateSubsystem(UObject* Outer) const override;
 	virtual bool DoesSupportWorldType(const EWorldType::Type WorldType) const override;
+	virtual void Initialize(FSubsystemCollectionBase& Collection) override;
 	virtual void Deinitialize() override;
+	virtual int32 GetTeardownPriority() const override { return DreamUI::WorldServiceTeardownPriority::Input; }
+	virtual void TeardownForWorld(UWorld& InWorld) override;
 
 	/**
 	 * Show InDialogClass modally for InUserIndex, on top of any modal that player already has up.
@@ -149,4 +153,6 @@ private:
 	 * focus, the scrim in front of their view, and the one their Back closes.
 	 */
 	TMap<int32, TArray<FActiveModal>> ModalStacks;
+	/** Set by TeardownForWorld, which runs once. */
+	bool bTornDownForWorld = false;
 };

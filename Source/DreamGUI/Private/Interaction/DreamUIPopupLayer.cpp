@@ -2,6 +2,7 @@
 
 #include "Interaction/DreamUIPopupLayer.h"
 
+#include "Core/DreamUIManager.h"
 #include "Core/DreamScreenUISubsystem.h"
 #include "Core/Components/DreamWidget.h"
 #include "DreamGUI.h"
@@ -11,6 +12,33 @@ UDreamUIPopupLayer* UDreamUIPopupLayer::Get(const UObject* InWorldContext)
 {
 	const UWorld* World = IsValid(InWorldContext) ? InWorldContext->GetWorld() : nullptr;
 	return World != nullptr ? World->GetSubsystem<UDreamUIPopupLayer>() : nullptr;
+}
+
+void UDreamUIPopupLayer::Initialize(FSubsystemCollectionBase& Collection)
+{
+	Super::Initialize(Collection);
+	DreamUI::EnrolWorldService(Collection, *this, *this);
+}
+
+void UDreamUIPopupLayer::Deinitialize()
+{
+	// Passive: the world's teardown has taken this service down already (TeardownForWorld), unless the
+	// world had no manager to take it.
+	if (!bTornDownForWorld && GetWorld() != nullptr)
+	{
+		TeardownForWorld(*GetWorld());
+	}
+	Super::Deinitialize();
+}
+
+void UDreamUIPopupLayer::TeardownForWorld(UWorld& InWorld)
+{
+	if (bTornDownForWorld)
+	{
+		return;
+	}
+	bTornDownForWorld = true;
+	ElevatedHomes.Reset();
 }
 
 bool UDreamUIPopupLayer::Elevate(UDreamWidget* InWidget)

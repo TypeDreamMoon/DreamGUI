@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Subsystems/WorldSubsystem.h"
+#include "Core/DreamUIWorldService.h"
 #include "DreamUINavigationStack.generated.h"
 
 class UDreamUINavigationScope;
@@ -21,12 +22,15 @@ class UUISelectable;
  * and one player opening a dialog must not move the other player's focus.
  */
 UCLASS()
-class DREAMGUIINPUT_API UDreamUINavigationStack : public UWorldSubsystem
+class DREAMGUIINPUT_API UDreamUINavigationStack : public UWorldSubsystem, public IDreamUIWorldService
 {
 	GENERATED_BODY()
 public:
 	virtual bool ShouldCreateSubsystem(UObject* Outer)const override;
+	virtual void Initialize(FSubsystemCollectionBase& Collection) override;
 	virtual void Deinitialize()override;
+	virtual int32 GetTeardownPriority() const override { return DreamUI::WorldServiceTeardownPriority::Input; }
+	virtual void TeardownForWorld(UWorld& InWorld) override;
 
 	static UDreamUINavigationStack* Get(const UObject* WorldContextObject);
 
@@ -82,6 +86,8 @@ private:
 	/** Push order, all users interleaved. Tiny enough that filtering beats a map of arrays. */
 	UPROPERTY()
 	TArray<TWeakObjectPtr<UDreamUINavigationScope>> Scopes;
+	/** Set by TeardownForWorld, which runs once. */
+	bool bTornDownForWorld = false;
 
 	/** Drop entries whose scope has been destroyed; they would otherwise sit on top forever. */
 	void RemoveStaleScopes();

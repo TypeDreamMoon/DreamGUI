@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Core/DreamUIInputServices.h"
+#include "Core/DreamUIWorldService.h"
 #include "DreamUIInputSubsystem.generated.h"
 
 class AActor;
@@ -22,7 +23,7 @@ class UDreamUIManagerWorldSubsystem;
  * is about a widget that manager registered.
  */
 UCLASS(NotBlueprintable, NotBlueprintType, Transient)
-class DREAMGUIINPUT_API UDreamUIInputSubsystem : public UDreamUIInputServices
+class DREAMGUIINPUT_API UDreamUIInputSubsystem : public UDreamUIInputServices, public IDreamUIWorldService
 {
 	GENERATED_BODY()
 
@@ -32,7 +33,10 @@ public:
 
 	virtual bool ShouldCreateSubsystem(UObject* Outer) const override;
 	virtual void PostInitialize() override;
+	virtual void Initialize(FSubsystemCollectionBase& Collection) override;
 	virtual void Deinitialize() override;
+	virtual int32 GetTeardownPriority() const override { return DreamUI::WorldServiceTeardownPriority::Input; }
+	virtual void TeardownForWorld(UWorld& InWorld) override;
 
 	// ---- the event-system registry
 
@@ -100,4 +104,6 @@ private:
 	/** The event system spawned from project settings, if one had to be. Never more than one. */
 	UPROPERTY(Transient)
 	TObjectPtr<AActor> CreatedEventSystemActor;
+	/** Set by TeardownForWorld, which runs once. */
+	bool bTornDownForWorld = false;
 };

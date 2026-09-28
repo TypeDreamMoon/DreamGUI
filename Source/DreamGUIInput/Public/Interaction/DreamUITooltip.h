@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Subsystems/WorldSubsystem.h"
+#include "Core/DreamUIWorldService.h"
 #include "UObject/Interface.h"
 #include "DreamUITooltip.generated.h"
 
@@ -79,7 +80,7 @@ namespace DreamUITooltipPolicy
  * raycast-disabled throughout -- a tooltip that can steal the pointer hides itself forever.
  */
 UCLASS()
-class DREAMGUIINPUT_API UDreamUITooltipSubsystem : public UTickableWorldSubsystem
+class DREAMGUIINPUT_API UDreamUITooltipSubsystem : public UTickableWorldSubsystem, public IDreamUIWorldService
 {
 	GENERATED_BODY()
 
@@ -89,7 +90,10 @@ public:
 
 	virtual bool ShouldCreateSubsystem(UObject* Outer) const override;
 	virtual bool DoesSupportWorldType(const EWorldType::Type WorldType) const override;
+	virtual void Initialize(FSubsystemCollectionBase& Collection) override;
 	virtual void Deinitialize() override;
+	virtual int32 GetTeardownPriority() const override { return DreamUI::WorldServiceTeardownPriority::Input; }
+	virtual void TeardownForWorld(UWorld& InWorld) override;
 
 	virtual void Tick(float DeltaTime) override;
 	virtual TStatId GetStatId() const override;
@@ -143,6 +147,8 @@ private:
 
 	/** The event system observed, so a late-spawned or replaced one is picked up. */
 	TWeakObjectPtr<UDreamEventSystem> SubscribedEventSystem;
+	/** Set by TeardownForWorld, which runs once. */
+	bool bTornDownForWorld = false;
 	/** The pointer's event data object -- mutated in place by the input module, so it IS the live position. */
 	TWeakObjectPtr<UDreamPointerEventData> LastPointerEvent;
 

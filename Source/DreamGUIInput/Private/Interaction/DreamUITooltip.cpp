@@ -1,6 +1,7 @@
 ﻿// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
 
 #include "Interaction/DreamUITooltip.h"
+#include "Core/DreamUIManager.h"
 
 #include "Core/DreamGUISettings.h"
 #include "Core/DreamScreenUISubsystem.h"
@@ -117,15 +118,36 @@ bool UDreamUITooltipSubsystem::DoesSupportWorldType(const EWorldType::Type World
 	return WorldType == EWorldType::Game || WorldType == EWorldType::PIE;
 }
 
+void UDreamUITooltipSubsystem::Initialize(FSubsystemCollectionBase& Collection)
+{
+	Super::Initialize(Collection);
+	DreamUI::EnrolWorldService(Collection, *this, *this);
+}
+
 void UDreamUITooltipSubsystem::Deinitialize()
 {
+	// Passive: the world's teardown has taken this service down already (TeardownForWorld), unless the
+	// world had no manager to take it.
+	if (!bTornDownForWorld && GetWorld() != nullptr)
+	{
+		TeardownForWorld(*GetWorld());
+	}
+	Super::Deinitialize();
+}
+
+void UDreamUITooltipSubsystem::TeardownForWorld(UWorld& InWorld)
+{
+	if (bTornDownForWorld)
+	{
+		return;
+	}
+	bTornDownForWorld = true;
 	if (UDreamEventSystem* EventSystem = SubscribedEventSystem.Get())
 	{
 		EventSystem->GetInputEvent().RemoveAll(this);
 	}
 	SubscribedEventSystem.Reset();
 	DestroyTooltipWidgets();
-	Super::Deinitialize();
 }
 
 TStatId UDreamUITooltipSubsystem::GetStatId() const

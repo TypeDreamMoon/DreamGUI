@@ -1,6 +1,7 @@
 // Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
 
 #include "Interaction/DreamUINavigationStack.h"
+#include "Core/DreamUIManager.h"
 #include "Interaction/DreamUINavigationScope.h"
 #include "Interaction/UISelectable.h"
 #include "Interaction/DreamUITextInputTarget.h"
@@ -14,10 +15,31 @@ bool UDreamUINavigationStack::ShouldCreateSubsystem(UObject* Outer) const
 	return !IsRunningCommandlet() && !IsRunningDedicatedServer() && Super::ShouldCreateSubsystem(Outer);
 }
 
+void UDreamUINavigationStack::Initialize(FSubsystemCollectionBase& Collection)
+{
+	Super::Initialize(Collection);
+	DreamUI::EnrolWorldService(Collection, *this, *this);
+}
+
 void UDreamUINavigationStack::Deinitialize()
 {
-	Scopes.Reset();
+	// Passive: the world's teardown has taken this service down already (TeardownForWorld), unless the
+	// world had no manager to take it.
+	if (!bTornDownForWorld && GetWorld() != nullptr)
+	{
+		TeardownForWorld(*GetWorld());
+	}
 	Super::Deinitialize();
+}
+
+void UDreamUINavigationStack::TeardownForWorld(UWorld& InWorld)
+{
+	if (bTornDownForWorld)
+	{
+		return;
+	}
+	bTornDownForWorld = true;
+	Scopes.Reset();
 }
 
 UDreamUINavigationStack* UDreamUINavigationStack::Get(const UObject* WorldContextObject)

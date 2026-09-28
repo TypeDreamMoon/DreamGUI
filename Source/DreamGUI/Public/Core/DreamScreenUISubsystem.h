@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Subsystems/WorldSubsystem.h"
+#include "Core/DreamUIWorldService.h"
 #include "DreamScreenUISubsystem.generated.h"
 
 class AActor;
@@ -46,7 +47,7 @@ DECLARE_DYNAMIC_DELEGATE_ThreeParams(FDreamUIScreenPageAsyncCallback, FName, Pag
  * AddToPlayerScreen for whoever owns the widget.
  */
 UCLASS()
-class DREAMGUI_API UDreamScreenUISubsystem : public UWorldSubsystem
+class DREAMGUI_API UDreamScreenUISubsystem : public UWorldSubsystem, public IDreamUIWorldService
 {
 	GENERATED_BODY()
 
@@ -74,6 +75,8 @@ public:
 	virtual bool DoesSupportWorldType(EWorldType::Type WorldType) const override;
 	virtual void Initialize(FSubsystemCollectionBase& Collection) override;
 	virtual void Deinitialize() override;
+	virtual int32 GetTeardownPriority() const override { return DreamUI::WorldServiceTeardownPriority::Layers; }
+	virtual void TeardownForWorld(UWorld& InWorld) override;
 
 	/** The screen root for InOwningPlayer (the first local player when null), creating it on demand. */
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI|Screen", meta = (AdvancedDisplay = "InOwningPlayer"))
@@ -313,6 +316,8 @@ private:
 
 	/** Indices whose root this subsystem made, and therefore has to destroy. */
 	TSet<int32> OwnedScreenRoots;
+	/** Set by TeardownForWorld, which runs once. */
+	bool bTornDownForWorld = false;
 
 	TMap<FName, FEntry> Entries;
 	TMap<FName, FPageDefinition> PageDefinitions;
