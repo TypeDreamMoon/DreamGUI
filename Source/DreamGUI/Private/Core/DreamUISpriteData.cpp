@@ -75,6 +75,10 @@ bool UDreamUISpriteData::PackSprite()
 	CheckAndApplySpriteTextureSetting(SpriteTexture);
 
 	auto AtlasData = UDreamUIDynamicSpriteAtlasManager::FindOrAdd(PackingTag);
+	if (AtlasData == nullptr)
+	{
+		return false;//no engine yet to hold the atlases; packed on first use afterwards
+	}
 	AtlasData->EnsureAtlasTexture();
 #if WITH_EDITOR
 	FTextureCompilingManager::Get().FinishCompilation({ SpriteTexture });
@@ -464,8 +468,10 @@ void UDreamUISpriteData::AddUISprite(TScriptInterface<class IDreamUISpriteRender
 	{
 		if (!PackingTag.IsNone())
 		{
-			auto& spriteArray = UDreamUIDynamicSpriteAtlasManager::FindOrAdd(PackingTag)->RenderSpriteArray;
-			spriteArray.AddUnique(InUISprite.GetObject());
+			if (FDreamUIDynamicSpriteAtlasData* AtlasData = UDreamUIDynamicSpriteAtlasManager::FindOrAdd(PackingTag))
+			{
+				AtlasData->RenderSpriteArray.AddUnique(InUISprite.GetObject());
+			}
 		}
 	}
 }

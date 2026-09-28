@@ -9,6 +9,7 @@
 #include "Utils/DreamUIUtils.h"
 #include "Core/IDreamUISpriteRenderInterface.h"
 #include "RenderingThread.h"
+#include "Engine/Engine.h"
 #include "Rendering/Texture2DResource.h"
 
 
@@ -465,29 +466,27 @@ void FDreamUIDynamicSpriteAtlasData::CopySpriteTextureToAtlas(UDreamUISpriteData
 	});
 }
 
-UDreamUIDynamicSpriteAtlasManager* UDreamUIDynamicSpriteAtlasManager::Instance = nullptr;
+UDreamUIDynamicSpriteAtlasManager* UDreamUIDynamicSpriteAtlasManager::Get()
+{
+	return GEngine != nullptr ? GEngine->GetEngineSubsystem<UDreamUIDynamicSpriteAtlasManager>() : nullptr;
+}
 bool UDreamUIDynamicSpriteAtlasManager::InitCheck()
 {
-	if (Instance == nullptr)
-	{
-		Instance = NewObject<UDreamUIDynamicSpriteAtlasManager>();
-		Instance->AddToRoot();
-	}
-	return true;
+	return Get() != nullptr;
 }
-void UDreamUIDynamicSpriteAtlasManager::BeginDestroy()
+void UDreamUIDynamicSpriteAtlasManager::Deinitialize()
 {
-	ResetAtlasMap();
-#if WITH_EDITOR
-	UDreamUISpriteData::MarkAllSpritesNeedToReinitialize();
-#endif
-	Instance = nullptr;
-	Super::BeginDestroy();
+	for (auto& AtlasMapKeyValue : AtlasMap)
+	{
+		AtlasMapKeyValue.Value.ReleaseAtlasTextures();
+	}
+	AtlasMap.Empty();
+	Super::Deinitialize();
 }
 
 FDreamUIDynamicSpriteAtlasData* UDreamUIDynamicSpriteAtlasManager::FindOrAdd(const FName& InPackingTag)
 {
-	if (InitCheck())
+	if (UDreamUIDynamicSpriteAtlasManager* Instance = Get())
 	{
 		if (!Instance->AtlasMap.Contains(InPackingTag))
 		{
@@ -505,7 +504,7 @@ FDreamUIDynamicSpriteAtlasData* UDreamUIDynamicSpriteAtlasManager::FindOrAdd(con
 }
 FDreamUIDynamicSpriteAtlasData* UDreamUIDynamicSpriteAtlasManager::Find(const FName& InPackingTag)
 {
-	if (Instance != nullptr)
+	if (UDreamUIDynamicSpriteAtlasManager* Instance = Get())
 	{
 		return Instance->AtlasMap.Find(InPackingTag);
 	}
@@ -513,7 +512,7 @@ FDreamUIDynamicSpriteAtlasData* UDreamUIDynamicSpriteAtlasManager::Find(const FN
 }
 void UDreamUIDynamicSpriteAtlasManager::ResetAtlasMap()
 {
-	if (Instance != nullptr)
+	if (UDreamUIDynamicSpriteAtlasManager* Instance = Get())
 	{
 		for (auto& AtlasMapKeyValue : Instance->AtlasMap)
 		{
@@ -529,7 +528,7 @@ void UDreamUIDynamicSpriteAtlasManager::ResetAtlasMap()
 
 void UDreamUIDynamicSpriteAtlasManager::DisposeAtlasByPackingTag(FName InPackingTag)
 {
-	if (Instance != nullptr)
+	if (UDreamUIDynamicSpriteAtlasManager* Instance = Get())
 	{
 		if (auto AtlasData = Instance->AtlasMap.Find(InPackingTag))
 		{
@@ -546,6 +545,7 @@ void UDreamUIDynamicSpriteAtlasManager::DisposeAtlasByPackingTag(FName InPacking
 
 bool UDreamUIDynamicSpriteAtlasManager::TrimAtlasByPackingTag(FName InPackingTag)
 {
+	UDreamUIDynamicSpriteAtlasManager* Instance = Get();
 	if (Instance == nullptr)return false;
 	auto AtlasData = Instance->AtlasMap.Find(InPackingTag);
 	if (AtlasData == nullptr)return false;
@@ -570,6 +570,7 @@ bool UDreamUIDynamicSpriteAtlasManager::TrimAtlasByPackingTag(FName InPackingTag
 
 int32 UDreamUIDynamicSpriteAtlasManager::EvictUnusedSpritesByPackingTag(FName InPackingTag)
 {
+	UDreamUIDynamicSpriteAtlasManager* Instance = Get();
 	if (Instance == nullptr)return 0;
 	auto AtlasData = Instance->AtlasMap.Find(InPackingTag);
 	if (AtlasData == nullptr)return 0;
@@ -583,6 +584,7 @@ int32 UDreamUIDynamicSpriteAtlasManager::EvictUnusedSpritesByPackingTag(FName In
 
 int32 UDreamUIDynamicSpriteAtlasManager::TrimUnusedAtlases()
 {
+	UDreamUIDynamicSpriteAtlasManager* Instance = Get();
 	if (Instance == nullptr)return 0;
 	TArray<FName> PackingTags;
 	Instance->AtlasMap.GetKeys(PackingTags);

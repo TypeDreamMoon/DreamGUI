@@ -6,6 +6,7 @@
 #include "Engine/DataAsset.h"
 #include "Utils/MaxRectsBinPack/MaxRectsBinPack.h"
 #include "Engine/Texture2D.h"
+#include "Subsystems/EngineSubsystem.h"
 #include "DreamUIDynamicSpriteAtlasData.generated.h"
 
 
@@ -79,18 +80,26 @@ struct DREAMGUI_API FDreamUIDynamicSpriteAtlasData
 	void CopySpriteTextureToAtlas(UDreamUISpriteData* InSprite, UTexture2D* InAtlasTexture, rbp::Rect InPackedRect, int32 InAtlasTexturePadding);
 };
 
+/**
+ * The dynamic sprite atlases, one per packing tag, shared by every world as the sprites they pack are.
+ *
+ * An engine subsystem: the engine makes it and takes it down, and holds it for the collector. It used to be a
+ * rooted object in a static, which nothing ever unrooted -- it outlived every world and was only ever torn
+ * down by the process going away.
+ */
 UCLASS(NotBlueprintable, NotBlueprintType)
-class DREAMGUI_API UDreamUIDynamicSpriteAtlasManager :public UObject
+class DREAMGUI_API UDreamUIDynamicSpriteAtlasManager : public UEngineSubsystem
 {
 	GENERATED_BODY()
 public:
-	static UDreamUIDynamicSpriteAtlasManager* Instance;
+	/** The engine's instance, or null before the engine has made its subsystems and after it has taken them down. */
+	static UDreamUIDynamicSpriteAtlasManager* Get();
 private:
 	UPROPERTY(VisibleAnywhere, Transient, Category = "DreamGUI")
 		TMap<FName, FDreamUIDynamicSpriteAtlasData> AtlasMap;
-protected:
-	virtual void BeginDestroy()override;
 public:
+	virtual void Deinitialize()override;
+	/** Whether there is an instance to pack into: Get() is not null. */
 	static bool InitCheck();
 	const TMap<FName, FDreamUIDynamicSpriteAtlasData>& GetAtlasMap() { return AtlasMap; }
 	static FDreamUIDynamicSpriteAtlasData* FindOrAdd(const FName& InPackingTag);

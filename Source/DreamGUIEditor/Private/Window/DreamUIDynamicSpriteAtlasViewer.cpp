@@ -14,7 +14,7 @@
 void SDreamUIDynamicSpriteAtlasViewer::Construct(const FArguments& Args, TSharedPtr<SDockTab> InOwnerTab)
 {
 	InOwnerTab->SetOnTabClosed(SDockTab::FOnTabClosedCallback::CreateSP(this, &SDreamUIDynamicSpriteAtlasViewer::CloseTabCallback));
-	if (UDreamUIDynamicSpriteAtlasManager::Instance != nullptr)
+	if (UDreamUIDynamicSpriteAtlasManager* AtlasManager = UDreamUIDynamicSpriteAtlasManager::Get())
 	{
 		FPropertyEditorModule& EditModule = FModuleManager::Get().GetModuleChecked<FPropertyEditorModule>("PropertyEditor");
 		FDetailsViewArgs DetailsViewArgs;
@@ -30,7 +30,7 @@ void SDreamUIDynamicSpriteAtlasViewer::Construct(const FArguments& Args, TShared
 		//Property->SetObject(UDreamGUIAtlasManager::Instance);
 
 		TSharedPtr<IDetailsView> DescriptorDetailView = EditModule.CreateDetailView(DetailsViewArgs);
-		DescriptorDetailView->SetObject(UDreamUIDynamicSpriteAtlasManager::Instance);
+		DescriptorDetailView->SetObject(AtlasManager);
 
 		ChildSlot
 			[
