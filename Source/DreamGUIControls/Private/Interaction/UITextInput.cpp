@@ -817,7 +817,7 @@ void UUITextInput::WarnOnceIfNoCharacterEventSource()
 	}
 	UE_LOG(DreamGUI, Warning, TEXT("[%s].%d This project's game viewport client is '%s', which does not route character input to DreamGUI. ")
 		TEXT("Text fields will fall back to their own FKey-to-character table, which is only correct on a US QWERTY layout -- AZERTY, QWERTZ, Dvorak, Cyrillic, dead keys and AltGr will type the wrong character. ")
-		TEXT("Fix by setting GameViewportClientClassName=/Script/DreamGUI.DreamGameViewportClient in [/Script/Engine.Engine] of DefaultEngine.ini, by deriving the project's own viewport client from UDreamGameViewportClient, or by calling UUITextInput::RouteCharacterInputToActiveInput(Character) from its InputChar override.")
+		TEXT("Fix by setting GameViewportClientClassName=/Script/DreamGUIInput.DreamGameViewportClient in [/Script/Engine.Engine] of DefaultEngine.ini, by deriving the project's own viewport client from UDreamGameViewportClient, or by calling UUITextInput::RouteCharacterInputToActiveInput(Character) from its InputChar override.")
 		, ANSI_TO_TCHAR(__FUNCTION__), __LINE__
 		, ViewportClientClass != nullptr ? *ViewportClientClass->GetName() : TEXT("(none yet)"));
 }

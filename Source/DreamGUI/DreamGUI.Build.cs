@@ -51,7 +51,6 @@ public class DreamGUI : ModuleRules
                 "RHI","RenderCore","Renderer",
                 "DreamTween",
                 "InputCore",//UITextInput
-                "EnhancedInput",//DreamEnhancedInputEventSystemActor
                 "DeveloperSettings",//UDreamGUISettings
                 "FieldNotification",//UDreamUserWidget implements INotifyFieldValueChanged
                 //"FreeType2",

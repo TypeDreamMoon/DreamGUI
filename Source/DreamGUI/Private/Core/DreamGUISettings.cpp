@@ -59,7 +59,7 @@ UDreamGUISettings::UDreamGUISettings()
 	// sets IMC_DreamUIInputContext and the four IA_* actions and nothing else, so everything the class
 	// binds is what it gets (DreamGUI.Input.EnhancedPreset.* holds it to that). A project on Enhanced
 	// Input should point this setting at THAT, not at the native class.
-	EventSystemActorClass = TSoftClassPtr<AActor>(FSoftClassPath(TEXT("/Script/DreamGUI.DreamStandaloneInputEventSystemActor")));
+	EventSystemActorClass = TSoftClassPtr<AActor>(FSoftClassPath(TEXT("/Script/DreamGUIInput.DreamStandaloneInputEventSystemActor")));
 }
 
 const UDreamGUISettings* UDreamGUISettings::Get()

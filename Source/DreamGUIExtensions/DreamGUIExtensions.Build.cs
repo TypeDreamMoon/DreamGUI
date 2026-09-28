@@ -39,6 +39,7 @@ public class DreamGUIExtensions : ModuleRules
 				"Slate",
 				"SlateCore",
 				"DreamGUI",
+				"DreamGUIInput",//DreamUIRenderTargetInteraction is a screen raycaster
 				"DreamTween",
 			});
 	}

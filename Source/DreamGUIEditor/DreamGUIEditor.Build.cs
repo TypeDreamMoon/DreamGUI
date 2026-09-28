@@ -45,6 +45,7 @@ public class DreamGUIEditor : ModuleRules
                 "RHI",
                 "DreamGUI",
                 "DreamGUIControls",
+                "DreamGUIInput",
                 "DreamGUIExtensions",
                 "LevelEditor",
                 "Projects",

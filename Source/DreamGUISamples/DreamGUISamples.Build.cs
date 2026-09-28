@@ -27,6 +27,7 @@ public class DreamGUISamples : ModuleRules
 				"Engine",
 				"DreamGUI",
 				"DreamGUIControls",
+				"DreamGUIInput",//the showcase opens its dialog through the modal subsystem
 				"DreamTween",
 			});
 	}

@@ -37,6 +37,7 @@ public class DreamGUIControls : ModuleRules
 				"UMG",//UMG interop
 				"FieldNotification",
 				"DreamGUI",
+				"DreamGUIInput",//UUISelectable, which the UI* behaviours derive from; navigation, modals, drag and drop
 				"DreamTween",
 			});
 	}

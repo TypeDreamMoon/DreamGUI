@@ -151,26 +151,26 @@ Source/DreamGUI/Private/DreamUIUtils.cpp,DreamGUI,core
 Source/DreamGUI/Private/DreamUIWidgetGeometryLibrary.cpp,DreamGUI,core
 Source/DreamGUI/Private/DreamUIWidgetLibrary.cpp,DreamGUI,core
 Source/DreamGUI/Private/Event/DreamBaseRaycaster.cpp,DreamGUI,contract + core hit-testing: abstract raycaster referenced by UDreamPointerEventData and the UI manager registry
-Source/DreamGUI/Private/Event/DreamEnhancedInputEventSystemActor.cpp,DreamGUIInput,Enhanced Input event system actor
-Source/DreamGUI/Private/Event/DreamEventSystem.cpp,DreamGUIInput,event system component + actor
+Source/DreamGUIInput/Private/Event/DreamEnhancedInputEventSystemActor.cpp,DreamGUIInput,Enhanced Input event system actor
+Source/DreamGUIInput/Private/Event/DreamEventSystem.cpp,DreamGUIInput,event system component + actor
 Source/DreamGUI/Private/Event/DreamGestureEventData.cpp,DreamGUI,contract: UDreamGestureEventData (UDreamUserWidget pinch/swipe)
 Source/DreamGUI/Private/Event/DreamKeyDispatch.cpp,DreamGUI,defines DreamUIKeyDispatch::DispatchBubbling declared in the Core key-interface contract
 Source/DreamGUI/Private/Event/DreamPointerEventData.cpp,DreamGUI,"contract: UDreamPointerEventData, FDreamUIHitResult, EDreamUINavigationDirection (UDreamUserWidget API)"
-Source/DreamGUI/Private/Event/DreamPointerPolicy.cpp,DreamGUIInput,pointer pipeline policy
-Source/DreamGUI/Private/Event/DreamScreenSpaceRaycaster.cpp,DreamGUIInput,screen raycaster
-Source/DreamGUI/Private/Event/DreamStandaloneInputEventSystemActor.cpp,DreamGUIInput,standalone event system actor
+Source/DreamGUIInput/Private/Event/DreamPointerPolicy.cpp,DreamGUIInput,pointer pipeline policy
+Source/DreamGUIInput/Private/Event/DreamScreenSpaceRaycaster.cpp,DreamGUIInput,screen raycaster
+Source/DreamGUIInput/Private/Event/DreamStandaloneInputEventSystemActor.cpp,DreamGUIInput,standalone event system actor
 Source/DreamGUI/Private/Event/DreamUIEventDelegate.cpp,DreamGUI,"contract: FDreamUIEventDelegate serialized event binding (used by PlayTween, text builder, BP library)"
-Source/DreamGUI/Private/Event/DreamUIInputModeLibrary.cpp,DreamGUIInput,input-mode BP library
-Source/DreamGUI/Private/Event/DreamUIInputSubsystem.cpp,DreamGUIInput,"the input system's side of the services; event-system registry, interaction setup"
-Source/DreamGUI/Private/Event/DreamWorldSpaceRaycaster.cpp,DreamGUIInput,world raycaster
-Source/DreamGUI/Private/Event/InputModule/DreamBaseInputModule.cpp,DreamGUIInput,input modules
-Source/DreamGUI/Private/Event/InputModule/DreamPointerInputModule.cpp,DreamGUIInput,input modules
-Source/DreamGUI/Private/Event/InputModule/DreamStandaloneInputModule.cpp,DreamGUIInput,input modules
+Source/DreamGUIInput/Private/Event/DreamUIInputModeLibrary.cpp,DreamGUIInput,input-mode BP library
+Source/DreamGUIInput/Private/Event/DreamUIInputSubsystem.cpp,DreamGUIInput,"the input system's side of the services; event-system registry, interaction setup"
+Source/DreamGUIInput/Private/Event/DreamWorldSpaceRaycaster.cpp,DreamGUIInput,world raycaster
+Source/DreamGUIInput/Private/Event/InputModule/DreamBaseInputModule.cpp,DreamGUIInput,input modules
+Source/DreamGUIInput/Private/Event/InputModule/DreamPointerInputModule.cpp,DreamGUIInput,input modules
+Source/DreamGUIInput/Private/Event/InputModule/DreamStandaloneInputModule.cpp,DreamGUIInput,input modules
 Source/DreamGUIExtensions/Private/Extensions/2DLineRenderer/Dream2DLineChildrenAsPoints.cpp,DreamGUIExtensions,extension
 Source/DreamGUIExtensions/Private/Extensions/2DLineRenderer/Dream2DLineRaw.cpp,DreamGUIExtensions,extension
 Source/DreamGUIExtensions/Private/Extensions/2DLineRenderer/Dream2DLineRendererBase.cpp,DreamGUIExtensions,extension
 Source/DreamGUIExtensions/Private/Extensions/DreamCanvasRenderTargetPreviewer.cpp,DreamGUIExtensions,extension
-Source/DreamGUI/Private/Extensions/DreamGameViewportClient.cpp,DreamGUIInput,routes InputChar to the active text field (needs an Input-level text-input registry) | CONDITIONAL(05): Input only if plugin-ini CoreRedirects are verified in MS-0; otherwise stays in core as a thin adapter
+Source/DreamGUIInput/Private/Extensions/DreamGameViewportClient.cpp,DreamGUIInput,routes InputChar to the active text field (needs an Input-level text-input registry) | CONDITIONAL(05): Input only if plugin-ini CoreRedirects are verified in MS-0; otherwise stays in core as a thin adapter
 Source/DreamGUI/Private/Extensions/DreamImageSequencePlayer.cpp,DreamGUI,base of UUISpriteSequencePlayer
 Source/DreamGUIExtensions/Private/Extensions/DreamPolygon.cpp,DreamGUIExtensions,extension
 Source/DreamGUIExtensions/Private/Extensions/DreamPolygonLine.cpp,DreamGUIExtensions,extension
@@ -191,29 +191,29 @@ Source/DreamGUIExtensions/Private/Extensions/UISpriteSheetTexturePlayer.cpp,Drea
 Source/DreamGUI/Private/Interaction/DreamContentWidget.cpp,DreamGUI,"named-slot hosting used by UDreamUserWidget, panel layouts and the .dui builder"
 Source/DreamGUI/Private/Interaction/DreamResponsiveBinding.cpp,DreamGUI,data binding / responsive rules; no input
 Source/DreamGUIControls/Private/Interaction/DreamUIActionBar.cpp,DreamGUIControls,action-hint bar control
-Source/DreamGUI/Private/Interaction/DreamUIActionRouter.cpp,DreamGUIInput,action router subsystem (split: FDreamUIActionHandle + FDreamUIActionExecutedDelegate move to a Core header)
-Source/DreamGUI/Private/Interaction/DreamUIActionTrigger.cpp,DreamGUIInput,binds an input action to a widget
-Source/DreamGUI/Private/Interaction/DreamUIDragDrop.cpp,DreamGUIInput,drag source / drop target + drag-drop subsystem
-Source/DreamGUI/Private/Interaction/DreamUIInputAction.cpp,DreamGUIInput,input action data-table row
-Source/DreamGUI/Private/Interaction/DreamUIModal.cpp,DreamGUIInput,"modal scope + subsystem (focus trapping, scrim, event blocker)"
-Source/DreamGUI/Private/Interaction/DreamUINavigationScope.cpp,DreamGUIInput,focus scope behaviour
+Source/DreamGUIInput/Private/Interaction/DreamUIActionRouter.cpp,DreamGUIInput,action router subsystem (split: FDreamUIActionHandle + FDreamUIActionExecutedDelegate move to a Core header)
+Source/DreamGUIInput/Private/Interaction/DreamUIActionTrigger.cpp,DreamGUIInput,binds an input action to a widget
+Source/DreamGUIInput/Private/Interaction/DreamUIDragDrop.cpp,DreamGUIInput,drag source / drop target + drag-drop subsystem
+Source/DreamGUIInput/Private/Interaction/DreamUIInputAction.cpp,DreamGUIInput,input action data-table row
+Source/DreamGUIInput/Private/Interaction/DreamUIModal.cpp,DreamGUIInput,"modal scope + subsystem (focus trapping, scrim, event blocker)"
+Source/DreamGUIInput/Private/Interaction/DreamUINavigationScope.cpp,DreamGUIInput,focus scope behaviour
 Source/DreamGUI/Private/Interaction/DreamUINavigationScroll.cpp,DreamGUI,scroll-into-view helper called by UDreamWidgetNavigation (Core) and input; needs an IDreamUIScrollable contract to drop UUIScrollView
-Source/DreamGUI/Private/Interaction/DreamUINavigationStack.cpp,DreamGUIInput,focus stack subsystem
+Source/DreamGUIInput/Private/Interaction/DreamUINavigationStack.cpp,DreamGUIInput,focus stack subsystem
 Source/DreamGUI/Private/Interaction/DreamUIPopupLayer.cpp,DreamGUI,screen layering service (sibling of DreamScreenUISubsystem); no input
-Source/DreamGUI/Private/Interaction/DreamUITextInputTarget.cpp,DreamGUIInput,"text input seam: the field that owns the keyboard, for the viewport client and Back"
-Source/DreamGUI/Private/Interaction/DreamUITooltip.cpp,DreamGUIInput,hover-driven tooltip subsystem + source interface
-Source/DreamGUI/Private/Interaction/DreamUIVirtualCursor.cpp,DreamGUIInput,gamepad virtual cursor
+Source/DreamGUIInput/Private/Interaction/DreamUITextInputTarget.cpp,DreamGUIInput,"text input seam: the field that owns the keyboard, for the viewport client and Back"
+Source/DreamGUIInput/Private/Interaction/DreamUITooltip.cpp,DreamGUIInput,hover-driven tooltip subsystem + source interface
+Source/DreamGUIInput/Private/Interaction/DreamUIVirtualCursor.cpp,DreamGUIInput,gamepad virtual cursor
 Source/DreamGUIControls/Private/Interaction/UIButton.cpp,DreamGUIControls,control behaviour
 Source/DreamGUIControls/Private/Interaction/UIDropdown.cpp,DreamGUIControls,control behaviour
-Source/DreamGUI/Private/Interaction/UIEventBlocker.cpp,DreamGUIInput,swallows pointer events; used by DreamUIModal
-Source/DreamGUI/Private/Interaction/UIEventTrigger.cpp,DreamGUIInput,pointer events -> delegates (UGUI EventTrigger equivalent)
+Source/DreamGUIInput/Private/Interaction/UIEventBlocker.cpp,DreamGUIInput,swallows pointer events; used by DreamUIModal
+Source/DreamGUIInput/Private/Interaction/UIEventTrigger.cpp,DreamGUIInput,pointer events -> delegates (UGUI EventTrigger equivalent)
 Source/DreamGUIControls/Private/Interaction/UIListView.cpp,DreamGUIControls,control behaviour
 Source/DreamGUI/Private/Interaction/UINavigationInputSelectionHandler.cpp,DreamGUI,selection-cursor visual; used by UDreamWidgetPresenterComponentBase (Core) and UUISelectable
 Source/DreamGUIControls/Private/Interaction/UIRecyclableScrollView.cpp,DreamGUIControls,control behaviour
 Source/DreamGUIControls/Private/Interaction/UIScrollView.cpp,DreamGUIControls,control behaviour
 Source/DreamGUIControls/Private/Interaction/UIScrollViewWithScrollbar.cpp,DreamGUIControls,control behaviour
 Source/DreamGUIControls/Private/Interaction/UIScrollbar.cpp,DreamGUIControls,control behaviour
-Source/DreamGUI/Private/Interaction/UISelectable.cpp,DreamGUIInput,"selectable/navigable base: selection state machine, navigation mode, transitions; used by navigation scope/stack/input module"
+Source/DreamGUIInput/Private/Interaction/UISelectable.cpp,DreamGUIInput,"selectable/navigable base: selection state machine, navigation mode, transitions; used by navigation scope/stack/input module"
 Source/DreamGUIControls/Private/Interaction/UISlider.cpp,DreamGUIControls,control behaviour
 Source/DreamGUIControls/Private/Interaction/UIStandardControls.cpp,DreamGUIControls,UUIProgressBar (split: UDreamLayoutSelfSpacer -> Core layout header)
 Source/DreamGUIControls/Private/Interaction/UITextHyperlink.cpp,DreamGUIControls,clickable text link behaviour
@@ -402,22 +402,22 @@ Source/DreamGUI/Public/DreamUIWidgetLibrary.h,DreamGUI,core
 Source/DreamGUI/Public/Event/DreamBaseEventData.h,DreamGUI,contract: UDreamBaseEventData + pointer event/button enums (UDreamUserWidget API)
 Source/DreamGUI/Public/Event/DreamBaseRaycaster.h,DreamGUI,contract + core hit-testing: abstract raycaster referenced by UDreamPointerEventData and the UI manager registry
 Source/DreamGUI/Public/Event/DreamDelegateDeclaration.h,DreamGUI,contract: native multicast delegate typedefs
-Source/DreamGUI/Public/Event/DreamEnhancedInputEventSystemActor.h,DreamGUIInput,Enhanced Input event system actor
-Source/DreamGUI/Public/Event/DreamEventSystem.h,DreamGUIInput,event system component + actor
+Source/DreamGUIInput/Public/Event/DreamEnhancedInputEventSystemActor.h,DreamGUIInput,Enhanced Input event system actor
+Source/DreamGUIInput/Public/Event/DreamEventSystem.h,DreamGUIInput,event system component + actor
 Source/DreamGUI/Public/Event/DreamGestureEventData.h,DreamGUI,contract: UDreamGestureEventData (UDreamUserWidget pinch/swipe)
 Source/DreamGUI/Public/Event/DreamKeyEventData.h,DreamGUI,contract: UDreamKeyEventData (UDreamUserWidget key events)
 Source/DreamGUI/Public/Event/DreamPointerEventData.h,DreamGUI,"contract: UDreamPointerEventData, FDreamUIHitResult, EDreamUINavigationDirection (UDreamUserWidget API)"
-Source/DreamGUI/Public/Event/DreamPointerPolicy.h,DreamGUIInput,pointer pipeline policy
-Source/DreamGUI/Public/Event/DreamScreenSpaceRaycaster.h,DreamGUIInput,screen raycaster
-Source/DreamGUI/Public/Event/DreamStandaloneInputEventSystemActor.h,DreamGUIInput,standalone event system actor
+Source/DreamGUIInput/Public/Event/DreamPointerPolicy.h,DreamGUIInput,pointer pipeline policy
+Source/DreamGUIInput/Public/Event/DreamScreenSpaceRaycaster.h,DreamGUIInput,screen raycaster
+Source/DreamGUIInput/Public/Event/DreamStandaloneInputEventSystemActor.h,DreamGUIInput,standalone event system actor
 Source/DreamGUI/Public/Event/DreamUIEventDelegate.h,DreamGUI,"contract: FDreamUIEventDelegate serialized event binding (used by PlayTween, text builder, BP library)"
 Source/DreamGUI/Public/Event/DreamUIEventDelegate_PresetParameter.h,DreamGUI,contract: typed FDreamUIEventDelegate structs used by BP library
-Source/DreamGUI/Public/Event/DreamUIInputModeLibrary.h,DreamGUIInput,input-mode BP library
-Source/DreamGUI/Public/Event/DreamUIInputSubsystem.h,DreamGUIInput,"the input system's side of the services; event-system registry, interaction setup"
-Source/DreamGUI/Public/Event/DreamWorldSpaceRaycaster.h,DreamGUIInput,world raycaster
-Source/DreamGUI/Public/Event/InputModule/DreamBaseInputModule.h,DreamGUIInput,input modules
-Source/DreamGUI/Public/Event/InputModule/DreamPointerInputModule.h,DreamGUIInput,input modules
-Source/DreamGUI/Public/Event/InputModule/DreamStandaloneInputModule.h,DreamGUIInput,input modules
+Source/DreamGUIInput/Public/Event/DreamUIInputModeLibrary.h,DreamGUIInput,input-mode BP library
+Source/DreamGUIInput/Public/Event/DreamUIInputSubsystem.h,DreamGUIInput,"the input system's side of the services; event-system registry, interaction setup"
+Source/DreamGUIInput/Public/Event/DreamWorldSpaceRaycaster.h,DreamGUIInput,world raycaster
+Source/DreamGUIInput/Public/Event/InputModule/DreamBaseInputModule.h,DreamGUIInput,input modules
+Source/DreamGUIInput/Public/Event/InputModule/DreamPointerInputModule.h,DreamGUIInput,input modules
+Source/DreamGUIInput/Public/Event/InputModule/DreamStandaloneInputModule.h,DreamGUIInput,input modules
 Source/DreamGUI/Public/Event/Interface/DreamKeyInterface.h,DreamGUI,contract: pointer/key/navigation interface (implemented by core UDreamUserWidgetEventBridge)
 Source/DreamGUI/Public/Event/Interface/DreamNavigationInterface.h,DreamGUI,contract: pointer/key/navigation interface (implemented by core UDreamUserWidgetEventBridge)
 Source/DreamGUI/Public/Event/Interface/DreamPointerClickInterface.h,DreamGUI,contract: pointer/key/navigation interface (implemented by core UDreamUserWidgetEventBridge)
@@ -434,7 +434,7 @@ Source/DreamGUIExtensions/Public/Extensions/2DLineRenderer/Dream2DLineChildrenAs
 Source/DreamGUIExtensions/Public/Extensions/2DLineRenderer/Dream2DLineRaw.h,DreamGUIExtensions,extension
 Source/DreamGUIExtensions/Public/Extensions/2DLineRenderer/Dream2DLineRendererBase.h,DreamGUIExtensions,extension
 Source/DreamGUIExtensions/Public/Extensions/DreamCanvasRenderTargetPreviewer.h,DreamGUIExtensions,extension
-Source/DreamGUI/Public/Extensions/DreamGameViewportClient.h,DreamGUIInput,routes InputChar to the active text field (needs an Input-level text-input registry) | CONDITIONAL(05): Input only if plugin-ini CoreRedirects are verified in MS-0; otherwise stays in core as a thin adapter
+Source/DreamGUIInput/Public/Extensions/DreamGameViewportClient.h,DreamGUIInput,routes InputChar to the active text field (needs an Input-level text-input registry) | CONDITIONAL(05): Input only if plugin-ini CoreRedirects are verified in MS-0; otherwise stays in core as a thin adapter
 Source/DreamGUI/Public/Extensions/DreamImageSequencePlayer.h,DreamGUI,base of UUISpriteSequencePlayer
 Source/DreamGUIExtensions/Public/Extensions/DreamPolygon.h,DreamGUIExtensions,extension
 Source/DreamGUIExtensions/Public/Extensions/DreamPolygonLine.h,DreamGUIExtensions,extension
@@ -455,31 +455,31 @@ Source/DreamGUIExtensions/Public/Extensions/UISpriteSheetTexturePlayer.h,DreamGU
 Source/DreamGUI/Public/Interaction/DreamContentWidget.h,DreamGUI,"named-slot hosting used by UDreamUserWidget, panel layouts and the .dui builder"
 Source/DreamGUI/Public/Interaction/DreamDragDropOperation.h,DreamGUI,contract: drag payload in UDreamUserWidget drag events and UDreamPointerEventData::DragOperation
 Source/DreamGUI/Public/Interaction/DreamResponsiveBinding.h,DreamGUI,data binding / responsive rules; no input
-Source/DreamGUI/Public/Interaction/DreamSelectableStyle.h,DreamGUIInput,style asset referenced by UUISelectable::Style
+Source/DreamGUIInput/Public/Interaction/DreamSelectableStyle.h,DreamGUIInput,style asset referenced by UUISelectable::Style
 Source/DreamGUIControls/Public/Interaction/DreamUIActionBar.h,DreamGUIControls,action-hint bar control
-Source/DreamGUI/Public/Interaction/DreamUIActionRouter.h,DreamGUIInput,action router subsystem (split: FDreamUIActionHandle + FDreamUIActionExecutedDelegate move to a Core header)
-Source/DreamGUI/Public/Interaction/DreamUIActionTrigger.h,DreamGUIInput,binds an input action to a widget
-Source/DreamGUI/Public/Interaction/DreamUIDragDrop.h,DreamGUIInput,drag source / drop target + drag-drop subsystem
-Source/DreamGUI/Public/Interaction/DreamUIInputAction.h,DreamGUIInput,input action data-table row
-Source/DreamGUI/Public/Interaction/DreamUIModal.h,DreamGUIInput,"modal scope + subsystem (focus trapping, scrim, event blocker)"
-Source/DreamGUI/Public/Interaction/DreamUINavigationScope.h,DreamGUIInput,focus scope behaviour
+Source/DreamGUIInput/Public/Interaction/DreamUIActionRouter.h,DreamGUIInput,action router subsystem (split: FDreamUIActionHandle + FDreamUIActionExecutedDelegate move to a Core header)
+Source/DreamGUIInput/Public/Interaction/DreamUIActionTrigger.h,DreamGUIInput,binds an input action to a widget
+Source/DreamGUIInput/Public/Interaction/DreamUIDragDrop.h,DreamGUIInput,drag source / drop target + drag-drop subsystem
+Source/DreamGUIInput/Public/Interaction/DreamUIInputAction.h,DreamGUIInput,input action data-table row
+Source/DreamGUIInput/Public/Interaction/DreamUIModal.h,DreamGUIInput,"modal scope + subsystem (focus trapping, scrim, event blocker)"
+Source/DreamGUIInput/Public/Interaction/DreamUINavigationScope.h,DreamGUIInput,focus scope behaviour
 Source/DreamGUI/Public/Interaction/DreamUINavigationScroll.h,DreamGUI,scroll-into-view helper called by UDreamWidgetNavigation (Core) and input; needs an IDreamUIScrollable contract to drop UUIScrollView
-Source/DreamGUI/Public/Interaction/DreamUINavigationStack.h,DreamGUIInput,focus stack subsystem
+Source/DreamGUIInput/Public/Interaction/DreamUINavigationStack.h,DreamGUIInput,focus stack subsystem
 Source/DreamGUI/Public/Interaction/DreamUIPopupLayer.h,DreamGUI,screen layering service (sibling of DreamScreenUISubsystem); no input
-Source/DreamGUI/Public/Interaction/DreamUITextInputTarget.h,DreamGUIInput,"text input seam: the field that owns the keyboard, for the viewport client and Back"
-Source/DreamGUI/Public/Interaction/DreamUITooltip.h,DreamGUIInput,hover-driven tooltip subsystem + source interface
-Source/DreamGUI/Public/Interaction/DreamUIVirtualCursor.h,DreamGUIInput,gamepad virtual cursor
+Source/DreamGUIInput/Public/Interaction/DreamUITextInputTarget.h,DreamGUIInput,"text input seam: the field that owns the keyboard, for the viewport client and Back"
+Source/DreamGUIInput/Public/Interaction/DreamUITooltip.h,DreamGUIInput,hover-driven tooltip subsystem + source interface
+Source/DreamGUIInput/Public/Interaction/DreamUIVirtualCursor.h,DreamGUIInput,gamepad virtual cursor
 Source/DreamGUIControls/Public/Interaction/UIButton.h,DreamGUIControls,control behaviour
 Source/DreamGUIControls/Public/Interaction/UIDropdown.h,DreamGUIControls,control behaviour
-Source/DreamGUI/Public/Interaction/UIEventBlocker.h,DreamGUIInput,swallows pointer events; used by DreamUIModal
-Source/DreamGUI/Public/Interaction/UIEventTrigger.h,DreamGUIInput,pointer events -> delegates (UGUI EventTrigger equivalent)
+Source/DreamGUIInput/Public/Interaction/UIEventBlocker.h,DreamGUIInput,swallows pointer events; used by DreamUIModal
+Source/DreamGUIInput/Public/Interaction/UIEventTrigger.h,DreamGUIInput,pointer events -> delegates (UGUI EventTrigger equivalent)
 Source/DreamGUIControls/Public/Interaction/UIListView.h,DreamGUIControls,control behaviour
 Source/DreamGUI/Public/Interaction/UINavigationInputSelectionHandler.h,DreamGUI,selection-cursor visual; used by UDreamWidgetPresenterComponentBase (Core) and UUISelectable
 Source/DreamGUIControls/Public/Interaction/UIRecyclableScrollView.h,DreamGUIControls,control behaviour
 Source/DreamGUIControls/Public/Interaction/UIScrollView.h,DreamGUIControls,control behaviour
 Source/DreamGUIControls/Public/Interaction/UIScrollViewWithScrollbar.h,DreamGUIControls,control behaviour
 Source/DreamGUIControls/Public/Interaction/UIScrollbar.h,DreamGUIControls,control behaviour
-Source/DreamGUI/Public/Interaction/UISelectable.h,DreamGUIInput,"selectable/navigable base: selection state machine, navigation mode, transitions; used by navigation scope/stack/input module"
+Source/DreamGUIInput/Public/Interaction/UISelectable.h,DreamGUIInput,"selectable/navigable base: selection state machine, navigation mode, transitions; used by navigation scope/stack/input module"
 Source/DreamGUIControls/Public/Interaction/UISlider.h,DreamGUIControls,control behaviour
 Source/DreamGUIControls/Public/Interaction/UIStandardControls.h,DreamGUIControls,UUIProgressBar (split: UDreamLayoutSelfSpacer -> Core layout header)
 Source/DreamGUIControls/Public/Interaction/UITextHyperlink.h,DreamGUIControls,clickable text link behaviour
