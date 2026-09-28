@@ -69,11 +69,11 @@ UDreamUIBehaviour* UDreamWidget::AddComponent(TSubclassOf<UDreamUIBehaviour> Com
 	const FName NewComponentName = MakeUniqueObjectName(this, ComponentClass, ComponentClass->GetFName());
 	auto NewComponent = NewObject<UDreamUIBehaviour>(this, ComponentClass, NewComponentName, NewComponentFlags, ComponentTemplate);
 	Components.Add(NewComponent);
-	if (bIsRegistered)
+	if (HasRegistered())
 	{
-		NewComponent->OnRegister();
+		NewComponent->Call_OnRegister();
 	}
-	if (bHasBegunPlay)
+	if (HasBegunPlay())
 	{
 		NewComponent->BeginPlay();
 	}
@@ -96,11 +96,10 @@ void UDreamWidget::RemoveComponent(UDreamUIBehaviour* Component)
 	auto Index = Components.Find(Component);
 	if (Index < 0)return;
 	Components.RemoveAt(Index);
-	if (bHasBegunPlay)
-	{
-		Component->EndPlay();
-	}
-	Component->OnUnregister();
+	// Asked whether or not this widget is in play: a behaviour woken before its widget began play is awake
+	// all the same, and the behaviour's own EndPlay only undoes what it has done.
+	Component->EndPlay();
+	Component->Call_OnUnregister();
 	OnComponentsChangedEvent.Broadcast(EDreamWidgetComponentsChangedType::Removed);
 }
 
@@ -272,7 +271,7 @@ UDreamVisual* UDreamWidget::CreateNewVisual(TSubclassOf<UDreamVisual> VisualClas
 	}
 	if (IsValid(OldVisual))
 	{
-		if (bHasBegunPlay)
+		if (HasBegunPlay())
 		{
 			OldVisual->EndPlay();
 		}
@@ -280,7 +279,7 @@ UDreamVisual* UDreamWidget::CreateNewVisual(TSubclassOf<UDreamVisual> VisualClas
 	}
 	
 	NewVisual->Call_OnRegister();
-	if (bHasBegunPlay)
+	if (HasBegunPlay())
 	{
 		NewVisual->BeginPlay();
 	}
@@ -295,7 +294,7 @@ void UDreamWidget::RemoveVisual()
 
 	if (IsValid(OldVisual))
 	{
-		if (bHasBegunPlay)
+		if (HasBegunPlay())
 		{
 			OldVisual->EndPlay();
 		}
@@ -345,7 +344,7 @@ UDreamLayoutContainer* UDreamWidget::CreateNewLayoutContainer(TSubclassOf<UDream
 		&& (!IsValid(OldLayout) || !OldLayout->IsA<UDreamLayoutContainerScaleBox>());
 	if (IsValid(OldLayout))
 	{
-		if (bHasBegunPlay)
+		if (HasBegunPlay())
 		{
 			OldLayout->EndPlay();
 		}
@@ -353,7 +352,7 @@ UDreamLayoutContainer* UDreamWidget::CreateNewLayoutContainer(TSubclassOf<UDream
 	}
 	
 	NewLayout->Call_OnRegister();
-	if (bHasBegunPlay)
+	if (HasBegunPlay())
 	{
 		NewLayout->BeginPlay();
 	}
@@ -408,7 +407,7 @@ void UDreamWidget::RemoveLayoutContainer()
 
 	if (IsValid(OldLayout))
 	{
-		if (bHasBegunPlay)
+		if (HasBegunPlay())
 		{
 			OldLayout->EndPlay();
 		}
@@ -445,7 +444,7 @@ UDreamLayoutSelf* UDreamWidget::CreateNewLayoutSelf(TSubclassOf<UDreamLayoutSelf
 	}
 	if (IsValid(OldLayout))
 	{
-		if (bHasBegunPlay)
+		if (HasBegunPlay())
 		{
 			OldLayout->EndPlay();
 		}
@@ -453,7 +452,7 @@ UDreamLayoutSelf* UDreamWidget::CreateNewLayoutSelf(TSubclassOf<UDreamLayoutSelf
 	}
 	
 	NewLayout->Call_OnRegister();
-	if (bHasBegunPlay)
+	if (HasBegunPlay())
 	{
 		NewLayout->BeginPlay();
 	}
@@ -473,7 +472,7 @@ void UDreamWidget::RemoveLayoutSelf()
 
 	if (IsValid(OldLayout))
 	{
-		if (bHasBegunPlay)
+		if (HasBegunPlay())
 		{
 			OldLayout->EndPlay();
 		}
@@ -512,7 +511,7 @@ UDreamPanelSlot* UDreamWidget::CreateNewPanelSlot(TSubclassOf<UDreamPanelSlot> S
 	if (IsValid(OldSlot))
 	{
 		OldSlot->RestoreAuthoredGeometry();
-		if (bHasBegunPlay)
+		if (HasBegunPlay())
 		{
 			OldSlot->EndPlay();
 		}
@@ -522,7 +521,7 @@ UDreamPanelSlot* UDreamWidget::CreateNewPanelSlot(TSubclassOf<UDreamPanelSlot> S
 	if (IsValid(NewSlot))
 	{
 		NewSlot->Call_OnRegister();
-		if (bHasBegunPlay)
+		if (HasBegunPlay())
 		{
 			NewSlot->BeginPlay();
 		}
@@ -537,7 +536,7 @@ void UDreamWidget::RemovePanelSlot()
 	if (IsValid(OldSlot))
 	{
 		OldSlot->RestoreAuthoredGeometry();
-		if (bHasBegunPlay)
+		if (HasBegunPlay())
 		{
 			OldSlot->EndPlay();
 		}

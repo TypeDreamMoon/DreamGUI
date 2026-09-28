@@ -70,7 +70,8 @@ bool FDreamPlayerScreenPerPlayerRootTest::RunTest(const FString& Parameters)
 	UDreamWidget* SecondPlayerChild = NewObject<UDreamWidget>(TestWorld.World, NAME_None, RF_Transient);
 	SecondPlayerChild->SetDisplayName(TEXT("OnSecondScreen"));
 	// Parent, THEN register -- the order the name states and the one every production path follows.
-	// SetParentBeforeRegister asserts !bIsRegistered, so registering first takes the editor down.
+	// SetParentBeforeRegister refuses a registered widget with an ensure, so registering first would
+	// fail the test and leave the child unparented.
 	SecondPlayerChild->SetParentBeforeRegister(SecondRoot);
 	RegisterDreamWidgetHierarchy(SecondPlayerChild);
 	TestEqual(TEXT("an overlay for a widget on the second screen goes to the second screen"),
@@ -101,7 +102,7 @@ bool FDreamPlayerScreenOwningPlayerResolutionTest::RunTest(const FString& Parame
 	UDreamUserWidget* Host = NewObject<UDreamUserWidget>(TestWorld.World, UDreamUserWidget::StaticClass());
 	UDreamUserWidget* Nested = NewObject<UDreamUserWidget>(TestWorld.World, UDreamUserWidget::StaticClass());
 	// Build the hierarchy, then bring it to life, which is what every production path does and what
-	// SetParentBeforeRegister's own check(!bIsRegistered) demands.
+	// SetParentBeforeRegister, which refuses a registered widget, demands.
 	Nested->SetParentBeforeRegister(Host);
 	RegisterDreamWidgetHierarchy(Host);
 
@@ -187,8 +188,8 @@ bool FDreamPlayerScreenKeyBubbleTest::RunTest(const FString& Parameters)
 	Parent->SetDisplayName(TEXT("Parent"));
 	Child->SetDisplayName(TEXT("Child"));
 	// Attach first, register the whole thing afterwards. Registering a widget and THEN calling
-	// SetParentBeforeRegister trips its check(!bIsRegistered), which is a fatal assertion rather than
-	// a failed test: it takes the editor down and the rest of the suite with it.
+	// SetParentBeforeRegister is refused with an ensure, which fails the test and leaves the child
+	// where it was.
 	Child->SetParentBeforeRegister(Parent);
 	RegisterDreamWidgetHierarchy(Parent);
 

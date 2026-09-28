@@ -241,9 +241,9 @@ public:
 	/**
 	 * How many user widgets are on the per-frame polled-binding visit.
 	 *
-	 * Exposed because "is this widget still being polled after it was destroyed" is otherwise
-	 * unobservable: DestroyWidget does not mark the object garbage, so the list's own IsValid sweep
-	 * cannot answer it and neither can a test.
+	 * Exposed because "is this widget still being polled once it has left play" is otherwise
+	 * unobservable: a widget unregistered without being destroyed is never marked garbage, so the
+	 * list's own IsValid sweep cannot answer it and neither can a test.
 	 */
 	int32 GetPropertyBindingUserCount() const { return PropertyBindingUsers.Num(); }
 private:

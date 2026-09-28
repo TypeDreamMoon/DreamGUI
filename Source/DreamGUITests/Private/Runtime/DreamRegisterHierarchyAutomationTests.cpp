@@ -13,11 +13,12 @@
 /*
  * RegisterDreamWidgetHierarchy over a tree it does not entirely own.
  *
- * The function makes two passes over the same collected subtree, and until recently the two disagreed
- * about what a second visit means. UDreamWidget::OnRegister is deliberately idempotent -- an explicit
- * `if (bIsRegistered) return;` with a comment saying that registering a widget you did not create is
- * safe to ask for. UDreamWidget::BeginPlay opens with `check(!bHasBegunPlay)`. So the same walk
- * tolerated a re-visit in its first loop and killed the process in its second.
+ * The function makes two passes over the same collected subtree, and the two once disagreed about what
+ * a second visit means. UDreamWidget::OnRegister was idempotent on purpose -- registering a widget you
+ * did not create is safe to ask for -- while UDreamWidget::BeginPlay opened with a fatal check that play
+ * had not begun. So the same walk tolerated a re-visit in its first loop and killed the process in its
+ * second. Both steps are no-ops outside the state they leave now (EDreamWidgetLifecycle), and the walk
+ * still asks before it begins a widget.
  *
  * That is not hypothetical, and it is not reachable by building a tree the ordinary way. An `each`
  * list makes its cells the moment it is handed a data source: UDreamUserWidget::Initialize ->
@@ -45,10 +46,10 @@
  *     second test pins the opposite direction: a tree where nothing has begun play must come out with
  *     everything begun.
  *
- * There is no soft failure mode for the defect itself. `check` is fatal, so a regression takes the
- * test process with it rather than reporting a red test -- surviving to the assertions after the call
- * is half of what is being pinned, and is why those assertions are written to be reached rather than
- * skipped by an early return.
+ * The defect's own failure mode was fatal: the check took the test process with it rather than
+ * reporting a red test. BeginPlay leaves a widget already in play alone now, so what is pinned is the
+ * outcome -- every widget registered and begun, once -- and the assertions are still written to be
+ * reached rather than skipped by an early return.
  */
 
 namespace DreamRegisterHierarchyTestLocal
@@ -77,7 +78,7 @@ namespace DreamRegisterHierarchyTestLocal
 
 	/**
 	 * A widget attached the way a hierarchy under assembly is attached: SetParentBeforeRegister, which
-	 * raises no attach event and asserts if the widget is already registered. Every production caller
+	 * raises no attach event and refuses a widget that is already registered. Every production caller
 	 * of RegisterDreamWidgetHierarchy hands it a tree built this way.
 	 */
 	UDreamWidget* MakeWidget(UWorld* InWorld, UDreamWidget* InParent, const TCHAR* InName)
@@ -198,7 +199,8 @@ bool FDreamRegisterHierarchySkipsAlreadyBegunSubtreeTest::RunTest(const FString&
 		Walk.IndexOfByKey(Tree.Header) > Walk.IndexOfByKey(Tree.CellLabel));
 
 	// THE CLAIM. Before the HasBegunPlay() guard this asserted inside UDreamWidget::BeginPlay and took
-	// the editor with it, so reaching the next line at all is half of what is pinned here.
+	// the editor with it. BeginPlay ignores a widget already in play now; the guard stays, so the walk
+	// never asks it to.
 	RegisterDreamWidgetHierarchy(Tree.Host);
 
 	TestTrue(TEXT("the host registered"), Tree.Host->HasRegistered());

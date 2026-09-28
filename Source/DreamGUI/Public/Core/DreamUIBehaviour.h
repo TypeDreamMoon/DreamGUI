@@ -31,6 +31,13 @@ public:
 private:
 	void BeginPlay();
 	void EndPlay();
+	/**
+	 * What the widget calls, rather than OnRegister/OnUnregister themselves: each runs the override once
+	 * per registration, however often it is asked. A subclass's override does its own work after calling
+	 * the base, where no guard in the base could reach it.
+	 */
+	void Call_OnRegister();
+	void Call_OnUnregister();
 
 protected:
 	virtual void OnRegister();
@@ -64,6 +71,8 @@ protected:
 	uint8 bCanExecuteBlueprintEvent : 1;
 	/** The Blueprint wrote a Tick event, as opposed to merely being a Blueprint. Set once in the ctor. */
 	uint8 bHasBlueprintTick : 1 = false;
+	/** Between Call_OnRegister and Call_OnUnregister; see them. */
+	uint8 bIsRegisteredWithWidget : 1 = false;
 
 	UPROPERTY(EditAnywhere, Category=DreamUIBehaviour)
 	uint8 bStartWithTickEnabled : 1 = true;

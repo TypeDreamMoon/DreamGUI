@@ -39,15 +39,19 @@ void UDreamUIBehaviour::PostDuplicate(EDuplicateMode::Type DuplicateMode)
 void UDreamUIBehaviour::BeginPlay()
 {
 	auto Widget = this->GetWidget();
-	if (!ensureMsgf(Widget != nullptr, TEXT("%s: BeginPlay on a behaviour that belongs to no widget."), *GetPathName())
-		|| !ensureMsgf(!this->bIsAwakeCalled, TEXT("%s: BeginPlay on a behaviour that is already awake."), *GetPathName()))
+	if (!ensureMsgf(Widget != nullptr, TEXT("%s: BeginPlay on a behaviour that belongs to no widget."), *GetPathName()))
 	{
 		return;
 	}
 	GetAnimationPlayer();
-	this->Call_Awake();
-	if (Widget->GetWidgetActiveInHierarchy()
-		&& ensureMsgf(!this->bIsEnableCalled, TEXT("%s: a behaviour was enabled before it began play."), *GetPathName()))
+	// Already awake is not a mistake: a widget made active in a game world before it began play wakes
+	// its behaviours then (Call_OnWidgetActiveChanged), and its BeginPlay still follows. What that
+	// leaves owed is only what did not happen yet.
+	if (!this->bIsAwakeCalled)
+	{
+		this->Call_Awake();
+	}
+	if (Widget->GetWidgetActiveInHierarchy() && !this->bIsEnableCalled)
 	{
 		bCanExecuteTick = bStartWithTickEnabled;
 		this->Call_OnEnable();
@@ -64,6 +68,26 @@ void UDreamUIBehaviour::EndPlay()
 		Call_OnDestroy();
 	}
 }
+void UDreamUIBehaviour::Call_OnRegister()
+{
+	if (bIsRegisteredWithWidget)
+	{
+		return;
+	}
+	bIsRegisteredWithWidget = true;
+	OnRegister();
+}
+
+void UDreamUIBehaviour::Call_OnUnregister()
+{
+	if (!bIsRegisteredWithWidget)
+	{
+		return;
+	}
+	bIsRegisteredWithWidget = false;
+	OnUnregister();
+}
+
 void UDreamUIBehaviour::OnRegister()
 {
 	if (auto Widget = GetWidget())

@@ -802,8 +802,8 @@ void FDreamWidgetPreviewHost::OnObjectsReplaced(const TMap<UObject*, UObject*>& 
 	// A recompile reinstances the preview like any other instance of the class: the original is
 	// renamed aside and every reference to it is swapped for a property copy. Ours is swapped too --
 	// a beat after this delegate -- and that is the whole problem, because the original is REGISTERED
-	// in the preview world and the copy is not (bIsRegistered is not a UPROPERTY, so it does not come
-	// across). Adopt the copy and the original is left live, registered, and unowned; it turns up much
+	// in the preview world and the copy is not (a widget's lifecycle is not a UPROPERTY, so it does not
+	// come across). Adopt the copy and the original is left live, registered, and unowned; it turns up much
 	// later as UDreamWidget's last-resort cleanup, at Error verbosity, inside whatever happened to be
 	// running when GC reached it.
 	//

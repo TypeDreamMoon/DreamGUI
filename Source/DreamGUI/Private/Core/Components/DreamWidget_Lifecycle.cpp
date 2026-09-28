@@ -57,12 +57,16 @@ UDreamWidget::UDreamWidget()
 
 void UDreamWidget::BeginPlay()
 {
-	// Every caller checks first. One that did not is a bug to report, not one to take the process down for.
-	if (!ensureMsgf(!bHasBegunPlay, TEXT("%s: BeginPlay on a widget that has already begun play."), *GetPathName()))
+	// Registered -> BegunPlay, and nothing in any other state (EDreamWidgetLifecycle): a second call is
+	// harmless, and so is one for a widget already destroyed. Beginning play before registering is the
+	// one worth reporting -- the manager ticks and raycasts only widgets it knows about, so a widget in
+	// play it was never told of plays alone.
+	if (Lifecycle != EDreamWidgetLifecycle::Registered)
 	{
+		ensureMsgf(Lifecycle != EDreamWidgetLifecycle::Constructed, TEXT("%s: BeginPlay on a widget that is not registered."), *GetPathName());
 		return;
 	}
-	bHasBegunPlay = true;
+	Lifecycle = EDreamWidgetLifecycle::BegunPlay;
 
 	// Iterate a snapshot: a component's BeginPlay can add or remove components on this same widget (a layout
 	// container attaching its companion behaviour, for one), which would invalidate a ranged-for over Components.
@@ -96,7 +100,13 @@ void UDreamWidget::BeginPlay()
 
 void UDreamWidget::EndPlay()
 {
-	bHasBegunPlay = false;
+	// BegunPlay -> Registered, and nothing in any other state: ending play for a widget that never began
+	// used to run every part's EndPlay anyway, and a behaviour's OnDisable/OnDestroy with it.
+	if (Lifecycle != EDreamWidgetLifecycle::BegunPlay)
+	{
+		return;
+	}
+	Lifecycle = EDreamWidgetLifecycle::Registered;
 
 	// Iterate a snapshot, exactly as BeginPlay/OnRegister/OnUnregister do. A component's EndPlay runs
 	// its OnDisable and OnDestroy, and behaviour code there is free to DestroyComponent() -- which
@@ -197,7 +207,7 @@ void UDreamWidget::PostDuplicate(EDuplicateMode::Type DuplicateMode)
 
 void UDreamWidget::BeginDestroy()
 {
-	if (bHasBegunPlay || bIsRegistered)
+	if (HasRegistered())
 	{
 		UDreamWidget* TeardownRoot = RootWidget.GetEvenIfUnreachable();
 		if (TeardownRoot == nullptr || TeardownRoot->HasAnyFlags(RF_FinishDestroyed))
@@ -339,6 +349,25 @@ void UDreamWidget::DestroyWidget()
 	TSet<const UDreamWidget*> ScheduledWidgets;
 	LOCAL::AppendSubtree(this, TeardownWidgets, ScheduledWidgets);
 
+	// The exit steps owed, in the order EDreamWidgetLifecycle fixes: EndPlay for the whole tree before
+	// any of it unregisters, then Unregister, parents before children both times. Each step is a no-op
+	// for a widget not in the state it leaves, so nothing here has to ask first.
+	//
+	// Both passes run with the hierarchy still writable -- a behaviour may move widgets in either -- so
+	// each walks a list that grows: after a widget's step, whatever now hangs under it is appended. A
+	// widget that arrived only while the tree was unregistering never had its EndPlay, and takes it just
+	// before its own unregister.
+	for (int32 EndPlayIndex = 0; EndPlayIndex < TeardownWidgets.Num(); ++EndPlayIndex)
+	{
+		UDreamWidget* Widget = TeardownWidgets[EndPlayIndex].Get();
+		if (Widget == nullptr || Widget->HasAnyFlags(RF_FinishDestroyed))
+		{
+			continue;
+		}
+		Widget->EndPlay();
+		LOCAL::AppendCurrentChildren(Widget, TeardownWidgets, ScheduledWidgets);
+	}
+
 	int32 UnregisterIndex = 0;
 	auto UnregisterPendingWidgets = [&]()
 	{
@@ -349,10 +378,8 @@ void UDreamWidget::DestroyWidget()
 			{
 				continue;
 			}
-			if (Widget->bIsRegistered)
-			{
-				Widget->OnUnregister();
-			}
+			Widget->EndPlay();
+			Widget->OnUnregister();
 			LOCAL::AppendCurrentChildren(Widget, TeardownWidgets, ScheduledWidgets);
 		}
 	};
@@ -367,20 +394,28 @@ void UDreamWidget::DestroyWidget()
 	}
 	UnregisterPendingWidgets();
 
-	int32 EndPlayIndex = 0;
-	while (EndPlayIndex < TeardownWidgets.Num())
+	// Which of them this call destroyed: every widget it tore down that still hangs in this subtree. A
+	// widget a behaviour moved OUT while the tree came down has a live parent now; it was ended and
+	// unregistered -- the caller asked for that and got it -- but it is no longer this subtree's to
+	// destroy (see the marking below), so it stays Constructed, free to be registered where it went.
+	TArray<UDreamWidget*> DestroyedWidgets;
+	DestroyedWidgets.Reserve(TeardownWidgets.Num());
+	for (const TObjectPtr<UDreamWidget>& TornDown : TeardownWidgets)
 	{
-		UnregisterPendingWidgets();
-		UDreamWidget* Widget = TeardownWidgets[EndPlayIndex++].Get();
+		UDreamWidget* Widget = TornDown.Get();
 		if (Widget == nullptr || Widget->HasAnyFlags(RF_FinishDestroyed))
 		{
 			continue;
 		}
-		if (Widget->bHasBegunPlay)
+		if (Widget != this && !Widget->IsChildOf(this))
 		{
-			Widget->EndPlay();
+			continue;//moved out from under us while we were coming down
 		}
-		LOCAL::AppendCurrentChildren(Widget, TeardownWidgets, ScheduledWidgets);
+		DestroyedWidgets.Add(Widget);
+	}
+	for (UDreamWidget* Widget : DestroyedWidgets)
+	{
+		Widget->Lifecycle = EDreamWidgetLifecycle::Destroyed;
 	}
 
 	/**
@@ -426,18 +461,12 @@ void UDreamWidget::DestroyWidget()
 		// own ancestors vanish from under the widgets after it in the list, and every one of those would
 		// then look like it had been moved out.
 		TArray<UDreamWidget*> WidgetsToMark;
-		WidgetsToMark.Reserve(TeardownWidgets.Num());
-		for (const TObjectPtr<UDreamWidget>& TornDown : TeardownWidgets)
+		WidgetsToMark.Reserve(DestroyedWidgets.Num());
+		for (UDreamWidget* Widget : DestroyedWidgets)
 		{
-			UDreamWidget* Widget = TornDown.Get();
-			if (Widget == nullptr || !IsValid(Widget) || Widget->IsRooted()
-				|| Widget->HasAnyFlags(RF_BeginDestroyed | RF_FinishDestroyed))
+			if (!IsValid(Widget) || Widget->IsRooted() || Widget->HasAnyFlags(RF_BeginDestroyed))
 			{
 				continue;
-			}
-			if (Widget != this && !Widget->IsChildOf(this))
-			{
-				continue;//moved out from under us while we were coming down; see above
 			}
 			WidgetsToMark.Add(Widget);
 		}
@@ -477,14 +506,16 @@ UWorld* UDreamWidget::GetWorld() const
 
 void UDreamWidget::OnRegister()
 {
-	// Idempotent: UDreamUIManagerWorldSubsystem::AddWidget treats a duplicate as a bug worth an error
-	// and a stack dump, and every step below is either a set-to-true or an AddUnique, so a second
-	// call can only do redundant work. Registering a widget you did not create is now safe to ask for.
-	if (bIsRegistered)
+	// Constructed -> Registered, and nothing once registered (EDreamWidgetLifecycle): the manager's
+	// AddWidget treats a duplicate as a bug worth an error and a stack dump, so a second call has to be
+	// the no-op it is here. Registering a widget you did not create is safe to ask for. Registering one
+	// that has been destroyed is not -- whoever asks is holding on to a widget whose host let it go.
+	if (Lifecycle != EDreamWidgetLifecycle::Constructed)
 	{
+		ensureMsgf(Lifecycle != EDreamWidgetLifecycle::Destroyed, TEXT("%s: registering a widget that has been destroyed."), *GetPathName());
 		return;
 	}
-	bIsRegistered = true;
+	Lifecycle = EDreamWidgetLifecycle::Registered;
 	// The prefab loader writes properties straight into memory -- no setter, no
 	// PostEditChangeProperty -- and restores the hierarchy through SetParentBeforeRegister, which
 	// fires no attach events. So registration is the first moment the transient bits derived from
@@ -540,20 +571,21 @@ void UDreamWidget::OnRegister()
 	{
 		if (IsValid(Component) && Components.Contains(Component))
 		{
-			Component->OnRegister();
+			Component->Call_OnRegister();
 		}
 	}
 }
 void UDreamWidget::OnUnregister()
 {
-	// Idempotent, like OnRegister: what follows undoes what registering did -- a canvas leaves the
-	// manager, a visual leaves its canvas -- and undoing it for a widget that was never registered, or
-	// twice, reaches into registries it is not in.
-	if (!bIsRegistered)
+	// Registered -> Constructed, and nothing in any other state: what follows undoes what registering
+	// did -- a canvas leaves the manager, a visual leaves its canvas -- and undoing it for a widget that
+	// was never registered, or twice, reaches into registries it is not in. A widget still in play ends
+	// play first; DestroyWidget does that for a whole tree before any of it unregisters.
+	if (Lifecycle != EDreamWidgetLifecycle::Registered)
 	{
 		return;
 	}
-	bIsRegistered = false;
+	Lifecycle = EDreamWidgetLifecycle::Constructed;
 
 	/**
 	 * Live memory, not IsValid. Unregistering undoes what registering did -- a canvas leaves the
@@ -575,11 +607,21 @@ void UDreamWidget::OnUnregister()
 	// Component teardown may remove helper behaviours from this same widget.
 	// Iterate a snapshot so those callbacks cannot invalidate the active iterator.
 	const TArray<TObjectPtr<UDreamUIBehaviour>> ComponentsToUnregister = Components;
+	// A behaviour a game world woke before its widget began play (UDreamUIBehaviour::Call_OnWidgetActiveChanged)
+	// is awake, and no EndPlay of this widget's is coming to put it to rest: it never began. Unregistering is
+	// the last moment it can be disabled and destroyed; for every other behaviour this is a no-op.
 	for (UDreamUIBehaviour* Component : ComponentsToUnregister)
 	{
 		if (IsLiveForTeardown(Component) && Components.Contains(Component))
 		{
-			Component->OnUnregister();
+			Component->EndPlay();
+		}
+	}
+	for (UDreamUIBehaviour* Component : ComponentsToUnregister)
+	{
+		if (IsLiveForTeardown(Component) && Components.Contains(Component))
+		{
+			Component->Call_OnUnregister();
 		}
 	}
 

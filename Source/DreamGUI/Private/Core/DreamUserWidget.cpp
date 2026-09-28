@@ -184,14 +184,14 @@ void RegisterDreamWidgetHierarchy(UDreamWidget* InRoot)
 		{
 			for (UDreamWidget* Widget : AllWidgets)
 			{
-				// Skipped the way OnRegister above skips an already-registered widget, and for the same
-				// reason: this walk does not own every widget it covers. It collects the whole subtree,
-				// nested user widgets and all, and anything built by CreateDreamWidget has already
-				// registered and begun on its own -- a nested widget when its own class initialized it,
-				// an `each` list's cells the moment the list was given a data source, which is before
-				// the containing widget is registered at all. BeginPlay asserts rather than tolerating a
-				// second call, so the caller is the one that has to know.
-				if (IsValid(Widget) && !Widget->HasBegunPlay())
+				// This walk does not own every widget it covers. It collects the whole subtree, nested user
+				// widgets and all, and anything built by CreateDreamWidget has already registered and
+				// begun on its own -- a nested widget when its own class initialized it, an `each` list's
+				// cells the moment the list was given a data source, which is before the containing
+				// widget is registered at all. BeginPlay is a no-op for those; asking only of the widgets
+				// still waiting to begin also skips one an earlier widget's BeginPlay unregistered, which
+				// BeginPlay would report as never having been registered.
+				if (IsValid(Widget) && Widget->HasRegistered() && !Widget->HasBegunPlay())
 				{
 					Widget->BeginPlay();
 				}
@@ -565,7 +565,7 @@ void UDreamUserWidget::ReinitializeFromArchetype(UDreamWidgetTree* InArchetype)
 	// into the new tree's slots a moment later.
 	//
 	// Through whichever door matches the widget's state, the same pair AttachNamedSlotContent uses on
-	// the way back in: SetParentBeforeRegister asserts !bIsRegistered, and the host content of a LIVE
+	// the way back in: SetParentBeforeRegister refuses a registered widget, and the host content of a LIVE
 	// instance -- which is every instance this function exists for -- is registered.
 	//
 	// Holes first. A reinstanced copy can arrive with null entries where destroyed children were (see
@@ -701,11 +701,9 @@ void UDreamUserWidget::NativeOnDestruct()
 	// polled bindings had below, in the one other list this widget puts itself on.
 	StopListeningForAllInputActions();
 	UDreamUIManagerWorldSubsystem::UnregisterDreamUICultureChangedEvent(this);
-	// Stop being polled. DestroyWidget unregisters, ends play and detaches without ever marking the
-	// object garbage, so the manager's own !IsValid sweep never sees this widget go -- it would keep
-	// calling the binding source functions of a widget that has run EndPlay until the next full GC.
-	// The manager drops it on unregister as well; this covers a widget that ends play without ever
-	// having been registered.
+	// Stop being polled, from the moment play ends rather than from the unregister that follows it:
+	// between the two a binding source function would be called on a widget that has run EndPlay. The
+	// manager drops it on unregister as well.
 	if (UDreamUIManagerWorldSubsystem* Manager = UDreamUIManagerWorldSubsystem::GetInstance(GetWorld()))
 	{
 		Manager->RemovePropertyBindingUser(this);

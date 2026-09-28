@@ -133,7 +133,7 @@ void UDreamWidget::PostEditChangeProperty(FPropertyChangedEvent& PropertyChanged
 				{
 					RenderCanvas->RegisterVisual(Visual);
 				}
-				if (bHasBegunPlay)
+				if (HasBegunPlay())
 				{
 					Visual->BeginPlay();
 				}
@@ -175,7 +175,7 @@ void UDreamWidget::PostEditChangeProperty(FPropertyChangedEvent& PropertyChanged
 				&& (!IsValid(PreviousLayout) || !PreviousLayout->IsA<UDreamLayoutContainerScaleBox>());
 			if (IsValid(LayoutContainer))
 			{
-				if (bHasBegunPlay)
+				if (HasBegunPlay())
 				{
 					LayoutContainer->BeginPlay();
 				}
@@ -211,7 +211,7 @@ void UDreamWidget::PostEditChangeProperty(FPropertyChangedEvent& PropertyChanged
 		{
 			if (IsValid(LayoutSelf))
 			{
-				if (bHasBegunPlay)
+				if (HasBegunPlay())
 				{
 					LayoutSelf->BeginPlay();
 				}
@@ -224,7 +224,7 @@ void UDreamWidget::PostEditChangeProperty(FPropertyChangedEvent& PropertyChanged
 		{
 			if (IsValid(PanelSlot))
 			{
-				if (bHasBegunPlay)
+				if (HasBegunPlay())
 				{
 					PanelSlot->BeginPlay();
 				}
@@ -332,7 +332,7 @@ void UDreamWidget::PreEditChange(FProperty* PropertyAboutToChange)
 				RenderCanvas->MarkVisualWillChange(Visual);
 				RenderCanvas->UnregisterVisual(Visual);
 			}
-			if (bHasBegunPlay)
+			if (HasBegunPlay())
 			{
 				Visual->EndPlay();
 			}
@@ -344,7 +344,7 @@ void UDreamWidget::PreEditChange(FProperty* PropertyAboutToChange)
 		LayoutContainerBeforeEdit = LayoutContainer;
 		if (IsValid(LayoutContainer))
 		{
-			if (bHasBegunPlay)
+			if (HasBegunPlay())
 			{
 				LayoutContainer->EndPlay();
 			}
@@ -355,7 +355,7 @@ void UDreamWidget::PreEditChange(FProperty* PropertyAboutToChange)
 	{
 		if (IsValid(LayoutSelf))
 		{
-			if (bHasBegunPlay)
+			if (HasBegunPlay())
 			{
 				LayoutSelf->EndPlay();
 			}
@@ -366,7 +366,7 @@ void UDreamWidget::PreEditChange(FProperty* PropertyAboutToChange)
 	{
 		if (IsValid(PanelSlot))
 		{
-			if (bHasBegunPlay)
+			if (HasBegunPlay())
 			{
 				PanelSlot->EndPlay();
 			}
@@ -429,15 +429,19 @@ void UDreamWidget::PostEditUndo()
 		// it, and a widget claiming a parent that disowns it is worse than one claiming none.
 		Parent = nullptr;
 	}
+	// An undo that took back a delete brought back a destroyed widget: the transaction cleared the
+	// garbage mark, but Lifecycle is not a property and still says Destroyed. That life ended; the undo
+	// has started another, from the beginning.
+	ReviveLifecycleAfterUndo();
 	// Re-register if unregistered (e.g., undo of a delete operation via DeleteForUndo).
-	// bIsRegistered is not a UPROPERTY so it is not saved/restored by the undo system;
-	// after soft-delete it remains false, so we need to call OnRegister() explicitly.
+	// Lifecycle is not a UPROPERTY so it is not saved/restored by the undo system;
+	// after soft-delete it remains unregistered, so we need to call OnRegister() explicitly.
 	// Only for a widget undo keeps -- an authored one, in an asset or in a level. A tree made while a
 	// world runs -- a presenter's, the designer preview's, a screen's -- belongs to the host that built
 	// it, and whether it comes back is that host's call: registering it from here brought back trees
 	// their hosts had destroyed.
-	const bool bWasRegistered = bIsRegistered;
-	if (!bIsRegistered && DreamUI::IsKeptByUndo(*this))
+	const bool bWasRegistered = HasRegistered();
+	if (!bWasRegistered && DreamUI::IsKeptByUndo(*this))
 	{
 		struct LOCAL
 		{
@@ -448,10 +452,10 @@ void UDreamWidget::PostEditUndo()
 					return;
 				}
 				VisitedWidgets.Add(Widget);
-				if (!Widget->bIsRegistered)
-				{
-					Widget->OnRegister();
-				}
+				// The same undo brought the children back; their own PostEditUndo may simply not have
+				// run yet, and the order the transaction calls them in is not this one.
+				Widget->ReviveLifecycleAfterUndo();
+				Widget->OnRegister();
 				for (UDreamWidget* Child : Widget->Children)
 				{
 					if (IsValid(Child))
@@ -509,6 +513,14 @@ void UDreamWidget::PostEditUndo()
 	}
 	CalculateVisibility_Recursive();
 	MarkLayoutForRebuild(this);
+}
+
+void UDreamWidget::ReviveLifecycleAfterUndo()
+{
+	if (Lifecycle == EDreamWidgetLifecycle::Destroyed && IsValid(this))
+	{
+		Lifecycle = EDreamWidgetLifecycle::Constructed;
+	}
 }
 
 void UDreamWidget::PostRename(UObject* OldOuter, const FName OldName)

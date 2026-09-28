@@ -5,8 +5,10 @@
 #include "CoreMinimal.h"
 
 /**
- * Where a widget is in its life: one value in place of the flags that stand for it today --
- * bIsRegistered, bHasBegunPlay, and the parked state.
+ * Where a widget is in its life: one value in place of the two flags that used to stand for it,
+ * registered and begun play. Being parked -- waiting for a parent -- is not one of the states: it is a
+ * question of where the widget hangs rather than how far it has come, and a parked widget is
+ * registered.
  *
  * The steps between the states are fixed, and each one is idempotent:
  *
@@ -20,7 +22,8 @@
  * tree before any of it unregisters. A widget may still be moved between parents while it unregisters or
  * ends play; what decides its next state is the step asked of it, never where it happens to hang.
  *
- * Nothing uses this yet: UDreamWidget still keeps the flags.
+ * UDreamWidget keeps one (GetLifecycle) and takes each step through the call of the same name:
+ * OnRegister, BeginPlay, EndPlay, OnUnregister, DestroyWidget.
  */
 enum class EDreamWidgetLifecycle : uint8
 {

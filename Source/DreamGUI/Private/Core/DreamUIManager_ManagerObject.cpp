@@ -191,9 +191,11 @@ void UDreamUIManagerObject::OnObjectsReplaced(const TMap<UObject*, UObject*>& In
 	 * into one of them. Until then it drew the old tree beside the copy's new one.
 	 *
 	 * So the original is unregistered here, while its memory is live and before any collection: its
-	 * canvases leave the manager and destroy the meshes they made, its visuals leave their canvas. It is
-	 * not detached or destroyed -- the reinstancer is about to swap the copy into the parent that holds
-	 * it, and the compile's own repair (OnBlueprintCompiled) brings the copy up in its place.
+	 * canvases leave the manager and destroy the meshes they made, its visuals leave their canvas. One
+	 * still in play ends play first -- for all of it before any of it unregisters, the order a widget's
+	 * own teardown takes, since unregistering is a no-op for a widget in play. It is not detached or
+	 * destroyed -- the reinstancer is about to swap the copy into the parent that holds it, and the
+	 * compile's own repair (OnBlueprintCompiled) brings the copy up in its place.
 	 *
 	 * Only the replaced instance's OWN widgets, the ones outered inside it. A slot's content belongs to
 	 * the host that placed the instance, is not being replaced, and is re-registered under the copy.
@@ -206,6 +208,7 @@ void UDreamUIManagerObject::OnObjectsReplaced(const TMap<UObject*, UObject*>& In
 	};
 	TSet<const UDreamWidget*> Visited;
 	TArray<UDreamWidget*> Pending;
+	TArray<UDreamWidget*> ToTearDown;
 	for (const TPair<UObject*, UObject*>& Replacement : InReplacementMap)
 	{
 		UDreamWidget* Replaced = Cast<UDreamWidget>(Replacement.Key);
@@ -214,7 +217,7 @@ void UDreamUIManagerObject::OnObjectsReplaced(const TMap<UObject*, UObject*>& In
 		{
 			continue;
 		}
-		// Parents before children, the order DestroyWidget unregisters in.
+		// Parents before children, the order DestroyWidget takes its steps in.
 		Pending.Reset();
 		Pending.Add(Replaced);
 		while (Pending.Num() > 0)
@@ -225,11 +228,8 @@ void UDreamUIManagerObject::OnObjectsReplaced(const TMap<UObject*, UObject*>& In
 				continue;
 			}
 			Visited.Add(Widget);
+			ToTearDown.Add(Widget);
 			const TArray<UDreamWidget*> Children = Widget->GetChildren();
-			if (Widget->HasRegistered())
-			{
-				Widget->OnUnregister();
-			}
 			for (int32 Index = Children.Num() - 1; Index >= 0; --Index)
 			{
 				UDreamWidget* Child = Children[Index];
@@ -238,6 +238,20 @@ void UDreamUIManagerObject::OnObjectsReplaced(const TMap<UObject*, UObject*>& In
 					Pending.Add(Child);
 				}
 			}
+		}
+	}
+	for (UDreamWidget* Widget : ToTearDown)
+	{
+		if (IsLiveForTeardown(Widget))
+		{
+			Widget->EndPlay();
+		}
+	}
+	for (UDreamWidget* Widget : ToTearDown)
+	{
+		if (IsLiveForTeardown(Widget))
+		{
+			Widget->OnUnregister();
 		}
 	}
 }

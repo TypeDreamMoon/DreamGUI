@@ -263,10 +263,9 @@ void UDreamUIManagerWorldSubsystem::RemoveWidget(UDreamWidget* InWidget)
 	if (UDreamUserWidget* UserWidget = Cast<UDreamUserWidget>(InWidget))
 	{
 		// A widget only reaches here from OnUnregister, which is teardown -- and a torn-down user
-		// widget must stop being polled for its property bindings. IsValid() is no answer to that
-		// question: DestroyWidget unregisters, ends play and detaches without ever marking the
-		// object garbage, so the poll loop's own sweep went on calling binding source functions on
-		// a widget that had already run EndPlay, until the next full GC.
+		// widget must stop being polled for its property bindings. The poll loop's own IsValid sweep
+		// answers that only once DestroyWidget has marked the widget garbage, which is the last thing
+		// it does; a widget unregistered without being destroyed is never marked at all.
 		RemovePropertyBindingUser(UserWidget);
 	}
 }
@@ -301,8 +300,7 @@ void UDreamUIManagerWorldSubsystem::DestroyRegisteredWidgetTrees()
 	// Corrupt or partially collected hierarchies may not have a usable cached root.
 	for (UDreamWidget* Widget : RegisteredWidgets)
 	{
-		if (Widget != nullptr && !Widget->HasAnyFlags(RF_FinishDestroyed)
-			&& (Widget->HasRegistered() || Widget->HasBegunPlay()))
+		if (Widget != nullptr && !Widget->HasAnyFlags(RF_FinishDestroyed) && Widget->HasRegistered())
 		{
 			Widget->DestroyWidget();
 		}

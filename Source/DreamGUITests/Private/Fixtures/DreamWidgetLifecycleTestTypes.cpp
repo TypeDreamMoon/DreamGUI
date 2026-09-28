@@ -40,3 +40,48 @@ void UDreamWidgetLifecycleCountingBehaviour::OnUnregister()
 	Super::OnUnregister();
 	++UnregisterCount;
 }
+
+void UDreamWidgetLifecycleRecordingBehaviour::OnRegister()
+{
+	Super::OnRegister();
+	Record(TEXT("Register"));
+}
+
+void UDreamWidgetLifecycleRecordingBehaviour::OnUnregister()
+{
+	Super::OnUnregister();
+	Record(TEXT("Unregister"));
+}
+
+void UDreamWidgetLifecycleRecordingBehaviour::Awake()
+{
+	Super::Awake();
+	Record(TEXT("Awake"));
+}
+
+void UDreamWidgetLifecycleRecordingBehaviour::OnEnable()
+{
+	Super::OnEnable();
+	Record(TEXT("Enable"));
+}
+
+void UDreamWidgetLifecycleRecordingBehaviour::OnDisable()
+{
+	Super::OnDisable();
+	Record(TEXT("Disable"));
+}
+
+void UDreamWidgetLifecycleRecordingBehaviour::OnDestroy()
+{
+	Super::OnDestroy();
+	Record(TEXT("Destroy"));
+}
+
+void UDreamWidgetLifecycleRecordingBehaviour::Record(const TCHAR* InStep) const
+{
+	if (Log.IsValid())
+	{
+		const UDreamWidget* Widget = GetWidget();
+		Log->Add(FString::Printf(TEXT("%s %s"), InStep, Widget != nullptr ? *Widget->GetDisplayName() : TEXT("?")));
+	}
+}

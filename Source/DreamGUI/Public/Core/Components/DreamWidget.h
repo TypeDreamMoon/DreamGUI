@@ -12,6 +12,7 @@
 #include "Widgets/WidgetPixelSnapping.h"
 #include "Core/DreamUIAnchorData.h"
 #include "Core/DreamLayoutPassContext.h"
+#include "Core/DreamWidgetLifecycle.h"
 #include "DreamWidget.generated.h"
 
 class UDreamWidgetSubObjectBehaviour;
@@ -236,6 +237,8 @@ public:
 	virtual bool CanEditChange(const FProperty* InProperty) const override;
 	virtual bool CanEditChange(const FEditPropertyChain& PropertyChain) const override;
 	virtual void PostEditUndo()override;
+	/** Destroyed -> Constructed, for a widget an undo has brought back to life; nothing otherwise. */
+	void ReviveLifecycleAfterUndo();
 	virtual void PostRename(UObject* OldOuter, const FName OldName) override;
 
 	void EnsureChildrenAfterTransaction();
@@ -309,8 +312,11 @@ public:
 		return GET_MEMBER_NAME_CHECKED(UDreamWidget, Components);
 	}
 
-	bool HasBegunPlay()const{return bHasBegunPlay;}
-	bool HasRegistered()const{return bIsRegistered;}
+	bool HasBegunPlay()const{return Lifecycle == EDreamWidgetLifecycle::BegunPlay;}
+	/** Registered, whether or not play has begun since: a widget in play is still registered. */
+	bool HasRegistered()const{return Lifecycle == EDreamWidgetLifecycle::Registered || Lifecycle == EDreamWidgetLifecycle::BegunPlay;}
+	/** Where this widget is in its life; EDreamWidgetLifecycle has the steps between the states. */
+	EDreamWidgetLifecycle GetLifecycle()const{return Lifecycle;}
 
 	static void CollectChildrenWidgets(UDreamWidget* Target, TArray<UDreamWidget*>& OutAllChildrenWidgets, bool IncludeTarget = true);
 
@@ -1997,8 +2003,17 @@ private:
 	uint32 bHasRenderTransform : 1 = false;
 	EDreamWidgetClipping LayoutClippingOverride = EDreamWidgetClipping::Inherit;
 
-	uint32 bHasBegunPlay : 1 = false;
-	uint32 bIsRegistered : 1 = false;
+	/**
+	 * Where the widget is in its life. Not a property, so nothing restores it: a duplicate starts at
+	 * Constructed like any new widget, and an undo leaves it as it was -- which is why PostEditUndo puts
+	 * a widget the undo brought back from Destroyed at Constructed before anything registers it.
+	 */
+	EDreamWidgetLifecycle Lifecycle = EDreamWidgetLifecycle::Constructed;
+	/**
+	 * Waiting for a parent. Beside Lifecycle rather than one of its states, because it is a question of
+	 * where the widget hangs, not of how far it has come: a parked widget is registered, and has begun
+	 * play once its world has.
+	 */
 	uint32 bParked : 1 = false;
 	/** Cached "this widget or an ancestor declares a perspective", so the usual case is one bit test. */
 	uint32 bHasPerspectiveInHierarchy : 1 = false;

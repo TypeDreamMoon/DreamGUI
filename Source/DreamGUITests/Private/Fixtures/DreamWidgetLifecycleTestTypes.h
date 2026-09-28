@@ -74,6 +74,30 @@ protected:
 	virtual void OnUnregister() override;
 };
 
+/**
+ * A behaviour that writes each lifecycle call its widget passes on into a log the test hands it, as
+ * "<step> <widget display name>". Shared, so one log can take a whole tree's calls in the order they came.
+ */
+UCLASS()
+class UDreamWidgetLifecycleRecordingBehaviour : public UDreamUIBehaviour
+{
+	GENERATED_BODY()
+
+public:
+	TSharedPtr<TArray<FString>> Log;
+
+protected:
+	virtual void OnRegister() override;
+	virtual void OnUnregister() override;
+	virtual void Awake() override;
+	virtual void OnEnable() override;
+	virtual void OnDisable() override;
+	virtual void OnDestroy() override;
+
+private:
+	void Record(const TCHAR* InStep) const;
+};
+
 /** A tree host that owns no tree and records what it is asked, for the tests of the contract itself. */
 UCLASS()
 class UDreamTreeHostProbe : public UObject, public IDreamWidgetTreeHost

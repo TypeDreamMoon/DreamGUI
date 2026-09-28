@@ -332,7 +332,7 @@ void UDreamWidget::FindChildArrayByDisplayNameWithChildren_Internal(const FStrin
 
 void UDreamWidget::SetParentBeforeRegister(UDreamWidget* InParent)
 {
-	if (!ensureMsgf(!bIsRegistered, TEXT("%s: SetParentBeforeRegister on a registered widget; SetParent is the call for that."), *GetPathName()))
+	if (!ensureMsgf(!HasRegistered(), TEXT("%s: SetParentBeforeRegister on a registered widget; SetParent is the call for that."), *GetPathName()))
 	{
 		return;
 	}
@@ -598,7 +598,7 @@ bool UDreamWidget::TrySetParentInternal(UDreamWidget* InParent, bool InKeepWorld
 		}
 		this->RelativeRotationEuler = this->RelativeRotation.Rotator();
 		this->CalculateObjectToWorldTransform();
-		if (bIsRegistered)
+		if (HasRegistered())
 		{
 			CalculateAnchorFromTransform();
 		}
@@ -858,7 +858,7 @@ void UDreamWidget::OnAttachedToParent()
 	}
 	RefreshPerspectiveInHierarchy();//a new parent can put this subtree inside a perspective scope
 	RefreshShearInHierarchy();//...and, the same way, inside a sheared one
-	if (this->bIsRegistered)//registered means the hierarchy is live, not still being assembled
+	if (this->HasRegistered())//registered means the hierarchy is live, not still being assembled
 	{
 		Call_TransformChanged();
 		CalculateAnchorFromTransform();//a live attach has to derive anchors from the transform so KeepRelative/KeepWorld hold; while a tree is being assembled the serialized anchors are already right
