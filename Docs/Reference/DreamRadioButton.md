@@ -18,7 +18,7 @@ UUIToggleGroup behaviour living on a shared ancestor, and membership is handed o
 SetToggleGroup. Ungrouped, this control is honest about being a round toggle -- clicking it again
 turns it off; a group with bAllowNoneSelected=false is what forbids that.
 
-    /Script/DreamGUI.DreamRadioButton OptionA {
+    /Script/DreamGUIControls.DreamRadioButton OptionA {
         bIsOn = true
         OnToggleChanged -> HandleOptionA
 

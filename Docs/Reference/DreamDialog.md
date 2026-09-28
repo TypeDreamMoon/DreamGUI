@@ -37,7 +37,7 @@ Options honestly says. Buttons is still fillable from C++, from Blueprint and fr
 panel -- and the constructor seeds Cancel + OK (OK primary), so the common dialog needs no array
 at all:
 
-    /Script/DreamGUI.DreamDialog Confirm {
+    /Script/DreamGUIControls.DreamDialog Confirm {
         Title   = "删除存档"
         Message = "这个操作不能撤销。"
         OnDialogClosed -> HandleAnswer

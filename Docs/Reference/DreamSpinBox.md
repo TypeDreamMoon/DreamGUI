@@ -31,7 +31,7 @@ counts from where the drag was recognised, not from the press: the travel that t
 into a drag moves nothing, as in SSpinBox, so the value does not leap by the drag threshold the
 moment a scrub starts.
 
-    /Script/DreamGUI.DreamSpinBox Count {
+    /Script/DreamGUIControls.DreamSpinBox Count {
         Value = 5
         MaxValue = 10
         OnValueChanged -> HandleCount

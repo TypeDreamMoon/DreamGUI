@@ -19,7 +19,7 @@ UMG Scroll Box
 | `NavigationScrollPadding` | `float` | ScrollBox | yes | `GetNavigationScrollPadding` / `SetNavigationScrollPadding` | How much of the window to keep clear around a revealed widget, in local units -- UMG's NavigationScrollPadding. Stops a row landing flush against the edge with its neighbour cut in half beside it, which is the only cue a player has that the list continues. |
 | `ScrollWhenFocusChanges` | `EDreamUIScrollWhenFocusChanges` | ScrollBox | yes | `GetScrollWhenFocusChanges` / `SetScrollWhenFocusChanges` | What this box does when user focus lands inside it -- UMG's ScrollWhenFocusChanges. Read by FDreamUINavigationScroll, which is the only thing that reveals a widget because focus moved. |
 | `AnalogMouseWheelKey` | `FKey` | ScrollBox | yes | `GetAnalogMouseWheelKey` / `SetAnalogMouseWheelKey` | The analog key that acts as this box's mouse wheel -- UMG's AnalogMouseWheelKey. Invalid (the default) means "whatever the input preset already routes here", which is the right stick and therefore exactly today's behaviour. |
-| `Scrollbar` | `TWeakObjectPtr<UUIScrollbar>` | ScrollBox | yes | read / write | A UUIScrollbar to keep in step with this box, both ways. Assign the component from a scrollbar prefab (/DreamGUI/Prefabs/VerticalScrollbar or HorizontalScrollbar) placed anywhere in the hierarchy -- it does not have to be a child of this box. Which end of the bar means zero is the BAR's business: this box always feeds the raw 0..1 fraction and the bar's own DirectionType decides the mapping. |
+| `Scrollbar` | `TWeakObjectPtr<UDreamUIBehaviour>` | ScrollBox | yes | read / write | A scrollbar behaviour to keep in step with this box, both ways -- a UUIScrollbar, or anything else that implements IDreamUIScrollbarInterface. Assign the component from a scrollbar prefab (/DreamGUI/Prefabs/VerticalScrollbar or HorizontalScrollbar) placed anywhere in the hierarchy -- it does not have to be a child of this box. Which end of the bar means zero is the BAR's business: this box always feeds the raw 0..1 fraction and the bar's own DirectionType decides the mapping. |
 | `ScrollbarVisibility` | `EDreamScrollBoxScrollbarVisibility` | ScrollBox | yes | `GetScrollbarVisibility` / `SetScrollbarVisibility` | Whether that bar hides itself when the content already fits. |
 | `bAnimateWheelScrolling` | `bool` | ScrollBox | yes | `GetAnimateWheelScrolling` / `SetAnimateWheelScrolling` | Ease to the wheel's new position over a few frames instead of jumping there. |
 | `ScrollAnimationMode` | `EDreamScrollAnimationMode` | ScrollBox | yes | `GetScrollAnimationMode` / `SetScrollAnimationMode` | Which curve an eased scroll follows. |
@@ -55,7 +55,7 @@ UMG Scroll Box
 | `EDreamTweenEase GetScrollAnimationEase()` | pure | Get Scroll Animation Ease |
 | `float GetScrollAnimationInterpolationSpeed()` | pure | Get Scroll Animation Interpolation Speed |
 | `EDreamScrollAnimationMode GetScrollAnimationMode()` | pure | Get Scroll Animation Mode |
-| `UUIScrollbar* GetScrollbar()` | pure | The bar this box drives. Takes the raw pointer, because the stored form is a weak one. |
+| `UDreamUIBehaviour* GetScrollbar()` | pure | The bar this box drives. Takes the raw pointer, because the stored form is a weak one. |
 | `EDreamScrollBoxScrollbarVisibility GetScrollbarVisibility()` | pure | Get Scrollbar Visibility |
 | `float GetScrollOffset()` | pure | Distance scrolled from the start, in local units. Always within [0, GetMaxScrollOffset()]. |
 | `float GetScrollOffsetOfEnd()` | pure | The offset at which the end of the content is in view -- UMG's name for GetMaxScrollOffset. |
@@ -85,7 +85,7 @@ UMG Scroll Box
 | `void SetScrollAnimationEase(EDreamTweenEase Value)` | callable | Set Scroll Animation Ease |
 | `void SetScrollAnimationInterpolationSpeed(float Value)` | callable | Set Scroll Animation Interpolation Speed |
 | `void SetScrollAnimationMode(EDreamScrollAnimationMode Value)` | callable | Set Scroll Animation Mode |
-| `void SetScrollbar(UUIScrollbar* Value)` | callable | Set Scrollbar |
+| `void SetScrollbar(UDreamUIBehaviour* Value)` | callable | Link a scrollbar behaviour; one that does not implement IDreamUIScrollbarInterface is refused. |
 | `void SetScrollbarVisibility(EDreamScrollBoxScrollbarVisibility Value)` | callable | Set Scrollbar Visibility |
 | `void SetScrollOffset(float Value)` | callable | Set Scroll Offset |
 | `void SetScrollOffsetAnimated(float Value)` | callable | Ease towards Value over the coming frames instead of moving now. Cancels any momentum. |

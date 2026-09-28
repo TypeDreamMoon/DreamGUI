@@ -36,7 +36,7 @@ UMG parity is UInputKeySelector's core: SelectedChord (with SelectedKey as its b
 bIsListening, OnKeySelected, OnIsSelectingKey -- plus the library's OnValueChangedBP, because the
 key is a value and `<->` binds against it.
 
-    /Script/DreamGUI.DreamInputKeySelector JumpBinding {
+    /Script/DreamGUIControls.DreamInputKeySelector JumpBinding {
         SelectedKey = (KeyName="SpaceBar")
         OnKeySelected -> HandleJumpRebound
 
