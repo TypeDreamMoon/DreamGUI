@@ -10,6 +10,8 @@
 #include "Core/IDreamUISpriteRenderInterface.h"
 #include "RenderingThread.h"
 #include "Engine/Engine.h"
+#include "Misc/ScopeExit.h"
+#include "RHICommandList.h"
 #include "Rendering/Texture2DResource.h"
 
 
@@ -368,6 +370,17 @@ void FDreamUIDynamicSpriteAtlasData::CopySpriteTextureToAtlas(UDreamUISpriteData
 		auto dstRegionPosition = RegionData.DstRegionBox.Min;
 		auto packedRect = RegionData.PackedRect;
 		auto spaceBetweenSprites = RegionData.SpaceBetweenSprites;
+		// Both are shader resources between frames, and the copies below read and write them in the copy
+		// states: in before the first, out again after the last.
+		RHICmdList.Transition({
+			FRHITransitionInfo(spriteTextureRHIRef, ERHIAccess::SRVMask, ERHIAccess::CopySrc),
+			FRHITransitionInfo(atlasTextureRHIRef, ERHIAccess::SRVMask, ERHIAccess::CopyDest) });
+		ON_SCOPE_EXIT
+		{
+			RHICmdList.Transition({
+				FRHITransitionInfo(spriteTextureRHIRef, ERHIAccess::CopySrc, ERHIAccess::SRVMask),
+				FRHITransitionInfo(atlasTextureRHIRef, ERHIAccess::CopyDest, ERHIAccess::SRVMask) });
+		};
 		//origin image
 		FRHICopyTextureInfo CopyInfo;
 		CopyInfo.SourcePosition = FIntVector(srcRegionPosition.X, srcRegionPosition.Y, 0);

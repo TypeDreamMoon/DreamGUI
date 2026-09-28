@@ -8,6 +8,7 @@
 #include "Materials/MaterialInstanceDynamic.h"
 #include "TextureResource.h"
 #include "Engine/Texture2DDynamic.h"
+#include "RHICommandList.h"
 #include "RenderingThread.h"
 
 #define LOCTEXT_NAMESPACE "LWidgetDataAsTexture"
@@ -133,15 +134,21 @@ bool UDreamUIDataAsTexture::ExpandTexture()
 		ENQUEUE_RENDER_COMMAND(FLFDreamUIDataAsTexture_UpdateAndCopyDataTexture)(
 			[OldTexture, NewTexture, Width = TextureWidth, OldTextureHeight](FRHICommandListImmediate& RHICmdList)
 			{
+				FRHITexture* Source = ((FTexture2DDynamicResource*)OldTexture->GetResource())->GetTexture2DRHI();
+				FRHITexture* Destination = ((FTexture2DDynamicResource*)NewTexture->GetResource())->GetTexture2DRHI();
 				FRHICopyTextureInfo CopyInfo;
 				CopyInfo.SourcePosition = FIntVector(0, 0, 0);
 				CopyInfo.Size = FIntVector(Width, OldTextureHeight, 0);
 				CopyInfo.DestPosition = FIntVector(0, 0, 0);
-				RHICmdList.CopyTexture(
-					((FTexture2DDynamicResource*)OldTexture->GetResource())->GetTexture2DRHI(),
-					((FTexture2DDynamicResource*)NewTexture->GetResource())->GetTexture2DRHI(),
-					CopyInfo
-				);
+				// Both are shader resources between frames, and a copy reads and writes them in the copy states:
+				// in and out again around it, which the RHI's validation layer requires and some RHIs rely on.
+				RHICmdList.Transition({
+					FRHITransitionInfo(Source, ERHIAccess::SRVMask, ERHIAccess::CopySrc),
+					FRHITransitionInfo(Destination, ERHIAccess::SRVMask, ERHIAccess::CopyDest) });
+				RHICmdList.CopyTexture(Source, Destination, CopyInfo);
+				RHICmdList.Transition({
+					FRHITransitionInfo(Source, ERHIAccess::CopySrc, ERHIAccess::SRVMask),
+					FRHITransitionInfo(Destination, ERHIAccess::CopyDest, ERHIAccess::SRVMask) });
 				RHIFlushResources();//UE5.8: FRHICommandListImmediate::FlushResources removed; global RHIFlushResources replaces it
 			});
 	}
