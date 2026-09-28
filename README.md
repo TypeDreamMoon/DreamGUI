@@ -34,6 +34,24 @@ rather than Slate's, and it buys three things UMG cannot do as directly:
 
 It costs you Slate's ecosystem: none of UMG's widgets, styles or bindings apply.
 
+## Modules
+
+The runtime is being split into modules by layer. A module depends only on the ones below it, and
+`Tools/Tests/static_checks.py` fails an include that goes the other way (rule `layering`). Every runtime
+module loads at `PostConfigInit`, as the core does, so its types and `.dui` tags are in place before
+anything compiles.
+
+| Module | Layer | Holds |
+| --- | --- | --- |
+| `DreamGUI` | core | Widgets, visuals, canvas batching, layout, text and `.dui`, animation, the event contracts. For now also the renderer, the input system and the controls, which are still to be split off |
+| `DreamGUIExtensions` | above the core | 2D lines, polygons and rings, the static-mesh visual, the retainer box and the render-target helpers, lyrics, the concrete mesh modifiers, and the background blur, pixelate and pixel sort effects |
+| `DreamTween` | independent | Tweens |
+| `DreamGUIEditor`, `DreamGUIK2Nodes` | editor | The designer and the asset tools; the Blueprint nodes |
+| `DreamGUITests` | editor | The automation suite |
+
+C++ that uses a type from a split-off module adds that module to its `Build.cs`. Assets need nothing:
+every type that moved still loads under its old name (see [below](#if-you-have-assets-authored-against-lgui--lexui-or-from-before-an-in-fork-rename)).
+
 ## Install
 
 Requires **Unreal Engine 5.8**. Clone into your project's `Plugins/` directory:
@@ -47,7 +65,8 @@ Regenerate project files and build. That is the whole install for a fresh projec
 > [!IMPORTANT]
 > **Engine 5.8, a launcher install included.** `DreamGUI.Build.cs` adds
 > `Engine/Source/Runtime/Renderer/Private` and `Runtime/Renderer/Internal` to its private include paths,
-> for `SceneRendering.h`, `ScenePrivate.h` and `SceneTextures.h`. A launcher install ships those headers;
+> for `SceneRendering.h`, `ScenePrivate.h` and `SceneTextures.h`, and `DreamGUIExtensions.Build.cs` adds
+> `Runtime/Renderer/Internal` for the post-process effects. A launcher install ships those headers;
 > should an install ever stop shipping engine private headers, the failure is a missing-header compile
 > error rather than anything that names the requirement.
 >
@@ -99,8 +118,10 @@ They reference the old class names and the old `/LGUI/` mount, so they need Core
 **the plugin ships them**: the `[CoreRedirects]` block in
 [`Config/DefaultDreamGUI.ini`](./Config/DefaultDreamGUI.ini) is mounted as the plugin's own config
 branch, and the engine applies every branch's redirects before the first asset loads. Nothing to copy.
-It covers the LGUI/LexUI rename, the prefab-vocabulary rename that the class model replaced, and the
-control renames (`UIButtonComponent` → `UIButton` and its siblings).
+It covers the LGUI/LexUI rename, the prefab-vocabulary rename that the class model replaced, the
+control renames (`UIButtonComponent` → `UIButton` and its siblings), and the module split: a type that
+moved out of the core into another of the plugin's runtime modules is still found under its old
+`/Script/DreamGUI` name.
 
 **If you copied the block into your project's `Config/DefaultEngine.ini` for an earlier version,
 delete that copy.** Earlier versions shipped it as a template, `Config/DefaultEngine.ini`, on the
