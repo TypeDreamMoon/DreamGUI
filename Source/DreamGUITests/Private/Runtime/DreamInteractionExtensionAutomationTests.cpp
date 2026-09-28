@@ -17,7 +17,7 @@
 #include "Event/Interface/DreamPointerEnterExitInterface.h"
 #include "Event/Interface/DreamPointerScrollInterface.h"
 #include "Extensions/DreamUIRenderTargetInteraction.h"
-#include "Extensions/DreamUMGWidgetInteraction.h"
+#include "UMG/DreamUMGWidgetInteraction.h"
 #include "Extensions/DreamVisualCustomRaycastExtensions.h"
 #include "GameFramework/Actor.h"
 #include "InputCoreTypes.h"

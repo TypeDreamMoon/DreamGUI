@@ -4,7 +4,7 @@
 
 #include "Misc/AutomationTest.h"
 
-#include "Core/Components/DreamPixelSort.h"
+#include "Extensions/Effects/DreamPixelSort.h"
 
 namespace DreamPixelSortTestLocal
 {

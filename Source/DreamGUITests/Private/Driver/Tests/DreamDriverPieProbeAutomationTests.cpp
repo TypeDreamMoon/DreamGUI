@@ -12,7 +12,7 @@
 #include "Engine/Engine.h"
 #include "Engine/GameViewportClient.h"
 #include "Engine/World.h"
-#include "Extensions/DreamGameViewportClient.h"
+#include "Event/DreamGameViewportClient.h"
 #include "GameFramework/PlayerController.h"
 #include "IAssetViewport.h"
 #include "Interaction/UITextInput.h"

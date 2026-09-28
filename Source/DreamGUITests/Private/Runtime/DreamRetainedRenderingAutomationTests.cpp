@@ -5,7 +5,7 @@
 #include "Misc/AutomationTest.h"
 
 #include "Core/Components/DreamCanvas.h"
-#include "Core/DreamUIMeshIndex.h"
+#include "DreamUIRender/DreamUIMeshIndex.h"
 #include "Extensions/DreamRetainerBox.h"
 
 /*

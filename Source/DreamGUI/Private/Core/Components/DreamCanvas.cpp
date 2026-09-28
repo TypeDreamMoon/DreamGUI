@@ -10,7 +10,7 @@
 #include "Utils/DreamUIUtils.h"
 #include "Core/DreamUISettings.h"
 #include "Core/DreamUIManager.h"
-#include "Core/DreamUIRender/DreamUIRenderer.h"
+#include "DreamUIRender/DreamUIRenderer.h"
 #include "Core/DreamUIMesh/DreamUIMeshComponent.h"
 #include "Core/DreamUIDrawCall.h"
 #include "Core/DreamUIFontData_BaseObject.h"

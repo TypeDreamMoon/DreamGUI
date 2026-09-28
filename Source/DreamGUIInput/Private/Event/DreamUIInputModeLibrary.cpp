@@ -6,7 +6,7 @@
 #include "Core/Components/DreamWidget.h"
 #include "Engine/LocalPlayer.h"
 #include "Event/DreamEventSystem.h"
-#include "Extensions/DreamGameViewportClient.h"
+#include "Event/DreamGameViewportClient.h"
 #include "GameFramework/PlayerController.h"
 
 namespace DreamUIInputModeLibraryLocal

@@ -9,7 +9,7 @@
 #include "Core/DreamCanvasProcessingDrawCallData.h"
 #include "Core/DreamUIBehaviour.h"
 #include "Core/DreamUIDrawCall.h"
-#include "Core/DreamUIRender/IDreamUIRendererViewSource.h"
+#include "DreamUIRender/IDreamUIRendererViewSource.h"
 #include "Math/TransformCalculus2D.h"
 #include "DreamCanvas.generated.h"
 

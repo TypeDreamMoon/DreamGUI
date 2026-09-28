@@ -17,7 +17,7 @@
 #include "Event/DreamPointerEventData.h"
 #include "Event/DreamUIInputModeLibrary.h"
 #include "Event/DreamWorldSpaceRaycaster.h"
-#include "Extensions/DreamGameViewportClient.h"
+#include "Event/DreamGameViewportClient.h"
 #include "GameFramework/Actor.h"
 #include "GameFramework/PlayerController.h"
 #include "InputCoreTypes.h"

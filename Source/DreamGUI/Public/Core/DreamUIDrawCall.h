@@ -5,7 +5,7 @@
 #include "CoreMinimal.h"
 #include "DreamUIGeometry.h"
 #include "Engine/Texture.h"
-#include "Core/DreamUIMeshIndex.h"
+#include "DreamUIRender/DreamUIMeshIndex.h"
 #include "Core/DreamUIQuadTree.h"
 
 class UDreamVisualPostProcess;

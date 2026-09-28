@@ -6,7 +6,7 @@
 
 DREAMGUI_API DECLARE_LOG_CATEGORY_EXTERN(DreamGUI, Log, All);
 // The plugin's stat group is declared with the renderer, the lowest module that counts into it.
-#include "Core/DreamUIRender/DreamUIRendererLogging.h"
+#include "DreamUIRender/DreamUIRendererLogging.h"
 
 class FDreamGUIModule : public IModuleInterface
 {

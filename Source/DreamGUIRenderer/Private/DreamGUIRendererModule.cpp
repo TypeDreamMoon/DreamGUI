@@ -1,6 +1,6 @@
 // Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
 
-#include "Core/DreamUIRender/DreamUIRendererLogging.h"
+#include "DreamUIRender/DreamUIRendererLogging.h"
 #include "Interfaces/IPluginManager.h"
 #include "Misc/Paths.h"
 #include "Modules/ModuleManager.h"

@@ -4,9 +4,9 @@
 #pragma once
 
 #include "Components/MeshComponent.h"
-#include "Core/DreamUIMeshIndex.h"
-#include "Core/DreamUIMeshVertex.h"
-#include "Core/DreamUIRender/DreamUIBaseShaders.h"
+#include "DreamUIRender/DreamUIMeshIndex.h"
+#include "DreamUIRender/DreamUIMeshVertex.h"
+#include "DreamUIRender/DreamUIBaseShaders.h"
 #include "DreamUIMeshComponent.generated.h"
 
 class FDreamUIDrawCall;

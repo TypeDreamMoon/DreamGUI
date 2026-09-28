@@ -4,9 +4,9 @@
 #include "CoreMinimal.h"
 #include "Components/DreamText.h"
 #include "Components/DreamSprite.h"
-#include "Core/DreamUIBlendMode.h"
-#include "Core/DreamUIMeshIndex.h"
-#include "Core/DreamUIMeshVertex.h"
+#include "DreamUIRender/DreamUIBlendMode.h"
+#include "DreamUIRender/DreamUIMeshIndex.h"
+#include "DreamUIRender/DreamUIMeshVertex.h"
 
 struct FDreamUISpriteInfo;
 struct FDreamUITextLineProperty;

@@ -17,10 +17,10 @@
 #include "UObject/StrongObjectPtr.h"
 #include "UObject/UnrealType.h"
 
-#include "Core/Components/DreamBackgroundBlur.h"
-#include "Core/Components/DreamBackgroundPixelate.h"
+#include "Extensions/Effects/DreamBackgroundBlur.h"
+#include "Extensions/Effects/DreamBackgroundPixelate.h"
 #include "Core/Components/DreamCanvas.h"
-#include "Core/Components/DreamPixelSort.h"
+#include "Extensions/Effects/DreamPixelSort.h"
 #include "Core/Components/DreamTexture.h"
 #include "Core/Components/DreamWidget.h"
 #include "Extensions/DreamStaticMesh.h"

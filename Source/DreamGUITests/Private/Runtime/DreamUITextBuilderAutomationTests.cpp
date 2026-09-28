@@ -4,11 +4,11 @@
 
 #include "Misc/AutomationTest.h"
 
-#include "Core/Components/DreamBackgroundBlur.h"
-#include "Core/Components/DreamBackgroundPixelate.h"
+#include "Extensions/Effects/DreamBackgroundBlur.h"
+#include "Extensions/Effects/DreamBackgroundPixelate.h"
 #include "Core/Components/DreamImage.h"
 #include "Core/Components/DreamPanelSlot.h"
-#include "Core/Components/DreamPixelSort.h"
+#include "Extensions/Effects/DreamPixelSort.h"
 #include "Core/Components/DreamRectBlock.h"
 #include "Core/Components/DreamSprite.h"
 #include "Core/Components/DreamText.h"

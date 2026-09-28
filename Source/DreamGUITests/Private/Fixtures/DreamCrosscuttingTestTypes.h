@@ -3,7 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Extensions/DreamUMGWidget.h"
+#include "UMG/DreamUMGWidget.h"
 #include "DreamCrosscuttingTestTypes.generated.h"
 
 /**

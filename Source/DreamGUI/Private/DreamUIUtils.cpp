@@ -6,7 +6,7 @@
 #include "TextureResource.h"
 #include "Engine/Texture2D.h"
 #include "DreamGUI.h"
-#include "Core/DreamUIMeshVertex.h"
+#include "DreamUIRender/DreamUIMeshVertex.h"
 #include "Engine/StaticMesh.h"
 #include "StaticMeshResources.h"
 #if WITH_EDITOR

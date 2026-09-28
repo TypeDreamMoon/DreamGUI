@@ -7,8 +7,8 @@
 #include "Core/DreamUIBuilder.h"
 #include "Core/DreamWidgetTree.h"
 #include "Core/Components/DreamWidget.h"
-#include "Extensions/DreamUMGWidget.h"
-#include "Extensions/DreamUMGWidgetInteraction.h"
+#include "UMG/DreamUMGWidget.h"
+#include "UMG/DreamUMGWidgetInteraction.h"
 
 void UDreamNativeWidgetHost::CollectParts(TArray<FDreamControlPart>& OutParts)
 {

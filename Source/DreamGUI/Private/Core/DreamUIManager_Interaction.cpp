@@ -16,11 +16,11 @@
 #include "Core/DreamUIFontData_FreeTypeRender.h"
 #include "Core/Components/DreamVisual.h"
 #include "Engine/Engine.h"
-#include "Core/DreamUIRender/DreamUIRenderer.h"
+#include "DreamUIRender/DreamUIRenderer.h"
 #include "Core/IDreamUICultureChangedInterface.h"
 #include "Core/DreamUIBehaviour.h"
 #include "Core/Components/DreamLayout.h"
-#include "Core/DreamUIMesh/DreamUIGizmoMesh.h"
+#include "DreamUIRender/DreamUIGizmoMesh.h"
 #include "CoreGlobals.h"
 #if WITH_EDITOR
 #include "Editor.h"

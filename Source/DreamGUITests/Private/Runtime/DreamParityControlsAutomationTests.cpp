@@ -21,7 +21,7 @@
 #include "Core/Components/DreamVisual.h"
 #include "Core/Components/DreamWidget.h"
 #include "Demo/DreamUIShowcase.h"
-#include "Extensions/DreamUMGWidget.h"
+#include "UMG/DreamUMGWidget.h"
 #include "Interaction/UITextInput.h"
 #include "UObject/Package.h"
 #include "UObject/StrongObjectPtr.h"

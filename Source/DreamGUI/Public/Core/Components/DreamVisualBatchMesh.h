@@ -4,7 +4,7 @@
 #pragma once
 
 #include "DreamVisual.h"
-#include "Core/DreamUIBlendMode.h"
+#include "DreamUIRender/DreamUIBlendMode.h"
 #include "DreamVisualBatchMesh.generated.h"
 
 class UDreamMeshModifierBase;

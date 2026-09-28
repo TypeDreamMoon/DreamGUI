@@ -2,8 +2,8 @@
 
 #include "DreamGUI.h"
 #include "Animation/DreamUIMovieScenePropertyAccessors.h"
-#include "Core/DreamUIRender/DreamUIRenderer.h"
-#include "Core/DreamUIRender/DreamUIRendererSettings.h"
+#include "DreamUIRender/DreamUIRenderer.h"
+#include "DreamUIRender/DreamUIRendererSettings.h"
 #include "Core/DreamUIScriptPackages.h"
 #include "Core/DreamUISettings.h"
 #include "Core/DreamUIWidgetRegistry.h"

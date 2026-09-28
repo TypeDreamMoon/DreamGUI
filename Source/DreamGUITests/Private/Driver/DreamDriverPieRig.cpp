@@ -20,7 +20,7 @@
 #include "Event/DreamEventSystem.h"
 #include "Event/DreamScreenSpaceRaycaster.h"
 #include "Event/DreamWorldSpaceRaycaster.h"
-#include "Extensions/DreamGameViewportClient.h"
+#include "Event/DreamGameViewportClient.h"
 #include "Framework/Application/SlateApplication.h"
 #include "GameFramework/Actor.h"
 #include "GameFramework/GameModeBase.h"

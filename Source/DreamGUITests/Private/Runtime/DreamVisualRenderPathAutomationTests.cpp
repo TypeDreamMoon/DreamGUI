@@ -4,7 +4,7 @@
 
 #include "Misc/AutomationTest.h"
 
-#include "Core/Components/DreamBackgroundBlur.h"
+#include "Extensions/Effects/DreamBackgroundBlur.h"
 #include "Core/Components/DreamCanvas.h"
 #include "Core/Components/DreamImage.h"
 #include "Core/Components/DreamRectBlock.h"

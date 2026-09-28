@@ -6,7 +6,7 @@
 #include "DreamGUI.h"
 #include "Core/Components/DreamCanvas.h"
 #include "Core/DreamUIGeometry.h"
-#include "Core/DreamVisualPostProcessRenderProxy.h"
+#include "DreamUIRender/DreamVisualPostProcessRenderProxy.h"
 #include "Core/DreamUIRuntimeObject.h"
 #include "Core/Components/DreamWidget.h"
 #include "Engine/TextureRenderTarget2D.h"

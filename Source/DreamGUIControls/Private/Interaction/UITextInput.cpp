@@ -21,7 +21,7 @@
 #include "Engine/Engine.h"
 #include "Engine/GameViewportClient.h"
 #include "Engine/World.h"
-#include "Extensions/DreamGameViewportClient.h"
+#include "Event/DreamGameViewportClient.h"
 #include "Interaction/UIButton.h"
 #include "Misc/Char.h"
 #include "SceneView.h"

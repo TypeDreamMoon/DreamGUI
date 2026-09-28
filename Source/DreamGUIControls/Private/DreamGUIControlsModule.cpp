@@ -1,6 +1,6 @@
 // Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
 
-#include "Core/DreamUIEachAdapter.h"
+#include "Binding/DreamUIEachAdapter.h"
 #include "Core/DreamUIScriptPackages.h"
 #include "Core/DreamUIWidgetRegistry.h"
 #include "Modules/ModuleManager.h"

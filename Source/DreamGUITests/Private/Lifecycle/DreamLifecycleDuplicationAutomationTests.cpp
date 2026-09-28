@@ -22,7 +22,7 @@
 #include "Extensions/DreamPostProcessRenderElement.h"
 #include "Extensions/DreamPostProcessRenderElement_Text.h"
 #include "Extensions/DreamUIRenderTargetGeometrySource.h"
-#include "Extensions/DreamUMGWidget.h"
+#include "UMG/DreamUMGWidget.h"
 #include "Lifecycle/DreamLifecycleFixtures.h"
 #include "Lifecycle/DreamLifecycleProbe.h"
 #include "Materials/Material.h"
