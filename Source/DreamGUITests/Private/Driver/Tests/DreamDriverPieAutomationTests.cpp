@@ -18,6 +18,10 @@
 #include "Event/DreamUIInputModeLibrary.h"
 #include "Event/DreamWorldSpaceRaycaster.h"
 #include "Event/DreamGameViewportClient.h"
+#include "Event/DreamUIInputSubsystem.h"
+#include "Framework/Application/SlateApplication.h"
+#include "Input/Events.h"
+#include "Widgets/SViewport.h"
 #include "GameFramework/Actor.h"
 #include "GameFramework/PlayerController.h"
 #include "InputCoreTypes.h"
@@ -32,6 +36,7 @@
 #include "Driver/DreamDriverInputModule.h"
 #include "Driver/DreamDriverLocators.h"
 #include "Driver/DreamDriverPieRig.h"
+#include "Driver/DreamDriverProjection.h"
 #include "Driver/DreamDriverRig.h"
 #include "Driver/DreamDriverSequence.h"
 #include "Driver/DreamDriverTypes.h"
@@ -762,6 +767,122 @@ bool FDreamDriverPieMatchesActorRigTest::RunTest(const FString& Parameters)
 		HeadlessLog == ExpectedPassLog());
 
 	QueuePassInPlayAndCompare(*this, HeadlessLog, TEXT("the actor-hosted headless rig"));
+	return true;
+}
+
+namespace DreamDriverPieTestLocal
+{
+	/**
+	 * A left button pressed or released where the platform puts one -- FSlateApplication, ahead of every widget --
+	 * at InButton's centre on the play session's viewport.
+	 */
+	void ClickThroughSlate(FAutomationTestBase& InTest, const FDreamDriverContext& InContext, const UDreamButton* InButton, bool bInDown)
+	{
+		UGameViewportClient* Client = InContext.World != nullptr ? InContext.World->GetGameViewport() : nullptr;
+		const TSharedPtr<SViewport> Viewport = Client != nullptr ? Client->GetGameViewportWidget() : nullptr;
+		const TOptional<FVector2D> Pixel = FDreamDriverProjection::WidgetCentrePixel(InButton);
+		if (!InTest.TestTrue(TEXT("The play session has a viewport widget, and the button a pixel on it"), Viewport.IsValid() && Pixel.IsSet()))
+		{
+			return;
+		}
+		// Viewport pixels back to screen space, the way FSceneViewport reads a cursor the other way round.
+		const FGeometry& Geometry = Viewport->GetCachedGeometry();
+		const FVector2D Screen = Geometry.LocalToAbsolute(Pixel.GetValue() / FMath::Max(Geometry.Scale, UE_SMALL_NUMBER));
+		InTest.TestTrue(TEXT("...which is on the viewport's widget"), Geometry.IsUnderLocation(Screen));
+		FSlateApplication& Slate = FSlateApplication::Get();
+		TSet<FKey> Held;
+		if (bInDown)
+		{
+			Held.Add(EKeys::LeftMouseButton);
+			Slate.ProcessMouseMoveEvent(FPointerEvent(0, FSlateApplication::CursorPointerIndex, Screen, Screen, TSet<FKey>(), EKeys::Invalid, 0.0f, FModifierKeysState()));
+			Slate.ProcessMouseButtonDownEvent(nullptr, FPointerEvent(0, FSlateApplication::CursorPointerIndex, Screen, Screen, Held, EKeys::LeftMouseButton, 0.0f, FModifierKeysState()));
+		}
+		else
+		{
+			Slate.ProcessMouseButtonUpEvent(FPointerEvent(0, FSlateApplication::CursorPointerIndex, Screen, Screen, Held, EKeys::LeftMouseButton, 0.0f, FModifierKeysState()));
+		}
+	}
+}
+
+/*
+ * The same click, heard from Slate, in each input mode the ENGINE has -- its own UI-only mode included, which makes
+ * the viewport client ignore every click, so that the player controller the preset actors listen through hears
+ * nothing. The Slate input source is an input pre-processor: it hears the click ahead of the viewport, in every
+ * mode alike, and the preset actor stands down while it is on. The click goes in where the platform puts one.
+ *
+ * On a real RHI only. Where the click lands is the viewport widget's geometry, which Slate lays out when it draws a
+ * window -- and without a renderer it draws none (Slate.SkipWidgetDrawingInHeadlessMode), so under -nullrhi the
+ * viewport has no extent and no click from the platform is ever on it.
+ */
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamDriverPieSlateSourceTest,
+	"DreamGUI.Pie.RHI.WithTheSlateInputSourceAButtonIsClickedInEveryInputModeOfTheEngine",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter | EAutomationTestFlags::NonNullRHI)
+
+bool FDreamDriverPieSlateSourceTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamDriverPieTestLocal;
+	const TStrongObjectPtr<UDreamPressInteractionListener> Listener(NewObject<UDreamPressInteractionListener>());
+	const TSharedRef<TWeakObjectPtr<UDreamButton>> Made = MakeShared<TWeakObjectPtr<UDreamButton>>();
+
+	TSharedRef<FDreamDriverPieRig> Rig = FDreamDriverPieRig::Create(*this);
+	Rig->Start();
+	Rig->WhenReady([Listener, Made](FDreamDriverPieRig& InRig)
+	{
+		UDreamButton* Button = InRig.MakeControl<UDreamButton>(TEXT("Play"), nullptr, FVector2D(200.0, 60.0));
+		BindButton(Button, Listener.Get());
+		*Made = Button;
+	});
+	FDreamDriverSequence Steps = Rig->Sequence();
+	Steps.Then([this](FDreamDriverContext& InContext)
+	{
+		UDreamUIInputSubsystem* Input = UDreamUIInputSubsystem::Get(InContext.World);
+		if (TestNotNull(TEXT("The play session has DreamGUI's input"), Input))
+		{
+			Input->SetSlateInputSourceEnabled(true);
+			TestTrue(TEXT("...heard from Slate now"), Input->IsSlateInputSourceActive());
+		}
+	});
+	const TCHAR* ModeNames[] = { TEXT("game only"), TEXT("game and UI"), TEXT("UI only") };
+	const int32 ModeCount = UE_ARRAY_COUNT(ModeNames);
+	for (int32 Mode = 0; Mode < ModeCount; ++Mode)
+	{
+		Steps.Then([this, Made, Mode](FDreamDriverContext& InContext)
+		{
+			if (APlayerController* Controller = InContext.PlayerController)
+			{
+				switch (Mode)
+				{
+				case 0: Controller->SetInputMode(FInputModeGameOnly()); break;
+				case 1: Controller->SetInputMode(FInputModeGameAndUI()); break;
+				default: Controller->SetInputMode(FInputModeUIOnly()); break;
+				}
+			}
+			ClickThroughSlate(*this, InContext, Made->Get(), true);
+		});
+		Steps.WaitFrames(2);
+		Steps.Then([this, Made](FDreamDriverContext& InContext)
+		{
+			ClickThroughSlate(*this, InContext, Made->Get(), false);
+		});
+		Steps.Wait(FDreamUntil::Condition([Listener, Mode]() { return Listener->ClickedCount > Mode; }, ConditionLimit()),
+			StepLimit(), FString::Printf(TEXT("the click heard from Slate to click the button in %s"), ModeNames[Mode]));
+	}
+	Steps.Then([this, Listener, ModeCount](FDreamDriverContext& InContext)
+	{
+		TestEqual(TEXT("One click in each of the engine's three input modes"), Listener->ClickedCount, ModeCount);
+		TestEqual(TEXT("...each pressed once"), Listener->PressedCount, ModeCount);
+		if (APlayerController* Controller = InContext.PlayerController)
+		{
+			Controller->SetInputMode(FInputModeGameAndUI());
+		}
+		if (UDreamUIInputSubsystem* Input = UDreamUIInputSubsystem::Get(InContext.World))
+		{
+			Input->SetSlateInputSourceEnabled(false);
+		}
+	});
+	Steps.PerformLatent();
+	Rig->Finish();
 	return true;
 }
 
