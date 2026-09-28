@@ -1950,8 +1950,8 @@ UDreamUserWidget* DreamUserWidgetCreateLocal::CreateUnder(UWorld* InWorld, TSubc
 	}
 
 	// Same ownership rule a prefab load follows: join the parent's tree, or mint one where the caller
-	// says -- somewhere whose outer chain reaches the world, so GetTypedOuter<UWorld> resolves for
-	// everything inside.
+	// says -- somewhere whose outer chain reaches a level or a world, so UDreamWidget::GetWorld resolves
+	// for everything inside.
 	UObject* Owner = nullptr;
 	UDreamWidgetTree* OwnedTree = nullptr;
 	if (IsValid(InParent) && InParent->GetOuter() != nullptr)

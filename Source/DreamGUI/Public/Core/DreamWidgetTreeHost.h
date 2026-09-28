@@ -29,13 +29,11 @@ class UDreamWidgetTreeHost : public UInterface
  * Something that owns widget trees: a world widget component, the screen and popup layers, the input
  * services that hold widgets of their own, a designer preview.
  *
- * Ownership in the UObject sense. The host is the Outer of every tree it owns -- so GetTypedOuter<UWorld>
- * still finds the world through it -- and holds each tree by a property declared Transient,
+ * Ownership in the UObject sense. The host is the Outer of every tree it owns -- so a widget still finds
+ * its world through it (UDreamWidget::GetWorld) -- and holds each tree by a property declared Transient,
  * DuplicateTransient and TextExportTransient, so nothing that saves, duplicates or copies the host takes
  * a tree along. The manager only observes. A registered tree whose host is gone is a bug to report, not
  * something for the garbage collector to clean up.
- *
- * Nothing implements this yet: trees are still outered to the world and kept alive by the manager.
  */
 class DREAMGUI_API IDreamWidgetTreeHost
 {

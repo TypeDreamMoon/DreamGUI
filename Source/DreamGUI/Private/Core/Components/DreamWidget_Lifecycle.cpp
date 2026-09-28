@@ -28,6 +28,7 @@
 #include "Core/DreamWidgetNavigation.h"
 #include "Core/DreamWidgetTree.h"
 #include "Engine/GameInstance.h"
+#include "Engine/Level.h"
 #include "Engine/LocalPlayer.h"
 #include "Event/DreamPointerEventData.h"
 #include "GameFramework/PlayerController.h"
@@ -472,8 +473,16 @@ void UDreamWidget::DestroyWidget()
 
 UWorld* UDreamWidget::GetWorld() const
 {
-	auto OuterWorld = GetTypedOuter<UWorld>();
-	return OuterWorld;
+	// The world the level the widget is in plays or is edited in -- ULevel::OwningWorld, which is what
+	// AActor::GetWorld answers -- before the UWorld its outers reach. The two are one world for the
+	// persistent level; for a sublevel they are not: its own UWorld is the package's asset, which nothing
+	// initializes, so a tree hosted there that asked it found no manager, and was neither laid out, nor
+	// drawn, nor taken down with the world it was shown in.
+	if (const ULevel* Level = GetTypedOuter<ULevel>(); Level != nullptr && Level->OwningWorld != nullptr)
+	{
+		return Level->OwningWorld;
+	}
+	return GetTypedOuter<UWorld>();
 }
 
 

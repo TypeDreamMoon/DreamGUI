@@ -2,6 +2,7 @@
 
 #include "Core/DreamWidgetTree.h"
 #include "Animation/DreamWidgetAnimation.h"
+#include "Engine/Level.h"
 #include "Engine/World.h"
 #include "Core/Components/DreamWidget.h"
 #include "Core/DreamUserWidget.h"
@@ -10,7 +11,12 @@
 UWorld* UDreamWidgetTree::GetWorld() const
 {
 	// Null for a tree held as a class template, which is outered to the class rather than a world.
-	// Callers must tolerate that: it is the signal that this tree is a template, not an instance.
+	// Callers must tolerate that: it is the signal that this tree is a template, not an instance. A tree
+	// in a level is in the world that level is in, as its widgets are (UDreamWidget::GetWorld).
+	if (const ULevel* Level = GetTypedOuter<ULevel>(); Level != nullptr && Level->OwningWorld != nullptr)
+	{
+		return Level->OwningWorld;
+	}
 	return GetTypedOuter<UWorld>();
 }
 

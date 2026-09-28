@@ -22,8 +22,9 @@ class UDreamWidget;
  * chain, so a flat outer costs nothing -- and it means reparenting never has to move an outer,
  * which keeps UObject::Rename (unsafe once an object has begun destruction) out of the attach path.
  *
- * UDreamWidget::GetWorld is GetTypedOuter<UWorld>(), so an instance tree must be outered somewhere
- * that reaches a world. A tree held as a class template deliberately is not: it returns no world,
+ * UDreamWidget::GetWorld is the world of the level its outers reach -- that level's OwningWorld -- or
+ * else the UWorld they reach, so an instance tree must be outered somewhere that reaches a level or a
+ * world. A tree held as a class template deliberately is not: it returns no world,
  * never registers (registration is an explicit OnRegister call, never PostInitProperties) and is
  * never ticked.
  */
