@@ -134,24 +134,6 @@
     },
     {
       "file": "Source/DreamGUI/Private/Text/DreamUITextBuilder.cpp",
-      "include": "Source/DreamGUI/Public/Core/Components/DreamBackgroundBlur.h",
-      "owner": "DreamGUI",
-      "includedOwner": "DreamGUIExtensions"
-    },
-    {
-      "file": "Source/DreamGUI/Private/Text/DreamUITextBuilder.cpp",
-      "include": "Source/DreamGUI/Public/Core/Components/DreamBackgroundPixelate.h",
-      "owner": "DreamGUI",
-      "includedOwner": "DreamGUIExtensions"
-    },
-    {
-      "file": "Source/DreamGUI/Private/Text/DreamUITextBuilder.cpp",
-      "include": "Source/DreamGUI/Public/Core/Components/DreamPixelSort.h",
-      "owner": "DreamGUI",
-      "includedOwner": "DreamGUIExtensions"
-    },
-    {
-      "file": "Source/DreamGUI/Private/Text/DreamUITextBuilder.cpp",
       "include": "Source/DreamGUI/Public/Interaction/UIListView.h",
       "owner": "DreamGUI",
       "includedOwner": "DreamGUIControls"
