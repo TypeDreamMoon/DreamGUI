@@ -20,6 +20,7 @@
 #include "DreamTweenBPLibrary.h"
 #include "Materials/MaterialRenderProxy.h"
 #include "SceneInterface.h"
+#include "SceneView.h"
 #include "RayTracingInstance.h"
 #include "RayTracingGeometry.h"
 #include "Core/DreamUIManager.h"

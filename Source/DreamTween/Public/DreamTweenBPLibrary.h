@@ -6,6 +6,7 @@
 #include "DreamTweenManager.h"
 #include "DreamTweenerSpring.h"
 #include "Kismet/BlueprintFunctionLibrary.h"
+#include "Layout/Margin.h"
 #include "DreamTweenBPLibrary.generated.h"
 
 DECLARE_DYNAMIC_DELEGATE_OneParam(FDreamTweenFloatSetterDynamic, float, value);

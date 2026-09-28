@@ -6,6 +6,7 @@
 #include "Core/DreamUIAnchorData.h"
 #include "DreamWidgetSubObjectBehaviour.h"
 #include "Widgets/Layout/Anchors.h"
+#include "Layout/Margin.h"
 #include "DreamPanelSlot.generated.h"
 
 // Defined with the widget; forward declared here so this header stays off the big one.

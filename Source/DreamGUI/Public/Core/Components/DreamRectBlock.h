@@ -5,6 +5,7 @@
 #include "DreamVisualBatchMesh.h"
 #include "Core/IDreamUISpriteRenderInterface.h"
 #include "Core/DreamUIDataAsTexture.h"
+#include "Layout/Margin.h"
 #include "DreamRectBlock.generated.h"
 
 

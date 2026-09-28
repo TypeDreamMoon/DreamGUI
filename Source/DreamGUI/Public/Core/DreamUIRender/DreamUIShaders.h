@@ -9,6 +9,7 @@
 #include "Engine/Texture2D.h"
 #include "MeshMaterialShader.h"
 #include "RHIStaticStates.h"
+#include "PrimitiveUniformShaderParameters.h"
 
 // Uniform Buffer Declaration for Metal Shader Compilation
 // Using BEGIN_GLOBAL_SHADER_PARAMETER_STRUCT to properly bind textures/samplers

@@ -6,6 +6,7 @@
 #include "Engine/EngineTypes.h"
 #include "Engine/EngineBaseTypes.h"
 #include "Engine/HitResult.h"
+#include "Curves/CurveFloat.h"
 #include "DreamTweener.generated.h"
 
 DECLARE_DELEGATE_RetVal_FourParams(float, FDreamTweenFunction, float, float, float, float);

@@ -5,6 +5,7 @@
 
 #include "DreamVisual.h"
 #include "Core/DreamUIRender/DreamUIPostProcessVertex.h"
+#include "Engine/TextureRenderTarget2D.h"
 #include "DreamVisualPostProcess.generated.h"
 
 class FDreamVisualPostProcessRenderProxy;

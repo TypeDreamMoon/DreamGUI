@@ -13,6 +13,7 @@
 
 class UDreamUMGWidget;
 class UDreamUMGWidgetInteraction;
+class UWidget;
 
 /**
  * The one place that answers "which of the components sharing a virtual Slate user is driving it".

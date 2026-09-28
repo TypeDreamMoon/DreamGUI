@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Engine/DataAsset.h"
+#include "Engine/Texture.h"
 #include "DreamUIDataAsTexture.generated.h"
 
 UENUM(BlueprintType)
