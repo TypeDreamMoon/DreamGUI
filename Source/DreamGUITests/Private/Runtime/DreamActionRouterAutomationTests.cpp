@@ -521,4 +521,40 @@ bool FDreamActionRouterInputActionBridgeTest::RunTest(const FString& Parameters)
 	return true;
 }
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamActionRouterUIClockTest,
+	"DreamGUI.Navigation.Actions.AHoldTakesTheSameRealTimeHoweverTheGameClockRuns",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamActionRouterUIClockTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamActionRouterTestLocal;
+	FScopedGameWorld TestWorld;
+	UDreamUIActionRouter* Router = TestWorld.World->GetSubsystem<UDreamUIActionRouter>();
+	if (!TestNotNull(TEXT("Action router subsystem exists"), Router))
+	{
+		return false;
+	}
+	UDataTable* Table = MakeActionTable();
+	AddAction(Table, TEXT("HoldToQuit"), EKeys::X, EKeys::Gamepad_FaceButton_Left, 1.0f);
+	UDreamActionCallCounter* Counter = NewObject<UDreamActionCallCounter>();
+	const FDreamUIActionHandle Handle = Router->RegisterAction(nullptr, MakeHandle(Table, TEXT("HoldToQuit")), BindTo(Counter));
+
+	// A game slowed to a tenth: the tick is handed a tenth of the frame, while a quarter of a second really passed.
+	// A hold-to-confirm counted on the tick's delta took ten times as long in slow motion while a double click did
+	// not; it counts on the UI clock -- the world's real delta -- now.
+	TestTrue(TEXT("The press is taken"), Router->HandleKey(0, EKeys::X, true));
+	TestWorld.World->DeltaRealTimeSeconds = 0.25f;
+	Router->Tick(0.025f);
+	TestEqual(TEXT("A quarter of a real second is a quarter of the hold, whatever the game clock says"), Router->GetHoldProgress(Handle), 0.25f);
+
+	// A paused game hands its tickables no game time at all; the hold goes on filling on real time.
+	Router->Tick(0.0f);
+	TestEqual(TEXT("...and it goes on filling while the game clock stands still"), Router->GetHoldProgress(Handle), 0.5f);
+	Router->Tick(0.0f);
+	Router->Tick(0.0f);
+	TestEqual(TEXT("A second of real time completes it"), Counter->CallCount, 1);
+	return true;
+}
+
 #endif
