@@ -98,10 +98,11 @@ bool FDreamDesiredSizeMemoCollapsesMeasurementTest::RunTest(const FString& Param
 	Manager->TickDreamUI(0.016f);
 	Manager->TickDreamUI(0.016f);
 
-	UDreamPanelLayoutBase::ResetDesiredSizeComputeCount();
+	FDreamLayoutPassContext& LayoutContext = Manager->GetLayoutPassContext();
+	LayoutContext.ResetDesiredSizeComputeCount();
 	Root->SetWidth(700.0f);
 	Manager->TickDreamUI(0.016f);
-	const int64 Computes = UDreamPanelLayoutBase::GetDesiredSizeComputeCount();
+	const int64 Computes = LayoutContext.GetDesiredSizeComputeCount();
 
 	// Measured on this fixture: 408 without the memo, 102 with - exactly the factor of four the code
 	// predicts, since a StackBox asks for each child's desired size four times in one arrange. The

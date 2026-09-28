@@ -11,6 +11,7 @@
 #include "GenericPlatform/ICursor.h"
 #include "Widgets/WidgetPixelSnapping.h"
 #include "Core/DreamUIAnchorData.h"
+#include "Core/DreamLayoutPassContext.h"
 #include "DreamWidget.generated.h"
 
 class UDreamWidgetSubObjectBehaviour;
@@ -1929,15 +1930,16 @@ public:
 	struct DREAMGUI_API FLayoutWriteScope
 	{
 		explicit FLayoutWriteScope(UDreamWidget* InLayoutWidget);
-		~FLayoutWriteScope();
 		FLayoutWriteScope(const FLayoutWriteScope&) = delete;
 		FLayoutWriteScope& operator=(const FLayoutWriteScope&) = delete;
 	private:
-		bool bPushed = false;
+		/** Unset for a widget that is not valid: nothing is writing for it. */
+		TOptional<FDreamLayoutPassContext::FWriteScope> Scope;
 	};
 
 	/**
-	 * True while any layout is computing and writing results, i.e. inside UpdateLayout.
+	 * True while a layout is computing and writing results in this widget's world, i.e. inside an
+	 * UpdateLayout there.
 	 *
 	 * Distinguishes a size that is layout OUTPUT from a size somebody actually asked for. The two have to
 	 * be told apart, because a panel measures an Auto child from the authored snapshot rather than from its
@@ -1947,20 +1949,22 @@ public:
 	 * Broader than FLayoutWriteScope on purpose: that one covers the container write-back only, because it
 	 * governs how far a dirty mark propagates. This covers a LayoutSelf sizing its own widget too.
 	 */
-	static bool IsLayoutWriting() { return LayoutPassDepth > 0; }
+	bool IsLayoutWriting() const { return GetLayoutPassContext().IsWriting(); }
+
 	/**
-	 * For tests: the raw nesting depth behind IsLayoutWriting, so a test rig can assert it is back at
-	 * zero once the rig is gone -- a pass entered and never left would make every later size edit read
-	 * as layout output. The number rather than the bool, because a stray decrement (a negative depth)
-	 * is the same fault in the other direction and the bool cannot show it. A read; it changes nothing.
+	 * The state this widget's layout passes keep: the writer stack, the pass depth, the desired-size memo.
+	 *
+	 * Its world's, held by that world's manager. A widget in no world with a manager -- a test's tree, an
+	 * authoring template, a commandlet's -- uses one held by the root of its hierarchy instead, made the
+	 * first time it is asked for. That is enough because a pass never leaves the tree it started in: every
+	 * scope a pass opens is on a widget of that tree, and every question asked of the state during it is
+	 * about one, so they all reach the same root.
 	 */
-	static int32 GetLayoutPassDepthForTesting() { return LayoutPassDepth; }
+	FDreamLayoutPassContext& GetLayoutPassContext() const;
 
 private:
-	/** Stack of widgets whose layout containers are applying results; see FLayoutWriteScope. Game thread only. */
-	static TArray<UDreamWidget*> LayoutWriterStack;
-	/** Nesting depth of UpdateLayout; see IsLayoutWriting. Game thread only. */
-	static int32 LayoutPassDepth;
+	/** The layout-pass state of a tree no manager holds one for; see GetLayoutPassContext. Only ever made on a root. */
+	mutable TUniquePtr<FDreamLayoutPassContext> DetachedLayoutPassContext;
 
 private:
 	friend class FDreamWidgetCustomization;

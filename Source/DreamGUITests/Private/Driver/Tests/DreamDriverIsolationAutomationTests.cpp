@@ -5,7 +5,6 @@
 #include "Misc/AutomationTest.h"
 
 #include "Controls/DreamTextInput.h"
-#include "Core/Components/DreamPanelLayouts.h"
 #include "Core/Components/DreamWidget.h"
 #include "Core/DreamUIManager.h"
 #include "Interaction/UITextInput.h"
@@ -19,12 +18,16 @@
  * A RIG LEAVES THE PROCESS AS IT FOUND IT.
  *
  * Some of DreamGUI's state is not in any world: a class-wide switch saying a host delivers characters,
- * the field that owns the keyboard, the depth of the layout pass and of the desired-size memo, the
- * editor's "a Blueprint is compiling" flag. Each outlives every world, so each outlives every test,
+ * the field that owns the keyboard, the editor's "a Blueprint is compiling" flag. Each outlives every
+ * world, so each outlives every test,
  * and a test that moved one decides how the tests after it behave -- in the order the runner happens
  * to pick. The character switch is the sharpest case: it flips for good on the first character a host
  * delivers, and from then on the key-to-character fallback, the road DevTest itself is on, can no
  * longer be reached in that process.
+ *
+ * The layout pass and the desired-size memo are no longer among them: their depths live in each world's
+ * layout context and go with the world. The rig still checks them settled before its world goes, since
+ * one left open is a pass that never ended.
  *
  * The rig puts the switch back, makes sure the keyboard's owner is nothing of its own, and checks the
  * counters are settled when it goes. These pin both halves: the restore happens, and the check says
@@ -131,11 +134,17 @@ bool FDreamDriverIsolationCounterGuardTest::RunTest(const FString& Parameters)
 		Rig.MakeWidget(TEXT("Panel"), nullptr, FVector2D(400.0, 300.0));
 		Rig.MakeControl<UDreamTextInput>(TEXT("Field"), nullptr, FVector2D(300.0, 40.0), FVector2D(0.0, -200.0));
 		Rig.PumpFrames(3);
-		TestEqual(TEXT("Between frames no layout pass is open"), UDreamWidget::GetLayoutPassDepthForTesting(), 0);
-		TestEqual(TEXT("Between frames no desired-size memo is open"), UDreamPanelLayoutBase::GetDesiredSizeMemoDepthForTesting(), 0);
+		const UDreamUIManagerWorldSubsystem* Manager = UDreamUIManagerWorldSubsystem::GetInstance(Rig.GetWorld());
+		if (!TestNotNull(TEXT("The rig's world has a UI manager"), Manager))
+		{
+			return false;
+		}
+		const FDreamLayoutPassContext& LayoutContext = Manager->GetLayoutPassContext();
+		TestEqual(TEXT("Between frames no layout pass is open"), LayoutContext.GetPassDepth(), 0);
+		TestEqual(TEXT("Between frames no desired-size memo is open"), LayoutContext.GetMemoDepth(), 0);
+		TestEqual(TEXT("Between frames no widget is still recorded as writing layout"), LayoutContext.GetWriterCount(), 0);
+		TestEqual(TEXT("and no desired size is remembered past its pass"), LayoutContext.GetRecordedDesiredSizeCount(), 0);
 	}
-	TestEqual(TEXT("After the rig no layout pass is open"), UDreamWidget::GetLayoutPassDepthForTesting(), 0);
-	TestEqual(TEXT("After the rig no desired-size memo is open"), UDreamPanelLayoutBase::GetDesiredSizeMemoDepthForTesting(), 0);
 	TestFalse(TEXT("And the editor object does not think a Blueprint is compiling"), UDreamUIManagerObject::GetIsBlueprintCompiling());
 	return true;
 }

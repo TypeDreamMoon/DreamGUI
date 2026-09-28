@@ -723,40 +723,22 @@ TArray<UDreamWidget*> UDreamPanelLayoutBase::CollectLayoutChildren(bool bEnsureS
 	return Result;
 }
 
-TMap<UDreamPanelLayoutBase::FDesiredSizeKey, FVector2D> UDreamPanelLayoutBase::DesiredSizeMemo;
-int32 UDreamPanelLayoutBase::DesiredSizeMemoDepth = 0;
-int64 UDreamPanelLayoutBase::DesiredSizeComputeCount = 0;
-
-UDreamPanelLayoutBase::FDesiredSizeMemoScope::FDesiredSizeMemoScope()
+UDreamPanelLayoutBase::FDesiredSizeMemoScope::FDesiredSizeMemoScope(const UDreamWidget* InWidget)
 {
-	++DesiredSizeMemoDepth;
-}
-
-UDreamPanelLayoutBase::FDesiredSizeMemoScope::~FDesiredSizeMemoScope()
-{
-	if (--DesiredSizeMemoDepth <= 0)
+	if (IsValid(InWidget))
 	{
-		DesiredSizeMemoDepth = 0;
-		DesiredSizeMemo.Reset();
+		Scope.Emplace(InWidget->GetLayoutPassContext());
 	}
 }
 
-void UDreamPanelLayoutBase::ForgetDesiredSize(const UDreamWidget* Widget)
+void UDreamPanelLayoutBase::ForgetDesiredSize(const UDreamWidget* Widget) const
 {
-	// One widget can hold several entries now, one per constraint it was measured under, so this drops
-	// by widget rather than by key.
-	for (auto It = DesiredSizeMemo.CreateIterator(); It; ++It)
+	// One widget can hold several entries, one per constraint it was measured under, so this drops by
+	// widget rather than by key.
+	if (const UDreamWidget* Panel = GetWidget(); IsValid(Panel))
 	{
-		if (It.Key().Widget == Widget)
-		{
-			It.RemoveCurrent();
-		}
+		Panel->GetLayoutPassContext().ForgetDesiredSizes(Widget);
 	}
-}
-
-void UDreamPanelLayoutBase::ForgetAllDesiredSizes()
-{
-	DesiredSizeMemo.Reset();
 }
 
 FVector2D UDreamPanelLayoutBase::GetDesiredSize(UDreamWidget* Child) const
@@ -767,10 +749,14 @@ FVector2D UDreamPanelLayoutBase::GetDesiredSize(UDreamWidget* Child) const
 FVector2D UDreamPanelLayoutBase::GetDesiredSize(UDreamWidget* Child,
 	const FDreamMeasureSpec& InWidthSpec, const FDreamMeasureSpec& InHeightSpec) const
 {
-	const FDesiredSizeKey MemoKey{Child, InWidthSpec, InHeightSpec};
-	if (DesiredSizeMemoDepth > 0)
+	// The memo is the pass's, in the context of the panel's world; outside a memo scope it answers nothing
+	// and records nothing, so a measurement outside a pass is always computed afresh.
+	const UDreamWidget* Panel = GetWidget();
+	FDreamLayoutPassContext* LayoutContext = IsValid(Panel) ? &Panel->GetLayoutPassContext() : nullptr;
+	const FDreamLayoutPassContext::FDesiredSizeKey MemoKey{FObjectKey(Child), InWidthSpec, InHeightSpec};
+	if (LayoutContext != nullptr)
 	{
-		if (const FVector2D* Cached = DesiredSizeMemo.Find(MemoKey))
+		if (const FVector2D* Cached = LayoutContext->FindDesiredSize(MemoKey))
 		{
 			return *Cached;
 		}
@@ -886,7 +872,10 @@ FVector2D UDreamPanelLayoutBase::GetDesiredSize(UDreamWidget* Child,
 	};
 
 	TSet<const UDreamWidget*> Visited;
-	++DesiredSizeComputeCount;
+	if (LayoutContext != nullptr)
+	{
+		LayoutContext->NoteDesiredSizeComputed();
+	}
 	FVector2D Result = GetIntrinsicSize(Child, InWidthSpec, InHeightSpec, Visited);
 	// The legacy "applied but never snapshotted" fallback, at the measure root only -- see the
 	// comment inside the lambda for why it must not run one level down.
@@ -906,9 +895,9 @@ FVector2D UDreamPanelLayoutBase::GetDesiredSize(UDreamWidget* Child,
 	// own Resolve.
 	Result.X = InWidthSpec.Resolve(static_cast<float>(Result.X));
 	Result.Y = InHeightSpec.Resolve(static_cast<float>(Result.Y));
-	if (DesiredSizeMemoDepth > 0)
+	if (LayoutContext != nullptr)
 	{
-		DesiredSizeMemo.Add(MemoKey, Result);
+		LayoutContext->RecordDesiredSize(MemoKey, Result);
 	}
 	return Result;
 }
@@ -1117,7 +1106,7 @@ FDreamFragment UDreamPanelLayoutBase::Arrange()
 	{
 		// One arrange asks for the same child's desired size four times over, and each ask re-measures the
 		// whole subtree beneath it. Safe to memoise precisely because the pass writes nothing.
-		FDesiredSizeMemoScope Memo;
+		FDesiredSizeMemoScope Memo(GetWidget());
 		TGuardValue<FDreamFragment*> Recording(RecordingFragment, &Fragment);
 		ArrangeChildren();
 	}
@@ -1152,7 +1141,7 @@ FVector2f UDreamPanelLayoutBase::GetLayoutPreferredSize() const
 
 FVector2f UDreamPanelLayoutBase::GetLayoutPreferredSize(const FDreamMeasureSpec& InWidthSpec, const FDreamMeasureSpec& InHeightSpec) const
 {
-	FDesiredSizeMemoScope Memo;
+	FDesiredSizeMemoScope Memo(GetWidget());
 	const FVector2f Result = MeasureLayout(InWidthSpec, InHeightSpec);
 	return FVector2f(DreamPanelLayoutLocal::NonNegative(Result.X), DreamPanelLayoutLocal::NonNegative(Result.Y));
 }
@@ -3399,7 +3388,7 @@ bool UDreamLayoutContainerScrollBox::CalculateOffsetToReveal(UDreamWidget* InWid
 	// The walk below asks every child for its desired size, and each of those measures that child's whole
 	// subtree. Outside a pass the memo is empty and unshared, so without this scope the cost of one
 	// navigation query is O(children x subtree) with nothing reused between them.
-	FDesiredSizeMemoScope Memo;
+	FDesiredSizeMemoScope Memo(GetWidget());
 	OutTarget = ScrollOffset;
 	float Start = 0.0f;
 	float Extent = 0.0f;

@@ -51,8 +51,9 @@ namespace DreamTests
  * DreamDriverGameHost. Either way the steps are the same; see FDreamDriverSequence.
  *
  * PROCESS-WIDE STATE the rig disturbs is put back when it goes -- UUITextInput's "a host delivers
- * characters" switch -- and the counters that outlive worlds (the layout pass depth, the desired-size
- * memo depth, the editor's compiling flag) are checked settled; see DescribeUnsettledProcessState.
+ * characters" switch -- and the counters are checked settled: the rig world's layout pass and
+ * desired-size memo depths before the world goes, the editor's compiling flag after; see
+ * DescribeUnsettledProcessState.
  *
  * THE VIEWPORT. A game world with no player controller answers GetViewportSize with a 2x2 fallback,
  * which makes the canvas 2 units across and the projection matrix describe a 2x2 screen, and a ray
@@ -194,10 +195,11 @@ public:
 	void PumpFrames(int32 InFrameCount);
 
 	/**
-	 * What the rig's tear-down says about the process-wide counters, as sentences -- empty when all
-	 * of them are settled. The destructor calls it with the live values (UDreamWidget's layout pass
-	 * depth, UDreamPanelLayoutBase's desired-size memo depth, UDreamUIManagerObject's compiling flag)
-	 * and reports every sentence against the bound test.
+	 * What the rig's tear-down says about the counters it checks, as sentences -- empty when all of
+	 * them are settled. The destructor calls it with the live values (the rig world's layout pass and
+	 * desired-size memo depths, read from its layout context once the tree is gone and before the
+	 * world is; UDreamUIManagerObject's compiling flag) and reports every sentence against the bound
+	 * test.
 	 *
 	 * Taken apart and public because the state it exists to catch -- a layout pass entered and never
 	 * left -- is not one a test can safely produce for real: the only way to be inside a layout pass
@@ -229,7 +231,7 @@ private:
 	UUITextInput* FindEditInRigTree() const;
 	void EndLeakedTextEdit(UUITextInput* InEditInRigTree, FAutomationTestBase* InTest);
 	static void ReportTextEditOutlivingWorld(const UWorld* InRigWorld, FAutomationTestBase* InTest);
-	void RestoreAndVerifyProcessState(FAutomationTestBase* InTest);
+	void RestoreAndVerifyProcessState(FAutomationTestBase* InTest, int32 InLayoutPassDepth, int32 InDesiredSizeMemoDepth);
 	static void ReportRigProblem(FAutomationTestBase* InTest, const FString& InMessage);
 
 	/**

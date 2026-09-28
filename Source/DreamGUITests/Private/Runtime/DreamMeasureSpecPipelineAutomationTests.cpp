@@ -186,7 +186,7 @@ bool FDreamMeasureMemoSeparatesConstraintsTest::RunTest(const FString& Parameter
 
 	// The memo used to be keyed on the widget alone. With constraints in play that is a correctness bug
 	// rather than a missed optimisation: whichever constraint asked first would answer for all of them.
-	UDreamPanelLayoutBase::FDesiredSizeMemoScope Memo;
+	UDreamPanelLayoutBase::FDesiredSizeMemoScope Memo(WrapWidget);
 	const FVector2f Narrow = WrapWidget->GetLayoutContainer()->GetLayoutPreferredSize(
 		FDreamMeasureSpec::AtMost(300.0f), FDreamMeasureSpec::Undefined());
 	const FVector2f Wide = WrapWidget->GetLayoutContainer()->GetLayoutPreferredSize(

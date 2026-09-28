@@ -4,21 +4,21 @@
 
 #include "CoreMinimal.h"
 #include "UObject/ObjectKey.h"
+#include "Core/Components/DreamLayoutFragment.h"
 
 /**
- * The state a layout pass keeps, owned by one world instead of by the process.
+ * The state a layout pass keeps, owned by one world instead of by the process: the stack of widgets whose
+ * layout containers are writing their results, the pass depth behind UDreamWidget::IsLayoutWriting, and the
+ * desired-size memo with its depth and its count of answers computed rather than recalled.
  *
- * Today that state is static on the classes that use it: the stack of widgets whose layout containers are
- * writing their results (UDreamWidget::LayoutWriterStack), the pass depth behind
- * UDreamWidget::IsLayoutWriting, and the desired-size memo with its depth (UDreamPanelLayoutBase). Every
- * world shares that one copy, and the stack and the memo hold raw widget pointers. This is the shape it
- * moves into: one context per world, held by that world's manager, keyed by FObjectKey, and entered only
- * through the scopes below, which give back exactly what they took. A pass that ends with anything still
- * open says so through IsBalanced.
+ * That state used to be static on the classes that use it, so every world shared one copy, and the stack
+ * and the memo held raw widget pointers. Now a world's manager holds its context, keyed by FObjectKey; a
+ * tree in no world with a manager -- a test's, an authoring template's -- has one on its root widget, since
+ * a pass never leaves the tree it started in (see UDreamWidget::GetLayoutPassContext). The context is
+ * entered only through the scopes below, which give back exactly what they took, and a pass that ends with
+ * anything still open says so through IsBalanced.
  *
  * Widgets are taken as UObject so this header needs nothing from the widget's.
- *
- * Nothing uses this yet: the scopes on UDreamWidget and UDreamPanelLayoutBase still write the static state.
  */
 class FDreamLayoutPassContext
 {
@@ -96,19 +96,29 @@ public:
 		FDreamLayoutPassContext& Context;
 	};
 
-	/** A desired size per widget and per measure spec, the spec folded into a number by whoever measures. */
+	/**
+	 * A desired size per widget and per pair of measure specs: one widget can be measured under several
+	 * constraints in a pass, and each answer is its own.
+	 *
+	 * The hash folds in the two modes and ignores the values, because FDreamMeasureSpec's equality is a
+	 * tolerance comparison and a hash built from a float would put two equal keys in different buckets.
+	 * Equal keys therefore always hash equal; unequal keys with the same modes share a bucket, which costs a
+	 * comparison and nothing else.
+	 */
 	struct FDesiredSizeKey
 	{
 		FObjectKey Widget;
-		uint64 Spec = 0;
+		FDreamMeasureSpec WidthSpec;
+		FDreamMeasureSpec HeightSpec;
 
 		bool operator==(const FDesiredSizeKey& Other) const
 		{
-			return Widget == Other.Widget && Spec == Other.Spec;
+			return Widget == Other.Widget && WidthSpec == Other.WidthSpec && HeightSpec == Other.HeightSpec;
 		}
 		friend uint32 GetTypeHash(const FDesiredSizeKey& InKey)
 		{
-			return HashCombine(GetTypeHash(InKey.Widget), ::GetTypeHash(InKey.Spec));
+			return HashCombine(GetTypeHash(InKey.Widget),
+				static_cast<uint32>(InKey.WidthSpec.Mode) * 3u + static_cast<uint32>(InKey.HeightSpec.Mode));
 		}
 	};
 
@@ -164,9 +174,29 @@ public:
 		return PassDepth == 0 && Writers.Num() == 0 && MemoDepth == 0;
 	}
 
+	/**
+	 * The raw counts behind IsBalanced and IsWriting, for a test rig that has to say which scope was left
+	 * open. Numbers rather than bools, because a stray close -- a negative depth -- is the same fault in the
+	 * other direction and a bool cannot show it. Reads; they change nothing.
+	 */
+	int32 GetPassDepth() const { return PassDepth; }
+	int32 GetWriterCount() const { return Writers.Num(); }
+	int32 GetMemoDepth() const { return MemoDepth; }
+	int32 GetRecordedDesiredSizeCount() const { return DesiredSizes.Num(); }
+
+	/** Counts one desired size that had to be computed because the memo could not answer it. */
+	void NoteDesiredSizeComputed()
+	{
+		++DesiredSizeComputeCount;
+	}
+	/** How many desired sizes were computed rather than recalled since the last reset: what a test of the memo measures. */
+	int64 GetDesiredSizeComputeCount() const { return DesiredSizeComputeCount; }
+	void ResetDesiredSizeComputeCount() { DesiredSizeComputeCount = 0; }
+
 private:
 	int32 PassDepth = 0;
 	TArray<FObjectKey, TInlineAllocator<8>> Writers;
 	int32 MemoDepth = 0;
 	TMap<FDesiredSizeKey, FVector2D> DesiredSizes;
+	int64 DesiredSizeComputeCount = 0;
 };

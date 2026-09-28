@@ -850,8 +850,7 @@ void UDreamWidget::UpdateLayout()
 {
 	// Everything written from here down is layout output, not something anybody asked for; see
 	// IsLayoutWriting.
-	++LayoutPassDepth;
-	ON_SCOPE_EXIT{ --LayoutPassDepth; };
+	FDreamLayoutPassContext::FPassScope Pass(GetLayoutPassContext());
 	// Both halves are gated on the dirty flag now. The container half always was (BeginLayoutPass inside
 	// CalculateLayout); the LayoutSelf half read nothing and re-solved on every pass for every widget
 	// carrying one. See UDreamLayoutSelf::BeginLayoutPass.
@@ -1194,23 +1193,37 @@ UObject* UDreamWidget::GetLayoutSource(TFunctionRef<float(UDreamLayoutSelf*)> Ge
 	return nullptr;
 }
 
-TArray<UDreamWidget*> UDreamWidget::LayoutWriterStack;
-int32 UDreamWidget::LayoutPassDepth = 0;
+FDreamLayoutPassContext& UDreamWidget::GetLayoutPassContext() const
+{
+	if (UDreamUIManagerWorldSubsystem* Manager = UDreamUIManagerWorldSubsystem::GetInstance(GetWorld()))
+	{
+		return Manager->GetLayoutPassContext();
+	}
+	// No manager holds one for this tree, so its root does. Walked rather than read from RootWidget, which
+	// is only kept up to date for registered widgets, and a detached tree is usually not registered.
+	const UDreamWidget* Root = this;
+	FDreamVisitedWidgetSet Visited;
+	while (UDreamWidget* Up = Root->Parent.Get())
+	{
+		if (Visited.Contains(Root))
+		{
+			break;//a cycle is refused where parents are set; this only keeps a corrupt chain from hanging here
+		}
+		Visited.Add(Root);
+		Root = Up;
+	}
+	if (!Root->DetachedLayoutPassContext.IsValid())
+	{
+		Root->DetachedLayoutPassContext = MakeUnique<FDreamLayoutPassContext>();
+	}
+	return *Root->DetachedLayoutPassContext;
+}
 
 UDreamWidget::FLayoutWriteScope::FLayoutWriteScope(UDreamWidget* InLayoutWidget)
 {
 	if (IsValid(InLayoutWidget))
 	{
-		LayoutWriterStack.Push(InLayoutWidget);
-		bPushed = true;
-	}
-}
-
-UDreamWidget::FLayoutWriteScope::~FLayoutWriteScope()
-{
-	if (bPushed)
-	{
-		LayoutWriterStack.Pop(EAllowShrinking::No);
+		Scope.Emplace(InLayoutWidget->GetLayoutPassContext(), InLayoutWidget);
 	}
 }
 
@@ -1225,6 +1238,8 @@ void UDreamWidget::MarkLayoutForRebuild(UDreamWidget* InWidget, EDreamLayoutInva
 	{
 		return;
 	}
+	// Every widget this walk visits is in InWidget's tree, so they all answer to this one context.
+	const FDreamLayoutPassContext& LayoutContext = InWidget->GetLayoutPassContext();
 	static IConsoleVariable* LayoutTraceCVar = IConsoleManager::Get().FindConsoleVariable(TEXT("dreamgui.LayoutTrace"));
 	if (LayoutTraceCVar && LayoutTraceCVar->GetInt() != 0)
 	{
@@ -1251,7 +1266,7 @@ void UDreamWidget::MarkLayoutForRebuild(UDreamWidget* InWidget, EDreamLayoutInva
 			return;
 		}
 		// A writer applying its own arrangement must not be re-dirtied by it, same as the walk below.
-		if (LayoutWriterStack.Contains(ParentWidget))
+		if (LayoutContext.IsWriter(ParentWidget))
 		{
 			return;
 		}
@@ -1275,7 +1290,7 @@ void UDreamWidget::MarkLayoutForRebuild(UDreamWidget* InWidget, EDreamLayoutInva
 		// writer: everything below it still gets dirtied, because a nested container does have to react to
 		// the size it was just handed, but the writer and its ancestors keep the dirty state they already
 		// consumed. Widgets outside the writer's subtree never reach this branch and behave as before.
-		if (LayoutWriterStack.Contains(TargetWidget))
+		if (LayoutContext.IsWriter(TargetWidget))
 		{
 			bStoppedAtLayoutWriter = true;
 			break;
@@ -1356,7 +1371,7 @@ void UDreamWidget::SetLayoutVisibilitySuppressed(bool bSuppressed)
 		// SizeBox, ScaleBox and WidgetSwitcher all flip this from inside their own arrange. It changes
 		// which widgets a measurement is allowed to include, so every memoised desired size in the pass
 		// may now be wrong - not just this widget's. Outside a pass the memo is empty and this is free.
-		UDreamPanelLayoutBase::ForgetAllDesiredSizes();
+		GetLayoutPassContext().ForgetAllDesiredSizes();
 		CalculateVisibility_Recursive();
 	}
 }

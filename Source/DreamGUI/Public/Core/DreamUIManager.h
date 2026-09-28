@@ -6,6 +6,7 @@
 #include "Subsystems/WorldSubsystem.h"
 #include "Tickable.h"
 #include "Containers/Ticker.h"
+#include "Core/DreamLayoutPassContext.h"
 #include "DreamUIManager.generated.h"
 
 struct FDreamUIHelperGizmoRenderParameter;
@@ -183,6 +184,10 @@ public:
 	/** See LastLayoutPassCount. One is the only healthy value. */
 	int32 GetLastLayoutPassCount()const{return LastLayoutPassCount;}
 
+	/** The layout-pass state of this world's widgets; see UDreamWidget::GetLayoutPassContext. */
+	FDreamLayoutPassContext& GetLayoutPassContext() { return LayoutPassContext; }
+	const FDreamLayoutPassContext& GetLayoutPassContext() const { return LayoutPassContext; }
+
 	static UDreamUIManagerWorldSubsystem* GetInstance(UWorld* InWorld);
 #if WITH_EDITOR
 	bool bShouldTickInEditor = false;
@@ -271,6 +276,8 @@ private:
 	 * eight times and happened to agree" was unobservable in a normal build.
 	 */
 	int32 LastLayoutPassCount = 0;
+	/** The writer stack, pass depth and desired-size memo every layout pass in this world shares. */
+	FDreamLayoutPassContext LayoutPassContext;
 	int32 CurrentExecutingTickIndex = -1;
 	UPROPERTY(Transient) TArray<UDreamUIBehaviour*> DreamUIBehavioursNeedToRemoveFromTick;
 #if !UE_BUILD_SHIPPING

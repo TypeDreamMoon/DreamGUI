@@ -121,9 +121,12 @@ bool FDreamLayoutPassContextBalanceTest::RunTest(const FString& Parameters)
 	using FContext = FDreamLayoutPassContext;
 	const TStrongObjectPtr<UDreamTreeHostProbe> First(NewObject<UDreamTreeHostProbe>());
 	const TStrongObjectPtr<UDreamTreeHostProbe> Second(NewObject<UDreamTreeHostProbe>());
-	const FContext::FDesiredSizeKey FirstWide{ FObjectKey(First.Get()), 1 };
-	const FContext::FDesiredSizeKey FirstTall{ FObjectKey(First.Get()), 2 };
-	const FContext::FDesiredSizeKey SecondWide{ FObjectKey(Second.Get()), 1 };
+	const FDreamMeasureSpec Unbounded = FDreamMeasureSpec::Undefined();
+	const FDreamMeasureSpec Wide = FDreamMeasureSpec::Exactly(400.0f);
+	const FDreamMeasureSpec Tall = FDreamMeasureSpec::Exactly(300.0f);
+	const FContext::FDesiredSizeKey FirstWide{ FObjectKey(First.Get()), Wide, Unbounded };
+	const FContext::FDesiredSizeKey FirstTall{ FObjectKey(First.Get()), Unbounded, Tall };
+	const FContext::FDesiredSizeKey SecondWide{ FObjectKey(Second.Get()), Wide, Unbounded };
 
 	FContext Context;
 	TestTrue(TEXT("A new context is balanced"), Context.IsBalanced());

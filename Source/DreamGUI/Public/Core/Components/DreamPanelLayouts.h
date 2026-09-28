@@ -6,6 +6,7 @@
 #include "CoreMinimal.h"
 #include "DreamLayout.h"
 #include "DreamLayoutFragment.h"
+#include "Core/DreamLayoutPassContext.h"
 #include "DreamPanelSlot.h"
 #include "DreamScrollTypes.h"
 #include "DreamTweener.h"
@@ -97,23 +98,23 @@ public:
 	 * change while the pass that would change it is still recording into a fragment. Entries are dropped
 	 * explicitly on the two paths that do write mid-arrange (authored-geometry restore, and layout
 	 * visibility suppression), and the whole memo dies when the outermost scope closes.
+	 *
+	 * The memo lives in the layout-pass context of InWidget's world (UDreamWidget::GetLayoutPassContext),
+	 * so a panel's memo is shared with every other panel in the same pass and with nothing outside it. A
+	 * null widget -- a container not on one yet -- opens nothing, and its measurements are simply not
+	 * remembered.
 	 */
 	struct DREAMGUI_API FDesiredSizeMemoScope
 	{
-		FDesiredSizeMemoScope();
-		~FDesiredSizeMemoScope();
+		explicit FDesiredSizeMemoScope(const UDreamWidget* InWidget);
 		FDesiredSizeMemoScope(const FDesiredSizeMemoScope&) = delete;
 		FDesiredSizeMemoScope& operator=(const FDesiredSizeMemoScope&) = delete;
+	private:
+		TOptional<FDreamLayoutPassContext::FMemoScope> Scope;
 	};
 
-	/** Drop one entry, for a caller that is about to write the widget's geometry mid-pass. */
-	static void ForgetDesiredSize(const UDreamWidget* Widget);
-	/** Drop everything, for a change that alters which widgets participate at all. */
-	static void ForgetAllDesiredSizes();
-
-	/** Times GetDesiredSize walked the tree instead of answering from the memo. Test instrumentation. */
-	static int64 GetDesiredSizeComputeCount() { return DesiredSizeComputeCount; }
-	static void ResetDesiredSizeComputeCount() { DesiredSizeComputeCount = 0; }
+	/** Drop Widget's entries, for a caller that is about to write the widget's geometry mid-pass. */
+	void ForgetDesiredSize(const UDreamWidget* Widget) const;
 
 protected:
 	FVector2f PreferredSize = FVector2f::ZeroVector;
@@ -186,47 +187,6 @@ protected:
 
 	/** Where the current arrange pass is recording. Null outside a pass. */
 	mutable FDreamFragment* RecordingFragment = nullptr;
-
-private:
-	/**
-	 * One measured widget under one constraint. The spec has to be part of the key: the same widget
-	 * genuinely has different answers under different constraints, and keying on the widget alone would
-	 * hand a constrained caller whatever the unconstrained one happened to ask for first.
-	 *
-	 * The hash deliberately ignores the spec VALUES and folds in only the two modes, because
-	 * FDreamMeasureSpec's equality is a tolerance comparison and a hash built from a float would put
-	 * two equal keys in different buckets. Equal keys therefore always hash equal; unequal keys with the
-	 * same modes share a bucket, which costs a comparison and nothing else.
-	 */
-	struct FDesiredSizeKey
-	{
-		const UDreamWidget* Widget = nullptr;
-		FDreamMeasureSpec WidthSpec;
-		FDreamMeasureSpec HeightSpec;
-
-		bool operator==(const FDesiredSizeKey& Other) const
-		{
-			return Widget == Other.Widget && WidthSpec == Other.WidthSpec && HeightSpec == Other.HeightSpec;
-		}
-		friend uint32 GetTypeHash(const FDesiredSizeKey& Key)
-		{
-			return HashCombine(::GetTypeHash(Key.Widget),
-				static_cast<uint32>(Key.WidthSpec.Mode) * 3u + static_cast<uint32>(Key.HeightSpec.Mode));
-		}
-	};
-
-	/** One pass is single-threaded, so the memo is shared across every panel taking part in it. */
-	static TMap<FDesiredSizeKey, FVector2D> DesiredSizeMemo;
-	static int32 DesiredSizeMemoDepth;
-	static int64 DesiredSizeComputeCount;
-
-public:
-	/**
-	 * For tests: how many desired-size memo scopes are open right now. Zero between passes; a test
-	 * rig asserts it is zero once the rig is gone, because a scope left open keeps the shared memo
-	 * answering measurements from a pass that is over. A read; it changes nothing.
-	 */
-	static int32 GetDesiredSizeMemoDepthForTesting() { return DesiredSizeMemoDepth; }
 
 protected:
 

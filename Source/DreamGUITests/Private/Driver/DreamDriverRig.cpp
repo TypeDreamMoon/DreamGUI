@@ -3,7 +3,6 @@
 #include "Driver/DreamDriverRig.h"
 
 #include "Core/Components/DreamCanvas.h"
-#include "Core/Components/DreamPanelLayouts.h"
 #include "Core/Components/DreamVisualEmpty.h"
 #include "Core/Components/DreamWidget.h"
 #include "Core/DreamUIManager.h"
@@ -332,11 +331,11 @@ TArray<FString> FDreamDriverRig::DescribeUnsettledProcessState(int32 InLayoutPas
 	TArray<FString> Complaints;
 	if (InLayoutPassDepth != 0)
 	{
-		Complaints.Add(FString::Printf(TEXT("UDreamWidget's layout pass depth is %d after the rig was torn down; a layout pass was entered and never left, so every later size edit is being taken for layout output"), InLayoutPassDepth));
+		Complaints.Add(FString::Printf(TEXT("The rig world's layout pass depth is %d once its tree was torn down; a layout pass was entered and never left, so every later size edit in that world was being taken for layout output"), InLayoutPassDepth));
 	}
 	if (InDesiredSizeMemoDepth != 0)
 	{
-		Complaints.Add(FString::Printf(TEXT("UDreamPanelLayoutBase's desired-size memo depth is %d after the rig was torn down; the memo is still live, so later measurements can be answered from a pass that is over"), InDesiredSizeMemoDepth));
+		Complaints.Add(FString::Printf(TEXT("The rig world's desired-size memo depth is %d once its tree was torn down; the memo was still live, so later measurements in that world could be answered from a pass that is over"), InDesiredSizeMemoDepth));
 	}
 	if (bInBlueprintCompiling)
 	{
@@ -397,7 +396,7 @@ void FDreamDriverRig::ReportTextEditOutlivingWorld(const UWorld* InRigWorld, FAu
 	}
 }
 
-void FDreamDriverRig::RestoreAndVerifyProcessState(FAutomationTestBase* InTest)
+void FDreamDriverRig::RestoreAndVerifyProcessState(FAutomationTestBase* InTest, int32 InLayoutPassDepth, int32 InDesiredSizeMemoDepth)
 {
 	// Put back what the rig found. The character switch is class-wide and flipped for good by the
 	// first HandleCharacterInput, so without this a test that types would silently move every test
@@ -405,11 +404,12 @@ void FDreamDriverRig::RestoreAndVerifyProcessState(FAutomationTestBase* InTest)
 	// viewport client is actually on.
 	UUITextInput::SetHostDeliversCharacterEventsForTesting(bHostDeliveredCharacterEventsAtStart);
 
-	// Last, once the tree and the world are both gone, because these are counters the rig's whole
-	// life could have moved: a layout pass or a desired-size memo scope that was entered and never
-	// left, or a compile the editor object never heard finish. Each of them outlives worlds and would
-	// quietly change how the next test's layout behaves.
-	const int32 MemoDepth = UDreamPanelLayoutBase::GetDesiredSizeMemoDepthForTesting();
+	// Last, once the tree and the world are both gone. The layout counters were read from the world's
+	// layout context before the world went (the destructor hands them in): a layout pass or a
+	// desired-size memo scope entered and never left. They die with the world, so they cannot reach the
+	// next test, but one still open is a pass that never ended in this one. The compile flag is the
+	// editor object's and does outlive worlds: a compile it never heard finish would keep everything that
+	// defers itself during a compile deferring in every later test.
 	bool bCompiling = false;
 #if WITH_EDITOR
 	// Set at all is the leak: the editor object clears it on the announcement that a compile is over,
@@ -429,7 +429,7 @@ void FDreamDriverRig::RestoreAndVerifyProcessState(FAutomationTestBase* InTest)
 		}
 	}
 #endif
-	for (const FString& Complaint : DescribeUnsettledProcessState(UDreamWidget::GetLayoutPassDepthForTesting(), MemoDepth, bCompiling))
+	for (const FString& Complaint : DescribeUnsettledProcessState(InLayoutPassDepth, InDesiredSizeMemoDepth, bCompiling))
 	{
 		ReportRigProblem(InTest, Complaint);
 	}
@@ -488,6 +488,8 @@ FDreamDriverRig::~FDreamDriverRig()
 	// running, and by then the context that knew it has been released.
 	FAutomationTestBase* TeardownTest = DriverContext.IsValid() ? DriverContext->CurrentTest : nullptr;
 	UWorld* RigWorld = DriverContext.IsValid() ? DriverContext->World : nullptr;
+	int32 LayoutPassDepthAtTeardown = 0;
+	int32 MemoDepthAtTeardown = 0;
 
 	// Reverse order, and the widget tree before the world: DestroyWidget unregisters the tree from
 	// the UI manager while the world is still whole, which is where the manager expects to be told.
@@ -522,6 +524,13 @@ FDreamDriverRig::~FDreamDriverRig()
 		// After the tree, before the world: the tree's destruction is what should have ended an edit
 		// in it, and the world still being whole is what lets a missed one be ended properly.
 		EndLeakedTextEdit(EditInRigTree, TeardownTest);
+		// The world's layout context goes with its manager, so what it says about passes left open
+		// is read now, with the tree gone and the world still whole.
+		if (const UDreamUIManagerWorldSubsystem* RigManager = DriverContext->Manager; IsValid(RigManager))
+		{
+			LayoutPassDepthAtTeardown = RigManager->GetLayoutPassContext().GetPassDepth();
+			MemoDepthAtTeardown = RigManager->GetLayoutPassContext().GetMemoDepth();
+		}
 	}
 	DriverInstance.Reset();
 	DriverContext.Reset();
@@ -531,7 +540,7 @@ FDreamDriverRig::~FDreamDriverRig()
 	ScopedGameInstanceWorld.Reset();
 
 	ReportTextEditOutlivingWorld(RigWorld, TeardownTest);
-	RestoreAndVerifyProcessState(TeardownTest);
+	RestoreAndVerifyProcessState(TeardownTest, LayoutPassDepthAtTeardown, MemoDepthAtTeardown);
 }
 
 bool FDreamDriverRig::IsUsable() const
