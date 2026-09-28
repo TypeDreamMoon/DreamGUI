@@ -36,10 +36,20 @@ It costs you Slate's ecosystem: none of UMG's widgets, styles or bindings apply.
 
 ## Modules
 
-The runtime is being split into modules by layer. A module depends only on the ones below it, and
-`Tools/Tests/static_checks.py` fails an include that goes the other way (rule `layering`). Every runtime
-module loads at `PostConfigInit`, as the core does, so its types and `.dui` tags are in place before
-anything compiles.
+The runtime is split into modules by layer. A module depends only on modules in the layers below its
+own, never on a sibling in its layer, and `Tools/Tests/static_checks.py` fails an include that goes the
+other way (rule `layering`). Every runtime module loads at `PostConfigInit`, as the core does, so its
+types and `.dui` tags are in place before anything compiles.
+
+```text
+L4   DreamGUISamples
+L3   DreamGUIControls      DreamGUIExtensions
+L2   DreamGUIInput
+L1   DreamGUI (core)
+L0   DreamGUIRenderer      DreamTween
+     ------------------------------------------------------------
+     DreamGUIEditor, DreamGUIK2Nodes, DreamGUITests (editor only)
+```
 
 | Module | Layer | Holds |
 | --- | --- | --- |
@@ -55,6 +65,29 @@ anything compiles.
 
 C++ that uses a type from a split-off module adds that module to its `Build.cs`. Assets need nothing:
 every type that moved still loads under its old name (see [below](#if-you-have-assets-authored-against-lgui--lexui-or-from-before-an-in-fork-rename)).
+
+### C++ written against the single module
+
+Besides the `Build.cs` line, a few includes and calls changed. Every other header kept its path.
+
+| Include that was | Is now |
+| --- | --- |
+| `Core/DreamUIRender/*`, `Core/DreamUIMesh/DreamUIGizmoMesh.h`, `Core/DreamUIMeshVertex.h`, `Core/DreamUIMeshIndex.h`, `Core/DreamUIBlendMode.h`, `Core/DreamVisualPostProcessRenderProxy.h` | `DreamUIRender/` and the same file name |
+| `Extensions/DreamGameViewportClient.h` | `Event/DreamGameViewportClient.h` |
+| `Extensions/DreamUMGWidget.h`, `Extensions/DreamUMGWidgetInteraction.h` | `UMG/` and the same file name |
+| `Core/DreamUIEachAdapter.h` | `Binding/DreamUIEachAdapter.h` |
+| `Core/Components/DreamBackgroundBlur.h`, `Core/Components/DreamBackgroundPixelate.h`, `Core/Components/DreamPixelSort.h` | `Extensions/Effects/` and the same file name |
+
+| Call that was | Is now |
+| --- | --- |
+| `UUITextInput::RouteCharacterInputToActiveInput` | `DreamUITextInputRouter::RouteCharacter`, called [before the base class](#keyboard-layouts-give-dreamgui-the-game-viewport-client) |
+| `UDreamCanvas::CalculateRenderScaledSize` | `FDreamUIRenderer::CalculateRenderScaledSize` |
+| `DreamPixelSort::ResolveRegionSize` | `DreamUIPostProcessEffects::ResolvePixelSortRegionSize` (`DreamUIRender/DreamUIPostProcessEffects.h`) |
+| `UDreamUIManagerWorldSubsystem`'s event-system registry and player interaction: `GetEventSystemByUserIndex`, `GetMapUserIndexToEventSystem`, `AddEventSystem`, `RemoveEventSystem`, `EnsureInteractionForPlayer`, `GetInteractionHost` | The same names on `UDreamUIInputSubsystem` (`Event/DreamUIInputSubsystem.h`); `UDreamUIInputSubsystem::Get(WorldContext)` finds it |
+| `UDreamUIManagerWorldSubsystem::AddSelectable`, `RemoveSelectable` and `GetAllSelectableArray`, with `UUISelectable` | The same, with `UDreamUIBehaviour` |
+| `UDreamGUISettings::DefaultStyleSheet` as a `UDreamUIStyleSheet` | A `TSoftObjectPtr<UDataAsset>`; `UDreamUIStyleSheet::GetProjectSheet()` does the cast |
+
+The renderer logs to `LogDreamGUIRenderer`; `stat DreamGUI` still shows its counters.
 
 ## Install
 
@@ -436,7 +469,8 @@ link time. Six interaction subsystems already decline to exist on a server
 
 ## Status
 
-1112 automation tests — `Automation RunTests DreamGUI`. There were none before this fork.
+1395 automation tests are declared — run them with `Automation RunTests DreamGUI`, or a preset of
+`Tools/Tests/Invoke-DreamGUITests.ps1`. There were none before this fork.
 
 Known gaps:
 

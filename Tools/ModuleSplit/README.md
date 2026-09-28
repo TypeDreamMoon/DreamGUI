@@ -1,9 +1,9 @@
 # Splitting a runtime module off the core
 
-The core, `Source/DreamGUI`, is being split into runtime modules by layer. `Tools/Tests/module-owners.csv`
-says which module each runtime file is headed for; the scripts here move one module's files, write the
-CoreRedirects that keep old assets loading, and check what a game build will see. The first three print what
-they would do unless given `--apply`.
+The core, `Source/DreamGUI`, was split into runtime modules by layer, one module at a time, with the scripts
+here; they stay for the next module to leave it. `Tools/Tests/module-owners.csv` says which module each runtime
+file belongs to. The scripts move one module's files, write the CoreRedirects that keep old assets loading, and
+check what a game build will see. The first three print what they would do unless given `--apply`.
 
 | File | What it does |
 |---|---|
@@ -32,7 +32,9 @@ they would do unless given `--apply`.
    string as it is, without redirects.
 7. `python Tools/ModuleSplit/check_game_includes.py`, and give every file it lists that really uses a type by value
    the include it needs. The editor build cannot show these; BuildPlugin's game target shows them half an hour later.
-8. Build, then run the whole suite. `DreamGUI.Packaging.EveryTypeInASplitOffModuleAnswersToItsOldCorePath`
+8. Build, then run the whole suite. A class that never carried an API macro, because every user sat in the same
+   module, fails to link once one of them stays behind: the move script only renames macros that are there. The
+   renderer's vertex buffer was one. `DreamGUI.Packaging.EveryTypeInASplitOffModuleAnswersToItsOldCorePath`
    checks that every type in the new package answers to its old path, and the old-asset fixtures, the asset
    smoke test and the redirect tests check the rest.
 9. Resave the plugin's assets that name a moved type, and regenerate `Docs/Reference`.
