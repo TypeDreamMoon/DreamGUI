@@ -4,6 +4,7 @@
 
 #include "Misc/AutomationTest.h"
 
+#include "Controls/DreamTextInput.h"
 #include "Core/Components/DreamWidget.h"
 #include "Core/DreamUIInputServices.h"
 #include "Core/DreamUIManager.h"
@@ -11,6 +12,7 @@
 #include "Driver/DreamDriverProjection.h"
 #include "Driver/DreamDriverRig.h"
 #include "DreamInputPipelineTestTypes.h"
+#include "DreamPlayerScreenTestTypes.h"
 #include "Engine/World.h"
 #include "Event/DreamEventSystem.h"
 #include "Event/DreamPointerEventData.h"
@@ -18,8 +20,11 @@
 #include "Event/DreamUIInputSubsystem.h"
 #include "Event/DreamUIInputUser.h"
 #include "GameFramework/Actor.h"
+#include "Interaction/DreamUIActionRouter.h"
 #include "Interaction/DreamUIDragDrop.h"
+#include "Interaction/DreamUINavigationStack.h"
 #include "Interaction/DreamUITooltip.h"
+#include "Interaction/UITextInput.h"
 
 /*
  * ONE PIPELINE PER PLAYER, AND WHAT IT PROMISES.
@@ -506,6 +511,170 @@ bool FDreamInputRayPerPointerTest::RunTest(const FString& Parameters)
 	Module->TouchRelease(1, CentreOf(Left));
 	Module->TouchRelease(2, CentreOf(Right));
 	Rig.PumpFrames(1);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamInputFocusOutlivesTheFingerTest,
+	"DreamGUI.Input.Focus.AFieldTappedAndLetGoOfKeepsTheFocusSoBackEndsItsEditAndATapElsewhereTakesIt",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamInputFocusOutlivesTheFingerTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamInputPipelineTestLocal;
+	FDreamDriverRig Rig = FDreamDriverRig::Headless(ViewportSize);
+	Rig.BindTest(this);
+	if (!TestTrue(TEXT("The rig came up"), Rig.IsUsable()))
+	{
+		return false;
+	}
+	UDreamUIInputUser* User = Rig.EventSystem()->GetInputUser();
+	UDreamTextInput* Field = Rig.MakeControl<UDreamTextInput>(TEXT("Name"), nullptr, FVector2D(320.0, 40.0), FVector2D(-250.0, 0.0));
+	UDreamWidget* Elsewhere = Rig.MakeWidget(TEXT("Elsewhere"), nullptr, FVector2D(200.0, 100.0), FVector2D(250.0, 0.0));
+	if (!TestTrue(TEXT("A player, a field and somewhere else to tap"),
+		User != nullptr && Field != nullptr && Field->InputBehaviour != nullptr && IsValid(Elsewhere)))
+	{
+		return false;
+	}
+	Rig.PumpFrames(2);
+	UDreamDriverInputModule* Module = Rig.InputModule();
+	const FVector2D At = CentreOf(Field);
+
+	// A tap: a finger down on the field and up again -- which takes the finger's pointer away with it.
+	Module->TouchPress(0, At);
+	Rig.PumpFrames(1);
+	Module->TouchRelease(0, At);
+	Rig.PumpFrames(1);
+	const UDreamWidget* FieldWidget = Field->InputBehaviour->GetWidget();
+	TestNull(TEXT("The lifted finger's pointer is gone"), User->FindPointerEventData(UDreamStandaloneInputModule::GetTouchPointerID(0)));
+	TestTrue(TEXT("The tap began an edit"), Field->InputBehaviour->IsInputActive());
+	// The finger took its own record of the focus with it; the player's stays.
+	TestTrue(TEXT("...and the field has the player's focus, though the finger that gave it is gone"),
+		FieldWidget != nullptr && User->GetFocusedWidget() == FieldWidget);
+	TestTrue(TEXT("...which the widget's own query answers too"), FieldWidget != nullptr && FieldWidget->HasFocus());
+	TestTrue(TEXT("...and the field owns the player's keyboard"),
+		UUITextInput::GetActiveTextInputForPlayer(Rig.GetWorld(), 0) == Field->InputBehaviour.Get());
+
+	// Back ends the edit, because it asks the player's focus -- which is still the field.
+	UDreamUINavigationStack* Stack = UDreamUINavigationStack::Get(Rig.GetWorld());
+	TestTrue(TEXT("Back is taken"), Stack != nullptr && Stack->HandleBack(0));
+	TestFalse(TEXT("...by ending the edit"), Field->InputBehaviour->IsInputActive());
+	TestNull(TEXT("...which lets go of the player's keyboard"), UUITextInput::GetActiveTextInputForPlayer(Rig.GetWorld(), 0));
+
+	// A tap on something else, with another finger that has no record of any focus: the player's goes.
+	const FVector2D There = CentreOf(Elsewhere);
+	Module->TouchPress(1, There);
+	Rig.PumpFrames(1);
+	Module->TouchRelease(1, There);
+	Rig.PumpFrames(1);
+	TestTrue(TEXT("A tap on something else takes the field's focus away"), User->GetFocusedWidget() != FieldWidget);
+	TestFalse(TEXT("...and the widget no longer has it"), FieldWidget != nullptr && FieldWidget->HasFocus());
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamInputTwoPlayersTypeTest,
+	"DreamGUI.Input.Players.TwoPlayersEachTypeIntoTheFieldTheyClicked",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamInputTwoPlayersTypeTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamInputPipelineTestLocal;
+	FDreamDriverRig Rig = FDreamDriverRig::Headless(ViewportSize);
+	Rig.BindTest(this);
+	if (!TestTrue(TEXT("The rig came up"), Rig.IsUsable()))
+	{
+		return false;
+	}
+	UDreamUIInputSubsystem* Input = UDreamUIInputSubsystem::Get(Rig.GetWorld());
+	FSecondPlayer Second(Rig, 1);
+	UDreamTextInput* First = Rig.MakeControl<UDreamTextInput>(TEXT("FirstName"), nullptr, FVector2D(320.0, 40.0), FVector2D(-250.0, 0.0));
+	UDreamTextInput* Other = Rig.MakeControl<UDreamTextInput>(TEXT("OtherName"), nullptr, FVector2D(320.0, 40.0), FVector2D(250.0, 0.0));
+	if (!TestTrue(TEXT("Two players and a field for each"), Input != nullptr && Second.IsUsable()
+		&& First != nullptr && First->InputBehaviour != nullptr && Other != nullptr && Other->InputBehaviour != nullptr))
+	{
+		return false;
+	}
+	Rig.PumpFrames(2);
+
+	// Each player clicks their own field.
+	Rig.InputModule()->MoveTo(CentreOf(First));
+	Second.Module->MoveTo(CentreOf(Other));
+	Rig.PumpFrames(1);
+	Rig.InputModule()->Press();
+	Second.Module->Press();
+	Rig.PumpFrames(1);
+	Rig.InputModule()->Release();
+	Second.Module->Release();
+	Rig.PumpFrames(1);
+	TestTrue(TEXT("Both fields are being edited at once"), First->InputBehaviour->IsInputActive() && Other->InputBehaviour->IsInputActive());
+	TestTrue(TEXT("Player 0's keyboard is the first field's"), UUITextInput::GetActiveTextInputForPlayer(Rig.GetWorld(), 0) == First->InputBehaviour.Get());
+	TestTrue(TEXT("...and player 1's the other's -- the second click did not take it from player 0"),
+		UUITextInput::GetActiveTextInputForPlayer(Rig.GetWorld(), 1) == Other->InputBehaviour.Get());
+
+	// Each player's characters go to their own field.
+	TestTrue(TEXT("Player 0 types"), Input->HandleViewportCharacter(0, TEXT('a')));
+	TestTrue(TEXT("Player 1 types"), Input->HandleViewportCharacter(1, TEXT('b')));
+	Input->HandleViewportCharacter(1, TEXT('c'));
+	TestEqual(TEXT("The first field holds what player 0 typed"), First->GetText(), FString(TEXT("a")));
+	TestEqual(TEXT("...and the other what player 1 typed"), Other->GetText(), FString(TEXT("bc")));
+	TestFalse(TEXT("A player typing into nothing types into nobody's field"), Input->HandleViewportCharacter(2, TEXT('x')));
+
+	// Player 1 leaves: their edit ends with them, and player 0's goes on.
+	Input->RemoveEventSystem(Second.EventSystem);
+	Input->RemoveUser(1);
+	TestFalse(TEXT("The player who left is no longer typing"), Other->InputBehaviour->IsInputActive());
+	TestTrue(TEXT("...while the one who stayed still is"), First->InputBehaviour->IsInputActive()
+		&& UUITextInput::GetActiveTextInputForPlayer(Rig.GetWorld(), 0) == First->InputBehaviour.Get());
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamInputKeyCharAndAnalogTest,
+	"DreamGUI.Input.Keys.ACharacterNoFieldTakesAndAMovingStickReachWhatThePlayerHasFocused",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamInputKeyCharAndAnalogTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamInputPipelineTestLocal;
+	FDreamDriverRig Rig = FDreamDriverRig::Headless(ViewportSize);
+	Rig.BindTest(this);
+	if (!TestTrue(TEXT("The rig came up"), Rig.IsUsable()))
+	{
+		return false;
+	}
+	UDreamUIInputSubsystem* Input = UDreamUIInputSubsystem::Get(Rig.GetWorld());
+	UDreamUIActionRouter* Router = UDreamUIActionRouter::Get(Rig.GetWorld());
+	UDreamWidget* Target = Rig.MakeWidget(TEXT("Target"), nullptr, FVector2D(200.0, 100.0));
+	UDreamKeyRecordingBehaviour* Recorder = IsValid(Target) ? Target->AddComponent<UDreamKeyRecordingBehaviour>() : nullptr;
+	if (!TestTrue(TEXT("Input, a router and a widget that hears keys"), Input != nullptr && Router != nullptr && Recorder != nullptr))
+	{
+		return false;
+	}
+	Rig.PumpFrames(1);
+
+	TestFalse(TEXT("With nothing focused, a character goes nowhere"), Input->HandleViewportCharacter(0, TEXT('q')));
+	Rig.EventSystem()->SetSelectComponentWithDefault(Target);
+
+	// A character: the KeyChar channel, which nothing ever dispatched -- NativeOnKeyChar was dead code.
+	TestFalse(TEXT("A character the focused widget does not keep is not taken"), Input->HandleViewportCharacter(0, TEXT('x')));
+	TestEqual(TEXT("...but it heard it, as a character"), Recorder->KeyCharCount, 1);
+	TestEqual(TEXT("...and not as a key"), Recorder->KeyDownCount, 0);
+	Recorder->bKeepTheKey = true;
+	TestTrue(TEXT("One it keeps is taken"), Input->HandleViewportCharacter(0, TEXT('y')));
+	TestEqual(TEXT("...and heard"), Recorder->KeyCharCount, 2);
+
+	// A stick: AnalogValueChanged, once per change -- a stick reports every frame whether or not it moved.
+	TestTrue(TEXT("A stick pushed is heard, and kept"), Router->HandleAnalog(0, EKeys::Gamepad_RightX, 0.5f));
+	TestEqual(TEXT("...once"), Recorder->AnalogCount, 1);
+	TestTrue(TEXT("Held where it is, it is still kept -- so it does not scroll as well"), Router->HandleAnalog(0, EKeys::Gamepad_RightX, 0.5f));
+	TestEqual(TEXT("...and the widget is not told again"), Recorder->AnalogCount, 1);
+	Router->HandleAnalog(0, EKeys::Gamepad_RightX, 0.0f);
+	TestEqual(TEXT("Let go, it has moved, and is heard"), Recorder->AnalogCount, 2);
+	TestFalse(TEXT("A trigger at rest from its first sample has not moved"), Router->HandleAnalog(0, EKeys::Gamepad_LeftTriggerAxis, 0.0f));
+	TestEqual(TEXT("...and is not heard"), Recorder->AnalogCount, 2);
+	TestFalse(TEXT("Another player's stick is not this player's focus's"), Router->HandleAnalog(1, EKeys::Gamepad_RightX, 0.7f));
+	TestEqual(TEXT("...and is not heard"), Recorder->AnalogCount, 2);
 	return true;
 }
 
