@@ -8,6 +8,7 @@
 #include "DreamStandaloneInputEventSystemActor.generated.h"
 
 class UDreamStandaloneInputModule;
+class UDreamUIInputUser;
 
 /**
  * A ready-to-place event system driven by the engine's legacy key bindings.
@@ -135,6 +136,16 @@ protected:
 	bool IsInputSuspendedByGamePause() const;
 
 	/**
+	 * True while this world's input is heard from Slate instead (UDreamGUISettings::bUseSlateInputSource): every
+	 * binding here then stands down, so no press, key or move reaches the player twice.
+	 */
+	bool IsStandingDownForSlate() const;
+	/** The one question every handler asks first: suspended by a pause, or standing down for the Slate source. */
+	bool ShouldIgnoreInput() const { return IsStandingDownForSlate() || IsInputSuspendedByGamePause(); }
+	/** The player this actor's event system speaks for, or null. */
+	UDreamUIInputUser* GetInputUser() const;
+
+	/**
 	 * How fast the right stick scrolls the list under focus, in canvas units per second at full tilt.
 	 *
 	 * A property rather than a constant because the right answer is a function of how tall a row is,
@@ -171,15 +182,6 @@ protected:
 	 * the key arrives.
 	 */
 	virtual EDreamUINavigationDirection ResolveNavigationDirection(const FKey& Key) const;
-
-	/**
-	 * Give Key to the virtual cursor when one is up, so the cursor and directional navigation never
-	 * act on the same press.
-	 *
-	 * @return true when the cursor is active and the key is therefore spoken for -- a confirm is
-	 * forwarded to it as a click, a direction belongs to the stick it is integrating and is dropped.
-	 */
-	bool TryHandleWithVirtualCursor(const FKey& Key, bool bPressed);
 
 	/** Current mouse position as the module reports it, as a 3D vector for the pointer API. */
 	FVector GetPointerPosition() const;

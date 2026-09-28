@@ -228,7 +228,7 @@ void ADreamEnhancedInputEventSystemActor::HandleWorldTickStart(UWorld* InWorld, 
 	// A paused frame runs only what ticks while paused, and this actor's own tick -- where the pointer
 	// is followed the rest of the time -- keeps the engine's default and does not; a pause menu still
 	// wants the pointer followed, so it is followed from here while the world is paused.
-	if (InWorld->IsPaused() && IsValid(InputModule))
+	if (InWorld->IsPaused() && IsValid(InputModule) && !IsStandingDownForSlate())
 	{
 		InputModule->InputMouseMove(GetPointerPosition());
 	}
@@ -350,7 +350,7 @@ void ADreamEnhancedInputEventSystemActor::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
 
-	if (IsValid(InputModule))
+	if (IsValid(InputModule) && !IsStandingDownForSlate())
 	{
 		InputModule->InputMouseMove(GetPointerPosition());
 	}
@@ -404,6 +404,10 @@ void ADreamEnhancedInputEventSystemActor::ForwardTrigger(const FInputActionInsta
 	// Which trigger event arrived is what says press or release. Reading it from the value instead
 	// depended on EnhancedInput.bAlwaysGetRealValueFromActionInstanceData, and a Canceled -- the reason
 	// the Canceled binding exists at all -- carries no value to read either way.
+	if (IsStandingDownForSlate())
+	{
+		return;
+	}
 	const bool bPressed = Instance.GetTriggerEvent() == ETriggerEvent::Started;
 	// One press and one release per button per frame. The copy and the original of this button's action
 	// are both bound here, and one key that both contexts map -- an action that lets its key through to
@@ -438,7 +442,7 @@ void ADreamEnhancedInputEventSystemActor::OnTriggerMiddle(const FInputActionInst
 void ADreamEnhancedInputEventSystemActor::OnMouseWheelAction(const FInputActionValue& Value)
 {
 	const float AxisValue = Value.Get<float>();
-	if (FMath::IsNearlyZero(AxisValue))
+	if (FMath::IsNearlyZero(AxisValue) || IsStandingDownForSlate())
 	{
 		return;
 	}

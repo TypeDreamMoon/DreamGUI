@@ -43,6 +43,11 @@ struct FInputActionInstance;
  * button's press (or release, or the wheel's notch in that direction) is forwarded once. Code
  * elsewhere that queries or removes the original context itself no longer finds it on the player,
  * which has this actor's copy instead; GetOriginalAction answers which original a copy stands for.
+ *
+ * Superseded by the Slate input source (UDreamGUISettings::bUseSlateInputSource), which hears every
+ * pointer, key and stick before the viewport and decides the pause per event: no copies of the
+ * actions and no context of the UI's own. This actor and its copies go away together in a later
+ * version; it stands down while the Slate source is on.
  */
 UCLASS(ClassGroup = DreamGUI)
 class DREAMGUIINPUT_API ADreamEnhancedInputEventSystemActor : public ADreamStandaloneInputEventSystemActor
