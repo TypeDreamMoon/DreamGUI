@@ -452,12 +452,13 @@ void UDreamWidget::PostEditUndo()
 	// Re-register if unregistered (e.g., undo of a delete operation via DeleteForUndo).
 	// Lifecycle is not a UPROPERTY so it is not saved/restored by the undo system;
 	// after soft-delete it remains unregistered, so we need to call OnRegister() explicitly.
-	// Only for a widget undo keeps -- an authored one, in an asset or in a level. A tree made while a
-	// world runs -- a presenter's, the designer preview's, a screen's -- belongs to the host that built
-	// it, and whether it comes back is that host's call: registering it from here brought back trees
-	// their hosts had destroyed.
+	// Only for a widget undo keeps, in a world -- one authored in a level. A tree made while a world
+	// runs -- a presenter's, the designer preview's, a screen's -- belongs to the host that built it, and
+	// whether it comes back is that host's call: registering it from here brought back trees their hosts
+	// had destroyed. And the tree a widget class is authored in is a template no world holds: it was never
+	// registered, and registering it from here left a live tree in no world, which nothing takes down.
 	const bool bWasRegistered = HasRegistered();
-	if (!bWasRegistered && DreamUI::IsKeptByUndo(*this))
+	if (!bWasRegistered && DreamUI::IsKeptByUndo(*this) && GetWorld() != nullptr)
 	{
 		struct LOCAL
 		{
