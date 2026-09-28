@@ -389,9 +389,13 @@ void UDreamCanvas::ClearDrawCall()
 	// Out of the parent canvas's mesh first. A canvas clears its draw calls when it is about to draw
 	// some other way -- sorting itself, rendering to its own target -- and a mesh still hooked into the
 	// parent's as a child section goes on being drawn by the parent as well.
+	//
+	// The parent's mesh as it stands, not GetUIMesh(), which makes one when there is none: a child
+	// unregistering after its parent -- a tree coming down with its world -- made the parent a new mesh
+	// and registered it in a world already cleaned up, which the engine refuses and logs as an error.
 	if (IsValid(UIMesh) && ParentCanvas.IsValid())
 	{
-		UIMesh->ClearParentCanvasMeshComp(ParentCanvas->GetUIMesh());
+		UIMesh->ClearParentCanvasMeshComp(ParentCanvas->UIMesh.Get());
 	}
 	if (IsValid(UIMesh))
 	{
@@ -2503,10 +2507,11 @@ void UDreamCanvas::SetOverrideSorting(bool Value)
 	{
 		bOverrideSorting = Value;
 		// Sorted on its own now, or with its parent again: either way its mesh must not stay hooked
-		// into the parent's as a child section, or the parent draws it too, in the parent's order.
+		// into the parent's as a child section, or the parent draws it too, in the parent's order. The
+		// parent's mesh as it stands (see ClearDrawCall).
 		if (IsValid(UIMesh) && ParentCanvas.IsValid())
 		{
-			UIMesh->ClearParentCanvasMeshComp(ParentCanvas->GetUIMesh());
+			UIMesh->ClearParentCanvasMeshComp(ParentCanvas->UIMesh.Get());
 		}
 		if (CheckRootCanvas())
 		{
