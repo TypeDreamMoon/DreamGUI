@@ -338,6 +338,14 @@ void UDreamCanvas::OnRegister()
 }
 void UDreamCanvas::OnUnregister()
 {
+	// Whatever shows this canvas's target lets go of it first. A render-target surface's material holds it as
+	// a texture parameter; when the collector takes the target with this canvas -- a destroyed widget's parts
+	// go with it -- it nulls that parameter on the game thread only, and the material's render-thread copy
+	// goes on pointing at a freed texture until the next uniform-expression update reads it.
+	if (GetRenderTarget() != nullptr)
+	{
+		OnRenderTargetChanged.Broadcast(nullptr);
+	}
 	Super::OnUnregister();
 	if (auto DreamUIManager = UDreamUIManagerWorldSubsystem::GetInstance(GetWorld()))
 	{

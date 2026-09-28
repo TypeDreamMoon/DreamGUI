@@ -87,6 +87,10 @@ private:
 	TWeakObjectPtr<class UDreamTweener> CheckRenderTargetTickTweener;
 	void CheckRenderTargetTick();
 
+	/** Hear InCanvas's render target change, so the material shows the target the canvas has -- and none once it has none. */
+	void ListenToCanvas(UDreamCanvas* InCanvas)const;
+	void HandleCanvasRenderTargetChanged(class UTextureRenderTarget2D* InTarget);
+
 	void UpdateLocalBounds();
 	void UpdateCollision();
 	void UpdateMeshData();

@@ -1065,14 +1065,51 @@ UDreamCanvas* UDreamUIRenderTargetGeometrySource::GetCanvas()const
 		return nullptr;
 	}
 	TargetCanvasObject = Canvas;
+	ListenToCanvas(Canvas);
 	return Canvas;
+}
+
+void UDreamUIRenderTargetGeometrySource::ListenToCanvas(UDreamCanvas* InCanvas)const
+{
+	if (InCanvas == nullptr)
+	{
+		return;
+	}
+	// From GetCanvas too, which is const and caches what it found; the binding changes nothing a caller sees.
+	UDreamUIRenderTargetGeometrySource* MutableThis = const_cast<UDreamUIRenderTargetGeometrySource*>(this);
+	InCanvas->GetRenderTargetChangedEvent().RemoveAll(MutableThis);
+	InCanvas->GetRenderTargetChangedEvent().AddUObject(MutableThis, &UDreamUIRenderTargetGeometrySource::HandleCanvasRenderTargetChanged);
+}
+
+void UDreamUIRenderTargetGeometrySource::HandleCanvasRenderTargetChanged(UTextureRenderTarget2D* InTarget)
+{
+	// Straight into the material rather than through GetRenderTarget, which a canvas that is going still
+	// answers with the target it is letting go of. Cleared here, the parameter reaches the render thread
+	// before the collector can take the texture.
+	if (MaterialInstance != nullptr)
+	{
+		MaterialInstance->SetTextureParameterValue(PARAMETER_NAME_MAINTEXTURE, InTarget);
+	}
+	if (InTarget != nullptr)
+	{
+		// A new target may be a new size: the quad, its bounds and its collision follow it.
+		UpdateMeshData();
+		UpdateLocalBounds();
+		UpdateCollision();
+		MarkRenderStateDirty();
+	}
 }
 
 void UDreamUIRenderTargetGeometrySource::SetCanvas(UDreamCanvas* Value)
 {
 	if (TargetCanvasObject.Get() != Value)
 	{
+		if (UDreamCanvas* Previous = TargetCanvasObject.Get())
+		{
+			Previous->GetRenderTargetChangedEvent().RemoveAll(this);
+		}
 		TargetCanvasObject = Value;
+		ListenToCanvas(Value);
 		BeginCheckRenderTarget();
 
 		UpdateMeshData();
