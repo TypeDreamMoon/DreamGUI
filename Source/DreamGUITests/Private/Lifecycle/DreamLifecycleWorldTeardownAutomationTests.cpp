@@ -17,7 +17,7 @@
 #include "DreamUIBPLibrary.h"
 #include "Engine/World.h"
 #include "Lifecycle/DreamLifecycleFixtures.h"
-#include "Misc/OutputDevice.h"
+#include "Lifecycle/DreamLifecycleProbe.h"
 #include "RenderingThread.h"
 #include "UObject/UObjectIterator.h"
 
@@ -77,36 +77,6 @@ namespace DreamLifecycleWorldTeardownTestLocal
 		Counts.DataTextures = CountLive<UDreamUIDataAsTexture>();
 		return Counts;
 	}
-
-	/** Every log line naming a tree the collector reached before its owner took it down. */
-	struct FLeakLogWatch : public FOutputDevice
-	{
-		FCriticalSection Lock;
-		TArray<FString> Hits;
-
-		FLeakLogWatch() { GLog->AddOutputDevice(this); }
-		virtual ~FLeakLogWatch() override { GLog->RemoveOutputDevice(this); }
-
-		virtual void Serialize(const TCHAR* InText, ELogVerbosity::Type InVerbosity, const FName& InCategory) override
-		{
-			static const TCHAR* const Patterns[] = {
-				TEXT("was not destroyed by its owner"),
-				TEXT("reached the collector still registered"),
-				TEXT("outlived its host"),
-				TEXT("collected with its widget tree still loaded"),
-			};
-			for (const TCHAR* Pattern : Patterns)
-			{
-				if (FCString::Stristr(InText, Pattern) != nullptr)
-				{
-					FScopeLock Guard(&Lock);
-					Hits.Add(InText);
-					return;
-				}
-			}
-		}
-		virtual bool CanBeUsedOnAnyThread() const override { return true; }
-	};
 
 	void Settle(bool bInFlush)
 	{
@@ -181,9 +151,7 @@ namespace DreamLifecycleWorldTeardownTestLocal
 		const FCounts After = CountLiveObjects();
 		InTest.TestTrue(FString::Printf(TEXT("Everything the worlds held is gone: before %s, after %s"), *Baseline.ToString(), *After.ToString()),
 			After == Baseline);
-		GLog->Flush();
-		FScopeLock Guard(&Watch.Lock);
-		InTest.TestEqual(TEXT("and none of it reached the collector before the world's teardown took it down"), JoinLines(Watch.Hits), FString(TEXT("none")));
+		InTest.TestEqual(TEXT("and none of it reached the collector before the world's teardown took it down"), Watch.Describe(), FString(TEXT("none")));
 		return true;
 	}
 }

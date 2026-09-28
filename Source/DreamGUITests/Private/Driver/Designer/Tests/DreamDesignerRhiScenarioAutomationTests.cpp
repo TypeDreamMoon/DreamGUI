@@ -380,6 +380,42 @@ bool FDreamDesignerRhiCompileBetweenDragsTest::RunTest(const FString&)
 }
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamDesignerRhiHundredCompilesTest,
+	"DreamGUI.Designer.RHI.AHundredDropsEachCompiledKeepRendering",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter | EAutomationTestFlags::NonNullRHI)
+
+bool FDreamDesignerRhiHundredCompilesTest::RunTest(const FString&)
+{
+	using namespace DreamDesignerRhiScenarioLocal;
+
+	LogRenderGraphSettings(*this);
+	const FScenarioRef Scenario = BeginScenario(*this, TEXT("DesignerRhiHundredCompiles"));
+	EnqueueDrawnFrames({ Scenario }, 2);
+	// The designer's own loop -- edit, compile, look -- a hundred times, each drawn. Every compile takes the
+	// preview down before the reinstancer can reach it and builds it again the tick after, so the renderer
+	// is handed a tree it has not seen twice a cycle, and every compile of the toolkit's collects garbage.
+	for (int32 Cycle = 0; Cycle < 100; ++Cycle)
+	{
+		EnqueueAction(Scenario, [Scenario]()
+		{
+			DropButton(Scenario, RandomCanvasPixel(Scenario));
+			if (Scenario->Driver.IsValid())
+			{
+				Scenario->Driver->Compile();
+			}
+		});
+		EnqueueDrawnFrames({ Scenario }, 2);
+	}
+	EnqueueCheck([this, Scenario]()
+	{
+		CheckStillStanding(*this, Scenario, 100, TEXT("After a hundred drops, each compiled"));
+		CheckFramesDrawn(*this, Scenario);
+	});
+	EnqueueTeardown({ Scenario });
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamDesignerRhiUndoRedoStormTest,
 	"DreamGUI.Designer.RHI.UndoRedoStormWhileRendering",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter | EAutomationTestFlags::NonNullRHI)

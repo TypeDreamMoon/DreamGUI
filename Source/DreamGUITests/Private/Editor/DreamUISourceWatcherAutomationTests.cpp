@@ -11,6 +11,9 @@
 #include "Core/Components/DreamWidget.h"
 #include "Designer/DreamUITextAuthoringGate.h"
 #include "Text/DreamUISourceWatcher.h"
+#include "Text/DreamUIDocument.h"
+#include "Editor.h"
+#include "DreamGUIEditorSubsystem.h"
 #include "Text/DreamUITextWriteBack.h"
 
 #include "HAL/FileManager.h"
@@ -268,6 +271,82 @@ bool FDreamUIWatcherDeletedSourceIsReportedTest::RunTest(const FString&)
 	// Nothing was rebuilt, because nothing could be: the hierarchy the class last compiled is still
 	// there. The point of the pass is that the author has been told, not that anything changed.
 	TestNotNull(TEXT("the class keeps the tree it last built"), Fixture.FindTemplate(TEXT("Title")));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamUIWatcherWaitsForAnEditInProgressTest,
+	"DreamGUI.Text.ASaveDuringAnEditInProgressWaitsForTheEditToEnd",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * A save that lands while the author is in the middle of something -- dragging a widget in the designer's
+ * hierarchy, dragging a value in a details panel -- would recompile the class under it: the compile rebuilds
+ * the preview the drag holds widgets of, and an open transaction would take the compile's changes into the
+ * edit it is recording, for the next undo to take back. The watcher waits both out, and compiles once the
+ * edit is over. Driven through a transaction, because a drag in flight is Slate's to report and a test cannot
+ * hold one open; the watcher asks the one question for both.
+ */
+bool FDreamUIWatcherWaitsForAnEditInProgressTest::RunTest(const FString&)
+{
+	using namespace DreamUISourceWatcherTestLocal;
+
+	FScopedDuiFile File(TEXT("WatcherWaitsForEdit.dui"));
+	if (!TestTrue(TEXT("the .dui was written"), File.WriteWith(TEXT("Title"))))
+	{
+		return false;
+	}
+	FScopedTextBlueprint Fixture(TEXT("WatcherWaitsForEdit"));
+	if (!TestNotNull(TEXT("the Blueprint was created"), Fixture.Blueprint)
+		|| !TestTrue(TEXT("and points at the file"),
+			DreamUITextAuthoring::SetAuthoredSourcePath(Fixture.Blueprint, File.FilePath))
+		|| !TestNotNull(TEXT("which built the file's hierarchy"), Fixture.FindTemplate(TEXT("Title"))))
+	{
+		return false;
+	}
+	if (!TestTrue(TEXT("the file was rewritten"), File.WriteWith(TEXT("Renamed"))))
+	{
+		return false;
+	}
+
+	GEditor->BeginTransaction(FText::FromString(TEXT("An edit in progress")));
+	FDreamUISourceWatcher::QueueFile(File.FilePath);
+	FDreamUISourceWatcher::FlushPending();
+	TestNotNull(TEXT("while the edit is open, the class is left as it was"), Fixture.FindTemplate(TEXT("Title")));
+	TestNull(TEXT("and the new text is not built yet"), Fixture.FindTemplate(TEXT("Renamed")));
+	GEditor->EndTransaction();
+
+	FDreamUISourceWatcher::FlushPending();
+	TestNotNull(TEXT("once it is over, the queued save rebuilds the class"), Fixture.FindTemplate(TEXT("Renamed")));
+	TestNull(TEXT("from the text as it is now"), Fixture.FindTemplate(TEXT("Title")));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamUIWatcherBelongsToTheSessionTest,
+	"DreamGUI.Text.TheWatchersQueueBelongsToTheEditorSession",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * The watcher's queue, its watches and its dependency table are the editor session's, held by the editor's
+ * DreamGUI subsystem from the session's start to its end, not globals that outlive it.
+ */
+bool FDreamUIWatcherBelongsToTheSessionTest::RunTest(const FString&)
+{
+	UDreamGUIEditorSubsystem* EditorSubsystem = UDreamGUIEditorSubsystem::Get();
+	if (!TestNotNull(TEXT("the editor's DreamGUI subsystem exists"), EditorSubsystem))
+	{
+		return false;
+	}
+	FDreamUISourceWatcherState& State = EditorSubsystem->GetSourceWatcher();
+	TestTrue(TEXT("the session's watcher is draining its queue"), State.TickerHandle.IsValid());
+
+	const FString Missing = FDreamUIDocumentRegistry::NormalizePath(FPaths::ConvertRelativePathToFull(
+		FPaths::Combine(FPaths::ProjectSavedDir(), TEXT("DreamGUITests"), TEXT("WatcherSessionNeverWritten.dui"))));
+	FDreamUISourceWatcher::QueueFile(Missing);
+	TestTrue(TEXT("a queued file waits in the session's queue"), State.PendingFiles.Contains(Missing));
+	FDreamUISourceWatcher::FlushPending();
+	TestFalse(TEXT("and a flush drains it"), State.PendingFiles.Contains(Missing));
 	return true;
 }
 

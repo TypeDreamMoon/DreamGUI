@@ -13,9 +13,12 @@
 #include "Engine/World.h"
 #include "GameFramework/Actor.h"
 #include "Misc/AutomationTest.h"
+#include "Misc/ScopeLock.h"
 #include "UObject/Package.h"
 #include "UObject/UObjectHash.h"
 #include "UObject/UObjectIterator.h"
+
+DEFINE_LOG_CATEGORY_STATIC(LogDreamLifecycleProbe, Log, All);
 
 namespace DreamTests::Lifecycle
 {
@@ -234,7 +237,58 @@ namespace DreamTests::Lifecycle
 				}
 			}
 		}
+		// A registered tree in no world has no manager to leak into and no teardown to take it down: the
+		// collector finds it still registered tests later and says so inside whatever test is running then.
+		// Named here, after the test that left it -- a warning, since it breaks nothing, but the collector's
+		// line would otherwise be pinned on a bystander.
+		for (TObjectIterator<UDreamWidget> It(RF_ClassDefaultObject | RF_ArchetypeObject, true, EInternalObjectFlags::Garbage); It; ++It)
+		{
+			UDreamWidget* Widget = *It;
+			if (Widget->HasRegistered() && Widget->GetParent() == nullptr && Widget->GetWorld() == nullptr
+				&& !Reported.Contains(FObjectKey(Widget)))
+			{
+				Reported.Add(FObjectKey(Widget));
+				UE_LOG(LogDreamLifecycleProbe, Warning, TEXT("After %s: a registered tree in no world that nothing destroyed, %s."),
+					*InTest->GetBeautifiedTestName(), *Widget->GetFullName());
+			}
+		}
 		ensureAlwaysMsgf(Broken.Num() == 0, TEXT("After %s: %s."), *InTest->GetBeautifiedTestName(), *FString::Join(Broken, TEXT("; ")));
+	}
+
+	FLeakLogWatch::FLeakLogWatch()
+	{
+		GLog->AddOutputDevice(this);
+	}
+
+	FLeakLogWatch::~FLeakLogWatch()
+	{
+		GLog->RemoveOutputDevice(this);
+	}
+
+	void FLeakLogWatch::Serialize(const TCHAR* InText, ELogVerbosity::Type InVerbosity, const FName& InCategory)
+	{
+		static const TCHAR* const Patterns[] = {
+			TEXT("was not destroyed by its owner"),
+			TEXT("reached the collector still registered"),
+			TEXT("outlived its host"),
+			TEXT("collected with its widget tree still loaded"),
+		};
+		for (const TCHAR* Pattern : Patterns)
+		{
+			if (FCString::Stristr(InText, Pattern) != nullptr)
+			{
+				FScopeLock Guard(&Lock);
+				Hits.Add(InText);
+				return;
+			}
+		}
+	}
+
+	FString FLeakLogWatch::Describe()
+	{
+		GLog->Flush();
+		FScopeLock Guard(&Lock);
+		return Hits.Num() > 0 ? FString::Join(Hits, TEXT("; ")) : FString(TEXT("none"));
 	}
 }
 

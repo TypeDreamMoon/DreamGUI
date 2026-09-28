@@ -10,6 +10,7 @@
 #include "Designer/DreamWidgetBlueprintEditor.h"
 #include "Designer/DreamWidgetTreeEditing.h"
 #include "Designer/DreamWidgetPreviewHost.h"
+#include "Designer/DreamWidgetEditorHierarchyViewItem.h"
 #include "Designer/SDreamWidgetPalette.h"//FDreamUIPaletteDragDropOp, the object a palette drag carries
 #include "DreamUIControlRegistry.h"
 #include "Preview/DreamWidgetDesignerScene.h"
@@ -2337,6 +2338,120 @@ bool FDreamDesignerDropIntoANamedHoleTest::RunTest(const FString&)
 	return true;
 }
 
+
+/*
+ * Edit, compile, look -- the designer's own loop, a hundred times over.
+ *
+ * Every compile takes the preview down before the reinstancer can reach it and builds it again after, and
+ * every edit rebuilds it from the asset; one compile in ten also collects garbage, as the toolbar's Compile
+ * does. What has to hold at the end is what an author would see: the designer still up, the asset holding
+ * every widget added, a preview of each of them, and nothing left waiting to be built.
+ */
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamDesignerHundredCompilesTest,
+	"DreamGUI.Designer.AHundredEditsEachCompiledAndPreviewedLeaveEveryWidgetShowing",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamDesignerHundredCompilesTest::RunTest(const FString&)
+{
+	using namespace DreamDesignerEditingTestLocal;
+
+	FScopedDesigner Scoped(TEXT("DesignerHundredCompiles"));
+	UDreamGUIEditorSubsystem* EditorSubsystem = UDreamGUIEditorSubsystem::Get();
+	if (!TestNotNull(TEXT("The designer opened"), Scoped.Designer) || Scoped.PreviewRoot() == nullptr
+		|| !TestNotNull(TEXT("The editor's DreamGUI subsystem exists"), EditorSubsystem))
+	{
+		return false;
+	}
+	const int32 CountBefore = Scoped.TemplateCount();
+	constexpr int32 Cycles = 100;
+	for (int32 Cycle = 0; Cycle < Cycles; ++Cycle)
+	{
+		UDreamWidget* PreviewRoot = Scoped.PreviewRoot();
+		if (PreviewRoot == nullptr)
+		{
+			AddError(FString::Printf(TEXT("The preview was gone at the start of cycle %d"), Cycle));
+			return false;
+		}
+		FDreamUIEditorTools::CreateWidgetAndReturn([PreviewRoot]() { return PreviewRoot; },
+			FString::Printf(TEXT("Cycle%03d"), Cycle), nullptr, nullptr);
+		FKismetEditorUtilities::CompileBlueprint(Scoped.Blueprint,
+			Cycle % 10 == 9 ? EBlueprintCompileOptions::None : EBlueprintCompileOptions::SkipGarbageCollection);
+		if (EditorSubsystem->IsRecompiling())
+		{
+			AddError(FString::Printf(TEXT("The compile of cycle %d never announced its end"), Cycle));
+			return false;
+		}
+		// The tick after the compile, then the toolkit's own rebuild.
+		EditorSubsystem->RebuildReleasedTrees();
+		Scoped.Rebuild();
+	}
+	TestFalse(TEXT("Nothing is left waiting to be built"), EditorSubsystem->HasPendingRebuild());
+	TestEqual(TEXT("The asset holds every widget added"), Scoped.TemplateCount(), CountBefore + Cycles);
+	UDreamWidget* PreviewRoot = Scoped.PreviewRoot();
+	if (!TestNotNull(TEXT("The designer still shows a preview"), PreviewRoot))
+	{
+		return false;
+	}
+	TestTrue(TEXT("registered"), PreviewRoot->HasRegistered());
+	int32 Shown = 0;
+	for (int32 Cycle = 0; Cycle < Cycles; ++Cycle)
+	{
+		const UDreamWidget* Template = Scoped.FindTemplate(FString::Printf(TEXT("Cycle%03d"), Cycle));
+		Shown += Template != nullptr && Scoped.Designer->GetPreviewHost()->FindPreviewForTemplate(Template) != nullptr ? 1 : 0;
+	}
+	TestEqual(TEXT("and every widget added has a preview"), Shown, Cycles);
+	return true;
+}
+
+/*
+ * A drag in the hierarchy lasts as long as the mouse is held, and the preview it drags from can be rebuilt
+ * in the meantime -- a compile, a .dui saved from another window -- which destroys every widget it named. It
+ * named them by raw pointer, and the drop walked into freed memory. It holds them weakly now: after the
+ * rebuild the drag names nothing, and ending it cancels the transaction it opened and touches nothing else.
+ */
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamDesignerDragOutlivesItsPreviewTest,
+	"DreamGUI.Designer.AHierarchyDragOutlivesThePreviewItWasTakenFrom",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamDesignerDragOutlivesItsPreviewTest::RunTest(const FString&)
+{
+	using namespace DreamDesignerEditingTestLocal;
+
+	FScopedDesigner Scoped(TEXT("DesignerDragOutlivesPreview"));
+	if (!TestNotNull(TEXT("The designer opened"), Scoped.Designer) || Scoped.PreviewRoot() == nullptr)
+	{
+		return false;
+	}
+	UDreamWidget* PreviewRoot = Scoped.PreviewRoot();
+	FDreamUIEditorTools::CreateWidgetAndReturn([PreviewRoot]() { return PreviewRoot; }, TEXT("Dragged"), nullptr, nullptr);
+	Scoped.Rebuild();
+	UDreamWidget* Template = Scoped.FindTemplate(TEXT("Dragged"));
+	UDreamWidget* Dragged = Template != nullptr ? Scoped.Designer->GetPreviewHost()->FindPreviewForTemplate(Template) : nullptr;
+	if (!TestNotNull(TEXT("The widget to drag has a preview"), Dragged))
+	{
+		return false;
+	}
+	const int32 CountBefore = Scoped.TemplateCount();
+
+	TSharedPtr<FHierarchyDreamWidgetDragDropOp> Operation = FHierarchyDreamWidgetDragDropOp::New({ Dragged });
+	TestTrue(TEXT("The drag names the widget"), Operation->DraggedWidgets.Num() == 1 && Operation->DraggedWidgets[0].Widget.Get() == Dragged);
+
+	// The preview goes and comes back under the held mouse.
+	Scoped.Rebuild();
+	TestFalse(TEXT("The dragged widget went with the old preview"), IsValid(Dragged));
+	TestNull(TEXT("and the drag no longer names it"), Operation->DraggedWidgets[0].Widget.Get());
+
+	// Nothing handled the drop: Slate tells the operation so, and it lets its transaction go.
+	Operation->OnDrop(/*bDropWasHandled*/ false, FPointerEvent());
+	Operation.Reset();
+	TestFalse(TEXT("No transaction is left open"), GEditor->IsTransactionActive());
+	TestEqual(TEXT("and the asset is as it was"), Scoped.TemplateCount(), CountBefore);
+	TestNotNull(TEXT("with a preview of the widget that was being dragged"),
+		Scoped.Designer->GetPreviewHost()->FindPreviewForTemplate(Scoped.FindTemplate(TEXT("Dragged"))));
+	return true;
+}
 
 
 #endif

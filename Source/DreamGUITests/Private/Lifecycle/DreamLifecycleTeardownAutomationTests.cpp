@@ -84,9 +84,9 @@ bool FDreamLifecycleDestroyTakesPartsDownTest::RunTest(const FString& Parameters
  * A level that is gone stays gone.
  *
  * A torn-down world waits in memory for the collector with its components unregistered, and it still
- * passes IsValid: UWorld::DestroyWorld does not mark it garbage. Every Blueprint compile ends with the
- * editor reloading the trees of the panels placed in editor levels, so that they show the recompiled
- * class -- and that used to take in the panels of levels already torn down. Each got a new tree,
+ * passes IsValid: UWorld::DestroyWorld does not mark it garbage. A compile of a widget class ends with
+ * the trees built from it being built again, so that they show the recompiled class -- and the reload
+ * that used to do this took in the panels of levels already torn down. Each got a new tree,
  * registered in a world with no manager left in it, which nothing would ever tear down; the collector
  * reported it inside whatever test or edit collected next.
  */

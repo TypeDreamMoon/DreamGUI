@@ -3,6 +3,8 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "HAL/CriticalSection.h"
+#include "Misc/OutputDevice.h"
 #include "UObject/ObjectKey.h"
 
 class AActor;
@@ -47,6 +49,24 @@ namespace DreamTests::Lifecycle
 	 */
 	UWorld* DuplicateWorldForPlayInEditor(UWorld* InWorld);
 	void DestroyDuplicatedWorld(UWorld* InDuplicate);
+
+	/**
+	 * Every log line, for as long as the watch exists, that names a tree the collector reached before its
+	 * owner took it down, or a host collected still holding one. A scenario holds one across its rounds and
+	 * expects it to have heard nothing.
+	 */
+	struct FLeakLogWatch : public FOutputDevice
+	{
+		FCriticalSection Lock;
+		TArray<FString> Hits;
+
+		FLeakLogWatch();
+		virtual ~FLeakLogWatch() override;
+		virtual void Serialize(const TCHAR* InText, ELogVerbosity::Type InVerbosity, const FName& InCategory) override;
+		virtual bool CanBeUsedOnAnyThread() const override { return true; }
+		/** What was heard, joined for a test message, or "none". Flushes the log first. */
+		FString Describe();
+	};
 
 	/**
 	 * The probes that must hold between any two tests, checked after every DreamGUI test for as long as the
