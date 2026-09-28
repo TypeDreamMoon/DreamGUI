@@ -24,11 +24,14 @@
 #include "Engine/World.h"
 #include "Extensions/DreamUIRenderTargetGeometrySource.h"
 #include "Extensions/Effects/DreamBackgroundBlur.h"
+#include "HAL/FileManager.h"
 #include "Kismet2/KismetEditorUtilities.h"
 #include "Lifecycle/DreamLifecycleProbe.h"
 #include "Materials/MaterialInstanceDynamic.h"
 #include "Misc/App.h"
+#include "Misc/PackageName.h"
 #include "UObject/Package.h"
+#include "UObject/SavePackage.h"
 
 namespace DreamTests::Lifecycle
 {
@@ -66,10 +69,14 @@ namespace DreamTests::Lifecycle
 		World->DestroyWorld(false);
 	}
 
-	FScopedPanelClass::FScopedPanelClass(const TCHAR* InName)
+	FScopedPanelClass::FScopedPanelClass(const TCHAR* InName, bool bInSavedToDisk)
 	{
 		Package = CreatePackage(*FString::Printf(TEXT("/Temp/DreamGUITests/%s"), InName));
 		Package->AddToRoot();
+		// A package made here reads as fully loaded only while no file has its name (see the on-disk fixture);
+		// once one is saved below, anything loaded that imports the class would load it again, over the one
+		// in memory.
+		Package->MarkAsFullyLoaded();
 		Blueprint = Cast<UDreamWidgetBlueprint>(FKismetEditorUtilities::CreateBlueprint(
 			UDreamUserWidget::StaticClass(), Package, FName(InName), BPTYPE_Normal,
 			UDreamWidgetBlueprint::StaticClass(), UDreamWidgetGeneratedClass::StaticClass()));
@@ -79,6 +86,20 @@ namespace DreamTests::Lifecycle
 			Root->SetDisplayName(TEXT("Panel"));
 			Root->CreateNewVisual<UDreamRectBlock>();
 			FKismetEditorUtilities::CompileBlueprint(Blueprint, EBlueprintCompileOptions::SkipGarbageCollection);
+			if (bInSavedToDisk)
+			{
+				FileName = FPackageName::LongPackageNameToFilename(Package->GetName(), FPackageName::GetAssetPackageExtension());
+				FSavePackageArgs Args;
+				Args.TopLevelFlags = RF_Public | RF_Standalone;
+				Args.SaveFlags = SAVE_None;
+				// Not through GError, which in an unattended editor turns SavePackage's explanation into a crash.
+				Args.Error = GWarn;
+				Args.bSlowTask = false;
+				if (!UPackage::Save(Package, Blueprint, *FileName, Args).IsSuccessful())
+				{
+					UE_LOG(LogTemp, Warning, TEXT("[%s].%d The test class %s could not be saved to %s."), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *Package->GetName(), *FileName);
+				}
+			}
 		}
 	}
 
@@ -86,6 +107,12 @@ namespace DreamTests::Lifecycle
 	{
 		if (Package != nullptr)
 		{
+			if (!FileName.IsEmpty())
+			{
+				// A loader that read the file still holds it open.
+				ResetLoaders(Package);
+				IFileManager::Get().Delete(*FileName, /*RequireExists*/ false, /*EvenReadOnly*/ true, /*Quiet*/ true);
+			}
 			Package->RemoveFromRoot();
 		}
 	}

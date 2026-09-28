@@ -35,13 +35,16 @@ namespace DreamTests::Lifecycle
 	/**
 	 * A widget class whose root draws a rect block, compiled into /Temp/DreamGUITests/<InName>. The rect
 	 * block draws with a material, so the canvas that draws it makes material instances that read its
-	 * data textures.
+	 * data textures. With bInSavedToDisk the class is written to its file as well, as a class a saved level
+	 * refers to is -- a level read back by level streaming finds only what is on disk -- and the file is
+	 * removed again with the class.
 	 */
 	struct FScopedPanelClass
 	{
 		UPackage* Package = nullptr;
 		UDreamWidgetBlueprint* Blueprint = nullptr;
-		explicit FScopedPanelClass(const TCHAR* InName);
+		FString FileName;
+		explicit FScopedPanelClass(const TCHAR* InName, bool bInSavedToDisk = false);
 		~FScopedPanelClass();
 		UE_NONCOPYABLE(FScopedPanelClass);
 		UClass* GetClass() const;

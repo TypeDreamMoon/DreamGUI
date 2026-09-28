@@ -79,8 +79,8 @@ namespace DreamLifecycleStreamingTestLocal
 	}
 
 	/**
-	 * The level a designer made to stream, saved to disk: a panel drawn by DreamUI's renderer and one drawn by the
-	 * engine's. Made as the level editor's New Level makes one -- a world of its own package, inactive
+	 * The level a designer made to stream, saved to disk -- beside the class its panels show, which is on disk too:
+	 * a panel drawn by DreamUI's renderer and one drawn by the engine's. Made as the level editor's New Level makes one -- a world of its own package, inactive
 	 * (UWorldFactory) -- so nothing in it builds: a host builds its tree only in a world that plays or is edited.
 	 */
 	bool SaveStreamedLevel(DreamOnDiskFixture::FScopedOnDiskPackage& InMap, UClass* InPanelClass, FString& OutError)
@@ -181,7 +181,7 @@ namespace DreamLifecycleStreamingTestLocal
 
 	bool RunEditorRounds(FAutomationTestBase& InTest, bool bInFlush)
 	{
-		FScopedPanelClass Panel(bInFlush ? TEXT("StreamedPanelRhi") : TEXT("StreamedPanel"));
+		FScopedPanelClass Panel(bInFlush ? TEXT("StreamedPanelRhi") : TEXT("StreamedPanel"), /*bInSavedToDisk*/ true);
 		DreamOnDiskFixture::FScopedOnDiskPackage Map(bInFlush ? TEXT("StreamedPanelsRhi") : TEXT("StreamedPanels"), /*bInIsMap*/ true);
 		if (!InTest.TestNotNull(TEXT("the panel class compiled"), Panel.GetClass()))
 		{
@@ -289,7 +289,7 @@ namespace DreamLifecycleStreamingTestLocal
 
 	bool RunPlayRounds(FAutomationTestBase& InTest, bool bInFlush)
 	{
-		const TSharedRef<FScopedPanelClass> Panel = MakeShared<FScopedPanelClass>(bInFlush ? TEXT("StreamedPanelPieRhi") : TEXT("StreamedPanelPie"));
+		const TSharedRef<FScopedPanelClass> Panel = MakeShared<FScopedPanelClass>(bInFlush ? TEXT("StreamedPanelPieRhi") : TEXT("StreamedPanelPie"), /*bInSavedToDisk*/ true);
 		const TSharedRef<DreamOnDiskFixture::FScopedOnDiskPackage> Map = MakeShared<DreamOnDiskFixture::FScopedOnDiskPackage>(
 			bInFlush ? TEXT("StreamedPanelsPieRhi") : TEXT("StreamedPanelsPie"), /*bInIsMap*/ true);
 		if (!InTest.TestNotNull(TEXT("the panel class compiled"), Panel->GetClass()))
