@@ -8,6 +8,7 @@
 // For the touch-scrolling gate: what the player's hands are on is the event system's answer, not
 // something the pointer event carries -- touch id zero and mouse id zero are the same number.
 #include "Event/DreamEventSystem.h"
+#include "Event/DreamUIInputTypes.h"
 
 namespace DreamScrollViewLocal
 {
@@ -102,8 +103,9 @@ void UUIScrollView::Awake()
 void UUIScrollView::Tick(float DeltaTime)
 {
     Super::Tick(DeltaTime);
+    // The UI clock: a list flung in a slowed-down game glides as it would at full speed.
     if (bCanUpdateAfterDrag)
-        UpdateAfterDrag(DeltaTime);
+        UpdateAfterDrag(DreamUIInputClock::GetUIDeltaSeconds(this, DeltaTime));
 }
 
 void UUIScrollView::OnUnregister()
@@ -512,7 +514,7 @@ void UUIScrollView::ReleaseRangeHelper()
 float UUIScrollView::GetSafeDeltaTime() const
 {
 	const UWorld* World = GetWorld();
-	return FMath::Max(World ? World->GetDeltaSeconds() : 0.0f, UE_SMALL_NUMBER);
+	return FMath::Max(DreamUIInputClock::GetUIDeltaSeconds(this, World ? World->GetDeltaSeconds() : 0.0f), UE_SMALL_NUMBER);
 }
 
 /**
