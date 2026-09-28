@@ -35,7 +35,7 @@ namespace DreamUIStyleSheetTestLocal
 	/** Scoped settings mutation: point the project at InSheet, put it back on destruction. */
 	struct FScopedProjectSheet
 	{
-		TSoftObjectPtr<UDreamUIStyleSheet> Saved;
+		TSoftObjectPtr<UDataAsset> Saved;
 
 		explicit FScopedProjectSheet(UDreamUIStyleSheet* InSheet)
 		{

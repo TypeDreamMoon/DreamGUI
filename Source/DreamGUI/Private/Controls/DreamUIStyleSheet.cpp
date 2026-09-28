@@ -13,9 +13,10 @@ const UDreamUIStyleSheet* UDreamUIStyleSheet::GetProjectSheet()
 	// Get() first: after the first resolve the object is alive and this is a map lookup. The
 	// LoadSynchronous is once, at the first control of a session, which is construction time --
 	// exactly where a style lookup is supposed to pay its cost.
-	if (const UDreamUIStyleSheet* Loaded = Settings->DefaultStyleSheet.Get())
+	if (const UDreamUIStyleSheet* Loaded = Cast<UDreamUIStyleSheet>(Settings->DefaultStyleSheet.Get()))
 	{
 		return Loaded;
 	}
-	return Settings->DefaultStyleSheet.LoadSynchronous();
+	// A setting that names some other data asset answers "no sheet", the same as an unset one.
+	return Cast<UDreamUIStyleSheet>(Settings->DefaultStyleSheet.LoadSynchronous());
 }

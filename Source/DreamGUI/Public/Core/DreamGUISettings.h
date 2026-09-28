@@ -96,9 +96,14 @@ public:
 	 * The project's control style sheet -- one asset where every native control's default look
 	 * lives. Unset is a supported state, not a missing one: controls then use their styles' own
 	 * C++ defaults, which are the built-in theme.
+	 *
+	 * Typed as the sheet's base class: the sheet is the control library's, and the core does not
+	 * name the control library's types. AllowedClasses keeps the picker to style sheets, and
+	 * UDreamUIStyleSheet::GetProjectSheet does the cast. The config value is the asset's path either
+	 * way, so a project's setting reads the same as before.
 	 */
-	UPROPERTY(config, EditAnywhere, Category = "Assets")
-	TSoftObjectPtr<class UDreamUIStyleSheet> DefaultStyleSheet;
+	UPROPERTY(config, EditAnywhere, Category = "Assets", meta = (AllowedClasses = "/Script/DreamGUI.DreamUIStyleSheet"))
+	TSoftObjectPtr<class UDataAsset> DefaultStyleSheet;
 
 
 	/**
