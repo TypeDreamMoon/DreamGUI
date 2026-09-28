@@ -12,11 +12,12 @@
 
 namespace DreamOnDiskFixture
 {
-	FScopedOnDiskPackage::FScopedOnDiskPackage(const TCHAR* InAssetName)
+	FScopedOnDiskPackage::FScopedOnDiskPackage(const TCHAR* InAssetName, bool bInIsMap)
 	{
 		AssetName = InAssetName;
 		PackageName = FString::Printf(TEXT("/Temp/DreamGUITests/%s"), InAssetName);
-		FileName = FPackageName::LongPackageNameToFilename(PackageName, FPackageName::GetAssetPackageExtension());
+		FileName = FPackageName::LongPackageNameToFilename(PackageName,
+			bInIsMap ? FPackageName::GetMapPackageExtension() : FPackageName::GetAssetPackageExtension());
 		Package = CreatePackage(*PackageName);
 		Package->AddToRoot();
 		// What every asset factory does after CreatePackage, and it is load-bearing rather than

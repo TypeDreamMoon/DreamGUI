@@ -33,8 +33,11 @@ namespace DreamOnDiskFixture
 {
 	struct FScopedOnDiskPackage
 	{
-		/** "/Temp/DreamGUITests/<InAssetName>" -- a real mount point, so it has a real filename. */
-		explicit FScopedOnDiskPackage(const TCHAR* InAssetName);
+		/**
+		 * "/Temp/DreamGUITests/<InAssetName>" -- a real mount point, so it has a real filename. A map (bInIsMap) is
+		 * written where the engine looks for one, a .umap.
+		 */
+		explicit FScopedOnDiskPackage(const TCHAR* InAssetName, bool bInIsMap = false);
 		/** Removes the file as well as the root reference; nothing is left behind on disk. */
 		~FScopedOnDiskPackage();
 
