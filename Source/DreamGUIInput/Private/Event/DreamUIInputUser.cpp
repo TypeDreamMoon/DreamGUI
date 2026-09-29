@@ -526,6 +526,11 @@ void UDreamUIInputUser::BroadcastInputEvent(UDreamBaseEventData* InEventData)
 	}
 }
 
+void UDreamUIInputUser::SetEventSystem(UDreamEventSystem* InEventSystem)
+{
+	EventSystem = InEventSystem;
+}
+
 void UDreamUIInputUser::AddEventSystemFacade(UDreamEventSystem* InEventSystem)
 {
 	if (InEventSystem != nullptr)
