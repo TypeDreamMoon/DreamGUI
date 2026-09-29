@@ -200,18 +200,21 @@ bool FDreamUIDrawCall::GeometryListsShareLayout(const TArray<TSharedPtr<const FD
 bool FDreamUIDrawCall::CanConsumeUIGeometryForBatchMesh(const FDreamUIGeometry& geo)const
 {
 	if (this->Type != EDreamUIDrawCallType::BatchMesh)return false;
-	if (this->Material != geo.Material)return false;
+	// Compared as the keys they are, never resolved: this runs on the batching thread, and == and != resolve both weak
+	// pointers whenever they differ, reading the object array while a collection may be under way on the game thread. Two
+	// pointers set to the same object that has gone are still the same key; one set to nothing is not.
+	if (!this->Material.HasSameIndexAndSerialNumber(geo.Material))return false;
 	//the blend state is chosen once for the whole draw-call, so elements that composite differently
 	//cannot share one however identical everything else is
 	if (this->BlendMode != geo.BlendMode)return false;
 	if (geo.bIsFont)
 	{
-		if (this->FontTexture != nullptr && this->FontTexture != geo.Texture)//draw-call also contains font but different of geo's
+		if (!this->FontTexture.IsExplicitlyNull() && !this->FontTexture.HasSameIndexAndSerialNumber(geo.Texture))//draw-call also contains font but different of geo's
 			return false;
 	}
 	else
 	{
-		if (this->Texture != nullptr && this->Texture != geo.Texture)//draw-call also contains non-font but difference of geo's
+		if (!this->Texture.IsExplicitlyNull() && !this->Texture.HasSameIndexAndSerialNumber(geo.Texture))//draw-call also contains non-font but difference of geo's
 			return false;
 	}
 	if (this->VerticesCount + geo.Vertices.Num() >= LEXUI_MAX_VERTEX_COUNT)return false;

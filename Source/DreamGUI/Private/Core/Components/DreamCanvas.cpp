@@ -1745,13 +1745,6 @@ void UDreamCanvas::BatchDrawCallAsync(const FVector2D& InCanvasLeftBottom, const
 		}
 	};
 
-	// Same gate as the renderer's dump: which geometry reaches assembly, with what material. Looked up once a batch --
-	// a console variable is found by name, which cost a lookup per element when it was done in the loop. The
-	// variable is a static in the renderer's translation unit, so the lookup can answer null (not yet constructed,
-	// or that unit compiled out), and this runs on the batching thread.
-	const IConsoleVariable* DumpMaterialDrawsCVar = IConsoleManager::Get().FindConsoleVariable(TEXT("dreamgui.DumpMaterialDraws"));
-	const bool bDumpMaterialDraws = DumpMaterialDrawsCVar != nullptr && DumpMaterialDrawsCVar->GetInt() != 0;
-
 	//for sorted ui items, iterate from head to tail, compare draw-call from tail to head
 	for (int i = 0; i < InRenderDataArray.Num(); i++)
 	{
@@ -1774,15 +1767,6 @@ void UDreamCanvas::BatchDrawCallAsync(const FVector2D& InCanvasLeftBottom, const
 					continue;
 				}
 				const FDreamUIGeometry& ItemGeo = *RenderData.BatchMeshGeometry;
-
-				if (bDumpMaterialDraws)
-				{
-					UE_LOG(DreamGUI, Display, TEXT("[DumpMaterialDraws][assemble] visual=%s verts=%d material=%s batching=%d"),
-						RenderData.BatchMeshVisualObject.IsValid() ? *RenderData.BatchMeshVisualObject->GetClass()->GetName() : TEXT("null"),
-						ItemGeo.Vertices.Num(),
-						ItemGeo.Material.IsValid() ? *ItemGeo.Material->GetName() : TEXT("none"),
-						ItemGeo.bSupportDrawcallBatching ? 1 : 0);
-				}
 
 				bool is2DUIItem = Is2DUITransform(ItemGeo.TransformRelativeToCanvas);
 				//a 3D element's 2D bounds do not describe where it ends up on screen, so only flat
@@ -2165,6 +2149,30 @@ void UDreamCanvas::UpdateDrawCallMesh()
 	SCOPE_CYCLE_COUNTER(STAT_UpdateDrawCallMesh);
 	TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_UpdateDrawCallMesh);
 	if (!IsValid(UIMesh))return;
+	// Same gate as the renderer's dump: which geometry reached assembly, with what material. Here on the game thread, where
+	// the names can be read: the batching thread must not resolve an object. The variable is a static in the renderer's
+	// translation unit, so the lookup can answer null (not yet constructed, or that unit compiled out).
+	const IConsoleVariable* DumpMaterialDrawsCVar = IConsoleManager::Get().FindConsoleVariable(TEXT("dreamgui.DumpMaterialDraws"));
+	if (DumpMaterialDrawsCVar != nullptr && DumpMaterialDrawsCVar->GetInt() != 0)
+	{
+		for (const FDreamUIDrawCall& DrawCall : CurrentDrawCallData.DrawCallArray)
+		{
+			for (int32 Index = 0; Index < DrawCall.BatchMeshGeometryArray.Num(); ++Index)
+			{
+				if (!DrawCall.BatchMeshGeometryArray[Index].IsValid())
+				{
+					continue;
+				}
+				const FDreamUIGeometry& ItemGeo = *DrawCall.BatchMeshGeometryArray[Index];
+				const UObject* Visual = DrawCall.BatchMeshVisualArray.IsValidIndex(Index) ? DrawCall.BatchMeshVisualArray[Index].Get() : nullptr;
+				UE_LOG(DreamGUI, Display, TEXT("[DumpMaterialDraws][assemble] visual=%s verts=%d material=%s batching=%d"),
+					Visual != nullptr ? *Visual->GetClass()->GetName() : TEXT("null"),
+					ItemGeo.Vertices.Num(),
+					ItemGeo.Material.IsValid() ? *ItemGeo.Material->GetName() : TEXT("none"),
+					ItemGeo.bSupportDrawcallBatching ? 1 : 0);
+			}
+		}
+	}
 	UIMesh->PoolAllRenderSection();
 	// Before any section is set up: every draw call that can take its old section back as it was claims it first.
 	UIMesh->ClaimPooledMeshSections(CurrentDrawCallData.DrawCallArray);
