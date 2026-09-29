@@ -75,4 +75,59 @@ public:
 
 	/** "(R=255,G=0,B=0,A=255)", for a failure message that has to name a colour. */
 	static FString Describe(const FColor& InColor);
+
+	/*
+	 * Whole pictures. A named pixel says whether one thing is where it should be; a picture says whether everything
+	 * else still is -- the rounding of a corner, the weight of a glyph, the falloff of a shadow -- which is what a
+	 * change to the renderer can break without moving any block. Each picture a test takes is written out, so a person
+	 * can look at what the renderer drew; the golden image beside the tests is that picture, looked at and kept.
+	 */
+
+	/** <Project>/Saved/DreamGUITests/Captures: every picture a test held up, as it saw it. */
+	static FString GetCaptureDirectory();
+	/** Source/DreamGUITests/Resources/Golden in the plugin: the pictures the tests are held to, kept with the code. */
+	static FString GetGoldenDirectory();
+
+	/** InPixels as <capture directory>/<InName>.png. The file written, or empty when it could not be. */
+	static FString SaveCapture(const TArray<FColor>& InPixels, FIntPoint InSize, const FString& InName);
+
+	/** A PNG file's pixels, top row first. */
+	static bool LoadPng(const FString& InFilePath, TArray<FColor>& OutPixels, FIntPoint& OutSize);
+
+	/** How two pictures differ. */
+	struct FDifference
+	{
+		bool bSizesDiffer = false;
+		/** Pixels further apart than the tolerance on at least one channel. */
+		int32 DifferingPixels = 0;
+		/** The largest distance on any channel of any pixel. */
+		int32 LargestChannelDelta = 0;
+		/** The first pixel past the tolerance, reading rows from the top, or (-1,-1). */
+		FIntPoint FirstDifferingPixel = FIntPoint(-1, -1);
+	};
+	static FDifference Compare(const TArray<FColor>& InActual, FIntPoint InActualSize,
+		const TArray<FColor>& InExpected, FIntPoint InExpectedSize, uint8 InTolerance);
+
+	/**
+	 * Hold a picture to its golden image, Golden/<InName>.png: no more than InAllowedFraction of its pixels may be
+	 * further than InTolerance from the golden's on any channel. The picture is written to the capture directory
+	 * whatever happens, and where the two differ, <InName>.diff.png beside it marks the pixels that did.
+	 *
+	 * A picture with no golden yet passes with a warning naming the file to look at: a golden is a picture someone
+	 * has judged right, and only a person can do that. -DreamGUIWriteGoldens on the command line writes every
+	 * picture over its golden instead, for when the renderer changed on purpose.
+	 */
+	static bool ExpectMatchesGolden(FAutomationTestBase& InTest, const TArray<FColor>& InPixels, FIntPoint InSize,
+		const FString& InName, uint8 InTolerance = 8, double InAllowedFraction = 0.002);
+
+	/** Two pictures of the same thing, drawn two ways, held to each other the way ExpectMatchesGolden holds one to its golden. */
+	static bool ExpectPicturesMatch(FAutomationTestBase& InTest, const TArray<FColor>& InLeft, FIntPoint InLeftSize,
+		const TArray<FColor>& InRight, FIntPoint InRightSize, const FString& InName, uint8 InTolerance, double InAllowedFraction);
+
+private:
+	/** InActual with every pixel past the tolerance in magenta over a dimmed copy of the rest, as <InName>.diff.png. */
+	static FString SaveDifferenceImage(const TArray<FColor>& InActual, FIntPoint InSize, const TArray<FColor>& InExpected, uint8 InTolerance, const FString& InName);
+	/** The difference in a sentence: how many pixels, the worst channel, and the first pixel as each picture has it. */
+	static FString DescribeDifference(const FDifference& InDifference, const TArray<FColor>& InActual, FIntPoint InActualSize,
+		const TArray<FColor>& InExpected, FIntPoint InExpectedSize, uint8 InTolerance, int32 InAllowed);
 };
