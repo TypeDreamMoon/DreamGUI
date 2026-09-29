@@ -36,7 +36,13 @@ public:
 	}
 	EDreamUIDrawCallType Type = EDreamUIDrawCallType::BatchMesh;
 
-	FDreamUIGeometry BatchMeshGeometry;
+	/**
+	 * The batch mesh's geometry as the batching is to see it: the visual's copy of its geometry, made again only when
+	 * the geometry changed since the last copy, and never written once made (UDreamVisualBatchMesh::
+	 * GetGeometryForBatching). The batching reads it on a worker thread and the draw call keeps it, so a canvas where
+	 * one widget moved copies that widget's geometry and hands every other one over as it was.
+	 */
+	TSharedPtr<const FDreamUIGeometry> BatchMeshGeometry;
 	TWeakObjectPtr<UDreamVisualBatchMesh> BatchMeshVisualObject;
 
 	TWeakObjectPtr<UDreamVisualPostProcess> PostProcessVisualObject;//post process object
@@ -90,9 +96,20 @@ public:
 	 * never by the draw-call's position.
 	 */
 	TSharedPtr<struct FDreamUIRenderSection> RenderSection;
+	/**
+	 * A pooled mesh section built from exactly this draw call's geometries, claimed for it before any section is set
+	 * up (UDreamUIMeshComponent::ClaimPooledMeshSections), so that setting up an earlier draw call cannot take it from
+	 * the pool first. Set up, it becomes RenderSection.
+	 */
+	TSharedPtr<struct FDreamUIRenderSection> ClaimedMeshSection;
 
 	TArray<TWeakObjectPtr<UDreamVisualBatchMesh>> BatchMeshVisualArray;
-	TArray<FDreamUIGeometry> BatchMeshGeometryArray;//BatchMesh's geometry collections belong to this draw-call, must be sorted on hierarchy-index
+	/**
+	 * The geometries this draw call was built from, in hierarchy order: the visuals' copies, shared and never written.
+	 * Two draw calls built from the same list hold the same vertices, which is how a mesh section built from one is
+	 * known to need nothing uploaded for the other (UDreamUIMeshComponent::SetupRenderSection).
+	 */
+	TArray<TSharedPtr<const FDreamUIGeometry>> BatchMeshGeometryArray;
 	TArray<FDreamUIMeshVertex> CombinedBatchMeshGeometryVertices;
 	TArray<FDreamUIMeshIndex> CombinedBatchMeshGeometryTriangles;
 	FBox CombinedBounds;

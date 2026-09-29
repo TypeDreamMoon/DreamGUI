@@ -8,6 +8,7 @@
 #include "DreamGUI/Public/MeshModifier/DreamMeshModifierBase.h"
 #include "Materials/MaterialInstanceDynamic.h"
 #include "Core/DreamUIDrawCall.h"
+#include "DreamUIRender/DreamUIRenderStats.h"
 #include "Core/Components/DreamWidget.h"
 #include "Event/DreamPointerEventData.h"
 
@@ -344,6 +345,22 @@ bool UDreamVisualBatchMesh::LineTraceUI(FDreamUIHitResult& OutHit, const FVector
 		return LineTraceUICustom(OutHit, Start, End);
 		break;
 	}
+}
+
+TSharedPtr<const FDreamUIGeometry> UDreamVisualBatchMesh::GetGeometryForBatching()
+{
+	if (!UIGeometry.IsValid())
+	{
+		return nullptr;
+	}
+	if (!GeometryForBatching.IsValid() || !UIGeometry->MatchesDataForPrepare(*GeometryForBatching))
+	{
+		const TSharedRef<FDreamUIGeometry> Copy = MakeShared<FDreamUIGeometry>();
+		Copy->CopyDataForPrepare(*UIGeometry);
+		GeometryForBatching = Copy;
+		DreamUIRenderStats::AddCount(DreamUIRenderStats::ECounter::GeometryCopies, 1);
+	}
+	return GeometryForBatching;
 }
 
 bool UDreamVisualBatchMesh::GetAnythingDirty()const

@@ -21,7 +21,7 @@ void FDreamUIDrawCall::CopyBatchMeshGeometry()
 	int PrevVertCount = 0;
 	for (int geoIndex = 0; geoIndex < BatchMeshGeometryArray.Num(); geoIndex++)
 	{
-		const auto& BuiltGeo = BatchMeshGeometryArray[geoIndex];
+		const FDreamUIGeometry& BuiltGeo = *BatchMeshGeometryArray[geoIndex];
 		if (bSkipTrianglelessGeometry && BuiltGeo.Triangles.Num() <= 0)continue;
 		if (!BatchMeshVisualArray.IsValidIndex(geoIndex))return;
 		auto BatchMeshVisual = BatchMeshVisualArray[geoIndex].Get();
@@ -50,7 +50,7 @@ void FDreamUIDrawCall::ApplyBatchMeshGeometryToCombined()
 	
 	if (BatchMeshGeometryArray.Num() == 1)
 	{
-		auto& uiGeo = BatchMeshGeometryArray[0];
+		const FDreamUIGeometry& uiGeo = *BatchMeshGeometryArray[0];
 		CombinedBatchMeshGeometryVertices.SetNumUninitialized(uiGeo.Vertices.Num());
 		FMemory::Memcpy(CombinedBatchMeshGeometryVertices.GetData(), uiGeo.Vertices.GetData(), uiGeo.Vertices.Num() * sizeof(FDreamUIMeshVertex));
 		CombinedBatchMeshGeometryTriangles.SetNumUninitialized(uiGeo.Triangles.Num());
@@ -67,7 +67,7 @@ void FDreamUIDrawCall::ApplyBatchMeshGeometryToCombined()
 		auto CombinedTriangleData = CombinedBatchMeshGeometryTriangles.GetData();
 		for (int geoIndex = 0; geoIndex < BatchMeshGeometryArray.Num(); geoIndex++)
 		{
-			auto& uiGeo = BatchMeshGeometryArray[geoIndex];
+			const FDreamUIGeometry& uiGeo = *BatchMeshGeometryArray[geoIndex];
 			int triangleCount = uiGeo.Triangles.Num();
 			if (triangleCount <= 0)continue;
 			

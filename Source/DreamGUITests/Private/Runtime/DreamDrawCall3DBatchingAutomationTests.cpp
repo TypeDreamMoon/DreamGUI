@@ -48,7 +48,9 @@ namespace DreamDrawCall3DBatchingTestLocal
 	FDreamUIRenderData MakeBatchMeshRenderData(const FDreamUIGeometry& InGeo)
 	{
 		FDreamUIRenderData RenderData(EDreamUIDrawCallType::BatchMesh);
-		RenderData.BatchMeshGeometry.CopyDataForPrepare(InGeo);
+		const TSharedRef<FDreamUIGeometry> Prepared = MakeShared<FDreamUIGeometry>();
+		Prepared->CopyDataForPrepare(InGeo);
+		RenderData.BatchMeshGeometry = Prepared;
 		return RenderData;
 	}
 

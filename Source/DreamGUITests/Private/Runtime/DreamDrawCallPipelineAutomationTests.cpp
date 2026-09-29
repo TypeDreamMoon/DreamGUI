@@ -51,7 +51,9 @@ namespace DreamDrawCallPipelineTestLocal
 	FDreamUIRenderData MakeBatchMeshRenderData(const FDreamUIGeometry& InGeo)
 	{
 		FDreamUIRenderData RenderData(EDreamUIDrawCallType::BatchMesh);
-		RenderData.BatchMeshGeometry.CopyDataForPrepare(InGeo);
+		const TSharedRef<FDreamUIGeometry> Prepared = MakeShared<FDreamUIGeometry>();
+		Prepared->CopyDataForPrepare(InGeo);
+		RenderData.BatchMeshGeometry = Prepared;
 		return RenderData;
 	}
 
@@ -103,8 +105,8 @@ bool FDreamDrawCallBatchingWorkerNoEmptyResultTest::RunTest(const FString& Param
 	FirstPush.LeftBottomPoint = FVector2D(-500.0, -500.0);
 	FirstPush.RightTopPoint = FVector2D(500.0, 500.0);
 	FirstPush.FrameNumber = 100;
-	FDreamUIRenderData RenderData(EDreamUIDrawCallType::BatchMesh);
-	RenderData.BatchMeshGeometry.CopyDataForPrepare(DreamDrawCallPipelineTestLocal::MakeQuad(FVector2D(-10.0, -10.0), FVector2D(10.0, 10.0)));
+	FDreamUIRenderData RenderData = DreamDrawCallPipelineTestLocal::MakeBatchMeshRenderData(
+		DreamDrawCallPipelineTestLocal::MakeQuad(FVector2D(-10.0, -10.0), FVector2D(10.0, 10.0)));
 	FirstPush.DataArray.Add(RenderData);
 
 	FDreamCanvasPreparedDrawCallData SecondPush = FirstPush;
@@ -232,7 +234,7 @@ bool FDreamDrawCallRefreshSkipsTheSameGeometryTheBatchDidTest::RunTest(const FSt
 	}
 
 	FDreamUIDrawCall DrawCall(DreamUIQuadTree::Rectangle(FVector2D(-500.0, -500.0), FVector2D(500.0, 500.0)));
-	DrawCall.BatchMeshGeometryArray = { FirstGeo, EmptyGeo, LastGeo };
+	DrawCall.BatchMeshGeometryArray = { MakeShared<FDreamUIGeometry>(FirstGeo), MakeShared<FDreamUIGeometry>(EmptyGeo), MakeShared<FDreamUIGeometry>(LastGeo) };
 	DrawCall.BatchMeshVisualArray = { Visuals[0], Visuals[1], Visuals[2] };
 	DrawCall.VerticesCount = FirstGeo.Vertices.Num() + EmptyGeo.Vertices.Num() + LastGeo.Vertices.Num();
 	DrawCall.IndicesCount = FirstGeo.Triangles.Num() + EmptyGeo.Triangles.Num() + LastGeo.Triangles.Num();
@@ -262,6 +264,45 @@ bool FDreamDrawCallRefreshSkipsTheSameGeometryTheBatchDidTest::RunTest(const FSt
 		DrawCall.CombinedBatchMeshGeometryVertices[4].Position.Y, BuiltLastFirstVertex.Y);
 	TestEqual(TEXT("...in both directions"),
 		DrawCall.CombinedBatchMeshGeometryVertices[4].Position.Z, BuiltLastFirstVertex.Z);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamDrawCallUnchangedGeometryIsNotCopiedAgainTest,
+	"DreamGUI.Canvas.AGeometryThatDidNotChangeIsHandedToTheBatchingAsTheSameCopy",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamDrawCallUnchangedGeometryIsNotCopiedAgainTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamDrawCallPipelineTestLocal;
+
+	/*
+	 * Preparing a canvas for batching copied every element's geometry each time anything in the canvas changed, so a
+	 * panel where one widget moved paid for copying all of them. The visual keeps the copy it made and hands the same
+	 * one over while its geometry still holds what the copy holds. The copy itself is never written: a batch on a
+	 * worker thread, and the draw calls it builds, go on reading it after the geometry has moved on.
+	 */
+	UDreamVisualBatchMesh* Visual = MakeVisualWithGeometry(MakeQuad(FVector2D(-10.0, -10.0), FVector2D(10.0, 10.0)));
+	if (!TestNotNull(TEXT("Visual created"), Visual))
+	{
+		return false;
+	}
+	const TSharedPtr<const FDreamUIGeometry> First = Visual->GetGeometryForBatching();
+	if (!TestTrue(TEXT("The visual hands over a copy"), First.IsValid()))
+	{
+		return false;
+	}
+	TestTrue(TEXT("...which is not the geometry itself"), First.Get() != Visual->GetGeometry());
+	TestTrue(TEXT("Asked again with nothing changed, it hands over the same copy"), Visual->GetGeometryForBatching() == First);
+
+	Visual->GetGeometry()->Vertices[0].Color = FColor::Red;
+	const TSharedPtr<const FDreamUIGeometry> AfterColour = Visual->GetGeometryForBatching();
+	TestTrue(TEXT("A vertex changed: a new copy"), AfterColour.IsValid() && AfterColour != First);
+	TestTrue(TEXT("...that holds the change"), AfterColour.IsValid() && AfterColour->Vertices[0].Color == FColor::Red);
+	TestTrue(TEXT("...while the copy a batch may still be reading is as it was"), First->Vertices[0].Color != FColor::Red);
+
+	Visual->GetGeometry()->BlendMode = EDreamUIBlendMode::Additive;
+	TestTrue(TEXT("A batching key changed with no vertex changing: a new copy as well"), Visual->GetGeometryForBatching() != AfterColour);
 	return true;
 }
 

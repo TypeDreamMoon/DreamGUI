@@ -33,6 +33,8 @@ namespace DreamUIRenderStats
 			TEXT("SectionUploads"),
 			TEXT("UploadedBytes"),
 			TEXT("DataTextureUpdates"),
+			TEXT("GeometryCopies"),
+			TEXT("SectionReuses"),
 		};
 	}
 

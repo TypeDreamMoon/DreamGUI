@@ -1144,7 +1144,8 @@ void UDreamCanvas::PrepareDrawCallBatchingData(TArray<FDreamUIRenderData>& OutRe
 						continue;
 					}
 					auto RenderData = FDreamUIRenderData(EDreamUIDrawCallType::BatchMesh);
-					RenderData.BatchMeshGeometry.CopyDataForPrepare(*ItemGeo);
+					//the visual's copy, made again only when the geometry changed since the last one
+					RenderData.BatchMeshGeometry = DreamVisualBatchMesh->GetGeometryForBatching();
 					RenderData.BatchMeshVisualObject = DreamVisualBatchMesh;
 					OutRenderDataArray.Add(MoveTemp(RenderData));
 				}
@@ -1354,7 +1355,7 @@ void UDreamCanvas::BatchDrawCallAsync(const FVector2D& InCanvasLeftBottom, const
 		default:
 		case EDreamUIDrawCallType::BatchMesh:
 			{
-				auto& InItemGeo = InRenderData.BatchMeshGeometry;
+				const FDreamUIGeometry& InItemGeo = *InRenderData.BatchMeshGeometry;
 				auto DrawCallItem = FDreamUIDrawCall(CanvasRect);
 				if (InItemGeo.bIsFont)
 				{
@@ -1372,8 +1373,8 @@ void UDreamCanvas::BatchDrawCallAsync(const FVector2D& InCanvasLeftBottom, const
 				DrawCallItem.IndicesCount = InItemGeo.Triangles.Num();
 				DrawCallItem.BatchMeshTreeNode->Insert(DreamUIQuadTree::Rectangle(InItemGeo.BoundsMin2DInCanvasSpace, InItemGeo.BoundsMax2DInCanvasSpace));
 				DrawCallItem.bIs2DSpace = InIs2DSpace;
-				//last: the prepared data is this batch's to use up, so the geometry is moved rather than copied
-				DrawCallItem.BatchMeshGeometryArray.Add(MoveTemp(InItemGeo));
+				//last: the draw call keeps the prepared copy itself, shared with its visual, rather than a copy of it
+				DrawCallItem.BatchMeshGeometryArray.Add(MoveTemp(InRenderData.BatchMeshGeometry));
 				InOutUIDrawCallList.Add(MoveTemp(DrawCallItem));
 			}
 			break;
@@ -1422,7 +1423,11 @@ void UDreamCanvas::BatchDrawCallAsync(const FVector2D& InCanvasLeftBottom, const
 			break;
 		case EDreamUIDrawCallType::BatchMesh:
 			{
-				auto& ItemGeo = RenderData.BatchMeshGeometry;
+				if (!RenderData.BatchMeshGeometry.IsValid())
+				{
+					continue;
+				}
+				const FDreamUIGeometry& ItemGeo = *RenderData.BatchMeshGeometry;
 
 				if (bDumpMaterialDraws)
 				{
@@ -1465,8 +1470,8 @@ void UDreamCanvas::BatchDrawCallAsync(const FVector2D& InCanvasLeftBottom, const
 					DrawCallItem.BatchMeshTreeNode->Insert(DreamUIQuadTree::Rectangle(ItemGeo.BoundsMin2DInCanvasSpace, ItemGeo.BoundsMax2DInCanvasSpace));
 					DrawCallItem.VerticesCount += ItemGeo.Vertices.Num();
 					DrawCallItem.IndicesCount += ItemGeo.Triangles.Num();
-					//last, moved rather than copied: see PushSingleDrawCall
-					DrawCallItem.BatchMeshGeometryArray.Add(MoveTemp(ItemGeo));
+					//last, shared rather than copied: see PushSingleDrawCall
+					DrawCallItem.BatchMeshGeometryArray.Add(MoveTemp(RenderData.BatchMeshGeometry));
 					// CanFitInDrawCall keeps this true; past the limit the indices would wrap, which is a wrong
 					// picture rather than a reason to stop the process, on a thread that is only batching.
 					ensureMsgf(DrawCallItem.VerticesCount < LEXUI_MAX_VERTEX_COUNT, TEXT("A draw call reached %d vertices; the limit is %d."), DrawCallItem.VerticesCount, LEXUI_MAX_VERTEX_COUNT);
@@ -1705,6 +1710,8 @@ void UDreamCanvas::UpdateDrawCallMesh()
 	TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_UpdateDrawCallMesh);
 	if (!IsValid(UIMesh))return;
 	UIMesh->PoolAllRenderSection();
+	// Before any section is set up: every draw call that can take its old section back as it was claims it first.
+	UIMesh->ClaimPooledMeshSections(CurrentDrawCallData.DrawCallArray);
 	bool bNeedToUpdateBounds = false;
 	bool bAnySectionCreated = false;
 	for (int i = 0; i < CurrentDrawCallData.DrawCallArray.Num(); i++)

@@ -10,6 +10,7 @@
 #include "DreamUIMeshComponent.generated.h"
 
 class FDreamUIDrawCall;
+class FDreamUIGeometry;
 struct FDreamUIRenderSectionProxy;
 struct FDreamUISectionProxy_Mesh;
 struct FDreamUIRenderSectionProxy_PostProcess;
@@ -48,6 +49,14 @@ struct DREAMGUI_API FDreamUIRenderSection_Mesh : public FDreamUIRenderSection
 	UMaterialInterface* Material = nullptr;
 	/** Set instead of a material when DreamGUI's own renderer draws this section with its built-in shader. */
 	FDreamUIBuiltInDrawParams BuiltIn;
+	/**
+	 * The geometries the vertices here were built from, as the draw call that last set this section up listed them,
+	 * and whether normals and tangents went up with them; emptied when anything else writes the vertices. A draw call
+	 * built from exactly these, the same way, finds its vertices already here and on the GPU, and takes the section
+	 * back without a copy or an upload.
+	 */
+	TArray<TSharedPtr<const FDreamUIGeometry>> SourceGeometries;
+	bool bSourceNormalAndTangent = false;
 
 	void Reset()
 	{
@@ -191,6 +200,16 @@ private:
 	};
 	TArray<FMeshRenderSectionPool> RenderSectionMesh_CascadePool;//for mesh section pool, sorted by vertex buffer size, to prevent memory waste of big vertex and index buffer
 	TDoubleLinkedList<TSharedPtr<FDreamUIRenderSection_Mesh>>& GetRenderSectionMeshPool(int32 InNumVertices);
+public:
+	/**
+	 * After PoolAllRenderSection and before the sections are set up again: every batch-mesh draw call built from
+	 * exactly the geometries a pooled section was built from -- the same copies, which are never written -- claims
+	 * that section, whose vertices are already here and on the GPU. Claimed first, all together, because the pool
+	 * hands sections out by size: set up in order, an earlier draw call that changed could take a later one's section,
+	 * and both would upload.
+	 */
+	void ClaimPooledMeshSections(TArray<FDreamUIDrawCall>& InOutDrawCalls);
+private:
 #if DEBUG_PRINT_MESH_MEMORY
 	int ExpandMeshSectionCount = 0;
 #endif

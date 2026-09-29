@@ -49,6 +49,10 @@ namespace DreamUIRenderStats
 		UploadedBytes,
 		/** Game thread: texture updates the data textures enqueued. */
 		DataTextureUpdates,
+		/** Game thread: element geometries copied for the batching. One that did not change is not copied again. */
+		GeometryCopies,
+		/** Game thread: mesh sections a rebuilt canvas took back as they were, their vertices already on the GPU. */
+		SectionReuses,
 		Num
 	};
 

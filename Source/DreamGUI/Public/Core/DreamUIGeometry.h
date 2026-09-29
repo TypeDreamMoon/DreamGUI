@@ -177,6 +177,13 @@ public:
 		BoundsMax2DInCanvasSpace = Other.BoundsMax2DInCanvasSpace;
 	}
 
+	/**
+	 * Whether InPrepared holds what CopyDataForPrepare would copy from this geometry now: every field it copies, the
+	 * vertices and indices byte for byte. When it does, the batching would see no difference between the two, and a
+	 * copy made earlier can stand for this geometry. Comparing allocates nothing, where copying allocates twice.
+	 */
+	bool MatchesDataForPrepare(const FDreamUIGeometry& InPrepared) const;
+
 	/** 
 	 * Clear vertices and triangle indices data and keep memory, so when the data array do SetNumUninitialized (or similar function, which just change num but not memory), the origin data is still there.
 	 * e.g. The following lines use InTriangleChanged to tell if we need to set actual data in triangles, after SetNumUninitialized, the old triangles value is good to use.

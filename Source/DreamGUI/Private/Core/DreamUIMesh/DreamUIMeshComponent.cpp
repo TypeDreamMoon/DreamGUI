@@ -1232,10 +1232,20 @@ TSharedPtr<FDreamUIRenderSection> UDreamUIMeshComponent::SetupRenderSection(EDre
 	};
 
 	TSharedPtr<FDreamUIRenderSection> RenderSection;
+	bool bMeshSectionHoldsItsGeometry = false;
 	switch (InType)
 	{
 	case EDreamUIRenderSectionType::Mesh:
-		RenderSection = GetMeshRenderSectionFromPool(InDrawCallData->CombinedBatchMeshGeometryVertices.Num());
+		// Claimed by ClaimPooledMeshSections: its vertices are this draw call's already, here and on the GPU.
+		bMeshSectionHoldsItsGeometry = InDrawCallData->ClaimedMeshSection.IsValid();
+		if (bMeshSectionHoldsItsGeometry)
+		{
+			RenderSection = MoveTemp(InDrawCallData->ClaimedMeshSection);
+		}
+		else
+		{
+			RenderSection = GetMeshRenderSectionFromPool(InDrawCallData->CombinedBatchMeshGeometryVertices.Num());
+		}
 		break;
 	case EDreamUIRenderSectionType::DirectMesh:
 		RenderSection = GetDirectMeshRenderSectionFromPool(InDrawCallData->DirectMeshVisualObject.Get());
@@ -1269,6 +1279,22 @@ TSharedPtr<FDreamUIRenderSection> UDreamUIMeshComponent::SetupRenderSection(EDre
 	case EDreamUIRenderSectionType::Mesh:
 		{
 			auto MeshSectionPtr = static_cast<FDreamUIRenderSection_Mesh*>(RenderSection.Get());
+			if (bMeshSectionHoldsItsGeometry)
+			{
+				// Taken back as it was. Pooling switched it off on the render thread and dropped its material: it is
+				// switched on again here, and UpdateDrawCallMaterial sends the material after, as for any section.
+				MeshSectionPtr->BoundingBox = InDrawCallData->CombinedBounds.TransformBy(GetComponentTransform());
+				auto DreamUIMeshSceneProxy = static_cast<FDreamUIRenderSceneProxy*>(SceneProxy);
+				ENQUEUE_RENDER_COMMAND(FDreamUIMeshSectionProxy_EnableMeshSection)(
+					[DreamUIMeshSceneProxy, SectionProxy = MeshSectionPtr->RenderProxy, Material = MeshSectionPtr->Material](FRHICommandListImmediate& RHICmdList) {
+						DreamUIMeshSceneProxy->EnableMeshSection_RenderThread(SectionProxy, Material);
+					});
+				DreamUIRenderStats::AddCount(DreamUIRenderStats::ECounter::SectionReuses, 1);
+				break;
+			}
+			// What the vertices below are built from, for the next rebuild to recognise.
+			MeshSectionPtr->SourceGeometries = InDrawCallData->BatchMeshGeometryArray;
+			MeshSectionPtr->bSourceNormalAndTangent = RenderCanvas->GetActualRequireNormalAndTangent();
 			bool bNeedExpandMeshSection = false;
 			if (MeshSectionPtr->Vertices.Num() < InDrawCallData->CombinedBatchMeshGeometryVertices.Num())
 			{
@@ -1411,6 +1437,9 @@ void UDreamUIMeshComponent::UpdateMeshSection(const TSharedPtr<FDreamUIRenderSec
 		return;
 	}
 	auto MeshSectionPtr = static_cast<FDreamUIRenderSection_Mesh*>(InRenderSection.Get());
+	// The visuals' live vertices go in now, which are not those of the geometries the section was built from: it can
+	// no longer stand for them.
+	MeshSectionPtr->SourceGeometries.Reset();
 	if (MeshSectionPtr->RenderProxy)//if we have valid render-proxy then recreate or update data
 	{
 		MeshSectionPtr->BoundingBox = InDrawCallData->CombinedBounds.TransformBy(GetComponentTransform());
@@ -1965,6 +1994,41 @@ void UDreamUIMeshComponent::Init(UDreamCanvas* InCanvas)
 		RenderSectionMesh_CascadePool.Add(MoveTemp(Pool));
 	}
 }
+void UDreamUIMeshComponent::ClaimPooledMeshSections(TArray<FDreamUIDrawCall>& InOutDrawCalls)
+{
+	// Without a scene proxy no section has anything on the GPU to keep.
+	if (SceneProxy == nullptr || !RenderCanvas.IsValid())
+	{
+		return;
+	}
+	const bool bNormalAndTangent = RenderCanvas->GetActualRequireNormalAndTangent();
+	for (FDreamUIDrawCall& DrawCall : InOutDrawCalls)
+	{
+		if (DrawCall.Type != EDreamUIDrawCallType::BatchMesh || DrawCall.BatchMeshGeometryArray.Num() == 0)
+		{
+			continue;
+		}
+		for (FMeshRenderSectionPool& Pool : RenderSectionMesh_CascadePool)
+		{
+			for (auto Node = Pool.RenderSections.GetHead(); Node != nullptr; Node = Node->GetNextNode())
+			{
+				const TSharedPtr<FDreamUIRenderSection_Mesh>& Candidate = Node->GetValue();
+				if (Candidate->RenderProxy != nullptr && Candidate->bSourceNormalAndTangent == bNormalAndTangent
+					&& Candidate->SourceGeometries == DrawCall.BatchMeshGeometryArray)
+				{
+					DrawCall.ClaimedMeshSection = Candidate;
+					Pool.RenderSections.RemoveNode(Node);
+					break;
+				}
+			}
+			if (DrawCall.ClaimedMeshSection.IsValid())
+			{
+				break;
+			}
+		}
+	}
+}
+
 TDoubleLinkedList<TSharedPtr<FDreamUIRenderSection_Mesh>>& UDreamUIMeshComponent::GetRenderSectionMeshPool(int32 InNumVertices)
 {
 	auto GetRange = [](int32 x)

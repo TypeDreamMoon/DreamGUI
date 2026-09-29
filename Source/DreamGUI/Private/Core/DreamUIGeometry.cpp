@@ -14,6 +14,24 @@
 #include "Core/Components/DreamWidget.h"
 
 
+bool FDreamUIGeometry::MatchesDataForPrepare(const FDreamUIGeometry& InPrepared) const
+{
+	// The weak pointers are compared by what they point at, without resolving them.
+	return Vertices.Num() == InPrepared.Vertices.Num()
+		&& Triangles.Num() == InPrepared.Triangles.Num()
+		&& Texture.HasSameIndexAndSerialNumber(InPrepared.Texture)
+		&& Font.HasSameIndexAndSerialNumber(InPrepared.Font)
+		&& Material.HasSameIndexAndSerialNumber(InPrepared.Material)
+		&& bIsFont == InPrepared.bIsFont
+		&& bSupportDrawcallBatching == InPrepared.bSupportDrawcallBatching
+		&& BlendMode == InPrepared.BlendMode
+		&& BoundsMin2DInCanvasSpace == InPrepared.BoundsMin2DInCanvasSpace
+		&& BoundsMax2DInCanvasSpace == InPrepared.BoundsMax2DInCanvasSpace
+		&& TransformRelativeToCanvas.Equals(InPrepared.TransformRelativeToCanvas, 0.0)
+		&& (Vertices.Num() == 0 || FMemory::Memcmp(Vertices.GetData(), InPrepared.Vertices.GetData(), Vertices.Num() * sizeof(FDreamUIMeshVertex)) == 0)
+		&& (Triangles.Num() == 0 || FMemory::Memcmp(Triangles.GetData(), InPrepared.Triangles.GetData(), Triangles.Num() * sizeof(FDreamUIMeshIndex)) == 0);
+}
+
 FORCEINLINE float RoundToFloat(float value)
 {
 	return FMath::FloorToFloat(value + 0.5f);

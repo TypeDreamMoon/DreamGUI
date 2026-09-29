@@ -22,6 +22,7 @@
 #include "Core/Components/DreamCanvas.h"
 #include "Core/DreamUIDataTexture.h"
 #include "Core/DreamUISettings.h"
+#include "DreamUIRender/DreamUIRenderStats.h"
 #include "Engine/Texture2D.h"
 #include "TextureResource.h"
 #include "Extensions/Effects/DreamPixelSort.h"
@@ -839,6 +840,83 @@ bool FDreamRhiClipOutgrowsItsTextureUnderAnEffectTest::RunTest(const FString& Pa
 	});
 	EnqueueSettledFrames(Stage);
 	EnqueueDo([CheckClipped]() { CheckClipped(TEXT("after the clip data grew and was collected around")); });
+	EnqueueTearDown(Stage);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamRhiRebuildUploadsOnlyWhatChangedTest,
+	"DreamGUI.RHI.ACanvasRebuiltForOneMovedWidgetUploadsOnlyTheDrawCallThatHoldsIt",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter | EAutomationTestFlags::NonNullRHI)
+
+bool FDreamRhiRebuildUploadsOnlyWhatChangedTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamRenderStabilityTestLocal;
+
+	// A canvas is rebuilt whole when anything in it moves, and every one of its draw calls used to go up to the GPU
+	// again. An element that did not change hands the batching the same copy of its geometry as before, and a draw call
+	// built from exactly the copies a section was built from takes that section back, its vertices still on the GPU.
+	// Two blocks with textures of their own make two draw calls; one moves, and only its draw call goes up -- the other
+	// block's section is taken back as it was, and draws as before.
+	FStageRef Stage = BeginStage(*this);
+	if (!Stage->IsUsable())
+	{
+		Stage->TearDown();
+		return false;
+	}
+	const TSharedRef<FBuiltInShaderScope> BuiltIn = MakeShared<FBuiltInShaderScope>();
+	UTexture2D* RedTexture = MakeSolidTexture(Red);
+	UTexture2D* GreenTexture = MakeSolidTexture(Green);
+	if (!TestNotNull(TEXT("a red texture"), RedTexture) || !TestNotNull(TEXT("a green texture"), GreenTexture))
+	{
+		Stage->TearDown();
+		return false;
+	}
+	const TSharedRef<TArray<TStrongObjectPtr<UTexture2D>>> KeepTextures = MakeShared<TArray<TStrongObjectPtr<UTexture2D>>>();
+	KeepTextures->Emplace(RedTexture);
+	KeepTextures->Emplace(GreenTexture);
+	auto AddTextured = [&Stage](const TCHAR* InName, UTexture2D* InTexture, FVector2D InPosition)
+	{
+		UDreamWidget* Widget = Stage->AddWidget(InName, FVector2D(60.0, 60.0), InPosition);
+		if (UDreamTexture* Visual = Widget->CreateNewVisual<UDreamTexture>())
+		{
+			Visual->SetTexture(InTexture);
+			Visual->SetColor(FColor::White);
+		}
+		return Widget;
+	};
+	const TWeakObjectPtr<UDreamWidget> Mover = AddTextured(TEXT("Moves"), RedTexture, FVector2D(-60.0, 0.0));
+	UDreamWidget* Stayer = AddTextured(TEXT("Stays"), GreenTexture, FVector2D(60.0, 0.0));
+	const FIntPoint StayerCentre = Stage->PixelOf(Stayer, FVector2D::ZeroVector);
+
+	EnqueueSettledFrames(Stage);
+	EnqueueDo([Stage, StayerCentre, Mover]()
+	{
+		CheckPixel(Stage, StayerCentre, Green, TEXT("the block that stays, before the other moves"));
+		DreamUIRenderStats::TakeSnapshot(/*bInReset*/ true);
+		if (UDreamWidget* Widget = Mover.Get())
+		{
+			Widget->SetAnchoredPosition(FVector2D(-60.0, 50.0));
+		}
+	});
+	EnqueueSettledFrames(Stage);
+	EnqueueDo([this, Stage, StayerCentre, Mover]()
+	{
+		using DreamUIRenderStats::ECounter;
+		const DreamUIRenderStats::FSnapshot Counted = DreamUIRenderStats::TakeSnapshot(/*bInReset*/ true);
+		const int64 Uploads = Counted.Counters[static_cast<int32>(ECounter::SectionUploads)];
+		const int64 Reuses = Counted.Counters[static_cast<int32>(ECounter::SectionReuses)];
+		const int64 Copies = Counted.Counters[static_cast<int32>(ECounter::GeometryCopies)];
+		TestEqual(TEXT("One section went up to the GPU: the moved block's"), Uploads, static_cast<int64>(1));
+		TestEqual(TEXT("One was taken back as it was: the other block's"), Reuses, static_cast<int64>(1));
+		TestEqual(TEXT("One geometry was copied for the batching: the moved block's"), Copies, static_cast<int64>(1));
+		CheckPixel(Stage, StayerCentre, Green, TEXT("the block that stays, after the rebuild"));
+		if (UDreamWidget* Widget = Mover.Get())
+		{
+			CheckPixel(Stage, Stage->PixelOf(Widget, FVector2D::ZeroVector), Red, TEXT("the moved block, where it moved to"));
+		}
+	});
+	EnqueueDo([KeepTextures]() { KeepTextures->Reset(); });
 	EnqueueTearDown(Stage);
 	return true;
 }

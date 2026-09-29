@@ -957,7 +957,7 @@ public:
 	 *		parent's surface, and a canvas is not a clipper, so its rect says nothing about visibility.
 	 */
 	static void BatchDrawCallAsync(const FVector2D& InCanvasLeftBottom, const FVector2D& InCanvasRightTop, const TArray<FDreamUIRenderData>& InRenderDataArray, TArray<FDreamUIDrawCall>& InOutUIDrawCallList, bool bCullElementsOutsideCanvasRect = false);
-	/** The same, using up InRenderDataArray: each element's geometry is moved into its draw call rather than copied. */
+	/** The same, using up InRenderDataArray: each element's prepared geometry goes into its draw call as it is. */
 	static void BatchDrawCallAsync(const FVector2D& InCanvasLeftBottom, const FVector2D& InCanvasRightTop, TArray<FDreamUIRenderData>&& InRenderDataArray, TArray<FDreamUIDrawCall>& InOutUIDrawCallList, bool bCullElementsOutsideCanvasRect = false);
 	static bool Is2DUITransform(const FTransform& Transform);
 private:
