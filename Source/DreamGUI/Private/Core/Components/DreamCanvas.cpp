@@ -313,15 +313,8 @@ void UDreamCanvas::CheckRenderTargetUpdate()
 #endif
 				if (RenderTargetViewExtension.IsValid())
 				{
-					if (FDreamUIRenderer::IsRenderTargetDrawerEnabled())
-					{
-						// Drawn once this frame's sections have gone to the render thread: DrawRenderTargetIfRequested.
-						bRenderTargetDrawRequested = true;
-					}
-					else
-					{
-						RenderTargetViewExtension->UpdateRenderTargetRenderer(Target, RenderTargetClearColor);
-					}
+					// Drawn once this frame's sections have gone to the render thread: DrawRenderTargetIfRequested.
+					bRenderTargetDrawRequested = true;
 				}
 			}
 		}

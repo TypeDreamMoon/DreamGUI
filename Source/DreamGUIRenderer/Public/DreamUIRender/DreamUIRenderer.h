@@ -102,12 +102,7 @@ public:
 	void UpdateRenderTargetRenderer(class UTextureRenderTarget2D* InRenderTarget, FColor InClearColor);
 
 	/**
-	 * Whether a render-target canvas is drawn by a render command and a graph of its own (r.DreamUI.RTDrawer, on by
-	 * default) rather than inside the render of one of its world's views. Game thread.
-	 */
-	static bool IsRenderTargetDrawerEnabled();
-	/**
-	 * Render-target mode with the drawer on: draws the canvas into InRenderTarget with a render command and a graph of
+	 * Render-target mode: draws the canvas into InRenderTarget with a render command and a graph of
 	 * its own, enqueued now -- after this frame's changes to the canvas's sections -- whether or not anything renders
 	 * the canvas's world. Game thread.
 	 */

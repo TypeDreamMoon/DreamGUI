@@ -28,13 +28,6 @@
 #include "ClearQuad.h"
 #include "DataDrivenShaderPlatformInfo.h"//RHISupportsMSAA, for the platform that cannot honour the setting
 
-static TAutoConsoleVariable<int32> CVarDreamUIRenderTargetDrawer(
-	TEXT("r.DreamUI.RTDrawer"), 1,
-	TEXT("1: a render-target canvas is drawn by a render command and a graph of its own whenever it updates, whether or not ")
-	TEXT("a view of its world is rendered. 0: it is drawn inside the render of one of its world's views, and a world that no ")
-	TEXT("viewport renders never updates its render-target canvases."),
-	ECVF_Default);
-
 static TAutoConsoleVariable<int32> CVarDreamGUIDumpMaterialDraws(
 	TEXT("dreamgui.DumpMaterialDraws"), 0,
 	TEXT("1: log one line per screen-space material draw attempt (which branch/exit it took). Stays on until set back to 0."),
@@ -230,14 +223,10 @@ bool FDreamUIRenderer::IsActiveThisFrame_Internal(const FSceneViewExtensionConte
 #endif
 
 	if (World.Get() != Context.GetWorld())return false;//only render self world
-	// A render-target canvas the drawer draws is not drawn again in its world's views.
-	if (RendererType == EDreamUIRendererType::RenderTarget && IsRenderTargetDrawerEnabled())return false;
+	// A render-target canvas is drawn by DrawRenderTarget_GameThread, with a render command and a graph of its own, and
+	// never inside its world's views.
+	if (RendererType == EDreamUIRendererType::RenderTarget)return false;
 	return true;
-}
-
-bool FDreamUIRenderer::IsRenderTargetDrawerEnabled()
-{
-	return CVarDreamUIRenderTargetDrawer.GetValueOnGameThread() != 0;
 }
 
 void FDreamUIRenderer::DrawRenderTarget_GameThread(UTextureRenderTarget2D* InRenderTarget, FColor InClearColor)
