@@ -62,6 +62,7 @@
 - [UDreamLyricsLibrary](DreamLyricsLibrary.md)
 - [UDreamUIAnimationLibrary](DreamUIAnimationLibrary.md)
 - [UDreamUIBPLibrary](DreamUIBPLibrary.md)
+- [UDreamUICaptureLibrary](DreamUICaptureLibrary.md)
 - [UDreamUIInputModeLibrary](DreamUIInputModeLibrary.md)
 - [UDreamUILayoutLibrary](DreamUILayoutLibrary.md)
 - [UDreamUIWidgetGeometryLibrary](DreamUIWidgetGeometryLibrary.md)
