@@ -86,6 +86,46 @@ public:
 		return *this;
 	}
 
+	/**
+	 * Moves, so that a geometry the batching is done with can go into its draw call without its vertices being
+	 * copied again. The atomic flag rules out the implicit ones; a moved-to geometry is not being calculated.
+	 */
+	FDreamUIGeometry(FDreamUIGeometry&& Other)
+		: OriginVertices(MoveTemp(Other.OriginVertices)),
+		  Vertices(MoveTemp(Other.Vertices)),
+		  Triangles(MoveTemp(Other.Triangles)),
+		  Texture(MoveTemp(Other.Texture)),
+		  Font(MoveTemp(Other.Font)),
+		  Material(MoveTemp(Other.Material)),
+		  bIsFont(Other.bIsFont),
+		  bSupportDrawcallBatching(Other.bSupportDrawcallBatching),
+		  BlendMode(Other.BlendMode),
+		  TransformRelativeToCanvas(Other.TransformRelativeToCanvas),
+		  BoundsMin2DInCanvasSpace(Other.BoundsMin2DInCanvasSpace),
+		  BoundsMax2DInCanvasSpace(Other.BoundsMax2DInCanvasSpace)
+	{
+	}
+
+	FDreamUIGeometry& operator=(FDreamUIGeometry&& Other)
+	{
+		if (this != &Other)
+		{
+			OriginVertices = MoveTemp(Other.OriginVertices);
+			Vertices = MoveTemp(Other.Vertices);
+			Triangles = MoveTemp(Other.Triangles);
+			Texture = MoveTemp(Other.Texture);
+			Font = MoveTemp(Other.Font);
+			Material = MoveTemp(Other.Material);
+			bIsFont = Other.bIsFont;
+			bSupportDrawcallBatching = Other.bSupportDrawcallBatching;
+			BlendMode = Other.BlendMode;
+			TransformRelativeToCanvas = Other.TransformRelativeToCanvas;
+			BoundsMin2DInCanvasSpace = Other.BoundsMin2DInCanvasSpace;
+			BoundsMax2DInCanvasSpace = Other.BoundsMax2DInCanvasSpace;
+		}
+		return *this;
+	}
+
 	//is calculating vertices?
 	std::atomic<bool> bIsCalculating = false;
 	//local space vertex position/ normal/ tangent

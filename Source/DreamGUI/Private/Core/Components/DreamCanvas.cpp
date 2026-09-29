@@ -1186,6 +1186,15 @@ void UDreamCanvas::BatchDrawCallAsync(const FVector2D& InCanvasLeftBottom, const
 	const TArray<FDreamUIRenderData>& InRenderDataArray, TArray<FDreamUIDrawCall>& InOutUIDrawCallList,
 	bool bCullElementsOutsideCanvasRect)
 {
+	// A copy the batching may use up: the data a caller hands over as const is the caller's to keep.
+	TArray<FDreamUIRenderData> RenderDataArray = InRenderDataArray;
+	BatchDrawCallAsync(InCanvasLeftBottom, InCanvasRightTop, MoveTemp(RenderDataArray), InOutUIDrawCallList, bCullElementsOutsideCanvasRect);
+}
+
+void UDreamCanvas::BatchDrawCallAsync(const FVector2D& InCanvasLeftBottom, const FVector2D& InCanvasRightTop,
+	TArray<FDreamUIRenderData>&& InRenderDataArray, TArray<FDreamUIDrawCall>& InOutUIDrawCallList,
+	bool bCullElementsOutsideCanvasRect)
+{
 	SCOPE_CYCLE_COUNTER(STAT_BatchDrawCall);
 	DREAMUI_STAGE_SCOPE(Batching);
 
@@ -1285,8 +1294,9 @@ void UDreamCanvas::BatchDrawCallAsync(const FVector2D& InCanvasLeftBottom, const
 			}
 			return false;
 		}
-		TArray<int> CanFitinDrawCallIndexArray;
-		//get all draw-call that can fit-in this UI item, then use the first one (because we iterate from tail to head)
+		//the deepest draw-call walked so far that can take this item: the walk goes from tail to head, so the last one
+		//found is the one to use. One index, where a list of every candidate used to be allocated per item.
+		int32 DeepestFit = INDEX_NONE;
 		for (int i = LastDrawCallIndex; i >= FitInDrawCallMinIndex; i--)//from tail to head
 		{
 			const auto& OtherDrawCall = InOutUIDrawCallList[i];
@@ -1301,9 +1311,9 @@ void UDreamCanvas::BatchDrawCallAsync(const FVector2D& InCanvasLeftBottom, const
 				 * CopyDataForPrepare carried TransformRelativeToCanvas, bIs2DSpace was always true and this
 				 * whole branch was unreachable.
 				 */
-				if (CanFitinDrawCallIndexArray.Num() > 0)
+				if (DeepestFit != INDEX_NONE)
 				{
-					OutDrawCallIndexToFitin = CanFitinDrawCallIndexArray[CanFitinDrawCallIndexArray.Num() - 1];
+					OutDrawCallIndexToFitin = DeepestFit;
 					return true;
 				}
 				return false;
@@ -1313,9 +1323,9 @@ void UDreamCanvas::BatchDrawCallAsync(const FVector2D& InCanvasLeftBottom, const
 			{
 				if (OverlapWithOtherDrawCall(InGeo, OtherDrawCall))//overlap with other draw-call, can't batch
 				{
-					if (CanFitinDrawCallIndexArray.Num() > 0)
+					if (DeepestFit != INDEX_NONE)
 					{
-						OutDrawCallIndexToFitin = CanFitinDrawCallIndexArray[CanFitinDrawCallIndexArray.Num() - 1];
+						OutDrawCallIndexToFitin = DeepestFit;
 						return true;
 					}
 					return false;
@@ -1328,17 +1338,17 @@ void UDreamCanvas::BatchDrawCallAsync(const FVector2D& InCanvasLeftBottom, const
 				OutDrawCallIndexToFitin = i;
 				return true;
 			}
-			CanFitinDrawCallIndexArray.Add(i);
+			DeepestFit = i;
 		}
-		if (CanFitinDrawCallIndexArray.Num() > 0)
+		if (DeepestFit != INDEX_NONE)
 		{
-			OutDrawCallIndexToFitin = CanFitinDrawCallIndexArray[CanFitinDrawCallIndexArray.Num() - 1];
+			OutDrawCallIndexToFitin = DeepestFit;
 			return true;
 		}
 		return false;
 	};
 
-	auto PushSingleDrawCall = [&](const FDreamUIRenderData& InRenderData, EDreamUIDrawCallType InDrawCallType, bool InIs2DSpace = true) {
+	auto PushSingleDrawCall = [&](FDreamUIRenderData& InRenderData, EDreamUIDrawCallType InDrawCallType, bool InIs2DSpace = true) {
 		switch (InDrawCallType)
 		{
 		default:
@@ -1357,12 +1367,13 @@ void UDreamCanvas::BatchDrawCallAsync(const FVector2D& InCanvasLeftBottom, const
 				}
 				DrawCallItem.Material = InItemGeo.Material.Get();
 				DrawCallItem.BlendMode = InItemGeo.BlendMode;
-				DrawCallItem.BatchMeshGeometryArray.Add(InItemGeo);
 				DrawCallItem.BatchMeshVisualArray.Add(InRenderData.BatchMeshVisualObject);
 				DrawCallItem.VerticesCount = InItemGeo.Vertices.Num();
 				DrawCallItem.IndicesCount = InItemGeo.Triangles.Num();
 				DrawCallItem.BatchMeshTreeNode->Insert(DreamUIQuadTree::Rectangle(InItemGeo.BoundsMin2DInCanvasSpace, InItemGeo.BoundsMax2DInCanvasSpace));
 				DrawCallItem.bIs2DSpace = InIs2DSpace;
+				//last: the prepared data is this batch's to use up, so the geometry is moved rather than copied
+				DrawCallItem.BatchMeshGeometryArray.Add(MoveTemp(InItemGeo));
 				InOutUIDrawCallList.Add(MoveTemp(DrawCallItem));
 			}
 			break;
@@ -1387,6 +1398,13 @@ void UDreamCanvas::BatchDrawCallAsync(const FVector2D& InCanvasLeftBottom, const
 		}
 	};
 
+	// Same gate as the renderer's dump: which geometry reaches assembly, with what material. Looked up once a batch --
+	// a console variable is found by name, which cost a lookup per element when it was done in the loop. The
+	// variable is a static in the renderer's translation unit, so the lookup can answer null (not yet constructed,
+	// or that unit compiled out), and this runs on the batching thread.
+	const IConsoleVariable* DumpMaterialDrawsCVar = IConsoleManager::Get().FindConsoleVariable(TEXT("dreamgui.DumpMaterialDraws"));
+	const bool bDumpMaterialDraws = DumpMaterialDrawsCVar != nullptr && DumpMaterialDrawsCVar->GetInt() != 0;
+
 	//for sorted ui items, iterate from head to tail, compare draw-call from tail to head
 	for (int i = 0; i < InRenderDataArray.Num(); i++)
 	{
@@ -1406,12 +1424,7 @@ void UDreamCanvas::BatchDrawCallAsync(const FVector2D& InCanvasLeftBottom, const
 			{
 				auto& ItemGeo = RenderData.BatchMeshGeometry;
 
-				// Same gate as the renderer's dump: which geometry reaches assembly, with what
-				// material -- the missing rect block is either absent here or arriving material-less.
-				// The cvar is a static living in the renderer's translation unit, so the lookup can answer
-				// null (not yet constructed, or that unit compiled out) -- and this runs on the batching thread.
-				auto* DumpMaterialDrawsCVar = IConsoleManager::Get().FindConsoleVariable(TEXT("dreamgui.DumpMaterialDraws"));
-				if (DumpMaterialDrawsCVar != nullptr && DumpMaterialDrawsCVar->GetInt() != 0)
+				if (bDumpMaterialDraws)
 				{
 					UE_LOG(DreamGUI, Display, TEXT("[DumpMaterialDraws][assemble] visual=%s verts=%d material=%s batching=%d"),
 						RenderData.BatchMeshVisualObject.IsValid() ? *RenderData.BatchMeshVisualObject->GetClass()->GetName() : TEXT("null"),
@@ -1448,11 +1461,12 @@ void UDreamCanvas::BatchDrawCallAsync(const FVector2D& InCanvasLeftBottom, const
 						}
 					}
 					//add to this draw-call
-					DrawCallItem.BatchMeshGeometryArray.Add(ItemGeo);
 					DrawCallItem.BatchMeshVisualArray.Add(RenderData.BatchMeshVisualObject);
 					DrawCallItem.BatchMeshTreeNode->Insert(DreamUIQuadTree::Rectangle(ItemGeo.BoundsMin2DInCanvasSpace, ItemGeo.BoundsMax2DInCanvasSpace));
 					DrawCallItem.VerticesCount += ItemGeo.Vertices.Num();
 					DrawCallItem.IndicesCount += ItemGeo.Triangles.Num();
+					//last, moved rather than copied: see PushSingleDrawCall
+					DrawCallItem.BatchMeshGeometryArray.Add(MoveTemp(ItemGeo));
 					// CanFitInDrawCall keeps this true; past the limit the indices would wrap, which is a wrong
 					// picture rather than a reason to stop the process, on a thread that is only batching.
 					ensureMsgf(DrawCallItem.VerticesCount < LEXUI_MAX_VERTEX_COUNT, TEXT("A draw call reached %d vertices; the limit is %d."), DrawCallItem.VerticesCount, LEXUI_MAX_VERTEX_COUNT);
