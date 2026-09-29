@@ -1777,7 +1777,6 @@ void UDreamCanvas::UpdateCanvasDrawCall()
 	}
 
 	//update draw-call
-	bHasPendingUpdateData = false;
 	if (bCanTickUpdate)
 	{
 		bCanTickUpdate = false;
@@ -1893,6 +1892,8 @@ void UDreamCanvas::UpdateCanvasDrawCall()
 		if (bShouldRebuildDrawCall && !bDrawCallRebuildSuspended)
 		{
 			bShouldRebuildDrawCall = false;
+			// The prepare below takes every vertex change asked for until now.
+			bHasPendingUpdateData = false;
 			NewestDrawCallFrameNumber = GFrameCounter;
 
 			//rect size minimal at 100, so UIQuadTree can work properly (prevent too small rect)
@@ -1969,23 +1970,22 @@ void UDreamCanvas::UpdateDrawCallBatchData()
 
 		MarkFinishUpdateCanvasDrawCall();
 	}
-	else
+	/**
+	 * A vertex refresh asked for since the draw calls in hand were prepared, once they are the newest asked for: a
+	 * rebuild still on its way prepared after the request, and takes it. The request used to go with the next update of
+	 * the canvas, which cleared it whether or not a refresh had happened in between, and with any frame a batch result
+	 * arrived in -- a colour changed then never showed.
+	 */
+	if (bHasPendingUpdateData && GFrameCounter > CurrentDrawCallData.FrameNumber && CurrentDrawCallData.FrameNumber == NewestDrawCallFrameNumber)
 	{
-		if (bHasPendingUpdateData)//make sure there is no pending data in async thread, if there is pending data we may update draw-call with wrong data
+		bHasPendingUpdateData = false;
+		for (int i = 0; i < CurrentDrawCallData.DrawCallArray.Num(); i++)
 		{
-			//current draw-call data only need to update, then we compare the frame-number,
-			//if frame-number is greater than current rendering draw-call's frame-number, that means we can safely update it
-			if (GFrameCounter > CurrentDrawCallData.FrameNumber && CurrentDrawCallData.FrameNumber == NewestDrawCallFrameNumber)
+			auto& DrawCallItem = CurrentDrawCallData.DrawCallArray[i];
+			// Only a draw call one of whose elements changed is copied and goes up again.
+			if (DrawCallItem.Type == EDreamUIDrawCallType::BatchMesh && DrawCallItem.CopyBatchMeshGeometry())
 			{
-				for (int i = 0; i < CurrentDrawCallData.DrawCallArray.Num(); i++)
-				{
-					auto& DrawCallItem = CurrentDrawCallData.DrawCallArray[i];
-					// Only a draw call one of whose elements changed is copied and goes up again.
-					if (DrawCallItem.Type == EDreamUIDrawCallType::BatchMesh && DrawCallItem.CopyBatchMeshGeometry())
-					{
-						UIMesh->UpdateMeshSection(DrawCallItem.RenderSection, &DrawCallItem);
-					}
-				}
+				UIMesh->UpdateMeshSection(DrawCallItem.RenderSection, &DrawCallItem);
 			}
 		}
 	}

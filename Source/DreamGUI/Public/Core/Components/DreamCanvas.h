@@ -834,6 +834,10 @@ private:
 	uint32 bShouldRebuildDrawCall : 1 = true;
 	/** See SetDrawCallRebuildSuspended. The request above is kept, not dropped, while this is set. */
 	uint32 bDrawCallRebuildSuspended : 1 = false;
+	/**
+	 * A vertex refresh asked for -- a colour, an alpha, nothing moved -- and not yet carried out. It stays until the
+	 * draw calls in hand take it (UpdateDrawCallBatchData) or a rebuild prepares what it asked for.
+	 */
 	uint32 bHasPendingUpdateData : 1 = false;
 	uint32 bNeedToSortRenderPriority : 1 = true;
 	uint32 bHasAddToDreamScreenSpaceRenderer : 1 = false;//is this canvas added to DreamGUI screen space renderer
