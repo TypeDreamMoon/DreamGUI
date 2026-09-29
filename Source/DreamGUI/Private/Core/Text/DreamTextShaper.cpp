@@ -43,9 +43,47 @@ namespace DreamTextShaperLocal
 		return Script == HB_SCRIPT_COMMON || Script == HB_SCRIPT_INHERITED || Script == HB_SCRIPT_UNKNOWN;
 	}
 
+	/**
+	 * Whether the bidi algorithm can have anything to say about a code point: a right-to-left letter (Hebrew, Arabic,
+	 * Syriac, Thaana, NKo, Samaritan, Mandaic and their presentation forms, the right-to-left scripts of the
+	 * supplementary planes), an Arabic digit, or an explicit direction control.
+	 */
+	bool CanTurnRightToLeft(uint32 C)
+	{
+		return (C >= 0x0590 && C <= 0x08FF)
+			|| (C >= 0xFB1D && C <= 0xFDFF)
+			|| (C >= 0xFE70 && C <= 0xFEFF)
+			|| (C >= 0x10800 && C <= 0x10FFF)
+			|| (C >= 0x1E800 && C <= 0x1EFFF)
+			|| C == 0x200E || C == 0x200F || C == 0x061C
+			|| (C >= 0x202A && C <= 0x202E)
+			|| (C >= 0x2066 && C <= 0x2069);
+	}
+
 	/** Direction per element, from the engine's bidi over the paragraph as UTF-16. */
 	void ResolveDirections(const TArray<FDreamShapeElement>& Elements, EDreamTextFlowDirection FlowDirection, TArray<bool>& OutRightToLeft, bool& OutBaseRightToLeft)
 	{
+		// A paragraph laid out left to right with not one character that could turn it: every element is left to right
+		// -- with no right-to-left letter and no embedding, the bidi algorithm resolves everything to the paragraph's
+		// level -- and asking it costs far more than the rest of a short label's layout.
+		if (FlowDirection != EDreamTextFlowDirection::RightToLeft)
+		{
+			bool bAnyThatCanTurn = false;
+			for (const FDreamShapeElement& Element : Elements)
+			{
+				if (CanTurnRightToLeft(Element.Codepoint))
+				{
+					bAnyThatCanTurn = true;
+					break;
+				}
+			}
+			if (!bAnyThatCanTurn)
+			{
+				OutBaseRightToLeft = false;
+				OutRightToLeft.Init(false, Elements.Num());
+				return;
+			}
+		}
 		FString Plain;
 		TArray<int32> PlainStart;
 		PlainStart.SetNumUninitialized(Elements.Num());
