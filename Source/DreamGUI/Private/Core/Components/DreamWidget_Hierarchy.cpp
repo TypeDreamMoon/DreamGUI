@@ -907,7 +907,33 @@ void UDreamWidget::OnChildDetached(UDreamWidget* ChildWidget)
 	{
 		if (IsValid(Component)) Component->OnWidgetChildDetached(ChildWidget);
 	}
-	MarkLayoutForRebuild(this);//child removed, so need to rebuild layout
+	/**
+	 * A child going leaves its siblings where they were unless something lays them out: a layout on this widget, or on
+	 * one above it whose size follows this one's content -- the chain MarkLayoutForRebuild walks. With none on it, the
+	 * rebuild fell back to laying this widget's whole subtree out again, every widget of it, to the same places: a panel
+	 * that lost a child every frame paid for all its widgets every frame.
+	 */
+	bool bLaidOut = false;
+	{
+		FDreamVisitedWidgetSet Visited;
+		for (UDreamWidget* Widget = this; IsValid(Widget) && !Visited.Contains(Widget); Widget = Widget->GetParent())
+		{
+			Visited.Add(Widget);
+			if (IsValid(Widget->GetLayoutContainer()) || IsValid(Widget->GetLayoutSelf()))
+			{
+				bLaidOut = true;
+				break;
+			}
+			if (Widget->GetIgnoreLayout())
+			{
+				break;
+			}
+		}
+	}
+	if (bLaidOut)
+	{
+		MarkLayoutForRebuild(this);//child removed, so need to rebuild layout
+	}
 }
 
 void UDreamWidget::OnDetachedFromParent()
