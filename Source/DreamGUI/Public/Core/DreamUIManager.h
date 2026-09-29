@@ -22,6 +22,9 @@ class UDreamCanvas;
 class UDreamBaseRaycaster;
 class UDreamUIBehaviour;
 class ULevel;
+class UDreamRectBlockData;
+class UDreamUIDataAsTexture;
+enum class EDreamUIDataAsTexturePixelFormat : uint8;
 
 DECLARE_MULTICAST_DELEGATE_OneParam(FDreamUIEditorTickMulticastDelegate, float);
 class UDreamUIManagerWorldSubsystem;
@@ -165,6 +168,16 @@ public:
 	bool HasTornDownWorld() const { return bWorldTornDown; }
 
 	static UDreamUIManagerWorldSubsystem* GetInstance(UWorld* InWorld);
+
+	/**
+	 * The rows this world's rect blocks of InData keep their shapes in: one set per world and rect block data asset,
+	 * made when the first of those rect blocks asks, and gone with the world.
+	 *
+	 * They used to live in the asset, which every world shares -- the editor's, each play session's, each preview's --
+	 * so a rect block in one world grew the texture every other world drew with, and rows a play session never gave
+	 * back were still taken in the next one. The asset keeps what it is for, the material.
+	 */
+	UDreamUIDataAsTexture* GetRectBlockDataRows(UDreamRectBlockData* InData, int32 InBlockSizeInBytes, EDreamUIDataAsTexturePixelFormat InPixelFormat);
 #if WITH_EDITOR
 	/**
 	 * Broadcast on every editor tick of a world nobody plays -- the level editor's, a preview's -- for what
@@ -197,6 +210,9 @@ private:
 	UPROPERTY(VisibleAnywhere, Category = "DreamGUI")
 	mutable TObjectPtr<UDreamUISelection> Selection;
 #endif
+	/** See GetRectBlockDataRows. */
+	UPROPERTY(Transient, DuplicateTransient, TextExportTransient)
+	TMap<TObjectPtr<UDreamRectBlockData>, TObjectPtr<UDreamUIDataAsTexture>> RectBlockDataRows;
 	
 	UPROPERTY(VisibleAnywhere, Category = "DreamGUI")
 	TArray<TWeakObjectPtr<UDreamCanvas>> AllCanvasArray;

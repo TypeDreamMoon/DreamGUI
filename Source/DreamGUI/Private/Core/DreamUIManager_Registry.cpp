@@ -2,7 +2,10 @@
 // Modified by TypeDreamMoon.
 
 #include "Core/DreamUIManager.h"
+#include "Core/DreamUIDataAsTexture.h"
+#include "Core/DreamUIRuntimeObject.h"
 #include "Core/DreamUIWorldContext.h"
+#include "Core/Components/DreamRectBlock.h"
 #include "Core/DreamGUISettings.h"
 
 #include "DreamGUI.h"
@@ -459,3 +462,20 @@ TSharedPtr<class FDreamUIRenderer, ESPMode::ThreadSafe> UDreamUIManagerWorldSubs
 }
 
 #undef LOCTEXT_NAMESPACE
+
+UDreamUIDataAsTexture* UDreamUIManagerWorldSubsystem::GetRectBlockDataRows(UDreamRectBlockData* InData, int32 InBlockSizeInBytes, EDreamUIDataAsTexturePixelFormat InPixelFormat)
+{
+	if (InData == nullptr)
+	{
+		return nullptr;
+	}
+	if (const TObjectPtr<UDreamUIDataAsTexture>* Found = RectBlockDataRows.Find(InData); Found != nullptr && IsValid(Found->Get()))
+	{
+		return Found->Get();
+	}
+	// The manager's, and never saved, duplicated or copied: a play session's copy of this world makes its own.
+	UDreamUIDataAsTexture* Rows = NewObject<UDreamUIDataAsTexture>(this, NAME_None, DreamUI::RuntimeObjectFlags);
+	Rows->Init(InBlockSizeInBytes, InPixelFormat, 32);
+	RectBlockDataRows.Add(InData, Rows);
+	return Rows;
+}

@@ -224,6 +224,8 @@ private:
 	{
 		FDreamUIRenderSectionProxy* SectionProxy;
 		FDreamUIBuiltInDrawParams Params;
+		/** Taken from Params when the command is enqueued, and read by it alone. */
+		FDreamUIBuiltInTextures Textures;
 	};
 	TArray<UpdateMeshSectionBuiltInDataStruct> PendingUpdateMeshSectionBuiltInDataArray;
 

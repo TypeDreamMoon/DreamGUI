@@ -5,8 +5,11 @@
 #include "DreamUIRender/DreamUIPostProcessShaders.h"
 #include "Rendering/Texture2DResource.h"
 #include "DreamUIRender/DreamUIRenderer.h"
+#include "Engine/Texture.h"
+#include "Engine/TextureRenderTarget2D.h"
 #include "RHIResourceUtils.h"
 #include "SceneTextures.h"
+#include "TextureResource.h"
 
 BEGIN_SHADER_PARAMETER_STRUCT(FDreamUIPostProcessRenderMeshParameters, )
 	SHADER_PARAMETER_RDG_TEXTURE(Texture2D, SceneDepthTex)
@@ -48,7 +51,8 @@ void FDreamVisualPostProcessRenderProxy::SetCommonParams_GameThread(const FDream
 				TempRenderProxy->RenderMeshRegionToScreenVertexArray = MoveTemp(Params.MeshRegionToScreenVertices);
 				TempRenderProxy->RectSize = Params.RectSize;
 				TempRenderProxy->ObjectToWorldMatrix = Params.ObjectToWorldMatrix;
-				TempRenderProxy->ClipDataTexture = Params.ClipDataTexture;
+				// The texture was alive when this was enqueued, and anything that releases it is enqueued after.
+				TempRenderProxy->ClipDataTextureRHI = Params.ClipDataTexture != nullptr ? Params.ClipDataTexture->TextureReference.TextureReferenceRHI : FTextureReferenceRHIRef();
 				TempRenderProxy->bUseFullSize = Params.bUseFullSize;
 				TempRenderProxy->BoundingBox = Params.BoundingBox;
 				TempRenderProxy->TintColor = Params.TintColor;
@@ -82,16 +86,26 @@ void FDreamVisualPostProcessRenderProxy::SetMaskTexture_GameThread(const FDreamV
 			});
 }
 
-void FDreamVisualPostProcessRenderProxy::SetRenderTarget_GameThread(const FDreamVisualPostProcessRenderProxyPtr& InProxy, FTextureRenderTargetResource* InRenderTargetResource)
+void FDreamVisualPostProcessRenderProxy::SetRenderTarget_GameThread(const FDreamVisualPostProcessRenderProxyPtr& InProxy, UTextureRenderTarget2D* InRenderTarget)
 {
 	if (!InProxy.IsValid())
 	{
 		return;
 	}
-	ENQUEUE_RENDER_COMMAND(FDreamPostProcess_UpdateMaskTexture)
-		([TempRenderProxy = InProxy, RenderTargetResource = InRenderTargetResource](FRHICommandListImmediate& RHICmdList)
+	ENQUEUE_RENDER_COMMAND(FDreamPostProcess_UpdateRenderTarget)
+		([TempRenderProxy = InProxy, RenderTarget = InRenderTarget](FRHICommandListImmediate& RHICmdList)
 			{
-				TempRenderProxy->RenderTargetResource = RenderTargetResource;
+				// The target's resource as the render thread sees it now, read by the command the game thread enqueued
+				// while the target was alive; only the texture is kept, and it keeps itself alive.
+				FTextureRHIRef Texture;
+				if (RenderTarget != nullptr)
+				{
+					if (FTextureRenderTargetResource* Resource = RenderTarget->GetRenderTargetResource())
+					{
+						Texture = Resource->GetRenderTargetTexture();
+					}
+				}
+				TempRenderProxy->OutputTargetTexture = Texture;
 			});
 }
 
@@ -158,9 +172,9 @@ void FDreamVisualPostProcessRenderProxy::RenderMeshOnScreen_RenderThread(
 							, MaskTextureSamplerState
 , TintColor, TintMode
 						);
-						if (ClipDataTexture != nullptr)
+						if (ClipDataTextureRHI.IsValid())
 						{
-							PixelShader->SetClipParameters(RHICmdList, ModelMatrix.Inverse(), ClipDataTexture->TextureRHI, ClipDataTexture->SamplerStateRHI);
+							PixelShader->SetClipParameters(RHICmdList, ModelMatrix.Inverse(), ClipDataTextureRHI.GetReference(), TStaticSamplerState<SF_Point, AM_Clamp, AM_Clamp, AM_Clamp>::GetRHI());
 						}
 						PixelShader->SetDepthBlendParameter(RHICmdList, BlendDepthForWorld, DepthTextureScaleOffset, PSShaderParameters->SceneDepthTex->GetRHI());
 					}
@@ -175,9 +189,9 @@ void FDreamVisualPostProcessRenderProxy::RenderMeshOnScreen_RenderThread(
 							, MaskTextureSamplerState
 , TintColor, TintMode
 						);
-						if (ClipDataTexture != nullptr)
+						if (ClipDataTextureRHI.IsValid())
 						{
-							PixelShader->SetClipParameters(RHICmdList, ModelMatrix.Inverse(), ClipDataTexture->TextureRHI, ClipDataTexture->SamplerStateRHI);
+							PixelShader->SetClipParameters(RHICmdList, ModelMatrix.Inverse(), ClipDataTextureRHI.GetReference(), TStaticSamplerState<SF_Point, AM_Clamp, AM_Clamp, AM_Clamp>::GetRHI());
 						}
 						PixelShader->SetDepthBlendParameter(RHICmdList, BlendDepthForWorld, DepthTextureScaleOffset, PSShaderParameters->SceneDepthTex->GetRHI());
 						PixelShader->SetDepthFadeParameter(RHICmdList, DepthFadeForWorld, FVector2f(1.0f / ViewRect.Width(), 1.0f / ViewRect.Height()));
@@ -194,9 +208,9 @@ void FDreamVisualPostProcessRenderProxy::RenderMeshOnScreen_RenderThread(
 						, MaskTextureSamplerState
 , TintColor, TintMode
 					);
-					if (ClipDataTexture != nullptr)
+					if (ClipDataTextureRHI.IsValid())
 					{
-						PixelShader->SetClipParameters(RHICmdList, ModelMatrix.Inverse(), ClipDataTexture->TextureRHI, ClipDataTexture->SamplerStateRHI);
+						PixelShader->SetClipParameters(RHICmdList, ModelMatrix.Inverse(), ClipDataTextureRHI.GetReference(), TStaticSamplerState<SF_Point, AM_Clamp, AM_Clamp, AM_Clamp>::GetRHI());
 					}
 				}
 				IndexBuffer = GDreamUIFullScreenQuadIndexBuffer.IndexBufferRHI;
@@ -212,9 +226,9 @@ void FDreamVisualPostProcessRenderProxy::RenderMeshOnScreen_RenderThread(
 						SET_PIPELINE_STATE_FOR_CLIP();
 						VertexShader->SetParameters(RHICmdList, ModelViewProjectionMatrix, ModelMatrix);
 						PixelShader->SetParameters(RHICmdList, MeshRegionTextureRHI, ResultTextureSamplerState, TintColor, TintMode);
-						if (ClipDataTexture != nullptr)
+						if (ClipDataTextureRHI.IsValid())
 						{
-							PixelShader->SetClipParameters(RHICmdList, ModelMatrix.Inverse(), ClipDataTexture->TextureRHI);
+							PixelShader->SetClipParameters(RHICmdList, ModelMatrix.Inverse(), ClipDataTextureRHI.GetReference());
 						}
 						PixelShader->SetDepthBlendParameter(RHICmdList, BlendDepthForWorld, DepthTextureScaleOffset, PSShaderParameters->SceneDepthTex->GetRHI());
 					}
@@ -225,9 +239,9 @@ void FDreamVisualPostProcessRenderProxy::RenderMeshOnScreen_RenderThread(
 						SET_PIPELINE_STATE_FOR_CLIP();
 						VertexShader->SetParameters(RHICmdList, ModelViewProjectionMatrix, ModelMatrix);
 						PixelShader->SetParameters(RHICmdList, MeshRegionTextureRHI, ResultTextureSamplerState, TintColor, TintMode);
-						if (ClipDataTexture != nullptr)
+						if (ClipDataTextureRHI.IsValid())
 						{
-							PixelShader->SetClipParameters(RHICmdList, ModelMatrix.Inverse(), ClipDataTexture->TextureRHI);
+							PixelShader->SetClipParameters(RHICmdList, ModelMatrix.Inverse(), ClipDataTextureRHI.GetReference());
 						}
 						PixelShader->SetDepthBlendParameter(RHICmdList, BlendDepthForWorld, DepthTextureScaleOffset, PSShaderParameters->SceneDepthTex->GetRHI());
 						PixelShader->SetDepthFadeParameter(RHICmdList, DepthFadeForWorld, FVector2f(1.0f / ViewRect.Width(), 1.0f / ViewRect.Height()));
@@ -240,9 +254,9 @@ void FDreamVisualPostProcessRenderProxy::RenderMeshOnScreen_RenderThread(
 					SET_PIPELINE_STATE_FOR_CLIP();
 					VertexShader->SetParameters(RHICmdList, ModelViewProjectionMatrix, ModelMatrix);
 					PixelShader->SetParameters(RHICmdList, MeshRegionTextureRHI, ResultTextureSamplerState, TintColor, TintMode);
-					if (ClipDataTexture != nullptr)
+					if (ClipDataTextureRHI.IsValid())
 					{
-						PixelShader->SetClipParameters(RHICmdList, ModelMatrix.Inverse(), ClipDataTexture->TextureRHI);
+						PixelShader->SetClipParameters(RHICmdList, ModelMatrix.Inverse(), ClipDataTextureRHI.GetReference());
 					}
 				}
 				IndexBuffer = GDreamUIFullScreenQuadIndexBuffer.IndexBufferRHI;

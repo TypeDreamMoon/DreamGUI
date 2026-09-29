@@ -6,20 +6,53 @@
 #include "GlobalShader.h"
 #include "ShaderParameterStruct.h"
 #include "RHIStaticStates.h"
+#include "RHITextureReference.h"
+#include "UObject/WeakObjectPtrTemplates.h"
 #include "DreamUIRender/DreamUIBlendMode.h"
 
+class UTexture;
+
 /**
- * What a built-in draw needs beyond its vertices: the textures the material used to carry as
- * parameters, and the font atlas's field geometry for the MTSDF decode. Game-thread side holds
- * texture resources (stable pointers); the render thread reads their RHI at draw time.
+ * The textures of a built-in draw on their way to the render thread: taken on the game thread just before the render
+ * command that carries them is enqueued, and read on the render thread by that command alone. The textures are alive
+ * when it is enqueued, and whatever the collector enqueues to release them comes after it, so reading them there is
+ * safe -- and nowhere else is.
+ */
+struct FDreamUIBuiltInTextures
+{
+	const UTexture* Main = nullptr;
+	const UTexture* Font = nullptr;
+	const UTexture* WidgetData = nullptr;
+	const UTexture* ClipData = nullptr;
+};
+
+/**
+ * What a built-in draw needs beyond its vertices: the textures the material used to carry as parameters, and the font
+ * atlas's field geometry for the MTSDF decode.
+ *
+ * Two halves. The game thread names the textures (weakly: a section that waits in a pool keeps its parameters, and a
+ * texture can be collected meanwhile). The render thread binds each texture's reference and sampler, taken from the
+ * texture by the command that delivers these (ResolveTextures_RenderThread). A reference follows its texture through
+ * every rebuild of the texture's resource -- a font atlas repacked, a data texture grown, an UpdateResource -- and
+ * outlives the texture, pointing at a black one once it is gone. The resource pointers they replace were kept across
+ * frames and left dangling by each of those until the next rebuild of the draw call, and the sampler, fixed to a
+ * bilinear one, drew a texture filtered nearest soft where the material drew it sharp.
  */
 struct FDreamUIBuiltInDrawParams
 {
 	bool bEnabled = false;
-	class FTextureResource* MainTexture = nullptr;
-	class FTextureResource* FontTexture = nullptr;
-	class FTextureResource* WidgetDataTexture = nullptr;
-	class FTextureResource* ClipDataTexture = nullptr;
+	/** Game thread: the textures, as the canvas names them. Never read on the render thread. */
+	TWeakObjectPtr<const UTexture> MainTexture;
+	TWeakObjectPtr<const UTexture> FontTexture;
+	TWeakObjectPtr<const UTexture> WidgetDataTexture;
+	TWeakObjectPtr<const UTexture> ClipDataTexture;
+	/** Render thread: what a draw binds. Null where there is no texture; the draw then binds a fallback. */
+	FTextureReferenceRHIRef MainTextureRHI;
+	FSamplerStateRHIRef MainSamplerRHI;
+	FTextureReferenceRHIRef FontTextureRHI;
+	FSamplerStateRHIRef FontSamplerRHI;
+	FTextureReferenceRHIRef WidgetDataTextureRHI;
+	FTextureReferenceRHIRef ClipDataTextureRHI;
 	/** Atlas slice size in texels. */
 	FVector2f FontAtlasSize = FVector2f(1.0f, 1.0f);
 	/** Distance-field range in texels (twice the spread); 0 for non-field atlases. */
@@ -28,6 +61,11 @@ struct FDreamUIBuiltInDrawParams
 	float FontEmTexels = 0.0f;
 	/** How this draw composites. One per draw-call, because the blend state is set once per draw. */
 	EDreamUIBlendMode BlendMode = EDreamUIBlendMode::Alpha;
+
+	/** Game thread: the textures, for a render command about to be enqueued. A texture that is gone is null. */
+	DREAMGUIRENDERER_API FDreamUIBuiltInTextures GetTexturesForRenderCommand() const;
+	/** Render thread, inside the command that carries InTextures: take each one's reference and sampler. */
+	DREAMGUIRENDERER_API void ResolveTextures_RenderThread(const FDreamUIBuiltInTextures& InTextures);
 };
 
 /** Vertex shader of the built-in UI pass: the full DreamGUI vertex, model and model-view-projection. */

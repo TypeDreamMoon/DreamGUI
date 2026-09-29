@@ -7,7 +7,10 @@
 
 #include "Core/Components/DreamCanvas.h"
 #include "Core/Components/DreamWidget.h"
+#include "Core/Components/DreamRectBlock.h"
 #include "Core/DreamUIDataAsTexture.h"
+#include "Core/DreamUIDataTexture.h"
+#include "Core/DreamUIManager.h"
 #include "Core/DreamUIMesh/DreamUIMeshComponent.h"
 #include "Core/DreamUIRuntimeObject.h"
 #include "Core/DreamUserWidget.h"
@@ -79,7 +82,7 @@ bool FDreamLifecycleCopyLeavesTheCanvasMeshOutTest::RunTest(const FString& Param
 	DreamTests::Lifecycle::CopyPasteActor(Level.World, Actor, 0, &Copied);
 	TestTrue(TEXT("Copy wrote the actor out"), Copied.Contains(ADreamWorldWidgetActor::StaticClass()->GetName()));
 	TestFalse(TEXT("but not the canvas mesh, which the host's canvas makes for itself"), Copied.Contains(UDreamUIMeshComponent::StaticClass()->GetName()));
-	TestFalse(TEXT("nor any of the canvas's data textures"), Copied.Contains(UTexture2DDynamic::StaticClass()->GetName()));
+	TestFalse(TEXT("nor any of the canvas's data textures"), Copied.Contains(UDreamUIDataTexture::StaticClass()->GetName()) || Copied.Contains(UTexture2DDynamic::StaticClass()->GetName()));
 	return true;
 }
 
@@ -149,7 +152,7 @@ bool FDreamLifecyclePlayAfterPasteTest::RunTest(const FString& Parameters)
 	if (!TestNotNull(TEXT("the level was duplicated for play"), PlayWorld))return false;
 	const int32 TreeObjectsCopied = DreamUI::GetCopiedIntoPlaySessionCount() - CopiesBefore;
 	const TArray<FString> ZeroSize = DreamTests::Lifecycle::FindZeroSizeDynamicTextures();
-	const TArray<FString> ClonedTextures = DreamTests::Lifecycle::FindObjectsInPackage(PlayWorld->GetOutermost(), UTexture2DDynamic::StaticClass());
+	const TArray<FString> ClonedTextures = DreamTests::Lifecycle::FindObjectsInPackage(PlayWorld->GetOutermost(), UDreamUIDataTexture::StaticClass());
 	const TArray<FString> ClonedCanvases = DreamTests::Lifecycle::FindObjectsInPackage(PlayWorld->GetOutermost(), UDreamCanvas::StaticClass());
 	DreamTests::Lifecycle::DestroyDuplicatedWorld(PlayWorld);
 
@@ -269,7 +272,7 @@ bool FDreamLifecycleForeignMaterialBridgeTest::RunTest(const FString& Parameters
 	if (!TestNotNull(TEXT("the level was duplicated for play"), PlayWorld))return false;
 	const int32 TreeObjectsCopied = DreamUI::GetCopiedIntoPlaySessionCount() - CopiesBefore;
 	const TArray<FString> ZeroSize = DreamTests::Lifecycle::FindZeroSizeDynamicTextures();
-	const TArray<FString> ClonedTextures = DreamTests::Lifecycle::FindObjectsInPackage(PlayWorld->GetOutermost(), UTexture2DDynamic::StaticClass());
+	const TArray<FString> ClonedTextures = DreamTests::Lifecycle::FindObjectsInPackage(PlayWorld->GetOutermost(), UDreamUIDataTexture::StaticClass());
 	DreamTests::Lifecycle::DestroyDuplicatedWorld(PlayWorld);
 
 	TestEqual(FString::Printf(TEXT("the duplication made no texture the RHI would refuse (found: %s)"), *JoinLines(ZeroSize)), ZeroSize.Num(), 0);
@@ -513,6 +516,8 @@ bool FDreamLifecycleRuntimePropertiesLeftOutTest::RunTest(const FString& Paramet
 		{ UDreamCanvas::StaticClass(), TEXT("ClipDataAsTexture") },
 		{ UDreamCanvas::StaticClass(), TEXT("WidgetPropertyDataAsTexture") },
 		{ UDreamUIDataAsTexture::StaticClass(), TEXT("Texture") },
+		{ UDreamRectBlock::StaticClass(), TEXT("DataRows") },
+		{ UDreamUIManagerWorldSubsystem::StaticClass(), TEXT("RectBlockDataRows") },
 		{ UDreamUIRenderTargetGeometrySource::StaticClass(), TEXT("BodySetup") },
 		{ UDreamUIRenderTargetGeometrySource::StaticClass(), TEXT("MaterialInstance") },
 		{ UDreamUMGWidget::StaticClass(), TEXT("RenderTarget") },
@@ -536,7 +541,7 @@ namespace DreamLifecycleDuplicationAuditLocal
 	bool IsMadeByItsOwner(const UClass* InClass)
 	{
 		const UClass* const Made[] = {
-			UTexture2DDynamic::StaticClass(), UTextureRenderTarget2D::StaticClass(), UMaterialInstanceDynamic::StaticClass(),
+			UTexture2DDynamic::StaticClass(), UDreamUIDataTexture::StaticClass(), UTextureRenderTarget2D::StaticClass(), UMaterialInstanceDynamic::StaticClass(),
 			UDreamUIMeshComponent::StaticClass(), UDreamUIDataAsTexture::StaticClass(), UDreamWidgetTree::StaticClass(),
 		};
 		for (const UClass* Class : Made)

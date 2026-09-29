@@ -13,6 +13,8 @@
 // draw -- the renderer's own -- are given its include path.
 struct FMinimalSceneTextures;
 class FTexture2DResource;
+class UTexture;
+class UTextureRenderTarget2D;
 
 /**
  * What a post-process visual sends its proxy whenever its region, transform or tint changes: worked out on the
@@ -24,7 +26,11 @@ struct FDreamUIPostProcessCommonParams
 	TArray<FDreamUIPostProcessVertex> MeshRegionToScreenVertices;
 	FVector2f RectSize = FVector2f::ZeroVector;
 	FMatrix44f ObjectToWorldMatrix = FMatrix44f::Identity;
-	FTexture2DDynamicResource* ClipDataTexture = nullptr;
+	/**
+	 * The canvas's clip data texture. Read on the render thread by the command that carries these, and only there: the
+	 * proxy keeps the texture's reference, which follows it as it grows (see FDreamVisualPostProcessRenderProxy).
+	 */
+	const UTexture* ClipDataTexture = nullptr;
 	bool bUseFullSize = false;
 	FBox BoundingBox = FBox(EForceInit::ForceInit);
 	/** See FDreamVisualPostProcessRenderProxy::TintColor. */
@@ -59,8 +65,12 @@ public:
 	static void SetCommonParams_GameThread(const FDreamVisualPostProcessRenderProxyPtr& InProxy, FDreamUIPostProcessCommonParams&& InParams);
 	/** InMaskTextureResource is the mask texture's resource as the game thread sees it now, or null for no mask. */
 	static void SetMaskTexture_GameThread(const FDreamVisualPostProcessRenderProxyPtr& InProxy, FTexture2DResource* InMaskTextureResource);
-	/** Null draws the effect to the screen; otherwise it is drawn into this render target. */
-	static void SetRenderTarget_GameThread(const FDreamVisualPostProcessRenderProxyPtr& InProxy, FTextureRenderTargetResource* InRenderTargetResource);
+	/**
+	 * Null draws the effect to the screen; otherwise it is drawn into this render target. The command takes the
+	 * target's texture on the render thread and keeps it, so a target collected afterwards cannot leave the proxy
+	 * drawing into freed memory; a target that is resized is sent again by the visual.
+	 */
+	static void SetRenderTarget_GameThread(const FDreamVisualPostProcessRenderProxyPtr& InProxy, UTextureRenderTarget2D* InRenderTarget);
 private:
 	TWeakPtr<FDreamUIRenderer, ESPMode::ThreadSafe> DreamRenderer;
 	bool bIsWorld = false;//is world space or screen space
@@ -95,7 +105,12 @@ public:
 		const FVector4f& ViewTextureScaleOffset
 	) = 0;
 public:
-	FTexture2DDynamicResource* ClipDataTexture = nullptr;
+	/**
+	 * The clip data texture's reference, which is whatever texture the canvas's clip data lives in now -- it grows in
+	 * place -- and outlives it. The resource pointer it replaces was sent once and read every frame after, and the
+	 * texture it pointed into could be rebuilt or collected in between.
+	 */
+	FTextureReferenceRHIRef ClipDataTextureRHI;
 	
 	FMatrix44f ObjectToWorldMatrix = FMatrix44f::Identity;
 	TArray<FDreamUIPostProcessCopyMeshRegionVertex> RenderScreenToMeshRegionVertexArray;
@@ -114,8 +129,8 @@ public:
 	FSamplerStateRHIRef MaskTextureSamplerState;
 	bool bUseFullSize = false;
 	FBox BoundingBox;
-	//output target
-	FTextureRenderTargetResource* RenderTargetResource = nullptr;
+	/** The render target the effect draws into, or null to draw it to the screen. See SetRenderTarget_GameThread. */
+	FTextureRHIRef OutputTargetTexture;
 
 	/**
 	 * Use a mesh to render the MeshRegionTexture to ScreenTargetTexture

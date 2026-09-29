@@ -119,7 +119,7 @@ public:
 				, PixelateEffectRenderTargetTexture);
 		}
 
-		if (RenderTargetResource == nullptr)
+		if (!OutputTargetTexture.IsValid())
 		{
 			//after pixelate process, copy the area back to screen image
 			if (!bFullScreen)
@@ -135,7 +135,7 @@ public:
 		}
 		else
 		{
-			Renderer->CopyRenderTarget_ColorCorrect(GraphBuilder, GlobalShaderMap, PixelateEffectRenderTargetTexture, RenderTargetResource->GetRenderTargetTexture()
+			Renderer->CopyRenderTarget_ColorCorrect(GraphBuilder, GlobalShaderMap, PixelateEffectRenderTargetTexture, OutputTargetTexture
 					, TStaticSamplerState<SF_Point, AM_Clamp, AM_Clamp, AM_Clamp>::GetRHI());
 		}
 	}

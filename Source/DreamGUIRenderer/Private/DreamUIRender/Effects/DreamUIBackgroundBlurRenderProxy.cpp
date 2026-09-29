@@ -50,7 +50,7 @@ public:
 	) override
 	{
 		SCOPE_CYCLE_COUNTER(STAT_BackgroundBlur);
-		if (BlurStrength <= 0.0f && RenderTargetResource == nullptr)return;
+		if (BlurStrength <= 0.0f && !OutputTargetTexture.IsValid())return;
 
 		auto& RHICmdList = GraphBuilder.RHICmdList;
 
@@ -88,7 +88,7 @@ public:
 			RectWidth = FMath::Max(RectWidth, 1.0f);
 			RectHeight = FMath::Max(RectHeight, 1.0f);
 			FPooledRenderTargetDesc desc(FPooledRenderTargetDesc::Create2DDesc(FIntPoint(RectWidth, RectHeight), ScreenTargetTexture->GetFormat(), FClearValueBinding::Black, TexCreate_None, TexCreate_RenderTargetable, false));
-			if (RenderTargetResource == nullptr)
+			if (!OutputTargetTexture.IsValid())
 			{
 				if (!bUseFullSize)
 				{
@@ -111,7 +111,7 @@ public:
 			}
 		}
 		FRHITexture* BlurEffectRenderTexture = nullptr;
-		if (RenderTargetResource == nullptr)
+		if (!OutputTargetTexture.IsValid())
 		{
 			if (bUseFullSize)//full screen just use it directly
 			{
@@ -197,7 +197,7 @@ public:
 		}
 		DoBlur(BlurEffectRenderTexture, FilteredBlurStrength, MagicNumber, GraphBuilder, Renderer, GlobalShaderMap);
 
-		if (RenderTargetResource == nullptr)
+		if (!OutputTargetTexture.IsValid())
 		{
 			//after blur process, copy the blur result image back to screen image of the area
 			if (!bUseFullSize)
@@ -208,7 +208,7 @@ public:
 		}
 		else
 		{
-			Renderer->CopyRenderTarget_ColorCorrect(GraphBuilder, GlobalShaderMap, BlurEffectRenderTexture, RenderTargetResource->GetRenderTargetTexture());
+			Renderer->CopyRenderTarget_ColorCorrect(GraphBuilder, GlobalShaderMap, BlurEffectRenderTexture, OutputTargetTexture);
 		}
 
 		//no explicit release: every pooled target above is referenced by the graph until it executes,

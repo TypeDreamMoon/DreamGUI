@@ -289,9 +289,9 @@ void UDreamVisualPostProcess::SendRegionVertexDataToRenderProxy()
 			Params.BoundingBox += WorldMax;
 		}
 		auto ClipDataTex = this->GetClipDataTexture();
-		if (IsValid(ClipDataTex) && ClipDataTex->GetResource() != nullptr)
+		if (IsValid(ClipDataTex))
 		{
-			Params.ClipDataTexture = (FTexture2DDynamicResource*)ClipDataTex->GetResource();
+			Params.ClipDataTexture = ClipDataTex;
 		}
 		FDreamVisualPostProcessRenderProxy::SetCommonParams_GameThread(RenderProxy, MoveTemp(Params));
 	}
@@ -378,16 +378,12 @@ void UDreamVisualPostProcess::SendRenderTargetToRenderProxy()
 {
 	if (RenderProxy.IsValid())
 	{
-		FTextureRenderTargetResource* RenderTargetResource = nullptr;
+		UTextureRenderTarget2D* Target = nullptr;
 		if (!bUseFullSize && RenderType == EDreamBackgroundBlurRenderType::RenderTarget && IsValid(GetOutputRenderTarget()))
 		{
-			RenderTargetResource = GetOutputRenderTarget()->GameThread_GetRenderTargetResource();
+			Target = GetOutputRenderTarget();
 		}
-		else
-		{
-			RenderTargetResource = nullptr;
-		}
-		FDreamVisualPostProcessRenderProxy::SetRenderTarget_GameThread(RenderProxy, RenderTargetResource);
+		FDreamVisualPostProcessRenderProxy::SetRenderTarget_GameThread(RenderProxy, Target);
 	}
 }
 

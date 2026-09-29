@@ -18,13 +18,14 @@
 #include "Driver/DreamDriverRig.h"
 
 /*
- * A CANVAS GIVES ITS NEW DATA TEXTURES TO EVERY MATERIAL INSTANCE IT KEEPS, NOT ONLY THE ONES IN USE.
+ * EVERY MATERIAL INSTANCE A CANVAS KEEPS SAMPLES ITS DATA TEXTURES AS THEY GROW, NOT ONLY THE ONES IN USE.
  *
  * A canvas makes a material instance for each draw call through a custom material and keeps them from one
  * frame to the next: a frame with fewer such draw calls leaves the rest waiting in a pool. When the widget
- * property data outgrew its texture and moved to a new one, only the instances that frame's draw calls took
- * were told. An instance waiting in the pool kept the old texture, and the frame that took it back drew
- * through a texture the canvas no longer writes to.
+ * property data outgrew its texture it used to move to a new one, and only the instances that frame's draw
+ * calls took were told: an instance waiting in the pool kept the old texture, and the frame that took it back
+ * drew through a texture the canvas no longer wrote to. A data texture now grows in place, and an instance
+ * binds its reference, so none of them has anything to be told.
  */
 namespace DreamCanvasMaterialPoolTestLocal
 {
@@ -73,7 +74,7 @@ namespace DreamCanvasMaterialPoolTestLocal
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamCanvasPooledMaterialDataTextureTest,
-	"DreamGUI.Canvas.AMaterialInstanceWaitingInItsPoolIsGivenTheNewDataTextureToo",
+	"DreamGUI.Canvas.AMaterialInstanceWaitingInItsPoolSamplesTheDataTextureStillWhenItGrows",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
 
 bool FDreamCanvasPooledMaterialDataTextureTest::RunTest(const FString& Parameters)
@@ -132,27 +133,31 @@ bool FDreamCanvasPooledMaterialDataTextureTest::RunTest(const FString& Parameter
 	{
 		return false;
 	}
-	const UTexture* OldTexture = PropertyData->GetDataTexture();
+	const UTexture* Texture = PropertyData->GetDataTexture();
+	const int HeightBefore = PropertyData->GetTextureHeight();
 	TArray<int> ClaimedRows;
-	while (PropertyData->GetDataTexture() == OldTexture && ClaimedRows.Num() < 65536)
+	while (PropertyData->GetTextureHeight() == HeightBefore && ClaimedRows.Num() < 65536)
 	{
 		ClaimedRows.Add(PropertyData->RegisterBuffer());
 	}
-	const UTexture* NewTexture = PropertyData->GetDataTexture();
+	const int HeightAfter = PropertyData->GetTextureHeight();
 	for (const int Row : ClaimedRows)
 	{
 		PropertyData->UnregisterBuffer(Row);
 	}
-	if (!TestTrue(TEXT("The property data moved to a new texture"), NewTexture != nullptr && NewTexture != OldTexture))
+	if (!TestTrue(FString::Printf(TEXT("The property data grew (%d rows, then %d)"), HeightBefore, HeightAfter), HeightAfter > HeightBefore))
 	{
 		return false;
 	}
+	TestTrue(TEXT("...in place: it is the same texture"), PropertyData->GetDataTexture() == Texture);
 	DrawFrames(Rig, Manager, 2);
 
+	// Nothing has to be given to anyone: the instances bind the texture's reference, which the growth pointed at
+	// the taller one. The pooled instance, which no draw call took this frame, has the texture as much as the other.
 	for (const UMaterialInstanceDynamic* Instance : Instances)
 	{
-		TestTrue(FString::Printf(TEXT("%s samples the new property data texture"), *Instance->GetName()),
-			PropertyDataTextureOf(Instance) == NewTexture);
+		TestTrue(FString::Printf(TEXT("%s samples the property data texture, grown"), *Instance->GetName()),
+			PropertyDataTextureOf(Instance) == Texture);
 	}
 	return true;
 }

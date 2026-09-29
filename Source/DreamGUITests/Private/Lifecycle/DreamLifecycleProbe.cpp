@@ -5,6 +5,7 @@
 #if WITH_EDITOR
 
 #include "Core/Components/DreamWidget.h"
+#include "Core/DreamUIDataTexture.h"
 #include "Core/DreamUIManager.h"
 #include "Core/DreamUIMesh/DreamUIMeshComponent.h"
 #include "Editor.h"
@@ -35,6 +36,15 @@ namespace DreamTests::Lifecycle
 			if (Texture->SizeX <= 0 || Texture->SizeY <= 0 || Texture->NumMips <= 0)
 			{
 				Found.Add(FString::Printf(TEXT("%s (%dx%d, %d mips)"), *Texture->GetPathName(), Texture->SizeX, Texture->SizeY, Texture->NumMips));
+			}
+		}
+		// A data texture with no size is a copy of one: it makes no resource, but it should not exist either.
+		for (TObjectIterator<UDreamUIDataTexture> It; It; ++It)
+		{
+			const UDreamUIDataTexture* Texture = *It;
+			if (IsValid(Texture) && !Texture->IsTemplate() && (Texture->GetWidth() <= 0 || Texture->GetHeight() <= 0))
+			{
+				Found.Add(FString::Printf(TEXT("%s (a data texture of %dx%d)"), *Texture->GetPathName(), Texture->GetWidth(), Texture->GetHeight()));
 			}
 		}
 		return Found;
@@ -195,6 +205,17 @@ namespace DreamTests::Lifecycle
 				Reported.Add(FObjectKey(Texture));
 				Broken.Add(FString::Printf(TEXT("a dynamic texture the RHI would refuse, %s (%dx%d, %d mips)"),
 					*Texture->GetPathName(), Texture->SizeX, Texture->SizeY, Texture->NumMips));
+			}
+		}
+		for (TObjectIterator<UDreamUIDataTexture> It; It; ++It)
+		{
+			const UDreamUIDataTexture* Texture = *It;
+			if (IsValid(Texture) && !Texture->IsTemplate()
+				&& (Texture->GetWidth() <= 0 || Texture->GetHeight() <= 0)
+				&& !Reported.Contains(FObjectKey(Texture)))
+			{
+				Reported.Add(FObjectKey(Texture));
+				Broken.Add(FString::Printf(TEXT("a data texture with no size -- a copy of one -- %s"), *Texture->GetPathName()));
 			}
 		}
 		for (TObjectIterator<UDreamUIMeshComponent> It; It; ++It)

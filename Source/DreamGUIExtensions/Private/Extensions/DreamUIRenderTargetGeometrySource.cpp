@@ -61,10 +61,17 @@ public:
 	}
 	FDreamUIRenderTargetGeometrySource_SceneProxy(UDreamUIRenderTargetGeometrySource* Component)
 		: FPrimitiveSceneProxy(Component)
-		, RenderTarget(Component->GetRenderTarget())
-		, MaterialInstance(Component->GetMaterialInstance())
 		, GeometryMode(Component->GetGeometryMode())
 	{
+		// Everything the draw needs of the component is read here, on the game thread. The proxy used to keep the
+		// render target and the material instance themselves and read them in GetDynamicMeshElements, on the render
+		// thread or one of its tasks, whatever the game thread had done to them since. A material instance's render
+		// proxy lives as long as the instance, which the component holds past this proxy; and whether there is a
+		// target to show is decided now, as it was on every draw before -- a new target rebuilds this proxy.
+		const UMaterialInstanceDynamic* MaterialInstance = Component->GetMaterialInstance();
+		SurfaceMaterialProxy = MaterialInstance->GetRenderProxy();
+		const UTextureRenderTarget2D* Target = Component->GetRenderTarget();
+		bHasRenderTarget = Target != nullptr && Target->GetResource() != nullptr;
 		MaterialRelevance = MaterialInstance->GetRelevance_Concurrent(GetScene().GetShaderPlatform());
 
 		Section = new FDreamUIRenderTargetGeometrySourceMeshProxySection(GetScene().GetFeatureLevel());
@@ -237,17 +244,15 @@ public:
 		}
 		else
 		{
-			ParentMaterialProxy = MaterialInstance->GetRenderProxy();
+			ParentMaterialProxy = SurfaceMaterialProxy;
 		}
 #else
 		const bool bWireframe = false;
-		FMaterialRenderProxy* ParentMaterialProxy = MaterialInstance->GetRenderProxy();
+		FMaterialRenderProxy* ParentMaterialProxy = SurfaceMaterialProxy;
 #endif
 
-		if (RenderTarget)
+		if (bHasRenderTarget)
 		{
-			auto TextureResource = RenderTarget->GetResource();
-			if (TextureResource)
 			{
 				switch (GeometryMode)
 				{
@@ -362,7 +367,7 @@ public:
 		
 		if (Section != nullptr)
 		{
-			FMaterialRenderProxy* MaterialProxy = MaterialInstance->GetRenderProxy();
+			FMaterialRenderProxy* MaterialProxy = SurfaceMaterialProxy;
 
 			if (Section->RayTracingGeometry.IsValid())
 			{
@@ -377,7 +382,7 @@ public:
 
 				MeshBatch.VertexFactory = &Section->VertexFactory;
 				MeshBatch.SegmentIndex = 0;
-				MeshBatch.MaterialRenderProxy = MaterialInstance->GetRenderProxy();
+				MeshBatch.MaterialRenderProxy = SurfaceMaterialProxy;
 				MeshBatch.ReverseCulling = IsLocalToWorldDeterminantNegative();
 				MeshBatch.Type = PT_TriangleList;
 				MeshBatch.DepthPriorityGroup = SDPG_World;
@@ -421,8 +426,9 @@ public:
 #endif
 
 private:
-	UTextureRenderTarget2D* RenderTarget = nullptr;
-	UMaterialInstanceDynamic* MaterialInstance = nullptr;
+	/** The component's material instance, as its render proxy: see the constructor. */
+	FMaterialRenderProxy* SurfaceMaterialProxy = nullptr;
+	bool bHasRenderTarget = false;
 	EDreamUIRenderTargetGeometryMode GeometryMode = EDreamUIRenderTargetGeometryMode::Plane;
 	FDreamUIRenderTargetGeometrySourceMeshProxySection* Section = nullptr;
 

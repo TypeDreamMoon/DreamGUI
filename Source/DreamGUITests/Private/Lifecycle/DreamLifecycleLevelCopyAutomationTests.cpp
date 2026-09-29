@@ -6,6 +6,7 @@
 
 #include "Core/Components/DreamWidget.h"
 #include "Core/DreamUIDataAsTexture.h"
+#include "Core/DreamUIDataTexture.h"
 #include "Core/DreamUIMesh/DreamUIMeshComponent.h"
 #include "Core/DreamUIRuntimeObject.h"
 #include "Core/DreamWidgetTree.h"
@@ -39,7 +40,7 @@ namespace DreamLifecycleLevelCopyTestLocal
 	{
 		TArray<FString> Found;
 		for (const UClass* Class : { UDreamWidget::StaticClass(), UDreamWidgetTree::StaticClass(), UDreamUIMeshComponent::StaticClass(),
-				 UDreamUIDataAsTexture::StaticClass(), UTexture2DDynamic::StaticClass() })
+				 UDreamUIDataAsTexture::StaticClass(), UDreamUIDataTexture::StaticClass(), UTexture2DDynamic::StaticClass() })
 		{
 			Found.Append(FindObjectsInPackage(InPackage, Class));
 		}

@@ -1,10 +1,11 @@
-﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
+// Copyright 2019-Present LexLiu. All Rights Reserved.
 
 #pragma once
 
 #include "CoreMinimal.h"
 #include "Engine/DataAsset.h"
 #include "Engine/Texture.h"
+#include "Core/DreamUIDataTexture.h"
 #include "DreamUIDataAsTexture.generated.h"
 
 UENUM(BlueprintType)
@@ -17,6 +18,11 @@ enum class EDreamUIDataAsTexturePixelFormat:uint8
 	R16G16B16A16,
 	R32G32B32A32,
 };
+/**
+ * Rows of a texture handed out as blocks: a canvas's widget data, its clip data, the rect blocks' data. The rows
+ * live in a UDreamUIDataTexture, which grows in place when they run out, so the texture this hands out is the same
+ * object for as long as this lives, and whatever binds it follows every growth.
+ */
 UCLASS(ClassGroup = (DreamUI), BlueprintType)
 class DREAMGUI_API UDreamUIDataAsTexture :public UDataAsset
 {
@@ -50,13 +56,8 @@ private:
 	int CurrentPosition = 0;
 	bool bIsInitialized = false;
 	TArray<int> NotUsingPositionArray;
-	struct FPendingUpdateData
-	{
-		int PosX = 0, PosY = 0;
-		TArray<uint8> Data;
-		int DataPixelCount = 1;
-	};
-	TArray<FPendingUpdateData> PendingUpdateDataArray;
+	/** The writes of a batch, sent together when it is flushed. */
+	TArray<FDreamUIDataTextureUpdate> PendingUpdates;
 	bool bBatchUpdateMode = false;
 
 	void CreateTexture();
@@ -71,6 +72,8 @@ public:
 	 */
 	void Init(int InBlockSizeInByte, EDreamUIDataAsTexturePixelFormat InPixelFormat, int InInitialTextureHeight = 32);
 	int GetBlockSizeInByte()const { return BlockSizeInByte; }
+	/** Rows the texture has now; it grows as rows are handed out. */
+	int GetTextureHeight()const { return TextureHeight; }
 	/**
 	 * Request a new block area with initialize block size.
 	 * @return Start position in texture's data
@@ -84,8 +87,6 @@ public:
 	void PrepareForBatchUpdate();
 	void Flush();
 
+	/** The same texture for as long as this lives: it grows in place (see UDreamUIDataTexture). */
 	UTexture* GetDataTexture()const { return Texture; }
-
-	DECLARE_EVENT_OneParam(UDreamUIDataAsTexture, FOnDataTextureChange, UTexture*);
-	FOnDataTextureChange OnDataTextureChange;
 };

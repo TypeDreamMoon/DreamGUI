@@ -2,6 +2,7 @@
 // Modified by TypeDreamMoon.
 
 #include "Core/Components/DreamRectBlock.h"
+#include "Core/DreamUIManager.h"
 #include "Core/DreamUIWorldContext.h"
 #include "Core/DreamGUISettings.h"
 #include "DreamGUI.h"
@@ -367,9 +368,8 @@ void UDreamRectBlock::OnRegister()
 	// INDEX_NONE, which is what OnUnregister and the geometry update already key off.
 	if (RectBlockData != nullptr)
 	{
-		RectBlockData->Init(DataCountInBytes(), EDreamUIDataAsTexturePixelFormat::R32G32B32A32, 32);
-		DataStartPosition = RectBlockData->RegisterBuffer();
-		OnDataTextureChangedDelegateHandle = RectBlockData->OnDataTextureChange.AddUObject(this, &UDreamRectBlock::OnDataTextureChanged);
+		DataRows = FindDataRows();
+		DataStartPosition = DataRows->RegisterBuffer();
 	}
 	else
 	{
@@ -398,16 +398,12 @@ void UDreamRectBlock::OnUnregister()
 	// RectBlockData is null when OnRegister could not load the settings default, and DataStartPosition
 	// is then still its as-declared 0 rather than INDEX_NONE -- so the row test alone would call
 	// UnregisterBuffer on nothing.
-	if (RectBlockData != nullptr && DataStartPosition > INDEX_NONE)
+	if (DataRows != nullptr && DataStartPosition > INDEX_NONE)
 	{
-		RectBlockData->UnregisterBuffer(DataStartPosition);
+		DataRows->UnregisterBuffer(DataStartPosition);
 		DataStartPosition = INDEX_NONE;
 	}
-	if (RectBlockData != nullptr && OnDataTextureChangedDelegateHandle.IsValid())
-	{
-		RectBlockData->OnDataTextureChange.Remove(OnDataTextureChangedDelegateHandle);
-		OnDataTextureChangedDelegateHandle.Reset();
-	}
+	DataRows = nullptr;
 #if WITH_EDITOR
 	if (DreamUI::IsEditingWorld(this))
 	{
@@ -562,10 +558,22 @@ UMaterialInterface* UDreamRectBlock::GetMaterialToCreateGeometry()
 }
 void UDreamRectBlock::OnMaterialInstanceDynamicCreated(class UMaterialInstanceDynamic* mat)
 {
-	if (RectBlockData != nullptr)
+	if (DataRows != nullptr)
 	{
-		mat->SetTextureParameterValue(DataTextureParameterName, RectBlockData->GetDataTexture());
+		mat->SetTextureParameterValue(DataTextureParameterName, DataRows->GetDataTexture());
 	}
+}
+
+UDreamUIDataAsTexture* UDreamRectBlock::FindDataRows() const
+{
+	if (UDreamUIManagerWorldSubsystem* Manager = UDreamUIManagerWorldSubsystem::GetInstance(GetWorld()))
+	{
+		return Manager->GetRectBlockDataRows(RectBlockData, DataCountInBytes(), EDreamUIDataAsTexturePixelFormat::R32G32B32A32);
+	}
+	// A world no UI manager runs in draws no rect block, but one can register there all the same; it keeps to the
+	// asset's own rows, as every world used to.
+	RectBlockData->Init(DataCountInBytes(), EDreamUIDataAsTexturePixelFormat::R32G32B32A32, 32);
+	return RectBlockData;
 }
 
 void UDreamRectBlock::MarkAllDirty()
@@ -698,12 +706,6 @@ bool UDreamRectBlock::LineTraceUIRect(FDreamUIHitResult& OutHit, const FVector& 
 	return false;
 }
 
-void UDreamRectBlock::OnDataTextureChanged(class UTexture* Texture)
-{
-	UIGeometry->Texture = GetTextureToCreateGeometry();
-	MarkVerticesDirty(false, true, true, false);
-}
-
 void UDreamRectBlock::OnUpdateGeometry(FDreamUIGeometry& InGeo, bool InTriangleChanged, bool InVertexPositionChanged, bool InVertexUVChanged, bool InVertexColorChanged)
 {
 	auto Widget = GetWidget();
@@ -731,11 +733,11 @@ void UDreamRectBlock::OnUpdateGeometry(FDreamUIGeometry& InGeo, bool InTriangleC
 	}
 
 	// No data block means there is nothing to upload into -- see OnRegister.
-	if (bNeedUpdateBlockData && RectBlockData != nullptr)
+	if (bNeedUpdateBlockData && DataRows != nullptr)
 	{
 		bNeedUpdateBlockData = false;
 
-		auto BlockSize = RectBlockData->GetBlockSizeInByte();
+		auto BlockSize = DataRows->GetBlockSizeInByte();
 		// The RHI upload copies whole pixels -- BlockPixelCount * 16 bytes for the R32G32B32A32
 		// format registered in OnRegister -- so an exactly BlockSize-d buffer (156 bytes = 9.75
 		// pixels) is overread by the tail of the last pixel. Pad to pixel granularity, zeroed.
@@ -744,7 +746,7 @@ void UDreamRectBlock::OnUpdateGeometry(FDreamUIGeometry& InGeo, bool InTriangleC
 		BlockBuffer.SetNumUninitialized(BufferSize);
 		FMemory::Memzero(BlockBuffer.GetData(), BufferSize);
 		FillData(BlockBuffer.GetData(), Widget->GetWidth(), Widget->GetHeight());
-		RectBlockData->UpdateBlock(DataStartPosition, MoveTemp(BlockBuffer));
+		DataRows->UpdateBlock(DataStartPosition, MoveTemp(BlockBuffer));
 	}
 }
 

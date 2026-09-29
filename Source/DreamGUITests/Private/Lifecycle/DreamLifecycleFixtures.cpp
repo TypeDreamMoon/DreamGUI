@@ -10,6 +10,7 @@
 #include "Core/Components/DreamCanvas.h"
 #include "Core/Components/DreamRectBlock.h"
 #include "Core/Components/DreamWidget.h"
+#include "Core/DreamUIDataTexture.h"
 #include "Core/DreamUIManager.h"
 #include "Core/DreamUserWidget.h"
 #include "Core/DreamWidgetGeneratedClass.h"
@@ -290,7 +291,7 @@ namespace DreamTests::Lifecycle
 			{
 				for (const FTextureParameterValue& Value : Instance->TextureParameterValues)
 				{
-					if (Cast<UTexture2DDynamic>(Value.ParameterValue) != nullptr)
+					if (Cast<UDreamUIDataTexture>(Value.ParameterValue) != nullptr || Cast<UTexture2DDynamic>(Value.ParameterValue) != nullptr)
 					{
 						return Instance;
 					}

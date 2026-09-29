@@ -20,6 +20,10 @@
 #include "Extensions/Effects/DreamBackgroundBlur.h"
 #include "Extensions/Effects/DreamBackgroundPixelate.h"
 #include "Core/Components/DreamCanvas.h"
+#include "Core/DreamUIDataTexture.h"
+#include "Core/DreamUISettings.h"
+#include "Engine/Texture2D.h"
+#include "TextureResource.h"
 #include "Extensions/Effects/DreamPixelSort.h"
 #include "Core/Components/DreamTexture.h"
 #include "Core/Components/DreamWidget.h"
@@ -174,6 +178,25 @@ namespace DreamRenderStabilityTestLocal
 		bool ReadBack(TArray<FColor>& OutPixels, FIntPoint& OutSize) const
 		{
 			return FDreamPixelProbe::ReadBack(TargetTexture.Get(), OutPixels, OutSize);
+		}
+
+		UTextureRenderTarget2D* GetTarget() const { return TargetTexture.Get(); }
+
+		/** A new target of the same size for the canvas; the stage lets go of the old one, which nothing else holds. */
+		UTextureRenderTarget2D* ReplaceTarget()
+		{
+			UTextureRenderTarget2D* Target = NewObject<UTextureRenderTarget2D>(GetTransientPackage(), NAME_None, RF_Transient);
+			Target->AddressX = TextureAddress::TA_Clamp;
+			Target->AddressY = TextureAddress::TA_Clamp;
+			Target->ClearColor = FLinearColor::Black;
+			Target->InitCustomFormat(static_cast<uint32>(TargetExtent), static_cast<uint32>(TargetExtent), EPixelFormat::PF_B8G8R8A8, false);
+			Target->UpdateResourceImmediate(true);
+			if (UDreamCanvas* Canvas = CanvasComponent.Get())
+			{
+				Canvas->SetRenderTarget(Target);
+			}
+			TargetTexture.Reset(Target);
+			return Target;
 		}
 
 		/** Idempotent; the destructor calls it too. */
@@ -625,6 +648,238 @@ bool FDreamRhiPixelSortSampleTest::RunTest(const FString& Parameters)
 		CheckPixel(Stage, InsideRight, Blue, TEXT("a blue column, sorted, inside the rect"));
 		CheckPixel(Stage, OutsideLeft, Red, TEXT("the red half, outside the sorted rect"));
 		CheckPixel(Stage, OutsideRight, Blue, TEXT("the blue half, outside the sorted rect"));
+	});
+	EnqueueTearDown(Stage);
+	return true;
+}
+
+namespace DreamRenderStabilityTestLocal
+{
+	/** A 4x4 texture of one colour, filtered nearest. */
+	UTexture2D* MakeSolidTexture(FColor InColour)
+	{
+		UTexture2D* Texture = UTexture2D::CreateTransient(4, 4, PF_B8G8R8A8);
+		if (Texture == nullptr || Texture->GetPlatformData() == nullptr || Texture->GetPlatformData()->Mips.Num() == 0)
+		{
+			return nullptr;
+		}
+		Texture->Filter = TF_Nearest;
+		Texture->SRGB = true;
+		FTexture2DMipMap& Mip = Texture->GetPlatformData()->Mips[0];
+		FColor* Pixels = static_cast<FColor*>(Mip.BulkData.Lock(LOCK_READ_WRITE));
+		for (int32 Index = 0; Index < 16; ++Index)
+		{
+			Pixels[Index] = InColour;
+		}
+		Mip.BulkData.Unlock();
+		Texture->UpdateResource();
+		return Texture;
+	}
+
+	/** Every pixel of InTexture made InColour, and its resource rebuilt -- the old one is deleted on the render thread. */
+	void RepaintAndRebuild(UTexture2D* InTexture, FColor InColour)
+	{
+		FTexture2DMipMap& Mip = InTexture->GetPlatformData()->Mips[0];
+		FColor* Pixels = static_cast<FColor*>(Mip.BulkData.Lock(LOCK_READ_WRITE));
+		for (int32 Index = 0; Index < 16; ++Index)
+		{
+			Pixels[Index] = InColour;
+		}
+		Mip.BulkData.Unlock();
+		InTexture->UpdateResource();
+	}
+
+	/** The built-in shader for plain widgets, whatever the project says, put back when this goes. */
+	struct FBuiltInShaderScope
+	{
+		bool bSaved = true;
+		FBuiltInShaderScope()
+		{
+			bSaved = GetMutableDefault<UDreamUISettings>()->bUseBuiltInUIShader;
+			GetMutableDefault<UDreamUISettings>()->bUseBuiltInUIShader = true;
+		}
+		~FBuiltInShaderScope()
+		{
+			GetMutableDefault<UDreamUISettings>()->bUseBuiltInUIShader = bSaved;
+		}
+	};
+
+	void CollectEverything()
+	{
+		FlushRenderingCommands();
+		CollectGarbage(GARBAGE_COLLECTION_KEEPFLAGS, /*bPerformFullPurge*/ true);
+		FlushRenderingCommands();
+	}
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamRhiTextureRebuiltUnderASuspendedCanvasTest,
+	"DreamGUI.RHI.ATextureRebuiltUnderACanvasThatRebuildsNothingDrawsItsNewPixels",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter | EAutomationTestFlags::NonNullRHI)
+
+bool FDreamRhiTextureRebuiltUnderASuspendedCanvasTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamRenderStabilityTestLocal;
+
+	// A texture drawn by the built-in shader has its resource rebuilt -- repainted and UpdateResource'd, as an atlas
+	// repack or a reimport does -- under a canvas that rebuilds none of its draw calls, the way one inside an
+	// invalidation box does. The draw used to keep the texture's old resource and read it from freed memory; it binds
+	// the texture's reference now, which the rebuild points at the new pixels.
+	FStageRef Stage = BeginStage(*this);
+	if (!Stage->IsUsable())
+	{
+		Stage->TearDown();
+		return false;
+	}
+	const TSharedRef<FBuiltInShaderScope> BuiltIn = MakeShared<FBuiltInShaderScope>();
+	UTexture2D* Texture = MakeSolidTexture(Red);
+	if (!TestNotNull(TEXT("a texture to draw"), Texture))
+	{
+		Stage->TearDown();
+		return false;
+	}
+	const TSharedRef<TStrongObjectPtr<UTexture2D>> KeepTexture = MakeShared<TStrongObjectPtr<UTexture2D>>(Texture);
+	UDreamWidget* Block = Stage->AddWidget(TEXT("Textured"), FVector2D(100.0, 100.0), FVector2D::ZeroVector);
+	if (UDreamTexture* Visual = Block->CreateNewVisual<UDreamTexture>())
+	{
+		Visual->SetTexture(Texture);
+		Visual->SetColor(FColor::White);
+	}
+	const FIntPoint Centre = Stage->PixelOf(Block, FVector2D::ZeroVector);
+
+	EnqueueSettledFrames(Stage);
+	EnqueueDo([Stage, Centre]()
+	{
+		CheckPixel(Stage, Centre, Red, TEXT("the block, drawn with its texture"));
+	});
+	EnqueueDo([Stage, KeepTexture]()
+	{
+		Stage->GetCanvas()->SetDrawCallRebuildSuspended(true);
+		RepaintAndRebuild(KeepTexture->Get(), Green);
+		CollectEverything();
+	});
+	EnqueueSettledFrames(Stage);
+	EnqueueDo([Stage, Centre]()
+	{
+		CheckPixel(Stage, Centre, Green, TEXT("the block, once its texture was rebuilt under a canvas that rebuilt nothing"));
+		Stage->GetCanvas()->SetDrawCallRebuildSuspended(false);
+	});
+	EnqueueDo([BuiltIn, KeepTexture]() { KeepTexture->Reset(); });
+	EnqueueTearDown(Stage);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamRhiClipOutgrowsItsTextureUnderAnEffectTest,
+	"DreamGUI.RHI.AnEffectInsideAClipKeepsItsClipWhenTheClipDataOutgrowsItsTexture",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter | EAutomationTestFlags::NonNullRHI)
+
+bool FDreamRhiClipOutgrowsItsTextureUnderAnEffectTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamRenderStabilityTestLocal;
+
+	// A full-strength pixelate twice the size of the clip it is in: inside the clip it is one colour, the average of
+	// the split it covers; outside, the clip leaves the background as it was. Then more clips than the clip data
+	// texture has rows, so that it grows, and a collection. An effect used to keep the clip texture's resource, which
+	// the growth replaced and the collection freed; it keeps the texture's reference now, and the texture grows in
+	// place besides.
+	FStageRef Stage = BeginStage(*this);
+	if (!Stage->IsUsable())
+	{
+		Stage->TearDown();
+		return false;
+	}
+	AddSplitBackground(Stage);
+	UDreamWidget* Clip = Stage->AddWidget(TEXT("Clip"), FVector2D(100.0, 100.0), FVector2D::ZeroVector);
+	Clip->SetClipping(EDreamWidgetClipping::ClipToBounds);
+	UDreamWidget* Effect = Stage->AddWidget(TEXT("Pixelate"), FVector2D(200.0, 200.0), FVector2D::ZeroVector, Clip);
+	UDreamBackgroundPixelate* Pixelate = Effect->CreateNewVisual<UDreamBackgroundPixelate>();
+	if (!TestNotNull(TEXT("a pixelate visual"), Pixelate))
+	{
+		Stage->TearDown();
+		return false;
+	}
+	Pixelate->SetPixelateStrength(100.0f);
+	const FIntPoint InsideClip = Stage->PixelOf(Clip, FVector2D(-30.0, 0.0));
+	const FIntPoint OutsideClip = Stage->PixelOf(Effect, FVector2D(-80.0, 0.0));
+	auto CheckClipped = [this, Stage, InsideClip, OutsideClip](const TCHAR* InWhen)
+	{
+		const TOptional<FColor> Inside = ColourAt(Stage, InsideClip);
+		if (TestTrue(FString::Printf(TEXT("the target reads back inside the clip %s"), InWhen), Inside.IsSet()))
+		{
+			TestTrue(FString::Printf(TEXT("inside the clip %s, the effect has mixed the split (%s)"), InWhen, *FDreamPixelProbe::Describe(Inside.GetValue())),
+				IsAMixOfBoth(Inside.GetValue()));
+		}
+		CheckPixel(Stage, OutsideClip, Red, *FString::Printf(TEXT("outside the clip %s, where the effect's rect is but the clip is not"), InWhen));
+	};
+
+	EnqueueSettledFrames(Stage);
+	EnqueueDo([CheckClipped]() { CheckClipped(TEXT("before the clip data grew")); });
+	EnqueueDo([this, Stage]()
+	{
+		UTexture* ClipTexture = Stage->GetCanvas()->GetClipDataTexture();
+		const int32 RowsBefore = Cast<UDreamUIDataTexture>(ClipTexture) != nullptr ? Cast<UDreamUIDataTexture>(ClipTexture)->GetHeight() : 0;
+		// Small and out of the way, and each one a clip of its own: a row each.
+		for (int32 Index = 0; Index < RowsBefore + 12; ++Index)
+		{
+			UDreamWidget* Extra = Stage->AddWidget(*FString::Printf(TEXT("ExtraClip%d"), Index), FVector2D(2.0, 2.0), FVector2D(-120.0, -120.0));
+			Extra->SetClipping(EDreamWidgetClipping::ClipToBounds);
+		}
+		AddInfo(FString::Printf(TEXT("the clip data texture had %d rows; %d more clips were added"), RowsBefore, RowsBefore + 12));
+	});
+	EnqueueSettledFrames(Stage);
+	EnqueueDo([this, Stage]()
+	{
+		CollectEverything();
+		const UDreamUIDataTexture* ClipTexture = Cast<UDreamUIDataTexture>(Stage->GetCanvas()->GetClipDataTexture());
+		if (TestNotNull(TEXT("the canvas's clip data lives in a data texture"), ClipTexture))
+		{
+			TestTrue(FString::Printf(TEXT("which grew (%d rows now)"), ClipTexture->GetHeight()), ClipTexture->GetHeight() > 128);
+		}
+	});
+	EnqueueSettledFrames(Stage);
+	EnqueueDo([CheckClipped]() { CheckClipped(TEXT("after the clip data grew and was collected around")); });
+	EnqueueTearDown(Stage);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamRhiCanvasGivenANewTargetTest,
+	"DreamGUI.RHI.ACanvasGivenANewTargetDrawsIntoItAndItsOldOneIsCollected",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter | EAutomationTestFlags::NonNullRHI)
+
+bool FDreamRhiCanvasGivenANewTargetTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamRenderStabilityTestLocal;
+
+	// The renderer takes a render-target canvas's target on the render thread and keeps its texture, not the
+	// target's resource, which a target collected between the update and the draw used to leave it holding.
+	FStageRef Stage = BeginStage(*this);
+	if (!Stage->IsUsable())
+	{
+		Stage->TearDown();
+		return false;
+	}
+	UDreamWidget* Block = Stage->AddBlock(TEXT("Block"), FVector2D(100.0, 100.0), FVector2D::ZeroVector, Red);
+	const FIntPoint Centre = Stage->PixelOf(Block, FVector2D::ZeroVector);
+	const TSharedRef<TWeakObjectPtr<UTextureRenderTarget2D>> OldTarget = MakeShared<TWeakObjectPtr<UTextureRenderTarget2D>>();
+
+	EnqueueSettledFrames(Stage);
+	EnqueueDo([Stage, Centre]()
+	{
+		CheckPixel(Stage, Centre, Red, TEXT("the block, in the first target"));
+	});
+	EnqueueDo([Stage, OldTarget]()
+	{
+		*OldTarget = Stage->GetTarget();
+		Stage->ReplaceTarget();
+		CollectEverything();
+	});
+	EnqueueSettledFrames(Stage);
+	EnqueueDo([this, Stage, Centre, OldTarget]()
+	{
+		CheckPixel(Stage, Centre, Red, TEXT("the block, in the target that replaced it"));
+		TestFalse(TEXT("the first target was collected: nothing kept it"), OldTarget->IsValid());
 	});
 	EnqueueTearDown(Stage);
 	return true;

@@ -525,24 +525,26 @@ void FDreamUIRenderer::DrawBuiltInBatch(FRHICommandList& RHICmdList, FGraphicsPi
 	VSParameters.DreamUI_M = FMatrix44f(Batch.LocalToWorld);
 	SetShaderParameters(RHICmdList, VertexShader, VertexShader.GetVertexShader(), VSParameters);
 
-	auto TextureOrFallback = [](FTextureResource* Resource, FTexture* Fallback) -> FRHITexture*
+	// Each texture's reference, which is whatever texture its UTexture has now -- or a black one, once the UTexture is
+	// gone -- and each texture's own sampler, as the material path uses it.
+	auto TextureOrFallback = [](FRHITextureReference* InReference, FTexture* Fallback) -> FRHITexture*
 	{
-		if (Resource && Resource->TextureRHI.IsValid())
-		{
-			return Resource->TextureRHI.GetReference();
-		}
-		return Fallback->TextureRHI.GetReference();
+		return InReference != nullptr ? static_cast<FRHITexture*>(InReference) : Fallback->TextureRHI.GetReference();
+	};
+	auto SamplerOrBilinear = [](FRHISamplerState* InSampler) -> FRHISamplerState*
+	{
+		return InSampler != nullptr ? InSampler : TStaticSamplerState<SF_Bilinear, AM_Clamp, AM_Clamp, AM_Clamp>::GetRHI();
 	};
 	FDreamUIBasePS::FParameters PSParameters;
 	PSParameters.DreamUI_InvM = FMatrix44f(Batch.LocalToWorld.Inverse());
 	PSParameters.DreamUI_GammaValues = FVector4f(2.2f / GammaValue, 1.0f / GammaValue, 0.0f, 0.0f);
 	PSParameters.DreamUI_FontAtlasInfo = FVector4f(Params.FontAtlasSize.X, Params.FontAtlasSize.Y, Params.FontFieldRangeTexels, Params.FontEmTexels);
-	PSParameters.DreamUI_MainTex = TextureOrFallback(Params.MainTexture, GWhiteTexture);
-	PSParameters.DreamUI_MainTexSampler = TStaticSamplerState<SF_Bilinear, AM_Clamp, AM_Clamp, AM_Clamp>::GetRHI();
-	PSParameters.DreamUI_FontTex = TextureOrFallback(Params.FontTexture, GBlackArrayTexture);
-	PSParameters.DreamUI_FontTexSampler = TStaticSamplerState<SF_Bilinear, AM_Clamp, AM_Clamp, AM_Clamp>::GetRHI();
-	PSParameters.DreamUI_WidgetDataTex = TextureOrFallback(Params.WidgetDataTexture, GBlackTexture);
-	PSParameters.DreamUI_ClipDataTex = TextureOrFallback(Params.ClipDataTexture, GBlackTexture);
+	PSParameters.DreamUI_MainTex = TextureOrFallback(Params.MainTextureRHI.GetReference(), GWhiteTexture);
+	PSParameters.DreamUI_MainTexSampler = SamplerOrBilinear(Params.MainSamplerRHI.GetReference());
+	PSParameters.DreamUI_FontTex = TextureOrFallback(Params.FontTextureRHI.GetReference(), GBlackArrayTexture);
+	PSParameters.DreamUI_FontTexSampler = SamplerOrBilinear(Params.FontSamplerRHI.GetReference());
+	PSParameters.DreamUI_WidgetDataTex = TextureOrFallback(Params.WidgetDataTextureRHI.GetReference(), GBlackTexture);
+	PSParameters.DreamUI_ClipDataTex = TextureOrFallback(Params.ClipDataTextureRHI.GetReference(), GBlackTexture);
 	PSParameters.DreamUI_SceneDepthTex = SceneDepthTexture ? SceneDepthTexture : GBlackTexture->TextureRHI.GetReference();
 	PSParameters.DreamUI_SceneDepthTexSampler = TStaticSamplerState<SF_Point, AM_Clamp, AM_Clamp, AM_Clamp>::GetRHI();
 	PSParameters.DreamUI_SceneDepthTextureScaleOffset = SceneDepthTexST;
@@ -699,9 +701,9 @@ void FDreamUIRenderer::RenderDreamUI_RenderThread(
 		{
 			return;
 		}
-		if (RenderTargetResource != nullptr && RenderTargetResource->GetRenderTargetTexture() != nullptr)
+		if (CanvasTargetTexture.IsValid())
 		{
-			ScreenColorRenderTargetTexture = RenderTargetResource->GetRenderTargetTexture();
+			ScreenColorRenderTargetTexture = CanvasTargetTexture;
 			if (ScreenColorRenderTargetTexture == nullptr)return;//invalid render target
 
 			if (NumSamples > 1)
@@ -743,7 +745,7 @@ void FDreamUIRenderer::RenderDreamUI_RenderThread(
 					}
 				);
 			}
-			RenderTargetResource = nullptr;
+			CanvasTargetTexture = nullptr;
 
 			ViewRect = FIntRect(0, 0, ScreenColorRenderTargetTexture->GetSizeXYZ().X, ScreenColorRenderTargetTexture->GetSizeXYZ().Y);
 		}
@@ -1746,18 +1748,25 @@ void FDreamUIRenderer::ClearScreenSpaceRootCanvas(const UObject* InCanvas)
 
 void FDreamUIRenderer::UpdateRenderTargetRenderer(UTextureRenderTarget2D* InRenderTarget, FColor InClearColor)
 {
-	auto Resource = InRenderTarget->GameThread_GetRenderTargetResource();
-	if (Resource)
+	if (InRenderTarget == nullptr || InRenderTarget->GameThread_GetRenderTargetResource() == nullptr)
 	{
-		auto ViewExtension = this;
-		ENQUEUE_RENDER_COMMAND(FDreamUIRender_UpdateRenderTargetRenderer)(
-			[ViewExtension, Resource, InClearColor](FRHICommandListImmediate& RHICmdList)
-			{
-				ViewExtension->RenderTargetResource = Resource;
-				ViewExtension->RenderTargetClearColor = InClearColor;
-			}
-		);
+		return;
 	}
+	auto ViewExtension = this;
+	ENQUEUE_RENDER_COMMAND(FDreamUIRender_UpdateRenderTargetRenderer)(
+		[ViewExtension, InRenderTarget, InClearColor](FRHICommandListImmediate& RHICmdList)
+		{
+			// The target's resource as the render thread sees it, read by the command the game thread enqueued while
+			// the target was alive: what it releases is enqueued after this. Only the texture is kept.
+			FTextureRHIRef Texture;
+			if (FTextureRenderTargetResource* Resource = InRenderTarget->GetRenderTargetResource())
+			{
+				Texture = Resource->GetRenderTargetTexture();
+			}
+			ViewExtension->CanvasTargetTexture = Texture;
+			ViewExtension->RenderTargetClearColor = InClearColor;
+		}
+	);
 }
 
 #if WITH_EDITOR

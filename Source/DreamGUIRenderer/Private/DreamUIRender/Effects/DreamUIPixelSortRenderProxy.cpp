@@ -268,7 +268,7 @@ void FDreamPixelSortRenderProxy::OnRenderPostProcess_RenderThread(
 	auto ResultTexture = SortTextureB;
 
 	const auto PointSampler = SortSampler;
-	if (RenderTargetResource == nullptr)
+	if (!OutputTargetTexture.IsValid())
 	{
 		if (!bFullScreen)
 		{
@@ -286,7 +286,7 @@ void FDreamPixelSortRenderProxy::OnRenderPostProcess_RenderThread(
 		// Pixelate omits this branch from its GetRenderProxy push chain and the RenderTarget output
 		// mode quietly does nothing as a result. Blur's version is the complete one.
 		Renderer->CopyRenderTarget_ColorCorrect(GraphBuilder, GlobalShaderMap, ResultTexture,
-			RenderTargetResource->GetRenderTargetTexture(), PointSampler);
+			OutputTargetTexture, PointSampler);
 	}
 }
 

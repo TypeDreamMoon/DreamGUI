@@ -9,13 +9,5 @@
     "  presets   optional: only in these presets (e.g. [\"Rhi\"]); absent means every preset",
     "When a listed test passes, the summary says so: take the entry out, so that the next regression is red again."
   ],
-  "issues": [
-    {
-      "test": "DreamGUI.RHI.Gallery.TheBuiltInShaderAndTheMaterialPathDrawTheSamePicture",
-      "reason": "The built-in shader samples every main texture bilinearly with a clamp, whatever the texture's own filter says, so a texture filtered nearest comes out soft there and sharp through the material: the renderer binds a fixed sampler instead of the texture's.",
-      "decision": "Found by the gallery on its first run; the built-in path takes each texture's own sampler when its draws bind texture references instead of resource pointers.",
-      "added": "2026-09-29",
-      "presets": ["Rhi", "Validate", "All"]
-    }
-  ]
+  "issues": []
 }

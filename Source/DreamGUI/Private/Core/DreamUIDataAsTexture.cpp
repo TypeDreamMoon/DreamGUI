@@ -1,15 +1,12 @@
-﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
+// Copyright 2019-Present LexLiu. All Rights Reserved.
 // Modified by TypeDreamMoon.
 
 #include "Core/DreamUIDataAsTexture.h"
 #include "DreamGUI.h"
+#include "Core/DreamUIDataTexture.h"
 #include "Core/DreamUIRuntimeObject.h"
 #include "Utils/DreamUIUtils.h"
-#include "Materials/MaterialInstanceDynamic.h"
-#include "TextureResource.h"
-#include "Engine/Texture2DDynamic.h"
-#include "RHICommandList.h"
-#include "RenderingThread.h"
+#include "RHIGlobals.h"
 #include "DreamUIRender/DreamUIRenderStats.h"
 
 #define LOCTEXT_NAMESPACE "LWidgetDataAsTexture"
@@ -40,78 +37,58 @@ void UDreamUIDataAsTexture::PostDuplicate(EDuplicateMode::Type DuplicateMode)
 
 void UDreamUIDataAsTexture::CreateTexture()
 {
-	// A UTexture2DDynamic keeps its size and mip count outside its properties, so any copy of one -- a
-	// play-in-editor duplication of the world, a Duplicate, a copy that reached it -- comes out zero by
-	// zero with no mips, and creating that copy's resource asserts on the render thread. So the texture
-	// lives in the transient package, outside every world a duplication starts from, and carries the
-	// flags that keep it out of a duplication, a copy and a save even when something reaches it by
-	// reference.
+	// The texture keeps its size and format outside its properties, so a copy of it -- a play-in-editor duplication
+	// of the world, a Duplicate, a copy that reached it -- has none, and makes no resource (see UDreamUIDataTexture).
+	// It lives in the transient package, outside every world a duplication starts from, and carries the flags that keep
+	// it out of a duplication, a copy and a save even when something reaches it by reference.
 	if (!ensureMsgf(TextureWidth > 0 && TextureHeight > 0, TEXT("%s: refusing to create a %dx%d data texture."), *GetPathName(), TextureWidth, TextureHeight))
 	{
 		return;
 	}
-	static int TextureNameSuffix = 0;
-	UPackage* TransientPackage = GetTransientPackage();
-	auto TextureDynamic = NewObject<UTexture2DDynamic>(
-		TransientPackage,
-		MakeUniqueObjectName(TransientPackage, UTexture2DDynamic::StaticClass(), FName(*FString::Printf(TEXT("DreamUIDataAsTexture_%d"), TextureNameSuffix++))),
-		DreamUI::RuntimeObjectFlags
-	);
-	TextureDynamic->LODGroup = TEXTUREGROUP_UI;
 	EPixelFormat GraphicPixelFormat;
+	TextureCompressionSettings Compression;
 	switch (PixelFormat)
 	{
 	default:
 	case EDreamUIDataAsTexturePixelFormat::R8:
-		TextureDynamic->CompressionSettings = TC_Grayscale;
+		Compression = TC_Grayscale;
 		GraphicPixelFormat = PF_R8;
 		break;
 	case EDreamUIDataAsTexturePixelFormat::R16:
-		TextureDynamic->CompressionSettings = TC_HalfFloat;
+		Compression = TC_HalfFloat;
 		GraphicPixelFormat = PF_R16F;
 		break;
 	case EDreamUIDataAsTexturePixelFormat::R32:
-		TextureDynamic->CompressionSettings = TC_SingleFloat;
+		Compression = TC_SingleFloat;
 		GraphicPixelFormat = PF_R32_FLOAT;
 		break;
 	case EDreamUIDataAsTexturePixelFormat::R8G8B8A8:
-		TextureDynamic->CompressionSettings = TC_VectorDisplacementmap;
+		Compression = TC_VectorDisplacementmap;
 		GraphicPixelFormat = PF_R8G8B8A8;
 		break;
 	case EDreamUIDataAsTexturePixelFormat::R16G16B16A16:
-		TextureDynamic->CompressionSettings = TC_HDR;
+		Compression = TC_HDR;
 		GraphicPixelFormat = PF_A16B16G16R16;
 		break;
 	case EDreamUIDataAsTexturePixelFormat::R32G32B32A32:
-		TextureDynamic->CompressionSettings = TC_HDR_F32;
+		Compression = TC_HDR_F32;
 		GraphicPixelFormat = PF_A32B32G32R32F;
 		break;
 	}
-	TextureDynamic->SRGB = false;
-	TextureDynamic->Init(TextureWidth, TextureHeight, GraphicPixelFormat, false);
-	if (TextureDynamic->GetResource())
-	{
-		auto TextureRes = (FTexture2DDynamicResource*)TextureDynamic->GetResource();
-		ENQUEUE_RENDER_COMMAND(FDreamUIDataAsTexture_ZeroMemory)(
-			[TextureRes, Width = TextureWidth, Height = TextureHeight, BytesPerPixel = BytesPerPixel](FRHICommandListImmediate& RHICmdList)
-			{
-				TArray<uint8> Data;
-				Data.SetNumZeroed(Width * Height * BytesPerPixel);
-				RHICmdList.UpdateTexture2D(
-					TextureRes->GetTexture2DRHI(),
-					0,
-					FUpdateTextureRegion2D(0, 0, 0, 0, Width, Height),
-					BytesPerPixel * Width,
-					Data.GetData()
-				);
-			});
-	}
-
-	Texture = TextureDynamic;
+	UPackage* TransientPackage = GetTransientPackage();
+	UDreamUIDataTexture* DataTexture = NewObject<UDreamUIDataTexture>(
+		TransientPackage,
+		MakeUniqueObjectName(TransientPackage, UDreamUIDataTexture::StaticClass(), FName(TEXT("DreamUIDataTexture"))),
+		DreamUI::RuntimeObjectFlags);
+	DataTexture->LODGroup = TEXTUREGROUP_UI;
+	// What a material's sampler expects of the texture: the same answer the texture this replaced gave.
+	DataTexture->CompressionSettings = Compression;
+	DataTexture->Initialize(TextureWidth, TextureHeight, GraphicPixelFormat, BytesPerPixel);
+	Texture = DataTexture;
 }
 bool UDreamUIDataAsTexture::ExpandTexture()
 {
-	uint32 NewTextureHeight = TextureHeight + TextureHeight;
+	const uint32 NewTextureHeight = static_cast<uint32>(TextureHeight) * 2;
 	if (NewTextureHeight > GetMax2DTextureDimension())
 	{
 		auto WarningMsg = FText::Format(LOCTEXT("BufferTexture_Size_Error", "{0} Trying to expand buffer texture, result too large size that not supported! Maximum texture size is:{1}.")
@@ -123,41 +100,17 @@ bool UDreamUIDataAsTexture::ExpandTexture()
 #endif
 		return false;
 	}
-	auto OldTexture = Texture;
-	auto OldTextureHeight = TextureHeight;
-	TextureHeight = NewTextureHeight;
-	CreateTexture();
-
-	//copy existing data
-	auto NewTexture = Texture;
-	if (OldTexture->GetResource() != nullptr && NewTexture->GetResource() != nullptr)
+	const int32 OldTextureHeight = TextureHeight;
+	TextureHeight = static_cast<int32>(NewTextureHeight);
+	// Grown in place: every row stays where it was, and whatever samples the texture -- a material instance, pooled
+	// or not, a built-in draw on the render thread -- binds its reference, which the growth points at the taller one.
+	// Nothing is told, because nothing has to be.
+	if (UDreamUIDataTexture* DataTexture = Cast<UDreamUIDataTexture>(Texture))
 	{
-		ENQUEUE_RENDER_COMMAND(FLFDreamUIDataAsTexture_UpdateAndCopyDataTexture)(
-			[OldTexture, NewTexture, Width = TextureWidth, OldTextureHeight](FRHICommandListImmediate& RHICmdList)
-			{
-				FRHITexture* Source = ((FTexture2DDynamicResource*)OldTexture->GetResource())->GetTexture2DRHI();
-				FRHITexture* Destination = ((FTexture2DDynamicResource*)NewTexture->GetResource())->GetTexture2DRHI();
-				FRHICopyTextureInfo CopyInfo;
-				CopyInfo.SourcePosition = FIntVector(0, 0, 0);
-				CopyInfo.Size = FIntVector(Width, OldTextureHeight, 0);
-				CopyInfo.DestPosition = FIntVector(0, 0, 0);
-				// Both are shader resources between frames, and a copy reads and writes them in the copy states:
-				// in and out again around it, which the RHI's validation layer requires and some RHIs rely on.
-				RHICmdList.Transition({
-					FRHITransitionInfo(Source, ERHIAccess::SRVMask, ERHIAccess::CopySrc),
-					FRHITransitionInfo(Destination, ERHIAccess::SRVMask, ERHIAccess::CopyDest) });
-				RHICmdList.CopyTexture(Source, Destination, CopyInfo);
-				RHICmdList.Transition({
-					FRHITransitionInfo(Source, ERHIAccess::CopySrc, ERHIAccess::SRVMask),
-					FRHITransitionInfo(Destination, ERHIAccess::CopyDest, ERHIAccess::SRVMask) });
-				RHIFlushResources();//UE5.8: FRHICommandListImmediate::FlushResources removed; global RHIFlushResources replaces it
-			});
+		DataTexture->Grow(TextureHeight);
 	}
 	// set start position to bottom
 	CurrentPosition = OldTextureHeight;
-
-	OnDataTextureChange.Broadcast(Texture);
-
 	return true;
 }
 
@@ -238,67 +191,28 @@ void UDreamUIDataAsTexture::UnregisterBuffer(int InPosition)
 }
 void UDreamUIDataAsTexture::UpdateBlock(int InPositionY, TArray<uint8> InData)
 {
-	if (bBatchUpdateMode)
-	{
-		FPendingUpdateData Data;
-		Data.PosX = 0;
-		Data.PosY = InPositionY;
-		Data.Data = MoveTemp(InData);
-		Data.DataPixelCount = this->BlockPixelCount;
-		PendingUpdateDataArray.Add(MoveTemp(Data));
-	}
-	else
-	{
-		if (IsValid(Texture) && Texture->GetResource())
-		{
-			DreamUIRenderStats::AddCount(DreamUIRenderStats::ECounter::DataTextureUpdates, 1);
-			DreamUIRenderStats::AddCount(DreamUIRenderStats::ECounter::UploadedBytes, InData.Num());
-			auto TextureRes = (FTexture2DDynamicResource*)Texture->GetResource();
-			ENQUEUE_RENDER_COMMAND(FDreamUIDataAsTexture_UpdateBlock)(
-				[TextureRes, InPositionY, InData = MoveTemp(InData), BlockSizeInByte = this->BlockSizeInByte, BlockPixelCount = this->BlockPixelCount](FRHICommandListImmediate& RHICmdList)
-				{
-					RHICmdList.UpdateTexture2D(
-						TextureRes->GetTexture2DRHI(),
-						0,
-						FUpdateTextureRegion2D(0, InPositionY, 0, 0, BlockPixelCount, 1),
-						BlockSizeInByte,
-						InData.GetData()
-					);
-				});
-		}
-	}
+	UpdateBlock(0, InPositionY, MoveTemp(InData), BlockPixelCount);
 }
 
 void UDreamUIDataAsTexture::UpdateBlock(int InPositionX, int InPositionY, TArray<uint8> InData, int InDataPixelCount)
 {
+	FDreamUIDataTextureUpdate Update;
+	Update.X = InPositionX;
+	Update.Y = InPositionY;
+	Update.PixelCount = InDataPixelCount;
+	Update.Data = MoveTemp(InData);
 	if (bBatchUpdateMode)
 	{
-		FPendingUpdateData Data;
-		Data.PosX = InPositionX;
-		Data.PosY = InPositionY;
-		Data.Data = MoveTemp(InData);
-		Data.DataPixelCount = InDataPixelCount;
-		PendingUpdateDataArray.Add(MoveTemp(Data));
+		PendingUpdates.Add(MoveTemp(Update));
+		return;
 	}
-	else
+	if (UDreamUIDataTexture* DataTexture = Cast<UDreamUIDataTexture>(Texture))
 	{
-		if (IsValid(Texture) && Texture->GetResource())
-		{
-			DreamUIRenderStats::AddCount(DreamUIRenderStats::ECounter::DataTextureUpdates, 1);
-			DreamUIRenderStats::AddCount(DreamUIRenderStats::ECounter::UploadedBytes, InData.Num());
-			auto TextureRes = (FTexture2DDynamicResource*)Texture->GetResource();
-			ENQUEUE_RENDER_COMMAND(FDreamUIDataAsTexture_UpdateBlock)(
-				[TextureRes, InPositionX, InPositionY, InData = MoveTemp(InData), BlockSizeInByte = this->BlockSizeInByte, InDataPixelCount](FRHICommandListImmediate& RHICmdList)
-				{
-					RHICmdList.UpdateTexture2D(
-						TextureRes->GetTexture2DRHI(),
-						0,
-						FUpdateTextureRegion2D(InPositionX, InPositionY, 0, 0, InDataPixelCount, 1),
-						BlockSizeInByte,
-						InData.GetData()
-					);
-				});
-		}
+		DreamUIRenderStats::AddCount(DreamUIRenderStats::ECounter::DataTextureUpdates, 1);
+		DreamUIRenderStats::AddCount(DreamUIRenderStats::ECounter::UploadedBytes, Update.Data.Num());
+		TArray<FDreamUIDataTextureUpdate> Updates;
+		Updates.Add(MoveTemp(Update));
+		DataTexture->Upload(MoveTemp(Updates));
 	}
 }
 
@@ -312,37 +226,21 @@ void UDreamUIDataAsTexture::Flush()
 {
 	check(bBatchUpdateMode);
 	bBatchUpdateMode = false;
-	if (PendingUpdateDataArray.Num() <= 0)return;
+	if (PendingUpdates.Num() <= 0)return;
 	TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_DataTextureFlush);
-	if (IsValid(Texture) && Texture->GetResource())
+	if (UDreamUIDataTexture* DataTexture = Cast<UDreamUIDataTexture>(Texture))
 	{
 		int64 PendingBytes = 0;
-		for (const FPendingUpdateData& Pending : PendingUpdateDataArray)
+		for (const FDreamUIDataTextureUpdate& Pending : PendingUpdates)
 		{
 			PendingBytes += Pending.Data.Num();
 		}
-		DreamUIRenderStats::AddCount(DreamUIRenderStats::ECounter::DataTextureUpdates, PendingUpdateDataArray.Num());
+		DreamUIRenderStats::AddCount(DreamUIRenderStats::ECounter::DataTextureUpdates, PendingUpdates.Num());
 		DreamUIRenderStats::AddCount(DreamUIRenderStats::ECounter::UploadedBytes, PendingBytes);
-		auto TextureRes = (FTexture2DDynamicResource*)Texture->GetResource();
-		ENQUEUE_RENDER_COMMAND(FDreamUIDataAsTexture_FlushData)(
-			[TextureRes, PendingUpdateDataArray = MoveTemp(PendingUpdateDataArray), BlockSizeInByte = this->BlockSizeInByte](FRHICommandListImmediate& RHICmdList)
-			{
-				for (auto& PendingUpdateData : PendingUpdateDataArray)
-				{
-					RHICmdList.UpdateTexture2D(
-						TextureRes->GetTexture2DRHI(),
-						0,
-						FUpdateTextureRegion2D(PendingUpdateData.PosX, PendingUpdateData.PosY, 0, 0, PendingUpdateData.DataPixelCount, 1),
-						BlockSizeInByte,
-						PendingUpdateData.Data.GetData()
-					);
-				}
-			});
+		// One command for the frame's writes, which go up as one texture update per run of rows they touched.
+		DataTexture->Upload(MoveTemp(PendingUpdates));
 	}
-	else
-	{
-		PendingUpdateDataArray.Reset();
-	}
+	PendingUpdates.Reset();
 }
 
 void UDreamUIDataAsTexture::PostInitProperties()

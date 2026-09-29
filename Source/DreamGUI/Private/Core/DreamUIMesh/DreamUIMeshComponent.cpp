@@ -411,6 +411,17 @@ public:
 				// Grab material
 				NewSectionProxy->Material = SrcSection->Material;
 				NewSectionProxy->BuiltIn = SrcSection->BuiltIn;
+				if (NewSectionProxy->BuiltIn.bEnabled)
+				{
+					// The references a built-in draw binds are taken on the render thread, by a command enqueued
+					// while the textures are alive. It runs before the proxy is first drawn: anything that draws it
+					// is enqueued after this.
+					ENQUEUE_RENDER_COMMAND(FDreamUIMeshSectionProxy_ResolveBuiltIn)(
+						[NewSectionProxy, Textures = NewSectionProxy->BuiltIn.GetTexturesForRenderCommand()](FRHICommandListImmediate& RHICmdList)
+						{
+							NewSectionProxy->BuiltIn.ResolveTextures_RenderThread(Textures);
+						});
+				}
 				if (NewSectionProxy->Material == nullptr)
 				{
 					NewSectionProxy->Material = UMaterial::GetDefaultMaterial(MD_Surface);
@@ -1683,10 +1694,13 @@ void UDreamUIMeshComponent::SetMeshSectionBuiltIn(int32 InSectionIndex, const FD
 #if LATE_FLUSH_RENDER_CMD
 			PendingUpdateMeshSectionBuiltInDataArray.Add(MoveTemp(UpdateData));
 #else
+			UpdateData.Textures = UpdateData.Params.GetTexturesForRenderCommand();
 			auto DreamUIMeshSceneProxy = static_cast<FDreamUIRenderSceneProxy*>(SceneProxy);
 			ENQUEUE_RENDER_COMMAND(FDreamUIMeshSectionProxy_SetMeshSectionBuiltIn)(
 				[DreamUIMeshSceneProxy, UpdateData = MoveTemp(UpdateData)](FRHICommandListImmediate& RHICmdList) {
-					DreamUIMeshSceneProxy->SetMeshSectionBuiltIn_RenderThread(UpdateData.SectionProxy, UpdateData.Params);
+					FDreamUIBuiltInDrawParams Params = UpdateData.Params;
+					Params.ResolveTextures_RenderThread(UpdateData.Textures);
+					DreamUIMeshSceneProxy->SetMeshSectionBuiltIn_RenderThread(UpdateData.SectionProxy, Params);
 				});
 #endif
 		}
@@ -2062,12 +2076,19 @@ void UDreamUIMeshComponent::FlushRenderCommand()
 	}
 	if (PendingUpdateMeshSectionBuiltInDataArray.Num() > 0)
 	{
+		// Taken now, just before the command that reads them is enqueued: see FDreamUIBuiltInTextures.
+		for (auto& UpdateData : PendingUpdateMeshSectionBuiltInDataArray)
+		{
+			UpdateData.Textures = UpdateData.Params.GetTexturesForRenderCommand();
+		}
 		auto DreamUIMeshSceneProxy = static_cast<FDreamUIRenderSceneProxy*>(SceneProxy);
 		ENQUEUE_RENDER_COMMAND(FDreamUIMeshSectionProxy_SetMeshSectionBuiltIn)(
 			[DreamUIMeshSceneProxy, PendingUpdateMeshSectionBuiltInDataArray = MoveTemp(PendingUpdateMeshSectionBuiltInDataArray)](FRHICommandListImmediate& RHICmdList) {
 				for (auto& UpdateData : PendingUpdateMeshSectionBuiltInDataArray)
 				{
-					DreamUIMeshSceneProxy->SetMeshSectionBuiltIn_RenderThread(UpdateData.SectionProxy, UpdateData.Params);
+					FDreamUIBuiltInDrawParams Params = UpdateData.Params;
+					Params.ResolveTextures_RenderThread(UpdateData.Textures);
+					DreamUIMeshSceneProxy->SetMeshSectionBuiltIn_RenderThread(UpdateData.SectionProxy, Params);
 				}
 			});
 	}

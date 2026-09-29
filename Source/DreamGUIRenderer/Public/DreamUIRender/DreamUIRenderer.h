@@ -235,8 +235,13 @@ private:
 	//no MeshBatchArray member: mesh batches are collected into a pass-local array inside each RDG
 	//pass. A shared one was only safe because every pass here takes FRHICommandListImmediate& and is
 	//therefore serialised, which is also what stops these passes being recorded in parallel.
-	//if 'bIsRenderToRenderTarget' is true then we need a render target
-	class FTextureRenderTargetResource* RenderTargetResource = nullptr;
+	/**
+	 * A render-target canvas's target for its next draw, taken on the render thread from the target's resource by the
+	 * command UpdateRenderTargetRenderer enqueues, and let go of once drawn into. Held as the texture, which keeps
+	 * itself alive: the resource pointer kept here before could be freed with its target between the command and the
+	 * draw.
+	 */
+	FTextureRHIRef CanvasTargetTexture;
 	FColor RenderTargetClearColor = FColor::Transparent;
 	void SortScreenSpacePrimitiveRenderPriority_RenderThread();
 	void SetRenderCanvasDepthFade_RenderThread(FObjectKey InRenderCanvasKey, float InBlendDepth, int InDepthFade);

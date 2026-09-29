@@ -324,6 +324,14 @@ private:
 
 	UPROPERTY(VisibleAnywhere, Category = "DreamGUI", AdvancedDisplay)
 		TObjectPtr<class UDreamRectBlockData> RectBlockData = nullptr;
+	/**
+	 * The rows this rect block's shape is uploaded into: its world's, for RectBlockData (see
+	 * UDreamUIManagerWorldSubsystem::GetRectBlockDataRows), taken when it registers. Null while unregistered.
+	 */
+	UPROPERTY(Transient, DuplicateTransient, TextExportTransient)
+		TObjectPtr<class UDreamUIDataAsTexture> DataRows = nullptr;
+	/** Its world's rows, or the asset's own in a world with no UI manager to keep any. */
+	UDreamUIDataAsTexture* FindDataRows() const;
 	/** When do raycast interaction, will the CornerRadius be considered? Only support RaycastType.Rect. */
 	UPROPERTY(EditAnywhere, Category = "DreamGUI-Raycast")
 		bool bRaycastSupportCornerRadius = true;
@@ -344,8 +352,6 @@ private:
 	virtual bool GetAnythingDirty() const override;
 
 	void MarkNeedUpdateBlockData();
-	void OnDataTextureChanged(class UTexture* Texture);
-	FDelegateHandle OnDataTextureChangedDelegateHandle;
 	uint8 bNeedUpdateBlockData : 1;
 	uint8 bHasAddToSprite : 1;
 protected:

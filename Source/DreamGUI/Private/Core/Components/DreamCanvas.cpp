@@ -332,7 +332,6 @@ void UDreamCanvas::OnRegister()
 	{
 		ClipDataAsTexture = NewObject<UDreamUIDataAsTexture>(this, UDreamUIDataAsTexture::StaticClass(), NAME_None, DreamUI::RuntimeObjectFlags);
 		ClipDataAsTexture->Init(FDreamUIClipData::BlockSizeInBytes, EDreamUIDataAsTexturePixelFormat::R32G32B32A32, 128);
-		ClipDataAsTexture->OnDataTextureChange.AddUObject(this, &UDreamCanvas::OnClipDataTextureChanged);
 		ClipDataAsTexture->RegisterBuffer();//register a zero position as a placeholder for not clipping type.
 	}
 
@@ -647,11 +646,22 @@ void UDreamCanvas::RefreshAllClipData()
 	{
 		return;
 	}
+	// The clips that changed go up together, in one command and as few texture updates as their rows allow, rather
+	// than a command each.
+	const bool bBatch = IsValid(ClipDataAsTexture) && !ClipDataAsTexture->GetIsBatchUpdateMode();
+	if (bBatch)
+	{
+		ClipDataAsTexture->PrepareForBatchUpdate();
+	}
 	for (const auto& ClipData : ClipDataList)
 	{
 		//removing a widget's clip leaves the slot behind until the list is compacted
 		if (!ClipData.IsValid())continue;
 		ClipData->UpdateData();
+	}
+	if (bBatch)
+	{
+		ClipDataAsTexture->Flush();
 	}
 }
 
@@ -2140,13 +2150,15 @@ void UDreamCanvas::UpdateDrawCallMaterial()
 				}
 				else if (bUseBuiltInShader)
 				{
-					// No material at all: the renderer draws this section with the built-in UI shader.
+					// No material at all: the renderer draws this section with the built-in UI shader. The textures go
+					// over as textures, not as their resources: the render thread binds each one's reference, which
+					// follows it through a rebuild and outlives it (see FDreamUIBuiltInDrawParams).
 					FDreamUIBuiltInDrawParams BuiltIn;
 					BuiltIn.bEnabled = true;
-					BuiltIn.MainTexture = DrawCallItem.Texture.IsValid() ? DrawCallItem.Texture->GetResource() : nullptr;
-					BuiltIn.FontTexture = DrawCallItem.FontTexture.IsValid() ? DrawCallItem.FontTexture->GetResource() : nullptr;
-					BuiltIn.WidgetDataTexture = WidgetPropertyDataAsTexture->GetDataTexture() ? WidgetPropertyDataAsTexture->GetDataTexture()->GetResource() : nullptr;
-					BuiltIn.ClipDataTexture = RootCanvas->ClipDataAsTexture->GetDataTexture() ? RootCanvas->ClipDataAsTexture->GetDataTexture()->GetResource() : nullptr;
+					BuiltIn.MainTexture = DrawCallItem.Texture.Get();
+					BuiltIn.FontTexture = DrawCallItem.FontTexture.Get();
+					BuiltIn.WidgetDataTexture = WidgetPropertyDataAsTexture->GetDataTexture();
+					BuiltIn.ClipDataTexture = RootCanvas->ClipDataAsTexture->GetDataTexture();
 					const FVector4f AtlasInfo = MakeFontAtlasInfo(DrawCallItem);
 					BuiltIn.FontAtlasSize = FVector2f(AtlasInfo.X, AtlasInfo.Y);
 					BuiltIn.FontFieldRangeTexels = AtlasInfo.Z;
@@ -2914,30 +2926,15 @@ int32 UDreamCanvas::GetDrawCallCount()const
 	return Result;
 }
 
-void UDreamCanvas::OnClipDataTextureChanged(UTexture* NewTexture)
-{
-	//only root canvas use ClipDataTexture
-	if (!ensureMsgf(this == RootCanvas, TEXT("%s: the clip data texture changed on a canvas that is not a root."), *GetPathName()))
-	{
-		return;
-	}
-	MarkCanvasUpdate(true);
-	bClipDataAsTextureChanged = true;
-}
-
-void UDreamCanvas::OnWidgetPropertyDataTextureChanged(UTexture* NewTexture)
-{
-	MarkCanvasUpdate(true);
-	bWidgetPropertyDataAsTextureChanged = true;
-}
-
 void UDreamCanvas::CheckWidgetPropertyData()
 {
+	// Neither data texture is watched for growing: each grows in place, and everything that samples it -- the
+	// material instances, the built-in draws -- binds its reference, which follows it. A growth used to swap in a new
+	// texture, which every instance had to be given again and every draw call rebuilt for.
 	if (!IsValid(WidgetPropertyDataAsTexture))
 	{
 		WidgetPropertyDataAsTexture = NewObject<UDreamUIDataAsTexture>(this, UDreamUIDataAsTexture::StaticClass(), NAME_None, DreamUI::RuntimeObjectFlags);
 		WidgetPropertyDataAsTexture->Init(UDreamVisual::WidgetPropertyDataLength, EDreamUIDataAsTexturePixelFormat::R32, 128);
-		WidgetPropertyDataAsTexture->OnDataTextureChange.AddUObject(this, &UDreamCanvas::OnWidgetPropertyDataTextureChanged);
 	}
 }
 
