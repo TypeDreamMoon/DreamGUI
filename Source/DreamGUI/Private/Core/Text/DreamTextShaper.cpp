@@ -5,6 +5,7 @@
 #include "Internationalization/Culture.h"
 #include "Internationalization/Internationalization.h"
 #include "Internationalization/Text.h"
+#include "ProfilingDebugging/CpuProfilerTrace.h"
 
 #if WITH_HARFBUZZ
 #include "hb.h"
@@ -288,7 +289,10 @@ bool FDreamTextShaper::ShapeParagraph(const TArray<FDreamShapeElement>& Elements
 				Features[0] = { HB_TAG('k','e','r','n'), bUseKerning ? 1u : 0u, 0, (unsigned int)-1 };
 				Features[1] = { HB_TAG('l','i','g','a'), 0u, 0, (unsigned int)-1 };
 				Features[2] = { HB_TAG('c','l','i','g'), 0u, 0, (unsigned int)-1 };
-				hb_shape(HBFont, Buffer, Features, 3);
+				{
+					TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_TextShape);
+					hb_shape(HBFont, Buffer, Features, 3);
+				}
 
 				unsigned int GlyphCount = 0;
 				hb_glyph_info_t* Infos = hb_buffer_get_glyph_infos(Buffer, &GlyphCount);

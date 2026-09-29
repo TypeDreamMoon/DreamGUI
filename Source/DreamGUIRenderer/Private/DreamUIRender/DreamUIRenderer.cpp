@@ -1116,6 +1116,7 @@ void FDreamUIRenderer::RecordWorldSpace_RenderThread(FRDGBuilder& GraphBuilder, 
 								if (auto Primitive = RenderPrimitiveItem.Primitive->DreamUI_GetPostProcessElement(RenderPrimitiveItem.Sections[i].SectionPointer))
 								{
 									SCOPE_CYCLE_COUNTER(STAT_DreamGUI_RHIRenderPostProcess);
+									TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_RecordPostProcess);
 									Primitive->OnRenderPostProcess_RenderThread(
 										GraphBuilder,
 										SceneDepth,
@@ -1148,6 +1149,7 @@ void FDreamUIRenderer::RecordWorldSpace_RenderThread(FRDGBuilder& GraphBuilder, 
 							// its passes have run.
 							auto* Collected = GraphBuilder.AllocObject<DreamUIRendererLocal::FCollectedMeshBatches>();
 							{
+								TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_CollectMeshBatches);
 								FDreamUIMeshElementCollector MeshCollector(RenderView->GetFeatureLevel(), Collected->Allocator, GraphBuilder.RHICmdList);
 								RenderPrimitiveItem.Primitive->DreamUI_GetMeshElements(*RenderView->Family, MeshCollector, RenderPrimitiveItem, Collected->Batches);
 							}
@@ -1506,6 +1508,7 @@ void FDreamUIRenderer::RecordScreenSpace_RenderThread(FRDGBuilder& GraphBuilder,
 					if (auto Primitive = RenderSequenceItem.Primitive->DreamUI_GetPostProcessElement(RenderSequenceItem.Sections[i].SectionPointer))
 					{
 						SCOPE_CYCLE_COUNTER(STAT_DreamGUI_RHIRenderPostProcess);
+						TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_RecordPostProcess);
 						Primitive->OnRenderPostProcess_RenderThread(
 							GraphBuilder,
 							SceneDepth,
@@ -1545,6 +1548,7 @@ void FDreamUIRenderer::RecordScreenSpace_RenderThread(FRDGBuilder& GraphBuilder,
 				// Collected while the pass is recorded, not when it runs: see the world-space mesh pass above.
 				auto* Collected = GraphBuilder.AllocObject<DreamUIRendererLocal::FCollectedMeshBatches>();
 				{
+					TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_CollectMeshBatches);
 					FDreamUIMeshElementCollector MeshCollector(RenderView->GetFeatureLevel(), Collected->Allocator, GraphBuilder.RHICmdList);
 					RenderSequenceItem.Primitive->DreamUI_GetMeshElements(*RenderView->Family, MeshCollector, RenderSequenceItem, Collected->Batches);
 				}

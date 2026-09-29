@@ -1279,6 +1279,7 @@ void UDreamUIMeshComponent::OnRegister()
 
 TSharedPtr<FDreamUIRenderSection> UDreamUIMeshComponent::SetupRenderSection(EDreamUIRenderSectionType InType, FDreamUIDrawCall* InDrawCallData)
 {
+	TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_SetupRenderSection);
 	auto GetMeshRenderSectionFromPool = [&](int32 NumVertices)
 	{
 		auto& RenderSections = GetRenderSectionMeshPool(NumVertices);
@@ -1801,6 +1802,7 @@ void UDreamUIMeshComponent::RetargetPendingRenderCommands(FDreamUIRenderSectionP
 
 void UDreamUIMeshComponent::PoolAllRenderSection()
 {
+	TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_PoolAllRenderSection);
 	if (SceneProxy)
 	{
 		auto DreamUIMeshSceneProxy = static_cast<FDreamUIRenderSceneProxy*>(SceneProxy);
@@ -2216,6 +2218,7 @@ TArray<TArray<TSharedPtr<const FDreamUIGeometry>>> UDreamUIMeshComponent::GetMes
 
 void UDreamUIMeshComponent::ClaimPooledMeshSections(TArray<FDreamUIDrawCall>& InOutDrawCalls)
 {
+	TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_ClaimPooledMeshSections);
 	// Without a scene proxy no section has anything on the GPU to keep.
 	if (SceneProxy == nullptr || !RenderCanvas.IsValid())
 	{

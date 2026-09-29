@@ -2456,6 +2456,7 @@ DECLARE_CYCLE_STAT(TEXT("Canvas SetMaterialParameter"), STAT_SetMaterialParamete
 void UDreamCanvas::UpdateDrawCallMaterial()
 {
 	SCOPE_CYCLE_COUNTER(STAT_UpdateDrawCallMaterial);
+	TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_UpdateDrawCallMaterial);
 
 	//pool and reuse material
 	{
