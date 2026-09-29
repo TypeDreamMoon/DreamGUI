@@ -585,6 +585,7 @@ bool FDreamPackagedPluginCarriesItsDocumentedFilesTest::RunTest(const FString& P
 		TEXT("/Config/DefaultDreamGUI.ini"),
 		TEXT("/Config/Game.ini"),
 		TEXT("/README.md"),
+		TEXT("/Docs/Migration.md"),
 		TEXT("/LICENSE"),
 	};
 	for (const TCHAR* Entry : MustBePackaged)

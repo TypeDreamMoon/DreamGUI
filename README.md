@@ -87,6 +87,9 @@ Besides the `Build.cs` line, a few includes and calls changed. Every other heade
 | `UDreamUIManagerWorldSubsystem::AddSelectable`, `RemoveSelectable` and `GetAllSelectableArray`, with `UUISelectable` | The same, with `UDreamUIBehaviour` |
 | `UDreamGUISettings::DefaultStyleSheet` as a `UDreamUIStyleSheet` | A `TSoftObjectPtr<UDataAsset>`; `UDreamUIStyleSheet::GetProjectSheet()` does the cast |
 
+What changed for C++ since the split — the material callback a visual overrode, the input and renderer
+calls that went with the old code paths — is in [Docs/Migration.md](Docs/Migration.md#6-c-of-your-own).
+
 The renderer logs to `LogDreamGUIRenderer`; `stat DreamGUI` still shows its counters.
 
 ## Install
@@ -180,6 +183,9 @@ UI took). A key typed into a field being edited is always kept. The source is of
 and becomes the default in a later version.
 
 ### If you have assets authored against LGUI / LexUI, or from before an in-fork rename
+
+The whole move — what to take out first, what loads by itself, what no longer exists, what to check
+afterwards and what changed for C++ — is written up in [Docs/Migration.md](Docs/Migration.md). In short:
 
 They reference the old class names and the old `/LGUI/` mount, so they need CoreRedirects — and
 **the plugin ships them**: the `[CoreRedirects]` block in
