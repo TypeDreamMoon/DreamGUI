@@ -16,6 +16,7 @@
 #include "UObject/StrongObjectPtr.h"
 
 #include "Core/Components/DreamCanvas.h"
+#include "Core/DreamUIMesh/DreamUIMeshComponent.h"
 #include "Core/Components/DreamRectBlock.h"
 #include "Core/Components/DreamText.h"
 #include "Core/Components/DreamTexture.h"
@@ -634,6 +635,74 @@ bool FDreamGalleryEffectsTest::RunTest(const FString& Parameters)
 		Sort->SetSortStrength(1.0f);
 	}
 	EnqueuePictureCheck(Stage, TEXT("Gallery_Effects"), 40000);
+	EnqueueTearDown(Stage);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamProxyMadeAgainKeepsRootTest,
+	"DreamGUI.RHI.ACanvasMeshWhoseProxyIsMadeAgainKeepsItsSectionsAndItsPicture",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter | EAutomationTestFlags::NonNullRHI)
+
+bool FDreamProxyMadeAgainKeepsRootTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamRenderGalleryTestLocal;
+	// The engine makes a primitive's scene proxy again whenever its render state is dirtied. The canvas's sections live in
+	// the mesh's render root, which the new proxy is made for: the root, its sections and the picture stay as they were.
+	FStageRef Stage = BeginStage(*this);
+	if (!Stage->IsUsable())
+	{
+		Stage->TearDown();
+		return false;
+	}
+	Stage->AddBlock(TEXT("Left"), FVector2D(Extent / 2.0, Extent), FVector2D(-Extent / 4.0, 0.0), FColor(255, 64, 0, 255));
+	Stage->AddBlock(TEXT("Right"), FVector2D(Extent / 2.0, Extent / 2.0), FVector2D(Extent / 4.0, 0.0), FColor(0, 128, 255, 255));
+	TSharedRef<TArray<FColor>> Before = MakeShared<TArray<FColor>>();
+	TSharedRef<const void*> RootBefore = MakeShared<const void*>(nullptr);
+	EnqueueFrames(Stage, 3);
+	EnqueueFramesUntilDrawn(Stage, 1000);
+	EnqueueFramesUntilStable(Stage);
+	EnqueueDo([this, Stage, Before, RootBefore]()
+	{
+		FIntPoint Size = FIntPoint::ZeroValue;
+		TestTrue(TEXT("The picture reads back"), Stage->ReadBack(*Before, Size));
+		UDreamUIMeshComponent* Mesh = Stage->GetCanvas()->GetUIMesh();
+		if (TestNotNull(TEXT("The canvas has a mesh"), Mesh))
+		{
+			*RootBefore = Mesh->GetRenderRoot();
+			TestNotNull(TEXT("...with a render root"), *RootBefore);
+			Mesh->MarkRenderStateDirty();
+		}
+	});
+	EnqueueFrames(Stage, 3);
+	EnqueueFramesUntilStable(Stage);
+	EnqueueDo([this, Stage, Before, RootBefore]()
+	{
+		UDreamUIMeshComponent* Mesh = Stage->GetCanvas()->GetUIMesh();
+		if (!TestNotNull(TEXT("The canvas still has its mesh"), Mesh))
+		{
+			return;
+		}
+		TestTrue(TEXT("The proxy made again is made for the same render root"), Mesh->GetRenderRoot() == *RootBefore);
+		TArray<FColor> After;
+		FIntPoint Size = FIntPoint::ZeroValue;
+		if (!TestTrue(TEXT("The picture reads back again"), Stage->ReadBack(After, Size))
+			|| !TestEqual(TEXT("...at the size it had"), After.Num(), Before->Num()))
+		{
+			return;
+		}
+		int32 Different = 0;
+		for (int32 Index = 0; Index < After.Num(); ++Index)
+		{
+			const FColor& A = (*Before)[Index];
+			const FColor& B = After[Index];
+			if (FMath::Max3(FMath::Abs(A.R - B.R), FMath::Abs(A.G - B.G), FMath::Abs(A.B - B.B)) > GoldenTolerance)
+			{
+				++Different;
+			}
+		}
+		TestEqual(TEXT("...and it is the same picture"), Different, 0);
+	});
 	EnqueueTearDown(Stage);
 	return true;
 }

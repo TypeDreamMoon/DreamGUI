@@ -110,7 +110,13 @@ class FDreamUIRenderer;
 class IDreamUIRendererPrimitive;
 class UDreamCanvas;
 
-DECLARE_MULTICAST_DELEGATE_TwoParams(FDreamUIMeshSceneProxyCreateDeleteDelegate, class UDreamUIMeshComponent*, class FDreamUIRenderSceneProxy*);
+class FDreamUIRenderRoot;
+/**
+ * A mesh's render root (see DreamUIMeshComponent.cpp): made on the game thread, deleted on the render thread by whichever
+ * of the mesh and the scene proxies made for the root lets go of it last.
+ */
+using FDreamUIRenderRootRef = TSharedPtr<FDreamUIRenderRoot, ESPMode::ThreadSafe>;
+DECLARE_MULTICAST_DELEGATE_TwoParams(FDreamUIMeshRenderRootCreatedDelegate, class UDreamUIMeshComponent*, FDreamUIRenderRoot*);
 
 //DreamUI render mesh
 //@todo: split this class to: one for UE renderer && one for DreamUI renderer, will it be more efficient?
@@ -127,12 +133,13 @@ public:
 	virtual void PostEditImport() override;
 #endif
 	virtual void OnRegister() override;
+	virtual void OnUnregister() override;
+	virtual void BeginDestroy() override;
 	/**
 	 * On the game thread. The engine runs end-of-frame updates on worker threads unless a component says
-	 * otherwise, and this one's read and write its canvas -- the proxy's construction can even set the
-	 * root canvas -- and hand a child canvas's sections to the parent component's SceneProxy through a
-	 * render command. Off the game thread that is a data race, and when parent and child rebuild in the
-	 * same frame the command can reach a parent proxy that has already been deleted.
+	 * otherwise. This one's send the render root its transform, and a mesh registered again makes its root
+	 * with its first proxy, from its canvas's settings: both read the mesh and its canvas as the game
+	 * thread leaves them.
 	 */
 	virtual bool RequiresGameThreadEndOfFrameUpdates() const override { return true; }
 	/**
@@ -193,6 +200,14 @@ public:
 	//~ Begin UPrimitiveComponent Interface.
 	virtual FPrimitiveSceneProxy* CreateSceneProxy() override;
 	//~ End UPrimitiveComponent Interface.
+
+	/** The render thread's side of the sections, while the mesh has one (see EnsureRenderRoot). */
+	FDreamUIRenderRoot* GetRenderRoot() const { return RenderRoot.Get(); }
+protected:
+	/** Both send the render root the transform UE's scene has for the proxy. */
+	virtual void CreateRenderState_Concurrent(FRegisterComponentContext* Context) override;
+	virtual void SendRenderTransform_Concurrent() override;
+public:
 
 	//~ Begin UMeshComponent Interface.
 	virtual int32 GetNumMaterials() const override;
@@ -276,6 +291,19 @@ private:
 
 	friend class FDreamUIRenderSceneProxy;
 
+	/**
+	 * Made with the first section set up while the mesh is registered, from the settings it has then; released by
+	 * ClearRenderData and when the mesh is unregistered. The scene proxies UE makes for the mesh draw it and hold it too,
+	 * so a proxy made again finds the sections where they were.
+	 */
+	FDreamUIRenderRootRef RenderRoot;
+	FDreamUIRenderRoot* EnsureRenderRoot();
+	/** Out of the renderer and out of every parent section; the section proxies go with it, and the updates naming them. */
+	void ReleaseRenderRoot();
+	void PushRenderRootTransform();
+	/** Whether the sections carry UE's vertex buffers and vertex factory as well as DreamGUI's own. */
+	bool NeedsUERendererSectionData() const;
+
 protected:
 	TWeakPtr<FDreamUIRenderer, ESPMode::ThreadSafe> DreamUIRenderer;
 	bool bIsDreamUIRenderToWorld = false;//DreamUI renderer render to world or screen
@@ -284,7 +312,8 @@ protected:
 	TWeakObjectPtr<UDreamUIMeshComponent> ParentCanvasMeshComp = nullptr;
 
 public:
-	FDreamUIMeshSceneProxyCreateDeleteDelegate OnSceneProxyCreated;
+	/** Broadcast as the mesh makes a render root: a parent canvas's section for this mesh points at the new one. */
+	FDreamUIMeshRenderRootCreatedDelegate OnRenderRootCreated;
 };
 
 
