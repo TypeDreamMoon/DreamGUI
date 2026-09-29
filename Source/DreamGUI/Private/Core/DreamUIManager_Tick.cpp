@@ -18,6 +18,7 @@
 #include "Core/Components/DreamVisual.h"
 #include "Engine/Engine.h"
 #include "DreamUIRender/DreamUIRenderer.h"
+#include "DreamUIRender/DreamUIRenderStats.h"
 #include "Core/IDreamUICultureChangedInterface.h"
 #include "Core/DreamUIBehaviour.h"
 #include "Core/Components/DreamLayout.h"
@@ -84,6 +85,7 @@ void UDreamUIManagerWorldSubsystem::RemovePropertyBindingUser(UDreamUserWidget* 
 
 void UDreamUIManagerWorldSubsystem::TickDreamUI(float DeltaTime)
 {
+	DREAMUI_STAGE_SCOPE(ManagerTick);
 	SweepExpiredParkedWidgets();
 	//Update culture
 	{
@@ -224,6 +226,7 @@ void UDreamUIManagerWorldSubsystem::TickDreamUI(float DeltaTime)
 		while (LayoutDirtyWidgetArray.Num() > 0 && LayoutPassCount < MaxLayoutPassesPerFrame)
 		{
 			SCOPE_CYCLE_COUNTER(STAT_UpdateLayout);
+			TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_LayoutPass);
 			++LayoutPassCount;
 			LastLayoutPassCount = LayoutPassCount;
 
@@ -363,6 +366,7 @@ void UDreamUIManagerWorldSubsystem::TickDreamUI(float DeltaTime)
 	// build and a memcmp, with no GPU write.
 	{
 		SCOPE_CYCLE_COUNTER(STAT_DreamUIRefreshClipData);
+		TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_RefreshClipData);
 		for (const TWeakObjectPtr<UDreamCanvas>& Canvas : SnapshotCanvases())
 		{
 			if (IsCanvasStillRegistered(Canvas))
@@ -423,6 +427,7 @@ void UDreamUIManagerWorldSubsystem::OnWorldPreSendAllEndOfFrameUpdates(UWorld* I
 void UDreamUIManagerWorldSubsystem::SubmitCanvasDrawCall()
 {
 	SCOPE_CYCLE_COUNTER(STAT_DreamUISubmitCanvasDrawCall);
+	DREAMUI_STAGE_SCOPE(DrawCallSubmit);
 	UDreamUIFontData_FreeTypeRender::FlushPendingFontTextures();
 	//update draw-call
 	{

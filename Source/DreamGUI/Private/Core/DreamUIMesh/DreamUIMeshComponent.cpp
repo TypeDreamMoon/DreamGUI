@@ -8,6 +8,7 @@
 #include "Materials/Material.h"
 #include "DreamUIRender/IDreamUIRendererPrimitive.h"
 #include "DreamUIRender/DreamUIRenderer.h"
+#include "DreamUIRender/DreamUIRenderStats.h"
 #include "Engine/Engine.h"
 #include "DreamGUI.h"
 #include "Core/Components/DreamCanvas.h"
@@ -643,6 +644,7 @@ public:
 		, FDreamUISectionProxy_Mesh* Section)const
 	{
 		SCOPE_CYCLE_COUNTER(STAT_UpdateMeshSectionRT);
+		TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_UpdateSection_RenderThread);
 
 		check(IsInRenderingThread());
 
@@ -1472,6 +1474,9 @@ void UDreamUIMeshComponent::UpdateMeshSectionRenderData(FDreamUIRenderSection_Me
 	SCOPE_CYCLE_COUNTER(STAT_UpdateMeshSectionGT);
 	if (SceneProxy)
 	{
+		DreamUIRenderStats::AddCount(DreamUIRenderStats::ECounter::SectionUploads, 1);
+		DreamUIRenderStats::AddCount(DreamUIRenderStats::ECounter::UploadedBytes,
+			static_cast<int64>(InMeshSection->ValidVerticesNum) * sizeof(FDreamUIMeshVertex) + static_cast<int64>(InMeshSection->ValidTriangleIndicesNum) * sizeof(FDreamUIMeshIndex));
 		UpdateMeshSectionDataStruct UpdateData;
 		UpdateData.Section = static_cast<FDreamUISectionProxy_Mesh*>(InMeshSection->RenderProxy);
 		//vertex data
@@ -1995,6 +2000,7 @@ DECLARE_CYCLE_STAT(TEXT("DreamUIMesh FlushRenderCommand"), STAT_DreamUIMesh_Flus
 void UDreamUIMeshComponent::FlushRenderCommand()
 {
 	SCOPE_CYCLE_COUNTER(STAT_DreamUIMesh_FlushRenderCommand)
+	TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_MeshFlushRenderCommand);
 	if (SceneProxy == nullptr)
 	{
 		/**

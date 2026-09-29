@@ -11,6 +11,7 @@
 #include "Core/DreamUISettings.h"
 #include "Core/DreamUIManager.h"
 #include "DreamUIRender/DreamUIRenderer.h"
+#include "DreamUIRender/DreamUIRenderStats.h"
 #include "Core/DreamUIMesh/DreamUIMeshComponent.h"
 #include "Core/DreamUIDrawCall.h"
 #include "Core/DreamUIFontData_BaseObject.h"
@@ -114,6 +115,7 @@ void UDreamCanvas::UpdateRootCanvas()
 {
 	if (!GetWorld())
 		return;
+	DREAMUI_STAGE_SCOPE(CanvasUpdate);
 	CheckRootCanvas();
 	if (this == RootCanvas)
 	{
@@ -1064,6 +1066,7 @@ DECLARE_CYCLE_STAT(TEXT("Canvas PrepareDrawCallBatchingData"), STAT_PrepareDrawC
 void UDreamCanvas::PrepareDrawCallBatchingData(TArray<FDreamUIRenderData>& OutRenderDataArray)
 {
 	SCOPE_CYCLE_COUNTER(STAT_PrepareDrawCallBatching);
+	TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_PrepareDrawCallBatchingData);
 	OutRenderDataArray.Reset();
 	/**
 	 * Drain the vertex-transform work once, here, before reading any geometry: CopyDataForPrepare
@@ -1174,6 +1177,7 @@ void UDreamCanvas::BatchDrawCallAsync(const FVector2D& InCanvasLeftBottom, const
 	bool bCullElementsOutsideCanvasRect)
 {
 	SCOPE_CYCLE_COUNTER(STAT_BatchDrawCall);
+	DREAMUI_STAGE_SCOPE(Batching);
 
 	InOutUIDrawCallList.Reset();
 
@@ -1551,6 +1555,7 @@ void UDreamCanvas::UpdateCanvasDrawCall()
 		//update clip and geometry from head to tail
 		{
 			SCOPE_CYCLE_COUNTER(STAT_UpdateClipAndGeometry)
+			TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_UpdateClipAndGeometry);
 			for (const auto& Widget : WidgetList)
 			{
 				//a widget collected earlier can be destroyed before the list is regenerated
@@ -1673,6 +1678,7 @@ DECLARE_CYCLE_STAT(TEXT("Canvas UpdateDrawCallMesh"), STAT_UpdateDrawCallMesh, S
 void UDreamCanvas::UpdateDrawCallMesh()
 {
 	SCOPE_CYCLE_COUNTER(STAT_UpdateDrawCallMesh);
+	TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_UpdateDrawCallMesh);
 	if (!IsValid(UIMesh))return;
 	UIMesh->PoolAllRenderSection();
 	bool bNeedToUpdateBounds = false;

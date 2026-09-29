@@ -10,6 +10,7 @@
 #include "Engine/Texture2DDynamic.h"
 #include "RHICommandList.h"
 #include "RenderingThread.h"
+#include "DreamUIRender/DreamUIRenderStats.h"
 
 #define LOCTEXT_NAMESPACE "LWidgetDataAsTexture"
 
@@ -250,6 +251,8 @@ void UDreamUIDataAsTexture::UpdateBlock(int InPositionY, TArray<uint8> InData)
 	{
 		if (IsValid(Texture) && Texture->GetResource())
 		{
+			DreamUIRenderStats::AddCount(DreamUIRenderStats::ECounter::DataTextureUpdates, 1);
+			DreamUIRenderStats::AddCount(DreamUIRenderStats::ECounter::UploadedBytes, InData.Num());
 			auto TextureRes = (FTexture2DDynamicResource*)Texture->GetResource();
 			ENQUEUE_RENDER_COMMAND(FDreamUIDataAsTexture_UpdateBlock)(
 				[TextureRes, InPositionY, InData = MoveTemp(InData), BlockSizeInByte = this->BlockSizeInByte, BlockPixelCount = this->BlockPixelCount](FRHICommandListImmediate& RHICmdList)
@@ -281,6 +284,8 @@ void UDreamUIDataAsTexture::UpdateBlock(int InPositionX, int InPositionY, TArray
 	{
 		if (IsValid(Texture) && Texture->GetResource())
 		{
+			DreamUIRenderStats::AddCount(DreamUIRenderStats::ECounter::DataTextureUpdates, 1);
+			DreamUIRenderStats::AddCount(DreamUIRenderStats::ECounter::UploadedBytes, InData.Num());
 			auto TextureRes = (FTexture2DDynamicResource*)Texture->GetResource();
 			ENQUEUE_RENDER_COMMAND(FDreamUIDataAsTexture_UpdateBlock)(
 				[TextureRes, InPositionX, InPositionY, InData = MoveTemp(InData), BlockSizeInByte = this->BlockSizeInByte, InDataPixelCount](FRHICommandListImmediate& RHICmdList)
@@ -308,8 +313,16 @@ void UDreamUIDataAsTexture::Flush()
 	check(bBatchUpdateMode);
 	bBatchUpdateMode = false;
 	if (PendingUpdateDataArray.Num() <= 0)return;
+	TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_DataTextureFlush);
 	if (IsValid(Texture) && Texture->GetResource())
 	{
+		int64 PendingBytes = 0;
+		for (const FPendingUpdateData& Pending : PendingUpdateDataArray)
+		{
+			PendingBytes += Pending.Data.Num();
+		}
+		DreamUIRenderStats::AddCount(DreamUIRenderStats::ECounter::DataTextureUpdates, PendingUpdateDataArray.Num());
+		DreamUIRenderStats::AddCount(DreamUIRenderStats::ECounter::UploadedBytes, PendingBytes);
 		auto TextureRes = (FTexture2DDynamicResource*)Texture->GetResource();
 		ENQUEUE_RENDER_COMMAND(FDreamUIDataAsTexture_FlushData)(
 			[TextureRes, PendingUpdateDataArray = MoveTemp(PendingUpdateDataArray), BlockSizeInByte = this->BlockSizeInByte](FRHICommandListImmediate& RHICmdList)

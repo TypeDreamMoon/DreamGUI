@@ -10,6 +10,7 @@
 #include "DreamUIRender/DreamUIPostProcessShaders.h"
 #include "DreamUIRender/DreamUIResolveShaders.h"
 #include "DreamUIRender/DreamUIRendererLogging.h"
+#include "DreamUIRender/DreamUIRenderStats.h"
 #include "SceneView.h"
 #include "PipelineStateCache.h"
 #include "SceneRendering.h"
@@ -457,6 +458,18 @@ namespace DreamUIRendererLocal
 		FSceneRenderingBulkObjectAllocator Allocator;
 		TArray<FDreamUIMeshBatchContainer> Batches;
 	};
+
+	/** What one collection is about to draw, into the frame's counters. */
+	void CountCollected(const FCollectedMeshBatches& InCollected)
+	{
+		int64 Vertices = 0;
+		for (const FDreamUIMeshBatchContainer& Batch : InCollected.Batches)
+		{
+			Vertices += Batch.NumVerts;
+		}
+		DreamUIRenderStats::AddCount(DreamUIRenderStats::ECounter::BatchesRecorded, InCollected.Batches.Num());
+		DreamUIRenderStats::AddCount(DreamUIRenderStats::ECounter::VerticesRecorded, Vertices);
+	}
 }
 
 /**
@@ -659,6 +672,7 @@ void FDreamUIRenderer::RenderDreamUI_RenderThread(
 		&& WorldSpaceGizmoMeshArray.Num() <= 0
 #endif
 		)return;//nothing to render
+	DREAMUI_STAGE_SCOPE(RenderRecord);
 	bool bIsMainViewport = !(InView.bIsSceneCapture || InView.bIsReflectionCapture || InView.bIsPlanarReflection || InView.bIsVirtualTexture);
 	
 	bool bRenderWireframe = InView.Family->ViewMode == VMI_Wireframe || InView.Family->ViewMode == VMI_Lit_Wireframe;
@@ -990,6 +1004,7 @@ void FDreamUIRenderer::RenderDreamUI_RenderThread(
 								FDreamUIMeshElementCollector MeshCollector(RenderView->GetFeatureLevel(), Collected->Allocator, GraphBuilder.RHICmdList);
 								RenderPrimitiveItem.Primitive->DreamUI_GetMeshElements(*RenderView->Family, MeshCollector, RenderPrimitiveItem, Collected->Batches);
 							}
+							DreamUIRendererLocal::CountCollected(*Collected);
 							GraphBuilder.AddPass(
 								RDG_EVENT_NAME("DreamUIRender_WorldSpace"),
 								PassParameters,
@@ -1348,6 +1363,7 @@ void FDreamUIRenderer::RenderDreamUI_RenderThread(
 					FDreamUIMeshElementCollector MeshCollector(RenderView->GetFeatureLevel(), Collected->Allocator, GraphBuilder.RHICmdList);
 					RenderSequenceItem.Primitive->DreamUI_GetMeshElements(*RenderView->Family, MeshCollector, RenderSequenceItem, Collected->Batches);
 				}
+				DreamUIRendererLocal::CountCollected(*Collected);
 				GraphBuilder.AddPass(
 					RDG_EVENT_NAME("DreamUIRender_ScreenSpace"),
 					PassParameters,
