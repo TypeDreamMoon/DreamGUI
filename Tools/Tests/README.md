@@ -224,6 +224,10 @@ that still do are listed in `layering-allow.json`, and that list only gets short
 include is gone is itself an error (`layering-stale`) and comes off. A file that moves or is added
 gets its row in `module-owners.csv` in the same change.
 
+`engine-private-path` keeps the engine's `Private` and `Internal` folders off every module's include
+path. The renderer used to read the scene depth through the renderer's private headers; it reads it
+through the public scene-texture API now, and a `Build.cs` that adds such a folder again is an error.
+
 `--fix-eol` rewrites the line endings of the files the branch touched to what `.gitattributes` asks
 for, or else to the repository's majority (CRLF: `core.autocrlf=true` keeps the index LF and checks
 out CRLF). The `eol` rule only reports new files whose endings differ.

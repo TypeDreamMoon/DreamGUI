@@ -1,6 +1,5 @@
 // Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
 
-using System.IO;
 using UnrealBuildTool;
 
 /*
@@ -23,16 +22,9 @@ public class DreamGUIRenderer : ModuleRules
 			bUseUnity = false;
 		}
 
-		// The engine renderer's private and internal headers (SceneRendering.h, ScenePrivate.h,
-		// SceneTextures.h), for the passes the view extension records. Only this module is given them: no
-		// public header here includes one, so nothing above the renderer needs the paths.
-		PrivateIncludePaths.AddRange(
-			new string[]
-			{
-				Path.Combine(EngineDirectory, "Source", "Runtime", "Renderer", "Private"),
-				Path.Combine(EngineDirectory, "Source", "Runtime", "Renderer", "Internal"),
-			});
-
+		// No include path into the engine renderer's Private or Internal folders: the scene depth and the view
+		// rectangle come through its public API (SceneRenderTargetParameters.h, FXRenderingUtils.h), which is
+		// what keeps an engine upgrade from breaking this module in a header nobody promised to keep.
 		PublicDependencyModuleNames.AddRange(
 			new string[]
 			{

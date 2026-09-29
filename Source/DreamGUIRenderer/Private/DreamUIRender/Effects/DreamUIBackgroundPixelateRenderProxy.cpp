@@ -10,7 +10,6 @@
 #include "RenderGraphUtils.h"
 #include "RenderTargetPool.h"
 #include "RHIStaticStates.h"
-#include "SceneTextures.h"
 
 #define MAX_PixelateStrength 100.0f
 #define INV_MAX_PixelateStrength 0.01f
@@ -32,7 +31,7 @@ public:
 	}
 	virtual void OnRenderPostProcess_RenderThread(
 		FRDGBuilder& GraphBuilder,
-		const FMinimalSceneTextures& SceneTextures,
+		FRDGTextureRef SceneDepth,
 		FDreamUIRenderer* Renderer,
 		FTextureRHIRef ScreenTargetTexture,
 		FGlobalShaderMap* GlobalShaderMap,
@@ -124,7 +123,7 @@ public:
 			//after pixelate process, copy the area back to screen image
 			if (!bFullScreen)
 			{
-				RenderMeshOnScreen_RenderThread(GraphBuilder, SceneTextures, ScreenTargetTexture, GlobalShaderMap, PixelateEffectRenderTargetTexture, ModelViewProjectionMatrix, ObjectToWorldMatrix, bIsWorldSpace, BlendDepthForWorld, DepthFadeForWorld, DepthTextureScaleOffset, ViewRect
+				RenderMeshOnScreen_RenderThread(GraphBuilder, SceneDepth, ScreenTargetTexture, GlobalShaderMap, PixelateEffectRenderTargetTexture, ModelViewProjectionMatrix, ObjectToWorldMatrix, bIsWorldSpace, BlendDepthForWorld, DepthFadeForWorld, DepthTextureScaleOffset, ViewRect
 					, TStaticSamplerState<SF_Point, AM_Clamp, AM_Clamp, AM_Clamp>::GetRHI());
 			}
 			else

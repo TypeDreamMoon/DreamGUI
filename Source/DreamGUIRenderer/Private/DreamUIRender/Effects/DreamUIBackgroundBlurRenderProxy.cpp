@@ -10,7 +10,6 @@
 #include "RenderGraphUtils.h"
 #include "RenderTargetPool.h"
 #include "RHIStaticStates.h"
-#include "SceneTextures.h"
 
 BEGIN_SHADER_PARAMETER_STRUCT(FDreamUIBackgroundBlurPassParameters, )
 	RDG_TEXTURE_ACCESS(SourceTexture, ERHIAccess::SRVGraphics)
@@ -35,7 +34,7 @@ public:
 	}
 	virtual void OnRenderPostProcess_RenderThread(
 		FRDGBuilder& GraphBuilder,
-		const FMinimalSceneTextures& SceneTextures,
+		FRDGTextureRef SceneDepth,
 		FDreamUIRenderer* Renderer,
 		FTextureRHIRef ScreenTargetTexture,
 		FGlobalShaderMap* GlobalShaderMap,
@@ -203,7 +202,7 @@ public:
 			if (!bUseFullSize)
 			{
 				//copy on mesh region
-				RenderMeshOnScreen_RenderThread(GraphBuilder, SceneTextures, ScreenTargetTexture, GlobalShaderMap, BlurEffectRenderTexture, ModelViewProjectionMatrix, ObjectToWorldMatrix, bIsWorldSpace, BlendDepthForWorld, DepthFadeForWorld, DepthTextureScaleOffset, ViewRect);
+				RenderMeshOnScreen_RenderThread(GraphBuilder, SceneDepth, ScreenTargetTexture, GlobalShaderMap, BlurEffectRenderTexture, ModelViewProjectionMatrix, ObjectToWorldMatrix, bIsWorldSpace, BlendDepthForWorld, DepthFadeForWorld, DepthTextureScaleOffset, ViewRect);
 			}//full screen don't need it
 		}
 		else

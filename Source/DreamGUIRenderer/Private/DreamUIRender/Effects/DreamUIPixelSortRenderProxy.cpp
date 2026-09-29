@@ -10,7 +10,6 @@
 #include "RenderGraphUtils.h"
 #include "RenderTargetPool.h"
 #include "RHIStaticStates.h"
-#include "SceneTextures.h"
 #include "ScreenRendering.h"
 
 DECLARE_CYCLE_STAT(TEXT("PostProcess PixelSort"), STAT_PixelSort, STATGROUP_DreamGUI);
@@ -61,7 +60,7 @@ public:
 
 	virtual void OnRenderPostProcess_RenderThread(
 		FRDGBuilder& GraphBuilder,
-		const FMinimalSceneTextures& SceneTextures,
+		FRDGTextureRef SceneDepth,
 		FDreamUIRenderer* Renderer,
 		FTextureRHIRef ScreenTargetTexture,
 		FGlobalShaderMap* GlobalShaderMap,
@@ -78,7 +77,7 @@ public:
 
 void FDreamPixelSortRenderProxy::OnRenderPostProcess_RenderThread(
 	FRDGBuilder& GraphBuilder,
-	const FMinimalSceneTextures& SceneTextures,
+	FRDGTextureRef SceneDepth,
 	FDreamUIRenderer* Renderer,
 	FTextureRHIRef ScreenTargetTexture,
 	FGlobalShaderMap* GlobalShaderMap,
@@ -272,7 +271,7 @@ void FDreamPixelSortRenderProxy::OnRenderPostProcess_RenderThread(
 	{
 		if (!bFullScreen)
 		{
-			RenderMeshOnScreen_RenderThread(GraphBuilder, SceneTextures, ScreenTargetTexture, GlobalShaderMap, ResultTexture,
+			RenderMeshOnScreen_RenderThread(GraphBuilder, SceneDepth, ScreenTargetTexture, GlobalShaderMap, ResultTexture,
 				ModelViewProjectionMatrix, ObjectToWorldMatrix, bIsWorldSpace, BlendDepthForWorld, DepthFadeForWorld,
 				DepthTextureScaleOffset, ViewRect, PointSampler);
 		}

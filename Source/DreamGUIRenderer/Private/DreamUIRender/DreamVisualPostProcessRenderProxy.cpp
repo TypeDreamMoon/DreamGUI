@@ -8,7 +8,6 @@
 #include "Engine/Texture.h"
 #include "Engine/TextureRenderTarget2D.h"
 #include "RHIResourceUtils.h"
-#include "SceneTextures.h"
 #include "TextureResource.h"
 
 BEGIN_SHADER_PARAMETER_STRUCT(FDreamUIPostProcessRenderMeshParameters, )
@@ -124,7 +123,7 @@ SetGraphicsPipelineState(RHICmdList, GraphicsPSOInit, 0, EApplyRendertargetOptio
 
 void FDreamVisualPostProcessRenderProxy::RenderMeshOnScreen_RenderThread(
 	FRDGBuilder& GraphBuilder
-	, const FMinimalSceneTextures& SceneTextures
+	, FRDGTextureRef SceneDepth
 	, FTextureRHIRef ScreenTargetTexture
 	, FGlobalShaderMap* GlobalShaderMap
 	, FTextureRHIRef MeshRegionTexture
@@ -141,7 +140,7 @@ void FDreamVisualPostProcessRenderProxy::RenderMeshOnScreen_RenderThread(
 	uint8 NumSamples = ScreenTargetTexture->GetNumSamples();
 	auto MeshRegionRDGTexture = RegisterExternalTexture(GraphBuilder, MeshRegionTexture, TEXT("DreamUIPostProcessMeshRegionTexture"));
 	auto PSShaderParameters = GraphBuilder.AllocParameters<FDreamUIPostProcessRenderMeshParameters>();
-	PSShaderParameters->SceneDepthTex = SceneTextures.Depth.Resolve;
+	PSShaderParameters->SceneDepthTex = SceneDepth;
 	PSShaderParameters->MeshRegionTexture = MeshRegionRDGTexture;
 	PSShaderParameters->RenderTargets[0] = FRenderTargetBinding(RegisterExternalTexture(GraphBuilder, ScreenTargetTexture, TEXT("DreamUIRendererTargetTexture")), ERenderTargetLoadAction::ELoad);
 

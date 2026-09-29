@@ -36,6 +36,8 @@ Rules (--list-rules prints them with their reasons):
                          not on the list of includes still to be cut (layering-allow.json)
     layering-stale       an entry on that list that no longer happens: the list only shrinks, so a cut
                          edge comes off it
+  The engine:
+    engine-private-path  a Build.cs putting a Private or Internal folder of the engine on the include path
 
 A finding can be allowed where it stands, with a comment on its line or the line above:
 
@@ -107,6 +109,7 @@ RULES = collections.OrderedDict([
     ('eol', 'Mixed line endings make every later diff of the file noisy.'),
     ('layering', 'A lower layer that includes a higher one cannot be split from it; every new edge is one more to cut.'),
     ('layering-stale', 'The list of edges still to cut only shrinks: an edge that is gone comes off it.'),
+    ('engine-private-path', "The engine's Private and Internal headers change between versions without notice; the plugin reads the engine through its public headers."),
 ])
 WARNING_RULES = frozenset(['eol'])
 
@@ -837,6 +840,22 @@ def check_layering(root, findings, want):
                                         'no longer includes %s: take the entry off layering-allow.json' % e['include']))
 
 
+ENGINE_PRIVATE_PATH = re.compile(r'EngineDirectory[^;]*?["/\\](Private|Internal)["/\\]')
+
+
+def check_engine_paths(root, findings, want):
+    if 'engine-private-path' not in want:
+        return
+    for path in sorted(glob.glob(os.path.join(root, 'Source', '**', '*.Build.cs'), recursive=True)):
+        rel = os.path.relpath(path, root).replace(os.sep, '/')
+        with open(path, encoding='utf-8-sig', errors='ignore') as f:
+            text = f.read()
+        for m in ENGINE_PRIVATE_PATH.finditer(text):
+            findings.append(Finding('engine-private-path', rel, text.count('\n', 0, m.start()) + 1,
+                                    "puts the engine's %s folder on the include path; use the engine's public headers"
+                                    % m.group(1)))
+
+
 def main(argv=None):
     sourcescan.console_safe()
     ap = argparse.ArgumentParser(description='Static checks over the plugin source (see the module docstring).')
@@ -877,6 +896,7 @@ def main(argv=None):
         check_words(root, git, findings, want)
         check_eol(root, git, findings, want)
         check_layering(root, findings, want)
+        check_engine_paths(root, findings, want)
         allow = load_allow(ns.allow)
     except Exception:  # noqa: BLE001 -- a crash here must read as "could not run", not as findings
         import traceback

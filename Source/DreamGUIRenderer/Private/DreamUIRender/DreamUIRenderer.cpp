@@ -13,15 +13,14 @@
 #include "DreamUIRender/DreamUIRenderStats.h"
 #include "SceneView.h"
 #include "PipelineStateCache.h"
-#include "SceneRendering.h"
 #include "RenderTargetPool.h"//UE5.8: GRenderTargetPool no longer transitively included
 #include "DreamUIRender/IDreamUIRendererPrimitive.h"
-#include "MeshPassProcessor.inl"
-#include "ScenePrivate.h"
 #include "TextureResource.h"
 #include "Engine/TextureRenderTarget2D.h"
 #include "DreamUIRender/DreamVisualPostProcessRenderProxy.h"
-#include "SceneTextures.h"
+#include "FXRenderingUtils.h"
+#include "SceneRenderTargetParameters.h"
+#include "SystemTextures.h"
 #if WITH_EDITOR
 #include "Engine/Engine.h"
 #endif
@@ -470,6 +469,30 @@ namespace DreamUIRendererLocal
 		DreamUIRenderStats::AddCount(DreamUIRenderStats::ECounter::BatchesRecorded, InCollected.Batches.Num());
 		DreamUIRenderStats::AddCount(DreamUIRenderStats::ECounter::VerticesRecorded, Vertices);
 	}
+
+	/**
+	 * The view's resolved scene depth, through the renderer's public scene-texture uniform buffers -- the deferred one
+	 * or the mobile one, whichever path drew the view -- and the dummy depth where there is none to read: a view the
+	 * scene renderer did not make, or a mobile depth that never leaves tile memory. It was read before from the view
+	 * family cast to the renderer's private class, which only a private include path could see.
+	 */
+	FRDGTextureRef SceneDepthOf(FRDGBuilder& GraphBuilder, const FSceneView& InView)
+	{
+		FRDGTextureRef Depth = nullptr;
+		if (InView.bIsViewInfo)
+		{
+			const FSceneTextureShaderParameters Parameters = CreateSceneTextureShaderParameters(GraphBuilder, InView, ESceneTextureSetupMode::SceneDepth);
+			if (Parameters.SceneTextures)
+			{
+				Depth = Parameters.SceneTextures->GetContents()->SceneDepthTexture;
+			}
+			else if (Parameters.MobileSceneTextures)
+			{
+				Depth = Parameters.MobileSceneTextures->GetContents()->SceneDepthTexture;
+			}
+		}
+		return Depth != nullptr ? Depth : GSystemTextures.GetDepthDummy(GraphBuilder);
+	}
 }
 
 /**
@@ -695,6 +718,9 @@ void FDreamUIRenderer::RenderDreamUI_RenderThread(
 	FRHICommandListImmediate& RHICmdList = GraphBuilder.RHICmdList;
 	FVector4f DepthTextureScaleOffset;
 	FVector4f ColorTextureScaleOffset;
+	// Once for the view: taken from the view the scene renderer made. The copies of it made below for the world- and
+	// screen-space passes are plain FSceneViews and cannot be asked.
+	const FRDGTextureRef SceneDepth = DreamUIRendererLocal::SceneDepthOf(GraphBuilder, InView);
 	if (RendererType == EDreamUIRendererType::RenderTarget)//render-target mode
 	{
 		if (!bIsMainViewport)//render to scene capture (or other capture)
@@ -783,21 +809,20 @@ void FDreamUIRenderer::RenderDreamUI_RenderThread(
 		float ScreenPercentage = 1.0f;//this can affect scale on depth texture
 		if (InView.bIsViewInfo)
 		{
-			auto& ViewInfo = static_cast<FViewInfo&>(InView);
-			ScreenPercentage = (float)ViewInfo.ViewRect.Width() / ViewRect.Width();
+			ScreenPercentage = (float)UE::FXRenderingUtils::GetRawViewRectUnsafe(InView).Width() / ViewRect.Width();
 		}
 		else
 		{
 			ScreenPercentage = 1.0f;
 		}
-		const FMinimalSceneTextures& SceneTextures = ((FViewFamilyInfo*)InView.Family)->GetSceneTextures();
+		const FIntVector SceneDepthSize = SceneDepth->Desc.GetSize();
 		switch (InView.StereoPass)
 		{
 		case EStereoscopicPass::eSSP_FULL:
 		{
 			DepthTextureScaleOffset = FVector4f(
-				(float)ScreenColorRenderTargetTexture->GetSizeXYZ().X / SceneTextures.Depth.Resolve->Desc.GetSize().X,
-				(float)ScreenColorRenderTargetTexture->GetSizeXYZ().Y / SceneTextures.Depth.Resolve->Desc.GetSize().Y,
+				(float)ScreenColorRenderTargetTexture->GetSizeXYZ().X / SceneDepthSize.X,
+				(float)ScreenColorRenderTargetTexture->GetSizeXYZ().Y / SceneDepthSize.Y,
 				0, 0
 			);
 			DepthTextureScaleOffset = DepthTextureScaleOffset * ScreenPercentage;
@@ -807,8 +832,8 @@ void FDreamUIRenderer::RenderDreamUI_RenderThread(
 		case EStereoscopicPass::eSSP_PRIMARY:
 		{
 			DepthTextureScaleOffset = FVector4f(
-				(float)ViewRect.Width() / SceneTextures.Depth.Resolve->Desc.GetSize().X,//normally ViewRect.Width is half of screen size
-				(float)ViewRect.Height() / SceneTextures.Depth.Resolve->Desc.GetSize().Y,
+				(float)ViewRect.Width() / SceneDepthSize.X,//normally ViewRect.Width is half of screen size
+				(float)ViewRect.Height() / SceneDepthSize.Y,
 				0, 0
 			);
 			DepthTextureScaleOffset = DepthTextureScaleOffset * ScreenPercentage;
@@ -818,8 +843,8 @@ void FDreamUIRenderer::RenderDreamUI_RenderThread(
 		case EStereoscopicPass::eSSP_SECONDARY:
 		{
 			DepthTextureScaleOffset = FVector4f(
-				(float)ViewRect.Width() / SceneTextures.Depth.Resolve->Desc.GetSize().X,
-				(float)ViewRect.Height() / SceneTextures.Depth.Resolve->Desc.GetSize().Y,
+				(float)ViewRect.Width() / SceneDepthSize.X,
+				(float)ViewRect.Height() / SceneDepthSize.Y,
 				0, 0
 			);
 			DepthTextureScaleOffset = DepthTextureScaleOffset * ScreenPercentage;
@@ -911,8 +936,6 @@ void FDreamUIRenderer::RenderDreamUI_RenderThread(
 			FSceneView* RenderView = GraphBuilder.AllocObject<FSceneView>(InView);
 			auto GlobalShaderMap = GetGlobalShaderMap(RenderView->GetFeatureLevel());
 
-			const FMinimalSceneTextures& SceneTextures = ((FViewFamilyInfo*)InView.Family)->GetSceneTextures();
-
 			RenderView->ViewMatrices = InView.ViewMatrices;
 			RenderView->ViewMatrices.HackRemoveTemporalAAProjectionJitter();
 			auto ViewProjectionMatrix = FMatrix44f(RenderView->ViewMatrices.GetViewProjectionMatrix());
@@ -973,7 +996,7 @@ void FDreamUIRenderer::RenderDreamUI_RenderThread(
 									SCOPE_CYCLE_COUNTER(STAT_DreamGUI_RHIRenderPostProcess);
 									Primitive->OnRenderPostProcess_RenderThread(
 										GraphBuilder,
-										SceneTextures,
+										SceneDepth,
 										this,
 										ScreenColorRenderTargetTexture,
 										GlobalShaderMap,
@@ -993,7 +1016,7 @@ void FDreamUIRenderer::RenderDreamUI_RenderThread(
 					case EDreamUIRendererPrimitiveType::Mesh://render mesh
 						{
 							auto* PassParameters = GraphBuilder.AllocParameters<FDreamUIWorldRenderPSParameter>();
-							PassParameters->SceneDepthTex = SceneTextures.Depth.Resolve;
+							PassParameters->SceneDepthTex = SceneDepth;
 							PassParameters->RenderTargets[0] = FRenderTargetBinding(RenderTargetTexture, ERenderTargetLoadAction::ELoad);
 
 							// Collected now, on the render thread while the pass is recorded, and not when it
@@ -1307,7 +1330,6 @@ void FDreamUIRenderer::RenderDreamUI_RenderThread(
 
 		RenderView->ViewUniformBuffer = TUniformBufferRef<FViewUniformShaderParameters>::CreateUniformBufferImmediate(ViewUniformShaderParameters, UniformBuffer_SingleFrame);
 
-		const FMinimalSceneTextures& SceneTextures = ((FViewFamilyInfo*)InView.Family)->GetSceneTextures();
 		bool bIsDepthStencilCleared = false;
 		bool bIsRenderTarget = RendererType == EDreamUIRendererType::RenderTarget;
 		for (auto& RenderSequenceItem : RenderSequenceArray)
@@ -1325,7 +1347,7 @@ void FDreamUIRenderer::RenderDreamUI_RenderThread(
 						SCOPE_CYCLE_COUNTER(STAT_DreamGUI_RHIRenderPostProcess);
 						Primitive->OnRenderPostProcess_RenderThread(
 							GraphBuilder,
-							SceneTextures,
+							SceneDepth,
 							this,
 							ScreenColorRenderTargetTexture,
 							GlobalShaderMap,
@@ -1775,7 +1797,6 @@ void FDreamUIRenderer::RenderGizmoMesh_RenderThread(TArray<TSharedPtr<FDreamUIGi
 	FRDGTextureRef RenderTargetTexture)
 {
 	if (HelperGizmoDataMap.Num() <= 0)return;
-	const FMinimalSceneTextures& SceneTextures = ((FViewFamilyInfo*)RenderView->Family)->GetSceneTextures();
 	auto* PassParameters = GraphBuilder.AllocParameters<FRenderTargetParameters>();
 	PassParameters->RenderTargets[0] = FRenderTargetBinding(RenderTargetTexture, ERenderTargetLoadAction::ELoad);
 	GraphBuilder.AddPass(

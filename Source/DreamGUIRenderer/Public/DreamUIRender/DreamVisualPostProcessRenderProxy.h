@@ -9,9 +9,6 @@
 #include "RHIStaticStates.h"
 #include "TextureResource.h"
 
-// Declared, not included: SceneTextures.h is the engine renderer's internal header, and only the files that
-// draw -- the renderer's own -- are given its include path.
-struct FMinimalSceneTextures;
 class FTexture2DResource;
 class UTexture;
 class UTextureRenderTarget2D;
@@ -86,12 +83,13 @@ public:
 	virtual bool CanRender() const = 0;
 	/**
 	 * render thread function that will do the post process draw
+	 * @param	SceneDepth						The view's resolved scene depth, which a world-space effect is tested against
 	 * @param	ScreenTargetTexture				The full screen render target
 	 * @param	ViewProjectionMatrix			For vertex shader to convert vertex to screen space. vertex position is already transformed to world space, so we dont need model matrix
 	 */
 	virtual void OnRenderPostProcess_RenderThread(
 		FRDGBuilder& GraphBuilder,
-		const FMinimalSceneTextures& SceneTextures,
+		FRDGTextureRef SceneDepth,
 		FDreamUIRenderer* Renderer,
 		FTextureRHIRef ScreenTargetTexture,
 		FGlobalShaderMap* GlobalShaderMap,
@@ -137,7 +135,7 @@ public:
 	 */
 	void RenderMeshOnScreen_RenderThread(
 		FRDGBuilder& GraphBuilder
-		, const FMinimalSceneTextures& SceneTextures
+		, FRDGTextureRef SceneDepth
 		, FTextureRHIRef ScreenTargetTexture
 		, FGlobalShaderMap* GlobalShaderMap
 		, FTextureRHIRef MeshRegionTexture
