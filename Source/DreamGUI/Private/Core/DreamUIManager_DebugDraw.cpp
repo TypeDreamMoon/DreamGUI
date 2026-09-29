@@ -429,34 +429,19 @@ void UDreamUIManagerWorldSubsystem::DrawHelperGizmo()
 			|| this->GetWorld()->WorldType == EWorldType::Editor
 			|| this->GetWorld()->WorldType == EWorldType::EditorPreview)
 		{
-			struct LOCAL
-			{
-				static void ForEachWidget(UDreamUIManagerWorldSubsystem* DreamUIManager, UDreamWidget* Widget, bool bIsGameWorld)
-				{
-					if (!IsValid(Widget))return;
-
-					bool bIsScreenSpace = false;
-					if (bIsGameWorld)
-					{
-						if (auto RenderCanvas = Widget->GetRenderCanvas())
-						{
-							bIsScreenSpace = RenderCanvas->IsRenderToScreenSpace() || RenderCanvas->IsRenderToRenderTarget();
-						}
-					}
-					DreamUIManager->DrawFrameOnWidget(Widget, bIsScreenSpace);
-
-					for (auto& Child : Widget->GetChildren())
-					{
-						ForEachWidget(DreamUIManager, Child, bIsGameWorld);
-					}
-				}
-			};
+			// Only a selected widget draws anything (DrawFrameOnWidget), so the selection is what is walked. This
+			// walked every widget of every canvas instead, each frame, in the editor and in PIE, selection or not.
 			auto bIsGameWorld = this->GetWorld()->IsGameWorld();
-			for (const TWeakObjectPtr<UDreamCanvas>& Canvas : SnapshotCanvases())
+			for (const TWeakObjectPtr<UDreamWidget>& WeakWidget : GetSelection()->GetSelectedWidgets())
 			{
-				if (!IsCanvasStillRegistered(Canvas))continue;
-				if (!Canvas->IsRootCanvas())continue;
-				LOCAL::ForEachWidget(this, Canvas->GetWidget(), bIsGameWorld);
+				UDreamWidget* Widget = WeakWidget.Get();
+				if (!IsValid(Widget) || Widget->GetWorld() != this->GetWorld())continue;
+				// Part of a registered canvas's tree, as the widgets the walk down from the root canvases reached were.
+				UDreamCanvas* RenderCanvas = Widget->GetRenderCanvas();
+				if (RenderCanvas == nullptr || !IsCanvasStillRegistered(RenderCanvas->GetRootCanvas()))continue;
+				const bool bIsScreenSpace = bIsGameWorld
+					&& (RenderCanvas->IsRenderToScreenSpace() || RenderCanvas->IsRenderToRenderTarget());
+				DrawFrameOnWidget(Widget, bIsScreenSpace);
 			}
 		}
 	}
