@@ -77,9 +77,12 @@ Defined in `presets.json` (the runner owns this list; nothing depends on the eng
 | `Quick` | every `DreamGUI.*` and `DreamTween.*` test except the PIE layer (`DreamGUI.Pie.*`) | `-nullrhi` | 1386 | 20 min |
 | `Interaction` | the tests declared under `Private/Interaction` and `Private/Driver/Tests` | `-nullrhi` | 233 | 15 min |
 | `Designer` | `DreamGUI.Designer.*` | `-nullrhi` | 88 | 20 min |
-| `Rhi` | every test flagged `NonNullRHI`, except the PIE layer's | `-RenderOffScreen` | 12 | 30 min |
-| `Validate` | the same, under the RHI validation layer | `-RenderOffScreen -rhivalidation` | 12 | 40 min |
-| `Pie` | `DreamGUI.Pie.*` (its `NonNullRHI` probes are dropped here and run in `All`) | `-nullrhi` | 9 | 30 min |
+| `Rhi` | every test flagged `NonNullRHI`, except the PIE layer's and the benchmark | `-RenderOffScreen` | 32 | 30 min |
+| `Validate` | the same, under the RHI validation layer | `-RenderOffScreen -rhivalidation` | 32 | 40 min |
+| `Pie` | `DreamGUI.Pie.*` (its `NonNullRHI` tests are dropped here and run in `PieRhi`) | `-nullrhi` | 9 | 30 min |
+| `PieRhi` | the `NonNullRHI` tests of `DreamGUI.Pie.*`, on a real RHI | `-RenderOffScreen` | 5 | 20 min |
+| `Exit` | `DreamGUI.Lifecycle.Smoke.*`, then the editor's own exit, its log searched afterwards | `-nullrhi` | 1 | 20 min |
+| `Perf` | the benchmark, `DreamGUI.Performance.*`, alone in its editor | `-RenderOffScreen` | 1 | 20 min |
 | `All` | everything, in one editor on a real RHI | `-RenderOffScreen -dpcvars=r.GPUScene.UseReservedResources=0,r.GPUScene.InstanceDataTileSizeLog2=-1` | 1404 | 60 min |
 
 Under `-nullrhi` the engine itself drops every test flagged `NonNullRHI` before any filter applies
@@ -92,6 +95,22 @@ destroyed world keeps its scene until the next garbage collection, which the edi
 apart, and at twenty worlds a second the process runs out of address space within seconds — D3D12
 then removes the device (`DXGI_ERROR_DRIVER_INTERNAL_ERROR`) on the next reservation. Headless, the
 same worlds cost nothing on the GPU.
+
+### Pictures and the benchmark
+
+Every picture a pixel test holds to a golden image is written to
+`<project>/Saved/DreamGUITests/Captures/<name>.png` whether it matches or not, and where it does not,
+`<name>.diff.png` beside it marks the pixels that differ in magenta. The golden images live in
+`Source/DreamGUITests/Resources/Golden/`. A picture with no golden yet passes with a warning naming
+the file: look at it, and copy it there once it is right. `-DreamGUIWriteGoldens` on the editor's
+command line writes every picture over its golden instead, for when the renderer changed on purpose.
+
+The `Perf` preset runs the benchmark, which writes `Saved/DreamGUITests/Perf/Benchmark.json` (per
+stage milliseconds per frame, and what was drawn and uploaded, for a scene standing still, animating
+and churning) and a CPU trace, `Benchmark.utrace`. `perf_report.py show <json>` prints a run,
+`perf_report.py compare <old> <new>` two of them side by side, and `perf_report.py insights <utrace>`
+has Unreal Insights break each stretch down by timer. Nothing fails on a time: a number is only worth
+something next to another run's on the same machine.
 
 The **floor** is the least number of tests that must actually run; fewer is an infrastructure
 failure (exit 2). It is what stops a plugin that loaded without its test module from passing as

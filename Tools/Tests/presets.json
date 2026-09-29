@@ -37,11 +37,11 @@
       "timeoutMinutes": 20
     },
     "PieRhi": {
-      "about": "The play-in-editor layer's NonNullRHI tests, which -nullrhi drops from Pie: a play session drawn on a real RHI that renders off screen, for what needs Slate to lay its viewport out or the renderer to fill it.",
+      "about": "The play-in-editor layer's NonNullRHI tests, which -nullrhi drops from Pie: a play session drawn on a real RHI that renders off screen, for what needs Slate to lay its viewport out or the renderer to fill it. The picture of a play session's viewport is written to Saved/DreamGUITests/Captures.",
       "include": ["DreamGUI.Pie."],
       "flags": ["NonNullRHI"],
       "args": ["-RenderOffScreen"],
-      "minTests": 4,
+      "minTests": 5,
       "timeoutMinutes": 20
     },
     "Designer": {
@@ -52,20 +52,28 @@
       "timeoutMinutes": 20
     },
     "Rhi": {
-      "about": "Every test flagged NonNullRHI except the PIE layer's (each PIE test first replaces the editor's level with a blank map, which the pixel tests draw through), on a real RHI that renders off screen (no window).",
+      "about": "Every test flagged NonNullRHI except the PIE layer's (each PIE test first replaces the editor's level with a blank map, which the pixel tests draw through) and the benchmark's (Perf), on a real RHI that renders off screen (no window). Every picture a test holds to a golden image is written to Saved/DreamGUITests/Captures.",
       "flags": ["NonNullRHI"],
-      "exclude": ["DreamGUI.Pie."],
+      "exclude": ["DreamGUI.Pie.", "DreamGUI.Performance."],
       "args": ["-RenderOffScreen"],
-      "minTests": 12,
+      "minTests": 32,
       "timeoutMinutes": 30
     },
     "Validate": {
       "about": "The Rhi preset under the RHI validation layer, which turns missing transitions and stale bindings into deterministic asserts with a callstack instead of a timing-dependent crash.",
       "flags": ["NonNullRHI"],
-      "exclude": ["DreamGUI.Pie."],
+      "exclude": ["DreamGUI.Pie.", "DreamGUI.Performance."],
       "args": ["-RenderOffScreen", "-rhivalidation"],
-      "minTests": 12,
+      "minTests": 32,
       "timeoutMinutes": 40
+    },
+    "Perf": {
+      "about": "The benchmark (DreamGUI.Performance.*) alone in its editor on a real RHI off screen, so that nothing else competes for the machine while it is timed. It writes Saved/DreamGUITests/Perf/Benchmark.json and a CPU trace, Benchmark.utrace; Tools/Tests/perf_report.py shows, compares and breaks them down. Nothing fails on a time: a number is only worth something next to another run's on the same machine.",
+      "include": ["DreamGUI.Performance."],
+      "flags": ["NonNullRHI"],
+      "args": ["-RenderOffScreen"],
+      "minTests": 1,
+      "timeoutMinutes": 20
     },
     "Pie": {
       "about": "The play-in-editor layer (DreamGUI.Pie.*): a real game mode, local player, viewport and viewport client, one PIE session per test. In its own editor, out of Quick. Its NonNullRHI tests are dropped under -nullrhi and run in PieRhi.",
