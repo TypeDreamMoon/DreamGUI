@@ -101,6 +101,18 @@ public:
 
 	void UpdateRenderTargetRenderer(class UTextureRenderTarget2D* InRenderTarget, FColor InClearColor);
 
+	/**
+	 * Whether a render-target canvas is drawn by a render command and a graph of its own (r.DreamUI.RTDrawer, on by
+	 * default) rather than inside the render of one of its world's views. Game thread.
+	 */
+	static bool IsRenderTargetDrawerEnabled();
+	/**
+	 * Render-target mode with the drawer on: draws the canvas into InRenderTarget with a render command and a graph of
+	 * its own, enqueued now -- after this frame's changes to the canvas's sections -- whether or not anything renders
+	 * the canvas's world. Game thread.
+	 */
+	void DrawRenderTarget_GameThread(class UTextureRenderTarget2D* InRenderTarget, FColor InClearColor);
+
 	TWeakObjectPtr<UWorld> GetWorld() { return World; }
 
 	void CopyRenderTarget(
@@ -225,11 +237,15 @@ private:
 	};
 	/** The registered root the screen-space view parameters are taken from, or null. */
 	const FScreenSpaceRoot* GetScreenSpaceViewRoot()const;
+	/** The view parameters, from the registered root and the project's settings, worked out and sent to the render thread. */
+	void UpdateViewParameter_GameThread();
+	/** The drawer's command: a view of the target alone, and a graph that draws the canvas into it. */
+	void DrawRenderTarget_RenderThread(FRHICommandListImmediate& RHICmdList, class UTextureRenderTarget2D* InRenderTarget, const struct FGameTime& InTime);
 	TArray<FWorldSpaceRenderParameter> WorldSpaceRenderCanvasParameterArray;
 	FScreenSpaceRenderParameter ScreenSpaceRenderParameter;
-	/** Written by SetupView on the game thread; never read there. */
+	/** Written on the game thread by UpdateViewParameter_GameThread, for SetupView or the drawer; never read there. */
 	FScreenSpaceViewParameter GameThreadViewParameter;
-	/** The render thread's own copy, replaced by the command SetupView enqueues. */
+	/** The render thread's own copy, replaced by the command UpdateViewParameter_GameThread enqueues. */
 	FScreenSpaceViewParameter RenderThreadViewParameter;
 	TWeakObjectPtr<UWorld> World;
 	//no MeshBatchArray member: mesh batches are collected into a pass-local array inside each RDG

@@ -236,7 +236,14 @@ private:
 	void RemoveFromViewExtension(bool PropagateToChildrenCanvas);
 	TSharedPtr<class FDreamUIRenderer, ESPMode::ThreadSafe> RenderTargetViewExtension = nullptr;
 	TSharedPtr<class FDreamUIRenderer, ESPMode::ThreadSafe> GetRenderTargetViewExtension();
+	/** Render-target mode: the target is to be drawn this frame, once the sections have gone (DrawRenderTargetIfRequested). */
+	bool bRenderTargetDrawRequested = false;
 public:
+	/**
+	 * Render-target mode, with the renderer's drawer on: draws the target, when this frame asked for it, with a render
+	 * command of its own. The UI manager calls this after every canvas has sent this frame's sections.
+	 */
+	void DrawRenderTargetIfRequested();
 	/** mark canvas layout dirty */
 	void MarkTransformOrDimensionChanged();
 	/**

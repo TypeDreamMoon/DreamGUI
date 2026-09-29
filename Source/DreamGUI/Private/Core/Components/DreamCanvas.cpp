@@ -295,10 +295,32 @@ void UDreamCanvas::CheckRenderTargetUpdate()
 #endif
 				if (RenderTargetViewExtension.IsValid())
 				{
-					RenderTargetViewExtension->UpdateRenderTargetRenderer(Target, RenderTargetClearColor);
+					if (FDreamUIRenderer::IsRenderTargetDrawerEnabled())
+					{
+						// Drawn once this frame's sections have gone to the render thread: DrawRenderTargetIfRequested.
+						bRenderTargetDrawRequested = true;
+					}
+					else
+					{
+						RenderTargetViewExtension->UpdateRenderTargetRenderer(Target, RenderTargetClearColor);
+					}
 				}
 			}
 		}
+	}
+}
+
+void UDreamCanvas::DrawRenderTargetIfRequested()
+{
+	if (!bRenderTargetDrawRequested)
+	{
+		return;
+	}
+	bRenderTargetDrawRequested = false;
+	UTextureRenderTarget2D* Target = GetRenderTarget();
+	if (RenderTargetViewExtension.IsValid() && IsValid(Target))
+	{
+		RenderTargetViewExtension->DrawRenderTarget_GameThread(Target, RenderTargetClearColor);
 	}
 }
 

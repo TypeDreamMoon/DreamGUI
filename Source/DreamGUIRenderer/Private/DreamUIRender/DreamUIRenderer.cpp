@@ -28,6 +28,13 @@
 #include "ClearQuad.h"
 #include "DataDrivenShaderPlatformInfo.h"//RHISupportsMSAA, for the platform that cannot honour the setting
 
+static TAutoConsoleVariable<int32> CVarDreamUIRenderTargetDrawer(
+	TEXT("r.DreamUI.RTDrawer"), 1,
+	TEXT("1: a render-target canvas is drawn by a render command and a graph of its own whenever it updates, whether or not ")
+	TEXT("a view of its world is rendered. 0: it is drawn inside the render of one of its world's views, and a world that no ")
+	TEXT("viewport renders never updates its render-target canvases."),
+	ECVF_Default);
+
 static TAutoConsoleVariable<int32> CVarDreamGUIDumpMaterialDraws(
 	TEXT("dreamgui.DumpMaterialDraws"), 0,
 	TEXT("1: log one line per screen-space material draw attempt (which branch/exit it took). Stays on until set back to 0."),
@@ -86,7 +93,11 @@ void FDreamUIRenderer::SetupView(FSceneViewFamily& InViewFamily, FSceneView& InV
 {
 	if (!World.IsValid())return;
 	if (World.Get() != InView.Family->Scene->GetWorld())return;
-	
+	UpdateViewParameter_GameThread();
+}
+
+void FDreamUIRenderer::UpdateViewParameter_GameThread()
+{
 	if (const FScreenSpaceRoot* ViewRoot = GetScreenSpaceViewRoot())
 	{
 		const IDreamUIRendererViewSource* ViewSource = ViewRoot->ViewSource;
@@ -217,7 +228,66 @@ bool FDreamUIRenderer::IsActiveThisFrame_Internal(const FSceneViewExtensionConte
 #endif
 
 	if (World.Get() != Context.GetWorld())return false;//only render self world
+	// A render-target canvas the drawer draws is not drawn again in its world's views.
+	if (RendererType == EDreamUIRendererType::RenderTarget && IsRenderTargetDrawerEnabled())return false;
 	return true;
+}
+
+bool FDreamUIRenderer::IsRenderTargetDrawerEnabled()
+{
+	return CVarDreamUIRenderTargetDrawer.GetValueOnGameThread() != 0;
+}
+
+void FDreamUIRenderer::DrawRenderTarget_GameThread(UTextureRenderTarget2D* InRenderTarget, FColor InClearColor)
+{
+	check(IsInGameThread());
+	if (RendererType != EDreamUIRendererType::RenderTarget || !World.IsValid()
+		|| InRenderTarget == nullptr || InRenderTarget->GameThread_GetRenderTargetResource() == nullptr)
+	{
+		return;
+	}
+	// In order on the render thread: the view, the target, then the draw. The canvas's sections for this frame were
+	// sent before this was called, so the draw sees them.
+	UpdateViewParameter_GameThread();
+	UpdateRenderTargetRenderer(InRenderTarget, InClearColor);
+	const FGameTime Time = World->GetTime();
+	TSharedRef<FDreamUIRenderer, ESPMode::ThreadSafe> Self = StaticCastSharedRef<FDreamUIRenderer>(AsShared());
+	ENQUEUE_RENDER_COMMAND(FDreamUIRender_DrawRenderTarget)(
+		[Self, InRenderTarget, Time](FRHICommandListImmediate& RHICmdList)
+		{
+			Self->DrawRenderTarget_RenderThread(RHICmdList, InRenderTarget, Time);
+		});
+}
+
+void FDreamUIRenderer::DrawRenderTarget_RenderThread(FRHICommandListImmediate& RHICmdList, UTextureRenderTarget2D* InRenderTarget, const FGameTime& InTime)
+{
+	// The target is read here, by the command the game thread enqueued while it was alive, exactly as the command
+	// before this one read it; nothing of it is kept past this call.
+	FTextureRenderTargetResource* TargetResource = InRenderTarget->GetRenderTargetResource();
+	if (TargetResource == nullptr || !CanvasTargetTexture.IsValid())
+	{
+		return;
+	}
+	const FIntPoint Size = TargetResource->GetSizeXY();
+	if (Size.X <= 0 || Size.Y <= 0)
+	{
+		return;
+	}
+	// No scene: a view of the target alone, the way the engine's canvas draws its tiles, with the view the canvas
+	// answers for. The scene renderer is not asked for anything, so a world nothing renders draws all the same.
+	FRDGBuilder GraphBuilder(RHICmdList, RDG_EVENT_NAME("DreamUI_RenderTargetCanvas"));
+	FSceneViewFamily* ViewFamily = GraphBuilder.AllocObject<FSceneViewFamily>(FSceneViewFamily::ConstructionValues(
+		TargetResource, nullptr, FEngineShowFlags(ESFIM_Game)).SetTime(InTime));
+	FSceneViewInitOptions ViewInitOptions;
+	ViewInitOptions.ViewFamily = ViewFamily;
+	ViewInitOptions.SetViewRectangle(FIntRect(FIntPoint::ZeroValue, Size));
+	ViewInitOptions.ViewOrigin = RenderThreadViewParameter.ViewOrigin;
+	ViewInitOptions.ViewRotationMatrix = RenderThreadViewParameter.ViewRotationMatrix;
+	ViewInitOptions.ProjectionMatrix = RenderThreadViewParameter.ProjectionMatrix;
+	ViewInitOptions.BackgroundColor = FLinearColor::Transparent;
+	FSceneView* View = GraphBuilder.AllocObject<FSceneView>(ViewInitOptions);
+	RenderDreamUI_RenderThread(GraphBuilder, *View);
+	GraphBuilder.Execute();
 }
 void FDreamUIRenderer::PreRenderView_RenderThread(FRDGBuilder& GraphBuilder, FSceneView& InView)
 {

@@ -445,6 +445,14 @@ void UDreamUIManagerWorldSubsystem::SubmitCanvasDrawCall()
 		UpdateCanvas(EDreamRenderMode::WorldSpace_DreamUI);
 		UpdateCanvas(EDreamRenderMode::RenderTarget);
 	}
+	// The render-target canvases that draw themselves, now that every canvas has sent this frame's sections.
+	for (const TWeakObjectPtr<UDreamCanvas>& Canvas : SnapshotCanvases())
+	{
+		if (IsCanvasStillRegistered(Canvas) && Canvas->IsRootCanvas())
+		{
+			Canvas->DrawRenderTargetIfRequested();
+		}
+	}
 }
 
 void UDreamUIManagerWorldSubsystem::AddDreamUIBehavioursForTick(UDreamUIBehaviour* InComp)
