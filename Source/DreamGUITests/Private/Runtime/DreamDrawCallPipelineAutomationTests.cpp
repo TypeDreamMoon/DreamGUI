@@ -396,6 +396,136 @@ bool FDreamDrawCallCombineLeftForATakenBackSectionTest::RunTest(const FString& P
 }
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamDrawCallGeometryListsShareLayoutTest,
+	"DreamGUI.Canvas.TwoGeometryListsShareALayoutWhenOnlyTheirVerticesDiffer",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamDrawCallGeometryListsShareLayoutTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamDrawCallPipelineTestLocal;
+
+	/*
+	 * A section built from one list of geometries can take another list's vertices in place when the two are laid out
+	 * alike: as many geometries, each with the vertex count and the triangles of the one in its place.
+	 */
+	auto Shared = [](const FDreamUIGeometry& InGeometry) { return TSharedPtr<const FDreamUIGeometry>(MakeShared<FDreamUIGeometry>(InGeometry)); };
+	const TSharedPtr<const FDreamUIGeometry> First = Shared(MakeQuad(FVector2D(-10.0, -10.0), FVector2D(10.0, 10.0)));
+	const TSharedPtr<const FDreamUIGeometry> Second = Shared(MakeQuad(FVector2D(20.0, 20.0), FVector2D(40.0, 40.0)));
+	const TSharedPtr<const FDreamUIGeometry> SecondMoved = Shared(MakeQuad(FVector2D(60.0, 20.0), FVector2D(80.0, 40.0)));
+	FDreamUIGeometry TurnedQuad = MakeQuad(FVector2D(20.0, 20.0), FVector2D(40.0, 40.0));
+	TurnedQuad.Triangles = { 0, 1, 3, 0, 3, 2 };
+	const TSharedPtr<const FDreamUIGeometry> SecondTurned = Shared(TurnedQuad);
+	FDreamUIGeometry GrownQuad = MakeQuad(FVector2D(20.0, 20.0), FVector2D(40.0, 40.0));
+	const FDreamUIMeshVertex ExtraVertex = GrownQuad.Vertices[0];
+	GrownQuad.Vertices.Add(ExtraVertex);
+	const TSharedPtr<const FDreamUIGeometry> SecondGrown = Shared(GrownQuad);
+
+	using FList = TArray<TSharedPtr<const FDreamUIGeometry>>;
+	TestTrue(TEXT("A list shares its own layout"), FDreamUIDrawCall::GeometryListsShareLayout(FList{ First, Second }, FList{ First, Second }));
+	TestTrue(TEXT("...and one with an element moved"), FDreamUIDrawCall::GeometryListsShareLayout(FList{ First, Second }, FList{ First, SecondMoved }));
+	TestFalse(TEXT("Not one with other triangles"), FDreamUIDrawCall::GeometryListsShareLayout(FList{ First, Second }, FList{ First, SecondTurned }));
+	TestFalse(TEXT("Not one with more vertices"), FDreamUIDrawCall::GeometryListsShareLayout(FList{ First, Second }, FList{ First, SecondGrown }));
+	TestFalse(TEXT("Not one with fewer geometries"), FDreamUIDrawCall::GeometryListsShareLayout(FList{ First, Second }, FList{ First }));
+	TestFalse(TEXT("Not two empty lists: nothing is laid out"), FDreamUIDrawCall::GeometryListsShareLayout(FList{}, FList{}));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamDrawCallCombineLeftForAPatchedSectionTest,
+	"DreamGUI.Canvas.TheBatchingLeavesUncombinedADrawCallWhoseSectionWillTakeItsNewVerticesInPlace",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamDrawCallCombineLeftForAPatchedSectionTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamDrawCallPipelineTestLocal;
+
+	/*
+	 * A draw call built from copies laid out as a section's are takes that section back with its vertices written in
+	 * place, so the batching leaves it uncombined too. Each section goes to one draw call: two single quads of different
+	 * textures are both laid out as the one section there is -- the left quad's, from before it moved -- and only the
+	 * first of them is left uncombined.
+	 */
+	FDreamUIGeometry Left = MakeQuad(FVector2D(-40.0, -10.0), FVector2D(-20.0, 10.0));
+	Left.Texture = UTexture2D::CreateTransient(4, 4);
+	FDreamUIGeometry Right = MakeQuad(FVector2D(20.0, -10.0), FVector2D(40.0, 10.0));
+	Right.Texture = UTexture2D::CreateTransient(4, 4);
+	TArray<FDreamUIRenderData> RenderDataArray;
+	RenderDataArray.Add(MakeBatchMeshRenderData(Left));
+	RenderDataArray.Add(MakeBatchMeshRenderData(Right));
+	const FDreamUIRenderData Before = MakeBatchMeshRenderData(MakeQuad(FVector2D(-60.0, -10.0), FVector2D(-40.0, 10.0)));
+	const TArray<TArray<TSharedPtr<const FDreamUIGeometry>>> OnSections = { { Before.BatchMeshGeometry } };
+
+	TArray<FDreamUIDrawCall> DrawCallList;
+	UDreamCanvas::BatchDrawCallAsync(CanvasLeftBottom, CanvasRightTop, MoveTemp(RenderDataArray), DrawCallList, false, &OnSections);
+	if (!TestEqual(TEXT("Two textures, two draw calls"), DrawCallList.Num(), 2))
+	{
+		return false;
+	}
+	TestTrue(TEXT("The first, laid out as the section is, is left uncombined"), DrawCallList[0].bCombinePending);
+	TestTrue(TEXT("...its bounds worked out"), DrawCallList[0].CombinedBounds.IsValid != 0);
+	TestFalse(TEXT("The second finds the section taken, and is combined"), DrawCallList[1].bCombinePending);
+	TestEqual(TEXT("...its buffer full"), DrawCallList[1].CombinedBatchMeshGeometryVertices.Num(), 4);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamDrawCallRefreshOfUncombinedDrawCallTest,
+	"DreamGUI.Canvas.AVertexRefreshOfADrawCallLeftUncombinedTakesTheNewCopiesAndCombinesNothing",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamDrawCallRefreshOfUncombinedDrawCallTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamDrawCallPipelineTestLocal;
+
+	/*
+	 * A draw call the batching left uncombined, because its section is taken back, has no combined buffer for the cheap
+	 * refresh to write into, and needs none: its section takes the changed vertices in place. The refresh takes the new
+	 * copies and leaves the buffer to be made from them should anything read it. A copy whose triangles changed is the
+	 * exception -- no section can take it in place -- so the buffer is made as built and the vertices written into it.
+	 */
+	UDreamVisualBatchMesh* First = MakeVisualWithGeometry(MakeQuad(FVector2D(-10.0, -10.0), FVector2D(10.0, 10.0)));
+	UDreamVisualBatchMesh* Second = MakeVisualWithGeometry(MakeQuad(FVector2D(20.0, 20.0), FVector2D(40.0, 40.0)));
+	if (!TestNotNull(TEXT("A first visual"), First) || !TestNotNull(TEXT("...and a second"), Second))
+	{
+		return false;
+	}
+	FDreamUIDrawCall DrawCall(DreamUIQuadTree::Rectangle(FVector2D(-500.0, -500.0), FVector2D(500.0, 500.0)));
+	DrawCall.BatchMeshGeometryArray = { First->GetGeometryForBatching(), Second->GetGeometryForBatching() };
+	DrawCall.BatchMeshVisualArray = { First, Second };
+	DrawCall.VerticesCount = 8;
+	DrawCall.IndicesCount = 12;
+	DrawCall.ApplyBatchMeshBoundsToCombined();
+	DrawCall.bCombinePending = true;
+
+	Second->GetGeometry()->Vertices[0].Color = FColor::Red;
+	TestTrue(TEXT("A vertex of the second visual changed: the draw call is refreshed"), DrawCall.CopyBatchMeshGeometry());
+	TestTrue(TEXT("...and left uncombined"), DrawCall.bCombinePending);
+	TestEqual(TEXT("...its buffer still empty"), DrawCall.CombinedBatchMeshGeometryVertices.Num(), 0);
+	TestTrue(TEXT("...holding the visual's new copy"), DrawCall.BatchMeshGeometryArray[1] == Second->GetGeometryForBatching());
+	DrawCall.CombineIfPending();
+	if (TestEqual(TEXT("Made when asked for, the buffer holds both quads"), DrawCall.CombinedBatchMeshGeometryVertices.Num(), 8))
+	{
+		TestEqual(TEXT("...the new vertex among them"), DrawCall.CombinedBatchMeshGeometryVertices[4].Color, FColor::Red);
+	}
+
+	// Left uncombined again; then the second copy's triangles turn.
+	DrawCall.CombinedBatchMeshGeometryVertices.Reset();
+	DrawCall.CombinedBatchMeshGeometryTriangles.Reset();
+	DrawCall.bCombinePending = true;
+	Second->GetGeometry()->Triangles = { 0, 1, 3, 0, 3, 2 };
+	Second->GetGeometry()->Vertices[0].Color = FColor::Blue;
+	TestTrue(TEXT("Its triangles turned: the draw call is refreshed"), DrawCall.CopyBatchMeshGeometry());
+	TestFalse(TEXT("...its buffer made, as built"), DrawCall.bCombinePending);
+	if (TestEqual(TEXT("...with both quads"), DrawCall.CombinedBatchMeshGeometryVertices.Num(), 8))
+	{
+		TestEqual(TEXT("...the new vertex written into it"), DrawCall.CombinedBatchMeshGeometryVertices[4].Color, FColor::Blue);
+		TestEqual(TEXT("...and the triangles as built"), static_cast<int32>(DrawCall.CombinedBatchMeshGeometryTriangles[6]), 4);
+	}
+	TestFalse(TEXT("...which the new copy's are not"), DrawCall.bTrianglesAsBuilt);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamDrawCallBlendModeSplitsBatchesTest,
 	"DreamGUI.Canvas.ElementsThatCompositeDifferentlyNeverShareADrawCall",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)

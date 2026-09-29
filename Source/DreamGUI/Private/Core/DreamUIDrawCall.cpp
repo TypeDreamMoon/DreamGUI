@@ -17,7 +17,6 @@ bool FDreamUIDrawCall::CopyBatchMeshGeometry()
 	 * the batch and this refresh) and that it still has the vertex count its slot was sized for. Either way the answer is
 	 * to stop and leave the buffer as it is; a rebuild is what fixes it.
 	 */
-	CombineIfPending();
 	const int32 CombinedVertexCount = CombinedBatchMeshGeometryVertices.Num();
 	//the multi-geometry branch of ApplyBatchMeshGeometryToCombined leaves out anything with no
 	//triangles, so a refresh that walked every geometry wrote each later one at the wrong offset
@@ -38,7 +37,7 @@ bool FDreamUIDrawCall::CopyBatchMeshGeometry()
 		//count that no longer matches means the layout itself is stale
 		const int32 VertexCount = Built->Vertices.Num();
 		const bool bInBuffer = !(bSkipTrianglelessGeometry && Built->Triangles.Num() <= 0);
-		if (!ensureMsgf(Now->Vertices.Num() == VertexCount && (!bInBuffer || PrevVertCount + VertexCount <= CombinedVertexCount)
+		if (!ensureMsgf(Now->Vertices.Num() == VertexCount && (!bInBuffer || bCombinePending || PrevVertCount + VertexCount <= CombinedVertexCount)
 			, TEXT("[FDreamUIDrawCall::CopyBatchMeshGeometry] Geometry changed since the draw-call was built (%d vertices now, %d then; %d + %d > %d), skipping the refresh; the draw-call rebuild will pick it up.")
 			, Now->Vertices.Num(), VertexCount, PrevVertCount, VertexCount, CombinedVertexCount))
 		{
@@ -55,21 +54,42 @@ bool FDreamUIDrawCall::CopyBatchMeshGeometry()
 	{
 		return false;
 	}
+	auto SameTriangles = [](const FDreamUIGeometry& InA, const FDreamUIGeometry& InB)
+	{
+		return InA.Triangles.Num() == InB.Triangles.Num()
+			&& (InA.Triangles.Num() == 0 || FMemory::Memcmp(InA.Triangles.GetData(), InB.Triangles.GetData(), InA.Triangles.Num() * sizeof(FDreamUIMeshIndex)) == 0);
+	};
+	// Left to be made, the buffer is made from the copies taken here whenever something reads it -- while their triangles
+	// are the ones built. A copy with other triangles has its vertices written into the buffer as built, as below.
+	if (bCombinePending)
+	{
+		for (int geoIndex = 0; geoIndex < BatchMeshGeometryArray.Num(); geoIndex++)
+		{
+			if (!SameTriangles(*Latest[geoIndex], *BatchMeshGeometryArray[geoIndex]))
+			{
+				CombineIfPending();
+				break;
+			}
+		}
+	}
 	// Only vertices go into the buffer; the indices stay as the batch laid them out. The section can stand for these
 	// copies only while their triangles are the ones it holds.
-	FDreamUIMeshVertex* CombinedVertexData = CombinedBatchMeshGeometryVertices.GetData();
+	FDreamUIMeshVertex* CombinedVertexData = bCombinePending ? nullptr : CombinedBatchMeshGeometryVertices.GetData();
 	PrevVertCount = 0;
 	for (int geoIndex = 0; geoIndex < BatchMeshGeometryArray.Num(); geoIndex++)
 	{
 		const FDreamUIGeometry& Built = *BatchMeshGeometryArray[geoIndex];
 		const FDreamUIGeometry& Now = *Latest[geoIndex];
-		if (!(bSkipTrianglelessGeometry && Built.Triangles.Num() <= 0))
+		if (CombinedVertexData != nullptr && !(bSkipTrianglelessGeometry && Built.Triangles.Num() <= 0))
 		{
-			FMemory::Memcpy(CombinedVertexData + PrevVertCount, Now.Vertices.GetData(), Now.Vertices.Num() * sizeof(FDreamUIMeshVertex));
+			// A copy that did not change is in the buffer already, as the batch or an earlier refresh wrote it.
+			if (Latest[geoIndex] != BatchMeshGeometryArray[geoIndex])
+			{
+				FMemory::Memcpy(CombinedVertexData + PrevVertCount, Now.Vertices.GetData(), Now.Vertices.Num() * sizeof(FDreamUIMeshVertex));
+			}
 			PrevVertCount += Now.Vertices.Num();
 		}
-		bTrianglesAsBuilt = bTrianglesAsBuilt && Now.Triangles.Num() == Built.Triangles.Num()
-			&& (Now.Triangles.Num() == 0 || FMemory::Memcmp(Now.Triangles.GetData(), Built.Triangles.GetData(), Now.Triangles.Num() * sizeof(FDreamUIMeshIndex)) == 0);
+		bTrianglesAsBuilt = bTrianglesAsBuilt && SameTriangles(Now, Built);
 		BatchMeshGeometryArray[geoIndex] = Latest[geoIndex];
 	}
 	return true;
@@ -147,6 +167,34 @@ void FDreamUIDrawCall::ApplyBatchMeshGeometryToCombined()
 			prevVertexCount += uiGeo.Vertices.Num();
 		}
 	}
+}
+
+bool FDreamUIDrawCall::GeometryListsShareLayout(const TArray<TSharedPtr<const FDreamUIGeometry>>& A, const TArray<TSharedPtr<const FDreamUIGeometry>>& B)
+{
+	if (A.Num() != B.Num() || A.Num() == 0)
+	{
+		return false;
+	}
+	for (int32 Index = 0; Index < A.Num(); ++Index)
+	{
+		const FDreamUIGeometry* GeometryA = A[Index].Get();
+		const FDreamUIGeometry* GeometryB = B[Index].Get();
+		if (GeometryA == nullptr || GeometryB == nullptr)
+		{
+			return false;
+		}
+		if (GeometryA == GeometryB)
+		{
+			continue;
+		}
+		if (GeometryA->Vertices.Num() != GeometryB->Vertices.Num() || GeometryA->Triangles.Num() != GeometryB->Triangles.Num()
+			|| (GeometryA->Triangles.Num() > 0
+				&& FMemory::Memcmp(GeometryA->Triangles.GetData(), GeometryB->Triangles.GetData(), GeometryA->Triangles.Num() * sizeof(FDreamUIMeshIndex)) != 0))
+		{
+			return false;
+		}
+	}
+	return true;
 }
 
 bool FDreamUIDrawCall::CanConsumeUIGeometryForBatchMesh(const FDreamUIGeometry& geo)const

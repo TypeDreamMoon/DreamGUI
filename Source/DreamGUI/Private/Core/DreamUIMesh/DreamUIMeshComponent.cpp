@@ -388,6 +388,8 @@ public:
 				NewSectionProxy->NumPrimitives = SrcSection->ValidTriangleIndicesNum / 3;
 				if (bIsSupportDreamUIRenderer)
 				{
+					// Kept after the buffer is made, as what it holds: see PatchSection_RenderThread.
+					NewSectionProxy->DreamUIVertexBuffers.bAutoClearVerticesAfterInitRHI = false;
 					auto& Vertices = NewSectionProxy->DreamUIVertexBuffers.Vertices;
 					Vertices.SetNumUninitialized(SrcVertices.Num());
 					FMemory::Memcpy(Vertices.GetData(), SrcVertices.GetData(), SrcVertices.Num() * sizeof(FDreamUIMeshVertex));
@@ -647,9 +649,99 @@ public:
 	}
 #endif
 
+	/** The UE renderer's copy of one vertex, in the section's split buffers. */
+	static void SetUERendererVertex(FDreamUISectionProxy_Mesh* Section, int32 Index, const FDreamUIMeshVertex& DreamUIVert, bool RequireNormalAndTangent)
+	{
+		Section->VertexBuffers.PositionVertexBuffer.VertexPosition(Index) = DreamUIVert.Position;
+		Section->VertexBuffers.ColorVertexBuffer.VertexColor(Index) = DreamUIVert.Color;
+		if (RequireNormalAndTangent)
+			Section->VertexBuffers.StaticMeshVertexBuffer.SetVertexTangents(Index, DreamUIVert.TangentX.ToFVector3f(), DreamUIVert.GetTangentY(), DreamUIVert.TangentZ.ToFVector3f());
+		Section->VertexBuffers.StaticMeshVertexBuffer.SetVertexUV(Index, 0, DreamUIVert.TextureCoordinate[0]);
+		Section->VertexBuffers.StaticMeshVertexBuffer.SetVertexUV(Index, 1, DreamUIVert.TextureCoordinate[1]);
+		Section->VertexBuffers.StaticMeshVertexBuffer.SetVertexUV(Index, 2, DreamUIVert.TextureCoordinate[2]);
+		Section->VertexBuffers.StaticMeshVertexBuffer.SetVertexUV(Index, 3, DreamUIVert.TextureCoordinate[3]);
+	}
+
+	/** The UE renderer's split buffers, sent up whole from their copies here. */
+	static void UploadUERendererVertexBuffers_RenderThread(FRHICommandListImmediate& RHICmdList, FDreamUISectionProxy_Mesh* Section, bool RequireNormalAndTangent)
+	{
+		{
+			auto& VertexBuffer = Section->VertexBuffers.PositionVertexBuffer;
+			void* VertexBufferData = RHICmdList.LockBuffer(VertexBuffer.VertexBufferRHI, 0, VertexBuffer.GetNumVertices() * VertexBuffer.GetStride(), RLM_WriteOnly);
+			FMemory::Memcpy(VertexBufferData, VertexBuffer.GetVertexData(), VertexBuffer.GetNumVertices() * VertexBuffer.GetStride());
+			RHICmdList.UnlockBuffer(VertexBuffer.VertexBufferRHI);
+		}
+
+		{
+			auto& VertexBuffer = Section->VertexBuffers.ColorVertexBuffer;
+			void* VertexBufferData = RHICmdList.LockBuffer(VertexBuffer.VertexBufferRHI, 0, VertexBuffer.GetNumVertices() * VertexBuffer.GetStride(), RLM_WriteOnly);
+			FMemory::Memcpy(VertexBufferData, VertexBuffer.GetVertexData(), VertexBuffer.GetNumVertices() * VertexBuffer.GetStride());
+			RHICmdList.UnlockBuffer(VertexBuffer.VertexBufferRHI);
+		}
+
+		if (RequireNormalAndTangent)
+		{
+			auto& VertexBuffer = Section->VertexBuffers.StaticMeshVertexBuffer;
+			void* VertexBufferData = RHICmdList.LockBuffer(VertexBuffer.TangentsVertexBuffer.VertexBufferRHI, 0, VertexBuffer.GetTangentSize(), RLM_WriteOnly);
+			FMemory::Memcpy(VertexBufferData, VertexBuffer.GetTangentData(), VertexBuffer.GetTangentSize());
+			RHICmdList.UnlockBuffer(VertexBuffer.TangentsVertexBuffer.VertexBufferRHI);
+		}
+
+		{
+			auto& VertexBuffer = Section->VertexBuffers.StaticMeshVertexBuffer;
+			void* VertexBufferData = RHICmdList.LockBuffer(VertexBuffer.TexCoordVertexBuffer.VertexBufferRHI, 0, VertexBuffer.GetTexCoordSize(), RLM_WriteOnly);
+			FMemory::Memcpy(VertexBufferData, VertexBuffer.GetTexCoordData(), VertexBuffer.GetTexCoordSize());
+			RHICmdList.UnlockBuffer(VertexBuffer.TexCoordVertexBuffer.VertexBufferRHI);
+		}
+	}
+
+	/**
+	 * Called on the render thread to write runs of a section's vertices -- RunVertices holds them back to back, in the
+	 * order of Runs, each (first vertex, count) -- leaving the rest of the section and its indices as they are.
+	 */
+	void PatchSection_RenderThread(FRHICommandListImmediate& RHICmdList
+		, const TArray<FDreamUIMeshVertex>& RunVertices, const TArray<TPair<int32, int32>>& Runs
+		, bool RequireNormalAndTangent
+		, FDreamUISectionProxy_Mesh* Section)const
+	{
+		TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_PatchSection_RenderThread);
+		check(IsInRenderingThread());
+		check(Section != nullptr);
+		if (bIsSupportDreamUIRenderer)
+		{
+			// A dynamic buffer cannot be written in part -- locking one hands out new memory -- so the runs go into the
+			// copy it was last filled from, and all of that goes up again.
+			TArray<FDreamUIMeshVertex>& Held = Section->DreamUIVertexBuffers.Vertices;
+			check(Held.Num() >= static_cast<int32>(Section->ValidVerticesCount));
+			int32 Read = 0;
+			for (const TPair<int32, int32>& Run : Runs)
+			{
+				check(Run.Key >= 0 && Run.Key + Run.Value <= Held.Num());
+				FMemory::Memcpy(Held.GetData() + Run.Key, RunVertices.GetData() + Read, Run.Value * sizeof(FDreamUIMeshVertex));
+				Read += Run.Value;
+			}
+			const uint32 VertexDataLength = Section->ValidVerticesCount * sizeof(FDreamUIMeshVertex);
+			void* VertexBufferData = RHICmdList.LockBuffer(Section->DreamUIVertexBuffers.VertexBufferRHI, 0, VertexDataLength, RLM_WriteOnly);
+			FMemory::Memcpy(VertexBufferData, Held.GetData(), VertexDataLength);
+			RHICmdList.UnlockBuffer(Section->DreamUIVertexBuffers.VertexBufferRHI);
+		}
+		if (NeedsUERendererSectionData())
+		{
+			int32 Read = 0;
+			for (const TPair<int32, int32>& Run : Runs)
+			{
+				for (int32 Offset = 0; Offset < Run.Value; ++Offset)
+				{
+					SetUERendererVertex(Section, Run.Key + Offset, RunVertices[Read++], RequireNormalAndTangent);
+				}
+			}
+			UploadUERendererVertexBuffers_RenderThread(RHICmdList, Section, RequireNormalAndTangent);
+		}
+	}
+
 	/** Called on render thread to assign new dynamic data */
 	void UpdateSection_RenderThread(FRHICommandListImmediate& RHICmdList
-		, const TArray<FDreamUIMeshVertex>& MeshVertexData, const int32& NumVerts
+		, TArray<FDreamUIMeshVertex>& MeshVertexData, const int32& NumVerts
 		, const TArray<FDreamUIMeshIndex>& MeshIndexData, const int32& NumTriangles
 		, bool RequireNormalAndTangent
 		, FDreamUISectionProxy_Mesh* Section)const
@@ -675,45 +767,9 @@ public:
 		{
 			for (int i = 0; i < NumVerts; i++)
 			{
-				auto& DreamUIVert = MeshVertexData[i];
-				Section->VertexBuffers.PositionVertexBuffer.VertexPosition(i) = DreamUIVert.Position;
-				Section->VertexBuffers.ColorVertexBuffer.VertexColor(i) = DreamUIVert.Color;
-				if (RequireNormalAndTangent)
-					Section->VertexBuffers.StaticMeshVertexBuffer.SetVertexTangents(i, DreamUIVert.TangentX.ToFVector3f(), DreamUIVert.GetTangentY(), DreamUIVert.TangentZ.ToFVector3f());
-				Section->VertexBuffers.StaticMeshVertexBuffer.SetVertexUV(i, 0, DreamUIVert.TextureCoordinate[0]);
-				Section->VertexBuffers.StaticMeshVertexBuffer.SetVertexUV(i, 1, DreamUIVert.TextureCoordinate[1]);
-				Section->VertexBuffers.StaticMeshVertexBuffer.SetVertexUV(i, 2, DreamUIVert.TextureCoordinate[2]);
-				Section->VertexBuffers.StaticMeshVertexBuffer.SetVertexUV(i, 3, DreamUIVert.TextureCoordinate[3]);
+				SetUERendererVertex(Section, i, MeshVertexData[i], RequireNormalAndTangent);
 			}
-
-			{
-				auto& VertexBuffer = Section->VertexBuffers.PositionVertexBuffer;
-				void* VertexBufferData = RHICmdList.LockBuffer(VertexBuffer.VertexBufferRHI, 0, VertexBuffer.GetNumVertices() * VertexBuffer.GetStride(), RLM_WriteOnly);
-				FMemory::Memcpy(VertexBufferData, VertexBuffer.GetVertexData(), VertexBuffer.GetNumVertices() * VertexBuffer.GetStride());
-				RHICmdList.UnlockBuffer(VertexBuffer.VertexBufferRHI);
-			}
-
-			{
-				auto& VertexBuffer = Section->VertexBuffers.ColorVertexBuffer;
-				void* VertexBufferData = RHICmdList.LockBuffer(VertexBuffer.VertexBufferRHI, 0, VertexBuffer.GetNumVertices() * VertexBuffer.GetStride(), RLM_WriteOnly);
-				FMemory::Memcpy(VertexBufferData, VertexBuffer.GetVertexData(), VertexBuffer.GetNumVertices() * VertexBuffer.GetStride());
-				RHICmdList.UnlockBuffer(VertexBuffer.VertexBufferRHI);
-			}
-
-			if (RequireNormalAndTangent)
-			{
-				auto& VertexBuffer = Section->VertexBuffers.StaticMeshVertexBuffer;
-				void* VertexBufferData = RHICmdList.LockBuffer(VertexBuffer.TangentsVertexBuffer.VertexBufferRHI, 0, VertexBuffer.GetTangentSize(), RLM_WriteOnly);
-				FMemory::Memcpy(VertexBufferData, VertexBuffer.GetTangentData(), VertexBuffer.GetTangentSize());
-				RHICmdList.UnlockBuffer(VertexBuffer.TangentsVertexBuffer.VertexBufferRHI);
-			}
-
-			{
-				auto& VertexBuffer = Section->VertexBuffers.StaticMeshVertexBuffer;
-				void* VertexBufferData = RHICmdList.LockBuffer(VertexBuffer.TexCoordVertexBuffer.VertexBufferRHI, 0, VertexBuffer.GetTexCoordSize(), RLM_WriteOnly);
-				FMemory::Memcpy(VertexBufferData, VertexBuffer.GetTexCoordData(), VertexBuffer.GetTexCoordSize());
-				RHICmdList.UnlockBuffer(VertexBuffer.TexCoordVertexBuffer.VertexBufferRHI);
-			}
+			UploadUERendererVertexBuffers_RenderThread(RHICmdList, Section, RequireNormalAndTangent);
 		}
 
 		Section->NumPrimitives = NumTriangles;
@@ -722,6 +778,21 @@ public:
 		auto IndexBufferData = RHICmdList.LockBuffer(Section->IndexBuffer.IndexBufferRHI, 0, IndicesDataLength, RLM_WriteOnly);
 		FMemory::Memcpy(IndexBufferData, MeshIndexData.GetData(), IndicesDataLength);
 		RHICmdList.UnlockBuffer(Section->IndexBuffer.IndexBufferRHI);
+
+		// What the DreamUI vertex buffer holds now, kept for a patch to write its runs into (PatchSection_RenderThread).
+		// Taken whole when the copy kept is no longer; the copy kept stays the size the buffer was made at otherwise.
+		if (bIsSupportDreamUIRenderer)
+		{
+			TArray<FDreamUIMeshVertex>& Held = Section->DreamUIVertexBuffers.Vertices;
+			if (Held.Num() <= MeshVertexData.Num())
+			{
+				Held = MoveTemp(MeshVertexData);
+			}
+			else
+			{
+				FMemory::Memcpy(Held.GetData(), MeshVertexData.GetData(), NumVerts * sizeof(FDreamUIMeshVertex));
+			}
+		}
 	}
 
 	virtual void GetDynamicMeshElements(const TArray<const FSceneView*>& Views, const FSceneViewFamily& ViewFamily, uint32 VisibilityMap, FMeshElementCollector& Collector) const override
@@ -1283,15 +1354,25 @@ TSharedPtr<FDreamUIRenderSection> UDreamUIMeshComponent::SetupRenderSection(EDre
 			auto MeshSectionPtr = static_cast<FDreamUIRenderSection_Mesh*>(RenderSection.Get());
 			if (bMeshSectionHoldsItsGeometry)
 			{
-				// Taken back as it was. Pooling switched it off on the render thread and dropped its material: it is
-				// switched on again here, and UpdateDrawCallMaterial sends the material after, as for any section.
+				// Taken back. Pooling switched it off on the render thread and dropped its material: it is switched on
+				// again here, and UpdateDrawCallMaterial sends the material after, as for any section. Taken back for
+				// geometries laid out as its own are, it has the vertices of those that differ written in place.
 				MeshSectionPtr->BoundingBox = InDrawCallData->CombinedBounds.TransformBy(GetComponentTransform());
 				auto DreamUIMeshSceneProxy = static_cast<FDreamUIRenderSceneProxy*>(SceneProxy);
 				ENQUEUE_RENDER_COMMAND(FDreamUIMeshSectionProxy_EnableMeshSection)(
 					[DreamUIMeshSceneProxy, SectionProxy = MeshSectionPtr->RenderProxy, Material = MeshSectionPtr->Material](FRHICommandListImmediate& RHICmdList) {
 						DreamUIMeshSceneProxy->EnableMeshSection_RenderThread(SectionProxy, Material);
 					});
-				DreamUIRenderStats::AddCount(DreamUIRenderStats::ECounter::SectionReuses, 1);
+				if (InDrawCallData->bPatchClaimedMeshSection)
+				{
+					InDrawCallData->bPatchClaimedMeshSection = false;
+					// Claimed for this very layout (ClaimPooledMeshSections), so it takes the vertices.
+					ensure(PatchMeshSection(MeshSectionPtr, InDrawCallData->BatchMeshGeometryArray));
+				}
+				else
+				{
+					DreamUIRenderStats::AddCount(DreamUIRenderStats::ECounter::SectionReuses, 1);
+				}
 				break;
 			}
 			// What the vertices below are built from, for the next rebuild to recognise.
@@ -1439,6 +1520,15 @@ void UDreamUIMeshComponent::UpdateMeshSection(const TSharedPtr<FDreamUIRenderSec
 		return;
 	}
 	auto MeshSectionPtr = static_cast<FDreamUIRenderSection_Mesh*>(InRenderSection.Get());
+	// Laid out as the geometries the section was built from: only the vertices of those that changed are written, here
+	// and on the GPU.
+	if (PatchMeshSection(MeshSectionPtr, InDrawCallData->BatchMeshGeometryArray))
+	{
+		MeshSectionPtr->BoundingBox = InDrawCallData->CombinedBounds.TransformBy(GetComponentTransform());
+		return;
+	}
+	// Every vertex, from the combined buffer, made now if the batching left it to be made.
+	InDrawCallData->CombineIfPending();
 	// The refreshed copies' vertices go in now, with the indices the section already holds: it stands for those copies
 	// while their triangles are the ones it holds, and for nothing a rebuild could claim otherwise.
 	if (InDrawCallData->bTrianglesAsBuilt)
@@ -1468,6 +1558,70 @@ void UDreamUIMeshComponent::UpdateMeshSection(const TSharedPtr<FDreamUIRenderSec
 			ThisSceneProxy->AddSectionData(MeshSectionPtr);
 		}
 	}
+}
+
+bool UDreamUIMeshComponent::PatchMeshSection(FDreamUIRenderSection_Mesh* InMeshSection, const TArray<TSharedPtr<const FDreamUIGeometry>>& InGeometries)
+{
+	if (SceneProxy == nullptr || InMeshSection == nullptr || InMeshSection->RenderProxy == nullptr || !RenderCanvas.IsValid()
+		|| InMeshSection->bSourceNormalAndTangent != RenderCanvas->GetActualRequireNormalAndTangent()
+		|| !FDreamUIDrawCall::GeometryListsShareLayout(InMeshSection->SourceGeometries, InGeometries))
+	{
+		return false;
+	}
+	// Each geometry's vertices follow the one before's, leaving out those with no triangles unless there is only one
+	// (FDreamUIDrawCall::ApplyBatchMeshGeometryToCombined). The layout is the section's, so they fill it exactly.
+	const bool bSkipTriangleless = InGeometries.Num() != 1;
+	int32 Total = 0;
+	for (const TSharedPtr<const FDreamUIGeometry>& Geometry : InGeometries)
+	{
+		if (!(bSkipTriangleless && Geometry->Triangles.Num() <= 0))
+		{
+			Total += Geometry->Vertices.Num();
+		}
+	}
+	if (Total != InMeshSection->ValidVerticesNum || InMeshSection->Vertices.Num() < Total)
+	{
+		return false;
+	}
+	UpdateMeshSectionDataStruct UpdateData;
+	int32 First = 0;
+	for (int32 Index = 0; Index < InGeometries.Num(); ++Index)
+	{
+		const FDreamUIGeometry& Geometry = *InGeometries[Index];
+		if (bSkipTriangleless && Geometry.Triangles.Num() <= 0)
+		{
+			continue;
+		}
+		const int32 Count = Geometry.Vertices.Num();
+		if (Count > 0 && InGeometries[Index] != InMeshSection->SourceGeometries[Index])
+		{
+			FMemory::Memcpy(InMeshSection->Vertices.GetData() + First, Geometry.Vertices.GetData(), Count * sizeof(FDreamUIMeshVertex));
+			if (UpdateData.PatchedRuns.Num() > 0 && UpdateData.PatchedRuns.Last().Key + UpdateData.PatchedRuns.Last().Value == First)
+			{
+				UpdateData.PatchedRuns.Last().Value += Count;
+			}
+			else
+			{
+				UpdateData.PatchedRuns.Emplace(First, Count);
+			}
+			UpdateData.VertexBufferData.Append(Geometry.Vertices.GetData(), Count);
+		}
+		First += Count;
+	}
+	InMeshSection->SourceGeometries = InGeometries;
+	if (UpdateData.PatchedRuns.Num() == 0)
+	{
+		return true;
+	}
+	DreamUIRenderStats::AddCount(DreamUIRenderStats::ECounter::SectionPatches, 1);
+	DreamUIRenderStats::AddCount(DreamUIRenderStats::ECounter::UploadedBytes, static_cast<int64>(UpdateData.VertexBufferData.Num()) * sizeof(FDreamUIMeshVertex));
+	UpdateData.Section = static_cast<FDreamUISectionProxy_Mesh*>(InMeshSection->RenderProxy);
+	UpdateData.NumVerts = InMeshSection->ValidVerticesNum;
+	UpdateData.NumTriangles = InMeshSection->ValidTriangleIndicesNum / 3;
+	UpdateData.RequireNormalAndTangent = InMeshSection->bSourceNormalAndTangent;
+	// With the frame's other section updates, in order: a patch must not overtake an update it follows.
+	PendingUpdateMeshSectionDataArray.Add(MoveTemp(UpdateData));
+	return true;
 }
 
 void UDreamUIMeshComponent::SetupDirectMeshRenderSection(FDreamUIRenderSection_DirectMesh* InDirectMeshSection, bool bNeedExpandMeshSection, UMaterialInterface* InMaterial)
@@ -2044,28 +2198,37 @@ void UDreamUIMeshComponent::ClaimPooledMeshSections(TArray<FDreamUIDrawCall>& In
 		return;
 	}
 	const bool bNormalAndTangent = RenderCanvas->GetActualRequireNormalAndTangent();
-	for (FDreamUIDrawCall& DrawCall : InOutDrawCalls)
+	// The sections built from exactly a draw call's geometries first, all of them; then, for the draw calls left, the
+	// sections laid out as theirs are. A draw call none of whose geometries changed must not find its section taken by
+	// one that changed.
+	for (int32 Pass = 0; Pass < 2; ++Pass)
 	{
-		if (DrawCall.Type != EDreamUIDrawCallType::BatchMesh || DrawCall.BatchMeshGeometryArray.Num() == 0)
+		const bool bInPlace = Pass == 1;
+		for (FDreamUIDrawCall& DrawCall : InOutDrawCalls)
 		{
-			continue;
-		}
-		for (FMeshRenderSectionPool& Pool : RenderSectionMesh_CascadePool)
-		{
-			for (auto Node = Pool.RenderSections.GetHead(); Node != nullptr; Node = Node->GetNextNode())
+			if (DrawCall.Type != EDreamUIDrawCallType::BatchMesh || DrawCall.BatchMeshGeometryArray.Num() == 0 || DrawCall.ClaimedMeshSection.IsValid())
 			{
-				const TSharedPtr<FDreamUIRenderSection_Mesh>& Candidate = Node->GetValue();
-				if (Candidate->RenderProxy != nullptr && Candidate->bSourceNormalAndTangent == bNormalAndTangent
-					&& Candidate->SourceGeometries == DrawCall.BatchMeshGeometryArray)
+				continue;
+			}
+			for (FMeshRenderSectionPool& Pool : RenderSectionMesh_CascadePool)
+			{
+				for (auto Node = Pool.RenderSections.GetHead(); Node != nullptr; Node = Node->GetNextNode())
 				{
-					DrawCall.ClaimedMeshSection = Candidate;
-					Pool.RenderSections.RemoveNode(Node);
+					const TSharedPtr<FDreamUIRenderSection_Mesh>& Candidate = Node->GetValue();
+					if (Candidate->RenderProxy != nullptr && Candidate->bSourceNormalAndTangent == bNormalAndTangent
+						&& (bInPlace ? FDreamUIDrawCall::GeometryListsShareLayout(Candidate->SourceGeometries, DrawCall.BatchMeshGeometryArray)
+							: Candidate->SourceGeometries == DrawCall.BatchMeshGeometryArray))
+					{
+						DrawCall.ClaimedMeshSection = Candidate;
+						DrawCall.bPatchClaimedMeshSection = bInPlace;
+						Pool.RenderSections.RemoveNode(Node);
+						break;
+					}
+				}
+				if (DrawCall.ClaimedMeshSection.IsValid())
+				{
 					break;
 				}
-			}
-			if (DrawCall.ClaimedMeshSection.IsValid())
-			{
-				break;
 			}
 		}
 	}
@@ -2142,10 +2305,21 @@ void UDreamUIMeshComponent::FlushRenderCommand()
 		//update data
 		auto DreamUIMeshSceneProxy = static_cast<FDreamUIRenderSceneProxy*>(SceneProxy);
 		ENQUEUE_RENDER_COMMAND(FDreamUIMeshUpdate)(
-			[DreamUIMeshSceneProxy, PendingUpdateMeshSectionDataArray = MoveTemp(PendingUpdateMeshSectionDataArray)](FRHICommandListImmediate& RHICmdList)
+			[DreamUIMeshSceneProxy, PendingUpdateMeshSectionDataArray = MoveTemp(PendingUpdateMeshSectionDataArray)](FRHICommandListImmediate& RHICmdList) mutable
 			{
 				for (auto& UpdateData : PendingUpdateMeshSectionDataArray)
 				{
+					if (UpdateData.PatchedRuns.Num() > 0)
+					{
+						DreamUIMeshSceneProxy->PatchSection_RenderThread(
+							RHICmdList
+							, UpdateData.VertexBufferData
+							, UpdateData.PatchedRuns
+							, UpdateData.RequireNormalAndTangent
+							, UpdateData.Section
+						);
+						continue;
+					}
 					DreamUIMeshSceneProxy->UpdateSection_RenderThread(
 						RHICmdList
 						, UpdateData.VertexBufferData

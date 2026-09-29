@@ -1650,15 +1650,49 @@ void UDreamCanvas::BatchDrawCallAsync(const FVector2D& InCanvasLeftBottom, const
 
 	{
 		TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_CombineDrawCalls);
-		for (auto& DrawCallItem : InOutUIDrawCallList)
+		/**
+		 * The draw calls that will take a section back: those built from the very copies a section was built from, then,
+		 * among the rest, those built from copies laid out as a section's are, each section going to one draw call -- the
+		 * way UDreamUIMeshComponent::ClaimPooledMeshSections hands them out. Their vertices are left uncombined: nothing
+		 * reads them unless the section is not there after all (FDreamCanvasPreparedDrawCallData::GeometryListsOnSections).
+		 */
+		TArray<bool, TInlineAllocator<64>> TakesASectionBack;
+		TakesASectionBack.SetNumZeroed(InOutUIDrawCallList.Num());
+		if (InGeometryListsOnSections != nullptr && InGeometryListsOnSections->Num() > 0)
 		{
+			TArray<bool, TInlineAllocator<64>> SectionTaken;
+			SectionTaken.SetNumZeroed(InGeometryListsOnSections->Num());
+			for (int32 Pass = 0; Pass < 2; ++Pass)
+			{
+				for (int32 DrawCallIndex = 0; DrawCallIndex < InOutUIDrawCallList.Num(); ++DrawCallIndex)
+				{
+					const FDreamUIDrawCall& DrawCallItem = InOutUIDrawCallList[DrawCallIndex];
+					if (DrawCallItem.Type != EDreamUIDrawCallType::BatchMesh || TakesASectionBack[DrawCallIndex])
+					{
+						continue;
+					}
+					for (int32 SectionIndex = 0; SectionIndex < SectionTaken.Num(); ++SectionIndex)
+					{
+						const TArray<TSharedPtr<const FDreamUIGeometry>>& OnSection = (*InGeometryListsOnSections)[SectionIndex];
+						if (!SectionTaken[SectionIndex] && (Pass == 0 ? OnSection == DrawCallItem.BatchMeshGeometryArray
+							: FDreamUIDrawCall::GeometryListsShareLayout(OnSection, DrawCallItem.BatchMeshGeometryArray)))
+						{
+							SectionTaken[SectionIndex] = true;
+							TakesASectionBack[DrawCallIndex] = true;
+							break;
+						}
+					}
+				}
+			}
+		}
+		for (int32 DrawCallIndex = 0; DrawCallIndex < InOutUIDrawCallList.Num(); ++DrawCallIndex)
+		{
+			FDreamUIDrawCall& DrawCallItem = InOutUIDrawCallList[DrawCallIndex];
 			if (DrawCallItem.Type != EDreamUIDrawCallType::BatchMesh)
 			{
 				continue;
 			}
-			// Built from the very copies one of the canvas's sections was built from: that section is taken back as it is,
-			// and nothing reads these vertices unless it is not (FDreamCanvasPreparedDrawCallData::GeometryListsOnSections).
-			if (InGeometryListsOnSections != nullptr && InGeometryListsOnSections->Contains(DrawCallItem.BatchMeshGeometryArray))
+			if (TakesASectionBack[DrawCallIndex])
 			{
 				DrawCallItem.ApplyBatchMeshBoundsToCombined();
 				DrawCallItem.bCombinePending = true;

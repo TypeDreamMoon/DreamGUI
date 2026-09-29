@@ -20,7 +20,7 @@ import sys
 
 STAGES = ['ManagerTick', 'CanvasUpdate', 'Batching', 'DrawCallSubmit', 'RenderRecord']
 COUNTERS = ['BatchesRecorded', 'VerticesRecorded', 'SectionUploads', 'UploadedBytes', 'DataTextureUpdates',
-            'GeometryCopies', 'SectionReuses', 'WidgetsUpdated']
+            'GeometryCopies', 'SectionReuses', 'WidgetsUpdated', 'SectionPatches']
 DEFAULT_ENGINE = os.environ.get('DREAMGUI_ENGINE', r'C:\Program Files\Epic Games\UE_5.8')
 THREADS = [('GameThread', 'GameThread'), ('RenderThread', 'RenderThread*'), ('Workers', '*Worker*')]
 

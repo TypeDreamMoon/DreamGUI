@@ -36,6 +36,7 @@ namespace DreamUIRenderStats
 			TEXT("GeometryCopies"),
 			TEXT("SectionReuses"),
 			TEXT("WidgetsUpdated"),
+			TEXT("SectionPatches"),
 		};
 	}
 

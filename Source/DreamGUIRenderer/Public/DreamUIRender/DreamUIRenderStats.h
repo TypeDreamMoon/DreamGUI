@@ -55,6 +55,8 @@ namespace DreamUIRenderStats
 		SectionReuses,
 		/** Game thread: widgets whose clip and geometry a canvas update looked at. */
 		WidgetsUpdated,
+		/** Game thread: mesh sections that took the vertices of only the elements that changed, the rest left as they were. */
+		SectionPatches,
 		Num
 	};
 

@@ -155,6 +155,13 @@ private:
 public:
 	TSharedPtr<FDreamUIRenderSection> SetupRenderSection(EDreamUIRenderSectionType InType, FDreamUIDrawCall* InDrawCallData);
 	void UpdateMeshSection(const TSharedPtr<FDreamUIRenderSection>& InRenderSection, FDreamUIDrawCall* InDrawCallData);
+	/**
+	 * When InMeshSection holds the layout of InGeometries (FDreamUIDrawCall::GeometryListsShareLayout with the geometries
+	 * it was built from): the vertices of each geometry that is not the one it was built from are written into it where
+	 * they go, and only those go to the render thread; the section then stands for InGeometries. False, with nothing
+	 * written, when it does not hold that layout.
+	 */
+	bool PatchMeshSection(FDreamUIRenderSection_Mesh* InMeshSection, const TArray<TSharedPtr<const FDreamUIGeometry>>& InGeometries);
 	void SetupDirectMeshRenderSection(FDreamUIRenderSection_DirectMesh* InDirectMeshSection, bool bNeedExpandMeshSection, UMaterialInterface* InMaterial);
 	void SetDirectMeshRenderSectionMaterial(FDreamUIRenderSection_DirectMesh* InDirectMeshSection, UMaterialInterface* InMaterial);
 	void PoolAllRenderSection();
@@ -204,9 +211,10 @@ public:
 	/**
 	 * After PoolAllRenderSection and before the sections are set up again: every batch-mesh draw call built from
 	 * exactly the geometries a pooled section was built from -- the same copies, which are never written -- claims
-	 * that section, whose vertices are already here and on the GPU. Claimed first, all together, because the pool
-	 * hands sections out by size: set up in order, an earlier draw call that changed could take a later one's section,
-	 * and both would upload.
+	 * that section, whose vertices are already here and on the GPU. Then each draw call left claims a pooled section
+	 * built from geometries laid out as its own are, to have the vertices that differ written in place
+	 * (FDreamUIDrawCall::bPatchClaimedMeshSection). Claimed first, all together, because the pool hands sections out by
+	 * size: set up in order, an earlier draw call that changed could take a later one's section, and both would upload.
 	 */
 	void ClaimPooledMeshSections(TArray<FDreamUIDrawCall>& InOutDrawCalls);
 	/**
@@ -230,6 +238,11 @@ private:
 		TArray<FDreamUIMeshIndex> IndexBufferData;
 		bool RequireNormalAndTangent;
 		FDreamUISectionProxy_Mesh* Section;
+		/**
+		 * Empty for the whole section. Otherwise VertexBufferData holds only these runs of the section's vertices --
+		 * (first vertex, count) -- back to back, and the rest of the section and its indices stay as they are.
+		 */
+		TArray<TPair<int32, int32>> PatchedRuns;
 	};
 	TArray<UpdateMeshSectionDataStruct> PendingUpdateMeshSectionDataArray;
 	struct UpdateRenderSectionPriority

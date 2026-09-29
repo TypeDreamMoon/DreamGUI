@@ -102,6 +102,12 @@ public:
 	 * the pool first. Set up, it becomes RenderSection.
 	 */
 	TSharedPtr<struct FDreamUIRenderSection> ClaimedMeshSection;
+	/**
+	 * ClaimedMeshSection was built from geometries laid out as this draw call's are (GeometryListsShareLayout), not all
+	 * of them the same copies: the vertices of those that differ are written into it in place, and the rest of it stays
+	 * as it is, here and on the GPU (UDreamUIMeshComponent::PatchMeshSection).
+	 */
+	bool bPatchClaimedMeshSection = false;
 
 	TArray<TWeakObjectPtr<UDreamVisualBatchMesh>> BatchMeshVisualArray;
 	/**
@@ -126,15 +132,17 @@ public:
 	/**
 	 * The cheap refresh, for a draw call whose layout still holds: each visual's copy of its geometry taken again
 	 * (UDreamVisualBatchMesh::GetGeometryForBatching) and its vertices written into the combined buffer where the batch
-	 * put them. False, and nothing written, when no visual changed -- the draw call then has nothing to upload -- or when
-	 * the layout no longer holds, which the coming rebuild fixes.
+	 * put them -- or, when the batching left that buffer to be made (bCombinePending), only taken: the buffer is made
+	 * from them should anything read it. False, and nothing taken, when no visual changed -- the draw call then has
+	 * nothing to upload -- or when the layout no longer holds, which the coming rebuild fixes.
 	 */
 	bool CopyBatchMeshGeometry();
 	/** Whether every copy this draw call now holds has the triangles of the copy it was built from: see CopyBatchMeshGeometry. */
 	bool bTrianglesAsBuilt = true;
 	/**
 	 * Set by the batching when it left the combined buffers empty, because the canvas has a section built from these
-	 * very geometries and will take it back as it is. Everything that reads the buffers asks CombineIfPending first.
+	 * very geometries, or from geometries laid out as they are, and will take it back as it is or with the vertices that
+	 * differ written in place. Everything that reads the buffers asks CombineIfPending first.
 	 */
 	bool bCombinePending = false;
 	/** The combined buffers, made now if the batching left them. */
@@ -143,4 +151,10 @@ public:
 	void ApplyBatchMeshBoundsToCombined();
 	void ApplyBatchMeshGeometryToCombined();
 	bool CanConsumeUIGeometryForBatchMesh(const FDreamUIGeometry& geo)const;
+	/**
+	 * Whether a mesh built from A holds B's triangles and a place for each of B's vertices: as many geometries, each with
+	 * the vertex count and the triangles of the one in its place. Only vertices can differ, and B's can be written over
+	 * A's where they are.
+	 */
+	static bool GeometryListsShareLayout(const TArray<TSharedPtr<const FDreamUIGeometry>>& A, const TArray<TSharedPtr<const FDreamUIGeometry>>& B);
 };

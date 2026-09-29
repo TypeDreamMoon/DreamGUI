@@ -846,7 +846,7 @@ bool FDreamRhiClipOutgrowsItsTextureUnderAnEffectTest::RunTest(const FString& Pa
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamRhiRebuildUploadsOnlyWhatChangedTest,
-	"DreamGUI.RHI.ACanvasRebuiltForOneMovedWidgetUploadsOnlyTheDrawCallThatHoldsIt",
+	"DreamGUI.RHI.ACanvasRebuiltForOneMovedWidgetRewritesOnlyThatWidgetsVertices",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter | EAutomationTestFlags::NonNullRHI)
 
 bool FDreamRhiRebuildUploadsOnlyWhatChangedTest::RunTest(const FString& Parameters)
@@ -856,8 +856,9 @@ bool FDreamRhiRebuildUploadsOnlyWhatChangedTest::RunTest(const FString& Paramete
 	// A canvas is rebuilt whole when anything in it moves, and every one of its draw calls used to go up to the GPU
 	// again. An element that did not change hands the batching the same copy of its geometry as before, and a draw call
 	// built from exactly the copies a section was built from takes that section back, its vertices still on the GPU.
-	// Two blocks with textures of their own make two draw calls; one moves, and only its draw call goes up -- the other
-	// block's section is taken back as it was, and draws as before.
+	// Two blocks with textures of their own make two draw calls. One moves: its draw call is laid out as before -- one
+	// quad -- and takes its section back with the moved block's vertices written in place, so nothing goes up whole; the
+	// other block's section is taken back as it was, and draws as before.
 	FStageRef Stage = BeginStage(*this);
 	if (!Stage->IsUsable())
 	{
@@ -907,7 +908,9 @@ bool FDreamRhiRebuildUploadsOnlyWhatChangedTest::RunTest(const FString& Paramete
 		const int64 Uploads = Counted.Counters[static_cast<int32>(ECounter::SectionUploads)];
 		const int64 Reuses = Counted.Counters[static_cast<int32>(ECounter::SectionReuses)];
 		const int64 Copies = Counted.Counters[static_cast<int32>(ECounter::GeometryCopies)];
-		TestEqual(TEXT("One section went up to the GPU: the moved block's"), Uploads, static_cast<int64>(1));
+		const int64 Patches = Counted.Counters[static_cast<int32>(ECounter::SectionPatches)];
+		TestEqual(TEXT("No section went up whole"), Uploads, static_cast<int64>(0));
+		TestEqual(TEXT("One took new vertices in place: the moved block's"), Patches, static_cast<int64>(1));
 		TestEqual(TEXT("One was taken back as it was: the other block's"), Reuses, static_cast<int64>(1));
 		TestEqual(TEXT("One geometry was copied for the batching: the moved block's"), Copies, static_cast<int64>(1));
 		CheckPixel(Stage, StayerCentre, Green, TEXT("the block that stays, after the rebuild"));
@@ -917,6 +920,85 @@ bool FDreamRhiRebuildUploadsOnlyWhatChangedTest::RunTest(const FString& Paramete
 		}
 	});
 	EnqueueDo([KeepTextures]() { KeepTextures->Reset(); });
+	EnqueueTearDown(Stage);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamRhiOneBlockOfManyRewritesItsOwnVerticesTest,
+	"DreamGUI.RHI.OneBlockOfABigDrawCallMovedOrRecolouredRewritesItsOwnVerticesAlone",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter | EAutomationTestFlags::NonNullRHI)
+
+bool FDreamRhiOneBlockOfManyRewritesItsOwnVerticesTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamRenderStabilityTestLocal;
+
+	// Eight blocks on one texture make one draw call. One moves: the canvas is rebuilt, the draw call is laid out as
+	// before -- eight quads -- and takes its section back with the moved block's vertices written in place. Another
+	// changes colour: nothing is rebuilt, and again only that block's vertices are written. After each, every block is
+	// where it should be and the colour it should be.
+	FStageRef Stage = BeginStage(*this);
+	if (!Stage->IsUsable())
+	{
+		Stage->TearDown();
+		return false;
+	}
+	const TSharedRef<FBuiltInShaderScope> BuiltIn = MakeShared<FBuiltInShaderScope>();
+	TArray<TWeakObjectPtr<UDreamWidget>> Blocks;
+	for (int32 Index = 0; Index < 8; ++Index)
+	{
+		Blocks.Add(Stage->AddBlock(*FString::Printf(TEXT("Block%d"), Index), FVector2D(20.0, 20.0), FVector2D(-87.5 + Index * 25.0, 0.0), Green));
+	}
+	const TWeakObjectPtr<UDreamWidget> Mover = Blocks[2];
+	const TWeakObjectPtr<UDreamWidget> Painted = Blocks[6];
+	const FIntPoint MoverWasAt = Stage->PixelOf(Mover.Get(), FVector2D::ZeroVector);
+	const FIntPoint Neighbour = Stage->PixelOf(Blocks[3].Get(), FVector2D::ZeroVector);
+
+	EnqueueSettledFrames(Stage);
+	EnqueueDo([Stage, MoverWasAt, Neighbour, Mover]()
+	{
+		CheckPixel(Stage, MoverWasAt, Green, TEXT("the block that moves, before it moves"));
+		CheckPixel(Stage, Neighbour, Green, TEXT("its neighbour"));
+		DreamUIRenderStats::TakeSnapshot(/*bInReset*/ true);
+		if (UDreamWidget* Widget = Mover.Get())
+		{
+			Widget->SetAnchoredPosition(FVector2D(-37.5, 60.0));
+		}
+	});
+	EnqueueSettledFrames(Stage);
+	EnqueueDo([this, Stage, MoverWasAt, Neighbour, Mover, Painted]()
+	{
+		using DreamUIRenderStats::ECounter;
+		const DreamUIRenderStats::FSnapshot Counted = DreamUIRenderStats::TakeSnapshot(/*bInReset*/ true);
+		TestEqual(TEXT("Moved: no section went up whole"), Counted.Counters[static_cast<int32>(ECounter::SectionUploads)], static_cast<int64>(0));
+		TestEqual(TEXT("...the draw call's took the moved block's vertices in place"), Counted.Counters[static_cast<int32>(ECounter::SectionPatches)], static_cast<int64>(1));
+		CheckPixel(Stage, MoverWasAt, ClearColour, TEXT("where the moved block was"));
+		CheckPixel(Stage, Neighbour, Green, TEXT("its neighbour, after the move"));
+		if (UDreamWidget* Widget = Mover.Get())
+		{
+			CheckPixel(Stage, Stage->PixelOf(Widget, FVector2D::ZeroVector), Green, TEXT("the moved block, where it moved to"));
+		}
+		if (UDreamWidget* Widget = Painted.Get())
+		{
+			if (UDreamTexture* Visual = Cast<UDreamTexture>(Widget->GetVisual()))
+			{
+				Visual->SetColor(Red);
+			}
+		}
+	});
+	EnqueueSettledFrames(Stage);
+	EnqueueDo([this, Stage, Neighbour, Painted]()
+	{
+		using DreamUIRenderStats::ECounter;
+		const DreamUIRenderStats::FSnapshot Counted = DreamUIRenderStats::TakeSnapshot(/*bInReset*/ true);
+		TestEqual(TEXT("Recoloured: no section went up whole"), Counted.Counters[static_cast<int32>(ECounter::SectionUploads)], static_cast<int64>(0));
+		TestEqual(TEXT("...the draw call's took the recoloured block's vertices in place"), Counted.Counters[static_cast<int32>(ECounter::SectionPatches)], static_cast<int64>(1));
+		CheckPixel(Stage, Neighbour, Green, TEXT("a block that kept its colour"));
+		if (UDreamWidget* Widget = Painted.Get())
+		{
+			CheckPixel(Stage, Stage->PixelOf(Widget, FVector2D::ZeroVector), Red, TEXT("the recoloured block"));
+		}
+	});
 	EnqueueTearDown(Stage);
 	return true;
 }
