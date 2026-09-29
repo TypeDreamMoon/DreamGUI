@@ -281,6 +281,8 @@ namespace DreamRenderBenchmarkTestLocal
 			UDreamWidget* Backdrop = AddWidget(TEXT("Backdrop"), FVector2D(TargetExtent - 16.0, TargetExtent - 16.0), FVector2D::ZeroVector, Root);
 			if (UDreamRectBlock* Block = Backdrop->CreateNewVisual<UDreamRectBlock>())
 			{
+				Block->SetCornerRadiusUnitMode(EDreamRectBlockUnitMode::Value);
+				Block->SetBorderWidthUnitMode(EDreamRectBlockUnitMode::Value);
 				Block->SetBodyColor(FColor(40, 44, 60, 255));
 				Block->SetCornerRadius(FVector4(16.0, 16.0, 16.0, 16.0));
 				Block->SetEnableBorder(true);

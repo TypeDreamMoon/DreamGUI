@@ -155,6 +155,14 @@ namespace DreamRenderGalleryTestLocal
 			UDreamRectBlock* Block = Widget->CreateNewVisual<UDreamRectBlock>();
 			if (Block != nullptr)
 			{
+				// In pixels: a rect block's sizes default to fractions of its own size.
+				Block->SetCornerRadiusUnitMode(EDreamRectBlockUnitMode::Value);
+				Block->SetBorderWidthUnitMode(EDreamRectBlockUnitMode::Value);
+				Block->SetInnerShadowSizeUnitMode(EDreamRectBlockUnitMode::Value);
+				Block->SetInnerShadowBlurUnitMode(EDreamRectBlockUnitMode::Value);
+				Block->SetOuterShadowSizeUnitMode(EDreamRectBlockUnitMode::Value);
+				Block->SetOuterShadowBlurUnitMode(EDreamRectBlockUnitMode::Value);
+				Block->SetOuterShadowDistanceUnitMode(EDreamRectBlockUnitMode::Value);
 				Block->SetBodyColor(InBody);
 				Block->SetCornerRadius(FVector4(InCornerRadius, InCornerRadius, InCornerRadius, InCornerRadius));
 			}
@@ -171,6 +179,8 @@ namespace DreamRenderGalleryTestLocal
 				Text->SetFontSize(InFontSize);
 				Text->SetParagraphHorizontalAlignment(EDreamUITextParagraphHorizontalAlign::Center);
 				Text->SetParagraphVerticalAlignment(EDreamUITextParagraphVerticalAlign::Middle);
+				// One line each: a line that wrapped would run into the next one's.
+				Text->SetOverflowType(EDreamUITextOverflowType::HorizontalOverflow);
 				Text->SetColor(InColour);
 			}
 			return Text;
@@ -561,8 +571,8 @@ bool FDreamGalleryTextTest::RunTest(const FString& Parameters)
 		Stage->TearDown();
 		return false;
 	}
-	Stage->AddText(TEXT("Large"), TEXT("DreamGUI 0123"), 36.0f, FVector2D(240.0, 50.0), FVector2D(0.0, 80.0), FColor::White);
-	if (UDreamText* Styled = Stage->AddText(TEXT("Styled"), TEXT("Outline & Shadow"), 30.0f, FVector2D(240.0, 50.0), FVector2D(0.0, 20.0), FColor(255, 220, 64, 255)))
+	Stage->AddText(TEXT("Large"), TEXT("DreamGUI 0123"), 30.0f, FVector2D(250.0, 50.0), FVector2D(0.0, 80.0), FColor::White);
+	if (UDreamText* Styled = Stage->AddText(TEXT("Styled"), TEXT("Outline & Shadow"), 26.0f, FVector2D(250.0, 50.0), FVector2D(0.0, 20.0), FColor(255, 220, 64, 255)))
 	{
 		FDreamTextStyle Style = Styled->GetTextStyle();
 		Style.OutlineColor = FColor(0, 0, 0, 255);
@@ -572,7 +582,7 @@ bool FDreamGalleryTextTest::RunTest(const FString& Parameters)
 		Style.UnderlaySoftness = 0.05f;
 		Styled->SetTextStyle(Style);
 	}
-	Stage->AddText(TEXT("Small"), TEXT("The quick brown fox jumps"), 16.0f, FVector2D(240.0, 30.0), FVector2D(0.0, -40.0), FColor(200, 220, 255, 255));
+	Stage->AddText(TEXT("Small"), TEXT("The quick brown fox jumps"), 16.0f, FVector2D(250.0, 30.0), FVector2D(0.0, -40.0), FColor(200, 220, 255, 255));
 	EnqueuePictureCheck(Stage, TEXT("Gallery_Text"), 1500);
 	EnqueueTearDown(Stage);
 	return true;
