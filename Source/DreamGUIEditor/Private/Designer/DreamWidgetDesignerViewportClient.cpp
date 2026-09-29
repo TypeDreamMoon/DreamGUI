@@ -2433,8 +2433,12 @@ bool FDreamWidgetDesignerViewportClient::InputWidgetDelta(FViewport* InViewport,
 		if (InCurrentAxis != EAxisList::None)
 		{
 			// Skip actors transformation routine in case if any of the selected actors locked
-			// but still pretend that we have handled the input -- asked as the level editor's viewport asks it
-			if (!GEditor->HasSelectedMovementLockedItems())
+			// but still pretend that we have handled the input -- asked as the level editor's viewport asks it, through
+			// a query the engine marks experimental
+			PRAGMA_DISABLE_EXPERIMENTAL_WARNINGS
+			const bool bAnyLocked = GEditor->HasSelectedMovementLockedItems();
+			PRAGMA_ENABLE_EXPERIMENTAL_WARNINGS
+			if (!bAnyLocked)
 			{
 				const bool LeftMouseButtonDown = InViewport->KeyState(EKeys::LeftMouseButton);
 				const bool RightMouseButtonDown = InViewport->KeyState(EKeys::RightMouseButton);
