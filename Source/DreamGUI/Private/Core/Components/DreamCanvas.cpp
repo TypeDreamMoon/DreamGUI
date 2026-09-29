@@ -794,6 +794,68 @@ bool UDreamCanvas::MergePreparedDataCache()
 {
 	TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_MergePreparedData);
 	EnsureWidgetListIndex();
+	if (!bWidgetListChangedSincePrepare)
+	{
+		/**
+		 * The list is as it was, so each widget looked at keeps its place: an entry it had and still has is made again
+		 * where it is, and nothing else moves. It is found by the widget's place in the list, the order the entries are
+		 * in. A widget gaining an entry or losing one moves the others, which the merge below does -- and it makes again
+		 * whatever was made here, so giving up halfway is no harm. Walking the whole cache for a few widgets that asked
+		 * is what a canvas with a few widgets moving paid for, every frame, before this.
+		 */
+		bool bInPlace = true;
+		TArray<FDreamUIRenderData> Made;
+		for (const TWeakObjectPtr<UDreamWidget>& WeakWidget : WidgetsToPrepare)
+		{
+			UDreamWidget* Widget = WeakWidget.Get();
+			const int32* Place = IsValid(Widget) ? WidgetListIndex.Find(TObjectKey<UDreamWidget>(Widget)) : nullptr;
+			if (Place == nullptr)
+			{
+				bInPlace = false;
+				break;
+			}
+			int32 Low = 0;
+			int32 High = PreparedDataCache.Num();
+			while (Low < High)
+			{
+				const int32 Middle = (Low + High) / 2;
+				const int32* MiddlePlace = WidgetListIndex.Find(PreparedDataCache[Middle].Widget);
+				if (MiddlePlace == nullptr)
+				{
+					bInPlace = false;
+					break;
+				}
+				if (*MiddlePlace < *Place)
+				{
+					Low = Middle + 1;
+				}
+				else
+				{
+					High = Middle;
+				}
+			}
+			if (!bInPlace)
+			{
+				break;
+			}
+			const bool bHadEntry = Low < PreparedDataCache.Num() && PreparedDataCache[Low].Widget == TObjectKey<UDreamWidget>(Widget);
+			Made.Reset();
+			AppendRenderDataOf(Widget, Made);
+			if (bHadEntry != (Made.Num() > 0))
+			{
+				bInPlace = false;
+				break;
+			}
+			if (bHadEntry)
+			{
+				PreparedDataCache[Low] = MoveTemp(Made[0]);
+			}
+		}
+		if (bInPlace)
+		{
+			return true;
+		}
+	}
 	// The widgets looked at since the last prepare, in list order, each once: what a prepare makes of them now is made
 	// again. One gone, or no longer this canvas's, has no place in the list, and nothing is made for it.
 	TArray<TPair<int32, UDreamWidget*>, TInlineAllocator<64>> Looked;
