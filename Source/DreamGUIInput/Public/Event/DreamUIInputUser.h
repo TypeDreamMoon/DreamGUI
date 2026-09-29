@@ -80,8 +80,11 @@ public:
 
 	/** The event system placed for this player, which its settings came from; null when none was. */
 	UDreamEventSystem* GetEventSystem() const { return EventSystem.Get(); }
-	/** Called by the subsystem's registry. */
-	void SetEventSystem(UDreamEventSystem* InEventSystem) { EventSystem = InEventSystem; }
+	/**
+	 * Called by the subsystem's registry. Defined in the .cpp: storing the pointer converts it to a UObject, which takes
+	 * UDreamEventSystem's definition, and this header only declares it.
+	 */
+	void SetEventSystem(UDreamEventSystem* InEventSystem);
 	/**
 	 * Every event system that speaks for this player -- the placed one, one a Blueprint was handed when none was
 	 * placed, a second one placed by mistake -- each of which relays this player's events to its Blueprint

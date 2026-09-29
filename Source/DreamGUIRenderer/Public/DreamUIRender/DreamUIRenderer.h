@@ -46,12 +46,12 @@ public:
 	virtual void SetupViewProjectionMatrix(FSceneViewProjectionData& InOutProjectionData)override;
 	virtual void BeginRenderViewFamily(FSceneViewFamily& InViewFamily)override;
 
-	virtual void PreRenderViewFamily_RenderThread(FRDGBuilder& GraphBuilder, FSceneViewFamily& InViewFamily)override {};
+	virtual void PreRenderViewFamily_RenderThread(FRDGBuilder& GraphBuilder, FSceneViewFamily& InViewFamily)override;
 	virtual void PreRenderView_RenderThread(FRDGBuilder& GraphBuilder, FSceneView& InView)override;
 
 	virtual void PostRenderBasePassDeferred_RenderThread(FRDGBuilder& GraphBuilder, FSceneView& InView, const FRenderTargetBindingSlots& RenderTargets, TRDGUniformBufferRef<FSceneTextureUniformParameters> SceneTextures)override;
 	virtual void PrePostProcessPass_RenderThread(FRDGBuilder& GraphBuilder, const FSceneView& View, const FPostProcessingInputs& Inputs)override {};
-	virtual void SubscribeToPostProcessingPass(EPostProcessingPass Pass, const FSceneView& InView, FAfterPassCallbackDelegateArray& InOutPassCallbacks, bool bIsPassEnabled)override {};
+	virtual void SubscribeToPostProcessingPass(EPostProcessingPass Pass, const FSceneView& InView, FAfterPassCallbackDelegateArray& InOutPassCallbacks, bool bIsPassEnabled)override;
 
 	virtual void PostRenderView_RenderThread(FRDGBuilder& GraphBuilder, FSceneView& InView)override;
 	virtual void PostRenderViewFamily_RenderThread(FRDGBuilder& GraphBuilder, FSceneViewFamily& InViewFamily)override {};
@@ -271,9 +271,14 @@ private:
 	void SetRenderCanvasDepthFade_RenderThread(FObjectKey InRenderCanvasKey, float InBlendDepth, int InDepthFade);
 	EDreamUIRendererType RendererType = EDreamUIRendererType::ScreenSpace_and_WorldSpace;
 
+	/**
+	 * InTargetOverride, when given, is drawn into instead of the view family's render target, the whole of it
+	 * standing for the view. See RenderAfterTonemap_RenderThread.
+	 */
 	void RenderDreamUI_RenderThread(
 		FRDGBuilder& GraphBuilder
-		, FSceneView& InView);
+		, FSceneView& InView
+		, FTextureRHIRef InTargetOverride = nullptr);
 	/** What one recording of the UI into a view shares between its stages. */
 	struct FRecordTargets
 	{
@@ -294,7 +299,7 @@ private:
 		float GammaValue = 1.0f;
 	};
 	/** The targets: a render-target canvas's own, the view's otherwise, multisampled when asked. False when there is none to draw into. */
-	bool PrepareTargets_RenderThread(FRDGBuilder& GraphBuilder, FSceneView& InView, FRecordTargets& Targets);
+	bool PrepareTargets_RenderThread(FRDGBuilder& GraphBuilder, FSceneView& InView, FRecordTargets& Targets, FTextureRHIRef InTargetOverride);
 	/** The world-space canvases, sorted by priority and then distance, each drawn against the scene's depth. */
 	void RecordWorldSpace_RenderThread(FRDGBuilder& GraphBuilder, FSceneView& InView, FRecordTargets& Targets);
 	/** The screen-space canvases, through the canvas's own view, scaled down first when asked. */
@@ -304,6 +309,8 @@ private:
 #if WITH_EDITORONLY_DATA
 private:
 	bool bIsEditorPreview = false;
+	/** The world is the level editor's, where the editor draws its gizmos over the scene. Fixed at construction. */
+	bool bIsLevelEditorWorld = false;
 	/**
 	 * Decided on the game thread each frame by IsActiveThisFrame_Internal and read there only: SetupView
 	 * copies them into the view parameters, and the render thread reads the copies. It read these
@@ -329,6 +336,11 @@ private:
 	void BeginGizmoFrame();
 	/** Game thread, as a frame's first view family begins: this frame's gizmos replace the render thread's. */
 	void SubmitGizmoMeshes();
+	/** Whether InView draws its UI straight after tonemapping, beneath the editor's gizmos, instead of after the view. */
+	bool ShouldDrawBeforeEditorPrimitives_RenderThread(const FSceneView& InView) const;
+	FScreenPassTexture RenderAfterTonemap_RenderThread(FRDGBuilder& GraphBuilder, const FSceneView& InView, const FPostProcessMaterialInputs& Inputs);
+	/** Render thread: the views of the family being rendered whose UI was drawn after tonemapping, which PostRenderView then skips. */
+	TArray<const FSceneView*, TInlineAllocator<4>> ViewsDrawnAfterTonemap;
 	void RenderGizmoMesh_RenderThread(const TArray<TSharedPtr<FDreamUIGizmoMesh>>& HelperGizmoDataMap
 	, FRDGBuilder& GraphBuilder
 	, FSceneView* RenderView

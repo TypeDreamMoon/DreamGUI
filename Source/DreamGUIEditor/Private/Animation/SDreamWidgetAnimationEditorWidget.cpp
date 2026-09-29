@@ -8,6 +8,7 @@
 #include "Core/DreamUserWidget.h"
 
 #include "Animation/DreamWidgetAnimation.h"
+#include "Containers/Ticker.h"
 #include "ISequencer.h"
 #include "ISequencerModule.h"
 #include "LevelEditorSequencerIntegration.h"
@@ -183,9 +184,11 @@ public:
 
 	virtual void PostUndo(bool bSuccess) override
 	{
-		if (!GetAnimation())
+		// The undo took the animation away. Deselect rather than Close(), which would close Sequencer in
+		// the middle of the undo's input event (see ReleaseSequencer) and stop listening for undo for good.
+		if (!GetAnimation() && Sequencer.IsValid())
 		{
-			Close();
+			SetDreamWidgetAnimation(nullptr);
 		}
 	}
 
@@ -342,17 +345,12 @@ public:
 			return;
 		}
 
-		// If we're setting the sequence to none, destroy sequencer
+		// If we're setting the sequence to none, let the sequencer go
 		if (!NewSequence)
 		{
 			if (Sequencer.IsValid())
 			{
-				StopObservingWidgetSelection();
-				StopObservingPreviewRebuild();
-				Sequencer->SetShowCurveEditor(false);
-				FLevelEditorSequencerIntegration::Get().RemoveSequencer(Sequencer.ToSharedRef());
-				Sequencer->Close();
-				Sequencer = nullptr;
+				ReleaseSequencer();
 			}
 
 			Content->SetContent(SNew(STextBlock).Text(LOCTEXT("NothingSelected", "Select a sequence")));
@@ -400,7 +398,8 @@ public:
 		Sequencer->GetSelectionChangedObjectGuids().AddSP(this, &SDreamWidgetAnimationEditorWidgetImpl::SyncSelectedWidgetsWithSequencerSelection);
 		ObserveWidgetSelection();
 		ObservePreviewRebuild();
-		Sequencer->OnMovieSceneBindingsChanged().AddLambda([=, this]() {
+		// Weakly bound: a released sequencer outlives this panel by a frame (see ReleaseSequencer).
+		Sequencer->OnMovieSceneBindingsChanged().AddSPLambda(this, [=, this]() {
 			if (!WeakSequence.IsValid())return;
 			auto MovieScene = WeakSequence->GetMovieScene();
 			if (!IsValid(MovieScene))return;
@@ -424,6 +423,44 @@ public:
 		Options.bForceRefreshDetails = false;
 
 		FLevelEditorSequencerIntegration::Get().AddSequencer(Sequencer.ToSharedRef(), Options);
+	}
+
+	/**
+	 * Let go of the sequencer now and close it a frame later.
+	 *
+	 * Deselecting happens inside an input event -- the list toggles, so clicking the selected row again
+	 * is a deselect, and so are a list refresh and an undo -- and Slate can be holding the focused
+	 * widget's whole path strongly until it has finished that frame's input (FSlateUser::StrongFocusPath,
+	 * cleared in FinishedInputThisFrame). With focus still in Sequencer, which is where it is right after
+	 * working in it, that path keeps SSequencer alive, and closing then failed
+	 * FSequencer::DestroySequencerWidget's "last reference to SSequencer" ensure. Slate can take input
+	 * again in its own tick after FinishedInputThisFrame, so the close waits for the core ticker of the
+	 * NEXT frame, which runs after that frame's clear.
+	 *
+	 * Everything the sequencer does to the editor stops here; only the teardown waits. Nothing it still
+	 * holds can call back into this panel meanwhile: its raw bindings fire only from its widget, which is
+	 * already out of the tree, and the rest are bound weakly.
+	 */
+	void ReleaseSequencer()
+	{
+		StopObservingWidgetSelection();
+		StopObservingPreviewRebuild();
+		Sequencer->SetShowCurveEditor(false);
+		FLevelEditorSequencerIntegration::Get().RemoveSequencer(Sequencer.ToSharedRef());
+		Sequencer->RestorePreAnimatedState();
+
+		FTSTicker::GetCoreTicker().AddTicker(FTickerDelegate::CreateLambda(
+			[PendingSequencer = Sequencer, bWaitedAFrame = false](float) mutable
+			{
+				if (!bWaitedAFrame)
+				{
+					bWaitedAFrame = true;
+					return true;
+				}
+				PendingSequencer->Close();
+				return false;
+			}));
+		Sequencer = nullptr;
 	}
 
 	// sequence select widget handler
