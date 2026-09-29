@@ -451,6 +451,20 @@ delegates the `Controls/` family declares, and the `FDreamUIEventDelegate` prope
 > first time that name resolves), and `StructValue` + `StructValueType` for the new `Struct`
 > parameter type, which carries any USTRUCT as exported text. Older assets load unchanged.
 
+### Seeing what it drew, and what it cost
+
+Two console commands answer both questions without a debugger:
+
+- `DreamUI.Capture [Directory]` writes a PNG of the world's viewport and of every root canvas that
+  renders into a target — by default into a new folder under `Saved/DreamUI/Captures`. The same
+  thing is a Blueprint library, `UDreamUICaptureLibrary`: `SaveViewportToPng`, `SaveCanvasToPng`,
+  `SaveRenderTargetToPng`, `CaptureAll`. A canvas drawn straight onto the screen has no picture of
+  its own; capture the viewport it is on.
+- `DreamUI.Stats` prints what the frames since the last `DreamUI.Stats` cost, stage by stage — the
+  UI manager's tick, canvas updates, batching, draw-call submission, the render thread's recording —
+  and how many batches, vertices and bytes went to the GPU. Each stage is also a named scope in
+  Unreal Insights (`DreamUI_*`).
+
 ## Platforms
 
 What is *claimed* and what has been *run* are different lists, so both are here.
