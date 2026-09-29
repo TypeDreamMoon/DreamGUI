@@ -1710,7 +1710,9 @@ void UDreamCanvas::BatchDrawCallAsync(const FVector2D& InCanvasLeftBottom, const
 				{
 					DrawCallItem.Texture = InItemGeo.Texture;
 				}
-				DrawCallItem.Material = InItemGeo.Material.Get();
+				// Copied as the weak pointer it is: this runs on the batching thread, where resolving it -- and then reading the
+				// object to make a weak pointer of it again -- can meet a collection under way on the game thread.
+				DrawCallItem.Material = InItemGeo.Material;
 				DrawCallItem.BlendMode = InItemGeo.BlendMode;
 				DrawCallItem.BatchMeshVisualArray.Add(InRenderData.BatchMeshVisualObject);
 				DrawCallItem.VerticesCount = InItemGeo.Vertices.Num();
