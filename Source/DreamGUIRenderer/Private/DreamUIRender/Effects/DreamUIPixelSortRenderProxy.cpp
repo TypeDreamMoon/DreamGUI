@@ -94,101 +94,20 @@ void FDreamPixelSortRenderProxy::OnRenderPostProcess_RenderThread(
 	SCOPE_CYCLE_COUNTER(STAT_PixelSort);
 	if (!CanRender())return;
 
-	auto& RHICmdList = GraphBuilder.RHICmdList;
-
-	// Each pooled target is handed to the graph with GraphBuilder.RegisterExternalTexture as soon as it
-	// is taken, as blur does, which parks a strong reference on it until the graph has executed. This
-	// function only RECORDS passes: releasing the targets at its end, as it used to, put them back in
-	// GRenderTargetPool before any pass had run, and a later effect in the same frame could be handed
-	// the same memory with RDG seeing no dependency between the two.
-	TRefCountPtr<IPooledRenderTarget> ScreenResolvedTexture;
-	TRefCountPtr<IPooledRenderTarget> SortTargetA;
-	TRefCountPtr<IPooledRenderTarget> SortTargetB;
-	TRefCountPtr<IPooledRenderTarget> IndexTarget;
-
-	const uint8 NumSamples = ScreenTargetTexture->GetNumSamples();
-	const auto ScreenSize = ScreenTargetTexture->GetSizeXY();
-	if (NumSamples > 1)
-	{
-		// A multisampled screen texture cannot be sampled directly; resolve first. This MUST be
-		// AddResolvePass and not CopyRenderTarget: the copy shader declares its source as a plain
-		// Texture2D, and binding an MSAA texture to a Texture2D slot is a dimension mismatch that
-		// reads as zero on D3D12 -- the resolve silently comes back black and every grab downstream
-		// is a grab of nothing. The resolve shader is the one place in the plugin that declares
-		// Texture2DMS and loads each sample. Getting this wrong cost a day; see blur and pixelate,
-		// which have always done it this way.
-		FPooledRenderTargetDesc ResolveDesc(FPooledRenderTargetDesc::Create2DDesc(ScreenSize, ScreenTargetTexture->GetFormat(),
-			FClearValueBinding::Black, TexCreate_None, TexCreate_RenderTargetable, false));
-		GRenderTargetPool.FindFreeElement(RHICmdList, ResolveDesc, ScreenResolvedTexture, TEXT("DreamUIPixelSortResolveTarget"));
-		if (!ScreenResolvedTexture.IsValid())
-		{
-			return;
-		}
-		auto ResolveSrc = RegisterExternalTexture(GraphBuilder, ScreenTargetTexture, TEXT("DreamUIPixelSortResolveSource"));
-		auto ResolveDst = GraphBuilder.RegisterExternalTexture(ScreenResolvedTexture, TEXT("DreamUIPixelSortResolveTarget"));
-		Renderer->AddResolvePass(GraphBuilder, FRDGTextureMSAA(ResolveSrc, ResolveDst), FIntRect(0, 0, ScreenSize.X, ScreenSize.Y), NumSamples, GlobalShaderMap);
-	}
-
-	// Read the FLAG, not a coincidence of sizes. bUseFullSize makes RectSize the root canvas's
-	// authored resolution, which almost never equals the screen -- so testing sizes takes the
-	// widget-rect path while the author has asked for the screen, and the sort then runs in a buffer
-	// whose texels are not pixels and whose edges sample past what is on screen.
+	const FScreenRead Screen = ReadScreen_RenderThread(GraphBuilder, Renderer, GlobalShaderMap, ScreenTargetTexture);
 	const bool bFullScreen = bUseFullSize;
-	const FIntPoint RegionSize = DreamUIPostProcessEffects::ResolvePixelSortRegionSize(bUseFullSize, RectSize, ScreenSize);
-	// Still no in-place shortcut, unlike blur: blur can write straight into the backbuffer because
-	// its own passes ping-pong internally, but a sort pass reading and writing one texture produces
-	// per-tile garbage that varies by GPU. Full screen here means a screen-sized SCRATCH buffer.
-
-	{
-		FPooledRenderTargetDesc Desc(FPooledRenderTargetDesc::Create2DDesc(RegionSize, ScreenTargetTexture->GetFormat(),
-			FClearValueBinding::Black, TexCreate_None, TexCreate_RenderTargetable, false));
-		GRenderTargetPool.FindFreeElement(RHICmdList, Desc, SortTargetA, TEXT("DreamUIPixelSortTargetA"));
-		GRenderTargetPool.FindFreeElement(RHICmdList, Desc, SortTargetB, TEXT("DreamUIPixelSortTargetB"));
-		// One float channel for the destination index. R32F holds every integer up to 2^24 exactly,
-		// far past any line length -- packing an index into 8-bit RGB, as the reference shader has to
-		// on Shadertoy, is unnecessary here and would only add rounding to something that must be
-		// compared for equality.
-		FPooledRenderTargetDesc IndexDesc(FPooledRenderTargetDesc::Create2DDesc(RegionSize, PF_R32_FLOAT,
-			FClearValueBinding::Black, TexCreate_None, TexCreate_RenderTargetable | TexCreate_ShaderResource, false));
-		GRenderTargetPool.FindFreeElement(RHICmdList, IndexDesc, IndexTarget, TEXT("DreamUIPixelSortIndexTarget"));
-		if (!SortTargetA.IsValid() || !SortTargetB.IsValid() || !IndexTarget.IsValid())
-		{
-			return;
-		}
-		GraphBuilder.RegisterExternalTexture(SortTargetA, TEXT("DreamUIPixelSortTargetA"));
-		GraphBuilder.RegisterExternalTexture(SortTargetB, TEXT("DreamUIPixelSortTargetB"));
-		GraphBuilder.RegisterExternalTexture(IndexTarget, TEXT("DreamUIPixelSortIndexTarget"));
-	}
-	auto SortTextureA = SortTargetA->GetRHI();
-	auto SortTextureB = SortTargetB->GetRHI();
-	auto IndexTexture = IndexTarget->GetRHI();
+	const FIntPoint RegionSize = DreamUIPostProcessEffects::ResolvePixelSortRegionSize(bUseFullSize, RectSize, Screen.Size);
+	FRDGTextureRef SourceTexture = CreateWorkTexture(GraphBuilder, Screen, RegionSize, TEXT("DreamUIPixelSortSource"));
+	// One float channel for the destination index. R32F holds every integer up to 2^24 exactly,
+	// far past any line length -- packing an index into 8-bit RGB, as the reference shader has to
+	// on Shadertoy, is unnecessary here and would only add rounding to something that must be
+	// compared for equality.
+	FRDGTextureRef DestinationTexture = CreateWorkTexture(GraphBuilder, Screen, RegionSize, TEXT("DreamUIPixelSortDestinations"), PF_R32_FLOAT);
+	FRDGTextureRef ResultRDGTexture = CreateWorkTexture(GraphBuilder, Screen, RegionSize, TEXT("DreamUIPixelSortResult"));
 
 	// Grab the widget's region out of the screen.
 	const auto ModelViewProjectionMatrix = ObjectToWorldMatrix * ViewProjectionMatrix;
-	auto SourceScreenTexture = NumSamples > 1 ? ScreenResolvedTexture->GetRHI() : ScreenTargetTexture.GetReference();
-	if (!bFullScreen)
-	{
-		Renderer->CopyRenderTargetOnMeshRegion(GraphBuilder
-			, RegisterExternalTexture(GraphBuilder, SortTextureA, TEXT("DreamUIPixelSortRegionGrab"))
-			, SourceScreenTexture
-			, GlobalShaderMap
-			, RenderScreenToMeshRegionVertexArray
-			, ModelViewProjectionMatrix
-			, bIsRenderTarget
-			, FIntRect(0, 0, RegionSize.X, RegionSize.Y)
-			, ViewTextureScaleOffset
-		);
-	}
-	else
-	{
-		Renderer->CopyRenderTarget(GraphBuilder, GlobalShaderMap, SourceScreenTexture, SortTextureA);
-	}
-
-	// Registered once per pooled target. Registering the same RHI texture twice gives RDG two
-	// handles onto one resource, so it cannot see the dependency between passes and they race.
-	FRDGTextureRef SourceTexture = RegisterExternalTexture(GraphBuilder, SortTextureA, TEXT("DreamUIPixelSortSource"));
-	FRDGTextureRef DestinationTexture = RegisterExternalTexture(GraphBuilder, IndexTexture, TEXT("DreamUIPixelSortDestinations"));
-	FRDGTextureRef ResultRDGTexture = RegisterExternalTexture(GraphBuilder, SortTextureB, TEXT("DreamUIPixelSortResult"));
+	GrabRegion_RenderThread(GraphBuilder, Renderer, GlobalShaderMap, Screen, SourceTexture, bFullScreen, ModelViewProjectionMatrix, bIsRenderTarget, ViewTextureScaleOffset);
 
 	TShaderMapRef<FDreamUISimplePostProcessVS> VertexShader(GlobalShaderMap);
 	TShaderMapRef<FDreamUIPostProcessPixelSortRankPS> RankShader(GlobalShaderMap);
@@ -278,29 +197,8 @@ void FDreamPixelSortRenderProxy::OnRenderPostProcess_RenderThread(
 			});
 	}
 
-	auto ResultTexture = SortTextureB;
-
-	const auto PointSampler = SortSampler;
-	if (!OutputTargetTexture.IsValid())
-	{
-		if (!bFullScreen)
-		{
-			RenderMeshOnScreen_RenderThread(GraphBuilder, SceneDepth, ScreenTargetTexture, GlobalShaderMap, ResultTexture,
-				ModelViewProjectionMatrix, ObjectToWorldMatrix, bIsWorldSpace, BlendDepthForWorld, DepthFadeForWorld,
-				DepthTextureScaleOffset, ViewRect, PointSampler);
-		}
-		else
-		{
-			Renderer->CopyRenderTarget(GraphBuilder, GlobalShaderMap, ResultTexture, ScreenTargetTexture, PointSampler);
-		}
-	}
-	else
-	{
-		// Pixelate omits this branch from its GetRenderProxy push chain and the RenderTarget output
-		// mode quietly does nothing as a result. Blur's version is the complete one.
-		Renderer->CopyRenderTarget_ColorCorrect(GraphBuilder, GlobalShaderMap, ResultTexture,
-			OutputTargetTexture, PointSampler);
-	}
+	WriteBack_RenderThread(GraphBuilder, Renderer, GlobalShaderMap, SceneDepth, Screen, ResultRDGTexture, bFullScreen, ModelViewProjectionMatrix
+		, bIsWorldSpace, BlendDepthForWorld, DepthFadeForWorld, DepthTextureScaleOffset, ViewRect, SortSampler);
 }
 
 FIntPoint DreamUIPostProcessEffects::ResolvePixelSortRegionSize(bool bInUseFullSize, const FVector2f& InRectSize, const FIntPoint& InScreenSize)

@@ -318,11 +318,9 @@ namespace DreamUIRendererLocal
 	 * scaled by BlendAlpha and blended over what Dst holds. PassName names the pass and Dst in the graph, SourceName Src.
 	 */
 	static void AddCopyTargetPass(FDreamUIRenderer* Renderer, FRDGBuilder& GraphBuilder, FGlobalShaderMap* GlobalShaderMap
-		, FTextureRHIRef Src, FTextureRHIRef Dst, FRHISamplerState* SrcTextureSamplerState
-		, bool bColorCorrect, bool bBlendAlpha, float BlendAlpha, const TCHAR* PassName, const TCHAR* SourceName)
+		, FRDGTextureRef SourceTexture, FRDGTextureRef DestinationTexture, FRHISamplerState* SrcTextureSamplerState
+		, bool bColorCorrect, bool bBlendAlpha, float BlendAlpha, const TCHAR* PassName)
 	{
-		auto SourceTexture = RegisterExternalTexture(GraphBuilder, Src, SourceName);
-		auto DestinationTexture = RegisterExternalTexture(GraphBuilder, Dst, PassName);
 		auto* PassParameters = GraphBuilder.AllocParameters<FDreamUITextureReadRenderTargetParameters>();
 		PassParameters->SourceTexture = SourceTexture;
 		// A blended copy goes over what the target holds; any other covers all of it.
@@ -371,22 +369,43 @@ void FDreamUIRenderer::CopyRenderTarget(FRDGBuilder& GraphBuilder, FGlobalShader
 	, FRHISamplerState* SrcTextureSamplerState
 )
 {
+	CopyRenderTarget(GraphBuilder, GlobalShaderMap, RegisterExternalTexture(GraphBuilder, Src, TEXT("DreamUICopyRenderTargetSource"))
+		, RegisterExternalTexture(GraphBuilder, Dst, TEXT("DreamUICopyRenderTarget")), SrcTextureSamplerState);
+}
+
+void FDreamUIRenderer::CopyRenderTarget(FRDGBuilder& GraphBuilder, FGlobalShaderMap* GlobalShaderMap, FRDGTextureRef Src, FRDGTextureRef Dst
+	, FRHISamplerState* SrcTextureSamplerState)
+{
 	DreamUIRendererLocal::AddCopyTargetPass(this, GraphBuilder, GlobalShaderMap, Src, Dst, SrcTextureSamplerState, false, false, 1.0f
-		, TEXT("DreamUICopyRenderTarget"), TEXT("DreamUICopyRenderTargetSource"));
+		, TEXT("DreamUICopyRenderTarget"));
 }
 
 void FDreamUIRenderer::CopyRenderTarget_ColorCorrect(FRDGBuilder& GraphBuilder, FGlobalShaderMap* GlobalShaderMap,
 	FTextureRHIRef Src, FTextureRHIRef Dst, FRHISamplerState* SrcTextureSamplerState)
 {
+	CopyRenderTarget_ColorCorrect(GraphBuilder, GlobalShaderMap, RegisterExternalTexture(GraphBuilder, Src, TEXT("DreamUICopyRenderTarget_ColorCorrectSource"))
+		, RegisterExternalTexture(GraphBuilder, Dst, TEXT("DreamUICopyRenderTarget_ColorCorrect")), SrcTextureSamplerState);
+}
+
+void FDreamUIRenderer::CopyRenderTarget_ColorCorrect(FRDGBuilder& GraphBuilder, FGlobalShaderMap* GlobalShaderMap, FRDGTextureRef Src, FRDGTextureRef Dst
+	, FRHISamplerState* SrcTextureSamplerState)
+{
 	DreamUIRendererLocal::AddCopyTargetPass(this, GraphBuilder, GlobalShaderMap, Src, Dst, SrcTextureSamplerState, true, false, 1.0f
-		, TEXT("DreamUICopyRenderTarget_ColorCorrect"), TEXT("DreamUICopyRenderTarget_ColorCorrectSource"));
+		, TEXT("DreamUICopyRenderTarget_ColorCorrect"));
 }
 
 void FDreamUIRenderer::CopyRenderTarget_BlendAlpha(FRDGBuilder& GraphBuilder, FGlobalShaderMap* GlobalShaderMap,
                                                  FTextureRHIRef Src, FTextureRHIRef Dst, float BlendAlpha, FRHISamplerState* SrcTextureSamplerState)
 {
+	CopyRenderTarget_BlendAlpha(GraphBuilder, GlobalShaderMap, RegisterExternalTexture(GraphBuilder, Src, TEXT("DreamUICopyRenderTarget_BlendAlphaSource"))
+		, RegisterExternalTexture(GraphBuilder, Dst, TEXT("DreamUICopyRenderTarget_BlendAlpha")), BlendAlpha, SrcTextureSamplerState);
+}
+
+void FDreamUIRenderer::CopyRenderTarget_BlendAlpha(FRDGBuilder& GraphBuilder, FGlobalShaderMap* GlobalShaderMap, FRDGTextureRef Src, FRDGTextureRef Dst
+	, float BlendAlpha, FRHISamplerState* SrcTextureSamplerState)
+{
 	DreamUIRendererLocal::AddCopyTargetPass(this, GraphBuilder, GlobalShaderMap, Src, Dst, SrcTextureSamplerState, false, true, BlendAlpha
-		, TEXT("DreamUICopyRenderTarget_BlendAlpha"), TEXT("DreamUICopyRenderTarget_BlendAlphaSource"));
+		, TEXT("DreamUICopyRenderTarget_BlendAlpha"));
 }
 
 void FDreamUIRenderer::CopyRenderTargetOnMeshRegion(
@@ -402,7 +421,23 @@ void FDreamUIRenderer::CopyRenderTargetOnMeshRegion(
 	, bool ColorCorrect
 )
 {
-	auto SourceTexture = RegisterExternalTexture(GraphBuilder, Src, TEXT("DreamUICopyRenderTargetOnMeshRegionSource"));
+	CopyRenderTargetOnMeshRegion(GraphBuilder, Dst, RegisterExternalTexture(GraphBuilder, Src, TEXT("DreamUICopyRenderTargetOnMeshRegionSource"))
+		, GlobalShaderMap, RegionVertexData, MVP, bIsRenderTarget, ViewRect, SrcTextureScaleOffset, ColorCorrect);
+}
+
+void FDreamUIRenderer::CopyRenderTargetOnMeshRegion(
+	FRDGBuilder& GraphBuilder
+	, FRDGTextureRef Dst
+	, FRDGTextureRef SourceTexture
+	, FGlobalShaderMap* GlobalShaderMap
+	, const TArray<FDreamUIPostProcessCopyMeshRegionVertex>& RegionVertexData
+	, const FMatrix44f& MVP
+	, bool bIsRenderTarget
+	, const FIntRect& ViewRect
+	, const FVector4f& SrcTextureScaleOffset
+	, bool ColorCorrect
+)
+{
 	auto* PassParameters = GraphBuilder.AllocParameters<FDreamUITextureReadRenderTargetParameters>();
 	PassParameters->SourceTexture = SourceTexture;
 	PassParameters->RenderTargets[0] = FRenderTargetBinding(Dst, ERenderTargetLoadAction::EClear);

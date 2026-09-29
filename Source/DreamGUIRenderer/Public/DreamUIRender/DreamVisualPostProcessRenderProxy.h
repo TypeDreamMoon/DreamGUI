@@ -131,14 +131,14 @@ public:
 	FTextureRHIRef OutputTargetTexture;
 
 	/**
-	 * Use a mesh to render the MeshRegionTexture to ScreenTargetTexture
+	 * Use a mesh to render the MeshRegionTexture to ScreenTarget
 	 */
 	void RenderMeshOnScreen_RenderThread(
 		FRDGBuilder& GraphBuilder
 		, FRDGTextureRef SceneDepth
-		, FTextureRHIRef ScreenTargetTexture
+		, FRDGTextureRef ScreenTarget
 		, FGlobalShaderMap* GlobalShaderMap
-		, FTextureRHIRef MeshRegionTexture
+		, FRDGTextureRef MeshRegionTexture
 		, const FMatrix44f & ModelViewProjectionMatrix
 		, const FMatrix44f & ModelMatrix
 		, bool IsWorldSpace
@@ -148,4 +148,33 @@ public:
 		, const FIntRect& ViewRect
 		, FRHISamplerState* ResultTextureSamplerState = TStaticSamplerState<SF_Bilinear, AM_Clamp, AM_Clamp, AM_Clamp>::GetRHI()
 	);
+protected:
+	/**
+	 * The three stages every effect goes through: the screen read (ReadScreen_RenderThread, GrabRegion_RenderThread), the
+	 * effect's own passes on what was read, and the result written back (WriteBack_RenderThread). Every texture in between is
+	 * the graph's own (CreateWorkTexture): the graph keeps it for as long as a pass it recorded needs it, and a second effect
+	 * in the frame gets textures of its own.
+	 */
+	struct FScreenRead
+	{
+		/** The screen's target. */
+		FRDGTextureRef Target = nullptr;
+		/** What an effect reads the screen through: the target, or its resolved copy when it is multisampled. */
+		FRDGTextureRef Readable = nullptr;
+		uint8 NumSamples = 1;
+		FIntPoint Size = FIntPoint::ZeroValue;
+	};
+	static FScreenRead ReadScreen_RenderThread(FRDGBuilder& GraphBuilder, FDreamUIRenderer* Renderer, FGlobalShaderMap* GlobalShaderMap, FTextureRHIRef ScreenTargetTexture);
+	/** A texture of InSize, in the screen's format unless InFormat says otherwise, that an effect draws into and reads from. */
+	static FRDGTextureRef CreateWorkTexture(FRDGBuilder& GraphBuilder, const FScreenRead& InScreen, FIntPoint InSize, const TCHAR* InName, EPixelFormat InFormat = PF_Unknown);
+	/** Into InWork: the mesh's region of the screen, or the whole screen. */
+	void GrabRegion_RenderThread(FRDGBuilder& GraphBuilder, FDreamUIRenderer* Renderer, FGlobalShaderMap* GlobalShaderMap, const FScreenRead& InScreen
+		, FRDGTextureRef InWork, bool bInWholeScreen, const FMatrix44f& ModelViewProjectionMatrix, bool bIsRenderTarget, const FVector4f& ViewTextureScaleOffset) const;
+	/**
+	 * InResult where it goes: into the output target when there is one; else onto the mesh's region of the screen; else over the
+	 * whole screen -- unless InResult is the screen's target itself, which an effect worked on in place.
+	 */
+	void WriteBack_RenderThread(FRDGBuilder& GraphBuilder, FDreamUIRenderer* Renderer, FGlobalShaderMap* GlobalShaderMap, FRDGTextureRef SceneDepth
+		, const FScreenRead& InScreen, FRDGTextureRef InResult, bool bInWholeScreen, const FMatrix44f& ModelViewProjectionMatrix, bool bIsWorldSpace
+		, float BlendDepthForWorld, int DepthFadeForWorld, const FVector4f& DepthTextureScaleOffset, const FIntRect& ViewRect, FRHISamplerState* InSampler);
 };

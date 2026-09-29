@@ -109,12 +109,75 @@ void FDreamVisualPostProcessRenderProxy::SetRenderTarget_GameThread(const FDream
 			});
 }
 
+FDreamVisualPostProcessRenderProxy::FScreenRead FDreamVisualPostProcessRenderProxy::ReadScreen_RenderThread(FRDGBuilder& GraphBuilder
+	, FDreamUIRenderer* Renderer, FGlobalShaderMap* GlobalShaderMap, FTextureRHIRef ScreenTargetTexture)
+{
+	FScreenRead Screen;
+	Screen.Target = RegisterExternalTexture(GraphBuilder, ScreenTargetTexture, TEXT("DreamUIPostProcessScreen"));
+	Screen.NumSamples = Screen.Target->Desc.NumSamples;
+	Screen.Size = Screen.Target->Desc.Extent;
+	Screen.Readable = Screen.Target;
+	if (Screen.NumSamples > 1)
+	{
+		Screen.Readable = CreateWorkTexture(GraphBuilder, Screen, Screen.Size, TEXT("DreamUIPostProcessScreenResolved"));
+		Renderer->AddResolvePass(GraphBuilder, FRDGTextureMSAA(Screen.Target, Screen.Readable), FIntRect(FIntPoint::ZeroValue, Screen.Size), Screen.NumSamples, GlobalShaderMap);
+	}
+	return Screen;
+}
+
+FRDGTextureRef FDreamVisualPostProcessRenderProxy::CreateWorkTexture(FRDGBuilder& GraphBuilder, const FScreenRead& InScreen, FIntPoint InSize
+	, const TCHAR* InName, EPixelFormat InFormat)
+{
+	const FRDGTextureDesc Desc = FRDGTextureDesc::Create2D(FIntPoint(FMath::Max(InSize.X, 1), FMath::Max(InSize.Y, 1))
+		, InFormat == PF_Unknown ? InScreen.Target->Desc.Format : InFormat, FClearValueBinding::Black
+		, TexCreate_RenderTargetable | TexCreate_ShaderResource);
+	return GraphBuilder.CreateTexture(Desc, InName);
+}
+
+void FDreamVisualPostProcessRenderProxy::GrabRegion_RenderThread(FRDGBuilder& GraphBuilder, FDreamUIRenderer* Renderer, FGlobalShaderMap* GlobalShaderMap
+	, const FScreenRead& InScreen, FRDGTextureRef InWork, bool bInWholeScreen, const FMatrix44f& ModelViewProjectionMatrix, bool bIsRenderTarget
+	, const FVector4f& ViewTextureScaleOffset) const
+{
+	if (bInWholeScreen)
+	{
+		Renderer->CopyRenderTarget(GraphBuilder, GlobalShaderMap, InScreen.Readable, InWork);
+	}
+	else
+	{
+		Renderer->CopyRenderTargetOnMeshRegion(GraphBuilder, InWork, InScreen.Readable, GlobalShaderMap, RenderScreenToMeshRegionVertexArray
+			, ModelViewProjectionMatrix, bIsRenderTarget, FIntRect(FIntPoint::ZeroValue, InWork->Desc.Extent), ViewTextureScaleOffset);
+	}
+}
+
+void FDreamVisualPostProcessRenderProxy::WriteBack_RenderThread(FRDGBuilder& GraphBuilder, FDreamUIRenderer* Renderer, FGlobalShaderMap* GlobalShaderMap
+	, FRDGTextureRef SceneDepth, const FScreenRead& InScreen, FRDGTextureRef InResult, bool bInWholeScreen, const FMatrix44f& ModelViewProjectionMatrix
+	, bool bIsWorldSpace, float BlendDepthForWorld, int DepthFadeForWorld, const FVector4f& DepthTextureScaleOffset, const FIntRect& ViewRect
+	, FRHISamplerState* InSampler)
+{
+	if (OutputTargetTexture.IsValid())
+	{
+		Renderer->CopyRenderTarget_ColorCorrect(GraphBuilder, GlobalShaderMap, InResult
+			, RegisterExternalTexture(GraphBuilder, OutputTargetTexture, TEXT("DreamUIPostProcessOutputTarget")), InSampler);
+	}
+	else if (!bInWholeScreen)
+	{
+		RenderMeshOnScreen_RenderThread(GraphBuilder, SceneDepth, InScreen.Target, GlobalShaderMap, InResult, ModelViewProjectionMatrix, ObjectToWorldMatrix
+			, bIsWorldSpace, BlendDepthForWorld, DepthFadeForWorld, DepthTextureScaleOffset, ViewRect, InSampler);
+	}
+	else if (InResult != InScreen.Target)
+	{
+		// The whole screen, worked on in a texture of its own -- or in place in a multisampled target's resolved copy, which has
+		// to go back into the target: the resolve that ends the UI's recording writes the target over the picture.
+		Renderer->CopyRenderTarget(GraphBuilder, GlobalShaderMap, InResult, InScreen.Target, InSampler);
+	}
+}
+
 void FDreamVisualPostProcessRenderProxy::RenderMeshOnScreen_RenderThread(
 	FRDGBuilder& GraphBuilder
 	, FRDGTextureRef SceneDepth
-	, FTextureRHIRef ScreenTargetTexture
+	, FRDGTextureRef ScreenTarget
 	, FGlobalShaderMap* GlobalShaderMap
-	, FTextureRHIRef MeshRegionTexture
+	, FRDGTextureRef MeshRegionTexture
 	, const FMatrix44f& ModelViewProjectionMatrix
 	, const FMatrix44f& ModelMatrix
 	, bool IsWorldSpace
@@ -125,12 +188,12 @@ void FDreamVisualPostProcessRenderProxy::RenderMeshOnScreen_RenderThread(
 	, FRHISamplerState* ResultTextureSamplerState
 )
 {
-	uint8 NumSamples = ScreenTargetTexture->GetNumSamples();
-	auto MeshRegionRDGTexture = RegisterExternalTexture(GraphBuilder, MeshRegionTexture, TEXT("DreamUIPostProcessMeshRegionTexture"));
+	uint8 NumSamples = ScreenTarget->Desc.NumSamples;
+	auto MeshRegionRDGTexture = MeshRegionTexture;
 	auto PSShaderParameters = GraphBuilder.AllocParameters<FDreamUIPostProcessRenderMeshParameters>();
 	PSShaderParameters->SceneDepthTex = SceneDepth;
 	PSShaderParameters->MeshRegionTexture = MeshRegionRDGTexture;
-	PSShaderParameters->RenderTargets[0] = FRenderTargetBinding(RegisterExternalTexture(GraphBuilder, ScreenTargetTexture, TEXT("DreamUIRendererTargetTexture")), ERenderTargetLoadAction::ELoad);
+	PSShaderParameters->RenderTargets[0] = FRenderTargetBinding(ScreenTarget, ERenderTargetLoadAction::ELoad);
 
 	GraphBuilder.AddPass(
 		RDG_EVENT_NAME("UIPostProcess_RenderMeshToScreen"),

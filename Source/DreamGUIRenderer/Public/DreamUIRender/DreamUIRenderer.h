@@ -146,6 +146,19 @@ public:
 		const FVector4f& SrcTextureScaleOffset,
 		bool ColorCorrect = false
 	);
+	/**
+	 * The same four on textures of the graph. The effects' intermediates are the graph's own (GraphBuilder.CreateTexture),
+	 * which have no RHI texture until the graph runs.
+	 */
+	void CopyRenderTarget(FRDGBuilder& GraphBuilder, FGlobalShaderMap* GlobalShaderMap, FRDGTextureRef Src, FRDGTextureRef Dst,
+		FRHISamplerState* SrcTextureSamplerState = TStaticSamplerState<SF_Bilinear, AM_Clamp, AM_Clamp, AM_Clamp>::GetRHI());
+	void CopyRenderTarget_ColorCorrect(FRDGBuilder& GraphBuilder, FGlobalShaderMap* GlobalShaderMap, FRDGTextureRef Src, FRDGTextureRef Dst,
+		FRHISamplerState* SrcTextureSamplerState = TStaticSamplerState<SF_Bilinear, AM_Clamp, AM_Clamp, AM_Clamp>::GetRHI());
+	void CopyRenderTarget_BlendAlpha(FRDGBuilder& GraphBuilder, FGlobalShaderMap* GlobalShaderMap, FRDGTextureRef Src, FRDGTextureRef Dst, float BlendAlpha,
+		FRHISamplerState* SrcTextureSamplerState = TStaticSamplerState<SF_Bilinear, AM_Clamp, AM_Clamp, AM_Clamp>::GetRHI());
+	void CopyRenderTargetOnMeshRegion(FRDGBuilder& GraphBuilder, FRDGTextureRef Dst, FRDGTextureRef Src, FGlobalShaderMap* GlobalShaderMap,
+		const TArray<FDreamUIPostProcessCopyMeshRegionVertex>& RegionVertexData, const FMatrix44f& MVP, bool bIsRenderTarget,
+		const FIntRect& ViewRect, const FVector4f& SrcTextureScaleOffset, bool ColorCorrect = false);
 	void DrawFullScreenQuad(
 		FRHICommandListImmediate& RHICmdList
 	);
