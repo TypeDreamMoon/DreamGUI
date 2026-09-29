@@ -862,9 +862,9 @@ bool FDreamGameHostNoGameInstanceTest::RunTest(const FString& Parameters)
  * system ticks while paused -- which the module-only case below shows. A paused world runs the
  * controller's input frame with bGamePaused set, where UPlayerInput swaps the delegate of every binding
  * whose bExecuteWhenPaused is false for an unbound one (GetChordForKey), and Enhanced Input drops every
- * action whose bTriggerWhenPaused is false. So the presets bind with bExecuteWhenPaused on and apply the
- * setting themselves, and the Enhanced preset triggers runtime copies of its actions whose
- * bTriggerWhenPaused follows the setting; before that, no click reached the module while paused.
+ * action whose bTriggerWhenPaused is false. So the presets bind with bExecuteWhenPaused on and the
+ * Enhanced preset's actions trigger while paused, and both presets apply the setting themselves as each
+ * input arrives; before that, no click reached the module while paused.
  */
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamGameHostPausedClickTest,

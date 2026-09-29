@@ -32,11 +32,15 @@ namespace DreamDriverInputActorsLocal
 		return true;
 	}
 
-	/** One of the four actions, as the shipped asset of that name is: a value type and nothing else. */
+	/**
+	 * One of the four actions, as the shipped asset of that name is: a value type, and triggering while the game is
+	 * paused -- the preset decides a paused game per event -- and nothing else.
+	 */
 	UInputAction* MakeAction(UObject* InOuter, const TCHAR* InName, EInputActionValueType InValueType)
 	{
 		UInputAction* Action = NewObject<UInputAction>(InOuter, FName(InName), RF_Transient);
 		Action->ValueType = InValueType;
+		Action->bTriggerWhenPaused = true;
 		return Action;
 	}
 }

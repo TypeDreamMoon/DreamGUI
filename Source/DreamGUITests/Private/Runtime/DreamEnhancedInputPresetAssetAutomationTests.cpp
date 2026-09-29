@@ -49,8 +49,8 @@
  * reached it. It is now a data-only subclass of ADreamEnhancedInputEventSystemActor that fills in the
  * context and the four actions, and these tests hold the asset to that: the class it derives from, the
  * five assets on its defaults and nothing else of its own, and -- spawned for a player the way a game
- * spawns it -- the C++ class's behaviour arriving intact: its own copies of the context and actions
- * on the player, a click through the controller, the D-pad in the D-pad's direction, the space bar as
+ * spawns it -- the C++ class's behaviour arriving intact: the shipped context and actions on the
+ * player, a click through the controller, the D-pad in the D-pad's direction, the space bar as
  * confirm, and a click that still lands while the game is paused.
  *
  * The driver's rigs cannot host this class: they swap their own input module into the C++ presets
@@ -196,7 +196,7 @@ namespace DreamEnhancedPresetAssetTestLocal
 			}
 			// What AActor::PostActorConstruction does in a world whose actors are initialized:
 			// PreInitializeComponents is where AutoReceiveInput claims player 0, DispatchBeginPlay is
-			// where the preset copies its actions, binds, and pushes its context.
+			// where the preset binds its actions and pushes its context.
 			if (!World->AreActorsInitialized() && !Preset->IsActorInitialized())
 			{
 				Preset->PreInitializeComponents();
@@ -415,14 +415,13 @@ bool FDreamEnhancedPresetAssetIsTheNativeActorTest::RunTest(const FString& Param
 }
 
 /**
- * Spawned for a player, the preset does what the C++ class does with the shipped assets: pushes its
- * own copy of the context (so the pause setting can be written on copies, never on the shared assets)
- * whose left button is mapped to its copy of IA_Trigger, and a left click through the controller
- * comes out of its handler as the pointer's left button, pressed and then released.
+ * Spawned for a player, the preset does what the C++ class does with the shipped assets: pushes the shipped context
+ * itself, whose left button is mapped to the shipped IA_Trigger, and a left click through the controller comes out
+ * of its handler as the pointer's left button, pressed and then released.
  */
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamEnhancedPresetAssetContextTest,
-	"DreamGUI.Input.EnhancedPreset.ForAPlayerItPushesItsOwnCopyOfTheShippedContextAndALeftClickReachesItsPointer",
+	"DreamGUI.Input.EnhancedPreset.ForAPlayerItPushesTheShippedContextAndALeftClickReachesItsPointer",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
 
 bool FDreamEnhancedPresetAssetContextTest::RunTest(const FString& Parameters)
@@ -444,12 +443,9 @@ bool FDreamEnhancedPresetAssetContextTest::RunTest(const FString& Parameters)
 		return false;
 	}
 	TestTrue(TEXT("The context it pushed is on the player"), Host.EnhancedInput->HasMappingContext(PushedContext));
-	TestTrue(TEXT("...and it is the preset's own copy, not the shared asset"), PushedContext != ShippedContext);
-	TestFalse(TEXT("The shared asset itself was not pushed"), ShippedContext != nullptr
-		&& Host.EnhancedInput->HasMappingContext(Cast<UInputMappingContext>(ShippedContext)));
-	TestTrue(TEXT("Its left-button action is a copy"), LeftAction != ShippedTrigger);
-	TestSamePtr(TEXT("...of the shipped IA_Trigger"), static_cast<const UObject*>(Host.Preset->GetOriginalAction(LeftAction)), ShippedTrigger);
-	TestTrue(TEXT("The player's mappings take the left button to that copy"), PlayerMaps(*Host.EnhancedInput, EKeys::LeftMouseButton, LeftAction));
+	TestSamePtr(TEXT("...and it is the shipped context itself"), static_cast<const UObject*>(PushedContext), ShippedContext);
+	TestSamePtr(TEXT("Its left-button action is the shipped IA_Trigger"), static_cast<const UObject*>(LeftAction), ShippedTrigger);
+	TestTrue(TEXT("The player's mappings take the left button to it"), PlayerMaps(*Host.EnhancedInput, EKeys::LeftMouseButton, LeftAction));
 
 	Host.SendKey(EKeys::LeftMouseButton, IE_Pressed);
 	Host.RunFrame();
@@ -524,10 +520,11 @@ bool FDreamEnhancedPresetAssetNavigationTest::RunTest(const FString& Parameters)
 }
 
 /**
- * The pause fix, which lives in the C++ class's runtime copies: Enhanced Input drops a paused frame's
- * triggers for an action whose bTriggerWhenPaused is false, which the shipped actions are, so the old
- * graph -- bound to the shipped assets -- went deaf to the mouse in a paused game's menu. The preset's
- * copies take the flag from UDreamUISettings instead, and the shared assets stay as they were.
+ * The pause fix: Enhanced Input drops a paused frame's triggers for an action whose bTriggerWhenPaused is false, which
+ * the shipped actions were, so the old graph went deaf to the mouse in a paused game's menu. The shipped actions
+ * trigger while paused now, and the preset decides a paused game per event from UDreamUISettings, as the legacy preset
+ * does: with the UI going on while the game is paused, a paused click reaches the pointer; with the UI paused along
+ * with the game, it reaches nothing.
  */
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamEnhancedPresetAssetPausedClickTest,
@@ -538,8 +535,8 @@ bool FDreamEnhancedPresetAssetPausedClickTest::RunTest(const FString& Parameters
 {
 	using namespace DreamEnhancedPresetAssetTestLocal;
 
-	// The setting the copies follow, pinned to its default for the test: UI that goes on answering
-	// while the game is paused. Read when the preset begins play, so set before it is spawned.
+	// The setting the preset asks as each input arrives, pinned to its default for the test: UI that goes on
+	// answering while the game is paused.
 	UDreamUISettings* Settings = GetMutableDefault<UDreamUISettings>();
 	const bool bAffectedBefore = Settings->bScreenSpaceUIAffectByGamePause;
 	Settings->bScreenSpaceUIAffectByGamePause = false;
@@ -552,12 +549,12 @@ bool FDreamEnhancedPresetAssetPausedClickTest::RunTest(const FString& Parameters
 	}
 	const UInputAction* ShippedTrigger = LoadObject<UInputAction>(nullptr, ShippedAssets[1].Path);
 	const UInputAction* LeftAction = Cast<UInputAction>(ReadObjectProperty(Host.Preset, TEXT("TriggerLeftAction")));
-	if (!TestNotNull(TEXT("The shipped IA_Trigger loads"), ShippedTrigger) || !TestNotNull(TEXT("and the preset holds its copy"), LeftAction))
+	if (!TestNotNull(TEXT("The shipped IA_Trigger loads"), ShippedTrigger) || !TestNotNull(TEXT("and the preset holds it"), LeftAction))
 	{
 		return false;
 	}
-	TestFalse(TEXT("The shipped action does not trigger while paused, which is why the copy exists"), ShippedTrigger->bTriggerWhenPaused);
-	TestTrue(TEXT("The preset's copy does, as the settings ask"), LeftAction->bTriggerWhenPaused);
+	TestTrue(TEXT("The shipped action triggers while paused"), ShippedTrigger->bTriggerWhenPaused);
+	TestTrue(TEXT("...and it is the action the preset holds"), LeftAction == ShippedTrigger);
 
 	UWorld* World = Host.Scope.World;
 	AWorldSettings* WorldSettings = World->GetWorldSettings();
@@ -585,6 +582,14 @@ bool FDreamEnhancedPresetAssetPausedClickTest::RunTest(const FString& Parameters
 	Host.RunFrame();
 	TestFalse(TEXT("and its release lets it go"), Pointer->bNowIsTriggerPressed);
 	TestTrue(TEXT("The game stayed paused throughout"), World->IsPaused());
+
+	// The UI paused along with the game: the same click reaches nothing.
+	Settings->bScreenSpaceUIAffectByGamePause = true;
+	Host.SendKey(EKeys::LeftMouseButton, IE_Pressed);
+	Host.RunFrame();
+	TestFalse(TEXT("With the UI paused along with the game, a paused left click does not press the pointer"), Pointer->bNowIsTriggerPressed);
+	Host.SendKey(EKeys::LeftMouseButton, IE_Released);
+	Host.RunFrame();
 	return true;
 }
 

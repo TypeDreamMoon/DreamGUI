@@ -52,10 +52,8 @@
  * is what UWorld::IsPaused asks for) and enters through the player controller of a rig built with one
  * of the preset actors as its input host.
  *
- * The last two are about the Enhanced Input preset's runtime copies of its actions: it plays with
- * copies (so their pause flag can follow the setting without writing to an asset) and keeps the
- * originals bound beside them, so a key a project's own context maps to an original still reaches the
- * UI -- once, however many of the two roads one input comes down.
+ * The last is about the Enhanced Input preset's actions: a key a project's own context maps to one of
+ * them reaches the UI, in a paused game too.
  */
 namespace DreamPausedGameHostTestLocal
 {
@@ -316,20 +314,19 @@ bool FDreamPausedGameHostKeySelectorCaptureTest::RunTest(const FString& Paramete
 }
 
 /**
- * The Enhanced Input preset plays with copies of its actions, and a project's own context may map one
- * more key to the ORIGINAL -- a pad button on the UI click. That key clicks the button, because the
- * original stays bound beside its copy; and it pauses as the original's own asset says (here, as the
- * shipped actions do, not while paused), while the preset's own key, through the copy, follows the
- * DreamUI setting and still clicks in the paused game.
+ * The Enhanced Input preset binds the actions it is given, as they are, and a project's own context may map one more
+ * key to one of them -- a pad button on the UI click. That key clicks the button in play and in a paused game alike:
+ * the action triggers while paused, as the shipped ones do, and the preset decides a paused game per event from the
+ * DreamUI setting, which by default keeps screen-space UI answering.
  *
  * Standalone has no Input Actions, so only the Enhanced preset is asked.
  */
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
-	FDreamPausedGameHostOriginalActionKeyTest,
-	"DreamGUI.Driver.GameHost.Paused.AKeyAProjectMapsToTheOriginalActionClicksAndPausesAsThatActionSays",
+	FDreamPausedGameHostProjectKeyTest,
+	"DreamGUI.Driver.GameHost.Paused.AKeyAProjectMapsToThePresetsActionClicksInAPausedGameToo",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
 
-bool FDreamPausedGameHostOriginalActionKeyTest::RunTest(const FString& Parameters)
+bool FDreamPausedGameHostProjectKeyTest::RunTest(const FString& Parameters)
 {
 	using namespace DreamPausedGameHostTestLocal;
 	const FHostCase& Case = EnhancedHost;
@@ -348,14 +345,12 @@ bool FDreamPausedGameHostOriginalActionKeyTest::RunTest(const FString& Parameter
 	{
 		return false;
 	}
-	const UInputAction* Copy = InputActor->GetDriverTriggerAction(EDreamUIMouseButtonType::Left);
-	const UInputAction* Original = InputActor->GetOriginalAction(Copy);
-	if (!TestNotNull(*Under(Case, TEXT("The actor has its left-button action")), Copy)
-		|| !TestTrue(Under(Case, TEXT("and in play it is a copy of the one that was set, which is still there")), Original != nullptr && Original != Copy))
+	const UInputAction* Action = InputActor->GetDriverTriggerAction(EDreamUIMouseButtonType::Left);
+	if (!TestNotNull(*Under(Case, TEXT("The actor has its left-button action")), Action))
 	{
 		return false;
 	}
-	TestFalse(Under(Case, TEXT("The original, like the shipped action, does not trigger while paused")), Original->bTriggerWhenPaused);
+	TestTrue(Under(Case, TEXT("The action triggers while paused, as the shipped one does")), Action->bTriggerWhenPaused);
 
 	UDreamButton* Button = MakeListenedButton(Rig, Listener.Get());
 	if (!TestNotNull(*Under(Case, TEXT("A button can be made on the rig")), Button))
@@ -364,9 +359,9 @@ bool FDreamPausedGameHostOriginalActionKeyTest::RunTest(const FString& Parameter
 	}
 	Rig.PumpFrames(1);
 
-	// The project's own context: one more key, mapped to the original, above the preset's context.
+	// The project's own context: one more key, mapped to the preset's action, above the preset's context.
 	UInputMappingContext* ProjectContext = NewObject<UInputMappingContext>(GetTransientPackage(), NAME_None, RF_Transient);
-	ProjectContext->MapKey(Original, ProjectKey());
+	ProjectContext->MapKey(Action, ProjectKey());
 	FModifyContextOptions ApplyNow;
 	ApplyNow.bForceImmediately = true;
 	Subsystem->AddMappingContext(ProjectContext, 1, ApplyNow);
@@ -378,7 +373,7 @@ bool FDreamPausedGameHostOriginalActionKeyTest::RunTest(const FString& Parameter
 	TestTrue(Under(Case, TEXT("The pointer moves onto the button")), Rig.Driver()->Find(FDreamBy::Widget(Button))->Hover());
 	TestTrue(Under(Case, TEXT("The project's key, and the frame its release lands in, complete")),
 		Rig.Driver()->Sequence().Type(ProjectKey()).WaitFrames(1).Perform());
-	TestEqual(Under(Case, TEXT("The key the project mapped to the original pressed the button once")), Listener->PressedCount, 1);
+	TestEqual(Under(Case, TEXT("The key the project mapped to the action pressed the button once")), Listener->PressedCount, 1);
 	TestEqual(Under(Case, TEXT("and clicked it once")), Listener->ClickedCount, 1);
 
 	UWorld* World = Rig.GetWorld();
@@ -392,106 +387,10 @@ bool FDreamPausedGameHostOriginalActionKeyTest::RunTest(const FString& Parameter
 	};
 	TestTrue(Under(Case, TEXT("The project's key while paused completes")),
 		Rig.Driver()->Sequence().Type(ProjectKey()).WaitFrames(1).Perform());
-	TestEqual(Under(Case, TEXT("Paused, the original -- which its asset keeps from triggering while paused -- clicked nothing")),
-		Listener->ClickedCount, 1);
+	TestEqual(Under(Case, TEXT("Paused, the project's key clicked the button again")), Listener->ClickedCount, 2);
 	TestTrue(Under(Case, TEXT("A click while paused completes")), Rig.Driver()->Find(FDreamBy::Widget(Button))->Click());
-	TestEqual(Under(Case, TEXT("while the preset's own button, through the copy, clicked in the paused game")), Listener->ClickedCount, 2);
+	TestEqual(Under(Case, TEXT("and so did the preset's own mouse button")), Listener->ClickedCount, 3);
 	TestTrue(Under(Case, TEXT("The project's key went through the player controller")), ControllerSawKey(Rig, ProjectKey()));
-	return true;
-}
-
-/**
- * One input down both roads is one input. When the project's context maps the same key to the
- * original -- above the preset's context, with an action that lets its key through to lower contexts
- * (bConsumeInput false, which Enhanced Input then does not stop at) -- a single press starts both the
- * original and the copy in the same frame. Both are bound to the same handler; the button is pressed,
- * released and clicked once each, as SButton is by one mouse click.
- *
- * The test first shows the premise -- both mappings are on the player, and both actions did start --
- * so a single press cannot pass it by only ever having taken one road.
- */
-IMPLEMENT_SIMPLE_AUTOMATION_TEST(
-	FDreamPausedGameHostOneInputTwoRoadsTest,
-	"DreamGUI.Driver.GameHost.Paused.OneMouseClickComingDownTheCopyAndTheOriginalAtOnceIsOneClick",
-	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
-
-bool FDreamPausedGameHostOneInputTwoRoadsTest::RunTest(const FString& Parameters)
-{
-	using namespace DreamPausedGameHostTestLocal;
-	const FHostCase& Case = EnhancedHost;
-	TStrongObjectPtr<UDreamPressInteractionListener> Listener(NewObject<UDreamPressInteractionListener>());
-	FDreamDriverRig Rig = FDreamDriverRig::Headless(OptionsFor(Case.Host));
-	Rig.BindTest(this);
-	if (!TestTrue(RigCameUp(Case, Rig), Rig.IsUsable()))
-	{
-		return false;
-	}
-	ADreamDriverEnhancedInputActor* InputActor = Cast<ADreamDriverEnhancedInputActor>(Rig.Context().InputActor);
-	ULocalPlayer* LocalPlayer = Rig.Context().LocalPlayer;
-	UEnhancedInputLocalPlayerSubsystem* Subsystem = LocalPlayer != nullptr ? LocalPlayer->GetSubsystem<UEnhancedInputLocalPlayerSubsystem>() : nullptr;
-	APlayerController* Controller = Rig.GetPlayerController();
-	UEnhancedPlayerInput* PlayerInput = Controller != nullptr ? Cast<UEnhancedPlayerInput>(Controller->PlayerInput) : nullptr;
-	UEnhancedInputComponent* InputComponent = InputActor != nullptr ? Cast<UEnhancedInputComponent>(InputActor->InputComponent) : nullptr;
-	if (!TestNotNull(*Under(Case, TEXT("The input actor is the Enhanced Input one")), InputActor)
-		|| !TestNotNull(*Under(Case, TEXT("The local player has the Enhanced Input subsystem")), Subsystem)
-		|| !TestNotNull(*Under(Case, TEXT("The player's PlayerInput is an EnhancedPlayerInput")), PlayerInput)
-		|| !TestNotNull(*Under(Case, TEXT("The actor's input component is an EnhancedInputComponent")), InputComponent))
-	{
-		return false;
-	}
-	const UInputAction* Copy = InputActor->GetDriverTriggerAction(EDreamUIMouseButtonType::Left);
-	const UInputAction* Original = InputActor->GetOriginalAction(Copy);
-	if (!TestTrue(Under(Case, TEXT("The left-button action in play is a copy of one that is still there")),
-		Copy != nullptr && Original != nullptr && Original != Copy))
-	{
-		return false;
-	}
-
-	UDreamButton* Button = MakeListenedButton(Rig, Listener.Get());
-	if (!TestNotNull(*Under(Case, TEXT("A button can be made on the rig")), Button))
-	{
-		return false;
-	}
-	Rig.PumpFrames(1);
-
-	// The original is the driver's in-memory stand-in for the shipped action, not an asset, so the test
-	// may let it pass its key on; put back afterwards all the same.
-	UInputAction* MutableOriginal = const_cast<UInputAction*>(Original);
-	const bool bOriginalConsumed = MutableOriginal->bConsumeInput;
-	MutableOriginal->bConsumeInput = false;
-	ON_SCOPE_EXIT
-	{
-		MutableOriginal->bConsumeInput = bOriginalConsumed;
-	};
-	UInputMappingContext* ProjectContext = NewObject<UInputMappingContext>(GetTransientPackage(), NAME_None, RF_Transient);
-	ProjectContext->MapKey(Original, EKeys::LeftMouseButton);
-	FModifyContextOptions ApplyNow;
-	ApplyNow.bForceImmediately = true;
-	Subsystem->AddMappingContext(ProjectContext, 1, ApplyNow);
-	ON_SCOPE_EXIT
-	{
-		Subsystem->RemoveMappingContext(ProjectContext, ApplyNow);
-	};
-	if (!TestTrue(Under(Case, TEXT("The player maps the left mouse button to the original, from the project's context")),
-			PlayerInputMaps(*PlayerInput, EKeys::LeftMouseButton, Original))
-		|| !TestTrue(Under(Case, TEXT("and to the copy, from the preset's")), PlayerInputMaps(*PlayerInput, EKeys::LeftMouseButton, Copy)))
-	{
-		return false;
-	}
-
-	const TSharedRef<int32> CopyStarted = MakeShared<int32>(0);
-	const TSharedRef<int32> OriginalStarted = MakeShared<int32>(0);
-	InputComponent->BindActionInstanceLambda(Copy, ETriggerEvent::Started,
-		[CopyStarted](const FInputActionInstance&) { ++(*CopyStarted); });
-	InputComponent->BindActionInstanceLambda(Original, ETriggerEvent::Started,
-		[OriginalStarted](const FInputActionInstance&) { ++(*OriginalStarted); });
-
-	TestTrue(Under(Case, TEXT("Clicking the button completes")), Rig.Driver()->Find(FDreamBy::Widget(Button))->Click());
-	TestEqual(Under(Case, TEXT("The press came down the copy's road")), *CopyStarted, 1);
-	TestEqual(Under(Case, TEXT("and down the original's, in the same frame")), *OriginalStarted, 1);
-	TestEqual(Under(Case, TEXT("yet the button was pressed once")), Listener->PressedCount, 1);
-	TestEqual(Under(Case, TEXT("released once")), Listener->ReleasedCount, 1);
-	TestEqual(Under(Case, TEXT("and clicked once")), Listener->ClickedCount, 1);
 	return true;
 }
 
