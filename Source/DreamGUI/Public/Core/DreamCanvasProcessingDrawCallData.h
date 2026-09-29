@@ -11,6 +11,14 @@ struct FDreamCanvasPreparedDrawCallData
 	uint64 FrameNumber = 0;
 	/** Decided on the game thread; see UDreamCanvas::BatchDrawCallAsync for when it may be true. */
 	bool bCullElementsOutsideCanvasRect = false;
+	/**
+	 * The geometry lists the canvas's mesh sections were built from when this was prepared. A draw call built from one
+	 * of them, or from geometries laid out as one of them is, takes that section back, as it is or with the vertices that
+	 * differ written in place (UDreamUIMeshComponent::ClaimPooledMeshSections), so the batching leaves its vertices
+	 * uncombined; FDreamUIDrawCall::CombineIfPending combines them on the game thread should the section not be there
+	 * after all.
+	 */
+	TArray<TArray<TSharedPtr<const FDreamUIGeometry>>> GeometryListsOnSections;
 };
 struct FDreamCanvasPendingDrawCallData
 {

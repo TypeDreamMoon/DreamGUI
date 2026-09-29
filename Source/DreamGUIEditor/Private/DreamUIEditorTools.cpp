@@ -2,6 +2,8 @@
 // Modified by TypeDreamMoon.
 
 #include "DreamUIEditorTools.h"
+#include "DreamGUIEditorSubsystem.h"
+#include "Core/Components/DreamText.h"
 #include "Styling/AppStyle.h"
 #include "Widgets/Notifications/SNotificationList.h"
 #include "Framework/Notifications/NotificationManager.h"
@@ -29,6 +31,22 @@
 #include "Utils/DreamUIUtils.h"
 
 #define LOCTEXT_NAMESPACE "DreamGUIEditorTools"
+
+void FDreamUIEditorTools::ApplyEditorDefaults(UDreamVisual* InVisual)
+{
+	// The font last chosen for a text in a details panel, for the next text the editor makes. Only here: a
+	// text made anywhere else takes the project's default, whatever somebody clicked earlier.
+	UDreamText* Text = Cast<UDreamText>(InVisual);
+	const UDreamGUIEditorSubsystem* EditorSubsystem = UDreamGUIEditorSubsystem::Get();
+	if (Text != nullptr && EditorSubsystem != nullptr)
+	{
+		if (UDreamUIFontData_BaseObject* Font = EditorSubsystem->GetLastPickedFont())
+		{
+			Text->SetFont(Font);
+		}
+	}
+}
+
 
 
 FEditingWidgetChangedDelegate FDreamUIEditorTools::OnEditingWidgetChanged;
@@ -311,7 +329,7 @@ UDreamWidget* FDreamUIEditorTools::CreateWidgetAndReturn(TFunction<UDreamWidget*
 				InTemplate->SetAnchoredPosition(FVector2D::ZeroVector);
 				if (VisualClass)
 				{
-					InTemplate->CreateNewVisual(VisualClass);
+					FDreamUIEditorTools::ApplyEditorDefaults(InTemplate->CreateNewVisual(VisualClass));
 				}
 				if (Callback)
 				{
@@ -344,7 +362,7 @@ UDreamWidget* FDreamUIEditorTools::CreateWidgetAndReturn(TFunction<UDreamWidget*
 		} 
 		if (VisualClass)
 		{
-			NewWidget->CreateNewVisual(VisualClass);
+			FDreamUIEditorTools::ApplyEditorDefaults(NewWidget->CreateNewVisual(VisualClass));
 		}
 		if (Callback)
 		{

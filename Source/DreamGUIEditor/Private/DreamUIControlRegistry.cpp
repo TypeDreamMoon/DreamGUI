@@ -1,16 +1,17 @@
 ﻿// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
 
 #include "DreamUIControlRegistry.h"
+#include "DreamUIEditorTools.h"
 // Explicit: this used to arrive through whichever designer header the unity blob happened to pull
 // in first, which is not a dependency, it is a coincidence.
 #include "DreamWidgetBlueprint.h"
 #include "Core/DreamGUISettings.h"
 
-#include "Core/Components/DreamBackgroundBlur.h"
-#include "Core/Components/DreamBackgroundPixelate.h"
+#include "Extensions/Effects/DreamBackgroundBlur.h"
+#include "Extensions/Effects/DreamBackgroundPixelate.h"
 #include "Core/Components/DreamCustomMesh.h"
 #include "Core/Components/DreamImage.h"
-#include "Core/Components/DreamPixelSort.h"
+#include "Extensions/Effects/DreamPixelSort.h"
 #include "Core/Components/DreamLayoutSelfAspectRatio.h"
 #include "Core/Components/DreamPanelLayouts.h"
 #include "Core/Components/DreamSprite.h"
@@ -59,8 +60,8 @@
 #include "Extensions/DreamPostProcessRenderElement_Text.h"
 #include "Extensions/DreamRing.h"
 #include "Extensions/DreamStaticMesh.h"
-#include "Extensions/DreamUMGWidget.h"
-#include "Extensions/DreamUMGWidgetInteraction.h"
+#include "UMG/DreamUMGWidget.h"
+#include "UMG/DreamUMGWidgetInteraction.h"
 #include "Extensions/UISpriteSequencePlayer.h"
 #include "Extensions/UISpriteSheetTexturePlayer.h"
 #include "Interaction/DreamContentWidget.h"
@@ -71,6 +72,7 @@
 #include "Interaction/UINavigationInputSelectionHandler.h"
 #include "Interaction/UIScrollView.h"
 #include "Interaction/UIStandardControls.h"
+#include "Core/Components/DreamLayoutSelfSpacer.h"
 #include "MeshModifier/DreamMeshModifierGradientColor.h"
 #include "MeshModifier/DreamMeshModifierLongShadow.h"
 #include "MeshModifier/DreamMeshModifierOutline.h"
@@ -95,6 +97,9 @@ namespace DreamUIControlRegistryLocal
 	static UDreamWidget* CreateChild(UDreamWidget* Parent, const TCHAR* Name, UClass* VisualClass = nullptr)
 	{
 		UDreamWidget* Child = NewObject<UDreamWidget>(Parent->GetOuter(), UDreamWidget::StaticClass(), NAME_None, RF_Public | RF_Transactional);
+		// A part is a widget the author edits like any other, born here rather than in the tree's
+		// ConstructWidget, so it takes its identity here too. Without one it was saved without one.
+		Child->AssignNewWidgetGuid();
 		Child->SetDisplayName(Name);
 		Child->OnRegister();
 		Child->SetParent(Parent, false);
@@ -102,7 +107,7 @@ namespace DreamUIControlRegistryLocal
 		Child->SetAnchorOffset(FMargin(0));
 		if (VisualClass)
 		{
-			Child->CreateNewVisual(VisualClass);
+			FDreamUIEditorTools::ApplyEditorDefaults(Child->CreateNewVisual(VisualClass));
 		}
 		return Child;
 	}

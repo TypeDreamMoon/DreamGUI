@@ -1,17 +1,17 @@
 ﻿// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
 
 #include "Core/DreamUserWidget.h"
-#include "Core/DreamUIEachAdapter.h"
+#include "Core/DreamUIEachBindingHandler.h"
 #include "Core/DreamWidgetTree.h"
 #include "Core/DreamWidgetGeneratedClass.h"
+#include "Core/DreamUIInputServices.h"
 #include "Core/DreamUIManager.h"
+#include "Core/DreamUIRuntimeObject.h"
 #include "Core/DreamScreenUISubsystem.h"
 #include "Core/Components/DreamCanvas.h"
-#include "Event/DreamEventSystem.h"
 #include "Event/DreamGestureEventData.h"
 #include "Event/DreamKeyEventData.h"
 #include "Interaction/DreamDragDropOperation.h"
-#include "Interaction/DreamUINavigationScope.h"
 #include "Kismet/GameplayStatics.h"
 #include "Sound/SoundBase.h"
 #include "Animation/DreamWidgetAnimation.h"
@@ -132,12 +132,27 @@ void RegisterDreamWidgetHierarchy(UDreamWidget* InRoot)
 	// Everything this subtree inherits from the parent it was just attached to. OnRegister does
 	// this itself only for a hierarchy ROOT; a subtree parented through SetParentBeforeRegister
 	// raises no attach event, so without this it registers holding its birth defaults -- visible
-	// under a hidden parent, raycastable under a disabled one, and off the parent's render canvas.
+	// under a hidden parent, raycastable under a disabled one, off the parent's render canvas, and
+	// placed wherever it was last composed instead of on its parent (a control made at its default
+	// position on a world-space panel sat at the world origin).
 	// One call here rather than at each of the four call sites, because this function IS the seam
-	// every one of them goes through.
+	// every one of them goes through. After the OnRegister loop rather than before it: registration
+	// is what refreshes the render-transform bits the world transform is composed from.
 	if (InRoot->GetParent() != nullptr)
 	{
 		InRoot->RefreshInheritedStateFromParentChain();
+	}
+	else
+	{
+		// A hierarchy root inherits no state -- OnRegister ran the state walks for it -- but it still has a
+		// place: its own transform, over the scene component its canvas follows or over nothing, and
+		// nothing had composed that either. A root's contents are hung under it before this point
+		// (instancing, duplication, the rebuild after a recompile), each part composed against whatever the
+		// root was at that moment, and a copy's world transforms are not copied at all -- only what a widget
+		// serializes is -- so a copy of a root standing off the origin sat AT the origin, its whole subtree
+		// with it, until something moved it. The same recompute the parented branch ends with, after the
+		// same OnRegister loop and for the same reason.
+		InRoot->CalculateObjectToWorldTransform(true);
 	}
 
 	if (UDreamUIManagerWorldSubsystem* Manager = UDreamUIManagerWorldSubsystem::GetInstance(InRoot->GetWorld()))
@@ -169,14 +184,14 @@ void RegisterDreamWidgetHierarchy(UDreamWidget* InRoot)
 		{
 			for (UDreamWidget* Widget : AllWidgets)
 			{
-				// Skipped the way OnRegister above skips an already-registered widget, and for the same
-				// reason: this walk does not own every widget it covers. It collects the whole subtree,
-				// nested user widgets and all, and anything built by CreateDreamWidget has already
-				// registered and begun on its own -- a nested widget when its own class initialized it,
-				// an `each` list's cells the moment the list was given a data source, which is before
-				// the containing widget is registered at all. BeginPlay asserts rather than tolerating a
-				// second call, so the caller is the one that has to know.
-				if (IsValid(Widget) && !Widget->HasBegunPlay())
+				// This walk does not own every widget it covers. It collects the whole subtree, nested user
+				// widgets and all, and anything built by CreateDreamWidget has already registered and
+				// begun on its own -- a nested widget when its own class initialized it, an `each` list's
+				// cells the moment the list was given a data source, which is before the containing
+				// widget is registered at all. BeginPlay is a no-op for those; asking only of the widgets
+				// still waiting to begin also skips one an earlier widget's BeginPlay unregistered, which
+				// BeginPlay would report as never having been registered.
+				if (IsValid(Widget) && Widget->HasRegistered() && !Widget->HasBegunPlay())
 				{
 					Widget->BeginPlay();
 				}
@@ -483,126 +498,6 @@ void UDreamUserWidget::NativeOnSlotContentAttached()
 	OnSlotContentAttached();
 }
 
-bool UDreamUserWidget::NeedsReinitializeFromClass() const
-{
-	// The signature of a reinstanced survivor: contents underneath, no tree to call them, and no
-	// record of ever having been initialized. A widget that simply has not been initialized yet has
-	// no children either, which is what keeps this from firing on one.
-	if (bInitialized || IsValid(WidgetTree) || IsTemplate())
-	{
-		return false;
-	}
-	// LIVE contents, which is not the same as a non-empty array. The reinstancer's copy shares the
-	// original's children; when the original's owner tears it down instead of adopting the copy --
-	// the designer's preview host does exactly that -- those children are destroyed, and the next
-	// collection leaves the copy holding nulls. Such a copy has nothing on screen to repair and nobody
-	// who owns it: counting its holes as contents sent it through a rebuild that then registered a
-	// hierarchy for an orphan, and the first walk over the array fell into the hole.
-	bool bHasLiveContents = false;
-	for (const UDreamWidget* Child : GetChildren())
-	{
-		if (IsValid(Child))
-		{
-			bHasLiveContents = true;
-			break;
-		}
-	}
-	return bHasLiveContents
-		&& UDreamWidgetGeneratedClass::FindWidgetTreeArchetype(GetClass()) != nullptr;
-}
-
-void UDreamUserWidget::ReinitializeFromClass()
-{
-	ReinitializeFromArchetype(UDreamWidgetGeneratedClass::FindWidgetTreeArchetype(GetClass()));
-}
-
-void UDreamUserWidget::ReinitializeFromArchetype(UDreamWidgetTree* InArchetype)
-{
-	if (IsTemplate())
-	{
-		return;
-	}
-	// Nothing to rebuild FROM. Destroying the contents anyway would turn a widget that still works
-	// into an empty one -- strictly worse than the half-dead state this exists to repair -- and the
-	// two ways to get here are both ordinary: a class that declares no hierarchy of its own (a
-	// logic-only subclass, a native class) and one whose Blueprint has not compiled yet.
-	if (!IsValid(InArchetype))
-	{
-		UE_LOG(DreamGUI, Warning,
-			TEXT("[%s].%d '%s' has no hierarchy to rebuild from, so its contents are left as they are."),
-			ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *GetPathDisplayName());
-		return;
-	}
-	// The host's widgets, which are not this class's to destroy. NamedSlotContent is a persistent
-	// Instanced map and therefore the one thing that survives reinstancing intact, which is exactly
-	// what makes "mine" and "the host's" separable here at all.
-	TSet<const UDreamWidget*> HostContent;
-	for (const TPair<FName, TObjectPtr<UDreamWidget>>& SlotPair : NamedSlotContent)
-	{
-		if (IsValid(SlotPair.Value))
-		{
-			HostContent.Add(SlotPair.Value);
-		}
-	}
-
-	// Everything else under this widget came from the OLD class's tree. Detach the host's content
-	// first so destroying the rest cannot take it down with it -- AttachNamedSlotContent puts it back
-	// into the new tree's slots a moment later.
-	//
-	// Through whichever door matches the widget's state, the same pair AttachNamedSlotContent uses on
-	// the way back in: SetParentBeforeRegister asserts !bIsRegistered, and the host content of a LIVE
-	// instance -- which is every instance this function exists for -- is registered.
-	//
-	// Holes first. A reinstanced copy can arrive with null entries where destroyed children were (see
-	// NeedsReinitializeFromClass), the two loops below skip what is not valid and so would leave them
-	// in place, and everything after this -- instancing, slot adoption, registration -- walks the
-	// array assuming each entry is a widget.
-	EnsureUIChildrenValid();
-	const TArray<UDreamWidget*> PreviousChildren = GetChildren();
-	for (UDreamWidget* Child : PreviousChildren)
-	{
-		if (IsValid(Child) && HostContent.Contains(Child))
-		{
-			if (Child->HasRegistered())
-			{
-				Child->TrySetParent(nullptr, false);
-			}
-			else
-			{
-				Child->SetParentBeforeRegister(nullptr);
-			}
-		}
-	}
-	for (UDreamWidget* Child : PreviousChildren)
-	{
-		if (IsValid(Child) && !HostContent.Contains(Child))
-		{
-			Child->DestroyWidget();
-		}
-	}
-	// And again, for what the loop above just produced. A reinstanced copy's children arrive without
-	// their Parent link (it is DuplicateTransient), so a child destroyed here cannot take itself out of
-	// this array the way a properly attached one does -- it stays behind as a garbage entry, ahead of
-	// the root the rebuild is about to append.
-	EnsureUIChildrenValid();
-
-	// Back to the pre-Initialize state, then through the ordinary road: the archetype is instanced,
-	// the by-name bindings resolve against it, and the host's slot content is re-attached.
-	//
-	// InitializeFromArchetype rather than Initialize, for the same reason InitializeWidgetStatic takes
-	// its archetype as a parameter: the caller may know which hierarchy this instance is being rebuilt
-	// from -- the designer's authoring tree, a test's fixture -- and re-deriving it from the class here
-	// would silently rebuild the wrong one, or nothing at all for a class that declares none.
-	EachAdapters.Reset();
-	ResolvedBindings.Reset();
-	PolledBindingCount = 0;
-	bInitialized = false;
-	WidgetTree = nullptr;
-	InitializeFromArchetype(InArchetype);
-	// Registration is what makes the new subtree lay out and draw; nothing else re-registers it.
-	RegisterDreamWidgetHierarchy(this);
-}
-
 UDreamWidget* UDreamUserWidget::GetWidgetFromName(FName InVariableName) const
 {
 	// The tree's own resolver, which is the same one the compiler declares variables with -- so a
@@ -686,11 +581,9 @@ void UDreamUserWidget::NativeOnDestruct()
 	// polled bindings had below, in the one other list this widget puts itself on.
 	StopListeningForAllInputActions();
 	UDreamUIManagerWorldSubsystem::UnregisterDreamUICultureChangedEvent(this);
-	// Stop being polled. DestroyWidget unregisters, ends play and detaches without ever marking the
-	// object garbage, so the manager's own !IsValid sweep never sees this widget go -- it would keep
-	// calling the binding source functions of a widget that has run EndPlay until the next full GC.
-	// The manager drops it on unregister as well; this covers a widget that ends play without ever
-	// having been registered.
+	// Stop being polled, from the moment play ends rather than from the unregister that follows it:
+	// between the two a binding source function would be called on a widget that has run EndPlay. The
+	// manager drops it on unregister as well.
 	if (UDreamUIManagerWorldSubsystem* Manager = UDreamUIManagerWorldSubsystem::GetInstance(GetWorld()))
 	{
 		Manager->RemovePropertyBindingUser(this);
@@ -825,22 +718,16 @@ FDreamUIActionHandle UDreamUserWidget::ListenForInputAction(const FDataTableRowH
 	FDreamUIActionExecutedDelegate InCallback, bool bDisplayInActionBar)
 {
 	FDreamUIActionHandle Handle;
-	UDreamUIActionRouter* Router = UDreamUIActionRouter::Get(this);
-	if (Router == nullptr)
+	UDreamUIInputServices* Services = UDreamUIInputServices::Get(this);
+	if (Services == nullptr || !Services->CanListenForActions())
 	{
 		UE_LOG(DreamGUI, Warning, TEXT("[%s].%d No action router in this world; '%s' heard nothing."),
 			ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *GetPathDisplayName());
 		return Handle;
 	}
-	// Scoped to the screen this widget is inside, so the binding is live only while that screen is in
-	// front. A widget with no scope above it binds globally, which is the honest reading of "there is
-	// no screen this belongs to".
-	UDreamUINavigationScope* Scope = nullptr;
-	for (UDreamWidget* Walker = this; IsValid(Walker) && Scope == nullptr; Walker = Walker->GetParent())
-	{
-		Scope = Walker->GetComponent<UDreamUINavigationScope>();
-	}
-	Handle = Router->RegisterAction(Scope, InAction, InCallback, GetOwningPlayerIndex(), bDisplayInActionBar);
+	// Scoped by the input system to the screen this widget is inside, so the binding is live only while
+	// that screen is in front; with no screen above it, it binds globally.
+	Handle = Services->RegisterWidgetAction(this, InAction, InCallback, GetOwningPlayerIndex(), bDisplayInActionBar);
 	if (Handle.IsValidHandle())
 	{
 		ListenedInputActions.Add(Handle);
@@ -850,26 +737,26 @@ FDreamUIActionHandle UDreamUserWidget::ListenForInputAction(const FDataTableRowH
 
 void UDreamUserWidget::StopListeningForInputAction(const FDreamUIActionHandle& InHandle)
 {
-	if (UDreamUIActionRouter* Router = UDreamUIActionRouter::Get(this))
+	if (UDreamUIInputServices* Services = UDreamUIInputServices::Get(this))
 	{
-		Router->UnregisterAction(InHandle);
+		Services->UnregisterAction(InHandle);
 	}
 	ListenedInputActions.RemoveAll([&InHandle](const FDreamUIActionHandle& Held) { return Held == InHandle; });
 }
 
 void UDreamUserWidget::StopListeningForAllInputActions()
 {
-	UDreamUIActionRouter* Router = UDreamUIActionRouter::Get(this);
+	UDreamUIInputServices* Services = UDreamUIInputServices::Get(this);
 	// A copy: UnregisterAction is free to do anything, and the array is this widget's own bookkeeping.
 	const TArray<FDreamUIActionHandle> Held = ListenedInputActions;
 	ListenedInputActions.Reset();
-	if (Router == nullptr)
+	if (Services == nullptr)
 	{
 		return;
 	}
 	for (const FDreamUIActionHandle& Handle : Held)
 	{
-		Router->UnregisterAction(Handle);
+		Services->UnregisterAction(Handle);
 	}
 }
 
@@ -1365,9 +1252,8 @@ void UDreamUserWidgetEventBridge::TickPointerMoveWatch()
 		bHasWatchedPointerPoint = false;
 		return;
 	}
-	UDreamEventSystem* EventSystem = UDreamEventSystem::GetDreamEventSystemInstance(
-		UserWidget, UserWidget->GetOwningPlayerIndex());
-	UDreamPointerEventData* PointerEvent = IsValid(EventSystem) ? EventSystem->GetPointerEventData(0, false) : nullptr;
+	const UDreamUIInputServices* Services = UDreamUIInputServices::Get(UserWidget);
+	UDreamPointerEventData* PointerEvent = Services != nullptr ? Services->FindPointer(UserWidget->GetOwningPlayerIndex(), 0) : nullptr;
 	// Over this widget means over it or anything inside it, which is what the enter stack records and
 	// what "the mouse is over my button" means to the widget that owns the button.
 	const bool bIsOverThisWidget = PointerEvent != nullptr
@@ -1683,7 +1569,9 @@ void UDreamUserWidget::ResolveEachBindings()
 
 	TArray<FDreamWidgetEachBinding> Bindings;
 	UDreamWidgetGeneratedClass::CollectEachBindings(GetClass(), Bindings);
-	if (Bindings.Num() == 0)
+	// No handler: the module with the list views is not loaded, and there is nothing to bind them to.
+	const IDreamUIEachBindingHandler* Handler = DreamUI::GetEachBindingHandler();
+	if (Bindings.Num() == 0 || Handler == nullptr)
 	{
 		return;
 	}
@@ -1698,40 +1586,33 @@ void UDreamUserWidget::ResolveEachBindings()
 		};
 		UDreamWidget* Host = FindWidgetByVariable(Binding.HostWidgetName);
 		UDreamWidget* Template = FindWidgetByVariable(Binding.TemplateWidgetName);
-		UUIRecyclableScrollView* ListView = IsValid(Host) ? Host->GetComponent<UUIRecyclableScrollView>() : nullptr;
-		if (!IsValid(ListView) || !IsValid(Template))
+		if (!Handler->HasListView(Host) || !IsValid(Template))
 		{
 			// The compiler and builder vetted all of this; the class moved underneath us. Skip.
 			continue;
 		}
 
-		// The view's Content pointer was authored against the archetype; re-aim it at THIS
-		// instance's content, the same per-instance re-wiring the template gets below. Without it
-		// every cell the view clones lands in the invisible archetype tree. The synthesized
-		// content may not have earned a class variable, so the template's own parent -- which IS
-		// that content whenever the builder synthesized one -- is the fallback.
+		// The view's Content pointer was authored against the archetype; the handler re-aims it at
+		// THIS instance's content, the same per-instance re-wiring the template gets. Without it every
+		// cell the view clones lands in the invisible archetype tree. The synthesized content may not
+		// have earned a class variable, so the template's own parent -- which IS that content whenever
+		// the builder synthesized one -- is the fallback.
+		UDreamWidget* Content = nullptr;
 		if (!Binding.ContentWidgetName.IsNone())
 		{
-			UDreamWidget* Content = FindWidgetByVariable(Binding.ContentWidgetName);
+			Content = FindWidgetByVariable(Binding.ContentWidgetName);
 			if (!IsValid(Content) && Template->GetParent() != Host)
 			{
 				Content = Template->GetParent();
 			}
-			if (IsValid(Content))
-			{
-				ListView->SetContent(Content);
-			}
 		}
 
-		UDreamUIEachAdapter* Adapter = NewObject<UDreamUIEachAdapter>(this);
-		Adapter->Initialize(this, Binding, ListView);
+		UObject* Adapter = Handler->Bind(this, Binding, Host, Template, Content);
+		if (Adapter == nullptr)
+		{
+			continue;
+		}
 		EachAdapters.Add(Adapter);
-
-		ListView->SetCellTemplate(Template);
-		TScriptInterface<IUIRecyclableScrollViewDataSource> DataSource;
-		DataSource.SetObject(Adapter);
-		DataSource.SetInterface(Cast<IUIRecyclableScrollViewDataSource>(Adapter));
-		ListView->SetDataSource(DataSource);
 
 		// A variable source that broadcasts refreshes its list the way a FieldNotify binding
 		// re-evaluates: from the change, not from a poll.
@@ -1754,24 +1635,31 @@ void UDreamUserWidget::ResolveEachBindings()
 
 void UDreamUserWidget::HandleEachSourceChanged(UObject* InObject, UE::FieldNotification::FFieldId InFieldId)
 {
-	for (UDreamUIEachAdapter* Adapter : EachAdapters)
+	const IDreamUIEachBindingHandler* Handler = DreamUI::GetEachBindingHandler();
+	if (Handler == nullptr)
 	{
-		if (IsValid(Adapter) && !Adapter->GetBinding().bSourceIsFunction
-			&& Adapter->GetBinding().SourceName == InFieldId.GetName())
+		return;
+	}
+	for (UObject* Adapter : EachAdapters)
+	{
+		const FDreamWidgetEachBinding* Binding = Handler->GetBinding(Adapter);
+		if (Binding != nullptr && !Binding->bSourceIsFunction && Binding->SourceName == InFieldId.GetName())
 		{
-			Adapter->Refresh();
+			Handler->Refresh(Adapter);
 		}
 	}
 }
 
 void UDreamUserWidget::RefreshEachBindings()
 {
-	for (UDreamUIEachAdapter* Adapter : EachAdapters)
+	const IDreamUIEachBindingHandler* Handler = DreamUI::GetEachBindingHandler();
+	if (Handler == nullptr)
 	{
-		if (IsValid(Adapter))
-		{
-			Adapter->Refresh();
-		}
+		return;
+	}
+	for (UObject* Adapter : EachAdapters)
+	{
+		Handler->Refresh(Adapter);
 	}
 }
 
@@ -2010,6 +1898,17 @@ bool UDreamUserWidget::SetContentForNamedSlot(FName InSlotName, UDreamWidget* In
 	return true;
 }
 
+namespace DreamUserWidgetCreateLocal
+{
+	/**
+	 * What both creation verbs share. InTreeOuter is where a minted tree lives -- a host, the manager's
+	 * pool, or the world when there is no manager -- and OutTree receives it; neither is used when the
+	 * widget joins InParent's tree instead.
+	 */
+	UDreamUserWidget* CreateUnder(UWorld* InWorld, TSubclassOf<UDreamUserWidget> InClass, UDreamWidget* InParent, UObject* InTreeOuter,
+		UDreamWidgetTree** OutTree, const TFunction<void(UDreamUserWidget*)>& InCallbackBeforeAlive);
+}
+
 UDreamUserWidget* CreateDreamWidget(UWorld* InWorld, TSubclassOf<UDreamUserWidget> InClass, UDreamWidget* InParent,
 	const TFunction<void(UDreamUserWidget*)>& InCallbackBeforeAlive)
 {
@@ -2018,14 +1917,41 @@ UDreamUserWidget* CreateDreamWidget(UWorld* InWorld, TSubclassOf<UDreamUserWidge
 		UE_LOG(DreamGUI, Error, TEXT("[%s].%d CreateDreamWidget needs a valid world."), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
 		return nullptr;
 	}
+	// No host: the tree is the manager's, held in its pool of free roots until something takes it; the
+	// world only where there is no manager to hold it, which is a world no widget lives in for long.
+	UObject* TreeOuter = UDreamUIManagerWorldSubsystem::GetInstance(InWorld);
+	if (TreeOuter == nullptr)
+	{
+		TreeOuter = InWorld;
+	}
+	return DreamUserWidgetCreateLocal::CreateUnder(InWorld, InClass, InParent, TreeOuter, nullptr, InCallbackBeforeAlive);
+}
+
+UDreamUserWidget* CreateDreamWidgetForHost(UObject& InHost, TSubclassOf<UDreamUserWidget> InClass, UDreamWidgetTree*& OutTree,
+	const TFunction<void(UDreamUserWidget*)>& InCallbackBeforeAlive)
+{
+	OutTree = nullptr;
+	UWorld* World = InHost.GetWorld();
+	if (!IsValid(World))
+	{
+		UE_LOG(DreamGUI, Error, TEXT("[%s].%d %s is in no world to create a widget in."), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *InHost.GetPathName());
+		return nullptr;
+	}
+	return DreamUserWidgetCreateLocal::CreateUnder(World, InClass, nullptr, &InHost, &OutTree, InCallbackBeforeAlive);
+}
+
+UDreamUserWidget* DreamUserWidgetCreateLocal::CreateUnder(UWorld* InWorld, TSubclassOf<UDreamUserWidget> InClass, UDreamWidget* InParent,
+	UObject* InTreeOuter, UDreamWidgetTree** OutTree, const TFunction<void(UDreamUserWidget*)>& InCallbackBeforeAlive)
+{
 	if (!IsValid(InClass))
 	{
 		UE_LOG(DreamGUI, Error, TEXT("[%s].%d CreateDreamWidget needs a valid class."), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
 		return nullptr;
 	}
 
-	// Same ownership rule a prefab load follows: join the parent's tree, or mint one outered to the
-	// world so GetTypedOuter<UWorld> resolves for everything inside.
+	// Same ownership rule a prefab load follows: join the parent's tree, or mint one where the caller
+	// says -- somewhere whose outer chain reaches a level or a world, so UDreamWidget::GetWorld resolves
+	// for everything inside.
 	UObject* Owner = nullptr;
 	UDreamWidgetTree* OwnedTree = nullptr;
 	if (IsValid(InParent) && InParent->GetOuter() != nullptr)
@@ -2034,11 +1960,18 @@ UDreamUserWidget* CreateDreamWidget(UWorld* InWorld, TSubclassOf<UDreamUserWidge
 	}
 	else
 	{
-		OwnedTree = NewObject<UDreamWidgetTree>(InWorld);
+		// A tree made here lives only as long as the world runs it: whatever the world or the host is
+		// saved, duplicated or copied into never gets it.
+		OwnedTree = NewObject<UDreamWidgetTree>(InTreeOuter, NAME_None, DreamUI::RuntimeObjectFlags);
 		Owner = OwnedTree;
+		if (OutTree != nullptr)
+		{
+			*OutTree = OwnedTree;
+		}
 	}
 
-	UDreamUserWidget* UserWidget = NewObject<UDreamUserWidget>(Owner, InClass, NAME_None, RF_Transactional);
+	// Transactional only inside an authored tree; a widget made in a world is not undo's to restore.
+	UDreamUserWidget* UserWidget = NewObject<UDreamUserWidget>(Owner, InClass, NAME_None, DreamUI::TransactionalFlagFor(Owner));
 	if (OwnedTree != nullptr)
 	{
 		OwnedTree->RootWidget = UserWidget;

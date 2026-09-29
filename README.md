@@ -34,6 +34,64 @@ rather than Slate's, and it buys three things UMG cannot do as directly:
 
 It costs you Slate's ecosystem: none of UMG's widgets, styles or bindings apply.
 
+## Modules
+
+The runtime is split into modules by layer. A module depends only on modules in the layers below its
+own, never on a sibling in its layer, and `Tools/Tests/static_checks.py` fails an include that goes the
+other way (rule `layering`). Every runtime module loads at `PostConfigInit`, as the core does, so its
+types and `.dui` tags are in place before anything compiles.
+
+```text
+L4   DreamGUISamples
+L3   DreamGUIControls      DreamGUIExtensions
+L2   DreamGUIInput
+L1   DreamGUI (core)
+L0   DreamGUIRenderer      DreamTween
+     ------------------------------------------------------------
+     DreamGUIEditor, DreamGUIK2Nodes, DreamGUITests (editor only)
+```
+
+| Module | Layer | Holds |
+| --- | --- | --- |
+| `DreamGUIRenderer` | below the core | The view extension that draws DreamUI and the render command that draws a render-target canvas, its shaders, the vertex and index formats, the material proxies a canvas answers its parameters through, the post-process proxies with the screen reads and writes the effects share, and the stage timing behind `DreamUI.Stats`. It knows nothing of widgets: the core registers what it asks for |
+| `DreamGUI` | core | Widgets, visuals, canvas batching, layout, text and `.dui`, animation, the event contracts, the render root that holds a canvas's sections for the renderer, and the PNG capture |
+| `DreamGUIInput` | above the core | The input system: the event systems and their preset actors, the raycasters and input modules, the action router, navigation, drag and drop, tooltips and modals, the selectable base the controls are built on, and the game viewport client |
+| `DreamGUIControls` | above the input system | The control library: the `Dream*` controls (button, toggle, slider, lists, dialog, tab view, ...), the `UI*` behaviours they are built from, the action bar, style sheets and the UMG interop |
+| `DreamGUIExtensions` | above the input system | 2D lines, polygons and rings, the static-mesh visual, the retainer box and the render-target helpers, lyrics, the concrete mesh modifiers, and the background blur, pixelate and pixel sort effects |
+| `DreamGUISamples` | above the controls | The showcase and the controls gallery |
+| `DreamTween` | independent | Tweens |
+| `DreamGUIEditor`, `DreamGUIK2Nodes` | editor | The designer and the asset tools; the Blueprint nodes |
+| `DreamGUITests` | editor | The automation suite |
+
+C++ that uses a type from a split-off module adds that module to its `Build.cs`. Assets need nothing:
+every type that moved still loads under its old name (see [below](#if-you-have-assets-authored-against-lgui--lexui-or-from-before-an-in-fork-rename)).
+
+### C++ written against the single module
+
+Besides the `Build.cs` line, a few includes and calls changed. Every other header kept its path.
+
+| Include that was | Is now |
+| --- | --- |
+| `Core/DreamUIRender/*`, `Core/DreamUIMesh/DreamUIGizmoMesh.h`, `Core/DreamUIMeshVertex.h`, `Core/DreamUIMeshIndex.h`, `Core/DreamUIBlendMode.h`, `Core/DreamVisualPostProcessRenderProxy.h` | `DreamUIRender/` and the same file name |
+| `Extensions/DreamGameViewportClient.h` | `Event/DreamGameViewportClient.h` |
+| `Extensions/DreamUMGWidget.h`, `Extensions/DreamUMGWidgetInteraction.h` | `UMG/` and the same file name |
+| `Core/DreamUIEachAdapter.h` | `Binding/DreamUIEachAdapter.h` |
+| `Core/Components/DreamBackgroundBlur.h`, `Core/Components/DreamBackgroundPixelate.h`, `Core/Components/DreamPixelSort.h` | `Extensions/Effects/` and the same file name |
+
+| Call that was | Is now |
+| --- | --- |
+| `UUITextInput::RouteCharacterInputToActiveInput` | `DreamUITextInputRouter::RouteViewportCharacter`, called [before the base class](#keyboard-layouts-give-dreamgui-the-game-viewport-client) |
+| `UDreamCanvas::CalculateRenderScaledSize` | `FDreamUIRenderer::CalculateRenderScaledSize` |
+| `DreamPixelSort::ResolveRegionSize` | `DreamUIPostProcessEffects::ResolvePixelSortRegionSize` (`DreamUIRender/DreamUIPostProcessEffects.h`) |
+| `UDreamUIManagerWorldSubsystem`'s event-system registry and player interaction: `GetEventSystemByUserIndex`, `GetMapUserIndexToEventSystem`, `AddEventSystem`, `RemoveEventSystem`, `EnsureInteractionForPlayer`, `GetInteractionHost` | The same names on `UDreamUIInputSubsystem` (`Event/DreamUIInputSubsystem.h`); `UDreamUIInputSubsystem::Get(WorldContext)` finds it |
+| `UDreamUIManagerWorldSubsystem::AddSelectable`, `RemoveSelectable` and `GetAllSelectableArray`, with `UUISelectable` | The same, with `UDreamUIBehaviour` |
+| `UDreamGUISettings::DefaultStyleSheet` as a `UDreamUIStyleSheet` | A `TSoftObjectPtr<UDataAsset>`; `UDreamUIStyleSheet::GetProjectSheet()` does the cast |
+
+What changed for C++ since the split — the material callback a visual overrode, the input and renderer
+calls that went with the old code paths — is in [Docs/Migration.md](Docs/Migration.md#6-c-of-your-own).
+
+The renderer logs to `LogDreamGUIRenderer`; `stat DreamGUI` still shows its counters.
+
 ## Install
 
 Requires **Unreal Engine 5.8**. Clone into your project's `Plugins/` directory:
@@ -45,12 +103,16 @@ git clone https://github.com/TypeDreamMoon/DreamGUI.git Plugins/DreamGUI
 Regenerate project files and build. That is the whole install for a fresh project.
 
 > [!IMPORTANT]
-> **A source build of the engine is required**, not a launcher install. `DreamGUI.Build.cs` adds
-> `Engine/Source/Runtime/Renderer/Private`, `Runtime/Renderer/Internal` and `Engine/Source` itself to
-> its private include paths, for `SceneRendering.h`, `ScenePrivate.h`, `SceneTextures.h` and the
-> single-file `ThirdParty/msdfgen/msdfgen.cpp` that the glyph rasteriser compiles. A binary engine
-> ships none of those, and the failure is a missing-header compile error rather than anything that
-> names this requirement.
+> **Engine 5.8, a launcher install included.** The plugin compiles against the engine's public headers
+> only: the renderer reads the scene's depth through the public scene-texture API, and the static check
+> `engine-private-path` fails any include path into `Runtime/Renderer/Private` or `Internal`.
+>
+> msdfgen, which the glyph rasteriser compiles into its own translation unit, used to need a source
+> build: upstream generates its single-file copy rather than committing it, so a launcher install has
+> only `Engine/Source/ThirdParty/msdfgen/msdfgen.tps`. The plugin now carries its
+> own generated copy under `ThirdParty/` — see `ThirdParty/README.md`. A plain clone or a zip download
+> builds it as-is; the `ThirdParty/msdfgen` submodule is only what `Tools/UpdateMsdfgen.ps1` regenerates
+> that copy from.
 
 ### Keyboard layouts: give DreamGUI the game viewport client
 
@@ -68,39 +130,73 @@ neither is in place.
 
 ```ini
 [/Script/Engine.Engine]
-GameViewportClientClassName=/Script/DreamGUI.DreamGameViewportClient
+GameViewportClientClassName=/Script/DreamGUIInput.DreamGameViewportClient
 ```
 
 **2. Keep your own viewport client.** Either derive it from `UDreamGameViewportClient` instead of
-`UGameViewportClient`, or keep its base and add one line to its `InputChar` override:
+`UGameViewportClient`, or keep its base and hand the character to DreamGUI from its `InputChar`
+override (module `DreamGUIInput`, header `Interaction/DreamUITextInputTarget.h`) — after the console,
+and before the base class:
 
 ```cpp
 bool UMyGameViewportClient::InputChar(FViewport* InViewport, int32 ControllerId, TCHAR Character)
 {
-    if (Super::InputChar(InViewport, ControllerId, Character)) { return true; }
-    return UUITextInput::RouteCharacterInputToActiveInput(Character);
+    FString CharacterString;
+    CharacterString += Character;
+    // An open console takes every character.
+    if (ViewportConsole && ViewportConsole->InputChar(FInputDeviceId::CreateFromInternalId(ControllerId), CharacterString))
+    {
+        return true;
+    }
+    // Before the base class: in a play-in-editor viewport it answers true for every character, so a
+    // field asked after it never sees one there.
+    if (!IgnoreInput() && DreamUITextInputRouter::RouteViewportCharacter(this, ControllerId, Character))
+    {
+        return true;
+    }
+    return Super::InputChar(InViewport, ControllerId, Character);
 }
 ```
 
-`RouteCharacterInputToActiveInput` is the entire contract — it hands the character to whichever
-field currently owns the keyboard and returns whether one took it. From the first character that
-arrives this way, the `FKey` table stops synthesising printable characters altogether, so the two
-roads never double-type.
+`DreamUITextInputRouter::RouteViewportCharacter` is the entire contract — it hands the character to
+the field the typing player (the one `ControllerId` is) is editing, or, when no field takes it, to
+what that player has focused as a key character, and returns whether either took it. From the first
+character that arrives this way, the `FKey` table stops synthesising printable characters in that
+world, so the two roads never double-type.
+
+### Input in every input mode: the Slate input source
+
+By default DreamGUI hears input through its preset event system actor's bindings on the player
+controller, so it hears nothing in the engine's own UI-only input mode: `SetInputMode(FInputModeUIOnly())`
+makes the game viewport ignore input, and the controller never sees it. Turn on **Project Settings →
+Plugins → Dream GUI → Input → Use Slate Input Source** and DreamGUI hears the mouse, touch, keys and
+sticks from Slate itself instead — an input pre-processor, ahead of the game viewport — in every input
+mode. The preset actors stand down while it is on, so nothing arrives twice.
+
+**Slate Input Consume Policy** decides what the UI keeps from the game: `Never` (the default; the game
+hears everything, as it always has), `WhenOverUI` (a press, release or wheel turn over DreamGUI UI,
+and any key the UI took) or `WhenHandled` (only a press on a widget that handles presses, and a key the
+UI took). A key typed into a field being edited is always kept. The source is off by default for now,
+and becomes the default in a later version.
 
 ### If you have assets authored against LGUI / LexUI, or from before an in-fork rename
 
+The whole move — what to take out first, what loads by itself, what no longer exists, what to check
+afterwards and what changed for C++ — is written up in [Docs/Migration.md](Docs/Migration.md). In short:
+
 They reference the old class names and the old `/LGUI/` mount, so they need CoreRedirects — and
-**the engine only reads those from the project's config**. A plugin's own config is not consulted
-for them: `Config/DefaultEngine.ini` here is a template to copy, and a plugin's
-`Config/Default<PluginName>.ini` is mounted after the redirects have already been read, which is why
-none live there any more.
+**the plugin ships them**: the `[CoreRedirects]` block in
+[`Config/DefaultDreamGUI.ini`](./Config/DefaultDreamGUI.ini) is mounted as the plugin's own config
+branch, and the engine applies every branch's redirects before the first asset loads. Nothing to copy.
+It covers the LGUI/LexUI rename, the prefab-vocabulary rename that the class model replaced, the
+control renames (`UIButtonComponent` → `UIButton` and its siblings), and the module split: a type that
+moved out of the core into another of the plugin's runtime modules is still found under its old
+`/Script/DreamGUI` name.
 
-Copy the `[CoreRedirects]` block from
-[`Config/DefaultEngine.ini`](./Config/DefaultEngine.ini) into your project's
-`Config/DefaultEngine.ini`. It covers the LGUI/LexUI rename, the prefab-vocabulary rename that the
-class model replaced, and the control renames (`UIButtonComponent` → `UIButton` and its siblings).
-
-Skip this if you are starting fresh.
+**If you copied the block into your project's `Config/DefaultEngine.ini` for an earlier version,
+delete that copy.** Earlier versions shipped it as a template, `Config/DefaultEngine.ini`, on the
+belief that a plugin's config is read too late for redirects; it is not. Two redirects for one old
+name with different new names are an error, and the copy is older than the file that ships.
 
 **Removed in this version.** These have no redirect, because there is nothing left to point at:
 
@@ -110,8 +206,10 @@ Skip this if you are starting fresh.
   `UDreamWorldWidgetComponent` is what you place now;
 - the `UDreamWorldSpaceRaycasterBase`, `UDreamWorldSpaceRaycasterForWorldTrigger` and
   `UDreamWorldSpaceRaycasterSource` family — `UDreamWorldSpaceRaycaster` absorbed all of it;
-- the plugin settings' `ScreenSpaceRootClass`, `WorldSpaceRootClass`, `WorldSpaceUERendererRootClass`
-  and `WorldSpaceRaycasterSourceClass`.
+- the plugin settings' `ScreenSpaceRootClass`, `WorldSpaceRootClass`, `WorldSpaceUERendererRootClass`,
+  `WorldSpaceRaycasterSourceClass` and `bLegacyTouchPointerIds`;
+- the console variables `r.DreamUI.MaterialWrappers` and `r.DreamUI.RTDrawer`, and the renderer
+  behaviour they put back.
 
 A level that still holds one of those Blueprints drops that actor on load — its class no longer
 resolves, so the whole export is discarded and a warning is logged naming it. Nothing is left behind
@@ -171,7 +269,7 @@ UnrealEditor-Cmd.exe <project>.uproject -run=DreamGUIReferenceDocs
 
 ## How it differs from upstream
 
-Forked from upstream `LexUI/5.7` at `765efeaf1` (2026-07-13); 214 commits since.
+Forked from upstream `LexUI/5.7` at `765efeaf1` (2026-07-13), and the upstream commits up to `97d281376` (2026-07-21) were rebased in afterwards: `97d281376` is the upstream this code starts from, and its content is this repository's `5b48c42a`. Diff against that, not against `765efeaf1` or a merge base, or the rebased commits count as this fork's changes. Upstream fixes after it are ported by hand.
 
 Upstream is actively developed, but the two branches can no longer be merged cheaply:
 
@@ -208,6 +306,17 @@ perspective projection; inert otherwise.
 **Render transform**, widened to three dimensions, so a widget can be animated inside a layout
 without the layout fighting it.
 
+**Input**, per player. Each local player has its own pointers, focus and text target, so a split
+screen's second player hovers, focuses and types on its own; the mouse, fingers and scripted pointers
+have id ranges of their own and no longer share an id. An optional Slate input source hears input
+before the viewport, so the UI keeps working in the engine's UI-only input mode.
+
+**Rendering.** A canvas walks only the widgets that asked to change, patches in place the sections
+whose geometry changed rather than rebuilding them, and answers its materials' parameters through
+render-thread proxies instead of a material instance per draw call. A render-target canvas is drawn
+by a render command of its own, so it updates whether or not anything renders its world. The screen
+effects share one way to read, crop and write back the screen, on the render graph's textures.
+
 ## Widget Blueprints
 
 A UI tree is a **class**, not an asset you instance. Authoring one gives you a
@@ -222,7 +331,7 @@ through `UDreamNamedSlotHost`.
 > [!NOTE]
 > The prefab asset model this forked from is gone, along with `SavePrefab`, `Apply`,
 > `ClearLoadedPrefab` and *Save on Apply*. Assets saved against the old class names are covered by
-> the redirects in [`Config/DefaultEngine.ini`](./Config/DefaultEngine.ini).
+> the redirects in [`Config/DefaultDreamGUI.ini`](./Config/DefaultDreamGUI.ini).
 
 ### Try it
 
@@ -263,8 +372,12 @@ Interaction needs no setup. On `BeginPlay` the component asks for an event syste
 `UDreamWorldSpaceRaycaster` for each local player and supplies whichever is missing, so pressing Play
 is enough to click a button hanging in the world. The raycaster points either from the cursor or from
 the middle of the screen (`PointerSource`), and `bOccludeByWorld` makes solid geometry block a click
-the way it blocks a line trace. Put a raycaster of your own on any actor with the same user index and
-nothing is added on top of it — the test is for one that exists, not for one this plugin made.
+the way it blocks a line trace. It is on by default: whatever blocks the raycaster's `TraceChannel`
+(Visibility) stops the pointer, and the actor it hits is handed the pointer's events through the
+pointer interfaces, which is also how a render-target surface on a mesh is clicked. To click through
+walls instead, untick it on a raycaster of your own, or call `SetOccludeByWorld(false)` on the
+player's. Put a raycaster of your own on any actor with the same user index and nothing is added on
+top of it — the test is for one that exists, not for one this plugin made.
 
 From code it is the two calls that were already there: `ConstructWidget`, then
 `AttachWidgetToSceneComponent` on whatever component should carry the tree.
@@ -354,6 +467,29 @@ delegates the `Controls/` family declares, and the `FDreamUIEventDelegate` prope
 > first time that name resolves), and `StructValue` + `StructValueType` for the new `Struct`
 > parameter type, which carries any USTRUCT as exported text. Older assets load unchanged.
 
+### Seeing what it drew, and what it cost
+
+Two console commands answer both questions without a debugger:
+
+- `DreamUI.Capture [Directory]` writes a PNG of the world's viewport and of every root canvas that
+  renders into a target — by default into a new folder under `Saved/DreamUI/Captures`. The same
+  thing is a Blueprint library, `UDreamUICaptureLibrary`: `SaveViewportToPng`, `SaveCanvasToPng`,
+  `SaveRenderTargetToPng`, `CaptureAll`. A canvas drawn straight onto the screen has no picture of
+  its own; capture the viewport it is on.
+- `DreamUI.Stats` prints what the frames since the last `DreamUI.Stats` cost, stage by stage — the
+  UI manager's tick, canvas updates, batching, draw-call submission, the render thread's recording —
+  and how many batches, vertices and bytes went to the GPU. Each stage is also a named scope in
+  Unreal Insights (`DreamUI_*`).
+
+A canvas answers the parameters it gives its own materials through render-thread proxies of the
+material — it makes no material instance per draw call — and a render-target canvas is drawn by a
+render command of its own, whether or not anything renders its world. The switches that put the old
+ways back for a while are gone with them.
+
+For a report of something drawn wrong or not drawn, `r.DreamUI.VerifyPartialPrepare 1` checks every
+prepare a canvas makes from its last one against a prepare of every widget, and a difference is an
+ensure that names the canvas. The test suite runs with it on.
+
 ## Platforms
 
 What is *claimed* and what has been *run* are different lists, so both are here.
@@ -388,12 +524,17 @@ link time. Six interaction subsystems already decline to exist on a server
 
 ## Status
 
-1112 automation tests — `Automation RunTests DreamGUI`. There were none before this fork.
+1480 automation tests are declared — run them with `Automation RunTests DreamGUI`, or a preset of
+`Tools/Tests/Invoke-DreamGUITests.ps1`. There were none before this fork.
 
 Known gaps:
 
 - `LineHeightPercentage` and `WrapTextAt` are only reachable through a real font asset, so they are
   not covered by tests.
+- When a panel measures a text, the text breaks its lines at its `WrapTextAt` if it has one and at its
+  own width if it does not -- never at the width the panel is about to give it. A wrapping text in a Fill
+  slot of a vertical box therefore needs a `WrapTextAt`, or it is measured as one character per line;
+  the sample's heading and subheading carry one.
 - One content asset still carries `Lex` in its name
   (`Content/Blueprints/LexEventSystemActor_EnhancedInput`). Renaming a `.uasset` file does not rename
   the object inside it, so only an editor-side rename can change it; the code points at what is

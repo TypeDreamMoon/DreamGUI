@@ -16,7 +16,7 @@ class UDreamWidgetBlueprint;
 struct FDreamLayoutControlAnchorData;
 
 /** Viewport client for editor viewports. Contains common functionality for camera movement, rendering debug information, etc. */
-class FDreamWidgetDesignerViewportClient : public FEditorViewportClient
+class DREAMGUIEDITOR_API FDreamWidgetDesignerViewportClient : public FEditorViewportClient
 {
 public:
 	FDreamWidgetDesignerViewportClient(TWeakPtr<FDreamWidgetBlueprintEditor> InDesignerPtr, const TSharedRef<class SDreamWidgetDesignerViewport>& InEditorViewportPtr);

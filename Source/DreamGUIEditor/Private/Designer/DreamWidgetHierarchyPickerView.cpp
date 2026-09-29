@@ -140,7 +140,7 @@ void SDreamWidgetHierarchyPickerView::RefreshTree()
 	{
 		if (auto DreamUIManager = UDreamUIManagerWorldSubsystem::GetInstance(DesignerWorld.Get()))
 		{
-			for (const TObjectPtr<UDreamWidget>& Widget : DreamUIManager->GetAllWidgetArray())
+			for (UDreamWidget* Widget : DreamUIManager->GetRegisteredWidgets())
 			{
 				// The manager's array can hold an entry a structural edit has already destroyed --
 				// unregistration happens on the next tick, not in DestroyWidget -- which is why the

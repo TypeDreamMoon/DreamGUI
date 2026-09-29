@@ -3,6 +3,7 @@
 #include "Core/DreamUIWidgetRegistry.h"
 
 #include "Algo/Sort.h"
+#include "UObject/Class.h"
 
 namespace DreamUIWidgetRegistryLocal
 {
@@ -28,6 +29,11 @@ TArray<FDreamUIWidgetRegistry::FEntry>& FDreamUIWidgetRegistry::Entries()
 void FDreamUIWidgetRegistry::Register(const FEntry& InEntry)
 {
 	Entries().Add(InEntry);
+}
+
+void FDreamUIWidgetRegistry::UnregisterModule(FName InModule)
+{
+	Entries().RemoveAll([InModule](const FEntry& Entry) { return Entry.Module == InModule; });
 }
 
 void FDreamUIWidgetRegistry::GetAllEntries(TArray<FEntry>& OutEntries)

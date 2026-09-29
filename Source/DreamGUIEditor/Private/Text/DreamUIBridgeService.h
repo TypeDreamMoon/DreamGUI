@@ -36,7 +36,7 @@
  * process, and a half-written file it happens to catch reads as a corrupt reveal rather than as
  * "not yet".
  */
-struct FDreamUIBridgeService
+struct DREAMGUIEDITOR_API FDreamUIBridgeService
 {
 	/** Module startup: ensures the folders, starts the poll ticker and the heartbeat. */
 	static void Register();

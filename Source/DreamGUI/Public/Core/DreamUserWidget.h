@@ -26,9 +26,11 @@
 // FDreamUIAnimationHandle is passed and returned by value below, so it is a definition here rather
 // than a forward declaration.
 #include "Animation/DreamWidgetAnimationComponent.h"
-// FDreamUIActionHandle and FDreamUIActionExecutedDelegate cross the ListenForInputAction surface by
-// value, so definitions rather than forward declarations.
-#include "Interaction/DreamUIActionRouter.h"
+// FDreamUIActionHandle, FDreamUIActionExecutedDelegate and FDataTableRowHandle cross the
+// ListenForInputAction surface by value, so definitions rather than forward declarations. The router
+// that resolves the action is the input system's, reached through UDreamUIInputServices.
+#include "Core/DreamUIActionTypes.h"
+#include "Engine/DataTable.h"
 #include "DreamUserWidget.generated.h"
 
 class UDreamWidgetTree;
@@ -211,43 +213,6 @@ public:
 	 * DuplicateDreamWidgetHierarchy guarantees.
 	 */
 	void InitializeAsDuplicate(UDreamWidget* InContentRoot);
-
-	/**
-	 * Rebuild this instance's contents from its (just recompiled) class.
-	 *
-	 * Recompiling a Blueprint replaces every live instance with a fresh copy of the new class, and the
-	 * copy arrives HALF DEAD: WidgetTree is DuplicateTransient so it comes across null, bInitialized
-	 * and the resolved bindings are plain members that come across empty, and the old contents are
-	 * still hanging underneath because Children is Instanced. Nothing re-ran Initialize, so the widget
-	 * on screen had contents, a null content root, no bindings and silently inert animation verbs --
-	 * and a later Initialize would have hung a SECOND hierarchy on it.
-	 *
-	 * What survives on purpose is NamedSlotContent, which is a persistent Instanced map: the host's
-	 * widgets are the host's and are re-attached rather than thrown away. Everything else under this
-	 * widget came from the old class's tree and is destroyed, because the new class is what the author
-	 * just asked for -- the same choice UMG makes when it rebuilds its preview from the new class.
-	 *
-	 * Editor-only in practice (it is the recompile path), idempotent, and a no-op on a class template
-	 * or on a class that declares no hierarchy -- destroying contents it cannot rebuild would turn a
-	 * widget that still works into an empty one.
-	 */
-	void ReinitializeFromClass();
-
-	/**
-	 * ReinitializeFromClass against a NAMED hierarchy rather than the one the class resolves to.
-	 *
-	 * The same split, and for the same reason, as Initialize / InitializeFromArchetype: the designer
-	 * rebuilds its preview from the Blueprint's authoring tree, which is not what the class holds
-	 * until the next compile, and a test can prove the whole road before a generated class exists.
-	 */
-	void ReinitializeFromArchetype(UDreamWidgetTree* InArchetype);
-
-	/**
-	 * Whether this instance is in the half-dead state ReinitializeFromClass repairs: it has contents
-	 * but no tree and has not been initialized.
-	 */
-	UFUNCTION(BlueprintPure, Category = "DreamGUI|UserWidget")
-	bool NeedsReinitializeFromClass() const;
 
 	/**
 	 * The tree exists and every by-name widget binding points into it; nothing has read this widget's
@@ -943,7 +908,7 @@ public:
 	UFUNCTION(BlueprintImplementableEvent, Category = "DreamGUI|UserWidget|Pointer", meta = (DisplayName = "On Mouse Wheel"))
 	void OnMouseWheel(UDreamPointerEventData* EventData);
 
-	/** UMG's OnMouseButtonDoubleClick. The single click still arrives first; tell them apart with ClickCount. */
+	/** UMG's OnMouseButtonDoubleClick, and like UMG's it arrives in place of the down (On Pointer Down) for the second press of the pair. The first click, and the up and click after the second press, still arrive; ClickCount says which click of a run an event belongs to. */
 	virtual bool NativeOnPointerDoubleClick(UDreamPointerEventData* EventData);
 	UFUNCTION(BlueprintImplementableEvent, Category = "DreamGUI|UserWidget|Pointer", meta = (DisplayName = "On Double Click"))
 	void OnDoubleClick(UDreamPointerEventData* EventData);
@@ -1138,9 +1103,13 @@ private:
 	/** A FieldNotify array source broadcast: refresh the adapters reading that field. */
 	void HandleEachSourceChanged(UObject* InObject, UE::FieldNotification::FFieldId InFieldId);
 
-	/** One per `each` block, kept alive here; the view holds them only as its data source interface. */
+	/**
+	 * One per `each` block, kept alive here; the view holds them only as its data source interface. Typed
+	 * as UObject because the adapter is the list views', which the core does not name: the registered
+	 * IDreamUIEachBindingHandler makes them and refreshes them.
+	 */
 	UPROPERTY(Transient)
-	TArray<TObjectPtr<class UDreamUIEachAdapter>> EachAdapters;
+	TArray<TObjectPtr<UObject>> EachAdapters;
 	/** One binding, source through setter. Shared by the poll, the initial push and the broadcasts. */
 	void EvaluateBinding(const FResolvedBinding& InBinding);
 	/** Re-evaluates every binding whose source field just broadcast. */
@@ -1361,9 +1330,11 @@ DREAMGUI_API UDreamWidget* DuplicateDreamWidgetHierarchy(UObject* InOuter, UDrea
 /**
  * Create and initialize a user widget of InClass.
  *
- * A widget needs a tree to belong to, so a fresh UDreamWidgetTree is minted and outered to the world,
- * with the new widget as its root -- the same ownership a prefab load produces. Pass InParent to put
- * the widget into an existing hierarchy instead, in which case it joins that hierarchy's tree.
+ * A widget needs a tree to belong to, so a fresh UDreamWidgetTree is minted with the new widget as its
+ * root -- the same ownership a prefab load produces. With no host to hold it (see CreateDreamWidgetForHost)
+ * the tree is outered to the world's UI manager, whose pool of free roots holds it until it is attached
+ * somewhere or destroyed. Pass InParent to put the widget into an existing hierarchy instead, in which
+ * case it joins that hierarchy's tree.
  *
  * InCallbackBeforeAlive runs after the hierarchy exists and is parented, but before it is registered
  * and before any behaviour's Awake. It is the counterpart of the prefab loader's CallbackBeforeAwake
@@ -1373,6 +1344,15 @@ DREAMGUI_API UDreamWidget* DuplicateDreamWidgetHierarchy(UObject* InOuter, UDrea
  * Returns null if InClass is not a UDreamUserWidget, or if the world is invalid.
  */
 DREAMGUI_API UDreamUserWidget* CreateDreamWidget(UWorld* InWorld, TSubclassOf<UDreamUserWidget> InClass, UDreamWidget* InParent = nullptr,
+	const TFunction<void(UDreamUserWidget*)>& InCallbackBeforeAlive = nullptr);
+
+/**
+ * CreateDreamWidget for a host (IDreamWidgetTreeHost): the new tree is outered to InHost, which holds it
+ * -- OutTree is the tree, for the host to keep in a Transient, DuplicateTransient, TextExportTransient
+ * property -- and which lets it go. Nothing else keeps it alive, the manager's pool included, so what is
+ * saved, duplicated or copied with the host never carries the tree along.
+ */
+DREAMGUI_API UDreamUserWidget* CreateDreamWidgetForHost(UObject& InHost, TSubclassOf<UDreamUserWidget> InClass, UDreamWidgetTree*& OutTree,
 	const TFunction<void(UDreamUserWidget*)>& InCallbackBeforeAlive = nullptr);
 
 template<typename WidgetT>

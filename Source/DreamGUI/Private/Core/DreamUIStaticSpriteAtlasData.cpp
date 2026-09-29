@@ -1,6 +1,7 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
 #include "Core/DreamUIStaticSpriteAtlasData.h"
+#include "Core/DreamUIRuntimeObject.h"
 #include "DreamGUI.h"
 #include "Core/DreamUISpriteData.h"
 #include "TextureCompiler.h"
@@ -141,7 +142,7 @@ void UDreamUIStaticSpriteAtlasData::PostEditChangeProperty(struct FPropertyChang
 							break;
 						}
 						auto WeakThis = TWeakObjectPtr<UDreamUIStaticSpriteAtlasData>(this);
-						UDreamUIManagerObject::AddOneShotTickFunction([=] {
+						DreamUI::DeferToLaterTick([=] {
 							if (WeakThis.IsValid())
 							{
 								WeakThis->bIsYesToAll = false;
@@ -165,7 +166,7 @@ void UDreamUIStaticSpriteAtlasData::PostEditChangeProperty(struct FPropertyChang
 			{
 				bIsAddedToDelayedCall = true;
 				auto WeakThis = TWeakObjectPtr<UDreamUIStaticSpriteAtlasData>(this);
-				UDreamUIManagerObject::AddOneShotTickFunction([=] {
+				DreamUI::DeferToLaterTick([=] {
 					if (WeakThis.IsValid())
 					{
 						WeakThis->MarkNotInitialized();

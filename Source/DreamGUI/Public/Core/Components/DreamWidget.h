@@ -11,6 +11,8 @@
 #include "GenericPlatform/ICursor.h"
 #include "Widgets/WidgetPixelSnapping.h"
 #include "Core/DreamUIAnchorData.h"
+#include "Core/DreamLayoutPassContext.h"
+#include "Core/DreamWidgetLifecycle.h"
 #include "DreamWidget.generated.h"
 
 class UDreamWidgetSubObjectBehaviour;
@@ -209,6 +211,8 @@ public:
 
 	virtual void PostLoad()override;
 	virtual void BeginDestroy() override;
+	/** A play session's copy of the world never holds one of these: see DreamUI::ReportCopiedIntoPlaySession. */
+	virtual void PostDuplicate(EDuplicateMode::Type DuplicateMode) override;
 
 	/**
 	 * Tear this widget and its whole subtree down: unregister, detach from the parent, end play, and
@@ -233,6 +237,8 @@ public:
 	virtual bool CanEditChange(const FProperty* InProperty) const override;
 	virtual bool CanEditChange(const FEditPropertyChain& PropertyChain) const override;
 	virtual void PostEditUndo()override;
+	/** Destroyed -> Constructed, for a widget an undo has brought back to life; nothing otherwise. */
+	void ReviveLifecycleAfterUndo();
 	virtual void PostRename(UObject* OldOuter, const FName OldName) override;
 
 	void EnsureChildrenAfterTransaction();
@@ -306,8 +312,11 @@ public:
 		return GET_MEMBER_NAME_CHECKED(UDreamWidget, Components);
 	}
 
-	bool HasBegunPlay()const{return bHasBegunPlay;}
-	bool HasRegistered()const{return bIsRegistered;}
+	bool HasBegunPlay()const{return Lifecycle == EDreamWidgetLifecycle::BegunPlay;}
+	/** Registered, whether or not play has begun since: a widget in play is still registered. */
+	bool HasRegistered()const{return Lifecycle == EDreamWidgetLifecycle::Registered || Lifecycle == EDreamWidgetLifecycle::BegunPlay;}
+	/** Where this widget is in its life; EDreamWidgetLifecycle has the steps between the states. */
+	EDreamWidgetLifecycle GetLifecycle()const{return Lifecycle;}
 
 	static void CollectChildrenWidgets(UDreamWidget* Target, TArray<UDreamWidget*>& OutAllChildrenWidgets, bool IncludeTarget = true);
 
@@ -328,7 +337,7 @@ private:
 	 * DuiHidden: the setter recomputes the anchors, and AnchorData is what a .dui spells -- a
 	 * reflective sweep that also wrote this would author one position twice.
 	 */
-	UPROPERTY(Interp, BlueprintReadOnly, Getter, Setter, meta=(AllowPrivateAccess = true, DuiHidden))
+	UPROPERTY(Interp, BlueprintReadOnly, Getter, Setter, Category = "Transform", meta=(AllowPrivateAccess = true, DuiHidden))
 	FVector RelativeLocation = FVector::ZeroVector;
 	/**
 	 * Local space rotation.
@@ -338,7 +347,7 @@ private:
 	// DuiHidden: RelativeRotationEuler is the authored face of this value, and a quaternion has no
 	// spelling -- but FQuat is an ordinary struct, so without the tag a reflective sweep would
 	// recurse it and write X/Y/Z/W component lines beside the euler it already wrote.
-	UPROPERTY(BlueprintReadOnly, Getter, Setter, meta = (AllowPrivateAccess = true, DuiHidden))
+	UPROPERTY(BlueprintReadOnly, Getter, Setter, Category = "Transform", meta = (AllowPrivateAccess = true, DuiHidden))
 	FQuat RelativeRotation = FQuat::Identity;
 	/**
 	 * Local space rotation as euler angles, mirroring RelativeRotation so that rotation can be
@@ -348,10 +357,10 @@ private:
 	 * property memory directly while writing through the setter, so this has to be a real stored
 	 * field kept in sync rather than a value derived on demand.
 	 */
-	UPROPERTY(Interp, Transient, BlueprintReadOnly, Getter, Setter, meta = (AllowPrivateAccess = true))
+	UPROPERTY(Interp, Transient, BlueprintReadOnly, Getter, Setter, Category = "Transform", meta = (AllowPrivateAccess = true))
 	FRotator RelativeRotationEuler = FRotator::ZeroRotator;
 	/** Local space scale */
-	UPROPERTY(Interp, BlueprintReadOnly, Getter, Setter, meta = (AllowPrivateAccess = true, AllowPreserveRatio))
+	UPROPERTY(Interp, BlueprintReadOnly, Getter, Setter, Category = "Transform", meta = (AllowPrivateAccess = true, AllowPreserveRatio))
 	FVector RelativeScale = FVector::OneVector;
 
 	/*
@@ -721,8 +730,12 @@ public:
 	 * random guid here would be AssignNewWidgetGuid; a colliding one is the caller's bug.
 	 */
 	void SetWidgetGuid(const FGuid& InGuid) { WidgetGuid = InGuid; }
-	/** Give this widget an identity only if it has none: an asset authored before ids existed. */
-	void EnsureWidgetGuid() { if (!WidgetGuid.IsValid()) { WidgetGuid = FGuid::NewGuid(); } }
+	/**
+	 * Give this widget an identity only if it has none: one saved before ids existed, or built by something
+	 * that did not give it one. Derived from where the widget lives rather than drawn at random, so every
+	 * load of an asset that was never resaved backfills the same id.
+	 */
+	void EnsureWidgetGuid() { if (!WidgetGuid.IsValid()) { WidgetGuid = FGuid::NewDeterministicGuid(GetPathName()); } }
 
 	/**
 	 * Deep-copy this subtree into InOuter, flat, and hand back the copy of this widget.
@@ -910,7 +923,7 @@ public:
 		}
 		return nullptr;
 	}
-	UFUNCTION(BlueprintCallable, Category = "DreamGUI", meta = (ComponentClass = "/Sript/DreamGUI.DreamUIBehaviour", DeterminesOutputType = "ComponentClass"))
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI", meta = (ComponentClass = "/Script/DreamGUI.DreamUIBehaviour", DeterminesOutputType = "ComponentClass"))
 	UDreamUIBehaviour* AddComponent(TSubclassOf<UDreamUIBehaviour> ComponentClass);
 	UDreamUIBehaviour* AddComponentByTemplate(UDreamUIBehaviour* ComponentTemplate);
 	template<class T>
@@ -925,9 +938,9 @@ public:
 		static_assert(TPointerIsConvertibleFromTo<T, const UDreamUIBehaviour>::Value, "'T' template parameter to GetComponent must be derived from UDreamUIBehaviour");
 		return Cast<T>(AddComponent(T::StaticClass(), ComponentTemplate));
 	}
-	UFUNCTION(BlueprintCallable, Category = "DreamGUI", meta = (ComponentClass = "/Sript/DreamGUI.DreamUIBehaviour"))
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI", meta = (ComponentClass = "/Script/DreamGUI.DreamUIBehaviour"))
 	void RemoveComponent(UDreamUIBehaviour* Component);
-	UFUNCTION(BlueprintCallable, Category = "DreamGUI", meta = (ComponentClass = "/Sript/DreamGUI.DreamUIBehaviour"))
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI", meta = (ComponentClass = "/Script/DreamGUI.DreamUIBehaviour"))
 	void MoveComponentToIndex(UDreamUIBehaviour* Component, int32 NewIndex);
 	void UpdateObjectToWorldTransform();
 	void CalculateObjectToWorldTransform(bool bPropagateToChildren = true);
@@ -946,7 +959,7 @@ private:
 
 	/** UIItem's hierarchy changed */
 	void OnHierarchyAttachmentChanged(UDreamCanvas* ParentRenderCanvas, UDreamWidget* ParentRoot);
-	/** called when RenderCanvas changed. */
+	/** Called by SetRenderCanvas, after it has moved the widget and its visual to the new canvas (which may be the old one, re-registered). */
 	virtual void OnRenderCanvasChanged(UDreamCanvas* OldCanvas, UDreamCanvas* NewCanvas);
 	void SetRenderCanvas(UDreamCanvas* InNewCanvas);
 
@@ -1923,15 +1936,16 @@ public:
 	struct DREAMGUI_API FLayoutWriteScope
 	{
 		explicit FLayoutWriteScope(UDreamWidget* InLayoutWidget);
-		~FLayoutWriteScope();
 		FLayoutWriteScope(const FLayoutWriteScope&) = delete;
 		FLayoutWriteScope& operator=(const FLayoutWriteScope&) = delete;
 	private:
-		bool bPushed = false;
+		/** Unset for a widget that is not valid: nothing is writing for it. */
+		TOptional<FDreamLayoutPassContext::FWriteScope> Scope;
 	};
 
 	/**
-	 * True while any layout is computing and writing results, i.e. inside UpdateLayout.
+	 * True while a layout is computing and writing results in this widget's world, i.e. inside an
+	 * UpdateLayout there.
 	 *
 	 * Distinguishes a size that is layout OUTPUT from a size somebody actually asked for. The two have to
 	 * be told apart, because a panel measures an Auto child from the authored snapshot rather than from its
@@ -1941,13 +1955,22 @@ public:
 	 * Broader than FLayoutWriteScope on purpose: that one covers the container write-back only, because it
 	 * governs how far a dirty mark propagates. This covers a LayoutSelf sizing its own widget too.
 	 */
-	static bool IsLayoutWriting() { return LayoutPassDepth > 0; }
+	bool IsLayoutWriting() const { return GetLayoutPassContext().IsWriting(); }
+
+	/**
+	 * The state this widget's layout passes keep: the writer stack, the pass depth, the desired-size memo.
+	 *
+	 * Its world's, held by that world's manager. A widget in no world with a manager -- a test's tree, an
+	 * authoring template, a commandlet's -- uses one held by the root of its hierarchy instead, made the
+	 * first time it is asked for. That is enough because a pass never leaves the tree it started in: every
+	 * scope a pass opens is on a widget of that tree, and every question asked of the state during it is
+	 * about one, so they all reach the same root.
+	 */
+	FDreamLayoutPassContext& GetLayoutPassContext() const;
 
 private:
-	/** Stack of widgets whose layout containers are applying results; see FLayoutWriteScope. Game thread only. */
-	static TArray<UDreamWidget*> LayoutWriterStack;
-	/** Nesting depth of UpdateLayout; see IsLayoutWriting. Game thread only. */
-	static int32 LayoutPassDepth;
+	/** The layout-pass state of a tree no manager holds one for; see GetLayoutPassContext. Only ever made on a root. */
+	mutable TUniquePtr<FDreamLayoutPassContext> DetachedLayoutPassContext;
 
 private:
 	friend class FDreamWidgetCustomization;
@@ -1980,8 +2003,17 @@ private:
 	uint32 bHasRenderTransform : 1 = false;
 	EDreamWidgetClipping LayoutClippingOverride = EDreamWidgetClipping::Inherit;
 
-	uint32 bHasBegunPlay : 1 = false;
-	uint32 bIsRegistered : 1 = false;
+	/**
+	 * Where the widget is in its life. Not a property, so nothing restores it: a duplicate starts at
+	 * Constructed like any new widget, and an undo leaves it as it was -- which is why PostEditUndo puts
+	 * a widget the undo brought back from Destroyed at Constructed before anything registers it.
+	 */
+	EDreamWidgetLifecycle Lifecycle = EDreamWidgetLifecycle::Constructed;
+	/**
+	 * Waiting for a parent. Beside Lifecycle rather than one of its states, because it is a question of
+	 * where the widget hangs, not of how far it has come: a parked widget is registered, and has begun
+	 * play once its world has.
+	 */
 	uint32 bParked : 1 = false;
 	/** Cached "this widget or an ancestor declares a perspective", so the usual case is one bit test. */
 	uint32 bHasPerspectiveInHierarchy : 1 = false;

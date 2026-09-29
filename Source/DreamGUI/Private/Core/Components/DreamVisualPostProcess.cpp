@@ -6,9 +6,11 @@
 #include "DreamGUI.h"
 #include "Core/Components/DreamCanvas.h"
 #include "Core/DreamUIGeometry.h"
-#include "Core/DreamVisualPostProcessRenderProxy.h"
+#include "DreamUIRender/DreamVisualPostProcessRenderProxy.h"
+#include "Core/DreamUIRuntimeObject.h"
 #include "Core/Components/DreamWidget.h"
 #include "Engine/TextureRenderTarget2D.h"
+#include "Engine/Texture2D.h"
 #include "TextureResource.h"
 #include "Rendering/Texture2DResource.h"
 
@@ -37,14 +39,7 @@ void UDreamVisualPostProcess::BeginDestroy()
 	// section and any update command still in flight hold their own references, so the proxy dies
 	// when the last of them lets go -- and because every one of those is released on the render
 	// thread, the destructor (which touches render resources) always runs there.
-	if (RenderProxy.IsValid())
-	{
-		ENQUEUE_RENDER_COMMAND(FDreamPostProcess_ReleaseRenderProxy)
-			([ReleasedProxy = MoveTemp(RenderProxy)](FRHICommandListImmediate& RHICmdList) mutable
-				{
-					ReleasedProxy.Reset();
-				});
-	}
+	FDreamVisualPostProcessRenderProxy::ReleaseOnRenderThread(MoveTemp(RenderProxy));
 	Super::BeginDestroy();
 }
 
@@ -52,6 +47,18 @@ void UDreamVisualPostProcess::OnUnregister()
 {
 	Super::OnUnregister();
 	OnRenderTargetChanged.Broadcast(nullptr);
+}
+
+void UDreamVisualPostProcess::PostLoad()
+{
+	Super::PostLoad();
+	// An older build kept the output render target it made for itself in OutputRenderTarget, the author's
+	// property, and saved it there. One outered to this visual is that, never an author's asset: it goes,
+	// and the visual makes its own again, in AutoOutputRenderTarget.
+	if (OutputRenderTarget != nullptr && OutputRenderTarget->GetOuter() == this)
+	{
+		OutputRenderTarget = nullptr;
+	}
 }
 
 #if WITH_EDITOR
@@ -125,8 +132,11 @@ void UDreamVisualPostProcess::UpdateGeometry()
 {
 	SCOPE_CYCLE_COUNTER(STAT_UIPostProcessRenderableUpdate);
 	auto Widget = GetWidget();
-	auto RenderCanvas = Widget->GetRenderCanvas();
-	check(RenderCanvas);
+	auto RenderCanvas = Widget != nullptr ? Widget->GetRenderCanvas() : nullptr;
+	if (!ensureMsgf(RenderCanvas != nullptr, TEXT("%s: asked for geometry with no widget or no canvas to draw in."), *GetPathName()))
+	{
+		return;
+	}
 
 	Super::UpdateGeometry();
 	
@@ -255,63 +265,35 @@ void UDreamVisualPostProcess::SendRegionVertexDataToRenderProxy()
 	auto RenderCanvas = Widget != nullptr ? Widget->GetRenderCanvas() : nullptr;
 	if (RenderProxy.IsValid() && RenderCanvas)
 	{
-		// Copied, not borrowed: the command below runs later and must not care whether this visual
-		// has since let go of the proxy.
-		auto TempRenderProxy = RenderProxy;
-		struct FUIPostProcess_SendRegionVertexDataToRenderProxy
-		{
-			TArray<FDreamUIPostProcessCopyMeshRegionVertex> renderScreenToMeshRegionVertexArray;
-			TArray<FDreamUIPostProcessVertex> renderMeshRegionToScreenVertexArray;
-			FVector2f RectSize;
-			FMatrix44f objectToWorldMatrix;
-			FTexture2DDynamicResource* ClipDataTexture = nullptr;
-			bool bUseFullSize;
-			FBox BoundingBox;
-			FVector4f TintColor;
-			int32 TintMode;
-		};
-		auto updateData = new FUIPostProcess_SendRegionVertexDataToRenderProxy();
-		updateData->renderMeshRegionToScreenVertexArray = this->RenderMeshRegionToScreenVertexArray;
-		updateData->renderScreenToMeshRegionVertexArray = this->RenderScreenToMeshRegionVertexArray;
-		updateData->RectSize = FVector2f(Widget->GetWidth(), Widget->GetHeight());
-		updateData->objectToWorldMatrix = FMatrix44f(RenderCanvas->GetWidget()->GetWorldTransform().ToMatrixWithScale());
-		updateData->bUseFullSize = bUseFullSize;
+		FDreamUIPostProcessCommonParams Params;
+		Params.MeshRegionToScreenVertices = this->RenderMeshRegionToScreenVertexArray;
+		Params.ScreenToMeshRegionVertices = this->RenderScreenToMeshRegionVertexArray;
+		Params.RectSize = FVector2f(Widget->GetWidth(), Widget->GetHeight());
+		Params.ObjectToWorldMatrix = FMatrix44f(RenderCanvas->GetWidget()->GetWorldTransform().ToMatrixWithScale());
+		Params.bUseFullSize = bUseFullSize;
 		// RGB tints the captured background; the visual's own alpha is left to the effect (background blur reads
 		// it as blur strength), so TintStrength travels in the alpha slot instead.
 		{
 			const FLinearColor LinearTint = FLinearColor(this->GetColor());
-			updateData->TintColor = FVector4f(LinearTint.R, LinearTint.G, LinearTint.B,
+			Params.TintColor = FVector4f(LinearTint.R, LinearTint.G, LinearTint.B,
 				FMath::Clamp(this->TintStrength, 0.0f, 1.0f));
-			updateData->TintMode = (int32)this->TintMode;
+			Params.TintMode = (int32)this->TintMode;
 		}
 		{
-			updateData->BoundingBox = FBox(EForceInit::ForceInit);
+			Params.BoundingBox = FBox(EForceInit::ForceInit);
 			FVector2D Min, Max;
 			this->GetGeometryBoundsInLocalSpace(Min, Max);
 			auto WorldMin = this->GetWidget()->GetWorldTransform().TransformPosition(FVector(0, Min.X, Min.Y));
 			auto WorldMax = this->GetWidget()->GetWorldTransform().TransformPosition(FVector(0, Max.X, Max.Y));
-			updateData->BoundingBox += WorldMin;
-			updateData->BoundingBox += WorldMax;
+			Params.BoundingBox += WorldMin;
+			Params.BoundingBox += WorldMax;
 		}
 		auto ClipDataTex = this->GetClipDataTexture();
-		if (IsValid(ClipDataTex) && ClipDataTex->GetResource() != nullptr)
+		if (IsValid(ClipDataTex))
 		{
-			updateData->ClipDataTexture = (FTexture2DDynamicResource*)ClipDataTex->GetResource();
+			Params.ClipDataTexture = ClipDataTex;
 		}
-		ENQUEUE_RENDER_COMMAND(FDreamPostProcess_UpdateData)
-			([TempRenderProxy, updateData](FRHICommandListImmediate& RHICmdList)
-				{
-					TempRenderProxy->RenderScreenToMeshRegionVertexArray = updateData->renderScreenToMeshRegionVertexArray;
-					TempRenderProxy->RenderMeshRegionToScreenVertexArray = updateData->renderMeshRegionToScreenVertexArray;
-					TempRenderProxy->RectSize = updateData->RectSize;
-					TempRenderProxy->ObjectToWorldMatrix = updateData->objectToWorldMatrix;
-					TempRenderProxy->ClipDataTexture = updateData->ClipDataTexture;
-					TempRenderProxy->bUseFullSize = updateData->bUseFullSize;
-					TempRenderProxy->BoundingBox = updateData->BoundingBox;
-					TempRenderProxy->TintColor = updateData->TintColor;
-					TempRenderProxy->TintMode = updateData->TintMode;
-					delete updateData;
-				});
+		FDreamVisualPostProcessRenderProxy::SetCommonParams_GameThread(RenderProxy, MoveTemp(Params));
 	}
 }
 
@@ -383,31 +365,12 @@ void UDreamVisualPostProcess::SendMaskTextureToRenderProxy()
 {
 	if (RenderProxy.IsValid())
 	{
-		auto TempRenderProxy = RenderProxy;
 		FTexture2DResource* MaskTextureResource = nullptr;
 		if (IsValid(this->MaskTexture) && this->MaskTexture->GetResource() != nullptr)
 		{
 			MaskTextureResource = (FTexture2DResource*)this->MaskTexture->GetResource();
 		}
-		ENQUEUE_RENDER_COMMAND(FDreamPostProcess_UpdateMaskTexture)
-			([TempRenderProxy, MaskTextureResource](FRHICommandListImmediate& RHICmdList)
-				{
-					// Read the resource here, on the render thread, and keep only ref-counted handles:
-					// the resource itself is deleted whenever the texture's resource is rebuilt, with
-					// no notification to this proxy. Dereferencing it now is safe because the pointer
-					// was taken from the texture on the game thread just before this command was
-					// enqueued, and the delete for it can only be enqueued after.
-					if (MaskTextureResource != nullptr)
-					{
-						TempRenderProxy->MaskTextureRHI = MaskTextureResource->TextureRHI;
-						TempRenderProxy->MaskTextureSamplerState = MaskTextureResource->SamplerStateRHI;
-					}
-					else
-					{
-						TempRenderProxy->MaskTextureRHI = nullptr;
-						TempRenderProxy->MaskTextureSamplerState = nullptr;
-					}
-				});
+		FDreamVisualPostProcessRenderProxy::SetMaskTexture_GameThread(RenderProxy, MaskTextureResource);
 	}
 }
 
@@ -415,21 +378,12 @@ void UDreamVisualPostProcess::SendRenderTargetToRenderProxy()
 {
 	if (RenderProxy.IsValid())
 	{
-		auto TempRenderProxy = RenderProxy;
-		FTextureRenderTargetResource* RenderTargetResource = nullptr;
-		if (!bUseFullSize && RenderType == EDreamBackgroundBlurRenderType::RenderTarget && IsValid(OutputRenderTarget))
+		UTextureRenderTarget2D* Target = nullptr;
+		if (!bUseFullSize && RenderType == EDreamBackgroundBlurRenderType::RenderTarget && IsValid(GetOutputRenderTarget()))
 		{
-			RenderTargetResource = OutputRenderTarget->GameThread_GetRenderTargetResource();
+			Target = GetOutputRenderTarget();
 		}
-		else
-		{
-			RenderTargetResource = nullptr;
-		}
-		ENQUEUE_RENDER_COMMAND(FDreamPostProcess_UpdateMaskTexture)
-			([TempRenderProxy, RenderTargetResource](FRHICommandListImmediate& RHICmdList)
-				{
-					TempRenderProxy->RenderTargetResource = RenderTargetResource;
-				});
+		FDreamVisualPostProcessRenderProxy::SetRenderTarget_GameThread(RenderProxy, Target);
 	}
 }
 
@@ -513,25 +467,29 @@ void UDreamVisualPostProcess::UpdateRenderTarget()
 	DesiredRenderTargetSize.X = FMath::Min(DesiredRenderTargetSize.X, MaxAllowedDrawSize);
 	DesiredRenderTargetSize.Y = FMath::Min(DesiredRenderTargetSize.Y, MaxAllowedDrawSize);
 
-	if (OutputRenderTarget == nullptr)
+	if (OutputRenderTarget == nullptr && AutoOutputRenderTarget == nullptr)
 	{
-		OutputRenderTarget = NewObject<UTextureRenderTarget2D>(this, NAME_None, EObjectFlags::RF_Transient);
-		OutputRenderTarget->AddressX = TextureAddress::TA_Clamp;
-		OutputRenderTarget->AddressY = TextureAddress::TA_Clamp;
-		OutputRenderTarget->ClearColor = FLinearColor::Transparent;
-		OutputRenderTarget->InitCustomFormat(DesiredRenderTargetSize.X, DesiredRenderTargetSize.Y, EPixelFormat::PF_B8G8R8A8, false);
+		// Made here and held apart from the assigned one, so never saved, duplicated or copied: a copy of
+		// this visual makes its own. A render target assigned from outside keeps whatever flags its owner
+		// gave it.
+		AutoOutputRenderTarget = NewObject<UTextureRenderTarget2D>(this, NAME_None, DreamUI::RuntimeObjectFlags);
+		AutoOutputRenderTarget->AddressX = TextureAddress::TA_Clamp;
+		AutoOutputRenderTarget->AddressY = TextureAddress::TA_Clamp;
+		AutoOutputRenderTarget->ClearColor = FLinearColor::Transparent;
+		AutoOutputRenderTarget->InitCustomFormat(DesiredRenderTargetSize.X, DesiredRenderTargetSize.Y, EPixelFormat::PF_B8G8R8A8, false);
 		SendRenderTargetToRenderProxy();
-		OnRenderTargetChanged.Broadcast(OutputRenderTarget);
+		OnRenderTargetChanged.Broadcast(AutoOutputRenderTarget);
 	}
 	else
 	{
-		if (OutputRenderTarget->SizeX != DesiredRenderTargetSize.X || OutputRenderTarget->SizeY != DesiredRenderTargetSize.Y)
+		UTextureRenderTarget2D* Target = GetOutputRenderTarget();
+		if (Target->SizeX != DesiredRenderTargetSize.X || Target->SizeY != DesiredRenderTargetSize.Y)
 		{
-			OutputRenderTarget->ClearColor = FLinearColor::Transparent;
-			OutputRenderTarget->InitCustomFormat(DesiredRenderTargetSize.X, DesiredRenderTargetSize.Y, EPixelFormat::PF_B8G8R8A8, false);
-			OutputRenderTarget->UpdateResourceImmediate();
+			Target->ClearColor = FLinearColor::Transparent;
+			Target->InitCustomFormat(DesiredRenderTargetSize.X, DesiredRenderTargetSize.Y, EPixelFormat::PF_B8G8R8A8, false);
+			Target->UpdateResourceImmediate();
 #if WITH_EDITOR
-			OutputRenderTarget->Modify();
+			DreamUI::ModifyIfKeptByUndo(*Target);
 #endif
 			SendRenderTargetToRenderProxy();
 		}
@@ -540,9 +498,10 @@ void UDreamVisualPostProcess::UpdateRenderTarget()
 #if WITH_EDITOR
 	if (!DreamUI::IsGameWorld(this))
 	{
-		if (!OutputRenderTarget->GameThread_GetRenderTargetResource())
+		UTextureRenderTarget2D* Target = GetOutputRenderTarget();
+		if (!Target->GameThread_GetRenderTargetResource())
 		{
-			OutputRenderTarget->InitCustomFormat(OutputRenderTarget->SizeX, OutputRenderTarget->SizeY, EPixelFormat::PF_B8G8R8A8, false);
+			Target->InitCustomFormat(Target->SizeX, Target->SizeY, EPixelFormat::PF_B8G8R8A8, false);
 			SendRenderTargetToRenderProxy();
 		}
 	}

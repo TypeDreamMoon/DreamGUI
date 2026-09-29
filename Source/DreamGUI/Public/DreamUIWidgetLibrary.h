@@ -5,6 +5,8 @@
 #include "CoreMinimal.h"
 #include "Kismet/BlueprintFunctionLibrary.h"
 #include "Core/DreamUIImageBrush.h"
+#include "Templates/SubclassOf.h"
+#include "UObject/Interface.h"
 #include "DreamUIWidgetLibrary.generated.h"
 
 class APlayerController;

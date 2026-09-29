@@ -5,6 +5,7 @@
 #include "DreamVisualBatchMesh.h"
 #include "Core/IDreamUISpriteRenderInterface.h"
 #include "Core/DreamUIDataAsTexture.h"
+#include "Layout/Margin.h"
 #include "DreamRectBlock.generated.h"
 
 
@@ -323,6 +324,14 @@ private:
 
 	UPROPERTY(VisibleAnywhere, Category = "DreamGUI", AdvancedDisplay)
 		TObjectPtr<class UDreamRectBlockData> RectBlockData = nullptr;
+	/**
+	 * The rows this rect block's shape is uploaded into: its world's, for RectBlockData (see
+	 * UDreamUIManagerWorldSubsystem::GetRectBlockDataRows), taken when it registers. Null while unregistered.
+	 */
+	UPROPERTY(Transient, DuplicateTransient, TextExportTransient)
+		TObjectPtr<class UDreamUIDataAsTexture> DataRows = nullptr;
+	/** Its world's rows, or the asset's own in a world with no UI manager to keep any. */
+	UDreamUIDataAsTexture* FindDataRows() const;
 	/** When do raycast interaction, will the CornerRadius be considered? Only support RaycastType.Rect. */
 	UPROPERTY(EditAnywhere, Category = "DreamGUI-Raycast")
 		bool bRaycastSupportCornerRadius = true;
@@ -335,7 +344,7 @@ private:
 	virtual void OnBeforeCreateOrUpdateGeometry()override;
 	virtual UTexture* GetTextureToCreateGeometry()override;
 	virtual UMaterialInterface* GetMaterialToCreateGeometry()override;
-	virtual void OnMaterialInstanceDynamicCreated(class UMaterialInstanceDynamic* mat) override;
+	virtual void AddMaterialParameters(FDreamUIMaterialParameters& InOutParameters) const override;
 
 	//virtual void OnAnchorChange(bool InPivotChange, bool InWidthChange, bool InHeightChange, bool InDiscardCache = true)override;
 	virtual void OnUpdateGeometry(FDreamUIGeometry& InGeo, bool InTriangleChanged, bool InVertexPositionChanged, bool InVertexUVChanged, bool InVertexColorChanged)override;
@@ -343,8 +352,6 @@ private:
 	virtual bool GetAnythingDirty() const override;
 
 	void MarkNeedUpdateBlockData();
-	void OnDataTextureChanged(class UTexture* Texture);
-	FDelegateHandle OnDataTextureChangedDelegateHandle;
 	uint8 bNeedUpdateBlockData : 1;
 	uint8 bHasAddToSprite : 1;
 protected:

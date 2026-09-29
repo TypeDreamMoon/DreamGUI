@@ -9,6 +9,10 @@
 #include "Framework/Commands/UIAction.h"
 #include "IDetailCustomNodeBuilder.h"
 #include "Widgets/Input/NumericTypeInterface.h"
+// The definitions, not just the interface: FComponentTransformDetails derives from
+// TNumericUnitTypeInterface, so every translation unit including this header instantiates that base's
+// constructors and needs them visible. Leaving it to the .cpp compiled only in a unity build.
+#include "Widgets/Input/NumericUnitTypeInterface.inl"
 #include "AssetSelection.h"
 
 class FDetailWidgetRow;
@@ -30,7 +34,7 @@ namespace ETransformField
 /**
  * Manages the Transform section of a details view                    
  */
-class FComponentTransformDetails : public TSharedFromThis<FComponentTransformDetails>, public IDetailCustomNodeBuilder, public TNumericUnitTypeInterface<FVector::FReal>
+class DREAMGUIEDITOR_API FComponentTransformDetails : public TSharedFromThis<FComponentTransformDetails>, public IDetailCustomNodeBuilder, public TNumericUnitTypeInterface<FVector::FReal>
 {
 public:
 	FComponentTransformDetails( const TArray< TWeakObjectPtr<UDreamWidget> >& InSelectedObjects, const FSelectedActorInfo& InSelectedActorInfo, IDetailLayoutBuilder& DetailBuilder );

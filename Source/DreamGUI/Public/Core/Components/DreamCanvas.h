@@ -9,6 +9,7 @@
 #include "Core/DreamCanvasProcessingDrawCallData.h"
 #include "Core/DreamUIBehaviour.h"
 #include "Core/DreamUIDrawCall.h"
+#include "DreamUIRender/IDreamUIRendererViewSource.h"
 #include "Math/TransformCalculus2D.h"
 #include "DreamCanvas.generated.h"
 
@@ -157,31 +158,9 @@ protected:
 	bool ReceiveConvertPositionFromCanvasToViewport(const FVector2D& InPosition, FVector2D& Result)const;
 };
 
-USTRUCT()
-struct FDreamCanvasDynamicMaterialArrayContainer
-{
-	GENERATED_BODY()
-
-	UPROPERTY(EditAnywhere, Category = DreamGUI)
-	TArray<TObjectPtr<UMaterialInstanceDynamic>> MaterialArray;
-
-	int CurrentIndex = 0;
-	/** Consecutive frames the tail of MaterialArray went unused; past the decay window it is trimmed. */
-	int UnusedStreak = 0;
-};
-
-USTRUCT()
-struct FDreamCanvasMaterialParameterCache
-{
-	GENERATED_BODY()
-	UPROPERTY(VisibleAnywhere, Category=DreamGUI)
-	TWeakObjectPtr<UTexture> Texture = nullptr;
-	UPROPERTY(VisibleAnywhere, Category=DreamGUI)
-	TWeakObjectPtr<UTexture> FontTexture = nullptr;
-};
-
 class UDreamWidget;
 class UDreamVisual;
+class FDreamUIMaterialProxy;
 class UDreamVisualBatchMesh;
 class UDreamVisualDirectMesh;
 class UDreamUIMeshComponent;
@@ -196,12 +175,20 @@ class UTextureRenderTarget2D;
  * Other UV channels are defined by DreamVisual, check DreamText and DreamRectBlock.
  */
 UCLASS(ClassGroup = (DreamGUI), Blueprintable, meta = (BlueprintSpawnableComponent))
-class DREAMGUI_API UDreamCanvas : public UDreamUIBehaviour
+class DREAMGUI_API UDreamCanvas : public UDreamUIBehaviour, public IDreamUIRendererViewSource
 {
 	GENERATED_BODY()
 
 public:	
 	UDreamCanvas();
+private:
+	//~ Begin IDreamUIRendererViewSource: what the renderer sets a screen-space view up from, when this is the root
+	virtual FVector GetRendererViewLocation() const override { return GetViewLocation(); }
+	virtual FRotator GetRendererViewRotator() const override { return GetViewRotator(); }
+	virtual FMatrix GetRendererProjectionMatrix() const override { return GetProjectionMatrix(); }
+	virtual bool GetRendererEnableDepthTest() const override { return GetEnableDepthTest(); }
+	virtual float GetRendererScreenSpaceRenderScale() const override { return GetScreenSpaceRenderScale(); }
+	//~ End IDreamUIRendererViewSource
 protected:
 	virtual void Awake() override;
 #if WITH_EDITOR
@@ -227,7 +214,14 @@ private:
 	void RemoveFromViewExtension(bool PropagateToChildrenCanvas);
 	TSharedPtr<class FDreamUIRenderer, ESPMode::ThreadSafe> RenderTargetViewExtension = nullptr;
 	TSharedPtr<class FDreamUIRenderer, ESPMode::ThreadSafe> GetRenderTargetViewExtension();
+	/** Render-target mode: the target is to be drawn this frame, once the sections have gone (DrawRenderTargetIfRequested). */
+	bool bRenderTargetDrawRequested = false;
 public:
+	/**
+	 * Render-target mode, with the renderer's drawer on: draws the target, when this frame asked for it, with a render
+	 * command of its own. The UI manager calls this after every canvas has sent this frame's sections.
+	 */
+	void DrawRenderTargetIfRequested();
 	/** mark canvas layout dirty */
 	void MarkTransformOrDimensionChanged();
 	/**
@@ -249,6 +243,24 @@ public:
 	FVector GetViewLocation()const;
 	FRotator GetViewRotator()const;
 	FIntPoint GetViewportSize()const;
+	/**
+	 * Substitute a viewport size for this canvas, for a caller that has no viewport to read one from.
+	 *
+	 * A ScreenSpaceOverlay canvas takes its size from the local player's viewport, so a world with no
+	 * player controller -- a headless fixture, a tool that builds a tree nobody is looking at -- leaves
+	 * GetViewportSize answering with the 2x2 fallback, and everything derived from it degenerates with
+	 * it: the root widget is sized 2x2, the projection matrix describes a 2x2 screen, and a screen-space
+	 * ray cast through that matrix lands nowhere near the pixel the caller aimed at.
+	 *
+	 * Applied immediately, because the size the canvas last applied is cached and the derived widget
+	 * size is what a caller asks for this for. Unset by default, so a canvas nobody has called this on
+	 * behaves exactly as before. Deliberately not a UPROPERTY: a substituted viewport is a property of
+	 * the run, not of the asset, and serializing it would let one escape into content.
+	 */
+	void SetViewportSizeOverride(const FIntPoint& InSize);
+	/** Drop the substituted size and go back to whatever the real viewport says. */
+	void ClearViewportSizeOverride();
+	bool HasViewportSizeOverride()const { return ViewportSizeOverride.IsSet(); }
 	/** get scale value of canvas. only valid for root canvas. */
 	FORCEINLINE float GetCanvasScale()const { return CanvasScale; }
 private:
@@ -334,10 +346,17 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "DreamGUI")
 		EDreamRenderMode RenderMode = EDreamRenderMode::WorldSpace;
 	/**
-	 * Render to RenderTarget, if not specified then DreamGUI will create a new one.
+	 * Render to RenderTarget, if not specified then DreamGUI will create a new one (AutoRenderTarget).
 	 */
 	UPROPERTY(EditAnywhere, Category = "DreamGUI")
 		TObjectPtr<UTextureRenderTarget2D> RenderTarget;
+	/**
+	 * The render target this canvas made for itself because none was assigned. Held apart from RenderTarget,
+	 * which is the author's: never saved, duplicated or copied, so a copy of the canvas makes its own rather
+	 * than drawing into this one.
+	 */
+	UPROPERTY(Transient, DuplicateTransient, TextExportTransient)
+		TObjectPtr<UTextureRenderTarget2D> AutoRenderTarget;
 	/** Clear color for TextureRenderTarget */
 	UPROPERTY(EditAnywhere, Category = "DreamGUI")
 	FColor RenderTargetClearColor = FColor::Transparent;
@@ -469,6 +488,11 @@ private:
 	TObjectPtr<UDreamCanvasCustomScale> CustomScale;
 	/** Current viewport size*/
 	FIntPoint ViewportSize = FIntPoint(2, 2);
+	/**
+	 * A viewport size standing in for the real one. Unset means "read the real viewport", which is
+	 * every canvas that has not been handed one. See SetViewportSizeOverride.
+	 */
+	TOptional<FIntPoint> ViewportSizeOverride;
 #pragma endregion
 	FRenderModeChangedEvent OnRenderModeChanged;
 	FRenderTargetChangedEvent OnRenderTargetChanged;
@@ -562,22 +586,12 @@ public:
 		float GetScreenSpaceRenderScale()const { return ScreenSpaceRenderScale; }
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
 		void SetScreenSpaceRenderScale(float Value);
-	/**
-	 * The size a screen-space pass renders at for a given viewport size and render scale, and the
-	 * scale that was actually used (the request, clamped).
-	 *
-	 * Separate from the RDG work on purpose: this is the whole decision, it is pure arithmetic, and it
-	 * is where the rules live -- never larger than the viewport, never smaller than one pixel on
-	 * either axis, and a scale of exactly 1 must give back the viewport size unchanged so that the
-	 * ordinary case cannot drift by a rounding error.
-	 */
-	static FIntPoint CalculateRenderScaledSize(const FIntPoint& InViewportSize, float InRequestedScale, float& OutAppliedScale);
 	/** Get actual render target of this canvas if actual render mode is RenderTarget. Canvas's render-target is inherited from root canvas. */
 	UFUNCTION(BlueprintCallable, Category = DreamGUI)
 		UTextureRenderTarget2D* GetActualRenderTarget()const;
-	/** Get render target of this canvas. */
+	/** Get render target of this canvas: the one assigned, or the one it made when none was. */
 	UFUNCTION(BlueprintCallable, Category = DreamGUI)
-		UTextureRenderTarget2D* GetRenderTarget()const { return RenderTarget; }
+		UTextureRenderTarget2D* GetRenderTarget()const { return RenderTarget != nullptr ? RenderTarget.Get() : AutoRenderTarget.Get(); }
 	UFUNCTION(BlueprintCallable, Category = DreamGUI)
 	FColor GetRenderTargetClearColor()const{return RenderTargetClearColor;}
 	UFUNCTION(BlueprintCallable, Category = DreamGUI)
@@ -766,6 +780,12 @@ public:
 
 	void AddDreamWidget(UDreamWidget* InWidget);
 	void RemoveDreamWidget(UDreamWidget* InWidget);
+	/**
+	 * InWidget came into this canvas, left it, or moved within it: the widget list is made again. The widgets already in
+	 * it keep their order, so only a widget that is in the canvas now asks for an update; what one that left drew goes
+	 * with the rebuild, whose prepare leaves out what is no longer in the list.
+	 */
+	void MarkWidgetCameOrWent(UDreamWidget* InWidget);
 	/** return all DreamWidget that belongs to this canvas. */
 	const TArray<UDreamVisual*>& GetVisualArray()const { return VisualList; }
 	const TArray<UDreamWidget*>& GetWidgetArray()const { return WidgetList; }
@@ -797,6 +817,10 @@ private:
 	uint32 bShouldRebuildDrawCall : 1 = true;
 	/** See SetDrawCallRebuildSuspended. The request above is kept, not dropped, while this is set. */
 	uint32 bDrawCallRebuildSuspended : 1 = false;
+	/**
+	 * A vertex refresh asked for -- a colour, an alpha, nothing moved -- and not yet carried out. It stays until the
+	 * draw calls in hand take it (UpdateDrawCallBatchData) or a rebuild prepares what it asked for.
+	 */
 	uint32 bHasPendingUpdateData : 1 = false;
 	uint32 bNeedToSortRenderPriority : 1 = true;
 	uint32 bHasAddToDreamScreenSpaceRenderer : 1 = false;//is this canvas added to DreamGUI screen space renderer
@@ -805,10 +829,7 @@ private:
 	uint32 bPrevAnythingChangedForRenderTarget : 1 = true;//same as upper one, but the prev frame
 	uint32 bHasSetInitialStateForDreamWorldSpaceRenderer : 1 = false;//is DreamGUI world space renderer's initial state set
 	uint32 bNeedToVerifyMaterials : 1 = true;
-	mutable uint32 bNeedToSetClipDataTextureMaterialParameter : 1 = true;
 	uint32 bNeedToGenerateWidgetList : 1 = true;
-	uint32 bWidgetPropertyDataAsTextureChanged : 1 = true;
-	uint32 bClipDataAsTextureChanged : 1 = true;
 
 	uint32 bPrevIsVisible : 1 = true;//is DreamWidget active in prev frame?
 
@@ -817,8 +838,6 @@ private:
 	mutable uint32 bUIMeshNeedToSetInitialParameters : 1 = true;//after clear UIMesh, it will need to set initial parameters to use again
 	mutable uint32 bIsViewProjectionMatrixDirty : 1 = true;
 	mutable FMatrix CacheViewProjectionMatrix = FMatrix::Identity;//cache to prevent multiple calculation in same frame
-	mutable float LastRenderTime = 0;
-	friend class FDreamUIRenderSceneProxy;
 	friend class FDreamCanvasHierarchyOrderTest;
 	friend class FDreamCanvasVisualChangeRebuildsDrawCallTest;
 	friend class FDreamCanvasSuspendedRebuildKeepsTheRequestTest;
@@ -840,18 +859,23 @@ private:
 	float OverrideFovAngle = 0;
 	FMatrix OverrideProjectionMatrix = FMatrix::Identity;
 
-	UPROPERTY(Transient)
+	UPROPERTY(Transient, DuplicateTransient, TextExportTransient)
 	mutable TObjectPtr<UDreamUIMeshComponent> UIMesh;//current using UIMesh.
-	//DefaultMaterial created MaterialInstanceDynamic pool 
-	UPROPERTY(Transient, VisibleAnywhere, Category = "DreamGUI", AdvancedDisplay)
-	TArray<TObjectPtr<UMaterialInstanceDynamic>> PooledDefaultMaterialList;
-	//Currently using material inside PooledDefaultMaterialList from this start index to end
-	UPROPERTY(Transient, VisibleAnywhere, Category = "DreamGUI", AdvancedDisplay)
-	int UsingMaterialStartIndex = 0;
-	UPROPERTY(Transient, VisibleAnywhere, Category = "DreamGUI", AdvancedDisplay)
-	TMap<TObjectPtr<UMaterialInterface>, FDreamCanvasDynamicMaterialArrayContainer> MapSrcMatToDynamicMat;//trimmed by the decay pass in UpdateDrawCallMaterial once a tail sits idle a whole window
-	UPROPERTY(Transient, VisibleAnywhere, Category = "DreamGUI", AdvancedDisplay)
-	TMap<TObjectPtr<UMaterialInterface>, FDreamCanvasMaterialParameterCache> MapMatToParamCache;
+	/**
+	 * The proxies the canvas draws its materials through, per source material: DreamGUI answers the parameters it gives a
+	 * material in the material's place (FDreamUIMaterialProxy), and a proxy is taken back rebuild after rebuild.
+	 */
+	struct FMaterialProxyPool
+	{
+		TArray<TSharedPtr<FDreamUIMaterialProxy, ESPMode::ThreadSafe>> Proxies;
+		int32 CurrentIndex = 0;
+		/** Consecutive rebuilds the tail of Proxies went unused; past the decay window it is let go of. */
+		int32 UnusedStreak = 0;
+	};
+	TMap<TObjectKey<UMaterialInterface>, FMaterialProxyPool> MaterialProxyPools;
+	/** What those proxies point at -- their sources and the textures they answer with -- kept from the collector. */
+	UPROPERTY(Transient, DuplicateTransient, TextExportTransient)
+	TArray<TObjectPtr<UObject>> MaterialProxyReferences;
 	uint64 NewestDrawCallFrameNumber = 0;
 	FDreamCanvasPendingDrawCallData CurrentDrawCallData;//current drawing draw-call
 	TUniquePtr<FDreamCanvasDrawCallProcessingRunnable> DrawCallProcessingRunnable;
@@ -870,13 +894,11 @@ private:
 	
 	//clip data is stored in root canvas
 	TArray<TSharedPtr<FDreamUIClipData>> ClipDataList;
-	UPROPERTY(Transient, VisibleAnywhere, Category = "DreamGUI", AdvancedDisplay)
+	UPROPERTY(Transient, DuplicateTransient, TextExportTransient, VisibleAnywhere, Category = "DreamGUI", AdvancedDisplay)
 	TObjectPtr<UDreamUIDataAsTexture> ClipDataAsTexture;//clip coordinate stored in UV1.x
-	void OnClipDataTextureChanged(UTexture* NewTexture);
 	//widget property data is stored in each canvas (not only root canvas)
-	UPROPERTY(Transient, VisibleAnywhere, Category = "DreamGUI", AdvancedDisplay)
+	UPROPERTY(Transient, DuplicateTransient, TextExportTransient, VisibleAnywhere, Category = "DreamGUI", AdvancedDisplay)
 	TObjectPtr<UDreamUIDataAsTexture> WidgetPropertyDataAsTexture;//widget properties coordinate stored in UV1.y
-	void OnWidgetPropertyDataTextureChanged(UTexture* NewTexture);
 	void CheckWidgetPropertyData();
 public:
 	void PushAsyncFunction_TransformVertices(TFunction<void()> InFunction);
@@ -917,7 +939,56 @@ public:
 	 * same frame instead of waiting for the owner's next incidental rebuild.
 	 */
 	void ConsumePendingRenderPrioritySort();
+public:
+	/**
+	 * A widget of this canvas asks for an update: MarkCanvasUpdate, with the widget named. When only widgets asked, the
+	 * update looks at those widgets alone, where it looks at every widget of the canvas otherwise.
+	 */
+	void MarkWidgetUpdate(UDreamWidget* InWidget, bool bRebuildDrawCall);
 private:
+	/**
+	 * The widgets that asked for an update since the canvas last updated. The update looks at them alone -- in the
+	 * order of WidgetList, each after its parents' clips -- unless something else woke the canvas as well: the canvas
+	 * itself, a new widget list, a caller that named no widget (bUpdateEveryWidget).
+	 */
+	TArray<TWeakObjectPtr<UDreamWidget>> WidgetsToUpdate;
+	/** Something other than a widget woke the canvas: the next update looks at every widget. */
+	bool bUpdateEveryWidget = true;
+	/**
+	 * Each widget's place in WidgetList: the order the widgets that asked are looked at in, and the order the prepare's
+	 * entries are merged in. Made when it is first needed after the list was made (bWidgetListIndexValid).
+	 */
+	TMap<TObjectKey<UDreamWidget>, int32> WidgetListIndex;
+	bool bWidgetListIndexValid = false;
+	void EnsureWidgetListIndex();
+	/**
+	 * InAsking in list order, once each. False when one of them is not in the list and the list is behind, not when it
+	 * went: one that left the canvas since the list was last made has nothing to look at, and what it drew goes with the
+	 * prepare that merges the new list (bWidgetListChangedSincePrepare).
+	 */
+	bool GatherWidgetsToUpdateInListOrder(const TArray<TWeakObjectPtr<UDreamWidget>>& InAsking, TArray<UDreamWidget*>& OutWidgets);
+	/**
+	 * What the last prepare made, kept: when only the widgets in WidgetsToPrepare changed since -- asked, came, moved --
+	 * the next prepare keeps every other widget's entry and makes theirs again (MergePreparedDataCache), instead of
+	 * walking every widget.
+	 */
+	TArray<FDreamUIRenderData> PreparedDataCache;
+	/** The widgets looked at since the last prepare; bPrepareEveryWidget when every widget was. */
+	TArray<TWeakObjectPtr<UDreamWidget>> WidgetsToPrepare;
+	bool bPrepareEveryWidget = true;
+	bool bPreparedDataCacheValid = false;
+	/** The widget list was made again since the last prepare: widgets came, went or moved. */
+	bool bWidgetListChangedSincePrepare = false;
+	/**
+	 * PreparedDataCache made over: each widget that stayed where it was keeps its entry, in the list's order, and each
+	 * widget in WidgetsToPrepare has its made again. False when only a full prepare can say what the order is; the cache
+	 * is then made again from nothing.
+	 */
+	bool MergePreparedDataCache();
+	/** What a prepare makes of InWidget -- nothing, or its one entry -- appended to OutRenderDataArray. */
+	void AppendRenderDataOf(UDreamWidget* InWidget, TArray<FDreamUIRenderData>& OutRenderDataArray);
+	/** r.DreamUI.VerifyPartialPrepare: InPrepared, made from the last prepare, against a prepare of every widget now. */
+	void VerifyPartialPrepare(const TArray<FDreamUIRenderData>& InPrepared);
 
 	void PrepareDrawCallBatchingData(TArray<FDreamUIRenderData>& OutRenderDataArray);
 	void UpdateDrawCallMesh();
@@ -931,6 +1002,9 @@ public:
 	 *		parent's surface, and a canvas is not a clipper, so its rect says nothing about visibility.
 	 */
 	static void BatchDrawCallAsync(const FVector2D& InCanvasLeftBottom, const FVector2D& InCanvasRightTop, const TArray<FDreamUIRenderData>& InRenderDataArray, TArray<FDreamUIDrawCall>& InOutUIDrawCallList, bool bCullElementsOutsideCanvasRect = false);
+	/** The same, using up InRenderDataArray: each element's prepared geometry goes into its draw call as it is. */
+	static void BatchDrawCallAsync(const FVector2D& InCanvasLeftBottom, const FVector2D& InCanvasRightTop, TArray<FDreamUIRenderData>&& InRenderDataArray, TArray<FDreamUIDrawCall>& InOutUIDrawCallList, bool bCullElementsOutsideCanvasRect = false
+		, const TArray<TArray<TSharedPtr<const FDreamUIGeometry>>>* InGeometryListsOnSections = nullptr);
 	static bool Is2DUITransform(const FTransform& Transform);
 private:
 	void CheckUIMesh()const;

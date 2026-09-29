@@ -51,14 +51,14 @@ protected:
 	void RegisterOnRichTextCustomStyleDataChange();
 	void UnregisterOnRichTextCustomStyleDataChange();
 	FDelegateHandle RichTextCustomStyleDataChangedDelegateHandle;
-#if WITH_EDITORONLY_DATA
-	/** current using font. the default font when creating new UIText */
-	static TWeakObjectPtr<UDreamUIFontData_BaseObject> CurrentUsingFontData;
-#endif
 public:
 	static FName GetPropertyName_Text()
 	{
 		return GET_MEMBER_NAME_CHECKED(UDreamText, Text);
+	}
+	static FName GetPropertyName_Font()
+	{
+		return GET_MEMBER_NAME_CHECKED(UDreamText, Font);
 	}
 	static FName GetPropertyName_OverrideMaterial()
 	{

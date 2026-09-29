@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "Containers/Queue.h"
+#include "HAL/PlatformProcess.h"
 #include "Misc/ScopeLock.h"
 #include "Tasks/Task.h"
 
@@ -51,23 +52,35 @@ public:
 	}
 
 	/**
-	 * Block until everything pushed so far has run. Prefer this to sleeping on a per-item flag: the
-	 * wait can retract a drain that has not started and run it on the calling thread.
+	 * Block until everything pushed so far has run, and the drain that ran it has returned. Prefer this
+	 * to sleeping on a per-item flag: the wait can retract a drain that has not started and run it on the
+	 * calling thread.
+	 *
+	 * The slot alone is not enough to wait on. A drain gives it up before its last look at the queue --
+	 * so that a push in between is not lost -- and is still reading this object for that look, and may
+	 * launch the next drain from there. Returning on the slot let an owner destroy this under the drain's
+	 * tail, which then wrote into freed memory: heap damage that surfaced wherever it happened to land.
 	 */
 	void WaitForAllFunctions()
 	{
-		while (bIsDraining.load(std::memory_order_acquire))
+		for (;;)
 		{
 			UE::Tasks::FTask TaskToWait;
 			{
 				FScopeLock Lock(&DrainTaskLock);
 				TaskToWait = DrainTask;
 			}
-			if (!TaskToWait.IsValid())
+			if (TaskToWait.IsValid() && !TaskToWait.IsCompleted())
 			{
-				break;
+				TaskToWait.Wait();
+				continue;//it may have launched the next drain on its way out
 			}
-			TaskToWait.Wait();
+			if (!bIsDraining.load(std::memory_order_acquire))
+			{
+				return;
+			}
+			//a drain has taken the slot and is about to record its task; it will not be long
+			FPlatformProcess::YieldThread();
 		}
 	}
 

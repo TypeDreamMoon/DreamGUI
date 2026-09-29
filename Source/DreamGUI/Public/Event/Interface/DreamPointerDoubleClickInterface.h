@@ -16,17 +16,25 @@ class UDreamPointerDoubleClickInterface : public UInterface
 /**
  * Interface for handling DreamUI double click event.
  *
- * The second click of a pair still delivers OnPointerClick first: a list row that opens on double click
- * usually also selects on single click, and making the caller choose would mean re-implementing the
- * single click behaviour in every double-click handler. A handler that wants only the double click
- * distinguishes them with UDreamPointerEventData::ClickCount.
+ * The double click is the SECOND PRESS of a pair, delivered at that press and IN PLACE of its
+ * OnPointerDown -- Slate's routing (FSlateApplication::ProcessMouseButtonDoubleClickEvent), so a widget
+ * that only listens for downs sees one down per double click, as a UMG widget does. The release that
+ * follows is an ordinary OnPointerUp and OnPointerClick, so a list row that selects on a click and
+ * opens on a double click does both; ClickCount says which click of a run each event belongs to.
+ *
+ * Nothing turns an unanswered double click back into a down, in Slate or here. A control that wants
+ * the second press as a press does it itself, as SButton and SCheckBox do: UUIButton and UUIToggle
+ * answer this by running their own down. Only pointer presses double-click; a key or a pad's confirm
+ * never does.
  */
 class DREAMGUI_API IDreamPointerDoubleClickInterface
 {
 	GENERATED_BODY()
 public:
 	/**
-	 * Called when two clicks land on the same widget inside the event system's DoubleClickTime.
+	 * Called at the second press on the same widget, with the same button, inside the event system's
+	 * DoubleClickTime of the last click there and within the press raycaster's drag threshold of where
+	 * that click was pressed -- instead of OnPointerDown for that press.
 	 * @return Allow event bubble up? If all interface of same actor's components return true, then the event can bubble up.
 	 */
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = DreamGUI)

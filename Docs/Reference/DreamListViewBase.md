@@ -54,6 +54,16 @@ window plus an overscan and rows are re-bound as the view moves, which is what U
 does and the only way a hundred thousand rows is anything but a hang. GetRowWidget then answers
 for realized rows and null for the rest, which is UMG's contract too.
 
+NAVIGATION STEPS BY ITEM, AS SListView's DOES
+--------------------------------------------
+A navigation press on a row is answered by the list (see UDreamListRowButton): along the scroll axis
+the next or previous item -- ResolveNavigationTarget, which a tile view answers per line and per
+column -- is scrolled into view and, while bSelectItemOnNavigation is on, selected, the way
+SListView::OnNavigation and NavigationSelect do it. A press with nowhere to go inside the list (past
+either end, or across a one-column list) is left to the ordinary geometric scan, which takes focus
+to whatever is beside the list -- STableViewBase::OnNavigation's answer. Arriving at a list from
+outside is that same scan, which lands on the nearest row and does not select it.
+
 WHY THE PLAIN SCROLL VIEW, NOT UUIListView
 ------------------------------------------
 The recycling stack (UUIRecyclableScrollView, and UUIListView on top of it) is the right answer
@@ -128,6 +138,9 @@ Reach for `each` when the ROW is the interesting part. Reach for Native.List whe
 | `DragDropVisualEntryClass` | `TSubclassOf<UDreamUserWidget>` | List|Drag | yes | `SetDragDropVisualEntryClass` | What to show under the cursor while dragging -- UMG's DragDropVisualEntryClass. |
 | `DragDropOperationClass` | `TSubclassOf<UDreamDragDropOperation>` | List|Drag | yes | `SetDragDropOperationClass` | The operation class a row's drag builds -- UMG's DragDropOperationClass. |
 | `DragOperationTag` | `FName` | List|Drag | yes | `SetDragOperationTag` | The tag copied onto every operation this list creates, for drop targets to filter on. |
+| `bEnableDragEdgeScrolling` | `bool` | List|Drag | yes | `GetEnableDragEdgeScrolling` / `SetEnableDragEdgeScrolling` | Whether a drag held near the viewport's edge scrolls the list towards that edge -- which UMG's list does not do, and which is what makes a drop onto a row that is off screen possible at all. |
+| `DragEdgeScrollBandSize` | `float` | List|Drag | yes | `GetDragEdgeScrollBandSize` / `SetDragEdgeScrollBandSize` | How deep the band along each end of the viewport is, in local units along the scroll axis. The whole band scrolls at the same speed; zero turns the band, and with it edge scrolling, off. |
+| `DragEdgeScrollSpeed` | `float` | List|Drag | yes | `GetDragEdgeScrollSpeed` / `SetDragEdgeScrollSpeed` | How fast a drag in the band scrolls the list, in local units per second. |
 | `OnIsItemSelectableOrNavigable` | `FDreamListItemSelectableQuery` | List | - | read / write | Whether one item may be chosen or navigated to -- UMG's BP_OnIsItemSelectableOrNavigable. |
 | `FaceNode` | `TObjectPtr<UDreamWidget>` | List | - | read only | The face: the list's own look, and what cuts everything off at its rounded edge. |
 | `ViewportNode` | `TObjectPtr<UDreamWidget>` | List | - | read only | The window the rows slide behind, and where the scroll behaviour lives. |
@@ -160,7 +173,10 @@ Reach for `each` when the ROW is the interesting part. Reach for Native.List whe
 | `bool GetAlternatingRowColors()` | pure | Get Alternating Row Colors |
 | `bool GetClearScrollVelocityOnSelection()` | pure | Get Clear Scroll Velocity on Selection |
 | `EDreamScrollBoxConsumeMouseWheel GetConsumeMouseWheel()` | pure | Get Consume Mouse Wheel |
+| `float GetDragEdgeScrollBandSize()` | pure | Get Drag Edge Scroll Band Size |
+| `float GetDragEdgeScrollSpeed()` | pure | Get Drag Edge Scroll Speed |
 | `int32 GetDraggedItemIndex()` | pure | The item index the drag in flight started on, or -1 when nothing is being dragged. |
+| `bool GetEnableDragEdgeScrolling()` | pure | Get Enable Drag Edge Scrolling |
 | `bool GetEnableFixedLineOffset()` | pure | Get Enable Fixed Line Offset |
 | `bool GetEnableRightClickScrolling()` | pure | Get Enable Right Click Scrolling |
 | `bool GetEnableScrollAnimation()` | pure | Get Enable Scroll Animation |
@@ -205,7 +221,7 @@ Reach for `each` when the ROW is the interesting part. Reach for Native.List whe
 | `bool IsItemSelected(int32 InItemIndex)` | pure | Is Item Selected |
 | `bool IsItemVisible(int32 InItemIndex)` | pure | True when an item currently has a row widget standing for it -- UMG's IsItemVisible. |
 | `bool IsVirtualizing()` | pure | True while the list is showing a window of widgets rather than one per item. |
-| `void NavigateToIndex(int32 InItemIndex)` | callable | Select an item's row AND bring it into view -- UMG's NavigateToIndex, which is what directional navigation does when it lands on a list. |
+| `void NavigateToIndex(int32 InItemIndex)` | callable | Select an item's row AND bring it into view -- UMG's NavigateToIndex. |
 | `void RebuildRows()` | callable | Throw the rows away and build them again from the source. Called for you by ApplyStyle -- row geometry and row colour are both style, so there is no such thing as re-styling without it -- and by every setter that moves the source. |
 | `void RemoveItem(UObject* InItem)` | callable | Drop one object from the source and rebuild -- UMG's RemoveItem. |
 | `void RemoveItemAt(int32 InItemIndex)` | callable | Drop the item at a source index and rebuild. Out of range does nothing. |
@@ -226,7 +242,10 @@ Reach for `each` when the ROW is the interesting part. Reach for Native.List whe
 | `void SetDragDropVisualEntryClass(TSubclassOf<UDreamUserWidget> InEntryClass)` | callable | Set Drag Drop Visual Entry Class |
 | `void SetDragDropVisualOffset(FVector2D InOffset)` | callable | Set Drag Drop Visual Offset |
 | `void SetDragDropVisualPivot(FVector2D InPivot)` | callable | The five below are read when a drag STARTS, so setting one is all a setter has to do; a drag already in flight keeps the visual and the operation it began with. |
+| `void SetDragEdgeScrollBandSize(float InBandSize)` | callable | Clamped at zero. Read on every step, so a change reaches a drag already in flight. |
+| `void SetDragEdgeScrollSpeed(float InSpeed)` | callable | Clamped at zero. Read on every step, like the band. |
 | `void SetDragOperationTag(FName InTag)` | callable | Set Drag Operation Tag |
+| `void SetEnableDragEdgeScrolling(bool bInEnable)` | callable | Turning it off mid-drag stops a scroll already under way, and says it finished. |
 | `void SetEnableFixedLineOffset(bool bInEnable)` | callable | Set Enable Fixed Line Offset |
 | `void SetEnableRightClickScrolling(bool bInEnable)` | callable | Set Enable Right Click Scrolling |
 | `void SetEnableScrollAnimation(bool bInEnable)` | callable | Set Enable Scroll Animation |

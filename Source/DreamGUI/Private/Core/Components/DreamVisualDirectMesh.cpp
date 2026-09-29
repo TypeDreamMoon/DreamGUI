@@ -2,6 +2,7 @@
 
 #include "Core/Components/DreamVisualDirectMesh.h"
 #include "Core/DreamUIMesh/DreamUIMeshComponent.h"
+#include "Event/DreamPointerEventData.h"
 #include "Materials/MaterialInstanceDynamic.h"
 #include "Core/DreamUIDrawCall.h"
 #include "Core/Components/DreamWidget.h"

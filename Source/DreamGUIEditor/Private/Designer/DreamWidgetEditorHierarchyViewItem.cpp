@@ -39,12 +39,12 @@ TSharedRef<FHierarchyDreamWidgetDragDropOp> FHierarchyDreamWidgetDragDropOp::New
 	if (InWidgets.Num() == 1)
 	{
 		Operation->CurrentHoverText = Operation->DefaultHoverText = FText::FromString(InWidgets[0]->GetDisplayName());
-		Operation->Transaction = new FScopedTransaction(LOCTEXT("MoveWidget", "Change Hierarchy"));
+		Operation->Transaction = MakeUnique<FScopedTransaction>(LOCTEXT("MoveWidget", "Change Hierarchy"));
 	}
 	else
 	{
 		Operation->CurrentHoverText = Operation->DefaultHoverText = LOCTEXT("DragMultipleWidgets", "Multiple Widgets");
-		Operation->Transaction = new FScopedTransaction(LOCTEXT("MoveWidgets", "Change Hierarchy"));
+		Operation->Transaction = MakeUnique<FScopedTransaction>(LOCTEXT("MoveWidgets", "Change Hierarchy"));
 	}
 
 	// Add an FItem for each widget in the drag operation.
@@ -67,14 +67,11 @@ TSharedRef<FHierarchyDreamWidgetDragDropOp> FHierarchyDreamWidgetDragDropOp::New
 	return Operation;
 }
 
-FHierarchyDreamWidgetDragDropOp::~FHierarchyDreamWidgetDragDropOp()
-{
-	delete Transaction;
-}
+FHierarchyDreamWidgetDragDropOp::~FHierarchyDreamWidgetDragDropOp() = default;
 
 void FHierarchyDreamWidgetDragDropOp::OnDrop(bool bDropWasHandled, const FPointerEvent& MouseEvent)
 {
-	if (!bDropWasHandled)
+	if (!bDropWasHandled && Transaction.IsValid())
 	{
 		Transaction->Cancel();
 	}
@@ -211,7 +208,7 @@ TOptional<EItemDropZone> ProcessHierarchyDragDrop(const FDragDropEvent& DragDrop
 				});
 			const bool bIsChildOfDraggedObject = HierarchyDragDropOp->DraggedWidgets.ContainsByPredicate([TargetItem](const FHierarchyDreamWidgetDragDropOp::FItem& DraggedItem)
 				{
-					return TargetItem->IsChildOf(DraggedItem.Widget);
+					return TargetItem->IsChildOf(DraggedItem.Widget.Get());
 				});
 
 			if (bIsDraggedObject || bIsChildOfDraggedObject)
@@ -224,7 +221,7 @@ TOptional<EItemDropZone> ProcessHierarchyDragDrop(const FDragDropEvent& DragDrop
 			TArray<UDreamWidget*> ProposedChildren;
 			for (const FHierarchyDreamWidgetDragDropOp::FItem& DraggedItem : HierarchyDragDropOp->DraggedWidgets)
 			{
-				if (IsValid(DraggedItem.Widget)) ProposedChildren.Add(DraggedItem.Widget);
+				if (UDreamWidget* Dragged = DraggedItem.Widget.Get()) ProposedChildren.Add(Dragged);
 			}
 			if (!NewParent->CanAcceptChildren(ProposedChildren))
 			{
@@ -266,8 +263,13 @@ TOptional<EItemDropZone> ProcessHierarchyDragDrop(const FDragDropEvent& DragDrop
 				for (const auto& DraggedWidget : HierarchyDragDropOp->DraggedWidgets)
 				{
 					// Named TemplateWidget, but it is the preview's -- see the note above. Nothing
-					// records it.
-					auto TemplateWidget = DraggedWidget.Widget;
+					// records it. Gone if the preview was rebuilt while the mouse was down; there is
+					// then nothing of it left to move.
+					UDreamWidget* TemplateWidget = DraggedWidget.Widget.Get();
+					if (TemplateWidget == nullptr)
+					{
+						continue;
+					}
 
 					if (Index.IsSet())
 					{
@@ -569,7 +571,7 @@ TOptional<EItemDropZone> SDreamWidgetEditorHierarchyViewItem::HandleCanAcceptDro
 			TOptional<EItemDropZone> ValidDropZone;
 			for (auto DraggedWidget : HierarchyDragDropOp->DraggedWidgets)
 			{
-				if (SupportDrop(DraggedWidget.Widget, Widget.Get(), DropZone))
+				if (SupportDrop(DraggedWidget.Widget.Get(), Widget.Get(), DropZone))
 				{
 					auto Zone = ProcessHierarchyDragDrop(DragDropEvent, DropZone, bIsDrop, Manager.Pin(), Widget.Get());
 					if (ValidDropZone.IsSet())

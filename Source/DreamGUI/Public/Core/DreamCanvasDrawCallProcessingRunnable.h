@@ -17,7 +17,7 @@
  * Exactly one batch is ever in flight per canvas (bIsBatching is the claim on it), which keeps the
  * pending queue in frame order.
  */
-class FDreamCanvasDrawCallProcessingRunnable
+class DREAMGUI_API FDreamCanvasDrawCallProcessingRunnable
 {
 public:
 	/** Stop() is what waits for the in-flight batch; the task reads queues this object owns. */

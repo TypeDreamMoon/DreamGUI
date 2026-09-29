@@ -50,7 +50,7 @@
  * Declared here rather than in the widget's header because that header describes the Slate class,
  * which no headless test can construct; DreamPanelsAuditAutomationTests declares this prototype.
  */
-bool DreamWidgetAnimation_CanBindWidgetToSequencer(const UDreamWidget* InWidget)
+DREAMGUIEDITOR_API bool DreamWidgetAnimation_CanBindWidgetToSequencer(const UDreamWidget* InWidget)
 {
 	if (!IsValid(InWidget))
 	{

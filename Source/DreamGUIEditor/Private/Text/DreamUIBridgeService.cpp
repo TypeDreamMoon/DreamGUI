@@ -5,6 +5,7 @@
 #include "DreamGUIEditorModule.h"
 #include "DreamWidgetBlueprint.h"
 #include "Designer/DreamWidgetBlueprintEditor.h"
+#include "Core/DreamUIScriptPackages.h"
 #include "Core/DreamUserWidget.h"
 #include "Core/Components/DreamWidget.h"
 
@@ -25,6 +26,7 @@
 #include "Serialization/JsonReader.h"
 #include "Serialization/JsonSerializer.h"
 #include "Subsystems/AssetEditorSubsystem.h"
+#include "UObject/CoreRedirects.h"
 #include "UObject/UnrealType.h"
 #include "UObject/UObjectGlobals.h"
 
@@ -253,8 +255,12 @@ namespace DreamUIBridgeLocal
 		{
 			// LOAD_NoWarn, because a path that is a class rather than a Blueprint is an ordinary
 			// case here and the load that discovers so must not narrate it into the log on every
-			// keystroke of an author's completion.
-			if (UObject* Loaded = LoadObject<UObject>(nullptr, *InClassPath, nullptr, LOAD_NoWarn | LOAD_Quiet))
+			// keystroke of an author's completion. Redirected first, for a class that has moved to
+			// another module or been renamed since the file asking about it was written.
+			const FString ClassPath = InClassPath.StartsWith(TEXT("/Script/"))
+				? DreamUI::ApplyTypeRedirects(ECoreRedirectFlags::Type_Class, InClassPath)
+				: InClassPath;
+			if (UObject* Loaded = LoadObject<UObject>(nullptr, *ClassPath, nullptr, LOAD_NoWarn | LOAD_Quiet))
 			{
 				if (UClass* AsClass = Cast<UClass>(Loaded))
 				{
@@ -348,6 +354,16 @@ namespace DreamUIBridgeLocal
 			if (!Type.Split(TEXT("."), &PackagePath, &Leaf, ESearchCase::CaseSensitive, ESearchDir::FromEnd))
 			{
 				ObjectPath = Type + TEXT(".") + FPackageName::GetShortName(Type);
+			}
+			else if (Type.StartsWith(TEXT("/Script/")))
+			{
+				// A native type, which may have moved to another module or been renamed since the file
+				// naming it was written: whichever of struct or class redirects it, the way a load would.
+				ObjectPath = DreamUI::ApplyTypeRedirects(ECoreRedirectFlags::Type_Struct, Type);
+				if (ObjectPath == Type)
+				{
+					ObjectPath = DreamUI::ApplyTypeRedirects(ECoreRedirectFlags::Type_Class, Type);
+				}
 			}
 			UObject* Loaded = LoadObject<UObject>(nullptr, *ObjectPath, nullptr, LOAD_NoWarn | LOAD_Quiet);
 			if (UScriptStruct* AsStruct = Cast<UScriptStruct>(Loaded))
@@ -727,7 +743,7 @@ namespace DreamUIBridgeLocal
 	{
 		// The watcher's own gates: compiling reinstances live widgets, which mid-PIE is a crash
 		// report, and mid-GC/save is worse. Refusing loudly beats queueing quietly.
-		if (GEditor == nullptr || GEditor->PlayWorld != nullptr || GIsSavingPackage || IsGarbageCollecting())
+		if (GEditor == nullptr || GEditor->PlayWorld != nullptr || UE::IsSavingPackage() || IsGarbageCollecting())
 		{
 			OutResponse->SetBoolField(TEXT("ok"), false);
 			OutResponse->SetStringField(TEXT("message"),

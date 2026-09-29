@@ -1,7 +1,7 @@
 ﻿{
 	"FileVersion": 3,
-	"Version": 1,
-	"VersionName": "1.0.0",
+	"Version": 2,
+	"VersionName": "2.0.0",
 	"FriendlyName": "DreamGUI",
 	"Description": "DreamGUI - 3D UI System, Event Framework, Widget Blueprints and Designer, Tween Animation. A fork of LGUI/LexUI by Lex Liu (MIT). Platform status: Win64 is verified (editor plus the automation suite); Mac, Linux, iOS and Android build and carry the mobile touch and virtual-keyboard paths, but none has been run on a device; no dedicated-server target has been built. See the Platforms section of README.md.",
 	"Category": "UI",
@@ -10,7 +10,7 @@
 	"DocsURL": "https://github.com/TypeDreamMoon/DreamGUI",
 	"MarketplaceURL": "",
 	"SupportURL": "https://github.com/TypeDreamMoon/DreamGUI/issues",
-	"EngineVersion": "5.8",
+	"EngineVersion": "5.8.0",
 	"CanContainContent": true,
 	"SupportedTargetPlatforms": [ "Win64", "Mac", "Linux", "IOS", "Android" ],
 	"Installed": false,
@@ -22,7 +22,37 @@
 	],
 	"Modules": [
 		{
+			"Name": "DreamGUIRenderer",
+			"Type": "Runtime",
+			"LoadingPhase": "PostConfigInit",
+			"PlatformAllowList": [ "Win64", "Mac", "Linux", "IOS", "Android" ]
+		},
+		{
 			"Name": "DreamGUI",
+			"Type": "Runtime",
+			"LoadingPhase": "PostConfigInit",
+			"PlatformAllowList": [ "Win64", "Mac", "Linux", "IOS", "Android" ]
+		},
+		{
+			"Name": "DreamGUIInput",
+			"Type": "Runtime",
+			"LoadingPhase": "PostConfigInit",
+			"PlatformAllowList": [ "Win64", "Mac", "Linux", "IOS", "Android" ]
+		},
+		{
+			"Name": "DreamGUIControls",
+			"Type": "Runtime",
+			"LoadingPhase": "PostConfigInit",
+			"PlatformAllowList": [ "Win64", "Mac", "Linux", "IOS", "Android" ]
+		},
+		{
+			"Name": "DreamGUIExtensions",
+			"Type": "Runtime",
+			"LoadingPhase": "PostConfigInit",
+			"PlatformAllowList": [ "Win64", "Mac", "Linux", "IOS", "Android" ]
+		},
+		{
+			"Name": "DreamGUISamples",
 			"Type": "Runtime",
 			"LoadingPhase": "PostConfigInit",
 			"PlatformAllowList": [ "Win64", "Mac", "Linux", "IOS", "Android" ]
@@ -44,6 +74,11 @@
 			"Type": "Runtime",
 			"LoadingPhase": "Default",
 			"PlatformAllowList": [ "Win64", "Mac", "Linux", "IOS", "Android" ]
+		},
+		{
+			"Name": "DreamGUITests",
+			"Type": "Editor",
+			"LoadingPhase": "PostEngineInit"
 		}
 	]
 }

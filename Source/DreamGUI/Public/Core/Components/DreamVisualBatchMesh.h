@@ -4,7 +4,7 @@
 #pragma once
 
 #include "DreamVisual.h"
-#include "Core/DreamUIBlendMode.h"
+#include "DreamUIRender/DreamUIBlendMode.h"
 #include "DreamVisualBatchMesh.generated.h"
 
 class UDreamMeshModifierBase;
@@ -104,6 +104,8 @@ protected:
 #endif
 
 	TSharedPtr<FDreamUIGeometry> UIGeometry = nullptr;
+	/** The last copy GetGeometryForBatching made. */
+	TSharedPtr<const FDreamUIGeometry> GeometryForBatching;
 	
 	/** Will any geometry modifier change these data? */
 	void GeometryModifierWillChangeVertexData(bool& OutTriangleIndices, bool& OutVertexPosition, bool& OutUV, bool& OutColor);
@@ -137,6 +139,13 @@ public:
 
 	virtual void MarkAllDirty()override;
 	FDreamUIGeometry* GetGeometry()const { return UIGeometry.Get(); }
+	/**
+	 * The geometry as the draw-call batching is to see it, asked on the game thread once the vertices are transformed:
+	 * the copy made the last time, while the geometry still holds what that copy holds, and a new copy when it does
+	 * not. A copy is never written once made -- the batching reads it on a worker thread, and draw calls keep it -- so
+	 * an element that did not change is handed over again without being copied again.
+	 */
+	TSharedPtr<const FDreamUIGeometry> GetGeometryForBatching();
 	UDreamMeshModifierBase* AddMeshModifier(TSubclassOf<UDreamMeshModifierBase> ModifierClass);
 
 	virtual bool LineTraceUI(FDreamUIHitResult& OutHit, const FVector& Start, const FVector& End)const override;

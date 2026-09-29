@@ -128,21 +128,12 @@ FDreamTextPaintParams UDreamText::MakePaintParams(const UDreamText* Text)
 }
 
 
-#if WITH_EDITORONLY_DATA
-TWeakObjectPtr<UDreamUIFontData_BaseObject> UDreamText::CurrentUsingFontData = nullptr;
-#endif
 UDreamText::UDreamText(const FObjectInitializer& ObjectInitializer):Super(ObjectInitializer)
 {
-#if WITH_EDITOR
-	if (UDreamText::CurrentUsingFontData.IsValid())
-	{
-		Font = CurrentUsingFontData.Get();
-	}
-	else
-#endif
-	{
-		Font = UDreamUIFontData_BaseObject::GetDefaultFont();
-	}
+	// The project's default font, and only that. The font last picked in a details panel used to be the
+	// default of every text made afterwards, anywhere in the process -- a play session's, a test's, a
+	// preview's -- which made what a new text looks like depend on what somebody had clicked earlier.
+	Font = UDreamUIFontData_BaseObject::GetDefaultFont();
 	UIGeometry->bIsFont = true;
 }
 
@@ -365,6 +356,7 @@ bool UDreamText::GetShouldAffectByPixelSnapping()const
 
 void UDreamText::OnUpdateGeometry(FDreamUIGeometry& InGeo, bool InTriangleChanged, bool InVertexPositionChanged, bool InVertexUVChanged, bool InVertexColorChanged)
 {
+	TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_TextUpdateGeometry);
 	if (InTriangleChanged || InVertexPositionChanged || InVertexUVChanged || InVertexColorChanged)
 	{
 		UpdateCacheTextGeometry();
@@ -456,7 +448,6 @@ void UDreamText::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEv
 			}
 			else if (MemberPropertyName == GET_MEMBER_NAME_CHECKED(UDreamText, Font))
 			{
-				UDreamText::CurrentUsingFontData = Font;
 				ClearEmojiObject();
 				ConditionalUpdateCacheTextGeometry();
 			}

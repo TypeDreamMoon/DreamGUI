@@ -5,6 +5,7 @@
 #include "Core/DreamUserWidget.h"
 #include "Core/DreamGUISettings.h"
 #include "Core/DreamUIManager.h"
+#include "Core/DreamWidgetTree.h"
 
 #include "EngineUtils.h"
 #include "GameFramework/Actor.h"
@@ -45,24 +46,27 @@ void UDreamWidgetPresenterComponentBase::EndPlay(const EEndPlayReason::Type EndP
 {
 	Super::EndPlay(EndPlayReason);
 
-	// The loaded tree is outered to the World and held by the manager's AllWidgetArray, so nothing
-	// releases it when the owning actor goes away unless someone says so here. A world-space health
-	// bar otherwise outlived every enemy that died -- still registered, still ticking, still drawing
-	// -- one live tree per corpse until the world ended. EndPlay and not OnUnregister, because a
-	// component unregisters for reasons that are not a teardown (a reregister context, for one) and
+	// The tree is this component's to let go: a world-space health bar otherwise outlived every enemy
+	// that died -- still registered, still ticking, still drawing. EndPlay and not OnUnregister, because
+	// a component unregisters for reasons that are not a teardown (a reregister context, for one) and
 	// throwing the tree away there would take it out from under a live actor.
 	//
 	// Skipped while garbage collection is already destroying this component -- UActorComponent's
-	// BeginDestroy routes here too, and the widget is unreachable by then, so the weak pointer
-	// answers null anyway. A whole-world shutdown is safe as it stands: UWorld::EndPlay routes every
-	// actor before it reaches the subsystems, so DestroyRegisteredWidgetTrees finds this tree already
-	// gone, and DestroyWidget tolerates a second call regardless.
+	// BeginDestroy routes here too, and the tree goes with the component then. A whole-world shutdown
+	// is safe as it stands: UWorld::EndPlay routes every actor before it reaches the subsystems, so the
+	// world's teardown finds this tree already gone, and DestroyWidget tolerates a second call regardless.
 	if (!HasAnyFlags(RF_BeginDestroyed))
 	{
 		DestroyLoadedWidget();
 	}
 	LoadedWidget = nullptr;
 	RootCanvas = nullptr;
+}
+
+bool UDreamWidgetPresenterComponentBase::IsInAWorldThatRunsTrees() const
+{
+	const UWorld* World = GetWorld();
+	return World != nullptr && World->WorldType != EWorldType::Inactive && World->WorldType != EWorldType::None;
 }
 
 void UDreamWidgetPresenterComponentBase::OnRegister()
@@ -72,9 +76,15 @@ void UDreamWidgetPresenterComponentBase::OnRegister()
 	// An Inactive (or typeless) world is a package being preloaded -- double-clicking a map asset
 	// loads it before the map command runs. A tree built there answers to no manager and is reaped
 	// by the next GC through the BeginDestroy fallback, mid-purge; building it is pure liability.
-	if (World == nullptr || World->WorldType == EWorldType::Inactive || World->WorldType == EWorldType::None)
+	if (!IsInAWorldThatRunsTrees())
 	{
 		return;
+	}
+	// Known to the world's manager as a host, so the world's teardown and a level's removal can ask for
+	// the tree back (IDreamWidgetTreeHost).
+	if (UDreamUIManagerWorldSubsystem* Manager = UDreamUIManagerWorldSubsystem::GetInstance(World))
+	{
+		Manager->RegisterTreeHost(this);
 	}
 	if (!World->IsGameWorld())
 	{
@@ -108,64 +118,83 @@ void UDreamWidgetPresenterComponentBase::OnUnregister()
 	// OnComponentDestroyed / BeginDestroy below.
 	Super::OnUnregister();
 
-#if WITH_EDITOR
 	// An edit-mode tree has no EndPlay, and an unregister on its own does not say which of three things
 	// is happening:
 	//  - a reregister (a property edit, an undo that keeps the component): it registers again before
 	//    the frame is out and the tree must survive it, which is the reason for not destroying above;
-	//  - a destruction (component deleted, actor destroyed): OnComponentDestroyed follows, but the
-	//    component already knows, so the tree goes now rather than drawing on for the rest of the frame;
-	//  - a removal that never routes a destruction at all. World Partition unloading actors in the
-	//    editor, hiding a sublevel, and an undo that takes the component away all unregister and stop
-	//    there. Nothing after that releases the tree until garbage collection reaches BeginDestroy --
-	//    until then it keeps drawing for an actor that is no longer in the level -- and a teardown run
-	//    from inside GC is one this plugin has already been bitten by: DestroyWidget reaches other
-	//    objects, and any of them may be unreachable in the same purge.
-	// So a known destruction tears down at once, and anything else is looked at again a frame later and
-	// torn down only if nobody has registered the component in the meantime. Anything that comes back
-	// later (a sublevel shown again, a redo) goes through OnRegister, which builds a fresh tree.
+	//  - a destruction -- the component deleted or its actor destroyed, or an undo taking either away,
+	//    which leaves it garbage rather than destroyed: the tree goes now;
+	//  - a level leaving the world -- a sublevel hidden, World Partition unloading a cell: the world's
+	//    manager hears of it (LevelRemovedFromWorld) and asks every host in that level for its tree.
+	// Anything that comes back later (a sublevel shown again, a redo) goes through OnRegister, which
+	// builds a fresh tree.
 	const UWorld* World = GetWorld();
 	if (LoadedWidget.IsValid() && (World == nullptr || !World->IsGameWorld()))
 	{
 		const AActor* Owner = GetOwner();
-		if (IsBeingDestroyed() || (Owner != nullptr && Owner->IsActorBeingDestroyed()))
+		if (IsBeingDestroyed() || !IsValid(this) || (Owner != nullptr && (Owner->IsActorBeingDestroyed() || !IsValid(Owner))))
 		{
-			DestroyLoadedWidget();
-		}
-		else
-		{
-			TWeakObjectPtr<UDreamWidgetPresenterComponentBase> WeakThis(this);
-			UDreamUIManagerObject::AddOneShotTickFunction([WeakThis]()
-			{
-				// Garbage still resolves: an undo that removes the component leaves it marked garbage but
-				// uncollected, and releasing the tree before collection is the whole point. Unreachable
-				// objects still answer null, so this never touches one a purge is already destroying.
-				UDreamWidgetPresenterComponentBase* Presenter = WeakThis.Get(/*bEvenIfPendingKill*/ true);
-				if (Presenter != nullptr && !Presenter->IsRegistered())
-				{
-					Presenter->DestroyLoadedWidget();
-				}
-			}, 1);
+			ReleaseTree(EDreamTreeReleaseReason::HostDestroyed);
 		}
 	}
-#endif
 }
+
+#if WITH_EDITOR
+void UDreamWidgetPresenterComponentBase::PostEditUndo()
+{
+	Super::PostEditUndo();
+	// A transaction that takes this component away -- redoing its actor's deletion, undoing the actor's
+	// placement -- unregisters it BEFORE it marks it garbage: PreEditUndo opens a reregister context, and
+	// OnUnregister, seeing a live component then, kept the tree for the register that would follow. None
+	// follows for garbage, so the tree goes now. Undo bringing the component back registers it, and that
+	// builds a fresh one.
+	if (!IsValid(this))
+	{
+		ReleaseTree(EDreamTreeReleaseReason::HostDestroyed);
+		if (UDreamUIManagerWorldSubsystem* Manager = UDreamUIManagerWorldSubsystem::GetInstance(GetWorld()))
+		{
+			Manager->UnregisterTreeHost(this);
+		}
+	}
+}
+#endif
 
 void UDreamWidgetPresenterComponentBase::OnComponentDestroyed(bool bDestroyingHierarchy)
 {
 	// The component is going away for good -- deleted from an actor, or its actor destroyed -- which
 	// OnUnregister no longer stands in for.
-	DestroyLoadedWidget();
+	ReleaseTree(EDreamTreeReleaseReason::HostDestroyed);
+	if (UDreamUIManagerWorldSubsystem* Manager = UDreamUIManagerWorldSubsystem::GetInstance(GetWorld()))
+	{
+		Manager->UnregisterTreeHost(this);
+	}
 	Super::OnComponentDestroyed(bDestroyingHierarchy);
 }
 
 void UDreamWidgetPresenterComponentBase::BeginDestroy()
 {
-	// The backstop for a component collected without anyone destroying it first, which is how an
-	// editor-world tree usually ends. By this point garbage collection may already have taken the
-	// widget, in which case the weak pointer answers null and there is nothing to do.
-	DestroyLoadedWidget();
+	// Nothing is taken down here: this runs inside a collection, and the tree, outered to this
+	// component, is collected with it. Every way a host goes -- EndPlay, destruction, an undo, a level
+	// leaving, the world's teardown -- let the tree go before now; a tree still held here is said so.
+	UE_CLOG(OwnedTree != nullptr, DreamGUI, Warning,
+		TEXT("%s was collected with its widget tree still loaded; nothing let it go."), *GetPathName());
+	LoadedWidget = nullptr;
+	RootCanvas = nullptr;
+	OwnedTree = nullptr;
 	Super::BeginDestroy();
+}
+
+void UDreamWidgetPresenterComponentBase::ReleaseTree(EDreamTreeReleaseReason InReason)
+{
+	DestroyLoadedWidget();
+}
+
+void UDreamWidgetPresenterComponentBase::RebuildTree()
+{
+	if (IsRegistered() && !IsBeingDestroyed() && IsValid(this))
+	{
+		LoadWidget();
+	}
 }
 
 void UDreamWidgetPresenterComponentBase::DestroyLoadedWidget()
@@ -178,6 +207,7 @@ void UDreamWidgetPresenterComponentBase::DestroyLoadedWidget()
 	// they do come in pairs, a destroyed component is also collected -- finds nothing left to do.
 	LoadedWidget = nullptr;
 	RootCanvas = nullptr;
+	OwnedTree = nullptr;
 }
 
 UUINavigationInputSelectionHandler* UDreamWidgetPresenterComponentBase::GetNavigationSelection()
@@ -261,7 +291,7 @@ void UDreamWidgetPresenterComponentBase::NotifyWidgetLoaded()
 	{
 		ULevelSequencePlayer* Player = It->GetSequencePlayer();
 		UMovieSceneSequence* Sequence = Player != nullptr ? Player->GetSequence() : nullptr;
-		UMovieScene* MovieScene = Sequence != nullptr ? Sequence->GetMovieScene() : nullptr;
+		const UMovieScene* MovieScene = Sequence != nullptr ? Sequence->GetMovieScene() : nullptr;
 		if (MovieScene == nullptr)
 		{
 			continue;

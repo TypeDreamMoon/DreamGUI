@@ -8,6 +8,7 @@
 #include "DreamGUI/Public/MeshModifier/DreamMeshModifierBase.h"
 #include "Materials/MaterialInstanceDynamic.h"
 #include "Core/DreamUIDrawCall.h"
+#include "DreamUIRender/DreamUIRenderStats.h"
 #include "Core/Components/DreamWidget.h"
 #include "Event/DreamPointerEventData.h"
 
@@ -131,7 +132,6 @@ void UDreamVisualBatchMesh::MarkAllDirty()
 	bTriangleChanged = true;
 	bTextureChanged = true;
 	bMaterialChanged = true;
-	GetWidget()->MarkCanvasUpdate(true);
 	Super::MarkAllDirty();
 }
 
@@ -200,9 +200,11 @@ void UDreamVisualBatchMesh::OnRenderCanvasChanged(UDreamCanvas* InOldCanvas, UDr
 void UDreamVisualBatchMesh::UpdateGeometry()
 {
 	auto Widget = this->GetWidget();
-	check(Widget);
-	auto Canvas = Widget->GetRenderCanvas();
-	check(Canvas);
+	auto Canvas = Widget != nullptr ? Widget->GetRenderCanvas() : nullptr;
+	if (!ensureMsgf(Canvas != nullptr, TEXT("%s: asked for geometry with no widget or no canvas to draw in."), *GetPathName()))
+	{
+		return;
+	}
 
 	{
 		SCOPE_CYCLE_COUNTER(STAT_BeforeUpdateGeometry)
@@ -223,11 +225,14 @@ void UDreamVisualBatchMesh::UpdateGeometry()
 	}
 	
 	//when use pixel-perfect, the pixel-perfect calculation will take consider transform matrix, so we need to recalculate geometry if pixel-perfect & bTransformChanged
-	bool pixelPerfect = this->GetShouldAffectByPixelSnapping() && Widget->GetPixelSnappingInHierarchy();
-	bool pixelPerfectAffectTransform = pixelPerfect && bTransformChanged;
+	//asked only after a move: the snapping setting is looked up through the parents, and every element that did not move
+	//paid for that walk on every update of its canvas
+	const bool pixelPerfectAffectTransform = bTransformChanged
+		&& this->GetShouldAffectByPixelSnapping() && Widget->GetPixelSnappingInHierarchy();
 	if (GetAnythingDirty() || pixelPerfectAffectTransform)
 	{
 		SCOPE_CYCLE_COUNTER(STAT_DreamUpdateGeometry);
+		TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_OnUpdateGeometry);
 		UIGeometry->Clear();
 		//check if GeometryModifier will affect vertex data, if so we need to update these data in OnUpdateGeometry
 		{
@@ -266,6 +271,7 @@ void UDreamVisualBatchMesh::UpdateGeometry()
 	{
 		{
 			SCOPE_CYCLE_COUNTER(STAT_TransformVertices)
+			TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_TransformVertices);
 #if 1
 			check(!UIGeometry->bIsCalculating);//this should not happen
 			UIGeometry->bIsCalculating = true;
@@ -288,6 +294,7 @@ void UDreamVisualBatchMesh::UpdateGeometry()
 			Canvas->PushAsyncFunction_TransformVertices(
 				[Params = FDreamUIGeometry::MakeTransformVerticesParams(Canvas, this), Geometry = this->UIGeometry]()
 			{
+				TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_TransformVerticesTask);
 				FDreamUIGeometry::TransformVertices(Params, Geometry.Get());
 				Geometry->bIsCalculating = false;
 			});
@@ -341,6 +348,22 @@ bool UDreamVisualBatchMesh::LineTraceUI(FDreamUIHitResult& OutHit, const FVector
 		return LineTraceUICustom(OutHit, Start, End);
 		break;
 	}
+}
+
+TSharedPtr<const FDreamUIGeometry> UDreamVisualBatchMesh::GetGeometryForBatching()
+{
+	if (!UIGeometry.IsValid())
+	{
+		return nullptr;
+	}
+	if (!GeometryForBatching.IsValid() || !UIGeometry->MatchesDataForPrepare(*GeometryForBatching))
+	{
+		const TSharedRef<FDreamUIGeometry> Copy = MakeShared<FDreamUIGeometry>();
+		Copy->CopyDataForPrepare(*UIGeometry);
+		GeometryForBatching = Copy;
+		DreamUIRenderStats::AddCount(DreamUIRenderStats::ECounter::GeometryCopies, 1);
+	}
+	return GeometryForBatching;
 }
 
 bool UDreamVisualBatchMesh::GetAnythingDirty()const

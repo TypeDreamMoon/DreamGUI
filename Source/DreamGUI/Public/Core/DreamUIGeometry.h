@@ -4,9 +4,9 @@
 #include "CoreMinimal.h"
 #include "Components/DreamText.h"
 #include "Components/DreamSprite.h"
-#include "Core/DreamUIBlendMode.h"
-#include "Core/DreamUIMeshIndex.h"
-#include "Core/DreamUIMeshVertex.h"
+#include "DreamUIRender/DreamUIBlendMode.h"
+#include "DreamUIRender/DreamUIMeshIndex.h"
+#include "DreamUIRender/DreamUIMeshVertex.h"
 
 struct FDreamUISpriteInfo;
 struct FDreamUITextLineProperty;
@@ -86,6 +86,46 @@ public:
 		return *this;
 	}
 
+	/**
+	 * Moves, so that a geometry the batching is done with can go into its draw call without its vertices being
+	 * copied again. The atomic flag rules out the implicit ones; a moved-to geometry is not being calculated.
+	 */
+	FDreamUIGeometry(FDreamUIGeometry&& Other)
+		: OriginVertices(MoveTemp(Other.OriginVertices)),
+		  Vertices(MoveTemp(Other.Vertices)),
+		  Triangles(MoveTemp(Other.Triangles)),
+		  Texture(MoveTemp(Other.Texture)),
+		  Font(MoveTemp(Other.Font)),
+		  Material(MoveTemp(Other.Material)),
+		  bIsFont(Other.bIsFont),
+		  bSupportDrawcallBatching(Other.bSupportDrawcallBatching),
+		  BlendMode(Other.BlendMode),
+		  TransformRelativeToCanvas(Other.TransformRelativeToCanvas),
+		  BoundsMin2DInCanvasSpace(Other.BoundsMin2DInCanvasSpace),
+		  BoundsMax2DInCanvasSpace(Other.BoundsMax2DInCanvasSpace)
+	{
+	}
+
+	FDreamUIGeometry& operator=(FDreamUIGeometry&& Other)
+	{
+		if (this != &Other)
+		{
+			OriginVertices = MoveTemp(Other.OriginVertices);
+			Vertices = MoveTemp(Other.Vertices);
+			Triangles = MoveTemp(Other.Triangles);
+			Texture = MoveTemp(Other.Texture);
+			Font = MoveTemp(Other.Font);
+			Material = MoveTemp(Other.Material);
+			bIsFont = Other.bIsFont;
+			bSupportDrawcallBatching = Other.bSupportDrawcallBatching;
+			BlendMode = Other.BlendMode;
+			TransformRelativeToCanvas = Other.TransformRelativeToCanvas;
+			BoundsMin2DInCanvasSpace = Other.BoundsMin2DInCanvasSpace;
+			BoundsMax2DInCanvasSpace = Other.BoundsMax2DInCanvasSpace;
+		}
+		return *this;
+	}
+
 	//is calculating vertices?
 	std::atomic<bool> bIsCalculating = false;
 	//local space vertex position/ normal/ tangent
@@ -136,6 +176,13 @@ public:
 		BoundsMin2DInCanvasSpace = Other.BoundsMin2DInCanvasSpace;
 		BoundsMax2DInCanvasSpace = Other.BoundsMax2DInCanvasSpace;
 	}
+
+	/**
+	 * Whether InPrepared holds what CopyDataForPrepare would copy from this geometry now: every field it copies, the
+	 * vertices and indices byte for byte. When it does, the batching would see no difference between the two, and a
+	 * copy made earlier can stand for this geometry. Comparing allocates nothing, where copying allocates twice.
+	 */
+	bool MatchesDataForPrepare(const FDreamUIGeometry& InPrepared) const;
 
 	/** 
 	 * Clear vertices and triangle indices data and keep memory, so when the data array do SetNumUninitialized (or similar function, which just change num but not memory), the origin data is still there.

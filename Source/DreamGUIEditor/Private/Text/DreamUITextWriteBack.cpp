@@ -12,6 +12,7 @@
 #include "DreamWidgetBlueprint.h"
 
 #include "Core/DreamUIBehaviour.h"
+#include "Core/DreamUIWidgetRegistry.h"
 #include "Core/DreamUserWidget.h"
 #include "Core/DreamWidgetTree.h"
 #include "Core/Components/DreamLayout.h"
@@ -812,6 +813,17 @@ namespace DreamUIWriteBackLocal
 		}
 		if (InWidget->IsA<UDreamUserWidget>())
 		{
+			// A native control by its tag -- `Native.Button` -- when one is declared: a class path would
+			// name the module the class happens to live in, and the file written today has to read back
+			// after the class has moved to another. Nothing but a tag is stable across that.
+			if (InWidget->GetClass()->HasAnyClassFlags(CLASS_Native))
+			{
+				const FString Tag = FDreamUIWidgetRegistry::FindTagForClass(InWidget->GetClass());
+				if (Tag.Contains(TEXT(".")))
+				{
+					return Tag;
+				}
+			}
 			// A nested widget blueprint is named by its asset path, `_C` stripped -- the spelling the
 			// parser reads back and ResolveNodeClasses loads.
 			FString Path = InWidget->GetClass()->GetPathName();

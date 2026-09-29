@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Subsystems/WorldSubsystem.h"
+#include "Core/DreamUIWorldService.h"
 #include "DreamScreenUISubsystem.generated.h"
 
 class AActor;
@@ -46,7 +47,7 @@ DECLARE_DYNAMIC_DELEGATE_ThreeParams(FDreamUIScreenPageAsyncCallback, FName, Pag
  * AddToPlayerScreen for whoever owns the widget.
  */
 UCLASS()
-class DREAMGUI_API UDreamScreenUISubsystem : public UWorldSubsystem
+class DREAMGUI_API UDreamScreenUISubsystem : public UWorldSubsystem, public IDreamUIWorldService
 {
 	GENERATED_BODY()
 
@@ -74,6 +75,8 @@ public:
 	virtual bool DoesSupportWorldType(EWorldType::Type WorldType) const override;
 	virtual void Initialize(FSubsystemCollectionBase& Collection) override;
 	virtual void Deinitialize() override;
+	virtual int32 GetTeardownPriority() const override { return DreamUI::WorldServiceTeardownPriority::Layers; }
+	virtual void TeardownForWorld(UWorld& InWorld) override;
 
 	/** The screen root for InOwningPlayer (the first local player when null), creating it on demand. */
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI|Screen", meta = (AdvancedDisplay = "InOwningPlayer"))
@@ -275,6 +278,16 @@ public:
 	UFUNCTION(BlueprintPure, Category = "DreamGUI|Screen|Stack", meta = (AdvancedDisplay = "InOwningPlayer"))
 	TArray<FName> GetUIStack(APlayerController* InOwningPlayer = nullptr) const;
 
+	/**
+	 * Take down every page whose tree holds an instance of InClass, keeping its name, place in the stack,
+	 * sort order, player and state: InClass is about to be recompiled, and the copies the reinstancer would
+	 * make of those trees are husks. RebuildReleasedPages shows them again from their classes. A page that
+	 * is not a user widget has no class to be built from and is only taken down. Returns how many went.
+	 */
+	int32 ReleasePagesUsing(const UClass* InClass);
+	/** Build again, from their classes as they are now, the pages ReleasePagesUsing took down. */
+	void RebuildReleasedPages();
+
 private:
 	struct FEntry
 	{
@@ -313,8 +326,12 @@ private:
 
 	/** Indices whose root this subsystem made, and therefore has to destroy. */
 	TSet<int32> OwnedScreenRoots;
+	/** Set by TeardownForWorld, which runs once. */
+	bool bTornDownForWorld = false;
 
 	TMap<FName, FEntry> Entries;
+	/** Pages a recompile took down, by name, with the class each is built again from; see ReleasePagesUsing. */
+	TMap<FName, TPair<TWeakObjectPtr<UClass>, bool>> ReleasedPages;
 	TMap<FName, FPageDefinition> PageDefinitions;
 	TMap<FName, FPendingPageLoad> PendingPageLoads;
 	/**
@@ -350,8 +367,8 @@ private:
 	void ExecuteLoadCallbacks(FName InName, FPendingPageLoad& InPendingLoad, UDreamWidget* InPage, bool bSuccess);
 	void DestroyPage(UDreamWidget* InRoot);
 	/**
-	 * Make sure this player can point at their screen: the manager supplies the event system and the
-	 * screen raycaster, and this binds that raycaster to InRootCanvas.
+	 * Make sure this player can point at their screen: the input system supplies the event system and the
+	 * screen raycaster and binds that raycaster to InRootCanvas (UDreamUIInputServices::PrepareScreenInteraction).
 	 */
 	void EnsureInteractionObjects(UDreamCanvas* InRootCanvas, int32 InPlayerIndex);
 

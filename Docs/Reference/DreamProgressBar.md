@@ -28,7 +28,7 @@ and it is styled from the same sheet as every other bar in the project.
 UMG parity is UProgressBar's core: Percent in 0..1, SetPercent/GetPercent, no events -- progress
 is written by code, so there is nobody to notify.
 
-    /Script/DreamGUI.DreamProgressBar LoadProgress {
+    /Script/DreamGUIControls.DreamProgressBar LoadProgress {
         Percent = 0.35
 
 ## Properties

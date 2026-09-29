@@ -9,6 +9,7 @@
 #include "Core/Text/DreamTextBreaker.h"
 #include "Core/Text/DreamTextShaper.h"
 #include "Algo/Reverse.h"
+#include "ProfilingDebugging/CpuProfilerTrace.h"
 
 bool FDreamTextLayoutInput::operator==(const FDreamTextLayoutInput& Other) const
 {
@@ -1639,17 +1640,36 @@ namespace DreamTextLayoutLocal
 
 	void FLayoutRun::Run()
 	{
+		// A scope a step, so that Insights says which of them a slow layout spent its time in.
 		Out.Reset();
-		Prepare();
-		Preprocess();
-		Measure();
-		if (ShouldWrap())
 		{
-			ComputeBreakOpportunities();
+			TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_TextLayout_Prepare);
+			Prepare();
 		}
-		BreakLines();
-		Place();
-		Finish();
+		{
+			TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_TextLayout_Preprocess);
+			Preprocess();
+		}
+		{
+			TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_TextLayout_Measure);
+			Measure();
+		}
+		{
+			TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_TextLayout_BreakLines);
+			if (ShouldWrap())
+			{
+				ComputeBreakOpportunities();
+			}
+			BreakLines();
+		}
+		{
+			TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_TextLayout_Place);
+			Place();
+		}
+		{
+			TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_TextLayout_Finish);
+			Finish();
+		}
 	}
 
 	void FLayoutRun::Finish()

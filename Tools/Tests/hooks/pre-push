@@ -1,0 +1,100 @@
+#!/bin/sh
+# DreamGUI pre-push hook: runs the Quick preset of the automation suite before a branch is pushed,
+# when the checked-out tree is exactly the commit being pushed, and refuses the push when it is red
+# or cannot be judged.
+#
+# Tools/Tests/Install-DreamGUIHooks.ps1 installs a forwarding stub in the repository's hooks
+# directory; the stub runs this file from the checkout that pushes, so every worktree runs the
+# version its own branch carries.
+#
+#   DREAMGUI_SKIP_PREPUSH=1 git push ...    pushes without testing.
+#
+# Git calls pre-push with <remote name> <remote url> and one line per ref on stdin (githooks(5)):
+#   <local ref> SP <local object> SP <remote ref> SP <remote object>
+# A deletion pushes the all-zero object; a tag goes to refs/tags/.
+#
+# Not tested, with a note, when: a pushed branch is not the checked-out commit; the tree has
+# uncommitted changes to what a build compiles (Source, Shaders, Config, DreamGUI.uplugin); no
+# .uproject holds this checkout; an Unreal editor has that project open (the runner's
+# -SkipIfEditorOpen). An open editor blocks nothing: close it, or push from the test host worktree,
+# to have the push tested.
+
+if [ "${DREAMGUI_SKIP_PREPUSH:-}" = "1" ]; then
+	echo "dreamgui pre-push: DREAMGUI_SKIP_PREPUSH=1, not testing." >&2
+	exit 0
+fi
+
+top=$(git rev-parse --show-toplevel 2>/dev/null) || exit 0
+head=$(git rev-parse HEAD 2>/dev/null) || exit 0
+
+run=0
+while read -r local_ref local_sha remote_ref remote_sha; do
+	[ -n "$local_sha" ] || continue
+	case "$local_sha" in
+		*[!0]*) ;;          # an update
+		*) continue ;;      # all zeros: a deletion
+	esac
+	case "$remote_ref" in
+		refs/heads/*) ;;
+		*) continue ;;      # tags, notes, anything that is not a branch
+	esac
+	if [ "$local_sha" = "$head" ]; then
+		run=1
+	else
+		echo "dreamgui pre-push: $remote_ref would get $local_sha, which is not the checked-out commit $head; not testing it." >&2
+	fi
+done
+
+[ "$run" = "1" ] || exit 0
+
+changes=$(git -C "$top" status --porcelain -- Source Shaders Config DreamGUI.uplugin 2>/dev/null)
+if [ -n "$changes" ]; then
+	echo "dreamgui pre-push: uncommitted changes to what a build compiles; a run would not test the pushed commit. Not testing:" >&2
+	echo "$changes" | head -n 10 >&2
+	exit 0
+fi
+
+# The plugin lives in <project>/Plugins/DreamGUI (or one group directory deeper).
+project=""
+for candidate in "$top"/../../*.uproject "$top"/../../../*.uproject; do
+	if [ -f "$candidate" ]; then
+		project="$candidate"
+		break
+	fi
+done
+if [ -z "$project" ]; then
+	echo "dreamgui pre-push: no .uproject holds $top; not testing." >&2
+	exit 0
+fi
+
+if ! command -v pwsh >/dev/null 2>&1; then
+	echo "dreamgui pre-push: pwsh (PowerShell 7) is not on PATH, so the suite cannot run." >&2
+	echo "Install PowerShell 7, or push with DREAMGUI_SKIP_PREPUSH=1." >&2
+	exit 1
+fi
+
+# The runner names its report directory in latest.txt; a changed name after the run is this run's.
+latest="$(dirname "$project")/Saved/DreamGUITestReports/latest.txt"
+before=""
+if [ -f "$latest" ]; then
+	before=$(tr -d '\r' < "$latest")
+fi
+
+echo "dreamgui pre-push: running the Quick preset against $project" >&2
+pwsh -NoProfile -NonInteractive -File "$top/Tools/Tests/Invoke-DreamGUITests.ps1" -Preset Quick -Project "$project" -SkipIfEditorOpen
+rc=$?
+if [ "$rc" -ne 0 ]; then
+	after=""
+	if [ -f "$latest" ]; then
+		after=$(tr -d '\r' < "$latest")
+	fi
+	echo "dreamgui pre-push: the Quick preset returned $rc (1: tests red, 2: not judged); the push is refused." >&2
+	if [ -n "$after" ] && [ "$after" != "$before" ]; then
+		echo "Report: $after (summary.md says what went wrong)" >&2
+	else
+		echo "It stopped before making a report directory; the reason is printed above." >&2
+	fi
+	echo "Push anyway with: DREAMGUI_SKIP_PREPUSH=1 git push ..." >&2
+	exit 1
+fi
+exit 0

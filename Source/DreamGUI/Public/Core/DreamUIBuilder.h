@@ -301,7 +301,7 @@ namespace DreamUI
 	inline TDreamUINode<UDreamText> Text(FName InName) { return Node<UDreamText>(InName); }
 
 	/**
-	 * Another user widget class as a node, which is what `/Script/DreamGUI.DreamToggle Foo { }` means
+	 * Another user widget class as a node, which is what `/Script/DreamGUIControls.DreamToggle Foo { }` means
 	 * in .dui. Its contents come from its own class; this only places it.
 	 */
 	template<class WidgetT>

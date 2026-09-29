@@ -52,6 +52,18 @@ recycling stack (UUITreeView) instead, which is why that class stays.
 Cycles are survivable: an item already visited is not visited again, so a graph produces a tree
 rather than a hang.
 
+LEFT AND RIGHT ARE THE TREE'S
+-----------------------------
+Up and down step through the rows that show, as a list's do. Left and right open and close, as
+STreeView::OnKeyDown has them: right on a folded parent unfolds it, right on an open one moves to its
+first child; left on an open parent folds it, left anywhere else moves to the parent. Where the key
+has nothing to do -- right on a leaf, left on a root that is already folded -- it still belongs to
+the tree and focus stays put, which is what STreeView does with the arrow keys. This library has one
+navigation road for the keyboard and the gamepad, so a D-pad gets the same answer; in UMG a D-pad
+goes round OnKeyDown and would leave the tree sideways instead. The twisty is not a navigation stop
+(UMG's expander arrow is not focusable either), so a press that follows a click on it starts from
+the row.
+
 See UDreamListViewBase for the shape of the tree it builds, why it hosts the plain scroll view
 rather than the recycling one, and how these controls sit beside the `each` language feature.
 
@@ -102,7 +114,7 @@ Every Blueprint-facing member of the UMG class, and where it went. *adopt*: same
 
 | UMG | Member | Status | Here | Note |
 |---|---|---|---|---|
-| `UTreeView` | `SetItemExpansion` | adopt | `SetItemExpansion` | A one-line forward to SetItemExpanded, which is the name this control was written with and which every existing caller uses. By source index, so it survives a collapse above it. |
+| `UTreeView` | `SetItemExpansion` | adopt | `SetItemExpansion` | A one-line forward to SetItemExpanded, which is the name this control was written with and which every existing caller uses. By source index, so it survives a collapse above it. The player reaches it too: Left and Right on a row open, close and walk to parent or first child as STreeView::OnKeyDown does with the arrow keys -- and, this library having one navigation road, a D-pad does the same, where in UMG it would leave the tree sideways. |
 | `UTreeView` | `ExpandAll` | adopt | `ExpandAll` |  |
 | `UTreeView` | `CollapseAll` | adopt | `CollapseAll` |  |
 | `UTreeView` | `BP_OnGetItemChildren` | map | `OnGetItemChildren` | FDreamTreeGetItemChildren, with UMG's signature. Single-cast like UMG's: this one is a QUESTION, and two answers to a question is an ambiguity nothing can resolve. Unbound, the walk falls back to IUITreeViewItem::GetTreeChildren. |

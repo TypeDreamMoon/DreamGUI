@@ -26,7 +26,7 @@ struct FDreamUIDiagnosticBag;
 namespace DreamUIExpressionThunks
 {
 	/** The prefix every generated thunk graph name carries; the cleanup pass keys on it. */
-	extern const TCHAR* GeneratedGraphPrefix;
+	extern DREAMGUIEDITOR_API const TCHAR* GeneratedGraphPrefix;
 
 	/**
 	 * Remove stale generated graphs, then lower every BindingExpression in InAst: create the

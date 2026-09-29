@@ -2,6 +2,7 @@
 // Modified by TypeDreamMoon.
 
 #include "DreamUIBPLibrary.h"
+#include "Components/SceneComponent.h"
 #include "Engine/Engine.h"
 
 #include "DreamUIDelegateHandleWrapper.h"
@@ -10,9 +11,9 @@
 #include "Core/Components/DreamWidget.h"
 #include "Core/DreamScreenUISubsystem.h"
 #include "Core/DreamUIManager.h"
+#include "Core/DreamUIRuntimeObject.h"
 #include "Core/Components/DreamVisual.h"
 #include "Core/Components/DreamCanvas.h"
-#include "Event/DreamScreenSpaceRaycaster.h"
 
 
 namespace DreamUICreateLocal
@@ -67,9 +68,16 @@ UDreamWidget* UDreamUIBPLibrary::ConstructWidget(UObject* WorldContextObject, co
 	{
 		return nullptr;
 	}
-	// Outer is the world, not the caller: GetTypedOuter<UWorld>() has to resolve or the widget never
-	// finds a manager. Outering to a GameInstance -- the habit UMG teaches -- would fail that test.
-	UDreamWidget* Widget = NewObject<UDreamWidget>(World, NAME_None, RF_Public | RF_Transactional);
+	// Outer is the world's UI manager, not the caller: the widget's world has to resolve through its outers
+	// or it never finds its manager -- outering to a GameInstance, the habit UMG teaches, would fail
+	// that -- and the manager is what holds a widget nobody hosts (its pool, and the parked list).
+	// Not transactional: a widget made in a world is not undo's to restore (DreamUI::TransactionalFlagFor).
+	UObject* Owner = UDreamUIManagerWorldSubsystem::GetInstance(World);
+	if (Owner == nullptr)
+	{
+		Owner = World;
+	}
+	UDreamWidget* Widget = NewObject<UDreamWidget>(Owner, NAME_None, RF_Public | DreamUI::TransactionalFlagFor(Owner));
 	Widget->SetDisplayName(DisplayName.IsEmpty() ? TEXT("Widget") : DisplayName);
 	if (UClass* ResolvedVisualClass = VisualClass.Get();
 		ResolvedVisualClass != nullptr && !ResolvedVisualClass->HasAnyClassFlags(CLASS_Abstract))

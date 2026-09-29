@@ -28,6 +28,11 @@ and HandleSize is how much of the track the handle covers. Point it at a UUIScro
 numbers become the view's -- progress in, progress out -- which is how the standalone bar drives a
 scroll box.
 
+Clicking the track off the handle puts the handle's CENTRE where the track was clicked, clamped to
+the ends, and a drag from that press carries on from there -- SScrollBar's behaviour. Until this was
+checked against the 5.8 source a track click paged one handle length toward the pointer (Unity's
+behaviour), so existing screens now jump where they used to step.
+
 ## Properties
 
 | Name | Type | Category | In the details panel | From Blueprint | Description |
@@ -42,6 +47,7 @@ scroll box.
 | `NavigationChangeInterval` | `float` | Scroll Bar | yes | `GetNavigationChangeInterval` / `SetNavigationChangeInterval` | How far one navigation press moves the value. |
 | `bShowArrows` | `bool` | Scroll Bar | yes | `GetShowArrows` / `SetShowArrows` | A step button at each end of the track -- the desktop scroll bar's arrows. |
 | `ArrowStepSize` | `float` | Scroll Bar | yes | `GetArrowStepSize` / `SetArrowStepSize` | How far one arrow click moves the value, as a fraction of the whole range. |
+| `AcceptedMouseButtons` | `int32` | Scroll Bar | yes | `GetAcceptedMouseButtons` / `SetAcceptedMouseButtons` | WHICH mouse buttons move this bar -- a bitmask over EDreamUIMouseButtonType, the left button alone by default, which is SScrollBar's rule: its OnMouseButtonDown answers EKeys::LeftMouseButton and nothing else, so a right drag on the handle or a right click on the track leaves the bar where it is and goes on to whatever is behind it. The two arrows answer the same buttons. |
 | `TrackNode` | `TObjectPtr<UDreamWidget>` | Scroll Bar | - | read only |  |
 | `HandleNode` | `TObjectPtr<UDreamWidget>` | Scroll Bar | - | read only |  |
 | `BarBehaviour` | `TObjectPtr<UUIScrollbar>` | Scroll Bar | - | read only |  |
@@ -56,6 +62,7 @@ scroll box.
 
 | Function | Kind | Description |
 |---|---|---|
+| `int32 GetAcceptedMouseButtons()` | pure | Get Accepted Mouse Buttons |
 | `bool GetAlwaysShowScrollbar()` | pure | Get Always Show Scrollbar |
 | `bool GetAlwaysShowScrollbarTrack()` | pure | Get Always Show Scrollbar Track |
 | `float GetArrowStepSize()` | pure | Get Arrow Step Size |
@@ -69,6 +76,7 @@ scroll box.
 | `float GetValue()` | pure | Get Value |
 | `bool IsHorizontal()` | pure | True for LeftToRight and RightToLeft. Everything axis-dependent in here asks this. |
 | `void RefreshFromScrollView()` | callable | Take position and visible fraction from the attached view. Called for you whenever it moves. |
+| `void SetAcceptedMouseButtons(int32 InAcceptedMouseButtons)` | callable | Writes the bitmask and pushes it onto the bar's behaviours at once -- the next press consults it. |
 | `void SetAlwaysShowScrollbar(bool bInAlwaysShow)` | callable | Set Always Show Scrollbar |
 | `void SetAlwaysShowScrollbarTrack(bool bInAlwaysShow)` | callable | Set Always Show Scrollbar Track |
 | `void SetArrowStepSize(float InStep)` | callable | Set Arrow Step Size |
@@ -102,5 +110,5 @@ Every Blueprint-facing member of the UMG class, and where it went. *adopt*: same
 | `UScrollBar` | `Orientation` | map | `Direction` | EUIScrollbarDirectionType, which says which way it runs AND which end is zero -- four answers where UMG's EOrientation has two. Get/SetDirection. |
 | `UScrollBar` | `Thickness` | map | `FDreamScrollBarStyle::Thickness` | In the style, because it is what the bar is drawn from. A float: a bar has one thickness across its own axis, and its length is whatever it is scrolling. |
 | `UScrollBar` | `Padding` | map | `FDreamScrollBarStyle::BarPadding` | New style field, default FMargin(0) = what every bar has drawn. Spent on the bar's rect, not the track's, so the track still reaches both ends of what the bar spans. |
-| `UScrollBar` | `SetState` | adopt | `SetState` | Position and visible fraction in one call, which is the shape a scroll view actually pushes: writing them one at a time lays the handle out twice for one change. |
+| `UScrollBar` | `SetState` | adopt | `SetState` | Position and visible fraction in one call, which is the shape a scroll view actually pushes: writing them one at a time lays the handle out twice for one change. The pointer moves the position only with the mouse buttons in AcceptedMouseButtons -- the left one alone by default, which is SScrollBar's rule (its OnMouseButtonDown tests EKeys::LeftMouseButton); AcceptedMouseButtons is this control's own knob, as on UDreamButton, and a touch always counts. A click on the track off the handle puts the handle's centre there, as SScrollBar's ExecuteOnUserScrolled does, rather than paging. |
 

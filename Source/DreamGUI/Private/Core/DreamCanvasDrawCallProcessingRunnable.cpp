@@ -2,6 +2,7 @@
 
 #include "Core/DreamCanvasDrawCallProcessingRunnable.h"
 
+#include "HAL/PlatformProcess.h"
 #include "Misc/ScopeLock.h"
 #include "Core/Components/DreamCanvas.h"
 
@@ -58,8 +59,9 @@ void FDreamCanvasDrawCallProcessingRunnable::ProcessPreparedDrawCallData()
 		{
 			FDreamCanvasPendingDrawCallData PendingDrawCallData;
 			PendingDrawCallData.FrameNumber = PreparedDrawCallData.FrameNumber;
-			UDreamCanvas::BatchDrawCallAsync(PreparedDrawCallData.LeftBottomPoint, PreparedDrawCallData.RightTopPoint, PreparedDrawCallData.DataArray, PendingDrawCallData.DrawCallArray
-				, PreparedDrawCallData.bCullElementsOutsideCanvasRect);
+			//the prepared data is this task's own and is not looked at again, so the batch may use it up
+			UDreamCanvas::BatchDrawCallAsync(PreparedDrawCallData.LeftBottomPoint, PreparedDrawCallData.RightTopPoint, MoveTemp(PreparedDrawCallData.DataArray), PendingDrawCallData.DrawCallArray
+				, PreparedDrawCallData.bCullElementsOutsideCanvasRect, &PreparedDrawCallData.GeometryListsOnSections);
 			//push to main thread queue
 			PendingQueue->Enqueue(MoveTemp(PendingDrawCallData));
 		}
@@ -77,16 +79,27 @@ void FDreamCanvasDrawCallProcessingRunnable::ProcessPreparedDrawCallData()
 
 void FDreamCanvasDrawCallProcessingRunnable::WaitForBatchingToFinish()
 {
-	//the loop is for the re-launch above, not a spin: Wait() blocks (or retracts the task and runs it
-	//here), and a batch only re-launches while there is queued data, which the caller is not adding to
-	while (bIsBatching.load(std::memory_order_acquire))
+	//until no batch holds the slot AND the last one launched has returned. A batch gives the slot up
+	//before its re-check of the queue and is still reading this object for that re-check, and may
+	//re-launch from there; returning on the slot alone let Stop()'s caller delete this under the batch's
+	//tail, which then wrote into freed memory -- heap damage that surfaced wherever it landed.
+	//
+	//The loop is for that re-launch, not a spin: Wait() blocks (or retracts the task and runs it here),
+	//and a batch only re-launches while there is queued data, which the caller is not adding to.
+	for (;;)
 	{
 		UE::Tasks::FTask TaskToWait = GetBatchingTask();
-		if (!TaskToWait.IsValid())
+		if (TaskToWait.IsValid() && !TaskToWait.IsCompleted())
 		{
-			break;
+			TaskToWait.Wait();
+			continue;
 		}
-		TaskToWait.Wait();
+		if (!bIsBatching.load(std::memory_order_acquire))
+		{
+			return;
+		}
+		//a batch has taken the slot and is about to record its task; it will not be long
+		FPlatformProcess::YieldThread();
 	}
 }
 

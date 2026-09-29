@@ -1,0 +1,4 @@
+# Git for Windows runs hooks with sh, which reads a carriage return as part of the command:
+# the hook must keep LF endings in every checkout, whatever core.autocrlf says.
+hooks/* text eol=lf
+*.sh text eol=lf

@@ -10,6 +10,7 @@
 
 struct FDreamUIHitResult;
 class FDreamUIGeometry;
+struct FDreamUIMaterialParameters;
 class UMaterialInterface;
 class UTexture;
 class UDreamCanvas;
@@ -210,8 +211,11 @@ public:
 	
 	/** Called by DreamCanvas when begin to collect geometry for render */
 	virtual void UpdateGeometry() {};
-	/** Called by DreamCanvas after create MaterialInstanceDynamic for this object or it's draw-call */
-	virtual void OnMaterialInstanceDynamicCreated(class UMaterialInstanceDynamic* mat) {};
+	/**
+	 * The parameters this visual's material needs besides the canvas's. DreamGUI answers a material's parameters in its
+	 * place (FDreamUIMaterialProxy), so a visual gives its own here rather than setting them on a material instance.
+	 */
+	virtual void AddMaterialParameters(FDreamUIMaterialParameters& InOutParameters) const {};
 
 	/** will this UI element affected by canvas's pixel perfect property? */
 	virtual bool GetShouldAffectByPixelSnapping()const { return true; };

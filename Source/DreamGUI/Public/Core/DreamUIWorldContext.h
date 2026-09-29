@@ -82,4 +82,16 @@ namespace DreamUI
 		const UWorld* World = GetWorldSafe(InObject);
 		return World != nullptr ? World->WorldType.GetValue() : EWorldType::None;
 	}
+
+	/**
+	 * Whether InObject is in a world somebody is editing: the level editor's, or an editor preview --
+	 * the widget designer's, a Blueprint's viewport. For what both want alike, such as a sprite edit
+	 * reaching every widget that shows it. What only the level editor wants -- its hit proxies, what
+	 * its save and Copy must not carry -- asks GetWorldType for EWorldType::Editor instead.
+	 */
+	FORCEINLINE bool IsEditingWorld(const UObject* InObject)
+	{
+		const EWorldType::Type WorldType = GetWorldType(InObject);
+		return WorldType == EWorldType::Editor || WorldType == EWorldType::EditorPreview;
+	}
 }

@@ -2,6 +2,7 @@
 // Modified by TypeDreamMoon.
 
 #include "DreamWidgetEditorHierarchyView.h"
+#include "Core/DreamUIRuntimeObject.h"
 #include "DreamWidgetBlueprint.h"
 
 #include "DreamGUIEditorModule.h"
@@ -105,7 +106,7 @@ void SDreamWidgetEditorHierarchyView::Construct(const FArguments& InArgs, UWorld
 		// be captured raw: closing the designer within that frame leaves this panel destroyed and
 		// the widgets it named collected. Weak on both sides, and the whole body is skipped if either
 		// is already gone.
-		UDreamUIManagerObject::AddOneShotTickFunction([WeakSelf = TWeakPtr<SDreamWidgetEditorHierarchyView>(SharedThis(this)), UnexpendWidgetSet]()
+		DreamUI::DeferToLaterTick([WeakSelf = TWeakPtr<SDreamWidgetEditorHierarchyView>(SharedThis(this)), UnexpendWidgetSet]()
 		{
 			auto Self = WeakSelf.Pin();
 			if (!Self.IsValid() || !Self->WidgetTreeView.IsValid())return;
@@ -225,7 +226,7 @@ void SDreamWidgetEditorHierarchyView::BeginRename()
 		WidgetTreeView->SetItemExpansion(Ancestor, true);
 	}
 	WidgetTreeView->RequestScrollIntoView(Item);
-	UDreamUIManagerObject::AddOneShotTickFunction([WeakSelf = TWeakPtr<SDreamWidgetEditorHierarchyView>(SharedThis(this)), Item]()
+	DreamUI::DeferToLaterTick([WeakSelf = TWeakPtr<SDreamWidgetEditorHierarchyView>(SharedThis(this)), Item]()
 	{
 		auto Self = WeakSelf.Pin();
 		if (!Self.IsValid() || !Item.IsValid())return;
@@ -304,11 +305,11 @@ void SDreamWidgetEditorHierarchyView::RefreshImmediately()
 }
 namespace DreamWidgetHierarchyRows
 {
-	void CollectRoots(const TArray<TObjectPtr<UDreamWidget>>& InAllWidgets, TArray<TWeakObjectPtr<UDreamWidget>>& OutRoots)
+	void CollectRoots(const TArray<UDreamWidget*>& InAllWidgets, TArray<TWeakObjectPtr<UDreamWidget>>& OutRoots)
 	{
 		TSet<const UDreamWidget*> Seen;
 		Seen.Reserve(InAllWidgets.Num());
-		for (const TObjectPtr<UDreamWidget>& Widget : InAllWidgets)
+		for (UDreamWidget* Widget : InAllWidgets)
 		{
 			if (!IsValid(Widget) || !Widget->IsRootWidgetInHierarchy())
 			{
@@ -399,7 +400,7 @@ void SDreamWidgetEditorHierarchyView::RefreshTree()
 	{
 		if (auto DreamUIManager = UDreamUIManagerWorldSubsystem::GetInstance(World.Get()))
 		{
-			DreamWidgetHierarchyRows::CollectRoots(DreamUIManager->GetAllWidgetArray(), RootWidgets);
+			DreamWidgetHierarchyRows::CollectRoots(DreamUIManager->GetRegisteredWidgets(), RootWidgets);
 		}
 	}
 

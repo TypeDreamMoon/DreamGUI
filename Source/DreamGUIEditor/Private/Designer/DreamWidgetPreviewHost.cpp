@@ -247,12 +247,50 @@ void FDreamWidgetPreviewHost::Initialize(UDreamWidgetBlueprint* InBlueprint)
 	// which is what keeps a drag from rebuilding the preview on every mouse move.
 	BlueprintChangedHandle = Blueprint->OnChanged().AddRaw(this, &FDreamWidgetPreviewHost::OnBlueprintChanged);
 	BlueprintCompiledHandle = Blueprint->OnCompiled().AddRaw(this, &FDreamWidgetPreviewHost::OnBlueprintCompiled);
+	if (UDreamGUIEditorSubsystem* EditorSubsystem = UDreamGUIEditorSubsystem::Get())
+	{
+		EditorSubsystem->RegisterPreview(this);
+	}
 
 	RebuildPreview();
 }
 
+bool FDreamWidgetPreviewHost::UsesClass(const UClass* InClass) const
+{
+	if (InClass == nullptr)
+	{
+		return false;
+	}
+	if (IsValid(Blueprint) && Blueprint->GeneratedClass != nullptr && Blueprint->GeneratedClass->IsChildOf(InClass))
+	{
+		return true;
+	}
+	TArray<UDreamWidget*> Widgets;
+	UDreamWidget::CollectChildrenWidgets(PreviewWidget, Widgets, true);
+	return Widgets.ContainsByPredicate([InClass](const UDreamWidget* Widget) { return Widget->IsA(InClass); });
+}
+
+void FDreamWidgetPreviewHost::ReleaseForRecompile()
+{
+	// The same last moment a rebuild gives, so whoever holds the preview's widgets -- the animation
+	// editor's sequencer -- lets go of them while they are still alive.
+	OnPreviewAboutToRebuild.Broadcast();
+	DestroyPreview();
+	InvalidatePreview();
+}
+
+void FDreamWidgetPreviewHost::RebuildAfterRecompile()
+{
+	// Unless the toolkit's own tick got there first: the compile invalidated the preview too.
+	RebuildPreviewIfInvalidated();
+}
+
 void FDreamWidgetPreviewHost::Shutdown()
 {
+	if (UDreamGUIEditorSubsystem* EditorSubsystem = UDreamGUIEditorSubsystem::Get())
+	{
+		EditorSubsystem->UnregisterPreview(this);
+	}
 	if (ObjectsReplacedHandle.IsValid())
 	{
 		FCoreUObjectDelegates::OnObjectsReplaced.Remove(ObjectsReplacedHandle);
@@ -445,7 +483,7 @@ void FDreamWidgetPreviewHost::RebuildPreview()
 	// Tell the canvas it has something new to draw. Nothing else here does, and a canvas that is
 	// never marked builds no draw calls at all -- the preview would be registered, laid out, and
 	// invisible. It looked like it worked because compiling a Blueprint refreshes every canvas in
-	// every world (UDreamUIManagerObject::OnBlueprintCompiled), which is true of the first open of a
+	// every world (UDreamGUIEditorSubsystem::RebuildReleasedTrees), which is true of the first open of a
 	// freshly loaded asset and of pressing Compile, and false of every open after that.
 	UDreamUIManagerWorldSubsystem::RefreshAllUI(Scene->GetWorld());
 
@@ -802,8 +840,8 @@ void FDreamWidgetPreviewHost::OnObjectsReplaced(const TMap<UObject*, UObject*>& 
 	// A recompile reinstances the preview like any other instance of the class: the original is
 	// renamed aside and every reference to it is swapped for a property copy. Ours is swapped too --
 	// a beat after this delegate -- and that is the whole problem, because the original is REGISTERED
-	// in the preview world and the copy is not (bIsRegistered is not a UPROPERTY, so it does not come
-	// across). Adopt the copy and the original is left live, registered, and unowned; it turns up much
+	// in the preview world and the copy is not (a widget's lifecycle is not a UPROPERTY, so it does not
+	// come across). Adopt the copy and the original is left live, registered, and unowned; it turns up much
 	// later as UDreamWidget's last-resort cleanup, at Error verbosity, inside whatever happened to be
 	// running when GC reached it.
 	//

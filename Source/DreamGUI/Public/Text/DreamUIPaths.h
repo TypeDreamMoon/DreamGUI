@@ -23,11 +23,13 @@ struct FDreamUISourceRoot
  * languages in this project having three different answers to "where does source go" would be the
  * worse outcome either way.
  *
- * Nothing here is cached. DreamFX caches its roots and pays for it with an InvalidateSourceRoots that
- * every mutation site has to remember to call; here the answer is wanted a few times per compile and
- * once when a designer opens, so scanning is cheaper than the staleness -- notably the case where an
- * author creates the DUI folder while the editor is running, which a cache answers wrongly until a
- * restart.
+ * No cache anybody has to invalidate. DreamFX caches its roots and pays for it with an
+ * InvalidateSourceRoots that every mutation site has to remember to call, and with a DUI folder created
+ * while the editor runs going unseen until somebody does. GetSourceRoots only keeps its answer for half
+ * a second (a write-back flush asks once per import), never keeps an empty answer, and checks on every
+ * call whether the project's own DUI folder exists, so a folder the editor has just made is seen at
+ * once; a plugin's DUI folder appearing or going away is seen within the half second. The .cpp says why
+ * each of those is so.
  */
 namespace DreamUIPaths
 {

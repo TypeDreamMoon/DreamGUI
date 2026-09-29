@@ -5,8 +5,8 @@
 #include "DreamGUI.h"
 #include "Components/DirectionalLightComponent.h"
 #include "Core/Components/DreamWidget.h"
+#include "Core/DreamUIManager.h"
 #include "Engine/TextureCube.h"
-#include "Event/DreamScreenSpaceRaycaster.h"
 #include "GameFramework/Actor.h"
 #include "Materials/MaterialInstanceConstant.h"
 
@@ -19,6 +19,14 @@ const FIntPoint FDreamWidgetDesignerScene::DefaultCanvasSize = FIntPoint(1920, 1
 
 FDreamWidgetDesignerScene::FDreamWidgetDesignerScene(ConstructionValues CVS) :FDreamWidgetPreviewScene(CVS)
 {
+	// Shown the moment it exists, so its widgets are laid out and drawn from the start. Its world is an
+	// editor preview, which the manager does not tick in the editor unless told -- a Blueprint's actor
+	// preview has no DreamGUI in it to lay out -- so the scene that is nothing but DreamGUI tells it.
+	if (UDreamUIManagerWorldSubsystem* Manager = UDreamUIManagerWorldSubsystem::GetInstance(GetWorld()))
+	{
+		Manager->bShouldTickInEditor = true;
+	}
+
 	//GetWorld()->GetWorldSettings()->NotifyBeginPlay();
 	//GetWorld()->GetWorldSettings()->NotifyMatchStarted();
 	//GetWorld()->GetWorldSettings()->SetActorHiddenInGame(false);

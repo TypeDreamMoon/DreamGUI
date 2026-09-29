@@ -10,8 +10,11 @@
 #include "Utils/DreamUIUtils.h"
 #include "Core/DreamUISettings.h"
 #include "Core/DreamUIManager.h"
-#include "Core/DreamUIRender/DreamUIRenderer.h"
+#include "DreamUIRender/DreamUIRenderer.h"
+#include "DreamUIRender/DreamUIRenderStats.h"
 #include "Core/DreamUIMesh/DreamUIMeshComponent.h"
+#include "DreamUIRender/DreamUIMaterialProxy.h"
+#include "HAL/IConsoleManager.h"
 #include "Core/DreamUIDrawCall.h"
 #include "Core/DreamUIFontData_BaseObject.h"
 #include "Engine/GameViewportClient.h"
@@ -35,10 +38,20 @@
 #include "Core/DreamCanvasDrawCallProcessingRunnable.h"
 #include "Core/DreamUIClipData.h"
 #include "Core/DreamUIDataAsTexture.h"
+#include "Core/DreamUIRuntimeObject.h"
 #include "Core/Components/DreamLayout.h"
 
 
 #define LOCTEXT_NAMESPACE "DreamCanvas"
+
+static TAutoConsoleVariable<int32> CVarDreamUIVerifyPartialPrepare(
+	TEXT("r.DreamUI.VerifyPartialPrepare"),
+	0,
+	TEXT("1: every prepare a canvas makes from its last one -- making again only what the widgets that asked, came or moved ")
+	TEXT("draw -- is checked against a prepare of every widget, and a difference is an ensure. For tests: it costs a full ")
+	TEXT("prepare each time."),
+	ECVF_Default);
+
 
 UDreamCanvas::UDreamCanvas()
 {
@@ -95,6 +108,7 @@ void UDreamCanvas::UpdateRootCanvas()
 {
 	if (!GetWorld())
 		return;
+	DREAMUI_STAGE_SCOPE(CanvasUpdate);
 	CheckRootCanvas();
 	if (this == RootCanvas)
 	{
@@ -118,7 +132,7 @@ void UDreamCanvas::UpdateRootCanvas()
 
 					if (ViewExtension.IsValid())//only root canvas can add screen space UI to DreamGUIRenderer
 					{
-						ViewExtension->SetScreenSpaceRootCanvas(this);
+						ViewExtension->SetScreenSpaceRootCanvas(this, this);
 						bHasAddToDreamScreenSpaceRenderer = true;
 					}
 				}
@@ -128,7 +142,7 @@ void UDreamCanvas::UpdateRootCanvas()
 			{
 				if (!bHasAddToDreamScreenSpaceRenderer)
 				{
-					GetRenderTargetViewExtension()->SetScreenSpaceRootCanvas(this);
+					GetRenderTargetViewExtension()->SetScreenSpaceRootCanvas(this, this);
 					bHasAddToDreamScreenSpaceRenderer = true;
 				}
 			}
@@ -166,44 +180,45 @@ void UDreamCanvas::UpdateRenderTarget(bool CallEvent)
 	DesiredRenderTargetSize.X = FMath::Min(DesiredRenderTargetSize.X, MaxAllowedDrawSize);
 	DesiredRenderTargetSize.Y = FMath::Min(DesiredRenderTargetSize.Y, MaxAllowedDrawSize);
 
-	if (RenderTarget == nullptr)
+	if (RenderTarget == nullptr && AutoRenderTarget == nullptr)
 	{
-		RenderTarget = NewObject<UTextureRenderTarget2D>(this, NAME_None, EObjectFlags::RF_Transient);
-		RenderTarget->AddressX = TextureAddress::TA_Clamp;
-		RenderTarget->AddressY = TextureAddress::TA_Clamp;
-		RenderTarget->ClearColor = FLinearColor::Transparent;
-		RenderTarget->InitCustomFormat(DesiredRenderTargetSize.X, DesiredRenderTargetSize.Y, EPixelFormat::PF_B8G8R8A8, false);
+		// Made here and held apart from the assigned one, so never saved, duplicated or copied: a copy of
+		// this canvas makes its own. A render target assigned from outside keeps whatever flags its owner
+		// gave it.
+		AutoRenderTarget = NewObject<UTextureRenderTarget2D>(this, NAME_None, DreamUI::RuntimeObjectFlags);
+		AutoRenderTarget->AddressX = TextureAddress::TA_Clamp;
+		AutoRenderTarget->AddressY = TextureAddress::TA_Clamp;
+		AutoRenderTarget->ClearColor = FLinearColor::Transparent;
+		AutoRenderTarget->InitCustomFormat(DesiredRenderTargetSize.X, DesiredRenderTargetSize.Y, EPixelFormat::PF_B8G8R8A8, false);
 		if (CallEvent)
 		{
-			OnRenderTargetChanged.Broadcast(RenderTarget);
+			OnRenderTargetChanged.Broadcast(AutoRenderTarget);
 		}
 	}
 	else
 	{
+		UTextureRenderTarget2D* Target = GetRenderTarget();
 		switch (RenderTargetSizeMode)
 		{
 		case EDreamCanvasRenderTargetSizeMode::None:
 		case EDreamCanvasRenderTargetSizeMode::CanvasFitToRenderTarget:
-			if (RenderTarget != nullptr)
-			{
-				DesiredRenderTargetSize.X = RenderTarget->SizeX;
-				DesiredRenderTargetSize.Y = RenderTarget->SizeY;
-			}
+			DesiredRenderTargetSize.X = Target->SizeX;
+			DesiredRenderTargetSize.Y = Target->SizeY;
 			break;
 		case EDreamCanvasRenderTargetSizeMode::RenderTargetFitToCanvas:
 			break;
 		}
-		if (RenderTarget->SizeX != DesiredRenderTargetSize.X || RenderTarget->SizeY != DesiredRenderTargetSize.Y)
+		if (Target->SizeX != DesiredRenderTargetSize.X || Target->SizeY != DesiredRenderTargetSize.Y)
 		{
-			RenderTarget->ClearColor = FLinearColor::Transparent;
-			RenderTarget->InitCustomFormat(DesiredRenderTargetSize.X, DesiredRenderTargetSize.Y, EPixelFormat::PF_B8G8R8A8, false);
-			RenderTarget->UpdateResourceImmediate();
+			Target->ClearColor = FLinearColor::Transparent;
+			Target->InitCustomFormat(DesiredRenderTargetSize.X, DesiredRenderTargetSize.Y, EPixelFormat::PF_B8G8R8A8, false);
+			Target->UpdateResourceImmediate();
 #if WITH_EDITOR
-			RenderTarget->Modify();
+			DreamUI::ModifyIfKeptByUndo(*Target);
 #endif
 			if (CallEvent)
 			{
-				OnRenderTargetChanged.Broadcast(RenderTarget);
+				OnRenderTargetChanged.Broadcast(Target);
 			}
 		}
 	}
@@ -260,23 +275,38 @@ void UDreamCanvas::CheckRenderTargetUpdate()
 		if (bCanUpdateRenderTarget)
 		{
 			UpdateRenderTarget(true);
-			if (IsValid(RenderTarget))
+			if (UTextureRenderTarget2D* Target = GetRenderTarget(); IsValid(Target))
 			{
 #if WITH_EDITOR
 				if (!DreamUI::IsGameWorld(this))
 				{
-					if (!RenderTarget->GameThread_GetRenderTargetResource())
+					if (!Target->GameThread_GetRenderTargetResource())
 					{
-						RenderTarget->InitCustomFormat(RenderTarget->SizeX, RenderTarget->SizeY, EPixelFormat::PF_B8G8R8A8, false);
+						Target->InitCustomFormat(Target->SizeX, Target->SizeY, EPixelFormat::PF_B8G8R8A8, false);
 					}
 				}
 #endif
 				if (RenderTargetViewExtension.IsValid())
 				{
-					RenderTargetViewExtension->UpdateRenderTargetRenderer(RenderTarget, RenderTargetClearColor);
+					// Drawn once this frame's sections have gone to the render thread: DrawRenderTargetIfRequested.
+					bRenderTargetDrawRequested = true;
 				}
 			}
 		}
+	}
+}
+
+void UDreamCanvas::DrawRenderTargetIfRequested()
+{
+	if (!bRenderTargetDrawRequested)
+	{
+		return;
+	}
+	bRenderTargetDrawRequested = false;
+	UTextureRenderTarget2D* Target = GetRenderTarget();
+	if (RenderTargetViewExtension.IsValid() && IsValid(Target))
+	{
+		RenderTargetViewExtension->DrawRenderTarget_GameThread(Target, RenderTargetClearColor);
 	}
 }
 
@@ -308,9 +338,8 @@ void UDreamCanvas::OnRegister()
 
 	if (!IsValid(ClipDataAsTexture))
 	{
-		ClipDataAsTexture = NewObject<UDreamUIDataAsTexture>(this, UDreamUIDataAsTexture::StaticClass(), NAME_None, RF_Transient);
+		ClipDataAsTexture = NewObject<UDreamUIDataAsTexture>(this, UDreamUIDataAsTexture::StaticClass(), NAME_None, DreamUI::RuntimeObjectFlags);
 		ClipDataAsTexture->Init(FDreamUIClipData::BlockSizeInBytes, EDreamUIDataAsTexturePixelFormat::R32G32B32A32, 128);
-		ClipDataAsTexture->OnDataTextureChange.AddUObject(this, &UDreamCanvas::OnClipDataTextureChanged);
 		ClipDataAsTexture->RegisterBuffer();//register a zero position as a placeholder for not clipping type.
 	}
 
@@ -318,6 +347,14 @@ void UDreamCanvas::OnRegister()
 }
 void UDreamCanvas::OnUnregister()
 {
+	// Whatever shows this canvas's target lets go of it first. A render-target surface's material holds it as
+	// a texture parameter; when the collector takes the target with this canvas -- a destroyed widget's parts
+	// go with it -- it nulls that parameter on the game thread only, and the material's render-thread copy
+	// goes on pointing at a freed texture until the next uniform-expression update reads it.
+	if (GetRenderTarget() != nullptr)
+	{
+		OnRenderTargetChanged.Broadcast(nullptr);
+	}
 	Super::OnUnregister();
 	if (auto DreamUIManager = UDreamUIManagerWorldSubsystem::GetInstance(GetWorld()))
 	{
@@ -366,18 +403,23 @@ void UDreamCanvas::PostInitProperties()
 
 void UDreamCanvas::ClearDrawCall()
 {
+	// Out of the parent canvas's mesh first. A canvas clears its draw calls when it is about to draw
+	// some other way -- sorting itself, rendering to its own target -- and a mesh still hooked into the
+	// parent's as a child section goes on being drawn by the parent as well.
+	//
+	// The parent's mesh as it stands, not GetUIMesh(), which makes one when there is none: a child
+	// unregistering after its parent -- a tree coming down with its world -- made the parent a new mesh
+	// and registered it in a world already cleaned up, which the engine refuses and logs as an error.
+	if (IsValid(UIMesh) && ParentCanvas.IsValid())
+	{
+		UIMesh->ClearParentCanvasMeshComp(ParentCanvas->UIMesh.Get());
+	}
 	if (IsValid(UIMesh))
 	{
 		UIMesh->ClearRenderData();
 		bUIMeshNeedToSetInitialParameters = true;
 	}
-	PooledDefaultMaterialList.Empty();
-	MapSrcMatToDynamicMat.Empty();
-	// The parameter cache keys the same MIDs the two pools above just dropped; without this line it
-	// both leaked entries and kept those MIDs rooted forever -- the pool died, the cache did not.
-	MapMatToParamCache.Empty();
 	CurrentDrawCallData.DrawCallArray.Empty();
-	bNeedToSetClipDataTextureMaterialParameter = true;
 }
 
 void UDreamCanvas::RemoveFromViewExtension(bool PropogateToChildrenCanvas)
@@ -448,7 +490,6 @@ bool UDreamCanvas::CheckRootCanvas(bool forceRecheck)const
 	if (NewRootCanvas != RootCanvas)
 	{
 		RootCanvas = NewRootCanvas;
-		bNeedToSetClipDataTextureMaterialParameter = true;
 	}
 	if (RootCanvas.IsValid())
 	{
@@ -532,6 +573,7 @@ void UDreamCanvas::CheckRenderMode(bool PropagateToChildrenCanvas)
 void UDreamCanvas::OnUIHierarchyAttachmentChanged()
 {
  	this->bCanTickUpdate = true;
+	bUpdateEveryWidget = true;
 	RemoveFromViewExtension(true);
 	CheckRenderMode(true);
 
@@ -606,21 +648,240 @@ void UDreamCanvas::RefreshAllClipData()
 	{
 		return;
 	}
+	// The clips that changed go up together, in one command and as few texture updates as their rows allow, rather
+	// than a command each.
+	const bool bBatch = IsValid(ClipDataAsTexture) && !ClipDataAsTexture->GetIsBatchUpdateMode();
+	if (bBatch)
+	{
+		ClipDataAsTexture->PrepareForBatchUpdate();
+	}
 	for (const auto& ClipData : ClipDataList)
 	{
 		//removing a widget's clip leaves the slot behind until the list is compacted
 		if (!ClipData.IsValid())continue;
 		ClipData->UpdateData();
 	}
+	if (bBatch)
+	{
+		ClipDataAsTexture->Flush();
+	}
 }
 
 void UDreamCanvas::MarkCanvasUpdate(bool bRebuildDrawCall)
+{
+	this->bCanTickUpdate = true;
+	// No widget named: which widgets need looking at is unknown, so every one of them is.
+	this->bUpdateEveryWidget = true;
+	if (bRebuildDrawCall)
+	{
+		this->bShouldRebuildDrawCall = true;
+	}
+}
+
+void UDreamCanvas::MarkWidgetUpdate(UDreamWidget* InWidget, bool bRebuildDrawCall)
 {
 	this->bCanTickUpdate = true;
 	if (bRebuildDrawCall)
 	{
 		this->bShouldRebuildDrawCall = true;
 	}
+	if (InWidget == nullptr)
+	{
+		this->bUpdateEveryWidget = true;
+	}
+	if (this->bUpdateEveryWidget)
+	{
+		return;
+	}
+	// Past half the list, looking at every widget costs no more than sorting the ones that asked.
+	if (WidgetsToUpdate.Num() >= FMath::Max(32, WidgetList.Num() / 2))
+	{
+		this->bUpdateEveryWidget = true;
+		WidgetsToUpdate.Reset();
+		return;
+	}
+	WidgetsToUpdate.Add(InWidget);
+}
+
+void UDreamCanvas::EnsureWidgetListIndex()
+{
+	if (bWidgetListIndexValid)
+	{
+		return;
+	}
+	bWidgetListIndexValid = true;
+	WidgetListIndex.Reset();
+	WidgetListIndex.Reserve(WidgetList.Num());
+	for (int32 Index = 0; Index < WidgetList.Num(); ++Index)
+	{
+		WidgetListIndex.Add(TObjectKey<UDreamWidget>(WidgetList[Index]), Index);
+	}
+}
+
+bool UDreamCanvas::GatherWidgetsToUpdateInListOrder(const TArray<TWeakObjectPtr<UDreamWidget>>& InAsking, TArray<UDreamWidget*>& OutWidgets)
+{
+	EnsureWidgetListIndex();
+	TArray<TPair<int32, UDreamWidget*>, TInlineAllocator<64>> Ordered;
+	for (const TWeakObjectPtr<UDreamWidget>& WeakWidget : InAsking)
+	{
+		UDreamWidget* Widget = WeakWidget.Get();
+		const int32* Index = IsValid(Widget) ? WidgetListIndex.Find(TObjectKey<UDreamWidget>(Widget)) : nullptr;
+		if (Index == nullptr)
+		{
+			// Gone since it asked, or no longer this canvas's: what it drew goes with the prepare that merges the list
+			// made again without it. Anything else not in the list means the list is behind, which only a full walk and
+			// prepare see.
+			if (bWidgetListChangedSincePrepare && (!IsValid(Widget) || Widget->GetRenderCanvas() != this))
+			{
+				continue;
+			}
+			return false;
+		}
+		Ordered.Emplace(*Index, Widget);
+	}
+	Ordered.Sort([](const TPair<int32, UDreamWidget*>& A, const TPair<int32, UDreamWidget*>& B) { return A.Key < B.Key; });
+	OutWidgets.Reserve(Ordered.Num());
+	for (int32 Index = 0; Index < Ordered.Num(); ++Index)
+	{
+		if (Index == 0 || Ordered[Index].Key != Ordered[Index - 1].Key)
+		{
+			OutWidgets.Add(Ordered[Index].Value);
+		}
+	}
+	return true;
+}
+
+bool UDreamCanvas::MergePreparedDataCache()
+{
+	TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_MergePreparedData);
+	EnsureWidgetListIndex();
+	if (!bWidgetListChangedSincePrepare)
+	{
+		/**
+		 * The list is as it was, so each widget looked at keeps its place: an entry it had and still has is made again
+		 * where it is, and nothing else moves. It is found by the widget's place in the list, the order the entries are
+		 * in. A widget gaining an entry or losing one moves the others, which the merge below does -- and it makes again
+		 * whatever was made here, so giving up halfway is no harm. Walking the whole cache for a few widgets that asked
+		 * is what a canvas with a few widgets moving paid for, every frame, before this.
+		 */
+		bool bInPlace = true;
+		TArray<FDreamUIRenderData> Made;
+		for (const TWeakObjectPtr<UDreamWidget>& WeakWidget : WidgetsToPrepare)
+		{
+			UDreamWidget* Widget = WeakWidget.Get();
+			const int32* Place = IsValid(Widget) ? WidgetListIndex.Find(TObjectKey<UDreamWidget>(Widget)) : nullptr;
+			if (Place == nullptr)
+			{
+				bInPlace = false;
+				break;
+			}
+			int32 Low = 0;
+			int32 High = PreparedDataCache.Num();
+			while (Low < High)
+			{
+				const int32 Middle = (Low + High) / 2;
+				const int32* MiddlePlace = WidgetListIndex.Find(PreparedDataCache[Middle].Widget);
+				if (MiddlePlace == nullptr)
+				{
+					bInPlace = false;
+					break;
+				}
+				if (*MiddlePlace < *Place)
+				{
+					Low = Middle + 1;
+				}
+				else
+				{
+					High = Middle;
+				}
+			}
+			if (!bInPlace)
+			{
+				break;
+			}
+			const bool bHadEntry = Low < PreparedDataCache.Num() && PreparedDataCache[Low].Widget == TObjectKey<UDreamWidget>(Widget);
+			Made.Reset();
+			AppendRenderDataOf(Widget, Made);
+			if (bHadEntry != (Made.Num() > 0))
+			{
+				bInPlace = false;
+				break;
+			}
+			if (bHadEntry)
+			{
+				PreparedDataCache[Low] = MoveTemp(Made[0]);
+			}
+		}
+		if (bInPlace)
+		{
+			return true;
+		}
+	}
+	// The widgets looked at since the last prepare, in list order, each once: what a prepare makes of them now is made
+	// again. One gone, or no longer this canvas's, has no place in the list, and nothing is made for it.
+	TArray<TPair<int32, UDreamWidget*>, TInlineAllocator<64>> Looked;
+	TSet<TObjectKey<UDreamWidget>> LookedKeys;
+	for (const TWeakObjectPtr<UDreamWidget>& WeakWidget : WidgetsToPrepare)
+	{
+		UDreamWidget* Widget = WeakWidget.Get();
+		if (!IsValid(Widget))
+		{
+			continue;
+		}
+		const TObjectKey<UDreamWidget> Key(Widget);
+		const int32* Index = WidgetListIndex.Find(Key);
+		if (Index == nullptr)
+		{
+			if (Widget->GetRenderCanvas() == this)
+			{
+				return false;//this canvas's and not in its list: the list is behind
+			}
+			continue;
+		}
+		bool bAlreadyLooked = false;
+		LookedKeys.Add(Key, &bAlreadyLooked);
+		if (!bAlreadyLooked)
+		{
+			Looked.Emplace(*Index, Widget);
+		}
+	}
+	Looked.Sort([](const TPair<int32, UDreamWidget*>& A, const TPair<int32, UDreamWidget*>& B) { return A.Key < B.Key; });
+
+	// Every other widget's entry stands as the last prepare made it, in its place: the widgets that stayed keep their order
+	// in a list made again, and one that moved was looked at. An entry whose widget is no longer in the list goes. Entries
+	// are moved out of the cache as they are taken; a merge that gives up leaves the cache to a full prepare.
+	TArray<FDreamUIRenderData> Merged;
+	Merged.Reserve(PreparedDataCache.Num() + Looked.Num());
+	int32 NextLooked = 0;
+	int32 LastPlace = INDEX_NONE;
+	for (FDreamUIRenderData& Entry : PreparedDataCache)
+	{
+		if (LookedKeys.Contains(Entry.Widget))
+		{
+			continue;
+		}
+		const int32* Place = WidgetListIndex.Find(Entry.Widget);
+		if (Place == nullptr)
+		{
+			continue;
+		}
+		if (*Place <= LastPlace)
+		{
+			return false;//out of the list's order: only a full prepare says what the order is
+		}
+		LastPlace = *Place;
+		for (; NextLooked < Looked.Num() && Looked[NextLooked].Key < *Place; ++NextLooked)
+		{
+			AppendRenderDataOf(Looked[NextLooked].Value, Merged);
+		}
+		Merged.Add(MoveTemp(Entry));
+	}
+	for (; NextLooked < Looked.Num(); ++NextLooked)
+	{
+		AppendRenderDataOf(Looked[NextLooked].Value, Merged);
+	}
+	PreparedDataCache = MoveTemp(Merged);
+	return true;
 }
 
 void UDreamCanvas::MarkCanvasHierarchyChanged()
@@ -709,15 +970,23 @@ void UDreamCanvas::PostEditChangeProperty(FPropertyChangedEvent& PropertyChanged
 	auto PropertyName = PropertyChangedEvent.GetMemberPropertyName();
 	if (PropertyName == GET_MEMBER_NAME_CHECKED(UDreamCanvas, bForceRenderToTarget))
 	{
+		// What the setter does, for the same reason: the canvas stops, or starts, being drawn as part
+		// of its root.
+		ClearDrawCall();
+		CheckRootCanvas(true);
 		if (bForceRenderToTarget)
 		{
 			RenderMode = EDreamRenderMode::RenderTarget;
-			OnRenderTargetChanged.Broadcast(RenderTarget);
+			OnRenderTargetChanged.Broadcast(GetRenderTarget());
 		}
 		else
 		{
 			OnRenderTargetChanged.Broadcast(nullptr);
 		}
+	}
+	else if (PropertyName == GET_MEMBER_NAME_CHECKED(UDreamCanvas, bOverrideSorting))
+	{
+		ClearDrawCall();
 	}
 
 	//The Details panel writes ProjectionType/FieldOfView/the clip planes/the overrides straight into the
@@ -730,6 +999,13 @@ void UDreamCanvas::PostEditChangeProperty(FPropertyChangedEvent& PropertyChanged
 void UDreamCanvas::PostLoad()
 {
 	Super::PostLoad();
+	// An older build kept the render target it made for itself in RenderTarget, the author's property, and
+	// saved it there. One outered to this canvas is that, never an author's asset: it goes, and the canvas
+	// makes its own again, in AutoRenderTarget.
+	if (RenderTarget != nullptr && RenderTarget->GetOuter() == this)
+	{
+		RenderTarget = nullptr;
+	}
 }
 void UDreamCanvas::PostEditUndo()
 {
@@ -759,7 +1035,7 @@ void UDreamCanvas::EnsureDataForRebuild()
 			}
 		}
 	};
-	UDreamUIManagerObject::AddOneShotTickFunction([WeakThis = MakeWeakObjectPtr(this)]() {
+	DreamUI::DeferToLaterTick([WeakThis = MakeWeakObjectPtr(this)]() {
 		if (WeakThis.IsValid())
 		{
 			LOCAL::RecheckRootCanvasRecursive(WeakThis.Get());
@@ -833,8 +1109,24 @@ void UDreamCanvas::MarkVisualWillChange(UDreamVisual* InOldVisual)
 	 * editor this was invisible because PostReinitProperties marks everything dirty; at runtime
 	 * (Blueprint swapping a visual type, or an object pool reusing a widget) the old visual kept
 	 * drawing.
+	 *
+	 * The visual's widget asks, when it stays in this canvas: what it draws now, if anything, is made again. One that
+	 * left this canvas goes from the list made again without it, and its entry with it. A visual with no widget leaves
+	 * nothing to say whose entry goes, and every widget is looked at.
 	 */
-	MarkCanvasUpdate(true);
+	UDreamWidget* VisualWidget = InOldVisual != nullptr ? InOldVisual->GetWidget() : nullptr;
+	if (VisualWidget == nullptr)
+	{
+		MarkCanvasUpdate(true);
+	}
+	else if (VisualWidget->GetRenderCanvas() == this)
+	{
+		MarkWidgetUpdate(VisualWidget, true);
+	}
+	else
+	{
+		MarkWidgetCameOrWent(VisualWidget);
+	}
 }
 
 void UDreamCanvas::RegisterVisual(UDreamVisual* InVisual)
@@ -854,7 +1146,9 @@ void UDreamCanvas::RegisterVisual(UDreamVisual* InVisual)
 	if (bAlreadyRegisteredHere)return;
 	//a visual arriving needs a draw-call of its own (or a place in someone else's), which only the
 	//rebuild pass can work out -- the refresh path just re-copies vertices into the existing layout.
-	MarkCanvasUpdate(true);
+	//Its widget asks for that; the canvas's other widgets stay as they are.
+	UDreamWidget* VisualWidget = InVisual->GetWidget();
+	MarkWidgetUpdate(VisualWidget != nullptr && VisualWidget->GetRenderCanvas() == this ? VisualWidget : nullptr, true);
 	InVisual->SetWidgetPropertyDataStartPosition(WidgetPropertyDataAsTexture->RegisterBuffer());
 }
 
@@ -874,13 +1168,25 @@ void UDreamCanvas::UnregisterVisual(UDreamVisual* InVisual)
 
 void UDreamCanvas::AddDreamWidget(UDreamWidget* InWidget)
 {
-	bNeedToGenerateWidgetList = true;
-	MarkCanvasUpdate(true);
+	MarkWidgetCameOrWent(InWidget);
 }
 void UDreamCanvas::RemoveDreamWidget(UDreamWidget* InWidget)
 {
+	MarkWidgetCameOrWent(InWidget);
+}
+
+void UDreamCanvas::MarkWidgetCameOrWent(UDreamWidget* InWidget)
+{
 	bNeedToGenerateWidgetList = true;
-	MarkCanvasUpdate(true);
+	if (IsValid(InWidget) && InWidget->GetRenderCanvas() == this)
+	{
+		MarkWidgetUpdate(InWidget, true);
+	}
+	else
+	{
+		bCanTickUpdate = true;
+		bShouldRebuildDrawCall = true;
+	}
 }
 
 bool UDreamCanvas::Is2DUITransform(const FTransform& Transform)
@@ -1010,6 +1316,7 @@ DECLARE_CYCLE_STAT(TEXT("Canvas PrepareDrawCallBatchingData"), STAT_PrepareDrawC
 void UDreamCanvas::PrepareDrawCallBatchingData(TArray<FDreamUIRenderData>& OutRenderDataArray)
 {
 	SCOPE_CYCLE_COUNTER(STAT_PrepareDrawCallBatching);
+	TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_PrepareDrawCallBatchingData);
 	OutRenderDataArray.Reset();
 	/**
 	 * Drain the vertex-transform work once, here, before reading any geometry: CopyDataForPrepare
@@ -1020,96 +1327,162 @@ void UDreamCanvas::PrepareDrawCallBatchingData(TArray<FDreamUIRenderData>& OutRe
 	 */
 	if (TransformVerticesAsyncFunctionRunnable.IsValid())
 	{
+		TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_WaitForVertexTransforms);
 		TransformVerticesAsyncFunctionRunnable->WaitForAllFunctions();
 	}
-	for (int i = 0; i < WidgetList.Num(); i++)
+	// When only some widgets were looked at since the last prepare -- they asked, came or moved -- the last prepare stands
+	// but for them. Past half the list, walking it all costs no more.
+	if (!bPrepareEveryWidget && bPreparedDataCacheValid && WidgetsToPrepare.Num() < FMath::Max(32, WidgetList.Num() / 2)
+		&& MergePreparedDataCache())
 	{
-		auto& Widget = WidgetList[i];
-		if (!IsValid(Widget))continue;//a widget collected earlier can be destroyed before the list is regenerated
-		if (Widget->IsCanvasWidget() && Widget->GetRenderCanvas() != this)//is child canvas
+		OutRenderDataArray = PreparedDataCache;
+		WidgetsToPrepare.Reset();
+		bWidgetListChangedSincePrepare = false;
+		if (CVarDreamUIVerifyPartialPrepare.GetValueOnGameThread() != 0)
 		{
-			auto ChildCanvas = Widget->GetRenderCanvas();
-			if (ChildCanvas == nullptr)continue;//normally this won't be nullptr, but when redo in editor this breaks
-			if (ChildCanvas->bForceRenderToTarget)continue;//skip this type
-			if (ChildCanvas->GetOverrideSorting())continue;//override sorting means render by itself, then no need to use it as child-canvas
-			auto RenderData = FDreamUIRenderData(EDreamUIDrawCallType::ChildCanvas);
-			RenderData.ChildCanvas = ChildCanvas;
+			VerifyPartialPrepare(OutRenderDataArray);
+		}
+		return;
+	}
+	for (const TObjectPtr<UDreamWidget>& Widget : WidgetList)
+	{
+		AppendRenderDataOf(Widget.Get(), OutRenderDataArray);
+	}
+	// Kept for the prepares to come: see MergePreparedDataCache.
+	PreparedDataCache = OutRenderDataArray;
+	bPreparedDataCacheValid = true;
+	bPrepareEveryWidget = false;
+	bWidgetListChangedSincePrepare = false;
+	WidgetsToPrepare.Reset();
+}
+
+void UDreamCanvas::AppendRenderDataOf(UDreamWidget* Widget, TArray<FDreamUIRenderData>& OutRenderDataArray)
+{
+	if (!IsValid(Widget))return;//a widget collected earlier can be destroyed before the list is regenerated
+	if (Widget->IsCanvasWidget() && Widget->GetRenderCanvas() != this)//is child canvas
+	{
+		auto ChildCanvas = Widget->GetRenderCanvas();
+		if (ChildCanvas == nullptr)return;//normally this won't be nullptr, but when redo in editor this breaks
+		if (ChildCanvas->bForceRenderToTarget)return;//skip this type
+		if (ChildCanvas->GetOverrideSorting())return;//override sorting means render by itself, then no need to use it as child-canvas
+		auto RenderData = FDreamUIRenderData(EDreamUIDrawCallType::ChildCanvas);
+		RenderData.ChildCanvas = ChildCanvas;
+		RenderData.Widget = Widget;
+		OutRenderDataArray.Add(MoveTemp(RenderData));
+		return;
+	}
+	auto Visual = Widget->GetVisual();
+	if (!Visual)return;
+	if (!Widget->GetRenderVisibleInHierarchy())//if not visible, need to remove the draw-call from draw-call list
+	{
+		return;
+	}
+	switch (Visual->GetVisualType())
+	{
+	default:
+	case EDreamVisualType::BatchMesh:
+		{
+			auto DreamVisualBatchMesh = static_cast<UDreamVisualBatchMesh*>(Visual);
+			auto ItemGeo = DreamVisualBatchMesh->GetGeometry();
+			if (ItemGeo == nullptr)return;
+			while (ItemGeo->bIsCalculating)
+			{
+				//should not be reached: the transform queue was drained before the prepare began.
+				//Kept as the correctness backstop -- CopyDataForPrepare must never read a
+				//half-written geometry -- but yielding rather than sleeping a millisecond.
+				FPlatformProcess::Sleep(0.0f);
+			}
+			if (ItemGeo->Vertices.Num() == 0)return;
+			/**
+			 * One element that does not fit in an index buffer cannot be drawn, but it used to
+			 * disappear without a word -- a long text block or a big tiled image simply stopped
+			 * rendering, with nothing in the log to connect it to a vertex budget. Say so.
+			 *
+			 * The comparison is >=, not >: PushSingleDrawCall asserts VerticesCount is strictly
+			 * below the budget, so a geometry sitting exactly on it passed this gate and then
+			 * tripped the check one step later.
+			 */
+			if (ItemGeo->Vertices.Num() >= LEXUI_MAX_VERTEX_COUNT)
+			{
+				UE_LOG(DreamGUI, Error, TEXT("[%s].%d Widget '%s' has %d vertices, at or past the %d a single draw-call can index, so it cannot be drawn. Split it into several widgets, or build with a 32-bit index buffer (LEXUI_USE_32BIT_INDEXBUFFER in DreamGUI.Build.cs).")
+					, ANSI_TO_TCHAR(__FUNCTION__), __LINE__
+					, *Widget->GetDisplayName(), ItemGeo->Vertices.Num(), LEXUI_MAX_VERTEX_COUNT);
+				return;
+			}
+			auto RenderData = FDreamUIRenderData(EDreamUIDrawCallType::BatchMesh);
+			//the visual's copy, made again only when the geometry changed since the last one
+			RenderData.BatchMeshGeometry = DreamVisualBatchMesh->GetGeometryForBatching();
+			RenderData.BatchMeshVisualObject = DreamVisualBatchMesh;
+			RenderData.Widget = Widget;
 			OutRenderDataArray.Add(MoveTemp(RenderData));
 		}
-		else
+		break;
+	case EDreamVisualType::PostProcess:
 		{
-			auto Visual = Widget->GetVisual();
-			if (!Visual)continue;
-			if (!Widget->GetRenderVisibleInHierarchy())//if not visible, need to remove the draw-call from draw-call list
+			auto DreamVisualPostProcess = static_cast<UDreamVisualPostProcess*>(Visual);
+			if (!DreamVisualPostProcess->HaveValidData())return;
+			auto RenderData = FDreamUIRenderData(EDreamUIDrawCallType::PostProcess);
+			RenderData.PostProcessVisualObject = DreamVisualPostProcess;
+			//read the bounds here, on the game thread: the batching pass that needs them runs on a
+			//worker thread, where dereferencing the visual races with garbage collection
+			if (auto PostProcessGeo = DreamVisualPostProcess->GetGeometry())
 			{
-				continue;
+				RenderData.PostProcessBoundsMin2DInCanvasSpace = PostProcessGeo->BoundsMin2DInCanvasSpace;
+				RenderData.PostProcessBoundsMax2DInCanvasSpace = PostProcessGeo->BoundsMax2DInCanvasSpace;
 			}
-			switch (Visual->GetVisualType())
-			{
-			default:
-			case EDreamVisualType::BatchMesh:
-				{
-					auto DreamVisualBatchMesh = static_cast<UDreamVisualBatchMesh*>(Visual);
-					auto ItemGeo = DreamVisualBatchMesh->GetGeometry();
-					if (ItemGeo == nullptr)continue;
-					while (ItemGeo->bIsCalculating)
-					{
-						//should not be reached: the transform queue was drained before this loop began.
-						//Kept as the correctness backstop -- CopyDataForPrepare must never read a
-						//half-written geometry -- but yielding rather than sleeping a millisecond.
-						FPlatformProcess::Sleep(0.0f);
-					}
-					if (ItemGeo->Vertices.Num() == 0)continue;
-					/**
-					 * One element that does not fit in an index buffer cannot be drawn, but it used to
-					 * disappear without a word -- a long text block or a big tiled image simply stopped
-					 * rendering, with nothing in the log to connect it to a vertex budget. Say so.
-					 *
-					 * The comparison is >=, not >: PushSingleDrawCall asserts VerticesCount is strictly
-					 * below the budget, so a geometry sitting exactly on it passed this gate and then
-					 * tripped the check one step later.
-					 */
-					if (ItemGeo->Vertices.Num() >= LEXUI_MAX_VERTEX_COUNT)
-					{
-						UE_LOG(DreamGUI, Error, TEXT("[%s].%d Widget '%s' has %d vertices, at or past the %d a single draw-call can index, so it cannot be drawn. Split it into several widgets, or build with a 32-bit index buffer (LEXUI_USE_32BIT_INDEXBUFFER in DreamGUI.Build.cs).")
-							, ANSI_TO_TCHAR(__FUNCTION__), __LINE__
-							, *Widget->GetDisplayName(), ItemGeo->Vertices.Num(), LEXUI_MAX_VERTEX_COUNT);
-						continue;
-					}
-					auto RenderData = FDreamUIRenderData(EDreamUIDrawCallType::BatchMesh);
-					RenderData.BatchMeshGeometry.CopyDataForPrepare(*ItemGeo);
-					RenderData.BatchMeshVisualObject = DreamVisualBatchMesh;
-					OutRenderDataArray.Add(MoveTemp(RenderData));
-				}
-				break;
-			case EDreamVisualType::PostProcess:
-				{
-					auto DreamVisualPostProcess = static_cast<UDreamVisualPostProcess*>(Visual);
-					if (!DreamVisualPostProcess->HaveValidData())continue;
-					auto RenderData = FDreamUIRenderData(EDreamUIDrawCallType::PostProcess);
-					RenderData.PostProcessVisualObject = DreamVisualPostProcess;
-					//read the bounds here, on the game thread: the batching pass that needs them runs on a
-					//worker thread, where dereferencing the visual races with garbage collection
-					if (auto PostProcessGeo = DreamVisualPostProcess->GetGeometry())
-					{
-						RenderData.PostProcessBoundsMin2DInCanvasSpace = PostProcessGeo->BoundsMin2DInCanvasSpace;
-						RenderData.PostProcessBoundsMax2DInCanvasSpace = PostProcessGeo->BoundsMax2DInCanvasSpace;
-					}
-					OutRenderDataArray.Add(MoveTemp(RenderData));
-				}
-				break;
-			case EDreamVisualType::DirectMesh:
-				{
-					auto DreamVisualDirectMesh = static_cast<UDreamVisualDirectMesh*>(Visual);
-					if (!DreamVisualDirectMesh->HaveValidData())continue;
-					auto RenderData = FDreamUIRenderData(EDreamUIDrawCallType::DirectMesh);
-					RenderData.DirectMeshVisualObject = DreamVisualDirectMesh;
-					OutRenderDataArray.Add(MoveTemp(RenderData));
-				}
-				break;
-			}
+			RenderData.Widget = Widget;
+			OutRenderDataArray.Add(MoveTemp(RenderData));
+		}
+		break;
+	case EDreamVisualType::DirectMesh:
+		{
+			auto DreamVisualDirectMesh = static_cast<UDreamVisualDirectMesh*>(Visual);
+			if (!DreamVisualDirectMesh->HaveValidData())return;
+			auto RenderData = FDreamUIRenderData(EDreamUIDrawCallType::DirectMesh);
+			RenderData.DirectMeshVisualObject = DreamVisualDirectMesh;
+			RenderData.Widget = Widget;
+			OutRenderDataArray.Add(MoveTemp(RenderData));
+		}
+		break;
+	}
+}
+
+void UDreamCanvas::VerifyPartialPrepare(const TArray<FDreamUIRenderData>& InPrepared)
+{
+	TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_VerifyPartialPrepare);
+	TArray<FDreamUIRenderData> Full;
+	for (const TObjectPtr<UDreamWidget>& Widget : WidgetList)
+	{
+		AppendRenderDataOf(Widget.Get(), Full);
+	}
+	auto Same = [](const FDreamUIRenderData& A, const FDreamUIRenderData& B)
+	{
+		return A.Type == B.Type
+			&& A.Widget == B.Widget
+			&& A.BatchMeshGeometry == B.BatchMeshGeometry
+			&& A.BatchMeshVisualObject == B.BatchMeshVisualObject
+			&& A.PostProcessVisualObject == B.PostProcessVisualObject
+			&& A.PostProcessBoundsMin2DInCanvasSpace == B.PostProcessBoundsMin2DInCanvasSpace
+			&& A.PostProcessBoundsMax2DInCanvasSpace == B.PostProcessBoundsMax2DInCanvasSpace
+			&& A.DirectMeshVisualObject == B.DirectMeshVisualObject
+			&& A.ChildCanvas == B.ChildCanvas;
+	};
+	int32 First = INDEX_NONE;
+	const int32 Common = FMath::Min(Full.Num(), InPrepared.Num());
+	for (int32 Index = 0; Index < Common; ++Index)
+	{
+		if (!Same(Full[Index], InPrepared[Index]))
+		{
+			First = Index;
+			break;
 		}
 	}
+	if (First == INDEX_NONE && Full.Num() != InPrepared.Num())
+	{
+		First = Common;
+	}
+	ensureMsgf(First == INDEX_NONE, TEXT("%s: the prepare made from the last one differs from a prepare of every widget, first at entry %d (%d entries against %d)."),
+		*GetPathName(), First, InPrepared.Num(), Full.Num());
 }
 
 DECLARE_CYCLE_STAT(TEXT("Canvas BatchDrawCallAsync"), STAT_BatchDrawCall, STATGROUP_DreamGUI);
@@ -1119,7 +1492,17 @@ void UDreamCanvas::BatchDrawCallAsync(const FVector2D& InCanvasLeftBottom, const
 	const TArray<FDreamUIRenderData>& InRenderDataArray, TArray<FDreamUIDrawCall>& InOutUIDrawCallList,
 	bool bCullElementsOutsideCanvasRect)
 {
+	// A copy the batching may use up: the data a caller hands over as const is the caller's to keep.
+	TArray<FDreamUIRenderData> RenderDataArray = InRenderDataArray;
+	BatchDrawCallAsync(InCanvasLeftBottom, InCanvasRightTop, MoveTemp(RenderDataArray), InOutUIDrawCallList, bCullElementsOutsideCanvasRect);
+}
+
+void UDreamCanvas::BatchDrawCallAsync(const FVector2D& InCanvasLeftBottom, const FVector2D& InCanvasRightTop,
+	TArray<FDreamUIRenderData>&& InRenderDataArray, TArray<FDreamUIDrawCall>& InOutUIDrawCallList,
+	bool bCullElementsOutsideCanvasRect, const TArray<TArray<TSharedPtr<const FDreamUIGeometry>>>* InGeometryListsOnSections)
+{
 	SCOPE_CYCLE_COUNTER(STAT_BatchDrawCall);
+	DREAMUI_STAGE_SCOPE(Batching);
 
 	InOutUIDrawCallList.Reset();
 
@@ -1217,8 +1600,9 @@ void UDreamCanvas::BatchDrawCallAsync(const FVector2D& InCanvasLeftBottom, const
 			}
 			return false;
 		}
-		TArray<int> CanFitinDrawCallIndexArray;
-		//get all draw-call that can fit-in this UI item, then use the first one (because we iterate from tail to head)
+		//the deepest draw-call walked so far that can take this item: the walk goes from tail to head, so the last one
+		//found is the one to use. One index, where a list of every candidate used to be allocated per item.
+		int32 DeepestFit = INDEX_NONE;
 		for (int i = LastDrawCallIndex; i >= FitInDrawCallMinIndex; i--)//from tail to head
 		{
 			const auto& OtherDrawCall = InOutUIDrawCallList[i];
@@ -1233,9 +1617,9 @@ void UDreamCanvas::BatchDrawCallAsync(const FVector2D& InCanvasLeftBottom, const
 				 * CopyDataForPrepare carried TransformRelativeToCanvas, bIs2DSpace was always true and this
 				 * whole branch was unreachable.
 				 */
-				if (CanFitinDrawCallIndexArray.Num() > 0)
+				if (DeepestFit != INDEX_NONE)
 				{
-					OutDrawCallIndexToFitin = CanFitinDrawCallIndexArray[CanFitinDrawCallIndexArray.Num() - 1];
+					OutDrawCallIndexToFitin = DeepestFit;
 					return true;
 				}
 				return false;
@@ -1245,9 +1629,9 @@ void UDreamCanvas::BatchDrawCallAsync(const FVector2D& InCanvasLeftBottom, const
 			{
 				if (OverlapWithOtherDrawCall(InGeo, OtherDrawCall))//overlap with other draw-call, can't batch
 				{
-					if (CanFitinDrawCallIndexArray.Num() > 0)
+					if (DeepestFit != INDEX_NONE)
 					{
-						OutDrawCallIndexToFitin = CanFitinDrawCallIndexArray[CanFitinDrawCallIndexArray.Num() - 1];
+						OutDrawCallIndexToFitin = DeepestFit;
 						return true;
 					}
 					return false;
@@ -1260,23 +1644,23 @@ void UDreamCanvas::BatchDrawCallAsync(const FVector2D& InCanvasLeftBottom, const
 				OutDrawCallIndexToFitin = i;
 				return true;
 			}
-			CanFitinDrawCallIndexArray.Add(i);
+			DeepestFit = i;
 		}
-		if (CanFitinDrawCallIndexArray.Num() > 0)
+		if (DeepestFit != INDEX_NONE)
 		{
-			OutDrawCallIndexToFitin = CanFitinDrawCallIndexArray[CanFitinDrawCallIndexArray.Num() - 1];
+			OutDrawCallIndexToFitin = DeepestFit;
 			return true;
 		}
 		return false;
 	};
 
-	auto PushSingleDrawCall = [&](const FDreamUIRenderData& InRenderData, EDreamUIDrawCallType InDrawCallType, bool InIs2DSpace = true) {
+	auto PushSingleDrawCall = [&](FDreamUIRenderData& InRenderData, EDreamUIDrawCallType InDrawCallType, bool InIs2DSpace = true) {
 		switch (InDrawCallType)
 		{
 		default:
 		case EDreamUIDrawCallType::BatchMesh:
 			{
-				auto& InItemGeo = InRenderData.BatchMeshGeometry;
+				const FDreamUIGeometry& InItemGeo = *InRenderData.BatchMeshGeometry;
 				auto DrawCallItem = FDreamUIDrawCall(CanvasRect);
 				if (InItemGeo.bIsFont)
 				{
@@ -1287,14 +1671,17 @@ void UDreamCanvas::BatchDrawCallAsync(const FVector2D& InCanvasLeftBottom, const
 				{
 					DrawCallItem.Texture = InItemGeo.Texture;
 				}
-				DrawCallItem.Material = InItemGeo.Material.Get();
+				// Copied as the weak pointer it is: this runs on the batching thread, where resolving it -- and then reading the
+				// object to make a weak pointer of it again -- can meet a collection under way on the game thread.
+				DrawCallItem.Material = InItemGeo.Material;
 				DrawCallItem.BlendMode = InItemGeo.BlendMode;
-				DrawCallItem.BatchMeshGeometryArray.Add(InItemGeo);
 				DrawCallItem.BatchMeshVisualArray.Add(InRenderData.BatchMeshVisualObject);
 				DrawCallItem.VerticesCount = InItemGeo.Vertices.Num();
 				DrawCallItem.IndicesCount = InItemGeo.Triangles.Num();
 				DrawCallItem.BatchMeshTreeNode->Insert(DreamUIQuadTree::Rectangle(InItemGeo.BoundsMin2DInCanvasSpace, InItemGeo.BoundsMax2DInCanvasSpace));
 				DrawCallItem.bIs2DSpace = InIs2DSpace;
+				//last: the draw call keeps the prepared copy itself, shared with its visual, rather than a copy of it
+				DrawCallItem.BatchMeshGeometryArray.Add(MoveTemp(InRenderData.BatchMeshGeometry));
 				InOutUIDrawCallList.Add(MoveTemp(DrawCallItem));
 			}
 			break;
@@ -1336,21 +1723,11 @@ void UDreamCanvas::BatchDrawCallAsync(const FVector2D& InCanvasLeftBottom, const
 			break;
 		case EDreamUIDrawCallType::BatchMesh:
 			{
-				auto& ItemGeo = RenderData.BatchMeshGeometry;
-
-				// Same gate as the renderer's dump: which geometry reaches assembly, with what
-				// material -- the missing rect block is either absent here or arriving material-less.
-				// The cvar is a static living in the renderer's translation unit, so the lookup can answer
-				// null (not yet constructed, or that unit compiled out) -- and this runs on the batching thread.
-				auto* DumpMaterialDrawsCVar = IConsoleManager::Get().FindConsoleVariable(TEXT("dreamgui.DumpMaterialDraws"));
-				if (DumpMaterialDrawsCVar != nullptr && DumpMaterialDrawsCVar->GetInt() != 0)
+				if (!RenderData.BatchMeshGeometry.IsValid())
 				{
-					UE_LOG(DreamGUI, Display, TEXT("[DumpMaterialDraws][assemble] visual=%s verts=%d material=%s batching=%d"),
-						RenderData.BatchMeshVisualObject.IsValid() ? *RenderData.BatchMeshVisualObject->GetClass()->GetName() : TEXT("null"),
-						ItemGeo.Vertices.Num(),
-						ItemGeo.Material.IsValid() ? *ItemGeo.Material->GetName() : TEXT("none"),
-						ItemGeo.bSupportDrawcallBatching ? 1 : 0);
+					continue;
 				}
+				const FDreamUIGeometry& ItemGeo = *RenderData.BatchMeshGeometry;
 
 				bool is2DUIItem = Is2DUITransform(ItemGeo.TransformRelativeToCanvas);
 				//a 3D element's 2D bounds do not describe where it ends up on screen, so only flat
@@ -1380,12 +1757,15 @@ void UDreamCanvas::BatchDrawCallAsync(const FVector2D& InCanvasLeftBottom, const
 						}
 					}
 					//add to this draw-call
-					DrawCallItem.BatchMeshGeometryArray.Add(ItemGeo);
 					DrawCallItem.BatchMeshVisualArray.Add(RenderData.BatchMeshVisualObject);
 					DrawCallItem.BatchMeshTreeNode->Insert(DreamUIQuadTree::Rectangle(ItemGeo.BoundsMin2DInCanvasSpace, ItemGeo.BoundsMax2DInCanvasSpace));
 					DrawCallItem.VerticesCount += ItemGeo.Vertices.Num();
 					DrawCallItem.IndicesCount += ItemGeo.Triangles.Num();
-					check(DrawCallItem.VerticesCount < LEXUI_MAX_VERTEX_COUNT);
+					//last, shared rather than copied: see PushSingleDrawCall
+					DrawCallItem.BatchMeshGeometryArray.Add(MoveTemp(RenderData.BatchMeshGeometry));
+					// CanFitInDrawCall keeps this true; past the limit the indices would wrap, which is a wrong
+					// picture rather than a reason to stop the process, on a thread that is only batching.
+					ensureMsgf(DrawCallItem.VerticesCount < LEXUI_MAX_VERTEX_COUNT, TEXT("A draw call reached %d vertices; the limit is %d."), DrawCallItem.VerticesCount, LEXUI_MAX_VERTEX_COUNT);
 				}
 				else//cannot fit in any other draw-call
 				{
@@ -1413,11 +1793,59 @@ void UDreamCanvas::BatchDrawCallAsync(const FVector2D& InCanvasLeftBottom, const
 		}
 	}
 
-	for (auto& DrawCallItem : InOutUIDrawCallList)
 	{
-		if (DrawCallItem.Type == EDreamUIDrawCallType::BatchMesh)
+		TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_CombineDrawCalls);
+		/**
+		 * The draw calls that will take a section back: those built from the very copies a section was built from, then,
+		 * among the rest, those built from copies laid out as a section's are, each section going to one draw call -- the
+		 * way UDreamUIMeshComponent::ClaimPooledMeshSections hands them out. Their vertices are left uncombined: nothing
+		 * reads them unless the section is not there after all (FDreamCanvasPreparedDrawCallData::GeometryListsOnSections).
+		 */
+		TArray<bool, TInlineAllocator<64>> TakesASectionBack;
+		TakesASectionBack.SetNumZeroed(InOutUIDrawCallList.Num());
+		if (InGeometryListsOnSections != nullptr && InGeometryListsOnSections->Num() > 0)
 		{
-			DrawCallItem.ApplyBatchMeshGeometryToCombined();
+			TArray<bool, TInlineAllocator<64>> SectionTaken;
+			SectionTaken.SetNumZeroed(InGeometryListsOnSections->Num());
+			for (int32 Pass = 0; Pass < 2; ++Pass)
+			{
+				for (int32 DrawCallIndex = 0; DrawCallIndex < InOutUIDrawCallList.Num(); ++DrawCallIndex)
+				{
+					const FDreamUIDrawCall& DrawCallItem = InOutUIDrawCallList[DrawCallIndex];
+					if (DrawCallItem.Type != EDreamUIDrawCallType::BatchMesh || TakesASectionBack[DrawCallIndex])
+					{
+						continue;
+					}
+					for (int32 SectionIndex = 0; SectionIndex < SectionTaken.Num(); ++SectionIndex)
+					{
+						const TArray<TSharedPtr<const FDreamUIGeometry>>& OnSection = (*InGeometryListsOnSections)[SectionIndex];
+						if (!SectionTaken[SectionIndex] && (Pass == 0 ? OnSection == DrawCallItem.BatchMeshGeometryArray
+							: FDreamUIDrawCall::GeometryListsShareLayout(OnSection, DrawCallItem.BatchMeshGeometryArray)))
+						{
+							SectionTaken[SectionIndex] = true;
+							TakesASectionBack[DrawCallIndex] = true;
+							break;
+						}
+					}
+				}
+			}
+		}
+		for (int32 DrawCallIndex = 0; DrawCallIndex < InOutUIDrawCallList.Num(); ++DrawCallIndex)
+		{
+			FDreamUIDrawCall& DrawCallItem = InOutUIDrawCallList[DrawCallIndex];
+			if (DrawCallItem.Type != EDreamUIDrawCallType::BatchMesh)
+			{
+				continue;
+			}
+			if (TakesASectionBack[DrawCallIndex])
+			{
+				DrawCallItem.ApplyBatchMeshBoundsToCombined();
+				DrawCallItem.bCombinePending = true;
+			}
+			else
+			{
+				DrawCallItem.ApplyBatchMeshGeometryToCombined();
+			}
 		}
 	}
 }
@@ -1450,16 +1878,19 @@ void UDreamCanvas::UpdateCanvasDrawCall()
 		if (bNowIsVisible != bPrevIsVisible)
 		{
 			bCanTickUpdate = true;
+			bUpdateEveryWidget = true;
 		}
 		bPrevIsVisible = bNowIsVisible;
 	}
 
 	//update draw-call
-	bHasPendingUpdateData = false;
 	if (bCanTickUpdate)
 	{
 		bCanTickUpdate = false;
 		RootCanvas->bAnythingChangedForRenderTarget = true;
+		// Whatever made this canvas update -- layout, a transform, geometry, a sort -- may have moved what a
+		// ray would hit on it.
+		UDreamUIManagerWorldSubsystem::BumpHitTestGenerationFor(this);
 		CheckUIMesh();
 		struct LOCAL
 		{
@@ -1482,9 +1913,14 @@ void UDreamCanvas::UpdateCanvasDrawCall()
 		};
 		if (bNeedToGenerateWidgetList)
 		{
+			TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_GenerateWidgetList);
 			bNeedToGenerateWidgetList = false;
 			WidgetList.Reset();
 			LOCAL::CollectRenderWidget(GetWidget(), this, WidgetList);
+			// A new list, in which the widgets that stayed keep their order: a widget that came or moved asked for itself,
+			// and every widget is looked at only when something else woke the canvas too. The next prepare merges.
+			bWidgetListIndexValid = false;
+			bWidgetListChangedSincePrepare = true;
 		}
 
 		CheckWidgetPropertyData();
@@ -1492,15 +1928,71 @@ void UDreamCanvas::UpdateCanvasDrawCall()
 		//update clip and geometry from head to tail
 		{
 			SCOPE_CYCLE_COUNTER(STAT_UpdateClipAndGeometry)
-			for (const auto& Widget : WidgetList)
+			TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_UpdateClipAndGeometry);
+			// Resolved once for the loop rather than twice for every widget in it: the root is a weak pointer.
+			UDreamCanvas* const Root = RootCanvas.Get();
+			auto UpdateWidget = [this, Root](UDreamWidget* Widget)
 			{
-				//a widget collected earlier can be destroyed before the list is regenerated
-				if (!IsValid(Widget))continue;
-				Widget->UpdateClip(RootCanvas->ClipDataAsTexture, RootCanvas->ClipDataList);
+				if (Root != nullptr)
+				{
+					Widget->UpdateClip(Root->ClipDataAsTexture, Root->ClipDataList);
+				}
 				if (Widget->GetRenderVisibleInHierarchy() && Widget->GetRenderCanvas() == this)
 				{
 					Widget->UpdateVisual();
 				}
+			};
+			// Taken now: a widget that asks again while this update runs -- its geometry asking for its block data, say --
+			// is looked at in the next one, as it was when the whole canvas woke up again.
+			const TArray<TWeakObjectPtr<UDreamWidget>> Asking = MoveTemp(WidgetsToUpdate);
+			WidgetsToUpdate.Reset();
+			const bool bEveryWidget = bUpdateEveryWidget;
+			bUpdateEveryWidget = false;
+			TArray<UDreamWidget*> AskedInListOrder;
+			if (!bEveryWidget && GatherWidgetsToUpdateInListOrder(Asking, AskedInListOrder))
+			{
+				// Only the widgets that asked. Walking the list, a widget's parents have their clips brought up to date
+				// before it, and it may inherit one: here its parents' clips are, as far as this canvas's widgets go.
+				for (UDreamWidget* Widget : AskedInListOrder)
+				{
+					if (Root != nullptr)
+					{
+						TArray<UDreamWidget*, TInlineAllocator<16>> Parents;
+						for (UDreamWidget* Parent = Widget->GetParent(); IsValid(Parent) && Parent->GetRenderCanvas() == this; Parent = Parent->GetParent())
+						{
+							Parents.Add(Parent);
+						}
+						for (int32 Index = Parents.Num() - 1; Index >= 0; --Index)
+						{
+							Parents[Index]->UpdateClip(Root->ClipDataAsTexture, Root->ClipDataList);
+						}
+					}
+					UpdateWidget(Widget);
+					if (!bPrepareEveryWidget)
+					{
+						WidgetsToPrepare.Add(Widget);
+					}
+				}
+				// Colour after colour with no rebuild between would grow the list without end; past half the widgets a
+				// full prepare costs no more.
+				if (WidgetsToPrepare.Num() > FMath::Max(32, WidgetList.Num() / 2))
+				{
+					bPrepareEveryWidget = true;
+					WidgetsToPrepare.Reset();
+				}
+				DreamUIRenderStats::AddCount(DreamUIRenderStats::ECounter::WidgetsUpdated, AskedInListOrder.Num());
+			}
+			else
+			{
+				for (const auto& Widget : WidgetList)
+				{
+					//a widget collected earlier can be destroyed before the list is regenerated
+					if (!IsValid(Widget))continue;
+					UpdateWidget(Widget);
+				}
+				DreamUIRenderStats::AddCount(DreamUIRenderStats::ECounter::WidgetsUpdated, WidgetList.Num());
+				bPrepareEveryWidget = true;
+				WidgetsToPrepare.Reset();
 			}
 			// Clips created above are uploaded by RefreshAllClipData, driven every tick from the UI manager.
 		}
@@ -1509,6 +2001,8 @@ void UDreamCanvas::UpdateCanvasDrawCall()
 		if (bShouldRebuildDrawCall && !bDrawCallRebuildSuspended)
 		{
 			bShouldRebuildDrawCall = false;
+			// The prepare below takes every vertex change asked for until now.
+			bHasPendingUpdateData = false;
 			NewestDrawCallFrameNumber = GFrameCounter;
 
 			//rect size minimal at 100, so UIQuadTree can work properly (prevent too small rect)
@@ -1532,6 +2026,7 @@ void UDreamCanvas::UpdateCanvasDrawCall()
 				PreparedDrawCallData.bCullElementsOutsideCanvasRect = bCullElementsOutsideCanvas
 					&& (this->IsRootCanvas() || this->bForceRenderToTarget);
 				PrepareDrawCallBatchingData(PreparedDrawCallData.DataArray);
+				PreparedDrawCallData.GeometryListsOnSections = UIMesh->GetMeshSectionGeometryLists();
 				//push to async thread
 				DrawCallProcessingRunnable->PushPreparedDrawCallData(MoveTemp(PreparedDrawCallData));
 			}
@@ -1584,23 +2079,22 @@ void UDreamCanvas::UpdateDrawCallBatchData()
 
 		MarkFinishUpdateCanvasDrawCall();
 	}
-	else
+	/**
+	 * A vertex refresh asked for since the draw calls in hand were prepared, once they are the newest asked for: a
+	 * rebuild still on its way prepared after the request, and takes it. The request used to go with the next update of
+	 * the canvas, which cleared it whether or not a refresh had happened in between, and with any frame a batch result
+	 * arrived in -- a colour changed then never showed.
+	 */
+	if (bHasPendingUpdateData && GFrameCounter > CurrentDrawCallData.FrameNumber && CurrentDrawCallData.FrameNumber == NewestDrawCallFrameNumber)
 	{
-		if (bHasPendingUpdateData)//make sure there is no pending data in async thread, if there is pending data we may update draw-call with wrong data
+		bHasPendingUpdateData = false;
+		for (int i = 0; i < CurrentDrawCallData.DrawCallArray.Num(); i++)
 		{
-			//current draw-call data only need to update, then we compare the frame-number,
-			//if frame-number is greater than current rendering draw-call's frame-number, that means we can safely update it
-			if (GFrameCounter > CurrentDrawCallData.FrameNumber && CurrentDrawCallData.FrameNumber == NewestDrawCallFrameNumber)
+			auto& DrawCallItem = CurrentDrawCallData.DrawCallArray[i];
+			// Only a draw call one of whose elements changed is copied and goes up again.
+			if (DrawCallItem.Type == EDreamUIDrawCallType::BatchMesh && DrawCallItem.CopyBatchMeshGeometry())
 			{
-				for (int i = 0; i < CurrentDrawCallData.DrawCallArray.Num(); i++)
-				{
-					auto& DrawCallItem = CurrentDrawCallData.DrawCallArray[i];
-					if (DrawCallItem.Type == EDreamUIDrawCallType::BatchMesh)
-					{
-						DrawCallItem.CopyBatchMeshGeometry();
-						UIMesh->UpdateMeshSection(DrawCallItem.RenderSection, &DrawCallItem);
-					}
-				}
+				UIMesh->UpdateMeshSection(DrawCallItem.RenderSection, &DrawCallItem);
 			}
 		}
 	}
@@ -1614,8 +2108,35 @@ DECLARE_CYCLE_STAT(TEXT("Canvas UpdateDrawCallMesh"), STAT_UpdateDrawCallMesh, S
 void UDreamCanvas::UpdateDrawCallMesh()
 {
 	SCOPE_CYCLE_COUNTER(STAT_UpdateDrawCallMesh);
+	TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_UpdateDrawCallMesh);
 	if (!IsValid(UIMesh))return;
+	// Same gate as the renderer's dump: which geometry reached assembly, with what material. Here on the game thread, where
+	// the names can be read: the batching thread must not resolve an object. The variable is a static in the renderer's
+	// translation unit, so the lookup can answer null (not yet constructed, or that unit compiled out).
+	const IConsoleVariable* DumpMaterialDrawsCVar = IConsoleManager::Get().FindConsoleVariable(TEXT("dreamgui.DumpMaterialDraws"));
+	if (DumpMaterialDrawsCVar != nullptr && DumpMaterialDrawsCVar->GetInt() != 0)
+	{
+		for (const FDreamUIDrawCall& DrawCall : CurrentDrawCallData.DrawCallArray)
+		{
+			for (int32 Index = 0; Index < DrawCall.BatchMeshGeometryArray.Num(); ++Index)
+			{
+				if (!DrawCall.BatchMeshGeometryArray[Index].IsValid())
+				{
+					continue;
+				}
+				const FDreamUIGeometry& ItemGeo = *DrawCall.BatchMeshGeometryArray[Index];
+				const UObject* Visual = DrawCall.BatchMeshVisualArray.IsValidIndex(Index) ? DrawCall.BatchMeshVisualArray[Index].Get() : nullptr;
+				UE_LOG(DreamGUI, Display, TEXT("[DumpMaterialDraws][assemble] visual=%s verts=%d material=%s batching=%d"),
+					Visual != nullptr ? *Visual->GetClass()->GetName() : TEXT("null"),
+					ItemGeo.Vertices.Num(),
+					ItemGeo.Material.IsValid() ? *ItemGeo.Material->GetName() : TEXT("none"),
+					ItemGeo.bSupportDrawcallBatching ? 1 : 0);
+			}
+		}
+	}
 	UIMesh->PoolAllRenderSection();
+	// Before any section is set up: every draw call that can take its old section back as it was claims it first.
+	UIMesh->ClaimPooledMeshSections(CurrentDrawCallData.DrawCallArray);
 	bool bNeedToUpdateBounds = false;
 	bool bAnySectionCreated = false;
 	for (int i = 0; i < CurrentDrawCallData.DrawCallArray.Num(); i++)
@@ -1733,10 +2254,13 @@ void UDreamCanvas::CheckUIMesh()const
 			}
 		}
 		auto ObjectName = MakeUniqueObjectName(MeshOuter, MeshType, FName(*this->GetWidget()->GetDisplayName()));
-		// DuplicateTransient alongside Transient: duplicating the host actor -- PIE, or a copy-paste in
-		// the level -- must not carry a mesh built for the original's tree into the copy, which builds
-		// its own.
-		UIMesh = NewObject<UDreamUIMeshComponent>(MeshOuter, MeshType, ObjectName, RF_Transient | RF_DuplicateTransient);
+		// Never saved, duplicated or copied: a copy of the host actor builds its own tree and its own mesh.
+		// TextExportTransient matters most here. The level editor's Copy writes out every object inside a
+		// copied actor that lacks it -- Transient does not keep an object out of the text -- and Paste made
+		// that text an ordinary, non-transient component of the new actor, still naming this canvas's
+		// materials. A play-in-editor duplication carries every non-transient component of an actor, so it
+		// followed those materials into this tree and cloned its data textures without their size.
+		UIMesh = NewObject<UDreamUIMeshComponent>(MeshOuter, MeshType, ObjectName, DreamUI::RuntimeObjectFlags);
 		UIMesh->RegisterComponentWithWorld(this->GetWorld());
 		// The same host the outer came from, so the mesh is in the actor's attachment tree as well as
 		// in its component list. A scene component that an actor owns but that hangs off nothing is a
@@ -1899,64 +2423,51 @@ bool UDreamCanvas::IsMaterialContainsDreamUIParameter(const UMaterialInterface* 
 }
 
 DECLARE_CYCLE_STAT(TEXT("Canvas UpdateDrawCallMaterial"), STAT_UpdateDrawCallMaterial, STATGROUP_DreamGUI);
-DECLARE_CYCLE_STAT(TEXT("Canvas SetMaterialParameter"), STAT_SetMaterialParameter, STATGROUP_DreamGUI);
 void UDreamCanvas::UpdateDrawCallMaterial()
 {
 	SCOPE_CYCLE_COUNTER(STAT_UpdateDrawCallMaterial);
+	TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_UpdateDrawCallMaterial);
 
-	//pool and reuse material
-	{
-		UsingMaterialStartIndex = PooledDefaultMaterialList.Num() - 1;
-	}
-	//reset index for dynamic material -- and retire what stopped being used. The pools were
-	//high-water-mark allocators: a screenful of one-off materials was rent paid forever (the old
-	//@todo on MapSrcMatToDynamicMat). At this point the counters still hold LAST frame's usage, so
-	//the tail beyond it is provably idle; a tail idle for a whole decay window is dropped, its
-	//parameter-cache entries with it. The window keeps a transiently hidden panel from thrashing
-	//allocate/free on every blink.
+	// The proxies taken last rebuild go back to their pools, and a pool's tail that went unused for a whole decay window is
+	// let go of: a screenful of one-off materials is not rent paid forever. The window keeps a transiently hidden panel
+	// from thrashing make and let go on every blink.
 	{
 		constexpr int MaterialPoolDecayFrames = 120;
-		TArray<UMaterialInterface*, TInlineAllocator<8>> EmptiedSources;
-		for (auto& KeyValue : MapSrcMatToDynamicMat)
+		for (auto It = MaterialProxyPools.CreateIterator(); It; ++It)
 		{
-			FDreamCanvasDynamicMaterialArrayContainer& Container = KeyValue.Value;
-			const int UsedLastFrame = Container.CurrentIndex;
-			if (UsedLastFrame < Container.MaterialArray.Num())
+			FMaterialProxyPool& Pool = It.Value();
+			if (Pool.CurrentIndex < Pool.Proxies.Num())
 			{
-				++Container.UnusedStreak;
-				if (Container.UnusedStreak > MaterialPoolDecayFrames)
+				if (++Pool.UnusedStreak > MaterialPoolDecayFrames)
 				{
-					for (int Index = UsedLastFrame; Index < Container.MaterialArray.Num(); ++Index)
-					{
-						MapMatToParamCache.Remove(Container.MaterialArray[Index]);
-					}
-					Container.MaterialArray.SetNum(UsedLastFrame);
-					Container.UnusedStreak = 0;
-					if (Container.MaterialArray.Num() == 0)
-					{
-						EmptiedSources.Add(KeyValue.Key);
-					}
+					Pool.Proxies.SetNum(Pool.CurrentIndex);
+					Pool.UnusedStreak = 0;
 				}
 			}
 			else
 			{
-				Container.UnusedStreak = 0;
+				Pool.UnusedStreak = 0;
 			}
-			Container.CurrentIndex = 0;
-		}
-		for (UMaterialInterface* Source : EmptiedSources)
-		{
-			MapSrcMatToDynamicMat.Remove(Source);
+			Pool.CurrentIndex = 0;
+			if (Pool.Proxies.Num() == 0)
+			{
+				It.RemoveCurrent();
+			}
 		}
 	}
+	// A proxy of InSource's from its pool, a new one when the pool is used up.
+	auto TakeMaterialProxy = [this](UMaterialInterface* InSource)
+	{
+		FMaterialProxyPool& Pool = MaterialProxyPools.FindOrAdd(TObjectKey<UMaterialInterface>(InSource));
+		if (!Pool.Proxies.IsValidIndex(Pool.CurrentIndex))
+		{
+			Pool.Proxies.Add(FDreamUIMaterialProxy::Create(InSource));
+			bNeedToVerifyMaterials = true;//verify material when new material will be used
+		}
+		return Pool.Proxies[Pool.CurrentIndex++];
+	};
 
 	const bool bUseBuiltInShader = UDreamUISettings::GetUseBuiltInUIShader() && IsRenderByDreamUIRendererOrUERenderer();
-	auto SetParameterForNewlyCreatedMaterial = [&](UMaterialInstanceDynamic* InMaterialInstanceDynamic)
-	{
-		InMaterialInstanceDynamic->SetScalarParameterValue(DreamUI_IsRenderByDreamUIRenderer_MaterialParameterName, this->IsRenderByDreamUIRendererOrUERenderer());
-		InMaterialInstanceDynamic->SetTextureParameterValue(DreamUI_WidgetPropertyDataTexture_MaterialParameterName, this->WidgetPropertyDataAsTexture->GetDataTexture());
-		InMaterialInstanceDynamic->SetTextureParameterValue(DreamUI_ClipDataTexture_MaterialParameterName, RootCanvas->ClipDataAsTexture->GetDataTexture());
-	};
 
 	// UpdateDrawCallMesh does not create a section for every draw-call (the WorldSpace path skips
 	// PostProcess ones), so the section index must be counted from the draw-calls that own one --
@@ -1973,153 +2484,81 @@ void UDreamCanvas::UpdateDrawCallMaterial()
 		switch (DrawCallItem.Type)
 		{
 		case EDreamUIDrawCallType::BatchMesh:
+			if (DrawCallItem.Material.IsValid() || (!bUseBuiltInShader && GetDefaultMaterial() != nullptr))
 			{
-				UMaterialInterface* RenderMat = nullptr;
-				bool bShouldSetMaterialParameter = false;
-				if (DrawCallItem.Material.IsValid())
+				/**
+				 * The draw call's own material, or the default one: DreamGUI answers the parameters it gives a material in
+				 * the material's place, through a proxy of the material's render proxy -- a material instance given to the
+				 * draw call is answered for as it is, never written to. A material with none of those parameters draws as
+				 * it is.
+				 */
+				UMaterialInterface* Source = DrawCallItem.Material.IsValid() ? DrawCallItem.Material.Get() : GetDefaultMaterial();
+				if (DrawCallItem.Material.IsValid() && !Source->IsA<UMaterialInstanceDynamic>() && !IsMaterialContainsDreamUIParameter(Source))
 				{
-					if (DrawCallItem.Material->IsA<UMaterialInstanceDynamic>())
+					bNeedToVerifyMaterials = true;//verify material when new material will be used
+					if (UIMesh->IsMeshSectionBuiltIn(SectionIndex))
 					{
-						auto RenderMatDynamic = static_cast<UMaterialInstanceDynamic*>(DrawCallItem.Material.Get());
-						RenderMat = RenderMatDynamic;
-						bShouldSetMaterialParameter = true;
-						SetParameterForNewlyCreatedMaterial(RenderMatDynamic);
+						UIMesh->SetMeshSectionBuiltIn(SectionIndex, FDreamUIBuiltInDrawParams());
 					}
-					else
-					{
-						auto DynamicMaterialContainerPtr = MapSrcMatToDynamicMat.Find(DrawCallItem.Material.Get());
-						if (!DynamicMaterialContainerPtr)
-						{
-							if (IsMaterialContainsDreamUIParameter(DrawCallItem.Material.Get()))
-							{
-								bShouldSetMaterialParameter = true;
-								auto RenderMatDynamic = UMaterialInstanceDynamic::Create(DrawCallItem.Material.Get(), this);
-								SetParameterForNewlyCreatedMaterial(RenderMatDynamic);
-								auto MaterialContainer = FDreamCanvasDynamicMaterialArrayContainer();
-								MaterialContainer.MaterialArray.Add(RenderMatDynamic);
-								MaterialContainer.CurrentIndex = 1;
-								MapSrcMatToDynamicMat.Add(DrawCallItem.Material.Get(), MaterialContainer);
-								RenderMat = RenderMatDynamic;
-								for (auto& BatchMeshVisual : DrawCallItem.BatchMeshVisualArray)
-								{
-									if (!BatchMeshVisual.IsValid())continue;
-									BatchMeshVisual->OnMaterialInstanceDynamicCreated(RenderMatDynamic);
-								}
-								bNeedToVerifyMaterials = true;//verify material when new material will be used
-							}
-							else
-							{
-								RenderMat = DrawCallItem.Material.Get();
-								bNeedToVerifyMaterials = true;//verify material when new material will be used
-							}
-						}
-						else
-						{
-							bShouldSetMaterialParameter = true;
-							auto& MaterialArray = DynamicMaterialContainerPtr->MaterialArray;
-							if (!MaterialArray.IsValidIndex(DynamicMaterialContainerPtr->CurrentIndex))//material use up, need more
-							{
-								auto RenderMatDynamic = UMaterialInstanceDynamic::Create(DrawCallItem.Material.Get(), this);
-								MaterialArray.Add(RenderMatDynamic);
-								SetParameterForNewlyCreatedMaterial(RenderMatDynamic);
-								RenderMat = RenderMatDynamic;
-								DynamicMaterialContainerPtr->CurrentIndex++;
-								bNeedToVerifyMaterials = true;//verify material when new material will be used
-								for (auto& BatchMeshVisual : DrawCallItem.BatchMeshVisualArray)
-								{
-									if (!BatchMeshVisual.IsValid())continue;
-									BatchMeshVisual->OnMaterialInstanceDynamicCreated(RenderMatDynamic);
-								}
-							}
-							else//enough material, use index one
-							{
-								auto RenderMatDynamic = MaterialArray[DynamicMaterialContainerPtr->CurrentIndex];
-								RenderMat = RenderMatDynamic;
-								if (bWidgetPropertyDataAsTextureChanged || RootCanvas->bClipDataAsTextureChanged)
-								{
-									SetParameterForNewlyCreatedMaterial(RenderMatDynamic);//update texture to material
-								}
-								DynamicMaterialContainerPtr->CurrentIndex++;
-								for (auto& BatchMeshVisual : DrawCallItem.BatchMeshVisualArray)
-								{
-									if (!BatchMeshVisual.IsValid())continue;
-									BatchMeshVisual->OnMaterialInstanceDynamicCreated(RenderMatDynamic);
-								}
-							}
-						}
-					}
-				}
-				else if (bUseBuiltInShader)
-				{
-					// No material at all: the renderer draws this section with the built-in UI shader.
-					FDreamUIBuiltInDrawParams BuiltIn;
-					BuiltIn.bEnabled = true;
-					BuiltIn.MainTexture = DrawCallItem.Texture.IsValid() ? DrawCallItem.Texture->GetResource() : nullptr;
-					BuiltIn.FontTexture = DrawCallItem.FontTexture.IsValid() ? DrawCallItem.FontTexture->GetResource() : nullptr;
-					BuiltIn.WidgetDataTexture = WidgetPropertyDataAsTexture->GetDataTexture() ? WidgetPropertyDataAsTexture->GetDataTexture()->GetResource() : nullptr;
-					BuiltIn.ClipDataTexture = RootCanvas->ClipDataAsTexture->GetDataTexture() ? RootCanvas->ClipDataAsTexture->GetDataTexture()->GetResource() : nullptr;
-					const FVector4f AtlasInfo = MakeFontAtlasInfo(DrawCallItem);
-					BuiltIn.FontAtlasSize = FVector2f(AtlasInfo.X, AtlasInfo.Y);
-					BuiltIn.FontFieldRangeTexels = AtlasInfo.Z;
-					BuiltIn.FontEmTexels = AtlasInfo.W;
-					//every element in this draw-call agreed on it; CanConsumeUIGeometryForBatchMesh is
-					//what makes that true
-					BuiltIn.BlendMode = DrawCallItem.BlendMode;
-					UIMesh->SetMeshSectionBuiltIn(SectionIndex, BuiltIn);
-					UIMesh->SetMeshSectionMaterial(SectionIndex, nullptr);
+					UIMesh->SetMeshSectionMaterial(SectionIndex, Source);
 					break;
 				}
-				else
+				const TSharedPtr<FDreamUIMaterialProxy, ESPMode::ThreadSafe> Proxy = TakeMaterialProxy(Source);
+				FDreamUIMaterialParameters Parameters;
+				Parameters.SetScalar(DreamUI_IsRenderByDreamUIRenderer_MaterialParameterName, this->IsRenderByDreamUIRendererOrUERenderer() ? 1.0f : 0.0f);
+				Parameters.SetTexture(DreamUI_WidgetPropertyDataTexture_MaterialParameterName, this->WidgetPropertyDataAsTexture->GetDataTexture());
+				Parameters.SetTexture(DreamUI_ClipDataTexture_MaterialParameterName, RootCanvas->ClipDataAsTexture->GetDataTexture());
+				Parameters.SetTexture(DreamUI_MainTextureMaterialParameterName, DrawCallItem.Texture.Get());
+				Parameters.SetTexture(DreamUI_FontTextureMaterialParameterName, DrawCallItem.FontTexture.Get());
+				const FVector4f AtlasInfo = MakeFontAtlasInfo(DrawCallItem);
+				Parameters.SetVector(DreamUI_FontAtlasInfoMaterialParameterName, FLinearColor(AtlasInfo.X, AtlasInfo.Y, AtlasInfo.Z, AtlasInfo.W));
+				for (const TWeakObjectPtr<UDreamVisualBatchMesh>& BatchMeshVisual : DrawCallItem.BatchMeshVisualArray)
 				{
-					auto GetUIMaterialFromPool = [&]()
+					if (const UDreamVisualBatchMesh* Visual = BatchMeshVisual.Get())
 					{
-						if (UsingMaterialStartIndex < 0)
-						{
-							auto SrcMaterial = GetDefaultMaterial();
-							auto RenderMatDynamic = UMaterialInstanceDynamic::Create(SrcMaterial, this);
-							RenderMatDynamic->SetFlags(RF_Transient);
-							PooledDefaultMaterialList.Add(RenderMatDynamic);
-							SetParameterForNewlyCreatedMaterial(RenderMatDynamic);
-							bNeedToVerifyMaterials = true;//verify material when new material will be used
-							return RenderMatDynamic;
-						}
-						auto RenderMatDynamic = PooledDefaultMaterialList[UsingMaterialStartIndex];
-						if (bWidgetPropertyDataAsTextureChanged || RootCanvas->bClipDataAsTextureChanged)
-						{
-							SetParameterForNewlyCreatedMaterial(RenderMatDynamic);//update texture to material
-						}
-						UsingMaterialStartIndex--;
-						return RenderMatDynamic.Get();
-					};
-					RenderMat = GetUIMaterialFromPool();
-					bShouldSetMaterialParameter = true;//pooled material definitely contains DreamUIParam
+						Visual->AddMaterialParameters(Parameters);
+					}
 				}
-				if (bShouldSetMaterialParameter)
+				// Sent to the render thread only when something in them changed.
+				if (Proxy->GetParameters_GameThread() != Parameters)
 				{
-					SCOPE_CYCLE_COUNTER(STAT_SetMaterialParameter)
-					auto RenderMat_MID = static_cast<UMaterialInstanceDynamic*>(RenderMat);
-					auto& ParamCache = MapMatToParamCache.FindOrAdd(RenderMat_MID);
-					if (ParamCache.Texture != DrawCallItem.Texture || ParamCache.FontTexture != DrawCallItem.FontTexture)
-					{
-						RenderMat_MID->SetTextureParameterValue(DreamUI_MainTextureMaterialParameterName, DrawCallItem.Texture.Get());
-						RenderMat_MID->SetTextureParameterValue(DreamUI_FontTextureMaterialParameterName, DrawCallItem.FontTexture.Get());
-						// The atlas geometry travels with the atlas: a new font texture means new values.
-						const FVector4f AtlasInfo = MakeFontAtlasInfo(DrawCallItem);
-						RenderMat_MID->SetVectorParameterValue(DreamUI_FontAtlasInfoMaterialParameterName, FLinearColor(AtlasInfo.X, AtlasInfo.Y, AtlasInfo.Z, AtlasInfo.W));
-						ParamCache.Texture = DrawCallItem.Texture;
-						ParamCache.FontTexture = DrawCallItem.FontTexture;
-					}
-					if (bNeedToSetClipDataTextureMaterialParameter)
-					{
-						RenderMat_MID->SetTextureParameterValue(DreamUI_ClipDataTexture_MaterialParameterName, RootCanvas->ClipDataAsTexture->GetDataTexture());
-					}
+					Proxy->SetParameters_GameThread(Parameters);
 				}
 				if (UIMesh->IsMeshSectionBuiltIn(SectionIndex))
 				{
 					UIMesh->SetMeshSectionBuiltIn(SectionIndex, FDreamUIBuiltInDrawParams());
 				}
-				UIMesh->SetMeshSectionMaterial(SectionIndex, RenderMat);
+				UIMesh->SetMeshSectionMaterial(SectionIndex, Source, Proxy);
+				break;
 			}
+			if (bUseBuiltInShader)
+			{
+				// No material at all: the renderer draws this section with the built-in UI shader. The textures go
+				// over as textures, not as their resources: the render thread binds each one's reference, which
+				// follows it through a rebuild and outlives it (see FDreamUIBuiltInDrawParams).
+				FDreamUIBuiltInDrawParams BuiltIn;
+				BuiltIn.bEnabled = true;
+				BuiltIn.MainTexture = DrawCallItem.Texture.Get();
+				BuiltIn.FontTexture = DrawCallItem.FontTexture.Get();
+				BuiltIn.WidgetDataTexture = WidgetPropertyDataAsTexture->GetDataTexture();
+				BuiltIn.ClipDataTexture = RootCanvas->ClipDataAsTexture->GetDataTexture();
+				const FVector4f AtlasInfo = MakeFontAtlasInfo(DrawCallItem);
+				BuiltIn.FontAtlasSize = FVector2f(AtlasInfo.X, AtlasInfo.Y);
+				BuiltIn.FontFieldRangeTexels = AtlasInfo.Z;
+				BuiltIn.FontEmTexels = AtlasInfo.W;
+				//every element in this draw-call agreed on it; CanConsumeUIGeometryForBatchMesh is
+				//what makes that true
+				BuiltIn.BlendMode = DrawCallItem.BlendMode;
+				UIMesh->SetMeshSectionBuiltIn(SectionIndex, BuiltIn);
+				UIMesh->SetMeshSectionMaterial(SectionIndex, nullptr);
+				break;
+			}
+			// No material, no built-in shader, and no default material to draw it with: nothing draws the section.
+			if (UIMesh->IsMeshSectionBuiltIn(SectionIndex))
+			{
+				UIMesh->SetMeshSectionBuiltIn(SectionIndex, FDreamUIBuiltInDrawParams());
+			}
+			UIMesh->SetMeshSectionMaterial(SectionIndex, nullptr);
 			break;
 		case EDreamUIDrawCallType::PostProcess:
 		case EDreamUIDrawCallType::ChildCanvas:
@@ -2138,11 +2577,22 @@ void UDreamCanvas::UpdateDrawCallMaterial()
 		MarkNeedVerifyMaterials();//tell parent canvas to verify material
 	}
 
-	bNeedToSetClipDataTextureMaterialParameter = false;
-	bWidgetPropertyDataAsTextureChanged = false;
-	if (RootCanvas == this)
+	// The proxies point at their sources and at the textures they answer with; a texture let go of here was replaced in its
+	// proxy by a command already sent, which the render thread carries out before the texture can be collected.
+	MaterialProxyReferences.Reset();
+	for (const TPair<TObjectKey<UMaterialInterface>, FMaterialProxyPool>& SourceAndPool : MaterialProxyPools)
 	{
-		RootCanvas->bClipDataAsTextureChanged = false;
+		for (const TSharedPtr<FDreamUIMaterialProxy, ESPMode::ThreadSafe>& Proxy : SourceAndPool.Value.Proxies)
+		{
+			MaterialProxyReferences.Add(Proxy->GetSource());
+			for (const TPair<FName, const UTexture*>& Texture : Proxy->GetParameters_GameThread().Textures)
+			{
+				if (Texture.Value != nullptr)
+				{
+					MaterialProxyReferences.Add(const_cast<UTexture*>(Texture.Value));
+				}
+			}
+		}
 	}
 }
 
@@ -2183,6 +2633,7 @@ void UDreamCanvas::SetDrawCallRebuildSuspended(bool Value)
 			 * consumed by a vertex-only refresh since.
 			 */
 			bCanTickUpdate = true;
+			bUpdateEveryWidget = true;
 		}
 	}
 }
@@ -2205,26 +2656,6 @@ void UDreamCanvas::SetScreenSpaceRenderScale(float Value)
 		ScreenSpaceRenderScale = Value;
 		bAnythingChangedForRenderTarget = true;
 	}
-}
-
-FIntPoint UDreamCanvas::CalculateRenderScaledSize(const FIntPoint& InViewportSize, float InRequestedScale, float& OutAppliedScale)
-{
-	const FIntPoint ClampedViewport(FMath::Max(InViewportSize.X, 1), FMath::Max(InViewportSize.Y, 1));
-	//1 means "leave it alone", and it has to mean that exactly: rounding a full-size pass through the
-	//arithmetic below could come back one pixel short and quietly make every UI a rescale
-	const float RequestedScale = FMath::Clamp(InRequestedScale, 0.1f, 1.0f);
-	if (RequestedScale >= 1.0f)
-	{
-		OutAppliedScale = 1.0f;
-		return ClampedViewport;
-	}
-	const FIntPoint ScaledSize(
-		FMath::Max(FMath::RoundToInt(ClampedViewport.X * RequestedScale), 1),
-		FMath::Max(FMath::RoundToInt(ClampedViewport.Y * RequestedScale), 1));
-	//report what was actually rendered at, not what was asked for: the pixel rounding and the
-	//one-pixel floor both move it, and the upscale has to use the size that exists
-	OutAppliedScale = (float)ScaledSize.X / (float)ClampedViewport.X;
-	return ScaledSize;
 }
 
 void UDreamCanvas::SetRenderTargetSizeMode(EDreamCanvasRenderTargetSizeMode Value)
@@ -2456,6 +2887,13 @@ void UDreamCanvas::SetOverrideSorting(bool Value)
 	if (bOverrideSorting != Value)
 	{
 		bOverrideSorting = Value;
+		// Sorted on its own now, or with its parent again: either way its mesh must not stay hooked
+		// into the parent's as a child section, or the parent draws it too, in the parent's order. The
+		// parent's mesh as it stands (see ClearDrawCall).
+		if (IsValid(UIMesh) && ParentCanvas.IsValid())
+		{
+			UIMesh->ClearParentCanvasMeshComp(ParentCanvas->UIMesh.Get());
+		}
 		if (CheckRootCanvas())
 		{
 			RootCanvas->bNeedToSortRenderPriority = true;
@@ -2505,61 +2943,36 @@ void UDreamCanvas::BuildProjectionMatrix(FIntPoint InViewportSize, ECameraProjec
 	{
 		InViewportSize.X = InViewportSize.Y = 1;
 	}
+	// Reversed Z either way: every RHI the engine runs on inverts the depth buffer, which is why it is retiring the
+	// switch that said so.
 	if (InProjectionType == ECameraProjectionMode::Orthographic)
 	{
-		check((int32)ERHIZBuffer::IsInverted);
 		const float tempOrthoWidth = InViewportSize.X * 0.5f;
 		const float tempOrthoHeight = InViewportSize.Y * 0.5f;
 
 		const float ZScale = 1.0f / (FarClipPlane - NearClipPlane);
 		const float ZOffset = -NearClipPlane;
 
-		if ((int32)ERHIZBuffer::IsInverted)
-		{
-			OutProjectionMatrix = FReversedZOrthoMatrix(
-				tempOrthoWidth,
-				tempOrthoHeight,
-				ZScale,
-				ZOffset
-			);
-		}
-		else
-		{
-			OutProjectionMatrix = FOrthoMatrix(
-				tempOrthoWidth,
-				tempOrthoHeight,
-				ZScale,
-				ZOffset
-			);
-		}
+		OutProjectionMatrix = FReversedZOrthoMatrix(
+			tempOrthoWidth,
+			tempOrthoHeight,
+			ZScale,
+			ZOffset
+		);
 	}
 	else
 	{
 		float XAxisMultiplier = 1.0f;
 		float YAxisMultiplier = InViewportSize.X / (float)InViewportSize.Y;
 
-		if ((int32)ERHIZBuffer::IsInverted)
-		{
-			OutProjectionMatrix = FReversedZPerspectiveMatrix(
-				InFOV,
-				InFOV,
-				XAxisMultiplier,
-				YAxisMultiplier,
-				NearClipPlane,
-				FarClipPlane
-			);
-		}
-		else
-		{
-			OutProjectionMatrix = FPerspectiveMatrix(
-				InFOV,
-				InFOV,
-				XAxisMultiplier,
-				YAxisMultiplier,
-				NearClipPlane,
-				FarClipPlane
-			);
-		}
+		OutProjectionMatrix = FReversedZPerspectiveMatrix(
+			InFOV,
+			InFOV,
+			XAxisMultiplier,
+			YAxisMultiplier,
+			NearClipPlane,
+			FarClipPlane
+		);
 	}
 }
 float UDreamCanvas::CalculateDistanceToCamera()const
@@ -2624,6 +3037,12 @@ FRotator UDreamCanvas::GetViewRotator()const
 }
 FIntPoint UDreamCanvas::GetViewportSize()const
 {
+	// Answered before the world, the render mode or the player controller are consulted, because
+	// standing in for sources that are not there is the whole of what a substituted viewport is for.
+	if (ViewportSizeOverride.IsSet())
+	{
+		return ViewportSizeOverride.GetValue();
+	}
 	auto TempViewportSize = FIntPoint(2, 2);
 	if (auto world = this->GetWorld())
 	{
@@ -2646,10 +3065,10 @@ FIntPoint UDreamCanvas::GetViewportSize()const
 					pc->GetViewportSize(TempViewportSize.X, TempViewportSize.Y);
 				}
 			}
-			else if (RenderMode == EDreamRenderMode::RenderTarget && IsValid(RenderTarget))
+			else if (RenderMode == EDreamRenderMode::RenderTarget && IsValid(GetRenderTarget()))
 			{
-				TempViewportSize.X = RenderTarget->SizeX / RenderTargetResolutionScale;
-				TempViewportSize.Y = RenderTarget->SizeY / RenderTargetResolutionScale;
+				TempViewportSize.X = GetRenderTarget()->SizeX / RenderTargetResolutionScale;
+				TempViewportSize.Y = GetRenderTarget()->SizeY / RenderTargetResolutionScale;
 			}
 		}
 	}
@@ -2674,6 +3093,11 @@ void UDreamCanvas::SetForceRenderToTarget(bool Value)
 	if (bForceRenderToTarget != Value)
 	{
 		bForceRenderToTarget = Value;
+		// A canvas that renders to its own target is a root of its own, and one that stops is part of
+		// its parent's root again: the draw calls built for the other arrangement are dropped, and the
+		// root is looked up afresh rather than taken from the cache.
+		ClearDrawCall();
+		CheckRootCanvas(true);
 		if (bForceRenderToTarget)
 		{
 			MarkCanvasUpdate(true);
@@ -2709,7 +3133,7 @@ void UDreamCanvas::SetRenderTarget(UTextureRenderTarget2D* Value)
 			 */
 			CheckAndApplyViewportParameter();
 		}
-		OnRenderTargetChanged.Broadcast(RenderTarget);
+		OnRenderTargetChanged.Broadcast(GetRenderTarget());
 	}
 }
 
@@ -2736,7 +3160,9 @@ EDreamRenderMode UDreamCanvas::GetActualRenderMode()const
 	{
 		if (bForceRenderToTarget)
 		{
-			checkf(this->RenderMode == EDreamRenderMode::RenderTarget, TEXT("[%s].%d This error should not happen!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
+			// Reported rather than asserted: the two are separate properties, and nothing about loading or
+			// editing them keeps them in step.
+			ensureMsgf(this->RenderMode == EDreamRenderMode::RenderTarget, TEXT("%s: forced to render to a target while its render mode says otherwise."), *GetPathName());
 			return this->RenderMode;
 		}
 		if (CheckRootCanvas())
@@ -2805,13 +3231,13 @@ UTextureRenderTarget2D* UDreamCanvas::GetActualRenderTarget()const
 {
 	if (IsRootCanvas())
 	{
-		return this->RenderTarget;
+		return this->GetRenderTarget();
 	}
 	else
 	{
 		if (CheckRootCanvas())
 		{
-			return RootCanvas->RenderTarget;
+			return RootCanvas->GetRenderTarget();
 		}
 	}
 	return nullptr;
@@ -2830,26 +3256,15 @@ int32 UDreamCanvas::GetDrawCallCount()const
 	return Result;
 }
 
-void UDreamCanvas::OnClipDataTextureChanged(UTexture* NewTexture)
-{
-	check(this == RootCanvas);//only root canvas use ClipDataTexture
-	MarkCanvasUpdate(true);
-	bClipDataAsTextureChanged = true;
-}
-
-void UDreamCanvas::OnWidgetPropertyDataTextureChanged(UTexture* NewTexture)
-{
-	MarkCanvasUpdate(true);
-	bWidgetPropertyDataAsTextureChanged = true;
-}
-
 void UDreamCanvas::CheckWidgetPropertyData()
 {
+	// Neither data texture is watched for growing: each grows in place, and everything that samples it -- the
+	// material instances, the built-in draws -- binds its reference, which follows it. A growth used to swap in a new
+	// texture, which every instance had to be given again and every draw call rebuilt for.
 	if (!IsValid(WidgetPropertyDataAsTexture))
 	{
-		WidgetPropertyDataAsTexture = NewObject<UDreamUIDataAsTexture>(this, UDreamUIDataAsTexture::StaticClass(), NAME_None, RF_Transient);
+		WidgetPropertyDataAsTexture = NewObject<UDreamUIDataAsTexture>(this, UDreamUIDataAsTexture::StaticClass(), NAME_None, DreamUI::RuntimeObjectFlags);
 		WidgetPropertyDataAsTexture->Init(UDreamVisual::WidgetPropertyDataLength, EDreamUIDataAsTexturePixelFormat::R32, 128);
-		WidgetPropertyDataAsTexture->OnDataTextureChange.AddUObject(this, &UDreamCanvas::OnWidgetPropertyDataTextureChanged);
 	}
 }
 
@@ -2952,8 +3367,71 @@ bool UDreamCanvasCustomScale::ConvertPositionFromCanvasToViewport(const FVector2
 	return false;
 }
 
+void UDreamCanvas::SetViewportSizeOverride(const FIntPoint& InSize)
+{
+	if (ViewportSizeOverride.IsSet() && ViewportSizeOverride.GetValue() == InSize)
+	{
+		return;
+	}
+	ViewportSizeOverride = InSize;
+	// The size the canvas last applied is cached in ViewportSize and the root widget was sized from
+	// it, so a substitution that only changed what GetViewportSize answers would leave the widget and
+	// the projection matrix disagreeing with it until something else happened to re-apply.
+	CheckAndApplyViewportParameter();
+}
+
+void UDreamCanvas::ClearViewportSizeOverride()
+{
+	if (!ViewportSizeOverride.IsSet())
+	{
+		return;
+	}
+	ViewportSizeOverride.Reset();
+	//re-applied for the same reason setting it is: the cached size is still the substituted one
+	CheckAndApplyViewportParameter();
+}
+
 void UDreamCanvas::CheckAndApplyViewportParameter()
 {
+	// A substituted viewport outranks both real sources. The overlay branch would honour it anyway --
+	// it reads GetViewportSize -- but the render-target branch reads the texture's dimensions
+	// directly, and would walk straight past the substitution.
+	if (ViewportSizeOverride.IsSet())
+	{
+		ViewportSize = ViewportSizeOverride.GetValue();
+		OnViewportParameterChanged();
+		return;
+	}
+	// The viewport is the render target's only when the canvas follows the target. With
+	// RenderTargetFitToCanvas the target follows the canvas, and sizing the canvas from it would chase
+	// its own tail.
+	const auto ApplyRenderTargetSize = [this]()
+	{
+		switch (RenderTargetSizeMode)
+		{
+		case EDreamCanvasRenderTargetSizeMode::None:
+		case EDreamCanvasRenderTargetSizeMode::CanvasFitToRenderTarget:
+			if (UTextureRenderTarget2D* Target = GetRenderTarget(); IsValid(Target))
+			{
+				ViewportSize.X = Target->SizeX / RenderTargetResolutionScale;
+				ViewportSize.Y = Target->SizeY / RenderTargetResolutionScale;
+				OnViewportParameterChanged();
+			}
+			break;
+		case EDreamCanvasRenderTargetSizeMode::RenderTargetFitToCanvas:
+			break;
+		}
+	};
+	if (bForceRenderToTarget)
+	{
+		// A child canvas forced into its own target has a viewport of its own, whatever its root's is.
+		ApplyRenderTargetSize();
+		return;
+	}
+	if (!this->IsRootCanvas())
+	{
+		return;
+	}
 	switch (this->GetRenderMode())
 	{
 	case EDreamRenderMode::ScreenSpaceOverlay:
@@ -2964,12 +3442,7 @@ void UDreamCanvas::CheckAndApplyViewportParameter()
 	break;
 	case EDreamRenderMode::RenderTarget:
 	{
-		if (IsValid(RenderTarget))
-		{
-			ViewportSize.X = RenderTarget->SizeX / RenderTargetResolutionScale;
-			ViewportSize.Y = RenderTarget->SizeY / RenderTargetResolutionScale;
-			OnViewportParameterChanged();
-		}
+		ApplyRenderTargetSize();
 	}
 	break;
 	}
@@ -2988,14 +3461,14 @@ void UDreamCanvas::RegisterCanvasScaler()
 #if WITH_EDITOR
 	if (GetWorld() && !GetWorld()->IsGameWorld() && this->IsRootCanvas())
 	{
-		if (auto DreamUIManagerObject = UDreamUIManagerObject::GetInstance(true))
+		if (auto WorldManager = UDreamUIManagerWorldSubsystem::GetInstance(GetWorld()))
 		{
 			if (EditorTickDelegateHandle.IsValid())
 			{
-				DreamUIManagerObject->GetEditorTickDelegate().Remove(EditorTickDelegateHandle);
+				WorldManager->GetEditorTickDelegate().Remove(EditorTickDelegateHandle);
 				EditorTickDelegateHandle.Reset();
 			}
-			EditorTickDelegateHandle = DreamUIManagerObject->GetEditorTickDelegate().AddWeakLambda(this, [this](float deltaTime) {
+			EditorTickDelegateHandle = WorldManager->GetEditorTickDelegate().AddWeakLambda(this, [this](float deltaTime) {
 				this->OnEditorTick(deltaTime);
 				});
 		}
@@ -3042,9 +3515,9 @@ void UDreamCanvas::UnregisterCanvasScaler()
 #if WITH_EDITOR
 	if (EditorTickDelegateHandle.IsValid())
 	{
-		if (auto DreamUIManagerObject = UDreamUIManagerObject::GetInstance(false))
+		if (auto WorldManager = UDreamUIManagerWorldSubsystem::GetInstance(GetWorld()))
 		{
-			DreamUIManagerObject->GetEditorTickDelegate().Remove(EditorTickDelegateHandle);
+			WorldManager->GetEditorTickDelegate().Remove(EditorTickDelegateHandle);
 		}
 		//reset whether or not the manager was still there to remove it from: a handle kept after
 		//unregistering reads as "still bound", so the next RegisterCanvasScaler overwrites it and any
@@ -3249,7 +3722,20 @@ void UDreamCanvas::OnEditorTick(float DeltaTime)
 
 			if (!DreamUI::IsGameWorld(this))
 			{
-				if (this->GetRenderMode() == EDreamRenderMode::ScreenSpaceOverlay)
+				// A substituted viewport outranks everything this branch would otherwise read -- the
+				// fixed edit-mode size, the editor viewport, the render target's own dimensions -- and
+				// has to say so here, because neither of the two branches below goes through
+				// GetViewportSize. Unset, which is every canvas nobody handed one to, leaves them
+				// exactly as they were. See SetViewportSizeOverride.
+				if (ViewportSizeOverride.IsSet())
+				{
+					if (ViewportSize != ViewportSizeOverride.GetValue())
+					{
+						ViewportSize = ViewportSizeOverride.GetValue();
+						OnViewportParameterChanged();
+					}
+				}
+				else if (this->GetRenderMode() == EDreamRenderMode::ScreenSpaceOverlay)
 				{
 					TOptional<FIntPoint> NewViewportSize;
 #if WITH_EDITOR
@@ -3283,11 +3769,12 @@ void UDreamCanvas::OnEditorTick(float DeltaTime)
 						}
 					}
 				}
-				if (this->GetRenderMode() == EDreamRenderMode::RenderTarget && IsValid(this->RenderTarget))
+				if (!ViewportSizeOverride.IsSet()
+					&& this->GetRenderMode() == EDreamRenderMode::RenderTarget && IsValid(this->GetRenderTarget()))
 				{
 					auto prevSize = ViewportSize;
-					ViewportSize.X = this->RenderTarget->SizeX;
-					ViewportSize.Y = this->RenderTarget->SizeY;
+					ViewportSize.X = this->GetRenderTarget()->SizeX;
+					ViewportSize.Y = this->GetRenderTarget()->SizeY;
 					if (prevSize != ViewportSize)
 					{
 						OnViewportParameterChanged();

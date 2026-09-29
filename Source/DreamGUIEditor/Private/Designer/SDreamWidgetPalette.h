@@ -49,7 +49,7 @@ namespace DreamUIPalette
 	typedef TSharedPtr<FPaletteItem> FItemPtr;
 
 	/** The synthesized group the favourites are shown in, at the head of the tree. */
-	extern const TCHAR* FavoritesGroupName;
+	extern DREAMGUIEDITOR_API const TCHAR* FavoritesGroupName;
 
 	/**
 	 * How an entry is named in the saved favourites list. Display names are not identities -- two
@@ -57,7 +57,7 @@ namespace DreamUIPalette
 	 * across folders -- so the key is the registry Name or the package path, tagged with the kind so
 	 * a basic "Text" and a control named "Text" cannot claim each other's star.
 	 */
-	FString MakeFavoriteKey(const FPaletteItem& Item);
+	DREAMGUIEDITOR_API FString MakeFavoriteKey(const FPaletteItem& Item);
 
 	/**
 	 * Whether a group is shown expanded after a rebuild.
@@ -66,14 +66,14 @@ namespace DreamUIPalette
 	 * what survives is the set of groups the user collapsed. While a filter is active every surviving
 	 * group is force-expanded, since a search that hides its own results reads as no results at all.
 	 */
-	bool ShouldExpandGroup(bool bFilterActive, bool bWasCollapsed);
+	DREAMGUIEDITOR_API bool ShouldExpandGroup(bool bFilterActive, bool bWasCollapsed);
 
 	/**
 	 * Derive the tree from the collected groups: the favourites first, then each group with only the
 	 * entries the filter admits, and no empty groups. The favourites are copies rather than the same
 	 * items again, because a tree view keys its rows by item and would otherwise see one entry twice.
 	 */
-	void BuildRootItems(const TArray<FItemPtr>& InAllGroups, const TSet<FString>& InFavorites,
+	DREAMGUIEDITOR_API void BuildRootItems(const TArray<FItemPtr>& InAllGroups, const TSet<FString>& InFavorites,
 		bool bFilterActive, TFunctionRef<bool(const FPaletteItem&)> InMatchesFilter, TArray<FItemPtr>& OutRootItems);
 
 	/**
@@ -87,7 +87,7 @@ namespace DreamUIPalette
 	 *
 	 * InEditedPackage may be NAME_None, which excludes nothing.
 	 */
-	bool ShouldListUserWidget(FName InPackageName, FName InEditedPackage, const TSet<FString>& InAlreadyOffered);
+	DREAMGUIEDITOR_API bool ShouldListUserWidget(FName InPackageName, FName InEditedPackage, const TSet<FString>& InAlreadyOffered);
 }
 
 /**
@@ -96,7 +96,7 @@ namespace DreamUIPalette
  * handler calls CreateUnder(dropTargetWidget) to place it. Lets the Palette drop onto an
  * Outliner row, UMG-designer style, reusing FDreamUIEditorTools::CreateWidget / CreateUIControls.
  */
-class FDreamUIPaletteDragDropOp : public FDecoratedDragDropOp
+class DREAMGUIEDITOR_API FDreamUIPaletteDragDropOp : public FDecoratedDragDropOp
 {
 public:
 	DRAG_DROP_OPERATOR_TYPE(FDreamUIPaletteDragDropOp, FDecoratedDragDropOp)

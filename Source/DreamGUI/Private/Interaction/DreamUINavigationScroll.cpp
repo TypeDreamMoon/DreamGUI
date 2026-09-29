@@ -3,7 +3,8 @@
 #include "Interaction/DreamUINavigationScroll.h"
 #include "Core/Components/DreamWidget.h"
 #include "Core/Components/DreamPanelLayouts.h"
-#include "Interaction/UIScrollView.h"
+#include "Core/Components/DreamUIScrollable.h"
+#include "Core/DreamUIBehaviour.h"
 
 namespace DreamUINavigationScrollLocal
 {
@@ -11,7 +12,7 @@ namespace DreamUINavigationScrollLocal
 	struct FScrollAncestor
 	{
 		UDreamLayoutContainerScrollBox* Box = nullptr;
-		UUIScrollView* View = nullptr;
+		IDreamUIScrollable* View = nullptr;
 	};
 
 	/**
@@ -33,7 +34,7 @@ namespace DreamUINavigationScrollLocal
 				FScrollAncestor& Entry = OutAncestors.AddDefaulted_GetRef();
 				Entry.Box = Box;
 			}
-			if (auto View = Ancestor->GetComponent<UUIScrollView>())
+			if (auto View = Cast<IDreamUIScrollable>(Ancestor->GetComponentByInterface(UDreamUIScrollable::StaticClass())))
 			{
 				FScrollAncestor& Entry = OutAncestors.AddDefaulted_GetRef();
 				Entry.View = View;
@@ -69,11 +70,11 @@ bool FDreamUINavigationScroll::IsReachableByScrolling(const UDreamWidget* InWidg
 		}
 		if (Ancestor.View != nullptr)
 		{
-			if (Ancestor.View->CanScrollWidgetIntoView(Target))
+			if (Ancestor.View->CanScrollToReveal(Target))
 			{
 				return true;
 			}
-			Target = Ancestor.View->GetWidget() != nullptr ? Ancestor.View->GetWidget() : Target;
+			Target = Ancestor.View->GetScrollableWidget() != nullptr ? Ancestor.View->GetScrollableWidget() : Target;
 		}
 	}
 	return false;
@@ -109,18 +110,18 @@ bool FDreamUINavigationScroll::RevealWidget(UDreamWidget* InWidget, bool bAnimat
 		}
 		if (Ancestor.View != nullptr)
 		{
-			const EDreamUIScrollWhenFocusChanges Rule = Ancestor.View->GetScrollWhenFocusChanges();
+			const EDreamUIScrollWhenFocusChanges Rule = Ancestor.View->GetFocusScrollRule();
 			if (Rule != EDreamUIScrollWhenFocusChanges::NoScroll)
 			{
-				bMovedAnything |= Ancestor.View->ScrollWidgetIntoView(Target,
+				bMovedAnything |= Ancestor.View->ScrollToReveal(Target,
 					bAnimate && Rule == EDreamUIScrollWhenFocusChanges::AnimatedScroll);
 			}
 			// Announced whatever the rule said, and with the ORIGINAL widget rather than the walking
 			// target: "focus moved inside you" is true for every view on the way out, and a view that
 			// declines to scroll has not declined to know. Unconditional, because a control acting on
 			// it (returning focus to its selected row) must not depend on whether anything moved.
-			Ancestor.View->NotifyContentFocusMoved(InWidget);
-			Target = Ancestor.View->GetWidget() != nullptr ? Ancestor.View->GetWidget() : Target;
+			Ancestor.View->NotifyFocusMovedInside(InWidget);
+			Target = Ancestor.View->GetScrollableWidget() != nullptr ? Ancestor.View->GetScrollableWidget() : Target;
 		}
 	}
 	return bMovedAnything;
@@ -147,11 +148,11 @@ bool FDreamUINavigationScroll::ScrollByAnalogAxis(UDreamWidget* InWidget, const 
 		// axis does. Refusing here rather than further in means a view with gamepad scrolling off
 		// hands the gesture to nobody, which is what "off" has to mean -- the outer container is not
 		// a fallback for a switch the author turned off on the inner one.
-		if (!Ancestor.View->GetGamepadScrollingEnabled())
+		if (!Ancestor.View->AcceptsGamepadScrolling())
 		{
 			return false;
 		}
-		Declared = Ancestor.View->GetAnalogMouseWheelKey();
+		Declared = Ancestor.View->GetAnalogScrollKey();
 	}
 	if (Declared.IsValid() && Declared != InAxisKey)
 	{
@@ -191,14 +192,14 @@ namespace DreamUINavigationScrollLocal
 		}
 		if (InAncestor.View != nullptr)
 		{
-			const UDreamWidget* Widget = InAncestor.View->GetWidget();
+			const UDreamWidget* Widget = InAncestor.View->GetScrollableWidget();
 			if (!IsValid(Widget))
 			{
 				return 0.0f;
 			}
 			// A view can scroll both ways; the vertical extent is the page, because a page key means
 			// vertical everywhere it exists and a horizontal-only view is reached by the stick instead.
-			return InAncestor.View->CanScrollOnAxis(/*bInHorizontalAxis*/false)
+			return InAncestor.View->CanScrollAlong(/*bInHorizontalAxis*/false)
 				? Widget->GetHeight() : Widget->GetWidth();
 		}
 		return 0.0f;
@@ -215,7 +216,7 @@ bool FDreamUINavigationScroll::HasScrollableAncestor(const UDreamWidget* InWidge
 	}
 	if (Ancestor.View != nullptr)
 	{
-		return Ancestor.View->CanScrollOnAxis(true) || Ancestor.View->CanScrollOnAxis(false);
+		return Ancestor.View->CanScrollAlong(true) || Ancestor.View->CanScrollAlong(false);
 	}
 	return false;
 }
@@ -252,10 +253,10 @@ bool FDreamUINavigationScroll::ScrollByPages(UDreamWidget* InWidget, float InPag
 	{
 		// The axis the view actually scrolls. A vertical view takes the page on Y; a horizontal-only
 		// one takes it on X, so a page key is not simply inert on a horizontal carousel.
-		const FVector2D Before = Ancestor.View->GetScrollOffset();
-		const bool bVertical = Ancestor.View->CanScrollOnAxis(/*bInHorizontalAxis*/false);
-		Ancestor.View->ScrollBy(bVertical ? FVector2D(0.0f, Delta) : FVector2D(Delta, 0.0f));
-		return !Ancestor.View->GetScrollOffset().Equals(Before, 0.01f);
+		const FVector2D Before = Ancestor.View->GetScrollPosition();
+		const bool bVertical = Ancestor.View->CanScrollAlong(/*bInHorizontalAxis*/false);
+		Ancestor.View->ScrollContentBy(bVertical ? FVector2D(0.0f, Delta) : FVector2D(Delta, 0.0f));
+		return !Ancestor.View->GetScrollPosition().Equals(Before, 0.01f);
 	}
 	return false;
 }
@@ -283,16 +284,9 @@ bool FDreamUINavigationScroll::ScrollToExtent(UDreamWidget* InWidget, bool bToSt
 	}
 	if (Ancestor.View != nullptr)
 	{
-		const FVector2D Before = Ancestor.View->GetScrollOffset();
-		if (bToStart)
-		{
-			Ancestor.View->ScrollToStart();
-		}
-		else
-		{
-			Ancestor.View->ScrollToEnd();
-		}
-		return !Ancestor.View->GetScrollOffset().Equals(Before, 0.01f);
+		const FVector2D Before = Ancestor.View->GetScrollPosition();
+		Ancestor.View->ScrollContentToExtent(bToStart);
+		return !Ancestor.View->GetScrollPosition().Equals(Before, 0.01f);
 	}
 	return false;
 }
@@ -315,9 +309,9 @@ bool FDreamUINavigationScroll::ScrollByDelta(UDreamWidget* InWidget, const FVect
 	}
 	if (Ancestor.View != nullptr)
 	{
-		const FVector2D Before = Ancestor.View->GetScrollOffset();
-		Ancestor.View->ScrollBy(InDelta);
-		return !Ancestor.View->GetScrollOffset().Equals(Before, 0.01f);
+		const FVector2D Before = Ancestor.View->GetScrollPosition();
+		Ancestor.View->ScrollContentBy(InDelta);
+		return !Ancestor.View->GetScrollPosition().Equals(Before, 0.01f);
 	}
 	return false;
 }

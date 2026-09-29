@@ -40,10 +40,15 @@ public class DreamGUIEditor : ModuleRules
                 "SlateCore",
                 "Engine",
                 "UnrealEd",
+                "EditorSubsystem",//UDreamGUIEditorSubsystem
                 "PropertyEditor",
                 "RenderCore",
                 "RHI",
                 "DreamGUI",
+                "DreamGUIRenderer",
+                "DreamGUIControls",
+                "DreamGUIInput",
+                "DreamGUIExtensions",
                 "LevelEditor",
                 "Projects",
                 "DirectoryWatcher",//FDreamUISourceWatcher

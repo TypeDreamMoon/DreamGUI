@@ -3,8 +3,54 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Containers/Ticker.h"
 
 class UDreamWidgetBlueprint;
+
+/**
+ * What the source watcher keeps between a change on disk and the compile it causes, for one editor
+ * session. UDreamGUIEditorSubsystem holds it, and registers the watcher with it when the session starts
+ * and unregisters it when the session ends; everything else reaches it through the subsystem, and does
+ * nothing outside a session -- a commandlet compiling a text-authored class has no watcher to tell.
+ */
+struct FDreamUISourceWatcherState
+{
+	/** The directories being watched, with the directory watcher's handle for each. */
+	TMap<FString, FDelegateHandle> WatchHandles;
+	/** The ticker that drains the queue. */
+	FTSTicker::FDelegateHandle TickerHandle;
+	/** Changed files, waiting out the debounce. */
+	TSet<FString> PendingFiles;
+	/**
+	 * Files the watcher saw GO AWAY, which used to be dropped where the event arrived.
+	 *
+	 * A deletion or a rename is the one change to a .dui that leaves its class with no way to notice:
+	 * there is nothing to recompile from, so the class keeps the tree it last built and stays wrong
+	 * until somebody presses Compile by hand and finally meets DUI6001 -- by which time the file has
+	 * been gone long enough that nothing connects the two. Kept apart from PendingFiles because the
+	 * answer is a report, not a rebuild.
+	 */
+	TSet<FString> PendingRemovals;
+	/** When the last change arrived, for the debounce. */
+	double LastChangeTime = 0.0;
+	/** A batch too large to compile unasked. Held rather than dropped -- see OfferDeferredBatch. */
+	TSet<FString> DeferredBulkFiles;
+	/** Set by an explicit command; a plain save leaves it false and stays quiet when it worked. */
+	bool bAnnounceSuccess = false;
+	/**
+	 * True for the span of a rebuild caused by a change on DISK rather than by the designer.
+	 *
+	 * Read by the compiler through FDreamUISourceWatcher::IsCompilingFromExternalChange. A flag
+	 * rather than a parameter because the question is asked five frames down a call chain that runs
+	 * through FKismetEditorUtilities and the compilation manager, neither of which has anywhere to
+	 * carry it.
+	 */
+	bool bCompilingFromExternalChange = false;
+	/** import (normalized, lowercased) -> importer (same spelling RecompileFor expects). */
+	TMultiMap<FString, FString> ImportEdges;
+	/** False until the on-disk sweep of `use` lines has run once this session. */
+	bool bImportIndexSeeded = false;
+};
 
 /**
  * Save a `.dui`, and the classes built from it recompile.
@@ -52,14 +98,17 @@ class UDreamWidgetBlueprint;
 class DREAMGUIEDITOR_API FDreamUISourceWatcher
 {
 public:
-	/** Starts watching every DUI root. Safe to call with no roots -- the queue is used by menus too. */
-	static void Register();
-	static void Unregister();
+	/**
+	 * Starts watching every DUI root, into InState. Safe to call with no roots -- the queue is used by
+	 * menus too. UDreamGUIEditorSubsystem calls it as the editor session starts, and Unregister as it ends.
+	 */
+	static void Register(FDreamUISourceWatcherState& InState);
+	static void Unregister(FDreamUISourceWatcherState& InState);
 
 	/**
 	 * Start watching InDirectory as a DUI root, if it is one and nothing is watching it yet.
 	 *
-	 * Register() runs once, at module startup, over the roots that EXIST at that moment -- and a
+	 * Register() runs once, as the editor session starts, over the roots that EXIST at that moment -- and a
 	 * project's `DUI/` directory is routinely created later, by Open Workspace, on a project that
 	 * never had one. Until something called this, every file in that brand new directory saved into
 	 * silence for the rest of the session and the author's first experience of the language was the

@@ -1,6 +1,7 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
 #include "DreamUIEditorUtils.h"
+#include "DreamGUIEditorSubsystem.h"
 #include "CanvasItem.h"
 #include "CanvasTypes.h"
 #include "IImageWrapper.h"
@@ -10,7 +11,6 @@
 
 #define LOCTEXT_NAMESPACE "DreamGUIEditorUtils"
 
-TMap<FString, UTexture2D*> FDreamUIEditorUtils::TexturePathToTextureMap;
 UTexture2D* FDreamUIEditorUtils::LoadTexture(const FString& TextureFullPath)
 {
 	auto LoadSpriteIconTextureFromFile = [TextureFullPath]()
@@ -45,7 +45,6 @@ UTexture2D* FDreamUIEditorUtils::LoadTexture(const FString& TextureFullPath)
 					FMemory::Memcpy(TextureData, UncompressedRGBA.GetData(), UncompressedRGBA.Num());
 					Texture->GetPlatformData()->Mips[0].BulkData.Unlock();
 					Texture->UpdateResource();
-					Texture->AddToRoot();
 				}
 			}
 		}
@@ -53,12 +52,13 @@ UTexture2D* FDreamUIEditorUtils::LoadTexture(const FString& TextureFullPath)
 		return Texture;
 	};
 
-	UTexture2D* SpriteIconTexture = nullptr;
-	if (!TexturePathToTextureMap.Contains(TextureFullPath))
+	// Held by the editor subsystem for the session, where the collector can see it; a static map of rooted
+	// textures kept every icon alive past the editor that used it.
+	if (UDreamGUIEditorSubsystem* EditorSubsystem = UDreamGUIEditorSubsystem::Get())
 	{
-		TexturePathToTextureMap.Add(TextureFullPath, LoadSpriteIconTextureFromFile());
+		return EditorSubsystem->GetSpriteIconTexture(TextureFullPath, LoadSpriteIconTextureFromFile);
 	}
-	return TexturePathToTextureMap[TextureFullPath];
+	return LoadSpriteIconTextureFromFile();
 }
 void FDreamUIEditorUtils::DrawThumbnailIcon(const FString& TextureFullPath, int32 X, int32 Y, uint32 Width, uint32 Height, FCanvas* Canvas)
 {

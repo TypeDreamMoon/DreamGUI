@@ -31,7 +31,8 @@ It composes into .dui with no language change at all, because a class path is al
 | `ClickMethod` | `EDreamUIClickMethod` | Toggle | yes | `GetClickMethod` / `SetClickMethod` | WHEN the tick flips, per input kind -- UMG's three enums, surfaced at the control exactly as UDreamButton surfaces them and for the same reason: they live on the selectable underneath, and a control that never stated them left every check box on the desktop's DownAndUp. |
 | `TouchMethod` | `EDreamUITouchMethod` | Toggle | yes | `GetTouchMethod` / `SetTouchMethod` |  |
 | `PressMethod` | `EDreamUIPressMethod` | Toggle | yes | `GetPressMethod` / `SetPressMethod` |  |
-| `CheckedState` | `EDreamCheckState` | Toggle | yes | `GetCheckedState` / `SetCheckedState` | The authored state, in UMG's spelling and with UMG's third value. A property rather than the getter/setter pair alone, because the pair alone is invisible: .dui writes properties, the designer lists properties, and a binding resolves a property -- so a knob that exists only as two UFUNCTIONs is a knob nothing outside C++ can turn. |
+| `AcceptedMouseButtons` | `int32` | Toggle | yes | `GetAcceptedMouseButtons` / `SetAcceptedMouseButtons` | WHICH mouse buttons press and flip this check box -- a bitmask over EDreamUIMouseButtonType, the left button alone by default, which is UMG's rule: SCheckBox toggles on the left button and nothing else, so a right click neither presses nor flips it and goes on to whatever is behind. |
+| `CheckedState` | `EDreamCheckState` | Toggle | yes | `GetCheckedState` / `SetCheckedState` | The authored state, in UMG's spelling and with UMG's third value. A click moves it the way UMG's check box does: Unchecked to Checked, and Checked or Undetermined to Unchecked -- a mixed state is cleared by a click, never ticked. A property rather than the getter/setter pair alone, because the pair alone is invisible: .dui writes properties, the designer lists properties, and a binding resolves a property -- so a knob that exists only as two UFUNCTIONs is a knob nothing outside C++ can turn. |
 | `bIsOn` | `bool` | Toggle | yes | `GetIsOn` / `SetIsOn` | The compatibility spelling: CheckedState as a bool. Checked mirrors true; Unchecked and Undetermined mirror false. Kept as a property because existing .dui two-way-binds it (`bIsOn <-> ...`) and a binding resolves a property; kept coherent with CheckedState through every path (authored push, user click, programmatic set). New code speaks CheckedState. |
 | `BoxNode` | `TObjectPtr<UDreamWidget>` | Toggle | - | read only | The parts, in the shape the rest of the framework expects to find them. |
 | `TickNode` | `TObjectPtr<UDreamWidget>` | Toggle | - | read only |  |
@@ -42,6 +43,7 @@ It composes into .dui with no language change at all, because a class path is al
 
 | Function | Kind | Description |
 |---|---|---|
+| `int32 GetAcceptedMouseButtons()` | pure | Get Accepted Mouse Buttons |
 | `EDreamCheckState GetCheckedState()` | pure | The full state. The behaviour is the truth for the two states it can hold; Undetermined is the control's own and reads from here. |
 | `EDreamUIClickMethod GetClickMethod()` | pure | Get Click Method |
 | `bool GetIsOn()` | pure | The compatibility spelling of IsChecked(): the behaviour's bool once it exists, bIsOn before. |
@@ -50,6 +52,7 @@ It composes into .dui with no language change at all, because a class path is al
 | `EDreamUITouchMethod GetTouchMethod()` | pure | Get Touch Method |
 | `bool IsChecked()` | pure | UMG's convenience: exactly GetCheckedState() == Checked. |
 | `bool IsPressed()` | pure | Whether a pointer is holding the box down -- UMG's IsPressed, which a check box has for the same reason a button does. Asked of the behaviour rather than remembered here: a second copy of "is it down" goes stale the first time a press ends somewhere this control does not hear. |
+| `void SetAcceptedMouseButtons(int32 InAcceptedMouseButtons)` | callable | Writes the bitmask and pushes it onto the behaviour at once, as the three method setters do. |
 | `void SetCheckedState(EDreamCheckState InCheckedState)` | callable | Set any of the three states. Checked/Unchecked go through the behaviour with notify, the path a click takes; Undetermined parks the behaviour at unchecked without notify and lives on the control (see the class comment). |
 | `void SetClickMethod(EDreamUIClickMethod InMethod)` | callable | Each of the four setters below writes the field and re-pushes it onto the behaviour. |
 | `void SetIsChecked(bool bInIsChecked)` | callable | UMG's convenience spelling of SetIsOn. |
@@ -83,12 +86,12 @@ Every Blueprint-facing member of the UMG class, and where it went. *adopt*: same
 | `UCheckBox` | `TouchMethod` | adopt | `TouchMethod` |  |
 | `UCheckBox` | `PressMethod` | adopt | `PressMethod` |  |
 | `UCheckBox` | `IsFocusable` | map | `UDreamWidget::bIsFocusable` | Every widget here carries it; a control-level copy would shadow the base member. |
-| `UCheckBox` | `OnCheckStateChanged` | adopt | `OnCheckStateChanged` | Carries the full state. OnToggleChanged is the bool projection and fires alongside it. |
+| `UCheckBox` | `OnCheckStateChanged` | adopt | `OnCheckStateChanged` | Carries the full state. OnToggleChanged is the bool projection and fires alongside it. Only the mouse buttons in AcceptedMouseButtons press and flip the box -- the left one alone by default, which is SCheckBox's rule; AcceptedMouseButtons is this control's own knob, as on UDreamButton. A double click flips the box twice, as SCheckBox's does: the second press arrives as a double click and the toggle takes it as its press (SCheckBox::OnMouseButtonDoubleClick is OnMouseButtonDown). |
 | `UCheckBox` | `IsPressed` | adopt | `IsPressed` | Asked of the behaviour's selection state rather than remembered on the control. |
 | `UCheckBox` | `IsChecked` | adopt | `IsChecked` |  |
 | `UCheckBox` | `GetCheckedState` | adopt | `GetCheckedState` |  |
 | `UCheckBox` | `SetIsChecked` | adopt | `SetIsChecked` |  |
-| `UCheckBox` | `SetCheckedState` | adopt | `SetCheckedState` | Undetermined parks the two-state behaviour at unchecked and lives on the control; a click leaves it by becoming checked, as UMG's does. |
+| `UCheckBox` | `SetCheckedState` | adopt | `SetCheckedState` | Undetermined parks the two-state behaviour at unchecked and lives on the control; a click leaves it by becoming UNCHECKED, as UMG's does (SCheckBox::ToggleCheckedState: Checked or Undetermined becomes Unchecked, Unchecked becomes Checked). |
 | `UCheckBox` | `SetClickMethod` | adopt | `SetClickMethod` |  |
 | `UCheckBox` | `SetTouchMethod` | adopt | `SetTouchMethod` |  |
 | `UCheckBox` | `SetPressMethod` | adopt | `SetPressMethod` |  |

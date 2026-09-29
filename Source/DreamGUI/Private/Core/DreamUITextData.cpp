@@ -5,6 +5,7 @@
 #include "Core/Text/DreamTextLayout.h"
 #include "Core/Text/DreamTextPainter.h"
 #include "Math/Float16.h"
+#include "ProfilingDebugging/CpuProfilerTrace.h"
 
 bool FDreamTextStyle::HasEffects() const
 {
@@ -150,6 +151,7 @@ bool FDreamUITextGeometryCache::EnsureLayout()
 	if (!Input->Font.IsValid())return false;
 	bIsDirty = false;
 	LayoutRunCount++;
+	TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_TextLayout);
 	FDreamTextLayoutEngine::Layout(*Input, *DisplayList);
 	return true;
 }
@@ -157,6 +159,7 @@ bool FDreamUITextGeometryCache::EnsureLayout()
 void FDreamUITextGeometryCache::Paint(FDreamUIGeometry& Geometry, const FDreamTextPaintParams& Params)
 {
 	EnsureLayout();
+	TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_TextPaint);
 	FDreamTextPainter::Paint(*DisplayList, Params, Geometry, CharPropertyArray);
 }
 

@@ -13,7 +13,7 @@ struct FDreamUISourceRoot;
  * what lights up the extension's workspace features: the file names every enabled plugin's DUI/
  * root beside the project's, pins the *.dui association, and recommends the extension.
  */
-struct FDreamUIWorkspaceService
+struct DREAMGUIEDITOR_API FDreamUIWorkspaceService
 {
 	/**
 	 * The workspace JSON for these roots. Split from the writer so a test can hold it without

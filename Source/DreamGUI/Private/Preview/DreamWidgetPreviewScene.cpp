@@ -27,7 +27,10 @@ FDreamWidgetPreviewScene::FDreamWidgetPreviewScene(FDreamWidgetPreviewScene::Con
 	}
 
 	PreviewWorld = NewObject<UWorld>(GetTransientPackage(), CVS.Name, NewObjectFlags);
-	PreviewWorld->WorldType = CVS.bEditor ? EWorldType::Editor : EWorldType::GamePreview;
+	// A preview, as the engine's own FPreviewScene makes one: EWorldType::Editor means the level editor,
+	// and what only the level editor wants -- hit proxies for its viewport, runtime flags on what its save
+	// and Copy would otherwise carry -- asks exactly that.
+	PreviewWorld->WorldType = CVS.bEditor ? EWorldType::EditorPreview : EWorldType::GamePreview;
 
 	FWorldContext& WorldContext = GEngine->CreateNewWorldContext(PreviewWorld->WorldType);
 	WorldContext.SetCurrentWorld(PreviewWorld);

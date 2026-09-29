@@ -67,9 +67,15 @@ Widget Root {
                 Padding = (24, 28, 24, 28)
             }
 
+            // A text breaks its lines at WrapTextAt when it has one and at its own width when it does
+            // not -- and a column asks how tall a child wants to be BEFORE it gives the child a width. So
+            // a text in a Fill slot names a width to break at: here the widest the card is meant to be,
+            // 420, less the column's 24 on each side. Without it the heading is measured at its own
+            // width, 0, as one character per line.
             Text Heading : Title {
                 AnchorData.SizeDelta = (0, 34)
                 Text = "Hello, DreamGUI"
+                WrapTextAt = 372
                 @slot HorizontalAlignment = Fill
                 @slot SizeRule = Auto
             }

@@ -72,7 +72,6 @@ Initialize, from the class, every time.
 | `TArray<FName> K2_GetDeclaredSlotNames()` | pure | The named slots this instance declares, in the order its class declares them. |
 | `void K2_RemoveFieldValueChangedDelegate(FFieldNotificationId FieldId, FFieldValueChangedDynamicDelegate Delegate)` | callable | Remove Field Value Changed Delegate |
 | `FDreamUIActionHandle ListenForInputAction(FDataTableRowHandle InAction, FDreamUIActionExecutedDelegate InCallback, bool bDisplayInActionBar)` | callable | UMG's ListenForInputAction, on this framework's own action layer. |
-| `bool NeedsReinitializeFromClass()` | pure | Whether this instance is in the half-dead state ReinitializeFromClass repairs: it has contents but no tree and has not been initialized. |
 | `void OnAnimationFinished(UMovieSceneSequence* Animation)` | event | An instance of one of this widget's animations ended, naturally or by Stop. |
 | `void OnAnimationStarted(UMovieSceneSequence* Animation)` | event | An instance of one of this widget's animations started. |
 | `void OnBeginDrag(UDreamPointerEventData* EventData)` | event | On Begin Drag |

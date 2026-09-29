@@ -50,7 +50,7 @@ Every Blueprint-facing member of the UMG class, and where it went. *adopt*: same
 |---|---|---|---|---|
 | `UWidgetBlueprintLibrary` | `Create` | map | `UDreamUIBPLibrary::CreateDreamWidgetOfClass` | Pre-existing. AddWidgetOfClassToViewport is the create-and-show pair. |
 | `UWidgetBlueprintLibrary` | `CreateDragDropOperation` | adopt | `CreateDragDropOperation` | Outered to the transient package, as UMG does: an operation outlives the widget that made it, and a recycled list row mid-drag is the ordinary case. |
-| `UWidgetBlueprintLibrary` | `SetInputMode_UIOnlyEx` | map | `UDreamUIInputModeLibrary::SetInputModeUIOnly` | Addressed by DreamGUI user index rather than by a raw controller, so split screen does not have to rediscover which player a menu belongs to. |
+| `UWidgetBlueprintLibrary` | `SetInputMode_UIOnlyEx` | map | `UDreamUIInputModeLibrary::SetInputModeUIOnly` | Addressed by DreamGUI user index rather than by a raw controller, so split screen does not have to rediscover which player a menu belongs to. Needs UDreamGameViewportClient as the game viewport client: the engine's UI-only mode ignores input at the client, which DreamGUI's input comes through, and that client lets it through while this mode holds. |
 | `UWidgetBlueprintLibrary` | `SetInputMode_GameAndUIEx` | map | `UDreamUIInputModeLibrary::SetInputModeGameAndUI` |  |
 | `UWidgetBlueprintLibrary` | `SetInputMode_GameOnly` | map | `UDreamUIInputModeLibrary::SetInputModeGameOnly` |  |
 | `UWidgetBlueprintLibrary` | `SetFocusToGameViewport` | adopt | `SetFocusToGameViewport` | A Slate focus change, not a DreamGUI one. UDreamWidget::ClearKeyboardFocus is the framework-level counterpart and the two are usually wanted together. |

@@ -14,6 +14,24 @@
 #include "Core/Components/DreamWidget.h"
 
 
+bool FDreamUIGeometry::MatchesDataForPrepare(const FDreamUIGeometry& InPrepared) const
+{
+	// The weak pointers are compared by what they point at, without resolving them.
+	return Vertices.Num() == InPrepared.Vertices.Num()
+		&& Triangles.Num() == InPrepared.Triangles.Num()
+		&& Texture.HasSameIndexAndSerialNumber(InPrepared.Texture)
+		&& Font.HasSameIndexAndSerialNumber(InPrepared.Font)
+		&& Material.HasSameIndexAndSerialNumber(InPrepared.Material)
+		&& bIsFont == InPrepared.bIsFont
+		&& bSupportDrawcallBatching == InPrepared.bSupportDrawcallBatching
+		&& BlendMode == InPrepared.BlendMode
+		&& BoundsMin2DInCanvasSpace == InPrepared.BoundsMin2DInCanvasSpace
+		&& BoundsMax2DInCanvasSpace == InPrepared.BoundsMax2DInCanvasSpace
+		&& TransformRelativeToCanvas.Equals(InPrepared.TransformRelativeToCanvas, 0.0)
+		&& (Vertices.Num() == 0 || FMemory::Memcmp(Vertices.GetData(), InPrepared.Vertices.GetData(), Vertices.Num() * sizeof(FDreamUIMeshVertex)) == 0)
+		&& (Triangles.Num() == 0 || FMemory::Memcmp(Triangles.GetData(), InPrepared.Triangles.GetData(), Triangles.Num() * sizeof(FDreamUIMeshIndex)) == 0);
+}
+
 FORCEINLINE float RoundToFloat(float value)
 {
 	return FMath::FloorToFloat(value + 0.5f);
@@ -316,16 +334,26 @@ void FDreamUIGeometry::UpdateRectBlockVertex(FDreamUIGeometry* uiGeo,
 			float oneDivideWidth = 1.0f / width;
 			float oneDivideHeight = 1.0f / height;
 			
-			Vert0.TextureCoordinate[0] = uniformSpriteInfo.GetUV0() + FVector2f((OriginVert0.Position.Y - minX) * oneDivideWidth, -(OriginVert0.Position.Z - minY) * oneDivideHeight);
-			Vert1.TextureCoordinate[0] = uniformSpriteInfo.GetUV1() + FVector2f((OriginVert1.Position.Y - maxX) * oneDivideWidth, -(OriginVert1.Position.Z - minY) * oneDivideHeight);
-			Vert2.TextureCoordinate[0] = uniformSpriteInfo.GetUV2() + FVector2f((OriginVert2.Position.Y - minX) * oneDivideWidth, -(OriginVert2.Position.Z - maxY) * oneDivideHeight);
-			Vert3.TextureCoordinate[0] = uniformSpriteInfo.GetUV3() + FVector2f((OriginVert3.Position.Y - maxX) * oneDivideWidth, -(OriginVert3.Position.Z - maxY) * oneDivideHeight);
+			auto uv0_Offset = FVector2f((OriginVert0.Position.Y - minX) * oneDivideWidth, -(OriginVert0.Position.Z - minY) * oneDivideHeight);
+			auto uv1_Offset = FVector2f((OriginVert1.Position.Y - maxX) * oneDivideWidth, -(OriginVert1.Position.Z - minY) * oneDivideHeight);
+			auto uv2_Offset = FVector2f((OriginVert2.Position.Y - minX) * oneDivideWidth, -(OriginVert2.Position.Z - maxY) * oneDivideHeight);
+			auto uv3_Offset = FVector2f((OriginVert3.Position.Y - maxX) * oneDivideWidth, -(OriginVert3.Position.Z - maxY) * oneDivideHeight);
+			
+			Vert0.TextureCoordinate[0] = uniformSpriteInfo.GetUV0() + uv0_Offset;
+			Vert1.TextureCoordinate[0] = uniformSpriteInfo.GetUV1() + uv1_Offset;
+			Vert2.TextureCoordinate[0] = uniformSpriteInfo.GetUV2() + uv2_Offset;
+			Vert3.TextureCoordinate[0] = uniformSpriteInfo.GetUV3() + uv3_Offset;
 			
 			//uv2 store the info for sampling texture and Sprite
-			Vert0.TextureCoordinate[2] = spriteInfo.GetUV0();
-			Vert1.TextureCoordinate[2] = spriteInfo.GetUV1();
-			Vert2.TextureCoordinate[2] = spriteInfo.GetUV2();
-			Vert3.TextureCoordinate[2] = spriteInfo.GetUV3();
+			// The same offsets, measured in the sprite. The ones above are fractions of the rect, which are
+			// UVs only for a sprite that covers its whole texture; a sprite packed into an atlas -- the
+			// default white one is -- covers a fraction of it, and an offset not scaled to that fraction
+			// reached past the sprite into its neighbours, at the rect's own edges as well as beyond them.
+			const FVector2f spriteUVSize = spriteInfo.MaxUV - spriteInfo.MinUV;
+			Vert0.TextureCoordinate[2] = spriteInfo.GetUV0() + uv0_Offset * spriteUVSize;
+			Vert1.TextureCoordinate[2] = spriteInfo.GetUV1() + uv1_Offset * spriteUVSize;
+			Vert2.TextureCoordinate[2] = spriteInfo.GetUV2() + uv2_Offset * spriteUVSize;
+			Vert3.TextureCoordinate[2] = spriteInfo.GetUV3() + uv3_Offset * spriteUVSize;
 		}
 
 		if (InVertexColorChanged)

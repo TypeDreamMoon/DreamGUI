@@ -1,6 +1,7 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
 #include "DetailCustomization/DreamTextureBaseCustomization.h"
+#include "Core/DreamUIWorldContext.h"
 #include "DreamUIEditorUtils.h"
 #include "DreamDetailsTemplateMirror.h"
 #include "Core/Components/DreamTextureBase.h"
@@ -35,7 +36,7 @@ void FDreamTextureBaseCustomization::CustomizeDetails(IDetailLayoutBuilder& Deta
 		if (auto validItem = Cast<UDreamTextureBase>(item.Get()))
 		{
 			TargetScriptArray.Add(TWeakObjectPtr<UDreamTextureBase>(validItem));
-			if (validItem->GetWorld() && validItem->GetWorld()->WorldType == EWorldType::Editor)
+			if (DreamUI::IsEditingWorld(validItem))
 			{
 				validItem->CheckTexture();
 				validItem->GetWidget()->MarkCanvasUpdate(true);

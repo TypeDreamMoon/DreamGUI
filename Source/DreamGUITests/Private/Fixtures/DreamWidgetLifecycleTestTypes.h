@@ -1,0 +1,145 @@
+// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
+
+#pragma once
+
+#include "Core/DreamUIBehaviour.h"
+#include "Core/DreamUIWorldService.h"
+#include "Core/DreamWidgetTreeHost.h"
+#include "Core/Components/DreamImage.h"
+#include "DreamWidgetLifecycleTestTypes.generated.h"
+
+class UDreamCanvas;
+class UDreamWidget;
+
+UCLASS()
+class UDreamWidgetHierarchyMutationBehaviour : public UDreamUIBehaviour
+{
+	GENERATED_BODY()
+
+public:
+	void Configure(UDreamWidget* InWidgetToDetach, UDreamWidget* InWidgetToAttach, UDreamWidget* InExternalParent)
+	{
+		WidgetToDetach = InWidgetToDetach;
+		WidgetToAttach = InWidgetToAttach;
+		ExternalParent = InExternalParent;
+	}
+
+protected:
+	virtual void OnUnregister() override;
+
+private:
+	UPROPERTY()
+	TObjectPtr<UDreamWidget> WidgetToDetach;
+
+	UPROPERTY()
+	TObjectPtr<UDreamWidget> WidgetToAttach;
+
+	UPROPERTY()
+	TObjectPtr<UDreamWidget> ExternalParent;
+};
+
+/** An image that records each change of the canvas it draws in, and each time it is marked to be written whole. */
+UCLASS()
+class UDreamWidgetCanvasProbeVisual : public UDreamImage
+{
+	GENERATED_BODY()
+
+public:
+	virtual void OnRenderCanvasChanged(UDreamCanvas* InOldCanvas, UDreamCanvas* InNewCanvas) override;
+	virtual void MarkAllDirty() override;
+
+	/** Old and new canvas of each change, compared by address only: either may be gone by the time a test looks. */
+	TArray<TPair<const UDreamCanvas*, const UDreamCanvas*>> CanvasChanges;
+	int32 MarkAllDirtyCount = 0;
+};
+
+/** Something a widget made and keeps as one of its parts. It takes no part in registration or play. */
+UCLASS()
+class UDreamWidgetLifecyclePart : public UObject
+{
+	GENERATED_BODY()
+};
+
+/** A behaviour that counts how often its widget registers and unregisters it. */
+UCLASS()
+class UDreamWidgetLifecycleCountingBehaviour : public UDreamUIBehaviour
+{
+	GENERATED_BODY()
+
+public:
+	int32 RegisterCount = 0;
+	int32 UnregisterCount = 0;
+
+protected:
+	virtual void OnRegister() override;
+	virtual void OnUnregister() override;
+};
+
+/**
+ * A behaviour that writes each lifecycle call its widget passes on into a log the test hands it, as
+ * "<step> <widget display name>". Shared, so one log can take a whole tree's calls in the order they came.
+ */
+UCLASS()
+class UDreamWidgetLifecycleRecordingBehaviour : public UDreamUIBehaviour
+{
+	GENERATED_BODY()
+
+public:
+	TSharedPtr<TArray<FString>> Log;
+
+protected:
+	virtual void OnRegister() override;
+	virtual void OnUnregister() override;
+	virtual void Awake() override;
+	virtual void OnEnable() override;
+	virtual void OnDisable() override;
+	virtual void OnDestroy() override;
+
+private:
+	void Record(const TCHAR* InStep) const;
+};
+
+/** A world service that only records that its world took it down, and when, into a log the test hands it. */
+UCLASS()
+class UDreamWorldServiceProbe : public UObject, public IDreamUIWorldService
+{
+	GENERATED_BODY()
+
+public:
+	int32 Priority = 0;
+	FString Label;
+	TSharedPtr<TArray<FString>> Log;
+
+	virtual int32 GetTeardownPriority() const override { return Priority; }
+	virtual void TeardownForWorld(UWorld& InWorld) override
+	{
+		if (Log.IsValid())
+		{
+			Log->Add(Label);
+		}
+	}
+};
+
+/** A tree host that owns no tree and records what it is asked, for the tests of the contract itself. */
+UCLASS()
+class UDreamTreeHostProbe : public UObject, public IDreamWidgetTreeHost
+{
+	GENERATED_BODY()
+
+public:
+	virtual UObject* GetTreeOuter() const override
+	{
+		return const_cast<UDreamTreeHostProbe*>(this);
+	}
+	virtual void ReleaseTree(EDreamTreeReleaseReason InReason) override
+	{
+		Releases.Add(InReason);
+	}
+	virtual void RebuildTree() override
+	{
+		++Rebuilds;
+	}
+
+	TArray<EDreamTreeReleaseReason> Releases;
+	int32 Rebuilds = 0;
+};

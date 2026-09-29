@@ -38,7 +38,7 @@ enum class EDreamUIRichTextCustomStyleData_BoolType : uint8
 };
 
 USTRUCT(BlueprintType)
-struct FDreamUIRichTextCustomStyleItemData
+struct DREAMGUI_API FDreamUIRichTextCustomStyleItemData
 {
 	GENERATED_BODY()
 public:

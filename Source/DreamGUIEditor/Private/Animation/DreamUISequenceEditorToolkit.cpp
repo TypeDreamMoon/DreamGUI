@@ -33,8 +33,17 @@ const FName FDreamUISequenceEditorToolkit::ViewportTabId(TEXT("DreamUISequenceEd
 const FName FDreamUISequenceEditorToolkit::SequencerMainTabId(TEXT("DreamUISequenceEditor_Sequencer"));
 const FName FDreamUISequenceEditorToolkit::DetailsTabId(TEXT("DreamUISequenceEditor_Details"));
 
+// Defaulted here rather than left implicit: the implicit one would instantiate the TUniquePtr deleter
+// for the forward-declared FDreamWidgetDesignerScene in every translation unit that creates a toolkit,
+// which a unity build hid by having this .cpp in the same blob.
+FDreamUISequenceEditorToolkit::FDreamUISequenceEditorToolkit() = default;
+
 FDreamUISequenceEditorToolkit::~FDreamUISequenceEditorToolkit()
 {
+	if (UDreamGUIEditorSubsystem* EditorSubsystem = UDreamGUIEditorSubsystem::Get())
+	{
+		EditorSubsystem->UnregisterPreview(this);
+	}
 	if (PropertyChangedHandle.IsValid())
 	{
 		FCoreUObjectDelegates::OnObjectPropertyChanged.Remove(PropertyChangedHandle);
@@ -437,6 +446,33 @@ void FDreamUISequenceEditorToolkit::Initialize(const EToolkitMode::Type Mode, co
 	// so the one diagnostic a broken binding has never once appeared.
 	ReportUnresolvableBindings();
 	PropertyChangedHandle = FCoreUObjectDelegates::OnObjectPropertyChanged.AddRaw(this, &FDreamUISequenceEditorToolkit::OnObjectPropertyChanged);
+	if (UDreamGUIEditorSubsystem* EditorSubsystem = UDreamGUIEditorSubsystem::Get())
+	{
+		EditorSubsystem->RegisterPreview(this);
+	}
+}
+
+bool FDreamUISequenceEditorToolkit::UsesClass(const UClass* InClass) const
+{
+	UDreamWidget* Root = PreviewRoot.Get();
+	if (InClass == nullptr || Root == nullptr)
+	{
+		return false;
+	}
+	TArray<UDreamWidget*> Widgets;
+	UDreamWidget::CollectChildrenWidgets(Root, Widgets, true);
+	return Widgets.ContainsByPredicate([InClass](const UDreamWidget* Widget) { return Widget->IsA(InClass); });
+}
+
+void FDreamUISequenceEditorToolkit::ReleaseForRecompile()
+{
+	EvacuateSequencerEntities();
+	DestroyPreviewTree();
+}
+
+void FDreamUISequenceEditorToolkit::RebuildAfterRecompile()
+{
+	RebuildPreviewTree();
 }
 
 void FDreamUISequenceEditorToolkit::ReportUnresolvableBindings()

@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Subsystems/WorldSubsystem.h"
+#include "Core/DreamUIWorldService.h"
 #include "UObject/ObjectKey.h"
 #include "DreamUIPopupLayer.generated.h"
 
@@ -28,12 +29,18 @@ class UDreamWidget;
  * re-deriving position per frame.
  */
 UCLASS()
-class DREAMGUI_API UDreamUIPopupLayer : public UWorldSubsystem
+class DREAMGUI_API UDreamUIPopupLayer : public UWorldSubsystem, public IDreamUIWorldService
 {
 	GENERATED_BODY()
 
 public:
 	static UDreamUIPopupLayer* Get(const UObject* InWorldContext);
+
+	virtual void Initialize(FSubsystemCollectionBase& Collection) override;
+	virtual void Deinitialize() override;
+	virtual int32 GetTeardownPriority() const override { return DreamUI::WorldServiceTeardownPriority::Layers; }
+	/** Forget every lifted widget's way home: the trees they belong to are coming down with the world. */
+	virtual void TeardownForWorld(UWorld& InWorld) override;
 
 	/**
 	 * Lift InWidget to the screen root, keeping its on-screen position. Safe to call on a widget
@@ -60,4 +67,6 @@ private:
 	 * be reflected at all.
 	 */
 	TMap<FObjectKey, TWeakObjectPtr<UDreamWidget>> ElevatedHomes;
+	/** Set by TeardownForWorld, which runs once. */
+	bool bTornDownForWorld = false;
 };

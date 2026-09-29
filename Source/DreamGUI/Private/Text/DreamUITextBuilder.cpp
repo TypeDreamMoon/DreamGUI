@@ -7,19 +7,16 @@
 
 #include "Core/DreamUIBehaviour.h"
 #include "Core/DreamUserWidget.h"
+#include "Core/DreamUIScriptPackages.h"
 #include "Core/DreamUIWidgetRegistry.h"
 #include "Core/DreamWidgetEachBinding.h"
 #include "Core/DreamWidgetTree.h"
 // A `->` route may name an FDreamUIEventDelegate as well as a multicast delegate.
 #include "Event/DreamUIEventDelegate.h"
-#include "Interaction/UIListView.h"
-#include "Interaction/UIRecyclableScrollView.h"
-#include "Core/Components/DreamBackgroundBlur.h"
-#include "Core/Components/DreamBackgroundPixelate.h"
+#include "Core/DreamUIEachBindingHandler.h"
 #include "Core/Components/DreamImage.h"
 #include "Core/Components/DreamLayout.h"
 #include "Core/Components/DreamPanelSlot.h"
-#include "Core/Components/DreamPixelSort.h"
 #include "Core/Components/DreamRectBlock.h"
 #include "Core/Components/DreamSprite.h"
 #include "Core/Components/DreamText.h"
@@ -40,6 +37,7 @@
 #include "Channels/MovieSceneStringChannel.h"
 #include "MovieScene.h"
 #include "MovieScenePossessable.h"
+#include "UObject/CoreRedirects.h"
 #include "Sections/MovieSceneColorSection.h"
 #include "Sections/MovieSceneDoubleSection.h"
 #include "Sections/MovieSceneFloatSection.h"
@@ -554,7 +552,9 @@ namespace DreamUITextBuilderLocal
 	{
 		if (InPath.StartsWith(TEXT("/Script/")))
 		{
-			return UClass::TryFindTypeSlowSafe<UClass>(InPath);
+			// Redirected first: the lookup takes the path as written, and a class that has moved to
+			// another module or been renamed answers only to where it is now.
+			return UClass::TryFindTypeSlowSafe<UClass>(DreamUI::ApplyTypeRedirects(ECoreRedirectFlags::Type_Class, InPath));
 		}
 		FString ObjectPath = InPath;
 		if (!ObjectPath.Contains(TEXT(".")))
@@ -1354,10 +1354,11 @@ UClass* FDreamUITextBuilder::ResolveComponentClass(const FString& InClassName)
 
 	if (Name.StartsWith(TEXT("/")))
 	{
-		UClass* Found = UClass::TryFindTypeSlowSafe<UClass>(Name);
+		const FString Redirected = DreamUI::ApplyTypeRedirects(ECoreRedirectFlags::Type_Class, Name);
+		UClass* Found = UClass::TryFindTypeSlowSafe<UClass>(Redirected);
 		if (Found == nullptr)
 		{
-			Found = LoadObject<UClass>(nullptr, *Name, nullptr, LOAD_NoWarn | LOAD_Quiet);
+			Found = LoadObject<UClass>(nullptr, *Redirected, nullptr, LOAD_NoWarn | LOAD_Quiet);
 		}
 		return AsComponentClass(Found);
 	}
@@ -1371,12 +1372,20 @@ UClass* FDreamUITextBuilder::ResolveComponentClass(const FString& InClassName)
 	{
 		TEXT(""), TEXT("Dream"), TEXT("UI"), TEXT("DreamLayoutContainer"), TEXT("DreamLayoutSelf")
 	};
+	//
+	// In every runtime module of the plugin, prefix by prefix: all of them are searched for the plain
+	// name before any is searched for `Dream` + name, so which module a class lives in never decides
+	// which of two spellings wins.
+	const TArray<FName> Packages = DreamUI::GetRuntimeScriptPackages();
 	for (const TCHAR* Prefix : Prefixes)
 	{
-		if (UClass* Found = AsComponentClass(UClass::TryFindTypeSlowSafe<UClass>(
-			FString::Printf(TEXT("/Script/DreamGUI.%s%s"), Prefix, *Name))))
+		for (const FName Package : Packages)
 		{
-			return Found;
+			if (UClass* Found = AsComponentClass(UClass::TryFindTypeSlowSafe<UClass>(
+				FString::Printf(TEXT("%s.%s%s"), *Package.ToString(), Prefix, *Name))))
+			{
+				return Found;
+			}
 		}
 	}
 	// A behaviour from the game module or another plugin. Last, because it is the slow lookup
@@ -1854,11 +1863,19 @@ namespace DreamUITextBuilderLocal
 				TEXT("an 'each' lives inside the widget whose list it fills; it cannot be the root"));
 			return nullptr;
 		}
+		// The list views are the control library's, reached through the handler it registers.
+		const IDreamUIEachBindingHandler* Handler = DreamUI::GetEachBindingHandler();
+		if (Handler == nullptr)
+		{
+			InContext.Diagnostics->AddError(EDreamUIDiagnosticCode::EachMisplaced, InNode.Location,
+				TEXT("an 'each' fills a list view, and no module that has list views is loaded"));
+			return nullptr;
+		}
 		// The host contract: the ENCLOSING widget carries the list view, configured however the
 		// author likes -- the `each` only supplies the template and the data. Auto-adding a view
 		// here would mean auto-choosing its scroll direction, content and bars, which are layout
 		// decisions this block has no words for.
-		if (InParent->GetComponent<UUIRecyclableScrollView>() == nullptr)
+		if (!Handler->HasListView(InParent))
 		{
 			InContext.Diagnostics->AddError(EDreamUIDiagnosticCode::EachMisplaced, InNode.Location,
 				FString::Printf(TEXT("'%s' has no UIListView/UIRecyclableScrollView behaviour for this 'each' to fill -- add one with '+ UIListView { }'"),
@@ -1911,25 +1928,13 @@ namespace DreamUITextBuilderLocal
 		}
 		Each.TemplateWidgetName = UDreamWidgetTree::MakeWidgetVariableName(Template);
 
-		// The recyclable view clones whatever carries the cell-marker interface; a template the
-		// author did not mark gets the plain list entry, which is the marker plus click plumbing.
-		if (Template->GetComponentByInterface(UUIRecyclableScrollViewCell::StaticClass()) == nullptr)
-		{
-			Template->AddComponent<UUIListEntry>();
-		}
-
 		// The runtime prerequisites the walkthrough caught the view silently returning without:
-		// InitializeOnDataSource needs a CONTENT widget under the host (the thing scrolling moves
-		// and sizes), and exactly one scroll axis -- the scroll-view default is both. The language
-		// has no words for either, so the builder supplies them: a synthesized content the template
-		// moves into, and a vertical list when the author configured no single axis. An author who
-		// set one axis on the behaviour keeps it.
-		UUIRecyclableScrollView* View = InParent->GetComponent<UUIRecyclableScrollView>();
-		if (View->GetHorizontal() == View->GetVertical())
-		{
-			View->SetHorizontal(false);
-			View->SetVertical(true);
-		}
+		// a cell marker on the template, InitializeOnDataSource's CONTENT widget under the host (the
+		// thing scrolling moves and sizes), and exactly one scroll axis -- the scroll-view default is
+		// both. The language has no words for any of them, so they are supplied here: the handler
+		// marks the template and settles the axis (vertical when the author configured no single
+		// axis; one who set an axis keeps it), and the builder synthesizes the content.
+		const bool bVertical = Handler->PrepareHost(InParent, Template);
 		const FString ContentName = InParent->GetDisplayName() + TEXT("_EachContent");
 		UDreamWidget* Content = InContext.Tree->ConstructWidget(UDreamWidget::StaticClass(), FName(*ContentName),
 			FGuid::NewDeterministicGuid(InContext.LocalizationNamespace + TEXT("/") + ContentName));
@@ -1937,7 +1942,7 @@ namespace DreamUITextBuilderLocal
 		{
 			Content->SetDisplayName(ContentName);
 			FDreamUIAnchorData ContentAnchors;
-			if (View->GetVertical())
+			if (bVertical)
 			{
 				// Stretch across the top: the view drives the height from the item count.
 				ContentAnchors.AnchorMin = FVector2D(0.0, 1.0);
@@ -1955,7 +1960,7 @@ namespace DreamUITextBuilderLocal
 			Content->SetAnchorData(ContentAnchors);
 			Content->TrySetParent(InParent, /*bKeepWorldPosition*/false);
 			Template->TrySetParent(Content, /*bKeepWorldPosition*/false);
-			View->SetContent(Content);
+			Handler->SetContent(InParent, Content);
 			// By name too: the pointer above lives in the archetype and does not survive into
 			// instances -- ResolveEachBindings re-aims it per instance through this.
 			Each.ContentWidgetName = UDreamWidgetTree::MakeWidgetVariableName(Content);
@@ -2004,7 +2009,18 @@ namespace DreamUITextBuilderLocal
 			}
 			else if (Wanted->IsChildOf(UDreamUIBehaviour::StaticClass()))
 			{
-				Resolved = Named->GetComponent(Wanted);
+				// A property typed as the behaviour base can name, through MustImplement, the interface
+				// its behaviour has to implement instead -- the scroll box's Scrollbar is one. The part of
+				// the node meant is then the behaviour that implements it, not whichever comes first. The
+				// metadata is editor-only, and so is the one caller that builds from text.
+				UClass* Interface = nullptr;
+#if WITH_EDITORONLY_DATA
+				if (const FString* MustImplement = Pending.Property->FindMetaData(TEXT("MustImplement")))
+				{
+					Interface = FindObject<UClass>(nullptr, **MustImplement);
+				}
+#endif
+				Resolved = Interface != nullptr ? Named->GetComponentByInterface(Interface) : Named->GetComponent(Wanted);
 				MissingPartAdvice = TEXT("add that behaviour to the node with '+'");
 			}
 			else
@@ -2545,8 +2561,13 @@ namespace DreamUITextBuilderLocal
 		for (int32 Index = 0; Index < MovieScene->GetPossessableCount(); ++Index)
 		{
 			const FMovieScenePossessable& Possessable = MovieScene->GetPossessable(Index);
+			// A possessable's class is editor-only data, so a game build goes by the name alone -- which
+			// already says which object it is, since a visual's or a behaviour's binding carries its class.
 			if (Possessable.GetName() == BindingName
-				&& Possessable.GetPossessedObjectClass() == Resolved.Object->GetClass())
+#if WITH_EDITORONLY_DATA
+				&& Possessable.GetPossessedObjectClass() == Resolved.Object->GetClass()
+#endif
+				)
 			{
 				Binding = Possessable.GetGuid();
 				break;

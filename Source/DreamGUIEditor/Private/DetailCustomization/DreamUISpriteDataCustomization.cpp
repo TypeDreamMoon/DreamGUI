@@ -80,9 +80,9 @@ void FDreamUISpriteDataCustomization::CustomizeDetails(IDetailLayoutBuilder& Det
 		DetailBuilder.ForceRefreshDetails();
 		}));
 	RefreshNameList(nullptr);
-	if (UDreamUIDynamicSpriteAtlasManager::Instance != nullptr)
+	if (UDreamUIDynamicSpriteAtlasManager* AtlasManager = UDreamUIDynamicSpriteAtlasManager::Get())
 	{
-		UDreamUIDynamicSpriteAtlasManager::Instance->OnAtlasMapChanged.AddSP(this, &FDreamUISpriteDataCustomization::RefreshNameList, &DetailBuilder);
+		AtlasManager->OnAtlasMapChanged.AddSP(this, &FDreamUISpriteDataCustomization::RefreshNameList, &DetailBuilder);
 	}
 	DetailBuilder.HideProperty(GET_MEMBER_NAME_CHECKED(UDreamUISpriteData, PackingTag));
 	auto PackingTag_PH = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UDreamUISpriteData, PackingTag));
@@ -383,9 +383,9 @@ void FDreamUISpriteDataCustomization::RefreshNameList(IDetailLayoutBuilder* Deta
 {
 	NameList.Reset();
 	NameList.Add(MakeShareable(new FName(NAME_None)));
-	if (UDreamUIDynamicSpriteAtlasManager::Instance != nullptr)
+	if (UDreamUIDynamicSpriteAtlasManager* AtlasManager = UDreamUIDynamicSpriteAtlasManager::Get())
 	{
-		auto& AtlasMap = UDreamUIDynamicSpriteAtlasManager::Instance->GetAtlasMap();
+		auto& AtlasMap = AtlasManager->GetAtlasMap();
 		for (auto KeyValue : AtlasMap)
 		{
 			NameList.Add(TSharedPtr<FName>(new FName(KeyValue.Key)));

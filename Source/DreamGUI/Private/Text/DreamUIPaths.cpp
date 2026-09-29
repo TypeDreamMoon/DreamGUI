@@ -78,20 +78,37 @@ namespace DreamUIPaths
 		// walk once instead of once per line.
 		//
 		// Game thread only, like everything that asks IPluginManager anything.
+		//
+		// "A moment later" is not soon enough for the one root the editor makes by itself, so whether
+		// that one exists is asked on every call. Open Workspace creates the project's DUI/ and asks
+		// about it in the same breath: FDreamUIWorkspaceService::WriteWorkspaceFile makes the directory,
+		// hands it straight to FDreamUISourceWatcher::EnsureWatching -- which watches only a directory
+		// this list names -- and writes the workspace's folders from this list. And Reveal in VS Code
+		// resolves the class's source through here just before it opens the workspace, so for a class
+		// whose .dui lives under a plugin's root the memo was fresh at that point and could not have the
+		// new folder in it: the watcher declined the root without a word, saves under it rebuilt nothing
+		// until the workspace was opened again, and the workspace file left out the folder it sits in.
+		// One DirectoryExists per call, against the walk's one per enabled plugin; an answer taken while
+		// the project's root did not exist (or did) is not served once that has changed. A plugin's
+		// root appearing or going away is still seen up to one memo late: nothing in the editor creates
+		// one, and noticing it would take the very walk the memo is there to save.
 		static TArray<FDreamUISourceRoot> Cached;
 		static double CachedAt = 0.0;
+		static bool bCachedWithProjectRoot = false;
 		constexpr double MemoSeconds = 0.5;
 		const double Now = FPlatformTime::Seconds();
-		if (!Cached.IsEmpty() && Now - CachedAt < MemoSeconds)
+
+		const FString ProjectRoot = Local::NormalizeDirectory(
+			FPaths::Combine(FPaths::ProjectDir(), SourceDirectoryName));
+		const bool bProjectRootExists = IFileManager::Get().DirectoryExists(*ProjectRoot);
+		if (!Cached.IsEmpty() && Now - CachedAt < MemoSeconds && bProjectRootExists == bCachedWithProjectRoot)
 		{
 			return Cached;
 		}
 
 		TArray<FDreamUISourceRoot> Roots;
 
-		const FString ProjectRoot = Local::NormalizeDirectory(
-			FPaths::Combine(FPaths::ProjectDir(), SourceDirectoryName));
-		if (IFileManager::Get().DirectoryExists(*ProjectRoot))
+		if (bProjectRootExists)
 		{
 			FDreamUISourceRoot& Root = Roots.AddDefaulted_GetRef();
 			Root.Directory = ProjectRoot;
@@ -118,6 +135,7 @@ namespace DreamUIPaths
 		{
 			Cached = Roots;
 			CachedAt = Now;
+			bCachedWithProjectRoot = bProjectRootExists;
 		}
 		return Roots;
 	}

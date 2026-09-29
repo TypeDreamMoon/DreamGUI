@@ -13,7 +13,7 @@ class IDetailCategoryBuilder;
  * rather than an IDetailCustomization, and registering it as one would only produce a layout nothing
  * ever asks for.
  */
-class FDreamPanelSlotCustomization
+class DREAMGUIEDITOR_API FDreamPanelSlotCustomization
 {
 public:
 	static void AddSlotProperties(IDetailCategoryBuilder& Category, const TArray<UObject*>& SlotObjects, const UDreamLayoutContainer* ParentLayout);

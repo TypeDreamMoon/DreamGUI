@@ -347,7 +347,7 @@ void FDreamWidgetCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBui
 			TargetScriptArray.Add(ValidItem);
 			if (ValidItem->GetWorld() != nullptr)
 			{
-				if (DreamUI::GetWorldType(ValidItem) == EWorldType::Editor)
+				if (DreamUI::IsEditingWorld(ValidItem))
 				{
 					ValidItem->MarkCanvasUpdate(true);
 				}

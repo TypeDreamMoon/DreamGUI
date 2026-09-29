@@ -4,9 +4,12 @@
 
 #include "DreamGUI.h"
 #include "DreamUIBPLibrary.h"
+#include "Core/DreamUIInputServices.h"
 #include "Core/DreamUIManager.h"
+#include "Core/DreamUIRuntimeObject.h"
 #include "Core/DreamUserWidget.h"
 #include "Core/DreamWidgetGeneratedClass.h"
+#include "Core/DreamWidgetTree.h"
 #include "Core/Components/DreamCanvas.h"
 #include "Core/Components/DreamWidget.h"
 #include "Engine/GameInstance.h"
@@ -21,8 +24,8 @@ void UDreamWorldWidgetComponent::BeginPlay()
 	{
 		return;
 	}
-	UDreamUIManagerWorldSubsystem* Manager = UDreamUIManagerWorldSubsystem::GetInstance(World);
-	if (Manager == nullptr)
+	UDreamUIInputServices* Services = UDreamUIInputServices::Get(World);
+	if (Services == nullptr)
 	{
 		return;
 	}
@@ -42,12 +45,12 @@ void UDreamWorldWidgetComponent::BeginPlay()
 		// No local player yet: a world built in code, or one whose players arrive after this. Player 0
 		// is the answer the screen subsystem gives when no controller is named, so the objects created
 		// under that index are the ones the first player to arrive will find.
-		Manager->EnsureInteractionForPlayer(0, EDreamInteractionKind::World);
+		Services->EnsureInteractionForPlayer(0, EDreamInteractionKind::World);
 		return;
 	}
 	for (int32 PlayerIndex = 0; PlayerIndex < LocalPlayerCount; ++PlayerIndex)
 	{
-		Manager->EnsureInteractionForPlayer(PlayerIndex, EDreamInteractionKind::World);
+		Services->EnsureInteractionForPlayer(PlayerIndex, EDreamInteractionKind::World);
 	}
 }
 
@@ -75,8 +78,16 @@ void UDreamWorldWidgetComponent::LoadWidget()
 	{
 		return;
 	}
+	// Setting the class on a panel in a level that is still being made -- by the level editor, or by a
+	// script that places panels and saves -- builds nothing: the panel builds when it registers in a world
+	// that runs it (IsInAWorldThatRunsTrees).
+	if (!IsInAWorldThatRunsTrees())
+	{
+		return;
+	}
 
-	LoadedWidget = CreateDreamWidget(World, WidgetClass, nullptr, [this](UDreamUserWidget* RootWidget)
+	UDreamWidgetTree* NewTree = nullptr;
+	LoadedWidget = CreateDreamWidgetForHost(*this, WidgetClass, NewTree, [this](UDreamUserWidget* RootWidget)
 	{
 		// Before the hierarchy comes alive, which is what this hook is for: a behaviour that wakes up
 		// first may read the render mode off the canvas and cache what it found.
@@ -97,6 +108,7 @@ void UDreamWorldWidgetComponent::LoadWidget()
 		RootCanvas = Canvas;
 		ApplyCanvasSettings();
 	});
+	OwnedTree = NewTree;
 
 	// CreateDreamWidget answers null for an invalid world or an unusable class, and everything below
 	// dereferences the result.
@@ -125,14 +137,17 @@ void UDreamWorldWidgetComponent::LoadWidget()
 #if WITH_EDITOR
 	if (World->WorldType == EWorldType::Editor)
 	{
-		// Transient in the editor world so the level does not save a hierarchy that is rebuilt from
-		// the class on load anyway. Not in EditorPreview, where the designer needs the tree fully
-		// transactional, and not in a game world, where nothing is saved.
+		// The level's copy of a hierarchy that is rebuilt from the class on load anyway, so nothing that
+		// copies the level may take it along: not the save, not the world a play session duplicates,
+		// not Copy. A play session's duplicate of anything still pointing at one of these widgets -- a
+		// blueprint variable, say -- gets null rather than a clone of the widget and its tree. Not in
+		// EditorPreview, where the designer needs the tree fully transactional, and not in a game
+		// world, where nothing is saved or copied.
 		TArray<UDreamWidget*> AllLoadedWidgets;
 		UDreamWidget::CollectChildrenWidgets(LoadedWidget.Get(), AllLoadedWidgets, true);
 		for (UDreamWidget* Widget : AllLoadedWidgets)
 		{
-			Widget->SetFlags(RF_Transient);
+			Widget->SetFlags(DreamUI::RuntimeObjectFlags);
 		}
 	}
 #endif

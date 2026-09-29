@@ -110,35 +110,88 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "DreamGUI")
 		TObjectPtr<UDreamBaseRaycaster> PressRaycaster;
 	/**
+	 * The press raycaster's ray for THIS pointer, as of the latest frame it was traced.
+	 *
+	 * A raycaster keeps only the ray it generated last (UDreamBaseRaycaster::GetRayOrigin), for whichever
+	 * pointer that was, so two pointers pressed through one raycaster -- two fingers on a screen -- read
+	 * each other's ray from it, and a drag followed the wrong finger. The input system writes this every
+	 * frame it traces the pointer; the drag helpers below read it, and fall back to the raycaster's own
+	 * ray only for event data nobody traced (bHasPressRaycasterRay).
+	 */
+	FVector PressRaycasterRayOrigin = FVector::ZeroVector;
+	FVector PressRaycasterRayDirection = FVector(1, 0, 0);
+	bool bHasPressRaycasterRay = false;
+	/** Record InOrigin/InDirection as the press raycaster's ray for this pointer. */
+	void SetPressRaycasterRay(const FVector& InOrigin, const FVector& InDirection)
+	{
+		PressRaycasterRayOrigin = InOrigin;
+		PressRaycasterRayDirection = InDirection;
+		bHasPressRaycasterRay = true;
+	}
+	/**
 	 * The three timestamps below all start at zero, meaning "the thing they date has not happened
 	 * yet". They were the only fields on this class without an initialiser, which was survivable
 	 * only for as long as nobody read one before writing it -- and PressTime IS read that way:
-	 * ShouldStartDrag subtracts it from the current time and compares the difference against a hold
-	 * duration. An event data that has never seen a button go down is completely ordinary (a hover,
-	 * a scroll, the object a raycaster hands around before the first press), and with indeterminate
-	 * bytes in PressTime hold-to-drag would begin a drag, or refuse to, at random on such a pointer.
+	 * ShouldStartDrag subtracts it from the pointer clock's current time and compares the difference
+	 * against a hold duration. An event data that has never seen a button go down is completely
+	 * ordinary (a hover, a scroll, the object a raycaster hands around before the first press), and
+	 * with indeterminate bytes in PressTime hold-to-drag would begin a drag, or refuse to, at random on
+	 * such a pointer.
 	 */
 
-	/** the last time when trigger click(time is get from GetWorld()->TimeSeconds), can be used to tell double click */
+	/**
+	 * When this pointer's last click landed -- the release that completed it -- in seconds on the
+	 * pointer clock (UDreamEventSystem::GetPointerClockSeconds: the world's real time, which a pause
+	 * does not stop and time dilation does not stretch). The next press measures the double-click
+	 * window from it.
+	 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "DreamGUI")
 		double ClickTime = 0;
 	/**
 	 * How many clicks this pointer has landed on the same widget in an unbroken run: 1 for a single
-	 * click, 2 for the second of a double, and so on. Reset to 1 by a click on a different widget or one
-	 * that came too late (see UDreamEventSystem::DoubleClickTime).
+	 * click, 2 for the second of a double, and so on. Reset to 1 by a press on a different widget from
+	 * the last click, with a different button, too late (see UDreamEventSystem::DoubleClickTime), or
+	 * farther from where the last click was pressed than the press raycaster's drag threshold.
 	 *
-	 * A double-click event is dispatched on every even count, which is how a triple click reads as
-	 * click, double, click and a quadruple as two doubles -- the same shape as the desktop.
+	 * Counted at the PRESS, and the click that press ends in carries the same number, so a down, a
+	 * double click and a click all read one answer. Every even press is dispatched as a double click
+	 * instead of a down, which is how a triple click reads as down, double, down and a quadruple as two
+	 * doubles -- the same shape as the desktop.
 	 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "DreamGUI")
 		int32 ClickCount = 0;
 	/** What the previous click landed on. A click elsewhere starts the count over rather than continuing it. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "DreamGUI")
 		TObjectPtr<UDreamWidget> LastClickWidget = nullptr;
-	/** the last time when trigger release(time is get from GetWorld()->TimeSeconds). */
+	/**
+	 * Which button the previous click was made with. A run is one button's, as a desktop double click
+	 * is: a left click and a quick right press are two single presses, not a double click -- which
+	 * matters now that the second press of a double click is delivered as the double click and not as
+	 * a down, since a right press read as a left double click would never reach anything as a press.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "DreamGUI")
+		EDreamUIMouseButtonType LastClickMouseButtonType = EDreamUIMouseButtonType::Left;
+	/**
+	 * Where the previous click was PRESSED, in the pointer's screen position (its PressPointerPosition).
+	 * A second press only continues the run if it lands within the press raycaster's drag threshold of
+	 * this -- see UDreamBaseRaycaster::IsWithinDoubleClickDistance.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "DreamGUI")
+		FVector LastClickPressPointerPosition = FVector::ZeroVector;
+	/** The same press in the world (its PressWorldPoint), for a pointer whose screen position never moves. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "DreamGUI")
+		FVector LastClickPressWorldPoint = FVector::ZeroVector;
+	/**
+	 * When the trigger last came up, on the pointer clock (see ClickTime). ReleaseTime - PressTime is
+	 * how long the press was held, which is what a swipe's duration limit is measured on.
+	 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "DreamGUI")
 		double ReleaseTime = 0;
-	/** the last time when trigger press(time is tell from GetWorld()->TimeSeconds). */
+	/**
+	 * When the trigger last went down, on the pointer clock (see ClickTime). Long press and hold-to-drag
+	 * measure the hold as the pointer clock's current time minus this, so compare it against that clock
+	 * -- never against the game clock (GetTimeSeconds), which a pause stops while the UI keeps running.
+	 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "DreamGUI")
 		double PressTime = 0;
 

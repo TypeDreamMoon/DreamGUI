@@ -1,0 +1,755 @@
+﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
+// Modified by TypeDreamMoon.
+
+#include "Core/DreamUIManager.h"
+#include "Core/DreamUIWorldContext.h"
+#include "Core/DreamGUISettings.h"
+
+#include "DreamGUI.h"
+#include "Utils/DreamUIUtils.h"
+#include "Core/DreamUserWidget.h"
+#include "Core/Components/DreamWidget.h"
+#include "Engine/GameInstance.h"
+#include "Core/Components/DreamCanvas.h"
+#include "Event/DreamBaseRaycaster.h"
+#include "Engine/World.h"
+#include "Core/DreamUISettings.h"
+#include "Core/DreamUIFontData_FreeTypeRender.h"
+#include "Core/Components/DreamVisual.h"
+#include "Engine/Engine.h"
+#include "DreamUIRender/DreamUIRenderer.h"
+#include "DreamUIRender/DreamUIRenderStats.h"
+#include "Core/IDreamUICultureChangedInterface.h"
+#include "Core/DreamUIBehaviour.h"
+#include "Core/Components/DreamLayout.h"
+#include "DreamUIRender/DreamUIGizmoMesh.h"
+#include "CoreGlobals.h"
+#include "EngineUtils.h"
+#include "GameFramework/Actor.h"
+#if WITH_EDITOR
+#include "Editor.h"
+#include "EditorViewportClient.h"
+#include "Core/DreamUISpriteData.h"
+#endif
+
+#define LOCTEXT_NAMESPACE "DreamUIManager"
+#define ENABLED_DreamGUI_DEBUG_DUMP				0
+#define ENABLED_DreamGUI_DEBUG_LAYOUT_FRAME		0
+
+TStatId UDreamUIManagerWorldSubsystem::GetStatId() const
+{
+	//return GetStatID();
+	RETURN_QUICK_DECLARE_CYCLE_STAT(UDreamGUIManagerWorldSubsystem, STATGROUP_Tickables);
+}
+bool UDreamUIManagerWorldSubsystem::IsTickableWhenPaused() const
+{
+	return true;
+}
+
+DECLARE_CYCLE_STAT(TEXT("DreamUIBehaviour Tick"), STAT_DreamUIBehaviourTick, STATGROUP_DreamGUI);
+DECLARE_CYCLE_STAT(TEXT("DreamUIBehaviour Start"), STAT_DreamUIBehaviourStart, STATGROUP_DreamGUI);
+DECLARE_CYCLE_STAT(TEXT("UpdateLayout"), STAT_UpdateLayout, STATGROUP_DreamGUI);
+DECLARE_CYCLE_STAT(TEXT("PropertyBindings Poll"), STAT_DreamUIPropertyBindingsPoll, STATGROUP_DreamGUI);
+DECLARE_CYCLE_STAT(TEXT("RefreshAllClipData"), STAT_DreamUIRefreshClipData, STATGROUP_DreamGUI);
+DECLARE_CYCLE_STAT(TEXT("UpdateRootCanvas"), STAT_DreamUIUpdateRootCanvas, STATGROUP_DreamGUI);
+DECLARE_CYCLE_STAT(TEXT("RenderPrioritySort"), STAT_DreamUIRenderPrioritySort, STATGROUP_DreamGUI);
+DECLARE_CYCLE_STAT(TEXT("SubmitCanvasDrawCall"), STAT_DreamUISubmitCanvasDrawCall, STATGROUP_DreamGUI);
+
+void UDreamUIManagerWorldSubsystem::Tick(float DeltaTime)
+{
+	Super::Tick(DeltaTime);
+#if WITH_EDITOR
+	if (!GetWorld()->IsGameWorld() && EditorTick.IsBound())
+	{
+		EditorTick.Broadcast(DeltaTime);
+	}
+	if (bShouldTickInEditor)
+#endif
+	{
+		this->TickDreamUI(DeltaTime);
+	}
+}
+
+void UDreamUIManagerWorldSubsystem::AddPropertyBindingUser(UDreamUserWidget* InUserWidget)
+{
+	if (IsValid(InUserWidget))
+	{
+		PropertyBindingUsers.AddUnique(InUserWidget);
+	}
+}
+
+void UDreamUIManagerWorldSubsystem::RemovePropertyBindingUser(UDreamUserWidget* InUserWidget)
+{
+	PropertyBindingUsers.RemoveSingleSwap(InUserWidget);
+}
+
+void UDreamUIManagerWorldSubsystem::TickDreamUI(float DeltaTime)
+{
+	DREAMUI_STAGE_SCOPE(ManagerTick);
+	SweepExpiredParkedWidgets();
+	//Update culture
+	{
+		if (bShouldUpdateOnCultureChanged)
+		{
+			bShouldUpdateOnCultureChanged = false;
+			// Sweep first, then walk a snapshot. The entries are weak and a registrant can have been
+			// destroyed since it registered -- the generated Execute_OnCultureChanged thunk checks its
+			// target against null -- and a handler is free to register or unregister listeners as it runs.
+			AllCultureChangedArray.RemoveAll([](const TWeakObjectPtr<UObject>& Item) { return !Item.IsValid(); });
+			const TArray<TWeakObjectPtr<UObject>> CultureChangedListeners = AllCultureChangedArray;
+			for (auto& Culture : CultureChangedListeners)
+			{
+				if (UObject* CultureObject = Culture.Get(); IsValid(CultureObject))
+				{
+					IDreamUICultureChangedInterface::Execute_OnCultureChanged(CultureObject);
+				}
+			}
+		}
+	}
+
+	// Property bindings, BEFORE the behaviours: a behaviour that reads a bound property this frame
+	// should see this frame's value, not the one from before the function was called.
+	{
+		SCOPE_CYCLE_COUNTER(STAT_DreamUIPropertyBindingsPoll);
+		for (int32 Index = PropertyBindingUsers.Num() - 1; Index >= 0; --Index)
+		{
+			UDreamUserWidget* UserWidget = PropertyBindingUsers[Index].Get();
+			if (!IsValid(UserWidget))
+			{
+				PropertyBindingUsers.RemoveAtSwap(Index);
+				continue;
+			}
+			// Only the polled remainder: subscribed bindings re-evaluate from their field's
+			// broadcast, and visiting them here would just do the work twice.
+			UserWidget->EvaluatePolledPropertyBindings();
+		}
+	}
+
+	//DreamUIBehaviour start
+	{
+		if (DreamUIBehavioursForStart.Num() > 0)
+		{
+			bIsExecutingStart = true;
+			SCOPE_CYCLE_COUNTER(STAT_DreamUIBehaviourStart);
+			for (int i = 0; i < DreamUIBehavioursForStart.Num(); i++)
+			{
+				auto item = DreamUIBehavioursForStart[i];
+				if (item.IsValid())
+				{
+					item->Call_Start();
+					// Re-checked after Start, because Start is allowed to switch its own widget off or
+					// destroy it. bIsStartCalled is set BEFORE Start() runs, so the Call_OnDisable that
+					// follows takes the "already started" branch and calls RemoveDreamUIBehavioursFromTick
+					// on a list this behaviour is not in yet (it logs "Not exist" and does nothing).
+					// Adding it unconditionally here then ticked a disabled behaviour every frame, and
+					// the next enable reported "Already exist".
+					if (item.IsValid() && item->bIsEnableCalled && item->bCanExecuteTick)
+					{
+						DreamUIBehavioursForTick.AddUnique(item);
+					}
+				}
+			}
+			DreamUIBehavioursForStart.Reset();
+			bIsExecutingStart = false;
+		}
+	}
+
+	//DreamUIBehaviour tick
+	{
+		bIsExecutingTick = true;
+		auto bIsGamePaused = GetWorld()->IsPaused();
+		auto Settings = GetDefault<UDreamUISettings>();
+		SCOPE_CYCLE_COUNTER(STAT_DreamUIBehaviourTick);
+		for (int i = 0; i < DreamUIBehavioursForTick.Num(); i++)
+		{
+			CurrentExecutingTickIndex = i;
+			UDreamUIBehaviour* Behaviour = DreamUIBehavioursForTick[i].Get();
+			if (!IsValid(Behaviour))
+			{
+				// Destroyed since the list was built. Not removed here: the index is what
+				// RemoveDreamUIBehavioursFromTick compares against CurrentExecutingTickIndex to decide
+				// whether a removal is safe, so renumbering mid-walk would make it drop the wrong entry.
+				// The sweep below the loop drops it instead.
+				continue;
+			}
+			if (auto Widget = Behaviour->GetWidget())
+			{
+				bool bAffectByGamePause;
+				if (Widget->IsScreenSpaceOverlayUI())
+				{
+					bAffectByGamePause = Settings->bScreenSpaceUIAffectByGamePause;
+				}
+				else
+				{
+					bAffectByGamePause = Settings->bWorldSpaceUIAffectByGamePause;
+				}
+				if (!bIsGamePaused || (bIsGamePaused && !bAffectByGamePause))
+				{
+					Behaviour->Tick(DeltaTime);
+				}
+			}
+			else
+			{
+				if (!bIsGamePaused || (bIsGamePaused && Behaviour->bTickEvenWhenPaused))
+				{
+					Behaviour->Tick(DeltaTime);
+				}
+			}
+		}
+		bIsExecutingTick = false;
+		CurrentExecutingTickIndex = -1;
+		//remove these padding things
+		if (DreamUIBehavioursNeedToRemoveFromTick.Num() > 0)
+		{
+			for (auto& item : DreamUIBehavioursNeedToRemoveFromTick)
+			{
+				DreamUIBehavioursForTick.Remove(item);
+			}
+			DreamUIBehavioursNeedToRemoveFromTick.Reset();
+		}
+		//and the entries whose behaviour was destroyed while the list was being walked
+		DreamUIBehavioursForTick.RemoveAll([](const TWeakObjectPtr<UDreamUIBehaviour>& Item) { return !Item.IsValid(); });
+	}
+
+	//update layout
+	if (LayoutDirtyWidgetArray.Num() > 0)
+	{
+		bIsExecutingLayout = true;
+		constexpr int32 MaxLayoutPassesPerFrame = 32;
+		int32 LayoutPassCount = 0;
+		LastLayoutPassCount = 0;
+#if WITH_EDITOR && ENABLED_DreamGUI_DEBUG_LAYOUT_FRAME
+		auto Time = FDateTime::Now();
+		UE_LOG(DreamGUI, Log, TEXT("---Begin layout frame:%d, World:%s---"), GFrameNumber, *GetWorld()->GetPathName());
+#endif
+		LayoutContainerArrayWhichHasSnapshot.Reset();
+		while (LayoutDirtyWidgetArray.Num() > 0 && LayoutPassCount < MaxLayoutPassesPerFrame)
+		{
+			SCOPE_CYCLE_COUNTER(STAT_UpdateLayout);
+			TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_LayoutPass);
+			++LayoutPassCount;
+			LastLayoutPassCount = LayoutPassCount;
+
+			TArray<TWeakObjectPtr<UDreamWidget>> CopiedLayoutDirtyWidgetArray;
+			Swap(CopiedLayoutDirtyWidgetArray, LayoutDirtyWidgetArray);
+
+			// Collect the live roots up front so ancestry can be tested against the whole batch.
+			TSet<UDreamWidget*> BatchRoots;
+			TArray<UDreamWidget*> OrderedRoots;
+			BatchRoots.Reserve(CopiedLayoutDirtyWidgetArray.Num());
+			OrderedRoots.Reserve(CopiedLayoutDirtyWidgetArray.Num());
+			for (const TWeakObjectPtr<UDreamWidget>& WeakWidget : CopiedLayoutDirtyWidgetArray)
+			{
+				if (UDreamWidget* Widget = WeakWidget.Get(); IsValid(Widget))
+				{
+					bool bAlreadyPresent = false;
+					BatchRoots.Add(Widget, &bAlreadyPresent);
+					if (!bAlreadyPresent)
+					{
+						OrderedRoots.Add(Widget);
+					}
+				}
+			}
+
+			// CalculateLayoutTree walks an entire subtree, so a root sitting under another root in the same
+			// batch is redundant - the ancestor's walk already covers it. It was worse than redundant: this
+			// batch used to be iterated back-to-front, so the descendant usually ran FIRST, laying its
+			// subtree out against the ancestor's stale size and then being laid out a second time when the
+			// ancestor's walk reached it. Both roots are easy to enqueue at once, because
+			// UDreamWidget::MarkLayoutForRebuild falls back to the widget itself when no layout exists yet on
+			// its ancestor chain - sizing a widget before parenting it is enough.
+			// The survivors are pairwise unrelated, so their relative order no longer matters; keep enqueue
+			// order for determinism.
+			constexpr int32 MaxHierarchyDepthGuard = 1024;
+			for (UDreamWidget* Widget : OrderedRoots)
+			{
+				bool bCoveredByAncestor = false;
+				int32 DepthGuard = 0;
+				for (UDreamWidget* Ancestor = Widget->GetParent();
+					IsValid(Ancestor) && DepthGuard < MaxHierarchyDepthGuard;
+					Ancestor = Ancestor->GetParent(), ++DepthGuard)
+				{
+					if (BatchRoots.Contains(Ancestor))
+					{
+						bCoveredByAncestor = true;
+						break;
+					}
+				}
+				if (!bCoveredByAncestor)
+				{
+					CalculateLayoutTree(Widget);
+				}
+			}
+		}
+		if (LayoutDirtyWidgetArray.Num() > 0)
+		{
+			UE_LOG(DreamGUI, Error,
+				TEXT("Layout did not converge after %d passes in World %s. Deferring %d pending widgets to the next frame."),
+				MaxLayoutPassesPerFrame, *GetNameSafe(GetWorld()), LayoutDirtyWidgetArray.Num());
+		}
+		for (auto& SnapshotLayout : LayoutContainerArrayWhichHasSnapshot)
+		{
+			if (UDreamLayoutContainer* Layout = SnapshotLayout.Get(); IsValid(Layout))
+			{
+				Layout->ApplyLayoutResult();
+			}
+		}
+#if WITH_EDITOR && ENABLED_DreamGUI_DEBUG_LAYOUT_FRAME
+		for (auto& CalcCountKeyValue : LayoutCalculationCounterMap)
+		{
+			if (CalcCountKeyValue.Value >= 2)
+			{
+				UE_LOG(DreamGUI, Warning, TEXT("Widget %s has been calculated layout %d times in a frame"), *CalcCountKeyValue.Key, CalcCountKeyValue.Value);
+			}
+		}
+		LayoutCalculationCounterMap.Reset();
+		auto TimeSpan = (FDateTime::Now() - Time).GetTotalMilliseconds();
+		UE_LOG(DreamGUI, Log, TEXT("---end layout frame:%d, count:%d, time:%f"), GFrameNumber, LayoutPassCount, TimeSpan);
+#endif
+		bIsExecutingLayout = false;
+		// Anything that restructured the tree while the pass was running asked for a rebuild and was told
+		// to wait; this is the wait ending. See MarkRebuildLayoutTree.
+		FlushPendingLayoutTreeRebuild();
+	}
+
+	// One ScreenSpaceOverlay root canvas PER LOCAL PLAYER, not one per world.
+	//
+	// It used to be one per world, full stop, and that is what made split screen impossible: the
+	// second player's screen is a second overlay canvas by definition. What is still wrong -- and
+	// still shows up in a packaged build as one of the two UIs randomly not being there -- is having
+	// MORE overlay canvases than there are local players to own them, because past that point two of
+	// them are competing for the same screen with an undefined order between them.
+	//
+	// Not editor-only, for the same reason it was made not-editor-only before: the rule is a runtime
+	// one. Shipping is the only build that stays silent.
+#if !UE_BUILD_SHIPPING
+	const int32 ScreenSpaceOverlayCanvasCount = CountCompetingScreenSpaceOverlayCanvases();
+	const UGameInstance* GameInstanceForScreens = GetWorld() != nullptr ? GetWorld()->GetGameInstance() : nullptr;
+	const int32 AllowedOverlayCanvasCount = FMath::Max(1,
+		GameInstanceForScreens != nullptr ? GameInstanceForScreens->GetNumLocalPlayers() : 1);
+	if (ScreenSpaceOverlayCanvasCount > AllowedOverlayCanvasCount)
+	{
+		if (PrevScreenSpaceOverlayCanvasCount != ScreenSpaceOverlayCanvasCount)//only show message when change
+		{
+			PrevScreenSpaceOverlayCanvasCount = ScreenSpaceOverlayCanvasCount;
+			auto errMsg = FText::Format(LOCTEXT("MultipleDreamUICanvasRenderScreenSpaceOverlay", "[{0}].{1} Detect {2} DreamCanvas rendered with ScreenSpaceOverlay mode for {3} local player(s). There may be at most one ScreenSpace UI per local player; the extra ones compete for the same screen.\
+\n	World: {4}, type: {5}")
+			, FText::FromString(ANSI_TO_TCHAR(__FUNCTION__)), __LINE__, ScreenSpaceOverlayCanvasCount, AllowedOverlayCanvasCount
+			, FText::FromString(this->GetWorld()->GetPathName()), (int)(this->GetWorld()->WorldType));
+			UE_LOG(DreamGUI, Error, TEXT("%s"), *errMsg.ToString());
+#if WITH_EDITOR
+			FDreamUIUtils::EditorNotification(errMsg, false, 10.0f);
+#endif
+		}
+	}
+	else
+	{
+		PrevScreenSpaceOverlayCanvasCount = 0;
+	}
+#endif
+#if WITH_EDITOR
+	if (bDreamUIWidgetOutlinerChanged)
+	{
+		bDreamUIWidgetOutlinerChanged = false;
+		OnDreamUIWidgetOutlinerChanged.Broadcast();
+	}
+#endif
+
+	// Refresh clip rectangles after layout, before draw-calls.
+	//
+	// This is the equivalent of UGUI's ClipperRegistry.Cull(): a clip rectangle is derived from widget world
+	// transforms, which the layout pass above has just changed, so it is recomputed here every tick instead of
+	// being driven by dirty flags. Flag-driven invalidation was the wrong shape for this — a clip depends on the
+	// transform of every ancestor, and whatever moves an ancestor has no idea a descendant owns a clip, so every
+	// missed mark left the shader clipping against a stale rectangle and silently culled a whole subtree.
+	// FDreamUIClipData::UpdateData diffs against the last uploaded block, so an unchanged clip costs one matrix
+	// build and a memcmp, with no GPU write.
+	{
+		SCOPE_CYCLE_COUNTER(STAT_DreamUIRefreshClipData);
+		TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_RefreshClipData);
+		for (const TWeakObjectPtr<UDreamCanvas>& Canvas : SnapshotCanvases())
+		{
+			if (IsCanvasStillRegistered(Canvas))
+			{
+				Canvas->RefreshAllClipData();
+			}
+		}
+	}
+
+	//update draw-call
+	{
+		SCOPE_CYCLE_COUNTER(STAT_DreamUIUpdateRootCanvas);
+		auto UpdateCanvas = [this](EDreamRenderMode RenderMode) {
+			// A snapshot per pass: UpdateRootCanvas may make a render target and broadcast it, and a
+			// listener may register or unregister a canvas.
+			for (const TWeakObjectPtr<UDreamCanvas>& Canvas : SnapshotCanvases())
+			{
+				if (!IsCanvasStillRegistered(Canvas))continue;
+				if (!Canvas->IsRootCanvas())continue;
+				if (Canvas->GetActualRenderMode() != RenderMode)continue;
+				Canvas->UpdateRootCanvas();
+			}
+		};
+		UpdateCanvas(EDreamRenderMode::ScreenSpaceOverlay);
+		UpdateCanvas(EDreamRenderMode::WorldSpace);
+		UpdateCanvas(EDreamRenderMode::WorldSpace_DreamUI);
+		UpdateCanvas(EDreamRenderMode::RenderTarget);
+	}
+	UDreamUIFontData_FreeTypeRender::FlushPendingFontTextures();
+
+	// Consume render-priority sort requests at their owner. A request raised outside the owner's own
+	// draw-call rebuild (runtime SetSortOrder, a child canvas rebuilding alone) used to sit in the flag
+	// until the owner happened to rebuild for some other reason; this sweep executes it the same frame.
+	{
+		SCOPE_CYCLE_COUNTER(STAT_DreamUIRenderPrioritySort);
+		for (const TWeakObjectPtr<UDreamCanvas>& Canvas : SnapshotCanvases())
+		{
+			if (IsCanvasStillRegistered(Canvas))
+			{
+				Canvas->ConsumePendingRenderPrioritySort();
+			}
+		}
+	}
+}
+
+void UDreamUIManagerWorldSubsystem::OnWorldPreSendAllEndOfFrameUpdates(UWorld* InWorld)
+{
+	if (InWorld == this->GetWorld())
+	{
+#if WITH_EDITOR
+		this->DrawHelperGizmo();
+#endif
+		this->SubmitCanvasDrawCall();
+	}
+}
+
+
+void UDreamUIManagerWorldSubsystem::SubmitCanvasDrawCall()
+{
+	SCOPE_CYCLE_COUNTER(STAT_DreamUISubmitCanvasDrawCall);
+	DREAMUI_STAGE_SCOPE(DrawCallSubmit);
+	UDreamUIFontData_FreeTypeRender::FlushPendingFontTextures();
+	//update draw-call
+	{
+		auto UpdateCanvas = [this](EDreamRenderMode RenderMode) {
+			for (const TWeakObjectPtr<UDreamCanvas>& Canvas : SnapshotCanvases())
+			{
+				if (!IsCanvasStillRegistered(Canvas))continue;
+				if (!Canvas->IsRootCanvas())continue;
+				if (Canvas->GetRenderMode() != RenderMode)continue;
+				Canvas->UpdateDrawCallBatchData();
+			}
+		};
+		UpdateCanvas(EDreamRenderMode::ScreenSpaceOverlay);
+		UpdateCanvas(EDreamRenderMode::WorldSpace);
+		UpdateCanvas(EDreamRenderMode::WorldSpace_DreamUI);
+		UpdateCanvas(EDreamRenderMode::RenderTarget);
+	}
+	// The render-target canvases that draw themselves, now that every canvas has sent this frame's sections.
+	for (const TWeakObjectPtr<UDreamCanvas>& Canvas : SnapshotCanvases())
+	{
+		if (IsCanvasStillRegistered(Canvas) && Canvas->IsRootCanvas())
+		{
+			Canvas->DrawRenderTargetIfRequested();
+		}
+	}
+}
+
+void UDreamUIManagerWorldSubsystem::AddDreamUIBehavioursForTick(UDreamUIBehaviour* InComp)
+{
+	if (IsValid(InComp))
+	{
+		if (auto Instance = GetInstance(InComp->GetWorld()))
+		{
+			int32 index = INDEX_NONE;
+			if (!Instance->DreamUIBehavioursForTick.Find(InComp, index))
+			{
+				Instance->DreamUIBehavioursForTick.Add(InComp);
+				return;
+			}
+			UE_LOG(DreamGUI, Warning, TEXT("[%s].%d Already exist, comp:%s"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *(InComp->GetPathName()));
+		}
+	}
+}
+void UDreamUIManagerWorldSubsystem::RemoveDreamUIBehavioursFromTick(UDreamUIBehaviour* InComp)
+{
+	if (IsValid(InComp))
+	{
+		if (auto Instance = GetInstance(InComp->GetWorld()))
+		{
+			auto& TickArray = Instance->DreamUIBehavioursForTick;
+			int32 Index = INDEX_NONE;
+			if (TickArray.Find(InComp, Index))
+			{
+				if (Instance->bIsExecutingTick)
+				{
+					if (Index > Instance->CurrentExecutingTickIndex)//not execute it yet, safe to remove
+					{
+						TickArray.RemoveAt(Index);
+					}
+					else//already execute or current execute it, not safe to remove. should remove it after execute process complete
+					{
+						Instance->DreamUIBehavioursNeedToRemoveFromTick.Add(InComp);
+					}
+				}
+				else//not executing tick, safe to remove
+				{
+					TickArray.RemoveAt(Index);
+				}
+			}
+			else
+			{
+				UE_LOG(DreamGUI, Warning, TEXT("[%s].%d Not exist, comp:%s"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *(InComp->GetPathName()));
+			}
+
+			//cleanup array
+			int InvalidCount = 0;
+			for (int i = TickArray.Num() - 1; i >= 0; i--)
+			{
+				if (!TickArray[i].IsValid())
+				{
+					TickArray.RemoveAt(i);
+					InvalidCount++;
+				}
+			}
+			if (InvalidCount > 0)
+			{
+				UE_LOG(DreamGUI, Warning, TEXT("[%s].%d Cleanup %d invalid DreamUIBehaviour"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, InvalidCount);
+			}
+		}
+	}
+}
+void UDreamUIManagerWorldSubsystem::AddDreamUIBehavioursForStart(UDreamUIBehaviour* InComp)
+{
+	if (IsValid(InComp))
+	{
+		if (auto Instance = GetInstance(InComp->GetWorld()))
+		{
+			int32 index = INDEX_NONE;
+			if (!Instance->DreamUIBehavioursForStart.Find(InComp, index))
+			{
+				Instance->DreamUIBehavioursForStart.Add(InComp);
+				return;
+			}
+			UE_LOG(DreamGUI, Warning, TEXT("[%s].%d Already exist, comp:%s"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *(InComp->GetPathName()));
+		}
+	}
+}
+void UDreamUIManagerWorldSubsystem::RemoveDreamUIBehavioursFromStart(UDreamUIBehaviour* InComp)
+{
+	if (IsValid(InComp))
+	{
+		if (auto Instance = GetInstance(InComp->GetWorld()))
+		{
+			auto& startArray = Instance->DreamUIBehavioursForStart;
+			int32 index = INDEX_NONE;
+			if (startArray.Find(InComp, index))
+			{
+				if (Instance->bIsExecutingStart)
+				{
+					if (!InComp->bIsStartCalled)//if already called start then nothing to do, because start array will be cleared after execute start
+					{
+						startArray.RemoveAt(index);//not execute start yet, safe to remove
+					}
+				}
+				else
+				{
+					startArray.RemoveAt(index);//not executing start, safe to remove
+				}
+			}
+			else
+			{
+				UE_LOG(DreamGUI, Warning, TEXT("[%s].%d Not exist, comp:%s"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *(InComp->GetPathName()));
+			}
+
+			//cleanup array
+			int inValidCount = 0;
+			for (int i = startArray.Num() - 1; i >= 0; i--)
+			{
+				if (!startArray[i].IsValid())
+				{
+					startArray.RemoveAt(i);
+					inValidCount++;
+				}
+			}
+			if (inValidCount > 0)
+			{
+				UE_LOG(DreamGUI, Warning, TEXT("[%s].%d Cleanup %d invalid DreamUIBehaviour"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, inValidCount);
+			}
+		}
+	}
+}
+
+void UDreamUIManagerWorldSubsystem::AddLayoutDirtyWidget(UDreamWidget* InWidget)
+{
+	if (IsValid(InWidget))
+	{
+		LayoutDirtyWidgetArray.AddUnique(InWidget);
+	}
+}
+
+/**
+ * Both entry points defer rather than drop while a pass is running.
+ *
+ * The cached tree cannot be rebuilt mid-pass -- CalculateLayoutTree is iterating a copy of it, and
+ * emptying the map underneath would strand the walk. But a structural change made from inside a pass is
+ * real: a behaviour that adds a child from OnDimensionChanged, the sibling renumbering panels do while
+ * arranging, a subtree revealed by SetLayoutVisibilitySuppressed. The old shape simply did nothing, and
+ * because CalculateLayoutTree only re-collects when the cached array is EMPTY, the stale tree then
+ * survived indefinitely -- until some later attach or detach outside a pass happened to wipe it. The
+ * new widget still laid itself out (it enqueues itself as its own dirty root), but its ancestors' cached
+ * pre-order no longer contained it, so the ancestor walk skipped it.
+ *
+ * Remembering a single "rebuild everything" bit rather than the specific widgets is deliberate: the
+ * targeted form only ever removes one entry, so upgrading it to the full wipe is conservative, and it
+ * only costs anything on the frames where something really did restructure mid-pass.
+ */
+void UDreamUIManagerWorldSubsystem::MarkRebuildLayoutTree(UDreamWidget* InWidget)
+{
+	if (bIsExecutingLayout)
+	{
+		bPendingLayoutTreeRebuild = true;
+		return;
+	}
+	MapWidgetToLayoutTree.Remove(InWidget);
+}
+
+void UDreamUIManagerWorldSubsystem::MarkRebuildAllLayoutTree()
+{
+	if (bIsExecutingLayout)
+	{
+		bPendingLayoutTreeRebuild = true;
+		return;
+	}
+	MapWidgetToLayoutTree.Empty();
+}
+
+void UDreamUIManagerWorldSubsystem::FlushPendingLayoutTreeRebuild()
+{
+	if (bPendingLayoutTreeRebuild)
+	{
+		bPendingLayoutTreeRebuild = false;
+		MapWidgetToLayoutTree.Empty();
+	}
+}
+
+void UDreamUIManagerWorldSubsystem::CalculateLayoutTree(UDreamWidget* RootLayoutWidget)
+{
+	if (!IsValid(RootLayoutWidget))
+	{
+		return;
+	}
+
+	struct LOCAL
+	{
+		static void CollectLayoutTree(UDreamWidget* Widget, TArray<TWeakObjectPtr<UDreamWidget>>& LayoutTreeArray,
+			TSet<const UDreamWidget*>& VisitedWidgets)
+		{
+			if (!IsValid(Widget))return;
+			if (VisitedWidgets.Contains(Widget))return;
+			VisitedWidgets.Add(Widget);
+			//Collect the full subtree, including layout-invisible and not-yet-registered widgets. Both flags flip
+			//without a usable chance to invalidate this cache: a collapsed subtree that becomes visible from
+			//inside a layout pass hits the bIsExecutingLayout guard in MarkRebuildAllLayoutTree, and OnRegister
+			//never invalidates the cache at all. Pruning here would bake such a subtree out of the cached tree
+			//permanently, so it would only lay out again after something re-dirties the whole tree top-down
+			//(a viewport resize). Filter per-widget at update time instead.
+			LayoutTreeArray.Add(Widget);
+			for (UDreamWidget* Child : Widget->GetChildren())
+			{
+				CollectLayoutTree(Child, LayoutTreeArray, VisitedWidgets);
+			}
+		}
+	};
+	auto& LayoutTree = MapWidgetToLayoutTree.FindOrAdd(RootLayoutWidget);
+	if (LayoutTree.WidgetArray.IsEmpty())
+	{
+		TSet<const UDreamWidget*> VisitedWidgets;
+		LOCAL::CollectLayoutTree(RootLayoutWidget, LayoutTree.WidgetArray, VisitedWidgets);
+	}
+	//Iterate a copy: UpdateLayout can re-enter CalculateLayoutTree through RebuildLayoutImmediately, and the
+	//FindOrAdd there may rehash the map out from under a reference into it.
+	const TArray<TWeakObjectPtr<UDreamWidget>> LayoutTreeArray = LayoutTree.WidgetArray;
+	for (int i = 0; i < LayoutTreeArray.Num(); i++)
+	{
+		UDreamWidget* Widget = LayoutTreeArray[i].Get();
+		if (!IsValid(Widget))
+		{
+			continue;
+		}
+		if (!Widget->GetLayoutVisibleInHierarchy())
+		{
+			continue;//collapsed for layout, but stays in the tree so it lays out as soon as it becomes visible
+		}
+		if (!Widget->HasRegistered())
+		{
+			continue;//if not registered, means it could about to remove
+		}
+		if (auto LayoutContainer = Widget->GetLayoutContainer())
+		{
+			if (!LayoutContainerArrayWhichHasSnapshot.Contains(LayoutContainer))
+			{
+				LayoutContainer->SnapshotLayout();
+				LayoutContainerArrayWhichHasSnapshot.Add(LayoutContainer);
+			}
+		}
+		Widget->UpdateLayout();
+	}
+}
+
+void UDreamUIManagerWorldSubsystem::RebuildLayoutImmediately(UDreamWidget* InWidget)
+{
+	auto RootLayoutWidget = InWidget;
+	//move up, find if parent widget affect by layout then mark dirty
+	while (RootLayoutWidget)
+	{
+		if (auto ParentWidget = RootLayoutWidget->GetParent())
+		{
+			if (ParentWidget->GetLayoutContainer())//parent contains LayoutContainer, need calculate layout
+			{
+				RootLayoutWidget = ParentWidget;
+				continue;
+			}
+		}
+		break;
+	}
+
+	bool bCanCalculateLayoutTree = true;
+	if (RootLayoutWidget == InWidget)//no valid layout parent
+	{
+		if (InWidget->GetLayoutContainer())//self contains layout container
+		{
+			bCanCalculateLayoutTree = true;
+		}
+		else
+		{
+			bCanCalculateLayoutTree = false;
+		}
+	}
+	if (bCanCalculateLayoutTree)
+	{
+		CalculateLayoutTree(RootLayoutWidget);
+	}
+}
+
+#if WITH_EDITOR
+int UDreamUIManagerWorldSubsystem::IncreateLayoutCalculationCounter(const FString& InPathName)
+{
+	if (auto CounterPtr = LayoutCalculationCounterMap.Find(InPathName))
+	{
+		(*CounterPtr)++;
+		if (*CounterPtr >= 2)
+		{
+			// UE_LOG(DreamGUI, Warning, TEXT("Widget %s has been calculated layout %d times in a frame"), *InPathName, *CounterPtr);
+		}
+		return *CounterPtr;
+	}
+	else
+	{
+		LayoutCalculationCounterMap.Add(InPathName, 1);
+		return 1;
+	}
+}
+#endif
+
+#undef LOCTEXT_NAMESPACE

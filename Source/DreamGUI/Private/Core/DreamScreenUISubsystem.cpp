@@ -5,12 +5,12 @@
 
 #include "Core/Components/DreamCanvas.h"
 #include "Core/Components/DreamWidget.h"
+#include "Core/DreamUIInputServices.h"
 #include "Core/DreamUIManager.h"
 #include "Engine/AssetManager.h"
 #include "Engine/Engine.h"
 #include "Engine/StreamableManager.h"
 #include "Engine/World.h"
-#include "Event/DreamScreenSpaceRaycaster.h"
 #include "GameFramework/Actor.h"
 #include "GameFramework/PlayerController.h"
 #include "DreamGUI.h"
@@ -37,11 +37,27 @@ bool UDreamScreenUISubsystem::DoesSupportWorldType(EWorldType::Type WorldType) c
 void UDreamScreenUISubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {
 	Super::Initialize(Collection);
-	Collection.InitializeDependency<UDreamUIManagerWorldSubsystem>();
+	DreamUI::EnrolWorldService(Collection, *this, *this);
 }
 
 void UDreamScreenUISubsystem::Deinitialize()
 {
+	// Passive: the world's teardown has taken this service down already (TeardownForWorld), unless the
+	// world had no manager to take it.
+	if (!bTornDownForWorld && GetWorld() != nullptr)
+	{
+		TeardownForWorld(*GetWorld());
+	}
+	Super::Deinitialize();
+}
+
+void UDreamScreenUISubsystem::TeardownForWorld(UWorld& InWorld)
+{
+	if (bTornDownForWorld)
+	{
+		return;
+	}
+	bTornDownForWorld = true;
 	for (TPair<FName, FPendingPageLoad>& Pair : PendingPageLoads)
 	{
 		if (Pair.Value.Handle.IsValid())
@@ -62,8 +78,6 @@ void UDreamScreenUISubsystem::Deinitialize()
 	}
 	ScreenRoots.Reset();
 	OwnedScreenRoots.Reset();
-
-	Super::Deinitialize();
 }
 
 bool UDreamScreenUISubsystem::IsUsablePage(const UDreamWidget* InRoot) const
@@ -207,9 +221,10 @@ UDreamWidget* UDreamScreenUISubsystem::GetOrCreateScreenRootForIndex(int32 InPla
 		return nullptr;
 	}
 
-	const FName RootName = MakeUniqueObjectName(World, UDreamWidget::StaticClass(),
+	// Outered to this subsystem, which holds it (ScreenRoots) and takes it down with the world.
+	const FName RootName = MakeUniqueObjectName(this, UDreamWidget::StaticClass(),
 		*FString::Printf(TEXT("DreamScreenRoot_P%d"), InPlayerIndex));
-	UDreamWidget* NewRoot = NewObject<UDreamWidget>(World, RootName, RF_Transient);
+	UDreamWidget* NewRoot = NewObject<UDreamWidget>(this, RootName, RF_Transient);
 	NewRoot->SetDisplayName(FString::Printf(TEXT("[DreamScreenRoot P%d]"), InPlayerIndex));
 	NewRoot->SetSizeDelta(FVector2D(1920.0, 1080.0));
 	NewRoot->OnRegister();
@@ -240,41 +255,11 @@ void UDreamScreenUISubsystem::EnsureInteractionObjects(UDreamCanvas* InRootCanva
 	{
 		return;
 	}
-	UDreamUIManagerWorldSubsystem* Manager = UDreamUIManagerWorldSubsystem::GetInstance(GetWorld());
-	if (Manager == nullptr)
+	// The event system and the raycaster are the input system's to create -- a world-space host needs the
+	// same pair -- and so is pointing this player's screen raycaster at the canvas it projects through.
+	if (UDreamUIInputServices* Services = UDreamUIInputServices::Get(this))
 	{
-		return;
-	}
-	// Creating the event system and the raycaster is the manager's job, because a world-space host
-	// needs exactly the same pair and neither of them is anything to do with a screen. What is left
-	// here is the part that IS: telling this player's screen raycaster which canvas it projects
-	// through, which the manager has no way to know.
-	Manager->EnsureInteractionForPlayer(InPlayerIndex, EDreamInteractionKind::Screen);
-
-	for (const TWeakObjectPtr<UDreamBaseRaycaster>& Raycaster : Manager->GetAllRaycasterArray())
-	{
-		UDreamScreenSpaceRaycaster* ScreenRaycaster = Cast<UDreamScreenSpaceRaycaster>(Raycaster.Get());
-		// Only a raycaster that speaks for THIS player. A second player's raycaster carries its own
-		// UserIndex and must keep pointing at its own canvas; retargeting every screen raycaster at
-		// whichever root was built last is what made split screen impossible.
-		if (ScreenRaycaster != nullptr && ScreenRaycaster->GetUserIndex() == InPlayerIndex)
-		{
-			ScreenRaycaster->SetRootCanvas(InRootCanvas);
-		}
-	}
-	// The one the manager has just created is on its host actor and has not necessarily enrolled --
-	// enrolment happens on activation, which a world that has not begun play never performs -- so it
-	// would otherwise be left without a canvas until the first frame of play.
-	if (const AActor* Host = Manager->GetInteractionHost(InPlayerIndex))
-	{
-		for (UActorComponent* Component : Host->GetComponents())
-		{
-			if (UDreamScreenSpaceRaycaster* ScreenRaycaster = Cast<UDreamScreenSpaceRaycaster>(Component);
-				ScreenRaycaster != nullptr && ScreenRaycaster->GetUserIndex() == InPlayerIndex)
-			{
-				ScreenRaycaster->SetRootCanvas(InRootCanvas);
-			}
-		}
+		Services->PrepareScreenInteraction(InRootCanvas, InPlayerIndex);
 	}
 }
 
@@ -536,6 +521,79 @@ UDreamWidget* UDreamScreenUISubsystem::ShowWidgetOfClass(FName InName, TSubclass
 	return Page;
 }
 
+int32 UDreamScreenUISubsystem::ReleasePagesUsing(const UClass* InClass)
+{
+	int32 Released = 0;
+	TArray<FName> Names;
+	Entries.GetKeys(Names);
+	for (const FName& Name : Names)
+	{
+		FEntry* Entry = Entries.Find(Name);
+		UDreamWidget* Root = Entry != nullptr ? Entry->Root.Get() : nullptr;
+		if (!IsUsablePage(Root))
+		{
+			continue;
+		}
+		TArray<UDreamWidget*> Widgets;
+		UDreamWidget::CollectChildrenWidgets(Root, Widgets, true);
+		if (!Widgets.ContainsByPredicate([InClass](const UDreamWidget* Widget) { return Widget->IsA(InClass); }))
+		{
+			continue;
+		}
+		// The entry stays -- its name, its place in the stack, its sort order and player -- with nothing in
+		// it for the moment; the page is what goes.
+		if (Root->IsA<UDreamUserWidget>())
+		{
+			ReleasedPages.Add(Name, TPair<TWeakObjectPtr<UClass>, bool>(Root->GetClass(), Entry->State == EDreamUIScreenPageState::Active));
+		}
+		else
+		{
+			UE_LOG(DreamGUI, Warning, TEXT("Recompiling %s took screen page '%s' down; it is not a user widget, so nothing can build it again."),
+				*InClass->GetName(), *Name.ToString());
+		}
+		Entry->Root = nullptr;
+		Entry->State = EDreamUIScreenPageState::Inactive;
+		Root->DestroyWidget();
+		++Released;
+	}
+	return Released;
+}
+
+void UDreamScreenUISubsystem::RebuildReleasedPages()
+{
+	TMap<FName, TPair<TWeakObjectPtr<UClass>, bool>> ToRebuild = MoveTemp(ReleasedPages);
+	ReleasedPages.Reset();
+	TSet<int32> Players;
+	for (const TPair<FName, TPair<TWeakObjectPtr<UClass>, bool>>& Released : ToRebuild)
+	{
+		FEntry* Entry = Entries.Find(Released.Key);
+		UClass* PageClass = Released.Value.Key.Get();
+		// Removed while it was down, or its class gone with the compile: nothing to build.
+		if (Entry == nullptr || Entry->Root.IsValid() || PageClass == nullptr || !PageClass->IsChildOf(UDreamUserWidget::StaticClass()))
+		{
+			continue;
+		}
+		UDreamWidget* Root = GetOrCreateScreenRootForIndex(Entry->PlayerIndex);
+		UDreamWidget* Page = Root != nullptr ? CreateDreamWidget(GetWorld(), PageClass, Root) : nullptr;
+		if (Page == nullptr)
+		{
+			continue;
+		}
+		Entry->Root = Page;
+		ConfigurePage(Page, Entry->SortOrder, Entry->PlayerIndex, Entry->bCustomPlacement);
+		Page->SetVisibility(EDreamWidgetVisibility::Collapsed);
+		OnPageCreated.Broadcast(Released.Key, Page);
+		// Back in the state it was taken down in: showing, or there and switched off.
+		SetPageActive(Released.Key, Released.Value.Value);
+		Players.Add(Entry->PlayerIndex);
+	}
+	// The stack decides again what shows, now that its pages are back.
+	for (const int32 PlayerIndex : Players)
+	{
+		RefreshStack(PlayerIndex, GetTopUIForIndex(PlayerIndex));
+	}
+}
+
 UDreamWidget* UDreamScreenUISubsystem::GetUI(FName InName) const
 {
 	if (const FEntry* Entry = Entries.Find(InName))
@@ -687,7 +745,8 @@ int32 UDreamScreenUISubsystem::PruneDeadEntries()
 	TArray<FName> DeadNames;
 	for (const TPair<FName, FEntry>& Pair : Entries)
 	{
-		if (!IsUsablePage(Pair.Value.Root.Get()))
+		// A page a recompile took down is not dead: it is built again from its class a tick later.
+		if (!IsUsablePage(Pair.Value.Root.Get()) && !ReleasedPages.Contains(Pair.Key))
 		{
 			DeadNames.Add(Pair.Key);
 		}
@@ -1101,7 +1160,7 @@ void UDreamScreenUISubsystem::RefreshStack(int32 InPlayerIndex, FName InPrevious
 		PruneDeadEntries();
 		for (int32 Index = Stack.Num() - 1; Index >= 0; --Index)
 		{
-			if (!GetUI(Stack[Index]))
+			if (!GetUI(Stack[Index]) && !ReleasedPages.Contains(Stack[Index]))
 			{
 				Stack.RemoveAt(Index);
 			}

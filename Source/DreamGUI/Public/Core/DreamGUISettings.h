@@ -12,6 +12,18 @@ class UDreamUISpriteData;
 class UMaterialInterface;
 class UTexture2D;
 
+/** What DreamGUI's input keeps from the game, with the Slate input source. */
+UENUM(BlueprintType)
+enum class EDreamUIInputConsumePolicy : uint8
+{
+	/** Nothing: the game hears everything the UI hears, as it does through the preset actors. */
+	Never,
+	/** A press, a release or a wheel turn over DreamGUI UI, and any key the UI took. */
+	WhenOverUI,
+	/** Only what a widget answers: a press on a widget that handles presses, and a key the UI took. */
+	WhenHandled,
+};
+
 /**
  * Every asset and class DreamGUI reaches for by itself, in one place a project can edit.
  *
@@ -96,9 +108,14 @@ public:
 	 * The project's control style sheet -- one asset where every native control's default look
 	 * lives. Unset is a supported state, not a missing one: controls then use their styles' own
 	 * C++ defaults, which are the built-in theme.
+	 *
+	 * Typed as the sheet's base class: the sheet is the control library's, and the core does not
+	 * name the control library's types. AllowedClasses keeps the picker to style sheets, and
+	 * UDreamUIStyleSheet::GetProjectSheet does the cast. The config value is the asset's path either
+	 * way, so a project's setting reads the same as before.
 	 */
-	UPROPERTY(config, EditAnywhere, Category = "Assets")
-	TSoftObjectPtr<class UDreamUIStyleSheet> DefaultStyleSheet;
+	UPROPERTY(config, EditAnywhere, Category = "Assets", meta = (AllowedClasses = "/Script/DreamGUIControls.DreamUIStyleSheet"))
+	TSoftObjectPtr<class UDataAsset> DefaultStyleSheet;
 
 
 	/**
@@ -126,6 +143,22 @@ public:
 	 */
 	UPROPERTY(config, EditAnywhere, Category = "Actors")
 	TSoftClassPtr<AActor> EventSystemActorClass;
+
+	// ---------------------------------------------------------------- Input
+
+	/**
+	 * Hear input from Slate itself -- an input pre-processor, ahead of the game viewport -- instead of through the
+	 * preset actor's bindings on the player controller. DreamGUI then answers in every input mode, the engine's own
+	 * UI-only mode included, where the viewport ignores input and the controller hears nothing; and it can keep what
+	 * it handled from the game (SlateInputConsumePolicy). The preset actors stand down while it is on. Off for now;
+	 * it becomes the default in a later version.
+	 */
+	UPROPERTY(config, EditAnywhere, Category = "Input")
+	bool bUseSlateInputSource = false;
+
+	/** With the Slate input source: what the UI keeps from the game. A key typed into a field being edited is always kept. */
+	UPROPERTY(config, EditAnywhere, Category = "Input", meta = (EditCondition = "bUseSlateInputSource"))
+	EDreamUIInputConsumePolicy SlateInputConsumePolicy = EDreamUIInputConsumePolicy::Never;
 
 	// ---------------------------------------------------------------- Tooltip
 

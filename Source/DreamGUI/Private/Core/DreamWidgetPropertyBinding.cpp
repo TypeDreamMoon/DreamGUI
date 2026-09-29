@@ -4,6 +4,7 @@
 
 #include "Core/Components/DreamWidget.h"
 #include "Core/DreamUIBehaviour.h"
+#include "Core/Components/DreamVisual.h"
 
 // FEnumProperty lives in its own header, not UnrealType.h; the conversion rule has to exclude it by
 // name and a unity blob is no place to learn that from a neighbour.

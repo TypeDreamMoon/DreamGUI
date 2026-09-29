@@ -467,7 +467,11 @@ TSharedPtr<IPropertyHandle> FComponentTransformDetails::GeneratePropertyHandle(F
 
 bool FComponentTransformDetails::GetIsEnabled() const
 {
-	return !GEditor->HasLockedActors() || SelectedActorInfo.NumSelected == 0;
+	// The level editor's own query, which the engine marks experimental.
+	PRAGMA_DISABLE_EXPERIMENTAL_WARNINGS
+	const bool bAnyLocked = GEditor->HasSelectedMovementLockedItems();
+	PRAGMA_ENABLE_EXPERIMENTAL_WARNINGS
+	return !bAnyLocked || SelectedActorInfo.NumSelected == 0;
 }
 
 const FSlateBrush* FComponentTransformDetails::GetPreserveScaleRatioImage() const

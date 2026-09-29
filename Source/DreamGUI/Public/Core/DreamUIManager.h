@@ -6,24 +6,29 @@
 #include "Subsystems/WorldSubsystem.h"
 #include "Tickable.h"
 #include "Containers/Ticker.h"
+#include "Core/DreamLayoutPassContext.h"
+#include "Core/DreamUIWorldService.h"
+#include "Core/DreamWidgetTreeHost.h"
 #include "DreamUIManager.generated.h"
 
 struct FDreamUIHelperGizmoRenderParameter;
 struct FDreamUIHelperGizmoVertex;
-class AActor;
 class UMaterialInterface;
 class FEditorViewportClient;
-class UDreamEventSystem;
 class UDreamWidget;
 class UDreamVisualBatchMesh;
 class UDreamVisual;
 class UDreamCanvas;
 class UDreamBaseRaycaster;
-class UUISelectable;
 class UDreamUIBehaviour;
-class UDreamBaseInputModule;
+class ULevel;
+class UDreamRectBlockData;
+class UDreamUIDataAsTexture;
+enum class EDreamUIDataAsTexturePixelFormat : uint8;
 
 DECLARE_MULTICAST_DELEGATE_OneParam(FDreamUIEditorTickMulticastDelegate, float);
+class UDreamUIManagerWorldSubsystem;
+DECLARE_MULTICAST_DELEGATE_OneParam(FDreamUIDrawHelperGizmoDelegate, UDreamUIManagerWorldSubsystem* /*Manager*/);
 
 /**
  * A widget that has been created but not yet added to anything -- the state a UMG-style
@@ -42,57 +47,6 @@ struct FDreamParkedWidgetEntry
 	/** Seconds on the world clock, for the optional never-attached diagnostic. */
 	UPROPERTY()
 	double ParkedAtSeconds = 0.0;
-};
-
-/**
- * This manager is a single instance, mainly for manage DreamUI in Editor
- */
-UCLASS(NotBlueprintable, NotBlueprintType, Transient, NotPlaceable)
-class DREAMGUI_API UDreamUIManagerObject :public UObject, public FTickableGameObject
-{
-	GENERATED_BODY()
-
-public:
-	UDreamUIManagerObject();
-	virtual void BeginDestroy()override;
-public:
-	//begin TickableEditorObject interface
-	virtual void Tick(float DeltaTime)override;
-	virtual bool IsTickable() const { return Instance == this; }
-	virtual bool IsTickableInEditor()const { return Instance == this; }
-	virtual TStatId GetStatId() const override;
-	virtual bool IsEditorOnly()const override { return true; }
-	//end TickableEditorObject interface
-private:
-	static UDreamUIManagerObject* Instance;
-#if WITH_EDITORONLY_DATA
-	static bool bIsBlueprintCompiling;
-	FDreamUIEditorTickMulticastDelegate EditorTick;
-	TArray<TTuple<int, TFunction<void()>>> OneShotFunctionsToExecuteInTick;
-public:
-	static void AddOneShotTickFunction(const TFunction<void()>& InFunction, int InDelayFrameCount = 0);
-	FDreamUIEditorTickMulticastDelegate& GetEditorTickDelegate();
-
-#endif
-#if WITH_EDITOR
-	static bool GetIsBlueprintCompiling(){return bIsBlueprintCompiling;}
-private:
-	static bool InitCheck();
-public:
-	static UDreamUIManagerObject* GetInstance(bool CreateIfNotValid = false);
-private:
-	FDelegateHandle OnBlueprintPreCompileDelegateHandle;
-	FDelegateHandle OnBlueprintCompiledDelegateHandle;
-	void OnBlueprintPreCompile(UBlueprint* InBlueprint);
-	void OnBlueprintCompiled();
-private:
-	FDelegateHandle OnAssetReimportDelegateHandle;
-	void OnAssetReimport(UObject* Asset);
-	FDelegateHandle OnMapOpenedDelegateHandle;
-	void OnMapOpened(const FString& FileName, bool AsTemplate);
-	FDelegateHandle OnPackageReloadedDelegateHandle;
-	void OnPackageReloaded(EPackageReloadPhase Phase, FPackageReloadedEvent* Event);
-#endif
 };
 
 UCLASS(NotBlueprintable, NotBlueprintType, Transient)
@@ -128,7 +82,7 @@ private:
 class IDreamUICultureChangedInterface;
 enum class EDreamRenderMode : uint8;
 
-/** Which kind of pointer a player needs a raycaster for. See EnsureInteractionForPlayer. */
+/** Which kind of pointer a player needs a raycaster for. See UDreamUIInputServices::EnsureInteractionForPlayer. */
 UENUM()
 enum class EDreamInteractionKind : uint8
 {
@@ -142,8 +96,8 @@ public:
 	/**
 	 * Weak on purpose. This cache lives outside UPROPERTY reflection, so a TObjectPtr here is invisible
 	 * to the garbage collector: it neither keeps a widget alive nor gets cleared when one goes away,
-	 * which left IsValid() being asked about memory that may already have been recycled. Everything
-	 * listed here is kept alive by UDreamUIManagerWorldSubsystem::AllWidgetArray while it is registered.
+	 * which left IsValid() being asked about memory that may already have been recycled. What keeps a
+	 * listed widget alive is its tree's host, or the manager's pool of trees no host holds.
 	 */
 	TArray<TWeakObjectPtr<UDreamWidget>> WidgetArray;
 };
@@ -154,6 +108,8 @@ class DREAMGUI_API UDreamUIManagerWorldSubsystem : public UTickableWorldSubsyste
 	GENERATED_BODY()
 public:	
 	virtual bool ShouldCreateSubsystem(UObject* Outer) const override;
+	/** The engine's three, and editor previews: a preview's widgets need a manager as much as a level's. */
+	virtual bool DoesSupportWorldType(const EWorldType::Type WorldType) const override;
 	virtual void Initialize(FSubsystemCollectionBase& Collection)override;
 	virtual void PostInitialize()override;
 	virtual void Deinitialize()override;
@@ -177,13 +133,68 @@ public:
 	/** See LastLayoutPassCount. One is the only healthy value. */
 	int32 GetLastLayoutPassCount()const{return LastLayoutPassCount;}
 
+	/**
+	 * Moves on whenever what a ray would hit in this world may have changed: a canvas updating (layout,
+	 * transform, visibility, geometry and sort all reach the draw calls through one), a canvas or a
+	 * raycaster coming or going, a widget's active, visible, raycastable or interactable state being
+	 * worked out again. The input system traces a pointer that has not moved again only when this has
+	 * moved since its last trace -- an idle screen costs no raycasts.
+	 */
+	uint64 GetHitTestGeneration()const{ return HitTestGeneration; }
+	void BumpHitTestGeneration(){ ++HitTestGeneration; }
+	/** BumpHitTestGeneration on InWorldContext's manager, when it has one. */
+	static void BumpHitTestGenerationFor(const UObject* InWorldContext);
+
+	/** The layout-pass state of this world's widgets; see UDreamWidget::GetLayoutPassContext. */
+	FDreamLayoutPassContext& GetLayoutPassContext() { return LayoutPassContext; }
+	const FDreamLayoutPassContext& GetLayoutPassContext() const { return LayoutPassContext; }
+
+	/**
+	 * Enrol a DreamGUI service of this world for the world's teardown (IDreamUIWorldService). Every service
+	 * does it from its Initialize, through DreamUI::EnrolWorldService, whichever module it lives in. Kept
+	 * weakly: a service already gone when the teardown comes is skipped.
+	 */
+	void RegisterWorldService(UObject* InServiceObject, IDreamUIWorldService* InService);
+	void UnregisterWorldService(const UObject* InServiceObject);
+	/** Whether InServiceObject is enrolled for this world's teardown and has not been taken down yet. */
+	bool HasWorldService(const UObject* InServiceObject) const;
+	/**
+	 * The one path this world's DreamGUI comes down by, taken once: every enrolled service, highest
+	 * priority first; then every widget tree still registered; then the manager's own state. A game
+	 * world's EndPlay takes it, and any world's cleanup takes it when nothing did before -- which is how
+	 * an editor or preview world comes down. Deinitialize only checks that it was taken.
+	 */
+	void TeardownWorld();
+	bool HasTornDownWorld() const { return bWorldTornDown; }
+
 	static UDreamUIManagerWorldSubsystem* GetInstance(UWorld* InWorld);
+
+	/**
+	 * The rows this world's rect blocks of InData keep their shapes in: one set per world and rect block data asset,
+	 * made when the first of those rect blocks asks, and gone with the world.
+	 *
+	 * They used to live in the asset, which every world shares -- the editor's, each play session's, each preview's --
+	 * so a rect block in one world grew the texture every other world drew with, and rows a play session never gave
+	 * back were still taken in the next one. The asset keeps what it is for, the material.
+	 */
+	UDreamUIDataAsTexture* GetRectBlockDataRows(UDreamRectBlockData* InData, int32 InBlockSizeInBytes, EDreamUIDataAsTexturePixelFormat InPixelFormat);
 #if WITH_EDITOR
+	/**
+	 * Broadcast on every editor tick of a world nobody plays -- the level editor's, a preview's -- for what
+	 * animates there without play: a canvas scaler following its viewport, an image sequence previewing, a
+	 * UMG widget shown in the editor. It is this world's, and goes with it.
+	 */
+	FDreamUIEditorTickMulticastDelegate& GetEditorTickDelegate() { return EditorTick; }
 	bool bShouldTickInEditor = false;
 	UDreamUISelection* GetSelection()const;
 	FSimpleMulticastDelegate OnDeinitialize;
 	FSimpleMulticastDelegate OnEndPlay;
 	FSimpleMulticastDelegate OnDreamUIWidgetOutlinerChanged;
+	/**
+	 * Broadcast at the end of DrawHelperGizmo, for the editor helpers that belong to someone else: the
+	 * input system draws the selectables' navigation arrows from here, with DrawNavigationArrow.
+	 */
+	FDreamUIDrawHelperGizmoDelegate OnDrawHelperGizmo;
 	void MarkDreamUIWidgetOutlinerChanged();
 private:
 	bool bDreamUIWidgetOutlinerChanged = true;
@@ -191,26 +202,48 @@ private:
 	
 private:
 #if WITH_EDITOR
-	static TArray<UDreamUIManagerWorldSubsystem*> InstanceArray;
 	FTSTicker::FDelegateHandle EditorTickDelegateHandle;
+	FDreamUIEditorTickMulticastDelegate EditorTick;
 #endif
 
 #if WITH_EDITORONLY_DATA
 	UPROPERTY(VisibleAnywhere, Category = "DreamGUI")
 	mutable TObjectPtr<UDreamUISelection> Selection;
 #endif
+	/** See GetRectBlockDataRows. */
+	UPROPERTY(Transient, DuplicateTransient, TextExportTransient)
+	TMap<TObjectPtr<UDreamRectBlockData>, TObjectPtr<UDreamUIDataAsTexture>> RectBlockDataRows;
 	
 	UPROPERTY(VisibleAnywhere, Category = "DreamGUI")
 	TArray<TWeakObjectPtr<UDreamCanvas>> AllCanvasArray;
+	/**
+	 * Every registered widget, weakly: registering is not owning. A tree is kept alive by its host --
+	 * the component, subsystem or preview that made it -- and the host lets it go; see FreeRoots for the
+	 * trees no host holds.
+	 */
 	UPROPERTY(VisibleAnywhere, Category = "DreamGUI")
-	TArray<TObjectPtr<UDreamWidget>> AllWidgetArray;
+	TArray<TWeakObjectPtr<UDreamWidget>> RegisteredWidgets;
+	/**
+	 * The roots of registered trees nothing but this manager holds: made with no host (CreateDreamWidget
+	 * with no parent, a Blueprint's ConstructWidget, a test's widget made straight in the world), or taken
+	 * off their parent while registered. The pool is the manager's to empty -- on attach, on destroy, and
+	 * at the world's teardown -- and nothing in it is reported as a leak.
+	 */
+	UPROPERTY(VisibleAnywhere, Transient, Category = "DreamGUI")
+	TArray<TObjectPtr<UDreamWidget>> FreeRoots;
 	UPROPERTY(VisibleAnywhere, Category = "DreamGUI")
 	TArray<FDreamParkedWidgetEntry> ParkedWidgets;
+	/** The objects that host trees in this world (IDreamWidgetTreeHost), for the world's teardown to ask. */
+	TArray<TWeakObjectPtr<UObject>> TreeHosts;
 
 	UPROPERTY(VisibleAnywhere, Category = "DreamGUI")
 		TArray<TWeakObjectPtr<UDreamBaseRaycaster>> AllRaycasterArray;
+	/**
+	 * Every registered selectable, as the behaviour it is. The navigation scan and the input system walk
+	 * it; neither needs the core to know the selectable class, which belongs to the input system.
+	 */
 	UPROPERTY(VisibleAnywhere, Category = "DreamGUI")
-		TArray<TWeakObjectPtr<UUISelectable>> AllSelectableArray;
+		TArray<TWeakObjectPtr<UDreamUIBehaviour>> AllSelectableArray;
 	UPROPERTY(VisibleAnywhere, Category = "DreamGUI")
 		TArray<TWeakObjectPtr<UObject>> AllCultureChangedArray;
 
@@ -221,30 +254,14 @@ public:
 	/**
 	 * How many user widgets are on the per-frame polled-binding visit.
 	 *
-	 * Exposed because "is this widget still being polled after it was destroyed" is otherwise
-	 * unobservable: DestroyWidget does not mark the object garbage, so the list's own IsValid sweep
-	 * cannot answer it and neither can a test.
+	 * Exposed because "is this widget still being polled once it has left play" is otherwise
+	 * unobservable: a widget unregistered without being destroyed is never marked garbage, so the
+	 * list's own IsValid sweep cannot answer it and neither can a test.
 	 */
 	int32 GetPropertyBindingUserCount() const { return PropertyBindingUsers.Num(); }
 private:
 	/** Weak, and swept as it is walked: a widget can be destroyed between two frames. */
 	TArray<TWeakObjectPtr<class UDreamUserWidget>> PropertyBindingUsers;
-
-	UPROPERTY(VisibleAnywhere, Category = "DreamGUI")
-	TMap<int, TWeakObjectPtr<UDreamEventSystem>> MapUserIndexToEventSystem;
-
-	/**
-	 * One transient actor per local player, carrying whichever raycasters were created for them.
-	 *
-	 * Per PLAYER rather than per kind, so a player pointing at both a screen UI and a world-space
-	 * panel has one host with two raycasters on it instead of two actors that mean the same thing.
-	 */
-	UPROPERTY(Transient)
-	TMap<int32, TObjectPtr<AActor>> InteractionHosts;
-
-	/** The event system spawned from project settings, if one had to be. Never more than one. */
-	UPROPERTY(Transient)
-	TObjectPtr<AActor> CreatedEventSystemActor;
 
 	UPROPERTY(VisibleAnywhere, Category = "DreamGUI")
 		TArray<TWeakObjectPtr<UDreamUIBehaviour>> DreamUIBehavioursForTick;
@@ -272,6 +289,23 @@ private:
 	 * eight times and happened to agree" was unobservable in a normal build.
 	 */
 	int32 LastLayoutPassCount = 0;
+	/** See GetHitTestGeneration. */
+	uint64 HitTestGeneration = 0;
+	/** The writer stack, pass depth and desired-size memo every layout pass in this world shares. */
+	FDreamLayoutPassContext LayoutPassContext;
+	struct FWorldServiceEntry
+	{
+		TWeakObjectPtr<UObject> Object;
+		IDreamUIWorldService* Service = nullptr;
+	};
+	/** What TeardownWorld takes down, in the order the services enrolled. */
+	TArray<FWorldServiceEntry> WorldServices;
+	bool bWorldTornDown = false;
+	void HandleWorldCleanup(UWorld* InWorld, bool bInSessionEnded, bool bInCleanupResources);
+	/** A level leaving this world takes the trees of the hosts in it down with it. */
+	void HandleLevelRemovedFromWorld(ULevel* InLevel, UWorld* InWorld);
+	/** Ask every registered host to let its trees go, for InReason; the hosts in InOnlyLevel only, when given. */
+	void ReleaseHostTrees(EDreamTreeReleaseReason InReason, const ULevel* InOnlyLevel = nullptr);
 	int32 CurrentExecutingTickIndex = -1;
 	UPROPERTY(Transient) TArray<UDreamUIBehaviour*> DreamUIBehavioursNeedToRemoveFromTick;
 #if !UE_BUILD_SHIPPING
@@ -295,6 +329,15 @@ public:
 	const TArray<TWeakObjectPtr<UDreamCanvas>>& GetAllCanvasArray()const{return AllCanvasArray;}
 	void AddCanvas(UDreamCanvas* InCanvas);
 	void RemoveCanvas(UDreamCanvas* InCanvas);
+	/**
+	 * The registered canvases as they are now, for a loop whose calls may register or unregister a
+	 * canvas -- updating a root canvas can make a render target and tell whoever listens, and a listener
+	 * may add or remove a canvas. A ranged-for over the registry itself asserts the moment that happens.
+	 * Check each entry with IsCanvasStillRegistered before calling into it.
+	 */
+	TArray<TWeakObjectPtr<UDreamCanvas>> SnapshotCanvases()const{return AllCanvasArray;}
+	/** Whether a canvas from a snapshot is alive and still registered here. */
+	bool IsCanvasStillRegistered(const TWeakObjectPtr<UDreamCanvas>& InCanvas)const{return InCanvas.IsValid() && AllCanvasArray.Contains(InCanvas);}
 	TArray<UDreamCanvas*> GetCanvasArrayByRenderMode(EDreamRenderMode RenderMode)const;
 	/**
 	 * Root canvases in ScreenSpaceOverlay mode that are actually competing for the screen. Inactive
@@ -307,7 +350,27 @@ public:
 	 */
 	int32 CountCompetingScreenSpaceOverlayCanvases()const;
 
-	const TArray<TObjectPtr<UDreamWidget>>& GetAllWidgetArray()const{return AllWidgetArray;}
+	/** Every widget registered here and still alive, in registration order. */
+	TArray<UDreamWidget*> GetRegisteredWidgets()const;
+	bool IsWidgetRegistered(const UDreamWidget* InWidget)const;
+	/**
+	 * Whether InRoot, a hierarchy root, is held by something other than this manager: the tree it is the
+	 * root of is outered to a host, or it is outered to one itself. A root outered to the world, to this
+	 * manager, or to a widget -- one taken off its parent -- has nobody else, and is pooled (FreeRoots).
+	 */
+	bool IsHeldByHost(const UDreamWidget* InRoot)const;
+	/** Pool InRoot if it is a registered hierarchy root no host holds; see FreeRoots. */
+	void AdoptIfFreeRoot(UDreamWidget* InRoot);
+	/** Let InWidget out of the pool: it has a parent now, or is being destroyed. */
+	void ForgetFreeRoot(const UDreamWidget* InWidget);
+	bool IsFreeRoot(const UDreamWidget* InWidget)const;
+	/**
+	 * Enrol InHost -- an object implementing IDreamWidgetTreeHost -- as a host of trees in this world, so
+	 * the world's teardown and a level's removal can ask it to let them go. Kept weakly; idempotent.
+	 */
+	void RegisterTreeHost(UObject* InHost);
+	void UnregisterTreeHost(const UObject* InHost);
+	bool IsTreeHostRegistered(const UObject* InHost)const;
 	/**
 	 * Hold a freshly created widget in the not-yet-added state: set its parked bit so it draws
 	 * nothing and its behaviours stay disabled, and keep a reference so the caller is not the only
@@ -332,8 +395,12 @@ public:
 	int32 SweepExpiredParkedWidgets();
 	void AddWidget(UDreamWidget* InWidget);
 	void RemoveWidget(UDreamWidget* InWidget);
-	/** Tears down registered widgets once per hierarchy root. Safe to call repeatedly during world shutdown. */
-	void DestroyRegisteredWidgetTrees();
+	/**
+	 * Tears down registered widgets once per hierarchy root, and empties the pool of free roots. With
+	 * bInReportTreesOutlivingHosts, a tree whose host still holds it is reported first: its host was asked
+	 * to let it go (ReleaseHostTrees) and did not. Safe to call repeatedly during world shutdown.
+	 */
+	void DestroyRegisteredWidgetTrees(bool bInReportTreesOutlivingHosts = false);
 
 	/** Ask for a layout pass on this widget next frame -- UMG's InvalidateLayoutAndVolatility. */
 	void AddLayoutDirtyWidget(UDreamWidget* InWidget);
@@ -359,32 +426,9 @@ public:
 	static void AddRaycaster(UDreamBaseRaycaster* InRaycaster);
 	static void RemoveRaycaster(UDreamBaseRaycaster* InRaycaster);
 
-	const TArray<TWeakObjectPtr<UUISelectable>>& GetAllSelectableArray() { return AllSelectableArray; }
-	static void AddSelectable(UUISelectable* InSelectable);
-	static void RemoveSelectable(UUISelectable* InSelectable);
-
-	const TMap<int, TWeakObjectPtr<UDreamEventSystem>>& GetMapUserIndexToEventSystem() { return MapUserIndexToEventSystem; }
-	UDreamEventSystem* GetEventSystemByUserIndex(int UserIndex = 0);
-	void AddEventSystem(UDreamEventSystem* InEventSystem);
-	void RemoveEventSystem(UDreamEventSystem* InEventSystem);
-
-	/**
-	 * Give local player InUserIndex what it takes to point at DreamUI: an event system, and a
-	 * raycaster of InKind.
-	 *
-	 * The event system half is per world, not per player -- only the first local player gets one
-	 * spawned from UDreamGUISettings::EventSystemActorClass, because a second copy would carry the
-	 * same UserIndex and make each player read the other's input; a second player's event system has
-	 * to be placed deliberately, and not having one is a warning rather than a guess.
-	 *
-	 * The raycaster half is skipped when that player already has one of that kind, wherever it was
-	 * placed, which is what lets an authored raycaster override the default. Otherwise one is added
-	 * to a transient "DreamInteractionHost_P%d" actor. Idempotent: calling it on every world-space
-	 * host's BeginPlay, and again from the screen subsystem, is the expected usage.
-	 */
-	void EnsureInteractionForPlayer(int32 InUserIndex, EDreamInteractionKind InKind);
-	/** The host actor carrying InUserIndex's auto-created raycasters, or null if none was needed. */
-	AActor* GetInteractionHost(int32 InUserIndex)const;
+	const TArray<TWeakObjectPtr<UDreamUIBehaviour>>& GetAllSelectableArray() { return AllSelectableArray; }
+	static void AddSelectable(UDreamUIBehaviour* InSelectable);
+	static void RemoveSelectable(UDreamUIBehaviour* InSelectable);
 	
 #if WITH_EDITOR
 	/**
@@ -402,7 +446,6 @@ public:
 	);
 	void DrawFrameOnWidget(UDreamWidget* InItem, bool ScreenOrWorld = false);
 	void DrawNavigationArrow(UWorld* InWorld, const TArray<FVector>& InControlPoints, const FVector& InArrowPointA, const FVector& InArrowPointB, FColor const& InColor, void* Object, const FString& DebugName, bool ScreenOrWorld = false);
-	void DrawNavigationVisualizerOnUISelectable(UWorld* InWorld, UUISelectable* InSelectable, bool IsScreenSpace = false);
 	FEditorViewportClient* GetEditorViewportClient();
 	
 	static void DrawDebugRect(UWorld* InWorld, const FVector& Center, const FMatrix& LocalToWorld, FVector2D const& Rect, FColor const& Color, void* Object, const FString& DebugName, bool ScreenOrWorld);
@@ -423,3 +466,13 @@ public:
 	static void AddDreamUIBehavioursForStart(UDreamUIBehaviour* InComp);
 	static void RemoveDreamUIBehavioursFromStart(UDreamUIBehaviour* InComp);
 };
+
+namespace DreamUI
+{
+	/**
+	 * What a world service's Initialize does to take part in its world's teardown: enrol with the world's
+	 * manager, making the manager first if it is not yet. False where the world has no manager -- a
+	 * commandlet's, a game preview's -- and the service then takes itself down in its own Deinitialize.
+	 */
+	DREAMGUI_API bool EnrolWorldService(FSubsystemCollectionBase& InCollection, UObject& InServiceObject, IDreamUIWorldService& InService);
+}

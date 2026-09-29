@@ -28,7 +28,7 @@ FVector UDreamPointerEventData::GetWorldPointInPlane()const
 {
 	if (IsValid(PressRaycaster))
 	{
-		return FMath::RayPlaneIntersection(PressRaycaster->GetRayOrigin(), PressRaycaster->GetRayDirection(), FPlane(PressWorldPoint, PressWorldNormal));
+		return FMath::RayPlaneIntersection(GetDragRayOrigin(), GetDragRayDirection(), FPlane(PressWorldPoint, PressWorldNormal));
 	}
 	else
 	{
@@ -43,7 +43,7 @@ FVector UDreamPointerEventData::GetWorldPointSpherical()const
 {
 	if (IsValid(PressRaycaster))
 	{
-		return PressRaycaster->GetRayOrigin() + PressRaycaster->GetRayDirection() * PressDistance;
+		return GetDragRayOrigin() + GetDragRayDirection() * PressDistance;
 	}
 	else
 	{
@@ -52,6 +52,11 @@ FVector UDreamPointerEventData::GetWorldPointSpherical()const
 }
 FVector UDreamPointerEventData::GetDragRayOrigin()const
 {
+	// This pointer's own ray through its press raycaster; see PressRaycasterRayOrigin.
+	if (bHasPressRaycasterRay)
+	{
+		return PressRaycasterRayOrigin;
+	}
 	if (IsValid(PressRaycaster))
 	{
 		return PressRaycaster->GetRayOrigin();
@@ -63,6 +68,10 @@ FVector UDreamPointerEventData::GetDragRayOrigin()const
 }
 FVector UDreamPointerEventData::GetDragRayDirection()const
 {
+	if (bHasPressRaycasterRay)
+	{
+		return PressRaycasterRayDirection;
+	}
 	if (IsValid(PressRaycaster))
 	{
 		return PressRaycaster->GetRayDirection();

@@ -12,10 +12,10 @@ Base class for almost all UI related things.
 
 | Name | Type | Category | In the details panel | From Blueprint | Description |
 |---|---|---|---|---|---|
-| `RelativeLocation` | `FVector` | DreamWidget | yes | read only | Local space position. DuiHidden: the setter recomputes the anchors, and AnchorData is what a .dui spells -- a reflective sweep that also wrote this would author one position twice. |
-| `RelativeRotation` | `FQuat` | DreamWidget | - | read only | Local space rotation. Not marked Interp: Sequencer has no property track for FQuat, so this cannot be keyed directly. Animate RelativeRotationEuler instead, which mirrors this value.         // DuiHidden: RelativeRotationEuler is the authored face of this value, and a quaternion has no // spelling -- but FQuat is an ordinary struct, so without the tag a reflective sweep would // recurse it and write X/Y/Z/W component lines beside the euler it already wrote. |
-| `RelativeRotationEuler` | `FRotator` | DreamWidget | yes | read only | Local space rotation as euler angles, mirroring RelativeRotation so that rotation can be animated: Sequencer has an FRotator property track but none for FQuat. |
-| `RelativeScale` | `FVector` | DreamWidget | yes | read only | Local space scale |
+| `RelativeLocation` | `FVector` | Transform | yes | read only | Local space position. DuiHidden: the setter recomputes the anchors, and AnchorData is what a .dui spells -- a reflective sweep that also wrote this would author one position twice. |
+| `RelativeRotation` | `FQuat` | Transform | - | read only | Local space rotation. Not marked Interp: Sequencer has no property track for FQuat, so this cannot be keyed directly. Animate RelativeRotationEuler instead, which mirrors this value.         // DuiHidden: RelativeRotationEuler is the authored face of this value, and a quaternion has no // spelling -- but FQuat is an ordinary struct, so without the tag a reflective sweep would // recurse it and write X/Y/Z/W component lines beside the euler it already wrote. |
+| `RelativeRotationEuler` | `FRotator` | Transform | yes | read only | Local space rotation as euler angles, mirroring RelativeRotation so that rotation can be animated: Sequencer has an FRotator property track but none for FQuat. |
+| `RelativeScale` | `FVector` | Transform | yes | read only | Local space scale |
 | `RenderTranslation` | `FVector` | Render Transform | yes | read only | RENDER TRANSFORM. |
 | `RenderRotation` | `FRotator` | Render Transform | yes | read only | Render-only rotation about RenderTransformPivot, in degrees. FRotator rather than FQuat for the same reason RelativeRotationEuler exists: Sequencer has a property track for one and not the other. No transient mirror is needed here because this is itself the serialized source of truth. |
 | `RenderScale` | `FVector` | Render Transform | yes | read only | Render-only scale about RenderTransformPivot. |

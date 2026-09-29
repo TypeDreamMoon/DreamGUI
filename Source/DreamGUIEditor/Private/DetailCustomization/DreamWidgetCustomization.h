@@ -10,7 +10,7 @@
 /**
  * 
  */
-class FDreamWidgetCustomization : public IDetailCustomization
+class DREAMGUIEDITOR_API FDreamWidgetCustomization : public IDetailCustomization
 {
 public:
 	FDreamWidgetCustomization();

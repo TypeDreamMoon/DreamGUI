@@ -5,16 +5,14 @@
 #include "Core/DreamUIManager.h"
 #include "Core/Components/DreamWidget.h"
 #include "Interaction/DreamUINavigationScroll.h"
-#include "Interaction/UISelectable.h"
 
 namespace
 {
 	/**
 	 * Every registered navigation component, world-agnostic and filtered at use.
 	 *
-	 * A registry of its own rather than a second array on UDreamUIManagerWorldSubsystem: the manager's
-	 * selectable array is typed to UUISelectable and widening it would reach into a file half the
-	 * plugin edits. Entries are weak and the scan checks the world, which is the same treatment the
+	 * A registry of its own rather than the manager's selectable array, which holds the input system's
+	 * selectables. Entries are weak and the scan checks the world, which is the same treatment the
 	 * selectable array gets from the code that reads it.
 	 */
 	TArray<TWeakObjectPtr<UDreamWidgetNavigation>> GAllNavigationComponents;
@@ -472,7 +470,7 @@ UDreamUIBehaviour* DreamUINavigationScan::ScanDirectional(UDreamUIBehaviour* InS
 
 	if (UDreamUIManagerWorldSubsystem* Manager = UDreamUIManagerWorldSubsystem::GetInstance(InSelf->GetWorld()))
 	{
-		for (const TWeakObjectPtr<UUISelectable>& Selectable : Manager->GetAllSelectableArray())
+		for (const TWeakObjectPtr<UDreamUIBehaviour>& Selectable : Manager->GetAllSelectableArray())
 		{
 			Consider(Selectable.Get());
 		}

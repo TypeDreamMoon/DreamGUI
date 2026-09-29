@@ -9,6 +9,7 @@
 #include "Engine/StaticMesh.h"
 #include "Engine/Texture2D.h"
 #include "Materials/MaterialInterface.h"
+#include "GameFramework/Actor.h"
 
 #define LOCTEXT_NAMESPACE "DreamGUISettings"
 
@@ -47,15 +48,18 @@ UDreamGUISettings::UDreamGUISettings()
 
 	// The STANDALONE native preset, and the choice is load-bearing: this class is the auto-spawn
 	// path's actor, and of the two native presets it is the only one that works unconfigured --
-	// AutoReceiveInput plus direct key bindings, "useful as a drop-in" by its own doc.
+	// AutoReceiveInput plus direct key bindings, "useful as a drop-in" by its own doc. The plugin's
+	// /DreamGUI/Blueprints/DreamEventSystemActor is a data-only subclass of it that adds nothing
+	// (DreamGUI.Input.StandalonePreset.*), so pointing this setting at that Blueprint behaves the same.
 	// ADreamEnhancedInputEventSystemActor looks like the newer pick but leaves its mapping context
 	// and mouse actions deliberately empty for a Blueprint to fill, so pointing here at the C++ class
 	// spawned an event system that never heard a click -- every auto-spawned screen UI lost
-	// interaction until this pointed back. The Blueprint that fills them DOES ship:
-	// /DreamGUI/Blueprints/DreamEventSystemActor_EnhancedInput, which carries IMC_DreamUIInputContext
-	// and the four IA_* actions. A project on Enhanced Input should point this setting at THAT, not at
-	// the native class.
-	EventSystemActorClass = TSoftClassPtr<AActor>(FSoftClassPath(TEXT("/Script/DreamGUI.DreamStandaloneInputEventSystemActor")));
+	// interaction until this pointed back. The Blueprint that fills them ships with the plugin:
+	// /DreamGUI/Blueprints/DreamEventSystemActor_EnhancedInput, a data-only subclass of that class which
+	// sets IMC_DreamUIInputContext and the four IA_* actions and nothing else, so everything the class
+	// binds is what it gets (DreamGUI.Input.EnhancedPreset.* holds it to that). A project on Enhanced
+	// Input should point this setting at THAT, not at the native class.
+	EventSystemActorClass = TSoftClassPtr<AActor>(FSoftClassPath(TEXT("/Script/DreamGUIInput.DreamStandaloneInputEventSystemActor")));
 }
 
 const UDreamGUISettings* UDreamGUISettings::Get()

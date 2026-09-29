@@ -34,6 +34,7 @@ the default one, so nesting fills it:
 | `ClickMethod` | `EDreamUIClickMethod` | Button | yes | `GetClickMethod` / `SetClickMethod` | WHEN this button's click fires, per input kind -- UMG's three enums, surfaced at the control. |
 | `TouchMethod` | `EDreamUITouchMethod` | Button | yes | `GetTouchMethod` / `SetTouchMethod` |  |
 | `PressMethod` | `EDreamUIPressMethod` | Button | yes | `GetPressMethod` / `SetPressMethod` |  |
+| `AcceptedMouseButtons` | `int32` | Button | yes | `GetAcceptedMouseButtons` / `SetAcceptedMouseButtons` | WHICH mouse buttons press and click this button -- a bitmask over EDreamUIMouseButtonType, the left button alone by default, which is UMG's rule: SButton answers the left button and nothing else, so a right click on a button is not a use of it (no OnPressed, OnReleased or OnClicked) and goes on to whatever is behind it. |
 | `FaceNode` | `TObjectPtr<UDreamWidget>` | Button | - | read only |  |
 | `ContentNode` | `TObjectPtr<UDreamWidget>` | Button | - | read only | The hole. Empty is the normal state, and an empty one claims no size -- see RealizeBuiltIn. |
 | `ButtonBehaviour` | `TObjectPtr<UUIButton>` | Button | - | read only |  |
@@ -43,6 +44,7 @@ the default one, so nesting fills it:
 
 | Function | Kind | Description |
 |---|---|---|
+| `int32 GetAcceptedMouseButtons()` | pure | Get Accepted Mouse Buttons |
 | `bool GetAllowDragDrop()` | pure | Get Allow Drag Drop |
 | `FColor GetBackgroundColor()` | pure | Get Background Color |
 | `EDreamUIClickMethod GetClickMethod()` | pure | Get Click Method |
@@ -52,6 +54,7 @@ the default one, so nesting fills it:
 | `FDreamButtonStyle GetStyle()` | pure | Get Style |
 | `EDreamUITouchMethod GetTouchMethod()` | pure | Get Touch Method |
 | `bool IsPressed()` | pure | Whether a pointer is holding this button down right now. |
+| `void SetAcceptedMouseButtons(int32 InAcceptedMouseButtons)` | callable | Writes the bitmask and pushes it onto the behaviour at once, as the three method setters do. |
 | `void SetAllowDragDrop(bool bInAllowDragDrop)` | callable | Set Allow Drag Drop |
 | `void SetBackgroundColor(FColor InBackgroundColor)` | callable | Set Background Color |
 | `void SetClickMethod(EDreamUIClickMethod InMethod)` | callable | Each of the four setters below writes the field and re-pushes it onto the behaviour. |
@@ -83,9 +86,9 @@ Every Blueprint-facing member of the UMG class, and where it went. *adopt*: same
 | `UButton` | `TouchMethod` | adopt | `TouchMethod` | EDreamUITouchMethod. |
 | `UButton` | `PressMethod` | adopt | `PressMethod` | EDreamUIPressMethod. |
 | `UButton` | `IsFocusable` | map | `UDreamWidget::bIsFocusable` | Every widget here carries it, so a control-level copy would shadow the base member and be a second answer to one question. |
-| `UButton` | `OnClicked` | adopt | `OnClicked` |  |
-| `UButton` | `OnPressed` | adopt | `OnPressed` |  |
-| `UButton` | `OnReleased` | adopt | `OnReleased` |  |
+| `UButton` | `OnClicked` | adopt | `OnClicked` | Only the mouse buttons in AcceptedMouseButtons press and click a button -- the left one alone by default, which is SButton's rule (its OnMouseButtonDown/Up test for EKeys::LeftMouseButton or a touch). UMG has no knob for it; AcceptedMouseButtons is this control's own, for a button that should answer another button too. A touch and a gamepad or keyboard press always count. A double click is two full clicks, as on SButton: the event system delivers the second press as a double click, and the button takes a double click as a press (SButton::OnMouseButtonDoubleClick hands it to OnMouseButtonDown). |
+| `UButton` | `OnPressed` | adopt | `OnPressed` | Not for a mouse button the button does not answer (see OnClicked), nor while disabled. |
+| `UButton` | `OnReleased` | adopt | `OnReleased` | Only after an OnPressed, as SButton's Release is gated on bIsPressed: the press pair always comes as a pair. |
 | `UButton` | `OnHovered` | adopt | `OnHovered` |  |
 | `UButton` | `OnUnhovered` | adopt | `OnUnhovered` |  |
 | `UButton` | `SetStyle` | adopt | `SetStyle` |  |

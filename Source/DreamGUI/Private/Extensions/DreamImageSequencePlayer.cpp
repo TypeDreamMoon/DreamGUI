@@ -3,6 +3,7 @@
 #include "Extensions/DreamImageSequencePlayer.h"
 #include "DreamTweenBPLibrary.h"
 #include "Core/DreamUIManager.h"
+#include "Core/DreamUIWorldContext.h"
 #include "Core/Components/DreamTexture.h"
 
 UDreamImageSequencePlayer::UDreamImageSequencePlayer()
@@ -27,11 +28,11 @@ void UDreamImageSequencePlayer::OnRegister()
 {
 	Super::OnRegister();
 #if WITH_EDITOR
-	if (GetWorld() && GetWorld()->WorldType == EWorldType::Editor)
+	if (DreamUI::IsEditingWorld(this))
 	{
-		if (auto DreamUIManagerObject = UDreamUIManagerObject::GetInstance(true))
+		if (auto WorldManager = UDreamUIManagerWorldSubsystem::GetInstance(GetWorld()))
 		{
-			EditorPlayDelegateHandle = DreamUIManagerObject->GetEditorTickDelegate().AddWeakLambda(this, [this](float deltaTime) {
+			EditorPlayDelegateHandle = WorldManager->GetEditorTickDelegate().AddWeakLambda(this, [this](float deltaTime) {
 				if (!bPreviewInEditor)return;
 				EnforceFrameRate();
 				if (!CanPlay())return;
@@ -49,9 +50,9 @@ void UDreamImageSequencePlayer::OnUnregister()
 #if WITH_EDITOR
 	if (EditorPlayDelegateHandle.IsValid())
 	{
-		if (auto DreamUIManagerObject = UDreamUIManagerObject::GetInstance(false))
+		if (auto WorldManager = UDreamUIManagerWorldSubsystem::GetInstance(GetWorld()))
 		{
-			DreamUIManagerObject->GetEditorTickDelegate().Remove(EditorPlayDelegateHandle);
+			WorldManager->GetEditorTickDelegate().Remove(EditorPlayDelegateHandle);
 		}
 	}
 #endif
@@ -93,8 +94,25 @@ void UDreamImageSequencePlayer::Play()
 		if (PlayTweener.IsValid())
 		{
 			PlayTweener->SetAffectByGamePause(bAffectByGamePause)->SetAffectByTimeDilation(bAffectByTimeDilation);
+			UpdateAnimation(0);
 		}
-		UpdateAnimation(0);
+		else if (bLoop)
+		{
+			// No tween manager to be ticked by: the per-frame update is a tween, and a world no game
+			// instance owns has none. A loop has no end to land on, so it shows its first frame and
+			// stays there -- the still a designer would look at anyway.
+			UpdateAnimation(0);
+		}
+		else
+		{
+			// The same missing clock, for a sequence that ends: its end is its last frame, so that is
+			// what is shown, and then the player stops as it does when the clock runs out. The last
+			// INDEX rather than the frame count: the sheet player reads a frame number one past the end
+			// as the first cell of the last row.
+			ElapsedTime = Duration;
+			OnUpdateAnimation(FMath::Max(FMath::RoundToInt(Duration * Fps) - 1, 0));
+			Stop();
+		}
 	}
 	if (bIsPaused)
 	{
