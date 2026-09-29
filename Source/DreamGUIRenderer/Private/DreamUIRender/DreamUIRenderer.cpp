@@ -507,6 +507,15 @@ namespace DreamUIRendererLocal
 		DreamUIRenderStats::AddCount(DreamUIRenderStats::ECounter::VerticesRecorded, Vertices);
 	}
 
+	/** Whether a batch collected is drawn through a material -- its own, or the wireframe's -- which reads the view's uniform buffer. */
+	bool DrawsThroughAMaterial(const FCollectedMeshBatches& InCollected, bool bRenderWireframe)
+	{
+		return bRenderWireframe || InCollected.Batches.ContainsByPredicate([](const FDreamUIMeshBatchContainer& Batch)
+		{
+			return !Batch.BuiltIn.bEnabled;
+		});
+	}
+
 	/**
 	 * The view's resolved scene depth, through the renderer's public scene-texture uniform buffers -- the deferred one
 	 * or the mobile one, whichever path drew the view -- and the dummy depth where there is none to read: a view the
@@ -1042,17 +1051,28 @@ void FDreamUIRenderer::RecordWorldSpace_RenderThread(FRDGBuilder& GraphBuilder, 
 			RenderView->ViewMatrices.HackRemoveTemporalAAProjectionJitter();
 			auto ViewProjectionMatrix = FMatrix44f(RenderView->ViewMatrices.GetWorldToClip());
 
-			FViewUniformShaderParameters ViewUniformShaderParameters;
-			RenderView->SetupCommonViewUniformBufferParameters(
-				ViewUniformShaderParameters,
-				ViewRect.Size(),
-				1,
-				ViewRect,
-				RenderView->ViewMatrices,
-				FViewMatrices()
-			);
-
-			RenderView->ViewUniformBuffer = TUniformBufferRef<FViewUniformShaderParameters>::CreateUniformBufferImmediate(ViewUniformShaderParameters, UniformBuffer_SingleFrame);
+			// The view's uniform buffer is what a material reads; the built-in shader reads none of it. It is made once a batch
+			// that can be drawn through a material has been collected, and a stage that collects none makes none. The copy
+			// starts without the view's own.
+			RenderView->ViewUniformBuffer.SafeRelease();
+			auto MakeViewUniformBuffer = [RenderView, &ViewRect]()
+			{
+				if (RenderView->ViewUniformBuffer.IsValid())
+				{
+					return;
+				}
+				TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_ViewUniformBuffer);
+				FViewUniformShaderParameters ViewUniformShaderParameters;
+				RenderView->SetupCommonViewUniformBufferParameters(
+					ViewUniformShaderParameters,
+					ViewRect.Size(),
+					1,
+					ViewRect,
+					RenderView->ViewMatrices,
+					FViewMatrices()
+				);
+				RenderView->ViewUniformBuffer = TUniformBufferRef<FViewUniformShaderParameters>::CreateUniformBufferImmediate(ViewUniformShaderParameters, UniformBuffer_SingleFrame);
+			};
 
 			/**
 			 * Unconditional on purpose, and no dirty flag can change that: RenderSequenceArray is built
@@ -1132,6 +1152,10 @@ void FDreamUIRenderer::RecordWorldSpace_RenderThread(FRDGBuilder& GraphBuilder, 
 								RenderPrimitiveItem.Primitive->DreamUI_GetMeshElements(*RenderView->Family, MeshCollector, RenderPrimitiveItem, Collected->Batches);
 							}
 							DreamUIRendererLocal::CountCollected(*Collected);
+							if (DreamUIRendererLocal::DrawsThroughAMaterial(*Collected, bRenderWireframe))
+							{
+								MakeViewUniformBuffer();
+							}
 							GraphBuilder.AddPass(
 								RDG_EVENT_NAME("DreamUIRender_WorldSpace"),
 								PassParameters,
@@ -1169,6 +1193,11 @@ void FDreamUIRenderer::RecordWorldSpace_RenderThread(FRDGBuilder& GraphBuilder, 
 											if (!MaterialRenderProxy)return;
 											auto Material = MaterialRenderProxy->GetMaterialNoFallback(RenderView->GetFeatureLevel());//why not use "GetIncompleteMaterialWithFallback" here? because fallback material can't render with DreamUIRenderer
 											if (!Material)return;
+											// Collected with a primitive uniform buffer, and the view's made, whenever it can be drawn through a material.
+											if (!ensure(Mesh.Elements[0].PrimitiveUniformBufferResource != nullptr && RenderView->ViewUniformBuffer.IsValid()))
+											{
+												return;
+											}
 											
 											if (DepthFade <= 0)
 											{
@@ -1439,17 +1468,28 @@ void FDreamUIRenderer::RecordScreenSpace_RenderThread(FRDGBuilder& GraphBuilder,
 			}
 		}
 
-		FViewUniformShaderParameters ViewUniformShaderParameters;
-		RenderView->SetupCommonViewUniformBufferParameters(
-			ViewUniformShaderParameters,
-			ViewRect.Size(),
-			1,
-			ViewRect,
-			RenderView->ViewMatrices,
-			FViewMatrices()
-		);
-
-		RenderView->ViewUniformBuffer = TUniformBufferRef<FViewUniformShaderParameters>::CreateUniformBufferImmediate(ViewUniformShaderParameters, UniformBuffer_SingleFrame);
+		// The view's uniform buffer is what a material reads; the built-in shader reads none of it. It is made once a batch
+		// that can be drawn through a material has been collected, and a stage that collects none makes none. The copy
+		// starts without the view's own.
+		RenderView->ViewUniformBuffer.SafeRelease();
+		auto MakeViewUniformBuffer = [RenderView, &ViewRect]()
+		{
+			if (RenderView->ViewUniformBuffer.IsValid())
+			{
+				return;
+			}
+			TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_ViewUniformBuffer);
+			FViewUniformShaderParameters ViewUniformShaderParameters;
+			RenderView->SetupCommonViewUniformBufferParameters(
+				ViewUniformShaderParameters,
+				ViewRect.Size(),
+				1,
+				ViewRect,
+				RenderView->ViewMatrices,
+				FViewMatrices()
+			);
+			RenderView->ViewUniformBuffer = TUniformBufferRef<FViewUniformShaderParameters>::CreateUniformBufferImmediate(ViewUniformShaderParameters, UniformBuffer_SingleFrame);
+		};
 
 		bool bIsDepthStencilCleared = false;
 		bool bIsRenderTarget = RendererType == EDreamUIRendererType::RenderTarget;
@@ -1509,6 +1549,10 @@ void FDreamUIRenderer::RecordScreenSpace_RenderThread(FRDGBuilder& GraphBuilder,
 					RenderSequenceItem.Primitive->DreamUI_GetMeshElements(*RenderView->Family, MeshCollector, RenderSequenceItem, Collected->Batches);
 				}
 				DreamUIRendererLocal::CountCollected(*Collected);
+				if (DreamUIRendererLocal::DrawsThroughAMaterial(*Collected, bRenderWireframe))
+				{
+					MakeViewUniformBuffer();
+				}
 				GraphBuilder.AddPass(
 					RDG_EVENT_NAME("DreamUIRender_ScreenSpace"),
 					PassParameters,
@@ -1560,6 +1604,11 @@ void FDreamUIRenderer::RecordScreenSpace_RenderThread(FRDGBuilder& GraphBuilder,
 									return;
 								}
 								
+								// Collected with a primitive uniform buffer, and the view's made, whenever it can be drawn through a material.
+								if (!ensure(Mesh.Elements[0].PrimitiveUniformBufferResource != nullptr && RenderView->ViewUniformBuffer.IsValid()))
+								{
+									return;
+								}
 								FMaterialShaderTypes ShaderTypes;
 								ShaderTypes.AddShaderType<FDreamUIScreenRenderVS>();
 								ShaderTypes.AddShaderType<FDreamUIScreenRenderPS>();

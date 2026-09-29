@@ -963,6 +963,8 @@ public:
 		{
 			WireframeMaterialInstance = GEngine->WireframeMaterial ? GEngine->WireframeMaterial->GetRenderProxy() : nullptr;
 		}
+		// The renderer draws a wireframe in the wireframe view mode, and over a lit view with mesh edges shown.
+		const bool bAnyWireframePass = ViewFamily.ViewMode == VMI_Wireframe || ViewFamily.EngineShowFlags.MeshEdges;
 
 		for (int i = 0; i < PrimitiveData.Sections.Num(); i++)
 		{
@@ -984,10 +986,14 @@ public:
 			Mesh.bWireframe = bWireframe;
 			Mesh.MaterialRenderProxy = MaterialProxy;
 
-			FDynamicPrimitiveUniformBuffer& DynamicPrimitiveUniformBuffer = Collector.AllocateOneFrameResource<FDynamicPrimitiveUniformBuffer>();
-			DynamicPrimitiveUniformBuffer.Set(Collector.GetRHICommandList(), GetLocalToWorld(), GetLocalToWorld(), GetBounds(), GetLocalBounds(), false, false, false);
-			BatchElement.PrimitiveUniformBufferResource = &DynamicPrimitiveUniformBuffer.UniformBuffer;
-			//BatchElement.PrimitiveUniformBuffer = CreatePrimitiveUniformBufferImmediate(GetLocalToWorld(), GetBounds(), GetLocalBounds(), false, UseEditorDepthTest());
+			// The built-in shader takes the transform from the batch and reads no primitive uniform buffer; a material reads
+			// one, and so does the wireframe.
+			if (bWireframe || bAnyWireframePass || !Section->BuiltIn.bEnabled)
+			{
+				FDynamicPrimitiveUniformBuffer& DynamicPrimitiveUniformBuffer = Collector.AllocateOneFrameResource<FDynamicPrimitiveUniformBuffer>();
+				DynamicPrimitiveUniformBuffer.Set(Collector.GetRHICommandList(), GetLocalToWorld(), GetLocalToWorld(), GetBounds(), GetLocalBounds(), false, false, false);
+				BatchElement.PrimitiveUniformBufferResource = &DynamicPrimitiveUniformBuffer.UniformBuffer;
+			}
 
 			BatchElement.FirstIndex = 0;
 			BatchElement.NumPrimitives = Section->NumPrimitives;
