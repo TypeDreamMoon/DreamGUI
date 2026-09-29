@@ -803,6 +803,12 @@ public:
 
 	void AddDreamWidget(UDreamWidget* InWidget);
 	void RemoveDreamWidget(UDreamWidget* InWidget);
+	/**
+	 * InWidget came into this canvas, left it, or moved within it: the widget list is made again. The widgets already in
+	 * it keep their order, so only a widget that is in the canvas now asks for an update; what one that left drew goes
+	 * with the rebuild, whose prepare leaves out what is no longer in the list.
+	 */
+	void MarkWidgetCameOrWent(UDreamWidget* InWidget);
 	/** return all DreamWidget that belongs to this canvas. */
 	const TArray<UDreamVisual*>& GetVisualArray()const { return VisualList; }
 	const TArray<UDreamWidget*>& GetWidgetArray()const { return WidgetList; }
@@ -986,27 +992,40 @@ private:
 	/** Something other than a widget woke the canvas: the next update looks at every widget. */
 	bool bUpdateEveryWidget = true;
 	/**
-	 * Each widget's place in WidgetList: the order the widgets that asked are looked at in. Made when widgets first ask
-	 * alone after the list was made, which a list made again every frame never sees (bWidgetListIndexValid).
+	 * Each widget's place in WidgetList: the order the widgets that asked are looked at in, and the order the prepare's
+	 * entries are merged in. Made when it is first needed after the list was made (bWidgetListIndexValid).
 	 */
 	TMap<TObjectKey<UDreamWidget>, int32> WidgetListIndex;
 	bool bWidgetListIndexValid = false;
-	/** InAsking in list order, once each; false when one of them is gone or not in the list, which is then behind. */
+	void EnsureWidgetListIndex();
+	/**
+	 * InAsking in list order, once each. False when one of them is not in the list and the list is behind, not when it
+	 * went: one that left the canvas since the list was last made has nothing to look at, and what it drew goes with the
+	 * prepare that merges the new list (bWidgetListChangedSincePrepare).
+	 */
 	bool GatherWidgetsToUpdateInListOrder(const TArray<TWeakObjectPtr<UDreamWidget>>& InAsking, TArray<UDreamWidget*>& OutWidgets);
 	/**
-	 * What the last full prepare made, kept: when only the widgets in WidgetsToPrepare changed since, the next prepare
-	 * takes it and gives those widgets their new geometry, instead of walking every widget again.
+	 * What the last prepare made, kept: when only the widgets in WidgetsToPrepare changed since -- asked, came, moved --
+	 * the next prepare keeps every other widget's entry and makes theirs again (MergePreparedDataCache), instead of
+	 * walking every widget.
 	 */
 	TArray<FDreamUIRenderData> PreparedDataCache;
-	/** Where each batch-mesh widget's entry is in PreparedDataCache; made from it when a prepare first takes it. */
-	TMap<TObjectKey<UDreamWidget>, int32> PreparedDataIndex;
-	bool bPreparedDataIndexValid = false;
 	/** The widgets looked at since the last prepare; bPrepareEveryWidget when every widget was. */
 	TArray<TWeakObjectPtr<UDreamWidget>> WidgetsToPrepare;
 	bool bPrepareEveryWidget = true;
 	bool bPreparedDataCacheValid = false;
-	/** The cache brought up to date for WidgetsToPrepare; false when only a full prepare can say what they became. */
-	bool RefreshPreparedDataCache();
+	/** The widget list was made again since the last prepare: widgets came, went or moved. */
+	bool bWidgetListChangedSincePrepare = false;
+	/**
+	 * PreparedDataCache made over: each widget that stayed where it was keeps its entry, in the list's order, and each
+	 * widget in WidgetsToPrepare has its made again. False when only a full prepare can say what the order is; the cache
+	 * is then made again from nothing.
+	 */
+	bool MergePreparedDataCache();
+	/** What a prepare makes of InWidget -- nothing, or its one entry -- appended to OutRenderDataArray. */
+	void AppendRenderDataOf(UDreamWidget* InWidget, TArray<FDreamUIRenderData>& OutRenderDataArray);
+	/** r.DreamUI.VerifyPartialPrepare: InPrepared, made from the last prepare, against a prepare of every widget now. */
+	void VerifyPartialPrepare(const TArray<FDreamUIRenderData>& InPrepared);
 
 	void PrepareDrawCallBatchingData(TArray<FDreamUIRenderData>& OutRenderDataArray);
 	void UpdateDrawCallMesh();

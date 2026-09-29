@@ -32,19 +32,28 @@ namespace DreamTests::Lifecycle
 		UE_NONCOPYABLE(FScopedWorld);
 	};
 
+	/** The console variable InName at InValue for the length of a scope, and back to what it was after. */
+	struct FScopedConsoleVariable
+	{
+		FScopedConsoleVariable(const TCHAR* InName, int32 InValue);
+		~FScopedConsoleVariable();
+		UE_NONCOPYABLE(FScopedConsoleVariable);
+	private:
+		class IConsoleVariable* Variable = nullptr;
+		int32 Before = 0;
+	};
+
 	/**
 	 * r.DreamUI.MaterialWrappers at InValue for the length of a scope, and back to what it was after. 0 has a
 	 * canvas draw its own materials through a material instance per draw call, as it did before its material
 	 * proxies: what the tests of those instances need made.
 	 */
-	struct FScopedMaterialWrappers
+	struct FScopedMaterialWrappers : public FScopedConsoleVariable
 	{
-		explicit FScopedMaterialWrappers(int32 InValue);
-		~FScopedMaterialWrappers();
-		UE_NONCOPYABLE(FScopedMaterialWrappers);
-	private:
-		class IConsoleVariable* Variable = nullptr;
-		int32 Before = 0;
+		explicit FScopedMaterialWrappers(int32 InValue)
+			: FScopedConsoleVariable(TEXT("r.DreamUI.MaterialWrappers"), InValue)
+		{
+		}
 	};
 
 	/**

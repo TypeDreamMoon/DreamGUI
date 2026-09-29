@@ -22,7 +22,8 @@
  * A canvas used to look at every one of its widgets -- its clip, its geometry, and again to prepare the batching --
  * whenever anything in it changed, so a panel of a thousand widgets paid for a thousand when one of them moved. A
  * widget that asks for an update names itself now, and a canvas woken by its widgets alone looks at those widgets
- * alone. Anything else that wakes the canvas -- the canvas itself, a new hierarchy -- still looks at every widget.
+ * alone; so does a widget coming into the canvas or going from it. Anything else that wakes the canvas -- the canvas
+ * itself, a reordered hierarchy -- still looks at every widget.
  */
 namespace DreamCanvasWidgetUpdateTestLocal
 {
@@ -117,6 +118,97 @@ bool FDreamCanvasWokenByOneWidgetTest::RunTest(const FString& Parameters)
 		Frame();
 	});
 	TestEqual(TEXT("Woken by the canvas itself: every widget is looked at"), Everything, static_cast<int64>(BlockCount + 1));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamCanvasWidgetComingAndGoingTest,
+	"DreamGUI.Canvas.AWidgetComingOrGoingIsLookedAtAloneAndTheDrawCallsFollowIt",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamCanvasWidgetComingAndGoingTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamCanvasWidgetUpdateTestLocal;
+	// The widgets already in a canvas keep their order when another comes or goes, so the canvas looks at the one that
+	// came and at nothing for the one that went, and its prepare keeps the last one's entries for the rest. Every prepare
+	// made that way is checked here against a prepare of every widget, and a difference is an ensure.
+	const DreamTests::Lifecycle::FScopedConsoleVariable Verify(TEXT("r.DreamUI.VerifyPartialPrepare"), 1);
+	FDreamDriverRig Rig = FDreamDriverRig::Headless(FIntPoint(1280, 720));
+	Rig.BindTest(this);
+	if (!TestTrue(TEXT("The rig came up"), Rig.IsUsable()))
+	{
+		return false;
+	}
+	UDreamCanvas* Canvas = Rig.RootCanvas();
+	UDreamUIManagerWorldSubsystem* Manager = UDreamUIManagerWorldSubsystem::GetInstance(Rig.GetWorld());
+	if (!TestNotNull(TEXT("The rig's world has its UI manager"), Manager))
+	{
+		return false;
+	}
+	// White blocks in a row share a draw call; a block on a texture of its own draws in a second.
+	for (int32 Index = 0; Index < BlockCount; ++Index)
+	{
+		UDreamWidget* Block = Rig.MakeWidget(FString::Printf(TEXT("Block%d"), Index), nullptr, FVector2D(10.0, 10.0), FVector2D(-300.0 + Index * 15.0, 0.0));
+		if (UDreamTexture* Visual = Block != nullptr ? Block->CreateNewVisual<UDreamTexture>() : nullptr)
+		{
+			Visual->SetTexture(FDreamUIUtils::GetDefaultWhiteTexture());
+		}
+	}
+	UTexture2D* OwnTexture = UTexture2D::CreateTransient(4, 4);
+	if (!TestNotNull(TEXT("A texture of its own"), OwnTexture))
+	{
+		return false;
+	}
+	DrawFrames(Rig, Manager, 3);
+	if (!TestEqual(TEXT("The white blocks share a draw call"), Canvas->GetDrawCallCount(), 1))
+	{
+		return false;
+	}
+
+	UDreamWidget* Odd = nullptr;
+	const int64 Coming = WidgetsUpdatedBy([&Rig, Manager, OwnTexture, &Odd]()
+	{
+		Odd = Rig.MakeWidget(TEXT("Odd"), nullptr, FVector2D(10.0, 10.0), FVector2D(0.0, 100.0));
+		if (UDreamTexture* Image = Odd != nullptr ? Odd->CreateNewVisual<UDreamTexture>() : nullptr)
+		{
+			Image->SetTexture(OwnTexture);
+		}
+		DrawFrames(Rig, Manager, 2);
+	});
+	if (!TestNotNull(TEXT("The block that came"), Odd))
+	{
+		return false;
+	}
+	TestTrue(FString::Printf(TEXT("A block coming is looked at, and the %d already there are not (%lld looked at)"), BlockCount, Coming),
+		Coming >= 1 && Coming < BlockCount);
+	TestEqual(TEXT("...and it draws, in a draw call of its own"), Canvas->GetDrawCallCount(), 2);
+
+	const int64 Going = WidgetsUpdatedBy([&Rig, Manager, Odd]()
+	{
+		Odd->DestroyWidget();
+		DrawFrames(Rig, Manager, 2);
+	});
+	TestTrue(FString::Printf(TEXT("A block going has no widget looked at for it (%lld looked at)"), Going), Going < BlockCount);
+	TestEqual(TEXT("...and its draw call goes with it"), Canvas->GetDrawCallCount(), 1);
+
+	// A block moving under another parent of the same canvas comes to another place in its list, and asks.
+	UDreamWidget* Holder = Rig.MakeWidget(TEXT("Holder"), nullptr, FVector2D(100.0, 100.0), FVector2D(0.0, -150.0));
+	UDreamWidget* Moved = Rig.MakeWidget(TEXT("Moved"), nullptr, FVector2D(10.0, 10.0), FVector2D(200.0, 0.0));
+	UDreamTexture* MovedImage = Moved != nullptr ? Moved->CreateNewVisual<UDreamTexture>() : nullptr;
+	if (!TestNotNull(TEXT("A holder"), Holder) || !TestNotNull(TEXT("A block to move"), MovedImage))
+	{
+		return false;
+	}
+	MovedImage->SetTexture(OwnTexture);
+	DrawFrames(Rig, Manager, 2);
+	const int64 Moving = WidgetsUpdatedBy([&Rig, Manager, Moved, Holder]()
+	{
+		Moved->TrySetParent(Holder, /*InKeepWorldPosition*/ false);
+		DrawFrames(Rig, Manager, 2);
+	});
+	TestTrue(FString::Printf(TEXT("A block moving within the canvas is looked at, and not every widget (%lld looked at)"), Moving),
+		Moving >= 1 && Moving < BlockCount);
+	TestEqual(TEXT("...and it still draws in its own draw call"), Canvas->GetDrawCallCount(), 2);
 	return true;
 }
 

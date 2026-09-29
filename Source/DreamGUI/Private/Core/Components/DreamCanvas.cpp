@@ -44,6 +44,14 @@
 
 #define LOCTEXT_NAMESPACE "DreamCanvas"
 
+static TAutoConsoleVariable<int32> CVarDreamUIVerifyPartialPrepare(
+	TEXT("r.DreamUI.VerifyPartialPrepare"),
+	0,
+	TEXT("1: every prepare a canvas makes from its last one -- making again only what the widgets that asked, came or moved ")
+	TEXT("draw -- is checked against a prepare of every widget, and a difference is an ensure. For tests: it costs a full ")
+	TEXT("prepare each time."),
+	ECVF_Default);
+
 static TAutoConsoleVariable<int32> CVarDreamUIMaterialWrappers(
 	TEXT("r.DreamUI.MaterialWrappers"),
 	1,
@@ -734,29 +742,38 @@ void UDreamCanvas::MarkWidgetUpdate(UDreamWidget* InWidget, bool bRebuildDrawCal
 	WidgetsToUpdate.Add(InWidget);
 }
 
+void UDreamCanvas::EnsureWidgetListIndex()
+{
+	if (bWidgetListIndexValid)
+	{
+		return;
+	}
+	bWidgetListIndexValid = true;
+	WidgetListIndex.Reset();
+	WidgetListIndex.Reserve(WidgetList.Num());
+	for (int32 Index = 0; Index < WidgetList.Num(); ++Index)
+	{
+		WidgetListIndex.Add(TObjectKey<UDreamWidget>(WidgetList[Index]), Index);
+	}
+}
+
 bool UDreamCanvas::GatherWidgetsToUpdateInListOrder(const TArray<TWeakObjectPtr<UDreamWidget>>& InAsking, TArray<UDreamWidget*>& OutWidgets)
 {
-	if (!bWidgetListIndexValid)
-	{
-		bWidgetListIndexValid = true;
-		WidgetListIndex.Reset();
-		WidgetListIndex.Reserve(WidgetList.Num());
-		for (int32 Index = 0; Index < WidgetList.Num(); ++Index)
-		{
-			WidgetListIndex.Add(TObjectKey<UDreamWidget>(WidgetList[Index]), Index);
-		}
-	}
+	EnsureWidgetListIndex();
 	TArray<TPair<int32, UDreamWidget*>, TInlineAllocator<64>> Ordered;
 	for (const TWeakObjectPtr<UDreamWidget>& WeakWidget : InAsking)
 	{
 		UDreamWidget* Widget = WeakWidget.Get();
-		if (!IsValid(Widget))
-		{
-			return false;//gone since it asked: what it drew has to go too, which only a full walk and prepare see
-		}
-		const int32* Index = WidgetListIndex.Find(TObjectKey<UDreamWidget>(Widget));
+		const int32* Index = IsValid(Widget) ? WidgetListIndex.Find(TObjectKey<UDreamWidget>(Widget)) : nullptr;
 		if (Index == nullptr)
 		{
+			// Gone since it asked, or no longer this canvas's: what it drew goes with the prepare that merges the list
+			// made again without it. Anything else not in the list means the list is behind, which only a full walk and
+			// prepare see.
+			if (bWidgetListChangedSincePrepare && (!IsValid(Widget) || Widget->GetRenderCanvas() != this))
+			{
+				continue;
+			}
 			return false;
 		}
 		Ordered.Emplace(*Index, Widget);
@@ -773,72 +790,74 @@ bool UDreamCanvas::GatherWidgetsToUpdateInListOrder(const TArray<TWeakObjectPtr<
 	return true;
 }
 
-bool UDreamCanvas::RefreshPreparedDataCache()
+bool UDreamCanvas::MergePreparedDataCache()
 {
-	if (!bPreparedDataIndexValid)
-	{
-		bPreparedDataIndexValid = true;
-		PreparedDataIndex.Reset();
-		for (int32 Entry = 0; Entry < PreparedDataCache.Num(); ++Entry)
-		{
-			const FDreamUIRenderData& Data = PreparedDataCache[Entry];
-			if (Data.Type != EDreamUIDrawCallType::BatchMesh)
-			{
-				continue;
-			}
-			// A visual gone since leaves its widget out, and a widget with no entry that is drawn now sends the prepare
-			// back to walking every widget.
-			if (UDreamVisualBatchMesh* Visual = Data.BatchMeshVisualObject.Get())
-			{
-				PreparedDataIndex.Add(TObjectKey<UDreamWidget>(Visual->GetWidget()), Entry);
-			}
-		}
-	}
+	TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_MergePreparedData);
+	EnsureWidgetListIndex();
+	// The widgets looked at since the last prepare, in list order, each once: what a prepare makes of them now is made
+	// again. One gone, or no longer this canvas's, has no place in the list, and nothing is made for it.
+	TArray<TPair<int32, UDreamWidget*>, TInlineAllocator<64>> Looked;
+	TSet<TObjectKey<UDreamWidget>> LookedKeys;
 	for (const TWeakObjectPtr<UDreamWidget>& WeakWidget : WidgetsToPrepare)
 	{
 		UDreamWidget* Widget = WeakWidget.Get();
 		if (!IsValid(Widget))
 		{
-			return false;
+			continue;
 		}
-		const int32* Entry = PreparedDataIndex.Find(TObjectKey<UDreamWidget>(Widget));
-		// What a full prepare would make of the widget now. Anything but a batch mesh, or a widget that comes into the
-		// list or leaves it, is left to a full prepare: the entries around it would have to move.
-		if (Widget->IsCanvasWidget() && Widget->GetRenderCanvas() != this)
+		const TObjectKey<UDreamWidget> Key(Widget);
+		const int32* Index = WidgetListIndex.Find(Key);
+		if (Index == nullptr)
 		{
-			return false;
-		}
-		UDreamVisual* Visual = Widget->GetVisual();
-		if (Visual == nullptr)
-		{
-			if (Entry != nullptr)
+			if (Widget->GetRenderCanvas() == this)
 			{
-				return false;
+				return false;//this canvas's and not in its list: the list is behind
 			}
 			continue;
 		}
-		if (Visual->GetVisualType() != EDreamVisualType::BatchMesh)
+		bool bAlreadyLooked = false;
+		LookedKeys.Add(Key, &bAlreadyLooked);
+		if (!bAlreadyLooked)
 		{
-			return false;
-		}
-		UDreamVisualBatchMesh* BatchMesh = static_cast<UDreamVisualBatchMesh*>(Visual);
-		const FDreamUIGeometry* Geometry = BatchMesh->GetGeometry();
-		const bool bIncluded = Widget->GetRenderVisibleInHierarchy() && Geometry != nullptr
-			&& Geometry->Vertices.Num() > 0 && Geometry->Vertices.Num() < LEXUI_MAX_VERTEX_COUNT;
-		if (bIncluded != (Entry != nullptr))
-		{
-			return false;
-		}
-		if (bIncluded)
-		{
-			// Made from another visual: the widget was given a new one since.
-			if (PreparedDataCache[*Entry].BatchMeshVisualObject.Get() != BatchMesh)
-			{
-				return false;
-			}
-			PreparedDataCache[*Entry].BatchMeshGeometry = BatchMesh->GetGeometryForBatching();
+			Looked.Emplace(*Index, Widget);
 		}
 	}
+	Looked.Sort([](const TPair<int32, UDreamWidget*>& A, const TPair<int32, UDreamWidget*>& B) { return A.Key < B.Key; });
+
+	// Every other widget's entry stands as the last prepare made it, in its place: the widgets that stayed keep their order
+	// in a list made again, and one that moved was looked at. An entry whose widget is no longer in the list goes. Entries
+	// are moved out of the cache as they are taken; a merge that gives up leaves the cache to a full prepare.
+	TArray<FDreamUIRenderData> Merged;
+	Merged.Reserve(PreparedDataCache.Num() + Looked.Num());
+	int32 NextLooked = 0;
+	int32 LastPlace = INDEX_NONE;
+	for (FDreamUIRenderData& Entry : PreparedDataCache)
+	{
+		if (LookedKeys.Contains(Entry.Widget))
+		{
+			continue;
+		}
+		const int32* Place = WidgetListIndex.Find(Entry.Widget);
+		if (Place == nullptr)
+		{
+			continue;
+		}
+		if (*Place <= LastPlace)
+		{
+			return false;//out of the list's order: only a full prepare says what the order is
+		}
+		LastPlace = *Place;
+		for (; NextLooked < Looked.Num() && Looked[NextLooked].Key < *Place; ++NextLooked)
+		{
+			AppendRenderDataOf(Looked[NextLooked].Value, Merged);
+		}
+		Merged.Add(MoveTemp(Entry));
+	}
+	for (; NextLooked < Looked.Num(); ++NextLooked)
+	{
+		AppendRenderDataOf(Looked[NextLooked].Value, Merged);
+	}
+	PreparedDataCache = MoveTemp(Merged);
 	return true;
 }
 
@@ -1067,8 +1086,24 @@ void UDreamCanvas::MarkVisualWillChange(UDreamVisual* InOldVisual)
 	 * editor this was invisible because PostReinitProperties marks everything dirty; at runtime
 	 * (Blueprint swapping a visual type, or an object pool reusing a widget) the old visual kept
 	 * drawing.
+	 *
+	 * The visual's widget asks, when it stays in this canvas: what it draws now, if anything, is made again. One that
+	 * left this canvas goes from the list made again without it, and its entry with it. A visual with no widget leaves
+	 * nothing to say whose entry goes, and every widget is looked at.
 	 */
-	MarkCanvasUpdate(true);
+	UDreamWidget* VisualWidget = InOldVisual != nullptr ? InOldVisual->GetWidget() : nullptr;
+	if (VisualWidget == nullptr)
+	{
+		MarkCanvasUpdate(true);
+	}
+	else if (VisualWidget->GetRenderCanvas() == this)
+	{
+		MarkWidgetUpdate(VisualWidget, true);
+	}
+	else
+	{
+		MarkWidgetCameOrWent(VisualWidget);
+	}
 }
 
 void UDreamCanvas::RegisterVisual(UDreamVisual* InVisual)
@@ -1088,7 +1123,9 @@ void UDreamCanvas::RegisterVisual(UDreamVisual* InVisual)
 	if (bAlreadyRegisteredHere)return;
 	//a visual arriving needs a draw-call of its own (or a place in someone else's), which only the
 	//rebuild pass can work out -- the refresh path just re-copies vertices into the existing layout.
-	MarkCanvasUpdate(true);
+	//Its widget asks for that; the canvas's other widgets stay as they are.
+	UDreamWidget* VisualWidget = InVisual->GetWidget();
+	MarkWidgetUpdate(VisualWidget != nullptr && VisualWidget->GetRenderCanvas() == this ? VisualWidget : nullptr, true);
 	InVisual->SetWidgetPropertyDataStartPosition(WidgetPropertyDataAsTexture->RegisterBuffer());
 }
 
@@ -1108,13 +1145,25 @@ void UDreamCanvas::UnregisterVisual(UDreamVisual* InVisual)
 
 void UDreamCanvas::AddDreamWidget(UDreamWidget* InWidget)
 {
-	bNeedToGenerateWidgetList = true;
-	MarkCanvasUpdate(true);
+	MarkWidgetCameOrWent(InWidget);
 }
 void UDreamCanvas::RemoveDreamWidget(UDreamWidget* InWidget)
 {
+	MarkWidgetCameOrWent(InWidget);
+}
+
+void UDreamCanvas::MarkWidgetCameOrWent(UDreamWidget* InWidget)
+{
 	bNeedToGenerateWidgetList = true;
-	MarkCanvasUpdate(true);
+	if (IsValid(InWidget) && InWidget->GetRenderCanvas() == this)
+	{
+		MarkWidgetUpdate(InWidget, true);
+	}
+	else
+	{
+		bCanTickUpdate = true;
+		bShouldRebuildDrawCall = true;
+	}
 }
 
 bool UDreamCanvas::Is2DUITransform(const FTransform& Transform)
@@ -1258,110 +1307,159 @@ void UDreamCanvas::PrepareDrawCallBatchingData(TArray<FDreamUIRenderData>& OutRe
 		TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_WaitForVertexTransforms);
 		TransformVerticesAsyncFunctionRunnable->WaitForAllFunctions();
 	}
-	// When only some widgets were looked at since the last prepare, and none came into the list or left it, the last
-	// prepare stands but for their geometry. Past half the list, walking it all costs no more.
+	// When only some widgets were looked at since the last prepare -- they asked, came or moved -- the last prepare stands
+	// but for them. Past half the list, walking it all costs no more.
 	if (!bPrepareEveryWidget && bPreparedDataCacheValid && WidgetsToPrepare.Num() < FMath::Max(32, WidgetList.Num() / 2)
-		&& RefreshPreparedDataCache())
+		&& MergePreparedDataCache())
 	{
 		OutRenderDataArray = PreparedDataCache;
 		WidgetsToPrepare.Reset();
+		bWidgetListChangedSincePrepare = false;
+		if (CVarDreamUIVerifyPartialPrepare.GetValueOnGameThread() != 0)
+		{
+			VerifyPartialPrepare(OutRenderDataArray);
+		}
 		return;
 	}
-	for (int i = 0; i < WidgetList.Num(); i++)
+	for (const TObjectPtr<UDreamWidget>& Widget : WidgetList)
 	{
-		auto& Widget = WidgetList[i];
-		if (!IsValid(Widget))continue;//a widget collected earlier can be destroyed before the list is regenerated
-		if (Widget->IsCanvasWidget() && Widget->GetRenderCanvas() != this)//is child canvas
-		{
-			auto ChildCanvas = Widget->GetRenderCanvas();
-			if (ChildCanvas == nullptr)continue;//normally this won't be nullptr, but when redo in editor this breaks
-			if (ChildCanvas->bForceRenderToTarget)continue;//skip this type
-			if (ChildCanvas->GetOverrideSorting())continue;//override sorting means render by itself, then no need to use it as child-canvas
-			auto RenderData = FDreamUIRenderData(EDreamUIDrawCallType::ChildCanvas);
-			RenderData.ChildCanvas = ChildCanvas;
-			OutRenderDataArray.Add(MoveTemp(RenderData));
-		}
-		else
-		{
-			auto Visual = Widget->GetVisual();
-			if (!Visual)continue;
-			if (!Widget->GetRenderVisibleInHierarchy())//if not visible, need to remove the draw-call from draw-call list
-			{
-				continue;
-			}
-			switch (Visual->GetVisualType())
-			{
-			default:
-			case EDreamVisualType::BatchMesh:
-				{
-					auto DreamVisualBatchMesh = static_cast<UDreamVisualBatchMesh*>(Visual);
-					auto ItemGeo = DreamVisualBatchMesh->GetGeometry();
-					if (ItemGeo == nullptr)continue;
-					while (ItemGeo->bIsCalculating)
-					{
-						//should not be reached: the transform queue was drained before this loop began.
-						//Kept as the correctness backstop -- CopyDataForPrepare must never read a
-						//half-written geometry -- but yielding rather than sleeping a millisecond.
-						FPlatformProcess::Sleep(0.0f);
-					}
-					if (ItemGeo->Vertices.Num() == 0)continue;
-					/**
-					 * One element that does not fit in an index buffer cannot be drawn, but it used to
-					 * disappear without a word -- a long text block or a big tiled image simply stopped
-					 * rendering, with nothing in the log to connect it to a vertex budget. Say so.
-					 *
-					 * The comparison is >=, not >: PushSingleDrawCall asserts VerticesCount is strictly
-					 * below the budget, so a geometry sitting exactly on it passed this gate and then
-					 * tripped the check one step later.
-					 */
-					if (ItemGeo->Vertices.Num() >= LEXUI_MAX_VERTEX_COUNT)
-					{
-						UE_LOG(DreamGUI, Error, TEXT("[%s].%d Widget '%s' has %d vertices, at or past the %d a single draw-call can index, so it cannot be drawn. Split it into several widgets, or build with a 32-bit index buffer (LEXUI_USE_32BIT_INDEXBUFFER in DreamGUI.Build.cs).")
-							, ANSI_TO_TCHAR(__FUNCTION__), __LINE__
-							, *Widget->GetDisplayName(), ItemGeo->Vertices.Num(), LEXUI_MAX_VERTEX_COUNT);
-						continue;
-					}
-					auto RenderData = FDreamUIRenderData(EDreamUIDrawCallType::BatchMesh);
-					//the visual's copy, made again only when the geometry changed since the last one
-					RenderData.BatchMeshGeometry = DreamVisualBatchMesh->GetGeometryForBatching();
-					RenderData.BatchMeshVisualObject = DreamVisualBatchMesh;
-					OutRenderDataArray.Add(MoveTemp(RenderData));
-				}
-				break;
-			case EDreamVisualType::PostProcess:
-				{
-					auto DreamVisualPostProcess = static_cast<UDreamVisualPostProcess*>(Visual);
-					if (!DreamVisualPostProcess->HaveValidData())continue;
-					auto RenderData = FDreamUIRenderData(EDreamUIDrawCallType::PostProcess);
-					RenderData.PostProcessVisualObject = DreamVisualPostProcess;
-					//read the bounds here, on the game thread: the batching pass that needs them runs on a
-					//worker thread, where dereferencing the visual races with garbage collection
-					if (auto PostProcessGeo = DreamVisualPostProcess->GetGeometry())
-					{
-						RenderData.PostProcessBoundsMin2DInCanvasSpace = PostProcessGeo->BoundsMin2DInCanvasSpace;
-						RenderData.PostProcessBoundsMax2DInCanvasSpace = PostProcessGeo->BoundsMax2DInCanvasSpace;
-					}
-					OutRenderDataArray.Add(MoveTemp(RenderData));
-				}
-				break;
-			case EDreamVisualType::DirectMesh:
-				{
-					auto DreamVisualDirectMesh = static_cast<UDreamVisualDirectMesh*>(Visual);
-					if (!DreamVisualDirectMesh->HaveValidData())continue;
-					auto RenderData = FDreamUIRenderData(EDreamUIDrawCallType::DirectMesh);
-					RenderData.DirectMeshVisualObject = DreamVisualDirectMesh;
-					OutRenderDataArray.Add(MoveTemp(RenderData));
-				}
-				break;
-			}
-		}
+		AppendRenderDataOf(Widget.Get(), OutRenderDataArray);
 	}
-	// Kept for the prepares to come: see RefreshPreparedDataCache.
+	// Kept for the prepares to come: see MergePreparedDataCache.
 	PreparedDataCache = OutRenderDataArray;
 	bPreparedDataCacheValid = true;
-	bPreparedDataIndexValid = false;
 	bPrepareEveryWidget = false;
+	bWidgetListChangedSincePrepare = false;
 	WidgetsToPrepare.Reset();
+}
+
+void UDreamCanvas::AppendRenderDataOf(UDreamWidget* Widget, TArray<FDreamUIRenderData>& OutRenderDataArray)
+{
+	if (!IsValid(Widget))return;//a widget collected earlier can be destroyed before the list is regenerated
+	if (Widget->IsCanvasWidget() && Widget->GetRenderCanvas() != this)//is child canvas
+	{
+		auto ChildCanvas = Widget->GetRenderCanvas();
+		if (ChildCanvas == nullptr)return;//normally this won't be nullptr, but when redo in editor this breaks
+		if (ChildCanvas->bForceRenderToTarget)return;//skip this type
+		if (ChildCanvas->GetOverrideSorting())return;//override sorting means render by itself, then no need to use it as child-canvas
+		auto RenderData = FDreamUIRenderData(EDreamUIDrawCallType::ChildCanvas);
+		RenderData.ChildCanvas = ChildCanvas;
+		RenderData.Widget = Widget;
+		OutRenderDataArray.Add(MoveTemp(RenderData));
+		return;
+	}
+	auto Visual = Widget->GetVisual();
+	if (!Visual)return;
+	if (!Widget->GetRenderVisibleInHierarchy())//if not visible, need to remove the draw-call from draw-call list
+	{
+		return;
+	}
+	switch (Visual->GetVisualType())
+	{
+	default:
+	case EDreamVisualType::BatchMesh:
+		{
+			auto DreamVisualBatchMesh = static_cast<UDreamVisualBatchMesh*>(Visual);
+			auto ItemGeo = DreamVisualBatchMesh->GetGeometry();
+			if (ItemGeo == nullptr)return;
+			while (ItemGeo->bIsCalculating)
+			{
+				//should not be reached: the transform queue was drained before the prepare began.
+				//Kept as the correctness backstop -- CopyDataForPrepare must never read a
+				//half-written geometry -- but yielding rather than sleeping a millisecond.
+				FPlatformProcess::Sleep(0.0f);
+			}
+			if (ItemGeo->Vertices.Num() == 0)return;
+			/**
+			 * One element that does not fit in an index buffer cannot be drawn, but it used to
+			 * disappear without a word -- a long text block or a big tiled image simply stopped
+			 * rendering, with nothing in the log to connect it to a vertex budget. Say so.
+			 *
+			 * The comparison is >=, not >: PushSingleDrawCall asserts VerticesCount is strictly
+			 * below the budget, so a geometry sitting exactly on it passed this gate and then
+			 * tripped the check one step later.
+			 */
+			if (ItemGeo->Vertices.Num() >= LEXUI_MAX_VERTEX_COUNT)
+			{
+				UE_LOG(DreamGUI, Error, TEXT("[%s].%d Widget '%s' has %d vertices, at or past the %d a single draw-call can index, so it cannot be drawn. Split it into several widgets, or build with a 32-bit index buffer (LEXUI_USE_32BIT_INDEXBUFFER in DreamGUI.Build.cs).")
+					, ANSI_TO_TCHAR(__FUNCTION__), __LINE__
+					, *Widget->GetDisplayName(), ItemGeo->Vertices.Num(), LEXUI_MAX_VERTEX_COUNT);
+				return;
+			}
+			auto RenderData = FDreamUIRenderData(EDreamUIDrawCallType::BatchMesh);
+			//the visual's copy, made again only when the geometry changed since the last one
+			RenderData.BatchMeshGeometry = DreamVisualBatchMesh->GetGeometryForBatching();
+			RenderData.BatchMeshVisualObject = DreamVisualBatchMesh;
+			RenderData.Widget = Widget;
+			OutRenderDataArray.Add(MoveTemp(RenderData));
+		}
+		break;
+	case EDreamVisualType::PostProcess:
+		{
+			auto DreamVisualPostProcess = static_cast<UDreamVisualPostProcess*>(Visual);
+			if (!DreamVisualPostProcess->HaveValidData())return;
+			auto RenderData = FDreamUIRenderData(EDreamUIDrawCallType::PostProcess);
+			RenderData.PostProcessVisualObject = DreamVisualPostProcess;
+			//read the bounds here, on the game thread: the batching pass that needs them runs on a
+			//worker thread, where dereferencing the visual races with garbage collection
+			if (auto PostProcessGeo = DreamVisualPostProcess->GetGeometry())
+			{
+				RenderData.PostProcessBoundsMin2DInCanvasSpace = PostProcessGeo->BoundsMin2DInCanvasSpace;
+				RenderData.PostProcessBoundsMax2DInCanvasSpace = PostProcessGeo->BoundsMax2DInCanvasSpace;
+			}
+			RenderData.Widget = Widget;
+			OutRenderDataArray.Add(MoveTemp(RenderData));
+		}
+		break;
+	case EDreamVisualType::DirectMesh:
+		{
+			auto DreamVisualDirectMesh = static_cast<UDreamVisualDirectMesh*>(Visual);
+			if (!DreamVisualDirectMesh->HaveValidData())return;
+			auto RenderData = FDreamUIRenderData(EDreamUIDrawCallType::DirectMesh);
+			RenderData.DirectMeshVisualObject = DreamVisualDirectMesh;
+			RenderData.Widget = Widget;
+			OutRenderDataArray.Add(MoveTemp(RenderData));
+		}
+		break;
+	}
+}
+
+void UDreamCanvas::VerifyPartialPrepare(const TArray<FDreamUIRenderData>& InPrepared)
+{
+	TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_VerifyPartialPrepare);
+	TArray<FDreamUIRenderData> Full;
+	for (const TObjectPtr<UDreamWidget>& Widget : WidgetList)
+	{
+		AppendRenderDataOf(Widget.Get(), Full);
+	}
+	auto Same = [](const FDreamUIRenderData& A, const FDreamUIRenderData& B)
+	{
+		return A.Type == B.Type
+			&& A.Widget == B.Widget
+			&& A.BatchMeshGeometry == B.BatchMeshGeometry
+			&& A.BatchMeshVisualObject == B.BatchMeshVisualObject
+			&& A.PostProcessVisualObject == B.PostProcessVisualObject
+			&& A.PostProcessBoundsMin2DInCanvasSpace == B.PostProcessBoundsMin2DInCanvasSpace
+			&& A.PostProcessBoundsMax2DInCanvasSpace == B.PostProcessBoundsMax2DInCanvasSpace
+			&& A.DirectMeshVisualObject == B.DirectMeshVisualObject
+			&& A.ChildCanvas == B.ChildCanvas;
+	};
+	int32 First = INDEX_NONE;
+	const int32 Common = FMath::Min(Full.Num(), InPrepared.Num());
+	for (int32 Index = 0; Index < Common; ++Index)
+	{
+		if (!Same(Full[Index], InPrepared[Index]))
+		{
+			First = Index;
+			break;
+		}
+	}
+	if (First == INDEX_NONE && Full.Num() != InPrepared.Num())
+	{
+		First = Common;
+	}
+	ensureMsgf(First == INDEX_NONE, TEXT("%s: the prepare made from the last one differs from a prepare of every widget, first at entry %d (%d entries against %d)."),
+		*GetPathName(), First, InPrepared.Num(), Full.Num());
 }
 
 DECLARE_CYCLE_STAT(TEXT("Canvas BatchDrawCallAsync"), STAT_BatchDrawCall, STATGROUP_DreamGUI);
@@ -1806,12 +1904,14 @@ void UDreamCanvas::UpdateCanvasDrawCall()
 		};
 		if (bNeedToGenerateWidgetList)
 		{
+			TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_GenerateWidgetList);
 			bNeedToGenerateWidgetList = false;
 			WidgetList.Reset();
 			LOCAL::CollectRenderWidget(GetWidget(), this, WidgetList);
-			// A new list: every widget is looked at, and the places kept are the old list's until widgets next ask alone.
+			// A new list, in which the widgets that stayed keep their order: a widget that came or moved asked for itself,
+			// and every widget is looked at only when something else woke the canvas too. The next prepare merges.
 			bWidgetListIndexValid = false;
-			bUpdateEveryWidget = true;
+			bWidgetListChangedSincePrepare = true;
 		}
 
 		CheckWidgetPropertyData();

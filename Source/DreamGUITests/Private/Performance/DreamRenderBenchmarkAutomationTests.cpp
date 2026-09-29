@@ -10,6 +10,7 @@
 #include "Engine/TextureRenderTarget2D.h"
 #include "Engine/World.h"
 #include "HAL/FileManager.h"
+#include "HAL/IConsoleManager.h"
 #include "HAL/PlatformTime.h"
 #include "Misc/FileHelper.h"
 #include "Misc/Paths.h"
@@ -483,6 +484,14 @@ bool FDreamRenderBenchmarkTest::RunTest(const FString& Parameters)
 		Stage->TearDown();
 		return false;
 	}
+	// The suite has every prepare a canvas makes from its last one checked against a full one (r.DreamUI.VerifyPartialPrepare,
+	// in the test host's config): what is measured here is the prepare alone.
+	IConsoleVariable* const Verify = IConsoleManager::Get().FindConsoleVariable(TEXT("r.DreamUI.VerifyPartialPrepare"));
+	const int32 VerifyBefore = Verify != nullptr ? Verify->GetInt() : 0;
+	if (Verify != nullptr)
+	{
+		Verify->Set(0, ECVF_SetByCode);
+	}
 	TSharedRef<FRun> Run = MakeShared<FRun>();
 	Run->TracePath = FPaths::Combine(PerfDirectory(), TEXT("Benchmark.utrace"));
 	IFileManager::Get().MakeDirectory(*PerfDirectory(), /*Tree*/ true);
@@ -542,7 +551,14 @@ bool FDreamRenderBenchmarkTest::RunTest(const FString& Parameters)
 				Phase.Stats.Counters[static_cast<int32>(DreamUIRenderStats::ECounter::BatchesRecorded)] > 0);
 		}
 	});
-	EnqueueDo([Stage]() { Stage->TearDown(); });
+	EnqueueDo([Stage, Verify, VerifyBefore]()
+	{
+		Stage->TearDown();
+		if (Verify != nullptr)
+		{
+			Verify->Set(VerifyBefore, ECVF_SetByCode);
+		}
+	});
 	return true;
 }
 

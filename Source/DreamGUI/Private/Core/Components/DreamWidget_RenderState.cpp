@@ -363,8 +363,21 @@ void UDreamWidget::OnHierarchyAttachmentChanged(UDreamCanvas* ParentRenderCanvas
 		}
 	}
 
-	//flatten hierarchy index
-	MarkFlattenHierarchyIndexDirty();
+	// The raycast's order, as MarkFlattenHierarchyIndexDirty marks it. This widget came into its canvas or moved within
+	// it, and the widgets already there keep their order: the canvas hears that, and looks at this widget alone, rather
+	// than that its whole hierarchy changed. A canvas widget is ordered among its parent canvas's, which hears as before.
+	if (!RenderCanvas.IsValid() || this->bIsCanvasWidget)
+	{
+		MarkFlattenHierarchyIndexDirty();
+	}
+	else
+	{
+		if (RootWidget.IsValid())
+		{
+			RootWidget->bFlattenHierarchyIndexDirty = true;
+		}
+		RenderCanvas->MarkWidgetCameOrWent(this);
+	}
 
 	{
 		bCacheWidthDirty = true;

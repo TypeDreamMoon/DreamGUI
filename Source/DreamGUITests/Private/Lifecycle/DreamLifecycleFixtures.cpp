@@ -280,9 +280,9 @@ namespace DreamTests::Lifecycle
 		return Kinds;
 	}
 
-	FScopedMaterialWrappers::FScopedMaterialWrappers(int32 InValue)
+	FScopedConsoleVariable::FScopedConsoleVariable(const TCHAR* InName, int32 InValue)
 	{
-		Variable = IConsoleManager::Get().FindConsoleVariable(TEXT("r.DreamUI.MaterialWrappers"));
+		Variable = IConsoleManager::Get().FindConsoleVariable(InName);
 		if (Variable != nullptr)
 		{
 			Before = Variable->GetInt();
@@ -290,7 +290,7 @@ namespace DreamTests::Lifecycle
 		}
 	}
 
-	FScopedMaterialWrappers::~FScopedMaterialWrappers()
+	FScopedConsoleVariable::~FScopedConsoleVariable()
 	{
 		if (Variable != nullptr)
 		{

@@ -7,6 +7,7 @@
 #include "Engine/Texture.h"
 #include "DreamUIRender/DreamUIMeshIndex.h"
 #include "Core/DreamUIQuadTree.h"
+#include "UObject/ObjectKey.h"
 
 class UDreamVisualPostProcess;
 class UDreamUIFontData_BaseObject;
@@ -57,6 +58,12 @@ public:
 	TWeakObjectPtr<UDreamVisualDirectMesh> DirectMeshVisualObject;
 
 	TWeakObjectPtr<UDreamCanvas> ChildCanvas;
+
+	/**
+	 * The widget the entry was prepared from, as a key: the canvas finds the entry's place in its widget list with it on
+	 * the game thread, and never reaches the widget through it. The batching does not read it.
+	 */
+	TObjectKey<UDreamWidget> Widget;
 };
 
 class DREAMGUI_API FDreamUIDrawCall
