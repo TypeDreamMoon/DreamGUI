@@ -343,7 +343,8 @@ void UDreamUIManagerWorldSubsystem::RefreshAllUI(UWorld* InWorld)
 			if (auto Widget = Canvas->GetWidget())
 			{
 				Widget->EnsureDataForRebuild();
-				Widget->MarkCanvasUpdate(true);
+				// The canvas, not its widget: a widget asking wakes the canvas for that widget alone.
+				Canvas->MarkCanvasUpdate(true);
 			}
 		}
 	}

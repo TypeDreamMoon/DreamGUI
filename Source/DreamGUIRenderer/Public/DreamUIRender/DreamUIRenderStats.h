@@ -53,6 +53,8 @@ namespace DreamUIRenderStats
 		GeometryCopies,
 		/** Game thread: mesh sections a rebuilt canvas took back as they were, their vertices already on the GPU. */
 		SectionReuses,
+		/** Game thread: widgets whose clip and geometry a canvas update looked at. */
+		WidgetsUpdated,
 		Num
 	};
 

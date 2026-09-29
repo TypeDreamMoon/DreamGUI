@@ -950,7 +950,38 @@ public:
 	 * same frame instead of waiting for the owner's next incidental rebuild.
 	 */
 	void ConsumePendingRenderPrioritySort();
+public:
+	/**
+	 * A widget of this canvas asks for an update: MarkCanvasUpdate, with the widget named. When only widgets asked, the
+	 * update looks at those widgets alone, where it looks at every widget of the canvas otherwise.
+	 */
+	void MarkWidgetUpdate(UDreamWidget* InWidget, bool bRebuildDrawCall);
 private:
+	/**
+	 * The widgets that asked for an update since the canvas last updated. The update looks at them alone -- in the
+	 * order of WidgetList, each after its parents' clips -- unless something else woke the canvas as well: the canvas
+	 * itself, a new widget list, a caller that named no widget (bUpdateEveryWidget).
+	 */
+	TArray<TWeakObjectPtr<UDreamWidget>> WidgetsToUpdate;
+	/** Something other than a widget woke the canvas: the next update looks at every widget. */
+	bool bUpdateEveryWidget = true;
+	/** Each widget's place in WidgetList, made with the list: the order the widgets that asked are looked at in. */
+	TMap<TObjectKey<UDreamWidget>, int32> WidgetListIndex;
+	/** InAsking in list order, once each; false when one of them is gone or not in the list, which is then behind. */
+	bool GatherWidgetsToUpdateInListOrder(const TArray<TWeakObjectPtr<UDreamWidget>>& InAsking, TArray<UDreamWidget*>& OutWidgets) const;
+	/**
+	 * What the last full prepare made, kept: when only the widgets in WidgetsToPrepare changed since, the next prepare
+	 * takes it and gives those widgets their new geometry, instead of walking every widget again.
+	 */
+	TArray<FDreamUIRenderData> PreparedDataCache;
+	/** Where each batch-mesh widget's entry is in PreparedDataCache. */
+	TMap<TObjectKey<UDreamWidget>, int32> PreparedDataIndex;
+	/** The widgets looked at since the last prepare; bPrepareEveryWidget when every widget was. */
+	TArray<TWeakObjectPtr<UDreamWidget>> WidgetsToPrepare;
+	bool bPrepareEveryWidget = true;
+	bool bPreparedDataCacheValid = false;
+	/** The cache brought up to date for WidgetsToPrepare; false when only a full prepare can say what they became. */
+	bool RefreshPreparedDataCache();
 
 	void PrepareDrawCallBatchingData(TArray<FDreamUIRenderData>& OutRenderDataArray);
 	void UpdateDrawCallMesh();

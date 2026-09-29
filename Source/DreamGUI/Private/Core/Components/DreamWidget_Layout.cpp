@@ -947,7 +947,7 @@ void UDreamWidget::MarkDimensionChanged(bool InPivotChanged, bool InWidthChanged
 
 	if (this->RenderCanvas.IsValid())
 	{
-		this->RenderCanvas->MarkCanvasUpdate(InPivotChanged || InWidthChanged || InHeightChanged);//mark canvas to update
+		this->RenderCanvas->MarkWidgetUpdate(this, InPivotChanged || InWidthChanged || InHeightChanged);//mark canvas to update
 		if (this->IsCanvasWidget())
 		{
 			this->RenderCanvas->MarkTransformOrDimensionChanged();
@@ -966,7 +966,7 @@ void UDreamWidget::MarkTransformChanged()
 	MarkWorldRectBoundsDirty();
 	if (this->RenderCanvas.IsValid())
 	{
-		this->RenderCanvas->MarkCanvasUpdate(true);//mark canvas to update
+		this->RenderCanvas->MarkWidgetUpdate(this, true);//mark canvas to update
 		if (this->IsCanvasWidget())
 		{
 			//This is mainly to mark DreamGUICanvas's bIsViewProjectionMatrixDirty to true.

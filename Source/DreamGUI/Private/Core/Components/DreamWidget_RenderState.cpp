@@ -644,7 +644,8 @@ void UDreamWidget::MarkCanvasUpdate(bool bRebuildDrawCall)const
 {
 	if (RenderCanvas.IsValid())
 	{
-		RenderCanvas->MarkCanvasUpdate(bRebuildDrawCall);
+		// Named: a canvas woken by its widgets alone looks at those widgets alone.
+		RenderCanvas->MarkWidgetUpdate(const_cast<UDreamWidget*>(this), bRebuildDrawCall);
 	}
 }
 

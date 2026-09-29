@@ -594,6 +594,7 @@ void UDreamCanvas::CheckRenderMode(bool PropagateToChildrenCanvas)
 void UDreamCanvas::OnUIHierarchyAttachmentChanged()
 {
  	this->bCanTickUpdate = true;
+	bUpdateEveryWidget = true;
 	RemoveFromViewExtension(true);
 	CheckRenderMode(true);
 
@@ -690,10 +691,116 @@ void UDreamCanvas::RefreshAllClipData()
 void UDreamCanvas::MarkCanvasUpdate(bool bRebuildDrawCall)
 {
 	this->bCanTickUpdate = true;
+	// No widget named: which widgets need looking at is unknown, so every one of them is.
+	this->bUpdateEveryWidget = true;
 	if (bRebuildDrawCall)
 	{
 		this->bShouldRebuildDrawCall = true;
 	}
+}
+
+void UDreamCanvas::MarkWidgetUpdate(UDreamWidget* InWidget, bool bRebuildDrawCall)
+{
+	this->bCanTickUpdate = true;
+	if (bRebuildDrawCall)
+	{
+		this->bShouldRebuildDrawCall = true;
+	}
+	if (InWidget == nullptr)
+	{
+		this->bUpdateEveryWidget = true;
+	}
+	if (this->bUpdateEveryWidget)
+	{
+		return;
+	}
+	// Past half the list, looking at every widget costs no more than sorting the ones that asked.
+	if (WidgetsToUpdate.Num() >= FMath::Max(32, WidgetList.Num() / 2))
+	{
+		this->bUpdateEveryWidget = true;
+		WidgetsToUpdate.Reset();
+		return;
+	}
+	WidgetsToUpdate.Add(InWidget);
+}
+
+bool UDreamCanvas::GatherWidgetsToUpdateInListOrder(const TArray<TWeakObjectPtr<UDreamWidget>>& InAsking, TArray<UDreamWidget*>& OutWidgets) const
+{
+	TArray<TPair<int32, UDreamWidget*>, TInlineAllocator<64>> Ordered;
+	for (const TWeakObjectPtr<UDreamWidget>& WeakWidget : InAsking)
+	{
+		UDreamWidget* Widget = WeakWidget.Get();
+		if (!IsValid(Widget))
+		{
+			return false;//gone since it asked: what it drew has to go too, which only a full walk and prepare see
+		}
+		const int32* Index = WidgetListIndex.Find(TObjectKey<UDreamWidget>(Widget));
+		if (Index == nullptr)
+		{
+			return false;
+		}
+		Ordered.Emplace(*Index, Widget);
+	}
+	Ordered.Sort([](const TPair<int32, UDreamWidget*>& A, const TPair<int32, UDreamWidget*>& B) { return A.Key < B.Key; });
+	OutWidgets.Reserve(Ordered.Num());
+	for (int32 Index = 0; Index < Ordered.Num(); ++Index)
+	{
+		if (Index == 0 || Ordered[Index].Key != Ordered[Index - 1].Key)
+		{
+			OutWidgets.Add(Ordered[Index].Value);
+		}
+	}
+	return true;
+}
+
+bool UDreamCanvas::RefreshPreparedDataCache()
+{
+	for (const TWeakObjectPtr<UDreamWidget>& WeakWidget : WidgetsToPrepare)
+	{
+		UDreamWidget* Widget = WeakWidget.Get();
+		if (!IsValid(Widget))
+		{
+			return false;
+		}
+		const int32* Entry = PreparedDataIndex.Find(TObjectKey<UDreamWidget>(Widget));
+		// What a full prepare would make of the widget now. Anything but a batch mesh, or a widget that comes into the
+		// list or leaves it, is left to a full prepare: the entries around it would have to move.
+		if (Widget->IsCanvasWidget() && Widget->GetRenderCanvas() != this)
+		{
+			return false;
+		}
+		UDreamVisual* Visual = Widget->GetVisual();
+		if (Visual == nullptr)
+		{
+			if (Entry != nullptr)
+			{
+				return false;
+			}
+			continue;
+		}
+		if (Visual->GetVisualType() != EDreamVisualType::BatchMesh)
+		{
+			return false;
+		}
+		UDreamVisualBatchMesh* BatchMesh = static_cast<UDreamVisualBatchMesh*>(Visual);
+		const FDreamUIGeometry* Geometry = BatchMesh->GetGeometry();
+		const bool bIncluded = Widget->GetRenderVisibleInHierarchy() && Geometry != nullptr
+			&& Geometry->Vertices.Num() > 0 && Geometry->Vertices.Num() < LEXUI_MAX_VERTEX_COUNT;
+		if (bIncluded != (Entry != nullptr))
+		{
+			return false;
+		}
+		if (bIncluded)
+		{
+			// Made from another visual: the widget was given a new one since.
+			if (PreparedDataCache[*Entry].BatchMeshVisualObject.Get() != BatchMesh)
+			{
+				return false;
+			}
+			PreparedDataCache[*Entry].BatchMeshGeometry = BatchMesh->GetGeometryForBatching();
+		}
+	}
+	return true;
 }
 
 void UDreamCanvas::MarkCanvasHierarchyChanged()
@@ -1112,6 +1219,16 @@ void UDreamCanvas::PrepareDrawCallBatchingData(TArray<FDreamUIRenderData>& OutRe
 		TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_WaitForVertexTransforms);
 		TransformVerticesAsyncFunctionRunnable->WaitForAllFunctions();
 	}
+	// When only some widgets were looked at since the last prepare, and none came into the list or left it, the last
+	// prepare stands but for their geometry. Past half the list, walking it all costs no more.
+	if (!bPrepareEveryWidget && bPreparedDataCacheValid && WidgetsToPrepare.Num() < FMath::Max(32, WidgetList.Num() / 2)
+		&& RefreshPreparedDataCache())
+	{
+		OutRenderDataArray = PreparedDataCache;
+		WidgetsToPrepare.Reset();
+		return;
+	}
+	PreparedDataIndex.Reset();
 	for (int i = 0; i < WidgetList.Num(); i++)
 	{
 		auto& Widget = WidgetList[i];
@@ -1170,6 +1287,7 @@ void UDreamCanvas::PrepareDrawCallBatchingData(TArray<FDreamUIRenderData>& OutRe
 					//the visual's copy, made again only when the geometry changed since the last one
 					RenderData.BatchMeshGeometry = DreamVisualBatchMesh->GetGeometryForBatching();
 					RenderData.BatchMeshVisualObject = DreamVisualBatchMesh;
+					PreparedDataIndex.Add(TObjectKey<UDreamWidget>(Widget), OutRenderDataArray.Num());
 					OutRenderDataArray.Add(MoveTemp(RenderData));
 				}
 				break;
@@ -1201,6 +1319,11 @@ void UDreamCanvas::PrepareDrawCallBatchingData(TArray<FDreamUIRenderData>& OutRe
 			}
 		}
 	}
+	// Kept for the prepares to come: see RefreshPreparedDataCache.
+	PreparedDataCache = OutRenderDataArray;
+	bPreparedDataCacheValid = true;
+	bPrepareEveryWidget = false;
+	WidgetsToPrepare.Reset();
 }
 
 DECLARE_CYCLE_STAT(TEXT("Canvas BatchDrawCallAsync"), STAT_BatchDrawCall, STATGROUP_DreamGUI);
@@ -1576,6 +1699,7 @@ void UDreamCanvas::UpdateCanvasDrawCall()
 		if (bNowIsVisible != bPrevIsVisible)
 		{
 			bCanTickUpdate = true;
+			bUpdateEveryWidget = true;
 		}
 		bPrevIsVisible = bNowIsVisible;
 	}
@@ -1614,6 +1738,14 @@ void UDreamCanvas::UpdateCanvasDrawCall()
 			bNeedToGenerateWidgetList = false;
 			WidgetList.Reset();
 			LOCAL::CollectRenderWidget(GetWidget(), this, WidgetList);
+			// A new list: the places kept are the old one's, and every widget is looked at.
+			WidgetListIndex.Reset();
+			WidgetListIndex.Reserve(WidgetList.Num());
+			for (int32 Index = 0; Index < WidgetList.Num(); ++Index)
+			{
+				WidgetListIndex.Add(TObjectKey<UDreamWidget>(WidgetList[Index]), Index);
+			}
+			bUpdateEveryWidget = true;
 		}
 
 		CheckWidgetPropertyData();
@@ -1624,10 +1756,8 @@ void UDreamCanvas::UpdateCanvasDrawCall()
 			TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_UpdateClipAndGeometry);
 			// Resolved once for the loop rather than twice for every widget in it: the root is a weak pointer.
 			UDreamCanvas* const Root = RootCanvas.Get();
-			for (const auto& Widget : WidgetList)
+			auto UpdateWidget = [this, Root](UDreamWidget* Widget)
 			{
-				//a widget collected earlier can be destroyed before the list is regenerated
-				if (!IsValid(Widget))continue;
 				if (Root != nullptr)
 				{
 					Widget->UpdateClip(Root->ClipDataAsTexture, Root->ClipDataList);
@@ -1636,6 +1766,58 @@ void UDreamCanvas::UpdateCanvasDrawCall()
 				{
 					Widget->UpdateVisual();
 				}
+			};
+			// Taken now: a widget that asks again while this update runs -- its geometry asking for its block data, say --
+			// is looked at in the next one, as it was when the whole canvas woke up again.
+			const TArray<TWeakObjectPtr<UDreamWidget>> Asking = MoveTemp(WidgetsToUpdate);
+			WidgetsToUpdate.Reset();
+			const bool bEveryWidget = bUpdateEveryWidget;
+			bUpdateEveryWidget = false;
+			TArray<UDreamWidget*> AskedInListOrder;
+			if (!bEveryWidget && GatherWidgetsToUpdateInListOrder(Asking, AskedInListOrder))
+			{
+				// Only the widgets that asked. Walking the list, a widget's parents have their clips brought up to date
+				// before it, and it may inherit one: here its parents' clips are, as far as this canvas's widgets go.
+				for (UDreamWidget* Widget : AskedInListOrder)
+				{
+					if (Root != nullptr)
+					{
+						TArray<UDreamWidget*, TInlineAllocator<16>> Parents;
+						for (UDreamWidget* Parent = Widget->GetParent(); IsValid(Parent) && Parent->GetRenderCanvas() == this; Parent = Parent->GetParent())
+						{
+							Parents.Add(Parent);
+						}
+						for (int32 Index = Parents.Num() - 1; Index >= 0; --Index)
+						{
+							Parents[Index]->UpdateClip(Root->ClipDataAsTexture, Root->ClipDataList);
+						}
+					}
+					UpdateWidget(Widget);
+					if (!bPrepareEveryWidget)
+					{
+						WidgetsToPrepare.Add(Widget);
+					}
+				}
+				// Colour after colour with no rebuild between would grow the list without end; past half the widgets a
+				// full prepare costs no more.
+				if (WidgetsToPrepare.Num() > FMath::Max(32, WidgetList.Num() / 2))
+				{
+					bPrepareEveryWidget = true;
+					WidgetsToPrepare.Reset();
+				}
+				DreamUIRenderStats::AddCount(DreamUIRenderStats::ECounter::WidgetsUpdated, AskedInListOrder.Num());
+			}
+			else
+			{
+				for (const auto& Widget : WidgetList)
+				{
+					//a widget collected earlier can be destroyed before the list is regenerated
+					if (!IsValid(Widget))continue;
+					UpdateWidget(Widget);
+				}
+				DreamUIRenderStats::AddCount(DreamUIRenderStats::ECounter::WidgetsUpdated, WidgetList.Num());
+				bPrepareEveryWidget = true;
+				WidgetsToPrepare.Reset();
 			}
 			// Clips created above are uploaded by RefreshAllClipData, driven every tick from the UI manager.
 		}
@@ -2343,6 +2525,7 @@ void UDreamCanvas::SetDrawCallRebuildSuspended(bool Value)
 			 * consumed by a vertex-only refresh since.
 			 */
 			bCanTickUpdate = true;
+			bUpdateEveryWidget = true;
 		}
 	}
 }
