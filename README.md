@@ -53,8 +53,8 @@ L0   DreamGUIRenderer      DreamTween
 
 | Module | Layer | Holds |
 | --- | --- | --- |
-| `DreamGUIRenderer` | below the core | The view extension that draws DreamUI, its shaders, the vertex and index formats and the post-process proxies. It knows nothing of widgets: the core registers what it asks for |
-| `DreamGUI` | core | Widgets, visuals, canvas batching, layout, text and `.dui`, animation, the event contracts |
+| `DreamGUIRenderer` | below the core | The view extension that draws DreamUI and the render command that draws a render-target canvas, its shaders, the vertex and index formats, the material proxies a canvas answers its parameters through, the post-process proxies with the screen reads and writes the effects share, and the stage timing behind `DreamUI.Stats`. It knows nothing of widgets: the core registers what it asks for |
+| `DreamGUI` | core | Widgets, visuals, canvas batching, layout, text and `.dui`, animation, the event contracts, the render root that holds a canvas's sections for the renderer, and the PNG capture |
 | `DreamGUIInput` | above the core | The input system: the event systems and their preset actors, the raycasters and input modules, the action router, navigation, drag and drop, tooltips and modals, the selectable base the controls are built on, and the game viewport client |
 | `DreamGUIControls` | above the input system | The control library: the `Dream*` controls (button, toggle, slider, lists, dialog, tab view, ...), the `UI*` behaviours they are built from, the action bar, style sheets and the UMG interop |
 | `DreamGUIExtensions` | above the input system | 2D lines, polygons and rings, the static-mesh visual, the retainer box and the render-target helpers, lyrics, the concrete mesh modifiers, and the background blur, pixelate and pixel sort effects |
@@ -103,16 +103,13 @@ git clone https://github.com/TypeDreamMoon/DreamGUI.git Plugins/DreamGUI
 Regenerate project files and build. That is the whole install for a fresh project.
 
 > [!IMPORTANT]
-> **Engine 5.8, a launcher install included.** `DreamGUI.Build.cs` adds
-> `Engine/Source/Runtime/Renderer/Private` and `Runtime/Renderer/Internal` to its private include paths,
-> for `SceneRendering.h`, `ScenePrivate.h` and `SceneTextures.h`, and `DreamGUIExtensions.Build.cs` adds
-> `Runtime/Renderer/Internal` for the post-process effects. A launcher install ships those headers;
-> should an install ever stop shipping engine private headers, the failure is a missing-header compile
-> error rather than anything that names the requirement.
+> **Engine 5.8, a launcher install included.** The plugin compiles against the engine's public headers
+> only: the renderer reads the scene's depth through the public scene-texture API, and the static check
+> `engine-private-path` fails any include path into `Runtime/Renderer/Private` or `Internal`.
 >
-> msdfgen, which the glyph rasteriser compiles into its own translation unit, used to be the other reason
-> a source build was needed: upstream generates its single-file copy rather than committing it, so a
-> launcher install has only `Engine/Source/ThirdParty/msdfgen/msdfgen.tps`. The plugin now carries its
+> msdfgen, which the glyph rasteriser compiles into its own translation unit, used to need a source
+> build: upstream generates its single-file copy rather than committing it, so a launcher install has
+> only `Engine/Source/ThirdParty/msdfgen/msdfgen.tps`. The plugin now carries its
 > own generated copy under `ThirdParty/` — see `ThirdParty/README.md`. A plain clone or a zip download
 > builds it as-is; the `ThirdParty/msdfgen` submodule is only what `Tools/UpdateMsdfgen.ps1` regenerates
 > that copy from.
@@ -209,8 +206,10 @@ name with different new names are an error, and the copy is older than the file 
   `UDreamWorldWidgetComponent` is what you place now;
 - the `UDreamWorldSpaceRaycasterBase`, `UDreamWorldSpaceRaycasterForWorldTrigger` and
   `UDreamWorldSpaceRaycasterSource` family — `UDreamWorldSpaceRaycaster` absorbed all of it;
-- the plugin settings' `ScreenSpaceRootClass`, `WorldSpaceRootClass`, `WorldSpaceUERendererRootClass`
-  and `WorldSpaceRaycasterSourceClass`.
+- the plugin settings' `ScreenSpaceRootClass`, `WorldSpaceRootClass`, `WorldSpaceUERendererRootClass`,
+  `WorldSpaceRaycasterSourceClass` and `bLegacyTouchPointerIds`;
+- the console variables `r.DreamUI.MaterialWrappers` and `r.DreamUI.RTDrawer`, and the renderer
+  behaviour they put back.
 
 A level that still holds one of those Blueprints drops that actor on load — its class no longer
 resolves, so the whole export is discarded and a warning is logged naming it. Nothing is left behind
@@ -306,6 +305,17 @@ perspective projection; inert otherwise.
 
 **Render transform**, widened to three dimensions, so a widget can be animated inside a layout
 without the layout fighting it.
+
+**Input**, per player. Each local player has its own pointers, focus and text target, so a split
+screen's second player hovers, focuses and types on its own; the mouse, fingers and scripted pointers
+have id ranges of their own and no longer share an id. An optional Slate input source hears input
+before the viewport, so the UI keeps working in the engine's UI-only input mode.
+
+**Rendering.** A canvas walks only the widgets that asked to change, patches in place the sections
+whose geometry changed rather than rebuilding them, and answers its materials' parameters through
+render-thread proxies instead of a material instance per draw call. A render-target canvas is drawn
+by a render command of its own, so it updates whether or not anything renders its world. The screen
+effects share one way to read, crop and write back the screen, on the render graph's textures.
 
 ## Widget Blueprints
 
@@ -471,17 +481,14 @@ Two console commands answer both questions without a debugger:
   and how many batches, vertices and bytes went to the GPU. Each stage is also a named scope in
   Unreal Insights (`DreamUI_*`).
 
-If something the renderer does differently now misbehaves in your project, these console variables
-put the way it was done before back, one at a time, until the old roads are removed:
+A canvas answers the parameters it gives its own materials through render-thread proxies of the
+material — it makes no material instance per draw call — and a render-target canvas is drawn by a
+render command of its own, whether or not anything renders its world. The switches that put the old
+ways back for a while are gone with them.
 
-- `r.DreamUI.MaterialWrappers 0` — a canvas draws its own materials through a material instance per
-  draw call, pooled per material, instead of through render-thread proxies of the material.
-- `r.DreamUI.RTDrawer 0` — a render-target canvas is drawn inside a view of its world again, instead
-  of by a render command of its own (then it is not drawn in a world nothing renders).
-
-And one for a report of something drawn wrong or not drawn: `r.DreamUI.VerifyPartialPrepare 1` checks
-every prepare a canvas makes from its last one against a prepare of every widget, and a difference is
-an ensure that names the canvas. The test suite runs with it on.
+For a report of something drawn wrong or not drawn, `r.DreamUI.VerifyPartialPrepare 1` checks every
+prepare a canvas makes from its last one against a prepare of every widget, and a difference is an
+ensure that names the canvas. The test suite runs with it on.
 
 ## Platforms
 
@@ -517,7 +524,7 @@ link time. Six interaction subsystems already decline to exist on a server
 
 ## Status
 
-1448 automation tests are declared — run them with `Automation RunTests DreamGUI`, or a preset of
+1480 automation tests are declared — run them with `Automation RunTests DreamGUI`, or a preset of
 `Tools/Tests/Invoke-DreamGUITests.ps1`. There were none before this fork.
 
 Known gaps:
