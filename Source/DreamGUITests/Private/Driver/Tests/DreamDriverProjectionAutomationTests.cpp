@@ -7,6 +7,7 @@
 #include "Core/Components/DreamCanvas.h"
 #include "Core/Components/DreamWidget.h"
 #include "Engine/LocalPlayer.h"
+#include "Event/DreamEventSystem.h"
 #include "Event/DreamPointerEventData.h"
 #include "Event/DreamScreenSpaceRaycaster.h"
 #include "Event/DreamWorldSpaceRaycaster.h"
