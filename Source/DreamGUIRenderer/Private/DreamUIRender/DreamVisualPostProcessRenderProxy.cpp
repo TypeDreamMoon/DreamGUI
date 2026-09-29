@@ -7,6 +7,7 @@
 #include "DreamUIRender/DreamUIRenderer.h"
 #include "Engine/Texture.h"
 #include "Engine/TextureRenderTarget2D.h"
+#include "GlobalRenderResources.h"
 #include "RHIResourceUtils.h"
 #include "TextureResource.h"
 
@@ -108,19 +109,6 @@ void FDreamVisualPostProcessRenderProxy::SetRenderTarget_GameThread(const FDream
 			});
 }
 
-#define SET_PIPELINE_STATE_FOR_CLIP()\
-FGraphicsPipelineStateInitializer GraphicsPSOInit;\
-RHICmdList.ApplyCachedRenderTargets(GraphicsPSOInit);\
-GraphicsPSOInit.DepthStencilState = TStaticDepthStencilState<false, ECompareFunction::CF_Always>::GetRHI();\
-GraphicsPSOInit.RasterizerState = TStaticRasterizerState<FM_Solid, CM_None>::GetRHI();\
-GraphicsPSOInit.BlendState = TStaticBlendState<CW_RGBA, BO_Add, BF_SourceAlpha, BF_InverseSourceAlpha, BO_Add, BF_InverseDestAlpha, BF_One>::GetRHI();\
-GraphicsPSOInit.BoundShaderState.VertexDeclarationRHI = GetDreamUIPostProcessVertexDeclaration();\
-GraphicsPSOInit.BoundShaderState.VertexShaderRHI = VertexShader.GetVertexShader();\
-GraphicsPSOInit.BoundShaderState.PixelShaderRHI = PixelShader.GetPixelShader();\
-GraphicsPSOInit.PrimitiveType = EPrimitiveType::PT_TriangleList;\
-GraphicsPSOInit.NumSamples = NumSamples;\
-SetGraphicsPipelineState(RHICmdList, GraphicsPSOInit, 0, EApplyRendertargetOption::ForceApply);
-
 void FDreamVisualPostProcessRenderProxy::RenderMeshOnScreen_RenderThread(
 	FRDGBuilder& GraphBuilder
 	, FRDGTextureRef SceneDepth
@@ -154,118 +142,58 @@ void FDreamVisualPostProcessRenderProxy::RenderMeshOnScreen_RenderThread(
 			auto MeshRegionTextureRHI = MeshRegionRDGTexture->GetRHI();
 			RHICmdList.SetViewport(ViewRect.Min.X, ViewRect.Min.Y, 0.0f, ViewRect.Max.X, ViewRect.Max.Y, 1.0f);
 
-			FBufferRHIRef IndexBuffer = nullptr;
-			int32 TriangleCount = 2;
-			if (MaskTextureRHI.IsValid())
-			{
-				if (IsWorldSpace)
-				{
-					if (DepthFadeForWorld <= 0.0f)
-					{
-						TShaderMapRef<FDreamUIRenderMeshWorldVS> VertexShader(GlobalShaderMap);
-						TShaderMapRef<FDreamUIRenderMeshWithMaskWorldPS_Clip> PixelShader(GlobalShaderMap);
-						SET_PIPELINE_STATE_FOR_CLIP();
-						VertexShader->SetParameters(RHICmdList, ModelViewProjectionMatrix, ModelMatrix);
-						PixelShader->SetParameters(RHICmdList, MeshRegionTextureRHI, MaskTextureRHI
-							, ResultTextureSamplerState
-							, MaskTextureSamplerState
-, TintColor, TintMode
-						);
-						if (ClipDataTextureRHI.IsValid())
-						{
-							PixelShader->SetClipParameters(RHICmdList, ModelMatrix.Inverse(), ClipDataTextureRHI.GetReference(), TStaticSamplerState<SF_Point, AM_Clamp, AM_Clamp, AM_Clamp>::GetRHI());
-						}
-						PixelShader->SetDepthBlendParameter(RHICmdList, BlendDepthForWorld, DepthTextureScaleOffset, PSShaderParameters->SceneDepthTex->GetRHI());
-					}
-					else
-					{
-						TShaderMapRef<FDreamUIRenderMeshWorldVS> VertexShader(GlobalShaderMap);
-						TShaderMapRef<FDreamUIRenderMeshWithMaskWorldDepthFadePS_Clip> PixelShader(GlobalShaderMap);
-						SET_PIPELINE_STATE_FOR_CLIP();
-						VertexShader->SetParameters(RHICmdList, ModelViewProjectionMatrix, ModelMatrix);
-						PixelShader->SetParameters(RHICmdList, MeshRegionTextureRHI, MaskTextureRHI
-							, ResultTextureSamplerState
-							, MaskTextureSamplerState
-, TintColor, TintMode
-						);
-						if (ClipDataTextureRHI.IsValid())
-						{
-							PixelShader->SetClipParameters(RHICmdList, ModelMatrix.Inverse(), ClipDataTextureRHI.GetReference(), TStaticSamplerState<SF_Point, AM_Clamp, AM_Clamp, AM_Clamp>::GetRHI());
-						}
-						PixelShader->SetDepthBlendParameter(RHICmdList, BlendDepthForWorld, DepthTextureScaleOffset, PSShaderParameters->SceneDepthTex->GetRHI());
-						PixelShader->SetDepthFadeParameter(RHICmdList, DepthFadeForWorld, FVector2f(1.0f / ViewRect.Width(), 1.0f / ViewRect.Height()));
-					}
-				}
-				else
-				{
-					TShaderMapRef<FDreamUIRenderMeshVS> VertexShader(GlobalShaderMap);
-					TShaderMapRef<FDreamUIRenderMeshWithMaskPS_Clip> PixelShader(GlobalShaderMap);
-					SET_PIPELINE_STATE_FOR_CLIP();
-					VertexShader->SetParameters(RHICmdList, ModelViewProjectionMatrix, ModelMatrix);
-					PixelShader->SetParameters(RHICmdList, MeshRegionTextureRHI, MaskTextureRHI
-						, ResultTextureSamplerState
-						, MaskTextureSamplerState
-, TintColor, TintMode
-					);
-					if (ClipDataTextureRHI.IsValid())
-					{
-						PixelShader->SetClipParameters(RHICmdList, ModelMatrix.Inverse(), ClipDataTextureRHI.GetReference(), TStaticSamplerState<SF_Point, AM_Clamp, AM_Clamp, AM_Clamp>::GetRHI());
-					}
-				}
-				IndexBuffer = GDreamUIFullScreenQuadIndexBuffer.IndexBufferRHI;
-			}
-			else
-			{
-				if (IsWorldSpace)
-				{
-					if (DepthFadeForWorld <= 0.0f)
-					{
-						TShaderMapRef<FDreamUIRenderMeshWorldVS> VertexShader(GlobalShaderMap);
-						TShaderMapRef<FDreamUIRenderMeshWorldPS_Clip> PixelShader(GlobalShaderMap);
-						SET_PIPELINE_STATE_FOR_CLIP();
-						VertexShader->SetParameters(RHICmdList, ModelViewProjectionMatrix, ModelMatrix);
-						PixelShader->SetParameters(RHICmdList, MeshRegionTextureRHI, ResultTextureSamplerState, TintColor, TintMode);
-						if (ClipDataTextureRHI.IsValid())
-						{
-							PixelShader->SetClipParameters(RHICmdList, ModelMatrix.Inverse(), ClipDataTextureRHI.GetReference());
-						}
-						PixelShader->SetDepthBlendParameter(RHICmdList, BlendDepthForWorld, DepthTextureScaleOffset, PSShaderParameters->SceneDepthTex->GetRHI());
-					}
-					else
-					{
-						TShaderMapRef<FDreamUIRenderMeshWorldVS> VertexShader(GlobalShaderMap);
-						TShaderMapRef<FDreamUIRenderMeshWorldDepthFadePS_Clip> PixelShader(GlobalShaderMap);
-						SET_PIPELINE_STATE_FOR_CLIP();
-						VertexShader->SetParameters(RHICmdList, ModelViewProjectionMatrix, ModelMatrix);
-						PixelShader->SetParameters(RHICmdList, MeshRegionTextureRHI, ResultTextureSamplerState, TintColor, TintMode);
-						if (ClipDataTextureRHI.IsValid())
-						{
-							PixelShader->SetClipParameters(RHICmdList, ModelMatrix.Inverse(), ClipDataTextureRHI.GetReference());
-						}
-						PixelShader->SetDepthBlendParameter(RHICmdList, BlendDepthForWorld, DepthTextureScaleOffset, PSShaderParameters->SceneDepthTex->GetRHI());
-						PixelShader->SetDepthFadeParameter(RHICmdList, DepthFadeForWorld, FVector2f(1.0f / ViewRect.Width(), 1.0f / ViewRect.Height()));
-					}
-				}
-				else
-				{
-					TShaderMapRef<FDreamUIRenderMeshVS> VertexShader(GlobalShaderMap);
-					TShaderMapRef<FDreamUIRenderMeshPS_Clip> PixelShader(GlobalShaderMap);
-					SET_PIPELINE_STATE_FOR_CLIP();
-					VertexShader->SetParameters(RHICmdList, ModelViewProjectionMatrix, ModelMatrix);
-					PixelShader->SetParameters(RHICmdList, MeshRegionTextureRHI, ResultTextureSamplerState, TintColor, TintMode);
-					if (ClipDataTextureRHI.IsValid())
-					{
-						PixelShader->SetClipParameters(RHICmdList, ModelMatrix.Inverse(), ClipDataTextureRHI.GetReference());
-					}
-				}
-				IndexBuffer = GDreamUIFullScreenQuadIndexBuffer.IndexBufferRHI;
-			}
-			
+			// One shader for every case: the mask, the blend against the scene's depth for a world-space canvas, and that
+			// blend's fade are its permutations.
+			const bool bMask = MaskTextureRHI.IsValid();
+			FDreamUIRenderMeshVS::FPermutationDomain VertexPermutation;
+			VertexPermutation.Set<FDreamUIRenderMeshVS::FBlendDepth>(IsWorldSpace);
+			TShaderMapRef<FDreamUIRenderMeshVS> VertexShader(GlobalShaderMap, VertexPermutation);
+			FDreamUIRenderMeshPS::FPermutationDomain PixelPermutation;
+			PixelPermutation.Set<FDreamUIRenderMeshPS::FMask>(bMask);
+			PixelPermutation.Set<FDreamUIRenderMeshPS::FBlendDepth>(IsWorldSpace);
+			PixelPermutation.Set<FDreamUIRenderMeshPS::FDepthFade>(IsWorldSpace && DepthFadeForWorld > 0);
+			TShaderMapRef<FDreamUIRenderMeshPS> PixelShader(GlobalShaderMap, PixelPermutation);
+
+			FGraphicsPipelineStateInitializer GraphicsPSOInit;
+			RHICmdList.ApplyCachedRenderTargets(GraphicsPSOInit);
+			GraphicsPSOInit.DepthStencilState = TStaticDepthStencilState<false, ECompareFunction::CF_Always>::GetRHI();
+			GraphicsPSOInit.RasterizerState = TStaticRasterizerState<FM_Solid, CM_None>::GetRHI();
+			GraphicsPSOInit.BlendState = TStaticBlendState<CW_RGBA, BO_Add, BF_SourceAlpha, BF_InverseSourceAlpha, BO_Add, BF_InverseDestAlpha, BF_One>::GetRHI();
+			GraphicsPSOInit.BoundShaderState.VertexDeclarationRHI = GetDreamUIPostProcessVertexDeclaration();
+			GraphicsPSOInit.BoundShaderState.VertexShaderRHI = VertexShader.GetVertexShader();
+			GraphicsPSOInit.BoundShaderState.PixelShaderRHI = PixelShader.GetPixelShader();
+			GraphicsPSOInit.PrimitiveType = EPrimitiveType::PT_TriangleList;
+			GraphicsPSOInit.NumSamples = NumSamples;
+			SetGraphicsPipelineState(RHICmdList, GraphicsPSOInit, 0, EApplyRendertargetOption::ForceApply);
+
+			FDreamUIRenderMeshVS::FParameters VertexParameters;
+			VertexParameters.LocalToClip = ModelViewProjectionMatrix;
+			VertexParameters.LocalToWorld = ModelMatrix;
+			SetShaderParameters(RHICmdList, VertexShader, VertexShader.GetVertexShader(), VertexParameters);
+
+			// Every texture a permutation reads is bound: one that is not there is a fallback that changes nothing.
+			const auto BilinearSampler = TStaticSamplerState<SF_Bilinear, AM_Clamp, AM_Clamp, AM_Clamp>::GetRHI();
+			FDreamUIRenderMeshPS::FParameters PixelParameters;
+			PixelParameters.MainTex = MeshRegionTextureRHI;
+			PixelParameters.MainTexSampler = ResultTextureSamplerState != nullptr ? ResultTextureSamplerState : BilinearSampler;
+			PixelParameters.TintColor = TintColor;
+			PixelParameters.TintMode = TintMode;
+			PixelParameters.MaskTex = bMask ? MaskTextureRHI.GetReference() : GWhiteTexture->TextureRHI.GetReference();
+			PixelParameters.MaskTexSampler = MaskTextureSamplerState.IsValid() ? MaskTextureSamplerState.GetReference() : BilinearSampler;
+			PixelParameters.ClipDataTex = ClipDataTextureRHI.IsValid() ? static_cast<FRHITexture*>(ClipDataTextureRHI.GetReference()) : GBlackTexture->TextureRHI.GetReference();
+			PixelParameters.SceneDepthTex = IsWorldSpace ? PSShaderParameters->SceneDepthTex->GetRHI() : GBlackTexture->TextureRHI.GetReference();
+			PixelParameters.SceneDepthTexSampler = BilinearSampler;
+			PixelParameters.SceneDepthTextureScaleOffset = DepthTextureScaleOffset;
+			PixelParameters.SceneDepthBlend = BlendDepthForWorld;
+			PixelParameters.SceneDepthFade = DepthFadeForWorld;
+			PixelParameters.ViewSizeInv = FVector2f(1.0f / FMath::Max(ViewRect.Width(), 1), 1.0f / FMath::Max(ViewRect.Height(), 1));
+			SetShaderParameters(RHICmdList, PixelShader, PixelShader.GetPixelShader(), PixelParameters);
+
 			FBufferRHIRef VertexBufferRHI = UE::RHIResourceUtils::CreateVertexBufferFromArray(
 				RHICmdList, TEXT("RenderMeshOnScreen"), EBufferUsageFlags::Volatile, MakeConstArrayView(RenderMeshRegionToScreenVertexArray)
 			);
 			RHICmdList.SetStreamSource(0, VertexBufferRHI, 0);
-			RHICmdList.DrawIndexedPrimitive(IndexBuffer, 0, 0, RenderMeshRegionToScreenVertexArray.Num(), 0, TriangleCount, 1);
+			RHICmdList.DrawIndexedPrimitive(GDreamUIFullScreenQuadIndexBuffer.IndexBufferRHI, 0, 0, RenderMeshRegionToScreenVertexArray.Num(), 0, 2, 1);
 			VertexBufferRHI.SafeRelease();
 		});
 }

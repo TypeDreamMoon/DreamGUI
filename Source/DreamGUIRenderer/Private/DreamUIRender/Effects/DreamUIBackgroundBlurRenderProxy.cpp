@@ -260,11 +260,13 @@ public:
 				GraphicsPSOInit.BoundShaderState.PixelShaderRHI = PixelShader.GetPixelShader();
 				GraphicsPSOInit.PrimitiveType = EPrimitiveType::PT_TriangleList;
 				SetGraphicsPipelineState(RHICmdList, GraphicsPSOInit, 0, EApplyRendertargetOption::CheckApply);
-				VertexShader->SetParameters(RHICmdList);
 				//render vertical
 				RHICmdList.SetViewport(0, 0, 0.0f, BlurTexture->Desc.Extent.X, BlurTexture->Desc.Extent.Y, 1.0f);
-				PixelShader->SetMainTexture(RHICmdList, SourceTexture->GetRHI(), SamplerState);
-				PixelShader->SetBlurStrength(RHICmdList, FVector2f(1.0f / SourceTexture->Desc.Extent.X * BlurAmount, 0));
+				FDreamUIPostProcessGaussianBlurPS::FParameters Parameters;
+				Parameters.MainTex = SourceTexture->GetRHI();
+				Parameters.MainTexSampler = SamplerState;
+				Parameters.BlurStrength = FVector2f(1.0f / SourceTexture->Desc.Extent.X * BlurAmount, 0);
+				SetShaderParameters(RHICmdList, PixelShader, PixelShader.GetPixelShader(), Parameters);
 				Renderer->DrawFullScreenQuad(RHICmdList);
 			});
 
@@ -288,11 +290,13 @@ public:
 				GraphicsPSOInit.BoundShaderState.PixelShaderRHI = PixelShader.GetPixelShader();
 				GraphicsPSOInit.PrimitiveType = EPrimitiveType::PT_TriangleList;
 				SetGraphicsPipelineState(RHICmdList, GraphicsPSOInit, 0, EApplyRendertargetOption::CheckApply);
-				VertexShader->SetParameters(RHICmdList);
 				//render horizontal
 				RHICmdList.SetViewport(0, 0, 0.0f, SourceTexture->Desc.Extent.X, SourceTexture->Desc.Extent.Y, 1.0f);
-				PixelShader->SetMainTexture(RHICmdList, BlurTexture->GetRHI(), SamplerState);
-				PixelShader->SetBlurStrength(RHICmdList, FVector2f(0, 1.0f / BlurTexture->Desc.Extent.Y * BlurAmount));
+				FDreamUIPostProcessGaussianBlurPS::FParameters Parameters;
+				Parameters.MainTex = BlurTexture->GetRHI();
+				Parameters.MainTexSampler = SamplerState;
+				Parameters.BlurStrength = FVector2f(0, 1.0f / BlurTexture->Desc.Extent.Y * BlurAmount);
+				SetShaderParameters(RHICmdList, PixelShader, PixelShader.GetPixelShader(), Parameters);
 				Renderer->DrawFullScreenQuad(RHICmdList);
 			});
 

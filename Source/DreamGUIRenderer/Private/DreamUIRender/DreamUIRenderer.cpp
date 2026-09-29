@@ -304,123 +304,82 @@ void FDreamUIRenderer::PostRenderBasePassDeferred_RenderThread(FRDGBuilder& Grap
 
 }
 
+namespace DreamUIRendererLocal
+{
+	/**
+	 * The pass of the three CopyRenderTarget functions: Src over the whole of Dst, the colour linearized or the alpha
+	 * scaled by BlendAlpha and blended over what Dst holds. PassName names the pass and Dst in the graph, SourceName Src.
+	 */
+	static void AddCopyTargetPass(FDreamUIRenderer* Renderer, FRDGBuilder& GraphBuilder, FGlobalShaderMap* GlobalShaderMap
+		, FTextureRHIRef Src, FTextureRHIRef Dst, FRHISamplerState* SrcTextureSamplerState
+		, bool bColorCorrect, bool bBlendAlpha, float BlendAlpha, const TCHAR* PassName, const TCHAR* SourceName)
+	{
+		auto SourceTexture = RegisterExternalTexture(GraphBuilder, Src, SourceName);
+		auto DestinationTexture = RegisterExternalTexture(GraphBuilder, Dst, PassName);
+		auto* PassParameters = GraphBuilder.AllocParameters<FDreamUITextureReadRenderTargetParameters>();
+		PassParameters->SourceTexture = SourceTexture;
+		// A blended copy goes over what the target holds; any other covers all of it.
+		PassParameters->RenderTargets[0] = FRenderTargetBinding(DestinationTexture, bBlendAlpha ? ERenderTargetLoadAction::ELoad : ERenderTargetLoadAction::ENoAction);
+		GraphBuilder.AddPass(
+			RDG_EVENT_NAME("%s", PassName),
+			PassParameters,
+			ERDGPassFlags::Raster,
+			[Renderer, GlobalShaderMap, SourceTexture, DestinationTexture, SrcTextureSamplerState, bColorCorrect, bBlendAlpha, BlendAlpha](FRHICommandListImmediate& RHICmdList)
+			{
+				SourceTexture->MarkResourceAsUsed();
+				const FIntPoint DestinationExtent = DestinationTexture->Desc.Extent;
+				RHICmdList.SetViewport(0, 0, 0, DestinationExtent.X, DestinationExtent.Y, 1.0f);
+
+				TShaderMapRef<FDreamUISimplePostProcessVS> VertexShader(GlobalShaderMap);
+				FDreamUISimpleCopyTargetPS::FPermutationDomain PermutationVector;
+				PermutationVector.Set<FDreamUISimpleCopyTargetPS::FColorCorrect>(bColorCorrect);
+				PermutationVector.Set<FDreamUISimpleCopyTargetPS::FBlendAlpha>(bBlendAlpha);
+				TShaderMapRef<FDreamUISimpleCopyTargetPS> PixelShader(GlobalShaderMap, PermutationVector);
+				FGraphicsPipelineStateInitializer GraphicsPSOInit;
+				RHICmdList.ApplyCachedRenderTargets(GraphicsPSOInit);
+				GraphicsPSOInit.DepthStencilState = TStaticDepthStencilState<false, ECompareFunction::CF_Always>::GetRHI();
+				GraphicsPSOInit.RasterizerState = TStaticRasterizerState<FM_Solid, CM_None>::GetRHI();
+				GraphicsPSOInit.BlendState = bBlendAlpha
+					? TStaticBlendState<CW_RGBA, BO_Add, BF_SourceAlpha, BF_InverseSourceAlpha, BO_Add, BF_InverseDestAlpha, BF_One>::GetRHI()
+					: TStaticBlendState<>::GetRHI();
+				GraphicsPSOInit.PrimitiveType = EPrimitiveType::PT_TriangleList;
+				GraphicsPSOInit.NumSamples = DestinationTexture->Desc.NumSamples;
+				GraphicsPSOInit.BoundShaderState.VertexDeclarationRHI = GetDreamUIPostProcessVertexDeclaration();
+				GraphicsPSOInit.BoundShaderState.VertexShaderRHI = VertexShader.GetVertexShader();
+				GraphicsPSOInit.BoundShaderState.PixelShaderRHI = PixelShader.GetPixelShader();
+				SetGraphicsPipelineState(RHICmdList, GraphicsPSOInit, 0, EApplyRendertargetOption::CheckApply);
+
+				FDreamUISimpleCopyTargetPS::FParameters Parameters;
+				Parameters.MainTex = SourceTexture->GetRHI();
+				Parameters.MainTexSampler = SrcTextureSamplerState != nullptr ? SrcTextureSamplerState : TStaticSamplerState<SF_Bilinear, AM_Clamp, AM_Clamp, AM_Clamp>::GetRHI();
+				Parameters.BlendAlpha = BlendAlpha;
+				SetShaderParameters(RHICmdList, PixelShader, PixelShader.GetPixelShader(), Parameters);
+
+				Renderer->DrawFullScreenQuad(RHICmdList);
+			});
+	}
+}
+
 void FDreamUIRenderer::CopyRenderTarget(FRDGBuilder& GraphBuilder, FGlobalShaderMap* GlobalShaderMap, FTextureRHIRef Src, FTextureRHIRef Dst
 	, FRHISamplerState* SrcTextureSamplerState
 )
 {
-	auto SourceTexture = RegisterExternalTexture(GraphBuilder, Src, TEXT("DreamUICopyRenderTargetSource"));
-	auto DestinationTexture = RegisterExternalTexture(GraphBuilder, Dst, TEXT("DreamUICopyRenderTarget"));
-	auto* PassParameters = GraphBuilder.AllocParameters<FDreamUITextureReadRenderTargetParameters>();
-	PassParameters->SourceTexture = SourceTexture;
-	PassParameters->RenderTargets[0] = FRenderTargetBinding(DestinationTexture, ERenderTargetLoadAction::ENoAction);
-	GraphBuilder.AddPass(
-		RDG_EVENT_NAME("DreamUICopyRenderTarget"),
-		PassParameters,
-		ERDGPassFlags::Raster,
-		[this, GlobalShaderMap, SourceTexture, DestinationTexture, SrcTextureSamplerState](FRHICommandListImmediate& RHICmdList)
-		{
-			SourceTexture->MarkResourceAsUsed();
-			const FIntPoint DestinationExtent = DestinationTexture->Desc.Extent;
-			RHICmdList.SetViewport(0, 0, 0, DestinationExtent.X, DestinationExtent.Y, 1.0f);
-
-			TShaderMapRef<FDreamUISimplePostProcessVS> VertexShader(GlobalShaderMap);
-			FGraphicsPipelineStateInitializer GraphicsPSOInit;
-			RHICmdList.ApplyCachedRenderTargets(GraphicsPSOInit);
-			GraphicsPSOInit.DepthStencilState = TStaticDepthStencilState<false, ECompareFunction::CF_Always>::GetRHI();
-			GraphicsPSOInit.RasterizerState = TStaticRasterizerState<FM_Solid, CM_None>::GetRHI();
-			GraphicsPSOInit.BlendState = TStaticBlendState<>::GetRHI();
-			GraphicsPSOInit.PrimitiveType = EPrimitiveType::PT_TriangleList;
-			GraphicsPSOInit.NumSamples = DestinationTexture->Desc.NumSamples;
-			GraphicsPSOInit.BoundShaderState.VertexDeclarationRHI = GetDreamUIPostProcessVertexDeclaration();
-			GraphicsPSOInit.BoundShaderState.VertexShaderRHI = VertexShader.GetVertexShader();
-			TShaderMapRef<FDreamUISimpleCopyTargetPS> PixelShader(GlobalShaderMap);
-			GraphicsPSOInit.BoundShaderState.PixelShaderRHI = PixelShader.GetPixelShader();
-			SetGraphicsPipelineState(RHICmdList, GraphicsPSOInit, 0, EApplyRendertargetOption::CheckApply);
-			PixelShader->SetParameters(RHICmdList, SourceTexture->GetRHI(), SrcTextureSamplerState);
-			VertexShader->SetParameters(RHICmdList);
-
-			DrawFullScreenQuad(RHICmdList);
-		});
+	DreamUIRendererLocal::AddCopyTargetPass(this, GraphBuilder, GlobalShaderMap, Src, Dst, SrcTextureSamplerState, false, false, 1.0f
+		, TEXT("DreamUICopyRenderTarget"), TEXT("DreamUICopyRenderTargetSource"));
 }
 
 void FDreamUIRenderer::CopyRenderTarget_ColorCorrect(FRDGBuilder& GraphBuilder, FGlobalShaderMap* GlobalShaderMap,
 	FTextureRHIRef Src, FTextureRHIRef Dst, FRHISamplerState* SrcTextureSamplerState)
 {
-	auto SourceTexture = RegisterExternalTexture(GraphBuilder, Src, TEXT("DreamUICopyRenderTarget_ColorCorrectSource"));
-	auto DestinationTexture = RegisterExternalTexture(GraphBuilder, Dst, TEXT("DreamUICopyRenderTarget_ColorCorrect"));
-	auto* PassParameters = GraphBuilder.AllocParameters<FDreamUITextureReadRenderTargetParameters>();
-	PassParameters->SourceTexture = SourceTexture;
-	PassParameters->RenderTargets[0] = FRenderTargetBinding(DestinationTexture, ERenderTargetLoadAction::ENoAction);
-	GraphBuilder.AddPass(
-		RDG_EVENT_NAME("DreamUICopyRenderTarget_ColorCorrect"),
-		PassParameters,
-		ERDGPassFlags::Raster,
-		[this, GlobalShaderMap, SourceTexture, DestinationTexture, SrcTextureSamplerState](FRHICommandListImmediate& RHICmdList)
-		{
-			SourceTexture->MarkResourceAsUsed();
-			const FIntPoint DestinationExtent = DestinationTexture->Desc.Extent;
-			RHICmdList.SetViewport(0, 0, 0, DestinationExtent.X, DestinationExtent.Y, 1.0f);
-
-			TShaderMapRef<FDreamUISimplePostProcessVS> VertexShader(GlobalShaderMap);
-			FGraphicsPipelineStateInitializer GraphicsPSOInit;
-			RHICmdList.ApplyCachedRenderTargets(GraphicsPSOInit);
-			GraphicsPSOInit.DepthStencilState = TStaticDepthStencilState<false, ECompareFunction::CF_Always>::GetRHI();
-			GraphicsPSOInit.RasterizerState = TStaticRasterizerState<FM_Solid, CM_None>::GetRHI();
-			GraphicsPSOInit.BlendState = TStaticBlendState<>::GetRHI();
-			GraphicsPSOInit.PrimitiveType = EPrimitiveType::PT_TriangleList;
-			GraphicsPSOInit.NumSamples = DestinationTexture->Desc.NumSamples;
-			GraphicsPSOInit.BoundShaderState.VertexDeclarationRHI = GetDreamUIPostProcessVertexDeclaration();
-			GraphicsPSOInit.BoundShaderState.VertexShaderRHI = VertexShader.GetVertexShader();
-			TShaderMapRef<FDreamUISimpleCopyTargetPS_ColorCorrect> PixelShader(GlobalShaderMap);
-			GraphicsPSOInit.BoundShaderState.PixelShaderRHI = PixelShader.GetPixelShader();
-			SetGraphicsPipelineState(RHICmdList, GraphicsPSOInit, 0, EApplyRendertargetOption::CheckApply);
-			PixelShader->SetParameters(RHICmdList, SourceTexture->GetRHI(), SrcTextureSamplerState);
-			VertexShader->SetParameters(RHICmdList);
-
-			DrawFullScreenQuad(RHICmdList);
-		});
+	DreamUIRendererLocal::AddCopyTargetPass(this, GraphBuilder, GlobalShaderMap, Src, Dst, SrcTextureSamplerState, true, false, 1.0f
+		, TEXT("DreamUICopyRenderTarget_ColorCorrect"), TEXT("DreamUICopyRenderTarget_ColorCorrectSource"));
 }
 
 void FDreamUIRenderer::CopyRenderTarget_BlendAlpha(FRDGBuilder& GraphBuilder, FGlobalShaderMap* GlobalShaderMap,
                                                  FTextureRHIRef Src, FTextureRHIRef Dst, float BlendAlpha, FRHISamplerState* SrcTextureSamplerState)
 {
-	auto SourceTexture = RegisterExternalTexture(GraphBuilder, Src, TEXT("DreamUICopyRenderTarget_BlendAlphaSource"));
-	auto DestinationTexture = RegisterExternalTexture(GraphBuilder, Dst, TEXT("DreamUICopyRenderTarget_BlendAlpha"));
-	auto* PassParameters = GraphBuilder.AllocParameters<FDreamUITextureReadRenderTargetParameters>();
-	PassParameters->SourceTexture = SourceTexture;
-	PassParameters->RenderTargets[0] = FRenderTargetBinding(DestinationTexture, ERenderTargetLoadAction::ELoad);
-	GraphBuilder.AddPass(
-		RDG_EVENT_NAME("DreamUICopyRenderTarget_BlendAlpha"),
-		PassParameters,
-		ERDGPassFlags::Raster,
-		[this, GlobalShaderMap, SourceTexture, DestinationTexture, SrcTextureSamplerState, BlendAlpha](FRHICommandListImmediate& RHICmdList)
-		{
-			SourceTexture->MarkResourceAsUsed();
-			const FIntPoint DestinationExtent = DestinationTexture->Desc.Extent;
-			RHICmdList.SetViewport(0, 0, 0, DestinationExtent.X, DestinationExtent.Y, 1.0f);
-
-
-			TShaderMapRef<FDreamUISimplePostProcessVS> VertexShader(GlobalShaderMap);
-			FGraphicsPipelineStateInitializer GraphicsPSOInit;
-			RHICmdList.ApplyCachedRenderTargets(GraphicsPSOInit);
-			GraphicsPSOInit.DepthStencilState = TStaticDepthStencilState<false, ECompareFunction::CF_Always>::GetRHI();
-			GraphicsPSOInit.RasterizerState = TStaticRasterizerState<FM_Solid, CM_None>::GetRHI();
-			GraphicsPSOInit.BlendState = TStaticBlendState<CW_RGBA, BO_Add, BF_SourceAlpha, BF_InverseSourceAlpha, BO_Add, BF_InverseDestAlpha, BF_One>::GetRHI();
-			GraphicsPSOInit.PrimitiveType = EPrimitiveType::PT_TriangleList;
-			GraphicsPSOInit.NumSamples = DestinationTexture->Desc.NumSamples;
-			GraphicsPSOInit.BoundShaderState.VertexDeclarationRHI = GetDreamUIPostProcessVertexDeclaration();
-			GraphicsPSOInit.BoundShaderState.VertexShaderRHI = VertexShader.GetVertexShader();
-
-			TShaderMapRef<FDreamUISimpleCopyTargetPS_BlendAlpha> PixelShader(GlobalShaderMap);
-			GraphicsPSOInit.BoundShaderState.PixelShaderRHI = PixelShader.GetPixelShader();
-			SetGraphicsPipelineState(RHICmdList, GraphicsPSOInit, 0, EApplyRendertargetOption::CheckApply);
-			PixelShader->SetParameters(RHICmdList, SourceTexture->GetRHI(), SrcTextureSamplerState);
-			PixelShader->SetBlendAlpha(RHICmdList, BlendAlpha);
-
-			VertexShader->SetParameters(RHICmdList);
-
-			DrawFullScreenQuad(RHICmdList);
-		});
+	DreamUIRendererLocal::AddCopyTargetPass(this, GraphBuilder, GlobalShaderMap, Src, Dst, SrcTextureSamplerState, false, true, BlendAlpha
+		, TEXT("DreamUICopyRenderTarget_BlendAlpha"), TEXT("DreamUICopyRenderTarget_BlendAlphaSource"));
 }
 
 void FDreamUIRenderer::CopyRenderTargetOnMeshRegion(
@@ -462,22 +421,19 @@ void FDreamUIRenderer::CopyRenderTargetOnMeshRegion(
 			GraphicsPSOInit.BoundShaderState.VertexShaderRHI = VertexShader.GetVertexShader();
 			GraphicsPSOInit.PrimitiveType = EPrimitiveType::PT_TriangleList;
 			GraphicsPSOInit.NumSamples = NumSamples;
-			if (ColorCorrect)
-			{
-				TShaderMapRef<FDreamUICopyMeshRegionPS_ColorCorrect> PixelShader(GlobalShaderMap);
-				GraphicsPSOInit.BoundShaderState.PixelShaderRHI = PixelShader.GetPixelShader();
-				SetGraphicsPipelineState(RHICmdList, GraphicsPSOInit, 0, EApplyRendertargetOption::CheckApply);
+			FDreamUICopyMeshRegionPS::FPermutationDomain PermutationVector;
+			PermutationVector.Set<FDreamUICopyMeshRegionPS::FColorCorrect>(ColorCorrect);
+			TShaderMapRef<FDreamUICopyMeshRegionPS> PixelShader(GlobalShaderMap, PermutationVector);
+			GraphicsPSOInit.BoundShaderState.PixelShaderRHI = PixelShader.GetPixelShader();
+			SetGraphicsPipelineState(RHICmdList, GraphicsPSOInit, 0, EApplyRendertargetOption::CheckApply);
 
-				PixelShader->SetParameters(RHICmdList, MVP, bIsRenderTarget, SourceRHI, SrcTextureScaleOffset);
-			}
-			else
-			{
-				TShaderMapRef<FDreamUICopyMeshRegionPS> PixelShader(GlobalShaderMap);
-				GraphicsPSOInit.BoundShaderState.PixelShaderRHI = PixelShader.GetPixelShader();
-				SetGraphicsPipelineState(RHICmdList, GraphicsPSOInit, 0, EApplyRendertargetOption::CheckApply);
-
-				PixelShader->SetParameters(RHICmdList, MVP, bIsRenderTarget, SourceRHI, SrcTextureScaleOffset);
-			}
+			FDreamUICopyMeshRegionPS::FParameters Parameters;
+			Parameters.MainTex = SourceRHI;
+			Parameters.MainTexSampler = TStaticSamplerState<SF_Bilinear, AM_Clamp, AM_Clamp, AM_Clamp>::GetRHI();
+			Parameters.MainTextureScaleOffset = SrcTextureScaleOffset;
+			Parameters.LocalToClip = MVP;
+			Parameters.IsRenderTarget = bIsRenderTarget ? 1.0f : 0.0f;
+			SetShaderParameters(RHICmdList, PixelShader, PixelShader.GetPixelShader(), Parameters);
 			
 			FBufferRHIRef VertexBufferRHI = UE::RHIResourceUtils::CreateVertexBufferFromArray(
 			RHICmdList, TEXT("CopyRenderTargetOnMeshRegion"), EBufferUsageFlags::Volatile, MakeConstArrayView(RegionVertexData)
@@ -1723,6 +1679,11 @@ void FDreamUIRenderer::AddResolvePass(
 		ERDGPassFlags::Raster,
 		[ViewRect, SceneColorTargetable, NumSamples, GlobalShaderMap](FRHICommandList& RHICmdList)
 		{
+			// 2, 4 and 8 samples resolve; a target with any other count has no shader to resolve it.
+			if (NumSamples != 2 && NumSamples != 4 && NumSamples != 8)
+			{
+				return;
+			}
 			FRHITexture* SceneColorTargetableRHI = SceneColorTargetable->GetRHI();
 
 			FGraphicsPipelineStateInitializer GraphicsPSOInit;
@@ -1742,30 +1703,14 @@ void FDreamUIRenderer::AddResolvePass(
 			GraphicsPSOInit.BoundShaderState.VertexDeclarationRHI = GetVertexDeclarationFVector4();
 			GraphicsPSOInit.BoundShaderState.VertexShaderRHI = VertexShader.GetVertexShader();
 			GraphicsPSOInit.PrimitiveType = PT_TriangleList;
-			if (NumSamples == 2)
-			{
-				TShaderMapRef<FDreamUIResolveShader2xPS> PixelShader(GlobalShaderMap);
-				GraphicsPSOInit.BoundShaderState.PixelShaderRHI = PixelShader.GetPixelShader();
-
-				SetGraphicsPipelineState(RHICmdList, GraphicsPSOInit, 0);
-				PixelShader->SetParameters(RHICmdList, SceneColorTargetableRHI);
-			}
-			else if (NumSamples == 4)
-			{
-				TShaderMapRef<FDreamUIResolveShader4xPS> PixelShader(GlobalShaderMap);
-				GraphicsPSOInit.BoundShaderState.PixelShaderRHI = PixelShader.GetPixelShader();
-
-				SetGraphicsPipelineState(RHICmdList, GraphicsPSOInit, 0);
-				PixelShader->SetParameters(RHICmdList, SceneColorTargetableRHI);
-			}
-			else if (NumSamples == 8)
-			{
-				TShaderMapRef<FDreamUIResolveShader8xPS> PixelShader(GlobalShaderMap);
-				GraphicsPSOInit.BoundShaderState.PixelShaderRHI = PixelShader.GetPixelShader();
-
-				SetGraphicsPipelineState(RHICmdList, GraphicsPSOInit, 0);
-				PixelShader->SetParameters(RHICmdList, SceneColorTargetableRHI);
-			}
+			FDreamUIResolveShaderPS::FPermutationDomain PermutationVector;
+			PermutationVector.Set<FDreamUIResolveShaderPS::FSampleCount>(NumSamples);
+			TShaderMapRef<FDreamUIResolveShaderPS> PixelShader(GlobalShaderMap, PermutationVector);
+			GraphicsPSOInit.BoundShaderState.PixelShaderRHI = PixelShader.GetPixelShader();
+			SetGraphicsPipelineState(RHICmdList, GraphicsPSOInit, 0);
+			FDreamUIResolveShaderPS::FParameters Parameters;
+			Parameters.Tex = SceneColorTargetableRHI;
+			SetShaderParameters(RHICmdList, PixelShader, PixelShader.GetPixelShader(), Parameters);
 
 			RHICmdList.SetStreamSource(0, GDreamUIResolveDummyVertexBuffer.VertexBufferRHI, 0);
 			RHICmdList.DrawPrimitive(0, 1, 1);

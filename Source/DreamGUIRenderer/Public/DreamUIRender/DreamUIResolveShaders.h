@@ -3,96 +3,33 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Shader.h"
-#include "ShaderParameterUtils.h"
-#include "MaterialShaderType.h"
-#include "MaterialShader.h"
-#include "Engine/Texture2D.h"
+#include "GlobalShader.h"
+#include "ShaderParameterStruct.h"
 
-class FDreamUIResolveShaderVS :public FGlobalShader
+/** Vertex shader of the multi-sample resolve: one triangle over the whole target, made from the vertex index alone. */
+class FDreamUIResolveShaderVS : public FGlobalShader
 {
-	DECLARE_SHADER_TYPE(FDreamUIResolveShaderVS, Global);
 public:
-	FDreamUIResolveShaderVS() {}
-	FDreamUIResolveShaderVS(const ShaderMetaType::CompiledShaderInitializerType& Initializer)
-		: FGlobalShader(Initializer)
-	{
-	}
-	static void ModifyCompilationEnvironment(const FGlobalShaderPermutationParameters& Parameters, FShaderCompilerEnvironment& OutEnvironment)
-	{
-		FGlobalShader::ModifyCompilationEnvironment(Parameters, OutEnvironment);
-	}
+	DECLARE_GLOBAL_SHADER(FDreamUIResolveShaderVS);
+	SHADER_USE_PARAMETER_STRUCT(FDreamUIResolveShaderVS, FGlobalShader);
+	using FParameters = FEmptyShaderParameters;
+
+	static bool ShouldCompilePermutation(const FGlobalShaderPermutationParameters& Parameters) { return true; }
 };
 
-class FDreamUIResolveShader2xPS :public FGlobalShader
+/** Each pixel of a multi-sampled target, the mean of its samples. Permutation: the sample count, 2, 4 or 8. */
+class FDreamUIResolveShaderPS : public FGlobalShader
 {
-	DECLARE_SHADER_TYPE(FDreamUIResolveShader2xPS, Global);
 public:
-	FDreamUIResolveShader2xPS() {}
-	FDreamUIResolveShader2xPS(const ShaderMetaType::CompiledShaderInitializerType& Initializer)
-		: FGlobalShader(Initializer)
-	{
-		Tex.Bind(Initializer.ParameterMap, TEXT("Tex"), SPF_Mandatory);
-	}
-	void SetParameters(FRHICommandList& RHICmdList, FRHITexture* Texture2DMS)
-	{
-		auto& BatchedParameters = RHICmdList.GetScratchShaderParameters();
-		SetTextureParameter(BatchedParameters, Tex, Texture2DMS);
-		RHICmdList.SetBatchedShaderParameters(RHICmdList.GetBoundPixelShader(), BatchedParameters);
-	}
-	static void ModifyCompilationEnvironment(const FGlobalShaderPermutationParameters& Parameters, FShaderCompilerEnvironment& OutEnvironment)
-	{
-		FGlobalShader::ModifyCompilationEnvironment(Parameters, OutEnvironment);
-		OutEnvironment.SetDefine(TEXT("LEXUI_RESOLVE_2X"), 1);
-	}
-protected:
-	LAYOUT_FIELD(FShaderResourceParameter, Tex);
-};
-class FDreamUIResolveShader4xPS :public FGlobalShader
-{
-	DECLARE_SHADER_TYPE(FDreamUIResolveShader4xPS, Global);
-public:
-	FDreamUIResolveShader4xPS() {}
-	FDreamUIResolveShader4xPS(const ShaderMetaType::CompiledShaderInitializerType& Initializer)
-		: FGlobalShader(Initializer)
-	{
-		Tex.Bind(Initializer.ParameterMap, TEXT("Tex"), SPF_Mandatory);
-	}
-	void SetParameters(FRHICommandList& RHICmdList, FRHITexture* Texture2DMS)
-	{
-		auto& BatchedParameters = RHICmdList.GetScratchShaderParameters();
-		SetTextureParameter(BatchedParameters, Tex, Texture2DMS);
-		RHICmdList.SetBatchedShaderParameters(RHICmdList.GetBoundPixelShader(), BatchedParameters);
-	}
-	static void ModifyCompilationEnvironment(const FGlobalShaderPermutationParameters& Parameters, FShaderCompilerEnvironment& OutEnvironment)
-	{
-		FGlobalShader::ModifyCompilationEnvironment(Parameters, OutEnvironment);
-		OutEnvironment.SetDefine(TEXT("LEXUI_RESOLVE_4X"), 1);
-	}
-protected:
-	LAYOUT_FIELD(FShaderResourceParameter, Tex);
-};
-class FDreamUIResolveShader8xPS :public FGlobalShader
-{
-	DECLARE_SHADER_TYPE(FDreamUIResolveShader8xPS, Global);
-public:
-	FDreamUIResolveShader8xPS() {}
-	FDreamUIResolveShader8xPS(const ShaderMetaType::CompiledShaderInitializerType& Initializer)
-		: FGlobalShader(Initializer)
-	{
-		Tex.Bind(Initializer.ParameterMap, TEXT("Tex"), SPF_Mandatory);
-	}
-	void SetParameters(FRHICommandList& RHICmdList, FRHITexture* Texture2DMS)
-	{
-		auto& BatchedParameters = RHICmdList.GetScratchShaderParameters();
-		SetTextureParameter(BatchedParameters, Tex, Texture2DMS);
-		RHICmdList.SetBatchedShaderParameters(RHICmdList.GetBoundPixelShader(), BatchedParameters);
-	}
-	static void ModifyCompilationEnvironment(const FGlobalShaderPermutationParameters& Parameters, FShaderCompilerEnvironment& OutEnvironment)
-	{
-		FGlobalShader::ModifyCompilationEnvironment(Parameters, OutEnvironment);
-		OutEnvironment.SetDefine(TEXT("LEXUI_RESOLVE_8X"), 1);
-	}
-protected:
-	LAYOUT_FIELD(FShaderResourceParameter, Tex);
+	DECLARE_GLOBAL_SHADER(FDreamUIResolveShaderPS);
+	SHADER_USE_PARAMETER_STRUCT(FDreamUIResolveShaderPS, FGlobalShader);
+
+	class FSampleCount : SHADER_PERMUTATION_SPARSE_INT("LEXUI_RESOLVE_SAMPLES", 2, 4, 8);
+	using FPermutationDomain = TShaderPermutationDomain<FSampleCount>;
+
+	BEGIN_SHADER_PARAMETER_STRUCT(FParameters, )
+		SHADER_PARAMETER_TEXTURE(Texture2DMS<float4>, Tex)
+	END_SHADER_PARAMETER_STRUCT()
+
+	static bool ShouldCompilePermutation(const FGlobalShaderPermutationParameters& Parameters) { return true; }
 };

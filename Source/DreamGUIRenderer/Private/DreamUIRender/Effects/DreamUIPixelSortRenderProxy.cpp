@@ -226,10 +226,18 @@ void FDreamPixelSortRenderProxy::OnRenderPostProcess_RenderThread(
 				PSOInit.BoundShaderState.PixelShaderRHI = RankShader.GetPixelShader();
 				PSOInit.PrimitiveType = EPrimitiveType::PT_TriangleList;
 				SetGraphicsPipelineState(RHICmdList, PSOInit, 0, EApplyRendertargetOption::CheckApply);
-				VertexShader->SetParameters(RHICmdList);
 				RHICmdList.SetViewport(0, 0, 0.0f, DestinationTexture->Desc.Extent.X, DestinationTexture->Desc.Extent.Y, 1.0f);
-				RankShader->SetParameters(RHICmdList, SourceTexture->GetRHI(), SortSampler,
-					RegionSizeFloat, Band, AxisFlag, KeyFlag, DescendingFlag, RadiusFloat, IntervalParams);
+				FDreamUIPostProcessPixelSortRankPS::FParameters Parameters;
+				Parameters.MainTex = SourceTexture->GetRHI();
+				Parameters.MainTexSampler = SortSampler;
+				Parameters.RegionSize = RegionSizeFloat;
+				Parameters.Band = Band;
+				Parameters.SortAxis = AxisFlag;
+				Parameters.SortKey = KeyFlag;
+				Parameters.Descending = DescendingFlag;
+				Parameters.SearchRadius = RadiusFloat;
+				Parameters.IntervalParams = IntervalParams;
+				SetShaderParameters(RHICmdList, RankShader, RankShader.GetPixelShader(), Parameters);
 				Renderer->DrawFullScreenQuad(RHICmdList);
 			});
 	}
@@ -256,10 +264,16 @@ void FDreamPixelSortRenderProxy::OnRenderPostProcess_RenderThread(
 				PSOInit.BoundShaderState.PixelShaderRHI = GatherShader.GetPixelShader();
 				PSOInit.PrimitiveType = EPrimitiveType::PT_TriangleList;
 				SetGraphicsPipelineState(RHICmdList, PSOInit, 0, EApplyRendertargetOption::CheckApply);
-				VertexShader->SetParameters(RHICmdList);
 				RHICmdList.SetViewport(0, 0, 0.0f, ResultRDGTexture->Desc.Extent.X, ResultRDGTexture->Desc.Extent.Y, 1.0f);
-				GatherShader->SetParameters(RHICmdList, SourceTexture->GetRHI(), SortSampler,
-					DestinationTexture->GetRHI(), RegionSizeFloat, AxisFlag, RadiusFloat);
+				FDreamUIPostProcessPixelSortGatherPS::FParameters Parameters;
+				Parameters.MainTex = SourceTexture->GetRHI();
+				Parameters.MainTexSampler = SortSampler;
+				Parameters.DestinationTex = DestinationTexture->GetRHI();
+				Parameters.DestinationTexSampler = SortSampler;
+				Parameters.RegionSize = RegionSizeFloat;
+				Parameters.SortAxis = AxisFlag;
+				Parameters.SearchRadius = RadiusFloat;
+				SetShaderParameters(RHICmdList, GatherShader, GatherShader.GetPixelShader(), Parameters);
 				Renderer->DrawFullScreenQuad(RHICmdList);
 			});
 	}

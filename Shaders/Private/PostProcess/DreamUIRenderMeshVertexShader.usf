@@ -1,8 +1,8 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 #include "/Engine/Public/Platform.ush"
 
-float4x4 _MVP;
-float4x4 _M;
+float4x4 LocalToClip;
+float4x4 LocalToWorld;
 
 struct RenderMeshVSToPS
 {
@@ -23,8 +23,8 @@ void RenderMeshVS(
     out RenderMeshVSToPS v2p
 )
 {
-    v2p.position = mul(float4(Position.xyz, 1.0), _MVP);
-    v2p.worldPosition = mul(float4(Position.xyz, 1.0), _M);
+    v2p.position = mul(float4(Position.xyz, 1.0), LocalToClip);
+    v2p.worldPosition = mul(float4(Position.xyz, 1.0), LocalToWorld);
     v2p.localPosition = Position.xyz;
     v2p.uv = TextureCoord0;
     v2p.uv1 = TextureCoord1;

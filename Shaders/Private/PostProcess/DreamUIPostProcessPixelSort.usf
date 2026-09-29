@@ -1,7 +1,9 @@
 // Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
 #include "DreamUIPostProcessVertexShader.usf"
 #include "/Engine/Public/Platform.ush"
-#include "/Engine/Generated/UniformBuffers/DreamUIPostProcessMainTexUB.ush"
+
+Texture2D MainTex;
+SamplerState MainTexSampler;
 
 // Pixel sorting in TWO passes, by computing each texel's destination directly instead of shuffling
 // it there one step at a time.
@@ -17,13 +19,13 @@
 // This file mirrors namespace DreamPixelSort in DreamPixelSort.cpp. The two cannot share code -- one is
 // HLSL -- so they are kept in step by hand, and anything added here belongs there too.
 
-float2 _RegionSize;     // texels along x and y
-float2 _Band;           // threshold band, already ordered low then high
-float  _SortAxis;       // 0 = horizontal (sort along x), 1 = vertical (sort along y)
-float  _SortKey;        // matches EDreamPixelSortKey
-float  _Descending;
-float  _SearchRadius;   // how far a texel may look, and therefore how far it may travel
-float4 _IntervalParams; // x = EDreamPixelSortInterval, y = interval length, z = randomness, w unused
+float2 RegionSize;     // texels along x and y
+float2 Band;           // threshold band, already ordered low then high
+float  SortAxis;       // 0 = horizontal (sort along x), 1 = vertical (sort along y)
+float  SortKey;        // matches EDreamPixelSortKey
+float  Descending;
+float  SearchRadius;   // how far a texel may look, and therefore how far it may travel
+float4 IntervalParams; // x = EDreamPixelSortInterval, y = interval length, z = randomness, w unused
 
 // Mirrors DreamPixelSort::ComputeKey. Order matches EDreamPixelSortKey exactly.
 float ComputeKey(float4 color)
@@ -31,19 +33,19 @@ float ComputeKey(float4 color)
     float maxChannel = max(color.r, max(color.g, color.b));
     float minChannel = min(color.r, min(color.g, color.b));
 
-    if (_SortKey < 0.5)         // Luminance
+    if (SortKey < 0.5)         // Luminance
     {
         return dot(color.rgb, float3(0.2126, 0.7152, 0.0722));
     }
-    else if (_SortKey < 1.5)    // Brightness
+    else if (SortKey < 1.5)    // Brightness
     {
         return maxChannel;
     }
-    else if (_SortKey < 2.5)    // Saturation
+    else if (SortKey < 2.5)    // Saturation
     {
         return maxChannel > 0.00001 ? (maxChannel - minChannel) / maxChannel : 0.0;
     }
-    else if (_SortKey < 3.5)    // Hue -- wraps, so a run spanning red splits rather than sorting
+    else if (SortKey < 3.5)    // Hue -- wraps, so a run spanning red splits rather than sorting
     {
         float chroma = maxChannel - minChannel;
         if (chroma <= 0.00001)
@@ -57,11 +59,11 @@ float ComputeKey(float4 color)
         hue /= 6.0;
         return hue < 0.0 ? hue + 1.0 : hue;
     }
-    else if (_SortKey < 4.5)    // Intensity
+    else if (SortKey < 4.5)    // Intensity
     {
         return (color.r + color.g + color.b) / 3.0;
     }
-    else if (_SortKey < 5.5)    // Minimum
+    else if (SortKey < 5.5)    // Minimum
     {
         return minChannel;
     }
@@ -85,7 +87,7 @@ uint DreamHash(uint value)
 bool IsInBand(float key)
 {
     float clamped = saturate(key);
-    return clamped >= _Band.x && clamped <= _Band.y;
+    return clamped >= Band.x && clamped <= Band.y;
 }
 
 // Mirrors DreamPixelSort::IsSortable. Threshold asks the image; Random and Waves ask only the
@@ -94,8 +96,8 @@ bool IsInBand(float key)
 bool IsSortable(float key, int index, int lineIndex)
 {
     uint lineSeed = DreamHash((uint)lineIndex * 0x9e3779b9u);
-    int length = max((int)_IntervalParams.y, 2);
-    int mode = (int)(_IntervalParams.x + 0.5);
+    int length = max((int)IntervalParams.y, 2);
+    int mode = (int)(IntervalParams.x + 0.5);
     int runIndex = 0;
 
     if (mode == 0)          // Threshold
@@ -125,10 +127,10 @@ bool IsSortable(float key, int index, int lineIndex)
     }
     // mode == 3 (None): everything takes part, runIndex stays 0
 
-    if (_IntervalParams.z > 0.0)
+    if (IntervalParams.z > 0.0)
     {
         uint roll = DreamHash(lineSeed ^ ((uint)runIndex * 0xc2b2ae35u));
-        if ((roll & 0xffffffu) < (uint)(_IntervalParams.z * 16777215.0))
+        if ((roll & 0xffffffu) < (uint)(IntervalParams.z * 16777215.0))
         {
             return false;
         }
@@ -139,10 +141,10 @@ bool IsSortable(float key, int index, int lineIndex)
 // Sample the texel at a given position along the line, in the line's own coordinates.
 float4 SampleAt(float2 uv, float alongIndex, bool bVertical)
 {
-    float2 texel = floor(uv * _RegionSize);
+    float2 texel = floor(uv * RegionSize);
     float2 target = bVertical ? float2(texel.x, alongIndex) : float2(alongIndex, texel.y);
-    return DreamUIPostProcessMainTexUB._MainTex.SampleLevel(DreamUIPostProcessMainTexUB._MainTexSampler,
-        (target + 0.5) / _RegionSize, 0.0);
+    return MainTex.SampleLevel(MainTexSampler,
+        (target + 0.5) / RegionSize, 0.0);
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -150,13 +152,13 @@ float4 SampleAt(float2 uv, float alongIndex, bool bVertical)
 // ------------------------------------------------------------------------------------------------
 float4 RankPS(SimpleVSToPS input) : SV_Target0
 {
-    bool bVertical = _SortAxis > 0.5;
-    float lineLength = bVertical ? _RegionSize.y : _RegionSize.x;
-    float2 texel = floor(input.uv * _RegionSize);
+    bool bVertical = SortAxis > 0.5;
+    float lineLength = bVertical ? RegionSize.y : RegionSize.x;
+    float2 texel = floor(input.uv * RegionSize);
     float index = bVertical ? texel.y : texel.x;
     int lineIndex = (int)(bVertical ? texel.x : texel.y);
 
-    float4 self = DreamUIPostProcessMainTexUB._MainTex.Sample(DreamUIPostProcessMainTexUB._MainTexSampler, input.uv);
+    float4 self = MainTex.Sample(MainTexSampler, input.uv);
     float selfKey = ComputeKey(self);
 
     // A wall stays exactly where it is, and its own index is its destination.
@@ -165,7 +167,7 @@ float4 RankPS(SimpleVSToPS input) : SV_Target0
         return float4(index, 0, 0, 1);
     }
 
-    int radius = max((int)_SearchRadius, 1);
+    int radius = max((int)SearchRadius, 1);
     float head = index;
     float tail = index;
     float rank = 0.0;
@@ -201,27 +203,27 @@ float4 RankPS(SimpleVSToPS input) : SV_Target0
         tail = probe;
     }
 
-    float destination = _Descending > 0.5 ? (tail - rank) : (head + rank);
+    float destination = Descending > 0.5 ? (tail - rank) : (head + rank);
     return float4(destination, 0, 0, 1);
 }
 
 // ------------------------------------------------------------------------------------------------
 // Pass 2 -- who comes here?
 // ------------------------------------------------------------------------------------------------
-Texture2D _DestinationTex;
-SamplerState _DestinationTexSampler;
+Texture2D DestinationTex;
+SamplerState DestinationTexSampler;
 
 float4 GatherPS(SimpleVSToPS input) : SV_Target0
 {
-    bool bVertical = _SortAxis > 0.5;
-    float lineLength = bVertical ? _RegionSize.y : _RegionSize.x;
-    float2 texel = floor(input.uv * _RegionSize);
+    bool bVertical = SortAxis > 0.5;
+    float lineLength = bVertical ? RegionSize.y : RegionSize.x;
+    float2 texel = floor(input.uv * RegionSize);
     float index = bVertical ? texel.y : texel.x;
 
     // Pass 1 said where everyone is going; this inverts it, because a pixel shader can only gather.
     // Searching outward from this position finds the nearest claimant first, and a texel can only
     // have travelled as far as the radius allowed, so the search is bounded by the same number.
-    int radius = max((int)_SearchRadius, 1);
+    int radius = max((int)SearchRadius, 1);
     [loop]
     for (int i = 0; i <= radius; i++)
     {
@@ -231,12 +233,12 @@ float4 GatherPS(SimpleVSToPS input) : SV_Target0
             float probe = side == 0 ? index + (float)i : index - (float)i;
             if (probe < 0.0 || probe > lineLength - 1.0) { continue; }
             float2 target = bVertical ? float2(texel.x, probe) : float2(probe, texel.y);
-            float2 targetUV = (target + 0.5) / _RegionSize;
-            float destination = _DestinationTex.SampleLevel(_DestinationTexSampler, targetUV, 0.0).x;
+            float2 targetUV = (target + 0.5) / RegionSize;
+            float destination = DestinationTex.SampleLevel(DestinationTexSampler, targetUV, 0.0).x;
             if (abs(destination - index) < 0.5)
             {
-                return DreamUIPostProcessMainTexUB._MainTex.SampleLevel(
-                    DreamUIPostProcessMainTexUB._MainTexSampler, targetUV, 0.0);
+                return MainTex.SampleLevel(
+                    MainTexSampler, targetUV, 0.0);
             }
             if (i == 0) { break; }//both sides are the same texel at distance zero
         }
@@ -246,5 +248,5 @@ float4 GatherPS(SimpleVSToPS input) : SV_Target0
     // truncated search radius can leave a gap -- so keep what was already here rather than
     // punching a hole. mizt returns magenta here, which is right for a debug shader and wrong for
     // something an author will put over their UI.
-    return DreamUIPostProcessMainTexUB._MainTex.Sample(DreamUIPostProcessMainTexUB._MainTexSampler, input.uv);
+    return MainTex.Sample(MainTexSampler, input.uv);
 }

@@ -9,48 +9,20 @@ float4 DreamUIResolveVS(uint Id : SV_VertexID) : SV_POSITION
     return float4(x * 4 - 1, y * 4 - 1, 0, 1);
 }
 
-#if LEXUI_RESOLVE_2X
+#if LEXUI_RESOLVE_SAMPLES
 
-	Texture2DMS<float4,2> Tex;
-	float4 DreamUIResolve2xPS(float4 Pos : SV_POSITION) : SV_Target0
+	Texture2DMS<float4, LEXUI_RESOLVE_SAMPLES> Tex;
+	// Each sample weighted 1/N and added in order, as the 2x, 4x and 8x shaders this replaces wrote them out.
+	float4 DreamUIResolvePS(float4 Pos : SV_POSITION) : SV_Target0
 	{
 		uint2 P = uint2(Pos.xy);
-		float4 C0 = Tex.Load(P, 0);
-		float4 C1 = Tex.Load(P, 1);
-		return C0*0.5 + C1*0.5;
-	}
-	
-#endif
-
-#if LEXUI_RESOLVE_4X
-
-	Texture2DMS<float4,4> Tex;
-	float4 DreamUIResolve4xPS(float4 Pos : SV_POSITION) : SV_Target0
-	{
-		uint2 P = uint2(Pos.xy);
-		float4 C0 = (Tex.Load(P, 0));
-		float4 C1 = (Tex.Load(P, 1));
-		float4 C2 = (Tex.Load(P, 2));
-		float4 C3 = (Tex.Load(P, 3));
-		return (C0*0.25 + C1*0.25 + C2*0.25 + C3*0.25);
+		float4 Color = 0;
+		UNROLL
+		for (int SampleIndex = 0; SampleIndex < LEXUI_RESOLVE_SAMPLES; SampleIndex++)
+		{
+			Color += Tex.Load(P, SampleIndex) * (1.0f / LEXUI_RESOLVE_SAMPLES);
+		}
+		return Color;
 	}
 
-#endif
-
-#if LEXUI_RESOLVE_8X
-
-	Texture2DMS<float4,8> Tex;
-	float4 DreamUIResolve8xPS(float4 Pos : SV_POSITION) : SV_Target0
-	{
-		uint2 P = uint2(Pos.xy);
-		float4 C0 = (Tex.Load(P, 0));
-		float4 C1 = (Tex.Load(P, 1));
-		float4 C2 = (Tex.Load(P, 2));
-		float4 C3 = (Tex.Load(P, 3));
-		float4 C4 = (Tex.Load(P, 4));
-		float4 C5 = (Tex.Load(P, 5));
-		float4 C6 = (Tex.Load(P, 6));
-		float4 C7 = (Tex.Load(P, 7));
-		return (C0*0.125 + C1*0.125 + C2*0.125 + C3*0.125 + C4*0.125 + C5*0.125 + C6*0.125 + C7*0.125);
-	}
 #endif
