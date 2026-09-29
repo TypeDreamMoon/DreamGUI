@@ -23,6 +23,8 @@
 #include "SystemTextures.h"
 #if WITH_EDITOR
 #include "Engine/Engine.h"
+#include "ScreenPass.h"
+#include "PostProcess/PostProcessMaterialInputs.h"
 #endif
 #include "DreamUIRender/DreamUIRendererSettings.h"
 #include "ClearQuad.h"
@@ -55,6 +57,7 @@ FDreamUIRenderer::FDreamUIRenderer(const FAutoRegister& AutoRegister, UWorld* In
 
 #if WITH_EDITORONLY_DATA
 	bIsEditorPreview = !World->IsGameWorld();
+	bIsLevelEditorWorld = World->WorldType == EWorldType::Editor;
 #endif
 }
 FDreamUIRenderer::~FDreamUIRenderer()
@@ -176,10 +179,85 @@ void FDreamUIRenderer::BeginRenderViewFamily(FSceneViewFamily& InViewFamily)
 	SubmitGizmoMeshes();
 #endif
 }
+void FDreamUIRenderer::PreRenderViewFamily_RenderThread(FRDGBuilder& GraphBuilder, FSceneViewFamily& InViewFamily)
+{
+#if WITH_EDITOR
+	ViewsDrawnAfterTonemap.Reset();
+#endif
+}
 void FDreamUIRenderer::PostRenderView_RenderThread(FRDGBuilder& GraphBuilder, FSceneView& InView)
 {
+#if WITH_EDITOR
+	if (ViewsDrawnAfterTonemap.RemoveSwap(&InView) > 0)
+	{
+		return;
+	}
+#endif
 	RenderDreamUI_RenderThread(GraphBuilder, InView);
 }
+void FDreamUIRenderer::SubscribeToPostProcessingPass(EPostProcessingPass Pass, const FSceneView& InView, FAfterPassCallbackDelegateArray& InOutPassCallbacks, bool bIsPassEnabled)
+{
+#if WITH_EDITOR
+	if (Pass == EPostProcessingPass::Tonemap && bIsPassEnabled && ShouldDrawBeforeEditorPrimitives_RenderThread(InView))
+	{
+		InOutPassCallbacks.Add(FAfterPassCallbackDelegate::CreateRaw(this, &FDreamUIRenderer::RenderAfterTonemap_RenderThread));
+	}
+#endif
+}
+#if WITH_EDITOR
+bool FDreamUIRenderer::ShouldDrawBeforeEditorPrimitives_RenderThread(const FSceneView& InView) const
+{
+	// The level editor's views: the editor composites its gizmos and selection outline over the scene in the
+	// post-process chain, after tonemapping, and a UI drawn once the view is finished went over them -- the
+	// transform gizmo of a world-space panel's own actor disappeared behind the panel. Drawn straight after
+	// tonemapping instead, the UI is part of the scene the gizmos are composited over.
+	//
+	// Nowhere else: a game view has no gizmos and keeps drawing last, at the output resolution. The level
+	// editor never draws screen-space UI (it only does while playing), whose depth target is sized from the
+	// family's render target and would not fit the texture drawn into here. And not for a world with nothing to
+	// draw, which would pay for the two copies and draw nothing between them.
+	return bIsLevelEditorWorld
+		&& (WorldSpaceRenderCanvasParameterArray.Num() > 0 || WorldSpaceGizmoMeshArray.Num() > 0)
+		&& RendererType == EDreamUIRendererType::ScreenSpace_and_WorldSpace
+		&& InView.bIsViewInfo
+		&& InView.Family->EngineShowFlags.CompositeEditorPrimitives
+		&& InView.StereoPass == EStereoscopicPass::eSSP_FULL
+		&& !(InView.bIsSceneCapture || InView.bIsReflectionCapture || InView.bIsPlanarReflection || InView.bIsVirtualTexture);
+}
+
+FScreenPassTexture FDreamUIRenderer::RenderAfterTonemap_RenderThread(FRDGBuilder& GraphBuilder, const FSceneView& InView, const FPostProcessMaterialInputs& Inputs)
+{
+	FScreenPassTexture SceneColor = FScreenPassTexture::CopyFromSlice(GraphBuilder, Inputs.GetInput(EPostProcessMaterialInput::SceneColor));
+	const FIntPoint Size = SceneColor.ViewRect.Size();
+	if (SceneColor.IsValid() && Size.X > 0 && Size.Y > 0)
+	{
+		// Drawn the way it is drawn after the view, into a texture that is the whole of the view: a pooled one of
+		// the view's exact size, copied out of the scene colour and back. The post-process chain pools its
+		// textures at sizes larger than the view, and a screen-reading effect (blur, pixelate) takes the whole
+		// of the texture it is given for the view.
+		TRefCountPtr<IPooledRenderTarget> Staging;
+		const FPooledRenderTargetDesc Desc(FPooledRenderTargetDesc::Create2DDesc(Size, SceneColor.Texture->Desc.Format, FClearValueBinding::Black
+			, TexCreate_None, TexCreate_RenderTargetable | TexCreate_ShaderResource, false));
+		GRenderTargetPool.FindFreeElement(GraphBuilder.RHICmdList, Desc, Staging, TEXT("DreamUI_AfterTonemap"));
+		if (Staging.IsValid())
+		{
+			// The pool element, registered, so the graph holds it until its passes have run (see PrepareTargets).
+			const FRDGTextureRef StagingTexture = GraphBuilder.RegisterExternalTexture(Staging, TEXT("DreamUI_AfterTonemap"));
+			AddCopyTexturePass(GraphBuilder, SceneColor.Texture, StagingTexture, SceneColor.ViewRect.Min, FIntPoint::ZeroValue, Size);
+			// Only read through: every stage copies the view before changing anything of it.
+			RenderDreamUI_RenderThread(GraphBuilder, const_cast<FSceneView&>(InView), Staging->GetRHI());
+			AddCopyTexturePass(GraphBuilder, StagingTexture, SceneColor.Texture, FIntPoint::ZeroValue, SceneColor.ViewRect.Min, Size);
+			ViewsDrawnAfterTonemap.AddUnique(&InView);
+		}
+	}
+	if (Inputs.OverrideOutput.IsValid())
+	{
+		AddDrawTexturePass(GraphBuilder, InView, SceneColor, Inputs.OverrideOutput);
+		return Inputs.OverrideOutput;
+	}
+	return SceneColor;
+}
+#endif
 int32 FDreamUIRenderer::GetPriority() const
 {
 #if WITH_EDITOR
@@ -771,7 +849,8 @@ DECLARE_CYCLE_STAT(TEXT("DreamUI RHIRenderMesh"), STAT_DreamGUI_RHIRenderMesh, S
 DECLARE_CYCLE_STAT(TEXT("DreamUI RHIRenderPostProcess"), STAT_DreamGUI_RHIRenderPostProcess, STATGROUP_DreamGUI);
 void FDreamUIRenderer::RenderDreamUI_RenderThread(
 	FRDGBuilder& GraphBuilder
-	, FSceneView& InView)
+	, FSceneView& InView
+	, FTextureRHIRef InTargetOverride)
 {
 	if (ScreenSpaceRenderParameter.PrimitiveArray.Num() <= 0 && WorldSpaceRenderCanvasParameterArray.Num() <= 0
 #if WITH_EDITOR
@@ -783,7 +862,7 @@ void FDreamUIRenderer::RenderDreamUI_RenderThread(
 	// In stages, which share what the first one makes: the targets, then the world-space canvases, then the screen-space
 	// ones, then the resolve of the multisampled target.
 	FRecordTargets Targets;
-	if (!PrepareTargets_RenderThread(GraphBuilder, InView, Targets))
+	if (!PrepareTargets_RenderThread(GraphBuilder, InView, Targets, InTargetOverride))
 	{
 		return;
 	}
@@ -795,7 +874,7 @@ void FDreamUIRenderer::RenderDreamUI_RenderThread(
 	//a reference of its own until it has executed the passes recorded above.
 }
 
-bool FDreamUIRenderer::PrepareTargets_RenderThread(FRDGBuilder& GraphBuilder, FSceneView& InView, FRecordTargets& Targets)
+bool FDreamUIRenderer::PrepareTargets_RenderThread(FRDGBuilder& GraphBuilder, FSceneView& InView, FRecordTargets& Targets, FTextureRHIRef InTargetOverride)
 {
 	TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_PrepareTargets);
 	bool bIsMainViewport = !(InView.bIsSceneCapture || InView.bIsReflectionCapture || InView.bIsPlanarReflection || InView.bIsVirtualTexture);
@@ -888,7 +967,7 @@ bool FDreamUIRenderer::PrepareTargets_RenderThread(FRDGBuilder& GraphBuilder, FS
 	}
 	else//world space or screen space mode
 	{
-		ScreenColorRenderTargetTexture = InView.Family->RenderTarget->GetRenderTargetTexture();
+		ScreenColorRenderTargetTexture = InTargetOverride.IsValid() ? InTargetOverride : InView.Family->RenderTarget->GetRenderTargetTexture();
 		if (ScreenColorRenderTargetTexture == nullptr)return false;//invalid render target
 
 		if (NumSamples > 1)
@@ -909,7 +988,7 @@ bool FDreamUIRenderer::PrepareTargets_RenderThread(FRDGBuilder& GraphBuilder, FS
 			ScreenColorRenderTargetTexture = MSAARenderTarget->GetRHI();
 		}
 
-		ViewRect = InView.UnscaledViewRect;
+		ViewRect = InTargetOverride.IsValid() ? FIntRect(FIntPoint::ZeroValue, InTargetOverride->GetSizeXY()) : InView.UnscaledViewRect;
 		float ScreenPercentage = 1.0f;//this can affect scale on depth texture
 		if (InView.bIsViewInfo)
 		{
@@ -923,6 +1002,21 @@ bool FDreamUIRenderer::PrepareTargets_RenderThread(FRDGBuilder& GraphBuilder, FS
 		switch (InView.StereoPass)
 		{
 		case EStereoscopicPass::eSSP_FULL:
+		if (InTargetOverride.IsValid())
+		{
+			// The override is the whole view at whatever resolution the post-process chain has reached, which
+			// is not always the output's; the depth is the primary view's. The shaders take a position across
+			// the view, so it maps straight onto the depth texture's view rect.
+			const FIntRect DepthRect = InView.bIsViewInfo ? UE::FXRenderingUtils::GetRawViewRectUnsafe(InView) : ViewRect;
+			DepthTextureScaleOffset = FVector4f(
+				(float)DepthRect.Width() / SceneDepthSize.X,
+				(float)DepthRect.Height() / SceneDepthSize.Y,
+				(float)DepthRect.Min.X / SceneDepthSize.X,
+				(float)DepthRect.Min.Y / SceneDepthSize.Y
+			);
+			ColorTextureScaleOffset = FVector4f(1, 1, 0, 0);
+		}
+		else
 		{
 			DepthTextureScaleOffset = FVector4f(
 				(float)ScreenColorRenderTargetTexture->GetSizeXYZ().X / SceneDepthSize.X,
