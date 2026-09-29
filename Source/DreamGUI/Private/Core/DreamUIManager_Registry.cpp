@@ -90,6 +90,12 @@ TArray<UDreamCanvas*> UDreamUIManagerWorldSubsystem::GetCanvasArrayByRenderMode(
 }
 
 
+bool UDreamUIManagerWorldSubsystem::IsCanvasStillRegistered(const TWeakObjectPtr<UDreamCanvas>& InCanvas)const
+{
+	const UDreamCanvas* Canvas = InCanvas.Get();
+	return Canvas != nullptr && RegisteredCanvasKeys.Contains(FObjectKey(Canvas));
+}
+
 void UDreamUIManagerWorldSubsystem::AddCanvas(UDreamCanvas* InCanvas)
 {
 #if !UE_BUILD_SHIPPING && ENABLED_DreamGUI_DEBUG_DUMP
@@ -100,6 +106,7 @@ void UDreamUIManagerWorldSubsystem::AddCanvas(UDreamCanvas* InCanvas)
 	}
 #endif
 	this->AllCanvasArray.AddUnique(InCanvas);
+	this->RegisteredCanvasKeys.Add(FObjectKey(InCanvas));
 	BumpHitTestGeneration();
 }
 
@@ -113,6 +120,7 @@ void UDreamUIManagerWorldSubsystem::RemoveCanvas(UDreamCanvas* InCanvas)
 	}
 #endif
 	this->AllCanvasArray.RemoveSingle(InCanvas);
+	this->RegisteredCanvasKeys.Remove(FObjectKey(InCanvas));
 	BumpHitTestGeneration();
 }
 

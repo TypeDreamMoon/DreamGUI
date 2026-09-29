@@ -86,7 +86,10 @@ void UDreamUIManagerWorldSubsystem::RemovePropertyBindingUser(UDreamUserWidget* 
 void UDreamUIManagerWorldSubsystem::TickDreamUI(float DeltaTime)
 {
 	DREAMUI_STAGE_SCOPE(ManagerTick);
-	SweepExpiredParkedWidgets();
+	{
+		TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_SweepParkedWidgets);
+		SweepExpiredParkedWidgets();
+	}
 	//Update culture
 	{
 		if (bShouldUpdateOnCultureChanged)
@@ -111,6 +114,7 @@ void UDreamUIManagerWorldSubsystem::TickDreamUI(float DeltaTime)
 	// should see this frame's value, not the one from before the function was called.
 	{
 		SCOPE_CYCLE_COUNTER(STAT_DreamUIPropertyBindingsPoll);
+		TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_PropertyBindingsPoll);
 		for (int32 Index = PropertyBindingUsers.Num() - 1; Index >= 0; --Index)
 		{
 			UDreamUserWidget* UserWidget = PropertyBindingUsers[Index].Get();
@@ -131,6 +135,7 @@ void UDreamUIManagerWorldSubsystem::TickDreamUI(float DeltaTime)
 		{
 			bIsExecutingStart = true;
 			SCOPE_CYCLE_COUNTER(STAT_DreamUIBehaviourStart);
+			TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_BehaviourStart);
 			for (int i = 0; i < DreamUIBehavioursForStart.Num(); i++)
 			{
 				auto item = DreamUIBehavioursForStart[i];
@@ -160,6 +165,7 @@ void UDreamUIManagerWorldSubsystem::TickDreamUI(float DeltaTime)
 		auto bIsGamePaused = GetWorld()->IsPaused();
 		auto Settings = GetDefault<UDreamUISettings>();
 		SCOPE_CYCLE_COUNTER(STAT_DreamUIBehaviourTick);
+		TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_BehaviourTick);
 		for (int i = 0; i < DreamUIBehavioursForTick.Num(); i++)
 		{
 			CurrentExecutingTickIndex = i;
@@ -323,7 +329,11 @@ void UDreamUIManagerWorldSubsystem::TickDreamUI(float DeltaTime)
 	// Not editor-only, for the same reason it was made not-editor-only before: the rule is a runtime
 	// one. Shipping is the only build that stays silent.
 #if !UE_BUILD_SHIPPING
-	const int32 ScreenSpaceOverlayCanvasCount = CountCompetingScreenSpaceOverlayCanvases();
+	const int32 ScreenSpaceOverlayCanvasCount = [this]()
+	{
+		TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_OverlayCanvasCheck);
+		return CountCompetingScreenSpaceOverlayCanvases();
+	}();
 	const UGameInstance* GameInstanceForScreens = GetWorld() != nullptr ? GetWorld()->GetGameInstance() : nullptr;
 	const int32 AllowedOverlayCanvasCount = FMath::Max(1,
 		GameInstanceForScreens != nullptr ? GameInstanceForScreens->GetNumLocalPlayers() : 1);
@@ -379,6 +389,7 @@ void UDreamUIManagerWorldSubsystem::TickDreamUI(float DeltaTime)
 	//update draw-call
 	{
 		SCOPE_CYCLE_COUNTER(STAT_DreamUIUpdateRootCanvas);
+		TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_UpdateRootCanvases);
 		auto UpdateCanvas = [this](EDreamRenderMode RenderMode) {
 			// A snapshot per pass: UpdateRootCanvas may make a render target and broadcast it, and a
 			// listener may register or unregister a canvas.
@@ -402,6 +413,7 @@ void UDreamUIManagerWorldSubsystem::TickDreamUI(float DeltaTime)
 	// until the owner happened to rebuild for some other reason; this sweep executes it the same frame.
 	{
 		SCOPE_CYCLE_COUNTER(STAT_DreamUIRenderPrioritySort);
+		TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_RenderPrioritySort);
 		for (const TWeakObjectPtr<UDreamCanvas>& Canvas : SnapshotCanvases())
 		{
 			if (IsCanvasStillRegistered(Canvas))

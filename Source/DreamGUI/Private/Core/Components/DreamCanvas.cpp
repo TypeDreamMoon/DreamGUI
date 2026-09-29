@@ -2045,6 +2045,7 @@ void UDreamCanvas::UpdateCanvasDrawCall()
 
 void UDreamCanvas::UpdateDrawCallBatchData()
 {
+	TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_UpdateDrawCallBatchData);
 	if(!GetWidget()->HasRegistered())return;
 	//update children canvas
 	for (auto& item : ChildrenCanvasArray)
@@ -2061,6 +2062,7 @@ void UDreamCanvas::UpdateDrawCallBatchData()
 		//this frame must show this frame's batching, so wait for it. The wait is not a sleep loop any
 		//more: it can retract a batch the worker pool has not started and run it here, which is both
 		//sooner than the old 1ms granularity and work the game thread was going to wait for anyway.
+		TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_WaitForBatching);
 		DrawCallProcessingRunnable->WaitForBatchingToFinish();
 	}
 
@@ -2112,8 +2114,13 @@ void UDreamCanvas::UpdateDrawCallMesh()
 	if (!IsValid(UIMesh))return;
 	// Same gate as the renderer's dump: which geometry reached assembly, with what material. Here on the game thread, where
 	// the names can be read: the batching thread must not resolve an object. The variable is a static in the renderer's
-	// translation unit, so the lookup can answer null (not yet constructed, or that unit compiled out).
-	const IConsoleVariable* DumpMaterialDrawsCVar = IConsoleManager::Get().FindConsoleVariable(TEXT("dreamgui.DumpMaterialDraws"));
+	// translation unit, so the lookup can answer null (not yet constructed, or that unit compiled out). Kept once found:
+	// this runs for every canvas that rebuilt, every frame, and a lookup by name takes the console manager's lock.
+	static const IConsoleVariable* DumpMaterialDrawsCVar = nullptr;
+	if (DumpMaterialDrawsCVar == nullptr)
+	{
+		DumpMaterialDrawsCVar = IConsoleManager::Get().FindConsoleVariable(TEXT("dreamgui.DumpMaterialDraws"));
+	}
 	if (DumpMaterialDrawsCVar != nullptr && DumpMaterialDrawsCVar->GetInt() != 0)
 	{
 		for (const FDreamUIDrawCall& DrawCall : CurrentDrawCallData.DrawCallArray)

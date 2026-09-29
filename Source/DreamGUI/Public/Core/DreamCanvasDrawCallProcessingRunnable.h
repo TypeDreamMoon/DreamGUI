@@ -53,4 +53,6 @@ private:
 
 	std::atomic<bool> bIsRunning = false;
 	std::atomic<bool> bIsBatching = false;
+	/** Pushed and not yet taken by a batch. Counted before the enqueue, so it is never behind the queue. */
+	std::atomic<int32> NumPreparedQueued = 0;
 };

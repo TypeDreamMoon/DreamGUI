@@ -46,7 +46,11 @@ void FDreamCanvasDrawCallProcessingRunnable::ProcessPreparedDrawCallData()
 	{
 		FDreamCanvasPreparedDrawCallData PreparedDrawCallData;
 		bool bGotData = false;
-		while (PreparedQueue->Dequeue(PreparedDrawCallData)){bGotData = true;}//discard old data and get the newest one
+		while (PreparedQueue->Dequeue(PreparedDrawCallData))//discard old data and get the newest one
+		{
+			bGotData = true;
+			--NumPreparedQueued;
+		}
 		/**
 		 * Nothing to take is a real outcome, not a bug to paper over: the task claims the slot before
 		 * it runs, so a push that arrives in between finds the slot taken and leaves its data for this
@@ -67,11 +71,17 @@ void FDreamCanvasDrawCallProcessingRunnable::ProcessPreparedDrawCallData()
 		}
 	}
 
-	bIsBatching.store(false, std::memory_order_release);
-
-	//a push between the drain above and releasing the slot saw a batch in flight and launched nothing
-	//of its own; pick that data up now rather than leaving it until the next push
-	if (bIsRunning && PreparedQueue.IsValid() && !PreparedQueue->IsEmpty())
+	/**
+	 * A push between the drain above and releasing the slot saw a batch in flight and launched nothing
+	 * of its own; pick that data up now rather than leaving it until the next push.
+	 *
+	 * The release and the re-check are sequentially consistent, and the re-check reads the count rather
+	 * than the queue, for the reason FDreamCanvasAsyncFunctionRunnable::ReleaseSlot gives: with a release
+	 * store and a plain read of the queue, this could see the queue empty while the push saw the slot
+	 * still taken, and the data sat unbatched -- for good, on a canvas nothing pushes to again.
+	 */
+	bIsBatching.store(false);
+	if (bIsRunning && NumPreparedQueued.load() > 0)
 	{
 		LaunchBatchingTaskIfIdle();
 	}
@@ -86,20 +96,32 @@ void FDreamCanvasDrawCallProcessingRunnable::WaitForBatchingToFinish()
 	//
 	//The loop is for that re-launch, not a spin: Wait() blocks (or retracts the task and runs it here),
 	//and a batch only re-launches while there is queued data, which the caller is not adding to.
+	//
+	//An idle slot with data still queued is what a lost hand-off leaves behind; that data is batched
+	//here, since the caller is waiting precisely for this frame's batch.
 	for (;;)
 	{
 		UE::Tasks::FTask TaskToWait = GetBatchingTask();
-		if (TaskToWait.IsValid() && !TaskToWait.IsCompleted())
+		if (!TaskToWait.IsCompleted())
 		{
 			TaskToWait.Wait();
 			continue;
 		}
-		if (!bIsBatching.load(std::memory_order_acquire))
+		if (bIsBatching.load())
+		{
+			//a batch has taken the slot and is about to record its task; it will not be long
+			FPlatformProcess::YieldThread();
+			continue;
+		}
+		if (NumPreparedQueued.load() == 0)
 		{
 			return;
 		}
-		//a batch has taken the slot and is about to record its task; it will not be long
-		FPlatformProcess::YieldThread();
+		bool bExpected = false;
+		if (bIsBatching.compare_exchange_strong(bExpected, true))
+		{
+			ProcessPreparedDrawCallData();
+		}
 	}
 }
 
@@ -119,6 +141,7 @@ void FDreamCanvasDrawCallProcessingRunnable::Stop()
 	}
 	PreparedDrawCallDataQueue.Reset();
 	PendingRebuildDrawCallQueue.Reset();
+	NumPreparedQueued = 0;
 	bIsBatching = false;
 }
 
@@ -129,6 +152,7 @@ void FDreamCanvasDrawCallProcessingRunnable::PushPreparedDrawCallData(FDreamCanv
 		return;
 	}
 
+	++NumPreparedQueued;
 	PreparedDrawCallDataQueue->Enqueue(MoveTemp(InData));
 	LaunchBatchingTaskIfIdle();
 }

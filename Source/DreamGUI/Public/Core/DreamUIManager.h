@@ -6,6 +6,7 @@
 #include "Subsystems/WorldSubsystem.h"
 #include "Tickable.h"
 #include "Containers/Ticker.h"
+#include "UObject/ObjectKey.h"
 #include "Core/DreamLayoutPassContext.h"
 #include "Core/DreamUIWorldService.h"
 #include "Core/DreamWidgetTreeHost.h"
@@ -217,6 +218,11 @@ private:
 	UPROPERTY(VisibleAnywhere, Category = "DreamGUI")
 	TArray<TWeakObjectPtr<UDreamCanvas>> AllCanvasArray;
 	/**
+	 * AllCanvasArray again, as keys, for IsCanvasStillRegistered: every per-frame pass over the canvases asks it once
+	 * per canvas, and asking the array made each pass quadratic -- about 45 ms a frame with a thousand world panels.
+	 */
+	TSet<FObjectKey> RegisteredCanvasKeys;
+	/**
 	 * Every registered widget, weakly: registering is not owning. A tree is kept alive by its host --
 	 * the component, subsystem or preview that made it -- and the host lets it go; see FreeRoots for the
 	 * trees no host holds.
@@ -337,7 +343,7 @@ public:
 	 */
 	TArray<TWeakObjectPtr<UDreamCanvas>> SnapshotCanvases()const{return AllCanvasArray;}
 	/** Whether a canvas from a snapshot is alive and still registered here. */
-	bool IsCanvasStillRegistered(const TWeakObjectPtr<UDreamCanvas>& InCanvas)const{return InCanvas.IsValid() && AllCanvasArray.Contains(InCanvas);}
+	bool IsCanvasStillRegistered(const TWeakObjectPtr<UDreamCanvas>& InCanvas)const;
 	TArray<UDreamCanvas*> GetCanvasArrayByRenderMode(EDreamRenderMode RenderMode)const;
 	/**
 	 * Root canvases in ScreenSpaceOverlay mode that are actually competing for the screen. Inactive

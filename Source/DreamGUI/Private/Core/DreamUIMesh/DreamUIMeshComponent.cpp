@@ -2466,10 +2466,29 @@ void UDreamUIMeshComponent::UpdateChildCanvasSectionBox()
 #endif
 }
 
-void UDreamUIMeshComponent::UpdateLocalBounds() 
+void UDreamUIMeshComponent::UpdateLocalBounds()
 {
-	UpdateBounds();// Update global bounds		
-	MarkRenderTransformDirty();// Need to send to render thread
+	UpdateBounds();// Update global bounds
+	/**
+	 * Only a primitive the scene has a use for goes through the scene's transform update. The scene takes a moved
+	 * primitive out and puts it back -- octree, Lumen, distance fields, cached draw commands -- and an animated child
+	 * moves its canvas's bounds every frame: with a thousand animated world panels that was ten milliseconds of
+	 * workers a frame for primitives nothing in the scene draws. DreamGUI's own renderer reads the render root's copy
+	 * (its batches build their own primitive uniform buffer from it), so that is all such a canvas sends.
+	 *
+	 * Not while the mesh has no scene proxy, though. A mesh is registered before it has a section, when CreateSceneProxy
+	 * makes none, and the scene's transform update is what adds it later: FScene::UpdatePrimitiveTransform adds a
+	 * primitive it has no proxy for. The root is drawn only once a proxy holds it (DreamUI_CanRender), so without that
+	 * update a render-target canvas in a world nothing renders drew nothing at all.
+	 */
+	if (NeedsUERendererSectionData() || GetSceneProxy() == nullptr)
+	{
+		MarkRenderTransformDirty();// Need to send to render thread
+	}
+	else
+	{
+		PushRenderRootTransform();
+	}
 }
 
 DECLARE_CYCLE_STAT(TEXT("DreamUIMesh CreateSceneProxy"), STAT_DreamUIMesh_CreateSceneProxy, STATGROUP_DreamGUI);
