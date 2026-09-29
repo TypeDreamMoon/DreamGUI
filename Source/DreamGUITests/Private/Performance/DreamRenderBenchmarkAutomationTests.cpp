@@ -39,9 +39,10 @@
  *
  * The scene is several RenderTarget canvases in the editor's world, each a panel of the kind a game has: a rect block
  * behind, a grid of tinted blocks, a column of labels, a rounded clip holding more blocks, and on every other panel a
- * background blur. Three stretches of frames are timed -- the scene standing still, the scene animating (blocks moving
- * and changing colour, labels changing text), and the scene churning (widgets destroyed and made every frame) -- and
- * for each the per-stage costs DreamUIRenderStats counts are written to Saved/DreamGUITests/Perf/Benchmark.json, with a
+ * background blur. Four stretches of frames are timed -- the scene standing still, one block of each panel moving and
+ * the rest still (what most of a real UI does most of the time), the scene animating (blocks moving and changing
+ * colour, labels changing text), and the scene churning (widgets destroyed and made every frame) -- and for each the
+ * per-stage costs DreamUIRenderStats counts are written to Saved/DreamGUITests/Perf/Benchmark.json, with a
  * CPU trace of the whole run beside it for Unreal Insights, each stretch a region of its own. Tools/Tests/perf_report.py
  * reads both and compares two runs.
  *
@@ -172,6 +173,24 @@ namespace DreamRenderBenchmarkTestLocal
 					{
 						Label->SetText(FText::FromString(FString::Printf(TEXT("Frame %05d"), InFrame)));
 					}
+				}
+			}
+		}
+
+		/** One block a panel drifts a little, a different one each frame; everything else holds still. */
+		void Nudge(int32 InFrame)
+		{
+			for (FPanel& Panel : Panels)
+			{
+				if (Panel.Blocks.Num() == 0)
+				{
+					continue;
+				}
+				const int32 Index = InFrame % Panel.Blocks.Num();
+				if (UDreamWidget* Block = Panel.Blocks[Index].Get(); IsValid(Block))
+				{
+					const double Angle = InFrame * 0.2;
+					Block->SetAnchoredPosition(Panel.BlockHomes[Index] + FVector2D(FMath::Cos(Angle), FMath::Sin(Angle)) * 4.0);
 				}
 			}
 		}
@@ -478,6 +497,7 @@ bool FDreamRenderBenchmarkTest::RunTest(const FString& Parameters)
 		Run->bStartedTrace = FTraceAuxiliary::Start(FTraceAuxiliary::EConnectionType::File, *Run->TracePath, TEXT("cpu,frame,region,bookmark"));
 	});
 	EnqueuePhase(Stage, Run, TEXT("Static"), nullptr);
+	EnqueuePhase(Stage, Run, TEXT("Sparse"), [Stage](int32 InFrame) { Stage->Nudge(InFrame); });
 	EnqueuePhase(Stage, Run, TEXT("Animated"), [Stage](int32 InFrame) { Stage->Animate(InFrame); });
 	EnqueuePhase(Stage, Run, TEXT("Churn"), [Stage](int32 InFrame) { Stage->Churn(InFrame); });
 	EnqueueDo([this, Stage, Run]()
@@ -514,7 +534,7 @@ bool FDreamRenderBenchmarkTest::RunTest(const FString& Parameters)
 		FJsonSerializer::Serialize(Root, Writer);
 		const FString ReportPath = FPaths::Combine(PerfDirectory(), TEXT("Benchmark.json"));
 		TestTrue(FString::Printf(TEXT("The benchmark's numbers are written to %s"), *ReportPath), FFileHelper::SaveStringToFile(Json, *ReportPath));
-		TestEqual(TEXT("Every stretch of frames was timed"), Run->Phases.Num(), 3);
+		TestEqual(TEXT("Every stretch of frames was timed"), Run->Phases.Num(), 4);
 		for (const FPhase& Phase : Run->Phases)
 		{
 			TestTrue(FString::Printf(TEXT("%s drew: its panels made draw calls"), *Phase.Name), Phase.DrawCalls > 0);
