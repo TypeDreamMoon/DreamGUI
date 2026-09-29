@@ -266,6 +266,33 @@ private:
 	void RenderDreamUI_RenderThread(
 		FRDGBuilder& GraphBuilder
 		, FSceneView& InView);
+	/** What one recording of the UI into a view shares between its stages. */
+	struct FRecordTargets
+	{
+		bool bIsMainViewport = true;
+		bool bRenderWireframe = false;
+		bool bRenderLit = true;
+		FMaterialRenderProxy* WireframeMaterialInstance = nullptr;
+		/** The target the UI ends up in, when ScreenColorRenderTargetTexture is a multisampled one resolved into it. */
+		FTextureRHIRef OrignScreenColorRenderTargetTexture;
+		FTextureRHIRef ScreenColorRenderTargetTexture;
+		TRefCountPtr<IPooledRenderTarget> MSAARenderTarget;
+		uint8 NumSamples = 1;
+		FIntRect ViewRect;
+		FVector4f DepthTextureScaleOffset = FVector4f(1, 1, 0, 0);
+		FVector4f ColorTextureScaleOffset = FVector4f(1, 1, 0, 0);
+		FRDGTextureRef SceneDepth = nullptr;
+		FRDGTextureRef RenderTargetTexture = nullptr;
+		float GammaValue = 1.0f;
+	};
+	/** The targets: a render-target canvas's own, the view's otherwise, multisampled when asked. False when there is none to draw into. */
+	bool PrepareTargets_RenderThread(FRDGBuilder& GraphBuilder, FSceneView& InView, FRecordTargets& Targets);
+	/** The world-space canvases, sorted by priority and then distance, each drawn against the scene's depth. */
+	void RecordWorldSpace_RenderThread(FRDGBuilder& GraphBuilder, FSceneView& InView, FRecordTargets& Targets);
+	/** The screen-space canvases, through the canvas's own view, scaled down first when asked. */
+	void RecordScreenSpace_RenderThread(FRDGBuilder& GraphBuilder, FSceneView& InView, FRecordTargets& Targets);
+	/** The multisampled target resolved into the one the UI ends up in. */
+	void Resolve_RenderThread(FRDGBuilder& GraphBuilder, FSceneView& InView, const FRecordTargets& Targets);
 #if WITH_EDITORONLY_DATA
 private:
 	bool bIsEditorPreview = false;

@@ -784,6 +784,23 @@ void FDreamUIRenderer::RenderDreamUI_RenderThread(
 #endif
 		)return;//nothing to render
 	DREAMUI_STAGE_SCOPE(RenderRecord);
+	// In stages, which share what the first one makes: the targets, then the world-space canvases, then the screen-space
+	// ones, then the resolve of the multisampled target.
+	FRecordTargets Targets;
+	if (!PrepareTargets_RenderThread(GraphBuilder, InView, Targets))
+	{
+		return;
+	}
+	RecordWorldSpace_RenderThread(GraphBuilder, InView, Targets);
+	RecordScreenSpace_RenderThread(GraphBuilder, InView, Targets);
+	Resolve_RenderThread(GraphBuilder, InView, Targets);
+
+	//Targets.MSAARenderTarget goes out of scope here. It is deliberately NOT released early: the graph holds
+	//a reference of its own until it has executed the passes recorded above.
+}
+
+bool FDreamUIRenderer::PrepareTargets_RenderThread(FRDGBuilder& GraphBuilder, FSceneView& InView, FRecordTargets& Targets)
+{
 	bool bIsMainViewport = !(InView.bIsSceneCapture || InView.bIsReflectionCapture || InView.bIsPlanarReflection || InView.bIsVirtualTexture);
 	
 	// Lit wireframe is the lit view mode with mesh edges shown now.
@@ -815,12 +832,12 @@ void FDreamUIRenderer::RenderDreamUI_RenderThread(
 	{
 		if (!bIsMainViewport)//render to scene capture (or other capture)
 		{
-			return;
+			return false;
 		}
 		if (CanvasTargetTexture.IsValid())
 		{
 			ScreenColorRenderTargetTexture = CanvasTargetTexture;
-			if (ScreenColorRenderTargetTexture == nullptr)return;//invalid render target
+			if (ScreenColorRenderTargetTexture == nullptr)return false;//invalid render target
 
 			if (NumSamples > 1)
 			{
@@ -829,7 +846,7 @@ void FDreamUIRenderer::RenderDreamUI_RenderThread(
 				desc.NumSamples = NumSamples;
 				GRenderTargetPool.FindFreeElement(RHICmdList, desc, MSAARenderTarget, TEXT("DreamUI_MSAA_RenderTarget"));
 				if (!MSAARenderTarget.IsValid())
-					return;
+					return false;
 
 				/**
 				 * Hand the POOLED target to the graph, not just its RHI texture. Registering the raw
@@ -867,7 +884,7 @@ void FDreamUIRenderer::RenderDreamUI_RenderThread(
 		}
 		else
 		{
-			return;
+			return false;
 		}
 
 		ColorTextureScaleOffset = DepthTextureScaleOffset = FVector4f(1, 1, 0, 0);
@@ -875,7 +892,7 @@ void FDreamUIRenderer::RenderDreamUI_RenderThread(
 	else//world space or screen space mode
 	{
 		ScreenColorRenderTargetTexture = InView.Family->RenderTarget->GetRenderTargetTexture();
-		if (ScreenColorRenderTargetTexture == nullptr)return;//invalid render target
+		if (ScreenColorRenderTargetTexture == nullptr)return false;//invalid render target
 
 		if (NumSamples > 1)
 		{
@@ -884,7 +901,7 @@ void FDreamUIRenderer::RenderDreamUI_RenderThread(
 			desc.NumSamples = NumSamples;
 			GRenderTargetPool.FindFreeElement(RHICmdList, desc, MSAARenderTarget, TEXT("DreamUI_MSAA_RenderTarget"));
 			if (!MSAARenderTarget.IsValid())
-				return;
+				return false;
 
 			//keep the pool element itself referenced for the graph's lifetime -- see the long note on
 			//the render-target-mode branch above
@@ -949,6 +966,38 @@ void FDreamUIRenderer::RenderDreamUI_RenderThread(
 	const float EngineGamma = GEngine ? GEngine->GetDisplayGamma() : 2.2f;
 	float GammaValue =
 		(RendererType == EDreamUIRendererType::RenderTarget || !bIsMainViewport) ? 1.0f : EngineGamma;
+
+	Targets.bIsMainViewport = bIsMainViewport;
+	Targets.bRenderWireframe = bRenderWireframe;
+	Targets.bRenderLit = bRenderLit;
+	Targets.WireframeMaterialInstance = WireframeMaterialInstance;
+	Targets.OrignScreenColorRenderTargetTexture = OrignScreenColorRenderTargetTexture;
+	Targets.ScreenColorRenderTargetTexture = ScreenColorRenderTargetTexture;
+	Targets.MSAARenderTarget = MSAARenderTarget;
+	Targets.NumSamples = NumSamples;
+	Targets.ViewRect = ViewRect;
+	Targets.DepthTextureScaleOffset = DepthTextureScaleOffset;
+	Targets.ColorTextureScaleOffset = ColorTextureScaleOffset;
+	Targets.SceneDepth = SceneDepth;
+	Targets.RenderTargetTexture = RenderTargetTexture;
+	Targets.GammaValue = GammaValue;
+	return true;
+}
+
+void FDreamUIRenderer::RecordWorldSpace_RenderThread(FRDGBuilder& GraphBuilder, FSceneView& InView, FRecordTargets& Targets)
+{
+	// The recording's targets, by the names the stages shared when they were one function.
+	bool& bRenderWireframe = Targets.bRenderWireframe;
+	bool& bRenderLit = Targets.bRenderLit;
+	FMaterialRenderProxy*& WireframeMaterialInstance = Targets.WireframeMaterialInstance;
+	FTextureRHIRef& ScreenColorRenderTargetTexture = Targets.ScreenColorRenderTargetTexture;
+	uint8& NumSamples = Targets.NumSamples;
+	FIntRect& ViewRect = Targets.ViewRect;
+	FVector4f& DepthTextureScaleOffset = Targets.DepthTextureScaleOffset;
+	FVector4f& ColorTextureScaleOffset = Targets.ColorTextureScaleOffset;
+	const FRDGTextureRef SceneDepth = Targets.SceneDepth;
+	const FRDGTextureRef RenderTargetTexture = Targets.RenderTargetTexture;
+	const float GammaValue = Targets.GammaValue;
 
 	//Render world space
 	if (WorldSpaceRenderCanvasParameterArray.Num() > 0
@@ -1243,6 +1292,24 @@ void FDreamUIRenderer::RenderDreamUI_RenderThread(
 #endif
 		}
 	}
+}
+
+void FDreamUIRenderer::RecordScreenSpace_RenderThread(FRDGBuilder& GraphBuilder, FSceneView& InView, FRecordTargets& Targets)
+{
+	// The recording's targets, by the names the stages shared when they were one function.
+	FRHICommandListImmediate& RHICmdList = GraphBuilder.RHICmdList;
+	bool& bIsMainViewport = Targets.bIsMainViewport;
+	bool& bRenderWireframe = Targets.bRenderWireframe;
+	bool& bRenderLit = Targets.bRenderLit;
+	FMaterialRenderProxy*& WireframeMaterialInstance = Targets.WireframeMaterialInstance;
+	FTextureRHIRef& ScreenColorRenderTargetTexture = Targets.ScreenColorRenderTargetTexture;
+	uint8& NumSamples = Targets.NumSamples;
+	FIntRect& ViewRect = Targets.ViewRect;
+	FVector4f& DepthTextureScaleOffset = Targets.DepthTextureScaleOffset;
+	FVector4f& ColorTextureScaleOffset = Targets.ColorTextureScaleOffset;
+	const FRDGTextureRef SceneDepth = Targets.SceneDepth;
+	const FRDGTextureRef RenderTargetTexture = Targets.RenderTargetTexture;
+	const float GammaValue = Targets.GammaValue;
 
 	//Render screen space
 	if ((ScreenSpaceRenderParameter.PrimitiveArray.Num() > 0
@@ -1271,20 +1338,20 @@ void FDreamUIRenderer::RenderDreamUI_RenderThread(
 			if (!RenderThreadViewParameter.bCanRenderScreenSpace)
 			{
 				ScreenSpaceGizmoMeshArray.Reset();
-				goto END_LEXUI_RENDER;
+				return;
 			}
 			if (RenderThreadViewParameter.bIsPlaying)
 			{
 				if (!InView.bIsGameView)
 				{
 					ScreenSpaceGizmoMeshArray.Reset();
-					goto END_LEXUI_RENDER;
+					return;
 				}
 			}
 			else
 			{
 				ScreenSpaceGizmoMeshArray.Reset();
-				goto END_LEXUI_RENDER;
+				return;
 			}
 		}
 #endif
@@ -1598,22 +1665,17 @@ void FDreamUIRenderer::RenderDreamUI_RenderThread(
 		//no SafeRelease here any more: the graph holds its own reference (see where it is registered),
 		//and dropping ours mid-recording is what let another view claim the same pool element
 	}
+}
 
-#if WITH_EDITOR
-	END_LEXUI_RENDER :
-	;
-#endif
-
-	if (NumSamples > 1)
+void FDreamUIRenderer::Resolve_RenderThread(FRDGBuilder& GraphBuilder, FSceneView& InView, const FRecordTargets& Targets)
+{
+	if (Targets.NumSamples > 1)
 	{
-		auto Src = RegisterExternalTexture(GraphBuilder, ScreenColorRenderTargetTexture, TEXT("DreamUIResolveSrc"));
-		auto Dst = RegisterExternalTexture(GraphBuilder, OrignScreenColorRenderTargetTexture, TEXT("DreamUIResolveDst"));
+		auto Src = RegisterExternalTexture(GraphBuilder, Targets.ScreenColorRenderTargetTexture, TEXT("DreamUIResolveSrc"));
+		auto Dst = RegisterExternalTexture(GraphBuilder, Targets.OrignScreenColorRenderTargetTexture, TEXT("DreamUIResolveDst"));
 
-		AddResolvePass(GraphBuilder, FRDGTextureMSAA(Src, Dst), ViewRect, NumSamples, GetGlobalShaderMap(InView.GetFeatureLevel()));
+		AddResolvePass(GraphBuilder, FRDGTextureMSAA(Src, Dst), Targets.ViewRect, Targets.NumSamples, GetGlobalShaderMap(InView.GetFeatureLevel()));
 	}
-
-	//MSAARenderTarget goes out of scope here. It is deliberately NOT released early: the graph holds
-	//a reference of its own until it has executed the passes recorded above.
 }
 
 
