@@ -87,6 +87,43 @@ bool FDreamLifecycleCopyLeavesTheCanvasMeshOutTest::RunTest(const FString& Param
 }
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamLifecycleProxiesKeepNoMaterialInTheMeshTest,
+	"DreamGUI.Lifecycle.ACanvasDrawingThroughMaterialProxiesKeepsNoMaterialOfItsOwnInItsMesh",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamLifecycleProxiesKeepNoMaterialInTheMeshTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamTests::Lifecycle;
+
+	// A copy a play session makes of the level, a paste, a save: each carries what the canvas's mesh holds as its
+	// materials. Drawing through its material proxies the canvas keeps none of its own there -- no instance that reads
+	// a data texture of the canvas, nothing the canvas made -- only the materials it was given.
+	const FScopedMaterialWrappers Proxies(1);
+	FScopedPanelClass Panel(TEXT("LifecycleProxies"));
+	if (!TestNotNull(TEXT("the panel class compiled"), Panel.GetClass()))return false;
+	FScopedWorld Level(EWorldType::Editor);
+	ADreamWorldWidgetActor* Actor = PlacePanel(Level.World, Panel.GetClass());
+	if (!TestNotNull(TEXT("the panel was placed"), Actor))return false;
+	UDreamCanvas* Canvas = Actor->GetWidgetComponent()->GetLoadedCanvas();
+	if (!TestNotNull(TEXT("with its canvas"), Canvas))return false;
+	UDreamUIMeshComponent* Mesh = Canvas->GetUIMesh();
+	if (!TestNotNull(TEXT("which drew"), Mesh))return false;
+
+	TestNull(TEXT("No material of the mesh reads a data texture"), FindMaterialReadingADynamicTexture(Mesh));
+	int32 Materials = 0;
+	for (UMaterialInterface* Material : Mesh->OverrideMaterials)
+	{
+		if (Material != nullptr)
+		{
+			++Materials;
+			TestFalse(FString::Printf(TEXT("%s is not the canvas's own"), *Material->GetName()), Material->IsIn(Canvas));
+		}
+	}
+	TestTrue(TEXT("...and the mesh drew with a material all the same"), Materials > 0);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamLifecyclePasteLeavesNoPersistentMeshTest,
 	"DreamGUI.Lifecycle.PastingAWorldWidgetActorLeavesNoCanvasMeshTheLevelWouldKeep",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
@@ -94,6 +131,8 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 bool FDreamLifecyclePasteLeavesNoPersistentMeshTest::RunTest(const FString& Parameters)
 {
 	using namespace DreamTests::Lifecycle;
+	// What the canvas drew with is to be its material instances, which it makes with its proxies switched off.
+	const FScopedMaterialWrappers MaterialInstances(0);
 
 	FScopedPanelClass Panel(TEXT("LifecyclePaste"));
 	if (!TestNotNull(TEXT("the panel class compiled"), Panel.GetClass()))return false;
@@ -132,6 +171,8 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 bool FDreamLifecyclePlayAfterPasteTest::RunTest(const FString& Parameters)
 {
 	using namespace DreamTests::Lifecycle;
+	// What the canvas drew with is to be its material instances, which it makes with its proxies switched off.
+	const FScopedMaterialWrappers MaterialInstances(0);
 
 	FScopedPanelClass Panel(TEXT("LifecyclePlayAfterPaste"));
 	if (!TestNotNull(TEXT("the panel class compiled"), Panel.GetClass()))return false;
@@ -171,6 +212,8 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 bool FDreamLifecycleOrphanMeshNeutralizedTest::RunTest(const FString& Parameters)
 {
 	using namespace DreamTests::Lifecycle;
+	// What the canvas drew with is to be its material instances, which it makes with its proxies switched off.
+	const FScopedMaterialWrappers MaterialInstances(0);
 
 	// The state a paste by an older build left behind, or a map saved by one: a canvas mesh that is an
 	// ordinary component of its actor, still naming another panel's material.
@@ -249,6 +292,8 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 bool FDreamLifecycleForeignMaterialBridgeTest::RunTest(const FString& Parameters)
 {
 	using namespace DreamTests::Lifecycle;
+	// What the canvas drew with is to be its material instances, which it makes with its proxies switched off.
+	const FScopedMaterialWrappers MaterialInstances(0);
 
 	// Another way into a panel's tree: a component the level keeps holding one of the canvas's material
 	// instances -- a render target shown on a static mesh, or a Blueprint that stored the material.

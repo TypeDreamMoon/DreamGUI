@@ -10,6 +10,7 @@
 #include "Core/DreamUISpriteInfo.h"
 #include "Materials/MaterialInterface.h"
 #include "Materials/MaterialInstanceDynamic.h"
+#include "DreamUIRender/DreamUIMaterialProxy.h"
 #include "Core/Components/DreamTextureBase.h"
 #include "Utils/DreamUIUtils.h"
 #include "Core/DreamUISpriteData.h"
@@ -561,6 +562,14 @@ void UDreamRectBlock::OnMaterialInstanceDynamicCreated(class UMaterialInstanceDy
 	if (DataRows != nullptr)
 	{
 		mat->SetTextureParameterValue(DataTextureParameterName, DataRows->GetDataTexture());
+	}
+}
+
+void UDreamRectBlock::AddMaterialParameters(FDreamUIMaterialParameters& InOutParameters) const
+{
+	if (DataRows != nullptr)
+	{
+		InOutParameters.SetTexture(DataTextureParameterName, DataRows->GetDataTexture());
 	}
 }
 

@@ -2,6 +2,7 @@
 // Modified by TypeDreamMoon.
 
 #include "Core/DreamUIMesh/DreamUIMeshComponent.h"
+#include "DreamUIRender/DreamUIMaterialProxy.h"
 #include "DynamicMeshBuilder.h"
 #include "PhysicsEngine/BodySetup.h"
 #include "StaticMeshResources.h"
@@ -53,6 +54,16 @@ struct FDreamUISectionProxy_Mesh : public FDreamUIRenderSectionProxy
 {
 	/** Material applied to this section */
 	UMaterialInterface* Material = nullptr;
+	/** What the section draws through instead of Material's own render proxy, when DreamGUI answers its parameters. */
+	TSharedPtr<FDreamUIMaterialProxy, ESPMode::ThreadSafe> MaterialProxy;
+	FMaterialRenderProxy* GetMaterialRenderProxy() const
+	{
+		if (MaterialProxy.IsValid())
+		{
+			return MaterialProxy.Get();
+		}
+		return Material != nullptr ? Material->GetRenderProxy() : nullptr;
+	}
 	/** Built-in shader parameters; when enabled the material is not used by DreamGUI's renderer. */
 	FDreamUIBuiltInDrawParams BuiltIn;
 	/** Vertex buffer for this section */
@@ -412,6 +423,7 @@ public:
 
 				// Grab material
 				NewSectionProxy->Material = SrcSection->Material;
+				NewSectionProxy->MaterialProxy = SrcSection->MaterialProxy;
 				NewSectionProxy->BuiltIn = SrcSection->BuiltIn;
 				if (NewSectionProxy->BuiltIn.bEnabled)
 				{
@@ -546,9 +558,11 @@ public:
 	{
 		RenderPriority = NewPriority;
 	}
-	void SetMeshSectionMaterial_RenderThread(FDreamUIRenderSectionProxy* Section, UMaterialInterface* Material)
+	void SetMeshSectionMaterial_RenderThread(FDreamUIRenderSectionProxy* Section, UMaterialInterface* Material, const TSharedPtr<FDreamUIMaterialProxy, ESPMode::ThreadSafe>& MaterialProxy = nullptr)
 	{
-		(static_cast<FDreamUISectionProxy_Mesh*>(Section))->Material = Material;
+		auto MeshSection = static_cast<FDreamUISectionProxy_Mesh*>(Section);
+		MeshSection->Material = Material;
+		MeshSection->MaterialProxy = MaterialProxy;
 	}
 	/** A pooled mesh section taken back by a draw call without new geometry: drawn again, with InMaterial. */
 	void EnableMeshSection_RenderThread(FDreamUIRenderSectionProxy* Section, UMaterialInterface* Material)
@@ -862,13 +876,14 @@ public:
 			case EDreamUIRenderSectionProxyType::Mesh:
 			{
 				auto Section = static_cast<FDreamUISectionProxy_Mesh*>(RenderSection);
-				if (!bWireframe && Section->Material == nullptr && InFallbackMaterial == nullptr)
+				FMaterialRenderProxy* SectionMaterialProxy = Section->GetMaterialRenderProxy();
+				if (!bWireframe && SectionMaterialProxy == nullptr && InFallbackMaterial == nullptr)
 				{
 					break;//built-in sections are drawn by the DreamUI renderer only
 				}
 				FMaterialRenderProxy* MaterialProxy = bWireframe
 					? static_cast<FMaterialRenderProxy*>(WireframeMaterialInstance)
-					: (Section->Material != nullptr ? Section->Material->GetRenderProxy() : InFallbackMaterial);
+					: (SectionMaterialProxy != nullptr ? SectionMaterialProxy : InFallbackMaterial);
 
 				// For each view..
 				for (int32 ViewIndex = 0; ViewIndex < Views.Num(); ViewIndex++)
@@ -955,7 +970,7 @@ public:
 			auto RenderSection = SectionData.SectionPointer;
 
 			auto Section = static_cast<FDreamUISectionProxy_Mesh*>(RenderSection);
-			FMaterialRenderProxy* MaterialProxy = bWireframe ? WireframeMaterialInstance : (Section->Material ? Section->Material->GetRenderProxy() : nullptr);
+			FMaterialRenderProxy* MaterialProxy = bWireframe ? WireframeMaterialInstance : Section->GetMaterialRenderProxy();
 			if (MaterialProxy == nullptr && !Section->BuiltIn.bEnabled)
 			{
 				continue;//nothing to draw it with
@@ -1185,6 +1200,7 @@ private:
 void FDreamUIRenderSection_Mesh::ClearBeforePool()
 {
 	Material = nullptr;
+	MaterialProxy.Reset();
 	BuiltIn = FDreamUIBuiltInDrawParams();
 }
 
@@ -1847,11 +1863,12 @@ void UDreamUIMeshComponent::SetRenderSectionRenderPriority(const TSharedPtr<FDre
 	}
 }
 
-void UDreamUIMeshComponent::SetMeshSectionMaterial(int32 InSectionIndex, UMaterialInterface* InMaterial)
+void UDreamUIMeshComponent::SetMeshSectionMaterial(int32 InSectionIndex, UMaterialInterface* InMaterial, const TSharedPtr<FDreamUIMaterialProxy, ESPMode::ThreadSafe>& InMaterialProxy)
 {
 	auto RenderSection = RenderSectionArray[InSectionIndex];
 	check(RenderSection->Type == EDreamUIRenderSectionType::Mesh);
 	(static_cast<FDreamUIRenderSection_Mesh*>(RenderSection.Get()))->Material = InMaterial;
+	(static_cast<FDreamUIRenderSection_Mesh*>(RenderSection.Get()))->MaterialProxy = InMaterialProxy;
 	if (SceneProxy)
 	{
 		if (RenderSection->RenderProxy)
@@ -1859,6 +1876,7 @@ void UDreamUIMeshComponent::SetMeshSectionMaterial(int32 InSectionIndex, UMateri
 			UpdateMeshSectionMaterialDataStruct UpdateData;
 			UpdateData.SectionProxy = RenderSection->RenderProxy;
 			UpdateData.Material = InMaterial;
+			UpdateData.MaterialProxy = InMaterialProxy;
 #if LATE_FLUSH_RENDER_CMD
 			PendingUpdateMeshSectionMaterialDataArray.Add(MoveTemp(UpdateData));
 #else
@@ -2350,7 +2368,7 @@ void UDreamUIMeshComponent::FlushRenderCommand()
 			[DreamUIMeshSceneProxy, PendingUpdateMeshSectionMaterialDataArray = MoveTemp(PendingUpdateMeshSectionMaterialDataArray)](FRHICommandListImmediate& RHICmdList) {
 				for (auto& UpdateData : PendingUpdateMeshSectionMaterialDataArray)
 				{
-					DreamUIMeshSceneProxy->SetMeshSectionMaterial_RenderThread(UpdateData.SectionProxy, UpdateData.Material);
+					DreamUIMeshSceneProxy->SetMeshSectionMaterial_RenderThread(UpdateData.SectionProxy, UpdateData.Material, UpdateData.MaterialProxy);
 				}
 			});
 	}

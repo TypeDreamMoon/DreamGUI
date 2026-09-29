@@ -20,6 +20,7 @@
 #include "Extensions/Effects/DreamBackgroundBlur.h"
 #include "Extensions/Effects/DreamBackgroundPixelate.h"
 #include "Core/Components/DreamCanvas.h"
+#include "Core/DreamGUISettings.h"
 #include "Core/DreamUIDataTexture.h"
 #include "Core/DreamUISettings.h"
 #include "DreamUIRender/DreamUIRenderStats.h"
@@ -999,6 +1000,121 @@ bool FDreamRhiOneBlockOfManyRewritesItsOwnVerticesTest::RunTest(const FString& P
 			CheckPixel(Stage, Stage->PixelOf(Widget, FVector2D::ZeroVector), Red, TEXT("the recoloured block"));
 		}
 	});
+	EnqueueTearDown(Stage);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamRhiMaterialInstanceGivenIsAnsweredForTest,
+	"DreamGUI.RHI.AnImageThroughAMaterialInstanceItWasGivenDrawsItsTexture",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter | EAutomationTestFlags::NonNullRHI)
+
+bool FDreamRhiMaterialInstanceGivenIsAnsweredForTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamRenderStabilityTestLocal;
+
+	// A material instance given to an image is drawn through a proxy that answers the canvas's parameters -- the image's
+	// texture among them -- in the instance's place: the image shows its texture, and the instance is not written to.
+	FStageRef Stage = BeginStage(*this);
+	if (!Stage->IsUsable())
+	{
+		Stage->TearDown();
+		return false;
+	}
+	UMaterialInterface* Material = UDreamGUISettings::LoadSetting(UDreamGUISettings::Get()->DefaultUIMaterial, TEXT("DefaultUIMaterial"));
+	UTexture2D* RedTexture = MakeSolidTexture(Red);
+	UMaterialInstanceDynamic* Given = Material != nullptr ? UMaterialInstanceDynamic::Create(Material, GetTransientPackage()) : nullptr;
+	if (!TestNotNull(TEXT("a material instance of the default UI material"), Given) || !TestNotNull(TEXT("a red texture"), RedTexture))
+	{
+		Stage->TearDown();
+		return false;
+	}
+	const TSharedRef<TArray<TStrongObjectPtr<UObject>>> Keep = MakeShared<TArray<TStrongObjectPtr<UObject>>>();
+	Keep->Emplace(RedTexture);
+	Keep->Emplace(Given);
+	UDreamWidget* Image = Stage->AddWidget(TEXT("Image"), FVector2D(60.0, 60.0), FVector2D::ZeroVector);
+	if (UDreamTexture* Visual = Image->CreateNewVisual<UDreamTexture>())
+	{
+		Visual->SetTexture(RedTexture);
+		Visual->SetColor(FColor::White);
+		Visual->SetOverrideMaterial(Given);
+	}
+	const FIntPoint Centre = Stage->PixelOf(Image, FVector2D::ZeroVector);
+
+	EnqueueSettledFrames(Stage);
+	EnqueueDo([this, Stage, Centre, Given]()
+	{
+		CheckPixel(Stage, Centre, Red, TEXT("the image through the instance it was given"));
+		TestEqual(TEXT("...and the instance was given no texture by the canvas"), Given->TextureParameterValues.Num(), 0);
+	});
+	EnqueueDo([Keep]() { Keep->Reset(); });
+	EnqueueTearDown(Stage);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamRhiMaterialInstanceCollectedTest,
+	"DreamGUI.RHI.AMaterialInstanceCollectedUnderADrawingImageLeavesTheImageDrawing",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter | EAutomationTestFlags::NonNullRHI)
+
+bool FDreamRhiMaterialInstanceCollectedTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamRenderStabilityTestLocal;
+
+	// A material instance marked as garbage while an image draws through it is taken by the next collection, whatever
+	// holds it. The canvas's proxy of it reads it from the render thread as a plain pointer, so it lets go of it first,
+	// and the image draws on: without the instance once its canvas rebuilds.
+	FStageRef Stage = BeginStage(*this);
+	if (!Stage->IsUsable())
+	{
+		Stage->TearDown();
+		return false;
+	}
+	UMaterialInterface* Material = UDreamGUISettings::LoadSetting(UDreamGUISettings::Get()->DefaultUIMaterial, TEXT("DefaultUIMaterial"));
+	UTexture2D* RedTexture = MakeSolidTexture(Red);
+	UMaterialInstanceDynamic* Given = Material != nullptr ? UMaterialInstanceDynamic::Create(Material, GetTransientPackage()) : nullptr;
+	if (!TestNotNull(TEXT("a material instance of the default UI material"), Given) || !TestNotNull(TEXT("a red texture"), RedTexture))
+	{
+		Stage->TearDown();
+		return false;
+	}
+	const TSharedRef<TArray<TStrongObjectPtr<UObject>>> Keep = MakeShared<TArray<TStrongObjectPtr<UObject>>>();
+	Keep->Emplace(RedTexture);
+	UDreamWidget* Image = Stage->AddWidget(TEXT("Image"), FVector2D(60.0, 60.0), FVector2D::ZeroVector);
+	if (UDreamTexture* Visual = Image->CreateNewVisual<UDreamTexture>())
+	{
+		Visual->SetTexture(RedTexture);
+		Visual->SetColor(FColor::White);
+		Visual->SetOverrideMaterial(Given);
+	}
+	const FIntPoint Centre = Stage->PixelOf(Image, FVector2D::ZeroVector);
+	const TWeakObjectPtr<UMaterialInstanceDynamic> WeakGiven = Given;
+
+	EnqueueSettledFrames(Stage);
+	EnqueueDo([Stage, Centre, WeakGiven]()
+	{
+		CheckPixel(Stage, Centre, Red, TEXT("the image through the instance, before it is collected"));
+		if (UMaterialInstanceDynamic* Instance = WeakGiven.Get())
+		{
+			Instance->MarkAsGarbage();
+		}
+		CollectEverything();
+	});
+	EnqueueSettledFrames(Stage);
+	EnqueueDo([this, Stage, WeakGiven]()
+	{
+		TestFalse(TEXT("The instance is gone"), WeakGiven.IsValid());
+		if (UDreamCanvas* Canvas = Stage->GetCanvas())
+		{
+			Canvas->MarkCanvasUpdate(true);
+		}
+	});
+	EnqueueSettledFrames(Stage);
+	EnqueueDo([Stage, Centre]()
+	{
+		CheckPixel(Stage, Centre, Red, TEXT("the image, drawn without the instance once its canvas rebuilt"));
+	});
+	EnqueueDo([Keep]() { Keep->Reset(); });
 	EnqueueTearDown(Stage);
 	return true;
 }

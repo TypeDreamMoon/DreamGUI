@@ -13,6 +13,7 @@ class FDreamUIDrawCall;
 class FDreamUIGeometry;
 struct FDreamUIRenderSectionProxy;
 struct FDreamUISectionProxy_Mesh;
+class FDreamUIMaterialProxy;
 struct FDreamUIRenderSectionProxy_PostProcess;
 struct FDreamUIRenderSectionProxy_ChildCanvas;
 
@@ -49,6 +50,11 @@ struct DREAMGUI_API FDreamUIRenderSection_Mesh : public FDreamUIRenderSection
 	UMaterialInterface* Material = nullptr;
 	/** Set instead of a material when DreamGUI's own renderer draws this section with its built-in shader. */
 	FDreamUIBuiltInDrawParams BuiltIn;
+	/**
+	 * Set with Material when DreamGUI answers the material's parameters in its place (r.DreamUI.MaterialWrappers): the
+	 * section draws through it, and Material is its source.
+	 */
+	TSharedPtr<FDreamUIMaterialProxy, ESPMode::ThreadSafe> MaterialProxy;
 	/**
 	 * The geometries the vertices here were built from, as the draw call that last set this section up listed them,
 	 * and whether normals and tangents went up with them; emptied when anything else writes the vertices. A draw call
@@ -166,7 +172,8 @@ public:
 	void SetDirectMeshRenderSectionMaterial(FDreamUIRenderSection_DirectMesh* InDirectMeshSection, UMaterialInterface* InMaterial);
 	void PoolAllRenderSection();
 	void SetRenderSectionRenderPriority(const TSharedPtr<FDreamUIRenderSection>& InRenderSection, int32 InSortPriority);
-	void SetMeshSectionMaterial(int32 InSectionIndex, UMaterialInterface* InMaterial);
+	/** InMaterialProxy, when given, is what the section draws through, InMaterial its source (FDreamUIRenderSection_Mesh::MaterialProxy). */
+	void SetMeshSectionMaterial(int32 InSectionIndex, UMaterialInterface* InMaterial, const TSharedPtr<FDreamUIMaterialProxy, ESPMode::ThreadSafe>& InMaterialProxy = nullptr);
 	/** Draw the section with the built-in UI shader (no material). Pass a disabled params struct to go back to the material. */
 	void SetMeshSectionBuiltIn(int32 InSectionIndex, const FDreamUIBuiltInDrawParams& InParams);
 	bool IsMeshSectionBuiltIn(int32 InSectionIndex) const;
@@ -255,6 +262,7 @@ private:
 	{
 		FDreamUIRenderSectionProxy* SectionProxy;
 		UMaterialInterface* Material;
+		TSharedPtr<FDreamUIMaterialProxy, ESPMode::ThreadSafe> MaterialProxy;
 	};
 	TArray<UpdateMeshSectionMaterialDataStruct> PendingUpdateMeshSectionMaterialDataArray;
 	struct UpdateMeshSectionBuiltInDataStruct

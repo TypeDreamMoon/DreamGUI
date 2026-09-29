@@ -183,6 +183,7 @@ struct FDreamCanvasMaterialParameterCache
 
 class UDreamWidget;
 class UDreamVisual;
+class FDreamUIMaterialProxy;
 class UDreamVisualBatchMesh;
 class UDreamVisualDirectMesh;
 class UDreamUIMeshComponent;
@@ -887,6 +888,21 @@ private:
 	TMap<TObjectPtr<UMaterialInterface>, FDreamCanvasDynamicMaterialArrayContainer> MapSrcMatToDynamicMat;//trimmed by the decay pass in UpdateDrawCallMaterial once a tail sits idle a whole window
 	UPROPERTY(Transient, VisibleAnywhere, Category = "DreamGUI", AdvancedDisplay)
 	TMap<TObjectPtr<UMaterialInterface>, FDreamCanvasMaterialParameterCache> MapMatToParamCache;
+	/**
+	 * The proxies the canvas draws its materials through when DreamGUI answers their parameters in their place
+	 * (r.DreamUI.MaterialWrappers), per source material: where the material instances per source were pooled otherwise.
+	 */
+	struct FMaterialProxyPool
+	{
+		TArray<TSharedPtr<FDreamUIMaterialProxy, ESPMode::ThreadSafe>> Proxies;
+		int32 CurrentIndex = 0;
+		/** Consecutive rebuilds the tail of Proxies went unused; past the decay window it is let go of. */
+		int32 UnusedStreak = 0;
+	};
+	TMap<TObjectKey<UMaterialInterface>, FMaterialProxyPool> MaterialProxyPools;
+	/** What those proxies point at -- their sources and the textures they answer with -- kept from the collector. */
+	UPROPERTY(Transient, DuplicateTransient, TextExportTransient)
+	TArray<TObjectPtr<UObject>> MaterialProxyReferences;
 	uint64 NewestDrawCallFrameNumber = 0;
 	FDreamCanvasPendingDrawCallData CurrentDrawCallData;//current drawing draw-call
 	TUniquePtr<FDreamCanvasDrawCallProcessingRunnable> DrawCallProcessingRunnable;

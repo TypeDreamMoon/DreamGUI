@@ -13,6 +13,8 @@
 #include "DreamUIRender/DreamUIRenderer.h"
 #include "DreamUIRender/DreamUIRenderStats.h"
 #include "Core/DreamUIMesh/DreamUIMeshComponent.h"
+#include "DreamUIRender/DreamUIMaterialProxy.h"
+#include "HAL/IConsoleManager.h"
 #include "Core/DreamUIDrawCall.h"
 #include "Core/DreamUIFontData_BaseObject.h"
 #include "Engine/GameViewportClient.h"
@@ -41,6 +43,14 @@
 
 
 #define LOCTEXT_NAMESPACE "DreamCanvas"
+
+static TAutoConsoleVariable<int32> CVarDreamUIMaterialWrappers(
+	TEXT("r.DreamUI.MaterialWrappers"),
+	1,
+	TEXT("1: a canvas draws its own materials through render-thread proxies that answer DreamGUI's parameters in the ")
+	TEXT("material's place, a material instance given to it included. 0: through a material instance per draw call, ")
+	TEXT("pooled per material, whose parameters it sets."),
+	ECVF_Default);
 
 namespace DreamCanvasLocal
 {
@@ -2329,7 +2339,40 @@ void UDreamCanvas::UpdateDrawCallMaterial()
 		{
 			MapSrcMatToDynamicMat.Remove(Source);
 		}
+		for (auto It = MaterialProxyPools.CreateIterator(); It; ++It)
+		{
+			FMaterialProxyPool& Pool = It.Value();
+			if (Pool.CurrentIndex < Pool.Proxies.Num())
+			{
+				if (++Pool.UnusedStreak > MaterialPoolDecayFrames)
+				{
+					Pool.Proxies.SetNum(Pool.CurrentIndex);
+					Pool.UnusedStreak = 0;
+				}
+			}
+			else
+			{
+				Pool.UnusedStreak = 0;
+			}
+			Pool.CurrentIndex = 0;
+			if (Pool.Proxies.Num() == 0)
+			{
+				It.RemoveCurrent();
+			}
+		}
 	}
+	const bool bUseMaterialProxies = CVarDreamUIMaterialWrappers.GetValueOnGameThread() != 0;
+	// A proxy of InSource's from its pool, a new one when the pool is used up.
+	auto TakeMaterialProxy = [this](UMaterialInterface* InSource)
+	{
+		FMaterialProxyPool& Pool = MaterialProxyPools.FindOrAdd(TObjectKey<UMaterialInterface>(InSource));
+		if (!Pool.Proxies.IsValidIndex(Pool.CurrentIndex))
+		{
+			Pool.Proxies.Add(FDreamUIMaterialProxy::Create(InSource));
+			bNeedToVerifyMaterials = true;//verify material when new material will be used
+		}
+		return Pool.Proxies[Pool.CurrentIndex++];
+	};
 
 	const bool bUseBuiltInShader = UDreamUISettings::GetUseBuiltInUIShader() && IsRenderByDreamUIRendererOrUERenderer();
 	auto SetCommonParameterForMaterial = [&](UMaterialInstanceDynamic* InMaterialInstanceDynamic)
@@ -2379,6 +2422,53 @@ void UDreamCanvas::UpdateDrawCallMaterial()
 		switch (DrawCallItem.Type)
 		{
 		case EDreamUIDrawCallType::BatchMesh:
+			if (bUseMaterialProxies && (DrawCallItem.Material.IsValid() || (!bUseBuiltInShader && GetDefaultMaterial() != nullptr)))
+			{
+				/**
+				 * The draw call's own material, or the default one: DreamGUI answers the parameters it gives a material in
+				 * the material's place, through a proxy of the material's render proxy -- a material instance given to the
+				 * draw call is answered for as it is, never written to. A material with none of those parameters draws as
+				 * it is.
+				 */
+				UMaterialInterface* Source = DrawCallItem.Material.IsValid() ? DrawCallItem.Material.Get() : GetDefaultMaterial();
+				if (DrawCallItem.Material.IsValid() && !Source->IsA<UMaterialInstanceDynamic>() && !IsMaterialContainsDreamUIParameter(Source))
+				{
+					bNeedToVerifyMaterials = true;//verify material when new material will be used
+					if (UIMesh->IsMeshSectionBuiltIn(SectionIndex))
+					{
+						UIMesh->SetMeshSectionBuiltIn(SectionIndex, FDreamUIBuiltInDrawParams());
+					}
+					UIMesh->SetMeshSectionMaterial(SectionIndex, Source);
+					break;
+				}
+				const TSharedPtr<FDreamUIMaterialProxy, ESPMode::ThreadSafe> Proxy = TakeMaterialProxy(Source);
+				FDreamUIMaterialParameters Parameters;
+				Parameters.SetScalar(DreamUI_IsRenderByDreamUIRenderer_MaterialParameterName, this->IsRenderByDreamUIRendererOrUERenderer() ? 1.0f : 0.0f);
+				Parameters.SetTexture(DreamUI_WidgetPropertyDataTexture_MaterialParameterName, this->WidgetPropertyDataAsTexture->GetDataTexture());
+				Parameters.SetTexture(DreamUI_ClipDataTexture_MaterialParameterName, RootCanvas->ClipDataAsTexture->GetDataTexture());
+				Parameters.SetTexture(DreamUI_MainTextureMaterialParameterName, DrawCallItem.Texture.Get());
+				Parameters.SetTexture(DreamUI_FontTextureMaterialParameterName, DrawCallItem.FontTexture.Get());
+				const FVector4f AtlasInfo = MakeFontAtlasInfo(DrawCallItem);
+				Parameters.SetVector(DreamUI_FontAtlasInfoMaterialParameterName, FLinearColor(AtlasInfo.X, AtlasInfo.Y, AtlasInfo.Z, AtlasInfo.W));
+				for (const TWeakObjectPtr<UDreamVisualBatchMesh>& BatchMeshVisual : DrawCallItem.BatchMeshVisualArray)
+				{
+					if (const UDreamVisualBatchMesh* Visual = BatchMeshVisual.Get())
+					{
+						Visual->AddMaterialParameters(Parameters);
+					}
+				}
+				// Sent to the render thread only when something in them changed.
+				if (Proxy->GetParameters_GameThread() != Parameters)
+				{
+					Proxy->SetParameters_GameThread(Parameters);
+				}
+				if (UIMesh->IsMeshSectionBuiltIn(SectionIndex))
+				{
+					UIMesh->SetMeshSectionBuiltIn(SectionIndex, FDreamUIBuiltInDrawParams());
+				}
+				UIMesh->SetMeshSectionMaterial(SectionIndex, Source, Proxy);
+				break;
+			}
 			{
 				UMaterialInterface* RenderMat = nullptr;
 				bool bShouldSetMaterialParameter = false;
@@ -2535,6 +2625,24 @@ void UDreamCanvas::UpdateDrawCallMaterial()
 		)
 	{
 		MarkNeedVerifyMaterials();//tell parent canvas to verify material
+	}
+
+	// The proxies point at their sources and at the textures they answer with; a texture let go of here was replaced in its
+	// proxy by a command already sent, which the render thread carries out before the texture can be collected.
+	MaterialProxyReferences.Reset();
+	for (const TPair<TObjectKey<UMaterialInterface>, FMaterialProxyPool>& SourceAndPool : MaterialProxyPools)
+	{
+		for (const TSharedPtr<FDreamUIMaterialProxy, ESPMode::ThreadSafe>& Proxy : SourceAndPool.Value.Proxies)
+		{
+			MaterialProxyReferences.Add(Proxy->GetSource());
+			for (const TPair<FName, const UTexture*>& Texture : Proxy->GetParameters_GameThread().Textures)
+			{
+				if (Texture.Value != nullptr)
+				{
+					MaterialProxyReferences.Add(const_cast<UTexture*>(Texture.Value));
+				}
+			}
+		}
 	}
 
 	bNeedToSetClipDataTextureMaterialParameter = false;

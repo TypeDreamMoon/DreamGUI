@@ -345,6 +345,7 @@ private:
 	virtual UTexture* GetTextureToCreateGeometry()override;
 	virtual UMaterialInterface* GetMaterialToCreateGeometry()override;
 	virtual void OnMaterialInstanceDynamicCreated(class UMaterialInstanceDynamic* mat) override;
+	virtual void AddMaterialParameters(FDreamUIMaterialParameters& InOutParameters) const override;
 
 	//virtual void OnAnchorChange(bool InPivotChange, bool InWidthChange, bool InHeightChange, bool InDiscardCache = true)override;
 	virtual void OnUpdateGeometry(FDreamUIGeometry& InGeo, bool InTriangleChanged, bool InVertexPositionChanged, bool InVertexUVChanged, bool InVertexColorChanged)override;

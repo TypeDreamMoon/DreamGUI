@@ -26,6 +26,7 @@
 #include "Extensions/DreamUIRenderTargetGeometrySource.h"
 #include "Extensions/Effects/DreamBackgroundBlur.h"
 #include "HAL/FileManager.h"
+#include "HAL/IConsoleManager.h"
 #include "Kismet2/KismetEditorUtilities.h"
 #include "Lifecycle/DreamLifecycleProbe.h"
 #include "Materials/MaterialInstanceDynamic.h"
@@ -277,6 +278,24 @@ namespace DreamTests::Lifecycle
 		}
 		DrawFrames(InWorld, 2);
 		return Kinds;
+	}
+
+	FScopedMaterialWrappers::FScopedMaterialWrappers(int32 InValue)
+	{
+		Variable = IConsoleManager::Get().FindConsoleVariable(TEXT("r.DreamUI.MaterialWrappers"));
+		if (Variable != nullptr)
+		{
+			Before = Variable->GetInt();
+			Variable->Set(InValue, ECVF_SetByCode);
+		}
+	}
+
+	FScopedMaterialWrappers::~FScopedMaterialWrappers()
+	{
+		if (Variable != nullptr)
+		{
+			Variable->Set(Before, ECVF_SetByCode);
+		}
 	}
 
 	UMaterialInstanceDynamic* FindMaterialReadingADynamicTexture(const UMeshComponent* InMesh)

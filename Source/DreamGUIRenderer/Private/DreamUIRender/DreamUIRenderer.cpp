@@ -275,6 +275,12 @@ void FDreamUIRenderer::DrawRenderTarget_RenderThread(FRHICommandListImmediate& R
 	}
 	// No scene: a view of the target alone, the way the engine's canvas draws its tiles, with the view the canvas
 	// answers for. The scene renderer is not asked for anything, so a world nothing renders draws all the same.
+	// A material's cached uniform expressions are brought up to date as a scene render starts, and this is none: those
+	// asked for since -- a canvas's material proxy given new parameters -- are made here.
+	if (FMaterialRenderProxy::HasDeferredUniformExpressionCacheRequests())
+	{
+		FMaterialRenderProxy::UpdateDeferredCachedUniformExpressions(RHICmdList);
+	}
 	FRDGBuilder GraphBuilder(RHICmdList, RDG_EVENT_NAME("DreamUI_RenderTargetCanvas"));
 	FSceneViewFamily* ViewFamily = GraphBuilder.AllocObject<FSceneViewFamily>(FSceneViewFamily::ConstructionValues(
 		TargetResource, nullptr, FEngineShowFlags(ESFIM_Game)).SetTime(InTime));

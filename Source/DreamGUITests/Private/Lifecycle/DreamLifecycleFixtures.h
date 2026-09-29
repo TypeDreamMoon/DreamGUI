@@ -33,9 +33,24 @@ namespace DreamTests::Lifecycle
 	};
 
 	/**
+	 * r.DreamUI.MaterialWrappers at InValue for the length of a scope, and back to what it was after. 0 has a
+	 * canvas draw its own materials through a material instance per draw call, as it did before its material
+	 * proxies: what the tests of those instances need made.
+	 */
+	struct FScopedMaterialWrappers
+	{
+		explicit FScopedMaterialWrappers(int32 InValue);
+		~FScopedMaterialWrappers();
+		UE_NONCOPYABLE(FScopedMaterialWrappers);
+	private:
+		class IConsoleVariable* Variable = nullptr;
+		int32 Before = 0;
+	};
+
+	/**
 	 * A widget class whose root draws a rect block, compiled into /Temp/DreamGUITests/<InName>. The rect
 	 * block draws with a material, so the canvas that draws it makes material instances that read its
-	 * data textures. With bInSavedToDisk the class is written to its file as well, as a class a saved level
+	 * data textures -- with its material proxies switched off (FScopedMaterialWrappers). With bInSavedToDisk the class is written to its file as well, as a class a saved level
 	 * refers to is -- a level read back by level streaming finds only what is on disk -- and the file is
 	 * removed again with the class.
 	 */

@@ -36,6 +36,8 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 bool FDreamLifecycleDestroyTakesPartsDownTest::RunTest(const FString& Parameters)
 {
 	using namespace DreamTests::Lifecycle;
+	// What the canvas drew with is to be its material instances, which it makes with its proxies switched off.
+	const FScopedMaterialWrappers MaterialInstances(0);
 
 	FScopedPanelClass Panel(TEXT("LifecycleTeardown"));
 	if (!TestNotNull(TEXT("the panel class compiled"), Panel.GetClass()))return false;
