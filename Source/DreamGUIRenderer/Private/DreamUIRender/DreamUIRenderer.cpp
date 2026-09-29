@@ -780,7 +780,8 @@ void FDreamUIRenderer::RenderDreamUI_RenderThread(
 	DREAMUI_STAGE_SCOPE(RenderRecord);
 	bool bIsMainViewport = !(InView.bIsSceneCapture || InView.bIsReflectionCapture || InView.bIsPlanarReflection || InView.bIsVirtualTexture);
 	
-	bool bRenderWireframe = InView.Family->ViewMode == VMI_Wireframe || InView.Family->ViewMode == VMI_Lit_Wireframe;
+	// Lit wireframe is the lit view mode with mesh edges shown now.
+	bool bRenderWireframe = InView.Family->ViewMode == VMI_Wireframe || InView.Family->EngineShowFlags.MeshEdges;
 	bool bRenderLit = InView.Family->ViewMode != VMI_Wireframe;
 	FMaterialRenderProxy* WireframeMaterialInstance = NULL;
 	if (bRenderWireframe)
@@ -1021,7 +1022,7 @@ void FDreamUIRenderer::RenderDreamUI_RenderThread(
 
 			RenderView->ViewMatrices = InView.ViewMatrices;
 			RenderView->ViewMatrices.HackRemoveTemporalAAProjectionJitter();
-			auto ViewProjectionMatrix = FMatrix44f(RenderView->ViewMatrices.GetViewProjectionMatrix());
+			auto ViewProjectionMatrix = FMatrix44f(RenderView->ViewMatrices.GetWorldToClip());
 
 			FViewUniformShaderParameters ViewUniformShaderParameters;
 			RenderView->SetupCommonViewUniformBufferParameters(
@@ -1895,7 +1896,7 @@ void FDreamUIRenderer::RenderGizmoMesh_RenderThread(TArray<TSharedPtr<FDreamUIGi
 			FDreamUIBasePS::FPermutationDomain PermutationVector;
 			PermutationVector.Set<FDreamUIBasePS::FPlainColor>(true);
 			TShaderMapRef<FDreamUIBasePS> PixelShader(GlobalShaderMap, PermutationVector);
-			const FMatrix ViewProjection = RenderView->ViewMatrices.GetViewProjectionMatrix();
+			const FMatrix ViewProjection = RenderView->ViewMatrices.GetWorldToClip();
 
 			for (auto& RenderParameter : HelperGizmoDataMap)
 			{

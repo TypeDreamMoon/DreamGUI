@@ -291,7 +291,7 @@ void UDreamWidgetPresenterComponentBase::NotifyWidgetLoaded()
 	{
 		ULevelSequencePlayer* Player = It->GetSequencePlayer();
 		UMovieSceneSequence* Sequence = Player != nullptr ? Player->GetSequence() : nullptr;
-		UMovieScene* MovieScene = Sequence != nullptr ? Sequence->GetMovieScene() : nullptr;
+		const UMovieScene* MovieScene = Sequence != nullptr ? Sequence->GetMovieScene() : nullptr;
 		if (MovieScene == nullptr)
 		{
 			continue;

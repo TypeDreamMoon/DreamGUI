@@ -81,7 +81,7 @@ void SDreamWidgetHierarchyPickerViewItem::Construct(const FArguments& InArgs, co
 			{
 				SubObjects.Add(SubObject);
 			}
-		}, false);
+		}, EGetObjectsFlags::None);
 		if (SubObjects.Num() > 0)
 		{
 			MenuBuilder->AddSubMenu(
@@ -129,7 +129,7 @@ void SDreamWidgetHierarchyPickerViewItem::Construct(const FArguments& InArgs, co
 			{
 				SubObjects.Add(SubObject);
 			}
-		}, false);
+		}, EGetObjectsFlags::None);
 		if (SubObjects.Num() > 0)
 		{
 			MenuBuilder->AddSubMenu(

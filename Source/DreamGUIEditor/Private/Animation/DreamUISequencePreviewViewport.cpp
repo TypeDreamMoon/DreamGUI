@@ -109,7 +109,7 @@ void FDreamUISequencePreviewViewportClient::ProcessClick(FSceneView& View, HHitP
 	}
 
 	FVector RayOrigin, RayDirection;
-	View.DeprojectScreenToWorld(FVector2D(HitX, HitY), View.UnscaledViewRect, View.ViewMatrices.GetInvViewProjectionMatrix(), RayOrigin, RayDirection);
+	View.DeprojectScreenToWorld(FVector2D(HitX, HitY), View.UnscaledViewRect, View.ViewMatrices.GetClipToWorld(), RayOrigin, RayDirection);
 	const FVector LineStart = RayOrigin;
 	const FVector LineEnd = RayOrigin + RayDirection * 100000000.0;
 

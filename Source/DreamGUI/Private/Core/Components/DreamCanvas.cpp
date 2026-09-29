@@ -2892,61 +2892,36 @@ void UDreamCanvas::BuildProjectionMatrix(FIntPoint InViewportSize, ECameraProjec
 	{
 		InViewportSize.X = InViewportSize.Y = 1;
 	}
+	// Reversed Z either way: every RHI the engine runs on inverts the depth buffer, which is why it is retiring the
+	// switch that said so.
 	if (InProjectionType == ECameraProjectionMode::Orthographic)
 	{
-		check((int32)ERHIZBuffer::IsInverted);
 		const float tempOrthoWidth = InViewportSize.X * 0.5f;
 		const float tempOrthoHeight = InViewportSize.Y * 0.5f;
 
 		const float ZScale = 1.0f / (FarClipPlane - NearClipPlane);
 		const float ZOffset = -NearClipPlane;
 
-		if ((int32)ERHIZBuffer::IsInverted)
-		{
-			OutProjectionMatrix = FReversedZOrthoMatrix(
-				tempOrthoWidth,
-				tempOrthoHeight,
-				ZScale,
-				ZOffset
-			);
-		}
-		else
-		{
-			OutProjectionMatrix = FOrthoMatrix(
-				tempOrthoWidth,
-				tempOrthoHeight,
-				ZScale,
-				ZOffset
-			);
-		}
+		OutProjectionMatrix = FReversedZOrthoMatrix(
+			tempOrthoWidth,
+			tempOrthoHeight,
+			ZScale,
+			ZOffset
+		);
 	}
 	else
 	{
 		float XAxisMultiplier = 1.0f;
 		float YAxisMultiplier = InViewportSize.X / (float)InViewportSize.Y;
 
-		if ((int32)ERHIZBuffer::IsInverted)
-		{
-			OutProjectionMatrix = FReversedZPerspectiveMatrix(
-				InFOV,
-				InFOV,
-				XAxisMultiplier,
-				YAxisMultiplier,
-				NearClipPlane,
-				FarClipPlane
-			);
-		}
-		else
-		{
-			OutProjectionMatrix = FPerspectiveMatrix(
-				InFOV,
-				InFOV,
-				XAxisMultiplier,
-				YAxisMultiplier,
-				NearClipPlane,
-				FarClipPlane
-			);
-		}
+		OutProjectionMatrix = FReversedZPerspectiveMatrix(
+			InFOV,
+			InFOV,
+			XAxisMultiplier,
+			YAxisMultiplier,
+			NearClipPlane,
+			FarClipPlane
+		);
 	}
 }
 float UDreamCanvas::CalculateDistanceToCamera()const

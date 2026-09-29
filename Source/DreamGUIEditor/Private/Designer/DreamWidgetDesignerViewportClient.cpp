@@ -98,7 +98,7 @@ FDreamWidgetDesignerViewportClient::FDreamWidgetDesignerViewportClient(TWeakPtr<
 
 	// DrawHelper set up
 
-	DrawHelper.PerspectiveGridSize = HALF_WORLD_MAX1;
+	DrawHelper.PerspectiveGridSize = static_cast<float>(HALF_WORLD_MAX1);
 	DrawHelper.AxesLineThickness = 1.0f;
 	DrawHelper.bDrawGrid = true;
 
@@ -2144,7 +2144,7 @@ void FDreamWidgetDesignerViewportClient::ProcessClick(FSceneView& View, HHitProx
 	const FViewportClick Click(&View, this, Key, Event, HitX, HitY);
 
 	FVector RayOrigin, RayDirection;
-	View.DeprojectScreenToWorld(FVector2D(HitX, HitY), View.UnscaledViewRect, View.ViewMatrices.GetInvViewProjectionMatrix(), RayOrigin, RayDirection);
+	View.DeprojectScreenToWorld(FVector2D(HitX, HitY), View.UnscaledViewRect, View.ViewMatrices.GetClipToWorld(), RayOrigin, RayDirection);
 	const FVector LineStart = RayOrigin;
 	const FVector LineEnd = RayOrigin + RayDirection * 100000000.0f;
 	TArray<UDreamWidget*> AllWidgetArray;
@@ -2433,8 +2433,8 @@ bool FDreamWidgetDesignerViewportClient::InputWidgetDelta(FViewport* InViewport,
 		if (InCurrentAxis != EAxisList::None)
 		{
 			// Skip actors transformation routine in case if any of the selected actors locked
-			// but still pretend that we have handled the input
-			if (!GEditor->HasLockedActors())
+			// but still pretend that we have handled the input -- asked as the level editor's viewport asks it
+			if (!GEditor->HasSelectedMovementLockedItems())
 			{
 				const bool LeftMouseButtonDown = InViewport->KeyState(EKeys::LeftMouseButton);
 				const bool RightMouseButtonDown = InViewport->KeyState(EKeys::RightMouseButton);

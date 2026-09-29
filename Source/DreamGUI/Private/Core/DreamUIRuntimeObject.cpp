@@ -154,7 +154,7 @@ TArray<DreamUI::FTreeBridge> DreamUI::FindTreeBridges(const UWorld& InWorld)
 			}
 			TArray<UObject*> Kept;
 			Kept.Add(Actor);
-			GetObjectsWithOuter(Actor, Kept, /*bIncludeNestedObjects*/ true);
+			GetObjectsWithOuter(Actor, Kept, EGetObjectsFlags::IncludeNestedObjects);
 			for (UObject* Object : Kept)
 			{
 				// Only what the level keeps: a save and a play session's duplication both pass over transient

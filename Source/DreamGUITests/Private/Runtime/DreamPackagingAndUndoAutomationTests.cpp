@@ -532,7 +532,7 @@ bool FDreamSplitOffTypesAnswerToTheirOldPathTest::RunTest(const FString& Paramet
 					Object->GetPathName());
 			}
 			return true;
-		}, /*bIncludeNestedObjects*/ false);
+		}, EGetObjectsFlags::None);
 	}
 	AddInfo(FString::Printf(TEXT("%d split-off modules, %d types checked"), NumModules, NumChecked));
 	if (NumModules > 0)

@@ -40,7 +40,7 @@ namespace DreamCanvasMaterialPoolTestLocal
 			{
 				Instances.Add(Instance);
 			}
-		}, /*bIncludeNestedObjects*/ false);
+		}, EGetObjectsFlags::None);
 		return Instances;
 	}
 
