@@ -639,6 +639,107 @@ bool FDreamGalleryEffectsTest::RunTest(const FString& Parameters)
 }
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamFullSizeBlurMultisampledTest,
+	"DreamGUI.RHI.AFullSizeBlurOnAMultisampledCanvasSurvivesItsResolve",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter | EAutomationTestFlags::NonNullRHI)
+
+bool FDreamFullSizeBlurMultisampledTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamRenderGalleryTestLocal;
+	// Stripes under a blur the size of the canvas, drawn without multisampling and then with four samples. On a
+	// multisampled target the blur is done in the target's resolved copy; it used to stay there, and the resolve that ends
+	// the UI's recording wrote the unblurred target over the picture. The two pictures are to be the same blur.
+	FStageRef Stage = BeginStage(*this);
+	if (!Stage->IsUsable())
+	{
+		Stage->TearDown();
+		return false;
+	}
+	const FColor Stripes[] =
+	{
+		FColor(255, 0, 0, 255), FColor(255, 255, 0, 255), FColor(0, 255, 0, 255), FColor(0, 255, 255, 255),
+		FColor(0, 0, 255, 255), FColor(255, 0, 255, 255), FColor(255, 255, 255, 255), FColor(0, 0, 0, 255),
+	};
+	const int32 StripeCount = UE_ARRAY_COUNT(Stripes);
+	const double StripeWidth = static_cast<double>(Extent) / StripeCount;
+	for (int32 Index = 0; Index < StripeCount; ++Index)
+	{
+		const double Centre = -Extent / 2.0 + StripeWidth * (Index + 0.5);
+		Stage->AddBlock(*FString::Printf(TEXT("Stripe%d"), Index), FVector2D(StripeWidth, Extent), FVector2D(Centre, 0.0), Stripes[Index]);
+	}
+	UDreamBackgroundBlur* Blur = Stage->AddWidget(TEXT("Blur"), FVector2D(Extent, Extent), FVector2D::ZeroVector)->CreateNewVisual<UDreamBackgroundBlur>();
+	if (!TestNotNull(TEXT("A blur"), Blur))
+	{
+		Stage->TearDown();
+		return false;
+	}
+	Blur->SetUseFullSize(true);
+	Blur->SetBlurStrength(0.8f);
+
+	// A pixel that is none of the stripes' colours is one the blur mixed.
+	auto CountMixed = [Stripes, StripeCount](const TArray<FColor>& InPixels)
+	{
+		int32 Mixed = 0;
+		for (const FColor& Pixel : InPixels)
+		{
+			bool bStripe = false;
+			for (int32 Index = 0; Index < StripeCount && !bStripe; ++Index)
+			{
+				bStripe = FMath::Abs(Pixel.R - Stripes[Index].R) <= GoldenTolerance && FMath::Abs(Pixel.G - Stripes[Index].G) <= GoldenTolerance
+					&& FMath::Abs(Pixel.B - Stripes[Index].B) <= GoldenTolerance;
+			}
+			Mixed += bStripe ? 0 : 1;
+		}
+		return Mixed;
+	};
+	TSharedRef<TArray<FColor>> Plain = MakeShared<TArray<FColor>>();
+	EnqueueFrames(Stage, 3);
+	EnqueueFramesUntilDrawn(Stage, 40000);
+	EnqueueFramesUntilStable(Stage);
+	EnqueueDo([Stage, Plain]()
+	{
+		FIntPoint Size = FIntPoint::ZeroValue;
+		if (Stage->ReadBack(*Plain, Size))
+		{
+			FDreamPixelProbe::SaveCapture(*Plain, Size, TEXT("FullSizeBlur_Plain"));
+		}
+	});
+	EnqueueDo([Stage]() { Stage->UseMultisampling(4); });
+	EnqueueFrames(Stage, 3);
+	EnqueueFramesUntilDrawn(Stage, 40000);
+	EnqueueFramesUntilStable(Stage);
+	EnqueueDo([this, Stage, Plain, CountMixed]()
+	{
+		TArray<FColor> Multisampled;
+		FIntPoint Size = FIntPoint::ZeroValue;
+		if (!TestTrue(TEXT("The multisampled picture reads back"), Stage->ReadBack(Multisampled, Size))
+			|| !TestEqual(TEXT("...at the size of the other"), Multisampled.Num(), Plain->Num()))
+		{
+			return;
+		}
+		FDreamPixelProbe::SaveCapture(Multisampled, Size, TEXT("FullSizeBlur_Multisampled"));
+		const int32 Pixels = Plain->Num();
+		const int32 MixedPlain = CountMixed(*Plain);
+		const int32 MixedMultisampled = CountMixed(Multisampled);
+		TestTrue(FString::Printf(TEXT("Without multisampling the stripes are blurred (%d of %d pixels mixed)"), MixedPlain, Pixels), MixedPlain > Pixels / 5);
+		TestTrue(FString::Printf(TEXT("With four samples they are blurred too (%d of %d pixels mixed)"), MixedMultisampled, Pixels), MixedMultisampled > Pixels / 5);
+		int32 Different = 0;
+		for (int32 Index = 0; Index < Pixels; ++Index)
+		{
+			const FColor& A = (*Plain)[Index];
+			const FColor& B = Multisampled[Index];
+			if (FMath::Max3(FMath::Abs(A.R - B.R), FMath::Abs(A.G - B.G), FMath::Abs(A.B - B.B)) > GoldenTolerance)
+			{
+				++Different;
+			}
+		}
+		TestTrue(FString::Printf(TEXT("...and the two are the same blur (%d of %d pixels differ)"), Different, Pixels), Different <= Pixels / 100);
+	});
+	EnqueueTearDown(Stage);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamGalleryMultisamplingTest,
 	"DreamGUI.RHI.Gallery.RotatedEdgesWithAndWithoutMultisamplingMatchTheirGoldenImages",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter | EAutomationTestFlags::NonNullRHI)

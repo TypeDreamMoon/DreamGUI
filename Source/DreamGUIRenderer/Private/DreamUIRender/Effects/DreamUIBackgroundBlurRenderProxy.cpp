@@ -203,7 +203,14 @@ public:
 			{
 				//copy on mesh region
 				RenderMeshOnScreen_RenderThread(GraphBuilder, SceneDepth, ScreenTargetTexture, GlobalShaderMap, BlurEffectRenderTexture, ModelViewProjectionMatrix, ObjectToWorldMatrix, bIsWorldSpace, BlendDepthForWorld, DepthFadeForWorld, DepthTextureScaleOffset, ViewRect);
-			}//full screen don't need it
+			}
+			else if (NumSamples > 1)
+			{
+				// Full size, the blur is done in the target itself -- but a multisampled target was blurred in its resolved
+				// copy, and the copy goes back into it: the resolve that ends the UI's recording wrote the target as it was
+				// before the blur over the picture, and the blur never showed. Pixelate and the pixel sort copy theirs back.
+				Renderer->CopyRenderTarget(GraphBuilder, GlobalShaderMap, BlurEffectRenderTexture, ScreenTargetTexture);
+			}
 		}
 		else
 		{
