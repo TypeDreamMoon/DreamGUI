@@ -579,7 +579,7 @@ namespace DreamUISourceWatcherLocal
 		{
 			return true;
 		}
-		if (GIsSavingPackage)
+		if (UE::IsSavingPackage())
 		{
 			return true;
 		}

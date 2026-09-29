@@ -743,7 +743,7 @@ namespace DreamUIBridgeLocal
 	{
 		// The watcher's own gates: compiling reinstances live widgets, which mid-PIE is a crash
 		// report, and mid-GC/save is worse. Refusing loudly beats queueing quietly.
-		if (GEditor == nullptr || GEditor->PlayWorld != nullptr || GIsSavingPackage || IsGarbageCollecting())
+		if (GEditor == nullptr || GEditor->PlayWorld != nullptr || UE::IsSavingPackage() || IsGarbageCollecting())
 		{
 			OutResponse->SetBoolField(TEXT("ok"), false);
 			OutResponse->SetStringField(TEXT("message"),

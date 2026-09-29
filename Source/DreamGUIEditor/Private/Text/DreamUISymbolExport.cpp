@@ -226,7 +226,7 @@ void FDreamUISymbolExport::Register()
 	using namespace DreamUISymbolExportLocal;
 	// OnPostEngineInit rather than module startup: the dump reads every reflected class, and the
 	// class set is only whole once every module has loaded.
-	GStartupHandle = FCoreDelegates::OnPostEngineInit.AddLambda([] { ExportNow(); });
+	GStartupHandle = FCoreDelegates::GetOnPostEngineInit().AddLambda([] { ExportNow(); });
 }
 
 void FDreamUISymbolExport::Unregister()
@@ -234,7 +234,7 @@ void FDreamUISymbolExport::Unregister()
 	using namespace DreamUISymbolExportLocal;
 	if (GStartupHandle.IsValid())
 	{
-		FCoreDelegates::OnPostEngineInit.Remove(GStartupHandle);
+		FCoreDelegates::GetOnPostEngineInit().Remove(GStartupHandle);
 		GStartupHandle.Reset();
 	}
 }
