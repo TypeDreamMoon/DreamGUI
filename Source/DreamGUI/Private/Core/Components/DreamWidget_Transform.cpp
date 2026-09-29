@@ -531,6 +531,7 @@ void UDreamWidget::RefreshRenderTransformFlag()
 
 void UDreamWidget::ApplyRenderTransformChange()
 {
+	TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_ApplyRenderTransformChange);
 	RefreshRenderTransformFlag();
 	// Exactly what SetLayoutScale does, and pointedly NOT what SetRelativeLocation does: no
 	// CalculateAnchorFromTransform, no MarkLayoutForRebuild. Those two lines are the reason
