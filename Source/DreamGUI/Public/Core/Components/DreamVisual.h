@@ -211,12 +211,9 @@ public:
 	
 	/** Called by DreamCanvas when begin to collect geometry for render */
 	virtual void UpdateGeometry() {};
-	/** Called by DreamCanvas after create MaterialInstanceDynamic for this object or it's draw-call */
-	virtual void OnMaterialInstanceDynamicCreated(class UMaterialInstanceDynamic* mat) {};
 	/**
-	 * The parameters this visual's material needs besides the canvas's, when DreamGUI answers a material's parameters in
-	 * its place instead of making a material instance for it (r.DreamUI.MaterialWrappers): what
-	 * OnMaterialInstanceDynamicCreated sets on the instance, set here.
+	 * The parameters this visual's material needs besides the canvas's. DreamGUI answers a material's parameters in its
+	 * place (FDreamUIMaterialProxy), so a visual gives its own here rather than setting them on a material instance.
 	 */
 	virtual void AddMaterialParameters(FDreamUIMaterialParameters& InOutParameters) const {};
 

@@ -52,31 +52,6 @@ static TAutoConsoleVariable<int32> CVarDreamUIVerifyPartialPrepare(
 	TEXT("prepare each time."),
 	ECVF_Default);
 
-static TAutoConsoleVariable<int32> CVarDreamUIMaterialWrappers(
-	TEXT("r.DreamUI.MaterialWrappers"),
-	1,
-	TEXT("1: a canvas draws its own materials through render-thread proxies that answer DreamGUI's parameters in the ")
-	TEXT("material's place, a material instance given to it included. 0: through a material instance per draw call, ")
-	TEXT("pooled per material, whose parameters it sets."),
-	ECVF_Default);
-
-namespace DreamCanvasLocal
-{
-	/**
-	 * What a canvas makes while it runs -- its mesh, its material instances, its data textures, its render
-	 * target -- carries DreamUI::RuntimeObjectFlags: never saved, never cloned by a duplication (play in
-	 * editor, Duplicate), never written out by the level editor's Copy.
-	 */
-	UMaterialInstanceDynamic* CreateRuntimeMaterial(UMaterialInterface* InParent, UObject* InOuter)
-	{
-		UMaterialInstanceDynamic* Material = UMaterialInstanceDynamic::Create(InParent, InOuter);
-		if (Material != nullptr)
-		{
-			Material->SetFlags(DreamUI::RuntimeObjectFlags);
-		}
-		return Material;
-	}
-}
 
 UDreamCanvas::UDreamCanvas()
 {
@@ -444,13 +419,7 @@ void UDreamCanvas::ClearDrawCall()
 		UIMesh->ClearRenderData();
 		bUIMeshNeedToSetInitialParameters = true;
 	}
-	PooledDefaultMaterialList.Empty();
-	MapSrcMatToDynamicMat.Empty();
-	// The parameter cache keys the same MIDs the two pools above just dropped; without this line it
-	// both leaked entries and kept those MIDs rooted forever -- the pool died, the cache did not.
-	MapMatToParamCache.Empty();
 	CurrentDrawCallData.DrawCallArray.Empty();
-	bNeedToSetClipDataTextureMaterialParameter = true;
 }
 
 void UDreamCanvas::RemoveFromViewExtension(bool PropogateToChildrenCanvas)
@@ -521,7 +490,6 @@ bool UDreamCanvas::CheckRootCanvas(bool forceRecheck)const
 	if (NewRootCanvas != RootCanvas)
 	{
 		RootCanvas = NewRootCanvas;
-		bNeedToSetClipDataTextureMaterialParameter = true;
 	}
 	if (RootCanvas.IsValid())
 	{
@@ -2455,56 +2423,16 @@ bool UDreamCanvas::IsMaterialContainsDreamUIParameter(const UMaterialInterface* 
 }
 
 DECLARE_CYCLE_STAT(TEXT("Canvas UpdateDrawCallMaterial"), STAT_UpdateDrawCallMaterial, STATGROUP_DreamGUI);
-DECLARE_CYCLE_STAT(TEXT("Canvas SetMaterialParameter"), STAT_SetMaterialParameter, STATGROUP_DreamGUI);
 void UDreamCanvas::UpdateDrawCallMaterial()
 {
 	SCOPE_CYCLE_COUNTER(STAT_UpdateDrawCallMaterial);
 	TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_UpdateDrawCallMaterial);
 
-	//pool and reuse material
-	{
-		UsingMaterialStartIndex = PooledDefaultMaterialList.Num() - 1;
-	}
-	//reset index for dynamic material -- and retire what stopped being used. The pools were
-	//high-water-mark allocators: a screenful of one-off materials was rent paid forever (the old
-	//@todo on MapSrcMatToDynamicMat). At this point the counters still hold LAST frame's usage, so
-	//the tail beyond it is provably idle; a tail idle for a whole decay window is dropped, its
-	//parameter-cache entries with it. The window keeps a transiently hidden panel from thrashing
-	//allocate/free on every blink.
+	// The proxies taken last rebuild go back to their pools, and a pool's tail that went unused for a whole decay window is
+	// let go of: a screenful of one-off materials is not rent paid forever. The window keeps a transiently hidden panel
+	// from thrashing make and let go on every blink.
 	{
 		constexpr int MaterialPoolDecayFrames = 120;
-		TArray<UMaterialInterface*, TInlineAllocator<8>> EmptiedSources;
-		for (auto& KeyValue : MapSrcMatToDynamicMat)
-		{
-			FDreamCanvasDynamicMaterialArrayContainer& Container = KeyValue.Value;
-			const int UsedLastFrame = Container.CurrentIndex;
-			if (UsedLastFrame < Container.MaterialArray.Num())
-			{
-				++Container.UnusedStreak;
-				if (Container.UnusedStreak > MaterialPoolDecayFrames)
-				{
-					for (int Index = UsedLastFrame; Index < Container.MaterialArray.Num(); ++Index)
-					{
-						MapMatToParamCache.Remove(Container.MaterialArray[Index]);
-					}
-					Container.MaterialArray.SetNum(UsedLastFrame);
-					Container.UnusedStreak = 0;
-					if (Container.MaterialArray.Num() == 0)
-					{
-						EmptiedSources.Add(KeyValue.Key);
-					}
-				}
-			}
-			else
-			{
-				Container.UnusedStreak = 0;
-			}
-			Container.CurrentIndex = 0;
-		}
-		for (UMaterialInterface* Source : EmptiedSources)
-		{
-			MapSrcMatToDynamicMat.Remove(Source);
-		}
 		for (auto It = MaterialProxyPools.CreateIterator(); It; ++It)
 		{
 			FMaterialProxyPool& Pool = It.Value();
@@ -2527,7 +2455,6 @@ void UDreamCanvas::UpdateDrawCallMaterial()
 			}
 		}
 	}
-	const bool bUseMaterialProxies = CVarDreamUIMaterialWrappers.GetValueOnGameThread() != 0;
 	// A proxy of InSource's from its pool, a new one when the pool is used up.
 	auto TakeMaterialProxy = [this](UMaterialInterface* InSource)
 	{
@@ -2541,37 +2468,6 @@ void UDreamCanvas::UpdateDrawCallMaterial()
 	};
 
 	const bool bUseBuiltInShader = UDreamUISettings::GetUseBuiltInUIShader() && IsRenderByDreamUIRendererOrUERenderer();
-	auto SetCommonParameterForMaterial = [&](UMaterialInstanceDynamic* InMaterialInstanceDynamic)
-	{
-		InMaterialInstanceDynamic->SetScalarParameterValue(DreamUI_IsRenderByDreamUIRenderer_MaterialParameterName, this->IsRenderByDreamUIRendererOrUERenderer());
-		InMaterialInstanceDynamic->SetTextureParameterValue(DreamUI_WidgetPropertyDataTexture_MaterialParameterName, this->WidgetPropertyDataAsTexture->GetDataTexture());
-		InMaterialInstanceDynamic->SetTextureParameterValue(DreamUI_ClipDataTexture_MaterialParameterName, RootCanvas->ClipDataAsTexture->GetDataTexture());
-	};
-
-	// Every pooled instance, not only those this frame's draw calls take. An instance waiting in a pool
-	// keeps the data textures it was last given, and a frame that took it back after they were replaced
-	// -- the widget property data grown past its texture, the clip data likewise, a new root canvas --
-	// drew through textures the canvas no longer uses, which may be serving something else by then.
-	if (RootCanvas.IsValid() && (bWidgetPropertyDataAsTextureChanged || RootCanvas->bClipDataAsTextureChanged || bNeedToSetClipDataTextureMaterialParameter))
-	{
-		for (UMaterialInstanceDynamic* Material : PooledDefaultMaterialList)
-		{
-			if (IsValid(Material))
-			{
-				SetCommonParameterForMaterial(Material);
-			}
-		}
-		for (auto& SourceAndInstances : MapSrcMatToDynamicMat)
-		{
-			for (UMaterialInstanceDynamic* Material : SourceAndInstances.Value.MaterialArray)
-			{
-				if (IsValid(Material))
-				{
-					SetCommonParameterForMaterial(Material);
-				}
-			}
-		}
-	}
 
 	// UpdateDrawCallMesh does not create a section for every draw-call (the WorldSpace path skips
 	// PostProcess ones), so the section index must be counted from the draw-calls that own one --
@@ -2588,7 +2484,7 @@ void UDreamCanvas::UpdateDrawCallMaterial()
 		switch (DrawCallItem.Type)
 		{
 		case EDreamUIDrawCallType::BatchMesh:
-			if (bUseMaterialProxies && (DrawCallItem.Material.IsValid() || (!bUseBuiltInShader && GetDefaultMaterial() != nullptr)))
+			if (DrawCallItem.Material.IsValid() || (!bUseBuiltInShader && GetDefaultMaterial() != nullptr))
 			{
 				/**
 				 * The draw call's own material, or the default one: DreamGUI answers the parameters it gives a material in
@@ -2635,146 +2531,34 @@ void UDreamCanvas::UpdateDrawCallMaterial()
 				UIMesh->SetMeshSectionMaterial(SectionIndex, Source, Proxy);
 				break;
 			}
+			if (bUseBuiltInShader)
 			{
-				UMaterialInterface* RenderMat = nullptr;
-				bool bShouldSetMaterialParameter = false;
-				if (DrawCallItem.Material.IsValid())
-				{
-					if (DrawCallItem.Material->IsA<UMaterialInstanceDynamic>())
-					{
-						auto RenderMatDynamic = static_cast<UMaterialInstanceDynamic*>(DrawCallItem.Material.Get());
-						RenderMat = RenderMatDynamic;
-						bShouldSetMaterialParameter = true;
-						SetCommonParameterForMaterial(RenderMatDynamic);
-					}
-					else
-					{
-						auto DynamicMaterialContainerPtr = MapSrcMatToDynamicMat.Find(DrawCallItem.Material.Get());
-						if (!DynamicMaterialContainerPtr)
-						{
-							if (IsMaterialContainsDreamUIParameter(DrawCallItem.Material.Get()))
-							{
-								bShouldSetMaterialParameter = true;
-								auto RenderMatDynamic = DreamCanvasLocal::CreateRuntimeMaterial(DrawCallItem.Material.Get(), this);
-								SetCommonParameterForMaterial(RenderMatDynamic);
-								auto MaterialContainer = FDreamCanvasDynamicMaterialArrayContainer();
-								MaterialContainer.MaterialArray.Add(RenderMatDynamic);
-								MaterialContainer.CurrentIndex = 1;
-								MapSrcMatToDynamicMat.Add(DrawCallItem.Material.Get(), MaterialContainer);
-								RenderMat = RenderMatDynamic;
-								for (auto& BatchMeshVisual : DrawCallItem.BatchMeshVisualArray)
-								{
-									if (!BatchMeshVisual.IsValid())continue;
-									BatchMeshVisual->OnMaterialInstanceDynamicCreated(RenderMatDynamic);
-								}
-								bNeedToVerifyMaterials = true;//verify material when new material will be used
-							}
-							else
-							{
-								RenderMat = DrawCallItem.Material.Get();
-								bNeedToVerifyMaterials = true;//verify material when new material will be used
-							}
-						}
-						else
-						{
-							bShouldSetMaterialParameter = true;
-							auto& MaterialArray = DynamicMaterialContainerPtr->MaterialArray;
-							if (!MaterialArray.IsValidIndex(DynamicMaterialContainerPtr->CurrentIndex))//material use up, need more
-							{
-								auto RenderMatDynamic = DreamCanvasLocal::CreateRuntimeMaterial(DrawCallItem.Material.Get(), this);
-								MaterialArray.Add(RenderMatDynamic);
-								SetCommonParameterForMaterial(RenderMatDynamic);
-								RenderMat = RenderMatDynamic;
-								DynamicMaterialContainerPtr->CurrentIndex++;
-								bNeedToVerifyMaterials = true;//verify material when new material will be used
-								for (auto& BatchMeshVisual : DrawCallItem.BatchMeshVisualArray)
-								{
-									if (!BatchMeshVisual.IsValid())continue;
-									BatchMeshVisual->OnMaterialInstanceDynamicCreated(RenderMatDynamic);
-								}
-							}
-							else//enough material, use index one
-							{
-								auto RenderMatDynamic = MaterialArray[DynamicMaterialContainerPtr->CurrentIndex];
-								RenderMat = RenderMatDynamic;
-								DynamicMaterialContainerPtr->CurrentIndex++;
-								for (auto& BatchMeshVisual : DrawCallItem.BatchMeshVisualArray)
-								{
-									if (!BatchMeshVisual.IsValid())continue;
-									BatchMeshVisual->OnMaterialInstanceDynamicCreated(RenderMatDynamic);
-								}
-							}
-						}
-					}
-				}
-				else if (bUseBuiltInShader)
-				{
-					// No material at all: the renderer draws this section with the built-in UI shader. The textures go
-					// over as textures, not as their resources: the render thread binds each one's reference, which
-					// follows it through a rebuild and outlives it (see FDreamUIBuiltInDrawParams).
-					FDreamUIBuiltInDrawParams BuiltIn;
-					BuiltIn.bEnabled = true;
-					BuiltIn.MainTexture = DrawCallItem.Texture.Get();
-					BuiltIn.FontTexture = DrawCallItem.FontTexture.Get();
-					BuiltIn.WidgetDataTexture = WidgetPropertyDataAsTexture->GetDataTexture();
-					BuiltIn.ClipDataTexture = RootCanvas->ClipDataAsTexture->GetDataTexture();
-					const FVector4f AtlasInfo = MakeFontAtlasInfo(DrawCallItem);
-					BuiltIn.FontAtlasSize = FVector2f(AtlasInfo.X, AtlasInfo.Y);
-					BuiltIn.FontFieldRangeTexels = AtlasInfo.Z;
-					BuiltIn.FontEmTexels = AtlasInfo.W;
-					//every element in this draw-call agreed on it; CanConsumeUIGeometryForBatchMesh is
-					//what makes that true
-					BuiltIn.BlendMode = DrawCallItem.BlendMode;
-					UIMesh->SetMeshSectionBuiltIn(SectionIndex, BuiltIn);
-					UIMesh->SetMeshSectionMaterial(SectionIndex, nullptr);
-					break;
-				}
-				else
-				{
-					auto GetUIMaterialFromPool = [&]()
-					{
-						if (UsingMaterialStartIndex < 0)
-						{
-							auto SrcMaterial = GetDefaultMaterial();
-							auto RenderMatDynamic = DreamCanvasLocal::CreateRuntimeMaterial(SrcMaterial, this);
-							PooledDefaultMaterialList.Add(RenderMatDynamic);
-							SetCommonParameterForMaterial(RenderMatDynamic);
-							bNeedToVerifyMaterials = true;//verify material when new material will be used
-							return RenderMatDynamic;
-						}
-						auto RenderMatDynamic = PooledDefaultMaterialList[UsingMaterialStartIndex];
-						UsingMaterialStartIndex--;
-						return RenderMatDynamic.Get();
-					};
-					RenderMat = GetUIMaterialFromPool();
-					bShouldSetMaterialParameter = true;//pooled material definitely contains DreamUIParam
-				}
-				if (bShouldSetMaterialParameter)
-				{
-					SCOPE_CYCLE_COUNTER(STAT_SetMaterialParameter)
-					auto RenderMat_MID = static_cast<UMaterialInstanceDynamic*>(RenderMat);
-					auto& ParamCache = MapMatToParamCache.FindOrAdd(RenderMat_MID);
-					if (ParamCache.Texture != DrawCallItem.Texture || ParamCache.FontTexture != DrawCallItem.FontTexture)
-					{
-						RenderMat_MID->SetTextureParameterValue(DreamUI_MainTextureMaterialParameterName, DrawCallItem.Texture.Get());
-						RenderMat_MID->SetTextureParameterValue(DreamUI_FontTextureMaterialParameterName, DrawCallItem.FontTexture.Get());
-						// The atlas geometry travels with the atlas: a new font texture means new values.
-						const FVector4f AtlasInfo = MakeFontAtlasInfo(DrawCallItem);
-						RenderMat_MID->SetVectorParameterValue(DreamUI_FontAtlasInfoMaterialParameterName, FLinearColor(AtlasInfo.X, AtlasInfo.Y, AtlasInfo.Z, AtlasInfo.W));
-						ParamCache.Texture = DrawCallItem.Texture;
-						ParamCache.FontTexture = DrawCallItem.FontTexture;
-					}
-					if (bNeedToSetClipDataTextureMaterialParameter)
-					{
-						RenderMat_MID->SetTextureParameterValue(DreamUI_ClipDataTexture_MaterialParameterName, RootCanvas->ClipDataAsTexture->GetDataTexture());
-					}
-				}
-				if (UIMesh->IsMeshSectionBuiltIn(SectionIndex))
-				{
-					UIMesh->SetMeshSectionBuiltIn(SectionIndex, FDreamUIBuiltInDrawParams());
-				}
-				UIMesh->SetMeshSectionMaterial(SectionIndex, RenderMat);
+				// No material at all: the renderer draws this section with the built-in UI shader. The textures go
+				// over as textures, not as their resources: the render thread binds each one's reference, which
+				// follows it through a rebuild and outlives it (see FDreamUIBuiltInDrawParams).
+				FDreamUIBuiltInDrawParams BuiltIn;
+				BuiltIn.bEnabled = true;
+				BuiltIn.MainTexture = DrawCallItem.Texture.Get();
+				BuiltIn.FontTexture = DrawCallItem.FontTexture.Get();
+				BuiltIn.WidgetDataTexture = WidgetPropertyDataAsTexture->GetDataTexture();
+				BuiltIn.ClipDataTexture = RootCanvas->ClipDataAsTexture->GetDataTexture();
+				const FVector4f AtlasInfo = MakeFontAtlasInfo(DrawCallItem);
+				BuiltIn.FontAtlasSize = FVector2f(AtlasInfo.X, AtlasInfo.Y);
+				BuiltIn.FontFieldRangeTexels = AtlasInfo.Z;
+				BuiltIn.FontEmTexels = AtlasInfo.W;
+				//every element in this draw-call agreed on it; CanConsumeUIGeometryForBatchMesh is
+				//what makes that true
+				BuiltIn.BlendMode = DrawCallItem.BlendMode;
+				UIMesh->SetMeshSectionBuiltIn(SectionIndex, BuiltIn);
+				UIMesh->SetMeshSectionMaterial(SectionIndex, nullptr);
+				break;
 			}
+			// No material, no built-in shader, and no default material to draw it with: nothing draws the section.
+			if (UIMesh->IsMeshSectionBuiltIn(SectionIndex))
+			{
+				UIMesh->SetMeshSectionBuiltIn(SectionIndex, FDreamUIBuiltInDrawParams());
+			}
+			UIMesh->SetMeshSectionMaterial(SectionIndex, nullptr);
 			break;
 		case EDreamUIDrawCallType::PostProcess:
 		case EDreamUIDrawCallType::ChildCanvas:
@@ -2809,13 +2593,6 @@ void UDreamCanvas::UpdateDrawCallMaterial()
 				}
 			}
 		}
-	}
-
-	bNeedToSetClipDataTextureMaterialParameter = false;
-	bWidgetPropertyDataAsTextureChanged = false;
-	if (RootCanvas == this)
-	{
-		RootCanvas->bClipDataAsTextureChanged = false;
 	}
 }
 

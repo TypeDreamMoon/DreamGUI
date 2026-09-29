@@ -98,7 +98,6 @@ bool FDreamLifecycleProxiesKeepNoMaterialInTheMeshTest::RunTest(const FString& P
 	// A copy a play session makes of the level, a paste, a save: each carries what the canvas's mesh holds as its
 	// materials. Drawing through its material proxies the canvas keeps none of its own there -- no instance that reads
 	// a data texture of the canvas, nothing the canvas made -- only the materials it was given.
-	const FScopedMaterialWrappers Proxies(1);
 	FScopedPanelClass Panel(TEXT("LifecycleProxies"));
 	if (!TestNotNull(TEXT("the panel class compiled"), Panel.GetClass()))return false;
 	FScopedWorld Level(EWorldType::Editor);
@@ -131,16 +130,13 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 bool FDreamLifecyclePasteLeavesNoPersistentMeshTest::RunTest(const FString& Parameters)
 {
 	using namespace DreamTests::Lifecycle;
-	// What the canvas drew with is to be its material instances, which it makes with its proxies switched off.
-	const FScopedMaterialWrappers MaterialInstances(0);
-
 	FScopedPanelClass Panel(TEXT("LifecyclePaste"));
 	if (!TestNotNull(TEXT("the panel class compiled"), Panel.GetClass()))return false;
 	FScopedWorld Level(EWorldType::Editor);
 	ADreamWorldWidgetActor* Actor = PlacePanel(Level.World, Panel.GetClass());
 	if (!TestNotNull(TEXT("the panel was placed"), Actor))return false;
-	if (!TestNotNull(TEXT("and its canvas drew with a material that reads a data texture"),
-		FindMaterialReadingADynamicTexture(Actor->GetWidgetComponent()->GetLoadedCanvas()->GetUIMesh())))return false;
+	if (!TestNotNull(TEXT("and its canvas drew with a material"),
+		FindFirstMaterial(Actor->GetWidgetComponent()->GetLoadedCanvas()->GetUIMesh())))return false;
 
 	const TArray<AActor*> Pasted = DreamTests::Lifecycle::CopyPasteActor(Level.World, Actor, 3);
 	TestEqual(TEXT("three pastes made three actors"), Pasted.Num(), 3);
@@ -171,16 +167,13 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 bool FDreamLifecyclePlayAfterPasteTest::RunTest(const FString& Parameters)
 {
 	using namespace DreamTests::Lifecycle;
-	// What the canvas drew with is to be its material instances, which it makes with its proxies switched off.
-	const FScopedMaterialWrappers MaterialInstances(0);
-
 	FScopedPanelClass Panel(TEXT("LifecyclePlayAfterPaste"));
 	if (!TestNotNull(TEXT("the panel class compiled"), Panel.GetClass()))return false;
 	FScopedWorld Level(EWorldType::Editor);
 	ADreamWorldWidgetActor* Actor = PlacePanel(Level.World, Panel.GetClass());
 	if (!TestNotNull(TEXT("the panel was placed"), Actor))return false;
-	if (!TestNotNull(TEXT("and its canvas drew with a material that reads a data texture"),
-		FindMaterialReadingADynamicTexture(Actor->GetWidgetComponent()->GetLoadedCanvas()->GetUIMesh())))return false;
+	if (!TestNotNull(TEXT("and its canvas drew with a material"),
+		FindFirstMaterial(Actor->GetWidgetComponent()->GetLoadedCanvas()->GetUIMesh())))return false;
 
 	// Seven pastes, as many as it took the first time.
 	DreamTests::Lifecycle::CopyPasteActor(Level.World, Actor, 7);
@@ -212,9 +205,6 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 bool FDreamLifecycleOrphanMeshNeutralizedTest::RunTest(const FString& Parameters)
 {
 	using namespace DreamTests::Lifecycle;
-	// What the canvas drew with is to be its material instances, which it makes with its proxies switched off.
-	const FScopedMaterialWrappers MaterialInstances(0);
-
 	// The state a paste by an older build left behind, or a map saved by one: a canvas mesh that is an
 	// ordinary component of its actor, still naming another panel's material.
 	FScopedPanelClass Panel(TEXT("LifecycleOrphan"));
@@ -222,8 +212,8 @@ bool FDreamLifecycleOrphanMeshNeutralizedTest::RunTest(const FString& Parameters
 	FScopedWorld Level(EWorldType::Editor);
 	ADreamWorldWidgetActor* Source = PlacePanel(Level.World, Panel.GetClass());
 	if (!TestNotNull(TEXT("a panel was placed"), Source))return false;
-	UMaterialInstanceDynamic* SourceMaterial = FindMaterialReadingADynamicTexture(Source->GetWidgetComponent()->GetLoadedCanvas()->GetUIMesh());
-	if (!TestNotNull(TEXT("and drew with a material that reads a data texture"), SourceMaterial))return false;
+	UMaterialInterface* SourceMaterial = FindFirstMaterial(Source->GetWidgetComponent()->GetLoadedCanvas()->GetUIMesh());
+	if (!TestNotNull(TEXT("and drew with a material"), SourceMaterial))return false;
 
 	AActor* Holder = Level.World->SpawnActor<AActor>();
 	if (!TestNotNull(TEXT("an actor to hold the stray mesh"), Holder))return false;
@@ -281,48 +271,6 @@ bool FDreamLifecycleDataTexturesStayOutsideTheWorldTest::RunTest(const FString& 
 		TestTrue(FString::Printf(TEXT("%s lives in the transient package, outside any world a duplication starts from"), *Object->GetName()), Object->GetOutermost() == GetTransientPackage());
 	}
 	TestTrue(TEXT("the widget property data object is never saved, duplicated or copied either"), PropertyData->HasAllFlags(NeverCopied));
-	return true;
-}
-
-IMPLEMENT_SIMPLE_AUTOMATION_TEST(
-	FDreamLifecycleForeignMaterialBridgeTest,
-	"DreamGUI.Lifecycle.APlaySessionDuplicatingACanvasMaterialLeavesItsDataTextureAlone",
-	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
-
-bool FDreamLifecycleForeignMaterialBridgeTest::RunTest(const FString& Parameters)
-{
-	using namespace DreamTests::Lifecycle;
-	// What the canvas drew with is to be its material instances, which it makes with its proxies switched off.
-	const FScopedMaterialWrappers MaterialInstances(0);
-
-	// Another way into a panel's tree: a component the level keeps holding one of the canvas's material
-	// instances -- a render target shown on a static mesh, or a Blueprint that stored the material.
-	FScopedPanelClass Panel(TEXT("LifecycleForeignBridge"));
-	if (!TestNotNull(TEXT("the panel class compiled"), Panel.GetClass()))return false;
-	FScopedWorld Level(EWorldType::Editor);
-	ADreamWorldWidgetActor* Actor = PlacePanel(Level.World, Panel.GetClass());
-	if (!TestNotNull(TEXT("the panel was placed"), Actor))return false;
-	UMaterialInstanceDynamic* CanvasMaterial = FindMaterialReadingADynamicTexture(Actor->GetWidgetComponent()->GetLoadedCanvas()->GetUIMesh());
-	if (!TestNotNull(TEXT("and drew with a material that reads a data texture"), CanvasMaterial))return false;
-
-	AActor* Holder = Level.World->SpawnActor<AActor>();
-	if (!TestNotNull(TEXT("an actor for the static mesh"), Holder))return false;
-	UStaticMeshComponent* Shown = NewObject<UStaticMeshComponent>(Holder, TEXT("ShowsTheCanvasMaterial"), RF_Transactional);
-	Holder->AddInstanceComponent(Shown);
-	Shown->RegisterComponent();
-	Shown->OverrideMaterials.Add(CanvasMaterial);
-
-	const int32 CopiesBefore = DreamUI::GetCopiedIntoPlaySessionCount();
-	UWorld* PlayWorld = DreamTests::Lifecycle::DuplicateWorldForPlayInEditor(Level.World);
-	if (!TestNotNull(TEXT("the level was duplicated for play"), PlayWorld))return false;
-	const int32 TreeObjectsCopied = DreamUI::GetCopiedIntoPlaySessionCount() - CopiesBefore;
-	const TArray<FString> ZeroSize = DreamTests::Lifecycle::FindZeroSizeDynamicTextures();
-	const TArray<FString> ClonedTextures = DreamTests::Lifecycle::FindObjectsInPackage(PlayWorld->GetOutermost(), UDreamUIDataTexture::StaticClass());
-	DreamTests::Lifecycle::DestroyDuplicatedWorld(PlayWorld);
-
-	TestEqual(FString::Printf(TEXT("the duplication made no texture the RHI would refuse (found: %s)"), *JoinLines(ZeroSize)), ZeroSize.Num(), 0);
-	TestEqual(FString::Printf(TEXT("and cloned no data texture: they are not in the world it duplicates (found: %s)"), *JoinLines(ClonedTextures)), ClonedTextures.Num(), 0);
-	TestEqual(TEXT("nor any object of the panel's tree"), TreeObjectsCopied, 0);
 	return true;
 }
 

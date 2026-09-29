@@ -36,9 +36,6 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 bool FDreamLifecycleDestroyTakesPartsDownTest::RunTest(const FString& Parameters)
 {
 	using namespace DreamTests::Lifecycle;
-	// What the canvas drew with is to be its material instances, which it makes with its proxies switched off.
-	const FScopedMaterialWrappers MaterialInstances(0);
-
 	FScopedPanelClass Panel(TEXT("LifecycleTeardown"));
 	if (!TestNotNull(TEXT("the panel class compiled"), Panel.GetClass()))return false;
 	FScopedWorld Level(EWorldType::Editor);
@@ -59,10 +56,8 @@ bool FDreamLifecycleDestroyTakesPartsDownTest::RunTest(const FString& Parameters
 			break;
 		}
 	}
-	UMaterialInstanceDynamic* Material = FindMaterialReadingADynamicTexture(Canvas->GetUIMesh());
 	UDreamUIDataAsTexture* PropertyData = Canvas->GetWidgetPropertyDataAsTexture();
 	if (!TestNotNull(TEXT("a widget of it draws"), Visual)
-		|| !TestNotNull(TEXT("through a material the canvas made"), Material)
 		|| !TestNotNull(TEXT("with the canvas's widget property data"), PropertyData))
 	{
 		return false;
@@ -70,14 +65,12 @@ bool FDreamLifecycleDestroyTakesPartsDownTest::RunTest(const FString& Parameters
 
 	const TWeakObjectPtr<UDreamCanvas> WeakCanvas(Canvas);
 	const TWeakObjectPtr<UDreamVisual> WeakVisual(Visual);
-	const TWeakObjectPtr<UMaterialInstanceDynamic> WeakMaterial(Material);
 	const TWeakObjectPtr<UDreamUIDataAsTexture> WeakPropertyData(PropertyData);
 
 	Root->DestroyWidget();
 	TestFalse(TEXT("the destroyed root is gone"), IsValid(Root));
 	TestFalse(TEXT("and so is its canvas, before any collection"), WeakCanvas.IsValid());
 	TestFalse(TEXT("and the visual of a widget under it"), WeakVisual.IsValid());
-	TestFalse(TEXT("and a material the canvas made"), WeakMaterial.IsValid());
 	TestFalse(TEXT("and the canvas's widget property data"), WeakPropertyData.IsValid());
 	return true;
 }

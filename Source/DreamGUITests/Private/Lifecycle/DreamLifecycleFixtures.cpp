@@ -298,6 +298,22 @@ namespace DreamTests::Lifecycle
 		}
 	}
 
+	UMaterialInterface* FindFirstMaterial(const UMeshComponent* InMesh)
+	{
+		if (InMesh == nullptr)
+		{
+			return nullptr;
+		}
+		for (UMaterialInterface* Material : InMesh->OverrideMaterials)
+		{
+			if (Material != nullptr)
+			{
+				return Material;
+			}
+		}
+		return nullptr;
+	}
+
 	UMaterialInstanceDynamic* FindMaterialReadingADynamicTexture(const UMeshComponent* InMesh)
 	{
 		if (InMesh == nullptr)

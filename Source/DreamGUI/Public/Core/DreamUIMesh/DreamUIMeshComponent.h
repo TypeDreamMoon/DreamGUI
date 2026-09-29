@@ -51,7 +51,7 @@ struct DREAMGUI_API FDreamUIRenderSection_Mesh : public FDreamUIRenderSection
 	/** Set instead of a material when DreamGUI's own renderer draws this section with its built-in shader. */
 	FDreamUIBuiltInDrawParams BuiltIn;
 	/**
-	 * Set with Material when DreamGUI answers the material's parameters in its place (r.DreamUI.MaterialWrappers): the
+	 * Set with Material when DreamGUI answers the material's parameters in its place: the
 	 * section draws through it, and Material is its source.
 	 */
 	TSharedPtr<FDreamUIMaterialProxy, ESPMode::ThreadSafe> MaterialProxy;

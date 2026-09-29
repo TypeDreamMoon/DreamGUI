@@ -557,14 +557,6 @@ UMaterialInterface* UDreamRectBlock::GetMaterialToCreateGeometry()
 		return RectBlockData != nullptr ? RectBlockData->GetMaterial() : nullptr;
 	}
 }
-void UDreamRectBlock::OnMaterialInstanceDynamicCreated(class UMaterialInstanceDynamic* mat)
-{
-	if (DataRows != nullptr)
-	{
-		mat->SetTextureParameterValue(DataTextureParameterName, DataRows->GetDataTexture());
-	}
-}
-
 void UDreamRectBlock::AddMaterialParameters(FDreamUIMaterialParameters& InOutParameters) const
 {
 	if (DataRows != nullptr)

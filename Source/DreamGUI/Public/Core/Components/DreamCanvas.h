@@ -158,29 +158,6 @@ protected:
 	bool ReceiveConvertPositionFromCanvasToViewport(const FVector2D& InPosition, FVector2D& Result)const;
 };
 
-USTRUCT()
-struct FDreamCanvasDynamicMaterialArrayContainer
-{
-	GENERATED_BODY()
-
-	UPROPERTY(EditAnywhere, Category = DreamGUI)
-	TArray<TObjectPtr<UMaterialInstanceDynamic>> MaterialArray;
-
-	int CurrentIndex = 0;
-	/** Consecutive frames the tail of MaterialArray went unused; past the decay window it is trimmed. */
-	int UnusedStreak = 0;
-};
-
-USTRUCT()
-struct FDreamCanvasMaterialParameterCache
-{
-	GENERATED_BODY()
-	UPROPERTY(VisibleAnywhere, Category=DreamGUI)
-	TWeakObjectPtr<UTexture> Texture = nullptr;
-	UPROPERTY(VisibleAnywhere, Category=DreamGUI)
-	TWeakObjectPtr<UTexture> FontTexture = nullptr;
-};
-
 class UDreamWidget;
 class UDreamVisual;
 class FDreamUIMaterialProxy;
@@ -852,10 +829,7 @@ private:
 	uint32 bPrevAnythingChangedForRenderTarget : 1 = true;//same as upper one, but the prev frame
 	uint32 bHasSetInitialStateForDreamWorldSpaceRenderer : 1 = false;//is DreamGUI world space renderer's initial state set
 	uint32 bNeedToVerifyMaterials : 1 = true;
-	mutable uint32 bNeedToSetClipDataTextureMaterialParameter : 1 = true;
 	uint32 bNeedToGenerateWidgetList : 1 = true;
-	uint32 bWidgetPropertyDataAsTextureChanged : 1 = true;
-	uint32 bClipDataAsTextureChanged : 1 = true;
 
 	uint32 bPrevIsVisible : 1 = true;//is DreamWidget active in prev frame?
 
@@ -864,7 +838,6 @@ private:
 	mutable uint32 bUIMeshNeedToSetInitialParameters : 1 = true;//after clear UIMesh, it will need to set initial parameters to use again
 	mutable uint32 bIsViewProjectionMatrixDirty : 1 = true;
 	mutable FMatrix CacheViewProjectionMatrix = FMatrix::Identity;//cache to prevent multiple calculation in same frame
-	friend class FDreamUIRenderSceneProxy;
 	friend class FDreamCanvasHierarchyOrderTest;
 	friend class FDreamCanvasVisualChangeRebuildsDrawCallTest;
 	friend class FDreamCanvasSuspendedRebuildKeepsTheRequestTest;
@@ -888,19 +861,9 @@ private:
 
 	UPROPERTY(Transient, DuplicateTransient, TextExportTransient)
 	mutable TObjectPtr<UDreamUIMeshComponent> UIMesh;//current using UIMesh.
-	//DefaultMaterial created MaterialInstanceDynamic pool 
-	UPROPERTY(Transient, DuplicateTransient, TextExportTransient, VisibleAnywhere, Category = "DreamGUI", AdvancedDisplay)
-	TArray<TObjectPtr<UMaterialInstanceDynamic>> PooledDefaultMaterialList;
-	//Currently using material inside PooledDefaultMaterialList from this start index to end
-	UPROPERTY(Transient, VisibleAnywhere, Category = "DreamGUI", AdvancedDisplay)
-	int UsingMaterialStartIndex = 0;
-	UPROPERTY(Transient, DuplicateTransient, TextExportTransient, VisibleAnywhere, Category = "DreamGUI", AdvancedDisplay)
-	TMap<TObjectPtr<UMaterialInterface>, FDreamCanvasDynamicMaterialArrayContainer> MapSrcMatToDynamicMat;//trimmed by the decay pass in UpdateDrawCallMaterial once a tail sits idle a whole window
-	UPROPERTY(Transient, VisibleAnywhere, Category = "DreamGUI", AdvancedDisplay)
-	TMap<TObjectPtr<UMaterialInterface>, FDreamCanvasMaterialParameterCache> MapMatToParamCache;
 	/**
-	 * The proxies the canvas draws its materials through when DreamGUI answers their parameters in their place
-	 * (r.DreamUI.MaterialWrappers), per source material: where the material instances per source were pooled otherwise.
+	 * The proxies the canvas draws its materials through, per source material: DreamGUI answers the parameters it gives a
+	 * material in the material's place (FDreamUIMaterialProxy), and a proxy is taken back rebuild after rebuild.
 	 */
 	struct FMaterialProxyPool
 	{

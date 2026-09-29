@@ -44,22 +44,9 @@ namespace DreamTests::Lifecycle
 	};
 
 	/**
-	 * r.DreamUI.MaterialWrappers at InValue for the length of a scope, and back to what it was after. 0 has a
-	 * canvas draw its own materials through a material instance per draw call, as it did before its material
-	 * proxies: what the tests of those instances need made.
-	 */
-	struct FScopedMaterialWrappers : public FScopedConsoleVariable
-	{
-		explicit FScopedMaterialWrappers(int32 InValue)
-			: FScopedConsoleVariable(TEXT("r.DreamUI.MaterialWrappers"), InValue)
-		{
-		}
-	};
-
-	/**
 	 * A widget class whose root draws a rect block, compiled into /Temp/DreamGUITests/<InName>. The rect
-	 * block draws with a material, so the canvas that draws it makes material instances that read its
-	 * data textures -- with its material proxies switched off (FScopedMaterialWrappers). With bInSavedToDisk the class is written to its file as well, as a class a saved level
+	 * block draws with a material, whose parameters -- the canvas's data textures among them -- the canvas
+	 * answers through a proxy of it. With bInSavedToDisk the class is written to its file as well, as a class a saved level
 	 * refers to is -- a level read back by level streaming finds only what is on disk -- and the file is
 	 * removed again with the class.
 	 */
@@ -118,6 +105,9 @@ namespace DreamTests::Lifecycle
 
 	/** The first material instance on InMesh that reads a dynamic texture -- one of a canvas's data textures. */
 	UMaterialInstanceDynamic* FindMaterialReadingADynamicTexture(const UMeshComponent* InMesh);
+
+	/** The first material InMesh draws with, or null when it draws with none. */
+	UMaterialInterface* FindFirstMaterial(const UMeshComponent* InMesh);
 
 	/** InLines joined for a test message, or "none". */
 	FString JoinLines(const TArray<FString>& InLines);
