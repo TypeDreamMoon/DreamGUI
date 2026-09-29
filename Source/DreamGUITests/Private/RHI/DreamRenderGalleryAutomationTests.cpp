@@ -10,6 +10,10 @@
 #include "Engine/TextureRenderTarget2D.h"
 #include "Engine/World.h"
 #include "HAL/PlatformTime.h"
+#include "Interfaces/IPluginManager.h"
+#include "Kismet2/CompilerResultsLog.h"
+#include "Kismet2/KismetEditorUtilities.h"
+#include "Misc/Paths.h"
 #include "PixelFormat.h"
 #include "TextureResource.h"
 #include "UObject/Package.h"
@@ -21,7 +25,11 @@
 #include "Core/Components/DreamText.h"
 #include "Core/Components/DreamTexture.h"
 #include "Core/Components/DreamWidget.h"
+#include "Core/DreamTextUserWidget.h"
 #include "Core/DreamUISettings.h"
+#include "Core/DreamUserWidget.h"
+#include "Core/DreamWidgetGeneratedClass.h"
+#include "DreamWidgetBlueprint.h"
 #include "Core/DreamUITextData.h"
 #include "Extensions/Effects/DreamBackgroundBlur.h"
 #include "Extensions/Effects/DreamBackgroundPixelate.h"
@@ -124,6 +132,8 @@ namespace DreamRenderGalleryTestLocal
 		const FString& GetFailure() const { return Failure; }
 		FAutomationTestBase& GetTest() const { return Test; }
 		UDreamCanvas* GetCanvas() const { return CanvasComponent.Get(); }
+		UDreamWidget* GetRoot() const { return RootWidget.Get(); }
+		UWorld* GetWorld() const { return World; }
 
 		/** A registered widget of InSize under InParent (the root by default), its centre InPosition from the parent's, +Y up. */
 		UDreamWidget* AddWidget(const TCHAR* InName, FVector2D InSize, FVector2D InPosition, UDreamWidget* InParent = nullptr)
@@ -636,6 +646,92 @@ bool FDreamGalleryEffectsTest::RunTest(const FString& Parameters)
 	}
 	EnqueuePictureCheck(Stage, TEXT("Gallery_Effects"), 40000);
 	EnqueueTearDown(Stage);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamShippedSampleTest,
+	"DreamGUI.RHI.TheShippedSampleCompilesFromItsTextAndDrawsItsHeading",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter | EAutomationTestFlags::NonNullRHI)
+
+bool FDreamShippedSampleTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamRenderGalleryTestLocal;
+	// The README's "Try it", done the way it tells a user to: a widget Blueprint where the sample's `class` line says the
+	// class is, pointed at the file the plugin ships -- read from the plugin as installed -- compiled, and shown.
+	const TSharedPtr<IPlugin> Plugin = IPluginManager::Get().FindPlugin(TEXT("DreamGUI"));
+	if (!TestTrue(TEXT("The plugin is installed"), Plugin.IsValid()))
+	{
+		return false;
+	}
+	FString SamplePath = FPaths::ConvertRelativePathToFull(FPaths::Combine(Plugin->GetContentDir(), TEXT("Samples"), TEXT("HelloDreamGUI.dui")));
+	FPaths::NormalizeFilename(SamplePath);
+	if (!TestTrue(FString::Printf(TEXT("The sample ships with it (%s)"), *SamplePath), FPaths::FileExists(SamplePath)))
+	{
+		return false;
+	}
+	UPackage* Package = CreatePackage(TEXT("/Game/UI/WBP_HelloDreamGUI"));
+	Package->AddToRoot();
+	UDreamWidgetBlueprint* Blueprint = Cast<UDreamWidgetBlueprint>(FKismetEditorUtilities::CreateBlueprint(
+		UDreamTextUserWidget::StaticClass(), Package, FName(TEXT("WBP_HelloDreamGUI")), BPTYPE_Normal,
+		UDreamWidgetBlueprint::StaticClass(), UDreamWidgetGeneratedClass::StaticClass()));
+	UDreamTextUserWidget* Defaults = Blueprint != nullptr && Blueprint->GeneratedClass != nullptr
+		? Cast<UDreamTextUserWidget>(Blueprint->GeneratedClass->GetDefaultObject()) : nullptr;
+	if (!TestNotNull(TEXT("A widget Blueprint for it"), Defaults))
+	{
+		Package->RemoveFromRoot();
+		return false;
+	}
+	// Pick Text Source, as the designer's toolbar does it: the class default the compile reads the file from.
+	Defaults->SourceFile.FilePath = SamplePath;
+	FCompilerResultsLog Results;
+	FKismetEditorUtilities::CompileBlueprint(Blueprint, EBlueprintCompileOptions::SkipGarbageCollection, &Results);
+	AddInfo(FString::Printf(TEXT("The sample compiled with %d error(s) and %d warning(s)"), Results.NumErrors, Results.NumWarnings));
+	if (!TestEqual(TEXT("The sample compiles without an error"), Results.NumErrors, 0))
+	{
+		Package->RemoveFromRoot();
+		return false;
+	}
+
+	FStageRef Stage = BeginStage(*this);
+	if (!Stage->IsUsable())
+	{
+		Stage->TearDown();
+		Package->RemoveFromRoot();
+		return false;
+	}
+	UDreamUserWidget* Sample = CreateDreamWidget(Stage->GetWorld(), Blueprint->GeneratedClass.Get(), Stage->GetRoot());
+	if (!TestNotNull(TEXT("The sample's class makes a widget on the stage"), Sample))
+	{
+		Stage->TearDown();
+		Package->RemoveFromRoot();
+		return false;
+	}
+	EnqueueFrames(Stage, 3);
+	EnqueueFramesUntilDrawn(Stage, 200);
+	EnqueueFramesUntilStable(Stage);
+	EnqueueDo([this, Stage]()
+	{
+		TArray<FColor> Pixels;
+		FIntPoint Size = FIntPoint::ZeroValue;
+		if (!TestTrue(TEXT("The picture reads back"), Stage->ReadBack(Pixels, Size)))
+		{
+			return;
+		}
+		FDreamPixelProbe::SaveCapture(Pixels, Size, TEXT("Sample_HelloDreamGUI"));
+		// The heading is #E6E9F0 on the card; nothing else in the picture comes near it.
+		int32 HeadingPixels = 0;
+		for (const FColor& Pixel : Pixels)
+		{
+			HeadingPixels += Pixel.R > 160 && Pixel.G > 160 && Pixel.B > 160 ? 1 : 0;
+		}
+		TestTrue(FString::Printf(TEXT("The heading is drawn (%d bright pixels)"), HeadingPixels), HeadingPixels >= 100);
+	});
+	EnqueueTearDown(Stage);
+	EnqueueDo([Package]()
+	{
+		Package->RemoveFromRoot();
+	});
 	return true;
 }
 
