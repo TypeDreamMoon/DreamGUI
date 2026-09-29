@@ -60,27 +60,38 @@ public:
 	 * so that a push in between is not lost -- and is still reading this object for that look, and may
 	 * launch the next drain from there. Returning on the slot let an owner destroy this under the drain's
 	 * tail, which then wrote into freed memory: heap damage that surfaced wherever it happened to land.
+	 *
+	 * Nor is an idle slot proof that the queue is empty, which is why the count is asked last. Queued work
+	 * with no drain to run it is exactly the state a lost hand-off leaves (see ReleaseSlot), and returning
+	 * on it froze the editor: the canvas went on to read a geometry whose transform was still queued, and
+	 * spun on its bIsCalculating for ever, with nothing left to run it. Such work is run here instead.
 	 */
 	void WaitForAllFunctions()
 	{
 		for (;;)
 		{
-			UE::Tasks::FTask TaskToWait;
-			{
-				FScopeLock Lock(&DrainTaskLock);
-				TaskToWait = DrainTask;
-			}
-			if (TaskToWait.IsValid() && !TaskToWait.IsCompleted())
+			const UE::Tasks::FTask TaskToWait = GetDrainTask();
+			if (!TaskToWait.IsCompleted())
 			{
 				TaskToWait.Wait();
 				continue;//it may have launched the next drain on its way out
 			}
-			if (!bIsDraining.load(std::memory_order_acquire))
+			if (bIsDraining.load())
+			{
+				//a drain has taken the slot and is about to record its task; it will not be long
+				FPlatformProcess::YieldThread();
+				continue;
+			}
+			if (ItemCount.load() == 0)
 			{
 				return;
 			}
-			//a drain has taken the slot and is about to record its task; it will not be long
-			FPlatformProcess::YieldThread();
+			//pushed, and no drain coming for it: take the slot and run it on this thread
+			bool bExpected = false;
+			if (bIsDraining.compare_exchange_strong(bExpected, true))
+			{
+				DrainQueue();
+			}
 		}
 	}
 
@@ -103,6 +114,11 @@ public:
 	}
 
 private:
+	UE::Tasks::FTask GetDrainTask()
+	{
+		FScopeLock Lock(&DrainTaskLock);
+		return DrainTask;
+	}
 	void LaunchDrainTaskIfIdle()
 	{
 		bool bExpected = false;
@@ -124,15 +140,32 @@ private:
 			Function();
 			--ItemCount;
 		}
-		bIsDraining.store(false, std::memory_order_release);
-		//a push between the drain above and releasing the slot launched nothing of its own
-		if (bIsRunning && !FunctionQueue.IsEmpty())
+		ReleaseSlot();
+	}
+	/**
+	 * Gives up the slot, then relaunches if a push came in meanwhile: that push found the slot taken
+	 * and launched nothing of its own.
+	 *
+	 * This is one half of a hand-off whose other half is PushFunction (count, enqueue, try the slot).
+	 * The protocol only holds if at least one side sees the other, and that takes a total order over
+	 * both sides' accesses. A release store, then a plain read of the queue, does not give one: x86 lets
+	 * the read overtake the buffered store, so the drain could see the queue empty while the push saw
+	 * the slot still taken, and neither ran the function. It sat queued with its geometry flagged
+	 * bIsCalculating, and the next prepare of the canvas spun on the flag for ever. Both sides therefore
+	 * use sequentially consistent atomics, and the re-check reads the count, which is an atomic, instead
+	 * of the queue, whose emptiness test is a plain read.
+	 */
+	void ReleaseSlot()
+	{
+		bIsDraining.store(false);
+		if (bIsRunning && ItemCount.load() > 0)
 		{
 			LaunchDrainTaskIfIdle();
 		}
 	}
 
 	TQueue<TFunction<void()>, EQueueMode::Mpsc> FunctionQueue;
+	/** Pushed and not yet run. Counted before the enqueue, so it is never behind the queue. */
 	std::atomic<int> ItemCount = 0;
 
 	/** Guards DrainTask only; never held across a wait. */
