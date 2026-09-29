@@ -1244,6 +1244,8 @@ TSharedPtr<FDreamUIRenderSection> UDreamUIMeshComponent::SetupRenderSection(EDre
 		}
 		else
 		{
+			// Not taken back after all: its vertices are combined now if the batching left them for that.
+			InDrawCallData->CombineIfPending();
 			RenderSection = GetMeshRenderSectionFromPool(InDrawCallData->CombinedBatchMeshGeometryVertices.Num());
 		}
 		break;
@@ -1437,9 +1439,17 @@ void UDreamUIMeshComponent::UpdateMeshSection(const TSharedPtr<FDreamUIRenderSec
 		return;
 	}
 	auto MeshSectionPtr = static_cast<FDreamUIRenderSection_Mesh*>(InRenderSection.Get());
-	// The visuals' live vertices go in now, which are not those of the geometries the section was built from: it can
-	// no longer stand for them.
-	MeshSectionPtr->SourceGeometries.Reset();
+	// The refreshed copies' vertices go in now, with the indices the section already holds: it stands for those copies
+	// while their triangles are the ones it holds, and for nothing a rebuild could claim otherwise.
+	if (InDrawCallData->bTrianglesAsBuilt)
+	{
+		MeshSectionPtr->SourceGeometries = InDrawCallData->BatchMeshGeometryArray;
+		MeshSectionPtr->bSourceNormalAndTangent = RenderCanvas->GetActualRequireNormalAndTangent();
+	}
+	else
+	{
+		MeshSectionPtr->SourceGeometries.Reset();
+	}
 	if (MeshSectionPtr->RenderProxy)//if we have valid render-proxy then recreate or update data
 	{
 		MeshSectionPtr->BoundingBox = InDrawCallData->CombinedBounds.TransformBy(GetComponentTransform());
@@ -1994,6 +2004,38 @@ void UDreamUIMeshComponent::Init(UDreamCanvas* InCanvas)
 		RenderSectionMesh_CascadePool.Add(MoveTemp(Pool));
 	}
 }
+TArray<TArray<TSharedPtr<const FDreamUIGeometry>>> UDreamUIMeshComponent::GetMeshSectionGeometryLists() const
+{
+	TArray<TArray<TSharedPtr<const FDreamUIGeometry>>> Lists;
+	if (SceneProxy == nullptr)
+	{
+		return Lists;
+	}
+	auto AddFrom = [&Lists](const FDreamUIRenderSection* InSection)
+	{
+		if (InSection != nullptr && InSection->Type == EDreamUIRenderSectionType::Mesh && InSection->RenderProxy != nullptr)
+		{
+			const FDreamUIRenderSection_Mesh* MeshSection = static_cast<const FDreamUIRenderSection_Mesh*>(InSection);
+			if (MeshSection->SourceGeometries.Num() > 0)
+			{
+				Lists.Add(MeshSection->SourceGeometries);
+			}
+		}
+	};
+	for (const TSharedPtr<FDreamUIRenderSection>& Section : RenderSectionArray)
+	{
+		AddFrom(Section.Get());
+	}
+	for (const FMeshRenderSectionPool& Pool : RenderSectionMesh_CascadePool)
+	{
+		for (auto Node = Pool.RenderSections.GetHead(); Node != nullptr; Node = Node->GetNextNode())
+		{
+			AddFrom(Node->GetValue().Get());
+		}
+	}
+	return Lists;
+}
+
 void UDreamUIMeshComponent::ClaimPooledMeshSections(TArray<FDreamUIDrawCall>& InOutDrawCalls)
 {
 	// Without a scene proxy no section has anything on the GPU to keep.

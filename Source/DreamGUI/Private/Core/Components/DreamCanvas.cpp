@@ -1216,7 +1216,7 @@ void UDreamCanvas::BatchDrawCallAsync(const FVector2D& InCanvasLeftBottom, const
 
 void UDreamCanvas::BatchDrawCallAsync(const FVector2D& InCanvasLeftBottom, const FVector2D& InCanvasRightTop,
 	TArray<FDreamUIRenderData>&& InRenderDataArray, TArray<FDreamUIDrawCall>& InOutUIDrawCallList,
-	bool bCullElementsOutsideCanvasRect)
+	bool bCullElementsOutsideCanvasRect, const TArray<TArray<TSharedPtr<const FDreamUIGeometry>>>* InGeometryListsOnSections)
 {
 	SCOPE_CYCLE_COUNTER(STAT_BatchDrawCall);
 	DREAMUI_STAGE_SCOPE(Batching);
@@ -1524,11 +1524,25 @@ void UDreamCanvas::BatchDrawCallAsync(const FVector2D& InCanvasLeftBottom, const
 		}
 	}
 
-	for (auto& DrawCallItem : InOutUIDrawCallList)
 	{
-		if (DrawCallItem.Type == EDreamUIDrawCallType::BatchMesh)
+		TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_CombineDrawCalls);
+		for (auto& DrawCallItem : InOutUIDrawCallList)
 		{
-			DrawCallItem.ApplyBatchMeshGeometryToCombined();
+			if (DrawCallItem.Type != EDreamUIDrawCallType::BatchMesh)
+			{
+				continue;
+			}
+			// Built from the very copies one of the canvas's sections was built from: that section is taken back as it is,
+			// and nothing reads these vertices unless it is not (FDreamCanvasPreparedDrawCallData::GeometryListsOnSections).
+			if (InGeometryListsOnSections != nullptr && InGeometryListsOnSections->Contains(DrawCallItem.BatchMeshGeometryArray))
+			{
+				DrawCallItem.ApplyBatchMeshBoundsToCombined();
+				DrawCallItem.bCombinePending = true;
+			}
+			else
+			{
+				DrawCallItem.ApplyBatchMeshGeometryToCombined();
+			}
 		}
 	}
 }
@@ -1652,6 +1666,7 @@ void UDreamCanvas::UpdateCanvasDrawCall()
 				PreparedDrawCallData.bCullElementsOutsideCanvasRect = bCullElementsOutsideCanvas
 					&& (this->IsRootCanvas() || this->bForceRenderToTarget);
 				PrepareDrawCallBatchingData(PreparedDrawCallData.DataArray);
+				PreparedDrawCallData.GeometryListsOnSections = UIMesh->GetMeshSectionGeometryLists();
 				//push to async thread
 				DrawCallProcessingRunnable->PushPreparedDrawCallData(MoveTemp(PreparedDrawCallData));
 			}
@@ -1715,9 +1730,9 @@ void UDreamCanvas::UpdateDrawCallBatchData()
 				for (int i = 0; i < CurrentDrawCallData.DrawCallArray.Num(); i++)
 				{
 					auto& DrawCallItem = CurrentDrawCallData.DrawCallArray[i];
-					if (DrawCallItem.Type == EDreamUIDrawCallType::BatchMesh)
+					// Only a draw call one of whose elements changed is copied and goes up again.
+					if (DrawCallItem.Type == EDreamUIDrawCallType::BatchMesh && DrawCallItem.CopyBatchMeshGeometry())
 					{
-						DrawCallItem.CopyBatchMeshGeometry();
 						UIMesh->UpdateMeshSection(DrawCallItem.RenderSection, &DrawCallItem);
 					}
 				}

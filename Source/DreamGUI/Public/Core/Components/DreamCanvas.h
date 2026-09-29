@@ -965,7 +965,8 @@ public:
 	 */
 	static void BatchDrawCallAsync(const FVector2D& InCanvasLeftBottom, const FVector2D& InCanvasRightTop, const TArray<FDreamUIRenderData>& InRenderDataArray, TArray<FDreamUIDrawCall>& InOutUIDrawCallList, bool bCullElementsOutsideCanvasRect = false);
 	/** The same, using up InRenderDataArray: each element's prepared geometry goes into its draw call as it is. */
-	static void BatchDrawCallAsync(const FVector2D& InCanvasLeftBottom, const FVector2D& InCanvasRightTop, TArray<FDreamUIRenderData>&& InRenderDataArray, TArray<FDreamUIDrawCall>& InOutUIDrawCallList, bool bCullElementsOutsideCanvasRect = false);
+	static void BatchDrawCallAsync(const FVector2D& InCanvasLeftBottom, const FVector2D& InCanvasRightTop, TArray<FDreamUIRenderData>&& InRenderDataArray, TArray<FDreamUIDrawCall>& InOutUIDrawCallList, bool bCullElementsOutsideCanvasRect = false
+		, const TArray<TArray<TSharedPtr<const FDreamUIGeometry>>>* InGeometryListsOnSections = nullptr);
 	static bool Is2DUITransform(const FTransform& Transform);
 private:
 	void CheckUIMesh()const;

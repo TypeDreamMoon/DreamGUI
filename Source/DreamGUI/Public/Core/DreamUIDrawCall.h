@@ -123,7 +123,24 @@ public:
 
 	TWeakObjectPtr<class UDreamCanvas> ChildCanvas;//insert point to sort child canvas
 public:
-	void CopyBatchMeshGeometry();
+	/**
+	 * The cheap refresh, for a draw call whose layout still holds: each visual's copy of its geometry taken again
+	 * (UDreamVisualBatchMesh::GetGeometryForBatching) and its vertices written into the combined buffer where the batch
+	 * put them. False, and nothing written, when no visual changed -- the draw call then has nothing to upload -- or when
+	 * the layout no longer holds, which the coming rebuild fixes.
+	 */
+	bool CopyBatchMeshGeometry();
+	/** Whether every copy this draw call now holds has the triangles of the copy it was built from: see CopyBatchMeshGeometry. */
+	bool bTrianglesAsBuilt = true;
+	/**
+	 * Set by the batching when it left the combined buffers empty, because the canvas has a section built from these
+	 * very geometries and will take it back as it is. Everything that reads the buffers asks CombineIfPending first.
+	 */
+	bool bCombinePending = false;
+	/** The combined buffers, made now if the batching left them. */
+	void CombineIfPending();
+	/** The bounds ApplyBatchMeshGeometryToCombined works out, alone: for a draw call whose buffers are left. */
+	void ApplyBatchMeshBoundsToCombined();
 	void ApplyBatchMeshGeometryToCombined();
 	bool CanConsumeUIGeometryForBatchMesh(const FDreamUIGeometry& geo)const;
 };

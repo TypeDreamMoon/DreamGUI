@@ -209,6 +209,11 @@ public:
 	 * and both would upload.
 	 */
 	void ClaimPooledMeshSections(TArray<FDreamUIDrawCall>& InOutDrawCalls);
+	/**
+	 * The geometry lists this mesh's sections were built from, in use or pooled, where their vertices are on the GPU:
+	 * what a rebuild may find again, and so need not combine (see FDreamCanvasPreparedDrawCallData).
+	 */
+	TArray<TArray<TSharedPtr<const FDreamUIGeometry>>> GetMeshSectionGeometryLists() const;
 private:
 #if DEBUG_PRINT_MESH_MEMORY
 	int ExpandMeshSectionCount = 0;

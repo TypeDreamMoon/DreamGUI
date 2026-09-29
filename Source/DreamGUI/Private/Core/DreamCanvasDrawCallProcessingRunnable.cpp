@@ -61,7 +61,7 @@ void FDreamCanvasDrawCallProcessingRunnable::ProcessPreparedDrawCallData()
 			PendingDrawCallData.FrameNumber = PreparedDrawCallData.FrameNumber;
 			//the prepared data is this task's own and is not looked at again, so the batch may use it up
 			UDreamCanvas::BatchDrawCallAsync(PreparedDrawCallData.LeftBottomPoint, PreparedDrawCallData.RightTopPoint, MoveTemp(PreparedDrawCallData.DataArray), PendingDrawCallData.DrawCallArray
-				, PreparedDrawCallData.bCullElementsOutsideCanvasRect);
+				, PreparedDrawCallData.bCullElementsOutsideCanvasRect, &PreparedDrawCallData.GeometryListsOnSections);
 			//push to main thread queue
 			PendingQueue->Enqueue(MoveTemp(PendingDrawCallData));
 		}

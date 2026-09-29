@@ -11,6 +11,7 @@
 #include "Core/DreamCanvasDrawCallProcessingRunnable.h"
 #include "Core/DreamUIDrawCall.h"
 #include "Core/DreamUIGeometry.h"
+#include "Engine/Texture2D.h"
 
 /*
  * The stages between "the canvas has geometry" and "the mesh component has sections": the off-thread
@@ -303,6 +304,94 @@ bool FDreamDrawCallUnchangedGeometryIsNotCopiedAgainTest::RunTest(const FString&
 
 	Visual->GetGeometry()->BlendMode = EDreamUIBlendMode::Additive;
 	TestTrue(TEXT("A batching key changed with no vertex changing: a new copy as well"), Visual->GetGeometryForBatching() != AfterColour);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamDrawCallRefreshLeavesUnchangedDrawCallsTest,
+	"DreamGUI.Canvas.AVertexRefreshLeavesADrawCallWhoseElementsDidNotChangeAsItWas",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamDrawCallRefreshLeavesUnchangedDrawCallsTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamDrawCallPipelineTestLocal;
+
+	/*
+	 * The cheap refresh -- a colour or an alpha changed, nothing moved -- copied every draw call's vertices out of its
+	 * visuals and uploaded them all again. Each visual hands over its copy of its geometry now, the same copy while
+	 * nothing in it changed, so a draw call none of whose visuals changed has nothing to copy and nothing to upload.
+	 */
+	UDreamVisualBatchMesh* First = MakeVisualWithGeometry(MakeQuad(FVector2D(-10.0, -10.0), FVector2D(10.0, 10.0)));
+	UDreamVisualBatchMesh* Second = MakeVisualWithGeometry(MakeQuad(FVector2D(20.0, 20.0), FVector2D(40.0, 40.0)));
+	if (!TestNotNull(TEXT("A first visual"), First) || !TestNotNull(TEXT("...and a second"), Second))
+	{
+		return false;
+	}
+	FDreamUIDrawCall DrawCall(DreamUIQuadTree::Rectangle(FVector2D(-500.0, -500.0), FVector2D(500.0, 500.0)));
+	DrawCall.BatchMeshGeometryArray = { First->GetGeometryForBatching(), Second->GetGeometryForBatching() };
+	DrawCall.BatchMeshVisualArray = { First, Second };
+	DrawCall.VerticesCount = 8;
+	DrawCall.IndicesCount = 12;
+	DrawCall.ApplyBatchMeshGeometryToCombined();
+	if (!TestEqual(TEXT("The combined buffer holds both quads"), DrawCall.CombinedBatchMeshGeometryVertices.Num(), 8))
+	{
+		return false;
+	}
+
+	TestFalse(TEXT("Nothing changed: the refresh leaves the draw call as it was"), DrawCall.CopyBatchMeshGeometry());
+
+	Second->GetGeometry()->Vertices[0].Color = FColor::Red;
+	TestTrue(TEXT("A vertex of the second visual changed: the draw call is refreshed"), DrawCall.CopyBatchMeshGeometry());
+	TestEqual(TEXT("...its vertex, where the batch put it"), DrawCall.CombinedBatchMeshGeometryVertices[4].Color, FColor::Red);
+	TestTrue(TEXT("...and the draw call holds the visual's new copy"), DrawCall.BatchMeshGeometryArray[1] == Second->GetGeometryForBatching());
+	TestTrue(TEXT("...whose triangles are the ones the buffer has"), DrawCall.bTrianglesAsBuilt);
+	TestFalse(TEXT("Asked again with nothing new, it has nothing to do"), DrawCall.CopyBatchMeshGeometry());
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamDrawCallCombineLeftForATakenBackSectionTest,
+	"DreamGUI.Canvas.TheBatchingLeavesUncombinedADrawCallWhoseSectionWillBeTakenBackAsItIs",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamDrawCallCombineLeftForATakenBackSectionTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamDrawCallPipelineTestLocal;
+
+	/*
+	 * Combining a draw call's geometries into one buffer is most of what the batching does, and a draw call built from
+	 * the very copies one of the canvas's sections was built from does not need it: the section is taken back as it is.
+	 * The batching leaves such a draw call's buffers empty, works out its bounds alone, and says so; anything that
+	 * reads the buffers combines them first. Two quads of different textures make two draw calls; the first is one the
+	 * canvas already has a section for.
+	 */
+	FDreamUIGeometry Left = MakeQuad(FVector2D(-40.0, -10.0), FVector2D(-20.0, 10.0));
+	Left.Texture = UTexture2D::CreateTransient(4, 4);
+	FDreamUIGeometry Right = MakeQuad(FVector2D(20.0, -10.0), FVector2D(40.0, 10.0));
+	Right.Texture = UTexture2D::CreateTransient(4, 4);
+	TArray<FDreamUIRenderData> RenderDataArray;
+	RenderDataArray.Add(MakeBatchMeshRenderData(Left));
+	RenderDataArray.Add(MakeBatchMeshRenderData(Right));
+	const TArray<TArray<TSharedPtr<const FDreamUIGeometry>>> OnSections = { { RenderDataArray[0].BatchMeshGeometry } };
+
+	TArray<FDreamUIDrawCall> DrawCallList;
+	UDreamCanvas::BatchDrawCallAsync(CanvasLeftBottom, CanvasRightTop, MoveTemp(RenderDataArray), DrawCallList, false, &OnSections);
+	if (!TestEqual(TEXT("Two textures, two draw calls"), DrawCallList.Num(), 2))
+	{
+		return false;
+	}
+	TestTrue(TEXT("The draw call a section holds already is left uncombined"), DrawCallList[0].bCombinePending);
+	TestEqual(TEXT("...its buffer empty"), DrawCallList[0].CombinedBatchMeshGeometryVertices.Num(), 0);
+	TestTrue(TEXT("...but its bounds worked out"), DrawCallList[0].CombinedBounds.IsValid != 0);
+	TestFalse(TEXT("The other is combined as ever"), DrawCallList[1].bCombinePending);
+	TestEqual(TEXT("...its buffer full"), DrawCallList[1].CombinedBatchMeshGeometryVertices.Num(), 4);
+
+	const FBox BoundsLeftAlone = DrawCallList[0].CombinedBounds;
+	DrawCallList[0].CombineIfPending();
+	TestFalse(TEXT("Asked for, the buffer is combined"), DrawCallList[0].bCombinePending);
+	TestEqual(TEXT("...all of it"), DrawCallList[0].CombinedBatchMeshGeometryVertices.Num(), 4);
+	TestEqual(TEXT("...with its indices"), DrawCallList[0].CombinedBatchMeshGeometryTriangles.Num(), 6);
+	TestTrue(TEXT("...and the bounds are the ones worked out alone"), DrawCallList[0].CombinedBounds.Equals(BoundsLeftAlone));
 	return true;
 }
 
