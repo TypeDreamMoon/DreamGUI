@@ -68,11 +68,11 @@ namespace DreamRenderGalleryTestLocal
 	static constexpr int32 StableFrames = 3;
 	static constexpr double StableTimeoutSeconds = 30.0;
 
-	/** A RenderTarget root canvas in the editor's world, Extent pixels square, and the scene a test puts on it. */
+	/** A RenderTarget root canvas in the editor's world, Extent pixels square unless asked otherwise, and the scene a test puts on it. */
 	class FGalleryStage
 	{
 	public:
-		explicit FGalleryStage(FAutomationTestBase& InTest)
+		explicit FGalleryStage(FAutomationTestBase& InTest, FIntPoint InSize = FIntPoint(Extent, Extent))
 			: Test(InTest)
 		{
 			if (GEditor == nullptr || GEditor->GetEditorWorldContext().World() == nullptr)
@@ -91,14 +91,14 @@ namespace DreamRenderGalleryTestLocal
 			Target->AddressX = TextureAddress::TA_Clamp;
 			Target->AddressY = TextureAddress::TA_Clamp;
 			Target->ClearColor = FLinearColor::Black;
-			Target->InitCustomFormat(static_cast<uint32>(Extent), static_cast<uint32>(Extent), EPixelFormat::PF_B8G8R8A8, false);
+			Target->InitCustomFormat(static_cast<uint32>(InSize.X), static_cast<uint32>(InSize.Y), EPixelFormat::PF_B8G8R8A8, false);
 			Target->UpdateResourceImmediate(true);
 			TargetTexture.Reset(Target);
 
 			UDreamWidget* Root = NewObject<UDreamWidget>(World, NAME_None, RF_Transient);
 			Root->SetDisplayName(TEXT("DreamRenderGalleryRoot"));
-			Root->SetWidth(static_cast<float>(Extent));
-			Root->SetHeight(static_cast<float>(Extent));
+			Root->SetWidth(static_cast<float>(InSize.X));
+			Root->SetHeight(static_cast<float>(InSize.Y));
 			Root->OnRegister();
 			RootWidget.Reset(Root);
 
@@ -324,9 +324,9 @@ namespace DreamRenderGalleryTestLocal
 
 	using FStageRef = TSharedRef<FGalleryStage>;
 
-	FStageRef BeginStage(FAutomationTestBase& InTest)
+	FStageRef BeginStage(FAutomationTestBase& InTest, FIntPoint InSize = FIntPoint(Extent, Extent))
 	{
-		FStageRef Stage = MakeShared<FGalleryStage>(InTest);
+		FStageRef Stage = MakeShared<FGalleryStage>(InTest, InSize);
 		if (!Stage->IsUsable())
 		{
 			InTest.AddError(FString::Printf(TEXT("The gallery's render-target stage did not come up: %s."), *Stage->GetFailure()));
@@ -693,7 +693,8 @@ bool FDreamShippedSampleTest::RunTest(const FString& Parameters)
 		return false;
 	}
 
-	FStageRef Stage = BeginStage(*this);
+	// A small screen, not the gallery's square: the sample's card is meant to be 420 wide.
+	FStageRef Stage = BeginStage(*this, FIntPoint(640, 360));
 	if (!Stage->IsUsable())
 	{
 		Stage->TearDown();
@@ -707,11 +708,34 @@ bool FDreamShippedSampleTest::RunTest(const FString& Parameters)
 		Package->RemoveFromRoot();
 		return false;
 	}
+	// Placed the way adding it to the viewport places a page (UDreamScreenUISubsystem::ConfigurePage): full-bleed on what
+	// it is added to, the stage here. Left as it was made, it is a widget's default size, and a screen that fills
+	// whatever it is added to fills that.
+	Sample->SetHorizontalAndVerticalAnchorMinMax(FVector2D::ZeroVector, FVector2D(1.0, 1.0), false, false);
+	Sample->SetAnchoredPosition(FVector2D::ZeroVector);
+	Sample->SetSizeDelta(FVector2D::ZeroVector);
 	EnqueueFrames(Stage, 3);
 	EnqueueFramesUntilDrawn(Stage, 200);
 	EnqueueFramesUntilStable(Stage);
-	EnqueueDo([this, Stage]()
+	EnqueueDo([this, Stage, Placed = TWeakObjectPtr<UDreamUserWidget>(Sample)]()
 	{
+		// Where the sample's parts stand on the stage, for when the picture is not what it should be.
+		FString Parts;
+		if (const UDreamUserWidget* Widget = Placed.Get())
+		{
+			Parts = FString::Printf(TEXT("sample %.0f x %.0f"), Widget->GetWidth(), Widget->GetHeight());
+			for (const TCHAR* Name : { TEXT("Root"), TEXT("Card"), TEXT("Backdrop"), TEXT("Column"), TEXT("Heading"), TEXT("Rule"), TEXT("Subheading") })
+			{
+				const UDreamWidget* Part = Widget->FindChildByDisplayName(Name, true);
+				Parts += Part != nullptr
+					? FString::Printf(TEXT(", %s %.0f x %.0f%s%s"), Name, Part->GetWidth(), Part->GetHeight(),
+						Part->GetWidgetActiveInHierarchy() ? TEXT("") : TEXT(" inactive"),
+						Part->GetRenderCanvas() == Stage->GetCanvas() ? TEXT("") : TEXT(" on another canvas"))
+					: FString::Printf(TEXT(", no %s"), Name);
+			}
+		}
+		AddInfo(FString::Printf(TEXT("On the stage: %s; the stage's canvas has %d draw call(s)"),
+			Parts.IsEmpty() ? TEXT("the sample is gone") : *Parts, Stage->GetCanvas() != nullptr ? Stage->GetCanvas()->GetDrawCallCount() : -1));
 		TArray<FColor> Pixels;
 		FIntPoint Size = FIntPoint::ZeroValue;
 		if (!TestTrue(TEXT("The picture reads back"), Stage->ReadBack(Pixels, Size)))
@@ -719,13 +743,32 @@ bool FDreamShippedSampleTest::RunTest(const FString& Parameters)
 			return;
 		}
 		FDreamPixelProbe::SaveCapture(Pixels, Size, TEXT("Sample_HelloDreamGUI"));
-		// The heading is #E6E9F0 on the card; nothing else in the picture comes near it.
+		// The heading is #E6E9F0 on the card; nothing else in the picture comes near it -- the text under it is #8C93A6.
 		int32 HeadingPixels = 0;
-		for (const FColor& Pixel : Pixels)
+		int32 TopRow = Size.Y;
+		int32 BottomRow = -1;
+		for (int32 Y = 0; Y < Size.Y; ++Y)
 		{
-			HeadingPixels += Pixel.R > 160 && Pixel.G > 160 && Pixel.B > 160 ? 1 : 0;
+			for (int32 X = 0; X < Size.X; ++X)
+			{
+				const FColor& Pixel = Pixels[Y * Size.X + X];
+				if (Pixel.R > 160 && Pixel.G > 160 && Pixel.B > 160)
+				{
+					++HeadingPixels;
+					TopRow = FMath::Min(TopRow, Y);
+					BottomRow = FMath::Max(BottomRow, Y);
+				}
+			}
 		}
-		TestTrue(FString::Printf(TEXT("The heading is drawn (%d bright pixels)"), HeadingPixels), HeadingPixels >= 100);
+		if (!TestTrue(FString::Printf(TEXT("The heading is drawn (%d bright pixels)"), HeadingPixels), HeadingPixels >= 100))
+		{
+			return;
+		}
+		// Laid out as written: one line of 28-pixel type at the top of a card in the middle of the screen. Measured at the
+		// wrong width, the heading comes out one character per line, far taller than the card is meant to be.
+		TestTrue(FString::Printf(TEXT("The heading is one line (rows %d to %d)"), TopRow, BottomRow), BottomRow - TopRow < 2 * 28);
+		TestTrue(FString::Printf(TEXT("and it is in the top half of the screen, where the card's top is (rows %d to %d of %d)"), TopRow, BottomRow, Size.Y),
+			BottomRow < Size.Y / 2);
 	});
 	EnqueueTearDown(Stage);
 	EnqueueDo([Package]()

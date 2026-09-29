@@ -531,6 +531,10 @@ Known gaps:
 
 - `LineHeightPercentage` and `WrapTextAt` are only reachable through a real font asset, so they are
   not covered by tests.
+- When a panel measures a text, the text breaks its lines at its `WrapTextAt` if it has one and at its
+  own width if it does not -- never at the width the panel is about to give it. A wrapping text in a Fill
+  slot of a vertical box therefore needs a `WrapTextAt`, or it is measured as one character per line;
+  the sample's heading and subheading carry one.
 - One content asset still carries `Lex` in its name
   (`Content/Blueprints/LexEventSystemActor_EnhancedInput`). Renaming a `.uasset` file does not rename
   the object inside it, so only an editor-side rename can change it; the code points at what is
