@@ -26,20 +26,22 @@ FDreamUIGizmoMesh::FDreamUIGizmoMesh(const TArray<FDreamUIMeshVertex>& InVertexA
 FDreamUIGizmoMesh::~FDreamUIGizmoMesh()
 {
 	/**
-	 * FRenderResource::ReleaseResource is render-thread only, and this destructor runs wherever the
-	 * last shared pointer to the mesh is dropped -- which for the editor gizmo lists is the game
-	 * thread. The buffers are members, so they cannot be handed to a deferred release and left to
-	 * outlive the object: the release has to be enqueued and waited for.
+	 * This runs wherever the last shared pointer to the mesh is dropped. On the game thread the render thread may still be
+	 * drawing it, and the buffers are members, which cannot be handed to a deferred release and left to outlive the object:
+	 * the release is enqueued and waited for. Anywhere else it is the render thread's side letting go -- the render thread,
+	 * or a render task deleting the renderer that held the frame's gizmos -- where a flush is not allowed (it is the game
+	 * thread's) and not needed: nothing that still draws the mesh holds it, and a draw already recorded keeps the RHI
+	 * buffers it names alive by itself.
 	 */
-	if (IsInRenderingThread())
-	{
-		IndexBuffer.ReleaseResource();
-		VertexBuffer.ReleaseResource();
-	}
-	else
+	if (IsInGameThread())
 	{
 		ReleaseResourceAndFlush(&IndexBuffer);
 		ReleaseResourceAndFlush(&VertexBuffer);
+	}
+	else
+	{
+		IndexBuffer.ReleaseResource();
+		VertexBuffer.ReleaseResource();
 	}
 }
 

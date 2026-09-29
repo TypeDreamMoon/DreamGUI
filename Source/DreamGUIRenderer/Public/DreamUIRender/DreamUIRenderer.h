@@ -306,9 +306,22 @@ private:
 #endif
 #if WITH_EDITOR
 private:
+	/**
+	 * Render thread: the gizmos of the frame last sent (SubmitGizmoMeshes), drawn by every view of every family until the
+	 * next frame's replace them. A pass takes its own copy of the list, so what it draws lives until it has drawn it.
+	 */
 	TArray<TSharedPtr<FDreamUIGizmoMesh>> ScreenSpaceGizmoMeshArray;
 	TArray<TSharedPtr<FDreamUIGizmoMesh>> WorldSpaceGizmoMeshArray;
-	void RenderGizmoMesh_RenderThread(TArray<TSharedPtr<FDreamUIGizmoMesh>>& HelperGizmoDataMap
+	/** Game thread: the gizmos added in the frame PendingGizmoFrame, not sent yet. */
+	TArray<TSharedPtr<FDreamUIGizmoMesh>> PendingScreenSpaceGizmoMeshes;
+	TArray<TSharedPtr<FDreamUIGizmoMesh>> PendingWorldSpaceGizmoMeshes;
+	uint64 PendingGizmoFrame = 0;
+	uint64 SubmittedGizmoFrame = 0;
+	/** Game thread: the pending gizmos become this frame's, dropping a frame's that were never sent. */
+	void BeginGizmoFrame();
+	/** Game thread, as a frame's first view family begins: this frame's gizmos replace the render thread's. */
+	void SubmitGizmoMeshes();
+	void RenderGizmoMesh_RenderThread(const TArray<TSharedPtr<FDreamUIGizmoMesh>>& HelperGizmoDataMap
 	, FRDGBuilder& GraphBuilder
 	, FSceneView* RenderView
 	, const FIntRect& ViewRect

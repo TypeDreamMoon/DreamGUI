@@ -179,7 +179,9 @@ void FDreamUIRenderer::SetupViewProjectionMatrix(FSceneViewProjectionData& InOut
 }
 void FDreamUIRenderer::BeginRenderViewFamily(FSceneViewFamily& InViewFamily)
 {
-
+#if WITH_EDITOR
+	SubmitGizmoMeshes();
+#endif
 }
 void FDreamUIRenderer::PostRenderView_RenderThread(FRDGBuilder& GraphBuilder, FSceneView& InView)
 {
@@ -1327,25 +1329,19 @@ void FDreamUIRenderer::RecordScreenSpace_RenderThread(FRDGBuilder& GraphBuilder,
 		}
 		else
 		{
-			// The gizmo array's only Reset is inside the pass that draws it, so every path that leaves
-			// without drawing has to drop the meshes itself. An editor world that never plays takes one
-			// of these three every frame, and the array grew for the life of the renderer.
 			if (!RenderThreadViewParameter.bCanRenderScreenSpace)
 			{
-				ScreenSpaceGizmoMeshArray.Reset();
 				return;
 			}
 			if (RenderThreadViewParameter.bIsPlaying)
 			{
 				if (!InView.bIsGameView)
 				{
-					ScreenSpaceGizmoMeshArray.Reset();
 					return;
 				}
 			}
 			else
 			{
-				ScreenSpaceGizmoMeshArray.Reset();
 				return;
 			}
 		}
@@ -1951,7 +1947,7 @@ void FDreamUIRenderer::UpdateRenderTargetRenderer(UTextureRenderTarget2D* InRend
 }
 
 #if WITH_EDITOR
-void FDreamUIRenderer::RenderGizmoMesh_RenderThread(TArray<TSharedPtr<FDreamUIGizmoMesh>>& HelperGizmoDataMap,
+void FDreamUIRenderer::RenderGizmoMesh_RenderThread(const TArray<TSharedPtr<FDreamUIGizmoMesh>>& HelperGizmoDataMap,
 	FRDGBuilder& GraphBuilder, FSceneView* RenderView, const FIntRect& ViewRect, uint8 NumSamples,
 	FRDGTextureRef RenderTargetTexture)
 {
@@ -1962,7 +1958,7 @@ void FDreamUIRenderer::RenderGizmoMesh_RenderThread(TArray<TSharedPtr<FDreamUIGi
 		RDG_EVENT_NAME("DreamUI_RenderHelperLine"),
 		PassParameters,
 		ERDGPassFlags::Raster,
-		[this, &HelperGizmoDataMap, RenderView, ViewRect, NumSamples](FRHICommandListImmediate& RHICmdList)
+		[this, Gizmos = TArray<TSharedPtr<FDreamUIGizmoMesh>>(HelperGizmoDataMap), RenderView, ViewRect, NumSamples](FRHICommandListImmediate& RHICmdList)
 		{
 			RHICmdList.SetViewport(ViewRect.Min.X, ViewRect.Min.Y, 0.0f, ViewRect.Max.X, ViewRect.Max.Y, 1.0f);
 
@@ -1973,7 +1969,7 @@ void FDreamUIRenderer::RenderGizmoMesh_RenderThread(TArray<TSharedPtr<FDreamUIGi
 			TShaderMapRef<FDreamUIBasePS> PixelShader(GlobalShaderMap, PermutationVector);
 			const FMatrix ViewProjection = RenderView->ViewMatrices.GetWorldToClip();
 
-			for (auto& RenderParameter : HelperGizmoDataMap)
+			for (const TSharedPtr<FDreamUIGizmoMesh>& RenderParameter : Gizmos)
 			{
 				auto& LocalBounds = RenderParameter->LocalBounds;
 				auto& LocalToWorldMatrix = RenderParameter->LocalToWorldMatrix;
@@ -2042,30 +2038,61 @@ void FDreamUIRenderer::RenderGizmoMesh_RenderThread(TArray<TSharedPtr<FDreamUIGi
 				RHICmdList.SetStreamSource(0, RenderParameter->GetVertexBuffer().GetRHI(), 0);
 				RHICmdList.DrawIndexedPrimitive(RenderParameter->GetIndexBuffer().GetRHI(), 0, 0, RenderParameter->GetNumVertices(), 0, NumPrimitives, 1);
 			}
-			HelperGizmoDataMap.Reset();
 		});
+}
+
+void FDreamUIRenderer::BeginGizmoFrame()
+{
+	check(IsInGameThread());
+	if (PendingGizmoFrame == GFrameCounter)
+	{
+		return;
+	}
+	PendingGizmoFrame = GFrameCounter;
+	if (PendingScreenSpaceGizmoMeshes.Num() > 0 || PendingWorldSpaceGizmoMeshes.Num() > 0)
+	{
+		// A frame no view family began in: its gizmos were never sent, and are not drawn late. Let go of on the render thread,
+		// where a mesh's buffers are released without a flush.
+		ENQUEUE_RENDER_COMMAND(FDreamUIRender_DropGizmoMeshes)(
+			[ScreenMeshes = MoveTemp(PendingScreenSpaceGizmoMeshes), WorldMeshes = MoveTemp(PendingWorldSpaceGizmoMeshes)](FRHICommandListImmediate& RHICmdList)
+			{
+			});
+		PendingScreenSpaceGizmoMeshes.Reset();
+		PendingWorldSpaceGizmoMeshes.Reset();
+	}
+}
+
+void FDreamUIRenderer::SubmitGizmoMeshes()
+{
+	check(IsInGameThread());
+	if (SubmittedGizmoFrame == GFrameCounter)
+	{
+		return;
+	}
+	SubmittedGizmoFrame = GFrameCounter;
+	BeginGizmoFrame();
+	// Every view of every family this frame draws the same gizmos: the list is replaced once a frame, not emptied by the
+	// first view that draws it -- a second viewport saw none. The meshes it replaces are let go of on the render thread.
+	ENQUEUE_RENDER_COMMAND(FDreamUIRender_SetGizmoMeshes)(
+		[Renderer = this, ScreenMeshes = MoveTemp(PendingScreenSpaceGizmoMeshes), WorldMeshes = MoveTemp(PendingWorldSpaceGizmoMeshes)](FRHICommandListImmediate& RHICmdList) mutable
+		{
+			Renderer->ScreenSpaceGizmoMeshArray = MoveTemp(ScreenMeshes);
+			Renderer->WorldSpaceGizmoMeshArray = MoveTemp(WorldMeshes);
+		});
+	PendingScreenSpaceGizmoMeshes.Reset();
+	PendingWorldSpaceGizmoMeshes.Reset();
 }
 
 void FDreamUIRenderer::AddScreenSpaceGizmoMesh(TSharedPtr<FDreamUIGizmoMesh> InMesh)
 {
-	auto ViewExtension = this;
-	ENQUEUE_RENDER_COMMAND(FDreamUIRender_AddLineRender)(
-		[ViewExtension, InMesh](FRHICommandListImmediate& RHICmdList)
-		{
-			ViewExtension->ScreenSpaceGizmoMeshArray.Add(InMesh);
-		}
-	);
+	BeginGizmoFrame();
+	PendingScreenSpaceGizmoMeshes.Add(MoveTemp(InMesh));
 }
 
 void FDreamUIRenderer::AddWorldSpaceGizmoMesh(TSharedPtr<FDreamUIGizmoMesh> InMesh)
 {
-	auto ViewExtension = this;
-	ENQUEUE_RENDER_COMMAND(FDreamUIRender_AddLineRender)(
-		[ViewExtension, InMesh](FRHICommandListImmediate& RHICmdList)
-		{
-			ViewExtension->WorldSpaceGizmoMeshArray.Add(InMesh);
-		}
-	);
+	BeginGizmoFrame();
+	PendingWorldSpaceGizmoMeshes.Add(MoveTemp(InMesh));
 }
 #endif
 
