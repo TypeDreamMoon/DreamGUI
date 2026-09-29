@@ -475,20 +475,30 @@ namespace DreamUIRendererLocal
 	 * or the mobile one, whichever path drew the view -- and the dummy depth where there is none to read: a view the
 	 * scene renderer did not make, or a mobile depth that never leaves tile memory. It was read before from the view
 	 * family cast to the renderer's private class, which only a private include path could see.
+	 *
+	 * The deferred buffer is read as the scene renderer left it, not made again: by the time a view is done, it holds
+	 * every scene texture. Making one is a whole struct of textures to set up for every renderer and every view, every
+	 * frame, and the render thread paid for it on each of them. The mobile renderer sets its buffer up pass by pass and
+	 * may have left the depth out, so for it one is made that asks for the depth alone.
 	 */
 	FRDGTextureRef SceneDepthOf(FRDGBuilder& GraphBuilder, const FSceneView& InView)
 	{
+		TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_SceneDepth);
 		FRDGTextureRef Depth = nullptr;
 		if (InView.bIsViewInfo)
 		{
-			const FSceneTextureShaderParameters Parameters = CreateSceneTextureShaderParameters(GraphBuilder, InView, ESceneTextureSetupMode::SceneDepth);
+			const FSceneTextureShaderParameters Parameters = GetSceneTextureShaderParameters(InView);
 			if (Parameters.SceneTextures)
 			{
 				Depth = Parameters.SceneTextures->GetContents()->SceneDepthTexture;
 			}
 			else if (Parameters.MobileSceneTextures)
 			{
-				Depth = Parameters.MobileSceneTextures->GetContents()->SceneDepthTexture;
+				if (const TRDGUniformBufferRef<FMobileSceneTextureUniformParameters> Mobile
+					= CreateMobileSceneTextureUniformBuffer(GraphBuilder, InView, EMobileSceneTextureSetupMode::SceneDepth))
+				{
+					Depth = Mobile->GetContents()->SceneDepthTexture;
+				}
 			}
 		}
 		return Depth != nullptr ? Depth : GSystemTextures.GetDepthDummy(GraphBuilder);
@@ -719,8 +729,11 @@ void FDreamUIRenderer::RenderDreamUI_RenderThread(
 	FVector4f DepthTextureScaleOffset;
 	FVector4f ColorTextureScaleOffset;
 	// Once for the view: taken from the view the scene renderer made. The copies of it made below for the world- and
-	// screen-space passes are plain FSceneViews and cannot be asked.
-	const FRDGTextureRef SceneDepth = DreamUIRendererLocal::SceneDepthOf(GraphBuilder, InView);
+	// screen-space passes are plain FSceneViews and cannot be asked. A render-target canvas draws into a target of its
+	// own and tests nothing against the scene, so it binds the dummy and does not ask at all.
+	const FRDGTextureRef SceneDepth = RendererType == EDreamUIRendererType::RenderTarget
+		? GSystemTextures.GetDepthDummy(GraphBuilder)
+		: DreamUIRendererLocal::SceneDepthOf(GraphBuilder, InView);
 	if (RendererType == EDreamUIRendererType::RenderTarget)//render-target mode
 	{
 		if (!bIsMainViewport)//render to scene capture (or other capture)
