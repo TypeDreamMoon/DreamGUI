@@ -724,8 +724,18 @@ void UDreamCanvas::MarkWidgetUpdate(UDreamWidget* InWidget, bool bRebuildDrawCal
 	WidgetsToUpdate.Add(InWidget);
 }
 
-bool UDreamCanvas::GatherWidgetsToUpdateInListOrder(const TArray<TWeakObjectPtr<UDreamWidget>>& InAsking, TArray<UDreamWidget*>& OutWidgets) const
+bool UDreamCanvas::GatherWidgetsToUpdateInListOrder(const TArray<TWeakObjectPtr<UDreamWidget>>& InAsking, TArray<UDreamWidget*>& OutWidgets)
 {
+	if (!bWidgetListIndexValid)
+	{
+		bWidgetListIndexValid = true;
+		WidgetListIndex.Reset();
+		WidgetListIndex.Reserve(WidgetList.Num());
+		for (int32 Index = 0; Index < WidgetList.Num(); ++Index)
+		{
+			WidgetListIndex.Add(TObjectKey<UDreamWidget>(WidgetList[Index]), Index);
+		}
+	}
 	TArray<TPair<int32, UDreamWidget*>, TInlineAllocator<64>> Ordered;
 	for (const TWeakObjectPtr<UDreamWidget>& WeakWidget : InAsking)
 	{
@@ -755,6 +765,25 @@ bool UDreamCanvas::GatherWidgetsToUpdateInListOrder(const TArray<TWeakObjectPtr<
 
 bool UDreamCanvas::RefreshPreparedDataCache()
 {
+	if (!bPreparedDataIndexValid)
+	{
+		bPreparedDataIndexValid = true;
+		PreparedDataIndex.Reset();
+		for (int32 Entry = 0; Entry < PreparedDataCache.Num(); ++Entry)
+		{
+			const FDreamUIRenderData& Data = PreparedDataCache[Entry];
+			if (Data.Type != EDreamUIDrawCallType::BatchMesh)
+			{
+				continue;
+			}
+			// A visual gone since leaves its widget out, and a widget with no entry that is drawn now sends the prepare
+			// back to walking every widget.
+			if (UDreamVisualBatchMesh* Visual = Data.BatchMeshVisualObject.Get())
+			{
+				PreparedDataIndex.Add(TObjectKey<UDreamWidget>(Visual->GetWidget()), Entry);
+			}
+		}
+	}
 	for (const TWeakObjectPtr<UDreamWidget>& WeakWidget : WidgetsToPrepare)
 	{
 		UDreamWidget* Widget = WeakWidget.Get();
@@ -1228,7 +1257,6 @@ void UDreamCanvas::PrepareDrawCallBatchingData(TArray<FDreamUIRenderData>& OutRe
 		WidgetsToPrepare.Reset();
 		return;
 	}
-	PreparedDataIndex.Reset();
 	for (int i = 0; i < WidgetList.Num(); i++)
 	{
 		auto& Widget = WidgetList[i];
@@ -1287,7 +1315,6 @@ void UDreamCanvas::PrepareDrawCallBatchingData(TArray<FDreamUIRenderData>& OutRe
 					//the visual's copy, made again only when the geometry changed since the last one
 					RenderData.BatchMeshGeometry = DreamVisualBatchMesh->GetGeometryForBatching();
 					RenderData.BatchMeshVisualObject = DreamVisualBatchMesh;
-					PreparedDataIndex.Add(TObjectKey<UDreamWidget>(Widget), OutRenderDataArray.Num());
 					OutRenderDataArray.Add(MoveTemp(RenderData));
 				}
 				break;
@@ -1322,6 +1349,7 @@ void UDreamCanvas::PrepareDrawCallBatchingData(TArray<FDreamUIRenderData>& OutRe
 	// Kept for the prepares to come: see RefreshPreparedDataCache.
 	PreparedDataCache = OutRenderDataArray;
 	bPreparedDataCacheValid = true;
+	bPreparedDataIndexValid = false;
 	bPrepareEveryWidget = false;
 	WidgetsToPrepare.Reset();
 }
@@ -1772,13 +1800,8 @@ void UDreamCanvas::UpdateCanvasDrawCall()
 			bNeedToGenerateWidgetList = false;
 			WidgetList.Reset();
 			LOCAL::CollectRenderWidget(GetWidget(), this, WidgetList);
-			// A new list: the places kept are the old one's, and every widget is looked at.
-			WidgetListIndex.Reset();
-			WidgetListIndex.Reserve(WidgetList.Num());
-			for (int32 Index = 0; Index < WidgetList.Num(); ++Index)
-			{
-				WidgetListIndex.Add(TObjectKey<UDreamWidget>(WidgetList[Index]), Index);
-			}
+			// A new list: every widget is looked at, and the places kept are the old list's until widgets next ask alone.
+			bWidgetListIndexValid = false;
 			bUpdateEveryWidget = true;
 		}
 

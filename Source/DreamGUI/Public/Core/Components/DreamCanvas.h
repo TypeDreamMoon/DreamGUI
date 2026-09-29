@@ -965,17 +965,22 @@ private:
 	TArray<TWeakObjectPtr<UDreamWidget>> WidgetsToUpdate;
 	/** Something other than a widget woke the canvas: the next update looks at every widget. */
 	bool bUpdateEveryWidget = true;
-	/** Each widget's place in WidgetList, made with the list: the order the widgets that asked are looked at in. */
+	/**
+	 * Each widget's place in WidgetList: the order the widgets that asked are looked at in. Made when widgets first ask
+	 * alone after the list was made, which a list made again every frame never sees (bWidgetListIndexValid).
+	 */
 	TMap<TObjectKey<UDreamWidget>, int32> WidgetListIndex;
+	bool bWidgetListIndexValid = false;
 	/** InAsking in list order, once each; false when one of them is gone or not in the list, which is then behind. */
-	bool GatherWidgetsToUpdateInListOrder(const TArray<TWeakObjectPtr<UDreamWidget>>& InAsking, TArray<UDreamWidget*>& OutWidgets) const;
+	bool GatherWidgetsToUpdateInListOrder(const TArray<TWeakObjectPtr<UDreamWidget>>& InAsking, TArray<UDreamWidget*>& OutWidgets);
 	/**
 	 * What the last full prepare made, kept: when only the widgets in WidgetsToPrepare changed since, the next prepare
 	 * takes it and gives those widgets their new geometry, instead of walking every widget again.
 	 */
 	TArray<FDreamUIRenderData> PreparedDataCache;
-	/** Where each batch-mesh widget's entry is in PreparedDataCache. */
+	/** Where each batch-mesh widget's entry is in PreparedDataCache; made from it when a prepare first takes it. */
 	TMap<TObjectKey<UDreamWidget>, int32> PreparedDataIndex;
+	bool bPreparedDataIndexValid = false;
 	/** The widgets looked at since the last prepare; bPrepareEveryWidget when every widget was. */
 	TArray<TWeakObjectPtr<UDreamWidget>> WidgetsToPrepare;
 	bool bPrepareEveryWidget = true;
