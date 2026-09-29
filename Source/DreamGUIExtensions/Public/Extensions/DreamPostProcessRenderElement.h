@@ -7,6 +7,7 @@
 #include "DreamPostProcessRenderElement.generated.h"
 
 class UDreamVisualPostProcess;
+class UMaterialInstanceDynamic;
 /**
  * This component will grab post-process result image and display here.
  * NOTE!!! This only valid when target PostProcess RenderType is set to RenderTarget and bUseFullSize is set to false.

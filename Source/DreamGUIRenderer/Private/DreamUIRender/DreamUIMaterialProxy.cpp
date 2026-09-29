@@ -3,6 +3,7 @@
 #include "DreamUIRender/DreamUIMaterialProxy.h"
 
 #include "Engine/Texture.h"
+#include "MaterialDomain.h"
 #include "Materials/Material.h"
 #include "Materials/MaterialInterface.h"
 #include "RenderingThread.h"
