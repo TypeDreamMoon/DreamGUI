@@ -42,8 +42,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category = DreamGUI)
 	void InputTouchMoved(int InTouchID, const FVector& InTouchPointPosition);
 	/**
-	 * The pointer id finger InTouchID is tracked under: 100 plus the finger, so that no finger is the mouse -- or the
-	 * finger itself under UDreamGUISettings::bLegacyTouchPointerIds.
+	 * The pointer id finger InTouchID is tracked under: 100 plus the finger, so that no finger is the mouse.
 	 */
 	UFUNCTION(BlueprintPure, Category = DreamGUI)
 	static int32 GetTouchPointerID(int32 InTouchID);

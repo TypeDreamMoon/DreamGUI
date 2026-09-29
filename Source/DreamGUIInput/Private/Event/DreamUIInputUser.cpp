@@ -44,7 +44,7 @@ DECLARE_CYCLE_STAT(TEXT("InputUserFrame"), STAT_DreamUIInputUserFrame, STATGROUP
 
 int32 DreamUIPointerIds::ForTouch(int32 InFingerIndex)
 {
-	return GetDefault<UDreamGUISettings>()->bLegacyTouchPointerIds ? InFingerIndex : TouchBase + InFingerIndex;
+	return TouchBase + InFingerIndex;
 }
 
 float DreamUIInputClock::GetUIDeltaSeconds(const UObject* InWorldContext, float InTickDeltaSeconds)

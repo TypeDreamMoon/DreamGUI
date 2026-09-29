@@ -147,17 +147,6 @@ public:
 	// ---------------------------------------------------------------- Input
 
 	/**
-	 * Give a touch the finger's own index as its pointer id, as before pointer ids had ranges of their own.
-	 *
-	 * Pointer ids are ranges now -- the mouse is 0, a finger is 100 plus its index -- because the first
-	 * finger and the mouse used to be the same pointer 0: a tap and a mouse on one device fought over one
-	 * pointer, and lifting the finger took away the mouse's hover and selection with it. On for a project
-	 * whose own code reads touch pointers by finger index; it goes away in a later version.
-	 */
-	UPROPERTY(config, EditAnywhere, Category = "Input")
-	bool bLegacyTouchPointerIds = false;
-
-	/**
 	 * Hear input from Slate itself -- an input pre-processor, ahead of the game viewport -- instead of through the
 	 * preset actor's bindings on the player controller. DreamGUI then answers in every input mode, the engine's own
 	 * UI-only mode included, where the viewport ignores input and the controller hears nothing; and it can keep what

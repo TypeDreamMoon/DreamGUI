@@ -125,7 +125,7 @@ namespace DreamUIPointerIds
 	/** Ids a project or a test makes up for pointers of its own start here. */
 	constexpr int32 ScriptBase = 1000;
 
-	/** The pointer id for finger InFingerIndex, honouring UDreamGUISettings::bLegacyTouchPointerIds. */
+	/** The pointer id for finger InFingerIndex: TouchBase plus the finger, so that no finger is the mouse. */
 	DREAMGUIINPUT_API int32 ForTouch(int32 InFingerIndex);
 }
 

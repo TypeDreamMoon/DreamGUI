@@ -84,8 +84,4 @@ namespace DreamUITextInputRouter
 
 	/** Which player controller InControllerId of InViewportClient's game is: its local player's index, or 0 when no local player has it. */
 	DREAMGUIINPUT_API int32 GetUserIndexForController(const UGameViewportClient* InViewportClient, int32 InControllerId);
-
-	/** To the first player of the game viewport's world. */
-	UE_DEPRECATED(5.8, "A character belongs to a player: call RouteViewportCharacter from a viewport client, or RouteCharacter with a world and a player.")
-	DREAMGUIINPUT_API bool RouteCharacter(TCHAR InCharacter);
 }

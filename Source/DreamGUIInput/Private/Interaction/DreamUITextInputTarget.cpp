@@ -76,9 +76,3 @@ bool DreamUITextInputRouter::RouteViewportCharacter(const UGameViewportClient* I
 	UDreamUIInputSubsystem* Input = InViewportClient != nullptr ? UDreamUIInputSubsystem::Get(InViewportClient->GetWorld()) : nullptr;
 	return Input != nullptr && Input->HandleViewportCharacter(GetUserIndexForController(InViewportClient, InControllerId), InCharacter);
 }
-
-bool DreamUITextInputRouter::RouteCharacter(TCHAR InCharacter)
-{
-	const UGameViewportClient* ViewportClient = GEngine != nullptr ? GEngine->GameViewport.Get() : nullptr;
-	return ViewportClient != nullptr && RouteCharacter(ViewportClient->GetWorld(), 0, InCharacter);
-}
