@@ -294,6 +294,7 @@ void UDreamVisualBatchMesh::UpdateGeometry()
 			Canvas->PushAsyncFunction_TransformVertices(
 				[Params = FDreamUIGeometry::MakeTransformVerticesParams(Canvas, this), Geometry = this->UIGeometry]()
 			{
+				TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_TransformVerticesTask);
 				FDreamUIGeometry::TransformVertices(Params, Geometry.Get());
 				Geometry->bIsCalculating = false;
 			});

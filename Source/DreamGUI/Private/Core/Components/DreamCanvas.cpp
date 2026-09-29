@@ -1109,6 +1109,7 @@ void UDreamCanvas::PrepareDrawCallBatchingData(TArray<FDreamUIRenderData>& OutRe
 	 */
 	if (TransformVerticesAsyncFunctionRunnable.IsValid())
 	{
+		TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_WaitForVertexTransforms);
 		TransformVerticesAsyncFunctionRunnable->WaitForAllFunctions();
 	}
 	for (int i = 0; i < WidgetList.Num(); i++)
