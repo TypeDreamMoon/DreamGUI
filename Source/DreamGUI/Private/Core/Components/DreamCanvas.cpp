@@ -1585,11 +1585,16 @@ void UDreamCanvas::UpdateCanvasDrawCall()
 		{
 			SCOPE_CYCLE_COUNTER(STAT_UpdateClipAndGeometry)
 			TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_UpdateClipAndGeometry);
+			// Resolved once for the loop rather than twice for every widget in it: the root is a weak pointer.
+			UDreamCanvas* const Root = RootCanvas.Get();
 			for (const auto& Widget : WidgetList)
 			{
 				//a widget collected earlier can be destroyed before the list is regenerated
 				if (!IsValid(Widget))continue;
-				Widget->UpdateClip(RootCanvas->ClipDataAsTexture, RootCanvas->ClipDataList);
+				if (Root != nullptr)
+				{
+					Widget->UpdateClip(Root->ClipDataAsTexture, Root->ClipDataList);
+				}
 				if (Widget->GetRenderVisibleInHierarchy() && Widget->GetRenderCanvas() == this)
 				{
 					Widget->UpdateVisual();

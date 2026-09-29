@@ -225,8 +225,10 @@ void UDreamVisualBatchMesh::UpdateGeometry()
 	}
 	
 	//when use pixel-perfect, the pixel-perfect calculation will take consider transform matrix, so we need to recalculate geometry if pixel-perfect & bTransformChanged
-	bool pixelPerfect = this->GetShouldAffectByPixelSnapping() && Widget->GetPixelSnappingInHierarchy();
-	bool pixelPerfectAffectTransform = pixelPerfect && bTransformChanged;
+	//asked only after a move: the snapping setting is looked up through the parents, and every element that did not move
+	//paid for that walk on every update of its canvas
+	const bool pixelPerfectAffectTransform = bTransformChanged
+		&& this->GetShouldAffectByPixelSnapping() && Widget->GetPixelSnappingInHierarchy();
 	if (GetAnythingDirty() || pixelPerfectAffectTransform)
 	{
 		SCOPE_CYCLE_COUNTER(STAT_DreamUpdateGeometry);
