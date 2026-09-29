@@ -356,6 +356,7 @@ bool UDreamText::GetShouldAffectByPixelSnapping()const
 
 void UDreamText::OnUpdateGeometry(FDreamUIGeometry& InGeo, bool InTriangleChanged, bool InVertexPositionChanged, bool InVertexUVChanged, bool InVertexColorChanged)
 {
+	TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_TextUpdateGeometry);
 	if (InTriangleChanged || InVertexPositionChanged || InVertexUVChanged || InVertexColorChanged)
 	{
 		UpdateCacheTextGeometry();

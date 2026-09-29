@@ -242,6 +242,7 @@ void UDreamWidget::UnregisterRenderCanvas()
 void UDreamWidget::UpdateClip(UDreamUIDataAsTexture* ClipDataTexture, TArray<TSharedPtr<FDreamUIClipData>>& ClipDataList)
 {
 	if (!bClipDirty)return;
+	TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_UpdateClip);
 	bClipDirty = false;
 	
 	if (bNeedRecreateClip && ClipData.IsValid())

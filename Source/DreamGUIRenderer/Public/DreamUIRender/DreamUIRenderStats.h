@@ -109,4 +109,4 @@ namespace DreamUIRenderStats
 /** Counts the enclosing scope as InStage, and marks it for Unreal Insights as DreamUI_<InStage>. */
 #define DREAMUI_STAGE_SCOPE(InStage) \
 	TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_##InStage); \
-	const DreamUIRenderStats::FScopedStage PREPROCESSOR_JOIN(DreamUIStageScope_, __LINE__)(DreamUIRenderStats::EStage::InStage)
+	const DreamUIRenderStats::FScopedStage UE_JOIN(DreamUIStageScope_, __LINE__)(DreamUIRenderStats::EStage::InStage)
