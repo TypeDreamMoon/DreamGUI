@@ -293,7 +293,12 @@ void FDreamUIRenderer::DrawRenderTarget_RenderThread(FRHICommandListImmediate& R
 	ViewInitOptions.BackgroundColor = FLinearColor::Transparent;
 	FSceneView* View = GraphBuilder.AllocObject<FSceneView>(ViewInitOptions);
 	RenderDreamUI_RenderThread(GraphBuilder, *View);
-	GraphBuilder.Execute();
+	{
+		// The canvas's draws: the passes recorded above run here, in its own graph. A canvas drawn into a view runs them
+		// in the scene renderer's graph instead, where they are that graph's passes.
+		TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_RenderTargetExecute);
+		GraphBuilder.Execute();
+	}
 }
 void FDreamUIRenderer::PreRenderView_RenderThread(FRDGBuilder& GraphBuilder, FSceneView& InView)
 {
@@ -757,6 +762,7 @@ void FDreamUIRenderer::RenderDreamUI_RenderThread(
 
 bool FDreamUIRenderer::PrepareTargets_RenderThread(FRDGBuilder& GraphBuilder, FSceneView& InView, FRecordTargets& Targets)
 {
+	TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_PrepareTargets);
 	bool bIsMainViewport = !(InView.bIsSceneCapture || InView.bIsReflectionCapture || InView.bIsPlanarReflection || InView.bIsVirtualTexture);
 	
 	// Lit wireframe is the lit view mode with mesh edges shown now.
@@ -942,6 +948,7 @@ bool FDreamUIRenderer::PrepareTargets_RenderThread(FRDGBuilder& GraphBuilder, FS
 
 void FDreamUIRenderer::RecordWorldSpace_RenderThread(FRDGBuilder& GraphBuilder, FSceneView& InView, FRecordTargets& Targets)
 {
+	TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_RecordWorldSpace);
 	// The recording's targets, by the names the stages shared when they were one function.
 	bool& bRenderWireframe = Targets.bRenderWireframe;
 	bool& bRenderLit = Targets.bRenderLit;
@@ -1252,6 +1259,7 @@ void FDreamUIRenderer::RecordWorldSpace_RenderThread(FRDGBuilder& GraphBuilder, 
 
 void FDreamUIRenderer::RecordScreenSpace_RenderThread(FRDGBuilder& GraphBuilder, FSceneView& InView, FRecordTargets& Targets)
 {
+	TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_RecordScreenSpace);
 	// The recording's targets, by the names the stages shared when they were one function.
 	FRHICommandListImmediate& RHICmdList = GraphBuilder.RHICmdList;
 	bool& bIsMainViewport = Targets.bIsMainViewport;
@@ -1625,6 +1633,7 @@ void FDreamUIRenderer::RecordScreenSpace_RenderThread(FRDGBuilder& GraphBuilder,
 
 void FDreamUIRenderer::Resolve_RenderThread(FRDGBuilder& GraphBuilder, FSceneView& InView, const FRecordTargets& Targets)
 {
+	TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_Resolve);
 	if (Targets.NumSamples > 1)
 	{
 		auto Src = RegisterExternalTexture(GraphBuilder, Targets.ScreenColorRenderTargetTexture, TEXT("DreamUIResolveSrc"));
