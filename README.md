@@ -465,6 +465,18 @@ Two console commands answer both questions without a debugger:
   and how many batches, vertices and bytes went to the GPU. Each stage is also a named scope in
   Unreal Insights (`DreamUI_*`).
 
+If something the renderer does differently now misbehaves in your project, these console variables
+put the way it was done before back, one at a time, until the old roads are removed:
+
+- `r.DreamUI.MaterialWrappers 0` — a canvas draws its own materials through a material instance per
+  draw call, pooled per material, instead of through render-thread proxies of the material.
+- `r.DreamUI.RTDrawer 0` — a render-target canvas is drawn inside a view of its world again, instead
+  of by a render command of its own (then it is not drawn in a world nothing renders).
+
+And one for a report of something drawn wrong or not drawn: `r.DreamUI.VerifyPartialPrepare 1` checks
+every prepare a canvas makes from its last one against a prepare of every widget, and a difference is
+an ensure that names the canvas. The test suite runs with it on.
+
 ## Platforms
 
 What is *claimed* and what has been *run* are different lists, so both are here.
