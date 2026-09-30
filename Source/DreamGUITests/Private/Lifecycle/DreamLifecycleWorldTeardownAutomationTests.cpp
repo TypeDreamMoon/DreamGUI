@@ -14,12 +14,18 @@
 #include "Core/DreamWidgetTree.h"
 #include "Core/DreamWorldWidgetActor.h"
 #include "Core/DreamWorldWidgetComponent.h"
+#include "DreamScopedWorld.h"
 #include "DreamUIBPLibrary.h"
+#include "DreamUIRender/DreamUIRenderer.h"
 #include "Engine/World.h"
+#include "HAL/Event.h"
 #include "Lifecycle/DreamLifecycleFixtures.h"
 #include "Lifecycle/DreamLifecycleProbe.h"
 #include "RenderingThread.h"
+#include "SceneViewExtension.h"
 #include "UObject/UObjectIterator.h"
+
+#include <atomic>
 
 /*
  * A WORLD DESTROYED WITH ITS TREES STILL IN IT LEAVES NOTHING BEHIND.
@@ -174,6 +180,67 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 bool FDreamLifecycleWorldTeardownRhiTest::RunTest(const FString& Parameters)
 {
 	return DreamLifecycleWorldTeardownTestLocal::RunRounds(*this, /*bInFlush*/ true);
+}
+
+/*
+ * A WORLD'S RENDERER LIVES AS LONG AS WHAT IT HAS SENT THE RENDER THREAD.
+ *
+ * FSceneViewExtensions::NewExtension makes a renderer with MakeShareable, so whoever lets go of it last deletes it on
+ * the spot, and the manager lets go of its world's renderer when the world is torn down -- which a test world is within
+ * the frame it was built in. The render commands the renderer had sent by then were still waiting for the render
+ * thread, and while they held it by a bare pointer they ran against freed memory, writing into whatever the allocator
+ * had put there since. Here the render thread is held while the renderer's owner lets go, so the commands are certain
+ * to be waiting when it does.
+ */
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamLifecycleRendererOutlivesItsCommandsTest,
+	"DreamGUI.Lifecycle.ARendererOutlivesItsLastOwnerUntilTheRenderCommandsItSentHaveRun",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamLifecycleRendererOutlivesItsCommandsTest::RunTest(const FString& Parameters)
+{
+	if (!GIsThreadedRendering)
+	{
+		AddInfo(TEXT("Rendering is not threaded here: a render command runs as it is sent, and none is ever left waiting."));
+		return true;
+	}
+	DreamTests::FScopedGameWorld Scoped;
+	if (!TestNotNull(TEXT("a world was created"), Scoped.World))
+	{
+		return false;
+	}
+	TSharedPtr<FDreamUIRenderer, ESPMode::ThreadSafe> Owner =
+		FSceneViewExtensions::NewExtension<FDreamUIRenderer>(Scoped.World, EDreamUIRendererType::ScreenSpace_and_WorldSpace);
+	const TWeakPtr<FDreamUIRenderer, ESPMode::ThreadSafe> Renderer = Owner;
+
+	// The render thread is held on a command of the test's own, so everything sent after it waits. Nothing between here
+	// and the release may wait for the render thread.
+	FEventRef Release(EEventMode::ManualReset);
+	std::atomic<bool> bSentAfterRan = false;
+	ENQUEUE_RENDER_COMMAND(DreamTest_HoldTheRenderThread)([&Release](FRHICommandListImmediate&)
+	{
+		Release->Wait();
+	});
+	Owner->MarkNeedToSortScreenSpacePrimitiveRenderPriority();
+	Owner->SetRenderCanvasDepthParameter(Scoped.World, 0.5f, 1);
+	ENQUEUE_RENDER_COMMAND(DreamTest_SentAfterTheRenderersCommands)([&bSentAfterRan](FRHICommandListImmediate&)
+	{
+		bSentAfterRan = true;
+	});
+
+	Owner.Reset();
+	const bool bCommandsWereWaiting = !bSentAfterRan;
+	const bool bAliveWhileTheyWaited = Renderer.IsValid();
+
+	Release->Trigger();
+	FlushRenderingCommands();
+
+	TestTrue(TEXT("The renderer's commands were still waiting for the render thread when its last owner let go"), bCommandsWereWaiting);
+	TestTrue(TEXT("The commands the renderer sent keep it alive after its last owner lets go"), bAliveWhileTheyWaited);
+	TestTrue(TEXT("The render thread got through them"), bSentAfterRan.load());
+	TestFalse(TEXT("The renderer is let go of once they have run"), Renderer.IsValid());
+	return true;
 }
 
 #endif

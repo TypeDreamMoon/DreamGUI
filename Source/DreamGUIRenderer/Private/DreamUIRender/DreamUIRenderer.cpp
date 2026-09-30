@@ -41,6 +41,21 @@ static TAutoConsoleVariable<int32> CVarDreamGUIDumpMaterialDraws(
 
 DEFINE_LOG_CATEGORY(LogDreamGUIRenderer);
 
+namespace DreamUIRendererLocal
+{
+	/**
+	 * The renderer, for a render command to hold until it has run. NewExtension makes a renderer with MakeShareable, so
+	 * the last strong reference deletes it there and then, and the game thread lets go of a world's renderer when the
+	 * world is torn down -- a test world is built, drawn into and torn down within one frame. A command holding a bare
+	 * pointer then ran on the render thread against the freed renderer, writing into whatever had been allocated there
+	 * since.
+	 */
+	TSharedRef<FDreamUIRenderer, ESPMode::ThreadSafe> HoldForRenderThread(FDreamUIRenderer& InRenderer)
+	{
+		return StaticCastSharedRef<FDreamUIRenderer>(InRenderer.AsShared());
+	}
+}
+
 BEGIN_SHADER_PARAMETER_STRUCT(FDreamUITextureReadRenderTargetParameters, )
 	RDG_TEXTURE_ACCESS(SourceTexture, ERHIAccess::SRVGraphics)
 	RENDER_TARGET_BINDING_SLOTS()
@@ -157,9 +172,8 @@ void FDreamUIRenderer::UpdateViewParameter_GameThread()
 
 	// Hand the whole thing over by value. The render thread reads these while this function is writing
 	// them, which is what the @todo that used to sit above asked for.
-	auto ViewExtension = this;
 	ENQUEUE_RENDER_COMMAND(FDreamUIRender_SetScreenSpaceViewParameter)(
-		[ViewExtension, Parameter = GameThreadViewParameter](FRHICommandListImmediate& RHICmdList)
+		[ViewExtension = DreamUIRendererLocal::HoldForRenderThread(*this), Parameter = GameThreadViewParameter](FRHICommandListImmediate& RHICmdList)
 		{
 			ViewExtension->RenderThreadViewParameter = Parameter;
 		}
@@ -320,9 +334,8 @@ void FDreamUIRenderer::DrawRenderTarget_GameThread(UTextureRenderTarget2D* InRen
 	UpdateViewParameter_GameThread();
 	UpdateRenderTargetRenderer(InRenderTarget, InClearColor);
 	const FGameTime Time = World->GetTime();
-	TSharedRef<FDreamUIRenderer, ESPMode::ThreadSafe> Self = StaticCastSharedRef<FDreamUIRenderer>(AsShared());
 	ENQUEUE_RENDER_COMMAND(FDreamUIRender_DrawRenderTarget)(
-		[Self, InRenderTarget, Time](FRHICommandListImmediate& RHICmdList)
+		[Self = DreamUIRendererLocal::HoldForRenderThread(*this), InRenderTarget, Time](FRHICommandListImmediate& RHICmdList)
 		{
 			Self->DrawRenderTarget_RenderThread(RHICmdList, InRenderTarget, Time);
 		});
@@ -2009,9 +2022,8 @@ void FDreamUIRenderer::SortScreenSpacePrimitiveRenderPriority_RenderThread()
 
 void FDreamUIRenderer::MarkNeedToSortScreenSpacePrimitiveRenderPriority()
 {
-	auto ViewExtension = this;
 	ENQUEUE_RENDER_COMMAND(FDreamUIRender_SortRenderPriority)(
-		[ViewExtension](FRHICommandListImmediate& RHICmdList)
+		[ViewExtension = DreamUIRendererLocal::HoldForRenderThread(*this)](FRHICommandListImmediate& RHICmdList)
 		{
 			ViewExtension->ScreenSpaceRenderParameter.bNeedSortRenderPriority = true;
 		}
@@ -2019,11 +2031,10 @@ void FDreamUIRenderer::MarkNeedToSortScreenSpacePrimitiveRenderPriority()
 }
 void FDreamUIRenderer::SetRenderCanvasDepthParameter(const UObject* InRenderCanvas, float InBlendDepth, int InDepthFade)
 {
-	auto viewExtension = this;
 	//take the identity here, on the game thread, so the canvas pointer never crosses to the render thread
 	const FObjectKey RenderCanvasKey(InRenderCanvas);
 	ENQUEUE_RENDER_COMMAND(FDreamUIRender_SortRenderPriority)(
-		[viewExtension, RenderCanvasKey, InBlendDepth, InDepthFade](FRHICommandListImmediate& RHICmdList)
+		[viewExtension = DreamUIRendererLocal::HoldForRenderThread(*this), RenderCanvasKey, InBlendDepth, InDepthFade](FRHICommandListImmediate& RHICmdList)
 		{
 			viewExtension->SetRenderCanvasDepthFade_RenderThread(RenderCanvasKey, InBlendDepth, InDepthFade);
 		}
@@ -2088,9 +2099,8 @@ void FDreamUIRenderer::UpdateRenderTargetRenderer(UTextureRenderTarget2D* InRend
 	{
 		return;
 	}
-	auto ViewExtension = this;
 	ENQUEUE_RENDER_COMMAND(FDreamUIRender_UpdateRenderTargetRenderer)(
-		[ViewExtension, InRenderTarget, InClearColor](FRHICommandListImmediate& RHICmdList)
+		[ViewExtension = DreamUIRendererLocal::HoldForRenderThread(*this), InRenderTarget, InClearColor](FRHICommandListImmediate& RHICmdList)
 		{
 			// The target's resource as the render thread sees it, read by the command the game thread enqueued while
 			// the target was alive: what it releases is enqueued after this. Only the texture is kept.
@@ -2235,7 +2245,7 @@ void FDreamUIRenderer::SubmitGizmoMeshes()
 	// Every view of every family this frame draws the same gizmos: the list is replaced once a frame, not emptied by the
 	// first view that draws it -- a second viewport saw none. The meshes it replaces are let go of on the render thread.
 	ENQUEUE_RENDER_COMMAND(FDreamUIRender_SetGizmoMeshes)(
-		[Renderer = this, ScreenMeshes = MoveTemp(PendingScreenSpaceGizmoMeshes), WorldMeshes = MoveTemp(PendingWorldSpaceGizmoMeshes)](FRHICommandListImmediate& RHICmdList) mutable
+		[Renderer = DreamUIRendererLocal::HoldForRenderThread(*this), ScreenMeshes = MoveTemp(PendingScreenSpaceGizmoMeshes), WorldMeshes = MoveTemp(PendingWorldSpaceGizmoMeshes)](FRHICommandListImmediate& RHICmdList) mutable
 		{
 			Renderer->ScreenSpaceGizmoMeshArray = MoveTemp(ScreenMeshes);
 			Renderer->WorldSpaceGizmoMeshArray = MoveTemp(WorldMeshes);
