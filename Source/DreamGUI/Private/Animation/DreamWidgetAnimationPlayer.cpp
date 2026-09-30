@@ -15,6 +15,7 @@
 #include "MovieScene.h"
 #include "MovieSceneSequence.h"
 #include "MovieSceneTimeController.h"
+#include "MovieSceneTimeHelpers.h"
 
 static TAutoConsoleVariable<int32> CVarDreamUIDirectAnimationEvaluation(
 	TEXT("DreamUI.Animation.DirectEvaluation"),
@@ -99,7 +100,11 @@ bool UDreamWidgetAnimationPlayer::TryEvaluateDirectly(const FMovieSceneEvaluatio
 		const EMovieSceneCompletionModeOverride Completion = PlaybackSettings.FinishCompletionStateOverride;
 		if (CVarDreamUIDirectAnimationEvaluation.GetValueOnGameThread() != 0 && PlayedSequence != nullptr
 			&& !HasDynamicWeighting() && GetPlaybackClient() == nullptr
-			&& (Completion == EMovieSceneCompletionModeOverride::ForceKeepState || Completion == EMovieSceneCompletionModeOverride::ForceRestoreState))
+			&& (Completion == EMovieSceneCompletionModeOverride::ForceKeepState || Completion == EMovieSceneCompletionModeOverride::ForceRestoreState)
+			// A time warp in the play-rate domain at the root remaps the time the clock gives (UpdateTimeCursorPosition_Internal),
+			// which the player's own tick does not: looked for here, once a play, rather than by that tick every frame, which
+			// only ever runs for an animation evaluated directly.
+			&& !IsRootPlayRateWarped())
 		{
 			DirectEvaluation = FDreamUIDirectAnimationEvaluation::TryCreate(*PlayedSequence);
 		}
@@ -118,8 +123,8 @@ bool UDreamWidgetAnimationPlayer::TryEvaluateDirectly(const FMovieSceneEvaluatio
 		}
 		DirectEvaluation.Reset();
 	}
-	const UMovieScene* MovieScene = PlayedSequence != nullptr ? PlayedSequence->GetMovieScene() : nullptr;
-	if (!DirectEvaluation.IsValid() || MovieScene == nullptr)
+	// A plan is only made for a sequence with a movie scene, and holds its tick resolution: the frame reads neither.
+	if (!DirectEvaluation.IsValid())
 	{
 		return false;
 	}
@@ -128,7 +133,7 @@ bool UDreamWidgetAnimationPlayer::TryEvaluateDirectly(const FMovieSceneEvaluatio
 	bSkipNextUpdate = false;
 	FMovieSceneContext Context(InRange, PlayerStatus);
 	PreEvaluation(Context);
-	const FFrameTime Time = ConvertFrameTime(InRange.GetTime(), InRange.GetFrameRate(), MovieScene->GetTickResolution());
+	const FFrameTime Time = ConvertFrameTime(InRange.GetTime(), InRange.GetFrameRate(), DirectEvaluation->GetTickResolution());
 	// Held for the evaluation: a listener of one of its writes may stop the animation, and OnStopped lets it go.
 	const TSharedPtr<FDreamUIDirectAnimationEvaluation> Evaluation = DirectEvaluation;
 	if (!Evaluation->Evaluate(*this, Time))
@@ -166,10 +171,58 @@ void UDreamWidgetAnimationPlayer::OnStopped()
 void UDreamWidgetAnimationPlayer::OnStartedPlaying()
 {
 	Super::OnStartedPlaying();
-	// The sequencer's HasAuthority walks the outers for the actor each time it is asked; here the walk is made once a play.
-	// The actor a widget's animation plays under does not change while it plays, and a walk of the outers every frame is
-	// part of what TickLite saves.
-	AuthorityActor = GetTypedOuter<AActor>();
+	// The sequencer's HasAuthority walks the outers for the actor each time it is asked; here the walk, and the question, are
+	// made once a play. The actor a widget's animation plays under does not change while it plays, nor does its network
+	// role, and a look at the actor every frame -- a thousand playing widgets' thousand actors -- is part of what TickLite
+	// saves.
+	const AActor* Actor = GetTypedOuter<AActor>();
+	bAuthorityAtStart = Actor != nullptr && Actor->HasAuthority();
+}
+
+bool UDreamWidgetAnimationPlayer::TryPrepareReplay(const FMovieSceneSequencePlaybackSettings& InSettings)
+{
+	UMovieSceneSequence* PlayedSequence = GetSequence();
+	const UMovieScene* MovieScene = PlayedSequence != nullptr ? PlayedSequence->GetMovieScene() : nullptr;
+	if (MovieScene == nullptr || !TimeController.IsValid() || IsPlaying() || IsPaused() || IsEvaluating() || !RootTemplateInstance.IsValid()
+		// What Initialize registered the player with, and what it set up the sequence's instance for.
+		|| InSettings.TickInterval != PlaybackSettings.TickInterval
+		|| InSettings.bInheritTickIntervalFromOwner != PlaybackSettings.bInheritTickIntervalFromOwner
+		|| InSettings.bDynamicWeighting || PlaybackSettings.bDynamicWeighting
+		|| InSettings.bRandomStartTime)
+	{
+		return false;
+	}
+	PlaybackSettings = InSettings;
+	// Initialize's frame range: the sequence's playback range, in the display rate, with the rates it falls back to.
+	FFrameRate TickResolution = MovieScene->GetTickResolution();
+	FFrameRate DisplayRate = MovieScene->GetDisplayRate();
+	if (!TickResolution.IsValid() || TickResolution.Numerator <= 0)
+	{
+		TickResolution = FFrameRate(60000, 1);
+	}
+	if (!DisplayRate.IsValid() || DisplayRate.Numerator <= 0)
+	{
+		DisplayRate = FFrameRate(30, 1);
+	}
+	const TRange<FFrameNumber> PlaybackRange = MovieScene->GetPlaybackRange();
+	const FFrameNumber SrcStartFrame = UE::MovieScene::DiscreteInclusiveLower(PlaybackRange);
+	const FFrameNumber SrcEndFrame = UE::MovieScene::DiscreteExclusiveUpper(PlaybackRange);
+	const FFrameTime EndingTime = ConvertFrameTime(SrcEndFrame, TickResolution, DisplayRate);
+	const FFrameNumber StartingFrame = ConvertFrameTime(SrcStartFrame, TickResolution, DisplayRate).FloorToFrame();
+	const FFrameNumber EndingFrame = EndingTime.FloorToFrame();
+	SetFrameRange(StartingFrame.Value, (EndingFrame - StartingFrame).Value, EndingTime.GetSubFrame());
+	// ...and its start: the offset asked for, in the range, from where the stop before left the cursor.
+	const FFrameTime StartingTimeOffset = FMath::Clamp<FFrameTime>(PlaybackSettings.StartTime * DisplayRate, 0, GetFrameDuration() - 1);
+	LatentActionManager.ClearLatentActions();
+	PlayPosition.Reset(StartTime + StartingTimeOffset);
+	TimeController->Reset(GetCurrentTime());
+	return true;
+}
+
+bool UDreamWidgetAnimationPlayer::IsRootPlayRateWarped() const
+{
+	const FMovieSceneSequenceHierarchy* Hierarchy = RootTemplateInstance.GetHierarchy();
+	return Hierarchy != nullptr && Hierarchy->GetRootTransform().FindFirstWarpDomain() == UE::MovieScene::ETimeWarpChannelDomain::PlayRate;
 }
 
 void UDreamWidgetAnimationPlayer::TickFromSequenceTickManager(float DeltaSeconds, FMovieSceneEntitySystemRunner* InRunner)
@@ -235,13 +288,8 @@ UDreamWidgetAnimationPlayer::ELiteTick UDreamWidgetAnimationPlayer::ChooseLiteTi
 	{
 		return ELiteTick::Sequencer;
 	}
-	// A time warp in the play-rate domain at the root remaps the time the clock gives (UpdateTimeCursorPosition_Internal),
-	// which TickLite does not.
-	const FMovieSceneSequenceHierarchy* Hierarchy = RootTemplateInstance.GetHierarchy();
-	if (Hierarchy != nullptr && Hierarchy->GetRootTransform().FindFirstWarpDomain() == UE::MovieScene::ETimeWarpChannelDomain::PlayRate)
-	{
-		return ELiteTick::Sequencer;
-	}
+	// A play-rate time warp at the root, which TickLite does not remap the time by, has no direct evaluation
+	// (TryEvaluateDirectly), and so never gets this far.
 	return ELiteTick::Advance;
 }
 
@@ -269,14 +317,18 @@ void UDreamWidgetAnimationPlayer::TickLite(float DeltaSeconds)
 		bWarnZeroDuration = true;
 		// ...the cursor moves only by PlayTo, the way the player is playing...
 		const FMovieSceneEvaluationRange Range = PlayPosition.PlayTo(NewTime, bReversePlayback ? EPlayDirection::Backwards : EPlayDirection::Forwards);
-		// ...and the range goes to UpdateMovieSceneInstance with the arguments the sequencer gives it: the direct evaluation
-		// takes it, between the pre- and post-evaluation callbacks, and should it hand the animation over to the sequencer
-		// the update is queued rather than flushed, as in the main level update.
-		const UMovieSceneSequence* RootSequence = RootTemplateInstance.GetSequence(MovieSceneSequenceID::Root);
-		FMovieSceneUpdateArgs Args;
-		Args.bIsAsync = bIsAsyncUpdate
-			&& !(RootSequence != nullptr && EnumHasAnyFlags(RootSequence->GetFlags(), EMovieSceneSequenceFlags::BlockingEvaluation));
-		UpdateMovieSceneInstance(Range, EMovieScenePlayerStatus::Playing, Args);
+		// ...and the range goes to UpdateMovieSceneInstance: the direct evaluation takes it, between the pre- and
+		// post-evaluation callbacks, and should it hand the animation over to the sequencer, the sequencer is given it with
+		// the arguments its own update gives, so that the update is queued rather than flushed, as in the main level update.
+		// Worked out only then: the direct evaluation needs none of them.
+		if (!TryEvaluateDirectly(Range, EMovieScenePlayerStatus::Playing))
+		{
+			const UMovieSceneSequence* RootSequence = RootTemplateInstance.GetSequence(MovieSceneSequenceID::Root);
+			FMovieSceneUpdateArgs Args;
+			Args.bIsAsync = bIsAsyncUpdate
+				&& !(RootSequence != nullptr && EnumHasAnyFlags(RootSequence->GetFlags(), EMovieSceneSequenceFlags::BlockingEvaluation));
+			Super::UpdateMovieSceneInstance(Range, EMovieScenePlayerStatus::Playing, Args);
+		}
 
 		// A listener of one of the writes may have stopped or paused the player from inside them. That has run already --
 		// the direct evaluation does not count as evaluating, so nothing was deferred -- exactly as inside the sequencer's
@@ -286,7 +338,7 @@ void UDreamWidgetAnimationPlayer::TickLite(float DeltaSeconds)
 		// private: the snapshot a replicated player sends its clients, kept by the authority. This is that step. Nothing
 		// reads the snapshot of a player that is not replicated, and nothing in DreamGUI replicates one; it is kept all the
 		// same, so that what a frame leaves behind does not depend on which update ran it.
-		if (const AActor* Actor = AuthorityActor.Get(/*bEvenIfPendingKill*/ true); Actor != nullptr && Actor->HasAuthority())
+		if (bAuthorityAtStart)
 		{
 			NetSyncProps.LastKnownPosition = PlayPosition.GetCurrentPosition();
 			NetSyncProps.LastKnownStatus = Status;

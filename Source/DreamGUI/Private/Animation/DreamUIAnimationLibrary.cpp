@@ -15,5 +15,6 @@ UMovieSceneSequence* UDreamUIAnimationLibrary::GetAnimationFromHandle(const FDre
 
 bool UDreamUIAnimationLibrary::EqualAnimationHandles(const FDreamUIAnimationHandle& A, const FDreamUIAnimationHandle& B)
 {
-	return A.Player == B.Player;
+	// The same player plays one instance after another: the instance is what a handle names.
+	return A.Player == B.Player && A.Instance == B.Instance;
 }

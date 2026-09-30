@@ -71,6 +71,8 @@ private:
 
 	TWeakObjectPtr<UDreamWidgetAnimationComponent> Component;
 	TWeakObjectPtr<UDreamWidgetAnimationPlayer> Player;
+	/** The instance of Player that was started: the player may play another after it ends. */
+	uint32 PlayerInstance = 0;
 	FDelegateHandle FinishedHandle;
 	FTSTicker::FDelegateHandle TickerHandle;
 };

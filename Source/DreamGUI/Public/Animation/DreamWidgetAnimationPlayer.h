@@ -33,6 +33,23 @@ public:
 	bool IsEvaluatingDirectly() const { return DirectEvaluation.IsValid(); }
 
 	/**
+	 * The instance of its animation this player is playing, or played last: counted up each time one starts on it
+	 * (BeginInstance). A player plays its animation's next instance once one ends (UDreamWidgetAnimationComponent::
+	 * SparePlayers), and a handle names the instance it was handed out for (FDreamUIAnimationHandle::Instance).
+	 */
+	uint32 GetInstance() const { return Instance; }
+	/** A new instance starts on this player; see GetInstance. */
+	void BeginInstance() { ++Instance; }
+	/**
+	 * Makes this player, whose last instance ended, ready to play its sequence again with InSettings, as Initialize would
+	 * have made a new player -- the sequence's whole range, the start offset, the settings -- without Initialize's
+	 * registration and set-up, which it keeps from the first time. False, and nothing touched, when it cannot: still
+	 * playing or paused, no longer set up, or InSettings asks for what only Initialize does (another tick interval, dynamic
+	 * weighting, a random start time).
+	 */
+	bool TryPrepareReplay(const FMovieSceneSequencePlaybackSettings& InSettings);
+
+	/**
 	 * Vouches for the time controller the player has now as one the player may tick and read itself (see
 	 * TickFromSequenceTickManager): the engine's tick controller, or one built on it that changes only what a tick adds, as
 	 * the component's unscaled clock does. Neither reads the play rate it is asked for the time with. Held by identity, so
@@ -76,7 +93,7 @@ protected:
 	 * the sequencer's state is the player's state whichever update ran.
 	 */
 	virtual void TickFromSequenceTickManager(float DeltaSeconds, FMovieSceneEntitySystemRunner* Runner) override;
-	/** Notes the actor asked whether this play is the network authority; see TickLite. */
+	/** Notes whether this play is the network authority; see TickLite. */
 	virtual void OnStartedPlaying() override;
 
 	using Super::UpdateMovieSceneInstance;
@@ -94,6 +111,8 @@ protected:
 private:
 	/** Evaluates InRange directly if this player can; false when the sequencer has to. */
 	bool TryEvaluateDirectly(const FMovieSceneEvaluationRange& InRange, EMovieScenePlayerStatus::Type PlayerStatus);
+	/** Whether the root of the sequence's hierarchy warps time in the play-rate domain; see TryEvaluateDirectly. */
+	bool IsRootPlayRateWarped() const;
 
 	/** What the tick manager's tick of this player does this frame; see TickFromSequenceTickManager. */
 	enum class ELiteTick : uint8
@@ -118,8 +137,10 @@ private:
 
 	/** The time controller vouched for (TrustTimeController). Held, so that no other controller can come to have its address. */
 	TSharedPtr<FMovieSceneTimeController> TrustedTimeController;
-	/** The actor the sequencer asks whether this player is the network authority, as of the start of the play. */
-	TWeakObjectPtr<AActor> AuthorityActor;
+	/** Whether the actor the sequencer asks is the network authority, as of the start of the play (OnStartedPlaying). */
+	bool bAuthorityAtStart = false;
 	/** See IsTickingLite. */
 	bool bTickedLite = false;
+	/** See GetInstance. */
+	uint32 Instance = 0;
 };
