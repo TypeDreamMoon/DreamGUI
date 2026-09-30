@@ -107,6 +107,11 @@ public:
 protected:
 	void RaycastUI(UDreamPointerEventData* InPointerEventData, UDreamCanvas* InRootCanvas, FVector& OutRayOrigin, FVector& OutRayDirection, FVector& OutRayEnd, TArray<FDreamUIHitResult>& OutHitResultArray);
 	/**
+	 * RaycastUI along a ray already made (GenerateRay, and recorded as this raycaster's current one): for a caller that
+	 * tests many canvases against one pointer, which would otherwise ask the player's view for the same ray per canvas.
+	 */
+	void RaycastUIAlongRay(UDreamCanvas* InRootCanvas, const FVector& InRayOrigin, const FVector& InRayEnd, TArray<FDreamUIHitResult>& OutHitResultArray);
+	/**
 	 * Trace the world along this raycaster's ray and report what is in the way.
 	 *
 	 * At most one result, and it has no Widget -- a world primitive is not one. It is an occluder: the

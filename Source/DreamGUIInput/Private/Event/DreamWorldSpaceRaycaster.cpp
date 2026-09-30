@@ -95,7 +95,12 @@ void UDreamWorldSpaceRaycaster::Raycast(UDreamPointerEventData* InPointerEventDa
 	// of whichever canvas happened to be visited last. Its sort is a within-canvas answer -- canvas
 	// sort order, then hierarchy index -- and it has nothing to say about two separate panels, which
 	// is what the distance sort below is for.
+	//
+	// One ray for every canvas: making it asks the player's view for its projection, which cost more than testing a
+	// small panel against it, once per world panel.
 	TArray<FDreamUIHitResult> CanvasHitResultArray;
+	bool bRayMade = false;
+	bool bHaveRay = false;
 	for (const TWeakObjectPtr<UDreamCanvas>& CanvasPtr : Manager->GetAllCanvasArray())
 	{
 		UDreamCanvas* Canvas = CanvasPtr.Get();
@@ -103,8 +108,19 @@ void UDreamWorldSpaceRaycaster::Raycast(UDreamPointerEventData* InPointerEventDa
 		if (!Canvas->IsRootCanvas())continue;
 		if (!Canvas->IsRenderToWorldSpace())continue;
 		if (Canvas->GetTraceChannel() != TraceChannel.GetValue())continue;
+		if (!bRayMade)
+		{
+			bRayMade = true;
+			bHaveRay = GenerateRay(InPointerEventData, OutRayOrigin, OutRayDirection, OutRayEnd, CurrentRayLength);
+			if (bHaveRay)
+			{
+				CurrentRayOrigin = OutRayOrigin;
+				CurrentRayDirection = OutRayDirection;
+			}
+		}
+		if (!bHaveRay)break;
 		CanvasHitResultArray.Reset();
-		RaycastUI(InPointerEventData, Canvas, OutRayOrigin, OutRayDirection, OutRayEnd, CanvasHitResultArray);
+		RaycastUIAlongRay(Canvas, OutRayOrigin, OutRayEnd, CanvasHitResultArray);
 		OutHitResultArray.Append(CanvasHitResultArray);
 	}
 
