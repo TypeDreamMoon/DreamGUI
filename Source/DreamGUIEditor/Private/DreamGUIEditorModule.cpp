@@ -148,7 +148,35 @@ DEFINE_LOG_CATEGORY(DreamGUIEditor);
 void FDreamGUIEditorModule::StartupModule()
 {
 	// This code will execute after your module is loaded into memory; the exact timing is specified in the .uplugin file per-module
-	
+
+	// Teaches Kismet how to compile a DreamUI hierarchy into a class. Registering the compiler is
+	// independent of having an editor for the asset -- the stock Blueprint editor opens it and the
+	// stock compile button drives this -- so a DreamUI designer surface can come later on its own.
+	//
+	// First, and in every process that loads this module, because the editor is not the only one that
+	// compiles. An editor build drops a Blueprint's saved bytecode when it loads the class
+	// ([StructSerialization] SkipByteCodeSerialization, BaseEditor.ini) and rebuilds it from the Blueprint
+	// instead, so a game run on uncooked content -- -game with the editor binary, or Standalone Game --
+	// has code in a widget Blueprint's functions only if UDreamWidgetBlueprint loads there and this
+	// compiler is registered. As an Editor module this one never loaded in such a game: the Blueprint
+	// failed to load, nothing rebuilt its class, and every function of every widget Blueprint silently
+	// did nothing -- On Construct, the events, the resume point of a Delay. Hence UncookedOnly.
+	FKismetCompilerContext::RegisterCompilerForBP(UDreamWidgetBlueprint::StaticClass(),
+		[](UBlueprint* InBlueprint, FCompilerResultsLog& InMessageLog, const FKismetCompilerOptions& InCompileOptions)
+		{
+			return TSharedPtr<FKismetCompilerContext>(new FDreamWidgetBlueprintCompilerContext(
+				CastChecked<UDreamWidgetBlueprint>(InBlueprint), InMessageLog, InCompileOptions));
+		});
+
+	// Everything below serves an editor session, which a game run on uncooked content is not: nothing
+	// there shows a menu, a tab or a details panel, the bridge would take requests meant for an editor
+	// the external tools are talking to, and the symbol export would rewrite files that editor owns.
+	bStartedEditorSession = GIsEditor;
+	if (!bStartedEditorSession)
+	{
+		return;
+	}
+
 	FDreamGUIEditorStyle::Initialize();
 	FDreamGUIEditorStyle::ReloadTextures();
 	FDreamUIControlRegistry::Get().InitializeDynamicDiscovery();
@@ -176,16 +204,6 @@ void FDreamGUIEditorModule::StartupModule()
 			return FDreamUITextWriteBack::CanSpellAsLiteral(InLeaf, InValuePtr);
 		});
 	FDreamUIBehaviourEditorBackendRegistry::Get().RegisterBuiltInBackends();
-
-	// Teaches Kismet how to compile a DreamUI hierarchy into a class. Registering the compiler is
-	// independent of having an editor for the asset -- the stock Blueprint editor opens it and the
-	// stock compile button drives this -- so a DreamUI designer surface can come later on its own.
-	FKismetCompilerContext::RegisterCompilerForBP(UDreamWidgetBlueprint::StaticClass(),
-		[](UBlueprint* InBlueprint, FCompilerResultsLog& InMessageLog, const FKismetCompilerOptions& InCompileOptions)
-		{
-			return TSharedPtr<FKismetCompilerContext>(new FDreamWidgetBlueprintCompilerContext(
-				CastChecked<UDreamWidgetBlueprint>(InBlueprint), InMessageLog, InCompileOptions));
-		});
 
 	OnInitializeSequenceHandle = UDreamWidgetAnimation::OnInitializeSequence().AddStatic(FDreamGUIEditorModule::OnInitializeSequence);
 
@@ -426,6 +444,15 @@ void FDreamGUIEditorModule::ShutdownModule()
 {
 	// This function may be called during shutdown to clean up your module.  For modules that support dynamic reloading,
 	// we call this function before unloading the module.
+
+	// All of it takes down the editor session; the compiler registration, the one thing a game run on
+	// uncooked content starts, has no counterpart (see the end of this function).
+	if (!bStartedEditorSession)
+	{
+		return;
+	}
+	bStartedEditorSession = false;
+
 	FDreamUISymbolExport::Unregister();
 	FDreamUIBridgeService::Unregister();
 	FDreamUIMenus::Unregister();

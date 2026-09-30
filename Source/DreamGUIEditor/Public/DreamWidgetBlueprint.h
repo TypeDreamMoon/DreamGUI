@@ -77,9 +77,13 @@ struct FDreamWidgetDesignerData
  * archetype instances are built from. The two copies are deliberate and match UMG: editing the
  * archetype in place would mutate every live instance's template mid-session.
  *
- * Editor-module only, like UWidgetBlueprint -- a cooked build has the generated class and needs
- * nothing else. The designer surface for it is out of scope here: a stock Blueprint editor opens
- * this asset and can already author graphs and variables against it.
+ * Never cooked, like UWidgetBlueprint -- a cooked build has the generated class, bytecode included,
+ * and needs nothing else. Uncooked content is another matter: an editor build drops a Blueprint's
+ * saved bytecode on load and rebuilds it from the Blueprint, so any process running uncooked content
+ * -- a game started with -game or as Standalone Game included -- needs this class and its compiler,
+ * which is why their module is UncookedOnly rather than Editor (FDreamGUIEditorModule::StartupModule).
+ * The designer surface for it is out of scope here: a stock Blueprint editor opens this asset and
+ * can already author graphs and variables against it.
  */
 UCLASS(BlueprintType, DisplayName = "DreamUI Widget Blueprint")
 class DREAMGUIEDITOR_API UDreamWidgetBlueprint : public UBlueprint
