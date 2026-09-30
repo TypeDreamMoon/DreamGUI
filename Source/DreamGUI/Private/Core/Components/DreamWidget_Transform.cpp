@@ -685,7 +685,7 @@ void UDreamWidget::CalculateObjectToWorldTransform(bool /*bPropagateToChildren*/
 	{
 		MarkWorldTransformStaleRecursive();
 	}
-	UDreamUIManagerWorldSubsystem* Manager = TransformChangeManager.Get();
+	UDreamUIManagerWorldSubsystem* Manager = RegisteredManager.Get();
 	if (Manager != nullptr && Manager->DefersTransformChanges())
 	{
 		Manager->AddTransformChangeRoot(this);

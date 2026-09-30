@@ -93,6 +93,22 @@ static TAutoConsoleVariable<int32> CVarDreamUIRenderLayerMaxPerCanvas(
 namespace DreamCanvasLocal
 {
 	/**
+	 * UDreamUIManagerWorldSubsystem::BumpHitTestGenerationFor through the manager the canvas's widget registered with. A
+	 * canvas that moves asks this a few times a frame -- updated, layers marked moved, layers placed -- and finding the
+	 * manager through the world walks the outers each time.
+	 */
+	void BumpHitTestGeneration(const UDreamCanvas* InCanvas)
+	{
+		const UDreamWidget* Widget = InCanvas->GetWidget();
+		if (UDreamUIManagerWorldSubsystem* Manager = Widget != nullptr ? Widget->GetRegisteredManager() : nullptr)
+		{
+			Manager->BumpHitTestGeneration();
+			return;
+		}
+		UDreamUIManagerWorldSubsystem::BumpHitTestGenerationFor(InCanvas);
+	}
+
+	/**
 	 * Whether every element of InCanvas under InWidget, its own included, can be kept relative to it: each one transformed
 	 * along the FTransform path of FDreamUIGeometry::TransformVertices, from nothing but where it is in the layer. A child
 	 * canvas is drawn by that canvas, at its own transform, and none of this one's business.
@@ -227,7 +243,9 @@ TSharedPtr<class FDreamUIRenderer, ESPMode::ThreadSafe> UDreamCanvas::GetRenderT
 
 void UDreamCanvas::UpdateRootCanvas()
 {
-	if (!GetWorld())
+	// Found once: a canvas's world is found by walking its outers, and every root canvas asks each frame.
+	const UWorld* World = GetWorld();
+	if (World == nullptr)
 		return;
 	DREAMUI_STAGE_SCOPE(CanvasUpdate);
 	CheckRootCanvas();
@@ -237,7 +255,7 @@ void UDreamCanvas::UpdateRootCanvas()
 		{
 			auto ActualRenderMode = GetActualRenderMode();
 #if WITH_EDITOR
-			if (!DreamUI::IsGameWorld(this))//edit mode
+			if (!World->IsGameWorld())//edit mode
 			{
 				if (ActualRenderMode == EDreamRenderMode::ScreenSpaceOverlay)
 					ActualRenderMode = EDreamRenderMode::WorldSpace_DreamUI;
@@ -878,7 +896,7 @@ void UDreamCanvas::MarkRenderLayerMoved(UDreamWidget* InLayer)
 		{
 			RootCanvas->bAnythingChangedForRenderTarget = true;
 		}
-		UDreamUIManagerWorldSubsystem::BumpHitTestGenerationFor(this);
+		DreamCanvasLocal::BumpHitTestGeneration(this);
 	}
 }
 
@@ -1037,13 +1055,14 @@ void UDreamCanvas::TendRenderLayers()
 	{
 		const bool bCanDraw = bEnabled && IsValid(UIMesh) && UIMesh->CanDrawRenderLayers();
 		const uint64 DemoteFrames = static_cast<uint64>(FMath::Max(CVarDreamUIRenderLayerDemoteFrames.GetValueOnGameThread(), 1));
-		const TArray<TWeakObjectPtr<UDreamWidget>> Layers = RenderLayers;
-		for (const TWeakObjectPtr<UDreamWidget>& WeakLayer : Layers)
+		// Backwards over the list itself rather than over a copy of it made every frame: a layer given back leaves it, and
+		// only from where it is. Clamped all the same, should a layer ever be listed twice.
+		for (int32 Index = RenderLayers.Num() - 1; Index >= 0; Index = FMath::Min(Index - 1, RenderLayers.Num() - 1))
 		{
-			UDreamWidget* Layer = WeakLayer.Get();
+			UDreamWidget* Layer = RenderLayers[Index].Get();
 			if (Layer == nullptr)
 			{
-				RenderLayers.Remove(WeakLayer);
+				RenderLayers.RemoveAt(Index);
 				continue;
 			}
 			bool bKeep = bCanDraw && Layer->GetRenderCanvas() == this && Layer->GetRenderLayerMode() != EDreamWidgetRenderLayer::Never;
@@ -2525,7 +2544,7 @@ void UDreamCanvas::UpdateCanvasDrawCall()
 		RootCanvas->bAnythingChangedForRenderTarget = true;
 		// Whatever made this canvas update -- layout, a transform, geometry, a sort -- may have moved what a
 		// ray would hit on it.
-		UDreamUIManagerWorldSubsystem::BumpHitTestGenerationFor(this);
+		DreamCanvasLocal::BumpHitTestGeneration(this);
 		CheckUIMesh();
 		struct LOCAL
 		{

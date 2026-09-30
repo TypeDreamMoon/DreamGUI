@@ -1036,6 +1036,12 @@ public:
 	bool IsWorldTransformDirty()const { return bWorldTransformDirty; }
 	/** Whether a change of this widget's world transform waits to be announced at the next flush. */
 	bool IsTransformChangePending()const { return bTransformChangePending; }
+	/**
+	 * The UI manager this widget registered with, kept from registration to unregistration. Null while it is not
+	 * registered, or when its world has no manager. For what is asked every frame of a thousand widgets: finding it
+	 * through the world walks the outers each time.
+	 */
+	UDreamUIManagerWorldSubsystem* GetRegisteredManager()const;
 	/** Announce the changes pending in this widget's subtree now, to its canvases, visuals and listeners. */
 	void FlushTransformChanges();
 	/**
@@ -1075,10 +1081,10 @@ private:
 	/** The pending change began at this widget, not only above it: what the render-layer rules measure moves by. */
 	uint8 bOwnTransformChanged : 1 = false;
 	/**
-	 * The manager whose flush announces this widget's changes, kept from registration so that a write need
-	 * not walk the outers to its world. Null with no manager: every change is then announced on the spot.
+	 * The manager this widget registered with (GetRegisteredManager), whose flush announces its changes. Null with
+	 * no manager: every change is then announced on the spot.
 	 */
-	TWeakObjectPtr<UDreamUIManagerWorldSubsystem> TransformChangeManager;
+	TWeakObjectPtr<UDreamUIManagerWorldSubsystem> RegisteredManager;
 	void ComputeWorldTransform()const;
 	/** Mark this widget and its subtree stale and pending, stopping at a descendant already both. */
 	void MarkWorldTransformStaleRecursive();
