@@ -1121,6 +1121,11 @@ private:
 	 */
 	TWeakObjectPtr<UDreamUIManagerWorldSubsystem> RegisteredManager;
 	void ComputeWorldTransform()const;
+	/**
+	 * The world transform as ComputeWorldTransform would compose it now, without keeping it -- nor that of any stale
+	 * ancestor it is composed from: see GetWorldRectBoundingSphere. Writes nothing.
+	 */
+	FTransform ComposeWorldTransformWithoutKeeping()const;
 	/** Mark this widget and its subtree stale and pending, stopping at a descendant already both. */
 	void MarkWorldTransformStaleRecursive();
 	/** What FlushTransformChanges does with a notice: the canvas's marks, and the visual's. */

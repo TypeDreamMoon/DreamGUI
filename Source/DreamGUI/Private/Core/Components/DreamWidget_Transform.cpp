@@ -576,9 +576,18 @@ bool UDreamWidget::GetWorldRectBoundingSphere(FVector& OutCenter, double& OutRad
 		const double Width = GetWidth();
 		const double Height = GetHeight();
 		const FVector2D LocalCenter = GetLocalSpaceCenter();
-		// Through the accessor: a move marks this cache and the transform stale together, and the
-		// transform is only composed again when it is read.
-		const FTransform& WorldTransform = GetWorldTransform();
+		/**
+		 * A widget whose world transform is stale is left stale: its sphere is worked out from a transform composed here, as
+		 * ComputeWorldTransform would, and neither is kept. What a render layer holds is marked stale each time the layer is
+		 * written, and the marking stops at a widget already stale; a ray that composed every one of them, every frame, had
+		 * every write of a turning layer walk its contents again. The exact test composes a candidate's transform and keeps
+		 * it, as it always did.
+		 */
+		const bool bTransformStale = bWorldTransformDirty;
+		// ...and so is any stale widget between it and the first current one above: a label inside a turning button, under
+		// a panel of the button's own, would otherwise have that panel composed and kept, and walked again at the next turn.
+		const FTransform Composed = bTransformStale ? ComposeWorldTransformWithoutKeeping() : FTransform::Identity;
+		const FTransform& WorldTransform = bTransformStale ? Composed : ObjectToWorldTransform;
 		// The rect lies on local X = 0, so only the two in-plane scales can stretch it. FTransform
 		// scales before it rotates, so a local (0, y, z) lands at R * (0, Sy*y, Sz*z) + T, whose
 		// distance from the transformed centre is at most Max(|Sy|, |Sz|) times the local one --
@@ -586,12 +595,24 @@ bool UDreamWidget::GetWorldRectBoundingSphere(FVector& OutCenter, double& OutRad
 		const FVector Scale = WorldTransform.GetScale3D();
 		const double MaxPlaneScale = FMath::Max(FMath::Abs(Scale.Y), FMath::Abs(Scale.Z));
 		const double HalfDiagonal = 0.5 * FMath::Sqrt(Width * Width + Height * Height) * MaxPlaneScale;
-		CacheWorldRectCenter = WorldTransform.TransformPosition(FVector(0.0, LocalCenter.X, LocalCenter.Y));
+		const FVector Center = WorldTransform.TransformPosition(FVector(0.0, LocalCenter.X, LocalCenter.Y));
 		// A hair of slack on a real rect, so a click landing exactly on a corner cannot be thrown out
 		// by the last bit of a square root: a coarse test that is tighter than the exact test it
 		// stands in front of is a lost hit, which is the one failure mode this must not have. A
 		// degenerate rect gets no slack and is reported as no bound at all.
-		CacheWorldRectRadius = HalfDiagonal > 0.0 ? HalfDiagonal * 1.001 + UE_KINDA_SMALL_NUMBER : 0.0;
+		const double Radius = HalfDiagonal > 0.0 ? HalfDiagonal * 1.001 + UE_KINDA_SMALL_NUMBER : 0.0;
+		if (bTransformStale)
+		{
+			if (!(Radius > 0.0))
+			{
+				return false;
+			}
+			OutCenter = Center;
+			OutRadius = Radius;
+			return true;
+		}
+		CacheWorldRectCenter = Center;
+		CacheWorldRectRadius = Radius;
 		bWorldRectBoundsDirty = false;
 	}
 	// Spelt as a negation so a NaN radius -- from a width nobody has measured -- answers "no bound"
@@ -651,6 +672,24 @@ namespace DreamWidgetTransformLocal
 uint64 UDreamWidget::GetWorldTransformComputeCount()
 {
 	return DreamWidgetTransformLocal::WorldTransformComputeCount.load(std::memory_order_relaxed);
+}
+
+FTransform UDreamWidget::ComposeWorldTransformWithoutKeeping()const
+{
+	if (!bWorldTransformDirty)
+	{
+		return ObjectToWorldTransform;
+	}
+	const FTransform LocalTransform = GetRenderLocalTransform();
+	if (const UDreamWidget* ParentWidget = Parent.Get())
+	{
+		return LocalTransform * ParentWidget->ComposeWorldTransformWithoutKeeping();
+	}
+	if (const USceneComponent* WidgetPresenterComponent = GetAttachedRootSceneComponent())
+	{
+		return LocalTransform * WidgetPresenterComponent->GetComponentTransform();
+	}
+	return LocalTransform;
 }
 
 void UDreamWidget::ComputeWorldTransform()const
