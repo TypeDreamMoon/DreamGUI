@@ -599,6 +599,67 @@ namespace DreamUIRendererLocal
 		TArray<FDreamUIMeshBatchContainer> Batches;
 	};
 
+	/**
+	 * What the draws of one pass through a material looked up last: the shaders the material has for the world renderer's
+	 * shader types. A wall of world-space panels draws one material thousands of times a frame, panel after panel, and each
+	 * draw looked the shaders up in the material's shader map again.
+	 */
+	template<typename PixelShaderType>
+	struct TMaterialShadersCache
+	{
+		const FMaterial* Material = nullptr;
+		bool bFound = false;
+		TShaderRef<FDreamUIScreenRenderVS> VertexShader;
+		TShaderRef<PixelShaderType> PixelShader;
+
+		bool Find(const FMaterial& InMaterial)
+		{
+			if (Material != &InMaterial)
+			{
+				Material = &InMaterial;
+				FMaterialShaderTypes ShaderTypes;
+				ShaderTypes.AddShaderType<FDreamUIScreenRenderVS>();
+				ShaderTypes.AddShaderType<PixelShaderType>();
+				FMaterialShaders Shaders;
+				bFound = InMaterial.TryGetShaders(ShaderTypes, nullptr, Shaders);
+				VertexShader = TShaderRef<FDreamUIScreenRenderVS>();
+				PixelShader = TShaderRef<PixelShaderType>();
+				if (bFound)
+				{
+					Shaders.TryGetVertexShader(VertexShader);
+					Shaders.TryGetPixelShader(PixelShader);
+				}
+			}
+			return bFound;
+		}
+	};
+
+	/**
+	 * The pipeline state a pass's last draw through a material set, by what it was made from: a draw that would make the
+	 * same one does not look it up in the cache and set it again. Forgotten by any draw that sets another -- a built-in one.
+	 */
+	struct FMaterialPipelineKey
+	{
+		const FMaterial* Material = nullptr;
+		bool bWireframe = false;
+		bool bReverseCulling = false;
+		bool bDepthFade = false;
+		bool bSet = false;
+
+		bool Matches(const FMaterial* InMaterial, bool bInWireframe, bool bInReverseCulling, bool bInDepthFade) const
+		{
+			return bSet && Material == InMaterial && bWireframe == bInWireframe && bReverseCulling == bInReverseCulling && bDepthFade == bInDepthFade;
+		}
+		void Remember(const FMaterial* InMaterial, bool bInWireframe, bool bInReverseCulling, bool bInDepthFade)
+		{
+			Material = InMaterial;
+			bWireframe = bInWireframe;
+			bReverseCulling = bInReverseCulling;
+			bDepthFade = bInDepthFade;
+			bSet = true;
+		}
+	};
+
 	/** What one collection is about to draw, into the frame's counters. */
 	void CountCollected(const FCollectedMeshBatches& InCollected)
 	{
@@ -1116,6 +1177,7 @@ void FDreamUIRenderer::RecordWorldSpace_RenderThread(FRDGBuilder& GraphBuilder, 
 			int RenderPriority = 0;
 		};
 		TArray<FWorldSpaceRenderParameterSequence> RenderSequenceArray;
+		RenderSequenceArray.Reserve(WorldSpaceRenderCanvasParameterArray.Num());
 		for (auto& WorldRenderParameter : WorldSpaceRenderCanvasParameterArray)
 		{
 			if (WorldRenderParameter.Primitive->DreamUI_CanRender())
@@ -1144,7 +1206,8 @@ void FDreamUIRenderer::RecordWorldSpace_RenderThread(FRDGBuilder& GraphBuilder, 
 							Item.DepthFade = WorldRenderParameter.DepthFade;
 							Item.WorldPosition = WorldRenderParameter.Primitive->DreamUI_GetWorldPositionForSortTranslucent();
 							Item.RenderPriority = WorldRenderParameter.Primitive->DreamUI_GetRenderPriority();
-							RenderSequenceArray.Add(Item);
+							// Moved: its render data is an array of arrays, which a copy made again for each of a world's panels.
+							RenderSequenceArray.Add(MoveTemp(Item));
 						}
 					}
 				}
@@ -1202,24 +1265,40 @@ void FDreamUIRenderer::RecordWorldSpace_RenderThread(FRDGBuilder& GraphBuilder, 
 			 * is measured against this frame's camera. The commented-out `if (bNeedSortWorldSpaceRenderCanvas)`
 			 * that used to stand here would have rendered world-space canvases in registration order.
 			 */
+			/**
+			 * Sorted as keys -- priority, distance, and the place in the array, which makes it the order a stable sort gives:
+			 * equal (priority, distance) keeps registration order, so ties cannot flip between frames when the array is
+			 * rebuilt or resorted. Moving the records themselves, each with an array of its own, was a twelfth of the render
+			 * thread's frame with a world of panels.
+			 */
+			struct FSortKey
+			{
+				int32 RenderPriority = 0;
+				float DistToCamera = 0.0f;
+				int32 Index = 0;
+			};
+			TArray<FSortKey> SortedSequence;
 			{
 				auto InViewPosition = FVector3f(RenderView->ViewMatrices.GetViewOrigin());
-				for (auto& Item : RenderSequenceArray)
+				SortedSequence.SetNumUninitialized(RenderSequenceArray.Num());
+				for (int32 Index = 0; Index < RenderSequenceArray.Num(); ++Index)
 				{
+					FWorldSpaceRenderParameterSequence& Item = RenderSequenceArray[Index];
 					Item.DistToCamera = FVector3f::DistSquared(InViewPosition, Item.WorldPosition);
+					SortedSequence[Index] = FSortKey{ Item.RenderPriority, Item.DistToCamera, Index };
 				}
-				//StableSort: equal (priority, distance) keeps registration order, so ties cannot flip
-				//between frames when the array is rebuilt or resorted.
-				RenderSequenceArray.StableSort([InViewPosition](const FWorldSpaceRenderParameterSequence& A, const FWorldSpaceRenderParameterSequence& B) {
-					if (A.RenderPriority == B.RenderPriority)
-					{
-						return A.DistToCamera > B.DistToCamera;
-					}
-					else
+				SortedSequence.Sort([](const FSortKey& A, const FSortKey& B)
+				{
+					if (A.RenderPriority != B.RenderPriority)
 					{
 						return A.RenderPriority < B.RenderPriority;
 					}
-					});
+					if (A.DistToCamera != B.DistToCamera)
+					{
+						return A.DistToCamera > B.DistToCamera;
+					}
+					return A.Index < B.Index;
+				});
 			}
 
 			/**
@@ -1263,6 +1342,10 @@ void FDreamUIRenderer::RecordWorldSpace_RenderThread(FRDGBuilder& GraphBuilder, 
 						FGraphicsPipelineStateInitializer GraphicsPSOInit;
 						RHICmdList.ApplyCachedRenderTargets(GraphicsPSOInit);
 						RHICmdList.SetViewport(ViewRect.Min.X, ViewRect.Min.Y, 0.0f, ViewRect.Max.X, ViewRect.Max.Y, 1.0f);
+						// See TMaterialShadersCache and FMaterialPipelineKey: kept across this pass's draws.
+						DreamUIRendererLocal::TMaterialShadersCache<FDreamUIWorldRenderPS> WorldShaders;
+						DreamUIRendererLocal::TMaterialShadersCache<FDreamUIWorldRenderDepthFadePS> DepthFadeShaders;
+						DreamUIRendererLocal::FMaterialPipelineKey PipelineKey;
 
 						for (const FMeshDraws& Draw : *Draws)
 						{
@@ -1281,6 +1364,8 @@ void FDreamUIRenderer::RecordWorldSpace_RenderThread(FRDGBuilder& GraphBuilder, 
 										DrawBuiltInBatch(RHICmdList, GraphicsPSOInit, *RenderView, ViewRect, MeshBatchContainer
 											, NumSamples, GammaValue, false
 											, true, BlendDepth, DepthFade, SceneDepthTexST, PassParameters->SceneDepthTex->GetRHI());
+										// It set a pipeline of its own.
+										PipelineKey.bSet = false;
 										return;
 									}
 									auto MaterialRenderProxy = (bWireframe ? WireframeMaterialInstance : Mesh.MaterialRenderProxy);
@@ -1295,26 +1380,24 @@ void FDreamUIRenderer::RecordWorldSpace_RenderThread(FRDGBuilder& GraphBuilder, 
 
 									if (DepthFade <= 0)
 									{
-										FMaterialShaderTypes ShaderTypes;
-										ShaderTypes.AddShaderType<FDreamUIScreenRenderVS>();
-										ShaderTypes.AddShaderType<FDreamUIWorldRenderPS>();
-										FMaterialShaders Shaders;
-										if (Material->TryGetShaders(ShaderTypes, nullptr, Shaders))
+										if (WorldShaders.Find(*Material))
 										{
-											TShaderRef<FDreamUIScreenRenderVS> VertexShader;
-											TShaderRef<FDreamUIWorldRenderPS> PixelShader;
-											Shaders.TryGetVertexShader(VertexShader);
-											Shaders.TryGetPixelShader(PixelShader);
+											const TShaderRef<FDreamUIScreenRenderVS>& VertexShader = WorldShaders.VertexShader;
+											const TShaderRef<FDreamUIWorldRenderPS>& PixelShader = WorldShaders.PixelShader;
 
-											FDreamUIRenderer::SetGraphicPipelineState_BlendDepthStencilRasterize(RenderView->GetFeatureLevel(), GraphicsPSOInit, Material->GetBlendMode()
-											, Material->IsWireframe() || bWireframe, Material->IsTwoSided(), Material->ShouldDisableDepthTest(), false, Mesh.ReverseCulling
-											);
-											GraphicsPSOInit.BoundShaderState.VertexDeclarationRHI = GetDreamUIMeshVertexDeclaration();
-											GraphicsPSOInit.BoundShaderState.VertexShaderRHI = VertexShader.GetVertexShader();
-											GraphicsPSOInit.BoundShaderState.PixelShaderRHI = PixelShader.GetPixelShader();
-											GraphicsPSOInit.PrimitiveType = EPrimitiveType::PT_TriangleList;
-											GraphicsPSOInit.NumSamples = NumSamples;
-											SetGraphicsPipelineState(RHICmdList, GraphicsPSOInit, 0, EApplyRendertargetOption::CheckApply);
+											if (!PipelineKey.Matches(Material, bWireframe, Mesh.ReverseCulling, false))
+											{
+												FDreamUIRenderer::SetGraphicPipelineState_BlendDepthStencilRasterize(RenderView->GetFeatureLevel(), GraphicsPSOInit, Material->GetBlendMode()
+												, Material->IsWireframe() || bWireframe, Material->IsTwoSided(), Material->ShouldDisableDepthTest(), false, Mesh.ReverseCulling
+												);
+												GraphicsPSOInit.BoundShaderState.VertexDeclarationRHI = GetDreamUIMeshVertexDeclaration();
+												GraphicsPSOInit.BoundShaderState.VertexShaderRHI = VertexShader.GetVertexShader();
+												GraphicsPSOInit.BoundShaderState.PixelShaderRHI = PixelShader.GetPixelShader();
+												GraphicsPSOInit.PrimitiveType = EPrimitiveType::PT_TriangleList;
+												GraphicsPSOInit.NumSamples = NumSamples;
+												SetGraphicsPipelineState(RHICmdList, GraphicsPSOInit, 0, EApplyRendertargetOption::CheckApply);
+												PipelineKey.Remember(Material, bWireframe, Mesh.ReverseCulling, false);
+											}
 
 											VertexShader->SetMaterialShaderParameters(RHICmdList, *RenderView, MaterialRenderProxy, Material, Mesh.Elements[0].PrimitiveUniformBufferResource, MeshBatchContainer.BuiltIn.RenderLayerTableRHI.GetReference(), MeshBatchContainer.BuiltIn.WidgetDataTextureRHI.GetReference());
 											PixelShader->SetMaterialShaderParameters(RHICmdList, *RenderView, MaterialRenderProxy, Material, Mesh.Elements[0].PrimitiveUniformBufferResource);
@@ -1327,26 +1410,24 @@ void FDreamUIRenderer::RecordWorldSpace_RenderThread(FRDGBuilder& GraphBuilder, 
 									}
 									else
 									{
-										FMaterialShaderTypes ShaderTypes;
-										ShaderTypes.AddShaderType<FDreamUIScreenRenderVS>();
-										ShaderTypes.AddShaderType<FDreamUIWorldRenderDepthFadePS>();
-										FMaterialShaders Shaders;
-										if (Material->TryGetShaders(ShaderTypes, nullptr, Shaders))
+										if (DepthFadeShaders.Find(*Material))
 										{
-											TShaderRef<FDreamUIScreenRenderVS> VertexShader;
-											TShaderRef<FDreamUIWorldRenderDepthFadePS> PixelShader;
-											Shaders.TryGetVertexShader(VertexShader);
-											Shaders.TryGetPixelShader(PixelShader);
+											const TShaderRef<FDreamUIScreenRenderVS>& VertexShader = DepthFadeShaders.VertexShader;
+											const TShaderRef<FDreamUIWorldRenderDepthFadePS>& PixelShader = DepthFadeShaders.PixelShader;
 
-											FDreamUIRenderer::SetGraphicPipelineState_BlendDepthStencilRasterize(RenderView->GetFeatureLevel(), GraphicsPSOInit, Material->GetBlendMode()
-											, Material->IsWireframe() || bWireframe, Material->IsTwoSided(), Material->ShouldDisableDepthTest(), false, Mesh.ReverseCulling
-											);
-											GraphicsPSOInit.BoundShaderState.VertexDeclarationRHI = GetDreamUIMeshVertexDeclaration();
-											GraphicsPSOInit.BoundShaderState.VertexShaderRHI = VertexShader.GetVertexShader();
-											GraphicsPSOInit.BoundShaderState.PixelShaderRHI = PixelShader.GetPixelShader();
-											GraphicsPSOInit.PrimitiveType = EPrimitiveType::PT_TriangleList;
-											GraphicsPSOInit.NumSamples = NumSamples;
-											SetGraphicsPipelineState(RHICmdList, GraphicsPSOInit, 0, EApplyRendertargetOption::CheckApply);
+											if (!PipelineKey.Matches(Material, bWireframe, Mesh.ReverseCulling, true))
+											{
+												FDreamUIRenderer::SetGraphicPipelineState_BlendDepthStencilRasterize(RenderView->GetFeatureLevel(), GraphicsPSOInit, Material->GetBlendMode()
+												, Material->IsWireframe() || bWireframe, Material->IsTwoSided(), Material->ShouldDisableDepthTest(), false, Mesh.ReverseCulling
+												);
+												GraphicsPSOInit.BoundShaderState.VertexDeclarationRHI = GetDreamUIMeshVertexDeclaration();
+												GraphicsPSOInit.BoundShaderState.VertexShaderRHI = VertexShader.GetVertexShader();
+												GraphicsPSOInit.BoundShaderState.PixelShaderRHI = PixelShader.GetPixelShader();
+												GraphicsPSOInit.PrimitiveType = EPrimitiveType::PT_TriangleList;
+												GraphicsPSOInit.NumSamples = NumSamples;
+												SetGraphicsPipelineState(RHICmdList, GraphicsPSOInit, 0, EApplyRendertargetOption::CheckApply);
+												PipelineKey.Remember(Material, bWireframe, Mesh.ReverseCulling, true);
+											}
 
 											VertexShader->SetMaterialShaderParameters(RHICmdList, *RenderView, MaterialRenderProxy, Material, Mesh.Elements[0].PrimitiveUniformBufferResource, MeshBatchContainer.BuiltIn.RenderLayerTableRHI.GetReference(), MeshBatchContainer.BuiltIn.WidgetDataTextureRHI.GetReference());
 											PixelShader->SetMaterialShaderParameters(RHICmdList, *RenderView, MaterialRenderProxy, Material, Mesh.Elements[0].PrimitiveUniformBufferResource);
@@ -1373,8 +1454,9 @@ void FDreamUIRenderer::RecordWorldSpace_RenderThread(FRDGBuilder& GraphBuilder, 
 				PendingDraws = nullptr;
 			};
 
-			for (auto& RenderSequenceItem : RenderSequenceArray)
+			for (const FSortKey& SortKey : SortedSequence)
 			{
+				auto& RenderSequenceItem = RenderSequenceArray[SortKey.Index];
 				for (auto& RenderPrimitiveItem : RenderSequenceItem.RenderDataArray)
 				{
 					switch (RenderPrimitiveItem.Type)

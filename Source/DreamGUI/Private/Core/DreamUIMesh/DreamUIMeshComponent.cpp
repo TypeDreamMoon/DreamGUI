@@ -17,6 +17,7 @@
 #include "Materials/MaterialRenderProxy.h"
 #include "MaterialDomain.h"
 #include "PrimitiveSceneProxy.h"
+#include "PrimitiveUniformShaderParametersBuilder.h"
 #include "SceneView.h"
 #include "Core/DreamUIDrawCall.h"
 #include "DreamUIRender/DreamVisualPostProcessRenderProxy.h"
@@ -377,6 +378,58 @@ public:
 	{
 		Transform = InTransform;
 		bDeterminantNegative = InTransform.LocalToWorld.Determinant() < 0.0f;
+		// Made again from the new transform when next drawn through a material; the one in use stays with what holds it.
+		PrimitiveUniformBuffer.Reset();
+	}
+
+	/**
+	 * The primitive uniform buffer a section drawn through a material reads -- the transform, the bounds -- made when first
+	 * asked for after the transform changed, and kept: what FDynamicPrimitiveUniformBuffer::Set makes, made once, rather
+	 * than for every such section of every world panel every frame on the render thread. A batch holds it
+	 * (FDreamUIMeshBatchContainer::PrimitiveUniformBufferHold), so that a pass run after the root is gone still reads it.
+	 */
+	const TSharedPtr<TUniformBuffer<FPrimitiveUniformShaderParameters>, ESPMode::ThreadSafe>& GetPrimitiveUniformBuffer_RenderThread(FRHICommandListBase& RHICmdList)
+	{
+		if (!PrimitiveUniformBuffer.IsValid())
+		{
+			// Released and deleted on the render thread, whichever holder lets go of it last.
+			PrimitiveUniformBuffer = TSharedPtr<TUniformBuffer<FPrimitiveUniformShaderParameters>, ESPMode::ThreadSafe>(
+				new TUniformBuffer<FPrimitiveUniformShaderParameters>(),
+				[](TUniformBuffer<FPrimitiveUniformShaderParameters>* InBuffer)
+				{
+					if (IsInRenderingThread())
+					{
+						InBuffer->ReleaseResource();
+						delete InBuffer;
+					}
+					else
+					{
+						ENQUEUE_RENDER_COMMAND(FDreamUIRenderRoot_ReleasePrimitiveUniformBuffer)(
+							[InBuffer](FRHICommandListImmediate&)
+							{
+								InBuffer->ReleaseResource();
+								delete InBuffer;
+							});
+					}
+				});
+			// As FDynamicPrimitiveUniformBuffer::Set(RHICmdList, LocalToWorld, LocalToWorld, Bounds, LocalBounds, false, false,
+			// false) makes it, which is what each section made for itself before: no decals, no lightmap, no velocity.
+			PrimitiveUniformBuffer->BufferUsage = UniformBuffer_MultiFrame;
+			PrimitiveUniformBuffer->SetContents(RHICmdList, FPrimitiveUniformShaderParametersBuilder{}
+				.Defaults()
+					.LocalToWorld(Transform.LocalToWorld)
+					.PreviousLocalToWorld(Transform.LocalToWorld)
+					.ActorWorldPosition(Transform.Bounds.Origin)
+					.WorldBounds(Transform.Bounds)
+					.LocalBounds(Transform.LocalBounds)
+					.PreSkinnedLocalBounds(Transform.LocalBounds)
+					.ReceivesDecals(false)
+					.OutputVelocity(false)
+					.UseVolumetricLightmap(false)
+				.Build());
+			PrimitiveUniformBuffer->InitResource(RHICmdList);
+		}
+		return PrimitiveUniformBuffer;
 	}
 
 	/** The proxy last made for this root, while it lives. */
@@ -833,9 +886,10 @@ public:
 		const bool bAnyWireframePass = ViewFamily.ViewMode == VMI_Wireframe || ViewFamily.EngineShowFlags.MeshEdges;
 		const FMatrix& LocalToWorld = Transform.LocalToWorld;
 
+		ResultArray.Reserve(ResultArray.Num() + PrimitiveData.Sections.Num());
 		for (int i = 0; i < PrimitiveData.Sections.Num(); i++)
 		{
-			auto SectionData = PrimitiveData.Sections[i];
+			const FDreamUIPrimitiveSectionDataContainer& SectionData = PrimitiveData.Sections[i];
 			auto RenderSection = SectionData.SectionPointer;
 
 			auto Section = static_cast<FDreamUISectionProxy_Mesh*>(RenderSection);
@@ -845,8 +899,11 @@ public:
 				continue;//nothing to draw it with
 			}
 
-			// Draw the mesh.
-			FMeshBatch Mesh;
+			// Built where it is kept. A batch made on the stack and copied in was a mesh batch copied, and every render
+			// resource reference it holds taken twice and let go once -- for each of a wall of world panels' sections, each
+			// frame, on the render thread.
+			FDreamUIMeshBatchContainer& MeshBatchContainer = ResultArray.AddDefaulted_GetRef();
+			FMeshBatch& Mesh = MeshBatchContainer.Mesh;
 			FMeshBatchElement& BatchElement = Mesh.Elements[0];
 			BatchElement.IndexBuffer = &Section->IndexBuffer;
 			BatchElement.PrimitiveIdMode = PrimID_ForceZero;
@@ -857,9 +914,10 @@ public:
 			// one, and so does the wireframe.
 			if (bWireframe || bAnyWireframePass || !Section->BuiltIn.bEnabled)
 			{
-				FDynamicPrimitiveUniformBuffer& DynamicPrimitiveUniformBuffer = Collector.AllocateOneFrameResource<FDynamicPrimitiveUniformBuffer>();
-				DynamicPrimitiveUniformBuffer.Set(Collector.GetRHICommandList(), LocalToWorld, LocalToWorld, Transform.Bounds, Transform.LocalBounds, false, false, false);
-				BatchElement.PrimitiveUniformBufferResource = &DynamicPrimitiveUniformBuffer.UniformBuffer;
+				// The root's, kept until its transform changes, and held by the batch: see GetPrimitiveUniformBuffer_RenderThread.
+				const TSharedPtr<TUniformBuffer<FPrimitiveUniformShaderParameters>, ESPMode::ThreadSafe>& Buffer = GetPrimitiveUniformBuffer_RenderThread(Collector.GetRHICommandList());
+				BatchElement.PrimitiveUniformBufferResource = Buffer.Get();
+				MeshBatchContainer.PrimitiveUniformBufferHold = Buffer;
 			}
 
 			BatchElement.FirstIndex = 0;
@@ -871,8 +929,6 @@ public:
 			Mesh.DepthPriorityGroup = SDPG_World;
 			Mesh.bCanApplyViewModeOverrides = false;
 
-			FDreamUIMeshBatchContainer MeshBatchContainer;
-			MeshBatchContainer.Mesh = Mesh;
 			MeshBatchContainer.VertexBufferRHI = Section->DreamUIVertexBuffers.VertexBufferRHI;
 			MeshBatchContainer.IndexBufferRHI = Section->IndexBuffer.IndexBufferRHI;
 			MeshBatchContainer.NumVerts = Section->ValidVerticesCount;
@@ -881,7 +937,6 @@ public:
 			MeshBatchContainer.BuiltIn.bEnabled = MeshBatchContainer.BuiltIn.bEnabled && !bWireframe;
 			// The primitive uniform buffer above stays the root's: a render layer's row of the table is applied ahead of it.
 			MeshBatchContainer.LocalToWorld = LocalToWorld;
-			ResultArray.Add(MeshBatchContainer);
 		}
 	}
 
@@ -924,7 +979,7 @@ public:
 			{
 				if (CurrentRenderData.Sections.Num() > 0)
 				{
-					OutRenderDataArray.Add(CurrentRenderData);
+					OutRenderDataArray.Add(MoveTemp(CurrentRenderData));
 				}
 				PrevRenderSectionType = RenderSection->Type;
 				CurrentRenderData = FDreamUIPrimitiveDataContainer();
@@ -968,7 +1023,7 @@ public:
 		}
 		if (CurrentRenderData.Sections.Num() > 0)
 		{
-			OutRenderDataArray.Add(CurrentRenderData);
+			OutRenderDataArray.Add(MoveTemp(CurrentRenderData));
 		}
 	}
 
@@ -1006,6 +1061,8 @@ private:
 	bool bReleased = false;
 	ERHIFeatureLevel::Type FeatureLevel;
 	TArray<FDreamUIRenderSectionProxy*> SectionArray;
+	/** See GetPrimitiveUniformBuffer_RenderThread. */
+	TSharedPtr<TUniformBuffer<FPrimitiveUniformShaderParameters>, ESPMode::ThreadSafe> PrimitiveUniformBuffer;
 #if DEBUG_PRINT_MESH_MEMORY
 	uint32 MeshMemorySize = 0;
 	uint32 MaxVertexBufferSize = 0;

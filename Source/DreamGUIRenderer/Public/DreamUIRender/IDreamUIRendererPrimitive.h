@@ -47,6 +47,12 @@ struct FDreamUIMeshBatchContainer
 	FDreamUIBuiltInDrawParams BuiltIn;
 	/** Primitive transform, for the built-in path (the material path reads it from the primitive uniform buffer). */
 	FMatrix LocalToWorld = FMatrix::Identity;
+	/**
+	 * The primitive uniform buffer Mesh.Elements[0].PrimitiveUniformBufferResource points at, when it is one its primitive
+	 * keeps from frame to frame rather than one made for the frame: held for as long as the batch is, so that a pass run
+	 * after the primitive is gone still reads it.
+	 */
+	TSharedPtr<const FRenderResource, ESPMode::ThreadSafe> PrimitiveUniformBufferHold;
 
 	FDreamUIMeshBatchContainer() {}
 };
