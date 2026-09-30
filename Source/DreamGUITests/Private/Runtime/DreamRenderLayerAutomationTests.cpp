@@ -15,6 +15,7 @@
 #include "Core/DreamUIDrawCall.h"
 #include "Core/DreamUIGeometry.h"
 #include "Core/DreamUIManager.h"
+#include "Core/DreamUIMesh/DreamUIMeshComponent.h"
 #include "DreamUIRender/DreamUIRenderStats.h"
 #include "Engine/World.h"
 #include "Event/DreamWorldSpaceRaycaster.h"
@@ -649,6 +650,98 @@ bool FDreamRenderLayerQuietTest::RunTest(const FString& Parameters)
 		const DreamTests::Lifecycle::FScopedConsoleVariable Loud(TEXT("r.DreamUI.QuietRenderLayers"), 0);
 		Stage.TurnCard(70.0);
 		TestFalse(TEXT("With quiet layers switched off, the face's move with the card is announced"), Stage.Face->IsTransformChangePending());
+	}
+	return true;
+}
+
+namespace DreamRenderLayerTestLocal
+{
+	/** What a run of turning cards left: each panel's mesh bounds after every frame, and the counters over the run. */
+	struct FPlacedRun
+	{
+		TArray<FBox> Bounds;
+		int64 Promotions = 0;
+		int64 Moves = 0;
+	};
+
+	/** Forty panels, each with a card turned on every frame, placed on the game thread or also on the workers. */
+	bool TurnManyCards(FAutomationTestBase& InTest, int32 InParallelMinCanvases, FPlacedRun& OutRun)
+	{
+		const DreamTests::Lifecycle::FScopedConsoleVariable Layers(TEXT("r.DreamUI.RenderLayers"), 1);
+		const DreamTests::Lifecycle::FScopedConsoleVariable Promote(TEXT("r.DreamUI.RenderLayerPromoteFrames"), 2);
+		const DreamTests::Lifecycle::FScopedConsoleVariable Parallel(TEXT("r.DreamUI.ParallelLayerPlacementMinCanvases"), InParallelMinCanvases);
+		FStage Stage;
+		if (!Stage.Build(InTest))
+		{
+			return false;
+		}
+		constexpr int32 PanelCount = 40;
+		TArray<UDreamCanvas*> Canvases = { Stage.Canvas };
+		TArray<UDreamWidget*> Cards = { Stage.Card };
+		for (int32 Index = 1; Index < PanelCount; ++Index)
+		{
+			UDreamWidget* Root = Stage.MakeWidget(nullptr, 400.0f, 400.0f, FVector2D::ZeroVector);
+			UDreamCanvas* Canvas = Root->AddComponent<UDreamCanvas>();
+			if (!InTest.TestNotNull(TEXT("A canvas on each panel"), Canvas))
+			{
+				return false;
+			}
+			Canvas->SetRenderMode(EDreamRenderMode::WorldSpace_DreamUI);
+			UDreamWidget* Card = Stage.MakeBlock(Root, 100.0f + Index, 60.0f, FVector2D(-50.0, 0.0), FColor::Red);
+			Stage.MakeBlock(Card, 40.0f, 20.0f, FVector2D(10.0, 5.0), FColor::Green);
+			Canvases.Add(Canvas);
+			Cards.Add(Card);
+		}
+		Stage.Frames(3);
+		ResetCounters();
+		for (int32 Step = 1; Step <= 5; ++Step)
+		{
+			for (int32 Index = 0; Index < PanelCount; ++Index)
+			{
+				Cards[Index]->SetRenderRotation(FRotator(5.0 * Step, 10.0 * Step + Index, 0.0));
+			}
+			Stage.Frames(1);
+			for (UDreamCanvas* Canvas : Canvases)
+			{
+				const UDreamUIMeshComponent* Mesh = Canvas->GetUIMesh();
+				OutRun.Bounds.Add(Mesh != nullptr ? Mesh->Bounds.GetBox() : FBox(ForceInit));
+			}
+		}
+		const FCounted Counted;
+		OutRun.Promotions = Counted.Get(DreamUIRenderStats::ECounter::RenderLayerPromotions);
+		OutRun.Moves = Counted.Get(DreamUIRenderStats::ECounter::RenderLayerMoves);
+		return true;
+	}
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamRenderLayerParallelPlacementTest,
+	"DreamGUI.RenderLayer.LayersPlacedTogetherOnWorkersEndWhereTheyDoPlacedOneAfterAnother",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamRenderLayerParallelPlacementTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamRenderLayerTestLocal;
+	FPlacedRun OneAfterAnother;
+	FPlacedRun Together;
+	if (!TurnManyCards(*this, 0, OneAfterAnother) || !TurnManyCards(*this, 1, Together))
+	{
+		return false;
+	}
+	TestEqual(TEXT("Every card became a layer, one after another"), OneAfterAnother.Promotions, static_cast<int64>(40));
+	TestEqual(TEXT("...and together"), Together.Promotions, OneAfterAnother.Promotions);
+	TestTrue(TEXT("The layers moved"), OneAfterAnother.Moves > 0);
+	TestEqual(TEXT("...as often together as one after another"), Together.Moves, OneAfterAnother.Moves);
+	if (!TestEqual(TEXT("Both runs saw every panel every frame"), Together.Bounds.Num(), OneAfterAnother.Bounds.Num()))
+	{
+		return false;
+	}
+	for (int32 Index = 0; Index < Together.Bounds.Num(); ++Index)
+	{
+		const FBox& A = OneAfterAnother.Bounds[Index];
+		const FBox& B = Together.Bounds[Index];
+		TestTrue(FString::Printf(TEXT("Panel %d, frame %d: the mesh bounds follow the card the same way"), Index % 40, Index / 40 + 1),
+			A.IsValid == B.IsValid && A.Min.Equals(B.Min, 1.e-3) && A.Max.Equals(B.Max, 1.e-3));
 	}
 	return true;
 }

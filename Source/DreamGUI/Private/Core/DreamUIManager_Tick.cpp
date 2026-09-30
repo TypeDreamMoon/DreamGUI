@@ -66,6 +66,13 @@ static TAutoConsoleVariable<int32> CVarDreamUIParallelVertexRefreshMinCanvases(
 	TEXT("as well as the game thread. 0: always on the game thread."),
 	ECVF_Default);
 
+static TAutoConsoleVariable<int32> CVarDreamUIParallelLayerPlacementMinCanvases(
+	TEXT("r.DreamUI.ParallelLayerPlacementMinCanvases"),
+	32,
+	TEXT("When at least this many canvases have render layers to place in a frame, the placing -- each layer's matrix and ")
+	TEXT("section boxes -- runs on the task graph's workers as well as the game thread. 0: always on the game thread."),
+	ECVF_Default);
+
 static TAutoConsoleVariable<int32> CVarDreamUIDeferTransformNotifications(
 	TEXT("r.DreamUI.DeferTransformNotifications"),
 	1,
@@ -625,6 +632,33 @@ void UDreamUIManagerWorldSubsystem::SubmitCanvasDrawCall()
 			for (UDreamCanvas* Canvas : ToRefresh)
 			{
 				Canvas->RefreshDrawCallVertices();
+			}
+		}
+		// Their render layers placed where the layers now are: tended on the game thread, then placed -- a matrix and a box
+		// for each section, the canvas's own -- on as many threads as there are, and the rest of each finish after.
+		TArray<UDreamCanvas*> ToPlace;
+		for (UDreamCanvas* Canvas : ToFinish)
+		{
+			if (IsValid(Canvas) && Canvas->TendRenderLayersBeforeFinish())
+			{
+				ToPlace.Add(Canvas);
+			}
+		}
+		const int32 MinPlacingCanvases = CVarDreamUIParallelLayerPlacementMinCanvases.GetValueOnGameThread();
+		if (MinPlacingCanvases > 0 && ToPlace.Num() >= MinPlacingCanvases && FApp::ShouldUseThreadingForPerformance())
+		{
+			TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_ParallelLayerPlacement);
+			constexpr int32 MinBatchSize = 16;
+			ParallelFor(TEXT("DreamUI_PlaceRenderLayers"), ToPlace.Num(), MinBatchSize, [&ToPlace](int32 Index)
+			{
+				ToPlace[Index]->PlaceRenderLayers();
+			});
+		}
+		else
+		{
+			for (UDreamCanvas* Canvas : ToPlace)
+			{
+				Canvas->PlaceRenderLayers();
 			}
 		}
 		for (UDreamCanvas* Canvas : ToFinish)

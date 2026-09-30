@@ -827,6 +827,19 @@ public:
 	void RefreshDrawCallVertices();
 	/** On the game thread, after the refresh: what it left -- sections to rebuild, the mesh's bounds -- and the mesh's render commands. */
 	void FinishDrawCallBatchData();
+	/**
+	 * FinishDrawCallBatchData's render layers, for a caller finishing many canvases at once. First, on the game thread: the
+	 * layers that held still long enough taken back, and whether the rest are to be placed, which FinishDrawCallBatchData
+	 * then does not ask again. True when they are: PlaceRenderLayers, before FinishDrawCallBatchData.
+	 */
+	bool TendRenderLayersBeforeFinish();
+	/**
+	 * Each layer's draw calls and sections moved to where the layer is now, if it moved. Any thread, and several canvases
+	 * at once, between TendRenderLayersBeforeFinish and FinishDrawCallBatchData: it reads transforms the tending composed,
+	 * and writes nothing but this canvas's draw calls and its mesh's sections. What a move asks of the game thread -- a
+	 * render target drawn again, a ray traced again -- FinishDrawCallBatchData does.
+	 */
+	void PlaceRenderLayers();
 	/**  */
 	void MarkNeedVerifyMaterials();
 private:
@@ -1027,12 +1040,17 @@ private:
 	void SetWidgetIsRenderLayer(UDreamWidget* InWidget, bool bInIsLayer);
 	/** At an update, before the widgets are: the layers taken back that can be no longer, and the ones due made. */
 	void UpdateRenderLayers();
-	/** Each frame, at the submit: the layers that held still long enough taken back, and every layer's draw calls placed. */
-	void TendRenderLayers();
+	/**
+	 * Each frame, at the submit: the layers that held still long enough taken back. True when the rest are to be placed
+	 * (PlaceRenderLayers), whose transforms it has composed by then.
+	 */
+	bool TendRenderLayers();
 	/** For draw calls just taken: which of them hold each layer's elements, and where the layer is. */
 	void GatherRenderLayerPlacements();
-	/** Each layer's draw calls and sections moved to where the layer is now, if it moved. */
-	void PlaceRenderLayers();
+	/** TendRenderLayersBeforeFinish ran this frame, and FinishDrawCallBatchData leaves the layers be. */
+	bool bRenderLayersTendedBeforeFinish = false;
+	/** PlaceRenderLayers moved a layer, and FinishDrawCallBatchData tells the rest. */
+	bool bRenderLayersPlaced = false;
 	/** Every widget this canvas made a layer is a layer no longer, and nothing is asked of them: the canvas is going. */
 	void ForgetRenderLayers();
 	/** InLayer's transform relative to this canvas: what its elements are drawn through ahead of the mesh's. */

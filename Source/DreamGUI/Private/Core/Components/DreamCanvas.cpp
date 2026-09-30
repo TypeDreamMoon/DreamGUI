@@ -1029,7 +1029,7 @@ void UDreamCanvas::UpdateRenderLayers()
 	}
 }
 
-void UDreamCanvas::TendRenderLayers()
+bool UDreamCanvas::TendRenderLayers()
 {
 	const bool bEnabled = CVarDreamUIRenderLayers.GetValueOnGameThread() != 0;
 	if (bEnabled != bRenderLayersWereEnabled)
@@ -1046,7 +1046,7 @@ void UDreamCanvas::TendRenderLayers()
 	{
 		// Nothing placed, so nothing to move: the next MarkRenderLayerMoved is news again.
 		bRenderLayersMayHaveMoved = false;
-		return;
+		return false;
 	}
 	TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_TendRenderLayers);
 	const uint64 Frame = GFrameCounter;
@@ -1088,7 +1088,36 @@ void UDreamCanvas::TendRenderLayers()
 			It.RemoveCurrent();
 		}
 	}
-	PlaceRenderLayers();
+	if (!bRenderLayersMayHaveMoved)
+	{
+		return false;
+	}
+	if (RenderLayerPlacements.Num() == 0 || !IsValid(UIMesh))
+	{
+		// Nothing to place, which is as good as placed: the next MarkRenderLayerMoved is news again.
+		bRenderLayersMayHaveMoved = false;
+		return false;
+	}
+	// Composed here, where it may be: PlaceRenderLayers reads these transforms, and may do it on another thread, alongside
+	// other canvases.
+	if (const UDreamWidget* CanvasWidget = GetWidget())
+	{
+		CanvasWidget->GetWorldTransform();
+	}
+	for (const FRenderLayerPlacement& Placement : RenderLayerPlacements)
+	{
+		if (const UDreamWidget* Layer = Placement.Layer.ResolveObjectPtr())
+		{
+			Layer->GetWorldTransform();
+		}
+	}
+	return true;
+}
+
+bool UDreamCanvas::TendRenderLayersBeforeFinish()
+{
+	bRenderLayersTendedBeforeFinish = true;
+	return IsValid(UIMesh) && TendRenderLayers();
 }
 
 void UDreamCanvas::GatherRenderLayerPlacements()
@@ -1172,14 +1201,9 @@ void UDreamCanvas::PlaceRenderLayers()
 	}
 	if (bAnyMoved)
 	{
-		// The mesh's bounds follow the sections' in FinishDrawCallBatchData. A render target that saw no change this frame
-		// draws the move in the next, and a ray is traced again: a move told after this frame's update came too late for both.
+		// The mesh's bounds follow the sections' in FinishDrawCallBatchData, which tells the rest on the game thread.
 		bRefreshMovedBounds = true;
-		if (CheckRootCanvas())
-		{
-			RootCanvas->bAnythingChangedForRenderTarget = true;
-		}
-		UDreamUIManagerWorldSubsystem::BumpHitTestGenerationFor(this);
+		bRenderLayersPlaced = true;
 	}
 }
 
@@ -2826,10 +2850,29 @@ void UDreamCanvas::FinishDrawCallBatchData()
 	{
 		DrawCallsLeftToUpdate.Reset();
 		bRefreshMovedBounds = false;
+		bRenderLayersTendedBeforeFinish = false;
 		return;
 	}
 	// First, so that a section updated whole below is given its layer's transform and box as they are now.
-	TendRenderLayers();
+	if (bRenderLayersTendedBeforeFinish)
+	{
+		bRenderLayersTendedBeforeFinish = false;
+	}
+	else if (TendRenderLayers())
+	{
+		PlaceRenderLayers();
+	}
+	if (bRenderLayersPlaced)
+	{
+		// A render target that saw no change this frame draws the move in the next, and a ray is traced again: a move told
+		// after this frame's update came too late for both.
+		bRenderLayersPlaced = false;
+		if (CheckRootCanvas())
+		{
+			RootCanvas->bAnythingChangedForRenderTarget = true;
+		}
+		DreamCanvasLocal::BumpHitTestGeneration(this);
+	}
 	for (const int32 Index : DrawCallsLeftToUpdate)
 	{
 		if (CurrentDrawCallData.DrawCallArray.IsValidIndex(Index))
