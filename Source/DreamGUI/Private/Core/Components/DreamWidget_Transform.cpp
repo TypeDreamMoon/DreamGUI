@@ -532,7 +532,6 @@ void UDreamWidget::RefreshRenderTransformFlag()
 
 void UDreamWidget::ApplyRenderTransformChange()
 {
-	TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_ApplyRenderTransformChange);
 	RefreshRenderTransformFlag();
 	if (RenderCanvas.IsValid())
 	{

@@ -482,7 +482,6 @@ bool FDreamUIDirectAnimationEvaluation::Evaluate(IMovieScenePlayer& InPlayer, FF
 			}
 			FChannelValues Values = *Initial;
 			EvaluateChannels(Property, InTime, Values);
-			TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_DirectAnimationWrite);
 			Write(Property, *Object, Values);
 			bWrittenAnything = true;
 			if (bStoppedWhileEvaluating)
