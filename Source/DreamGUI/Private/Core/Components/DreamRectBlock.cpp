@@ -782,17 +782,25 @@ void UDreamRectBlock::SetEnableBody(bool value)
 }
 void UDreamRectBlock::SetBodyColor(const FColor& value)
 {
-	this->BodyColor = value;
-	MarkNeedUpdateBlockData();
+	if (this->BodyColor != value)
+	{
+		this->BodyColor = value;
+		MarkNeedUpdateBlockData();
+	}
 }
 void UDreamRectBlock::SetBodyTexture(UTexture* value)
 {
-	this->BodyTexture = value;
-	if (this->BodyTexture == nullptr)
+	if (value == nullptr)
 	{
-		this->BodyTexture = FDreamUIUtils::GetDefaultWhiteTexture();
+		value = FDreamUIUtils::GetDefaultWhiteTexture();
 	}
-	MarkTextureDirty();
+	// A control skins its face on every state change with the brush it has: the same texture again changes nothing, and a
+	// texture marked dirty rebuilds the canvas's draw calls.
+	if (this->BodyTexture != value)
+	{
+		this->BodyTexture = value;
+		MarkTextureDirty();
+	}
 }
 void UDreamRectBlock::SetBodySpriteTexture(UDreamUISpriteData_BaseObject* value)
 {
@@ -823,9 +831,12 @@ void UDreamRectBlock::SetBodySpriteTexture(UDreamUISpriteData_BaseObject* value)
 }
 void UDreamRectBlock::SetBodyTextureMode(EDreamRectBlockTextureMode value)
 {
-	this->BodyTextureMode = value;
-	MarkTextureDirty();
-	MarkVertexUVDirty();
+	if (this->BodyTextureMode != value)
+	{
+		this->BodyTextureMode = value;
+		MarkTextureDirty();
+		MarkVertexUVDirty();
+	}
 }
 void UDreamRectBlock::SetSizeFromBodyTexture()
 {
@@ -862,19 +873,28 @@ void UDreamRectBlock::SetSoftEdge(bool value)
 }
 void UDreamRectBlock::SetBodyTextureScaleMode(EDreamRectBlockTextureScaleMode value)
 {
-	this->BodyTextureScaleMode = value;
-	MarkNeedUpdateBlockData();
+	if (this->BodyTextureScaleMode != value)
+	{
+		this->BodyTextureScaleMode = value;
+		MarkNeedUpdateBlockData();
+	}
 }
 
 void UDreamRectBlock::SetBodyTextureDrawMode(EDreamRectBlockTextureDrawMode value)
 {
-	this->BodyTextureDrawMode = value;
-	MarkNeedUpdateBlockData();
+	if (this->BodyTextureDrawMode != value)
+	{
+		this->BodyTextureDrawMode = value;
+		MarkNeedUpdateBlockData();
+	}
 }
 void UDreamRectBlock::SetBodyTextureMargin(const FMargin& value)
 {
-	this->BodyTextureMargin = value;
-	MarkNeedUpdateBlockData();
+	if (this->BodyTextureMargin != value)
+	{
+		this->BodyTextureMargin = value;
+		MarkNeedUpdateBlockData();
+	}
 }
 
 void UDreamRectBlock::SetEnableBodyGradient(bool value)
