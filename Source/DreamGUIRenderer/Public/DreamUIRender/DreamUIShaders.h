@@ -29,7 +29,13 @@ public:
 	static void ModifyCompilationEnvironment(const FMaterialShaderPermutationParameters& Parameters, FShaderCompilerEnvironment& OutEnvironment);
 	static bool ShouldCompilePermutation(const FMaterialShaderPermutationParameters& Parameters);
 	
-	void SetMaterialShaderParameters(FRHICommandList& RHICmdList, const FSceneView& View, const FMaterialRenderProxy* MaterialRenderProxy, const FMaterial* Material, const TUniformBuffer<FPrimitiveUniformShaderParameters>* PrimitiveUniformBuffer);
+	/**
+	 * InElementToCanvas: what the section's vertices go through ahead of the primitive's transform, identity or a render
+	 * layer's (FDreamUIMeshBatchContainer::ElementToCanvas). Set with the rest, in the same batch.
+	 */
+	void SetMaterialShaderParameters(FRHICommandList& RHICmdList, const FSceneView& View, const FMaterialRenderProxy* MaterialRenderProxy, const FMaterial* Material, const TUniformBuffer<FPrimitiveUniformShaderParameters>* PrimitiveUniformBuffer, const FMatrix44f& InElementToCanvas);
+private:
+	LAYOUT_FIELD(FShaderParameter, ElementToCanvasParameter);
 };
 class FDreamUIScreenRenderPS : public FMaterialShader
 {

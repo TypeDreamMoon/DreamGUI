@@ -7,6 +7,7 @@
 #include "DreamUIRender/DreamUIBlendMode.h"
 #include "DreamUIRender/DreamUIMeshIndex.h"
 #include "DreamUIRender/DreamUIMeshVertex.h"
+#include "UObject/ObjectKey.h"
 
 struct FDreamUISpriteInfo;
 struct FDreamUITextLineProperty;
@@ -60,7 +61,8 @@ public:
 		  BlendMode(Other.BlendMode),
 		  TransformRelativeToCanvas(Other.TransformRelativeToCanvas),
 		  BoundsMin2DInCanvasSpace(Other.BoundsMin2DInCanvasSpace),
-		  BoundsMax2DInCanvasSpace(Other.BoundsMax2DInCanvasSpace)
+		  BoundsMax2DInCanvasSpace(Other.BoundsMax2DInCanvasSpace),
+		  RenderLayer(Other.RenderLayer)
 	{
 		
 	}
@@ -82,6 +84,7 @@ public:
 			TransformRelativeToCanvas = Other.TransformRelativeToCanvas;
 			BoundsMin2DInCanvasSpace = Other.BoundsMin2DInCanvasSpace;
 			BoundsMax2DInCanvasSpace = Other.BoundsMax2DInCanvasSpace;
+			RenderLayer = Other.RenderLayer;
 		}
 		return *this;
 	}
@@ -102,7 +105,8 @@ public:
 		  BlendMode(Other.BlendMode),
 		  TransformRelativeToCanvas(Other.TransformRelativeToCanvas),
 		  BoundsMin2DInCanvasSpace(Other.BoundsMin2DInCanvasSpace),
-		  BoundsMax2DInCanvasSpace(Other.BoundsMax2DInCanvasSpace)
+		  BoundsMax2DInCanvasSpace(Other.BoundsMax2DInCanvasSpace),
+		  RenderLayer(Other.RenderLayer)
 	{
 	}
 
@@ -122,6 +126,7 @@ public:
 			TransformRelativeToCanvas = Other.TransformRelativeToCanvas;
 			BoundsMin2DInCanvasSpace = Other.BoundsMin2DInCanvasSpace;
 			BoundsMax2DInCanvasSpace = Other.BoundsMax2DInCanvasSpace;
+			RenderLayer = Other.RenderLayer;
 		}
 		return *this;
 	}
@@ -150,6 +155,14 @@ public:
 	FTransform TransformRelativeToCanvas;
 	FVector2D BoundsMin2DInCanvasSpace;
 	FVector2D BoundsMax2DInCanvasSpace;
+	/**
+	 * The render layer the vertices are kept relative to (UDreamWidget::GetRenderLayer when they were transformed), or
+	 * none, when they are in canvas space. So are TransformRelativeToCanvas and the 2D bounds above, for an element of a
+	 * layer: all of it is relative to the layer and stays as it is while the layer moves, and the layer's transform puts
+	 * it on the canvas (FDreamUIDrawCall::LayerToCanvas). A key the batching compares on its worker, never resolved there.
+	 */
+	TObjectKey<UDreamWidget> RenderLayer;
+	bool IsInRenderLayer()const { return RenderLayer != TObjectKey<UDreamWidget>(); }
 
 	void CopyDataForPrepare(const FDreamUIGeometry& Other)
 	{
@@ -175,6 +188,8 @@ public:
 
 		BoundsMin2DInCanvasSpace = Other.BoundsMin2DInCanvasSpace;
 		BoundsMax2DInCanvasSpace = Other.BoundsMax2DInCanvasSpace;
+		//the space the vertices are in, which the batching keys draw calls by
+		RenderLayer = Other.RenderLayer;
 	}
 
 	/**
@@ -323,6 +338,17 @@ public:
 		 */
 		bool bUseWorldMatrix = false;
 		bool bRequireNormalAndTangent = false;
+		/**
+		 * The render layer the visual's widget is in (UDreamWidget::GetRenderLayer), or none. When it is in one, the
+		 * vertices are taken to the layer's space by ItemToLayerTransform instead of to the canvas's.
+		 */
+		TObjectKey<UDreamWidget> RenderLayer;
+		/**
+		 * The widget's transform relative to RenderLayer, composed from the local transforms in between rather than
+		 * divided out of the two world transforms: so it comes out the same, bit for bit, however the layer and what is
+		 * above it move, and a geometry whose place in its layer did not change is not copied or uploaded again.
+		 */
+		FTransform ItemToLayerTransform = FTransform::Identity;
 	};
 	/** Gathers FTransformVerticesParams from the two objects. Game thread only. */
 	static FTransformVerticesParams MakeTransformVerticesParams(class UDreamCanvas* canvas, class UDreamVisual* item);

@@ -119,6 +119,14 @@ void UDreamWidget::PostEditChangeProperty(FPropertyChangedEvent& PropertyChanged
 			// looks exactly like the feature not working.
 			ApplyRenderTransformChange();
 		}
+		else if (MemberName == GET_MEMBER_NAME_CHECKED(UDreamWidget, RenderLayer))
+		{
+			// Written into the field the same way: the canvas hears of it as SetRenderLayerMode would have told it.
+			if (RenderCanvas.IsValid())
+			{
+				RenderCanvas->NoteRenderLayerModeChanged(this);
+			}
+		}
 		else if (MemberName == GET_MEMBER_NAME_CHECKED(UDreamWidget, bPerspective)
 			|| MemberName == GET_MEMBER_NAME_CHECKED(UDreamWidget, PerspectiveFieldOfView)
 			|| MemberName == GET_MEMBER_NAME_CHECKED(UDreamWidget, PerspectiveOrigin))

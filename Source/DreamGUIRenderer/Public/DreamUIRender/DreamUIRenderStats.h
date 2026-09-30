@@ -61,6 +61,12 @@ namespace DreamUIRenderStats
 		DrawCallRebuilds,
 		/** Game thread: canvases whose elements only moved, refreshed in the draw calls they had instead of rebuilt. */
 		InPlaceRefreshes,
+		/** Game thread: render layers that moved, each only its sections' matrix and box sent anew -- nothing under it. */
+		RenderLayerMoves,
+		/** Game thread: widgets made render layers, each costing its canvas one rebuild. */
+		RenderLayerPromotions,
+		/** Game thread: render layers taken back, each costing its canvas one rebuild. */
+		RenderLayerDemotions,
 		Num
 	};
 

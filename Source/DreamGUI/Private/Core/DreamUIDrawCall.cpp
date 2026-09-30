@@ -33,6 +33,9 @@ bool FDreamUIDrawCall::CopyBatchMeshGeometry()
 		if (BatchMeshVisual == nullptr)return false;
 		TSharedPtr<const FDreamUIGeometry> Now = BatchMeshVisual->GetGeometryForBatching();
 		if (!Now.IsValid())return false;
+		// Kept in another space than the draw call is drawn in -- a render layer came or went -- which only the rebuild
+		// that asked for it can put right.
+		if (Now->RenderLayer != Built->RenderLayer)return false;
 		//the slot is the size the batch was built with, so that -- not the live count -- is what the layout says; a
 		//count that no longer matches means the layout itself is stale
 		const int32 VertexCount = Built->Vertices.Num();
@@ -200,6 +203,8 @@ bool FDreamUIDrawCall::GeometryListsShareLayout(const TArray<TSharedPtr<const FD
 bool FDreamUIDrawCall::CanConsumeUIGeometryForBatchMesh(const FDreamUIGeometry& geo)const
 {
 	if (this->Type != EDreamUIDrawCallType::BatchMesh)return false;
+	//a draw call is drawn through one render layer's transform, or through none: its vertices are all in one space
+	if (this->RenderLayer != geo.RenderLayer)return false;
 	// Compared as the keys they are, never resolved: this runs on the batching thread, and == and != resolve both weak
 	// pointers whenever they differ, reading the object array while a collection may be under way on the game thread. Two
 	// pointers set to the same object that has gone are still the same key; one set to nothing is not.

@@ -25,6 +25,7 @@ bool FDreamUIGeometry::MatchesDataForPrepare(const FDreamUIGeometry& InPrepared)
 		&& bIsFont == InPrepared.bIsFont
 		&& bSupportDrawcallBatching == InPrepared.bSupportDrawcallBatching
 		&& BlendMode == InPrepared.BlendMode
+		&& RenderLayer == InPrepared.RenderLayer
 		&& BoundsMin2DInCanvasSpace == InPrepared.BoundsMin2DInCanvasSpace
 		&& BoundsMax2DInCanvasSpace == InPrepared.BoundsMax2DInCanvasSpace
 		&& TransformRelativeToCanvas.Equals(InPrepared.TransformRelativeToCanvas, 0.0)
@@ -46,6 +47,8 @@ void FDreamUIGeometry::AdjustPixelPerfectPos(TArray<FDreamUIOriginVertexData>& o
 	//index to stop before. Renamed rather than reinterpreted: reinterpreting it would silently change
 	//what every existing call snaps.
 	endIndex = FMath::Min(endIndex, originVertices.Num());
+	// A render layer's elements are kept relative to it, and its transform places them on the GPU, off the pixel grid.
+	if (Visual->GetWidget()->GetRenderLayer() != nullptr)return;
 	auto CanvasWidget = RenderCanvas->GetRootCanvas()->GetWidget();
 	auto ComponentToCanvasTransform = Visual->GetWidget()->GetWorldTransform() * CanvasWidget->GetWorldTransform().Inverse();
 	if (!UDreamCanvas::Is2DUITransform(ComponentToCanvasTransform))return;//only 2d UI can do pixel perfect
@@ -76,6 +79,8 @@ void FDreamUIGeometry::AdjustPixelPerfectPos(TArray<FDreamUIOriginVertexData>& o
 void AdjustPixelPerfectPos_For_UIRectFillRadial360(TArray<FDreamUIOriginVertexData>& originVertices, UDreamCanvas* RenderCanvas, UDreamVisual* Visual)
 {
 	SCOPE_CYCLE_COUNTER(STAT_TransformPixelPerfectVertices);
+	// A render layer's elements are kept relative to it, and its transform places them on the GPU, off the pixel grid.
+	if (Visual->GetWidget()->GetRenderLayer() != nullptr)return;
 	auto CanvasWidget = RenderCanvas->GetRootCanvas()->GetWidget();
 	auto ComponentToCanvasTransform = Visual->GetWidget()->GetWorldTransform() * CanvasWidget->GetWorldTransform().Inverse();
 	if (!UDreamCanvas::Is2DUITransform(ComponentToCanvasTransform))return;//only 2d UI can do pixel perfect
@@ -110,6 +115,8 @@ void FDreamUIGeometry::AdjustPixelPerfectPos_For_UIText(TArray<FDreamUIOriginVer
 	SCOPE_CYCLE_COUNTER(STAT_TransformPixelPerfectVertices);
 	if (cacheCharPropertyArray.Num() <= 0)return;
 
+	// A render layer's elements are kept relative to it, and its transform places them on the GPU, off the pixel grid.
+	if (Visual->GetWidget()->GetRenderLayer() != nullptr)return;
 	auto CanvasWidget = RenderCanvas->GetRootCanvas()->GetWidget();
 	auto ComponentToCanvasTransform = Visual->GetWidget()->GetWorldTransform() * CanvasWidget->GetWorldTransform().Inverse();
 	if (!UDreamCanvas::Is2DUITransform(ComponentToCanvasTransform))return;//only 2d UI can do pixel perfect
@@ -2289,6 +2296,21 @@ FDreamUIGeometry::FTransformVerticesParams FDreamUIGeometry::MakeTransformVertic
 		// GetWorldMatrix folds in whichever of the two applies, and both when both do.
 		Params.ItemWorldMatrix = ItemWidget->GetWorldMatrix();
 	}
+	// A widget drawn through the matrix path is never in a render layer (UDreamCanvas::CanBeRenderLayer): the matrix is
+	// built from world transforms and the canvas's eye, and a layer's move does not carry it.
+	else if (const UDreamWidget* Layer = ItemWidget->GetRenderLayer())
+	{
+		Params.RenderLayer = Layer;
+		if (ItemWidget != Layer)
+		{
+			FTransform ItemToLayer = ItemWidget->GetRenderLocalTransform();
+			for (const UDreamWidget* Ancestor = ItemWidget->GetParent(); Ancestor != nullptr && Ancestor != Layer; Ancestor = Ancestor->GetParent())
+			{
+				ItemToLayer = ItemToLayer * Ancestor->GetRenderLocalTransform();
+			}
+			Params.ItemToLayerTransform = ItemToLayer;
+		}
+	}
 	//read after CalculateLocalBounds has run, which is why that call has to stay on the game thread too
 	item->GetGeometryBoundsInLocalSpace(Params.LocalBoundsMin, Params.LocalBoundsMax);
 	Params.bRequireNormalAndTangent = canvas->GetActualRequireNormalAndTangent();
@@ -2317,8 +2339,19 @@ void FDreamUIGeometry::TransformVertices(const FTransformVerticesParams& Params,
 
 	const FTransform& inverseCanvasTf = Params.InverseCanvasTransform;
 	const FTransform& itemTf = Params.ItemWorldTransform;
+	// In a render layer the vertices are kept relative to the layer, and from here on "canvas" reads "layer": the transform
+	// and the 2D bounds below are the layer's too, and none of it changes while the layer moves. The layer's transform
+	// puts them on the canvas, on the GPU. Batching and the in-place refresh read neither for such an element.
+	uiGeo->RenderLayer = Params.RenderLayer;
 	FTransform itemToCanvasTf;
-	FTransform::Multiply(&itemToCanvasTf, &itemTf, &inverseCanvasTf);
+	if (uiGeo->IsInRenderLayer())
+	{
+		itemToCanvasTf = Params.ItemToLayerTransform;
+	}
+	else
+	{
+		FTransform::Multiply(&itemToCanvasTf, &itemTf, &inverseCanvasTf);
+	}
 	uiGeo->TransformRelativeToCanvas = itemToCanvasTf;
 	auto itemToCanvasTf2D = UDreamCanvas::ConvertTo2DTransform(itemToCanvasTf);
 	FVector2D itemMin, itemMax;
