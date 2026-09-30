@@ -28,6 +28,7 @@ class UDreamPanelSlot;
 class FDreamUIClipData;
 class UDreamUIDataAsTexture;
 class UDreamCanvas;
+class UDreamUIManagerWorldSubsystem;
 enum class EDreamRenderMode : uint8;
 namespace DreamPerspective { struct FScope; }
 
@@ -180,6 +181,24 @@ enum class EDreamWidgetComponentsChangedType : uint8
 	Removed,
 	//Component reordered
 	Reorder,
+};
+
+/**
+ * What a transform flush tells the canvas and the visual of a widget whose world transform changed
+ * (UDreamWidget::FlushTransformChangesFrom). The render-layer rules choose it: the geometry of a render
+ * layer and of every widget in it is kept relative to the layer, so a layer that moves as a whole moves
+ * its sections and transforms nothing in it again.
+ */
+enum class EDreamTransformChangeNotice : uint8
+{
+	/** A canvas's own widget: the canvas updates it and works out its view again, as for any change of the canvas. */
+	Canvas,
+	/** A render layer: its sections move, and its own vertices, kept relative to it, stay as they are. */
+	RenderLayer,
+	/** Moved relative to what its geometry is kept relative to: its visual transforms its vertices again. */
+	Moved,
+	/** In a render layer that moved with it: nothing it draws changes. */
+	InsideMovedLayer,
 };
 
 /**
@@ -674,13 +693,13 @@ public:
 	/**
 	 * Drop the cached bounding sphere.
 	 *
-	 * Called from the three places its inputs can change: MarkTransformChanged (the single funnel for
-	 * every ObjectToWorldTransform write, including the cascade a parent's move sends down),
-	 * MarkDimensionChanged (size and pivot, unconditionally -- the flags it is handed say WHAT
-	 * changed, and trusting them would make this cache depend on every caller passing them right),
-	 * and the resolve branch inside GetWidth/GetHeight, which catches the paths that dirty the size
-	 * cache without announcing anything (MarkAllDirty, and a stretched child resolving lazily against
-	 * a parent that has since moved).
+	 * Called from the three places its inputs can change: CalculateObjectToWorldTransform (the single
+	 * funnel for every change of the world transform, which marks the moved widget and every
+	 * descendant stale at once), MarkDimensionChanged (size and pivot, unconditionally -- the flags it
+	 * is handed say WHAT changed, and trusting them would make this cache depend on every caller
+	 * passing them right), and the resolve branch inside GetWidth/GetHeight, which catches the paths
+	 * that dirty the size cache without announcing anything (MarkAllDirty, and a stretched child
+	 * resolving lazily against a parent that has since moved).
 	 */
 	void MarkWorldRectBoundsDirty()const { bWorldRectBoundsDirty = true; }
 
@@ -953,14 +972,76 @@ public:
 	void RemoveComponent(UDreamUIBehaviour* Component);
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI", meta = (ComponentClass = "/Script/DreamGUI.DreamUIBehaviour"))
 	void MoveComponentToIndex(UDreamUIBehaviour* Component, int32 NewIndex);
-	void UpdateObjectToWorldTransform();
+	/**
+	 * This widget's own transform changed -- its relative, layout or render transform, its parent, or the
+	 * scene component its canvas follows. The single funnel for every such change.
+	 *
+	 * Nothing is computed here. The widget and every descendant are marked stale, and GetWorldTransform
+	 * composes each when it is next read, so a reader right after the write sees the new transform while a
+	 * widget written three times before anyone reads it is composed once. What a move is announced to --
+	 * the canvas, the visual, the OnTransformChanged listeners -- hears it once, at the next flush of this
+	 * world's manager (UDreamUIManagerWorldSubsystem::FlushTransformChanges). Where no manager will flush --
+	 * a tree with no world, a manager that does not tick, r.DreamUI.DeferTransformNotifications 0 -- the
+	 * subtree is flushed before this returns, which is when every move used to be announced.
+	 *
+	 * bPropagateToChildren is kept for the callers that spell it out: a descendant's world transform is
+	 * composed from this one, so the descendants are always marked.
+	 */
 	void CalculateObjectToWorldTransform(bool bPropagateToChildren = true);
+	/** Whether the cached world transform is out of date, to be composed again when next read. */
+	bool IsWorldTransformDirty()const { return bWorldTransformDirty; }
+	/** Whether a change of this widget's world transform waits to be announced at the next flush. */
+	bool IsTransformChangePending()const { return bTransformChangePending; }
+	/** Announce the changes pending in this widget's subtree now, to its canvases, visuals and listeners. */
+	void FlushTransformChanges();
+	/**
+	 * The walk every flush takes, with its two questions handed in: which widgets are render layers, and
+	 * what telling a widget's canvas and visual means. FlushTransformChanges hands in IsRenderLayer and the
+	 * canvas's own marks; a test hands in its own, to check the render-layer rules against layers of its
+	 * choosing.
+	 *
+	 * The widgets of InRoot's subtree whose change is pending are visited parents first, each once: its
+	 * pending state cleared (a listener that moves it again marks it afresh), its world transform
+	 * composed, InNotify told what EDreamTransformChangeNotice applies, its OnTransformChanged listeners
+	 * called. A widget whose layer-relative transform did not change -- nothing between its render layer
+	 * and it changed its own transform -- is InsideMovedLayer, and its listeners still hear the move: the
+	 * world transform did change.
+	 */
+	static void FlushTransformChangesFrom(UDreamWidget* InRoot, TFunctionRef<bool(const UDreamWidget&)> InIsRenderLayer,
+		TFunctionRef<void(UDreamWidget&, EDreamTransformChangeNotice)> InNotify);
+	/** How many world transforms any widget has composed since the process started: what tests and profiling count. */
+	static uint64 GetWorldTransformComputeCount();
 private:
 	UDreamUIBehaviour* AddComponent(TSubclassOf<UDreamUIBehaviour> ComponentClass, UDreamUIBehaviour* ComponentTemplate);
 	bool TrySetParentInternal(UDreamWidget* InParent, bool InKeepWorldPosition, int InSiblingIndex, bool bEnforceCapacity);
 	
+	/**
+	 * The world transform as last composed. GetWorldTransform is its only reader: it composes it again first
+	 * when bWorldTransformDirty says it is out of date, from the parent's (or the canvas's scene component's)
+	 * and GetRenderLocalTransform.
+	 */
 	mutable FTransform ObjectToWorldTransform;
+	/**
+	 * ObjectToWorldTransform is out of date. Set on a widget, it is set on every descendant too -- they are
+	 * composed from it -- which is what lets a second mark stop at a widget already marked.
+	 */
+	mutable uint8 bWorldTransformDirty : 1 = false;
+	/** The world transform changed and the next flush announces it. Like the dirty bit, set here means set below. */
+	uint8 bTransformChangePending : 1 = false;
+	/** The pending change began at this widget, not only above it: what the render-layer rules measure moves by. */
+	uint8 bOwnTransformChanged : 1 = false;
+	/**
+	 * The manager whose flush announces this widget's changes, kept from registration so that a write need
+	 * not walk the outers to its world. Null with no manager: every change is then announced on the spot.
+	 */
+	TWeakObjectPtr<UDreamUIManagerWorldSubsystem> TransformChangeManager;
+	void ComputeWorldTransform()const;
+	/** Mark this widget and its subtree stale and pending, stopping at a descendant already both. */
+	void MarkWorldTransformStaleRecursive();
+	/** What FlushTransformChanges does with a notice: the canvas's marks, and the visual's. */
+	void ApplyTransformChangeNotice(EDreamTransformChangeNotice InNotice);
 
+	/** Tell this widget's layout container, layout self and visual that its transform changed. */
 	virtual void OnUpdateTransform();
 	virtual void OnChildAttached(UDreamWidget* ChildComponent);
 	virtual void OnChildDetached(UDreamWidget* ChildComponent);
@@ -1243,7 +1324,6 @@ public:
 	void CalculateTransformFromAnchor();
 	void CalculateTransformFromAnchor(bool& OutHorizontalPositionChanged, bool& OutVerticalPositionChanged);
 	
-	void MarkTransformChanged();
 	void MarkDimensionChanged(bool InPivotChanged, bool InWidthChanged, bool InHeightChanged);
 	void MarkAnchorDataChanged_Recursive(bool InPivotChanged, bool InWidthChanged, bool InHeightChanged, bool InDiscardCache = true, bool InPropagateToChildren = true);
 	virtual void MarkCanvasUpdate(bool bRebuildDrawCall)const;
@@ -1265,8 +1345,6 @@ private:
 		, TFunctionRef<float(UDreamVisual*)> GetVisualProperty
 		)const;
 	
-	FVector2D PrevLocation2D = FVector2D::Zero();
-	FVector2D PrevScale2D = FVector2D::One();
 	mutable uint8 bNeedSortUIChildren : 1;
 	uint8 bIsAttaching : 1 = false;
 

@@ -146,6 +146,26 @@ public:
 	/** BumpHitTestGeneration on InWorldContext's manager, when it has one. */
 	static void BumpHitTestGenerationFor(const UObject* InWorldContext);
 
+	/**
+	 * Announce every widget transform change marked in this world since the last flush
+	 * (UDreamWidget::CalculateObjectToWorldTransform): each moved widget's canvas and visual are told once,
+	 * and its OnTransformChanged listeners hear it once, however often it moved. TickDreamUI runs it after
+	 * the layout pass, so the clips and the canvases it goes on to update see every move of the frame so
+	 * far; the world's end-of-frame updates run it again, for what moved after the tick.
+	 *
+	 * A listener that moves a widget again is heard in a further pass. Passes that never settle are cut off
+	 * at a limit, with a warning, and what is left waits for the next flush.
+	 */
+	void FlushTransformChanges();
+	/**
+	 * Whether a transform change marked in this world waits for FlushTransformChanges rather than being
+	 * announced on the spot: r.DreamUI.DeferTransformNotifications is on, this manager ticks, and its world
+	 * has not been torn down.
+	 */
+	bool DefersTransformChanges()const;
+	/** A widget whose own transform changed, where the next flush starts from. Once per change; the flush takes each once. */
+	void AddTransformChangeRoot(UDreamWidget* InWidget);
+
 	/** The layout-pass state of this world's widgets; see UDreamWidget::GetLayoutPassContext. */
 	FDreamLayoutPassContext& GetLayoutPassContext() { return LayoutPassContext; }
 	const FDreamLayoutPassContext& GetLayoutPassContext() const { return LayoutPassContext; }
@@ -301,6 +321,15 @@ private:
 	int32 LastLayoutPassCount = 0;
 	/** See GetHitTestGeneration. */
 	uint64 HitTestGeneration = 0;
+	/**
+	 * The widgets whose own transform changed since the last flush, in the order they changed, weakly and
+	 * with repeats: a flush skips one it has already reached. See FlushTransformChanges.
+	 */
+	TArray<TWeakObjectPtr<UDreamWidget>> TransformChangeRoots;
+	/** A pass of the flush's roots, swapped out of TransformChangeRoots so that neither array gives up its memory. */
+	TArray<TWeakObjectPtr<UDreamWidget>> TransformChangeRootsBeingFlushed;
+	/** A flush is running. A listener's move lands in its next pass, not in a flush of its own. */
+	bool bIsFlushingTransformChanges = false;
 	/** The writer stack, pass depth and desired-size memo every layout pass in this world shares. */
 	FDreamLayoutPassContext LayoutPassContext;
 	struct FWorldServiceEntry

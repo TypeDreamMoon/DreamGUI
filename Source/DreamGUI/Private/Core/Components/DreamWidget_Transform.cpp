@@ -362,7 +362,7 @@ FMatrix UDreamWidget::GetInheritedShearCorrection()const
 	FMatrix Result = Parent.IsValid() ? Parent->GetInheritedShearCorrection() : FMatrix::Identity;
 	if (HasOwnRenderShear())
 	{
-		const FMatrix ObjectToWorld = ObjectToWorldTransform.ToMatrixWithScale();
+		const FMatrix ObjectToWorld = GetWorldTransform().ToMatrixWithScale();
 		Result = ObjectToWorld.Inverse() * DreamRenderShear::MakeLocalShearMatrix(RenderShear) * ObjectToWorld * Result;
 	}
 	return Result;
@@ -370,7 +370,7 @@ FMatrix UDreamWidget::GetInheritedShearCorrection()const
 
 FMatrix UDreamWidget::GetWorldMatrix()const
 {
-	FMatrix Result = ObjectToWorldTransform.ToMatrixWithScale();
+	FMatrix Result = GetWorldTransform().ToMatrixWithScale();
 	// Both multiplications are skipped when they would be by Identity, so a widget using neither
 	// feature gets exactly the matrix this function has always returned.
 	if (HasShearApplied())
@@ -503,8 +503,9 @@ void UDreamWidget::ApplyRenderShearChange()
 {
 	// Same shape as ApplyPerspectiveChange and for the same reason: a shear moves where things are
 	// drawn, never where the layout believes they are. CalculateObjectToWorldTransform(true) is what
-	// walks the subtree and re-runs the geometry; the shear itself contributes nothing to the
-	// FTransform it recomputes, which is precisely why it has to ride the matrix path instead.
+	// marks the subtree, and its flush is what re-runs the geometry; the shear itself contributes
+	// nothing to the FTransform that is composed, which is precisely why it has to ride the matrix
+	// path instead.
 	RefreshShearInHierarchy();
 	CalculateObjectToWorldTransform(true);
 	MarkCanvasUpdate(true);
@@ -544,6 +545,14 @@ void UDreamWidget::ApplyRenderTransformChange()
 }
 const FTransform& UDreamWidget::GetWorldTransform()const
 {
+	// Composed when it is read, not when an input changes: a write only marks the widget and its
+	// subtree stale (CalculateObjectToWorldTransform). Every reader -- a raycast in the input tick, a
+	// layout pass asking for a world scale, a test right after a setter -- therefore sees the transform
+	// as it is now, and a widget moved three times before anyone looks is composed once.
+	if (bWorldTransformDirty)
+	{
+		ComputeWorldTransform();
+	}
 	return ObjectToWorldTransform;
 }
 
@@ -566,14 +575,17 @@ bool UDreamWidget::GetWorldRectBoundingSphere(FVector& OutCenter, double& OutRad
 		const double Width = GetWidth();
 		const double Height = GetHeight();
 		const FVector2D LocalCenter = GetLocalSpaceCenter();
+		// Through the accessor: a move marks this cache and the transform stale together, and the
+		// transform is only composed again when it is read.
+		const FTransform& WorldTransform = GetWorldTransform();
 		// The rect lies on local X = 0, so only the two in-plane scales can stretch it. FTransform
 		// scales before it rotates, so a local (0, y, z) lands at R * (0, Sy*y, Sz*z) + T, whose
 		// distance from the transformed centre is at most Max(|Sy|, |Sz|) times the local one --
 		// exact under uniform scale, an over-estimate otherwise, which is the direction to err in.
-		const FVector Scale = ObjectToWorldTransform.GetScale3D();
+		const FVector Scale = WorldTransform.GetScale3D();
 		const double MaxPlaneScale = FMath::Max(FMath::Abs(Scale.Y), FMath::Abs(Scale.Z));
 		const double HalfDiagonal = 0.5 * FMath::Sqrt(Width * Width + Height * Height) * MaxPlaneScale;
-		CacheWorldRectCenter = ObjectToWorldTransform.TransformPosition(FVector(0.0, LocalCenter.X, LocalCenter.Y));
+		CacheWorldRectCenter = WorldTransform.TransformPosition(FVector(0.0, LocalCenter.X, LocalCenter.Y));
 		// A hair of slack on a real rect, so a click landing exactly on a corner cannot be thrown out
 		// by the last bit of a square root: a coarse test that is tighter than the exact test it
 		// stands in front of is a lost hit, which is the one failure mode this must not have. A
@@ -626,45 +638,199 @@ void UDreamWidget::SetWorldTransform(const FTransform& InWorldTransform)
 	}
 }
 
-void UDreamWidget::UpdateObjectToWorldTransform()
+namespace DreamWidgetTransformLocal
 {
-	auto LocalTransform = GetRenderLocalTransform();
-	if (Parent.IsValid())
+	/** See UDreamWidget::GetWorldTransformComputeCount. Game thread only, like every reader of a world transform. */
+	uint64 WorldTransformComputeCount = 0;
+}
+
+uint64 UDreamWidget::GetWorldTransformComputeCount()
+{
+	return DreamWidgetTransformLocal::WorldTransformComputeCount;
+}
+
+void UDreamWidget::ComputeWorldTransform()const
+{
+	// The parent through its own accessor, so a stale chain is composed from the top down: every
+	// descendant of a stale widget is stale too (MarkWorldTransformStaleRecursive), so the walk up ends
+	// at the first ancestor that is current, and nothing below is ever left composed against an older
+	// value of what is above it.
+	const FTransform LocalTransform = GetRenderLocalTransform();
+	if (const UDreamWidget* ParentWidget = Parent.Get())
 	{
-		ObjectToWorldTransform = LocalTransform * Parent->GetWorldTransform();
+		ObjectToWorldTransform = LocalTransform * ParentWidget->GetWorldTransform();
+	}
+	else if (const USceneComponent* WidgetPresenterComponent = GetAttachedRootSceneComponent())
+	{
+		ObjectToWorldTransform = LocalTransform * WidgetPresenterComponent->GetComponentTransform();
 	}
 	else
 	{
-		if (auto WidgetPresenterComponent = GetAttachedRootSceneComponent())
+		ObjectToWorldTransform = LocalTransform;
+	}
+	bWorldTransformDirty = false;
+	++DreamWidgetTransformLocal::WorldTransformComputeCount;
+}
+
+void UDreamWidget::CalculateObjectToWorldTransform(bool /*bPropagateToChildren*/)
+{
+	TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_MarkTransformChanged);
+	// This widget's own transform moved; the descendants marked below only moved with it. The difference
+	// is what the render-layer rules go by: a widget inside a layer is drawn again only when something
+	// between the layer and it moved on its own.
+	bOwnTransformChanged = true;
+	// Already stale and pending means the whole subtree is: a widget animated on several channels, or
+	// laid out and then animated, walks its subtree once however often it is written before it is read.
+	if (!(bWorldTransformDirty && bTransformChangePending))
+	{
+		MarkWorldTransformStaleRecursive();
+	}
+	UDreamUIManagerWorldSubsystem* Manager = TransformChangeManager.Get();
+	if (Manager != nullptr && Manager->DefersTransformChanges())
+	{
+		Manager->AddTransformChangeRoot(this);
+	}
+	else
+	{
+		FlushTransformChanges();
+	}
+}
+
+void UDreamWidget::MarkWorldTransformStaleRecursive()
+{
+	bWorldTransformDirty = true;
+	bTransformChangePending = true;
+	// What is built from the world transform goes stale with it here, not at the flush: a raycast before
+	// the flush reads both the rect's bounding sphere and, for a canvas's own widget, the canvas's view.
+	MarkWorldRectBoundsDirty();
+	if (bIsCanvasWidget && RenderCanvas.IsValid())
+	{
+		RenderCanvas->MarkTransformOrDimensionChanged();
+	}
+	for (UDreamWidget* Child : Children)
+	{
+		if (IsValid(Child) && !(Child->bWorldTransformDirty && Child->bTransformChangePending))
 		{
-			ObjectToWorldTransform = LocalTransform * WidgetPresenterComponent->GetComponentTransform();
+			Child->MarkWorldTransformStaleRecursive();
+		}
+	}
+}
+
+void UDreamWidget::FlushTransformChanges()
+{
+	FlushTransformChangesFrom(this,
+		[](const UDreamWidget& InWidget) { return InWidget.IsRenderLayer(); },
+		[](UDreamWidget& InWidget, EDreamTransformChangeNotice InNotice) { InWidget.ApplyTransformChangeNotice(InNotice); });
+}
+
+void UDreamWidget::FlushTransformChangesFrom(UDreamWidget* InRoot, TFunctionRef<bool(const UDreamWidget&)> InIsRenderLayer,
+	TFunctionRef<void(UDreamWidget&, EDreamTransformChangeNotice)> InNotify)
+{
+	if (!IsValid(InRoot) || !InRoot->bTransformChangePending)
+	{
+		return;
+	}
+	struct FVisit
+	{
+		UDreamWidget* Widget = nullptr;
+		/** It is in a render layer: one of its ancestors in the same canvas is one. */
+		bool bInLayer = false;
+		/** Something between that layer and it, both left out, changed its own transform. */
+		bool bMovedInLayer = false;
+	};
+	// A stack rather than recursion, so the children are read after the listeners have run: a listener
+	// is free to add or remove them. The first child is pushed last and so walked first.
+	TArray<FVisit, TInlineAllocator<32>> ToVisit;
+	// Where the walk starts is where a change was marked: the widget moved relative to whatever it is in.
+	ToVisit.Add({ InRoot, false, true });
+	while (ToVisit.Num() > 0)
+	{
+		const FVisit Visit = ToVisit.Pop(EAllowShrinking::No);
+		UDreamWidget* Widget = Visit.Widget;
+		// A listener earlier in the walk may have destroyed it, or flushed it itself.
+		if (!IsValid(Widget) || !Widget->bTransformChangePending)
+		{
+			continue;
+		}
+		const bool bMoved = Visit.bMovedInLayer || Widget->bOwnTransformChanged;
+		// Cleared before anyone hears of it, so that a listener moving it again marks it afresh, for a
+		// later pass of the manager's flush, instead of being folded into the move it is answering.
+		Widget->bTransformChangePending = false;
+		Widget->bOwnTransformChanged = false;
+
+		EDreamTransformChangeNotice Notice;
+		bool bChildrenInLayer = Visit.bInLayer;
+		bool bChildrenMovedInLayer = bMoved;
+		if (Widget->bIsCanvasWidget)
+		{
+			// A canvas's widgets are drawn relative to it, never to a layer of the canvas above; it cannot be a layer.
+			Notice = EDreamTransformChangeNotice::Canvas;
+			bChildrenInLayer = false;
+		}
+		else if (InIsRenderLayer(*Widget))
+		{
+			// The layer moves as a whole, and what is in it is measured from it afresh.
+			Notice = EDreamTransformChangeNotice::RenderLayer;
+			bChildrenInLayer = true;
+			bChildrenMovedInLayer = false;
 		}
 		else
 		{
-			ObjectToWorldTransform = LocalTransform;
+			Notice = (!Visit.bInLayer || bMoved) ? EDreamTransformChangeNotice::Moved : EDreamTransformChangeNotice::InsideMovedLayer;
 		}
-	}
-	this->MarkTransformChanged();
-}
-void UDreamWidget::CalculateObjectToWorldTransform(bool bPropagateToChildren)
-{
-	{
-		TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_UpdateObjectToWorldTransform);
-		this->UpdateObjectToWorldTransform();
-	}
-	{
-		TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_OnUpdateTransform);
-		this->OnUpdateTransform();
-	}
-	if (bPropagateToChildren)
-	{
-		for (UDreamWidget* Child : this->Children)
+		Widget->GetWorldTransform();
+		InNotify(*Widget, Notice);
+		// Parents before children, and every child already marked: a parent's listener that reads a child's
+		// transform composes it then and there, so it never sees where the child was.
+		if (Widget->OnTransformChangedEvent.IsBound())
 		{
-			if (IsValid(Child))
+			TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_TransformChangedEvent);
+			Widget->Call_TransformChanged();
+		}
+		const TArray<UDreamWidget*>& WidgetChildren = Widget->GetChildren();
+		for (int32 Index = WidgetChildren.Num() - 1; Index >= 0; --Index)
+		{
+			UDreamWidget* Child = WidgetChildren[Index];
+			if (IsValid(Child) && Child->bTransformChangePending)
 			{
-				Child->CalculateObjectToWorldTransform(true);
+				ToVisit.Add({ Child, bChildrenInLayer, bChildrenMovedInLayer });
 			}
 		}
+	}
+}
+
+void UDreamWidget::ApplyTransformChangeNotice(EDreamTransformChangeNotice InNotice)
+{
+	UDreamCanvas* const Canvas = RenderCanvas.Get();
+	switch (InNotice)
+	{
+	case EDreamTransformChangeNotice::Canvas:
+		if (Canvas != nullptr)
+		{
+			Canvas->MarkWidgetUpdate(this, true);
+			// The canvas's view is built from where its widget stands -- a render target canvas moved at run
+			// time kept answering hit tests for its old place without this. Marked stale when the move was
+			// marked, for a reader in between, and here as it always was.
+			Canvas->MarkTransformOrDimensionChanged();
+		}
+		OnUpdateTransform();
+		break;
+	case EDreamTransformChangeNotice::RenderLayer:
+		if (Canvas != nullptr)
+		{
+			Canvas->MarkRenderLayerMoved(this);
+		}
+		break;
+	case EDreamTransformChangeNotice::Moved:
+		if (Canvas != nullptr)
+		{
+			// A move and nothing else: the canvas rebuilds its draw calls only if the move could change how they batch.
+			Canvas->MarkWidgetMoved(this);
+		}
+		OnUpdateTransform();
+		break;
+	case EDreamTransformChangeNotice::InsideMovedLayer:
+		break;
 	}
 }
 
@@ -672,35 +838,21 @@ DECLARE_CYCLE_STAT(TEXT("DreamWidget OnUpdateTransform"), STAT_OnUpdateTransform
 void UDreamWidget::OnUpdateTransform()
 {
 	SCOPE_CYCLE_COUNTER(STAT_OnUpdateTransform)
-	// UE_LOG(DreamGUI, Error, TEXT("OnUpdateTransform Flag:%d %s"), (int)UpdateTransformFlags, *this->GetDisplayName());
-		bool bPositionChanged = false, bRotationChanged = false, bScaleChanged = false;
+	if (LayoutContainer)
 	{
-		auto Pos = this->GetRelativeLocation();
-		auto Pos2D = FVector2D(Pos.Y, Pos.Z);
-		if (Pos2D != PrevLocation2D)
-		{
-			PrevLocation2D = Pos2D;
-			bPositionChanged = true;
-		}
-		auto CompScale3D = this->GetWorldScale();
-		auto CompScale2D = FVector2D(CompScale3D.Y, CompScale3D.Z);
-		if (PrevScale2D != CompScale2D)
-		{
-			PrevScale2D = CompScale2D;
-			bScaleChanged = true;
-		}
-		if (LayoutContainer)
-		{
-			LayoutContainer->OnTransformChanged();
-		}
-		if (LayoutSelf)
-		{
-			LayoutSelf->OnTransformChanged();
-		}
-		if (Visual)
-		{
-			Visual->OnTransformChanged(bPositionChanged, bScaleChanged);
-		}
+		LayoutContainer->OnTransformChanged();
+	}
+	if (LayoutSelf)
+	{
+		LayoutSelf->OnTransformChanged();
+	}
+	if (Visual)
+	{
+		// Both flags set. They belong to the visuals' override signature and none of the overrides reads
+		// them; they used to be worked out here from two caches kept for nothing else -- the relative
+		// location and the world scale at the last call -- which cost every moved widget a read of its
+		// world transform.
+		Visual->OnTransformChanged(true, true);
 	}
 }
 

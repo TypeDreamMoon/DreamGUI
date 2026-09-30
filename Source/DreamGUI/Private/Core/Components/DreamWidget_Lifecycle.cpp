@@ -511,6 +511,9 @@ void UDreamWidget::OnRegister()
 		&& EnsurePanelSlotForChild(Parent.Get(), this);
 	if (auto DreamUIManager = UDreamUIManagerWorldSubsystem::GetInstance(this->GetWorld()))
 	{
+		// Kept for every transform change from now on, which would otherwise walk the outers to the world
+		// on every write -- a thousand animated panels' worth of writes a frame.
+		TransformChangeManager = DreamUIManager;
 		DreamUIManager->AddWidget(this);
 #if WITH_EDITOR
 		DreamUIManager->MarkDreamUIWidgetOutlinerChanged();
@@ -576,6 +579,9 @@ void UDreamWidget::OnUnregister()
 		return;
 	}
 	Lifecycle = EDreamWidgetLifecycle::Constructed;
+	// From here a transform change is announced on the spot, as for any widget no manager knows of. One
+	// already marked is still the manager's to announce: it keeps where the flush starts, weakly.
+	TransformChangeManager.Reset();
 
 	/**
 	 * Live memory, not IsValid. Unregistering undoes what registering did -- a canvas leaves the

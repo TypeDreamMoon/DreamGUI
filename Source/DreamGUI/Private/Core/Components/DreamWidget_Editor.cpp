@@ -104,9 +104,9 @@ void UDreamWidget::PostEditChangeProperty(FPropertyChangedEvent& PropertyChanged
 				this->RelativeRotationEuler = this->RelativeRotation.Rotator();
 			}
 			CalculateAnchorFromTransform();
+			// The whole of a move's announcement: the widget's layouts, visual, canvas and listeners hear
+			// it from the flush this marks for, once, with the rest of its subtree.
 			CalculateObjectToWorldTransform();
-			OnUpdateTransform();
-			MarkTransformChanged();
 			MarkLayoutForRebuild(this);
 		}
 		else if (MemberName == GET_MEMBER_NAME_CHECKED(UDreamWidget, RenderTranslation)

@@ -35,10 +35,10 @@ void UDream2DLineChildrenAsPoints::OnUnregister()
  * result away, because no dirty flag was set on the pass that mattered.
  *
  * The broadcast to hang it on is the CHILD's own transform-changed event: UDreamWidget fires it
- * from MarkTransformChanged, which is precisely the moment its relative location -- the number
- * CalculatePoints reads -- becomes something else. There is no parent-side equivalent to subscribe
- * to once, so the line subscribes per child and has to keep that set honest as children come and
- * go. Hence a stored set rather than a fire-and-forget hookup.
+ * whenever a move of the child is announced, and its relative location -- the number
+ * CalculatePoints reads -- becoming something else is such a move. There is no parent-side
+ * equivalent to subscribe to once, so the line subscribes per child and has to keep that set honest
+ * as children come and go. Hence a stored set rather than a fire-and-forget hookup.
  *
  * A visual cannot be told about attach and detach directly. UDreamWidget::OnChildAttached walks its
  * Components array, and a Visual is not in it -- it hangs off its own member -- so the two hooks

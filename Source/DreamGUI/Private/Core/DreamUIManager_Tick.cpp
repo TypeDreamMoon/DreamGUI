@@ -66,6 +66,14 @@ static TAutoConsoleVariable<int32> CVarDreamUIParallelVertexRefreshMinCanvases(
 	TEXT("as well as the game thread. 0: always on the game thread."),
 	ECVF_Default);
 
+static TAutoConsoleVariable<int32> CVarDreamUIDeferTransformNotifications(
+	TEXT("r.DreamUI.DeferTransformNotifications"),
+	1,
+	TEXT("1: a widget's move is announced -- its canvas and visual told, its OnTransformChanged listeners called -- once, at ")
+	TEXT("the UI manager's next flush (after the layout pass, and at the end of the frame). 0: at every write, for the moved ")
+	TEXT("widget and its whole subtree. World transforms are composed when they are read either way."),
+	ECVF_Default);
+
 void UDreamUIManagerWorldSubsystem::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
@@ -329,6 +337,10 @@ void UDreamUIManagerWorldSubsystem::TickDreamUI(float DeltaTime)
 		FlushPendingLayoutTreeRebuild();
 	}
 
+	// Every move since the last flush -- animations, tweens, input, the behaviours and the layout pass
+	// above -- announced once, before the clips and the canvases below read what it tells them.
+	FlushTransformChanges();
+
 	// One ScreenSpaceOverlay root canvas PER LOCAL PLAYER, not one per world.
 	//
 	// It used to be one per world, full stop, and that is what made split screen impossible: the
@@ -468,6 +480,9 @@ void UDreamUIManagerWorldSubsystem::OnWorldPreSendAllEndOfFrameUpdates(UWorld* I
 {
 	if (InWorld == this->GetWorld())
 	{
+		// What moved after the tick -- a later tick group, a script, the editor -- is announced before the
+		// frame ends, and its canvases take it at their next update.
+		FlushTransformChanges();
 #if WITH_EDITOR
 		this->DrawHelperGizmo();
 #endif
@@ -484,6 +499,85 @@ void UDreamUIManagerWorldSubsystem::OnWorldPreSendAllEndOfFrameUpdates(UWorld* I
 		LastEndOfFrameSubmitFrame = GFrameCounter;
 		bCanvasesUpdatedSinceSubmit = false;
 		this->SubmitCanvasDrawCall();
+	}
+}
+
+bool UDreamUIManagerWorldSubsystem::DefersTransformChanges()const
+{
+	if (bWorldTornDown || CVarDreamUIDeferTransformNotifications.GetValueOnGameThread() == 0)
+	{
+		return false;
+	}
+#if WITH_EDITOR
+	// A manager that does not tick -- a preview nobody shows -- would hold a change until something drew its
+	// world, if anything ever did. Its widgets are told on the spot, as they always were.
+	return bShouldTickInEditor;
+#else
+	return true;
+#endif
+}
+
+void UDreamUIManagerWorldSubsystem::AddTransformChangeRoot(UDreamWidget* InWidget)
+{
+	TransformChangeRoots.Add(InWidget);
+}
+
+void UDreamUIManagerWorldSubsystem::FlushTransformChanges()
+{
+	// Asked for again from inside one, by something a listener did: its moves land in the running flush's
+	// next pass instead.
+	if (bIsFlushingTransformChanges || TransformChangeRoots.Num() == 0)
+	{
+		return;
+	}
+	TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_FlushTransformChanges);
+	TGuardValue<bool> FlushingGuard(bIsFlushingTransformChanges, true);
+	// The layout loop's limit, for the same reason: every pass after the first is caused by the one before
+	// it, and a listener that answers each move with another would otherwise never let the frame end.
+	constexpr int32 MaxTransformFlushPasses = 32;
+	int32 PassCount = 0;
+	TArray<UDreamWidget*> NestedRoots;
+	while (TransformChangeRoots.Num() > 0 && PassCount < MaxTransformFlushPasses)
+	{
+		++PassCount;
+		// Taken whole, into an array kept for it so that neither gives up its memory from frame to frame:
+		// what the listeners move from here is the next pass's.
+		Swap(TransformChangeRootsBeingFlushed, TransformChangeRoots);
+		NestedRoots.Reset();
+		for (const TWeakObjectPtr<UDreamWidget>& WeakRoot : TransformChangeRootsBeingFlushed)
+		{
+			UDreamWidget* Root = WeakRoot.Get();
+			// Gone, or already reached from a root flushed before it, or listed twice.
+			if (!IsValid(Root) || !Root->IsTransformChangePending())
+			{
+				continue;
+			}
+			// Under a widget whose own move is pending too, which is flushed first so that the subtree is
+			// announced parents first; the walk from it reaches this one on the way.
+			const UDreamWidget* Parent = Root->GetParent();
+			if (Parent != nullptr && Parent->IsTransformChangePending())
+			{
+				NestedRoots.Add(Root);
+				continue;
+			}
+			Root->FlushTransformChanges();
+		}
+		// Whatever of those is still pending hangs under a pending widget no root of this pass leads to --
+		// one moved out from under it, say -- and is flushed from where it is.
+		for (UDreamWidget* Root : NestedRoots)
+		{
+			if (IsValid(Root) && Root->IsTransformChangePending())
+			{
+				Root->FlushTransformChanges();
+			}
+		}
+		TransformChangeRootsBeingFlushed.Reset();
+	}
+	if (TransformChangeRoots.Num() > 0)
+	{
+		UE_LOG(DreamGUI, Warning,
+			TEXT("Widget transform changes did not settle after %d passes in World %s: an OnTransformChanged listener keeps moving widgets. %d move(s) wait for the next flush."),
+			MaxTransformFlushPasses, *GetNameSafe(GetWorld()), TransformChangeRoots.Num());
 	}
 }
 
