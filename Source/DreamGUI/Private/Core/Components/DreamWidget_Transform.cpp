@@ -535,9 +535,10 @@ void UDreamWidget::RefreshRenderTransformFlag()
 void UDreamWidget::ApplyRenderTransformChange()
 {
 	RefreshRenderTransformFlag();
-	if (RenderCanvas.IsValid())
+	// Looked up once: every write of every animated widget comes through here.
+	if (UDreamCanvas* Canvas = RenderCanvas.Get())
 	{
-		RenderCanvas->NoteRenderTransformChanged(this);
+		Canvas->NoteRenderTransformChanged(this);
 	}
 	// Exactly what SetLayoutScale does, and pointedly NOT what SetRelativeLocation does: no
 	// CalculateAnchorFromTransform, no MarkLayoutForRebuild. Those two lines are the reason
@@ -702,6 +703,8 @@ void UDreamWidget::ComputeWorldTransform()const
 	if (const UDreamWidget* ParentWidget = Parent.Get())
 	{
 		ObjectToWorldTransform = LocalTransform * ParentWidget->GetWorldTransform();
+		// No longer stale, which is what the parent may have vouched for (ChildrenStaleAndPending).
+		ParentWidget->ForgetChildrenStale();
 	}
 	else if (const USceneComponent* WidgetPresenterComponent = GetAttachedRootSceneComponent())
 	{
@@ -733,7 +736,8 @@ void UDreamWidget::CalculateObjectToWorldTransform(bool /*bPropagateToChildren*/
 	bOwnTransformChanged = true;
 	// Already stale and pending means the whole subtree is: a widget animated on several channels, or
 	// laid out and then animated, walks its subtree once however often it is written before it is read.
-	if (!(bWorldTransformDirty && bTransformChangePending))
+	const bool bWasStaleAndPending = bWorldTransformDirty && bTransformChangePending;
+	if (!bWasStaleAndPending)
 	{
 		MarkWorldTransformStaleRecursive();
 	}
@@ -750,6 +754,15 @@ void UDreamWidget::CalculateObjectToWorldTransform(bool /*bPropagateToChildren*/
 	{
 		bTransformChangePending = false;
 		bOwnTransformChanged = false;
+		// No longer pending, which the parent may have vouched for (ChildrenStaleAndPending) -- only if it already was on the
+		// way in: a parent vouches for a child only while every child is both, and this one was marked just now if it was not.
+		if (bWasStaleAndPending)
+		{
+			if (const UDreamWidget* ParentWidget = Parent.Get())
+			{
+				ParentWidget->ForgetChildrenStale();
+			}
+		}
 		if (UDreamCanvas* Canvas = RenderCanvas.Get())
 		{
 			Canvas->MarkRenderLayerMoved(this);
@@ -778,6 +791,11 @@ void UDreamWidget::MarkWorldTransformStaleRecursive()
 	{
 		RenderCanvas->MarkTransformOrDimensionChanged();
 	}
+	// Every child still as this widget's last marking left it: nothing below to do, and none of them to read.
+	if (ChildrenStaleAndPending != 0)
+	{
+		return;
+	}
 	// A child that is garbage and not yet collected only has two flags set that nothing reads: not asking the object array
 	// about each child is a cache miss fewer for every child of every widget written, every frame, on a wall of them.
 	for (UDreamWidget* Child : Children)
@@ -787,6 +805,8 @@ void UDreamWidget::MarkWorldTransformStaleRecursive()
 			Child->MarkWorldTransformStaleRecursive();
 		}
 	}
+	// Marking only sets flags: nothing above took a child out of the state again.
+	ChildrenStaleAndPending = 1;
 }
 
 void UDreamWidget::FlushTransformChanges()
@@ -817,12 +837,14 @@ void UDreamWidget::FlushTransformChangesFrom(UDreamWidget* InRoot, TFunctionRef<
 		bool bInLayer = false;
 		/** Something between that layer and it, both left out, changed its own transform. */
 		bool bMovedInLayer = false;
+		/** The widget that walked into it, whose ChildrenStaleAndPending its announcement clears; the root's parent is looked up. */
+		const UDreamWidget* WalkedFrom = nullptr;
 	};
 	// A stack rather than recursion, so the children are read after the listeners have run: a listener
 	// is free to add or remove them. The first child is pushed last and so walked first.
 	TArray<FVisit, TInlineAllocator<32>> ToVisit;
 	// Where the walk starts is where a change was marked: the widget moved relative to whatever it is in.
-	ToVisit.Add({ InRoot, false, true });
+	ToVisit.Add({ InRoot, false, true, InRoot->Parent.Get() });
 	while (ToVisit.Num() > 0)
 	{
 		const FVisit Visit = ToVisit.Pop(EAllowShrinking::No);
@@ -837,6 +859,11 @@ void UDreamWidget::FlushTransformChangesFrom(UDreamWidget* InRoot, TFunctionRef<
 		// later pass of the manager's flush, instead of being folded into the move it is answering.
 		Widget->bTransformChangePending = false;
 		Widget->bOwnTransformChanged = false;
+		// No longer pending, which its parent may have vouched for (ChildrenStaleAndPending).
+		if (Visit.WalkedFrom != nullptr)
+		{
+			Visit.WalkedFrom->ForgetChildrenStale();
+		}
 
 		EDreamTransformChangeNotice Notice;
 		bool bChildrenInLayer = Visit.bInLayer;
@@ -888,7 +915,7 @@ void UDreamWidget::FlushTransformChangesFrom(UDreamWidget* InRoot, TFunctionRef<
 			UDreamWidget* Child = WidgetChildren[Index];
 			if (IsValid(Child) && Child->bTransformChangePending)
 			{
-				ToVisit.Add({ Child, bChildrenInLayer, bChildrenMovedInLayer });
+				ToVisit.Add({ Child, bChildrenInLayer, bChildrenMovedInLayer, Widget });
 			}
 		}
 	}

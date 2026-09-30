@@ -1116,6 +1116,23 @@ private:
 	/** The pending change began at this widget, not only above it: what the render-layer rules measure moves by. */
 	uint8 bOwnTransformChanged : 1 = false;
 	/**
+	 * Every child is stale and pending -- and so, as ever, everything under each -- as this widget's last marking left them:
+	 * none has been composed, flushed or announced since, and none has joined. Its next marking then has nothing to do below
+	 * it, and does not read the children to find that out: a wall of turning buttons read every button's label at every
+	 * turn, only to find it still marked. Whatever takes a child out of that state clears it -- ComputeWorldTransform, the
+	 * flush, a quiet layer's announcement -- and so does a child joining. A byte of its own rather than a bit: a child
+	 * composed on a worker clears it, and workers composing siblings may clear it at once (ForgetChildrenStale).
+	 */
+	mutable int8 ChildrenStaleAndPending = 0;
+	/** Clears ChildrenStaleAndPending, from any thread. */
+	void ForgetChildrenStale()const
+	{
+		if (FPlatformAtomics::AtomicRead_Relaxed(&ChildrenStaleAndPending) != 0)
+		{
+			FPlatformAtomics::AtomicStore_Relaxed(&ChildrenStaleAndPending, static_cast<int8>(0));
+		}
+	}
+	/**
 	 * The manager this widget registered with (GetRegisteredManager), whose flush announces its changes. Null with
 	 * no manager: every change is then announced on the spot.
 	 */
