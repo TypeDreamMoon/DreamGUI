@@ -2756,7 +2756,6 @@ void UDreamCanvas::TakeDrawCallBatchData(TArray<UDreamCanvas*>& OutToRefresh, TA
 		//this frame must show this frame's batching, so wait for it. The wait is not a sleep loop any
 		//more: it can retract a batch the worker pool has not started and run it here, which is both
 		//sooner than the old 1ms granularity and work the game thread was going to wait for anyway.
-		TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_WaitForBatching);
 		DrawCallProcessingRunnable->WaitForBatchingToFinish();
 	}
 

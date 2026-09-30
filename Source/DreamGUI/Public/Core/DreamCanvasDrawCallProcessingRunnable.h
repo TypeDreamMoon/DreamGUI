@@ -42,7 +42,8 @@ private:
 	void LaunchBatchingTaskIfIdle();
 	/** The task body: take the newest prepared data, batch it, publish it. */
 	void ProcessPreparedDrawCallData();
-	UE::Tasks::FTask GetBatchingTask()const;
+	/** The task last launched, and how many had been launched with it (NumLaunched), read together. */
+	UE::Tasks::FTask GetBatchingTask(uint32& OutNumLaunched)const;
 
 	TSharedPtr<TQueue<FDreamCanvasPreparedDrawCallData>> PreparedDrawCallDataQueue;
 	TSharedPtr<TQueue<FDreamCanvasPendingDrawCallData>> PendingRebuildDrawCallQueue;
@@ -55,4 +56,8 @@ private:
 	std::atomic<bool> bIsBatching = false;
 	/** Pushed and not yet taken by a batch. Counted before the enqueue, so it is never behind the queue. */
 	std::atomic<int32> NumPreparedQueued = 0;
+	/** Batching tasks launched, counted with BatchingTaskLock held and before the launch: a task never runs ahead of its count. */
+	std::atomic<uint32> NumLaunched = 0;
+	/** NumLaunched when WaitForBatchingToFinish last found the canvas idle, the waiting thread's own. */
+	uint32 NumLaunchedWhenLastIdle = 0;
 };
