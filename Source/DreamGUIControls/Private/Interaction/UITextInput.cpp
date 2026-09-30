@@ -88,6 +88,12 @@ bool UDreamTextInputCustomValidation::OnValidateInput(UUITextInput* InTextInput,
 	return false;
 }
 
+UUITextInput::UUITextInput()
+{
+	// It ticks (the caret, the held keys), but a move of the field means nothing to it.
+	DeclareTransformChangedUnused(StaticClass());
+}
+
 void UUITextInput::Awake()
 {
 	Super::Awake();

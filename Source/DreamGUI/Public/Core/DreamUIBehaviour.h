@@ -73,11 +73,31 @@ protected:
 	uint8 bHasBlueprintTick : 1 = false;
 	/** Between Call_OnRegister and Call_OnUnregister; see them. */
 	uint8 bIsRegisteredWithWidget : 1 = false;
+	/** This behaviour's C++ does nothing on Tick. Set once in the ctor; see DeclareTickUnused. */
+	uint8 bNativeTickUnused : 1 = false;
+	/** This behaviour's C++ does nothing on OnTransformChanged. Set once in the ctor; see DeclareTransformChangedUnused. */
+	uint8 bNativeTransformChangedUnused : 1 = false;
 
 	UPROPERTY(EditAnywhere, Category=DreamUIBehaviour)
 	uint8 bStartWithTickEnabled : 1 = true;
 	UPROPERTY(EditAnywhere, Category=DreamUIBehaviour)
 	uint8 bTickEvenWhenPaused : 1 = false;
+
+	/**
+	 * For the constructor of a class whose C++ does nothing on Tick. A behaviour of exactly InClass, or of a Blueprint
+	 * made from it, then stays out of the UI manager's tick list unless that Blueprint wrote a Tick event, rather than being
+	 * called every frame for nothing. Whether it may tick (SetCanExecuteTick) is kept as it was.
+	 *
+	 * InClass is the constructor's own class, and no other class is covered: a C++ subclass may override Tick, and nothing
+	 * can ask that of it. It ticks as it always did until its own constructor declares the same.
+	 */
+	void DeclareTickUnused(const UClass* InClass);
+	/**
+	 * DeclareTickUnused for OnTransformChanged. A behaviour of exactly InClass does not listen to its widget's moves unless
+	 * its Blueprint wrote the event. A widget nothing listens to is announced no move, and a widget that only moved with
+	 * its render layer is then not composed either (see UDreamWidget::FlushTransformChangesFrom).
+	 */
+	void DeclareTransformChangedUnused(const UClass* InClass);
 private:
 	friend class UDreamUIManagerWorldSubsystem;
 	void Call_Awake();
@@ -85,6 +105,10 @@ private:
 	void Call_Start();
 	void Call_OnDisable();
 	void Call_OnDestroy();
+	/** Whether Tick does anything here: the C++ may, since no ctor said otherwise, or the Blueprint wrote the event. */
+	bool HasTickWork() const { return !bNativeTickUnused || bHasBlueprintTick; }
+	/** Whether this behaviour listens to its widget's moves: the C++ may, since no ctor said otherwise, or the Blueprint wrote the event. */
+	bool HearsTransformChanges() const;
 	UPROPERTY(Transient, Getter=GetWidget, DisplayName=Widget, BlueprintReadOnly, Category=DreamUIBehaviour, meta=(AllowPrivateAccess=true))
 	mutable TObjectPtr<UDreamWidget> CacheWidget = nullptr;
 	UPROPERTY(Transient, Getter=GetAnimationPlayer, DisplayName="Animation Player", BlueprintReadOnly, Category="DreamUI|Animation", meta=(AllowPrivateAccess=true))

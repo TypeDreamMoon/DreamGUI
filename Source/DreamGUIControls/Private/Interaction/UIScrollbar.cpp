@@ -8,6 +8,9 @@
 
 UUIScrollbar::UUIScrollbar()
 {
+	// Driven by the pointer and by its scroll view, never by the frame or by its own move.
+	DeclareTickUnused(StaticClass());
+	DeclareTransformChangedUnused(StaticClass());
 }
 
 void UUIScrollbar::Awake()

@@ -106,8 +106,10 @@ bool FDreamPastedComponentStopsListeningWhenRemovedTest::RunTest(const FString& 
 
 	UDreamUIBehaviour* Pasted = DreamUIWidgetComponentClipboard_PasteOnto(Target.Get(), Button);
 	if (!TestNotNull(TEXT("pasting produced a component"), Pasted))return true;
+	// Asked of the dimension event: a button has nothing to do when its widget moves, and does not listen to the
+	// transform event at all (UDreamUIBehaviour::DeclareTransformChangedUnused).
 	if (!TestTrue(TEXT("the paste registered it against the target widget"),
-		Target->GetTransformChangedEvent().IsBoundToObject(Pasted)))return true;
+		Target->GetDimensionChangedEvent().IsBoundToObject(Pasted)))return true;
 
 	// Nothing between the paste and the removal asks the component for its widget: whatever the paste
 	// left in the cache is what the removal has to work with.

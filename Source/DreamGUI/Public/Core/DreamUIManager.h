@@ -289,6 +289,11 @@ public:
 	 * list's own IsValid sweep cannot answer it and neither can a test.
 	 */
 	int32 GetPropertyBindingUserCount() const { return PropertyBindingUsers.Num(); }
+	/**
+	 * Whether InBehaviour is on the per-frame tick visit. Exposed for the same reason: a behaviour whose Tick does nothing
+	 * (UDreamUIBehaviour::DeclareTickUnused) is kept off it, and nothing else can tell.
+	 */
+	bool IsBehaviourOnTickVisit(const UDreamUIBehaviour* InBehaviour) const;
 private:
 	/** Weak, and swept as it is walked: a widget can be destroyed between two frames. */
 	TArray<TWeakObjectPtr<class UDreamUserWidget>> PropertyBindingUsers;

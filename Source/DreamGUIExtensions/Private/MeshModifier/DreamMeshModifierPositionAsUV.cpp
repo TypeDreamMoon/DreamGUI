@@ -8,6 +8,9 @@
 
 UDreamMeshModifierPositionAsUV::UDreamMeshModifierPositionAsUV()
 {
+	// A modifier works when the geometry is built, never each frame or when its widget moves.
+	DeclareTickUnused(StaticClass());
+	DeclareTransformChangedUnused(StaticClass());
 }
 
 void UDreamMeshModifierPositionAsUV::ModifyUIGeometry(

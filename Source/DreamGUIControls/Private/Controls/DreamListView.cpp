@@ -2033,6 +2033,13 @@ void UDreamListViewBase::NavigateToIndex(int32 InItemIndex)
 	ScrollIndexIntoView(InItemIndex);
 }
 
+UDreamListRowButton::UDreamListRowButton()
+{
+	// What UUIButton declares, for its own class only: a row is a button, with nothing to do each frame or when it moves.
+	DeclareTickUnused(StaticClass());
+	DeclareTransformChangedUnused(StaticClass());
+}
+
 bool UDreamListRowButton::OnNavigate_Implementation(EDreamUINavigationDirection InDirection, TScriptInterface<IDreamNavigationInterface>& OutResult)
 {
 	// The list first: it steps by item, the way SListView does. Only a press it has no answer for --

@@ -7,6 +7,9 @@
 
 UDreamMeshModifierLongShadow::UDreamMeshModifierLongShadow()
 {
+	// A modifier works when the geometry is built, never each frame or when its widget moves.
+	DeclareTickUnused(StaticClass());
+	DeclareTransformChangedUnused(StaticClass());
 }
 
 void UDreamMeshModifierLongShadow::ApplyColorAndAlpha(FColor& InOutColor, FColor InTintColor, uint8 InOriginAlpha)

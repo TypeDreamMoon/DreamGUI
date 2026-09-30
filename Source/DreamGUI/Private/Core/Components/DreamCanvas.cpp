@@ -176,6 +176,9 @@ UDreamCanvas::UDreamCanvas()
 	DefaultMeshType = UDreamUIMeshComponent::StaticClass();
 	DefaultMaterial = UDreamGUISettings::LoadSetting(UDreamGUISettings::Get()->DefaultUIMaterial, TEXT("DefaultUIMaterial"));
 	bStartWithTickEnabled = false;
+	// The manager updates a canvas, and its widget's move reaches it as a notice at the flush, not as the event.
+	DeclareTickUnused(StaticClass());
+	DeclareTransformChangedUnused(StaticClass());
 }
 
 void UDreamCanvas::Awake()

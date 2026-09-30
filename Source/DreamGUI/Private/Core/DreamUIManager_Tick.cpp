@@ -167,7 +167,7 @@ void UDreamUIManagerWorldSubsystem::TickDreamUI(float DeltaTime)
 					// on a list this behaviour is not in yet (it logs "Not exist" and does nothing).
 					// Adding it unconditionally here then ticked a disabled behaviour every frame, and
 					// the next enable reported "Already exist".
-					if (item.IsValid() && item->bIsEnableCalled && item->bCanExecuteTick)
+					if (item.IsValid() && item->bIsEnableCalled && item->bCanExecuteTick && item->HasTickWork())
 					{
 						DreamUIBehavioursForTick.AddUnique(item);
 					}
@@ -643,6 +643,14 @@ void UDreamUIManagerWorldSubsystem::SubmitCanvasDrawCall()
 			Canvas->DrawRenderTargetIfRequested();
 		}
 	}
+}
+
+bool UDreamUIManagerWorldSubsystem::IsBehaviourOnTickVisit(const UDreamUIBehaviour* InBehaviour) const
+{
+	return InBehaviour != nullptr && DreamUIBehavioursForTick.ContainsByPredicate([InBehaviour](const TWeakObjectPtr<UDreamUIBehaviour>& InItem)
+	{
+		return InItem.Get() == InBehaviour;
+	});
 }
 
 void UDreamUIManagerWorldSubsystem::AddDreamUIBehavioursForTick(UDreamUIBehaviour* InComp)

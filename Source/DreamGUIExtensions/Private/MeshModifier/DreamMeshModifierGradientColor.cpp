@@ -7,6 +7,9 @@
 
 UDreamMeshModifierGradientColor::UDreamMeshModifierGradientColor()
 {
+	// A modifier works when the geometry is built, never each frame or when its widget moves.
+	DeclareTickUnused(StaticClass());
+	DeclareTransformChangedUnused(StaticClass());
 }
 void UDreamMeshModifierGradientColor::ApplyColorAndAlpha(FColor& InOutColor, FColor InTintColor)
 {

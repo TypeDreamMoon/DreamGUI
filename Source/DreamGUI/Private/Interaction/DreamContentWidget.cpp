@@ -6,6 +6,25 @@
 #include "Core/Components/DreamPanelSlot.h"
 #include "Core/Components/DreamWidget.h"
 
+// The three answer to changes in the tree, never to the frame or to a move.
+UDreamContentWidget::UDreamContentWidget()
+{
+	DeclareTickUnused(StaticClass());
+	DeclareTransformChangedUnused(StaticClass());
+}
+
+UDreamNamedSlotHost::UDreamNamedSlotHost()
+{
+	DeclareTickUnused(StaticClass());
+	DeclareTransformChangedUnused(StaticClass());
+}
+
+UDreamNamedSlot::UDreamNamedSlot()
+{
+	DeclareTickUnused(StaticClass());
+	DeclareTransformChangedUnused(StaticClass());
+}
+
 void UDreamContentWidget::OnRegister()
 {
 	Super::OnRegister();

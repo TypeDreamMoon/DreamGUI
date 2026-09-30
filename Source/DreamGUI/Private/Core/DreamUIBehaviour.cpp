@@ -22,6 +22,16 @@ namespace DreamUIBehaviourLocal
 		const UFunction* Function = InClass->FindFunctionByName(InName);
 		return Function != nullptr && Function->GetOuterUClass()->HasAnyClassFlags(CLASS_CompiledFromBlueprint);
 	}
+
+	/** The C++ of InClass: InClass itself when it is native, otherwise the native class its Blueprint was made from. */
+	const UClass* GetNativeClass(const UClass* InClass)
+	{
+		while (InClass != nullptr && !InClass->HasAnyClassFlags(CLASS_Native))
+		{
+			InClass = InClass->GetSuperClass();
+		}
+		return InClass;
+	}
 }
 
 UDreamUIBehaviour::UDreamUIBehaviour()
@@ -39,6 +49,31 @@ UDreamUIBehaviour::UDreamUIBehaviour()
 			&& TickFunction->GetOuterUClass()->HasAnyClassFlags(CLASS_CompiledFromBlueprint);
 	}
 	CallbacksBeforeAwake.SetNumZeroed((int)ECallbackFunctionType::COUNT);
+}
+
+void UDreamUIBehaviour::DeclareTickUnused(const UClass* InClass)
+{
+	// The class being constructed is already this object's class, so a subclass's constructor, which runs after this
+	// one, still finds its own class here and not InClass.
+	if (DreamUIBehaviourLocal::GetNativeClass(GetClass()) == InClass)
+	{
+		bNativeTickUnused = true;
+	}
+}
+
+void UDreamUIBehaviour::DeclareTransformChangedUnused(const UClass* InClass)
+{
+	if (DreamUIBehaviourLocal::GetNativeClass(GetClass()) == InClass)
+	{
+		bNativeTransformChangedUnused = true;
+	}
+}
+
+bool UDreamUIBehaviour::HearsTransformChanges() const
+{
+	static const FName ReceiveOnTransformChangedName(TEXT("ReceiveOnTransformChanged"));
+	return !bNativeTransformChangedUnused
+		|| (bCanExecuteBlueprintEvent && DreamUIBehaviourLocal::IsImplementedInBlueprint(GetClass(), ReceiveOnTransformChangedName));
 }
 
 void UDreamUIBehaviour::PostDuplicate(EDuplicateMode::Type DuplicateMode)
@@ -107,7 +142,12 @@ void UDreamUIBehaviour::OnRegister()
 	if (auto Widget = GetWidget())
 	{
 		Widget->GetWidgetActiveChangedEvent().AddUObject(this, &UDreamUIBehaviour::Call_OnWidgetActiveChanged);
-		Widget->GetTransformChangedEvent().AddUObject(this, &UDreamUIBehaviour::Call_OnTransformChanged);
+		// Asked, not assumed: a widget with a listener is announced every move and composed for it, and most behaviours
+		// have nothing to do when their widget moves.
+		if (HearsTransformChanges())
+		{
+			Widget->GetTransformChangedEvent().AddUObject(this, &UDreamUIBehaviour::Call_OnTransformChanged);
+		}
 		Widget->GetDimensionChangedEvent().AddUObject(this, &UDreamUIBehaviour::Call_OnDimensionsChanged);
 		Widget->GetChildDimensionChangedEvent().AddUObject(this, &UDreamUIBehaviour::Call_OnChildDimensionsChanged);
 		Widget->GetAttachmentChangedEvent().AddUObject(this, &UDreamUIBehaviour::Call_OnAttachmentChanged);
@@ -164,7 +204,8 @@ void UDreamUIBehaviour::SetCanExecuteTick(bool Value)
 	if (bCanExecuteTick != Value)
 	{
 		bCanExecuteTick = Value;
-		if (bIsStartCalled)
+		// One with nothing to do on Tick is never in the list, allowed to tick or not.
+		if (bIsStartCalled && HasTickWork())
 		{
 			if (bCanExecuteTick)
 			{
@@ -289,7 +330,7 @@ void UDreamUIBehaviour::Call_OnEnable()
 	}
 	else
 	{
-		if (bCanExecuteTick)
+		if (bCanExecuteTick && HasTickWork())
 		{
 			UDreamUIManagerWorldSubsystem::AddDreamUIBehavioursForTick(this);
 		}
@@ -323,7 +364,7 @@ void UDreamUIBehaviour::Call_OnDisable()
 	}
 	else
 	{
-		if (bCanExecuteTick)
+		if (bCanExecuteTick && HasTickWork())
 		{
 			UDreamUIManagerWorldSubsystem::RemoveDreamUIBehavioursFromTick(this);
 		}

@@ -7,6 +7,9 @@
 
 UDreamMeshModifierOutline::UDreamMeshModifierOutline()
 {
+	// A modifier works when the geometry is built, never each frame or when its widget moves.
+	DeclareTickUnused(StaticClass());
+	DeclareTransformChangedUnused(StaticClass());
 }
 
 void UDreamMeshModifierOutline::ApplyColorAndAlpha(FColor& InOutColor, uint8 InSourceAlpha)

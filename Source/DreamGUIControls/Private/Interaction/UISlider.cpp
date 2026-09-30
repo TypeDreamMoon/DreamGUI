@@ -3,6 +3,13 @@
 #include "Interaction/UISlider.h"
 #include "Core/Components/DreamWidget.h"
 
+UUISlider::UUISlider()
+{
+	// Moved by the pointer and by its value, never by the frame; its parts are placed when their areas are laid out.
+	DeclareTickUnused(StaticClass());
+	DeclareTransformChangedUnused(StaticClass());
+}
+
 void UUISlider::Awake()
 {
     Super::Awake();

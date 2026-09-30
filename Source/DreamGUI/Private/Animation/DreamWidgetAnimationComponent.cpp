@@ -20,6 +20,9 @@
 
 UDreamWidgetAnimationComponent::UDreamWidgetAnimationComponent()
 {
+	// Its players are ticked by the sequence tick manager, and where its widget stands means nothing to them.
+	DeclareTickUnused(StaticClass());
+	DeclareTransformChangedUnused(StaticClass());
 }
 
 bool FDreamUIAnimationHandle::IsValid() const

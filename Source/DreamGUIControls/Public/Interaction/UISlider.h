@@ -26,6 +26,9 @@ class DREAMGUICONTROLS_API UUISlider : public UUISelectable, public IDreamPointe
 {
 	GENERATED_BODY()
 	
+public:
+	UUISlider();
+
 protected:	
 	virtual void Awake() override;
 	virtual void Start() override;

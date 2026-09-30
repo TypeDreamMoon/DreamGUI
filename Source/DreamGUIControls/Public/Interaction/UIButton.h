@@ -16,6 +16,8 @@ UCLASS(ClassGroup = (DreamGUI), Blueprintable, meta = (BlueprintSpawnableCompone
 class DREAMGUICONTROLS_API UUIButton : public UUISelectable, public IDreamPointerClickInterface, public IDreamPointerDoubleClickInterface
 {
 	GENERATED_BODY()
+public:
+	UUIButton();
 protected:
 
 	UPROPERTY(EditAnywhere, Category = "DreamGUI-Button")
