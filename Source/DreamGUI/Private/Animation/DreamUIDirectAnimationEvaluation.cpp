@@ -158,6 +158,7 @@ TSharedPtr<FDreamUIDirectAnimationEvaluation> FDreamUIDirectAnimationEvaluation:
 	TSharedPtr<FDreamUIDirectAnimationEvaluation> Plan = MakeShared<FDreamUIDirectAnimationEvaluation>();
 	Plan->Sequence = &InSequence;
 	Plan->TickResolution = MovieScene->GetTickResolution();
+	Plan->MovieSceneSignature = MovieScene->GetSignature();
 	for (const FMovieSceneBinding& Binding : MovieScene->GetBindings())
 	{
 		for (const UMovieSceneTrack* Track : Binding.GetTracks())
@@ -582,6 +583,13 @@ bool FDreamUIDirectAnimationEvaluation::Evaluate(IMovieScenePlayer& InPlayer, FF
 		}
 	}
 	return true;
+}
+
+bool FDreamUIDirectAnimationEvaluation::IsStillPlanFor(const UMovieSceneSequence& InSequence) const
+{
+	const UMovieScene* MovieScene = InSequence.GetMovieScene();
+	return Sequence.Get() == &InSequence && MovieScene != nullptr && MovieScene->GetSignature() == MovieSceneSignature
+		&& MovieScene->GetTickResolution() == TickResolution;
 }
 
 void FDreamUIDirectAnimationEvaluation::RestoreInitialValues()

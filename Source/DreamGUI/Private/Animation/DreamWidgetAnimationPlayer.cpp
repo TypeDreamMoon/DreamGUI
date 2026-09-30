@@ -94,6 +94,8 @@ bool UDreamWidgetAnimationPlayer::TryEvaluateDirectly(const FMovieSceneEvaluatio
 	{
 		DirectEvaluationDecidedFor = PlayedSequence;
 		DirectEvaluation.Reset();
+		// The play before's, if it still does for this sequence: see KeptDirectEvaluation.
+		const TSharedPtr<FDreamUIDirectAnimationEvaluation> Kept = MoveTemp(KeptDirectEvaluation);
 		// Only what the component starts: it always says whether the values stay or go back when the animation ends, and
 		// that is the one completion rule evaluated here. Weights blend against the sequencer's captured initial values,
 		// and a replicated or warped playback is the sequencer's business too.
@@ -106,7 +108,7 @@ bool UDreamWidgetAnimationPlayer::TryEvaluateDirectly(const FMovieSceneEvaluatio
 			// only ever runs for an animation evaluated directly.
 			&& !IsRootPlayRateWarped())
 		{
-			DirectEvaluation = FDreamUIDirectAnimationEvaluation::TryCreate(*PlayedSequence);
+			DirectEvaluation = Kept.IsValid() && Kept->IsStillPlanFor(*PlayedSequence) ? Kept : FDreamUIDirectAnimationEvaluation::TryCreate(*PlayedSequence);
 		}
 	}
 	if (DirectEvaluation.IsValid() && CVarDreamUIDirectAnimationEvaluation.GetValueOnGameThread() == 0)
@@ -163,7 +165,9 @@ void UDreamWidgetAnimationPlayer::OnStopped()
 			DirectEvaluation->DiscardInitialValues();
 		}
 	}
-	// The next play decides again: its settings, or the sequence the player is given next, may differ.
+	// The next play decides again: its settings, or the sequence the player is given next, may differ. What it decides on
+	// is kept for it, its values put back or forgotten above (KeptDirectEvaluation).
+	KeptDirectEvaluation = MoveTemp(DirectEvaluation);
 	DirectEvaluation.Reset();
 	DirectEvaluationDecidedFor.Reset();
 }

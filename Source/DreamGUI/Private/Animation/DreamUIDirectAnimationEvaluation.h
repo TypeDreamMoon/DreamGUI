@@ -48,6 +48,11 @@ public:
 	void RestoreInitialValues();
 	/** The movie scene's tick resolution when this was made (TryCreate): the resolution Evaluate takes its time in. */
 	FFrameRate GetTickResolution() const { return TickResolution; }
+	/**
+	 * Whether this is still what TryCreate would make for InSequence: made for it, and its movie scene not edited since
+	 * -- every edit of a binding, a track, a section or a key changes the movie scene's signature.
+	 */
+	bool IsStillPlanFor(const UMovieSceneSequence& InSequence) const;
 	/** The values written stay, and the initial ones are forgotten, as the sequencer keeps state. */
 	void DiscardInitialValues();
 
@@ -137,6 +142,8 @@ private:
 	TWeakObjectPtr<const UMovieSceneSequence> Sequence;
 	/** See GetTickResolution. Kept here so that a frame's evaluation need not look at the movie scene for it. */
 	FFrameRate TickResolution;
+	/** The movie scene's signature when this was made: see IsStillPlanFor. */
+	FGuid MovieSceneSignature;
 	TArray<FAnimatedProperty> Properties;
 	/** Whether any property has been written: after that, the sequencer can no longer take over cleanly. */
 	bool bWrittenAnything = false;

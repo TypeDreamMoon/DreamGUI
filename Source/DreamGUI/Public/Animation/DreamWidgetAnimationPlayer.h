@@ -130,6 +130,13 @@ private:
 
 	TSharedPtr<class FDreamUIDirectAnimationEvaluation> DirectEvaluation;
 	/**
+	 * The direct evaluation of the play before, kept by OnStopped for the next play of the same sequence: made from the
+	 * sequence's bindings, tracks and sections, with the bound objects, their properties and setters found, it is as good
+	 * as new while the movie scene is unchanged (FDreamUIDirectAnimationEvaluation::IsStillPlanFor). A wall of widgets
+	 * starting an animation together made thousands of them again in one frame.
+	 */
+	TSharedPtr<class FDreamUIDirectAnimationEvaluation> KeptDirectEvaluation;
+	/**
 	 * The sequence whether to evaluate directly was decided for, at its first evaluation after a stop, when the playback
 	 * settings are final. A player the component re-initializes with another sequence decides again.
 	 */
