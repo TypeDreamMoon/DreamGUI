@@ -21,6 +21,7 @@
 
 #include "DreamWorldRaycastTestTypes.h"
 #include "DreamScopedWorld.h"
+#include "Lifecycle/DreamLifecycleFixtures.h"
 
 /*
  * What a world-space raycaster answers with, and what a world object does to a pointer.
@@ -445,6 +446,60 @@ bool FDreamWorldRaycastAuthoredRaycasterWinsTest::RunTest(const FString& Paramet
 			CountComponentsOfClass(Host, UDreamScreenSpaceRaycaster::StaticClass()), 1);
 		TestEqual(TEXT("...and no world one, which was already answered"),
 			CountComponentsOfClass(Host, UDreamWorldSpaceRaycaster::StaticClass()), 0);
+	}
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamWorldRaycastParallelTest,
+	"DreamGUI.WorldRaycast.ManyPanelsTracedTogetherOnWorkersHitWhatTheyHitTracedOneAfterAnother",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamWorldRaycastParallelTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamWorldRaycastTestLocal;
+	FScopedGameWorld Scope;
+	if (!TestNotNull(TEXT("A world to trace in"), Scope.World))
+	{
+		return false;
+	}
+	// Forty panels: every other one across the ray, and the rest beside it, where their bounds turn the ray away.
+	constexpr int32 PanelCount = 40;
+	for (int32 Index = 0; Index < PanelCount; ++Index)
+	{
+		UDreamCanvas* Canvas = nullptr;
+		const FVector Location(300.0 + 20.0 * Index, Index % 2 == 0 ? 0.0 : 5000.0, 0.0);
+		if (!TestNotNull(TEXT("A panel"), MakeWorldPanel(Scope.World, FString::Printf(TEXT("Panel%d"), Index), Location, 200.0f, Canvas)))
+		{
+			return false;
+		}
+	}
+	UDreamWorldSpaceRaycasterFixedRay* Raycaster = MakeFixedRayRaycaster(Scope.World);
+	UDreamPointerEventData* EventData = NewObject<UDreamPointerEventData>();
+	if (!TestNotNull(TEXT("A raycaster"), Raycaster) || !TestNotNull(TEXT("A pointer"), EventData))
+	{
+		return false;
+	}
+	const auto Trace = [Raycaster, EventData](int32 InParallelMinCanvases)
+	{
+		const DreamTests::Lifecycle::FScopedConsoleVariable Parallel(TEXT("r.DreamUI.ParallelRaycastMinCanvases"), InParallelMinCanvases);
+		FVector RayOrigin = FVector::ZeroVector, RayDirection = FVector::ZeroVector, RayEnd = FVector::ZeroVector;
+		TArray<FDreamUIHitResult> Hits;
+		Raycaster->Raycast(EventData, RayOrigin, RayDirection, RayEnd, Hits);
+		return Hits;
+	};
+	const TArray<FDreamUIHitResult> OneAfterAnother = Trace(0);
+	const TArray<FDreamUIHitResult> Together = Trace(1);
+	if (!TestEqual(TEXT("Traced one after another, every panel across the ray is hit"), OneAfterAnother.Num(), PanelCount / 2)
+		|| !TestEqual(TEXT("...and traced together, as many"), Together.Num(), OneAfterAnother.Num()))
+	{
+		return false;
+	}
+	for (int32 Index = 0; Index < Together.Num(); ++Index)
+	{
+		TestTrue(FString::Printf(TEXT("Hit %d is the same panel at the same distance"), Index),
+			Together[Index].Widget.Get() == OneAfterAnother[Index].Widget.Get()
+			&& FMath::IsNearlyEqual(Together[Index].Distance, OneAfterAnother[Index].Distance));
 	}
 	return true;
 }

@@ -11,6 +11,7 @@
 #include "DreamBaseRaycaster.generated.h"
 
 class UPrimitiveComponent;
+class UDreamVisual;
 
 /** 
  * Base interaction component that perform a raycast hit test
@@ -111,6 +112,20 @@ protected:
 	 * tests many canvases against one pointer, which would otherwise ask the player's view for the same ray per canvas.
 	 */
 	void RaycastUIAlongRay(UDreamCanvas* InRootCanvas, const FVector& InRayOrigin, const FVector& InRayEnd, TArray<FDreamUIHitResult>& OutHitResultArray);
+	/**
+	 * RaycastUIAlongRay's first half: the visuals of InRootCanvas's tree the ray could hit, in the order it walks them, by
+	 * the tests that read nothing but a visual and its widget -- raycastable, hit-test visible, a raycast target, and a ray
+	 * that reaches the widget's rect. Any thread, one tree per thread, once PrepareRaycastTree has run for each: what it
+	 * composes and resolves is the tree's own.
+	 */
+	static void GatherRaycastCandidates(UDreamCanvas* InRootCanvas, const FVector& InRayOrigin, const FVector& InRayEnd, TArray<UDreamVisual*>& OutCandidates);
+	/**
+	 * On the game thread, before GatherRaycastCandidates runs for InRootCanvas anywhere else: the canvas's widget, and the
+	 * widgets above it that other trees may share, composed and resolved.
+	 */
+	static void PrepareRaycastTree(UDreamCanvas* InRootCanvas);
+	/** RaycastUIAlongRay's second half, on the game thread: the candidates' exact tests, and the hits sorted as they are drawn. */
+	static void RaycastCandidates(TArrayView<UDreamVisual* const> InCandidates, const FVector& InRayOrigin, const FVector& InRayEnd, TArray<FDreamUIHitResult>& OutHitResultArray);
 	/**
 	 * Trace the world along this raycaster's ray and report what is in the way.
 	 *

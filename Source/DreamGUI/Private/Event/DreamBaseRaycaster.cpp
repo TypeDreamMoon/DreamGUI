@@ -114,81 +114,73 @@ void UDreamBaseRaycaster::RaycastUI(UDreamPointerEventData* InPointerEventData, 
 
 void UDreamBaseRaycaster::RaycastUIAlongRay(UDreamCanvas* InRootCanvas, const FVector& InRayOrigin, const FVector& InRayEnd, TArray<FDreamUIHitResult>& OutHitResultArray)
 {
-	struct LOCAL
+	TArray<UDreamVisual*> Candidates;
+	GatherRaycastCandidates(InRootCanvas, InRayOrigin, InRayEnd, Candidates);
+	RaycastCandidates(Candidates, InRayOrigin, InRayEnd, OutHitResultArray);
+}
+
+void UDreamBaseRaycaster::PrepareRaycastTree(UDreamCanvas* InRootCanvas)
+{
+	if (const UDreamWidget* Widget = InRootCanvas->GetWidget())
 	{
-		static void CollectVisualWidget(UDreamCanvas* InCanvas, TArray<UDreamVisual*>& OutVisualArray)
-		{
-			OutVisualArray.Append(InCanvas->GetVisualArray());
-			for (auto& Child : InCanvas->GetChildrenCanvasArray())
-			{
-				CollectVisualWidget(Child.Get(), OutVisualArray);
-			}
-		}
-		static void ForeachCanvas(UDreamCanvas* InCanvas, TFunctionRef<void(UDreamCanvas*)> InFunction)
-		{
-			InFunction(InCanvas);
-			for (auto& Child : InCanvas->GetChildrenCanvasArray())
-			{
-				ForeachCanvas(Child.Get(), InFunction);
-			}
-		}
-	};
-#if 0// use ParallelFor to speed up the hit process, should be ok because it blocks game thread and we use thread lock
-	TArray<UDreamVisual*> VisualArray;
-	LOCAL::CollectVisualWidget(InRootCanvas, VisualArray);
-	FCriticalSection Mutex;
-	ParallelFor(VisualArray.Num(), [&VisualArray, &Mutex, &OutHitResultArray, InRayOrigin, InRayEnd](int32 Index)
+		// Each composes and resolves the widgets above as it needs them, and those may be shared with another root canvas's
+		// tree. Below this widget, every widget is this tree's alone.
+		Widget->GetWorldTransform();
+		Widget->GetWidth();
+		Widget->GetHeight();
+	}
+}
+
+void UDreamBaseRaycaster::GatherRaycastCandidates(UDreamCanvas* InRootCanvas, const FVector& InRayOrigin, const FVector& InRayEnd, TArray<UDreamVisual*>& OutCandidates)
+{
+	TArray<UDreamCanvas*, TInlineAllocator<8>> Canvases;
+	Canvases.Add(InRootCanvas);
+	// A canvas, then each of its children and theirs in turn, as the hits have always been collected.
+	for (int32 Index = 0; Index < Canvases.Num(); ++Index)
 	{
-		auto& Visual = VisualArray[Index];
-		auto Widget = Visual->GetWidget();
-		FDreamUIHitResult ThisHit;
-		ThisHit.FaceIndex = INDEX_NONE;
-		if (
-			Widget->GetRaycastableInHierarchy()
-			&& Widget->GetHitTestVisibleInHierarchy()
-			&& Visual->GetRaycastTarget()
-			&& DreamBaseRaycasterLocal::CouldRayReachVisual(Visual, Widget, InRayOrigin, InRayEnd)
-			&& Visual->LineTraceUI(ThisHit, InRayOrigin, InRayEnd)
-			)
+		const UDreamCanvas* Canvas = Canvases[Index];
+		for (UDreamVisual* Visual : Canvas->GetVisualArray())
 		{
-			if (Widget->IsPointVisibleOnClip(ThisHit.Location))
-			{
-				Mutex.Lock();
-				OutHitResultArray.Add(ThisHit);
-				Mutex.Unlock();
-			}
-		}
-	});
-#else
-	auto TraceFunction = [&](UDreamCanvas* InCanvas)
-	{
-		auto& VisualArray = InCanvas->GetVisualArray();
-		for (auto& Visual : VisualArray)
-		{
-			auto Widget = Visual->GetWidget();
-			FDreamUIHitResult ThisHit;
-			ThisHit.FaceIndex = INDEX_NONE;
-			if (
-				Widget->GetRaycastableInHierarchy()
+			const UDreamWidget* Widget = Visual->GetWidget();
+			if (Widget->GetRaycastableInHierarchy()
 				&& Widget->GetHitTestVisibleInHierarchy()
 				&& Visual->GetRaycastTarget()
-				// Ordered last of the cheap tests and first of the expensive ones: the three above
-				// are field reads, this one is arithmetic on a cached sphere, and LineTraceUI below
-				// inverts a transform.
-				&& DreamBaseRaycasterLocal::CouldRayReachVisual(Visual, Widget, InRayOrigin, InRayEnd)
-				&& Visual->LineTraceUI(ThisHit, InRayOrigin, InRayEnd)
-				)
+				// Last of the cheap tests: the three above are field reads, this one is arithmetic on a cached sphere. The
+				// exact test is RaycastCandidates', and inverts a transform.
+				&& DreamBaseRaycasterLocal::CouldRayReachVisual(Visual, Widget, InRayOrigin, InRayEnd))
 			{
-				if (Widget->IsPointVisibleOnClip(ThisHit.Location))
-				{
-					OutHitResultArray.Add(ThisHit);
-				}
+				OutCandidates.Add(Visual);
 			}
 		}
-	};
-	LOCAL::ForeachCanvas(InRootCanvas, TraceFunction);
-#endif
-	
+		int32 InsertAt = Index + 1;
+		for (const TWeakObjectPtr<UDreamCanvas>& Child : Canvas->GetChildrenCanvasArray())
+		{
+			if (UDreamCanvas* ChildCanvas = Child.Get())
+			{
+				Canvases.Insert(ChildCanvas, InsertAt++);
+			}
+		}
+	}
+}
+
+void UDreamBaseRaycaster::RaycastCandidates(TArrayView<UDreamVisual* const> InCandidates, const FVector& InRayOrigin, const FVector& InRayEnd, TArray<FDreamUIHitResult>& OutHitResultArray)
+{
+	for (UDreamVisual* Visual : InCandidates)
+	{
+		// Gathered before any of these ran, and a custom raycast may run game code.
+		if (!IsValid(Visual))
+		{
+			continue;
+		}
+		UDreamWidget* Widget = Visual->GetWidget();
+		FDreamUIHitResult ThisHit;
+		ThisHit.FaceIndex = INDEX_NONE;
+		if (Visual->LineTraceUI(ThisHit, InRayOrigin, InRayEnd) && Widget->IsPointVisibleOnClip(ThisHit.Location))
+		{
+			OutHitResultArray.Add(ThisHit);
+		}
+	}
+
 	if (OutHitResultArray.Num() > 0)
 	{
 		OutHitResultArray.Sort([](const FDreamUIHitResult& A, const FDreamUIHitResult& B)

@@ -10,6 +10,18 @@
 #include "Engine/World.h"
 #include "Event/DreamEventSystem.h"
 #include "GameFramework/PlayerController.h"
+#include "ProfilingDebugging/CpuProfilerTrace.h"
+#include "Async/ParallelFor.h"
+#include "HAL/IConsoleManager.h"
+#include "Misc/App.h"
+
+static TAutoConsoleVariable<int32> CVarDreamUIParallelRaycastMinCanvases(
+	TEXT("r.DreamUI.ParallelRaycastMinCanvases"),
+	32,
+	TEXT("When a world-space raycaster traces at least this many root canvases, the cheap tests of their visuals -- the ")
+	TEXT("rect bounds each ray is held against -- run on the task graph's workers as well as the game thread; the exact ")
+	TEXT("tests stay on the game thread. 0: all on the game thread."),
+	ECVF_Default);
 #include "SceneView.h"
 
 UDreamWorldSpaceRaycaster::UDreamWorldSpaceRaycaster()
@@ -87,6 +99,7 @@ bool UDreamWorldSpaceRaycaster::GenerateRay(UDreamPointerEventData* InPointerEve
 
 void UDreamWorldSpaceRaycaster::Raycast(UDreamPointerEventData* InPointerEventData, FVector& OutRayOrigin, FVector& OutRayDirection, FVector& OutRayEnd, TArray<FDreamUIHitResult>& OutHitResultArray)
 {
+	TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_WorldSpaceRaycast);
 	UDreamUIManagerWorldSubsystem* Manager = UDreamUIManagerWorldSubsystem::GetInstance(GetWorld());
 	if (Manager == nullptr)return;
 
@@ -98,9 +111,7 @@ void UDreamWorldSpaceRaycaster::Raycast(UDreamPointerEventData* InPointerEventDa
 	//
 	// One ray for every canvas: making it asks the player's view for its projection, which cost more than testing a
 	// small panel against it, once per world panel.
-	TArray<FDreamUIHitResult> CanvasHitResultArray;
-	bool bRayMade = false;
-	bool bHaveRay = false;
+	TArray<UDreamCanvas*> TracedCanvases;
 	for (const TWeakObjectPtr<UDreamCanvas>& CanvasPtr : Manager->GetAllCanvasArray())
 	{
 		UDreamCanvas* Canvas = CanvasPtr.Get();
@@ -108,26 +119,57 @@ void UDreamWorldSpaceRaycaster::Raycast(UDreamPointerEventData* InPointerEventDa
 		if (!Canvas->IsRootCanvas())continue;
 		if (!Canvas->IsRenderToWorldSpace())continue;
 		if (Canvas->GetTraceChannel() != TraceChannel.GetValue())continue;
-		if (!bRayMade)
+		TracedCanvases.Add(Canvas);
+	}
+	if (TracedCanvases.Num() > 0 && GenerateRay(InPointerEventData, OutRayOrigin, OutRayDirection, OutRayEnd, CurrentRayLength))
+	{
+		CurrentRayOrigin = OutRayOrigin;
+		CurrentRayDirection = OutRayDirection;
+		// Each tree's cheap tests on its own, on as many threads as there are when there are many: with a thousand world
+		// panels they are most of a trace, and nearly every visual fails them. Then the exact tests of what is left, one
+		// canvas after another as before, on the game thread, where a custom raycast may run a Blueprint.
+		TArray<TArray<UDreamVisual*>> Candidates;
+		Candidates.SetNum(TracedCanvases.Num());
+		const int32 MinCanvases = CVarDreamUIParallelRaycastMinCanvases.GetValueOnGameThread();
+		if (MinCanvases > 0 && TracedCanvases.Num() >= MinCanvases && FApp::ShouldUseThreadingForPerformance())
 		{
-			bRayMade = true;
-			bHaveRay = GenerateRay(InPointerEventData, OutRayOrigin, OutRayDirection, OutRayEnd, CurrentRayLength);
-			if (bHaveRay)
+			TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_ParallelRaycastCandidates);
+			for (UDreamCanvas* Canvas : TracedCanvases)
 			{
-				CurrentRayOrigin = OutRayOrigin;
-				CurrentRayDirection = OutRayDirection;
+				PrepareRaycastTree(Canvas);
+			}
+			constexpr int32 MinBatchSize = 16;
+			ParallelFor(TEXT("DreamUI_GatherRaycastCandidates"), TracedCanvases.Num(), MinBatchSize,
+				[&TracedCanvases, &Candidates, &OutRayOrigin, &OutRayEnd](int32 Index)
+				{
+					GatherRaycastCandidates(TracedCanvases[Index], OutRayOrigin, OutRayEnd, Candidates[Index]);
+				});
+		}
+		else
+		{
+			for (int32 Index = 0; Index < TracedCanvases.Num(); ++Index)
+			{
+				GatherRaycastCandidates(TracedCanvases[Index], OutRayOrigin, OutRayEnd, Candidates[Index]);
 			}
 		}
-		if (!bHaveRay)break;
-		CanvasHitResultArray.Reset();
-		RaycastUIAlongRay(Canvas, OutRayOrigin, OutRayEnd, CanvasHitResultArray);
-		OutHitResultArray.Append(CanvasHitResultArray);
+		TArray<FDreamUIHitResult> CanvasHitResultArray;
+		for (int32 Index = 0; Index < TracedCanvases.Num(); ++Index)
+		{
+			if (Candidates[Index].Num() == 0)
+			{
+				continue;
+			}
+			CanvasHitResultArray.Reset();
+			RaycastCandidates(Candidates[Index], OutRayOrigin, OutRayEnd, CanvasHitResultArray);
+			OutHitResultArray.Append(CanvasHitResultArray);
+		}
 	}
 
 	if (bOccludeByWorld)
 	{
 		// Its own array as well, for a blunter reason: RaycastWorld resets whatever it is handed
 		// before tracing, so passing the collected hits in would throw every one of them away.
+		TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_RaycastWorld);
 		TArray<FDreamUIHitResult> WorldHitResultArray;
 		RaycastWorld(InPointerEventData, false, TraceChannel, OutRayOrigin, OutRayDirection, OutRayEnd, WorldHitResultArray);
 		OutHitResultArray.Append(WorldHitResultArray);

@@ -2,6 +2,7 @@
 // Modified by TypeDreamMoon.
 
 #include "Core/Components/DreamWidget.h"
+#include <atomic>
 #include "DreamWidgetPrivate.h"
 #include "Core/DreamPerspective.h"
 #include "DreamGUI.h"
@@ -639,13 +640,16 @@ void UDreamWidget::SetWorldTransform(const FTransform& InWorldTransform)
 
 namespace DreamWidgetTransformLocal
 {
-	/** See UDreamWidget::GetWorldTransformComputeCount. Game thread only, like every reader of a world transform. */
-	uint64 WorldTransformComputeCount = 0;
+	/**
+	 * See UDreamWidget::GetWorldTransformComputeCount. Counted from the game thread, and from the workers a world-space
+	 * raycast walks separate trees on (UDreamBaseRaycaster::GatherRaycastCandidates).
+	 */
+	std::atomic<uint64> WorldTransformComputeCount = 0;
 }
 
 uint64 UDreamWidget::GetWorldTransformComputeCount()
 {
-	return DreamWidgetTransformLocal::WorldTransformComputeCount;
+	return DreamWidgetTransformLocal::WorldTransformComputeCount.load(std::memory_order_relaxed);
 }
 
 void UDreamWidget::ComputeWorldTransform()const
@@ -668,7 +672,7 @@ void UDreamWidget::ComputeWorldTransform()const
 		ObjectToWorldTransform = LocalTransform;
 	}
 	bWorldTransformDirty = false;
-	++DreamWidgetTransformLocal::WorldTransformComputeCount;
+	DreamWidgetTransformLocal::WorldTransformComputeCount.fetch_add(1, std::memory_order_relaxed);
 }
 
 void UDreamWidget::CalculateObjectToWorldTransform(bool /*bPropagateToChildren*/)
