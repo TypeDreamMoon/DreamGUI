@@ -968,14 +968,75 @@ public:
 	 * the moved vertices and bounds, as they take a colour.
 	 */
 	void MarkWidgetMoved(UDreamWidget* InWidget);
-	/** InWidget's own render transform changed: what tells the canvas which widgets to keep as render layers. */
+	/**
+	 * InWidget's own render transform changed: what tells the canvas which widgets to keep as render layers. One whose
+	 * RenderLayer is Auto and whose render transform has changed on r.DreamUI.RenderLayerPromoteFrames frames in a row
+	 * becomes one at the next update, if it can (CanBeRenderLayer) and the canvas holds fewer than
+	 * r.DreamUI.RenderLayerMaxPerCanvas, and stops being one once it has held still for r.DreamUI.RenderLayerDemoteFrames
+	 * frames. Either way the draw calls are rebuilt once. r.DreamUI.RenderLayers 0 makes none, and takes back those there are.
+	 */
 	void NoteRenderTransformChanged(UDreamWidget* InWidget);
 	/**
 	 * A render layer's transform relative to this canvas changed (UDreamWidget::IsRenderLayer): its sections move, and
-	 * nothing in the layer is transformed again.
+	 * nothing in the layer is transformed again. They are moved at the frame's submit (FinishDrawCallBatchData), which
+	 * looks at where each layer is whether or not the canvas updated; nothing of the canvas's own update is needed for it.
 	 */
 	void MarkRenderLayerMoved(UDreamWidget* InLayer);
+	/** InWidget's RenderLayer setting changed (UDreamWidget::SetRenderLayerMode): the next update makes it a layer or takes it back. */
+	void NoteRenderLayerModeChanged(UDreamWidget* InWidget);
 private:
+	/** A widget of this canvas whose own render transform changed lately, or a render layer: see NoteRenderTransformChanged. */
+	struct FRenderLayerCandidate
+	{
+		/** The frame its render transform last changed on, and on how many frames in a row it had changed by then. */
+		uint64 LastChangeFrame = 0;
+		int32 ChangeStreak = 0;
+		/** Found unable to be a layer during this run of changes (CanBeRenderLayer); asked again when another run starts. */
+		bool bRefused = false;
+	};
+	TMap<TObjectKey<UDreamWidget>, FRenderLayerCandidate> RenderLayerCandidates;
+	/** The widgets this canvas made render layers. */
+	TArray<TWeakObjectPtr<UDreamWidget>> RenderLayers;
+	/** One render layer whose elements the draw calls in hand hold: which draw calls, and where they were placed. */
+	struct FRenderLayerPlacement
+	{
+		TObjectKey<UDreamWidget> Layer;
+		FMatrix44f LayerToCanvas = FMatrix44f::Identity;
+		TArray<int32, TInlineAllocator<2>> DrawCalls;
+	};
+	TArray<FRenderLayerPlacement> RenderLayerPlacements;
+	/** A candidate changed on enough frames in a row to be made a layer: the next update looks at it. */
+	bool bRenderLayerPromotionsPending = false;
+	/** The widgets' RenderLayer settings are looked at in the next update: the list was made again, or a setting changed. */
+	bool bRenderLayerModesToScan = true;
+	/** A layer may have moved since its draw calls were placed: the canvas updated, or MarkRenderLayerMoved. */
+	bool bRenderLayersMayHaveMoved = false;
+	/** Whether r.DreamUI.RenderLayers was on when this canvas last looked. */
+	bool bRenderLayersWereEnabled = true;
+	/**
+	 * Whether InWidget can be a render layer of this canvas now. Never: a canvas's own widget, which places the whole
+	 * canvas, and a widget hosting a canvas, which that canvas draws; a mesh DreamGUI's renderer does not draw alone
+	 * (UDreamUIMeshComponent::CanDrawRenderLayers); and a subtree with an element that is not transformed through the
+	 * FTransform path of FDreamUIGeometry::TransformVertices -- under a perspective or a shear, a post process, a direct mesh.
+	 */
+	bool CanBeRenderLayer(const UDreamWidget* InWidget) const;
+	/**
+	 * InWidget becomes a render layer, or stops being one. Every element of its canvas under it is kept in another space
+	 * from then on, so each is transformed again, and the draw calls are rebuilt.
+	 */
+	void SetWidgetIsRenderLayer(UDreamWidget* InWidget, bool bInIsLayer);
+	/** At an update, before the widgets are: the layers taken back that can be no longer, and the ones due made. */
+	void UpdateRenderLayers();
+	/** Each frame, at the submit: the layers that held still long enough taken back, and every layer's draw calls placed. */
+	void TendRenderLayers();
+	/** For draw calls just taken: which of them hold each layer's elements, and where the layer is. */
+	void GatherRenderLayerPlacements();
+	/** Each layer's draw calls and sections moved to where the layer is now, if it moved. */
+	void PlaceRenderLayers();
+	/** Every widget this canvas made a layer is a layer no longer, and nothing is asked of them: the canvas is going. */
+	void ForgetRenderLayers();
+	/** InLayer's transform relative to this canvas: what its elements are drawn through ahead of the mesh's. */
+	FMatrix44f GetLayerToCanvas(const UDreamWidget* InLayer) const;
 	/** Set by MarkWidgetMoved; the next update decides whether the moves need a rebuild. */
 	bool bWidgetsMovedSinceUpdate = false;
 	/** What RefreshDrawCallVertices leaves to FinishDrawCallBatchData: whether a draw call's bounds moved, and the draw calls whose section it could not patch. */

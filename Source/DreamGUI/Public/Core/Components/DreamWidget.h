@@ -172,6 +172,18 @@ enum class EDreamWidgetInteractableType : uint8
 	Disabled,
 };
 
+/** Whether a widget may be a render layer, and when: see UDreamWidget::IsRenderLayer. */
+UENUM(BlueprintType)
+enum class EDreamWidgetRenderLayer : uint8
+{
+	/** Once its own render transform has changed on a few frames in a row; no longer once it has held still for a while. */
+	Auto,
+	/** Whenever it can be one, animated or not. */
+	Always,
+	/** Never: what is under it is transformed on the CPU with the rest of its canvas. */
+	Never,
+};
+
 enum class EDreamWidgetComponentsChangedType : uint8
 {
 	//New component added to this widget
@@ -423,6 +435,38 @@ private:
 	 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Render Transform", Getter, Setter, meta = (AllowPrivateAccess = true, DisplayName = "Shear"))
 	FVector2D RenderShear = FVector2D::ZeroVector;
+
+	/*
+	 * RENDER LAYER.
+	 *
+	 * A widget can be a render layer of its canvas (IsRenderLayer): the canvas keeps the geometry under it relative to it
+	 * and applies its transform on the GPU, so while it turns or slides, what is under it is neither transformed again nor
+	 * uploaded again -- only its sections' matrix changes. The price is batching: a layer's elements share draw calls only
+	 * with each other. The canvas makes a widget one once its own render transform has changed on a few frames in a row,
+	 * and takes it back once it has held still for a while (UDreamCanvas::NoteRenderTransformChanged), so this setting is
+	 * rarely one to touch; and some widgets can never be one (UDreamCanvas::CanBeRenderLayer).
+	 */
+	/**
+	 * Whether this widget may be a render layer of its canvas, and when: once its render transform keeps changing (Auto),
+	 * whenever it can be (Always), or never. A layer's transform is applied on the GPU to everything under it.
+	 */
+	UPROPERTY(EditAnywhere, AdvancedDisplay, Category = "Render Transform")
+	EDreamWidgetRenderLayer RenderLayer = EDreamWidgetRenderLayer::Auto;
+public:
+	/** Whether this widget may be a render layer of its canvas, and when. IsRenderLayer says whether it is one now. */
+	UFUNCTION(BlueprintCallable, Category = "Render Transform")
+	EDreamWidgetRenderLayer GetRenderLayerMode()const { return RenderLayer; }
+	/** Whether this widget may be a render layer of its canvas, and when; its canvas makes it one, or takes it back, at its next update. */
+	UFUNCTION(BlueprintCallable, Category = "Render Transform")
+	void SetRenderLayerMode(EDreamWidgetRenderLayer Value);
+private:
+	/** Set and cleared by the canvas that makes this widget a render layer; IsRenderLayer. */
+	uint32 bIsRenderLayer : 1 = false;
+	/** GetRenderLayer's answer, and the generation of the answers it was worked out in (InvalidateRenderLayerCaches). */
+	mutable TWeakObjectPtr<UDreamWidget> CachedRenderLayer;
+	mutable uint64 CachedRenderLayerGeneration = 0;
+	/** Every widget works out GetRenderLayer again when next asked: a layer came or went, or a widget changed its place in a tree. */
+	static void InvalidateRenderLayerCaches();
 
 	/*
 	 * PERSPECTIVE, in the shape CSS uses.

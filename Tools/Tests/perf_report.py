@@ -20,7 +20,8 @@ import sys
 
 STAGES = ['ManagerTick', 'CanvasUpdate', 'Batching', 'DrawCallSubmit', 'RenderRecord']
 COUNTERS = ['BatchesRecorded', 'VerticesRecorded', 'SectionUploads', 'UploadedBytes', 'DataTextureUpdates',
-            'GeometryCopies', 'SectionReuses', 'WidgetsUpdated', 'SectionPatches', 'DrawCallRebuilds', 'InPlaceRefreshes']
+            'GeometryCopies', 'SectionReuses', 'WidgetsUpdated', 'SectionPatches', 'DrawCallRebuilds', 'InPlaceRefreshes',
+            'RenderLayerMoves', 'RenderLayerPromotions', 'RenderLayerDemotions']
 DEFAULT_ENGINE = os.environ.get('DREAMGUI_ENGINE', r'C:\Program Files\Epic Games\UE_5.8')
 THREADS = [('GameThread', 'GameThread'), ('RenderThread', 'RenderThread*'), ('Workers', '*Worker*')]
 
@@ -42,7 +43,7 @@ def show(report):
         for stage in STAGES:
             print('  %-16s %9.3f ms/frame   %8d run(s)' % (stage, phase['msPerFrame'].get(stage, 0.0), phase['runs'].get(stage, 0)))
         for counter in COUNTERS:
-            print('  %-18s %12.1f /frame' % (counter, phase['perFrame'].get(counter, 0.0)))
+            print('  %-21s %12.1f /frame' % (counter, phase['perFrame'].get(counter, 0.0)))
     if report.get('trace'):
         print('\ntrace: %s' % report['trace'])
 
@@ -66,7 +67,7 @@ def compare(old, new):
         rows += [(c + ' /f', before['perFrame'].get(c, 0.0), phase['perFrame'].get(c, 0.0)) for c in COUNTERS]
         rows += [('draw calls', before.get('drawCalls', 0), phase.get('drawCalls', 0))]
         for name, a, b in rows:
-            print('  %-22s %10.3f  %10.3f  %s' % (name, a, b, change(a, b)))
+            print('  %-24s %10.3f  %10.3f  %s' % (name, a, b, change(a, b)))
 
 
 def read_timers(path):
