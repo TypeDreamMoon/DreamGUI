@@ -87,10 +87,23 @@ void UDreamWidgetAnimationPlayer::UpdateMovieSceneInstance(FMovieSceneEvaluation
 	}
 }
 
+void UDreamWidgetAnimationPlayer::Initialize(UMovieSceneSequence* InSequence, const FMovieSceneSequencePlaybackSettings& InSettings)
+{
+	Super::Initialize(InSequence, InSettings);
+	// Whatever the sequence: see DirectEvaluationDecidedFor.
+	DirectEvaluationDecidedFor = nullptr;
+}
+
+void UDreamWidgetAnimationPlayer::Initialize(UMovieSceneSequence* InSequence)
+{
+	Super::Initialize(InSequence);
+	DirectEvaluationDecidedFor = nullptr;
+}
+
 bool UDreamWidgetAnimationPlayer::TryEvaluateDirectly(const FMovieSceneEvaluationRange& InRange, EMovieScenePlayerStatus::Type PlayerStatus)
 {
 	UMovieSceneSequence* PlayedSequence = GetSequence();
-	if (DirectEvaluationDecidedFor.Get() != PlayedSequence)
+	if (DirectEvaluationDecidedFor != PlayedSequence)
 	{
 		DirectEvaluationDecidedFor = PlayedSequence;
 		DirectEvaluation.Reset();
@@ -109,6 +122,10 @@ bool UDreamWidgetAnimationPlayer::TryEvaluateDirectly(const FMovieSceneEvaluatio
 			&& !IsRootPlayRateWarped())
 		{
 			DirectEvaluation = Kept.IsValid() && Kept->IsStillPlanFor(*PlayedSequence) ? Kept : FDreamUIDirectAnimationEvaluation::TryCreate(*PlayedSequence);
+		}
+		if (DirectEvaluation.IsValid())
+		{
+			LiteDisplayRate = GetDisplayRate();
 		}
 	}
 	if (DirectEvaluation.IsValid() && CVarDreamUIDirectAnimationEvaluation.GetValueOnGameThread() == 0)
@@ -136,7 +153,8 @@ bool UDreamWidgetAnimationPlayer::TryEvaluateDirectly(const FMovieSceneEvaluatio
 	FMovieSceneContext Context(InRange, PlayerStatus);
 	PreEvaluation(Context);
 	const FFrameTime Time = ConvertFrameTime(InRange.GetTime(), InRange.GetFrameRate(), DirectEvaluation->GetTickResolution());
-	// Held for the evaluation: a listener of one of its writes may stop the animation, and OnStopped lets it go.
+	// Held for the evaluation: a listener of one of its writes may stop the animation, and OnStopped lets it go. Made for
+	// the sequence this player plays and holds (DirectEvaluationDecidedFor), which is so alive while it evaluates.
 	const TSharedPtr<FDreamUIDirectAnimationEvaluation> Evaluation = DirectEvaluation;
 	if (!Evaluation->Evaluate(*this, Time))
 	{
@@ -169,7 +187,7 @@ void UDreamWidgetAnimationPlayer::OnStopped()
 	// is kept for it, its values put back or forgotten above (KeptDirectEvaluation).
 	KeptDirectEvaluation = MoveTemp(DirectEvaluation);
 	DirectEvaluation.Reset();
-	DirectEvaluationDecidedFor.Reset();
+	DirectEvaluationDecidedFor = nullptr;
 }
 
 void UDreamWidgetAnimationPlayer::OnStartedPlaying()
@@ -305,8 +323,9 @@ void UDreamWidgetAnimationPlayer::TickLite(float DeltaSeconds)
 	const float PlayRate = bReversePlayback ? -PlaybackSettings.PlayRate : PlaybackSettings.PlayRate;
 	TimeController->Tick(DeltaSeconds, PlayRate);
 	// The update multiplies the rate by the world's dilation before it asks for the time. A clock vouched for does not read
-	// it -- FMovieSceneTimeController_Tick answers from what its ticks added up to -- so the world is not looked up.
-	const FFrameTime NewTime = TimeController->RequestCurrentTime(GetCurrentTime(), PlayRate, GetDisplayRate());
+	// it -- FMovieSceneTimeController_Tick answers from what its ticks added up to -- so the world is not looked up. The
+	// display rate is the one this play decided on its evaluation with (LiteDisplayRate).
+	const FFrameTime NewTime = TimeController->RequestCurrentTime(GetCurrentTime(), PlayRate, LiteDisplayRate);
 
 	if (GetPauseTimeForNewPosition(NewTime).IsSet() || ShouldStopOrLoop(NewTime))
 	{

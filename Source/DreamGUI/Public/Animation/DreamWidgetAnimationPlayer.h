@@ -50,6 +50,15 @@ public:
 	bool TryPrepareReplay(const FMovieSceneSequencePlaybackSettings& InSettings);
 
 	/**
+	 * UMovieSceneSequencePlayer::Initialize, after which the next evaluation decides again whether this player evaluates its
+	 * animation itself: the sequence it decided for is known by its address (DirectEvaluationDecidedFor), which a sequence
+	 * made after this one's end could come to have.
+	 */
+	void Initialize(UMovieSceneSequence* InSequence, const FMovieSceneSequencePlaybackSettings& InSettings);
+	/** As the other Initialize, with the settings the player has. */
+	void Initialize(UMovieSceneSequence* InSequence);
+
+	/**
 	 * Vouches for the time controller the player has now as one the player may tick and read itself (see
 	 * TickFromSequenceTickManager): the engine's tick controller, or one built on it that changes only what a tick adds, as
 	 * the component's unscaled clock does. Neither reads the play rate it is asked for the time with. Held by identity, so
@@ -138,9 +147,17 @@ private:
 	TSharedPtr<class FDreamUIDirectAnimationEvaluation> KeptDirectEvaluation;
 	/**
 	 * The sequence whether to evaluate directly was decided for, at its first evaluation after a stop, when the playback
-	 * settings are final. A player the component re-initializes with another sequence decides again.
+	 * settings are final. A player the component re-initializes with another sequence decides again. Only ever compared
+	 * with the sequence the player holds, which is alive; forgotten at every stop and every Initialize, so that no other
+	 * sequence can come to have its address while it is kept -- every frame of a wall of widgets asked for it by a weak
+	 * look-up.
 	 */
-	TWeakObjectPtr<const UMovieSceneSequence> DirectEvaluationDecidedFor;
+	const UMovieSceneSequence* DirectEvaluationDecidedFor = nullptr;
+	/**
+	 * The sequence's display rate as of that decision, which the player's own tick asks the clock for the time in (TickLite):
+	 * the sequencer's update reads it from the movie scene every frame, and a wall of widgets each has its own movie scene.
+	 */
+	FFrameRate LiteDisplayRate;
 
 	/** The time controller vouched for (TrustTimeController). Held, so that no other controller can come to have its address. */
 	TSharedPtr<FMovieSceneTimeController> TrustedTimeController;

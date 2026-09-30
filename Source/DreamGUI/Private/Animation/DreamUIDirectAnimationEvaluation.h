@@ -41,7 +41,8 @@ public:
 	/**
 	 * Every animated property of every bound object to its value at InTime, in the movie scene's tick resolution. False
 	 * when a bound property turns out to be of a type only the sequencer converts to -- found before anything was
-	 * written, so the sequencer can take over from there as if this had never run.
+	 * written, so the sequencer can take over from there as if this had never run. InPlayer plays the sequence this was
+	 * made for and holds it: its channels are read without asking whether it is still alive.
 	 */
 	bool Evaluate(IMovieScenePlayer& InPlayer, FFrameTime InTime);
 	/** Back to the values the properties had before they were first written, as the sequencer restores state. */

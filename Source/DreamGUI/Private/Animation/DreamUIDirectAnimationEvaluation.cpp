@@ -498,12 +498,7 @@ void FDreamUIDirectAnimationEvaluation::EvaluateChannels(const FAnimatedProperty
 bool FDreamUIDirectAnimationEvaluation::Evaluate(IMovieScenePlayer& InPlayer, FFrameTime InTime)
 {
 	// No timing scope of its own: a wall of thousands of players pays for one per player, and the sequence tick manager's
-	// scopes already say what the players cost together.
-	if (!Sequence.IsValid())
-	{
-		// Gone before anything was written: nothing to hand over. Gone after: nothing left to write.
-		return bWrittenAnything;
-	}
+	// scopes already say what the players cost together. The sequence is not looked up: the player holds it.
 	/**
 	 * A write runs the property's setter, and whatever listens to it may stop the animation, which the player then does on
 	 * the spot -- the component's stop tears the player down as well. Nothing more is written after that. A restored play
@@ -518,32 +513,42 @@ bool FDreamUIDirectAnimationEvaluation::Evaluate(IMovieScenePlayer& InPlayer, FF
 		{
 			continue;
 		}
-		// See FAnimatedProperty::BoundObjects: the player's lookup, again only once an object it found is gone.
+		// See FAnimatedProperty::BoundObjects: the player's lookup, again only once an object it found is gone. Each object
+		// is looked up once a frame, here, and written below as found here -- as the sequencer writes the objects its
+		// bindings resolved to when the evaluation began. Copied: a listener of a write may start an evaluation of its own
+		// that looks the objects up again.
+		TArray<TPair<TWeakObjectPtr<UObject>, UObject*>, TInlineAllocator<4>> BoundObjects;
 		bool bLookUp = !Property.bBoundObjectsFound;
 		for (int32 Index = 0; !bLookUp && Index < Property.BoundObjects.Num(); ++Index)
 		{
-			bLookUp = !Property.BoundObjects[Index].IsValid();
+			UObject* const Found = Property.BoundObjects[Index].Get();
+			bLookUp = Found == nullptr;
+			BoundObjects.Emplace(Property.BoundObjects[Index], Found);
 		}
 		if (bLookUp)
 		{
 			Property.BoundObjects = TArray<TWeakObjectPtr<UObject>, TInlineAllocator<1>>(InPlayer.FindBoundObjects(Property.BindingId, MovieSceneSequenceID::Root));
 			Property.bBoundObjectsFound = true;
+			BoundObjects.Reset();
+			for (const TWeakObjectPtr<UObject>& WeakObject : Property.BoundObjects)
+			{
+				BoundObjects.Emplace(WeakObject, WeakObject.Get());
+			}
 		}
-		// Copied: a listener of a write may start an evaluation of its own that looks the objects up again.
-		const TArray<TWeakObjectPtr<>, TInlineAllocator<4>> BoundObjects(Property.BoundObjects);
-		for (const TWeakObjectPtr<>& WeakObject : BoundObjects)
+		for (const TPair<TWeakObjectPtr<UObject>, UObject*>& Bound : BoundObjects)
 		{
-			UObject* Object = WeakObject.Get();
+			UObject* Object = Bound.Value;
 			if (Object == nullptr)
 			{
 				continue;
 			}
 			// The value the object had before the first write: what an unanimated channel keeps, as the sequencer keeps
-			// it, and what a restore puts back.
+			// it, and what a restore puts back. Found by the weak pointer's identity: the object is alive, so only a
+			// pointer to it can have its index and serial number, and no entry's pointer is looked up for it.
 			FChannelValues* Initial = nullptr;
 			for (TPair<TWeakObjectPtr<UObject>, FChannelValues>& Entry : Property.InitialValues)
 			{
-				if (Entry.Key.Get() == Object)
+				if (Entry.Key.HasSameIndexAndSerialNumber(Bound.Key))
 				{
 					Initial = &Entry.Value;
 					break;
@@ -570,7 +575,7 @@ bool FDreamUIDirectAnimationEvaluation::Evaluate(IMovieScenePlayer& InPlayer, FF
 				{
 					continue;
 				}
-				Initial = &Property.InitialValues.Emplace_GetRef(Object, Values).Value;
+				Initial = &Property.InitialValues.Emplace_GetRef(Bound.Key, Values).Value;
 			}
 			FChannelValues Values = *Initial;
 			EvaluateChannels(Property, InTime, Values);
