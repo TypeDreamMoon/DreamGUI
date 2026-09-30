@@ -303,6 +303,14 @@ public:
 protected:
 	/** Root DreamCanvas on hierarchy. DreamGUI's update start from the RootCanvas, and goes all down to every UI elements under it */
 	UPROPERTY(Transient) mutable TWeakObjectPtr<UDreamCanvas> RootCanvas = nullptr;
+	/**
+	 * RootCanvas as last set, for asking whether this canvas is its own root without a weak look-up: compared with this
+	 * canvas only, which is alive while it asks, so a root gone since cannot compare equal. Every pass over a world of
+	 * panels asks each of them several times a frame.
+	 */
+	mutable const UDreamCanvas* RootCanvasRaw = nullptr;
+	/** Whether this canvas is its own root: see RootCanvasRaw. */
+	bool IsOwnRoot()const { return RootCanvasRaw == this; }
 	void CheckRenderMode(bool PropagateToChildrenCanvas);
 	/** check RootCanvas. search for it if not valid */
 	bool CheckRootCanvas(bool forceRecheck = false)const;
@@ -808,7 +816,8 @@ private:
 	void CheckRenderTargetUpdate();
 public:
 	/** Called from DreamUIManagerActor. Update this canvas if it is a RootCanvas */
-	void UpdateRootCanvas();
+	/** InWorld: this canvas's world, as the manager updating it knows it -- its widget's is found by walking outers. */
+	void UpdateRootCanvas(const UWorld* InWorld);
 	/** TakeDrawCallBatchData, RefreshDrawCallVertices and FinishDrawCallBatchData for this canvas and its children, in turn. */
 	void UpdateDrawCallBatchData();
 	/**

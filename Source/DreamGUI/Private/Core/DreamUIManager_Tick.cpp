@@ -428,7 +428,8 @@ void UDreamUIManagerWorldSubsystem::TickDreamUI(float DeltaTime)
 		bCanvasesUpdatedSinceSubmit = true;
 		// Recorded and sent as one: see SubmitCanvasDrawCall.
 		FRenderCommandList::FRecordScope RecordScope(FRenderCommandList::Create(ERenderCommandListFlags::CloseOnSubmit), FRenderCommandList::EStopRecordingAction::Submit);
-		ForEachRootCanvasInRenderModeOrder(true, [](UDreamCanvas* Canvas) { Canvas->UpdateRootCanvas(); });
+		const UWorld* World = GetWorld();
+		ForEachRootCanvasInRenderModeOrder(true, [World](UDreamCanvas* Canvas) { Canvas->UpdateRootCanvas(World); });
 	}
 	UDreamUIFontData_FreeTypeRender::FlushPendingFontTextures();
 

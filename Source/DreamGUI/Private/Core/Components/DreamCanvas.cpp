@@ -253,16 +253,17 @@ TSharedPtr<class FDreamUIRenderer, ESPMode::ThreadSafe> UDreamCanvas::GetRenderT
 	return RenderTargetViewExtension;
 }
 
-void UDreamCanvas::UpdateRootCanvas()
+void UDreamCanvas::UpdateRootCanvas(const UWorld* InWorld)
 {
-	// Found once: a canvas's world is found by walking its outers, and every root canvas asks each frame.
-	const UWorld* World = GetWorld();
+	// Handed in by the manager: a canvas's own world is found by walking its widget's outers, and every root canvas of a
+	// world of panels was asked it every frame.
+	const UWorld* World = InWorld;
 	if (World == nullptr)
 		return;
 	// Timed as a stage for all the root canvases together, by the manager's pass over them.
 	DREAMUI_DETAIL_SCOPE(DreamUI_CanvasUpdate);
 	CheckRootCanvas();
-	if (this == RootCanvas)
+	if (IsOwnRoot())
 	{
 		if (RenderModeIsDreamRendererOrUERenderer(CurrentRenderMode))
 		{
@@ -619,6 +620,11 @@ bool UDreamCanvas::CheckRootCanvas(bool forceRecheck)const
 		{
 			RootCanvas = nullptr;
 		}
+		RootCanvasRaw = nullptr;
+	}
+	else if (IsOwnRoot())
+	{
+		return true;
 	}
 	if (RootCanvas.IsValid())return true;
 	if (this->GetWorld() == nullptr)return false;
@@ -641,6 +647,7 @@ bool UDreamCanvas::CheckRootCanvas(bool forceRecheck)const
 		return ResultCanvas;
 	};
 	auto NewRootCanvas = FindRootCanvas(this->GetWidget());
+	RootCanvasRaw = NewRootCanvas;
 	if (NewRootCanvas != RootCanvas)
 	{
 		RootCanvas = NewRootCanvas;
@@ -800,7 +807,7 @@ bool UDreamCanvas::IsRenderByDreamUIRendererOrUERenderer()const
 void UDreamCanvas::RefreshAllClipData()
 {
 	// All children canvas clip data is stored in the root canvas, so only the root has a list to walk.
-	if (this != RootCanvas)
+	if (!IsOwnRoot())
 	{
 		return;
 	}
@@ -913,7 +920,11 @@ void UDreamCanvas::MarkRenderLayerMoved(UDreamWidget* InLayer)
 	if (!bRenderLayersMayHaveMoved)
 	{
 		bRenderLayersMayHaveMoved = true;
-		if (CheckRootCanvas())
+		if (IsOwnRoot())
+		{
+			bAnythingChangedForRenderTarget = true;
+		}
+		else if (CheckRootCanvas())
 		{
 			RootCanvas->bAnythingChangedForRenderTarget = true;
 		}
@@ -1820,7 +1831,7 @@ UDreamCanvas* UDreamCanvas::GetRootCanvas() const
 }
 bool UDreamCanvas::IsRootCanvas()const
 {
-	return GetRootCanvas() == this;
+	return IsOwnRoot() || GetRootCanvas() == this;
 }
 
 USceneComponent* UDreamCanvas::GetAttachedRootSceneComponent() const
@@ -2904,7 +2915,7 @@ void UDreamCanvas::UpdateCanvasDrawCall()
 		}
 	}
 
-	if (this == RootCanvas)
+	if (IsOwnRoot())
 	{
 		CheckRenderTargetUpdate();
 	}
@@ -3042,7 +3053,11 @@ void UDreamCanvas::FinishDrawCallBatchData()
 		// A render target that saw no change this frame draws the move in the next, and a ray is traced again: a move told
 		// after this frame's update came too late for both.
 		bRenderLayersPlaced = false;
-		if (CheckRootCanvas())
+		if (IsOwnRoot())
+		{
+			bAnythingChangedForRenderTarget = true;
+		}
+		else if (CheckRootCanvas())
 		{
 			RootCanvas->bAnythingChangedForRenderTarget = true;
 		}
