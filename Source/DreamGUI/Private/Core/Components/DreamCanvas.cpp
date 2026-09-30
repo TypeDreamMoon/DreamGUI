@@ -730,6 +730,16 @@ void UDreamCanvas::MarkWidgetMoved(UDreamWidget* InWidget)
 	MarkWidgetUpdate(InWidget, false);
 }
 
+void UDreamCanvas::NoteRenderTransformChanged(UDreamWidget* InWidget)
+{
+}
+
+void UDreamCanvas::MarkRenderLayerMoved(UDreamWidget* InLayer)
+{
+	// No widget is a render layer yet (UDreamWidget::IsRenderLayer), so no layer can move.
+	MarkWidgetUpdate(InLayer, false);
+}
+
 bool UDreamCanvas::CanRefreshDrawCallsInPlace()
 {
 	TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_CanRefreshDrawCallsInPlace);

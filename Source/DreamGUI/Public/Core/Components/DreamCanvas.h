@@ -968,6 +968,13 @@ public:
 	 * the moved vertices and bounds, as they take a colour.
 	 */
 	void MarkWidgetMoved(UDreamWidget* InWidget);
+	/** InWidget's own render transform changed: what tells the canvas which widgets to keep as render layers. */
+	void NoteRenderTransformChanged(UDreamWidget* InWidget);
+	/**
+	 * A render layer's transform relative to this canvas changed (UDreamWidget::IsRenderLayer): its sections move, and
+	 * nothing in the layer is transformed again.
+	 */
+	void MarkRenderLayerMoved(UDreamWidget* InLayer);
 private:
 	/** Set by MarkWidgetMoved; the next update decides whether the moves need a rebuild. */
 	bool bWidgetsMovedSinceUpdate = false;

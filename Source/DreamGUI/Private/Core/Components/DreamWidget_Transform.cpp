@@ -533,6 +533,10 @@ void UDreamWidget::ApplyRenderTransformChange()
 {
 	TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_ApplyRenderTransformChange);
 	RefreshRenderTransformFlag();
+	if (RenderCanvas.IsValid())
+	{
+		RenderCanvas->NoteRenderTransformChanged(this);
+	}
 	// Exactly what SetLayoutScale does, and pointedly NOT what SetRelativeLocation does: no
 	// CalculateAnchorFromTransform, no MarkLayoutForRebuild. Those two lines are the reason
 	// animating a laid-out widget's position fights the layout instead of moving it.

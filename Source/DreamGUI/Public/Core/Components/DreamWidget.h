@@ -633,6 +633,17 @@ public:
 	void ApplyRenderTransformChange();
 	/** Recompute the cached has-a-render-transform bit from the serialized channels. */
 	void RefreshRenderTransformFlag();
+	/**
+	 * Whether this widget is a render layer: its render canvas keeps the geometry of the widgets in its layer relative
+	 * to it and applies its transform on the GPU, so a change of its own transform moves the layer's sections and
+	 * transforms nothing in it again. The canvas decides which widgets are layers.
+	 */
+	bool IsRenderLayer()const;
+	/**
+	 * The render layer this widget's geometry is kept relative to: the nearest render layer among itself and its
+	 * ancestors in the same render canvas, or null when it is in none.
+	 */
+	UDreamWidget* GetRenderLayer()const;
 	void ApplyPerspectiveChange();
 #if WITH_EDITOR
 	/** Say plainly when a declared perspective is inert, rather than leaving the author to guess. */
