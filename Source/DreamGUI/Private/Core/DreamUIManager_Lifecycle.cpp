@@ -26,6 +26,7 @@
 #include "EngineUtils.h"
 #include "GameFramework/Actor.h"
 #include "UObject/UObjectIterator.h"
+#include "HAL/IConsoleManager.h"
 #if WITH_EDITOR
 #include "Editor.h"
 #include "EditorViewportClient.h"
@@ -36,6 +37,32 @@
 #define ENABLED_DreamGUI_DEBUG_DUMP				0
 #define ENABLED_DreamGUI_DEBUG_LAYOUT_FRAME		0
 #if WITH_EDITOR
+
+static TAutoConsoleVariable<float> CVarDreamUIEditorWorldTickIntervalDuringPlay(
+	TEXT("r.DreamUI.EditorWorldTickIntervalDuringPlay"),
+	0.1f,
+	TEXT("While a play or simulate session runs, the level being edited updates its UI at most this often, in seconds. Its ")
+	TEXT("panels hold still meanwhile, and walking a thousand of them every frame cost the session's frame about 1.7 ms. ")
+	TEXT("0: every frame."),
+	ECVF_Default);
+
+void UDreamUIManagerWorldSubsystem::TickFromEditorTicker(float DeltaTime)
+{
+	const UWorld* World = GetWorld();
+	if (World != nullptr && World->WorldType == EWorldType::Editor && GEditor != nullptr && GEditor->PlayWorld != nullptr)
+	{
+		const float Interval = CVarDreamUIEditorWorldTickIntervalDuringPlay.GetValueOnGameThread();
+		EditorTickHeldBackSeconds += DeltaTime;
+		if (EditorTickHeldBackSeconds < Interval)
+		{
+			return;
+		}
+		// The time held back goes with the tick that is let through, so nothing that counts time falls behind.
+		DeltaTime = EditorTickHeldBackSeconds;
+	}
+	EditorTickHeldBackSeconds = 0.0f;
+	Tick(DeltaTime);
+}
 
 void UDreamUIManagerWorldSubsystem::OnEnginePreExit()
 {
@@ -73,7 +100,7 @@ void UDreamUIManagerWorldSubsystem::Initialize(FSubsystemCollectionBase& Collect
 		EditorTickDelegateHandle = FTSTicker::GetCoreTicker().AddTicker(TEXT("DreamUIManagerWorldSubsystemEditorTick"), 0, [WeakThis = MakeWeakObjectPtr(this)](float DeltaTime) {
 			if (WeakThis.IsValid())
 			{
-				WeakThis->Tick(DeltaTime);
+				WeakThis->TickFromEditorTicker(DeltaTime);
 				return true;
 			}
 			return false;

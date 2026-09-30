@@ -989,6 +989,8 @@ private:
 	 * itself, a new widget list, a caller that named no widget (bUpdateEveryWidget).
 	 */
 	TArray<TWeakObjectPtr<UDreamWidget>> WidgetsToUpdate;
+	/** The widgets an update is looking at, swapped out of WidgetsToUpdate so that neither array gives up its memory. */
+	TArray<TWeakObjectPtr<UDreamWidget>> WidgetsBeingUpdated;
 	/** Something other than a widget woke the canvas: the next update looks at every widget. */
 	bool bUpdateEveryWidget = true;
 	/**
@@ -1003,7 +1005,7 @@ private:
 	 * went: one that left the canvas since the list was last made has nothing to look at, and what it drew goes with the
 	 * prepare that merges the new list (bWidgetListChangedSincePrepare).
 	 */
-	bool GatherWidgetsToUpdateInListOrder(const TArray<TWeakObjectPtr<UDreamWidget>>& InAsking, TArray<UDreamWidget*>& OutWidgets);
+	bool GatherWidgetsToUpdateInListOrder(const TArray<TWeakObjectPtr<UDreamWidget>>& InAsking, TArray<UDreamWidget*, TInlineAllocator<16>>& OutWidgets);
 	/**
 	 * What the last prepare made, kept: when only the widgets in WidgetsToPrepare changed since -- asked, came, moved --
 	 * the next prepare keeps every other widget's entry and makes theirs again (MergePreparedDataCache), instead of

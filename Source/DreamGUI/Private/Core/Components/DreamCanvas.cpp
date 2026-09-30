@@ -829,7 +829,7 @@ void UDreamCanvas::EnsureWidgetListIndex()
 	}
 }
 
-bool UDreamCanvas::GatherWidgetsToUpdateInListOrder(const TArray<TWeakObjectPtr<UDreamWidget>>& InAsking, TArray<UDreamWidget*>& OutWidgets)
+bool UDreamCanvas::GatherWidgetsToUpdateInListOrder(const TArray<TWeakObjectPtr<UDreamWidget>>& InAsking, TArray<UDreamWidget*, TInlineAllocator<16>>& OutWidgets)
 {
 	EnsureWidgetListIndex();
 	TArray<TPair<int32, UDreamWidget*>, TInlineAllocator<64>> Ordered;
@@ -2099,30 +2099,36 @@ void UDreamCanvas::UpdateCanvasDrawCall()
 			};
 			// Taken now: a widget that asks again while this update runs -- its geometry asking for its block data, say --
 			// is looked at in the next one, as it was when the whole canvas woke up again.
-			const TArray<TWeakObjectPtr<UDreamWidget>> Asking = MoveTemp(WidgetsToUpdate);
+			Swap(WidgetsBeingUpdated, WidgetsToUpdate);
 			WidgetsToUpdate.Reset();
+			const TArray<TWeakObjectPtr<UDreamWidget>>& Asking = WidgetsBeingUpdated;
 			const bool bEveryWidget = bUpdateEveryWidget;
 			bUpdateEveryWidget = false;
-			TArray<UDreamWidget*> AskedInListOrder;
+			TArray<UDreamWidget*, TInlineAllocator<16>> AskedInListOrder;
 			if (!bEveryWidget && GatherWidgetsToUpdateInListOrder(Asking, AskedInListOrder))
 			{
 				// Only the widgets that asked. Walking the list, a widget's parents have their clips brought up to date
-				// before it, and it may inherit one: here its parents' clips are, as far as this canvas's widgets go.
+				// before it, and it may inherit one: here its parents' clips are, as far as this canvas's widgets go. A
+				// parent brought up to date earlier in this pass -- another asker's, or one that asked itself -- is not
+				// looked at again: the list puts parents first.
+				TArray<const UDreamWidget*, TInlineAllocator<16>> ClipsUpToDate;
 				for (UDreamWidget* Widget : AskedInListOrder)
 				{
 					if (Root != nullptr)
 					{
 						TArray<UDreamWidget*, TInlineAllocator<16>> Parents;
-						for (UDreamWidget* Parent = Widget->GetParent(); IsValid(Parent) && Parent->GetRenderCanvas() == this; Parent = Parent->GetParent())
+						for (UDreamWidget* Parent = Widget->GetParent(); IsValid(Parent) && Parent->GetRenderCanvas() == this && !ClipsUpToDate.Contains(Parent); Parent = Parent->GetParent())
 						{
 							Parents.Add(Parent);
 						}
 						for (int32 Index = Parents.Num() - 1; Index >= 0; --Index)
 						{
 							Parents[Index]->UpdateClip(Root->ClipDataAsTexture, Root->ClipDataList);
+							ClipsUpToDate.Add(Parents[Index]);
 						}
 					}
 					UpdateWidget(Widget);
+					ClipsUpToDate.Add(Widget);
 					if (!bPrepareEveryWidget)
 					{
 						WidgetsToPrepare.Add(Widget);
@@ -2149,6 +2155,7 @@ void UDreamCanvas::UpdateCanvasDrawCall()
 				bPrepareEveryWidget = true;
 				WidgetsToPrepare.Reset();
 			}
+			WidgetsBeingUpdated.Reset();
 			// Clips created above are uploaded by RefreshAllClipData, driven every tick from the UI manager.
 		}
 		{

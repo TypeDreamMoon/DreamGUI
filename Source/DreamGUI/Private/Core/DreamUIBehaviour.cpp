@@ -499,8 +499,10 @@ void UDreamUIBehaviour::Call_OnInteractableChanged(bool Interactable)
 void UDreamUIBehaviour::Call_OnTransformChanged()
 {
 #if WITH_EDITOR
-	if (!GetWorld())return;
-	if (!DreamUI::IsGameWorld(this))//edit mode
+	// One walk to the world, not two: this runs for every behaviour of every widget a moving parent reaches.
+	const UWorld* World = GetWorld();
+	if (!World)return;
+	if (!World->IsGameWorld())//edit mode
 	{
 		OnTransformChanged();
 	}
@@ -526,8 +528,9 @@ void UDreamUIBehaviour::Call_OnTransformChanged()
 void UDreamUIBehaviour::Call_OnDimensionsChanged(bool PivotChanged, bool WidthChanged, bool HeightChanged)
 {
 #if WITH_EDITOR
-	if (!GetWorld())return;
-	if (!DreamUI::IsGameWorld(this))//edit mode
+	const UWorld* World = GetWorld();
+	if (!World)return;
+	if (!World->IsGameWorld())//edit mode
 	{
 		OnDimensionsChanged(PivotChanged, WidthChanged, HeightChanged);
 	}
@@ -554,8 +557,9 @@ void UDreamUIBehaviour::Call_OnChildDimensionsChanged(UDreamWidget* Child, bool 
 	bool HeightChanged)
 {
 #if WITH_EDITOR
-	if (!GetWorld())return;
-	if (!DreamUI::IsGameWorld(this))//edit mode
+	const UWorld* World = GetWorld();
+	if (!World)return;
+	if (!World->IsGameWorld())//edit mode
 	{
 		OnChildDimensionsChanged(Child, PivotChanged, WidthChanged, HeightChanged);
 	}
@@ -581,8 +585,9 @@ void UDreamUIBehaviour::Call_OnChildDimensionsChanged(UDreamWidget* Child, bool 
 void UDreamUIBehaviour::Call_OnAttachmentChanged()
 {
 #if WITH_EDITOR
-	if (!GetWorld())return;
-	if (!DreamUI::IsGameWorld(this))//edit mode
+	const UWorld* World = GetWorld();
+	if (!World)return;
+	if (!World->IsGameWorld())//edit mode
 	{
 		OnAttachmentChanged();
 	}
@@ -608,8 +613,9 @@ void UDreamUIBehaviour::Call_OnAttachmentChanged()
 void UDreamUIBehaviour::Call_OnSiblingIndexChanged()
 {
 #if WITH_EDITOR
-	if (!GetWorld())return;
-	if (!DreamUI::IsGameWorld(this))//edit mode
+	const UWorld* World = GetWorld();
+	if (!World)return;
+	if (!World->IsGameWorld())//edit mode
 	{
 		OnSiblingIndexChanged();
 	}
@@ -692,8 +698,9 @@ void UDreamUIBehaviour::Call_OnWidgetActiveChanged(bool WidgetActive)
 void UDreamUIBehaviour::Call_OnRaycastableChanged(bool Raycastable)
 {
 #if WITH_EDITOR
-	if (!GetWorld())return;
-	if (!DreamUI::IsGameWorld(this))//edit mode
+	const UWorld* World = GetWorld();
+	if (!World)return;
+	if (!World->IsGameWorld())//edit mode
 	{
 		OnRaycastableChanged(Raycastable);
 	}

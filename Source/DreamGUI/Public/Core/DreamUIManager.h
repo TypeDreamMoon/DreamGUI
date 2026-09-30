@@ -205,6 +205,10 @@ private:
 #if WITH_EDITOR
 	FTSTicker::FDelegateHandle EditorTickDelegateHandle;
 	FDreamUIEditorTickMulticastDelegate EditorTick;
+	/** The editor ticker's call for this world: every frame, or less often for the level being edited while a session plays. */
+	void TickFromEditorTicker(float DeltaTime);
+	/** Time the editor ticker has held back while a session plays (r.DreamUI.EditorWorldTickIntervalDuringPlay). */
+	float EditorTickHeldBackSeconds = 0.0f;
 #endif
 
 #if WITH_EDITORONLY_DATA
