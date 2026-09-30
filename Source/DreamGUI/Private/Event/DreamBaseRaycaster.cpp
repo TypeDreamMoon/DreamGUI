@@ -94,25 +94,45 @@ namespace DreamBaseRaycasterLocal
 	void GatherCandidatesInParallel(const TArray<UDreamVisual*>& InVisuals, const FVector& InRayOrigin, const FVector& InRayEnd, TArray<UDreamVisual*>& OutCandidates)
 	{
 		TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_ParallelRaycastCandidates);
-		TArray<const UDreamWidget*> Parents;
-		Parents.Reserve(InVisuals.Num());
-		for (const UDreamVisual* Visual : InVisuals)
+		// Each visual's parent and grandparent found on the workers, which only read: a look-up of each, one visual after
+		// another on this thread, was most of what this thread spent on a ray at a wall.
+		struct FAbove
 		{
-			if (const UDreamWidget* Parent = Visual->GetWidget()->GetParent())
+			const UDreamWidget* Parent = nullptr;
+			const UDreamWidget* GrandParent = nullptr;
+		};
+		TArray<FAbove> Above;
+		Above.SetNum(InVisuals.Num());
+		ParallelFor(TEXT("DreamUI_RaycastParentsOf"), InVisuals.Num(), 512, [&InVisuals, &Above](int32 Index)
+		{
+			const UDreamWidget* Parent = InVisuals[Index]->GetWidget()->GetParent();
+			Above[Index].Parent = Parent;
+			Above[Index].GrandParent = Parent != nullptr ? Parent->GetParent() : nullptr;
+		});
+		TArray<const UDreamWidget*> Parents;
+		TArray<const UDreamWidget*> GrandParents;
+		Parents.Reserve(InVisuals.Num());
+		for (const FAbove& Entry : Above)
+		{
+			if (Entry.Parent != nullptr)
 			{
-				Parents.Add(Parent);
+				Parents.Add(Entry.Parent);
+			}
+			// Side by side they mostly repeat -- a wall's widgets share their panel -- so only a change is kept before sorting.
+			if (Entry.GrandParent != nullptr && (GrandParents.Num() == 0 || GrandParents.Last() != Entry.GrandParent))
+			{
+				GrandParents.Add(Entry.GrandParent);
 			}
 		}
 		Algo::Sort(Parents);
 		Parents.SetNum(Algo::Unique(Parents), EAllowShrinking::No);
-		for (const UDreamWidget* Parent : Parents)
+		Algo::Sort(GrandParents);
+		GrandParents.SetNum(Algo::Unique(GrandParents), EAllowShrinking::No);
+		for (const UDreamWidget* GrandParent : GrandParents)
 		{
-			if (const UDreamWidget* GrandParent = Parent->GetParent())
-			{
-				GrandParent->GetWorldTransform();
-				GrandParent->GetWidth();
-				GrandParent->GetHeight();
-			}
+			GrandParent->GetWorldTransform();
+			GrandParent->GetWidth();
+			GrandParent->GetHeight();
 		}
 		ParallelFor(TEXT("DreamUI_RaycastParents"), Parents.Num(), 256, [&Parents](int32 Index)
 		{
