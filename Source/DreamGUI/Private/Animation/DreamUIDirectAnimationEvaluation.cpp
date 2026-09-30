@@ -519,7 +519,12 @@ bool FDreamUIDirectAnimationEvaluation::Evaluate(IMovieScenePlayer& InPlayer, FF
 		// that looks the objects up again.
 		TArray<TPair<TWeakObjectPtr<UObject>, UObject*>, TInlineAllocator<4>> BoundObjects;
 		bool bLookUp = !Property.bBoundObjectsFound;
-		for (int32 Index = 0; !bLookUp && Index < Property.BoundObjects.Num(); ++Index)
+		if (!bLookUp && Property.BoundHost != nullptr)
+		{
+			// See FAnimatedProperty::BoundHost.
+			BoundObjects.Emplace(Property.BoundObjects[0], Property.BoundHost);
+		}
+		for (int32 Index = 0; !bLookUp && Property.BoundHost == nullptr && Index < Property.BoundObjects.Num(); ++Index)
 		{
 			UObject* const Found = Property.BoundObjects[Index].Get();
 			bLookUp = Found == nullptr;
@@ -534,6 +539,8 @@ bool FDreamUIDirectAnimationEvaluation::Evaluate(IMovieScenePlayer& InPlayer, FF
 			{
 				BoundObjects.Emplace(WeakObject, WeakObject.Get());
 			}
+			UObject* const Host = InPlayer.GetPlaybackContext();
+			Property.BoundHost = BoundObjects.Num() == 1 && Host != nullptr && BoundObjects[0].Value == Host ? Host : nullptr;
 		}
 		for (const TPair<TWeakObjectPtr<UObject>, UObject*>& Bound : BoundObjects)
 		{

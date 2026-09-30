@@ -124,6 +124,12 @@ private:
 		 */
 		TArray<TWeakObjectPtr<UObject>, TInlineAllocator<1>> BoundObjects;
 		bool bBoundObjectsFound = false;
+		/**
+		 * The one object the binding resolved to is the player's playback context -- the widget whose animation component
+		 * made the player -- which lives while the player plays: the component is the widget's own, and stops its plays when
+		 * it goes. Written without a weak look-up of it every frame.
+		 */
+		UObject* BoundHost = nullptr;
 	};
 
 	/** Points the property at its section's channels. */

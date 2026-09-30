@@ -3,6 +3,8 @@
 
 #include "Animation/DreamWidgetAnimationPlayer.h"
 
+#include "Animation/DreamUIAnimationTicker.h"
+
 #include "Core/Components/DreamWidget.h"
 #include "Animation/DreamUIDirectAnimationEvaluation.h"
 #include "Animation/DreamWidgetAnimationComponent.h"
@@ -81,10 +83,47 @@ void UDreamWidgetAnimationPlayer::TrustTimeController()
 
 void UDreamWidgetAnimationPlayer::UpdateMovieSceneInstance(FMovieSceneEvaluationRange InRange, EMovieScenePlayerStatus::Type PlayerStatus, const FMovieSceneUpdateArgs& Args)
 {
+	// A play started by whatever path -- the component asks for ticks after its own (KeepTicked) -- evaluates here first.
+	if (Ticker != nullptr && TickerActiveIndex == INDEX_NONE && Status == EMovieScenePlayerStatus::Playing)
+	{
+		Ticker->Activate(*this);
+	}
 	if (!TryEvaluateDirectly(InRange, PlayerStatus))
 	{
 		Super::UpdateMovieSceneInstance(InRange, PlayerStatus, Args);
 	}
+}
+
+void UDreamWidgetAnimationPlayer::UseTicker(UDreamUIAnimationTicker* InTicker)
+{
+	Ticker = InTicker;
+	if (InTicker != nullptr)
+	{
+		// What Initialize registers with, as InitializeForTick would have set the world's.
+		TickManager = InTicker->GetRegistry();
+	}
+}
+
+void UDreamWidgetAnimationPlayer::KeepTicked()
+{
+	if (Ticker != nullptr)
+	{
+		Ticker->Activate(*this);
+	}
+}
+
+bool UDreamWidgetAnimationPlayer::HasNothingToTick() const
+{
+	return Status != EMovieScenePlayerStatus::Playing && TimeControllerState == ETimeControllerState::ReadyToPlay && !bUpdateNetSync;
+}
+
+void UDreamWidgetAnimationPlayer::BeginDestroy()
+{
+	if (Ticker != nullptr)
+	{
+		Ticker->Forget(*this);
+	}
+	Super::BeginDestroy();
 }
 
 void UDreamWidgetAnimationPlayer::Initialize(UMovieSceneSequence* InSequence, const FMovieSceneSequencePlaybackSettings& InSettings)
@@ -100,7 +139,7 @@ void UDreamWidgetAnimationPlayer::Initialize(UMovieSceneSequence* InSequence)
 	DirectEvaluationDecidedFor = nullptr;
 }
 
-bool UDreamWidgetAnimationPlayer::TryEvaluateDirectly(const FMovieSceneEvaluationRange& InRange, EMovieScenePlayerStatus::Type PlayerStatus)
+bool UDreamWidgetAnimationPlayer::TryEvaluateDirectly(const FMovieSceneEvaluationRange& InRange, EMovieScenePlayerStatus::Type PlayerStatus, bool bInOwnTick)
 {
 	UMovieSceneSequence* PlayedSequence = GetSequence();
 	if (DirectEvaluationDecidedFor != PlayedSequence)
@@ -148,10 +187,17 @@ bool UDreamWidgetAnimationPlayer::TryEvaluateDirectly(const FMovieSceneEvaluatio
 		return false;
 	}
 	// What the sequencer's UpdateMovieSceneInstance does around its runner: an update clears a pending skip, and the
-	// pre- and post-evaluation callbacks run on either side of the values being written.
+	// pre- and post-evaluation callbacks run on either side of the values being written. From the player's own tick between
+	// boundaries they have nothing to run unless the update event is listened to: the post-evaluation callbacks are only
+	// queued by the sequencer's cursor update (UpdateTimeCursorPosition_Internal), which has not run, and nothing queues
+	// pre-evaluation ones. Every playing widget of a wall paid for both every frame.
 	bSkipNextUpdate = false;
-	FMovieSceneContext Context(InRange, PlayerStatus);
-	PreEvaluation(Context);
+	const bool bAroundEvaluation = !bInOwnTick || OnSequenceUpdated().IsBound();
+	const FMovieSceneContext Context(InRange, PlayerStatus);
+	if (bAroundEvaluation)
+	{
+		PreEvaluation(Context);
+	}
 	const FFrameTime Time = ConvertFrameTime(InRange.GetTime(), InRange.GetFrameRate(), DirectEvaluation->GetTickResolution());
 	// Held for the evaluation: a listener of one of its writes may stop the animation, and OnStopped lets it go. Made for
 	// the sequence this player plays and holds (DirectEvaluationDecidedFor), which is so alive while it evaluates.
@@ -165,7 +211,10 @@ bool UDreamWidgetAnimationPlayer::TryEvaluateDirectly(const FMovieSceneEvaluatio
 		}
 		return false;
 	}
-	PostEvaluation(Context);
+	if (bAroundEvaluation)
+	{
+		PostEvaluation(Context);
+	}
 	return true;
 }
 
@@ -344,7 +393,7 @@ void UDreamWidgetAnimationPlayer::TickLite(float DeltaSeconds)
 		// post-evaluation callbacks, and should it hand the animation over to the sequencer, the sequencer is given it with
 		// the arguments its own update gives, so that the update is queued rather than flushed, as in the main level update.
 		// Worked out only then: the direct evaluation needs none of them.
-		if (!TryEvaluateDirectly(Range, EMovieScenePlayerStatus::Playing))
+		if (!TryEvaluateDirectly(Range, EMovieScenePlayerStatus::Playing, /*bInOwnTick*/ true))
 		{
 			const UMovieSceneSequence* RootSequence = RootTemplateInstance.GetSequence(MovieSceneSequenceID::Root);
 			FMovieSceneUpdateArgs Args;

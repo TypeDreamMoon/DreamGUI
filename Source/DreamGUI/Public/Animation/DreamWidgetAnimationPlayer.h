@@ -7,6 +7,7 @@
 #include "DreamWidgetAnimationPlayer.generated.h"
 
 class AActor;
+class UDreamUIAnimationTicker;
 
 /**
  * UDreamWidgetAnimationPlayer is used to actually "play" a widget animation at runtime.
@@ -59,6 +60,17 @@ public:
 	void Initialize(UMovieSceneSequence* InSequence);
 
 	/**
+	 * Before Initialize: the player is ticked by InTicker instead of the world's sequence tick manager, and registers with the
+	 * ticker's own tick manager (UDreamUIAnimationTicker::GetRegistry), whose linker, runner and latent actions are its own.
+	 */
+	void UseTicker(UDreamUIAnimationTicker* InTicker);
+	/**
+	 * Ticked from the ticker's next tick on, if a ticker ticks this player: after anything that starts a play or gives it
+	 * something to do. A ticker lets a player go once it has nothing to (HasNothingToTick).
+	 */
+	void KeepTicked();
+
+	/**
 	 * Vouches for the time controller the player has now as one the player may tick and read itself (see
 	 * TickFromSequenceTickManager): the engine's tick controller, or one built on it that changes only what a tick adds, as
 	 * the component's unscaled clock does. Neither reads the play rate it is asked for the time with. Held by identity, so
@@ -105,6 +117,9 @@ protected:
 	/** Notes whether this play is the network authority; see TickLite. */
 	virtual void OnStartedPlaying() override;
 
+	/** Out of its ticker's list, if a ticker ticks it: a player is let go of there only while the ticker ticks otherwise. */
+	virtual void BeginDestroy() override;
+
 	using Super::UpdateMovieSceneInstance;
 	/**
 	 * The sequencer's player keeps time, loops, direction, pauses and finishing, and hands each evaluation to its runner
@@ -118,8 +133,19 @@ protected:
 	virtual void OnStopped() override;
 
 private:
-	/** Evaluates InRange directly if this player can; false when the sequencer has to. */
-	bool TryEvaluateDirectly(const FMovieSceneEvaluationRange& InRange, EMovieScenePlayerStatus::Type PlayerStatus);
+	friend class UDreamUIAnimationTicker;
+
+	/**
+	 * Evaluates InRange directly if this player can; false when the sequencer has to. bInOwnTick: from the player's own tick
+	 * between boundaries (TickLite), where the pre- and post-evaluation have nothing to do unless the update event is
+	 * listened to.
+	 */
+	bool TryEvaluateDirectly(const FMovieSceneEvaluationRange& InRange, EMovieScenePlayerStatus::Type PlayerStatus, bool bInOwnTick = false);
+	/**
+	 * Nothing for a tick of this player to do: not playing, its clock ready, nothing to sync -- what the sequencer's update
+	 * does nothing for (ChooseLiteTick's Idle). Its ticker lets it go.
+	 */
+	bool HasNothingToTick() const;
 	/** Whether the root of the sequence's hierarchy warps time in the play-rate domain; see TryEvaluateDirectly. */
 	bool IsRootPlayRateWarped() const;
 
@@ -167,4 +193,12 @@ private:
 	bool bTickedLite = false;
 	/** See GetInstance. */
 	uint32 Instance = 0;
+
+	/** The ticker ticking this player (UseTicker), which it keeps alive while the player lives. */
+	UPROPERTY(Transient)
+	TObjectPtr<UDreamUIAnimationTicker> Ticker;
+	/** Where the player is in its ticker's list, while it is in it. */
+	int32 TickerActiveIndex = INDEX_NONE;
+	/** The tick of its ticker the player was last ticked in: see UDreamUIAnimationTicker::TickSerial. */
+	uint64 LastTickerTick = 0;
 };

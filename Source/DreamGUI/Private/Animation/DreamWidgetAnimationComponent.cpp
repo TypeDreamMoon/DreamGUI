@@ -5,6 +5,7 @@
 #include "Animation/DreamWidgetAnimation.h"
 #include "Animation/DreamUISequence.h"
 #include "Animation/DreamWidgetAnimationPlayer.h"
+#include "Animation/DreamUIAnimationTicker.h"
 #include "Animation/DreamUIMovieScenePropertyAccessors.h"
 #include "Core/DreamUserWidget.h"
 #include "DreamGUI.h"
@@ -322,6 +323,7 @@ FDreamUIAnimationHandle UDreamWidgetAnimationComponent::PlayAnimationRelative(UM
 		{
 			Player->Play();
 		}
+		Player->KeepTicked();
 		return Live;
 	}
 	return PlayAnimationInternal(Animation, 0.0f, TOptional<float>(), 1, PlayMode, PlaybackSpeed, bRestoreState);
@@ -371,7 +373,18 @@ FDreamUIAnimationHandle UDreamWidgetAnimationComponent::PlayAnimationInternal(
 	if (Player == nullptr)
 	{
 		Player = NewObject<UDreamWidgetAnimationPlayer>(this);
-		Player->InitializeForTick(this);
+		// Ticked by DreamGUI's animation ticker for the interval the settings resolve to -- the component's own, never the
+		// owner's -- when there is one; by the world's sequence tick manager otherwise.
+		UDreamUIAnimationTicker* Ticker = UDreamUIAnimationTicker::IsEnabled()
+			? UDreamUIAnimationTicker::FindOrCreate(HostWidget->GetWorld(), Settings.TickInterval) : nullptr;
+		if (Ticker != nullptr)
+		{
+			Player->UseTicker(Ticker);
+		}
+		else
+		{
+			Player->InitializeForTick(this);
+		}
 		Player->Initialize(Animation, Settings);
 	}
 	Player->BeginInstance();
@@ -408,6 +421,7 @@ FDreamUIAnimationHandle UDreamWidgetAnimationComponent::PlayAnimationInternal(
 	{
 		Player->Play();
 	}
+	Player->KeepTicked();
 
 	Handle = FDreamUIAnimationHandle::Of(Player);
 	NotifyInstanceStarted(Player);
@@ -515,6 +529,7 @@ void UDreamWidgetAnimationComponent::ResumeAnimation(FDreamUIAnimationHandle Han
 		{
 			Handle.Player->Play();
 		}
+		Handle.Player->KeepTicked();
 	}
 }
 
