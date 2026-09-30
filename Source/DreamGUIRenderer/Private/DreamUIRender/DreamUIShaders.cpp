@@ -20,7 +20,7 @@ IMPLEMENT_GLOBAL_SHADER_PARAMETER_STRUCT(FDreamUIWorldRenderDepthTexUB, "DreamUI
 FDreamUIScreenRenderVS::FDreamUIScreenRenderVS(const FMaterialShaderType::CompiledShaderInitializerType& Initializer)
 	: FMaterialShader(Initializer)
 {
-	
+	ElementToCanvasParameter.Bind(Initializer.ParameterMap, TEXT("DreamUI_ElementToCanvas"));
 }
 bool FDreamUIScreenRenderVS::ShouldCompilePermutation(const FMaterialShaderPermutationParameters& Parameters)
 {
@@ -37,11 +37,12 @@ void FDreamUIScreenRenderVS::ModifyCompilationEnvironment(const FMaterialShaderP
 	OutEnvironment.SetDefine(TEXT("VF_SUPPORTS_PRIMITIVE_SCENE_DATA"), false);
 	OutEnvironment.SetDefine(TEXT("NEEDS_WORLD_POSITION_EXCLUDING_SHADER_OFFSETS"), true);
 }
-void FDreamUIScreenRenderVS::SetMaterialShaderParameters(FRHICommandList& RHICmdList, const FSceneView& View, const FMaterialRenderProxy* MaterialRenderProxy, const FMaterial* Material, const TUniformBuffer<FPrimitiveUniformShaderParameters>* PrimitiveUniformBuffer)
+void FDreamUIScreenRenderVS::SetMaterialShaderParameters(FRHICommandList& RHICmdList, const FSceneView& View, const FMaterialRenderProxy* MaterialRenderProxy, const FMaterial* Material, const TUniformBuffer<FPrimitiveUniformShaderParameters>* PrimitiveUniformBuffer, const FMatrix44f& InElementToCanvas)
 {
 	FRHIBatchedShaderParameters& BatchedParameters = RHICmdList.GetScratchShaderParameters();
 	SetUniformBufferParameter(BatchedParameters, GetUniformBufferParameter<FPrimitiveUniformShaderParameters>(), *PrimitiveUniformBuffer);
 	SetViewParameters(BatchedParameters, View, View.ViewUniformBuffer);
+	SetShaderValue(BatchedParameters, ElementToCanvasParameter, InElementToCanvas);
 	RHICmdList.SetBatchedShaderParameters(RHICmdList.GetBoundVertexShader(), BatchedParameters);
 	FMaterialShader::SetParameters(RHICmdList, RHICmdList.GetBoundVertexShader(), MaterialRenderProxy, *Material, View);
 }

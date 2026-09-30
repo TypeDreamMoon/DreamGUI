@@ -12,6 +12,11 @@
 float4x4 DreamUI_MVP;
 float4x4 DreamUI_M;
 float4x4 DreamUI_InvM;
+/**
+ * What the batch's vertices go through to be in canvas space: identity, or the transform of the render layer they are
+ * kept relative to (UDreamWidget::IsRenderLayer). DreamUI_MVP starts from canvas space, as the clip rects do.
+ */
+float4x4 DreamUI_ElementToCanvas;
 /** x: gamma curve adjustment, y: inverse display gamma, z: unused, w: unused */
 float4 DreamUI_GammaValues;
 /** xy: atlas slice size in texels, z: field range in texels (2 * spread), w: texels per em at the sample size */
@@ -58,9 +63,12 @@ void MainVS(
 	out FDreamUIBaseVSToPS Out
 )
 {
-	Out.Position = mul(float4(Position, 1.0), DreamUI_MVP);
+	// Everything after this line -- the projection, the clip rects DreamUI_ShadePixel measures against -- is in canvas
+	// space, so a render layer's vertices are placed on the canvas first.
+	float3 CanvasPosition = mul(float4(Position, 1.0), DreamUI_ElementToCanvas).xyz;
+	Out.Position = mul(float4(CanvasPosition, 1.0), DreamUI_MVP);
 	Out.ScreenPosition = Out.Position;
-	Out.LocalPosition = Position;
+	Out.LocalPosition = CanvasPosition;
 #if COMPILER_GLSL_ES3_1 && !MOBILE_EMULATION
 	Color.rgba = Color.bgra;
 #endif
