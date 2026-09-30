@@ -2,6 +2,7 @@
 // Modified by TypeDreamMoon.
 
 #include "Core/DreamUIMesh/DreamUIMeshComponent.h"
+#include "Core/DreamUIDetailTrace.h"
 #include "DreamUIRender/DreamUIMaterialProxy.h"
 #include "DynamicMeshBuilder.h"
 #include "PhysicsEngine/BodySetup.h"
@@ -714,7 +715,7 @@ public:
 		, bool RequireNormalAndTangent
 		, FDreamUISectionProxy_Mesh* Section)const
 	{
-		TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_PatchSection_RenderThread);
+		DREAMUI_DETAIL_SCOPE(DreamUI_PatchSection_RenderThread);
 		check(IsInRenderingThread());
 		check(Section != nullptr);
 		if (bIsSupportDreamUIRenderer)
@@ -757,7 +758,7 @@ public:
 		, FDreamUISectionProxy_Mesh* Section)const
 	{
 		SCOPE_CYCLE_COUNTER(STAT_UpdateMeshSectionRT);
-		TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_UpdateSection_RenderThread);
+		DREAMUI_DETAIL_SCOPE(DreamUI_UpdateSection_RenderThread);
 
 		check(IsInRenderingThread());
 
@@ -1884,7 +1885,7 @@ TSharedPtr<FDreamUIRenderSection> UDreamUIMeshComponent::SetupRenderSection(EDre
 
 bool UDreamUIMeshComponent::TryPatchMeshSection(const TSharedPtr<FDreamUIRenderSection>& InRenderSection, FDreamUIDrawCall* InDrawCallData)
 {
-	TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_PatchMeshSection);
+	DREAMUI_DETAIL_SCOPE(DreamUI_PatchMeshSection);
 	// Addressed by handle, not by draw-call index: skipped draw-calls have no section, so index-based
 	// addressing hit the wrong section — including reinterpreting a ChildCanvas section as a mesh.
 	if (!InRenderSection.IsValid() || InRenderSection->Type != EDreamUIRenderSectionType::Mesh)
@@ -1904,7 +1905,7 @@ bool UDreamUIMeshComponent::TryPatchMeshSection(const TSharedPtr<FDreamUIRenderS
 
 void UDreamUIMeshComponent::UpdateMeshSection(const TSharedPtr<FDreamUIRenderSection>& InRenderSection, FDreamUIDrawCall* InDrawCallData)
 {
-	TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_UpdateMeshSection);
+	DREAMUI_DETAIL_SCOPE(DreamUI_UpdateMeshSection);
 	if (TryPatchMeshSection(InRenderSection, InDrawCallData))
 	{
 		return;
@@ -2685,7 +2686,7 @@ DECLARE_CYCLE_STAT(TEXT("DreamUIMesh FlushRenderCommand"), STAT_DreamUIMesh_Flus
 void UDreamUIMeshComponent::FlushRenderCommand()
 {
 	SCOPE_CYCLE_COUNTER(STAT_DreamUIMesh_FlushRenderCommand)
-	TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_MeshFlushRenderCommand);
+	DREAMUI_DETAIL_SCOPE(DreamUI_MeshFlushRenderCommand);
 	if (!RenderRoot.IsValid())
 	{
 		/**

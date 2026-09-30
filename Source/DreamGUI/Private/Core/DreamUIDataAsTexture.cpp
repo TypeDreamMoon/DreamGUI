@@ -2,6 +2,7 @@
 // Modified by TypeDreamMoon.
 
 #include "Core/DreamUIDataAsTexture.h"
+#include "Core/DreamUIDetailTrace.h"
 #include "DreamGUI.h"
 #include "Core/DreamUIDataTexture.h"
 #include "Core/DreamUIRuntimeObject.h"
@@ -227,7 +228,7 @@ void UDreamUIDataAsTexture::Flush()
 	check(bBatchUpdateMode);
 	bBatchUpdateMode = false;
 	if (PendingUpdates.Num() <= 0)return;
-	TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_DataTextureFlush);
+	DREAMUI_DETAIL_SCOPE(DreamUI_DataTextureFlush);
 	if (UDreamUIDataTexture* DataTexture = Cast<UDreamUIDataTexture>(Texture))
 	{
 		int64 PendingBytes = 0;

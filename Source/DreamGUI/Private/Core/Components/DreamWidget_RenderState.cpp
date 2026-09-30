@@ -2,6 +2,7 @@
 // Modified by TypeDreamMoon.
 
 #include "Core/Components/DreamWidget.h"
+#include "Core/DreamUIDetailTrace.h"
 #include "DreamWidgetPrivate.h"
 #include "Core/DreamPerspective.h"
 #include "DreamGUI.h"
@@ -242,7 +243,7 @@ void UDreamWidget::UnregisterRenderCanvas()
 void UDreamWidget::UpdateClip(UDreamUIDataAsTexture* ClipDataTexture, TArray<TSharedPtr<FDreamUIClipData>>& ClipDataList)
 {
 	if (!bClipDirty)return;
-	TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_UpdateClip);
+	DREAMUI_DETAIL_SCOPE(DreamUI_UpdateClip);
 	bClipDirty = false;
 	
 	if (bNeedRecreateClip && ClipData.IsValid())

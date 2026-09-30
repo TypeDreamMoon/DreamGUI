@@ -102,6 +102,8 @@ public class DreamGUI : ModuleRules
 			new string[]
 			{
 				"XmlParser",
+				// The trace channel of the finer timing scopes is defined here (DreamUIDetailTrace.h).
+				"TraceLog",
 				// ... add private dependencies that you statically link with here ...	
 			}
 			);

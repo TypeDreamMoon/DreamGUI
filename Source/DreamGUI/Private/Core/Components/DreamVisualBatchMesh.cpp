@@ -2,6 +2,7 @@
 // Modified by TypeDreamMoon.
 
 #include "Core/Components/DreamVisualBatchMesh.h"
+#include "Core/DreamUIDetailTrace.h"
 #include "DreamGUI.h"
 #include "Core/Components/DreamCanvas.h"
 #include "Utils/DreamUIUtils.h"
@@ -240,7 +241,7 @@ void UDreamVisualBatchMesh::UpdateGeometry()
 	if (GetAnythingDirty() || pixelPerfectAffectTransform)
 	{
 		SCOPE_CYCLE_COUNTER(STAT_DreamUpdateGeometry);
-		TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_OnUpdateGeometry);
+		DREAMUI_DETAIL_SCOPE(DreamUI_OnUpdateGeometry);
 		UIGeometry->Clear();
 		//check if GeometryModifier will affect vertex data, if so we need to update these data in OnUpdateGeometry
 		{
@@ -281,7 +282,7 @@ void UDreamVisualBatchMesh::UpdateGeometry()
 	{
 		{
 			SCOPE_CYCLE_COUNTER(STAT_TransformVertices)
-			TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_TransformVertices);
+			DREAMUI_DETAIL_SCOPE(DreamUI_TransformVertices);
 #if 1
 			check(!UIGeometry->bIsCalculating);//this should not happen
 			UIGeometry->bIsCalculating = true;
@@ -306,7 +307,7 @@ void UDreamVisualBatchMesh::UpdateGeometry()
 			FillWidgetPropertyDataForMaterial_RenderLayerRow(Canvas->GetWidgetPropertyDataAsTexture(), Params.RenderLayerRow);
 			auto Transform = [Params = MoveTemp(Params), Geometry = this->UIGeometry]()
 			{
-				TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_TransformVerticesTask);
+				DREAMUI_DETAIL_SCOPE(DreamUI_TransformVerticesTask);
 				FDreamUIGeometry::TransformVertices(Params, Geometry.Get());
 				Geometry->bIsCalculating = false;
 			};
