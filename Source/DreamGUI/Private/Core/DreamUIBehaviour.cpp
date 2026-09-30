@@ -10,6 +10,20 @@
 #include "Animation/DreamWidgetAnimationComponent.h"
 #include "Core/DreamUIWorldContext.h"
 
+namespace DreamUIBehaviourLocal
+{
+	/**
+	 * Whether InClass's Blueprint implemented the event InName names: a UFunction that lives on a Blueprint-compiled class
+	 * is an override, the one on the native declaring class is the empty stub. Asked per call, not cached, because a
+	 * Blueprint recompile replaces the class; the lookup costs less than the ProcessEvent it saves.
+	 */
+	bool IsImplementedInBlueprint(const UClass* InClass, FName InName)
+	{
+		const UFunction* Function = InClass->FindFunctionByName(InName);
+		return Function != nullptr && Function->GetOuterUClass()->HasAnyClassFlags(CLASS_CompiledFromBlueprint);
+	}
+}
+
 UDreamUIBehaviour::UDreamUIBehaviour()
 {
 	bCanExecuteBlueprintEvent = GetClass()->HasAnyClassFlags(CLASS_CompiledFromBlueprint) || !GetClass()->HasAnyClassFlags(CLASS_Native);
@@ -419,7 +433,10 @@ void UDreamUIBehaviour::OnInteractableChanged(bool Interactable)
 
 void UDreamUIBehaviour::OnTransformChanged()
 {
-	if (bCanExecuteBlueprintEvent)
+	// Every behaviour on every moved widget hears this, and a Blueprint behaviour that never wrote the event used to pay a
+	// ProcessEvent for it each time.
+	static const FName ReceiveOnTransformChangedName(TEXT("ReceiveOnTransformChanged"));
+	if (bCanExecuteBlueprintEvent && DreamUIBehaviourLocal::IsImplementedInBlueprint(GetClass(), ReceiveOnTransformChangedName))
 	{
 		ReceiveOnTransformChanged();
 	}
@@ -498,8 +515,15 @@ void UDreamUIBehaviour::Call_OnInteractableChanged(bool Interactable)
 
 void UDreamUIBehaviour::Call_OnTransformChanged()
 {
+	// Awake, the answer is the same in any world: told now, as a game build always tells it. The walk to the world below
+	// is only for a behaviour that has not woken, which in a game world waits for Awake; this runs for every behaviour of
+	// every widget a moving parent reaches.
+	if (bIsAwakeCalled)
+	{
+		OnTransformChanged();
+		return;
+	}
 #if WITH_EDITOR
-	// One walk to the world, not two: this runs for every behaviour of every widget a moving parent reaches.
 	const UWorld* World = GetWorld();
 	if (!World)return;
 	if (!World->IsGameWorld())//edit mode
