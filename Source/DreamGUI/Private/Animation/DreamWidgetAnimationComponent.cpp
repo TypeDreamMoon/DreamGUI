@@ -11,6 +11,8 @@
 #include "Core/Components/DreamWidget.h"
 #include "Engine/World.h"
 
+#include "MovieScene.h"
+#include "MovieSceneSequence.h"
 #include "MovieSceneSequencePlaybackSettings.h"
 #include "MovieSceneSequenceTickManager.h"
 #include "MovieSceneTimeController.h"
@@ -154,15 +156,32 @@ namespace DreamUI
 
 void UDreamWidgetAnimationComponent::ApplyTimeControl(UDreamWidgetAnimationPlayer* Player) const
 {
-	if (bAffectedByTimeDilation || !IsValid(Player))
+	if (!IsValid(Player))
 	{
-		// The engine's default tick controller already follows the world, which is what "affected by
-		// time dilation" means; a player that is handed nothing keeps it.
 		return;
 	}
-	UDreamWidget* HostWidget = GetWidget();
-	UWorld* World = IsValid(HostWidget) ? HostWidget->GetWorld() : nullptr;
-	Player->SetTimeController(MakeShared<DreamUI::FDreamUIUnscaledTimeController>(World));
+	if (bAffectedByTimeDilation)
+	{
+		// The engine's tick controller already follows the world, which is what "affected by time dilation" means. It is
+		// given fresh rather than left to Initialize: a player initialized a second time keeps the controller it had --
+		// the unscaled one, if the flag was off then -- and only a controller the component made itself can be vouched
+		// for, which is what lets the player keep its own time (UDreamWidgetAnimationPlayer::TrustTimeController). An
+		// animation authored for another clock keeps the one Initialize made for it, and the sequencer's update.
+		const UMovieSceneSequence* Sequence = Player->GetSequence();
+		const UMovieScene* MovieScene = Sequence != nullptr ? Sequence->GetMovieScene() : nullptr;
+		if (MovieScene != nullptr && MovieScene->GetClockSource() != EUpdateClockSource::Tick)
+		{
+			return;
+		}
+		Player->SetTimeController(MakeShared<FMovieSceneTimeController_Tick>());
+	}
+	else
+	{
+		UDreamWidget* HostWidget = GetWidget();
+		UWorld* World = IsValid(HostWidget) ? HostWidget->GetWorld() : nullptr;
+		Player->SetTimeController(MakeShared<DreamUI::FDreamUIUnscaledTimeController>(World));
+	}
+	Player->TrustTimeController();
 }
 
 void UDreamWidgetAnimationComponent::OnDestroy()

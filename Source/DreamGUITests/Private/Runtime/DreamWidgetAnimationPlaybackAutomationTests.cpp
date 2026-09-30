@@ -26,6 +26,7 @@
 #include "Evaluation/MovieSceneEvaluationField.h"
 #include "MovieScene.h"
 #include "MovieSceneSection.h"
+#include "MovieSceneTimeController.h"
 #include "MovieSceneTrack.h"
 #include "MovieSceneTrackEvaluationField.h"
 #include "Sections/MovieSceneFloatSection.h"
@@ -1323,6 +1324,115 @@ bool FDreamWidgetAnimationQueuedCallsTest::RunTest(const FString& Parameters)
 	TestTrue(TEXT("A queued stop of everything leaves it playing when the call returns"), Tree.Animator->HasPlayingAnimation(Tree.Animation));
 	TickFrames(Scope.World, 1);
 	TestFalse(TEXT("...and has stopped it by the end of the frame"), Tree.Animator->HasPlayingAnimation(Tree.Animation));
+	return true;
+}
+
+/*
+ * The player keeping its own time (UDreamWidgetAnimationPlayer::TickFromSequenceTickManager): taken for a plain play, and
+ * anything the player cannot update exactly as the sequencer's update would is left to that update.
+ */
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamWidgetAnimationLitePlayerTakenTest,
+	"DreamGUI.Animation.Playback.LitePlayer.APlainPlayKeepsItsOwnTimeAndAnythingElseIsLeftToTheSequencer",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamWidgetAnimationLitePlayerTakenTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamWidgetAnimationPlaybackTestLocal;
+	const DreamTests::Lifecycle::FScopedConsoleVariable Lite(TEXT("DreamUI.Animation.LitePlayer"), 1);
+	const DreamTests::Lifecycle::FScopedConsoleVariable Direct(TEXT("DreamUI.Animation.DirectEvaluation"), 1);
+	{
+		FScopedGameWorld Scope;
+		FScopedTree Tree(Scope.World);
+		Tree.AddFloatTrack(TEXT("AnimatableWidth"), 20.0f, 220.0f);
+		const FDreamUIAnimationHandle Handle = Tree.Animator->PlayAnimation(Tree.Animation, 0.0f, 0);
+		UDreamWidgetAnimationPlayer* Player = Handle.Player;
+		if (!TestTrue(TEXT("A plain play is live"), Handle.IsValid()))
+		{
+			return false;
+		}
+		TickFrames(Scope.World, 1);
+		TestFalse(TEXT("The first tick of a play is the sequencer's: it starts the play"), Player->IsTickingLite());
+		TickFrames(Scope.World, 3);
+		TestTrue(TEXT("A plain play keeps its own time after that"), Player->IsTickingLite());
+		TestTrue(TEXT("...being one its player evaluates itself"), Player->IsEvaluatingDirectly());
+		// Past two loop boundaries: each is handed to the sequencer's cursor update from inside the player's own tick.
+		TickFrames(Scope.World, AnimationFrames * 2);
+		TestTrue(TEXT("A looping play keeps its own time across its loops"), Player->IsTickingLite() && Player->IsPlaying());
+
+		Tree.Animator->PauseAnimation(Handle);
+		TickFrames(Scope.World, 2);
+		TestTrue(TEXT("A paused player has nothing to update, and skips the sequencer's update"), Player->IsTickingLite());
+
+		// A clock set from outside the component -- through the handle's player, as game code can -- is not the one the
+		// component vouched for.
+		Player->SetTimeController(MakeShared<FMovieSceneTimeController_Tick>());
+		Tree.Animator->ResumeAnimation(Handle);
+		const float WidthAtResume = Tree.Button->GetWidth();
+		TickFrames(Scope.World, 4);
+		TestFalse(TEXT("A play on a clock the component did not give it goes through the sequencer's update"), Player->IsTickingLite());
+		TestTrue(FString::Printf(TEXT("...which plays it on (width %.2f -> %.2f)"), WidthAtResume, Tree.Button->GetWidth()),
+			Tree.Animator->IsAnimationPlaying(Handle) && !FMath::IsNearlyEqual(Tree.Button->GetWidth(), WidthAtResume, 0.01f));
+	}
+	{
+		// The component's unscaled clock is one it vouches for too.
+		FScopedGameWorld Scope;
+		FScopedTree Tree(Scope.World);
+		Tree.AddFloatTrack(TEXT("AnimatableWidth"), 20.0f, 220.0f);
+		Tree.Animator->SetAffectedByTimeDilation(false);
+		const FDreamUIAnimationHandle Handle = Tree.Animator->PlayAnimation(Tree.Animation);
+		TickFrames(Scope.World, 4);
+		TestTrue(TEXT("A play that ignores time dilation keeps its own time"), Handle.Player != nullptr && Handle.Player->IsTickingLite());
+	}
+	{
+		// Weights blend in the sequencer, which evaluates them.
+		FScopedGameWorld Scope;
+		FScopedTree Tree(Scope.World);
+		Tree.AddFloatTrack(TEXT("AnimatableWidth"), 20.0f, 220.0f);
+		Tree.Animator->SetDynamicWeighting(true);
+		const FDreamUIAnimationHandle Handle = Tree.Animator->PlayAnimation(Tree.Animation);
+		TickFrames(Scope.World, 4);
+		TestFalse(TEXT("A weighted play goes through the sequencer's update"), Handle.Player == nullptr || Handle.Player->IsTickingLite());
+	}
+	{
+		FScopedGameWorld Scope;
+		FScopedTree Tree(Scope.World);
+		Tree.AddFloatTrack(TEXT("AnimatableWidth"), 20.0f, 220.0f);
+		Tree.Animation->GetMovieScene()->AddTrack<UMovieSceneFloatTrack>();
+		const FDreamUIAnimationHandle Handle = Tree.Animator->PlayAnimation(Tree.Animation);
+		TickFrames(Scope.World, 4);
+		TestFalse(TEXT("A play the sequencer evaluates goes through the sequencer's update"), Handle.Player == nullptr || Handle.Player->IsTickingLite());
+	}
+	{
+		// A clock the animation asks for itself is Initialize's to make, not the component's.
+		FScopedGameWorld Scope;
+		FScopedTree Tree(Scope.World);
+		Tree.AddFloatTrack(TEXT("AnimatableWidth"), 20.0f, 220.0f);
+		Tree.Animation->GetMovieScene()->SetClockSource(EUpdateClockSource::Platform);
+		const FDreamUIAnimationHandle Handle = Tree.Animator->PlayAnimation(Tree.Animation);
+		TickFrames(Scope.World, 4);
+		TestFalse(TEXT("A play on the platform clock goes through the sequencer's update"), Handle.Player == nullptr || Handle.Player->IsTickingLite());
+	}
+	{
+		const DreamTests::Lifecycle::FScopedConsoleVariable Off(TEXT("DreamUI.Animation.LitePlayer"), 0);
+		FScopedGameWorld Scope;
+		FScopedTree Tree(Scope.World);
+		Tree.AddFloatTrack(TEXT("AnimatableWidth"), 20.0f, 220.0f);
+		const FDreamUIAnimationHandle Handle = Tree.Animator->PlayAnimation(Tree.Animation);
+		TickFrames(Scope.World, 4);
+		TestFalse(TEXT("With DreamUI.Animation.LitePlayer 0 a plain play goes through the sequencer's update"), Handle.Player == nullptr || Handle.Player->IsTickingLite());
+	}
+	{
+		// The component's own player, registered with the tick manager and stopped, as it sits on every component with an
+		// animation of its own.
+		FScopedGameWorld Scope;
+		FScopedTree Tree(Scope.World);
+		Tree.AddFloatTrack(TEXT("AnimatableWidth"), 20.0f, 220.0f);
+		Tree.Animator->InitSequencePlayer();
+		TickFrames(Scope.World, 2);
+		UDreamWidgetAnimationPlayer* Idle = Tree.Animator->GetSequencePlayer();
+		TestTrue(TEXT("A stopped player skips the sequencer's update"), Idle != nullptr && Idle->IsTickingLite());
+	}
 	return true;
 }
 
