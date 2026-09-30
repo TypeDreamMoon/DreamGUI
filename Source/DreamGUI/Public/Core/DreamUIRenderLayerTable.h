@@ -60,7 +60,7 @@ public:
 	int32 GetNumRowsInUse() const { return NumRowsInUse; }
 
 private:
-	UPROPERTY(Transient)
+	UPROPERTY(Transient, DuplicateTransient, TextExportTransient)
 	TObjectPtr<UDreamUIDataTexture> Texture;
 	/** The rows as the texture is to hold them, PixelsPerRow pixels each: what is sent up, and what ReadRow answers. */
 	TArray<FVector4f> Pixels;

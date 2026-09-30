@@ -28,6 +28,33 @@ namespace DreamUIDrawCallLocal
 		InOutLayerBounds.Last().Bounds += Min;
 		InOutLayerBounds.Last().Bounds += Max;
 	}
+
+	/**
+	 * The room a draw call of render layer elements is boxed with beyond what its layers need now: an eighth of its largest
+	 * side, and no less than a unit, all round. A layer turning about the middle of what it holds boxes the same every
+	 * frame only on paper -- rounding moves the box a hair each frame, and a layer turning about a point off the middle of
+	 * its elements carries their box round in a small circle -- and a box given out again each time is the section's and
+	 * the mesh's, and a render command, every frame, for every such canvas.
+	 */
+	double GetLayerBoundsRoom(const FBox& InPlaced)
+	{
+		return FMath::Max(InPlaced.GetSize().GetMax() * 0.125, 1.0);
+	}
+
+	/**
+	 * Whether InKept, the box a draw call was given before, still does for InPlaced, where its layers stand now: it holds
+	 * it, and is not more than InPlaced with twice the room all round -- so a box that grew for a layer that has since
+	 * shrunk or stopped is given back its size.
+	 */
+	bool StillHolds(const FBox& InKept, const FBox& InPlaced)
+	{
+		if (!InKept.IsValid || !InPlaced.IsValid || !InKept.IsInsideOrOn(InPlaced))
+		{
+			return false;
+		}
+		const FVector Slack = InKept.GetSize() - InPlaced.GetSize();
+		return Slack.GetMax() <= 4.0 * GetLayerBoundsRoom(InPlaced);
+	}
 }
 
 bool FDreamUIDrawCall::CopyBatchMeshGeometry()
@@ -150,15 +177,35 @@ void FDreamUIDrawCall::ApplyBatchMeshBoundsToCombined()
 
 void FDreamUIDrawCall::PlaceBounds(const UDreamUIRenderLayerTable* InTable)
 {
-	CanvasBounds = CombinedBounds;
+	FBox Placed = CombinedBounds;
 	for (const FLayerBounds& Entry : LayerBounds)
 	{
-		if (Entry.Bounds.IsValid)
+		if (!Entry.Bounds.IsValid)
 		{
-			// A table that is gone places nothing: the layer's elements are boxed where they would stand in no layer.
-			const FMatrix44f LayerToCanvas = InTable != nullptr ? InTable->ReadRow(Entry.Row) : FMatrix44f::Identity;
-			CanvasBounds += Entry.Bounds.TransformBy(FMatrix(LayerToCanvas));
+			continue;
 		}
+		/**
+		 * The sphere around the run's box, where the layer's row takes its centre, and as big as the layer's largest scale
+		 * makes it: the box of that on the canvas. A layer turning about the middle of what it holds -- a button spinning
+		 * about its pivot, as animations turn them -- boxes the same every frame, so the section's box, and the mesh's
+		 * with it, are left as they are rather than sent again each frame. A little larger than the turned box itself,
+		 * which only ever makes the mesh less likely to be culled. A table that is gone places nothing: the layer's
+		 * elements are boxed where they would stand in no layer.
+		 */
+		const FMatrix LayerToCanvas(InTable != nullptr ? InTable->ReadRow(Entry.Row) : FMatrix44f::Identity);
+		const FVector Center = LayerToCanvas.TransformPosition(Entry.Bounds.GetCenter());
+		const double Radius = Entry.Bounds.GetExtent().Size() * LayerToCanvas.GetMaximumAxisScale();
+		Placed += FBox(Center - FVector(Radius), Center + FVector(Radius));
+	}
+	if (LayerBounds.Num() == 0)
+	{
+		CanvasBounds = Placed;
+		return;
+	}
+	// A box given out before is kept while it still holds the layers where they stand: see GetLayerBoundsRoom.
+	if (!DreamUIDrawCallLocal::StillHolds(CanvasBounds, Placed))
+	{
+		CanvasBounds = Placed.ExpandBy(DreamUIDrawCallLocal::GetLayerBoundsRoom(Placed));
 	}
 }
 

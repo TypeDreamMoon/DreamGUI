@@ -40,9 +40,10 @@
 
 static TAutoConsoleVariable<float> CVarDreamUIEditorWorldTickIntervalDuringPlay(
 	TEXT("r.DreamUI.EditorWorldTickIntervalDuringPlay"),
-	0.1f,
+	0.5f,
 	TEXT("While a play or simulate session runs, the level being edited updates its UI at most this often, in seconds. Its ")
-	TEXT("panels hold still meanwhile, and walking a thousand of them every frame cost the session's frame about 1.7 ms. ")
+	TEXT("panels hold still meanwhile, and walking a thousand of them every frame cost the session's frame about 1.7 ms; ")
+	TEXT("nearly three thousand of them, every tenth of a second, about 5 ms every other frame of a session running at 20. ")
 	TEXT("0: every frame."),
 	ECVF_Default);
 

@@ -2,6 +2,7 @@
 // Modified by TypeDreamMoon.
 
 #include "Core/Components/DreamWidget.h"
+#include "Core/DreamUIDetailTrace.h"
 #include <atomic>
 #include "DreamWidgetPrivate.h"
 #include "Core/DreamPerspective.h"
@@ -675,9 +676,18 @@ void UDreamWidget::ComputeWorldTransform()const
 	DreamWidgetTransformLocal::WorldTransformComputeCount.fetch_add(1, std::memory_order_relaxed);
 }
 
+static TAutoConsoleVariable<int32> CVarDreamUIQuietRenderLayers(
+	TEXT("r.DreamUI.QuietRenderLayers"),
+	1,
+	TEXT("1: a render layer whose widgets need no word of its moves -- none hosts a canvas, is a layer or is listened to -- ")
+	TEXT("is not walked into when it moves: they stay stale, and are composed when read. 0: every widget under a moved layer ")
+	TEXT("is walked, as it was."),
+	ECVF_Default);
+
 void UDreamWidget::CalculateObjectToWorldTransform(bool /*bPropagateToChildren*/)
 {
-	TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_MarkTransformChanged);
+	// No timing scope: this runs for every write of every animated widget, thousands a frame on a busy screen, where one
+	// cost as much as the marking itself.
 	// This widget's own transform moved; the descendants marked below only moved with it. The difference
 	// is what the render-layer rules go by: a widget inside a layer is drawn again only when something
 	// between the layer and it moved on its own.
@@ -687,6 +697,25 @@ void UDreamWidget::CalculateObjectToWorldTransform(bool /*bPropagateToChildren*/
 	if (!(bWorldTransformDirty && bTransformChangePending))
 	{
 		MarkWorldTransformStaleRecursive();
+	}
+	/**
+	 * A render layer nothing needs a word of its moves from -- nothing it holds hosts a canvas, is a layer or listens
+	 * (IsRenderLayerQuiet), and nothing listens to it -- is announced here and now. All its move asks of the rest is that its
+	 * row be placed again and a ray traced again (UDreamCanvas::MarkRenderLayerMoved), which is all the flush would have done
+	 * for it; what it holds is left stale and pending, as the flush leaves it, and the layer itself is composed when something
+	 * reads it. A wall of thousands of turning widgets otherwise listed every one of them for the flush, every frame, only for
+	 * it to be told that.
+	 */
+	if (bIsRenderLayer && !OnTransformChangedEvent.IsBound() && CVarDreamUIQuietRenderLayers.GetValueOnGameThread() != 0
+		&& IsRenderLayerQuiet())
+	{
+		bTransformChangePending = false;
+		bOwnTransformChanged = false;
+		if (UDreamCanvas* Canvas = RenderCanvas.Get())
+		{
+			Canvas->MarkRenderLayerMoved(this);
+		}
+		return;
 	}
 	UDreamUIManagerWorldSubsystem* Manager = RegisteredManager.Get();
 	if (Manager != nullptr && Manager->DefersTransformChanges())
@@ -710,22 +739,16 @@ void UDreamWidget::MarkWorldTransformStaleRecursive()
 	{
 		RenderCanvas->MarkTransformOrDimensionChanged();
 	}
+	// A child that is garbage and not yet collected only has two flags set that nothing reads: not asking the object array
+	// about each child is a cache miss fewer for every child of every widget written, every frame, on a wall of them.
 	for (UDreamWidget* Child : Children)
 	{
-		if (IsValid(Child) && !(Child->bWorldTransformDirty && Child->bTransformChangePending))
+		if (Child != nullptr && !(Child->bWorldTransformDirty && Child->bTransformChangePending))
 		{
 			Child->MarkWorldTransformStaleRecursive();
 		}
 	}
 }
-
-static TAutoConsoleVariable<int32> CVarDreamUIQuietRenderLayers(
-	TEXT("r.DreamUI.QuietRenderLayers"),
-	1,
-	TEXT("1: a render layer whose widgets need no word of its moves -- none hosts a canvas, is a layer or is listened to -- ")
-	TEXT("is not walked into when it moves: they stay stale, and are composed when read. 0: every widget under a moved layer ")
-	TEXT("is walked, as it was."),
-	ECVF_Default);
 
 void UDreamWidget::FlushTransformChanges()
 {
@@ -813,7 +836,7 @@ void UDreamWidget::FlushTransformChangesFrom(UDreamWidget* InRoot, TFunctionRef<
 		// transform composes it then and there, so it never sees where the child was.
 		if (Widget->OnTransformChangedEvent.IsBound())
 		{
-			TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_TransformChangedEvent);
+			DREAMUI_DETAIL_SCOPE(DreamUI_TransformChangedEvent);
 			Widget->Call_TransformChanged();
 		}
 		if (!bWalkChildren)

@@ -251,17 +251,14 @@ private:
 	UPROPERTY(VisibleAnywhere, Category = "DreamGUI")
 	TArray<TWeakObjectPtr<UDreamCanvas>> AllCanvasArray;
 	/**
-	 * AllCanvasArray again, as keys, for IsCanvasStillRegistered: every per-frame pass over the canvases asks it once
-	 * per canvas, and asking the array made each pass quadratic -- about 45 ms a frame with a thousand world panels.
-	 */
-	TSet<FObjectKey> RegisteredCanvasKeys;
-	/**
 	 * The root canvases ForEachRootCanvasInRenderModeOrder takes, one list per render mode in the order it takes them, as
 	 * they were sorted at RootCanvasOrderGeneration (InvalidateRootCanvasOrder). Sorting them was a walk of the whole
 	 * registry, twice a frame, asking each canvas for its root and its mode.
 	 */
 	TArray<TWeakObjectPtr<UDreamCanvas>> RootCanvasesByPass[4];
 	uint64 RootCanvasOrderGeneration = 0;
+	/** RootCanvasesByPass sorted again, if a canvas came or went since (InvalidateRootCanvasOrder). */
+	void SortRootCanvasesIfStale();
 	/**
 	 * Every registered widget, weakly: registering is not owning. A tree is kept alive by its host --
 	 * the component, subsystem or preview that made it -- and the host lets it go; see FreeRoots for the

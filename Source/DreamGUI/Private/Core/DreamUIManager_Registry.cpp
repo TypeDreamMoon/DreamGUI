@@ -93,8 +93,10 @@ TArray<UDreamCanvas*> UDreamUIManagerWorldSubsystem::GetCanvasArrayByRenderMode(
 
 bool UDreamUIManagerWorldSubsystem::IsCanvasStillRegistered(const TWeakObjectPtr<UDreamCanvas>& InCanvas)const
 {
+	// The canvas says whom it is registered with: every pass over a thousand world panels asks this once for each, and
+	// asking the array made each pass quadratic -- about 45 ms a frame -- and a set of keys a hash for each.
 	const UDreamCanvas* Canvas = InCanvas.Get();
-	return Canvas != nullptr && RegisteredCanvasKeys.Contains(FObjectKey(Canvas));
+	return Canvas != nullptr && Canvas->RegisteredWithManager == this;
 }
 
 void UDreamUIManagerWorldSubsystem::AddCanvas(UDreamCanvas* InCanvas)
@@ -107,7 +109,7 @@ void UDreamUIManagerWorldSubsystem::AddCanvas(UDreamCanvas* InCanvas)
 	}
 #endif
 	this->AllCanvasArray.AddUnique(InCanvas);
-	this->RegisteredCanvasKeys.Add(FObjectKey(InCanvas));
+	InCanvas->RegisteredWithManager = this;
 	InvalidateRootCanvasOrder();
 	BumpHitTestGeneration();
 }
@@ -122,17 +124,23 @@ void UDreamUIManagerWorldSubsystem::RemoveCanvas(UDreamCanvas* InCanvas)
 	}
 #endif
 	this->AllCanvasArray.RemoveSingle(InCanvas);
-	this->RegisteredCanvasKeys.Remove(FObjectKey(InCanvas));
+	if (InCanvas != nullptr && InCanvas->RegisteredWithManager == this)
+	{
+		InCanvas->RegisteredWithManager = nullptr;
+	}
 	InvalidateRootCanvasOrder();
 	BumpHitTestGeneration();
 }
 
 int32 UDreamUIManagerWorldSubsystem::CountCompetingScreenSpaceOverlayCanvases()const
 {
+	// Asked every frame: the root canvases set to ScreenSpaceOverlay are one of the lists sorted for the passes over them,
+	// rather than a walk of every registered canvas -- a thousand world panels among them.
+	const_cast<UDreamUIManagerWorldSubsystem*>(this)->SortRootCanvasesIfStale();
 	int32 Count = 0;
-	for (auto& Canvas : AllCanvasArray)
+	for (auto& Canvas : RootCanvasesByPass[0])
 	{
-		if (!Canvas.IsValid())continue;
+		if (!IsCanvasStillRegistered(Canvas))continue;
 		if (!Canvas->IsRootCanvas())continue;
 		if (Canvas->GetRenderMode() != EDreamRenderMode::ScreenSpaceOverlay)continue;
 		// A canvas on an inactive widget is not on screen and is not fighting anyone for it. This

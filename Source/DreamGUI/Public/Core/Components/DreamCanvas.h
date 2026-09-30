@@ -1037,6 +1037,12 @@ private:
 	bool bRenderLayerModesToScan = true;
 	/** A layer may have moved since its draw calls were placed: the canvas updated, or MarkRenderLayerMoved. */
 	bool bRenderLayersMayHaveMoved = false;
+	friend class UDreamUIManagerWorldSubsystem;
+	/**
+	 * The manager this canvas is registered with (UDreamUIManagerWorldSubsystem::AddCanvas), which asks whether it still is
+	 * once for every canvas on every pass over them (IsCanvasStillRegistered). Only ever compared, never followed.
+	 */
+	const UDreamUIManagerWorldSubsystem* RegisteredWithManager = nullptr;
 	/** Whether r.DreamUI.RenderLayers was on when this canvas last looked. */
 	bool bRenderLayersWereEnabled = true;
 	/**
@@ -1055,7 +1061,7 @@ private:
 	void UpdateRenderLayers();
 	/**
 	 * Each frame, at the submit: the layers that held still long enough taken back. True when the rest are to be placed
-	 * (PlaceRenderLayers), whose transforms it has composed by then.
+	 * (PlaceRenderLayers), what whose transforms are composed from composed by then: PlaceRenderLayers composes each layer's.
 	 */
 	bool TendRenderLayers();
 	/** TendRenderLayersBeforeFinish ran this frame, and FinishDrawCallBatchData leaves the layers be. */

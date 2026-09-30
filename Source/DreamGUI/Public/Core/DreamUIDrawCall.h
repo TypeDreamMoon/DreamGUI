@@ -137,7 +137,9 @@ public:
 	TArray<FLayerBounds> LayerBounds;
 	/**
 	 * The box of everything the draw call holds, on the canvas, which its section is boxed by: CombinedBounds, and each of
-	 * LayerBounds where its row places it now (PlaceBounds). CombinedBounds alone for a draw call of no layer's elements.
+	 * LayerBounds where its row places it now, as a box that does not change while the layer only turns about it -- with
+	 * some room, and kept while it still holds them, so that a layer that only turns does not box its draw call anew each
+	 * frame (PlaceBounds). CombinedBounds alone for a draw call of no layer's elements.
 	 */
 	FBox CanvasBounds;
 	TSharedPtr<DreamUIQuadTree::Node> BatchMeshTreeNode = nullptr;
@@ -153,7 +155,10 @@ public:
 	 * of none besides: each vertex's record says which row, if any.
 	 */
 	bool HasRenderLayerElements()const { return LayerBounds.Num() > 0; }
-	/** CanvasBounds worked out again from InTable's rows as they are now. Any thread, while nothing writes those rows. */
+	/**
+	 * CanvasBounds worked out again from InTable's rows as they are now, or left as it is while it still holds them. Any
+	 * thread, while nothing writes those rows.
+	 */
 	void PlaceBounds(const class UDreamUIRenderLayerTable* InTable);
 
 	TWeakObjectPtr<class UDreamCanvas> ChildCanvas;//insert point to sort child canvas
