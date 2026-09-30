@@ -778,7 +778,13 @@ void UDreamWidget::FlushTransformChangesFrom(UDreamWidget* InRoot, TFunctionRef<
 		{
 			Notice = (!Visit.bInLayer || bMoved) ? EDreamTransformChangeNotice::Moved : EDreamTransformChangeNotice::InsideMovedLayer;
 		}
-		Widget->GetWorldTransform();
+		// Composed here where something is about to look at it -- a canvas, a visual told to transform again, a layer placed,
+		// a listener. A widget that only moved with its render layer and has no listener stays stale until something reads
+		// it, which a frame of a turning layer's contents mostly never does.
+		if (Notice != EDreamTransformChangeNotice::InsideMovedLayer || Widget->OnTransformChangedEvent.IsBound())
+		{
+			Widget->GetWorldTransform();
+		}
 		InNotify(*Widget, Notice);
 		// Parents before children, and every child already marked: a parent's listener that reads a child's
 		// transform composes it then and there, so it never sees where the child was.
