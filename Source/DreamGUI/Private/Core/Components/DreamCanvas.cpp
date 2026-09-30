@@ -726,7 +726,12 @@ void UDreamCanvas::MarkWidgetUpdate(UDreamWidget* InWidget, bool bRebuildDrawCal
 
 void UDreamCanvas::MarkWidgetMoved(UDreamWidget* InWidget)
 {
-	bWidgetsMovedSinceUpdate = true;
+	// A move inside a render layer cannot change how the canvas batches -- a layer's elements batch the same wherever
+	// they are (BatchDrawCallAsync) -- so it asks for no decision about a rebuild: only a vertex refresh, as a colour does.
+	if (InWidget == nullptr || InWidget->GetRenderLayer() == nullptr)
+	{
+		bWidgetsMovedSinceUpdate = true;
+	}
 	MarkWidgetUpdate(InWidget, false);
 }
 
@@ -796,9 +801,15 @@ bool UDreamCanvas::CanRefreshDrawCallsInPlace()
 				const UDreamVisualBatchMesh* Visual = DrawCall.BatchMeshVisualArray.IsValidIndex(Index) ? DrawCall.BatchMeshVisualArray[Index].Get() : nullptr;
 				const FDreamUIGeometry* Now = Visual != nullptr ? Visual->GetGeometry() : nullptr;
 				if (Batched == nullptr || Now == nullptr
-					|| Now->Vertices.Num() != Batched->Vertices.Num() || Now->Triangles.Num() != Batched->Triangles.Num())
+					|| Now->Vertices.Num() != Batched->Vertices.Num() || Now->Triangles.Num() != Batched->Triangles.Num()
+					|| Now->RenderLayer != Batched->RenderLayer)
 				{
 					return false;
+				}
+				// Batched the same wherever its layer is, and wherever it is in it: see BatchDrawCallAsync.
+				if (Now->IsInRenderLayer())
+				{
+					continue;
 				}
 				const bool bFlat = Is2DUITransform(Now->TransformRelativeToCanvas);
 				if (bFlat != Is2DUITransform(Batched->TransformRelativeToCanvas) || (bFlat && IsOutside(*Now)))
@@ -816,7 +827,8 @@ bool UDreamCanvas::CanRefreshDrawCallsInPlace()
 	{
 		const UDreamVisualBatchMesh* Visual = WeakCulled.Get();
 		const FDreamUIGeometry* Now = Visual != nullptr ? Visual->GetGeometry() : nullptr;
-		if (Now == nullptr || !Is2DUITransform(Now->TransformRelativeToCanvas) || !IsOutside(*Now))
+		// A culled element that went into a render layer is culled no more.
+		if (Now == nullptr || Now->IsInRenderLayer() || !Is2DUITransform(Now->TransformRelativeToCanvas) || !IsOutside(*Now))
 		{
 			return false;
 		}
@@ -1829,6 +1841,7 @@ void UDreamCanvas::BatchDrawCallAsync(const FVector2D& InCanvasLeftBottom, const
 				// object to make a weak pointer of it again -- can meet a collection under way on the game thread.
 				DrawCallItem.Material = InItemGeo.Material;
 				DrawCallItem.BlendMode = InItemGeo.BlendMode;
+				DrawCallItem.RenderLayer = InItemGeo.RenderLayer;
 				DrawCallItem.BatchMeshVisualArray.Add(InRenderData.BatchMeshVisualObject);
 				DrawCallItem.VerticesCount = InItemGeo.Vertices.Num();
 				DrawCallItem.IndicesCount = InItemGeo.Triangles.Num();
@@ -1883,7 +1896,14 @@ void UDreamCanvas::BatchDrawCallAsync(const FVector2D& InCanvasLeftBottom, const
 				}
 				const FDreamUIGeometry& ItemGeo = *RenderData.BatchMeshGeometry;
 
-				bool is2DUIItem = Is2DUITransform(ItemGeo.TransformRelativeToCanvas);
+				/**
+				 * An element of a render layer is placed by the layer's transform, on the GPU, wherever the layer happens to be:
+				 * it batches as a 3D element does, into the last draw call only -- which then has to be its own layer's, see
+				 * CanConsumeUIGeometryForBatchMesh -- and its draw call ends a flat element's walk back as a 3D one does. So
+				 * neither culling nor an overlap test ever reads where it is, and however the layer moves, the batch comes out
+				 * the same (FDreamUIBatchPlacement). Its transform and bounds are the layer's anyway, not the canvas's.
+				 */
+				bool is2DUIItem = !ItemGeo.IsInRenderLayer() && Is2DUITransform(ItemGeo.TransformRelativeToCanvas);
 				//a 3D element's 2D bounds do not describe where it ends up on screen, so only flat
 				//elements are culled by them
 				if (is2DUIItem && IsOutsideCanvas(ItemGeo.BoundsMin2DInCanvasSpace, ItemGeo.BoundsMax2DInCanvasSpace))
