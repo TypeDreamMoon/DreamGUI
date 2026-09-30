@@ -316,12 +316,6 @@ protected:
 	float CalculateDistanceToCamera()const;
 
 	/**
-	 * Force this canvas render to a TextureRenderTarget, no matter what render mode of the root canvas is.
-	 * This will break canvas link and make this canvas as root canvas.
-	 */
-	UPROPERTY(EditAnywhere, Category = "DreamGUI")
-	bool bForceRenderToTarget = false;
-	/**
 	 * Leave elements that are entirely outside this canvas's rect out of the draw-call list.
 	 *
 	 * Only has an effect when this canvas's rect is the surface being drawn -- a root canvas, or one
@@ -343,8 +337,6 @@ protected:
 	 */
 	UPROPERTY(EditAnywhere, Category = "DreamGUI", meta = (ClampMin = "0.1", ClampMax = "1.0", UIMin = "0.1", UIMax = "1.0"))
 	float ScreenSpaceRenderScale = 1.0f;
-	UPROPERTY(EditAnywhere, Category = "DreamGUI")
-		EDreamRenderMode RenderMode = EDreamRenderMode::WorldSpace;
 	/**
 	 * Render to RenderTarget, if not specified then DreamGUI will create a new one (AutoRenderTarget).
 	 */
@@ -1027,6 +1019,18 @@ private:
 	 * panels asks each of them several times a frame.
 	 */
 	mutable const UDreamCanvas* RootCanvasRaw = nullptr;
+	// Two of the properties are among what every pass reads, and are declared here for it: the details panel places them
+	// itself (FDreamCanvasCustomization).
+protected:
+	/**
+	 * Force this canvas render to a TextureRenderTarget, no matter what render mode of the root canvas is.
+	 * This will break canvas link and make this canvas as root canvas.
+	 */
+	UPROPERTY(EditAnywhere, Category = "DreamGUI")
+	bool bForceRenderToTarget = false;
+	UPROPERTY(EditAnywhere, Category = "DreamGUI")
+		EDreamRenderMode RenderMode = EDreamRenderMode::WorldSpace;
+private:
 	/**
 	 * RenderMode can affect UI's renderer, basically WorldSpace use UE's built-in renderer, others use DreamGUI's renderer. Different renderers cannot share same render data.
 	 * eg: when attach to other canvas, this will tell which render mode in old canvas, and if not compatible then recreate render data.
