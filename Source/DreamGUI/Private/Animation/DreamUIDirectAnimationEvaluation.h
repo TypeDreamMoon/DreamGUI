@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Misc/FrameRate.h"
 #include "Misc/FrameTime.h"
 #include "Misc/Guid.h"
 #include "UObject/WeakObjectPtr.h"
@@ -45,6 +46,8 @@ public:
 	bool Evaluate(IMovieScenePlayer& InPlayer, FFrameTime InTime);
 	/** Back to the values the properties had before they were first written, as the sequencer restores state. */
 	void RestoreInitialValues();
+	/** The movie scene's tick resolution when this was made (TryCreate): the resolution Evaluate takes its time in. */
+	FFrameRate GetTickResolution() const { return TickResolution; }
 	/** The values written stay, and the initial ones are forgotten, as the sequencer keeps state. */
 	void DiscardInitialValues();
 
@@ -83,7 +86,22 @@ private:
 		EValueKind Kind = EValueKind::Float;
 		bool bKindKnown = false;
 		TSharedPtr<FTrackInstancePropertyBindings> Bindings;
+		/** The track names a property of the bound object itself, not one inside a struct of it. */
+		bool bDirectProperty = false;
+		/**
+		 * The property's native setter, for objects of SetterClass: the write the bindings would make, without looking the
+		 * object up in their map every time (WriteValue). Found with the property's type, once a play; none for a property
+		 * without a native setter, or down a path, which the bindings write as they always did.
+		 */
+		const UClass* SetterClass = nullptr;
+		const FProperty* SetterProperty = nullptr;
 		int32 NumChannels = 0;
+		/**
+		 * The section the channels below were found in, while its sequence is alive (Evaluate), and where in it each channel
+		 * is: with the section's signature, what says which channel of which content it is (EvaluateChannels).
+		 */
+		const UMovieSceneSection* BoundSection = nullptr;
+		uint32 ChannelOffsets[4] = { 0, 0, 0, 0 };
 		const FMovieSceneFloatChannel* FloatChannels[4] = { nullptr, nullptr, nullptr, nullptr };
 		const FMovieSceneDoubleChannel* DoubleChannels[4] = { nullptr, nullptr, nullptr, nullptr };
 		const FMovieSceneBoolChannel* BoolChannel = nullptr;
@@ -91,6 +109,15 @@ private:
 		bool bEveryChannelAnimated = false;
 		/** The objects written so far, with the value each had before the first write. */
 		TArray<TPair<TWeakObjectPtr<UObject>, FChannelValues>> InitialValues;
+		/**
+		 * The objects the binding resolved to at this play's first evaluation, as the player's object cache gave them: looked
+		 * up again only once one of them is gone. A play of a widget animation does not see its binding resolve to other
+		 * objects -- nothing in DreamGUI invalidates a player's bindings, and the sequencer resolves one again when its object
+		 * went away -- and the lookup, a map in the player's state and another in its object cache, came to a twentieth of
+		 * what a wall of playing animations cost a frame.
+		 */
+		TArray<TWeakObjectPtr<UObject>, TInlineAllocator<1>> BoundObjects;
+		bool bBoundObjectsFound = false;
 	};
 
 	/** Points the property at its section's channels. */
@@ -100,11 +127,16 @@ private:
 	/** Reads the property's value as channel values. */
 	static bool Read(FAnimatedProperty& InProperty, UObject& InObject, FChannelValues& OutValues);
 	static void Write(FAnimatedProperty& InProperty, UObject& InObject, const FChannelValues& InValues);
+	/** One value into the property: through its native setter when it has one for InObject's class, else through the bindings. */
+	template<typename ValueType>
+	static void WriteValue(FAnimatedProperty& InProperty, UObject& InObject, const ValueType& InValue);
 	/** Overwrites the channels that have a value at InTime. */
 	static void EvaluateChannels(const FAnimatedProperty& InProperty, FFrameTime InTime, FChannelValues& InOutValues);
 
 	/** The sequence the channels belong to: they are only read while it is alive. */
 	TWeakObjectPtr<const UMovieSceneSequence> Sequence;
+	/** See GetTickResolution. Kept here so that a frame's evaluation need not look at the movie scene for it. */
+	FFrameRate TickResolution;
 	TArray<FAnimatedProperty> Properties;
 	/** Whether any property has been written: after that, the sequencer can no longer take over cleanly. */
 	bool bWrittenAnything = false;
