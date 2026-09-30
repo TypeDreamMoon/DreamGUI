@@ -268,6 +268,8 @@ void UDreamVisualBatchMesh::UpdateGeometry()
 		bWidgetPropertyDataFontMarkDirty = false;
 		FillWidgetPropertyDataForMaterial_InitialMark(Canvas->GetWidgetPropertyDataAsTexture(), GetFontMark_WidgetPropertyDataForMaterial());
 		FillWidgetPropertyDataForMaterial_Extra(Canvas->GetWidgetPropertyDataAsTexture());
+		// The row its vertices are kept in now; a transform below that puts them in another writes that one after.
+		FillWidgetPropertyDataForMaterial_RenderLayerRow(Canvas->GetWidgetPropertyDataAsTexture(), UIGeometry->RenderLayerRow);
 	}
 	if (bClipDataPositionChanged)
 	{
@@ -298,7 +300,11 @@ void UDreamVisualBatchMesh::UpdateGeometry()
 			 * destroyed while the task is in flight.
 			 */
 			CalculateLocalBounds();
-			auto Transform = [Params = FDreamUIGeometry::MakeTransformVerticesParams(Canvas, this), Geometry = this->UIGeometry]()
+			FDreamUIGeometry::FTransformVerticesParams Params = FDreamUIGeometry::MakeTransformVerticesParams(Canvas, this);
+			// Which row of the render layer table the vertices are placed on the canvas through, 0 for none: the record
+			// says it to the vertex shaders (DreamUIRenderLayer.ush), in the same frame as the vertices change space.
+			FillWidgetPropertyDataForMaterial_RenderLayerRow(Canvas->GetWidgetPropertyDataAsTexture(), Params.RenderLayerRow);
+			auto Transform = [Params = MoveTemp(Params), Geometry = this->UIGeometry]()
 			{
 				TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_TransformVerticesTask);
 				FDreamUIGeometry::TransformVertices(Params, Geometry.Get());

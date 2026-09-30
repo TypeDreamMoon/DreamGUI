@@ -26,6 +26,7 @@ bool FDreamUIGeometry::MatchesDataForPrepare(const FDreamUIGeometry& InPrepared)
 		&& bSupportDrawcallBatching == InPrepared.bSupportDrawcallBatching
 		&& BlendMode == InPrepared.BlendMode
 		&& RenderLayer == InPrepared.RenderLayer
+		&& RenderLayerRow == InPrepared.RenderLayerRow
 		&& BoundsMin2DInCanvasSpace == InPrepared.BoundsMin2DInCanvasSpace
 		&& BoundsMax2DInCanvasSpace == InPrepared.BoundsMax2DInCanvasSpace
 		&& TransformRelativeToCanvas.Equals(InPrepared.TransformRelativeToCanvas, 0.0)
@@ -2301,6 +2302,7 @@ FDreamUIGeometry::FTransformVerticesParams FDreamUIGeometry::MakeTransformVertic
 	else if (const UDreamWidget* Layer = ItemWidget->GetRenderLayer())
 	{
 		Params.RenderLayer = Layer;
+		Params.RenderLayerRow = Layer->GetRenderLayerRow();
 		if (ItemWidget != Layer)
 		{
 			FTransform ItemToLayer = ItemWidget->GetRenderLocalTransform();
@@ -2343,6 +2345,7 @@ void FDreamUIGeometry::TransformVertices(const FTransformVerticesParams& Params,
 	// and the 2D bounds below are the layer's too, and none of it changes while the layer moves. The layer's transform
 	// puts them on the canvas, on the GPU. Batching and the in-place refresh read neither for such an element.
 	uiGeo->RenderLayer = Params.RenderLayer;
+	uiGeo->RenderLayerRow = Params.RenderLayerRow;
 	FTransform itemToCanvasTf;
 	if (uiGeo->IsInRenderLayer())
 	{

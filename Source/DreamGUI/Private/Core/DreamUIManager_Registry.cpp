@@ -3,6 +3,7 @@
 
 #include "Core/DreamUIManager.h"
 #include "Core/DreamUIDataAsTexture.h"
+#include "Core/DreamUIRenderLayerTable.h"
 #include "Core/DreamUIRuntimeObject.h"
 #include "Core/DreamUIWorldContext.h"
 #include "Core/Components/DreamRectBlock.h"
@@ -488,4 +489,14 @@ UDreamUIDataAsTexture* UDreamUIManagerWorldSubsystem::GetRectBlockDataRows(UDrea
 	Rows->Init(InBlockSizeInBytes, InPixelFormat, 32);
 	RectBlockDataRows.Add(InData, Rows);
 	return Rows;
+}
+
+UDreamUIRenderLayerTable* UDreamUIManagerWorldSubsystem::GetRenderLayerTable()
+{
+	if (RenderLayerTable == nullptr)
+	{
+		// The manager's, and never saved, duplicated or copied, as the rect block rows above.
+		RenderLayerTable = NewObject<UDreamUIRenderLayerTable>(this, NAME_None, DreamUI::RuntimeObjectFlags);
+	}
+	return RenderLayerTable;
 }

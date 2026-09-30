@@ -460,8 +460,9 @@ private:
 	 *
 	 * A widget can be a render layer of its canvas (IsRenderLayer): the canvas keeps the geometry under it relative to it
 	 * and applies its transform on the GPU, so while it turns or slides, what is under it is neither transformed again nor
-	 * uploaded again -- only its sections' matrix changes. The price is batching: a layer's elements share draw calls only
-	 * with each other. The canvas makes a widget one once its own render transform has changed on a few frames in a row,
+	 * uploaded again -- only its row of the world's render layer table changes (UDreamUIRenderLayerTable). The price is
+	 * batching: a layer's elements batch as 3D elements do, into the draw call just before them only, and are never culled
+	 * by the canvas rect. The canvas makes a widget one once its own render transform has changed on a few frames in a row,
 	 * and takes it back once it has held still for a while (UDreamCanvas::NoteRenderTransformChanged), so this setting is
 	 * rarely one to touch; and some widgets can never be one (UDreamCanvas::CanBeRenderLayer).
 	 */
@@ -478,9 +479,23 @@ public:
 	/** Whether this widget may be a render layer of its canvas, and when; its canvas makes it one, or takes it back, at its next update. */
 	UFUNCTION(BlueprintCallable, Category = "Render Transform")
 	void SetRenderLayerMode(EDreamWidgetRenderLayer Value);
+	/** Its row in its world's render layer table while it is a render layer (UDreamUIRenderLayerTable); 0 when it is none. */
+	int32 GetRenderLayerRow()const { return RenderLayerRow; }
 private:
 	/** Set and cleared by the canvas that makes this widget a render layer; IsRenderLayer. */
 	uint32 bIsRenderLayer : 1 = false;
+	/** Found unable to be a layer during this run of changes (UDreamCanvas::CanBeRenderLayer); asked again when another run starts. */
+	uint32 bRenderLayerRefused : 1 = false;
+	/** Listed with its canvas as one to make a layer at the canvas's next update. */
+	uint32 bRenderLayerCandidate : 1 = false;
+	/** See GetRenderLayerRow: held for it by the canvas that made it a layer. */
+	int32 RenderLayerRow = 0;
+	/**
+	 * The frame its own render transform last changed on, and on how many frames in a row it had changed by then: what its
+	 * canvas makes it a layer by, and takes it back by (UDreamCanvas::NoteRenderTransformChanged).
+	 */
+	uint64 RenderLayerLastChangeFrame = 0;
+	int32 RenderLayerChangeStreak = 0;
 	/** GetRenderLayer's answer, and the generation of the answers it was worked out in (InvalidateRenderLayerCaches). */
 	mutable TWeakObjectPtr<UDreamWidget> CachedRenderLayer;
 	mutable uint64 CachedRenderLayerGeneration = 0;

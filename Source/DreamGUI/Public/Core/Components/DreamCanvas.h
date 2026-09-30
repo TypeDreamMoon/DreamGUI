@@ -871,6 +871,8 @@ private:
 	friend class FDreamCanvasHierarchyOrderTest;
 	friend class FDreamCanvasVisualChangeRebuildsDrawCallTest;
 	friend class FDreamCanvasSuspendedRebuildKeepsTheRequestTest;
+	friend class FDreamRenderLayerManyOnOneCanvasTest;
+	friend class FDreamRenderLayerRefreshBeforeSensitiveTest;
 	/**
 	 * RenderMode can affect UI's renderer, basically WorldSpace use UE's built-in renderer, others use DreamGUI's renderer. Different renderers cannot share same render data.
 	 * eg: when attach to other canvas, this will tell which render mode in old canvas, and if not compatible then recreate render data.
@@ -987,37 +989,48 @@ public:
 	 * becomes one at the next update, if it can (CanBeRenderLayer) and the canvas holds fewer than
 	 * r.DreamUI.RenderLayerMaxPerCanvas, and stops being one once it has held still for r.DreamUI.RenderLayerDemoteFrames
 	 * frames. Either way the draw calls are rebuilt once. r.DreamUI.RenderLayers 0 makes none, and takes back those there are.
+	 * What it counts by is kept on the widget: this runs for every render transform change of every widget.
 	 */
 	void NoteRenderTransformChanged(UDreamWidget* InWidget);
 	/**
-	 * A render layer's transform relative to this canvas changed (UDreamWidget::IsRenderLayer): its sections move, and
-	 * nothing in the layer is transformed again. They are moved at the frame's submit (FinishDrawCallBatchData), which
-	 * looks at where each layer is whether or not the canvas updated; nothing of the canvas's own update is needed for it.
+	 * A render layer's transform relative to this canvas changed (UDreamWidget::IsRenderLayer): its row of the render
+	 * layer table is written, and nothing in the layer is transformed again. That is done at the frame's submit
+	 * (PlaceRenderLayers), which looks at where each layer is whether or not the canvas updated; nothing of the canvas's
+	 * own update is needed for it.
 	 */
 	void MarkRenderLayerMoved(UDreamWidget* InLayer);
 	/** InWidget's RenderLayer setting changed (UDreamWidget::SetRenderLayerMode): the next update makes it a layer or takes it back. */
 	void NoteRenderLayerModeChanged(UDreamWidget* InWidget);
 private:
-	/** A widget of this canvas whose own render transform changed lately, or a render layer: see NoteRenderTransformChanged. */
-	struct FRenderLayerCandidate
+	/**
+	 * The widgets whose render transform changed on enough frames in a row to be made layers (NoteRenderTransformChanged),
+	 * each listed once (UDreamWidget::bRenderLayerCandidate). The next update makes them layers while there is room, and
+	 * the rest wait there while they keep changing.
+	 */
+	TArray<TWeakObjectPtr<UDreamWidget>> RenderLayerCandidates;
+	/** A widget this canvas made a render layer, and its row of the world's render layer table. */
+	struct FRenderLayerRecord
 	{
-		/** The frame its render transform last changed on, and on how many frames in a row it had changed by then. */
-		uint64 LastChangeFrame = 0;
-		int32 ChangeStreak = 0;
-		/** Found unable to be a layer during this run of changes (CanBeRenderLayer); asked again when another run starts. */
-		bool bRefused = false;
+		TWeakObjectPtr<UDreamWidget> Layer;
+		/** Held for the layer while it is one, and given back when it is not, or when it is gone. */
+		int32 Row = 0;
+		/** What this canvas last wrote into the row: where the layer stood on it. */
+		FMatrix44f Placed = FMatrix44f::Identity;
 	};
-	TMap<TObjectKey<UDreamWidget>, FRenderLayerCandidate> RenderLayerCandidates;
 	/** The widgets this canvas made render layers. */
-	TArray<TWeakObjectPtr<UDreamWidget>> RenderLayers;
-	/** One render layer whose elements the draw calls in hand hold: which draw calls, and where they were placed. */
-	struct FRenderLayerPlacement
-	{
-		TObjectKey<UDreamWidget> Layer;
-		FMatrix44f LayerToCanvas = FMatrix44f::Identity;
-		TArray<int32, TInlineAllocator<2>> DrawCalls;
-	};
-	TArray<FRenderLayerPlacement> RenderLayerPlacements;
+	TArray<FRenderLayerRecord> RenderLayers;
+	/** The world's render layer table (UDreamUIManagerWorldSubsystem::GetRenderLayerTable), made when InCreate asks for it. */
+	class UDreamUIRenderLayerTable* GetRenderLayerTable(bool bInCreate) const;
+	mutable TWeakObjectPtr<class UDreamUIRenderLayerTable> RenderLayerTable;
+	/**
+	 * Each draw call holding a render layer's elements boxed where its layers' rows place them now: every one, for draw
+	 * calls just taken, or only those a row of which was written since the table's last flush.
+	 */
+	void PlaceRenderLayerDrawCalls(bool bInAll);
+	/** The layer of RenderLayers[InIndex] is one no longer: its row given back, and what is under it transformed out of it. */
+	void TakeBackRenderLayer(int32 InIndex);
+	/** No widget is listed to be made a layer any more. */
+	void ForgetRenderLayerCandidates();
 	/** A candidate changed on enough frames in a row to be made a layer: the next update looks at it. */
 	bool bRenderLayerPromotionsPending = false;
 	/** The widgets' RenderLayer settings are looked at in the next update: the list was made again, or a setting changed. */
@@ -1045,8 +1058,6 @@ private:
 	 * (PlaceRenderLayers), whose transforms it has composed by then.
 	 */
 	bool TendRenderLayers();
-	/** For draw calls just taken: which of them hold each layer's elements, and where the layer is. */
-	void GatherRenderLayerPlacements();
 	/** TendRenderLayersBeforeFinish ran this frame, and FinishDrawCallBatchData leaves the layers be. */
 	bool bRenderLayersTendedBeforeFinish = false;
 	/** PlaceRenderLayers moved a layer, and FinishDrawCallBatchData tells the rest. */
@@ -1055,6 +1066,8 @@ private:
 	void ForgetRenderLayers();
 	/** InLayer's transform relative to this canvas: what its elements are drawn through ahead of the mesh's. */
 	FMatrix44f GetLayerToCanvas(const UDreamWidget* InLayer) const;
+	/** The same, with the inverse of the canvas widget's world transform worked out once for many layers. */
+	static FMatrix44f GetLayerToCanvas(const UDreamWidget* InLayer, const FTransform& InCanvasInverse);
 	/** Set by MarkWidgetMoved; the next update decides whether the moves need a rebuild. */
 	bool bWidgetsMovedSinceUpdate = false;
 	/** What RefreshDrawCallVertices leaves to FinishDrawCallBatchData: whether a draw call's bounds moved, and the draw calls whose section it could not patch. */

@@ -11,6 +11,7 @@
 #include "Core/Components/DreamWidget.h"
 #include "Engine/GameInstance.h"
 #include "Core/Components/DreamCanvas.h"
+#include "Core/DreamUIRenderLayerTable.h"
 #include "Event/DreamBaseRaycaster.h"
 #include "RenderingThread.h"
 #include "Async/ParallelFor.h"
@@ -685,6 +686,11 @@ void UDreamUIManagerWorldSubsystem::SubmitCanvasDrawCall()
 			{
 				Canvas->PlaceRenderLayers();
 			}
+		}
+		// Every row the canvases wrote this frame -- a layer made, a layer placed -- sent up together, a run at a time.
+		if (RenderLayerTable != nullptr)
+		{
+			RenderLayerTable->Flush();
 		}
 		for (UDreamCanvas* Canvas : ToFinish)
 		{

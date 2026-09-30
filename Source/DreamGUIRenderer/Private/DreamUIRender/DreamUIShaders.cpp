@@ -1,6 +1,7 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
 #include "DreamUIRender/DreamUIShaders.h"
+#include "GlobalRenderResources.h"
 #include "PipelineStateCache.h"
 #include "Materials/Material.h"
 #include "ShaderParameterUtils.h"
@@ -20,7 +21,8 @@ IMPLEMENT_GLOBAL_SHADER_PARAMETER_STRUCT(FDreamUIWorldRenderDepthTexUB, "DreamUI
 FDreamUIScreenRenderVS::FDreamUIScreenRenderVS(const FMaterialShaderType::CompiledShaderInitializerType& Initializer)
 	: FMaterialShader(Initializer)
 {
-	ElementToCanvasParameter.Bind(Initializer.ParameterMap, TEXT("DreamUI_ElementToCanvas"));
+	RenderLayerTableParameter.Bind(Initializer.ParameterMap, TEXT("DreamUI_RenderLayerTable"));
+	RenderLayerWidgetDataParameter.Bind(Initializer.ParameterMap, TEXT("DreamUI_RenderLayerWidgetData"));
 }
 bool FDreamUIScreenRenderVS::ShouldCompilePermutation(const FMaterialShaderPermutationParameters& Parameters)
 {
@@ -37,12 +39,14 @@ void FDreamUIScreenRenderVS::ModifyCompilationEnvironment(const FMaterialShaderP
 	OutEnvironment.SetDefine(TEXT("VF_SUPPORTS_PRIMITIVE_SCENE_DATA"), false);
 	OutEnvironment.SetDefine(TEXT("NEEDS_WORLD_POSITION_EXCLUDING_SHADER_OFFSETS"), true);
 }
-void FDreamUIScreenRenderVS::SetMaterialShaderParameters(FRHICommandList& RHICmdList, const FSceneView& View, const FMaterialRenderProxy* MaterialRenderProxy, const FMaterial* Material, const TUniformBuffer<FPrimitiveUniformShaderParameters>* PrimitiveUniformBuffer, const FMatrix44f& InElementToCanvas)
+void FDreamUIScreenRenderVS::SetMaterialShaderParameters(FRHICommandList& RHICmdList, const FSceneView& View, const FMaterialRenderProxy* MaterialRenderProxy, const FMaterial* Material, const TUniformBuffer<FPrimitiveUniformShaderParameters>* PrimitiveUniformBuffer, FRHITexture* InRenderLayerTable, FRHITexture* InRenderLayerWidgetData)
 {
 	FRHIBatchedShaderParameters& BatchedParameters = RHICmdList.GetScratchShaderParameters();
 	SetUniformBufferParameter(BatchedParameters, GetUniformBufferParameter<FPrimitiveUniformShaderParameters>(), *PrimitiveUniformBuffer);
 	SetViewParameters(BatchedParameters, View, View.ViewUniformBuffer);
-	SetShaderValue(BatchedParameters, ElementToCanvasParameter, InElementToCanvas);
+	// Black when there is none: a record read from it names row 0, no layer.
+	SetTextureParameter(BatchedParameters, RenderLayerTableParameter, InRenderLayerTable != nullptr ? InRenderLayerTable : GBlackTexture->TextureRHI.GetReference());
+	SetTextureParameter(BatchedParameters, RenderLayerWidgetDataParameter, InRenderLayerWidgetData != nullptr ? InRenderLayerWidgetData : GBlackTexture->TextureRHI.GetReference());
 	RHICmdList.SetBatchedShaderParameters(RHICmdList.GetBoundVertexShader(), BatchedParameters);
 	FMaterialShader::SetParameters(RHICmdList, RHICmdList.GetBoundVertexShader(), MaterialRenderProxy, *Material, View);
 }

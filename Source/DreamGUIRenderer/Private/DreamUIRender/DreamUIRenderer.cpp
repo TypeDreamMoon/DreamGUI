@@ -701,20 +701,21 @@ void FDreamUIRenderer::DrawBuiltInBatch(FRHICommandList& RHICmdList, FGraphicsPi
 	GraphicsPSOInit.NumSamples = NumSamples;
 	SetGraphicsPipelineState(RHICmdList, GraphicsPSOInit, 0, EApplyRendertargetOption::CheckApply);
 
-	// Model-view-projection in double precision, demoted once.
-	const FMatrix ViewProjection = View.ViewMatrices.GetWorldToClip();
-	FDreamUIBaseVS::FParameters VSParameters;
-	VSParameters.DreamUI_MVP = FMatrix44f(Batch.LocalToWorld * ViewProjection);
-	VSParameters.DreamUI_M = FMatrix44f(Batch.LocalToWorld);
-	VSParameters.DreamUI_ElementToCanvas = Batch.ElementToCanvas;
-	SetShaderParameters(RHICmdList, VertexShader, VertexShader.GetVertexShader(), VSParameters);
-
 	// Each texture's reference, which is whatever texture its UTexture has now -- or a black one, once the UTexture is
 	// gone -- and each texture's own sampler, as the material path uses it.
 	auto TextureOrFallback = [](FRHITextureReference* InReference, FTexture* Fallback) -> FRHITexture*
 	{
 		return InReference != nullptr ? static_cast<FRHITexture*>(InReference) : Fallback->TextureRHI.GetReference();
 	};
+
+	// Model-view-projection in double precision, demoted once.
+	const FMatrix ViewProjection = View.ViewMatrices.GetWorldToClip();
+	FDreamUIBaseVS::FParameters VSParameters;
+	VSParameters.DreamUI_MVP = FMatrix44f(Batch.LocalToWorld * ViewProjection);
+	VSParameters.DreamUI_M = FMatrix44f(Batch.LocalToWorld);
+	VSParameters.DreamUI_RenderLayerTable = TextureOrFallback(Params.RenderLayerTableRHI.GetReference(), GBlackTexture);
+	VSParameters.DreamUI_RenderLayerWidgetData = TextureOrFallback(Params.WidgetDataTextureRHI.GetReference(), GBlackTexture);
+	SetShaderParameters(RHICmdList, VertexShader, VertexShader.GetVertexShader(), VSParameters);
 	auto SamplerOrBilinear = [](FRHISamplerState* InSampler) -> FRHISamplerState*
 	{
 		return InSampler != nullptr ? InSampler : TStaticSamplerState<SF_Bilinear, AM_Clamp, AM_Clamp, AM_Clamp>::GetRHI();
@@ -1315,7 +1316,7 @@ void FDreamUIRenderer::RecordWorldSpace_RenderThread(FRDGBuilder& GraphBuilder, 
 											GraphicsPSOInit.NumSamples = NumSamples;
 											SetGraphicsPipelineState(RHICmdList, GraphicsPSOInit, 0, EApplyRendertargetOption::CheckApply);
 
-											VertexShader->SetMaterialShaderParameters(RHICmdList, *RenderView, MaterialRenderProxy, Material, Mesh.Elements[0].PrimitiveUniformBufferResource, MeshBatchContainer.ElementToCanvas);
+											VertexShader->SetMaterialShaderParameters(RHICmdList, *RenderView, MaterialRenderProxy, Material, Mesh.Elements[0].PrimitiveUniformBufferResource, MeshBatchContainer.BuiltIn.RenderLayerTableRHI.GetReference(), MeshBatchContainer.BuiltIn.WidgetDataTextureRHI.GetReference());
 											PixelShader->SetMaterialShaderParameters(RHICmdList, *RenderView, MaterialRenderProxy, Material, Mesh.Elements[0].PrimitiveUniformBufferResource);
 											PixelShader->SetDepthBlendParameter(RHICmdList, BlendDepth, SceneDepthTexST, PassParameters->SceneDepthTex->GetRHI());
 											PixelShader->SetGammaValue(RHICmdList, GammaValue);
@@ -1347,7 +1348,7 @@ void FDreamUIRenderer::RecordWorldSpace_RenderThread(FRDGBuilder& GraphBuilder, 
 											GraphicsPSOInit.NumSamples = NumSamples;
 											SetGraphicsPipelineState(RHICmdList, GraphicsPSOInit, 0, EApplyRendertargetOption::CheckApply);
 
-											VertexShader->SetMaterialShaderParameters(RHICmdList, *RenderView, MaterialRenderProxy, Material, Mesh.Elements[0].PrimitiveUniformBufferResource, MeshBatchContainer.ElementToCanvas);
+											VertexShader->SetMaterialShaderParameters(RHICmdList, *RenderView, MaterialRenderProxy, Material, Mesh.Elements[0].PrimitiveUniformBufferResource, MeshBatchContainer.BuiltIn.RenderLayerTableRHI.GetReference(), MeshBatchContainer.BuiltIn.WidgetDataTextureRHI.GetReference());
 											PixelShader->SetMaterialShaderParameters(RHICmdList, *RenderView, MaterialRenderProxy, Material, Mesh.Elements[0].PrimitiveUniformBufferResource);
 											PixelShader->SetDepthBlendParameter(RHICmdList, BlendDepth, SceneDepthTexST, PassParameters->SceneDepthTex->GetRHI());
 											PixelShader->SetDepthFadeParameter(RHICmdList, DepthFade);
@@ -1798,7 +1799,7 @@ void FDreamUIRenderer::RecordScreenSpace_RenderThread(FRDGBuilder& GraphBuilder,
 									GraphicsPSOInit.NumSamples = NumSamples;
 									SetGraphicsPipelineState(RHICmdList, GraphicsPSOInit, 0, EApplyRendertargetOption::CheckApply);
 
-									VertexShader->SetMaterialShaderParameters(RHICmdList, *RenderView, MaterialRenderProxy, Material, Mesh.Elements[0].PrimitiveUniformBufferResource, MeshBatchContainer.ElementToCanvas);
+									VertexShader->SetMaterialShaderParameters(RHICmdList, *RenderView, MaterialRenderProxy, Material, Mesh.Elements[0].PrimitiveUniformBufferResource, MeshBatchContainer.BuiltIn.RenderLayerTableRHI.GetReference(), MeshBatchContainer.BuiltIn.WidgetDataTextureRHI.GetReference());
 									PixelShader->SetMaterialShaderParameters(RHICmdList, *RenderView, MaterialRenderProxy, Material, Mesh.Elements[0].PrimitiveUniformBufferResource);
 									PixelShader->SetGammaValue(RHICmdList, GammaValue);
 
@@ -2172,8 +2173,10 @@ void FDreamUIRenderer::RenderGizmoMesh_RenderThread(const TArray<TSharedPtr<FDre
 				FDreamUIBaseVS::FParameters VSParameters;
 				VSParameters.DreamUI_MVP = FMatrix44f(LocalToWorldMatrix * ViewProjection);
 				VSParameters.DreamUI_M = FMatrix44f(LocalToWorldMatrix);
-				// A gizmo's vertices are in its own space already, which LocalToWorldMatrix places.
-				VSParameters.DreamUI_ElementToCanvas = FMatrix44f::Identity;
+				// A gizmo's vertices are in its own space already, which LocalToWorldMatrix places: black widget data names
+				// row 0 of a black table, no layer.
+				VSParameters.DreamUI_RenderLayerTable = GBlackTexture->TextureRHI.GetReference();
+				VSParameters.DreamUI_RenderLayerWidgetData = GBlackTexture->TextureRHI.GetReference();
 				SetShaderParameters(RHICmdList, VertexShader, VertexShader.GetVertexShader(), VSParameters);
 
 				// The plain-colour permutation reads none of the textures, but the parameter struct is

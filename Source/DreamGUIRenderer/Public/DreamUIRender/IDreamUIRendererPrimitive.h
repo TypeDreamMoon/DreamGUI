@@ -38,16 +38,15 @@ struct FDreamUIMeshBatchContainer
 	 */
 	FBufferRHIRef IndexBufferRHI;
 	int32 NumVerts = 0;
-	/** When enabled, the renderer draws this batch with the built-in UI shader instead of Mesh.MaterialRenderProxy. */
+	/**
+	 * When enabled, the renderer draws this batch with the built-in UI shader instead of Mesh.MaterialRenderProxy. Enabled
+	 * or not, its widget data and render layer table are what either vertex shader places a render layer's vertices on the
+	 * canvas through before LocalToWorld (DreamUIRenderLayer.ush): the primitive stays the canvas, so that everything read
+	 * in its space -- a material's LocalPosition, the clip rects -- stays in canvas space.
+	 */
 	FDreamUIBuiltInDrawParams BuiltIn;
 	/** Primitive transform, for the built-in path (the material path reads it from the primitive uniform buffer). */
 	FMatrix LocalToWorld = FMatrix::Identity;
-	/**
-	 * What the vertices go through before LocalToWorld, on either path: the transform of the render layer the section's
-	 * vertices are kept relative to, identity for a section of none. The primitive stays the canvas, so that everything
-	 * read in its space -- a material's LocalPosition, the clip rects -- stays in canvas space.
-	 */
-	FMatrix44f ElementToCanvas = FMatrix44f::Identity;
 
 	FDreamUIMeshBatchContainer() {}
 };

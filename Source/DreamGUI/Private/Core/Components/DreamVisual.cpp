@@ -261,6 +261,8 @@ void UDreamVisual::SetWidgetPropertyDataStartPosition(int InPosition)
 		//these data store inside DataTexture and use WidgetPropertyDataStartPosition as coordinate, so mark these dirty to fill data
 		bWidgetPropertyDataFontMarkDirty = true;
 		bClipDataPositionChanged = true;
+		// A row handed out again holds whatever its last owner's render layer row was: written with the marks.
+		WrittenRenderLayerRow = INDEX_NONE;
 	}
 }
 
@@ -451,6 +453,7 @@ int UDreamVisual::WidgetPropertyDataLength =
 	+ sizeof(float) * FDreamTextStyle::PackedPixelCount//5th..13th pixel, text style (FDreamTextStyle::Pack), texts only
 	+ sizeof(float)//14th pixel, widget rect centre X in canvas space, as a float VALUE
 	+ sizeof(float)//15th pixel, widget rect centre Y in canvas space, as a float VALUE
+	+ sizeof(float)//16th pixel, the element's render layer row, as a float VALUE (RenderLayerRowPixelStart)
 ;
 
 /*
@@ -547,6 +550,21 @@ void UDreamVisual::FillWidgetPropertyDataForMaterial_ClipDataCoordinate(UDreamUI
 	FMemory::Memcpy(BlockBuffer.GetData(), &ClipDataStartPositionAsFloat, 4);
 
 	DataAsTexture->UpdateBlock(1, StartPosition, MoveTemp(BlockBuffer), 1);
+}
+
+void UDreamVisual::FillWidgetPropertyDataForMaterial_RenderLayerRow(UDreamUIDataAsTexture* DataAsTexture, int32 InRow)
+{
+	if (WrittenRenderLayerRow == InRow || WidgetPropertyDataStartPosition == INDEX_NONE || DataAsTexture == nullptr)
+	{
+		return;
+	}
+	WrittenRenderLayerRow = InRow;
+	// A float VALUE, like the clip coordinate beside it: a row's bit pattern would be a denormal.
+	const float RowAsFloat = static_cast<float>(InRow);
+	TArray<uint8> BlockBuffer;
+	BlockBuffer.SetNumUninitialized(sizeof(float));
+	FMemory::Memcpy(BlockBuffer.GetData(), &RowAsFloat, sizeof(float));
+	DataAsTexture->UpdateBlock(RenderLayerRowPixelStart, WidgetPropertyDataStartPosition, MoveTemp(BlockBuffer), 1);
 }
 
 void UDreamVisual::FillWidgetPropertyDataForMaterial_InitialMark(UDreamUIDataAsTexture* DataAsTexture, uint8 FontMark) const

@@ -8,15 +8,11 @@
 #include "/Engine/Public/Platform.ush"
 #include "/Engine/Private/GammaCorrectionCommon.ush"
 #include "/Plugin/DreamGUI/Private/DreamUIShade.ush"
+#include "/Plugin/DreamGUI/Private/DreamUIRenderLayer.ush"
 
 float4x4 DreamUI_MVP;
 float4x4 DreamUI_M;
 float4x4 DreamUI_InvM;
-/**
- * What the batch's vertices go through to be in canvas space: identity, or the transform of the render layer they are
- * kept relative to (UDreamWidget::IsRenderLayer). DreamUI_MVP starts from canvas space, as the clip rects do.
- */
-float4x4 DreamUI_ElementToCanvas;
 /** x: gamma curve adjustment, y: inverse display gamma, z: unused, w: unused */
 float4 DreamUI_GammaValues;
 /** xy: atlas slice size in texels, z: field range in texels (2 * spread), w: texels per em at the sample size */
@@ -64,8 +60,9 @@ void MainVS(
 )
 {
 	// Everything after this line -- the projection, the clip rects DreamUI_ShadePixel measures against -- is in canvas
-	// space, so a render layer's vertices are placed on the canvas first.
-	float3 CanvasPosition = mul(float4(Position, 1.0), DreamUI_ElementToCanvas).xyz;
+	// space, so a render layer's vertices are placed on the canvas first, through their layer's row of the table.
+	float3x3 LayerRotation;
+	float3 CanvasPosition = DreamUI_RenderLayerToCanvas(Position, TextureCoord1.x, LayerRotation);
 	Out.Position = mul(float4(CanvasPosition, 1.0), DreamUI_MVP);
 	Out.ScreenPosition = Out.Position;
 	Out.LocalPosition = CanvasPosition;

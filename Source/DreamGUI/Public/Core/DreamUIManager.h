@@ -25,6 +25,7 @@ class UDreamUIBehaviour;
 class ULevel;
 class UDreamRectBlockData;
 class UDreamUIDataAsTexture;
+class UDreamUIRenderLayerTable;
 enum class EDreamUIDataAsTexturePixelFormat : uint8;
 
 DECLARE_MULTICAST_DELEGATE_OneParam(FDreamUIEditorTickMulticastDelegate, float);
@@ -199,6 +200,11 @@ public:
 	 * back were still taken in the next one. The asset keeps what it is for, the material.
 	 */
 	UDreamUIDataAsTexture* GetRectBlockDataRows(UDreamRectBlockData* InData, int32 InBlockSizeInBytes, EDreamUIDataAsTexturePixelFormat InPixelFormat);
+	/**
+	 * Where this world's render layers stand on their canvases, for the shaders (UDreamUIRenderLayerTable): made when the
+	 * first canvas makes a layer, and gone with the world. Flushed once a frame, after the canvases placed their layers.
+	 */
+	UDreamUIRenderLayerTable* GetRenderLayerTable();
 #if WITH_EDITOR
 	/**
 	 * Broadcast on every editor tick of a world nobody plays -- the level editor's, a preview's -- for what
@@ -238,6 +244,9 @@ private:
 	/** See GetRectBlockDataRows. */
 	UPROPERTY(Transient, DuplicateTransient, TextExportTransient)
 	TMap<TObjectPtr<UDreamRectBlockData>, TObjectPtr<UDreamUIDataAsTexture>> RectBlockDataRows;
+	/** See GetRenderLayerTable. */
+	UPROPERTY(Transient, DuplicateTransient, TextExportTransient)
+	TObjectPtr<UDreamUIRenderLayerTable> RenderLayerTable;
 	
 	UPROPERTY(VisibleAnywhere, Category = "DreamGUI")
 	TArray<TWeakObjectPtr<UDreamCanvas>> AllCanvasArray;

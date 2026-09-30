@@ -24,6 +24,7 @@ struct FDreamUIBuiltInTextures
 	const UTexture* Font = nullptr;
 	const UTexture* WidgetData = nullptr;
 	const UTexture* ClipData = nullptr;
+	const UTexture* RenderLayerTable = nullptr;
 };
 
 /**
@@ -37,6 +38,9 @@ struct FDreamUIBuiltInTextures
  * outlives the texture, pointing at a black one once it is gone. The resource pointers they replace were kept across
  * frames and left dangling by each of those until the next rebuild of the draw call, and the sampler, fixed to a
  * bilinear one, drew a texture filtered nearest soft where the material drew it sharp.
+ *
+ * A section a material draws carries them too, with bEnabled off: its vertex shader reads the widget data and the render
+ * layer table as the built-in one does (DreamUIRenderLayer.ush), and nothing else here.
  */
 struct FDreamUIBuiltInDrawParams
 {
@@ -46,6 +50,8 @@ struct FDreamUIBuiltInDrawParams
 	TWeakObjectPtr<const UTexture> FontTexture;
 	TWeakObjectPtr<const UTexture> WidgetDataTexture;
 	TWeakObjectPtr<const UTexture> ClipDataTexture;
+	/** The world's render layer table, which a render layer's vertices are placed on the canvas through; none without layers. */
+	TWeakObjectPtr<const UTexture> RenderLayerTable;
 	/** Render thread: what a draw binds. Null where there is no texture; the draw then binds a fallback. */
 	FTextureReferenceRHIRef MainTextureRHI;
 	FSamplerStateRHIRef MainSamplerRHI;
@@ -53,6 +59,7 @@ struct FDreamUIBuiltInDrawParams
 	FSamplerStateRHIRef FontSamplerRHI;
 	FTextureReferenceRHIRef WidgetDataTextureRHI;
 	FTextureReferenceRHIRef ClipDataTextureRHI;
+	FTextureReferenceRHIRef RenderLayerTableRHI;
 	/** Atlas slice size in texels. */
 	FVector2f FontAtlasSize = FVector2f(1.0f, 1.0f);
 	/** Distance-field range in texels (twice the spread); 0 for non-field atlases. */
@@ -69,9 +76,10 @@ struct FDreamUIBuiltInDrawParams
 };
 
 /**
- * Vertex shader of the built-in UI pass: the full DreamGUI vertex, model and model-view-projection, and what takes the
- * vertices into canvas space first -- identity, or a render layer's transform (FDreamUIMeshBatchContainer::ElementToCanvas).
- * It has no default: a draw that leaves it unset draws through garbage.
+ * Vertex shader of the built-in UI pass: the full DreamGUI vertex, model and model-view-projection, and what takes a render
+ * layer's vertices into canvas space first -- the widget data, whose records say which row of the render layer table each
+ * element is placed through, and the table (DreamUIRenderLayer.ush). A draw with no layers binds black textures to both:
+ * every record then reads row 0, no layer.
  */
 class DREAMGUIRENDERER_API FDreamUIBaseVS : public FGlobalShader
 {
@@ -82,7 +90,8 @@ public:
 	BEGIN_SHADER_PARAMETER_STRUCT(FParameters, )
 		SHADER_PARAMETER(FMatrix44f, DreamUI_MVP)
 		SHADER_PARAMETER(FMatrix44f, DreamUI_M)
-		SHADER_PARAMETER(FMatrix44f, DreamUI_ElementToCanvas)
+		SHADER_PARAMETER_TEXTURE(Texture2D, DreamUI_RenderLayerTable)
+		SHADER_PARAMETER_TEXTURE(Texture2D, DreamUI_RenderLayerWidgetData)
 	END_SHADER_PARAMETER_STRUCT()
 
 	static bool ShouldCompilePermutation(const FGlobalShaderPermutationParameters& Parameters) { return true; }

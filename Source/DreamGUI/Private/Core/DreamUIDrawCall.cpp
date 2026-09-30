@@ -2,7 +2,33 @@
 
 #include "Core/DreamUIDrawCall.h"
 #include "Core/DreamUIGeometry.h"
+#include "Core/DreamUIRenderLayerTable.h"
 #include "Core/Components/DreamVisualBatchMesh.h"
+
+namespace DreamUIDrawCallLocal
+{
+	/**
+	 * InGeometry's box, into InOutCombined when it is in no render layer and into its layer's entry of InOutLayerBounds when
+	 * it is in one: its 2D bounds are the layer's then, which only the layer's row puts on the canvas.
+	 */
+	void AddGeometryBounds(const FDreamUIGeometry& InGeometry, FBox& InOutCombined, TArray<FDreamUIDrawCall::FLayerBounds>& InOutLayerBounds)
+	{
+		const FVector Min(0.1f, InGeometry.BoundsMin2DInCanvasSpace.X, InGeometry.BoundsMin2DInCanvasSpace.Y);
+		const FVector Max(0.1f, InGeometry.BoundsMax2DInCanvasSpace.X, InGeometry.BoundsMax2DInCanvasSpace.Y);
+		if (!InGeometry.IsInRenderLayer())
+		{
+			InOutCombined += Min;
+			InOutCombined += Max;
+			return;
+		}
+		if (InOutLayerBounds.Num() == 0 || InOutLayerBounds.Last().Row != InGeometry.RenderLayerRow)
+		{
+			InOutLayerBounds.AddDefaulted_GetRef().Row = InGeometry.RenderLayerRow;
+		}
+		InOutLayerBounds.Last().Bounds += Min;
+		InOutLayerBounds.Last().Bounds += Max;
+	}
+}
 
 bool FDreamUIDrawCall::CopyBatchMeshGeometry()
 {
@@ -33,9 +59,9 @@ bool FDreamUIDrawCall::CopyBatchMeshGeometry()
 		if (BatchMeshVisual == nullptr)return false;
 		TSharedPtr<const FDreamUIGeometry> Now = BatchMeshVisual->GetGeometryForBatching();
 		if (!Now.IsValid())return false;
-		// Kept in another space than the draw call is drawn in -- a render layer came or went -- which only the rebuild
-		// that asked for it can put right.
-		if (Now->RenderLayer != Built->RenderLayer)return false;
+		// Kept in another space than it was batched in -- a render layer came or went -- which only the rebuild that asked
+		// for it can put right.
+		if (Now->RenderLayer != Built->RenderLayer || Now->RenderLayerRow != Built->RenderLayerRow)return false;
 		//the slot is the size the batch was built with, so that -- not the live count -- is what the layout says; a
 		//count that no longer matches means the layout itself is stale
 		const int32 VertexCount = Built->Vertices.Num();
@@ -112,12 +138,27 @@ void FDreamUIDrawCall::ApplyBatchMeshBoundsToCombined()
 	// What ApplyBatchMeshGeometryToCombined adds to the bounds, and nothing else: every geometry when there is one, else
 	// only those with triangles.
 	CombinedBounds.Init();
+	LayerBounds.Reset();
 	for (int geoIndex = 0; geoIndex < BatchMeshGeometryArray.Num(); geoIndex++)
 	{
 		const FDreamUIGeometry& uiGeo = *BatchMeshGeometryArray[geoIndex];
 		if (BatchMeshGeometryArray.Num() != 1 && uiGeo.Triangles.Num() <= 0)continue;
-		CombinedBounds += FVector(0.1f, uiGeo.BoundsMin2DInCanvasSpace.X, uiGeo.BoundsMin2DInCanvasSpace.Y);
-		CombinedBounds += FVector(0.1f, uiGeo.BoundsMax2DInCanvasSpace.X, uiGeo.BoundsMax2DInCanvasSpace.Y);
+		DreamUIDrawCallLocal::AddGeometryBounds(uiGeo, CombinedBounds, LayerBounds);
+	}
+	CanvasBounds = CombinedBounds;
+}
+
+void FDreamUIDrawCall::PlaceBounds(const UDreamUIRenderLayerTable* InTable)
+{
+	CanvasBounds = CombinedBounds;
+	for (const FLayerBounds& Entry : LayerBounds)
+	{
+		if (Entry.Bounds.IsValid)
+		{
+			// A table that is gone places nothing: the layer's elements are boxed where they would stand in no layer.
+			const FMatrix44f LayerToCanvas = InTable != nullptr ? InTable->ReadRow(Entry.Row) : FMatrix44f::Identity;
+			CanvasBounds += Entry.Bounds.TransformBy(FMatrix(LayerToCanvas));
+		}
 	}
 }
 
@@ -126,6 +167,7 @@ void FDreamUIDrawCall::ApplyBatchMeshGeometryToCombined()
 	CombinedBatchMeshGeometryVertices.Reset();
 	CombinedBatchMeshGeometryTriangles.Reset();
 	CombinedBounds.Init();
+	LayerBounds.Reset();
 	
 	if (BatchMeshGeometryArray.Num() == 1)
 	{
@@ -134,8 +176,7 @@ void FDreamUIDrawCall::ApplyBatchMeshGeometryToCombined()
 		FMemory::Memcpy(CombinedBatchMeshGeometryVertices.GetData(), uiGeo.Vertices.GetData(), uiGeo.Vertices.Num() * sizeof(FDreamUIMeshVertex));
 		CombinedBatchMeshGeometryTriangles.SetNumUninitialized(uiGeo.Triangles.Num());
 		FMemory::Memcpy(CombinedBatchMeshGeometryTriangles.GetData(), uiGeo.Triangles.GetData(), uiGeo.Triangles.Num() * sizeof(FDreamUIMeshIndex));
-		CombinedBounds += FVector(0.1f, uiGeo.BoundsMin2DInCanvasSpace.X, uiGeo.BoundsMin2DInCanvasSpace.Y);
-		CombinedBounds += FVector(0.1f, uiGeo.BoundsMax2DInCanvasSpace.X, uiGeo.BoundsMax2DInCanvasSpace.Y);
+		DreamUIDrawCallLocal::AddGeometryBounds(uiGeo, CombinedBounds, LayerBounds);
 	}
 	else
 	{
@@ -164,12 +205,12 @@ void FDreamUIDrawCall::ApplyBatchMeshGeometryToCombined()
 				CombinedTriangleData[triangleIndicesIndex++] = (FDreamUIMeshIndex)triangleIndex;
 			}
 
-			CombinedBounds += FVector(0.1f, uiGeo.BoundsMin2DInCanvasSpace.X, uiGeo.BoundsMin2DInCanvasSpace.Y);
-			CombinedBounds += FVector(0.1f, uiGeo.BoundsMax2DInCanvasSpace.X, uiGeo.BoundsMax2DInCanvasSpace.Y);
+			DreamUIDrawCallLocal::AddGeometryBounds(uiGeo, CombinedBounds, LayerBounds);
 			
 			prevVertexCount += uiGeo.Vertices.Num();
 		}
 	}
+	CanvasBounds = CombinedBounds;
 }
 
 bool FDreamUIDrawCall::GeometryListsShareLayout(const TArray<TSharedPtr<const FDreamUIGeometry>>& A, const TArray<TSharedPtr<const FDreamUIGeometry>>& B)
@@ -203,8 +244,7 @@ bool FDreamUIDrawCall::GeometryListsShareLayout(const TArray<TSharedPtr<const FD
 bool FDreamUIDrawCall::CanConsumeUIGeometryForBatchMesh(const FDreamUIGeometry& geo)const
 {
 	if (this->Type != EDreamUIDrawCallType::BatchMesh)return false;
-	//a draw call is drawn through one render layer's transform, or through none: its vertices are all in one space
-	if (this->RenderLayer != geo.RenderLayer)return false;
+	// Whatever render layers its elements are in: each vertex is placed through its own layer's row, on the GPU.
 	// Compared as the keys they are, never resolved: this runs on the batching thread, and == and != resolve both weak
 	// pointers whenever they differ, reading the object array while a collection may be under way on the game thread. Two
 	// pointers set to the same object that has gone are still the same key; one set to nothing is not.
