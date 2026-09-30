@@ -1124,6 +1124,12 @@ private:
 	 * composed on a worker clears it, and workers composing siblings may clear it at once (ForgetChildrenStale).
 	 */
 	mutable int8 ChildrenStaleAndPending = 0;
+	/**
+	 * The transform event was asked for (GetTransformChangedEvent), the only way to bind it. Until then nothing listens, and
+	 * the event is not asked whether anything does: a look that, in a development build, takes the delegate's check against
+	 * other threads, for every write of every animated widget.
+	 */
+	bool bTransformChangedEventAsked = false;
 	/** Clears ChildrenStaleAndPending, from any thread. */
 	void ForgetChildrenStale()const
 	{
@@ -1217,6 +1223,8 @@ public:
 	FWidgetActiveChangedEvent& GetWidgetActiveChangedEvent(){return OnWidgetActiveChangedEvent;}
 	/** Asking for it counts as meaning to listen: a render layer holding this widget no longer takes its moves as quiet. */
 	FTransformChangedEvent& GetTransformChangedEvent();
+	/** Whether anything listens to the transform event: nothing can before it is asked for (bTransformChangedEventAsked). */
+	bool HasTransformChangedListener()const { return bTransformChangedEventAsked && OnTransformChangedEvent.IsBound(); }
 	FDimensionChangedEvent& GetDimensionChangedEvent(){return OnDimensionChangedEvent;}
 	FChildDimensionChangedEvent& GetChildDimensionChangedEvent(){return OnChildDimensionChangedEvent;}
 	FAttachmentChangedEvent& GetAttachmentChangedEvent(){return OnAttachmentChangedEvent;}

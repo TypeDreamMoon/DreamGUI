@@ -749,7 +749,7 @@ void UDreamWidget::CalculateObjectToWorldTransform(bool /*bPropagateToChildren*/
 	 * reads it. A wall of thousands of turning widgets otherwise listed every one of them for the flush, every frame, only for
 	 * it to be told that.
 	 */
-	if (bIsRenderLayer && !OnTransformChangedEvent.IsBound() && CVarDreamUIQuietRenderLayers.GetValueOnGameThread() != 0
+	if (bIsRenderLayer && !HasTransformChangedListener() && CVarDreamUIQuietRenderLayers.GetValueOnGameThread() != 0
 		&& IsRenderLayerQuiet())
 	{
 		bTransformChangePending = false;
@@ -893,14 +893,14 @@ void UDreamWidget::FlushTransformChangesFrom(UDreamWidget* InRoot, TFunctionRef<
 		// Composed here where something is about to look at it -- a canvas, a visual told to transform again, a layer placed,
 		// a listener. A widget that only moved with its render layer and has no listener stays stale until something reads
 		// it, which a frame of a turning layer's contents mostly never does.
-		if (Notice != EDreamTransformChangeNotice::InsideMovedLayer || Widget->OnTransformChangedEvent.IsBound())
+		if (Notice != EDreamTransformChangeNotice::InsideMovedLayer || Widget->HasTransformChangedListener())
 		{
 			Widget->GetWorldTransform();
 		}
 		InNotify(*Widget, Notice);
 		// Parents before children, and every child already marked: a parent's listener that reads a child's
 		// transform composes it then and there, so it never sees where the child was.
-		if (Widget->OnTransformChangedEvent.IsBound())
+		if (Widget->HasTransformChangedListener())
 		{
 			DREAMUI_DETAIL_SCOPE(DreamUI_TransformChangedEvent);
 			Widget->Call_TransformChanged();

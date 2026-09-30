@@ -63,7 +63,7 @@ bool UDreamWidget::IsRenderLayerQuiet()const
 			{
 				continue;
 			}
-			bQuiet = !Widget->bIsCanvasWidget && !Widget->bIsRenderLayer && !Widget->OnTransformChangedEvent.IsBound();
+			bQuiet = !Widget->bIsCanvasWidget && !Widget->bIsRenderLayer && !Widget->HasTransformChangedListener();
 			for (const UDreamWidget* Child : Widget->GetChildren())
 			{
 				ToVisit.Add(Child);
@@ -77,6 +77,7 @@ bool UDreamWidget::IsRenderLayerQuiet()const
 UDreamWidget::FTransformChangedEvent& UDreamWidget::GetTransformChangedEvent()
 {
 	// Whoever asks may bind, and every event is bound through here: a layer this widget is in is looked at again.
+	bTransformChangedEventAsked = true;
 	InvalidateRenderLayerCaches();
 	return OnTransformChangedEvent;
 }
