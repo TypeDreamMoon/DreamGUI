@@ -10,6 +10,18 @@
 #include "Core/Components/DreamCanvas.h"
 #include "Components/PrimitiveComponent.h"
 #include "Engine/World.h"
+#include "Algo/Sort.h"
+#include "Algo/Unique.h"
+#include "Async/ParallelFor.h"
+#include "HAL/IConsoleManager.h"
+#include "Misc/App.h"
+
+static TAutoConsoleVariable<int32> CVarDreamUIParallelRaycastMinVisuals(
+	TEXT("r.DreamUI.ParallelRaycastMinVisuals"),
+	2048,
+	TEXT("A canvas with at least this many visuals has them looked at by a ray -- whether they can be hit, and whether the ray ")
+	TEXT("comes near them -- on as many threads as there are, in the order they are listed. 0: always on the raycasting thread."),
+	ECVF_Default);
 
 namespace DreamBaseRaycasterLocal
 {
@@ -55,6 +67,73 @@ namespace DreamBaseRaycasterLocal
 		// Negated so a NaN anywhere in the ray answers "could reach" and defers to the exact test,
 		// rather than quietly culling the widget.
 		return !(DistanceSquared > Radius * Radius);
+	}
+
+	/** Every cheap test the ray puts to a visual before the exact one: whether it can be hit at all, and whether the ray comes near it. */
+	FORCEINLINE bool IsRaycastCandidate(const UDreamVisual* InVisual, const FVector& InRayOrigin, const FVector& InRayEnd)
+	{
+		const UDreamWidget* Widget = InVisual->GetWidget();
+		return Widget->GetRaycastableInHierarchy()
+			&& Widget->GetHitTestVisibleInHierarchy()
+			&& InVisual->GetRaycastTarget()
+			// Last of the cheap tests: the three above are field reads, this one is arithmetic on a cached sphere. The
+			// exact test is RaycastCandidates', and inverts a transform.
+			&& CouldRayReachVisual(InVisual, Widget, InRayOrigin, InRayEnd);
+	}
+
+	/**
+	 * IsRaycastCandidate for each of a canvas's many visuals, on as many threads as there are, into OutCandidates in the
+	 * order they are listed. Asked, a visual composes its widget's world transform and size and its rect's sphere, each of
+	 * which is the widget's own to write; what it reads of anything else is its parent's transform and size. Those are
+	 * composed first, each parent by one thread, and what they in turn read -- their own parents' transforms and sizes --
+	 * before that, on the thread that owns the tree; a parent that is also another's grandparent is composed there whole. So
+	 * no two threads ever compose one widget, nor does one compose what another reads. A wall of turning widgets has a
+	 * parent of its own for every visual -- the widget that turns, above the one that draws -- and composing those one after
+	 * another on the thread that owns the tree was most of what a ray cost.
+	 */
+	void GatherCandidatesInParallel(const TArray<UDreamVisual*>& InVisuals, const FVector& InRayOrigin, const FVector& InRayEnd, TArray<UDreamVisual*>& OutCandidates)
+	{
+		TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_ParallelRaycastCandidates);
+		TArray<const UDreamWidget*> Parents;
+		Parents.Reserve(InVisuals.Num());
+		for (const UDreamVisual* Visual : InVisuals)
+		{
+			if (const UDreamWidget* Parent = Visual->GetWidget()->GetParent())
+			{
+				Parents.Add(Parent);
+			}
+		}
+		Algo::Sort(Parents);
+		Parents.SetNum(Algo::Unique(Parents), EAllowShrinking::No);
+		for (const UDreamWidget* Parent : Parents)
+		{
+			if (const UDreamWidget* GrandParent = Parent->GetParent())
+			{
+				GrandParent->GetWorldTransform();
+				GrandParent->GetWidth();
+				GrandParent->GetHeight();
+			}
+		}
+		ParallelFor(TEXT("DreamUI_RaycastParents"), Parents.Num(), 256, [&Parents](int32 Index)
+		{
+			const UDreamWidget* Parent = Parents[Index];
+			Parent->GetWorldTransform();
+			Parent->GetWidth();
+			Parent->GetHeight();
+		});
+		TArray<uint8> Reached;
+		Reached.SetNumZeroed(InVisuals.Num());
+		ParallelFor(TEXT("DreamUI_RaycastCandidates"), InVisuals.Num(), 256, [&InVisuals, &Reached, &InRayOrigin, &InRayEnd](int32 Index)
+		{
+			Reached[Index] = IsRaycastCandidate(InVisuals[Index], InRayOrigin, InRayEnd) ? 1 : 0;
+		});
+		for (int32 Index = 0; Index < InVisuals.Num(); ++Index)
+		{
+			if (Reached[Index] != 0)
+			{
+				OutCandidates.Add(InVisuals[Index]);
+			}
+		}
 	}
 }
 
@@ -139,17 +218,20 @@ void UDreamBaseRaycaster::GatherRaycastCandidates(UDreamCanvas* InRootCanvas, co
 	for (int32 Index = 0; Index < Canvases.Num(); ++Index)
 	{
 		const UDreamCanvas* Canvas = Canvases[Index];
-		for (UDreamVisual* Visual : Canvas->GetVisualArray())
+		const TArray<UDreamVisual*>& Visuals = Canvas->GetVisualArray();
+		const int32 MinParallel = CVarDreamUIParallelRaycastMinVisuals.GetValueOnAnyThread();
+		if (MinParallel > 0 && Visuals.Num() >= MinParallel && FApp::ShouldUseThreadingForPerformance())
 		{
-			const UDreamWidget* Widget = Visual->GetWidget();
-			if (Widget->GetRaycastableInHierarchy()
-				&& Widget->GetHitTestVisibleInHierarchy()
-				&& Visual->GetRaycastTarget()
-				// Last of the cheap tests: the three above are field reads, this one is arithmetic on a cached sphere. The
-				// exact test is RaycastCandidates', and inverts a transform.
-				&& DreamBaseRaycasterLocal::CouldRayReachVisual(Visual, Widget, InRayOrigin, InRayEnd))
+			DreamBaseRaycasterLocal::GatherCandidatesInParallel(Visuals, InRayOrigin, InRayEnd, OutCandidates);
+		}
+		else
+		{
+			for (UDreamVisual* Visual : Visuals)
 			{
-				OutCandidates.Add(Visual);
+				if (DreamBaseRaycasterLocal::IsRaycastCandidate(Visual, InRayOrigin, InRayEnd))
+				{
+					OutCandidates.Add(Visual);
+				}
 			}
 		}
 		int32 InsertAt = Index + 1;

@@ -504,4 +504,79 @@ bool FDreamWorldRaycastParallelTest::RunTest(const FString& Parameters)
 	return true;
 }
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamRaycastParallelVisualsTest,
+	"DreamGUI.WorldRaycast.ACanvasOfManyVisualsLookedAtOnWorkersHitsWhatItHitsLookedAtOneAfterAnother",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamRaycastParallelVisualsTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamWorldRaycastTestLocal;
+	FScopedGameWorld Scope;
+	if (!TestNotNull(TEXT("A world to trace in"), Scope.World))
+	{
+		return false;
+	}
+	UDreamCanvas* Canvas = nullptr;
+	UDreamWidget* Panel = MakeWorldPanel(Scope.World, TEXT("Panel"), FVector(300.0, 0.0, 0.0), 400.0f, Canvas);
+	if (!TestNotNull(TEXT("A panel"), Panel))
+	{
+		return false;
+	}
+	// Twenty-five cards in a five by five grid across the panel, the ray through the middle one, each card with a face on
+	// it: a face's parent is a card, whose transform and size the workers read while it composes its own.
+	TArray<UDreamWidget*> Cards;
+	for (int32 Index = 0; Index < 25; ++Index)
+	{
+		UDreamWidget* Card = UDreamUIBPLibrary::ConstructWidget(Scope.World, FString::Printf(TEXT("Card%d"), Index), UDreamVisualEmpty::StaticClass());
+		UDreamWidget* Face = UDreamUIBPLibrary::ConstructWidget(Scope.World, FString::Printf(TEXT("Face%d"), Index), UDreamVisualEmpty::StaticClass());
+		if (!TestTrue(TEXT("A card and its face"), Card != nullptr && Face != nullptr))
+		{
+			return false;
+		}
+		Card->SetWidth(60.0f);
+		Card->SetHeight(60.0f);
+		Card->TrySetParent(Panel, false);
+		Card->SetAnchoredPosition(FVector2D(70.0 * (Index % 5 - 2), 70.0 * (Index / 5 - 2)));
+		Face->SetWidth(20.0f);
+		Face->SetHeight(20.0f);
+		Face->TrySetParent(Card, false);
+		Cards.Add(Card);
+	}
+	UDreamWorldSpaceRaycasterFixedRay* Raycaster = MakeFixedRayRaycaster(Scope.World);
+	UDreamPointerEventData* EventData = NewObject<UDreamPointerEventData>();
+	if (!TestNotNull(TEXT("A raycaster"), Raycaster) || !TestNotNull(TEXT("A pointer"), EventData))
+	{
+		return false;
+	}
+	const auto Trace = [Raycaster, EventData, &Cards](int32 InParallelMinVisuals)
+	{
+		// Turned, then turned again to where both traces find them: every card and face is stale when the ray looks.
+		for (int32 Index = 0; Index < Cards.Num(); ++Index)
+		{
+			Cards[Index]->SetRenderRotation(FRotator::ZeroRotator);
+			Cards[Index]->SetRenderRotation(FRotator(0.0, 3.0 * (Index % 5), 7.0 * (Index % 3)));
+		}
+		const DreamTests::Lifecycle::FScopedConsoleVariable Parallel(TEXT("r.DreamUI.ParallelRaycastMinVisuals"), InParallelMinVisuals);
+		FVector RayOrigin = FVector::ZeroVector, RayDirection = FVector::ZeroVector, RayEnd = FVector::ZeroVector;
+		TArray<FDreamUIHitResult> Hits;
+		Raycaster->Raycast(EventData, RayOrigin, RayDirection, RayEnd, Hits);
+		return Hits;
+	};
+	const TArray<FDreamUIHitResult> OneAfterAnother = Trace(0);
+	const TArray<FDreamUIHitResult> Together = Trace(1);
+	if (!TestTrue(TEXT("Looked at one after another, the ray hits the panel and what is on it in the middle"), OneAfterAnother.Num() >= 2)
+		|| !TestEqual(TEXT("...and looked at together, as many"), Together.Num(), OneAfterAnother.Num()))
+	{
+		return false;
+	}
+	for (int32 Index = 0; Index < Together.Num(); ++Index)
+	{
+		TestTrue(FString::Printf(TEXT("Hit %d is the same widget at the same distance"), Index),
+			Together[Index].Widget.Get() == OneAfterAnother[Index].Widget.Get()
+			&& FMath::IsNearlyEqual(Together[Index].Distance, OneAfterAnother[Index].Distance));
+	}
+	return true;
+}
+
 #endif
