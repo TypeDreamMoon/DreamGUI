@@ -1076,6 +1076,12 @@ private:
 	/** TendRenderLayersBeforeFinish ran this frame, and FinishDrawCallBatchData leaves the layers be. */
 	bool bRenderLayersTendedBeforeFinish = false;
 	/**
+	 * What the layers are composed from -- the canvas widget's transform, the layers' parents' transforms and sizes -- is left
+	 * by TendRenderLayers to the thread that places them (PlaceRenderLayers): this canvas is its own root and holds no other,
+	 * so no other canvas's placement reaches into its tree.
+	 */
+	bool bComposeLayerParentsWhenPlacing = false;
+	/**
 	 * Draw-call data was handed to the batching (UpdateCanvasDrawCall) that TakeDrawCallBatchData has not since waited for
 	 * and taken. A canvas that holds still hands it none, and its every frame's wait and look at the batching's queue --
 	 * two objects of its own to read, for each of thousands of world panels -- is skipped.

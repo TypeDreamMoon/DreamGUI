@@ -1170,6 +1170,14 @@ bool UDreamCanvas::TendRenderLayers()
 	 * layers of a canvas mostly share a parent, told from the last one by its weak pointer's identity, not by a look-up.
 	 */
 	const bool bPlacementLikely = bRenderLayersMayHaveMoved && IsValid(UIMesh) && GetRenderLayerTable(/*bInCreate*/ false) != nullptr;
+	/**
+	 * ...except for a root canvas holding no other: its tree is its own, and the one thread placing it composes what its
+	 * layers are composed from (PlaceRenderLayers), alongside the other canvases, rather than this thread doing it for each of
+	 * a world of panels in turn. A canvas holding another, or held by one, shares a tree another thread may be placing.
+	 */
+	const bool bComposeWhenPlacing = IsOwnRoot() && ChildrenCanvasArray.Num() == 0;
+	bComposeLayerParentsWhenPlacing = bComposeWhenPlacing;
+	const bool bComposeHere = bPlacementLikely && !bComposeWhenPlacing;
 	TWeakObjectPtr<UDreamWidget> LastParent;
 	auto ComposeParentOf = [&LastParent](const UDreamWidget& InLayer)
 	{
@@ -1186,18 +1194,26 @@ bool UDreamCanvas::TendRenderLayers()
 		}
 	};
 	bool bParentsComposed = false;
-	if (bPlacementLikely)
+	if (bComposeHere)
 	{
 		if (const UDreamWidget* CanvasWidget = GetWidget())
 		{
 			CanvasWidget->GetWorldTransform();
 		}
 	}
+	const bool bCanDraw = bEnabled && IsValid(UIMesh) && UIMesh->CanDrawRenderLayers();
+	const uint64 DemoteFrames = static_cast<uint64>(FMath::Max(CVarDreamUIRenderLayerDemoteFrames.GetValueOnGameThread(), 1));
+	/**
+	 * Whether a layer is to be given back is looked at every eighth of the frames it has to hold still for, a canvas's turn
+	 * staggered from another's: a layer held still that long is given back a few frames later at most, and a world of panels
+	 * does not look at every layer of every canvas every frame. Every frame when the layers cannot be drawn at all, and when
+	 * the frames to hold still are few.
+	 */
+	const uint64 LookEvery = FMath::Max<uint64>(DemoteFrames / 8, 1);
+	const bool bDemotionDue = !bCanDraw || LookEvery == 1 || (Frame + static_cast<uint64>(GetUniqueID())) % LookEvery == 0;
 	// Taken back here rather than at an update, which a canvas that holds still does not have: each asks for one.
-	if (RenderLayers.Num() > 0 && !bDrawCallRebuildSuspended)
+	if (RenderLayers.Num() > 0 && !bDrawCallRebuildSuspended && bDemotionDue)
 	{
-		const bool bCanDraw = bEnabled && IsValid(UIMesh) && UIMesh->CanDrawRenderLayers();
-		const uint64 DemoteFrames = static_cast<uint64>(FMath::Max(CVarDreamUIRenderLayerDemoteFrames.GetValueOnGameThread(), 1));
 		// This canvas, told from a layer's weak pointer to its canvas by identity: it is alive, so only a pointer to it
 		// compares equal, and no layer's pointer is looked up for it.
 		const TWeakObjectPtr<UDreamCanvas> ThisCanvas(this);
@@ -1218,12 +1234,12 @@ bool UDreamCanvas::TendRenderLayers()
 				// Composes nothing and marks no transform stale: what was composed for the layers before stays composed.
 				TakeBackRenderLayer(Index);
 			}
-			else if (bPlacementLikely)
+			else if (bComposeHere)
 			{
 				ComposeParentOf(*Layer);
 			}
 		}
-		bParentsComposed = bPlacementLikely;
+		bParentsComposed = bComposeHere;
 	}
 	// A candidate is worth remembering only while its run of changes may still go on.
 	if (RenderLayerCandidates.Num() > 0)
@@ -1254,8 +1270,9 @@ bool UDreamCanvas::TendRenderLayers()
 		bRenderLayersMayHaveMoved = false;
 		return false;
 	}
-	// Not composed above, the placement having looked unlikely then, or no layer having been looked at to take back.
-	if (!bParentsComposed)
+	// Not composed above, the placement having looked unlikely then, or no layer having been looked at to take back; and not
+	// left to the placement.
+	if (!bParentsComposed && !bComposeWhenPlacing)
 	{
 		if (const UDreamWidget* CanvasWidget = GetWidget())
 		{
@@ -1325,6 +1342,27 @@ void UDreamCanvas::PlaceRenderLayers()
 	 * its own row alone, so a canvas of thousands of layers places them on as many threads as there are.
 	 */
 	const UDreamWidget* CanvasWidget = GetWidget();
+	// What the layers are composed from, when TendRenderLayers left it to the thread placing them: the parents here, each
+	// once, and the canvas widget just below. One thread places this canvas, and no other canvas's tree reaches into it.
+	if (bComposeLayerParentsWhenPlacing)
+	{
+		TWeakObjectPtr<UDreamWidget> LastParent;
+		for (const FRenderLayerRecord& Record : RenderLayers)
+		{
+			const UDreamWidget* Layer = Record.Layer.Get();
+			if (Layer == nullptr || Layer->Parent.HasSameIndexAndSerialNumber(LastParent))
+			{
+				continue;
+			}
+			LastParent = Layer->Parent;
+			if (const UDreamWidget* Parent = Layer->Parent.Get())
+			{
+				Parent->GetWorldTransform();
+				Parent->GetWidth();
+				Parent->GetHeight();
+			}
+		}
+	}
 	const FTransform CanvasInverse = CanvasWidget != nullptr ? CanvasWidget->GetWorldTransform().Inverse() : FTransform::Identity;
 	std::atomic<int32> Moved{ 0 };
 	auto Place = [this, Table, &CanvasInverse, &Moved](int32 InIndex)
