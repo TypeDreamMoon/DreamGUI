@@ -1260,4 +1260,70 @@ bool FDreamWidgetAnimationDirectEvaluationDeclinesTest::RunTest(const FString& P
 	return true;
 }
 
+/*
+ * The Queue calls: each waits for the end of the frame's sequence tick, which is what makes it safe to call from inside an
+ * animation's own Started and Finished. Every one of them used to hand the tick manager a latent action bound to no
+ * object, which the tick manager asserts on as the action is added.
+ */
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamWidgetAnimationQueuedCallsTest,
+	"DreamGUI.Animation.Playback.QueuedCallsRunWhenTheFramesSequenceTickEnds",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamWidgetAnimationQueuedCallsTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamWidgetAnimationPlaybackTestLocal;
+	// Declared before the tree: a Finished listener below counts into it, and the tree's teardown may still finish something.
+	int32 FinishedCount = 0;
+	FScopedGameWorld Scope;
+	FScopedTree Tree(Scope.World);
+	Tree.AddFloatTrack(TEXT("AnimatableWidth"), 20.0f, 220.0f);
+	// The tick manager runs what was queued at the end of a tick that updated a group of players, and there is a group
+	// only while a player is registered with it: the component's own player, given the animation here, is one.
+	Tree.Animator->InitSequencePlayer();
+
+	Tree.Animator->QueuePlayAnimation(Tree.Animation);
+	TestFalse(TEXT("A queued play has not started when the call returns"), Tree.Animator->HasPlayingAnimation(Tree.Animation));
+	TickFrames(Scope.World, 1);
+	const FDreamUIAnimationHandle Handle = Tree.Animator->FindAnimationInstance(Tree.Animation);
+	if (!TestTrue(TEXT("It has started by the end of the frame's sequence tick"), Tree.Animator->IsAnimationPlaying(Handle)))
+	{
+		return false;
+	}
+
+	TickFrames(Scope.World, 3);
+	Tree.Animator->QueuePauseAnimation(Handle);
+	TestTrue(TEXT("A queued pause leaves the instance playing when the call returns"), Tree.Animator->IsAnimationPlaying(Handle));
+	TickFrames(Scope.World, 1);
+	TestTrue(TEXT("...and has paused it by the end of the frame"), Tree.Animator->IsAnimationPaused(Handle));
+
+	Tree.Animator->QueueStopAnimation(Handle);
+	TestTrue(TEXT("A queued stop leaves the instance live when the call returns"), Handle.IsValid());
+	TickFrames(Scope.World, 1);
+	TestFalse(TEXT("...and has ended it by the end of the frame"), Handle.IsValid());
+
+	// What the queue is for: the next play asked for from inside the Finished of the one before.
+	UDreamWidgetAnimationComponent* Animator = Tree.Animator;
+	UDreamWidgetAnimation* Animation = Tree.Animation;
+	Tree.Animator->OnInstanceFinished.AddLambda([&FinishedCount, Animator, Animation](const FDreamUIAnimationHandle&)
+	{
+		if (++FinishedCount == 1)
+		{
+			Animator->QueuePlayAnimation(Animation);
+		}
+	});
+	const FDreamUIAnimationHandle First = Tree.Animator->PlayAnimation(Tree.Animation);
+	TickFrames(Scope.World, AnimationFrames + 3);
+	TestEqual(TEXT("The first play finished once"), FinishedCount, 1);
+	const FDreamUIAnimationHandle Second = Tree.Animator->FindAnimationInstance(Tree.Animation);
+	TestTrue(TEXT("The play its Finished queued has started after it"),
+		Second.IsValid() && Second.Player != First.Player && Tree.Animator->IsAnimationPlaying(Second));
+
+	Tree.Animator->QueueStopAllAnimations();
+	TestTrue(TEXT("A queued stop of everything leaves it playing when the call returns"), Tree.Animator->HasPlayingAnimation(Tree.Animation));
+	TickFrames(Scope.World, 1);
+	TestFalse(TEXT("...and has stopped it by the end of the frame"), Tree.Animator->HasPlayingAnimation(Tree.Animation));
+	return true;
+}
+
 #endif

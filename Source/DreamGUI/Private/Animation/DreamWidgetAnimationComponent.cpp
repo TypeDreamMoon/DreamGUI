@@ -375,14 +375,10 @@ void UDreamWidgetAnimationComponent::QueueAnimationAction(TFunction<void()> Acti
 		Action();
 		return;
 	}
-	TWeakObjectPtr<UDreamWidgetAnimationComponent> WeakThis(this);
-	TickManager->AddLatentAction(FMovieSceneSequenceLatentActionDelegate::CreateLambda([WeakThis, Action = MoveTemp(Action)]()
-	{
-		if (WeakThis.IsValid())
-		{
-			Action();
-		}
-	}));
+	// Bound to this component rather than handed over as a bare lambda. The tick manager keys every latent action by the
+	// object it belongs to: it asserts that there is one when the action is added, and a pass runs one action per object
+	// before flushing again. The weak binding is also what drops the action unrun when the component is gone by then.
+	TickManager->AddLatentAction(FMovieSceneSequenceLatentActionDelegate::CreateWeakLambda(this, MoveTemp(Action)));
 }
 
 void UDreamWidgetAnimationComponent::QueuePlayAnimation(UMovieSceneSequence* Animation, float StartAtTime, int32 NumLoopsToPlay, EDreamUIAnimationPlayMode PlayMode, float PlaybackSpeed, bool bRestoreState)
