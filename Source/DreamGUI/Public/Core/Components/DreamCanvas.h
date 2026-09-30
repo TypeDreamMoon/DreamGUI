@@ -214,8 +214,6 @@ private:
 	void RemoveFromViewExtension(bool PropagateToChildrenCanvas);
 	TSharedPtr<class FDreamUIRenderer, ESPMode::ThreadSafe> RenderTargetViewExtension = nullptr;
 	TSharedPtr<class FDreamUIRenderer, ESPMode::ThreadSafe> GetRenderTargetViewExtension();
-	/** Render-target mode: the target is to be drawn this frame, once the sections have gone (DrawRenderTargetIfRequested). */
-	bool bRenderTargetDrawRequested = false;
 public:
 	/**
 	 * Render-target mode, with the renderer's drawer on: draws the target, when this frame asked for it, with a render
@@ -303,12 +301,6 @@ public:
 protected:
 	/** Root DreamCanvas on hierarchy. DreamGUI's update start from the RootCanvas, and goes all down to every UI elements under it */
 	UPROPERTY(Transient) mutable TWeakObjectPtr<UDreamCanvas> RootCanvas = nullptr;
-	/**
-	 * RootCanvas as last set, for asking whether this canvas is its own root without a weak look-up: compared with this
-	 * canvas only, which is alive while it asks, so a root gone since cannot compare equal. Every pass over a world of
-	 * panels asks each of them several times a frame.
-	 */
-	mutable const UDreamCanvas* RootCanvasRaw = nullptr;
 	/** Whether this canvas is its own root: see RootCanvasRaw. */
 	bool IsOwnRoot()const { return RootCanvasRaw == this; }
 	void CheckRenderMode(bool PropagateToChildrenCanvas);
@@ -852,25 +844,7 @@ public:
 	/**  */
 	void MarkNeedVerifyMaterials();
 private:
-	uint32 bCanTickUpdate : 1 = true;//if Canvas can update from tick
-	uint32 bShouldRebuildDrawCall : 1 = true;
-	/** See SetDrawCallRebuildSuspended. The request above is kept, not dropped, while this is set. */
-	uint32 bDrawCallRebuildSuspended : 1 = false;
-	/**
-	 * A vertex refresh asked for -- a colour, an alpha, nothing moved -- and not yet carried out. It stays until the
-	 * draw calls in hand take it (UpdateDrawCallBatchData) or a rebuild prepares what it asked for.
-	 */
-	uint32 bHasPendingUpdateData : 1 = false;
-	uint32 bNeedToSortRenderPriority : 1 = true;
-	uint32 bHasAddToDreamScreenSpaceRenderer : 1 = false;//is this canvas added to DreamGUI screen space renderer
-	uint32 bRequestUpdateForRenderTarget : 1 = true;//request update when RenderTargetUpdateMode is WhenRequest
-	uint32 bAnythingChangedForRenderTarget : 1 = true;//if children canvas anything changed, then mark this property for root canvas, good for RenderTarget mode to update
-	uint32 bPrevAnythingChangedForRenderTarget : 1 = true;//same as upper one, but the prev frame
-	uint32 bHasSetInitialStateForDreamWorldSpaceRenderer : 1 = false;//is DreamGUI world space renderer's initial state set
-	uint32 bNeedToVerifyMaterials : 1 = true;
-	uint32 bNeedToGenerateWidgetList : 1 = true;
-
-	uint32 bPrevIsVisible : 1 = true;//is DreamWidget active in prev frame?
+	// The update's flags are kept with the rest of what every pass over the canvases reads: see RegisteredWithManager.
 
 	uint32 bOverrideViewLocation:1=false, bOverrideViewRotation:1=false, bOverrideProjectionMatrix:1=false, bOverrideFovAngle:1=false;
 
@@ -882,11 +856,6 @@ private:
 	friend class FDreamCanvasSuspendedRebuildKeepsTheRequestTest;
 	friend class FDreamRenderLayerManyOnOneCanvasTest;
 	friend class FDreamRenderLayerRefreshBeforeSensitiveTest;
-	/**
-	 * RenderMode can affect UI's renderer, basically WorldSpace use UE's built-in renderer, others use DreamGUI's renderer. Different renderers cannot share same render data.
-	 * eg: when attach to other canvas, this will tell which render mode in old canvas, and if not compatible then recreate render data.
-	 */
-	EDreamRenderMode CurrentRenderMode = EDreamRenderMode::None;
 	FORCEINLINE bool RenderModeIsDreamRendererOrUERenderer(EDreamRenderMode InRenderMode)const
 	{
 		if (bForceRenderToTarget)return true;
@@ -900,8 +869,6 @@ private:
 	float OverrideFovAngle = 0;
 	FMatrix OverrideProjectionMatrix = FMatrix::Identity;
 
-	UPROPERTY(Transient, DuplicateTransient, TextExportTransient)
-	mutable TObjectPtr<UDreamUIMeshComponent> UIMesh;//current using UIMesh.
 	/**
 	 * The proxies the canvas draws its materials through, per source material: DreamGUI answers the parameters it gives a
 	 * material in the material's place (FDreamUIMaterialProxy), and a proxy is taken back rebuild after rebuild.
@@ -933,8 +900,6 @@ private:
 	FDelegateHandle AttachedRootSceneComponentTransformHandle;
 	void OnAttachedRootSceneComponentTransformUpdated(USceneComponent* UpdatedComponent, EUpdateTransformFlags UpdateTransformFlags, ETeleportType Teleport);
 	
-	//clip data is stored in root canvas
-	TArray<TSharedPtr<FDreamUIClipData>> ClipDataList;
 	UPROPERTY(Transient, DuplicateTransient, TextExportTransient, VisibleAnywhere, Category = "DreamGUI", AdvancedDisplay)
 	TObjectPtr<UDreamUIDataAsTexture> ClipDataAsTexture;//clip coordinate stored in UV1.x
 	//widget property data is stored in each canvas (not only root canvas)
@@ -955,9 +920,6 @@ public:
 	/** Same, from the visual's local bounds as plain data -- safe to call off the game thread. */
 	static void CalculateVisual2DBounds(const FVector2D& InLocalMin, const FVector2D& InLocalMax, const FTransform2D& OutTransform2D, FVector2D& OutMin, FVector2D& OutMax);
 private:
-
-	/** canvas array belong to this canvas in hierarchy. */
-	UPROPERTY(Transient) TArray<TWeakObjectPtr<UDreamCanvas>> ChildrenCanvasArray;
 	/** update Canvas's draw-call */
 	void UpdateCanvasDrawCall();
 	/** mark render finish */
@@ -1049,9 +1011,60 @@ private:
 	friend class UDreamUIManagerWorldSubsystem;
 	/**
 	 * The manager this canvas is registered with (UDreamUIManagerWorldSubsystem::AddCanvas), which asks whether it still is
-	 * once for every canvas on every pass over them (IsCanvasStillRegistered). Only ever compared, never followed.
+	 * once for every canvas on every pass over them (IsCanvasStillRegistered), and which the canvas tells what it asks of the
+	 * world's UI -- a ray traced again, a sort, a render target drawn -- without looking up its widget and the manager that
+	 * registered. Cleared when the canvas is removed, and for any canvas still registered when the manager is deinitialized:
+	 * while it is set, the manager is alive.
+	 *
+	 * What follows, down to the draw calls the refresh leaves to the finish, is what the passes over every canvas read of each
+	 * one every frame -- the update, the submit, a layer's move -- declared together. A world of panels is thousands of
+	 * canvases, and flags spread over each of them were as many reads from memory for each pass.
 	 */
-	const UDreamUIManagerWorldSubsystem* RegisteredWithManager = nullptr;
+	UDreamUIManagerWorldSubsystem* RegisteredWithManager = nullptr;
+	/**
+	 * RootCanvas as last set, for asking whether this canvas is its own root without a weak look-up: compared with this
+	 * canvas only, which is alive while it asks, so a root gone since cannot compare equal. Every pass over a world of
+	 * panels asks each of them several times a frame.
+	 */
+	mutable const UDreamCanvas* RootCanvasRaw = nullptr;
+	/**
+	 * RenderMode can affect UI's renderer, basically WorldSpace use UE's built-in renderer, others use DreamGUI's renderer. Different renderers cannot share same render data.
+	 * eg: when attach to other canvas, this will tell which render mode in old canvas, and if not compatible then recreate render data.
+	 */
+	EDreamRenderMode CurrentRenderMode = EDreamRenderMode::None;
+	/** Render-target mode: the target is to be drawn this frame, once the sections have gone (DrawRenderTargetIfRequested). */
+	bool bRenderTargetDrawRequested = false;
+	uint32 bCanTickUpdate : 1 = true;//if Canvas can update from tick
+	uint32 bShouldRebuildDrawCall : 1 = true;
+	/** See SetDrawCallRebuildSuspended. The request above is kept, not dropped, while this is set. */
+	uint32 bDrawCallRebuildSuspended : 1 = false;
+	/**
+	 * A vertex refresh asked for -- a colour, an alpha, nothing moved -- and not yet carried out. It stays until the
+	 * draw calls in hand take it (UpdateDrawCallBatchData) or a rebuild prepares what it asked for.
+	 */
+	uint32 bHasPendingUpdateData : 1 = false;
+	uint32 bNeedToSortRenderPriority : 1 = true;
+	uint32 bHasAddToDreamScreenSpaceRenderer : 1 = false;//is this canvas added to DreamGUI screen space renderer
+	uint32 bRequestUpdateForRenderTarget : 1 = true;//request update when RenderTargetUpdateMode is WhenRequest
+	uint32 bAnythingChangedForRenderTarget : 1 = true;//if children canvas anything changed, then mark this property for root canvas, good for RenderTarget mode to update
+	uint32 bPrevAnythingChangedForRenderTarget : 1 = true;//same as upper one, but the prev frame
+	uint32 bHasSetInitialStateForDreamWorldSpaceRenderer : 1 = false;//is DreamGUI world space renderer's initial state set
+	uint32 bNeedToVerifyMaterials : 1 = true;
+	uint32 bNeedToGenerateWidgetList : 1 = true;
+
+	uint32 bPrevIsVisible : 1 = true;//is DreamWidget active in prev frame?
+	/** Listed with the manager for a render-priority sort (UDreamUIManagerWorldSubsystem::AddRenderPrioritySortRequest), once. */
+	uint32 bRenderPrioritySortListed : 1 = false;
+	UPROPERTY(Transient, DuplicateTransient, TextExportTransient)
+	mutable TObjectPtr<UDreamUIMeshComponent> UIMesh;//current using UIMesh.
+	/** canvas array belong to this canvas in hierarchy. */
+	UPROPERTY(Transient) TArray<TWeakObjectPtr<UDreamCanvas>> ChildrenCanvasArray;
+	//clip data is stored in root canvas
+	TArray<TSharedPtr<FDreamUIClipData>> ClipDataList;
+	/** What a ray hits may have changed: the manager this canvas registered with traces again (BumpHitTestGeneration). */
+	void BumpHitTestGeneration() const;
+	/** The draw calls are to be sorted by render priority at the next tick (ConsumePendingRenderPrioritySort); the manager is told. */
+	void RequestRenderPrioritySort();
 	/** Whether r.DreamUI.RenderLayers was on when this canvas last looked. */
 	bool bRenderLayersWereEnabled = true;
 	/**

@@ -110,6 +110,17 @@ void UDreamUIManagerWorldSubsystem::AddCanvas(UDreamCanvas* InCanvas)
 #endif
 	this->AllCanvasArray.AddUnique(InCanvas);
 	InCanvas->RegisteredWithManager = this;
+	// What it asked of a manager before it was here: every canvas starts owing a sort.
+	InCanvas->bRenderPrioritySortListed = false;
+	if (InCanvas->bNeedToSortRenderPriority)
+	{
+		InCanvas->bRenderPrioritySortListed = true;
+		RenderPrioritySortRequests.Add(InCanvas);
+	}
+	if (InCanvas->bRenderTargetDrawRequested)
+	{
+		RenderTargetDrawRequests.Add(InCanvas);
+	}
 	InvalidateRootCanvasOrder();
 	BumpHitTestGeneration();
 }
@@ -127,9 +138,28 @@ void UDreamUIManagerWorldSubsystem::RemoveCanvas(UDreamCanvas* InCanvas)
 	if (InCanvas != nullptr && InCanvas->RegisteredWithManager == this)
 	{
 		InCanvas->RegisteredWithManager = nullptr;
+		// Its requests here go with it: the lists pass over a canvas registered elsewhere or nowhere.
+		InCanvas->bRenderPrioritySortListed = false;
 	}
 	InvalidateRootCanvasOrder();
 	BumpHitTestGeneration();
+}
+
+void UDreamUIManagerWorldSubsystem::AddRenderTargetDrawRequest(UDreamCanvas* InCanvas)
+{
+	if (InCanvas != nullptr)
+	{
+		RenderTargetDrawRequests.Add(InCanvas);
+	}
+}
+
+void UDreamUIManagerWorldSubsystem::AddRenderPrioritySortRequest(UDreamCanvas* InCanvas)
+{
+	// Listed once: the canvas says whether it is (UDreamCanvas::RequestRenderPrioritySort).
+	if (InCanvas != nullptr)
+	{
+		RenderPrioritySortRequests.Add(InCanvas);
+	}
 }
 
 int32 UDreamUIManagerWorldSubsystem::CountCompetingScreenSpaceOverlayCanvases()const

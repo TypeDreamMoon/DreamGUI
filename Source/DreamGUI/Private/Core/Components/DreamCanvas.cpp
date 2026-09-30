@@ -105,22 +105,6 @@ static TAutoConsoleVariable<int32> CVarDreamUIParallelLayerRowsMin(
 namespace DreamCanvasLocal
 {
 	/**
-	 * UDreamUIManagerWorldSubsystem::BumpHitTestGenerationFor through the manager the canvas's widget registered with. A
-	 * canvas that moves asks this a few times a frame -- updated, layers marked moved, layers placed -- and finding the
-	 * manager through the world walks the outers each time.
-	 */
-	void BumpHitTestGeneration(const UDreamCanvas* InCanvas)
-	{
-		const UDreamWidget* Widget = InCanvas->GetWidget();
-		if (UDreamUIManagerWorldSubsystem* Manager = Widget != nullptr ? Widget->GetRegisteredManager() : nullptr)
-		{
-			Manager->BumpHitTestGeneration();
-			return;
-		}
-		UDreamUIManagerWorldSubsystem::BumpHitTestGenerationFor(InCanvas);
-	}
-
-	/**
 	 * Whether every element of InCanvas under InWidget, its own included, can be kept relative to it: each one transformed
 	 * along the FTransform path of FDreamUIGeometry::TransformVertices, from nothing but where it is in the layer. A child
 	 * canvas is drawn by that canvas, at its own transform, and none of this one's business.
@@ -226,7 +210,7 @@ void UDreamCanvas::Awake()
 	}
 	MarkCanvasUpdate(true);
 
-	bNeedToSortRenderPriority = true;
+	RequestRenderPrioritySort();
 
 	if (this->IsRootCanvas())
 	{
@@ -433,8 +417,13 @@ void UDreamCanvas::CheckRenderTargetUpdate()
 #endif
 				if (RenderTargetViewExtension.IsValid())
 				{
-					// Drawn once this frame's sections have gone to the render thread: DrawRenderTargetIfRequested.
+					// Drawn once this frame's sections have gone to the render thread: DrawRenderTargetIfRequested, by the
+					// manager, which is told which canvases asked.
 					bRenderTargetDrawRequested = true;
+					if (RegisteredWithManager != nullptr)
+					{
+						RegisteredWithManager->AddRenderTargetDrawRequest(this);
+					}
 				}
 			}
 		}
@@ -501,7 +490,8 @@ void UDreamCanvas::OnUnregister()
 		OnRenderTargetChanged.Broadcast(nullptr);
 	}
 	Super::OnUnregister();
-	if (auto DreamUIManager = UDreamUIManagerWorldSubsystem::GetInstance(GetWorld()))
+	// The manager it registered with first: the world's may be another by now, or none.
+	if (UDreamUIManagerWorldSubsystem* DreamUIManager = RegisteredWithManager != nullptr ? RegisteredWithManager : UDreamUIManagerWorldSubsystem::GetInstance(GetWorld()))
 	{
 		DreamUIManager->RemoveCanvas(this);
 	}
@@ -777,8 +767,10 @@ bool UDreamCanvas::IsRenderToWorldSpace()const
 {
 	if (CheckRootCanvas())
 	{
-		return RootCanvas->RenderMode == EDreamRenderMode::WorldSpace
-			|| RootCanvas->RenderMode == EDreamRenderMode::WorldSpace_DreamUI
+		// A root's own mode without a weak look-up of itself: a world-space raycast asks every canvas of a world of panels.
+		const EDreamRenderMode RootRenderMode = IsOwnRoot() ? RenderMode : RootCanvas->RenderMode;
+		return RootRenderMode == EDreamRenderMode::WorldSpace
+			|| RootRenderMode == EDreamRenderMode::WorldSpace_DreamUI
 			;
 	}
 	return false;
@@ -910,6 +902,8 @@ void UDreamCanvas::NoteRenderTransformChanged(UDreamWidget* InWidget)
 void UDreamCanvas::MarkRenderLayerMoved(UDreamWidget* InLayer)
 {
 	// Once a frame is enough for what a move means to the rest: a render target to draw again, and a pointer to trace again.
+	// What this reads of the canvas is declared together (see RegisteredWithManager): every animated layer of a world of
+	// panels comes here, each on a canvas of its own.
 	if (!bRenderLayersMayHaveMoved)
 	{
 		bRenderLayersMayHaveMoved = true;
@@ -921,7 +915,37 @@ void UDreamCanvas::MarkRenderLayerMoved(UDreamWidget* InLayer)
 		{
 			RootCanvas->bAnythingChangedForRenderTarget = true;
 		}
-		DreamCanvasLocal::BumpHitTestGeneration(this);
+		BumpHitTestGeneration();
+	}
+}
+
+void UDreamCanvas::BumpHitTestGeneration() const
+{
+	// Through the manager this canvas registered with, which it holds. A canvas that moves asks this a few times a frame --
+	// updated, layers marked moved, layers placed -- and looking up its widget and the manager that registered was two more
+	// reads from memory each time, for every panel of a world of them.
+	if (RegisteredWithManager != nullptr)
+	{
+		RegisteredWithManager->BumpHitTestGeneration();
+		return;
+	}
+	const UDreamWidget* Widget = GetWidget();
+	if (UDreamUIManagerWorldSubsystem* Manager = Widget != nullptr ? Widget->GetRegisteredManager() : nullptr)
+	{
+		Manager->BumpHitTestGeneration();
+		return;
+	}
+	UDreamUIManagerWorldSubsystem::BumpHitTestGenerationFor(this);
+}
+
+void UDreamCanvas::RequestRenderPrioritySort()
+{
+	bNeedToSortRenderPriority = true;
+	// Listed once with the manager, which sorts only the canvases that asked: an unregistered canvas is listed when it registers.
+	if (RegisteredWithManager != nullptr && !bRenderPrioritySortListed)
+	{
+		bRenderPrioritySortListed = true;
+		RegisteredWithManager->AddRenderPrioritySortRequest(this);
 	}
 }
 
@@ -1207,10 +1231,12 @@ bool UDreamCanvas::TendRenderLayers()
 	 * Whether a layer is to be given back is looked at every eighth of the frames it has to hold still for, a canvas's turn
 	 * staggered from another's: a layer held still that long is given back a few frames later at most, and a world of panels
 	 * does not look at every layer of every canvas every frame. Every frame when the layers cannot be drawn at all, and when
-	 * the frames to hold still are few.
+	 * the frames to hold still are few. Staggered by where the canvas is in memory: its index is in its object header, which
+	 * nothing else here reads.
 	 */
 	const uint64 LookEvery = FMath::Max<uint64>(DemoteFrames / 8, 1);
-	const bool bDemotionDue = !bCanDraw || LookEvery == 1 || (Frame + static_cast<uint64>(GetUniqueID())) % LookEvery == 0;
+	const uint64 Stagger = static_cast<uint64>(reinterpret_cast<UPTRINT>(this)) >> 6;
+	const bool bDemotionDue = !bCanDraw || LookEvery == 1 || (Frame + Stagger) % LookEvery == 0;
 	// Taken back here rather than at an update, which a canvas that holds still does not have: each asks for one.
 	if (RenderLayers.Num() > 0 && !bDrawCallRebuildSuspended && bDemotionDue)
 	{
@@ -2810,7 +2836,7 @@ void UDreamCanvas::UpdateCanvasDrawCall()
 		RootCanvas->bAnythingChangedForRenderTarget = true;
 		// Whatever made this canvas update -- layout, a transform, geometry, a sort -- may have moved what a
 		// ray would hit on it.
-		DreamCanvasLocal::BumpHitTestGeneration(this);
+		BumpHitTestGeneration();
 		CheckUIMesh();
 		struct LOCAL
 		{
@@ -3137,7 +3163,7 @@ void UDreamCanvas::FinishDrawCallBatchData()
 		{
 			RootCanvas->bAnythingChangedForRenderTarget = true;
 		}
-		DreamCanvasLocal::BumpHitTestGeneration(this);
+		BumpHitTestGeneration();
 	}
 	for (const int32 Index : DrawCallsLeftToUpdate)
 	{
@@ -3267,7 +3293,7 @@ void UDreamCanvas::UpdateDrawCallMesh()
 		// consume site cleared without ever sorting, and the owner never heard about it.
 		if (UDreamCanvas* SortOwner = GetSortOwnerCanvas())
 		{
-			SortOwner->bNeedToSortRenderPriority = true;
+			SortOwner->RequestRenderPrioritySort();
 		}
 	}
 
@@ -3789,7 +3815,7 @@ void UDreamCanvas::SetSortOrder(int32 InSortOrder, bool InPropagateToChildrenCan
 	{
 		if (CheckRootCanvas())
 		{
-			RootCanvas->bNeedToSortRenderPriority = true;
+			RootCanvas->RequestRenderPrioritySort();
 		}
 		MarkCanvasUpdate(false);
 		if (InPropagateToChildrenCanvas)
@@ -3814,7 +3840,7 @@ void UDreamCanvas::SetSortOrder(int32 InSortOrder, bool InPropagateToChildrenCan
 
 		if (CheckRootCanvas())
 		{
-			RootCanvas->bNeedToSortRenderPriority = true;
+			RootCanvas->RequestRenderPrioritySort();
 		}
 	}
 }
@@ -3972,7 +3998,7 @@ void UDreamCanvas::SetOverrideSorting(bool Value)
 		}
 		if (CheckRootCanvas())
 		{
-			RootCanvas->bNeedToSortRenderPriority = true;
+			RootCanvas->RequestRenderPrioritySort();
 		}
 		MarkCanvasUpdate(false);
 	}

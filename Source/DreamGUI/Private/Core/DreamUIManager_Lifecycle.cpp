@@ -144,6 +144,18 @@ void UDreamUIManagerWorldSubsystem::Deinitialize()
 		}
 		TeardownWorld();
 	}
+	// No canvas holds on to a manager that is going (UDreamCanvas::RegisteredWithManager, which a canvas follows): the teardown
+	// let go of every tree, and so of their canvases, and a canvas registered still is let go of here -- one that is garbage
+	// too, which may yet be told of a move before it is collected.
+	for (const TWeakObjectPtr<UDreamCanvas>& WeakCanvas : AllCanvasArray)
+	{
+		if (UDreamCanvas* Canvas = WeakCanvas.Get(/*bEvenIfPendingKill*/ true); Canvas != nullptr && Canvas->RegisteredWithManager == this)
+		{
+			Canvas->RegisteredWithManager = nullptr;
+		}
+	}
+	RenderTargetDrawRequests.Reset();
+	RenderPrioritySortRequests.Reset();
 #if WITH_EDITOR
 	if (EditorTickDelegateHandle.IsValid())
 	{

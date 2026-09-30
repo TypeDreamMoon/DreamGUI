@@ -114,8 +114,9 @@ void UDreamWorldSpaceRaycaster::Raycast(UDreamPointerEventData* InPointerEventDa
 	TArray<UDreamCanvas*> TracedCanvases;
 	for (const TWeakObjectPtr<UDreamCanvas>& CanvasPtr : Manager->GetAllCanvasArray())
 	{
+		// The weak look-up already leaves out a canvas that is garbage.
 		UDreamCanvas* Canvas = CanvasPtr.Get();
-		if (!IsValid(Canvas))continue;
+		if (Canvas == nullptr)continue;
 		if (!Canvas->IsRootCanvas())continue;
 		if (!Canvas->IsRenderToWorldSpace())continue;
 		if (Canvas->GetTraceChannel() != TraceChannel.GetValue())continue;

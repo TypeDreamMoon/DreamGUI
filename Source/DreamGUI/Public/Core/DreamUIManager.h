@@ -368,6 +368,12 @@ private:
 	/** The frame the world's end-of-frame updates last submitted the canvases in, and whether they updated since. */
 	uint64 LastEndOfFrameSubmitFrame = MAX_uint64;
 	bool bCanvasesUpdatedSinceSubmit = true;
+	/**
+	 * The canvases that asked to be drawn to their render targets (AddRenderTargetDrawRequest) and to be sorted
+	 * (AddRenderPrioritySortRequest): what the submit and the tick look at, instead of every registered canvas every frame.
+	 */
+	TArray<TWeakObjectPtr<UDreamCanvas>> RenderTargetDrawRequests;
+	TArray<TWeakObjectPtr<UDreamCanvas>> RenderPrioritySortRequests;
 #if !UE_BUILD_SHIPPING
 	/** Paired with the per-frame "only one ScreenSpaceOverlay canvas" check, which is not editor-only. */
 	int32 PrevScreenSpaceOverlayCanvasCount = 1;
@@ -389,6 +395,10 @@ public:
 	const TArray<TWeakObjectPtr<UDreamCanvas>>& GetAllCanvasArray()const{return AllCanvasArray;}
 	void AddCanvas(UDreamCanvas* InCanvas);
 	void RemoveCanvas(UDreamCanvas* InCanvas);
+	/** InCanvas asks to be drawn to its render target once this frame's sections have gone (UDreamCanvas::DrawRenderTargetIfRequested). */
+	void AddRenderTargetDrawRequest(UDreamCanvas* InCanvas);
+	/** InCanvas asks for its draw calls to be sorted by render priority at the next tick (UDreamCanvas::ConsumePendingRenderPrioritySort). */
+	void AddRenderPrioritySortRequest(UDreamCanvas* InCanvas);
 	/**
 	 * The registered canvases as they are now, for a loop whose calls may register or unregister a
 	 * canvas -- updating a root canvas can make a render target and tell whoever listens, and a listener

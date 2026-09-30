@@ -435,11 +435,38 @@ void UDreamUIManagerWorldSubsystem::TickDreamUI(float DeltaTime)
 	{
 		SCOPE_CYCLE_COUNTER(STAT_DreamUIRenderPrioritySort);
 		TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_RenderPrioritySort);
-		for (const TWeakObjectPtr<UDreamCanvas>& Canvas : SnapshotCanvases())
+		// Only the canvases that asked (AddRenderPrioritySortRequest), each once: every registered canvas was looked at every
+		// frame for the few that had.
+		if (RenderPrioritySortRequests.Num() > 0)
 		{
-			if (IsCanvasStillRegistered(Canvas))
+			TArray<TWeakObjectPtr<UDreamCanvas>> Requests;
+			Swap(Requests, RenderPrioritySortRequests);
+			TArray<UDreamCanvas*> StillAsking;
+			for (const TWeakObjectPtr<UDreamCanvas>& WeakCanvas : Requests)
 			{
+				UDreamCanvas* const Canvas = WeakCanvas.Get();
+				// Gone, let go of, or listed twice and taken already.
+				if (Canvas == nullptr || Canvas->RegisteredWithManager != this || !Canvas->bRenderPrioritySortListed)
+				{
+					continue;
+				}
+				Canvas->bRenderPrioritySortListed = false;
 				Canvas->ConsumePendingRenderPrioritySort();
+				// One that does not own its sorting keeps its request until a rebuild of its own takes it, as it did when every
+				// canvas was looked at every frame: it sorts once it owns its sorting.
+				if (Canvas->bNeedToSortRenderPriority)
+				{
+					StillAsking.Add(Canvas);
+				}
+			}
+			for (UDreamCanvas* Canvas : StillAsking)
+			{
+				// Asked again meanwhile, and listed then.
+				if (!Canvas->bRenderPrioritySortListed)
+				{
+					Canvas->bRenderPrioritySortListed = true;
+					RenderPrioritySortRequests.Add(Canvas);
+				}
 			}
 		}
 	}
@@ -507,12 +534,15 @@ void UDreamUIManagerWorldSubsystem::ForEachRootCanvasInRenderModeOrder(bool bInA
 		// A copy: a call that sorts the canvases again, through a pass of its own, would otherwise change the list under
 		// this one.
 		const TArray<TWeakObjectPtr<UDreamCanvas>> Canvases = RootCanvasesByPass[Pass];
-		for (const TWeakObjectPtr<UDreamCanvas>& Canvas : Canvases)
+		for (const TWeakObjectPtr<UDreamCanvas>& WeakCanvas : Canvases)
 		{
-			if (!IsCanvasStillRegistered(Canvas))continue;
+			// Looked up once for the checks and the call: IsCanvasStillRegistered and a weak look-up for each use after it were
+			// four for every canvas of every pass.
+			UDreamCanvas* const Canvas = WeakCanvas.Get();
+			if (Canvas == nullptr || Canvas->RegisteredWithManager != this)continue;
 			if (!Canvas->IsRootCanvas())continue;
-			if (ModeOf(Canvas.Get()) != DreamUIManagerTickLocal::PassOrder[Pass])continue;
-			InFunction(Canvas.Get());
+			if (ModeOf(Canvas) != DreamUIManagerTickLocal::PassOrder[Pass])continue;
+			InFunction(Canvas);
 		}
 	}
 }
@@ -673,7 +703,9 @@ void UDreamUIManagerWorldSubsystem::SubmitCanvasDrawCall()
 		TArray<UDreamCanvas*> ToPlace;
 		for (UDreamCanvas* Canvas : ToFinish)
 		{
-			if (IsValid(Canvas) && Canvas->TendRenderLayersBeforeFinish())
+			// Still registered here, asked of the flags the tending reads next rather than of the object array; one let go of
+			// meanwhile is asked about as before.
+			if ((Canvas->RegisteredWithManager == this || IsValid(Canvas)) && Canvas->TendRenderLayersBeforeFinish())
 			{
 				ToPlace.Add(Canvas);
 			}
@@ -702,18 +734,34 @@ void UDreamUIManagerWorldSubsystem::SubmitCanvasDrawCall()
 		}
 		for (UDreamCanvas* Canvas : ToFinish)
 		{
-			if (IsValid(Canvas))
+			if (Canvas->RegisteredWithManager == this || IsValid(Canvas))
 			{
 				Canvas->FinishDrawCallBatchData();
 			}
 		}
 	}
-	// The render-target canvases that draw themselves, now that every canvas has sent this frame's sections.
-	for (const TWeakObjectPtr<UDreamCanvas>& Canvas : SnapshotCanvases())
+	// The render-target canvases that asked to be drawn (AddRenderTargetDrawRequest), now that every canvas has sent this
+	// frame's sections: every registered canvas was looked at every frame for the few that had.
+	if (RenderTargetDrawRequests.Num() > 0)
 	{
-		if (IsCanvasStillRegistered(Canvas) && Canvas->IsRootCanvas())
+		TArray<TWeakObjectPtr<UDreamCanvas>> Requests;
+		Swap(Requests, RenderTargetDrawRequests);
+		for (const TWeakObjectPtr<UDreamCanvas>& WeakCanvas : Requests)
 		{
-			Canvas->DrawRenderTargetIfRequested();
+			UDreamCanvas* const Canvas = WeakCanvas.Get();
+			if (Canvas == nullptr || Canvas->RegisteredWithManager != this)
+			{
+				continue;
+			}
+			if (Canvas->IsRootCanvas())
+			{
+				Canvas->DrawRenderTargetIfRequested();
+			}
+			// Not a root just now, and so not drawn: asked again at the next submit, as when every canvas was looked at.
+			if (Canvas->bRenderTargetDrawRequested && !RenderTargetDrawRequests.Contains(WeakCanvas))
+			{
+				RenderTargetDrawRequests.Add(WeakCanvas);
+			}
 		}
 	}
 }
