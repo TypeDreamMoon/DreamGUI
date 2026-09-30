@@ -406,17 +406,9 @@ void UDreamUIManagerWorldSubsystem::TickDreamUI(float DeltaTime)
 	// missed mark left the shader clipping against a stale rectangle and silently culled a whole subtree.
 	// FDreamUIClipData::UpdateData diffs against the last uploaded block, so an unchanged clip costs one matrix
 	// build and a memcmp, with no GPU write.
-	{
-		SCOPE_CYCLE_COUNTER(STAT_DreamUIRefreshClipData);
-		TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_RefreshClipData);
-		for (const TWeakObjectPtr<UDreamCanvas>& Canvas : SnapshotCanvases())
-		{
-			if (IsCanvasStillRegistered(Canvas))
-			{
-				Canvas->RefreshAllClipData();
-			}
-		}
-	}
+	// A root canvas's clips are refreshed where the root is updated, just before, in the pass over the root canvases below:
+	// only a root has clips to refresh (RefreshAllClipData), and a pass of their own over every canvas was two looks at each
+	// of a world of panels a frame for none.
 
 	//update draw-call
 	{
@@ -429,7 +421,11 @@ void UDreamUIManagerWorldSubsystem::TickDreamUI(float DeltaTime)
 		// Recorded and sent as one: see SubmitCanvasDrawCall.
 		FRenderCommandList::FRecordScope RecordScope(FRenderCommandList::Create(ERenderCommandListFlags::CloseOnSubmit), FRenderCommandList::EStopRecordingAction::Submit);
 		const UWorld* World = GetWorld();
-		ForEachRootCanvasInRenderModeOrder(true, [World](UDreamCanvas* Canvas) { Canvas->UpdateRootCanvas(World); });
+		ForEachRootCanvasInRenderModeOrder(true, [World](UDreamCanvas* Canvas)
+		{
+			Canvas->RefreshAllClipData();
+			Canvas->UpdateRootCanvas(World);
+		});
 	}
 	UDreamUIFontData_FreeTypeRender::FlushPendingFontTextures();
 
