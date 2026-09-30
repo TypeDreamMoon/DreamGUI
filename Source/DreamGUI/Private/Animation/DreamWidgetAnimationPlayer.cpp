@@ -6,6 +6,7 @@
 #include "Core/Components/DreamWidget.h"
 #include "Animation/DreamUIDirectAnimationEvaluation.h"
 #include "Animation/DreamWidgetAnimationComponent.h"
+#include "DreamGUI.h"
 #include "Channels/MovieSceneTimeWarpChannel.h"
 #include "EntitySystem/MovieSceneEntitySystemRunner.h"
 #include "Evaluation/MovieSceneSequenceHierarchy.h"
@@ -31,6 +32,10 @@ static TAutoConsoleVariable<int32> CVarDreamUILiteAnimationPlayer(
 	TEXT("0: every player goes through the sequencer's per-frame update. Either way applies from the next frame."),
 	ECVF_Default);
 
+// Per frame, under `stat DreamGUI`: how many playing animations kept their own time, and how many ticks went to the
+// sequencer's update instead -- a play's first frame, and whatever the player's own tick leaves to it.
+DECLARE_DWORD_COUNTER_STAT(TEXT("Animation players keeping their own time"), STAT_DreamUIAnimationPlayersOwnTick, STATGROUP_DreamGUI);
+DECLARE_DWORD_COUNTER_STAT(TEXT("Animation players updated by the sequencer"), STAT_DreamUIAnimationPlayersSequencerTick, STATGROUP_DreamGUI);
 
 UObject* UDreamWidgetAnimationPlayer::GetPlaybackContext() const
 {
@@ -168,12 +173,14 @@ void UDreamWidgetAnimationPlayer::TickFromSequenceTickManager(float DeltaSeconds
 	bTickedLite = Choice != ELiteTick::Sequencer;
 	if (Choice == ELiteTick::Sequencer)
 	{
+		INC_DWORD_STAT(STAT_DreamUIAnimationPlayersSequencerTick);
 		// Nothing has been touched: the sequencer's update finds the player exactly as the tick manager left it.
 		Super::TickFromSequenceTickManager(DeltaSeconds, InRunner);
 		return;
 	}
 	if (Choice == ELiteTick::Advance)
 	{
+		INC_DWORD_STAT(STAT_DreamUIAnimationPlayersOwnTick);
 		// What the base wraps its update in (UpdateAsync): the runner of the group being ticked is the current one, and this
 		// is the main level update, the one whose evaluations may be queued rather than flushed. The flag is a bitfield, so
 		// it is set and cleared by hand; it is clear again before this returns, and nothing in between hands a tick to the
