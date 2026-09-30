@@ -8,6 +8,7 @@
 
 class AActor;
 class UDreamUIAnimationTicker;
+struct FDreamUIAnimationClock;
 
 /**
  * UDreamWidgetAnimationPlayer is used to actually "play" a widget animation at runtime.
@@ -78,6 +79,12 @@ public:
 	 * component calls it when it gives a player its clock.
 	 */
 	void TrustTimeController();
+	/**
+	 * Gives the player InClock, DreamGUI's clock, and vouches for it as TrustTimeController does: the player's own tick then
+	 * ticks it and reads the time off it in line (FDreamUIAnimationClock). The component calls it when it gives a player its
+	 * clock.
+	 */
+	void TrustClock(const TSharedPtr<FDreamUIAnimationClock>& InClock);
 
 	/**
 	 * Whether the sequence tick manager's last tick of this player was taken by the player itself rather than by the
@@ -187,6 +194,8 @@ private:
 
 	/** The time controller vouched for (TrustTimeController). Held, so that no other controller can come to have its address. */
 	TSharedPtr<FMovieSceneTimeController> TrustedTimeController;
+	/** The vouched-for controller, when it is DreamGUI's clock (TrustClock), which the player's own tick reads in line. */
+	FDreamUIAnimationClock* TrustedClock = nullptr;
 	/** Whether the actor the sequencer asks is the network authority, as of the start of the play (OnStartedPlaying). */
 	bool bAuthorityAtStart = false;
 	/** See IsTickingLite. */

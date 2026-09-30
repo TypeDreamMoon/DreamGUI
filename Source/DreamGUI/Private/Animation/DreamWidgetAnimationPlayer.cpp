@@ -3,6 +3,7 @@
 
 #include "Animation/DreamWidgetAnimationPlayer.h"
 
+#include "Animation/DreamUIAnimationClock.h"
 #include "Animation/DreamUIAnimationTicker.h"
 
 #include "Core/Components/DreamWidget.h"
@@ -79,6 +80,15 @@ void UDreamWidgetAnimationPlayer::FlushQueuedEvaluation()
 void UDreamWidgetAnimationPlayer::TrustTimeController()
 {
 	TrustedTimeController = TimeController;
+	// Not known to be DreamGUI's clock: ticked and read through its virtuals.
+	TrustedClock = nullptr;
+}
+
+void UDreamWidgetAnimationPlayer::TrustClock(const TSharedPtr<FDreamUIAnimationClock>& InClock)
+{
+	SetTimeController(InClock);
+	TrustedTimeController = InClock;
+	TrustedClock = InClock.Get();
 }
 
 void UDreamWidgetAnimationPlayer::UpdateMovieSceneInstance(FMovieSceneEvaluationRange InRange, EMovieScenePlayerStatus::Type PlayerStatus, const FMovieSceneUpdateArgs& Args)
@@ -370,11 +380,24 @@ void UDreamWidgetAnimationPlayer::TickLite(float DeltaSeconds)
 	// The clock is ticked once, with the delta the tick manager handed over -- dilated or not, paused or not, as the world
 	// and the tick interval say -- and the signed play rate, and it is the one source of the time.
 	const float PlayRate = bReversePlayback ? -PlaybackSettings.PlayRate : PlaybackSettings.PlayRate;
-	TimeController->Tick(DeltaSeconds, PlayRate);
+	// DreamGUI's clock, the one vouched for (ChooseLiteTick), is ticked and read in line: what its virtuals do, without a
+	// call into the engine and a virtual call for each, for every playing widget every frame. One whose tick changes the
+	// delta first is ticked through its virtual.
+	FDreamUIAnimationClock* const Clock = TrustedClock;
+	if (Clock != nullptr && Clock->bTicksAsGiven)
+	{
+		Clock->TickInLine(DeltaSeconds, PlayRate);
+	}
+	else
+	{
+		TimeController->Tick(DeltaSeconds, PlayRate);
+	}
 	// The update multiplies the rate by the world's dilation before it asks for the time. A clock vouched for does not read
 	// it -- FMovieSceneTimeController_Tick answers from what its ticks added up to -- so the world is not looked up. The
 	// display rate is the one this play decided on its evaluation with (LiteDisplayRate).
-	const FFrameTime NewTime = TimeController->RequestCurrentTime(GetCurrentTime(), PlayRate, LiteDisplayRate);
+	const FFrameTime NewTime = Clock != nullptr
+		? Clock->TimeInLine(FQualifiedFrameTime(PlayPosition.GetCurrentPosition(), PlayPosition.GetInputRate()))
+		: TimeController->RequestCurrentTime(GetCurrentTime(), PlayRate, LiteDisplayRate);
 
 	if (GetPauseTimeForNewPosition(NewTime).IsSet() || ShouldStopOrLoop(NewTime))
 	{

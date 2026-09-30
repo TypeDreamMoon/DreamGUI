@@ -5,6 +5,7 @@
 #include "Animation/DreamWidgetAnimation.h"
 #include "Animation/DreamUISequence.h"
 #include "Animation/DreamWidgetAnimationPlayer.h"
+#include "Animation/DreamUIAnimationClock.h"
 #include "Animation/DreamUIAnimationTicker.h"
 #include "Animation/DreamUIMovieScenePropertyAccessors.h"
 #include "Core/DreamUserWidget.h"
@@ -154,11 +155,14 @@ namespace DreamUI
 	 * animation running at exactly the rate its author authored -- the Sequencer-side equivalent of
 	 * UDreamTweener::affectByTimeDilation, which the tween side has always had.
 	 */
-	struct FDreamUIUnscaledTimeController : FMovieSceneTimeController_Tick
+	struct FDreamUIUnscaledTimeController : FDreamUIAnimationClock
 	{
 		explicit FDreamUIUnscaledTimeController(UWorld* InWorld)
 			: WeakWorld(InWorld)
-		{}
+		{
+			// Its tick changes the delta before adding it: ticked through the virtual (FDreamUIAnimationClock::bTicksAsGiven).
+			bTicksAsGiven = false;
+		}
 
 	protected:
 		virtual void OnTick(float DeltaSeconds, float InPlayRate) override
@@ -177,7 +181,7 @@ namespace DreamUI
 			{
 				DeltaSeconds /= Dilation;
 			}
-			FMovieSceneTimeController_Tick::OnTick(DeltaSeconds, InPlayRate);
+			FDreamUIAnimationClock::OnTick(DeltaSeconds, InPlayRate);
 		}
 
 	private:
@@ -204,15 +208,15 @@ void UDreamWidgetAnimationComponent::ApplyTimeControl(UDreamWidgetAnimationPlaye
 		{
 			return;
 		}
-		Player->SetTimeController(MakeShared<FMovieSceneTimeController_Tick>());
+		// The engine's tick controller, as DreamGUI's clock, which the player reads in line (FDreamUIAnimationClock).
+		Player->TrustClock(MakeShared<FDreamUIAnimationClock>());
 	}
 	else
 	{
 		UDreamWidget* HostWidget = GetWidget();
 		UWorld* World = IsValid(HostWidget) ? HostWidget->GetWorld() : nullptr;
-		Player->SetTimeController(MakeShared<DreamUI::FDreamUIUnscaledTimeController>(World));
+		Player->TrustClock(MakeShared<DreamUI::FDreamUIUnscaledTimeController>(World));
 	}
-	Player->TrustTimeController();
 }
 
 void UDreamWidgetAnimationComponent::OnDestroy()
