@@ -129,10 +129,15 @@ bool UDreamWidgetAnimationPlayer::TryEvaluateDirectly(const FMovieSceneEvaluatio
 	FMovieSceneContext Context(InRange, PlayerStatus);
 	PreEvaluation(Context);
 	const FFrameTime Time = ConvertFrameTime(InRange.GetTime(), InRange.GetFrameRate(), MovieScene->GetTickResolution());
-	if (!DirectEvaluation->Evaluate(*this, Time))
+	// Held for the evaluation: a listener of one of its writes may stop the animation, and OnStopped lets it go.
+	const TSharedPtr<FDreamUIDirectAnimationEvaluation> Evaluation = DirectEvaluation;
+	if (!Evaluation->Evaluate(*this, Time))
 	{
 		// A property only the sequencer can write, found before anything was written: it takes over from here.
-		DirectEvaluation.Reset();
+		if (DirectEvaluation == Evaluation)
+		{
+			DirectEvaluation.Reset();
+		}
 		return false;
 	}
 	PostEvaluation(Context);

@@ -1949,4 +1949,73 @@ bool FDreamWidgetAnimationLitePlayerSwitchTest::RunTest(const FString& Parameter
 	return true;
 }
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamWidgetAnimationStoppedFromItsOwnWriteTest,
+	"DreamGUI.Animation.Playback.AnAnimationStoppedByAListenerOfItsOwnWriteStopsThere",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamWidgetAnimationStoppedFromItsOwnWriteTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamWidgetAnimationPlaybackTestLocal;
+	// The player evaluates this animation itself, so the width written through the widget's setter reaches the listener
+	// while the evaluation is still under way, and the stop the listener asks for happens there and then -- with the
+	// component's stop, the player is torn down as well.
+	const DreamTests::Lifecycle::FScopedConsoleVariable Direct(TEXT("DreamUI.Animation.DirectEvaluation"), 1);
+	for (const bool bRestoreState : { false, true })
+	{
+		for (const bool bThroughComponent : { false, true })
+		{
+			const FString Case = FString::Printf(TEXT("%s, stopped through the %s"), bRestoreState ? TEXT("restoring") : TEXT("keeping"),
+				bThroughComponent ? TEXT("component") : TEXT("player"));
+			FScopedGameWorld Scope;
+			FScopedTree Tree(Scope.World);
+			Tree.AddFloatTrack(TEXT("AnimatableWidth"), 20.0f, 220.0f);
+			Tree.AddVectorTrack(TEXT("RenderTranslation"), FVector(0.0, -100.0, 0.0), FVector(0.0, 0.0, 30.0));
+			Tree.Button->SetWidth(60.0f);
+			const FDreamUIAnimationHandle Handle = Tree.Animator->PlayAnimation(Tree.Animation, 0.0f, 1, EDreamUIAnimationPlayMode::Forward, 1.0f, bRestoreState);
+			TickFrames(Scope.World, 3);
+			if (!TestTrue(FString::Printf(TEXT("%s: the player evaluates the animation itself"), *Case), Handle.Player != nullptr && Handle.Player->IsEvaluatingDirectly()))
+			{
+				continue;
+			}
+
+			bool bStopped = false;
+			UDreamWidgetAnimationComponent* const Animator = Tree.Animator;
+			const FDelegateHandle Listening = Tree.Button->GetDimensionChangedEvent().AddLambda(
+				[&bStopped, bThroughComponent, Animator, Handle](bool, bool bWidthChanged, bool)
+				{
+					if (bStopped || !bWidthChanged)
+					{
+						return;
+					}
+					bStopped = true;
+					if (bThroughComponent)
+					{
+						Animator->StopAnimation(Handle);
+					}
+					else if (Handle.Player != nullptr)
+					{
+						Handle.Player->Stop();
+					}
+				});
+			TickFrames(Scope.World, 1);
+			Tree.Button->GetDimensionChangedEvent().Remove(Listening);
+
+			TestTrue(FString::Printf(TEXT("%s: the listener stopped the animation from inside its write"), *Case), bStopped);
+			TestFalse(FString::Printf(TEXT("%s: it is not playing any more"), *Case), Handle.Player != nullptr && Handle.Player->IsPlaying());
+			const float WidthAfterStop = Tree.Button->GetWidth();
+			const double TranslationAfterStop = Tree.Button->GetRenderTranslation().Y;
+			TickFrames(Scope.World, 3);
+			TestEqual(FString::Printf(TEXT("%s: nothing writes the width after the stop"), *Case), Tree.Button->GetWidth(), WidthAfterStop, 0.001f);
+			TestEqual(FString::Printf(TEXT("%s: nor the translation"), *Case), Tree.Button->GetRenderTranslation().Y, TranslationAfterStop, 0.001);
+			if (bRestoreState)
+			{
+				TestEqual(FString::Printf(TEXT("%s: the width is put back"), *Case), WidthAfterStop, 60.0f, 0.01f);
+				TestEqual(FString::Printf(TEXT("%s: and so is the translation"), *Case), TranslationAfterStop, 0.0, 0.001);
+			}
+		}
+	}
+	return true;
+}
+
 #endif

@@ -108,4 +108,11 @@ private:
 	TArray<FAnimatedProperty> Properties;
 	/** Whether any property has been written: after that, the sequencer can no longer take over cleanly. */
 	bool bWrittenAnything = false;
+	/** Set while Evaluate writes. */
+	bool bEvaluating = false;
+	/**
+	 * Set when the initial values are put back or forgotten while Evaluate writes: a listener of a write stopped the
+	 * animation, and nothing more is written for it.
+	 */
+	bool bStoppedWhileEvaluating = false;
 };
