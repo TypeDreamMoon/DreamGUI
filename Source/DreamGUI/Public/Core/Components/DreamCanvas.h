@@ -1075,6 +1075,12 @@ private:
 	bool TendRenderLayers();
 	/** TendRenderLayersBeforeFinish ran this frame, and FinishDrawCallBatchData leaves the layers be. */
 	bool bRenderLayersTendedBeforeFinish = false;
+	/**
+	 * Draw-call data was handed to the batching (UpdateCanvasDrawCall) that TakeDrawCallBatchData has not since waited for
+	 * and taken. A canvas that holds still hands it none, and its every frame's wait and look at the batching's queue --
+	 * two objects of its own to read, for each of thousands of world panels -- is skipped.
+	 */
+	bool bDrawCallBatchingInFlight = true;
 	/** PlaceRenderLayers moved a layer, and FinishDrawCallBatchData tells the rest. */
 	bool bRenderLayersPlaced = false;
 	/** Every widget this canvas made a layer is a layer no longer, and nothing is asked of them: the canvas is going. */
