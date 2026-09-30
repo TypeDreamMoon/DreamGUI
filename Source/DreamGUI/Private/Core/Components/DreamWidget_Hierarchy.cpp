@@ -365,6 +365,18 @@ void UDreamWidget::SetParentBeforeRegister(UDreamWidget* InParent)
 			// FIRST: the modal dim, the tooltip, the drag visual and the virtual cursor all went to the
 			// bottom of the stack, and the renumber that followed made it permanent.
 			this->SiblingIndex = Parent->Children.Num() - 1;
+			// A parent whose move is still to be announced has a stale, pending subtree, and a second move
+			// of it stops at a widget already marked. Joining it unmarked would let that stop leave this
+			// subtree composed against where the parent was. No announcement of its own: the parent's
+			// flush reaches it, and registering it later marks it again.
+			if (Parent->IsTransformChangePending())
+			{
+				bOwnTransformChanged = true;
+				if (!(bWorldTransformDirty && bTransformChangePending))
+				{
+					MarkWorldTransformStaleRecursive();
+				}
+			}
 		}
 	}
 }
@@ -862,7 +874,12 @@ void UDreamWidget::OnAttachedToParent()
 	RefreshShearInHierarchy();//...and, the same way, inside a sheared one
 	if (this->HasRegistered())//registered means the hierarchy is live, not still being assembled
 	{
-		Call_TransformChanged();
+		// Still pending, the attach is heard at the flush with the rest of the subtree; announced on the
+		// spot (no manager defers it), it is said once more here, as a live attach always has been.
+		if (!IsTransformChangePending())
+		{
+			Call_TransformChanged();
+		}
 		CalculateAnchorFromTransform();//a live attach has to derive anchors from the transform so KeepRelative/KeepWorld hold; while a tree is being assembled the serialized anchors are already right
 	}
 

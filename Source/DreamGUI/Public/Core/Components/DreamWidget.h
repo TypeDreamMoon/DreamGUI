@@ -28,6 +28,7 @@ class UDreamPanelSlot;
 class FDreamUIClipData;
 class UDreamUIDataAsTexture;
 class UDreamCanvas;
+class UDreamUIManagerWorldSubsystem;
 enum class EDreamRenderMode : uint8;
 namespace DreamPerspective { struct FScope; }
 
@@ -977,9 +978,11 @@ public:
 	 *
 	 * Nothing is computed here. The widget and every descendant are marked stale, and GetWorldTransform
 	 * composes each when it is next read, so a reader right after the write sees the new transform while a
-	 * widget written three times before anyone reads it is composed once. The move is then announced, in one
-	 * walk of the subtree (FlushTransformChanges): each moved widget's canvas and visual are told what moved,
-	 * and its OnTransformChanged listeners hear it.
+	 * widget written three times before anyone reads it is composed once. What a move is announced to --
+	 * the canvas, the visual, the OnTransformChanged listeners -- hears it once, at the next flush of this
+	 * world's manager (UDreamUIManagerWorldSubsystem::FlushTransformChanges). Where no manager will flush --
+	 * a tree with no world, a manager that does not tick, r.DreamUI.DeferTransformNotifications 0 -- the
+	 * subtree is flushed before this returns, which is when every move used to be announced.
 	 *
 	 * bPropagateToChildren is kept for the callers that spell it out: a descendant's world transform is
 	 * composed from this one, so the descendants are always marked.
@@ -1027,6 +1030,11 @@ private:
 	uint8 bTransformChangePending : 1 = false;
 	/** The pending change began at this widget, not only above it: what the render-layer rules measure moves by. */
 	uint8 bOwnTransformChanged : 1 = false;
+	/**
+	 * The manager whose flush announces this widget's changes, kept from registration so that a write need
+	 * not walk the outers to its world. Null with no manager: every change is then announced on the spot.
+	 */
+	TWeakObjectPtr<UDreamUIManagerWorldSubsystem> TransformChangeManager;
 	void ComputeWorldTransform()const;
 	/** Mark this widget and its subtree stale and pending, stopping at a descendant already both. */
 	void MarkWorldTransformStaleRecursive();

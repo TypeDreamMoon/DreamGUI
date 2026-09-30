@@ -256,6 +256,8 @@ void UDreamUIManagerWorldSubsystem::TeardownWorld()
 	ensureMsgf(LayoutPassContext.IsBalanced(), TEXT("%s: a layout pass was still open when its world was torn down (depth %d, memo depth %d, %d writer(s))."),
 		*GetPathName(), LayoutPassContext.GetPassDepth(), LayoutPassContext.GetMemoDepth(), LayoutPassContext.GetWriterCount());
 	ParkedWidgets.Reset();
+	// Moves nobody is left to hear; from here on a move is announced on the spot (DefersTransformChanges).
+	TransformChangeRoots.Reset();
 }
 
 void UDreamUIManagerWorldSubsystem::HandleWorldCleanup(UWorld* InWorld, bool bInSessionEnded, bool bInCleanupResources)
