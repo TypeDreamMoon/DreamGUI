@@ -169,6 +169,12 @@ public:
 	TSharedPtr<FDreamUIRenderSection> SetupRenderSection(EDreamUIRenderSectionType InType, FDreamUIDrawCall* InDrawCallData);
 	void UpdateMeshSection(const TSharedPtr<FDreamUIRenderSection>& InRenderSection, FDreamUIDrawCall* InDrawCallData);
 	/**
+	 * UpdateMeshSection's patch, and nothing else: true when the section took the draw call's vertices (or is not a mesh
+	 * section, so there was nothing to take), false when it has to be updated whole. Touches only the section and this
+	 * mesh's pending updates and sends no render command, so different meshes may be patched on different threads.
+	 */
+	bool TryPatchMeshSection(const TSharedPtr<FDreamUIRenderSection>& InRenderSection, FDreamUIDrawCall* InDrawCallData);
+	/**
 	 * When InMeshSection holds the layout of InGeometries (FDreamUIDrawCall::GeometryListsShareLayout with the geometries
 	 * it was built from): the vertices of each geometry that is not the one it was built from are written into it where
 	 * they go, and only those go to the render thread; the section then stands for InGeometries. False, with nothing

@@ -644,8 +644,14 @@ void UDreamWidget::UpdateObjectToWorldTransform()
 }
 void UDreamWidget::CalculateObjectToWorldTransform(bool bPropagateToChildren)
 {
-	this->UpdateObjectToWorldTransform();
-	this->OnUpdateTransform();
+	{
+		TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_UpdateObjectToWorldTransform);
+		this->UpdateObjectToWorldTransform();
+	}
+	{
+		TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_OnUpdateTransform);
+		this->OnUpdateTransform();
+	}
 	if (bPropagateToChildren)
 	{
 		for (UDreamWidget* Child : this->Children)

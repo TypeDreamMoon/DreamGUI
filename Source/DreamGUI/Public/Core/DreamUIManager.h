@@ -314,6 +314,9 @@ private:
 	void ReleaseHostTrees(EDreamTreeReleaseReason InReason, const ULevel* InOnlyLevel = nullptr);
 	int32 CurrentExecutingTickIndex = -1;
 	UPROPERTY(Transient) TArray<UDreamUIBehaviour*> DreamUIBehavioursNeedToRemoveFromTick;
+	/** The frame the world's end-of-frame updates last submitted the canvases in, and whether they updated since. */
+	uint64 LastEndOfFrameSubmitFrame = MAX_uint64;
+	bool bCanvasesUpdatedSinceSubmit = true;
 #if !UE_BUILD_SHIPPING
 	/** Paired with the per-frame "only one ScreenSpaceOverlay canvas" check, which is not editor-only. */
 	int32 PrevScreenSpaceOverlayCanvasCount = 1;
@@ -342,6 +345,11 @@ public:
 	 * Check each entry with IsCanvasStillRegistered before calling into it.
 	 */
 	TArray<TWeakObjectPtr<UDreamCanvas>> SnapshotCanvases()const{return AllCanvasArray;}
+	/**
+	 * Calls InFunction on every registered root canvas, screen space first, then world space, then render targets, by
+	 * each canvas's actual render mode or the one it is set to. Safe against calls that register or unregister canvases.
+	 */
+	void ForEachRootCanvasInRenderModeOrder(bool bInActualRenderMode, TFunctionRef<void(UDreamCanvas*)> InFunction);
 	/** Whether a canvas from a snapshot is alive and still registered here. */
 	bool IsCanvasStillRegistered(const TWeakObjectPtr<UDreamCanvas>& InCanvas)const;
 	TArray<UDreamCanvas*> GetCanvasArrayByRenderMode(EDreamRenderMode RenderMode)const;

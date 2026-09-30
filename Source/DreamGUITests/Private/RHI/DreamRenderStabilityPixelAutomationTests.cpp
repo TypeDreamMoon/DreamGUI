@@ -9,6 +9,7 @@
 #include "Engine/Engine.h"
 #include "Engine/TextureRenderTarget2D.h"
 #include "Engine/World.h"
+#include "HAL/IConsoleManager.h"
 #include "HAL/PlatformTime.h"
 #include "Materials/MaterialInstanceDynamic.h"
 #include "PixelFormat.h"
@@ -854,12 +855,16 @@ bool FDreamRhiRebuildUploadsOnlyWhatChangedTest::RunTest(const FString& Paramete
 {
 	using namespace DreamRenderStabilityTestLocal;
 
-	// A canvas is rebuilt whole when anything in it moves, and every one of its draw calls used to go up to the GPU
-	// again. An element that did not change hands the batching the same copy of its geometry as before, and a draw call
-	// built from exactly the copies a section was built from takes that section back, its vertices still on the GPU.
-	// Two blocks with textures of their own make two draw calls. One moves: its draw call is laid out as before -- one
-	// quad -- and takes its section back with the moved block's vertices written in place, so nothing goes up whole; the
-	// other block's section is taken back as it was, and draws as before.
+	// A canvas rebuilt while one of its widgets moved used to send every one of its draw calls up to the GPU again. An
+	// element that did not change hands the batching the same copy of its geometry as before, and a draw call built from
+	// exactly the copies a section was built from takes that section back, its vertices still on the GPU. Two blocks with
+	// textures of their own make two draw calls. One moves: its draw call is laid out as before -- one quad -- and takes
+	// its section back with the moved block's vertices written in place, so nothing goes up whole; the other block's
+	// section is taken back as it was, and draws as before.
+	//
+	// A move this canvas's batching cannot depend on is refreshed in place without a rebuild at all
+	// (r.DreamUI.RefreshMovesInPlace; DreamCanvasMoveRefreshAutomationTests). The rebuild is what is under test here, so
+	// the move is made with that off, as a move that could change the batching would be.
 	FStageRef Stage = BeginStage(*this);
 	if (!Stage->IsUsable())
 	{
@@ -891,10 +896,16 @@ bool FDreamRhiRebuildUploadsOnlyWhatChangedTest::RunTest(const FString& Paramete
 	UDreamWidget* Stayer = AddTextured(TEXT("Stays"), GreenTexture, FVector2D(60.0, 0.0));
 	const FIntPoint StayerCentre = Stage->PixelOf(Stayer, FVector2D::ZeroVector);
 
+	const TSharedRef<int32> InPlaceBefore = MakeShared<int32>(1);
 	EnqueueSettledFrames(Stage);
-	EnqueueDo([Stage, StayerCentre, Mover]()
+	EnqueueDo([Stage, StayerCentre, Mover, InPlaceBefore]()
 	{
 		CheckPixel(Stage, StayerCentre, Green, TEXT("the block that stays, before the other moves"));
+		if (IConsoleVariable* InPlace = IConsoleManager::Get().FindConsoleVariable(TEXT("r.DreamUI.RefreshMovesInPlace")))
+		{
+			*InPlaceBefore = InPlace->GetInt();
+			InPlace->Set(0, ECVF_SetByCode);
+		}
 		DreamUIRenderStats::TakeSnapshot(/*bInReset*/ true);
 		if (UDreamWidget* Widget = Mover.Get())
 		{
@@ -918,6 +929,13 @@ bool FDreamRhiRebuildUploadsOnlyWhatChangedTest::RunTest(const FString& Paramete
 		if (UDreamWidget* Widget = Mover.Get())
 		{
 			CheckPixel(Stage, Stage->PixelOf(Widget, FVector2D::ZeroVector), Red, TEXT("the moved block, where it moved to"));
+		}
+	});
+	EnqueueDo([InPlaceBefore]()
+	{
+		if (IConsoleVariable* InPlace = IConsoleManager::Get().FindConsoleVariable(TEXT("r.DreamUI.RefreshMovesInPlace")))
+		{
+			InPlace->Set(*InPlaceBefore, ECVF_SetByCode);
 		}
 	});
 	EnqueueDo([KeepTextures]() { KeepTextures->Reset(); });

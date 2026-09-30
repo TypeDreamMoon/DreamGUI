@@ -12,6 +12,10 @@
 #include "Engine/GameInstance.h"
 #include "Core/Components/DreamCanvas.h"
 #include "Event/DreamBaseRaycaster.h"
+#include "RenderingThread.h"
+#include "Async/ParallelFor.h"
+#include "HAL/IConsoleManager.h"
+#include "Misc/App.h"
 #include "Engine/World.h"
 #include "Core/DreamUISettings.h"
 #include "Core/DreamUIFontData_FreeTypeRender.h"
@@ -54,6 +58,13 @@ DECLARE_CYCLE_STAT(TEXT("RefreshAllClipData"), STAT_DreamUIRefreshClipData, STAT
 DECLARE_CYCLE_STAT(TEXT("UpdateRootCanvas"), STAT_DreamUIUpdateRootCanvas, STATGROUP_DreamGUI);
 DECLARE_CYCLE_STAT(TEXT("RenderPrioritySort"), STAT_DreamUIRenderPrioritySort, STATGROUP_DreamGUI);
 DECLARE_CYCLE_STAT(TEXT("SubmitCanvasDrawCall"), STAT_DreamUISubmitCanvasDrawCall, STATGROUP_DreamGUI);
+
+static TAutoConsoleVariable<int32> CVarDreamUIParallelVertexRefreshMinCanvases(
+	TEXT("r.DreamUI.ParallelVertexRefreshMinCanvases"),
+	32,
+	TEXT("When at least this many canvases have vertices to refresh in a frame, the refreshes run on the task graph's workers ")
+	TEXT("as well as the game thread. 0: always on the game thread."),
+	ECVF_Default);
 
 void UDreamUIManagerWorldSubsystem::Tick(float DeltaTime)
 {
@@ -390,21 +401,10 @@ void UDreamUIManagerWorldSubsystem::TickDreamUI(float DeltaTime)
 	{
 		SCOPE_CYCLE_COUNTER(STAT_DreamUIUpdateRootCanvas);
 		TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_UpdateRootCanvases);
-		auto UpdateCanvas = [this](EDreamRenderMode RenderMode) {
-			// A snapshot per pass: UpdateRootCanvas may make a render target and broadcast it, and a
-			// listener may register or unregister a canvas.
-			for (const TWeakObjectPtr<UDreamCanvas>& Canvas : SnapshotCanvases())
-			{
-				if (!IsCanvasStillRegistered(Canvas))continue;
-				if (!Canvas->IsRootCanvas())continue;
-				if (Canvas->GetActualRenderMode() != RenderMode)continue;
-				Canvas->UpdateRootCanvas();
-			}
-		};
-		UpdateCanvas(EDreamRenderMode::ScreenSpaceOverlay);
-		UpdateCanvas(EDreamRenderMode::WorldSpace);
-		UpdateCanvas(EDreamRenderMode::WorldSpace_DreamUI);
-		UpdateCanvas(EDreamRenderMode::RenderTarget);
+		bCanvasesUpdatedSinceSubmit = true;
+		// Recorded and sent as one: see SubmitCanvasDrawCall.
+		FRenderCommandList::FRecordScope RecordScope(FRenderCommandList::Create(ERenderCommandListFlags::CloseOnSubmit), FRenderCommandList::EStopRecordingAction::Submit);
+		ForEachRootCanvasInRenderModeOrder(true, [](UDreamCanvas* Canvas) { Canvas->UpdateRootCanvas(); });
 	}
 	UDreamUIFontData_FreeTypeRender::FlushPendingFontTextures();
 
@@ -424,6 +424,46 @@ void UDreamUIManagerWorldSubsystem::TickDreamUI(float DeltaTime)
 	}
 }
 
+void UDreamUIManagerWorldSubsystem::ForEachRootCanvasInRenderModeOrder(bool bInActualRenderMode, TFunctionRef<void(UDreamCanvas*)> InFunction)
+{
+	/**
+	 * Screen space first, then world space, then render targets, as four passes over the registry used to take them --
+	 * sorted in one walk instead, which is a quarter of the lookups with a thousand world panels. Each canvas is looked at
+	 * again when its turn comes: a call may make a render target and broadcast it, and a listener may unregister a canvas
+	 * or change its mode. One registered meanwhile waits for the next frame.
+	 */
+	static constexpr EDreamRenderMode PassOrder[] = { EDreamRenderMode::ScreenSpaceOverlay, EDreamRenderMode::WorldSpace, EDreamRenderMode::WorldSpace_DreamUI, EDreamRenderMode::RenderTarget };
+	auto ModeOf = [bInActualRenderMode](const UDreamCanvas* Canvas)
+	{
+		return bInActualRenderMode ? Canvas->GetActualRenderMode() : Canvas->GetRenderMode();
+	};
+	TArray<TWeakObjectPtr<UDreamCanvas>> Passes[UE_ARRAY_COUNT(PassOrder)];
+	for (const TWeakObjectPtr<UDreamCanvas>& Canvas : AllCanvasArray)
+	{
+		const UDreamCanvas* Resolved = Canvas.Get();
+		if (Resolved == nullptr || !Resolved->IsRootCanvas())continue;
+		const EDreamRenderMode Mode = ModeOf(Resolved);
+		for (int32 Pass = 0; Pass < UE_ARRAY_COUNT(PassOrder); ++Pass)
+		{
+			if (PassOrder[Pass] == Mode)
+			{
+				Passes[Pass].Add(Canvas);
+				break;
+			}
+		}
+	}
+	for (int32 Pass = 0; Pass < UE_ARRAY_COUNT(PassOrder); ++Pass)
+	{
+		for (const TWeakObjectPtr<UDreamCanvas>& Canvas : Passes[Pass])
+		{
+			if (!IsCanvasStillRegistered(Canvas))continue;
+			if (!Canvas->IsRootCanvas())continue;
+			if (ModeOf(Canvas.Get()) != PassOrder[Pass])continue;
+			InFunction(Canvas.Get());
+		}
+	}
+}
+
 void UDreamUIManagerWorldSubsystem::OnWorldPreSendAllEndOfFrameUpdates(UWorld* InWorld)
 {
 	if (InWorld == this->GetWorld())
@@ -431,6 +471,18 @@ void UDreamUIManagerWorldSubsystem::OnWorldPreSendAllEndOfFrameUpdates(UWorld* I
 #if WITH_EDITOR
 		this->DrawHelperGizmo();
 #endif
+		/**
+		 * A world sends its end-of-frame updates when its tick ends and again when a viewport draws it. Only the canvases'
+		 * own update makes anything to submit -- vertices to refresh, a batch to wait for -- so once they have been
+		 * submitted this frame, a second pass with no update in between would look at a thousand world panels to find
+		 * nothing. A test or tool that calls SubmitCanvasDrawCall itself is not held to this.
+		 */
+		if (LastEndOfFrameSubmitFrame == GFrameCounter && !bCanvasesUpdatedSinceSubmit)
+		{
+			return;
+		}
+		LastEndOfFrameSubmitFrame = GFrameCounter;
+		bCanvasesUpdatedSinceSubmit = false;
 		this->SubmitCanvasDrawCall();
 	}
 }
@@ -443,19 +495,51 @@ void UDreamUIManagerWorldSubsystem::SubmitCanvasDrawCall()
 	UDreamUIFontData_FreeTypeRender::FlushPendingFontTextures();
 	//update draw-call
 	{
-		auto UpdateCanvas = [this](EDreamRenderMode RenderMode) {
-			for (const TWeakObjectPtr<UDreamCanvas>& Canvas : SnapshotCanvases())
+		/**
+		 * The render commands the canvases send -- each of a thousand world panels patching its vertices and moving its
+		 * render root -- recorded on this thread and handed to the render thread together when the pass ends. Enqueued one
+		 * by one, each was a task of its own and, whenever the render thread had gone idle, a wake-up of it. The order is
+		 * kept, and anything that waits for the render thread meanwhile (FlushRenderingCommands, a fence) sends what was
+		 * recorded first.
+		 */
+		FRenderCommandList* const RenderCommands = FRenderCommandList::Create(ERenderCommandListFlags::CloseOnSubmit);
+		FRenderCommandList::FRecordScope RecordScope(RenderCommands, FRenderCommandList::EStopRecordingAction::Submit);
+		// Each canvas's UpdateDrawCallBatchData, in its three parts: what has to happen on the game thread for every canvas
+		// first, then the vertex refreshes, which touch nothing another canvas does, on as many threads as there are, then
+		// the game thread's again.
+		TArray<UDreamCanvas*> ToRefresh;
+		TArray<UDreamCanvas*> ToFinish;
+		ForEachRootCanvasInRenderModeOrder(false, [&ToRefresh, &ToFinish](UDreamCanvas* Canvas) { Canvas->TakeDrawCallBatchData(ToRefresh, ToFinish); });
+		const int32 MinCanvases = CVarDreamUIParallelVertexRefreshMinCanvases.GetValueOnGameThread();
+		if (MinCanvases > 0 && ToRefresh.Num() >= MinCanvases && FApp::ShouldUseThreadingForPerformance())
+		{
+			TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_ParallelVertexRefresh);
+			// A refresh sends no render command, but should one ever come to, each task records its own and they join this
+			// frame's in task order when the context goes out of scope.
+			constexpr int32 MinBatchSize = 8;
+			constexpr EParallelForFlags Flags = EParallelForFlags::None;
+			FRenderCommandList::FParallelForContext ParallelForContext(RenderCommands, ToRefresh.Num(), MinBatchSize, Flags);
+			ParallelForWithExistingTaskContext(TEXT("DreamUI_RefreshDrawCallVertices"), ParallelForContext.GetCommandLists(), ToRefresh.Num(), MinBatchSize,
+				[&ToRefresh](FRenderCommandList* TaskCommands, int32 Index)
+				{
+					FRenderCommandList::FRecordScope TaskRecordScope(TaskCommands);
+					ToRefresh[Index]->RefreshDrawCallVertices();
+				}, Flags);
+		}
+		else
+		{
+			for (UDreamCanvas* Canvas : ToRefresh)
 			{
-				if (!IsCanvasStillRegistered(Canvas))continue;
-				if (!Canvas->IsRootCanvas())continue;
-				if (Canvas->GetRenderMode() != RenderMode)continue;
-				Canvas->UpdateDrawCallBatchData();
+				Canvas->RefreshDrawCallVertices();
 			}
-		};
-		UpdateCanvas(EDreamRenderMode::ScreenSpaceOverlay);
-		UpdateCanvas(EDreamRenderMode::WorldSpace);
-		UpdateCanvas(EDreamRenderMode::WorldSpace_DreamUI);
-		UpdateCanvas(EDreamRenderMode::RenderTarget);
+		}
+		for (UDreamCanvas* Canvas : ToFinish)
+		{
+			if (IsValid(Canvas))
+			{
+				Canvas->FinishDrawCallBatchData();
+			}
+		}
 	}
 	// The render-target canvases that draw themselves, now that every canvas has sent this frame's sections.
 	for (const TWeakObjectPtr<UDreamCanvas>& Canvas : SnapshotCanvases())

@@ -809,7 +809,24 @@ private:
 public:
 	/** Called from DreamUIManagerActor. Update this canvas if it is a RootCanvas */
 	void UpdateRootCanvas();
+	/** TakeDrawCallBatchData, RefreshDrawCallVertices and FinishDrawCallBatchData for this canvas and its children, in turn. */
 	void UpdateDrawCallBatchData();
+	/**
+	 * UpdateDrawCallBatchData in its parts, for a caller that refreshes many canvases at once (SubmitCanvasDrawCall).
+	 *
+	 * Take, on the game thread: waits for this canvas's and its children's batching and vertex transforms, puts new draw
+	 * calls in place, and adds to OutToRefresh each of them whose vertices are due a refresh and to OutToFinish each of
+	 * them with a mesh, children first.
+	 */
+	void TakeDrawCallBatchData(TArray<UDreamCanvas*>& OutToRefresh, TArray<UDreamCanvas*>& OutToFinish);
+	/**
+	 * The refresh a canvas Take listed: the moved elements' vertices into their draw calls, and the sections patched with
+	 * them. Any thread, and several canvases at once: it touches nothing but this canvas's draw calls, the visuals they
+	 * hold and its mesh's sections, and sends no render command. A section that cannot be patched is left to Finish.
+	 */
+	void RefreshDrawCallVertices();
+	/** On the game thread, after the refresh: what it left -- sections to rebuild, the mesh's bounds -- and the mesh's render commands. */
+	void FinishDrawCallBatchData();
 	/**  */
 	void MarkNeedVerifyMaterials();
 private:
@@ -945,7 +962,27 @@ public:
 	 * update looks at those widgets alone, where it looks at every widget of the canvas otherwise.
 	 */
 	void MarkWidgetUpdate(UDreamWidget* InWidget, bool bRebuildDrawCall);
+	/**
+	 * A widget of this canvas moved, and nothing else about it changed. Its draw calls are rebuilt only when the move
+	 * could change how its canvas's elements batch (CanRefreshDrawCallsInPlace); otherwise the draw calls in hand take
+	 * the moved vertices and bounds, as they take a colour.
+	 */
+	void MarkWidgetMoved(UDreamWidget* InWidget);
 private:
+	/** Set by MarkWidgetMoved; the next update decides whether the moves need a rebuild. */
+	bool bWidgetsMovedSinceUpdate = false;
+	/** What RefreshDrawCallVertices leaves to FinishDrawCallBatchData: whether a draw call's bounds moved, and the draw calls whose section it could not patch. */
+	bool bRefreshMovedBounds = false;
+	TArray<int32, TInlineAllocator<4>> DrawCallsLeftToUpdate;
+	/**
+	 * Whether the draw calls in hand are what a batch of the elements as they are now would make: the last batch did not
+	 * depend on positions (FDreamUIBatchPlacement), no rebuild is on its way, and every element still has its vertex
+	 * count, is still flat or not as it was, and is still inside or outside the canvas rect as it was. Waits for the
+	 * vertex transforms under way, since it reads the geometries they write.
+	 */
+	bool CanRefreshDrawCallsInPlace();
+	/** Whether the batching leaves out flat elements outside this canvas's rect: only where the rect is the surface drawn. */
+	bool CullsElementsOutsideItsRect() const { return bCullElementsOutsideCanvas && (IsRootCanvas() || bForceRenderToTarget); }
 	/**
 	 * The widgets that asked for an update since the canvas last updated. The update looks at them alone -- in the
 	 * order of WidgetList, each after its parents' clips -- unless something else woke the canvas as well: the canvas
@@ -1001,10 +1038,14 @@ public:
 	 *		a root canvas, or one rendering to its own target. A plain child canvas draws into its
 	 *		parent's surface, and a canvas is not a clipper, so its rect says nothing about visibility.
 	 */
-	static void BatchDrawCallAsync(const FVector2D& InCanvasLeftBottom, const FVector2D& InCanvasRightTop, const TArray<FDreamUIRenderData>& InRenderDataArray, TArray<FDreamUIDrawCall>& InOutUIDrawCallList, bool bCullElementsOutsideCanvasRect = false);
-	/** The same, using up InRenderDataArray: each element's prepared geometry goes into its draw call as it is. */
+	static void BatchDrawCallAsync(const FVector2D& InCanvasLeftBottom, const FVector2D& InCanvasRightTop, const TArray<FDreamUIRenderData>& InRenderDataArray, TArray<FDreamUIDrawCall>& InOutUIDrawCallList, bool bCullElementsOutsideCanvasRect = false
+		, FDreamUIBatchPlacement* OutPlacement = nullptr);
+	/**
+	 * The same, using up InRenderDataArray: each element's prepared geometry goes into its draw call as it is.
+	 * @param OutPlacement	When given, what the batch depended on of where the elements are: see FDreamUIBatchPlacement.
+	 */
 	static void BatchDrawCallAsync(const FVector2D& InCanvasLeftBottom, const FVector2D& InCanvasRightTop, TArray<FDreamUIRenderData>&& InRenderDataArray, TArray<FDreamUIDrawCall>& InOutUIDrawCallList, bool bCullElementsOutsideCanvasRect = false
-		, const TArray<TArray<TSharedPtr<const FDreamUIGeometry>>>* InGeometryListsOnSections = nullptr);
+		, const TArray<TArray<TSharedPtr<const FDreamUIGeometry>>>* InGeometryListsOnSections = nullptr, FDreamUIBatchPlacement* OutPlacement = nullptr);
 	static bool Is2DUITransform(const FTransform& Transform);
 private:
 	void CheckUIMesh()const;

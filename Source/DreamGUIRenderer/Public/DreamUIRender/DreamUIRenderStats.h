@@ -57,6 +57,10 @@ namespace DreamUIRenderStats
 		WidgetsUpdated,
 		/** Game thread: mesh sections that took the vertices of only the elements that changed, the rest left as they were. */
 		SectionPatches,
+		/** Game thread: canvases that prepared their elements and had their draw calls batched again. */
+		DrawCallRebuilds,
+		/** Game thread: canvases whose elements only moved, refreshed in the draw calls they had instead of rebuilt. */
+		InPlaceRefreshes,
 		Num
 	};
 
