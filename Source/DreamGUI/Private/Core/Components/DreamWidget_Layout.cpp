@@ -914,19 +914,19 @@ void UDreamWidget::MarkDimensionChanged(bool InPivotChanged, bool InWidthChanged
 	MarkWorldRectBoundsDirty();
 	// A render transform turns about a pivot POINT, and that point is resolved from the current size:
 	// GetLocalSpaceLeft() + GetWidth() * RenderTransformPivot.X. So a resize moves the point, which moves
-	// the bracketed transform, which moves ObjectToWorldTransform -- and nothing else here recomputes it.
+	// the bracketed transform, which moves the world transform -- and nothing else here marks it stale.
 	// CalculateTransformFromAnchor only writes RelativeLocation, and for a point-anchored widget a pure
-	// resize leaves that untouched, so SetRelativeLocation early-outs and the transform cascade never
-	// runs: the widget goes on being drawn (and hit-tested, GetWorldRectBoundingSphere reads the same
+	// resize leaves that untouched, so SetRelativeLocation early-outs and the transform is never marked:
+	// the widget goes on being drawn (and hit-tested, GetWorldRectBoundingSphere reads the same
 	// matrix) about the pivot point of its OLD size, off by (I - ScaleAndRotate) * (P_new - P_old).
 	// A card that hover-scales while its text changes width, a spinner resized by a SizeBox mid-rotation.
 	// Centre pivots are immune (the point is the origin) and so are pure translations, which is why this
 	// survived; the bit test keeps every widget without a render transform on the old path.
 	if (bHasRenderTransform && (InPivotChanged || InWidthChanged || InHeightChanged))
 	{
-		// Propagating is required rather than tidy: descendants compose their world transform from this
-		// one, and a descendant whose own relative location did not change would otherwise keep a world
-		// transform built from the pre-resize parent.
+		// The whole subtree is marked, and that is required rather than tidy: descendants compose their
+		// world transform from this one, and a descendant whose own relative location did not change
+		// would otherwise keep a world transform built from the pre-resize parent.
 		CalculateObjectToWorldTransform(true);
 	}
 	// No clip invalidation here: clip rectangles are recomputed and diffed every tick from the owner's world
@@ -955,33 +955,6 @@ void UDreamWidget::MarkDimensionChanged(bool InPivotChanged, bool InWidthChanged
 	}
 
 	Call_DimensionsChanged(InPivotChanged, InWidthChanged, InHeightChanged);
-}
-
-void UDreamWidget::MarkTransformChanged()
-{
-	// UpdateObjectToWorldTransform is the ONLY writer of ObjectToWorldTransform and it ends here, so
-	// this one line covers every move -- including the cascade CalculateObjectToWorldTransform sends
-	// down, which reaches each descendant through its own UpdateObjectToWorldTransform. That is what
-	// makes the cached sphere never staler than the transform it is derived from.
-	MarkWorldRectBoundsDirty();
-	if (this->RenderCanvas.IsValid())
-	{
-		if (this->IsCanvasWidget())
-		{
-			this->RenderCanvas->MarkWidgetUpdate(this, true);//mark canvas to update
-			//This is mainly to mark DreamGUICanvas's bIsViewProjectionMatrixDirty to true.
-			//For the condition DreamGUI_Tutorials/Tutorials/UIRenderTarget, when move DreamGUIRenderTarget at runtime, the DreamGUICanvas's RenderTarget's matrix not update, result in wrong interaction.
-			this->RenderCanvas->MarkTransformOrDimensionChanged();
-		}
-		else
-		{
-			// A move and nothing else: the canvas rebuilds its draw calls only if the move could change how they batch.
-			this->RenderCanvas->MarkWidgetMoved(this);
-		}
-	}
-
-	TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_TransformChangedEvent);
-	Call_TransformChanged();
 }
 
 void UDreamWidget::MarkAnchorDataChanged_Recursive(bool InPivotChanged, bool InWidthChanged, bool InHeightChanged, bool InDiscardCache, bool InPropagateToChildren)

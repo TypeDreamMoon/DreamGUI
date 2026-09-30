@@ -20,12 +20,12 @@
 /*
  * WHERE A HIERARCHY STANDS ONCE IT IS REGISTERED.
  *
- * A widget's world transform is a cache. UDreamWidget::UpdateObjectToWorldTransform composes it from
- * the widget's own transform and its parent's cached one -- or, for a root, the scene component its
- * canvas follows -- and it is composed again only when something asks: a transform setter whose value
- * changed, an attach through TrySetParent, a canvas attaching to a scene component. The trees the
- * runtime builds for itself are not attached that way. CreateDreamWidget, DuplicateDreamWidgetHierarchy,
- * class instancing and every control that assembles parts of its own hang a subtree up with
+ * A widget's world transform is a cache. UDreamWidget::GetWorldTransform composes it from the widget's
+ * own transform and its parent's -- or, for a root, the scene component its canvas follows -- and it is
+ * composed again only once something has marked it stale: a transform setter whose value changed, an
+ * attach through TrySetParent, a canvas attaching to a scene component. The trees the runtime builds
+ * for itself are not attached that way. CreateDreamWidget, DuplicateDreamWidgetHierarchy, class
+ * instancing and every control that assembles parts of its own hang a subtree up with
  * SetParentBeforeRegister, which moves pointers and composes nothing, and then hand the finished tree to
  * RegisterDreamWidgetHierarchy. Whatever in that tree is never moved afterwards keeps what it was
  * composed against while it was being built: a control's parts were composed against a control that had

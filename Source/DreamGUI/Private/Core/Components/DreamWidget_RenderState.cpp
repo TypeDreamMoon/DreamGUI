@@ -149,13 +149,13 @@ void UDreamWidget::RefreshInheritedStateFromParentChain()
 	// detach, and the editor's full refresh (EnsureDataForRebuild, which the designer runs after every
 	// preview rebuild) ends with this same call -- which is why no designer preview ever showed this.
 	//
-	// ObjectToWorldTransform is a cache of GetRenderLocalTransform() composed with the parent's, and
-	// SetParentBeforeRegister, being the cheap attach, does not touch it. A subtree hung that way keeps
-	// whatever it was last composed against: for anything CreateDreamWidget builds, its own user
-	// widget before that had a parent -- the world origin. Nothing afterwards is bound to correct it,
-	// because the setters and the layout write-back only recompute when the value they write differs
-	// from the one held. A control left at its default position never moves, so it is never
-	// recomputed: SetAnchoredPosition((0, 0)) on a new control returns early, and so does the
+	// The world transform is a cache of GetRenderLocalTransform() composed with the parent's, composed
+	// again only when a change has marked it stale, and SetParentBeforeRegister, being the cheap attach,
+	// composes nothing. A subtree hung that way keeps whatever it was last composed against: for anything
+	// CreateDreamWidget builds, its own user widget before that had a parent -- the world origin. Nothing
+	// afterwards is bound to correct it, because the setters and the layout write-back only mark when the
+	// value they write differs from the one held. A control left at its default position never moves, so
+	// it is never marked: SetAnchoredPosition((0, 0)) on a new control returns early, and so does the
 	// CalculateTransformFromAnchor a layout pass runs, which derives the relative location the widget
 	// already has. The early returns are right; the state they protect was never established.
 	//
@@ -171,10 +171,10 @@ void UDreamWidget::RefreshInheritedStateFromParentChain()
 	// and shear bits the composition reads were refreshed from serialized data; composed any earlier, a
 	// saved render transform would be left out of it.
 	//
-	// Unlike the four walks above, this announces itself whether or not the value moved -- the transform
-	// cascade always ends in MarkTransformChanged, so every behaviour bound in the subtree hears one
-	// transform change (queued until its Awake in a game world). An attach through TrySetParent opens
-	// with this same recompute and says the same thing, so a behaviour now hears it whichever of the two
+	// Unlike the four walks above, this announces itself whether or not the value moved -- every widget
+	// the mark reaches is announced by the flush that follows, so every behaviour bound in the subtree
+	// hears one transform change (queued until its Awake in a game world). An attach through TrySetParent
+	// opens with this same mark and says the same thing, so a behaviour now hears it whichever of the two
 	// doors its widget came in by.
 	CalculateObjectToWorldTransform(true);
 }
