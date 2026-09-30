@@ -114,6 +114,22 @@ void FDreamUIWorldRenderPS::SetDepthBlendParameter(FRHICommandList& RHICmdList, 
 	RHICmdList.SetBatchedShaderParameters(RHICmdList.GetBoundPixelShader(), BatchedParameters);
 }
 
+void FDreamUIWorldRenderPS::SetDepthBlendParameter(FRHICommandList& RHICmdList, float DepthBlend, const FVector4f& DepthTextureScaleOffset, FRHITexture* DepthTexture, TUniformBufferRef<FDreamUIWorldRenderDepthTexUB>& InOutDepthTextureBuffer)
+{
+	if (!InOutDepthTextureBuffer.IsValid())
+	{
+		FDreamUIWorldRenderDepthTexUB UB;
+		UB._SceneDepthTex = DepthTexture;
+		UB._SceneDepthTexSampler = TStaticSamplerState<SF_Bilinear, AM_Clamp, AM_Clamp, AM_Clamp>::GetRHI();
+		InOutDepthTextureBuffer = TUniformBufferRef<FDreamUIWorldRenderDepthTexUB>::CreateUniformBufferImmediate(UB, UniformBuffer_SingleFrame);
+	}
+	FRHIBatchedShaderParameters& BatchedParameters = RHICmdList.GetScratchShaderParameters();
+	SetUniformBufferParameter(BatchedParameters, GetUniformBufferParameter<FDreamUIWorldRenderDepthTexUB>(), InOutDepthTextureBuffer);
+	SetShaderValue(BatchedParameters, SceneDepthBlendParameter, DepthBlend);
+	SetShaderValue(BatchedParameters, SceneDepthTextureScaleOffsetParameter, DepthTextureScaleOffset);
+	RHICmdList.SetBatchedShaderParameters(RHICmdList.GetBoundPixelShader(), BatchedParameters);
+}
+
 
 FDreamUIWorldRenderDepthFadePS::FDreamUIWorldRenderDepthFadePS(const FMaterialShaderType::CompiledShaderInitializerType& Initializer)
 	:FDreamUIWorldRenderPS(Initializer)

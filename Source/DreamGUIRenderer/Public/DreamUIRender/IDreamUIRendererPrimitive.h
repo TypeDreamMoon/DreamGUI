@@ -72,8 +72,11 @@ struct FDreamUIPrimitiveDataContainer
 {
 	class IDreamUIRendererPrimitive* Primitive = nullptr;
 	EDreamUIRendererPrimitiveType Type;
-	TArray<FDreamUIPrimitiveSectionDataContainer> Sections;
+	/** A few held in place: collected for every primitive every frame, which for a wall of world panels was an allocation each. */
+	TArray<FDreamUIPrimitiveSectionDataContainer, TInlineAllocator<4>> Sections;
 };
+/** What a primitive collects in a frame (IDreamUIRendererPrimitive::DreamUI_CollectRenderData): mostly one run, held in place. */
+using FDreamUIPrimitiveDataArray = TArray<FDreamUIPrimitiveDataContainer, TInlineAllocator<1>>;
 
 class IDreamUIRendererPrimitive
 {
@@ -90,7 +93,7 @@ public:
 	virtual FVector3f DreamUI_GetWorldPositionForSortTranslucent()const = 0;
 	virtual FBoxSphereBounds DreamUI_GetWorldBounds()const = 0;
 
-	virtual void DreamUI_CollectRenderData(TArray<FDreamUIPrimitiveDataContainer>& OutRenderData) = 0;
+	virtual void DreamUI_CollectRenderData(FDreamUIPrimitiveDataArray& OutRenderData) = 0;
 	virtual void DreamUI_GetMeshElements(const FSceneViewFamily& ViewFamily, FMeshElementCollector& Collector, const FDreamUIPrimitiveDataContainer& PrimitiveData, TArray<FDreamUIMeshBatchContainer>& ResultArray) = 0;
 	/** Returns a reference, not a borrow: the caller keeps the proxy alive for as long as it renders with it. */
 	virtual FDreamVisualPostProcessRenderProxyPtr DreamUI_GetPostProcessElement(FDreamUIRenderSectionProxy* SectionPtr)const = 0;

@@ -864,7 +864,7 @@ public:
 	{
 		return FVector3f(Transform.LocalToWorld.GetOrigin());
 	}
-	virtual void DreamUI_CollectRenderData(TArray<FDreamUIPrimitiveDataContainer>& OutRenderData) override
+	virtual void DreamUI_CollectRenderData(FDreamUIPrimitiveDataArray& OutRenderData) override
 	{
 #if DEBUG_PRINT_MESH_MEMORY
 		CalculateMeshMemorySize_RT();
@@ -959,7 +959,7 @@ public:
 	}
 	virtual FBoxSphereBounds DreamUI_GetWorldBounds()const override { return Transform.Bounds; }
 	//end IDreamUIRendererPrimitive interface
-	void CollectRenderData_Implement(TArray<FDreamUIPrimitiveDataContainer>& OutRenderDataArray)
+	void CollectRenderData_Implement(FDreamUIPrimitiveDataArray& OutRenderDataArray)
 	{
 		if (SectionArray.Num() <= 0)return;
 		SortIfAsked_RenderThread();

@@ -65,6 +65,12 @@ public:
 	static void ModifyCompilationEnvironment(const FMaterialShaderPermutationParameters& Parameters, FShaderCompilerEnvironment& OutEnvironment);
 
 	void SetDepthBlendParameter(FRHICommandList& RHICmdList, float DepthBlend, const FVector4f& DepthTextureScaleOffset, FRHITexture* DepthTexture, FRHISamplerState* DepthTextureSampler = TStaticSamplerState<SF_Bilinear, AM_Clamp, AM_Clamp, AM_Clamp>::GetRHI());
+	/**
+	 * The same, for draw after draw of one pass against one depth: the uniform buffer of the depth and its bilinear sampler is
+	 * made at the first, into InOutDepthTextureBuffer, and bound again after. Each draw of a wall of world-space panels made
+	 * one otherwise.
+	 */
+	void SetDepthBlendParameter(FRHICommandList& RHICmdList, float DepthBlend, const FVector4f& DepthTextureScaleOffset, FRHITexture* DepthTexture, TUniformBufferRef<FDreamUIWorldRenderDepthTexUB>& InOutDepthTextureBuffer);
 private:
 	LAYOUT_FIELD(FShaderParameter, SceneDepthTextureScaleOffsetParameter);
 	LAYOUT_FIELD(FShaderParameter, SceneDepthBlendParameter);

@@ -17,6 +17,9 @@ struct FDreamUIPostProcessVertex;
 struct FDreamUIPostProcessCopyMeshRegionVertex;
 class FGlobalShaderMap;
 
+/** What a pass's built-in draws looked up and set last: see FDreamUIRenderer::DrawBuiltInBatch. */
+struct FDreamUIBuiltInDrawCache;
+
 class FDreamUIMeshElementCollector : public FMeshElementCollector//why use a custom collector? because default FMeshElementCollector have no public constructor
 {
 public:
@@ -178,6 +181,7 @@ private:
 		, const FSceneView& View, const FIntRect& ViewRect, const struct FDreamUIMeshBatchContainer& Batch
 		, uint8 NumSamples, float GammaValue, bool bIsDepthValid
 		, bool bBlendDepth, float BlendDepth, int DepthFade, const FVector4f& SceneDepthTexST, FRHITexture* SceneDepthTexture
+		, FDreamUIBuiltInDrawCache* InOutCache = nullptr
 	);
 	struct FWorldSpaceRenderParameter
 	{
