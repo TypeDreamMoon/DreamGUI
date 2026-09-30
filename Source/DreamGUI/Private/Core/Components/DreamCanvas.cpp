@@ -632,6 +632,8 @@ bool UDreamCanvas::CheckRootCanvas(bool forceRecheck)const
 	if (NewRootCanvas != RootCanvas)
 	{
 		RootCanvas = NewRootCanvas;
+		// Root or not, it may be sorted where it no longer belongs.
+		UDreamUIManagerWorldSubsystem::InvalidateRootCanvasOrder();
 	}
 	if (RootCanvas.IsValid())
 	{
@@ -1582,6 +1584,8 @@ bool UDreamCanvas::CanEditChange(const FProperty* InProperty) const
 void UDreamCanvas::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
 {
 	Super::PostEditChangeProperty(PropertyChangedEvent);
+	// The details panel and an undo write the render mode past its setter.
+	UDreamUIManagerWorldSubsystem::InvalidateRootCanvasOrder();
 
 	if (auto DreamWidget = GetWidget())
 	{
@@ -3874,6 +3878,7 @@ void UDreamCanvas::SetRenderMode(EDreamRenderMode Value)
 	if (RenderMode != Value)
 	{
 		RenderMode = Value;
+		UDreamUIManagerWorldSubsystem::InvalidateRootCanvasOrder();
 		MarkCanvasUpdate(true);
 		CheckRenderMode(true);
 

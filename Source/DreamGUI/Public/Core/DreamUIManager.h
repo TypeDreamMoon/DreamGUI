@@ -247,6 +247,13 @@ private:
 	 */
 	TSet<FObjectKey> RegisteredCanvasKeys;
 	/**
+	 * The root canvases ForEachRootCanvasInRenderModeOrder takes, one list per render mode in the order it takes them, as
+	 * they were sorted at RootCanvasOrderGeneration (InvalidateRootCanvasOrder). Sorting them was a walk of the whole
+	 * registry, twice a frame, asking each canvas for its root and its mode.
+	 */
+	TArray<TWeakObjectPtr<UDreamCanvas>> RootCanvasesByPass[4];
+	uint64 RootCanvasOrderGeneration = 0;
+	/**
 	 * Every registered widget, weakly: registering is not owning. A tree is kept alive by its host --
 	 * the component, subsystem or preview that made it -- and the host lets it go; see FreeRoots for the
 	 * trees no host holds.
@@ -388,6 +395,11 @@ public:
 	 * each canvas's actual render mode or the one it is set to. Safe against calls that register or unregister canvases.
 	 */
 	void ForEachRootCanvasInRenderModeOrder(bool bInActualRenderMode, TFunctionRef<void(UDreamCanvas*)> InFunction);
+	/**
+	 * A canvas came or went, found another root, or changed its render mode: every manager sorts its root canvases again
+	 * before its next pass over them (ForEachRootCanvasInRenderModeOrder). Any thread.
+	 */
+	static void InvalidateRootCanvasOrder();
 	/** Whether a canvas from a snapshot is alive and still registered here. */
 	bool IsCanvasStillRegistered(const TWeakObjectPtr<UDreamCanvas>& InCanvas)const;
 	TArray<UDreamCanvas*> GetCanvasArrayByRenderMode(EDreamRenderMode RenderMode)const;

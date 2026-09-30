@@ -14,6 +14,7 @@
 #include "Event/DreamBaseRaycaster.h"
 #include "RenderingThread.h"
 #include "Async/ParallelFor.h"
+#include <atomic>
 #include "HAL/IConsoleManager.h"
 #include "Misc/App.h"
 #include "Engine/World.h"
@@ -443,37 +444,61 @@ void UDreamUIManagerWorldSubsystem::TickDreamUI(float DeltaTime)
 	}
 }
 
+namespace DreamUIManagerTickLocal
+{
+	/** Moved on by InvalidateRootCanvasOrder; a manager whose sort is older sorts again. */
+	std::atomic<uint64> RootCanvasOrderGeneration = 1;
+}
+
+void UDreamUIManagerWorldSubsystem::InvalidateRootCanvasOrder()
+{
+	DreamUIManagerTickLocal::RootCanvasOrderGeneration.fetch_add(1, std::memory_order_relaxed);
+}
+
 void UDreamUIManagerWorldSubsystem::ForEachRootCanvasInRenderModeOrder(bool bInActualRenderMode, TFunctionRef<void(UDreamCanvas*)> InFunction)
 {
 	/**
 	 * Screen space first, then world space, then render targets, as four passes over the registry used to take them --
-	 * sorted in one walk instead, which is a quarter of the lookups with a thousand world panels. Each canvas is looked at
+	 * sorted in one walk instead, and that walk only when a canvas came or went, found another root or changed its mode.
+	 * A root's actual render mode is the one it is set to, so one sort serves both kinds of pass. Each canvas is looked at
 	 * again when its turn comes: a call may make a render target and broadcast it, and a listener may unregister a canvas
 	 * or change its mode. One registered meanwhile waits for the next frame.
 	 */
 	static constexpr EDreamRenderMode PassOrder[] = { EDreamRenderMode::ScreenSpaceOverlay, EDreamRenderMode::WorldSpace, EDreamRenderMode::WorldSpace_DreamUI, EDreamRenderMode::RenderTarget };
+	static_assert(UE_ARRAY_COUNT(PassOrder) == UE_ARRAY_COUNT(RootCanvasesByPass), "One sorted list per pass");
 	auto ModeOf = [bInActualRenderMode](const UDreamCanvas* Canvas)
 	{
 		return bInActualRenderMode ? Canvas->GetActualRenderMode() : Canvas->GetRenderMode();
 	};
-	TArray<TWeakObjectPtr<UDreamCanvas>> Passes[UE_ARRAY_COUNT(PassOrder)];
-	for (const TWeakObjectPtr<UDreamCanvas>& Canvas : AllCanvasArray)
+	const uint64 Generation = DreamUIManagerTickLocal::RootCanvasOrderGeneration.load(std::memory_order_relaxed);
+	if (RootCanvasOrderGeneration != Generation)
 	{
-		const UDreamCanvas* Resolved = Canvas.Get();
-		if (Resolved == nullptr || !Resolved->IsRootCanvas())continue;
-		const EDreamRenderMode Mode = ModeOf(Resolved);
-		for (int32 Pass = 0; Pass < UE_ARRAY_COUNT(PassOrder); ++Pass)
+		RootCanvasOrderGeneration = Generation;
+		for (TArray<TWeakObjectPtr<UDreamCanvas>>& Pass : RootCanvasesByPass)
 		{
-			if (PassOrder[Pass] == Mode)
+			Pass.Reset();
+		}
+		for (const TWeakObjectPtr<UDreamCanvas>& Canvas : AllCanvasArray)
+		{
+			const UDreamCanvas* Resolved = Canvas.Get();
+			if (Resolved == nullptr || !Resolved->IsRootCanvas())continue;
+			const EDreamRenderMode Mode = Resolved->GetRenderMode();
+			for (int32 Pass = 0; Pass < UE_ARRAY_COUNT(PassOrder); ++Pass)
 			{
-				Passes[Pass].Add(Canvas);
-				break;
+				if (PassOrder[Pass] == Mode)
+				{
+					RootCanvasesByPass[Pass].Add(Canvas);
+					break;
+				}
 			}
 		}
 	}
 	for (int32 Pass = 0; Pass < UE_ARRAY_COUNT(PassOrder); ++Pass)
 	{
-		for (const TWeakObjectPtr<UDreamCanvas>& Canvas : Passes[Pass])
+		// A copy: a call that sorts the canvases again, through a pass of its own, would otherwise change the list under
+		// this one.
+		const TArray<TWeakObjectPtr<UDreamCanvas>> Canvases = RootCanvasesByPass[Pass];
+		for (const TWeakObjectPtr<UDreamCanvas>& Canvas : Canvases)
 		{
 			if (!IsCanvasStillRegistered(Canvas))continue;
 			if (!Canvas->IsRootCanvas())continue;
