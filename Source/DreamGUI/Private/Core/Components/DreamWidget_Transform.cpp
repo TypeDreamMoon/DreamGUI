@@ -715,15 +715,30 @@ void UDreamWidget::MarkWorldTransformStaleRecursive()
 	}
 }
 
+static TAutoConsoleVariable<int32> CVarDreamUIQuietRenderLayers(
+	TEXT("r.DreamUI.QuietRenderLayers"),
+	1,
+	TEXT("1: a render layer whose widgets need no word of its moves -- none hosts a canvas, is a layer or is listened to -- ")
+	TEXT("is not walked into when it moves: they stay stale, and are composed when read. 0: every widget under a moved layer ")
+	TEXT("is walked, as it was."),
+	ECVF_Default);
+
 void UDreamWidget::FlushTransformChanges()
 {
 	FlushTransformChangesFrom(this,
 		[](const UDreamWidget& InWidget) { return InWidget.IsRenderLayer(); },
-		[](UDreamWidget& InWidget, EDreamTransformChangeNotice InNotice) { InWidget.ApplyTransformChangeNotice(InNotice); });
+		[](UDreamWidget& InWidget, EDreamTransformChangeNotice InNotice) { InWidget.ApplyTransformChangeNotice(InNotice); },
+		[](const UDreamWidget& InLayer) { return CVarDreamUIQuietRenderLayers.GetValueOnGameThread() != 0 && InLayer.IsRenderLayerQuiet(); });
 }
 
 void UDreamWidget::FlushTransformChangesFrom(UDreamWidget* InRoot, TFunctionRef<bool(const UDreamWidget&)> InIsRenderLayer,
 	TFunctionRef<void(UDreamWidget&, EDreamTransformChangeNotice)> InNotify)
+{
+	FlushTransformChangesFrom(InRoot, InIsRenderLayer, InNotify, [](const UDreamWidget&) { return false; });
+}
+
+void UDreamWidget::FlushTransformChangesFrom(UDreamWidget* InRoot, TFunctionRef<bool(const UDreamWidget&)> InIsRenderLayer,
+	TFunctionRef<void(UDreamWidget&, EDreamTransformChangeNotice)> InNotify, TFunctionRef<bool(const UDreamWidget&)> InIsQuietLayer)
 {
 	if (!IsValid(InRoot) || !InRoot->bTransformChangePending)
 	{
@@ -760,6 +775,7 @@ void UDreamWidget::FlushTransformChangesFrom(UDreamWidget* InRoot, TFunctionRef<
 		EDreamTransformChangeNotice Notice;
 		bool bChildrenInLayer = Visit.bInLayer;
 		bool bChildrenMovedInLayer = bMoved;
+		bool bWalkChildren = true;
 		if (Widget->bIsCanvasWidget)
 		{
 			// A canvas's widgets are drawn relative to it, never to a layer of the canvas above; it cannot be a layer.
@@ -772,6 +788,10 @@ void UDreamWidget::FlushTransformChangesFrom(UDreamWidget* InRoot, TFunctionRef<
 			Notice = EDreamTransformChangeNotice::RenderLayer;
 			bChildrenInLayer = true;
 			bChildrenMovedInLayer = false;
+			// ...and when nothing in it needs a word of that, it is left as the layer's move left it: stale and pending, which
+			// is where the layer's next move stops (MarkWorldTransformStaleRecursive). What moved on its own in it is a root
+			// of its own, and its move is announced from there.
+			bWalkChildren = !InIsQuietLayer(*Widget);
 		}
 		else
 		{
@@ -791,6 +811,10 @@ void UDreamWidget::FlushTransformChangesFrom(UDreamWidget* InRoot, TFunctionRef<
 		{
 			TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_TransformChangedEvent);
 			Widget->Call_TransformChanged();
+		}
+		if (!bWalkChildren)
+		{
+			continue;
 		}
 		const TArray<UDreamWidget*>& WidgetChildren = Widget->GetChildren();
 		for (int32 Index = WidgetChildren.Num() - 1; Index >= 0; --Index)

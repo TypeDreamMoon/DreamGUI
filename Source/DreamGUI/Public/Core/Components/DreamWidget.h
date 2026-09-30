@@ -484,7 +484,13 @@ private:
 	/** GetRenderLayer's answer, and the generation of the answers it was worked out in (InvalidateRenderLayerCaches). */
 	mutable TWeakObjectPtr<UDreamWidget> CachedRenderLayer;
 	mutable uint64 CachedRenderLayerGeneration = 0;
-	/** Every widget works out GetRenderLayer again when next asked: a layer came or went, or a widget changed its place in a tree. */
+	/** IsRenderLayerQuiet's answer, and the generation of the answers it was worked out in. */
+	mutable uint64 CachedLayerQuietGeneration = 0;
+	mutable uint8 bCachedLayerQuiet : 1 = false;
+	/**
+	 * Every widget works out GetRenderLayer and IsRenderLayerQuiet again when next asked: a layer came or went, a widget
+	 * changed its place in a tree, or somebody asked for a widget's transform event, to listen to it.
+	 */
 	static void InvalidateRenderLayerCaches();
 
 	/*
@@ -707,6 +713,13 @@ public:
 	 * ancestors in the same render canvas, or null when it is in none.
 	 */
 	UDreamWidget* GetRenderLayer()const;
+	/**
+	 * Whether what this render layer holds needs no word when the layer moves as a whole: no widget under it hosts a
+	 * canvas, is a render layer, or has an OnTransformChanged listener. A widget that only moved with such a layer is then
+	 * neither walked nor told at the flush (FlushTransformChanges): it stays stale, and is composed when something reads
+	 * it. Worked out again only after a layer, the tree, or a widget's listeners may have changed.
+	 */
+	bool IsRenderLayerQuiet()const;
 	void ApplyPerspectiveChange();
 #if WITH_EDITOR
 	/** Say plainly when a declared perspective is inert, rather than leaving the author to guess. */
@@ -1059,6 +1072,13 @@ public:
 	 */
 	static void FlushTransformChangesFrom(UDreamWidget* InRoot, TFunctionRef<bool(const UDreamWidget&)> InIsRenderLayer,
 		TFunctionRef<void(UDreamWidget&, EDreamTransformChangeNotice)> InNotify);
+	/**
+	 * The same walk, which does not go into a render layer InIsQuietLayer answers true for (IsRenderLayerQuiet). What is
+	 * under it only moved with it: it is left stale and pending, to be composed when read, and the layer's next move stops
+	 * at it. One of them that moved on its own is a root of its own at the manager's flush, and is told there.
+	 */
+	static void FlushTransformChangesFrom(UDreamWidget* InRoot, TFunctionRef<bool(const UDreamWidget&)> InIsRenderLayer,
+		TFunctionRef<void(UDreamWidget&, EDreamTransformChangeNotice)> InNotify, TFunctionRef<bool(const UDreamWidget&)> InIsQuietLayer);
 	/** How many world transforms any widget has composed since the process started: what tests and profiling count. */
 	static uint64 GetWorldTransformComputeCount();
 private:
@@ -1158,7 +1178,8 @@ private:
 	FComponentsChangedEvent OnComponentsChangedEvent;
 public:
 	FWidgetActiveChangedEvent& GetWidgetActiveChangedEvent(){return OnWidgetActiveChangedEvent;}
-	FTransformChangedEvent& GetTransformChangedEvent(){return OnTransformChangedEvent;}
+	/** Asking for it counts as meaning to listen: a render layer holding this widget no longer takes its moves as quiet. */
+	FTransformChangedEvent& GetTransformChangedEvent();
 	FDimensionChangedEvent& GetDimensionChangedEvent(){return OnDimensionChangedEvent;}
 	FChildDimensionChangedEvent& GetChildDimensionChangedEvent(){return OnChildDimensionChangedEvent;}
 	FAttachmentChangedEvent& GetAttachmentChangedEvent(){return OnAttachmentChangedEvent;}

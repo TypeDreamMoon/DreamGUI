@@ -585,4 +585,72 @@ bool FDreamRenderLayerHitTest::RunTest(const FString& Parameters)
 	return true;
 }
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamRenderLayerQuietTest,
+	"DreamGUI.RenderLayer.WhatAQuietLayerHoldsIsNotWalkedWhenItMovesAndStandsWhereTheLayerTookItWhenRead",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamRenderLayerQuietTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamRenderLayerTestLocal;
+	const DreamTests::Lifecycle::FScopedConsoleVariable Layers(TEXT("r.DreamUI.RenderLayers"), 1);
+	const DreamTests::Lifecycle::FScopedConsoleVariable Promote(TEXT("r.DreamUI.RenderLayerPromoteFrames"), 2);
+	const DreamTests::Lifecycle::FScopedConsoleVariable Quiet(TEXT("r.DreamUI.QuietRenderLayers"), 1);
+	FStage Stage;
+	if (!Stage.Build(*this))
+	{
+		return false;
+	}
+	Stage.TurnCard(10.0);
+	Stage.TurnCard(20.0);
+	if (!TestTrue(TEXT("Turned on two frames in a row, the card is a layer"), Stage.Card->IsRenderLayer()))
+	{
+		return false;
+	}
+	TestTrue(TEXT("Nothing on it hosts a canvas, is a layer or listens: it is quiet"), Stage.Card->IsRenderLayerQuiet());
+	const FTransform FaceOnCard = Stage.Face->GetWorldTransform().GetRelativeTransform(Stage.Card->GetWorldTransform());
+
+	// Turned again: only the card is walked. The face moved with it, and is left stale until something reads it.
+	Stage.TurnCard(30.0);
+	TestFalse(TEXT("The card's move was announced"), Stage.Card->IsTransformChangePending());
+	TestTrue(TEXT("The face's move with it was not"), Stage.Face->IsTransformChangePending());
+	TestTrue(TEXT("...nor was the face composed"), Stage.Face->IsWorldTransformDirty());
+	TestTrue(TEXT("Read, the face stands where the card took it"),
+		Stage.Face->GetWorldTransform().GetRelativeTransform(Stage.Card->GetWorldTransform()).Equals(FaceOnCard, UE_KINDA_SMALL_NUMBER));
+
+	// A listener on the face is told of every move, so the card is not quiet while it listens.
+	int32 Heard = 0;
+	const FDelegateHandle Listening = Stage.Face->GetTransformChangedEvent().AddLambda([&Heard]() { ++Heard; });
+	TestFalse(TEXT("With a listener on the face, the card is not quiet"), Stage.Card->IsRenderLayerQuiet());
+	Stage.TurnCard(40.0);
+	TestEqual(TEXT("The listener heard the card's turn"), Heard, 1);
+	TestFalse(TEXT("...and the face's move was announced"), Stage.Face->IsTransformChangePending());
+	Stage.Face->GetTransformChangedEvent().Remove(Listening);
+	TestTrue(TEXT("Its listener gone, the card is quiet again"), Stage.Card->IsRenderLayerQuiet());
+
+	// Moved on its own while the card turns, the face is announced from itself, and its geometry is taken to where it now
+	// is in the layer.
+	Stage.TurnCard(50.0);
+	const FDreamUIGeometry* FaceGeometry = Stage.GeometryOf(Stage.Face);
+	if (!TestTrue(TEXT("The face has a geometry"), FaceGeometry != nullptr && FaceGeometry->Vertices.Num() > 0))
+	{
+		return false;
+	}
+	const FVector3f CornerBefore = FaceGeometry->Vertices[0].Position;
+	Stage.Face->SetAnchoredPosition(Stage.Face->GetAnchoredPosition() + FVector2D(10.0, 0.0));
+	Stage.TurnCard(60.0);
+	TestFalse(TEXT("The face that moved on its own was announced"), Stage.Face->IsTransformChangePending());
+	FaceGeometry = Stage.GeometryOf(Stage.Face);
+	TestTrue(TEXT("...and its vertices, relative to the card, moved with it"),
+		FaceGeometry != nullptr && FaceGeometry->Vertices.Num() > 0 && !FaceGeometry->Vertices[0].Position.Equals(CornerBefore));
+
+	// Switched off, every widget under a moved layer is walked, as it was.
+	{
+		const DreamTests::Lifecycle::FScopedConsoleVariable Loud(TEXT("r.DreamUI.QuietRenderLayers"), 0);
+		Stage.TurnCard(70.0);
+		TestFalse(TEXT("With quiet layers switched off, the face's move with the card is announced"), Stage.Face->IsTransformChangePending());
+	}
+	return true;
+}
+
 #endif
