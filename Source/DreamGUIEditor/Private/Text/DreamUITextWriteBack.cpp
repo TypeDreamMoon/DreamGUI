@@ -1372,6 +1372,24 @@ bool FDreamUITextWriteBack::ProduceText(const FString& InText, const UDreamWidge
 	// splice invalidates the ones after it. SetProperties plans them all against this one state and
 	// applies them backwards; its false only means something was refused, and the rest still landed.
 	FDreamUITextPatcher::SetProperties(Working, Ast, Edits, OutDiagnostics);
+
+	// And read back before it goes anywhere, as the shape pass's result is. A splice the patcher got wrong -- two blocks
+	// written onto one node, a block that took in the statement after it -- was written to disk as it came out, and the
+	// author met it as a file that no longer opened. Its own bag: a file that does build says nothing new here.
+	{
+		FDreamUIAst Check;
+		FDreamUIDiagnosticBag CheckDiagnostics;
+		TStrongObjectPtr<UDreamWidgetTree> CheckTree(BuildReferenceTree(Working, Check, CheckDiagnostics));
+		if (!CheckTree.IsValid())
+		{
+			for (FDreamUIDiagnostic& Diagnostic : CheckDiagnostics.Diagnostics)
+			{
+				OutDiagnostics.Add(MoveTemp(Diagnostic));
+			}
+			OutText = InText;
+			return false;
+		}
+	}
 	OutText = MoveTemp(Working);
 	return true;
 }

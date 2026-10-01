@@ -157,6 +157,45 @@ namespace DreamUIPatchLocal
 		return Offset;
 	}
 
+	/**
+	 * True when nothing but whitespace or a comment stands on the line from InOffset on -- with bInAllowTerminators, a ';'
+	 * too. A node or block whose lines are its own can be cut or given a block by the line; one that shares a line with
+	 * another statement (`Text A; Text B`, `Button Ok { Text Label { } }`) cannot, and the line-wide cut took the other
+	 * statement with it -- or the new block took it in.
+	 */
+	bool RestOfLineIsBlank(const FString& InText, int32 InOffset, bool bInAllowTerminators)
+	{
+		const TCHAR* Chars = *InText;
+		const int32 Length = InText.Len();
+		for (int32 Offset = FMath::Max(0, InOffset); Offset < Length; ++Offset)
+		{
+			const TCHAR Char = Chars[Offset];
+			if (IsLineBreak(Char) || StartsComment(Chars, Length, Offset))
+			{
+				return true;
+			}
+			if (!IsInlineWhitespace(Char) && !(bInAllowTerminators && Char == TEXT(';')))
+			{
+				return false;
+			}
+		}
+		return true;
+	}
+
+	/** True when nothing but whitespace stands on InOffset's line before it. */
+	bool LineBeforeIsBlank(const FString& InText, int32 InOffset)
+	{
+		const TCHAR* Chars = *InText;
+		for (int32 Offset = FindLineStart(InText, InOffset); Offset < InOffset; ++Offset)
+		{
+			if (!IsInlineWhitespace(Chars[Offset]))
+			{
+				return false;
+			}
+		}
+		return true;
+	}
+
 	/** The leading whitespace of the line containing InOffset, verbatim -- tabs stay tabs. */
 	FString IndentAt(const FString& InText, int32 InOffset)
 	{
@@ -631,6 +670,11 @@ namespace DreamUIPatchLocal
 		FString Text;
 		/** The order this splice was planned in. See the sort in Apply for what it decides. */
 		int32 Order = 0;
+		/**
+		 * For the body of a block written onto a node that had none (PlanInsert), the offset of that node's header: another
+		 * property for the same node in the same batch joins this body instead of writing a block of its own.
+		 */
+		int32 SynthesizedBlockOwner = INDEX_NONE;
 	};
 
 	bool Apply(FString& InOutText, TArray<FSplice>& InSplices)
@@ -1115,6 +1159,31 @@ namespace DreamUIPatchLocal
 				RefuseStale(OutDiagnostics, InTarget.Location, TEXT("the header this property belongs to is not there"));
 				return false;
 			}
+			// Another property for the same node in this batch: into the block the first one is writing. A block each was
+			// `Text OkText { A = 1 } { B = 2 }`, which does not parse -- written to disk all the same.
+			for (FSplice& Planned : OutSplices)
+			{
+				if (Planned.SynthesizedBlockOwner == InTarget.OwnerOffset)
+				{
+					const FString Closing = LineEnding + OwnerIndent + TEXT("}");
+					if (!Planned.Text.EndsWith(Closing))
+					{
+						RefuseStale(OutDiagnostics, InTarget.Location, TEXT("the block planned for this node is not one another property could join"));
+						return false;
+					}
+					Planned.Text = Planned.Text.LeftChop(Closing.Len()) + LineEnding + Indent + NewLine + Closing;
+					return true;
+				}
+			}
+			// The block opens on the header's line and closes on a line of its own: whatever else stands on the header's line
+			// would end up inside it. A ';' alone is no statement -- `Text Label;` gets `Text Label {;`, and a node body skips
+			// separators -- but `Text A; Text B` has B after it.
+			if (!RestOfLineIsBlank(InText, End, /*bInAllowTerminators*/ true))
+			{
+				RefuseStale(OutDiagnostics, InTarget.Location,
+					TEXT("another statement shares this node's line, and a block written here would take it in; give the node a line and a block of its own"));
+				return false;
+			}
 
 			// Two splices, and their planning order is what puts them in the right sequence when the
 			// header has no trailing comment and both land on the same offset. See the sort in Apply.
@@ -1129,6 +1198,7 @@ namespace DreamUIPatchLocal
 			Body.Length = 0;
 			Body.Text = LineEnding + Indent + NewLine + LineEnding + OwnerIndent + TEXT("}");
 			Body.Order = InOutOrder++;
+			Body.SynthesizedBlockOwner = InTarget.OwnerOffset;
 			return true;
 		}
 
@@ -1398,7 +1468,15 @@ namespace DreamUIPatchLocal
 
 		int32 Open = INDEX_NONE;
 		int32 Close = INDEX_NONE;
-		OutEnd = FindBlock(InText, HeaderOffset, Open, Close)
+		const bool bHasBlock = FindBlock(InText, HeaderOffset, Open, Close);
+		// Whole lines, so only lines that are the node's own: anything before its header or after its end on those lines is
+		// another statement -- its parent's header, a sibling -- which the cut would take with it.
+		if (!LineBeforeIsBlank(InText, HeaderOffset)
+			|| !RestOfLineIsBlank(InText, bHasBlock ? Close + 1 : HeaderEnd(InText, HeaderOffset), /*bInAllowTerminators*/ true))
+		{
+			return false;
+		}
+		OutEnd = bHasBlock
 			? FindLineEnd(InText, Close)
 			: FindLineEnd(InText, HeaderOffset);
 		return true;
@@ -1416,7 +1494,14 @@ namespace DreamUIPatchLocal
 
 		int32 Open = INDEX_NONE;
 		int32 Close = INDEX_NONE;
-		OutEnd = FindBlock(InText, HeaderOffset, Open, Close)
+		const bool bHasBlock = FindBlock(InText, HeaderOffset, Open, Close);
+		// See MeasureNodeExtent: only lines that are the block's own.
+		if (!LineBeforeIsBlank(InText, HeaderOffset)
+			|| !RestOfLineIsBlank(InText, bHasBlock ? Close + 1 : HeaderEnd(InText, HeaderOffset), /*bInAllowTerminators*/ true))
+		{
+			return false;
+		}
+		OutEnd = bHasBlock
 			? FindLineEnd(InText, Close)
 			: FindLineEnd(InText, HeaderOffset);
 		return true;
@@ -1680,7 +1765,7 @@ namespace DreamUIPatchLocal
 		int32 End = INDEX_NONE;
 		if (!MeasureNodeExtent(InText, *Node, Start, End))
 		{
-			RefuseStale(OutDiagnostics, Node->Location, TEXT("this node's text is not where the tree says it is"));
+			RefuseStale(OutDiagnostics, Node->Location, TEXT("this node's text is not where the tree says it is, or shares its lines with another statement"));
 			return false;
 		}
 
@@ -1727,7 +1812,7 @@ namespace DreamUIPatchLocal
 		int32 End = INDEX_NONE;
 		if (!MeasureNodeExtent(InText, *Node, Start, End))
 		{
-			RefuseStale(OutDiagnostics, Node->Location, TEXT("this node's text is not where the tree says it is"));
+			RefuseStale(OutDiagnostics, Node->Location, TEXT("this node's text is not where the tree says it is, or shares its lines with another statement"));
 			return false;
 		}
 
@@ -1952,7 +2037,7 @@ namespace DreamUIPatchLocal
 		if (!MeasureComponentExtent(InText, Node->Components[InEdit.ComponentIndex], Start, End))
 		{
 			RefuseStale(OutDiagnostics, Node->Components[InEdit.ComponentIndex].Location,
-				TEXT("this '+' block's text is not where the tree says it is"));
+				TEXT("this '+' block's text is not where the tree says it is, or shares its lines with another statement"));
 			return false;
 		}
 
