@@ -257,5 +257,38 @@ bool FDreamPerspectivePreviewDefaultTest::RunTest(const FString& Parameters)
 	return true;
 }
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamDesignerFillScreenSaveTest,
+	"DreamGUI.Designer.SavingUnderFillScreenKeepsTheCanvasSizeTheAuthorPicked",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * Fill Screen sizes the canvas to the window -- a view rule -- and the editor state saved with the asset wrote the canvas's
+ * size into it all the same: the author's window became the class's design size, and from there the size of every world
+ * widget of the class. Saved under Fill Screen, the asset keeps the resolution picked; saved under that resolution, it is
+ * recorded as before.
+ */
+bool FDreamDesignerFillScreenSaveTest::RunTest(const FString&)
+{
+	using namespace DreamDesignerViewTestLocal;
+
+	FScopedDesigner Scoped(TEXT("DesignerFillScreenSave"));
+	if (!TestNotNull(TEXT("The designer opened"), Scoped.Designer))
+	{
+		return false;
+	}
+	Scoped.Designer->SetDesignerViewportSize(FIntPoint(1280, 720));
+	Scoped.Designer->SetDesignerSizeRule(EDreamUIDesignerSizeRule::FillScreen);
+	Scoped.Designer->ApplyDesignerViewportSize(FIntPoint(800, 600), /*bRecordOnAsset*/false);
+	Scoped.Designer->SaveEditorState();
+	TestEqual(TEXT("Saved under Fill Screen, the asset keeps the canvas size picked"),
+		Scoped.Blueprint->DesignerData.CanvasSize, FIntPoint(1280, 720));
+
+	Scoped.Designer->SetDesignerSizeRule(EDreamUIDesignerSizeRule::Custom);
+	Scoped.Designer->SaveEditorState();
+	TestEqual(TEXT("and saved under the resolution picked, it still records that"),
+		Scoped.Blueprint->DesignerData.CanvasSize, FIntPoint(1280, 720));
+	return true;
+}
 
 #endif

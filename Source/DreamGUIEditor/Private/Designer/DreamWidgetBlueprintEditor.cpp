@@ -1709,9 +1709,14 @@ void FDreamWidgetBlueprintEditor::SaveEditorState()
 		// of the asset builds its agent from it and comes up with a hierarchy that draws nothing.
 		// EnsureRootAgent substitutes for a stored zero on the way back in; this is the other end,
 		// and the cheaper one, because a value never written needs no substituting.
+		//
+		// Only while the canvas is the one the author picked. Under Fill Screen, or with the DPI preview on, the agent is
+		// sized by the window and the preview -- a view rule -- and writing it here put the author's window into the asset,
+		// into the class's design size, and from there into the size of every world widget of the class.
 		const FIntPoint AgentSize(RootAgentWidget->GetWidth(), RootAgentWidget->GetHeight());
-		if (AgentSize.X > 0) { DesignerData.CanvasSize.X = AgentSize.X; }
-		if (AgentSize.Y > 0) { DesignerData.CanvasSize.Y = AgentSize.Y; }
+		const bool bCanvasIsAView = DesignerSizeRule == EDreamUIDesignerSizeRule::FillScreen || GetPreviewDPIScale();
+		if (!bCanvasIsAView && AgentSize.X > 0) { DesignerData.CanvasSize.X = AgentSize.X; }
+		if (!bCanvasIsAView && AgentSize.Y > 0) { DesignerData.CanvasSize.Y = AgentSize.Y; }
 		if (UDreamCanvas* RootCanvas = RootAgentWidget->GetComponent<UDreamCanvas>())
 		{
 			DesignerData.CanvasRenderMode = (uint8)RootCanvas->GetRenderMode();
