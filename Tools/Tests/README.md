@@ -238,6 +238,28 @@ See [COVERAGE.md](COVERAGE.md): the table of controls by inputs by configuration
 registers to claim its cells, and `coverage_matrix.py` to draw it (`--heuristic` for a first picture
 from untagged tests, `--fail-on-holes` for a gate).
 
+## Every night
+
+`Invoke-DreamGUINightly.ps1` moves the test host's plugin worktree to a commit (`-Ref`, `origin/main` by default),
+builds the host in unity, runs a list of presets (`All`, `Validate`, `Exit`, `Perf` by default) and writes
+`<host>/Saved/DreamGUINightly/nightly-<stamp>.md`: the commit, the build, each preset's result, every red test, and what
+turned red -- or green again -- since the summary before. It refuses to run while an editor of the host is open, and
+exits like the runner (0 green, 1 red, 2 not run or not judged).
+
+```
+pwsh -File Tools/Tests/Invoke-DreamGUINightly.ps1 -Project <host>\DreamGUITestHost.uproject -Engine "C:\Program Files\Epic Games\UE_5.8"
+```
+
+It registers nothing. A Windows scheduled task is one way to run it every night, if the machine's owner wants one:
+
+```
+$Action = New-ScheduledTaskAction -Execute 'pwsh.exe' -Argument '-NoProfile -File "<copy of the script>\Invoke-DreamGUINightly.ps1"'
+Register-ScheduledTask -TaskName 'DreamGUI nightly' -Action $Action -Trigger (New-ScheduledTaskTrigger -Daily -At 3am)
+```
+
+with `DREAMGUI_TEST_PROJECT` and `DREAMGUI_ENGINE` set for the account it runs as. Run a copy kept outside the host's
+worktree, so that the script does not change with the commit it moves to.
+
 ## The pre-push hook
 
 ```
