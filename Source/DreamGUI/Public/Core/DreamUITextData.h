@@ -206,7 +206,11 @@ struct FDreamUITextCaretProperty
 {
 	/** caret position. caret is on left side of char */
 	FVector2f CaretPosition = FVector2f::ZeroVector;
-	/** char index in text, -1 means line end caret */
+	/**
+	 * Where the caret is in the text: a UTF-16 offset into it for plain text (an emoji of two code units has no caret
+	 * between them), the character index for rich text. -1 marks the end caret of a line the layout wrapped by itself,
+	 * which stands where the next line begins (UDreamText::GetCharIndexByCaretIndex answers that line's first offset).
+	 */
 	int32 CharIndex = 0;
 };
 /** a line of text property */

@@ -82,6 +82,29 @@ namespace DreamTextInputInteractionTestLocal
 		// The table is in the text widget's own 2D space, which is the space WidgetLocalPointToPixel reads.
 		return FDreamDriverProjection::WidgetLocalPointToPixel(InShown.GetWidget(), FVector2D(CaretPosition.X, CaretPosition.Y));
 	}
+
+	/** The first highlight bar a selection draws, under the field's text; null while no selection ever drew one. */
+	const UDreamWidget* FirstSelectionBar(const UDreamTextInput* InField)
+	{
+		if (InField == nullptr || InField->TextNode == nullptr)
+		{
+			return nullptr;
+		}
+		return InField->TextNode->FindChildByDisplayName(TEXT("Selection0"));
+	}
+
+	/** The field's IME context -- what an IME reads the selection from and writes through -- or null. */
+	TSharedPtr<ITextInputMethodContext> ImeOf(const UDreamTextInput* InField)
+	{
+		if (InField == nullptr || InField->InputBehaviour == nullptr)
+		{
+			return nullptr;
+		}
+		return InField->InputBehaviour->GetTextInputMethodContextForTesting();
+	}
+
+	/** An emoji past the Basic Multilingual Plane: one character, two UTF-16 code units. */
+	const TCHAR* const EmojiText = TEXT("\U0001F600");
 }
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
@@ -594,6 +617,644 @@ bool FDreamTextInputDoubleClickSelectsWordTest::RunTest(const FString& Parameter
 	// What is selected shows in what the next keystroke replaces.
 	FieldElement->Type(TEXT("X"));
 	TestEqual(TEXT("The word under the second press was the one selected"), Field->GetText(), FString(TEXT("alpha X charlie")));
+
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamTextInputEmojiIsOneCharacterTest,
+	"DreamGUI.TextInput.AnEmojiIsTypedDeletedAndTypedOverWholeNeverHalfASurrogatePair",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamTextInputEmojiIsOneCharacterTest, "DreamGUI.TextInput.AnEmojiIsTypedDeletedAndTypedOverWholeNeverHalfASurrogatePair", "[Pointer][Text][Animated]")
+
+/*
+ * A single-line field's carets were numbered one per laid-out character, and the field read those numbers
+ * as offsets into its UTF-16 string. An emoji is one character and two code units, so every caret after one
+ * stood a unit short of where it was drawn: a character typed after an emoji went in between its two
+ * halves, Backspace after an emoji and a letter took the emoji's second half instead of the letter, and a
+ * field holding only an emoji, clicked into -- which selects all of it -- kept half of it when typed over.
+ * Each of the three is done here, and the text is compared code unit for code unit.
+ */
+bool FDreamTextInputEmojiIsOneCharacterTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamTextInputInteractionTestLocal;
+	FDreamDriverRig Rig = FDreamDriverRig::Headless(ViewportSize);
+	Rig.BindTest(this);
+	UDreamTextInput* Field = MakeObservedField(Rig, nullptr);
+	const FString Emoji(EmojiText);
+	if (!TestTrue(TEXT("The rig and the field came up"), Rig.IsUsable() && Field != nullptr)
+		|| !TestEqual(TEXT("The emoji is two code units"), Emoji.Len(), 2))
+	{
+		return false;
+	}
+	Rig.PumpFrames(1);
+
+	// The driver hands a string over one code unit at a time, as a platform's character events do.
+	FDreamElementRef FieldElement = Rig.Driver()->Find(FDreamBy::Name(TEXT("Username")));
+	FieldElement->Type(Emoji);
+	FieldElement->Type(TEXT("b"));
+	TestEqualSensitive(TEXT("A character typed after an emoji goes in after the whole of it"), Field->GetText(), Emoji + TEXT("b"));
+
+	FieldElement->Type(EKeys::BackSpace);
+	TestEqualSensitive(TEXT("Backspace after it takes the letter, not half the emoji"), Field->GetText(), Emoji);
+	FieldElement->Type(EKeys::BackSpace);
+	TestEqualSensitive(TEXT("And the next Backspace takes the whole emoji"), Field->GetText(), FString());
+
+	// Enter ends the edit, so the next keystroke clicks in again -- which selects everything.
+	FieldElement->Type(EKeys::Enter);
+	Field->SetText(Emoji);
+	FieldElement->Type(TEXT("a"));
+	TestEqualSensitive(TEXT("Typing over a field that holds only an emoji replaces the whole of it"), Field->GetText(), FString(TEXT("a")));
+
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamTextInputImeCountsInCodeUnitsTest,
+	"DreamGUI.TextInput.AnImeIsToldWhereTheCaretIsAndWritesThereInCodeUnits",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamTextInputImeCountsInCodeUnitsTest, "DreamGUI.TextInput.AnImeIsToldWhereTheCaretIsAndWritesThereInCodeUnits", "[Pointer][Text][Animated]")
+
+/*
+ * An IME counts in UTF-16 offsets, and the field's IME context answered it in caret indices: TSF asks for
+ * the selection (GetSelectionRange) and writes the composed text into exactly that range (SetTextInRange),
+ * so with an emoji before the caret the composed text went in between the emoji's two halves. The setters
+ * stored the IME's offsets as caret indices in turn, and SetSelectionRange's Beginning case selected the
+ * stretch BEFORE the range it was given. Here the calls are made in the order TSF's InsertTextAtSelection
+ * makes them, after an emoji typed into the field, and then the IME selects the emoji itself.
+ */
+bool FDreamTextInputImeCountsInCodeUnitsTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamTextInputInteractionTestLocal;
+	FDreamDriverRig Rig = FDreamDriverRig::Headless(ViewportSize);
+	Rig.BindTest(this);
+	UDreamTextInput* Field = MakeObservedField(Rig, nullptr);
+	if (!TestTrue(TEXT("The rig and the field came up"), Rig.IsUsable() && Field != nullptr))
+	{
+		return false;
+	}
+	Rig.PumpFrames(1);
+
+	const FString Emoji(EmojiText);
+	const FString Composed(TEXT("あ"));
+	FDreamElementRef FieldElement = Rig.Driver()->Find(FDreamBy::Name(TEXT("Username")));
+	FieldElement->Type(Emoji);
+	const TSharedPtr<ITextInputMethodContext> Ime = ImeOf(Field);
+	if (!TestTrue(TEXT("The field is being edited, with an IME context"), IsEditing(Field) && Ime.IsValid()))
+	{
+		return false;
+	}
+
+	uint32 Begin = 99;
+	uint32 Length = 99;
+	ITextInputMethodContext::ECaretPosition CaretPosition = ITextInputMethodContext::ECaretPosition::Beginning;
+	Ime->GetSelectionRange(Begin, Length, CaretPosition);
+	TestEqual(TEXT("The IME is told the caret stands after both of the emoji's code units"), static_cast<int32>(Begin), 2);
+	TestEqual(TEXT("With nothing selected"), static_cast<int32>(Length), 0);
+
+	Ime->BeginComposition();
+	Ime->SetTextInRange(Begin, Length, Composed);
+	Ime->SetSelectionRange(Begin + static_cast<uint32>(Composed.Len()), 0, ITextInputMethodContext::ECaretPosition::Ending);
+	Ime->EndComposition();
+	TestEqualSensitive(TEXT("The composed text went in after the whole emoji"), Field->GetText(), Emoji + Composed);
+
+	// The caret the IME placed is where typing carries on.
+	FieldElement->Type(TEXT("b"));
+	TestEqualSensitive(TEXT("A character typed next follows the composed text"), Field->GetText(), Emoji + Composed + TEXT("b"));
+
+	// Beginning: the range given, with the caret at its start -- so typing replaces the emoji and nothing else.
+	Ime->SetSelectionRange(0, 2, ITextInputMethodContext::ECaretPosition::Beginning);
+	Ime->GetSelectionRange(Begin, Length, CaretPosition);
+	TestEqual(TEXT("The IME's selection starts where it said"), static_cast<int32>(Begin), 0);
+	TestEqual(TEXT("And covers the emoji"), static_cast<int32>(Length), 2);
+	TestTrue(TEXT("With the caret at its beginning"), CaretPosition == ITextInputMethodContext::ECaretPosition::Beginning);
+	FieldElement->Type(TEXT("c"));
+	TestEqualSensitive(TEXT("Typing replaces exactly the range the IME selected"), Field->GetText(), FString(TEXT("c")) + Composed + TEXT("b"));
+
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamTextInputImeCompositionIsOneUndoStepTest,
+	"DreamGUI.TextInput.UndoTakesBackAWholeImeCompositionAsOneStep",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamTextInputImeCompositionIsOneUndoStepTest, "DreamGUI.TextInput.UndoTakesBackAWholeImeCompositionAsOneStep", "[Pointer][Text][Animated]")
+
+/*
+ * Text an IME wrote never entered the undo history, so Ctrl+Z after a composition skipped straight past it
+ * and undid the keystroke typed before it, leaving the composed text where it was. A composition is one
+ * edit however many times the IME rewrites its working text on the way -- here twice, the way a kana IME
+ * turns a typed letter into a syllable -- and one undo takes the whole of it back.
+ */
+bool FDreamTextInputImeCompositionIsOneUndoStepTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamTextInputInteractionTestLocal;
+	FDreamDriverRig Rig = FDreamDriverRig::Headless(ViewportSize);
+	Rig.BindTest(this);
+	UDreamTextInput* Field = MakeObservedField(Rig, nullptr);
+	if (!TestTrue(TEXT("The rig and the field came up"), Rig.IsUsable() && Field != nullptr))
+	{
+		return false;
+	}
+	Rig.PumpFrames(1);
+
+	FDreamElementRef FieldElement = Rig.Driver()->Find(FDreamBy::Name(TEXT("Username")));
+	FieldElement->Type(TEXT("ab"));
+	const TSharedPtr<ITextInputMethodContext> Ime = ImeOf(Field);
+	if (!TestTrue(TEXT("The field is being edited, with an IME context"), IsEditing(Field) && Ime.IsValid()))
+	{
+		return false;
+	}
+
+	uint32 Begin = 0;
+	uint32 Length = 0;
+	ITextInputMethodContext::ECaretPosition CaretPosition = ITextInputMethodContext::ECaretPosition::Ending;
+	Ime->GetSelectionRange(Begin, Length, CaretPosition);
+	Ime->BeginComposition();
+	Ime->SetTextInRange(Begin, Length, TEXT("k"));
+	Ime->SetTextInRange(Begin, 1, TEXT("か"));
+	Ime->EndComposition();
+	if (!TestEqualSensitive(TEXT("The composition wrote its syllable"), Field->GetText(), FString(TEXT("abか"))))
+	{
+		return false;
+	}
+
+	FieldElement->TypeChord(EKeys::LeftControl, EKeys::Z);
+	TestEqualSensitive(TEXT("One undo takes back the whole composition"), Field->GetText(), FString(TEXT("ab")));
+	FieldElement->TypeChord(EKeys::LeftControl, EKeys::Z);
+	TestEqualSensitive(TEXT("And the next undo the keystroke before it"), Field->GetText(), FString(TEXT("a")));
+
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamTextInputUnfinishedCompositionTest,
+	"DreamGUI.TextInput.ACompositionLeftOpenWhenTheEditEndsDoesNotHoldBackTheNextEditsKeys",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamTextInputUnfinishedCompositionTest, "DreamGUI.TextInput.ACompositionLeftOpenWhenTheEditEndsDoesNotHoldBackTheNextEditsKeys", "[Pointer][Text][Animated]")
+
+/*
+ * Only EndComposition cleared the field's "composing" flag, and the platform does not always make that call:
+ * IMM completes a composition only once the context has stopped being the active one, and that end never
+ * reaches the field. The flag outlived the edit, and the key road defers to an open composition, so the next
+ * edit refused Backspace, the arrows, Enter -- every key that is not a character. Here a composition is begun
+ * and written into, the edit is ended by a click somewhere else with no end of the composition ever coming,
+ * and the field is clicked into again and edited with keys.
+ */
+bool FDreamTextInputUnfinishedCompositionTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamTextInputInteractionTestLocal;
+	FDreamDriverRig Rig = FDreamDriverRig::Headless(ViewportSize);
+	Rig.BindTest(this);
+	UDreamTextInput* Field = MakeObservedField(Rig, nullptr, FVector2D(0.0, 120.0));
+	UDreamWidget* Elsewhere = Rig.MakeWidget(TEXT("Elsewhere"), nullptr, FVector2D(300.0, 120.0), FVector2D(0.0, -150.0));
+	if (!TestTrue(TEXT("The rig, the field and the other widget came up"), Rig.IsUsable() && Field != nullptr && Elsewhere != nullptr))
+	{
+		return false;
+	}
+	Rig.PumpFrames(1);
+
+	FDreamElementRef FieldElement = Rig.Driver()->Find(FDreamBy::Name(TEXT("Username")));
+	FieldElement->Type(TEXT("ab"));
+	const TSharedPtr<ITextInputMethodContext> Ime = ImeOf(Field);
+	if (!TestTrue(TEXT("The field is being edited, with an IME context"), IsEditing(Field) && Ime.IsValid()))
+	{
+		return false;
+	}
+	uint32 Begin = 0;
+	uint32 Length = 0;
+	ITextInputMethodContext::ECaretPosition CaretPosition = ITextInputMethodContext::ECaretPosition::Ending;
+	Ime->GetSelectionRange(Begin, Length, CaretPosition);
+	Ime->BeginComposition();
+	Ime->SetTextInRange(Begin, Length, TEXT("x"));
+
+	Rig.Driver()->Find(FDreamBy::Name(TEXT("Elsewhere")))->Click();
+	TestFalse(TEXT("Clicking somewhere else ended the edit"), IsEditing(Field));
+	TestFalse(TEXT("And the composition with it"), Ime->IsComposing());
+
+	// Clicked into again (which selects everything), then End and Backspace: keys, not characters.
+	FieldElement->Type(EKeys::End);
+	FieldElement->Type(EKeys::BackSpace);
+	TestEqualSensitive(TEXT("The keys of the next edit reached the field"), Field->GetText(), FString(TEXT("ab")));
+
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamTextInputEmptySelectionIsNoSelectionTest,
+	"DreamGUI.TextInput.ASelectionTakenBackToWhereItBeganSelectsNothingAndBackspaceDeletesOneCharacter",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamTextInputEmptySelectionIsNoSelectionTest, "DreamGUI.TextInput.ASelectionTakenBackToWhereItBeganSelectsNothingAndBackspaceDeletesOneCharacter", "[Pointer][Text][Animated]")
+
+/*
+ * Shift+Left then Shift+Right brings the caret back onto its anchor, and nothing is selected. The field asked
+ * whether there was a selection by counting highlight bars, and a selection brought back to where it began
+ * still has one, zero wide: the Backspace after it went to delete the selection, deleted nothing, and still
+ * announced a change; the next character typed got no undo step of its own; Ctrl+C put an empty string on
+ * the clipboard. Here the Backspace has to take the character before the caret, and announce that once.
+ */
+bool FDreamTextInputEmptySelectionIsNoSelectionTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamTextInputInteractionTestLocal;
+	FDreamDriverRig Rig = FDreamDriverRig::Headless(ViewportSize);
+	Rig.BindTest(this);
+	TStrongObjectPtr<UDreamTextInteractionListener> Listener(NewObject<UDreamTextInteractionListener>());
+	UDreamTextInput* Field = MakeObservedField(Rig, Listener.Get());
+	if (!TestTrue(TEXT("The rig and the field came up"), Rig.IsUsable() && Field != nullptr))
+	{
+		return false;
+	}
+	Rig.PumpFrames(1);
+
+	FDreamElementRef FieldElement = Rig.Driver()->Find(FDreamBy::Name(TEXT("Username")));
+	FieldElement->Type(TEXT("abc"));
+	FieldElement->TypeChord(EKeys::LeftShift, EKeys::Left);
+	FieldElement->TypeChord(EKeys::LeftShift, EKeys::Right);
+	TestFalse(TEXT("Taken back to where it began, the selection selects nothing"), Field->IsAnyTextSelected());
+
+	const int32 ChangesBefore = Listener->TextChangedCount;
+	FieldElement->Type(EKeys::BackSpace);
+	TestEqualSensitive(TEXT("Backspace removed the character before the caret"), Field->GetText(), FString(TEXT("ab")));
+	TestEqual(TEXT("And announced that one change"), Listener->TextChangedCount, ChangesBefore + 1);
+
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamTextInputMaxLengthKeepsEmojiWholeTest,
+	"DreamGUI.TextInput.AMaximumLengthTakesAnEmojiWholeOrNotAtAll",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamTextInputMaxLengthKeepsEmojiWholeTest, "DreamGUI.TextInput.AMaximumLengthTakesAnEmojiWholeOrNotAtAll", "[Pointer][Text][Animated]")
+
+/*
+ * MaxLength counts code units, and an emoji is two of them. Checked a unit at a time, a limit one short of an
+ * emoji let its first half in and refused the second: SetText of two letters and an emoji under a limit of
+ * three kept the letters and the emoji's high surrogate, which is not a character at all. Typing it went the
+ * same way, and so did lowering the limit under a text that ends in one. All three roads are taken here, and
+ * each has to keep the emoji whole or leave it out.
+ */
+bool FDreamTextInputMaxLengthKeepsEmojiWholeTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamTextInputInteractionTestLocal;
+	FDreamDriverRig Rig = FDreamDriverRig::Headless(ViewportSize);
+	Rig.BindTest(this);
+	UDreamTextInput* Field = MakeObservedField(Rig, nullptr);
+	if (!TestTrue(TEXT("The rig and the field came up"), Rig.IsUsable() && Field != nullptr))
+	{
+		return false;
+	}
+	const FString Emoji(EmojiText);
+	const FString Letters(TEXT("ab"));
+
+	Field->SetMaxLength(3);
+	Field->SetText(Letters + Emoji);
+	TestEqualSensitive(TEXT("Set from code, an emoji that does not fit is left out whole"), Field->GetText(), Letters);
+	Rig.PumpFrames(1);
+
+	// Clicked into (which selects everything), End to stand after the letters, then the emoji typed.
+	FDreamElementRef FieldElement = Rig.Driver()->Find(FDreamBy::Name(TEXT("Username")));
+	FieldElement->Type(EKeys::End);
+	FieldElement->Type(Emoji);
+	TestEqualSensitive(TEXT("Typed, it is refused whole too"), Field->GetText(), Letters);
+
+	Field->SetMaxLength(4);
+	FieldElement->Type(Emoji);
+	TestEqualSensitive(TEXT("With room for both halves it goes in"), Field->GetText(), Letters + Emoji);
+
+	Field->SetMaxLength(3);
+	TestEqualSensitive(TEXT("Lowering the limit under it takes it out whole"), Field->GetText(), Letters);
+
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamTextInputLeftwardSelectionIsHighlightedTest,
+	"DreamGUI.TextInput.ASelectionMadeLeftwardIsHighlighted",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamTextInputLeftwardSelectionIsHighlightedTest, "DreamGUI.TextInput.ASelectionMadeLeftwardIsHighlighted", "[Pointer][Text][Animated]")
+
+/*
+ * The highlight of a selection on one line was measured from its anchor to its caret, in that order, so a
+ * selection made leftward -- Shift+Left, the commonest way there is to select the end of what was just
+ * typed -- measured a negative width, which the bar's widget clamps to nothing. The text was selected and
+ * nothing on screen said so. Here the last character is selected with Shift+Left and the bar is looked at.
+ */
+bool FDreamTextInputLeftwardSelectionIsHighlightedTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamTextInputInteractionTestLocal;
+	FDreamDriverRig Rig = FDreamDriverRig::Headless(ViewportSize);
+	Rig.BindTest(this);
+	UDreamTextInput* Field = MakeObservedField(Rig, nullptr);
+	if (!TestTrue(TEXT("The rig and the field came up"), Rig.IsUsable() && Field != nullptr))
+	{
+		return false;
+	}
+	Rig.PumpFrames(1);
+
+	FDreamElementRef FieldElement = Rig.Driver()->Find(FDreamBy::Name(TEXT("Username")));
+	FieldElement->Type(TEXT("hello"));
+	FieldElement->TypeChord(EKeys::LeftShift, EKeys::Left);
+	if (!TestTrue(TEXT("Shift+Left selected something"), Field->IsAnyTextSelected()))
+	{
+		return false;
+	}
+	const UDreamWidget* Bar = FirstSelectionBar(Field);
+	if (!TestNotNull(TEXT("The selection drew a highlight bar"), Bar))
+	{
+		return false;
+	}
+	TestTrue(TEXT("The bar is showing"), Bar->GetWidgetActive());
+	TestTrue(TEXT("And it is as wide as the character it covers, not nothing"), Bar->GetWidth() > 0.0f);
+
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamTextInputCodeChangesKeepTheCaretTest,
+	"DreamGUI.TextInput.TextOrMaskingChangedFromCodeMidEditLeavesTheCaretWhereTheTypingWas",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamTextInputCodeChangesKeepTheCaretTest, "DreamGUI.TextInput.TextOrMaskingChangedFromCodeMidEditLeavesTheCaretWhereTheTypingWas", "[Pointer][Text][Animated]")
+
+/*
+ * SetText from code while the player was typing put the caret back at the start of the text, and masking
+ * the field as a password did the same without even drawing the caret there: either way the player's next
+ * character went in front of everything. Slate's editable text keeps the caret where it was, pulled back to
+ * the end of a shorter text. Here the player types, the code replaces the text with a shorter one, the
+ * player types on; then the code masks the field, and the player types once more.
+ */
+bool FDreamTextInputCodeChangesKeepTheCaretTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamTextInputInteractionTestLocal;
+	FDreamDriverRig Rig = FDreamDriverRig::Headless(ViewportSize);
+	Rig.BindTest(this);
+	UDreamTextInput* Field = MakeObservedField(Rig, nullptr);
+	if (!TestTrue(TEXT("The rig and the field came up"), Rig.IsUsable() && Field != nullptr))
+	{
+		return false;
+	}
+	Rig.PumpFrames(1);
+
+	FDreamElementRef FieldElement = Rig.Driver()->Find(FDreamBy::Name(TEXT("Username")));
+	FieldElement->Type(TEXT("abc"));
+	Field->SetText(TEXT("x"));
+	FieldElement->Type(TEXT("y"));
+	TestEqualSensitive(TEXT("After a shorter text from code, typing carries on at its end"), Field->GetText(), FString(TEXT("xy")));
+
+	Field->SetIsPassword(true);
+	FieldElement->Type(TEXT("z"));
+	TestEqualSensitive(TEXT("After the field is masked, typing carries on where it was"), Field->GetText(), FString(TEXT("xyz")));
+
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamTextInputCaseOnlyChangesAreChangesTest,
+	"DreamGUI.TextInput.AChangeOfCaseAloneIsAChangeOfTheText",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamTextInputCaseOnlyChangesAreChangesTest, "DreamGUI.TextInput.AChangeOfCaseAloneIsAChangeOfTheText", "[Pointer][Text][Nav][Animated]")
+
+/*
+ * FString's == ignores case, and the field compared texts with it. SetText of the same letters in capitals
+ * was taken for no change and did nothing, and Escape with RevertTextOnEscape kept an edit that had only
+ * changed the case of the text, because that text "had not changed". Both are done here, and the text is
+ * compared code unit for code unit.
+ */
+bool FDreamTextInputCaseOnlyChangesAreChangesTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamTextInputInteractionTestLocal;
+	FDreamDriverRig Rig = FDreamDriverRig::Headless(ViewportSize);
+	Rig.BindTest(this);
+	UDreamTextInput* Field = MakeObservedField(Rig, nullptr);
+	if (!TestTrue(TEXT("The rig and the field came up"), Rig.IsUsable() && Field != nullptr))
+	{
+		return false;
+	}
+	Field->SetText(TEXT("start"));
+	Field->SetText(TEXT("START"));
+	TestEqualSensitive(TEXT("The same letters in capitals, set from code, are the field's text"), Field->GetText(), FString(TEXT("START")));
+
+	Field->SetText(TEXT("start"));
+	Field->SetRevertTextOnEscape(true);
+	Rig.PumpFrames(1);
+
+	// Clicked into, which selects everything, and typed over in capitals.
+	FDreamElementRef FieldElement = Rig.Driver()->Find(FDreamBy::Name(TEXT("Username")));
+	FieldElement->Type(TEXT("START"));
+	if (!TestEqualSensitive(TEXT("Typing over it in capitals changed it"), Field->GetText(), FString(TEXT("START"))))
+	{
+		return false;
+	}
+	FieldElement->Type(EKeys::Escape);
+	TestEqualSensitive(TEXT("Escape with revert puts the original back, though only its case had changed"), Field->GetText(), FString(TEXT("start")));
+
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamTextInputActivatingAgainSelectsNothingTest,
+	"DreamGUI.TextInput.ActivatingAFieldAlreadyBeingEditedLeavesNothingSelected",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamTextInputActivatingAgainSelectsNothingTest, "DreamGUI.TextInput.ActivatingAFieldAlreadyBeingEditedLeavesNothingSelected", "[Pointer][Text][Animated]")
+
+/*
+ * ActivateInput on a field that is already being edited moves the caret to the end, and left the selection's
+ * anchor where it was. The highlight came down, so nothing looked selected -- but the anchor and the caret are
+ * the selection, and the next character typed replaced everything from the old anchor to the end. Here the
+ * first character is selected, the edit is activated again from code -- what a Blueprint calling
+ * ActivateInput on a focused field does -- and one more character is typed.
+ */
+bool FDreamTextInputActivatingAgainSelectsNothingTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamTextInputInteractionTestLocal;
+	FDreamDriverRig Rig = FDreamDriverRig::Headless(ViewportSize);
+	Rig.BindTest(this);
+	UDreamTextInput* Field = MakeObservedField(Rig, nullptr);
+	if (!TestTrue(TEXT("The rig and the field came up"), Rig.IsUsable() && Field != nullptr && Field->InputBehaviour != nullptr))
+	{
+		return false;
+	}
+	Rig.PumpFrames(1);
+
+	FDreamElementRef FieldElement = Rig.Driver()->Find(FDreamBy::Name(TEXT("Username")));
+	FieldElement->Type(TEXT("hello"));
+	FieldElement->Type(EKeys::Home);
+	FieldElement->TypeChord(EKeys::LeftShift, EKeys::Right);
+	if (!TestTrue(TEXT("Shift+Right selected the first character"), Field->IsAnyTextSelected()))
+	{
+		return false;
+	}
+
+	Field->InputBehaviour->ActivateInput();
+	TestFalse(TEXT("Activating the edit again left nothing selected"), Field->IsAnyTextSelected());
+	FieldElement->Type(TEXT("!"));
+	TestEqualSensitive(TEXT("The next character went in at the end and replaced nothing"), Field->GetText(), FString(TEXT("hello!")));
+
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamTextInputResizeKeepsTheSelectionTest,
+	"DreamGUI.TextInput.ResizingAFieldWithSomethingSelectedKeepsTheSelectionHighlighted",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamTextInputResizeKeepsTheSelectionTest, "DreamGUI.TextInput.ResizingAFieldWithSomethingSelectedKeepsTheSelectionHighlighted", "[Pointer][Text][Animated]")
+
+/*
+ * A field measures itself again when its size changes, and doing so put the caret back and took the highlight
+ * down with it -- while the selection stayed: the anchor and the caret still selected the text, and the next
+ * keystroke replaced text nobody could see was selected. Here two characters are selected, the field is made
+ * wider, and the highlight has to still be over them when the next character replaces them.
+ */
+bool FDreamTextInputResizeKeepsTheSelectionTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamTextInputInteractionTestLocal;
+	FDreamDriverRig Rig = FDreamDriverRig::Headless(ViewportSize);
+	Rig.BindTest(this);
+	UDreamTextInput* Field = MakeObservedField(Rig, nullptr);
+	if (!TestTrue(TEXT("The rig and the field came up"), Rig.IsUsable() && Field != nullptr))
+	{
+		return false;
+	}
+	Rig.PumpFrames(1);
+
+	FDreamElementRef FieldElement = Rig.Driver()->Find(FDreamBy::Name(TEXT("Username")));
+	FieldElement->Type(TEXT("hello"));
+	FieldElement->TypeChord(EKeys::LeftShift, EKeys::Left);
+	FieldElement->TypeChord(EKeys::LeftShift, EKeys::Left);
+
+	Field->SetWidth(static_cast<float>(FieldSize.X) + 80.0f);
+	Rig.PumpFrames(1);
+
+	TestTrue(TEXT("The selection survived the resize"), Field->IsAnyTextSelected());
+	const UDreamWidget* Bar = FirstSelectionBar(Field);
+	TestTrue(TEXT("And is still highlighted"), Bar != nullptr && Bar->GetWidgetActive() && Bar->GetWidth() > 0.0f);
+	FieldElement->Type(TEXT("p"));
+	TestEqualSensitive(TEXT("The next character replaced the highlighted characters"), Field->GetText(), FString(TEXT("help")));
+
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamTextInputDragPastTheEndTest,
+	"DreamGUI.TextInput.ADragPastTheEndOfTheTextStopsTheCaretOnTheLastCaret",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamTextInputDragPastTheEndTest, "DreamGUI.TextInput.ADragPastTheEndOfTheTextStopsTheCaretOnTheLastCaret", "[Pointer][Text][Animated]")
+
+/*
+ * A drag that reaches the right end of the text set the caret one past the last caret there is. It was drawn
+ * on the last one, so nothing looked wrong, but the next Shift+Left only stepped back onto the last caret --
+ * a keystroke that visibly did nothing, and a selection one character short of the one the player made. Here
+ * a press lands past the end of the text (the field is far wider than "hello"), the pointer drags further
+ * right, and Shift+Left has to select the last character.
+ */
+bool FDreamTextInputDragPastTheEndTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamTextInputInteractionTestLocal;
+	FDreamDriverRig Rig = FDreamDriverRig::Headless(ViewportSize);
+	Rig.BindTest(this);
+	UDreamTextInput* Field = MakeObservedField(Rig, nullptr);
+	if (!TestTrue(TEXT("The rig and the field came up"), Rig.IsUsable() && Field != nullptr))
+	{
+		return false;
+	}
+	Rig.PumpFrames(1);
+
+	FDreamElementRef FieldElement = Rig.Driver()->Find(FDreamBy::Name(TEXT("Username")));
+	FieldElement->Type(TEXT("hello"));
+	// The drag has to start on a field being edited with nothing selected. Typing can leave the field asleep, and the
+	// press that wakes one selects all of it -- the anchor at the start, which no drag moves -- so the field is woken
+	// first and the selection taken back to the end.
+	FieldElement->Click();
+	FieldElement->Type(EKeys::End);
+	TestFalse(TEXT("Woken, with the caret taken to the end, the field has nothing selected"), Field->IsAnyTextSelected());
+	TestTrue(TEXT("A drag to the right from the middle of the field completes"), FieldElement->DragBy(FVector2D(60.0, 0.0)));
+	TestFalse(TEXT("A drag that stayed past the end of the text selected nothing"), Field->IsAnyTextSelected());
+
+	FieldElement->TypeChord(EKeys::LeftShift, EKeys::Left);
+	FieldElement->Type(TEXT("X"));
+	TestEqualSensitive(TEXT("Shift+Left after it selected the last character"), Field->GetText(), FString(TEXT("hellX")));
+
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamTextInputTextVisualTakenAwayTest,
+	"DreamGUI.TextInput.AFieldWhoseTextIsTakenAwayMidEditStopsEditing",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamTextInputTextVisualTakenAwayTest, "DreamGUI.TextInput.AFieldWhoseTextIsTakenAwayMidEditStopsEditing", "[Pointer][Text][Animated]")
+
+/*
+ * SetTextVisual(nullptr) while the field was being edited left the edit open with nothing to show it in:
+ * the field kept the player's keyboard and refused every key, and the next re-measure -- a resize -- drew
+ * the caret through the null visual. Taking the text away ends the edit, without reporting a commit nobody
+ * made; and a field resized afterwards has nothing left to fall over.
+ */
+bool FDreamTextInputTextVisualTakenAwayTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamTextInputInteractionTestLocal;
+	FDreamDriverRig Rig = FDreamDriverRig::Headless(ViewportSize);
+	Rig.BindTest(this);
+	TStrongObjectPtr<UDreamTextInteractionListener> Listener(NewObject<UDreamTextInteractionListener>());
+	UDreamTextInput* Field = MakeObservedField(Rig, Listener.Get());
+	if (!TestTrue(TEXT("The rig and the field came up"), Rig.IsUsable() && Field != nullptr && Field->InputBehaviour != nullptr))
+	{
+		return false;
+	}
+	Rig.PumpFrames(1);
+
+	Rig.Driver()->Find(FDreamBy::Name(TEXT("Username")))->Type(TEXT("abc"));
+	Field->InputBehaviour->SetTextVisual(nullptr);
+	TestFalse(TEXT("Taking the text away ended the edit"), IsEditing(Field));
+	TestEqual(TEXT("Without reporting a commit"), Listener->TextCommittedCount, 0);
+
+	Field->SetWidth(static_cast<float>(FieldSize.X) + 40.0f);
+	Rig.PumpFrames(1);
+	TestEqualSensitive(TEXT("And the field kept its text through a resize"), Field->InputBehaviour->GetText(), FString(TEXT("abc")));
+
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamTextInputImeContextOutlivesItsFieldTest,
+	"DreamGUI.TextInput.AnImeContextThatOutlivesItsFieldAnswersForNoText",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamTextInputImeContextOutlivesItsFieldTest, "DreamGUI.TextInput.AnImeContextThatOutlivesItsFieldAnswersForNoText", "[Pointer][Text][Animated]")
+
+/*
+ * The platform can hold a field's IME context past the field -- the Windows text store keeps a strong
+ * reference to its context -- and the context reached the field through a raw pointer it never let go of.
+ * Disposing of it now lets go, as Slate kills its own context with its widget: whatever calls in afterwards
+ * finds no field and does nothing. Here the context is kept past the rig, whose teardown destroys the field.
+ */
+bool FDreamTextInputImeContextOutlivesItsFieldTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamTextInputInteractionTestLocal;
+	TSharedPtr<ITextInputMethodContext> Ime;
+	{
+		FDreamDriverRig Rig = FDreamDriverRig::Headless(ViewportSize);
+		Rig.BindTest(this);
+		UDreamTextInput* Field = MakeObservedField(Rig, nullptr);
+		if (!TestTrue(TEXT("The rig and the field came up"), Rig.IsUsable() && Field != nullptr))
+		{
+			return false;
+		}
+		Rig.PumpFrames(1);
+		Rig.Driver()->Find(FDreamBy::Name(TEXT("Username")))->Type(TEXT("abc"));
+		Ime = ImeOf(Field);
+		if (!TestTrue(TEXT("The field had an IME context"), Ime.IsValid()) || !TestEqual(TEXT("Which saw its text"), static_cast<int32>(Ime->GetTextLength()), 3))
+		{
+			return false;
+		}
+		// The rig goes out of scope here, taking the field with it.
+	}
+
+	TestEqual(TEXT("Once the field is gone, the context has no text to report"), static_cast<int32>(Ime->GetTextLength()), 0);
+	TestTrue(TEXT("And takes no writing"), Ime->IsReadOnly());
+	Ime->BeginComposition();
+	Ime->SetTextInRange(0, 0, TEXT("x"));
+	Ime->EndComposition();
+	FString Contents(TEXT("unread"));
+	Ime->GetTextInRange(0, 3, Contents);
+	TestTrue(TEXT("And reads back nothing"), Contents.IsEmpty());
 
 	return true;
 }

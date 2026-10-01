@@ -144,4 +144,51 @@ bool FDreamSpinBoxClampsTypedValueTest::RunTest(const FString& Parameters)
 	return true;
 }
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamSpinBoxEnterKeepsEditingTest,
+	"DreamGUI.SpinBox.EnterKeepsTheFieldBeingEditedWithTheValueSelectedAndAStepLeavesNothingSelected",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamSpinBoxEnterKeepsEditingTest, "DreamGUI.SpinBox.EnterKeepsTheFieldBeingEditedWithTheValueSelectedAndAStepLeavesNothingSelected", "[Pointer][Text][Animated]")
+
+/*
+ * A spin box's commit knobs default to "keep editing, select the value" (ClearKeyboardFocusOnCommit off,
+ * SelectAllTextOnCommit on), and neither reached the field. Enter is the field's to finish, by its own
+ * settings, so a typed value always ended the edit. The control's own select-all ran on every commit
+ * instead, edit or no edit: a step face clicked, a scrub let go of, a field clicked away from each left a
+ * highlight on a field nobody was editing. Here a value is typed and entered -- the edit has to stay open
+ * with the value selected -- and typed over in the same edit; then the [+] face is clicked, which ends the
+ * edit, commits what was typed after the Enter, steps from it, and must leave nothing selected behind it.
+ */
+bool FDreamSpinBoxEnterKeepsEditingTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamSpinBoxTypingInteractionTestLocal;
+	FDreamDriverRig Rig = FDreamDriverRig::Headless(ViewportSize);
+	Rig.BindTest(this);
+	TStrongObjectPtr<UDreamTextInteractionListener> Listener(NewObject<UDreamTextInteractionListener>());
+	UDreamSpinBox* SpinBox = MakeObservedSpinBox(Rig, Listener.Get());
+	if (!TestTrue(TEXT("The rig and the spin box came up"), Rig.IsUsable() && SpinBox != nullptr && SpinBox->FieldNode != nullptr
+		&& SpinBox->IncrementNode != nullptr && SpinBox->InputBehaviour != nullptr))
+	{
+		return false;
+	}
+	Rig.PumpFrames(1);
+
+	FDreamElementRef Field = FieldOf(Rig, SpinBox);
+	Field->Type(TEXT("42"));
+	Field->Type(EKeys::Enter);
+	TestEqual(TEXT("Enter committed the typed value"), SpinBox->GetValue(), 42.0f, 0.001f);
+	TestTrue(TEXT("And the field is still being edited, as the spin box's defaults say"), SpinBox->InputBehaviour->IsInputActive());
+	TestTrue(TEXT("With the value selected, ready to be typed over"), SpinBox->InputBehaviour->IsAnyTextSelected());
+
+	// Typed over in the same edit: the field now holds a value the Enter did not commit.
+	Field->Type(TEXT("7"));
+	TestTrue(TEXT("Clicking the [+] face completes"), Rig.Driver()->Find(FDreamBy::Widget(SpinBox->IncrementNode))->Click());
+	TestEqual(TEXT("Leaving the field committed what was typed after the Enter, and the step counted up from it"),
+		SpinBox->GetValue(), 8.0f, 0.001f);
+	TestFalse(TEXT("Clicking the face ended the field's edit"), SpinBox->InputBehaviour->IsInputActive());
+	TestFalse(TEXT("And the step's commit left nothing selected on a field nobody is editing"), SpinBox->InputBehaviour->IsAnyTextSelected());
+
+	return true;
+}
+
 #endif

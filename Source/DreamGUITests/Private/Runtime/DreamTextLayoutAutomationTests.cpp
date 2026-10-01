@@ -322,6 +322,44 @@ bool FDreamTextCaretContractTest::RunTest(const FString& Parameters)
 }
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamTextCaretMoveWithoutLayoutTest,
+	"DreamGUI.Text.Caret.MovingTheCaretOfATextThatWasNeverLaidOutMovesNothing",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * A text with no render canvas -- every text in a headless tree and in a Blueprint authoring tree -- is never
+ * laid out and has no lines. MoveCaret read lines anyway: the last one for a move past the end, the caller's
+ * line for up and down, the first and the last for Home and End, each an index into an empty array. Every
+ * move here has to answer that nothing moved, and leave the caret it was handed alone.
+ */
+bool FDreamTextCaretMoveWithoutLayoutTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamTextLayoutTestLocal;
+	FScopedGameWorld TestWorld;
+	UDreamWidget* Widget = NewObject<UDreamWidget>(TestWorld.World, NAME_None, RF_Public | RF_Transactional);
+	Widget->SetWidth(200.0f);
+	Widget->SetHeight(40.0f);
+	UDreamText* Text = Widget->CreateNewVisual<UDreamText>();
+	if (!TestNotNull(TEXT("text visual"), Text))return false;
+	Text->SetFont(NewObject<UDreamTextTestFont>(TestWorld.World));
+	Text->SetText(FText::FromString(TEXT("never laid out")));
+	if (!TestEqual(TEXT("with no render canvas the text has no lines"), Text->GetCacheTextGeometryData().GetLines().Num(), 0))return false;
+
+	// 0 left, 1 right, 2 up, 3 down, 4 start, 5 end
+	for (int32 MoveType = 0; MoveType <= 5; MoveType++)
+	{
+		int32 CaretIndex = 3;
+		int32 LineIndex = 2;
+		FVector2f CaretPosition(0.0f, 0.0f);
+		TestFalse(*FString::Printf(TEXT("move %d reports that nothing moved"), MoveType),
+			Text->MoveCaret(MoveType, CaretIndex, LineIndex, CaretPosition));
+		TestEqual(*FString::Printf(TEXT("and move %d left the caret where it was"), MoveType), CaretIndex, 3);
+		TestEqual(*FString::Printf(TEXT("on the line it was on before move %d"), MoveType), LineIndex, 2);
+	}
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamTextBestFitMemoTest,
 	"DreamGUI.Text.Pipeline.BestFitRemembersItsAnswer",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)

@@ -604,9 +604,12 @@ namespace DreamTextLayoutLocal
 
 	int32 FLayoutRun::CaretIndexOf(int32 ElementIndex) const
 	{
-		// The caret contract: non-rich carets name the element (the code point), rich carets name the
-		// source index, so UITextInput can walk the markup it was given.
-		return In.bRichText ? RichTextPropertyArray[ElementIndex].CharIndex : ElementIndex;
+		// The caret contract: every caret names its element's offset in the source string, in UTF-16
+		// code units -- rich carets so UITextInput can walk the markup it was given, plain ones because an
+		// element is a whole cluster (a surrogate pair, an emoji sequence) and the text is edited in code
+		// units. Naming the element's position in the element list instead put every caret after an emoji
+		// a unit or more short of its character, and an edit there landed inside the emoji.
+		return In.bRichText ? RichTextPropertyArray[ElementIndex].CharIndex : TextProcessingArray[ElementIndex].StringIndex;
 	}
 
 	void FLayoutRun::Measure()
@@ -1581,7 +1584,8 @@ namespace DreamTextLayoutLocal
 			}
 			else if (LineIndex == LineRanges.Num() - 1)
 			{
-				CaretProperty.CharIndex = In.bRichText ? In.Content.Len() : TextProcessingArray.Num();
+				//the string's length in code units, the offset every other caret is counted in
+				CaretProperty.CharIndex = In.Content.Len();
 			}
 			else
 			{

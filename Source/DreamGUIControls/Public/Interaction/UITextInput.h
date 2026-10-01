@@ -511,7 +511,10 @@ public:
 	 * character through here makes the field stop synthesising printable characters from key codes
 	 * for the rest of its life (function keys keep working), so the two roads never double-type.
 	 *
-	 * @return true if the character was accepted into the text.
+	 * A character past the Basic Multilingual Plane -- an emoji -- arrives as two events, its high
+	 * surrogate and then its low one, and is held until both are in: half of one is not a character.
+	 *
+	 * @return true if the character was accepted into the text, or is the first half of one being held.
 	 */
 	bool HandleCharacterInput(TCHAR InCharacter);
 
@@ -570,6 +573,13 @@ public:
 	 * it off first. Nothing in the runtime calls it.
 	 */
 	static void SetHostDeliversCharacterEventsForTesting(const UObject* WorldContextObject, bool bInDelivers);
+	/**
+	 * For tests only: the IME context this field registers with the platform's text input method system while it
+	 * is being edited -- the object an IME reads the selection from and writes composed text through -- so a test
+	 * can play an IME's calls in the order the platform makes them. Null until the field has made one. Nothing in
+	 * the runtime calls it.
+	 */
+	TSharedPtr<ITextInputMethodContext> GetTextInputMethodContextForTesting() const;
 
 	/** Step back through the edit history. @return true if anything changed. */
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Input")
@@ -684,11 +694,13 @@ private:
 	/**
 	 * The open selection as a range into the SOURCE STRING, not as caret indices.
 	 *
-	 * A caret index is an element index (one per laid-out glyph) whenever the text is not rich text,
-	 * and every surrogate pair, every emoji, makes that differ from the UTF-16 offset FString wants.
-	 * Every edit road in this file maps through UDreamText for exactly that reason; DeleteSelection
-	 * was the one that did not, and cut half a character out of any field holding an emoji.
-	 * @return false when there is no selection, in which case the outputs are untouched.
+	 * A caret index counts laid-out carets -- one per cluster, plus one at the end of every line -- and
+	 * every emoji and every wrapped line before the caret makes that differ from the UTF-16 offset
+	 * FString wants. Every edit road in this file maps through UDreamText for exactly that reason.
+	 *
+	 * Whether there IS a selection is asked of the anchor and the caret, never of the highlight bars: a
+	 * selection dragged back to where it began still has a bar, zero wide, and selects nothing.
+	 * @return false when the selection covers no text, in which case the outputs are untouched.
 	 */
 	bool GetSelectionCharRange(int32& OutStartCharIndex, int32& OutCharCount);
 	/**
@@ -702,6 +714,27 @@ private:
 		return MaxLength <= 0 || InCurrentLength + InAddCount <= MaxLength;
 	}
 	/**
+	 * The characters of InCharacters that this field's rules let in, typed one after another at
+	 * InOutCharIndex of InOutText: each one is validated against the text as it stands with the ones before
+	 * it already in -- the rules are positional -- InOutText and InOutCharIndex move on with every one taken,
+	 * and MaxLength ends the run. A surrogate pair is one character here, taken whole or not at all.
+	 * @return the code units that went in, in order.
+	 */
+	FString InsertValidCharacters(const FString& InCharacters, FString& InOutText, int32& InOutCharIndex);
+	/**
+	 * The offset in the source string that caret InCaretIndex stands at. Every edit is made in these, never
+	 * in caret indices. The caret index itself, clamped to the text, while the text has no layout to ask.
+	 */
+	int32 GetCharIndexOfCaret(int32 InCaretIndex);
+	/**
+	 * The caret standing at source offset InCharIndex in the text as it is NOW: the visual is handed the text
+	 * and laid out again first, because an edit can move every caret after it -- a wrap gained or lost above
+	 * the caret changes the index of every caret below it.
+	 */
+	int32 GetCaretIndexOfChar(int32 InCharIndex);
+	/** Put the caret, and the selection anchor with it, on the caret at source offset InCharIndex. */
+	void SetCaretByCharIndex(int32 InCharIndex);
+	/**
 	 * delete selected chars if there is any.
 	 * @return true if anything deleted.
 	 */
@@ -709,6 +742,11 @@ private:
 	void InsertCharAtCaretPosition(TCHAR c);
 	void InsertStringAtCaretPosition(const FString& value);
 	bool bInputActive = false;
+	/**
+	 * The high surrogate of a character still waiting for its low half, 0 when none is. A platform delivers a
+	 * character past the Basic Multilingual Plane as two events, and HandleCharacterInput holds the first.
+	 */
+	TCHAR PendingHighSurrogate = 0;
 	float NextCaretBlinkTime = 0;
 	float ElapseTime = 0;
 	void BackSpace();
@@ -734,22 +772,29 @@ private:
 	/** Fire the submit events once for this activation. Enter and, if asked, the end of the edit. */
 	void Submit();
 
-	//undo/redo: one snapshot is the whole text plus where the caret was when the edit started
+	//undo/redo: one snapshot is the whole text plus where the caret was when the edit started, kept as an
+	//offset into that text -- a caret index names a different spot once the field is laid out differently
 	struct FTextSnapshot
 	{
 		FString Text;
-		int32 CaretPositionIndex = 0;
+		int32 CaretCharIndex = 0;
 	};
 	TArray<FTextSnapshot> UndoStack;
 	TArray<FTextSnapshot> RedoStack;
 	/** Push the CURRENT state as an undo step. Call before changing the text, not after. */
 	void PushUndoSnapshot();
 	void ApplySnapshot(const FTextSnapshot& InSnapshot);
-	/** Cut Text down to MaxLength. @return true if anything was removed. */
+	/** Cut Text down to MaxLength, never through a surrogate pair. @return true if anything was removed. */
 	bool EnforceMaxLength();
 
 	/** Set while an Enter already submitted this activation, so ending the edit does not re-submit. */
 	bool bSubmittedThisActivation = false;
+	/**
+	 * What the field held after an Enter that committed and kept the edit going (bClearKeyboardFocusOnCommit
+	 * off); unset until such an Enter. The end of the edit submits only a value that is not this one: the
+	 * Enter already reported it, and anything typed after it is a value nobody has committed yet.
+	 */
+	TOptional<FString> TextCommittedByEnter;
 	/**
 	 * What the field held when the edit began -- the value a cancel puts back.
 	 *
@@ -899,7 +944,19 @@ private:
 	{
 	public:
 		static TSharedRef<FTextInputMethodContext> Create(UUITextInput* Input);
+		/**
+		 * Lets go of the field, which is about to be destroyed. The platform can keep this context alive past it --
+		 * the Windows text store holds a strong reference to its context -- so a call that comes in afterwards
+		 * finds no field and does nothing, the way Slate's context is killed with its widget.
+		 */
 		void Dispose();
+		/**
+		 * Ends the composition the way EndComposition does, for an edit that ended under it: the platform does not
+		 * always say so -- IMM completes a composition only after the context stopped being the active one, and
+		 * that end never arrives here -- and a composition left open holds back every key of the next edit.
+		 * The change the composition made is reported only when bInReportChange says so.
+		 */
+		void CloseComposition(bool bInReportChange);
 
 		virtual bool IsComposing() override
 		{
@@ -935,6 +992,11 @@ private:
 		UUITextInput* InputComp;
 		FString OriginString;
 		bool bIsComposing = false;
+		/**
+		 * Whether this composition has put its undo step in yet. One composition is one step: taken by its first
+		 * write rather than at BeginComposition, so a composition that never wrote anything adds none.
+		 */
+		bool bCompositionUndoStepTaken = false;
 		TSharedPtr<SBox> CachedWindow;
 	};
 private:
