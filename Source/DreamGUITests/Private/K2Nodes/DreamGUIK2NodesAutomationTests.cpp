@@ -7,19 +7,25 @@
 #include "K2Node_DreamGUICompRef.h"
 
 #include "Components/ActorComponent.h"
+#include "Components/InputComponent.h"
+#include "Components/SceneComponent.h"
 #include "DreamUIComponentReference.h"
 #include "EdGraph/EdGraph.h"
 #include "EdGraphSchema_K2.h"
 #include "Engine/Blueprint.h"
 #include "Engine/BlueprintGeneratedClass.h"
 #include "GameFramework/Actor.h"
+#include "K2Node_CustomEvent.h"
 #include "K2Node_Knot.h"
 #include "K2Node_VariableGet.h"
+#include "K2Node_VariableSet.h"
 #include "Kismet2/BlueprintEditorUtils.h"
 #include "Kismet2/CompilerResultsLog.h"
 #include "Kismet2/KismetEditorUtilities.h"
 #include "Logging/TokenizedMessage.h"
 #include "UObject/Package.h"
+#include "UObject/StrongObjectPtr.h"
+#include "UObject/UnrealType.h"
 
 /*
  * The one node in this module with logic worth pinning, and it had none.
@@ -38,14 +44,18 @@ namespace DreamGUIK2NodeTestLocal
 		UPackage* Package = nullptr;
 		UBlueprint* Blueprint = nullptr;
 
-		explicit FScopedBlueprint(const TCHAR* InName)
+		/**
+		 * @param InParentClass  An actor by default, because that is the blueprint kind guaranteed to come
+		 *                       with an event graph -- most tests here need a graph to put nodes in, nothing
+		 *                       more. A test that runs what it compiles passes a plain object, which needs no
+		 *                       world to be made in.
+		 */
+		explicit FScopedBlueprint(const TCHAR* InName, UClass* InParentClass = AActor::StaticClass())
 		{
 			Package = CreatePackage(*FString::Printf(TEXT("/Temp/DreamGUIK2NodeTests/%s"), InName));
 			Package->AddToRoot();
-			// An actor parent, because that is the blueprint kind guaranteed to come with an
-			// event graph -- these tests need a graph to put nodes in, nothing more.
 			Blueprint = FKismetEditorUtilities::CreateBlueprint(
-				AActor::StaticClass(), Package, FName(InName), BPTYPE_Normal,
+				InParentClass, Package, FName(InName), BPTYPE_Normal,
 				UBlueprint::StaticClass(), UBlueprintGeneratedClass::StaticClass());
 		}
 
@@ -179,6 +189,127 @@ bool FDreamGUICompRefNodeFollowsRerouteToVariableTest::RunTest(const FString& Pa
 		Node->ReferencesVariable(VariableName, nullptr));
 	TestFalse(TEXT("and does not claim variables it has nothing to do with"),
 		Node->ReferencesVariable(FName(TEXT("SomethingElse")), nullptr));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamGUICompRefNodeCompilesAndCastsTest,
+	"DreamGUI.K2Node.AComponentReferenceNodeCompilesAndCastsTheTypeItNarrowsTo",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * The node had never compiled.
+ *
+ * Its expansion looked the library function up by a name the library does not declare, and asked for an input pin by a
+ * name that function does not have either, so every graph using it failed with "the function has not been found" -- and
+ * nothing here compiled a graph with it in. Its output type is read off the CLASS DEFAULT of the variable feeding it,
+ * which an instance can override, and the expansion retyped the function's result to it with no cast: a component of
+ * another class went downstream under a type it does not have. This compiles the node into a custom event that stores
+ * its result, then runs the event on an instance holding a component of the advertised class and on one holding
+ * another, and reads back what was stored.
+ */
+bool FDreamGUICompRefNodeCompilesAndCastsTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamGUIK2NodeTestLocal;
+	FScopedBlueprint Fixture(TEXT("BP_CompRefCompiles"), UObject::StaticClass());
+	UEdGraph* Graph = Fixture.Graph();
+	if (!TestNotNull(TEXT("the fixture has a graph"), Graph))
+	{
+		return false;
+	}
+
+	static const FName ReferenceName(TEXT("MyComponentRef"));
+	static const FName StoredName(TEXT("Stored"));
+	FEdGraphPinType SceneComponentPinType;
+	SceneComponentPinType.PinCategory = UEdGraphSchema_K2::PC_Object;
+	SceneComponentPinType.PinSubCategoryObject = USceneComponent::StaticClass();
+	if (!TestTrue(TEXT("the fixture declares a component reference"),
+			FBlueprintEditorUtils::AddMemberVariable(Fixture.Blueprint, ReferenceName, ComponentReferencePinType()))
+		|| !TestTrue(TEXT("and a scene component to store the result in"),
+			FBlueprintEditorUtils::AddMemberVariable(Fixture.Blueprint, StoredName, SceneComponentPinType)))
+	{
+		return false;
+	}
+	// The class the node narrows to is the reference's class DEFAULT, so the class has to exist first.
+	FKismetEditorUtilities::CompileBlueprint(Fixture.Blueprint, EBlueprintCompileOptions::SkipGarbageCollection);
+	const FStructProperty* DefaultsReference = FindFProperty<FStructProperty>(Fixture.Blueprint->GeneratedClass, ReferenceName);
+	if (!TestNotNull(TEXT("the class declares the reference"), DefaultsReference))
+	{
+		return false;
+	}
+	*DefaultsReference->ContainerPtrToValuePtr<FDreamUIComponentReference>(Fixture.Blueprint->GeneratedClass->GetDefaultObject())
+		= FDreamUIComponentReference(USceneComponent::StaticClass());
+
+	// StoreComponent: Stored = GetComponent(MyComponentRef)
+	FGraphNodeCreator<UK2Node_CustomEvent> EventCreator(*Graph);
+	UK2Node_CustomEvent* Event = EventCreator.CreateNode(/*bSelectNewNode*/false);
+	EventCreator.Finalize();
+	Event->CustomFunctionName = TEXT("StoreComponent");
+
+	UK2Node_VariableGet* Getter = NewObject<UK2Node_VariableGet>(Graph);
+	Graph->AddNode(Getter, false, false);
+	Getter->VariableReference.SetSelfMember(ReferenceName);
+	Getter->AllocateDefaultPins();
+
+	UK2Node_DreamGUICompRef_GetComponent* Node = NewObject<UK2Node_DreamGUICompRef_GetComponent>(Graph);
+	Graph->AddNode(Node, false, false);
+	Node->AllocateDefaultPins();
+
+	UK2Node_VariableSet* Setter = NewObject<UK2Node_VariableSet>(Graph);
+	Graph->AddNode(Setter, false, false);
+	Setter->VariableReference.SetSelfMember(StoredName);
+	Setter->AllocateDefaultPins();
+
+	UEdGraphPin* EventThen = Event->FindPin(UEdGraphSchema_K2::PN_Then);
+	UEdGraphPin* ReferenceOutput = Getter->FindPin(ReferenceName, EGPD_Output);
+	UEdGraphPin* StoredInput = Setter->FindPin(StoredName, EGPD_Input);
+	if (!TestTrue(TEXT("every pin the graph is wired through exists"),
+		EventThen != nullptr && ReferenceOutput != nullptr && StoredInput != nullptr && Setter->GetExecPin() != nullptr))
+	{
+		return false;
+	}
+	EventThen->MakeLinkTo(Setter->GetExecPin());
+	ReferenceOutput->MakeLinkTo(Node->Pins[0]);
+	// What wiring it in the editor does: the output takes the class the reference names.
+	Node->NodeConnectionListChanged();
+	TestEqual(TEXT("the node narrows its output to the class the reference names"),
+		(const UObject*)Node->Pins[1]->PinType.PinSubCategoryObject.Get(), (const UObject*)USceneComponent::StaticClass());
+	Node->Pins[1]->MakeLinkTo(StoredInput);
+
+	FCompilerResultsLog Results;
+	FKismetEditorUtilities::CompileBlueprint(Fixture.Blueprint, EBlueprintCompileOptions::SkipGarbageCollection, &Results);
+	if (!TestEqual(TEXT("a graph using the node compiles"), Results.NumErrors, 0))
+	{
+		for (const TSharedRef<FTokenizedMessage>& Message : Results.Messages)
+		{
+			AddInfo(Message->ToText().ToString());
+		}
+		return false;
+	}
+
+	UClass* CompiledClass = Fixture.Blueprint->GeneratedClass;
+	const FStructProperty* Reference = FindFProperty<FStructProperty>(CompiledClass, ReferenceName);
+	const FObjectProperty* Stored = FindFProperty<FObjectProperty>(CompiledClass, StoredName);
+	const TStrongObjectPtr<UObject> Instance(NewObject<UObject>(GetTransientPackage(), CompiledClass));
+	UFunction* StoreComponent = Instance->FindFunction(FName(TEXT("StoreComponent")));
+	if (!TestTrue(TEXT("the compiled class has the event and both variables"),
+		Reference != nullptr && Stored != nullptr && StoreComponent != nullptr))
+	{
+		return false;
+	}
+
+	const TStrongObjectPtr<USceneComponent> SceneComponent(NewObject<USceneComponent>(GetTransientPackage()));
+	*Reference->ContainerPtrToValuePtr<FDreamUIComponentReference>(Instance.Get()) = FDreamUIComponentReference(SceneComponent.Get());
+	Instance->ProcessEvent(StoreComponent, nullptr);
+	TestTrue(TEXT("a component of the advertised class comes through"),
+		Stored->GetObjectPropertyValue_InContainer(Instance.Get()) == SceneComponent.Get());
+
+	// An instance's own reference, to a component that is not a scene component at all.
+	const TStrongObjectPtr<UInputComponent> OtherComponent(NewObject<UInputComponent>(GetTransientPackage()));
+	*Reference->ContainerPtrToValuePtr<FDreamUIComponentReference>(Instance.Get()) = FDreamUIComponentReference(OtherComponent.Get());
+	Instance->ProcessEvent(StoreComponent, nullptr);
+	TestNull(TEXT("and one of another class comes through as None, not as a scene component it is not"),
+		Stored->GetObjectPropertyValue_InContainer(Instance.Get()));
 	return true;
 }
 

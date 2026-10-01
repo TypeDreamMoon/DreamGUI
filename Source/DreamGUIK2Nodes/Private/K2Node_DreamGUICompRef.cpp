@@ -9,6 +9,7 @@
 #include "BlueprintNodeSpawner.h"
 #include "K2Node_Variable.h"
 #include "K2Node_CallFunction.h"
+#include "K2Node_DynamicCast.h"
 #include "DreamUIBPLibrary.h"
 #include "DreamUIComponentReference.h"
 
@@ -224,10 +225,16 @@ void UK2Node_DreamGUICompRef_GetComponent::ExpandNode(FKismetCompilerContext& Co
 {
 	Super::ExpandNode(CompilerContext, SourceGraph);
 
-	UFunction* BlueprintFunction = UDreamUIBPLibrary::StaticClass()->FindFunctionByName("K2_DreamGUICompRef_GetComponent");
+	// By the checked name, so renaming the library function breaks the build here rather than every graph that uses this
+	// node. The literal this looked up was a name the library never declared, and since nothing checks a string, the node
+	// compiled to "function not found" from the day it was written.
+	UFunction* BlueprintFunction = UDreamUIBPLibrary::StaticClass()->FindFunctionByName(
+		GET_FUNCTION_NAME_CHECKED(UDreamUIBPLibrary, K2_DreamUICompRef_GetComponent));
 	if (!BlueprintFunction)
 	{
 		CompilerContext.MessageLog.Error(*LOCTEXT("InvalidFunctionName", "The function has not been found.").ToString(), this);
+		// Unwired, so the compile reports this node once instead of going on to compile it as if it had been expanded.
+		BreakAllNodeLinks();
 		return;
 	}
 
@@ -237,11 +244,33 @@ void UK2Node_DreamGUICompRef_GetComponent::ExpandNode(FKismetCompilerContext& Co
 	CallFunction->AllocateDefaultPins();
 	CompilerContext.MessageLog.NotifyIntermediateObjectCreation(CallFunction, this);
 
-	CompilerContext.MovePinLinksToIntermediate(*Pins[0], *CallFunction->FindPinChecked(TEXT("InDreamGUICompRef")));
-	auto FunctionResultPin = CallFunction->FindPinChecked(TEXT("OutResult"));
-	FunctionResultPin->PinType.PinCategory = Pins[1]->PinType.PinCategory;
-	FunctionResultPin->PinType.PinSubCategoryObject = Pins[1]->PinType.PinSubCategoryObject;
-	CompilerContext.MovePinLinksToIntermediate(*Pins[1], *FunctionResultPin);
+	// The parameter names of K2_DreamUICompRef_GetComponent, which are what its pins are called.
+	CompilerContext.MovePinLinksToIntermediate(*Pins[0], *CallFunction->FindPinChecked(TEXT("InDreamUICompRef")));
+	UEdGraphPin* FunctionResultPin = CallFunction->FindPinChecked(TEXT("OutResult"));
+
+	// The output is typed from the component class on the CLASS DEFAULT of the variable feeding this node, and that class
+	// is a promise nothing keeps: the variable can be instance editable, set in the graph, or point at a component of
+	// another class altogether. Retyping the function's result to it handed every downstream node an object of whatever
+	// class the reference really held, under a type it might not have -- so the narrowing goes through a cast, and a
+	// component of another class comes out as None.
+	UClass* OutputClass = Cast<UClass>(Pins[1]->PinType.PinSubCategoryObject.Get());
+	if (OutputClass != nullptr && OutputClass != UActorComponent::StaticClass())
+	{
+		UK2Node_DynamicCast* CastNode = CompilerContext.SpawnIntermediateNode<UK2Node_DynamicCast>(this, SourceGraph);
+		CastNode->SetPurity(true);
+		CastNode->TargetType = OutputClass->GetAuthoritativeClass();
+		CastNode->AllocateDefaultPins();
+		CompilerContext.MessageLog.NotifyIntermediateObjectCreation(CastNode, this);
+		if (!CompilerContext.GetSchema()->TryCreateConnection(FunctionResultPin, CastNode->GetCastSourcePin()))
+		{
+			CompilerContext.MessageLog.Error(*LOCTEXT("CastNotConnected", "@@ could not cast its result to the component type.").ToString(), this);
+		}
+		CompilerContext.MovePinLinksToIntermediate(*Pins[1], *CastNode->GetCastResultPin());
+	}
+	else
+	{
+		CompilerContext.MovePinLinksToIntermediate(*Pins[1], *FunctionResultPin);
+	}
 
 	//After we are done we break all links to this node (not the internally created one)
 	BreakAllNodeLinks();
