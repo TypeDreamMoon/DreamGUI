@@ -1019,6 +1019,14 @@ private:
 	 * panels asks each of them several times a frame.
 	 */
 	mutable const UDreamCanvas* RootCanvasRaw = nullptr;
+	/**
+	 * The canvas's widget -- its outer -- as found when the canvas registered, for the passes over every canvas: GetWidget
+	 * asks a weak pointer, kept in the behaviour's part of the object, for it every time. Taken only while it is still the
+	 * canvas's outer (GetCanvasWidget), and let go of when the canvas unregisters, which a widget's destruction does first.
+	 */
+	UDreamWidget* CanvasWidgetRaw = nullptr;
+	/** GetWidget, through CanvasWidgetRaw while that is still this canvas's outer. */
+	UDreamWidget* GetCanvasWidget() const;
 	// Two of the properties are among what every pass reads, and are declared here for it: the details panel places them
 	// itself (FDreamCanvasCustomization).
 protected:

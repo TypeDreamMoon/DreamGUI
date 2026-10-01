@@ -185,6 +185,11 @@ namespace DreamCanvasLocal
 	}
 }
 
+UDreamWidget* UDreamCanvas::GetCanvasWidget() const
+{
+	return CanvasWidgetRaw != nullptr && CanvasWidgetRaw == GetOuter() ? CanvasWidgetRaw : GetWidget();
+}
+
 UDreamCanvas::UDreamCanvas()
 {
 	DefaultMeshType = UDreamUIMeshComponent::StaticClass();
@@ -449,6 +454,7 @@ void UDreamCanvas::DrawRenderTargetIfRequested()
 void UDreamCanvas::OnRegister()
 {
 	Super::OnRegister();
+	CanvasWidgetRaw = GetWidget();
 	if (auto DreamUIManager = UDreamUIManagerWorldSubsystem::GetInstance(GetWorld()))
 	{
 		DreamUIManager->AddCanvas(this);
@@ -491,6 +497,7 @@ void UDreamCanvas::OnUnregister()
 	{
 		OnRenderTargetChanged.Broadcast(nullptr);
 	}
+	CanvasWidgetRaw = nullptr;
 	Super::OnUnregister();
 	// The manager it registered with first: the world's may be another by now, or none.
 	if (UDreamUIManagerWorldSubsystem* DreamUIManager = RegisteredWithManager != nullptr ? RegisteredWithManager : UDreamUIManagerWorldSubsystem::GetInstance(GetWorld()))
@@ -1237,7 +1244,7 @@ bool UDreamCanvas::TendRenderLayers()
 	bool bParentsComposed = false;
 	if (bComposeHere)
 	{
-		if (const UDreamWidget* CanvasWidget = GetWidget())
+		if (const UDreamWidget* CanvasWidget = GetCanvasWidget())
 		{
 			CanvasWidget->GetWorldTransform();
 		}
@@ -1317,7 +1324,7 @@ bool UDreamCanvas::TendRenderLayers()
 	// left to the placement.
 	if (!bParentsComposed && !bComposeWhenPlacing)
 	{
-		if (const UDreamWidget* CanvasWidget = GetWidget())
+		if (const UDreamWidget* CanvasWidget = GetCanvasWidget())
 		{
 			CanvasWidget->GetWorldTransform();
 		}
@@ -1384,7 +1391,7 @@ void UDreamCanvas::PlaceRenderLayers()
 	 * boxes of the draw calls its elements are in. Nothing under it is transformed, patched or uploaded. Each record writes
 	 * its own row alone, so a canvas of thousands of layers places them on as many threads as there are.
 	 */
-	const UDreamWidget* CanvasWidget = GetWidget();
+	const UDreamWidget* CanvasWidget = GetCanvasWidget();
 	// What the layers are composed from, when TendRenderLayers left it to the thread placing them: the parents here, each
 	// once, and the canvas widget just below. One thread places this canvas, and no other canvas's tree reaches into it.
 	const int32 MinParallel = CVarDreamUIParallelLayerRowsMin.GetValueOnAnyThread();
@@ -2886,7 +2893,7 @@ void UDreamCanvas::UpdateCanvasDrawCall()
 		item->UpdateCanvasDrawCall();
 	}
 
-	auto DreamWidget = GetWidget();
+	auto DreamWidget = GetCanvasWidget();
 	if (!DreamWidget)return;
 	/**
 	 * Why use bPrevIsVisible?:
@@ -3108,7 +3115,7 @@ void UDreamCanvas::UpdateDrawCallBatchData()
 void UDreamCanvas::TakeDrawCallBatchData(TArray<UDreamCanvas*>& OutToRefresh, TArray<UDreamCanvas*>& OutToFinish)
 {
 	DREAMUI_DETAIL_SCOPE(DreamUI_UpdateDrawCallBatchData);
-	if(!GetWidget()->HasRegistered())return;
+	if(!GetCanvasWidget()->HasRegistered())return;
 	//update children canvas
 	for (auto& item : ChildrenCanvasArray)
 	{

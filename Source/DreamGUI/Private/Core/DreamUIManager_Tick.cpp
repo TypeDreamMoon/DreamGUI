@@ -674,7 +674,45 @@ void UDreamUIManagerWorldSubsystem::SubmitCanvasDrawCall()
 		// the game thread's again.
 		TArray<UDreamCanvas*> ToRefresh;
 		TArray<UDreamCanvas*> ToFinish;
-		ForEachRootCanvasInRenderModeOrder(false, [&ToRefresh, &ToFinish](UDreamCanvas* Canvas) { Canvas->TakeDrawCallBatchData(ToRefresh, ToFinish); });
+		// Their render layers tended on the game thread, to be placed -- a matrix and a box for each section, the canvas's own
+		// -- on as many threads as there are, and the rest of each finish after. A canvas taken with no vertex refresh to make
+		// is tended right after its take, while it is in hand: a pass of its own over every canvas read each from memory
+		// again. One with a refresh is tended after the refreshes, as before: taking a layer back starts its elements' vertex
+		// transforms, which its refresh must not be reading.
+		TArray<UDreamCanvas*> ToPlace;
+		TArray<UDreamCanvas*> ToTendAfterRefresh;
+		auto Tend = [this, &ToPlace](UDreamCanvas* Canvas)
+		{
+			// Still registered here, asked of the flags the tending reads next rather than of the object array; one let go of
+			// meanwhile is asked about as before.
+			if ((Canvas->RegisteredWithManager == this || IsValid(Canvas)) && Canvas->TendRenderLayersBeforeFinish())
+			{
+				ToPlace.Add(Canvas);
+			}
+		};
+		ForEachRootCanvasInRenderModeOrder(false, [&ToRefresh, &ToFinish, &ToTendAfterRefresh, &Tend](UDreamCanvas* Canvas)
+		{
+			const int32 FirstRefreshed = ToRefresh.Num();
+			const int32 FirstFinished = ToFinish.Num();
+			Canvas->TakeDrawCallBatchData(ToRefresh, ToFinish);
+			for (int32 Index = FirstFinished; Index < ToFinish.Num(); ++Index)
+			{
+				UDreamCanvas* const Taken = ToFinish[Index];
+				bool bRefreshed = false;
+				for (int32 Refreshed = FirstRefreshed; Refreshed < ToRefresh.Num(); ++Refreshed)
+				{
+					bRefreshed |= ToRefresh[Refreshed] == Taken;
+				}
+				if (bRefreshed)
+				{
+					ToTendAfterRefresh.Add(Taken);
+				}
+				else
+				{
+					Tend(Taken);
+				}
+			}
+		});
 		const int32 MinCanvases = CVarDreamUIParallelVertexRefreshMinCanvases.GetValueOnGameThread();
 		if (MinCanvases > 0 && ToRefresh.Num() >= MinCanvases && FApp::ShouldUseThreadingForPerformance())
 		{
@@ -698,17 +736,9 @@ void UDreamUIManagerWorldSubsystem::SubmitCanvasDrawCall()
 				Canvas->RefreshDrawCallVertices();
 			}
 		}
-		// Their render layers placed where the layers now are: tended on the game thread, then placed -- a matrix and a box
-		// for each section, the canvas's own -- on as many threads as there are, and the rest of each finish after.
-		TArray<UDreamCanvas*> ToPlace;
-		for (UDreamCanvas* Canvas : ToFinish)
+		for (UDreamCanvas* Canvas : ToTendAfterRefresh)
 		{
-			// Still registered here, asked of the flags the tending reads next rather than of the object array; one let go of
-			// meanwhile is asked about as before.
-			if ((Canvas->RegisteredWithManager == this || IsValid(Canvas)) && Canvas->TendRenderLayersBeforeFinish())
-			{
-				ToPlace.Add(Canvas);
-			}
+			Tend(Canvas);
 		}
 		const int32 MinPlacingCanvases = CVarDreamUIParallelLayerPlacementMinCanvases.GetValueOnGameThread();
 		if (MinPlacingCanvases > 0 && ToPlace.Num() >= MinPlacingCanvases && FApp::ShouldUseThreadingForPerformance())
