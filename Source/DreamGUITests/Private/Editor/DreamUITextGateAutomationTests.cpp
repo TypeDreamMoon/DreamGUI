@@ -698,6 +698,16 @@ bool FDreamUITextSetSourceFileTest::RunTest(const FString&)
 		DreamUITextAuthoring::SetAuthoredSourcePath(Scoped.Blueprint, File.FilePath));
 	TestTrue(TEXT("and the class now reads as text-authored"),
 		DreamUITextAuthoring::IsTextAuthored(Scoped.Blueprint));
+	// And the designer that was open writes its edits to that file from now on. It bound its write-back when it opened,
+	// to no file, and kept writing nowhere.
+	{
+		FString Bound = FPaths::ConvertRelativePathToFull(Scoped.Designer->GetTextWriteBackFilePath());
+		FString Expected = FPaths::ConvertRelativePathToFull(File.FilePath);
+		FPaths::NormalizeFilename(Bound);
+		FPaths::NormalizeFilename(Expected);
+		TestTrue(*FString::Printf(TEXT("the open designer writes to the file now named (%s)"), *Bound),
+			Bound.Equals(Expected, ESearchCase::IgnoreCase));
+	}
 
 	// The claim that matters: SetAuthoredSourcePath compiles. Storing the string and stopping is the
 	// shape that produces "I set the file and nothing happened".

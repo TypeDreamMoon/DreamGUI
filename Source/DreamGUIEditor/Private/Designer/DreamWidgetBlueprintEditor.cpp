@@ -471,33 +471,7 @@ void FDreamWidgetBlueprintEditor::InitDesigner(const EToolkitMode::Type Mode, co
 	// For a text-authored asset, hook the designer's edits up to the file they came from. Without
 	// this the host still marks itself dirty and still broadcasts on every flush -- it just does it
 	// to nobody, and the panel looks like it is editing the .dui while nothing reaches the disk.
-	{
-		const FString AuthoredPath = DreamUITextAuthoring::GetAuthoredSourcePath(BlueprintBeingEdited);
-		if (!AuthoredPath.IsEmpty())
-		{
-			const FString AbsolutePath = UDreamTextUserWidget::ResolveDuiFilePath(AuthoredPath);
-			FString WriteBackError;
-			TextWriteBack = FDreamUITextWriteBack::Create(AbsolutePath, PreviewHost, WriteBackError);
-			if (!TextWriteBack.IsValid())
-			{
-				// Loud, and not fatal: the designer is still worth opening on a file that cannot be
-				// read, and refusing to open it would leave the author with no way to look at the
-				// asset at all.
-				UE_LOG(DreamGUIEditor, Error, TEXT("[%s].%d Designer edits will not reach '%s': %s"),
-					ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *AbsolutePath, *WriteBackError);
-			}
-			else
-			{
-				// The resources block compiles into Class Defaults, so the panel that edits those is
-				// the stock Kismet one -- no notify hook of ours anywhere near it. The global
-				// property-changed broadcast is the one place such an edit is visible, filtered hard:
-				// this fires for every property change in the process, so everything short of "our
-				// CDO, committed" has to leave in one compare.
-				DefaultsChangedHandle = FCoreUObjectDelegates::OnObjectPropertyChanged.AddSP(
-					this, &FDreamWidgetBlueprintEditor::OnAnyObjectPropertyChanged);
-			}
-		}
-	}
+	SyncTextWriteBackToSource();
 
 	// Every write of this asset records the designer's view state first, not just the toolkit's own
 	// Save button. See PreSaveHandle.
@@ -1650,6 +1624,66 @@ bool FDreamWidgetBlueprintEditor::IsPreviewingScreenSpace()const
 	UDreamWidget* RootAgent = DesignerScene ? DesignerScene->GetRootAgent() : nullptr;
 	UDreamCanvas* RootCanvas = IsValid(RootAgent) ? RootAgent->GetComponent<UDreamCanvas>() : nullptr;
 	return IsValid(RootCanvas) && RootCanvas->GetRenderMode() == EDreamRenderMode::ScreenSpaceOverlay;
+}
+
+void FDreamWidgetBlueprintEditor::SyncTextWriteBackToSource()
+{
+	if (!IsValid(BlueprintBeingEdited) || !PreviewHost.IsValid())
+	{
+		return;
+	}
+	const FString AuthoredPath = DreamUITextAuthoring::GetAuthoredSourcePath(BlueprintBeingEdited);
+	FString AbsolutePath = AuthoredPath.IsEmpty() ? FString() : UDreamTextUserWidget::ResolveDuiFilePath(AuthoredPath);
+	FPaths::NormalizeFilename(AbsolutePath);
+	FString BoundPath = TextWriteBack.IsValid() ? TextWriteBack->GetFilePath() : FString();
+	FPaths::NormalizeFilename(BoundPath);
+	if (TextWriteBack.IsValid() == !AbsolutePath.IsEmpty() && AbsolutePath.Equals(BoundPath, ESearchCase::IgnoreCase))
+	{
+		return;
+	}
+	// The old one goes first: it unsubscribes from the host as it goes, and the Class Defaults hook goes with it.
+	if (DefaultsChangedHandle.IsValid())
+	{
+		FCoreUObjectDelegates::OnObjectPropertyChanged.Remove(DefaultsChangedHandle);
+		DefaultsChangedHandle.Reset();
+	}
+	TextWriteBack.Reset();
+	if (AbsolutePath.IsEmpty())
+	{
+		return;
+	}
+	FString WriteBackError;
+	TextWriteBack = FDreamUITextWriteBack::Create(AbsolutePath, PreviewHost, WriteBackError);
+	if (!TextWriteBack.IsValid())
+	{
+		// Loud, and not fatal: the designer is still worth opening on a file that cannot be
+		// read, and refusing to open it would leave the author with no way to look at the
+		// asset at all.
+		UE_LOG(DreamGUIEditor, Error, TEXT("[%s].%d Designer edits will not reach '%s': %s"),
+			ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *AbsolutePath, *WriteBackError);
+		return;
+	}
+	// The resources block compiles into Class Defaults, so the panel that edits those is
+	// the stock Kismet one -- no notify hook of ours anywhere near it. The global
+	// property-changed broadcast is the one place such an edit is visible, filtered hard:
+	// this fires for every property change in the process, so everything short of "our
+	// CDO, committed" has to leave in one compare.
+	DefaultsChangedHandle = FCoreUObjectDelegates::OnObjectPropertyChanged.AddSP(
+		this, &FDreamWidgetBlueprintEditor::OnAnyObjectPropertyChanged);
+}
+
+FString FDreamWidgetBlueprintEditor::GetTextWriteBackFilePath() const
+{
+	return TextWriteBack.IsValid() ? TextWriteBack->GetFilePath() : FString();
+}
+
+void FDreamWidgetBlueprintEditor::OnBlueprintChangedImpl(UBlueprint* InBlueprint, bool bIsJustBeingCompiled)
+{
+	FBlueprintEditor::OnBlueprintChangedImpl(InBlueprint, bIsJustBeingCompiled);
+	if (InBlueprint != nullptr && InBlueprint == BlueprintBeingEdited)
+	{
+		SyncTextWriteBackToSource();
+	}
 }
 
 void FDreamWidgetBlueprintEditor::SaveEditorState()
