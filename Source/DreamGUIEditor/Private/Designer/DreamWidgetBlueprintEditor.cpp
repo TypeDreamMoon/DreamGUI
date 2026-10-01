@@ -3354,9 +3354,12 @@ void FDreamWidgetBlueprintEditor::CommitWidgetGeometryToTemplate(TConstArrayView
 		UDreamWidget::GetPropertyName_AnchorData(),
 		UDreamWidget::GetPropertyName_RelativeLocation(),
 	};
+	// The Euler rotation too: it is the rotation's authored face, the one the .dui writes, and the quaternion alone is
+	// DuiHidden -- a turn mirrored without it reached the asset and never the file.
 	static const FName TransformProperties[] =
 	{
 		UDreamWidget::GetPropertyName_RelativeRotation(),
+		UDreamWidget::GetPropertyName_RelativeRotationEuler(),
 		UDreamWidget::GetPropertyName_RelativeScale(),
 	};
 	for (UDreamWidget* PreviewWidget : InPreviewWidgets)

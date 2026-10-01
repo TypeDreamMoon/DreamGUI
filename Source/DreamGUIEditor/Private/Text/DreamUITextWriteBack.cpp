@@ -866,17 +866,30 @@ namespace DreamUIWriteBackLocal
 namespace DreamUIWriteBackDirtyLocal
 {
 	/**
-	 * One property, spelled the way a flush addresses one. Node id, which object on it, and the path.
+	 * One property, spelled the way both sides can agree on: the node id and the property's HEAD --
+	 * the first segment of its path. The reporters know the property they migrated (`AnchorData`,
+	 * `Padding`, `Brush`), never which leaf of it changed; the flush asks about leaves
+	 * (`AnchorData.SizeDelta`, `Padding.Left`, `Brush.TintColor`). Keyed on the leaf, a report and a
+	 * question about the same edit never met, and every struct-valued edit the designer made was
+	 * filtered out of the file and reverted by the next compile.
+	 *
+	 * Nor which object on the node: a slot's property is reported from the slot, which the details
+	 * panel resolves to the node, and a behaviour by its place among the widget's components, which
+	 * is not its place among the file's `+` lines. The node and the head are what both sides know.
+	 * Wider than it was by the object on the node, which costs nothing the set exists for: what it
+	 * keeps out is a value that differs because a layout computed it, and that is never under the
+	 * head of a property somebody edited.
 	 *
 	 * A string rather than a struct with a hash, because the set is tiny (a gesture dirties one to
 	 * three properties), it is read once per flush, and the alternative is a GetTypeHash nobody would
 	 * ever have a reason to read.
 	 */
-	FString MakeKey(const FString& InNodeId, EDreamUIPatchTarget InTarget, int32 InComponentIndex,
+	FString MakeKey(const FString& InNodeId, EDreamUIPatchTarget /*InTarget*/, int32 /*InComponentIndex*/,
 		const FString& InPropertyName)
 	{
-		return FString::Printf(TEXT("%s|%d|%d|%s"), *InNodeId, static_cast<int32>(InTarget),
-			InComponentIndex, *InPropertyName);
+		int32 Dot = INDEX_NONE;
+		const FString Head = InPropertyName.FindChar(TEXT('.'), Dot) ? InPropertyName.Left(Dot) : InPropertyName;
+		return FString::Printf(TEXT("%s|%s"), *InNodeId, *Head);
 	}
 
 	/**

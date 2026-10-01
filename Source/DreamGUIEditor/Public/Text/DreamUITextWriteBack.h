@@ -309,6 +309,10 @@ public:
 	 * Keyed on the TREE rather than kept per write-back, because the reporters (the preview host's
 	 * two migration paths) reach a tree long before they could reach a write-back, and because two
 	 * designers open at once then cannot see each other's edits.
+	 *
+	 * MATCHED BY NODE AND HEAD. A report names the property it migrated; the flush asks about the
+	 * leaves under it. So `AnchorData` reported writes `AnchorData.SizeDelta` and every other leaf of
+	 * it that differs, and the target and component index only say where the report came from.
 	 */
 	static void NoteDirtyProperty(const UDreamWidgetTree* InTree, const FString& InNodeId,
 		EDreamUIPatchTarget InTarget, int32 InComponentIndex, const FString& InPropertyName);
