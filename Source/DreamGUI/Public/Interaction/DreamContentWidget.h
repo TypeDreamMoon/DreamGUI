@@ -15,6 +15,9 @@ class DREAMGUI_API UDreamContentWidget : public UDreamUIBehaviour
 {
 	GENERATED_BODY()
 
+public:
+	UDreamContentWidget();
+
 protected:
 	UPROPERTY(VisibleAnywhere, Transient, BlueprintReadOnly, Category = "ContentWidget", meta = (AllowPrivateAccess = true))
 	TObjectPtr<UDreamWidget> Content = nullptr;
@@ -48,6 +51,9 @@ UCLASS(ClassGroup = (DreamGUI), Blueprintable, meta = (BlueprintSpawnableCompone
 class DREAMGUI_API UDreamNamedSlotHost : public UDreamUIBehaviour
 {
 	GENERATED_BODY()
+
+public:
+	UDreamNamedSlotHost();
 
 protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "NamedSlots", meta = (AllowPrivateAccess = true))
@@ -88,6 +94,8 @@ class DREAMGUI_API UDreamNamedSlot : public UDreamUIBehaviour
 	GENERATED_BODY()
 
 public:
+	UDreamNamedSlot();
+
 	/**
 	 * Whether this hole takes more than one widget.
 	 *

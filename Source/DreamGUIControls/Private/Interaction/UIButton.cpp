@@ -5,6 +5,13 @@
 #include "DreamGUI.h"
 #include "Core/Components/DreamWidget.h"
 
+UUIButton::UUIButton()
+{
+	// A button answers the pointer: it has nothing to do each frame, nor when it moves.
+	DeclareTickUnused(StaticClass());
+	DeclareTransformChangedUnused(StaticClass());
+}
+
 bool UUIButton::OnPointerEnter_Implementation(UDreamPointerEventData* EventData)
 {
 	const bool bBubble = Super::OnPointerEnter_Implementation(EventData);

@@ -98,6 +98,8 @@ class DREAMGUI_API UDreamWidgetNavigation : public UDreamUIBehaviour, public IDr
 	GENERATED_BODY()
 
 public:
+	UDreamWidgetNavigation();
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DreamGUI-Navigation")
 	FDreamWidgetNavigationData Up;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DreamGUI-Navigation")

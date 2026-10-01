@@ -26,6 +26,8 @@
 #include "Evaluation/MovieSceneEvaluationField.h"
 #include "MovieScene.h"
 #include "MovieSceneSection.h"
+#include "MovieSceneSequencePlayer.h"
+#include "MovieSceneTimeController.h"
 #include "MovieSceneTrack.h"
 #include "MovieSceneTrackEvaluationField.h"
 #include "Sections/MovieSceneFloatSection.h"
@@ -39,9 +41,11 @@
 #include "Kismet2/CompilerResultsLog.h"
 #include "Kismet2/KismetEditorUtilities.h"
 #include "Misc/FileHelper.h"
+#include "Misc/FrameTime.h"
 #include "Misc/Guid.h"
 #include "Misc/Paths.h"
 #include "UObject/Package.h"
+#include "UObject/UnrealType.h"
 
 /*
  * Playback, end to end: a widget tree in a world that ticks, an animation bound to one of its
@@ -1256,6 +1260,760 @@ bool FDreamWidgetAnimationDirectEvaluationDeclinesTest::RunTest(const FString& P
 		TickFrames(Scope.World, 2);
 		TestFalse(TEXT("An animation with an unbound track is evaluated by the sequencer"), Handle.Player != nullptr && Handle.Player->IsEvaluatingDirectly());
 		TestTrue(TEXT("...which still writes its bound track"), Tree.Button->GetWidth() > 20.0f && Tree.Button->GetWidth() < 220.0f);
+	}
+	return true;
+}
+
+/*
+ * The Queue calls: each waits for the end of the frame's sequence tick, which is what makes it safe to call from inside an
+ * animation's own Started and Finished. Every one of them used to hand the tick manager a latent action bound to no
+ * object, which the tick manager asserts on as the action is added.
+ */
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamWidgetAnimationQueuedCallsTest,
+	"DreamGUI.Animation.Playback.QueuedCallsRunWhenTheFramesSequenceTickEnds",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamWidgetAnimationQueuedCallsTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamWidgetAnimationPlaybackTestLocal;
+	// Declared before the tree: a Finished listener below counts into it, and the tree's teardown may still finish something.
+	int32 FinishedCount = 0;
+	FScopedGameWorld Scope;
+	FScopedTree Tree(Scope.World);
+	Tree.AddFloatTrack(TEXT("AnimatableWidth"), 20.0f, 220.0f);
+	// The tick manager runs what was queued at the end of a tick that updated a group of players, and there is a group
+	// only while a player is registered with it: the component's own player, given the animation here, is one.
+	Tree.Animator->InitSequencePlayer();
+
+	Tree.Animator->QueuePlayAnimation(Tree.Animation);
+	TestFalse(TEXT("A queued play has not started when the call returns"), Tree.Animator->HasPlayingAnimation(Tree.Animation));
+	TickFrames(Scope.World, 1);
+	const FDreamUIAnimationHandle Handle = Tree.Animator->FindAnimationInstance(Tree.Animation);
+	if (!TestTrue(TEXT("It has started by the end of the frame's sequence tick"), Tree.Animator->IsAnimationPlaying(Handle)))
+	{
+		return false;
+	}
+
+	TickFrames(Scope.World, 3);
+	Tree.Animator->QueuePauseAnimation(Handle);
+	TestTrue(TEXT("A queued pause leaves the instance playing when the call returns"), Tree.Animator->IsAnimationPlaying(Handle));
+	TickFrames(Scope.World, 1);
+	TestTrue(TEXT("...and has paused it by the end of the frame"), Tree.Animator->IsAnimationPaused(Handle));
+
+	Tree.Animator->QueueStopAnimation(Handle);
+	TestTrue(TEXT("A queued stop leaves the instance live when the call returns"), Handle.IsValid());
+	TickFrames(Scope.World, 1);
+	TestFalse(TEXT("...and has ended it by the end of the frame"), Handle.IsValid());
+
+	// What the queue is for: the next play asked for from inside the Finished of the one before.
+	UDreamWidgetAnimationComponent* Animator = Tree.Animator;
+	UDreamWidgetAnimation* Animation = Tree.Animation;
+	Tree.Animator->OnInstanceFinished.AddLambda([&FinishedCount, Animator, Animation](const FDreamUIAnimationHandle&)
+	{
+		if (++FinishedCount == 1)
+		{
+			Animator->QueuePlayAnimation(Animation);
+		}
+	});
+	const FDreamUIAnimationHandle First = Tree.Animator->PlayAnimation(Tree.Animation);
+	TickFrames(Scope.World, AnimationFrames + 3);
+	TestEqual(TEXT("The first play finished once"), FinishedCount, 1);
+	const FDreamUIAnimationHandle Second = Tree.Animator->FindAnimationInstance(Tree.Animation);
+	TestTrue(TEXT("The play its Finished queued has started after it"),
+		Second.IsValid() && Second.Player != First.Player && Tree.Animator->IsAnimationPlaying(Second));
+
+	Tree.Animator->QueueStopAllAnimations();
+	TestTrue(TEXT("A queued stop of everything leaves it playing when the call returns"), Tree.Animator->HasPlayingAnimation(Tree.Animation));
+	TickFrames(Scope.World, 1);
+	TestFalse(TEXT("...and has stopped it by the end of the frame"), Tree.Animator->HasPlayingAnimation(Tree.Animation));
+	return true;
+}
+
+/*
+ * The player keeping its own time (UDreamWidgetAnimationPlayer::TickFromSequenceTickManager): taken for a plain play, and
+ * anything the player cannot update exactly as the sequencer's update would is left to that update.
+ */
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamWidgetAnimationLitePlayerTakenTest,
+	"DreamGUI.Animation.Playback.LitePlayer.APlainPlayKeepsItsOwnTimeAndAnythingElseIsLeftToTheSequencer",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamWidgetAnimationLitePlayerTakenTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamWidgetAnimationPlaybackTestLocal;
+	const DreamTests::Lifecycle::FScopedConsoleVariable Lite(TEXT("DreamUI.Animation.LitePlayer"), 1);
+	const DreamTests::Lifecycle::FScopedConsoleVariable Direct(TEXT("DreamUI.Animation.DirectEvaluation"), 1);
+	{
+		FScopedGameWorld Scope;
+		FScopedTree Tree(Scope.World);
+		Tree.AddFloatTrack(TEXT("AnimatableWidth"), 20.0f, 220.0f);
+		const FDreamUIAnimationHandle Handle = Tree.Animator->PlayAnimation(Tree.Animation, 0.0f, 0);
+		UDreamWidgetAnimationPlayer* Player = Handle.Player;
+		if (!TestTrue(TEXT("A plain play is live"), Handle.IsValid()))
+		{
+			return false;
+		}
+		TickFrames(Scope.World, 1);
+		TestFalse(TEXT("The first tick of a play is the sequencer's: it starts the play"), Player->IsTickingLite());
+		TickFrames(Scope.World, 3);
+		TestTrue(TEXT("A plain play keeps its own time after that"), Player->IsTickingLite());
+		TestTrue(TEXT("...being one its player evaluates itself"), Player->IsEvaluatingDirectly());
+		// Past two loop boundaries: each is handed to the sequencer's cursor update from inside the player's own tick.
+		TickFrames(Scope.World, AnimationFrames * 2);
+		TestTrue(TEXT("A looping play keeps its own time across its loops"), Player->IsTickingLite() && Player->IsPlaying());
+
+		Tree.Animator->PauseAnimation(Handle);
+		TickFrames(Scope.World, 2);
+		TestTrue(TEXT("A paused player has nothing to update, and skips the sequencer's update"), Player->IsTickingLite());
+
+		// A clock set from outside the component -- through the handle's player, as game code can -- is not the one the
+		// component vouched for.
+		Player->SetTimeController(MakeShared<FMovieSceneTimeController_Tick>());
+		Tree.Animator->ResumeAnimation(Handle);
+		const float WidthAtResume = Tree.Button->GetWidth();
+		TickFrames(Scope.World, 4);
+		TestFalse(TEXT("A play on a clock the component did not give it goes through the sequencer's update"), Player->IsTickingLite());
+		TestTrue(FString::Printf(TEXT("...which plays it on (width %.2f -> %.2f)"), WidthAtResume, Tree.Button->GetWidth()),
+			Tree.Animator->IsAnimationPlaying(Handle) && !FMath::IsNearlyEqual(Tree.Button->GetWidth(), WidthAtResume, 0.01f));
+	}
+	{
+		// The component's unscaled clock is one it vouches for too.
+		FScopedGameWorld Scope;
+		FScopedTree Tree(Scope.World);
+		Tree.AddFloatTrack(TEXT("AnimatableWidth"), 20.0f, 220.0f);
+		Tree.Animator->SetAffectedByTimeDilation(false);
+		const FDreamUIAnimationHandle Handle = Tree.Animator->PlayAnimation(Tree.Animation);
+		TickFrames(Scope.World, 4);
+		TestTrue(TEXT("A play that ignores time dilation keeps its own time"), Handle.Player != nullptr && Handle.Player->IsTickingLite());
+	}
+	{
+		// Weights blend in the sequencer, which evaluates them.
+		FScopedGameWorld Scope;
+		FScopedTree Tree(Scope.World);
+		Tree.AddFloatTrack(TEXT("AnimatableWidth"), 20.0f, 220.0f);
+		Tree.Animator->SetDynamicWeighting(true);
+		const FDreamUIAnimationHandle Handle = Tree.Animator->PlayAnimation(Tree.Animation);
+		TickFrames(Scope.World, 4);
+		TestFalse(TEXT("A weighted play goes through the sequencer's update"), Handle.Player == nullptr || Handle.Player->IsTickingLite());
+	}
+	{
+		FScopedGameWorld Scope;
+		FScopedTree Tree(Scope.World);
+		Tree.AddFloatTrack(TEXT("AnimatableWidth"), 20.0f, 220.0f);
+		Tree.Animation->GetMovieScene()->AddTrack<UMovieSceneFloatTrack>();
+		const FDreamUIAnimationHandle Handle = Tree.Animator->PlayAnimation(Tree.Animation);
+		TickFrames(Scope.World, 4);
+		TestFalse(TEXT("A play the sequencer evaluates goes through the sequencer's update"), Handle.Player == nullptr || Handle.Player->IsTickingLite());
+	}
+	{
+		// A clock the animation asks for itself is Initialize's to make, not the component's.
+		FScopedGameWorld Scope;
+		FScopedTree Tree(Scope.World);
+		Tree.AddFloatTrack(TEXT("AnimatableWidth"), 20.0f, 220.0f);
+		Tree.Animation->GetMovieScene()->SetClockSource(EUpdateClockSource::Platform);
+		const FDreamUIAnimationHandle Handle = Tree.Animator->PlayAnimation(Tree.Animation);
+		TickFrames(Scope.World, 4);
+		TestFalse(TEXT("A play on the platform clock goes through the sequencer's update"), Handle.Player == nullptr || Handle.Player->IsTickingLite());
+	}
+	{
+		const DreamTests::Lifecycle::FScopedConsoleVariable Off(TEXT("DreamUI.Animation.LitePlayer"), 0);
+		FScopedGameWorld Scope;
+		FScopedTree Tree(Scope.World);
+		Tree.AddFloatTrack(TEXT("AnimatableWidth"), 20.0f, 220.0f);
+		const FDreamUIAnimationHandle Handle = Tree.Animator->PlayAnimation(Tree.Animation);
+		TickFrames(Scope.World, 4);
+		TestFalse(TEXT("With DreamUI.Animation.LitePlayer 0 a plain play goes through the sequencer's update"), Handle.Player == nullptr || Handle.Player->IsTickingLite());
+	}
+	{
+		// The component's own player, registered with the tick manager and stopped, as it sits on every component with an
+		// animation of its own.
+		FScopedGameWorld Scope;
+		FScopedTree Tree(Scope.World);
+		Tree.AddFloatTrack(TEXT("AnimatableWidth"), 20.0f, 220.0f);
+		Tree.Animator->InitSequencePlayer();
+		TickFrames(Scope.World, 2);
+		UDreamWidgetAnimationPlayer* Idle = Tree.Animator->GetSequencePlayer();
+		TestTrue(TEXT("A stopped player skips the sequencer's update"), Idle != nullptr && Idle->IsTickingLite());
+	}
+	return true;
+}
+
+/*
+ * The player's own tick held to the sequencer's update: the same play run twice, with DreamUI.Animation.LitePlayer off and
+ * on, and compared after every frame -- the player's time and loop count, whether it plays, the widget's values, and the
+ * frame its Finished fired in. The time and the loop count are compared exactly: the player's own tick runs the same
+ * engine code on the same numbers, so any difference at all is a difference in the state it leaves.
+ */
+namespace DreamWidgetAnimationPlaybackTestLocal
+{
+	/** One play as the comparisons read it, after every frame. */
+	struct FTickedPlay
+	{
+		TArray<FFrameTime> Times;
+		TArray<int32> Loops;
+		TArray<bool> Playing;
+		TArray<float> Widths;
+		TArray<double> TranslationsY;
+		/** The frame in whose tick, or in whose call before the tick, the play finished; INDEX_NONE if it did not. */
+		int32 FinishedFrame = INDEX_NONE;
+		/** Frames the player began playing and ticked itself. */
+		int32 LiteFrames = 0;
+		float WidthAfter = 0.0f;
+	};
+
+	/** How a comparison plays the animation, and what it does to the play between ticks. */
+	struct FTickedPlayScript
+	{
+		float StartAtTime = 0.0f;
+		/** Seconds into the animation to end at, through PlayAnimationTimeRange; zero or less plays to the animation's end. */
+		float EndAtTime = 0.0f;
+		int32 NumLoopsToPlay = 1;
+		EDreamUIAnimationPlayMode PlayMode = EDreamUIAnimationPlayMode::Forward;
+		float PlaybackSpeed = 1.0f;
+		bool bRestoreState = false;
+		bool bAffectedByTimeDilation = true;
+		float TimeDilation = 1.0f;
+		int32 Frames = AnimationFrames + 5;
+		/** Called before each frame's tick with the frame's index, the component and the play. */
+		TFunction<void(int32, UDreamWidgetAnimationComponent&, const FDreamUIAnimationHandle&)> BeforeTick;
+	};
+
+	/** The loop count the engine keeps and does not expose (UMovieSceneSequencePlayer::CurrentNumLoops), read by reflection. */
+	const FIntProperty* FindNumLoopsProperty()
+	{
+		return FindFProperty<FIntProperty>(UMovieSceneSequencePlayer::StaticClass(), TEXT("CurrentNumLoops"));
+	}
+
+	int32 NumLoopsOf(const UMovieSceneSequencePlayer* InPlayer)
+	{
+		const FIntProperty* Property = FindNumLoopsProperty();
+		return Property != nullptr && InPlayer != nullptr ? Property->GetPropertyValue_InContainer(InPlayer) : INDEX_NONE;
+	}
+
+	/** A console variable set from inside a play, as a player at the console would. */
+	void SetConsoleVariable(const TCHAR* InName, int32 InValue)
+	{
+		if (IConsoleVariable* Variable = IConsoleManager::Get().FindConsoleVariable(InName))
+		{
+			Variable->Set(InValue, ECVF_SetByCode);
+		}
+	}
+
+	/** One play of a width and a translation ramp, with DreamUI.Animation.LitePlayer at InLitePlayer to begin with. */
+	FTickedPlay RecordTickedPlay(int32 InLitePlayer, const FTickedPlayScript& InScript)
+	{
+		const DreamTests::Lifecycle::FScopedConsoleVariable Lite(TEXT("DreamUI.Animation.LitePlayer"), InLitePlayer);
+		// On at the start of every play, and back as it was after: a script may turn it off part way.
+		const DreamTests::Lifecycle::FScopedConsoleVariable Direct(TEXT("DreamUI.Animation.DirectEvaluation"), 1);
+		// Declared before the tree: its teardown may still finish the play and so reach the listener, which has stopped
+		// recording by then -- a play still running when the frames run out is not one that finished.
+		FTickedPlay Play;
+		int32 Frame = INDEX_NONE;
+		bool bRecording = true;
+		FScopedGameWorld Scope;
+		FScopedTree Tree(Scope.World);
+		Tree.AddFloatTrack(TEXT("AnimatableWidth"), 20.0f, 220.0f);
+		Tree.AddVectorTrack(TEXT("RenderTranslation"), FVector(0.0, -100.0, 0.0), FVector(0.0, 0.0, 30.0));
+		Tree.Button->SetWidth(60.0f);
+		if (AWorldSettings* Settings = Scope.World->GetWorldSettings())
+		{
+			Settings->TimeDilation = InScript.TimeDilation;
+		}
+		Tree.Animator->SetAffectedByTimeDilation(InScript.bAffectedByTimeDilation);
+		Tree.Animator->OnInstanceFinished.AddLambda([&Play, &Frame, &bRecording](const FDreamUIAnimationHandle&)
+		{
+			if (bRecording && Play.FinishedFrame == INDEX_NONE)
+			{
+				Play.FinishedFrame = Frame;
+			}
+		});
+
+		const FDreamUIAnimationHandle Handle = InScript.EndAtTime > 0.0f
+			? Tree.Animator->PlayAnimationTimeRange(Tree.Animation, InScript.StartAtTime, InScript.EndAtTime, InScript.NumLoopsToPlay,
+				InScript.PlayMode, InScript.PlaybackSpeed, InScript.bRestoreState)
+			: Tree.Animator->PlayAnimation(Tree.Animation, InScript.StartAtTime, InScript.NumLoopsToPlay,
+				InScript.PlayMode, InScript.PlaybackSpeed, InScript.bRestoreState);
+		// Read on after the play is released: a released player lingers until the collector takes it, and keeps its state.
+		const UDreamWidgetAnimationPlayer* Player = Handle.Player;
+		for (Frame = 0; Frame < InScript.Frames; ++Frame)
+		{
+			if (InScript.BeforeTick)
+			{
+				InScript.BeforeTick(Frame, *Tree.Animator, Handle);
+			}
+			const bool bWasPlaying = Player != nullptr && Player->IsPlaying();
+			TickFrames(Scope.World, 1);
+			if (bWasPlaying && Player->IsTickingLite())
+			{
+				++Play.LiteFrames;
+			}
+			Play.Times.Add(Player != nullptr ? Player->GetCurrentTime().Time : FFrameTime());
+			Play.Loops.Add(NumLoopsOf(Player));
+			Play.Playing.Add(Tree.Animator->IsAnimationPlaying(Handle));
+			Play.Widths.Add(Tree.Button->GetWidth());
+			Play.TranslationsY.Add(Tree.Button->GetRenderTranslation().Y);
+		}
+		Play.WidthAfter = Tree.Button->GetWidth();
+		bRecording = false;
+		return Play;
+	}
+
+	/** The play InScript describes, run by the sequencer's update and then by the player itself, compared frame by frame. */
+	void ExpectLitePlayMatchesSequencer(FAutomationTestBase& InTest, const TCHAR* InWhat, const FTickedPlayScript& InScript,
+		const FTickedPlayScript* InLiteScript = nullptr)
+	{
+		const FTickedPlay Sequencer = RecordTickedPlay(0, InScript);
+		const FTickedPlay Lite = RecordTickedPlay(1, InLiteScript != nullptr ? *InLiteScript : InScript);
+		InTest.TestEqual(FString::Printf(TEXT("%s: the sequencer's update ran every tick of the play without the player's own"), InWhat), Sequencer.LiteFrames, 0);
+		InTest.TestTrue(FString::Printf(TEXT("%s: the player kept its own time for part of the other"), InWhat), Lite.LiteFrames > 0);
+		if (!InTest.TestEqual(FString::Printf(TEXT("%s: both plays saw as many frames"), InWhat), Lite.Times.Num(), Sequencer.Times.Num()))
+		{
+			return;
+		}
+		for (int32 Frame = 0; Frame < Sequencer.Times.Num(); ++Frame)
+		{
+			InTest.TestTrue(FString::Printf(TEXT("%s, frame %d: the time is the sequencer's (%s, not %s)"), InWhat, Frame,
+				*LexToString(Lite.Times[Frame]), *LexToString(Sequencer.Times[Frame])), Lite.Times[Frame] == Sequencer.Times[Frame]);
+			InTest.TestEqual(FString::Printf(TEXT("%s, frame %d: the loop count is the sequencer's"), InWhat, Frame), Lite.Loops[Frame], Sequencer.Loops[Frame]);
+			InTest.TestTrue(FString::Printf(TEXT("%s, frame %d: it plays when the sequencer's does"), InWhat, Frame), Lite.Playing[Frame] == Sequencer.Playing[Frame]);
+			InTest.TestEqual(FString::Printf(TEXT("%s, frame %d: the width is the sequencer's"), InWhat, Frame), Lite.Widths[Frame], Sequencer.Widths[Frame], 0.001f);
+			InTest.TestEqual(FString::Printf(TEXT("%s, frame %d: the translation is the sequencer's"), InWhat, Frame), Lite.TranslationsY[Frame], Sequencer.TranslationsY[Frame], 0.001);
+		}
+		InTest.TestEqual(FString::Printf(TEXT("%s: Finished fired in the sequencer's frame"), InWhat), Lite.FinishedFrame, Sequencer.FinishedFrame);
+		InTest.TestEqual(FString::Printf(TEXT("%s: the widget is left as the sequencer leaves it"), InWhat), Lite.WidthAfter, Sequencer.WidthAfter, 0.001f);
+	}
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamWidgetAnimationLitePlayerDirectionAndSpeedTest,
+	"DreamGUI.Animation.Playback.LitePlayer.ForwardReverseFasterAndSlowerPlaysMatchTheSequencersUpdate",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamWidgetAnimationLitePlayerDirectionAndSpeedTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamWidgetAnimationPlaybackTestLocal;
+	{
+		FTickedPlayScript Script;
+		ExpectLitePlayMatchesSequencer(*this, TEXT("Forward"), Script);
+	}
+	{
+		FTickedPlayScript Script;
+		Script.StartAtTime = 4.0f * FrameSeconds;
+		ExpectLitePlayMatchesSequencer(*this, TEXT("Forward from four frames in"), Script);
+	}
+	{
+		FTickedPlayScript Script;
+		Script.PlayMode = EDreamUIAnimationPlayMode::Reverse;
+		ExpectLitePlayMatchesSequencer(*this, TEXT("Reverse"), Script);
+	}
+	{
+		FTickedPlayScript Script;
+		Script.PlayMode = EDreamUIAnimationPlayMode::Reverse;
+		Script.StartAtTime = 5.0f * FrameSeconds;
+		ExpectLitePlayMatchesSequencer(*this, TEXT("Reverse from five frames before the end"), Script);
+	}
+	{
+		FTickedPlayScript Script;
+		Script.PlaybackSpeed = 2.0f;
+		ExpectLitePlayMatchesSequencer(*this, TEXT("Twice as fast"), Script);
+	}
+	{
+		FTickedPlayScript Script;
+		Script.PlaybackSpeed = 0.37f;
+		Script.Frames = AnimationFrames * 3 + 5;
+		ExpectLitePlayMatchesSequencer(*this, TEXT("At 0.37 speed"), Script);
+	}
+	{
+		FTickedPlayScript Script;
+		Script.PlayMode = EDreamUIAnimationPlayMode::Reverse;
+		Script.PlaybackSpeed = 1.6f;
+		ExpectLitePlayMatchesSequencer(*this, TEXT("Reverse at 1.6 speed"), Script);
+	}
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamWidgetAnimationLitePlayerLoopsTest,
+	"DreamGUI.Animation.Playback.LitePlayer.LoopingPlaysMatchTheSequencersUpdate",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamWidgetAnimationLitePlayerLoopsTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamWidgetAnimationPlaybackTestLocal;
+	if (!TestNotNull(TEXT("The engine's loop count is there to be compared"), FindNumLoopsProperty()))
+	{
+		return false;
+	}
+	{
+		FTickedPlayScript Script;
+		Script.NumLoopsToPlay = 3;
+		Script.Frames = AnimationFrames * 3 + 5;
+		ExpectLitePlayMatchesSequencer(*this, TEXT("Three times"), Script);
+	}
+	{
+		FTickedPlayScript Script;
+		Script.NumLoopsToPlay = 0;
+		Script.Frames = AnimationFrames * 3 + 7;
+		ExpectLitePlayMatchesSequencer(*this, TEXT("For ever"), Script);
+	}
+	{
+		// Boundaries crossed part way through a tick, with the overshoot carried into the next pass.
+		FTickedPlayScript Script;
+		Script.NumLoopsToPlay = 3;
+		Script.PlaybackSpeed = 1.7f;
+		Script.Frames = AnimationFrames * 2 + 5;
+		ExpectLitePlayMatchesSequencer(*this, TEXT("Three times at 1.7 speed"), Script);
+	}
+	{
+		FTickedPlayScript Script;
+		Script.PlayMode = EDreamUIAnimationPlayMode::Reverse;
+		Script.NumLoopsToPlay = 2;
+		Script.Frames = AnimationFrames * 2 + 5;
+		ExpectLitePlayMatchesSequencer(*this, TEXT("Reverse, twice"), Script);
+	}
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamWidgetAnimationLitePlayerClocksTest,
+	"DreamGUI.Animation.Playback.LitePlayer.PlaysInADilatedWorldMatchTheSequencersUpdateWhetherOrNotTheyFollowIt",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamWidgetAnimationLitePlayerClocksTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamWidgetAnimationPlaybackTestLocal;
+	{
+		FTickedPlayScript Script;
+		Script.TimeDilation = 0.25f;
+		Script.Frames = AnimationFrames * 4 + 5;
+		ExpectLitePlayMatchesSequencer(*this, TEXT("In a quarter-speed world"), Script);
+	}
+	{
+		FTickedPlayScript Script;
+		Script.TimeDilation = 2.0f;
+		ExpectLitePlayMatchesSequencer(*this, TEXT("In a double-speed world"), Script);
+	}
+	{
+		// The component's unscaled clock, which divides the world's dilation back out of every tick.
+		FTickedPlayScript Script;
+		Script.TimeDilation = 0.25f;
+		Script.bAffectedByTimeDilation = false;
+		ExpectLitePlayMatchesSequencer(*this, TEXT("Ignoring a quarter-speed world"), Script);
+	}
+	{
+		FTickedPlayScript Script;
+		Script.TimeDilation = 2.0f;
+		Script.bAffectedByTimeDilation = false;
+		Script.NumLoopsToPlay = 2;
+		Script.Frames = AnimationFrames * 2 + 5;
+		ExpectLitePlayMatchesSequencer(*this, TEXT("Ignoring a double-speed world, twice"), Script);
+	}
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamWidgetAnimationLitePlayerControlledTest,
+	"DreamGUI.Animation.Playback.LitePlayer.PlaysPausedSoughtTurnedStoppedOrCutShortMatchTheSequencersUpdate",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamWidgetAnimationLitePlayerControlledTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamWidgetAnimationPlaybackTestLocal;
+	{
+		FTickedPlayScript Script;
+		Script.Frames = AnimationFrames + 10;
+		Script.BeforeTick = [](int32 Frame, UDreamWidgetAnimationComponent& Animator, const FDreamUIAnimationHandle& Handle)
+		{
+			if (Frame == 5)
+			{
+				Animator.PauseAnimation(Handle);
+			}
+			else if (Frame == 9)
+			{
+				Animator.ResumeAnimation(Handle);
+			}
+		};
+		ExpectLitePlayMatchesSequencer(*this, TEXT("Paused and resumed"), Script);
+	}
+	{
+		FTickedPlayScript Script;
+		Script.BeforeTick = [](int32 Frame, UDreamWidgetAnimationComponent& Animator, const FDreamUIAnimationHandle& Handle)
+		{
+			if (Frame == 4)
+			{
+				Animator.SetAnimationCurrentTime(Handle, 12.0f * FrameSeconds);
+			}
+		};
+		ExpectLitePlayMatchesSequencer(*this, TEXT("Sought forward while playing"), Script);
+	}
+	{
+		FTickedPlayScript Script;
+		Script.Frames = AnimationFrames + 12;
+		Script.BeforeTick = [](int32 Frame, UDreamWidgetAnimationComponent& Animator, const FDreamUIAnimationHandle& Handle)
+		{
+			if (Frame == 10)
+			{
+				Animator.SetAnimationCurrentTime(Handle, 2.0f * FrameSeconds);
+			}
+		};
+		ExpectLitePlayMatchesSequencer(*this, TEXT("Sought back while playing"), Script);
+	}
+	{
+		FTickedPlayScript Script;
+		Script.Frames = AnimationFrames + 8;
+		Script.BeforeTick = [](int32 Frame, UDreamWidgetAnimationComponent& Animator, const FDreamUIAnimationHandle& Handle)
+		{
+			if (Frame == 3)
+			{
+				Animator.PauseAnimation(Handle);
+			}
+			else if (Frame == 5)
+			{
+				Animator.SetAnimationCurrentTime(Handle, 9.0f * FrameSeconds);
+			}
+			else if (Frame == 7)
+			{
+				Animator.ResumeAnimation(Handle);
+			}
+		};
+		ExpectLitePlayMatchesSequencer(*this, TEXT("Sought while paused"), Script);
+	}
+	{
+		FTickedPlayScript Script;
+		Script.BeforeTick = [](int32 Frame, UDreamWidgetAnimationComponent& Animator, const FDreamUIAnimationHandle& Handle)
+		{
+			if (Frame == 7)
+			{
+				Animator.StopAnimation(Handle);
+			}
+		};
+		ExpectLitePlayMatchesSequencer(*this, TEXT("Stopped part way"), Script);
+	}
+	{
+		FTickedPlayScript Script;
+		Script.EndAtTime = 0.25f;
+		ExpectLitePlayMatchesSequencer(*this, TEXT("Cut short by an end time"), Script);
+	}
+	{
+		FTickedPlayScript Script;
+		Script.EndAtTime = 0.3f;
+		Script.NumLoopsToPlay = 2;
+		ExpectLitePlayMatchesSequencer(*this, TEXT("Cut short by an end time, twice"), Script);
+	}
+	{
+		FTickedPlayScript Script;
+		Script.BeforeTick = [](int32 Frame, UDreamWidgetAnimationComponent& Animator, const FDreamUIAnimationHandle& Handle)
+		{
+			if (Frame == 8)
+			{
+				Animator.ReverseAnimation(Handle);
+			}
+		};
+		ExpectLitePlayMatchesSequencer(*this, TEXT("Turned around part way"), Script);
+	}
+	{
+		FTickedPlayScript Script;
+		Script.BeforeTick = [](int32 Frame, UDreamWidgetAnimationComponent& Animator, const FDreamUIAnimationHandle& Handle)
+		{
+			if (Frame == 4)
+			{
+				Animator.SetPlaybackSpeed(Handle, 2.5f);
+			}
+		};
+		ExpectLitePlayMatchesSequencer(*this, TEXT("Sped up part way"), Script);
+	}
+	{
+		FTickedPlayScript Script;
+		Script.Frames = AnimationFrames * 3 + 5;
+		Script.BeforeTick = [](int32 Frame, UDreamWidgetAnimationComponent& Animator, const FDreamUIAnimationHandle& Handle)
+		{
+			if (Frame == 5)
+			{
+				Animator.SetNumLoopsToPlay(Handle, 3);
+			}
+		};
+		ExpectLitePlayMatchesSequencer(*this, TEXT("Given more loops part way"), Script);
+	}
+	{
+		// PlayTo: a pause the engine takes where the play crosses the frame asked for, from a latent action.
+		FTickedPlayScript Script;
+		Script.BeforeTick = [](int32 Frame, UDreamWidgetAnimationComponent&, const FDreamUIAnimationHandle& Handle)
+		{
+			if (Frame == 3 && Handle.Player != nullptr)
+			{
+				Handle.Player->PlayTo(FMovieSceneSequencePlaybackParams(12.0f * FrameSeconds, EUpdatePositionMethod::Play), FMovieSceneSequencePlayToParams());
+			}
+		};
+		ExpectLitePlayMatchesSequencer(*this, TEXT("Played to a frame"), Script);
+	}
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamWidgetAnimationLitePlayerRestoreStateTest,
+	"DreamGUI.Animation.Playback.LitePlayer.RestoringPlaysPutTheWidgetBackAsTheSequencersUpdateDoes",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamWidgetAnimationLitePlayerRestoreStateTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamWidgetAnimationPlaybackTestLocal;
+	{
+		FTickedPlayScript Script;
+		Script.bRestoreState = true;
+		ExpectLitePlayMatchesSequencer(*this, TEXT("Restoring, to the end"), Script);
+	}
+	{
+		FTickedPlayScript Script;
+		Script.bRestoreState = true;
+		Script.BeforeTick = [](int32 Frame, UDreamWidgetAnimationComponent& Animator, const FDreamUIAnimationHandle& Handle)
+		{
+			if (Frame == 6)
+			{
+				Animator.StopAnimation(Handle);
+			}
+		};
+		ExpectLitePlayMatchesSequencer(*this, TEXT("Restoring, stopped part way"), Script);
+	}
+	{
+		FTickedPlayScript Script;
+		Script.bRestoreState = true;
+		Script.PlayMode = EDreamUIAnimationPlayMode::Reverse;
+		ExpectLitePlayMatchesSequencer(*this, TEXT("Restoring, reverse"), Script);
+	}
+	{
+		FTickedPlayScript Script;
+		Script.bRestoreState = true;
+		Script.NumLoopsToPlay = 2;
+		Script.Frames = AnimationFrames * 2 + 5;
+		ExpectLitePlayMatchesSequencer(*this, TEXT("Restoring, twice"), Script);
+	}
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamWidgetAnimationLitePlayerSwitchTest,
+	"DreamGUI.Animation.Playback.LitePlayer.SwitchingItMidPlayHandsThePlayOverWhereItIs",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamWidgetAnimationLitePlayerSwitchTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamWidgetAnimationPlaybackTestLocal;
+	FTickedPlayScript Twice;
+	Twice.NumLoopsToPlay = 2;
+	Twice.Frames = AnimationFrames * 2 + 5;
+	{
+		// Off for a stretch that starts and ends between boundaries, and on again across the loop.
+		FTickedPlayScript OffAndOn = Twice;
+		OffAndOn.BeforeTick = [](int32 Frame, UDreamWidgetAnimationComponent&, const FDreamUIAnimationHandle&)
+		{
+			if (Frame == 6)
+			{
+				SetConsoleVariable(TEXT("DreamUI.Animation.LitePlayer"), 0);
+			}
+			else if (Frame == 12)
+			{
+				SetConsoleVariable(TEXT("DreamUI.Animation.LitePlayer"), 1);
+			}
+		};
+		ExpectLitePlayMatchesSequencer(*this, TEXT("Turned off and on again"), Twice, &OffAndOn);
+	}
+	{
+		// A play the sequencer's update started, taken over by the player part way.
+		FTickedPlayScript LaterOn = Twice;
+		LaterOn.BeforeTick = [](int32 Frame, UDreamWidgetAnimationComponent&, const FDreamUIAnimationHandle&)
+		{
+			if (Frame == 0)
+			{
+				SetConsoleVariable(TEXT("DreamUI.Animation.LitePlayer"), 0);
+			}
+			else if (Frame == 9)
+			{
+				SetConsoleVariable(TEXT("DreamUI.Animation.LitePlayer"), 1);
+			}
+		};
+		ExpectLitePlayMatchesSequencer(*this, TEXT("Turned on part way"), Twice, &LaterOn);
+	}
+	{
+		// Direct evaluation turned off under the player's own tick: the animation goes to the sequencer, and the time with it.
+		FTickedPlayScript DirectOff = Twice;
+		DirectOff.BeforeTick = [](int32 Frame, UDreamWidgetAnimationComponent&, const FDreamUIAnimationHandle&)
+		{
+			if (Frame == 8)
+			{
+				SetConsoleVariable(TEXT("DreamUI.Animation.DirectEvaluation"), 0);
+			}
+		};
+		ExpectLitePlayMatchesSequencer(*this, TEXT("Direct evaluation turned off part way"), DirectOff);
+	}
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamWidgetAnimationStoppedFromItsOwnWriteTest,
+	"DreamGUI.Animation.Playback.AnAnimationStoppedByAListenerOfItsOwnWriteStopsThere",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamWidgetAnimationStoppedFromItsOwnWriteTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamWidgetAnimationPlaybackTestLocal;
+	// The player evaluates this animation itself, so the width written through the widget's setter reaches the listener
+	// while the evaluation is still under way, and the stop the listener asks for happens there and then -- with the
+	// component's stop, the player is torn down as well.
+	const DreamTests::Lifecycle::FScopedConsoleVariable Direct(TEXT("DreamUI.Animation.DirectEvaluation"), 1);
+	for (const bool bRestoreState : { false, true })
+	{
+		for (const bool bThroughComponent : { false, true })
+		{
+			const FString Case = FString::Printf(TEXT("%s, stopped through the %s"), bRestoreState ? TEXT("restoring") : TEXT("keeping"),
+				bThroughComponent ? TEXT("component") : TEXT("player"));
+			FScopedGameWorld Scope;
+			FScopedTree Tree(Scope.World);
+			Tree.AddFloatTrack(TEXT("AnimatableWidth"), 20.0f, 220.0f);
+			Tree.AddVectorTrack(TEXT("RenderTranslation"), FVector(0.0, -100.0, 0.0), FVector(0.0, 0.0, 30.0));
+			Tree.Button->SetWidth(60.0f);
+			const FDreamUIAnimationHandle Handle = Tree.Animator->PlayAnimation(Tree.Animation, 0.0f, 1, EDreamUIAnimationPlayMode::Forward, 1.0f, bRestoreState);
+			TickFrames(Scope.World, 3);
+			if (!TestTrue(FString::Printf(TEXT("%s: the player evaluates the animation itself"), *Case), Handle.Player != nullptr && Handle.Player->IsEvaluatingDirectly()))
+			{
+				continue;
+			}
+
+			bool bStopped = false;
+			UDreamWidgetAnimationComponent* const Animator = Tree.Animator;
+			const FDelegateHandle Listening = Tree.Button->GetDimensionChangedEvent().AddLambda(
+				[&bStopped, bThroughComponent, Animator, Handle](bool, bool bWidthChanged, bool)
+				{
+					if (bStopped || !bWidthChanged)
+					{
+						return;
+					}
+					bStopped = true;
+					if (bThroughComponent)
+					{
+						Animator->StopAnimation(Handle);
+					}
+					else if (Handle.Player != nullptr)
+					{
+						Handle.Player->Stop();
+					}
+				});
+			TickFrames(Scope.World, 1);
+			Tree.Button->GetDimensionChangedEvent().Remove(Listening);
+
+			TestTrue(FString::Printf(TEXT("%s: the listener stopped the animation from inside its write"), *Case), bStopped);
+			TestFalse(FString::Printf(TEXT("%s: it is not playing any more"), *Case), Handle.Player != nullptr && Handle.Player->IsPlaying());
+			const float WidthAfterStop = Tree.Button->GetWidth();
+			const double TranslationAfterStop = Tree.Button->GetRenderTranslation().Y;
+			TickFrames(Scope.World, 3);
+			TestEqual(FString::Printf(TEXT("%s: nothing writes the width after the stop"), *Case), Tree.Button->GetWidth(), WidthAfterStop, 0.001f);
+			TestEqual(FString::Printf(TEXT("%s: nor the translation"), *Case), Tree.Button->GetRenderTranslation().Y, TranslationAfterStop, 0.001);
+			if (bRestoreState)
+			{
+				TestEqual(FString::Printf(TEXT("%s: the width is put back"), *Case), WidthAfterStop, 60.0f, 0.01f);
+				TestEqual(FString::Printf(TEXT("%s: and so is the translation"), *Case), TranslationAfterStop, 0.0, 0.001);
+			}
+		}
 	}
 	return true;
 }

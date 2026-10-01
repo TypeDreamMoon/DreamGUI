@@ -83,6 +83,25 @@ float4 TransformLocalToTranslatedWorld(float3 LocalPosition, FDFMatrix LocalToWo
     return DFTransformLocalToTranslatedWorld(LocalPosition, LocalToWorld, ResolvedView.PreViewTranslation);
 }
 
+/**
+ * What the section's vertices go through to be in the primitive's space, which is the canvas's: identity, or the
+ * transform of the render layer they are kept relative to (UDreamWidget::IsRenderLayer). Applied here, ahead of the
+ * primitive's transform, and not by the primitive's: a material reads the clip rects against LocalPosition -- the
+ * pixel's world position through the primitive's WorldToLocal -- which has to stay canvas space, as it is for every
+ * section outside a layer.
+ */
+float4x4 DreamUI_ElementToCanvas;
+
+/** InMatrix's rotation alone: each basis row brought to unit length, which takes a scale along it back out. */
+float3x3 DreamUI_RotationOf(float4x4 InMatrix)
+{
+	float3x3 Basis = (float3x3)InMatrix;
+	return float3x3(
+		Basis[0] * rsqrt(max(dot(Basis[0], Basis[0]), 1.0e-12)),
+		Basis[1] * rsqrt(max(dot(Basis[1], Basis[1]), 1.0e-12)),
+		Basis[2] * rsqrt(max(dot(Basis[2], Basis[2]), 1.0e-12)));
+}
+
 void MainVS(
     in float3 Position : ATTRIBUTE0,
     in HALF4_TYPE Color : ATTRIBUTE1,
@@ -99,12 +118,15 @@ void MainVS(
 	ResolvedView = ResolveView();
 
     FPrimitiveSceneData Primitive = GetPrimitiveDataFromUniformBuffer();
+	float3 CanvasPosition = mul(float4(Position, 1.0), DreamUI_ElementToCanvas).xyz;
 	//float4 WorldPosition = mul(float4(Position, 1.0), GetPrimitiveData(Parameters.PrimitiveId).LocalToWorld);
-    float4 WorldPosition = TransformLocalToTranslatedWorld(Position, Primitive.LocalToWorld);
+    float4 WorldPosition = TransformLocalToTranslatedWorld(CanvasPosition, Primitive.LocalToWorld);
 	//float4 WorldPosition = float4(Position.xyz + ResolvedView.PreViewTranslation.xyz, 1.0);
 	
     float TangentSign;
     half3x3 TangentToLocal = CalcTangentToLocal(TangentX, TangentZ, TangentSign);
+	// The tangent frame turns with the vertices; a scale of the layer's stays out of it, as the primitive's does.
+	TangentToLocal = (half3x3)mul((float3x3)TangentToLocal, DreamUI_RotationOf(DreamUI_ElementToCanvas));
     half3x3 TangentToWorld = CalcTangentToWorld(TangentToLocal, DFDemote(Primitive.LocalToWorld), Primitive.InvNonUniformScale);
     float TangentToWorldSign = TangentSign * GetPrimitive_DeterminantSign_FromFlags(Primitive.Flags);
 

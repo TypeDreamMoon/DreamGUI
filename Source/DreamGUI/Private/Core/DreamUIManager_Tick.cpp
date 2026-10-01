@@ -14,6 +14,7 @@
 #include "Event/DreamBaseRaycaster.h"
 #include "RenderingThread.h"
 #include "Async/ParallelFor.h"
+#include <atomic>
 #include "HAL/IConsoleManager.h"
 #include "Misc/App.h"
 #include "Engine/World.h"
@@ -64,6 +65,21 @@ static TAutoConsoleVariable<int32> CVarDreamUIParallelVertexRefreshMinCanvases(
 	32,
 	TEXT("When at least this many canvases have vertices to refresh in a frame, the refreshes run on the task graph's workers ")
 	TEXT("as well as the game thread. 0: always on the game thread."),
+	ECVF_Default);
+
+static TAutoConsoleVariable<int32> CVarDreamUIParallelLayerPlacementMinCanvases(
+	TEXT("r.DreamUI.ParallelLayerPlacementMinCanvases"),
+	32,
+	TEXT("When at least this many canvases have render layers to place in a frame, the placing -- each layer's matrix and ")
+	TEXT("section boxes -- runs on the task graph's workers as well as the game thread. 0: always on the game thread."),
+	ECVF_Default);
+
+static TAutoConsoleVariable<int32> CVarDreamUIDeferTransformNotifications(
+	TEXT("r.DreamUI.DeferTransformNotifications"),
+	1,
+	TEXT("1: a widget's move is announced -- its canvas and visual told, its OnTransformChanged listeners called -- once, at ")
+	TEXT("the UI manager's next flush (after the layout pass, and at the end of the frame). 0: at every write, for the moved ")
+	TEXT("widget and its whole subtree. World transforms are composed when they are read either way."),
 	ECVF_Default);
 
 void UDreamUIManagerWorldSubsystem::Tick(float DeltaTime)
@@ -159,7 +175,7 @@ void UDreamUIManagerWorldSubsystem::TickDreamUI(float DeltaTime)
 					// on a list this behaviour is not in yet (it logs "Not exist" and does nothing).
 					// Adding it unconditionally here then ticked a disabled behaviour every frame, and
 					// the next enable reported "Already exist".
-					if (item.IsValid() && item->bIsEnableCalled && item->bCanExecuteTick)
+					if (item.IsValid() && item->bIsEnableCalled && item->bCanExecuteTick && item->HasTickWork())
 					{
 						DreamUIBehavioursForTick.AddUnique(item);
 					}
@@ -329,6 +345,10 @@ void UDreamUIManagerWorldSubsystem::TickDreamUI(float DeltaTime)
 		FlushPendingLayoutTreeRebuild();
 	}
 
+	// Every move since the last flush -- animations, tweens, input, the behaviours and the layout pass
+	// above -- announced once, before the clips and the canvases below read what it tells them.
+	FlushTransformChanges();
+
 	// One ScreenSpaceOverlay root canvas PER LOCAL PLAYER, not one per world.
 	//
 	// It used to be one per world, full stop, and that is what made split screen impossible: the
@@ -424,37 +444,61 @@ void UDreamUIManagerWorldSubsystem::TickDreamUI(float DeltaTime)
 	}
 }
 
+namespace DreamUIManagerTickLocal
+{
+	/** Moved on by InvalidateRootCanvasOrder; a manager whose sort is older sorts again. */
+	std::atomic<uint64> RootCanvasOrderGeneration = 1;
+}
+
+void UDreamUIManagerWorldSubsystem::InvalidateRootCanvasOrder()
+{
+	DreamUIManagerTickLocal::RootCanvasOrderGeneration.fetch_add(1, std::memory_order_relaxed);
+}
+
 void UDreamUIManagerWorldSubsystem::ForEachRootCanvasInRenderModeOrder(bool bInActualRenderMode, TFunctionRef<void(UDreamCanvas*)> InFunction)
 {
 	/**
 	 * Screen space first, then world space, then render targets, as four passes over the registry used to take them --
-	 * sorted in one walk instead, which is a quarter of the lookups with a thousand world panels. Each canvas is looked at
+	 * sorted in one walk instead, and that walk only when a canvas came or went, found another root or changed its mode.
+	 * A root's actual render mode is the one it is set to, so one sort serves both kinds of pass. Each canvas is looked at
 	 * again when its turn comes: a call may make a render target and broadcast it, and a listener may unregister a canvas
 	 * or change its mode. One registered meanwhile waits for the next frame.
 	 */
 	static constexpr EDreamRenderMode PassOrder[] = { EDreamRenderMode::ScreenSpaceOverlay, EDreamRenderMode::WorldSpace, EDreamRenderMode::WorldSpace_DreamUI, EDreamRenderMode::RenderTarget };
+	static_assert(UE_ARRAY_COUNT(PassOrder) == UE_ARRAY_COUNT(RootCanvasesByPass), "One sorted list per pass");
 	auto ModeOf = [bInActualRenderMode](const UDreamCanvas* Canvas)
 	{
 		return bInActualRenderMode ? Canvas->GetActualRenderMode() : Canvas->GetRenderMode();
 	};
-	TArray<TWeakObjectPtr<UDreamCanvas>> Passes[UE_ARRAY_COUNT(PassOrder)];
-	for (const TWeakObjectPtr<UDreamCanvas>& Canvas : AllCanvasArray)
+	const uint64 Generation = DreamUIManagerTickLocal::RootCanvasOrderGeneration.load(std::memory_order_relaxed);
+	if (RootCanvasOrderGeneration != Generation)
 	{
-		const UDreamCanvas* Resolved = Canvas.Get();
-		if (Resolved == nullptr || !Resolved->IsRootCanvas())continue;
-		const EDreamRenderMode Mode = ModeOf(Resolved);
-		for (int32 Pass = 0; Pass < UE_ARRAY_COUNT(PassOrder); ++Pass)
+		RootCanvasOrderGeneration = Generation;
+		for (TArray<TWeakObjectPtr<UDreamCanvas>>& Pass : RootCanvasesByPass)
 		{
-			if (PassOrder[Pass] == Mode)
+			Pass.Reset();
+		}
+		for (const TWeakObjectPtr<UDreamCanvas>& Canvas : AllCanvasArray)
+		{
+			const UDreamCanvas* Resolved = Canvas.Get();
+			if (Resolved == nullptr || !Resolved->IsRootCanvas())continue;
+			const EDreamRenderMode Mode = Resolved->GetRenderMode();
+			for (int32 Pass = 0; Pass < UE_ARRAY_COUNT(PassOrder); ++Pass)
 			{
-				Passes[Pass].Add(Canvas);
-				break;
+				if (PassOrder[Pass] == Mode)
+				{
+					RootCanvasesByPass[Pass].Add(Canvas);
+					break;
+				}
 			}
 		}
 	}
 	for (int32 Pass = 0; Pass < UE_ARRAY_COUNT(PassOrder); ++Pass)
 	{
-		for (const TWeakObjectPtr<UDreamCanvas>& Canvas : Passes[Pass])
+		// A copy: a call that sorts the canvases again, through a pass of its own, would otherwise change the list under
+		// this one.
+		const TArray<TWeakObjectPtr<UDreamCanvas>> Canvases = RootCanvasesByPass[Pass];
+		for (const TWeakObjectPtr<UDreamCanvas>& Canvas : Canvases)
 		{
 			if (!IsCanvasStillRegistered(Canvas))continue;
 			if (!Canvas->IsRootCanvas())continue;
@@ -468,6 +512,9 @@ void UDreamUIManagerWorldSubsystem::OnWorldPreSendAllEndOfFrameUpdates(UWorld* I
 {
 	if (InWorld == this->GetWorld())
 	{
+		// What moved after the tick -- a later tick group, a script, the editor -- is announced before the
+		// frame ends, and its canvases take it at their next update.
+		FlushTransformChanges();
 #if WITH_EDITOR
 		this->DrawHelperGizmo();
 #endif
@@ -484,6 +531,85 @@ void UDreamUIManagerWorldSubsystem::OnWorldPreSendAllEndOfFrameUpdates(UWorld* I
 		LastEndOfFrameSubmitFrame = GFrameCounter;
 		bCanvasesUpdatedSinceSubmit = false;
 		this->SubmitCanvasDrawCall();
+	}
+}
+
+bool UDreamUIManagerWorldSubsystem::DefersTransformChanges()const
+{
+	if (bWorldTornDown || CVarDreamUIDeferTransformNotifications.GetValueOnGameThread() == 0)
+	{
+		return false;
+	}
+#if WITH_EDITOR
+	// A manager that does not tick -- a preview nobody shows -- would hold a change until something drew its
+	// world, if anything ever did. Its widgets are told on the spot, as they always were.
+	return bShouldTickInEditor;
+#else
+	return true;
+#endif
+}
+
+void UDreamUIManagerWorldSubsystem::AddTransformChangeRoot(UDreamWidget* InWidget)
+{
+	TransformChangeRoots.Add(InWidget);
+}
+
+void UDreamUIManagerWorldSubsystem::FlushTransformChanges()
+{
+	// Asked for again from inside one, by something a listener did: its moves land in the running flush's
+	// next pass instead.
+	if (bIsFlushingTransformChanges || TransformChangeRoots.Num() == 0)
+	{
+		return;
+	}
+	TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_FlushTransformChanges);
+	TGuardValue<bool> FlushingGuard(bIsFlushingTransformChanges, true);
+	// The layout loop's limit, for the same reason: every pass after the first is caused by the one before
+	// it, and a listener that answers each move with another would otherwise never let the frame end.
+	constexpr int32 MaxTransformFlushPasses = 32;
+	int32 PassCount = 0;
+	TArray<UDreamWidget*> NestedRoots;
+	while (TransformChangeRoots.Num() > 0 && PassCount < MaxTransformFlushPasses)
+	{
+		++PassCount;
+		// Taken whole, into an array kept for it so that neither gives up its memory from frame to frame:
+		// what the listeners move from here is the next pass's.
+		Swap(TransformChangeRootsBeingFlushed, TransformChangeRoots);
+		NestedRoots.Reset();
+		for (const TWeakObjectPtr<UDreamWidget>& WeakRoot : TransformChangeRootsBeingFlushed)
+		{
+			UDreamWidget* Root = WeakRoot.Get();
+			// Gone, or already reached from a root flushed before it, or listed twice.
+			if (!IsValid(Root) || !Root->IsTransformChangePending())
+			{
+				continue;
+			}
+			// Under a widget whose own move is pending too, which is flushed first so that the subtree is
+			// announced parents first; the walk from it reaches this one on the way.
+			const UDreamWidget* Parent = Root->GetParent();
+			if (Parent != nullptr && Parent->IsTransformChangePending())
+			{
+				NestedRoots.Add(Root);
+				continue;
+			}
+			Root->FlushTransformChanges();
+		}
+		// Whatever of those is still pending hangs under a pending widget no root of this pass leads to --
+		// one moved out from under it, say -- and is flushed from where it is.
+		for (UDreamWidget* Root : NestedRoots)
+		{
+			if (IsValid(Root) && Root->IsTransformChangePending())
+			{
+				Root->FlushTransformChanges();
+			}
+		}
+		TransformChangeRootsBeingFlushed.Reset();
+	}
+	if (TransformChangeRoots.Num() > 0)
+	{
+		UE_LOG(DreamGUI, Warning,
+			TEXT("Widget transform changes did not settle after %d passes in World %s: an OnTransformChanged listener keeps moving widgets. %d move(s) wait for the next flush."),
+			MaxTransformFlushPasses, *GetNameSafe(GetWorld()), TransformChangeRoots.Num());
 	}
 }
 
@@ -533,6 +659,33 @@ void UDreamUIManagerWorldSubsystem::SubmitCanvasDrawCall()
 				Canvas->RefreshDrawCallVertices();
 			}
 		}
+		// Their render layers placed where the layers now are: tended on the game thread, then placed -- a matrix and a box
+		// for each section, the canvas's own -- on as many threads as there are, and the rest of each finish after.
+		TArray<UDreamCanvas*> ToPlace;
+		for (UDreamCanvas* Canvas : ToFinish)
+		{
+			if (IsValid(Canvas) && Canvas->TendRenderLayersBeforeFinish())
+			{
+				ToPlace.Add(Canvas);
+			}
+		}
+		const int32 MinPlacingCanvases = CVarDreamUIParallelLayerPlacementMinCanvases.GetValueOnGameThread();
+		if (MinPlacingCanvases > 0 && ToPlace.Num() >= MinPlacingCanvases && FApp::ShouldUseThreadingForPerformance())
+		{
+			TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_ParallelLayerPlacement);
+			constexpr int32 MinBatchSize = 16;
+			ParallelFor(TEXT("DreamUI_PlaceRenderLayers"), ToPlace.Num(), MinBatchSize, [&ToPlace](int32 Index)
+			{
+				ToPlace[Index]->PlaceRenderLayers();
+			});
+		}
+		else
+		{
+			for (UDreamCanvas* Canvas : ToPlace)
+			{
+				Canvas->PlaceRenderLayers();
+			}
+		}
 		for (UDreamCanvas* Canvas : ToFinish)
 		{
 			if (IsValid(Canvas))
@@ -549,6 +702,14 @@ void UDreamUIManagerWorldSubsystem::SubmitCanvasDrawCall()
 			Canvas->DrawRenderTargetIfRequested();
 		}
 	}
+}
+
+bool UDreamUIManagerWorldSubsystem::IsBehaviourOnTickVisit(const UDreamUIBehaviour* InBehaviour) const
+{
+	return InBehaviour != nullptr && DreamUIBehavioursForTick.ContainsByPredicate([InBehaviour](const TWeakObjectPtr<UDreamUIBehaviour>& InItem)
+	{
+		return InItem.Get() == InBehaviour;
+	});
 }
 
 void UDreamUIManagerWorldSubsystem::AddDreamUIBehavioursForTick(UDreamUIBehaviour* InComp)

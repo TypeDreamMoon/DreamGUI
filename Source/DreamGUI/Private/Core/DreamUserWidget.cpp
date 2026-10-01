@@ -976,6 +976,8 @@ UDreamUserWidgetEventBridge::UDreamUserWidgetEventBridge()
 	// IsTickForwardingEnabled cannot claim ticking that is not armed.
 	bStartWithTickEnabled = false;
 	bCanExecuteTick = false;
+	// Nothing of a move is forwarded to the user widget.
+	DeclareTransformChangedUnused(StaticClass());
 }
 
 UDreamUserWidget* UDreamUserWidgetEventBridge::GetUserWidget() const

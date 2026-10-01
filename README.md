@@ -48,7 +48,7 @@ L2   DreamGUIInput
 L1   DreamGUI (core)
 L0   DreamGUIRenderer      DreamTween
      ------------------------------------------------------------
-     DreamGUIEditor, DreamGUIK2Nodes, DreamGUITests (editor only)
+     DreamGUIEditor, DreamGUIK2Nodes (uncooked only), DreamGUITests (editor only)
 ```
 
 | Module | Layer | Holds |
@@ -60,7 +60,7 @@ L0   DreamGUIRenderer      DreamTween
 | `DreamGUIExtensions` | above the input system | 2D lines, polygons and rings, the static-mesh visual, the retainer box and the render-target helpers, lyrics, the concrete mesh modifiers, and the background blur, pixelate and pixel sort effects |
 | `DreamGUISamples` | above the controls | The showcase and the controls gallery |
 | `DreamTween` | independent | Tweens |
-| `DreamGUIEditor`, `DreamGUIK2Nodes` | editor | The designer and the asset tools; the Blueprint nodes |
+| `DreamGUIEditor`, `DreamGUIK2Nodes` | uncooked only | The designer and the asset tools; the Blueprint nodes. Loaded by every process that runs uncooked content, a game started from the editor (`-game`, Standalone Game) included: an editor build drops a Blueprint's saved bytecode on load and rebuilds it from the Blueprint, and the widget Blueprint class and its compiler live here. Outside the editor only the compiler starts |
 | `DreamGUITests` | editor | The automation suite |
 
 C++ that uses a type from a split-off module adds that module to its `Build.cs`. Assets need nothing:

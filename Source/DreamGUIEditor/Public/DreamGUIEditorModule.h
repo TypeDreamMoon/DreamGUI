@@ -102,6 +102,14 @@ private:
 	FDelegateHandle DreamUISequenceTrackEditorCreateTrackEditorHandle;
 	TObjectPtr<class USequencerSettings> DreamWidgetAnimationSequencerSettings = nullptr;
 
+	/**
+	 * Whether StartupModule went past the widget Blueprint compiler into the editor session: the
+	 * designer, the menus, the details panels, the external-editor bridge. Only an editor starts one; a
+	 * game run on uncooked content loads this module for the compiler alone, and ShutdownModule takes
+	 * down only what StartupModule put up.
+	 */
+	bool bStartedEditorSession = false;
+
 	/** FGCObject interface */
 	virtual void AddReferencedObjects(FReferenceCollector& Collector) override;
 	virtual FString GetReferencerName() const override;

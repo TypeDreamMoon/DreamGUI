@@ -104,9 +104,9 @@ void UDreamWidget::PostEditChangeProperty(FPropertyChangedEvent& PropertyChanged
 				this->RelativeRotationEuler = this->RelativeRotation.Rotator();
 			}
 			CalculateAnchorFromTransform();
+			// The whole of a move's announcement: the widget's layouts, visual, canvas and listeners hear
+			// it from the flush this marks for, once, with the rest of its subtree.
 			CalculateObjectToWorldTransform();
-			OnUpdateTransform();
-			MarkTransformChanged();
 			MarkLayoutForRebuild(this);
 		}
 		else if (MemberName == GET_MEMBER_NAME_CHECKED(UDreamWidget, RenderTranslation)
@@ -118,6 +118,14 @@ void UDreamWidget::PostEditChangeProperty(FPropertyChangedEvent& PropertyChanged
 			// setter. Without this the value lands in the field and the widget never moves, which
 			// looks exactly like the feature not working.
 			ApplyRenderTransformChange();
+		}
+		else if (MemberName == GET_MEMBER_NAME_CHECKED(UDreamWidget, RenderLayer))
+		{
+			// Written into the field the same way: the canvas hears of it as SetRenderLayerMode would have told it.
+			if (RenderCanvas.IsValid())
+			{
+				RenderCanvas->NoteRenderLayerModeChanged(this);
+			}
 		}
 		else if (MemberName == GET_MEMBER_NAME_CHECKED(UDreamWidget, bPerspective)
 			|| MemberName == GET_MEMBER_NAME_CHECKED(UDreamWidget, PerspectiveFieldOfView)

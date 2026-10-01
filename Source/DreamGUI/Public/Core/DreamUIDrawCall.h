@@ -133,6 +133,18 @@ public:
 	bool bIs2DSpace = false;//transform relative to canvas is 2d or not? only 2d draw-call can batch
 	/** The blend mode every element in this draw-call shares; the blend state is set once per draw-call. */
 	EDreamUIBlendMode BlendMode = EDreamUIBlendMode::Alpha;
+	/**
+	 * The render layer whose elements this draw call holds (FDreamUIGeometry::RenderLayer), or none: a draw call holds the
+	 * elements of one layer and nothing else, or of none. Their vertices, and so CombinedBounds, are relative to the layer.
+	 */
+	TObjectKey<UDreamWidget> RenderLayer;
+	/**
+	 * Where RenderLayer stands on the canvas, as the canvas last placed it: what the draw call's section is drawn through
+	 * ahead of the canvas's own transform (FDreamUIRenderSection_Mesh::ElementToCanvas). Identity for a draw call of no
+	 * layer. Set on the game thread only, when the draw call is taken and whenever the layer moves.
+	 */
+	FMatrix44f LayerToCanvas = FMatrix44f::Identity;
+	bool IsInRenderLayer()const { return RenderLayer != TObjectKey<UDreamWidget>(); }
 
 	TWeakObjectPtr<class UDreamCanvas> ChildCanvas;//insert point to sort child canvas
 public:

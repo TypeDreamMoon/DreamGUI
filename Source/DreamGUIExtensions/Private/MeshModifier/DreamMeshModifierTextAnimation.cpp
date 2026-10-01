@@ -7,6 +7,9 @@
 
 UDreamMeshModifierTextAnimation::UDreamMeshModifierTextAnimation()
 {
+	// A modifier works when the geometry is built, never each frame or when its widget moves.
+	DeclareTickUnused(StaticClass());
+	DeclareTransformChangedUnused(StaticClass());
 }
 bool UDreamMeshModifierTextAnimation::CheckDreamText()
 {

@@ -105,6 +105,9 @@ class DREAMGUICONTROLS_API UUITextInput : public UUISelectable, public IDreamPoi
 {
 	GENERATED_BODY()
 	
+public:
+	UUITextInput();
+
 protected:
 	virtual void Awake() override;
 	virtual void Tick(float DeltaTime) override;

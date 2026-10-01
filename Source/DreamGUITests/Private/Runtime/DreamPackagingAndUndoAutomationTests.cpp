@@ -23,16 +23,21 @@
 #include "Extensions/DreamPostProcessRenderElement_Text.h"
 #include "Extensions/DreamStaticMesh.h"
 #include "CoreGlobals.h"
+#include "Engine/Blueprint.h"
 #include "HAL/FileManager.h"
 #include "Interfaces/IPluginManager.h"
+#include "K2Node.h"
 #include "Misc/ConfigCacheIni.h"
 #include "Misc/FileHelper.h"
+#include "Misc/PackageName.h"
 #include "Misc/Paths.h"
+#include "ModuleDescriptor.h"
 #include "ShaderCore.h"
 #include "DreamCrosscuttingTestTypes.h"
 #include "UObject/CoreRedirects.h"
 #include "UObject/Package.h"
 #include "UObject/UObjectHash.h"
+#include "UObject/UObjectIterator.h"
 #include "Utils/DreamUIUtils.h"
 
 /*
@@ -710,6 +715,104 @@ bool FDreamDescriptorPlatformsMatchItsModulesTest::RunTest(const FString& Parame
 				Readme.Contains(Platform, ESearchCase::IgnoreCase));
 		}
 	}
+	return true;
+}
+
+namespace DreamPackagingTestLocal
+{
+	/**
+	 * Whether a module of this host type loads in a game run on uncooked content: the editor binary with
+	 * -game (or Standalone Game), which is WITH_EDITOR and has developer tools and uncooked data, but is
+	 * no commandlet, no dedicated server or client, and has GIsEditor off. The answers are
+	 * FModuleDescriptor::IsLoadedInCurrentConfiguration's for that process, written out rather than
+	 * asked for, because asking would mean switching GIsEditor off under a running editor.
+	 */
+	bool LoadsInAGameOnUncookedContent(EHostType::Type InType)
+	{
+		switch (InType)
+		{
+		case EHostType::Runtime:
+		case EHostType::RuntimeNoCommandlet:
+		case EHostType::RuntimeAndProgram:
+		case EHostType::UncookedOnly:
+		case EHostType::Developer:
+		case EHostType::DeveloperTool:
+		case EHostType::ServerOnly:
+		case EHostType::ClientOnly:
+		case EHostType::ClientOnlyNoCommandlet:
+			return true;
+		case EHostType::CookedOnly:
+		case EHostType::Editor:
+		case EHostType::EditorNoCommandlet:
+		case EHostType::EditorAndProgram:
+		case EHostType::Program:
+		default:
+			return false;
+		}
+	}
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamBlueprintTypesLoadInAnUncookedGameTest,
+	"DreamGUI.Packaging.EveryBlueprintTypeAndNodeThePluginDefinesLoadsInAGameRunOnUncookedContent",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamBlueprintTypesLoadInAnUncookedGameTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamPackagingTestLocal;
+
+	// An editor build keeps none of the Blueprint bytecode it loads ([StructSerialization]
+	// SkipByteCodeSerialization, BaseEditor.ini): a Blueprint class's functions come back empty and the
+	// Blueprint rebuilds them as it loads. A game run on uncooked content -- -game with the editor
+	// binary, Standalone Game -- is such a build, with GIsEditor off. So a Blueprint type, or a node its
+	// graphs hold, whose class lives in a module that game does not load, cannot be loaded there, nothing
+	// rebuilds the class, and every function of every such asset does nothing, with no line in the log
+	// to say so. UDreamWidgetBlueprint was one, in the Editor module DreamGUIEditor: a stress level whose
+	// widgets ran On Construct -> Delay -> Play Animation animated in PIE and stood still in -game.
+	const TSharedPtr<IPlugin> Plugin = IPluginManager::Get().FindPlugin(TEXT("DreamGUI"));
+	if (!TestTrue(TEXT("the plugin manager knows about DreamGUI"), Plugin.IsValid()))
+	{
+		return false;
+	}
+	const TArray<FModuleDescriptor>& Modules = Plugin->GetDescriptor().Modules;
+
+	int32 BlueprintTypes = 0;
+	int32 Nodes = 0;
+	for (TObjectIterator<UClass> It; It; ++It)
+	{
+		const UClass* Class = *It;
+		const bool bIsBlueprintType = Class->IsChildOf(UBlueprint::StaticClass());
+		const bool bIsNode = Class->IsChildOf(UK2Node::StaticClass());
+		if ((!bIsBlueprintType && !bIsNode) || !Class->HasAnyClassFlags(CLASS_Native))
+		{
+			continue;
+		}
+		// A native class's package is /Script/<its module>.
+		const FName ModuleName(*FPackageName::GetShortName(Class->GetOutermost()->GetName()));
+		const FModuleDescriptor* Module = Modules.FindByPredicate([ModuleName](const FModuleDescriptor& InModule)
+		{
+			return InModule.Name == ModuleName;
+		});
+		if (Module == nullptr)
+		{
+			// Not one of this plugin's.
+			continue;
+		}
+		if (bIsBlueprintType)
+		{
+			++BlueprintTypes;
+		}
+		else
+		{
+			++Nodes;
+		}
+		TestTrue(*FString::Printf(TEXT("%s is in %s, a module a game on uncooked content loads (it is %s)"),
+				*Class->GetName(), *ModuleName.ToString(), EHostType::ToString(Module->Type)),
+			LoadsInAGameOnUncookedContent(Module->Type));
+	}
+	// Otherwise the loop above could pass by looking at nothing.
+	TestTrue(TEXT("the plugin's Blueprint types were found -- UDreamWidgetBlueprint at least"), BlueprintTypes > 0);
+	TestTrue(TEXT("and so were its Blueprint nodes"), Nodes > 0);
 	return true;
 }
 

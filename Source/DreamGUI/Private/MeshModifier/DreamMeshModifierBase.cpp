@@ -7,7 +7,9 @@
 
 UDreamMeshModifierBase::UDreamMeshModifierBase()
 {
-	
+	// A modifier works when the geometry is built, never each frame or when its widget moves.
+	DeclareTickUnused(StaticClass());
+	DeclareTransformChangedUnused(StaticClass());
 }
 
 UDreamVisualBatchMesh* UDreamMeshModifierBase::GetVisualBatchMesh()const

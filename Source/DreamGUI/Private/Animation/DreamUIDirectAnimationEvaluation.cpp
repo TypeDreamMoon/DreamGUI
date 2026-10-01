@@ -423,13 +423,23 @@ bool FDreamUIDirectAnimationEvaluation::Evaluate(IMovieScenePlayer& InPlayer, FF
 		// Gone before anything was written: nothing to hand over. Gone after: nothing left to write.
 		return bWrittenAnything;
 	}
+	/**
+	 * A write runs the property's setter, and whatever listens to it may stop the animation, which the player then does on
+	 * the spot -- the component's stop tears the player down as well. Nothing more is written after that. A restored play
+	 * ends as the sequencer's would, which finishes the frame's writes and stops after; a kept one keeps the rest of that
+	 * frame's properties at the previous frame's values, the price of never reading a torn-down player.
+	 */
+	TGuardValue<bool> Evaluating(bEvaluating, true);
+	bStoppedWhileEvaluating = false;
 	for (FAnimatedProperty& Property : Properties)
 	{
 		if (Property.NumChannels == 0 && !BindChannels(Property))
 		{
 			continue;
 		}
-		for (const TWeakObjectPtr<>& WeakObject : InPlayer.FindBoundObjects(Property.BindingId, MovieSceneSequenceID::Root))
+		// Copied: the player's list of bound objects goes with the player when a stop tears it down.
+		const TArray<TWeakObjectPtr<>, TInlineAllocator<4>> BoundObjects(InPlayer.FindBoundObjects(Property.BindingId, MovieSceneSequenceID::Root));
+		for (const TWeakObjectPtr<>& WeakObject : BoundObjects)
 		{
 			UObject* Object = WeakObject.Get();
 			if (Object == nullptr)
@@ -472,9 +482,12 @@ bool FDreamUIDirectAnimationEvaluation::Evaluate(IMovieScenePlayer& InPlayer, FF
 			}
 			FChannelValues Values = *Initial;
 			EvaluateChannels(Property, InTime, Values);
-			TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_DirectAnimationWrite);
 			Write(Property, *Object, Values);
 			bWrittenAnything = true;
+			if (bStoppedWhileEvaluating)
+			{
+				return true;
+			}
 		}
 	}
 	return true;
@@ -482,6 +495,7 @@ bool FDreamUIDirectAnimationEvaluation::Evaluate(IMovieScenePlayer& InPlayer, FF
 
 void FDreamUIDirectAnimationEvaluation::RestoreInitialValues()
 {
+	bStoppedWhileEvaluating |= bEvaluating;
 	for (FAnimatedProperty& Property : Properties)
 	{
 		for (TPair<TWeakObjectPtr<UObject>, FChannelValues>& Entry : Property.InitialValues)
@@ -498,6 +512,7 @@ void FDreamUIDirectAnimationEvaluation::RestoreInitialValues()
 
 void FDreamUIDirectAnimationEvaluation::DiscardInitialValues()
 {
+	bStoppedWhileEvaluating |= bEvaluating;
 	for (FAnimatedProperty& Property : Properties)
 	{
 		Property.InitialValues.Reset();

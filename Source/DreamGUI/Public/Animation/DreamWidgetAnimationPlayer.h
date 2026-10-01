@@ -6,6 +6,8 @@
 #include "MovieSceneSequencePlayer.h"
 #include "DreamWidgetAnimationPlayer.generated.h"
 
+class AActor;
+
 /**
  * UDreamWidgetAnimationPlayer is used to actually "play" a widget animation at runtime.
  *
@@ -30,11 +32,52 @@ public:
 	/** Whether this player evaluates its animation itself rather than through the sequencer (see UpdateMovieSceneInstance). */
 	bool IsEvaluatingDirectly() const { return DirectEvaluation.IsValid(); }
 
+	/**
+	 * Vouches for the time controller the player has now as one the player may tick and read itself (see
+	 * TickFromSequenceTickManager): the engine's tick controller, or one built on it that changes only what a tick adds, as
+	 * the component's unscaled clock does. Neither reads the play rate it is asked for the time with. Held by identity, so
+	 * a controller set after this is not the one vouched for, and hands the player back to the sequencer's update. The
+	 * component calls it when it gives a player its clock.
+	 */
+	void TrustTimeController();
+
+	/**
+	 * Whether the sequence tick manager's last tick of this player was taken by the player itself rather than by the
+	 * sequencer's update (see TickFromSequenceTickManager).
+	 */
+	bool IsTickingLite() const { return bTickedLite; }
+
 protected:
 
 	//~ IMovieScenePlayer interface
 	virtual UObject* GetPlaybackContext() const override;
 	virtual TArray<UObject*> GetEventContexts() const override;
+
+	//~ IMovieSceneSequenceTickManagerClient interface
+	/**
+	 * The sequence tick manager's tick of this player. The sequencer answers it with its whole per-frame update (Update and
+	 * UpdateTimeCursorPosition_Internal), which for an animation this player evaluates itself was most of what a playing
+	 * widget animation cost a frame. So between loop boundaries the player takes the update's steps itself: it ticks the
+	 * time controller, asks it for the time, moves the cursor and hands the range to UpdateMovieSceneInstance, and leaves
+	 * the sequencer's state exactly as the sequencer's update would have.
+	 *
+	 * - The choice is made before anything is touched. Anything else goes to the sequencer's update whole: a player still
+	 *   starting, syncing or skipping, a play of no length or without a positive rate, a clock the component did not vouch
+	 *   for (TrustTimeController), an animation the sequencer evaluates, weights, an observer or a playback client, and a
+	 *   play-rate time warp.
+	 * - The time controller is ticked once a frame and is the only source of the time.
+	 * - The cursor moves only by PlayTo. The loop count, the direction, the status and a PlayTo pause change only in the
+	 *   sequencer's code: at a boundary the player hands the time to UpdateTimeCursorPosition, which does the rest.
+	 * - The player stays registered with the tick manager, so its latent actions and its linker are what they would be.
+	 * - What is left different is what nothing reads: the game time of the last tick (LastTickGameTimeSeconds).
+	 *
+	 * A player that is not playing, with nothing to sync or start, gets nothing from the sequencer's update and skips it.
+	 * DreamUI.Animation.LitePlayer 0 sends every tick to the sequencer. It applies from the next frame either way, since
+	 * the sequencer's state is the player's state whichever update ran.
+	 */
+	virtual void TickFromSequenceTickManager(float DeltaSeconds, FMovieSceneEntitySystemRunner* Runner) override;
+	/** Notes the actor asked whether this play is the network authority; see TickLite. */
+	virtual void OnStartedPlaying() override;
 
 	using Super::UpdateMovieSceneInstance;
 	/**
@@ -52,10 +95,31 @@ private:
 	/** Evaluates InRange directly if this player can; false when the sequencer has to. */
 	bool TryEvaluateDirectly(const FMovieSceneEvaluationRange& InRange, EMovieScenePlayerStatus::Type PlayerStatus);
 
+	/** What the tick manager's tick of this player does this frame; see TickFromSequenceTickManager. */
+	enum class ELiteTick : uint8
+	{
+		/** The sequencer's update, whole. */
+		Sequencer,
+		/** Nothing: the player is not playing, and the sequencer's update would do nothing either. */
+		Idle,
+		/** The player's own update of a playing animation (TickLite). */
+		Advance,
+	};
+	ELiteTick ChooseLiteTick() const;
+	/** One frame of a playing animation, as the sequencer's update would have played it. */
+	void TickLite(float DeltaSeconds);
+
 	TSharedPtr<class FDreamUIDirectAnimationEvaluation> DirectEvaluation;
 	/**
 	 * The sequence whether to evaluate directly was decided for, at its first evaluation after a stop, when the playback
 	 * settings are final. A player the component re-initializes with another sequence decides again.
 	 */
 	TWeakObjectPtr<const UMovieSceneSequence> DirectEvaluationDecidedFor;
+
+	/** The time controller vouched for (TrustTimeController). Held, so that no other controller can come to have its address. */
+	TSharedPtr<FMovieSceneTimeController> TrustedTimeController;
+	/** The actor the sequencer asks whether this player is the network authority, as of the start of the play. */
+	TWeakObjectPtr<AActor> AuthorityActor;
+	/** See IsTickingLite. */
+	bool bTickedLite = false;
 };

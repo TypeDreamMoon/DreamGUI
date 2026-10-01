@@ -59,7 +59,7 @@
 		},
 		{
 			"Name": "DreamGUIEditor",
-			"Type": "Editor",
+			"Type": "UncookedOnly",
 			"LoadingPhase": "Default",
 			"PlatformAllowList": [ "Win64", "Mac", "Linux" ]
 		},

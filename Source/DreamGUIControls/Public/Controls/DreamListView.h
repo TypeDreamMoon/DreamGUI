@@ -159,6 +159,8 @@ class DREAMGUICONTROLS_API UDreamListRowButton : public UUIButton
 	GENERATED_BODY()
 
 public:
+	UDreamListRowButton();
+
 	UPROPERTY(Transient)
 	TObjectPtr<UDreamListViewBase> OwningList = nullptr;
 

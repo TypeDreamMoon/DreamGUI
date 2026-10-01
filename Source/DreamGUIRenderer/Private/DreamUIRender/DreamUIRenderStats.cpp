@@ -39,6 +39,9 @@ namespace DreamUIRenderStats
 			TEXT("SectionPatches"),
 			TEXT("DrawCallRebuilds"),
 			TEXT("InPlaceRefreshes"),
+			TEXT("RenderLayerMoves"),
+			TEXT("RenderLayerPromotions"),
+			TEXT("RenderLayerDemotions"),
 		};
 	}
 
@@ -106,7 +109,7 @@ namespace DreamUIRenderStats
 		for (int32 Index = 0; Index < CounterCount; ++Index)
 		{
 			const ECounter Counter = static_cast<ECounter>(Index);
-			Text += FString::Printf(TEXT("  %-18s %12.1f /frame  (%lld in all)\n"),
+			Text += FString::Printf(TEXT("  %-21s %12.1f /frame  (%lld in all)\n"),
 				GetCounterName(Counter), InSnapshot.GetPerFrame(Counter), InSnapshot.Counters[Index]);
 		}
 		return Text;

@@ -75,6 +75,7 @@ Source/DreamGUI/Private/Core/Components/DreamWidget_Layout.cpp,DreamGUI,core: UD
 Source/DreamGUI/Private/Core/Components/DreamWidget_Lifecycle.cpp,DreamGUI,core: UDreamWidget lifecycle
 Source/DreamGUI/Private/Core/Components/DreamWidget_RenderState.cpp,DreamGUI,core: UDreamWidget render state
 Source/DreamGUI/Private/Core/Components/DreamWidget_Transform.cpp,DreamGUI,core: UDreamWidget transforms
+Source/DreamGUI/Private/Core/Components/DreamWidget_RenderLayer.cpp,DreamGUI,core: UDreamWidget render layers
 Source/DreamGUI/Private/Core/DreamCanvasDrawCallProcessingRunnable.cpp,DreamGUI,canvas batching worker
 Source/DreamGUI/Private/Core/DreamCanvasViewFit.cpp,DreamGUI,core
 Source/DreamGUI/Private/Core/DreamGUISettings.cpp,DreamGUI,core

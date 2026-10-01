@@ -42,6 +42,12 @@ struct FDreamUIMeshBatchContainer
 	FDreamUIBuiltInDrawParams BuiltIn;
 	/** Primitive transform, for the built-in path (the material path reads it from the primitive uniform buffer). */
 	FMatrix LocalToWorld = FMatrix::Identity;
+	/**
+	 * What the vertices go through before LocalToWorld, on either path: the transform of the render layer the section's
+	 * vertices are kept relative to, identity for a section of none. The primitive stays the canvas, so that everything
+	 * read in its space -- a material's LocalPosition, the clip rects -- stays in canvas space.
+	 */
+	FMatrix44f ElementToCanvas = FMatrix44f::Identity;
 
 	FDreamUIMeshBatchContainer() {}
 };

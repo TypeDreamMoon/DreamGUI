@@ -107,6 +107,7 @@ void UDreamUIManagerWorldSubsystem::AddCanvas(UDreamCanvas* InCanvas)
 #endif
 	this->AllCanvasArray.AddUnique(InCanvas);
 	this->RegisteredCanvasKeys.Add(FObjectKey(InCanvas));
+	InvalidateRootCanvasOrder();
 	BumpHitTestGeneration();
 }
 
@@ -121,6 +122,7 @@ void UDreamUIManagerWorldSubsystem::RemoveCanvas(UDreamCanvas* InCanvas)
 #endif
 	this->AllCanvasArray.RemoveSingle(InCanvas);
 	this->RegisteredCanvasKeys.Remove(FObjectKey(InCanvas));
+	InvalidateRootCanvasOrder();
 	BumpHitTestGeneration();
 }
 

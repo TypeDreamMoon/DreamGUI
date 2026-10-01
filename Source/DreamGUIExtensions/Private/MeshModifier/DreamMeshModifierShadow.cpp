@@ -7,6 +7,9 @@
 
 UDreamMeshModifierShadow::UDreamMeshModifierShadow()
 {
+	// A modifier works when the geometry is built, never each frame or when its widget moves.
+	DeclareTickUnused(StaticClass());
+	DeclareTransformChangedUnused(StaticClass());
 }
 void UDreamMeshModifierShadow::ModifyUIGeometry(
 	FDreamUIGeometry& InGeometry, bool InTriangleChanged, bool InUVChanged, bool InColorChanged, bool InVertexPositionChanged

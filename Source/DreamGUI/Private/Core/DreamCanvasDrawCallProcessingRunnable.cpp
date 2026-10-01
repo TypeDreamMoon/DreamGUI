@@ -4,6 +4,7 @@
 
 #include "HAL/PlatformProcess.h"
 #include "Misc/ScopeLock.h"
+#include "ProfilingDebugging/CpuProfilerTrace.h"
 #include "Core/Components/DreamCanvas.h"
 
 void FDreamCanvasDrawCallProcessingRunnable::Start()
@@ -16,9 +17,10 @@ void FDreamCanvasDrawCallProcessingRunnable::Start()
 	bIsBatching = false;
 }
 
-UE::Tasks::FTask FDreamCanvasDrawCallProcessingRunnable::GetBatchingTask()const
+UE::Tasks::FTask FDreamCanvasDrawCallProcessingRunnable::GetBatchingTask(uint32& OutNumLaunched)const
 {
 	FScopeLock Lock(&BatchingTaskLock);
+	OutNumLaunched = NumLaunched.load();
 	return BatchingTask;
 }
 
@@ -30,6 +32,7 @@ void FDreamCanvasDrawCallProcessingRunnable::LaunchBatchingTaskIfIdle()
 		return;//a batch already holds the slot, and it re-checks the queue before letting go
 	}
 	FScopeLock Lock(&BatchingTaskLock);
+	++NumLaunched;
 	BatchingTask = UE::Tasks::Launch(TEXT("DreamCanvasDrawCallBatching"), [this]()
 		{
 			ProcessPreparedDrawCallData();
@@ -102,9 +105,20 @@ void FDreamCanvasDrawCallProcessingRunnable::WaitForBatchingToFinish()
 	//
 	//An idle slot with data still queued is what a lost hand-off leaves behind; that data is batched
 	//here, since the caller is waiting precisely for this frame's batch.
+	//
+	//Idle as it was when last found so -- no task launched since, no slot claimed, nothing queued -- is idle still, and
+	//says so without the lock and the task handle. Every canvas asks every frame, and a canvas that holds still is idle.
+	//A task only launches from the thread waiting here or from the tail of a running task, and the last one launched is
+	//known to have returned, so nothing can be launched between these reads.
+	if (NumLaunched.load() == NumLaunchedWhenLastIdle && !bIsBatching.load() && NumPreparedQueued.load() == 0)
+	{
+		return;
+	}
+	TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_WaitForBatching);
 	for (;;)
 	{
-		UE::Tasks::FTask TaskToWait = GetBatchingTask();
+		uint32 NumLaunchedWithTask = 0;
+		UE::Tasks::FTask TaskToWait = GetBatchingTask(NumLaunchedWithTask);
 		if (!TaskToWait.IsCompleted())
 		{
 			TaskToWait.Wait();
@@ -118,6 +132,7 @@ void FDreamCanvasDrawCallProcessingRunnable::WaitForBatchingToFinish()
 		}
 		if (NumPreparedQueued.load() == 0)
 		{
+			NumLaunchedWhenLastIdle = NumLaunchedWithTask;
 			return;
 		}
 		bool bExpected = false;

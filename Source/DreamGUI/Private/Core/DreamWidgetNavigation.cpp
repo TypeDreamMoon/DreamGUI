@@ -55,6 +55,13 @@ namespace
 
 // ---------------------------------------------------------------- UDreamWidgetNavigation
 
+UDreamWidgetNavigation::UDreamWidgetNavigation()
+{
+	// Asked where to go when navigation arrives; where it stands is read then.
+	DeclareTickUnused(StaticClass());
+	DeclareTransformChangedUnused(StaticClass());
+}
+
 void UDreamWidgetNavigation::OnRegister()
 {
 	Super::OnRegister();

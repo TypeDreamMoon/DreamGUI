@@ -15,6 +15,9 @@
 
 UUIDropdown::UUIDropdown()
 {
+	// The list it opens is placed when it opens; the dropdown itself has nothing to do each frame, nor when it moves.
+	DeclareTickUnused(StaticClass());
+	DeclareTransformChangedUnused(StaticClass());
 }
 
 void UUIDropdown::Awake()

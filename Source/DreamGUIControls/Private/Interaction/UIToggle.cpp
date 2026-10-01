@@ -35,6 +35,9 @@ void UUIToggleTransition::ToggleOff(bool InImmediateSet)
 
 UUIToggle::UUIToggle()
 {
+	// A toggle answers the pointer: it has nothing to do each frame, nor when it moves.
+	DeclareTickUnused(StaticClass());
+	DeclareTransformChangedUnused(StaticClass());
 	OnColor = FColor(255, 255, 255, 255);
 	OffColor = FColor(255, 255, 255, 0);
 }

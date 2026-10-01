@@ -68,7 +68,11 @@ struct FDreamUIBuiltInDrawParams
 	DREAMGUIRENDERER_API void ResolveTextures_RenderThread(const FDreamUIBuiltInTextures& InTextures);
 };
 
-/** Vertex shader of the built-in UI pass: the full DreamGUI vertex, model and model-view-projection. */
+/**
+ * Vertex shader of the built-in UI pass: the full DreamGUI vertex, model and model-view-projection, and what takes the
+ * vertices into canvas space first -- identity, or a render layer's transform (FDreamUIMeshBatchContainer::ElementToCanvas).
+ * It has no default: a draw that leaves it unset draws through garbage.
+ */
 class DREAMGUIRENDERER_API FDreamUIBaseVS : public FGlobalShader
 {
 public:
@@ -78,6 +82,7 @@ public:
 	BEGIN_SHADER_PARAMETER_STRUCT(FParameters, )
 		SHADER_PARAMETER(FMatrix44f, DreamUI_MVP)
 		SHADER_PARAMETER(FMatrix44f, DreamUI_M)
+		SHADER_PARAMETER(FMatrix44f, DreamUI_ElementToCanvas)
 	END_SHADER_PARAMETER_STRUCT()
 
 	static bool ShouldCompilePermutation(const FGlobalShaderPermutationParameters& Parameters) { return true; }

@@ -501,7 +501,10 @@ protected:
 	 * PlayAnimation agree about pause, dilation, weighting and tick interval.
 	 */
 	FMovieSceneSequencePlaybackSettings MakePlaybackSettings() const;
-	/** Gives Player the clock this component's flags call for; see bAffectedByTimeDilation. */
+	/**
+	 * Gives Player the clock this component's flags call for (see bAffectedByTimeDilation), made here and vouched for, so
+	 * that the player may keep its own time (UDreamWidgetAnimationPlayer::TrustTimeController).
+	 */
 	void ApplyTimeControl(UDreamWidgetAnimationPlayer* Player) const;
 	/** A live instance turned to run InDirection, or a fresh one started that way; PlayAnimationForward / Reverse. */
 	FDreamUIAnimationHandle PlayAnimationRelative(UMovieSceneSequence* Animation, EDreamUIAnimationPlayMode PlayMode, float PlaybackSpeed, bool bRestoreState);

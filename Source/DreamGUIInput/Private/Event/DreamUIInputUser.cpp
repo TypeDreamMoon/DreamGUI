@@ -39,6 +39,7 @@
 #include "Interaction/DreamUITextInputTarget.h"
 #include "Interaction/UISelectable.h"
 #include "Misc/ScopeExit.h"
+#include "ProfilingDebugging/CpuProfilerTrace.h"
 
 DECLARE_CYCLE_STAT(TEXT("InputUserFrame"), STAT_DreamUIInputUserFrame, STATGROUP_DreamGUI);
 
@@ -1010,6 +1011,7 @@ bool UDreamUIInputUser::LineTrace(UDreamPointerEventData* InPointerEventData, FD
 		}
 	}
 
+	TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_LineTrace);
 	++LineTraceCount;
 	MultiHitResult.Reset();
 	InPointerEventData->HoverComponentArray.Reset();

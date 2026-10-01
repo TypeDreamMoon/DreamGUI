@@ -146,6 +146,26 @@ public:
 	/** BumpHitTestGeneration on InWorldContext's manager, when it has one. */
 	static void BumpHitTestGenerationFor(const UObject* InWorldContext);
 
+	/**
+	 * Announce every widget transform change marked in this world since the last flush
+	 * (UDreamWidget::CalculateObjectToWorldTransform): each moved widget's canvas and visual are told once,
+	 * and its OnTransformChanged listeners hear it once, however often it moved. TickDreamUI runs it after
+	 * the layout pass, so the clips and the canvases it goes on to update see every move of the frame so
+	 * far; the world's end-of-frame updates run it again, for what moved after the tick.
+	 *
+	 * A listener that moves a widget again is heard in a further pass. Passes that never settle are cut off
+	 * at a limit, with a warning, and what is left waits for the next flush.
+	 */
+	void FlushTransformChanges();
+	/**
+	 * Whether a transform change marked in this world waits for FlushTransformChanges rather than being
+	 * announced on the spot: r.DreamUI.DeferTransformNotifications is on, this manager ticks, and its world
+	 * has not been torn down.
+	 */
+	bool DefersTransformChanges()const;
+	/** A widget whose own transform changed, where the next flush starts from. Once per change; the flush takes each once. */
+	void AddTransformChangeRoot(UDreamWidget* InWidget);
+
 	/** The layout-pass state of this world's widgets; see UDreamWidget::GetLayoutPassContext. */
 	FDreamLayoutPassContext& GetLayoutPassContext() { return LayoutPassContext; }
 	const FDreamLayoutPassContext& GetLayoutPassContext() const { return LayoutPassContext; }
@@ -227,6 +247,13 @@ private:
 	 */
 	TSet<FObjectKey> RegisteredCanvasKeys;
 	/**
+	 * The root canvases ForEachRootCanvasInRenderModeOrder takes, one list per render mode in the order it takes them, as
+	 * they were sorted at RootCanvasOrderGeneration (InvalidateRootCanvasOrder). Sorting them was a walk of the whole
+	 * registry, twice a frame, asking each canvas for its root and its mode.
+	 */
+	TArray<TWeakObjectPtr<UDreamCanvas>> RootCanvasesByPass[4];
+	uint64 RootCanvasOrderGeneration = 0;
+	/**
 	 * Every registered widget, weakly: registering is not owning. A tree is kept alive by its host --
 	 * the component, subsystem or preview that made it -- and the host lets it go; see FreeRoots for the
 	 * trees no host holds.
@@ -269,6 +296,11 @@ public:
 	 * list's own IsValid sweep cannot answer it and neither can a test.
 	 */
 	int32 GetPropertyBindingUserCount() const { return PropertyBindingUsers.Num(); }
+	/**
+	 * Whether InBehaviour is on the per-frame tick visit. Exposed for the same reason: a behaviour whose Tick does nothing
+	 * (UDreamUIBehaviour::DeclareTickUnused) is kept off it, and nothing else can tell.
+	 */
+	bool IsBehaviourOnTickVisit(const UDreamUIBehaviour* InBehaviour) const;
 private:
 	/** Weak, and swept as it is walked: a widget can be destroyed between two frames. */
 	TArray<TWeakObjectPtr<class UDreamUserWidget>> PropertyBindingUsers;
@@ -301,6 +333,15 @@ private:
 	int32 LastLayoutPassCount = 0;
 	/** See GetHitTestGeneration. */
 	uint64 HitTestGeneration = 0;
+	/**
+	 * The widgets whose own transform changed since the last flush, in the order they changed, weakly and
+	 * with repeats: a flush skips one it has already reached. See FlushTransformChanges.
+	 */
+	TArray<TWeakObjectPtr<UDreamWidget>> TransformChangeRoots;
+	/** A pass of the flush's roots, swapped out of TransformChangeRoots so that neither array gives up its memory. */
+	TArray<TWeakObjectPtr<UDreamWidget>> TransformChangeRootsBeingFlushed;
+	/** A flush is running. A listener's move lands in its next pass, not in a flush of its own. */
+	bool bIsFlushingTransformChanges = false;
 	/** The writer stack, pass depth and desired-size memo every layout pass in this world shares. */
 	FDreamLayoutPassContext LayoutPassContext;
 	struct FWorldServiceEntry
@@ -354,6 +395,11 @@ public:
 	 * each canvas's actual render mode or the one it is set to. Safe against calls that register or unregister canvases.
 	 */
 	void ForEachRootCanvasInRenderModeOrder(bool bInActualRenderMode, TFunctionRef<void(UDreamCanvas*)> InFunction);
+	/**
+	 * A canvas came or went, found another root, or changed its render mode: every manager sorts its root canvases again
+	 * before its next pass over them (ForEachRootCanvasInRenderModeOrder). Any thread.
+	 */
+	static void InvalidateRootCanvasOrder();
 	/** Whether a canvas from a snapshot is alive and still registered here. */
 	bool IsCanvasStillRegistered(const TWeakObjectPtr<UDreamCanvas>& InCanvas)const;
 	TArray<UDreamCanvas*> GetCanvasArrayByRenderMode(EDreamRenderMode RenderMode)const;
