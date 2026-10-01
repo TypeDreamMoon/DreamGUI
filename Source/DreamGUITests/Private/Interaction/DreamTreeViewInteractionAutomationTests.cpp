@@ -299,4 +299,66 @@ bool FDreamListsTreeViewNavigateExpandTest::RunTest(const FString& Parameters)
 	return true;
 }
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamListsTreeViewOpenedFoldStaysOpenTest,
+	"DreamGUI.TreeView.AFoldOpenedThroughTheCollapsedSetStaysOpenWhenTheSourceIsHandedOverAgain",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamListsTreeViewOpenedFoldStaysOpenTest, "DreamGUI.TreeView.AFoldOpenedThroughTheCollapsedSetStaysOpenWhenTheSourceIsHandedOverAgain", "[Pointer][Animated]")
+
+/*
+ * A tree with objects keeps its folds twice: by index, which the rows are built from, and by object,
+ * which carries a fold across a new source. SetCollapsedItems wrote only the index half, so a fold it
+ * opened was still remembered by object -- and the next source change, which re-derives the index half
+ * FROM the objects, folded it again: hand the tree the same four items and a parent the player had seen
+ * opened shut itself.
+ *
+ * Checked here: fold a parent by clicking its twisty, open everything through SetCollapsedItems, hand
+ * the tree the same items again, and all four rows still show.
+ */
+bool FDreamListsTreeViewOpenedFoldStaysOpenTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamTreeViewInteractionTestLocal;
+	FDreamDriverRig Rig = FDreamDriverRig::Headless(DreamListsInteraction::ViewportSize());
+	Rig.BindTest(this);
+	if (!TestTrue(TEXT("The headless rig came up"), Rig.IsUsable()))
+	{
+		return false;
+	}
+	UDreamTreeView* Tree = Rig.MakeControl<UDreamTreeView>(TEXT("Tree"), nullptr, TreeSize);
+	if (!TestNotNull(TEXT("The tree was made on the rig"), Tree))
+	{
+		return false;
+	}
+	Tree->SetStyleSource(EDreamUIStyleSource::Inline);
+	FDreamTreeViewStyle TreeStyle = Tree->GetStyle();
+	TreeStyle.List = DreamListsInteraction::WithRows(TreeStyle.List, RowHeight);
+	Tree->SetStyle(TreeStyle);
+	// A folder of two and a root of its own, as objects, so every fold has an item to follow.
+	const TArray<UObject*> Items = DreamListsInteraction::MakeItems(4);
+	Tree->SetItemDepths(TArray<int32>{ 0, 1, 1, 0 });
+	Tree->SetItemObjects(Items);
+	Rig.PumpFrames(2);
+	UDreamWidget* FolderTwisty = TwistyOf(*Tree, 0);
+	if (!TestEqual(TEXT("Everything starts open"), Tree->GetRowCount(), 4)
+		|| !TestNotNull(TEXT("and the folder's row has a twisty"), FolderTwisty))
+	{
+		return false;
+	}
+
+	if (!TestTrue(TEXT("Clicking the folder's twisty completes"), Rig.Driver()->Find(FDreamBy::Widget(FolderTwisty))->Click())
+		|| !TestEqual(TEXT("and folds it"), Tree->GetRowCount(), 2))
+	{
+		return false;
+	}
+	Tree->SetCollapsedItems(TSet<int32>());
+	TestEqual(TEXT("An empty collapsed set opens the folder"), Tree->GetRowCount(), 4);
+
+	// The same items, handed over again: nothing about what is folded has changed.
+	Tree->SetItemObjects(Items);
+	Rig.PumpFrames(1);
+	TestTrue(TEXT("The folder is still open"), Tree->IsItemExpanded(0));
+	TestEqual(TEXT("so all four rows show"), Tree->GetRowCount(), 4);
+	return true;
+}
+
 #endif

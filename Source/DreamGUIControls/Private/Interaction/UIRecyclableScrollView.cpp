@@ -410,7 +410,8 @@ void UUIRecyclableScrollView::InitializeOnDataSource()
     if (!IsValid(DataSource))return;
     if (!CheckParameters())return;
     if (Horizontal == Vertical)return;
-    DataItemCount = IUIRecyclableScrollViewDataSource::Execute_GetItemCount(DataSource);
+    // Taken into the members only once the layout is known to go ahead (see the refusal below).
+    const int32 NewDataItemCount = IUIRecyclableScrollViewDataSource::Execute_GetItemCount(DataSource);
 
     switch (CellTemplateType)
     {
@@ -454,9 +455,20 @@ void UUIRecyclableScrollView::InitializeOnDataSource()
     }
         break;
     }
-    WorkingCellTemplateSize.X = WorkingCellTemplate->GetWidth();
-    WorkingCellTemplateSize.Y = WorkingCellTemplate->GetHeight();
-
+    const FVector2D NewCellTemplateSize(WorkingCellTemplate->GetWidth(), WorkingCellTemplate->GetHeight());
+    // Each line has to move the layout on, or the count of lines that fill the view below never stops
+    // growing: a template with no extent along the scroll axis and no space after it spun that loop for
+    // good. A layout that cannot advance has nothing to show, so it is refused here, before anything of
+    // the previous layout is taken down -- its item count and cell size among it, which the cells still
+    // on screen are recycled against.
+    const float LinePitch = Horizontal ? NewCellTemplateSize.X + Space.X : NewCellTemplateSize.Y + Space.Y;
+    if (LinePitch <= KINDA_SMALL_NUMBER)
+    {
+        UE_LOG(DreamGUI, Error, TEXT("[%s].%d The cell template plus the space after it is %.3f along the scroll axis; a cell has to take up room for the list to lay any out."), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, LinePitch);
+        return;
+    }
+    DataItemCount = NewDataItemCount;
+    WorkingCellTemplateSize = NewCellTemplateSize;
 
     if (OnScrollEventDelegateHandle.IsValid())
     {
@@ -577,8 +589,18 @@ void UUIRecyclableScrollView::InitializeOnDataSource()
         Item.Widget->DestroyWidget();
         CacheCellList.RemoveAt(LastIndex);
     }
+    // Every recycling cursor starts over with the layout below, which puts data index 0 in the first cell
+    // at the content's start -- all of them, before anything reads them. The data index and the first
+    // cell's position used to be reset only after the scroll that follows, and that scroll recycled against
+    // them: with fewer cells than the last layout it indexed past the end of the cache, and with more it
+    // moved a cell to where the old layout had been scrolled to, after which nothing recycled at all.
     MinCellIndexInCacheCellList = 0;
-    MaxCellIndexInCacheCellList = (VisibleColumnOrRowCount - 1) * (Horizontal ? Rows : Columns);
+    // The first cell of the LAST line the cache holds. A source shorter than the view has fewer cells than
+    // lines that fit, and the line count would point past them.
+    const int CellsPerLine = Horizontal ? Rows : Columns;
+    MaxCellIndexInCacheCellList = CacheCellList.Num() > 0 ? ((CacheCellList.Num() - 1) / CellsPerLine) * CellsPerLine : 0;
+    MinCellDataIndex = 0;
+    MinCellPosition = Horizontal ? Padding.Left : -Padding.Top;
 
     IUIRecyclableScrollViewDataSource::Execute_BeforeSetCell(DataSource);
     //set cell position and size and data
@@ -587,6 +609,9 @@ void UUIRecyclableScrollView::InitializeOnDataSource()
     for (int i = 0; i < CacheCellList.Num(); i++)
     {
         auto& CellItem = CacheCellList[i];
+        // Awake, whatever the last layout left it as: a cell recycled past the end of a list was put to
+        // sleep, and this layout gives every cell an item.
+        CellItem.Widget->SetWidgetActive(true);
         IUIRecyclableScrollViewDataSource::Execute_SetCell(DataSource, CellItem.CellComponent, i);
         if (Horizontal)
         {
@@ -629,18 +654,23 @@ void UUIRecyclableScrollView::InitializeOnDataSource()
     }
     IUIRecyclableScrollViewDataSource::Execute_AfterSetCell(DataSource);
 
+    // The content goes to its START, where the layout above put data index 0: progress 0 on the scrolling
+    // axis, horizontal included. In the offset model 1 is the far end on both axes (UUIScrollView's
+    // ApplyContentPositionWithProgress), and a horizontal list used to be sent there -- it opened at its last
+    // column, with its cells at the first, and never recycled its way back. Nothing is recycled on the way
+    // (bResettingCells): the cells are already where this position wants them.
     auto PrevProgress = this->Progress;
-    if (Horizontal)
     {
-        this->SetScrollProgress(FVector2D(1.0f, PrevProgress.Y));
-        MinCellPosition = Padding.Left;
+        TGuardValue<bool> ResetGuard(bResettingCells, true);
+        if (Horizontal)
+        {
+            this->SetScrollProgress(FVector2D(0.0f, PrevProgress.Y));
+        }
+        else
+        {
+            this->SetScrollProgress(FVector2D(PrevProgress.X, 0.0f));
+        }
     }
-    else
-    {
-        this->SetScrollProgress(FVector2D(PrevProgress.X, 0.0f));
-        MinCellPosition = -Padding.Top;
-    }
-    MinCellDataIndex = 0;
 
     PrevContentPosition = FVector2D(Content->GetRelativeLocation().Y, Content->GetRelativeLocation().Z);
     OnScrollEventDelegateHandle = this->GetOnValueChangedEvent().AddUObject(this, &UUIRecyclableScrollView::OnScrollCallback);
@@ -648,6 +678,7 @@ void UUIRecyclableScrollView::InitializeOnDataSource()
 }
 void UUIRecyclableScrollView::OnScrollCallback(FVector2D value)
 {
+    if (bResettingCells)return;
     if (Horizontal == Vertical)return;
     if (CacheCellList.Num() == 0)return;
     if (DataItemCount == 0)return;
@@ -662,7 +693,10 @@ void UUIRecyclableScrollView::OnScrollCallback(FVector2D value)
         {
             while (MinCellDataIndex > 0 || (bInfiniteLoop && Rows == 1))
             {
-                int CellDataIndex = MinCellDataIndex - Rows;//flip data
+                // The first item of the line this recycle fills. Each cell of the line is that plus its place in the
+                // line: added onto the previous cell's index instead, a line of three or more took items C, C+1, C+3,
+                // C+6 -- the wrong ones once a grid scrolled back.
+                const int LineStartDataIndex = MinCellDataIndex - Rows;
                 auto& RightTopCellItem = CacheCellList[MaxCellIndexInCacheCellList];
                 auto CellLeftPointInScrollViewSpace = RightTopCellItem.Widget->GetLocalSpaceLeft() + RightTopCellItem.Widget->GetRelativeLocation().Y + PointToScrollViewSpaceOffset;
                 if (CellLeftPointInScrollViewSpace > RangeArea.Y)//right item out of range
@@ -677,7 +711,7 @@ void UUIRecyclableScrollView::OnScrollCallback(FVector2D value)
                         //data index
                         MinCellDataIndex--;
                         //set data
-                        CellDataIndex = GetValidCellDataIndex(CellDataIndex + i);
+                        const int CellDataIndex = GetValidCellDataIndex(LineStartDataIndex + i);
                         if (CellDataIndex < DataItemCount)
                         {
                             CellItem.Widget->SetWidgetActive(true);
@@ -756,7 +790,8 @@ void UUIRecyclableScrollView::OnScrollCallback(FVector2D value)
         {
             while (MinCellDataIndex > 0 || (bInfiniteLoop && Columns == 1))
             {
-                int CellDataIndex = MinCellDataIndex - Columns;//flip data
+                // See the horizontal case: each cell of the line is the line's first item plus its place in it.
+                const int LineStartDataIndex = MinCellDataIndex - Columns;
                 auto& BottomLeftCellItem = CacheCellList[MaxCellIndexInCacheCellList];
                 auto CellTopPointInScrollViewSpace = BottomLeftCellItem.Widget->GetLocalSpaceTop() + BottomLeftCellItem.Widget->GetRelativeLocation().Z + PointToScrollViewSpaceOffset;
                 if (CellTopPointInScrollViewSpace < RangeArea.X)//bottom item out of range
@@ -772,7 +807,7 @@ void UUIRecyclableScrollView::OnScrollCallback(FVector2D value)
                         //data index
                         MinCellDataIndex--;
                         //set data
-                        CellDataIndex = GetValidCellDataIndex(CellDataIndex + i);
+                        const int CellDataIndex = GetValidCellDataIndex(LineStartDataIndex + i);
                         if (CellDataIndex < DataItemCount)
                         {
                             CellItem.Widget->SetWidgetActive(true);
@@ -868,6 +903,14 @@ void UUIRecyclableScrollView::UpdateCellData()
     IUIRecyclableScrollViewDataSource::Execute_AfterSetCell(DataSource);
 }
 
+bool UUIRecyclableScrollView::IsLooping()const
+{
+    // The same test every recycle loop makes for its own axis: one row across a horizontal list, one
+    // column across a vertical one. bInfiniteLoop alone can outlive that -- SetRows and SetColumns leave it
+    // set -- and a grid has no single next cell to wrap round to.
+    return bInfiniteLoop && (Horizontal ? Rows : Columns) == 1;
+}
+
 // Infinite loop could use out-of-range index, so use this to get a valid index
 int UUIRecyclableScrollView::GetValidCellDataIndex(int InMinCellDataIndex)const
 {
@@ -877,6 +920,13 @@ int UUIRecyclableScrollView::GetValidCellDataIndex(int InMinCellDataIndex)const
     if (DataItemCount <= 0)
     {
         return INDEX_NONE;
+    }
+    // Only a looping list wraps. A list that ENDS has cells past its end on its last, partly filled line,
+    // and wrapping their indices round to the start filled them with the first items again; the recycle
+    // loops' hiding branches, which compare against the count, could never run.
+    if (!IsLooping())
+    {
+        return InMinCellDataIndex;
     }
     auto TempMinCellDataIndex = InMinCellDataIndex % DataItemCount;
     if (TempMinCellDataIndex < 0)

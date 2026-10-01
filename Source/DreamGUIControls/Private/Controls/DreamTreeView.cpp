@@ -309,8 +309,8 @@ bool UDreamTreeView::HandleRowNavigation(int32 InPoolIndex, EDreamUINavigationDi
 		return Super::HandleRowNavigation(InPoolIndex, InDirection, OutResult);
 	}
 	// Asked NOW, like every handler keyed by pool slot: the row may be showing a different item than
-	// it was when focus arrived on it.
-	const int32 ItemIndex = GetRowItemIndex(InPoolIndex);
+	// it was when focus arrived on it -- in which case the press is about the item focus was on.
+	const int32 ItemIndex = GetNavigationItemIndex(InPoolIndex);
 	if (ItemIndex == INDEX_NONE)
 	{
 		return false;
@@ -426,6 +426,12 @@ void UDreamTreeView::OnSourceChanged(const TArray<TObjectPtr<UObject>>& InPrevio
 	// details panel writes and what the first source arrives against, so without this an authored
 	// fold -- or one taken before any object source was bound -- would be dropped the first time the
 	// items moved, which is the case this whole mechanism exists for.
+	//
+	// EXACTLY what it names: the index set is the fold state between two source changes, every setter
+	// keeps it and a details panel writes it directly, so the identity half is re-derived from it here
+	// rather than added to. An object remembered from before a fold was opened by a write to the set
+	// would otherwise fold it again.
+	CollapsedItemObjects.Reset();
 	for (int32 Index : CollapsedItems)
 	{
 		if (InPreviousItemObjects.IsValidIndex(Index) && InPreviousItemObjects[Index] != nullptr)
@@ -554,6 +560,17 @@ void UDreamTreeView::SetItemDepths(const TArray<int32>& InDepths)
 void UDreamTreeView::SetCollapsedItems(const TSet<int32>& InCollapsed)
 {
 	CollapsedItems = InCollapsed;
+	// The identity half follows, so it says what the index half now says. Left alone it still held the
+	// folds this call just opened, and the next source change -- which re-derives the index set FROM it
+	// -- folded them again.
+	CollapsedItemObjects.Reset();
+	for (int32 Index : CollapsedItems)
+	{
+		if (UObject* Item = GetItemObject(Index))
+		{
+			CollapsedItemObjects.Add(Item);
+		}
+	}
 	// A tree whose folds moved without its rows moving is a tree lying about where its items are, and
 	// a raw write onto the set was picked up only on the next rebuild -- which is exactly the
 	// difference between a property and a setter.

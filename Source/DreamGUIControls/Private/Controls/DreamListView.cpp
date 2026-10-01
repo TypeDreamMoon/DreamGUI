@@ -325,6 +325,33 @@ void UDreamListViewBase::RefreshContentHeight(const FDreamListStyle& InStyle)
 	{
 		return;
 	}
+	const bool bHorizontal = IsHorizontalList();
+	// The column's anchors for THIS orientation, before its size is written. The scrolled axis is a
+	// POINT anchor -- a stretched one would pin the column to the viewport and nothing would ever
+	// scroll -- and the other one stretched, so a row is as wide as the list whatever the list turns out
+	// to be. Stated here rather than after the size: a size written onto an axis still stretched from
+	// the other orientation is resolved against the viewport's span and stored as the difference, so a
+	// list turned sideways kept its content one viewport short until the next rebuild.
+	ColumnNode->SetPivot(bHorizontal ? FVector2D(0.0, 0.5) : FVector2D(0.5, 1.0));
+	ColumnNode->SetHorizontalAndVerticalAnchorMinMax(
+		bHorizontal ? FVector2D(0.0, 0.0) : FVector2D(0.0, 1.0),
+		bHorizontal ? FVector2D(0.0, 1.0) : FVector2D(1.0, 1.0), false, false);
+	// The DELTA on the stretched axis, never the size: a zero delta says "exactly the span", whenever
+	// the span is decided. SetWidth / SetHeight would be the wrong verb there -- on a stretched axis
+	// they resolve the parent's span at write time and bake the difference in, so a list built before
+	// it was sized would carry minus its eventual width forever.
+	FVector2D ColumnDelta = ColumnNode->GetSizeDelta();
+	(bHorizontal ? ColumnDelta.Y : ColumnDelta.X) = 0.0;
+	ColumnNode->SetSizeDelta(ColumnDelta);
+	// And no offset across: that axis never scrolls, so a position left on it is what scrolling in the
+	// OTHER orientation wrote there, and it would hold every row that far out of the window.
+	FVector2D ColumnPosition = ColumnNode->GetAnchoredPosition();
+	if ((bHorizontal ? ColumnPosition.Y : ColumnPosition.X) != 0.0)
+	{
+		(bHorizontal ? ColumnPosition.Y : ColumnPosition.X) = 0.0;
+		ColumnNode->SetAnchoredPosition(ColumnPosition);
+	}
+
 	// The column's extent ALONG THE SCROLL AXIS is the scroll range, stated rather than measured:
 	// lines, gaps and the viewport's own inset. The column is point-anchored on that axis, so the
 	// setter writes the SizeDelta straight through and leaves the anchored position -- where the
@@ -333,7 +360,7 @@ void UDreamListViewBase::RefreshContentHeight(const FDreamListStyle& InStyle)
 	const float Extent = GetMainPadStart(InStyle) + GetMainPadEnd(InStyle)
 		+ LineCount * InStyle.RowHeight
 		+ FMath::Max(0, LineCount - 1) * InStyle.RowSpacing;
-	if (IsHorizontalList())
+	if (bHorizontal)
 	{
 		ColumnNode->SetWidth(Extent);
 	}
@@ -439,7 +466,8 @@ void UDreamListViewBase::RebuildRows()
 	}
 
 	RefreshScrollFurniture(Active);
-	RefreshVisibleWindow();
+	RefreshVisibleWindow(/*bInRebindKeptRows*/true);
+	FinishDragFromDestroyedRow();
 	// The batch boundary, and it IS the return of this function: this control rebuilds synchronously,
 	// so there is no pending request for a later frame to complete and nothing else to wait for.
 	OnRowsGenerated.Broadcast(RowNodes.Num());
@@ -448,14 +476,39 @@ void UDreamListViewBase::RebuildRows()
 void UDreamListViewBase::ResizePool(int32 InPoolSize)
 {
 	InPoolSize = FMath::Max(0, InPoolSize);
-	for (int32 Index = RowNodes.Num() - 1; Index >= InPoolSize; --Index)
+	// The bindings are as long as the pool, whatever filled the arrays before: every reader indexes them by pool slot.
+	RowBindings.SetNum(RowNodes.Num());
+	while (RowNodes.Num() > InPoolSize)
 	{
-		if (IsValid(RowNodes[Index]))
+		const int32 Index = RowNodes.Num() - 1;
+		// Released before it goes, as a parked row is: the widget stops standing for its item for good,
+		// and a consumer that hung something on it at generation time has to hear that while the widget
+		// is still there to undo it on. Destroying it silently left a removed item with no release at all.
+		ReleaseRow(Index, /*bInItemChanges*/true);
+		if (!RowNodes.IsValidIndex(Index))
 		{
-			RowNodes[Index]->DestroyWidget();
+			// A release handler re-shaped the pool; what is left of it is measured again.
+			continue;
 		}
+		HoveredPoolIndices.Remove(Index);
+		if (Index == FocusAnchorPoolIndex)
+		{
+			ClearFocusAnchor();
+		}
+		if (bIsDragging && Index == DraggedPoolIndex)
+		{
+			// The row a drag started on: its source behaviour goes with it, and so does the end-of-drag
+			// it would have heard. Ended once the rows are settled (FinishDragFromDestroyedRow).
+			bDragSourceRowDestroyed = true;
+		}
+		UDreamWidget* Row = RowNodes[Index].Get();
 		RowNodes.RemoveAt(Index);
 		RowSourceIndices.RemoveAt(Index);
+		RowBindings.RemoveAt(Index);
+		if (IsValid(Row))
+		{
+			Row->DestroyWidget();
+		}
 	}
 	while (RowNodes.Num() < InPoolSize)
 	{
@@ -469,6 +522,7 @@ void UDreamListViewBase::ResizePool(int32 InPoolSize)
 		}
 		RowNodes.Add(Row);
 		RowSourceIndices.Add(INDEX_NONE);
+		RowBindings.AddDefaulted();
 	}
 }
 
@@ -479,14 +533,18 @@ void UDreamListViewBase::ResizePool(int32 InPoolSize)
  * control has always run, reached by the same road, which is what keeps the two behaviours from
  * being two implementations.
  */
-void UDreamListViewBase::RefreshVisibleWindow()
+void UDreamListViewBase::RefreshVisibleWindow(bool bInRebindKeptRows)
 {
 	if (RowNodes.Num() == 0)
 	{
+		// Nothing is realized, so nothing will be realized "again" either: an item that comes back once
+		// there are rows has arrived, and the set left from before would have kept that quiet.
+		RealizedItemIndices.Reset();
 		return;
 	}
 	const FDreamListStyle& Active = ResolveListStyle();
 	const int32 RowCount = VisibleItemIndices.Num();
+	RowBindings.SetNum(RowNodes.Num());
 
 	int32 FirstDisplayIndex = 0;
 	if (bVirtualizing)
@@ -503,31 +561,105 @@ void UDreamListViewBase::RefreshVisibleWindow()
 			0, FMath::Max(0, RowCount - RowNodes.Num()));
 	}
 	WindowStart = FirstDisplayIndex;
+	const int32 WindowEnd = FMath::Min(RowCount, FirstDisplayIndex + RowNodes.Num());
+
+	// Which row shows which slot of the window. A row whose item is still inside the window KEEPS it,
+	// wherever the window moved, and only the rows whose items left are handed the ones that arrived.
+	// Handing slot N of the window to pool row N instead re-bound every row on every line scrolled: the
+	// widget under a resting pointer -- or holding focus -- swapped its item for the next one without
+	// anything telling the hover or the focus, and every frame of a fling re-announced every row.
+	TMap<int32, int32> DisplayOfItem;
+	DisplayOfItem.Reserve(FMath::Max(0, WindowEnd - FirstDisplayIndex));
+	for (int32 DisplayIndex = FirstDisplayIndex; DisplayIndex < WindowEnd; ++DisplayIndex)
+	{
+		DisplayOfItem.Add(VisibleItemIndices[DisplayIndex], DisplayIndex);
+	}
+	TArray<int32> DisplayOfRow;
+	DisplayOfRow.Init(INDEX_NONE, RowNodes.Num());
+	TSet<int32> SlotsTaken;
+	for (int32 PoolIndex = 0; PoolIndex < RowNodes.Num(); ++PoolIndex)
+	{
+		const int32* Kept = DisplayOfItem.Find(RowSourceIndices[PoolIndex]);
+		if (Kept != nullptr && !SlotsTaken.Contains(*Kept))
+		{
+			DisplayOfRow[PoolIndex] = *Kept;
+			SlotsTaken.Add(*Kept);
+		}
+	}
+	// The arrivals, in display order, to the rows that are free, in pool order -- which from a standing
+	// start is the pool in display order, the layout every rebuild from nothing has always produced.
+	int32 NextFreeRow = 0;
+	for (int32 DisplayIndex = FirstDisplayIndex; DisplayIndex < WindowEnd; ++DisplayIndex)
+	{
+		if (SlotsTaken.Contains(DisplayIndex))
+		{
+			continue;
+		}
+		while (NextFreeRow < RowNodes.Num() && DisplayOfRow[NextFreeRow] != INDEX_NONE)
+		{
+			++NextFreeRow;
+		}
+		if (NextFreeRow >= RowNodes.Num())
+		{
+			break;
+		}
+		DisplayOfRow[NextFreeRow] = DisplayIndex;
+	}
 
 	// The window that WAS, kept so the arrivals can be told from the stays: "this item came into
 	// view" is an edge, and a consumer loading a thumbnail per row wants one call per arrival rather
-	// than one per scroll. Swapped rather than rebuilt in place, so the old set survives the loop.
-	TSet<int32> PreviousRealized = MoveTemp(RealizedItemIndices);
-	RealizedItemIndices.Reset();
-
-	for (int32 PoolIndex = 0; PoolIndex < RowNodes.Num(); ++PoolIndex)
+	// than one per scroll. The new set is built aside and stored only once every row is bound, so a
+	// handler that re-enters this function in the middle sees the window as it was.
+	TSet<int32> NowRealized;
+	// A handler of the row events below can rebuild the list from inside this loop. That nested pass
+	// leaves the rows as they should be, and this one stops rather than binding on from stale slots.
+	const uint32 Serial = ++WindowRefreshSerial;
+	for (int32 PoolIndex = 0; PoolIndex < DisplayOfRow.Num() && PoolIndex < RowNodes.Num(); ++PoolIndex)
 	{
-		const int32 DisplayIndex = FirstDisplayIndex + PoolIndex;
+		const int32 DisplayIndex = DisplayOfRow[PoolIndex];
 		if (!VisibleItemIndices.IsValidIndex(DisplayIndex))
 		{
 			ParkRow(PoolIndex);
-			continue;
 		}
-		const int32 ItemIndex = VisibleItemIndices[DisplayIndex];
-		BindRow(PoolIndex, DisplayIndex, ItemIndex, Active);
-		RealizedItemIndices.Add(ItemIndex);
+		else
+		{
+			const int32 ItemIndex = VisibleItemIndices[DisplayIndex];
+			// A row kept on its item and in its place has nothing to be told while the list scrolls: no
+			// look to re-push and no release or generation to announce. A rebuild, a style push and a
+			// resize re-push every row, because those are what changed the look.
+			if (bInRebindKeptRows || !IsRowBoundTo(PoolIndex, ItemIndex, GetItemObject(ItemIndex))
+				|| RowBindings[PoolIndex].DisplayIndex != DisplayIndex)
+			{
+				BindRow(PoolIndex, DisplayIndex, ItemIndex, Active);
+			}
+			NowRealized.Add(ItemIndex);
+		}
+		if (WindowRefreshSerial != Serial)
+		{
+			return;
+		}
 	}
 
 	// After every bind, not inside the loop: a handler that asks the list what else is on screen has
 	// to be told the whole answer rather than however much of it had been written when it was called.
-	for (int32 ItemIndex : RealizedItemIndices)
+	// From a list of its own, too: a handler that loads more items re-enters this function, which
+	// rewrites the set this used to be walking -- a broken iteration, and arrivals said twice.
+	TArray<int32> Arrivals;
+	for (int32 ItemIndex : NowRealized)
 	{
-		if (!PreviousRealized.Contains(ItemIndex))
+		if (!RealizedItemIndices.Contains(ItemIndex))
+		{
+			Arrivals.Add(ItemIndex);
+		}
+	}
+	// In display order, as they were said when pool order was display order: source order is display
+	// order for a list and for a tree's pre-order walk alike.
+	Arrivals.Sort();
+	RealizedItemIndices = MoveTemp(NowRealized);
+	for (int32 ItemIndex : Arrivals)
+	{
+		// Asked again before each one: an earlier handler may have moved the window past it.
+		if (RealizedItemIndices.Contains(ItemIndex))
 		{
 			OnItemScrolledIntoView.Broadcast(ItemIndex, GetRowWidget(ItemIndex), GetItemObject(ItemIndex));
 		}
@@ -538,7 +670,8 @@ void UDreamListViewBase::HandleScrollViewMoved(FVector2D InProgress)
 {
 	if (bVirtualizing)
 	{
-		RefreshVisibleWindow();
+		// Only the rows the move handed a new item: nothing else about a row changes when the list scrolls.
+		RefreshVisibleWindow(/*bInRebindKeptRows*/false);
 	}
 	const float Offset = GetScrollOffset();
 	if (bEnableShadowBrush)
@@ -865,6 +998,10 @@ void UDreamListViewBase::HandleRowDragDetected(int32 InPoolIndex, UDreamDragDrop
 	}
 	bIsDragging = true;
 	DraggedItemIndex = ItemIndex;
+	// The row, so destroying it can end the drag (ResizePool), and the item's object, so a source edit
+	// in mid-flight can say where the item went (SetItemObjects).
+	DraggedPoolIndex = InPoolIndex;
+	DraggedItemObject = GetItemObject(ItemIndex);
 	ActiveDragOperation = InOperation;
 	// The item index goes out with it, because the payload alone cannot answer "which row" for a
 	// text-only source -- which has no objects at all.
@@ -879,20 +1016,43 @@ void UDreamListViewBase::HandleRowDragEnded(UDreamDragDropOperation* InOperation
 	StopDragEdgeScroll();
 	if (!bIsDragging)
 	{
+		// Already ended -- by the row that started it being destroyed, say -- so a later end from the
+		// pipeline has nothing left to say.
 		return;
 	}
 	// Whether anything took it. The operation is the one thing that outlives the row: a recycled row
 	// or a closed screen can destroy the source mid-flight, and the flag would go with it.
 	const bool bHandled = InOperation != nullptr && InOperation->bDropWasHandled;
+	// The item as it is NOW: the index was re-located with the source (SetItemObjects), and the object
+	// is the one picked up, not whatever the source holds at the index the drag started on.
 	const int32 ItemIndex = DraggedItemIndex;
+	UObject* const Item = DraggedItemObject.Get();
 	bIsDragging = false;
 	DraggedItemIndex = INDEX_NONE;
+	DraggedPoolIndex = INDEX_NONE;
+	DraggedItemObject.Reset();
+	bDragSourceRowDestroyed = false;
 	ActiveDragOperation = nullptr;
 	if (!bHandled)
 	{
-		OnItemDragCancelled.Broadcast(ItemIndex, GetItemObject(ItemIndex), InOperation);
+		OnItemDragCancelled.Broadcast(ItemIndex, Item, InOperation);
 	}
 	OnDraggingStateChanged.Broadcast(false);
+}
+
+void UDreamListViewBase::FinishDragFromDestroyedRow()
+{
+	if (!bDragSourceRowDestroyed)
+	{
+		return;
+	}
+	bDragSourceRowDestroyed = false;
+	// The row the drag started on is gone, and with it the source behaviour that would have heard the
+	// drag end: the pointer pipeline has no widget left to deliver that end to. So it ends here, as
+	// whatever it has become -- a drop, when a target already took it (a consumer re-ordering the
+	// source from OnItemAcceptDrop is one way the row goes), and a cancel otherwise. Left alone the
+	// list stayed dragging for good, holding the operation, and never said the drag was over.
+	HandleRowDragEnded(ActiveDragOperation);
 }
 
 void UDreamListViewBase::HandleRowDragEnter(int32 InPoolIndex, UDreamDragDropOperation* InOperation)
@@ -1074,6 +1234,14 @@ bool UDreamListViewBase::HandleRowDrop(int32 InPoolIndex, UDreamDragDropOperatio
 	// The list does NOT re-order itself here, and that is deliberate: what a drop MEANS is the
 	// consumer's to decide. A list that moved its own source would be guessing at an edit only the
 	// data's owner can make, and would fight every consumer that made the same edit itself.
+	//
+	// Marked handled BEFORE the consumer hears of it, the order UDreamUIDropTarget keeps for its own
+	// handlers: a consumer that re-orders the source from here can destroy the row the drag started on,
+	// and the drag that ends with it has to end as the drop it is, not as a cancel.
+	if (InOperation != nullptr)
+	{
+		InOperation->bDropWasHandled = true;
+	}
 	OnItemAcceptDrop.Broadcast(ItemIndex, GetItemObject(ItemIndex), InOperation, InZone);
 	return true;
 }
@@ -1280,12 +1448,19 @@ void UDreamListViewBase::SkinRowForState(int32 InPoolIndex, EUISelectableSelecti
 	SkinFace(Row, Active.StateFaces.BrushFor(InState, Active.RowBrush));
 }
 
-void UDreamListViewBase::HandleRowSelectionStateChanged(int32 InPoolIndex, bool bInHovered)
+void UDreamListViewBase::HandleRowSelectionStateChanged(int32 InPoolIndex, EUISelectableSelectionState InState)
 {
+	// A row that was handed another item while focus stayed on it answers navigation from the item focus
+	// was on (GetNavigationItemIndex) -- until the pointer takes the row over or focus leaves it.
+	if (InPoolIndex == FocusAnchorPoolIndex && InState != EUISelectableSelectionState::Focused)
+	{
+		ClearFocusAnchor();
+	}
 	// The ITEM is what is hovered, not the widget: a row re-bound under a resting pointer is a
 	// different item hovered, and a consumer keyed by index would otherwise be told about the old one
 	// forever. Tracked as a set of pool indices rather than an array parallel to the pool, so nothing
 	// has to be resized when the pool grows or shrinks.
+	const bool bInHovered = InState == EUISelectableSelectionState::Hovered || InState == EUISelectableSelectionState::Pressed;
 	const bool bWasHovered = HoveredPoolIndices.Contains(InPoolIndex);
 	if (bWasHovered == bInHovered)
 	{
@@ -1329,7 +1504,9 @@ void UDreamListViewBase::HandleDimensionsChanged(bool bPivotChanged, bool bWidth
 			RowTemplateNode->SetWidgetActive(false);
 		}
 	}
-	RefreshVisibleWindow();
+	// Every row: a tile's place across its line moves with the width.
+	RefreshVisibleWindow(/*bInRebindKeptRows*/true);
+	FinishDragFromDestroyedRow();
 }
 
 void UDreamListViewBase::RefreshScrollFurniture(const FDreamListStyle& InStyle)
@@ -1337,10 +1514,15 @@ void UDreamListViewBase::RefreshScrollFurniture(const FDreamListStyle& InStyle)
 	const bool bBarVisible = ShouldShowScrollBar();
 	const float Gutter = bBarVisible ? InStyle.Bar.Thickness : 0.0f;
 	const bool bHorizontal = IsHorizontalList();
+	// What the content was just measured with, by the caller's RefreshContentHeight.
+	const int32 ColumnsMeasured = ResolveColumnCount();
 
-	// No circle here, unlike UDreamScrollBox's: the gutter takes from the viewport's CROSS axis and
-	// the overflow question is about the main one, and a row's length does not depend on how wide it
-	// is. So one pass answers it, where the box has to measure, decide and re-state.
+	// The gutter takes from the viewport's CROSS axis and the overflow question is about the main one,
+	// and a row's length does not depend on how wide it is -- but how many tiles a LINE holds does: a
+	// tile view counts its columns across the very axis the gutter just narrowed. So this is
+	// UDreamScrollBox's measure, decide and re-state, with the re-statement below. The decision cannot
+	// flip on it: a gutter that appears only ever takes columns away, making a content that already
+	// overflowed longer still, and one that goes only ever gives them back to a content that fitted.
 	if (ViewportNode != nullptr)
 	{
 		// Stretched, deliberately: the viewport has to track the list's live size on every arrange,
@@ -1354,24 +1536,12 @@ void UDreamListViewBase::RefreshScrollFurniture(const FDreamListStyle& InStyle)
 			bHorizontal ? FVector2D(0.0, -Gutter) : FVector2D(-Gutter, 0.0));
 	}
 
-	if (ColumnNode != nullptr)
+	// The column's anchors are re-stated with its extent, in RefreshContentHeight -- every push, since
+	// the built-in tree authors the vertical answer and Orientation is an editable property. Here it is
+	// only measured again, when the gutter changed how many tiles fit across.
+	if (ResolveColumnCount() != ColumnsMeasured)
 	{
-		// Re-stated on every push, not just at build: the built-in tree authors the vertical answer,
-		// and Orientation is an editable property. The scrolled axis has to be a POINT anchor -- a
-		// stretched one would pin the column to the viewport and nothing would ever scroll -- and the
-		// other one stretched, so a row is as wide as the list whatever the list turns out to be.
-		ColumnNode->SetPivot(bHorizontal ? FVector2D(0.0, 0.5) : FVector2D(0.5, 1.0));
-		ColumnNode->SetHorizontalAndVerticalAnchorMinMax(
-			bHorizontal ? FVector2D(0.0, 0.0) : FVector2D(0.0, 1.0),
-			bHorizontal ? FVector2D(0.0, 1.0) : FVector2D(1.0, 1.0), false, false);
-		// The DELTA on the stretched axis, never the size: a zero delta says "exactly the span",
-		// whenever the span is decided. SetWidth / SetHeight would be the wrong verb -- on a stretched
-		// axis they resolve the parent's span at write time and bake the difference in, so a list
-		// built before it was sized would carry minus its eventual width forever.
-		// RefreshContentHeight writes the other axis.
-		FVector2D ColumnDelta = ColumnNode->GetSizeDelta();
-		(bHorizontal ? ColumnDelta.Y : ColumnDelta.X) = 0.0;
-		ColumnNode->SetSizeDelta(ColumnDelta);
+		RefreshContentHeight(InStyle);
 	}
 
 	if (ScrollBarNode != nullptr)
@@ -1423,7 +1593,11 @@ bool UDreamListViewBase::ShouldShowScrollBar() const
 	{
 		return true;
 	}
-	return ColumnNode->GetHeight() > ViewportNode->GetHeight() + KINDA_SMALL_NUMBER;
+	// Along the SCROLL axis, whichever that is -- UDreamScrollBox's question. A horizontal list's
+	// column is exactly as tall as its viewport by construction, so asking about heights there said
+	// "fits" of every band however far it ran, and the auto-hiding bar never came out.
+	const float ColumnMain = IsHorizontalList() ? ColumnNode->GetWidth() : ColumnNode->GetHeight();
+	return ColumnMain > GetViewportMainExtent() + KINDA_SMALL_NUMBER;
 }
 
 /**
@@ -1497,8 +1671,7 @@ UDreamWidget* UDreamListViewBase::CreatePoolRow(int32 InPoolIndex)
 		RowButton->GetOnSelectionStateChangedEvent().AddWeakLambda(this,
 			[this, InPoolIndex](EUISelectableSelectionState InState, bool /*bInImmediate*/)
 			{
-				HandleRowSelectionStateChanged(InPoolIndex,
-					InState == EUISelectableSelectionState::Hovered || InState == EUISelectableSelectionState::Pressed);
+				HandleRowSelectionStateChanged(InPoolIndex, InState);
 				// The row's DRAWING per state, on the same subscription: the selectable already tints
 				// the row's colour per state, and this is the picture under that tint. One
 				// subscription rather than two, so the colour and the brush can never be a frame
@@ -1525,15 +1698,33 @@ void UDreamListViewBase::BindRow(int32 InPoolIndex, int32 InDisplayIndex, int32 
 	{
 		return;
 	}
+	// Whether the row comes to stand for a different ITEM: another index, or another object at the same
+	// index -- a source edit shifts objects under rows whose indices stay put.
+	UObject* const Item = GetItemObject(InItemIndex);
+	const bool bItemChanges = !IsRowBoundTo(InPoolIndex, InItemIndex, Item);
 	// The row is about to stop standing for whatever it was showing -- UMG's OnEntryReleased, and the
 	// place a consumer undoes what OnRowGenerated did to this widget. Before the new index is written,
-	// so a handler asking GetRowItemIndex is still told the one being released.
-	const int32 ReleasedItemIndex = RowSourceIndices[InPoolIndex];
-	if (ReleasedItemIndex != INDEX_NONE && ReleasedItemIndex != InItemIndex)
+	// so a handler asking GetRowItemIndex is still told the one being released. On EVERY bind, the same
+	// item's included: a bind re-pushes the whole look below, and announces OnRowGenerated after it, and
+	// a generation with no release before it handed a consumer pairing the two a second one to undo.
+	// The release below runs handlers, and one that edits the source or scrolls rebuilds the rows from inside it: that
+	// pass bound this slot as it should be, or took it away, and this bind stops rather than writing over it.
+	const uint32 Serial = WindowRefreshSerial;
+	ReleaseRow(InPoolIndex, bItemChanges);
+	if (WindowRefreshSerial != Serial || !RowNodes.IsValidIndex(InPoolIndex) || RowNodes[InPoolIndex].Get() != Row)
 	{
-		OnRowReleased.Broadcast(ReleasedItemIndex, Row, GetItemObject(ReleasedItemIndex));
+		return;
 	}
 	RowSourceIndices[InPoolIndex] = InItemIndex;
+	FRowBinding& Binding = RowBindings[InPoolIndex];
+	Binding.Item = Item;
+	Binding.SourceSerial = TextSourceSerial;
+	Binding.DisplayIndex = InDisplayIndex;
+	if (InPoolIndex == FocusAnchorPoolIndex && GetNavigationItemIndex(InPoolIndex) == InItemIndex)
+	{
+		// Back on the item focus was on, so the row answers for itself again.
+		ClearFocusAnchor();
+	}
 	Row->SetWidgetActive(true);
 
 	// The row's LOOK, pushed here rather than inherited from the template it was copied from. That
@@ -1595,7 +1786,90 @@ void UDreamListViewBase::BindRow(int32 InPoolIndex, int32 InDisplayIndex, int32 
 	// The subclass's turn (the tree's twisty), then the consumer's. Both run on every BIND, which is
 	// every time a recycled row comes round to a new item -- UMG's OnEntryGenerated contract.
 	DecorateRow(*Row, InPoolIndex, InItemIndex);
-	OnRowGenerated.Broadcast(InItemIndex, Row, GetItemObject(InItemIndex));
+	if (bItemChanges && HoveredPoolIndices.Contains(InPoolIndex))
+	{
+		// The pointer is still on this widget and it shows another item now, so that item is the one
+		// hovered -- ReleaseRow has already said the old one no longer is.
+		OnItemIsHoveredChanged.Broadcast(InItemIndex, Item, true);
+	}
+	OnRowGenerated.Broadcast(InItemIndex, Row, Item);
+}
+
+void UDreamListViewBase::ReleaseRow(int32 InPoolIndex, bool bInItemChanges)
+{
+	const int32 ReleasedItemIndex = RowSourceIndices.IsValidIndex(InPoolIndex) ? RowSourceIndices[InPoolIndex] : INDEX_NONE;
+	if (ReleasedItemIndex == INDEX_NONE)
+	{
+		return;
+	}
+	UDreamWidget* Row = RowNodes[InPoolIndex].Get();
+	// The object the row was BOUND to, not whatever the source holds at that index now: after a removal
+	// the index names the next item along, and the removed one was never released at all.
+	UObject* ReleasedItem = RowBindings[InPoolIndex].Item.Get();
+	if (bInItemChanges)
+	{
+		// The hover belonged to the item, and the item is leaving this widget.
+		if (HoveredPoolIndices.Contains(InPoolIndex))
+		{
+			OnItemIsHoveredChanged.Broadcast(ReleasedItemIndex, ReleasedItem, false);
+		}
+		// So does focus, and focus cannot follow it: a row whose item left the window has nowhere for it
+		// to go. What it can keep is the item it was on, for the next navigation press to step from --
+		// SListView's selector item -- rather than from whatever this row is about to show. Kept once:
+		// a row already answering for an earlier item is not showing the item focus is on.
+		const UUIButton* RowButton = IsValid(Row) ? Row->GetComponent<UUIButton>() : nullptr;
+		if (RowButton != nullptr && RowButton->IsFocused() && InPoolIndex != FocusAnchorPoolIndex)
+		{
+			FocusAnchorPoolIndex = InPoolIndex;
+			FocusAnchorItemIndex = ReleasedItemIndex;
+			FocusAnchorItem = ReleasedItem;
+		}
+	}
+	OnRowReleased.Broadcast(ReleasedItemIndex, Row, ReleasedItem);
+}
+
+bool UDreamListViewBase::IsRowBoundTo(int32 InPoolIndex, int32 InItemIndex, UObject* InItem) const
+{
+	if (!RowSourceIndices.IsValidIndex(InPoolIndex) || !RowBindings.IsValidIndex(InPoolIndex)
+		|| RowSourceIndices[InPoolIndex] != InItemIndex)
+	{
+		return false;
+	}
+	const FRowBinding& Binding = RowBindings[InPoolIndex];
+	// An object is its own identity. Text is not, so a text row is the same item only while the texts
+	// it was bound from are still the source -- index 2 of new texts is a different line.
+	return InItem != nullptr
+		? Binding.Item.Get() == InItem
+		: (Binding.Item.Get() == nullptr && Binding.SourceSerial == TextSourceSerial);
+}
+
+int32 UDreamListViewBase::GetNavigationItemIndex(int32 InPoolIndex) const
+{
+	const int32 RowItemIndex = GetRowItemIndex(InPoolIndex);
+	if (InPoolIndex != FocusAnchorPoolIndex)
+	{
+		return RowItemIndex;
+	}
+	// Found again by its object when it has one, so a source edit since cannot point this at a neighbour.
+	int32 AnchorIndex = INDEX_NONE;
+	if (UObject* AnchorItem = FocusAnchorItem.Get())
+	{
+		AnchorIndex = GetIndexForItem(AnchorItem);
+	}
+	else if (FocusAnchorItemIndex >= 0 && FocusAnchorItemIndex < GetItemCount())
+	{
+		AnchorIndex = FocusAnchorItemIndex;
+	}
+	// An item that is not shown any more -- gone from the source, or folded away under a tree node -- is
+	// nowhere to step from, and the row's own item is the honest answer then.
+	return (AnchorIndex != INDEX_NONE && VisibleItemIndices.Contains(AnchorIndex)) ? AnchorIndex : RowItemIndex;
+}
+
+void UDreamListViewBase::ClearFocusAnchor()
+{
+	FocusAnchorPoolIndex = INDEX_NONE;
+	FocusAnchorItemIndex = INDEX_NONE;
+	FocusAnchorItem.Reset();
 }
 
 void UDreamListViewBase::PlaceRow(UDreamWidget& InRow, int32 InDisplayIndex, const FDreamListStyle& InStyle)
@@ -1634,14 +1908,20 @@ void UDreamListViewBase::ParkRow(int32 InPoolIndex)
 	{
 		return;
 	}
-	const int32 ReleasedItemIndex = RowSourceIndices[InPoolIndex];
-	RowSourceIndices[InPoolIndex] = INDEX_NONE;
-	if (ReleasedItemIndex != INDEX_NONE)
+	// Parking is a release too: the row stops standing for its item, and a consumer that hung
+	// something on it at generation time has to hear about that on every road out. Released with the
+	// index still written, as a re-bind releases, so a handler is told the item being let go.
+	// See BindRow: a handler of the release can rebuild the rows, and this park then has nothing left to do.
+	const uint32 Serial = WindowRefreshSerial;
+	ReleaseRow(InPoolIndex, /*bInItemChanges*/true);
+	if (WindowRefreshSerial != Serial || !RowNodes.IsValidIndex(InPoolIndex))
 	{
-		// Parking is a release too: the row stops standing for its item, and a consumer that hung
-		// something on it at generation time has to hear about that on both roads out.
-		OnRowReleased.Broadcast(ReleasedItemIndex, RowNodes[InPoolIndex].Get(), GetItemObject(ReleasedItemIndex));
+		return;
 	}
+	RowSourceIndices[InPoolIndex] = INDEX_NONE;
+	RowBindings[InPoolIndex] = FRowBinding();
+	// The item's hover ended above, and an asleep row has no item for a later exit to report.
+	HoveredPoolIndices.Remove(InPoolIndex);
 	if (UDreamWidget* Row = RowNodes[InPoolIndex].Get())
 	{
 		// Asleep rather than destroyed: a parked row is the pool's spare, and the next scroll wants
@@ -1691,9 +1971,11 @@ void UDreamListViewBase::RefreshRowColors()
 	for (int32 PoolIndex = 0; PoolIndex < RowNodes.Num(); ++PoolIndex)
 	{
 		const int32 ItemIndex = RowSourceIndices.IsValidIndex(PoolIndex) ? RowSourceIndices[PoolIndex] : INDEX_NONE;
-		if (ItemIndex != INDEX_NONE)
+		if (ItemIndex != INDEX_NONE && RowBindings.IsValidIndex(PoolIndex))
 		{
-			ApplyRowColor(RowNodes[PoolIndex], WindowStart + PoolIndex, ItemIndex, Active);
+			// The display index the row was placed at: a row keeps its item while the window moves round
+			// it, so its pool slot no longer says where in the window it sits.
+			ApplyRowColor(RowNodes[PoolIndex], RowBindings[PoolIndex].DisplayIndex, ItemIndex, Active);
 		}
 	}
 }
@@ -1755,6 +2037,9 @@ void UDreamListViewBase::SetItems(const TArray<FText>& InItems)
 	{
 		SelectedIndices.Reset();
 		SelectedIndex = INDEX_NONE;
+		// And for the same reason every row's binding is a new one: the rebuild releases each line and
+		// generates the new one in its place (IsRowBoundTo), where an object source keeps a row on its item.
+		++TextSourceSerial;
 	}
 	// The object source did not move, so it is its own "previous" -- a tree whose rows are objects
 	// keeps everything it keyed by them when only the LABELS are replaced.
@@ -1826,6 +2111,16 @@ void UDreamListViewBase::SetItemObjects(const TArray<UObject*>& InItems)
 		? Anchor
 		: (SelectedIndices.Num() > 0 ? SelectedIndices[0] : INDEX_NONE);
 	const bool bLostSelectedItems = SelectedIndices.Num() < SelectedBefore;
+	// A drag in flight follows its item the same way, before the rebuild below can end it: the index it
+	// started on now names whatever slid into that place, and the drag's end reports where the item went
+	// -- or -1, when the edit took it out of the source.
+	if (bIsDragging)
+	{
+		if (UObject* Dragged = DraggedItemObject.Get())
+		{
+			DraggedItemIndex = ItemObjects.IndexOfByKey(Dragged);
+		}
+	}
 	OnSourceChanged(PreviousItemObjects);
 	RebuildRows();
 	// SListView::UpdateSelectionSet: selected items that are no longer in the source leave the
@@ -2056,8 +2351,10 @@ bool UDreamListRowButton::OnNavigate_Implementation(EDreamUINavigationDirection 
 bool UDreamListViewBase::HandleRowNavigation(int32 InPoolIndex, EDreamUINavigationDirection InDirection,
 	TScriptInterface<IDreamNavigationInterface>& OutResult)
 {
-	// Which item the row shows, asked NOW: a recycled row stands for a different item every few scrolls.
-	const int32 ItemIndex = GetRowItemIndex(InPoolIndex);
+	// Which item the press steps FROM, asked NOW: a recycled row stands for a different item every few
+	// scrolls, and a row that was handed another one while focus stayed on it steps from the item focus
+	// was on (GetNavigationItemIndex) -- not from the stranger it shows.
+	const int32 ItemIndex = GetNavigationItemIndex(InPoolIndex);
 	const int32 DisplayIndex = ItemIndex != INDEX_NONE ? VisibleItemIndices.IndexOfByKey(ItemIndex) : INDEX_NONE;
 	if (DisplayIndex == INDEX_NONE)
 	{
@@ -2132,7 +2429,7 @@ bool UDreamListViewBase::MoveNavigationToItem(int32 InItemIndex, TScriptInterfac
 	return KeepNavigationOnItem(InItemIndex, OutResult);
 }
 
-bool UDreamListViewBase::KeepNavigationOnItem(int32 InItemIndex, TScriptInterface<IDreamNavigationInterface>& OutResult) const
+bool UDreamListViewBase::KeepNavigationOnItem(int32 InItemIndex, TScriptInterface<IDreamNavigationInterface>& OutResult)
 {
 	UDreamWidget* Row = GetRowWidget(InItemIndex);
 	UUIButton* RowButton = IsValid(Row) ? Row->GetComponent<UUIButton>() : nullptr;
@@ -2142,6 +2439,9 @@ bool UDreamListViewBase::KeepNavigationOnItem(int32 InItemIndex, TScriptInterfac
 	}
 	OutResult.SetObject(RowButton);
 	OutResult.SetInterface(Cast<IDreamNavigationInterface>(RowButton));
+	// Focus goes to the row that shows this item, so the item a re-bound row was keeping for it
+	// (GetNavigationItemIndex) has been stepped from and is done with -- even when that row is this one.
+	ClearFocusAnchor();
 	return true;
 }
 

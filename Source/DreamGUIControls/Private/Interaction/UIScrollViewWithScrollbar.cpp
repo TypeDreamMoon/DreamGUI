@@ -292,6 +292,8 @@ void UUIScrollViewWithScrollbar::CalculateVerticalRange()
 void UUIScrollViewWithScrollbar::OnHorizontalScrollbar(float InScrollValue)
 {
 	if (!Content.IsValid())return;
+	// The bar has the content now: a glide still under way would take it back on its next frame.
+	StopGlide();
 	bCanUpdateAfterDrag = false;
 	bAllowHorizontalScroll = true;
 
@@ -309,6 +311,8 @@ void UUIScrollViewWithScrollbar::OnHorizontalScrollbar(float InScrollValue)
 void UUIScrollViewWithScrollbar::OnVerticalScrollbar(float InScrollValue)
 {
 	if (!Content.IsValid())return;
+	//and the same glide rule as OnHorizontalScrollbar
+	StopGlide();
 	bCanUpdateAfterDrag = false;
 	bAllowVerticalScroll = true;
 
