@@ -1099,6 +1099,14 @@ private:
 	 */
 	bool bComposeLayerParentsWhenPlacing = false;
 	/**
+	 * This canvas's widget stands at the top of its tree, with no parent: nothing above it is another tree's, so a thread
+	 * placing this canvas's layers composes nothing another canvas's thread may compose (bComposeLayerParentsWhenPlacing).
+	 * Worked out whenever the widget's place in the hierarchy changes (OnUIHierarchyAttachmentChanged).
+	 */
+	bool bWidgetIsTreeRoot = false;
+	/** Whether a canvas this one holds, at any depth, holds render layers: its placement would compose in this canvas's tree. */
+	bool AnyChildCanvasHoldsRenderLayers() const;
+	/**
 	 * Draw-call data was handed to the batching (UpdateCanvasDrawCall) that TakeDrawCallBatchData has not since waited for
 	 * and taken. A canvas that holds still hands it none, and its every frame's wait and look at the batching's queue --
 	 * two objects of its own to read, for each of thousands of world panels -- is skipped.

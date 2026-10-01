@@ -42,6 +42,8 @@
 #include "Core/DreamUIDataAsTexture.h"
 #include "Core/DreamUIRenderLayerTable.h"
 #include "Async/ParallelFor.h"
+#include "Algo/Sort.h"
+#include "Algo/Unique.h"
 #include "Misc/App.h"
 #include <atomic>
 #include "Core/DreamUIRuntimeObject.h"
@@ -724,6 +726,20 @@ void UDreamCanvas::OnUIHierarchyAttachmentChanged()
 
 	auto NewParentCanvas = GetWidget()->GetComponentInParent<UDreamCanvas>(false);
 	SetParentCanvas(NewParentCanvas);
+	bWidgetIsTreeRoot = GetWidget()->GetParent() == nullptr;
+}
+
+bool UDreamCanvas::AnyChildCanvasHoldsRenderLayers() const
+{
+	for (const TWeakObjectPtr<UDreamCanvas>& Child : ChildrenCanvasArray)
+	{
+		const UDreamCanvas* ChildCanvas = Child.Get();
+		if (ChildCanvas != nullptr && (ChildCanvas->RenderLayers.Num() > 0 || ChildCanvas->AnyChildCanvasHoldsRenderLayers()))
+		{
+			return true;
+		}
+	}
+	return false;
 }
 
 void UDreamCanvas::OnWidgetActiveChanged(bool WidgetActive)
@@ -1195,11 +1211,12 @@ bool UDreamCanvas::TendRenderLayers()
 	 */
 	const bool bPlacementLikely = bRenderLayersMayHaveMoved && IsValid(UIMesh) && GetRenderLayerTable(/*bInCreate*/ false) != nullptr;
 	/**
-	 * ...except for a root canvas holding no other: its tree is its own, and the one thread placing it composes what its
-	 * layers are composed from (PlaceRenderLayers), alongside the other canvases, rather than this thread doing it for each of
-	 * a world of panels in turn. A canvas holding another, or held by one, shares a tree another thread may be placing.
+	 * ...except for a root canvas at the top of its tree whose canvases hold no layers: its tree is its own, and the one
+	 * thread placing it composes what its layers are composed from (PlaceRenderLayers), alongside the other canvases, rather
+	 * than this thread doing it for each of a world of panels in turn. A canvas under another widget, holding a canvas with
+	 * layers, or held by one, shares a tree another thread may be composing.
 	 */
-	const bool bComposeWhenPlacing = IsOwnRoot() && ChildrenCanvasArray.Num() == 0;
+	const bool bComposeWhenPlacing = IsOwnRoot() && bWidgetIsTreeRoot && !AnyChildCanvasHoldsRenderLayers();
 	bComposeLayerParentsWhenPlacing = bComposeWhenPlacing;
 	const bool bComposeHere = bPlacementLikely && !bComposeWhenPlacing;
 	TWeakObjectPtr<UDreamWidget> LastParent;
@@ -1370,7 +1387,66 @@ void UDreamCanvas::PlaceRenderLayers()
 	const UDreamWidget* CanvasWidget = GetWidget();
 	// What the layers are composed from, when TendRenderLayers left it to the thread placing them: the parents here, each
 	// once, and the canvas widget just below. One thread places this canvas, and no other canvas's tree reaches into it.
-	if (bComposeLayerParentsWhenPlacing)
+	const int32 MinParallel = CVarDreamUIParallelLayerRowsMin.GetValueOnAnyThread();
+	const bool bParallel = MinParallel > 0 && RenderLayers.Num() >= MinParallel && FApp::ShouldUseThreadingForPerformance();
+	if (bComposeLayerParentsWhenPlacing && bParallel)
+	{
+		/**
+		 * Thousands of layers with a parent each: found on as many threads as there are, which only read; their parents'
+		 * parents composed here, each once; then the parents on as many threads as there are -- each composes from its own
+		 * parent alone, composed by then, and writes only itself (as UDreamBaseRaycaster's GatherCandidatesInParallel does).
+		 * A parent that is another's grandparent is composed here whole.
+		 */
+		struct FAbove
+		{
+			const UDreamWidget* Parent = nullptr;
+			const UDreamWidget* GrandParent = nullptr;
+		};
+		TArray<FAbove> Above;
+		Above.SetNum(RenderLayers.Num());
+		ParallelFor(TEXT("DreamUI_LayerParentsOf"), RenderLayers.Num(), 512, [this, &Above](int32 Index)
+		{
+			if (const UDreamWidget* Layer = RenderLayers[Index].Layer.Get())
+			{
+				const UDreamWidget* Parent = Layer->Parent.Get();
+				Above[Index].Parent = Parent;
+				Above[Index].GrandParent = Parent != nullptr ? Parent->Parent.Get() : nullptr;
+			}
+		});
+		TArray<const UDreamWidget*> Parents;
+		TArray<const UDreamWidget*> GrandParents;
+		Parents.Reserve(Above.Num());
+		for (const FAbove& Entry : Above)
+		{
+			// Side by side they mostly repeat: only a change is kept before sorting.
+			if (Entry.Parent != nullptr && (Parents.Num() == 0 || Parents.Last() != Entry.Parent))
+			{
+				Parents.Add(Entry.Parent);
+			}
+			if (Entry.GrandParent != nullptr && (GrandParents.Num() == 0 || GrandParents.Last() != Entry.GrandParent))
+			{
+				GrandParents.Add(Entry.GrandParent);
+			}
+		}
+		Algo::Sort(Parents);
+		Parents.SetNum(Algo::Unique(Parents), EAllowShrinking::No);
+		Algo::Sort(GrandParents);
+		GrandParents.SetNum(Algo::Unique(GrandParents), EAllowShrinking::No);
+		for (const UDreamWidget* GrandParent : GrandParents)
+		{
+			GrandParent->GetWorldTransform();
+			GrandParent->GetWidth();
+			GrandParent->GetHeight();
+		}
+		ParallelFor(TEXT("DreamUI_LayerParents"), Parents.Num(), 256, [&Parents](int32 Index)
+		{
+			const UDreamWidget* Parent = Parents[Index];
+			Parent->GetWorldTransform();
+			Parent->GetWidth();
+			Parent->GetHeight();
+		});
+	}
+	else if (bComposeLayerParentsWhenPlacing)
 	{
 		TWeakObjectPtr<UDreamWidget> LastParent;
 		for (const FRenderLayerRecord& Record : RenderLayers)
@@ -1409,8 +1485,7 @@ void UDreamCanvas::PlaceRenderLayers()
 		Table->WriteRow(Record.Row, LayerToCanvas);
 		Moved.fetch_add(1, std::memory_order_relaxed);
 	};
-	const int32 MinParallel = CVarDreamUIParallelLayerRowsMin.GetValueOnAnyThread();
-	if (MinParallel > 0 && RenderLayers.Num() >= MinParallel && FApp::ShouldUseThreadingForPerformance())
+	if (bParallel)
 	{
 		ParallelFor(TEXT("DreamUI_PlaceRenderLayerRows"), RenderLayers.Num(), 256, Place);
 	}
