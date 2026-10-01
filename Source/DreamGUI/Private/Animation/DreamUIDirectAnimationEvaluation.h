@@ -107,6 +107,13 @@ private:
 		 * is: with the section's signature, what says which channel of which content it is (EvaluateChannels).
 		 */
 		const UMovieSceneSection* BoundSection = nullptr;
+		/**
+		 * The section's signature when the channels were found in it: what EvaluateChannels keys the channels' shared
+		 * values by, without a read of the section -- every widget's copy of an animation has sections of its own -- for
+		 * every player every frame. An edit of the section changes its movie scene's signature as well, and the next play
+		 * makes a plan again (IsStillPlanFor); one made while a play goes on keys the channels as before it until then.
+		 */
+		FGuid BoundSignature;
 		uint32 ChannelOffsets[4] = { 0, 0, 0, 0 };
 		const FMovieSceneFloatChannel* FloatChannels[4] = { nullptr, nullptr, nullptr, nullptr };
 		const FMovieSceneDoubleChannel* DoubleChannels[4] = { nullptr, nullptr, nullptr, nullptr };
@@ -115,6 +122,12 @@ private:
 		bool bEveryChannelAnimated = false;
 		/** The objects written so far, with the value each had before the first write. */
 		TArray<TPair<TWeakObjectPtr<UObject>, FChannelValues>> InitialValues;
+		/**
+		 * The first entry of InitialValues, while there is one: found by its key without a read of the array, a block of
+		 * its own, for every player every frame -- an animation mostly writes one object.
+		 */
+		TWeakObjectPtr<UObject> FirstInitialKey;
+		FChannelValues FirstInitialValues;
 		/**
 		 * The objects the binding resolved to at this play's first evaluation, as the player's object cache gave them: looked
 		 * up again only once one of them is gone. A play of a widget animation does not see its binding resolve to other

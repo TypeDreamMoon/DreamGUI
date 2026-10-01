@@ -288,6 +288,7 @@ bool FDreamUIDirectAnimationEvaluation::BindChannels(FAnimatedProperty& InOutPro
 	}
 	}
 	InOutProperty.BoundSection = Section;
+	InOutProperty.BoundSignature = Section->GetSignature();
 	for (int32 Index = 0; Index < InOutProperty.NumChannels; ++Index)
 	{
 		const void* Channel = InOutProperty.DoubleChannels[Index] != nullptr ? static_cast<const void*>(InOutProperty.DoubleChannels[Index])
@@ -494,8 +495,8 @@ void FDreamUIDirectAnimationEvaluation::EvaluateChannels(const FAnimatedProperty
 		return;
 	}
 	// Channels are only read while their section is alive -- its sequence is, see Evaluate -- and its signature says which
-	// content they are: see EvaluateShared.
-	const FGuid Signature = InProperty.BoundSection != nullptr ? InProperty.BoundSection->GetSignature() : FGuid();
+	// content they are (see EvaluateShared), as it was when they were found in it (BoundSignature).
+	const FGuid Signature = InProperty.BoundSection != nullptr ? InProperty.BoundSignature : FGuid();
 	for (int32 Index = 0; Index < InProperty.NumChannels; ++Index)
 	{
 		if (const FMovieSceneDoubleChannel* Channel = InProperty.DoubleChannels[Index])
@@ -583,12 +584,19 @@ bool FDreamUIDirectAnimationEvaluation::Evaluate(IMovieScenePlayer& InPlayer, FF
 			// it, and what a restore puts back. Found by the weak pointer's identity: the object is alive, so only a
 			// pointer to it can have its index and serial number, and no entry's pointer is looked up for it.
 			FChannelValues* Initial = nullptr;
-			for (TPair<TWeakObjectPtr<UObject>, FChannelValues>& Entry : Property.InitialValues)
+			if (Property.InitialValues.Num() > 0 && Property.FirstInitialKey.HasSameIndexAndSerialNumber(Bound.Key))
 			{
-				if (Entry.Key.HasSameIndexAndSerialNumber(Bound.Key))
+				Initial = &Property.FirstInitialValues;
+			}
+			else
+			{
+				for (TPair<TWeakObjectPtr<UObject>, FChannelValues>& Entry : Property.InitialValues)
 				{
-					Initial = &Entry.Value;
-					break;
+					if (Entry.Key.HasSameIndexAndSerialNumber(Bound.Key))
+					{
+						Initial = &Entry.Value;
+						break;
+					}
 				}
 			}
 			if (Initial == nullptr)
@@ -613,6 +621,11 @@ bool FDreamUIDirectAnimationEvaluation::Evaluate(IMovieScenePlayer& InPlayer, FF
 					continue;
 				}
 				Initial = &Property.InitialValues.Emplace_GetRef(Bound.Key, Values).Value;
+				if (Property.InitialValues.Num() == 1)
+				{
+					Property.FirstInitialKey = Bound.Key;
+					Property.FirstInitialValues = Values;
+				}
 			}
 			FChannelValues Values = *Initial;
 			EvaluateChannels(Property, InTime, Values);
@@ -647,6 +660,7 @@ void FDreamUIDirectAnimationEvaluation::RestoreInitialValues()
 			}
 		}
 		Property.InitialValues.Reset();
+		Property.FirstInitialKey.Reset();
 	}
 	bWrittenAnything = false;
 }
@@ -657,6 +671,7 @@ void FDreamUIDirectAnimationEvaluation::DiscardInitialValues()
 	for (FAnimatedProperty& Property : Properties)
 	{
 		Property.InitialValues.Reset();
+		Property.FirstInitialKey.Reset();
 	}
 	bWrittenAnything = false;
 }
