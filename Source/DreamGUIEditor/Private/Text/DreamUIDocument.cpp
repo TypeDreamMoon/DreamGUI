@@ -154,6 +154,28 @@ bool UDreamUIDocument::FlushToDisk(FString& OutError, EDreamUIDocumentFlush InMo
 		return false;
 	}
 
+	// What the file holds now, against what this document last read from it or wrote to it. A file changed since -- a
+	// pull, a branch switch, another program's save -- that the source watcher has not brought in yet (it waits out a
+	// drag, a play session, a debounce, and parks large batches) was overwritten here with this document's older text
+	// plus the latest edit: the change from outside was lost, and the watcher took the result for the editor's own write.
+	// Refused instead, and still owed; the reload that is coming brings the file's text in.
+	if (!LastWrittenHash.IsEmpty())
+	{
+		FString OnDisk;
+		if (FFileHelper::LoadFileToString(OnDisk, *FilePath))
+		{
+			const FString DiskHash = ComputeContentHash(OnDisk);
+			if (DiskHash != LastWrittenHash && DiskHash != Hash)
+			{
+				OutError = FString::Printf(
+					TEXT("'%s' changed on disk since the editor last read it, and was not overwritten. It is reloaded when the editor next looks; make the edit again then."),
+					*FilePath);
+				bHasUnflushedWrite = true;
+				return false;
+			}
+		}
+	}
+
 	// ForceUTF8WithoutBOM, never the AutoDetect default. AutoDetect writes ANSI while the text
 	// happens to be pure ASCII and switches to UTF-16-with-BOM the moment one CJK character appears
 	// (FileHelper.cpp:787) -- so a .dui would silently change encoding mid-life, the first Chinese

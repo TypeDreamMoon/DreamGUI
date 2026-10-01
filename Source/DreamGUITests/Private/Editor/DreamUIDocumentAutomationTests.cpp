@@ -423,4 +423,44 @@ bool FDreamUIDocumentNoTransactionTest::RunTest(const FString& Parameters)
 	return true;
 }
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamUIDocumentChangedOnDiskTest,
+	"DreamGUI.Designer.AFileChangedOnDiskSinceItWasReadIsNotOverwrittenByAnEdit",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * A pull, a branch switch, another program's save: the file changes under an open document, and the source watcher waits
+ * before it reloads -- out a drag, a play session, a debounce, a batch too large to take at once. An edit in that window
+ * wrote the document's older text, plus the edit, over the file, and the change from outside was gone without a word.
+ * Refused now: the file keeps what it was given, the edit stays owed, and the error says why.
+ */
+bool FDreamUIDocumentChangedOnDiskTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamUIDocumentTestLocal;
+	if (!HasTransactionBuffer(*this)) return false;
+
+	FScopedDuiFile File(TEXT("ChangedOnDisk.dui"), TextA);
+	FString Error;
+	TStrongObjectPtr<UDreamUIDocument> Document(UDreamUIDocument::CreateFromFile(nullptr, File.Path, Error));
+	if (!TestNotNull(TEXT("the document loaded"), (UObject*)Document.Get())) return false;
+
+	// Somebody else's text, written behind the document's back.
+	const FString Outside = FString(TextA) + TEXT("\n// changed outside the editor\n");
+	if (!TestTrue(TEXT("the file was changed on disk"),
+		FFileHelper::SaveStringToFile(Outside, *File.Path, FFileHelper::EEncodingOptions::ForceUTF8WithoutBOM)))
+	{
+		return false;
+	}
+
+	GEditor->BeginTransaction(FText::FromString(TEXT("Test Edit")));
+	const bool bSet = Document->SetContent(TextB, Error);
+	GEditor->EndTransaction();
+
+	TestFalse(TEXT("the edit is not written over the change"), bSet);
+	TestEqualSensitive(TEXT("the file keeps what was written outside"), File.ReadBack(), Outside);
+	TestTrue(TEXT("the edit is still owed"), Document->HasUnflushedWrite());
+	TestTrue(*FString::Printf(TEXT("and the error says the file changed (%s)"), *Error), Error.Contains(TEXT("changed on disk")));
+	return true;
+}
+
 #endif
