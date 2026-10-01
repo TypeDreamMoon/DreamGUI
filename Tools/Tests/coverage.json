@@ -34,7 +34,7 @@
     { "id": "TileView", "classes": ["UDreamTileView", "UUITileView"], "areas": ["TileView", "Controls.TileView"] },
     { "id": "TreeView", "classes": ["UDreamTreeView", "UUITreeView"], "areas": ["TreeView", "Controls.TreeView"] },
     { "id": "MenuAnchor", "classes": ["UDreamMenuAnchor"], "areas": ["MenuAnchor", "Controls.MenuAnchor"] },
-    { "id": "NativeWidgetHost", "classes": ["UDreamNativeWidgetHost"], "areas": ["NativeWidgetHost", "Controls.NativeWidgetHost"] },
+    { "id": "NativeWidgetHost", "classes": ["UDreamNativeWidgetHost"], "areas": ["NativeWidgetHost", "Controls.NativeWidgetHost", "Interaction.UMG"] },
     { "id": "ProgressBar", "classes": ["UDreamProgressBar", "UUIProgressBar"], "areas": ["ProgressBar", "Controls.ProgressBar", "Controls.ProgressBarBehaviour"] },
     { "id": "RadioButton", "classes": ["UDreamRadioButton"], "areas": ["RadioButton", "Controls.RadioButton"] },
     { "id": "RichText", "classes": ["UDreamRichTextBlock", "UUITextHyperlink"], "areas": ["RichText", "Controls.RichText"] },
