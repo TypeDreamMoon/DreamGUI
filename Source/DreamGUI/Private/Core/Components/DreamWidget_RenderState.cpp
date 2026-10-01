@@ -444,7 +444,12 @@ void UDreamWidget::CalculateWidgetActive_Recursive()
 				//tell layout
 				MarkLayoutForRebuild(Widget);
 			}
-			for (auto& Child : Widget->GetChildren())
+			// A copy of the children, not the live array: the active-changed callback above runs behaviour code, and a
+			// behaviour going to sleep can take a child away or bring one in -- a dropdown closing its open list
+			// destroys the blocker it hung on the root -- under the walk. Walking the live array then broke the
+			// iteration.
+			const TArray<UDreamWidget*, TInlineAllocator<16>> ChildrenAtStart(Widget->GetChildren());
+			for (UDreamWidget* Child : ChildrenAtStart)
 			{
 				// Children can hold nulls -- garbage collection clears a reference to a widget it
 				// took while this one lived, and this walk runs from OnDetachedFromParent, which is
