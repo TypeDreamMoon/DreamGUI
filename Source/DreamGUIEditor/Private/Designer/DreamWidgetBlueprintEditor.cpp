@@ -1126,10 +1126,12 @@ bool FDreamWidgetBlueprintEditor::CanUnwrapSelectedWidget() const
 		return false;
 	}
 	UDreamWidget* Parent = Template->GetParent();
-	const int32 ChildCount = Template->GetChildren().Num();
-	return IsValid(Parent) && ChildCount > 0
-		// The wrapper leaves as its children arrive, so the parent needs room for the difference only.
-		&& Parent->CanAcceptAdditionalChildren(ChildCount - 1);
+	const TArray<UDreamWidget*>& Children = Template->GetChildren();
+	// The children arrive while the wrapper still holds its place -- it is deleted after they have moved -- so the parent
+	// needs room for all of them beside it. Asked for the difference only, a single-child parent always answered yes,
+	// and the unwrap was offered and then refused, or half done.
+	return IsValid(Parent) && Children.Num() > 0
+		&& Parent->CanAcceptChildren(TConstArrayView<UDreamWidget*>(Children));
 }
 
 void FDreamWidgetBlueprintEditor::UnwrapSelectedWidget()
@@ -1168,11 +1170,15 @@ void FDreamWidgetBlueprintEditor::UnwrapSelectedWidget()
 	if (Moved.Num() != Children.Num())
 	{
 		// A partial unwrap would leave the wrapper holding what would not move while its siblings
-		// stood outside it, which is a shape nobody asked for. The transaction is still open, so
-		// cancelling it puts every reparent back.
+		// stood outside it, which is a shape nobody asked for. Moved back by hand: cancelling the transaction drops it
+		// without putting back anything it recorded (UTransBuffer::Cancel), which left the moves made and no undo step.
 		UE_LOG(DreamGUIEditor, Error, TEXT("[%s].%d '%s' took only %d of %d children; the unwrap was abandoned."),
 			ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *Parent->GetDisplayName(), Moved.Num(), Children.Num());
-		GEditor->CancelTransaction(0);
+		// In the order they left, each to the index it had: by then everything before it is back in place, or never left.
+		for (UDreamWidget* Child : Moved)
+		{
+			DreamWidgetTreeEditing::ReparentWidget(BlueprintBeingEdited, Child, Wrapper, Children.IndexOfByKey(Child));
+		}
 		RebuildPreviewPreservingSelection();
 		return;
 	}

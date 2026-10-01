@@ -2455,6 +2455,59 @@ bool FDreamDesignerDragOutlivesItsPreviewTest::RunTest(const FString&)
 }
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamDesignerUnwrapUnderASingleChildPanelTest,
+	"DreamGUI.Designer.AWrapperUnderAPanelOfOneChildIsNotOfferedForUnwrapping",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * Unwrap moves the wrapper's children out before it deletes the wrapper, so for that moment the parent holds them AND the
+ * wrapper. Asked only for room for the difference, a panel of one child always said yes: the menu offered the unwrap, and
+ * the first move was refused -- or, under a panel of two, the second, after the first had moved for good, since cancelling
+ * the transaction does not put back what it recorded. Not offered now; and the tree is as it was.
+ */
+bool FDreamDesignerUnwrapUnderASingleChildPanelTest::RunTest(const FString&)
+{
+	using namespace DreamDesignerEditingTestLocal;
+
+	FScopedDesigner Scoped(TEXT("DesignerUnwrapSingleChild"));
+	if (!TestNotNull(TEXT("The designer opened"), Scoped.Designer) || Scoped.PreviewRoot() == nullptr)
+	{
+		return false;
+	}
+	UDreamWidget* Root = Scoped.TemplateRoot();
+	UDreamWidget* Frame = DreamWidgetTreeEditing::CreateWidget(
+		Scoped.Blueprint, UDreamWidget::StaticClass(), Root, -1, TEXT("Frame"));
+	if (!TestNotNull(TEXT("a frame"), Frame) || !TestNotNull(TEXT("holding one child at most"),
+		Frame->CreateNewLayoutContainer<UDreamLayoutContainerBorder>()))
+	{
+		return false;
+	}
+	UDreamWidget* Wrapper = DreamWidgetTreeEditing::CreateWidget(
+		Scoped.Blueprint, UDreamWidget::StaticClass(), Frame, -1, TEXT("Wrapper"));
+	DreamWidgetTreeEditing::CreateWidget(Scoped.Blueprint, UDreamWidget::StaticClass(), Wrapper, -1, TEXT("Only"));
+	Scoped.Rebuild();
+	const int32 CountBefore = Scoped.TemplateCount();
+
+	UDreamWidget* WrapperPreview = Scoped.Designer->GetPreviewHost()->FindPreviewForTemplate(Scoped.FindTemplate(TEXT("Wrapper")));
+	if (!TestNotNull(TEXT("the wrapper has a preview to select"), WrapperPreview))
+	{
+		return false;
+	}
+	Scoped.Designer->SelectWidgets(TSet<UDreamWidget*>{ WrapperPreview }, /*bAppendOrToggle*/false);
+	TestFalse(TEXT("a panel of one child cannot take the child beside the wrapper, so the unwrap is not offered"),
+		Scoped.Designer->CanUnwrapSelectedWidget());
+	Scoped.Designer->UnwrapSelectedWidget();
+	Scoped.Rebuild();
+	TestEqual(TEXT("and asked for anyway, it leaves the asset as it was"), Scoped.TemplateCount(), CountBefore);
+	UDreamWidget* Only = Scoped.FindTemplate(TEXT("Only"));
+	if (TestNotNull(TEXT("the child is still there"), Only))
+	{
+		TestEqual(TEXT("under its wrapper"), Only->GetParent(), Scoped.FindTemplate(TEXT("Wrapper")));
+	}
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamDesignerWidgetReferenceEditTest,
 	"DreamGUI.Designer.AWidgetReferenceSetInTheDesignerNamesTheAssetsWidgetNotThePreviews",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
