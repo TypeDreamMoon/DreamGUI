@@ -2,6 +2,7 @@
 // Modified by TypeDreamMoon.
 
 #include "Core/Components/DreamWidget.h"
+#include "Core/DreamUIGoneCount.h"
 #include "DreamWidgetPrivate.h"
 #include "Core/DreamPerspective.h"
 #include "DreamGUI.h"
@@ -230,6 +231,8 @@ void UDreamWidget::BeginDestroy()
 				*GetFullName(), *GetDisplayName());
 		}
 	}
+	// Collected, registered or not: no longer one to keep or write without a look-up (DreamUIGone).
+	DreamUIGone::Note();
 	Super::BeginDestroy();
 }
 
@@ -468,6 +471,8 @@ void UDreamWidget::DestroyWidget()
 			DreamUI::ModifyIfKeptByUndo(*Part);
 			Part->MarkAsGarbage();
 		}
+		// None of them is one to write without a look-up any more (DreamUIGone).
+		DreamUIGone::Note();
 	}
 }
 
@@ -584,6 +589,8 @@ void UDreamWidget::OnUnregister()
 		return;
 	}
 	Lifecycle = EDreamWidgetLifecycle::Constructed;
+	// No longer one to write without a look-up (DreamUIGone).
+	DreamUIGone::Note();
 	// From here a transform change is announced on the spot, as for any widget no manager knows of. One
 	// already marked is still the manager's to announce: it keeps where the flush starts, weakly.
 	RegisteredManager.Reset();

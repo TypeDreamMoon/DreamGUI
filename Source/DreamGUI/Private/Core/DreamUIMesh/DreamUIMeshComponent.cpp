@@ -2,6 +2,7 @@
 // Modified by TypeDreamMoon.
 
 #include "Core/DreamUIMesh/DreamUIMeshComponent.h"
+#include "Core/DreamUIDetailTrace.h"
 #include "DreamUIRender/DreamUIMaterialProxy.h"
 #include "DynamicMeshBuilder.h"
 #include "PhysicsEngine/BodySetup.h"
@@ -16,6 +17,7 @@
 #include "Materials/MaterialRenderProxy.h"
 #include "MaterialDomain.h"
 #include "PrimitiveSceneProxy.h"
+#include "PrimitiveUniformShaderParametersBuilder.h"
 #include "SceneView.h"
 #include "Core/DreamUIDrawCall.h"
 #include "DreamUIRender/DreamVisualPostProcessRenderProxy.h"
@@ -64,13 +66,11 @@ struct FDreamUISectionProxy_Mesh : public FDreamUIRenderSectionProxy
 		}
 		return Material != nullptr ? Material->GetRenderProxy() : nullptr;
 	}
-	/** Built-in shader parameters; when enabled the material is not used by DreamGUI's renderer. */
-	FDreamUIBuiltInDrawParams BuiltIn;
 	/**
-	 * The render thread's copy of FDreamUIRenderSection_Mesh::ElementToCanvas: what DreamGUI's renderer draws the vertices
-	 * through ahead of the root's transform. Kept while pooled, as the game thread's copy is.
+	 * Built-in shader parameters; when enabled the material is not used by DreamGUI's renderer. Enabled or not, the widget
+	 * data and the render layer table either vertex shader places a render layer's vertices through.
 	 */
-	FMatrix44f ElementToCanvas = FMatrix44f::Identity;
+	FDreamUIBuiltInDrawParams BuiltIn;
 	/** Vertex buffer for this section */
 	FStaticMeshVertexBuffers VertexBuffers;
 	FDreamUIMeshVertexBuffer DreamUIVertexBuffers;
@@ -81,6 +81,32 @@ struct FDreamUISectionProxy_Mesh : public FDreamUIRenderSectionProxy
 
 	uint32 ValidVerticesCount = 0;
 	uint32 NumPrimitives = 0;
+
+	/**
+	 * What a draw of this section binds (FDreamUISectionDrawState), made when it is first asked for after any of it
+	 * changed -- the built-in parameters (bDrawStateStale), the buffers (by their address) -- and shared by every batch
+	 * collected meanwhile.
+	 */
+	TRefCountPtr<const FDreamUISectionDrawState> DrawState;
+	const FRHIBuffer* DrawStateVertexBuffer = nullptr;
+	const FRHIBuffer* DrawStateIndexBuffer = nullptr;
+	bool bDrawStateStale = true;
+	const TRefCountPtr<const FDreamUISectionDrawState>& GetDrawState()
+	{
+		if (bDrawStateStale || !DrawState.IsValid() || DrawStateVertexBuffer != DreamUIVertexBuffers.VertexBufferRHI.GetReference()
+			|| DrawStateIndexBuffer != IndexBuffer.IndexBufferRHI.GetReference())
+		{
+			FDreamUISectionDrawState* State = new FDreamUISectionDrawState();
+			State->VertexBufferRHI = DreamUIVertexBuffers.VertexBufferRHI;
+			State->IndexBufferRHI = IndexBuffer.IndexBufferRHI;
+			State->BuiltIn = BuiltIn;
+			DrawState = State;
+			DrawStateVertexBuffer = DreamUIVertexBuffers.VertexBufferRHI.GetReference();
+			DrawStateIndexBuffer = IndexBuffer.IndexBufferRHI.GetReference();
+			bDrawStateStale = false;
+		}
+		return DrawState;
+	}
 
 	FDreamUISectionProxy_Mesh(ERHIFeatureLevel::Type InFeatureLevel)
 		: VertexFactory(InFeatureLevel, "FDreamUISectionProxy_Mesh")
@@ -177,6 +203,7 @@ struct FDreamUISectionProxy_Mesh : public FDreamUIRenderSectionProxy
 	{
 		Material = nullptr;
 		BuiltIn = FDreamUIBuiltInDrawParams();
+		bDrawStateStale = true;
 		bCanRender = false;
 	}
 };
@@ -378,6 +405,58 @@ public:
 	{
 		Transform = InTransform;
 		bDeterminantNegative = InTransform.LocalToWorld.Determinant() < 0.0f;
+		// Made again from the new transform when next drawn through a material; the one in use stays with what holds it.
+		PrimitiveUniformBuffer.Reset();
+	}
+
+	/**
+	 * The primitive uniform buffer a section drawn through a material reads -- the transform, the bounds -- made when first
+	 * asked for after the transform changed, and kept: what FDynamicPrimitiveUniformBuffer::Set makes, made once, rather
+	 * than for every such section of every world panel every frame on the render thread. A batch holds it
+	 * (FDreamUIMeshBatchContainer::PrimitiveUniformBufferHold), so that a pass run after the root is gone still reads it.
+	 */
+	const TSharedPtr<TUniformBuffer<FPrimitiveUniformShaderParameters>, ESPMode::ThreadSafe>& GetPrimitiveUniformBuffer_RenderThread(FRHICommandListBase& RHICmdList)
+	{
+		if (!PrimitiveUniformBuffer.IsValid())
+		{
+			// Released and deleted on the render thread, whichever holder lets go of it last.
+			PrimitiveUniformBuffer = TSharedPtr<TUniformBuffer<FPrimitiveUniformShaderParameters>, ESPMode::ThreadSafe>(
+				new TUniformBuffer<FPrimitiveUniformShaderParameters>(),
+				[](TUniformBuffer<FPrimitiveUniformShaderParameters>* InBuffer)
+				{
+					if (IsInRenderingThread())
+					{
+						InBuffer->ReleaseResource();
+						delete InBuffer;
+					}
+					else
+					{
+						ENQUEUE_RENDER_COMMAND(FDreamUIRenderRoot_ReleasePrimitiveUniformBuffer)(
+							[InBuffer](FRHICommandListImmediate&)
+							{
+								InBuffer->ReleaseResource();
+								delete InBuffer;
+							});
+					}
+				});
+			// As FDynamicPrimitiveUniformBuffer::Set(RHICmdList, LocalToWorld, LocalToWorld, Bounds, LocalBounds, false, false,
+			// false) makes it, which is what each section made for itself before: no decals, no lightmap, no velocity.
+			PrimitiveUniformBuffer->BufferUsage = UniformBuffer_MultiFrame;
+			PrimitiveUniformBuffer->SetContents(RHICmdList, FPrimitiveUniformShaderParametersBuilder{}
+				.Defaults()
+					.LocalToWorld(Transform.LocalToWorld)
+					.PreviousLocalToWorld(Transform.LocalToWorld)
+					.ActorWorldPosition(Transform.Bounds.Origin)
+					.WorldBounds(Transform.Bounds)
+					.LocalBounds(Transform.LocalBounds)
+					.PreSkinnedLocalBounds(Transform.LocalBounds)
+					.ReceivesDecals(false)
+					.OutputVelocity(false)
+					.UseVolumetricLightmap(false)
+				.Build());
+			PrimitiveUniformBuffer->InitResource(RHICmdList);
+		}
+		return PrimitiveUniformBuffer;
 	}
 
 	/** The proxy last made for this root, while it lives. */
@@ -559,11 +638,9 @@ public:
 	}
 	void SetMeshSectionBuiltIn_RenderThread(FDreamUIRenderSectionProxy* Section, const FDreamUIBuiltInDrawParams& Params)
 	{
-		(static_cast<FDreamUISectionProxy_Mesh*>(Section))->BuiltIn = Params;
-	}
-	void SetMeshSectionElementToCanvas_RenderThread(FDreamUIRenderSectionProxy* Section, const FMatrix44f& ElementToCanvas)
-	{
-		(static_cast<FDreamUISectionProxy_Mesh*>(Section))->ElementToCanvas = ElementToCanvas;
+		FDreamUISectionProxy_Mesh* MeshSection = static_cast<FDreamUISectionProxy_Mesh*>(Section);
+		MeshSection->BuiltIn = Params;
+		MeshSection->bDrawStateStale = true;
 	}
 
 	void SetRenderSectionRenderPriority_RenderThread(FDreamUIRenderSectionProxy* Section, int32 NewPriority)
@@ -720,7 +797,7 @@ public:
 		, bool RequireNormalAndTangent
 		, FDreamUISectionProxy_Mesh* Section)const
 	{
-		TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_PatchSection_RenderThread);
+		DREAMUI_DETAIL_SCOPE(DreamUI_PatchSection_RenderThread);
 		check(IsInRenderingThread());
 		check(Section != nullptr);
 		if (bIsSupportDreamUIRenderer)
@@ -763,7 +840,7 @@ public:
 		, FDreamUISectionProxy_Mesh* Section)const
 	{
 		SCOPE_CYCLE_COUNTER(STAT_UpdateMeshSectionRT);
-		TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_UpdateSection_RenderThread);
+		DREAMUI_DETAIL_SCOPE(DreamUI_UpdateSection_RenderThread);
 
 		check(IsInRenderingThread());
 
@@ -816,7 +893,7 @@ public:
 	{
 		return FVector3f(Transform.LocalToWorld.GetOrigin());
 	}
-	virtual void DreamUI_CollectRenderData(TArray<FDreamUIPrimitiveDataContainer>& OutRenderData) override
+	virtual void DreamUI_CollectRenderData(FDreamUIPrimitiveDataArray& OutRenderData) override
 	{
 #if DEBUG_PRINT_MESH_MEMORY
 		CalculateMeshMemorySize_RT();
@@ -840,7 +917,7 @@ public:
 
 		for (int i = 0; i < PrimitiveData.Sections.Num(); i++)
 		{
-			auto SectionData = PrimitiveData.Sections[i];
+			const FDreamUIPrimitiveSectionDataContainer& SectionData = PrimitiveData.Sections[i];
 			auto RenderSection = SectionData.SectionPointer;
 
 			auto Section = static_cast<FDreamUISectionProxy_Mesh*>(RenderSection);
@@ -850,8 +927,11 @@ public:
 				continue;//nothing to draw it with
 			}
 
-			// Draw the mesh.
-			FMeshBatch Mesh;
+			// Built where it is kept. A batch made on the stack and copied in was a mesh batch copied, and every render
+			// resource reference it holds taken twice and let go once -- for each of a wall of world panels' sections, each
+			// frame, on the render thread.
+			FDreamUIMeshBatchContainer& MeshBatchContainer = ResultArray.AddDefaulted_GetRef();
+			FMeshBatch& Mesh = MeshBatchContainer.Mesh;
 			FMeshBatchElement& BatchElement = Mesh.Elements[0];
 			BatchElement.IndexBuffer = &Section->IndexBuffer;
 			BatchElement.PrimitiveIdMode = PrimID_ForceZero;
@@ -862,9 +942,10 @@ public:
 			// one, and so does the wireframe.
 			if (bWireframe || bAnyWireframePass || !Section->BuiltIn.bEnabled)
 			{
-				FDynamicPrimitiveUniformBuffer& DynamicPrimitiveUniformBuffer = Collector.AllocateOneFrameResource<FDynamicPrimitiveUniformBuffer>();
-				DynamicPrimitiveUniformBuffer.Set(Collector.GetRHICommandList(), LocalToWorld, LocalToWorld, Transform.Bounds, Transform.LocalBounds, false, false, false);
-				BatchElement.PrimitiveUniformBufferResource = &DynamicPrimitiveUniformBuffer.UniformBuffer;
+				// The root's, kept until its transform changes, and held by the batch: see GetPrimitiveUniformBuffer_RenderThread.
+				const TSharedPtr<TUniformBuffer<FPrimitiveUniformShaderParameters>, ESPMode::ThreadSafe>& Buffer = GetPrimitiveUniformBuffer_RenderThread(Collector.GetRHICommandList());
+				BatchElement.PrimitiveUniformBufferResource = Buffer.Get();
+				MeshBatchContainer.PrimitiveUniformBufferHold = Buffer;
 			}
 
 			BatchElement.FirstIndex = 0;
@@ -876,16 +957,13 @@ public:
 			Mesh.DepthPriorityGroup = SDPG_World;
 			Mesh.bCanApplyViewModeOverrides = false;
 
-			FDreamUIMeshBatchContainer MeshBatchContainer;
-			MeshBatchContainer.Mesh = Mesh;
-			MeshBatchContainer.VertexBufferRHI = Section->DreamUIVertexBuffers.VertexBufferRHI;
-			MeshBatchContainer.IndexBufferRHI = Section->IndexBuffer.IndexBufferRHI;
+			// The section's buffers and built-in parameters, one reference for all of them (FDreamUISectionDrawState).
+			MeshBatchContainer.State = Section->GetDrawState();
 			MeshBatchContainer.NumVerts = Section->ValidVerticesCount;
-			MeshBatchContainer.BuiltIn = bWireframe ? FDreamUIBuiltInDrawParams() : Section->BuiltIn;
+			// A wireframe is drawn through its material, and still places a render layer's vertices through the textures.
+			MeshBatchContainer.bBuiltIn = Section->BuiltIn.bEnabled && !bWireframe;
+			// The primitive uniform buffer above stays the root's: a render layer's row of the table is applied ahead of it.
 			MeshBatchContainer.LocalToWorld = LocalToWorld;
-			// The primitive uniform buffer above stays the root's: a render layer's transform is applied ahead of it.
-			MeshBatchContainer.ElementToCanvas = Section->ElementToCanvas;
-			ResultArray.Add(MeshBatchContainer);
 		}
 	}
 
@@ -908,7 +986,7 @@ public:
 	}
 	virtual FBoxSphereBounds DreamUI_GetWorldBounds()const override { return Transform.Bounds; }
 	//end IDreamUIRendererPrimitive interface
-	void CollectRenderData_Implement(TArray<FDreamUIPrimitiveDataContainer>& OutRenderDataArray)
+	void CollectRenderData_Implement(FDreamUIPrimitiveDataArray& OutRenderDataArray)
 	{
 		if (SectionArray.Num() <= 0)return;
 		SortIfAsked_RenderThread();
@@ -928,7 +1006,7 @@ public:
 			{
 				if (CurrentRenderData.Sections.Num() > 0)
 				{
-					OutRenderDataArray.Add(CurrentRenderData);
+					OutRenderDataArray.Add(MoveTemp(CurrentRenderData));
 				}
 				PrevRenderSectionType = RenderSection->Type;
 				CurrentRenderData = FDreamUIPrimitiveDataContainer();
@@ -972,7 +1050,7 @@ public:
 		}
 		if (CurrentRenderData.Sections.Num() > 0)
 		{
-			OutRenderDataArray.Add(CurrentRenderData);
+			OutRenderDataArray.Add(MoveTemp(CurrentRenderData));
 		}
 	}
 
@@ -1010,6 +1088,8 @@ private:
 	bool bReleased = false;
 	ERHIFeatureLevel::Type FeatureLevel;
 	TArray<FDreamUIRenderSectionProxy*> SectionArray;
+	/** See GetPrimitiveUniformBuffer_RenderThread. */
+	TSharedPtr<TUniformBuffer<FPrimitiveUniformShaderParameters>, ESPMode::ThreadSafe> PrimitiveUniformBuffer;
 #if DEBUG_PRINT_MESH_MEMORY
 	uint32 MeshMemorySize = 0;
 	uint32 MaxVertexBufferSize = 0;
@@ -1321,8 +1401,8 @@ FDreamUIRenderSectionProxy* FDreamUIRenderRoot::CreateSectionData(FDreamUIRender
 			NewSectionProxy->Material = SrcSection->Material;
 			NewSectionProxy->MaterialProxy = SrcSection->MaterialProxy;
 			NewSectionProxy->BuiltIn = SrcSection->BuiltIn;
-			NewSectionProxy->ElementToCanvas = SrcSection->ElementToCanvas;
-			if (NewSectionProxy->BuiltIn.bEnabled)
+			// A section a material draws has textures to take as well: those its vertex shader places a layer's vertices by.
+			if (NewSectionProxy->BuiltIn.bEnabled || NewSectionProxy->BuiltIn.WidgetDataTexture.IsValid() || NewSectionProxy->BuiltIn.RenderLayerTable.IsValid())
 			{
 				// The references a built-in draw binds are taken on the render thread, by a command enqueued
 				// while the textures are alive. It runs before the proxy is first drawn: anything that draws it
@@ -1331,6 +1411,7 @@ FDreamUIRenderSectionProxy* FDreamUIRenderRoot::CreateSectionData(FDreamUIRender
 					[NewSectionProxy, Textures = NewSectionProxy->BuiltIn.GetTexturesForRenderCommand()](FRHICommandListImmediate& RHICmdList)
 					{
 						NewSectionProxy->BuiltIn.ResolveTextures_RenderThread(Textures);
+						NewSectionProxy->bDrawStateStale = true;
 					});
 			}
 			if (NewSectionProxy->Material == nullptr)
@@ -1605,7 +1686,6 @@ void UDreamUIMeshComponent::ReleaseRenderRoot()
 	PendingUpdateRenderSectionPriorityArray.Reset();
 	PendingUpdateMeshSectionMaterialDataArray.Reset();
 	PendingUpdateMeshSectionBuiltInDataArray.Reset();
-	PendingUpdateMeshSectionMatrixDataArray.Reset();
 }
 
 bool UDreamUIMeshComponent::CanDrawRenderLayers() const
@@ -1615,39 +1695,17 @@ bool UDreamUIMeshComponent::CanDrawRenderLayers() const
 
 FBox UDreamUIMeshComponent::GetMeshSectionBounds(const FDreamUIDrawCall& InDrawCallData) const
 {
-	// A layer's elements are kept relative to it, and so are their combined bounds: its transform puts them on the canvas.
-	// A draw call of no layer takes the one step it always did, so its box comes out as it always did.
-	if (InDrawCallData.IsInRenderLayer())
-	{
-		return InDrawCallData.CombinedBounds.TransformBy(FMatrix(InDrawCallData.LayerToCanvas)).TransformBy(GetComponentTransform());
-	}
-	return InDrawCallData.CombinedBounds.TransformBy(GetComponentTransform());
+	// On the canvas already, the layers' elements where their rows placed them (FDreamUIDrawCall::PlaceBounds).
+	return InDrawCallData.CanvasBounds.TransformBy(GetComponentTransform());
 }
 
-void UDreamUIMeshComponent::QueueMeshSectionElementToCanvas(FDreamUIRenderSection_Mesh* InMeshSection)
-{
-	if (RenderRoot.IsValid() && InMeshSection->RenderProxy != nullptr)
-	{
-		UpdateMeshSectionMatrixDataStruct UpdateData;
-		UpdateData.SectionProxy = InMeshSection->RenderProxy;
-		UpdateData.ElementToCanvas = InMeshSection->ElementToCanvas;
-		PendingUpdateMeshSectionMatrixDataArray.Add(UpdateData);
-	}
-}
-
-void UDreamUIMeshComponent::UpdateMeshSectionElementToCanvas(const TSharedPtr<FDreamUIRenderSection>& InRenderSection, const FDreamUIDrawCall& InDrawCallData)
+void UDreamUIMeshComponent::UpdateMeshSectionBounds(const TSharedPtr<FDreamUIRenderSection>& InRenderSection, const FDreamUIDrawCall& InDrawCallData)
 {
 	if (!InRenderSection.IsValid() || InRenderSection->Type != EDreamUIRenderSectionType::Mesh)
 	{
 		return;
 	}
-	auto MeshSectionPtr = static_cast<FDreamUIRenderSection_Mesh*>(InRenderSection.Get());
-	MeshSectionPtr->BoundingBox = GetMeshSectionBounds(InDrawCallData);
-	if (MeshSectionPtr->ElementToCanvas != InDrawCallData.LayerToCanvas)
-	{
-		MeshSectionPtr->ElementToCanvas = InDrawCallData.LayerToCanvas;
-		QueueMeshSectionElementToCanvas(MeshSectionPtr);
-	}
+	static_cast<FDreamUIRenderSection_Mesh*>(InRenderSection.Get())->BoundingBox = GetMeshSectionBounds(InDrawCallData);
 }
 
 TSharedPtr<FDreamUIRenderSection> UDreamUIMeshComponent::SetupRenderSection(EDreamUIRenderSectionType InType, FDreamUIDrawCall* InDrawCallData)
@@ -1750,10 +1808,6 @@ TSharedPtr<FDreamUIRenderSection> UDreamUIMeshComponent::SetupRenderSection(EDre
 	case EDreamUIRenderSectionType::Mesh:
 		{
 			auto MeshSectionPtr = static_cast<FDreamUIRenderSection_Mesh*>(RenderSection.Get());
-			// Drawn through the draw call's layer from now on. Set before any proxy is made below, which copies it; a proxy the
-			// section keeps is sent it with the frame's other updates.
-			const bool bElementToCanvasChanged = MeshSectionPtr->ElementToCanvas != InDrawCallData->LayerToCanvas;
-			MeshSectionPtr->ElementToCanvas = InDrawCallData->LayerToCanvas;
 			if (bMeshSectionHoldsItsGeometry)
 			{
 				// Taken back. Pooling switched it off on the render thread and dropped its material: it is switched on
@@ -1765,10 +1819,6 @@ TSharedPtr<FDreamUIRenderSection> UDreamUIMeshComponent::SetupRenderSection(EDre
 					[Root, SectionProxy = MeshSectionPtr->RenderProxy, Material = MeshSectionPtr->Material](FRHICommandListImmediate& RHICmdList) {
 						Root->EnableMeshSection_RenderThread(SectionProxy, Material);
 					});
-				if (bElementToCanvasChanged)
-				{
-					QueueMeshSectionElementToCanvas(MeshSectionPtr);
-				}
 				if (InDrawCallData->bPatchClaimedMeshSection)
 				{
 					InDrawCallData->bPatchClaimedMeshSection = false;
@@ -1812,10 +1862,6 @@ TSharedPtr<FDreamUIRenderSection> UDreamUIMeshComponent::SetupRenderSection(EDre
 				else
 				{
 					UpdateMeshSectionRenderData(MeshSectionPtr, RenderCanvas->GetActualRequireNormalAndTangent());
-					if (bElementToCanvasChanged)
-					{
-						QueueMeshSectionElementToCanvas(MeshSectionPtr);
-					}
 				}
 			}
 			else//no valid render-proxy, because it is newly created
@@ -1924,7 +1970,7 @@ TSharedPtr<FDreamUIRenderSection> UDreamUIMeshComponent::SetupRenderSection(EDre
 
 bool UDreamUIMeshComponent::TryPatchMeshSection(const TSharedPtr<FDreamUIRenderSection>& InRenderSection, FDreamUIDrawCall* InDrawCallData)
 {
-	TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_PatchMeshSection);
+	DREAMUI_DETAIL_SCOPE(DreamUI_PatchMeshSection);
 	// Addressed by handle, not by draw-call index: skipped draw-calls have no section, so index-based
 	// addressing hit the wrong section — including reinterpreting a ChildCanvas section as a mesh.
 	if (!InRenderSection.IsValid() || InRenderSection->Type != EDreamUIRenderSectionType::Mesh)
@@ -1944,7 +1990,7 @@ bool UDreamUIMeshComponent::TryPatchMeshSection(const TSharedPtr<FDreamUIRenderS
 
 void UDreamUIMeshComponent::UpdateMeshSection(const TSharedPtr<FDreamUIRenderSection>& InRenderSection, FDreamUIDrawCall* InDrawCallData)
 {
-	TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_UpdateMeshSection);
+	DREAMUI_DETAIL_SCOPE(DreamUI_UpdateMeshSection);
 	if (TryPatchMeshSection(InRenderSection, InDrawCallData))
 	{
 		return;
@@ -2168,7 +2214,6 @@ void UDreamUIMeshComponent::RetargetPendingRenderCommands(FDreamUIRenderSectionP
 		PendingUpdateRenderSectionPriorityArray.RemoveAll([InOldSectionProxy](const UpdateRenderSectionPriority& Item) { return Item.SectionProxy == InOldSectionProxy; });
 		PendingUpdateMeshSectionMaterialDataArray.RemoveAll([InOldSectionProxy](const UpdateMeshSectionMaterialDataStruct& Item) { return Item.SectionProxy == InOldSectionProxy; });
 		PendingUpdateMeshSectionBuiltInDataArray.RemoveAll([InOldSectionProxy](const UpdateMeshSectionBuiltInDataStruct& Item) { return Item.SectionProxy == InOldSectionProxy; });
-		PendingUpdateMeshSectionMatrixDataArray.RemoveAll([InOldSectionProxy](const UpdateMeshSectionMatrixDataStruct& Item) { return Item.SectionProxy == InOldSectionProxy; });
 		return;
 	}
 	for (auto& Item : PendingUpdateMeshSectionDataArray)
@@ -2193,13 +2238,6 @@ void UDreamUIMeshComponent::RetargetPendingRenderCommands(FDreamUIRenderSectionP
 		}
 	}
 	for (auto& Item : PendingUpdateMeshSectionBuiltInDataArray)
-	{
-		if (Item.SectionProxy == InOldSectionProxy)
-		{
-			Item.SectionProxy = InNewSectionProxy;
-		}
-	}
-	for (auto& Item : PendingUpdateMeshSectionMatrixDataArray)
 	{
 		if (Item.SectionProxy == InOldSectionProxy)
 		{
@@ -2733,7 +2771,7 @@ DECLARE_CYCLE_STAT(TEXT("DreamUIMesh FlushRenderCommand"), STAT_DreamUIMesh_Flus
 void UDreamUIMeshComponent::FlushRenderCommand()
 {
 	SCOPE_CYCLE_COUNTER(STAT_DreamUIMesh_FlushRenderCommand)
-	TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_MeshFlushRenderCommand);
+	DREAMUI_DETAIL_SCOPE(DreamUI_MeshFlushRenderCommand);
 	if (!RenderRoot.IsValid())
 	{
 		/**
@@ -2746,7 +2784,6 @@ void UDreamUIMeshComponent::FlushRenderCommand()
 		PendingUpdateRenderSectionPriorityArray.Reset();
 		PendingUpdateMeshSectionMaterialDataArray.Reset();
 		PendingUpdateMeshSectionBuiltInDataArray.Reset();
-		PendingUpdateMeshSectionMatrixDataArray.Reset();
 		return;
 	}
 	if (PendingUpdateMeshSectionDataArray.Num() > 0)
@@ -2818,18 +2855,6 @@ void UDreamUIMeshComponent::FlushRenderCommand()
 					FDreamUIBuiltInDrawParams Params = UpdateData.Params;
 					Params.ResolveTextures_RenderThread(UpdateData.Textures);
 					Root->SetMeshSectionBuiltIn_RenderThread(UpdateData.SectionProxy, Params);
-				}
-			});
-	}
-	if (PendingUpdateMeshSectionMatrixDataArray.Num() > 0)
-	{
-		// All a render layer's move sends: a matrix for each of its sections, in one command with the mesh's others.
-		FDreamUIRenderRoot* Root = RenderRoot.Get();
-		ENQUEUE_RENDER_COMMAND(FDreamUIMeshSectionProxy_SetMeshSectionElementToCanvas)(
-			[Root, PendingUpdateMeshSectionMatrixDataArray = MoveTemp(PendingUpdateMeshSectionMatrixDataArray)](FRHICommandListImmediate& RHICmdList) {
-				for (const auto& UpdateData : PendingUpdateMeshSectionMatrixDataArray)
-				{
-					Root->SetMeshSectionElementToCanvas_RenderThread(UpdateData.SectionProxy, UpdateData.ElementToCanvas);
 				}
 			});
 	}

@@ -460,8 +460,9 @@ private:
 	 *
 	 * A widget can be a render layer of its canvas (IsRenderLayer): the canvas keeps the geometry under it relative to it
 	 * and applies its transform on the GPU, so while it turns or slides, what is under it is neither transformed again nor
-	 * uploaded again -- only its sections' matrix changes. The price is batching: a layer's elements share draw calls only
-	 * with each other. The canvas makes a widget one once its own render transform has changed on a few frames in a row,
+	 * uploaded again -- only its row of the world's render layer table changes (UDreamUIRenderLayerTable). The price is
+	 * batching: a layer's elements batch as 3D elements do, into the draw call just before them only, and are never culled
+	 * by the canvas rect. The canvas makes a widget one once its own render transform has changed on a few frames in a row,
 	 * and takes it back once it has held still for a while (UDreamCanvas::NoteRenderTransformChanged), so this setting is
 	 * rarely one to touch; and some widgets can never be one (UDreamCanvas::CanBeRenderLayer).
 	 */
@@ -478,15 +479,94 @@ public:
 	/** Whether this widget may be a render layer of its canvas, and when; its canvas makes it one, or takes it back, at its next update. */
 	UFUNCTION(BlueprintCallable, Category = "Render Transform")
 	void SetRenderLayerMode(EDreamWidgetRenderLayer Value);
+	/** Its row in its world's render layer table while it is a render layer (UDreamUIRenderLayerTable); 0 when it is none. */
+	int32 GetRenderLayerRow()const { return RenderLayerRow; }
 private:
 	/** Set and cleared by the canvas that makes this widget a render layer; IsRenderLayer. */
 	uint32 bIsRenderLayer : 1 = false;
+	/** Found unable to be a layer during this run of changes (UDreamCanvas::CanBeRenderLayer); asked again when another run starts. */
+	uint32 bRenderLayerRefused : 1 = false;
+	/** Listed with its canvas as one to make a layer at the canvas's next update. */
+	uint32 bRenderLayerCandidate : 1 = false;
+	/** See GetRenderLayerRow: held for it by the canvas that made it a layer. */
+	int32 RenderLayerRow = 0;
+	/**
+	 * The frame its own render transform last changed on, and on how many frames in a row it had changed by then: what its
+	 * canvas makes it a layer by, and takes it back by (UDreamCanvas::NoteRenderTransformChanged).
+	 */
+	uint64 RenderLayerLastChangeFrame = 0;
+	int32 RenderLayerChangeStreak = 0;
 	/** GetRenderLayer's answer, and the generation of the answers it was worked out in (InvalidateRenderLayerCaches). */
 	mutable TWeakObjectPtr<UDreamWidget> CachedRenderLayer;
 	mutable uint64 CachedRenderLayerGeneration = 0;
 	/** IsRenderLayerQuiet's answer, and the generation of the answers it was worked out in. */
 	mutable uint64 CachedLayerQuietGeneration = 0;
 	mutable uint8 bCachedLayerQuiet : 1 = false;
+	/*
+	 * What a render transform's write reads and writes of the widget, besides the render transform and the layer's counters
+	 * above -- the world transform's flags, the children's, the transform event's, the canvas, the cached hierarchy flags,
+	 * the rect bounds' flag, the render-transform bit -- declared together with them: every turning widget of a wall is
+	 * written every frame, and these, spread over the object, were a read from memory each. Each group of bit fields keeps
+	 * the unit it had, apart from the others: some are written from other threads.
+	 */
+	/**
+	 * Every child is stale and pending -- and so, as ever, everything under each -- as this widget's last marking left them:
+	 * none has been composed, flushed or announced since, and none has joined. Its next marking then has nothing to do below
+	 * it, and does not read the children to find that out: a wall of turning buttons read every button's label at every
+	 * turn, only to find it still marked. Whatever takes a child out of that state clears it -- ComputeWorldTransform, the
+	 * flush, a quiet layer's announcement -- and so does a child joining. A byte of its own rather than a bit: a child
+	 * composed on a worker clears it, and workers composing siblings may clear it at once (ForgetChildrenStale).
+	 */
+	mutable int8 ChildrenStaleAndPending = 0;
+	/**
+	 * The transform event was asked for (GetTransformChangedEvent), the only way to bind it. Until then nothing listens, and
+	 * the event is not asked whether anything does: a look that, in a development build, takes the delegate's check against
+	 * other threads, for every write of every animated widget.
+	 */
+	bool bTransformChangedEventAsked = false;
+	/**
+	 * ObjectToWorldTransform is out of date. Set on a widget, it is set on every descendant too -- they are
+	 * composed from it -- which is what lets a second mark stop at a widget already marked.
+	 */
+	mutable uint8 bWorldTransformDirty : 1 = false;
+	/** The world transform changed and the next flush announces it. Like the dirty bit, set here means set below. */
+	uint8 bTransformChangePending : 1 = false;
+	/** The pending change began at this widget, not only above it: what the render-layer rules measure moves by. */
+	uint8 bOwnTransformChanged : 1 = false;
+	/** DreamCanvas which render this UI element */
+	UPROPERTY(Transient) mutable TWeakObjectPtr<UDreamCanvas> RenderCanvas = nullptr;
+	/**
+	 * RenderCanvas as a weak look-up found it while the count of objects gone read RenderCanvasRawGone (DreamUIGone):
+	 * while the count reads the same, it is that canvas, alive and as registered as it was (GetRenderCanvas). Kept on
+	 * the game thread where nothing else reads it meanwhile: SetRenderCanvas, and a render transform's write
+	 * (KeepRenderCanvas).
+	 */
+	mutable UDreamCanvas* RenderCanvasRaw = nullptr;
+	mutable uint64 RenderCanvasRawGone = 0;
+	
+	/** is this widget contains DreamCanvas component */
+	mutable uint32 bIsCanvasWidget:1;
+	
+	mutable uint32 bClipDirty : 1 = true;
+	mutable uint32 bNeedRecreateClip : 1 = true;
+	
+	uint32 bCacheWidgetActiveInHierarchy : 1 = true;
+	uint32 bCacheLayoutVisibleInHierarchy : 1 = true;
+	uint32 bCacheRenderVisibleInHierarchy : 1 = true;
+	uint32 bCacheSelfHitTestVisibleInHierarchy : 1 = true;
+	uint32 bCacheChildrenHitTestVisibleInHierarchy : 1 = true;
+	uint32 bCacheInteractableInHierarchy : 1 = true;
+	/** "This widget and every ancestor are enabled", kept up to date by the interactable walk. */
+	uint32 bCacheEnabledInHierarchy : 1 = true;
+	uint32 bCacheRaycastableInHierarchy : 1 = true;
+	uint32 bLayoutVisibilitySuppressed : 1 = false;
+	uint32 bHasLayoutClippingOverride : 1 = false;
+	FVector2f LayoutScale = FVector2f::UnitVector;
+protected:
+	mutable uint8 bWorldRectBoundsDirty : 1 = true;
+private:
+	/** Cached "any render channel is off its default", so the common case costs one bit test. */
+	uint32 bHasRenderTransform : 1 = false;
 	/**
 	 * Every widget works out GetRenderLayer and IsRenderLayerQuiet again when next asked: a layer came or went, a widget
 	 * changed its place in a tree, or somebody asked for a widget's transform event, to listen to it.
@@ -700,6 +780,8 @@ public:
 	FTransform GetRenderLocalTransform()const;
 	/** Recompute the cached has-a-render-transform bit and push the new transform down the subtree. */
 	void ApplyRenderTransformChange();
+	/** GetRenderCanvas, keeping what it found for the ones after it (RenderCanvasRaw). Game thread, outside parallel work. */
+	UDreamCanvas* KeepRenderCanvas() const;
 	/** Recompute the cached has-a-render-transform bit from the serialized channels. */
 	void RefreshRenderTransformFlag();
 	/**
@@ -1091,21 +1173,26 @@ private:
 	 * and GetRenderLocalTransform.
 	 */
 	mutable FTransform ObjectToWorldTransform;
-	/**
-	 * ObjectToWorldTransform is out of date. Set on a widget, it is set on every descendant too -- they are
-	 * composed from it -- which is what lets a second mark stop at a widget already marked.
-	 */
-	mutable uint8 bWorldTransformDirty : 1 = false;
-	/** The world transform changed and the next flush announces it. Like the dirty bit, set here means set below. */
-	uint8 bTransformChangePending : 1 = false;
-	/** The pending change began at this widget, not only above it: what the render-layer rules measure moves by. */
-	uint8 bOwnTransformChanged : 1 = false;
+	// Its flags are declared with the render transform: see bCachedLayerQuiet's neighbours.
+	/** Clears ChildrenStaleAndPending, from any thread. */
+	void ForgetChildrenStale()const
+	{
+		if (FPlatformAtomics::AtomicRead_Relaxed(&ChildrenStaleAndPending) != 0)
+		{
+			FPlatformAtomics::AtomicStore_Relaxed(&ChildrenStaleAndPending, static_cast<int8>(0));
+		}
+	}
 	/**
 	 * The manager this widget registered with (GetRegisteredManager), whose flush announces its changes. Null with
 	 * no manager: every change is then announced on the spot.
 	 */
 	TWeakObjectPtr<UDreamUIManagerWorldSubsystem> RegisteredManager;
 	void ComputeWorldTransform()const;
+	/**
+	 * The world transform as ComputeWorldTransform would compose it now, without keeping it -- nor that of any stale
+	 * ancestor it is composed from: see GetWorldRectBoundingSphere. Writes nothing.
+	 */
+	FTransform ComposeWorldTransformWithoutKeeping()const;
 	/** Mark this widget and its subtree stale and pending, stopping at a descendant already both. */
 	void MarkWorldTransformStaleRecursive();
 	/** What FlushTransformChanges does with a notice: the canvas's marks, and the visual's. */
@@ -1180,6 +1267,8 @@ public:
 	FWidgetActiveChangedEvent& GetWidgetActiveChangedEvent(){return OnWidgetActiveChangedEvent;}
 	/** Asking for it counts as meaning to listen: a render layer holding this widget no longer takes its moves as quiet. */
 	FTransformChangedEvent& GetTransformChangedEvent();
+	/** Whether anything listens to the transform event: nothing can before it is asked for (bTransformChangedEventAsked). */
+	bool HasTransformChangedListener()const { return bTransformChangedEventAsked && OnTransformChangedEvent.IsBound(); }
 	FDimensionChangedEvent& GetDimensionChangedEvent(){return OnDimensionChangedEvent;}
 	FChildDimensionChangedEvent& GetChildDimensionChangedEvent(){return OnChildDimensionChangedEvent;}
 	FAttachmentChangedEvent& GetAttachmentChangedEvent(){return OnAttachmentChangedEvent;}
@@ -1272,7 +1361,6 @@ protected:
 	mutable FVector CacheWorldRectCenter = FVector::ZeroVector;
 	/** Zero means "no usable bound" -- a degenerate rect, never a legitimate answer of nothing. */
 	mutable double CacheWorldRectRadius = 0.0;
-	mutable uint8 bWorldRectBoundsDirty : 1 = true;
 	
 #pragma region AnchorData
 public:
@@ -2138,29 +2226,8 @@ private:
 	friend class FDreamCanvasHierarchyOrderTest;
 	/** Swaps arranged geometry out of AnchorData around prefab serialization; raw access, no side effects. */
 	friend class FDreamUIAuthoredGeometrySaveScope;
-	/** DreamCanvas which render this UI element */
-	UPROPERTY(Transient) mutable TWeakObjectPtr<UDreamCanvas> RenderCanvas = nullptr;
-	
-	/** is this widget contains DreamCanvas component */
-	mutable uint32 bIsCanvasWidget:1;
-	
-	mutable uint32 bClipDirty : 1 = true;
-	mutable uint32 bNeedRecreateClip : 1 = true;
-	
-	uint32 bCacheWidgetActiveInHierarchy : 1 = true;
-	uint32 bCacheLayoutVisibleInHierarchy : 1 = true;
-	uint32 bCacheRenderVisibleInHierarchy : 1 = true;
-	uint32 bCacheSelfHitTestVisibleInHierarchy : 1 = true;
-	uint32 bCacheChildrenHitTestVisibleInHierarchy : 1 = true;
-	uint32 bCacheInteractableInHierarchy : 1 = true;
-	/** "This widget and every ancestor are enabled", kept up to date by the interactable walk. */
-	uint32 bCacheEnabledInHierarchy : 1 = true;
-	uint32 bCacheRaycastableInHierarchy : 1 = true;
-	uint32 bLayoutVisibilitySuppressed : 1 = false;
-	uint32 bHasLayoutClippingOverride : 1 = false;
-	FVector2f LayoutScale = FVector2f::UnitVector;
-	/** Cached "any render channel is off its default", so the common case costs one bit test. */
-	uint32 bHasRenderTransform : 1 = false;
+	// The canvas, the cached hierarchy flags and the render-transform bit are declared with the render transform: see
+	// bCachedLayerQuiet's neighbours.
 	EDreamWidgetClipping LayoutClippingOverride = EDreamWidgetClipping::Inherit;
 
 	/**

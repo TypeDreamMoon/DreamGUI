@@ -121,7 +121,8 @@ protected:
 	static void GatherRaycastCandidates(UDreamCanvas* InRootCanvas, const FVector& InRayOrigin, const FVector& InRayEnd, TArray<UDreamVisual*>& OutCandidates);
 	/**
 	 * On the game thread, before GatherRaycastCandidates runs for InRootCanvas anywhere else: the canvas's widget, and the
-	 * widgets above it that other trees may share, composed and resolved.
+	 * widgets above it that other trees may share, composed and resolved. For a canvas whose widget has no parent -- nothing
+	 * above it for another tree to share -- on the thread that then gathers from it, as well.
 	 */
 	static void PrepareRaycastTree(UDreamCanvas* InRootCanvas);
 	/** RaycastUIAlongRay's second half, on the game thread: the candidates' exact tests, and the hits sorted as they are drawn. */

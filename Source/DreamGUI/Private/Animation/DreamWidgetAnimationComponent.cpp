@@ -5,6 +5,8 @@
 #include "Animation/DreamWidgetAnimation.h"
 #include "Animation/DreamUISequence.h"
 #include "Animation/DreamWidgetAnimationPlayer.h"
+#include "Animation/DreamUIAnimationClock.h"
+#include "Animation/DreamUIAnimationTicker.h"
 #include "Animation/DreamUIMovieScenePropertyAccessors.h"
 #include "Core/DreamUserWidget.h"
 #include "DreamGUI.h"
@@ -17,6 +19,20 @@
 #include "MovieSceneSequenceTickManager.h"
 #include "MovieSceneTimeController.h"
 #include "GameFramework/WorldSettings.h"
+#include "HAL/IConsoleManager.h"
+
+static TAutoConsoleVariable<int32> CVarDreamUIReuseAnimationPlayers(
+	TEXT("DreamUI.Animation.ReusePlayers"),
+	1,
+	TEXT("1: a player whose animation instance ended is kept, registered and set up, to play that animation's next instance ")
+	TEXT("(UDreamWidgetAnimationComponent::SparePlayers). 0: every play makes a player, and every end tears one down."),
+	ECVF_Default);
+
+static TAutoConsoleVariable<int32> CVarDreamUIMaxSpareAnimationPlayers(
+	TEXT("DreamUI.Animation.MaxSparePlayers"),
+	2,
+	TEXT("How many players whose instance ended each animation component keeps to play again (DreamUI.Animation.ReusePlayers)."),
+	ECVF_Default);
 
 UDreamWidgetAnimationComponent::UDreamWidgetAnimationComponent()
 {
@@ -25,21 +41,34 @@ UDreamWidgetAnimationComponent::UDreamWidgetAnimationComponent()
 	DeclareTransformChangedUnused(StaticClass());
 }
 
+FDreamUIAnimationHandle FDreamUIAnimationHandle::Of(UDreamWidgetAnimationPlayer* InPlayer)
+{
+	FDreamUIAnimationHandle Handle;
+	Handle.Player = InPlayer;
+	Handle.Instance = InPlayer != nullptr ? InPlayer->GetInstance() : 0;
+	return Handle;
+}
+
 bool FDreamUIAnimationHandle::IsValid() const
 {
-	// Live, not merely allocated: a stopped instance's player object lingers until the collector
-	// takes it, and a handle to it must read as done the moment it stops.
+	// Live, not merely allocated: a stopped instance's player object lingers -- until the collector takes it, or to play
+	// its animation's next instance -- and a handle to it must read as done the moment it stops.
 	if (!::IsValid(Player.Get()))
 	{
 		return false;
 	}
 	const UDreamWidgetAnimationComponent* Owner = Player->GetTypedOuter<UDreamWidgetAnimationComponent>();
-	return Owner != nullptr && Owner->OwnsLiveInstance(Player.Get());
+	return Owner != nullptr && Owner->IsLiveInstance(*this);
 }
 
 bool UDreamWidgetAnimationComponent::OwnsLiveInstance(const UDreamWidgetAnimationPlayer* Player) const
 {
 	return IsActiveSequencePlayer(Player);
+}
+
+bool UDreamWidgetAnimationComponent::IsLiveInstance(const FDreamUIAnimationHandle& Handle) const
+{
+	return IsActiveSequencePlayer(Handle.Player) && Handle.Player->GetInstance() == Handle.Instance;
 }
 
 UMovieSceneSequence* FDreamUIAnimationHandle::GetAnimation() const
@@ -126,11 +155,14 @@ namespace DreamUI
 	 * animation running at exactly the rate its author authored -- the Sequencer-side equivalent of
 	 * UDreamTweener::affectByTimeDilation, which the tween side has always had.
 	 */
-	struct FDreamUIUnscaledTimeController : FMovieSceneTimeController_Tick
+	struct FDreamUIUnscaledTimeController : FDreamUIAnimationClock
 	{
 		explicit FDreamUIUnscaledTimeController(UWorld* InWorld)
 			: WeakWorld(InWorld)
-		{}
+		{
+			// Its tick changes the delta before adding it: ticked through the virtual (FDreamUIAnimationClock::bTicksAsGiven).
+			bTicksAsGiven = false;
+		}
 
 	protected:
 		virtual void OnTick(float DeltaSeconds, float InPlayRate) override
@@ -149,7 +181,7 @@ namespace DreamUI
 			{
 				DeltaSeconds /= Dilation;
 			}
-			FMovieSceneTimeController_Tick::OnTick(DeltaSeconds, InPlayRate);
+			FDreamUIAnimationClock::OnTick(DeltaSeconds, InPlayRate);
 		}
 
 	private:
@@ -176,15 +208,15 @@ void UDreamWidgetAnimationComponent::ApplyTimeControl(UDreamWidgetAnimationPlaye
 		{
 			return;
 		}
-		Player->SetTimeController(MakeShared<FMovieSceneTimeController_Tick>());
+		// The engine's tick controller, as DreamGUI's clock, which the player reads in line (FDreamUIAnimationClock).
+		Player->TrustClock(MakeShared<FDreamUIAnimationClock>());
 	}
 	else
 	{
 		UDreamWidget* HostWidget = GetWidget();
 		UWorld* World = IsValid(HostWidget) ? HostWidget->GetWorld() : nullptr;
-		Player->SetTimeController(MakeShared<DreamUI::FDreamUIUnscaledTimeController>(World));
+		Player->TrustClock(MakeShared<DreamUI::FDreamUIUnscaledTimeController>(World));
 	}
-	Player->TrustTimeController();
 }
 
 void UDreamWidgetAnimationComponent::OnDestroy()
@@ -194,6 +226,7 @@ void UDreamWidgetAnimationComponent::OnDestroy()
 	// blueprint code -- and with Super first, that code ran while the widget was already being torn
 	// down. It also meant the blueprint's own OnDestroy, asking IsAnyAnimationPlaying, was told yes.
 	StopAllAnimations();
+	TearDownSparePlayers();
 
 	if (SequencePlayer)
 	{
@@ -294,6 +327,7 @@ FDreamUIAnimationHandle UDreamWidgetAnimationComponent::PlayAnimationRelative(UM
 		{
 			Player->Play();
 		}
+		Player->KeepTicked();
 		return Live;
 	}
 	return PlayAnimationInternal(Animation, 0.0f, TOptional<float>(), 1, PlayMode, PlaybackSpeed, bRestoreState);
@@ -339,9 +373,25 @@ FDreamUIAnimationHandle UDreamWidgetAnimationComponent::PlayAnimationInternal(
 		? EMovieSceneCompletionModeOverride::ForceRestoreState
 		: EMovieSceneCompletionModeOverride::ForceKeepState;
 
-	UDreamWidgetAnimationPlayer* Player = NewObject<UDreamWidgetAnimationPlayer>(this);
-	Player->InitializeForTick(this);
-	Player->Initialize(Animation, Settings);
+	UDreamWidgetAnimationPlayer* Player = TakeSparePlayer(Animation, Settings);
+	if (Player == nullptr)
+	{
+		Player = NewObject<UDreamWidgetAnimationPlayer>(this);
+		// Ticked by DreamGUI's animation ticker for the interval the settings resolve to -- the component's own, never the
+		// owner's -- when there is one; by the world's sequence tick manager otherwise.
+		UDreamUIAnimationTicker* Ticker = UDreamUIAnimationTicker::IsEnabled()
+			? UDreamUIAnimationTicker::FindOrCreate(HostWidget->GetWorld(), Settings.TickInterval) : nullptr;
+		if (Ticker != nullptr)
+		{
+			Player->UseTicker(Ticker);
+		}
+		else
+		{
+			Player->InitializeForTick(this);
+		}
+		Player->Initialize(Animation, Settings);
+	}
+	Player->BeginInstance();
 	// After Initialize, which is where the player builds the controller this may replace, and before
 	// Play, which is where the controller is first asked what time it is.
 	ApplyTimeControl(Player);
@@ -375,8 +425,9 @@ FDreamUIAnimationHandle UDreamWidgetAnimationComponent::PlayAnimationInternal(
 	{
 		Player->Play();
 	}
+	Player->KeepTicked();
 
-	Handle.Player = Player;
+	Handle = FDreamUIAnimationHandle::Of(Player);
 	NotifyInstanceStarted(Player);
 	return Handle;
 }
@@ -424,10 +475,12 @@ void UDreamWidgetAnimationComponent::QueuePlayAnimationTimeRange(UMovieSceneSequ
 void UDreamWidgetAnimationComponent::QueueStopAnimation(FDreamUIAnimationHandle Handle)
 {
 	TWeakObjectPtr<UDreamWidgetAnimationPlayer> WeakPlayer(Handle.Player);
-	QueueAnimationAction([this, WeakPlayer]()
+	const uint32 Instance = Handle.Instance;
+	QueueAnimationAction([this, WeakPlayer, Instance]()
 	{
 		FDreamUIAnimationHandle Later;
 		Later.Player = WeakPlayer.Get();
+		Later.Instance = Instance;
 		StopAnimation(Later);
 	});
 }
@@ -443,10 +496,12 @@ void UDreamWidgetAnimationComponent::QueueStopAllAnimations()
 void UDreamWidgetAnimationComponent::QueuePauseAnimation(FDreamUIAnimationHandle Handle)
 {
 	TWeakObjectPtr<UDreamWidgetAnimationPlayer> WeakPlayer(Handle.Player);
-	QueueAnimationAction([this, WeakPlayer]()
+	const uint32 Instance = Handle.Instance;
+	QueueAnimationAction([this, WeakPlayer, Instance]()
 	{
 		FDreamUIAnimationHandle Later;
 		Later.Player = WeakPlayer.Get();
+		Later.Instance = Instance;
 		PauseAnimation(Later);
 	});
 }
@@ -455,7 +510,7 @@ void UDreamWidgetAnimationComponent::QueuePauseAnimation(FDreamUIAnimationHandle
 
 float UDreamWidgetAnimationComponent::PauseAnimation(FDreamUIAnimationHandle Handle)
 {
-	if (!IsActiveSequencePlayer(Handle.Player))
+	if (!IsLiveInstance(Handle))
 	{
 		return 0.0f;
 	}
@@ -468,7 +523,7 @@ float UDreamWidgetAnimationComponent::PauseAnimation(FDreamUIAnimationHandle Han
 
 void UDreamWidgetAnimationComponent::ResumeAnimation(FDreamUIAnimationHandle Handle)
 {
-	if (IsActiveSequencePlayer(Handle.Player) && Handle.Player->IsPaused())
+	if (IsLiveInstance(Handle) && Handle.Player->IsPaused())
 	{
 		if (Handle.Player->IsReversed())
 		{
@@ -478,12 +533,13 @@ void UDreamWidgetAnimationComponent::ResumeAnimation(FDreamUIAnimationHandle Han
 		{
 			Handle.Player->Play();
 		}
+		Handle.Player->KeepTicked();
 	}
 }
 
 void UDreamWidgetAnimationComponent::StopAnimation(FDreamUIAnimationHandle Handle)
 {
-	if (IsActiveSequencePlayer(Handle.Player))
+	if (IsLiveInstance(Handle))
 	{
 		ReleaseActiveSequencePlayer(Handle.Player);
 	}
@@ -491,7 +547,7 @@ void UDreamWidgetAnimationComponent::StopAnimation(FDreamUIAnimationHandle Handl
 
 void UDreamWidgetAnimationComponent::ReverseAnimation(FDreamUIAnimationHandle Handle)
 {
-	if (IsActiveSequencePlayer(Handle.Player))
+	if (IsLiveInstance(Handle))
 	{
 		Handle.Player->ChangePlaybackDirection();
 	}
@@ -499,27 +555,27 @@ void UDreamWidgetAnimationComponent::ReverseAnimation(FDreamUIAnimationHandle Ha
 
 bool UDreamWidgetAnimationComponent::IsAnimationPlaying(FDreamUIAnimationHandle Handle) const
 {
-	return IsActiveSequencePlayer(Handle.Player) && Handle.Player->IsPlaying();
+	return IsLiveInstance(Handle) && Handle.Player->IsPlaying();
 }
 
 bool UDreamWidgetAnimationComponent::IsAnimationPaused(FDreamUIAnimationHandle Handle) const
 {
-	return IsActiveSequencePlayer(Handle.Player) && Handle.Player->IsPaused();
+	return IsLiveInstance(Handle) && Handle.Player->IsPaused();
 }
 
 bool UDreamWidgetAnimationComponent::IsAnimationPlayingForward(FDreamUIAnimationHandle Handle) const
 {
-	return IsActiveSequencePlayer(Handle.Player) && !Handle.Player->IsReversed();
+	return IsLiveInstance(Handle) && !Handle.Player->IsReversed();
 }
 
 float UDreamWidgetAnimationComponent::GetAnimationCurrentTime(FDreamUIAnimationHandle Handle) const
 {
-	return IsActiveSequencePlayer(Handle.Player) ? static_cast<float>(Handle.Player->GetCurrentTime().AsSeconds()) : 0.0f;
+	return IsLiveInstance(Handle) ? static_cast<float>(Handle.Player->GetCurrentTime().AsSeconds()) : 0.0f;
 }
 
 void UDreamWidgetAnimationComponent::SetAnimationCurrentTime(FDreamUIAnimationHandle Handle, float InTime)
 {
-	if (IsActiveSequencePlayer(Handle.Player))
+	if (IsLiveInstance(Handle))
 	{
 		Handle.Player->SetPlaybackPosition(FMovieSceneSequencePlaybackParams(FMath::Max(0.0f, InTime), EUpdatePositionMethod::Jump));
 	}
@@ -527,7 +583,7 @@ void UDreamWidgetAnimationComponent::SetAnimationCurrentTime(FDreamUIAnimationHa
 
 void UDreamWidgetAnimationComponent::SetNumLoopsToPlay(FDreamUIAnimationHandle Handle, int32 NumLoopsToPlay)
 {
-	if (IsActiveSequencePlayer(Handle.Player))
+	if (IsLiveInstance(Handle))
 	{
 		// Zero or less means forever, as in PlayAnimationInternal.
 		Handle.Player->SetLoopCount(NumLoopsToPlay <= 0 ? -1 : NumLoopsToPlay - 1);
@@ -536,7 +592,7 @@ void UDreamWidgetAnimationComponent::SetNumLoopsToPlay(FDreamUIAnimationHandle H
 
 void UDreamWidgetAnimationComponent::SetPlaybackSpeed(FDreamUIAnimationHandle Handle, float PlaybackSpeed)
 {
-	if (IsActiveSequencePlayer(Handle.Player))
+	if (IsLiveInstance(Handle))
 	{
 		Handle.Player->SetPlayRate(FMath::Max(FMath::Abs(PlaybackSpeed), UE_SMALL_NUMBER));
 	}
@@ -544,7 +600,7 @@ void UDreamWidgetAnimationComponent::SetPlaybackSpeed(FDreamUIAnimationHandle Ha
 
 void UDreamWidgetAnimationComponent::SetAnimationWeight(FDreamUIAnimationHandle Handle, float Weight)
 {
-	if (!IsActiveSequencePlayer(Handle.Player))
+	if (!IsLiveInstance(Handle))
 	{
 		return;
 	}
@@ -560,7 +616,7 @@ void UDreamWidgetAnimationComponent::SetAnimationWeight(FDreamUIAnimationHandle 
 
 void UDreamWidgetAnimationComponent::ClearAnimationWeight(FDreamUIAnimationHandle Handle)
 {
-	if (IsActiveSequencePlayer(Handle.Player))
+	if (IsLiveInstance(Handle))
 	{
 		Handle.Player->RemoveWeight();
 	}
@@ -580,7 +636,7 @@ FDreamUIAnimationHandle UDreamWidgetAnimationComponent::FindAnimationInstance(UM
 		UDreamWidgetAnimationPlayer* Player = ActiveSequencePlayers[Index];
 		if (IsValid(Player) && Player->GetSequence() == Animation)
 		{
-			Handle.Player = Player;
+			Handle = FDreamUIAnimationHandle::Of(Player);
 			break;
 		}
 	}
@@ -623,9 +679,7 @@ float UDreamWidgetAnimationComponent::PauseAnimationsOf(UMovieSceneSequence* Ani
 	{
 		if (IsValid(Player) && Player->GetSequence() == Animation)
 		{
-			FDreamUIAnimationHandle Handle;
-			Handle.Player = Player;
-			PausedTime = PauseAnimation(Handle);
+			PausedTime = PauseAnimation(FDreamUIAnimationHandle::Of(Player));
 		}
 	}
 	return PausedTime;
@@ -662,7 +716,10 @@ void UDreamWidgetAnimationComponent::StopAllAnimations()
 		{
 			Player->OnNativeFinished.Unbind();
 			Player->Stop();
-			Player->TearDown();
+			if (!KeepSparePlayer(Player))
+			{
+				Player->TearDown();
+			}
 			NotifyInstanceFinished(Player);
 		}
 	}
@@ -716,17 +773,72 @@ void UDreamWidgetAnimationComponent::ReleaseActiveSequencePlayer(UDreamWidgetAni
 	{
 		Player->Stop();
 	}
-	Player->TearDown();
 	// Out of the list before anyone hears about it, so a Finished listener asking whether the
 	// instance still plays gets the answer it expects.
 	ActiveSequencePlayers.RemoveSingleSwap(Player);
+	if (!KeepSparePlayer(Player))
+	{
+		Player->TearDown();
+	}
 	NotifyInstanceFinished(Player);
+}
+
+UDreamWidgetAnimationPlayer* UDreamWidgetAnimationComponent::TakeSparePlayer(UMovieSceneSequence* InAnimation, const FMovieSceneSequencePlaybackSettings& InSettings)
+{
+	for (int32 Index = SparePlayers.Num() - 1; Index >= 0; --Index)
+	{
+		UDreamWidgetAnimationPlayer* Spare = SparePlayers[Index];
+		if (!IsValid(Spare))
+		{
+			SparePlayers.RemoveAt(Index);
+			SparePlayerFrames.RemoveAt(Index);
+			continue;
+		}
+		if (Spare->GetSequence() != InAnimation || SparePlayerFrames[Index] >= GFrameCounter)
+		{
+			continue;
+		}
+		SparePlayers.RemoveAt(Index);
+		SparePlayerFrames.RemoveAt(Index);
+		if (Spare->TryPrepareReplay(InSettings))
+		{
+			return Spare;
+		}
+		// Asked for what only a new player gets: this one is not kept for another try.
+		Spare->TearDown();
+	}
+	return nullptr;
+}
+
+bool UDreamWidgetAnimationComponent::KeepSparePlayer(UDreamWidgetAnimationPlayer* Player)
+{
+	if (CVarDreamUIReuseAnimationPlayers.GetValueOnGameThread() == 0 || !IsValid(Player) || Player->GetSequence() == nullptr
+		|| Player->IsPlaying() || Player->IsPaused() || SparePlayers.Num() >= CVarDreamUIMaxSpareAnimationPlayers.GetValueOnGameThread())
+	{
+		return false;
+	}
+	SparePlayers.Add(Player);
+	SparePlayerFrames.Add(GFrameCounter);
+	return true;
+}
+
+void UDreamWidgetAnimationComponent::TearDownSparePlayers()
+{
+	TArray<TObjectPtr<UDreamWidgetAnimationPlayer>> Spares = MoveTemp(SparePlayers);
+	SparePlayers.Reset();
+	SparePlayerFrames.Reset();
+	for (UDreamWidgetAnimationPlayer* Spare : Spares)
+	{
+		if (IsValid(Spare))
+		{
+			Spare->TearDown();
+		}
+	}
 }
 
 void UDreamWidgetAnimationComponent::NotifyInstanceStarted(UDreamWidgetAnimationPlayer* Player)
 {
-	FDreamUIAnimationHandle Handle;
-	Handle.Player = Player;
+	const FDreamUIAnimationHandle Handle = FDreamUIAnimationHandle::Of(Player);
 	UMovieSceneSequence* Animation = Player->GetSequence();
 
 	OnInstanceStarted.Broadcast(Handle);
@@ -740,8 +852,7 @@ void UDreamWidgetAnimationComponent::NotifyInstanceStarted(UDreamWidgetAnimation
 
 void UDreamWidgetAnimationComponent::NotifyInstanceFinished(UDreamWidgetAnimationPlayer* Player)
 {
-	FDreamUIAnimationHandle Handle;
-	Handle.Player = Player;
+	const FDreamUIAnimationHandle Handle = FDreamUIAnimationHandle::Of(Player);
 	UMovieSceneSequence* Animation = Player->GetSequence();
 
 	OnInstanceFinished.Broadcast(Handle);

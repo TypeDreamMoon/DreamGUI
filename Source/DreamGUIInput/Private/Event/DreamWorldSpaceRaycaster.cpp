@@ -2,6 +2,7 @@
 
 #include "Event/DreamWorldSpaceRaycaster.h"
 #include "Core/Components/DreamCanvas.h"
+#include "Core/Components/DreamWidget.h"
 #include "Core/DreamUIManager.h"
 #include "Core/DreamUISettings.h"
 #include "Core/DreamUIWorldContext.h"
@@ -111,15 +112,60 @@ void UDreamWorldSpaceRaycaster::Raycast(UDreamPointerEventData* InPointerEventDa
 	//
 	// One ray for every canvas: making it asks the player's view for its projection, which cost more than testing a
 	// small panel against it, once per world panel.
+	/**
+	 * Which canvases the ray is put to: each a root in world space, on this raycaster's channel. With many canvases that is
+	 * asked on as many threads as there are -- it reads each canvas, and a world of panels is thousands of them, a few reads
+	 * from memory each -- and the answer says too whether the canvas's widget stands alone at the top of its tree, so that
+	 * the thread gathering from it prepares it: nothing above it is another tree's (PrepareRaycastTree).
+	 */
+	enum class ETraced : uint8 { No, Alone, UnderAnother };
+	const TArray<UDreamCanvas*>& AllCanvases = Manager->GetAllCanvasesResolved();
+	const int32 MinCanvases = CVarDreamUIParallelRaycastMinCanvases.GetValueOnGameThread();
+	const bool bParallel = MinCanvases > 0 && AllCanvases.Num() >= MinCanvases && FApp::ShouldUseThreadingForPerformance();
+	const ETraceTypeQuery Channel = TraceChannel.GetValue();
 	TArray<UDreamCanvas*> TracedCanvases;
-	for (const TWeakObjectPtr<UDreamCanvas>& CanvasPtr : Manager->GetAllCanvasArray())
+	TArray<ETraced> TracedHow;
+	if (bParallel)
 	{
-		UDreamCanvas* Canvas = CanvasPtr.Get();
-		if (!IsValid(Canvas))continue;
-		if (!Canvas->IsRootCanvas())continue;
-		if (!Canvas->IsRenderToWorldSpace())continue;
-		if (Canvas->GetTraceChannel() != TraceChannel.GetValue())continue;
-		TracedCanvases.Add(Canvas);
+		TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_ParallelTracedCanvases);
+		TArray<UDreamCanvas*> Resolved;
+		Resolved.SetNumZeroed(AllCanvases.Num());
+		TArray<ETraced> How;
+		How.SetNumZeroed(AllCanvases.Num());
+		ParallelFor(TEXT("DreamUI_TracedCanvases"), AllCanvases.Num(), 64, [&AllCanvases, &Resolved, &How, Channel](int32 Index)
+		{
+			// Resolved already, a canvas that is garbage left out (GetAllCanvasesResolved). Nothing asked here writes anything
+			// once a canvas knows its root and widget, which it does from its first update.
+			UDreamCanvas* const Canvas = AllCanvases[Index];
+			if (Canvas == nullptr || !Canvas->IsRootCanvas() || !Canvas->IsRenderToWorldSpace() || Canvas->GetTraceChannel() != Channel)
+			{
+				return;
+			}
+			const UDreamWidget* Widget = Canvas->GetWidget();
+			Resolved[Index] = Canvas;
+			How[Index] = Widget != nullptr && Widget->GetParent() == nullptr ? ETraced::Alone : ETraced::UnderAnother;
+		});
+		for (int32 Index = 0; Index < AllCanvases.Num(); ++Index)
+		{
+			if (How[Index] != ETraced::No)
+			{
+				TracedCanvases.Add(Resolved[Index]);
+				TracedHow.Add(How[Index]);
+			}
+		}
+	}
+	else
+	{
+		for (UDreamCanvas* Canvas : AllCanvases)
+		{
+			// Resolved already, a canvas that is garbage left out.
+			if (Canvas == nullptr)continue;
+			if (!Canvas->IsRootCanvas())continue;
+			if (!Canvas->IsRenderToWorldSpace())continue;
+			if (Canvas->GetTraceChannel() != Channel)continue;
+			TracedCanvases.Add(Canvas);
+			TracedHow.Add(ETraced::UnderAnother);
+		}
 	}
 	if (TracedCanvases.Num() > 0 && GenerateRay(InPointerEventData, OutRayOrigin, OutRayDirection, OutRayEnd, CurrentRayLength))
 	{
@@ -130,18 +176,26 @@ void UDreamWorldSpaceRaycaster::Raycast(UDreamPointerEventData* InPointerEventDa
 		// canvas after another as before, on the game thread, where a custom raycast may run a Blueprint.
 		TArray<TArray<UDreamVisual*>> Candidates;
 		Candidates.SetNum(TracedCanvases.Num());
-		const int32 MinCanvases = CVarDreamUIParallelRaycastMinCanvases.GetValueOnGameThread();
-		if (MinCanvases > 0 && TracedCanvases.Num() >= MinCanvases && FApp::ShouldUseThreadingForPerformance())
+		if (bParallel && TracedCanvases.Num() >= MinCanvases)
 		{
 			TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_ParallelRaycastCandidates);
-			for (UDreamCanvas* Canvas : TracedCanvases)
+			// A canvas under widgets another tree may share is prepared here; one standing alone, by the thread that gathers
+			// from it.
+			for (int32 Index = 0; Index < TracedCanvases.Num(); ++Index)
 			{
-				PrepareRaycastTree(Canvas);
+				if (TracedHow[Index] == ETraced::UnderAnother)
+				{
+					PrepareRaycastTree(TracedCanvases[Index]);
+				}
 			}
 			constexpr int32 MinBatchSize = 16;
 			ParallelFor(TEXT("DreamUI_GatherRaycastCandidates"), TracedCanvases.Num(), MinBatchSize,
-				[&TracedCanvases, &Candidates, &OutRayOrigin, &OutRayEnd](int32 Index)
+				[&TracedCanvases, &TracedHow, &Candidates, &OutRayOrigin, &OutRayEnd](int32 Index)
 				{
+					if (TracedHow[Index] == ETraced::Alone)
+					{
+						PrepareRaycastTree(TracedCanvases[Index]);
+					}
 					GatherRaycastCandidates(TracedCanvases[Index], OutRayOrigin, OutRayEnd, Candidates[Index]);
 				});
 		}

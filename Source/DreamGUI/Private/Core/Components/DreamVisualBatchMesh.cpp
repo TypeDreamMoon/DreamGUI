@@ -2,6 +2,7 @@
 // Modified by TypeDreamMoon.
 
 #include "Core/Components/DreamVisualBatchMesh.h"
+#include "Core/DreamUIDetailTrace.h"
 #include "DreamGUI.h"
 #include "Core/Components/DreamCanvas.h"
 #include "Utils/DreamUIUtils.h"
@@ -240,7 +241,7 @@ void UDreamVisualBatchMesh::UpdateGeometry()
 	if (GetAnythingDirty() || pixelPerfectAffectTransform)
 	{
 		SCOPE_CYCLE_COUNTER(STAT_DreamUpdateGeometry);
-		TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_OnUpdateGeometry);
+		DREAMUI_DETAIL_SCOPE(DreamUI_OnUpdateGeometry);
 		UIGeometry->Clear();
 		//check if GeometryModifier will affect vertex data, if so we need to update these data in OnUpdateGeometry
 		{
@@ -268,6 +269,8 @@ void UDreamVisualBatchMesh::UpdateGeometry()
 		bWidgetPropertyDataFontMarkDirty = false;
 		FillWidgetPropertyDataForMaterial_InitialMark(Canvas->GetWidgetPropertyDataAsTexture(), GetFontMark_WidgetPropertyDataForMaterial());
 		FillWidgetPropertyDataForMaterial_Extra(Canvas->GetWidgetPropertyDataAsTexture());
+		// The row its vertices are kept in now; a transform below that puts them in another writes that one after.
+		FillWidgetPropertyDataForMaterial_RenderLayerRow(Canvas->GetWidgetPropertyDataAsTexture(), UIGeometry->RenderLayerRow);
 	}
 	if (bClipDataPositionChanged)
 	{
@@ -279,7 +282,7 @@ void UDreamVisualBatchMesh::UpdateGeometry()
 	{
 		{
 			SCOPE_CYCLE_COUNTER(STAT_TransformVertices)
-			TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_TransformVertices);
+			DREAMUI_DETAIL_SCOPE(DreamUI_TransformVertices);
 #if 1
 			check(!UIGeometry->bIsCalculating);//this should not happen
 			UIGeometry->bIsCalculating = true;
@@ -298,9 +301,13 @@ void UDreamVisualBatchMesh::UpdateGeometry()
 			 * destroyed while the task is in flight.
 			 */
 			CalculateLocalBounds();
-			auto Transform = [Params = FDreamUIGeometry::MakeTransformVerticesParams(Canvas, this), Geometry = this->UIGeometry]()
+			FDreamUIGeometry::FTransformVerticesParams Params = FDreamUIGeometry::MakeTransformVerticesParams(Canvas, this);
+			// Which row of the render layer table the vertices are placed on the canvas through, 0 for none: the record
+			// says it to the vertex shaders (DreamUIRenderLayer.ush), in the same frame as the vertices change space.
+			FillWidgetPropertyDataForMaterial_RenderLayerRow(Canvas->GetWidgetPropertyDataAsTexture(), Params.RenderLayerRow);
+			auto Transform = [Params = MoveTemp(Params), Geometry = this->UIGeometry]()
 			{
-				TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_TransformVerticesTask);
+				DREAMUI_DETAIL_SCOPE(DreamUI_TransformVerticesTask);
 				FDreamUIGeometry::TransformVertices(Params, Geometry.Get());
 				Geometry->bIsCalculating = false;
 			};

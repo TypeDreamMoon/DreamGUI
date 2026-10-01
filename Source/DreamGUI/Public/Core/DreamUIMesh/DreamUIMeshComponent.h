@@ -63,13 +63,6 @@ struct DREAMGUI_API FDreamUIRenderSection_Mesh : public FDreamUIRenderSection
 	 */
 	TArray<TSharedPtr<const FDreamUIGeometry>> SourceGeometries;
 	bool bSourceNormalAndTangent = false;
-	/**
-	 * What the vertices are drawn through ahead of the canvas's transform: the transform of the render layer they are kept
-	 * relative to (FDreamUIDrawCall::LayerToCanvas), identity for a section of none. The section proxy has its own copy,
-	 * made with it and kept in step by a pending update (UDreamUIMeshComponent::FlushRenderCommand); a pooled section
-	 * keeps both, so the two never differ.
-	 */
-	FMatrix44f ElementToCanvas = FMatrix44f::Identity;
 
 	void Reset()
 	{
@@ -189,16 +182,17 @@ public:
 	 */
 	bool PatchMeshSection(FDreamUIRenderSection_Mesh* InMeshSection, const TArray<TSharedPtr<const FDreamUIGeometry>>& InGeometries);
 	/**
-	 * The render layer of the draw call InRenderSection was set up from moved: the section is drawn through the draw
-	 * call's LayerToCanvas from now on, and its box follows. Nothing else of it changes, and nothing but the matrix goes
-	 * to the render thread. Game thread.
+	 * A render layer whose elements the draw call InRenderSection was set up from holds moved: the section's box follows
+	 * the draw call's CanvasBounds. Nothing goes to the render thread -- the layer's row of the render layer table places
+	 * the vertices. The canvas's own sections only, from any thread, as the canvas's placement may run on a worker.
 	 */
-	void UpdateMeshSectionElementToCanvas(const TSharedPtr<FDreamUIRenderSection>& InRenderSection, const FDreamUIDrawCall& InDrawCallData);
+	void UpdateMeshSectionBounds(const TSharedPtr<FDreamUIRenderSection>& InRenderSection, const FDreamUIDrawCall& InDrawCallData);
 	/**
-	 * Whether sections can be drawn through a render layer's matrix here (FDreamUIRenderSection_Mesh::ElementToCanvas).
-	 * Only DreamGUI's own renderer applies one. UE's renderer draws a section through the engine's vertex factory and the
-	 * primitive's transform alone, which leave no room for it, and it draws every mesh that carries its section data --
-	 * among them every mesh in the level editor's world, for the editor's hit proxies (NeedsUERendererSectionData).
+	 * Whether a render layer's elements can be drawn here, placed by their layer's row of the render layer table
+	 * (DreamUIRenderLayer.ush). Only DreamGUI's own renderer places them. UE's renderer draws a section through the
+	 * engine's vertex factory and the primitive's transform alone, which leave no room for it, and it draws every mesh
+	 * that carries its section data -- among them every mesh in the level editor's world, for the editor's hit proxies
+	 * (NeedsUERendererSectionData).
 	 */
 	bool CanDrawRenderLayers() const;
 	void SetupDirectMeshRenderSection(FDreamUIRenderSection_DirectMesh* InDirectMeshSection, bool bNeedExpandMeshSection, UMaterialInterface* InMaterial);
@@ -314,15 +308,7 @@ private:
 		FDreamUIBuiltInTextures Textures;
 	};
 	TArray<UpdateMeshSectionBuiltInDataStruct> PendingUpdateMeshSectionBuiltInDataArray;
-	struct UpdateMeshSectionMatrixDataStruct
-	{
-		FDreamUIRenderSectionProxy* SectionProxy;
-		FMatrix44f ElementToCanvas;
-	};
-	TArray<UpdateMeshSectionMatrixDataStruct> PendingUpdateMeshSectionMatrixDataArray;
-	/** InMeshSection's ElementToCanvas to its proxy, with the frame's other section updates. Nothing when it has none yet: the proxy made for it copies it. */
-	void QueueMeshSectionElementToCanvas(FDreamUIRenderSection_Mesh* InMeshSection);
-	/** The box of the section InDrawCallData is drawn with, in world space: its combined bounds, through its layer's transform and this mesh's. */
+	/** The box of the section InDrawCallData is drawn with, in world space: its CanvasBounds, through this mesh's transform. */
 	FBox GetMeshSectionBounds(const FDreamUIDrawCall& InDrawCallData) const;
 
 	friend class FDreamUIRenderSceneProxy;

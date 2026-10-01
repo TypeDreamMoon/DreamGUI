@@ -2,10 +2,12 @@
 // Modified by TypeDreamMoon.
 
 #include "Core/Components/DreamWidget.h"
+#include "Core/DreamUIDetailTrace.h"
 #include "DreamWidgetPrivate.h"
 #include "Core/DreamPerspective.h"
 #include "DreamGUI.h"
 #include "Core/Components/DreamCanvas.h"
+#include "Core/DreamUIGoneCount.h"
 #include "Core/DreamUISettings.h"
 #include "Core/DreamUIManager.h"
 #include "Core/DreamUIRuntimeObject.h"
@@ -242,7 +244,7 @@ void UDreamWidget::UnregisterRenderCanvas()
 void UDreamWidget::UpdateClip(UDreamUIDataAsTexture* ClipDataTexture, TArray<TSharedPtr<FDreamUIClipData>>& ClipDataList)
 {
 	if (!bClipDirty)return;
-	TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_UpdateClip);
+	DREAMUI_DETAIL_SCOPE(DreamUI_UpdateClip);
 	bClipDirty = false;
 	
 	if (bNeedRecreateClip && ClipData.IsValid())
@@ -310,6 +312,9 @@ void UDreamWidget::SetRenderCanvas(UDreamCanvas* InNewCanvas)
 {
 	auto OldRenderCanvas = RenderCanvas;
 	RenderCanvas = InNewCanvas;
+	// Kept as it was handed in, alive (RenderCanvasRaw).
+	RenderCanvasRawGone = DreamUIGone::Read();
+	RenderCanvasRaw = InNewCanvas;
 	if (ClipData.IsValid() && ClipData.Pin()->GetWidget() == this)//delete old clip-data
 	{
 		if (OldRenderCanvas.IsValid())
@@ -664,7 +669,28 @@ void UDreamWidget::MarkCanvasUpdate(bool bRebuildDrawCall)const
 
 UDreamCanvas* UDreamWidget::GetRenderCanvas()const
 {
+	// The canvas found while the count of objects gone read the same as now (RenderCanvasRaw): no look-up of the
+	// object array for every widget written, raycast and placed. Only read here, from any thread.
+	const uint64 Gone = DreamUIGone::Peek();
+	if (Gone != 0 && Gone == RenderCanvasRawGone)
+	{
+		return RenderCanvasRaw;
+	}
 	return RenderCanvas.Get();
+}
+
+UDreamCanvas* UDreamWidget::KeepRenderCanvas()const
+{
+	// Read before the look-up: a canvas found alive by it is still alive while the count reads the same.
+	const uint64 Gone = DreamUIGone::Read();
+	if (Gone == RenderCanvasRawGone)
+	{
+		return RenderCanvasRaw;
+	}
+	UDreamCanvas* const Canvas = RenderCanvas.Get();
+	RenderCanvasRaw = Canvas;
+	RenderCanvasRawGone = Gone;
+	return Canvas;
 }
 
 bool UDreamWidget::IsScreenSpaceOverlayUI()const

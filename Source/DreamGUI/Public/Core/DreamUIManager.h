@@ -25,6 +25,8 @@ class UDreamUIBehaviour;
 class ULevel;
 class UDreamRectBlockData;
 class UDreamUIDataAsTexture;
+class UDreamUIRenderLayerTable;
+class UTexture;
 enum class EDreamUIDataAsTexturePixelFormat : uint8;
 
 DECLARE_MULTICAST_DELEGATE_OneParam(FDreamUIEditorTickMulticastDelegate, float);
@@ -199,6 +201,16 @@ public:
 	 * back were still taken in the next one. The asset keeps what it is for, the material.
 	 */
 	UDreamUIDataAsTexture* GetRectBlockDataRows(UDreamRectBlockData* InData, int32 InBlockSizeInBytes, EDreamUIDataAsTexturePixelFormat InPixelFormat);
+	/**
+	 * This world's rows of the default rect block data, as the texture a built-in draw binds for the rect blocks it draws
+	 * (UDreamRectBlock::IsDrawnByBuiltInShader); null until a rect block of the default data made them.
+	 */
+	UTexture* GetBuiltInRectBlockRowsTexture() const;
+	/**
+	 * Where this world's render layers stand on their canvases, for the shaders (UDreamUIRenderLayerTable): made when the
+	 * first canvas makes a layer, and gone with the world. Flushed once a frame, after the canvases placed their layers.
+	 */
+	UDreamUIRenderLayerTable* GetRenderLayerTable();
 #if WITH_EDITOR
 	/**
 	 * Broadcast on every editor tick of a world nobody plays -- the level editor's, a preview's -- for what
@@ -238,21 +250,32 @@ private:
 	/** See GetRectBlockDataRows. */
 	UPROPERTY(Transient, DuplicateTransient, TextExportTransient)
 	TMap<TObjectPtr<UDreamRectBlockData>, TObjectPtr<UDreamUIDataAsTexture>> RectBlockDataRows;
+	/** See GetRenderLayerTable. */
+	UPROPERTY(Transient, DuplicateTransient, TextExportTransient)
+	TObjectPtr<UDreamUIRenderLayerTable> RenderLayerTable;
 	
 	UPROPERTY(VisibleAnywhere, Category = "DreamGUI")
 	TArray<TWeakObjectPtr<UDreamCanvas>> AllCanvasArray;
-	/**
-	 * AllCanvasArray again, as keys, for IsCanvasStillRegistered: every per-frame pass over the canvases asks it once
-	 * per canvas, and asking the array made each pass quadratic -- about 45 ms a frame with a thousand world panels.
-	 */
-	TSet<FObjectKey> RegisteredCanvasKeys;
 	/**
 	 * The root canvases ForEachRootCanvasInRenderModeOrder takes, one list per render mode in the order it takes them, as
 	 * they were sorted at RootCanvasOrderGeneration (InvalidateRootCanvasOrder). Sorting them was a walk of the whole
 	 * registry, twice a frame, asking each canvas for its root and its mode.
 	 */
 	TArray<TWeakObjectPtr<UDreamCanvas>> RootCanvasesByPass[4];
+	/**
+	 * RootCanvasesByPass as weak look-ups found them while the count of objects gone read RootCanvasesRawGone
+	 * (DreamUIGone): while the count reads the same, each is that canvas, alive and as registered as it was, and the
+	 * passes take them without a look-up of the object array for each -- two passes a frame over every panel of a world.
+	 */
+	TArray<UDreamCanvas*> RootCanvasesByPassRaw[4];
+	uint64 RootCanvasesRawGone = 0;
+	/** See GetAllCanvasesResolved: the canvases, and the order generation and count of objects gone they were found at. */
+	TArray<UDreamCanvas*> AllCanvasesResolved;
+	uint64 AllCanvasesResolvedOrder = 0;
+	uint64 AllCanvasesResolvedGone = 0;
 	uint64 RootCanvasOrderGeneration = 0;
+	/** RootCanvasesByPass sorted again, if a canvas came or went since (InvalidateRootCanvasOrder). */
+	void SortRootCanvasesIfStale();
 	/**
 	 * Every registered widget, weakly: registering is not owning. A tree is kept alive by its host --
 	 * the component, subsystem or preview that made it -- and the host lets it go; see FreeRoots for the
@@ -362,6 +385,12 @@ private:
 	/** The frame the world's end-of-frame updates last submitted the canvases in, and whether they updated since. */
 	uint64 LastEndOfFrameSubmitFrame = MAX_uint64;
 	bool bCanvasesUpdatedSinceSubmit = true;
+	/**
+	 * The canvases that asked to be drawn to their render targets (AddRenderTargetDrawRequest) and to be sorted
+	 * (AddRenderPrioritySortRequest): what the submit and the tick look at, instead of every registered canvas every frame.
+	 */
+	TArray<TWeakObjectPtr<UDreamCanvas>> RenderTargetDrawRequests;
+	TArray<TWeakObjectPtr<UDreamCanvas>> RenderPrioritySortRequests;
 #if !UE_BUILD_SHIPPING
 	/** Paired with the per-frame "only one ScreenSpaceOverlay canvas" check, which is not editor-only. */
 	int32 PrevScreenSpaceOverlayCanvasCount = 1;
@@ -381,8 +410,19 @@ public:
 #endif
 	
 	const TArray<TWeakObjectPtr<UDreamCanvas>>& GetAllCanvasArray()const{return AllCanvasArray;}
+	/**
+	 * GetAllCanvasArray with each canvas as a weak look-up found it while the count of objects gone read the same as now
+	 * -- null for one gone -- made again only once a canvas came or went or the count moved since. Game thread: what a
+	 * raycast hands to as many threads as there are, which then read the canvases without a look-up of the object
+	 * array for each of a world of panels.
+	 */
+	const TArray<UDreamCanvas*>& GetAllCanvasesResolved();
 	void AddCanvas(UDreamCanvas* InCanvas);
 	void RemoveCanvas(UDreamCanvas* InCanvas);
+	/** InCanvas asks to be drawn to its render target once this frame's sections have gone (UDreamCanvas::DrawRenderTargetIfRequested). */
+	void AddRenderTargetDrawRequest(UDreamCanvas* InCanvas);
+	/** InCanvas asks for its draw calls to be sorted by render priority at the next tick (UDreamCanvas::ConsumePendingRenderPrioritySort). */
+	void AddRenderPrioritySortRequest(UDreamCanvas* InCanvas);
 	/**
 	 * The registered canvases as they are now, for a loop whose calls may register or unregister a
 	 * canvas -- updating a root canvas can make a render target and tell whoever listens, and a listener

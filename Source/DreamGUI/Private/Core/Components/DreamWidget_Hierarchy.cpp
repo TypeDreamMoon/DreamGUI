@@ -136,6 +136,8 @@ void UDreamWidget::ApplySiblingIndex()
 		Parent->Modify();
 		if (Parent->Children.Num() == 0)
 		{
+			// A child joins: see ChildrenStaleAndPending.
+			Parent->ForgetChildrenStale();
 			Parent->Children.Add(this);
 			if (SiblingIndex != 0)
 			{
@@ -355,6 +357,8 @@ void UDreamWidget::SetParentBeforeRegister(UDreamWidget* InParent)
 		Parent = InParent;
 		if (Parent.IsValid())
 		{
+			// A child joins: see ChildrenStaleAndPending.
+			Parent->ForgetChildrenStale();
 			Parent->Children.Add(this);
 			// Say the index the append just produced, exactly as TrySetParentInternal's append branch
 			// does. Without it a widget attached this way kept SiblingIndex == INDEX_NONE while sitting
@@ -527,6 +531,8 @@ bool UDreamWidget::TrySetParentInternal(UDreamWidget* InParent, bool InKeepWorld
 		// never saw the damage.
 		InParent->Modify();
 		this->Modify();
+		// A child joins: see ChildrenStaleAndPending.
+		InParent->ForgetChildrenStale();
 		if (InSiblingIndex == -1 || !InParent->Children.IsValidIndex(InSiblingIndex))
 		{
 			InParent->Children.Add(this);
@@ -678,6 +684,8 @@ bool UDreamWidget::ReorderChildrenToPaintOrder(const TArray<UDreamWidget*>& InDe
 
 	// Same reason ApplySiblingIndex snapshots the parent: Children is persistent, and this rewrites it.
 	Modify();
+	// The same children, as checked above; forgotten all the same, as for any child joining (ChildrenStaleAndPending).
+	ForgetChildrenStale();
 	Children.Reset(InDesiredOrder.Num());
 	for (UDreamWidget* Child : InDesiredOrder)
 	{

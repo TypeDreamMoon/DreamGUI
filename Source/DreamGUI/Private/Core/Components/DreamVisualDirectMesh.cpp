@@ -152,6 +152,8 @@ void UDreamVisualDirectMesh::PostFillMeshData()
 	{
 		bWidgetPropertyDataFontMarkDirty = false;
 		FillWidgetPropertyDataForMaterial_InitialMark(Canvas->GetWidgetPropertyDataAsTexture(), 0);
+		// Never in a render layer (UDreamCanvas::CanBeRenderLayer): its vertices are where they are.
+		FillWidgetPropertyDataForMaterial_RenderLayerRow(Canvas->GetWidgetPropertyDataAsTexture(), 0);
 	}
 	if (bClipDataPositionChanged)
 	{

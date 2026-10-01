@@ -29,6 +29,13 @@ void UDreamWidgetSubObjectBehaviour::PostInitProperties()
 
 UDreamWidget* UDreamWidgetSubObjectBehaviour::GetWidget() const
 {
+	// As UDreamUIBehaviour::GetWidget: the direct outer matching the cache is the cache being right, without asking the
+	// object array whether the widget is garbage -- a ray asks for every visual of a canvas, every frame.
+	UDreamWidget* const Cached = OwnerWidget.Get();
+	if (Cached != nullptr && Cached == GetOuter())
+	{
+		return Cached;
+	}
 	if (!IsValid(OwnerWidget))
 	{
 		OwnerWidget = this->GetTypedOuter<UDreamWidget>();

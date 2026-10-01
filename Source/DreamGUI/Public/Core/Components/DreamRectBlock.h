@@ -84,6 +84,19 @@ class DREAMGUI_API UDreamRectBlock : public UDreamVisualBatchMesh
 public:
 	UDreamRectBlock(const FObjectInitializer& ObjectInitializer);
 
+	/**
+	 * The mark a rect block's widget record carries, past the font marks (EDreamUIFontTextureMark): what tells the
+	 * built-in UI shader to draw a pixel as a rect block (DreamUIShade.ush).
+	 */
+	static constexpr uint8 BuiltInShaderMark = 4;
+	/**
+	 * Drawn by the built-in UI shader rather than through its material: no material of its own, its shape kept in its
+	 * world's rows of the default rect block data -- the rows every built-in draw binds -- and a canvas that draws with
+	 * the built-in shader. Its canvas then batches it with what it draws there -- the label on a button, say -- where
+	 * its material drew it in a draw call of its own: a world of panels each with a button on it drew twice the panels.
+	 */
+	bool IsDrawnByBuiltInShader() const;
+
 #if WITH_EDITOR
 	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
 	virtual bool CanEditChange(const FProperty* InProperty) const override;
@@ -345,6 +358,7 @@ private:
 	virtual UTexture* GetTextureToCreateGeometry()override;
 	virtual UMaterialInterface* GetMaterialToCreateGeometry()override;
 	virtual void AddMaterialParameters(FDreamUIMaterialParameters& InOutParameters) const override;
+	virtual uint8 GetFontMark_WidgetPropertyDataForMaterial() override { return BuiltInShaderMark; }
 
 	//virtual void OnAnchorChange(bool InPivotChange, bool InWidthChange, bool InHeightChange, bool InDiscardCache = true)override;
 	virtual void OnUpdateGeometry(FDreamUIGeometry& InGeo, bool InTriangleChanged, bool InVertexPositionChanged, bool InVertexUVChanged, bool InVertexColorChanged)override;

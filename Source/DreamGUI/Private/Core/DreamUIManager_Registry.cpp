@@ -3,6 +3,7 @@
 
 #include "Core/DreamUIManager.h"
 #include "Core/DreamUIDataAsTexture.h"
+#include "Core/DreamUIRenderLayerTable.h"
 #include "Core/DreamUIRuntimeObject.h"
 #include "Core/DreamUIWorldContext.h"
 #include "Core/Components/DreamRectBlock.h"
@@ -92,8 +93,10 @@ TArray<UDreamCanvas*> UDreamUIManagerWorldSubsystem::GetCanvasArrayByRenderMode(
 
 bool UDreamUIManagerWorldSubsystem::IsCanvasStillRegistered(const TWeakObjectPtr<UDreamCanvas>& InCanvas)const
 {
+	// The canvas says whom it is registered with: every pass over a thousand world panels asks this once for each, and
+	// asking the array made each pass quadratic -- about 45 ms a frame -- and a set of keys a hash for each.
 	const UDreamCanvas* Canvas = InCanvas.Get();
-	return Canvas != nullptr && RegisteredCanvasKeys.Contains(FObjectKey(Canvas));
+	return Canvas != nullptr && Canvas->RegisteredWithManager == this;
 }
 
 void UDreamUIManagerWorldSubsystem::AddCanvas(UDreamCanvas* InCanvas)
@@ -106,7 +109,18 @@ void UDreamUIManagerWorldSubsystem::AddCanvas(UDreamCanvas* InCanvas)
 	}
 #endif
 	this->AllCanvasArray.AddUnique(InCanvas);
-	this->RegisteredCanvasKeys.Add(FObjectKey(InCanvas));
+	InCanvas->RegisteredWithManager = this;
+	// What it asked of a manager before it was here: every canvas starts owing a sort.
+	InCanvas->bRenderPrioritySortListed = false;
+	if (InCanvas->bNeedToSortRenderPriority)
+	{
+		InCanvas->bRenderPrioritySortListed = true;
+		RenderPrioritySortRequests.Add(InCanvas);
+	}
+	if (InCanvas->bRenderTargetDrawRequested)
+	{
+		RenderTargetDrawRequests.Add(InCanvas);
+	}
 	InvalidateRootCanvasOrder();
 	BumpHitTestGeneration();
 }
@@ -121,17 +135,42 @@ void UDreamUIManagerWorldSubsystem::RemoveCanvas(UDreamCanvas* InCanvas)
 	}
 #endif
 	this->AllCanvasArray.RemoveSingle(InCanvas);
-	this->RegisteredCanvasKeys.Remove(FObjectKey(InCanvas));
+	if (InCanvas != nullptr && InCanvas->RegisteredWithManager == this)
+	{
+		InCanvas->RegisteredWithManager = nullptr;
+		// Its requests here go with it: the lists pass over a canvas registered elsewhere or nowhere.
+		InCanvas->bRenderPrioritySortListed = false;
+	}
 	InvalidateRootCanvasOrder();
 	BumpHitTestGeneration();
 }
 
+void UDreamUIManagerWorldSubsystem::AddRenderTargetDrawRequest(UDreamCanvas* InCanvas)
+{
+	if (InCanvas != nullptr)
+	{
+		RenderTargetDrawRequests.Add(InCanvas);
+	}
+}
+
+void UDreamUIManagerWorldSubsystem::AddRenderPrioritySortRequest(UDreamCanvas* InCanvas)
+{
+	// Listed once: the canvas says whether it is (UDreamCanvas::RequestRenderPrioritySort).
+	if (InCanvas != nullptr)
+	{
+		RenderPrioritySortRequests.Add(InCanvas);
+	}
+}
+
 int32 UDreamUIManagerWorldSubsystem::CountCompetingScreenSpaceOverlayCanvases()const
 {
+	// Asked every frame: the root canvases set to ScreenSpaceOverlay are one of the lists sorted for the passes over them,
+	// rather than a walk of every registered canvas -- a thousand world panels among them.
+	const_cast<UDreamUIManagerWorldSubsystem*>(this)->SortRootCanvasesIfStale();
 	int32 Count = 0;
-	for (auto& Canvas : AllCanvasArray)
+	for (auto& Canvas : RootCanvasesByPass[0])
 	{
-		if (!Canvas.IsValid())continue;
+		if (!IsCanvasStillRegistered(Canvas))continue;
 		if (!Canvas->IsRootCanvas())continue;
 		if (Canvas->GetRenderMode() != EDreamRenderMode::ScreenSpaceOverlay)continue;
 		// A canvas on an inactive widget is not on screen and is not fighting anyone for it. This
@@ -488,4 +527,25 @@ UDreamUIDataAsTexture* UDreamUIManagerWorldSubsystem::GetRectBlockDataRows(UDrea
 	Rows->Init(InBlockSizeInBytes, InPixelFormat, 32);
 	RectBlockDataRows.Add(InData, Rows);
 	return Rows;
+}
+
+UTexture* UDreamUIManagerWorldSubsystem::GetBuiltInRectBlockRowsTexture() const
+{
+	if (RectBlockDataRows.Num() == 0)
+	{
+		return nullptr;
+	}
+	UDreamRectBlockData* const Default = UDreamGUISettings::LoadSetting(UDreamGUISettings::Get()->DefaultRectBlockData, TEXT("DefaultRectBlockData"));
+	const TObjectPtr<UDreamUIDataAsTexture>* Found = Default != nullptr ? RectBlockDataRows.Find(Default) : nullptr;
+	return Found != nullptr && IsValid(Found->Get()) ? Found->Get()->GetDataTexture() : nullptr;
+}
+
+UDreamUIRenderLayerTable* UDreamUIManagerWorldSubsystem::GetRenderLayerTable()
+{
+	if (RenderLayerTable == nullptr)
+	{
+		// The manager's, and never saved, duplicated or copied, as the rect block rows above.
+		RenderLayerTable = NewObject<UDreamUIRenderLayerTable>(this, NAME_None, DreamUI::RuntimeObjectFlags);
+	}
+	return RenderLayerTable;
 }

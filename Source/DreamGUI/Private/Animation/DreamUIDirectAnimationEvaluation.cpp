@@ -2,7 +2,12 @@
 
 #include "Animation/DreamUIDirectAnimationEvaluation.h"
 
+#include "Core/DreamUIBehaviour.h"
+#include "Core/DreamUIGoneCount.h"
+#include "Core/Components/DreamWidget.h"
+
 #include "Channels/IMovieSceneChannelOverrideProvider.h"
+#include "CoreGlobals.h"
 #include "Channels/MovieSceneBoolChannel.h"
 #include "Channels/MovieSceneDoubleChannel.h"
 #include "Channels/MovieSceneFloatChannel.h"
@@ -85,6 +90,62 @@ namespace DreamUIDirectAnimationLocal
 	{
 		return InChannel != nullptr && (InChannel->GetNumKeys() > 0 || InChannel->GetDefault().IsSet());
 	}
+
+	/**
+	 * A channel's value at a time, as its last evaluation in this frame found it. A wall of widgets playing one animation
+	 * together evaluates the same channels at the same time, one player after another: this way each channel's keys are
+	 * searched and interpolated once a frame rather than once a player, a few channels at a time.
+	 *
+	 * Each widget made from a blueprint has a copy of the blueprint's animations of its own -- the component's animations
+	 * are instanced -- and so sections and channels of its own; but a copy keeps its section's signature, which every edit
+	 * of the section's channels changes, so the signature and the channel's place in the section say which channel of which
+	 * content it is, whichever copy holds it. A section with no signature is its own: its channels are kept by their address.
+	 * An edit made between two evaluations of one frame changes the signature, and is not answered with the value before
+	 * it. Game thread only, as the players are.
+	 */
+	struct FChannelMemo
+	{
+		FGuid Signature;
+		/** The channel itself for a section with no signature; null for one with a signature, whose copies share. */
+		const void* Channel = nullptr;
+		uint32 Offset = 0;
+		uint64 Frame = 0;
+		FFrameTime Time;
+		double Value = 0.0;
+		bool bHasValue = false;
+	};
+	FChannelMemo ChannelMemos[64];
+
+	template<typename ChannelType, typename ValueType>
+	bool EvaluateShared(const ChannelType& InChannel, const FGuid& InSignature, uint32 InOffset, FFrameTime InTime, double& OutValue)
+	{
+		ValueType Value{};
+		if (!IsInGameThread())
+		{
+			const bool bHasValue = InChannel.Evaluate(InTime, Value);
+			OutValue = bHasValue ? static_cast<double>(Value) : OutValue;
+			return bHasValue;
+		}
+		const bool bShared = InSignature.IsValid();
+		const void* const Channel = bShared ? nullptr : static_cast<const void*>(&InChannel);
+		const uint32 Hash = bShared ? HashCombineFast(GetTypeHash(InSignature), InOffset) : PointerHash(&InChannel);
+		FChannelMemo& Memo = ChannelMemos[Hash % UE_ARRAY_COUNT(ChannelMemos)];
+		if (Memo.Offset != InOffset || Memo.Channel != Channel || Memo.Frame != GFrameCounter || Memo.Time != InTime || Memo.Signature != InSignature)
+		{
+			Memo.bHasValue = InChannel.Evaluate(InTime, Value);
+			Memo.Value = static_cast<double>(Value);
+			Memo.Signature = InSignature;
+			Memo.Channel = Channel;
+			Memo.Offset = InOffset;
+			Memo.Frame = GFrameCounter;
+			Memo.Time = InTime;
+		}
+		if (Memo.bHasValue)
+		{
+			OutValue = Memo.Value;
+		}
+		return Memo.bHasValue;
+	}
 }
 
 TSharedPtr<FDreamUIDirectAnimationEvaluation> FDreamUIDirectAnimationEvaluation::TryCreate(const UMovieSceneSequence& InSequence)
@@ -100,6 +161,8 @@ TSharedPtr<FDreamUIDirectAnimationEvaluation> FDreamUIDirectAnimationEvaluation:
 	const TRange<FFrameNumber> PlaybackRange = MovieScene->GetPlaybackRange();
 	TSharedPtr<FDreamUIDirectAnimationEvaluation> Plan = MakeShared<FDreamUIDirectAnimationEvaluation>();
 	Plan->Sequence = &InSequence;
+	Plan->TickResolution = MovieScene->GetTickResolution();
+	Plan->MovieSceneSignature = MovieScene->GetSignature();
 	for (const FMovieSceneBinding& Binding : MovieScene->GetBindings())
 	{
 		for (const UMovieSceneTrack* Track : Binding.GetTracks())
@@ -143,6 +206,7 @@ TSharedPtr<FDreamUIDirectAnimationEvaluation> FDreamUIDirectAnimationEvaluation:
 			}
 			const UMovieScenePropertyTrack* PropertyTrack = static_cast<const UMovieScenePropertyTrack*>(Track);
 			FAnimatedProperty& Property = Plan->Properties.AddDefaulted_GetRef();
+			Property.bDirectProperty = PropertyTrack->GetPropertyPath().ToString() == PropertyTrack->GetPropertyName().ToString();
 			Property.BindingId = Binding.GetObjectGuid();
 			Property.TrackKind = static_cast<uint8>(Kind);
 			Property.Section = Active;
@@ -223,6 +287,15 @@ bool FDreamUIDirectAnimationEvaluation::BindChannels(FAnimatedProperty& InOutPro
 		break;
 	}
 	}
+	InOutProperty.BoundSection = Section;
+	InOutProperty.BoundSignature = Section->GetSignature();
+	for (int32 Index = 0; Index < InOutProperty.NumChannels; ++Index)
+	{
+		const void* Channel = InOutProperty.DoubleChannels[Index] != nullptr ? static_cast<const void*>(InOutProperty.DoubleChannels[Index])
+			: static_cast<const void*>(InOutProperty.FloatChannels[Index]);
+		InOutProperty.ChannelOffsets[Index] = Channel != nullptr
+			? static_cast<uint32>(static_cast<const uint8*>(Channel) - reinterpret_cast<const uint8*>(Section)) : 0;
+	}
 	InOutProperty.bEveryChannelAnimated = true;
 	for (int32 Index = 0; Index < InOutProperty.NumChannels; ++Index)
 	{
@@ -239,6 +312,12 @@ bool FDreamUIDirectAnimationEvaluation::FindValueKind(FAnimatedProperty& InOutPr
 	if (Property == nullptr)
 	{
 		return false;
+	}
+	if (InOutProperty.bDirectProperty && Property->HasSetter())
+	{
+		InOutProperty.SetterClass = InObject.GetClass();
+		InOutProperty.SetterProperty = Property;
+		InOutProperty.SetterCheckedObject = nullptr;
 	}
 	const FStructProperty* StructProperty = CastField<FStructProperty>(Property);
 	const FName StructName = StructProperty != nullptr && StructProperty->Struct != nullptr ? StructProperty->Struct->GetFName() : NAME_None;
@@ -360,31 +439,52 @@ bool FDreamUIDirectAnimationEvaluation::Read(FAnimatedProperty& InProperty, UObj
 	return false;
 }
 
+template<typename ValueType>
+void FDreamUIDirectAnimationEvaluation::WriteValue(FAnimatedProperty& InProperty, UObject& InObject, const ValueType& InValue)
+{
+	// What FTrackInstancePropertyBindings::CallFunction does first for a property with a native setter, without its map.
+	// Whether the setter fits the object is found once for it (SetterCheckedObject).
+	if (InProperty.SetterProperty != nullptr)
+	{
+		if (InProperty.SetterCheckedObject != &InObject)
+		{
+			InProperty.SetterCheckedObject = &InObject;
+			InProperty.bSetterFits = InObject.GetClass() == InProperty.SetterClass;
+		}
+		if (InProperty.bSetterFits)
+		{
+			InProperty.SetterProperty->CallSetter(&InObject, &InValue);
+			return;
+		}
+	}
+	InProperty.Bindings->CallFunction<ValueType>(InObject, InValue);
+}
+
 void FDreamUIDirectAnimationEvaluation::Write(FAnimatedProperty& InProperty, UObject& InObject, const FChannelValues& InValues)
 {
-	FTrackInstancePropertyBindings& Bindings = *InProperty.Bindings;
 	const double* V = InValues.Values;
 	switch (InProperty.Kind)
 	{
-	case EValueKind::Float: Bindings.CallFunction<float>(InObject, static_cast<float>(V[0])); break;
-	case EValueKind::Double: Bindings.CallFunction<double>(InObject, V[0]); break;
-	case EValueKind::Bool: Bindings.CallFunction<bool>(InObject, InValues.bValue); break;
-	case EValueKind::Rotator: Bindings.CallFunction<FRotator>(InObject, FRotator(V[1], V[2], V[0])); break;
-	case EValueKind::Vector2d: Bindings.CallFunction<FVector2D>(InObject, FVector2D(V[0], V[1])); break;
-	case EValueKind::Vector3d: Bindings.CallFunction<FVector>(InObject, FVector(V[0], V[1], V[2])); break;
-	case EValueKind::Vector4d: Bindings.CallFunction<FVector4>(InObject, FVector4(V[0], V[1], V[2], V[3])); break;
-	case EValueKind::Vector2f: Bindings.CallFunction<FVector2f>(InObject, FVector2f(V[0], V[1])); break;
-	case EValueKind::Vector3f: Bindings.CallFunction<FVector3f>(InObject, FVector3f(V[0], V[1], V[2])); break;
-	case EValueKind::Vector4f: Bindings.CallFunction<FVector4f>(InObject, FVector4f(V[0], V[1], V[2], V[3])); break;
-	case EValueKind::LinearColor: Bindings.CallFunction<FLinearColor>(InObject, FLinearColor(V[0], V[1], V[2], V[3])); break;
+	case EValueKind::Float: WriteValue<float>(InProperty, InObject, static_cast<float>(V[0])); break;
+	case EValueKind::Double: WriteValue<double>(InProperty, InObject, V[0]); break;
+	case EValueKind::Bool: InProperty.Bindings->CallFunction<bool>(InObject, InValues.bValue); break;
+	case EValueKind::Rotator: WriteValue<FRotator>(InProperty, InObject, FRotator(V[1], V[2], V[0])); break;
+	case EValueKind::Vector2d: WriteValue<FVector2D>(InProperty, InObject, FVector2D(V[0], V[1])); break;
+	case EValueKind::Vector3d: WriteValue<FVector>(InProperty, InObject, FVector(V[0], V[1], V[2])); break;
+	case EValueKind::Vector4d: WriteValue<FVector4>(InProperty, InObject, FVector4(V[0], V[1], V[2], V[3])); break;
+	case EValueKind::Vector2f: WriteValue<FVector2f>(InProperty, InObject, FVector2f(V[0], V[1])); break;
+	case EValueKind::Vector3f: WriteValue<FVector3f>(InProperty, InObject, FVector3f(V[0], V[1], V[2])); break;
+	case EValueKind::Vector4f: WriteValue<FVector4f>(InProperty, InObject, FVector4f(V[0], V[1], V[2], V[3])); break;
+	case EValueKind::LinearColor: WriteValue<FLinearColor>(InProperty, InObject, FLinearColor(V[0], V[1], V[2], V[3])); break;
 	case EValueKind::Color:
-		Bindings.CallFunction<FColor>(InObject, UE::MovieScene::FIntermediateColor(V[0], V[1], V[2], V[3]).GetColor());
+		WriteValue<FColor>(InProperty, InObject, UE::MovieScene::FIntermediateColor(V[0], V[1], V[2], V[3]).GetColor());
 		break;
 	}
 }
 
 void FDreamUIDirectAnimationEvaluation::EvaluateChannels(const FAnimatedProperty& InProperty, FFrameTime InTime, FChannelValues& InOutValues)
 {
+	using namespace DreamUIDirectAnimationLocal;
 	if (InProperty.BoolChannel != nullptr)
 	{
 		bool bValue = false;
@@ -394,35 +494,26 @@ void FDreamUIDirectAnimationEvaluation::EvaluateChannels(const FAnimatedProperty
 		}
 		return;
 	}
+	// Channels are only read while their section is alive -- its sequence is, see Evaluate -- and its signature says which
+	// content they are (see EvaluateShared), as it was when they were found in it (BoundSignature).
+	const FGuid Signature = InProperty.BoundSection != nullptr ? InProperty.BoundSignature : FGuid();
 	for (int32 Index = 0; Index < InProperty.NumChannels; ++Index)
 	{
 		if (const FMovieSceneDoubleChannel* Channel = InProperty.DoubleChannels[Index])
 		{
-			double Value = 0.0;
-			if (Channel->Evaluate(InTime, Value))
-			{
-				InOutValues.Values[Index] = Value;
-			}
+			EvaluateShared<FMovieSceneDoubleChannel, double>(*Channel, Signature, InProperty.ChannelOffsets[Index], InTime, InOutValues.Values[Index]);
 		}
 		else if (const FMovieSceneFloatChannel* FloatChannel = InProperty.FloatChannels[Index])
 		{
-			float Value = 0.0f;
-			if (FloatChannel->Evaluate(InTime, Value))
-			{
-				InOutValues.Values[Index] = Value;
-			}
+			EvaluateShared<FMovieSceneFloatChannel, float>(*FloatChannel, Signature, InProperty.ChannelOffsets[Index], InTime, InOutValues.Values[Index]);
 		}
 	}
 }
 
 bool FDreamUIDirectAnimationEvaluation::Evaluate(IMovieScenePlayer& InPlayer, FFrameTime InTime)
 {
-	TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_DirectAnimationEvaluate);
-	if (!Sequence.IsValid())
-	{
-		// Gone before anything was written: nothing to hand over. Gone after: nothing left to write.
-		return bWrittenAnything;
-	}
+	// No timing scope of its own: a wall of thousands of players pays for one per player, and the sequence tick manager's
+	// scopes already say what the players cost together. The sequence is not looked up: the player holds it.
 	/**
 	 * A write runs the property's setter, and whatever listens to it may stop the animation, which the player then does on
 	 * the spot -- the component's stop tears the player down as well. Nothing more is written after that. A restored play
@@ -437,24 +528,75 @@ bool FDreamUIDirectAnimationEvaluation::Evaluate(IMovieScenePlayer& InPlayer, FF
 		{
 			continue;
 		}
-		// Copied: the player's list of bound objects goes with the player when a stop tears it down.
-		const TArray<TWeakObjectPtr<>, TInlineAllocator<4>> BoundObjects(InPlayer.FindBoundObjects(Property.BindingId, MovieSceneSequenceID::Root));
-		for (const TWeakObjectPtr<>& WeakObject : BoundObjects)
+		// See FAnimatedProperty::BoundObjects: the player's lookup, again only once an object it found is gone. Each object
+		// is looked up once a frame, here, and written below as found here -- as the sequencer writes the objects its
+		// bindings resolved to when the evaluation began. Copied: a listener of a write may start an evaluation of its own
+		// that looks the objects up again.
+		TArray<TPair<TWeakObjectPtr<UObject>, UObject*>, TInlineAllocator<4>> BoundObjects;
+		bool bLookUp = !Property.bBoundObjectsFound;
+		if (!bLookUp && Property.BoundHost != nullptr)
 		{
-			UObject* Object = WeakObject.Get();
+			// See FAnimatedProperty::BoundHost.
+			BoundObjects.Emplace(Property.BoundObjects[0], Property.BoundHost);
+		}
+		else if (!bLookUp && Property.BoundSingle != nullptr && Property.BoundSingleGone == DreamUIGone::Read())
+		{
+			// See FAnimatedProperty::BoundSingle.
+			BoundObjects.Emplace(Property.BoundObjects[0], Property.BoundSingle);
+		}
+		else
+		{
+			// Read before the look-ups: an object found alive by them is still alive while the count reads the same.
+			const uint64 Gone = DreamUIGone::Read();
+			for (int32 Index = 0; !bLookUp && Index < Property.BoundObjects.Num(); ++Index)
+			{
+				UObject* const Found = Property.BoundObjects[Index].Get();
+				bLookUp = Found == nullptr;
+				BoundObjects.Emplace(Property.BoundObjects[Index], Found);
+			}
+			if (bLookUp)
+			{
+				Property.BoundObjects = TArray<TWeakObjectPtr<UObject>, TInlineAllocator<1>>(InPlayer.FindBoundObjects(Property.BindingId, MovieSceneSequenceID::Root));
+				Property.bBoundObjectsFound = true;
+				BoundObjects.Reset();
+				for (const TWeakObjectPtr<UObject>& WeakObject : Property.BoundObjects)
+				{
+					BoundObjects.Emplace(WeakObject, WeakObject.Get());
+				}
+				UObject* const Host = InPlayer.GetPlaybackContext();
+				Property.BoundHost = BoundObjects.Num() == 1 && Host != nullptr && BoundObjects[0].Value == Host ? Host : nullptr;
+				// Another object, perhaps where an earlier one was: whether the setter fits it is found again.
+				Property.SetterCheckedObject = nullptr;
+			}
+			UObject* const Single = BoundObjects.Num() == 1 ? BoundObjects[0].Value : nullptr;
+			Property.BoundSingle = Property.BoundHost == nullptr && Single != nullptr
+				&& (Single->IsA<UDreamWidget>() || Single->IsA<UDreamUIBehaviour>()) ? Single : nullptr;
+			Property.BoundSingleGone = Gone;
+		}
+		for (const TPair<TWeakObjectPtr<UObject>, UObject*>& Bound : BoundObjects)
+		{
+			UObject* Object = Bound.Value;
 			if (Object == nullptr)
 			{
 				continue;
 			}
 			// The value the object had before the first write: what an unanimated channel keeps, as the sequencer keeps
-			// it, and what a restore puts back.
+			// it, and what a restore puts back. Found by the weak pointer's identity: the object is alive, so only a
+			// pointer to it can have its index and serial number, and no entry's pointer is looked up for it.
 			FChannelValues* Initial = nullptr;
-			for (TPair<TWeakObjectPtr<UObject>, FChannelValues>& Entry : Property.InitialValues)
+			if (Property.InitialValues.Num() > 0 && Property.FirstInitialKey.HasSameIndexAndSerialNumber(Bound.Key))
 			{
-				if (Entry.Key.Get() == Object)
+				Initial = &Property.FirstInitialValues;
+			}
+			else
+			{
+				for (TPair<TWeakObjectPtr<UObject>, FChannelValues>& Entry : Property.InitialValues)
 				{
-					Initial = &Entry.Value;
-					break;
+					if (Entry.Key.HasSameIndexAndSerialNumber(Bound.Key))
+					{
+						Initial = &Entry.Value;
+						break;
+					}
 				}
 			}
 			if (Initial == nullptr)
@@ -478,7 +620,12 @@ bool FDreamUIDirectAnimationEvaluation::Evaluate(IMovieScenePlayer& InPlayer, FF
 				{
 					continue;
 				}
-				Initial = &Property.InitialValues.Emplace_GetRef(Object, Values).Value;
+				Initial = &Property.InitialValues.Emplace_GetRef(Bound.Key, Values).Value;
+				if (Property.InitialValues.Num() == 1)
+				{
+					Property.FirstInitialKey = Bound.Key;
+					Property.FirstInitialValues = Values;
+				}
 			}
 			FChannelValues Values = *Initial;
 			EvaluateChannels(Property, InTime, Values);
@@ -491,6 +638,13 @@ bool FDreamUIDirectAnimationEvaluation::Evaluate(IMovieScenePlayer& InPlayer, FF
 		}
 	}
 	return true;
+}
+
+bool FDreamUIDirectAnimationEvaluation::IsStillPlanFor(const UMovieSceneSequence& InSequence) const
+{
+	const UMovieScene* MovieScene = InSequence.GetMovieScene();
+	return Sequence.Get() == &InSequence && MovieScene != nullptr && MovieScene->GetSignature() == MovieSceneSignature
+		&& MovieScene->GetTickResolution() == TickResolution;
 }
 
 void FDreamUIDirectAnimationEvaluation::RestoreInitialValues()
@@ -506,6 +660,7 @@ void FDreamUIDirectAnimationEvaluation::RestoreInitialValues()
 			}
 		}
 		Property.InitialValues.Reset();
+		Property.FirstInitialKey.Reset();
 	}
 	bWrittenAnything = false;
 }
@@ -516,6 +671,7 @@ void FDreamUIDirectAnimationEvaluation::DiscardInitialValues()
 	for (FAnimatedProperty& Property : Properties)
 	{
 		Property.InitialValues.Reset();
+		Property.FirstInitialKey.Reset();
 	}
 	bWrittenAnything = false;
 }

@@ -5,6 +5,7 @@
 
 #include "DreamGUI.h"
 #include "Core/DreamUIManager.h"
+#include "Core/DreamUIGoneCount.h"
 #include "Core/DreamUIRuntimeObject.h"
 #include "Core/Components/DreamWidget.h"
 #include "Animation/DreamWidgetAnimationComponent.h"
@@ -156,8 +157,16 @@ void UDreamUIBehaviour::OnRegister()
 		Widget->GetRaycastableChangedEvent().AddUObject(this, &UDreamUIBehaviour::Call_OnRaycastableChanged);
 	}
 }
+void UDreamUIBehaviour::BeginDestroy()
+{
+	DreamUIGone::Note();
+	Super::BeginDestroy();
+}
+
 void UDreamUIBehaviour::OnUnregister()
 {
+	// No longer one to write without a look-up (DreamUIGone).
+	DreamUIGone::Note();
 	if (IsValid(CacheWidget))
 	{
 		CacheWidget->GetWidgetActiveChangedEvent().RemoveAll(this);
@@ -417,6 +426,14 @@ void UDreamUIBehaviour::Call_Start()
 
 UDreamWidget* UDreamUIBehaviour::GetWidget() const
 {
+	// The widget is the behaviour's outer, and nearly always its direct one: the cache matching that is the cache being
+	// right, which the object array need not be asked about -- whether the widget is garbage -- on every call, several a
+	// frame for every canvas of a world of panels. A garbage widget found so is the one GetTypedOuter would find again.
+	UDreamWidget* const Cached = CacheWidget.Get();
+	if (Cached != nullptr && Cached == GetOuter())
+	{
+		return Cached;
+	}
 	if (!IsValid(CacheWidget))
 	{
 		CacheWidget = this->GetTypedOuter<UDreamWidget>();

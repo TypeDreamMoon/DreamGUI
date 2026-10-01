@@ -6,13 +6,15 @@
 #include "Engine/Texture.h"
 #include "DreamUIDataTexture.generated.h"
 
-/** A run of pixels on one row of a data texture, for UDreamUIDataTexture::Upload. */
+/** A run of pixels on one row of a data texture, or the same run on each of Rows rows, for UDreamUIDataTexture::Upload. */
 struct FDreamUIDataTextureUpdate
 {
 	int32 X = 0;
 	int32 Y = 0;
 	int32 PixelCount = 0;
-	/** PixelCount pixels of the texture's format; a longer buffer is read only that far. */
+	/** How many rows, from Y down, the run is written on: each row's PixelCount pixels follow the one above's in Data. */
+	int32 Rows = 1;
+	/** PixelCount pixels of the texture's format for each row; a longer buffer is read only that far. */
 	TArray<uint8> Data;
 };
 

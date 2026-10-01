@@ -272,6 +272,11 @@ public:
 	static constexpr int32 WidgetSizePixelStart = 2;//width, then height
 	/** After the text style block (4..12), so adding it did not shift the hand-indexed style pixels. */
 	static constexpr int32 WidgetCenterPixelStart = 13;//centre X, then centre Y
+	/**
+	 * The row of the world's render layer table the element's vertices are placed on the canvas through, as a float value,
+	 * 0 for an element of no layer. Read by both vertex shaders (DreamUIRenderLayer.ush), not by the pixel shader.
+	 */
+	static constexpr int32 RenderLayerRowPixelStart = 15;
 	/** Top byte of the marks pixel: present only so the word is a normal float. */
 	static constexpr uint32 WidgetMarksNormalFloatMarker = 0x3f000000;
 	/** Pack the marks pixel: constant top byte, font mark, extra mark. Mirrored by DreamUI_ReadWidgetProperty. */
@@ -289,8 +294,12 @@ protected:
 	int ClipDataStartPosition = 0;
 	int WidgetPropertyDataStartPosition = INDEX_NONE;
 
+	/** The row RenderLayerRowPixelStart holds now, as last written; INDEX_NONE when the record is new and holds nothing yet. */
+	int32 WrittenRenderLayerRow = INDEX_NONE;
 	void FillWidgetPropertyDataForMaterial(bool bNeedSize, bool bNeedCenterPosition)const;
 	void FillWidgetPropertyDataForMaterial_ClipDataCoordinate(class UDreamUIDataAsTexture* DataAsTexture)const;
+	/** The record's render layer row, when it is not InRow already. */
+	void FillWidgetPropertyDataForMaterial_RenderLayerRow(class UDreamUIDataAsTexture* DataAsTexture, int32 InRow);
 	// Fill initial mark data, only do this when first create widget property data or when render canvas changed
 	void FillWidgetPropertyDataForMaterial_InitialMark(class UDreamUIDataAsTexture* DataAsTexture, uint8 FontMark)const;
 public:

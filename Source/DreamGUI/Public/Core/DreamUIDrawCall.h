@@ -125,7 +125,23 @@ public:
 	TArray<TSharedPtr<const FDreamUIGeometry>> BatchMeshGeometryArray;
 	TArray<FDreamUIMeshVertex> CombinedBatchMeshGeometryVertices;
 	TArray<FDreamUIMeshIndex> CombinedBatchMeshGeometryTriangles;
+	/** The box of the elements of no render layer, on the canvas. */
 	FBox CombinedBounds;
+	/** The elements of a render layer: the layer's row of the render layer table, and their box in the layer's space. */
+	struct FLayerBounds
+	{
+		int32 Row = 0;
+		FBox Bounds = FBox(ForceInit);
+	};
+	/** One entry for each run of one layer's elements, in the order they are drawn. */
+	TArray<FLayerBounds> LayerBounds;
+	/**
+	 * The box of everything the draw call holds, on the canvas, which its section is boxed by: CombinedBounds, and each of
+	 * LayerBounds where its row places it now, as a box that does not change while the layer only turns about it -- with
+	 * some room, and kept while it still holds them, so that a layer that only turns does not box its draw call anew each
+	 * frame (PlaceBounds). CombinedBounds alone for a draw call of no layer's elements.
+	 */
+	FBox CanvasBounds;
 	TSharedPtr<DreamUIQuadTree::Node> BatchMeshTreeNode = nullptr;
 	int32 VerticesCount = 0;//vertices count of all BatchMeshRenderObjectList
 	int32 IndicesCount = 0;//triangle indices count of all BatchMeshRenderObjectList
@@ -134,17 +150,16 @@ public:
 	/** The blend mode every element in this draw-call shares; the blend state is set once per draw-call. */
 	EDreamUIBlendMode BlendMode = EDreamUIBlendMode::Alpha;
 	/**
-	 * The render layer whose elements this draw call holds (FDreamUIGeometry::RenderLayer), or none: a draw call holds the
-	 * elements of one layer and nothing else, or of none. Their vertices, and so CombinedBounds, are relative to the layer.
+	 * Whether it holds elements of render layers, whose vertices are relative to their layers and are placed on the canvas
+	 * by the layers' rows of the render layer table (DreamUIRenderLayer.ush), on the GPU. Any number of layers, and elements
+	 * of none besides: each vertex's record says which row, if any.
 	 */
-	TObjectKey<UDreamWidget> RenderLayer;
+	bool HasRenderLayerElements()const { return LayerBounds.Num() > 0; }
 	/**
-	 * Where RenderLayer stands on the canvas, as the canvas last placed it: what the draw call's section is drawn through
-	 * ahead of the canvas's own transform (FDreamUIRenderSection_Mesh::ElementToCanvas). Identity for a draw call of no
-	 * layer. Set on the game thread only, when the draw call is taken and whenever the layer moves.
+	 * CanvasBounds worked out again from InTable's rows as they are now, or left as it is while it still holds them. Any
+	 * thread, while nothing writes those rows.
 	 */
-	FMatrix44f LayerToCanvas = FMatrix44f::Identity;
-	bool IsInRenderLayer()const { return RenderLayer != TObjectKey<UDreamWidget>(); }
+	void PlaceBounds(const class UDreamUIRenderLayerTable* InTable);
 
 	TWeakObjectPtr<class UDreamCanvas> ChildCanvas;//insert point to sort child canvas
 public:
@@ -166,7 +181,10 @@ public:
 	bool bCombinePending = false;
 	/** The combined buffers, made now if the batching left them. */
 	void CombineIfPending();
-	/** The bounds ApplyBatchMeshGeometryToCombined works out, alone: for a draw call whose buffers are left. */
+	/**
+	 * The bounds ApplyBatchMeshGeometryToCombined works out, alone: for a draw call whose buffers are left. CanvasBounds is
+	 * CombinedBounds after either; a draw call with render layer elements is placed after (PlaceBounds).
+	 */
 	void ApplyBatchMeshBoundsToCombined();
 	void ApplyBatchMeshGeometryToCombined();
 	bool CanConsumeUIGeometryForBatchMesh(const FDreamUIGeometry& geo)const;

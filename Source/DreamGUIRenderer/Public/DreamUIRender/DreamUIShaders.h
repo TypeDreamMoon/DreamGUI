@@ -30,12 +30,14 @@ public:
 	static bool ShouldCompilePermutation(const FMaterialShaderPermutationParameters& Parameters);
 	
 	/**
-	 * InElementToCanvas: what the section's vertices go through ahead of the primitive's transform, identity or a render
-	 * layer's (FDreamUIMeshBatchContainer::ElementToCanvas). Set with the rest, in the same batch.
+	 * InRenderLayerTable and InRenderLayerWidgetData: what places a render layer's vertices on the canvas ahead of the
+	 * primitive's transform (DreamUIRenderLayer.ush), null for black ones, which place every vertex where it is. Set with
+	 * the rest, in the same batch.
 	 */
-	void SetMaterialShaderParameters(FRHICommandList& RHICmdList, const FSceneView& View, const FMaterialRenderProxy* MaterialRenderProxy, const FMaterial* Material, const TUniformBuffer<FPrimitiveUniformShaderParameters>* PrimitiveUniformBuffer, const FMatrix44f& InElementToCanvas);
+	void SetMaterialShaderParameters(FRHICommandList& RHICmdList, const FSceneView& View, const FMaterialRenderProxy* MaterialRenderProxy, const FMaterial* Material, const TUniformBuffer<FPrimitiveUniformShaderParameters>* PrimitiveUniformBuffer, FRHITexture* InRenderLayerTable, FRHITexture* InRenderLayerWidgetData);
 private:
-	LAYOUT_FIELD(FShaderParameter, ElementToCanvasParameter);
+	LAYOUT_FIELD(FShaderResourceParameter, RenderLayerTableParameter);
+	LAYOUT_FIELD(FShaderResourceParameter, RenderLayerWidgetDataParameter);
 };
 class FDreamUIScreenRenderPS : public FMaterialShader
 {
@@ -63,6 +65,12 @@ public:
 	static void ModifyCompilationEnvironment(const FMaterialShaderPermutationParameters& Parameters, FShaderCompilerEnvironment& OutEnvironment);
 
 	void SetDepthBlendParameter(FRHICommandList& RHICmdList, float DepthBlend, const FVector4f& DepthTextureScaleOffset, FRHITexture* DepthTexture, FRHISamplerState* DepthTextureSampler = TStaticSamplerState<SF_Bilinear, AM_Clamp, AM_Clamp, AM_Clamp>::GetRHI());
+	/**
+	 * The same, for draw after draw of one pass against one depth: the uniform buffer of the depth and its bilinear sampler is
+	 * made at the first, into InOutDepthTextureBuffer, and bound again after. Each draw of a wall of world-space panels made
+	 * one otherwise.
+	 */
+	void SetDepthBlendParameter(FRHICommandList& RHICmdList, float DepthBlend, const FVector4f& DepthTextureScaleOffset, FRHITexture* DepthTexture, TUniformBufferRef<FDreamUIWorldRenderDepthTexUB>& InOutDepthTextureBuffer);
 private:
 	LAYOUT_FIELD(FShaderParameter, SceneDepthTextureScaleOffsetParameter);
 	LAYOUT_FIELD(FShaderParameter, SceneDepthBlendParameter);

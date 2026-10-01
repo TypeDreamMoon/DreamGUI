@@ -5,6 +5,7 @@
 #include "Misc/AutomationTest.h"
 
 #include "Animation/DreamWidgetAnimation.h"
+#include "Animation/DreamUIAnimationLibrary.h"
 #include "Animation/DreamWidgetAnimationComponent.h"
 #include "Animation/DreamWidgetAnimationObjectReference.h"
 #include "Animation/DreamWidgetAnimationPlayer.h"
@@ -2014,6 +2015,88 @@ bool FDreamWidgetAnimationStoppedFromItsOwnWriteTest::RunTest(const FString& Par
 				TestEqual(FString::Printf(TEXT("%s: and so is the translation"), *Case), TranslationAfterStop, 0.0, 0.001);
 			}
 		}
+	}
+	return true;
+}
+
+/*
+ * A player whose instance ended plays its animation's next instance (UDreamWidgetAnimationComponent::SparePlayers): the
+ * same values, frame for frame, as the new player of the first play; the handle to the ended instance stays ended, and a
+ * call through it reaches nothing; a player kept in this frame is not the one the next play of this frame gets; and with
+ * DreamUI.Animation.ReusePlayers 0 every play has a player of its own. The frames here count up GFrameCounter, as the
+ * engine's do: a player is played again only in a frame after the one it was kept in.
+ */
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamWidgetAnimationReusedPlayerTest,
+	"DreamGUI.Animation.Playback.AFinishedInstancesPlayerPlaysTheNextOneAsANewPlayerWould",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamWidgetAnimationReusedPlayerTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamWidgetAnimationPlaybackTestLocal;
+	const DreamTests::Lifecycle::FScopedConsoleVariable Reuse(TEXT("DreamUI.Animation.ReusePlayers"), 1);
+	FScopedGameWorld Scope;
+	FScopedTree Tree(Scope.World);
+	Tree.AddFloatTrack(TEXT("AnimatableWidth"), 20.0f, 220.0f);
+	auto Frames = [&Scope, &Tree](int32 InCount, TArray<float>* OutWidths)
+	{
+		for (int32 Index = 0; Index < InCount; ++Index)
+		{
+			++GFrameCounter;
+			Scope.World->Tick(LEVELTICK_TimeOnly, FrameSeconds);
+			if (OutWidths != nullptr)
+			{
+				OutWidths->Add(Tree.Button->GetWidth());
+			}
+		}
+	};
+
+	TArray<float> FirstWidths;
+	const FDreamUIAnimationHandle First = Tree.Animator->PlayAnimation(Tree.Animation);
+	if (!TestTrue(TEXT("The first play is live"), First.IsValid()))
+	{
+		return false;
+	}
+	Frames(AnimationFrames + 3, &FirstWidths);
+	TestFalse(TEXT("The first instance has ended"), First.IsValid());
+
+	Tree.Button->SetWidth(20.0f);
+	TArray<float> SecondWidths;
+	const FDreamUIAnimationHandle Second = Tree.Animator->PlayAnimation(Tree.Animation);
+	TestTrue(TEXT("The next play of the animation is played by the first one's player"), Second.Player != nullptr && Second.Player == First.Player);
+	TestEqual(TEXT("...as its next instance"), Second.Instance, First.Instance + 1);
+	TestTrue(TEXT("The new instance is live"), Second.IsValid());
+	TestFalse(TEXT("The handle to the ended one stays ended"), First.IsValid());
+	TestFalse(TEXT("...and is not the new one's"), UDreamUIAnimationLibrary::EqualAnimationHandles(First, Second));
+	Tree.Animator->PauseAnimation(First);
+	TestTrue(TEXT("A pause through the ended instance's handle reaches nothing"), Tree.Animator->IsAnimationPlaying(Second));
+	Frames(AnimationFrames + 3, &SecondWidths);
+	TestFalse(TEXT("The second instance has ended too"), Second.IsValid());
+	if (TestEqual(TEXT("Both plays ran the same frames"), SecondWidths.Num(), FirstWidths.Num()))
+	{
+		for (int32 Index = 0; Index < FirstWidths.Num(); ++Index)
+		{
+			TestTrue(FString::Printf(TEXT("Frame %d: the kept player writes what the new one wrote (%.4f, %.4f)"), Index, FirstWidths[Index], SecondWidths[Index]),
+				FMath::IsNearlyEqual(FirstWidths[Index], SecondWidths[Index], 1.e-4f));
+		}
+	}
+
+	// Stopped and played again in one frame: the player stopped may still be inside its own ending.
+	const FDreamUIAnimationHandle Third = Tree.Animator->PlayAnimation(Tree.Animation);
+	Frames(3, nullptr);
+	Tree.Animator->StopAnimation(Third);
+	const FDreamUIAnimationHandle Fourth = Tree.Animator->PlayAnimation(Tree.Animation);
+	TestTrue(TEXT("A play in the frame a player was kept in gets another player"), Fourth.IsValid() && Fourth.Player != Third.Player);
+	Tree.Animator->StopAnimation(Fourth);
+
+	{
+		const DreamTests::Lifecycle::FScopedConsoleVariable NoReuse(TEXT("DreamUI.Animation.ReusePlayers"), 0);
+		Frames(2, nullptr);
+		const FDreamUIAnimationHandle Fifth = Tree.Animator->PlayAnimation(Tree.Animation);
+		Frames(AnimationFrames + 3, nullptr);
+		const FDreamUIAnimationHandle Sixth = Tree.Animator->PlayAnimation(Tree.Animation);
+		TestTrue(TEXT("With DreamUI.Animation.ReusePlayers 0 a play after an ended one has a player of its own"),
+			Fifth.Player != nullptr && Sixth.Player != nullptr && Sixth.Player != Fifth.Player);
 	}
 	return true;
 }

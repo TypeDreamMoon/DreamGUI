@@ -79,12 +79,13 @@ void UDreamUIAnimationPlayCallbackProxy::Execute(UDreamWidget* Widget, UMovieSce
 
 	Component = Animator;
 	Player = OutHandle.Player;
+	PlayerInstance = OutHandle.Instance;
 	FinishedHandle = Animator->OnInstanceFinished.AddUObject(this, &UDreamUIAnimationPlayCallbackProxy::OnInstanceFinished);
 }
 
 void UDreamUIAnimationPlayCallbackProxy::OnInstanceFinished(const FDreamUIAnimationHandle& InHandle)
 {
-	if (InHandle.Player != Player.Get())
+	if (InHandle.Player != Player.Get() || InHandle.Instance != PlayerInstance)
 	{
 		return;
 	}

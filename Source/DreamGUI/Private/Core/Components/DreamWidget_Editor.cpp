@@ -398,6 +398,12 @@ bool UDreamWidget::CanEditChange(const FEditPropertyChain& PropertyChain) const
 void UDreamWidget::PostEditUndo()
 {
 	Super::PostEditUndo();
+	// Undo writes Children back as they were, and nothing above says which joined: see ChildrenStaleAndPending.
+	ForgetChildrenStale();
+	if (const UDreamWidget* UndoneParent = Parent.Get())
+	{
+		UndoneParent->ForgetChildrenStale();
+	}
 	if (!IsValid(this))
 	{
 		// The transaction took this widget away -- undid its creation, or redid its deletion -- by marking

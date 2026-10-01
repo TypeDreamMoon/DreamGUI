@@ -16,6 +16,8 @@
 #include "Core/DreamUIGeometry.h"
 #include "Core/DreamUIManager.h"
 #include "Core/DreamUIMesh/DreamUIMeshComponent.h"
+#include "Core/DreamUIRenderLayerTable.h"
+#include "Engine/Texture2D.h"
 #include "DreamUIRender/DreamUIRenderStats.h"
 #include "Engine/World.h"
 #include "Event/DreamWorldSpaceRaycaster.h"
@@ -31,18 +33,19 @@
 
 /*
  * A widget whose render transform keeps changing becomes a render layer of its canvas: the geometry under it is kept
- * relative to it, and its transform is applied on the GPU, as a matrix its sections carry. While it turns, nothing under
- * it is transformed, patched or uploaded again -- only the matrix goes to the render thread.
+ * relative to it, and its transform is applied on the GPU, through its row of the world's render layer table. While it
+ * turns, nothing under it is transformed, patched or uploaded again -- only its row goes to the render thread.
  *
  * The batching rules come first, on hand-built render data, as DreamCanvasMoveRefreshAutomationTests.cpp drives the
- * batcher: a layer's elements share draw calls only with each other, and where a layer lies never changes what the
- * batch comes out as. The rest drive a game-world canvas drawn by DreamGUI's renderer frame by frame and read the
- * counters: when a widget becomes a layer, what its moves cost after that, when it stops being one, and what the
- * switches and settings decide. The pictures are in DreamRenderLayerPixelAutomationTests.cpp.
+ * batcher: a layer's elements batch as 3D elements do, into the draw call just before them whatever layer that one's
+ * are in, and where a layer lies never changes what the batch comes out as. The rest drive a game-world canvas drawn by
+ * DreamGUI's renderer frame by frame and read the counters: when a widget becomes a layer, what its moves cost after
+ * that, when it stops being one, and what the switches and settings decide. The pictures are in
+ * DreamRenderLayerPixelAutomationTests.cpp.
  */
 namespace DreamRenderLayerTestLocal
 {
-	FDreamUIGeometry MakeQuad(const FVector2D& InMin, const FVector2D& InMax, const UDreamWidget* InLayer = nullptr)
+	FDreamUIGeometry MakeQuad(const FVector2D& InMin, const FVector2D& InMax, const UDreamWidget* InLayer = nullptr, int32 InLayerRow = 0)
 	{
 		FDreamUIGeometry Geo;
 		Geo.Vertices.Add(FDreamUIMeshVertex(FVector3f(0.0f, (float)InMin.X, (float)InMin.Y)));
@@ -56,6 +59,7 @@ namespace DreamRenderLayerTestLocal
 		if (InLayer != nullptr)
 		{
 			Geo.RenderLayer = InLayer;
+			Geo.RenderLayerRow = InLayerRow;
 		}
 		return Geo;
 	}
@@ -195,7 +199,7 @@ namespace DreamRenderLayerTestLocal
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamRenderLayerBatchingTest,
-	"DreamGUI.RenderLayer.ALayersElementsShareDrawCallsOnlyWithEachOther",
+	"DreamGUI.RenderLayer.ALayersElementsBatchIntoTheDrawCallBeforeThemWhateverLayerItHolds",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
 
 bool FDreamRenderLayerBatchingTest::RunTest(const FString& Parameters)
@@ -205,43 +209,51 @@ bool FDreamRenderLayerBatchingTest::RunTest(const FString& Parameters)
 	DreamTests::Lifecycle::FScopedWorld World(EWorldType::Game);
 	const TStrongObjectPtr<UDreamWidget> LayerA(NewObject<UDreamWidget>(World.World, NAME_None, RF_Transient));
 	const TStrongObjectPtr<UDreamWidget> LayerB(NewObject<UDreamWidget>(World.World, NAME_None, RF_Transient));
-	const TObjectKey<UDreamWidget> KeyA(LayerA.Get());
-	const TObjectKey<UDreamWidget> KeyB(LayerB.Get());
+	constexpr int32 RowA = 3;
+	constexpr int32 RowB = 7;
 
 	// Six elements that would all share one draw call -- no texture, no material, one blend mode, nothing overlapping --
-	// were it not for the layers: none, A, A, none, B, B.
+	// were they all flat: none, A, A, none, B, B. A layer's element goes into the draw call before it, as a 3D one does,
+	// and makes it one no flat element walks back past.
 	TArray<FDreamUIDrawCall> DrawCalls;
 	FDreamUIBatchPlacement Placement = Batch({
 		MakeQuad(FVector2D(-400.0, -20.0), FVector2D(-350.0, 20.0)),
-		MakeQuad(FVector2D(-300.0, -20.0), FVector2D(-250.0, 20.0), LayerA.Get()),
-		MakeQuad(FVector2D(-200.0, -20.0), FVector2D(-150.0, 20.0), LayerA.Get()),
+		MakeQuad(FVector2D(-300.0, -20.0), FVector2D(-250.0, 20.0), LayerA.Get(), RowA),
+		MakeQuad(FVector2D(-200.0, -20.0), FVector2D(-150.0, 20.0), LayerA.Get(), RowA),
 		MakeQuad(FVector2D(-100.0, -20.0), FVector2D(-50.0, 20.0)),
-		MakeQuad(FVector2D(0.0, -20.0), FVector2D(50.0, 20.0), LayerB.Get()),
-		MakeQuad(FVector2D(100.0, -20.0), FVector2D(150.0, 20.0), LayerB.Get()) }, false, DrawCalls);
-	if (!TestEqual(TEXT("None, A, A, none, B, B: four draw calls"), DrawCalls.Num(), 4))
+		MakeQuad(FVector2D(0.0, -20.0), FVector2D(50.0, 20.0), LayerB.Get(), RowB),
+		MakeQuad(FVector2D(100.0, -20.0), FVector2D(150.0, 20.0), LayerB.Get(), RowB) }, false, DrawCalls);
+	if (!TestEqual(TEXT("None, A, A, none, B, B: two draw calls"), DrawCalls.Num(), 2))
 	{
 		return false;
 	}
-	TestFalse(TEXT("The first holds an element of no layer"), DrawCalls[0].IsInRenderLayer());
-	TestTrue(TEXT("...and is flat, as it was"), DrawCalls[0].bIs2DSpace);
-	TestTrue(TEXT("The second is layer A's"), DrawCalls[1].RenderLayer == KeyA);
-	TestEqual(TEXT("...with both of its elements"), DrawCalls[1].BatchMeshGeometryArray.Num(), 2);
-	TestFalse(TEXT("...and ends a flat element's walk back, as a 3D draw call does"), DrawCalls[1].bIs2DSpace);
-	TestFalse(TEXT("The flat element after it did not go back past it into the first"), DrawCalls[2].IsInRenderLayer());
-	TestEqual(TEXT("...but opened a draw call of its own"), DrawCalls[2].BatchMeshGeometryArray.Num(), 1);
-	TestTrue(TEXT("The last is layer B's, with both of its elements"), DrawCalls[3].RenderLayer == KeyB && DrawCalls[3].BatchMeshGeometryArray.Num() == 2);
+	TestEqual(TEXT("The first holds the element of no layer and both of A's"), DrawCalls[0].BatchMeshGeometryArray.Num(), 3);
+	TestFalse(TEXT("...and ends a flat element's walk back, as a 3D draw call does"), DrawCalls[0].bIs2DSpace);
+	TestTrue(TEXT("...boxing A's elements by A's row"), DrawCalls[0].LayerBounds.Num() == 1 && DrawCalls[0].LayerBounds[0].Row == RowA);
+	TestTrue(TEXT("...and the other on the canvas"), DrawCalls[0].CombinedBounds.IsValid != 0);
+	TestEqual(TEXT("The flat element after it opened the second, which took both of B's"), DrawCalls[1].BatchMeshGeometryArray.Num(), 3);
+	TestTrue(TEXT("...boxed by B's row"), DrawCalls[1].LayerBounds.Num() == 1 && DrawCalls[1].LayerBounds[0].Row == RowB);
 	TestTrue(TEXT("Nothing about it depended on where the elements are"), Placement.bIndependentOfPositions);
 
+	// Two layers one after the other: one draw call, each vertex placed through its own layer's row.
+	DrawCalls.Reset();
+	Placement = Batch({
+		MakeQuad(FVector2D(-300.0, -20.0), FVector2D(-250.0, 20.0), LayerA.Get(), RowA),
+		MakeQuad(FVector2D(-200.0, -20.0), FVector2D(-150.0, 20.0), LayerB.Get(), RowB) }, false, DrawCalls);
+	TestEqual(TEXT("A's element and then B's: one draw call"), DrawCalls.Num(), 1);
+	TestTrue(TEXT("...holding a run of each layer's"), DrawCalls.Num() == 1 && DrawCalls[0].LayerBounds.Num() == 2
+		&& DrawCalls[0].LayerBounds[0].Row == RowA && DrawCalls[0].LayerBounds[1].Row == RowB);
+
 	// A layer's element in the same place as a flat one, and then far from it: the batch is the same either way, because a
-	// layer's elements are placed by its transform wherever that takes them.
+	// layer's elements are placed by its row wherever that takes them.
 	for (const FVector2D& Offset : { FVector2D(-380.0, 0.0), FVector2D(300.0, 0.0) })
 	{
 		DrawCalls.Reset();
 		Placement = Batch({
 			MakeQuad(FVector2D(-400.0, -20.0), FVector2D(-350.0, 20.0)),
-			MakeQuad(Offset + FVector2D(0.0, -20.0), Offset + FVector2D(50.0, 20.0), LayerA.Get()),
+			MakeQuad(Offset + FVector2D(0.0, -20.0), Offset + FVector2D(50.0, 20.0), LayerA.Get(), RowA),
 			MakeQuad(FVector2D(200.0, -20.0), FVector2D(250.0, 20.0)) }, false, DrawCalls);
-		TestEqual(FString::Printf(TEXT("With the layer's element at %.0f: three draw calls"), Offset.X), DrawCalls.Num(), 3);
+		TestEqual(FString::Printf(TEXT("With the layer's element at %.0f: two draw calls"), Offset.X), DrawCalls.Num(), 2);
 		TestTrue(FString::Printf(TEXT("With the layer's element at %.0f: nothing depended on positions"), Offset.X), Placement.bIndependentOfPositions);
 	}
 
@@ -250,10 +262,81 @@ bool FDreamRenderLayerBatchingTest::RunTest(const FString& Parameters)
 	DrawCalls.Reset();
 	Placement = Batch({
 		MakeQuad(FVector2D(900.0, 900.0), FVector2D(950.0, 950.0)),
-		MakeQuad(FVector2D(900.0, 900.0), FVector2D(950.0, 950.0), LayerA.Get()) }, true, DrawCalls);
+		MakeQuad(FVector2D(900.0, 900.0), FVector2D(950.0, 950.0), LayerA.Get(), RowA) }, true, DrawCalls);
 	TestEqual(TEXT("Outside the rect, only the layer's element is drawn"), DrawCalls.Num(), 1);
-	TestTrue(TEXT("...in its layer's draw call"), DrawCalls.Num() == 1 && DrawCalls[0].RenderLayer == KeyA);
+	TestTrue(TEXT("...in a draw call boxed by its layer's row"), DrawCalls.Num() == 1 && DrawCalls[0].HasRenderLayerElements());
 	TestEqual(TEXT("...and only the other is listed as culled"), Placement.CulledVisuals.Num(), 1);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamRenderLayerPositionSensitiveFromTest,
+	"DreamGUI.RenderLayer.ABatchThatDependedOnPositionsSaysFromWhichDrawCallOn",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamRenderLayerPositionSensitiveFromTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamRenderLayerTestLocal;
+	DreamTests::Lifecycle::FScopedWorld World(EWorldType::Game);
+	// Textures named outright: an element with none batches with any draw call, and takes on the texture of the next.
+	const TStrongObjectPtr<UTexture2D> White(NewObject<UTexture2D>(GetTransientPackage(), NAME_None, RF_Transient));
+	const TStrongObjectPtr<UTexture2D> Other(NewObject<UTexture2D>(GetTransientPackage(), NAME_None, RF_Transient));
+	auto Textured = [](const FVector2D& InMin, const FVector2D& InMax, UTexture2D* InTexture)
+	{
+		FDreamUIGeometry Geo = MakeQuad(InMin, InMax);
+		Geo.Texture = InTexture;
+		return Geo;
+	};
+	// A 3D element, then white, other, white: the last one can go back past the other texture's draw call into the first
+	// white one, which it does not overlap -- where it went depended on positions, but no further back than the 3D one.
+	FDreamUIGeometry Turned = Textured(FVector2D(-400.0, -20.0), FVector2D(-350.0, 20.0), White.Get());
+	Turned.TransformRelativeToCanvas = FTransform(FRotator(0.0, 30.0, 0.0));
+	TArray<FDreamUIDrawCall> DrawCalls;
+	const FDreamUIBatchPlacement Placement = Batch({
+		Turned,
+		Textured(FVector2D(-300.0, -20.0), FVector2D(-250.0, 20.0), White.Get()),
+		Textured(FVector2D(-100.0, -20.0), FVector2D(-50.0, 20.0), Other.Get()),
+		Textured(FVector2D(100.0, -20.0), FVector2D(150.0, 20.0), White.Get()) }, false, DrawCalls);
+	if (!TestEqual(TEXT("3D, white, other, white: three draw calls"), DrawCalls.Num(), 3))
+	{
+		return false;
+	}
+	TestEqual(TEXT("The last white element went back into the first white draw call"), DrawCalls[1].BatchMeshGeometryArray.Num(), 2);
+	TestFalse(TEXT("...which depended on positions"), Placement.bIndependentOfPositions);
+	TestEqual(TEXT("...from the draw call after the 3D one on"), Placement.PositionSensitiveFrom, 1);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamRenderLayerTableRowsTest,
+	"DreamGUI.RenderLayer.ATableRowIsHandedOutAgainOnlyAFewFramesAfterItIsGivenBack",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamRenderLayerTableRowsTest::RunTest(const FString& Parameters)
+{
+	const TStrongObjectPtr<UDreamUIRenderLayerTable> Table(NewObject<UDreamUIRenderLayerTable>(GetTransientPackage(), NAME_None, RF_Transient));
+	const int32 A = Table->AcquireRow();
+	const int32 B = Table->AcquireRow();
+	TestTrue(TEXT("Two rows, neither of them row 0, which is no layer's"), A > 0 && B > 0 && A != B);
+	TestNotNull(TEXT("...in a texture the shaders read"), Table->GetTexture());
+
+	const FMatrix44f Placed(FTransform(FRotator(10.0, 20.0, 30.0), FVector(1.0, 2.0, 3.0), FVector(2.0)).ToMatrixWithScale());
+	Table->WriteRow(A, Placed);
+	TestTrue(TEXT("A row reads back what was written"), Table->ReadRow(A).Equals(Placed, 1.e-5f));
+	TestTrue(TEXT("...and is sent up at the next flush"), Table->IsRowWrittenSinceFlush(A));
+	Table->Flush();
+	TestFalse(TEXT("...after which it is not any more"), Table->IsRowWrittenSinceFlush(A));
+	TestTrue(TEXT("Row 0 reads identity"), Table->ReadRow(0).Equals(FMatrix44f::Identity));
+
+	// Given back: what was drawn through it is transformed out of it at its canvas's next update, so it waits.
+	Table->ReleaseRow(A);
+	const int32 C = Table->AcquireRow();
+	TestTrue(TEXT("A row given back is not handed out again at once"), C != A && C > 0);
+	TestTrue(TEXT("...and keeps what it holds meanwhile"), Table->ReadRow(A).Equals(Placed, 1.e-5f));
+	GFrameCounter += UDreamUIRenderLayerTable::ReleaseDelayFrames;
+	Table->Flush();
+	TestEqual(TEXT("Once the frames passed, it is handed out again"), Table->AcquireRow(), A);
+	TestEqual(TEXT("Three rows are held"), Table->GetNumRowsInUse(), 3);
 	return true;
 }
 
@@ -296,6 +379,8 @@ bool FDreamRenderLayerTurningCardTest::RunTest(const FString& Parameters)
 		return false;
 	}
 	TestTrue(TEXT("...kept relative to the card"), FaceGeometry->RenderLayer == TObjectKey<UDreamWidget>(Stage.Card));
+	TestTrue(TEXT("The card holds a row of the world's render layer table"), Stage.Card->GetRenderLayerRow() > 0);
+	TestEqual(TEXT("...which the face is placed through"), FaceGeometry->RenderLayerRow, Stage.Card->GetRenderLayerRow());
 	const FVector3f FaceCorner = FaceGeometry->Vertices[0].Position;
 
 	// Still turning, as an animation keeps turning it: each frame moves the card's sections, and nothing else.
@@ -321,6 +406,8 @@ bool FDreamRenderLayerTurningCardTest::RunTest(const FString& Parameters)
 	TestTrue(TEXT("The face is in no layer"), Stage.Face->GetRenderLayer() == nullptr);
 	FaceGeometry = Stage.GeometryOf(Stage.Face);
 	TestTrue(TEXT("...and its geometry is back in canvas space"), FaceGeometry != nullptr && !FaceGeometry->IsInRenderLayer());
+	TestEqual(TEXT("...placed through no row"), FaceGeometry != nullptr ? FaceGeometry->RenderLayerRow : -1, 0);
+	TestEqual(TEXT("The card holds no row any more"), Stage.Card->GetRenderLayerRow(), 0);
 	return true;
 }
 
@@ -743,6 +830,119 @@ bool FDreamRenderLayerParallelPlacementTest::RunTest(const FString& Parameters)
 		TestTrue(FString::Printf(TEXT("Panel %d, frame %d: the mesh bounds follow the card the same way"), Index % 40, Index / 40 + 1),
 			A.IsValid == B.IsValid && A.Min.Equals(B.Min, 1.e-3) && A.Max.Equals(B.Max, 1.e-3));
 	}
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamRenderLayerManyOnOneCanvasTest,
+	"DreamGUI.RenderLayer.ManyTurningWidgetsOnOneCanvasAreLayersDrawnTogether",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamRenderLayerManyOnOneCanvasTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamRenderLayerTestLocal;
+	using DreamUIRenderStats::ECounter;
+	const DreamTests::Lifecycle::FScopedConsoleVariable Layers(TEXT("r.DreamUI.RenderLayers"), 1);
+	const DreamTests::Lifecycle::FScopedConsoleVariable Promote(TEXT("r.DreamUI.RenderLayerPromoteFrames"), 2);
+	FStage Stage;
+	if (!Stage.Build(*this))
+	{
+		return false;
+	}
+	// Forty cards more beside the stage's, each with a face, all turning every frame: more layers than a canvas held when
+	// each layer had draw calls of its own.
+	constexpr int32 CardCount = 40;
+	TArray<UDreamWidget*> Cards = { Stage.Card };
+	for (int32 Index = 1; Index < CardCount; ++Index)
+	{
+		UDreamWidget* Card = Stage.MakeBlock(Stage.Root, 20.0f, 20.0f, FVector2D(-180.0 + 9.0 * Index, -150.0), FColor::Red);
+		Stage.MakeBlock(Card, 10.0f, 10.0f, FVector2D(2.0, 2.0), FColor::Green);
+		Cards.Add(Card);
+	}
+	Stage.Frames(2);
+	auto TurnAll = [&Stage, &Cards](double InYaw)
+	{
+		for (int32 Index = 0; Index < Cards.Num(); ++Index)
+		{
+			Cards[Index]->SetRenderRotation(FRotator(0.0, InYaw + Index, 0.0));
+		}
+		Stage.Frames(1);
+	};
+	TurnAll(10.0);
+	TurnAll(20.0);
+	int32 LayerCount = 0;
+	for (const UDreamWidget* Card : Cards)
+	{
+		LayerCount += Card->IsRenderLayer() ? 1 : 0;
+	}
+	TestEqual(TEXT("Every turning card is a layer"), LayerCount, CardCount);
+	ResetCounters();
+	for (int32 Step = 3; Step <= 6; ++Step)
+	{
+		TurnAll(10.0 * Step);
+	}
+	const FCounted Turning;
+	TestEqual(TEXT("Four more frames of turning rebuild nothing"), Turning.Get(ECounter::DrawCallRebuilds), static_cast<int64>(0));
+	TestEqual(TEXT("...patch no section"), Turning.Get(ECounter::SectionPatches), static_cast<int64>(0));
+	TestEqual(TEXT("...and move every layer once a frame"), Turning.Get(ECounter::RenderLayerMoves), static_cast<int64>(CardCount * 4));
+	// The draw calls in hand: the stage's card and its face in one; the block that stands still after it opens another, which
+	// every card after it goes into with its face. Two draw calls for forty layers, a run of each layer's elements apiece.
+	const UDreamUIMeshComponent* Mesh = Stage.Canvas->GetUIMesh();
+	TestTrue(TEXT("The canvas has a mesh"), Mesh != nullptr);
+	int32 LayerDrawCalls = 0;
+	int32 LayerRuns = 0;
+	for (const FDreamUIDrawCall& DrawCall : Stage.Canvas->CurrentDrawCallData.DrawCallArray)
+	{
+		if (DrawCall.HasRenderLayerElements())
+		{
+			++LayerDrawCalls;
+			LayerRuns += DrawCall.LayerBounds.Num();
+		}
+	}
+	TestEqual(TEXT("The forty layers' elements are drawn in two draw calls"), LayerDrawCalls, 2);
+	TestEqual(TEXT("...boxed a layer at a time"), LayerRuns, CardCount);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamRenderLayerRefreshBeforeSensitiveTest,
+	"DreamGUI.RenderLayer.AMoveBeforeWhereTheBatchLookedBackIsRefreshedInPlace",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamRenderLayerRefreshBeforeSensitiveTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamRenderLayerTestLocal;
+	using DreamUIRenderStats::ECounter;
+	// On the CPU: the card turns as a 3D element whose vertices are refreshed in place.
+	const DreamTests::Lifecycle::FScopedConsoleVariable Layers(TEXT("r.DreamUI.RenderLayers"), 0);
+	FStage Stage;
+	if (!Stage.Build(*this))
+	{
+		return false;
+	}
+	// After the card, the block and two more that stand still: one of another texture, and one white again that goes back
+	// past it into the block's draw call -- a batch that depends on positions, from the block's draw call on.
+	const TStrongObjectPtr<UTexture2D> Other(UTexture2D::CreateTransient(4, 4));
+	UDreamWidget* OtherBlock = Stage.MakeWidget(Stage.Root, 30.0f, 30.0f, FVector2D(-150.0, 150.0));
+	if (UDreamTexture* Visual = OtherBlock->CreateNewVisual<UDreamTexture>())
+	{
+		Visual->SetTexture(Other.Get());
+	}
+	Stage.MakeBlock(Stage.Root, 30.0f, 30.0f, FVector2D(150.0, -150.0), FColor::White);
+	Stage.Frames(2);
+	Stage.TurnCard(10.0);
+	Stage.TurnCard(20.0);
+	const FDreamUIBatchPlacement& Placement = Stage.Canvas->CurrentDrawCallData.Placement;
+	TestFalse(TEXT("The batch depended on positions"), Placement.bIndependentOfPositions);
+	TestTrue(TEXT("...only after the turning card's draw call"), Placement.PositionSensitiveFrom >= 1);
+	ResetCounters();
+	for (int32 Step = 3; Step <= 7; ++Step)
+	{
+		Stage.TurnCard(10.0 * Step);
+	}
+	const FCounted Turning;
+	TestEqual(TEXT("The card's turns rebuild nothing"), Turning.Get(ECounter::DrawCallRebuilds), static_cast<int64>(0));
+	TestEqual(TEXT("...and each is refreshed in place"), Turning.Get(ECounter::InPlaceRefreshes), static_cast<int64>(5));
 	return true;
 }
 

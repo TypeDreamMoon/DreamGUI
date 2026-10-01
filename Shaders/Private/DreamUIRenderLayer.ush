@@ -1,0 +1,57 @@
+// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
+//
+// Render layers, on the GPU. An element of a render layer (UDreamWidget::IsRenderLayer) keeps its vertices relative to
+// the layer, and where the layer stands on its canvas is one row of its world's render layer table
+// (UDreamUIRenderLayerTable). Which row is the element's own: the widget-property record its vertices name in UV1.x holds
+// it, in the render layer row pixel, and holds 0 for an element of no layer. So a draw call holds the elements of any
+// number of layers, and a layer that moves changes its row and nothing else.
+//
+// Both vertex shaders that draw a canvas's batches read it: the built-in one (DreamUIBase.usf) and the one a material
+// draws through (DreamUIShader.usf). Everything after it -- the projection, the clip rects, a material's LocalPosition --
+// is in canvas space, as it is for an element of no layer.
+
+#ifndef DREAMUI_RENDER_LAYER_USH
+#define DREAMUI_RENDER_LAYER_USH
+
+/** Mirrors UDreamVisual::RenderLayerRowPixelStart: the record's pixel holding the element's row, as a float value. */
+#define DREAMUI_WIDGET_PROPERTY_PIXEL_RENDER_LAYER_ROW 15
+
+/**
+ * The world's render layer table: a row a layer, and on it the three columns of the layer's transform to its canvas, a
+ * pixel each, so that a column dotted with (position, 1) is that coordinate on the canvas. Row 0 is no layer's.
+ */
+Texture2D DreamUI_RenderLayerTable;
+/** The canvas's widget-property records, the ones the pixel shader reads. */
+Texture2D DreamUI_RenderLayerWidgetData;
+
+/**
+ * Where the vertex at InPosition of the element whose record is InRecordIndex stands on its canvas, and the rotation that
+ * took it there, each basis row of unit length (a scale of the layer's stays out of a tangent frame, as the primitive's
+ * does). An element of no layer stands where it is.
+ */
+float3 DreamUI_RenderLayerToCanvas(float3 InPosition, float InRecordIndex, out float3x3 OutRotation)
+{
+	OutRotation = float3x3(1, 0, 0, 0, 1, 0, 0, 0, 1);
+	const float RowValue = DreamUI_RenderLayerWidgetData.Load(int3(DREAMUI_WIDGET_PROPERTY_PIXEL_RENDER_LAYER_ROW, (int)round(InRecordIndex), 0)).x;
+	BRANCH
+	if (RowValue < 0.5)
+	{
+		return InPosition;
+	}
+	const int Row = (int)round(RowValue);
+	const float4 ColumnX = DreamUI_RenderLayerTable.Load(int3(0, Row, 0));
+	const float4 ColumnY = DreamUI_RenderLayerTable.Load(int3(1, Row, 0));
+	const float4 ColumnZ = DreamUI_RenderLayerTable.Load(int3(2, Row, 0));
+	const float4 Position = float4(InPosition, 1.0);
+	// The rows of the transform's 3x3 part, as a vector times it reads them: the columns above, turned over.
+	const float3 BasisX = float3(ColumnX.x, ColumnY.x, ColumnZ.x);
+	const float3 BasisY = float3(ColumnX.y, ColumnY.y, ColumnZ.y);
+	const float3 BasisZ = float3(ColumnX.z, ColumnY.z, ColumnZ.z);
+	OutRotation = float3x3(
+		BasisX * rsqrt(max(dot(BasisX, BasisX), 1.0e-12)),
+		BasisY * rsqrt(max(dot(BasisY, BasisY), 1.0e-12)),
+		BasisZ * rsqrt(max(dot(BasisZ, BasisZ), 1.0e-12)));
+	return float3(dot(ColumnX, Position), dot(ColumnY, Position), dot(ColumnZ, Position));
+}
+
+#endif // DREAMUI_RENDER_LAYER_USH

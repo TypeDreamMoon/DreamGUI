@@ -62,7 +62,8 @@ public:
 		  TransformRelativeToCanvas(Other.TransformRelativeToCanvas),
 		  BoundsMin2DInCanvasSpace(Other.BoundsMin2DInCanvasSpace),
 		  BoundsMax2DInCanvasSpace(Other.BoundsMax2DInCanvasSpace),
-		  RenderLayer(Other.RenderLayer)
+		  RenderLayer(Other.RenderLayer),
+		  RenderLayerRow(Other.RenderLayerRow)
 	{
 		
 	}
@@ -85,6 +86,7 @@ public:
 			BoundsMin2DInCanvasSpace = Other.BoundsMin2DInCanvasSpace;
 			BoundsMax2DInCanvasSpace = Other.BoundsMax2DInCanvasSpace;
 			RenderLayer = Other.RenderLayer;
+			RenderLayerRow = Other.RenderLayerRow;
 		}
 		return *this;
 	}
@@ -106,7 +108,8 @@ public:
 		  TransformRelativeToCanvas(Other.TransformRelativeToCanvas),
 		  BoundsMin2DInCanvasSpace(Other.BoundsMin2DInCanvasSpace),
 		  BoundsMax2DInCanvasSpace(Other.BoundsMax2DInCanvasSpace),
-		  RenderLayer(Other.RenderLayer)
+		  RenderLayer(Other.RenderLayer),
+		  RenderLayerRow(Other.RenderLayerRow)
 	{
 	}
 
@@ -127,6 +130,7 @@ public:
 			BoundsMin2DInCanvasSpace = Other.BoundsMin2DInCanvasSpace;
 			BoundsMax2DInCanvasSpace = Other.BoundsMax2DInCanvasSpace;
 			RenderLayer = Other.RenderLayer;
+			RenderLayerRow = Other.RenderLayerRow;
 		}
 		return *this;
 	}
@@ -158,10 +162,12 @@ public:
 	/**
 	 * The render layer the vertices are kept relative to (UDreamWidget::GetRenderLayer when they were transformed), or
 	 * none, when they are in canvas space. So are TransformRelativeToCanvas and the 2D bounds above, for an element of a
-	 * layer: all of it is relative to the layer and stays as it is while the layer moves, and the layer's transform puts
-	 * it on the canvas (FDreamUIDrawCall::LayerToCanvas). A key the batching compares on its worker, never resolved there.
+	 * layer: all of it is relative to the layer and stays as it is while the layer moves, and the layer's row of the render
+	 * layer table puts it on the canvas, on the GPU. A key the batching compares on its worker, never resolved there.
 	 */
 	TObjectKey<UDreamWidget> RenderLayer;
+	/** That layer's row of its world's render layer table (UDreamWidget::GetRenderLayerRow), 0 for none: what boxes it on the canvas. */
+	int32 RenderLayerRow = 0;
 	bool IsInRenderLayer()const { return RenderLayer != TObjectKey<UDreamWidget>(); }
 
 	void CopyDataForPrepare(const FDreamUIGeometry& Other)
@@ -188,8 +194,9 @@ public:
 
 		BoundsMin2DInCanvasSpace = Other.BoundsMin2DInCanvasSpace;
 		BoundsMax2DInCanvasSpace = Other.BoundsMax2DInCanvasSpace;
-		//the space the vertices are in, which the batching keys draw calls by
+		//the space the vertices are in, which the batching tells 3D-like elements by, and the row that places it
 		RenderLayer = Other.RenderLayer;
+		RenderLayerRow = Other.RenderLayerRow;
 	}
 
 	/**
@@ -343,6 +350,8 @@ public:
 		 * vertices are taken to the layer's space by ItemToLayerTransform instead of to the canvas's.
 		 */
 		TObjectKey<UDreamWidget> RenderLayer;
+		/** RenderLayer's row of its world's render layer table (UDreamWidget::GetRenderLayerRow); 0 for none. */
+		int32 RenderLayerRow = 0;
 		/**
 		 * The widget's transform relative to RenderLayer, composed from the local transforms in between rather than
 		 * divided out of the two world transforms: so it comes out the same, bit for bit, however the layer and what is

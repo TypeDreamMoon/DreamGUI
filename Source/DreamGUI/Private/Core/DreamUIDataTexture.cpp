@@ -83,13 +83,18 @@ namespace DreamUIDataTextureLocal
 				{
 					continue;
 				}
-				const int32 Bytes = FMath::Min(FMath::Min(Update.PixelCount, Width - Update.X) * BytesPerPixel, Update.Data.Num());
-				if (Bytes <= 0)
+				const int32 RunBytes = FMath::Min(Update.PixelCount, Width - Update.X) * BytesPerPixel;
+				const int32 SourceStride = Update.PixelCount * BytesPerPixel;
+				for (int32 Row = 0; Row < FMath::Max(Update.Rows, 1) && Update.Y + Row < Height; ++Row)
 				{
-					continue;
+					const int32 Bytes = FMath::Min(RunBytes, Update.Data.Num() - Row * SourceStride);
+					if (Bytes <= 0)
+					{
+						break;
+					}
+					FMemory::Memcpy(Pixels.GetData() + (Update.Y + Row) * Pitch + Update.X * BytesPerPixel, Update.Data.GetData() + Row * SourceStride, Bytes);
+					Written[Update.Y + Row] = true;
 				}
-				FMemory::Memcpy(Pixels.GetData() + Update.Y * Pitch + Update.X * BytesPerPixel, Update.Data.GetData(), Bytes);
-				Written[Update.Y] = true;
 			}
 			for (int32 Row = 0; Row < Height;)
 			{

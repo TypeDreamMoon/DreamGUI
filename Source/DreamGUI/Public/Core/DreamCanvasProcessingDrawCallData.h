@@ -33,6 +33,13 @@ struct FDreamUIBatchPlacement
 	 * which one did depended on positions -- and a move could change it.
 	 */
 	bool bIndependentOfPositions = true;
+	/**
+	 * When it did depend on positions: the first draw call whose elements' bounds the looking back could have read. It
+	 * never went past a 3D draw call, a render layer's or the floor a child canvas, post process or direct mesh sets, so
+	 * the elements before this one were placed wherever they are: while every flat element from this draw call on keeps
+	 * its bounds, a new batch comes out the same. INDEX_NONE when nothing depended on positions.
+	 */
+	int32 PositionSensitiveFrom = INDEX_NONE;
 	/** The flat elements left out because they lay wholly outside the canvas rect. */
 	TArray<TWeakObjectPtr<UDreamVisualBatchMesh>> CulledVisuals;
 };

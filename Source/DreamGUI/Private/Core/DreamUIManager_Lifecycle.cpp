@@ -40,9 +40,10 @@
 
 static TAutoConsoleVariable<float> CVarDreamUIEditorWorldTickIntervalDuringPlay(
 	TEXT("r.DreamUI.EditorWorldTickIntervalDuringPlay"),
-	0.1f,
+	0.5f,
 	TEXT("While a play or simulate session runs, the level being edited updates its UI at most this often, in seconds. Its ")
-	TEXT("panels hold still meanwhile, and walking a thousand of them every frame cost the session's frame about 1.7 ms. ")
+	TEXT("panels hold still meanwhile, and walking a thousand of them every frame cost the session's frame about 1.7 ms; ")
+	TEXT("nearly three thousand of them, every tenth of a second, about 5 ms every other frame of a session running at 20. ")
 	TEXT("0: every frame."),
 	ECVF_Default);
 
@@ -143,6 +144,18 @@ void UDreamUIManagerWorldSubsystem::Deinitialize()
 		}
 		TeardownWorld();
 	}
+	// No canvas holds on to a manager that is going (UDreamCanvas::RegisteredWithManager, which a canvas follows): the teardown
+	// let go of every tree, and so of their canvases, and a canvas registered still is let go of here -- one that is garbage
+	// too, which may yet be told of a move before it is collected.
+	for (const TWeakObjectPtr<UDreamCanvas>& WeakCanvas : AllCanvasArray)
+	{
+		if (UDreamCanvas* Canvas = WeakCanvas.Get(/*bEvenIfPendingKill*/ true); Canvas != nullptr && Canvas->RegisteredWithManager == this)
+		{
+			Canvas->RegisteredWithManager = nullptr;
+		}
+	}
+	RenderTargetDrawRequests.Reset();
+	RenderPrioritySortRequests.Reset();
 #if WITH_EDITOR
 	if (EditorTickDelegateHandle.IsValid())
 	{

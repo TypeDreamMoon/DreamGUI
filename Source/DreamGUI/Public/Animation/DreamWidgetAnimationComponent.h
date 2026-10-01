@@ -41,6 +41,15 @@ struct DREAMGUI_API FDreamUIAnimationHandle
 
 	UPROPERTY(Transient, BlueprintReadOnly, Category = "DreamUI|Animation")
 	TObjectPtr<UDreamWidgetAnimationPlayer> Player = nullptr;
+	/**
+	 * Which of the player's instances this handle names (UDreamWidgetAnimationPlayer::GetInstance). A player whose instance
+	 * ended plays its animation's next instance too (UDreamWidgetAnimationComponent::SparePlayers), and a handle to the
+	 * ended one stays ended.
+	 */
+	uint32 Instance = 0;
+
+	/** The handle of the instance InPlayer is playing now, or played last. */
+	static FDreamUIAnimationHandle Of(UDreamWidgetAnimationPlayer* InPlayer);
 
 	bool IsValid() const;
 	/** The animation this instance plays, or null once the instance is gone. */
@@ -354,8 +363,10 @@ public:
 	/** The user widget whose contents this component lives in, or null for an authoring tree. */
 	UDreamUserWidget* GetOwningUserWidget() const;
 
-	/** True while Player is one of this component's live instances -- what makes a handle valid. */
+	/** True while Player is one of this component's live instances. */
 	bool OwnsLiveInstance(const UDreamWidgetAnimationPlayer* Player) const;
+	/** True while Handle's instance is one of this component's live instances -- what makes a handle valid. */
+	bool IsLiveInstance(const FDreamUIAnimationHandle& Handle) const;
 
 	UDreamWidgetAnimation* AddNewAnimation();
 	bool DeleteAnimationByIndex(int32 InIndex);
@@ -482,6 +493,19 @@ protected:
 	/** Players created by PlayAnimation. Kept alive independently for concurrent playback. */
 	UPROPERTY(Transient)
 	TArray<TObjectPtr<UDreamWidgetAnimationPlayer>> ActiveSequencePlayers;
+	/**
+	 * Players whose instance ended, kept to play their animation's next instance (DreamUI.Animation.ReusePlayers). A new
+	 * player is initialized for its sequence, which registers it with the world's sequence tick manager -- a walk of every
+	 * player registered there -- and sets up its instance of the sequence, and one torn down is walked for again to be
+	 * unregistered: a wall of thousands of widgets starting and ending an animation together paid for it quadratically, in
+	 * the frame they started and the frame they ended. A kept player stays registered and set up, and costs a frame only
+	 * the tick manager's look at a player that is not playing. At most a few for each component (MaxSparePlayers); torn
+	 * down with the component.
+	 */
+	UPROPERTY(Transient)
+	TArray<TObjectPtr<UDreamWidgetAnimationPlayer>> SparePlayers;
+	/** The frame each of SparePlayers was kept at: one is played again only in a later frame (TakeSparePlayer). */
+	TArray<uint64> SparePlayerFrames;
 
 	/** Delegates bound through BindToAnimationEvent and its two named forms. */
 	UPROPERTY(Transient)
@@ -512,6 +536,16 @@ protected:
 	void QueueAnimationAction(TFunction<void()> Action);
 
 	void HandleActiveSequencePlayerFinished(UDreamWidgetAnimationPlayer* Player);
+	/**
+	 * A kept player of InAnimation made ready to play it with InSettings, or null. Only one kept in an earlier frame: a
+	 * player released in this one may still be inside its own finish, which a listener of it ending may have started
+	 * this play from.
+	 */
+	UDreamWidgetAnimationPlayer* TakeSparePlayer(UMovieSceneSequence* InAnimation, const FMovieSceneSequencePlaybackSettings& InSettings);
+	/** Keeps Player, whose instance has ended, to play its animation again (SparePlayers); false when it is not kept. */
+	bool KeepSparePlayer(UDreamWidgetAnimationPlayer* Player);
+	/** Every kept player torn down. */
+	void TearDownSparePlayers();
 	bool IsActiveSequencePlayer(const UDreamWidgetAnimationPlayer* Player) const;
 	void ReleaseActiveSequencePlayer(UDreamWidgetAnimationPlayer* Player, bool bStopPlayer = true);
 	void NotifyInstanceStarted(UDreamWidgetAnimationPlayer* Player);

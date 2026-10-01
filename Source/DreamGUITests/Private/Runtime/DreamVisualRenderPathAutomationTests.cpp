@@ -591,9 +591,11 @@ bool FDreamDataTexturePackingTest::RunTest(const FString& Parameters)
 	TestEqual(TEXT("the text style block still starts at pixel 4"), FDreamTextStyle::PackedPixelStart, 4);
 	TestEqual(TEXT("and the centre comes after it"), UDreamVisual::WidgetCenterPixelStart,
 		FDreamTextStyle::PackedPixelStart + FDreamTextStyle::PackedPixelCount);
+	TestEqual(TEXT("then the render layer's row, after the centre"), UDreamVisual::RenderLayerRowPixelStart,
+		UDreamVisual::WidgetCenterPixelStart + 2);
 	TestEqual(TEXT("so the row is long enough to hold all of it"),
 		UDreamVisual::WidgetPropertyDataLength / (int32)sizeof(float),
-		UDreamVisual::WidgetCenterPixelStart + 2);
+		UDreamVisual::RenderLayerRowPixelStart + 1);
 	return true;
 }
 

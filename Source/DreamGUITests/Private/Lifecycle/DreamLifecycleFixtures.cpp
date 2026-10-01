@@ -12,6 +12,7 @@
 #include "Core/Components/DreamWidget.h"
 #include "Core/DreamUIDataTexture.h"
 #include "Core/DreamUIManager.h"
+#include "Core/DreamUISettings.h"
 #include "Core/DreamUserWidget.h"
 #include "Core/DreamWidgetGeneratedClass.h"
 #include "Core/DreamWidgetTree.h"
@@ -339,6 +340,17 @@ namespace DreamTests::Lifecycle
 	FString JoinLines(const TArray<FString>& InLines)
 	{
 		return InLines.Num() > 0 ? FString::Join(InLines, TEXT("; ")) : FString(TEXT("none"));
+	}
+
+	FScopedMaterialDrawing::FScopedMaterialDrawing()
+	{
+		bSaved = GetMutableDefault<UDreamUISettings>()->bUseBuiltInUIShader;
+		GetMutableDefault<UDreamUISettings>()->bUseBuiltInUIShader = false;
+	}
+
+	FScopedMaterialDrawing::~FScopedMaterialDrawing()
+	{
+		GetMutableDefault<UDreamUISettings>()->bUseBuiltInUIShader = bSaved;
 	}
 }
 

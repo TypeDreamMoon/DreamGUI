@@ -15,6 +15,8 @@ FDreamUIBuiltInTextures FDreamUIBuiltInDrawParams::GetTexturesForRenderCommand()
 	Textures.Font = FontTexture.Get();
 	Textures.WidgetData = WidgetDataTexture.Get();
 	Textures.ClipData = ClipDataTexture.Get();
+	Textures.RenderLayerTable = RenderLayerTable.Get();
+	Textures.RectBlockData = RectBlockData.Get();
 	return Textures;
 }
 
@@ -38,6 +40,8 @@ void FDreamUIBuiltInDrawParams::ResolveTextures_RenderThread(const FDreamUIBuilt
 	FontSamplerRHI = Sampler(InTextures.Font);
 	WidgetDataTextureRHI = Reference(InTextures.WidgetData);
 	ClipDataTextureRHI = Reference(InTextures.ClipData);
+	RenderLayerTableRHI = Reference(InTextures.RenderLayerTable);
+	RectBlockDataRHI = Reference(InTextures.RectBlockData);
 }
 
 IMPLEMENT_GLOBAL_SHADER(FDreamUIBaseVS, "/Plugin/DreamGUI/Private/DreamUIBase.usf", "MainVS", SF_Vertex);

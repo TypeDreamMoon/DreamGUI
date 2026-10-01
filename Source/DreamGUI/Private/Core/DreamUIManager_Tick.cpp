@@ -2,6 +2,7 @@
 // Modified by TypeDreamMoon.
 
 #include "Core/DreamUIManager.h"
+#include "Core/DreamUIGoneCount.h"
 #include "Core/DreamUIWorldContext.h"
 #include "Core/DreamGUISettings.h"
 
@@ -11,6 +12,7 @@
 #include "Core/Components/DreamWidget.h"
 #include "Engine/GameInstance.h"
 #include "Core/Components/DreamCanvas.h"
+#include "Core/DreamUIRenderLayerTable.h"
 #include "Event/DreamBaseRaycaster.h"
 #include "RenderingThread.h"
 #include "Async/ParallelFor.h"
@@ -405,26 +407,26 @@ void UDreamUIManagerWorldSubsystem::TickDreamUI(float DeltaTime)
 	// missed mark left the shader clipping against a stale rectangle and silently culled a whole subtree.
 	// FDreamUIClipData::UpdateData diffs against the last uploaded block, so an unchanged clip costs one matrix
 	// build and a memcmp, with no GPU write.
-	{
-		SCOPE_CYCLE_COUNTER(STAT_DreamUIRefreshClipData);
-		TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_RefreshClipData);
-		for (const TWeakObjectPtr<UDreamCanvas>& Canvas : SnapshotCanvases())
-		{
-			if (IsCanvasStillRegistered(Canvas))
-			{
-				Canvas->RefreshAllClipData();
-			}
-		}
-	}
+	// A root canvas's clips are refreshed where the root is updated, just before, in the pass over the root canvases below:
+	// only a root has clips to refresh (RefreshAllClipData), and a pass of their own over every canvas was two looks at each
+	// of a world of panels a frame for none.
 
 	//update draw-call
 	{
 		SCOPE_CYCLE_COUNTER(STAT_DreamUIUpdateRootCanvas);
 		TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_UpdateRootCanvases);
+		// One stage for every root canvas's update: timed per canvas, a wall of thousands of world panels read the clock
+		// thousands of times a frame for it.
+		DREAMUI_STAGE_SCOPE(CanvasUpdate);
 		bCanvasesUpdatedSinceSubmit = true;
 		// Recorded and sent as one: see SubmitCanvasDrawCall.
 		FRenderCommandList::FRecordScope RecordScope(FRenderCommandList::Create(ERenderCommandListFlags::CloseOnSubmit), FRenderCommandList::EStopRecordingAction::Submit);
-		ForEachRootCanvasInRenderModeOrder(true, [](UDreamCanvas* Canvas) { Canvas->UpdateRootCanvas(); });
+		const UWorld* World = GetWorld();
+		ForEachRootCanvasInRenderModeOrder(true, [World](UDreamCanvas* Canvas)
+		{
+			Canvas->RefreshAllClipData();
+			Canvas->UpdateRootCanvas(World);
+		});
 	}
 	UDreamUIFontData_FreeTypeRender::FlushPendingFontTextures();
 
@@ -434,11 +436,38 @@ void UDreamUIManagerWorldSubsystem::TickDreamUI(float DeltaTime)
 	{
 		SCOPE_CYCLE_COUNTER(STAT_DreamUIRenderPrioritySort);
 		TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_RenderPrioritySort);
-		for (const TWeakObjectPtr<UDreamCanvas>& Canvas : SnapshotCanvases())
+		// Only the canvases that asked (AddRenderPrioritySortRequest), each once: every registered canvas was looked at every
+		// frame for the few that had.
+		if (RenderPrioritySortRequests.Num() > 0)
 		{
-			if (IsCanvasStillRegistered(Canvas))
+			TArray<TWeakObjectPtr<UDreamCanvas>> Requests;
+			Swap(Requests, RenderPrioritySortRequests);
+			TArray<UDreamCanvas*> StillAsking;
+			for (const TWeakObjectPtr<UDreamCanvas>& WeakCanvas : Requests)
 			{
+				UDreamCanvas* const Canvas = WeakCanvas.Get();
+				// Gone, let go of, or listed twice and taken already.
+				if (Canvas == nullptr || Canvas->RegisteredWithManager != this || !Canvas->bRenderPrioritySortListed)
+				{
+					continue;
+				}
+				Canvas->bRenderPrioritySortListed = false;
 				Canvas->ConsumePendingRenderPrioritySort();
+				// One that does not own its sorting keeps its request until a rebuild of its own takes it, as it did when every
+				// canvas was looked at every frame: it sorts once it owns its sorting.
+				if (Canvas->bNeedToSortRenderPriority)
+				{
+					StillAsking.Add(Canvas);
+				}
+			}
+			for (UDreamCanvas* Canvas : StillAsking)
+			{
+				// Asked again meanwhile, and listed then.
+				if (!Canvas->bRenderPrioritySortListed)
+				{
+					Canvas->bRenderPrioritySortListed = true;
+					RenderPrioritySortRequests.Add(Canvas);
+				}
 			}
 		}
 	}
@@ -448,11 +477,64 @@ namespace DreamUIManagerTickLocal
 {
 	/** Moved on by InvalidateRootCanvasOrder; a manager whose sort is older sorts again. */
 	std::atomic<uint64> RootCanvasOrderGeneration = 1;
+	/** The render modes of UDreamUIManagerWorldSubsystem::RootCanvasesByPass, in the order the passes take them. */
+	constexpr EDreamRenderMode PassOrder[] = { EDreamRenderMode::ScreenSpaceOverlay, EDreamRenderMode::WorldSpace, EDreamRenderMode::WorldSpace_DreamUI, EDreamRenderMode::RenderTarget };
+}
+
+void UDreamUIManagerWorldSubsystem::SortRootCanvasesIfStale()
+{
+	using namespace DreamUIManagerTickLocal;
+	static_assert(UE_ARRAY_COUNT(PassOrder) == UE_ARRAY_COUNT(RootCanvasesByPass), "One sorted list per pass");
+	const uint64 Generation = DreamUIManagerTickLocal::RootCanvasOrderGeneration.load(std::memory_order_relaxed);
+	if (RootCanvasOrderGeneration == Generation)
+	{
+		return;
+	}
+	RootCanvasOrderGeneration = Generation;
+	for (TArray<TWeakObjectPtr<UDreamCanvas>>& Pass : RootCanvasesByPass)
+	{
+		Pass.Reset();
+	}
+	for (const TWeakObjectPtr<UDreamCanvas>& Canvas : AllCanvasArray)
+	{
+		const UDreamCanvas* Resolved = Canvas.Get();
+		if (Resolved == nullptr || !Resolved->IsRootCanvas())continue;
+		const EDreamRenderMode Mode = Resolved->GetRenderMode();
+		for (int32 Pass = 0; Pass < UE_ARRAY_COUNT(PassOrder); ++Pass)
+		{
+			if (PassOrder[Pass] == Mode)
+			{
+				RootCanvasesByPass[Pass].Add(Canvas);
+				break;
+			}
+		}
+	}
+	// Their pointers are found again at the next pass (RootCanvasesByPassRaw).
+	RootCanvasesRawGone = 0;
 }
 
 void UDreamUIManagerWorldSubsystem::InvalidateRootCanvasOrder()
 {
 	DreamUIManagerTickLocal::RootCanvasOrderGeneration.fetch_add(1, std::memory_order_relaxed);
+}
+
+const TArray<UDreamCanvas*>& UDreamUIManagerWorldSubsystem::GetAllCanvasesResolved()
+{
+	// A canvas coming or going moves the order generation on (AddCanvas, RemoveCanvas). The count is read before the
+	// look-ups: a canvas found alive by them is still alive while it reads the same.
+	const uint64 Order = DreamUIManagerTickLocal::RootCanvasOrderGeneration.load(std::memory_order_relaxed);
+	const uint64 Gone = DreamUIGone::Read();
+	if (Order != AllCanvasesResolvedOrder || Gone != AllCanvasesResolvedGone || AllCanvasesResolved.Num() != AllCanvasArray.Num())
+	{
+		AllCanvasesResolvedOrder = Order;
+		AllCanvasesResolvedGone = Gone;
+		AllCanvasesResolved.Reset(AllCanvasArray.Num());
+		for (const TWeakObjectPtr<UDreamCanvas>& Canvas : AllCanvasArray)
+		{
+			AllCanvasesResolved.Add(Canvas.Get());
+		}
+	}
+	return AllCanvasesResolved;
 }
 
 void UDreamUIManagerWorldSubsystem::ForEachRootCanvasInRenderModeOrder(bool bInActualRenderMode, TFunctionRef<void(UDreamCanvas*)> InFunction)
@@ -464,46 +546,39 @@ void UDreamUIManagerWorldSubsystem::ForEachRootCanvasInRenderModeOrder(bool bInA
 	 * again when its turn comes: a call may make a render target and broadcast it, and a listener may unregister a canvas
 	 * or change its mode. One registered meanwhile waits for the next frame.
 	 */
-	static constexpr EDreamRenderMode PassOrder[] = { EDreamRenderMode::ScreenSpaceOverlay, EDreamRenderMode::WorldSpace, EDreamRenderMode::WorldSpace_DreamUI, EDreamRenderMode::RenderTarget };
-	static_assert(UE_ARRAY_COUNT(PassOrder) == UE_ARRAY_COUNT(RootCanvasesByPass), "One sorted list per pass");
 	auto ModeOf = [bInActualRenderMode](const UDreamCanvas* Canvas)
 	{
 		return bInActualRenderMode ? Canvas->GetActualRenderMode() : Canvas->GetRenderMode();
 	};
-	const uint64 Generation = DreamUIManagerTickLocal::RootCanvasOrderGeneration.load(std::memory_order_relaxed);
-	if (RootCanvasOrderGeneration != Generation)
+	SortRootCanvasesIfStale();
+	// See RootCanvasesByPassRaw: looked up again only once something may have gone since they last were. Read before
+	// the look-ups: a canvas found alive by them is still alive while the count reads the same.
+	const uint64 Gone = DreamUIGone::Read();
+	if (RootCanvasesRawGone != Gone)
 	{
-		RootCanvasOrderGeneration = Generation;
-		for (TArray<TWeakObjectPtr<UDreamCanvas>>& Pass : RootCanvasesByPass)
+		RootCanvasesRawGone = Gone;
+		for (int32 Pass = 0; Pass < UE_ARRAY_COUNT(RootCanvasesByPass); ++Pass)
 		{
-			Pass.Reset();
-		}
-		for (const TWeakObjectPtr<UDreamCanvas>& Canvas : AllCanvasArray)
-		{
-			const UDreamCanvas* Resolved = Canvas.Get();
-			if (Resolved == nullptr || !Resolved->IsRootCanvas())continue;
-			const EDreamRenderMode Mode = Resolved->GetRenderMode();
-			for (int32 Pass = 0; Pass < UE_ARRAY_COUNT(PassOrder); ++Pass)
+			TArray<UDreamCanvas*>& Raw = RootCanvasesByPassRaw[Pass];
+			Raw.Reset();
+			for (const TWeakObjectPtr<UDreamCanvas>& WeakCanvas : RootCanvasesByPass[Pass])
 			{
-				if (PassOrder[Pass] == Mode)
-				{
-					RootCanvasesByPass[Pass].Add(Canvas);
-					break;
-				}
+				Raw.Add(WeakCanvas.Get());
 			}
 		}
 	}
-	for (int32 Pass = 0; Pass < UE_ARRAY_COUNT(PassOrder); ++Pass)
+	for (int32 Pass = 0; Pass < UE_ARRAY_COUNT(DreamUIManagerTickLocal::PassOrder); ++Pass)
 	{
 		// A copy: a call that sorts the canvases again, through a pass of its own, would otherwise change the list under
-		// this one.
-		const TArray<TWeakObjectPtr<UDreamCanvas>> Canvases = RootCanvasesByPass[Pass];
-		for (const TWeakObjectPtr<UDreamCanvas>& Canvas : Canvases)
+		// this one. A canvas a call lets go of meanwhile is still in memory until a collection, which no call makes, and
+		// is told by its registration.
+		const TArray<UDreamCanvas*> Canvases = RootCanvasesByPassRaw[Pass];
+		for (UDreamCanvas* const Canvas : Canvases)
 		{
-			if (!IsCanvasStillRegistered(Canvas))continue;
+			if (Canvas == nullptr || Canvas->RegisteredWithManager != this)continue;
 			if (!Canvas->IsRootCanvas())continue;
-			if (ModeOf(Canvas.Get()) != PassOrder[Pass])continue;
-			InFunction(Canvas.Get());
+			if (ModeOf(Canvas) != DreamUIManagerTickLocal::PassOrder[Pass])continue;
+			InFunction(Canvas);
 		}
 	}
 }
@@ -635,7 +710,45 @@ void UDreamUIManagerWorldSubsystem::SubmitCanvasDrawCall()
 		// the game thread's again.
 		TArray<UDreamCanvas*> ToRefresh;
 		TArray<UDreamCanvas*> ToFinish;
-		ForEachRootCanvasInRenderModeOrder(false, [&ToRefresh, &ToFinish](UDreamCanvas* Canvas) { Canvas->TakeDrawCallBatchData(ToRefresh, ToFinish); });
+		// Their render layers tended on the game thread, to be placed -- a matrix and a box for each section, the canvas's own
+		// -- on as many threads as there are, and the rest of each finish after. A canvas taken with no vertex refresh to make
+		// is tended right after its take, while it is in hand: a pass of its own over every canvas read each from memory
+		// again. One with a refresh is tended after the refreshes, as before: taking a layer back starts its elements' vertex
+		// transforms, which its refresh must not be reading.
+		TArray<UDreamCanvas*> ToPlace;
+		TArray<UDreamCanvas*> ToTendAfterRefresh;
+		auto Tend = [this, &ToPlace](UDreamCanvas* Canvas)
+		{
+			// Still registered here, asked of the flags the tending reads next rather than of the object array; one let go of
+			// meanwhile is asked about as before.
+			if ((Canvas->RegisteredWithManager == this || IsValid(Canvas)) && Canvas->TendRenderLayersBeforeFinish())
+			{
+				ToPlace.Add(Canvas);
+			}
+		};
+		ForEachRootCanvasInRenderModeOrder(false, [&ToRefresh, &ToFinish, &ToTendAfterRefresh, &Tend](UDreamCanvas* Canvas)
+		{
+			const int32 FirstRefreshed = ToRefresh.Num();
+			const int32 FirstFinished = ToFinish.Num();
+			Canvas->TakeDrawCallBatchData(ToRefresh, ToFinish);
+			for (int32 Index = FirstFinished; Index < ToFinish.Num(); ++Index)
+			{
+				UDreamCanvas* const Taken = ToFinish[Index];
+				bool bRefreshed = false;
+				for (int32 Refreshed = FirstRefreshed; Refreshed < ToRefresh.Num(); ++Refreshed)
+				{
+					bRefreshed |= ToRefresh[Refreshed] == Taken;
+				}
+				if (bRefreshed)
+				{
+					ToTendAfterRefresh.Add(Taken);
+				}
+				else
+				{
+					Tend(Taken);
+				}
+			}
+		});
 		const int32 MinCanvases = CVarDreamUIParallelVertexRefreshMinCanvases.GetValueOnGameThread();
 		if (MinCanvases > 0 && ToRefresh.Num() >= MinCanvases && FApp::ShouldUseThreadingForPerformance())
 		{
@@ -659,15 +772,9 @@ void UDreamUIManagerWorldSubsystem::SubmitCanvasDrawCall()
 				Canvas->RefreshDrawCallVertices();
 			}
 		}
-		// Their render layers placed where the layers now are: tended on the game thread, then placed -- a matrix and a box
-		// for each section, the canvas's own -- on as many threads as there are, and the rest of each finish after.
-		TArray<UDreamCanvas*> ToPlace;
-		for (UDreamCanvas* Canvas : ToFinish)
+		for (UDreamCanvas* Canvas : ToTendAfterRefresh)
 		{
-			if (IsValid(Canvas) && Canvas->TendRenderLayersBeforeFinish())
-			{
-				ToPlace.Add(Canvas);
-			}
+			Tend(Canvas);
 		}
 		const int32 MinPlacingCanvases = CVarDreamUIParallelLayerPlacementMinCanvases.GetValueOnGameThread();
 		if (MinPlacingCanvases > 0 && ToPlace.Num() >= MinPlacingCanvases && FApp::ShouldUseThreadingForPerformance())
@@ -686,20 +793,41 @@ void UDreamUIManagerWorldSubsystem::SubmitCanvasDrawCall()
 				Canvas->PlaceRenderLayers();
 			}
 		}
+		// Every row the canvases wrote this frame -- a layer made, a layer placed -- sent up together, a run at a time.
+		if (RenderLayerTable != nullptr)
+		{
+			RenderLayerTable->Flush();
+		}
 		for (UDreamCanvas* Canvas : ToFinish)
 		{
-			if (IsValid(Canvas))
+			if (Canvas->RegisteredWithManager == this || IsValid(Canvas))
 			{
 				Canvas->FinishDrawCallBatchData();
 			}
 		}
 	}
-	// The render-target canvases that draw themselves, now that every canvas has sent this frame's sections.
-	for (const TWeakObjectPtr<UDreamCanvas>& Canvas : SnapshotCanvases())
+	// The render-target canvases that asked to be drawn (AddRenderTargetDrawRequest), now that every canvas has sent this
+	// frame's sections: every registered canvas was looked at every frame for the few that had.
+	if (RenderTargetDrawRequests.Num() > 0)
 	{
-		if (IsCanvasStillRegistered(Canvas) && Canvas->IsRootCanvas())
+		TArray<TWeakObjectPtr<UDreamCanvas>> Requests;
+		Swap(Requests, RenderTargetDrawRequests);
+		for (const TWeakObjectPtr<UDreamCanvas>& WeakCanvas : Requests)
 		{
-			Canvas->DrawRenderTargetIfRequested();
+			UDreamCanvas* const Canvas = WeakCanvas.Get();
+			if (Canvas == nullptr || Canvas->RegisteredWithManager != this)
+			{
+				continue;
+			}
+			if (Canvas->IsRootCanvas())
+			{
+				Canvas->DrawRenderTargetIfRequested();
+			}
+			// Not a root just now, and so not drawn: asked again at the next submit, as when every canvas was looked at.
+			if (Canvas->bRenderTargetDrawRequested && !RenderTargetDrawRequests.Contains(WeakCanvas))
+			{
+				RenderTargetDrawRequests.Add(WeakCanvas);
+			}
 		}
 	}
 }

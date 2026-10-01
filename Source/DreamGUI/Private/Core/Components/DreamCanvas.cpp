@@ -2,6 +2,7 @@
 // Modified by TypeDreamMoon.
 
 #include "Core/Components/DreamCanvas.h"
+#include "Core/DreamUIDetailTrace.h"
 #include "Core/DreamUIWorldContext.h"
 #include "Core/DreamGUISettings.h"
 #include "Engine/UserInterfaceSettings.h"
@@ -10,6 +11,7 @@
 #include "Utils/DreamUIUtils.h"
 #include "Core/DreamUISettings.h"
 #include "Core/DreamUIManager.h"
+#include "Core/DreamUIGoneCount.h"
 #include "DreamUIRender/DreamUIRenderer.h"
 #include "DreamUIRender/DreamUIRenderStats.h"
 #include "Core/DreamUIMesh/DreamUIMeshComponent.h"
@@ -39,6 +41,12 @@
 #include "Core/DreamCanvasDrawCallProcessingRunnable.h"
 #include "Core/DreamUIClipData.h"
 #include "Core/DreamUIDataAsTexture.h"
+#include "Core/DreamUIRenderLayerTable.h"
+#include "Async/ParallelFor.h"
+#include "Algo/Sort.h"
+#include "Algo/Unique.h"
+#include "Misc/App.h"
+#include <atomic>
 #include "Core/DreamUIRuntimeObject.h"
 #include "Core/Components/DreamLayout.h"
 
@@ -84,30 +92,21 @@ static TAutoConsoleVariable<int32> CVarDreamUIRenderLayerDemoteFrames(
 
 static TAutoConsoleVariable<int32> CVarDreamUIRenderLayerMaxPerCanvas(
 	TEXT("r.DreamUI.RenderLayerMaxPerCanvas"),
-	16,
-	TEXT("A canvas holding this many render layers makes no more of widgets whose RenderLayer is Auto: a layer's elements ")
-	TEXT("batch only with each other, so each layer costs its canvas a draw call or two. A widget set to Always is made one ")
-	TEXT("whatever the count."),
+	8192,
+	TEXT("A canvas holding this many render layers makes no more of widgets whose RenderLayer is Auto. A layer costs a row of ")
+	TEXT("its world's render layer table and a matrix a frame while it moves; its elements batch as 3D elements do, into the ")
+	TEXT("draw call just before them, with any layer's. A widget set to Always is made one whatever the count."),
+	ECVF_Default);
+
+static TAutoConsoleVariable<int32> CVarDreamUIParallelLayerRowsMin(
+	TEXT("r.DreamUI.ParallelLayerRowsMin"),
+	2048,
+	TEXT("A canvas holding at least this many render layers works out where they stand, and writes their rows of the render ")
+	TEXT("layer table, on as many threads as there are. 0: always on the thread placing the canvas."),
 	ECVF_Default);
 
 namespace DreamCanvasLocal
 {
-	/**
-	 * UDreamUIManagerWorldSubsystem::BumpHitTestGenerationFor through the manager the canvas's widget registered with. A
-	 * canvas that moves asks this a few times a frame -- updated, layers marked moved, layers placed -- and finding the
-	 * manager through the world walks the outers each time.
-	 */
-	void BumpHitTestGeneration(const UDreamCanvas* InCanvas)
-	{
-		const UDreamWidget* Widget = InCanvas->GetWidget();
-		if (UDreamUIManagerWorldSubsystem* Manager = Widget != nullptr ? Widget->GetRegisteredManager() : nullptr)
-		{
-			Manager->BumpHitTestGeneration();
-			return;
-		}
-		UDreamUIManagerWorldSubsystem::BumpHitTestGenerationFor(InCanvas);
-	}
-
 	/**
 	 * Whether every element of InCanvas under InWidget, its own included, can be kept relative to it: each one transformed
 	 * along the FTransform path of FDreamUIGeometry::TransformVertices, from nothing but where it is in the layer. A child
@@ -187,6 +186,11 @@ namespace DreamCanvasLocal
 	}
 }
 
+UDreamWidget* UDreamCanvas::GetCanvasWidget() const
+{
+	return CanvasWidgetRaw != nullptr && CanvasWidgetRaw == GetOuter() ? CanvasWidgetRaw : GetWidget();
+}
+
 UDreamCanvas::UDreamCanvas()
 {
 	DefaultMeshType = UDreamUIMeshComponent::StaticClass();
@@ -214,7 +218,7 @@ void UDreamCanvas::Awake()
 	}
 	MarkCanvasUpdate(true);
 
-	bNeedToSortRenderPriority = true;
+	RequestRenderPrioritySort();
 
 	if (this->IsRootCanvas())
 	{
@@ -241,15 +245,17 @@ TSharedPtr<class FDreamUIRenderer, ESPMode::ThreadSafe> UDreamCanvas::GetRenderT
 	return RenderTargetViewExtension;
 }
 
-void UDreamCanvas::UpdateRootCanvas()
+void UDreamCanvas::UpdateRootCanvas(const UWorld* InWorld)
 {
-	// Found once: a canvas's world is found by walking its outers, and every root canvas asks each frame.
-	const UWorld* World = GetWorld();
+	// Handed in by the manager: a canvas's own world is found by walking its widget's outers, and every root canvas of a
+	// world of panels was asked it every frame.
+	const UWorld* World = InWorld;
 	if (World == nullptr)
 		return;
-	DREAMUI_STAGE_SCOPE(CanvasUpdate);
+	// Timed as a stage for all the root canvases together, by the manager's pass over them.
+	DREAMUI_DETAIL_SCOPE(DreamUI_CanvasUpdate);
 	CheckRootCanvas();
-	if (this == RootCanvas)
+	if (IsOwnRoot())
 	{
 		if (RenderModeIsDreamRendererOrUERenderer(CurrentRenderMode))
 		{
@@ -368,18 +374,10 @@ void UDreamCanvas::CheckRenderTargetUpdate()
 	bool bIsRenderTargetRenderer = false;
 	if (RenderModeIsDreamRendererOrUERenderer(CurrentRenderMode))
 	{
-		auto ActualRenderMode = GetActualRenderMode();
-#if WITH_EDITOR
-		if (!DreamUI::IsGameWorld(this))//edit mode
-		{
-			if (ActualRenderMode == EDreamRenderMode::ScreenSpaceOverlay)
-				ActualRenderMode = EDreamRenderMode::WorldSpace_DreamUI;
-		}
-#endif
-		if (ActualRenderMode == EDreamRenderMode::RenderTarget)
-		{
-			bIsRenderTargetRenderer = true;
-		}
+		// Only whether it renders to a target. The edited level draws a screen-space canvas in world space instead, which
+		// is no render target either, so which world this is -- found by walking the widget's outers, for every root canvas
+		// every frame -- is not asked here.
+		bIsRenderTargetRenderer = GetActualRenderMode() == EDreamRenderMode::RenderTarget;
 	}
 	if (bIsRenderTargetRenderer)
 	{
@@ -427,8 +425,13 @@ void UDreamCanvas::CheckRenderTargetUpdate()
 #endif
 				if (RenderTargetViewExtension.IsValid())
 				{
-					// Drawn once this frame's sections have gone to the render thread: DrawRenderTargetIfRequested.
+					// Drawn once this frame's sections have gone to the render thread: DrawRenderTargetIfRequested, by the
+					// manager, which is told which canvases asked.
 					bRenderTargetDrawRequested = true;
+					if (RegisteredWithManager != nullptr)
+					{
+						RegisteredWithManager->AddRenderTargetDrawRequest(this);
+					}
 				}
 			}
 		}
@@ -452,6 +455,7 @@ void UDreamCanvas::DrawRenderTargetIfRequested()
 void UDreamCanvas::OnRegister()
 {
 	Super::OnRegister();
+	CanvasWidgetRaw = GetWidget();
 	if (auto DreamUIManager = UDreamUIManagerWorldSubsystem::GetInstance(GetWorld()))
 	{
 		DreamUIManager->AddCanvas(this);
@@ -494,8 +498,10 @@ void UDreamCanvas::OnUnregister()
 	{
 		OnRenderTargetChanged.Broadcast(nullptr);
 	}
+	CanvasWidgetRaw = nullptr;
 	Super::OnUnregister();
-	if (auto DreamUIManager = UDreamUIManagerWorldSubsystem::GetInstance(GetWorld()))
+	// The manager it registered with first: the world's may be another by now, or none.
+	if (UDreamUIManagerWorldSubsystem* DreamUIManager = RegisteredWithManager != nullptr ? RegisteredWithManager : UDreamUIManagerWorldSubsystem::GetInstance(GetWorld()))
 	{
 		DreamUIManager->RemoveCanvas(this);
 	}
@@ -561,7 +567,6 @@ void UDreamCanvas::ClearDrawCall()
 		bUIMeshNeedToSetInitialParameters = true;
 	}
 	CurrentDrawCallData.DrawCallArray.Empty();
-	RenderLayerPlacements.Reset();
 }
 
 void UDreamCanvas::RemoveFromViewExtension(bool PropogateToChildrenCanvas)
@@ -607,6 +612,11 @@ bool UDreamCanvas::CheckRootCanvas(bool forceRecheck)const
 		{
 			RootCanvas = nullptr;
 		}
+		RootCanvasRaw = nullptr;
+	}
+	else if (IsOwnRoot())
+	{
+		return true;
 	}
 	if (RootCanvas.IsValid())return true;
 	if (this->GetWorld() == nullptr)return false;
@@ -629,6 +639,7 @@ bool UDreamCanvas::CheckRootCanvas(bool forceRecheck)const
 		return ResultCanvas;
 	};
 	auto NewRootCanvas = FindRootCanvas(this->GetWidget());
+	RootCanvasRaw = NewRootCanvas;
 	if (NewRootCanvas != RootCanvas)
 	{
 		RootCanvas = NewRootCanvas;
@@ -723,6 +734,20 @@ void UDreamCanvas::OnUIHierarchyAttachmentChanged()
 
 	auto NewParentCanvas = GetWidget()->GetComponentInParent<UDreamCanvas>(false);
 	SetParentCanvas(NewParentCanvas);
+	bWidgetIsTreeRoot = GetWidget()->GetParent() == nullptr;
+}
+
+bool UDreamCanvas::AnyChildCanvasHoldsRenderLayers() const
+{
+	for (const TWeakObjectPtr<UDreamCanvas>& Child : ChildrenCanvasArray)
+	{
+		const UDreamCanvas* ChildCanvas = Child.Get();
+		if (ChildCanvas != nullptr && (ChildCanvas->RenderLayers.Num() > 0 || ChildCanvas->AnyChildCanvasHoldsRenderLayers()))
+		{
+			return true;
+		}
+	}
+	return false;
 }
 
 void UDreamCanvas::OnWidgetActiveChanged(bool WidgetActive)
@@ -766,8 +791,10 @@ bool UDreamCanvas::IsRenderToWorldSpace()const
 {
 	if (CheckRootCanvas())
 	{
-		return RootCanvas->RenderMode == EDreamRenderMode::WorldSpace
-			|| RootCanvas->RenderMode == EDreamRenderMode::WorldSpace_DreamUI
+		// A root's own mode without a weak look-up of itself: a world-space raycast asks every canvas of a world of panels.
+		const EDreamRenderMode RootRenderMode = IsOwnRoot() ? RenderMode : RootCanvas->RenderMode;
+		return RootRenderMode == EDreamRenderMode::WorldSpace
+			|| RootRenderMode == EDreamRenderMode::WorldSpace_DreamUI
 			;
 	}
 	return false;
@@ -787,8 +814,9 @@ bool UDreamCanvas::IsRenderByDreamUIRendererOrUERenderer()const
 
 void UDreamCanvas::RefreshAllClipData()
 {
-	// All children canvas clip data is stored in the root canvas, so only the root has a list to walk.
-	if (this != RootCanvas)
+	// All children canvas clip data is stored in the root canvas, so only the root has a list to walk -- and a root with
+	// none, as most panels of a world are, has nothing to send up, and its clip texture is not looked at.
+	if (!IsOwnRoot() || ClipDataList.Num() == 0)
 	{
 		return;
 	}
@@ -860,29 +888,36 @@ void UDreamCanvas::MarkWidgetMoved(UDreamWidget* InWidget)
 
 void UDreamCanvas::NoteRenderTransformChanged(UDreamWidget* InWidget)
 {
-	// Cheap first: this runs for every render transform change of every widget, and most canvases can hold no layer.
-	if (InWidget == nullptr || InWidget->GetRenderLayerMode() == EDreamWidgetRenderLayer::Never
-		|| CVarDreamUIRenderLayers.GetValueOnGameThread() == 0 || !IsValid(UIMesh) || !UIMesh->CanDrawRenderLayers())
+	// This runs for every render transform change of every widget: what it counts is kept on the widget, which the write
+	// that got here has in hand already, and anything else is only looked at when the widget may be due to be made a layer.
+	// A canvas of thousands of turning widgets used to look each one up in a map, and ask its mesh, every time.
+	if (InWidget == nullptr)
 	{
 		return;
 	}
-	FRenderLayerCandidate& Candidate = RenderLayerCandidates.FindOrAdd(TObjectKey<UDreamWidget>(InWidget));
 	const uint64 Frame = GFrameCounter;
-	if (Candidate.LastChangeFrame == Frame)
+	if (InWidget->RenderLayerLastChangeFrame == Frame)
 	{
 		return;
 	}
-	const bool bInARow = Candidate.LastChangeFrame + 1 == Frame;
-	Candidate.ChangeStreak = bInARow ? Candidate.ChangeStreak + 1 : 1;
+	const bool bInARow = InWidget->RenderLayerLastChangeFrame + 1 == Frame;
+	InWidget->RenderLayerChangeStreak = bInARow ? InWidget->RenderLayerChangeStreak + 1 : 1;
 	if (!bInARow)
 	{
-		Candidate.bRefused = false;
+		InWidget->bRenderLayerRefused = false;
 	}
-	Candidate.LastChangeFrame = Frame;
-	if (!InWidget->IsRenderLayer() && !Candidate.bRefused && InWidget->GetRenderLayerMode() == EDreamWidgetRenderLayer::Auto
-		&& Candidate.ChangeStreak >= CVarDreamUIRenderLayerPromoteFrames.GetValueOnGameThread())
+	InWidget->RenderLayerLastChangeFrame = Frame;
+	if (!InWidget->IsRenderLayer() && !InWidget->bRenderLayerRefused && InWidget->GetRenderLayerMode() == EDreamWidgetRenderLayer::Auto
+		&& InWidget->RenderLayerChangeStreak >= CVarDreamUIRenderLayerPromoteFrames.GetValueOnGameThread()
+		// Last, and only for a widget due: whether this canvas can hold a layer at all.
+		&& CVarDreamUIRenderLayers.GetValueOnGameThread() != 0 && IsValid(UIMesh) && UIMesh->CanDrawRenderLayers())
 	{
 		// Made one at the next update, before its widgets are, so that they are transformed into it in that same update.
+		if (!InWidget->bRenderLayerCandidate)
+		{
+			InWidget->bRenderLayerCandidate = true;
+			RenderLayerCandidates.Add(InWidget);
+		}
 		bRenderLayerPromotionsPending = true;
 		MarkWidgetUpdate(InWidget, false);
 	}
@@ -891,14 +926,50 @@ void UDreamCanvas::NoteRenderTransformChanged(UDreamWidget* InWidget)
 void UDreamCanvas::MarkRenderLayerMoved(UDreamWidget* InLayer)
 {
 	// Once a frame is enough for what a move means to the rest: a render target to draw again, and a pointer to trace again.
+	// What this reads of the canvas is declared together (see RegisteredWithManager): every animated layer of a world of
+	// panels comes here, each on a canvas of its own.
 	if (!bRenderLayersMayHaveMoved)
 	{
 		bRenderLayersMayHaveMoved = true;
-		if (CheckRootCanvas())
+		if (IsOwnRoot())
+		{
+			bAnythingChangedForRenderTarget = true;
+		}
+		else if (CheckRootCanvas())
 		{
 			RootCanvas->bAnythingChangedForRenderTarget = true;
 		}
-		DreamCanvasLocal::BumpHitTestGeneration(this);
+		BumpHitTestGeneration();
+	}
+}
+
+void UDreamCanvas::BumpHitTestGeneration() const
+{
+	// Through the manager this canvas registered with, which it holds. A canvas that moves asks this a few times a frame --
+	// updated, layers marked moved, layers placed -- and looking up its widget and the manager that registered was two more
+	// reads from memory each time, for every panel of a world of them.
+	if (RegisteredWithManager != nullptr)
+	{
+		RegisteredWithManager->BumpHitTestGeneration();
+		return;
+	}
+	const UDreamWidget* Widget = GetWidget();
+	if (UDreamUIManagerWorldSubsystem* Manager = Widget != nullptr ? Widget->GetRegisteredManager() : nullptr)
+	{
+		Manager->BumpHitTestGeneration();
+		return;
+	}
+	UDreamUIManagerWorldSubsystem::BumpHitTestGenerationFor(this);
+}
+
+void UDreamCanvas::RequestRenderPrioritySort()
+{
+	bNeedToSortRenderPriority = true;
+	// Listed once with the manager, which sorts only the canvases that asked: an unregistered canvas is listed when it registers.
+	if (RegisteredWithManager != nullptr && !bRenderPrioritySortListed)
+	{
+		bRenderPrioritySortListed = true;
+		RegisteredWithManager->AddRenderPrioritySortRequest(this);
 	}
 }
 
@@ -925,6 +996,12 @@ bool UDreamCanvas::CanBeRenderLayer(const UDreamWidget* InWidget) const
 	{
 		return false;
 	}
+	// Its row is kept in the world's render layer table, which the manager the canvas's widget registered with holds.
+	const UDreamWidget* CanvasWidget = GetWidget();
+	if (CanvasWidget == nullptr || CanvasWidget->GetRegisteredManager() == nullptr)
+	{
+		return false;
+	}
 	return DreamCanvasLocal::CanKeepElementsInRenderLayer(InWidget, this);
 }
 
@@ -934,25 +1011,96 @@ void UDreamCanvas::SetWidgetIsRenderLayer(UDreamWidget* InWidget, bool bInIsLaye
 	{
 		return;
 	}
-	InWidget->bIsRenderLayer = bInIsLayer;
+	if (!bInIsLayer)
+	{
+		const int32 Index = RenderLayers.IndexOfByPredicate([InWidget](const FRenderLayerRecord& InRecord) { return InRecord.Layer.Get() == InWidget; });
+		if (Index != INDEX_NONE)
+		{
+			TakeBackRenderLayer(Index);
+		}
+		return;
+	}
+	// A row of the world's table, holding where it stands from the start: its elements are drawn through it in the frame
+	// they are transformed into it, before any placement.
+	UDreamUIRenderLayerTable* Table = GetRenderLayerTable(/*bInCreate*/ true);
+	const int32 Row = Table != nullptr ? Table->AcquireRow() : 0;
+	if (Row == 0)
+	{
+		// No world to hold it, or a table as tall as a texture can be: it stays on the CPU while this run of changes lasts.
+		InWidget->bRenderLayerRefused = true;
+		return;
+	}
+	FRenderLayerRecord& Record = RenderLayers.AddDefaulted_GetRef();
+	Record.Layer = InWidget;
+	Record.LayerRaw = InWidget;
+	Record.Row = Row;
+	Record.Placed = GetLayerToCanvas(InWidget);
+	Table->WriteRow(Row, Record.Placed);
+	InWidget->RenderLayerRow = Row;
+	InWidget->bIsRenderLayer = true;
 	UDreamWidget::InvalidateRenderLayerCaches();
-	if (bInIsLayer)
-	{
-		RenderLayers.AddUnique(InWidget);
-	}
-	else
-	{
-		RenderLayers.Remove(InWidget);
-	}
-	// Relative to it now, or to the layer above it, or to the canvas: in another space either way. And the draw calls, each of
-	// which holds one layer's elements, are made again.
+	// Relative to it now, in another space: every element under it is transformed again, and the draw calls made again.
 	DreamCanvasLocal::MarkElementsForRenderLayerChange(InWidget, InWidget->GetRenderCanvas());
-	DreamUIRenderStats::AddCount(bInIsLayer ? DreamUIRenderStats::ECounter::RenderLayerPromotions : DreamUIRenderStats::ECounter::RenderLayerDemotions, 1);
+	DreamUIRenderStats::AddCount(DreamUIRenderStats::ECounter::RenderLayerPromotions, 1);
+}
+
+void UDreamCanvas::TakeBackRenderLayer(int32 InIndex)
+{
+	const FRenderLayerRecord Record = RenderLayers[InIndex];
+	// Swapped out: the order of the records means nothing, and a canvas that lets thousands go at once shifts none.
+	RenderLayers.RemoveAtSwap(InIndex, EAllowShrinking::No);
+	// Given back, and handed out again only once what is drawn through it has been transformed out of it.
+	if (UDreamUIRenderLayerTable* Table = GetRenderLayerTable(/*bInCreate*/ false))
+	{
+		Table->ReleaseRow(Record.Row);
+	}
+	UDreamWidget* Layer = Record.Layer.Get();
+	if (Layer == nullptr || !Layer->bIsRenderLayer)
+	{
+		return;
+	}
+	Layer->bIsRenderLayer = false;
+	Layer->RenderLayerRow = 0;
+	UDreamWidget::InvalidateRenderLayerCaches();
+	// Relative to the layer above it now, or to the canvas: every element under it is transformed out of it, and the draw
+	// calls made again.
+	DreamCanvasLocal::MarkElementsForRenderLayerChange(Layer, Layer->GetRenderCanvas());
+	DreamUIRenderStats::AddCount(DreamUIRenderStats::ECounter::RenderLayerDemotions, 1);
+}
+
+void UDreamCanvas::ForgetRenderLayerCandidates()
+{
+	for (const TWeakObjectPtr<UDreamWidget>& WeakCandidate : RenderLayerCandidates)
+	{
+		if (UDreamWidget* Candidate = WeakCandidate.Get())
+		{
+			Candidate->bRenderLayerCandidate = false;
+		}
+	}
+	RenderLayerCandidates.Reset();
+}
+
+UDreamUIRenderLayerTable* UDreamCanvas::GetRenderLayerTable(bool bInCreate) const
+{
+	if (UDreamUIRenderLayerTable* Table = RenderLayerTable.Get())
+	{
+		return Table;
+	}
+	if (!bInCreate)
+	{
+		return nullptr;
+	}
+	// The manager the canvas's widget registered with: the world's table, which every canvas of it draws through.
+	const UDreamWidget* Widget = GetWidget();
+	UDreamUIManagerWorldSubsystem* Manager = Widget != nullptr ? Widget->GetRegisteredManager() : nullptr;
+	UDreamUIRenderLayerTable* Table = Manager != nullptr ? Manager->GetRenderLayerTable() : nullptr;
+	RenderLayerTable = Table;
+	return Table;
 }
 
 void UDreamCanvas::UpdateRenderLayers()
 {
-	// The canvas updated: wherever its layers are now, their draw calls are placed there at the submit.
+	// The canvas updated: wherever its layers are now, their rows are written at the submit.
 	bRenderLayersMayHaveMoved = true;
 	// A canvas holding its draw calls as they are makes no layer and takes none back: the draw calls in hand hold each element
 	// in the space it was in when they were made, and no rebuild would come to hold it in another.
@@ -960,31 +1108,28 @@ void UDreamCanvas::UpdateRenderLayers()
 	{
 		return;
 	}
-	TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_UpdateRenderLayers);
+	DREAMUI_DETAIL_SCOPE(DreamUI_UpdateRenderLayers);
 	const bool bEnabled = CVarDreamUIRenderLayers.GetValueOnGameThread() != 0 && IsValid(UIMesh) && UIMesh->CanDrawRenderLayers();
 	/**
 	 * Taken back here, before the widgets are updated below, so that what is under a layer is transformed out of it in this
 	 * same update: when layers are off, when this mesh cannot draw them, and when something changed under one that it cannot
 	 * hold. Whatever changes the tree, a visual or a setting asks for a rebuild, so that is when a layer is looked at again.
+	 * Backwards over the records themselves: a layer taken back leaves them from where it is.
 	 */
 	if (RenderLayers.Num() > 0 && (!bEnabled || bShouldRebuildDrawCall || bRenderLayerModesToScan))
 	{
-		const TArray<TWeakObjectPtr<UDreamWidget>> Layers = RenderLayers;
-		for (const TWeakObjectPtr<UDreamWidget>& WeakLayer : Layers)
+		for (int32 Index = RenderLayers.Num() - 1; Index >= 0; Index = FMath::Min(Index - 1, RenderLayers.Num() - 1))
 		{
-			UDreamWidget* Layer = WeakLayer.Get();
-			if (Layer == nullptr)
+			const UDreamWidget* Layer = RenderLayers[Index].Layer.Get();
+			if (Layer == nullptr || !bEnabled || !CanBeRenderLayer(Layer))
 			{
-				RenderLayers.Remove(WeakLayer);
-			}
-			else if (!bEnabled || !CanBeRenderLayer(Layer))
-			{
-				SetWidgetIsRenderLayer(Layer, false);
+				TakeBackRenderLayer(Index);
 			}
 		}
 	}
 	if (!bEnabled)
 	{
+		ForgetRenderLayerCandidates();
 		return;
 	}
 	if (bRenderLayerPromotionsPending)
@@ -992,20 +1137,29 @@ void UDreamCanvas::UpdateRenderLayers()
 		TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_PromoteRenderLayers);
 		bRenderLayerPromotionsPending = false;
 		const int32 PromoteFrames = CVarDreamUIRenderLayerPromoteFrames.GetValueOnGameThread();
+		const uint64 StaleAfter = static_cast<uint64>(FMath::Max(PromoteFrames, 1));
 		const int32 MaxLayers = CVarDreamUIRenderLayerMaxPerCanvas.GetValueOnGameThread();
-		for (TPair<TObjectKey<UDreamWidget>, FRenderLayerCandidate>& Pair : RenderLayerCandidates)
+		const uint64 Frame = GFrameCounter;
+		int32 Kept = 0;
+		for (int32 Index = 0; Index < RenderLayerCandidates.Num(); ++Index)
 		{
-			FRenderLayerCandidate& Candidate = Pair.Value;
-			UDreamWidget* Widget = Pair.Key.ResolveObjectPtr();
-			if (Widget == nullptr || Widget->IsRenderLayer() || Candidate.bRefused || Candidate.ChangeStreak < PromoteFrames
-				|| Widget->GetRenderLayerMode() != EDreamWidgetRenderLayer::Auto)
+			UDreamWidget* Widget = RenderLayerCandidates[Index].Get();
+			if (Widget == nullptr)
 			{
 				continue;
 			}
+			const bool bDue = !Widget->IsRenderLayer() && !Widget->bRenderLayerRefused && Widget->RenderLayerChangeStreak >= PromoteFrames
+				&& Frame - Widget->RenderLayerLastChangeFrame <= StaleAfter && Widget->GetRenderLayerMode() == EDreamWidgetRenderLayer::Auto;
 			// Full: the rest stay on the CPU, and are looked at again while they keep changing -- a layer taken back makes room.
-			if (RenderLayers.Num() >= MaxLayers)
+			if (bDue && RenderLayers.Num() >= MaxLayers)
 			{
-				break;
+				RenderLayerCandidates[Kept++] = RenderLayerCandidates[Index];
+				continue;
+			}
+			Widget->bRenderLayerCandidate = false;
+			if (!bDue)
+			{
+				continue;
 			}
 			if (CanBeRenderLayer(Widget))
 			{
@@ -1013,9 +1167,10 @@ void UDreamCanvas::UpdateRenderLayers()
 			}
 			else
 			{
-				Candidate.bRefused = true;
+				Widget->bRenderLayerRefused = true;
 			}
 		}
+		RenderLayerCandidates.SetNum(Kept, EAllowShrinking::No);
 	}
 	if (bRenderLayerModesToScan)
 	{
@@ -1044,73 +1199,154 @@ bool UDreamCanvas::TendRenderLayers()
 			bCanTickUpdate = true;
 		}
 	}
-	if (RenderLayers.Num() == 0 && RenderLayerCandidates.Num() == 0 && RenderLayerPlacements.Num() == 0)
+	if (RenderLayers.Num() == 0 && RenderLayerCandidates.Num() == 0)
 	{
 		// Nothing placed, so nothing to move: the next MarkRenderLayerMoved is news again.
 		bRenderLayersMayHaveMoved = false;
 		return false;
 	}
-	TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_TendRenderLayers);
-	const uint64 Frame = GFrameCounter;
-	// Taken back here rather than at an update, which a canvas that holds still does not have: each asks for one.
-	if (RenderLayers.Num() > 0 && !bDrawCallRebuildSuspended)
+	DREAMUI_DETAIL_SCOPE(DreamUI_TendRenderLayers);
+	// The records' widgets found again only once something may have gone since they last were (LayerRaw). Read before
+	// the look-ups: a widget found alive by them is still alive while the count reads the same.
+	const uint64 Gone = DreamUIGone::Read();
+	if (Gone != RenderLayersRawGone)
 	{
-		const bool bCanDraw = bEnabled && IsValid(UIMesh) && UIMesh->CanDrawRenderLayers();
-		const uint64 DemoteFrames = static_cast<uint64>(FMath::Max(CVarDreamUIRenderLayerDemoteFrames.GetValueOnGameThread(), 1));
-		// Backwards over the list itself rather than over a copy of it made every frame: a layer given back leaves it, and
-		// only from where it is. Clamped all the same, should a layer ever be listed twice.
+		RenderLayersRawGone = Gone;
+		for (FRenderLayerRecord& Record : RenderLayers)
+		{
+			Record.LayerRaw = Record.Layer.Get();
+		}
+	}
+	const uint64 Frame = GFrameCounter;
+	/**
+	 * PlaceRenderLayers composes each layer's transform, on other threads, alongside other canvases' layers: each by the one
+	 * thread placing it, which writes only that layer. What a layer's transform is composed from -- its parent's transform and
+	 * size, and the canvas widget's transform -- is composed here, where it may be, so that the threads only ever read it. A
+	 * layer inside another is composed here with its parent's chain, and is read there. A wall of thousands of turning
+	 * widgets was thousands of transforms composed one after another on this thread.
+	 *
+	 * When the layers are likely to be placed -- one may have moved, and there is a mesh and a table to place them in -- the
+	 * parents are composed in the pass that takes layers back, each layer looked up once rather than in a pass of each. The
+	 * layers of a canvas mostly share a parent, told from the last one by its weak pointer's identity, not by a look-up.
+	 */
+	const bool bPlacementLikely = bRenderLayersMayHaveMoved && IsValid(UIMesh) && GetRenderLayerTable(/*bInCreate*/ false) != nullptr;
+	/**
+	 * ...except for a root canvas at the top of its tree whose canvases hold no layers: its tree is its own, and the one
+	 * thread placing it composes what its layers are composed from (PlaceRenderLayers), alongside the other canvases, rather
+	 * than this thread doing it for each of a world of panels in turn. A canvas under another widget, holding a canvas with
+	 * layers, or held by one, shares a tree another thread may be composing.
+	 */
+	const bool bComposeWhenPlacing = IsOwnRoot() && bWidgetIsTreeRoot && !AnyChildCanvasHoldsRenderLayers();
+	bComposeLayerParentsWhenPlacing = bComposeWhenPlacing;
+	const bool bComposeHere = bPlacementLikely && !bComposeWhenPlacing;
+	TWeakObjectPtr<UDreamWidget> LastParent;
+	auto ComposeParentOf = [&LastParent](const UDreamWidget& InLayer)
+	{
+		if (InLayer.Parent.HasSameIndexAndSerialNumber(LastParent))
+		{
+			return;
+		}
+		LastParent = InLayer.Parent;
+		if (const UDreamWidget* Parent = InLayer.Parent.Get())
+		{
+			Parent->GetWorldTransform();
+			Parent->GetWidth();
+			Parent->GetHeight();
+		}
+	};
+	bool bParentsComposed = false;
+	if (bComposeHere)
+	{
+		if (const UDreamWidget* CanvasWidget = GetCanvasWidget())
+		{
+			CanvasWidget->GetWorldTransform();
+		}
+	}
+	const bool bCanDraw = bEnabled && IsValid(UIMesh) && UIMesh->CanDrawRenderLayers();
+	const uint64 DemoteFrames = static_cast<uint64>(FMath::Max(CVarDreamUIRenderLayerDemoteFrames.GetValueOnGameThread(), 1));
+	/**
+	 * Whether a layer is to be given back is looked at every eighth of the frames it has to hold still for, a canvas's turn
+	 * staggered from another's: a layer held still that long is given back a few frames later at most, and a world of panels
+	 * does not look at every layer of every canvas every frame. Every frame when the layers cannot be drawn at all, and when
+	 * the frames to hold still are few. Staggered by where the canvas is in memory: its index is in its object header, which
+	 * nothing else here reads.
+	 */
+	const uint64 LookEvery = FMath::Max<uint64>(DemoteFrames / 8, 1);
+	const uint64 Stagger = static_cast<uint64>(reinterpret_cast<UPTRINT>(this)) >> 6;
+	const bool bDemotionDue = !bCanDraw || LookEvery == 1 || (Frame + Stagger) % LookEvery == 0;
+	// Taken back here rather than at an update, which a canvas that holds still does not have: each asks for one.
+	if (RenderLayers.Num() > 0 && !bDrawCallRebuildSuspended && bDemotionDue)
+	{
+		// This canvas, told from a layer's weak pointer to its canvas by identity: it is alive, so only a pointer to it
+		// compares equal, and no layer's pointer is looked up for it.
+		const TWeakObjectPtr<UDreamCanvas> ThisCanvas(this);
+		// Backwards over the records themselves: a layer taken back leaves them from where it is. Clamped all the same,
+		// should taking one back ever take another with it.
 		for (int32 Index = RenderLayers.Num() - 1; Index >= 0; Index = FMath::Min(Index - 1, RenderLayers.Num() - 1))
 		{
-			UDreamWidget* Layer = RenderLayers[Index].Get();
-			if (Layer == nullptr)
-			{
-				RenderLayers.RemoveAt(Index);
-				continue;
-			}
-			bool bKeep = bCanDraw && Layer->GetRenderCanvas() == this && Layer->GetRenderLayerMode() != EDreamWidgetRenderLayer::Never;
+			const UDreamWidget* Layer = RenderLayers[Index].LayerRaw;
+			bool bKeep = Layer != nullptr && bCanDraw && Layer->RenderCanvas.HasSameIndexAndSerialNumber(ThisCanvas)
+				&& Layer->GetRenderLayerMode() != EDreamWidgetRenderLayer::Never;
 			if (bKeep && Layer->GetRenderLayerMode() == EDreamWidgetRenderLayer::Auto)
 			{
 				// An Auto layer is kept while it keeps moving, and given back to the batching once it has held still.
-				const FRenderLayerCandidate* Candidate = RenderLayerCandidates.Find(TObjectKey<UDreamWidget>(Layer));
-				bKeep = Candidate != nullptr && Frame - Candidate->LastChangeFrame < DemoteFrames;
+				bKeep = Frame - Layer->RenderLayerLastChangeFrame < DemoteFrames;
 			}
 			if (!bKeep)
 			{
-				SetWidgetIsRenderLayer(Layer, false);
+				// Composes nothing and marks no transform stale: what was composed for the layers before stays composed.
+				TakeBackRenderLayer(Index);
+			}
+			else if (bComposeHere)
+			{
+				ComposeParentOf(*Layer);
 			}
 		}
+		bParentsComposed = bComposeHere;
 	}
-	// A candidate that is no layer is worth remembering only while its run of changes may still go on.
-	const uint64 PromoteFrames = static_cast<uint64>(FMath::Max(CVarDreamUIRenderLayerPromoteFrames.GetValueOnGameThread(), 1));
-	for (auto It = RenderLayerCandidates.CreateIterator(); It; ++It)
+	// A candidate is worth remembering only while its run of changes may still go on.
+	if (RenderLayerCandidates.Num() > 0)
 	{
-		const UDreamWidget* Widget = It.Key().ResolveObjectPtr();
-		if (Widget == nullptr || (!Widget->IsRenderLayer() && Frame - It.Value().LastChangeFrame > PromoteFrames))
+		const uint64 PromoteFrames = static_cast<uint64>(FMath::Max(CVarDreamUIRenderLayerPromoteFrames.GetValueOnGameThread(), 1));
+		RenderLayerCandidates.RemoveAllSwap([Frame, PromoteFrames](const TWeakObjectPtr<UDreamWidget>& InWeakCandidate)
 		{
-			It.RemoveCurrent();
-		}
+			UDreamWidget* Candidate = InWeakCandidate.Get();
+			if (Candidate == nullptr)
+			{
+				return true;
+			}
+			if (Candidate->IsRenderLayer() || Frame - Candidate->RenderLayerLastChangeFrame > PromoteFrames)
+			{
+				Candidate->bRenderLayerCandidate = false;
+				return true;
+			}
+			return false;
+		});
 	}
 	if (!bRenderLayersMayHaveMoved)
 	{
 		return false;
 	}
-	if (RenderLayerPlacements.Num() == 0 || !IsValid(UIMesh))
+	if (RenderLayers.Num() == 0 || !IsValid(UIMesh) || GetRenderLayerTable(/*bInCreate*/ false) == nullptr)
 	{
 		// Nothing to place, which is as good as placed: the next MarkRenderLayerMoved is news again.
 		bRenderLayersMayHaveMoved = false;
 		return false;
 	}
-	// Composed here, where it may be: PlaceRenderLayers reads these transforms, and may do it on another thread, alongside
-	// other canvases.
-	if (const UDreamWidget* CanvasWidget = GetWidget())
+	// Not composed above, the placement having looked unlikely then, or no layer having been looked at to take back; and not
+	// left to the placement.
+	if (!bParentsComposed && !bComposeWhenPlacing)
 	{
-		CanvasWidget->GetWorldTransform();
-	}
-	for (const FRenderLayerPlacement& Placement : RenderLayerPlacements)
-	{
-		if (const UDreamWidget* Layer = Placement.Layer.ResolveObjectPtr())
+		if (const UDreamWidget* CanvasWidget = GetCanvasWidget())
 		{
-			Layer->GetWorldTransform();
+			CanvasWidget->GetWorldTransform();
+		}
+		for (const FRenderLayerRecord& Record : RenderLayers)
+		{
+			if (const UDreamWidget* Layer = Record.LayerRaw)
+			{
+				ComposeParentOf(*Layer);
+			}
 		}
 	}
 	return true;
@@ -1122,40 +1358,31 @@ bool UDreamCanvas::TendRenderLayersBeforeFinish()
 	return IsValid(UIMesh) && TendRenderLayers();
 }
 
-void UDreamCanvas::GatherRenderLayerPlacements()
+void UDreamCanvas::PlaceRenderLayerDrawCalls(bool bInAll)
 {
-	// A layer the draw calls in hand already held is placed where it was, if it is gone; any other where it is now.
-	TArray<FRenderLayerPlacement> Before = MoveTemp(RenderLayerPlacements);
-	RenderLayerPlacements.Reset();
-	for (int32 Index = 0; Index < CurrentDrawCallData.DrawCallArray.Num(); ++Index)
+	const UDreamUIRenderLayerTable* Table = RenderLayerTable.Get();
+	for (FDreamUIDrawCall& DrawCall : CurrentDrawCallData.DrawCallArray)
 	{
-		FDreamUIDrawCall& DrawCall = CurrentDrawCallData.DrawCallArray[Index];
-		if (DrawCall.Type != EDreamUIDrawCallType::BatchMesh || !DrawCall.IsInRenderLayer())
+		if (DrawCall.Type != EDreamUIDrawCallType::BatchMesh || !DrawCall.HasRenderLayerElements())
 		{
 			continue;
 		}
-		FRenderLayerPlacement* Placement = RenderLayerPlacements.FindByPredicate([&DrawCall](const FRenderLayerPlacement& InPlacement)
-		{
-			return InPlacement.Layer == DrawCall.RenderLayer;
-		});
-		if (Placement == nullptr)
-		{
-			Placement = &RenderLayerPlacements.AddDefaulted_GetRef();
-			Placement->Layer = DrawCall.RenderLayer;
-			if (const UDreamWidget* Layer = DrawCall.RenderLayer.ResolveObjectPtr())
+		// Only a draw call a row of which moved: the rest are boxed where they were.
+		if (!bInAll && !DrawCall.LayerBounds.ContainsByPredicate([Table](const FDreamUIDrawCall::FLayerBounds& InEntry)
 			{
-				Placement->LayerToCanvas = GetLayerToCanvas(Layer);
-			}
-			else if (const FRenderLayerPlacement* Held = Before.FindByPredicate([&DrawCall](const FRenderLayerPlacement& InPlacement)
-				{
-					return InPlacement.Layer == DrawCall.RenderLayer;
-				}))
-			{
-				Placement->LayerToCanvas = Held->LayerToCanvas;
-			}
+				return Table != nullptr && Table->IsRowWrittenSinceFlush(InEntry.Row);
+			}))
+		{
+			continue;
 		}
-		Placement->DrawCalls.Add(Index);
-		DrawCall.LayerToCanvas = Placement->LayerToCanvas;
+		const FBox Before = DrawCall.CanvasBounds;
+		DrawCall.PlaceBounds(Table);
+		if (!(DrawCall.CanvasBounds == Before))
+		{
+			// The section's box, and through it the mesh's, follow (FinishDrawCallBatchData).
+			UIMesh->UpdateMeshSectionBounds(DrawCall.RenderSection, DrawCall);
+			bRefreshMovedBounds = true;
+		}
 	}
 }
 
@@ -1166,56 +1393,153 @@ void UDreamCanvas::PlaceRenderLayers()
 		return;
 	}
 	bRenderLayersMayHaveMoved = false;
-	if (RenderLayerPlacements.Num() == 0 || !IsValid(UIMesh))
+	UDreamUIRenderLayerTable* Table = RenderLayerTable.Get();
+	if (RenderLayers.Num() == 0 || !IsValid(UIMesh) || Table == nullptr)
 	{
 		return;
 	}
-	TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_PlaceRenderLayers);
-	bool bAnyMoved = false;
-	for (FRenderLayerPlacement& Placement : RenderLayerPlacements)
+	DREAMUI_DETAIL_SCOPE(DreamUI_PlaceRenderLayers);
+	// The records' widgets as TendRenderLayers found them, which it did just before, unless the count moved since.
+	const bool bLayersRaw = RenderLayersRawGone != 0 && RenderLayersRawGone == DreamUIGone::Peek();
+	/**
+	 * The whole of a layer's move: its row of the table, which every vertex under it is placed through on the GPU, and the
+	 * boxes of the draw calls its elements are in. Nothing under it is transformed, patched or uploaded. Each record writes
+	 * its own row alone, so a canvas of thousands of layers places them on as many threads as there are.
+	 */
+	const UDreamWidget* CanvasWidget = GetCanvasWidget();
+	// What the layers are composed from, when TendRenderLayers left it to the thread placing them: the parents here, each
+	// once, and the canvas widget just below. One thread places this canvas, and no other canvas's tree reaches into it.
+	const int32 MinParallel = CVarDreamUIParallelLayerRowsMin.GetValueOnAnyThread();
+	const bool bParallel = MinParallel > 0 && RenderLayers.Num() >= MinParallel && FApp::ShouldUseThreadingForPerformance();
+	if (bComposeLayerParentsWhenPlacing && bParallel)
 	{
-		const UDreamWidget* Layer = Placement.Layer.ResolveObjectPtr();
-		if (Layer == nullptr)
+		/**
+		 * Thousands of layers with a parent each: found on as many threads as there are, which only read; their parents'
+		 * parents composed here, each once; then the parents on as many threads as there are -- each composes from its own
+		 * parent alone, composed by then, and writes only itself (as UDreamBaseRaycaster's GatherCandidatesInParallel does).
+		 * A parent that is another's grandparent is composed here whole.
+		 */
+		struct FAbove
 		{
-			//gone, and what was under it with it: the rebuild that asked for comes with these draw calls' replacements
-			continue;
+			const UDreamWidget* Parent = nullptr;
+			const UDreamWidget* GrandParent = nullptr;
+		};
+		TArray<FAbove> Above;
+		Above.SetNum(RenderLayers.Num());
+		ParallelFor(TEXT("DreamUI_LayerParentsOf"), RenderLayers.Num(), 512, [this, &Above, bLayersRaw](int32 Index)
+		{
+			if (const UDreamWidget* Layer = bLayersRaw ? RenderLayers[Index].LayerRaw : RenderLayers[Index].Layer.Get())
+			{
+				const UDreamWidget* Parent = Layer->Parent.Get();
+				Above[Index].Parent = Parent;
+				Above[Index].GrandParent = Parent != nullptr ? Parent->Parent.Get() : nullptr;
+			}
+		});
+		TArray<const UDreamWidget*> Parents;
+		TArray<const UDreamWidget*> GrandParents;
+		Parents.Reserve(Above.Num());
+		for (const FAbove& Entry : Above)
+		{
+			// Side by side they mostly repeat: only a change is kept before sorting.
+			if (Entry.Parent != nullptr && (Parents.Num() == 0 || Parents.Last() != Entry.Parent))
+			{
+				Parents.Add(Entry.Parent);
+			}
+			if (Entry.GrandParent != nullptr && (GrandParents.Num() == 0 || GrandParents.Last() != Entry.GrandParent))
+			{
+				GrandParents.Add(Entry.GrandParent);
+			}
 		}
-		const FMatrix44f LayerToCanvas = GetLayerToCanvas(Layer);
-		if (LayerToCanvas == Placement.LayerToCanvas)
+		Algo::Sort(Parents);
+		Parents.SetNum(Algo::Unique(Parents), EAllowShrinking::No);
+		Algo::Sort(GrandParents);
+		GrandParents.SetNum(Algo::Unique(GrandParents), EAllowShrinking::No);
+		for (const UDreamWidget* GrandParent : GrandParents)
 		{
-			continue;
+			GrandParent->GetWorldTransform();
+			GrandParent->GetWidth();
+			GrandParent->GetHeight();
 		}
-		// The whole of a layer's move: a matrix and a box for each of its sections. Nothing under it is transformed, patched
-		// or uploaded.
-		Placement.LayerToCanvas = LayerToCanvas;
-		for (const int32 Index : Placement.DrawCalls)
+		ParallelFor(TEXT("DreamUI_LayerParents"), Parents.Num(), 256, [&Parents](int32 Index)
 		{
-			if (!CurrentDrawCallData.DrawCallArray.IsValidIndex(Index))
+			const UDreamWidget* Parent = Parents[Index];
+			Parent->GetWorldTransform();
+			Parent->GetWidth();
+			Parent->GetHeight();
+		});
+	}
+	else if (bComposeLayerParentsWhenPlacing)
+	{
+		TWeakObjectPtr<UDreamWidget> LastParent;
+		for (const FRenderLayerRecord& Record : RenderLayers)
+		{
+			const UDreamWidget* Layer = bLayersRaw ? Record.LayerRaw : Record.Layer.Get();
+			if (Layer == nullptr || Layer->Parent.HasSameIndexAndSerialNumber(LastParent))
 			{
 				continue;
 			}
-			FDreamUIDrawCall& DrawCall = CurrentDrawCallData.DrawCallArray[Index];
-			DrawCall.LayerToCanvas = LayerToCanvas;
-			UIMesh->UpdateMeshSectionElementToCanvas(DrawCall.RenderSection, DrawCall);
+			LastParent = Layer->Parent;
+			if (const UDreamWidget* Parent = Layer->Parent.Get())
+			{
+				Parent->GetWorldTransform();
+				Parent->GetWidth();
+				Parent->GetHeight();
+			}
 		}
-		bAnyMoved = true;
-		DreamUIRenderStats::AddCount(DreamUIRenderStats::ECounter::RenderLayerMoves, 1);
 	}
-	if (bAnyMoved)
+	const FTransform CanvasInverse = CanvasWidget != nullptr ? CanvasWidget->GetWorldTransform().Inverse() : FTransform::Identity;
+	std::atomic<int32> Moved{ 0 };
+	auto Place = [this, Table, &CanvasInverse, &Moved, bLayersRaw](int32 InIndex)
 	{
-		// The mesh's bounds follow the sections' in FinishDrawCallBatchData, which tells the rest on the game thread.
-		bRefreshMovedBounds = true;
+		FRenderLayerRecord& Record = RenderLayers[InIndex];
+		const UDreamWidget* Layer = bLayersRaw ? Record.LayerRaw : Record.Layer.Get();
+		if (Layer == nullptr)
+		{
+			//gone, and what was under it with it: the rebuild that asked for comes with its draw calls' replacements
+			return;
+		}
+		const FMatrix44f LayerToCanvas = GetLayerToCanvas(Layer, CanvasInverse);
+		if (LayerToCanvas == Record.Placed)
+		{
+			return;
+		}
+		Record.Placed = LayerToCanvas;
+		Table->WriteRow(Record.Row, LayerToCanvas);
+		Moved.fetch_add(1, std::memory_order_relaxed);
+	};
+	if (bParallel)
+	{
+		ParallelFor(TEXT("DreamUI_PlaceRenderLayerRows"), RenderLayers.Num(), 256, Place);
+	}
+	else
+	{
+		for (int32 Index = 0; Index < RenderLayers.Num(); ++Index)
+		{
+			Place(Index);
+		}
+	}
+	const int32 MovedCount = Moved.load(std::memory_order_relaxed);
+	if (MovedCount > 0)
+	{
+		PlaceRenderLayerDrawCalls(/*bInAll*/ false);
+		DreamUIRenderStats::AddCount(DreamUIRenderStats::ECounter::RenderLayerMoves, MovedCount);
 		bRenderLayersPlaced = true;
 	}
 }
 
 void UDreamCanvas::ForgetRenderLayers()
 {
-	for (const TWeakObjectPtr<UDreamWidget>& WeakLayer : RenderLayers)
+	UDreamUIRenderLayerTable* Table = GetRenderLayerTable(/*bInCreate*/ false);
+	for (const FRenderLayerRecord& Record : RenderLayers)
 	{
-		if (UDreamWidget* Layer = WeakLayer.Get())
+		if (UDreamWidget* Layer = Record.Layer.Get())
 		{
 			Layer->bIsRenderLayer = false;
+			Layer->RenderLayerRow = 0;
+		}
+		if (Table != nullptr)
+		{
+			Table->ReleaseRow(Record.Row);
 		}
 	}
 	if (RenderLayers.Num() > 0)
@@ -1223,8 +1547,7 @@ void UDreamCanvas::ForgetRenderLayers()
 		UDreamWidget::InvalidateRenderLayerCaches();
 	}
 	RenderLayers.Reset();
-	RenderLayerCandidates.Reset();
-	RenderLayerPlacements.Reset();
+	ForgetRenderLayerCandidates();
 }
 
 FMatrix44f UDreamCanvas::GetLayerToCanvas(const UDreamWidget* InLayer) const
@@ -1234,19 +1557,26 @@ FMatrix44f UDreamCanvas::GetLayerToCanvas(const UDreamWidget* InLayer) const
 	{
 		return FMatrix44f::Identity;
 	}
+	return GetLayerToCanvas(InLayer, CanvasWidget->GetWorldTransform().Inverse());
+}
+
+FMatrix44f UDreamCanvas::GetLayerToCanvas(const UDreamWidget* InLayer, const FTransform& InCanvasInverse)
+{
 	// As an element of no layer is taken to the canvas (FDreamUIGeometry::TransformVertices): its world transform, then the
 	// inverse of the canvas widget's.
-	const FTransform LayerToCanvas = InLayer->GetWorldTransform() * CanvasWidget->GetWorldTransform().Inverse();
+	const FTransform LayerToCanvas = InLayer->GetWorldTransform() * InCanvasInverse;
 	return FMatrix44f(LayerToCanvas.ToMatrixWithScale());
 }
 
 bool UDreamCanvas::CanRefreshDrawCallsInPlace()
 {
-	TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_CanRefreshDrawCallsInPlace);
+	DREAMUI_DETAIL_SCOPE(DreamUI_CanRefreshDrawCallsInPlace);
 	// The draw calls in hand are the ones asked for last, not an older set a rebuild on its way will replace, and they were
 	// made from this widget list. And from an earlier frame: the refresh (UpdateDrawCallBatchData) only takes draw calls
-	// prepared before the frame it runs in, so without one the moves would wait for a rebuild nobody asked for.
-	if (!CurrentDrawCallData.Placement.bIndependentOfPositions
+	// prepared before the frame it runs in, so without one the moves would wait for a rebuild nobody asked for. A batch that
+	// depended on positions says from which draw call on: the flat elements there have to keep their bounds, see below.
+	const FDreamUIBatchPlacement& Placement = CurrentDrawCallData.Placement;
+	if ((!Placement.bIndependentOfPositions && Placement.PositionSensitiveFrom == INDEX_NONE)
 		|| CurrentDrawCallData.FrameNumber != NewestDrawCallFrameNumber
 		|| GFrameCounter <= CurrentDrawCallData.FrameNumber
 		|| bWidgetListChangedSincePrepare)
@@ -1282,8 +1612,10 @@ bool UDreamCanvas::CanRefreshDrawCallsInPlace()
 				|| InGeometry.BoundsMax2DInCanvasSpace.Y < LeftBottom.Y
 				|| InGeometry.BoundsMin2DInCanvasSpace.Y > RightTop.Y);
 	};
-	for (const FDreamUIDrawCall& DrawCall : CurrentDrawCallData.DrawCallArray)
+	const int32 PositionSensitiveFrom = Placement.bIndependentOfPositions ? MAX_int32 : Placement.PositionSensitiveFrom;
+	for (int32 DrawCallIndex = 0; DrawCallIndex < CurrentDrawCallData.DrawCallArray.Num(); ++DrawCallIndex)
 	{
+		const FDreamUIDrawCall& DrawCall = CurrentDrawCallData.DrawCallArray[DrawCallIndex];
 		switch (DrawCall.Type)
 		{
 		case EDreamUIDrawCallType::ChildCanvas:
@@ -1297,7 +1629,7 @@ bool UDreamCanvas::CanRefreshDrawCallsInPlace()
 				const FDreamUIGeometry* Now = Visual != nullptr ? Visual->GetGeometry() : nullptr;
 				if (Batched == nullptr || Now == nullptr
 					|| Now->Vertices.Num() != Batched->Vertices.Num() || Now->Triangles.Num() != Batched->Triangles.Num()
-					|| Now->RenderLayer != Batched->RenderLayer)
+					|| Now->RenderLayer != Batched->RenderLayer || Now->RenderLayerRow != Batched->RenderLayerRow)
 				{
 					return false;
 				}
@@ -1308,6 +1640,14 @@ bool UDreamCanvas::CanRefreshDrawCallsInPlace()
 				}
 				const bool bFlat = Is2DUITransform(Now->TransformRelativeToCanvas);
 				if (bFlat != Is2DUITransform(Batched->TransformRelativeToCanvas) || (bFlat && IsOutside(*Now)))
+				{
+					return false;
+				}
+				// Where the batch looked back over elements' bounds (FDreamUIBatchPlacement::PositionSensitiveFrom): a flat
+				// element there that moved could have gone elsewhere, or let another go elsewhere. Anything before it -- the
+				// 3D elements, the layers' -- moves as it likes.
+				if (bFlat && DrawCallIndex >= PositionSensitiveFrom
+					&& (Now->BoundsMin2DInCanvasSpace != Batched->BoundsMin2DInCanvasSpace || Now->BoundsMax2DInCanvasSpace != Batched->BoundsMax2DInCanvasSpace))
 				{
 					return false;
 				}
@@ -1681,7 +2021,7 @@ UDreamCanvas* UDreamCanvas::GetRootCanvas() const
 }
 bool UDreamCanvas::IsRootCanvas()const
 {
-	return GetRootCanvas() == this;
+	return IsOwnRoot() || GetRootCanvas() == this;
 }
 
 USceneComponent* UDreamCanvas::GetAttachedRootSceneComponent() const
@@ -2212,6 +2552,9 @@ void UDreamCanvas::BatchDrawCallAsync(const FVector2D& InCanvasLeftBottom, const
 	};
 
 	int FitInDrawCallMinIndex = 0;
+	// The last draw call holding a 3D element (or a render layer's), which a flat element's walk back never passes: only
+	// the last draw call ever takes one, so this only grows.
+	int32 Last3DDrawCall = INDEX_NONE;
 	auto CanFitInDrawCall = [&](const FDreamUIGeometry& InGeo, bool InIs2DUI, int32& OutDrawCallIndexToFitin){
 		const auto LastDrawCallIndex = InOutUIDrawCallList.Num() - 1;
 		if (LastDrawCallIndex < 0)
@@ -2340,12 +2683,15 @@ void UDreamCanvas::BatchDrawCallAsync(const FVector2D& InCanvasLeftBottom, const
 				// object to make a weak pointer of it again -- can meet a collection under way on the game thread.
 				DrawCallItem.Material = InItemGeo.Material;
 				DrawCallItem.BlendMode = InItemGeo.BlendMode;
-				DrawCallItem.RenderLayer = InItemGeo.RenderLayer;
 				DrawCallItem.BatchMeshVisualArray.Add(InRenderData.BatchMeshVisualObject);
 				DrawCallItem.VerticesCount = InItemGeo.Vertices.Num();
 				DrawCallItem.IndicesCount = InItemGeo.Triangles.Num();
 				DrawCallItem.BatchMeshTreeNode->Insert(DreamUIQuadTree::Rectangle(InItemGeo.BoundsMin2DInCanvasSpace, InItemGeo.BoundsMax2DInCanvasSpace));
 				DrawCallItem.bIs2DSpace = InIs2DSpace;
+				if (!InIs2DSpace)
+				{
+					Last3DDrawCall = InOutUIDrawCallList.Num();
+				}
 				//last: the draw call keeps the prepared copy itself, shared with its visual, rather than a copy of it
 				DrawCallItem.BatchMeshGeometryArray.Add(MoveTemp(InRenderData.BatchMeshGeometry));
 				InOutUIDrawCallList.Add(MoveTemp(DrawCallItem));
@@ -2396,11 +2742,12 @@ void UDreamCanvas::BatchDrawCallAsync(const FVector2D& InCanvasLeftBottom, const
 				const FDreamUIGeometry& ItemGeo = *RenderData.BatchMeshGeometry;
 
 				/**
-				 * An element of a render layer is placed by the layer's transform, on the GPU, wherever the layer happens to be:
-				 * it batches as a 3D element does, into the last draw call only -- which then has to be its own layer's, see
-				 * CanConsumeUIGeometryForBatchMesh -- and its draw call ends a flat element's walk back as a 3D one does. So
-				 * neither culling nor an overlap test ever reads where it is, and however the layer moves, the batch comes out
-				 * the same (FDreamUIBatchPlacement). Its transform and bounds are the layer's anyway, not the canvas's.
+				 * An element of a render layer is placed by the layer's row of the render layer table, on the GPU, wherever the
+				 * layer happens to be: it batches as a 3D element does, into the last draw call only -- whatever layers that
+				 * one's elements are in, each vertex is placed through its own -- and its draw call ends a flat element's walk
+				 * back as a 3D one does. So neither culling nor an overlap test ever reads where it is, and however the layer
+				 * moves, the batch comes out the same (FDreamUIBatchPlacement). Its transform and bounds are the layer's
+				 * anyway, not the canvas's.
 				 */
 				bool is2DUIItem = !ItemGeo.IsInRenderLayer() && Is2DUITransform(ItemGeo.TransformRelativeToCanvas);
 				//a 3D element's 2D bounds do not describe where it ends up on screen, so only flat
@@ -2413,16 +2760,30 @@ void UDreamCanvas::BatchDrawCallAsync(const FVector2D& InCanvasLeftBottom, const
 					}
 					continue;
 				}
-				if (OutPlacement != nullptr && OutPlacement->bIndependentOfPositions && ItemGeo.bSupportDrawcallBatching && is2DUIItem
+				/**
+				 * The first draw call this element's walk back could read the bounds of: the one after the last 3D draw call,
+				 * or the floor a child canvas, post process or direct mesh set. Nothing before it is read, for this element or
+				 * any other. It only grows, so once the batch depends on positions from there on, no later element can make
+				 * that any earlier, and nothing is asked again -- as nothing was once the first one depended, before.
+				 */
+				const int32 WalkFloor = FMath::Max(Last3DDrawCall + 1, FitInDrawCallMinIndex);
+				if (OutPlacement != nullptr && ItemGeo.bSupportDrawcallBatching && is2DUIItem
+					&& (OutPlacement->bIndependentOfPositions || OutPlacement->PositionSensitiveFrom > WalkFloor)
 					&& CouldGoPastTheLastDrawCall(ItemGeo))
 				{
 					OutPlacement->bIndependentOfPositions = false;
+					OutPlacement->PositionSensitiveFrom = OutPlacement->PositionSensitiveFrom == INDEX_NONE
+						? WalkFloor : FMath::Min(OutPlacement->PositionSensitiveFrom, WalkFloor);
 				}
 				int DrawCallIndexToFitin;
 				if (ItemGeo.bSupportDrawcallBatching && CanFitInDrawCall(ItemGeo, is2DUIItem, DrawCallIndexToFitin))
 				{
 					auto& DrawCallItem = InOutUIDrawCallList[DrawCallIndexToFitin];
 					DrawCallItem.bIs2DSpace = DrawCallItem.bIs2DSpace && is2DUIItem;
+					if (!is2DUIItem)
+					{
+						Last3DDrawCall = FMath::Max(Last3DDrawCall, DrawCallIndexToFitin);
+					}
 					if (ItemGeo.bIsFont)
 					{
 						if (DrawCallItem.FontTexture != ItemGeo.Texture)
@@ -2547,7 +2908,7 @@ void UDreamCanvas::UpdateCanvasDrawCall()
 		item->UpdateCanvasDrawCall();
 	}
 
-	auto DreamWidget = GetWidget();
+	auto DreamWidget = GetCanvasWidget();
 	if (!DreamWidget)return;
 	/**
 	 * Why use bPrevIsVisible?:
@@ -2572,7 +2933,7 @@ void UDreamCanvas::UpdateCanvasDrawCall()
 		RootCanvas->bAnythingChangedForRenderTarget = true;
 		// Whatever made this canvas update -- layout, a transform, geometry, a sort -- may have moved what a
 		// ray would hit on it.
-		DreamCanvasLocal::BumpHitTestGeneration(this);
+		BumpHitTestGeneration();
 		CheckUIMesh();
 		struct LOCAL
 		{
@@ -2614,19 +2975,19 @@ void UDreamCanvas::UpdateCanvasDrawCall()
 		//update clip and geometry from head to tail
 		{
 			SCOPE_CYCLE_COUNTER(STAT_UpdateClipAndGeometry)
-			TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_UpdateClipAndGeometry);
+			DREAMUI_DETAIL_SCOPE(DreamUI_UpdateClipAndGeometry);
 			// Resolved once for the loop rather than twice for every widget in it: the root is a weak pointer.
 			UDreamCanvas* const Root = RootCanvas.Get();
 			auto UpdateWidget = [this, Root](UDreamWidget* Widget)
 			{
 				if (Root != nullptr)
 				{
-					TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_UpdateWidgetClip);
+					DREAMUI_DETAIL_SCOPE(DreamUI_UpdateWidgetClip);
 					Widget->UpdateClip(Root->ClipDataAsTexture, Root->ClipDataList);
 				}
 				if (Widget->GetRenderVisibleInHierarchy() && Widget->GetRenderCanvas() == this)
 				{
-					TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_UpdateWidgetVisual);
+					DREAMUI_DETAIL_SCOPE(DreamUI_UpdateWidgetVisual);
 					Widget->UpdateVisual();
 				}
 			};
@@ -2692,7 +3053,7 @@ void UDreamCanvas::UpdateCanvasDrawCall()
 			// Clips created above are uploaded by RefreshAllClipData, driven every tick from the UI manager.
 		}
 		{
-			TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_WidgetPropertyDataFlush);
+			DREAMUI_DETAIL_SCOPE(DreamUI_WidgetPropertyDataFlush);
 			WidgetPropertyDataAsTexture->Flush();
 		}
 
@@ -2736,6 +3097,7 @@ void UDreamCanvas::UpdateCanvasDrawCall()
 				PreparedDrawCallData.GeometryListsOnSections = UIMesh->GetMeshSectionGeometryLists();
 				//push to async thread
 				DrawCallProcessingRunnable->PushPreparedDrawCallData(MoveTemp(PreparedDrawCallData));
+				bDrawCallBatchingInFlight = true;
 			}
 		}
 		else
@@ -2744,7 +3106,7 @@ void UDreamCanvas::UpdateCanvasDrawCall()
 		}
 	}
 
-	if (this == RootCanvas)
+	if (IsOwnRoot())
 	{
 		CheckRenderTargetUpdate();
 	}
@@ -2767,8 +3129,8 @@ void UDreamCanvas::UpdateDrawCallBatchData()
 
 void UDreamCanvas::TakeDrawCallBatchData(TArray<UDreamCanvas*>& OutToRefresh, TArray<UDreamCanvas*>& OutToFinish)
 {
-	TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_UpdateDrawCallBatchData);
-	if(!GetWidget()->HasRegistered())return;
+	DREAMUI_DETAIL_SCOPE(DreamUI_UpdateDrawCallBatchData);
+	if(!GetCanvasWidget()->HasRegistered())return;
 	//update children canvas
 	for (auto& item : ChildrenCanvasArray)
 	{
@@ -2779,29 +3141,37 @@ void UDreamCanvas::TakeDrawCallBatchData(TArray<UDreamCanvas*>& OutToRefresh, TA
 
 	if (!IsValid(UIMesh))return;
 
-	if (!bAllowDropFrame)
+	// Nothing handed to the batching since it was last waited for and emptied: nothing to wait for, and nothing to take.
+	if (bDrawCallBatchingInFlight)
 	{
-		//this frame must show this frame's batching, so wait for it. The wait is not a sleep loop any
-		//more: it can retract a batch the worker pool has not started and run it here, which is both
-		//sooner than the old 1ms granularity and work the game thread was going to wait for anyway.
-		DrawCallProcessingRunnable->WaitForBatchingToFinish();
-	}
-
-	if (DrawCallProcessingRunnable->TryGetDrawCallData(CurrentDrawCallData))
-	{
-		TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_ApplyNewDrawCalls);
-		//update draw-call mesh
-		UpdateDrawCallMesh();
-		//update draw-call material
-		UpdateDrawCallMaterial();
-
-		if (bNeedToVerifyMaterials)
+		if (!bAllowDropFrame)
 		{
-			bNeedToVerifyMaterials = false;
-			UIMesh->VerifyMaterials();
+			//this frame must show this frame's batching, so wait for it. The wait is not a sleep loop any
+			//more: it can retract a batch the worker pool has not started and run it here, which is both
+			//sooner than the old 1ms granularity and work the game thread was going to wait for anyway.
+			DrawCallProcessingRunnable->WaitForBatchingToFinish();
+			// Waited for, the batching has made all it was handed, and what it made is taken below: nothing more comes until
+			// the next hand-off, which says so again -- should one come even while what came is being taken. A canvas that
+			// lets frames drop did not wait, and looks again next frame.
+			bDrawCallBatchingInFlight = false;
 		}
 
-		MarkFinishUpdateCanvasDrawCall();
+		if (DrawCallProcessingRunnable->TryGetDrawCallData(CurrentDrawCallData))
+		{
+			TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_ApplyNewDrawCalls);
+			//update draw-call mesh
+			UpdateDrawCallMesh();
+			//update draw-call material
+			UpdateDrawCallMaterial();
+
+			if (bNeedToVerifyMaterials)
+			{
+				bNeedToVerifyMaterials = false;
+				UIMesh->VerifyMaterials();
+			}
+
+			MarkFinishUpdateCanvasDrawCall();
+		}
 	}
 	/**
 	 * A vertex refresh asked for since the draw calls in hand were prepared, once they are the newest asked for: a
@@ -2824,7 +3194,7 @@ void UDreamCanvas::TakeDrawCallBatchData(TArray<UDreamCanvas*>& OutToRefresh, TA
 
 void UDreamCanvas::RefreshDrawCallVertices()
 {
-	TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_RefreshDrawCallVertices);
+	DREAMUI_DETAIL_SCOPE(DreamUI_RefreshDrawCallVertices);
 	bRefreshMovedBounds = false;
 	DrawCallsLeftToUpdate.Reset();
 	UDreamUIMeshComponent* const Mesh = UIMesh.Get();
@@ -2837,10 +3207,16 @@ void UDreamCanvas::RefreshDrawCallVertices()
 			continue;
 		}
 		// An element that moved (MarkWidgetMoved) takes the draw call's bounds with it: the section's box, and through it
-		// the mesh's, follow.
-		const FBox BoundsBefore = DrawCallItem.CombinedBounds;
+		// the mesh's, follow. A layer's elements are boxed where its row places them; nothing writes the rows meanwhile.
+		const FBox BoundsBefore = DrawCallItem.CanvasBounds;
 		DrawCallItem.ApplyBatchMeshBoundsToCombined();
-		bRefreshMovedBounds |= !(DrawCallItem.CombinedBounds == BoundsBefore);
+		if (DrawCallItem.HasRenderLayerElements())
+		{
+			// Placed from the box it had, which it keeps while that still holds its layers (PlaceBounds).
+			DrawCallItem.CanvasBounds = BoundsBefore;
+			DrawCallItem.PlaceBounds(RenderLayerTable.Get());
+		}
+		bRefreshMovedBounds |= !(DrawCallItem.CanvasBounds == BoundsBefore);
 		if (!Mesh->TryPatchMeshSection(DrawCallItem.RenderSection, &DrawCallItem))
 		{
 			DrawCallsLeftToUpdate.Add(i);
@@ -2865,17 +3241,26 @@ void UDreamCanvas::FinishDrawCallBatchData()
 	else if (TendRenderLayers())
 	{
 		PlaceRenderLayers();
+		// Finished alone, away from the manager's submit: the rows it wrote go up now, before anything draws through them.
+		if (UDreamUIRenderLayerTable* Table = GetRenderLayerTable(/*bInCreate*/ false))
+		{
+			Table->Flush();
+		}
 	}
 	if (bRenderLayersPlaced)
 	{
 		// A render target that saw no change this frame draws the move in the next, and a ray is traced again: a move told
 		// after this frame's update came too late for both.
 		bRenderLayersPlaced = false;
-		if (CheckRootCanvas())
+		if (IsOwnRoot())
+		{
+			bAnythingChangedForRenderTarget = true;
+		}
+		else if (CheckRootCanvas())
 		{
 			RootCanvas->bAnythingChangedForRenderTarget = true;
 		}
-		DreamCanvasLocal::BumpHitTestGeneration(this);
+		BumpHitTestGeneration();
 	}
 	for (const int32 Index : DrawCallsLeftToUpdate)
 	{
@@ -2888,7 +3273,7 @@ void UDreamCanvas::FinishDrawCallBatchData()
 	DrawCallsLeftToUpdate.Reset();
 	if (bRefreshMovedBounds)
 	{
-		TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_UpdateMeshBounds);
+		DREAMUI_DETAIL_SCOPE(DreamUI_UpdateMeshBounds);
 		bRefreshMovedBounds = false;
 		UIMesh->UpdateLocalBounds();
 	}
@@ -2930,8 +3315,8 @@ void UDreamCanvas::UpdateDrawCallMesh()
 			}
 		}
 	}
-	// Before any section is set up: each is set up drawn through its layer's transform, and boxed where the layer is.
-	GatherRenderLayerPlacements();
+	// Before any section is set up: each draw call holding a layer's elements is boxed where its layers stand.
+	PlaceRenderLayerDrawCalls(/*bInAll*/ true);
 	UIMesh->PoolAllRenderSection();
 	// Before any section is set up: every draw call that can take its old section back as it was claims it first.
 	UIMesh->ClaimPooledMeshSections(CurrentDrawCallData.DrawCallArray);
@@ -3005,7 +3390,7 @@ void UDreamCanvas::UpdateDrawCallMesh()
 		// consume site cleared without ever sorting, and the owner never heard about it.
 		if (UDreamCanvas* SortOwner = GetSortOwnerCanvas())
 		{
-			SortOwner->bNeedToSortRenderPriority = true;
+			SortOwner->RequestRenderPrioritySort();
 		}
 	}
 
@@ -3266,6 +3651,34 @@ void UDreamCanvas::UpdateDrawCallMaterial()
 	};
 
 	const bool bUseBuiltInShader = UDreamUISettings::GetUseBuiltInUIShader() && IsRenderByDreamUIRendererOrUERenderer();
+	// The world's render layer table, when this canvas has made layers: what a section of their elements places them by.
+	const UDreamUIRenderLayerTable* LayerTable = GetRenderLayerTable(/*bInCreate*/ false);
+	const UTexture* LayerTableTexture = LayerTable != nullptr ? LayerTable->GetTexture() : nullptr;
+	/**
+	 * The world's rows of the default rect block data, which the built-in shader reads a rect block it draws from
+	 * (UDreamRectBlock::IsDrawnByBuiltInShader): given to every built-in draw, so that the draws of a world of panels
+	 * bind the same textures one after another.
+	 */
+	UDreamUIManagerWorldSubsystem* const RowsManager = RegisteredWithManager != nullptr ? RegisteredWithManager : UDreamUIManagerWorldSubsystem::GetInstance(GetWorld());
+	const UTexture* RectBlockRowsTexture = bUseBuiltInShader && RowsManager != nullptr ? RowsManager->GetBuiltInRectBlockRowsTexture() : nullptr;
+	/**
+	 * What a section a material draws is given of the built-in parameters: nothing, unless it holds a render layer's
+	 * elements, whose vertices its vertex shader places through the widget data and the table (DreamUIRenderLayer.ush).
+	 */
+	auto SetMaterialSectionParams = [this, LayerTableTexture](int32 InSectionIndex, const FDreamUIDrawCall& InDrawCall)
+	{
+		if (InDrawCall.HasRenderLayerElements())
+		{
+			FDreamUIBuiltInDrawParams LayerOnly;
+			LayerOnly.WidgetDataTexture = WidgetPropertyDataAsTexture->GetDataTexture();
+			LayerOnly.RenderLayerTable = LayerTableTexture;
+			UIMesh->SetMeshSectionBuiltIn(InSectionIndex, LayerOnly);
+		}
+		else if (UIMesh->IsMeshSectionBuiltIn(InSectionIndex))
+		{
+			UIMesh->SetMeshSectionBuiltIn(InSectionIndex, FDreamUIBuiltInDrawParams());
+		}
+	};
 
 	// UpdateDrawCallMesh does not create a section for every draw-call (the WorldSpace path skips
 	// PostProcess ones), so the section index must be counted from the draw-calls that own one --
@@ -3294,10 +3707,7 @@ void UDreamCanvas::UpdateDrawCallMaterial()
 				if (DrawCallItem.Material.IsValid() && !Source->IsA<UMaterialInstanceDynamic>() && !IsMaterialContainsDreamUIParameter(Source))
 				{
 					bNeedToVerifyMaterials = true;//verify material when new material will be used
-					if (UIMesh->IsMeshSectionBuiltIn(SectionIndex))
-					{
-						UIMesh->SetMeshSectionBuiltIn(SectionIndex, FDreamUIBuiltInDrawParams());
-					}
+					SetMaterialSectionParams(SectionIndex, DrawCallItem);
 					UIMesh->SetMeshSectionMaterial(SectionIndex, Source);
 					break;
 				}
@@ -3322,10 +3732,7 @@ void UDreamCanvas::UpdateDrawCallMaterial()
 				{
 					Proxy->SetParameters_GameThread(Parameters);
 				}
-				if (UIMesh->IsMeshSectionBuiltIn(SectionIndex))
-				{
-					UIMesh->SetMeshSectionBuiltIn(SectionIndex, FDreamUIBuiltInDrawParams());
-				}
+				SetMaterialSectionParams(SectionIndex, DrawCallItem);
 				UIMesh->SetMeshSectionMaterial(SectionIndex, Source, Proxy);
 				break;
 			}
@@ -3340,6 +3747,8 @@ void UDreamCanvas::UpdateDrawCallMaterial()
 				BuiltIn.FontTexture = DrawCallItem.FontTexture.Get();
 				BuiltIn.WidgetDataTexture = WidgetPropertyDataAsTexture->GetDataTexture();
 				BuiltIn.ClipDataTexture = RootCanvas->ClipDataAsTexture->GetDataTexture();
+				BuiltIn.RenderLayerTable = LayerTableTexture;
+				BuiltIn.RectBlockData = RectBlockRowsTexture;
 				const FVector4f AtlasInfo = MakeFontAtlasInfo(DrawCallItem);
 				BuiltIn.FontAtlasSize = FVector2f(AtlasInfo.X, AtlasInfo.Y);
 				BuiltIn.FontFieldRangeTexels = AtlasInfo.Z;
@@ -3511,7 +3920,7 @@ void UDreamCanvas::SetSortOrder(int32 InSortOrder, bool InPropagateToChildrenCan
 	{
 		if (CheckRootCanvas())
 		{
-			RootCanvas->bNeedToSortRenderPriority = true;
+			RootCanvas->RequestRenderPrioritySort();
 		}
 		MarkCanvasUpdate(false);
 		if (InPropagateToChildrenCanvas)
@@ -3536,7 +3945,7 @@ void UDreamCanvas::SetSortOrder(int32 InSortOrder, bool InPropagateToChildrenCan
 
 		if (CheckRootCanvas())
 		{
-			RootCanvas->bNeedToSortRenderPriority = true;
+			RootCanvas->RequestRenderPrioritySort();
 		}
 	}
 }
@@ -3694,7 +4103,7 @@ void UDreamCanvas::SetOverrideSorting(bool Value)
 		}
 		if (CheckRootCanvas())
 		{
-			RootCanvas->bNeedToSortRenderPriority = true;
+			RootCanvas->RequestRenderPrioritySort();
 		}
 		MarkCanvasUpdate(false);
 	}
