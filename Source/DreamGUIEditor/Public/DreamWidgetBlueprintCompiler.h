@@ -93,8 +93,36 @@ public:
 	 * variable from it through the shared rule and uses the id itself for the animation path. The two
 	 * agree for anything the parser accepts as an id, and deriving both from one input is what keeps
 	 * them agreeing if that ever stops being true.
+	 *
+	 * The designer's own rename (DreamWidgetTreeEditing::RenameWidget) calls this too, after the
+	 * structural change has given the class the new name; see MigrateVariableReferences for why the
+	 * order matters outside a compile. It moves the animation paths first, through MigrateWidgetRenamePaths.
 	 */
 	static FWidgetRenameMigration MigrateWidgetRename(UDreamWidgetBlueprint* InBlueprint, const FString& InOldId, const FString& InNewId);
+	/**
+	 * The path half of MigrateWidgetRename: the animation bindings embedded in this asset and in the loaded sequence
+	 * assets authored against its class, InOldId's segment rewritten to InNewId; OutResult's AnimationBindings and
+	 * ExternalSequenceBindings count them. Needs nothing of the class, so the designer's rename runs it BEFORE the
+	 * structural change: that change compiles the skeleton, and a path still naming the old id is an error there.
+	 */
+	static void MigrateWidgetRenamePaths(UDreamWidgetBlueprint* InBlueprint, const FString& InOldId, const FString& InNewId, FWidgetRenameMigration& OutResult);
+
+	/**
+	 * Move every graph reference to the member variable InOldVariableName onto InNewVariableName, in this
+	 * Blueprint and in every Blueprint that depends on it. The graph leg of MigrateWidgetRename, and the
+	 * whole of an animation rename in the animation editor.
+	 *
+	 * The match is by name only, so it is refused, with the reason in OutRefusal, when something other
+	 * than the renamed widget or animation already answers to the old name: a variable the author
+	 * declared, a local variable of that name, or a member of the parent class. Returns how many nodes in
+	 * this Blueprint's own graphs named the old variable.
+	 *
+	 * Outside a compile the class has to declare the new name first -- mark the Blueprint structurally
+	 * modified, then call this. A generated variable's guid is derived from its name, a renamed node
+	 * keeps the old guid, and while the class still declares only the old name, the first lookup of
+	 * that node renames it back by the guid.
+	 */
+	static int32 MigrateVariableReferences(UDreamWidgetBlueprint* InBlueprint, FName InOldVariableName, FName InNewVariableName, FString& OutRefusal);
 
 protected:
 	// FKismetCompilerContext

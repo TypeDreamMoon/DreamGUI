@@ -868,4 +868,54 @@ bool FDreamWidgetBlueprintAnimationBindingTest::RunTest(const FString& Parameter
 	return true;
 }
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamWidgetBlueprintInheritedAnimationClaimTest,
+	"DreamGUI.WidgetBlueprint.AnAnimationClaimIsCheckedAgainstTheHierarchyTheClassActuallyGets",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * A subclass that only adds logic failed its compile over an animation its parent had authored.
+ *
+ * The meta=(BindDreamWidgetAnim) check counted the subclass's own tree as authored as soon as it held a widget -- and
+ * every designer open puts a placeholder root in it -- and then looked only at that tree's animations, while every
+ * instance of the class is built with the parent's hierarchy, the claimed animation included. A fresh child of the native
+ * base failed the same way the moment it was created, because the factory's root is a placeholder too. The check now
+ * asks the hierarchy the class actually gets, and asks nothing while no class in the chain has authored one.
+ */
+bool FDreamWidgetBlueprintInheritedAnimationClaimTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamWidgetBlueprintCompilerTestLocal;
+
+	FScopedBlueprint Parent(TEXT("BP_AnimClaimParent"), UDreamWidgetBlueprintAnimBindingBase::StaticClass());
+	UDreamWidget* Target = Parent.AddWidget(TEXT("Header"));
+	UDreamWidgetAnimation* Sequence = nullptr;
+	BindAnimationToWidget(Parent, Target, Sequence);
+	if (!TestNotNull(TEXT("the parent has an animation to name"), Sequence))
+	{
+		return false;
+	}
+	Sequence->SetDisplayNameString(TEXT("RequiredIntro"));
+	FCompilerResultsLog ParentResults;
+	Compile(Parent.Blueprint, ParentResults);
+	if (!TestEqual(TEXT("a parent that authors the claimed animation compiles clean"), ParentResults.NumErrors, 0))
+	{
+		return false;
+	}
+
+	// Exactly what opening the designer on a logic-only subclass does to it, and nothing else.
+	FScopedBlueprint Child(TEXT("BP_AnimClaimLogicOnlyChild"), Parent.Blueprint->GeneratedClass);
+	Child.Blueprint->GetOrCreateWidgetTree(/*bEnsureRootWidget*/true);
+	FCompilerResultsLog ChildResults;
+	Compile(Child.Blueprint, ChildResults);
+	TestEqual(TEXT("a subclass that only adds logic compiles clean"), ChildResults.NumErrors, 0);
+
+	// And a child of the native base with nothing authored in it yet.
+	FScopedBlueprint Fresh(TEXT("BP_AnimClaimFreshChild"), UDreamWidgetBlueprintAnimBindingBase::StaticClass());
+	Fresh.Blueprint->GetOrCreateWidgetTree(/*bEnsureRootWidget*/true);
+	FCompilerResultsLog FreshResults;
+	Compile(Fresh.Blueprint, FreshResults);
+	TestEqual(TEXT("so does a fresh one, before anything has been authored"), FreshResults.NumErrors, 0);
+	return true;
+}
+
 #endif

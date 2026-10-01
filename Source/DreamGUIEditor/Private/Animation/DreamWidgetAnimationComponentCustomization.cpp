@@ -18,6 +18,7 @@
 #include "Widgets/Input/SButton.h"
 #include "SDreamWidgetAnimationEditor.h"
 #include "Designer/DreamWidgetBlueprintEditor.h"
+#include "Designer/DreamWidgetDesignerTabs.h"
 #include "Core/DreamWidgetPresenterComponentBase.h"
 #include "Core/DreamWorldWidgetComponent.h"
 // GetWidgetClass returns a TSubclassOf<UDreamUserWidget>, and converting that to a UClass* asks the
@@ -139,15 +140,10 @@ void FDreamWidgetAnimationComponentCustomization::CustomizeDetails(IDetailLayout
 		return;
 	}
 
-	bool bIsExternalTabAlreadyOpened = false;
-
+	// The designer's own id for its Animations panel. This asked for "Sequencer", which is the level
+	// editor's tab and has no spawner in a designer's tab manager, so the button never opened anything.
 	auto HostTabManager = DesignerEditor.Pin()->GetTabManager();
-	TSharedPtr<SDockTab> ExistingTab = HostTabManager->FindExistingLiveTab(FDreamWidgetBlueprintEditor::GetSequencerTabID());
-	if (ExistingTab.IsValid())
-	{
-		auto SequencerWidget = StaticCastSharedRef<SDreamWidgetAnimationEditor>(ExistingTab->GetContent());
-		bIsExternalTabAlreadyOpened = WeakSequenceComponent.IsValid() && SequencerWidget->GetSequenceComponent() == WeakSequenceComponent.Get();
-	}
+	const bool bIsExternalTabAlreadyOpened = HostTabManager->FindExistingLiveTab(FDreamWidgetDesignerTabs::AnimationsID).IsValid();
 	Category.AddCustomRow(FText())
 		.NameContent()
 		[
@@ -160,7 +156,7 @@ void FDreamWidgetAnimationComponentCustomization::CustomizeDetails(IDetailLayout
 			SNew(SButton)
 			.OnClicked_Lambda([=, this]()
 			{
-				if (TSharedPtr<SDockTab> Tab = HostTabManager->TryInvokeTab(FDreamWidgetBlueprintEditor::GetSequencerTabID()))
+				if (TSharedPtr<SDockTab> Tab = HostTabManager->TryInvokeTab(FDreamWidgetDesignerTabs::AnimationsID))
 				{
 					// Set up a delegate that forces a refresh of this panel when the tab is closed to ensure we see the inline widget
 					TWeakPtr<IPropertyUtilities> WeakUtilities = PropertyUtilities;
@@ -174,8 +170,19 @@ void FDreamWidgetAnimationComponentCustomization::CustomizeDetails(IDetailLayout
 					};
 	
 					Tab->SetOnTabClosed(SDockTab::FOnTabClosedCallback::CreateLambda(OnClosed));
-	
-					StaticCastSharedRef<SDreamWidgetAnimationEditor>(Tab->GetContent())->AssignDreamWidgetAnimationComponent(WeakSequenceComponent);
+
+					// The panel's host is found on the designer's AUTHORING tree. The component this row
+					// customizes is the preview's copy -- the designer's details show the preview -- and
+					// handing it to the panel would put every animation edited there on a tree the next
+					// rebuild throws away. Reached through the designer rather than by casting the tab's
+					// content, which is only the panel while the tab is the one this asked for.
+					if (const TSharedPtr<FDreamWidgetBlueprintEditor> Designer = DesignerEditor.Pin())
+					{
+						if (const TSharedPtr<SDreamWidgetAnimationEditor> AnimationPanel = Designer->GetSequencerEditor())
+						{
+							AnimationPanel->RefreshAnimationHost();
+						}
+					}
 				}
 
 				PropertyUtilities->ForceRefresh();

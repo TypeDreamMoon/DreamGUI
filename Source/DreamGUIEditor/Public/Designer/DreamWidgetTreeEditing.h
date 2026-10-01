@@ -94,8 +94,11 @@ namespace DreamWidgetTreeEditing
 	 * Give InWidget a new display name, made unique within the tree first.
 	 *
 	 * The display name is not decoration: UDreamWidgetTree::MakeWidgetVariableName derives the
-	 * compiler variable from it, so renaming here renames the variable the graph sees. Returns the
-	 * name actually applied, which differs from InDesiredDisplayName when it had to be disambiguated.
+	 * compiler variable from it, so renaming here renames the variable the graph sees -- and carries
+	 * across what named the old one, the way a `(was:)` clause does for a .dui: the authored bindings,
+	 * the graph nodes reading the variable, and the animation paths through the widget
+	 * (FDreamWidgetBlueprintCompilerContext::MigrateWidgetRename). Returns the name actually applied,
+	 * which differs from InDesiredDisplayName when it had to be disambiguated.
 	 */
 	DREAMGUIEDITOR_API FString RenameWidget(UDreamWidgetBlueprint* InBlueprint, UDreamWidget* InWidget, const FString& InDesiredDisplayName);
 

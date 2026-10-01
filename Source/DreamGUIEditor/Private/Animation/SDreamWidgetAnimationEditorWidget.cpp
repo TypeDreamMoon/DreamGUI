@@ -22,6 +22,7 @@
 #include "Animation/DreamWidgetAnimationComponent.h"
 #include "Designer/DreamWidgetBlueprintEditor.h"
 #include "DreamWidgetBlueprint.h"
+#include "Kismet2/BlueprintEditorUtils.h"
 #include "UObject/StrongObjectPtr.h"
 #include "UObject/Package.h"
 #include "LevelEditor.h"
@@ -266,7 +267,7 @@ public:
 		// objects the evacuation exists to let go of.
 		if (bPlaybackContextSuppressed)
 		{
-			return SuppressionContext.Get();
+			return GetSuppressionContext();
 		}
 		if (auto LocalAnimation = GetAnimation())
 		{
@@ -279,10 +280,27 @@ public:
 			{
 				return Preview;
 			}
-			return Owner;
+			// No preview to scrub against -- between a compile taking it down and the next tick
+			// building it again, for one -- and the sentinel stands in, never the authored owner.
+			// Bindings resolve against whatever context they are given, so with the owner here
+			// Sequencer evaluated the animation into the ASSET's own widgets: a save in that window
+			// (the designer's Save compiles first) wrote the animated pose into the asset.
+			return GetSuppressionContext();
 		}
-		
+
 		return nullptr;
+	}
+
+	/** The childless sentinel the playback context parks on. Made the first time it is needed. */
+	UDreamWidget* GetSuppressionContext() const
+	{
+		if (!SuppressionContext.IsValid())
+		{
+			// Strongly held: the recompile window this parks across runs a garbage collection.
+			SuppressionContext = TStrongObjectPtr<UDreamWidget>(
+				NewObject<UDreamWidget>(GetTransientPackage(), NAME_None, RF_Transient));
+		}
+		return SuppressionContext.Get();
 	}
 
 	TArray<UObject*> GetEventContexts() const
@@ -318,6 +336,7 @@ public:
 		}
 
 		WeakSequence = NewSequence;
+		MarkedSignature = NewSequence != nullptr && NewSequence->GetMovieScene() != nullptr ? NewSequence->GetMovieScene()->GetSignature() : FGuid();
 
 		if (NewSequence)
 		{
@@ -335,14 +354,22 @@ public:
 			NoAnimationTextBlock->SetVisibility(EVisibility::Collapsed);
 		}
 
-		// If we already have a sequencer open, just assign the sequence
+		// If we already have a sequencer open, just assign the sequence -- when it was made for this one's
+		// editability. Sequencer reads read-only once, from its init params, and keeps it across
+		// ResetToNewRootSequence: a `timeline` animation handed to an editable one could be edited (and
+		// the edits were gone at the next compile), and an editor-made one handed to a read-only one
+		// stayed locked. A change of editability gets a Sequencer of its own.
 		if (Sequencer.IsValid() && NewSequence)
 		{
-			if (Sequencer->GetRootMovieSceneSequence() != NewSequence)
+			if (bSequencerReadOnly == !NewSequence->IsEditable())
 			{
-				Sequencer->ResetToNewRootSequence(*NewSequence);
+				if (Sequencer->GetRootMovieSceneSequence() != NewSequence)
+				{
+					Sequencer->ResetToNewRootSequence(*NewSequence);
+				}
+				return;
 			}
-			return;
+			ReleaseSequencer();
 		}
 
 		// If we're setting the sequence to none, let the sequencer go
@@ -394,8 +421,10 @@ public:
 		}
 
 		Sequencer = FModuleManager::LoadModuleChecked<ISequencerModule>("Sequencer").CreateSequencer(SequencerInitParams);
+		bSequencerReadOnly = SequencerInitParams.ViewParams.bReadOnly;
 		Content->SetContent(Sequencer->GetSequencerWidget());
 		Sequencer->GetSelectionChangedObjectGuids().AddSP(this, &SDreamWidgetAnimationEditorWidgetImpl::SyncSelectedWidgetsWithSequencerSelection);
+		Sequencer->OnMovieSceneDataChanged().AddSP(this, &SDreamWidgetAnimationEditorWidgetImpl::HandleMovieSceneDataChanged);
 		ObserveWidgetSelection();
 		ObservePreviewRebuild();
 		// Weakly bound: a released sequencer outlives this panel by a frame (see ReleaseSequencer).
@@ -603,9 +632,10 @@ public:
 	 * entity and free every group through the same context-switch path it uses every day, while
 	 * everything is still coherent -- and under the sentinel every binding resolves to nothing,
 	 * so nothing new is keyed for the rest of the window. Resuming re-resolves against whatever
-	 * tree exists by then. Two windows, one pair each:
+	 * tree exists by then. Two windows, and both end at the rebuild, because a recompile of this
+	 * asset takes the preview down and the next tick builds it again:
 	 *
-	 *   recompile -- HandleBlueprintPreCompile / UEditorEngine::OnBlueprintCompiled
+	 *   recompile -- HandleBlueprintPreCompile / OnPreviewRebuilt (see HandleBlueprintCompiled)
 	 *   rebuild   -- OnPreviewAboutToRebuild   / OnPreviewRebuilt
 	 *
 	 * The sentinel is the load-bearing half, learned the hard way: suppressing to NULL was tried
@@ -624,12 +654,7 @@ public:
 		{
 			return;
 		}
-		if (!SuppressionContext.IsValid())
-		{
-			// Strongly held: the recompile window this parks across runs a garbage collection.
-			SuppressionContext = TStrongObjectPtr<UDreamWidget>(
-				NewObject<UDreamWidget>(GetTransientPackage(), NAME_None, RF_Transient));
-		}
+		GetSuppressionContext();
 		Sequencer->RestorePreAnimatedState();
 		bPlaybackContextSuppressed = true;
 		Sequencer->ForceEvaluate();
@@ -665,7 +690,15 @@ public:
 
 	void HandleBlueprintCompiled()
 	{
-		ResumeSequencerEvaluation();
+		// The preview's rebuild resumes, not the compile's announcement. A compile of this asset takes
+		// the preview down (UDreamGUIEditorSubsystem releases it for the recompile) and builds it again
+		// a tick later, so resuming here evaluated against a context with no preview behind it, for the
+		// rest of the frame the designer's Save writes the asset in. Only a sequencer no preview host
+		// answers to has no rebuild coming and resumes now.
+		if (!ObservedPreviewHost.IsValid())
+		{
+			ResumeSequencerEvaluation();
+		}
 	}
 
 	/** The other half of SyncSelectedWidgetsWithSequencerSelection: picking a widget highlights its tracks. */
@@ -912,7 +945,45 @@ public:
 	{
 		auto Widget = WeakSequence.IsValid() ? WeakSequence->GetTypedOuter<UDreamWidget>() : nullptr;
 		// The prefab helper was what a sequence change had to mark dirty. A Widget Blueprint's own
-		// dirty state is the Blueprint's, and the sequence lives on it.
+		// dirty state is the Blueprint's, and the sequence lives on it -- marked from
+		// HandleMovieSceneDataChanged rather than from here, because the signature also changes when
+		// nobody edited anything: a save's PreSave repairs the bindings' editor helpers through Modify.
+	}
+
+	/**
+	 * An edit made in Sequencer is an edit to the Blueprint.
+	 *
+	 * The class carries a copy of every animation, taken when it compiles, and PIE recompiles only a
+	 * Blueprint marked dirty -- so a key changed here kept playing its old value in PIE until something
+	 * else happened to dirty the asset. Marked once per dirty spell: a drag notifies on every mouse move.
+	 */
+	void HandleMovieSceneDataChanged(EMovieSceneDataChangeType InChangeType)
+	{
+		// What the view shows changed, not what the animation holds.
+		if (InChangeType == EMovieSceneDataChangeType::RefreshTree || InChangeType == EMovieSceneDataChangeType::ActiveMovieSceneChanged)
+		{
+			return;
+		}
+		UDreamWidgetAnimation* Sequence = WeakSequence.Get();
+		// Only a change of what the animation holds: Sequencer re-reads its data after any undo that creates or destroys
+		// an object anywhere in the editor, and notifies that too -- which marked this Blueprint for a recompile when an
+		// actor was put back in the level.
+		const UMovieScene* MovieScene = Sequence != nullptr ? Sequence->GetMovieScene() : nullptr;
+		const FGuid Signature = MovieScene != nullptr ? MovieScene->GetSignature() : FGuid();
+		if (Signature == MarkedSignature)
+		{
+			return;
+		}
+		MarkedSignature = Signature;
+		UDreamWidgetBlueprint* Blueprint = Sequence != nullptr ? Sequence->GetTypedOuter<UDreamWidgetBlueprint>() : nullptr;
+		// A clean package as well: an edit made here has already dirtied it through Modify, and
+		// Sequencer also notifies when it merely re-reads its data -- it hears every undo that touches
+		// any sequence in the editor, this asset's or not.
+		if (Blueprint == nullptr || Blueprint->Status == BS_Dirty || !Blueprint->GetOutermost()->IsDirty())
+		{
+			return;
+		}
+		FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
 	}
 private:
 	TSharedRef<FExtender> GetAddTrackSequencerExtender(const TSharedRef<FUICommandList> CommandList, const TArray<UObject*> ContextSensitiveObjects)
@@ -1124,6 +1195,8 @@ private:
 	}
 private:
 	TWeakObjectPtr<UDreamWidgetAnimation> WeakSequence;
+	/** The animation's signature when its Blueprint was last marked for it (or when it was shown); see HandleMovieSceneDataChanged. */
+	FGuid MarkedSignature;
 	TWeakObjectPtr<UDreamUISelection> ObservedSelection;
 	FDelegateHandle WidgetSelectionChangedHandle;
 	/** Weak, because the host outlives nothing here and this panel must not keep a designer alive. */
@@ -1134,8 +1207,10 @@ private:
 	FDelegateHandle BlueprintCompiledHandle;
 	/** True from an evacuation to its resume; GetPlaybackContext answers the sentinel throughout. */
 	bool bPlaybackContextSuppressed = false;
-	/** A childless widget nothing can resolve under. See EvacuateSequencerEntities. */
-	TStrongObjectPtr<UDreamWidget> SuppressionContext;
+	/** A childless widget nothing can resolve under. See EvacuateSequencerEntities and GetSuppressionContext. */
+	mutable TStrongObjectPtr<UDreamWidget> SuppressionContext;
+	/** What the open Sequencer was made with; it reads bReadOnly once, at creation. See SetDreamWidgetAnimation. */
+	bool bSequencerReadOnly = false;
 
 	TSharedPtr<SBox> Content;
 	TSharedPtr<ISequencer> Sequencer;

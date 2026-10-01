@@ -25,11 +25,13 @@
 #include "Text/DreamUITextBuilder.h"
 #include "Designer/DreamWidgetBlueprintEditor.h"
 #include "Designer/DreamWidgetPreviewHost.h"
+#include "DreamGUIEditorSubsystem.h"
 #include "Text/DreamUIExpressionThunks.h"
 #include "Text/DreamUISourceWatcher.h"
 
 #include "EdGraph/EdGraph.h"
 #include "EdGraphSchema_K2.h"
+#include "Engine/TimelineTemplate.h"
 #include "K2Node.h"
 #include "K2Node_FunctionEntry.h"
 #include "MovieScene.h"
@@ -348,6 +350,21 @@ void FDreamWidgetBlueprintCompilerContext::BuildWidgetTreeFromTextSource(FDreamU
 			}
 		});
 
+		// The language-owned animations the file has handed over: `timeline <Name> external` written where
+		// the block was is the way out the read-only animation editor names ("hand the animation to
+		// Sequencer for good"), and the keys the block held are on the animation the previous compile
+		// built and nowhere else. Those are carried and become the editor's from here on. Every other
+		// language-owned animation is the file's: rebuilt a moment ago when the file still declares it,
+		// and gone with the block when it does not.
+		TSet<FString> HandedOverTimelines;
+		for (const FDreamUITimeline& Timeline : Ast.Timelines)
+		{
+			if (Timeline.bExternal)
+			{
+				HandedOverTimelines.Add(Timeline.Name);
+			}
+		}
+
 		TArray<UDreamWidget*> OldWidgets;
 		UDreamWidget::CollectChildrenWidgets(DreamBlueprint->WidgetTree->RootWidget, OldWidgets, /*IncludeTarget*/true);
 		for (UDreamWidget* OldWidget : OldWidgets)
@@ -390,14 +407,20 @@ void FDreamWidgetBlueprintCompilerContext::BuildWidgetTreeFromTextSource(FDreamU
 			// The new home MAY already animate, now that `timeline` blocks build animations of their
 			// own -- and when it does, the whole-component re-home below would throw the file's
 			// animations away and put the previous compile's back. So the carry is per ANIMATION
-			// whenever the two have to coexist, and language-owned ones are never carried at all:
-			// the file rebuilt them a moment ago, and adopting the old copy would overwrite what the
-			// author just wrote with what they wrote last time.
+			// whenever the two have to coexist, and language-owned ones are never carried unless the
+			// file has handed them over: the file rebuilt the rest a moment ago, and adopting the old
+			// copy would overwrite what the author just wrote with what they wrote last time.
 			if (UDreamWidgetAnimationComponent* NewAnimator = NewHome->GetComponent<UDreamWidgetAnimationComponent>())
 			{
 				for (UDreamWidgetAnimation* OldAnimation : OldAnimator->GetSequenceArray())
 				{
-					if (!IsValid(OldAnimation) || OldAnimation->IsLanguageOwned())
+					if (!IsValid(OldAnimation))
+					{
+						continue;
+					}
+					const bool bHandedOver = OldAnimation->IsLanguageOwned()
+						&& HandedOverTimelines.Contains(OldAnimation->GetDisplayNameString());
+					if (OldAnimation->IsLanguageOwned() && !bHandedOver)
 					{
 						continue;
 					}
@@ -411,16 +434,43 @@ void FDreamWidgetBlueprintCompilerContext::BuildWidgetTreeFromTextSource(FDreamU
 							*Name));
 						continue;
 					}
+					if (bHandedOver)
+					{
+						// On the old copy, which the tree this compile drops is the only holder of:
+						// AdoptAnimation refuses a language-owned source, and from here on this one is not.
+						OldAnimation->SetLanguageOwned(false);
+					}
 					NewAnimator->AdoptAnimation(OldAnimation);
 				}
 				continue;
 			}
 
-			// The ordinary case, unchanged: nothing on the new home, so the whole component moves.
-			// One language-owned sequence in the old component would be carried with it, which
-			// cannot happen -- a language-owned sequence only exists on a tree the builder just made,
-			// and the builder always puts the component on the new home before this runs.
-			NewHome->AddComponentByTemplate(OldAnimator);
+			// Nothing on the new home, so the whole component moves -- and then gives back what the
+			// file owns. A language-owned sequence does reach this branch: when the file stops
+			// declaring timelines the builder makes no component, so the old one, timelines and all,
+			// was copied here whole, and every one of them then survived every later compile as a
+			// read-only animation and a class variable that nothing in the file could remove.
+			UDreamWidgetAnimationComponent* Carried =
+				Cast<UDreamWidgetAnimationComponent>(NewHome->AddComponentByTemplate(OldAnimator));
+			if (Carried != nullptr)
+			{
+				for (int32 Index = Carried->GetSequenceArray().Num() - 1; Index >= 0; --Index)
+				{
+					UDreamWidgetAnimation* CarriedAnimation = Carried->GetSequenceArray()[Index];
+					if (!IsValid(CarriedAnimation) || !CarriedAnimation->IsLanguageOwned())
+					{
+						continue;
+					}
+					if (HandedOverTimelines.Contains(CarriedAnimation->GetDisplayNameString()))
+					{
+						CarriedAnimation->SetLanguageOwned(false);
+					}
+					else
+					{
+						Carried->DeleteAnimationByIndex(Index);
+					}
+				}
+			}
 		}
 	}
 
@@ -478,6 +528,11 @@ void FDreamWidgetBlueprintCompilerContext::BuildWidgetTreeFromTextSource(FDreamU
 
 	// The one field the text owns. Replaced rather than merged: the .dui is the whole hierarchy, so
 	// anything still in the old tree is by definition not in the file any more.
+	//
+	// Recorded by the transaction this compile runs inside, when there is one: an animation added, deleted or renamed in
+	// the panel compiles the skeleton inside its own undo step, and a swap the step did not hold left Ctrl+Z restoring a
+	// tree nobody used any more. Without marking the package: outside a transaction this is a compile, not an edit.
+	DreamBlueprint->Modify(/*bAlwaysMarkDirty*/ false);
 	DreamBlueprint->WidgetTree = NewTree;
 	// And the resources ride along for PopulateBlueprintGeneratedVariables, which declares one class
 	// variable per entry a few lines after this function returns.
@@ -612,6 +667,140 @@ namespace DreamWidgetRenameMigrationLocal
 	}
 }
 
+int32 FDreamWidgetBlueprintCompilerContext::MigrateVariableReferences(UDreamWidgetBlueprint* InBlueprint,
+	FName InOldVariableName, FName InNewVariableName, FString& OutRefusal)
+{
+	OutRefusal.Reset();
+	if (InBlueprint == nullptr || InOldVariableName.IsNone() || InNewVariableName.IsNone() || InOldVariableName == InNewVariableName)
+	{
+		return 0;
+	}
+
+	// The graph leg matches by NAME ONLY. Everything below is about the one way that can do harm:
+	// if something OTHER than what was renamed already answers to the old name, this would move
+	// its references too -- silently, in a graph nobody has open.
+	if (FBlueprintEditorUtils::FindNewVariableIndex(InBlueprint, InOldVariableName) != INDEX_NONE)
+	{
+		OutRefusal = FString::Printf(
+			TEXT("this Blueprint declares a variable of its own called \"%s\", and a graph reference to that name cannot be told apart from one to what was renamed"),
+			*InOldVariableName.ToString());
+	}
+	else if (InBlueprint->ParentClass != nullptr
+		&& InBlueprint->ParentClass->FindPropertyByName(InOldVariableName) != nullptr)
+	{
+		// Not hypothetical: PopulateBlueprintGeneratedVariables deliberately skips a widget or an
+		// animation whose name the parent already declares, so one called this never had a variable
+		// of its own for anything to reference. The references belong to the parent's member.
+		OutRefusal = FString::Printf(
+			TEXT("\"%s\" is a member of the parent class %s, so the graph references to it are not this Blueprint's to move"),
+			*InOldVariableName.ToString(), *InBlueprint->ParentClass->GetName());
+	}
+
+	TArray<UEdGraph*> AllGraphs;
+	InBlueprint->GetAllGraphs(AllGraphs);
+
+	if (OutRefusal.IsEmpty())
+	{
+		// Function-local variables, which FindNewVariableIndex does not see: they live on the
+		// function entry node, not on the Blueprint. HandleVariableRenamed would happily repoint a
+		// local variable reference of the same name while leaving the DECLARATION alone, which is
+		// a graph that stops compiling with an error naming a variable the author never typed.
+		for (const UEdGraph* Graph : AllGraphs)
+		{
+			for (const UEdGraphNode* Node : Graph->Nodes)
+			{
+				const UK2Node_FunctionEntry* Entry = Cast<UK2Node_FunctionEntry>(Node);
+				if (Entry == nullptr)
+				{
+					continue;
+				}
+				for (const FBPVariableDescription& Local : Entry->LocalVariables)
+				{
+					if (Local.VarName == InOldVariableName)
+					{
+						OutRefusal = FString::Printf(
+							TEXT("\"%s\" is also a local variable in \"%s\""),
+							*InOldVariableName.ToString(), *Graph->GetName());
+						break;
+					}
+				}
+			}
+		}
+	}
+
+	if (OutRefusal.IsEmpty())
+	{
+		// Nor onto a name one of the Blueprint's own members already answers to: the references would leave what was
+		// renamed for that member, and the compile that refuses the clash comes after the nodes have moved.
+		if (FBlueprintEditorUtils::FindNewVariableIndex(InBlueprint, InNewVariableName) != INDEX_NONE)
+		{
+			OutRefusal = FString::Printf(TEXT("this Blueprint already declares a variable called \"%s\""), *InNewVariableName.ToString());
+		}
+		else if (InBlueprint->FunctionGraphs.ContainsByPredicate([InNewVariableName](const UEdGraph* Graph)
+			{
+				return Graph != nullptr && Graph->GetFName() == InNewVariableName;
+			}))
+		{
+			OutRefusal = FString::Printf(TEXT("this Blueprint already has a function called \"%s\""), *InNewVariableName.ToString());
+		}
+		else
+		{
+			for (const UEdGraph* Graph : AllGraphs)
+			{
+				for (const UEdGraphNode* Node : Graph->Nodes)
+				{
+					const UK2Node_FunctionEntry* Entry = Cast<UK2Node_FunctionEntry>(Node);
+					if (Entry != nullptr && Entry->LocalVariables.ContainsByPredicate([InNewVariableName](const FBPVariableDescription& Local)
+						{
+							return Local.VarName == InNewVariableName;
+						}))
+					{
+						OutRefusal = FString::Printf(TEXT("\"%s\" is already a local variable in \"%s\""),
+							*InNewVariableName.ToString(), *Graph->GetName());
+						break;
+					}
+				}
+			}
+		}
+	}
+
+	if (!OutRefusal.IsEmpty())
+	{
+		return 0;
+	}
+
+	// Counted before the replace, because ReplaceVariableReferences reports nothing. The same
+	// question RenameVariableReferencesInGraph asks internally to decide whether it changed
+	// anything, asked here so the note can say how much moved -- and so "nothing moved" can be
+	// told apart from "it ran", which is the whole of the already-migrated case.
+	//
+	// This Blueprint's graphs only. A dependent Blueprint's references are fixed by the call
+	// below and deliberately not counted: reaching into other assets to tally them would mean
+	// walking every loaded Blueprint twice for a number nobody acts on.
+	int32 GraphReferences = 0;
+	for (const UEdGraph* Graph : AllGraphs)
+	{
+		for (const UEdGraphNode* Node : Graph->Nodes)
+		{
+			const UK2Node* K2Node = Cast<UK2Node>(Node);
+			if (K2Node != nullptr && K2Node->ReferencesVariable(InOldVariableName, nullptr))
+			{
+				++GraphReferences;
+			}
+		}
+	}
+
+	if (InBlueprint->GeneratedClass != nullptr)
+	{
+		// Guarded on the class, not for safety -- a null one makes every node's scope check
+		// fail and the whole call a no-op -- but on cost: ReplaceVariableReferences walks
+		// every loaded UBlueprint to find dependents, and doing that to achieve nothing on
+		// every compile of a Blueprint that has never been compiled is a poor trade.
+		FBlueprintEditorUtils::ReplaceVariableReferences(InBlueprint, InOldVariableName, InNewVariableName);
+	}
+	return GraphReferences;
+}
+
 FDreamWidgetBlueprintCompilerContext::FWidgetRenameMigration
 FDreamWidgetBlueprintCompilerContext::MigrateWidgetRename(UDreamWidgetBlueprint* InBlueprint, const FString& InOldId, const FString& InNewId)
 {
@@ -646,8 +835,10 @@ FDreamWidgetBlueprintCompilerContext::MigrateWidgetRename(UDreamWidgetBlueprint*
 	// Safe to call mid-compile, and specifically at this stage: it dirties the Blueprint through
 	// MarkBlueprintAsModified, which early-outs while bBeingCompiled is set (BlueprintEditorUtils.cpp
 	// :1924) -- and bBeingCompiled goes up at STAGE IV, one stage before the hook this runs under.
-	// The node's own Modify() still records the change and still dirties the package, which is what
-	// makes the fixup survive to the next save.
+	// The node's own Modify() still records the change and dirties the package -- for the length of
+	// the compile only: the compilation manager puts every compiled package's dirty flag back the way
+	// it found it (BlueprintCompilationManager.cpp:1906), dependents' included, so MigrateRenamedWidgets
+	// marks the packages it changed dirty again once the compile is over.
 	//
 	// One more thing had to be true for this stage to work, and it is worth writing down because it
 	// is not obvious and it is what would silently undo the rename: HandleVariableRenamed moves the
@@ -659,96 +850,7 @@ FDreamWidgetBlueprintCompilerContext::MigrateWidgetRename(UDreamWidgetBlueprint*
 	// list immediately before this hook. By the time it is refilled it holds the NEW names, whose
 	// guids the old one does not match. Moving this fixup anywhere later in the compile reopens that
 	// window.
-	{
-		// The graph leg matches by NAME ONLY. Everything below is about the one way that can do harm:
-		// if something OTHER than the renamed widget already answers to the old name, this would move
-		// its references too -- silently, in a graph nobody has open.
-		FString Refusal;
-		if (FBlueprintEditorUtils::FindNewVariableIndex(InBlueprint, OldVariableName) != INDEX_NONE)
-		{
-			Refusal = FString::Printf(
-				TEXT("this Blueprint declares a variable of its own called \"%s\", and a graph reference to that name cannot be told apart from one to the widget"),
-				*OldVariableName.ToString());
-		}
-		else if (InBlueprint->ParentClass != nullptr
-			&& InBlueprint->ParentClass->FindPropertyByName(OldVariableName) != nullptr)
-		{
-			// Not hypothetical: PopulateBlueprintGeneratedVariables deliberately skips a widget whose
-			// name the parent already declares, so a widget called this never had a variable of its
-			// own for anything to reference. The references belong to the parent's member.
-			Refusal = FString::Printf(
-				TEXT("\"%s\" is a member of the parent class %s, so the graph references to it are not this widget's"),
-				*OldVariableName.ToString(), *InBlueprint->ParentClass->GetName());
-		}
-
-		TArray<UEdGraph*> AllGraphs;
-		InBlueprint->GetAllGraphs(AllGraphs);
-
-		if (Refusal.IsEmpty())
-		{
-			// Function-local variables, which FindNewVariableIndex does not see: they live on the
-			// function entry node, not on the Blueprint. HandleVariableRenamed would happily repoint a
-			// local variable reference of the same name while leaving the DECLARATION alone, which is
-			// a graph that stops compiling with an error naming a variable the author never typed.
-			for (const UEdGraph* Graph : AllGraphs)
-			{
-				for (const UEdGraphNode* Node : Graph->Nodes)
-				{
-					const UK2Node_FunctionEntry* Entry = Cast<UK2Node_FunctionEntry>(Node);
-					if (Entry == nullptr)
-					{
-						continue;
-					}
-					for (const FBPVariableDescription& Local : Entry->LocalVariables)
-					{
-						if (Local.VarName == OldVariableName)
-						{
-							Refusal = FString::Printf(
-								TEXT("\"%s\" is also a local variable in \"%s\""),
-								*OldVariableName.ToString(), *Graph->GetName());
-							break;
-						}
-					}
-				}
-			}
-		}
-
-		if (!Refusal.IsEmpty())
-		{
-			Result.GraphRefusal = MoveTemp(Refusal);
-		}
-		else
-		{
-			// Counted before the replace, because ReplaceVariableReferences reports nothing. The same
-			// question RenameVariableReferencesInGraph asks internally to decide whether it changed
-			// anything, asked here so the note can say how much moved -- and so "nothing moved" can be
-			// told apart from "it ran", which is the whole of the already-migrated case.
-			//
-			// This Blueprint's graphs only. A dependent Blueprint's references are fixed by the call
-			// below and deliberately not counted: reaching into other assets to tally them would mean
-			// walking every loaded Blueprint twice for a number nobody acts on.
-			for (const UEdGraph* Graph : AllGraphs)
-			{
-				for (const UEdGraphNode* Node : Graph->Nodes)
-				{
-					const UK2Node* K2Node = Cast<UK2Node>(Node);
-					if (K2Node != nullptr && K2Node->ReferencesVariable(OldVariableName, nullptr))
-					{
-						++Result.GraphReferences;
-					}
-				}
-			}
-
-			if (InBlueprint->GeneratedClass != nullptr)
-			{
-				// Guarded on the class, not for safety -- a null one makes every node's scope check
-				// fail and the whole call a no-op -- but on cost: ReplaceVariableReferences walks
-				// every loaded UBlueprint to find dependents, and doing that to achieve nothing on
-				// every compile of a Blueprint that has never been compiled is a poor trade.
-				FBlueprintEditorUtils::ReplaceVariableReferences(InBlueprint, OldVariableName, NewVariableName);
-			}
-		}
-	}
+	Result.GraphReferences = MigrateVariableReferences(InBlueprint, OldVariableName, NewVariableName, Result.GraphRefusal);
 
 	// --- 2. The authored property bindings. --------------------------------------------------
 	//
@@ -776,6 +878,20 @@ FDreamWidgetBlueprintCompilerContext::MigrateWidgetRename(UDreamWidgetBlueprint*
 		}
 	}
 
+	// --- 3 and 4. The animation paths: see MigrateWidgetRenamePaths. ----------------------------------
+	MigrateWidgetRenamePaths(InBlueprint, InOldId, InNewId, Result);
+
+	return Result;
+}
+
+void FDreamWidgetBlueprintCompilerContext::MigrateWidgetRenamePaths(UDreamWidgetBlueprint* InBlueprint, const FString& InOldId,
+	const FString& InNewId, FWidgetRenameMigration& OutResult)
+{
+	if (InBlueprint == nullptr || InOldId.IsEmpty() || InNewId.IsEmpty() || InOldId == InNewId)
+	{
+		return;
+	}
+
 	// --- 3. The embedded animation paths. ----------------------------------------------------
 	//
 	// The third identity, and the one that was silent before P0: an animation binding is a '/'-joined
@@ -794,7 +910,7 @@ FDreamWidgetBlueprintCompilerContext::MigrateWidgetRename(UDreamWidgetBlueprint*
 		UDreamWidgetTree* Tree = InBlueprint->WidgetTree;
 		if (IsValid(Tree))
 		{
-			Tree->ForEachWidget([&Result, &InOldId, &InNewId](UDreamWidget* ContextWidget)
+			Tree->ForEachWidget([&OutResult, &InOldId, &InNewId](UDreamWidget* ContextWidget)
 			{
 				for (UDreamUIBehaviour* Component : ContextWidget->GetAllComponents())
 				{
@@ -814,7 +930,7 @@ FDreamWidgetBlueprintCompilerContext::MigrateWidgetRename(UDreamWidgetBlueprint*
 							// and feeding the sanitized name to a display-name comparison is the kind
 							// of "works until someone widens the charset" that this file avoids by
 							// deriving each from the id separately.
-							Result.AnimationBindings += Animation->RenameWidgetPathSegment(InOldId, InNewId);
+							OutResult.AnimationBindings += Animation->RenameWidgetPathSegment(InOldId, InNewId);
 						}
 					}
 				}
@@ -846,12 +962,10 @@ FDreamWidgetBlueprintCompilerContext::MigrateWidgetRename(UDreamWidgetBlueprint*
 					&& Sequence->PreviewWidgetClass.ToSoftObjectPath() == FSoftObjectPath(InBlueprint->GeneratedClass));
 			if (bMatches)
 			{
-				Result.ExternalSequenceBindings += Sequence->RenameWidgetPathSegments(InOldId, InNewId);
+				OutResult.ExternalSequenceBindings += Sequence->RenameWidgetPathSegments(InOldId, InNewId);
 			}
 		}
 	}
-
-	return Result;
 }
 
 void FDreamWidgetBlueprintCompilerContext::MigrateRenamedWidgets(const FDreamUIAst& InAst, const FString& InSourceName,
@@ -945,6 +1059,33 @@ void FDreamWidgetBlueprintCompilerContext::MigrateRenamedWidgets(const FDreamUIA
 		// The compile is already failing on the errors above; nothing here has to fail it again.
 		return;
 	}
+	// No clause in the file: nothing to migrate, and no hop for an unloaded sequence asset to have
+	// missed -- the scan at the end warned on every compile of every .dui whose class one references.
+	if (Renames.Num() == 0)
+	{
+		return;
+	}
+
+	// What a rename writes into the graphs is an edit to those assets, and the compilation manager does
+	// not keep it: every package it compiles gets its dirty flag back the way it found it, dependents'
+	// included. So the packages are asked now, while their flags are still the author's, and the ones
+	// this migration dirties are marked again when the compile is over -- otherwise nothing prompts for
+	// the save, the note below says the line can be deleted, and the next session finds the graphs
+	// naming the old variable with nothing left to migrate them.
+	TArray<UPackage*> CleanDependentPackages;
+	{
+		TArray<UBlueprint*> Dependents;
+		FBlueprintEditorUtils::FindDependentBlueprints(DreamBlueprint, Dependents);
+		for (const UBlueprint* Dependent : Dependents)
+		{
+			UPackage* DependentPackage = Dependent != nullptr ? Dependent->GetOutermost() : nullptr;
+			if (DependentPackage != nullptr && !DependentPackage->IsDirty())
+			{
+				CleanDependentPackages.AddUnique(DependentPackage);
+			}
+		}
+	}
+	bool bMigratedThisAsset = false;
 
 	// One hop and no chain: each clause is applied against the asset as it stands, and the result is
 	// never fed back in. `A (was: B)` while a previous version said `B (was: C)` migrates B to A and
@@ -956,6 +1097,7 @@ void FDreamWidgetBlueprintCompilerContext::MigrateRenamedWidgets(const FDreamUIA
 	for (const FDreamUINode* Node : Renames)
 	{
 		const FWidgetRenameMigration Migration = MigrateWidgetRename(DreamBlueprint, Node->WasId, Node->Id);
+		bMigratedThisAsset |= Migration.GraphReferences + Migration.PropertyBindings + Migration.AnimationBindings > 0;
 
 		if (!Migration.GraphRefusal.IsEmpty())
 		{
@@ -990,7 +1132,7 @@ void FDreamWidgetBlueprintCompilerContext::MigrateRenamedWidgets(const FDreamUIA
 		if (Migration.Total() > 0)
 		{
 			MessageLog.Note(*FString::Printf(
-				TEXT("%s\"%s\" took over from \"%s\": %d graph reference(s), %d property binding(s), %d animation path(s), %d sequence-asset binding(s). That is done and recorded on the asset, so the '(was: %s)' line has served its purpose and can be deleted.%s"),
+				TEXT("%s\"%s\" took over from \"%s\": %d graph reference(s), %d property binding(s), %d animation path(s), %d sequence-asset binding(s). That is done on the asset, and it has to be saved to stay: once it is, the '(was: %s)' line has served its purpose and can be deleted.%s"),
 				*SourcePrefix(InSourceName, Node->Location), *Node->Id, *Node->WasId,
 				Migration.GraphReferences, Migration.PropertyBindings, Migration.AnimationBindings, Migration.ExternalSequenceBindings,
 				*Node->WasId, *LocalizationHint));
@@ -1011,6 +1153,31 @@ void FDreamWidgetBlueprintCompilerContext::MigrateRenamedWidgets(const FDreamUIA
 				TEXT("%s\"%s\" found nothing still named \"%s\", so this rename has already been applied. The '(was: %s)' line can be deleted.%s"),
 				*SourcePrefix(InSourceName, Node->Location), *Node->Id, *Node->WasId, *Node->WasId,
 				*LocalizationHint));
+		}
+	}
+
+	{
+		// This asset when anything on it moved: its graph, its bindings or its animation paths. A
+		// dependent when the migration is what dirtied it -- one that was dirty before keeps that flag
+		// through the compile anyway. Sequence assets are not compiled, so they keep theirs (and are
+		// warned about above). Without an editor there is no compile end to wait for, and nothing to
+		// prompt.
+		TArray<UPackage*> ChangedPackages;
+		if (bMigratedThisAsset)
+		{
+			ChangedPackages.Add(DreamBlueprint->GetOutermost());
+		}
+		for (UPackage* DependentPackage : CleanDependentPackages)
+		{
+			if (DependentPackage->IsDirty())
+			{
+				ChangedPackages.AddUnique(DependentPackage);
+			}
+		}
+		UDreamGUIEditorSubsystem* EditorSubsystem = UDreamGUIEditorSubsystem::Get();
+		if (EditorSubsystem != nullptr && ChangedPackages.Num() > 0)
+		{
+			EditorSubsystem->MarkPackagesDirtyWhenCompileEnds(ChangedPackages);
 		}
 	}
 
@@ -1053,6 +1220,12 @@ void FDreamWidgetBlueprintCompilerContext::MigrateRenamedWidgets(const FDreamUIA
 	}
 }
 
+namespace DreamWidgetAuthoredHierarchy
+{
+	/** Defined below, beside ResolveAuthoringArchetype; the animation-claim check in the variable pass asks it too. */
+	bool IsUnauthoredPlaceholder(const UDreamWidgetTree* InTree);
+}
+
 void FDreamWidgetBlueprintCompilerContext::PopulateBlueprintGeneratedVariables()
 {
 	Super::PopulateBlueprintGeneratedVariables();
@@ -1083,6 +1256,44 @@ void FDreamWidgetBlueprintCompilerContext::PopulateBlueprintGeneratedVariables()
 		TArray<UDreamWidget*> SourceWidgets;
 		DreamBlueprint->GetAllSourceWidgets(SourceWidgets);
 
+		// The names this Blueprint already gives to members of its own: the variables the author
+		// declared, its functions and its timelines. A generated variable of one of those names is a
+		// second member of that name -- nothing in the class layout refuses one -- and the class finds
+		// whichever was created first, which is the generated one, so every node the author wrote
+		// against their own member read a widget instead. Refused here, by name, before anything is
+		// declared.
+		TMap<FName, FText> AuthoredMemberKinds;
+		for (const FBPVariableDescription& Variable : Blueprint->NewVariables)
+		{
+			AuthoredMemberKinds.Add(Variable.VarName, LOCTEXT("AuthoredVariableKind", "a variable"));
+		}
+		for (const UEdGraph* FunctionGraph : Blueprint->FunctionGraphs)
+		{
+			if (FunctionGraph != nullptr)
+			{
+				AuthoredMemberKinds.Add(FunctionGraph->GetFName(), LOCTEXT("AuthoredFunctionKind", "a function"));
+			}
+		}
+		for (const UTimelineTemplate* Timeline : Blueprint->Timelines)
+		{
+			if (Timeline != nullptr)
+			{
+				AuthoredMemberKinds.Add(Timeline->GetVariableName(), LOCTEXT("AuthoredTimelineKind", "a timeline"));
+			}
+		}
+		auto IsTakenByAuthoredMember = [this, &AuthoredMemberKinds](const FName InVariableName, const FText& InGeneratedKind)
+		{
+			const FText* AuthoredKind = AuthoredMemberKinds.Find(InVariableName);
+			if (AuthoredKind == nullptr)
+			{
+				return false;
+			}
+			MessageLog.Error(*FText::Format(
+				LOCTEXT("GeneratedNameTaken", "\"{0}\" is the name of {1} this Blueprint declares, so the {2} of that name gets no variable: two members of one name leave every graph node reading whichever one the class finds first. Rename one of them."),
+				FText::FromName(InVariableName), *AuthoredKind, InGeneratedKind).ToString());
+			return true;
+		};
+
 		// One member variable per authored widget, named by the shared rule. Declaring them here is
 		// what makes a widget reachable from the graph AND what the runtime binds against -- the same
 		// names, from the same function, which is the point.
@@ -1111,6 +1322,10 @@ void FDreamWidgetBlueprintCompilerContext::PopulateBlueprintGeneratedVariables()
 			// A parent class that already declares this binding wins: a subclass re-declaring it would
 			// shadow the parent's property and leave the parent's own code bound to nothing.
 			if (Blueprint->ParentClass != nullptr && Blueprint->ParentClass->FindPropertyByName(VariableName) != nullptr)
+			{
+				continue;
+			}
+			if (IsTakenByAuthoredMember(VariableName, LOCTEXT("GeneratedWidgetKind", "widget")))
 			{
 				continue;
 			}
@@ -1175,6 +1390,10 @@ void FDreamWidgetBlueprintCompilerContext::PopulateBlueprintGeneratedVariables()
 			DeclaredAnimationNames.Add(VariableName);
 
 			if (Blueprint->ParentClass != nullptr && Blueprint->ParentClass->FindPropertyByName(VariableName) != nullptr)
+			{
+				return;
+			}
+			if (IsTakenByAuthoredMember(VariableName, LOCTEXT("GeneratedAnimationKind", "animation")))
 			{
 				return;
 			}
@@ -1257,12 +1476,53 @@ void FDreamWidgetBlueprintCompilerContext::PopulateBlueprintGeneratedVariables()
 		// than beside ValidateWidgetBindings because this is where the set of animation names exists:
 		// it includes the ones on the class's own defaults, which no widget tree contains.
 		//
-		// Not on a hierarchy that has nothing authored in it yet, which is the same exemption
+		// Against the hierarchy this class actually GETS, the rule ResolveAuthoringArchetype states for
+		// every other binding check: its own when it authors one, the nearest ancestor's when it does
+		// not. Asked of this Blueprint's own tree alone, a subclass that only adds logic -- whose tree is
+		// the placeholder every designer open puts there -- was told the animation its parent authored,
+		// the one every instance of it is built with, was missing.
+		//
+		// And not at all when nothing in the chain has authored a hierarchy yet, which is the exemption
 		// ValidateWidgetBindings makes for the same reason: a Blueprint is COMPILED the moment it is
-		// created, before its author has put anything in it, and reporting every claim the parent
-		// class makes as broken at that moment is noise in front of an empty asset.
-		if (Blueprint->ParentClass != nullptr && SourceWidgets.Num() > 0)
+		// created, before its author has put anything in it, and reporting every claim the parent class
+		// makes as broken at that moment is noise in front of an empty asset. That moment includes the
+		// factory's compile, whose root is a placeholder too.
+		const UDreamWidgetTree* AnimatedHierarchy = DreamWidgetAuthoredHierarchy::IsUnauthoredPlaceholder(DreamBlueprint->WidgetTree)
+			? UDreamWidgetGeneratedClass::FindWidgetTreeArchetype(Blueprint->ParentClass)
+			: DreamBlueprint->WidgetTree.Get();
+		if (Blueprint->ParentClass != nullptr && AnimatedHierarchy != nullptr)
 		{
+			// The names the declarations above collected -- this class's own tree and its defaults --
+			// and, for an inherited hierarchy, the ones every instance of this class is built with.
+			TSet<FName> AvailableAnimationNames = DeclaredAnimationNames;
+			if (AnimatedHierarchy != DreamBlueprint->WidgetTree.Get())
+			{
+				AnimatedHierarchy->ForEachWidget([&AvailableAnimationNames](UDreamWidget* Widget)
+				{
+					for (UDreamUIBehaviour* Component : Widget->GetAllComponents())
+					{
+						const UDreamWidgetAnimationComponent* Animator = Cast<UDreamWidgetAnimationComponent>(Component);
+						if (Animator == nullptr)
+						{
+							continue;
+						}
+						for (const UDreamWidgetAnimation* Animation : Animator->GetSequenceArray())
+						{
+							if (IsValid(Animation))
+							{
+								AvailableAnimationNames.Add(UDreamWidgetTree::MakeAnimationVariableName(Animation));
+							}
+						}
+						for (const TObjectPtr<UDreamUISequence>& Asset : Animator->GetSequenceAssets())
+						{
+							if (IsValid(Asset))
+							{
+								AvailableAnimationNames.Add(FName(*UDreamWidgetTree::SanitizeIdentifier(Asset->GetName())));
+							}
+						}
+					}
+				});
+			}
 			for (TFieldIterator<FObjectPropertyBase> PropertyIt(Blueprint->ParentClass, EFieldIterationFlags::IncludeSuper); PropertyIt; ++PropertyIt)
 			{
 				const bool bRequired = PropertyIt->HasMetaData(UDreamWidgetGeneratedClass::BindWidgetAnimMetaName);
@@ -1277,7 +1537,7 @@ void FDreamWidgetBlueprintCompilerContext::PopulateBlueprintGeneratedVariables()
 						FText::FromName(PropertyIt->GetFName())).ToString());
 					continue;
 				}
-				if (bRequired && !DeclaredAnimationNames.Contains(PropertyIt->GetFName()))
+				if (bRequired && !AvailableAnimationNames.Contains(PropertyIt->GetFName()))
 				{
 					MessageLog.Error(*FText::Format(
 						LOCTEXT("BindWidgetAnimMissing", "\"{0}\" is declared meta=(BindDreamWidgetAnim), so this hierarchy must contain an animation named \"{0}\", and it has none. Rename an animation to match, drop the specifier, or mark it BindDreamWidgetAnimOptional."),
@@ -1303,6 +1563,10 @@ void FDreamWidgetBlueprintCompilerContext::PopulateBlueprintGeneratedVariables()
 				continue;
 			}
 			if (Blueprint->ParentClass != nullptr && Blueprint->ParentClass->FindPropertyByName(VariableName) != nullptr)
+			{
+				continue;
+			}
+			if (IsTakenByAuthoredMember(VariableName, LOCTEXT("GeneratedResourceKind", "resource")))
 			{
 				continue;
 			}

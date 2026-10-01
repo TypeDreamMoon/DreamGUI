@@ -14,6 +14,7 @@ class UBlueprint;
 class UDreamScreenUISubsystem;
 class UDreamUIFontData_BaseObject;
 class UDreamUIManagerWorldSubsystem;
+class UPackage;
 class UTexture2D;
 
 /**
@@ -82,6 +83,17 @@ public:
 	/** Build again, now, whatever a recompile let go of; what the tick after OnBlueprintCompiled does. */
 	void RebuildReleasedTrees();
 
+	/**
+	 * Mark InPackages dirty when the compile running now announces it is over.
+	 *
+	 * For a compile that edits assets on purpose -- a `(was:)` rename carried into the graphs. The
+	 * compilation manager puts every compiled package's dirty flag back the way it found it, because a
+	 * compile is not an edit, so a package marked from inside the compile is clean again before
+	 * anything could prompt for it. Marked on OnBlueprintCompiled, which comes after that restore and
+	 * before a save that follows the compile in the same frame (the designer's Save button).
+	 */
+	void MarkPackagesDirtyWhenCompileEnds(TConstArrayView<UPackage*> InPackages);
+
 	/** The source watcher's queue and watches for this session; see FDreamUISourceWatcher. */
 	FDreamUISourceWatcherState& GetSourceWatcher() { return SourceWatcher; }
 
@@ -107,6 +119,8 @@ public:
 private:
 	void HandleBlueprintPreCompile(UBlueprint* InBlueprint);
 	void HandleBlueprintCompiled();
+	/** Marks dirty and forgets every package MarkPackagesDirtyWhenCompileEnds queued. */
+	void MarkQueuedPackagesDirty();
 	void HandleObjectsReplaced(const TMap<UObject*, UObject*>& InReplacementMap);
 	void HandleAssetReimport(UObject* InAsset);
 	void HandleObjectPropertyChanged(UObject* InObject, struct FPropertyChangedEvent& InEvent);
@@ -121,6 +135,8 @@ private:
 	FDelegateHandle ReimportHandle;
 	FDelegateHandle PropertyChangedHandle;
 	FTSTicker::FDelegateHandle RebuildTickerHandle;
+	/** The frame-later pass of MarkPackagesDirtyWhenCompileEnds. */
+	FTSTicker::FDelegateHandle DirtyTickerHandle;
 
 	bool bRecompiling = false;
 	TArray<IDreamRecompilePreview*> Previews;
@@ -129,6 +145,8 @@ private:
 	TArray<TWeakObjectPtr<UObject>> ReleasedHosts;
 	/** Screens whose pages a recompile took down, to show again. */
 	TArray<TWeakObjectPtr<UDreamScreenUISubsystem>> ReleasedScreens;
+	/** See MarkPackagesDirtyWhenCompileEnds. Weak: a package can go before the compile ends. */
+	TArray<TWeakObjectPtr<UPackage>> PackagesToDirtyAfterCompile;
 
 	FDreamUISourceWatcherState SourceWatcher;
 

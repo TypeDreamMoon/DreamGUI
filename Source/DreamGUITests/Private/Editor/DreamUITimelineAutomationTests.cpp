@@ -507,4 +507,155 @@ bool FDreamUITimelineCompileTest::RunTest(const FString& Parameters)
 	return true;
 }
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamUITimelineDeletedBlockTest,
+	"DreamGUI.Text.Timeline.DeletingATimelineBlockDeletesItsAnimation",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * A `timeline` block deleted from the file left its animation behind for good.
+ *
+ * With no timeline left in the file the builder puts no animation component on the new root, so the carry copied the old
+ * component whole -- the timeline's animation with it, still marked as the file's. It then survived every later compile:
+ * read-only in the animation editor, still a class variable, and with nothing in the file able to remove it. This
+ * compiles a file with Pulse, deletes the block, and compiles twice more.
+ */
+bool FDreamUITimelineDeletedBlockTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamUITimelineTestLocal;
+
+	FScopedDuiFile File(TEXT("TimelineDeletedBlock.dui"));
+	if (!TestTrue(TEXT("Fixture written"), File.Write({
+		TEXT("timeline Pulse {"),
+		TEXT("    duration = 0.5"),
+		TEXT("    RenderScale : 0.0 = (1, 1, 1), 0.5 = (1.2, 1.2, 1)"),
+		TEXT("}"),
+		TEXT("Widget Root { }")})))
+	{
+		return false;
+	}
+	FScopedBlueprint Fixture(TEXT("BP_TimelineDeletedBlock"));
+	if (!TestTrue(TEXT("Blueprint created"), Fixture.Blueprint != nullptr)
+		|| !TestTrue(TEXT("Path set"), Fixture.SetDuiFilePath(File.FilePath)))
+	{
+		return false;
+	}
+	FCompilerResultsLog FirstResults;
+	Compile(Fixture.Blueprint, FirstResults);
+	UDreamWidgetAnimationComponent* Animator = AnimatorOf(Fixture.Blueprint);
+	if (!TestEqual(TEXT("the timeline compiles"), FirstResults.NumErrors, 0)
+		|| !TestTrue(TEXT("into an animation on the root"), Animator != nullptr && Animator->GetSequenceByDisplayName(TEXT("Pulse")) != nullptr))
+	{
+		return false;
+	}
+
+	if (!TestTrue(TEXT("Block deleted"), File.Write({ TEXT("Widget Root { }") })))
+	{
+		return false;
+	}
+	for (int32 Pass = 0; Pass < 2; ++Pass)
+	{
+		FCompilerResultsLog Results;
+		Compile(Fixture.Blueprint, Results);
+		TestEqual(TEXT("the file without the block compiles"), Results.NumErrors, 0);
+		Animator = AnimatorOf(Fixture.Blueprint);
+		TestTrue(TEXT("and the block's animation went with it"),
+			Animator == nullptr || Animator->GetSequenceByDisplayName(TEXT("Pulse")) == nullptr);
+		TestNull(TEXT("its class variable too"), Fixture.Blueprint->GeneratedClass->FindPropertyByName(FName(TEXT("Pulse"))));
+	}
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamUITimelineHandedOverTest,
+	"DreamGUI.Text.Timeline.TurningABlockExternalHandsItsAnimationToSequencer",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * Turning a block into `timeline <Name> external` -- the way out the read-only animation editor names -- did not hand
+ * the animation over.
+ *
+ * An external line builds nothing, so the keys the block held are on the animation the previous compile built and
+ * nowhere else. The carry dropped that animation when the file still built other timelines on the root, and copied it
+ * still marked as the file's -- read-only for good -- when it did not. This turns Pulse external beside a Fade the file
+ * still builds, then deletes Fade's block, and checks Pulse came across with its track, editable, both times, while Fade
+ * went with its block.
+ */
+bool FDreamUITimelineHandedOverTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamUITimelineTestLocal;
+
+	FScopedDuiFile File(TEXT("TimelineHandedOver.dui"));
+	if (!TestTrue(TEXT("Fixture written"), File.Write({
+		TEXT("timeline Pulse {"),
+		TEXT("    duration = 0.5"),
+		TEXT("    RenderScale : 0.0 = (1, 1, 1), 0.5 = (1.2, 1.2, 1)"),
+		TEXT("}"),
+		TEXT("timeline Fade {"),
+		TEXT("    duration = 0.5"),
+		TEXT("    RenderScale : 0.0 = (1, 1, 1), 0.5 = (0.5, 0.5, 1)"),
+		TEXT("}"),
+		TEXT("Widget Root { }")})))
+	{
+		return false;
+	}
+	FScopedBlueprint Fixture(TEXT("BP_TimelineHandedOver"));
+	if (!TestTrue(TEXT("Blueprint created"), Fixture.Blueprint != nullptr)
+		|| !TestTrue(TEXT("Path set"), Fixture.SetDuiFilePath(File.FilePath)))
+	{
+		return false;
+	}
+	FCompilerResultsLog FirstResults;
+	Compile(Fixture.Blueprint, FirstResults);
+	if (!TestEqual(TEXT("both timelines compile"), FirstResults.NumErrors, 0))
+	{
+		return false;
+	}
+
+	// Pulse handed over while the file still builds Fade on the same root.
+	if (!TestTrue(TEXT("Pulse turned external"), File.Write({
+		TEXT("timeline Pulse external"),
+		TEXT("timeline Fade {"),
+		TEXT("    duration = 0.5"),
+		TEXT("    RenderScale : 0.0 = (1, 1, 1), 0.5 = (0.5, 0.5, 1)"),
+		TEXT("}"),
+		TEXT("Widget Root { }")})))
+	{
+		return false;
+	}
+	{
+		FCompilerResultsLog Results;
+		Compile(Fixture.Blueprint, Results);
+		TestEqual(TEXT("the external line compiles"), Results.NumErrors, 0);
+		UDreamWidgetAnimationComponent* Animator = AnimatorOf(Fixture.Blueprint);
+		const UDreamWidgetAnimation* Pulse = Animator != nullptr ? Animator->GetSequenceByDisplayName(TEXT("Pulse")) : nullptr;
+		if (TestNotNull(TEXT("Pulse came across"), Pulse))
+		{
+			TestTrue(TEXT("as the editor's now, so Sequencer can edit it"), Pulse->IsEditable() && !Pulse->IsLanguageOwned());
+			TestTrue(TEXT("with the track its block built"), Pulse->GetMovieScene() != nullptr && Pulse->GetMovieScene()->GetPossessableCount() > 0);
+		}
+		const UDreamWidgetAnimation* Fade = Animator != nullptr ? Animator->GetSequenceByDisplayName(TEXT("Fade")) : nullptr;
+		TestTrue(TEXT("while Fade is still the file's"), Fade != nullptr && Fade->IsLanguageOwned());
+		TestNotNull(TEXT("and Pulse is still a class variable"), Fixture.Blueprint->GeneratedClass->FindPropertyByName(FName(TEXT("Pulse"))));
+	}
+
+	// Fade's block deleted: the file builds no timeline now, and the root's component is carried whole.
+	if (!TestTrue(TEXT("Fade deleted"), File.Write({
+		TEXT("timeline Pulse external"),
+		TEXT("Widget Root { }")})))
+	{
+		return false;
+	}
+	{
+		FCompilerResultsLog Results;
+		Compile(Fixture.Blueprint, Results);
+		TestEqual(TEXT("the file with only the external line compiles"), Results.NumErrors, 0);
+		UDreamWidgetAnimationComponent* Animator = AnimatorOf(Fixture.Blueprint);
+		const UDreamWidgetAnimation* Pulse = Animator != nullptr ? Animator->GetSequenceByDisplayName(TEXT("Pulse")) : nullptr;
+		TestTrue(TEXT("Pulse is still there, and still editable"), Pulse != nullptr && Pulse->IsEditable());
+		TestTrue(TEXT("and Fade went with its block"), Animator == nullptr || Animator->GetSequenceByDisplayName(TEXT("Fade")) == nullptr);
+	}
+	return true;
+}
+
 #endif // WITH_DEV_AUTOMATION_TESTS && WITH_EDITOR

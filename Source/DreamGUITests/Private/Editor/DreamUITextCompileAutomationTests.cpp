@@ -17,7 +17,9 @@
 #include "Text/DreamUITextWriteBack.h"
 #include "Text/DreamUIValueFormat.h"
 
+#include "EdGraphSchema_K2.h"
 #include "HAL/FileManager.h"
+#include "Kismet2/BlueprintEditorUtils.h"
 #include "Kismet2/CompilerResultsLog.h"
 #include "Kismet2/KismetEditorUtilities.h"
 #include "Misc/FileHelper.h"
@@ -795,6 +797,68 @@ bool FDreamUITextResourcesCompileToClassDefaultsTest::RunTest(const FString& Par
 		TestEqual(TEXT("carrying the value the panel set, via the file"),
 			SecondGap->GetPropertyValue_InContainer(SecondDefaults), 11.0);
 	}
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamUITextGeneratedNameTakenTest,
+	"DreamGUI.WidgetBlueprint.ANodeNamedLikeAVariableTheBlueprintDeclaresIsRefusedByName",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * A node id that matched one of the Blueprint's own variables gave the class two members of that name.
+ *
+ * The generated variables were checked against one another and against the parent class, never against what the
+ * Blueprint declares itself, and the class layout refuses nothing of the kind -- so `Text Title {}` beside the author's
+ * own Title compiled clean into two properties called Title, the generated one found first, and every node the author
+ * wrote against their variable read a widget instead. The compile now refuses the widget's variable with an error naming
+ * both, and the class keeps the author's.
+ */
+bool FDreamUITextGeneratedNameTakenTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamUITextCompileTestLocal;
+
+	FScopedDuiFile Source(TEXT("GeneratedNameTaken.dui"));
+	if (!TestTrue(TEXT("the fixture wrote a .dui"), Source.Write({
+		TEXT("Widget Root {"),
+		TEXT("    Text Title {"),
+		TEXT("    }"),
+		TEXT("}")
+	})))
+	{
+		return false;
+	}
+
+	FScopedBlueprint Fixture(TEXT("BP_GeneratedNameTaken"));
+	if (!TestNotNull(TEXT("the Blueprint was created"), Fixture.Blueprint)) return false;
+	// Declared before the class names the file: the Blueprint editor refuses a variable named like a
+	// member the class already has, and once the file is read the widget's variable is one.
+	const FEdGraphPinType FloatType(UEdGraphSchema_K2::PC_Real, UEdGraphSchema_K2::PC_Float,
+		nullptr, EPinContainerType::None, false, FEdGraphTerminalType());
+	if (!TestTrue(TEXT("the Blueprint declares a Title of its own"),
+		FBlueprintEditorUtils::AddMemberVariable(Fixture.Blueprint, FName(TEXT("Title")), FloatType))) return false;
+	if (!TestTrue(TEXT("and points at the file"), Fixture.SetDuiFilePath(Source.FilePath))) return false;
+
+	AddExpectedError(TEXT("gets no variable"), EAutomationExpectedErrorFlags::Contains, 0);
+
+	FCompilerResultsLog Results;
+	Compile(Fixture.Blueprint, Results);
+	TestTrue(TEXT("the clash fails the compile"), Results.NumErrors > 0);
+	TestMessagesContain(*this, TEXT("with an error that names it"), Results, TEXT("\"Title\" is the name of a variable"));
+
+	int32 TitleCount = 0;
+	const FProperty* TitleProperty = nullptr;
+	for (TFieldIterator<FProperty> It(Fixture.Blueprint->GeneratedClass, EFieldIterationFlags::None); It; ++It)
+	{
+		if (It->GetFName() == FName(TEXT("Title")))
+		{
+			++TitleCount;
+			TitleProperty = *It;
+		}
+	}
+	TestEqual(TEXT("the class has exactly one member called Title"), TitleCount, 1);
+	TestTrue(TEXT("and it is the author's, not the widget's"),
+		TitleProperty != nullptr && CastField<FObjectPropertyBase>(TitleProperty) == nullptr);
 	return true;
 }
 

@@ -832,4 +832,85 @@ bool FDreamUIRenameWillNotStealAnotherVariableTest::RunTest(const FString& Param
 	return true;
 }
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamUIWasClauseLeavesTheAssetToSaveTest,
+	"DreamGUI.WidgetBlueprint.AWasClauseMigrationLeavesTheAssetMarkedForSaving",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * A `(was:)` rename the compile carried into the graph was never saved.
+ *
+ * The compilation manager puts every compiled package's dirty flag back the way it found it, because a compile is not an
+ * edit -- so the migrated graph nodes lived in memory only, nothing prompted for a save, and the compile told the author
+ * the clause could be deleted. Deleting it and restarting left a saved graph naming the old variable, with nothing left
+ * to migrate it. This starts the renaming compile from a clean package and checks the package ends it dirty -- and that a
+ * compile with the clause still in place and nothing left to move leaves a clean package clean.
+ */
+bool FDreamUIWasClauseLeavesTheAssetToSaveTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamUITextMigrationTestLocal;
+
+	FScopedDuiFile Source(TEXT("WasClauseDirties.dui"));
+	if (!TestTrue(TEXT("the fixture wrote a .dui"), Source.Write({
+		TEXT("Widget Root {"),
+		TEXT("    Text OkLabel {"),
+		TEXT("    }"),
+		TEXT("}")
+	})))
+	{
+		return false;
+	}
+
+	FScopedBlueprint Fixture(TEXT("BP_WasClauseDirties"));
+	if (!TestNotNull(TEXT("the Blueprint was created"), Fixture.Blueprint)) return false;
+	if (!TestTrue(TEXT("and points at the file"), Fixture.SetDuiFilePath(Source.FilePath))) return false;
+	{
+		FCompilerResultsLog Results;
+		Compile(Fixture.Blueprint, Results);
+		if (!TestEqual(TEXT("the .dui compiles clean"), Results.NumErrors, 0))
+		{
+			AddInfo(FString::Printf(TEXT("the compile said: %s"), *JoinMessages(Results)));
+			return false;
+		}
+	}
+	if (!TestNotNull(TEXT("a graph node references the node's variable"), AddVariableGetNode(Fixture, TEXT("OkLabel")))) return false;
+
+	if (!TestTrue(TEXT("the fixture renamed the node in the file"), Source.Write({
+		TEXT("Widget Root {"),
+		TEXT("    Text OkBtn (was: OkLabel) {"),
+		TEXT("    }"),
+		TEXT("}")
+	})))
+	{
+		return false;
+	}
+
+	// Clean going in, the way an asset is after a save: the edit under test is the .dui's.
+	Fixture.Package->SetDirtyFlag(false);
+	{
+		FCompilerResultsLog Results;
+		Compile(Fixture.Blueprint, Results);
+		if (!TestEqual(TEXT("the rename compiles clean"), Results.NumErrors, 0))
+		{
+			AddInfo(FString::Printf(TEXT("the compile said: %s"), *JoinMessages(Results)));
+			return false;
+		}
+	}
+	if (UK2Node_VariableGet* Moved = FindVariableGetNode(Fixture))
+	{
+		TestEqual(TEXT("the graph node moved to the new name"), Moved->GetVarName(), FName(TEXT("OkBtn")));
+	}
+	TestTrue(TEXT("and the asset is left to save, so the move outlives the session"), Fixture.Package->IsDirty());
+
+	// The steady state after it: the clause is still there and has nothing left to move.
+	Fixture.Package->SetDirtyFlag(false);
+	{
+		FCompilerResultsLog Results;
+		Compile(Fixture.Blueprint, Results);
+		TestEqual(TEXT("recompiling with the clause still there stays clean"), Results.NumErrors, 0);
+	}
+	TestFalse(TEXT("and a compile that moved nothing leaves a clean asset clean"), Fixture.Package->IsDirty());
+	return true;
+}
+
 #endif

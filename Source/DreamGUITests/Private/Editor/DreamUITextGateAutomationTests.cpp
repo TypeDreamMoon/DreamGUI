@@ -8,6 +8,10 @@
 
 #include "DreamWidgetBlueprint.h"
 #include "DreamWidgetBlueprintTestTypes.h"
+#include "Animation/DreamWidgetAnimation.h"
+#include "Animation/DreamWidgetAnimationComponent.h"
+#include "Animation/SDreamWidgetAnimationEditor.h"
+#include "ISequencer.h"
 #include "Designer/DreamUITextAuthoringGate.h"
 #include "Designer/DreamWidgetBlueprintEditor.h"
 #include "Designer/DreamWidgetPreviewHost.h"
@@ -858,6 +862,134 @@ bool FDreamUITextEventRouteRefusalsTest::RunTest(const FString&)
 		FScopedGatedDesigner Scoped(TEXT("EventRouteNH"), UDreamUIEventTestUserWidget::StaticClass(), File.FilePath);
 		TestTrue(TEXT("a missing handler fails the compile"), Scoped.CompileErrors > 0);
 	}
+	return true;
+}
+
+namespace DreamUITextGateTestLocal
+{
+	/** A .dui with one `timeline` block, which gives the root an animation component the file owns. */
+	bool WriteOneTimeline(const FScopedDuiFile& InFile)
+	{
+		return InFile.Write({
+			TEXT("timeline Pulse {"),
+			TEXT("    duration = 0.5"),
+			TEXT("    RenderScale : 0.0 = (1, 1, 1), 0.5 = (1.2, 1.2, 1)"),
+			TEXT("}"),
+			TEXT("Widget Root {"),
+			TEXT("}")
+		});
+	}
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamUITextCompileMovesTheAnimationPanelTest,
+	"DreamGUI.Designer.ATextAuthoredCompileHandsTheAnimationsPanelTheNewTreesHost",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * Compiling a text-authored asset left the Animations panel on animations the compile had just replaced.
+ *
+ * Every compile of a .dui builds a new tree with a new copy of every animation, and nothing told the panel: it went on
+ * showing and editing the copies on the tree the compile dropped, while the next compile carried the animations from
+ * the tree the asset actually holds -- so the edits were gone. This compiles with an animation open and checks the panel
+ * moved to the new tree's host and kept the animation by its name.
+ */
+bool FDreamUITextCompileMovesTheAnimationPanelTest::RunTest(const FString&)
+{
+	using namespace DreamUITextGateTestLocal;
+
+	FScopedDuiFile Source(TEXT("AnimationPanelAfterCompile.dui"));
+	if (!TestTrue(TEXT("the fixture wrote a .dui"), WriteOneTimeline(Source)))
+	{
+		return false;
+	}
+	FScopedGatedDesigner Scoped(TEXT("BP_AnimationPanelAfterCompile"), UDreamTextUserWidget::StaticClass(), Source.FilePath);
+	if (!TestNotNull(TEXT("The designer opened"), Scoped.Designer) || !TestEqual(TEXT("on a .dui that compiles"), Scoped.CompileErrors, 0))
+	{
+		return false;
+	}
+	const TSharedPtr<SDreamWidgetAnimationEditor> Panel = Scoped.Designer->GetSequencerEditor();
+	UDreamWidgetAnimationComponent* HostBefore = Scoped.TemplateRoot() != nullptr
+		? Scoped.TemplateRoot()->GetComponent<UDreamWidgetAnimationComponent>() : nullptr;
+	if (!TestTrue(TEXT("The designer has an Animations panel"), Panel.IsValid())
+		|| !TestNotNull(TEXT("and the timeline gave the root a host"), HostBefore))
+	{
+		return false;
+	}
+	TestTrue(TEXT("which the panel found when it opened"), Panel->GetSequenceComponent() == HostBefore);
+	Panel->SelectAnimation(HostBefore->GetSequenceByDisplayName(TEXT("Pulse")));
+
+	FKismetEditorUtilities::CompileBlueprint(Scoped.Blueprint, EBlueprintCompileOptions::SkipGarbageCollection);
+
+	UDreamWidgetAnimationComponent* HostAfter = Scoped.TemplateRoot() != nullptr
+		? Scoped.TemplateRoot()->GetComponent<UDreamWidgetAnimationComponent>() : nullptr;
+	if (!TestNotNull(TEXT("the recompiled tree has a host as well"), HostAfter))
+	{
+		return false;
+	}
+	TestTrue(TEXT("a new one, on the tree the compile built"), HostAfter != HostBefore);
+	TestTrue(TEXT("and the panel moved to it"), Panel->GetSequenceComponent() == HostAfter);
+	const UDreamWidgetAnimation* PulseAfter = HostAfter->GetSequenceByDisplayName(TEXT("Pulse"));
+	TestTrue(TEXT("with the open animation found again by its name"), PulseAfter != nullptr && Panel->GetAnimation() == PulseAfter);
+
+	Panel->ClearAnimationSelection();
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamUITimelineReadOnlyFollowsTheAnimationTest,
+	"DreamGUI.Designer.SwitchingBetweenATimelineAndAnEditableAnimationSwitchesReadOnly",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * Switching animations kept whatever editability the Animations panel's Sequencer had been opened with.
+ *
+ * Sequencer reads read-only once, when it is made, and the panel handed it every later animation through
+ * ResetToNewRootSequence. Opened on an animation made in the editor and then given a `timeline` one, it let the author
+ * edit what the next compile rebuilds from the file; opened the other way round, it left the editor's own animation
+ * locked. This alternates the two on one host.
+ */
+bool FDreamUITimelineReadOnlyFollowsTheAnimationTest::RunTest(const FString&)
+{
+	using namespace DreamUITextGateTestLocal;
+
+	FScopedDuiFile Source(TEXT("TimelineReadOnlySwitch.dui"));
+	if (!TestTrue(TEXT("the fixture wrote a .dui"), WriteOneTimeline(Source)))
+	{
+		return false;
+	}
+	FScopedGatedDesigner Scoped(TEXT("BP_TimelineReadOnlySwitch"), UDreamTextUserWidget::StaticClass(), Source.FilePath);
+	if (!TestNotNull(TEXT("The designer opened"), Scoped.Designer) || !TestEqual(TEXT("on a .dui that compiles"), Scoped.CompileErrors, 0))
+	{
+		return false;
+	}
+	const TSharedPtr<SDreamWidgetAnimationEditor> Panel = Scoped.Designer->GetSequencerEditor();
+	UDreamWidgetAnimationComponent* Host = Scoped.TemplateRoot() != nullptr
+		? Scoped.TemplateRoot()->GetComponent<UDreamWidgetAnimationComponent>() : nullptr;
+	UDreamWidgetAnimation* Timeline = Host != nullptr ? Host->GetSequenceByDisplayName(TEXT("Pulse")) : nullptr;
+	// One made in the animation editor, beside the file's.
+	UDreamWidgetAnimation* Editable = Host != nullptr ? Host->AddNewAnimation() : nullptr;
+	if (!TestTrue(TEXT("The designer has an Animations panel"), Panel.IsValid())
+		|| !TestTrue(TEXT("and a host holding a timeline and an editable animation"),
+			Timeline != nullptr && Editable != nullptr && !Timeline->IsEditable() && Editable->IsEditable()))
+	{
+		return false;
+	}
+	Panel->RefreshAnimationList();
+
+	Panel->SelectAnimation(Editable);
+	TSharedPtr<ISequencer> Sequencer = Panel->GetSequencer();
+	TestTrue(TEXT("an editable animation opens an editable Sequencer"), Sequencer.IsValid() && !Sequencer->IsReadOnly());
+
+	Panel->SelectAnimation(Timeline);
+	Sequencer = Panel->GetSequencer();
+	TestTrue(TEXT("a timeline after it is read-only"), Sequencer.IsValid() && Sequencer->IsReadOnly());
+
+	Panel->SelectAnimation(Editable);
+	Sequencer = Panel->GetSequencer();
+	TestTrue(TEXT("and the editable one after that is editable again"), Sequencer.IsValid() && !Sequencer->IsReadOnly());
+
+	Panel->ClearAnimationSelection();
 	return true;
 }
 
