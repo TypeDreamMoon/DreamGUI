@@ -16,6 +16,25 @@ namespace DreamPackageLoadCheckLocal
 	/** The category the Blueprint compiler reports its diagnostics in, other Blueprints' included. */
 	const FName BlueprintCategory(TEXT("LogBlueprint"));
 
+	/**
+	 * Categories that log from threads of their own, about nothing a package is: what they say while a package loads is not
+	 * the package's. The editor probes for a network connection on start (an HTTP request to a well-known address); behind
+	 * a proxy that does not answer it, the request times out a few seconds in -- in the middle of whichever package is
+	 * loading then -- and failed the test about that package, now and then, on a machine that has one.
+	 */
+	bool IsUnrelatedToLoading(const FName& InCategory)
+	{
+		static const FName Unrelated[] = { TEXT("LogHttp"), TEXT("LogHttpListener"), TEXT("LogOnline"), TEXT("LogAnalytics") };
+		for (const FName& Name : Unrelated)
+		{
+			if (InCategory == Name)
+			{
+				return true;
+			}
+		}
+		return false;
+	}
+
 	/** Every warning and error logged while it lives, from whichever thread logs it: problems, and the compiler's warnings. */
 	class FProblemCapture : public FOutputDevice
 	{
@@ -39,7 +58,7 @@ namespace DreamPackageLoadCheckLocal
 		virtual void Serialize(const TCHAR* InText, ELogVerbosity::Type InVerbosity, const FName& InCategory) override
 		{
 			const ELogVerbosity::Type Verbosity = (ELogVerbosity::Type)(InVerbosity & ELogVerbosity::VerbosityMask);
-			if (Verbosity == ELogVerbosity::NoLogging || Verbosity > ELogVerbosity::Warning)
+			if (Verbosity == ELogVerbosity::NoLogging || Verbosity > ELogVerbosity::Warning || IsUnrelatedToLoading(InCategory))
 			{
 				return;
 			}

@@ -571,6 +571,7 @@ void FDreamWidgetPreviewHost::ClearTransactionalFlagsOnPreview()
 void FDreamWidgetPreviewHost::RebuildPreviewGuidMap()
 {
 	PreviewWidgetsByGuid.Reset();
+	ForgetTemplateMisses();
 	if (!IsValid(PreviewWidget) || !IsValid(PreviewWidget->GetWidgetTree()))
 	{
 		return;
@@ -672,18 +673,93 @@ UDreamWidget* FDreamWidgetPreviewHost::FindTemplateForPreview(const UDreamWidget
 	{
 		return nullptr;
 	}
+	// The kept answer, while it is still one: the same guid, and a widget whose parents hold it up to the tree's root -- a
+	// deleted template stays alive in the undo buffer, outside the tree.
+	if (const TWeakObjectPtr<UDreamWidget>* Kept = TemplatesByGuid.Find(Guid))
+	{
+		if (UDreamWidget* Template = Kept->Get(); Template != nullptr && Template->GetWidgetGuid() == Guid)
+		{
+			// Held at every step, not only parented: a widget a reinstancing replaced still names the parent that has let
+			// go of it.
+			const UDreamWidget* Top = Template;
+			bool bHeld = true;
+			while (const UDreamWidget* Parent = Top->GetParent())
+			{
+				if (!Parent->GetChildren().Contains(Top))
+				{
+					bHeld = false;
+					break;
+				}
+				Top = Parent;
+			}
+			if (bHeld && Top == Blueprint->WidgetTree->RootWidget)
+			{
+				return Template;
+			}
+		}
+	}
+	if (TemplatesMissedFrame == GFrameCounter && TemplatesMissed.Contains(Guid))
+	{
+		return nullptr;
+	}
 	// The authoring tree of THIS asset only. A nested widget blueprint's contents live in the same
 	// preview hierarchy but carry their own asset's ids, so they find nothing here -- which is the
 	// answer the designer wants: a nested instance is edited by opening the class it came from.
+	// One walk keeps every widget it meets, the first of a guid as the walk always answered.
+	TemplatesByGuid.Reset();
 	UDreamWidget* Found = nullptr;
-	Blueprint->WidgetTree->ForEachWidget([&Found, Guid](UDreamWidget* Widget)
+	Blueprint->WidgetTree->ForEachWidget([this, &Found, Guid](UDreamWidget* Widget)
 	{
-		if (Found == nullptr && Widget->GetWidgetGuid() == Guid)
+		const FGuid WidgetGuid = Widget->GetWidgetGuid();
+		if (WidgetGuid.IsValid() && !TemplatesByGuid.Contains(WidgetGuid))
+		{
+			TemplatesByGuid.Add(WidgetGuid, Widget);
+		}
+		if (Found == nullptr && WidgetGuid == Guid)
 		{
 			Found = Widget;
 		}
 	});
+	if (Found == nullptr)
+	{
+		if (TemplatesMissedFrame != GFrameCounter)
+		{
+			TemplatesMissedFrame = GFrameCounter;
+			TemplatesMissed.Reset();
+		}
+		TemplatesMissed.Add(Guid);
+	}
 	return Found;
+}
+
+bool FDreamWidgetPreviewHost::MapPreviewReferenceToTemplate(UObject* InValue, UObject*& OutMapped) const
+{
+	OutMapped = InValue;
+	UWorld* const PreviewWorld = GetWorld();
+	if (InValue == nullptr || PreviewWorld == nullptr || InValue->GetWorld() != PreviewWorld)
+	{
+		return true;
+	}
+	if (const UDreamWidget* AsWidget = Cast<UDreamWidget>(InValue))
+	{
+		OutMapped = FindTemplateForPreview(AsWidget);
+		return OutMapped != nullptr;
+	}
+	const DreamWidgetPropertyBindingExtension::FBindingSite Site = DreamWidgetPropertyBindingExtension::ResolveBindingSite(InValue);
+	if (Site.Widget != nullptr)
+	{
+		if (UDreamWidget* Template = FindTemplateForPreview(Site.Widget))
+		{
+			UObject* Counterpart = ResolveDreamWidgetBindingTarget(Template, Site.Target, Site.BehaviourIndex);
+			if (Counterpart != nullptr && Counterpart->GetClass() == InValue->GetClass())
+			{
+				OutMapped = Counterpart;
+				return true;
+			}
+		}
+	}
+	OutMapped = nullptr;
+	return false;
 }
 
 bool FDreamWidgetPreviewHost::MigratePropertyToTemplate(UObject* InPreviewObject, FEditPropertyChain& InChain, bool bIsModify)
@@ -737,7 +813,31 @@ bool FDreamWidgetPreviewHost::MigratePropertyToTemplate(UObject* InPreviewObject
 	{
 		return false;
 	}
-	const bool bMigrated = DreamWidgetPreviewHostLocal::MigrateAlongChain(InPreviewObject, TemplateObject, Head, Head->GetValue(), bIsModify);
+	// A reference the edit names at the head -- a scroll view's Content, picked from the hierarchy -- is copied as the
+	// preview holds it: a PREVIEW widget, which the next rebuild destroys. The template's own counterpart goes in its place
+	// (MapPreviewReferenceToTemplate), and with none the template keeps what it had.
+	const FObjectPropertyBase* HeadReference = Head->GetNextNode() == nullptr ? CastField<FObjectPropertyBase>(HeadProperty) : nullptr;
+	UObject* const ReferenceBefore = HeadReference != nullptr && !bIsModify ? HeadReference->GetObjectPropertyValue_InContainer(TemplateObject) : nullptr;
+	bool bMigrated = DreamWidgetPreviewHostLocal::MigrateAlongChain(InPreviewObject, TemplateObject, Head, Head->GetValue(), bIsModify);
+	if (bMigrated && !bIsModify && HeadReference != nullptr)
+	{
+		UObject* const Copied = HeadReference->GetObjectPropertyValue_InContainer(TemplateObject);
+		UObject* Mapped = nullptr;
+		if (MapPreviewReferenceToTemplate(Copied, Mapped))
+		{
+			if (Mapped != Copied)
+			{
+				HeadReference->SetObjectPropertyValue_InContainer(TemplateObject, Mapped);
+			}
+		}
+		else
+		{
+			UE_LOG(DreamGUI, Warning, TEXT("[%s].%d '%s' was set to %s, which has no counterpart in the asset; the asset keeps what it had."),
+				ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *HeadProperty->GetName(), *GetNameSafe(Copied));
+			HeadReference->SetObjectPropertyValue_InContainer(TemplateObject, ReferenceBefore);
+			bMigrated = false;
+		}
+	}
 	if (bMigrated && !bIsModify)
 	{
 		// The details panel's half of the same report the viewport gesture makes. The path is the
@@ -823,6 +923,8 @@ void FDreamWidgetPreviewHost::OnBlueprintChanged(UBlueprint* InBlueprint)
 {
 	if (InBlueprint == Blueprint)
 	{
+		// A widget added or brought back is found from now on, in this frame too.
+		ForgetTemplateMisses();
 		InvalidatePreview();
 	}
 }
@@ -837,6 +939,7 @@ void FDreamWidgetPreviewHost::OnBlueprintCompiled(UBlueprint* InBlueprint)
 
 void FDreamWidgetPreviewHost::OnObjectsReplaced(const TMap<UObject*, UObject*>& InReplacementMap)
 {
+	ForgetTemplateMisses();
 	// A recompile reinstances the preview like any other instance of the class: the original is
 	// renamed aside and every reference to it is swapped for a property copy. Ours is swapped too --
 	// a beat after this delegate -- and that is the whole problem, because the original is REGISTERED

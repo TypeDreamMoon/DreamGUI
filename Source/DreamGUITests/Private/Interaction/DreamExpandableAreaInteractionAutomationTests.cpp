@@ -67,6 +67,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamPressExpandableAreaHeaderTest,
 	"DreamGUI.ExpandableArea.EachClickOnTheHeaderFlipsTheAreaAndSaysWhichWay",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamPressExpandableAreaHeaderTest, "DreamGUI.ExpandableArea.EachClickOnTheHeaderFlipsTheAreaAndSaysWhichWay", "[Pointer][Animated]")
 
 bool FDreamPressExpandableAreaHeaderTest::RunTest(const FString& Parameters)
 {
@@ -103,6 +104,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamPressExpandableAreaBodyTest,
 	"DreamGUI.ExpandableArea.ClickingTheBodyDoesNotFlipTheArea",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamPressExpandableAreaBodyTest, "DreamGUI.ExpandableArea.ClickingTheBodyDoesNotFlipTheArea", "[Pointer][Animated]")
 
 bool FDreamPressExpandableAreaBodyTest::RunTest(const FString& Parameters)
 {

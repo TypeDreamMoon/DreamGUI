@@ -113,6 +113,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamPressDropdownOpenTest,
 	"DreamGUI.Dropdown.ClickingTheDropdownOpensItsListAndSaysItIsOpening",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamPressDropdownOpenTest, "DreamGUI.Dropdown.ClickingTheDropdownOpensItsListAndSaysItIsOpening", "[Pointer][Animated]")
 
 bool FDreamPressDropdownOpenTest::RunTest(const FString& Parameters)
 {
@@ -138,6 +139,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamPressDropdownChooseTest,
 	"DreamGUI.Dropdown.ClickingAnOptionInTheOpenListChoosesItAndClosesTheList",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamPressDropdownChooseTest, "DreamGUI.Dropdown.ClickingAnOptionInTheOpenListChoosesItAndClosesTheList", "[Pointer][Animated]")
 
 bool FDreamPressDropdownChooseTest::RunTest(const FString& Parameters)
 {
@@ -172,6 +174,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamPressDropdownDismissTest,
 	"DreamGUI.Dropdown.ClickingOutsideTheOpenListClosesItAndChoosesNothing",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamPressDropdownDismissTest, "DreamGUI.Dropdown.ClickingOutsideTheOpenListClosesItAndChoosesNothing", "[Pointer][Animated]")
 
 bool FDreamPressDropdownDismissTest::RunTest(const FString& Parameters)
 {
@@ -200,6 +203,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamPressDropdownDisabledTest,
 	"DreamGUI.Dropdown.ClickingADisabledDropdownDoesNotOpenIt",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamPressDropdownDisabledTest, "DreamGUI.Dropdown.ClickingADisabledDropdownDoesNotOpenIt", "[Pointer][Disabled]")
 
 bool FDreamPressDropdownDisabledTest::RunTest(const FString& Parameters)
 {
@@ -232,6 +236,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamPressDropdownWheelTest,
 	"DreamGUI.Dropdown.TurningTheWheelOverTheOpenListScrollsItAndChoosesNothing",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamPressDropdownWheelTest, "DreamGUI.Dropdown.TurningTheWheelOverTheOpenListScrollsItAndChoosesNothing", "[Pointer][Animated]")
 
 bool FDreamPressDropdownWheelTest::RunTest(const FString& Parameters)
 {

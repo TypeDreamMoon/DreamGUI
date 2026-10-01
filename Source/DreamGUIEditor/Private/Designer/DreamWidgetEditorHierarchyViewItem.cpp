@@ -91,6 +91,20 @@ const UDreamWidget* DreamWidgetHierarchyDrop::GetLockOwnerForDropZone(const UDre
 
 TOptional<EItemDropZone> ProcessHierarchyDragDrop(const FDragDropEvent& DragDropEvent, EItemDropZone DropZone, bool bIsDrop, TSharedPtr<FDreamWidgetBlueprintEditor> Manager, UDreamWidget* TargetItem, TOptional<int32> Index)
 {
+	// A row dragged out of ANOTHER designer is a widget of another preview world. Reparented here it left that asset's
+	// preview, found no template in this one, and stayed registered with the other world's manager, which pulled it back
+	// out when its designer closed. Refused, on the tree and on the canvas alike.
+	if (const TSharedPtr<FHierarchyDreamWidgetDragDropOp> HierarchyOp = DragDropEvent.GetOperationAs<FHierarchyDreamWidgetDragDropOp>())
+	{
+		for (const FHierarchyDreamWidgetDragDropOp::FItem& Item : HierarchyOp->DraggedWidgets)
+		{
+			const UDreamWidget* Dragged = Item.Widget.Get();
+			if (Dragged == nullptr || FDreamWidgetBlueprintEditor::FindDesignerForWidget(Dragged) != Manager.Get())
+			{
+				return TOptional<EItemDropZone>();
+			}
+		}
+	}
 	auto TargetTemplate = TargetItem;
 	if (TargetTemplate && (DropZone == EItemDropZone::AboveItem || DropZone == EItemDropZone::BelowItem))
 	{

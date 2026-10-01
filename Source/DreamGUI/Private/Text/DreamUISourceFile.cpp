@@ -822,7 +822,17 @@ namespace DreamUIText
 			{
 				++Offset;
 			}
-			Emit(OutTokens, ETokenKind::AssetPath, Start, Slice(Start, Offset));
+			// Truncated, with an error, as an over-long identifier is and for the same reason: every path this language
+			// writes is loaded by name somewhere downstream, and a name past NAME_SIZE takes the editor down.
+			FString Path = Slice(Start, Offset);
+			if (Path.Len() >= NAME_SIZE)
+			{
+				Diagnostics.AddError(EDreamUIDiagnosticCode::AssetPathTooLong, MakeLocation(Start),
+					FString::Printf(TEXT("'%s' is %d characters long, and a path here holds at most %d"),
+						*Ellipsize(Path), Path.Len(), NAME_SIZE - 1));
+				Path.LeftInline(NAME_SIZE - 1);
+			}
+			Emit(OutTokens, ETokenKind::AssetPath, Start, MoveTemp(Path));
 		}
 
 		/** True when the character cannot begin any token, so a run of them is one mistake, not many. */
@@ -1009,9 +1019,9 @@ namespace DreamUIText
 		int32 NestingDepth = 0;
 
 		/** True (and reported once) when the cursor is already as deep as the parser will descend. */
-		bool IsTooDeep(const FDreamUISourceLocation& InLocation)
+		bool IsTooDeep(const FDreamUISourceLocation& InLocation, int32 InFurtherDepth = 0)
 		{
-			if (NestingDepth < DreamUIAst::MaxNestingDepth)
+			if (NestingDepth + InFurtherDepth < DreamUIAst::MaxNestingDepth)
 			{
 				return false;
 			}
@@ -2547,6 +2557,11 @@ namespace DreamUIText
 			{
 				return false;
 			}
+			// Each operator folds the expression so far into the left operand of the next: `a + b + c + ...` is a tree as deep
+			// as the chain is long, made here in a loop but walked recursively by everything after the parser -- the thunk
+			// lowering, the syntax tree's own destructor -- so a chain of thousands overflowed the stack there instead of being
+			// reported here. Counted against the same budget as nesting.
+			int32 ChainDepth = 0;
 			while (true)
 			{
 				const int32 Precedence = GetBinaryPrecedence(Current().Kind);
@@ -2556,6 +2571,11 @@ namespace DreamUIText
 				}
 				const ETokenKind OperatorKind = Current().Kind;
 				const FDreamUISourceLocation OperatorLocation = Current().Location;
+				if (IsTooDeep(OperatorLocation, ++ChainDepth))
+				{
+					RecoverToStatementBoundary();
+					return false;
+				}
 				Advance();
 
 				FDreamUIExpression Right;

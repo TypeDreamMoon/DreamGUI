@@ -30,6 +30,7 @@
 #include "Driver/DreamDriverWorldSpace.h"
 #include "Interaction/DreamPressInteractionTestTypes.h"
 #include "Lifecycle/DreamLifecycleFixtures.h"
+#include "Core/DreamUIGoneCount.h"
 
 /*
  * A widget whose render transform keeps changing becomes a render layer of its canvas: the geometry under it is kept
@@ -943,6 +944,51 @@ bool FDreamRenderLayerRefreshBeforeSensitiveTest::RunTest(const FString& Paramet
 	const FCounted Turning;
 	TestEqual(TEXT("The card's turns rebuild nothing"), Turning.Get(ECounter::DrawCallRebuilds), static_cast<int64>(0));
 	TestEqual(TEXT("...and each is refreshed in place"), Turning.Get(ECounter::InPlaceRefreshes), static_cast<int64>(5));
+	return true;
+}
+
+/*
+ * A canvas keeps its render layers' widgets and its own widget, and the UI manager its canvases, as weak look-ups found
+ * them while the count of objects gone reads the same (DreamUIGone). With r.DreamUI.VerifyKeptPointers every use looks
+ * them up as well. A card turns until it is a layer, is destroyed while it turns and another takes its place, and another
+ * canvas comes and goes beside the stage's, round after round: no kept pointer ever disagrees with its look-up.
+ */
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamRenderLayerKeptPointersTest,
+	"DreamGUI.RenderLayer.KeptPointersAgreeWithTheirLookUpsAsLayersAndCanvasesComeAndGo",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamRenderLayerKeptPointersTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamRenderLayerTestLocal;
+	const DreamTests::Lifecycle::FScopedConsoleVariable Verify(TEXT("r.DreamUI.VerifyKeptPointers"), 1);
+	const uint64 Before = DreamUIGone::GetKeptDisagreements();
+	FStage Stage;
+	if (!Stage.Build(*this))
+	{
+		return false;
+	}
+	for (int32 Round = 0; Round < 6; ++Round)
+	{
+		// The card turns until it is a layer...
+		for (int32 Step = 1; Step <= 4; ++Step)
+		{
+			Stage.TurnCard(Round * 30.0 + Step * 5.0);
+		}
+		// ...and goes while it turns, its face with it; another takes its place.
+		Stage.Card->DestroyWidget();
+		Stage.Face = nullptr;
+		Stage.Card = Stage.MakeBlock(Stage.Root, 120.0f, 80.0f, FVector2D(-80.0, 0.0), FColor::Red);
+		Stage.Frames(1);
+		// Another canvas comes and goes beside the stage's.
+		UDreamWidget* OtherRoot = Stage.MakeWidget(nullptr, 100.0f, 100.0f, FVector2D::ZeroVector);
+		OtherRoot->AddComponent<UDreamCanvas>();
+		Stage.Frames(1);
+		OtherRoot->DestroyWidget();
+		Stage.Frames(1);
+	}
+	TestEqual(TEXT("No kept pointer disagreed with its look-up"),
+		static_cast<int64>(DreamUIGone::GetKeptDisagreements() - Before), static_cast<int64>(0));
 	return true;
 }
 

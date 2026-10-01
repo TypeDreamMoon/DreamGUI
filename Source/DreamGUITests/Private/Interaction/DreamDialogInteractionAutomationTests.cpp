@@ -91,6 +91,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamPressDialogConfirmTest,
 	"DreamGUI.Dialog.ClickingTheConfirmButtonClosesTheDialogWithItsResult",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamPressDialogConfirmTest, "DreamGUI.Dialog.ClickingTheConfirmButtonClosesTheDialogWithItsResult", "[Pointer][Animated]")
 
 bool FDreamPressDialogConfirmTest::RunTest(const FString& Parameters)
 {
@@ -126,6 +127,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamPressDialogBlocksBehindTest,
 	"DreamGUI.Dialog.WhileTheDialogIsUpAClickOnAButtonBehindItDoesNothingUntilItCloses",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamPressDialogBlocksBehindTest, "DreamGUI.Dialog.WhileTheDialogIsUpAClickOnAButtonBehindItDoesNothingUntilItCloses", "[Pointer][Animated]")
 
 bool FDreamPressDialogBlocksBehindTest::RunTest(const FString& Parameters)
 {
@@ -173,6 +175,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamPressDialogDimmerDefaultTest,
 	"DreamGUI.Dialog.ByDefaultClickingTheDimmerLeavesTheDialogUp",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamPressDialogDimmerDefaultTest, "DreamGUI.Dialog.ByDefaultClickingTheDimmerLeavesTheDialogUp", "[Pointer][Animated]")
 
 bool FDreamPressDialogDimmerDefaultTest::RunTest(const FString& Parameters)
 {
@@ -199,6 +202,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamPressDialogDimmerDismissTest,
 	"DreamGUI.Dialog.WithCloseOnDimmerClickClickingTheDimmerCancelsTheDialog",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamPressDialogDimmerDismissTest, "DreamGUI.Dialog.WithCloseOnDimmerClickClickingTheDimmerCancelsTheDialog", "[Pointer][Animated]")
 
 bool FDreamPressDialogDimmerDismissTest::RunTest(const FString& Parameters)
 {

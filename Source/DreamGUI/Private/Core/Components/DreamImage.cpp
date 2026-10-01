@@ -609,6 +609,22 @@ void UDreamImage::SetBrush_Material(UTexture* Value)
 	UDreamWidget::MarkLayoutForRebuild(GetWidget());
 }
 
+void UDreamImage::SetBrushFromMaterial(UMaterialInterface* InMaterial)
+{
+	if (Brush.GetResourceObject() == InMaterial)
+	{
+		return;
+	}
+	// What SetBrush_Material does, for the type it was meant to take (upstream d6952e790).
+	UnregisterFromSprite();
+	MarkVerticesDirty(true, true, true, false);
+	MarkTextureDirty();
+	MarkMaterialDirty();
+	Brush.SetResourceObject(InMaterial);
+	CacheSpriteSourceSize();
+	UDreamWidget::MarkLayoutForRebuild(GetWidget());
+}
+
 void UDreamImage::SetBrushFillAmount(float Value)
 {
 	Value = FMath::Clamp(Value, 0.0f, 1.0f);

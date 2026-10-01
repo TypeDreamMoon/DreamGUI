@@ -106,6 +106,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamPressMenuAnchorToggleTest,
 	"DreamGUI.MenuAnchor.ClickingTheTriggerOpensTheMenuAndClickingItAgainClosesIt",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamPressMenuAnchorToggleTest, "DreamGUI.MenuAnchor.ClickingTheTriggerOpensTheMenuAndClickingItAgainClosesIt", "[Pointer][Animated]")
 
 bool FDreamPressMenuAnchorToggleTest::RunTest(const FString& Parameters)
 {
@@ -144,6 +145,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamPressMenuAnchorClickInsideTest,
 	"DreamGUI.MenuAnchor.ClickingInsideTheOpenMenuLeavesItOpen",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamPressMenuAnchorClickInsideTest, "DreamGUI.MenuAnchor.ClickingInsideTheOpenMenuLeavesItOpen", "[Pointer][Animated]")
 
 bool FDreamPressMenuAnchorClickInsideTest::RunTest(const FString& Parameters)
 {
@@ -168,6 +170,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamPressMenuAnchorClickOutsideTest,
 	"DreamGUI.MenuAnchor.ClickingOutsideTheOpenMenuClosesIt",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamPressMenuAnchorClickOutsideTest, "DreamGUI.MenuAnchor.ClickingOutsideTheOpenMenuClosesIt", "[Pointer][Animated]")
 
 bool FDreamPressMenuAnchorClickOutsideTest::RunTest(const FString& Parameters)
 {

@@ -39,6 +39,7 @@
 #include "HAL/FileManager.h"
 #include "HAL/IConsoleManager.h"
 #include "Lifecycle/DreamLifecycleFixtures.h"
+#include "Core/DreamUIGoneCount.h"
 #include "Kismet2/CompilerResultsLog.h"
 #include "Kismet2/KismetEditorUtilities.h"
 #include "Misc/FileHelper.h"
@@ -2098,6 +2099,46 @@ bool FDreamWidgetAnimationReusedPlayerTest::RunTest(const FString& Parameters)
 		TestTrue(TEXT("With DreamUI.Animation.ReusePlayers 0 a play after an ended one has a player of its own"),
 			Fifth.Player != nullptr && Sixth.Player != nullptr && Sixth.Player != Fifth.Player);
 	}
+	return true;
+}
+
+/*
+ * An animated property writes the widget its binding resolved to without a weak look-up of it while the count of
+ * objects gone reads the same (FDreamUIDirectAnimationEvaluation's bound objects). With r.DreamUI.VerifyKeptPointers
+ * the look-up is made as well. The bound widget is destroyed in the middle of a play, and the animation played again
+ * with nothing to bind to: the kept object never disagrees with its look-up, and nothing is written to the gone one.
+ */
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamWidgetAnimationKeptBoundObjectTest,
+	"DreamGUI.Animation.Playback.AKeptBoundObjectAgreesWithItsLookUpWhenItsWidgetGoesMidPlay",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamWidgetAnimationKeptBoundObjectTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamWidgetAnimationPlaybackTestLocal;
+	const DreamTests::Lifecycle::FScopedConsoleVariable Verify(TEXT("r.DreamUI.VerifyKeptPointers"), 1);
+	const uint64 Before = DreamUIGone::GetKeptDisagreements();
+	FScopedGameWorld Scope;
+	FScopedTree Tree(Scope.World);
+	Tree.AddFloatTrack(TEXT("AnimatableWidth"), 20.0f, 220.0f);
+	Tree.Button->SetWidth(60.0f);
+	const FDreamUIAnimationHandle Handle = Tree.Animator->PlayAnimation(Tree.Animation);
+	if (!TestTrue(TEXT("PlayAnimation hands back a live handle"), Handle.IsValid()))
+	{
+		return false;
+	}
+	TickFrames(Scope.World, 6);
+	TestFalse(TEXT("Six frames in, the bound widget is being written"), FMath::IsNearlyEqual(Tree.Button->GetWidth(), 60.0f));
+	// The bound widget goes in the middle of the play.
+	Tree.Button->DestroyWidget();
+	Tree.Button = nullptr;
+	TickFrames(Scope.World, 6);
+	// Played again from the start, with nothing to bind to.
+	Tree.Animator->StopAllAnimations();
+	Tree.Animator->PlayAnimation(Tree.Animation);
+	TickFrames(Scope.World, AnimationFrames + 5);
+	TestEqual(TEXT("No kept pointer disagreed with its look-up"),
+		static_cast<int64>(DreamUIGone::GetKeptDisagreements() - Before), static_cast<int64>(0));
 	return true;
 }
 

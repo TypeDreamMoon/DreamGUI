@@ -541,6 +541,25 @@ namespace DreamUITextBuilderLocal
 	}
 
 	/**
+	 * True, with the error said, when InPath is too long to load: a load splits it into names, and a name past NAME_SIZE
+	 * stops the editor rather than fail (see EDreamUIDiagnosticCode::AssetPathTooLong). The lexer cuts a path written bare;
+	 * this is for one that arrives as a string.
+	 */
+	bool RefuseOverlongPath(const FString& InPath, const FDreamUISourceLocation& InLocation, FDreamUIDiagnosticBag* InDiagnostics)
+	{
+		if (InPath.Len() < NAME_SIZE)
+		{
+			return false;
+		}
+		if (InDiagnostics != nullptr)
+		{
+			InDiagnostics->AddError(EDreamUIDiagnosticCode::AssetPathTooLong, InLocation,
+				FString::Printf(TEXT("a path of %d characters is longer than a load can take (%d)"), InPath.Len(), NAME_SIZE - 1));
+		}
+		return true;
+	}
+
+	/**
 	 * "/Game/UI/WBP_Save" -> its generated class.
 	 *
 	 * The author writes the ASSET path, because that is what they see in the content browser and what
@@ -550,6 +569,12 @@ namespace DreamUITextBuilderLocal
 	 */
 	UClass* ResolveWidgetClassFromPath(const FString& InPath)
 	{
+		// The spelling derived below gives a path with no object name its short name plus _C as one: a path near what a name
+		// holds would make that name longer than one can be, so it is not looked up at all.
+		if (InPath.Len() >= NAME_SIZE - 3)
+		{
+			return nullptr;
+		}
 		if (InPath.StartsWith(TEXT("/Script/")))
 		{
 			// Redirected first: the lookup takes the path as written, and a class that has moved to
@@ -929,6 +954,10 @@ namespace DreamUITextBuilderLocal
 				return false;
 			}
 			const bool bIsNone = Value.Raw.IsEmpty() || Value.Raw == TEXT("None");
+			if (!bIsNone && RefuseOverlongPath(Value.Raw, Value.Location, InContext.Diagnostics))
+			{
+				return false;
+			}
 			AsSoft->SetPropertyValue(ValuePtr,
 				FSoftObjectPtr(bIsNone ? FSoftObjectPath() : FSoftObjectPath(Value.Raw)));
 			return true;
@@ -973,6 +1002,10 @@ namespace DreamUITextBuilderLocal
 			}
 			// Loaded rather than soft-referenced: a class template holds the same hard reference an
 			// author dragging the asset into the details panel would, and the cook has to see it.
+			if (RefuseOverlongPath(Value.Raw, Value.Location, InContext.Diagnostics))
+			{
+				return false;
+			}
 			UObject* Loaded = AsObject->IsA<FClassProperty>()
 				? (UObject*)ResolveWidgetClassFromPath(Value.Raw)
 				: LoadObject<UObject>(nullptr, *Value.Raw, nullptr, LOAD_NoWarn | LOAD_Quiet);
@@ -1935,7 +1968,13 @@ namespace DreamUITextBuilderLocal
 		// marks the template and settles the axis (vertical when the author configured no single
 		// axis; one who set an axis keeps it), and the builder synthesizes the content.
 		const bool bVertical = Handler->PrepareHost(InParent, Template);
-		const FString ContentName = InParent->GetDisplayName() + TEXT("_EachContent");
+		FString ContentName = InParent->GetDisplayName() + TEXT("_EachContent");
+		if (ContentName.Len() >= NAME_SIZE)
+		{
+			// An id at the most a name holds makes this one longer than that, and an FName past NAME_SIZE stops the editor.
+			// Cut, with the whole spelling's hash, so the same id keeps the same content name.
+			ContentName = FString::Printf(TEXT("%s_%08X_EachContent"), *ContentName.Left(NAME_SIZE - 32), FCrc::StrCrc32(*ContentName));
+		}
 		UDreamWidget* Content = InContext.Tree->ConstructWidget(UDreamWidget::StaticClass(), FName(*ContentName),
 			FGuid::NewDeterministicGuid(InContext.LocalizationNamespace + TEXT("/") + ContentName));
 		if (IsValid(Content))

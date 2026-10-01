@@ -7,6 +7,7 @@
 #include "Animation/DreamUIAnimationTicker.h"
 
 #include "Core/Components/DreamWidget.h"
+#include "Core/DreamUIDetailTrace.h"
 #include "Animation/DreamUIDirectAnimationEvaluation.h"
 #include "Animation/DreamWidgetAnimationComponent.h"
 #include "DreamGUI.h"
@@ -160,12 +161,24 @@ void UDreamWidgetAnimationPlayer::Initialize(UMovieSceneSequence* InSequence, co
 	Super::Initialize(InSequence, InSettings);
 	// Whatever the sequence: see DirectEvaluationDecidedFor.
 	DirectEvaluationDecidedFor = nullptr;
+	IgnoreReplication();
 }
 
 void UDreamWidgetAnimationPlayer::Initialize(UMovieSceneSequence* InSequence)
 {
 	Super::Initialize(InSequence);
 	DirectEvaluationDecidedFor = nullptr;
+	IgnoreReplication();
+}
+
+void UDreamWidgetAnimationPlayer::IgnoreReplication()
+{
+	// A widget animation's player is never replicated: nothing in DreamGUI gives one a playback client or a channel. The
+	// sequencer still sends every player that finishes its finish event (RPC_OnFinishPlaybackEvent), and one with no actor
+	// of authority above it -- a widget on the screen -- took the event for a word from a server and finished all over
+	// again inside it, every play: the stop, the clock, the finished events once more. Ignored, the event only asks
+	// whether it has authority.
+	SetIgnorePlaybackReplication(true);
 }
 
 bool UDreamWidgetAnimationPlayer::TryEvaluateDirectly(const FMovieSceneEvaluationRange& InRange, EMovieScenePlayerStatus::Type PlayerStatus, bool bInOwnTick)
@@ -249,6 +262,7 @@ bool UDreamWidgetAnimationPlayer::TryEvaluateDirectly(const FMovieSceneEvaluatio
 
 void UDreamWidgetAnimationPlayer::OnStopped()
 {
+	DREAMUI_DETAIL_SCOPE(DreamUI_AnimationStopped);
 	Super::OnStopped();
 	if (DirectEvaluation.IsValid())
 	{
@@ -423,6 +437,7 @@ void UDreamWidgetAnimationPlayer::TickLite(float DeltaSeconds)
 		// A loop boundary, the end, or where PlayTo asked to pause: the sequencer's own cursor update takes the time the
 		// clock has just given and does the rest. The loop count, the direction, finishing and the pause, and the events
 		// around them, all change there and only there; and the clock is not ticked a second time.
+		DREAMUI_DETAIL_SCOPE(DreamUI_AnimationBoundary);
 		UpdateTimeCursorPosition(NewTime, EUpdatePositionMethod::Play);
 	}
 	else

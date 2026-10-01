@@ -80,6 +80,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamListsListViewClickSelectsTest,
 	"DreamGUI.ListView.ClickingTheThirdRowSelectsItWithOneSelectionChangeAndOneClick",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamListsListViewClickSelectsTest, "DreamGUI.ListView.ClickingTheThirdRowSelectsItWithOneSelectionChangeAndOneClick", "[Pointer][Animated]")
 
 bool FDreamListsListViewClickSelectsTest::RunTest(const FString& Parameters)
 {
@@ -129,6 +130,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamListsListViewSingleModeMovesSelectionTest,
 	"DreamGUI.ListView.ClickingAnotherRowInSingleModeMovesTheSelectionInOneChange",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamListsListViewSingleModeMovesSelectionTest, "DreamGUI.ListView.ClickingAnotherRowInSingleModeMovesTheSelectionInOneChange", "[Pointer][Animated]")
 
 bool FDreamListsListViewSingleModeMovesSelectionTest::RunTest(const FString& Parameters)
 {
@@ -177,6 +179,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamListsListViewMultiModeAccumulatesTest,
 	"DreamGUI.ListView.ClickingTwoRowsInMultiModeKeepsBothSelected",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamListsListViewMultiModeAccumulatesTest, "DreamGUI.ListView.ClickingTwoRowsInMultiModeKeepsBothSelected", "[Pointer][Animated]")
 
 bool FDreamListsListViewMultiModeAccumulatesTest::RunTest(const FString& Parameters)
 {
@@ -212,6 +215,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamListsListViewWheelScrollsRowsTest,
 	"DreamGUI.ListView.ThreeWheelNotchesScrollThreeRowsAndFinishScrollingOnce",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamListsListViewWheelScrollsRowsTest, "DreamGUI.ListView.ThreeWheelNotchesScrollThreeRowsAndFinishScrollingOnce", "[Pointer][Animated]")
 
 bool FDreamListsListViewWheelScrollsRowsTest::RunTest(const FString& Parameters)
 {
@@ -266,6 +270,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamListsListViewWheelAfterRevealTest,
 	"DreamGUI.ListView.TheWheelAfterScrollingAnIndexIntoViewCarriesOnFromThere",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamListsListViewWheelAfterRevealTest, "DreamGUI.ListView.TheWheelAfterScrollingAnIndexIntoViewCarriesOnFromThere", "[Pointer][Animated]")
 
 bool FDreamListsListViewWheelAfterRevealTest::RunTest(const FString& Parameters)
 {
@@ -308,6 +313,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamListsListViewDoubleClickTest,
 	"DreamGUI.ListView.DoubleClickingARowAnnouncesOneDoubleClickAndSelectsItOnce",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamListsListViewDoubleClickTest, "DreamGUI.ListView.DoubleClickingARowAnnouncesOneDoubleClickAndSelectsItOnce", "[Pointer][Animated]")
 
 bool FDreamListsListViewDoubleClickTest::RunTest(const FString& Parameters)
 {
@@ -346,6 +352,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamListsListViewHoverTest,
 	"DreamGUI.ListView.HoveringARowAnnouncesItAndLeavingAnnouncesItAgain",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamListsListViewHoverTest, "DreamGUI.ListView.HoveringARowAnnouncesItAndLeavingAnnouncesItAgain", "[Pointer][Animated]")
 
 bool FDreamListsListViewHoverTest::RunTest(const FString& Parameters)
 {
@@ -392,6 +399,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamListsListViewNavigateDownTest,
 	"DreamGUI.ListView.NavigatingDownThreeTimesMovesTheSelectionThreeRowsDown",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamListsListViewNavigateDownTest, "DreamGUI.ListView.NavigatingDownThreeTimesMovesTheSelectionThreeRowsDown", "[Pointer][Nav][Animated]")
 
 bool FDreamListsListViewNavigateDownTest::RunTest(const FString& Parameters)
 {
@@ -435,6 +443,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamListsListViewNavigateBoundTest,
 	"DreamGUI.ListView.NavigatingDownPastTheLastRowLeavesTheSelectionOnTheLastRow",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamListsListViewNavigateBoundTest, "DreamGUI.ListView.NavigatingDownPastTheLastRowLeavesTheSelectionOnTheLastRow", "[Pointer][Nav][Animated]")
 
 bool FDreamListsListViewNavigateBoundTest::RunTest(const FString& Parameters)
 {
@@ -472,6 +481,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamListsListViewRemoveSelectedTest,
 	"DreamGUI.ListView.RemovingTheSelectedItemClearsTheSelectionAndSaysSoOnce",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamListsListViewRemoveSelectedTest, "DreamGUI.ListView.RemovingTheSelectedItemClearsTheSelectionAndSaysSoOnce", "[Pointer][Animated]")
 
 bool FDreamListsListViewRemoveSelectedTest::RunTest(const FString& Parameters)
 {
@@ -517,6 +527,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamListsListViewRecyclingTest,
 	"DreamGUI.ListView.ScrollingARowOutOfTheWindowReleasesItAndScrollingBackGeneratesItAgain",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamListsListViewRecyclingTest, "DreamGUI.ListView.ScrollingARowOutOfTheWindowReleasesItAndScrollingBackGeneratesItAgain", "[Pointer][Animated]")
 
 bool FDreamListsListViewRecyclingTest::RunTest(const FString& Parameters)
 {

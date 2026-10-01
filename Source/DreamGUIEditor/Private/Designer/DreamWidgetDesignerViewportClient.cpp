@@ -148,6 +148,113 @@ FDreamWidgetDesignerViewportClient::~FDreamWidgetDesignerViewportClient()
 	{
 		GEditor->GetTimerManager()->ClearTimer(FocusTimerHandle);
 	}
+	// A designer closed with an arrow still held would leave the nudge's transaction open behind it.
+	EndNudgeTransaction();
+}
+
+void FDreamWidgetDesignerViewportClient::FlushTemplateChangesNow()
+{
+	if (const TSharedPtr<FDreamWidgetBlueprintEditor> Designer = DesignerPtr.Pin())
+	{
+		if (const TSharedPtr<FDreamWidgetPreviewHost> Host = Designer->GetPreviewHost())
+		{
+			Host->FlushTemplateChanges();
+		}
+	}
+}
+
+void FDreamWidgetDesignerViewportClient::EndNudgeTransaction()
+{
+	NudgeKeysHeld.Reset();
+	if (!bNudgeTransactionOpen)
+	{
+		return;
+	}
+	bNudgeTransactionOpen = false;
+	// Inside the transaction: the asset's change and the .dui's are one undo step (see FinishDesignerDrag).
+	FlushTemplateChangesNow();
+	if (GEditor != nullptr)
+	{
+		GEditor->EndTransaction();
+	}
+}
+
+bool FDreamWidgetDesignerViewportClient::IsAuthoredPreviewWidget(const UDreamWidget* InWidget) const
+{
+	const TSharedPtr<FDreamWidgetBlueprintEditor> Designer = DesignerPtr.Pin();
+	const TSharedPtr<FDreamWidgetPreviewHost> Host = Designer.IsValid() ? Designer->GetPreviewHost() : nullptr;
+	return InWidget != nullptr && Host.IsValid() && Host->FindTemplateForPreview(InWidget) != nullptr;
+}
+
+void FDreamWidgetDesignerViewportClient::KeepTopmostWidgets(TArray<UDreamWidget*>& InOutWidgets, bool bInByLayoutAxes)
+{
+	if (InOutWidgets.Num() < 2)
+	{
+		return;
+	}
+	TSet<const UDreamWidget*> Selected;
+	Selected.Reserve(InOutWidgets.Num());
+	for (const UDreamWidget* Member : InOutWidgets)
+	{
+		Selected.Add(Member);
+	}
+	InOutWidgets.RemoveAll([&Selected, bInByLayoutAxes](const UDreamWidget* Member)
+	{
+		for (const UDreamWidget* Parent = Member != nullptr ? Member->GetParent() : nullptr; Parent != nullptr; Parent = Parent->GetParent())
+		{
+			if (!Selected.Contains(Parent))
+			{
+				continue;
+			}
+			if (!bInByLayoutAxes)
+			{
+				return true;
+			}
+			// On every axis the member would move by itself, the carrier moves too: its layout leaves it free there. A
+			// parent held in place on both axes -- in a vertical box -- carries nothing, and its free child moves alone.
+			const FDreamLayoutControlAnchorData Own = GetEffectiveLayoutControl(Member);
+			const FDreamLayoutControlAnchorData Carrier = GetEffectiveLayoutControl(Parent);
+			if ((Own.bCanControlHorizontalPosition || !Carrier.bCanControlHorizontalPosition)
+				&& (Own.bCanControlVerticalPosition || !Carrier.bCanControlVerticalPosition))
+			{
+				return true;
+			}
+		}
+		return false;
+	});
+}
+
+void FDreamWidgetDesignerViewportClient::ReduceMarqueeCatch(TArray<UDreamWidget*>& InOutCaught, const TSet<const UDreamWidget*>& InWhole)
+{
+	if (InOutCaught.Num() < 2)
+	{
+		return;
+	}
+	TSet<const UDreamWidget*> Caught;
+	Caught.Reserve(InOutCaught.Num());
+	// Every widget with something caught inside it.
+	TSet<const UDreamWidget*> HoldsACatch;
+	for (const UDreamWidget* Member : InOutCaught)
+	{
+		Caught.Add(Member);
+		for (const UDreamWidget* Parent = Member != nullptr ? Member->GetParent() : nullptr; Parent != nullptr; Parent = Parent->GetParent())
+		{
+			HoldsACatch.Add(Parent);
+		}
+	}
+	InOutCaught.RemoveAll([&Caught, &HoldsACatch, &InWhole](const UDreamWidget* Member)
+	{
+		// Inside a widget the box went all the way round: it goes along with that one.
+		for (const UDreamWidget* Parent = Member != nullptr ? Member->GetParent() : nullptr; Parent != nullptr; Parent = Parent->GetParent())
+		{
+			if (Caught.Contains(Parent) && InWhole.Contains(Parent))
+			{
+				return true;
+			}
+		}
+		// Only cut across, around something caught inside it: what the box was drawn around is that.
+		return !InWhole.Contains(Member) && HoldsACatch.Contains(Member);
+	});
 }
 
 
@@ -1417,6 +1524,8 @@ void FDreamWidgetDesignerViewportClient::ReceivedFocus(FViewport* InViewport)
 void FDreamWidgetDesignerViewportClient::LostFocus(FViewport* InViewport)
 {
 	if (bDesignerDragging)FinishDesignerDrag(true);
+	// An arrow held while the focus went never sends its release here.
+	EndNudgeTransaction();
 	bDesignerMarqueePending = false;
 	bDesignerMarqueeActive = false;
 	bRightMouseButtonDown = false;
@@ -1588,7 +1697,11 @@ void FDreamWidgetDesignerViewportClient::FinishDesignerMarquee()
 
 	TArray<UDreamWidget*> Widgets;
 	DreamUIWidgetPicking::CollectPickableWidgets(GetWorld(), Widgets);
+	// The asset's own widgets only: the canvas agent and the preview wrapper hold every other widget, so a marquee caught
+	// them every time, and a selection holding them is one every command acts on nothing in.
+	Widgets.RemoveAll([this](const UDreamWidget* Candidate) { return !IsAuthoredPreviewWidget(Candidate); });
 	TArray<UDreamWidget*> Caught;
+	TSet<const UDreamWidget*> Whole;
 	TArray<FVector2D> Corners;
 	for (UDreamWidget* Candidate : Widgets)
 	{
@@ -1597,7 +1710,10 @@ void FDreamWidgetDesignerViewportClient::FinishDesignerMarquee()
 		if (!IsValid(Candidate) || !Candidate->GetRenderVisibleInHierarchy())continue;
 		if (DesignerPtr.Pin()->IsWidgetLockedForInteraction(Candidate))continue;
 		if (!DreamProjectWidgetCorners(*View, Candidate, Corners))continue;
-		if (DoesMarqueeMeetQuad(Box, Corners))Caught.Add(Candidate);
+		// What the box was drawn ON holds all of it -- the root, a panel the drag started inside -- and is not caught.
+		if (!DoesMarqueeMeetQuad(Box, Corners) || DoesQuadHoldMarquee(Box, Corners))continue;
+		Caught.Add(Candidate);
+		if (DoesMarqueeHoldQuad(Box, Corners))Whole.Add(Candidate);
 	}
 
 	TArray<UDreamWidget*> Current;
@@ -1606,6 +1722,8 @@ void FDreamWidgetDesignerViewportClient::FinishDesignerMarquee()
 		if (UDreamWidget* SelectedWidget = WeakWidget.Get())Current.Add(SelectedWidget);
 	}
 	const EMarqueeMode Mode = IsCtrlPressed() ? EMarqueeMode::Add : (IsAltPressed() ? EMarqueeMode::Remove : EMarqueeMode::Replace);
+	// Selecting: what the box was drawn around (ReduceMarqueeCatch). Removing: everything it met, children included.
+	if (Mode != EMarqueeMode::Remove)ReduceMarqueeCatch(Caught, Whole);
 	TSet<UDreamWidget*> NewSelection;
 	CombineMarqueeSelection(Mode, Current, Caught, NewSelection);
 	// SelectWidgets' append mode toggles rather than adds, so the finished set is handed over whole
@@ -1622,6 +1740,8 @@ void FDreamWidgetDesignerViewportClient::SelectWidgetAtPixel(const FVector2D& In
 	if (!ComputePickRay(ClickPixel.X, ClickPixel.Y, LineStart, LineEnd))return;
 	TArray<UDreamWidget*> Widgets;
 	DreamUIWidgetPicking::CollectPickableWidgets(GetWorld(), Widgets);
+	// See FinishDesignerMarquee: the asset's own widgets only.
+	Widgets.RemoveAll([this](const UDreamWidget* Candidate) { return !IsAuthoredPreviewWidget(Candidate); });
 	// This path and ProcessClick share the one cycle index, so they have to share the rule that
 	// resets it -- a click here after a cycle there would otherwise resume that stack's depth.
 	IndexOfClickSelectUI = ResolveClickCycleIndex(LastClickPixel, ClickPixel, IndexOfClickSelectUI);
@@ -1645,6 +1765,9 @@ void FDreamWidgetDesignerViewportClient::BeginDesignerDrag(EDesignerHandle InHan
 			if (!DesignerPtr.Pin()->IsWidgetLockedForInteraction(SelectedWidget))Widgets.Add(SelectedWidget);
 		}
 	}
+	// A child selected with its parent moves with the parent, once: moved by its own delta too, it went twice as far. Unless
+	// the parent's layout holds it in place: then the child moves by itself.
+	KeepTopmostWidgets(Widgets, /*bInByLayoutAxes*/ true);
 	if (Widgets.IsEmpty())return;
 	if (HitHandle != EDesignerHandle::Move && Widgets.Num() != 1)return;
 
@@ -2047,6 +2170,13 @@ void FDreamWidgetDesignerViewportClient::FinishDesignerDrag(bool bCancel)
 	}
 	const bool bRolledBack = DesignerTransaction.IsValid() && (bCancel || !bDesignerChanged);
 	if (bRolledBack)DesignerTransaction->Cancel();
+	else if (DesignerTransaction.IsValid())
+	{
+		// The .dui the gesture changes, written while its transaction is still open: the asset's change and the file's
+		// are one undo step. Written after it closed, they were two, and one Ctrl+Z took the file back while the asset
+		// and the designer kept the move.
+		FlushTemplateChangesNow();
+	}
 	DesignerTransaction.Reset();
 	if (bRolledBack && !bBlueprintPackageWasDirtyBeforeDrag && DesignerPtr.IsValid())
 	{
@@ -2149,6 +2279,8 @@ void FDreamWidgetDesignerViewportClient::ProcessClick(FSceneView& View, HHitProx
 	const FVector LineEnd = RayOrigin + RayDirection * 100000000.0f;
 	TArray<UDreamWidget*> AllWidgetArray;
 	DreamUIWidgetPicking::CollectPickableWidgets(this->GetWorld(), AllWidgetArray);
+	// See FinishDesignerMarquee: the asset's own widgets only, which is also what click-cycling steps through.
+	AllWidgetArray.RemoveAll([this](const UDreamWidget* Candidate) { return !IsAuthoredPreviewWidget(Candidate); });
 	const FIntPoint ClickPixel((int32)HitX, (int32)HitY);
 	IndexOfClickSelectUI = ResolveClickCycleIndex(LastClickPixel, ClickPixel, IndexOfClickSelectUI);
 	LastClickPixel = ClickPixel;
@@ -2342,13 +2474,16 @@ void FDreamWidgetDesignerViewportClient::GetGizmoWidgets(TArray<UDreamWidget*>& 
 
 void FDreamWidgetDesignerViewportClient::ApplyDeltaToSelectedWidgets(const FVector& Drag, const FRotator& Rot, const FVector& Scale)
 {
-	TArray<UDreamWidget*> Widgets;
-	GetGizmoWidgets(Widgets);
-	if (Widgets.IsEmpty())return;
 	const bool bHasDrag = !Drag.IsNearlyZero();
 	const bool bHasRot = !Rot.IsNearlyZero();
 	const bool bHasScale = !Scale.IsNearlyZero();
 	if (!bHasDrag && !bHasRot && !bHasScale)return;
+	TArray<UDreamWidget*> Widgets;
+	GetGizmoWidgets(Widgets);
+	// A child selected with its parent is carried by the parent's move; see BeginDesignerDrag. A translation is put back
+	// by the layout that places the parent, so it carries only where the parent is free; a turn or a scale, always.
+	KeepTopmostWidgets(Widgets, /*bInByLayoutAxes*/ bHasDrag && !bHasRot && !bHasScale);
+	if (Widgets.IsEmpty())return;
 
 	// Rotation and scale pivot on the gizmo, which sits at the selection's centre; with one widget
 	// selected that centre is its own origin, so both cases fall out of the same code.
@@ -2767,16 +2902,12 @@ void FDreamWidgetDesignerViewportClient::NudgeSelectedObjects(const struct FInpu
 	// underneath is as likely to be the designer drag's, which would lose the ability to cancel.
 	if (Event == IE_Released)
 	{
-		if (bNudgeTransactionOpen)
+		// The gesture ends with the release of the last arrow held, and writes what the repeats mirrored onto the
+		// template inside its own transaction (EndNudgeTransaction).
+		NudgeKeysHeld.Remove(Key);
+		if (NudgeKeysHeld.IsEmpty())
 		{
-			bNudgeTransactionOpen = false;
-			GEditor->EndTransaction();
-		}
-		// The end of this gesture, and the flush point for what the repeats mirrored onto the
-		// template. After the transaction closes, exactly where TrackingStopped puts it.
-		if (TSharedPtr<FDreamWidgetPreviewHost> Host = DesignerPtr.Pin()->GetPreviewHost())
-		{
-			Host->FlushTemplateChanges();
+			EndNudgeTransaction();
 		}
 		RedrawAllViewportsIntoThisScene();
 		return;
@@ -2794,6 +2925,8 @@ void FDreamWidgetDesignerViewportClient::NudgeSelectedObjects(const struct FInpu
 			Movable.Add(SelectedWidget);
 		}
 	}
+	// See BeginDesignerDrag: a child is carried by a selected parent only where the parent's layout lets it move.
+	KeepTopmostWidgets(Movable, /*bInByLayoutAxes*/ true);
 	// Before the transaction, not after: an opened-and-closed transaction is an undo step, and the
 	// prefab is dirtied by opening it, for a nudge whose every write the next arrange discards.
 	if (Movable.IsEmpty())return;
@@ -2806,8 +2939,13 @@ void FDreamWidgetDesignerViewportClient::NudgeSelectedObjects(const struct FInpu
 		// The transaction only. The widgets in Movable are the PREVIEW's and are not recorded --
 		// the CommitWidgetGeometryToTemplate below runs on this same press, before the template has
 		// been written, so its Modify is what snapshots the pre-nudge geometry into this entry.
-		GEditor->BeginTransaction(LOCTEXT("MoveWidget", "Move Widget"));
-		bNudgeTransactionOpen = true;
+		// One for the gesture, however many arrows it holds at once.
+		NudgeKeysHeld.Add(Key);
+		if (!bNudgeTransactionOpen)
+		{
+			GEditor->BeginTransaction(LOCTEXT("MoveWidget", "Move Widget"));
+			bNudgeTransactionOpen = true;
+		}
 	}
 
 	if (Event == IE_Pressed || Event == IE_Repeat)
@@ -3313,6 +3451,37 @@ bool FDreamWidgetDesignerViewportClient::DoesMarqueeMeetQuad(const FBox2D& InMar
 			QuadMax = FMath::Max(QuadMax, Projected);
 		}
 		if (BoxMax < QuadMin || QuadMax < BoxMin)return false;
+	}
+	return true;
+}
+
+bool FDreamWidgetDesignerViewportClient::DoesMarqueeHoldQuad(const FBox2D& InMarquee, TConstArrayView<FVector2D> InQuad)
+{
+	if (!InMarquee.bIsValid || InQuad.Num() != 4)return false;
+	for (const FVector2D& Corner : InQuad)
+	{
+		if (!InMarquee.IsInsideOrOn(Corner))return false;
+	}
+	return true;
+}
+
+bool FDreamWidgetDesignerViewportClient::DoesQuadHoldMarquee(const FBox2D& InMarquee, TConstArrayView<FVector2D> InQuad)
+{
+	if (!InMarquee.bIsValid || InQuad.Num() != 4)return false;
+	const FVector2D BoxCorners[4] = { InMarquee.Min, FVector2D(InMarquee.Max.X, InMarquee.Min.Y), InMarquee.Max, FVector2D(InMarquee.Min.X, InMarquee.Max.Y) };
+	// Every corner of the box on the same side of every edge of the quad: inside it, whichever way round the ring runs.
+	for (const FVector2D& Point : BoxCorners)
+	{
+		bool bAnyLeft = false;
+		bool bAnyRight = false;
+		for (int32 Index = 0; Index < 4; ++Index)
+		{
+			const FVector2D& From = InQuad[Index];
+			const double Side = FVector2D::CrossProduct(InQuad[(Index + 1) % 4] - From, Point - From);
+			bAnyLeft |= Side > UE_KINDA_SMALL_NUMBER;
+			bAnyRight |= Side < -UE_KINDA_SMALL_NUMBER;
+		}
+		if (bAnyLeft == bAnyRight)return false;
 	}
 	return true;
 }
@@ -3854,6 +4023,24 @@ void FDreamWidgetDesignerViewportClient::MouseLeave(FViewport* InViewport)
 
 void FDreamWidgetDesignerViewportClient::TrackingStarted(const struct FInputEventState& InInputState, bool bIsDraggingWidget, bool bNudge)
 {
+	// What Esc puts back. The transaction cannot: the gizmo moves the PREVIEW's widgets, which record nothing, and the
+	// engine's abort only applies the transaction before cancelling it.
+	bGizmoTrackingAborted = false;
+	GizmoTrackingSnapshots.Reset();
+	if (bIsDraggingWidget)
+	{
+		TArray<UDreamWidget*> Dragged;
+		GetGizmoWidgets(Dragged);
+		for (UDreamWidget* DraggedWidget : Dragged)
+		{
+			FGizmoTrackingSnapshot& Snapshot = GizmoTrackingSnapshots.AddDefaulted_GetRef();
+			Snapshot.Widget = DraggedWidget;
+			Snapshot.RelativeLocation = DraggedWidget->GetRelativeLocation();
+			Snapshot.RelativeRotation = DraggedWidget->GetRelativeRotation();
+			Snapshot.RelativeScale = DraggedWidget->GetRelativeScale();
+		}
+	}
+
 	// Begin transacting.  Give the current editor mode an opportunity to do the transacting.
 	const bool bTrackingHandledExternally = ModeTools->StartTracking(this, Viewport);
 
@@ -4035,7 +4222,7 @@ void FDreamWidgetDesignerViewportClient::TrackingStopped()
 	// Gated the same way the move notification above is: TransCount only rises when the gizmo itself
 	// was grabbed (TrackingStarted's bIsDraggingWidget), so a camera orbit with a widget selected
 	// does not mirror -- and therefore does not dirty the asset for having looked at it.
-	if (bDidAnythingActuallyChange && MouseDeltaTracker->HasReceivedDelta() && DesignerPtr.IsValid())
+	if (bDidAnythingActuallyChange && MouseDeltaTracker->HasReceivedDelta() && DesignerPtr.IsValid() && !bGizmoTrackingAborted)
 	{
 		TArray<UDreamWidget*> MovedWidgets;
 		GetGizmoWidgets(MovedWidgets);
@@ -4048,12 +4235,14 @@ void FDreamWidgetDesignerViewportClient::TrackingStopped()
 	// End the transaction here if one was started in StartTransaction()
 	if (TrackingTransaction.IsActive() || TrackingTransaction.IsPending())
 	{
-		if (!HaveSelectedObjectsBeenChanged())
+		if (!HaveSelectedObjectsBeenChanged() || bGizmoTrackingAborted)
 		{
 			TrackingTransaction.Cancel();
 		}
 		else
 		{
+			// See FinishDesignerDrag: the .dui written inside the gesture's own undo step.
+			FlushTemplateChangesNow();
 			TrackingTransaction.End();
 		}
 
@@ -4063,8 +4252,8 @@ void FDreamWidgetDesignerViewportClient::TrackingStopped()
 
 	ModeTools->ActorMoveNotify();
 
-	// The gizmo writes location, rotation and scale, so key all three.
-	if (MouseDeltaTracker->HasReceivedDelta())
+	// The gizmo writes location, rotation and scale, so key all three -- unless Esc took the drag back.
+	if (MouseDeltaTracker->HasReceivedDelta() && !bGizmoTrackingAborted)
 	{
 		TArray<UDreamWidget*> MovedWidgets;
 		GetGizmoWidgets(MovedWidgets);
@@ -4093,12 +4282,27 @@ void FDreamWidgetDesignerViewportClient::TrackingStopped()
 			Host->FlushTemplateChanges();
 		}
 	}
+	bGizmoTrackingAborted = false;
+	GizmoTrackingSnapshots.Reset();
 }
 
 void FDreamWidgetDesignerViewportClient::AbortTracking()
 {
+	EndNudgeTransaction();
 	if (TrackingTransaction.IsActive())
 	{
+		// The drag's widgets as they were when it began (TrackingStarted), and nothing of it committed by the
+		// TrackingStopped that StopTracking below runs: Esc in the level editor takes a gizmo drag back.
+		for (const FGizmoTrackingSnapshot& Snapshot : GizmoTrackingSnapshots)
+		{
+			if (UDreamWidget* DraggedWidget = Snapshot.Widget.Get())
+			{
+				DraggedWidget->SetRelativeLocation(Snapshot.RelativeLocation);
+				DraggedWidget->SetRelativeRotation(Snapshot.RelativeRotation);
+				DraggedWidget->SetRelativeScale(Snapshot.RelativeScale);
+			}
+		}
+		bGizmoTrackingAborted = !GizmoTrackingSnapshots.IsEmpty();
 		// Applying the global undo here will reset the drag operation
 		if (GUndo)
 		{

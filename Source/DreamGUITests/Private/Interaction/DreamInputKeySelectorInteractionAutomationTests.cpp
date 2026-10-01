@@ -44,6 +44,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamInputKeySelectorBindsTheNextKeyTest,
 	"DreamGUI.InputKeySelector.ClickingArmsItAndTheNextKeyPressedBecomesTheBinding",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamInputKeySelectorBindsTheNextKeyTest, "DreamGUI.InputKeySelector.ClickingArmsItAndTheNextKeyPressedBecomesTheBinding", "[Pointer][Text][Animated]")
 
 bool FDreamInputKeySelectorBindsTheNextKeyTest::RunTest(const FString& Parameters)
 {
@@ -76,6 +77,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamInputKeySelectorEscapeCancelsTest,
 	"DreamGUI.InputKeySelector.EscapeWhileArmedCancelsAndKeepsTheKeyItHad",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamInputKeySelectorEscapeCancelsTest, "DreamGUI.InputKeySelector.EscapeWhileArmedCancelsAndKeepsTheKeyItHad", "[Pointer][Text][Animated]")
 
 bool FDreamInputKeySelectorEscapeCancelsTest::RunTest(const FString& Parameters)
 {
@@ -113,6 +115,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamInputKeySelectorChordTest,
 	"DreamGUI.InputKeySelector.AKeyPressedWithShiftHeldIsBoundAsAChord",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamInputKeySelectorChordTest, "DreamGUI.InputKeySelector.AKeyPressedWithShiftHeldIsBoundAsAChord", "[Pointer][Text][Animated]")
 
 bool FDreamInputKeySelectorChordTest::RunTest(const FString& Parameters)
 {

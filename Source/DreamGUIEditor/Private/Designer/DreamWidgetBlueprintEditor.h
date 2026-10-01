@@ -511,6 +511,16 @@ private:
 	/** Class Defaults edits (the resources block) reach the file through this; see InitDesigner. */
 	FDelegateHandle DefaultsChangedHandle;
 	/**
+	 * TextWriteBack bound to the file the asset names NOW. Made once, when the designer opened, it kept writing the file of
+	 * that moment: Create Source File left a designer that had none writing nowhere, and Set Source File left one writing
+	 * the old file -- rewritten into the new file's shape by the next gesture. Called on opening and on every change of the
+	 * Blueprint, a compile included, which is how a new source path arrives.
+	 */
+	void SyncTextWriteBackToSource();
+protected:
+	virtual void OnBlueprintChangedImpl(UBlueprint* InBlueprint, bool bIsJustBeingCompiled = false) override;
+private:
+	/**
 	 * Package-save hook, so the designer's view state is captured by EVERY save of this asset.
 	 *
 	 * SaveAsset_Execute is only the toolkit's own Save button. Save All, Ctrl+Shift+S, the
@@ -594,6 +604,8 @@ public:
 	 */
 	bool CanUnwrapSelectedWidget() const;
 	void UnwrapSelectedWidget();
+	/** The .dui the designer writes its edits to; empty when it writes none (SyncTextWriteBackToSource). */
+	FString GetTextWriteBackFilePath() const;
 	/**
 	 * Find everything that names the selected widget: the Blueprint's own graphs, and the project.
 	 *

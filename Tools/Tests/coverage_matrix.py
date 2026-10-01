@@ -272,14 +272,18 @@ def render(result, inputs, configs, heuristic):
 
 
 def write_doc(text):
-    with open(DOC, 'r', encoding='utf-8') as f:
+    # Read and written with the line endings the file has (the repository's are CRLF): read in text mode they came in
+    # as LF, and written back as LF every line of the document became a change.
+    with open(DOC, 'r', encoding='utf-8', newline='') as f:
         doc = f.read()
+    eol = '\r\n' if '\r\n' in doc else '\n'
+    doc = doc.replace('\r\n', '\n')
     a, b = doc.find(BEGIN_MARK), doc.find(END_MARK)
     if a < 0 or b < a:
         raise ValueError('%s has no %s ... %s section' % (DOC, BEGIN_MARK, END_MARK))
     doc = doc[:a + len(BEGIN_MARK)] + '\n' + text + '\n' + doc[b:]
-    with open(DOC, 'w', encoding='utf-8', newline='\n') as f:
-        f.write(doc)
+    with open(DOC, 'w', encoding='utf-8', newline='') as f:
+        f.write(doc.replace('\n', eol))
 
 
 def main(argv=None):

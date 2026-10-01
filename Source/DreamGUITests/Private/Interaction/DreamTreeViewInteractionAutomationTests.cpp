@@ -102,6 +102,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamListsTreeViewTwistyTest,
 	"DreamGUI.TreeView.ClickingATwistyExpandsItsParentAndClickingItAgainCollapsesIt",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamListsTreeViewTwistyTest, "DreamGUI.TreeView.ClickingATwistyExpandsItsParentAndClickingItAgainCollapsesIt", "[Pointer][Animated]")
 
 bool FDreamListsTreeViewTwistyTest::RunTest(const FString& Parameters)
 {
@@ -165,6 +166,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamListsTreeViewRowBodyTest,
 	"DreamGUI.TreeView.ClickingAParentRowAwayFromItsTwistySelectsItWithoutExpandingIt",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamListsTreeViewRowBodyTest, "DreamGUI.TreeView.ClickingAParentRowAwayFromItsTwistySelectsItWithoutExpandingIt", "[Pointer][Animated]")
 
 bool FDreamListsTreeViewRowBodyTest::RunTest(const FString& Parameters)
 {
@@ -201,6 +203,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamListsTreeViewChildClickTest,
 	"DreamGUI.TreeView.ClickingAChildAfterExpandingSelectsTheChildAndNotItsParent",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamListsTreeViewChildClickTest, "DreamGUI.TreeView.ClickingAChildAfterExpandingSelectsTheChildAndNotItsParent", "[Pointer][Animated]")
 
 bool FDreamListsTreeViewChildClickTest::RunTest(const FString& Parameters)
 {
@@ -250,6 +253,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamListsTreeViewNavigateExpandTest,
 	"DreamGUI.TreeView.NavigatingRightOpensACollapsedParentAndLeftClosesIt",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamListsTreeViewNavigateExpandTest, "DreamGUI.TreeView.NavigatingRightOpensACollapsedParentAndLeftClosesIt", "[Pointer][Nav][Animated]")
 
 bool FDreamListsTreeViewNavigateExpandTest::RunTest(const FString& Parameters)
 {

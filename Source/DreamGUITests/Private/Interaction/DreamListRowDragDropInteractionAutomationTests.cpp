@@ -153,6 +153,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamListsRowDragDropOntoRowTest,
 	"DreamGUI.ListRowDragDrop.DraggingTheSecondRowOntoTheFifthAnnouncesOneDropCarryingTheSecondItem",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamListsRowDragDropOntoRowTest, "DreamGUI.ListRowDragDrop.DraggingTheSecondRowOntoTheFifthAnnouncesOneDropCarryingTheSecondItem", "[Pointer][Animated]")
 
 bool FDreamListsRowDragDropOntoRowTest::RunTest(const FString& Parameters)
 {
@@ -207,6 +208,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamListsRowDragDropOutsideTest,
 	"DreamGUI.ListRowDragDrop.ReleasingADraggedRowOutsideTheListCancelsItAndKeepsTheOrder",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamListsRowDragDropOutsideTest, "DreamGUI.ListRowDragDrop.ReleasingADraggedRowOutsideTheListCancelsItAndKeepsTheOrder", "[Pointer][Animated]")
 
 bool FDreamListsRowDragDropOutsideTest::RunTest(const FString& Parameters)
 {
@@ -265,6 +267,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamListsRowDragEdgeScrollTest,
 	"DreamGUI.ListRowDragDrop.HoldingADraggedRowInTheBottomEdgeBandScrollsTheListDown",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamListsRowDragEdgeScrollTest, "DreamGUI.ListRowDragDrop.HoldingADraggedRowInTheBottomEdgeBandScrollsTheListDown", "[Pointer][Animated]")
 
 bool FDreamListsRowDragEdgeScrollTest::RunTest(const FString& Parameters)
 {
@@ -311,6 +314,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamListsRowDragEdgeScrollLeavesBandTest,
 	"DreamGUI.ListRowDragDrop.MovingTheDragBackToTheMiddleStopsTheEdgeScroll",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamListsRowDragEdgeScrollLeavesBandTest, "DreamGUI.ListRowDragDrop.MovingTheDragBackToTheMiddleStopsTheEdgeScroll", "[Pointer][Animated]")
 
 bool FDreamListsRowDragEdgeScrollLeavesBandTest::RunTest(const FString& Parameters)
 {
@@ -352,6 +356,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamListsRowDragEdgeScrollReleaseTest,
 	"DreamGUI.ListRowDragDrop.LettingGoInTheEdgeBandStopsTheEdgeScroll",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamListsRowDragEdgeScrollReleaseTest, "DreamGUI.ListRowDragDrop.LettingGoInTheEdgeBandStopsTheEdgeScroll", "[Pointer][Animated]")
 
 bool FDreamListsRowDragEdgeScrollReleaseTest::RunTest(const FString& Parameters)
 {
@@ -392,6 +397,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamListsRowDragEdgeScrollSwitchTest,
 	"DreamGUI.ListRowDragDrop.WithEdgeScrollingSwitchedOffADragHeldInTheBandDoesNotScroll",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamListsRowDragEdgeScrollSwitchTest, "DreamGUI.ListRowDragDrop.WithEdgeScrollingSwitchedOffADragHeldInTheBandDoesNotScroll", "[Pointer][Animated]")
 
 bool FDreamListsRowDragEdgeScrollSwitchTest::RunTest(const FString& Parameters)
 {

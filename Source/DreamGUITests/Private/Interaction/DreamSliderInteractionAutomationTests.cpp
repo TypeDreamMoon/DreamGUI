@@ -88,6 +88,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamSliderInteractionDragHalfwayTest,
 	"DreamGUI.Slider.DraggingTheHandleHalfwayAlongItsTravelMovesTheValueHalfway",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamSliderInteractionDragHalfwayTest, "DreamGUI.Slider.DraggingTheHandleHalfwayAlongItsTravelMovesTheValueHalfway", "[Pointer][Animated]")
 
 bool FDreamSliderInteractionDragHalfwayTest::RunTest(const FString& Parameters)
 {
@@ -142,6 +143,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamSliderInteractionClickTrackTest,
 	"DreamGUI.Slider.ClickingTheTrackThreeQuartersAlongJumpsTheValueThere",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamSliderInteractionClickTrackTest, "DreamGUI.Slider.ClickingTheTrackThreeQuartersAlongJumpsTheValueThere", "[Pointer][Animated]")
 
 bool FDreamSliderInteractionClickTrackTest::RunTest(const FString& Parameters)
 {
@@ -189,6 +191,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamSliderInteractionMouseStepTest,
 	"DreamGUI.Slider.DraggingWithMouseUsesStepOnLandsOnTheNearestStep",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamSliderInteractionMouseStepTest, "DreamGUI.Slider.DraggingWithMouseUsesStepOnLandsOnTheNearestStep", "[Pointer][Animated]")
 
 bool FDreamSliderInteractionMouseStepTest::RunTest(const FString& Parameters)
 {
@@ -248,6 +251,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamSliderInteractionDragPastEndTest,
 	"DreamGUI.Slider.DraggingPastTheEndOfTheTrackPinsTheValueAtTheMaximum",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamSliderInteractionDragPastEndTest, "DreamGUI.Slider.DraggingPastTheEndOfTheTrackPinsTheValueAtTheMaximum", "[Pointer][Animated]")
 
 bool FDreamSliderInteractionDragPastEndTest::RunTest(const FString& Parameters)
 {
@@ -292,6 +296,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamSliderInteractionLockedTest,
 	"DreamGUI.Slider.ALockedSliderIgnoresADragAndSaysNothing",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamSliderInteractionLockedTest, "DreamGUI.Slider.ALockedSliderIgnoresADragAndSaysNothing", "[Pointer][Animated]")
 
 bool FDreamSliderInteractionLockedTest::RunTest(const FString& Parameters)
 {
@@ -338,6 +343,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamSliderInteractionVerticalTest,
 	"DreamGUI.Slider.DraggingAVerticalSlidersHandleUpwardRaisesTheValue",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamSliderInteractionVerticalTest, "DreamGUI.Slider.DraggingAVerticalSlidersHandleUpwardRaisesTheValue", "[Pointer][Animated]")
 
 bool FDreamSliderInteractionVerticalTest::RunTest(const FString& Parameters)
 {
@@ -390,6 +396,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamSliderInteractionWheelTest,
 	"DreamGUI.Slider.TurningTheWheelOverASliderLeavesItsValueAlone",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamSliderInteractionWheelTest, "DreamGUI.Slider.TurningTheWheelOverASliderLeavesItsValueAlone", "[Pointer][Animated]")
 
 bool FDreamSliderInteractionWheelTest::RunTest(const FString& Parameters)
 {

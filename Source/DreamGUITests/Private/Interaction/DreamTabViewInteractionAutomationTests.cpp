@@ -84,6 +84,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamPressTabViewSwitchTest,
 	"DreamGUI.TabView.ClickingTheThirdTabOpensItAndSaysSoOnce",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamPressTabViewSwitchTest, "DreamGUI.TabView.ClickingTheThirdTabOpensItAndSaysSoOnce", "[Pointer][Animated]")
 
 bool FDreamPressTabViewSwitchTest::RunTest(const FString& Parameters)
 {
@@ -111,6 +112,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamPressTabViewReclickTest,
 	"DreamGUI.TabView.ClickingTheOpenTabAgainChangesNothingAndSaysNothing",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamPressTabViewReclickTest, "DreamGUI.TabView.ClickingTheOpenTabAgainChangesNothingAndSaysNothing", "[Pointer][Animated]")
 
 bool FDreamPressTabViewReclickTest::RunTest(const FString& Parameters)
 {
@@ -147,6 +149,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamPressTabViewCloseTest,
 	"DreamGUI.TabView.ClickingTheOpenTabsCloseButtonClosesItAndOpensItsRightNeighbour",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamPressTabViewCloseTest, "DreamGUI.TabView.ClickingTheOpenTabsCloseButtonClosesItAndOpensItsRightNeighbour", "[Pointer][Animated]")
 
 bool FDreamPressTabViewCloseTest::RunTest(const FString& Parameters)
 {
@@ -192,6 +195,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamPressTabViewReorderTest,
 	"DreamGUI.TabView.DraggingTheFirstTabOntoTheThirdMovesItThereAndSaysSoOnce",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamPressTabViewReorderTest, "DreamGUI.TabView.DraggingTheFirstTabOntoTheThirdMovesItThereAndSaysSoOnce", "[Pointer][Animated]")
 
 bool FDreamPressTabViewReorderTest::RunTest(const FString& Parameters)
 {

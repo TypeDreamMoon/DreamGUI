@@ -78,8 +78,12 @@ public:
 	void SetBrush_SlateSprite(TScriptInterface<ISlateTextureAtlasInterface> Value);
 	UFUNCTION(BlueprintCallable, Category = "Image")
 	void SetBrush_Texture(UTexture* Value);
-	UFUNCTION(BlueprintCallable, Category = "Image")
+	/** Takes a texture, which is what its name says it does not: SetBrushFromMaterial takes the material. Kept so that the Blueprints calling it still compile, and still do what they did. */
+	UFUNCTION(BlueprintCallable, Category = "Image", meta = (DeprecatedFunction, DeprecationMessage = "Takes a texture by mistake. Use SetBrushFromMaterial to draw the brush with a material, or SetBrush_Texture for a texture."))
 	void SetBrush_Material(UTexture* Value);
+	/** Draws the brush with InMaterial, UMG's SetBrushFromMaterial. Null leaves the brush with nothing to draw. */
+	UFUNCTION(BlueprintCallable, Category = "Image")
+	void SetBrushFromMaterial(UMaterialInterface* InMaterial);
 	
 	UFUNCTION(BlueprintCallable, Category = "Image")
 	void SetBrushTintColor(FColor Value);

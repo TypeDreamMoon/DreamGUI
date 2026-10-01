@@ -98,6 +98,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamPressRadioExclusiveTest,
 	"DreamGUI.RadioButton.ClickingAnotherRadioInTheGroupSelectsItAndDeselectsTheOldOne",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamPressRadioExclusiveTest, "DreamGUI.RadioButton.ClickingAnotherRadioInTheGroupSelectsItAndDeselectsTheOldOne", "[Pointer][Animated]")
 
 bool FDreamPressRadioExclusiveTest::RunTest(const FString& Parameters)
 {
@@ -140,6 +141,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamPressRadioReclickTest,
 	"DreamGUI.RadioButton.ClickingTheChosenRadioAgainKeepsItChosenAndSaysNothing",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamPressRadioReclickTest, "DreamGUI.RadioButton.ClickingTheChosenRadioAgainKeepsItChosenAndSaysNothing", "[Pointer][Animated]")
 
 bool FDreamPressRadioReclickTest::RunTest(const FString& Parameters)
 {
@@ -172,6 +174,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamPressRadioSeparateGroupsTest,
 	"DreamGUI.RadioButton.AClickInOneGroupLeavesAnotherGroupsChoiceAlone",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamPressRadioSeparateGroupsTest, "DreamGUI.RadioButton.AClickInOneGroupLeavesAnotherGroupsChoiceAlone", "[Pointer][Animated]")
 
 bool FDreamPressRadioSeparateGroupsTest::RunTest(const FString& Parameters)
 {

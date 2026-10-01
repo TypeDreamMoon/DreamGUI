@@ -72,6 +72,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamPressToggleClickFlipsTest,
 	"DreamGUI.Toggle.EachClickFlipsTheCheckAndAnnouncesTheNewState",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamPressToggleClickFlipsTest, "DreamGUI.Toggle.EachClickFlipsTheCheckAndAnnouncesTheNewState", "[Pointer][Animated]")
 
 bool FDreamPressToggleClickFlipsTest::RunTest(const FString& Parameters)
 {
@@ -110,6 +111,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamPressToggleUndeterminedClickTest,
 	"DreamGUI.Toggle.ClickingAnUndeterminedToggleUnchecksItAsUMGsCheckBoxDoes",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamPressToggleUndeterminedClickTest, "DreamGUI.Toggle.ClickingAnUndeterminedToggleUnchecksItAsUMGsCheckBoxDoes", "[Pointer][Animated]")
 
 bool FDreamPressToggleUndeterminedClickTest::RunTest(const FString& Parameters)
 {
@@ -146,6 +148,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamPressToggleRightClickTest,
 	"DreamGUI.Toggle.ARightClickDoesNotFlipTheToggle",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamPressToggleRightClickTest, "DreamGUI.Toggle.ARightClickDoesNotFlipTheToggle", "[Pointer][Animated]")
 
 bool FDreamPressToggleRightClickTest::RunTest(const FString& Parameters)
 {
@@ -174,6 +177,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamPressToggleDisabledTest,
 	"DreamGUI.Toggle.ClickingADisabledToggleChangesNothingAndSaysNothing",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamPressToggleDisabledTest, "DreamGUI.Toggle.ClickingADisabledToggleChangesNothingAndSaysNothing", "[Pointer][Disabled]")
 
 bool FDreamPressToggleDisabledTest::RunTest(const FString& Parameters)
 {

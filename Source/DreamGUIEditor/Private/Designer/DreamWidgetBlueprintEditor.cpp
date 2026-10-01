@@ -471,33 +471,7 @@ void FDreamWidgetBlueprintEditor::InitDesigner(const EToolkitMode::Type Mode, co
 	// For a text-authored asset, hook the designer's edits up to the file they came from. Without
 	// this the host still marks itself dirty and still broadcasts on every flush -- it just does it
 	// to nobody, and the panel looks like it is editing the .dui while nothing reaches the disk.
-	{
-		const FString AuthoredPath = DreamUITextAuthoring::GetAuthoredSourcePath(BlueprintBeingEdited);
-		if (!AuthoredPath.IsEmpty())
-		{
-			const FString AbsolutePath = UDreamTextUserWidget::ResolveDuiFilePath(AuthoredPath);
-			FString WriteBackError;
-			TextWriteBack = FDreamUITextWriteBack::Create(AbsolutePath, PreviewHost, WriteBackError);
-			if (!TextWriteBack.IsValid())
-			{
-				// Loud, and not fatal: the designer is still worth opening on a file that cannot be
-				// read, and refusing to open it would leave the author with no way to look at the
-				// asset at all.
-				UE_LOG(DreamGUIEditor, Error, TEXT("[%s].%d Designer edits will not reach '%s': %s"),
-					ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *AbsolutePath, *WriteBackError);
-			}
-			else
-			{
-				// The resources block compiles into Class Defaults, so the panel that edits those is
-				// the stock Kismet one -- no notify hook of ours anywhere near it. The global
-				// property-changed broadcast is the one place such an edit is visible, filtered hard:
-				// this fires for every property change in the process, so everything short of "our
-				// CDO, committed" has to leave in one compare.
-				DefaultsChangedHandle = FCoreUObjectDelegates::OnObjectPropertyChanged.AddSP(
-					this, &FDreamWidgetBlueprintEditor::OnAnyObjectPropertyChanged);
-			}
-		}
-	}
+	SyncTextWriteBackToSource();
 
 	// Every write of this asset records the designer's view state first, not just the toolkit's own
 	// Save button. See PreSaveHandle.
@@ -1152,10 +1126,12 @@ bool FDreamWidgetBlueprintEditor::CanUnwrapSelectedWidget() const
 		return false;
 	}
 	UDreamWidget* Parent = Template->GetParent();
-	const int32 ChildCount = Template->GetChildren().Num();
-	return IsValid(Parent) && ChildCount > 0
-		// The wrapper leaves as its children arrive, so the parent needs room for the difference only.
-		&& Parent->CanAcceptAdditionalChildren(ChildCount - 1);
+	const TArray<UDreamWidget*>& Children = Template->GetChildren();
+	// The children arrive while the wrapper still holds its place -- it is deleted after they have moved -- so the parent
+	// needs room for all of them beside it. Asked for the difference only, a single-child parent always answered yes,
+	// and the unwrap was offered and then refused, or half done.
+	return IsValid(Parent) && Children.Num() > 0
+		&& Parent->CanAcceptChildren(TConstArrayView<UDreamWidget*>(Children));
 }
 
 void FDreamWidgetBlueprintEditor::UnwrapSelectedWidget()
@@ -1194,11 +1170,15 @@ void FDreamWidgetBlueprintEditor::UnwrapSelectedWidget()
 	if (Moved.Num() != Children.Num())
 	{
 		// A partial unwrap would leave the wrapper holding what would not move while its siblings
-		// stood outside it, which is a shape nobody asked for. The transaction is still open, so
-		// cancelling it puts every reparent back.
+		// stood outside it, which is a shape nobody asked for. Moved back by hand: cancelling the transaction drops it
+		// without putting back anything it recorded (UTransBuffer::Cancel), which left the moves made and no undo step.
 		UE_LOG(DreamGUIEditor, Error, TEXT("[%s].%d '%s' took only %d of %d children; the unwrap was abandoned."),
 			ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *Parent->GetDisplayName(), Moved.Num(), Children.Num());
-		GEditor->CancelTransaction(0);
+		// In the order they left, each to the index it had: by then everything before it is back in place, or never left.
+		for (UDreamWidget* Child : Moved)
+		{
+			DreamWidgetTreeEditing::ReparentWidget(BlueprintBeingEdited, Child, Wrapper, Children.IndexOfByKey(Child));
+		}
 		RebuildPreviewPreservingSelection();
 		return;
 	}
@@ -1652,6 +1632,66 @@ bool FDreamWidgetBlueprintEditor::IsPreviewingScreenSpace()const
 	return IsValid(RootCanvas) && RootCanvas->GetRenderMode() == EDreamRenderMode::ScreenSpaceOverlay;
 }
 
+void FDreamWidgetBlueprintEditor::SyncTextWriteBackToSource()
+{
+	if (!IsValid(BlueprintBeingEdited) || !PreviewHost.IsValid())
+	{
+		return;
+	}
+	const FString AuthoredPath = DreamUITextAuthoring::GetAuthoredSourcePath(BlueprintBeingEdited);
+	FString AbsolutePath = AuthoredPath.IsEmpty() ? FString() : UDreamTextUserWidget::ResolveDuiFilePath(AuthoredPath);
+	FPaths::NormalizeFilename(AbsolutePath);
+	FString BoundPath = TextWriteBack.IsValid() ? TextWriteBack->GetFilePath() : FString();
+	FPaths::NormalizeFilename(BoundPath);
+	if (TextWriteBack.IsValid() == !AbsolutePath.IsEmpty() && AbsolutePath.Equals(BoundPath, ESearchCase::IgnoreCase))
+	{
+		return;
+	}
+	// The old one goes first: it unsubscribes from the host as it goes, and the Class Defaults hook goes with it.
+	if (DefaultsChangedHandle.IsValid())
+	{
+		FCoreUObjectDelegates::OnObjectPropertyChanged.Remove(DefaultsChangedHandle);
+		DefaultsChangedHandle.Reset();
+	}
+	TextWriteBack.Reset();
+	if (AbsolutePath.IsEmpty())
+	{
+		return;
+	}
+	FString WriteBackError;
+	TextWriteBack = FDreamUITextWriteBack::Create(AbsolutePath, PreviewHost, WriteBackError);
+	if (!TextWriteBack.IsValid())
+	{
+		// Loud, and not fatal: the designer is still worth opening on a file that cannot be
+		// read, and refusing to open it would leave the author with no way to look at the
+		// asset at all.
+		UE_LOG(DreamGUIEditor, Error, TEXT("[%s].%d Designer edits will not reach '%s': %s"),
+			ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *AbsolutePath, *WriteBackError);
+		return;
+	}
+	// The resources block compiles into Class Defaults, so the panel that edits those is
+	// the stock Kismet one -- no notify hook of ours anywhere near it. The global
+	// property-changed broadcast is the one place such an edit is visible, filtered hard:
+	// this fires for every property change in the process, so everything short of "our
+	// CDO, committed" has to leave in one compare.
+	DefaultsChangedHandle = FCoreUObjectDelegates::OnObjectPropertyChanged.AddSP(
+		this, &FDreamWidgetBlueprintEditor::OnAnyObjectPropertyChanged);
+}
+
+FString FDreamWidgetBlueprintEditor::GetTextWriteBackFilePath() const
+{
+	return TextWriteBack.IsValid() ? TextWriteBack->GetFilePath() : FString();
+}
+
+void FDreamWidgetBlueprintEditor::OnBlueprintChangedImpl(UBlueprint* InBlueprint, bool bIsJustBeingCompiled)
+{
+	FBlueprintEditor::OnBlueprintChangedImpl(InBlueprint, bIsJustBeingCompiled);
+	if (InBlueprint != nullptr && InBlueprint == BlueprintBeingEdited)
+	{
+		SyncTextWriteBackToSource();
+	}
+}
+
 void FDreamWidgetBlueprintEditor::SaveEditorState()
 {
 	// The guard came AFTER the dereference it guards, which made it dead code: by the time it could
@@ -1675,9 +1715,14 @@ void FDreamWidgetBlueprintEditor::SaveEditorState()
 		// of the asset builds its agent from it and comes up with a hierarchy that draws nothing.
 		// EnsureRootAgent substitutes for a stored zero on the way back in; this is the other end,
 		// and the cheaper one, because a value never written needs no substituting.
+		//
+		// Only while the canvas is the one the author picked. Under Fill Screen, or with the DPI preview on, the agent is
+		// sized by the window and the preview -- a view rule -- and writing it here put the author's window into the asset,
+		// into the class's design size, and from there into the size of every world widget of the class.
 		const FIntPoint AgentSize(RootAgentWidget->GetWidth(), RootAgentWidget->GetHeight());
-		if (AgentSize.X > 0) { DesignerData.CanvasSize.X = AgentSize.X; }
-		if (AgentSize.Y > 0) { DesignerData.CanvasSize.Y = AgentSize.Y; }
+		const bool bCanvasIsAView = DesignerSizeRule == EDreamUIDesignerSizeRule::FillScreen || GetPreviewDPIScale();
+		if (!bCanvasIsAView && AgentSize.X > 0) { DesignerData.CanvasSize.X = AgentSize.X; }
+		if (!bCanvasIsAView && AgentSize.Y > 0) { DesignerData.CanvasSize.Y = AgentSize.Y; }
 		if (UDreamCanvas* RootCanvas = RootAgentWidget->GetComponent<UDreamCanvas>())
 		{
 			DesignerData.CanvasRenderMode = (uint8)RootCanvas->GetRenderMode();
@@ -3354,9 +3399,12 @@ void FDreamWidgetBlueprintEditor::CommitWidgetGeometryToTemplate(TConstArrayView
 		UDreamWidget::GetPropertyName_AnchorData(),
 		UDreamWidget::GetPropertyName_RelativeLocation(),
 	};
+	// The Euler rotation too: it is the rotation's authored face, the one the .dui writes, and the quaternion alone is
+	// DuiHidden -- a turn mirrored without it reached the asset and never the file.
 	static const FName TransformProperties[] =
 	{
 		UDreamWidget::GetPropertyName_RelativeRotation(),
+		UDreamWidget::GetPropertyName_RelativeRotationEuler(),
 		UDreamWidget::GetPropertyName_RelativeScale(),
 	};
 	for (UDreamWidget* PreviewWidget : InPreviewWidgets)

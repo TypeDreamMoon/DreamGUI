@@ -41,6 +41,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamProgressBarInteractionPointerTest,
 	"DreamGUI.ProgressBar.ClickingDraggingAndScrollingOverABarLeaveItsPercentAlone",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamProgressBarInteractionPointerTest, "DreamGUI.ProgressBar.ClickingDraggingAndScrollingOverABarLeaveItsPercentAlone", "[Pointer][Animated]")
 
 bool FDreamProgressBarInteractionPointerTest::RunTest(const FString& Parameters)
 {
@@ -79,6 +80,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamProgressBarInteractionCoversButtonTest,
 	"DreamGUI.ProgressBar.ABarDrawnOverAButtonTakesItsClickUntilTheBarIsNotHitTestable",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamProgressBarInteractionCoversButtonTest, "DreamGUI.ProgressBar.ABarDrawnOverAButtonTakesItsClickUntilTheBarIsNotHitTestable", "[Pointer][Animated]")
 
 bool FDreamProgressBarInteractionCoversButtonTest::RunTest(const FString& Parameters)
 {

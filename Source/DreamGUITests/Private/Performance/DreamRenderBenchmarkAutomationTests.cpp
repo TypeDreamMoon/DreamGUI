@@ -485,12 +485,19 @@ bool FDreamRenderBenchmarkTest::RunTest(const FString& Parameters)
 		return false;
 	}
 	// The suite has every prepare a canvas makes from its last one checked against a full one (r.DreamUI.VerifyPartialPrepare,
-	// in the test host's config): what is measured here is the prepare alone.
+	// in the test host's config): what is measured here is the prepare alone. Likewise every pointer kept while the count
+	// of objects gone reads the same is looked up as well (r.DreamUI.VerifyKeptPointers): measured here without the look-ups.
 	IConsoleVariable* const Verify = IConsoleManager::Get().FindConsoleVariable(TEXT("r.DreamUI.VerifyPartialPrepare"));
 	const int32 VerifyBefore = Verify != nullptr ? Verify->GetInt() : 0;
 	if (Verify != nullptr)
 	{
 		Verify->Set(0, ECVF_SetByCode);
+	}
+	IConsoleVariable* const VerifyKept = IConsoleManager::Get().FindConsoleVariable(TEXT("r.DreamUI.VerifyKeptPointers"));
+	const int32 VerifyKeptBefore = VerifyKept != nullptr ? VerifyKept->GetInt() : 0;
+	if (VerifyKept != nullptr)
+	{
+		VerifyKept->Set(0, ECVF_SetByCode);
 	}
 	TSharedRef<FRun> Run = MakeShared<FRun>();
 	Run->TracePath = FPaths::Combine(PerfDirectory(), TEXT("Benchmark.utrace"));
@@ -551,12 +558,16 @@ bool FDreamRenderBenchmarkTest::RunTest(const FString& Parameters)
 				Phase.Stats.Counters[static_cast<int32>(DreamUIRenderStats::ECounter::BatchesRecorded)] > 0);
 		}
 	});
-	EnqueueDo([Stage, Verify, VerifyBefore]()
+	EnqueueDo([Stage, Verify, VerifyBefore, VerifyKept, VerifyKeptBefore]()
 	{
 		Stage->TearDown();
 		if (Verify != nullptr)
 		{
 			Verify->Set(VerifyBefore, ECVF_SetByCode);
+		}
+		if (VerifyKept != nullptr)
+		{
+			VerifyKept->Set(VerifyKeptBefore, ECVF_SetByCode);
 		}
 	});
 	return true;

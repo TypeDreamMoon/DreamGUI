@@ -1300,4 +1300,48 @@ bool FDreamUIWriteBackNativeControlTagTest::RunTest(const FString& Parameters)
 	return true;
 }
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamUIWriteBackHeadReportTest,
+	"DreamGUI.Text.WriteBack.AReportOfAPropertyWritesTheLeavesUnderIt",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * The designer reports the property it migrated -- `AnchorData`, `Padding`, `Brush` -- and never which leaf of it changed;
+ * the flush asks about leaves (`AnchorData.SizeDelta`). Matched leaf to leaf, the two never met: every edit of a struct
+ * value made in the designer was filtered out of the file, and the next compile put the old value back. Reported the
+ * designer's way here, and the reported node's leaf reaches the file -- and only that node's.
+ */
+bool FDreamUIWriteBackHeadReportTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamUIWriteBackTestLocal;
+
+	const FString Source = Fixture();
+	FBuiltTree Live = BuildTree(Source);
+	if (!TestTrue(TEXT("the fixture builds"), Live.Tree.IsValid()))
+	{
+		return false;
+	}
+	FDreamUITextWriteBack::ClearDirtyProperties(Live.Tree.Get());
+	FDreamUIAnchorData* RootAnchor = AnchorDataOf(Live.Find(TEXT("Root")));
+	FDreamUIAnchorData* TitleAnchor = AnchorDataOf(Live.Find(TEXT("Title")));
+	if (!TestTrue(TEXT("both nodes have anchor blocks"), RootAnchor != nullptr && TitleAnchor != nullptr))
+	{
+		return false;
+	}
+	RootAnchor->SizeDelta = FVector2D(800.0, 480.0);
+	TitleAnchor->SizeDelta = FVector2D(300.0, 60.0);
+
+	FDreamUITextWriteBack::NoteDirtyProperty(Live.Tree.Get(), TEXT("Title"),
+		EDreamUIPatchTarget::Node, INDEX_NONE, TEXT("AnchorData"));
+	FString Updated;
+	FDreamUIDiagnosticBag Diagnostics;
+	TArray<FDreamUIPropertyEdit> Edits;
+	TestTrue(TEXT("the write-back ran"),
+		FDreamUITextWriteBack::ProduceText(Source, Live.Tree.Get(), Updated, Diagnostics, &Edits));
+	TestEqual(TEXT("the reported property's changed leaf is written, on the reported node alone"), Updated, FixtureWith(8,
+		TEXT("        AnchorData.SizeDelta = (300, 60)   // 标题")));
+	FDreamUITextWriteBack::ClearDirtyProperties(Live.Tree.Get());
+	return true;
+}
+
 #endif // WITH_DEV_AUTOMATION_TESTS && WITH_EDITOR

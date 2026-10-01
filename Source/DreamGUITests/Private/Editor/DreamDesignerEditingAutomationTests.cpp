@@ -24,6 +24,7 @@
 #include "Core/Components/DreamWidget.h"
 #include "Core/DreamUIBehaviour.h"
 #include "Interaction/UITextInput.h"
+#include "Interaction/UIScrollView.h"
 #include "Animation/DreamWidgetAnimationComponent.h"
 #include "Animation/DreamWidgetAnimation.h"
 #include "Core/Components/DreamText.h"
@@ -2453,5 +2454,110 @@ bool FDreamDesignerDragOutlivesItsPreviewTest::RunTest(const FString&)
 	return true;
 }
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamDesignerUnwrapUnderASingleChildPanelTest,
+	"DreamGUI.Designer.AWrapperUnderAPanelOfOneChildIsNotOfferedForUnwrapping",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * Unwrap moves the wrapper's children out before it deletes the wrapper, so for that moment the parent holds them AND the
+ * wrapper. Asked only for room for the difference, a panel of one child always said yes: the menu offered the unwrap, and
+ * the first move was refused -- or, under a panel of two, the second, after the first had moved for good, since cancelling
+ * the transaction does not put back what it recorded. Not offered now; and the tree is as it was.
+ */
+bool FDreamDesignerUnwrapUnderASingleChildPanelTest::RunTest(const FString&)
+{
+	using namespace DreamDesignerEditingTestLocal;
+
+	FScopedDesigner Scoped(TEXT("DesignerUnwrapSingleChild"));
+	if (!TestNotNull(TEXT("The designer opened"), Scoped.Designer) || Scoped.PreviewRoot() == nullptr)
+	{
+		return false;
+	}
+	UDreamWidget* Root = Scoped.TemplateRoot();
+	UDreamWidget* Frame = DreamWidgetTreeEditing::CreateWidget(
+		Scoped.Blueprint, UDreamWidget::StaticClass(), Root, -1, TEXT("Frame"));
+	if (!TestNotNull(TEXT("a frame"), Frame) || !TestNotNull(TEXT("holding one child at most"),
+		Frame->CreateNewLayoutContainer<UDreamLayoutContainerBorder>()))
+	{
+		return false;
+	}
+	UDreamWidget* Wrapper = DreamWidgetTreeEditing::CreateWidget(
+		Scoped.Blueprint, UDreamWidget::StaticClass(), Frame, -1, TEXT("Wrapper"));
+	DreamWidgetTreeEditing::CreateWidget(Scoped.Blueprint, UDreamWidget::StaticClass(), Wrapper, -1, TEXT("Only"));
+	Scoped.Rebuild();
+	const int32 CountBefore = Scoped.TemplateCount();
+
+	UDreamWidget* WrapperPreview = Scoped.Designer->GetPreviewHost()->FindPreviewForTemplate(Scoped.FindTemplate(TEXT("Wrapper")));
+	if (!TestNotNull(TEXT("the wrapper has a preview to select"), WrapperPreview))
+	{
+		return false;
+	}
+	Scoped.Designer->SelectWidgets(TSet<UDreamWidget*>{ WrapperPreview }, /*bAppendOrToggle*/false);
+	TestFalse(TEXT("a panel of one child cannot take the child beside the wrapper, so the unwrap is not offered"),
+		Scoped.Designer->CanUnwrapSelectedWidget());
+	Scoped.Designer->UnwrapSelectedWidget();
+	Scoped.Rebuild();
+	TestEqual(TEXT("and asked for anyway, it leaves the asset as it was"), Scoped.TemplateCount(), CountBefore);
+	UDreamWidget* Only = Scoped.FindTemplate(TEXT("Only"));
+	if (TestNotNull(TEXT("the child is still there"), Only))
+	{
+		TestEqual(TEXT("under its wrapper"), Only->GetParent(), Scoped.FindTemplate(TEXT("Wrapper")));
+	}
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamDesignerWidgetReferenceEditTest,
+	"DreamGUI.Designer.AWidgetReferenceSetInTheDesignerNamesTheAssetsWidgetNotThePreviews",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * A scroll view's Content picked in the details panel is a widget of the PREVIEW, and the edit copied it onto the template
+ * as it was: the asset pointed into the preview, which the next structural edit, compile or undo rebuilds -- the reference
+ * went to nothing, and a compiled class carried it to a destroyed widget. The template now holds its own counterpart.
+ */
+bool FDreamDesignerWidgetReferenceEditTest::RunTest(const FString&)
+{
+	using namespace DreamDesignerEditingTestLocal;
+
+	FScopedDesigner Scoped(TEXT("DesignerWidgetReferenceEdit"));
+	if (!TestNotNull(TEXT("The designer opened"), Scoped.Designer) || Scoped.PreviewRoot() == nullptr)
+	{
+		return false;
+	}
+	UDreamWidget* Root = Scoped.TemplateRoot();
+	UDreamWidget* Host = DreamWidgetTreeEditing::CreateWidget(Scoped.Blueprint, UDreamWidget::StaticClass(), Root, -1, TEXT("Host"));
+	DreamWidgetTreeEditing::CreateWidget(Scoped.Blueprint, UDreamWidget::StaticClass(), Host, -1, TEXT("Inner"));
+	if (!TestNotNull(TEXT("a scroll view on the host"), Host->AddComponent<UUIScrollView>()))
+	{
+		return false;
+	}
+	Scoped.Rebuild();
+
+	FDreamWidgetPreviewHost* PreviewHost = Scoped.Designer->GetPreviewHost().Get();
+	UDreamWidget* HostTemplate = Scoped.FindTemplate(TEXT("Host"));
+	UDreamWidget* InnerTemplate = Scoped.FindTemplate(TEXT("Inner"));
+	UDreamWidget* HostPreview = PreviewHost->FindPreviewForTemplate(HostTemplate);
+	UDreamWidget* InnerPreview = PreviewHost->FindPreviewForTemplate(InnerTemplate);
+	UUIScrollView* PreviewScroll = HostPreview != nullptr ? HostPreview->GetComponent<UUIScrollView>() : nullptr;
+	UUIScrollView* TemplateScroll = HostTemplate != nullptr ? HostTemplate->GetComponent<UUIScrollView>() : nullptr;
+	FObjectPropertyBase* ContentProperty = CastField<FObjectPropertyBase>(UUIScrollView::StaticClass()->FindPropertyByName(TEXT("Content")));
+	if (!TestNotNull(TEXT("the preview's scroll view"), PreviewScroll) || !TestNotNull(TEXT("the template's"), TemplateScroll)
+		|| !TestNotNull(TEXT("the preview's inner widget"), InnerPreview) || !TestNotNull(TEXT("Content is a reference"), ContentProperty))
+	{
+		return false;
+	}
+
+	// What the details panel's picker does: the preview's Content set to the preview's widget, then the change mirrored.
+	ContentProperty->SetObjectPropertyValue_InContainer(PreviewScroll, InnerPreview);
+	FEditPropertyChain Chain;
+	Chain.AddHead(ContentProperty);
+	Scoped.Designer->MigrateDetailsChangeToTemplate({ PreviewScroll }, Chain, /*bIsModify*/false);
+
+	TestTrue(TEXT("the asset's scroll view names the asset's widget"),
+		ContentProperty->GetObjectPropertyValue_InContainer(TemplateScroll) == InnerTemplate);
+	return true;
+}
 
 #endif

@@ -271,8 +271,29 @@ public:
 	};
 	/** Does a widget's projected rect meet the marquee box? InQuad is the four corners, in ring order. */
 	static bool DoesMarqueeMeetQuad(const FBox2D& InMarquee, TConstArrayView<FVector2D> InQuad);
+	/**
+	 * Does a widget's projected rect hold the whole marquee box? Then the box was drawn ON it -- the root, a panel the drag
+	 * started inside -- and not around it. InQuad as for DoesMarqueeMeetQuad.
+	 */
+	static bool DoesQuadHoldMarquee(const FBox2D& InMarquee, TConstArrayView<FVector2D> InQuad);
+	/** Does the marquee box hold the whole of a widget's projected rect? InQuad as for DoesMarqueeMeetQuad. */
+	static bool DoesMarqueeHoldQuad(const FBox2D& InMarquee, TConstArrayView<FVector2D> InQuad);
+	/**
+	 * What a marquee selects of what it caught (InOutCaught: every widget it met; InWhole: those it went all the way round).
+	 * A widget held whole takes what is inside it along -- the children go with it. One the box only cuts across gives way
+	 * to what it caught inside it: the box was drawn around those, and the panel or the root it started on is in the way.
+	 * Not for a marquee that removes: that takes away everything it met.
+	 */
+	static void ReduceMarqueeCatch(TArray<UDreamWidget*>& InOutCaught, const TSet<const UDreamWidget*>& InWhole);
 	/** Fold what a marquee caught into what was already selected. */
 	static void CombineMarqueeSelection(EMarqueeMode InMode, TConstArrayView<UDreamWidget*> InCurrent, TConstArrayView<UDreamWidget*> InCaught, TSet<UDreamWidget*>& OutSelection);
+	/**
+	 * InOutWidgets without those a selected ancestor carries: a move applied to a parent has moved its children already,
+	 * and moved by their own delta too they went twice as far. With bInByLayoutAxes, for a move that its layout may refuse
+	 * (a drag, a nudge, the gizmo's translation): an ancestor carries a widget only if it moves on every axis the widget
+	 * would -- one its layout holds in place moves nothing, and a free child of it moves by itself.
+	 */
+	static void KeepTopmostWidgets(TArray<UDreamWidget*>& InOutWidgets, bool bInByLayoutAxes);
 
 	/** World-space pick ray through a viewport pixel. */
 	bool ComputePickRay(int32 PixelX, int32 PixelY, FVector& OutLineStart, FVector& OutLineEnd);
@@ -452,6 +473,35 @@ private:
 	 * designer drag's own transaction, which can then no longer be cancelled.
 	 */
 	bool bNudgeTransactionOpen = false;
+	/**
+	 * The arrow keys the nudge gesture holds down. The transaction opens with the first and closes with the release of the
+	 * last: one per press, closed by one release, left a level open whenever two arrows overlapped -- and an open
+	 * transaction refuses every undo in the editor, and takes in every edit made anywhere after it.
+	 */
+	TSet<FKey> NudgeKeysHeld;
+	/** Closes the nudge gesture's transaction, its edits written to the .dui inside it first, and forgets the keys held. */
+	void EndNudgeTransaction();
+
+	/** A widget the gizmo drags, as it was when the drag began: what Esc puts back (AbortTracking). */
+	struct FGizmoTrackingSnapshot
+	{
+		TWeakObjectPtr<UDreamWidget> Widget;
+		FVector RelativeLocation = FVector::ZeroVector;
+		FQuat RelativeRotation = FQuat::Identity;
+		FVector RelativeScale = FVector::OneVector;
+	};
+	TArray<FGizmoTrackingSnapshot> GizmoTrackingSnapshots;
+	/** Set by AbortTracking: the drag TrackingStopped is ending was cancelled, so it commits and keys none of it. */
+	bool bGizmoTrackingAborted = false;
+
+	/** Writes what the preview host has mirrored onto the template to the .dui now, inside whatever transaction is open. */
+	void FlushTemplateChangesNow();
+	/**
+	 * Whether InWidget is one of the asset's own widgets in the preview -- one with a template. The design canvas's agent
+	 * and the preview's wrapper have none: selected, every command acted on nothing and every move moved what no asset
+	 * holds.
+	 */
+	bool IsAuthoredPreviewWidget(const UDreamWidget* InWidget) const;
 
 	int PrevMouseX = 0, PrevMouseY = 0;
 	int IndexOfClickSelectUI = INDEX_NONE;

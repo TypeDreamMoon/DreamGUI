@@ -122,6 +122,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamScrollBoxInteractionWheelTest,
 	"DreamGUI.ScrollBox.ThreeNotchesDownScrollThreeNotchesAndTurningBackStopsAtTheTop",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamScrollBoxInteractionWheelTest, "DreamGUI.ScrollBox.ThreeNotchesDownScrollThreeNotchesAndTurningBackStopsAtTheTop", "[Pointer][Animated]")
 
 bool FDreamScrollBoxInteractionWheelTest::RunTest(const FString& Parameters)
 {
@@ -177,6 +178,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamScrollBoxInteractionWheelAtEndTest,
 	"DreamGUI.ScrollBox.TheWheelStopsAtTheEndAndTurningItFurtherChangesNothing",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamScrollBoxInteractionWheelAtEndTest, "DreamGUI.ScrollBox.TheWheelStopsAtTheEndAndTurningItFurtherChangesNothing", "[Pointer][Animated]")
 
 bool FDreamScrollBoxInteractionWheelAtEndTest::RunTest(const FString& Parameters)
 {
@@ -228,6 +230,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamScrollBoxInteractionRightDragTest,
 	"DreamGUI.ScrollBox.DraggingTheContentWithTheRightButtonKeepsItUnderThePointer",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamScrollBoxInteractionRightDragTest, "DreamGUI.ScrollBox.DraggingTheContentWithTheRightButtonKeepsItUnderThePointer", "[Pointer][Animated]")
 
 bool FDreamScrollBoxInteractionRightDragTest::RunTest(const FString& Parameters)
 {
@@ -297,6 +300,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamScrollBoxInteractionRightDragOffTest,
 	"DreamGUI.ScrollBox.ARightButtonDragScrollsNothingWhenRightClickDragScrollingIsOff",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamScrollBoxInteractionRightDragOffTest, "DreamGUI.ScrollBox.ARightButtonDragScrollsNothingWhenRightClickDragScrollingIsOff", "[Pointer][Animated]")
 
 bool FDreamScrollBoxInteractionRightDragOffTest::RunTest(const FString& Parameters)
 {
@@ -346,6 +350,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamScrollBoxInteractionFlingTest,
 	"DreamGUI.ScrollBox.LettingGoOfADragWhileItMovesLeavesTheContentCoastingTheSameWay",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamScrollBoxInteractionFlingTest, "DreamGUI.ScrollBox.LettingGoOfADragWhileItMovesLeavesTheContentCoastingTheSameWay", "[Pointer][Animated]")
 
 bool FDreamScrollBoxInteractionFlingTest::RunTest(const FString& Parameters)
 {
@@ -407,6 +412,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamScrollBoxInteractionBarHandleTest,
 	"DreamGUI.ScrollBox.DraggingTheScrollBarHandleScrollsTheContentToTheMatchingPlace",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamScrollBoxInteractionBarHandleTest, "DreamGUI.ScrollBox.DraggingTheScrollBarHandleScrollsTheContentToTheMatchingPlace", "[Pointer][Animated]")
 
 bool FDreamScrollBoxInteractionBarHandleTest::RunTest(const FString& Parameters)
 {
@@ -488,6 +494,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamScrollBoxInteractionRevealThenWheelTest,
 	"DreamGUI.ScrollBox.TheWheelCarriesOnFromWhereScrollingARowIntoViewLeftTheBox",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamScrollBoxInteractionRevealThenWheelTest, "DreamGUI.ScrollBox.TheWheelCarriesOnFromWhereScrollingARowIntoViewLeftTheBox", "[Pointer][Animated]")
 
 bool FDreamScrollBoxInteractionRevealThenWheelTest::RunTest(const FString& Parameters)
 {
@@ -534,6 +541,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamScrollBoxInteractionNestedHandOnTest,
 	"DreamGUI.ScrollBox.AWheelTheInnerBoxCannotSpendAnyMoreScrollsTheOuterBox",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamScrollBoxInteractionNestedHandOnTest, "DreamGUI.ScrollBox.AWheelTheInnerBoxCannotSpendAnyMoreScrollsTheOuterBox", "[Pointer][Animated]")
 
 bool FDreamScrollBoxInteractionNestedHandOnTest::RunTest(const FString& Parameters)
 {
@@ -609,6 +617,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamScrollBoxInteractionNestedConsumeTest,
 	"DreamGUI.ScrollBox.AnInnerBoxThatAlwaysConsumesTheWheelKeepsItFromTheOuterBoxAtItsEnd",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamScrollBoxInteractionNestedConsumeTest, "DreamGUI.ScrollBox.AnInnerBoxThatAlwaysConsumesTheWheelKeepsItFromTheOuterBoxAtItsEnd", "[Pointer][Animated]")
 
 bool FDreamScrollBoxInteractionNestedConsumeTest::RunTest(const FString& Parameters)
 {
@@ -672,6 +681,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamScrollBoxInteractionHorizontalWheelTest,
 	"DreamGUI.ScrollBox.TheWheelScrollsAHorizontalBoxAlongItsOwnAxis",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamScrollBoxInteractionHorizontalWheelTest, "DreamGUI.ScrollBox.TheWheelScrollsAHorizontalBoxAlongItsOwnAxis", "[Pointer][Animated]")
 
 bool FDreamScrollBoxInteractionHorizontalWheelTest::RunTest(const FString& Parameters)
 {

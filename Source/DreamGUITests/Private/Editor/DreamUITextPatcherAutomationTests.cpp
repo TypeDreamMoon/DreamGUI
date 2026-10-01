@@ -1411,4 +1411,120 @@ bool FDreamUIPatcherStructuralEditsTest::RunTest(const FString& Parameters)
 	return true;
 }
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamUIPatcherOneBlockPerNodeTest,
+	"DreamGUI.Text.Patcher.TwoPropertiesForABlocklessNodeShareTheOneBlockWrittenForThem",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * Two properties for a node with no block, in one batch -- what a flush does whenever a gesture touches two. Each planned
+ * alone wrote a block of its own: `Text OkText { Text = "OK" } { FontSize = 18 }`, which does not parse, and the flush
+ * wrote it to disk. One block, holding both. And a node that shares its line with another statement gets no block at all:
+ * the block opens on the header's line, so whatever followed the header there ended up inside it.
+ */
+bool FDreamUIPatcherOneBlockPerNodeTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamUIPatcherTestLocal;
+
+	FString Text = SavePanel();
+	FDreamUIAst Ast;
+	FDreamUIDiagnosticBag ParseDiagnostics;
+	if (!TestTrue(TEXT("the fixture parses"), Parse(Text, Ast, ParseDiagnostics)))
+	{
+		return false;
+	}
+	TArray<FDreamUIPropertyEdit> Edits;
+	FDreamUIPropertyEdit& First = Edits.AddDefaulted_GetRef();
+	First.NodeId = TEXT("OkText");
+	First.PropertyName = TEXT("Text");
+	First.NewValueText = TEXT("\"OK\"");
+	FDreamUIPropertyEdit& Second = Edits.AddDefaulted_GetRef();
+	Second.NodeId = TEXT("OkText");
+	Second.PropertyName = TEXT("FontSize");
+	Second.NewValueText = TEXT("18");
+	FDreamUIDiagnosticBag Diagnostics;
+	FDreamUITextPatcher::SetProperties(Text, Ast, Edits, Diagnostics);
+
+	FDreamUIAst After;
+	FDreamUIDiagnosticBag AfterDiagnostics;
+	const bool bParsed = Parse(Text, After, AfterDiagnostics);
+	TestTrue(*FString::Printf(TEXT("the file still parses (%s)"), *AfterDiagnostics.ToString()), bParsed);
+	if (const FDreamUINode* OkText = bParsed ? FindNode(After, TEXT("OkText")) : nullptr)
+	{
+		TestEqual(TEXT("and the node holds both properties, in its one block"), OkText->Properties.Num(), 2);
+	}
+	else
+	{
+		AddError(TEXT("the node is not in the file the patch produced"));
+	}
+
+	FString Shared = MakeSource({
+		TEXT("Widget Root {"),
+		TEXT("    Text A; Text B"),
+		TEXT("}")
+	});
+	const FString SharedBefore = Shared;
+	FDreamUIDiagnosticBag SharedDiagnostics;
+	TestFalse(TEXT("a property for a node that shares its line is refused"),
+		Patch(Shared, TEXT("A"), EDreamUIPatchTarget::Node, INDEX_NONE, TEXT("FontSize"), TEXT("18"), SharedDiagnostics));
+	TestEqual(TEXT("and the text is left as it was"), Shared, SharedBefore);
+
+	// A ';' that ends the line is no other statement: the block takes it in, and a node body skips a separator.
+	FString Terminated = MakeSource({
+		TEXT("Widget Root {"),
+		TEXT("    Text A;"),
+		TEXT("}")
+	});
+	FDreamUIDiagnosticBag TerminatedDiagnostics;
+	TestTrue(*FString::Printf(TEXT("a property for a node whose line ends in ';' is written (%s)"), *TerminatedDiagnostics.ToString()),
+		Patch(Terminated, TEXT("A"), EDreamUIPatchTarget::Node, INDEX_NONE, TEXT("FontSize"), TEXT("18"), TerminatedDiagnostics));
+	FDreamUIAst TerminatedAst;
+	FDreamUIDiagnosticBag TerminatedParse;
+	const bool bTerminatedParsed = Parse(Terminated, TerminatedAst, TerminatedParse);
+	TestTrue(*FString::Printf(TEXT("and the file still parses (%s)"), *TerminatedParse.ToString()), bTerminatedParsed);
+	if (const FDreamUINode* A = bTerminatedParsed ? FindNode(TerminatedAst, TEXT("A")) : nullptr)
+	{
+		TestEqual(TEXT("with the property on the node"), A->Properties.Num(), 1);
+	}
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamUIPatcherSharedLineRemovalTest,
+	"DreamGUI.Text.Patcher.ANodeWrittenOnItsParentsLineIsNotCutWithItsParent",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * A remove or a move cuts its node by whole lines. With the node on a line of its own that is the node; with the node on its
+ * parent's line -- `Widget Ok { Text Label { } }` -- the line is the parent, and removing Label took Ok with it. Refused
+ * instead, and the file left exactly as it was.
+ */
+bool FDreamUIPatcherSharedLineRemovalTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamUIPatcherTestLocal;
+
+	FString Text = MakeSource({
+		TEXT("Widget Root {"),
+		TEXT("    Widget Ok { Text Label { } }"),
+		TEXT("    Text Kept"),
+		TEXT("}")
+	});
+	const FString Before = Text;
+	FDreamUIAst Ast;
+	FDreamUIDiagnosticBag ParseDiagnostics;
+	if (!TestTrue(TEXT("the fixture parses"), Parse(Text, Ast, ParseDiagnostics)))
+	{
+		return false;
+	}
+	FDreamUIStructuralEdit Edit;
+	Edit.Kind = EDreamUIStructuralEditKind::RemoveNode;
+	Edit.NodeId = TEXT("Label");
+	const TArray<FDreamUIStructuralEdit> Batch = { Edit };
+	FDreamUIDiagnosticBag Diagnostics;
+	FDreamUITextPatcher::ApplyStructuralEdits(Text, Ast, Batch, Diagnostics);
+	TestEqual(TEXT("removing a node written on its parent's line leaves the file as it was"), Text, Before);
+	TestTrue(TEXT("and says why"), Diagnostics.Diagnostics.Num() > 0);
+	return true;
+}
+
 #endif // WITH_DEV_AUTOMATION_TESTS && WITH_EDITOR

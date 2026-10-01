@@ -80,6 +80,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamPressBorderClickTest,
 	"DreamGUI.Border.AClickReportsOneButtonDownAndOneButtonUp",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamPressBorderClickTest, "DreamGUI.Border.AClickReportsOneButtonDownAndOneButtonUp", "[Pointer][Animated]")
 
 bool FDreamPressBorderClickTest::RunTest(const FString& Parameters)
 {
@@ -104,6 +105,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamPressBorderDragMoveTest,
 	"DreamGUI.Border.DraggingAcrossTheBorderReportsItsMovement",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamPressBorderDragMoveTest, "DreamGUI.Border.DraggingAcrossTheBorderReportsItsMovement", "[Pointer][Animated]")
 
 bool FDreamPressBorderDragMoveTest::RunTest(const FString& Parameters)
 {
@@ -129,6 +131,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamPressBorderDoubleClickTest,
 	"DreamGUI.Border.ADoubleClickReportsOneDoubleClick",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamPressBorderDoubleClickTest, "DreamGUI.Border.ADoubleClickReportsOneDoubleClick", "[Pointer][Animated]")
 
 bool FDreamPressBorderDoubleClickTest::RunTest(const FString& Parameters)
 {
@@ -157,6 +160,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamPressBorderDoubleClickDownTest,
 	"DreamGUI.Border.TheSecondPressOfADoubleClickIsTheDoubleClickNotASecondButtonDown",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamPressBorderDoubleClickDownTest, "DreamGUI.Border.TheSecondPressOfADoubleClickIsTheDoubleClickNotASecondButtonDown", "[Pointer][Animated]")
 
 bool FDreamPressBorderDoubleClickDownTest::RunTest(const FString& Parameters)
 {
@@ -188,6 +192,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamPressBorderDoubleClickDistanceTest,
 	"DreamGUI.Border.TwoQuickClicksAreADoubleClickOnlyWithinTheDragThresholdOfEachOther",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamPressBorderDoubleClickDistanceTest, "DreamGUI.Border.TwoQuickClicksAreADoubleClickOnlyWithinTheDragThresholdOfEachOther", "[Pointer][Animated]")
 
 bool FDreamPressBorderDoubleClickDistanceTest::RunTest(const FString& Parameters)
 {

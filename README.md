@@ -488,7 +488,14 @@ ways back for a while are gone with them.
 
 For a report of something drawn wrong or not drawn, `r.DreamUI.VerifyPartialPrepare 1` checks every
 prepare a canvas makes from its last one against a prepare of every widget, and a difference is an
-ensure that names the canvas. The test suite runs with it on.
+ensure that names the canvas. `r.DreamUI.VerifyKeptPointers 1` does the same for the objects DreamGUI
+keeps instead of looking them up every frame -- a widget's canvas, a canvas's render layers, the UI
+manager's canvases, an animated property's object: each use looks the object up as well, and a
+disagreement is an ensure that says which. The test suite runs with both on.
+
+`Tools/Bench` holds the benchmarks the performance work was measured with -- a screen of 5000 turning
+buttons and a level of 2688 world-space panels -- in PIE or in a `-game` process, with scripts that
+read the CSV profiles and traces they leave (`Tools/Bench/README.md`).
 
 ## Platforms
 
@@ -531,10 +538,10 @@ Known gaps:
 
 - `LineHeightPercentage` and `WrapTextAt` are only reachable through a real font asset, so they are
   not covered by tests.
-- When a panel measures a text, the text breaks its lines at its `WrapTextAt` if it has one and at its
-  own width if it does not -- never at the width the panel is about to give it. A wrapping text in a Fill
-  slot of a vertical box therefore needs a `WrapTextAt`, or it is measured as one character per line;
-  the sample's heading and subheading carry one.
+- A panel that offers a wrapping text no width -- a horizontal box measuring along its own axis -- is
+  answered with the paragraph's one-line width; the text wraps once it is arranged narrower than that.
+  (Offered a width, as a vertical box offers its own, a wrapping text answers with its height at that
+  width.)
 - One content asset still carries `Lex` in its name
   (`Content/Blueprints/LexEventSystemActor_EnhancedInput`). Renaming a `.uasset` file does not rename
   the object inside it, so only an editor-side rename can change it; the code points at what is
