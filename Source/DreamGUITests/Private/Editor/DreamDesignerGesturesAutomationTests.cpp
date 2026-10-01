@@ -157,12 +157,103 @@ bool FDreamMarqueeMeetsRectTest::RunTest(const FString& Parameters)
 	TestTrue(TEXT("a box laid over the rect catches it"), FDreamWidgetDesignerViewportClient::DoesMarqueeMeetQuad(FBox2D(FVector2D(80, 90), FVector2D(150, 150)), Upright));
 	TestTrue(TEXT("a box entirely inside it counts as crossing it"), FDreamWidgetDesignerViewportClient::DoesMarqueeMeetQuad(FBox2D(FVector2D(120, 120), FVector2D(130, 130)), Upright));
 	TestFalse(TEXT("a box beside it does not"), FDreamWidgetDesignerViewportClient::DoesMarqueeMeetQuad(FBox2D(FVector2D(0, 0), FVector2D(60, 60)), Upright));
+	// A box the rect holds whole was drawn ON the rect -- its background -- which the marquee does not select.
+	TestTrue(TEXT("the rect holds a box entirely inside it"), FDreamWidgetDesignerViewportClient::DoesQuadHoldMarquee(FBox2D(FVector2D(120, 120), FVector2D(130, 130)), Upright));
+	TestFalse(TEXT("but not one laid over its edge"), FDreamWidgetDesignerViewportClient::DoesQuadHoldMarquee(FBox2D(FVector2D(80, 90), FVector2D(150, 150)), Upright));
 
 	// A rotated widget projects to a diamond. Its bounding box reaches into all four corners it does
 	// not occupy, so a box-against-bounds test would hand it a marquee that never touched it.
 	const TArray<FVector2D> Diamond = MakeQuad(FVector2D(100, 50), FVector2D(150, 100), FVector2D(100, 150), FVector2D(50, 100));
 	TestFalse(TEXT("a corner of the bounding box is not the widget"), FDreamWidgetDesignerViewportClient::DoesMarqueeMeetQuad(FBox2D(FVector2D(52, 52), FVector2D(62, 62)), Diamond));
 	TestTrue(TEXT("but its middle is"), FDreamWidgetDesignerViewportClient::DoesMarqueeMeetQuad(FBox2D(FVector2D(95, 95), FVector2D(105, 105)), Diamond));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamMarqueeAroundChildrenTest,
+	"DreamGUI.Editor.DesignerMarquee.ABoxTakesWhatItWasDrawnAroundNotThePanelItCutsAcross",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * A marquee meets every widget its box overlaps, and the widgets it selects are fewer: a box drawn around two children
+ * that cuts across their panel's edge -- or the root's, with the canvas zoomed out -- is about the children; one drawn
+ * all the way round the panel is about the panel, which takes its children along.
+ */
+bool FDreamMarqueeAroundChildrenTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamDesignerGestureTestLocal;
+	FScopedTestWorld TestWorld;
+
+	UDreamWidget* Panel = MakeWidget(TestWorld.World, TEXT("Panel"), 400.0f, 300.0f);
+	UDreamWidget* A = MakeWidget(Panel, TEXT("A"), 50.0f, 50.0f);
+	A->TrySetParent(Panel, false);
+	UDreamWidget* B = MakeWidget(Panel, TEXT("B"), 50.0f, 50.0f);
+	B->TrySetParent(Panel, false);
+
+	TArray<UDreamWidget*> Caught = { Panel, A, B };
+	FDreamWidgetDesignerViewportClient::ReduceMarqueeCatch(Caught, TSet<const UDreamWidget*>{ A, B });
+	TestTrue(TEXT("around the children and across the panel: the children"), Caught.Num() == 2 && Caught.Contains(A) && Caught.Contains(B));
+
+	Caught = { Panel, A, B };
+	FDreamWidgetDesignerViewportClient::ReduceMarqueeCatch(Caught, TSet<const UDreamWidget*>{ Panel, A, B });
+	TestTrue(TEXT("around the whole panel: the panel, its children with it"), Caught.Num() == 1 && Caught.Contains(Panel));
+
+	Caught = { Panel };
+	FDreamWidgetDesignerViewportClient::ReduceMarqueeCatch(Caught, TSet<const UDreamWidget*>());
+	TestTrue(TEXT("across the panel and around nothing in it: the panel"), Caught.Num() == 1 && Caught.Contains(Panel));
+
+	Caught = { Panel, A };
+	FDreamWidgetDesignerViewportClient::ReduceMarqueeCatch(Caught, TSet<const UDreamWidget*>());
+	TestTrue(TEXT("across the panel and across a child: the child"), Caught.Num() == 1 && Caught.Contains(A));
+
+	const TArray<FVector2D> Rect = MakeQuad(FVector2D(100, 100), FVector2D(200, 100), FVector2D(200, 160), FVector2D(100, 160));
+	TestTrue(TEXT("a box all the way round a rect holds it"), FDreamWidgetDesignerViewportClient::DoesMarqueeHoldQuad(FBox2D(FVector2D(90, 90), FVector2D(210, 170)), Rect));
+	TestFalse(TEXT("one across its edge does not"), FDreamWidgetDesignerViewportClient::DoesMarqueeHoldQuad(FBox2D(FVector2D(150, 90), FVector2D(210, 170)), Rect));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamDesignerMovesCarryChildrenTest,
+	"DreamGUI.Editor.DesignerMoves.AParentCarriesASelectedChildOnlyWhereItsLayoutLetsItMove",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * A child selected with its parent moves with the parent, and moving it by its own delta as well sent it twice as far. But a
+ * parent its layout holds in place -- a vertical box places it on both axes -- moves nothing, and a free child of it
+ * selected with it has to move by itself, or the drag moves nothing at all.
+ */
+bool FDreamDesignerMovesCarryChildrenTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamDesignerGestureTestLocal;
+	FScopedTestWorld TestWorld;
+
+	UDreamWidget* CanvasRoot = MakeWidget(TestWorld.World, TEXT("CanvasRoot"), 800.0f, 600.0f);
+	CanvasRoot->CreateNewLayoutContainer<UDreamLayoutContainerCanvasPanel>();
+	UDreamWidget* FreeParent = MakeWidget(CanvasRoot, TEXT("FreeParent"), 300.0f, 200.0f);
+	FreeParent->TrySetParent(CanvasRoot, false);
+	UDreamWidget* FreeParentsChild = MakeWidget(FreeParent, TEXT("FreeParentsChild"), 50.0f, 50.0f);
+	FreeParentsChild->TrySetParent(FreeParent, false);
+
+	TArray<UDreamWidget*> Widgets = { FreeParent, FreeParentsChild };
+	FDreamWidgetDesignerViewportClient::KeepTopmostWidgets(Widgets, /*bInByLayoutAxes*/ true);
+	TestTrue(TEXT("a free parent carries its child"), Widgets.Num() == 1 && Widgets.Contains(FreeParent));
+
+	UDreamWidget* BoxRoot = MakeWidget(TestWorld.World, TEXT("BoxRoot"), 800.0f, 600.0f);
+	BoxRoot->CreateNewLayoutContainer<UDreamLayoutContainerVerticalBox>();
+	UDreamWidget* HeldParent = MakeWidget(BoxRoot, TEXT("HeldParent"), 300.0f, 200.0f);
+	HeldParent->TrySetParent(BoxRoot, false);
+	UDreamWidget* HeldParentsChild = MakeWidget(HeldParent, TEXT("HeldParentsChild"), 50.0f, 50.0f);
+	HeldParentsChild->TrySetParent(HeldParent, false);
+
+	Widgets = { HeldParent, HeldParentsChild };
+	FDreamWidgetDesignerViewportClient::KeepTopmostWidgets(Widgets, /*bInByLayoutAxes*/ true);
+	TestTrue(TEXT("a parent its layout holds carries nothing: its free child moves by itself"),
+		Widgets.Num() == 2 && Widgets.Contains(HeldParentsChild));
+
+	Widgets = { HeldParent, HeldParentsChild };
+	FDreamWidgetDesignerViewportClient::KeepTopmostWidgets(Widgets, /*bInByLayoutAxes*/ false);
+	TestTrue(TEXT("while a turn or a scale of it, which no layout puts back, carries the child"),
+		Widgets.Num() == 1 && Widgets.Contains(HeldParent));
 	return true;
 }
 

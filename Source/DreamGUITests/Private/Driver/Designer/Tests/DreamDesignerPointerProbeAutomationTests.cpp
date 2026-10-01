@@ -325,6 +325,9 @@ bool FDreamDesignerPointerMarqueeTest::RunTest(const FString&)
 	AddInfo(FString::Printf(TEXT("The marquee left %d widget(s) selected."), Selected.Num()));
 	TestTrue(TEXT("The widget on the left is selected"), Selected.Contains(Driver.PreviewFor(Left)));
 	TestTrue(TEXT("and so is the widget on the right"), Selected.Contains(Driver.PreviewFor(Right)));
+	// And nothing else: the canvas agent and the preview wrapper hold both widgets and were caught every time, and a
+	// selection holding them is one that delete, copy and duplicate act on nothing in.
+	TestEqual(TEXT("and nothing the asset does not hold"), Selected.Num(), 2);
 	return true;
 }
 
@@ -389,6 +392,63 @@ bool FDreamDesignerPointerContextMenuTest::RunTest(const FString&)
 			TEXT("whether one was asked for is not observable here. Only the selection half is asserted."));
 	}
 	FSlateApplication::Get().DismissAllMenus();
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamDesignerOverlappingNudgeTest,
+	"DreamGUI.Designer.Driver.TwoArrowsHeldTogetherNudgeInOneUndoStepAndLeaveNoTransactionOpen",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * Right pressed, Down pressed before Right is let go, then both released. Each press opened a transaction and each
+ * release closed one -- but by one flag, so the second press's level was never closed. An open transaction refuses every
+ * undo in the editor ("Can't undo while 'Move Widget' is in progress") and takes in every edit made anywhere after it.
+ */
+bool FDreamDesignerOverlappingNudgeTest::RunTest(const FString&)
+{
+	using namespace DreamDesignerPointerProbeLocal;
+
+	DreamTests::FScopedDesignerSession Session(TEXT("DesignerOverlappingNudge"), /*bGiveRootAPanel*/true);
+	if (!Session.IsReady())
+	{
+		AddError(FString::Printf(TEXT("No designer to drive: %s."), *Session.GetFailure()));
+		return false;
+	}
+	DreamTests::FDreamDesignerDriver& Driver = Session.GetDriver();
+	FBox2D WorkArea(ForceInit);
+	if (!PrepareOneToOne(*this, Driver, WorkArea))
+	{
+		return false;
+	}
+	UDreamWidget* Moved = DropPlainWidget(*this, Driver, PointIn(WorkArea, 0.5, 0.5));
+	if (Moved == nullptr)
+	{
+		return false;
+	}
+	if (FDreamWidgetBlueprintEditor* Toolkit = Driver.Toolkit())
+	{
+		Toolkit->SelectWidgets(TSet<UDreamWidget*>{ Driver.PreviewFor(Moved) }, /*bAppendOrToggle*/false);
+	}
+	Driver.PumpFrame();
+	const FVector2D Before = Moved->GetAnchoredPosition();
+
+	Driver.KeyDown(EKeys::Right);
+	Driver.KeyDown(EKeys::Down);
+	Driver.KeyUp(EKeys::Right);
+	Driver.KeyUp(EKeys::Down);
+	Driver.PumpFrame();
+
+	TestFalse(TEXT("No transaction is left open"), GEditor->IsTransactionActive());
+	const FVector2D After = Moved->GetAnchoredPosition();
+	if (!TestFalse(*FString::Printf(TEXT("The arrows nudged the widget (%s -> %s)"), *Before.ToString(), *After.ToString()), After.Equals(Before)))
+	{
+		return false;
+	}
+	Driver.Undo();
+	Driver.PumpFrame();
+	TestTrue(*FString::Printf(TEXT("One undo takes the whole nudge back (%s)"), *Moved->GetAnchoredPosition().ToString()),
+		Moved->GetAnchoredPosition().Equals(Before));
 	return true;
 }
 

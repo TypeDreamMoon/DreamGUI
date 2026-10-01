@@ -745,6 +745,30 @@ namespace DreamTests
 		return Viewport->OnMouseButtonUp(Geometry, PointerEvent).IsEventHandled();
 	}
 
+	bool FDreamDesignerDriver::KeyDown(const FKey& InKey)
+	{
+		TSharedPtr<FSceneViewport> Viewport = WeakSceneViewport.Pin();
+		FGeometry Geometry;
+		if (!Viewport.IsValid() || !GetViewportGeometry(Geometry))
+		{
+			return false;
+		}
+		const FKeyEvent KeyEvent(InKey, FModifierKeysState(), /*InUserIndex*/0, /*bInIsRepeat*/false, /*InCharacterCode*/0, /*InKeyCode*/0);
+		return Viewport->OnKeyDown(Geometry, KeyEvent).IsEventHandled();
+	}
+
+	bool FDreamDesignerDriver::KeyUp(const FKey& InKey)
+	{
+		TSharedPtr<FSceneViewport> Viewport = WeakSceneViewport.Pin();
+		FGeometry Geometry;
+		if (!Viewport.IsValid() || !GetViewportGeometry(Geometry))
+		{
+			return false;
+		}
+		const FKeyEvent KeyEvent(InKey, FModifierKeysState(), /*InUserIndex*/0, /*bInIsRepeat*/false, /*InCharacterCode*/0, /*InKeyCode*/0);
+		return Viewport->OnKeyUp(Geometry, KeyEvent).IsEventHandled();
+	}
+
 	void FDreamDesignerDriver::Compile()
 	{
 		if (ToolkitPtr != nullptr)

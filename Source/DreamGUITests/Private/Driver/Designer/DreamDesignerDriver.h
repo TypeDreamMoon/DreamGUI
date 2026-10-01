@@ -141,6 +141,9 @@ namespace DreamTests
 		bool MoveTo(FIntPoint InPixel);
 		bool Press(const FKey& InKey);
 		bool Release(const FKey& InKey);
+		/** A keyboard key down and up on the viewport, as Slate delivers one -- the arrows nudge the selection. */
+		bool KeyDown(const FKey& InKey);
+		bool KeyUp(const FKey& InKey);
 
 		/**
 		 * One engine frame of this designer's own work, synchronously: the viewport client's tick,
