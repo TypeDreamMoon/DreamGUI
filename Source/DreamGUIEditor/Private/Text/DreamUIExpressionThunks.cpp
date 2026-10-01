@@ -598,6 +598,14 @@ namespace DreamUIExpressionThunksLocal
 		}
 
 		FString Name = InPrefix + Sanitized;
+		// An id and a property path, each of a legal length, add up past what an FName holds, and an FName past NAME_SIZE stops
+		// the editor. Cut, with the whole spelling's hash, so the same pair keeps the same name; the room left is for the
+		// disambiguation below.
+		constexpr int32 MaxThunkName = NAME_SIZE - 32;
+		if (Name.Len() > MaxThunkName)
+		{
+			Name = FString::Printf(TEXT("%s_%08X"), *Name.Left(MaxThunkName - 9), FCrc::StrCrc32(*Name));
+		}
 		if (InOutClaimedNames.Contains(Name))
 		{
 			// US-31, a character no .dui token can contain, so the two halves cannot be confused

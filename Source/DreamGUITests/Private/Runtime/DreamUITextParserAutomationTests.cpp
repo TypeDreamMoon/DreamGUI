@@ -1562,4 +1562,58 @@ bool FDreamUIParserTransitiveImportTest::RunTest(const FString& Parameters)
 	return true;
 }
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamUIParserOverlongPathTest,
+	"DreamGUI.Text.Parser.AnAssetPathLongerThanANameCanHoldIsReportedNotLoaded",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * A path is loaded by name -- its package's, its object's -- and FName does not refuse a name of NAME_SIZE characters or
+ * more, it stops the editor. Identifiers were cut at the token already; a path of a thousand characters went through to
+ * the load. Reported at the token now, as an identifier is.
+ */
+bool FDreamUIParserOverlongPathTest::RunTest(const FString& Parameters)
+{
+	const FString LongPath = FString(TEXT("/Game/")) + FString::ChrN(1100, TEXT('A'));
+	const FString Source = FString::Printf(TEXT("Widget Root {\n    %s Child\n}\n"), *LongPath);
+	FDreamUIAst Ast;
+	FDreamUIDiagnosticBag Diagnostics;
+	FDreamUISourceFile::Parse(Source, TEXT("OverlongPath.dui"), Ast, Diagnostics);
+	TestTrue(*FString::Printf(TEXT("the path is reported as too long (%s)"), *Diagnostics.ToString()),
+		Diagnostics.Diagnostics.ContainsByPredicate([](const FDreamUIDiagnostic& InDiagnostic)
+		{
+			return InDiagnostic.Code == EDreamUIDiagnosticCode::AssetPathTooLong;
+		}));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamUIParserLongChainTest,
+	"DreamGUI.Text.Parser.AChainOfThousandsOfOperatorsIsReportedAsTooDeep",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * `1 + 1 + 1 + ...` is parsed in a loop, but every operator makes the tree one level deeper, and everything after the parser
+ * walks it recursively: a few thousand terms overflowed the stack in the binding's lowering and in the tree's destructor.
+ * The chain spends the nesting budget now, and is reported as nesting too deep is.
+ */
+bool FDreamUIParserLongChainTest::RunTest(const FString& Parameters)
+{
+	FString Expression = TEXT("1");
+	for (int32 Term = 0; Term < 3000; ++Term)
+	{
+		Expression += TEXT(" + 1");
+	}
+	const FString Source = FString::Printf(TEXT("Widget Root {\n    RenderOpacity <- %s\n}\n"), *Expression);
+	FDreamUIAst Ast;
+	FDreamUIDiagnosticBag Diagnostics;
+	FDreamUISourceFile::Parse(Source, TEXT("LongChain.dui"), Ast, Diagnostics);
+	TestTrue(TEXT("the chain is reported as nesting too deep"),
+		Diagnostics.Diagnostics.ContainsByPredicate([](const FDreamUIDiagnostic& InDiagnostic)
+		{
+			return InDiagnostic.Code == EDreamUIDiagnosticCode::NestingTooDeep;
+		}));
+	return true;
+}
+
 #endif

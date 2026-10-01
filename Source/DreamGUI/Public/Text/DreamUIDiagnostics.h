@@ -72,6 +72,12 @@ enum class EDreamUIDiagnosticCode : int32
 	 * one rule covers every position a word can appear in.
 	 */
 	IdentifierTooLong = 1006,
+	/**
+	 * An asset path longer than an FName can hold. A load splits the path into names -- the package's, the object's --
+	 * and FName stops the editor on one that is too long rather than return an error (see IdentifierTooLong). Caught at
+	 * the token for a path written bare, and by the builder for one written as a string.
+	 */
+	AssetPathTooLong = 1007,
 
 	// --- 2xxx parser ---
 	/** A token appeared where the grammar allows something else. Message names both. */
@@ -80,7 +86,7 @@ enum class EDreamUIDiagnosticCode : int32
 	UnclosedBlock = 2002,
 	/** A `(` with no matching `)`. */
 	UnclosedTuple = 2003,
-	/** A node header with no identifier: every node must be named, see the plan's id rule. */
+	/** A node header with no identifier: every node must be named, since the id is how bindings and the write-back find it. */
 	MissingNodeId = 2004,
 	/** A property name with no `=` or `<-` after it, or one whose operator is followed by nothing. */
 	MissingPropertyValue = 2005,
