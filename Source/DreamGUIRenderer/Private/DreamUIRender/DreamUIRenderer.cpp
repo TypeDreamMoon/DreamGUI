@@ -864,6 +864,7 @@ void FDreamUIRenderer::DrawBuiltInBatch(FRHICommandList& RHICmdList, FGraphicsPi
 	PSParameters.DreamUI_FontTexSampler = SamplerOrBilinear(Params.FontSamplerRHI.GetReference());
 	PSParameters.DreamUI_WidgetDataTex = TextureOrFallback(Params.WidgetDataTextureRHI.GetReference(), GBlackTexture);
 	PSParameters.DreamUI_ClipDataTex = TextureOrFallback(Params.ClipDataTextureRHI.GetReference(), GBlackTexture);
+	PSParameters.DreamUI_RectBlockDataTex = TextureOrFallback(Params.RectBlockDataRHI.GetReference(), GBlackTexture);
 	PSParameters.DreamUI_SceneDepthTex = SceneDepthTexture ? SceneDepthTexture : GBlackTexture->TextureRHI.GetReference();
 	PSParameters.DreamUI_SceneDepthTexSampler = TStaticSamplerState<SF_Point, AM_Clamp, AM_Clamp, AM_Clamp>::GetRHI();
 	PSParameters.DreamUI_SceneDepthTextureScaleOffset = SceneDepthTexST;
@@ -2367,6 +2368,7 @@ void FDreamUIRenderer::RenderGizmoMesh_RenderThread(const TArray<TSharedPtr<FDre
 				PSParameters.DreamUI_FontTexSampler = TStaticSamplerState<SF_Point, AM_Clamp, AM_Clamp, AM_Clamp>::GetRHI();
 				PSParameters.DreamUI_WidgetDataTex = GBlackTexture->TextureRHI;
 				PSParameters.DreamUI_ClipDataTex = GBlackTexture->TextureRHI;
+				PSParameters.DreamUI_RectBlockDataTex = GBlackTexture->TextureRHI;
 				PSParameters.DreamUI_SceneDepthTex = GBlackTexture->TextureRHI;
 				PSParameters.DreamUI_SceneDepthTexSampler = TStaticSamplerState<SF_Point, AM_Clamp, AM_Clamp, AM_Clamp>::GetRHI();
 				PSParameters.DreamUI_SceneDepthTextureScaleOffset = FVector4f(1.0f, 1.0f, 0.0f, 0.0f);

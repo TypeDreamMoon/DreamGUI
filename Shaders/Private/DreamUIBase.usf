@@ -1,12 +1,15 @@
 ﻿// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
 //
 // DreamGUI's built-in UI shader: everything a canvas batches -- sprites, bitmap glyphs, SDF and
-// MTSDF glyphs -- drawn by one global shader with no UMaterial. Which kind a pixel is comes from
+// MTSDF glyphs, rect blocks -- drawn by one global shader with no UMaterial. Which kind a pixel is comes from
 // the widget property record (FontMark), read by the record index in UV1.x, so one draw can mix
 // all of them, exactly as the material it replaces did.
 
 #include "/Engine/Public/Platform.ush"
 #include "/Engine/Private/GammaCorrectionCommon.ush"
+// Rect blocks are drawn here too (UDreamRectBlock::IsDrawnByBuiltInShader), their body texture sampled as the rest is.
+#define DREAMUI_SHADE_RECT_BLOCK 1
+#define DREAMUI_RECT_BLOCK_SAMPLE(Tex, Sampler, UV) Tex.Sample(Sampler, UV)
 #include "/Plugin/DreamGUI/Private/DreamUIShade.ush"
 #include "/Plugin/DreamGUI/Private/DreamUIRenderLayer.ush"
 
@@ -21,6 +24,8 @@ Texture2DArray DreamUI_FontTex;
 SamplerState DreamUI_FontTexSampler;
 Texture2D DreamUI_WidgetDataTex;
 Texture2D DreamUI_ClipDataTex;
+/** The world's rows of rect block data: what a rect block drawn here reads its shape from. */
+Texture2D DreamUI_RectBlockDataTex;
 
 #if LEXUI_BLEND_DEPTH
 Texture2D DreamUI_SceneDepthTex;
@@ -97,7 +102,7 @@ void MainPS(
 	// Everything a UI pixel is comes from the shared function; this shader adds depth, gamma, premultiply.
 	float4 Color = DreamUI_ShadePixel(In.UV0, In.UV1, In.UV2, In.UV3, In.Color, In.LocalPosition,
 		DreamUI_MainTex, DreamUI_MainTexSampler, DreamUI_FontTex, DreamUI_FontTexSampler,
-		DreamUI_WidgetDataTex, DreamUI_ClipDataTex, DreamUI_FontAtlasInfo);
+		DreamUI_WidgetDataTex, DreamUI_ClipDataTex, DreamUI_FontAtlasInfo, DreamUI_RectBlockDataTex);
 #endif
 
 #if LEXUI_BLEND_DEPTH

@@ -61,6 +61,20 @@ namespace DreamTests::Lifecycle
 		UClass* GetClass() const;
 	};
 
+	/**
+	 * Canvases draw through materials while it lives (UDreamUISettings::bUseBuiltInUIShader off): what a test that watches
+	 * the materials a canvas's mesh holds -- their proxies, what a copy or a play session carries of them -- needs of the
+	 * canvas. With the built-in shader on, a panel of a rect block draws with no material at all.
+	 */
+	struct FScopedMaterialDrawing
+	{
+		FScopedMaterialDrawing();
+		~FScopedMaterialDrawing();
+		UE_NONCOPYABLE(FScopedMaterialDrawing);
+	private:
+		bool bSaved = true;
+	};
+
 	/** The registered hierarchy roots of InWorld. */
 	TArray<UDreamWidget*> RegisteredRoots(UWorld* InWorld);
 

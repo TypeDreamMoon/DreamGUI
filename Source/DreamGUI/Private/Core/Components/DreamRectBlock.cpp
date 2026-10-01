@@ -5,6 +5,9 @@
 #include "Core/DreamUIManager.h"
 #include "Core/DreamUIWorldContext.h"
 #include "Core/DreamGUISettings.h"
+#include "Core/DreamUISettings.h"
+#include "Core/DreamUIFontData_BaseObject.h"
+#include "Core/Components/DreamCanvas.h"
 #include "DreamGUI.h"
 #include "Core/DreamUIGeometry.h"
 #include "Core/DreamUISpriteInfo.h"
@@ -543,11 +546,35 @@ UTexture* UDreamRectBlock::GetTextureToCreateGeometry()
 	}
 	return nullptr;
 }
+static_assert(UDreamRectBlock::BuiltInShaderMark > static_cast<uint8>(EDreamUIFontTextureMark::Mtsdf),
+	"a rect block's mark is past every font mark: the shader tells the two apart by it");
+
+bool UDreamRectBlock::IsDrawnByBuiltInShader() const
+{
+	// Its shape in its world's rows -- not the asset's own, which a world with no UI manager keeps -- of the default data,
+	// which is what a built-in draw binds (UDreamCanvas::UpdateDrawCallMaterial).
+	if (RectBlockData == nullptr || DataRows == nullptr || DataRows.Get() == RectBlockData.Get()
+		|| RectBlockData != UDreamGUISettings::LoadSetting(UDreamGUISettings::Get()->DefaultRectBlockData, TEXT("DefaultRectBlockData")))
+	{
+		return false;
+	}
+	const UDreamWidget* Widget = GetWidget();
+	const UDreamCanvas* Canvas = Widget != nullptr ? Widget->GetRenderCanvas() : nullptr;
+	// As the canvas decides a section with no material (UpdateDrawCallMaterial). A change of the canvas, or of how it
+	// renders, marks everything of this visual dirty, its material with it, and asks this again.
+	return Canvas != nullptr && UDreamUISettings::GetUseBuiltInUIShader() && Canvas->IsRenderByDreamUIRendererOrUERenderer();
+}
+
 UMaterialInterface* UDreamRectBlock::GetMaterialToCreateGeometry()
 {
 	if (auto Result = Super::GetMaterialToCreateGeometry())
 	{
 		return Result;
+	}
+	else if (IsDrawnByBuiltInShader())
+	{
+		// No material: the canvas draws it with the built-in shader, batched with what it draws there.
+		return nullptr;
 	}
 	else
 	{

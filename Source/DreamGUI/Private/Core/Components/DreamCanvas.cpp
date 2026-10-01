@@ -3640,6 +3640,13 @@ void UDreamCanvas::UpdateDrawCallMaterial()
 	const UDreamUIRenderLayerTable* LayerTable = GetRenderLayerTable(/*bInCreate*/ false);
 	const UTexture* LayerTableTexture = LayerTable != nullptr ? LayerTable->GetTexture() : nullptr;
 	/**
+	 * The world's rows of the default rect block data, which the built-in shader reads a rect block it draws from
+	 * (UDreamRectBlock::IsDrawnByBuiltInShader): given to every built-in draw, so that the draws of a world of panels
+	 * bind the same textures one after another.
+	 */
+	UDreamUIManagerWorldSubsystem* const RowsManager = RegisteredWithManager != nullptr ? RegisteredWithManager : UDreamUIManagerWorldSubsystem::GetInstance(GetWorld());
+	const UTexture* RectBlockRowsTexture = bUseBuiltInShader && RowsManager != nullptr ? RowsManager->GetBuiltInRectBlockRowsTexture() : nullptr;
+	/**
 	 * What a section a material draws is given of the built-in parameters: nothing, unless it holds a render layer's
 	 * elements, whose vertices its vertex shader places through the widget data and the table (DreamUIRenderLayer.ush).
 	 */
@@ -3726,6 +3733,7 @@ void UDreamCanvas::UpdateDrawCallMaterial()
 				BuiltIn.WidgetDataTexture = WidgetPropertyDataAsTexture->GetDataTexture();
 				BuiltIn.ClipDataTexture = RootCanvas->ClipDataAsTexture->GetDataTexture();
 				BuiltIn.RenderLayerTable = LayerTableTexture;
+				BuiltIn.RectBlockData = RectBlockRowsTexture;
 				const FVector4f AtlasInfo = MakeFontAtlasInfo(DrawCallItem);
 				BuiltIn.FontAtlasSize = FVector2f(AtlasInfo.X, AtlasInfo.Y);
 				BuiltIn.FontFieldRangeTexels = AtlasInfo.Z;

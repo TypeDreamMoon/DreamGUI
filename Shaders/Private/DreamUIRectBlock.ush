@@ -1,5 +1,16 @@
-﻿#include "/Engine/Private/GammaCorrectionCommon.ush"
+﻿// A rect block's shape, from its row of rect block data (UDreamRectBlock::FillData). Included by the rect block
+// material's Custom node (MF_DreamUI_RectBlock), and by the built-in UI shader through DreamUIShade.ush, which draws
+// a rect block with whatever else its canvas batches it with (UDreamRectBlock::IsDrawnByBuiltInShader).
+#ifndef DREAMUI_RECT_BLOCK_USH
+#define DREAMUI_RECT_BLOCK_USH
+#include "/Engine/Private/GammaCorrectionCommon.ush"
 #include "/Engine/Public/Platform.ush"
+
+// How the body texture is sampled: Common.ush's Texture2DSample in a material, and whatever the built-in shader, which
+// has no Common.ush, says before it includes this.
+#ifndef DREAMUI_RECT_BLOCK_SAMPLE
+#define DREAMUI_RECT_BLOCK_SAMPLE Texture2DSample
+#endif
 
 #ifndef PI
 #define PI 3.14159265359f
@@ -313,7 +324,7 @@ float DreamUI_CalculateRectBlock(Texture2D MainTex, SamplerState MainTexSampler,
             }
         }
 
-        float4 MainTexColor = Texture2DSample(MainTex, MainTexSampler, texUV);
+        float4 MainTexColor = DREAMUI_RECT_BLOCK_SAMPLE(MainTex, MainTexSampler, texUV);
         MainTexColor.a *= SliceCentreFade;
         float4 bodyColor = MainTexColor * _BodyColor;
         bodyColor.rgb *= bodyColor.a;
@@ -435,3 +446,5 @@ float DreamUI_CalculateRectBlock(Texture2D MainTex, SamplerState MainTexSampler,
     
     return 1;
 }
+
+#endif // DREAMUI_RECT_BLOCK_USH

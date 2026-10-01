@@ -529,6 +529,17 @@ UDreamUIDataAsTexture* UDreamUIManagerWorldSubsystem::GetRectBlockDataRows(UDrea
 	return Rows;
 }
 
+UTexture* UDreamUIManagerWorldSubsystem::GetBuiltInRectBlockRowsTexture() const
+{
+	if (RectBlockDataRows.Num() == 0)
+	{
+		return nullptr;
+	}
+	UDreamRectBlockData* const Default = UDreamGUISettings::LoadSetting(UDreamGUISettings::Get()->DefaultRectBlockData, TEXT("DefaultRectBlockData"));
+	const TObjectPtr<UDreamUIDataAsTexture>* Found = Default != nullptr ? RectBlockDataRows.Find(Default) : nullptr;
+	return Found != nullptr && IsValid(Found->Get()) ? Found->Get()->GetDataTexture() : nullptr;
+}
+
 UDreamUIRenderLayerTable* UDreamUIManagerWorldSubsystem::GetRenderLayerTable()
 {
 	if (RenderLayerTable == nullptr)

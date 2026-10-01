@@ -26,6 +26,7 @@ class ULevel;
 class UDreamRectBlockData;
 class UDreamUIDataAsTexture;
 class UDreamUIRenderLayerTable;
+class UTexture;
 enum class EDreamUIDataAsTexturePixelFormat : uint8;
 
 DECLARE_MULTICAST_DELEGATE_OneParam(FDreamUIEditorTickMulticastDelegate, float);
@@ -200,6 +201,11 @@ public:
 	 * back were still taken in the next one. The asset keeps what it is for, the material.
 	 */
 	UDreamUIDataAsTexture* GetRectBlockDataRows(UDreamRectBlockData* InData, int32 InBlockSizeInBytes, EDreamUIDataAsTexturePixelFormat InPixelFormat);
+	/**
+	 * This world's rows of the default rect block data, as the texture a built-in draw binds for the rect blocks it draws
+	 * (UDreamRectBlock::IsDrawnByBuiltInShader); null until a rect block of the default data made them.
+	 */
+	UTexture* GetBuiltInRectBlockRowsTexture() const;
 	/**
 	 * Where this world's render layers stand on their canvases, for the shaders (UDreamUIRenderLayerTable): made when the
 	 * first canvas makes a layer, and gone with the world. Flushed once a frame, after the canvases placed their layers.

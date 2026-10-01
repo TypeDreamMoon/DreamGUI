@@ -25,6 +25,7 @@ struct FDreamUIBuiltInTextures
 	const UTexture* WidgetData = nullptr;
 	const UTexture* ClipData = nullptr;
 	const UTexture* RenderLayerTable = nullptr;
+	const UTexture* RectBlockData = nullptr;
 };
 
 /**
@@ -52,6 +53,12 @@ struct FDreamUIBuiltInDrawParams
 	TWeakObjectPtr<const UTexture> ClipDataTexture;
 	/** The world's render layer table, which a render layer's vertices are placed on the canvas through; none without layers. */
 	TWeakObjectPtr<const UTexture> RenderLayerTable;
+	/**
+	 * The world's rows of the default rect block data, which a rect block the built-in shader draws reads its shape
+	 * from (UDreamRectBlock::IsDrawnByBuiltInShader): bound with every built-in draw of a world that has them, so that
+	 * the draws of a world of panels bind the same textures one after another.
+	 */
+	TWeakObjectPtr<const UTexture> RectBlockData;
 	/** Render thread: what a draw binds. Null where there is no texture; the draw then binds a fallback. */
 	FTextureReferenceRHIRef MainTextureRHI;
 	FSamplerStateRHIRef MainSamplerRHI;
@@ -60,6 +67,7 @@ struct FDreamUIBuiltInDrawParams
 	FTextureReferenceRHIRef WidgetDataTextureRHI;
 	FTextureReferenceRHIRef ClipDataTextureRHI;
 	FTextureReferenceRHIRef RenderLayerTableRHI;
+	FTextureReferenceRHIRef RectBlockDataRHI;
 	/** Atlas slice size in texels. */
 	FVector2f FontAtlasSize = FVector2f(1.0f, 1.0f);
 	/** Distance-field range in texels (twice the spread); 0 for non-field atlases. */
@@ -121,6 +129,7 @@ public:
 		SHADER_PARAMETER_SAMPLER(SamplerState, DreamUI_FontTexSampler)
 		SHADER_PARAMETER_TEXTURE(Texture2D, DreamUI_WidgetDataTex)
 		SHADER_PARAMETER_TEXTURE(Texture2D, DreamUI_ClipDataTex)
+		SHADER_PARAMETER_TEXTURE(Texture2D, DreamUI_RectBlockDataTex)
 		SHADER_PARAMETER_TEXTURE(Texture2D, DreamUI_SceneDepthTex)
 		SHADER_PARAMETER_SAMPLER(SamplerState, DreamUI_SceneDepthTexSampler)
 		SHADER_PARAMETER(FVector4f, DreamUI_SceneDepthTextureScaleOffset)

@@ -13,6 +13,8 @@
 //   UV1.x  widget property record index, UV1.y atlas slice
 //   UV2    field fonts: DilateEm + 16 * Layer, position across the fill run (see DreamUIText.ush)
 //   UV3    field fonts: fill progress, glow boost
+//   A rect block, where the host draws one (DREAMUI_SHADE_RECT_BLOCK): UV0 across its quad, UV2 its body texture's
+//   coordinate, UV3.x its row of rect block data (DreamUIRectBlock.ush)
 //   Colour authored in sRGB
 
 #ifndef DREAMUI_SHADE_USH
@@ -22,6 +24,11 @@
 #include "/Plugin/DreamGUI/Private/DreamUIWidgetProperty.ush"
 #include "/Plugin/DreamGUI/Private/DreamUIClip.ush"
 #include "/Plugin/DreamGUI/Private/DreamUIText.ush"
+// The built-in UI shader draws rect blocks too, and says so before including this. A material host does not: there a
+// rect block's mark falls to the sprite branch, as a mark of 0 did before rect blocks had one.
+#if DREAMUI_SHADE_RECT_BLOCK
+#include "/Plugin/DreamGUI/Private/DreamUIRectBlock.ush"
+#endif
 
 /**
  * FontAtlasInfo: xy atlas slice size in texels, z field range in texels (2 * spread), w texels per em
@@ -29,7 +36,11 @@
  */
 float4 DreamUI_ShadePixel(float2 UV0, float2 UV1, float2 UV2, float2 UV3, float4 RawVertexColor, float3 LocalPosition,
 	Texture2D MainTex, SamplerState MainSampler, Texture2DArray FontTex, SamplerState FontSampler,
-	Texture2D WidgetDataTex, Texture2D ClipDataTex, float4 FontAtlasInfo)
+	Texture2D WidgetDataTex, Texture2D ClipDataTex, float4 FontAtlasInfo
+#if DREAMUI_SHADE_RECT_BLOCK
+	, Texture2D RectBlockDataTex
+#endif
+	)
 {
 	half FontMark;
 	float ClipDataCoordinate;
@@ -39,7 +50,19 @@ float4 DreamUI_ShadePixel(float2 UV0, float2 UV1, float2 UV2, float2 UV3, float4
 	// Vertex colour is authored in sRGB; the pipeline works in linear.
 	float4 VertexColor = float4(sRGBToLinear(RawVertexColor.rgb), RawVertexColor.a);
 	float4 Color;
-	if (FontMark < 0.5)
+#if DREAMUI_SHADE_RECT_BLOCK
+	if (FontMark > 3.5)
+	{
+		// A rect block (UDreamRectBlock::BuiltInShaderMark): its shape from its row of rect block data, in the vertex
+		// colour, as its material draws it.
+		float3 BlockColor = float3(0, 0, 0);
+		float BlockAlpha = 0;
+		DreamUI_CalculateRectBlock(MainTex, MainSampler, UV0, UV2, UV3, RectBlockDataTex, BlockColor, BlockAlpha);
+		Color = VertexColor * float4(BlockColor, BlockAlpha);
+	}
+	else
+#endif
+	if (FontMark < 0.5 || FontMark > 3.5)
 	{
 		float4 Texel = DREAMUI_SAMPLE(MainTex, MainSampler, UV0);
 		Color = Texel * VertexColor;

@@ -98,6 +98,7 @@ bool FDreamLifecycleProxiesKeepNoMaterialInTheMeshTest::RunTest(const FString& P
 	// A copy a play session makes of the level, a paste, a save: each carries what the canvas's mesh holds as its
 	// materials. Drawing through its material proxies the canvas keeps none of its own there -- no instance that reads
 	// a data texture of the canvas, nothing the canvas made -- only the materials it was given.
+	const FScopedMaterialDrawing MaterialDrawing;
 	FScopedPanelClass Panel(TEXT("LifecycleProxies"));
 	if (!TestNotNull(TEXT("the panel class compiled"), Panel.GetClass()))return false;
 	FScopedWorld Level(EWorldType::Editor);
@@ -130,6 +131,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 bool FDreamLifecyclePasteLeavesNoPersistentMeshTest::RunTest(const FString& Parameters)
 {
 	using namespace DreamTests::Lifecycle;
+	const FScopedMaterialDrawing MaterialDrawing;
 	FScopedPanelClass Panel(TEXT("LifecyclePaste"));
 	if (!TestNotNull(TEXT("the panel class compiled"), Panel.GetClass()))return false;
 	FScopedWorld Level(EWorldType::Editor);
@@ -167,6 +169,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 bool FDreamLifecyclePlayAfterPasteTest::RunTest(const FString& Parameters)
 {
 	using namespace DreamTests::Lifecycle;
+	const FScopedMaterialDrawing MaterialDrawing;
 	FScopedPanelClass Panel(TEXT("LifecyclePlayAfterPaste"));
 	if (!TestNotNull(TEXT("the panel class compiled"), Panel.GetClass()))return false;
 	FScopedWorld Level(EWorldType::Editor);
@@ -207,6 +210,7 @@ bool FDreamLifecycleOrphanMeshNeutralizedTest::RunTest(const FString& Parameters
 	using namespace DreamTests::Lifecycle;
 	// The state a paste by an older build left behind, or a map saved by one: a canvas mesh that is an
 	// ordinary component of its actor, still naming another panel's material.
+	const FScopedMaterialDrawing MaterialDrawing;
 	FScopedPanelClass Panel(TEXT("LifecycleOrphan"));
 	if (!TestNotNull(TEXT("the panel class compiled"), Panel.GetClass()))return false;
 	FScopedWorld Level(EWorldType::Editor);
