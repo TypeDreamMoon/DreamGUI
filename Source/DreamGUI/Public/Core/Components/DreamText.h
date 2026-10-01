@@ -473,6 +473,10 @@ public:
 	 * @return true- data changed
 	 */
 	bool MoveCaret(int32 moveType, int32& inOutCaretPositionIndex, int32& inOutCaretPositionLineIndex, FVector2f& inOutCaretPosition);
+	/**
+	 * The offset in the source string, in UTF-16 code units, that caret inCaretPositionIndex stands at. The caret
+	 * that ends a soft-wrapped line stands where the next line starts: the wrap is not in the text.
+	 */
 	int GetCharIndexByCaretIndex(int32 inCaretPositionIndex);
 	int GetLastCaret();
 	/** get caret position and line index */
@@ -481,6 +485,7 @@ public:
 	void FindCaret(FVector2f& inOutCaretPosition, int32 inCaretPositionLineIndex, int32& outCaretPositionIndex);
 	/** find caret index by position */
 	void FindCaretByWorldPosition(FVector inWorldPosition, FVector2f& outCaretPosition, int32& outCaretPositionLineIndex, int32& outCaretPositionIndex);
+	/** The caret standing at source offset inCharIndex; for an offset inside a cluster, the caret just past the cluster. */
 	int GetCaretIndexByCharIndex(int32 inCharIndex);
 	bool GetVisibleCharRangeForMultiLine(int32& inOutCaretPositionIndex, int32& inOutCaretPositionLineIndex, int32& inOutVisibleCaretStartLineIndex, int32& inOutVisibleCaretStartIndex, int inMaxLineCount, int32& outVisibleCharStartIndex, int32& outVisibleCharCount);
 

@@ -233,6 +233,14 @@ private:
 	int MaxCellIndexInCacheCellList = 0;
 	double MinCellPosition = 0;//horizontal left cell position.y, or vertical top cell position.z
 	int MinCellDataIndex = 0;//horizontal left-top cell data index, or vertical left-top cell data index.
+	/**
+	 * Set while InitializeOnDataSource puts the content back at its start. The cells have just been laid
+	 * out from data index 0 and the recycling cursors say so, so there is nothing to recycle on the way
+	 * there -- and recycling against that move would read the cell positions it is replacing.
+	 */
+	bool bResettingCells = false;
+	/** Whether data indices wrap round: an infinite loop, which only a single row or column can be. */
+	bool IsLooping()const;
 	int GetValidCellDataIndex(int InMinCellDataIndex)const;
 	void IncreaseMinMaxCellIndexInCacheCellList(int Count);
 	void DecreaseMinMaxCellIndexInCacheCellList(int Count);

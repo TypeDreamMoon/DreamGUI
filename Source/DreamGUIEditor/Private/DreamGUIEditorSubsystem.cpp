@@ -17,6 +17,7 @@
 #include "Engine/Texture2D.h"
 #include "Engine/World.h"
 #include "Subsystems/ImportSubsystem.h"
+#include "UObject/Package.h"
 #include "UObject/UObjectGlobals.h"
 #include "UObject/UObjectIterator.h"
 
@@ -64,10 +65,16 @@ void UDreamGUIEditorSubsystem::Deinitialize()
 		FTSTicker::GetCoreTicker().RemoveTicker(RebuildTickerHandle);
 		RebuildTickerHandle.Reset();
 	}
+	if (DirtyTickerHandle.IsValid())
+	{
+		FTSTicker::GetCoreTicker().RemoveTicker(DirtyTickerHandle);
+		DirtyTickerHandle.Reset();
+	}
 	Previews.Reset();
 	ReleasedPreviews.Reset();
 	ReleasedHosts.Reset();
 	ReleasedScreens.Reset();
+	PackagesToDirtyAfterCompile.Reset();
 	SpriteIconTextures.Reset();
 	Super::Deinitialize();
 }
@@ -180,8 +187,53 @@ void UDreamGUIEditorSubsystem::ReleaseTreesUsing(UDreamUIManagerWorldSubsystem& 
 	}
 }
 
+void UDreamGUIEditorSubsystem::MarkPackagesDirtyWhenCompileEnds(TConstArrayView<UPackage*> InPackages)
+{
+	for (UPackage* Package : InPackages)
+	{
+		if (Package != nullptr)
+		{
+			PackagesToDirtyAfterCompile.AddUnique(Package);
+		}
+	}
+	// And a frame later, whichever comes first: a compile that only regenerates the skeleton, or one asked for in a
+	// batch, ends without the announcement, and the packages waited for some later compile -- after the author might
+	// have saved them, which that compile then made dirty again.
+	if (!PackagesToDirtyAfterCompile.IsEmpty() && !DirtyTickerHandle.IsValid())
+	{
+		DirtyTickerHandle = FTSTicker::GetCoreTicker().AddTicker(TEXT("DreamGUIDirtyAfterCompile"), 0.0f,
+			[WeakThis = TWeakObjectPtr<UDreamGUIEditorSubsystem>(this)](float)
+			{
+				if (UDreamGUIEditorSubsystem* Self = WeakThis.Get())
+				{
+					Self->DirtyTickerHandle.Reset();
+					Self->MarkQueuedPackagesDirty();
+				}
+				return false;
+			});
+	}
+}
+
+void UDreamGUIEditorSubsystem::MarkQueuedPackagesDirty()
+{
+	const TArray<TWeakObjectPtr<UPackage>> PackagesToDirty = MoveTemp(PackagesToDirtyAfterCompile);
+	PackagesToDirtyAfterCompile.Reset();
+	for (const TWeakObjectPtr<UPackage>& WeakPackage : PackagesToDirty)
+	{
+		if (UPackage* Package = WeakPackage.Get())
+		{
+			Package->MarkPackageDirty();
+		}
+	}
+}
+
 void UDreamGUIEditorSubsystem::HandleBlueprintCompiled()
 {
+	// Ahead of the widget-class test below: the packages a compile asked for are owed whatever kind of
+	// class it was, and this is the announcement that comes after the compilation manager has put their
+	// dirty flags back.
+	MarkQueuedPackagesDirty();
+
 	if (!bRecompiling)
 	{
 		return;

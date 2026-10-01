@@ -95,6 +95,14 @@ public:
 	TArray<int32> SelectionIndices;
 
 	/**
+	 * What a consumer's handler does to the control while it is still delivering the event -- refresh
+	 * the options as the list opens, replace a wheel's items from what was just chosen. Run after the
+	 * event is counted; unset, the handlers only count.
+	 */
+	TFunction<void()> DuringOpening;
+	TFunction<void()> DuringSelectionChanged;
+
+	/**
 	 * The dropdown's option rows, by option index, as OnItemGenerated handed them over.
 	 *
 	 * Reflected, because the rows belong to the control and are destroyed with it; a listener that
@@ -104,7 +112,15 @@ public:
 	TArray<TObjectPtr<UDreamWidget>> GeneratedItems;
 
 	UFUNCTION()
-	void HandleOpening() { ++OpeningCount; Log.Add(TEXT("Opening")); }
+	void HandleOpening()
+	{
+		++OpeningCount;
+		Log.Add(TEXT("Opening"));
+		if (DuringOpening)
+		{
+			DuringOpening();
+		}
+	}
 
 	UFUNCTION()
 	void HandleClosed() { ++ClosedCount; Log.Add(TEXT("Closed")); }
@@ -114,6 +130,10 @@ public:
 	{
 		SelectionIndices.Add(InSelectedIndex);
 		Log.Add(TEXT("SelectionChanged"));
+		if (DuringSelectionChanged)
+		{
+			DuringSelectionChanged();
+		}
 	}
 
 	UFUNCTION()

@@ -255,6 +255,79 @@ bool FDreamListsRowDragDropOutsideTest::RunTest(const FString& Parameters)
 	return true;
 }
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamListsRowDragSourceRemovedTest,
+	"DreamGUI.ListRowDragDrop.ADragWhoseRowTheSourceTakesAwayEndsAsACancelOfItsItem",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamListsRowDragSourceRemovedTest, "DreamGUI.ListRowDragDrop.ADragWhoseRowTheSourceTakesAwayEndsAsACancelOfItsItem", "[Pointer][Animated]")
+
+/*
+ * A list of one widget per item destroys its LAST row when its source loses an item -- here while
+ * that row is being dragged. The drag source went with the row, and with it the only thing that would
+ * have told the list the drag was over: the pointer pipeline has no widget left to send the end to.
+ * So the list stayed dragging for good, held the operation, and never announced a cancel or the end of
+ * the dragging state. It also kept the index the drag started on, which after the edit names nothing.
+ *
+ * Checked here: pick up the eighth row, take the first item out of the source, let go, and the drag is
+ * over -- dragging went on and off once, and the cancel names the dragged item where it is now, the
+ * seventh.
+ */
+bool FDreamListsRowDragSourceRemovedTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamListRowDragDropInteractionTestLocal;
+	FDreamDriverRig Rig = FDreamDriverRig::Headless(DreamListsInteraction::ViewportSize());
+	Rig.BindTest(this);
+	if (!TestTrue(TEXT("The headless rig came up"), Rig.IsUsable()))
+	{
+		return false;
+	}
+	TArray<UObject*> Items;
+	UDreamListView* List = MakeDraggableList(Rig, 8, Items);
+	UDreamWidget* LastRow = List != nullptr ? List->GetRowWidget(7) : nullptr;
+	if (!TestNotNull(TEXT("The list was made on the rig"), List)
+		|| !TestNotNull(TEXT("with a row for its eighth item"), LastRow))
+	{
+		return false;
+	}
+	TStrongObjectPtr<UDreamListsInteractionProbe> Probe(NewObject<UDreamListsInteractionProbe>());
+	DreamListsInteraction::ListenToList(*List, *Probe);
+
+	// Up past the raycaster's drag threshold, read rather than assumed, so the press is a drag that
+	// stays over the list.
+	const double PastThreshold = FMath::Sqrt(static_cast<double>(Rig.Raycaster()->GetScaledDragThresholdSquare())) + 2.0;
+	TestTrue(TEXT("Picking the eighth row up completes"),
+		Rig.Driver()->Sequence()
+			.MoveTo(FDreamBy::Widget(LastRow))
+			.Press()
+			.MoveBy(FVector2D(0.0, -PastThreshold))
+			.Perform());
+	if (!TestTrue(TEXT("The row is being dragged"), List->GetIsDraggingListItem()))
+	{
+		ReleaseDrag(Rig);
+		return false;
+	}
+
+	// The source loses its first item: seven rows now, and the eighth -- the one in the pointer's
+	// hand -- is the row that goes.
+	List->RemoveItemAt(0);
+	Rig.PumpFrames(1);
+	TestTrue(TEXT("Letting go completes"), ReleaseDrag(Rig));
+
+	TestFalse(TEXT("The list is no longer dragging"), List->GetIsDraggingListItem());
+	TestEqual(TEXT("and has no dragged item"), List->GetDraggedItemIndex(), INDEX_NONE);
+	if (TestEqual(TEXT("Dragging started and stopped"), Probe->DraggingStates.Num(), 2))
+	{
+		TestTrue(TEXT("first starting"), Probe->DraggingStates[0]);
+		TestFalse(TEXT("then stopping"), Probe->DraggingStates[1]);
+	}
+	// Nothing took it, so it was cancelled -- for the item that was picked up, at its index now.
+	if (TestEqual(TEXT("The drag was announced as cancelled once"), Probe->DragCancelledItems.Num(), 1))
+	{
+		TestEqual(TEXT("for the dragged item, now the seventh"), Probe->DragCancelledItems[0], 6);
+	}
+	return true;
+}
+
 /*
  * EDGE SCROLLING -- this library's own addition; UMG's list has no such thing.
  *

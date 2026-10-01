@@ -35,7 +35,7 @@ void UUIToggleGroup::AddToggleComponent(UUIToggle* InComp)
 		SetSelection(InComp);
 	}
 }
-void UUIToggleGroup::RemoveToggleComponent(UUIToggle* InComp)
+void UUIToggleGroup::RemoveToggleComponent(UUIToggle* InComp, bool bInAnnounce)
 {
 	int32 foundIndex = ToggleCollection.IndexOfByKey(InComp);
 	if (foundIndex == INDEX_NONE)
@@ -44,6 +44,30 @@ void UUIToggleGroup::RemoveToggleComponent(UUIToggle* InComp)
 		return;
 	}
 	ToggleCollection.RemoveAt(foundIndex);
+	// A toggle that left is not this group's selection any more. Remembered, it was the toggle the next
+	// selection switched off -- a radio moved to another group, or out of every group, went off when a
+	// former neighbour was clicked.
+	if (bInAnnounce)
+	{
+		ReleaseSelection(InComp);
+	}
+	else if (LastSelect.Get() == InComp)
+	{
+		LastSelect.Reset();
+	}
+}
+void UUIToggleGroup::ReleaseSelection(UUIToggle* InComp)
+{
+	if (InComp == nullptr || LastSelect.Get() != InComp)
+	{
+		return;
+	}
+	LastSelect.Reset();
+	// Said the way ClearSelection says it, because to a listener it is the same news: nothing in the
+	// group is chosen now.
+	OnValueChangedCPP.Broadcast(-1);
+	OnValueChangedBP.Broadcast(-1);
+	OnValueChanged.FireEvent(-1);
 }
 void UUIToggleGroup::SortToggleCollection()
 {

@@ -4,8 +4,10 @@
 
 #include "Misc/AutomationTest.h"
 
+#include "Controls/DreamButton.h"
 #include "Controls/DreamSlider.h"
 #include "Core/Components/DreamWidget.h"
+#include "Event/DreamEventSystem.h"
 #include "Interaction/UISlider.h"
 #include "UObject/StrongObjectPtr.h"
 
@@ -425,6 +427,276 @@ bool FDreamSliderInteractionWheelTest::RunTest(const FString& Parameters)
 
 	TestNearlyEqual(TEXT("The value is where it was"), Slider->GetValue(), 0.5f, 0.000001f);
 	TestEqual(TEXT("No value change was reported"), Log.Values->NumFloats(), 0);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamSliderInteractionCaptureReleasedOnFocusLossTest,
+	"DreamGUI.Slider.MovingPadFocusOffACapturedSliderEndsTheCaptureOnce",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamSliderInteractionCaptureReleasedOnFocusLossTest, "DreamGUI.Slider.MovingPadFocusOffACapturedSliderEndsTheCaptureOnce", "[Nav][Animated]")
+
+/*
+ * The accept button captures a slider for the pad; a direction across it is not the slider's to spend
+ * and moves focus on, to the button below. SSlider ends its capture when focus leaves it; this slider
+ * kept it -- OnControllerCaptureEnd, the moment consumers commit the value on, never came, and the
+ * next visit found the slider already captured. Moving down off the captured slider now ends the
+ * capture, once, with focus on the button below.
+ */
+bool FDreamSliderInteractionCaptureReleasedOnFocusLossTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamSliderInteractionTestLocal;
+	FDreamDriverRig Rig = FDreamDriverRig::Headless(ViewportSize);
+	Rig.BindTest(this);
+	if (!TestTrue(TEXT("The headless rig came up"), Rig.IsUsable()))
+	{
+		return false;
+	}
+	UDreamSlider* Slider = MakeSlider(Rig, FVector2D(400.0, 40.0));
+	UDreamButton* Below = Rig.MakeControl<UDreamButton>(TEXT("Below"), nullptr, FVector2D(160.0, 50.0), FVector2D(0.0, -150.0));
+	if (!TestTrue(TEXT("The slider came up with a track, a handle and a handle area"), HasParts(Slider))
+		|| !TestNotNull(TEXT("A button can be made below the slider"), Below)
+		|| !TestNotNull(TEXT("Which has a face to take focus"), Below->FaceNode.Get()))
+	{
+		return false;
+	}
+	Rig.PumpFrames(1);
+	TStrongObjectPtr<UDreamDragInteractionProbe> CaptureBegins(NewObject<UDreamDragInteractionProbe>());
+	TStrongObjectPtr<UDreamDragInteractionProbe> CaptureEnds(NewObject<UDreamDragInteractionProbe>());
+	Slider->OnControllerCaptureBegin.AddDynamic(CaptureBegins.Get(), &UDreamDragInteractionProbe::RecordSignal);
+	Slider->OnControllerCaptureEnd.AddDynamic(CaptureEnds.Get(), &UDreamDragInteractionProbe::RecordSignal);
+
+	// The first direction lands on the slider, the first control there is; the accept button captures it.
+	TestTrue(TEXT("Moving onto the slider and accepting completes"),
+		Rig.Driver()->Sequence()
+			.Navigate(EDreamUINavigationDirection::Right)
+			.NavigationTrigger(true)
+			.NavigationTrigger(false)
+			.Perform());
+	if (!TestTrue(TEXT("The accept button captured the slider"), Slider->IsControllerCaptured()))
+	{
+		return false;
+	}
+
+	TestTrue(TEXT("Moving down completes"), Rig.Driver()->Sequence().Navigate(EDreamUINavigationDirection::Down).Perform());
+
+	TestEqual(TEXT("Focus went to the button below"), Rig.EventSystem()->GetCurrentSelectedComponent(0), Below->FaceNode.Get());
+	TestFalse(TEXT("And the slider let go of the pad"), Slider->IsControllerCaptured());
+	TestEqual(TEXT("The capture began once"), CaptureBegins->Signals, 1);
+	TestEqual(TEXT("And ended once"), CaptureEnds->Signals, 1);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamSliderInteractionRightClickTest,
+	"DreamGUI.Slider.ARightClickOnTheTrackMovesNothingAndCapturesNothing",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamSliderInteractionRightClickTest, "DreamGUI.Slider.ARightClickOnTheTrackMovesNothingAndCapturesNothing", "[Pointer][Animated]")
+
+/*
+ * SSlider::OnMouseButtonDown answers the left button alone. This slider never asked which button it was:
+ * a right click three quarters along the track jumped the value there and began and ended a mouse
+ * capture. It now moves nothing and says nothing -- and the left button at the same pixel still jumps
+ * the value, which is what shows the pixel is on the track.
+ */
+bool FDreamSliderInteractionRightClickTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamSliderInteractionTestLocal;
+	FDreamDriverRig Rig = FDreamDriverRig::Headless(ViewportSize);
+	Rig.BindTest(this);
+	if (!TestTrue(TEXT("The headless rig came up"), Rig.IsUsable()))
+	{
+		return false;
+	}
+	UDreamSlider* Slider = MakeSlider(Rig, FVector2D(400.0, 40.0));
+	if (!TestTrue(TEXT("The slider came up with a track, a handle and a handle area"), HasParts(Slider)))
+	{
+		return false;
+	}
+	FDreamDriverRef Driver = Rig.Driver();
+	const TOptional<FBox2D> Track = Driver->Find(FDreamBy::Widget(Slider->TrackNode.Get()))->GetPixelRect();
+	const TOptional<FBox2D> Travel = Driver->Find(FDreamBy::Widget(Slider->HandleAreaNode.Get()))->GetPixelRect();
+	if (!TestTrue(TEXT("The track is on screen"), Track.IsSet())
+		|| !TestTrue(TEXT("The handle's travel is on screen"), Travel.IsSet()))
+	{
+		return false;
+	}
+	const double TravelLength = Travel->Max.X - Travel->Min.X;
+	const float OnePixel = static_cast<float>(1.0 / FMath::Max(TravelLength, 1.0));
+	const FVector2D ClickPixel(Travel->Min.X + 0.75 * TravelLength, Track->GetCenter().Y);
+
+	FSliderLog Log(Slider);
+	TestTrue(TEXT("The right click completes"), Driver->Sequence()
+		.MoveToPixel(ClickPixel)
+		.Press(EDreamUIMouseButtonType::Right)
+		.Release(EDreamUIMouseButtonType::Right)
+		.Perform());
+
+	TestNearlyEqual(TEXT("A right click leaves the value where it was"), Slider->GetValue(), 0.0f, 0.000001f);
+	TestEqual(TEXT("And reports no change"), Log.Values->NumFloats(), 0);
+	TestEqual(TEXT("It begins no mouse capture"), Log.CaptureBegins->Signals, 0);
+	TestEqual(TEXT("So ends none"), Log.CaptureEnds->Signals, 0);
+
+	TestTrue(TEXT("A left click at the same pixel completes"), Driver->Sequence().Press().Release().Perform());
+	TestNearlyEqual(TEXT("The left button still jumps the value there"), Slider->GetValue(), 0.75f, OnePixel);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamSliderInteractionBehaviourDisabledTest,
+	"DreamGUI.Slider.ASliderSwitchedOffThroughItsBehaviourIgnoresADrag",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamSliderInteractionBehaviourDisabledTest, "DreamGUI.Slider.ASliderSwitchedOffThroughItsBehaviourIgnoresADrag", "[Pointer][Disabled]")
+
+/*
+ * The behaviour's own switch keeps the slider hit-testable, so a press and a drag on it arrive. The
+ * press was refused its pressed look and nothing else: the value followed the drag and the capture
+ * events fired as for an enabled slider. Dragged now, it moves nothing and announces nothing.
+ */
+bool FDreamSliderInteractionBehaviourDisabledTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamSliderInteractionTestLocal;
+	FDreamDriverRig Rig = FDreamDriverRig::Headless(ViewportSize);
+	Rig.BindTest(this);
+	if (!TestTrue(TEXT("The headless rig came up"), Rig.IsUsable()))
+	{
+		return false;
+	}
+	UDreamSlider* Slider = MakeSlider(Rig, FVector2D(400.0, 40.0));
+	if (!TestTrue(TEXT("The slider came up with a track, a handle and a handle area"), HasParts(Slider))
+		|| !TestNotNull(TEXT("The slider has its behaviour"), Slider->SliderBehaviour.Get()))
+	{
+		return false;
+	}
+	Slider->SliderBehaviour->SetInteractable(false);
+	Rig.PumpFrames(1);
+
+	FDreamDriverRef Driver = Rig.Driver();
+	FDreamElementRef Handle = Driver->Find(FDreamBy::Widget(Slider->HandleNode.Get()));
+	const TOptional<FBox2D> Travel = Driver->Find(FDreamBy::Widget(Slider->HandleAreaNode.Get()))->GetPixelRect();
+	const TOptional<FVector2D> Grip = Handle->GetCentrePixel();
+	if (!TestTrue(TEXT("The handle's travel is on screen"), Travel.IsSet())
+		|| !TestTrue(TEXT("The handle is on screen"), Grip.IsSet()))
+	{
+		return false;
+	}
+
+	FSliderLog Log(Slider);
+	const double TargetX = Travel->Min.X + 0.5 * (Travel->Max.X - Travel->Min.X);
+	TestTrue(TEXT("The drag completes"), Handle->DragBy(FVector2D(TargetX - Grip->X, 0.0)));
+
+	TestNearlyEqual(TEXT("The value did not move"), Slider->GetValue(), 0.0f, 0.000001f);
+	TestEqual(TEXT("No value change was reported"), Log.Values->NumFloats(), 0);
+	TestEqual(TEXT("No mouse capture began"), Log.CaptureBegins->Signals, 0);
+	TestEqual(TEXT("So none ended"), Log.CaptureEnds->Signals, 0);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamSliderInteractionWholeNumbersPointerTest,
+	"DreamGUI.Slider.AWholeNumberSliderRoundsADragAndASetValueToTheNearestWholeNumber",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamSliderInteractionWholeNumbersPointerTest, "DreamGUI.Slider.AWholeNumberSliderRoundsADragAndASetValueToTheNearestWholeNumber", "[Pointer][Animated]")
+
+/*
+ * The whole-number rule was applied only where a drag became a value, and there it rounded DOWN: a
+ * value set from code or authored stayed fractional on a slider whose header says it holds whole
+ * numbers, and a drag reached the top value only at the very end of the track, every other position
+ * near it reading one less. On 0..10, SetValue(2.7) now reads 3, and a drag to 96% of the travel reads
+ * 10 -- where rounding down said 9.
+ */
+bool FDreamSliderInteractionWholeNumbersPointerTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamSliderInteractionTestLocal;
+	FDreamDriverRig Rig = FDreamDriverRig::Headless(ViewportSize);
+	Rig.BindTest(this);
+	if (!TestTrue(TEXT("The headless rig came up"), Rig.IsUsable()))
+	{
+		return false;
+	}
+	UDreamSlider* Slider = MakeSlider(Rig, FVector2D(400.0, 40.0));
+	if (!TestTrue(TEXT("The slider came up with a track, a handle and a handle area"), HasParts(Slider)))
+	{
+		return false;
+	}
+	Slider->SetMaxValue(10.0f);
+	Slider->SetWholeNumbers(true);
+	Slider->SetValue(2.7f);
+	Rig.PumpFrames(2);
+
+	TestEqual(TEXT("A value set from code is rounded to the nearest whole number"), Slider->GetValue(), 3.0f);
+
+	FDreamDriverRef Driver = Rig.Driver();
+	FDreamElementRef Handle = Driver->Find(FDreamBy::Widget(Slider->HandleNode.Get()));
+	const TOptional<FBox2D> Travel = Driver->Find(FDreamBy::Widget(Slider->HandleAreaNode.Get()))->GetPixelRect();
+	const TOptional<FVector2D> Grip = Handle->GetCentrePixel();
+	if (!TestTrue(TEXT("The handle's travel is on screen"), Travel.IsSet())
+		|| !TestTrue(TEXT("The handle is on screen"), Grip.IsSet()))
+	{
+		return false;
+	}
+	const double TravelLength = Travel->Max.X - Travel->Min.X;
+	if (!TestTrue(FString::Printf(TEXT("The travel is long enough to aim at (%.1f pixels)"), TravelLength), TravelLength > 100.0))
+	{
+		return false;
+	}
+	// 9.6 on 0..10, a pixel either way well short of 9.5: rounding to the nearest gives 10, down gives 9.
+	const double TargetX = Travel->Min.X + 0.96 * TravelLength;
+	TestTrue(TEXT("The drag completes"), Handle->DragBy(FVector2D(TargetX - Grip->X, 0.0)));
+
+	TestEqual(TEXT("A drag to 96% of the travel reads the top value"), Slider->GetValue(), 10.0f);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamSliderInteractionWholeNumbersPadTest,
+	"DreamGUI.Slider.APadStepsAWholeNumberSliderByWholeNumbersOnly",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamSliderInteractionWholeNumbersPadTest, "DreamGUI.Slider.APadStepsAWholeNumberSliderByWholeNumbersOnly", "[Nav][Animated]")
+
+/*
+ * A pad step is a fraction of the range, and it went round the whole-number rule: on 0..10 a quarter
+ * step made 2.5. The step now lands on a whole number -- 2, the even neighbour of the tie -- and a step
+ * worth less than one moves the slider one whole number rather than being rounded straight back to
+ * where it was.
+ */
+bool FDreamSliderInteractionWholeNumbersPadTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamSliderInteractionTestLocal;
+	FDreamDriverRig Rig = FDreamDriverRig::Headless(ViewportSize);
+	Rig.BindTest(this);
+	if (!TestTrue(TEXT("The headless rig came up"), Rig.IsUsable()))
+	{
+		return false;
+	}
+	UDreamSlider* Slider = MakeSlider(Rig, FVector2D(400.0, 40.0));
+	if (!TestTrue(TEXT("The slider came up with a track, a handle and a handle area"), HasParts(Slider)))
+	{
+		return false;
+	}
+	Slider->SetMaxValue(10.0f);
+	Slider->SetWholeNumbers(true);
+	Slider->SetNavigationChangeInterval(0.25f);
+	Rig.PumpFrames(1);
+
+	// The first direction lands on the slider; the accept button captures it; the next steps it.
+	TestTrue(TEXT("Moving onto the slider, capturing it and stepping it right completes"),
+		Rig.Driver()->Sequence()
+			.Navigate(EDreamUINavigationDirection::Right)
+			.NavigationTrigger(true)
+			.NavigationTrigger(false)
+			.Navigate(EDreamUINavigationDirection::Right)
+			.Perform());
+	if (!TestTrue(TEXT("The slider is captured"), Slider->IsControllerCaptured()))
+	{
+		return false;
+	}
+	TestEqual(TEXT("A quarter of 0..10 is stepped to a whole number"), Slider->GetValue(), 2.0f);
+
+	// A step of 0.4: one whole number, not nothing.
+	Slider->SetNavigationChangeInterval(0.04f);
+	TestTrue(TEXT("Stepping right once more completes"), Rig.Driver()->Sequence().Navigate(EDreamUINavigationDirection::Right).Perform());
+	TestEqual(TEXT("A step worth less than one moves the slider by one"), Slider->GetValue(), 3.0f);
 	return true;
 }
 

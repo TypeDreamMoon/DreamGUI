@@ -78,6 +78,13 @@ public:
 
 protected:
 	virtual void Awake()override;
+	/**
+	 * Closes an open list. Its blocker sits on the root canvas over everything and a lifted list is no
+	 * longer under this widget, so neither goes away with a dropdown that is hidden or destroyed.
+	 */
+	virtual void OnDisable()override;
+	/** The same, for a list opened from code on a dropdown that was never enabled. */
+	virtual void OnDestroy()override;
 #if WITH_EDITOR
 	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)override;
 #endif
@@ -124,6 +131,8 @@ protected:
 
 	bool bIsShow = false;
 	bool bNeedRecreate = true;
+	/** True while RecreateListItems runs: a rebuild asked for from inside it (a row's handler changing the options) waits. */
+	bool bRecreatingListItems = false;
 	TWeakObjectPtr<UDreamTweener> ShowOrHideTweener;
 	TWeakObjectPtr<UDreamWidget> BlockerWidget;
 	UPROPERTY(Transient) TArray<TWeakObjectPtr<class UUIDropdownItemComponent>> CreatedItemArray;
@@ -133,6 +142,10 @@ protected:
 	void ApplyValueToVisual();
 	virtual void CreateBlocker();
 	virtual void CreateListItems();
+	/** Destroy the rows the list holds and build one per option again. */
+	void RecreateListItems();
+	/** Whether InWidget is this dropdown or its list, or inside either: the list may be lifted out from under it. */
+	bool IsPartOfDropdown(const UDreamWidget* InWidget)const;
 
 	FDreamUIMulticastDelegateInt32 OnValueChangedCPP;
 	UPROPERTY(BlueprintAssignable, Category = "DreamGUI-Dropdown", DisplayName="OnValueChanged")
@@ -197,8 +210,13 @@ public:
 	void SetHorizontalPosition(EUIDropdownHorizontalPosition InValue);
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Dropdown")
 	void SetVerticalOverlap(bool InValue);
+	/**
+	 * Replace the options. An open list is rebuilt at once, so none of its rows stands for an option
+	 * that is gone; a closed one builds its rows the next time it opens.
+	 */
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Dropdown")
 	void SetOptions(const TArray<FUIDropdownOptionData>& InOptions);
+	/** Append options, rebuilding an open list at once as SetOptions does. */
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Dropdown")
 	void AddOptions(const TArray<FUIDropdownOptionData>& InOptions);
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Dropdown")

@@ -95,11 +95,32 @@ public:
 		GeneratedItems.Add(InItemIndex);
 	}
 
-	/** FDreamListRowEvent again, for OnRowReleased. */
+	/** FDreamListRowEvent again, for OnRowReleased. The object too: after a source edit the index alone can name another item. */
 	UFUNCTION()
 	void RecordRowReleased(int32 InItemIndex, UDreamWidget* InRow, UObject* InItem)
 	{
 		ReleasedItems.Add(InItemIndex);
+		ReleasedObjects.Add(InItem);
+	}
+
+	/**
+	 * FDreamListRowEvent for OnItemScrolledIntoView -- and, the first time the item at LoadMoreAtItem
+	 * arrives, what a paging consumer does there: LoadMoreItems added to LoadMoreList from inside the event.
+	 */
+	UFUNCTION()
+	void RecordItemScrolledIntoView(int32 InItemIndex, UDreamWidget* InRow, UObject* InItem)
+	{
+		ScrolledIntoViewItems.Add(InItemIndex);
+		if (InItemIndex == LoadMoreAtItem && LoadMoreList != nullptr && LoadMoreItems.Num() > 0)
+		{
+			TArray<UObject*> More;
+			for (const TObjectPtr<UObject>& Item : LoadMoreItems)
+			{
+				More.Add(Item.Get());
+			}
+			LoadMoreItems.Reset();
+			LoadMoreList->AddItems(More);
+		}
 	}
 
 	/** FDreamTreeExpansionChangedEvent: OnItemExpansionChanged. */
@@ -155,6 +176,8 @@ public:
 		FinishedOffsets.Reset();
 		GeneratedItems.Reset();
 		ReleasedItems.Reset();
+		ReleasedObjects.Reset();
+		ScrolledIntoViewItems.Reset();
 		ExpansionItems.Reset();
 		ExpansionStates.Reset();
 		DragDetectedItems.Reset();
@@ -185,6 +208,23 @@ public:
 	/** Reflected, so a payload the list has already let go of is still here to be compared. */
 	UPROPERTY(Transient)
 	TObjectPtr<UObject> LastDropPayload = nullptr;
+
+	/** What each OnRowReleased named, beside ReleasedItems; reflected for the reason the payload is. */
+	UPROPERTY(Transient)
+	TArray<TObjectPtr<UObject>> ReleasedObjects;
+
+	/** Every OnItemScrolledIntoView, in order. */
+	TArray<int32> ScrolledIntoViewItems;
+
+	/** The item whose arrival makes RecordItemScrolledIntoView load more; none by default. */
+	int32 LoadMoreAtItem = INDEX_NONE;
+
+	/** The list that loads more, and what it loads -- once. */
+	UPROPERTY(Transient)
+	TObjectPtr<UDreamListViewBase> LoadMoreList = nullptr;
+
+	UPROPERTY(Transient)
+	TArray<TObjectPtr<UObject>> LoadMoreItems;
 };
 
 /**

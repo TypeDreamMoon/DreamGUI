@@ -439,7 +439,13 @@ UDreamWidget* UDreamRingMenu::CreatePoolWedge(int32 InIndex)
 		});
 		Button->GetOnHoveredEvent().AddWeakLambda(this, [this, InIndex]()
 		{
-			SetHighlightedIndex(InIndex);
+			// Not while closing: the pointer is out of the ring's hit test by then, but a pad can still
+			// land on a fading wedge, and with bSelectOnHighlight a highlight is a choice made after
+			// OnClosed reported the last one.
+			if (bOpen)
+			{
+				SetHighlightedIndex(InIndex);
+			}
 		});
 		Button->GetOnUnhoveredEvent().AddWeakLambda(this, [this, InIndex]()
 		{
@@ -896,7 +902,9 @@ void UDreamRingMenu::SetShowLabels(bool bInShowLabels)
 
 void UDreamRingMenu::HandleWedgeClicked(int32 InIndex)
 {
-	if (!Items.IsValidIndex(InIndex) || !Items[InIndex].bEnabled)
+	// A closing ring chooses nothing: a press that began before the close still ends in a click on its
+	// wedge, and the close has already told everyone what was chosen.
+	if (!bOpen || !Items.IsValidIndex(InIndex) || !Items[InIndex].bEnabled)
 	{
 		return;
 	}
@@ -917,6 +925,10 @@ void UDreamRingMenu::ActivateItem(int32 InIndex)
 	{
 		return;
 	}
+	// Read BEFORE the selection moves. Moving it broadcasts, and a handler is free to replace the
+	// items -- a wheel that rebuilds itself from what was just chosen -- after which InIndex may name
+	// nothing at all, and reading the tag then was a read past the end of the array.
+	const FName ActivatedTag = Items[InIndex].Tag;
 	if (bAllowDeselect && SelectedIndex == InIndex)
 	{
 		SetSelectedIndex(INDEX_NONE);
@@ -927,7 +939,7 @@ void UDreamRingMenu::ActivateItem(int32 InIndex)
 	}
 	// AFTER the selection moved, and unconditionally: a menu entry is a command, and choosing the
 	// same one twice has to be sayable even though the selection did not change.
-	OnItemActivated.Broadcast(InIndex, Items[InIndex].Tag);
+	OnItemActivated.Broadcast(InIndex, ActivatedTag);
 }
 
 void UDreamRingMenu::Open()
@@ -942,6 +954,12 @@ void UDreamRingMenu::Open()
 	// -- and then put it to sleep when its completion callback arrived.
 	KillOpenTweens();
 	RingNode->SetWidgetActive(true);
+	// Back into the pointer's hit test, as the ring was before the close took it out.
+	if (bRaycastSuspendedByClose)
+	{
+		bRaycastSuspendedByClose = false;
+		RingNode->SetRaycastable(RaycastableBeforeClose);
+	}
 
 	const FDreamRingMenuStyle& Active = ResolveStyle(Style, &UDreamUIStyleSheet::RingMenuStyle);
 	const float Scale = FMath::Max(Active.OpenScaleFrom, 0.01f);
@@ -978,6 +996,16 @@ void UDreamRingMenu::Close()
 	// Before the fade, not after: a menu on its way out must stop answering the pointer at once, or
 	// the last frames of the animation are still clickable.
 	SetHighlightedIndex(INDEX_NONE);
+	// And out of the pointer's hit test, which clearing the highlight alone never did: the raycast does
+	// not read opacity, so a fading ring went on taking clicks -- each one an OnItemActivated after
+	// OnClosed -- and hovers, which with bSelectOnHighlight moved the selection the close had reported.
+	// Remembered, so Open hands back whatever the ring's own setting was.
+	if (!bRaycastSuspendedByClose)
+	{
+		bRaycastSuspendedByClose = true;
+		RaycastableBeforeClose = RingNode->GetRaycastable();
+		RingNode->SetRaycastable(EDreamWidgetRaycastableType::Disabled);
+	}
 	// And whatever an Open left running, for the reason Open kills a Close's.
 	KillOpenTweens();
 

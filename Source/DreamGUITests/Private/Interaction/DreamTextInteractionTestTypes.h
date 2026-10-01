@@ -68,6 +68,9 @@ public:
 	int32 ListeningChangedCount = 0;
 	bool bLastListening = false;
 
+	int32 PassedKeyCount = 0;
+	FKey LastPassedKey;
+
 	/** UDreamButton::OnClicked. */
 	UFUNCTION()
 	void HandleClicked() { ++ClickedCount; }
@@ -95,4 +98,10 @@ public:
 	/** UDreamInputKeySelector::OnIsListeningChanged -- FDreamInputKeySelectorListeningEvent, bool. */
 	UFUNCTION()
 	void HandleListeningChanged(bool bInListening) { ++ListeningChangedCount; bLastListening = bInListening; }
+
+	/**
+	 * A key binding on a player's own input stack, below whatever a control pushes on top of it: counts the
+	 * keys that got that far. A plain member, because UInputComponent::BindKey takes a native one.
+	 */
+	void HandlePassedKey(FKey InKey) { ++PassedKeyCount; LastPassedKey = InKey; }
 };

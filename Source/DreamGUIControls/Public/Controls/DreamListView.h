@@ -650,17 +650,21 @@ public:
 
 	/**
 	 * One per row, every time it is BOUND to an item -- which, while recycling, is every time that
-	 * row comes back round to a new item rather than once in its life. The hook for a consumer whose
-	 * rows are richer than a label but who would rather not author a whole class: everything under
-	 * the row is reachable from here by display name.
+	 * row comes back round to a new item rather than once in its life, and on every row the list
+	 * re-pushes (a rebuild, a style push, a resize), because that re-writes the row's look. A scroll
+	 * that leaves a row on its item binds nothing. Always after an OnRowReleased for whatever the row
+	 * stood for before, so the two pair up. The hook for a consumer whose rows are richer than a label
+	 * but who would rather not author a whole class: everything under the row is reachable from here
+	 * by display name.
 	 */
 	UPROPERTY(BlueprintAssignable, Category = "List")
 	FDreamListRowEvent OnRowGenerated;
 
 	/**
-	 * The counterpart of OnRowGenerated: a pool row is about to stop standing for this item, either
-	 * because it was re-bound to another one or because it was parked. UMG's OnEntryReleased, and
-	 * the hook for undoing whatever OnRowGenerated did to that row.
+	 * The counterpart of OnRowGenerated: a pool row is about to stop standing for this item, because
+	 * it is re-bound -- to another item, or to this one again by a re-push -- parked, or destroyed.
+	 * Carries the item the row was bound to, object included, even when the source has moved since.
+	 * UMG's OnEntryReleased, and the hook for undoing whatever OnRowGenerated did to that row.
 	 */
 	UPROPERTY(BlueprintAssignable, Category = "List")
 	FDreamListRowEvent OnRowReleased;
@@ -1153,7 +1157,10 @@ public:
 	UFUNCTION(BlueprintPure, Category = "List|Drag")
 	bool GetIsDraggingListItem() const { return bIsDragging; }
 
-	/** The item index the drag in flight started on, or -1 when nothing is being dragged. */
+	/**
+	 * The source index of the item the drag in flight carries -- where it is now, when an object source
+	 * moved under the drag -- or -1 when nothing is being dragged.
+	 */
 	UFUNCTION(BlueprintPure, Category = "List|Drag")
 	int32 GetDraggedItemIndex() const { return DraggedItemIndex; }
 
@@ -1484,7 +1491,15 @@ protected:
 	bool MoveNavigationToItem(int32 InItemIndex, TScriptInterface<IDreamNavigationInterface>& OutResult);
 
 	/** Answer a press by keeping focus on the item's own row -- a tree opening or closing a node. */
-	bool KeepNavigationOnItem(int32 InItemIndex, TScriptInterface<IDreamNavigationInterface>& OutResult) const;
+	bool KeepNavigationOnItem(int32 InItemIndex, TScriptInterface<IDreamNavigationInterface>& OutResult);
+
+	/**
+	 * The item a navigation press arriving at pool row InPoolIndex steps from: the row's own item, unless
+	 * the row was handed another one while focus stayed on it (its item scrolled out of the window, or a
+	 * source edit moved it) -- then the item focus was on, found again by its object when it has one.
+	 * SListView's selector item, and where the list's and the tree's HandleRowNavigation both start.
+	 */
+	int32 GetNavigationItemIndex(int32 InPoolIndex) const;
 
 	/** The label a row shows: the matching text, else the item object's name, else nothing. */
 	FText GetItemLabel(int32 InItemIndex) const;
@@ -1536,7 +1551,7 @@ private:
 	void HandleRowDoubleClicked(int32 InPoolIndex);
 	void HandleScrollViewMoved(FVector2D InProgress);
 	/** A pool row's pointer state moved. Turns "this WIDGET is hovered" into "this ITEM is hovered". */
-	void HandleRowSelectionStateChanged(int32 InPoolIndex, bool bInHovered);
+	void HandleRowSelectionStateChanged(int32 InPoolIndex, EUISelectableSelectionState InState);
 	/** The behaviour's drag gesture, re-broadcast as the three touch events when it WAS a touch. */
 	void HandleScrollGesture(EDreamScrollDragPhase InPhase, bool bInTouch);
 	/** Focus landed inside this list. Hands it on to the selected row when the author asked for that. */
@@ -1563,9 +1578,24 @@ private:
 	/** The same, for one row that has just been created. Called from CreatePoolRow. */
 	void RefreshRowDragBehaviour(UDreamWidget& InRow, int32 InPoolIndex);
 
-	/** Whether a row of THIS list is in flight, and which item it started on. */
+	/** Whether a row of THIS list is in flight, and which item it carries. */
 	bool bIsDragging = false;
 	int32 DraggedItemIndex = INDEX_NONE;
+
+	/** The pool slot the drag started on: destroying that row ends the drag (see ResizePool). */
+	int32 DraggedPoolIndex = INDEX_NONE;
+
+	/** The dragged item's object, which re-locates DraggedItemIndex when the source moves under the drag. */
+	TWeakObjectPtr<UObject> DraggedItemObject;
+
+	/** Set by ResizePool when it destroys the row a drag started on, for FinishDragFromDestroyedRow. */
+	bool bDragSourceRowDestroyed = false;
+
+	/**
+	 * End a drag whose source row ResizePool destroyed -- as the drop it became, or as a cancel. Called
+	 * once the rows are settled again, by RebuildRows and HandleDimensionsChanged.
+	 */
+	void FinishDragFromDestroyedRow();
 
 	/** The operation this list's own drag is riding, so an ending drag can be told apart from anyone's. */
 	UPROPERTY(Transient)
@@ -1702,6 +1732,51 @@ private:
 	void ParkRow(int32 InPoolIndex);
 
 	/**
+	 * OnRowReleased for whatever pool row InPoolIndex stands for, with the object it was bound to;
+	 * nothing for a parked row. When the row is about to stand for a different item (bInItemChanges),
+	 * that item's hover ends here too, and focus resting on the row keeps the item as its anchor.
+	 */
+	void ReleaseRow(int32 InPoolIndex, bool bInItemChanges);
+
+	/**
+	 * Whether pool row InPoolIndex is bound to exactly this item: the same index and the same object --
+	 * or, for a text source, which has no objects, the same texts.
+	 */
+	bool IsRowBoundTo(int32 InPoolIndex, int32 InItemIndex, UObject* InItem) const;
+
+	/**
+	 * Parallel to RowNodes, beside RowSourceIndices: the rest of what each row was bound to. The object
+	 * the index stood for, so a release names that object after the source has moved on; which text
+	 * source the binding came from, since text has no other identity; and the display index the row
+	 * was placed at, which a row kept on its item no longer reads off its pool slot.
+	 */
+	struct FRowBinding
+	{
+		TWeakObjectPtr<UObject> Item;
+		uint32 SourceSerial = 0;
+		int32 DisplayIndex = INDEX_NONE;
+	};
+	TArray<FRowBinding> RowBindings;
+
+	/** Moved on by every new text source: line N of new texts is not the line N a row was bound to. */
+	uint32 TextSourceSerial = 0;
+
+	/**
+	 * Focus rested on pool row FocusAnchorPoolIndex while it was handed another item, and this is the
+	 * item focus was on -- what GetNavigationItemIndex answers for that row until the row comes back to
+	 * the item, the pointer takes it over, focus leaves it, or the row is destroyed.
+	 */
+	int32 FocusAnchorPoolIndex = INDEX_NONE;
+	int32 FocusAnchorItemIndex = INDEX_NONE;
+	TWeakObjectPtr<UObject> FocusAnchorItem;
+
+	/** Forget the focus anchor. */
+	void ClearFocusAnchor();
+
+	/** Counts window refreshes, so one that a row event re-entered can tell and stop. */
+	uint32 WindowRefreshSerial = 0;
+
+	/**
 	 * Put the right DRAWING on a row for the state it is in -- FDreamListStyle::StateFaces, with
 	 * RowBrush as the fallback every unstated state falls back to.
 	 *
@@ -1717,8 +1792,14 @@ private:
 	/** Grow or shrink the pool to exactly this many widgets. */
 	void ResizePool(int32 InPoolSize);
 
-	/** Bind the pool to whatever the current scroll offset makes visible. The recycling pass. */
-	void RefreshVisibleWindow();
+	/**
+	 * Bind the pool to whatever the current scroll offset makes visible. The recycling pass.
+	 *
+	 * A row keeps the item it shows while that item stays in the window; only rows whose items left
+	 * are re-bound. bInRebindKeptRows re-binds the kept rows too -- a rebuild, a style push or a resize,
+	 * which change what a row looks like or where it sits -- where a scroll leaves them alone.
+	 */
+	void RefreshVisibleWindow(bool bInRebindKeptRows = true);
 
 	/** The gutter, the bar's rect and the scroll range -- everything that follows from the row count. */
 	void RefreshScrollFurniture(const FDreamListStyle& InStyle);
@@ -1742,7 +1823,7 @@ private:
 	UPROPERTY(Transient)
 	TSubclassOf<UDreamUserWidget> PoolRowTemplateClass = nullptr;
 
-	/** The display index the pool's first row currently shows. Zero while not recycling. */
+	/** The display index the realized window starts at. Zero while not recycling. */
 	UPROPERTY(Transient)
 	int32 WindowStart = 0;
 };

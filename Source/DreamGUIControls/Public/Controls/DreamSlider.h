@@ -102,8 +102,9 @@ public:
 
 	/**
 	 * Whole numbers only -- the behaviour has always had this and the control never pushed it, so a
-	 * slider authored as an integer picker answered 3.7215. The rule is applied where a drag becomes
-	 * a value, so an authored fractional Value is snapped at the next push rather than refused.
+	 * slider authored as an integer picker answered 3.7215. Every value the slider takes is rounded to
+	 * the nearest whole number -- a drag, a gamepad step, SetValue -- so an authored fractional Value is
+	 * rounded at the next push rather than refused.
 	 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetWholeNumbers", BlueprintSetter = "SetWholeNumbers", Category = "Slider")
 	bool bWholeNumbers = false;

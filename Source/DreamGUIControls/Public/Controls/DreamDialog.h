@@ -282,8 +282,9 @@ public:
 	void RequestCancel();
 
 	/**
-	 * Put focus on the default button now. Called for you at construct while bFocusDefaultButton is
-	 * on; public because a dialog whose buttons were replaced after it appeared has a new default.
+	 * Put focus on the default button now. Called for you whenever the dialog appears while
+	 * bFocusDefaultButton is on; public because a dialog whose buttons were replaced after it appeared
+	 * has a new default.
 	 */
 	UFUNCTION(BlueprintCallable, Category = "Dialog")
 	void FocusDefaultButton();
@@ -299,7 +300,8 @@ public:
 	 * navigation trigger keys), and bFocusDefaultButton puts focus there when the dialog opens, so
 	 * the ordinary case needs nothing. This is the same answer for the case where focus has since
 	 * moved somewhere that is not a button at all -- a body slot's text field, say -- and for code
-	 * that wants to confirm without a pointer.
+	 * that wants to confirm without a pointer. A default button that is disabled answers nothing,
+	 * exactly as it would to a click.
 	 */
 	UFUNCTION(BlueprintCallable, Category = "Dialog")
 	void SubmitDefaultButton();
@@ -373,6 +375,9 @@ protected:
 	 * earlier. See RefreshHostArrangement.
 	 */
 	virtual void NativeOnConstruct() override;
+
+	/** The dialog appearing -- at begin play when it starts awake, and on every wake after -- takes focus. */
+	virtual void NativeOnEnable() override;
 
 #if WITH_EDITOR
 	/** The base re-applies style; the button SPECS live outside ApplyStyle and rebuild here. */

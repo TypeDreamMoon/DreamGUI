@@ -27,6 +27,12 @@ namespace DreamScrollViewLocal
 	static constexpr float ReturnRate = 10.0f;
 	/** Converts DecelerateRate into e-folds per second, so 0.135 keeps the feel it always had. */
 	static constexpr float DecelerationScale = 50.0f;
+	/**
+	 * How long a drag's last move still counts towards the fling a release starts, in seconds on the
+	 * pointer clock: FInertialScrollManager's sample timeout. A pointer held still for longer than this
+	 * before letting go has stopped, and lets go of nothing.
+	 */
+	static constexpr double FlingSampleWindow = 0.1;
 
 	/** Exponential decay: the frame-rate independent spelling of Lerp(Value, 0, Rate * Dt). */
 	static double Decay(double InValue, double InRatePerSecond, double InDeltaTime)
@@ -96,6 +102,7 @@ void UUIScrollView::Awake()
         Widget->SetLayoutClippingOverride(EDreamWidgetClipping::ClipToBounds);
     }
     bGestureHorizontal = bGestureVertical = false;
+    bDragAccepted = false;
     RectRangeChanged();
     this->SetCanExecuteTick(true);
 }
@@ -471,6 +478,9 @@ void UUIScrollView::SetScrollOffset(FVector2D InOffset)
 	{
 		Position.Y = Start.Y + FMath::Clamp(InOffset.Y, 0.0, Extent.Y);
 	}
+	// A glide still under way would carry on from here on its next frame and undo this: an offset set by
+	// code or by a wheel notch is the newest word on where the content goes.
+	StopGlide();
 	Velocity = FVector2D::ZeroVector;
 	bCanUpdateAfterDrag = false;
 	ApplyContentPosition(Position);
@@ -592,6 +602,18 @@ bool UUIScrollView::OnPointerBeginDrag_Implementation(UDreamPointerEventData *Ev
         PrevPointerPosition = EventData->PressWorldPoint;
         const auto CurrentPointerPosition = EventData->GetWorldPointInPlane();
         const auto localMoveDelta = EventData->PressWorldToLocalTransform.TransformVector(CurrentPointerPosition - PrevPointerPosition);
+        // A view that scrolls one way only does not claim a drag that runs mostly the OTHER way: there is
+        // nothing it could do with one, and taking it kept the gesture from the view around this one -- a
+        // vertical list inside a horizontal carousel swallowed every sideways swipe made over it. Handed on,
+        // like any gesture refused below. A tie stays with this view, as it always did.
+        const double AlongX = FMath::Abs(localMoveDelta.Y);
+        const double AlongY = FMath::Abs(localMoveDelta.Z);
+        if ((Horizontal && !Vertical && AlongY > AlongX) || (Vertical && !Horizontal && AlongX > AlongY))
+        {
+            bGestureHorizontal = bGestureVertical = false;
+            bDragAccepted = false;
+            return true;
+        }
         // The RIGHT-button drag is UMG's drag-to-scroll, and there the travel that crossed the drag
         // threshold scrolls too: SScrollBox::OnMouseMove adds every move to AmountScrolledWhileRightMouseDown
         // and, once that passes the trigger distance, scrolls by the move that got it there as well as
@@ -604,18 +626,24 @@ bool UUIScrollView::OnPointerBeginDrag_Implementation(UDreamPointerEventData *Ev
             PrevPointerPosition = CurrentPointerPosition;
         }
         ResolveGestureAxes(FVector2D(localMoveDelta.Y, localMoveDelta.Z));
+        bDragAccepted = true;
+        // The pointer has the content now: a glide still under way would take it back on its next frame.
+        StopGlide();
         Velocity = FVector2D::ZeroVector;
+        LastDragMoveTime = -1.0;
         bCanUpdateAfterDrag = false;
         // Before the first move is applied, so a consumer hears "began" ahead of the delta that
         // began it rather than after -- the order a handler recording a gesture has to have.
         OnDragGestureCPP.Broadcast(EDreamScrollDragPhase::Begin, IsTouchInput(EventData));
         OnPointerDrag_Implementation(EventData);
+        return AllowEventBubbleUp;
     }
-    else
-    {
-        bGestureHorizontal = bGestureVertical = false;
-    }
-    return AllowEventBubbleUp;
+    // Refused -- a button or a finger switched off, or a press outside this view's own content -- and so
+    // handed on rather than consumed: a scroll view around this one may take the gesture, and swallowing
+    // one this view does nothing with left the player's drag moving nothing at all.
+    bGestureHorizontal = bGestureVertical = false;
+    bDragAccepted = false;
+    return true;
 }
 
 bool UUIScrollView::OnPointerDrag_Implementation(UDreamPointerEventData *EventData)
@@ -626,11 +654,20 @@ bool UUIScrollView::OnPointerDrag_Implementation(UDreamPointerEventData *EventDa
     const auto CurrentPointerPosition = EventData->GetWorldPointInPlane();
     const auto localMoveDelta = EventData->PressWorldToLocalTransform.TransformVector(CurrentPointerPosition - PrevPointerPosition);
     PrevPointerPosition = CurrentPointerPosition;
-    if (!bGestureHorizontal && !bGestureVertical)
+    if (!bDragAccepted)
     {
-        return AllowEventBubbleUp;
+        // Not this view's gesture -- it refused the drag when it began -- so the move goes on to whichever
+        // view took it. Consuming it here starved that view of every move after the first.
+        return true;
     }
     OnDragGestureCPP.Broadcast(EDreamScrollDragPhase::Move, IsTouchInput(EventData));
+    // A drag is delivered every frame the button is held, moved or not, so only a move that went
+    // somewhere says how fast the drag is going.
+    if (!FVector2D(localMoveDelta.Y, localMoveDelta.Z).IsNearlyZero())
+    {
+        LastDragMoveVelocity = FVector2D(localMoveDelta.Y, localMoveDelta.Z) / GetSafeDeltaTime();
+        LastDragMoveTime = UDreamEventSystem::GetPointerClockSeconds(this);
+    }
     // The pointer's delta, damped on whichever axis is already past its boundary -- and past it
     // BEFORE this move rather than after, so a drag heading back into range is at full weight the
     // whole way home instead of crawling the last unit.
@@ -644,6 +681,13 @@ bool UUIScrollView::OnPointerDrag_Implementation(UDreamPointerEventData *EventDa
     {
         Position.Y += localMoveDelta.Z * ((RestrictRectArea
             && (Position.Y < VerticalRange.X || Position.Y > VerticalRange.Y)) ? DragDamper : 1.0f);
+    }
+    if (RestrictRectArea && !bAllowOverscroll)
+    {
+        // With overscroll off the content stops AT an end, on the move that reaches it too. The damper
+        // above only weighs a move that STARTS past an end, so the one that crossed it went all the way out.
+        if (bGestureHorizontal) Position.X = FMath::Clamp(Position.X, HorizontalRange.X, HorizontalRange.Y);
+        if (bGestureVertical) Position.Y = FMath::Clamp(Position.Y, VerticalRange.X, VerticalRange.Y);
     }
     if (!CanScrollInSmallSize)
     {
@@ -665,18 +709,35 @@ bool UUIScrollView::OnPointerEndDrag_Implementation(UDreamPointerEventData *Even
 	{
 		return AllowEventBubbleUp;
 	}
+    if (!bDragAccepted)
+    {
+        // The end of a gesture this view refused: no fling to start and no end to announce, since it never
+        // announced a beginning -- and the view that took the drag is the one that has to hear it end.
+        return true;
+    }
+    bDragAccepted = false;
     const auto CurrentPointerPosition = EventData->GetWorldPointInPlane();
     const auto localMoveDelta = EventData->PressWorldToLocalTransform.TransformVector(CurrentPointerPosition - PrevPointerPosition);
     const float DeltaTime = GetSafeDeltaTime();
+    FVector2D ReleaseVelocity(localMoveDelta.Y / DeltaTime, localMoveDelta.Z / DeltaTime);
+    // Let go a frame after the last move -- the frame between them delivered a drag that went nowhere --
+    // and the release frame alone says the drag had stopped. It had not; it was moving a moment ago, and
+    // that is the speed to coast at. Only one frame's movement used to count, so a mouse released the
+    // frame after it moved flung nothing.
+    if (ReleaseVelocity.IsNearlyZero() && LastDragMoveTime >= 0.0
+        && UDreamEventSystem::GetPointerClockSeconds(this) - LastDragMoveTime <= DreamScrollViewLocal::FlingSampleWindow)
+    {
+        ReleaseVelocity = LastDragMoveVelocity;
+    }
     if (bGestureHorizontal)
     {
         bCanUpdateAfterDrag = true;
-		Velocity.X = localMoveDelta.Y / DeltaTime;
+		Velocity.X = ReleaseVelocity.X;
     }
     if (bGestureVertical)
     {
         bCanUpdateAfterDrag = true;
-		Velocity.Y = localMoveDelta.Z / DeltaTime;
+		Velocity.Y = ReleaseVelocity.Y;
     }
     const bool bTouch = IsTouchInput(EventData);
     // A finger let go can EASE to its resting place instead of coasting on the momentum it built --
@@ -726,7 +787,15 @@ bool UUIScrollView::OnPointerScroll_Implementation(UDreamPointerEventData *Event
     // offset -- which is what the offset model buys: no per-axis sign to remember, because the
     // offset itself already runs left-to-right and top-to-bottom.
     const FVector2D Extent = GetScrollableExtent();
-    const FVector2D BeforeOffset = GetScrollOffset();
+    // From where the scroll in flight is GOING, not from where it has got to: a notch during a glide adds
+    // to that glide's destination, as UMG's wheel adds to its DesiredScrollOffset. Starting from the
+    // mid-glide position lost whatever of the glide was still to come -- two quick animated notches
+    // travelled less than two, and a notch during an animated reveal undid the rest of the reveal.
+    const bool bGliding = IsGliding();
+    const FVector2D Start = GetStartAlignedPosition();
+    const FVector2D BeforeOffset = bGliding
+        ? FVector2D(Start.X - ActiveGlideTarget.X, ActiveGlideTarget.Y - Start.Y)
+        : GetScrollOffset();
     FVector2D AfterOffset = BeforeOffset;
     // The multiplier scales whichever of the two distances is in force, so "twice as fast" means the
     // same thing whether a notch is measured in local units or in a fraction of the range.
@@ -763,14 +832,16 @@ bool UUIScrollView::OnPointerScroll_Implementation(UDreamPointerEventData *Event
         // that setter kills the velocity and applies the position at once -- which is precisely the
         // teleport this branch exists to avoid. The conversion is the setter's own arithmetic: the
         // start-aligned position, less the offset on X and plus it on Y (the offset runs rightward
-        // and DOWNWARD, while the content's Y runs up).
-        const FVector2D Start = GetStartAlignedPosition();
-        FVector2D Target = GetContentPosition();
+        // and DOWNWARD, while the content's Y runs up). An axis the notch does not drive keeps the
+        // destination it had, which is the glide's when one is under way.
+        FVector2D Target = bGliding ? ActiveGlideTarget : GetContentPosition();
         if (bGestureHorizontal) Target.X = Start.X - AfterOffset.X;
         if (bGestureVertical)   Target.Y = Start.Y + AfterOffset.Y;
         GlideContentTo(ClampToRange(Target), true, WheelScrollAnimationDuration);
         return AllowEventBubbleUp;
     }
+    // SetScrollOffset stops a glide in flight before it moves anything, so the notch is not undone by the
+    // glide's next frame.
     SetScrollOffset(AfterOffset);
     return AllowEventBubbleUp;
 }
@@ -779,6 +850,8 @@ void UUIScrollView::SetVelocity(const FVector2D& value)
 {
     if (CheckParameters())
     {
+        // A fling replaces a glide; the two would otherwise write the content on alternate frames.
+        StopGlide();
         Velocity = value;
 		bCanUpdateAfterDrag = !Velocity.IsNearlyZero();
         if (bCanUpdateAfterDrag)
@@ -831,6 +904,7 @@ void UUIScrollView::SetScrollDelta(FVector2D value)
         return;
     }
     RecalculateRange();
+    StopGlide();
     FVector2D Position = GetContentPosition();
     const float DeltaTime = GetSafeDeltaTime();
     if (Horizontal)
@@ -851,6 +925,12 @@ void UUIScrollView::SetScrollDelta(FVector2D value)
         bGestureVertical = true;
         bCanUpdateAfterDrag = true;
     }
+    if (RestrictRectArea && !bAllowOverscroll)
+    {
+        // The drag's rule: with overscroll off a step that crosses an end stops at it. The fling it starts
+        // is stopped there by the settle pass.
+        Position = ClampToRange(Position);
+    }
     ApplyContentPosition(Position);
 }
 
@@ -861,6 +941,9 @@ void UUIScrollView::SetScrollValue(FVector2D value)
         return;
     }
     RecalculateRange();
+    // An absolute position written by somebody else ends a glide of this view's own -- the recycler's eased
+    // jump drives this setter frame by frame, and the newer motion is the one that wins.
+    StopGlide();
     FVector2D Position = GetContentPosition();
     if (Horizontal)
     {
@@ -891,6 +974,8 @@ void UUIScrollView::SetScrollProgress(FVector2D value)
         return;
     }
     RecalculateRange();
+    // A scroll bar's thumb, or code, putting the content somewhere: SetScrollOffset's rule.
+    StopGlide();
     Progress.X = FMath::Clamp(value.X, 0.0, 1.0);
     Progress.Y = FMath::Clamp(value.Y, 0.0, 1.0);
     Velocity = FVector2D::ZeroVector;
@@ -915,6 +1000,9 @@ FVector2D UUIScrollView::ClampToRange(const FVector2D& InPosition) const
 
 void UUIScrollView::GlideContentTo(const FVector2D& InTargetPosition, bool InEaseAnimation, float InAnimationDuration)
 {
+    // One glide at a time. The tween used to be created and forgotten, so a second one started while the
+    // first was under way left two tweens writing the same content, each towards its own end.
+    StopGlide();
     if (!InEaseAnimation)
     {
         Velocity = FVector2D::ZeroVector;
@@ -939,6 +1027,9 @@ void UUIScrollView::GlideContentTo(const FVector2D& InTargetPosition, bool InEas
     if (Tweener)
     {
         UDreamWidget::SetWidgetTweenerAffectByGamePauseAndTimeDilation(GetWidget(), Tweener);
+        // Kept, so whatever moves the content next can stop it, and a wheel notch can add to where it goes.
+        ActiveGlide = Tweener;
+        ActiveGlideTarget = InTargetPosition;
     }
     else
     {
@@ -949,6 +1040,25 @@ void UUIScrollView::GlideContentTo(const FVector2D& InTargetPosition, bool InEas
         // notch silently did nothing at all in such a world.
         ApplyContentPosition(InTargetPosition);
     }
+}
+
+bool UUIScrollView::IsGliding() const
+{
+    // Asked of the manager, not remembered: a glide that landed was retired from its list, and a killed one
+    // is marked before it leaves.
+    UDreamTweener* Glide = ActiveGlide.Get();
+    return Glide != nullptr && !Glide->IsMarkedToKill()
+        && UDreamTweenManager::IsTweening(const_cast<UUIScrollView*>(this), Glide);
+}
+
+void UUIScrollView::StopGlide()
+{
+    if (IsGliding())
+    {
+        // Without the completion: the content stays wherever the glide had got it to.
+        ActiveGlide->Kill(false);
+    }
+    ActiveGlide.Reset();
 }
 
 void UUIScrollView::ScrollTo(UDreamWidget* InChild, bool InEaseAnimation, float InAnimationDuration)
@@ -1114,9 +1224,13 @@ void UUIScrollView::UpdateAfterDrag(float deltaTime)
     }
     FVector2D Position = GetContentPosition();
     const FVector2D Clamped = ClampToRange(Position);
+    // Overscroll off means a fling ends AT the end it reaches. Without this the in-range step below carried
+    // the content past the end on the frame it got there, and the spring brought it back -- exactly the
+    // overshoot the switch is there to remove.
+    const bool bStopAtEnds = RestrictRectArea && !bAllowOverscroll;
 
     bool bStillMoving = false;
-    auto SettleAxis = [&](double& InOutPosition, double InClamped, double& InOutVelocity, bool bInActive)
+    auto SettleAxis = [&](double& InOutPosition, double InClamped, const FVector2D& InRange, double& InOutVelocity, bool bInActive)
     {
         if (!bInActive)
         {
@@ -1129,8 +1243,9 @@ void UUIScrollView::UpdateAfterDrag(float deltaTime)
         {
             // Past the edge, and still travelling further out: the boundary bleeds the fling off in
             // proportion to how far past it already is, so a hard throw rebounds and a gentle one
-            // simply stops.
-            if (InOutVelocity != 0.0 && FMath::Sign(InOutVelocity) == FMath::Sign(Overshoot))
+            // simply stops. Never with overscroll off, where nothing may travel further out at all: the
+            // band that is open closes, below.
+            if (!bStopAtEnds && InOutVelocity != 0.0 && FMath::Sign(InOutVelocity) == FMath::Sign(Overshoot))
             {
                 InOutVelocity -= FMath::Sign(InOutVelocity)
                     * FMath::Abs(Overshoot) * DreamScrollViewLocal::BoundaryForce * deltaTime;
@@ -1159,11 +1274,18 @@ void UUIScrollView::UpdateAfterDrag(float deltaTime)
         InOutVelocity = DreamScrollViewLocal::Decay(InOutVelocity,
             static_cast<double>(DecelerateRate) * DreamScrollViewLocal::DecelerationScale, deltaTime);
         InOutPosition += InOutVelocity * deltaTime;
+        if (bStopAtEnds && (InOutPosition < InRange.X || InOutPosition > InRange.Y))
+        {
+            // The step that reaches an end stops there, with nothing left to carry it on.
+            InOutPosition = FMath::Clamp(InOutPosition, InRange.X, InRange.Y);
+            InOutVelocity = 0.0;
+            return;
+        }
         bStillMoving = true;
     };
 
-    SettleAxis(Position.X, Clamped.X, Velocity.X, bGestureHorizontal && bAllowHorizontalScroll);
-    SettleAxis(Position.Y, Clamped.Y, Velocity.Y, bGestureVertical && bAllowVerticalScroll);
+    SettleAxis(Position.X, Clamped.X, HorizontalRange, Velocity.X, bGestureHorizontal && bAllowHorizontalScroll);
+    SettleAxis(Position.Y, Clamped.Y, VerticalRange, Velocity.Y, bGestureVertical && bAllowVerticalScroll);
 
     if (!Position.Equals(GetContentPosition(), DreamScrollViewLocal::SettleThreshold * 0.1))
     {

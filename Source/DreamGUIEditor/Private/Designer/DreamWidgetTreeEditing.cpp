@@ -4,6 +4,7 @@
 
 #include "Designer/DreamUITextAuthoringGate.h"
 #include "DreamWidgetBlueprint.h"
+#include "DreamWidgetBlueprintCompiler.h"
 #include "Core/DreamWidgetTree.h"
 #include "Core/DreamUserWidget.h"
 #include "Core/Components/DreamWidget.h"
@@ -732,6 +733,7 @@ namespace DreamWidgetTreeEditing
 
 		//the compiler's name for it, taken BEFORE the write, is the key every binding stored
 		const FName OldVariableName = UDreamWidgetTree::MakeWidgetVariableName(InWidget);
+		const FString OldDisplayName = InWidget->GetDisplayName();
 
 		InBlueprint->Modify();
 		InWidget->Modify();
@@ -743,9 +745,26 @@ namespace DreamWidgetTreeEditing
 		// was a compile error, at the next compile of anything, from a panel with no way to fix it.
 		Local::RetargetAuthoredBindings(InBlueprint, OldVariableName, UDreamWidgetTree::MakeWidgetVariableName(InWidget));
 
+		// The animation paths before the structural change: it compiles the skeleton, which checks every path, and one
+		// still naming the old id was an error there -- logged for a rename the next lines were about to carry through.
+		FDreamWidgetBlueprintCompilerContext::FWidgetRenameMigration PathMigration;
+		FDreamWidgetBlueprintCompilerContext::MigrateWidgetRenamePaths(InBlueprint, OldDisplayName, Applied, PathMigration);
+
 		// Structural, not merely modified: the display name IS the variable name, so a rename removes
 		// one member from the class and adds another. Anything bound to the old one has to be told.
 		NotifyStructureChanged(InBlueprint);
+
+		// And the graph nodes reading its variable, whose guid is derived from the name, so nothing found the renamed
+		// variable again. The same move a `(was:)` clause makes for a .dui, through the same function (its path legs
+		// find nothing left to move). After the structural change, never before it: until the class declares the new
+		// name, the first look at a renamed node finds its old guid on the old variable and renames it back.
+		const FDreamWidgetBlueprintCompilerContext::FWidgetRenameMigration Migration =
+			FDreamWidgetBlueprintCompilerContext::MigrateWidgetRename(InBlueprint, OldDisplayName, Applied);
+		if (!Migration.GraphRefusal.IsEmpty())
+		{
+			UE_LOG(DreamGUI, Warning, TEXT("[%s].%d '%s' is now '%s', and the graph references to it stayed where they were: %s. Repoint them by hand, or rename the other one."),
+				ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *OldDisplayName, *Applied, *Migration.GraphRefusal);
+		}
 		return Applied;
 	}
 }

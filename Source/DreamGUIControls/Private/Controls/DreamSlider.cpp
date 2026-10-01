@@ -9,6 +9,7 @@
 #include "Core/Components/DreamImage.h"
 #include "Core/Components/DreamRectBlock.h"
 #include "Core/Components/DreamWidget.h"
+#include "Event/DreamBaseEventData.h"
 
 void UDreamSlider::CollectParts(TArray<FDreamControlPart>& OutParts)
 {
@@ -57,6 +58,10 @@ void UDreamSlider::WireParts()
 	SliderBehaviour->SetHandle(HandleNode);
 	// The pointer transition rides the handle, the way the toggle's rides its box.
 	SliderBehaviour->SetTransitionTarget(HandleNode != nullptr ? HandleNode->GetVisual() : nullptr);
+	// The left mouse button alone moves it, as it alone moves UMG's: SSlider::OnMouseButtonDown leaves
+	// every other button unhandled. The behaviour answers every button unless told; a touch and a
+	// gamepad's accept are not mouse buttons and always count.
+	SliderBehaviour->SetAcceptedMouseButtons(1 << static_cast<int32>(EDreamUIMouseButtonType::Left));
 	SliderBehaviour->GetOnValueChangedEvent().AddUObject(this, &UDreamSlider::HandleValueChanged);
 	// The four capture moments, re-broadcast at the control the way the value change is: a consumer
 	// binds to this control, never to the behaviour sitting on one of its parts.

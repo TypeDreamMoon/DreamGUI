@@ -27,6 +27,19 @@
 #include "Interaction/UIScrollView.h"
 #include "Animation/DreamWidgetAnimationComponent.h"
 #include "Animation/DreamWidgetAnimation.h"
+#include "Animation/DreamUISequence.h"
+#include "Animation/DreamUIWidgetBinding.h"
+#include "Animation/SDreamWidgetAnimationEditor.h"
+#include "DreamWidgetBlueprintTestTypes.h"
+#include "ISequencer.h"
+#include "MovieScene.h"
+#include "Channels/MovieSceneChannelProxy.h"
+#include "Channels/MovieSceneDoubleChannel.h"
+#include "Sections/MovieSceneVectorSection.h"
+#include "Tracks/MovieSceneVectorTrack.h"
+#include "Kismet2/CompilerResultsLog.h"
+#include "Misc/ScopeExit.h"
+#include "UObject/StrongObjectPtr.h"
 #include "Core/Components/DreamText.h"
 #include "Controls/DreamButton.h"//a placed control with one hole, its default
 #include "Controls/DreamExpandableArea.h"//a placed control with a hole that is NOT its default
@@ -145,6 +158,55 @@ namespace DreamDesignerEditingTestLocal
 			return Found;
 		}
 	};
+
+	/** InHost's animation component, made when it has none -- the way the Animations panel makes one. */
+	UDreamWidgetAnimationComponent* EnsureAnimator(UDreamWidget* InHost)
+	{
+		if (InHost == nullptr)
+		{
+			return nullptr;
+		}
+		if (UDreamWidgetAnimationComponent* Existing = InHost->GetComponent<UDreamWidgetAnimationComponent>())
+		{
+			return Existing;
+		}
+		return Cast<UDreamWidgetAnimationComponent>(InHost->AddComponent(UDreamWidgetAnimationComponent::StaticClass()));
+	}
+
+	/**
+	 * An animation on InHost that keys InHost's own render translation to InValue for its whole length.
+	 *
+	 * Bound the way the sequencer binds: a possessable, then BindPossessableObject with the host as the
+	 * context, which records the host itself as the path -- so the binding resolves against whichever tree
+	 * the playback context belongs to, the asset's or the preview's.
+	 */
+	UDreamWidgetAnimation* AddKeyedAnimation(UDreamWidget* InHost, const FVector& InValue)
+	{
+		UDreamWidgetAnimationComponent* Animator = EnsureAnimator(InHost);
+		UDreamWidgetAnimation* Animation = Animator != nullptr ? Animator->AddNewAnimation() : nullptr;
+		UMovieScene* MovieScene = Animation != nullptr ? Animation->GetMovieScene() : nullptr;
+		if (MovieScene == nullptr)
+		{
+			return nullptr;
+		}
+		MovieScene->SetPlaybackRange(FFrameNumber(0), MovieScene->GetTickResolution().AsFrameNumber(1.0).Value);
+		const FGuid HostGuid = MovieScene->AddPossessable(InHost->GetDisplayName(), InHost->GetClass());
+		Animation->BindPossessableObject(HostGuid, *InHost, InHost);
+
+		UMovieSceneDoubleVectorTrack* Track = MovieScene->AddTrack<UMovieSceneDoubleVectorTrack>(HostGuid);
+		Track->SetPropertyNameAndPath(TEXT("RenderTranslation"), TEXT("RenderTranslation"));
+		Track->SetNumChannelsUsed(3);
+		UMovieSceneDoubleVectorSection* Section = CastChecked<UMovieSceneDoubleVectorSection>(Track->CreateNewSection());
+		Section->SetRange(TRange<FFrameNumber>::All());
+		TArrayView<FMovieSceneDoubleChannel*> Channels = Section->GetChannelProxy().GetChannels<FMovieSceneDoubleChannel>();
+		const double Values[3] = { InValue.X, InValue.Y, InValue.Z };
+		for (int32 Index = 0; Index < 3 && Index < Channels.Num(); ++Index)
+		{
+			Channels[Index]->AddConstantKey(FFrameNumber(0), Values[Index]);
+		}
+		Track->AddSection(*Section);
+		return Animation;
+	}
 }
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
@@ -2557,6 +2619,331 @@ bool FDreamDesignerWidgetReferenceEditTest::RunTest(const FString&)
 
 	TestTrue(TEXT("the asset's scroll view names the asset's widget"),
 		ContentProperty->GetObjectPropertyValue_InContainer(TemplateScroll) == InnerTemplate);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamDesignerCompileKeepsTheAuthoredPoseTest,
+	"DreamGUI.Designer.ACompileWithAnAnimationSelectedLeavesTheAuthoredPoseAlone",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * Saving with an animation selected wrote the animated pose into the asset.
+ *
+ * The designer's Save compiles first, and a compile takes the preview down and builds it again a tick later. The
+ * Animations panel resumed Sequencer the moment the compile announced it was over, and with no preview to scrub against
+ * its playback context fell back to the AUTHORED widget the animation lives on: every binding resolved into the asset's
+ * own tree, the keyed values were written there, and the save in the same frame kept them. This keys the root, selects
+ * the animation and compiles without ticking -- that window exactly -- and checks the asset's value and what Sequencer
+ * is looking at.
+ */
+bool FDreamDesignerCompileKeepsTheAuthoredPoseTest::RunTest(const FString&)
+{
+	using namespace DreamDesignerEditingTestLocal;
+
+	FScopedDesigner Scoped(TEXT("DesignerCompileKeepsAuthoredPose"));
+	if (!TestNotNull(TEXT("The designer opened"), Scoped.Designer) || Scoped.PreviewRoot() == nullptr)
+	{
+		return false;
+	}
+	const TSharedPtr<SDreamWidgetAnimationEditor> Panel = Scoped.Designer->GetSequencerEditor();
+	UDreamWidget* Root = Scoped.TemplateRoot();
+	if (!TestTrue(TEXT("The designer has an Animations panel"), Panel.IsValid()) || !TestNotNull(TEXT("and an authored root"), Root))
+	{
+		return false;
+	}
+	const FVector AuthoredTranslation = Root->GetRenderTranslation();
+
+	UDreamWidgetAnimation* Animation = AddKeyedAnimation(Root, FVector(0.0, 77.0, 0.0));
+	if (!TestNotNull(TEXT("an animation keying the root"), Animation))
+	{
+		return false;
+	}
+	Panel->AssignDreamWidgetAnimationComponent(Root->GetComponent<UDreamWidgetAnimationComponent>());
+	Panel->SelectAnimation(Animation);
+	const TSharedPtr<ISequencer> Sequencer = Panel->GetSequencer();
+	if (!TestTrue(TEXT("selecting it opened Sequencer on it"), Sequencer.IsValid()))
+	{
+		return false;
+	}
+
+	FKismetEditorUtilities::CompileBlueprint(Scoped.Blueprint, EBlueprintCompileOptions::SkipGarbageCollection);
+
+	TestTrue(TEXT("the asset's root keeps the value it was authored with"),
+		Root->GetRenderTranslation().Equals(AuthoredTranslation));
+	TestTrue(TEXT("and Sequencer is not playing into the asset's own tree"),
+		Sequencer->GetPlaybackContext() != Root);
+
+	Panel->ClearAnimationSelection();
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamDesignerExportAnimationToAssetTest,
+	"DreamGUI.Designer.ExportingAnAnimationToAnAssetKeepsItsBindingsAndItsClass",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * "Export to Asset..." crashed the editor, after its dialog had already made the package.
+ *
+ * The bindings resolve against the designer's authoring root, which lives in no world, and the transient playback state
+ * was made with that root's world -- a null CreateTransientSharedPlaybackState verifies against. The class the asset is
+ * authored against was read off the user widget the root belongs to, which an authoring root has none of, so the asset
+ * would have come out with no preview class either. This runs everything after the dialog into an asset made in the
+ * transient package.
+ */
+bool FDreamDesignerExportAnimationToAssetTest::RunTest(const FString&)
+{
+	using namespace DreamDesignerEditingTestLocal;
+
+	FScopedDesigner Scoped(TEXT("DesignerExportAnimation"));
+	if (!TestNotNull(TEXT("The designer opened"), Scoped.Designer) || Scoped.PreviewRoot() == nullptr)
+	{
+		return false;
+	}
+	const TSharedPtr<SDreamWidgetAnimationEditor> Panel = Scoped.Designer->GetSequencerEditor();
+	UDreamWidget* Root = Scoped.TemplateRoot();
+	UDreamWidget* Child = DreamWidgetTreeEditing::CreateWidget(Scoped.Blueprint, UDreamWidget::StaticClass(), Root, -1, TEXT("Child"));
+	UDreamWidgetAnimationComponent* Animator = EnsureAnimator(Root);
+	UDreamWidgetAnimation* Animation = Animator != nullptr ? Animator->AddNewAnimation() : nullptr;
+	if (!TestTrue(TEXT("The designer has an Animations panel"), Panel.IsValid())
+		|| !TestNotNull(TEXT("a child to animate"), Child) || !TestNotNull(TEXT("and an animation on the root"), Animation))
+	{
+		return false;
+	}
+	const FGuid ChildGuid = Animation->GetMovieScene()->AddPossessable(Child->GetDisplayName(), Child->GetClass());
+	Animation->BindPossessableObject(ChildGuid, *Child, Root);
+
+	const TStrongObjectPtr<UDreamUISequence> Asset(NewObject<UDreamUISequence>(GetTransientPackage()));
+	int32 KeptCount = 0;
+	int32 DroppedCount = 0;
+	if (!TestTrue(TEXT("the export runs"), Panel->ExportAnimationToAsset(Animation, Asset.Get(), KeptCount, DroppedCount)))
+	{
+		return false;
+	}
+	TestEqual(TEXT("the binding is kept"), KeptCount, 1);
+	TestEqual(TEXT("and nothing is dropped"), DroppedCount, 0);
+
+	bool bChildPathExported = false;
+	for (const FMovieSceneBindingReference& Reference : Asset->BindingReferences.GetAllReferences())
+	{
+		const UDreamUIWidgetBinding* WidgetBinding = Cast<UDreamUIWidgetBinding>(Reference.CustomBinding);
+		bChildPathExported |= WidgetBinding != nullptr && Reference.ID == ChildGuid && WidgetBinding->WidgetPath == TEXT("Child");
+	}
+	TestTrue(TEXT("as a widget path from the root"), bChildPathExported);
+	TestEqual(TEXT("and the asset names the class it was authored against"),
+		(const UObject*)Asset->PreviewWidgetClass.Get(), (const UObject*)Scoped.Blueprint->GeneratedClass.Get());
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamDesignerAnimationPanelKeepsItsAssetTest,
+	"DreamGUI.Designer.OpeningAnotherAssetLeavesThisDesignersAnimationsPanelOnItsOwnAsset",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * Opening a second asset handed every open Animations panel that asset's root.
+ *
+ * The panel took its root from one broadcast every designer heard, made by whichever designer opened last, so Add,
+ * Delete and Rename Animation in the first window edited the second asset -- Add could put an animation component on
+ * it -- and keys from the first window's details went into an animation nobody there was looking at. This gives the
+ * first asset an animation host, opens a second asset, and checks the first panel still animates the first.
+ */
+bool FDreamDesignerAnimationPanelKeepsItsAssetTest::RunTest(const FString&)
+{
+	using namespace DreamDesignerEditingTestLocal;
+
+	FScopedDesigner First(TEXT("AnimationPanelOwnerFirst"));
+	if (!TestNotNull(TEXT("The first designer opened"), First.Designer))
+	{
+		return false;
+	}
+	const TSharedPtr<SDreamWidgetAnimationEditor> FirstPanel = First.Designer->GetSequencerEditor();
+	UDreamWidgetAnimationComponent* FirstHost = EnsureAnimator(First.TemplateRoot());
+	if (!TestTrue(TEXT("with an Animations panel"), FirstPanel.IsValid()) || !TestNotNull(TEXT("and a host on its root"), FirstHost))
+	{
+		return false;
+	}
+	FirstPanel->AssignDreamWidgetAnimationComponent(FirstHost);
+
+	FScopedDesigner Second(TEXT("AnimationPanelOwnerSecond"));
+	if (!TestNotNull(TEXT("The second designer opened"), Second.Designer))
+	{
+		return false;
+	}
+	TestTrue(TEXT("opening another asset leaves the first panel on the first asset's host"),
+		FirstPanel->GetSequenceComponent() == FirstHost);
+	// And asking again -- what the designer does after every change and compile -- asks the first designer.
+	FirstPanel->RefreshAnimationHost();
+	TestTrue(TEXT("finding the host again finds the same one"), FirstPanel->GetSequenceComponent() == FirstHost);
+	const TSharedPtr<SDreamWidgetAnimationEditor> SecondPanel = Second.Designer->GetSequencerEditor();
+	TestTrue(TEXT("while the second panel has the second asset's, which is none"),
+		SecondPanel.IsValid() && SecondPanel->GetSequenceComponent() == nullptr);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamDesignerAnimationRenameCarriesTheGraphTest,
+	"DreamGUI.Designer.RenamingAnAnimationCarriesTheGraphNodesThatReadIt",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * Renaming an animation in the Animations panel broke every graph node that read it.
+ *
+ * An animation is a member variable of the class, named after it and with a guid derived from that name, so to the graph
+ * a renamed animation is a new variable and the old one is simply gone: a "Get" of it failed the next compile. The rename
+ * only changed the display name. It now moves the references the way a widget's `(was:)` rename does. This names an
+ * animation, compiles so the class declares it, reads it in the event graph, renames it the way the list's inline edit
+ * does, and compiles again.
+ */
+bool FDreamDesignerAnimationRenameCarriesTheGraphTest::RunTest(const FString&)
+{
+	using namespace DreamDesignerEditingTestLocal;
+
+	FScopedDesigner Scoped(TEXT("DesignerAnimationRenameGraph"));
+	if (!TestNotNull(TEXT("The designer opened"), Scoped.Designer))
+	{
+		return false;
+	}
+	const TSharedPtr<SDreamWidgetAnimationEditor> Panel = Scoped.Designer->GetSequencerEditor();
+	UDreamWidgetAnimationComponent* Animator = EnsureAnimator(Scoped.TemplateRoot());
+	UDreamWidgetAnimation* Animation = Animator != nullptr ? Animator->AddNewAnimation() : nullptr;
+	if (!TestTrue(TEXT("The designer has an Animations panel"), Panel.IsValid()) || !TestNotNull(TEXT("and an animation"), Animation))
+	{
+		return false;
+	}
+	Animation->SetDisplayNameString(TEXT("Intro"));
+	FKismetEditorUtilities::CompileBlueprint(Scoped.Blueprint, EBlueprintCompileOptions::SkipGarbageCollection);
+	if (!TestNotNull(TEXT("the class declares the animation"), Scoped.Blueprint->GeneratedClass->FindPropertyByName(FName(TEXT("Intro")))))
+	{
+		return false;
+	}
+
+	UEdGraph* Graph = FBlueprintEditorUtils::FindEventGraph(Scoped.Blueprint);
+	if (!TestNotNull(TEXT("The Blueprint has an event graph"), Graph))
+	{
+		return false;
+	}
+	UK2Node_VariableGet* Getter = NewObject<UK2Node_VariableGet>(Graph);
+	Getter->VariableReference.SetSelfMember(FName(TEXT("Intro")));
+	Graph->AddNode(Getter, /*bFromUI*/false, /*bSelectNewNode*/false);
+	Getter->CreateNewGuid();
+	Getter->PostPlacedNewNode();
+	Getter->AllocateDefaultPins();
+
+	// What the list's inline rename does once the new name is accepted.
+	Animation->SetDisplayNameString(TEXT("Outro"));
+	Panel->NotifyAnimationRenamed(TEXT("Intro"), TEXT("Outro"));
+	TestEqual(TEXT("the graph node reads the new name"), Getter->GetVarName(), FName(TEXT("Outro")));
+
+	FCompilerResultsLog Results;
+	FKismetEditorUtilities::CompileBlueprint(Scoped.Blueprint, EBlueprintCompileOptions::SkipGarbageCollection, &Results);
+	TestEqual(TEXT("and the asset still compiles"), Results.NumErrors, 0);
+	TestNotNull(TEXT("with the animation under its new name"), Scoped.Blueprint->GeneratedClass->FindPropertyByName(FName(TEXT("Outro"))));
+	TestEqual(TEXT("which the node still reads after the compile"), Getter->GetVarName(), FName(TEXT("Outro")));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamDesignerAnimationEditMarksTheBlueprintTest,
+	"DreamGUI.Designer.AddingAnAnimationMarksTheBlueprintAndDeclaresItsVariable",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * Animation edits never told the Blueprint, so PIE played the class's old animations.
+ *
+ * The class carries a copy of every animation taken when it last compiled, and PIE recompiles only a Blueprint marked
+ * dirty -- MarkAnimationDataDirty worked out which widget it was about and stopped there. An animation is a member
+ * variable too, so an added one has to reach the skeleton before the graph can use it. This adds one the way the panel
+ * does and asks the Blueprint both questions.
+ */
+bool FDreamDesignerAnimationEditMarksTheBlueprintTest::RunTest(const FString&)
+{
+	using namespace DreamDesignerEditingTestLocal;
+
+	FScopedDesigner Scoped(TEXT("DesignerAnimationMarksBlueprint"));
+	if (!TestNotNull(TEXT("The designer opened"), Scoped.Designer))
+	{
+		return false;
+	}
+	const TSharedPtr<SDreamWidgetAnimationEditor> Panel = Scoped.Designer->GetSequencerEditor();
+	UDreamWidgetAnimationComponent* Animator = EnsureAnimator(Scoped.TemplateRoot());
+	if (!TestTrue(TEXT("The designer has an Animations panel"), Panel.IsValid()) || !TestNotNull(TEXT("and a host on the root"), Animator))
+	{
+		return false;
+	}
+	FKismetEditorUtilities::CompileBlueprint(Scoped.Blueprint, EBlueprintCompileOptions::SkipGarbageCollection);
+	TestTrue(TEXT("the asset starts out compiled"), Scoped.Blueprint->Status != BS_Dirty);
+
+	Panel->AssignDreamWidgetAnimationComponent(Animator);
+	UDreamWidgetAnimation* Animation = Animator->AddNewAnimation();
+	Panel->MarkAnimationDataDirty();
+
+	TestTrue(TEXT("adding an animation marks the Blueprint for the recompile PIE makes"), Scoped.Blueprint->Status == BS_Dirty);
+	const UClass* Skeleton = Scoped.Blueprint->SkeletonGeneratedClass;
+	TestTrue(TEXT("and the skeleton already declares the animation, so the graph can read it"),
+		Skeleton != nullptr && Animation != nullptr
+		&& Skeleton->FindPropertyByName(UDreamWidgetTree::MakeAnimationVariableName(Animation)) != nullptr);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamDesignerUnrelatedUndoKeepsSequencerTest,
+	"DreamGUI.Designer.AnUndoInAnotherAssetLeavesTheOpenAnimationAndItsSequencerAlone",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * Every undo in the editor rebuilt every open Animations panel and threw its Sequencer away.
+ *
+ * The panel listened to FEditorDelegates::PostUndoRedo, which an undo of anything raises -- an actor dragged in the level,
+ * an edit to another asset -- and refreshed its list by way of "nothing selected", which releases Sequencer and builds a
+ * new one for the same animation. This opens an animation, undoes a change to an object in another package, and checks
+ * the panel kept both the animation and the Sequencer it was open in.
+ */
+bool FDreamDesignerUnrelatedUndoKeepsSequencerTest::RunTest(const FString&)
+{
+	using namespace DreamDesignerEditingTestLocal;
+	if (GEditor == nullptr || GEditor->Trans == nullptr)
+	{
+		AddError(TEXT("no transaction buffer; this test cannot say anything"));
+		return false;
+	}
+
+	FScopedDesigner Scoped(TEXT("DesignerUnrelatedUndoKeepsSequencer"));
+	if (!TestNotNull(TEXT("The designer opened"), Scoped.Designer))
+	{
+		return false;
+	}
+	const TSharedPtr<SDreamWidgetAnimationEditor> Panel = Scoped.Designer->GetSequencerEditor();
+	UDreamWidgetAnimationComponent* Animator = EnsureAnimator(Scoped.TemplateRoot());
+	UDreamWidgetAnimation* Animation = Animator != nullptr ? Animator->AddNewAnimation() : nullptr;
+	if (!TestTrue(TEXT("The designer has an Animations panel"), Panel.IsValid()) || !TestNotNull(TEXT("and an animation"), Animation))
+	{
+		return false;
+	}
+	Panel->AssignDreamWidgetAnimationComponent(Animator);
+	Panel->SelectAnimation(Animation);
+	const TSharedPtr<ISequencer> SequencerBefore = Panel->GetSequencer();
+	if (!TestTrue(TEXT("selecting the animation opened Sequencer"), SequencerBefore.IsValid()))
+	{
+		return false;
+	}
+
+	UPackage* OtherPackage = CreatePackage(TEXT("/Temp/DreamGUITests/DesignerUnrelatedUndoOther"));
+	OtherPackage->AddToRoot();
+	ON_SCOPE_EXIT{ OtherPackage->RemoveFromRoot(); };
+	UDreamDetailsMultiSelectTestObject* Other = NewObject<UDreamDetailsMultiSelectTestObject>(OtherPackage, NAME_None, RF_Transactional);
+	GEditor->BeginTransaction(FText::FromString(TEXT("Test Unrelated Edit")));
+	Other->Modify();
+	Other->bFlag = true;
+	GEditor->EndTransaction();
+	GEditor->UndoTransaction();
+	TestFalse(TEXT("the other asset's edit was undone"), Other->bFlag);
+
+	TestTrue(TEXT("the panel still has the animation open"), Panel->GetAnimation() == Animation);
+	TestTrue(TEXT("in the Sequencer it was opened in"), Panel->GetSequencer() == SequencerBefore);
+
+	Panel->ClearAnimationSelection();
 	return true;
 }
 

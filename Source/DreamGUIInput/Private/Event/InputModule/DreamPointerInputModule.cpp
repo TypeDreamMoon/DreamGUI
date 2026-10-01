@@ -377,7 +377,15 @@ void UDreamPointerInputModule::ProcessPointerEvent(UDreamUIInputUser* InUser, UD
 			}
 			else
 			{
+				// The source went away with the trigger still held. The drag is over here, so the release takes the
+				// not-dragging road and would never tell the operation: told now, as the release tells it when the
+				// source goes on the release's own frame.
 				EventData->bIsDragging = false;
+				if (UDreamDragDropOperation* EndedOperation = EventData->DragOperation.Get())
+				{
+					EndedOperation->NotifyDragCancelled();
+				}
+				EventData->DragOperation = nullptr;
 			}
 		}
 		else//trigger press but not dragging, only concern if trigger drag event

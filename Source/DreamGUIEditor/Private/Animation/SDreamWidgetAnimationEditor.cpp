@@ -5,6 +5,10 @@
 #include "Core/DreamUserWidget.h"
 #include "Core/DreamWidgetTree.h"
 #include "Core/Components/DreamWidget.h"
+#include "Designer/DreamWidgetBlueprintEditor.h"
+#include "DreamWidgetBlueprint.h"
+#include "DreamWidgetBlueprintCompiler.h"
+#include "Kismet2/BlueprintEditorUtils.h"
 #include "K2Node_CallFunction.h"
 #include "Animation/DreamUISequence.h"
 #include "Animation/DreamUIWidgetBinding.h"
@@ -45,7 +49,12 @@ struct FWidgetAnimationListItem
 		, bNewAnimation(bInNewAnimation)
 	{}
 
-	UDreamWidgetAnimation* Animation;
+	/**
+	 * Weak, because nothing about a row keeps its animation alive: a compile of a text-authored asset
+	 * replaces every animation with a copy, the garbage collector takes the old ones, and a row still
+	 * painting one read freed memory.
+	 */
+	TWeakObjectPtr<UDreamWidgetAnimation> Animation;
 	bool bRenameRequestPending;
 	bool bNewAnimation;
 };
@@ -88,9 +97,10 @@ public:
 private:
 	FText GetMovieSceneText() const
 	{
-		if (ListItem.IsValid())
+		const TSharedPtr<FWidgetAnimationListItem> PinnedItem = ListItem.Pin();
+		if (const UDreamWidgetAnimation* Animation = PinnedItem.IsValid() ? PinnedItem->Animation.Get() : nullptr)
 		{
-			return ListItem.Pin()->Animation->GetDisplayName();
+			return Animation->GetDisplayName();
 		}
 
 		return FText::GetEmpty();
@@ -103,7 +113,12 @@ private:
 		{
 			return false;
 		}
-		const UDreamWidgetAnimation* Animation = PinnedItem->Animation;
+		const UDreamWidgetAnimation* Animation = PinnedItem->Animation.Get();
+		if (Animation != nullptr && !Animation->IsEditable())
+		{
+			OutErrorMessage = LOCTEXT("NameOwnedByTheFile", "The .dui's timeline block makes this animation; rename it there");
+			return false;
+		}
 
 		// Compared the way the COMPILER compares it -- sanitized to an identifier -- and against widget
 		// names as well as animation names. "My Anim" and "My_Anim" are two display names that become
@@ -137,6 +152,20 @@ private:
 						OutErrorMessage = LOCTEXT("NameInUseByWidget", "A widget in this hierarchy already uses this name; the widget would win and this animation would get no variable");
 						return false;
 					}
+					// And against the Blueprint's own members, which the compiler refuses an animation's name to.
+					if (const UBlueprint* Blueprint = Tree->GetTypedOuter<UBlueprint>())
+					{
+						const bool bVariable = FBlueprintEditorUtils::FindNewVariableIndex(Blueprint, ProposedName) != INDEX_NONE;
+						const bool bFunction = Blueprint->FunctionGraphs.ContainsByPredicate([ProposedName](const UEdGraph* Graph)
+							{
+								return Graph != nullptr && Graph->GetFName() == ProposedName;
+							});
+						if (bVariable || bFunction)
+						{
+							OutErrorMessage = LOCTEXT("NameInUseByMember", "The Blueprint has a variable or a function of this name; the animation would get no variable");
+							return false;
+						}
+					}
 				}
 			}
 		}
@@ -146,11 +175,11 @@ private:
 	void OnNameTextCommited(const FText& InText, ETextCommit::Type CommitInfo)
 	{
 		TSharedPtr<FWidgetAnimationListItem> PinnedItem = ListItem.Pin();
-		if (!PinnedItem.IsValid() || !IsValid(PinnedItem->Animation))
+		if (!PinnedItem.IsValid() || !PinnedItem->Animation.IsValid())
 		{
 			return;
 		}
-		auto Animation = PinnedItem->Animation;
+		UDreamWidgetAnimation* Animation = PinnedItem->Animation.Get();
 
 		// Name has already been checked in VerifyAnimationRename
 		auto NewName = InText.ToString();
@@ -171,16 +200,16 @@ private:
 				Animation->Modify();
 
 				Animation->SetDisplayNameString(NewName);
-				Editor->MarkAnimationDataDirty();
-				if (!bNewAnimation)
-				{
-					Editor->NotifyAnimationRenamed(OldName, NewName);
-				}
-
 				if (bNewAnimation)
 				{
+					// Nothing can name an animation made a moment ago, so the class only has to declare it.
+					Editor->MarkAnimationDataDirty();
 					PinnedItem->bNewAnimation = false;
 					Editor->RefreshAnimationList();
+				}
+				else
+				{
+					Editor->NotifyAnimationRenamed(OldName, NewName);
 				}
 			}
 		}
@@ -201,12 +230,15 @@ private:
 SDreamWidgetAnimationEditor::~SDreamWidgetAnimationEditor()
 {
 	FCoreUObjectDelegates::OnObjectsReplaced.Remove(OnObjectsReplacedHandle);
-	FDreamUIEditorTools::OnEditingWidgetChanged.Remove(EditingWidgetChangedHandle);
-	FEditorDelegates::PostUndoRedo.Remove(PostUndoRedoHandle);
 }
 
-void SDreamWidgetAnimationEditor::Construct(const FArguments& InArgs)
+void SDreamWidgetAnimationEditor::Construct(const FArguments& InArgs, TSharedPtr<FDreamWidgetBlueprintEditor> InDesigner)
 {
+	// The panel's root is its own designer's, asked for when it is needed. It used to be set by a
+	// broadcast every designer heard: opening a second asset handed every open panel that asset's root,
+	// so Add, Delete and Rename Animation in one window edited another asset.
+	WeakDesigner = InDesigner;
+
 	SAssignNew(AnimationListView, SWidgetAnimationListView)
 		.SelectionMode(ESelectionMode::SingleToggle)//clicking the selected row again leaves animation mode
 		.ListItemsSource(&Animations)
@@ -224,7 +256,7 @@ void SDreamWidgetAnimationEditor::Construct(const FArguments& InArgs)
 			[
 				SNew(SBox)
 				.IsEnabled_Lambda([=, this]() {
-					return WeakRootWidget.IsValid();
+					return GetRootWidget() != nullptr;
 				})
 				[
 					SNew(SBorder)
@@ -278,8 +310,35 @@ void SDreamWidgetAnimationEditor::Construct(const FArguments& InArgs)
 	OnObjectsReplacedHandle = FCoreUObjectDelegates::OnObjectsReplaced.AddSP(this, &SDreamWidgetAnimationEditor::OnObjectsReplaced);
 
 	AnimationEditorWidget->AssignSequence(GetAnimation());
-	EditingWidgetChangedHandle = FDreamUIEditorTools::OnEditingWidgetChanged.AddRaw(this, &SDreamWidgetAnimationEditor::OnEditingWidgetChanged);
-	PostUndoRedoHandle = FEditorDelegates::PostUndoRedo.AddSP(this, &SDreamWidgetAnimationEditor::OnPostUndoRedo);
+	// Undo no longer reaches the panel from FEditorDelegates::PostUndoRedo, which every undo anywhere in
+	// the editor raises: the designer asks for RefreshAnimationHost from its own PostUndo, which only an
+	// undo touching its asset reaches (FDreamWidgetBlueprintEditor::MatchesContext).
+	RefreshAnimationHost();
+}
+
+UDreamWidget* SDreamWidgetAnimationEditor::GetRootWidget() const
+{
+	const TSharedPtr<FDreamWidgetBlueprintEditor> Designer = WeakDesigner.Pin();
+	return Designer.IsValid() ? Designer->GetAnimationHostWidget() : nullptr;
+}
+
+UDreamWidgetBlueprint* SDreamWidgetAnimationEditor::GetWidgetBlueprint() const
+{
+	if (const TSharedPtr<FDreamWidgetBlueprintEditor> Designer = WeakDesigner.Pin())
+	{
+		return Designer->GetWidgetBlueprint();
+	}
+	return WeakSequenceComponent.IsValid() ? WeakSequenceComponent->GetTypedOuter<UDreamWidgetBlueprint>() : nullptr;
+}
+
+void SDreamWidgetAnimationEditor::RefreshAnimationHost()
+{
+	// Remembered before the host moves: the selected animation is kept alive by the sequencer playing it,
+	// so its name is still there to ask for after a compile has replaced it.
+	const UDreamWidgetAnimation* Selected = GetSelectedAnimation();
+	const FString SelectedName = Selected != nullptr ? Selected->GetDisplayNameString() : FString();
+	WeakSequenceComponent = FindAnimationHost(GetRootWidget());
+	RebuildAnimationList(Selected, SelectedName);
 }
 
 void SDreamWidgetAnimationEditor::AssignDreamWidgetAnimationComponent(TWeakObjectPtr<UDreamWidgetAnimationComponent> InSequenceComponent)
@@ -312,17 +371,32 @@ void SDreamWidgetAnimationEditor::SetToolkitHost(TSharedPtr<IToolkitHost> InTool
 
 void SDreamWidgetAnimationEditor::NotifyAnimationRenamed(const FString& OldName, const FString& NewName)
 {
-	// Runtime code addresses an animation by its display name (PlayAnimationByDisplayName), and a
-	// rename edits only the sequence -- so list the companion-blueprint calls that still say the old
-	// name. A warning, not an auto-fix: a literal pin may be assembled for a different prefab.
-	UDreamWidget* RootWidget = WeakRootWidget.Get();
-	// The companion behaviour Blueprint a prefab used to carry its graph in. A widget class is its own
-	// Blueprint, so there is nothing beside it to find.
-	UBlueprint* Blueprint = nullptr;
+	UDreamWidgetBlueprint* Blueprint = GetWidgetBlueprint();
 	if (Blueprint == nullptr)
 	{
 		return;
 	}
+
+	// The animation's member variable. Its guid is derived from its name, so nothing found the renamed
+	// variable again and every node that read the old one failed the next compile. The class declares
+	// the new name first, because until it does, a node renamed below is renamed straight back by its
+	// old guid (see MigrateVariableReferences); then the references move, with the refusals a widget's
+	// `(was:)` rename makes.
+	MarkAnimationDataDirty();
+	const FName OldVariableName(*UDreamWidgetTree::SanitizeIdentifier(OldName));
+	const FName NewVariableName(*UDreamWidgetTree::SanitizeIdentifier(NewName));
+	FString Refusal;
+	FDreamWidgetBlueprintCompilerContext::MigrateVariableReferences(Blueprint, OldVariableName, NewVariableName, Refusal);
+	if (!Refusal.IsEmpty())
+	{
+		FDreamUIUtils::EditorNotification(FText::Format(
+			LOCTEXT("RenameKeptGraphReferences", "The graph references to \"{0}\" were not moved to \"{1}\": {2}. Repoint them by hand."),
+			FText::FromName(OldVariableName), FText::FromName(NewVariableName), FText::FromString(Refusal)), false, 8);
+	}
+
+	// Runtime code can also address an animation by its display name (PlayAnimationByDisplayName), and
+	// a literal name in a graph is not a reference anything can move -- so list the calls that still say
+	// the old name. A warning, not an auto-fix: a literal pin may be meant for another widget's animation.
 	int32 StaleCallCount = 0;
 	TArray<UEdGraph*> Graphs;
 	Blueprint->GetAllGraphs(Graphs);
@@ -431,7 +505,7 @@ UDreamWidgetAnimationComponent* SDreamWidgetAnimationEditor::FindAnimationHost(U
 
 UDreamWidgetAnimationComponent* SDreamWidgetAnimationEditor::EnsureAnimationHost()
 {
-	UDreamWidget* RootWidget = WeakRootWidget.Get();
+	UDreamWidget* RootWidget = GetRootWidget();
 	if (!IsValid(RootWidget))
 	{
 		return nullptr;
@@ -461,43 +535,40 @@ UDreamWidgetAnimationComponent* SDreamWidgetAnimationEditor::EnsureAnimationHost
 	NewHost->Modify();
 	FDreamUIUtils::NotifyPropertyChanged(RootWidget, UDreamWidget::GetPropertyName_Components());
 	AssignDreamWidgetAnimationComponent(NewHost);
-	MarkAnimationDataDirty();
+	// Not dirtied here: an empty host changes no member of the class, and the animation the caller adds
+	// next does. Marking now would compile in between, and for a text-authored asset a compile rebuilds
+	// the tree from its file and carries only hosts that hold an animation -- this one would be dropped
+	// before the animation reached it.
 	return NewHost;
 }
 
-void SDreamWidgetAnimationEditor::MarkAnimationDataDirty()
+void SDreamWidgetAnimationEditor::MarkAnimationDataDirty(bool bStructural)
 {
-	UDreamWidget* ContextWidget = WeakRootWidget.Get();
-	if (!IsValid(ContextWidget) && WeakSequenceComponent.IsValid())
+	UDreamWidgetBlueprint* Blueprint = GetWidgetBlueprint();
+	if (Blueprint == nullptr)
 	{
-		ContextWidget = WeakSequenceComponent->GetWidget();
+		return;
+	}
+	if (bStructural)
+	{
+		FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
+	}
+	else
+	{
+		FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
 	}
 }
 
 void SDreamWidgetAnimationEditor::OnObjectsReplaced(const TMap<UObject*, UObject*>& ReplacementMap)
 {
-	bool bRootReplaced = false;
-	if (UDreamWidget* RootWidget = WeakRootWidget.Get(true))
-	{
-		if (UDreamWidget* NewRootWidget = Cast<UDreamWidget>(ReplacementMap.FindRef(RootWidget)))
-		{
-			WeakRootWidget = NewRootWidget;
-			bRootReplaced = true;
-		}
-	}
-
+	// The host is replaced with its widget when that widget's class recompiles. The root itself is not
+	// held here -- the designer is asked for it -- so the host is the one thing to follow.
 	if (UDreamWidgetAnimationComponent* Component = WeakSequenceComponent.Get(true))
 	{
 		if (UDreamWidgetAnimationComponent* NewSequenceComponent = Cast<UDreamWidgetAnimationComponent>(ReplacementMap.FindRef(Component)))
 		{
 			AssignDreamWidgetAnimationComponent(NewSequenceComponent);
-			return;
 		}
-	}
-
-	if (bRootReplaced)
-	{
-		AssignDreamWidgetAnimationComponent(FindAnimationHost(WeakRootWidget.Get()));
 	}
 }
 
@@ -508,6 +579,10 @@ TSharedRef<ITableRow> SDreamWidgetAnimationEditor::OnGenerateRowForAnimationList
 
 void SDreamWidgetAnimationEditor::OnAnimationListViewSelectionChanged(TSharedPtr<FWidgetAnimationListItem> InListItem, ESelectInfo::Type InSelectInfo)
 {
+	if (bRebuildingAnimationList)
+	{
+		return;
+	}
 	AnimationEditorWidget->AssignSequence(GetAnimation());
 }
 
@@ -518,7 +593,7 @@ UDreamWidgetAnimation* SDreamWidgetAnimationEditor::GetSelectedAnimation() const
 		return nullptr;
 	}
 	const TArray<TSharedPtr<FWidgetAnimationListItem>> SelectedItems = AnimationListView->GetSelectedItems();
-	return SelectedItems.Num() == 1 && SelectedItems[0].IsValid() ? SelectedItems[0]->Animation : nullptr;
+	return SelectedItems.Num() == 1 && SelectedItems[0].IsValid() ? SelectedItems[0]->Animation.Get() : nullptr;
 }
 
 int32 SDreamWidgetAnimationEditor::GetSelectedAnimationSourceIndex() const
@@ -531,88 +606,106 @@ int32 SDreamWidgetAnimationEditor::GetSelectedAnimationSourceIndex() const
 
 bool SDreamWidgetAnimationEditor::CanExecuteAnimationListAction() const
 {
-	return GetSelectedAnimationSourceIndex() != INDEX_NONE;
+	// An animation the .dui's timeline block builds is the file's. Renamed, deleted or copied here, it came back from the
+	// file at the next compile -- and a rename first moved the graph's references onto a name the class then did not
+	// have.
+	const UDreamWidgetAnimation* Selected = GetSelectedAnimation();
+	return GetSelectedAnimationSourceIndex() != INDEX_NONE && Selected != nullptr && Selected->IsEditable();
 }
 
 void SDreamWidgetAnimationEditor::RefreshAnimationList()
 {
-	UDreamWidgetAnimation* PreviouslySelectedAnimation = GetSelectedAnimation();
-	if (AnimationListView.IsValid())
-	{
-		AnimationListView->ClearSelection();
-	}
-	Animations.Reset();
-	if (WeakSequenceComponent.IsValid())
-	{
-		const FText SearchText = SearchBoxPtr.IsValid() ? SearchBoxPtr->GetText() : FText::GetEmpty();
-		TTextFilter<UDreamWidgetAnimation*> TextFilter(
-			TTextFilter<UDreamWidgetAnimation*>::FItemToStringArray::CreateLambda(
-				[](UDreamWidgetAnimation* InAnimation, TArray<FString>& OutFilterStrings)
-				{
-					OutFilterStrings.Add(InAnimation->GetDisplayNameString());
-					OutFilterStrings.Add(InAnimation->GetName());
-				}));
-		TextFilter.SetRawFilterText(SearchText);
-		if (SearchBoxPtr.IsValid())
-		{
-			SearchBoxPtr->SetError(TextFilter.GetFilterErrorText());
-		}
+	const UDreamWidgetAnimation* Selected = GetSelectedAnimation();
+	RebuildAnimationList(Selected, Selected != nullptr ? Selected->GetDisplayNameString() : FString());
+}
 
-		for (UDreamWidgetAnimation* Item : WeakSequenceComponent->GetSequenceArray())
+TSharedPtr<FWidgetAnimationListItem> SDreamWidgetAnimationEditor::FindListItem(const UDreamWidgetAnimation* InAnimation, const FString& InName) const
+{
+	if (InAnimation != nullptr)
+	{
+		if (const TSharedPtr<FWidgetAnimationListItem>* Item = Animations.FindByPredicate(
+			[InAnimation](const TSharedPtr<FWidgetAnimationListItem>& Candidate) { return Candidate.IsValid() && Candidate->Animation == InAnimation; }))
 		{
-			if (IsValid(Item) && (SearchText.IsEmpty() || TextFilter.PassesFilter(Item)))
-			{
-				Animations.Add(MakeShareable(new FWidgetAnimationListItem(Item)));
-			}
+			return *Item;
 		}
 	}
-	else if (SearchBoxPtr.IsValid())
+	if (!InName.IsEmpty())
 	{
-		SearchBoxPtr->SetError(FText::GetEmpty());
+		if (const TSharedPtr<FWidgetAnimationListItem>* Item = Animations.FindByPredicate(
+			[&InName](const TSharedPtr<FWidgetAnimationListItem>& Candidate)
+			{
+				return Candidate.IsValid() && Candidate->Animation.IsValid() && Candidate->Animation->GetDisplayNameString() == InName;
+			}))
+		{
+			return *Item;
+		}
 	}
+	return nullptr;
+}
 
-	if (AnimationListView.IsValid())
+void SDreamWidgetAnimationEditor::RebuildAnimationList(const UDreamWidgetAnimation* InSelected, const FString& InSelectedName)
+{
+	// The selection callback sits this out, and the sequence is assigned once at the end. Clearing and
+	// then re-selecting went through "nothing selected" on the way, which releases Sequencer and builds
+	// a new one: every refresh -- every undo anywhere in the editor, when the panel listened for those --
+	// threw the open animation's Sequencer away for an identical one.
 	{
-		AnimationListView->RequestListRefresh();
-		TSharedPtr<FWidgetAnimationListItem>* ItemToSelect = Animations.FindByPredicate(
-			[PreviouslySelectedAnimation](const TSharedPtr<FWidgetAnimationListItem>& Item)
-			{
-				return Item.IsValid() && Item->Animation == PreviouslySelectedAnimation;
-			});
-		if (ItemToSelect)
+		TGuardValue<bool> RebuildGuard(bRebuildingAnimationList, true);
+		if (AnimationListView.IsValid())
 		{
-			AnimationListView->SetSelection(*ItemToSelect);
-		}
-		else
-		{
-			// No animation is selected until the designer picks one. Selecting the first on every
-			// refresh put the viewport into animation mode the moment a prefab with any animation was
-			// opened, which is invisible as a cause while the Animations tab is closed.
 			AnimationListView->ClearSelection();
-			if (AnimationEditorWidget.IsValid())
+		}
+		Animations.Reset();
+		if (WeakSequenceComponent.IsValid())
+		{
+			const FText SearchText = SearchBoxPtr.IsValid() ? SearchBoxPtr->GetText() : FText::GetEmpty();
+			TTextFilter<UDreamWidgetAnimation*> TextFilter(
+				TTextFilter<UDreamWidgetAnimation*>::FItemToStringArray::CreateLambda(
+					[](UDreamWidgetAnimation* InAnimation, TArray<FString>& OutFilterStrings)
+					{
+						OutFilterStrings.Add(InAnimation->GetDisplayNameString());
+						OutFilterStrings.Add(InAnimation->GetName());
+					}));
+			TextFilter.SetRawFilterText(SearchText);
+			if (SearchBoxPtr.IsValid())
 			{
-				AnimationEditorWidget->AssignSequence(nullptr);
+				SearchBoxPtr->SetError(TextFilter.GetFilterErrorText());
+			}
+
+			for (UDreamWidgetAnimation* Item : WeakSequenceComponent->GetSequenceArray())
+			{
+				if (IsValid(Item) && (SearchText.IsEmpty() || TextFilter.PassesFilter(Item)))
+				{
+					Animations.Add(MakeShareable(new FWidgetAnimationListItem(Item)));
+				}
+			}
+		}
+		else if (SearchBoxPtr.IsValid())
+		{
+			SearchBoxPtr->SetError(FText::GetEmpty());
+		}
+
+		if (AnimationListView.IsValid())
+		{
+			AnimationListView->RequestListRefresh();
+			// The same animation when it is still listed, else the one that took its name -- the copy a
+			// text-authored asset's compile made of it. With neither, nothing: no animation is selected
+			// until the designer picks one. Selecting the first on every refresh put the viewport into
+			// animation mode the moment a prefab with any animation was opened, which is invisible as a
+			// cause while the Animations tab is closed.
+			if (const TSharedPtr<FWidgetAnimationListItem> ItemToSelect = FindListItem(InSelected, InSelectedName))
+			{
+				AnimationListView->SetSelection(ItemToSelect);
 			}
 		}
 	}
-}
 
-void SDreamWidgetAnimationEditor::OnPostUndoRedo()
-{
-	AssignDreamWidgetAnimationComponent(FindAnimationHost(WeakRootWidget.Get()));
-}
-
-// Trigger when opening a new prefab
-void SDreamWidgetAnimationEditor::OnEditingWidgetChanged(UDreamWidget* RootWidget)
-{
-	WeakRootWidget = RootWidget;
-	UDreamWidgetAnimationComponent* AnimationHost = FindAnimationHost(RootWidget);
-
-	// A migration for animation hosts that older builds put on the transient preview root. It
-	// needed the prefab helper to tell preview from authored; the designer answers that itself now,
-	// and no build in this tree can produce that state any more.
-
-	AssignDreamWidgetAnimationComponent(AnimationHost);
+	// Once, for the whole rebuild. The same animation keeps the Sequencer it has, a copy found by name
+	// takes that Sequencer over, and an animation that is gone leaves animation mode.
+	if (AnimationEditorWidget.IsValid())
+	{
+		AnimationEditorWidget->AssignSequence(GetSelectedAnimation());
+	}
 }
 
 TSharedPtr<ISequencer> SDreamWidgetAnimationEditor::GetSequencer() const
@@ -657,7 +750,7 @@ TSharedPtr<SWidget> SDreamWidgetAnimationEditor::OnContextMenuOpening()const
 			if (SelectedItems.Num() == 1 && WeakSequenceComponent.IsValid())
 			{
 				auto SelectedItem = SelectedItems[0];
-				if (!SelectedItem->Animation->IsObjectReferencesGood(WeakSequenceComponent->GetWidget()))
+				if (SelectedItem->Animation.IsValid() && !SelectedItem->Animation->IsObjectReferencesGood(WeakSequenceComponent->GetWidget()))
 				{
 					MenuBuilder.AddMenuSeparator();
 					MenuBuilder.AddMenuEntry(
@@ -667,7 +760,7 @@ TSharedPtr<SWidget> SDreamWidgetAnimationEditor::OnContextMenuOpening()const
 						FSlateIcon(),
 						FUIAction(FExecuteAction::CreateLambda([=, this]() {
 							UDreamWidgetAnimationComponent* SequenceComponent = WeakSequenceComponent.Get();
-							UDreamWidgetAnimation* Animation = SelectedItem->Animation;
+							UDreamWidgetAnimation* Animation = SelectedItem->Animation.Get();
 							UDreamWidget* ContextWidget = IsValid(SequenceComponent) ? SequenceComponent->GetWidget() : nullptr;
 							if (!IsValid(Animation) || !IsValid(ContextWidget))
 							{
@@ -702,7 +795,8 @@ TSharedPtr<SWidget> SDreamWidgetAnimationEditor::OnContextMenuOpening()const
 								return;
 							}
 
-							const_cast<SDreamWidgetAnimationEditor*>(this)->MarkAnimationDataDirty();
+							// A value edit: the bindings changed, no member of the class did.
+							const_cast<SDreamWidgetAnimationEditor*>(this)->MarkAnimationDataDirty(/*bStructural*/false);
 							FDreamUIUtils::EditorNotification(FText::Format(
 								LOCTEXT("FixObjectReferenceSucceeded", "Repaired {0} animation binding(s)."), FText::AsNumber(RepairedCount)), true);
 							}))
@@ -739,6 +833,19 @@ void SDreamWidgetAnimationEditor::CreateCommandList()
 	);
 }
 
+void SDreamWidgetAnimationEditor::BeginRenamingNewAnimation(const UDreamWidgetAnimation* InAnimation, const FString& InName)
+{
+	// By name as well as by object: the compile that declares the new animation's variable rebuilds a
+	// text-authored asset's tree from its file, and the row the list shows afterwards is the copy.
+	if (const TSharedPtr<FWidgetAnimationListItem> NewItem = FindListItem(InAnimation, InName))
+	{
+		NewItem->bRenameRequestPending = true;
+		NewItem->bNewAnimation = true;
+		AnimationListView->SetSelection(NewItem);
+		AnimationListView->RequestScrollIntoView(NewItem);
+	}
+}
+
 FReply SDreamWidgetAnimationEditor::OnNewAnimationClicked()
 {
 	const FScopedTransaction Transaction(LOCTEXT("AddAnimation_Transaction", "Add DreamUI Animation"));
@@ -746,20 +853,14 @@ FReply SDreamWidgetAnimationEditor::OnNewAnimationClicked()
 	{
 		SequenceComponent->Modify();
 		UDreamWidgetAnimation* Sequence = SequenceComponent->AddNewAnimation();
+		const FString SequenceName = Sequence != nullptr ? Sequence->GetDisplayNameString() : FString();
 		MarkAnimationDataDirty();
 		if (SearchBoxPtr.IsValid())
 		{
 			SearchBoxPtr->SetText(FText::GetEmpty());
 		}
 		RefreshAnimationList();
-		if (TSharedPtr<FWidgetAnimationListItem>* NewItem = Animations.FindByPredicate(
-			[Sequence](const TSharedPtr<FWidgetAnimationListItem>& Item) { return Item.IsValid() && Item->Animation == Sequence; }))
-		{
-			(*NewItem)->bRenameRequestPending = true;
-			(*NewItem)->bNewAnimation = true;
-			AnimationListView->SetSelection(*NewItem);
-			AnimationListView->RequestScrollIntoView(*NewItem);
-		}
+		BeginRenamingNewAnimation(Sequence, SequenceName);
 	}
 	return FReply::Handled();
 }
@@ -772,6 +873,7 @@ void SDreamWidgetAnimationEditor::OnDuplicateAnimation()
 		const FScopedTransaction Transaction(LOCTEXT("DuplicateAnimation_Transaction", "DreamUISequence Duplicate Animation"));
 		WeakSequenceComponent->Modify();
 		UDreamWidgetAnimation* Sequence = WeakSequenceComponent->DuplicateAnimationByIndex(SourceIndex);
+		const FString SequenceName = Sequence != nullptr ? Sequence->GetDisplayNameString() : FString();
 		MarkAnimationDataDirty();
 
 		if (Sequence)
@@ -781,14 +883,7 @@ void SDreamWidgetAnimationEditor::OnDuplicateAnimation()
 				SearchBoxPtr->SetText(FText::GetEmpty());
 			}
 			RefreshAnimationList();
-			if (TSharedPtr<FWidgetAnimationListItem>* NewItem = Animations.FindByPredicate(
-				[Sequence](const TSharedPtr<FWidgetAnimationListItem>& Item) { return Item.IsValid() && Item->Animation == Sequence; }))
-			{
-				(*NewItem)->bRenameRequestPending = true;
-				(*NewItem)->bNewAnimation = true;
-				AnimationListView->SetSelection(*NewItem);
-				AnimationListView->RequestScrollIntoView(*NewItem);
-			}
+			BeginRenamingNewAnimation(Sequence, SequenceName);
 		}
 	}
 }
@@ -811,8 +906,7 @@ void SDreamWidgetAnimationEditor::OnDeleteAnimation()
 void SDreamWidgetAnimationEditor::OnExportAnimationToAsset()
 {
 	UDreamWidgetAnimation* Source = GetSelectedAnimation();
-	UDreamWidget* RootWidget = WeakRootWidget.Get();
-	if (Source == nullptr || RootWidget == nullptr)
+	if (Source == nullptr || GetRootWidget() == nullptr)
 	{
 		return;
 	}
@@ -826,29 +920,59 @@ void SDreamWidgetAnimationEditor::OnExportAnimationToAsset()
 		return;
 	}
 
+	int32 KeptCount = 0;
+	int32 DroppedCount = 0;
+	if (!ExportAnimationToAsset(Source, Asset, KeptCount, DroppedCount))
+	{
+		return;
+	}
+
+	FNotificationInfo Info(FText::Format(
+		LOCTEXT("ExportedAnimation", "Exported '{0}' to {1} ({2} bindings kept, {3} unresolved dropped)."),
+		FText::FromString(Source->GetDisplayNameString()), FText::FromString(Asset->GetName()),
+		FText::AsNumber(KeptCount), FText::AsNumber(DroppedCount)));
+	Info.ExpireDuration = 6.0f;
+	FSlateNotificationManager::Get().AddNotification(Info);
+}
+
+bool SDreamWidgetAnimationEditor::ExportAnimationToAsset(UDreamWidgetAnimation* InSource, UDreamUISequence* InAsset,
+	int32& OutKept, int32& OutDropped) const
+{
+	OutKept = 0;
+	OutDropped = 0;
+	UDreamWidget* RootWidget = GetRootWidget();
+	if (InSource == nullptr || InAsset == nullptr || RootWidget == nullptr)
+	{
+		return false;
+	}
+	UDreamWidgetAnimation* Source = InSource;
+	UDreamUISequence* Asset = InAsset;
+
 	// The movie scene is copied whole; the bindings are rebuilt as widget paths, because the
 	// embedded form's direct HelperWidget pointers mean nothing outside this prefab instance.
 	Asset->Modify();
 	// The asset remembers which widget CLASS it was authored against, so its own editor can put up a
-	// live preview tree. The instance the animation was authored on is the class: an embedded
-	// animation lives on a widget that belongs to exactly one UDreamUserWidget, preview or live.
+	// live preview tree: this designer's class. It used to be read off the user widget the root
+	// belongs to, which an authored root has none of -- it is outered to the asset's tree -- so every
+	// export came out with no preview class at all.
+	if (const UDreamWidgetBlueprint* Blueprint = GetWidgetBlueprint())
 	{
-		UDreamUserWidget* OwningInstance = Cast<UDreamUserWidget>(RootWidget);
-		if (OwningInstance == nullptr && RootWidget != nullptr)
+		if (Blueprint->GeneratedClass != nullptr && Blueprint->GeneratedClass->IsChildOf(UDreamUserWidget::StaticClass()))
 		{
-			OwningInstance = RootWidget->GetTypedOuter<UDreamUserWidget>();
-		}
-		if (OwningInstance != nullptr)
-		{
-			Asset->PreviewWidgetClass = OwningInstance->GetClass();
+			Asset->PreviewWidgetClass = Blueprint->GeneratedClass.Get();
 		}
 	}
 	UMovieScene* CopiedScene = DuplicateObject<UMovieScene>(Source->GetMovieScene(), Asset);
 	Asset->MovieScene = CopiedScene;
 	Asset->BindingReferences = FMovieSceneBindingReferences();
 
+	// The authored root is the playback context the state is made for, as well as the context the
+	// bindings resolve against. It is in no world, and asking it for one handed this a null that
+	// CreateTransientSharedPlaybackState verifies against: fatal in an editor build, after the dialog
+	// had already made the package. The state is only the vessel LocateBoundObjects is handed --
+	// resolution walks names down from the context and never reads a world.
 	const TSharedRef<UE::MovieScene::FSharedPlaybackState> TransientState =
-		MovieSceneHelpers::CreateTransientSharedPlaybackState(RootWidget->GetWorld(), Source);
+		MovieSceneHelpers::CreateTransientSharedPlaybackState(RootWidget, Source);
 	FGuid RootGuid;
 	struct FExportedBinding { FGuid Guid; FString WidgetPath; FString SubObjectPath; };
 	TArray<FExportedBinding> Exported;
@@ -909,12 +1033,9 @@ void SDreamWidgetAnimationEditor::OnExportAnimationToAsset()
 	}
 	Asset->MarkPackageDirty();
 
-	FNotificationInfo Info(FText::Format(
-		LOCTEXT("ExportedAnimation", "Exported '{0}' to {1} ({2} bindings kept, {3} unresolved dropped)."),
-		FText::FromString(Source->GetDisplayNameString()), FText::FromString(Asset->GetName()),
-		FText::AsNumber(Exported.Num()), FText::AsNumber(Unresolved.Num())));
-	Info.ExpireDuration = 6.0f;
-	FSlateNotificationManager::Get().AddNotification(Info);
+	OutKept = Exported.Num();
+	OutDropped = Unresolved.Num();
+	return true;
 }
 
 void SDreamWidgetAnimationEditor::OnRenameAnimation()

@@ -229,4 +229,71 @@ bool FDreamListsTileViewNavigateFocusTest::RunTest(const FString& Parameters)
 	return true;
 }
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamListsTileViewGutterReflowTest,
+	"DreamGUI.TileView.WhenTheBarComesOutAndATileNoLongerFitsTheLastLineCanStillBeScrolledTo",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamListsTileViewGutterReflowTest, "DreamGUI.TileView.WhenTheBarComesOutAndATileNoLongerFitsTheLastLineCanStillBeScrolledTo", "[Pointer][Animated]")
+
+/*
+ * A tile view measured its scrolled column with the columns that fit BEFORE the scroll bar's gutter was
+ * cut, then placed its tiles with the columns that fit after. Four hundred wide, tiles a hundred square:
+ * twelve tiles are three lines that exactly fill a window three hundred tall, so the bar stays away and
+ * four fit across. The thirteenth makes four lines, the bar comes out, ten units go to its gutter -- and
+ * three fit across now, so the tiles take five lines while the column was measured for four. The last
+ * tile sat a line below the end of the scroll range, where nothing could reach it.
+ *
+ * Checked here: after the thirteenth tile the column is as tall as the lines the tiles actually make,
+ * and wheeling to the end brings the last tile wholly into the window.
+ */
+bool FDreamListsTileViewGutterReflowTest::RunTest(const FString& Parameters)
+{
+	FDreamDriverRig Rig = FDreamDriverRig::Headless(DreamListsInteraction::ViewportSize());
+	Rig.BindTest(this);
+	if (!TestTrue(TEXT("The headless rig came up"), Rig.IsUsable()))
+	{
+		return false;
+	}
+	constexpr float TileSize = 100.0f;
+	UDreamTileView* Tiles = Rig.MakeControl<UDreamTileView>(TEXT("Tiles"), nullptr, FVector2D(400.0, 300.0));
+	if (!TestNotNull(TEXT("The tile view was made on the rig"), Tiles))
+	{
+		return false;
+	}
+	Tiles->SetStyleSource(EDreamUIStyleSource::Inline);
+	FDreamTileViewStyle TileStyle = Tiles->GetStyle();
+	TileStyle.List = DreamListsInteraction::WithRows(TileStyle.List, TileSize);
+	TileStyle.List.Bar.Thickness = 10.0f;
+	TileStyle.TileWidth = TileSize;
+	TileStyle.TileSpacing = 0.0f;
+	Tiles->SetStyle(TileStyle);
+	Tiles->SetItemObjects(DreamListsInteraction::MakeItems(12));
+	Rig.PumpFrames(2);
+	if (!TestNotNull(TEXT("The tile view has a bar"), Tiles->ScrollBarNode.Get())
+		|| !TestEqual(TEXT("Twelve tiles fit four across"), Tiles->GetColumnCount(), 4)
+		|| !TestFalse(TEXT("in three lines that fill the window, so the bar stays away"), Tiles->ScrollBarNode->GetWidgetActive()))
+	{
+		return false;
+	}
+
+	Tiles->AddItem(DreamListsInteraction::MakeItems(1)[0]);
+	Rig.PumpFrames(2);
+	TestTrue(TEXT("The thirteenth tile brought the bar out"), Tiles->ScrollBarNode->GetWidgetActive());
+	TestEqual(TEXT("and its gutter leaves room for three across"), Tiles->GetColumnCount(), 3);
+	TestEqual(TEXT("The scrolled column is as tall as the lines the tiles make"),
+		Tiles->ColumnNode->GetHeight(), Tiles->GetRowLineCount() * TileSize);
+
+	// Further than the tiles go, so it comes to rest at the end.
+	TestTrue(TEXT("Wheeling to the end completes"), Rig.Driver()->Find(FDreamBy::Widget(Tiles))->ScrollBy(FVector2D(-10.0, -10.0)));
+	Rig.PumpFrames(1);
+	const TOptional<FBox2D> WindowRect = Rig.Driver()->Find(FDreamBy::Widget(Tiles->ViewportNode.Get()))->GetPixelRect();
+	const TOptional<FBox2D> LastTileRect = DreamTileViewInteractionTestLocal::TileElement(Rig, *Tiles, 12)->GetPixelRect();
+	if (TestTrue(TEXT("The window and the last tile both project to pixels"), WindowRect.IsSet() && LastTileRect.IsSet()))
+	{
+		TestTrue(FString::Printf(TEXT("The last tile ends inside the window (%.1f against %.1f)"), LastTileRect->Max.Y, WindowRect->Max.Y),
+			LastTileRect->Max.Y <= WindowRect->Max.Y + 1.5 && LastTileRect->Min.Y >= WindowRect->Min.Y - 1.5);
+	}
+	return true;
+}
+
 #endif

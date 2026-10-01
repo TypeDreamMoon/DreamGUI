@@ -30,6 +30,7 @@
 #include "UObject/UObjectIterator.h"
 #include "Interaction/UIButton.h"
 #include "Misc/Char.h"
+#include "Containers/StringConv.h"
 #include "SceneView.h"
 #include "Widgets/SViewport.h"
 
@@ -72,6 +73,14 @@ namespace DreamTextInputLocal
 	{
 		const UWorld* World = InField != nullptr ? InField->GetWorld() : nullptr;
 		return World != nullptr ? World->GetRealTimeSeconds() : FPlatformTime::Seconds();
+	}
+
+	/** How many code units the character at InIndex of InString takes: two for a surrogate pair, one otherwise. */
+	static int32 CodeUnitsOfCharacterAt(const FString& InString, int32 InIndex)
+	{
+		return (InIndex + 1 < InString.Len()
+			&& StringConv::IsHighSurrogate(InString[InIndex])
+			&& StringConv::IsLowSurrogate(InString[InIndex + 1])) ? 2 : 1;
 	}
 }
 
@@ -362,7 +371,7 @@ void UUITextInput::ProcessKeyPressed(const FKey& InKey, bool bInCtrl, bool bInSh
 	{
 		if (ctrlOnly)
 		{
-			if (SelectionPropertyArray.Num() != 0)
+			if (IsAnyTextSelected())
 			{
 				Cut();
 			}
@@ -760,6 +769,25 @@ bool UUITextInput::HandleCharacterInput(TCHAR InCharacter)
 	{
 		Input->NoteHostDeliversCharacters();
 	}
+	// A character past the Basic Multilingual Plane -- an emoji -- comes in as two events, its high
+	// surrogate and then its low one. Each half on its own is not a character: inserted as it came, the
+	// first went in alone, and a full MaxLength or the validator could then refuse the second and leave
+	// half an emoji in the text. So the first half waits, and the pair goes in as one string or not at all.
+	if (StringConv::IsHighSurrogate(InCharacter))
+	{
+		PendingHighSurrogate = InCharacter;
+		return true;
+	}
+	const TCHAR HighSurrogate = PendingHighSurrogate;
+	PendingHighSurrogate = 0;//whatever comes next, a half that was waiting is resolved by it
+	if (StringConv::IsLowSurrogate(InCharacter))
+	{
+		if (HighSurrogate == 0)return false;//a second half with no first is not text
+		FString Pair;
+		Pair.AppendChar(HighSurrogate);
+		Pair.AppendChar(InCharacter);
+		return VerifyAndInsertStringAtCaretPosition(Pair);
+	}
 	//control characters are not text; the platform sends \b, \r, \x1b and friends through the same
 	//road and the key table above is what turns those into edits
 	if (InCharacter < 32 && !(InCharacter == '\n' && bAllowMultiLine))return false;
@@ -813,6 +841,11 @@ void UUITextInput::SetHostDeliversCharacterEventsForTesting(const UObject* World
 	{
 		Input->SetHostDeliversCharactersForTesting(bInDelivers);
 	}
+}
+TSharedPtr<ITextInputMethodContext> UUITextInput::GetTextInputMethodContextForTesting() const
+{
+	// A test hook and nothing else; see the declaration.
+	return TextInputMethodContext;
 }
 int32 UUITextInput::GetEditingSlateUserIndex() const
 {
@@ -1020,183 +1053,151 @@ bool UUITextInput::IsValidChar(TCHAR c, const FString& InAgainstText, int32 InAg
 	//	return true;
 	return true;
 }
-bool UUITextInput::GetSelectionCharRange(int32& OutStartCharIndex, int32& OutCharCount)
+int32 UUITextInput::GetCharIndexOfCaret(int32 InCaretIndex)
 {
-	if (SelectionPropertyArray.Num() == 0)return false;
-	int32 StartCharIndex = FMath::Min(PressCaretPositionIndex, CaretPositionIndex);
-	int32 EndCharIndex = FMath::Max(PressCaretPositionIndex, CaretPositionIndex);
-	if (DreamTextInputLocal::CanMapCaretIndices(TextVisual))
-	{
-		//the same mapping every other edit road in this file takes: caret index -> source offset
-		TextVisual->SetText(FText::FromString(GetReplaceText()));
-		const int32 MappedStart = TextVisual->GetCharIndexByCaretIndex(StartCharIndex);
-		const int32 MappedEnd = TextVisual->GetCharIndexByCaretIndex(EndCharIndex);
-		StartCharIndex = FMath::Min(MappedStart, MappedEnd);
-		EndCharIndex = FMath::Max(MappedStart, MappedEnd);
-	}
-	StartCharIndex = FMath::Clamp(StartCharIndex, 0, Text.Len());
-	EndCharIndex = FMath::Clamp(EndCharIndex, StartCharIndex, Text.Len());
-	OutStartCharIndex = StartCharIndex;
-	OutCharCount = EndCharIndex - StartCharIndex;
-	return OutCharCount > 0;
-}
-bool UUITextInput::DeleteSelection(bool InFireEvent)
-{
-	if (bReadOnly)return false;
-	if (SelectionPropertyArray.Num() != 0)//delete selection frist
-	{
-		int32 StartCharIndex = 0, CharCount = 0;
-		if (GetSelectionCharRange(StartCharIndex, CharCount))
-		{
-			PushUndoSnapshot();
-			Text.RemoveAt(StartCharIndex, CharCount);
-		}
-		CaretPositionIndex = FMath::Min(PressCaretPositionIndex, CaretPositionIndex);
-		PressCaretPositionIndex = CaretPositionIndex;
-		UpdateAfterTextChange(InFireEvent);
-		return true;
-	}
-	return false;
-}
-void UUITextInput::InsertCharAtCaretPosition(TCHAR c)
-{
-	if (bReadOnly)return;
 	// Without a laid-out text there is no caret map to ask, and asking anyway reads the last line of
 	// an empty array. A caret index and a source offset are the same number until a surrogate pair
 	// appears, so that is the answer for the unlaid-out case rather than a crash.
 	if (!DreamTextInputLocal::CanMapCaretIndices(TextVisual))
 	{
-		const int32 CharIndex = FMath::Clamp(CaretPositionIndex, 0, Text.Len());
-		Text.InsertAt(CharIndex, c);
-		CaretPositionIndex = CharIndex + 1;
-		PressCaretPositionIndex = CaretPositionIndex;
-		if (TextVisual.IsValid())
-		{
-			TextVisual->SetText(FText::FromString(GetReplaceText()));
-		}
-		return;
+		return FMath::Clamp(InCaretIndex, 0, Text.Len());
 	}
 	TextVisual->SetText(FText::FromString(GetReplaceText()));
-	auto CharIndex = TextVisual->GetCharIndexByCaretIndex(CaretPositionIndex);
-	Text.InsertAt(CharIndex, c);
-	TextVisual->SetText(FText::FromString(GetReplaceText()));
+	return FMath::Clamp(TextVisual->GetCharIndexByCaretIndex(InCaretIndex), 0, Text.Len());
+}
+int32 UUITextInput::GetCaretIndexOfChar(int32 InCharIndex)
+{
+	const int32 CharIndex = FMath::Clamp(InCharIndex, 0, Text.Len());
+	if (TextVisual.IsValid())
+	{
+		TextVisual->SetText(FText::FromString(GetReplaceText()));
+	}
+	//the same unlaid-out answer as above, the other way round
+	if (!DreamTextInputLocal::CanMapCaretIndices(TextVisual))
+	{
+		return CharIndex;
+	}
+	// GetCaretIndexByCharIndex reads the laid-out text, so without the rebuild a text that has just
+	// changed is still pending and the mapping answers against the PREVIOUS layout.
 	UDreamWidget::RebuildLayoutImmediately(TextVisual->GetWidget());
-	CaretPositionIndex = TextVisual->GetCaretIndexByCharIndex(CharIndex) + 1;
+	return FMath::Max(0, TextVisual->GetCaretIndexByCharIndex(CharIndex));
+}
+void UUITextInput::SetCaretByCharIndex(int32 InCharIndex)
+{
+	CaretPositionIndex = GetCaretIndexOfChar(InCharIndex);
 	PressCaretPositionIndex = CaretPositionIndex;
+}
+bool UUITextInput::GetSelectionCharRange(int32& OutStartCharIndex, int32& OutCharCount)
+{
+	if (!IsAnyTextSelected())return false;
+	//the same mapping every other edit road in this file takes: caret index -> source offset
+	const int32 PressCharIndex = GetCharIndexOfCaret(PressCaretPositionIndex);
+	const int32 CaretCharIndex = GetCharIndexOfCaret(CaretPositionIndex);
+	// Two different carets can stand at one position -- the end of a soft-wrapped line and the start of
+	// the next -- so an anchor and a caret that differ can still select nothing.
+	if (PressCharIndex == CaretCharIndex)return false;
+	OutStartCharIndex = FMath::Min(PressCharIndex, CaretCharIndex);
+	OutCharCount = FMath::Abs(CaretCharIndex - PressCharIndex);
+	return true;
+}
+bool UUITextInput::DeleteSelection(bool InFireEvent)
+{
+	if (bReadOnly)return false;
+	// Only a selection that covers text is an edit. One dragged back to where it began (Shift+Left, then
+	// Shift+Right) still drew a highlight bar, zero wide, and the bar was what this used to ask: the edit
+	// that followed deleted nothing yet still reported a change, and took the undo step of the next
+	// character typed with it.
+	int32 StartCharIndex = 0, CharCount = 0;
+	if (!GetSelectionCharRange(StartCharIndex, CharCount))return false;
+	PushUndoSnapshot();
+	Text.RemoveAt(StartCharIndex, CharCount);
+	SetCaretByCharIndex(StartCharIndex);
+	UpdateAfterTextChange(InFireEvent);
+	return true;
+}
+void UUITextInput::InsertCharAtCaretPosition(TCHAR c)
+{
+	if (bReadOnly)return;
+	// The caret goes back on by OFFSET -- the one just past the new character -- against the text as it
+	// is now laid out. Stepping the caret index on by one put it in the wrong place whenever the new
+	// character joined a cluster, or landed at a wrap.
+	const int32 CharIndex = GetCharIndexOfCaret(CaretPositionIndex);
+	Text.InsertAt(CharIndex, c);
+	SetCaretByCharIndex(CharIndex + 1);
 }
 void UUITextInput::InsertStringAtCaretPosition(const FString& value)
 {
 	if (bReadOnly)return;
-	//same unlaid-out fallback as the single-character road above
-	if (!DreamTextInputLocal::CanMapCaretIndices(TextVisual))
-	{
-		const int32 CharIndex = FMath::Clamp(CaretPositionIndex, 0, Text.Len());
-		Text.InsertAt(CharIndex, value);
-		CaretPositionIndex = CharIndex + value.Len();
-		PressCaretPositionIndex = CaretPositionIndex;
-		if (TextVisual.IsValid())
-		{
-			TextVisual->SetText(FText::FromString(GetReplaceText()));
-		}
-		return;
-	}
-	TextVisual->SetText(FText::FromString(GetReplaceText()));
-	auto CharIndex = TextVisual->GetCharIndexByCaretIndex(CaretPositionIndex);
+	//same road as the single character: insert at the caret's offset, then the caret just past what went in
+	const int32 CharIndex = GetCharIndexOfCaret(CaretPositionIndex);
 	Text.InsertAt(CharIndex, value);
-	//CharIndex now names the position just PAST the inserted string, so the caret index for it is
-	//already the answer -- the trailing +1 the single-character version needs (its CharIndex still
-	//names the position before the one character it inserted) put this one a glyph too far right
-	CharIndex += value.Len();
-	TextVisual->SetText(FText::FromString(GetReplaceText()));
-	// The other half of the same defect: GetCaretIndexByCharIndex reads the laid-out text, so
-	// without the rebuild the SetText above is still pending and the mapping answers against the
-	// PREVIOUS layout. The single-character version has always had this line.
-	UDreamWidget::RebuildLayoutImmediately(TextVisual->GetWidget());
-	CaretPositionIndex = TextVisual->GetCaretIndexByCharIndex(CharIndex);
-	PressCaretPositionIndex = CaretPositionIndex;
+	SetCaretByCharIndex(CharIndex + value.Len());
 }
 
 void UUITextInput::BackSpace()
 {
 	if (bReadOnly)return;
-	if (SelectionPropertyArray.Num() == 0)//no selection mask, use caret
+	if (DeleteSelection(true))return;//a selection that covers anything is what goes
+	// In source offsets throughout, never caret indices. The caret one step back can stand at the very
+	// same position -- the end of a soft-wrapped line and the start of the next are one position, and
+	// stepping back onto that nameless caret used to delete from the start of the text -- and the
+	// character before the caret can be several code units: an emoji, a surrogate pair, the markup in
+	// front of a rich text glyph.
+	const int32 CaretCharIndex = GetCharIndexOfCaret(CaretPositionIndex);
+	if (CaretCharIndex <= 0)return;
+	int32 RemoveFromCharIndex = CaretCharIndex - 1;
+	for (int32 CaretIndex = CaretPositionIndex - 1; CaretIndex >= 0; CaretIndex--)
 	{
-		if (CaretPositionIndex > 0)
+		const int32 CharIndex = GetCharIndexOfCaret(CaretIndex);
+		if (CharIndex < CaretCharIndex)
 		{
-			PushUndoSnapshot();//before the caret moves: an undo lands where the edit began
-			CaretPositionIndex--;
-			int CharIndex = CaretPositionIndex;
-			int RemoveCount = 1;
-			if (DreamTextInputLocal::CanMapCaretIndices(TextVisual))
-			{
-				TextVisual->SetText(FText::FromString(GetReplaceText()));
-				CharIndex = TextVisual->GetCharIndexByCaretIndex(CaretPositionIndex);
-				if (CharIndex + 1 < Text.Len())//not end char, could be rich text, so check delete count
-				{
-					auto NextCharIndex = TextVisual->GetCharIndexByCaretIndex(CaretPositionIndex + 1);
-					RemoveCount = NextCharIndex - CharIndex;
-				}
-			}
-			CharIndex = FMath::Clamp(CharIndex, 0, Text.Len());
-			RemoveCount = FMath::Clamp(RemoveCount, 0, Text.Len() - CharIndex);
-			if (RemoveCount > 0)
-			{
-				Text.RemoveAt(CharIndex, RemoveCount);
-			}
-			UpdateAfterTextChange(true);
-			PressCaretPositionIndex = CaretPositionIndex;
+			RemoveFromCharIndex = CharIndex;
+			break;
 		}
 	}
-	else//selection mask, delete
-	{
-		DeleteSelection(true);
-	}
+	PushUndoSnapshot();//before the text changes: an undo lands where the edit began
+	Text.RemoveAt(RemoveFromCharIndex, CaretCharIndex - RemoveFromCharIndex);
+	// Put back by offset against the text as now laid out: a deletion that undoes a wrap above the
+	// caret moves every caret index after it.
+	SetCaretByCharIndex(RemoveFromCharIndex);
+	UpdateAfterTextChange(true);
 }
 void UUITextInput::ForwardSpace()
 {
 	if (bReadOnly)return;
-	if (SelectionPropertyArray.Num() == 0)//no selection mask, use caret
+	if (DeleteSelection(true))return;
+	// BackSpace's mirror, in offsets for the same reasons: the next caret along can stand at this same
+	// position (the start of the line after a soft wrap), and the character after the caret can be
+	// several code units.
+	const int32 CaretCharIndex = GetCharIndexOfCaret(CaretPositionIndex);
+	if (CaretCharIndex >= Text.Len())return;
+	int32 RemoveToCharIndex = CaretCharIndex + 1;
+	const int32 LastCaretIndex = DreamTextInputLocal::CanMapCaretIndices(TextVisual) ? TextVisual->GetLastCaret() : Text.Len();
+	for (int32 CaretIndex = CaretPositionIndex + 1; CaretIndex <= LastCaretIndex; CaretIndex++)
 	{
-		int CharIndex = CaretPositionIndex;
-		int RemoveCount = 1;
-		if (DreamTextInputLocal::CanMapCaretIndices(TextVisual))
+		const int32 CharIndex = GetCharIndexOfCaret(CaretIndex);
+		if (CharIndex > CaretCharIndex)
 		{
-			TextVisual->SetText(FText::FromString(GetReplaceText()));
-			CharIndex = TextVisual->GetCharIndexByCaretIndex(CaretPositionIndex);
-			if (CharIndex + 1 < Text.Len())//not end char, could be rich text, so check delete count
-			{
-				auto NextCharIndex = TextVisual->GetCharIndexByCaretIndex(CaretPositionIndex + 1);
-				RemoveCount = NextCharIndex - CharIndex;
-			}
-		}
-		if (CharIndex >= 0 && CharIndex < Text.Len() && RemoveCount > 0 && CharIndex + RemoveCount <= Text.Len())
-		{
-			PushUndoSnapshot();
-			Text.RemoveAt(CharIndex, RemoveCount);
-			UpdateAfterTextChange(true);
-			PressCaretPositionIndex = CaretPositionIndex;
+			RemoveToCharIndex = CharIndex;
+			break;
 		}
 	}
-	else//selection mask, delete
-	{
-		DeleteSelection(true);
-	}
+	PushUndoSnapshot();
+	Text.RemoveAt(CaretCharIndex, RemoveToCharIndex - CaretCharIndex);
+	SetCaretByCharIndex(CaretCharIndex);
+	UpdateAfterTextChange(true);
 }
 void UUITextInput::Copy()
 {
 	if (InputType == EUITextInputType::Password
 		|| DisplayType == EUITextInputDisplayType::Password
 		)return;//not allow copy password
-	if (SelectionPropertyArray.Num() != 0)//have selection
+	// Only a selection that covers text: one dragged back to where it began put "" on the clipboard,
+	// over whatever the player had copied before.
+	int32 StartCharIndex = 0, CharCount = 0;
+	if (GetSelectionCharRange(StartCharIndex, CharCount))
 	{
-		TextVisual->SetText(FText::FromString(Text));
-		auto CharIndexAtPressCaretPosition = TextVisual->GetCharIndexByCaretIndex(PressCaretPositionIndex);
-		auto CharIndexAtCaretPosition = TextVisual->GetCharIndexByCaretIndex(CaretPositionIndex);
-		int32 TempCharIndex = CharIndexAtPressCaretPosition > CharIndexAtCaretPosition ? CharIndexAtCaretPosition : CharIndexAtPressCaretPosition;
-		auto CopyText = Text.Mid(TempCharIndex, FMath::Abs(CharIndexAtPressCaretPosition - CharIndexAtCaretPosition));
-		FPlatformApplicationMisc::ClipboardCopy(*CopyText);
-		
-		UpdateUITextComponent();
+		FPlatformApplicationMisc::ClipboardCopy(*Text.Mid(StartCharIndex, CharCount));
 	}
 }
 void UUITextInput::Paste()
@@ -1232,7 +1233,8 @@ void UUITextInput::Cut()
 	if (InputType == EUITextInputType::Password
 		|| DisplayType == EUITextInputDisplayType::Password
 		)return;//not allow copy password
-	if (SelectionPropertyArray.Num() != 0)//have selection
+	//both halves ask whether the selection covers any text, so an empty one cuts nothing
+	if (IsAnyTextSelected())
 	{
 		Copy();
 		DeleteSelection(true);
@@ -1296,7 +1298,9 @@ void UUITextInput::ShowContextMenu()
 	HideContextMenu();//a second open replaces the first; two menus is never the answer
 
 	const bool bIsPassword = InputType == EUITextInputType::Password || DisplayType == EUITextInputDisplayType::Password;
-	const bool bHasSelection = SelectionPropertyArray.Num() > 0;
+	//a selection that covers text, as Cut and Copy will ask it -- not whether a highlight bar exists
+	int32 SelectionStartCharIndex = 0, SelectionCharCount = 0;
+	const bool bHasSelection = GetSelectionCharRange(SelectionStartCharIndex, SelectionCharCount);
 	FString ClipboardText;
 	FPlatformApplicationMisc::ClipboardPaste(ClipboardText);
 
@@ -1524,6 +1528,9 @@ void UUITextInput::Submit()
 
 void UUITextInput::FinishCommitFromEnter()
 {
+	// A listener of the commit may have ended the edit already -- a spin box that clears focus on commit does
+	// -- and then there is nothing left to keep going or to select in.
+	if (!bInputActive)return;
 	if (bClearKeyboardFocusOnCommit)
 	{
 		// Which is what Enter has always done here, and stays the default. No second submit: the
@@ -1531,6 +1538,12 @@ void UUITextInput::FinishCommitFromEnter()
 		DeactivateInput();
 		return;
 	}
+	// The edit goes on, holding what this Enter committed -- after anything the commit's listeners wrote
+	// back. From here the end of the edit reports a value only if it is not that one: left saying "already
+	// submitted", it dropped everything typed after the Enter, and a spin box -- which keeps the edit by
+	// default -- showed a number it never took.
+	bSubmittedThisActivation = false;
+	TextCommittedByEnter = Text;
 	if (bSelectAllTextOnCommit)
 	{
 		// The edit continues, so the value is offered back ready to be typed over -- the state a row
@@ -1542,8 +1555,7 @@ void UUITextInput::FinishCommitFromEnter()
 FString UUITextInput::GetTextWithoutSelection(int32& OutCaretCharIndex)
 {
 	FString Result = Text;
-	OutCaretCharIndex = FMath::Clamp(DreamTextInputLocal::CanMapCaretIndices(TextVisual)
-		? TextVisual->GetCharIndexByCaretIndex(CaretPositionIndex) : CaretPositionIndex, 0, Text.Len());
+	OutCaretCharIndex = GetCharIndexOfCaret(CaretPositionIndex);
 	int32 StartCharIndex = 0, CharCount = 0;
 	if (GetSelectionCharRange(StartCharIndex, CharCount))
 	{
@@ -1551,6 +1563,38 @@ FString UUITextInput::GetTextWithoutSelection(int32& OutCaretCharIndex)
 		OutCaretCharIndex = StartCharIndex;
 	}
 	return Result;
+}
+FString UUITextInput::InsertValidCharacters(const FString& InCharacters, FString& InOutText, int32& InOutCharIndex)
+{
+	FString Accepted;
+	int32 Index = 0;
+	while (Index < InCharacters.Len())
+	{
+		// A surrogate pair is one character: room for both halves or for neither. Checked per code unit, a
+		// limit one short of the pair let the high half in and refused the low one, which left half an emoji
+		// at the end of the text.
+		const int32 UnitCount = DreamTextInputLocal::CodeUnitsOfCharacterAt(InCharacters, Index);
+		if (!HasRoomForMoreChars(InOutText.Len(), UnitCount))break;
+		int32 TakenCount = 0;
+		for (; TakenCount < UnitCount; TakenCount++)
+		{
+			const TCHAR Unit = InCharacters[Index + TakenCount];
+			if (!IsValidChar(Unit, InOutText, InOutCharIndex + TakenCount))break;
+			InOutText.InsertAt(InOutCharIndex + TakenCount, Unit);
+		}
+		if (TakenCount == UnitCount)
+		{
+			Accepted.Append(InCharacters.Mid(Index, UnitCount));
+			InOutCharIndex += UnitCount;
+		}
+		else if (TakenCount > 0)
+		{
+			//the half of a pair the rules let in goes back out with the half they refused
+			InOutText.RemoveAt(InOutCharIndex, TakenCount);
+		}
+		Index += UnitCount;
+	}
+	return Accepted;
 }
 bool UUITextInput::VerifyAndInsertStringAtCaretPosition(const FString& Value)
 {
@@ -1561,18 +1605,7 @@ bool UUITextInput::VerifyAndInsertStringAtCaretPosition(const FString& Value)
 	// characters the result would have been perfectly happy with.
 	int32 AgainstCaret = 0;
 	FString AgainstText = GetTextWithoutSelection(AgainstCaret);
-	FString verifiedString;
-	for (int i = 0; i < Value.Len(); i++)
-	{
-		TCHAR c = Value[i];
-		if (!HasRoomForMoreChars(AgainstText.Len(), 1))break;
-		if (IsValidChar(c, AgainstText, AgainstCaret))
-		{
-			verifiedString.AppendChar(c);
-			AgainstText.InsertAt(AgainstCaret, c);
-			AgainstCaret++;
-		}
-	}
+	const FString verifiedString = InsertValidCharacters(Value, AgainstText, AgainstCaret);
 	const bool bAnyDeleted = (verifiedString.Len() > 0) ? DeleteSelection(false) : false;
 	if (verifiedString.Len() > 0)
 	{
@@ -1602,8 +1635,18 @@ bool UUITextInput::VerifyAndInsertCharAtCaretPosition(TCHAR Value)
 
 void UUITextInput::UpdateAfterTextChange(bool InFireEvent)
 {
-	UpdateCaretPosition();
+	// Every edit collapses the selection before it gets here; a selection still open means the field was
+	// re-measured under it -- resized, its line mode changed -- and it is drawn again where the text now
+	// is. Taking the highlight down with the caret, as this used to, left it selected and invisible: the
+	// next keystroke replaced text nobody could see was selected.
+	const bool bRedrawSelection = bInputActive && IsAnyTextSelected() && TextVisual.IsValid();
+	UpdateCaretPosition(!bRedrawSelection);
 	UpdateUITextComponent();
+	if (bRedrawSelection)
+	{
+		TextVisual->GetSelectionProperty(PressCaretPositionIndex - VisibleCaretStartIndex, CaretPositionIndex - VisibleCaretStartIndex, SelectionPropertyArray);
+		UpdateSelection();
+	}
 	UpdatePlaceHolderComponent();
 	//the composition run moves with every character the IME writes, so it is re-measured here rather
 	//than only when the IME announces a new range
@@ -1640,6 +1683,9 @@ FString UUITextInput::GetReplaceText()const
 
 void UUITextInput::MoveCaret(int32 moveType, bool withSelection)
 {
+	// The visual and the caret drawn on it can go (destroyed, or unset from code) under a field that is
+	// still being edited, and both are dereferenced below.
+	if (!TextVisual.IsValid() || !CaretWidget.IsValid())return;
 	auto uiText = TextVisual;
 	auto originText = uiText->GetText();
 	auto replaceText = GetReplaceText();
@@ -1665,6 +1711,14 @@ void UUITextInput::MoveCaret(int32 moveType, bool withSelection)
 	else
 	{
 		uiText->SetText(originText);
+		// Nowhere to go -- End with the caret already on the last caret, Home on the first -- and still a key that
+		// moves without selecting ends the selection, as in any editor. Left standing, it was what the next character
+		// typed replaced.
+		if (!withSelection && PressCaretPositionIndex != CaretPositionIndex)
+		{
+			PressCaretPositionIndex = CaretPositionIndex;
+			HideSelectionMask();
+		}
 	}
 }
 
@@ -1739,8 +1793,9 @@ void UUITextInput::PushUndoSnapshot()
 	if (!bAllowUndoRedo)return;
 	//an edit branches the history: whatever was redoable belonged to the branch just abandoned
 	RedoStack.Reset();
-	if (UndoStack.Num() > 0 && UndoStack.Last().Text == Text)return;//nothing moved
-	UndoStack.Add(FTextSnapshot{ Text, CaretPositionIndex });
+	//case-sensitively: FString's own == ignores case, and an edit that only changed case is still an edit
+	if (UndoStack.Num() > 0 && UndoStack.Last().Text.Equals(Text, ESearchCase::CaseSensitive))return;//nothing moved
+	UndoStack.Add(FTextSnapshot{ Text, GetCharIndexOfCaret(CaretPositionIndex) });
 	const int32 Limit = FMath::Max(1, UndoHistoryLength);
 	while (UndoStack.Num() > Limit)
 	{
@@ -1750,15 +1805,16 @@ void UUITextInput::PushUndoSnapshot()
 void UUITextInput::ApplySnapshot(const FTextSnapshot& InSnapshot)
 {
 	Text = InSnapshot.Text;
-	CaretPositionIndex = FMath::Max(0, InSnapshot.CaretPositionIndex);
-	PressCaretPositionIndex = CaretPositionIndex;
+	// The caret was kept as an offset and becomes a caret index again only now, against the text as it
+	// is laid out today: the field may have been resized, and every wrap moved, since the step was taken.
+	SetCaretByCharIndex(InSnapshot.CaretCharIndex);
 	UpdateAfterTextChange(true);
 }
 bool UUITextInput::Undo()
 {
 	if (!bAllowUndoRedo || bReadOnly)return false;
 	if (UndoStack.Num() == 0)return false;
-	RedoStack.Add(FTextSnapshot{ Text, CaretPositionIndex });
+	RedoStack.Add(FTextSnapshot{ Text, GetCharIndexOfCaret(CaretPositionIndex) });
 	const FTextSnapshot Snapshot = UndoStack.Pop(EAllowShrinking::No);
 	ApplySnapshot(Snapshot);
 	return true;
@@ -1767,7 +1823,7 @@ bool UUITextInput::Redo()
 {
 	if (!bAllowUndoRedo || bReadOnly)return false;
 	if (RedoStack.Num() == 0)return false;
-	UndoStack.Add(FTextSnapshot{ Text, CaretPositionIndex });
+	UndoStack.Add(FTextSnapshot{ Text, GetCharIndexOfCaret(CaretPositionIndex) });
 	const FTextSnapshot Snapshot = RedoStack.Pop(EAllowShrinking::No);
 	ApplySnapshot(Snapshot);
 	return true;
@@ -1781,9 +1837,16 @@ bool UUITextInput::EnforceMaxLength()
 {
 	if (MaxLength <= 0)return false;
 	if (Text.Len() <= MaxLength)return false;
-	Text = Text.Left(MaxLength);
-	CaretPositionIndex = FMath::Min(CaretPositionIndex, Text.Len());
-	PressCaretPositionIndex = FMath::Min(PressCaretPositionIndex, Text.Len());
+	const int32 CaretCharIndex = GetCharIndexOfCaret(CaretPositionIndex);
+	// Never through the middle of a surrogate pair: a cut there kept the high half of an emoji, which is
+	// not a character, at the end of the text.
+	int32 KeepCount = MaxLength;
+	if (StringConv::IsHighSurrogate(Text[KeepCount - 1]) && StringConv::IsLowSurrogate(Text[KeepCount]))
+	{
+		KeepCount--;
+	}
+	Text = Text.Left(KeepCount);
+	SetCaretByCharIndex(FMath::Min(CaretCharIndex, Text.Len()));
 	return true;
 }
 
@@ -1918,6 +1981,9 @@ void UUITextInput::UpdateCaretPosition(bool InHideSelection)
 	}
 	else
 	{
+		// An edit can outlive its visual -- the text node destroyed, or the visual unset from code -- and
+		// a resize then still arrives here.
+		if (!TextVisual.IsValid())return;
 		FVector2f caretPos;
 		int tempCaretPositionLineIndex = 0;
 		int tempVisibleCaretStartIndex = 0;
@@ -2236,7 +2302,9 @@ bool UUITextInput::OnPointerDrag_Implementation(UDreamPointerEventData* EventDat
 			else if (CaretPositionIndex + 1 >= displayCaretCount)//caret position at right most
 			{
 				CaretPositionIndex = CaretPositionIndex + VisibleCaretStartIndex + 1;//move caret to right
-				CaretPositionIndex = FMath::Min(CaretPositionIndex, VisibleCaretStartIndex + displayCaretCount);
+				// ...but no further than the last caret there is. Clamped to the caret COUNT, a drag to the
+				// right end left the caret one past every caret in the text.
+				CaretPositionIndex = FMath::Min(CaretPositionIndex, VisibleCaretStartIndex + displayCaretCount - 1);
 				if (CaretPositionIndex - VisibleCaretStartIndex > displayCaretCount)//if caret is more than visible text
 				{
 					CaretPositionLineIndex++;
@@ -2325,6 +2393,9 @@ void UUITextInput::ActivateInput(UDreamPointerEventData* EventData)
 		//if already active, then update caret position
 		TextVisual->SetText(FText::FromString(GetReplaceText()));
 		CaretPositionIndex = TextVisual->GetLastCaret();
+		// The anchor goes with it. Left where an earlier selection put it, the caret at the end and the
+		// stale anchor made a selection nobody could see, and the next keystroke replaced all of it.
+		PressCaretPositionIndex = CaretPositionIndex;
 		UpdateCaretPosition();
 		UpdateUITextComponent();
 		return;
@@ -2371,6 +2442,7 @@ void UUITextInput::ActivateInput(UDreamPointerEventData* EventData)
 	// of a value somebody is typing into would hide the very characters the caret is standing on.
 	PushOverflowToVisual();
 	bSubmittedThisActivation = false;
+	TextCommittedByEnter.Reset();
 	// What a cancel puts back. Taken here, before a single character of this session exists, because
 	// "the value before the edit" is a fact about the MOMENT the edit started and nothing later in
 	// the session can reconstruct it.
@@ -2598,6 +2670,14 @@ void UUITextInput::DeactivateInput(bool InFireEvent)
 			TextInputMethodSystem->UnregisterContext(TextInputMethodContextRef);
 		}
 	}
+	// A composition the platform never ended ends with the edit. IMM completes it only once the context is no
+	// longer the active one, so its end never reaches this field -- and a composition left open makes the
+	// next edit refuse every key (HandleKeyInput defers to it). With the events of the edit's own end.
+	if (TextInputMethodContext.IsValid() && TextInputMethodContext->IsComposing())
+	{
+		TextInputMethodContext->CloseComposition(InFireEvent);
+	}
+	PendingHighSurrogate = 0;//the first half of a character that never got its second is not text
 	if (FSlateApplication::IsInitialized() && FPlatformApplicationMisc::RequiresVirtualKeyboard())
 	{
 		FSlateApplication::Get().ShowVirtualKeyboard(false, GetEditingSlateUserIndex());
@@ -2615,6 +2695,9 @@ void UUITextInput::DeactivateInput(bool InFireEvent)
 	}
 	//hide selection
 	HideSelectionMask();
+	// ...and let go of it. What is selected is the anchor and the caret, not the highlight, so a selection
+	// whose highlight came down with the edit would still be there, unseen, for IsAnyTextSelected to report.
+	PressCaretPositionIndex = CaretPositionIndex;
 	HideCompositionUnderline();
 	HideContextMenu();
 
@@ -2622,12 +2705,16 @@ void UUITextInput::DeactivateInput(bool InFireEvent)
 	// The edit ended without an Enter: clicked away, navigated away, Back/Escape ended it, the
 	// virtual keyboard was dismissed. UMG reports that moment through OnTextCommitted and DreamGUI
 	// reported nothing, so a field the player filled in and clicked out of never told anyone. An
-	// Enter that already submitted this activation does not submit twice.
-	if (InFireEvent && bSubmitWhenDeactivate && !bSubmittedThisActivation)
+	// Enter that already submitted this activation does not submit twice -- nor does one that kept the
+	// edit going, as long as the value is still the one it committed.
+	const bool bValueAlreadySubmitted = bSubmittedThisActivation
+		|| (TextCommittedByEnter.IsSet() && Text.Equals(TextCommittedByEnter.GetValue(), ESearchCase::CaseSensitive));
+	if (InFireEvent && bSubmitWhenDeactivate && !bValueAlreadySubmitted)
 	{
 		Submit();
 	}
 	bSubmittedThisActivation = false;
+	TextCommittedByEnter.Reset();
 	//fire event
 	if (InFireEvent)
 	{
@@ -2650,8 +2737,12 @@ const FString& UUITextInput::GetText()const
 }
 void UUITextInput::SetText(const FString& InText, bool InFireEvent)
 {
-	if (Text != InText)
+	// Case-sensitively: FString's own == ignores case, so SetText("ABC") over "abc" was taken for no
+	// change at all and did nothing.
+	if (!Text.Equals(InText, ESearchCase::CaseSensitive))
 	{
+		// Where the caret stands, as an offset, read while the text being replaced is still the one laid out.
+		const int32 CaretCharIndex = bInputActive ? GetCharIndexOfCaret(CaretPositionIndex) : 0;
 		// Each character is checked against the string being BUILT, at its own end, not against the
 		// text the field happens to hold right now. Every type rule is positional -- "only one dot",
 		// "only one @", "minus only at the front" -- so validating a wholesale replacement against
@@ -2660,15 +2751,8 @@ void UUITextInput::SetText(const FString& InText, bool InFireEvent)
 		// Callers used to work around it by pushing an empty string first (UDreamSpinBox did); that
 		// workaround is now redundant rather than required.
 		FString TempText;
-		for (int i = 0; i < InText.Len(); i++)
-		{
-			TCHAR c = InText[i];
-			if (!HasRoomForMoreChars(TempText.Len(), 1))break;
-			if (IsValidChar(c, TempText, TempText.Len()))
-			{
-				TempText.AppendChar(c);
-			}
-		}
+		int32 TempCharIndex = 0;
+		InsertValidCharacters(InText, TempText, TempCharIndex);
 		if (bAllowMultiLine)
 		{
 			Text = TempText;
@@ -2678,10 +2762,20 @@ void UUITextInput::SetText(const FString& InText, bool InFireEvent)
 			Text = TempText.Replace(TEXT("\n"), TEXT("")).Replace(TEXT("\t"), TEXT(""));
 		}
 
-		CaretPositionIndex = 0;
-		PressCaretPositionIndex = 0;
 		//a wholesale replacement is not an edit step: the history described a different string
 		ClearUndoHistory();
+		if (bInputActive)
+		{
+			// Mid-edit the caret stays where it stood, pulled back to the new end if the new text is shorter --
+			// what Slate's editable text does. It used to jump to the start, so the player's next character
+			// landed in front of everything the code had just put in.
+			SetCaretByCharIndex(FMath::Min(CaretCharIndex, Text.Len()));
+		}
+		else
+		{
+			CaretPositionIndex = 0;
+			PressCaretPositionIndex = 0;
+		}
 		UpdateAfterTextChange(InFireEvent);
 	}
 }
@@ -2702,15 +2796,8 @@ void UUITextInput::RevalidateText()
 	// own rules forbid: switching a field holding "abc" to IntegerNumber left "abc" sitting there,
 	// and the very next keystroke was validated against a string the type says cannot exist.
 	FString TempText;
-	for (int i = 0; i < Text.Len(); i++)
-	{
-		const TCHAR c = Text[i];
-		if (!HasRoomForMoreChars(TempText.Len(), 1))break;
-		if (IsValidChar(c, TempText, TempText.Len()))
-		{
-			TempText.AppendChar(c);
-		}
-	}
+	int32 TempCharIndex = 0;
+	InsertValidCharacters(Text, TempText, TempCharIndex);
 	const bool bChanged = TempText != Text;
 	Text = TempText;
 	CaretPositionIndex = 0;
@@ -2741,8 +2828,22 @@ void UUITextInput::SetDisplayType(EUITextInputDisplayType Value)
 {
 	if (DisplayType != Value)
 	{
+		// Where the caret stands, as an offset, read while the old display is still the one laid out: the
+		// masked text and the plain one do not number their carets alike once anything in it is a cluster.
+		const int32 CaretCharIndex = bInputActive ? GetCharIndexOfCaret(CaretPositionIndex) : 0;
 		DisplayType = Value;
-		CaretPositionIndex = 0;
+		if (bInputActive)
+		{
+			// Mid-edit the caret stays on that offset and is drawn there. It used to go back to the start
+			// without being drawn there, so the next character typed went in front of the whole value.
+			SetCaretByCharIndex(CaretCharIndex);
+			UpdateCaretPosition();
+		}
+		else
+		{
+			CaretPositionIndex = 0;
+			PressCaretPositionIndex = 0;
+		}
 		UpdateUITextComponent();
 	}
 }
@@ -2787,6 +2888,13 @@ void UUITextInput::SetTextVisual(UDreamText* Value)
 {
 	if (TextVisual != Value)
 	{
+		if (Value == nullptr && bInputActive)
+		{
+			// An edit with nothing to show it in: the caret, the highlight and every caret index belong to the
+			// visual going away, and the field would go on holding the player's keyboard while refusing every
+			// key. Ended without events, as SetReadOnly ends one -- nobody committed anything.
+			DeactivateInput(false);
+		}
 		TextVisual = Value;
 		if (TextVisual != nullptr)
 		{
@@ -2985,7 +3093,8 @@ void UUITextInput::CancelInput()
 	// Whether there is anything to put back, asked before anything is put back. The same comparison
 	// SetText makes, so "changed" here means exactly "SetText will restore something". SEditableText
 	// likewise reverts, and so reports, only when the edit changed the text (HasTextChangedFromOriginal).
-	const bool bEditChangedTheText = !Text.Equals(TextAtActivation, ESearchCase::IgnoreCase);
+	// Case-sensitively, as SetText now compares: ignoring case kept an edit that only changed case.
+	const bool bEditChangedTheText = !Text.Equals(TextAtActivation, ESearchCase::CaseSensitive);
 	if (bEditChangedTheText)
 	{
 		// The value goes back FIRST, so what is reported below is the restored value and not the
@@ -3141,6 +3250,8 @@ void UUITextInput::FTextInputMethodContext::Dispose()
 		// at all -- and then dereferenced the null that comes back.
 		CachedWindow.Reset();
 	}
+	// The field is going; this context may not be (see the declaration). Every entry below checks for it.
+	InputComp = nullptr;
 }
 bool UUITextInput::FTextInputMethodContext::ProjectUIPointToScreen(const FVector& InWorldPosition, FVector2D& OutScreenPosition)
 {
@@ -3216,10 +3327,11 @@ bool UUITextInput::FTextInputMethodContext::IsReadOnly()
 #if DreamGUI_LOG_TextInputMethodContext
 	//UE_LOG(DreamGUI, Log, TEXT("IsReadOnly"));
 #endif
-	return InputComp->GetReadOnly();
+	return InputComp == nullptr || InputComp->GetReadOnly();
 }
 uint32 UUITextInput::FTextInputMethodContext::GetTextLength()
 {
+	if (InputComp == nullptr)return 0;
 #if DreamGUI_LOG_TextInputMethodContext
 	UE_LOG(DreamGUI, Log, TEXT("GetTextLength, Text:%s, Length:%d"), *InputComp->Text, InputComp->Text.Len());
 #endif
@@ -3227,16 +3339,19 @@ uint32 UUITextInput::FTextInputMethodContext::GetTextLength()
 }
 void UUITextInput::FTextInputMethodContext::GetSelectionRange(uint32& BeginIndex, uint32& Length, ECaretPosition& OutCaretPosition)
 {
-	Length = FMath::Abs(InputComp->CaretPositionIndex - InputComp->PressCaretPositionIndex);
-	OutCaretPosition = InputComp->PressCaretPositionIndex <= InputComp->CaretPositionIndex ? ECaretPosition::Ending : ECaretPosition::Beginning;
-	if (OutCaretPosition == ECaretPosition::Beginning)
-	{
-		BeginIndex = InputComp->CaretPositionIndex;
-	}
-	else
-	{
-		BeginIndex = InputComp->PressCaretPositionIndex;
-	}
+	BeginIndex = 0;
+	Length = 0;
+	OutCaretPosition = ECaretPosition::Ending;
+	if (InputComp == nullptr)return;
+	// In source offsets, which is what the IME counts in -- TSF's InsertTextAtSelection hands this range
+	// straight to SetTextInRange. These used to be the raw caret indices, which count clusters and line
+	// ends: an emoji before the caret, or any wrapped line above it, put the IME's text in the wrong place,
+	// inside a surrogate pair at worst.
+	const int32 PressCharIndex = InputComp->GetCharIndexOfCaret(InputComp->PressCaretPositionIndex);
+	const int32 CaretCharIndex = InputComp->GetCharIndexOfCaret(InputComp->CaretPositionIndex);
+	BeginIndex = (uint32)FMath::Min(PressCharIndex, CaretCharIndex);
+	Length = (uint32)FMath::Abs(CaretCharIndex - PressCharIndex);
+	OutCaretPosition = CaretCharIndex < PressCharIndex ? ECaretPosition::Beginning : ECaretPosition::Ending;
 
 #if DreamGUI_LOG_TextInputMethodContext
 	UE_LOG(LogTemp, Log, TEXT("GetSelectionRange, BeginIndex:%d, Length:%d, InCaretPosition:%d, Text:%s"), BeginIndex, Length, (int32)OutCaretPosition, *InputComp->Text);
@@ -3244,38 +3359,30 @@ void UUITextInput::FTextInputMethodContext::GetSelectionRange(uint32& BeginIndex
 }
 void UUITextInput::FTextInputMethodContext::SetSelectionRange(const uint32 BeginIndex, const uint32 Length, const ECaretPosition InCaretPosition)
 {
-	// Clamped like CaretPositionIndex below. This one was never clamped, and it is read straight back
-	// as a string offset by GetSelectionRange, DeleteSelection and Copy.
-	InputComp->PressCaretPositionIndex = FMath::Clamp((int32)BeginIndex, 0, InputComp->Text.Len());
-	if (Length > 0)
-	{
-		if (InCaretPosition == ECaretPosition::Beginning)
-		{
-			InputComp->CaretPositionIndex = (int32)BeginIndex - (int32)Length;
-		}
-		else
-		{
-			InputComp->CaretPositionIndex = (int32)BeginIndex + (int32)Length;
-		}
-	}
-	else
-	{
-		InputComp->CaretPositionIndex = (int32)BeginIndex;
-	}
-	if (InputComp->Text.Len() == 0)
-	{
-		InputComp->CaretPositionIndex = 0;
-	}
-	else
-	{
-		InputComp->CaretPositionIndex = FMath::Clamp(InputComp->CaretPositionIndex, 0, InputComp->Text.Len());
-	}
+	if (InputComp == nullptr)return;
+	// The range is [BeginIndex, BeginIndex + Length) in source offsets, and InCaretPosition says which end the
+	// caret is on; the anchor is the other end, as Slate's own context reads it. The Beginning case used to
+	// put the caret at BeginIndex - Length, which selected the stretch BEFORE the range. Both ends become
+	// caret indices only as offsets into the text as it stands -- they used to be stored as caret indices
+	// raw, so every emoji and every soft wrap before them moved the caret somewhere else.
+	const int32 TextLength = InputComp->Text.Len();
+	const int32 RangeBegin = (int32)FMath::Clamp<int64>((int64)BeginIndex, 0, TextLength);
+	const int32 RangeEnd = (int32)FMath::Clamp<int64>((int64)BeginIndex + (int64)Length, RangeBegin, TextLength);
+	const bool bCaretAtBeginning = InCaretPosition == ECaretPosition::Beginning;
+	const int32 AnchorCaretIndex = InputComp->GetCaretIndexOfChar(bCaretAtBeginning ? RangeEnd : RangeBegin);
+	InputComp->CaretPositionIndex = InputComp->GetCaretIndexOfChar(bCaretAtBeginning ? RangeBegin : RangeEnd);
+	InputComp->PressCaretPositionIndex = AnchorCaretIndex;
 #if DreamGUI_LOG_TextInputMethodContext
 	UE_LOG(DreamGUI, Warning, TEXT("SetSelectionRange, BeginIndex:%d, Length:%d, InCaretPosition:%d, CaretPositionIndex:%d, PressCaretPositionIndex:%d"), BeginIndex, Length, (int32)InCaretPosition, InputComp->CaretPositionIndex, InputComp->PressCaretPositionIndex)
 #endif
 }
 void UUITextInput::FTextInputMethodContext::GetTextInRange(const uint32 BeginIndex, const uint32 Length, FString& OutString)
 {
+	if (InputComp == nullptr)
+	{
+		OutString.Reset();
+		return;
+	}
 	OutString = InputComp->Text.Mid(BeginIndex, Length);
 #if DreamGUI_LOG_TextInputMethodContext
 	UE_LOG(LogTemp, Log, TEXT("GetTextInRange, BeginIndex:%d, Length:%d, OutString:%s"), BeginIndex, Length, *(OutString));
@@ -3283,6 +3390,7 @@ void UUITextInput::FTextInputMethodContext::GetTextInRange(const uint32 BeginInd
 }
 void UUITextInput::FTextInputMethodContext::SetTextInRange(const uint32 BeginIndex, const uint32 Length, const FString& InString)
 {
+	if (InputComp == nullptr)return;
 	// The IME holds its OWN idea of the range and hands it back whenever it likes. Nothing stops the
 	// game from rewriting Text mid-composition -- a timer, a replication update, any SetText caller
 	// -- and an unclamped RemoveAt against a shorter string is TArray's RangeCheck, i.e. a crash.
@@ -3291,25 +3399,26 @@ void UUITextInput::FTextInputMethodContext::SetTextInRange(const uint32 BeginInd
 	const int32 TextLength = InputComp->Text.Len();
 	const int32 ClampedBegin = FMath::Clamp((int32)BeginIndex, 0, TextLength);
 	const int32 ClampedLength = FMath::Clamp((int32)Length, 0, TextLength - ClampedBegin);
+	// IME text is an edit like typed text, and was never in the undo history at all. One composition is one
+	// step -- taken by its first write, so a composition that writes nothing adds none -- and a write
+	// outside any composition is a step of its own. Before the text changes, as every edit takes it.
+	if (!bIsComposing || !bCompositionUndoStepTaken)
+	{
+		InputComp->PushUndoSnapshot();
+		bCompositionUndoStepTaken = bIsComposing;
+	}
 	if (ClampedLength > 0)
 	{
 		InputComp->Text.RemoveAt(ClampedBegin, ClampedLength);
 	}
-	int InsertCharCount = 0;
-	for (int i = 0; i < InString.Len(); i++)
-	{
-		TCHAR c = InString[i];
-		//the composition string answers to MaxLength like every other road into the text
-		if (!InputComp->HasRoomForMoreChars(InputComp->Text.Len(), 1))break;
-		if (InputComp->IsValidChar(c, InputComp->Text, ClampedBegin + InsertCharCount))
-		{
-			InputComp->Text.InsertAt(ClampedBegin + InsertCharCount, c);
-			InsertCharCount++;
-		}
-	}
-	InputComp->CaretPositionIndex = ClampedBegin + InsertCharCount;
-	InputComp->PressCaretPositionIndex = InputComp->CaretPositionIndex;
-	InputComp->UpdateAfterTextChange(false);
+	//the composition string answers to MaxLength and the validator like every other road into the text
+	int32 InsertCharIndex = ClampedBegin;
+	InputComp->InsertValidCharacters(InString, InputComp->Text, InsertCharIndex);
+	// The IME counts in offsets and the caret in caret indices; the offset just past what went in becomes
+	// a caret index against the text as it is now laid out. It used to be stored as a caret index raw.
+	InputComp->SetCaretByCharIndex(InsertCharIndex);
+	// A composition reports its change once, when it ends; a write outside one is the whole edit.
+	InputComp->UpdateAfterTextChange(!bIsComposing);
 #if DreamGUI_LOG_TextInputMethodContext
 	UE_LOG(DreamGUI, Log, TEXT("SetTextInRange, BeginIndex:%d, Length:%d, InString:%s"), BeginIndex, Length, *(InString));
 #endif
@@ -3437,6 +3546,7 @@ TSharedPtr<FGenericWindow> UUITextInput::FTextInputMethodContext::GetWindow()
 	// viewport for the same two calls; this one did not, and FindWidgetWindow legitimately returns
 	// null for a widget that has not been arranged into a window yet -- which is the state of a
 	// widget added to the viewport overlay in this very function.
+	if (InputComp == nullptr)return nullptr;//disposed: a window added now would never be taken out again
 	if (!IsValid(GEngine) || !IsValid(GEngine->GameViewport))return nullptr;
 	if (!FSlateApplication::IsInitialized())return nullptr;
 	if (!CachedWindow.IsValid())
@@ -3453,7 +3563,9 @@ TSharedPtr<FGenericWindow> UUITextInput::FTextInputMethodContext::GetWindow()
 }
 void UUITextInput::FTextInputMethodContext::BeginComposition()
 {
+	if (InputComp == nullptr)return;
 	bIsComposing = true;
+	bCompositionUndoStepTaken = false;//this composition's step is taken by its first write
 	OriginString = InputComp->Text;
 	InputComp->HideCompositionUnderline();//a new composition starts with nothing marked
 #if DreamGUI_LOG_TextInputMethodContext
@@ -3475,16 +3587,25 @@ void UUITextInput::FTextInputMethodContext::UpdateCompositionRange(const int32 I
 }
 void UUITextInput::FTextInputMethodContext::EndComposition()
 {
+	CloseComposition(true);
+#if DreamGUI_LOG_TextInputMethodContext
+	UE_LOG(DreamGUI, Log, TEXT("EndComposition"));
+#endif
+}
+void UUITextInput::FTextInputMethodContext::CloseComposition(bool bInReportChange)
+{
+	// Reported once: an end the platform delivers after the edit already closed the composition is no
+	// second change.
+	const bool bWasComposing = bIsComposing;
 	bIsComposing = false;
+	if (InputComp == nullptr)return;
 	//whatever is left is committed text now, so the "still being typed" mark comes off
 	InputComp->HideCompositionUnderline();
-	if (OriginString != InputComp->Text)
+	// Case-sensitively: FString's != ignores case, and a composition that only changed case changed the text.
+	if (bWasComposing && bInReportChange && !OriginString.Equals(InputComp->Text, ESearchCase::CaseSensitive))
 	{
 		InputComp->UpdateAfterTextChange(true);
 	}
-#if DreamGUI_LOG_TextInputMethodContext
-	UE_LOG(DreamGUI, Log, TEXT("EndComposition, ResultString:%s"), *(InputComp->Text));
-#endif
 }
 
 

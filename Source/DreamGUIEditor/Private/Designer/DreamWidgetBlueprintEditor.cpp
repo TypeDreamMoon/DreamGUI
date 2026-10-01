@@ -106,14 +106,12 @@ struct FDreamWidgetBlueprintEditorTabs
 	static const FName ViewportID;
 	static const FName OutlinerID;
 	static const FName PaletteID;
-	static const FName SequencerID;
 };
 
 const FName FDreamWidgetBlueprintEditorTabs::DetailsID(TEXT("Details"));
 const FName FDreamWidgetBlueprintEditorTabs::ViewportID(TEXT("Viewport"));
 const FName FDreamWidgetBlueprintEditorTabs::OutlinerID(TEXT("Outliner"));
 const FName FDreamWidgetBlueprintEditorTabs::PaletteID(TEXT("Palette"));
-const FName FDreamWidgetBlueprintEditorTabs::SequencerID(TEXT("Sequencer"));
 
 namespace DreamWidgetDesignerLocal
 {
@@ -390,6 +388,14 @@ void FDreamWidgetBlueprintEditor::HandlePostTransaction(bool bSuccess)
 		return;
 	}
 
+	// The animation list follows the asset's undo here, and only here: an undo can add or take away an
+	// animation, or the host itself. The panel used to hear FEditorDelegates::PostUndoRedo instead,
+	// which every undo in the editor raises, and threw its Sequencer away for each one.
+	if (SequencerPtr.IsValid())
+	{
+		SequencerPtr->RefreshAnimationHost();
+	}
+
 	FDreamWidgetDesignerScene* DesignerScene = GetPreviewScene();
 	if (!DesignerScene)
 	{
@@ -556,8 +562,9 @@ void FDreamWidgetBlueprintEditor::InitDesigner(const EToolkitMode::Type Mode, co
 	}
 	ApplyDesignerState();
 
-	SequencerPtr = SNew(SDreamWidgetAnimationEditor);
-	
+	// Handed this designer, whose authoring root it asks for its animation host from now on.
+	SequencerPtr = SNew(SDreamWidgetAnimationEditor, DesignerPtr);
+
 	BindCommands();
 	// InitBlueprintEditor below builds the menus, so a project's extenders have to be registered first.
 	AddMenuExtender(FDreamGUIEditorModule::Get().GetMenuExtensibilityManager()->GetAllExtenders(
@@ -576,9 +583,9 @@ void FDreamWidgetBlueprintEditor::InitDesigner(const EToolkitMode::Type Mode, co
 	}
 	// FBlueprintEditor registers for undo itself.
 
-	// After opening, broadcast event to DreamWidgetAnimationSequencerEditor
-	// The AUTHORING root: animations are asset data, and the panel edits them in place.
-	FDreamUIEditorTools::OnEditingWidgetChanged.Broadcast(GetAnimationHostWidget());
+	// No broadcast to the Animations panel: it found its host when it was built, and is asked again
+	// from OnBlueprintChangedImpl and HandlePostTransaction. The process-wide broadcast that stood here
+	// reached the panel of every open designer, and each of them then went on editing this asset.
 }
 
 void FDreamWidgetBlueprintEditor::GetInitialViewSetting(FVector& OutLocation, FRotator& OutRotation, FVector& OutOrbitLocation, ELevelViewportType& OutViewType)
@@ -780,7 +787,8 @@ bool FDreamWidgetBlueprintEditor::ResolveTemplateParentFor(const UDreamWidget* I
 
 FName FDreamWidgetBlueprintEditor::GetSequencerTabID()
 {
-	return FDreamWidgetBlueprintEditorTabs::SequencerID;
+	// The designer mode's Animations tab, which holds the Sequencer: there is no tab called "Sequencer".
+	return FDreamWidgetDesignerTabs::AnimationsID;
 }
 
 UDreamWidgetAnimation* FDreamWidgetBlueprintEditor::GetAnimationBeingEdited()const
@@ -1689,6 +1697,12 @@ void FDreamWidgetBlueprintEditor::OnBlueprintChangedImpl(UBlueprint* InBlueprint
 	if (InBlueprint != nullptr && InBlueprint == BlueprintBeingEdited)
 	{
 		SyncTextWriteBackToSource();
+		// A compile of a text-authored asset builds a new tree, animations and all, and nothing else
+		// tells the Animations panel: it went on editing the old copies, which the next compile dropped.
+		if (SequencerPtr.IsValid())
+		{
+			SequencerPtr->RefreshAnimationHost();
+		}
 	}
 }
 
@@ -1757,7 +1771,7 @@ void FDreamWidgetBlueprintEditor::SaveEditorState()
 
 void FDreamWidgetBlueprintEditor::FocusAnimationByDisplayName(const FString& InDisplayName)
 {
-	InvokeTab(FDreamWidgetBlueprintEditorTabs::SequencerID);
+	InvokeTab(GetSequencerTabID());
 	if (!SequencerPtr.IsValid() || InDisplayName.IsEmpty())
 	{
 		return;

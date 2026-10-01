@@ -16,6 +16,8 @@
 #include "Core/Components/DreamUIScrollable.h"
 #include "UIScrollView.generated.h"
 
+class UDreamTweener;
+
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FUIScrollViewValueChangedEvent, FVector2D, InVector2);
 
 // EDreamUIScrollDestination and EDreamUIScrollWhenFocusChanges used to be declared here, and moved to
@@ -323,6 +325,12 @@ protected:
 	uint8 bAllowHorizontalScroll: 1, bAllowVerticalScroll: 1;
 	/** Which axis the drag or wheel gesture in progress drives. See the class comment. */
 	uint8 bGestureHorizontal: 1, bGestureVertical: 1;
+	/**
+	 * Whether this view took the pointer drag in progress, decided when it began. Its own flag rather than "neither
+	 * gesture axis": the wheel and the setters write those axes mid-drag, which re-armed a view that had refused the
+	 * drag, so it took the rest of the moves away from the view around it.
+	 */
+	uint8 bDragAccepted: 1;
 	/** True while the inertia-and-spring pass has something left to do. */
 	uint8 bCanUpdateAfterDrag: 1;
 	uint8 bRangeCalculated: 1;
@@ -370,6 +378,14 @@ protected:
 	FVector2D HorizontalRange;//horizontal content-position range, x--min, y--max
 	FVector2D VerticalRange;//vertical content-position range, x--min, y--max
 	FVector PrevPointerPosition;//prev frame pointer hit position in world
+	/**
+	 * The velocity of the drag's last move that went anywhere, and when on the pointer clock it was made.
+	 * A release on a frame of its own -- the frame after the last move, which is how a mouse usually lets
+	 * go -- brings no movement with it, and flings with this instead while it is recent: the tenth of a
+	 * second of moves UMG's inertial scroll keeps.
+	 */
+	FVector2D LastDragMoveVelocity = FVector2D::ZeroVector;
+	double LastDragMoveTime = -1.0;
 
 	void UpdateAfterDrag(float deltaTime);
 	virtual void ApplyContentPositionWithProgress();
@@ -671,6 +687,24 @@ protected:
 
 	/** Glide the content to a position with no physics running underneath. Shared by both ScrollTo forms. */
 	void GlideContentTo(const FVector2D& InTargetPosition, bool InEaseAnimation, float InAnimationDuration);
+
+	/**
+	 * Stop the glide in flight, leaving the content wherever it has got to.
+	 *
+	 * A glide is a tween writing the content's position every frame until it lands, so anything else that
+	 * moves the content -- a drag, a wheel notch, a setter, a fling, another glide -- stops it first, or
+	 * the tween's next frame puts the content back on its own way.
+	 */
+	void StopGlide();
+
+	/** True while a glide this view started is still moving the content. */
+	bool IsGliding() const;
+
+	/** The glide in flight, if any. Weak: the tween manager owns it and retires it when it lands. */
+	TWeakObjectPtr<UDreamTweener> ActiveGlide;
+
+	/** Where that glide is taking the content, as a content position. Meaningful only while IsGliding. */
+	FVector2D ActiveGlideTarget = FVector2D::ZeroVector;
 
 	/** Which axes this gesture drives, given the first movement it made. Writes the two gesture bits. */
 	void ResolveGestureAxes(const FVector2D& InFirstDelta);

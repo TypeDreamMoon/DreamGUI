@@ -310,11 +310,12 @@ public:
 	/**
 	 * Whether arming also listens for the key itself.
 	 *
-	 * On, the control spawns an input agent for exactly as long as it is armed -- the arrangement
-	 * UUITextInput already uses to get raw keys (an actor with AutoReceiveInput, its InputComponent
-	 * pushed on top of the stack, every key bound). It is created on arming and destroyed on
-	 * disarming, so nothing is intercepted at any other moment: a key binder that consumed keys
-	 * while idle would be a key binder nobody could play past.
+	 * On, the control spawns an input agent for exactly as long as it is armed -- an actor whose
+	 * InputComponent is pushed on top of the OWNING player's input stack, with every key the selector
+	 * may bind bound on it (a pad key a keyboard-only selector refuses is left unbound, so it goes on to
+	 * whatever else wanted it). It is created on arming and destroyed on disarming, so nothing is
+	 * intercepted at any other moment: a key binder that consumed keys while idle would be a key binder
+	 * nobody could play past.
 	 *
 	 * Keyboard and gamepad only -- not axes, and not mouse buttons. A click is how the player arms
 	 * this and how they disarm it again, so a mouse button reaching the capture would bind itself on
@@ -373,6 +374,12 @@ private:
 
 	/** Destroy it. Called from every path that disarms, including the one a key took. */
 	void EndKeyCapture();
+
+	/**
+	 * Bind the capture again, for a knob that decides WHICH keys it binds -- the pad switch, the way-out
+	 * keys -- written while it is running. Nothing when no capture is.
+	 */
+	void RefreshKeyCapture();
 
 	/** What the agent's bindings call. Routes to NotifyKeyPressed, which owns the decision. */
 	void HandleCapturedKey(FKey InKey);

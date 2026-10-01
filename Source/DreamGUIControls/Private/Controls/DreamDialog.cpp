@@ -180,10 +180,18 @@ void UDreamDialog::NativeOnConstruct()
 {
 	Super::NativeOnConstruct();
 	RefreshHostArrangement();
+}
+
+void UDreamDialog::NativeOnEnable()
+{
+	Super::NativeOnEnable();
 	if (bFocusDefaultButton)
 	{
-		// At CONSTRUCT and not at initialize: focus is an event-system idea and the event system
-		// reaches a widget through its world, which a dialog does not have until it is attached.
+		// When the dialog APPEARS, which is enable and not construct: construct runs once, at begin
+		// play, whether or not the dialog is showing. A dialog placed asleep, to be woken when there is
+		// something to ask, took focus at begin play onto a button nobody could see -- away from the
+		// screen the player was on -- and then had none to give when it was finally shown. Enable runs
+		// right after construct for a dialog that starts awake, and again every time one is woken.
 		FocusDefaultButton();
 	}
 }
@@ -275,21 +283,40 @@ void UDreamDialog::RefreshDimmer()
 	// modal layer above a hosted dialog already answers Back, with the result its own header
 	// promises. Decided here because this is the one place that knows which arrangement we are in.
 	const bool bWantsBackScope = bCloseOnBack && !bHostAlreadyScrims;
-	if (bWantsBackScope && BackScope == nullptr)
+	if (bWantsBackScope)
 	{
-		BackScope = EnsureComponent<UDreamDialogScope>(GetContentRoot());
+		if (BackScope == nullptr)
+		{
+			BackScope = EnsureComponent<UDreamDialogScope>(GetContentRoot());
+			if (BackScope != nullptr)
+			{
+				// The scope's own close behaviour must not ALSO run: this dialog answers Back itself and
+				// returns true, and a scope that then closed something else would be two answers to one
+				// press.
+				BackScope->SetCloseOnBack(false);
+			}
+		}
 		if (BackScope != nullptr)
 		{
+			// Every time Back is wanted, not only when the scope is first made: turning the knob off
+			// releases the scope by clearing this, and a scope that already existed when the knob came
+			// back on stayed released -- Back passed to the screen underneath for good.
 			BackScope->OwnerDialog = this;
-			// The scope's own close behaviour must not ALSO run: this dialog answers Back itself and
-			// returns true, and a scope that then closed something else would be two answers to one
-			// press.
-			BackScope->SetCloseOnBack(false);
 		}
 	}
-	else if (!bWantsBackScope && BackScope != nullptr)
+	else if (BackScope != nullptr)
 	{
 		BackScope->OwnerDialog = nullptr;
+	}
+	if (BackScope != nullptr)
+	{
+		// The scope puts focus somewhere each time it is pushed, which is each time the dialog appears --
+		// after the dialog's own enable has focused the default, because the scope sits on a widget below
+		// it. With nothing to go on it takes the first control in reading order, the cancel button, so
+		// focus ended there whatever bFocusDefaultButton said. Told the default, the scope agrees with it,
+		// and moves the pad's navigation onto it as well.
+		UDreamButton* Default = bFocusDefaultButton ? GetDefaultButton() : nullptr;
+		BackScope->SetDesiredFocusTarget(Default != nullptr ? Default->ButtonBehaviour.Get() : nullptr);
 	}
 }
 
@@ -309,6 +336,13 @@ void UDreamDialog::SubmitDefaultButton()
 	UDreamButton* Default = GetDefaultButton();
 	if (Default == nullptr || Default->ButtonBehaviour == nullptr)
 	{
+		return;
+	}
+	if (!Default->ButtonBehaviour->IsInteractable())
+	{
+		// A disabled default answers nothing. The broadcast below is the button's click seam, past the
+		// test a click on the button itself is put to -- so a confirm the player could not have clicked
+		// went through from here, and a dialog whose answer was greyed out closed with it.
 		return;
 	}
 	// Through the button's own click seam, so a confirm from here and a confirm from the pointer take
@@ -735,6 +769,11 @@ void UDreamDialog::SetCancelResult(FName InCancelResult)
 void UDreamDialog::SetFocusDefaultButton(bool bInFocusDefaultButton)
 {
 	bFocusDefaultButton = bInFocusDefaultButton;
+	// The Back scope's focus target follows the flag, and it is decided in RefreshDimmer.
+	if (DimmerNode != nullptr)
+	{
+		RefreshDimmer();
+	}
 }
 
 void UDreamDialog::SetCloseOnBack(bool bInCloseOnBack)

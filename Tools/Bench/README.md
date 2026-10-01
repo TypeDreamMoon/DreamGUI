@@ -38,6 +38,29 @@ Everything goes to `<host>/Saved/DreamGUIBench`: the copied log, the trace (`-Tr
 - `run_sampler.ps1`, `StackSampler.cs`, `cmp_samples.py` -- a sampling profiler for one thread of the running process
   (`bench_launch.ps1 -Sample 1 -SamplePhase window|all|edges|ends`), and a comparison of two of its reports.
 
+## A packaged build
+
+The world wall plays by itself, so a packaged Development build can be measured without the editor's Python. From the
+host's directory:
+
+```
+$env:NO_PROXY = "$env:NO_PROXY,[::1]"   # behind a local proxy: UAT's Zen probe of [::1] must not go to it
+RunUAT.bat BuildCookRun -project=<host>\DreamGUITestHost.uproject -platform=Win64 -clientconfig=Development -build -cook `
+    -stage -pak -map=/Game/Maps/Lvl_Test_UI_BenchMark_Workdspace_5000Button -unattended -nop4 -NoCompileEditor `
+    '-ubtargs=-DisableAdaptiveUnity'
+Saved\StagedBuilds\Windows\DreamGUITestHost.exe /Game/Maps/Lvl_Test_UI_BenchMark_Workdspace_5000Button -windowed `
+    -resx=1920 -resy=1080 -csvCaptureFrames=1800 -ExitAfterCsvProfiling
+python Tools/Bench/csv_summary.py "<the new CSV under Saved\StagedBuilds\Windows\DreamGUITestHost\Saved\Profiling\CSV>"
+```
+
+- `-DisableAdaptiveUnity`: the host's plugin is a git worktree whose files a sync has just copied, and adaptive unity
+  takes every one of them for a file being edited and compiles them one by one -- hundreds, for an hour or more.
+- `-ExitAfterCsvProfiling` ends the game when the capture ends; there is no `-csvExitOnCompletion`.
+- The level has no PlayerStart: the default view looks at the panels from behind, and the first frames load.
+  `csv_summary.py`'s medians are not moved by those; its averages are.
+- The screen wall needs the widget the editor's Python puts on the screen, which a packaged build has no Python for:
+  measure it with `-Game` instead.
+
 ## Reading the numbers
 
 - **Discard the first launch after a build**: shaders compile in the background, and its frames are slower for it.

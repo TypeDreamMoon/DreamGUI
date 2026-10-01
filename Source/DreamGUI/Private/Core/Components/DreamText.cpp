@@ -1256,6 +1256,13 @@ bool UDreamText::MoveCaret(int32 moveType, int32& inOutCaretPositionIndex, int32
 
 	UpdateCacheTextGeometry();
 	auto& cacheLinePropertyArray = CacheTextGeometryData.GetLines();
+	// A text that has never been laid out -- no font, or no render canvas -- has no lines, and every move
+	// below reads one: the last line for left/right past the end, the caller's line for up/down, the first
+	// and last for start/end. There is no caret to move, so nothing moves.
+	if (cacheLinePropertyArray.Num() == 0)
+	{
+		return false;
+	}
 	//moveType 0-left, 1-right, 2-up, 3-down, 4-start, 5-end
 	switch (moveType)
 	{
@@ -1322,6 +1329,8 @@ bool UDreamText::MoveCaret(int32 moveType, int32& inOutCaretPositionIndex, int32
 				inOutCaretPositionLineIndex++;
 			}
 		}
+		// The line index is the caller's, remembered from an earlier layout: the text may have lost lines since.
+		inOutCaretPositionLineIndex = FMath::Clamp(inOutCaretPositionLineIndex, 0, cacheLinePropertyArray.Num() - 1);
 		auto& lineProperty = cacheLinePropertyArray[inOutCaretPositionLineIndex];
 		float minDistance = MAX_FLT;
 		int accumulatedCaretIndex = 0;
@@ -1388,14 +1397,25 @@ int UDreamText::GetCharIndexByCaretIndex(int32 inCaretPositionIndex)
 		return 0;
 	}
 	int accumulatedCaretIndex = 0;
+	// The caret that ends a soft-wrapped line names no character (its CharIndex is -1): the wrap is not in
+	// the text, so the end of the wrapped line and the start of the next are ONE position in it. That
+	// caret answers with the next caret's offset, which is the start of the next line. Handed back as -1,
+	// it was inserted at, deleted from and selected to as if it were an offset -- a write before the
+	// string's buffer, a deletion from the start of the text.
+	bool bFoundSoftWrapCaret = false;
 	for (int lineIndex = 0; lineIndex < cacheLinePropertyArray.Num(); lineIndex++)
 	{
 		auto& lineProperty = cacheLinePropertyArray[lineIndex];
 		for (int caretIndex = 0; caretIndex < lineProperty.CaretPropertyList.Num(); caretIndex++)
 		{
-			if (accumulatedCaretIndex == inCaretPositionIndex)//find caret
+			if (bFoundSoftWrapCaret || accumulatedCaretIndex == inCaretPositionIndex)//find caret
 			{
-				return lineProperty.CaretPropertyList[caretIndex].CharIndex;
+				const int32 CharIndex = lineProperty.CaretPropertyList[caretIndex].CharIndex;
+				if (CharIndex >= 0)
+				{
+					return CharIndex;
+				}
+				bFoundSoftWrapCaret = true;
 			}
 			accumulatedCaretIndex++;
 		}
@@ -1406,7 +1426,7 @@ int UDreamText::GetCharIndexByCaretIndex(int32 inCaretPositionIndex)
 	{
 		return 0;
 	}
-	return lastLineProperty.CaretPropertyList[lastLineProperty.CaretPropertyList.Num() - 1].CharIndex;
+	return FMath::Max(0, lastLineProperty.CaretPropertyList[lastLineProperty.CaretPropertyList.Num() - 1].CharIndex);
 }
 int UDreamText::GetLastCaret()
 {
@@ -1623,20 +1643,32 @@ int UDreamText::GetCaretIndexByCharIndex(int32 inCharIndex)
 	UpdateCacheTextGeometry();
 	int accumulatedCaretIndex = 0;
 	auto& cacheLinePropertyArray = CacheTextGeometryData.GetLines();
+	// An offset no caret stands at is one inside a cluster the layout keeps whole -- between the halves of
+	// a surrogate pair, inside an emoji sequence -- and its caret is the one just past that cluster. The
+	// end of the text, which is where such an offset used to be sent, can be any distance away.
+	int32 NearestCaretIndexAfter = INDEX_NONE;
+	int32 NearestCharIndexAfter = MAX_int32;
 	for (int lineIndex = 0; lineIndex < cacheLinePropertyArray.Num(); lineIndex++)
 	{
 		auto& lineProperty = cacheLinePropertyArray[lineIndex];
 		for (int caretIndex = 0; caretIndex < lineProperty.CaretPropertyList.Num(); caretIndex++)
 		{
-			if (lineProperty.CaretPropertyList[caretIndex].CharIndex == inCharIndex)//find char
+			const int32 CaretCharIndex = lineProperty.CaretPropertyList[caretIndex].CharIndex;
+			if (CaretCharIndex == inCharIndex)//find char
 			{
 				return accumulatedCaretIndex;
 			}
-			else
+			if (CaretCharIndex > inCharIndex && CaretCharIndex < NearestCharIndexAfter)
 			{
-				accumulatedCaretIndex++;
+				NearestCharIndexAfter = CaretCharIndex;
+				NearestCaretIndexAfter = accumulatedCaretIndex;
 			}
+			accumulatedCaretIndex++;
 		}
+	}
+	if (NearestCaretIndexAfter != INDEX_NONE)
+	{
+		return NearestCaretIndexAfter;
 	}
 	return accumulatedCaretIndex - 1;//not found, return last one
 }
@@ -1844,9 +1876,12 @@ void UDreamText::GetSelectionProperty(int32 InSelectionStartCaretIndex, int32 In
 	
 	if (startCaretPositionLineIndex == endCaretPositionLineIndex)//same line
 	{
+		// From whichever end is further left. The two ends arrive in the order the selection was made --
+		// anchor, then caret -- so a selection made leftward measured a negative width, which the bar's
+		// widget clamps to nothing: Shift+Left selected text and showed no highlight at all.
 		FDreamUITextSelectionProperty selectionProperty;
-		selectionProperty.Pos = startCaretPosition;
-		selectionProperty.Size = endCaretPosition.X - startCaretPosition.X;
+		selectionProperty.Pos = startCaretPosition.X <= endCaretPosition.X ? startCaretPosition : endCaretPosition;
+		selectionProperty.Size = FMath::TruncToInt(FMath::Abs(endCaretPosition.X - startCaretPosition.X));
 		OutSelectionProeprtyArray.Add(selectionProperty);
 	}
 	else//different line

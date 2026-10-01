@@ -281,10 +281,13 @@ bool FDreamScrollBoxInteractionRightDragTest::RunTest(const FString& Parameters)
 			.MoveBy(FVector2D(0.0, -LaterMove))
 			.MoveBy(FVector2D(0.0, -LaterMove))
 			.WaitFrames(1)
-			.Release(EDreamUIMouseButtonType::Right)
 			.Perform());
 
+	// Read with the button still down: letting go of a drag that was moving a moment ago flings the
+	// content on (SScrollBox begins inertial scrolling), and the claim here is about the drag itself.
 	const float Offset = Box->GetScrollOffset();
+	TestTrue(TEXT("Letting go of the right button completes"),
+		Driver->Sequence().Release(EDreamUIMouseButtonType::Right).Perform());
 	const float Pulled = static_cast<float>(150.0 * UnitsPerPixel);
 	// Two claims, so a red run says which one failed: that the drag scrolled at all, the way it was
 	// pulled; and that it scrolled the WHOLE distance, the move that started the drag included.
@@ -404,6 +407,62 @@ bool FDreamScrollBoxInteractionFlingTest::RunTest(const FString& Parameters)
 	Rig.PumpFrames(1);
 	const float OffsetAfter = Box->GetScrollOffset();
 	TestTrue(FString::Printf(TEXT("The content kept moving the way it was flung (%.2f then %.2f)"), OffsetAtRelease, OffsetAfter),
+		OffsetAfter > OffsetAtRelease + 0.5f);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamScrollBoxInteractionLateReleaseFlingTest,
+	"DreamGUI.ScrollBox.LettingGoAFrameAfterTheLastMoveStillLeavesTheContentCoasting",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamScrollBoxInteractionLateReleaseFlingTest, "DreamGUI.ScrollBox.LettingGoAFrameAfterTheLastMoveStillLeavesTheContentCoasting", "[Pointer][Animated]")
+
+/*
+ * A fling took its speed from the release frame's own movement and from nothing else. A held button is
+ * delivered a drag every frame, moved or not, so a mouse that let go the frame after its last move --
+ * the usual way to let go -- brought no movement to the release and flung nothing at all. SScrollBox
+ * keeps a tenth of a second of moves for its fling (FInertialScrollManager), and so does the view now.
+ *
+ * Checked here: the drag of the fling test above, a frame with the button held still, then the release:
+ * the box is still scrolling, and moves on the way it was dragged.
+ */
+bool FDreamScrollBoxInteractionLateReleaseFlingTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamScrollBoxInteractionTestLocal;
+	FDreamDriverRig Rig = FDreamDriverRig::Headless(ViewportSize);
+	Rig.BindTest(this);
+	// Begun play, as a game's UI has before anything is scrolled: a scroll view's inertia is its Tick
+	// and its bar re-places the handle in OnEnable and Start, none of which a world that never began
+	// play gives them (see DreamDragInteraction::BeginPlayForUI).
+	if (!TestTrue(TEXT("The headless rig came up"), Rig.IsUsable())
+		|| !TestTrue(TEXT("Its UI has begun play, as a game's has"), DreamDragInteraction::BeginPlayForUI(Rig.GetWorld())))
+	{
+		return false;
+	}
+
+	UDreamScrollBox* Box = MakeFilledBox(Rig, TEXT("Box"), nullptr, FVector2D(300.0, 400.0), 20, FVector2D(300.0, 100.0));
+	if (!TestTrue(TEXT("The box came up with a viewport and a content node"), HasParts(Box)))
+	{
+		return false;
+	}
+
+	const double FirstMove = FMath::Sqrt(static_cast<double>(Rig.Raycaster()->GetScaledDragThresholdSquare())) + 2.0;
+	TestTrue(TEXT("The drag, a still frame and the release complete"),
+		Rig.Driver()->Sequence()
+			.MoveTo(FDreamBy::Widget(Box->ViewportNode.Get()))
+			.Press(EDreamUIMouseButtonType::Right)
+			.MoveBy(FVector2D(0.0, -FirstMove))
+			.MoveBy(FVector2D(0.0, -40.0))
+			.WaitFrames(1)
+			.Release(EDreamUIMouseButtonType::Right)
+			.Perform());
+
+	const float OffsetAtRelease = Box->GetScrollOffset();
+	TestTrue(FString::Printf(TEXT("The drag scrolled down through the content (offset %.1f)"), OffsetAtRelease), OffsetAtRelease > 0.0f);
+	TestTrue(TEXT("The box is still scrolling after the button came up"), Box->GetIsScrolling());
+	Rig.PumpFrames(1);
+	const float OffsetAfter = Box->GetScrollOffset();
+	TestTrue(FString::Printf(TEXT("The content kept moving the way it was dragged (%.2f then %.2f)"), OffsetAtRelease, OffsetAfter),
 		OffsetAfter > OffsetAtRelease + 0.5f);
 	return true;
 }
@@ -722,6 +781,280 @@ bool FDreamScrollBoxInteractionHorizontalWheelTest::RunTest(const FString& Param
 		Rig.Driver()->Find(FDreamBy::Widget(Box->ViewportNode.Get()))->ScrollBy(WheelTowardUser));
 	TestNearlyEqual(TEXT("The strip scrolled one notch along its own axis"), Box->GetScrollOffset(), Notch, 0.5f);
 	TestEqual(TEXT("The notch was reported as the user scrolling"), UserScrolled->NumFloats(), 1);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamScrollBoxInteractionNestedCrossDragTest,
+	"DreamGUI.ScrollBox.ADragAcrossAnInnerBoxThatScrollsTheOtherWayScrollsTheOuterBox",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamScrollBoxInteractionNestedCrossDragTest, "DreamGUI.ScrollBox.ADragAcrossAnInnerBoxThatScrollsTheOtherWayScrollsTheOuterBox", "[Pointer][Animated]")
+
+/*
+ * A view that scrolls one way claimed every drag that began over it, whatever way the drag ran, and
+ * consumed every move of one it had refused: a sideways strip inside a page took the page's vertical
+ * drag, moved nothing with it, and kept it from the page. The wheel was already handed on in that case
+ * (see the test above); the drag now is too -- refused, or running along the axis the view does not
+ * scroll, it reaches the view around it.
+ *
+ * Checked here: an outer box holding a strip that scrolls sideways; a right-button drag pulled straight
+ * up over the strip scrolls the outer box and leaves the strip where it was.
+ */
+bool FDreamScrollBoxInteractionNestedCrossDragTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamScrollBoxInteractionTestLocal;
+	FDreamDriverRig Rig = FDreamDriverRig::Headless(ViewportSize);
+	Rig.BindTest(this);
+	// Begun play, as a game's UI has before anything is scrolled: a scroll view's inertia is its Tick
+	// and its bar re-places the handle in OnEnable and Start, none of which a world that never began
+	// play gives them (see DreamDragInteraction::BeginPlayForUI).
+	if (!TestTrue(TEXT("The headless rig came up"), Rig.IsUsable())
+		|| !TestTrue(TEXT("Its UI has begun play, as a game's has"), DreamDragInteraction::BeginPlayForUI(Rig.GetWorld())))
+	{
+		return false;
+	}
+
+	// The strip: six columns of 100 in a box 300 wide, held two rows tall, turned sideways -- and then
+	// ten rows of the outer box's own beneath it.
+	UDreamScrollBox* Outer = Rig.MakeControl<UDreamScrollBox>(TEXT("Outer"), nullptr, FVector2D(400.0, 400.0));
+	if (!TestTrue(TEXT("The outer box came up with a viewport and a content node"), HasParts(Outer)))
+	{
+		return false;
+	}
+	UDreamScrollBox* Strip = MakeFilledBox(Rig, TEXT("Strip"), Outer->GetContentNode(), FVector2D(300.0, 200.0), 6, FVector2D(100.0, 200.0));
+	if (!TestTrue(TEXT("The strip came up with a viewport and a content node"), HasParts(Strip))
+		|| !TestTrue(TEXT("The strip is held to two rows by its slot in the outer box"), HoldToTwoRows(Strip)))
+	{
+		return false;
+	}
+	Strip->SetOrientation(EDreamPanelOrientation::Horizontal);
+	for (int32 RowIndex = 0; RowIndex < 10; ++RowIndex)
+	{
+		Rig.MakeWidget(FString::Printf(TEXT("Outer_Row%02d"), RowIndex), Outer->GetContentNode(), FVector2D(400.0, 100.0));
+	}
+	// In the order the two sizes decide each other, as the nested wheel tests explain.
+	Outer->RefreshContentExtent();
+	Rig.PumpFrames(2);
+	Strip->RefreshContentExtent();
+	Rig.PumpFrames(2);
+	if (!TestTrue(FString::Printf(TEXT("The strip has somewhere to scroll sideways (end %.1f)"), Strip->GetScrollOffsetOfEnd()), Strip->GetScrollOffsetOfEnd() > 0.5f)
+		|| !TestTrue(FString::Printf(TEXT("and the outer box somewhere to scroll down (end %.1f)"), Outer->GetScrollOffsetOfEnd()), Outer->GetScrollOffsetOfEnd() > 100.0f))
+	{
+		return false;
+	}
+
+	// Straight up over the strip, past the raycaster's drag threshold first: the outer box's own
+	// gesture, whichever box the press landed in.
+	const double FirstMove = FMath::Sqrt(static_cast<double>(Rig.Raycaster()->GetScaledDragThresholdSquare())) + 2.0;
+	TestTrue(TEXT("The right-button drag over the strip completes"),
+		Rig.Driver()->Sequence()
+			.MoveTo(FDreamBy::Widget(Strip->ViewportNode.Get()))
+			.Press(EDreamUIMouseButtonType::Right)
+			.MoveBy(FVector2D(0.0, -FirstMove))
+			.MoveBy(FVector2D(0.0, -40.0))
+			.MoveBy(FVector2D(0.0, -40.0))
+			.WaitFrames(1)
+			.Release(EDreamUIMouseButtonType::Right)
+			.Perform());
+	Rig.PumpFrames(1);
+
+	// Canvas units are pixels here, so the pull is the distance the outer box had to follow.
+	TestTrue(FString::Printf(TEXT("The outer box scrolled with the drag (offset %.1f)"), Outer->GetScrollOffset()),
+		Outer->GetScrollOffset() > 40.0f);
+	TestNearlyEqual(TEXT("and the strip did not move"), Strip->GetScrollOffset(), 0.0f, 0.5f);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamScrollBoxInteractionNoOverscrollFlingTest,
+	"DreamGUI.ScrollBox.WithOverscrollOffNeitherTheDragNorTheFlingCarriesTheContentPastItsEnd",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamScrollBoxInteractionNoOverscrollFlingTest, "DreamGUI.ScrollBox.WithOverscrollOffNeitherTheDragNorTheFlingCarriesTheContentPastItsEnd", "[Pointer][Animated]")
+
+/*
+ * bAllowOverscroll off zeroes the damper that weighs a drag move starting past an end -- and nothing
+ * else. The move that CROSSED the end went the whole way out, and a fling's in-range step carried the
+ * content past the end on the frame it got there, for the spring to bring back: exactly the overshoot
+ * the switch exists to remove.
+ *
+ * Checked here: a third of a row short of the end, a drag and a fling down the content, and on every
+ * frame from the drag to well after the release the box is never past its end -- and it rests there.
+ */
+bool FDreamScrollBoxInteractionNoOverscrollFlingTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamScrollBoxInteractionTestLocal;
+	FDreamDriverRig Rig = FDreamDriverRig::Headless(ViewportSize);
+	Rig.BindTest(this);
+	// Begun play, as a game's UI has before anything is scrolled: a scroll view's inertia is its Tick
+	// and its bar re-places the handle in OnEnable and Start, none of which a world that never began
+	// play gives them (see DreamDragInteraction::BeginPlayForUI).
+	if (!TestTrue(TEXT("The headless rig came up"), Rig.IsUsable())
+		|| !TestTrue(TEXT("Its UI has begun play, as a game's has"), DreamDragInteraction::BeginPlayForUI(Rig.GetWorld())))
+	{
+		return false;
+	}
+
+	UDreamScrollBox* Box = MakeFilledBox(Rig, TEXT("Box"), nullptr, FVector2D(300.0, 400.0), 20, FVector2D(300.0, 100.0));
+	UDreamDriverInputModule* DriverInput = Rig.InputModule();
+	if (!TestTrue(TEXT("The box came up with a viewport and a content node"), HasParts(Box))
+		|| !TestNotNull(TEXT("The rig has an input module"), DriverInput))
+	{
+		return false;
+	}
+	Box->SetAllowOverscroll(false);
+	const float End = Box->GetScrollOffsetOfEnd();
+	Box->SetScrollOffset(End - 30.0f);
+	Rig.PumpFrames(1);
+
+	// The fixture of the fling test above: under way past the drag threshold, then the last move and
+	// the release in the same frame. The drag alone pulls further than the thirty units left.
+	const double FirstMove = FMath::Sqrt(static_cast<double>(Rig.Raycaster()->GetScaledDragThresholdSquare())) + 2.0;
+	TestTrue(TEXT("The drag gets going"),
+		Rig.Driver()->Sequence()
+			.MoveTo(FDreamBy::Widget(Box->ViewportNode.Get()))
+			.Press(EDreamUIMouseButtonType::Right)
+			.MoveBy(FVector2D(0.0, -FirstMove))
+			.MoveBy(FVector2D(0.0, -40.0))
+			.Perform());
+	TestTrue(FString::Printf(TEXT("The drag stopped at the end it crossed (offset %.2f, end %.2f)"), Box->GetScrollOffset(), End),
+		Box->GetScrollOffset() <= End + 0.5f);
+	DriverInput->MoveBy(FVector2D(0.0, -40.0));
+	DriverInput->Release(EDreamUIMouseButtonType::Right);
+	Rig.PumpFrames(1);
+	TestTrue(FString::Printf(TEXT("The fling's own frame is not past the end (offset %.2f)"), Box->GetScrollOffset()),
+		Box->GetScrollOffset() <= End + 0.5f);
+
+	// Half a second of whatever the fling and the spring would do.
+	float Furthest = Box->GetScrollOffset();
+	for (int32 Frame = 0; Frame < 30; ++Frame)
+	{
+		Rig.PumpFrames(1);
+		Furthest = FMath::Max(Furthest, Box->GetScrollOffset());
+	}
+	TestTrue(FString::Printf(TEXT("No frame after the release was past the end (furthest %.2f, end %.2f)"), Furthest, End),
+		Furthest <= End + 0.5f);
+	TestNearlyEqual(TEXT("and the box rests at its end"), Box->GetScrollOffset(), End, 0.5f);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamScrollBoxInteractionNotchDuringRevealTest,
+	"DreamGUI.ScrollBox.ANotchDuringAnAnimatedRevealCarriesOnFromWhereTheRevealIsGoing",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamScrollBoxInteractionNotchDuringRevealTest, "DreamGUI.ScrollBox.ANotchDuringAnAnimatedRevealCarriesOnFromWhereTheRevealIsGoing", "[Pointer][Animated]")
+
+/*
+ * An animated reveal is a tween writing the content's position every frame until it lands, and it was
+ * started and forgotten: a wheel notch in the meantime moved the content, and the tween's next frame
+ * moved it back on its own way, landing on the revealed row as if the notch had never happened. UMG
+ * adds a notch to where the scroll in flight is going.
+ *
+ * Checked here: the fifteenth row revealed with the glide on, a notch toward the user while it glides,
+ * and the box comes to rest one notch past where the reveal alone puts it.
+ */
+bool FDreamScrollBoxInteractionNotchDuringRevealTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamScrollBoxInteractionTestLocal;
+	FDreamDriverRig Rig = FDreamDriverRig::Headless(ViewportSize);
+	Rig.BindTest(this);
+	// Begun play, as a game's UI has before anything is scrolled: a scroll view's inertia is its Tick
+	// and its bar re-places the handle in OnEnable and Start, none of which a world that never began
+	// play gives them (see DreamDragInteraction::BeginPlayForUI).
+	if (!TestTrue(TEXT("The headless rig came up"), Rig.IsUsable())
+		|| !TestTrue(TEXT("Its UI has begun play, as a game's has"), DreamDragInteraction::BeginPlayForUI(Rig.GetWorld())))
+	{
+		return false;
+	}
+
+	TArray<UDreamWidget*> Rows;
+	UDreamScrollBox* Box = MakeFilledBox(Rig, TEXT("Box"), nullptr, FVector2D(300.0, 400.0), 20, FVector2D(300.0, 100.0), &Rows);
+	if (!TestTrue(TEXT("The box came up with a viewport and a content node"), HasParts(Box))
+		|| !TestEqual(TEXT("All twenty rows were made"), Rows.Num(), 20))
+	{
+		return false;
+	}
+	const float Notch = NotchOf(Box);
+
+	// Where the reveal lands, learned without the glide, and then the box put back at its top.
+	TestTrue(TEXT("Revealing the fifteenth row succeeds"), Box->ScrollWidgetIntoView(Rows[14], false));
+	Rig.PumpFrames(1);
+	const float Revealed = Box->GetScrollOffset();
+	Box->SetScrollOffset(0.0f);
+	Rig.PumpFrames(1);
+	if (!TestTrue(FString::Printf(TEXT("The reveal scrolls the box (offset %.1f)"), Revealed), Revealed > 0.0f)
+		|| !TestTrue(TEXT("with a notch still to go after it"), Revealed + Notch <= Box->GetScrollOffsetOfEnd() + 0.5f))
+	{
+		return false;
+	}
+
+	TestTrue(TEXT("Revealing it again, gliding, succeeds"), Box->ScrollWidgetIntoView(Rows[14], true));
+	Rig.PumpFrames(1);
+	const float Gliding = Box->GetScrollOffset();
+	if (!TestTrue(FString::Printf(TEXT("The glide has not landed yet (offset %.1f of %.1f)"), Gliding, Revealed), Gliding < Revealed - 0.5f))
+	{
+		return false;
+	}
+	TestTrue(TEXT("A notch toward the user completes"),
+		Rig.Driver()->Find(FDreamBy::Widget(Box->ViewportNode.Get()))->ScrollBy(WheelTowardUser));
+	// Longer than the reveal's quarter of a second, so anything still gliding has landed.
+	Rig.PumpFrames(30);
+	TestNearlyEqual(TEXT("The box came to rest one notch past the revealed row"), Box->GetScrollOffset(), Revealed + Notch, 0.5f);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamScrollBoxInteractionQuickAnimatedNotchesTest,
+	"DreamGUI.ScrollBox.TwoQuickAnimatedNotchesTravelTwoNotches",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamScrollBoxInteractionQuickAnimatedNotchesTest, "DreamGUI.ScrollBox.TwoQuickAnimatedNotchesTravelTwoNotches", "[Pointer][Animated]")
+
+/*
+ * With wheel animation on, each notch starts a glide. The second notch of a quick pair measured its
+ * step from wherever the first glide had got to, and started a second glide while the first one went
+ * on writing the content -- two tweens, each towards its own end, and the pair travelled less than two
+ * notches. A notch now adds to the destination of the glide in flight and takes it over.
+ *
+ * Checked here: two notches a couple of frames apart, well inside one glide, and the box comes to rest
+ * two notches down.
+ */
+bool FDreamScrollBoxInteractionQuickAnimatedNotchesTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamScrollBoxInteractionTestLocal;
+	FDreamDriverRig Rig = FDreamDriverRig::Headless(ViewportSize);
+	Rig.BindTest(this);
+	// Begun play, as a game's UI has before anything is scrolled: a scroll view's inertia is its Tick
+	// and its bar re-places the handle in OnEnable and Start, none of which a world that never began
+	// play gives them (see DreamDragInteraction::BeginPlayForUI).
+	if (!TestTrue(TEXT("The headless rig came up"), Rig.IsUsable())
+		|| !TestTrue(TEXT("Its UI has begun play, as a game's has"), DreamDragInteraction::BeginPlayForUI(Rig.GetWorld())))
+	{
+		return false;
+	}
+
+	UDreamScrollBox* Box = MakeFilledBox(Rig, TEXT("Box"), nullptr, FVector2D(300.0, 400.0), 20, FVector2D(300.0, 100.0));
+	if (!TestTrue(TEXT("The box came up with a viewport and a content node"), HasParts(Box)))
+	{
+		return false;
+	}
+	Box->SetAnimateWheelScrolling(true);
+	Rig.PumpFrames(1);
+	const float Notch = NotchOf(Box);
+	if (!TestTrue(FString::Printf(TEXT("There is more than two notches to scroll (end %.1f, notch %.1f)"), Box->GetScrollOffsetOfEnd(), Notch),
+		Notch > 0.0f && Box->GetScrollOffsetOfEnd() > 2.0f * Notch))
+	{
+		return false;
+	}
+
+	FDreamElementRef Viewport = Rig.Driver()->Find(FDreamBy::Widget(Box->ViewportNode.Get()));
+	TestTrue(TEXT("The first notch completes"), Viewport->ScrollBy(WheelTowardUser));
+	if (!TestTrue(FString::Printf(TEXT("The first notch is still gliding (offset %.1f)"), Box->GetScrollOffset()), Box->GetScrollOffset() < Notch - 0.5f))
+	{
+		return false;
+	}
+	TestTrue(TEXT("The second notch completes"), Viewport->ScrollBy(WheelTowardUser));
+	// Longer than any glide here, so both have landed.
+	Rig.PumpFrames(30);
+	TestNearlyEqual(TEXT("The two notches travelled two notches"), Box->GetScrollOffset(), 2.0f * Notch, 0.5f);
 	return true;
 }
 

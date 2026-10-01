@@ -6,12 +6,19 @@
 
 #include "DreamWidgetBlueprint.h"
 #include "Designer/DreamWidgetTreeEditing.h"
+#include "Animation/DreamWidgetAnimation.h"
+#include "Animation/DreamWidgetAnimationComponent.h"
 #include "Core/DreamUserWidget.h"
 #include "Core/DreamWidgetGeneratedClass.h"
 #include "Core/DreamWidgetPropertyBinding.h"
 #include "Core/DreamWidgetTree.h"
 #include "Core/Components/DreamWidget.h"
+#include "EdGraph/EdGraph.h"
+#include "K2Node_VariableGet.h"
+#include "Kismet2/BlueprintEditorUtils.h"
+#include "Kismet2/CompilerResultsLog.h"
 #include "Kismet2/KismetEditorUtilities.h"
+#include "MovieScene.h"
 #include "UObject/Package.h"
 
 /*
@@ -89,6 +96,27 @@ namespace DreamBindingBookkeepingTestLocal
 	{
 		return InBlueprint->PropertyBindings.FindByPredicate(
 			[InPropertyName](const FDreamWidgetPropertyBinding& Candidate) { return Candidate.PropertyName == InPropertyName; });
+	}
+
+	/**
+	 * An animation on the hierarchy's root with one track bound to InTarget, the way the sequencer binds
+	 * one: a possessable, then BindPossessableObject with the ROOT as context, so the recorded path runs
+	 * from the animation's owner down to InTarget by display name.
+	 */
+	FGuid BindAnimationToWidget(FScopedBlueprint& InFixture, UDreamWidget* InTarget, UDreamWidgetAnimation*& OutSequence)
+	{
+		OutSequence = nullptr;
+		UDreamWidget* Root = InFixture.Blueprint->GetOrCreateWidgetTree()->RootWidget.Get();
+		UDreamWidgetAnimationComponent* Animator = Root != nullptr
+			? Cast<UDreamWidgetAnimationComponent>(Root->AddComponent(UDreamWidgetAnimationComponent::StaticClass())) : nullptr;
+		OutSequence = Animator != nullptr ? Animator->AddNewAnimation() : nullptr;
+		if (OutSequence == nullptr || OutSequence->GetMovieScene() == nullptr || InTarget == nullptr)
+		{
+			return FGuid();
+		}
+		const FGuid BindingId = OutSequence->GetMovieScene()->AddPossessable(InTarget->GetDisplayName(), InTarget->GetClass());
+		OutSequence->BindPossessableObject(BindingId, *InTarget, Root);
+		return BindingId;
 	}
 }
 
@@ -211,6 +239,60 @@ bool FDreamReorderingBehavioursRenumbersBindingsTest::RunTest(const FString& Par
 	const FDreamWidgetPropertyBinding* WidgetBinding = FindByProperty(Fixture.Blueprint, TEXT("BoundToWidget"));
 	if (!TestNotNull(TEXT("the widget's own binding survives"), WidgetBinding))return true;
 	TestEqual(TEXT("...with no behaviour index invented for it"), WidgetBinding->BehaviourIndex, (int32)INDEX_NONE);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamRenameCarriesGraphAndAnimationTest,
+	"DreamGUI.Editor.Bindings.RenamingAWidgetCarriesTheGraphNodesAndAnimationPathsThatNamedIt",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * Renaming a widget in the designer broke every graph node that read it, and every animation path through it.
+ *
+ * The rename carried the authored bindings and nothing else. The widget's variable has a guid derived from its name, so
+ * a "Get" of the old name found nothing at the next compile, and an animation bound through the widget kept the old path
+ * -- which the compile reports as a path that walks to nothing -- until a save happened to repair it. A `(was:)` clause
+ * already carries both for a .dui; the designer's rename now goes through the same function. This reads the widget in
+ * the event graph and animates it, renames it, and compiles.
+ */
+bool FDreamRenameCarriesGraphAndAnimationTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamBindingBookkeepingTestLocal;
+	FScopedBlueprint Fixture(TEXT("BP_RenameCarriesGraphAndAnimation"));
+	if (!TestNotNull(TEXT("the fixture Blueprint was created"), Fixture.Blueprint))return true;
+
+	UDreamWidget* Label = Fixture.AddWidget(TEXT("Label"));
+	UDreamWidgetAnimation* Sequence = nullptr;
+	if (!TestTrue(TEXT("an animation drives the widget"), BindAnimationToWidget(Fixture, Label, Sequence).IsValid()))return true;
+	{
+		FCompilerResultsLog Results;
+		FKismetEditorUtilities::CompileBlueprint(Fixture.Blueprint, EBlueprintCompileOptions::SkipGarbageCollection, &Results);
+		if (!TestEqual(TEXT("the hierarchy compiles clean before the rename"), Results.NumErrors, 0))return true;
+	}
+
+	UEdGraph* Graph = FBlueprintEditorUtils::FindEventGraph(Fixture.Blueprint);
+	if (!TestNotNull(TEXT("the Blueprint has an event graph"), Graph))return true;
+	UK2Node_VariableGet* Getter = NewObject<UK2Node_VariableGet>(Graph);
+	Getter->VariableReference.SetSelfMember(FName(TEXT("Label")));
+	Graph->AddNode(Getter, /*bFromUI*/false, /*bSelectNewNode*/false);
+	Getter->CreateNewGuid();
+	Getter->PostPlacedNewNode();
+	Getter->AllocateDefaultPins();
+
+	const FString Applied = DreamWidgetTreeEditing::RenameWidget(Fixture.Blueprint, Label, TEXT("Title"));
+	if (!TestEqual(TEXT("the rename went through"), Applied, FString(TEXT("Title"))))return true;
+	TestEqual(TEXT("the graph node reads the new name"), Getter->GetVarName(), FName(TEXT("Title")));
+
+	FCompilerResultsLog Results;
+	FKismetEditorUtilities::CompileBlueprint(Fixture.Blueprint, EBlueprintCompileOptions::SkipGarbageCollection, &Results);
+	TestEqual(TEXT("and the asset compiles clean -- no node naming a missing variable, no path naming a missing widget"),
+		Results.NumErrors, 0);
+	TestEqual(TEXT("the node still reads the new name after the compile"), Getter->GetVarName(), FName(TEXT("Title")));
+
+	TArray<TPair<FGuid, FString>> Unresolvable;
+	Sequence->GetUnresolvableBindingPaths(Fixture.Blueprint->WidgetTree->RootWidget, Unresolvable);
+	TestEqual(TEXT("the animation's path walks to the renamed widget"), Unresolvable.Num(), 0);
 	return true;
 }
 

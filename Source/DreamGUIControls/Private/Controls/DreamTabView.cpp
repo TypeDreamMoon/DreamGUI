@@ -285,12 +285,12 @@ void UDreamTabView::RebuildTabs()
 			if (Entry.CloseBehaviour != nullptr)
 			{
 				Entry.CloseBehaviour->SetTransitionTarget(CloseFace->GetVisual());
-				// The INDEX as the payload, captured at build time -- and safe to capture precisely
-				// because the strip is rebuilt whenever its length changes, so no binding outlives
-				// the numbering it was made under. (The dialog's buttons capture a result NAME for
-				// the opposite reason: its row is rebound rather than rebuilt.)
+				// The TAB as the payload, and its index looked up at the click: a reorder moves tabs
+				// in place rather than rebuilding the strip, so an index captured here would close
+				// whichever tab had since come to stand where this one stood. (The dialog's buttons
+				// carry a result NAME for the same reason: their row is rebound, not rebuilt.)
 				Entry.CloseBehaviour->GetOnClickEvent().AddUObject(
-					this, &UDreamTabView::HandleCloseClicked, Index);
+					this, &UDreamTabView::HandleCloseClicked, TWeakObjectPtr<UDreamWidget>(TabRoot));
 			}
 		}
 
@@ -709,6 +709,10 @@ void UDreamTabView::CloseTab(int32 InIndex)
 	{
 		return;
 	}
+	// What was open before the close, so the close can say so when it opens something else. The tab
+	// the strip actually lit, which is the index resolved the way ApplyActiveTab resolves it.
+	const int32 ActiveBefore = ActiveTabIndex;
+	const bool bClosingOpenTab = (InIndex == FMath::Clamp(ActiveTabIndex, 0, Tabs.Num() - 1));
 	// BEFORE anything is destroyed, so a consumer that wants to keep the page can take it out of the
 	// switcher from the handler -- the order UDreamDialog::Close broadcasts in, and its reason.
 	OnTabClosed.Broadcast(InIndex);
@@ -738,6 +742,7 @@ void UDreamTabView::CloseTab(int32 InIndex)
 		--ActiveTabIndex;
 	}
 	RebuildTabs();
+	BroadcastActiveTabMoved(ActiveBefore, bClosingOpenTab);
 }
 
 void UDreamTabView::MoveTab(int32 InFromIndex, int32 InToIndex)
@@ -782,8 +787,30 @@ void UDreamTabView::MoveTab(int32 InFromIndex, int32 InToIndex)
 	MoveEntry(TabLabels);
 	MoveEntry(TabEnabled);
 
+	// The TABS move in place, carried by their widgets, rather than the strip being rebuilt. A rebuild
+	// destroyed every tab, the one under a reorder drag included, and the event system drops a drag
+	// whose widget is gone without ending it: the live reorder stopped after its first swap, however
+	// many tabs the pointer went on to pass. One sibling move does it, because the tabs sit side by side
+	// in the strip in strip order; the rest of the strip (the indicator, anything a template drew) keeps
+	// its place around them.
+	int32 FirstTabSibling = MAX_int32;
+	for (const FDreamTabViewTab& Tab : Tabs)
+	{
+		if (IsValid(Tab.TabNode))
+		{
+			FirstTabSibling = FMath::Min(FirstTabSibling, Tab.TabNode->GetSiblingIndex());
+		}
+	}
+	UDreamWidget* MovedTabNode = Tabs[InFromIndex].TabNode;
+	MoveEntry(Tabs);
+	if (IsValid(MovedTabNode) && FirstTabSibling != MAX_int32)
+	{
+		MovedTabNode->SetSiblingIndex(FirstTabSibling + InToIndex);
+	}
+
 	// The open PAGE stays open wherever it went, which is the only reading of a reorder that does not
 	// surprise: dragging a tab must not switch tabs.
+	const int32 ActiveBefore = ActiveTabIndex;
 	if (ActiveTabIndex == InFromIndex)
 	{
 		ActiveTabIndex = InToIndex;
@@ -796,8 +823,30 @@ void UDreamTabView::MoveTab(int32 InFromIndex, int32 InToIndex)
 	{
 		++ActiveTabIndex;
 	}
+	// The labels, the enabled flags and the open tab, pushed onto the tabs in their new order. Each tab
+	// carries its own caption, so nothing it shows changes; the push is what keeps the strip and the
+	// arrays it is read from saying the same thing.
+	ApplyStyle();
 	OnTabReordered.Broadcast(InFromIndex, InToIndex);
-	RebuildTabs();
+	BroadcastActiveTabMoved(ActiveBefore, /*bInOpenTabReplaced*/false);
+}
+
+void UDreamTabView::BroadcastActiveTabMoved(int32 InIndexBefore, bool bInOpenTabReplaced)
+{
+	if (Tabs.Num() == 0)
+	{
+		// No tab is open any more, so there is no index to announce.
+		return;
+	}
+	// The open tab can move without anyone switching to it: closing a tab before it renumbers it,
+	// closing it opens a neighbour, a reorder carries it along. OnTabChanged says the open tab changed
+	// whoever changed it, and a two-way binding hears the index only through these two -- left silent,
+	// it went on holding a number that now names a different tab, or none.
+	if (ActiveTabIndex != InIndexBefore || bInOpenTabReplaced)
+	{
+		OnTabChanged.Broadcast(ActiveTabIndex);
+		OnValueChangedBP.Broadcast(ActiveTabIndex);
+	}
 }
 
 int32 UDreamTabView::TabIndexAtPointer(const UDreamPointerEventData* InEventData) const
@@ -853,8 +902,8 @@ bool UDreamTabView::NativeOnDrag(UDreamPointerEventData* EventData)
 	{
 		// LIVE, one neighbour at a time: the tab under the pointer changes place with the dragged one
 		// the moment it is passed, which is what every browser does and what makes the gesture
-		// readable without a ghost widget following the cursor. MoveTab rebuilds the strip, so the
-		// dragged tab's new index is the one the pointer is now over.
+		// readable without a ghost widget following the cursor. MoveTab moves the dragged tab's own
+		// widget, so the drag goes on, and its new index is the one the pointer is now over.
 		MoveTab(DraggingTabIndex, Over);
 		DraggingTabIndex = Over;
 	}
@@ -868,7 +917,7 @@ bool UDreamTabView::NativeOnEndDrag(UDreamPointerEventData* EventData)
 	return bBubble;
 }
 
-void UDreamTabView::HandleCloseClicked(int32 InIndex)
+void UDreamTabView::HandleCloseClicked(TWeakObjectPtr<UDreamWidget> InTab)
 {
 	if (!bTabsClosable)
 	{
@@ -876,7 +925,15 @@ void UDreamTabView::HandleCloseClicked(int32 InIndex)
 		// that can still honour it.
 		return;
 	}
-	CloseTab(InIndex);
+	const UDreamWidget* Tab = InTab.Get();
+	for (int32 Index = 0; Index < Tabs.Num(); ++Index)
+	{
+		if (Tab != nullptr && Tabs[Index].TabNode.Get() == Tab)
+		{
+			CloseTab(Index);
+			return;
+		}
+	}
 }
 
 void UDreamTabView::FocusActivePage()

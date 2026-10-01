@@ -35,7 +35,18 @@ public:
 	FDreamUIMulticastDelegateInt32& GetOnValueChangedEvent(){return OnValueChangedCPP;}
 	
 	void AddToggleComponent(UUIToggle* InComp);
-	void RemoveToggleComponent(UUIToggle* InComp);
+	/**
+	 * Takes InComp out of the group, and out of the group's selection when it was the one chosen -- said as a change to
+	 * -1 when bInAnnounce. A toggle being destroyed does not announce: a screen closing is not its group's choice being
+	 * taken back, and a listener keeping the group's value would have written -1 as the screen went.
+	 */
+	void RemoveToggleComponent(UUIToggle* InComp, bool bInAnnounce = true);
+	/**
+	 * Stop holding InComp as the selection, without switching it: for a member leaving the group, or
+	 * one going into a state that is no selection (a radio's mixed state). The group's change fires with
+	 * -1 when InComp was the selection; any other toggle is left alone.
+	 */
+	void ReleaseSelection(UUIToggle* InComp);
 
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI-ToggleGroup")
 		void SetSelection(UUIToggle* Target);

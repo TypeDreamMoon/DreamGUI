@@ -11,6 +11,7 @@
 #include "Driver/DreamDriverInputModule.h"
 #include "Driver/DreamDriverProjection.h"
 #include "Driver/DreamDriverRig.h"
+#include "DreamDragDropTestTypes.h"
 #include "DreamInputPipelineTestTypes.h"
 #include "DreamPlayerScreenTestTypes.h"
 #include "Engine/World.h"
@@ -25,6 +26,7 @@
 #include "Interaction/DreamUINavigationStack.h"
 #include "Interaction/DreamUITooltip.h"
 #include "Interaction/UITextInput.h"
+#include "UObject/StrongObjectPtr.h"
 
 /*
  * ONE PIPELINE PER PLAYER, AND WHAT IT PROMISES.
@@ -675,6 +677,65 @@ bool FDreamInputKeyCharAndAnalogTest::RunTest(const FString& Parameters)
 	TestEqual(TEXT("...and is not heard"), Recorder->AnalogCount, 2);
 	TestFalse(TEXT("Another player's stick is not this player's focus's"), Router->HandleAnalog(1, EKeys::Gamepad_RightX, 0.7f));
 	TestEqual(TEXT("...and is not heard"), Recorder->AnalogCount, 2);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamInputDragSourceGoneWhileHeldTest,
+	"DreamGUI.Input.Pipeline.ADragWhoseSourceIsDestroyedWhileTheButtonIsHeldIsCancelledOnce",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * A drag source destroyed mid-drag -- a recycled row, a screen closed under the pointer -- with the button still held. The
+ * pipeline noticed the source was gone on the next frame and stopped dragging, but told nobody: the release then took the
+ * not-dragging road, and the operation's OnDragCancelled, the handler that puts an item back where it came from, never
+ * ran. The operation is told on the frame the pipeline notices, once, and the release adds nothing.
+ */
+bool FDreamInputDragSourceGoneWhileHeldTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamInputPipelineTestLocal;
+	FDreamDriverRig Rig = FDreamDriverRig::Headless(ViewportSize);
+	Rig.BindTest(this);
+	if (!TestTrue(TEXT("The rig came up"), Rig.IsUsable()))
+	{
+		return false;
+	}
+	Rig.EnsureGameInputHost();
+	UDreamWidget* Card = Rig.MakeWidget(TEXT("Card"), nullptr, FVector2D(160.0, 120.0), FVector2D(-200.0, 0.0));
+	UDreamUIDragDropSubsystem* DragDrop = UDreamUIDragDropSubsystem::Get(Rig.GetWorld());
+	if (!TestNotNull(TEXT("The card was built"), Card) || !TestNotNull(TEXT("A game world has a drag-drop subsystem"), DragDrop))
+	{
+		return false;
+	}
+	Card->AddComponent<UDreamUIDragSource>();
+	Rig.PumpFrames(3);
+
+	Rig.InputModule()->MoveTo(CentreOf(Card));
+	Rig.PumpFrames(1);
+	Rig.InputModule()->Press();
+	Rig.PumpFrames(1);
+	Rig.InputModule()->MoveTo(CentreOf(Card) + FVector2D(60.0, 0.0));
+	Rig.PumpFrames(2);
+	UDreamDragDropOperation* Operation = DragDrop->GetDragOperationForPointer(0);
+	if (!TestNotNull(TEXT("The source put an operation on the pointer when the drag began"), Operation))
+	{
+		Rig.InputModule()->Release();
+		Rig.PumpFrames(1);
+		return false;
+	}
+	TStrongObjectPtr<UDreamDragDropCallProbe> Probe(NewObject<UDreamDragDropCallProbe>());
+	Operation->OnDragCancelled.AddDynamic(Probe.Get(), &UDreamDragDropCallProbe::OnOperation);
+
+	// The source goes, the button stays down, and the pointer keeps moving.
+	const FVector2D FurtherOn = CentreOf(Card) + FVector2D(90.0, 0.0);
+	Card->DestroyWidget();
+	Rig.InputModule()->MoveTo(FurtherOn);
+	Rig.PumpFrames(2);
+	TestEqual(TEXT("The operation is told its drag was cancelled while the button is still held"), Probe->CallCount, 1);
+
+	Rig.InputModule()->Release();
+	Rig.PumpFrames(1);
+	TestEqual(TEXT("...and the release does not tell it twice"), Probe->CallCount, 1);
 	return true;
 }
 

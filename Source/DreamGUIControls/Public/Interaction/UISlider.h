@@ -44,6 +44,10 @@ protected:
 	 * themselves are deliberately ignored here.
 	 */
 	virtual void OnChildDimensionsChanged(UDreamWidget* Child, bool PivotChanged, bool WidthChanged, bool HeightChanged)override;
+	/** A slider that can no longer be used gives up a gamepad capture it was holding; see OnPointerDeselect. */
+	virtual void OnInteractableChanged(bool IsEnabled)override;
+	/** And so does one put to sleep. */
+	virtual void OnDisable()override;
 
 	UPROPERTY(EditAnywhere, Category = "DreamGUI-Slider")
 		float Value = 0;
@@ -51,7 +55,10 @@ protected:
 		float MinValue = 0;
 	UPROPERTY(EditAnywhere, Category = "DreamGUI-Slider")
 		float MaxValue = 1;
-	/** clamp to integer value */
+	/**
+	 * Whole numbers only: every value the slider takes -- dragged, stepped by navigation, set or authored --
+	 * is rounded to the nearest whole number, so each one owns an equal stretch of the track.
+	 */
 	UPROPERTY(EditAnywhere, Category = "DreamGUI-Slider")
 		bool WholeNumbers = false;
 	/** "Fill" can fill inside it's parent */
@@ -242,12 +249,18 @@ public:
 	virtual bool OnPointerBeginDrag_Implementation(UDreamPointerEventData* EventData)override;
 	virtual bool OnPointerDrag_Implementation(UDreamPointerEventData* EventData)override;
 	virtual bool OnPointerEndDrag_Implementation(UDreamPointerEventData* EventData)override;
+	/** Focus leaving the slider ends a gamepad capture, as it does UMG's -- see the definition. */
+	virtual bool OnPointerDeselect_Implementation(UDreamBaseEventData* EventData)override;
 	virtual bool OnNavigate_Implementation(EDreamUINavigationDirection direction, TScriptInterface<IDreamNavigationInterface>& result)override;
 private:
 	bool CheckFill();
 	bool CheckHandle();
+	/** Whether a drag from InEventData may move the value: the slider is enabled, and the button is one it answers. */
+	bool AcceptsPointerInput(const UDreamPointerEventData* InEventData)const;
 	void CalculateInputValue(UDreamPointerEventData* EventData);
 	void SetValue(float InValue, bool FireEvent);
+	/** InValue as this slider may hold it: rounded while WholeNumbers says so, then clamped to the range. */
+	float ConstrainValue(float InValue)const;
 	void ApplyValueToVisual();
 
 	/** LeftToRight or RightToLeft: which axis the value travels along. */

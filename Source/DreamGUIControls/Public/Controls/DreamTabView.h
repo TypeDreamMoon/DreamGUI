@@ -210,7 +210,10 @@ public:
 	UPROPERTY(BlueprintAssignable, Category = "Tab View")
 	FDreamTabViewTabEvent OnTabGenerated;
 
-	/** Fired when the open tab changes, whoever changed it. A consumer binds to this, not to a tab. */
+	/**
+	 * Fired when the open tab changes, whoever changed it -- a click, SetActiveTabIndex, or a close or a
+	 * reorder that moved it. A consumer binds to this, not to a tab.
+	 */
 	UPROPERTY(BlueprintAssignable, Category = "Tab View")
 	FDreamTabViewChangedEvent OnTabChanged;
 
@@ -304,12 +307,17 @@ public:
 	 * Close a tab: broadcast, then drop its caption and destroy its page, then regrow the strip.
 	 *
 	 * The active index follows the way a browser's does -- closing the open tab opens its neighbour,
-	 * closing one before it shifts the index down so the SAME page stays open.
+	 * closing one before it shifts the index down so the SAME page stays open. Either way OnTabChanged
+	 * reports it, because the open tab or its index moved.
 	 */
 	UFUNCTION(BlueprintCallable, Category = "Tab View")
 	void CloseTab(int32 InIndex);
 
-	/** Move a tab, carrying its page. Both indices are into the strip as it stands. */
+	/**
+	 * Move a tab, carrying its page. Both indices are into the strip as it stands. The tab's widget
+	 * moves with it rather than the strip being rebuilt, and OnTabChanged reports the open tab's new
+	 * index when the move shifted it.
+	 */
 	UFUNCTION(BlueprintCallable, Category = "Tab View")
 	void MoveTab(int32 InFromIndex, int32 InToIndex);
 
@@ -402,8 +410,14 @@ private:
 	/** A tab was switched on or off. The group's promise makes "which one is on" the whole news. */
 	void HandleTabValueChanged(bool bInIsOn);
 
-	/** A close button was clicked; the index is the payload it was bound with. */
-	void HandleCloseClicked(int32 InIndex);
+	/** A close button was clicked; the payload is the tab it closes, whose index is looked up now. */
+	void HandleCloseClicked(TWeakObjectPtr<UDreamWidget> InTab);
+
+	/**
+	 * Fire OnTabChanged and OnValueChangedBP for a close or a reorder that moved the open tab: when the
+	 * index differs from InIndexBefore, or bInOpenTabReplaced says a different page is open now.
+	 */
+	void BroadcastActiveTabMoved(int32 InIndexBefore, bool bInOpenTabReplaced);
 
 	/** Put focus on the first navigable thing inside the open page. See bFocusPageOnTabChange. */
 	void FocusActivePage();

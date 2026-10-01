@@ -197,10 +197,15 @@ void UDreamSpinBox::ApplyStyle()
 
 	if (InputBehaviour != nullptr)
 	{
-		// The typed-entry half of a spin box is a text field, and the two knobs it shares with one
-		// are pushed the same way everything else here is.
+		// The typed-entry half of a spin box is a text field, and the knobs it shares with one are
+		// pushed the same way everything else here is.
 		InputBehaviour->SetKeyboardType(KeyboardType);
 		InputBehaviour->SetVirtualKeyboardDismissAction(VirtualKeyboardDismissAction);
+		// The two commit knobs as well. Enter is the FIELD's to finish -- it commits through its own
+		// submit and then ends or keeps the edit by its own settings -- so left on the field's defaults,
+		// Enter always ended the edit, whatever this control's (keep editing, select all) said.
+		InputBehaviour->SetClearKeyboardFocusOnCommit(bClearKeyboardFocusOnCommit);
+		InputBehaviour->SetSelectAllTextOnCommit(bSelectAllTextOnCommit);
 	}
 	// Where the number sits in the field. Written on every push rather than only at build, for the
 	// template road's reason: a node somebody else's tree supplied carries the library's defaults.
@@ -395,13 +400,21 @@ void UDreamSpinBox::SetMaxFractionalDigits(int32 InMaxFractionalDigits)
 
 void UDreamSpinBox::SetClearKeyboardFocusOnCommit(bool bInClearKeyboardFocusOnCommit)
 {
-	// Read by CommitValue, so there is nothing to push: the next commit asks.
+	// Read by CommitValue, and by the field, which finishes an Enter by its own copy of the knob.
 	bClearKeyboardFocusOnCommit = bInClearKeyboardFocusOnCommit;
+	if (InputBehaviour != nullptr)
+	{
+		InputBehaviour->SetClearKeyboardFocusOnCommit(bInClearKeyboardFocusOnCommit);
+	}
 }
 
 void UDreamSpinBox::SetSelectAllTextOnCommit(bool bInSelectAllTextOnCommit)
 {
 	bSelectAllTextOnCommit = bInSelectAllTextOnCommit;
+	if (InputBehaviour != nullptr)
+	{
+		InputBehaviour->SetSelectAllTextOnCommit(bInSelectAllTextOnCommit);
+	}
 }
 
 void UDreamSpinBox::SetJustification(EDreamUITextParagraphHorizontalAlign InJustification)
@@ -645,11 +658,12 @@ void UDreamSpinBox::CommitValue(float InValue)
 		// a second submit would re-enter this function through HandleSubmitted.
 		InputBehaviour->DeactivateInput(false);
 	}
-	else if (bSelectAllTextOnCommit)
+	else if (bSelectAllTextOnCommit && InputBehaviour->IsInputActive())
 	{
 		// Ready to be typed over, which is what makes a spin box usable for a run of entries. Only
-		// when focus was KEPT -- selecting the contents of a field nobody is editing shows a
-		// highlight with no caret in it.
+		// when there is an edit for the selection to belong to -- a step face clicked, a scrub let go
+		// of or a field clicked away from commits a field nobody is editing, and selecting its
+		// contents showed a highlight with no caret in it.
 		InputBehaviour->SelectAll();
 	}
 }
@@ -659,12 +673,11 @@ void UDreamSpinBox::PushValueToParts()
 	const FString Spelled = FormatValue();
 	if (InputBehaviour != nullptr)
 	{
-		// Without notify: the field showing the control's value is not the user typing. Cleared
-		// first, not as belt-and-braces: UUITextInput::SetText runs every character of the NEW
-		// string through IsValidChar, and for DecimalNumber that check refuses a '.' (or a leading
-		// '-') already present in the OLD text -- so "3.5" pushed over "2.5" arrives as "35".
-		// Replacing through empty gives the filter nothing stale to refuse against.
-		InputBehaviour->SetTextWithoutNotify(FString());
+		// Without notify: the field showing the control's value is not the user typing. Straight over the old text:
+		// the field checks each character against the string it is building, so a '.' or a leading '-' the old text
+		// already had is no reason to refuse one. It was cleared first while the field checked against the old text,
+		// and with the edit kept open after Enter that empty push pulled the caret to the front, where the next digit
+		// typed went.
 		InputBehaviour->SetTextWithoutNotify(Spelled);
 	}
 	// Straight onto the visual as well. The behaviour's own visual write sits behind a

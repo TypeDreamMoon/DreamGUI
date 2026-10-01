@@ -86,8 +86,8 @@ Each input column holds one mark per configuration, in this order: Default (`[An
 |---|:---:|:---:|:---:|:---:|---:|
 | Border | `#...` | `....` | `....` | `----` | 11 |
 | Button | `##..` | `....` | `....` | `----` | 10 |
-| Dialog | `#...` | `....` | `....` | `----` | 11 |
-| Dropdown | `##..` | `....` | `....` | `----` | 10 |
+| Dialog | `#...` | `....` | `#...` | `----` | 10 |
+| Dropdown | `##..` | `....` | `#...` | `----` | 9 |
 | EditableText | `#...` | `....` | `....` | `#...` | 14 |
 | MultiLineEditableText | `#...` | `....` | `....` | `#...` | 14 |
 | TextInput | `#...` | `....` | `#...` | `#...` | 13 |
@@ -99,15 +99,15 @@ Each input column holds one mark per configuration, in this order: Default (`[An
 | TileView | `#...` | `....` | `#...` | `----` | 10 |
 | TreeView | `#...` | `....` | `#...` | `----` | 10 |
 | MenuAnchor | `#...` | `....` | `....` | `----` | 11 |
-| NativeWidgetHost | `....` | `....` | `....` | `----` | 12 |
+| NativeWidgetHost | `#...` | `....` | `....` | `----` | 11 |
 | ProgressBar | `#...` | `....` | `....` | `----` | 11 |
 | RadioButton | `#...` | `....` | `....` | `----` | 11 |
 | RichText | `....` | `....` | `....` | `----` | 12 |
-| RingMenu | `....` | `....` | `....` | `----` | 12 |
+| RingMenu | `#...` | `....` | `....` | `----` | 11 |
 | ScrollBar | `#...` | `....` | `....` | `----` | 11 |
 | ScrollBox | `#...` | `....` | `....` | `----` | 11 |
-| Slider | `#...` | `....` | `....` | `----` | 11 |
-| TabView | `#...` | `....` | `....` | `----` | 11 |
+| Slider | `##..` | `....` | `#...` | `----` | 9 |
+| TabView | `##..` | `....` | `....` | `----` | 10 |
 | Toggle | `##..` | `....` | `....` | `----` | 10 |
 | ToggleGroup | `....` | `....` | `....` | `----` | 12 |
 | EventBlocker | `....` | `....` | `....` | `----` | 12 |
@@ -122,7 +122,7 @@ Each input column holds one mark per configuration, in this order: Default (`[An
 | Tooltip | `....` | `....` | `....` | `----` | 12 |
 | VirtualCursor | `....` | `....` | `....` | `----` | 12 |
 
-**Holes: 430** of 464 applicable cells.
+**Holes: 423** of 464 applicable cells.
 
 Notes:
 
