@@ -86,6 +86,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamPressButtonClickOrderTest,
 	"DreamGUI.Button.ClickingTheCentrePressesReleasesAndClicksOnceEachInThatOrder",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamPressButtonClickOrderTest, "DreamGUI.Button.ClickingTheCentrePressesReleasesAndClicksOnceEachInThatOrder", "[Pointer][Animated]")
 
 bool FDreamPressButtonClickOrderTest::RunTest(const FString& Parameters)
 {
@@ -123,6 +124,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamPressButtonHoverTest,
 	"DreamGUI.Button.MovingOnAndOffTheButtonHoversAndUnhoversItOnceEach",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamPressButtonHoverTest, "DreamGUI.Button.MovingOnAndOffTheButtonHoversAndUnhoversItOnceEach", "[Pointer][Animated]")
 
 bool FDreamPressButtonHoverTest::RunTest(const FString& Parameters)
 {
@@ -160,6 +162,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamPressButtonSlideOffTest,
 	"DreamGUI.Button.PressingThenSlidingOffBeforeLettingGoReleasesWithoutClicking",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamPressButtonSlideOffTest, "DreamGUI.Button.PressingThenSlidingOffBeforeLettingGoReleasesWithoutClicking", "[Pointer][Animated]")
 
 bool FDreamPressButtonSlideOffTest::RunTest(const FString& Parameters)
 {
@@ -194,6 +197,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamPressButtonMouseDownMethodTest,
 	"DreamGUI.Button.WithTheMouseDownClickMethodThePressAloneClicks",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamPressButtonMouseDownMethodTest, "DreamGUI.Button.WithTheMouseDownClickMethodThePressAloneClicks", "[Pointer][Animated]")
 
 bool FDreamPressButtonMouseDownMethodTest::RunTest(const FString& Parameters)
 {
@@ -226,6 +230,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamPressButtonDisabledTest,
 	"DreamGUI.Button.ADisabledButtonIsNeitherHoveredNorPressedNorClicked",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamPressButtonDisabledTest, "DreamGUI.Button.ADisabledButtonIsNeitherHoveredNorPressedNorClicked", "[Pointer][Disabled]")
 
 bool FDreamPressButtonDisabledTest::RunTest(const FString& Parameters)
 {
@@ -261,6 +266,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamPressButtonDoubleClickTest,
 	"DreamGUI.Button.DoubleClickingIsTwoFullClicks",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamPressButtonDoubleClickTest, "DreamGUI.Button.DoubleClickingIsTwoFullClicks", "[Pointer][Animated]")
 
 bool FDreamPressButtonDoubleClickTest::RunTest(const FString& Parameters)
 {
@@ -291,6 +297,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamPressButtonRightClickTest,
 	"DreamGUI.Button.ARightClickDoesNotPressReleaseOrClickTheButton",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamPressButtonRightClickTest, "DreamGUI.Button.ARightClickDoesNotPressReleaseOrClickTheButton", "[Pointer][Animated]")
 
 bool FDreamPressButtonRightClickTest::RunTest(const FString& Parameters)
 {
@@ -320,6 +327,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamPressButtonRightClickAcceptedTest,
 	"DreamGUI.Button.WithTheRightButtonAcceptedARightClickPressesReleasesAndClicks",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamPressButtonRightClickAcceptedTest, "DreamGUI.Button.WithTheRightButtonAcceptedARightClickPressesReleasesAndClicks", "[Pointer][Animated]")
 
 bool FDreamPressButtonRightClickAcceptedTest::RunTest(const FString& Parameters)
 {
@@ -354,6 +362,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamPressButtonHoldTest,
 	"DreamGUI.Button.HoldingTheButtonDownIsAPressThatClicksOnlyWhenLetGo",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamPressButtonHoldTest, "DreamGUI.Button.HoldingTheButtonDownIsAPressThatClicksOnlyWhenLetGo", "[Pointer][Animated]")
 
 bool FDreamPressButtonHoldTest::RunTest(const FString& Parameters)
 {

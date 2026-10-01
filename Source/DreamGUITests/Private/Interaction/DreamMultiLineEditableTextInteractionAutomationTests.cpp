@@ -53,6 +53,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamMultiLineEnterBreaksTheLineTest,
 	"DreamGUI.MultiLineEditableText.EnterStartsANewLineInsteadOfCommitting",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamMultiLineEnterBreaksTheLineTest, "DreamGUI.MultiLineEditableText.EnterStartsANewLineInsteadOfCommitting", "[Pointer][Text][Animated]")
 
 bool FDreamMultiLineEnterBreaksTheLineTest::RunTest(const FString& Parameters)
 {
@@ -84,6 +85,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamMultiLineSubmitChordTest,
 	"DreamGUI.MultiLineEditableText.EnterWithASubmitKeyHeldCommitsInsteadOfBreakingTheLine",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamMultiLineSubmitChordTest, "DreamGUI.MultiLineEditableText.EnterWithASubmitKeyHeldCommitsInsteadOfBreakingTheLine", "[Pointer][Text][Animated]")
 
 bool FDreamMultiLineSubmitChordTest::RunTest(const FString& Parameters)
 {
@@ -116,6 +118,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamMultiLineUpDownTest,
 	"DreamGUI.MultiLineEditableText.UpAndDownMoveTheCaretBetweenLines",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamMultiLineUpDownTest, "DreamGUI.MultiLineEditableText.UpAndDownMoveTheCaretBetweenLines", "[Pointer][Text][Animated]")
 
 bool FDreamMultiLineUpDownTest::RunTest(const FString& Parameters)
 {

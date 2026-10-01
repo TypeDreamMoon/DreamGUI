@@ -46,6 +46,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamEditableTextTypeTest,
 	"DreamGUI.EditableText.ClickingTheInvisibleFaceAndTypingEntersTheText",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamEditableTextTypeTest, "DreamGUI.EditableText.ClickingTheInvisibleFaceAndTypingEntersTheText", "[Pointer][Text][Animated]")
 
 bool FDreamEditableTextTypeTest::RunTest(const FString& Parameters)
 {
@@ -72,6 +73,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamEditableTextEnterTest,
 	"DreamGUI.EditableText.EnterCommitsTheBorderlessFieldOnce",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamEditableTextEnterTest, "DreamGUI.EditableText.EnterCommitsTheBorderlessFieldOnce", "[Pointer][Text][Animated]")
 
 bool FDreamEditableTextEnterTest::RunTest(const FString& Parameters)
 {
@@ -100,6 +102,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamEditableTextClickAwayTest,
 	"DreamGUI.EditableText.ClickingSomewhereElseCommitsTheBorderlessField",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamEditableTextClickAwayTest, "DreamGUI.EditableText.ClickingSomewhereElseCommitsTheBorderlessField", "[Pointer][Text][Animated]")
 
 bool FDreamEditableTextClickAwayTest::RunTest(const FString& Parameters)
 {

@@ -60,6 +60,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamScrollBarInteractionDragHandleTest,
 	"DreamGUI.ScrollBar.DraggingTheHandleMovesItWithThePointerAndLeavesItsSizeAlone",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamScrollBarInteractionDragHandleTest, "DreamGUI.ScrollBar.DraggingTheHandleMovesItWithThePointerAndLeavesItsSizeAlone", "[Pointer][Animated]")
 
 bool FDreamScrollBarInteractionDragHandleTest::RunTest(const FString& Parameters)
 {
@@ -127,6 +128,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamScrollBarInteractionClickTrackTest,
 	"DreamGUI.ScrollBar.ClickingTheTrackBelowTheHandleJumpsTheHandleCentreToThePointer",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamScrollBarInteractionClickTrackTest, "DreamGUI.ScrollBar.ClickingTheTrackBelowTheHandleJumpsTheHandleCentreToThePointer", "[Pointer][Animated]")
 
 bool FDreamScrollBarInteractionClickTrackTest::RunTest(const FString& Parameters)
 {
@@ -195,6 +197,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamScrollBarInteractionRightButtonTest,
 	"DreamGUI.ScrollBar.ARightButtonDragMovesTheHandleOnlyOnceTheBarIsToldToAnswerIt",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamScrollBarInteractionRightButtonTest, "DreamGUI.ScrollBar.ARightButtonDragMovesTheHandleOnlyOnceTheBarIsToldToAnswerIt", "[Pointer][Animated]")
 
 bool FDreamScrollBarInteractionRightButtonTest::RunTest(const FString& Parameters)
 {

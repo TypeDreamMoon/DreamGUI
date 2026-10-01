@@ -70,6 +70,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamListsTileViewClickTest,
 	"DreamGUI.TileView.ClickingTheSixthTileSelectsTheSecondTileOfTheSecondLine",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamListsTileViewClickTest, "DreamGUI.TileView.ClickingTheSixthTileSelectsTheSecondTileOfTheSecondLine", "[Pointer][Animated]")
 
 bool FDreamListsTileViewClickTest::RunTest(const FString& Parameters)
 {
@@ -111,6 +112,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamListsTileViewWheelLinesTest,
 	"DreamGUI.TileView.AWheelNotchScrollsAWholeLineOfTilesNotOneTile",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamListsTileViewWheelLinesTest, "DreamGUI.TileView.AWheelNotchScrollsAWholeLineOfTilesNotOneTile", "[Pointer][Animated]")
 
 bool FDreamListsTileViewWheelLinesTest::RunTest(const FString& Parameters)
 {
@@ -154,6 +156,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamListsTileViewNavigateSelectsTest,
 	"DreamGUI.TileView.NavigatingRightThenDownMovesTheSelectionOneTileThenOneLine",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamListsTileViewNavigateSelectsTest, "DreamGUI.TileView.NavigatingRightThenDownMovesTheSelectionOneTileThenOneLine", "[Pointer][Nav][Animated]")
 
 bool FDreamListsTileViewNavigateSelectsTest::RunTest(const FString& Parameters)
 {
@@ -191,6 +194,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamListsTileViewNavigateFocusTest,
 	"DreamGUI.TileView.NavigatingRightThenDownMovesFocusOneTileThenOneLine",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamListsTileViewNavigateFocusTest, "DreamGUI.TileView.NavigatingRightThenDownMovesFocusOneTileThenOneLine", "[Pointer][Nav][Animated]")
 
 bool FDreamListsTileViewNavigateFocusTest::RunTest(const FString& Parameters)
 {

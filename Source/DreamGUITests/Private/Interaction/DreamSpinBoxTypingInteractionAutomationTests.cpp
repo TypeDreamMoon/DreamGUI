@@ -51,6 +51,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamSpinBoxTypeAndEnterTest,
 	"DreamGUI.SpinBox.TypingANumberIntoTheFieldAndPressingEnterCommitsIt",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamSpinBoxTypeAndEnterTest, "DreamGUI.SpinBox.TypingANumberIntoTheFieldAndPressingEnterCommitsIt", "[Pointer][Text][Animated]")
 
 bool FDreamSpinBoxTypeAndEnterTest::RunTest(const FString& Parameters)
 {
@@ -81,6 +82,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamSpinBoxRefusesLettersTest,
 	"DreamGUI.SpinBox.ALetterTypedIntoTheFieldIsRefusedAndTheNumberAroundItStillCommits",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamSpinBoxRefusesLettersTest, "DreamGUI.SpinBox.ALetterTypedIntoTheFieldIsRefusedAndTheNumberAroundItStillCommits", "[Pointer][Text][Animated]")
 
 bool FDreamSpinBoxRefusesLettersTest::RunTest(const FString& Parameters)
 {
@@ -114,6 +116,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamSpinBoxClampsTypedValueTest,
 	"DreamGUI.SpinBox.ATypedValueAboveTheMaximumIsClampedWhenCommitted",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamSpinBoxClampsTypedValueTest, "DreamGUI.SpinBox.ATypedValueAboveTheMaximumIsClampedWhenCommitted", "[Pointer][Text][Animated]")
 
 bool FDreamSpinBoxClampsTypedValueTest::RunTest(const FString& Parameters)
 {

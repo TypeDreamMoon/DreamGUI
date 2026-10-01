@@ -88,6 +88,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamTextInputTypeHelloTest,
 	"DreamGUI.TextInput.ClickingInAndTypingEntersEachCharacterWhereTheCaretIs",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamTextInputTypeHelloTest, "DreamGUI.TextInput.ClickingInAndTypingEntersEachCharacterWhereTheCaretIs", "[Pointer][Text][Animated]")
 
 bool FDreamTextInputTypeHelloTest::RunTest(const FString& Parameters)
 {
@@ -121,6 +122,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamTextInputEnterCommitsTest,
 	"DreamGUI.TextInput.EnterCommitsTheTextOnceAndEndsTheEdit",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamTextInputEnterCommitsTest, "DreamGUI.TextInput.EnterCommitsTheTextOnceAndEndsTheEdit", "[Pointer][Text][Animated]")
 
 bool FDreamTextInputEnterCommitsTest::RunTest(const FString& Parameters)
 {
@@ -161,6 +163,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamTextInputClickAwayCommitsTest,
 	"DreamGUI.TextInput.ClickingSomewhereElseCommitsTheTextOnce",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamTextInputClickAwayCommitsTest, "DreamGUI.TextInput.ClickingSomewhereElseCommitsTheTextOnce", "[Pointer][Text][Animated]")
 
 bool FDreamTextInputClickAwayCommitsTest::RunTest(const FString& Parameters)
 {
@@ -194,6 +197,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamTextInputEscapeKeepsTest,
 	"DreamGUI.TextInput.EscapeEndsTheEditKeepingTheTextAndCommitsItOnce",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamTextInputEscapeKeepsTest, "DreamGUI.TextInput.EscapeEndsTheEditKeepingTheTextAndCommitsItOnce", "[Pointer][Text][Nav][Animated]")
 
 bool FDreamTextInputEscapeKeepsTest::RunTest(const FString& Parameters)
 {
@@ -227,6 +231,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamTextInputEscapeRevertsTest,
 	"DreamGUI.TextInput.EscapeWithRevertPutsTheOriginalTextBackAndCommitsIt",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamTextInputEscapeRevertsTest, "DreamGUI.TextInput.EscapeWithRevertPutsTheOriginalTextBackAndCommitsIt", "[Pointer][Text][Nav][Animated]")
 
 bool FDreamTextInputEscapeRevertsTest::RunTest(const FString& Parameters)
 {
@@ -267,6 +272,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamTextInputCaretKeysTest,
 	"DreamGUI.TextInput.HomeEndAndLeftMoveTheCaretToWhereTheNextCharacterLands",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamTextInputCaretKeysTest, "DreamGUI.TextInput.HomeEndAndLeftMoveTheCaretToWhereTheNextCharacterLands", "[Pointer][Text][Animated]")
 
 bool FDreamTextInputCaretKeysTest::RunTest(const FString& Parameters)
 {
@@ -303,6 +309,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamTextInputDeleteKeysTest,
 	"DreamGUI.TextInput.BackspaceAndDeleteRemoveTheCharacterOnEitherSideOfTheCaret",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamTextInputDeleteKeysTest, "DreamGUI.TextInput.BackspaceAndDeleteRemoveTheCharacterOnEitherSideOfTheCaret", "[Pointer][Text][Animated]")
 
 bool FDreamTextInputDeleteKeysTest::RunTest(const FString& Parameters)
 {
@@ -335,6 +342,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamTextInputShiftSelectTest,
 	"DreamGUI.TextInput.ShiftLeftSelectsACharacterThatTheNextKeystrokeReplaces",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamTextInputShiftSelectTest, "DreamGUI.TextInput.ShiftLeftSelectsACharacterThatTheNextKeystrokeReplaces", "[Pointer][Text][Animated]")
 
 bool FDreamTextInputShiftSelectTest::RunTest(const FString& Parameters)
 {
@@ -364,6 +372,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamTextInputReadOnlyTest,
 	"DreamGUI.TextInput.AReadOnlyFieldTakesTheFocusButNoTyping",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamTextInputReadOnlyTest, "DreamGUI.TextInput.AReadOnlyFieldTakesTheFocusButNoTyping", "[Pointer][Text][Animated]")
 
 bool FDreamTextInputReadOnlyTest::RunTest(const FString& Parameters)
 {
@@ -395,6 +404,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamTextInputPasswordTest,
 	"DreamGUI.TextInput.APasswordFieldHoldsThePlainTextAndDrawsTheMask",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamTextInputPasswordTest, "DreamGUI.TextInput.APasswordFieldHoldsThePlainTextAndDrawsTheMask", "[Pointer][Text][Animated]")
 
 bool FDreamTextInputPasswordTest::RunTest(const FString& Parameters)
 {
@@ -429,6 +439,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamTextInputTypingPastMaxLengthTest,
 	"DreamGUI.TextInput.TypingStopsAtTheMaximumLength",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamTextInputTypingPastMaxLengthTest, "DreamGUI.TextInput.TypingStopsAtTheMaximumLength", "[Pointer][Text][Animated]")
 
 bool FDreamTextInputTypingPastMaxLengthTest::RunTest(const FString& Parameters)
 {
@@ -456,6 +467,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamTextInputTeardownEndsTheEditTest,
 	"DreamGUI.TextInput.TearingDownAFieldThatIsBeingEditedLeavesNoFieldBeingEdited",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamTextInputTeardownEndsTheEditTest, "DreamGUI.TextInput.TearingDownAFieldThatIsBeingEditedLeavesNoFieldBeingEdited", "[Pointer][Animated]")
 
 bool FDreamTextInputTeardownEndsTheEditTest::RunTest(const FString& Parameters)
 {
@@ -509,6 +521,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamTextInputDoubleClickSelectsWordTest,
 	"DreamGUI.TextInput.ADoubleClickSelectsTheWordUnderItsSecondPress",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamTextInputDoubleClickSelectsWordTest, "DreamGUI.TextInput.ADoubleClickSelectsTheWordUnderItsSecondPress", "[Pointer][Text][Animated]")
 
 bool FDreamTextInputDoubleClickSelectsWordTest::RunTest(const FString& Parameters)
 {

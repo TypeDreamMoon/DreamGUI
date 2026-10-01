@@ -79,6 +79,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamSpinBoxInteractionScrubTest,
 	"DreamGUI.SpinBox.ScrubbingMovesTheValueByTheDistanceTravelledAfterTheDragBeganAndCommitsOnce",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamSpinBoxInteractionScrubTest, "DreamGUI.SpinBox.ScrubbingMovesTheValueByTheDistanceTravelledAfterTheDragBeganAndCommitsOnce", "[Pointer][Animated]")
 
 bool FDreamSpinBoxInteractionScrubTest::RunTest(const FString& Parameters)
 {
@@ -141,6 +142,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamSpinBoxInteractionScrubClampTest,
 	"DreamGUI.SpinBox.ScrubbingPastEitherEndOfTheRangeStopsAtThatEnd",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamSpinBoxInteractionScrubClampTest, "DreamGUI.SpinBox.ScrubbingPastEitherEndOfTheRangeStopsAtThatEnd", "[Pointer][Animated]")
 
 bool FDreamSpinBoxInteractionScrubClampTest::RunTest(const FString& Parameters)
 {
@@ -182,6 +184,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamSpinBoxInteractionClickIsNotScrubTest,
 	"DreamGUI.SpinBox.AClickThatNeverMovesIsNotAScrubAndLeavesTheValueAlone",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamSpinBoxInteractionClickIsNotScrubTest, "DreamGUI.SpinBox.AClickThatNeverMovesIsNotAScrubAndLeavesTheValueAlone", "[Pointer][Animated]")
 
 bool FDreamSpinBoxInteractionClickIsNotScrubTest::RunTest(const FString& Parameters)
 {
