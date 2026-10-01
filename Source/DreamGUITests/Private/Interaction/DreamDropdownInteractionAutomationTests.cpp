@@ -5,8 +5,11 @@
 #include "Misc/AutomationTest.h"
 #include "UObject/StrongObjectPtr.h"
 
+#include "Controls/DreamButton.h"
 #include "Controls/DreamDropdown.h"
 #include "Core/Components/DreamWidget.h"
+#include "Event/DreamEventSystem.h"
+#include "Interaction/UIDropdown.h"
 #include "Interaction/UIScrollView.h"
 
 #include "Driver/DreamDriver.h"
@@ -106,6 +109,37 @@ namespace DreamPressDropdownTestLocal
 	bool ClickAtPixel(FDreamDriverRig& InRig, const FVector2D& InPixel)
 	{
 		return InRig.Driver()->Sequence().MoveToPixel(InPixel).Press().Release().Perform();
+	}
+
+	/** The scrolled column inside the list, which is where the rows are built. Null when there is none. */
+	UDreamWidget* FindColumn(const UDreamDropdown* InDropdown)
+	{
+		return InDropdown->ListNode != nullptr ? InDropdown->ListNode->FindChildByDisplayName(TEXT("Column")) : nullptr;
+	}
+
+	/** How many rows the list holds: everything in the column but the template the rows are copied from. */
+	int32 CountRows(const UDreamDropdown* InDropdown)
+	{
+		const UDreamWidget* Column = FindColumn(InDropdown);
+		if (Column == nullptr)
+		{
+			return 0;
+		}
+		int32 Rows = 0;
+		for (const UDreamWidget* Row : Column->GetChildren())
+		{
+			if (IsValid(Row) && Row != InDropdown->ItemTemplateNode.Get())
+			{
+				++Rows;
+			}
+		}
+		return Rows;
+	}
+
+	/** Two options to replace the placed three with: a different count, and words that are easy to read back. */
+	TArray<FText> TwoOtherOptions()
+	{
+		return { FText::AsCultureInvariant(TEXT("Windowed")), FText::AsCultureInvariant(TEXT("Fullscreen")) };
 	}
 }
 
@@ -264,6 +298,327 @@ bool FDreamPressDropdownWheelTest::RunTest(const FString& Parameters)
 	TestTrue(TEXT("Scrolling leaves the list open"), Placed.Dropdown->IsOpen());
 	TestEqual(TEXT("And the selection where it was"), Placed.Dropdown->GetSelectedIndex(), 0);
 	TestEqual(TEXT("With no selection change announced"), Listener->SelectionIndices.Num(), 0);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamPressDropdownDestroyedOpenTest,
+	"DreamGUI.Dropdown.DestroyingTheDropdownWithItsListOpenLeavesNothingOverTheScreen",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamPressDropdownDestroyedOpenTest, "DreamGUI.Dropdown.DestroyingTheDropdownWithItsListOpenLeavesNothingOverTheScreen", "[Pointer][Animated]")
+
+/*
+ * A dropdown destroyed while its list was open took none of the list's furniture with it. The
+ * full-screen blocker hangs on the root canvas, above everything, with its click bound to the
+ * destroyed behaviour, so it went on swallowing every click on the screen; and the list, lifted to the
+ * screen root, stayed up showing rows that called into the dead component. The list is opened here,
+ * the dropdown destroyed, and a button elsewhere on the screen clicked: the click reaches the button,
+ * no blocker is left on the root, and the list went with the dropdown.
+ */
+bool FDreamPressDropdownDestroyedOpenTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamPressDropdownTestLocal;
+	TStrongObjectPtr<UDreamPressInteractionListener> Listener(NewObject<UDreamPressInteractionListener>());
+	TStrongObjectPtr<UDreamPressInteractionListener> ElsewhereListener(NewObject<UDreamPressInteractionListener>());
+	FDreamDriverRig Rig = FDreamDriverRig::Headless(ViewportSize);
+	const FPlacedDropdown Placed = PlaceDropdown(*this, Rig, Listener.Get(), 3);
+	if (!Placed.IsReady())
+	{
+		return false;
+	}
+	// Low on the screen: clear of the dropdown, which sits high, and of the list that opens below it.
+	UDreamButton* Elsewhere = Rig.MakeControl<UDreamButton>(TEXT("Elsewhere"), nullptr, FVector2D(160.0, 50.0), FVector2D(0.0, -250.0));
+	if (!TestNotNull(TEXT("A button can be made elsewhere on the screen"), Elsewhere))
+	{
+		return false;
+	}
+	Elsewhere->OnClicked.AddDynamic(ElsewhereListener.Get(), &UDreamPressInteractionListener::HandleClicked);
+	Rig.PumpFrames(1);
+	if (!OpenByClicking(*this, Rig, Placed))
+	{
+		return false;
+	}
+	if (!TestNotNull(TEXT("The open list hung a blocker on the root"), Rig.Root()->FindChildByDisplayName(TEXT("UIDropdown_Blocker"))))
+	{
+		return false;
+	}
+	const TWeakObjectPtr<UDreamWidget> List(Placed.Dropdown->ListNode.Get());
+
+	Placed.Dropdown->DestroyWidget();
+	Rig.PumpFrames(1);
+
+	TestNull(TEXT("No blocker is left on the root"), Rig.Root()->FindChildByDisplayName(TEXT("UIDropdown_Blocker")));
+	TestFalse(TEXT("And the list went with the dropdown rather than staying on the screen"), List.IsValid());
+	TestTrue(TEXT("Clicking the button elsewhere completes"), Rig.Driver()->Find(FDreamBy::Widget(Elsewhere))->Click());
+	TestEqual(TEXT("The click reached the button"), ElsewhereListener->ClickedCount, 1);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamPressDropdownRefreshOnOpeningTest,
+	"DreamGUI.Dropdown.OptionsRefreshedAsTheListOpensAreTheRowsTheListShows",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamPressDropdownRefreshOnOpeningTest, "DreamGUI.Dropdown.OptionsRefreshedAsTheListOpensAreTheRowsTheListShows", "[Pointer][Animated]")
+
+/*
+ * OnOpening is UMG's moment to refresh a combo box's options, and the header promises the options
+ * written there are the ones the player sees. They were not: the rows had already been built from the
+ * old options when OnOpening fired, and a new options push only marked them for the next open -- three
+ * old rows squeezed into a list sized for the new count, each carrying an index the new options did not
+ * have. Here a handler replaces three options with two as the list opens: the list holds two rows, and
+ * clicking the second chooses the second of the new options.
+ */
+bool FDreamPressDropdownRefreshOnOpeningTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamPressDropdownTestLocal;
+	TStrongObjectPtr<UDreamPressInteractionListener> Listener(NewObject<UDreamPressInteractionListener>());
+	FDreamDriverRig Rig = FDreamDriverRig::Headless(ViewportSize);
+	const FPlacedDropdown Placed = PlaceDropdown(*this, Rig, Listener.Get(), 3);
+	if (!Placed.IsReady())
+	{
+		return false;
+	}
+	UDreamDropdown* Dropdown = Placed.Dropdown;
+	Listener->DuringOpening = [Dropdown]()
+	{
+		Dropdown->SetOptions(TwoOtherOptions());
+	};
+	if (!OpenByClicking(*this, Rig, Placed))
+	{
+		return false;
+	}
+
+	TestEqual(TEXT("The open list holds a row per option it was refreshed to"), CountRows(Dropdown), 2);
+	if (!TestTrue(TEXT("The refresh generated a row for the second new option"),
+		Listener->GeneratedItems.IsValidIndex(1) && IsValid(Listener->GeneratedItems[1])))
+	{
+		return false;
+	}
+	TestTrue(TEXT("Clicking that row completes"), Rig.Driver()->Find(FDreamBy::Widget(Listener->GeneratedItems[1].Get()))->Click());
+
+	if (TestEqual(TEXT("The choice was announced once"), Listener->SelectionIndices.Num(), 1))
+	{
+		TestEqual(TEXT("Naming the second option"), Listener->SelectionIndices[0], 1);
+	}
+	TestEqual(TEXT("Which is the second of the new options"), Dropdown->GetSelectedOption().ToString(), FString(TEXT("Fullscreen")));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamPressDropdownOptionsWhileOpenTest,
+	"DreamGUI.Dropdown.ChangingTheOptionsWhileTheListIsOpenRebuildsItsRowsAtOnce",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamPressDropdownOptionsWhileOpenTest, "DreamGUI.Dropdown.ChangingTheOptionsWhileTheListIsOpenRebuildsItsRowsAtOnce", "[Pointer][Animated]")
+
+/*
+ * The same defect from the other side: options replaced while the list is up. The rows used to stay as
+ * they were until the next open, so a row past the new end chose an index no option has -- a blank
+ * caption and a selection event naming nothing. The list is opened with three options and given two:
+ * it holds two rows at once, its column shrinks to two rows' height, and a click on a row chooses an
+ * option that exists.
+ */
+bool FDreamPressDropdownOptionsWhileOpenTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamPressDropdownTestLocal;
+	TStrongObjectPtr<UDreamPressInteractionListener> Listener(NewObject<UDreamPressInteractionListener>());
+	FDreamDriverRig Rig = FDreamDriverRig::Headless(ViewportSize);
+	const FPlacedDropdown Placed = PlaceDropdown(*this, Rig, Listener.Get(), 3);
+	if (!Placed.IsReady() || !OpenByClicking(*this, Rig, Placed))
+	{
+		return false;
+	}
+	UDreamWidget* Column = FindColumn(Placed.Dropdown);
+	if (!TestNotNull(TEXT("The open list has a column of rows"), Column))
+	{
+		return false;
+	}
+	const float ThreeRowsHigh = Column->GetHeight();
+
+	Placed.Dropdown->SetOptions(TwoOtherOptions());
+	Rig.PumpFrames(2);
+
+	TestTrue(TEXT("The list is still open"), Placed.Dropdown->IsOpen());
+	TestEqual(TEXT("It holds a row per new option"), CountRows(Placed.Dropdown), 2);
+	TestNearlyEqual(TEXT("And its column is two rows high where it was three"), Column->GetHeight(), ThreeRowsHigh * 2.0f / 3.0f, 0.5f);
+	if (!TestTrue(TEXT("The rebuild generated a row for the second new option"),
+		Listener->GeneratedItems.IsValidIndex(1) && IsValid(Listener->GeneratedItems[1])))
+	{
+		return false;
+	}
+	TestTrue(TEXT("Clicking that row completes"), Rig.Driver()->Find(FDreamBy::Widget(Listener->GeneratedItems[1].Get()))->Click());
+
+	bool bEveryChoiceExists = true;
+	for (const int32 Chosen : Listener->SelectionIndices)
+	{
+		bEveryChoiceExists &= (Chosen >= 0 && Chosen < Placed.Dropdown->GetOptionCount());
+	}
+	TestTrue(TEXT("Every choice announced names an option the dropdown has"), bEveryChoiceExists);
+	TestEqual(TEXT("And the click chose the second new option"), Placed.Dropdown->GetSelectedOption().ToString(), FString(TEXT("Fullscreen")));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamPressDropdownRowDestroyedElsewhereTest,
+	"DreamGUI.Dropdown.ARowDestroyedByOtherCodeDoesNotStopTheListFromBeingRebuilt",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamPressDropdownRowDestroyedElsewhereTest, "DreamGUI.Dropdown.ARowDestroyedByOtherCodeDoesNotStopTheListFromBeingRebuilt", "[Pointer][Animated]")
+
+/*
+ * The rows are handed to the consumer as they are built, and a consumer can destroy one. The behaviour
+ * keeps its rows weakly and, rebuilding, reached through every entry to destroy the row's widget
+ * without asking whether the entry still had a row behind it -- a null dereference on the next open.
+ * A row is destroyed here while the list is closed, the options are replaced, and the list opened
+ * again: it opens, holding a row per new option.
+ */
+bool FDreamPressDropdownRowDestroyedElsewhereTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamPressDropdownTestLocal;
+	TStrongObjectPtr<UDreamPressInteractionListener> Listener(NewObject<UDreamPressInteractionListener>());
+	FDreamDriverRig Rig = FDreamDriverRig::Headless(ViewportSize);
+	const FPlacedDropdown Placed = PlaceDropdown(*this, Rig, Listener.Get(), 3);
+	if (!Placed.IsReady() || !OpenByClicking(*this, Rig, Placed))
+	{
+		return false;
+	}
+	TestTrue(TEXT("Clicking far from the list to close it completes"), ClickAtPixel(Rig, FarFromTheDropdown));
+	Rig.PumpFrames(1);
+	if (!TestFalse(TEXT("The list closed"), Placed.Dropdown->IsOpen())
+		|| !TestTrue(TEXT("Opening generated a second row"), Listener->GeneratedItems.IsValidIndex(1) && IsValid(Listener->GeneratedItems[1])))
+	{
+		return false;
+	}
+
+	Listener->GeneratedItems[1]->DestroyWidget();
+	// Closed, so the new options only mark the rows for the next open -- which is where the rebuild runs.
+	Placed.Dropdown->SetOptions(TwoOtherOptions());
+	Rig.PumpFrames(1);
+
+	if (!OpenByClicking(*this, Rig, Placed))
+	{
+		return false;
+	}
+	TestEqual(TEXT("The reopened list holds a row per new option"), CountRows(Placed.Dropdown), 2);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamPressDropdownBehaviourDisabledTest,
+	"DreamGUI.Dropdown.ClickingADropdownSwitchedOffThroughItsBehaviourDoesNotOpenIt",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamPressDropdownBehaviourDisabledTest, "DreamGUI.Dropdown.ClickingADropdownSwitchedOffThroughItsBehaviourDoesNotOpenIt", "[Pointer][Disabled]")
+
+/*
+ * The behaviour's own switch, which leaves the face hit-testable -- a disabled control still stops a
+ * click reaching what is behind it -- so, unlike SetIsEnabled, it does not keep the click from
+ * arriving. The press was refused there and the click was not: a dropdown drawn disabled opened its
+ * list anyway. Clicking it now opens nothing and says nothing.
+ */
+bool FDreamPressDropdownBehaviourDisabledTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamPressDropdownTestLocal;
+	TStrongObjectPtr<UDreamPressInteractionListener> Listener(NewObject<UDreamPressInteractionListener>());
+	FDreamDriverRig Rig = FDreamDriverRig::Headless(ViewportSize);
+	const FPlacedDropdown Placed = PlaceDropdown(*this, Rig, Listener.Get(), 3);
+	if (!Placed.IsReady() || !TestNotNull(TEXT("The dropdown has its behaviour"), Placed.Dropdown->DropdownBehaviour.Get()))
+	{
+		return false;
+	}
+	Placed.Dropdown->DropdownBehaviour->SetInteractable(false);
+	Rig.PumpFrames(1);
+
+	TestTrue(TEXT("Clicking the switched-off dropdown completes"), Placed.Element->Click());
+
+	TestFalse(TEXT("The list stays closed"), Placed.Dropdown->IsOpen());
+	TestEqual(TEXT("And never began opening"), Listener->OpeningCount, 0);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamPressDropdownRightClickTest,
+	"DreamGUI.Dropdown.ARightClickDoesNotOpenTheDropdown",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamPressDropdownRightClickTest, "DreamGUI.Dropdown.ARightClickDoesNotOpenTheDropdown", "[Pointer][Animated]")
+
+/*
+ * UMG's combo box opens from an SButton, which answers the left mouse button alone. The behaviour
+ * answers every button unless told otherwise and the control never told it, so a right click opened the
+ * list. It opens nothing now, and the left button still does.
+ */
+bool FDreamPressDropdownRightClickTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamPressDropdownTestLocal;
+	TStrongObjectPtr<UDreamPressInteractionListener> Listener(NewObject<UDreamPressInteractionListener>());
+	FDreamDriverRig Rig = FDreamDriverRig::Headless(ViewportSize);
+	const FPlacedDropdown Placed = PlaceDropdown(*this, Rig, Listener.Get(), 3);
+	if (!Placed.IsReady())
+	{
+		return false;
+	}
+
+	TestTrue(TEXT("Right-clicking the dropdown completes"), Placed.Element->Click(EDreamUIMouseButtonType::Right));
+	TestFalse(TEXT("A right click leaves the list closed"), Placed.Dropdown->IsOpen());
+	TestEqual(TEXT("And began no opening"), Listener->OpeningCount, 0);
+
+	TestTrue(TEXT("Left-clicking it completes"), Placed.Element->Click());
+	TestTrue(TEXT("The left button still opens it"), Placed.Dropdown->IsOpen());
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamPressDropdownPadIntoListTest,
+	"DreamGUI.Dropdown.MovingPadFocusDownIntoTheOpenListKeepsItOpenAndChoosesFromIt",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamPressDropdownPadIntoListTest, "DreamGUI.Dropdown.MovingPadFocusDownIntoTheOpenListKeepsItOpenAndChoosesFromIt", "[Nav][Animated]")
+
+/*
+ * A pad opens the list with the accept button and moves down into it. The dropdown reads focus leaving
+ * it as the cue to close, and it asked whether the new focus was inside its own widget -- which a row
+ * is not once the list has been lifted to the screen layer, so the move into the list closed the list.
+ * The face also never gave up its focused look, because the dropdown's deselect never reached the
+ * selectable's own. Now the list stays open with focus on its first row, the face stops claiming focus,
+ * and one more step and the accept button choose the second option.
+ */
+bool FDreamPressDropdownPadIntoListTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamPressDropdownTestLocal;
+	TStrongObjectPtr<UDreamPressInteractionListener> Listener(NewObject<UDreamPressInteractionListener>());
+	FDreamDriverRig Rig = FDreamDriverRig::Headless(ViewportSize);
+	const FPlacedDropdown Placed = PlaceDropdown(*this, Rig, Listener.Get(), 3);
+	if (!Placed.IsReady() || !TestNotNull(TEXT("The dropdown has its behaviour"), Placed.Dropdown->DropdownBehaviour.Get()))
+	{
+		return false;
+	}
+
+	// The first direction lands on the only control there is; the accept button opens it.
+	TestTrue(TEXT("Moving onto the dropdown and accepting completes"),
+		Rig.Driver()->Sequence()
+			.Navigate(EDreamUINavigationDirection::Down)
+			.NavigationTrigger(true)
+			.NavigationTrigger(false)
+			.Perform());
+	Rig.PumpFrames(2);
+	if (!TestTrue(TEXT("The accept button opened the list"), Placed.Dropdown->IsOpen())
+		|| !TestTrue(TEXT("Opening generated the first two rows"), Listener->GeneratedItems.Num() >= 2))
+	{
+		return false;
+	}
+
+	TestTrue(TEXT("Moving down completes"), Rig.Driver()->Sequence().Navigate(EDreamUINavigationDirection::Down).Perform());
+	TestTrue(TEXT("Moving into the list leaves it open"), Placed.Dropdown->IsOpen());
+	TestEqual(TEXT("With focus on its first row"), Rig.EventSystem()->GetCurrentSelectedComponent(0), Listener->GeneratedItems[0].Get());
+	TestFalse(TEXT("And the face no longer claiming focus"), Placed.Dropdown->DropdownBehaviour->IsFocused());
+
+	TestTrue(TEXT("Moving down once more and accepting completes"),
+		Rig.Driver()->Sequence()
+			.Navigate(EDreamUINavigationDirection::Down)
+			.NavigationTrigger(true)
+			.NavigationTrigger(false)
+			.Perform());
+	if (TestEqual(TEXT("The choice was announced once"), Listener->SelectionIndices.Num(), 1))
+	{
+		TestEqual(TEXT("Naming the second option"), Listener->SelectionIndices[0], 1);
+	}
+	TestFalse(TEXT("And choosing closed the list"), Placed.Dropdown->IsOpen());
 	return true;
 }
 

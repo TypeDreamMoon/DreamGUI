@@ -48,11 +48,7 @@ bool UUISlider::CheckHandle()
 void UUISlider::PostEditChangeProperty(FPropertyChangedEvent &PropertyChangedEvent)
 {
     Super::PostEditChangeProperty(PropertyChangedEvent);
-    if (WholeNumbers)
-    {
-        Value = FMath::FloorToFloat(Value);
-    }
-    Value = FMath::Clamp(Value, MinValue, MaxValue);
+    Value = ConstrainValue(Value);
     HandleArea = nullptr;//force re-check
     FillArea = nullptr;//force re-check
     ApplyValueToVisual();
@@ -82,6 +78,25 @@ void UUISlider::OnChildDimensionsChanged(UDreamWidget* Child, bool PivotChanged,
     if (WidthChanged || HeightChanged)
     {
         ApplyValueToVisual();
+    }
+}
+
+void UUISlider::OnDisable()
+{
+    Super::OnDisable();
+    // Asleep with the stick held: the hold ends with its capture-end, rather than greeting the next visit already
+    // taken.
+    SetControllerCaptured(false);
+}
+
+void UUISlider::OnInteractableChanged(bool IsEnabled)
+{
+    Super::OnInteractableChanged(IsEnabled);
+    if (!IsInteractable())
+    {
+        // A slider the player can no longer reach cannot go on holding the stick: the capture ends here
+        // rather than surviving the disable and greeting the next visit already taken.
+        SetControllerCaptured(false);
     }
 }
 
@@ -141,9 +156,25 @@ void UUISlider::SetDirectionType(EUISliderDirectionType InDirection)
 	}
 }
 
+float UUISlider::ConstrainValue(float InValue) const
+{
+    if (WholeNumbers)
+    {
+        // The rule lives here, on the one road every value takes, rather than where a drag becomes a
+        // value: there, a gamepad step, a SetValue and an authored number all went round it, and a
+        // whole-number slider stepped by a quarter of 0..10 said 2.5. To the NEAREST whole number, so
+        // each one owns an equal stretch of the track -- rounding down left the top value nothing but
+        // the very end of it. A tie goes to the even neighbour, as uGUI's Mathf.Round sends it.
+        InValue = FMath::RoundHalfToEven(InValue);
+    }
+    // After the rounding: the range is the harder rule, so a whole number just past a fractional end
+    // is pulled back to that end.
+    return FMath::Clamp(InValue, MinValue, MaxValue);
+}
+
 void UUISlider::SetValue(float InValue, bool FireEvent)
 {
-    InValue = FMath::Clamp(InValue, MinValue, MaxValue);
+    InValue = ConstrainValue(InValue);
     if (Value != InValue)
     {
         Value = InValue;
@@ -175,13 +206,15 @@ void UUISlider::SetMinValue(float InMinValue, bool KeepRelativeValue, bool FireE
 		// multiplied it straight back into Value.
 		float value01 = GetValue01();
 		MinValue = InMinValue;
+        // Through the one rule every value obeys, so a whole-number slider keeps holding a whole number
+        // across a range change as well.
         if (KeepRelativeValue)
         {
-            Value = value01 * (MaxValue - MinValue) + MinValue;
+            Value = ConstrainValue(value01 * (MaxValue - MinValue) + MinValue);
         }
         else
         {
-            Value = FMath::Clamp(Value, MinValue, MaxValue);
+            Value = ConstrainValue(Value);
         }
         ApplyValueToVisual();
 		if (FireEvent)
@@ -198,13 +231,14 @@ void UUISlider::SetMaxValue(float InMaxValue, bool KeepRelativeValue, bool FireE
 		// The guarded reader, for the reason SetMinValue states.
 		float value01 = GetValue01();
         MaxValue = InMaxValue;
+		// The one rule every value obeys, for SetMinValue's reason.
 		if (KeepRelativeValue)
 		{
-			Value = value01 * (MaxValue - MinValue) + MinValue;
+			Value = ConstrainValue(value01 * (MaxValue - MinValue) + MinValue);
 		}
 		else
 		{
-			Value = FMath::Clamp(Value, MinValue, MaxValue);
+			Value = ConstrainValue(Value);
 		}
 		ApplyValueToVisual();
 		if (FireEvent)
@@ -229,9 +263,9 @@ void UUISlider::SetWholeNumbers(bool InValue)
 	WholeNumbers = InValue;
 	if (WholeNumbers)
 	{
-		// Without notify: stating the RULE is not the user moving the slider. The same floor
-		// CalculateInputValue applies to a drag and PostEditChangeProperty to an edit.
-		SetValue(FMath::FloorToFloat(Value), false);
+		// Without notify: stating the RULE is not the user moving the slider. SetValue is where the rule
+		// is applied, to this and to every other value.
+		SetValue(Value, false);
 	}
 }
 
@@ -267,11 +301,38 @@ void UUISlider::SetControllerCaptured(bool InValue)
 	}
 }
 
+bool UUISlider::AcceptsPointerInput(const UDreamPointerEventData* InEventData) const
+{
+    // A slider switched off through this behaviour stays hit-testable (see bInteractable), and every
+    // mouse button reaches it, so both questions are this component's to ask: disabled means nothing
+    // moves, and SSlider answers the left button alone. A touch and a pad's accept are not mouse
+    // buttons and always count.
+    return IsInteractable() && AcceptsPointerButton(InEventData);
+}
+
 bool UUISlider::OnPointerDown_Implementation(UDreamPointerEventData *EventData)
 {
+    if (!AcceptsPointerButton(EventData))
+    {
+        // Not a press at all -- no pressed look, no selection, no capture, no value -- and passed on, as
+        // SSlider::OnMouseButtonDown leaves every button but the left one unhandled and UUIButton passes
+        // on a button it does not answer.
+        return true;
+    }
     Super::OnPointerDown_Implementation(EventData);
+    if (!IsInteractable())
+    {
+        // The base has just refused the press of a disabled control, and the capture and the value are
+        // refused with it: a capture announced by a slider that cannot move would tell a consumer to
+        // wait for a value that is never coming.
+        return AllowEventBubbleUp;
+    }
     if (EventData->InputType == EDreamUIPointerInputType::Pointer)
     {
+        // A pointer press ends a gamepad capture, exactly as SSlider::OnMouseButtonDown resets its
+        // controller state: the player has switched to the mouse, and the stick's hold has to end with
+        // the capture-end its consumers commit on.
+        SetControllerCaptured(false);
         // A locked slider refuses the press outright: SSlider::OnMouseButtonDown asks IsLocked() before
         // anything else and returns Unhandled, so no capture begins -- and, having begun none, none
         // ends at the release. The value was never the problem (CalculateInputValue has its own lock
@@ -310,17 +371,38 @@ bool UUISlider::OnPointerUp_Implementation(UDreamPointerEventData *EventData)
 }
 bool UUISlider::OnPointerBeginDrag_Implementation(UDreamPointerEventData *EventData)
 {
-    CalculateInputValue(EventData);
+    // A drag is a press that moved, and is held to what the press was: a button this slider does not
+    // answer, or a slider that is switched off, moves nothing however far the pointer travels.
+    if (AcceptsPointerInput(EventData))
+    {
+        CalculateInputValue(EventData);
+    }
     return AllowEventBubbleUp;
 }
 bool UUISlider::OnPointerDrag_Implementation(UDreamPointerEventData *EventData)
 {
-    CalculateInputValue(EventData);
+    if (AcceptsPointerInput(EventData))
+    {
+        CalculateInputValue(EventData);
+    }
     return AllowEventBubbleUp;
 }
 bool UUISlider::OnPointerEndDrag_Implementation(UDreamPointerEventData *EventData)
 {
-    CalculateInputValue(EventData);
+    if (AcceptsPointerInput(EventData))
+    {
+        CalculateInputValue(EventData);
+    }
+    return AllowEventBubbleUp;
+}
+bool UUISlider::OnPointerDeselect_Implementation(UDreamBaseEventData* EventData)
+{
+    Super::OnPointerDeselect_Implementation(EventData);
+    // Focus has gone somewhere else, and the gamepad's hold on this slider goes with it -- SSlider's
+    // OnFocusLost resets its controller state for the same reason. A direction across a captured
+    // slider moves focus on, and the capture used to stay behind: OnControllerCaptureEnd never came, and
+    // the next visit found the slider already taken, so the accept meant to take it let it go instead.
+    SetControllerCaptured(false);
     return AllowEventBubbleUp;
 }
 bool UUISlider::OnNavigate_Implementation(EDreamUINavigationDirection direction, TScriptInterface<IDreamNavigationInterface>& result)
@@ -341,6 +423,14 @@ bool UUISlider::OnNavigate_Implementation(EDreamUINavigationDirection direction,
         || (DirectionType == EUISliderDirectionType::TopToBottom && direction == EDreamUINavigationDirection::Down))
     {
         valueIntervalMultiply = NavigationChangeInterval;
+    }
+    if (!IsInteractable())
+    {
+        // Switched off while it held the stick -- through the behaviour's own switch, which tells
+        // OnInteractableChanged nothing -- so the hold ends here, with its capture-end, and the directions go on
+        // to the navigation search as an uncaptured slider's do.
+        SetControllerCaptured(false);
+        return Super::OnNavigate_Implementation(direction, result);
     }
     if (bLocked)
     {
@@ -363,10 +453,16 @@ bool UUISlider::OnNavigate_Implementation(EDreamUINavigationDirection direction,
     }
     else
     {
-        auto tempValue = Value;
-        tempValue += (MaxValue - MinValue) * valueIntervalMultiply;
-        tempValue = FMath::Clamp(tempValue, MinValue, MaxValue);
-        SetValue(tempValue);
+        float valueDelta = (MaxValue - MinValue) * valueIntervalMultiply;
+        if (WholeNumbers && valueDelta != 0.0f && FMath::Abs(valueDelta) < 1.0f)
+        {
+            // A whole-number slider moves by whole numbers or not at all, and a press worth less than
+            // one would be rounded straight back to where it started -- the stick would push and the
+            // slider would never move. One whole number is the least a press can mean.
+            valueDelta = valueDelta > 0.0f ? 1.0f : -1.0f;
+        }
+        // SetValue applies the range and the whole-number rule.
+        SetValue(Value + valueDelta);
         return false;
     }
 }
@@ -448,10 +544,7 @@ void UUISlider::CalculateInputValue(UDreamPointerEventData *EventData)
             value = MinValue + FMath::RoundToFloat((value - MinValue) / StepSize) * StepSize;
             value = FMath::Clamp(value, MinValue, MaxValue);
         }
-        if (WholeNumbers)
-        {
-            value = FMath::FloorToFloat(value);
-        }
+        // The whole-number rule is SetValue's, applied there to this value as to every other.
         SetValue(value, true);
     }
 }

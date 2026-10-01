@@ -8,6 +8,7 @@
 #include "Controls/DreamRadioButton.h"
 #include "Controls/DreamToggle.h"
 #include "Core/Components/DreamWidget.h"
+#include "Interaction/UIToggle.h"
 #include "Interaction/UIToggleGroup.h"
 
 #include "Driver/DreamDriver.h"
@@ -210,6 +211,93 @@ bool FDreamPressRadioSeparateGroupsTest::RunTest(const FString& Parameters)
 		ModeAnnouncements += Listener->CheckStates.Num();
 	}
 	TestEqual(TEXT("And nothing in the other group announced anything"), ModeAnnouncements, 0);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamPressRadioLeftGroupTest,
+	"DreamGUI.RadioButton.ARadioThatLeftItsGroupKeepsItsChoiceWhenTheGroupChoosesAnother",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamPressRadioLeftGroupTest, "DreamGUI.RadioButton.ARadioThatLeftItsGroupKeepsItsChoiceWhenTheGroupChoosesAnother", "[Pointer][Animated]")
+
+/*
+ * Leaving a group took the radio out of the group's list and left it as the group's remembered
+ * selection, which is the toggle the next choice switches off -- so a chosen radio moved out of its
+ * group went off the moment a former neighbour was clicked. The chosen radio leaves the group here and
+ * another radio of the group is clicked: the new one is the group's choice, and the one that left is
+ * still checked.
+ */
+bool FDreamPressRadioLeftGroupTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamPressRadioTestLocal;
+	FDreamDriverRig Rig = FDreamDriverRig::Headless(ViewportSize);
+	Rig.BindTest(this);
+	if (!TestTrue(TEXT("The headless rig came up"), Rig.IsUsable()))
+	{
+		return false;
+	}
+	const FRadioGroup Radios = MakeRadioGroup(*this, Rig, TEXT("Quality"), FVector2D::ZeroVector, 0);
+	if (!Radios.IsReady())
+	{
+		return false;
+	}
+	Radios.Radios[0]->SetToggleGroup(nullptr);
+	Rig.PumpFrames(1);
+	TestNull(TEXT("Leaving took the radio out of the group's choice"), Radios.Group->GetSelectedItem());
+
+	TestTrue(TEXT("Clicking the second radio completes"), Rig.Driver()->Find(FDreamBy::Widget(Radios.Radios[1]))->Click());
+
+	TestTrue(TEXT("The second radio is chosen"), Radios.Radios[1]->IsChecked());
+	TestEqual(TEXT("And is the group's choice"), Radios.Group->GetSelectedItem(), Radios.Radios[1]->ToggleBehaviour.Get());
+	TestTrue(TEXT("The radio that left the group is still checked"), Radios.Radios[0]->IsChecked());
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamPressRadioMixedInGroupTest,
+	"DreamGUI.RadioButton.AMixedRadioInAGroupIsNotTheChoiceAndAClickChoosesIt",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamPressRadioMixedInGroupTest, "DreamGUI.RadioButton.AMixedRadioInAGroupIsNotTheChoiceAndAClickChoosesIt", "[Pointer][Animated]")
+
+/*
+ * Mixed parks the radio's two-state toggle at unchecked. In a group that forbids an empty choice the
+ * group refused to let its chosen member go off, park included, so the chosen radio put into the mixed
+ * state stayed on underneath -- GetIsOn said true -- and a click, which flips the toggle, could only
+ * try to switch it off, which the group refused again: the radio could never be chosen. Mixed now
+ * reads as not chosen, the group holds no choice, and a click checks the radio.
+ */
+bool FDreamPressRadioMixedInGroupTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamPressRadioTestLocal;
+	TArray<TStrongObjectPtr<UDreamPressInteractionListener>> Listeners;
+	FDreamDriverRig Rig = FDreamDriverRig::Headless(ViewportSize);
+	Rig.BindTest(this);
+	if (!TestTrue(TEXT("The headless rig came up"), Rig.IsUsable()))
+	{
+		return false;
+	}
+	const FRadioGroup Radios = MakeRadioGroup(*this, Rig, TEXT("Quality"), FVector2D::ZeroVector, 0);
+	if (!Radios.IsReady())
+	{
+		return false;
+	}
+	Listen(Radios, Listeners);
+	Radios.Radios[0]->SetCheckedState(EDreamCheckState::Undetermined);
+	Rig.PumpFrames(1);
+
+	TestEqual(TEXT("The chosen radio is mixed now"), Radios.Radios[0]->GetCheckedState(), EDreamCheckState::Undetermined);
+	TestFalse(TEXT("And reads as not on"), Radios.Radios[0]->GetIsOn());
+	TestNull(TEXT("The group holds no choice"), Radios.Group->GetSelectedItem());
+
+	TestTrue(TEXT("Clicking the mixed radio completes"), Rig.Driver()->Find(FDreamBy::Widget(Radios.Radios[0]))->Click());
+
+	TestTrue(TEXT("The click chose it"), Radios.Radios[0]->IsChecked());
+	TestEqual(TEXT("And it is the group's choice again"), Radios.Group->GetSelectedItem(), Radios.Radios[0]->ToggleBehaviour.Get());
+	if (TestEqual(TEXT("The radio announced the mixed state and then the choice"), Listeners[0]->CheckStates.Num(), 2))
+	{
+		TestEqual(TEXT("Mixed first"), Listeners[0]->CheckStates[0], EDreamCheckState::Undetermined);
+		TestEqual(TEXT("Then checked"), Listeners[0]->CheckStates[1], EDreamCheckState::Checked);
+	}
 	return true;
 }
 

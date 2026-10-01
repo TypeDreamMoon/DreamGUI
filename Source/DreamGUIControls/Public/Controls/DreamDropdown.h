@@ -6,6 +6,7 @@
 #include "Controls/DreamUIControl.h"
 #include "DreamDropdown.generated.h"
 
+class UDreamUIPopupLayer;
 class UDreamWidget;
 class UUIDropdown;
 
@@ -100,8 +101,9 @@ public:
 	/**
 	 * The list is opening -- UMG's OnOpening, and the moment to refresh the options from.
 	 *
-	 * Fired from the behaviour's Show, which is the moment the list appears. The rows are placed
-	 * immediately afterwards, so options written from a handler here are the ones the player sees.
+	 * Fired from the behaviour's Show, which is the moment the list appears: its rows are already built
+	 * then, and options written from a handler here rebuild them at once, before the list is sized and
+	 * placed -- so they are the ones the player sees.
 	 */
 	UPROPERTY(BlueprintAssignable, Category = "Dropdown")
 	FDreamDropdownSimpleEvent OnOpening;
@@ -124,7 +126,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Dropdown")
 	void SetSelectedIndex(int32 InIndex);
 
-	/** Replace the options and rebuild the list next time it opens. */
+	/** Replace the options: an open list is rebuilt and re-placed at once, a closed one when it next opens. */
 	UFUNCTION(BlueprintCallable, Category = "Dropdown")
 	void SetOptions(const TArray<FText>& InOptions);
 
@@ -273,6 +275,12 @@ private:
 	void HandleValueChanged(int32 InIndex);
 	void PushOptions();
 	void ApplyListRestingGeometry(const FDreamDropdownStyle& InActive);
+
+	/**
+	 * Size the open list for the rows it holds and lift it to InPopup, from where it hangs under the
+	 * face. What an open does, and what an options push re-does for a list that is already up.
+	 */
+	void LiftOpenList(UDreamUIPopupLayer& InPopup);
 
 	/** The rows the behaviour duplicated out of the template, which is everything in the column but it. */
 	TArray<UDreamWidget*> GetItemRows() const;

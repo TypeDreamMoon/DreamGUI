@@ -30,6 +30,12 @@ UDreamUMGWidgetInteractionManager::FInteractionContainer* UDreamUMGWidgetInterac
 
 bool UDreamUMGWidgetInteraction::OnPointerEnter_Implementation(UDreamPointerEventData* EventData)
 {
+	if (CurrentPointerEventData.Get() == EventData || !CurrentPointerEventData.IsValid())
+	{
+		// Back over this surface before letting go of a press that left it, or a hover starting afresh:
+		// either way no exit is owed any more.
+		bExitPendingRelease = false;
+	}
 	if (!CurrentPointerEventData.IsValid())
 	{
 		CurrentPointerEventData = EventData;
@@ -53,6 +59,22 @@ bool UDreamUMGWidgetInteraction::OnPointerEnter_Implementation(UDreamPointerEven
 }
 bool UDreamUMGWidgetInteraction::OnPointerExit_Implementation(UDreamPointerEventData* EventData)
 {
+	if (CurrentPointerEventData.Get() == EventData && PressingPointerEventData.Get() == EventData)
+	{
+		// Not while a press made here is held. A press that travels past the drag threshold is a drag,
+		// and the event system takes a dragged widget out of its own hit test -- so this surface hears
+		// an exit a few pixels into every drag that starts on it. Acting on that gave the cursor back and
+		// stopped forwarding moves, and a UMG slider's thumb froze where the drag began, though the
+		// thumb had captured the pointer on its press and expects every move until the release. The
+		// exit is acted on at the release instead.
+		bExitPendingRelease = true;
+		return bAllowEventBubbleUp;
+	}
+	EndHover(EventData);
+	return bAllowEventBubbleUp;
+}
+void UDreamUMGWidgetInteraction::EndHover(UDreamPointerEventData* EventData)
+{
 	if (CurrentPointerEventData.Get() == EventData)
 	{
 		CurrentPointerEventData.Reset();
@@ -67,7 +89,6 @@ bool UDreamUMGWidgetInteraction::OnPointerExit_Implementation(UDreamPointerEvent
 			}
 		}
 	}
-	return bAllowEventBubbleUp;
 }
 bool UDreamUMGWidgetInteraction::OnPointerDown_Implementation(UDreamPointerEventData* EventData)
 {
@@ -87,6 +108,9 @@ bool UDreamUMGWidgetInteraction::OnPointerDown_Implementation(UDreamPointerEvent
 	if (PressKey.IsValid())
 	{
 		PressPointerKey(PressKey);
+		// Whether or not Slate took the key: what this records is the press on this surface, which is what
+		// keeps the hover through a drag -- see OnPointerExit.
+		PressingPointerEventData = EventData;
 	}
 	return bAllowEventBubbleUp;
 }
@@ -113,6 +137,16 @@ bool UDreamUMGWidgetInteraction::OnPointerUp_Implementation(UDreamPointerEventDa
 	if (ReleaseKey.IsValid())
 	{
 		ReleasePointerKey(ReleaseKey);
+	}
+	if (PressingPointerEventData.Get() == EventData)
+	{
+		PressingPointerEventData.Reset();
+		if (bExitPendingRelease)
+		{
+			// The exit this press held off, now that nothing is held: the pointer left during the drag.
+			bExitPendingRelease = false;
+			EndHover(EventData);
+		}
 	}
 	return bAllowEventBubbleUp;
 }
@@ -178,6 +212,8 @@ void UDreamUMGWidgetInteraction::OnDestroy()
 	UDreamUMGWidgetInteractionManager* Manager = Helper.Get();
 	Helper.Reset();
 	CurrentPointerEventData.Reset();
+	PressingPointerEventData.Reset();
+	bExitPendingRelease = false;
 	if (Manager == nullptr)
 	{
 		return;
@@ -257,7 +293,22 @@ FWidgetPath UDreamUMGWidgetInteraction::DetermineWidgetUnderPointer()
 	LastLocalHitLocation = LocalHitLocation;
 	FWidgetTraceResult TraceResult;
 	const UDreamPointerEventData* HoveringPointer = CurrentPointerEventData.Get();
-	if (HoveringPointer != nullptr && HoveringPointer->Raycaster != nullptr)
+	if (HoveringPointer != nullptr && HoveringPointer == PressingPointerEventData.Get() && IsValid(HoveringPointer->PressRaycaster))
+	{
+		// While a press made here is held, the pointer is followed on the plane it pressed, through the
+		// raycaster that took the press. The point the hit test found is no use then: a drag takes this
+		// surface out of the hit test, so that point lies on whatever is behind -- or there is none at
+		// all. The plane is the one this surface was pressed on, so the point is where the pointer is ON
+		// the surface, inside its rect or past its edge, which is what a captured UMG widget is owed.
+		const FVector RayOrigin = HoveringPointer->GetDragRayOrigin();
+		const FVector RayEnd = RayOrigin + HoveringPointer->GetDragRayDirection() * HoveringPointer->PressRaycaster->GetRayLength();
+
+		WidgetComponent->GetLocalHitLocation(HoveringPointer->FaceIndex, HoveringPointer->GetWorldPointInPlane(), RayOrigin, RayEnd, TraceResult.LocalHitLocation);
+		TraceResult.HitWidgetPath = FWidgetPath(WidgetComponent->GetHitWidgetPath(TraceResult.LocalHitLocation, /*bIgnoreEnabledStatus*/ false));
+
+		LocalHitLocation = TraceResult.LocalHitLocation;
+	}
+	else if (HoveringPointer != nullptr && HoveringPointer->Raycaster != nullptr)
 	{
 		auto RayOrigin = HoveringPointer->Raycaster->GetRayOrigin();
 		auto RayDirection = HoveringPointer->Raycaster->GetRayDirection();

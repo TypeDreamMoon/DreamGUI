@@ -8,6 +8,7 @@
 #include "Controls/DreamButton.h"
 #include "Controls/DreamDialog.h"
 #include "Core/Components/DreamWidget.h"
+#include "Event/DreamEventSystem.h"
 
 #include "Driver/DreamDriver.h"
 #include "Driver/DreamDriverElement.h"
@@ -227,6 +228,141 @@ bool FDreamPressDialogDimmerDismissTest::RunTest(const FString& Parameters)
 	}
 	TestEqual(TEXT("No button was clicked to do it"), Listener->DialogButtonResults.Num(), 0);
 	TestFalse(TEXT("And the dialog put itself away"), Placed.Dialog->GetWidgetActive());
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamPressDialogDisabledDefaultTest,
+	"DreamGUI.Dialog.SubmittingTheDefaultButtonWhileItIsDisabledLeavesTheDialogUp",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * SubmitDefaultButton answers as the default button would -- and it broadcast that button's click
+ * whether or not the button could be clicked, so a dialog whose confirm was greyed out until the
+ * player had done something still closed with "Confirm" on Enter. The default is disabled here and
+ * submitted: the dialog stays up and nothing is announced. Enabled again, the same call answers.
+ */
+bool FDreamPressDialogDisabledDefaultTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamPressDialogTestLocal;
+	TStrongObjectPtr<UDreamPressInteractionListener> Listener(NewObject<UDreamPressInteractionListener>());
+	FDreamDriverRig Rig = FDreamDriverRig::Headless(ViewportSize);
+	const FPlacedDialog Placed = PlaceDialog(*this, Rig, Listener.Get());
+	if (!Placed.IsReady())
+	{
+		return false;
+	}
+	UDreamButton* Confirm = ButtonAnswering(Placed.Dialog, TEXT("Confirm"));
+	if (!TestNotNull(TEXT("The dialog has a button answering Confirm"), Confirm)
+		|| !TestEqual(TEXT("Which is its default"), Placed.Dialog->GetDefaultButton(), Confirm))
+	{
+		return false;
+	}
+	// UMG's SetIsEnabled, which is what a game flips to grey a button out.
+	Confirm->SetIsEnabled(false);
+	Rig.PumpFrames(1);
+
+	Placed.Dialog->SubmitDefaultButton();
+
+	TestEqual(TEXT("Submitting a disabled default closes nothing"), Listener->DialogClosedResults.Num(), 0);
+	TestEqual(TEXT("And announces no answer"), Listener->DialogButtonResults.Num(), 0);
+	TestTrue(TEXT("The dialog is still up"), Placed.Dialog->GetWidgetActive());
+
+	Confirm->SetIsEnabled(true);
+	Rig.PumpFrames(1);
+	Placed.Dialog->SubmitDefaultButton();
+	if (TestEqual(TEXT("Enabled again, submitting closes the dialog once"), Listener->DialogClosedResults.Num(), 1))
+	{
+		TestEqual(TEXT("With the default's answer"), Listener->DialogClosedResults[0], FName(TEXT("Confirm")));
+	}
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamPressDialogBackRearmedTest,
+	"DreamGUI.Dialog.BackClosesTheDialogAgainOnceCloseOnBackIsTurnedOffAndBackOn",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamPressDialogBackRearmedTest, "DreamGUI.Dialog.BackClosesTheDialogAgainOnceCloseOnBackIsTurnedOffAndBackOn", "[Nav][Animated]")
+
+/*
+ * Turning bCloseOnBack off releases the dialog's Back scope by clearing the dialog it answers for, and
+ * turning it back on only did anything when no scope existed yet -- which one did. The scope stayed
+ * released, Back went on to the screen underneath, and the dialog could no longer be backed out of.
+ * Off and on again, Back cancels the dialog with its cancel result.
+ */
+bool FDreamPressDialogBackRearmedTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamPressDialogTestLocal;
+	TStrongObjectPtr<UDreamPressInteractionListener> Listener(NewObject<UDreamPressInteractionListener>());
+	FDreamDriverRig Rig = FDreamDriverRig::Headless(ViewportSize);
+	const FPlacedDialog Placed = PlaceDialog(*this, Rig, Listener.Get());
+	if (!Placed.IsReady())
+	{
+		return false;
+	}
+	Placed.Dialog->SetCloseOnBack(false);
+	Placed.Dialog->SetCloseOnBack(true);
+	Rig.PumpFrames(1);
+
+	TestTrue(TEXT("Pressing Back completes"), Rig.Driver()->Sequence().Back().Perform());
+
+	if (TestEqual(TEXT("Back closed the dialog once"), Listener->DialogClosedResults.Num(), 1))
+	{
+		TestEqual(TEXT("As a cancel"), Listener->DialogClosedResults[0], FName(TEXT("Cancel")));
+	}
+	TestFalse(TEXT("And the dialog put itself away"), Placed.Dialog->GetWidgetActive());
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamPressDialogFocusOnWakeTest,
+	"DreamGUI.Dialog.ADialogPlacedAsleepTakesFocusWhenItIsWokenAndNotBefore",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * A standalone dialog waits asleep until there is something to ask, and puts focus on its default
+ * button when it appears. It did that at construct, which is begin play whether or not the dialog is
+ * showing: an asleep dialog took focus onto a button nobody could see, away from the screen the
+ * player was on. And when it was woken, the Back scope it wears was pushed and put focus on the first
+ * control in reading order -- the cancel button. Placed asleep here, it leaves focus alone; woken,
+ * focus is on its default button.
+ */
+bool FDreamPressDialogFocusOnWakeTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamPressDialogTestLocal;
+	FDreamDriverRig Rig = FDreamDriverRig::Headless(ViewportSize);
+	Rig.BindTest(this);
+	if (!TestTrue(TEXT("The headless rig came up"), Rig.IsUsable()))
+	{
+		return false;
+	}
+	// Asleep from the start: the dialog begins play under a host that is not active.
+	UDreamWidget* Host = Rig.MakeWidget(TEXT("Host"), nullptr, FVector2D(ViewportSize.X, ViewportSize.Y));
+	if (!TestNotNull(TEXT("A host for the dialog can be made"), Host))
+	{
+		return false;
+	}
+	Host->SetWidgetActive(false);
+	UDreamDialog* Dialog = Rig.MakeControl<UDreamDialog>(TEXT("Ask"), Host, FVector2D(ViewportSize.X, ViewportSize.Y));
+	if (!TestNotNull(TEXT("A dialog can be made under it"), Dialog))
+	{
+		return false;
+	}
+	Rig.PumpFrames(1);
+	UDreamButton* Confirm = ButtonAnswering(Dialog, TEXT("Confirm"));
+	if (!TestNotNull(TEXT("The dialog has its default button"), Confirm)
+		|| !TestNotNull(TEXT("Which has a face to take focus"), Confirm->FaceNode.Get())
+		|| !TestTrue(TEXT("And the dialog focuses its default when it appears"), Dialog->bFocusDefaultButton))
+	{
+		return false;
+	}
+
+	TestNotEqual(TEXT("Asleep, the dialog has not taken focus"), Rig.EventSystem()->GetCurrentSelectedComponent(0), Confirm->FaceNode.Get());
+
+	Host->SetWidgetActive(true);
+	Rig.PumpFrames(1);
+
+	TestEqual(TEXT("Woken, focus is on its default button"), Rig.EventSystem()->GetCurrentSelectedComponent(0), Confirm->FaceNode.Get());
 	return true;
 }
 

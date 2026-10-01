@@ -181,4 +181,91 @@ bool FDreamPressRingMenuHubTest::RunTest(const FString& Parameters)
 	return true;
 }
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamPressRingMenuItemsReplacedOnChoiceTest,
+	"DreamGUI.RingMenu.ReplacingTheItemsFromTheSelectionHandlerStillActivatesTheChosenItemByItsTag",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * A wheel that rebuilds itself from what was just chosen -- the next level of a nested menu, a list of
+ * targets that changes with the pick. Activating an item moves the selection first, which broadcasts,
+ * and only then read the item's tag: a handler that replaced the four items with one left the index of
+ * the third pointing past the end of the array, and the read of it took the process down. The third
+ * wedge is clicked with such a handler bound: the item that was chosen is activated, by its tag, once.
+ */
+bool FDreamPressRingMenuItemsReplacedOnChoiceTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamPressRingMenuTestLocal;
+	TStrongObjectPtr<UDreamPressInteractionListener> Listener(NewObject<UDreamPressInteractionListener>());
+	FDreamDriverRig Rig = FDreamDriverRig::Headless(ViewportSize);
+	UDreamRingMenu* Wheel = PlaceWheel(*this, Rig, Listener.Get());
+	if (Wheel == nullptr)
+	{
+		return false;
+	}
+	Listener->DuringSelectionChanged = [Wheel]()
+	{
+		Wheel->SetItems({ MakeItem(TEXT("Back")) });
+	};
+	const int32 Target = 2;
+	const TOptional<FVector2D> Pixel = RingPixel(Wheel->GetWedgeWidget(Target),
+		Wheel->GetItemMidAngle(Target), (InnerRadius + OuterRadius) * 0.5f);
+	if (!TestTrue(TEXT("The middle of the third wedge is a pixel the pointer can reach"), Pixel.IsSet()))
+	{
+		return false;
+	}
+
+	TestTrue(TEXT("Clicking the middle of the third wedge completes"), ClickAtPixel(Rig, Pixel.GetValue()));
+
+	TestEqual(TEXT("The handler replaced the wheel's items"), Wheel->GetItemCount(), 1);
+	if (TestEqual(TEXT("The chosen item was activated once"), Listener->ActivatedTags.Num(), 1))
+	{
+		TestEqual(TEXT("By the tag it had when it was chosen"), Listener->ActivatedTags[0], FName(TEXT("Heal")));
+	}
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamPressRingMenuClickWhileClosingTest,
+	"DreamGUI.RingMenu.AClickOnAWedgeWhileTheRingFadesOutActivatesNothing",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamPressRingMenuClickWhileClosingTest, "DreamGUI.RingMenu.AClickOnAWedgeWhileTheRingFadesOutActivatesNothing", "[Pointer][Animated]")
+
+/*
+ * Close clears the highlight at once and fades the ring out, and the raycast does not read opacity: the
+ * fading ring went on answering the pointer, so a click during the fade chose an item after OnClosed had
+ * reported the choice. Here the ring closes with its fade running and the third wedge is clicked while
+ * it is still on screen: nothing is activated and nothing chosen.
+ */
+bool FDreamPressRingMenuClickWhileClosingTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamPressRingMenuTestLocal;
+	TStrongObjectPtr<UDreamPressInteractionListener> Listener(NewObject<UDreamPressInteractionListener>());
+	FDreamDriverRig Rig = FDreamDriverRig::Headless(ViewportSize);
+	UDreamRingMenu* Wheel = PlaceWheel(*this, Rig, Listener.Get());
+	if (Wheel == nullptr)
+	{
+		return false;
+	}
+	// Worked out while the ring is fully open, before the close starts moving it.
+	const int32 Target = 2;
+	const TOptional<FVector2D> Pixel = RingPixel(Wheel->GetWedgeWidget(Target),
+		Wheel->GetItemMidAngle(Target), (InnerRadius + OuterRadius) * 0.5f);
+	if (!TestTrue(TEXT("The middle of the third wedge is a pixel the pointer can reach"), Pixel.IsSet()))
+	{
+		return false;
+	}
+	// The open-and-close animation back on, long enough that the click below lands well inside it.
+	Wheel->Style.OpenDuration = 0.5f;
+	Wheel->ApplyStyle();
+
+	Wheel->Close();
+	TestTrue(TEXT("Clicking the third wedge as the ring fades completes"), ClickAtPixel(Rig, Pixel.GetValue()));
+
+	TestTrue(TEXT("The click came while the ring was still fading out"), Wheel->RingNode != nullptr && Wheel->RingNode->GetWidgetActive());
+	TestEqual(TEXT("Nothing was activated"), Listener->ActivatedTags.Num(), 0);
+	TestEqual(TEXT("And nothing chosen"), Listener->SelectionIndices.Num(), 0);
+	return true;
+}
+
 #endif

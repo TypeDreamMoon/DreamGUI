@@ -87,6 +87,18 @@ protected:
 	 */
 	TWeakObjectPtr<UDreamPointerEventData> CurrentPointerEventData;
 
+	/**
+	 * The pointer whose press on this surface is still held, or null -- held weakly, for the reason the hovering one is.
+	 * While it is, the press keeps the shared cursor: an exit waits for the release, and moves go on being forwarded.
+	 */
+	TWeakObjectPtr<UDreamPointerEventData> PressingPointerEventData;
+
+	/** An exit that arrived while a press here was held, acted on when that press is let go. */
+	bool bExitPendingRelease = false;
+
+	/** What an exit of EventData does: stop following it, and hand the shared cursor back. */
+	void EndHover(UDreamPointerEventData* EventData);
+
 public:
 
 	// Begin ActorComponent interface

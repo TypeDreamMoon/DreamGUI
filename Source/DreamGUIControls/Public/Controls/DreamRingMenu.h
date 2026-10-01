@@ -544,6 +544,16 @@ private:
 	bool bOpen = true;
 
 	/**
+	 * Close takes the ring out of the pointer's hit test for the length of its fade and Open puts it
+	 * back: true between the two, with the ring's own raycastable setting kept here to be restored.
+	 */
+	UPROPERTY(Transient)
+	bool bRaycastSuspendedByClose = false;
+
+	UPROPERTY(Transient)
+	EDreamWidgetRaycastableType RaycastableBeforeClose = EDreamWidgetRaycastableType::Inherit;
+
+	/**
 	 * The two tweens Open and Close each start, kept so the other one can stop them.
 	 *
 	 * Open and Close write the SAME two properties in opposite directions, so a fast toggle used to

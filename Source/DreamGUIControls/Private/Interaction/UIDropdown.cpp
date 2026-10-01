@@ -49,6 +49,29 @@ void UUIDropdown::Awake()
 		}
 	}
 }
+void UUIDropdown::OnDisable()
+{
+	Super::OnDisable();
+	// An open list cannot outlive the dropdown that would close it. The blocker hangs on the root
+	// canvas above everything and answers a click by calling back into this component, and a list
+	// lifted to a popup layer is not under this widget at all -- so a dropdown hidden or destroyed
+	// while open left an invisible sheet over the whole screen that swallowed every click, with its
+	// list still showing. UDreamMenuAnchor closes on the way out for the same reason. Asked first
+	// because Hide reports a missing list root as an error, and a closed dropdown has nothing to hide.
+	if (bIsShow)
+	{
+		Hide();
+	}
+}
+void UUIDropdown::OnDestroy()
+{
+	Super::OnDestroy();
+	// A list opened from code on a dropdown that was never enabled has had no OnDisable to close it.
+	if (bIsShow)
+	{
+		Hide();
+	}
+}
 #if WITH_EDITOR
 void UUIDropdown::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
 {
@@ -133,15 +156,7 @@ void UUIDropdown::Show()
 	//create list item as options -- the template was validated at the top, before anything opened
 	if (bNeedRecreate)
 	{
-		bNeedRecreate = false;
-		for (auto item : CreatedItemArray)
-		{
-			auto ItemWidget = item->GetWidget();
-			ItemWidget->DestroyWidget();
-		}
-		CreatedItemArray.Reset();
-		//create items
-		CreateListItems();
+		RecreateListItems();
 	}
 
 	//set position
@@ -326,12 +341,13 @@ void UUIDropdown::Hide()
 	UDreamTweener* HideTweener = ListRoot->RenderOpacityTo(0, 0.3f, 0, EDreamTweenEase::InCubic);
 	if (HideTweener != nullptr)
 	{
-		HideTweener->OnComplete(FSimpleDelegate::CreateWeakLambda(ListRoot.Get(), [this]
+		// The list is all the completion needs, and it is what the lambda is bound to -- so it runs only
+		// while the list is alive and never reaches back into this component, which a list can outlive:
+		// a dropdown torn down with its list open hides it on the way out, and is gone before the fade ends.
+		UDreamWidget* FadingList = ListRoot.Get();
+		HideTweener->OnComplete(FSimpleDelegate::CreateWeakLambda(FadingList, [FadingList]
 		{
-			if (ListRoot.IsValid())
-			{
-				ListRoot->SetWidgetActive(false);
-			}
+			FadingList->SetWidgetActive(false);
 		}));
 	}
 	else
@@ -375,14 +391,21 @@ void UUIDropdown::CreateListItems()
 	}
 	ItemTemplateWidget->SetWidgetActive(true);
 	auto ScrollViewContentWidget = ItemTemplateWidget->GetParent();
-	for (int i = 0, count = Options.Num(); i < count; i++)
+	// Against the options as they are at each step: a row's handler below can change them.
+	for (int i = 0; i < Options.Num(); i++)
 	{
 		auto CopiedItemWidget = UDreamUIBPLibrary::DuplicateWidget(this->GetOuter()->GetWorld(), ItemTemplateWidget, ScrollViewContentWidget);
 		CopiedItemWidget->SetDisplayName(FString::Printf(TEXT("Item_%d"), i));
 		auto script = CopiedItemWidget->GetComponent<UUIDropdownItemComponent>();
-		int index = i;
-		script->Init(i, Options[i], [=, this]() {
-			this->OnSelectItem(index);
+		// Weakly: a row lives as long as its list, and the list can outlive this component -- lifted to
+		// a popup layer, or kept outside this widget by a hand-wired dropdown -- so a row clicked after
+		// the dropdown went away must find nobody to call rather than a destroyed object.
+		TWeakObjectPtr<UUIDropdown> WeakThis(this);
+		script->Init(i, Options[i], [WeakThis, i]() {
+			if (UUIDropdown* Dropdown = WeakThis.Get())
+			{
+				Dropdown->OnSelectItem(i);
+			}
 			});
 		script->SetSelectionState(i == Value);
 		OnSetItemCustomDataFunction.ExecuteIfBound(i, script, CopiedItemWidget);
@@ -406,6 +429,56 @@ void UUIDropdown::CreateListItems()
 	{
 		ListRoot->SetHeight(MaxHeight + HeightOffset);
 	}
+}
+void UUIDropdown::RecreateListItems()
+{
+	// A row's custom-data handler (UDreamDropdown's OnItemGenerated) can change the options, which asks for a rebuild
+	// while this one is still building rows. Rebuilding inside it read past the end of options that had shrunk, and a
+	// handler that always pushes rebuilt for ever; asked from inside, the rebuild waits and runs once this one is done
+	// -- once: a handler that changes the options every time leaves them for the next open.
+	if (bRecreatingListItems)
+	{
+		bNeedRecreate = true;
+		return;
+	}
+	TGuardValue<bool> Recreating(bRecreatingListItems, true);
+	for (int32 Pass = 0; Pass < 2; ++Pass)
+	{
+		bNeedRecreate = false;
+		for (const TWeakObjectPtr<UUIDropdownItemComponent>& Item : CreatedItemArray)
+		{
+			// The entries are weak, and a row can be gone before the list is rebuilt -- destroyed by whoever
+			// owned the list, or with the list itself. A row that is gone has nothing left to destroy.
+			UDreamWidget* ItemWidget = Item.IsValid() ? Item->GetWidget() : nullptr;
+			if (IsValid(ItemWidget))
+			{
+				ItemWidget->DestroyWidget();
+			}
+		}
+		CreatedItemArray.Reset();
+		CreateListItems();
+		if (!bNeedRecreate)
+		{
+			break;
+		}
+	}
+}
+bool UUIDropdown::IsPartOfDropdown(const UDreamWidget* InWidget)const
+{
+	if (!IsValid(InWidget))
+	{
+		return false;
+	}
+	const UDreamWidget* ThisWidget = GetWidget();
+	if (InWidget == ThisWidget || (ThisWidget != nullptr && InWidget->IsChildOf(ThisWidget)))
+	{
+		return true;
+	}
+	// Asked separately, because the list is a child of this widget only until a control lifts it to a
+	// popup layer -- and then its rows are under the screen root, where a membership test against this
+	// widget alone reads a row as somewhere else entirely.
+	const UDreamWidget* List = ListRoot.Get();
+	return List != nullptr && (InWidget == List || InWidget->IsChildOf(List));
 }
 FUIDropdownOptionData UUIDropdown::GetOption(int index)const
 {
@@ -511,6 +584,14 @@ void UUIDropdown::SetOptions(const TArray<FUIDropdownOptionData>& InOptions)
 {
 	bNeedRecreate = true;
 	Options = InOptions;
+	// At once while the list is up. Marking the rows for the next open left an open list showing the
+	// old ones, each still carrying the index it was built with: a click on one past the new end set
+	// a value no option has, and the caption went blank. This is also the road an OnOpening handler
+	// refreshing the options takes, because Show announces the open after the rows are built.
+	if (bIsShow && ItemTemplate.IsValid() && ListRoot.IsValid())
+	{
+		RecreateListItems();
+	}
 	ApplyValueToVisual();
 }
 void UUIDropdown::AddOptions(const TArray<FUIDropdownOptionData>& InOptions)
@@ -525,6 +606,11 @@ void UUIDropdown::AddOptions(const TArray<FUIDropdownOptionData>& InOptions)
 	for (int i = 0; i < InOptions.Num(); i++)
 	{
 		Options.Add(InOptions[i]);
+	}
+	// An open list gains its rows now, for SetOptions' reason.
+	if (bIsShow && ItemTemplate.IsValid() && ListRoot.IsValid())
+	{
+		RecreateListItems();
 	}
 	ApplyValueToVisual();
 }
@@ -547,7 +633,13 @@ void UUIDropdown::SetUseInteractionBlock(bool InValue)
 
 void UUIDropdown::OnSelectItem(int Index)
 {
-	SetValue(Index, true);
+	// Only an option that exists. A row carries the index it was built with, and a value past the end
+	// of Options is a selection the caption can only show as blank -- announced to every listener as a
+	// choice all the same.
+	if (Options.IsValidIndex(Index))
+	{
+		SetValue(Index, true);
+	}
 	Hide();
 }
 void UUIDropdown::ApplyValueToVisual()
@@ -609,17 +701,27 @@ bool UUIDropdown::OnPointerClick_Implementation(UDreamPointerEventData* EventDat
 		// button counts by default here, as it always has; see UUISelectable::AcceptedMouseButtons.
 		return true;
 	}
+	if (!IsInteractable())
+	{
+		// Disabled means disabled. A dropdown switched off through this behaviour is still hit-tested
+		// (see bInteractable), so its click arrives here, and the base's refusal of the press does not
+		// reach the click -- the test UUIButton::OnPointerClick makes, made here too.
+		return AllowEventBubbleUp;
+	}
 	Show();
 	return AllowEventBubbleUp;
 }
 bool UUIDropdown::OnPointerDeselect_Implementation(UDreamBaseEventData* EventData)
 {
-	if (IsValid(EventData->SelectedComponent))
+	// The base first: it is what stops this dropdown being drawn focused once focus has gone elsewhere,
+	// and leaving it out kept the face wearing its focused look for good.
+	Super::OnPointerDeselect_Implementation(EventData);
+	// Focus moving INTO the list is not focus leaving the dropdown. A pad moving down from the face onto
+	// the first row used to read as leaving whenever the list had been lifted to a popup layer, and
+	// closed the list it was moving into.
+	if (IsValid(EventData->SelectedComponent) && !IsPartOfDropdown(EventData->SelectedComponent))
 	{
-		if (!EventData->SelectedComponent->IsChildOf(this->GetWidget()))
-		{
-			Hide();
-		}
+		Hide();
 	}
 	return AllowEventBubbleUp;
 }

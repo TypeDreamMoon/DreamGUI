@@ -12,6 +12,7 @@
 #include "Core/Components/DreamRectBlock.h"
 #include "Core/Components/DreamText.h"
 #include "Core/Components/DreamWidget.h"
+#include "Event/DreamBaseEventData.h"
 #include "Interaction/DreamUIPopupLayer.h"
 #include "Interaction/UIDropdown.h"
 #include "Interaction/UIScrollView.h"
@@ -158,6 +159,10 @@ void UDreamDropdown::WireParts()
 		return;
 	}
 	DropdownBehaviour->SetTransitionTarget(FaceNode->GetVisual());
+	// The left mouse button alone opens it, as it alone opens UMG's combo box: SComboButton is an
+	// SButton, which answers no other. The behaviour answers every button unless told; a touch and a
+	// gamepad's accept are not mouse buttons and always count.
+	DropdownBehaviour->SetAcceptedMouseButtons(1 << static_cast<int32>(EDreamUIMouseButtonType::Left));
 	// The face draws one picture per state from here on, and the CAPTION is its foreground -- the
 	// one label in this family a control actually owns, so a style that wants the text to change
 	// with the pointer has somewhere to say so. The list and its rows are not part of this: they are
@@ -592,8 +597,21 @@ void UDreamDropdown::PushOptions()
 		FUIDropdownOptionData& Entry = Data.AddDefaulted_GetRef();
 		Entry.Text = Option;
 	}
+	// An open list has its rows rebuilt inside this call, so it never offers a row for an option that
+	// is gone.
 	DropdownBehaviour->SetOptions(Data);
 	DropdownBehaviour->SetValueWithoutNotify(SelectedIndex);
+	if (bIsListOpen && bListElevated && ListNode != nullptr)
+	{
+		// And the list holding them is still the size and the place it was given for the rows it had:
+		// home first, so it is measured against the face again, then up, exactly as an open places it.
+		// Not while the list is still opening -- that open has yet to place it, against these same rows.
+		if (UDreamUIPopupLayer* Popup = UDreamUIPopupLayer::Get(this))
+		{
+			Popup->Restore(ListNode);
+			LiftOpenList(*Popup);
+		}
+	}
 }
 
 #if WITH_EDITOR
@@ -634,49 +652,7 @@ void UDreamDropdown::HandleListVisibilityChanged(bool bInVisible)
 	}
 	if (bInVisible)
 	{
-		bListElevated = true;
-		// The control owns every height in the open list, because nothing else can. The list is
-		// exactly visible-rows tall (past MaxVisibleItems the rest scroll -- the scroll view only
-		// engages when the column outgrows it); the column is all-rows tall, the scrolled content.
-		// The rows go through their SLOTS, not through authored heights: a row is an overlay whose
-		// Auto measure is its TEXT's line height -- 19.7 for the default font, the measured symptom,
-		// and no authored number ever wins against a content measure. Fill does: the column is
-		// exactly rows*ItemHeight tall, so equal fill weights hand every row exactly ItemHeight.
-		// All before the lift, which pins the height it finds.
-		const FDreamDropdownStyle& Active = ResolveStyle(Style, &UDreamUIStyleSheet::DropdownStyle);
-		const int32 RowCount = FMath::Max(1, Options.Num());
-		const int32 VisibleRows = FMath::Min(RowCount, FMath::Max(1, MaxVisibleItems));
-		// The SCHEME first: Show()'s automatic placement thinks in the preset Blueprint's terms and
-		// rewrites the pivot (measured: top-pivot 0.5,1) -- under which our centre-pivot position
-		// maths hangs the list a full height below the face. Re-assert anchors and pivot, then
-		// write this open's numbers over the resting ones.
-		ApplyListRestingGeometry(Active);
-		// Width explicitly, each open: the face is the one measurement that is always live.
-		const float OpenHeight = VisibleRows * Active.ItemHeight;
-		const float OpenWidth = FaceNode != nullptr ? static_cast<float>(FaceNode->GetWidth()) : static_cast<float>(ListNode->GetWidth());
-		ListNode->SetAnchoredPositionAndSizeDelta(
-			FVector2D(0.0, -OpenHeight * 0.5), FVector2D(OpenWidth, OpenHeight));
-		for (UDreamWidget* Child : ListNode->GetChildren())
-		{
-			if (Child == nullptr || Child->GetDisplayName() != TEXT("Column"))
-			{
-				continue;
-			}
-			Child->SetHeight(RowCount * Active.ItemHeight);
-			for (UDreamWidget* Row : Child->GetChildren())
-			{
-				if (Row == nullptr || Row == ItemTemplateNode)
-				{
-					continue;
-				}
-				if (UDreamPanelSlot* RowSlot = Row->GetPanelSlot())
-				{
-					RowSlot->SetSizeRule(EDreamPanelSizeRule::Fill);
-					RowSlot->SetFillWeight(1.0f);
-				}
-			}
-		}
-		Popup->Elevate(ListNode);
+		LiftOpenList(*Popup);
 	}
 	else
 	{
@@ -688,6 +664,57 @@ void UDreamDropdown::HandleListVisibilityChanged(bool bInVisible)
 		// WIDTH. The measured symptom: a 0-wide list on the second open.
 		ApplyListRestingGeometry(ResolveStyle(Style, &UDreamUIStyleSheet::DropdownStyle));
 	}
+}
+
+void UDreamDropdown::LiftOpenList(UDreamUIPopupLayer& InPopup)
+{
+	if (ListNode == nullptr)
+	{
+		return;
+	}
+	bListElevated = true;
+	// The control owns every height in the open list, because nothing else can. The list is
+	// exactly visible-rows tall (past MaxVisibleItems the rest scroll -- the scroll view only
+	// engages when the column outgrows it); the column is all-rows tall, the scrolled content.
+	// The rows go through their SLOTS, not through authored heights: a row is an overlay whose
+	// Auto measure is its TEXT's line height -- 19.7 for the default font, the measured symptom,
+	// and no authored number ever wins against a content measure. Fill does: the column is
+	// exactly rows*ItemHeight tall, so equal fill weights hand every row exactly ItemHeight.
+	// All before the lift, which pins the height it finds.
+	const FDreamDropdownStyle& Active = ResolveStyle(Style, &UDreamUIStyleSheet::DropdownStyle);
+	const int32 RowCount = FMath::Max(1, Options.Num());
+	const int32 VisibleRows = FMath::Min(RowCount, FMath::Max(1, MaxVisibleItems));
+	// The SCHEME first: Show()'s automatic placement thinks in the preset Blueprint's terms and
+	// rewrites the pivot (measured: top-pivot 0.5,1) -- under which our centre-pivot position
+	// maths hangs the list a full height below the face. Re-assert anchors and pivot, then
+	// write this open's numbers over the resting ones.
+	ApplyListRestingGeometry(Active);
+	// Width explicitly, each open: the face is the one measurement that is always live.
+	const float OpenHeight = VisibleRows * Active.ItemHeight;
+	const float OpenWidth = FaceNode != nullptr ? static_cast<float>(FaceNode->GetWidth()) : static_cast<float>(ListNode->GetWidth());
+	ListNode->SetAnchoredPositionAndSizeDelta(
+		FVector2D(0.0, -OpenHeight * 0.5), FVector2D(OpenWidth, OpenHeight));
+	for (UDreamWidget* Child : ListNode->GetChildren())
+	{
+		if (Child == nullptr || Child->GetDisplayName() != TEXT("Column"))
+		{
+			continue;
+		}
+		Child->SetHeight(RowCount * Active.ItemHeight);
+		for (UDreamWidget* Row : Child->GetChildren())
+		{
+			if (Row == nullptr || Row == ItemTemplateNode)
+			{
+				continue;
+			}
+			if (UDreamPanelSlot* RowSlot = Row->GetPanelSlot())
+			{
+				RowSlot->SetSizeRule(EDreamPanelSizeRule::Fill);
+				RowSlot->SetFillWeight(1.0f);
+			}
+		}
+	}
+	InPopup.Elevate(ListNode);
 }
 
 void UDreamDropdown::ApplyListRestingGeometry(const FDreamDropdownStyle& InActive)

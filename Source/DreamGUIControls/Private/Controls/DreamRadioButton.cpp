@@ -164,6 +164,15 @@ void UDreamRadioButton::SetCheckedState(EDreamCheckState InCheckedState)
 		// Visuals BEFORE the value push: the dot's colour rides the OFF colour, so any transition the
 		// push starts must already aim at it.
 		PushCheckStateVisuals();
+		// Out of the group's selection before the park. A group that forbids an empty selection will not
+		// let its chosen member go off -- the rule a click on the chosen radio meets -- and it refused this
+		// park too: the behaviour stayed on under a mixed radio, GetIsOn said true, and a click could only
+		// try to switch it off, which the same rule refused, so the radio could never be chosen again.
+		// Mixed is not chosen, so the group lets go of this radio first.
+		if (UUIToggleGroup* Group = ToggleBehaviour->GetToggleGroup())
+		{
+			Group->ReleaseSelection(ToggleBehaviour);
+		}
 		ToggleBehaviour->SetIsOnWithoutNotify(false);
 		OnCheckStateChanged.Broadcast(EDreamCheckState::Undetermined);
 		if (bWasOn)

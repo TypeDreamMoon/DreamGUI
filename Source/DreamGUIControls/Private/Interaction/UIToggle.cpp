@@ -73,7 +73,8 @@ void UUIToggle::OnDestroy()
 	Super::OnDestroy();
 	if (ToggleGroup.IsValid())
 	{
-		ToggleGroup->RemoveToggleComponent(this);
+		// Quietly: see RemoveToggleComponent.
+		ToggleGroup->RemoveToggleComponent(this, /*bInAnnounce*/ false);
 	}
 }
 
@@ -312,6 +313,13 @@ bool UUIToggle::OnPointerClick_Implementation(UDreamPointerEventData* EventData)
 		// SCheckBox toggles on the left button alone; any other one is passed on, as it leaves those
 		// unhandled. See AcceptedMouseButtons.
 		return true;
+	}
+	if (!IsInteractable())
+	{
+		// Disabled means disabled. A toggle switched off through this behaviour is still hit-tested (see
+		// bInteractable) and the base refusing its press does not reach the click, so a disabled tab or
+		// a box disabled mid-press still flipped -- the test UUIButton::OnPointerClick makes, made here.
+		return AllowEventBubbleUp;
 	}
 	if (ShouldClickOnClick(EventData))
 	{
