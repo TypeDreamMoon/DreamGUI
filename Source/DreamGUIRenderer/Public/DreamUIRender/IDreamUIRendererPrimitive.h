@@ -27,24 +27,40 @@ class FDreamVisualPostProcessRenderProxy;
  */
 using FDreamVisualPostProcessRenderProxyPtr = TSharedPtr<FDreamVisualPostProcessRenderProxy, ESPMode::ThreadSafe>;
 
+/**
+ * What a draw of one mesh section binds that the section keeps from frame to frame -- its vertex and index buffers and
+ * its built-in parameters -- made again whenever any of it changes, and never changed after. The section keeps the
+ * newest; a batch collected from it holds the one it was collected with, for as long as its pass may run. A batch used
+ * to hold each buffer, texture and sampler itself: nine references taken and given back for every panel of a world of
+ * them, every frame, most of them on the textures and samplers every panel shares.
+ */
+class FDreamUISectionDrawState : public FRefCountedObject
+{
+public:
+	FBufferRHIRef VertexBufferRHI;
+	/**
+	 * The index buffer to draw with. Mesh.Elements[0].IndexBuffer points into the section proxy that owns it, which a
+	 * pass must not reach through: the batch is collected when the pass is recorded, and the pass may run after the
+	 * proxy is gone.
+	 */
+	FBufferRHIRef IndexBufferRHI;
+	/**
+	 * Whether or not the built-in UI shader draws a batch of the section, its widget data and render layer table are what
+	 * either vertex shader places a render layer's vertices on the canvas through before LocalToWorld
+	 * (DreamUIRenderLayer.ush): the primitive stays the canvas, so that everything read in its space -- a material's
+	 * LocalPosition, the clip rects -- stays in canvas space.
+	 */
+	FDreamUIBuiltInDrawParams BuiltIn;
+};
+
 struct FDreamUIMeshBatchContainer
 {
 	FMeshBatch Mesh;
-	FBufferRHIRef VertexBufferRHI;
-	/**
-	 * The index buffer to draw with, held by reference. Mesh.Elements[0].IndexBuffer points into the
-	 * section proxy that owns it, which a pass must not reach through: the batch is collected when the
-	 * pass is recorded, and the pass may run after the proxy is gone.
-	 */
-	FBufferRHIRef IndexBufferRHI;
+	/** See FDreamUISectionDrawState: one reference for the section's buffers and built-in parameters. */
+	TRefCountPtr<const FDreamUISectionDrawState> State;
 	int32 NumVerts = 0;
-	/**
-	 * When enabled, the renderer draws this batch with the built-in UI shader instead of Mesh.MaterialRenderProxy. Enabled
-	 * or not, its widget data and render layer table are what either vertex shader places a render layer's vertices on the
-	 * canvas through before LocalToWorld (DreamUIRenderLayer.ush): the primitive stays the canvas, so that everything read
-	 * in its space -- a material's LocalPosition, the clip rects -- stays in canvas space.
-	 */
-	FDreamUIBuiltInDrawParams BuiltIn;
+	/** Drawn with the built-in UI shader instead of Mesh.MaterialRenderProxy: the section's say, in any view but a wireframe. */
+	bool bBuiltIn = false;
 	/** Primitive transform, for the built-in path (the material path reads it from the primitive uniform buffer). */
 	FMatrix LocalToWorld = FMatrix::Identity;
 	/**
@@ -55,6 +71,10 @@ struct FDreamUIMeshBatchContainer
 	TSharedPtr<const FRenderResource, ESPMode::ThreadSafe> PrimitiveUniformBufferHold;
 
 	FDreamUIMeshBatchContainer() {}
+
+	const FDreamUIBuiltInDrawParams& GetBuiltIn() const { return State->BuiltIn; }
+	FRHIBuffer* GetVertexBuffer() const { return State->VertexBufferRHI; }
+	FRHIBuffer* GetIndexBuffer() const { return State->IndexBufferRHI; }
 };
 
 enum class EDreamUIRendererPrimitiveType :uint8

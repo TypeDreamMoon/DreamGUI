@@ -660,25 +660,36 @@ namespace DreamUIRendererLocal
 		}
 	};
 
-	/** What one collection is about to draw, into the frame's counters. */
-	void CountCollected(const FCollectedMeshBatches& InCollected)
+	/** What one collection is about to draw -- its batches from InFirst on -- into the frame's counters. */
+	void CountCollected(const FCollectedMeshBatches& InCollected, int32 InFirst = 0)
 	{
 		int64 Vertices = 0;
-		for (const FDreamUIMeshBatchContainer& Batch : InCollected.Batches)
+		for (int32 Index = InFirst; Index < InCollected.Batches.Num(); ++Index)
 		{
-			Vertices += Batch.NumVerts;
+			Vertices += InCollected.Batches[Index].NumVerts;
 		}
-		DreamUIRenderStats::AddCount(DreamUIRenderStats::ECounter::BatchesRecorded, InCollected.Batches.Num());
+		DreamUIRenderStats::AddCount(DreamUIRenderStats::ECounter::BatchesRecorded, InCollected.Batches.Num() - InFirst);
 		DreamUIRenderStats::AddCount(DreamUIRenderStats::ECounter::VerticesRecorded, Vertices);
 	}
 
-	/** Whether a batch collected is drawn through a material -- its own, or the wireframe's -- which reads the view's uniform buffer. */
-	bool DrawsThroughAMaterial(const FCollectedMeshBatches& InCollected, bool bRenderWireframe)
+	/**
+	 * Whether a batch collected -- from InFirst on -- is drawn through a material, its own or the wireframe's, which reads
+	 * the view's uniform buffer.
+	 */
+	bool DrawsThroughAMaterial(const FCollectedMeshBatches& InCollected, bool bRenderWireframe, int32 InFirst = 0)
 	{
-		return bRenderWireframe || InCollected.Batches.ContainsByPredicate([](const FDreamUIMeshBatchContainer& Batch)
+		if (bRenderWireframe)
 		{
-			return !Batch.BuiltIn.bEnabled;
-		});
+			return true;
+		}
+		for (int32 Index = InFirst; Index < InCollected.Batches.Num(); ++Index)
+		{
+			if (!InCollected.Batches[Index].bBuiltIn)
+			{
+				return true;
+			}
+		}
+		return false;
 	}
 
 	/**
@@ -769,7 +780,7 @@ void FDreamUIRenderer::DrawBuiltInBatch(FRHICommandList& RHICmdList, FGraphicsPi
 	, FDreamUIBuiltInDrawCache* InOutCache
 )
 {
-	const FDreamUIBuiltInDrawParams& Params = Batch.BuiltIn;
+	const FDreamUIBuiltInDrawParams& Params = Batch.GetBuiltIn();
 	const FMeshBatch& Mesh = Batch.Mesh;
 	const ERHIFeatureLevel::Type FeatureLevel = View.GetFeatureLevel();
 
@@ -837,7 +848,6 @@ void FDreamUIRenderer::DrawBuiltInBatch(FRHICommandList& RHICmdList, FGraphicsPi
 	const FMatrix ViewProjection = View.ViewMatrices.GetWorldToClip();
 	FDreamUIBaseVS::FParameters VSParameters;
 	VSParameters.DreamUI_MVP = FMatrix44f(Batch.LocalToWorld * ViewProjection);
-	VSParameters.DreamUI_M = FMatrix44f(Batch.LocalToWorld);
 	VSParameters.DreamUI_RenderLayerTable = TextureOrFallback(Params.RenderLayerTableRHI.GetReference(), GBlackTexture);
 	VSParameters.DreamUI_RenderLayerWidgetData = TextureOrFallback(Params.WidgetDataTextureRHI.GetReference(), GBlackTexture);
 	SetShaderParameters(RHICmdList, VertexShader, VertexShader.GetVertexShader(), VSParameters);
@@ -846,7 +856,6 @@ void FDreamUIRenderer::DrawBuiltInBatch(FRHICommandList& RHICmdList, FGraphicsPi
 		return InSampler != nullptr ? InSampler : TStaticSamplerState<SF_Bilinear, AM_Clamp, AM_Clamp, AM_Clamp>::GetRHI();
 	};
 	FDreamUIBasePS::FParameters PSParameters;
-	PSParameters.DreamUI_InvM = FMatrix44f(Batch.LocalToWorld.Inverse());
 	PSParameters.DreamUI_GammaValues = FVector4f(2.2f / GammaValue, 1.0f / GammaValue, 0.0f, 0.0f);
 	PSParameters.DreamUI_FontAtlasInfo = FVector4f(Params.FontAtlasSize.X, Params.FontAtlasSize.Y, Params.FontFieldRangeTexels, Params.FontEmTexels);
 	PSParameters.DreamUI_MainTex = TextureOrFallback(Params.MainTextureRHI.GetReference(), GWhiteTexture);
@@ -864,8 +873,8 @@ void FDreamUIRenderer::DrawBuiltInBatch(FRHICommandList& RHICmdList, FGraphicsPi
 	PSParameters.DreamUI_ViewSizeInv = FVector2f(1.0f / FMath::Max(ViewSize.X, 1), 1.0f / FMath::Max(ViewSize.Y, 1));
 	SetShaderParameters(RHICmdList, PixelShader, PixelShader.GetPixelShader(), PSParameters);
 
-	RHICmdList.SetStreamSource(0, Batch.VertexBufferRHI, 0);
-	RHICmdList.DrawIndexedPrimitive(Batch.IndexBufferRHI, 0, 0, Batch.NumVerts, 0, Mesh.Elements[0].NumPrimitives, Mesh.Elements[0].NumInstances);
+	RHICmdList.SetStreamSource(0, Batch.GetVertexBuffer(), 0);
+	RHICmdList.DrawIndexedPrimitive(Batch.GetIndexBuffer(), 0, 0, Batch.NumVerts, 0, Mesh.Elements[0].NumPrimitives, Mesh.Elements[0].NumInstances);
 }
 
 void FDreamUIRenderer::SetGraphicPipelineState_BlendDepthStencilRasterize(ERHIFeatureLevel::Type FeatureLevel, FGraphicsPipelineStateInitializer& GraphicsPSOInit, EBlendMode BlendMode
@@ -1372,18 +1381,27 @@ void FDreamUIRenderer::RecordWorldSpace_RenderThread(FRDGBuilder& GraphBuilder, 
 			 * into; and a run is cut every MaxPrimitivesPerPass primitives, so RDG can still record runs in parallel.
 			 * Each primitive's draws are replayed in order, with its own blend depth and depth fade, exactly as its
 			 * own pass drew them.
+			 *
+			 * A pass's primitives collect into one array, with one allocator for their uniform buffers, each primitive's run
+			 * of batches ending where FMeshDrawRun says: an array, an allocator and an object of the graph's for every
+			 * primitive were made and let go of again for every panel of a world of them, every frame.
 			 */
-			struct FMeshDraws
+			struct FMeshDrawRun
 			{
-				DreamUIRendererLocal::FCollectedMeshBatches* Collected = nullptr;
+				int32 EndBatch = 0;
 				float BlendDepth = 0.0f;
 				int DepthFade = 0;
 			};
+			struct FPassDraws
+			{
+				DreamUIRendererLocal::FCollectedMeshBatches Collected;
+				TArray<FMeshDrawRun, TInlineAllocator<64>> Runs;
+			};
 			constexpr int32 MaxPrimitivesPerPass = 64;
-			TArray<FMeshDraws>* PendingDraws = nullptr;
+			FPassDraws* PendingDraws = nullptr;
 			auto FlushPendingDraws = [&]()
 			{
-				if (PendingDraws == nullptr || PendingDraws->Num() == 0)
+				if (PendingDraws == nullptr || PendingDraws->Runs.Num() == 0)
 				{
 					return;
 				}
@@ -1415,19 +1433,21 @@ void FDreamUIRenderer::RecordWorldSpace_RenderThread(FRDGBuilder& GraphBuilder, 
 						// the pass, made at the first of them (FDreamUIWorldRenderPS::SetDepthBlendParameter).
 						TUniformBufferRef<FDreamUIWorldRenderDepthTexUB> DepthTextureBuffer;
 
-						for (const FMeshDraws& Draw : *Draws)
+						const TArray<FDreamUIMeshBatchContainer>& MeshBatchArray = Draws->Collected.Batches;
+						int32 FirstOfRun = 0;
+						for (const FMeshDrawRun& Run : Draws->Runs)
 						{
-							const float BlendDepth = Draw.BlendDepth;
-							const int DepthFade = Draw.DepthFade;
-							const TArray<FDreamUIMeshBatchContainer>& MeshBatchArray = Draw.Collected->Batches;
-							for (int MeshIndex = 0; MeshIndex < MeshBatchArray.Num(); MeshIndex++)
+							const float BlendDepth = Run.BlendDepth;
+							const int DepthFade = Run.DepthFade;
+							const int32 EndOfRun = Run.EndBatch;
+							for (int MeshIndex = FirstOfRun; MeshIndex < EndOfRun; MeshIndex++)
 							{
 								auto& MeshBatchContainer = MeshBatchArray[MeshIndex];
 								const FMeshBatch& Mesh = MeshBatchContainer.Mesh;
 
 								auto DoRender = [&](bool bWireframe)
 								{
-									if (!bWireframe && MeshBatchContainer.BuiltIn.bEnabled)
+									if (!bWireframe && MeshBatchContainer.bBuiltIn)
 									{
 										DrawBuiltInBatch(RHICmdList, GraphicsPSOInit, *RenderView, ViewRect, MeshBatchContainer
 											, NumSamples, GammaValue, false
@@ -1468,13 +1488,13 @@ void FDreamUIRenderer::RecordWorldSpace_RenderThread(FRDGBuilder& GraphBuilder, 
 												BuiltInCache.Pipeline.bSet = false;
 											}
 
-											VertexShader->SetMaterialShaderParameters(RHICmdList, *RenderView, MaterialRenderProxy, Material, Mesh.Elements[0].PrimitiveUniformBufferResource, MeshBatchContainer.BuiltIn.RenderLayerTableRHI.GetReference(), MeshBatchContainer.BuiltIn.WidgetDataTextureRHI.GetReference());
+											VertexShader->SetMaterialShaderParameters(RHICmdList, *RenderView, MaterialRenderProxy, Material, Mesh.Elements[0].PrimitiveUniformBufferResource, MeshBatchContainer.GetBuiltIn().RenderLayerTableRHI.GetReference(), MeshBatchContainer.GetBuiltIn().WidgetDataTextureRHI.GetReference());
 											PixelShader->SetMaterialShaderParameters(RHICmdList, *RenderView, MaterialRenderProxy, Material, Mesh.Elements[0].PrimitiveUniformBufferResource);
 											PixelShader->SetDepthBlendParameter(RHICmdList, BlendDepth, SceneDepthTexST, PassParameters->SceneDepthTex->GetRHI(), DepthTextureBuffer);
 											PixelShader->SetGammaValue(RHICmdList, GammaValue);
 
-											RHICmdList.SetStreamSource(0, MeshBatchContainer.VertexBufferRHI, 0);
-											RHICmdList.DrawIndexedPrimitive(MeshBatchContainer.IndexBufferRHI, 0, 0, MeshBatchContainer.NumVerts, 0, Mesh.GetNumPrimitives(), 1);
+											RHICmdList.SetStreamSource(0, MeshBatchContainer.GetVertexBuffer(), 0);
+											RHICmdList.DrawIndexedPrimitive(MeshBatchContainer.GetIndexBuffer(), 0, 0, MeshBatchContainer.NumVerts, 0, Mesh.GetNumPrimitives(), 1);
 										}
 									}
 									else
@@ -1499,14 +1519,14 @@ void FDreamUIRenderer::RecordWorldSpace_RenderThread(FRDGBuilder& GraphBuilder, 
 												BuiltInCache.Pipeline.bSet = false;
 											}
 
-											VertexShader->SetMaterialShaderParameters(RHICmdList, *RenderView, MaterialRenderProxy, Material, Mesh.Elements[0].PrimitiveUniformBufferResource, MeshBatchContainer.BuiltIn.RenderLayerTableRHI.GetReference(), MeshBatchContainer.BuiltIn.WidgetDataTextureRHI.GetReference());
+											VertexShader->SetMaterialShaderParameters(RHICmdList, *RenderView, MaterialRenderProxy, Material, Mesh.Elements[0].PrimitiveUniformBufferResource, MeshBatchContainer.GetBuiltIn().RenderLayerTableRHI.GetReference(), MeshBatchContainer.GetBuiltIn().WidgetDataTextureRHI.GetReference());
 											PixelShader->SetMaterialShaderParameters(RHICmdList, *RenderView, MaterialRenderProxy, Material, Mesh.Elements[0].PrimitiveUniformBufferResource);
 											PixelShader->SetDepthBlendParameter(RHICmdList, BlendDepth, SceneDepthTexST, PassParameters->SceneDepthTex->GetRHI(), DepthTextureBuffer);
 											PixelShader->SetDepthFadeParameter(RHICmdList, DepthFade);
 											PixelShader->SetGammaValue(RHICmdList, GammaValue);
 
-											RHICmdList.SetStreamSource(0, MeshBatchContainer.VertexBufferRHI, 0);
-											RHICmdList.DrawIndexedPrimitive(MeshBatchContainer.IndexBufferRHI, 0, 0, MeshBatchContainer.NumVerts, 0, Mesh.GetNumPrimitives(), 1);
+											RHICmdList.SetStreamSource(0, MeshBatchContainer.GetVertexBuffer(), 0);
+											RHICmdList.DrawIndexedPrimitive(MeshBatchContainer.GetIndexBuffer(), 0, 0, MeshBatchContainer.NumVerts, 0, Mesh.GetNumPrimitives(), 1);
 										}
 									}
 								};
@@ -1519,6 +1539,7 @@ void FDreamUIRenderer::RecordWorldSpace_RenderThread(FRDGBuilder& GraphBuilder, 
 									DoRender(true);
 								}
 							}
+							FirstOfRun = EndOfRun;
 						}
 					});
 				PendingDraws = nullptr;
@@ -1570,23 +1591,26 @@ void FDreamUIRenderer::RecordWorldSpace_RenderThread(FRDGBuilder& GraphBuilder, 
 							// primitive -- a scene proxy -- may be gone by then, and every virtual call into
 							// it with it. The graph owns what is collected, uniform buffers and all, until
 							// its passes have run.
-							auto* Collected = GraphBuilder.AllocObject<DreamUIRendererLocal::FCollectedMeshBatches>();
+							if (PendingDraws == nullptr)
+							{
+								PendingDraws = GraphBuilder.AllocObject<FPassDraws>();
+								// Mostly a section or two a primitive: room for the pass, grown by doubling past it.
+								PendingDraws->Collected.Batches.Reserve(MaxPrimitivesPerPass * 2);
+							}
+							DreamUIRendererLocal::FCollectedMeshBatches& Collected = PendingDraws->Collected;
+							const int32 FirstBatch = Collected.Batches.Num();
 							{
 								TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_CollectMeshBatches);
-								FDreamUIMeshElementCollector MeshCollector(RenderView->GetFeatureLevel(), Collected->Allocator, GraphBuilder.RHICmdList);
-								RenderPrimitiveItem.Primitive->DreamUI_GetMeshElements(*RenderView->Family, MeshCollector, RenderPrimitiveItem, Collected->Batches);
+								FDreamUIMeshElementCollector MeshCollector(RenderView->GetFeatureLevel(), Collected.Allocator, GraphBuilder.RHICmdList);
+								RenderPrimitiveItem.Primitive->DreamUI_GetMeshElements(*RenderView->Family, MeshCollector, RenderPrimitiveItem, Collected.Batches);
 							}
-							DreamUIRendererLocal::CountCollected(*Collected);
-							if (DreamUIRendererLocal::DrawsThroughAMaterial(*Collected, bRenderWireframe))
+							DreamUIRendererLocal::CountCollected(Collected, FirstBatch);
+							if (DreamUIRendererLocal::DrawsThroughAMaterial(Collected, bRenderWireframe, FirstBatch))
 							{
 								MakeViewUniformBuffer();
 							}
-							if (PendingDraws == nullptr)
-							{
-								PendingDraws = GraphBuilder.AllocObject<TArray<FMeshDraws>>();
-							}
-							PendingDraws->Add(FMeshDraws{ Collected, RenderSequenceItem.BlendDepth, RenderSequenceItem.DepthFade });
-							if (PendingDraws->Num() >= MaxPrimitivesPerPass)
+							PendingDraws->Runs.Add(FMeshDrawRun{ Collected.Batches.Num(), RenderSequenceItem.BlendDepth, RenderSequenceItem.DepthFade });
+							if (PendingDraws->Runs.Num() >= MaxPrimitivesPerPass)
 							{
 								FlushPendingDraws();
 							}
@@ -1890,7 +1914,7 @@ void FDreamUIRenderer::RecordScreenSpace_RenderThread(FRDGBuilder& GraphBuilder,
 							auto DoRender = [&](bool bWireframe)
 							{
 								const bool bDump = CVarDreamGUIDumpMaterialDraws.GetValueOnRenderThread() != 0;
-								if (!bWireframe && MeshBatchContainer.BuiltIn.bEnabled)
+								if (!bWireframe && MeshBatchContainer.bBuiltIn)
 								{
 									if (bDump)
 									{
@@ -1953,12 +1977,12 @@ void FDreamUIRenderer::RecordScreenSpace_RenderThread(FRDGBuilder& GraphBuilder,
 									GraphicsPSOInit.NumSamples = NumSamples;
 									SetGraphicsPipelineState(RHICmdList, GraphicsPSOInit, 0, EApplyRendertargetOption::CheckApply);
 
-									VertexShader->SetMaterialShaderParameters(RHICmdList, *RenderView, MaterialRenderProxy, Material, Mesh.Elements[0].PrimitiveUniformBufferResource, MeshBatchContainer.BuiltIn.RenderLayerTableRHI.GetReference(), MeshBatchContainer.BuiltIn.WidgetDataTextureRHI.GetReference());
+									VertexShader->SetMaterialShaderParameters(RHICmdList, *RenderView, MaterialRenderProxy, Material, Mesh.Elements[0].PrimitiveUniformBufferResource, MeshBatchContainer.GetBuiltIn().RenderLayerTableRHI.GetReference(), MeshBatchContainer.GetBuiltIn().WidgetDataTextureRHI.GetReference());
 									PixelShader->SetMaterialShaderParameters(RHICmdList, *RenderView, MaterialRenderProxy, Material, Mesh.Elements[0].PrimitiveUniformBufferResource);
 									PixelShader->SetGammaValue(RHICmdList, GammaValue);
 
-									RHICmdList.SetStreamSource(0, MeshBatchContainer.VertexBufferRHI, 0);
-									RHICmdList.DrawIndexedPrimitive(MeshBatchContainer.IndexBufferRHI, 0, 0, MeshBatchContainer.NumVerts, 0, Mesh.Elements[0].NumPrimitives, Mesh.Elements[0].NumInstances);
+									RHICmdList.SetStreamSource(0, MeshBatchContainer.GetVertexBuffer(), 0);
+									RHICmdList.DrawIndexedPrimitive(MeshBatchContainer.GetIndexBuffer(), 0, 0, MeshBatchContainer.NumVerts, 0, Mesh.Elements[0].NumPrimitives, Mesh.Elements[0].NumInstances);
 								}
 							};
 							if (bRenderLit)
@@ -2326,7 +2350,6 @@ void FDreamUIRenderer::RenderGizmoMesh_RenderThread(const TArray<TSharedPtr<FDre
 
 				FDreamUIBaseVS::FParameters VSParameters;
 				VSParameters.DreamUI_MVP = FMatrix44f(LocalToWorldMatrix * ViewProjection);
-				VSParameters.DreamUI_M = FMatrix44f(LocalToWorldMatrix);
 				// A gizmo's vertices are in its own space already, which LocalToWorldMatrix places: black widget data names
 				// row 0 of a black table, no layer.
 				VSParameters.DreamUI_RenderLayerTable = GBlackTexture->TextureRHI.GetReference();
@@ -2336,7 +2359,6 @@ void FDreamUIRenderer::RenderGizmoMesh_RenderThread(const TArray<TSharedPtr<FDre
 				// The plain-colour permutation reads none of the textures, but the parameter struct is
 				// shared, so they still need something bound.
 				FDreamUIBasePS::FParameters PSParameters;
-				PSParameters.DreamUI_InvM = FMatrix44f(LocalToWorldMatrix.Inverse());
 				PSParameters.DreamUI_GammaValues = FVector4f(2.2f, 1.0f, 0.0f, 0.0f);
 				PSParameters.DreamUI_FontAtlasInfo = FVector4f(1.0f, 1.0f, 0.0f, 0.0f);
 				PSParameters.DreamUI_MainTex = GWhiteTexture->TextureRHI;

@@ -76,7 +76,7 @@ struct FDreamUIBuiltInDrawParams
 };
 
 /**
- * Vertex shader of the built-in UI pass: the full DreamGUI vertex, model and model-view-projection, and what takes a render
+ * Vertex shader of the built-in UI pass: the full DreamGUI vertex, its model-view-projection, and what takes a render
  * layer's vertices into canvas space first -- the widget data, whose records say which row of the render layer table each
  * element is placed through, and the table (DreamUIRenderLayer.ush). A draw with no layers binds black textures to both:
  * every record then reads row 0, no layer.
@@ -89,7 +89,6 @@ public:
 
 	BEGIN_SHADER_PARAMETER_STRUCT(FParameters, )
 		SHADER_PARAMETER(FMatrix44f, DreamUI_MVP)
-		SHADER_PARAMETER(FMatrix44f, DreamUI_M)
 		SHADER_PARAMETER_TEXTURE(Texture2D, DreamUI_RenderLayerTable)
 		SHADER_PARAMETER_TEXTURE(Texture2D, DreamUI_RenderLayerWidgetData)
 	END_SHADER_PARAMETER_STRUCT()
@@ -114,7 +113,6 @@ public:
 	using FPermutationDomain = TShaderPermutationDomain<FBlendDepth, FDepthFade, FPlainColor>;
 
 	BEGIN_SHADER_PARAMETER_STRUCT(FParameters, )
-		SHADER_PARAMETER(FMatrix44f, DreamUI_InvM)
 		SHADER_PARAMETER(FVector4f, DreamUI_GammaValues)
 		SHADER_PARAMETER(FVector4f, DreamUI_FontAtlasInfo)
 		SHADER_PARAMETER_TEXTURE(Texture2D, DreamUI_MainTex)

@@ -82,6 +82,32 @@ struct FDreamUISectionProxy_Mesh : public FDreamUIRenderSectionProxy
 	uint32 ValidVerticesCount = 0;
 	uint32 NumPrimitives = 0;
 
+	/**
+	 * What a draw of this section binds (FDreamUISectionDrawState), made when it is first asked for after any of it
+	 * changed -- the built-in parameters (bDrawStateStale), the buffers (by their address) -- and shared by every batch
+	 * collected meanwhile.
+	 */
+	TRefCountPtr<const FDreamUISectionDrawState> DrawState;
+	const FRHIBuffer* DrawStateVertexBuffer = nullptr;
+	const FRHIBuffer* DrawStateIndexBuffer = nullptr;
+	bool bDrawStateStale = true;
+	const TRefCountPtr<const FDreamUISectionDrawState>& GetDrawState()
+	{
+		if (bDrawStateStale || !DrawState.IsValid() || DrawStateVertexBuffer != DreamUIVertexBuffers.VertexBufferRHI.GetReference()
+			|| DrawStateIndexBuffer != IndexBuffer.IndexBufferRHI.GetReference())
+		{
+			FDreamUISectionDrawState* State = new FDreamUISectionDrawState();
+			State->VertexBufferRHI = DreamUIVertexBuffers.VertexBufferRHI;
+			State->IndexBufferRHI = IndexBuffer.IndexBufferRHI;
+			State->BuiltIn = BuiltIn;
+			DrawState = State;
+			DrawStateVertexBuffer = DreamUIVertexBuffers.VertexBufferRHI.GetReference();
+			DrawStateIndexBuffer = IndexBuffer.IndexBufferRHI.GetReference();
+			bDrawStateStale = false;
+		}
+		return DrawState;
+	}
+
 	FDreamUISectionProxy_Mesh(ERHIFeatureLevel::Type InFeatureLevel)
 		: VertexFactory(InFeatureLevel, "FDreamUISectionProxy_Mesh")
 	{
@@ -177,6 +203,7 @@ struct FDreamUISectionProxy_Mesh : public FDreamUIRenderSectionProxy
 	{
 		Material = nullptr;
 		BuiltIn = FDreamUIBuiltInDrawParams();
+		bDrawStateStale = true;
 		bCanRender = false;
 	}
 };
@@ -611,7 +638,9 @@ public:
 	}
 	void SetMeshSectionBuiltIn_RenderThread(FDreamUIRenderSectionProxy* Section, const FDreamUIBuiltInDrawParams& Params)
 	{
-		(static_cast<FDreamUISectionProxy_Mesh*>(Section))->BuiltIn = Params;
+		FDreamUISectionProxy_Mesh* MeshSection = static_cast<FDreamUISectionProxy_Mesh*>(Section);
+		MeshSection->BuiltIn = Params;
+		MeshSection->bDrawStateStale = true;
 	}
 
 	void SetRenderSectionRenderPriority_RenderThread(FDreamUIRenderSectionProxy* Section, int32 NewPriority)
@@ -886,7 +915,6 @@ public:
 		const bool bAnyWireframePass = ViewFamily.ViewMode == VMI_Wireframe || ViewFamily.EngineShowFlags.MeshEdges;
 		const FMatrix& LocalToWorld = Transform.LocalToWorld;
 
-		ResultArray.Reserve(ResultArray.Num() + PrimitiveData.Sections.Num());
 		for (int i = 0; i < PrimitiveData.Sections.Num(); i++)
 		{
 			const FDreamUIPrimitiveSectionDataContainer& SectionData = PrimitiveData.Sections[i];
@@ -929,12 +957,11 @@ public:
 			Mesh.DepthPriorityGroup = SDPG_World;
 			Mesh.bCanApplyViewModeOverrides = false;
 
-			MeshBatchContainer.VertexBufferRHI = Section->DreamUIVertexBuffers.VertexBufferRHI;
-			MeshBatchContainer.IndexBufferRHI = Section->IndexBuffer.IndexBufferRHI;
+			// The section's buffers and built-in parameters, one reference for all of them (FDreamUISectionDrawState).
+			MeshBatchContainer.State = Section->GetDrawState();
 			MeshBatchContainer.NumVerts = Section->ValidVerticesCount;
 			// A wireframe is drawn through its material, and still places a render layer's vertices through the textures.
-			MeshBatchContainer.BuiltIn = Section->BuiltIn;
-			MeshBatchContainer.BuiltIn.bEnabled = MeshBatchContainer.BuiltIn.bEnabled && !bWireframe;
+			MeshBatchContainer.bBuiltIn = Section->BuiltIn.bEnabled && !bWireframe;
 			// The primitive uniform buffer above stays the root's: a render layer's row of the table is applied ahead of it.
 			MeshBatchContainer.LocalToWorld = LocalToWorld;
 		}
@@ -1384,6 +1411,7 @@ FDreamUIRenderSectionProxy* FDreamUIRenderRoot::CreateSectionData(FDreamUIRender
 					[NewSectionProxy, Textures = NewSectionProxy->BuiltIn.GetTexturesForRenderCommand()](FRHICommandListImmediate& RHICmdList)
 					{
 						NewSectionProxy->BuiltIn.ResolveTextures_RenderThread(Textures);
+						NewSectionProxy->bDrawStateStale = true;
 					});
 			}
 			if (NewSectionProxy->Material == nullptr)
