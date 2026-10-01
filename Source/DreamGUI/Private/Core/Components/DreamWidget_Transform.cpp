@@ -535,8 +535,8 @@ void UDreamWidget::RefreshRenderTransformFlag()
 void UDreamWidget::ApplyRenderTransformChange()
 {
 	RefreshRenderTransformFlag();
-	// Looked up once: every write of every animated widget comes through here.
-	if (UDreamCanvas* Canvas = RenderCanvas.Get())
+	// Looked up once, and kept: every write of every animated widget comes through here.
+	if (UDreamCanvas* Canvas = KeepRenderCanvas())
 	{
 		Canvas->NoteRenderTransformChanged(this);
 	}
@@ -763,7 +763,7 @@ void UDreamWidget::CalculateObjectToWorldTransform(bool /*bPropagateToChildren*/
 				ParentWidget->ForgetChildrenStale();
 			}
 		}
-		if (UDreamCanvas* Canvas = RenderCanvas.Get())
+		if (UDreamCanvas* Canvas = KeepRenderCanvas())
 		{
 			Canvas->MarkRenderLayerMoved(this);
 		}

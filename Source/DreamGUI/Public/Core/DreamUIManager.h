@@ -262,6 +262,17 @@ private:
 	 * registry, twice a frame, asking each canvas for its root and its mode.
 	 */
 	TArray<TWeakObjectPtr<UDreamCanvas>> RootCanvasesByPass[4];
+	/**
+	 * RootCanvasesByPass as weak look-ups found them while the count of objects gone read RootCanvasesRawGone
+	 * (DreamUIGone): while the count reads the same, each is that canvas, alive and as registered as it was, and the
+	 * passes take them without a look-up of the object array for each -- two passes a frame over every panel of a world.
+	 */
+	TArray<UDreamCanvas*> RootCanvasesByPassRaw[4];
+	uint64 RootCanvasesRawGone = 0;
+	/** See GetAllCanvasesResolved: the canvases, and the order generation and count of objects gone they were found at. */
+	TArray<UDreamCanvas*> AllCanvasesResolved;
+	uint64 AllCanvasesResolvedOrder = 0;
+	uint64 AllCanvasesResolvedGone = 0;
 	uint64 RootCanvasOrderGeneration = 0;
 	/** RootCanvasesByPass sorted again, if a canvas came or went since (InvalidateRootCanvasOrder). */
 	void SortRootCanvasesIfStale();
@@ -399,6 +410,13 @@ public:
 #endif
 	
 	const TArray<TWeakObjectPtr<UDreamCanvas>>& GetAllCanvasArray()const{return AllCanvasArray;}
+	/**
+	 * GetAllCanvasArray with each canvas as a weak look-up found it while the count of objects gone read the same as now
+	 * -- null for one gone -- made again only once a canvas came or went or the count moved since. Game thread: what a
+	 * raycast hands to as many threads as there are, which then read the canvases without a look-up of the object
+	 * array for each of a world of panels.
+	 */
+	const TArray<UDreamCanvas*>& GetAllCanvasesResolved();
 	void AddCanvas(UDreamCanvas* InCanvas);
 	void RemoveCanvas(UDreamCanvas* InCanvas);
 	/** InCanvas asks to be drawn to its render target once this frame's sections have gone (UDreamCanvas::DrawRenderTargetIfRequested). */

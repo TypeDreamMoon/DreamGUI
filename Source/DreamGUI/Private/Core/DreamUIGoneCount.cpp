@@ -41,6 +41,12 @@ uint64 DreamUIGone::Read()
 	return Count.load(std::memory_order_acquire);
 }
 
+uint64 DreamUIGone::Peek()
+{
+	using namespace DreamUIGoneLocal;
+	return DeleteListener.bListening ? Count.load(std::memory_order_acquire) : 0;
+}
+
 void DreamUIGone::Note()
 {
 	DreamUIGoneLocal::Count.fetch_add(1, std::memory_order_release);

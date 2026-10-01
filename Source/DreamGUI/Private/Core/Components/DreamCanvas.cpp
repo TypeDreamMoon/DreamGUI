@@ -11,6 +11,7 @@
 #include "Utils/DreamUIUtils.h"
 #include "Core/DreamUISettings.h"
 #include "Core/DreamUIManager.h"
+#include "Core/DreamUIGoneCount.h"
 #include "DreamUIRender/DreamUIRenderer.h"
 #include "DreamUIRender/DreamUIRenderStats.h"
 #include "Core/DreamUIMesh/DreamUIMeshComponent.h"
@@ -1031,6 +1032,7 @@ void UDreamCanvas::SetWidgetIsRenderLayer(UDreamWidget* InWidget, bool bInIsLaye
 	}
 	FRenderLayerRecord& Record = RenderLayers.AddDefaulted_GetRef();
 	Record.Layer = InWidget;
+	Record.LayerRaw = InWidget;
 	Record.Row = Row;
 	Record.Placed = GetLayerToCanvas(InWidget);
 	Table->WriteRow(Row, Record.Placed);
@@ -1204,6 +1206,17 @@ bool UDreamCanvas::TendRenderLayers()
 		return false;
 	}
 	DREAMUI_DETAIL_SCOPE(DreamUI_TendRenderLayers);
+	// The records' widgets found again only once something may have gone since they last were (LayerRaw). Read before
+	// the look-ups: a widget found alive by them is still alive while the count reads the same.
+	const uint64 Gone = DreamUIGone::Read();
+	if (Gone != RenderLayersRawGone)
+	{
+		RenderLayersRawGone = Gone;
+		for (FRenderLayerRecord& Record : RenderLayers)
+		{
+			Record.LayerRaw = Record.Layer.Get();
+		}
+	}
 	const uint64 Frame = GFrameCounter;
 	/**
 	 * PlaceRenderLayers composes each layer's transform, on other threads, alongside other canvases' layers: each by the one
@@ -1271,7 +1284,7 @@ bool UDreamCanvas::TendRenderLayers()
 		// should taking one back ever take another with it.
 		for (int32 Index = RenderLayers.Num() - 1; Index >= 0; Index = FMath::Min(Index - 1, RenderLayers.Num() - 1))
 		{
-			const UDreamWidget* Layer = RenderLayers[Index].Layer.Get();
+			const UDreamWidget* Layer = RenderLayers[Index].LayerRaw;
 			bool bKeep = Layer != nullptr && bCanDraw && Layer->RenderCanvas.HasSameIndexAndSerialNumber(ThisCanvas)
 				&& Layer->GetRenderLayerMode() != EDreamWidgetRenderLayer::Never;
 			if (bKeep && Layer->GetRenderLayerMode() == EDreamWidgetRenderLayer::Auto)
@@ -1330,7 +1343,7 @@ bool UDreamCanvas::TendRenderLayers()
 		}
 		for (const FRenderLayerRecord& Record : RenderLayers)
 		{
-			if (const UDreamWidget* Layer = Record.Layer.Get())
+			if (const UDreamWidget* Layer = Record.LayerRaw)
 			{
 				ComposeParentOf(*Layer);
 			}
@@ -1386,6 +1399,8 @@ void UDreamCanvas::PlaceRenderLayers()
 		return;
 	}
 	DREAMUI_DETAIL_SCOPE(DreamUI_PlaceRenderLayers);
+	// The records' widgets as TendRenderLayers found them, which it did just before, unless the count moved since.
+	const bool bLayersRaw = RenderLayersRawGone != 0 && RenderLayersRawGone == DreamUIGone::Peek();
 	/**
 	 * The whole of a layer's move: its row of the table, which every vertex under it is placed through on the GPU, and the
 	 * boxes of the draw calls its elements are in. Nothing under it is transformed, patched or uploaded. Each record writes
@@ -1411,9 +1426,9 @@ void UDreamCanvas::PlaceRenderLayers()
 		};
 		TArray<FAbove> Above;
 		Above.SetNum(RenderLayers.Num());
-		ParallelFor(TEXT("DreamUI_LayerParentsOf"), RenderLayers.Num(), 512, [this, &Above](int32 Index)
+		ParallelFor(TEXT("DreamUI_LayerParentsOf"), RenderLayers.Num(), 512, [this, &Above, bLayersRaw](int32 Index)
 		{
-			if (const UDreamWidget* Layer = RenderLayers[Index].Layer.Get())
+			if (const UDreamWidget* Layer = bLayersRaw ? RenderLayers[Index].LayerRaw : RenderLayers[Index].Layer.Get())
 			{
 				const UDreamWidget* Parent = Layer->Parent.Get();
 				Above[Index].Parent = Parent;
@@ -1458,7 +1473,7 @@ void UDreamCanvas::PlaceRenderLayers()
 		TWeakObjectPtr<UDreamWidget> LastParent;
 		for (const FRenderLayerRecord& Record : RenderLayers)
 		{
-			const UDreamWidget* Layer = Record.Layer.Get();
+			const UDreamWidget* Layer = bLayersRaw ? Record.LayerRaw : Record.Layer.Get();
 			if (Layer == nullptr || Layer->Parent.HasSameIndexAndSerialNumber(LastParent))
 			{
 				continue;
@@ -1474,10 +1489,10 @@ void UDreamCanvas::PlaceRenderLayers()
 	}
 	const FTransform CanvasInverse = CanvasWidget != nullptr ? CanvasWidget->GetWorldTransform().Inverse() : FTransform::Identity;
 	std::atomic<int32> Moved{ 0 };
-	auto Place = [this, Table, &CanvasInverse, &Moved](int32 InIndex)
+	auto Place = [this, Table, &CanvasInverse, &Moved, bLayersRaw](int32 InIndex)
 	{
 		FRenderLayerRecord& Record = RenderLayers[InIndex];
-		const UDreamWidget* Layer = Record.Layer.Get();
+		const UDreamWidget* Layer = bLayersRaw ? Record.LayerRaw : Record.Layer.Get();
 		if (Layer == nullptr)
 		{
 			//gone, and what was under it with it: the rebuild that asked for comes with its draw calls' replacements

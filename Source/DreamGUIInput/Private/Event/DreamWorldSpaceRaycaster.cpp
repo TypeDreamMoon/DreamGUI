@@ -119,7 +119,7 @@ void UDreamWorldSpaceRaycaster::Raycast(UDreamPointerEventData* InPointerEventDa
 	 * the thread gathering from it prepares it: nothing above it is another tree's (PrepareRaycastTree).
 	 */
 	enum class ETraced : uint8 { No, Alone, UnderAnother };
-	const TArray<TWeakObjectPtr<UDreamCanvas>>& AllCanvases = Manager->GetAllCanvasArray();
+	const TArray<UDreamCanvas*>& AllCanvases = Manager->GetAllCanvasesResolved();
 	const int32 MinCanvases = CVarDreamUIParallelRaycastMinCanvases.GetValueOnGameThread();
 	const bool bParallel = MinCanvases > 0 && AllCanvases.Num() >= MinCanvases && FApp::ShouldUseThreadingForPerformance();
 	const ETraceTypeQuery Channel = TraceChannel.GetValue();
@@ -134,9 +134,9 @@ void UDreamWorldSpaceRaycaster::Raycast(UDreamPointerEventData* InPointerEventDa
 		How.SetNumZeroed(AllCanvases.Num());
 		ParallelFor(TEXT("DreamUI_TracedCanvases"), AllCanvases.Num(), 64, [&AllCanvases, &Resolved, &How, Channel](int32 Index)
 		{
-			// The weak look-up already leaves out a canvas that is garbage. Nothing asked here writes anything once a canvas
-			// knows its root and widget, which it does from its first update.
-			UDreamCanvas* const Canvas = AllCanvases[Index].Get();
+			// Resolved already, a canvas that is garbage left out (GetAllCanvasesResolved). Nothing asked here writes anything
+			// once a canvas knows its root and widget, which it does from its first update.
+			UDreamCanvas* const Canvas = AllCanvases[Index];
 			if (Canvas == nullptr || !Canvas->IsRootCanvas() || !Canvas->IsRenderToWorldSpace() || Canvas->GetTraceChannel() != Channel)
 			{
 				return;
@@ -156,10 +156,9 @@ void UDreamWorldSpaceRaycaster::Raycast(UDreamPointerEventData* InPointerEventDa
 	}
 	else
 	{
-		for (const TWeakObjectPtr<UDreamCanvas>& CanvasPtr : AllCanvases)
+		for (UDreamCanvas* Canvas : AllCanvases)
 		{
-			// The weak look-up already leaves out a canvas that is garbage.
-			UDreamCanvas* Canvas = CanvasPtr.Get();
+			// Resolved already, a canvas that is garbage left out.
 			if (Canvas == nullptr)continue;
 			if (!Canvas->IsRootCanvas())continue;
 			if (!Canvas->IsRenderToWorldSpace())continue;

@@ -157,6 +157,12 @@ void UDreamUIBehaviour::OnRegister()
 		Widget->GetRaycastableChangedEvent().AddUObject(this, &UDreamUIBehaviour::Call_OnRaycastableChanged);
 	}
 }
+void UDreamUIBehaviour::BeginDestroy()
+{
+	DreamUIGone::Note();
+	Super::BeginDestroy();
+}
+
 void UDreamUIBehaviour::OnUnregister()
 {
 	// No longer one to write without a look-up (DreamUIGone).

@@ -2,6 +2,7 @@
 // Modified by TypeDreamMoon.
 
 #include "Core/DreamUIManager.h"
+#include "Core/DreamUIGoneCount.h"
 #include "Core/DreamUIWorldContext.h"
 #include "Core/DreamGUISettings.h"
 
@@ -508,11 +509,32 @@ void UDreamUIManagerWorldSubsystem::SortRootCanvasesIfStale()
 			}
 		}
 	}
+	// Their pointers are found again at the next pass (RootCanvasesByPassRaw).
+	RootCanvasesRawGone = 0;
 }
 
 void UDreamUIManagerWorldSubsystem::InvalidateRootCanvasOrder()
 {
 	DreamUIManagerTickLocal::RootCanvasOrderGeneration.fetch_add(1, std::memory_order_relaxed);
+}
+
+const TArray<UDreamCanvas*>& UDreamUIManagerWorldSubsystem::GetAllCanvasesResolved()
+{
+	// A canvas coming or going moves the order generation on (AddCanvas, RemoveCanvas). The count is read before the
+	// look-ups: a canvas found alive by them is still alive while it reads the same.
+	const uint64 Order = DreamUIManagerTickLocal::RootCanvasOrderGeneration.load(std::memory_order_relaxed);
+	const uint64 Gone = DreamUIGone::Read();
+	if (Order != AllCanvasesResolvedOrder || Gone != AllCanvasesResolvedGone || AllCanvasesResolved.Num() != AllCanvasArray.Num())
+	{
+		AllCanvasesResolvedOrder = Order;
+		AllCanvasesResolvedGone = Gone;
+		AllCanvasesResolved.Reset(AllCanvasArray.Num());
+		for (const TWeakObjectPtr<UDreamCanvas>& Canvas : AllCanvasArray)
+		{
+			AllCanvasesResolved.Add(Canvas.Get());
+		}
+	}
+	return AllCanvasesResolved;
 }
 
 void UDreamUIManagerWorldSubsystem::ForEachRootCanvasInRenderModeOrder(bool bInActualRenderMode, TFunctionRef<void(UDreamCanvas*)> InFunction)
@@ -529,16 +551,30 @@ void UDreamUIManagerWorldSubsystem::ForEachRootCanvasInRenderModeOrder(bool bInA
 		return bInActualRenderMode ? Canvas->GetActualRenderMode() : Canvas->GetRenderMode();
 	};
 	SortRootCanvasesIfStale();
+	// See RootCanvasesByPassRaw: looked up again only once something may have gone since they last were. Read before
+	// the look-ups: a canvas found alive by them is still alive while the count reads the same.
+	const uint64 Gone = DreamUIGone::Read();
+	if (RootCanvasesRawGone != Gone)
+	{
+		RootCanvasesRawGone = Gone;
+		for (int32 Pass = 0; Pass < UE_ARRAY_COUNT(RootCanvasesByPass); ++Pass)
+		{
+			TArray<UDreamCanvas*>& Raw = RootCanvasesByPassRaw[Pass];
+			Raw.Reset();
+			for (const TWeakObjectPtr<UDreamCanvas>& WeakCanvas : RootCanvasesByPass[Pass])
+			{
+				Raw.Add(WeakCanvas.Get());
+			}
+		}
+	}
 	for (int32 Pass = 0; Pass < UE_ARRAY_COUNT(DreamUIManagerTickLocal::PassOrder); ++Pass)
 	{
 		// A copy: a call that sorts the canvases again, through a pass of its own, would otherwise change the list under
-		// this one.
-		const TArray<TWeakObjectPtr<UDreamCanvas>> Canvases = RootCanvasesByPass[Pass];
-		for (const TWeakObjectPtr<UDreamCanvas>& WeakCanvas : Canvases)
+		// this one. A canvas a call lets go of meanwhile is still in memory until a collection, which no call makes, and
+		// is told by its registration.
+		const TArray<UDreamCanvas*> Canvases = RootCanvasesByPassRaw[Pass];
+		for (UDreamCanvas* const Canvas : Canvases)
 		{
-			// Looked up once for the checks and the call: IsCanvasStillRegistered and a weak look-up for each use after it were
-			// four for every canvas of every pass.
-			UDreamCanvas* const Canvas = WeakCanvas.Get();
 			if (Canvas == nullptr || Canvas->RegisteredWithManager != this)continue;
 			if (!Canvas->IsRootCanvas())continue;
 			if (ModeOf(Canvas) != DreamUIManagerTickLocal::PassOrder[Pass])continue;

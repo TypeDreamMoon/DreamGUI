@@ -975,6 +975,12 @@ private:
 	struct FRenderLayerRecord
 	{
 		TWeakObjectPtr<UDreamWidget> Layer;
+		/**
+		 * Layer as a weak look-up found it while the count of objects gone read RenderLayersRawGone (DreamUIGone): while it
+		 * reads the same, that widget, alive and as registered as it was. Found again by TendRenderLayers, and what it and
+		 * the placing after it read -- every layer of every canvas, every frame, the placing on as many threads as there are.
+		 */
+		UDreamWidget* LayerRaw = nullptr;
 		/** Held for the layer while it is one, and given back when it is not, or when it is gone. */
 		int32 Row = 0;
 		/** What this canvas last wrote into the row: where the layer stood on it. */
@@ -982,6 +988,8 @@ private:
 	};
 	/** The widgets this canvas made render layers. */
 	TArray<FRenderLayerRecord> RenderLayers;
+	/** See FRenderLayerRecord::LayerRaw. */
+	uint64 RenderLayersRawGone = 0;
 	/** The world's render layer table (UDreamUIManagerWorldSubsystem::GetRenderLayerTable), made when InCreate asks for it. */
 	class UDreamUIRenderLayerTable* GetRenderLayerTable(bool bInCreate) const;
 	mutable TWeakObjectPtr<class UDreamUIRenderLayerTable> RenderLayerTable;

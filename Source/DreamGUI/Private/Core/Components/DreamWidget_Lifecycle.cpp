@@ -231,6 +231,8 @@ void UDreamWidget::BeginDestroy()
 				*GetFullName(), *GetDisplayName());
 		}
 	}
+	// Collected, registered or not: no longer one to keep or write without a look-up (DreamUIGone).
+	DreamUIGone::Note();
 	Super::BeginDestroy();
 }
 

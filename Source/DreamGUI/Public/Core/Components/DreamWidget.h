@@ -535,6 +535,14 @@ private:
 	uint8 bOwnTransformChanged : 1 = false;
 	/** DreamCanvas which render this UI element */
 	UPROPERTY(Transient) mutable TWeakObjectPtr<UDreamCanvas> RenderCanvas = nullptr;
+	/**
+	 * RenderCanvas as a weak look-up found it while the count of objects gone read RenderCanvasRawGone (DreamUIGone):
+	 * while the count reads the same, it is that canvas, alive and as registered as it was (GetRenderCanvas). Kept on
+	 * the game thread where nothing else reads it meanwhile: SetRenderCanvas, and a render transform's write
+	 * (KeepRenderCanvas).
+	 */
+	mutable UDreamCanvas* RenderCanvasRaw = nullptr;
+	mutable uint64 RenderCanvasRawGone = 0;
 	
 	/** is this widget contains DreamCanvas component */
 	mutable uint32 bIsCanvasWidget:1;
@@ -772,6 +780,8 @@ public:
 	FTransform GetRenderLocalTransform()const;
 	/** Recompute the cached has-a-render-transform bit and push the new transform down the subtree. */
 	void ApplyRenderTransformChange();
+	/** GetRenderCanvas, keeping what it found for the ones after it (RenderCanvasRaw). Game thread, outside parallel work. */
+	UDreamCanvas* KeepRenderCanvas() const;
 	/** Recompute the cached has-a-render-transform bit from the serialized channels. */
 	void RefreshRenderTransformFlag();
 	/**
