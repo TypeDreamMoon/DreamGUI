@@ -210,6 +210,28 @@ private:
 	/** Set by the two template write paths, cleared by FlushTemplateChanges. See IsTemplateDirty. */
 	bool bTemplateDirty = false;
 
+	/**
+	 * FindTemplateForPreview's answers by widget guid, filled by one walk of the authoring tree and checked on the way out
+	 * (still that guid's, still held by its parent all the way up to the tree's root). One walk per lookup was a walk per
+	 * selected widget per commit, per undo and per nudge repeat: hitches, with a few thousand widgets and a few hundred
+	 * selected.
+	 */
+	mutable TMap<FGuid, TWeakObjectPtr<UDreamWidget>> TemplatesByGuid;
+	/**
+	 * Guids looked up and not found this frame (TemplatesMissedFrame): asked again, answered without another walk -- the
+	 * canvas agent and the preview's wrapper are asked about for every pick. Forgotten whenever the tree may have gained a
+	 * widget (ForgetTemplateMisses): a frame can delete a widget, ask, undo and ask again.
+	 */
+	mutable TSet<FGuid> TemplatesMissed;
+	mutable uint64 TemplatesMissedFrame = 0;
+	void ForgetTemplateMisses() { TemplatesMissed.Reset(); }
+	/**
+	 * InValue, a reference an edit copied onto the template, as the template must hold it: a preview widget, or a widget's
+	 * own object (its visual, a behaviour), becomes its template counterpart; anything not the preview's stays as it is.
+	 * False when it is the preview's and has no counterpart.
+	 */
+	bool MapPreviewReferenceToTemplate(UObject* InValue, UObject*& OutMapped) const;
+
 	void DestroyPreview();
 	/**
 	 * The tree the preview is instanced from: the Blueprint's own authoring tree, or -- when this asset

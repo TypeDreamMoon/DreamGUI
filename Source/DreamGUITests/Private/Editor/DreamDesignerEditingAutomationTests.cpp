@@ -24,6 +24,7 @@
 #include "Core/Components/DreamWidget.h"
 #include "Core/DreamUIBehaviour.h"
 #include "Interaction/UITextInput.h"
+#include "Interaction/UIScrollView.h"
 #include "Animation/DreamWidgetAnimationComponent.h"
 #include "Animation/DreamWidgetAnimation.h"
 #include "Core/Components/DreamText.h"
@@ -2453,5 +2454,57 @@ bool FDreamDesignerDragOutlivesItsPreviewTest::RunTest(const FString&)
 	return true;
 }
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamDesignerWidgetReferenceEditTest,
+	"DreamGUI.Designer.AWidgetReferenceSetInTheDesignerNamesTheAssetsWidgetNotThePreviews",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * A scroll view's Content picked in the details panel is a widget of the PREVIEW, and the edit copied it onto the template
+ * as it was: the asset pointed into the preview, which the next structural edit, compile or undo rebuilds -- the reference
+ * went to nothing, and a compiled class carried it to a destroyed widget. The template now holds its own counterpart.
+ */
+bool FDreamDesignerWidgetReferenceEditTest::RunTest(const FString&)
+{
+	using namespace DreamDesignerEditingTestLocal;
+
+	FScopedDesigner Scoped(TEXT("DesignerWidgetReferenceEdit"));
+	if (!TestNotNull(TEXT("The designer opened"), Scoped.Designer) || Scoped.PreviewRoot() == nullptr)
+	{
+		return false;
+	}
+	UDreamWidget* Root = Scoped.TemplateRoot();
+	UDreamWidget* Host = DreamWidgetTreeEditing::CreateWidget(Scoped.Blueprint, UDreamWidget::StaticClass(), Root, -1, TEXT("Host"));
+	DreamWidgetTreeEditing::CreateWidget(Scoped.Blueprint, UDreamWidget::StaticClass(), Host, -1, TEXT("Inner"));
+	if (!TestNotNull(TEXT("a scroll view on the host"), Host->AddComponent<UUIScrollView>()))
+	{
+		return false;
+	}
+	Scoped.Rebuild();
+
+	FDreamWidgetPreviewHost* PreviewHost = Scoped.Designer->GetPreviewHost().Get();
+	UDreamWidget* HostTemplate = Scoped.FindTemplate(TEXT("Host"));
+	UDreamWidget* InnerTemplate = Scoped.FindTemplate(TEXT("Inner"));
+	UDreamWidget* HostPreview = PreviewHost->FindPreviewForTemplate(HostTemplate);
+	UDreamWidget* InnerPreview = PreviewHost->FindPreviewForTemplate(InnerTemplate);
+	UUIScrollView* PreviewScroll = HostPreview != nullptr ? HostPreview->GetComponent<UUIScrollView>() : nullptr;
+	UUIScrollView* TemplateScroll = HostTemplate != nullptr ? HostTemplate->GetComponent<UUIScrollView>() : nullptr;
+	FObjectPropertyBase* ContentProperty = CastField<FObjectPropertyBase>(UUIScrollView::StaticClass()->FindPropertyByName(TEXT("Content")));
+	if (!TestNotNull(TEXT("the preview's scroll view"), PreviewScroll) || !TestNotNull(TEXT("the template's"), TemplateScroll)
+		|| !TestNotNull(TEXT("the preview's inner widget"), InnerPreview) || !TestNotNull(TEXT("Content is a reference"), ContentProperty))
+	{
+		return false;
+	}
+
+	// What the details panel's picker does: the preview's Content set to the preview's widget, then the change mirrored.
+	ContentProperty->SetObjectPropertyValue_InContainer(PreviewScroll, InnerPreview);
+	FEditPropertyChain Chain;
+	Chain.AddHead(ContentProperty);
+	Scoped.Designer->MigrateDetailsChangeToTemplate({ PreviewScroll }, Chain, /*bIsModify*/false);
+
+	TestTrue(TEXT("the asset's scroll view names the asset's widget"),
+		ContentProperty->GetObjectPropertyValue_InContainer(TemplateScroll) == InnerTemplate);
+	return true;
+}
 
 #endif
