@@ -966,15 +966,21 @@ void UDreamWidget::MarkTransformChanged()
 	MarkWorldRectBoundsDirty();
 	if (this->RenderCanvas.IsValid())
 	{
-		this->RenderCanvas->MarkWidgetUpdate(this, true);//mark canvas to update
 		if (this->IsCanvasWidget())
 		{
+			this->RenderCanvas->MarkWidgetUpdate(this, true);//mark canvas to update
 			//This is mainly to mark DreamGUICanvas's bIsViewProjectionMatrixDirty to true.
 			//For the condition DreamGUI_Tutorials/Tutorials/UIRenderTarget, when move DreamGUIRenderTarget at runtime, the DreamGUICanvas's RenderTarget's matrix not update, result in wrong interaction.
 			this->RenderCanvas->MarkTransformOrDimensionChanged();
 		}
+		else
+		{
+			// A move and nothing else: the canvas rebuilds its draw calls only if the move could change how they batch.
+			this->RenderCanvas->MarkWidgetMoved(this);
+		}
 	}
 
+	TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_TransformChangedEvent);
 	Call_TransformChanged();
 }
 

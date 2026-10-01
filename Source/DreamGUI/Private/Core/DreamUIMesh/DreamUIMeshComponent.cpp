@@ -1855,22 +1855,34 @@ TSharedPtr<FDreamUIRenderSection> UDreamUIMeshComponent::SetupRenderSection(EDre
 	return RenderSection;
 }
 
-void UDreamUIMeshComponent::UpdateMeshSection(const TSharedPtr<FDreamUIRenderSection>& InRenderSection, FDreamUIDrawCall* InDrawCallData)
+bool UDreamUIMeshComponent::TryPatchMeshSection(const TSharedPtr<FDreamUIRenderSection>& InRenderSection, FDreamUIDrawCall* InDrawCallData)
 {
+	TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_PatchMeshSection);
 	// Addressed by handle, not by draw-call index: skipped draw-calls have no section, so index-based
 	// addressing hit the wrong section — including reinterpreting a ChildCanvas section as a mesh.
 	if (!InRenderSection.IsValid() || InRenderSection->Type != EDreamUIRenderSectionType::Mesh)
 	{
-		return;
+		return true;
 	}
 	auto MeshSectionPtr = static_cast<FDreamUIRenderSection_Mesh*>(InRenderSection.Get());
 	// Laid out as the geometries the section was built from: only the vertices of those that changed are written, here
 	// and on the GPU.
-	if (PatchMeshSection(MeshSectionPtr, InDrawCallData->BatchMeshGeometryArray))
+	if (!PatchMeshSection(MeshSectionPtr, InDrawCallData->BatchMeshGeometryArray))
 	{
-		MeshSectionPtr->BoundingBox = InDrawCallData->CombinedBounds.TransformBy(GetComponentTransform());
+		return false;
+	}
+	MeshSectionPtr->BoundingBox = InDrawCallData->CombinedBounds.TransformBy(GetComponentTransform());
+	return true;
+}
+
+void UDreamUIMeshComponent::UpdateMeshSection(const TSharedPtr<FDreamUIRenderSection>& InRenderSection, FDreamUIDrawCall* InDrawCallData)
+{
+	TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_UpdateMeshSection);
+	if (TryPatchMeshSection(InRenderSection, InDrawCallData))
+	{
 		return;
 	}
+	auto MeshSectionPtr = static_cast<FDreamUIRenderSection_Mesh*>(InRenderSection.Get());
 	// Every vertex, from the combined buffer, made now if the batching left it to be made.
 	InDrawCallData->CombineIfPending();
 	// The refreshed copies' vertices go in now, with the indices the section already holds: it stands for those copies

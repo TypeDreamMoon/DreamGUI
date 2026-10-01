@@ -108,33 +108,63 @@ void UDreamBaseRaycaster::RaycastUI(UDreamPointerEventData* InPointerEventData, 
 	{
 		CurrentRayOrigin = OutRayOrigin;
 		CurrentRayDirection = OutRayDirection;
-		
-		struct LOCAL
+		RaycastUIAlongRay(InRootCanvas, OutRayOrigin, OutRayEnd, OutHitResultArray);
+	}
+}
+
+void UDreamBaseRaycaster::RaycastUIAlongRay(UDreamCanvas* InRootCanvas, const FVector& InRayOrigin, const FVector& InRayEnd, TArray<FDreamUIHitResult>& OutHitResultArray)
+{
+	struct LOCAL
+	{
+		static void CollectVisualWidget(UDreamCanvas* InCanvas, TArray<UDreamVisual*>& OutVisualArray)
 		{
-			static void CollectVisualWidget(UDreamCanvas* InCanvas, TArray<UDreamVisual*>& OutVisualArray)
+			OutVisualArray.Append(InCanvas->GetVisualArray());
+			for (auto& Child : InCanvas->GetChildrenCanvasArray())
 			{
-				OutVisualArray.Append(InCanvas->GetVisualArray());
-				for (auto& Child : InCanvas->GetChildrenCanvasArray())
-				{
-					CollectVisualWidget(Child.Get(), OutVisualArray);
-				}
+				CollectVisualWidget(Child.Get(), OutVisualArray);
 			}
-			static void ForeachCanvas(UDreamCanvas* InCanvas, TFunctionRef<void(UDreamCanvas*)> InFunction)
+		}
+		static void ForeachCanvas(UDreamCanvas* InCanvas, TFunctionRef<void(UDreamCanvas*)> InFunction)
+		{
+			InFunction(InCanvas);
+			for (auto& Child : InCanvas->GetChildrenCanvasArray())
 			{
-				InFunction(InCanvas);
-				for (auto& Child : InCanvas->GetChildrenCanvasArray())
-				{
-					ForeachCanvas(Child.Get(), InFunction);
-				}
+				ForeachCanvas(Child.Get(), InFunction);
 			}
-		};
+		}
+	};
 #if 0// use ParallelFor to speed up the hit process, should be ok because it blocks game thread and we use thread lock
-		TArray<UDreamVisual*> VisualArray;
-		LOCAL::CollectVisualWidget(InRootCanvas, VisualArray);
-		FCriticalSection Mutex;
-		ParallelFor(VisualArray.Num(), [&VisualArray, &Mutex, &OutHitResultArray, OutRayOrigin, OutRayEnd](int32 Index)
+	TArray<UDreamVisual*> VisualArray;
+	LOCAL::CollectVisualWidget(InRootCanvas, VisualArray);
+	FCriticalSection Mutex;
+	ParallelFor(VisualArray.Num(), [&VisualArray, &Mutex, &OutHitResultArray, InRayOrigin, InRayEnd](int32 Index)
+	{
+		auto& Visual = VisualArray[Index];
+		auto Widget = Visual->GetWidget();
+		FDreamUIHitResult ThisHit;
+		ThisHit.FaceIndex = INDEX_NONE;
+		if (
+			Widget->GetRaycastableInHierarchy()
+			&& Widget->GetHitTestVisibleInHierarchy()
+			&& Visual->GetRaycastTarget()
+			&& DreamBaseRaycasterLocal::CouldRayReachVisual(Visual, Widget, InRayOrigin, InRayEnd)
+			&& Visual->LineTraceUI(ThisHit, InRayOrigin, InRayEnd)
+			)
 		{
-			auto& Visual = VisualArray[Index];
+			if (Widget->IsPointVisibleOnClip(ThisHit.Location))
+			{
+				Mutex.Lock();
+				OutHitResultArray.Add(ThisHit);
+				Mutex.Unlock();
+			}
+		}
+	});
+#else
+	auto TraceFunction = [&](UDreamCanvas* InCanvas)
+	{
+		auto& VisualArray = InCanvas->GetVisualArray();
+		for (auto& Visual : VisualArray)
+		{
 			auto Widget = Visual->GetWidget();
 			FDreamUIHitResult ThisHit;
 			ThisHit.FaceIndex = INDEX_NONE;
@@ -142,70 +172,44 @@ void UDreamBaseRaycaster::RaycastUI(UDreamPointerEventData* InPointerEventData, 
 				Widget->GetRaycastableInHierarchy()
 				&& Widget->GetHitTestVisibleInHierarchy()
 				&& Visual->GetRaycastTarget()
-				&& DreamBaseRaycasterLocal::CouldRayReachVisual(Visual, Widget, OutRayOrigin, OutRayEnd)
-				&& Visual->LineTraceUI(ThisHit, OutRayOrigin, OutRayEnd)
+				// Ordered last of the cheap tests and first of the expensive ones: the three above
+				// are field reads, this one is arithmetic on a cached sphere, and LineTraceUI below
+				// inverts a transform.
+				&& DreamBaseRaycasterLocal::CouldRayReachVisual(Visual, Widget, InRayOrigin, InRayEnd)
+				&& Visual->LineTraceUI(ThisHit, InRayOrigin, InRayEnd)
 				)
 			{
 				if (Widget->IsPointVisibleOnClip(ThisHit.Location))
 				{
-					Mutex.Lock();
 					OutHitResultArray.Add(ThisHit);
-					Mutex.Unlock();
 				}
 			}
-		});
-#else
-		auto TraceFunction = [&](UDreamCanvas* InCanvas)
-		{
-			auto& VisualArray = InCanvas->GetVisualArray();
-			for (auto& Visual : VisualArray)
-			{
-				auto Widget = Visual->GetWidget();
-				FDreamUIHitResult ThisHit;
-				ThisHit.FaceIndex = INDEX_NONE;
-				if (
-					Widget->GetRaycastableInHierarchy()
-					&& Widget->GetHitTestVisibleInHierarchy()
-					&& Visual->GetRaycastTarget()
-					// Ordered last of the cheap tests and first of the expensive ones: the three above
-					// are field reads, this one is arithmetic on a cached sphere, and LineTraceUI below
-					// inverts a transform.
-					&& DreamBaseRaycasterLocal::CouldRayReachVisual(Visual, Widget, OutRayOrigin, OutRayEnd)
-					&& Visual->LineTraceUI(ThisHit, OutRayOrigin, OutRayEnd)
-					)
-				{
-					if (Widget->IsPointVisibleOnClip(ThisHit.Location))
-					{
-						OutHitResultArray.Add(ThisHit);
-					}
-				}
-			}
-		};
-		LOCAL::ForeachCanvas(InRootCanvas, TraceFunction);
-#endif
-		
-		if (OutHitResultArray.Num() > 0)
-		{
-			OutHitResultArray.Sort([](const FDreamUIHitResult& A, const FDreamUIHitResult& B)
-			{
-				auto AWidget = A.Widget.Get();
-				auto BWidget = B.Widget.Get();
-				if (AWidget != nullptr && BWidget != nullptr)
-				{
-					auto ACanvasSortOrder = AWidget->GetRenderCanvas()->GetActualSortOrder();
-					auto BCanvasSortOrder = BWidget->GetRenderCanvas()->GetActualSortOrder();
-					if (AWidget->GetRenderCanvas() != BWidget->GetRenderCanvas() && ACanvasSortOrder != BCanvasSortOrder)//not in same sort order
-					{
-						return ACanvasSortOrder > BCanvasSortOrder;
-					}
-					else//same Canvas, sort on item's hierarchy order
-					{
-						return AWidget->GetFlattenHierarchyIndex() > BWidget->GetFlattenHierarchyIndex();
-					}
-				}
-				return true;
-			});
 		}
+	};
+	LOCAL::ForeachCanvas(InRootCanvas, TraceFunction);
+#endif
+	
+	if (OutHitResultArray.Num() > 0)
+	{
+		OutHitResultArray.Sort([](const FDreamUIHitResult& A, const FDreamUIHitResult& B)
+		{
+			auto AWidget = A.Widget.Get();
+			auto BWidget = B.Widget.Get();
+			if (AWidget != nullptr && BWidget != nullptr)
+			{
+				auto ACanvasSortOrder = AWidget->GetRenderCanvas()->GetActualSortOrder();
+				auto BCanvasSortOrder = BWidget->GetRenderCanvas()->GetActualSortOrder();
+				if (AWidget->GetRenderCanvas() != BWidget->GetRenderCanvas() && ACanvasSortOrder != BCanvasSortOrder)//not in same sort order
+				{
+					return ACanvasSortOrder > BCanvasSortOrder;
+				}
+				else//same Canvas, sort on item's hierarchy order
+				{
+					return AWidget->GetFlattenHierarchyIndex() > BWidget->GetFlattenHierarchyIndex();
+				}
+			}
+			return true;
+		});
 	}
 }
 

@@ -37,6 +37,8 @@ namespace DreamUIRenderStats
 			TEXT("SectionReuses"),
 			TEXT("WidgetsUpdated"),
 			TEXT("SectionPatches"),
+			TEXT("DrawCallRebuilds"),
+			TEXT("InPlaceRefreshes"),
 		};
 	}
 

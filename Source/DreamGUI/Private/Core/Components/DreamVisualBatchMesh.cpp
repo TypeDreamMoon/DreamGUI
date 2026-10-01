@@ -11,10 +11,18 @@
 #include "DreamUIRender/DreamUIRenderStats.h"
 #include "Core/Components/DreamWidget.h"
 #include "Event/DreamPointerEventData.h"
+#include "HAL/IConsoleManager.h"
 
 DECLARE_CYCLE_STAT(TEXT("DreamVisualBatchMesh UpdateGeometry"), STAT_DreamUpdateGeometry, STATGROUP_DreamGUI);
 DECLARE_CYCLE_STAT(TEXT("DreamVisualBatchMesh TransformVertices"), STAT_TransformVertices, STATGROUP_DreamGUI);
 DECLARE_CYCLE_STAT(TEXT("DreamVisualBatchMesh BeforeUpdateGeometry"), STAT_BeforeUpdateGeometry, STATGROUP_DreamGUI);
+
+static TAutoConsoleVariable<int32> CVarDreamUIAsyncVertexTransformMinVertices(
+	TEXT("r.DreamUI.AsyncVertexTransformMinVertices"),
+	256,
+	TEXT("A geometry with at least this many vertices has them transformed on a worker; a smaller one, here. Handing a task ")
+	TEXT("over and waiting for it costs more than transforming a button's few dozen vertices. 0: every geometry on a worker."),
+	ECVF_Default);
 
 
 UDreamVisualBatchMesh::UDreamVisualBatchMesh(const FObjectInitializer& ObjectInitializer) :Super(ObjectInitializer)
@@ -290,14 +298,21 @@ void UDreamVisualBatchMesh::UpdateGeometry()
 			 * destroyed while the task is in flight.
 			 */
 			CalculateLocalBounds();
-			//it is safe to do async calculation because we can be sure it finish in same frame
-			Canvas->PushAsyncFunction_TransformVertices(
-				[Params = FDreamUIGeometry::MakeTransformVerticesParams(Canvas, this), Geometry = this->UIGeometry]()
+			auto Transform = [Params = FDreamUIGeometry::MakeTransformVerticesParams(Canvas, this), Geometry = this->UIGeometry]()
 			{
 				TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_TransformVerticesTask);
 				FDreamUIGeometry::TransformVertices(Params, Geometry.Get());
 				Geometry->bIsCalculating = false;
-			});
+			};
+			if (UIGeometry->Vertices.Num() < CVarDreamUIAsyncVertexTransformMinVertices.GetValueOnGameThread())
+			{
+				Transform();
+			}
+			else
+			{
+				//it is safe to do async calculation because we can be sure it finish in same frame
+				Canvas->PushAsyncFunction_TransformVertices(MoveTemp(Transform));
+			}
 #else
 			CalculateLocalBounds();
 			FDreamUIGeometry::TransformVertices(Canvas, this, this->UIGeometry.Get());

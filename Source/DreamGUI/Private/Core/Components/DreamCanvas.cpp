@@ -52,6 +52,27 @@ static TAutoConsoleVariable<int32> CVarDreamUIVerifyPartialPrepare(
 	TEXT("prepare each time."),
 	ECVF_Default);
 
+static TAutoConsoleVariable<int32> CVarDreamUIRefreshMovesInPlace(
+	TEXT("r.DreamUI.RefreshMovesInPlace"),
+	1,
+	TEXT("1: a canvas whose widgets only moved keeps its draw calls and refreshes their vertices and bounds, when the move ")
+	TEXT("cannot change how its elements batch. 0: every move rebuilds the draw calls, as it used to."),
+	ECVF_Default);
+
+namespace DreamCanvasLocal
+{
+	/** The rect a canvas batches against: its widget's, at least 100 on a side so that the quad tree can work. */
+	void GetBatchingRect(const UDreamWidget* InWidget, FVector2D& OutLeftBottom, FVector2D& OutRightTop)
+	{
+		//@todo: use a better size, maybe screen size (only for screen space UI)
+		const auto Width = FMath::Max(InWidget->GetWidth(), 100.0f);
+		const auto Height = FMath::Max(InWidget->GetHeight(), 100.0f);
+		OutLeftBottom.X = Width * -InWidget->GetPivot().X;
+		OutLeftBottom.Y = Height * -InWidget->GetPivot().Y;
+		OutRightTop.X = Width * (1.0f - InWidget->GetPivot().X);
+		OutRightTop.Y = Height * (1.0f - InWidget->GetPivot().Y);
+	}
+}
 
 UDreamCanvas::UDreamCanvas()
 {
@@ -703,6 +724,96 @@ void UDreamCanvas::MarkWidgetUpdate(UDreamWidget* InWidget, bool bRebuildDrawCal
 	WidgetsToUpdate.Add(InWidget);
 }
 
+void UDreamCanvas::MarkWidgetMoved(UDreamWidget* InWidget)
+{
+	bWidgetsMovedSinceUpdate = true;
+	MarkWidgetUpdate(InWidget, false);
+}
+
+bool UDreamCanvas::CanRefreshDrawCallsInPlace()
+{
+	TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_CanRefreshDrawCallsInPlace);
+	// The draw calls in hand are the ones asked for last, not an older set a rebuild on its way will replace, and they were
+	// made from this widget list. And from an earlier frame: the refresh (UpdateDrawCallBatchData) only takes draw calls
+	// prepared before the frame it runs in, so without one the moves would wait for a rebuild nobody asked for.
+	if (!CurrentDrawCallData.Placement.bIndependentOfPositions
+		|| CurrentDrawCallData.FrameNumber != NewestDrawCallFrameNumber
+		|| GFrameCounter <= CurrentDrawCallData.FrameNumber
+		|| bWidgetListChangedSincePrepare)
+	{
+		return false;
+	}
+	UDreamWidget* DreamWidget = GetWidget();
+	if (DreamWidget == nullptr)
+	{
+		return false;
+	}
+	// The rect a rebuild would batch against now, and whether it would cull by it, as the batch in hand did.
+	FVector2D LeftBottom;
+	FVector2D RightTop;
+	DreamCanvasLocal::GetBatchingRect(DreamWidget, LeftBottom, RightTop);
+	const bool bCull = CullsElementsOutsideItsRect();
+	if (LeftBottom != CurrentDrawCallData.LeftBottomPoint || RightTop != CurrentDrawCallData.RightTopPoint
+		|| bCull != CurrentDrawCallData.bCullElementsOutsideCanvasRect)
+	{
+		return false;
+	}
+	// The geometries read below are the ones the moves are being written into.
+	if (TransformVerticesAsyncFunctionRunnable.IsValid())
+	{
+		TransformVerticesAsyncFunctionRunnable->WaitForAllFunctions();
+	}
+	// BatchDrawCallAsync's culling test, against the same rect.
+	auto IsOutside = [bCull, &LeftBottom, &RightTop](const FDreamUIGeometry& InGeometry)
+	{
+		return bCull
+			&& (InGeometry.BoundsMax2DInCanvasSpace.X < LeftBottom.X
+				|| InGeometry.BoundsMin2DInCanvasSpace.X > RightTop.X
+				|| InGeometry.BoundsMax2DInCanvasSpace.Y < LeftBottom.Y
+				|| InGeometry.BoundsMin2DInCanvasSpace.Y > RightTop.Y);
+	};
+	for (const FDreamUIDrawCall& DrawCall : CurrentDrawCallData.DrawCallArray)
+	{
+		switch (DrawCall.Type)
+		{
+		case EDreamUIDrawCallType::ChildCanvas:
+			// Only a place in the order: the child canvas's own elements are its own canvas's business.
+			break;
+		case EDreamUIDrawCallType::BatchMesh:
+			for (int32 Index = 0; Index < DrawCall.BatchMeshGeometryArray.Num(); ++Index)
+			{
+				const FDreamUIGeometry* Batched = DrawCall.BatchMeshGeometryArray[Index].Get();
+				const UDreamVisualBatchMesh* Visual = DrawCall.BatchMeshVisualArray.IsValidIndex(Index) ? DrawCall.BatchMeshVisualArray[Index].Get() : nullptr;
+				const FDreamUIGeometry* Now = Visual != nullptr ? Visual->GetGeometry() : nullptr;
+				if (Batched == nullptr || Now == nullptr
+					|| Now->Vertices.Num() != Batched->Vertices.Num() || Now->Triangles.Num() != Batched->Triangles.Num())
+				{
+					return false;
+				}
+				const bool bFlat = Is2DUITransform(Now->TransformRelativeToCanvas);
+				if (bFlat != Is2DUITransform(Batched->TransformRelativeToCanvas) || (bFlat && IsOutside(*Now)))
+				{
+					return false;
+				}
+			}
+			break;
+		default:
+			// A post process reads what lies under it and a direct mesh has sections of its own; neither is refreshed in place.
+			return false;
+		}
+	}
+	for (const TWeakObjectPtr<UDreamVisualBatchMesh>& WeakCulled : CurrentDrawCallData.Placement.CulledVisuals)
+	{
+		const UDreamVisualBatchMesh* Visual = WeakCulled.Get();
+		const FDreamUIGeometry* Now = Visual != nullptr ? Visual->GetGeometry() : nullptr;
+		if (Now == nullptr || !Is2DUITransform(Now->TransformRelativeToCanvas) || !IsOutside(*Now))
+		{
+			return false;
+		}
+	}
+	return true;
+}
+
 void UDreamCanvas::EnsureWidgetListIndex()
 {
 	if (bWidgetListIndexValid)
@@ -718,7 +829,7 @@ void UDreamCanvas::EnsureWidgetListIndex()
 	}
 }
 
-bool UDreamCanvas::GatherWidgetsToUpdateInListOrder(const TArray<TWeakObjectPtr<UDreamWidget>>& InAsking, TArray<UDreamWidget*>& OutWidgets)
+bool UDreamCanvas::GatherWidgetsToUpdateInListOrder(const TArray<TWeakObjectPtr<UDreamWidget>>& InAsking, TArray<UDreamWidget*, TInlineAllocator<16>>& OutWidgets)
 {
 	EnsureWidgetListIndex();
 	TArray<TPair<int32, UDreamWidget*>, TInlineAllocator<64>> Ordered;
@@ -1490,21 +1601,26 @@ DECLARE_CYCLE_STAT(TEXT("Canvas BatchDrawCall/OverlapTest"), STAT_OverlapTest, S
 
 void UDreamCanvas::BatchDrawCallAsync(const FVector2D& InCanvasLeftBottom, const FVector2D& InCanvasRightTop,
 	const TArray<FDreamUIRenderData>& InRenderDataArray, TArray<FDreamUIDrawCall>& InOutUIDrawCallList,
-	bool bCullElementsOutsideCanvasRect)
+	bool bCullElementsOutsideCanvasRect, FDreamUIBatchPlacement* OutPlacement)
 {
 	// A copy the batching may use up: the data a caller hands over as const is the caller's to keep.
 	TArray<FDreamUIRenderData> RenderDataArray = InRenderDataArray;
-	BatchDrawCallAsync(InCanvasLeftBottom, InCanvasRightTop, MoveTemp(RenderDataArray), InOutUIDrawCallList, bCullElementsOutsideCanvasRect);
+	BatchDrawCallAsync(InCanvasLeftBottom, InCanvasRightTop, MoveTemp(RenderDataArray), InOutUIDrawCallList, bCullElementsOutsideCanvasRect, nullptr, OutPlacement);
 }
 
 void UDreamCanvas::BatchDrawCallAsync(const FVector2D& InCanvasLeftBottom, const FVector2D& InCanvasRightTop,
 	TArray<FDreamUIRenderData>&& InRenderDataArray, TArray<FDreamUIDrawCall>& InOutUIDrawCallList,
-	bool bCullElementsOutsideCanvasRect, const TArray<TArray<TSharedPtr<const FDreamUIGeometry>>>* InGeometryListsOnSections)
+	bool bCullElementsOutsideCanvasRect, const TArray<TArray<TSharedPtr<const FDreamUIGeometry>>>* InGeometryListsOnSections
+	, FDreamUIBatchPlacement* OutPlacement)
 {
 	SCOPE_CYCLE_COUNTER(STAT_BatchDrawCall);
 	DREAMUI_STAGE_SCOPE(Batching);
 
 	InOutUIDrawCallList.Reset();
+	if (OutPlacement != nullptr)
+	{
+		*OutPlacement = FDreamUIBatchPlacement();
+	}
 
 	auto CanvasRect = DreamUIQuadTree::Rectangle(InCanvasLeftBottom, InCanvasRightTop);
 
@@ -1653,6 +1769,34 @@ void UDreamCanvas::BatchDrawCallAsync(const FVector2D& InCanvasLeftBottom, const
 		}
 		return false;
 	};
+	/**
+	 * CanFitInDrawCall's walk for a flat element, with the overlap tests left out: whether a draw call before the last one
+	 * could take InGeo. The walk goes past the last draw call only as far as nothing it passes overlaps the element, so if
+	 * one of those could take it, where it went depended on positions. If only the last one could, it went there or into a
+	 * new draw call wherever it lay. A 3D draw call ends the walk, and so does the floor a child canvas, post process or
+	 * direct mesh sets.
+	 */
+	auto CouldGoPastTheLastDrawCall = [&](const FDreamUIGeometry& InGeo)
+	{
+		const int32 LastDrawCallIndex = InOutUIDrawCallList.Num() - 1;
+		if (LastDrawCallIndex < FitInDrawCallMinIndex || !InOutUIDrawCallList[LastDrawCallIndex].bIs2DSpace)
+		{
+			return false;
+		}
+		for (int32 Index = LastDrawCallIndex - 1; Index >= FitInDrawCallMinIndex; --Index)
+		{
+			const FDreamUIDrawCall& OtherDrawCall = InOutUIDrawCallList[Index];
+			if (!OtherDrawCall.bIs2DSpace)
+			{
+				return false;
+			}
+			if (OtherDrawCall.CanConsumeUIGeometryForBatchMesh(InGeo))
+			{
+				return true;
+			}
+		}
+		return false;
+	};
 
 	auto PushSingleDrawCall = [&](FDreamUIRenderData& InRenderData, EDreamUIDrawCallType InDrawCallType, bool InIs2DSpace = true) {
 		switch (InDrawCallType)
@@ -1734,7 +1878,16 @@ void UDreamCanvas::BatchDrawCallAsync(const FVector2D& InCanvasLeftBottom, const
 				//elements are culled by them
 				if (is2DUIItem && IsOutsideCanvas(ItemGeo.BoundsMin2DInCanvasSpace, ItemGeo.BoundsMax2DInCanvasSpace))
 				{
+					if (OutPlacement != nullptr)
+					{
+						OutPlacement->CulledVisuals.Add(RenderData.BatchMeshVisualObject);
+					}
 					continue;
+				}
+				if (OutPlacement != nullptr && OutPlacement->bIndependentOfPositions && ItemGeo.bSupportDrawcallBatching && is2DUIItem
+					&& CouldGoPastTheLastDrawCall(ItemGeo))
+				{
+					OutPlacement->bIndependentOfPositions = false;
 				}
 				int DrawCallIndexToFitin;
 				if (ItemGeo.bSupportDrawcallBatching && CanFitInDrawCall(ItemGeo, is2DUIItem, DrawCallIndexToFitin))
@@ -1935,39 +2088,47 @@ void UDreamCanvas::UpdateCanvasDrawCall()
 			{
 				if (Root != nullptr)
 				{
+					TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_UpdateWidgetClip);
 					Widget->UpdateClip(Root->ClipDataAsTexture, Root->ClipDataList);
 				}
 				if (Widget->GetRenderVisibleInHierarchy() && Widget->GetRenderCanvas() == this)
 				{
+					TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_UpdateWidgetVisual);
 					Widget->UpdateVisual();
 				}
 			};
 			// Taken now: a widget that asks again while this update runs -- its geometry asking for its block data, say --
 			// is looked at in the next one, as it was when the whole canvas woke up again.
-			const TArray<TWeakObjectPtr<UDreamWidget>> Asking = MoveTemp(WidgetsToUpdate);
+			Swap(WidgetsBeingUpdated, WidgetsToUpdate);
 			WidgetsToUpdate.Reset();
+			const TArray<TWeakObjectPtr<UDreamWidget>>& Asking = WidgetsBeingUpdated;
 			const bool bEveryWidget = bUpdateEveryWidget;
 			bUpdateEveryWidget = false;
-			TArray<UDreamWidget*> AskedInListOrder;
+			TArray<UDreamWidget*, TInlineAllocator<16>> AskedInListOrder;
 			if (!bEveryWidget && GatherWidgetsToUpdateInListOrder(Asking, AskedInListOrder))
 			{
 				// Only the widgets that asked. Walking the list, a widget's parents have their clips brought up to date
-				// before it, and it may inherit one: here its parents' clips are, as far as this canvas's widgets go.
+				// before it, and it may inherit one: here its parents' clips are, as far as this canvas's widgets go. A
+				// parent brought up to date earlier in this pass -- another asker's, or one that asked itself -- is not
+				// looked at again: the list puts parents first.
+				TArray<const UDreamWidget*, TInlineAllocator<16>> ClipsUpToDate;
 				for (UDreamWidget* Widget : AskedInListOrder)
 				{
 					if (Root != nullptr)
 					{
 						TArray<UDreamWidget*, TInlineAllocator<16>> Parents;
-						for (UDreamWidget* Parent = Widget->GetParent(); IsValid(Parent) && Parent->GetRenderCanvas() == this; Parent = Parent->GetParent())
+						for (UDreamWidget* Parent = Widget->GetParent(); IsValid(Parent) && Parent->GetRenderCanvas() == this && !ClipsUpToDate.Contains(Parent); Parent = Parent->GetParent())
 						{
 							Parents.Add(Parent);
 						}
 						for (int32 Index = Parents.Num() - 1; Index >= 0; --Index)
 						{
 							Parents[Index]->UpdateClip(Root->ClipDataAsTexture, Root->ClipDataList);
+							ClipsUpToDate.Add(Parents[Index]);
 						}
 					}
 					UpdateWidget(Widget);
+					ClipsUpToDate.Add(Widget);
 					if (!bPrepareEveryWidget)
 					{
 						WidgetsToPrepare.Add(Widget);
@@ -1994,37 +2155,50 @@ void UDreamCanvas::UpdateCanvasDrawCall()
 				bPrepareEveryWidget = true;
 				WidgetsToPrepare.Reset();
 			}
+			WidgetsBeingUpdated.Reset();
 			// Clips created above are uploaded by RefreshAllClipData, driven every tick from the UI manager.
 		}
-		WidgetPropertyDataAsTexture->Flush();
-		
+		{
+			TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_WidgetPropertyDataFlush);
+			WidgetPropertyDataAsTexture->Flush();
+		}
+
+		// Moves alone since the last update: the draw calls in hand take them unless the batching could now come out
+		// otherwise. A rebuild asked for anyway takes the moves with it.
+		if (bWidgetsMovedSinceUpdate)
+		{
+			bWidgetsMovedSinceUpdate = false;
+			if (!bShouldRebuildDrawCall)
+			{
+				if (CVarDreamUIRefreshMovesInPlace.GetValueOnGameThread() != 0 && CanRefreshDrawCallsInPlace())
+				{
+					DreamUIRenderStats::AddCount(DreamUIRenderStats::ECounter::InPlaceRefreshes, 1);
+				}
+				else
+				{
+					bShouldRebuildDrawCall = true;
+				}
+			}
+		}
+
 		if (bShouldRebuildDrawCall && !bDrawCallRebuildSuspended)
 		{
 			bShouldRebuildDrawCall = false;
 			// The prepare below takes every vertex change asked for until now.
 			bHasPendingUpdateData = false;
 			NewestDrawCallFrameNumber = GFrameCounter;
+			DreamUIRenderStats::AddCount(DreamUIRenderStats::ECounter::DrawCallRebuilds, 1);
 
-			//rect size minimal at 100, so UIQuadTree can work properly (prevent too small rect)
-			//@todo: use a better size, maybe screen size (only for screen space UI)
-			const auto Width = FMath::Max(DreamWidget->GetWidth(), 100.0f);
-			const auto Height = FMath::Max(DreamWidget->GetHeight(), 100.0f);
 			FVector2D LeftBottomPoint;
-			LeftBottomPoint.X = Width * -DreamWidget->GetPivot().X;
-			LeftBottomPoint.Y = Height * -DreamWidget->GetPivot().Y;
 			FVector2D RightTopPoint;
-			RightTopPoint.X = Width * (1.0f - DreamWidget->GetPivot().X);
-			RightTopPoint.Y = Height * (1.0f - DreamWidget->GetPivot().Y);
+			DreamCanvasLocal::GetBatchingRect(DreamWidget, LeftBottomPoint, RightTopPoint);
 			//prepare
 			{
 				FDreamCanvasPreparedDrawCallData PreparedDrawCallData;
 				PreparedDrawCallData.LeftBottomPoint = LeftBottomPoint;
 				PreparedDrawCallData.RightTopPoint = RightTopPoint;
 				PreparedDrawCallData.FrameNumber = GFrameCounter;
-				//only when this canvas's rect is the surface being drawn: a root canvas, or one that
-				//renders to its own target. See BatchDrawCallAsync.
-				PreparedDrawCallData.bCullElementsOutsideCanvasRect = bCullElementsOutsideCanvas
-					&& (this->IsRootCanvas() || this->bForceRenderToTarget);
+				PreparedDrawCallData.bCullElementsOutsideCanvasRect = CullsElementsOutsideItsRect();
 				PrepareDrawCallBatchingData(PreparedDrawCallData.DataArray);
 				PreparedDrawCallData.GeometryListsOnSections = UIMesh->GetMeshSectionGeometryLists();
 				//push to async thread
@@ -2045,6 +2219,21 @@ void UDreamCanvas::UpdateCanvasDrawCall()
 
 void UDreamCanvas::UpdateDrawCallBatchData()
 {
+	TArray<UDreamCanvas*> ToRefresh;
+	TArray<UDreamCanvas*> ToFinish;
+	TakeDrawCallBatchData(ToRefresh, ToFinish);
+	for (UDreamCanvas* Canvas : ToRefresh)
+	{
+		Canvas->RefreshDrawCallVertices();
+	}
+	for (UDreamCanvas* Canvas : ToFinish)
+	{
+		Canvas->FinishDrawCallBatchData();
+	}
+}
+
+void UDreamCanvas::TakeDrawCallBatchData(TArray<UDreamCanvas*>& OutToRefresh, TArray<UDreamCanvas*>& OutToFinish)
+{
 	TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_UpdateDrawCallBatchData);
 	if(!GetWidget()->HasRegistered())return;
 	//update children canvas
@@ -2052,7 +2241,7 @@ void UDreamCanvas::UpdateDrawCallBatchData()
 	{
 		if (!item.IsValid())continue;
 		if (item->bForceRenderToTarget)continue;
-		item->UpdateDrawCallBatchData();
+		item->TakeDrawCallBatchData(OutToRefresh, OutToFinish);
 	}
 
 	if (!IsValid(UIMesh))return;
@@ -2068,6 +2257,7 @@ void UDreamCanvas::UpdateDrawCallBatchData()
 
 	if (DrawCallProcessingRunnable->TryGetDrawCallData(CurrentDrawCallData))
 	{
+		TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_ApplyNewDrawCalls);
 		//update draw-call mesh
 		UpdateDrawCallMesh();
 		//update draw-call material
@@ -2090,20 +2280,66 @@ void UDreamCanvas::UpdateDrawCallBatchData()
 	if (bHasPendingUpdateData && GFrameCounter > CurrentDrawCallData.FrameNumber && CurrentDrawCallData.FrameNumber == NewestDrawCallFrameNumber)
 	{
 		bHasPendingUpdateData = false;
-		for (int i = 0; i < CurrentDrawCallData.DrawCallArray.Num(); i++)
+		// The refresh reads the geometries the vertex transforms write, and may run where it cannot wait for them.
+		if (TransformVerticesAsyncFunctionRunnable.IsValid())
 		{
-			auto& DrawCallItem = CurrentDrawCallData.DrawCallArray[i];
-			// Only a draw call one of whose elements changed is copied and goes up again.
-			if (DrawCallItem.Type == EDreamUIDrawCallType::BatchMesh && DrawCallItem.CopyBatchMeshGeometry())
-			{
-				UIMesh->UpdateMeshSection(DrawCallItem.RenderSection, &DrawCallItem);
-			}
+			TransformVerticesAsyncFunctionRunnable->WaitForAllFunctions();
+		}
+		OutToRefresh.Add(this);
+	}
+	OutToFinish.Add(this);
+}
+
+void UDreamCanvas::RefreshDrawCallVertices()
+{
+	TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_RefreshDrawCallVertices);
+	bRefreshMovedBounds = false;
+	DrawCallsLeftToUpdate.Reset();
+	UDreamUIMeshComponent* const Mesh = UIMesh.Get();
+	for (int i = 0; i < CurrentDrawCallData.DrawCallArray.Num(); i++)
+	{
+		auto& DrawCallItem = CurrentDrawCallData.DrawCallArray[i];
+		// Only a draw call one of whose elements changed is copied and goes up again.
+		if (DrawCallItem.Type != EDreamUIDrawCallType::BatchMesh || !DrawCallItem.CopyBatchMeshGeometry())
+		{
+			continue;
+		}
+		// An element that moved (MarkWidgetMoved) takes the draw call's bounds with it: the section's box, and through it
+		// the mesh's, follow.
+		const FBox BoundsBefore = DrawCallItem.CombinedBounds;
+		DrawCallItem.ApplyBatchMeshBoundsToCombined();
+		bRefreshMovedBounds |= !(DrawCallItem.CombinedBounds == BoundsBefore);
+		if (!Mesh->TryPatchMeshSection(DrawCallItem.RenderSection, &DrawCallItem))
+		{
+			DrawCallsLeftToUpdate.Add(i);
 		}
 	}
-	if (IsValid(UIMesh))
+}
+
+void UDreamCanvas::FinishDrawCallBatchData()
+{
+	if (!IsValid(UIMesh))
 	{
-		UIMesh->FlushRenderCommand();
+		DrawCallsLeftToUpdate.Reset();
+		bRefreshMovedBounds = false;
+		return;
 	}
+	for (const int32 Index : DrawCallsLeftToUpdate)
+	{
+		if (CurrentDrawCallData.DrawCallArray.IsValidIndex(Index))
+		{
+			FDreamUIDrawCall& DrawCallItem = CurrentDrawCallData.DrawCallArray[Index];
+			UIMesh->UpdateMeshSection(DrawCallItem.RenderSection, &DrawCallItem);
+		}
+	}
+	DrawCallsLeftToUpdate.Reset();
+	if (bRefreshMovedBounds)
+	{
+		TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_UpdateMeshBounds);
+		bRefreshMovedBounds = false;
+		UIMesh->UpdateLocalBounds();
+	}
+	UIMesh->FlushRenderCommand();
 }
 
 DECLARE_CYCLE_STAT(TEXT("Canvas UpdateDrawCallMesh"), STAT_UpdateDrawCallMesh, STATGROUP_DreamGUI);

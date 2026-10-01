@@ -34,6 +34,8 @@
 #include "Tracks/MovieSceneVectorTrack.h"
 
 #include "HAL/FileManager.h"
+#include "HAL/IConsoleManager.h"
+#include "Lifecycle/DreamLifecycleFixtures.h"
 #include "Kismet2/CompilerResultsLog.h"
 #include "Kismet2/KismetEditorUtilities.h"
 #include "Misc/FileHelper.h"
@@ -1105,6 +1107,156 @@ bool FDreamWidgetAnimationGalleryAssetTest::RunTest(const FString& Parameters)
 	TickFrames(Scope.World, AnimationFrames + 5);
 	TestEqual(TEXT("and it has slid home: Y holds the last key"), ButtonA->GetRenderTranslation().Y, 0.0, 0.01);
 	TestFalse(TEXT("The instance finished"), Instance->IsAnimationPlaying(Handle));
+	return true;
+}
+
+/*
+ * The player's own evaluation of plain property animations (FDreamUIDirectAnimationEvaluation): the same values as the
+ * sequencer, frame by frame, and the sequencer still in charge of anything it cannot do the same way.
+ */
+namespace DreamWidgetAnimationPlaybackTestLocal
+{
+	/** Width and translation Y at every frame of one play, and whether the player evaluated it itself. */
+	struct FRecordedPlay
+	{
+		TArray<float> Widths;
+		TArray<double> TranslationsY;
+		bool bDirect = false;
+		float WidthAfter = 0.0f;
+	};
+
+	/** One play of a width and a translation ramp; InTurnOffAtFrame turns direct evaluation off before that frame's tick. */
+	FRecordedPlay RecordPlay(int32 InDirectEvaluation, bool bInRestoreState, int32 InTurnOffAtFrame = INDEX_NONE)
+	{
+		const DreamTests::Lifecycle::FScopedConsoleVariable Direct(TEXT("DreamUI.Animation.DirectEvaluation"), InDirectEvaluation);
+		FScopedGameWorld Scope;
+		FScopedTree Tree(Scope.World);
+		Tree.AddFloatTrack(TEXT("AnimatableWidth"), 20.0f, 220.0f);
+		Tree.AddVectorTrack(TEXT("RenderTranslation"), FVector(0.0, -100.0, 0.0), FVector(0.0, 0.0, 30.0));
+		Tree.Button->SetWidth(60.0f);
+		FRecordedPlay Play;
+		const FDreamUIAnimationHandle Handle = Tree.Animator->PlayAnimation(Tree.Animation, 0.0f, 1, EDreamUIAnimationPlayMode::Forward, 1.0f, bInRestoreState);
+		for (int32 Frame = 0; Frame < AnimationFrames + 3; ++Frame)
+		{
+			if (Frame == InTurnOffAtFrame)
+			{
+				IConsoleManager::Get().FindConsoleVariable(TEXT("DreamUI.Animation.DirectEvaluation"))->Set(0, ECVF_SetByCode);
+			}
+			TickFrames(Scope.World, 1);
+			if (Frame == 0 && Handle.Player != nullptr)
+			{
+				Play.bDirect = Handle.Player->IsEvaluatingDirectly();
+			}
+			Play.Widths.Add(Tree.Button->GetWidth());
+			Play.TranslationsY.Add(Tree.Button->GetRenderTranslation().Y);
+		}
+		Play.WidthAfter = Tree.Button->GetWidth();
+		return Play;
+	}
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamWidgetAnimationDirectEvaluationMatchesTest,
+	"DreamGUI.Animation.Playback.APlainPropertyAnimationIsEvaluatedByItsPlayerWithTheSequencersValues",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamWidgetAnimationDirectEvaluationMatchesTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamWidgetAnimationPlaybackTestLocal;
+	const FRecordedPlay Sequencer = RecordPlay(0, false);
+	const FRecordedPlay Direct = RecordPlay(1, false);
+	TestFalse(TEXT("With direct evaluation off, the sequencer evaluates"), Sequencer.bDirect);
+	TestTrue(TEXT("With it on, the player evaluates a float and a vector track itself"), Direct.bDirect);
+	if (!TestEqual(TEXT("Both plays saw as many frames"), Direct.Widths.Num(), Sequencer.Widths.Num()))
+	{
+		return false;
+	}
+	for (int32 Frame = 0; Frame < Direct.Widths.Num(); ++Frame)
+	{
+		TestEqual(FString::Printf(TEXT("Frame %d: the width is the sequencer's"), Frame), Direct.Widths[Frame], Sequencer.Widths[Frame], 0.001f);
+		TestEqual(FString::Printf(TEXT("Frame %d: the translation is the sequencer's"), Frame), Direct.TranslationsY[Frame], Sequencer.TranslationsY[Frame], 0.001);
+	}
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamWidgetAnimationDirectEvaluationRestoresTest,
+	"DreamGUI.Animation.Playback.AnAnimationPlayedToRestoreStateLeavesThePropertyAsItFoundItEitherWay",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamWidgetAnimationDirectEvaluationRestoresTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamWidgetAnimationPlaybackTestLocal;
+	const FRecordedPlay Sequencer = RecordPlay(0, true);
+	const FRecordedPlay Direct = RecordPlay(1, true);
+	TestTrue(TEXT("The restoring play is evaluated by the player"), Direct.bDirect);
+	TestEqual(TEXT("The sequencer puts the width back"), Sequencer.WidthAfter, 60.0f, 0.01f);
+	TestEqual(TEXT("...and so does the player"), Direct.WidthAfter, Sequencer.WidthAfter, 0.01f);
+
+	const FRecordedPlay Kept = RecordPlay(1, false);
+	TestEqual(TEXT("Played to keep state, the last key's value stays"), Kept.WidthAfter, 220.0f, 0.01f);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamWidgetAnimationDirectEvaluationHandOverTest,
+	"DreamGUI.Animation.Playback.TurningDirectEvaluationOffMidPlayHandsTheAnimationToTheSequencerWhereItWas",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamWidgetAnimationDirectEvaluationHandOverTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamWidgetAnimationPlaybackTestLocal;
+	for (const bool bRestoreState : { false, true })
+	{
+		const FRecordedPlay Sequencer = RecordPlay(0, bRestoreState);
+		const FRecordedPlay HandedOver = RecordPlay(1, bRestoreState, AnimationFrames / 2);
+		const TCHAR* Mode = bRestoreState ? TEXT("restoring") : TEXT("keeping");
+		TestTrue(FString::Printf(TEXT("The %s play starts out evaluated by the player"), Mode), HandedOver.bDirect);
+		if (!TestEqual(TEXT("Both plays saw as many frames"), HandedOver.Widths.Num(), Sequencer.Widths.Num()))
+		{
+			return false;
+		}
+		for (int32 Frame = 0; Frame < HandedOver.Widths.Num(); ++Frame)
+		{
+			TestEqual(FString::Printf(TEXT("%s, frame %d: the width is the sequencer's"), Mode, Frame), HandedOver.Widths[Frame], Sequencer.Widths[Frame], 0.001f);
+			TestEqual(FString::Printf(TEXT("%s, frame %d: the translation is the sequencer's"), Mode, Frame), HandedOver.TranslationsY[Frame], Sequencer.TranslationsY[Frame], 0.001);
+		}
+		TestEqual(FString::Printf(TEXT("%s: the end state is the sequencer's"), Mode), HandedOver.WidthAfter, Sequencer.WidthAfter, 0.01f);
+	}
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamWidgetAnimationDirectEvaluationDeclinesTest,
+	"DreamGUI.Animation.Playback.AnAnimationWithWeightsOrUnboundTracksIsLeftToTheSequencer",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamWidgetAnimationDirectEvaluationDeclinesTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamWidgetAnimationPlaybackTestLocal;
+	{
+		// Weights blend against the initial values the sequencer captures: only it can.
+		FScopedGameWorld Scope;
+		FScopedTree Tree(Scope.World);
+		Tree.AddFloatTrack(TEXT("AnimatableWidth"), 20.0f, 220.0f);
+		Tree.Animator->SetDynamicWeighting(true);
+		const FDreamUIAnimationHandle Handle = Tree.Animator->PlayAnimation(Tree.Animation);
+		TickFrames(Scope.World, 2);
+		TestTrue(TEXT("A weighted play is live"), Handle.IsValid() && Handle.Player != nullptr);
+		TestFalse(TEXT("...and evaluated by the sequencer"), Handle.Player != nullptr && Handle.Player->IsEvaluatingDirectly());
+		TestTrue(TEXT("...which still writes it"), Tree.Button->GetWidth() > 20.0f && Tree.Button->GetWidth() < 220.0f);
+	}
+	{
+		// A track bound to nothing (events, sub-sequences, time warps) is the sequencer's.
+		FScopedGameWorld Scope;
+		FScopedTree Tree(Scope.World);
+		Tree.AddFloatTrack(TEXT("AnimatableWidth"), 20.0f, 220.0f);
+		Tree.Animation->GetMovieScene()->AddTrack<UMovieSceneFloatTrack>();
+		const FDreamUIAnimationHandle Handle = Tree.Animator->PlayAnimation(Tree.Animation);
+		TickFrames(Scope.World, 2);
+		TestFalse(TEXT("An animation with an unbound track is evaluated by the sequencer"), Handle.Player != nullptr && Handle.Player->IsEvaluatingDirectly());
+		TestTrue(TEXT("...which still writes its bound track"), Tree.Button->GetWidth() > 20.0f && Tree.Button->GetWidth() < 220.0f);
+	}
 	return true;
 }
 

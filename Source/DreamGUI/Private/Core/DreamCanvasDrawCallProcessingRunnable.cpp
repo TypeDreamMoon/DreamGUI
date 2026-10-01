@@ -63,9 +63,12 @@ void FDreamCanvasDrawCallProcessingRunnable::ProcessPreparedDrawCallData()
 		{
 			FDreamCanvasPendingDrawCallData PendingDrawCallData;
 			PendingDrawCallData.FrameNumber = PreparedDrawCallData.FrameNumber;
+			PendingDrawCallData.LeftBottomPoint = PreparedDrawCallData.LeftBottomPoint;
+			PendingDrawCallData.RightTopPoint = PreparedDrawCallData.RightTopPoint;
+			PendingDrawCallData.bCullElementsOutsideCanvasRect = PreparedDrawCallData.bCullElementsOutsideCanvasRect;
 			//the prepared data is this task's own and is not looked at again, so the batch may use it up
 			UDreamCanvas::BatchDrawCallAsync(PreparedDrawCallData.LeftBottomPoint, PreparedDrawCallData.RightTopPoint, MoveTemp(PreparedDrawCallData.DataArray), PendingDrawCallData.DrawCallArray
-				, PreparedDrawCallData.bCullElementsOutsideCanvasRect, &PreparedDrawCallData.GeometryListsOnSections);
+				, PreparedDrawCallData.bCullElementsOutsideCanvasRect, &PreparedDrawCallData.GeometryListsOnSections, &PendingDrawCallData.Placement);
 			//push to main thread queue
 			PendingQueue->Enqueue(MoveTemp(PendingDrawCallData));
 		}
