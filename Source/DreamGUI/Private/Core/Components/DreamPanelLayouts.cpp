@@ -821,8 +821,10 @@ FVector2D UDreamPanelLayoutBase::GetDesiredSize(UDreamWidget* Child,
 		}
 		if (UDreamVisual* Visual = Widget->GetVisual(); IsValid(Visual))
 		{
-			Accumulate(Desired.X, bWidthOverridden, Visual->GetPreferredWidth());
-			Accumulate(Desired.Y, bHeightOverridden, Visual->GetPreferredHeight());
+			// With the offer: a paragraph that wraps at its box answers for the width it is about to be given.
+			const FVector2f VisualDesired = Visual->GetPreferredSizeWithin(WidthSpec, HeightSpec);
+			Accumulate(Desired.X, bWidthOverridden, VisualDesired.X);
+			Accumulate(Desired.Y, bHeightOverridden, VisualDesired.Y);
 		}
 		if (!bHasLayoutContainer)
 		{

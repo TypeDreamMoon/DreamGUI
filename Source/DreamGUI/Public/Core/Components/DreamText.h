@@ -254,6 +254,11 @@ private:
 	bool bHasAddToFont = false;
 
 	mutable FDreamUITextGeometryCache CacheTextGeometryData;
+	/**
+	 * Where GetPreferredSizeWithin lays the text out at a width it is about to be given, apart from the layout it is drawn
+	 * from: made the first time a panel offers it a width other than its own, and marked dirty with the other.
+	 */
+	mutable TUniquePtr<FDreamUITextGeometryCache> MeasureAtWidthCache;
 	void UpdateCacheTextGeometry()const;
 	void ConditionalUpdateCacheTextGeometry()const;
 public:
@@ -310,6 +315,13 @@ public:
 
 	virtual float GetPreferredWidth() const override;
 	virtual float GetPreferredHeight() const override;
+	/**
+	 * A text that wraps at its box (VerticalOverflow, or AutoWrapText) with no WrapTextAt of its own, offered a bounded width:
+	 * its height at that width, laid out apart from the layout it is drawn from, and the narrower of its one-line width and
+	 * the offer. A panel measuring a paragraph in a Fill slot gets the paragraph's height at the slot's width, not at the
+	 * width the widget happened to have -- one character per line before the first arrangement. Anything else: as before.
+	 */
+	virtual FVector2f GetPreferredSizeWithin(const FDreamMeasureSpec& InWidthSpec, const FDreamMeasureSpec& InHeightSpec) const override;
 public:
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI") UDreamUIFontData_BaseObject* GetFont()const { return Font; }
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI")	const FText& GetText()const { return Text; }

@@ -9,6 +9,7 @@
 #include "DreamVisual.generated.h"
 
 struct FDreamUIHitResult;
+struct FDreamMeasureSpec;
 class FDreamUIGeometry;
 struct FDreamUIMaterialParameters;
 class UMaterialInterface;
@@ -254,6 +255,16 @@ public:
 	virtual float GetPreferredWidth()const{return -1;}
 	/** The preferred height. See GetPreferredWidth for the contract -- it binds both. */
 	virtual float GetPreferredHeight()const{return -1;}
+	/**
+	 * The preferred size given what a panel's measurement offers on each axis (FDreamMeasureSpec), under the same contract
+	 * as GetPreferredWidth: what a visual whose height depends on its width -- a text that wraps at its box -- answers for
+	 * the width it is about to be given, rather than for the width it has. By default the two answers above, the offer
+	 * aside.
+	 */
+	virtual FVector2f GetPreferredSizeWithin(const FDreamMeasureSpec& InWidthSpec, const FDreamMeasureSpec& InHeightSpec)const
+	{
+		return FVector2f(GetPreferredWidth(), GetPreferredHeight());
+	}
 
 	static int WidgetPropertyDataLength;
 

@@ -4,13 +4,16 @@
 
 #include "Misc/AutomationTest.h"
 
+#include "Core/Components/DreamCanvas.h"
 #include "Core/Components/DreamLayoutFragment.h"
 #include "Core/Components/DreamPanelLayouts.h"
 #include "Core/Components/DreamPanelSlot.h"
 #include "Core/Components/DreamWidget.h"
 #include "Core/DreamUIManager.h"
 #include "Engine/World.h"
+#include "Core/Components/DreamText.h"
 #include "DreamScopedWorld.h"
+#include "DreamTextTestFont.h"
 
 /*
  * Measurement under a constraint, end to end.
@@ -197,6 +200,83 @@ bool FDreamMeasureMemoSeparatesConstraintsTest::RunTest(const FString& Parameter
 		FMath::IsNearlyEqual(Wide.Y, 40.0f, 0.01f));
 
 	Root->DestroyWidget();
+	return true;
+}
+
+/*
+ * The case FDreamMeasureSpec names first: "how tall is this wrapping text at 300 wide". A paragraph that wraps at its box,
+ * with no WrapTextAt, in a Fill slot of a vertical box. Its own width before the box first arranges it is whatever it was
+ * authored at -- here ten, a few characters -- and measured at that width it was a column of single characters, hundreds
+ * of pixels tall, until the sample's heading carried a WrapTextAt to get round it. Measured with the box's offer it is as
+ * tall as the same paragraph laid out at the box's width, on the first pass, and stays so.
+ */
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamWrappingTextInAStackIsRightOnTheFirstPassTest,
+	"DreamGUI.Measure.AWrappingTextInsideAVerticalBoxIsGivenTheHeightItsLinesNeedAtTheBoxsWidth",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamWrappingTextInAStackIsRightOnTheFirstPassTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamMeasureSpecTestLocal;
+	FScopedGameWorld TestWorld;
+	UDreamUIManagerWorldSubsystem* Manager = UDreamUIManagerWorldSubsystem::GetInstance(TestWorld.World);
+	if (!TestNotNull(TEXT("DreamUI manager subsystem exists"), Manager))
+	{
+		return false;
+	}
+	UDreamTextTestFont* Font = NewObject<UDreamTextTestFont>(TestWorld.World);
+	const FText Paragraph = FText::FromString(TEXT("The quick brown fox jumps over the lazy dog, and then over the lazy dog once again."));
+
+	// The reference: the same paragraph in a widget 300 wide, under a canvas of its own, measured at its own width.
+	UDreamWidget* ReferenceRoot = MakeWidget(TestWorld.World, nullptr, TEXT("ReferenceRoot"), 300.0f, 600.0f);
+	ReferenceRoot->AddComponent<UDreamCanvas>();
+	UDreamWidget* ReferenceWidget = MakeWidget(TestWorld.World, ReferenceRoot, TEXT("Reference"), 300.0f, 20.0f);
+	UDreamText* Reference = ReferenceWidget->CreateNewVisual<UDreamText>();
+	Reference->SetFont(Font);
+	Reference->SetText(Paragraph);
+	const float Expected = Reference->GetPreferredHeight();
+	const float OneLine = Font->GetLineHeight(Reference->GetFontSize());
+	if (!TestTrue(FString::Printf(TEXT("At 300 wide the paragraph takes more than one line and fewer than ten (%.1f, a line %.1f)"), Expected, OneLine),
+		Expected > OneLine * 1.5f && Expected < OneLine * 10.0f))
+	{
+		ReferenceRoot->DestroyWidget();
+		return false;
+	}
+
+	UDreamWidget* Root = MakeWidget(TestWorld.World, nullptr, TEXT("Root"), 300.0f, 600.0f);
+	Root->AddComponent<UDreamCanvas>();
+	// Ten wide, as authored: the width the old measurement read.
+	UDreamWidget* TextWidget = MakeWidget(TestWorld.World, Root, TEXT("Paragraph"), 10.0f, 20.0f);
+	UDreamText* Text = TextWidget->CreateNewVisual<UDreamText>();
+	Text->SetFont(Font);
+	Text->SetText(Paragraph);
+	if (!TestNotNull(TEXT("Vertical box created"), Root->CreateNewLayoutContainer<UDreamLayoutContainerVerticalBox>()))
+	{
+		Root->DestroyWidget();
+		ReferenceRoot->DestroyWidget();
+		return false;
+	}
+
+	UDreamWidget::MarkLayoutForRebuild(Root);
+	Manager->TickDreamUI(0.016f);
+	TestTrue(FString::Printf(TEXT("The box gave the paragraph the height its lines need at the box's width (%.1f, expected %.1f)"), TextWidget->GetHeight(), Expected),
+		FMath::IsNearlyEqual(static_cast<float>(TextWidget->GetHeight()), Expected, 0.5f));
+	TestTrue(TEXT("...and the box's whole width, which it wraps at"),
+		FMath::IsNearlyEqual(static_cast<float>(TextWidget->GetWidth()), 300.0f, 0.01f));
+
+	Manager->TickDreamUI(0.016f);
+	TestTrue(TEXT("The second pass does not move it"),
+		FMath::IsNearlyEqual(static_cast<float>(TextWidget->GetHeight()), Expected, 0.5f));
+
+	// A WrapTextAt of its own is a width of its own: such a paragraph is measured at it, the offer aside.
+	Text->SetWrapTextAt(100.0f);
+	UDreamWidget::MarkLayoutForRebuild(Root);
+	Manager->TickDreamUI(0.016f);
+	TestTrue(FString::Printf(TEXT("With WrapTextAt 100 it is taller than at the box's width (%.1f)"), TextWidget->GetHeight()),
+		TextWidget->GetHeight() > Expected + OneLine * 0.5f);
+
+	Root->DestroyWidget();
+	ReferenceRoot->DestroyWidget();
 	return true;
 }
 

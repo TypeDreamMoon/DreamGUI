@@ -12,6 +12,7 @@
 #include "Core/DreamUIFontEmojiData.h"
 #include "Core/DreamUIManager.h"
 #include "Core/Components/DreamCanvas.h"
+#include "Core/Components/DreamLayoutFragment.h"
 #include "Core/Components/DreamWidget.h"
 #include "Utils/DreamUIUtils.h"
 #include "Engine/Texture2D.h"
@@ -1098,18 +1099,30 @@ void UDreamText::MarkVerticesDirty(bool InTriangleDirty, bool InVertexPositionDi
 	if (InTriangleDirty || InVertexPositionDirty || InVertexUVDirty)
 	{
 		CacheTextGeometryData.MarkDirty();
+		if (MeasureAtWidthCache.IsValid())
+		{
+			MeasureAtWidthCache->MarkDirty();
+		}
 	}
 	Super::MarkVerticesDirty(InTriangleDirty, InVertexPositionDirty, InVertexUVDirty, InVertexColorDirty);
 }
 void UDreamText::MarkTextureDirty()
 {
 	CacheTextGeometryData.MarkDirty();
+	if (MeasureAtWidthCache.IsValid())
+	{
+		MeasureAtWidthCache->MarkDirty();
+	}
 	Super::MarkTextureDirty();
 }
 
 void UDreamText::MarkAllDirty()
 {
 	CacheTextGeometryData.MarkDirty();
+	if (MeasureAtWidthCache.IsValid())
+	{
+		MeasureAtWidthCache->MarkDirty();
+	}
 	Super::MarkAllDirty();
 }
 int UDreamText::VisibleCharCountInString(const FString& srcStr)
@@ -1200,6 +1213,39 @@ float UDreamText::GetPreferredHeight() const
 		return -1;
 	}
 	return CacheTextGeometryData.GetPreferredSize().Y + Margin.Top + Margin.Bottom;
+}
+
+FVector2f UDreamText::GetPreferredSizeWithin(const FDreamMeasureSpec& InWidthSpec, const FDreamMeasureSpec& InHeightSpec) const
+{
+	const FVector2f Own(GetPreferredWidth(), GetPreferredHeight());
+	// Only a text that wraps at its box has a height that depends on the width it is given -- WrapTextAt is a width of its
+	// own, and Best Fit picks its size against the box it has -- and only a bounded offer says what that width will be.
+	const bool bWrapsAtItsBox = (OverflowType == EDreamUITextOverflowType::VerticalOverflow || bAutoWrapText)
+		&& WrapTextAt <= 0.0f && !bBestFit;
+	if (!bWrapsAtItsBox || !InWidthSpec.IsBounded() || Own.X < 0.0f || Own.Y < 0.0f)
+	{
+		return Own;
+	}
+	const float Offered = FMath::Max(0.0f, InWidthSpec.Value);
+	// Laid out at the width it has, and offered that width: the answer it has is the one asked for.
+	if (FMath::IsNearlyEqual(static_cast<float>(GetWidget()->GetWidth()), Offered, 0.5f))
+	{
+		return Own;
+	}
+	FDreamTextLayoutInput Input = MakeLayoutInput(this, this->GetFontSize());
+	Input.Width = FMath::Max(0.0f, Offered - Margin.Left - Margin.Right);
+	// No height: a box would cut a clamped paragraph's lines, and what is asked is how tall the paragraph is at this width.
+	Input.Height = 0.0f;
+	if (!MeasureAtWidthCache.IsValid())
+	{
+		MeasureAtWidthCache = MakeUnique<FDreamUITextGeometryCache>();
+	}
+	MeasureAtWidthCache->SetLayoutInput(Input);
+	MeasureAtWidthCache->EnsureLayout();
+	const FVector2f Measured = MeasureAtWidthCache->GetPreferredSize();
+	// The layout's preferred width is the paragraph on one line; wrapped at the offer it is no wider than the offer.
+	const float Width = FMath::Max(FMath::Min(Measured.X + Margin.Left + Margin.Right, Offered), MinDesiredWidth);
+	return FVector2f(Width, Measured.Y + Margin.Top + Margin.Bottom);
 }
 
 
