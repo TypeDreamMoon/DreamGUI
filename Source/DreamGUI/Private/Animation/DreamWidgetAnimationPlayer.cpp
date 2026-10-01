@@ -79,16 +79,29 @@ void UDreamWidgetAnimationPlayer::FlushQueuedEvaluation()
 
 void UDreamWidgetAnimationPlayer::TrustTimeController()
 {
+	// Not known to be DreamGUI's clock: ticked and read through its virtuals. One trusted before keeps its state again.
+	if (TrustedClock != nullptr)
+	{
+		TrustedClock->Detach();
+		TrustedClock = nullptr;
+	}
 	TrustedTimeController = TimeController;
-	// Not known to be DreamGUI's clock: ticked and read through its virtuals.
-	TrustedClock = nullptr;
 }
 
 void UDreamWidgetAnimationPlayer::TrustClock(const TSharedPtr<FDreamUIAnimationClock>& InClock)
 {
+	if (TrustedClock != nullptr && TrustedClock != InClock.Get())
+	{
+		TrustedClock->Detach();
+	}
 	SetTimeController(InClock);
 	TrustedTimeController = InClock;
 	TrustedClock = InClock.Get();
+	if (TrustedClock != nullptr)
+	{
+		TrustedClock->AttachTo(ClockState);
+		bClockTicksAsGiven = TrustedClock->bTicksAsGiven;
+	}
 }
 
 void UDreamWidgetAnimationPlayer::UpdateMovieSceneInstance(FMovieSceneEvaluationRange InRange, EMovieScenePlayerStatus::Type PlayerStatus, const FMovieSceneUpdateArgs& Args)
@@ -132,6 +145,12 @@ void UDreamWidgetAnimationPlayer::BeginDestroy()
 	if (Ticker != nullptr)
 	{
 		Ticker->Forget(*this);
+	}
+	// The clock may outlive this player, held elsewhere: it keeps its state again.
+	if (TrustedClock != nullptr)
+	{
+		TrustedClock->Detach();
+		TrustedClock = nullptr;
 	}
 	Super::BeginDestroy();
 }
@@ -382,11 +401,11 @@ void UDreamWidgetAnimationPlayer::TickLite(float DeltaSeconds)
 	const float PlayRate = bReversePlayback ? -PlaybackSettings.PlayRate : PlaybackSettings.PlayRate;
 	// DreamGUI's clock, the one vouched for (ChooseLiteTick), is ticked and read in line: what its virtuals do, without a
 	// call into the engine and a virtual call for each, for every playing widget every frame. One whose tick changes the
-	// delta first is ticked through its virtual.
+	// delta first is ticked through its virtual. Its state is kept here (ClockState): the clock itself is not read.
 	FDreamUIAnimationClock* const Clock = TrustedClock;
-	if (Clock != nullptr && Clock->bTicksAsGiven)
+	if (Clock != nullptr && bClockTicksAsGiven)
 	{
-		Clock->TickInLine(DeltaSeconds, PlayRate);
+		FDreamUIAnimationClock::TickInLine(ClockState, DeltaSeconds, PlayRate);
 	}
 	else
 	{
@@ -396,7 +415,7 @@ void UDreamWidgetAnimationPlayer::TickLite(float DeltaSeconds)
 	// it -- FMovieSceneTimeController_Tick answers from what its ticks added up to -- so the world is not looked up. The
 	// display rate is the one this play decided on its evaluation with (LiteDisplayRate).
 	const FFrameTime NewTime = Clock != nullptr
-		? Clock->TimeInLine(FQualifiedFrameTime(PlayPosition.GetCurrentPosition(), PlayPosition.GetInputRate()))
+		? FDreamUIAnimationClock::TimeInLine(ClockState, FQualifiedFrameTime(PlayPosition.GetCurrentPosition(), PlayPosition.GetInputRate()))
 		: TimeController->RequestCurrentTime(GetCurrentTime(), PlayRate, LiteDisplayRate);
 
 	if (GetPauseTimeForNewPosition(NewTime).IsSet() || ShouldStopOrLoop(NewTime))

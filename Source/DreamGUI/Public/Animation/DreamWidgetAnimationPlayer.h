@@ -10,6 +10,13 @@ class AActor;
 class UDreamUIAnimationTicker;
 struct FDreamUIAnimationClock;
 
+/** What DreamGUI's animation clock keeps (FDreamUIAnimationClock): where the play started, and what the ticks added up to since. */
+struct FDreamUIAnimationClockState
+{
+	double OffsetSeconds = 0.0;
+	TOptional<FQualifiedFrameTime> StartTime;
+};
+
 /**
  * UDreamWidgetAnimationPlayer is used to actually "play" a widget animation at runtime.
  *
@@ -196,6 +203,12 @@ private:
 	TSharedPtr<FMovieSceneTimeController> TrustedTimeController;
 	/** The vouched-for controller, when it is DreamGUI's clock (TrustClock), which the player's own tick reads in line. */
 	FDreamUIAnimationClock* TrustedClock = nullptr;
+	/**
+	 * The trusted clock's state, kept here while the clock is attached to this player (FDreamUIAnimationClock::AttachTo), and
+	 * whether it ticks as given: what the player's own tick reads and writes of the clock, without a read of the clock.
+	 */
+	FDreamUIAnimationClockState ClockState;
+	bool bClockTicksAsGiven = false;
 	/** Whether the actor the sequencer asks is the network authority, as of the start of the play (OnStartedPlaying). */
 	bool bAuthorityAtStart = false;
 	/** See IsTickingLite. */
