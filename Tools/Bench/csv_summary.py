@@ -9,6 +9,10 @@ import os
 import statistics
 import sys
 
+# A packaged build's profile ends with a metadata row whose command line and event list run past the csv module's default
+# field limit (128 KB), which stopped the read there.
+csv.field_size_limit(2 ** 31 - 1)
+
 
 def default_csv_dir():
     """<host project>/Saved/Profiling/CSV, from DREAMGUI_TEST_PROJECT."""
