@@ -537,11 +537,19 @@ bool FDreamUIDirectAnimationEvaluation::Evaluate(IMovieScenePlayer& InPlayer, FF
 		if (!bLookUp && Property.BoundHost != nullptr)
 		{
 			// See FAnimatedProperty::BoundHost.
+			if (DreamUIGone::IsVerifyingKept())
+			{
+				DreamUIGone::CheckKept(Property.BoundHost, Property.BoundObjects[0].Get(), TEXT("an animated property's host"));
+			}
 			BoundObjects.Emplace(Property.BoundObjects[0], Property.BoundHost);
 		}
 		else if (!bLookUp && Property.BoundSingle != nullptr && Property.BoundSingleGone == DreamUIGone::Read())
 		{
 			// See FAnimatedProperty::BoundSingle.
+			if (DreamUIGone::IsVerifyingKept())
+			{
+				DreamUIGone::CheckKept(Property.BoundSingle, Property.BoundObjects[0].Get(), TEXT("an animated property's bound object"));
+			}
 			BoundObjects.Emplace(Property.BoundObjects[0], Property.BoundSingle);
 		}
 		else

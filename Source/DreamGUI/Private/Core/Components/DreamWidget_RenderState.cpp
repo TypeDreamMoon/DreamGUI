@@ -674,6 +674,10 @@ UDreamCanvas* UDreamWidget::GetRenderCanvas()const
 	const uint64 Gone = DreamUIGone::Peek();
 	if (Gone != 0 && Gone == RenderCanvasRawGone)
 	{
+		if (DreamUIGone::IsVerifyingKept())
+		{
+			DreamUIGone::CheckKept(RenderCanvasRaw, RenderCanvas.Get(), TEXT("a widget's render canvas"));
+		}
 		return RenderCanvasRaw;
 	}
 	return RenderCanvas.Get();
@@ -685,6 +689,10 @@ UDreamCanvas* UDreamWidget::KeepRenderCanvas()const
 	const uint64 Gone = DreamUIGone::Read();
 	if (Gone == RenderCanvasRawGone)
 	{
+		if (DreamUIGone::IsVerifyingKept())
+		{
+			DreamUIGone::CheckKept(RenderCanvasRaw, RenderCanvas.Get(), TEXT("a widget's render canvas, kept"));
+		}
 		return RenderCanvasRaw;
 	}
 	UDreamCanvas* const Canvas = RenderCanvas.Get();

@@ -534,6 +534,13 @@ const TArray<UDreamCanvas*>& UDreamUIManagerWorldSubsystem::GetAllCanvasesResolv
 			AllCanvasesResolved.Add(Canvas.Get());
 		}
 	}
+	else if (DreamUIGone::IsVerifyingKept())
+	{
+		for (int32 Index = 0; Index < AllCanvasArray.Num(); ++Index)
+		{
+			DreamUIGone::CheckKept(AllCanvasesResolved[Index], AllCanvasArray[Index].Get(), TEXT("a registered canvas"));
+		}
+	}
 	return AllCanvasesResolved;
 }
 
@@ -564,6 +571,24 @@ void UDreamUIManagerWorldSubsystem::ForEachRootCanvasInRenderModeOrder(bool bInA
 			for (const TWeakObjectPtr<UDreamCanvas>& WeakCanvas : RootCanvasesByPass[Pass])
 			{
 				Raw.Add(WeakCanvas.Get());
+			}
+		}
+	}
+	else if (DreamUIGone::IsVerifyingKept())
+	{
+		for (int32 Pass = 0; Pass < UE_ARRAY_COUNT(RootCanvasesByPass); ++Pass)
+		{
+			const TArray<UDreamCanvas*>& Raw = RootCanvasesByPassRaw[Pass];
+			// A sort clears the count the lists were found at (SortRootCanvasesIfStale), so they are found again after one
+			// and are never of different lengths here: if they are, the kept list is reported as a whole.
+			if (Raw.Num() != RootCanvasesByPass[Pass].Num())
+			{
+				DreamUIGone::CheckKept(&Raw, nullptr, TEXT("the UI manager's root canvases, a kept list of another length"));
+				continue;
+			}
+			for (int32 Index = 0; Index < Raw.Num(); ++Index)
+			{
+				DreamUIGone::CheckKept(Raw[Index], RootCanvasesByPass[Pass][Index].Get(), TEXT("one of the UI manager's root canvases"));
 			}
 		}
 	}

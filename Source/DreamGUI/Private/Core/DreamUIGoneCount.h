@@ -20,4 +20,27 @@ namespace DreamUIGone
 	void Note();
 	/** Stops counting deletions: the module is going. */
 	void StopListening();
+
+	/**
+	 * r.DreamUI.VerifyKeptPointers. With it on, every place that uses an object kept by the count instead of looking it up
+	 * looks it up as well, and a disagreement is reported (CheckKept). Off by default: the test host turns it on for the
+	 * whole suite, and the benchmarks turn it off for themselves, since it costs the look-ups the kept pointers save.
+	 */
+	inline bool IsVerifyingKept();
+	/**
+	 * With IsVerifyingKept: Kept, an object kept while the count read the same, against LookedUp, what its weak pointer
+	 * answers now. Any thread. Kept is never dereferenced -- it may be just what the check is about. A disagreement is
+	 * counted (GetKeptDisagreements), logged as an error naming Where, and an ensure.
+	 */
+	DREAMGUI_API void CheckKept(const void* Kept, const UObject* LookedUp, const TCHAR* Where);
+	/** How many disagreements CheckKept has found since the process began. */
+	DREAMGUI_API uint64 GetKeptDisagreements();
+}
+
+/** r.DreamUI.VerifyKeptPointers; see DreamUIGone::IsVerifyingKept. */
+extern DREAMGUI_API int32 GDreamUIVerifyKeptPointers;
+
+inline bool DreamUIGone::IsVerifyingKept()
+{
+	return GDreamUIVerifyKeptPointers != 0;
 }

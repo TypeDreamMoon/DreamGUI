@@ -188,7 +188,15 @@ namespace DreamCanvasLocal
 
 UDreamWidget* UDreamCanvas::GetCanvasWidget() const
 {
-	return CanvasWidgetRaw != nullptr && CanvasWidgetRaw == GetOuter() ? CanvasWidgetRaw : GetWidget();
+	if (CanvasWidgetRaw != nullptr && CanvasWidgetRaw == GetOuter())
+	{
+		if (DreamUIGone::IsVerifyingKept())
+		{
+			DreamUIGone::CheckKept(CanvasWidgetRaw, GetWidget(), TEXT("a canvas's widget"));
+		}
+		return CanvasWidgetRaw;
+	}
+	return GetWidget();
 }
 
 UDreamCanvas::UDreamCanvas()
@@ -1217,6 +1225,13 @@ bool UDreamCanvas::TendRenderLayers()
 			Record.LayerRaw = Record.Layer.Get();
 		}
 	}
+	else if (DreamUIGone::IsVerifyingKept())
+	{
+		for (const FRenderLayerRecord& Record : RenderLayers)
+		{
+			DreamUIGone::CheckKept(Record.LayerRaw, Record.Layer.Get(), TEXT("a canvas's render layer, tended"));
+		}
+	}
 	const uint64 Frame = GFrameCounter;
 	/**
 	 * PlaceRenderLayers composes each layer's transform, on other threads, alongside other canvases' layers: each by the one
@@ -1401,6 +1416,13 @@ void UDreamCanvas::PlaceRenderLayers()
 	DREAMUI_DETAIL_SCOPE(DreamUI_PlaceRenderLayers);
 	// The records' widgets as TendRenderLayers found them, which it did just before, unless the count moved since.
 	const bool bLayersRaw = RenderLayersRawGone != 0 && RenderLayersRawGone == DreamUIGone::Peek();
+	if (bLayersRaw && DreamUIGone::IsVerifyingKept())
+	{
+		for (const FRenderLayerRecord& Record : RenderLayers)
+		{
+			DreamUIGone::CheckKept(Record.LayerRaw, Record.Layer.Get(), TEXT("a canvas's render layer, placed"));
+		}
+	}
 	/**
 	 * The whole of a layer's move: its row of the table, which every vertex under it is placed through on the GPU, and the
 	 * boxes of the draw calls its elements are in. Nothing under it is transformed, patched or uploaded. Each record writes
