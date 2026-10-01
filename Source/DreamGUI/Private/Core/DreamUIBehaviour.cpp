@@ -5,6 +5,7 @@
 
 #include "DreamGUI.h"
 #include "Core/DreamUIManager.h"
+#include "Core/DreamUIGoneCount.h"
 #include "Core/DreamUIRuntimeObject.h"
 #include "Core/Components/DreamWidget.h"
 #include "Animation/DreamWidgetAnimationComponent.h"
@@ -158,6 +159,8 @@ void UDreamUIBehaviour::OnRegister()
 }
 void UDreamUIBehaviour::OnUnregister()
 {
+	// No longer one to write without a look-up (DreamUIGone).
+	DreamUIGone::Note();
 	if (IsValid(CacheWidget))
 	{
 		CacheWidget->GetWidgetActiveChangedEvent().RemoveAll(this);

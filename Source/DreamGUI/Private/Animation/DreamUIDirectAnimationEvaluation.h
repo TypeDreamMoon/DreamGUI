@@ -130,6 +130,19 @@ private:
 		 * it goes. Written without a weak look-up of it every frame.
 		 */
 		UObject* BoundHost = nullptr;
+		/**
+		 * The one object the binding resolved to, when it is a DreamGUI widget or behaviour, as a weak look-up found it alive
+		 * while the count of objects gone read BoundSingleGone (DreamUIGone): while the count reads the same, it is that
+		 * object, alive and as registered as it was, and it is written without a weak look-up of it frame after frame.
+		 */
+		UObject* BoundSingle = nullptr;
+		uint64 BoundSingleGone = 0;
+		/**
+		 * The object the native setter was last found to fit or not (SetterClass), by address: what WriteValue asks of its
+		 * class -- in its header, a read from memory every write -- is asked again only of another object.
+		 */
+		const UObject* SetterCheckedObject = nullptr;
+		bool bSetterFits = false;
 	};
 
 	/** Points the property at its section's channels. */

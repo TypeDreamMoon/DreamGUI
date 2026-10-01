@@ -2,6 +2,10 @@
 
 #include "Animation/DreamUIDirectAnimationEvaluation.h"
 
+#include "Core/DreamUIBehaviour.h"
+#include "Core/DreamUIGoneCount.h"
+#include "Core/Components/DreamWidget.h"
+
 #include "Channels/IMovieSceneChannelOverrideProvider.h"
 #include "CoreGlobals.h"
 #include "Channels/MovieSceneBoolChannel.h"
@@ -312,6 +316,7 @@ bool FDreamUIDirectAnimationEvaluation::FindValueKind(FAnimatedProperty& InOutPr
 	{
 		InOutProperty.SetterClass = InObject.GetClass();
 		InOutProperty.SetterProperty = Property;
+		InOutProperty.SetterCheckedObject = nullptr;
 	}
 	const FStructProperty* StructProperty = CastField<FStructProperty>(Property);
 	const FName StructName = StructProperty != nullptr && StructProperty->Struct != nullptr ? StructProperty->Struct->GetFName() : NAME_None;
@@ -437,10 +442,19 @@ template<typename ValueType>
 void FDreamUIDirectAnimationEvaluation::WriteValue(FAnimatedProperty& InProperty, UObject& InObject, const ValueType& InValue)
 {
 	// What FTrackInstancePropertyBindings::CallFunction does first for a property with a native setter, without its map.
-	if (InProperty.SetterProperty != nullptr && InObject.GetClass() == InProperty.SetterClass)
+	// Whether the setter fits the object is found once for it (SetterCheckedObject).
+	if (InProperty.SetterProperty != nullptr)
 	{
-		InProperty.SetterProperty->CallSetter(&InObject, &InValue);
-		return;
+		if (InProperty.SetterCheckedObject != &InObject)
+		{
+			InProperty.SetterCheckedObject = &InObject;
+			InProperty.bSetterFits = InObject.GetClass() == InProperty.SetterClass;
+		}
+		if (InProperty.bSetterFits)
+		{
+			InProperty.SetterProperty->CallSetter(&InObject, &InValue);
+			return;
+		}
 	}
 	InProperty.Bindings->CallFunction<ValueType>(InObject, InValue);
 }
@@ -524,23 +538,39 @@ bool FDreamUIDirectAnimationEvaluation::Evaluate(IMovieScenePlayer& InPlayer, FF
 			// See FAnimatedProperty::BoundHost.
 			BoundObjects.Emplace(Property.BoundObjects[0], Property.BoundHost);
 		}
-		for (int32 Index = 0; !bLookUp && Property.BoundHost == nullptr && Index < Property.BoundObjects.Num(); ++Index)
+		else if (!bLookUp && Property.BoundSingle != nullptr && Property.BoundSingleGone == DreamUIGone::Read())
 		{
-			UObject* const Found = Property.BoundObjects[Index].Get();
-			bLookUp = Found == nullptr;
-			BoundObjects.Emplace(Property.BoundObjects[Index], Found);
+			// See FAnimatedProperty::BoundSingle.
+			BoundObjects.Emplace(Property.BoundObjects[0], Property.BoundSingle);
 		}
-		if (bLookUp)
+		else
 		{
-			Property.BoundObjects = TArray<TWeakObjectPtr<UObject>, TInlineAllocator<1>>(InPlayer.FindBoundObjects(Property.BindingId, MovieSceneSequenceID::Root));
-			Property.bBoundObjectsFound = true;
-			BoundObjects.Reset();
-			for (const TWeakObjectPtr<UObject>& WeakObject : Property.BoundObjects)
+			// Read before the look-ups: an object found alive by them is still alive while the count reads the same.
+			const uint64 Gone = DreamUIGone::Read();
+			for (int32 Index = 0; !bLookUp && Index < Property.BoundObjects.Num(); ++Index)
 			{
-				BoundObjects.Emplace(WeakObject, WeakObject.Get());
+				UObject* const Found = Property.BoundObjects[Index].Get();
+				bLookUp = Found == nullptr;
+				BoundObjects.Emplace(Property.BoundObjects[Index], Found);
 			}
-			UObject* const Host = InPlayer.GetPlaybackContext();
-			Property.BoundHost = BoundObjects.Num() == 1 && Host != nullptr && BoundObjects[0].Value == Host ? Host : nullptr;
+			if (bLookUp)
+			{
+				Property.BoundObjects = TArray<TWeakObjectPtr<UObject>, TInlineAllocator<1>>(InPlayer.FindBoundObjects(Property.BindingId, MovieSceneSequenceID::Root));
+				Property.bBoundObjectsFound = true;
+				BoundObjects.Reset();
+				for (const TWeakObjectPtr<UObject>& WeakObject : Property.BoundObjects)
+				{
+					BoundObjects.Emplace(WeakObject, WeakObject.Get());
+				}
+				UObject* const Host = InPlayer.GetPlaybackContext();
+				Property.BoundHost = BoundObjects.Num() == 1 && Host != nullptr && BoundObjects[0].Value == Host ? Host : nullptr;
+				// Another object, perhaps where an earlier one was: whether the setter fits it is found again.
+				Property.SetterCheckedObject = nullptr;
+			}
+			UObject* const Single = BoundObjects.Num() == 1 ? BoundObjects[0].Value : nullptr;
+			Property.BoundSingle = Property.BoundHost == nullptr && Single != nullptr
+				&& (Single->IsA<UDreamWidget>() || Single->IsA<UDreamUIBehaviour>()) ? Single : nullptr;
+			Property.BoundSingleGone = Gone;
 		}
 		for (const TPair<TWeakObjectPtr<UObject>, UObject*>& Bound : BoundObjects)
 		{

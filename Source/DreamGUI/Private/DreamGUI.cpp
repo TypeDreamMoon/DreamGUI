@@ -7,6 +7,7 @@
 #include "Core/DreamUIScriptPackages.h"
 #include "Core/DreamUISettings.h"
 #include "Core/DreamUIWidgetRegistry.h"
+#include "Core/DreamUIGoneCount.h"
 #include "Modules/ModuleManager.h"
 #include "Misc/CoreDelegates.h"
 #include "Engine/Engine.h"
@@ -84,6 +85,7 @@ void FDreamGUIModule::ShutdownModule()
 		GPostEngineInitHandle.Reset();
 	}
 	DreamUIRendererSettings::SetProvider(nullptr);
+	DreamUIGone::StopListening();
 #if WITH_EDITOR
 	FDreamUIRenderer::SetSimulatingInEditorQuery(nullptr);
 #endif
