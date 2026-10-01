@@ -6,6 +6,7 @@
 #include "Engine/World.h"
 #include "Framework/Application/SlateApplication.h"
 #include "GameFramework/Actor.h"
+#include "GameFramework/PlayerController.h"
 
 #include "Core/DreamUISettings.h"
 #include "Core/DreamUIWidgetRegistry.h"
@@ -276,13 +277,16 @@ void UDreamInputKeySelector::SetListeningText(const FText& InListeningText)
 
 void UDreamInputKeySelector::SetEscapeCancels(bool bInEscapeCancels)
 {
-	// Read by NotifyChordPressed, so the next key asks. Nothing to push.
+	// Read by NotifyChordPressed, so the next key asks -- and by the capture, which binds a refused pad
+	// key only when it is a way out.
 	bEscapeCancels = bInEscapeCancels;
+	RefreshKeyCapture();
 }
 
 void UDreamInputKeySelector::SetEscapeKeys(const TArray<FKey>& InKeys)
 {
 	EscapeKeys = InKeys;
+	RefreshKeyCapture();
 }
 
 void UDreamInputKeySelector::SetAllowModifierKeys(bool bInAllowModifierKeys)
@@ -293,6 +297,18 @@ void UDreamInputKeySelector::SetAllowModifierKeys(bool bInAllowModifierKeys)
 void UDreamInputKeySelector::SetAllowGamepadKeys(bool bInAllowGamepadKeys)
 {
 	bAllowGamepadKeys = bInAllowGamepadKeys;
+	RefreshKeyCapture();
+}
+
+void UDreamInputKeySelector::RefreshKeyCapture()
+{
+	if (!InputAgent.IsValid())
+	{
+		// Nothing is capturing; the next arming binds by the knobs as they are then.
+		return;
+	}
+	EndKeyCapture();
+	BeginKeyCapture();
 }
 
 void UDreamInputKeySelector::SetCaptureKeysWhileListening(bool bInCaptureKeysWhileListening)
@@ -373,10 +389,15 @@ void UDreamInputKeySelector::BeginKeyCapture()
 		return;
 	}
 	UWorld* World = GetWorld();
-	if (World == nullptr)
+	// The player this selector belongs to, whose keys are the ones it is waiting for. It used to listen to
+	// player 0 whoever owned it: in a split screen the second player's selector took the first player's
+	// keys, and the second player's own reached it not at all.
+	APlayerController* OwnerController = GetOwningPlayer();
+	if (World == nullptr || !IsValid(OwnerController))
 	{
-		// No world means no input stack -- an initialize-time arming, or a test. The control stays
-		// armed and NotifyKeyPressed remains the way in, which is the contract without this flag.
+		// No world means no input stack -- an initialize-time arming, or a test -- and no player means no
+		// stack to push onto. The control stays armed and NotifyKeyPressed remains the way in, which is
+		// the contract without this flag.
 		return;
 	}
 
@@ -388,10 +409,9 @@ void UDreamInputKeySelector::BeginKeyCapture()
 #if WITH_EDITOR
 	Agent->SetActorLabel(FString::Printf(TEXT("%s_KeyCaptureAgent"), *GetName()));
 #endif
-	// AutoReceiveInput plus PreInitializeComponents is what actually builds the InputComponent and
-	// pushes it on the player's stack; UUITextInput does the same two lines for the same reason.
-	Agent->AutoReceiveInput = EAutoReceiveInput::Player0;
-	Agent->PreInitializeComponents();
+	// EnableInput is what actually builds the InputComponent and pushes it on that player's stack -- the
+	// call AutoReceiveInput makes, for whichever player it names, from PreInitializeComponents.
+	Agent->EnableInput(OwnerController);
 	InputAgent = Agent;
 
 	if (UInputComponent* Input = Agent->InputComponent)
@@ -418,12 +438,28 @@ void UDreamInputKeySelector::BeginKeyCapture()
 			{
 				continue;
 			}
+			// Any Key is not a key but every key: UPlayerInput turns its binding into one per key held down, each of
+			// them consumed -- the pad keys and mouse buttons the filters below leave out included. Every real key
+			// is bound on its own.
+			if (Key == EKeys::AnyKey)
+			{
+				continue;
+			}
 			// Mouse buttons excluded for the same reason as axes, one step later: the click that
 			// arms this control is still going down when the agent appears, and the next click is
 			// how the player disarms it. Binding them meant the first click after arming bound Left
 			// Mouse Button -- and it was the only click the player could make, because there was no
 			// longer any way to reach the button again.
 			if (Key.IsMouseButton())
+			{
+				continue;
+			}
+			// A pad key this selector will not bind is not bound here either, the way-out keys apart. A
+			// binding consumes its key whether or not its handler takes it, so binding them only for
+			// NotifyChordPressed to refuse them swallowed every pad press -- the D-pad, A, the shoulders --
+			// for as long as a keyboard-only selector waited, where the property promises they go on to
+			// whatever else wanted them.
+			if (!bAllowGamepadKeys && Key.IsGamepadKey() && !(bEscapeCancels && EscapeKeys.Contains(Key)))
 			{
 				continue;
 			}
