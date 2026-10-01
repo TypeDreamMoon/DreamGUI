@@ -9,6 +9,7 @@
 #include "Animation/DreamUIAnimationTicker.h"
 #include "Animation/DreamUIMovieScenePropertyAccessors.h"
 #include "Core/DreamUserWidget.h"
+#include "Core/DreamUIDetailTrace.h"
 #include "DreamGUI.h"
 #include "Core/Components/DreamWidget.h"
 #include "Engine/World.h"
@@ -342,6 +343,7 @@ FDreamUIAnimationHandle UDreamWidgetAnimationComponent::PlayAnimationInternal(
 	float PlaybackSpeed,
 	bool bRestoreState)
 {
+	DREAMUI_DETAIL_SCOPE(DreamUI_PlayAnimation);
 	FDreamUIAnimationHandle Handle;
 	if (!IsValid(Animation))
 	{
@@ -373,7 +375,11 @@ FDreamUIAnimationHandle UDreamWidgetAnimationComponent::PlayAnimationInternal(
 		? EMovieSceneCompletionModeOverride::ForceRestoreState
 		: EMovieSceneCompletionModeOverride::ForceKeepState;
 
-	UDreamWidgetAnimationPlayer* Player = TakeSparePlayer(Animation, Settings);
+	UDreamWidgetAnimationPlayer* Player = nullptr;
+	{
+		DREAMUI_DETAIL_SCOPE(DreamUI_TakeSpareAnimationPlayer);
+		Player = TakeSparePlayer(Animation, Settings);
+	}
 	if (Player == nullptr)
 	{
 		Player = NewObject<UDreamWidgetAnimationPlayer>(this);
@@ -412,18 +418,21 @@ FDreamUIAnimationHandle UDreamWidgetAnimationComponent::PlayAnimationInternal(
 	Player->OnNativeFinished.BindUObject(this, &UDreamWidgetAnimationComponent::HandleActiveSequencePlayerFinished, Player);
 	ActiveSequencePlayers.Add(Player);
 
-	if (PlayMode == EDreamUIAnimationPlayMode::Reverse)
 	{
-		if (StartAtTime > 0.0f)
+		DREAMUI_DETAIL_SCOPE(DreamUI_StartAnimationPlayer);
+		if (PlayMode == EDreamUIAnimationPlayMode::Reverse)
 		{
-			const double ReverseStartTime = FMath::Max(0.0, Player->GetEndTime().AsSeconds() - StartAtTime);
-			Player->SetPlaybackPosition(FMovieSceneSequencePlaybackParams(static_cast<float>(ReverseStartTime), EUpdatePositionMethod::Jump));
+			if (StartAtTime > 0.0f)
+			{
+				const double ReverseStartTime = FMath::Max(0.0, Player->GetEndTime().AsSeconds() - StartAtTime);
+				Player->SetPlaybackPosition(FMovieSceneSequencePlaybackParams(static_cast<float>(ReverseStartTime), EUpdatePositionMethod::Jump));
+			}
+			Player->PlayReverse();
 		}
-		Player->PlayReverse();
-	}
-	else
-	{
-		Player->Play();
+		else
+		{
+			Player->Play();
+		}
 	}
 	Player->KeepTicked();
 
@@ -767,6 +776,7 @@ void UDreamWidgetAnimationComponent::ReleaseActiveSequencePlayer(UDreamWidgetAni
 	{
 		return;
 	}
+	DREAMUI_DETAIL_SCOPE(DreamUI_ReleaseAnimationPlayer);
 
 	Player->OnNativeFinished.Unbind();
 	if (bStopPlayer)
@@ -838,6 +848,7 @@ void UDreamWidgetAnimationComponent::TearDownSparePlayers()
 
 void UDreamWidgetAnimationComponent::NotifyInstanceStarted(UDreamWidgetAnimationPlayer* Player)
 {
+	DREAMUI_DETAIL_SCOPE(DreamUI_NotifyAnimationStarted);
 	const FDreamUIAnimationHandle Handle = FDreamUIAnimationHandle::Of(Player);
 	UMovieSceneSequence* Animation = Player->GetSequence();
 
@@ -852,6 +863,7 @@ void UDreamWidgetAnimationComponent::NotifyInstanceStarted(UDreamWidgetAnimation
 
 void UDreamWidgetAnimationComponent::NotifyInstanceFinished(UDreamWidgetAnimationPlayer* Player)
 {
+	DREAMUI_DETAIL_SCOPE(DreamUI_NotifyAnimationFinished);
 	const FDreamUIAnimationHandle Handle = FDreamUIAnimationHandle::Of(Player);
 	UMovieSceneSequence* Animation = Player->GetSequence();
 
@@ -866,6 +878,11 @@ void UDreamWidgetAnimationComponent::NotifyInstanceFinished(UDreamWidgetAnimatio
 
 void UDreamWidgetAnimationComponent::ExecuteBoundAnimationEvents(UMovieSceneSequence* Animation, EDreamUIAnimationEvent Event)
 {
+	// Nothing bound, the usual case: no copy made for every play's start and end.
+	if (AnimationCallbacks.Num() == 0)
+	{
+		return;
+	}
 	// A copy: a listener commonly unbinds itself from inside the call.
 	const TArray<FDreamUIAnimationEventBinding> Callbacks = AnimationCallbacks;
 	for (const FDreamUIAnimationEventBinding& Binding : Callbacks)

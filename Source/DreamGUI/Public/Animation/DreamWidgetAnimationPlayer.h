@@ -162,6 +162,8 @@ private:
 	bool HasNothingToTick() const;
 	/** Whether the root of the sequence's hierarchy warps time in the play-rate domain; see TryEvaluateDirectly. */
 	bool IsRootPlayRateWarped() const;
+	/** Has the player ignore the sequencer's playback replication events, which reach no widget animation; from Initialize. */
+	void IgnoreReplication();
 
 	/** What the tick manager's tick of this player does this frame; see TickFromSequenceTickManager. */
 	enum class ELiteTick : uint8
