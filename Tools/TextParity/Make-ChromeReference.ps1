@@ -7,10 +7,14 @@
 .DESCRIPTION
     For each case of Source/DreamGUITests/Resources/TextParity/corpus.json (variants included, by the same rules the
     test applies) the script writes an HTML page: one @font-face per font file of the case's font key (file:/// URLs to
-    the engine's own fonts), the text at (padding, padding) in a box of the case's width, white-space: pre-wrap (pre
-    when the box is not to wrap), the case's line height, letter spacing, lang, dir and alignment, black on white or
-    white on black. Rich cases are DreamGUI markup turned into HTML: <size=N> becomes a font-size span, <a=id> a link,
-    <b> <i> <u> <s> <sup> <sub> stay what they are.
+    the engine's own fonts; a fallback's unicode-range and size-adjust where the fonts table gives them), the family
+    list in the order DreamGUI's face resolver tries the faces -- with a :lang() list for every language a face is meant
+    for -- the text at (padding, padding) in a box of the case's width, white-space: pre-wrap (pre when the box is not to
+    wrap), the case's line height, letter spacing, tab size, lang, dir, alignment (justification included) and drop
+    shadow, black on white or white on black, drawn at the case's device scale. Rich cases are DreamGUI markup turned
+    into HTML: <size=N> becomes a font-size span, <a=id> a link, <lang=xx> a span with that lang, <b> <i> <u> <s> <sup>
+    <sub> stay what they are. A case held to Slate (reference 'slate': Chrome cannot draw it) is skipped, and so is a
+    case whose optional font key names a file this machine does not have.
 
     Chrome runs twice per page. The first run takes the screenshot (<case>.png). The second dumps the DOM, into which
     the page's own script has written, once document.fonts.ready has resolved: the caret x and y for every UTF-16
@@ -154,6 +158,10 @@ function Convert-RichMarkup([string]$Markup) {
                 if ($closing) { return '</a>' }
                 return "<a href=`"#$value`">"
             }
+            'lang' {
+                if ($closing) { return '</span>' }
+                return "<span lang=`"$value`">"
+            }
             default {
                 if ($closing) { return '</span>' }
                 return "<span data-tag=`"$name`">"
@@ -176,6 +184,7 @@ function Expand-Cases($Data) {
     $result = [System.Collections.Generic.List[object]]::new()
     foreach ($entry in @($Data.cases)) {
         $outline = Get-Prop $entry 'outline' $null
+        $shadow = Get-Prop $entry 'shadow' $null
         $item = [ordered]@{
             id            = [string]$entry.id
             base          = [string]$entry.id
@@ -188,15 +197,23 @@ function Expand-Cases($Data) {
             rich          = [bool](Get-Prop $entry 'rich' $false)
             lang          = [string](Get-Prop $entry 'lang' 'en')
             align         = [string](Get-Prop $entry 'align' 'start')
+            textJustify   = [string](Get-Prop $entry 'textJustify' 'auto')
+            textAlignLast = [string](Get-Prop $entry 'textAlignLast' 'auto')
             dir           = [string](Get-Prop $entry 'dir' 'ltr')
             wrap          = [string](Get-Prop $entry 'wrap' 'anywhere')
             wordBreak     = [string](Get-Prop $entry 'wordBreak' 'normal')
             overflow      = [string](Get-Prop $entry 'overflow' '')
             maxLines      = [int](Get-Prop $entry 'maxLines' 0)
             transform     = [string](Get-Prop $entry 'transform' '')
+            tabSize       = [double](Get-Prop $entry 'tabSize' 8)
             outlineEm     = if ($null -ne $outline) { [double](Get-Prop $outline 'width' 0) } else { 0.0 }
             outlineColor  = if ($null -ne $outline) { [string](Get-Prop $outline 'color' '#000000') } else { '#000000' }
+            shadowX       = if ($null -ne $shadow) { [double](Get-Prop $shadow 'x' 0) } else { 0.0 }
+            shadowY       = if ($null -ne $shadow) { [double](Get-Prop $shadow 'y' 0) } else { 0.0 }
+            shadowColor   = if ($null -ne $shadow) { [string](Get-Prop $shadow 'color' '#00000080') } else { '' }
             canvas        = @(Get-Prop $entry 'canvas' $defaultCanvas)
+            scale         = [double](Get-Prop $entry 'scale' 1)
+            reference     = [string](Get-Prop $entry 'reference' 'chrome')
             inverse       = $false
             flags         = @(Get-Prop $entry 'flags' @())
         }
@@ -217,6 +234,10 @@ function Expand-Cases($Data) {
                 $copy.id = "$($item.id)_Inverse"
                 $copy.inverse = $true
             }
+            elseif ($variant -eq 'field') {
+                # DreamGUI draws this one from its distance field; Chrome's picture is the case's own, under the variant's name.
+                $copy.id = "$($item.id)_Field"
+            }
             else {
                 continue
             }
@@ -226,15 +247,63 @@ function Expand-Cases($Data) {
     return $result
 }
 
+# A face of the fonts table: its file, or {file, lang, unicodeRange, scale} for a fallback meant for some languages,
+# some code points or a scale (DreamTextParityCorpus.cpp reads the same object).
+function ConvertTo-Face($Spec) {
+    if ($Spec -is [string]) {
+        return [pscustomobject]@{ File = Resolve-FontPath $Spec; Lang = ''; UnicodeRange = ''; Scale = 1.0 }
+    }
+    $file = [string](Get-Prop $Spec 'file' '')
+    if (-not $file) { throw 'a face of the fonts table has no file' }
+    return [pscustomobject]@{
+        File         = Resolve-FontPath $file
+        Lang         = ([string](Get-Prop $Spec 'lang' '')).Trim()
+        UnicodeRange = ([string](Get-Prop $Spec 'unicodeRange' '')).Trim()
+        Scale        = [double](Get-Prop $Spec 'scale' 1.0)
+    }
+}
+
 function Get-FontKey($Data, [string]$Key) {
     $entry = Get-Prop $Data.fonts $Key $null
     if ($null -eq $entry) { throw "the corpus has no font key '$Key'" }
     return [pscustomobject]@{
-        Faces      = @(@(Get-Prop $entry 'faces' @()) | ForEach-Object { Resolve-FontPath $_ })
+        Faces      = @(@(Get-Prop $entry 'faces' @()) | ForEach-Object { ConvertTo-Face $_ })
         Bold       = if (Get-Prop $entry 'bold' $null) { Resolve-FontPath $entry.bold } else { $null }
         Italic     = if (Get-Prop $entry 'italic' $null) { Resolve-FontPath $entry.italic } else { $null }
         BoldItalic = if (Get-Prop $entry 'boldItalic' $null) { Resolve-FontPath $entry.boldItalic } else { $null }
+        Optional   = [bool](Get-Prop $entry 'optional' $false)
     }
+}
+
+# Whether a text in $TextLang is in one of a face's languages ($FaceLangs, semicolon-separated): CSS :lang() matching,
+# a face's tag being the text's or a prefix of it at a hyphen, case-insensitive. DreamTextParity::LanguageMatches.
+function Test-LanguageMatch([string]$FaceLangs, [string]$TextLang) {
+    $text = $TextLang.Trim().ToLowerInvariant().Replace('_', '-')
+    if (-not $text) { return $false }
+    foreach ($tag in ($FaceLangs -split ';')) {
+        $face = $tag.Trim().ToLowerInvariant().Replace('_', '-')
+        if (-not $face) { continue }
+        if ($text -eq $face -or $text.StartsWith("$face-")) { return $true }
+    }
+    return $false
+}
+
+# The order a text in $Lang tries a key's faces in, as indices: the primary, the fallbacks meant for its language, those
+# meant for any, then the rest, each in table order. DreamTextParity::GetFaceOrder, and DreamGUI's face resolver.
+function Get-FaceOrder($FontKey, [string]$Lang) {
+    $order = [System.Collections.Generic.List[int]]::new()
+    if ($FontKey.Faces.Count -eq 0) { return @() }
+    $order.Add(0)
+    for ($index = 1; $index -lt $FontKey.Faces.Count; $index++) {
+        if ($FontKey.Faces[$index].Lang -and (Test-LanguageMatch $FontKey.Faces[$index].Lang $Lang)) { $order.Add($index) }
+    }
+    for ($index = 1; $index -lt $FontKey.Faces.Count; $index++) {
+        if (-not $FontKey.Faces[$index].Lang) { $order.Add($index) }
+    }
+    for ($index = 1; $index -lt $FontKey.Faces.Count; $index++) {
+        if (-not $order.Contains($index)) { $order.Add($index) }
+    }
+    return $order.ToArray()
 }
 
 # The page's own script: waits for the fonts, measures, and writes what it measured into the document as JSON.
@@ -407,21 +476,35 @@ function New-CasePage($Item, $FontKey, [int]$Padding) {
     $paper = if ($Item.inverse) { '#000000' } else { '#ffffff' }
     $boxWidth = if ($Item.width -gt 0) { $Item.width } else { $canvasWidth - 2 * $Padding }
 
+    $invariant = [System.Globalization.CultureInfo]::InvariantCulture
     $faceCss = [System.Text.StringBuilder]::new()
     $families = @()
     for ($index = 0; $index -lt $FontKey.Faces.Count; $index++) {
+        $face = $FontKey.Faces[$index]
         $family = "P_$($Item.font)_$index"
         $families += "'$family'"
-        [void]$faceCss.AppendLine("@font-face { font-family: '$family'; src: url('$(Get-ChromeFontUri $FontKey.Faces[$index])'); font-weight: 400; font-style: normal; }")
+        # A fallback's ranges and scale, as the fallback entry DreamGUI makes of it has them; the primary takes only its file.
+        $descriptors = ''
+        if ($index -gt 0 -and $face.UnicodeRange) { $descriptors += " unicode-range: $($face.UnicodeRange);" }
+        if ($index -gt 0 -and $face.Scale -ne 1.0) { $descriptors += " size-adjust: $((100.0 * $face.Scale).ToString($invariant))%;" }
+        [void]$faceCss.AppendLine("@font-face { font-family: '$family'; src: url('$(Get-ChromeFontUri $face.File)'); font-weight: 400; font-style: normal;$descriptors }")
         if ($index -eq 0) {
             if ($FontKey.Bold) { [void]$faceCss.AppendLine("@font-face { font-family: '$family'; src: url('$(Get-ChromeFontUri $FontKey.Bold)'); font-weight: 700; font-style: normal; }") }
             if ($FontKey.Italic) { [void]$faceCss.AppendLine("@font-face { font-family: '$family'; src: url('$(Get-ChromeFontUri $FontKey.Italic)'); font-weight: 400; font-style: italic; }") }
             if ($FontKey.BoldItalic) { [void]$faceCss.AppendLine("@font-face { font-family: '$family'; src: url('$(Get-ChromeFontUri $FontKey.BoldItalic)'); font-weight: 700; font-style: italic; }") }
         }
     }
-    $familyList = $families -join ', '
-
-    $invariant = [System.Globalization.CultureInfo]::InvariantCulture
+    # The family list in the order DreamGUI's resolver tries the faces for a language no face is meant for, and one more
+    # list for every language a face is meant for, which :lang() gives the paragraph and any <lang=xx> span in it. The
+    # shorter tags come first, so where a text matches two ("zh" and "zh-Hans") the list of the longer one wins.
+    $familyList = (@(Get-FaceOrder $FontKey '') | ForEach-Object { $families[$_] }) -join ', '
+    $tags = @($FontKey.Faces | ForEach-Object { $_.Lang -split ';' } | ForEach-Object { $_.Trim() } | Where-Object { $_ } |
+        Sort-Object -Unique | Sort-Object { ($_ -split '-').Count })
+    $langCss = [System.Text.StringBuilder]::new()
+    foreach ($tag in $tags) {
+        $tagList = (@(Get-FaceOrder $FontKey $tag) | ForEach-Object { $families[$_] }) -join ', '
+        [void]$langCss.AppendLine(".para:lang($tag), .para :lang($tag) { font-family: $tagList; }")
+    }
     $extra = [System.Collections.Generic.List[string]]::new()
     $whiteSpace = if ($Item.width -gt 0) { 'pre-wrap' } else { 'pre' }
     if ($Item.overflow -eq 'ellipsis') {
@@ -437,6 +520,12 @@ function New-CasePage($Item, $FontKey, [int]$Padding) {
         $stroke = (2.0 * $Item.outlineEm).ToString($invariant)
         $extra.Add("-webkit-text-stroke: ${stroke}em $($Item.outlineColor); paint-order: stroke fill;")
     }
+    if ($Item.shadowColor) {
+        # In em, as DreamGUI's underlay offset is: the text's own size makes them pixels. No blur, as the case's underlay has none.
+        $shadowX = $Item.shadowX.ToString($invariant)
+        $shadowY = $Item.shadowY.ToString($invariant)
+        $extra.Add("text-shadow: ${shadowX}em ${shadowY}em 0 $($Item.shadowColor);")
+    }
 
     $content = if ($Item.rich) { Convert-RichMarkup $Item.text } else { ConvertTo-HtmlText $Item.text }
     $caseJson = [ordered]@{
@@ -451,6 +540,7 @@ function New-CasePage($Item, $FontKey, [int]$Padding) {
 
     $size = $Item.size.ToString($invariant)
     $spacing = $Item.letterSpacing.ToString($invariant)
+    $tabSize = $Item.tabSize.ToString($invariant)
     $box = ([double]$boxWidth).ToString($invariant)
     $wrap = if ($Item.wrap -eq 'normal') { 'normal' } else { 'anywhere' }
     return @"
@@ -466,10 +556,12 @@ body { width: ${canvasWidth}px; height: ${canvasHeight}px; overflow: hidden; bac
 .para {
   position: absolute; left: ${Padding}px; top: ${Padding}px; width: ${box}px; margin: 0; padding: 0;
   font-family: $familyList; font-size: ${size}px; line-height: normal; letter-spacing: ${spacing}px;
-  white-space: $whiteSpace; overflow-wrap: $wrap; word-break: $($Item.wordBreak); line-break: auto;
-  color: $ink; text-align: $($Item.align); font-kerning: normal; -webkit-font-smoothing: antialiased;
+  white-space: $whiteSpace; overflow-wrap: $wrap; word-break: $($Item.wordBreak); line-break: auto; tab-size: $tabSize;
+  color: $ink; text-align: $($Item.align); text-justify: $($Item.textJustify); text-align-last: $($Item.textAlignLast);
+  font-kerning: normal; -webkit-font-smoothing: antialiased;
   $($extra -join ' ')
 }
+$($langCss.ToString())
 </style>
 </head>
 <body><div id="p" class="para" lang="$($Item.lang)" dir="$($Item.dir)">$content</div>
@@ -546,14 +638,17 @@ $PagesDir = Join-Path $WorkDir 'pages'
 $ProfileDir = Join-Path $WorkDir 'profile'
 New-Item -ItemType Directory -Force -Path $OutDir, $PagesDir, $ProfileDir | Out-Null
 
+# The device scale factor is the case's own and goes with each run.
 $Common = @(
-    '--headless=new', '--disable-gpu', '--disable-lcd-text', '--force-device-scale-factor=1', '--force-color-profile=srgb',
+    '--headless=new', '--disable-gpu', '--disable-lcd-text', '--force-color-profile=srgb',
     '--hide-scrollbars', '--allow-file-access-from-files', '--no-first-run', '--no-default-browser-check',
     '--disable-extensions', '--disable-background-networking', '--disable-component-update', '--disable-sync',
     "--user-data-dir=$ProfileDir", "--virtual-time-budget=$TimeBudgetMs"
 )
+$Invariant = [System.Globalization.CultureInfo]::InvariantCulture
 
 $Problems = 0
+$Skipped = 0
 foreach ($item in $Cases) {
     $notes = [System.Collections.Generic.List[string]]::new()
     $lines = '-'
@@ -565,15 +660,31 @@ foreach ($item in $Cases) {
         foreach ($stale in @($png, $json)) {
             if (Test-Path -LiteralPath $stale) { Remove-Item -LiteralPath $stale -Force }
         }
+        if ($item.reference -eq 'slate') {
+            # Measured against Slate: Chrome cannot draw it (a middle ellipsis), so there is no reference to make.
+            $Skipped++
+            Write-Host ("    {0,-36} skipped: held to Slate, Chrome cannot draw it" -f $item.id) -ForegroundColor DarkGray
+            continue
+        }
         $fontKey = Get-FontKey $Data $item.font
-        $missing = @($fontKey.Faces | Where-Object { -not (Test-Path -LiteralPath $_) })
+        $missing = @($fontKey.Faces | ForEach-Object { $_.File } | Where-Object { -not (Test-Path -LiteralPath $_) })
+        if ($missing.Count -gt 0 -and $fontKey.Optional) {
+            # A system font this machine does not have; the test skips the case here too.
+            $Skipped++
+            Write-Host ("    {0,-36} skipped: no {1} on this machine" -f $item.id, ($missing -join ', ')) -ForegroundColor DarkGray
+            continue
+        }
         if ($missing.Count -gt 0) { $notes.Add("missing font file(s): $($missing -join ', ')") }
         $page = Join-Path $PagesDir "$($item.id).html"
         [System.IO.File]::WriteAllText($page, (New-CasePage $item $fontKey $Padding), [System.Text.UTF8Encoding]::new($false))
         $url = ConvertTo-FileUri $page
+        # The window in CSS pixels, the canvas; the screenshot in device pixels, the canvas times the scale.
         $windowSize = "--window-size=$([int]$item.canvas[0]),$([int]$item.canvas[1])"
+        $scaleFactor = "--force-device-scale-factor=$($item.scale.ToString($Invariant))"
+        $expectedWidth = [int][Math]::Round([double]$item.canvas[0] * $item.scale)
+        $expectedHeight = [int][Math]::Round([double]$item.canvas[1] * $item.scale)
 
-        $shot = Invoke-Browser $Browser ($Common + @($windowSize, "--screenshot=$png", $url))
+        $shot = Invoke-Browser $Browser ($Common + @($scaleFactor, $windowSize, "--screenshot=$png", $url))
         if ($shot.TimedOut) {
             $notes.Add("the screenshot run did not finish within $TimeoutSeconds s and was killed")
         }
@@ -582,12 +693,12 @@ foreach ($item in $Cases) {
         }
         else {
             $pngSize = Get-PngSize $png
-            if ($null -ne $pngSize -and ($pngSize[0] -ne [int]$item.canvas[0] -or $pngSize[1] -ne [int]$item.canvas[1])) {
-                $notes.Add("the screenshot is $($pngSize[0]) x $($pngSize[1]), not $($item.canvas[0]) x $($item.canvas[1])")
+            if ($null -ne $pngSize -and ($pngSize[0] -ne $expectedWidth -or $pngSize[1] -ne $expectedHeight)) {
+                $notes.Add("the screenshot is $($pngSize[0]) x $($pngSize[1]), not $expectedWidth x $expectedHeight")
             }
         }
 
-        $dump = Invoke-Browser $Browser ($Common + @($windowSize, '--dump-dom', $url))
+        $dump = Invoke-Browser $Browser ($Common + @($scaleFactor, $windowSize, '--dump-dom', $url))
         $match = [regex]::Match($dump.Out, '(?s)<script[^>]*id="parity-result"[^>]*>(.*?)</script>')
         if ($dump.TimedOut) {
             $notes.Add("the measuring run did not finish within $TimeoutSeconds s and was killed")
@@ -618,5 +729,5 @@ foreach ($item in $Cases) {
     }
 }
 
-Write-Host "==> $($Cases.Count) case(s) drawn by $BrowserName $Version into $OutDir; $Problems with a problem." -ForegroundColor Cyan
+Write-Host "==> $($Cases.Count - $Skipped) case(s) drawn by $BrowserName $Version into $OutDir, $Skipped skipped; $Problems with a problem." -ForegroundColor Cyan
 exit ($(if ($Problems -gt 0) { 1 } else { 0 }))

@@ -592,6 +592,7 @@ bool FDreamDriverPieRig::UpdateStart()
 	{
 		// What the process had before this test touched it, taken before anything could change it.
 		bRememberedProcessState = true;
+		HideFloatingEditorWindows();
 
 		if (GEditor == nullptr || GEngine == nullptr)
 		{
@@ -1291,6 +1292,25 @@ bool FDreamDriverPieRig::IsKeyboardFocusStillGiven() const
 	return SlateApp.GetUserFocusedWidget(static_cast<uint32>(SlateApp.GetUserIndexForKeyboard())) == GivenTo;
 }
 
+void FDreamDriverPieRig::HideFloatingEditorWindows()
+{
+	if (!FSlateApplication::IsInitialized())
+	{
+		return;
+	}
+	for (const TSharedRef<SWindow>& TopWindow : FSlateApplication::Get().GetInteractiveTopLevelWindows())
+	{
+		for (const TSharedRef<SWindow>& ChildWindow : TopWindow->GetChildWindows())
+		{
+			if (ChildWindow->GetType() == EWindowType::Normal && ChildWindow->IsVisible())
+			{
+				ChildWindow->HideWindow();
+				HiddenEditorWindows.Add(ChildWindow);
+			}
+		}
+	}
+}
+
 void FDreamDriverPieRig::RestoreEditorState()
 {
 	if (bRestoredEditorState)
@@ -1314,6 +1334,16 @@ void FDreamDriverPieRig::RestoreEditorState()
 			SlateApp.ClearUserFocus(KeyboardUser, EFocusCause::SetDirectly);
 		}
 	}
+
+	// The editor's floating windows, back as they were.
+	for (const TWeakPtr<SWindow>& HiddenWindow : HiddenEditorWindows)
+	{
+		if (const TSharedPtr<SWindow> Window = HiddenWindow.Pin())
+		{
+			Window->ShowWindow();
+		}
+	}
+	HiddenEditorWindows.Reset();
 
 	/*
 	 * The editor's level viewport, which the ended session left at the size the rig gave the session

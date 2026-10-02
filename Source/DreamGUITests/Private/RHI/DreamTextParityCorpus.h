@@ -26,17 +26,47 @@ namespace DreamTextParity
 	/** A font file as the corpus spells it, $(EngineDir) and $(WindowsFonts) put in, as an absolute path. */
 	FString ResolveFontPath(const FString& InSpelling);
 
+	/**
+	 * One face of a font key. In the fonts table a face is its file, or an object {file, lang, unicodeRange, scale} saying
+	 * what a fallback is for: lang the cultures it is meant for (semicolon-separated, as FDreamUIFontFallback::Cultures
+	 * and Slate's sub-fonts write them), unicodeRange the code points it may draw (CSS syntax: U+4E00-9FFF, U+30??), scale
+	 * its size-adjust. DreamGUI makes them the fallback entry's Cultures, Ranges and Scale; Chrome's page the @font-face's
+	 * unicode-range and size-adjust and a :lang() family list; Slate a sub-typeface's character ranges and scaling factor.
+	 * The first face of a key is the font itself and takes only its file.
+	 */
+	struct FFontFace
+	{
+		FString File;
+		FString Lang;
+		/** As the corpus spells it, for Chrome; Ranges is the same read for DreamGUI and Slate. */
+		FString UnicodeRange;
+		TArray<FInt32Interval> Ranges;
+		float Scale = 1.0f;
+
+		/** Whether the face's ranges let it draw the code point: true for every code point when it has none. */
+		bool AllowsCodepoint(uint32 InCodepoint) const;
+		/** A face reads as its file, which is all a face of the table was before it could say what it is for. */
+		operator const FString&() const { return File; }
+	};
+
 	/** One key of the fonts table: its faces in fallback order, the primary first. */
 	struct FFontKey
 	{
 		FString Key;
-		TArray<FString> Faces;
+		TArray<FFontFace> Faces;
 		/** The primary's true style faces; empty where it has none. */
 		FString Bold;
 		FString Italic;
 		FString BoldItalic;
 		/** DreamGUI draws the key with a bitmap font rather than a distance field. */
 		bool bBitmap = false;
+		/** The key names a file not every machine has (a system font): a case that uses it is skipped where one is missing. */
+		bool bOptional = false;
+
+		/** Whether a face is meant for particular languages, which only Chrome and DreamGUI can follow per text. */
+		bool HasLanguageFaces() const;
+		/** Every file the key names that is not on disk. */
+		TArray<FString> GetMissingFiles() const;
 	};
 
 	/** One case of the corpus, variants already made into cases of their own. */
@@ -55,24 +85,52 @@ namespace DreamTextParity
 		float LetterSpacing = 0.0f;
 		bool bRich = false;
 		FString Lang = TEXT("en");
+		/** start, end, center, left, right or justify. */
 		FString Align = TEXT("start");
+		/** For a justified case, CSS text-justify (auto, inter-word, inter-character, none) and text-align-last (auto, start, center, end, justify). */
+		FString TextJustify = TEXT("auto");
+		FString TextAlignLast = TEXT("auto");
 		FString Dir = TEXT("ltr");
 		FString Wrap = TEXT("anywhere");
+		/** '', 'ellipsis', 'middleEllipsis', or 'clamp' with MaxLines. */
 		FString Overflow;
 		int32 MaxLines = 0;
 		FString Transform;
+		/** CSS tab-size in spaces; bTabSizeSet when the case states one, which Slate has no equivalent of. */
+		float TabSize = 8.0f;
+		bool bTabSizeSet = false;
 		/** Outline width in em outside the face; 0 for none. */
 		float OutlineEm = 0.0f;
 		FColor OutlineColor = FColor::Black;
+		/** A hard drop shadow: its offset in em, +Y down, and its colour. */
+		bool bShadow = false;
+		FVector2f ShadowOffsetEm = FVector2f::ZeroVector;
+		FColor ShadowColor = FColor::Black;
+		/** The canvas in CSS pixels, which is DreamGUI's canvas units and Slate's layout units. */
 		FIntPoint Canvas = FIntPoint(1024, 160);
+		/** Device pixels per CSS pixel: DreamGUI's canvas scale, Slate's DPI scale, Chrome's device scale factor. */
+		float Scale = 1.0f;
+		/** "off": DreamGUI draws the text from its font's distance field at every size (UDreamText::SmallTextRaster). */
+		FString SmallTextRaster;
+		/** What the case is measured against: "chrome", or "slate" where Chrome has nothing to compare (a middle ellipsis). */
+		FString Reference = TEXT("chrome");
+		/** How far DreamGUI may be from the reference, by measure; see the test for the names. Asserted unless reportOnly. */
+		TArray<TPair<FString, double>> Targets;
 		bool bInverse = false;
 		TArray<FString> Flags;
 
 		bool HasFlag(const TCHAR* InFlag) const { return Flags.Contains(InFlag); }
+		/** Nothing about the case is asserted, neither its breaks nor its targets: known not to match yet. */
+		bool IsReportOnly() const { return HasFlag(TEXT("reportOnly")); }
+		bool IsHeldToSlate() const { return Reference.Equals(TEXT("slate"), ESearchCase::IgnoreCase); }
 		FColor GetInk() const { return bInverse ? FColor::White : FColor::Black; }
 		FColor GetPaper() const { return bInverse ? FColor::Black : FColor::White; }
-		/** The rectangle the text is laid out in, from (InPadding, InPadding) of the canvas. */
+		/** The rectangle the text is laid out in, from (InPadding, InPadding) of the canvas, in CSS pixels. */
 		FVector2D GetBox(int32 InPadding) const;
+		/** The canvas in device pixels: what every picture of the case measures. */
+		FIntPoint GetDeviceCanvas() const;
+		/** Device pixels per CSS pixel as the pictures have it: the device canvas's width over the canvas's. */
+		double GetDeviceScale() const;
 	};
 
 	struct FCorpus
@@ -91,9 +149,9 @@ namespace DreamTextParity
 
 	/**
 	 * DreamGUI's font for a key: a distance-field font (outline multi-channel, the class default) or a bitmap font over
-	 * the key's faces, the rest of them as its fallbacks in order, and the key's bold, italic and bold-italic files as
-	 * its true style faces. A colour bitmap face (an emoji font) is left out: it has no outlines to make a distance
-	 * field of. Shared by every test while one holds it; null, with the reason, when no face can be used.
+	 * the key's faces, the rest of them as its fallback entries in order -- each with its face's cultures, ranges and
+	 * scale -- and the key's bold, italic and bold-italic files as its true style faces. A colour face (an emoji font) is
+	 * a fallback like any other. Shared by every test while one holds it; null, with the reason, when no face can be used.
 	 */
 	UDreamUIFontData_FreeTypeRender* GetDreamFont(const FFontKey& InKey, FString& OutError);
 
@@ -123,9 +181,9 @@ namespace DreamTextParity
 
 	/**
 	 * DreamGUI's rich-text markup read the way UDreamText reads it: <b> <i> <u> <s> <sup> <sub> <size=N> (also +N and
-	 * -N) <color=#hex> <a=id> and custom tags, closed by </name>, and the character references &lt; &gt; &amp; &quot;
-	 * &apos; &nbsp; &#N; &#xN;. Out come the runs of equally styled text and the text with the markup taken out, which
-	 * is what Chrome's text content of the same case is. OutSourceOffsets, when given, holds for every UTF-16 unit of
+	 * -N) <color=#hex> <a=id> <lang=xx> and custom tags, closed by </name>, and the character references &lt; &gt; &amp;
+	 * &quot; &apos; &nbsp; &#N; &#xN;. Out come the runs of equally styled text and the text with the markup taken out,
+	 * which is what Chrome's text content of the same case is. OutSourceOffsets, when given, holds for every UTF-16 unit of
 	 * that text the offset in the markup it was read from (a reference's '&'): DreamGUI numbers a rich text's carets by
 	 * offsets into the markup.
 	 */
@@ -138,6 +196,19 @@ namespace DreamTextParity
 	void DecodeCodepoints(const FString& InText, TArray<uint32>& OutCodepoints, TArray<int32>& OutOffsets);
 	/** Characters a font is not expected to draw: controls, joiners, marks of direction, variation selectors, the soft hyphen. */
 	bool IsDefaultIgnorable(uint32 InCodepoint);
+	/** CSS unicode-range ("U+0025-00FF, U+4??, U+20AC") as inclusive intervals. False, with nothing out, when it does not read. */
+	bool ParseUnicodeRange(const FString& InSpelling, TArray<FInt32Interval>& OutRanges);
+	/**
+	 * Whether a text in InTextLanguage is in one of a face's languages (InFaceLanguages, semicolon-separated): CSS :lang()
+	 * matching, case-insensitive -- "zh" takes "zh-Hans", "zh-Hans" does not take "zh".
+	 */
+	bool LanguageMatches(const FString& InFaceLanguages, const FString& InTextLanguage);
+	/**
+	 * The order a text in InLanguage tries a key's faces in: the primary, then the fallbacks meant for its language, then
+	 * those meant for any, then the rest, each group in table order. DreamGUI's face resolver tries fallback entries in
+	 * this order, and Chrome's page gives the paragraph this family list through :lang().
+	 */
+	void GetFaceOrder(const FFontKey& InKey, const FString& InLanguage, TArray<int32>& OutOrder);
 
 	/** The code points a font file maps, read once with FreeType. */
 	struct FFaceCoverage
@@ -146,6 +217,6 @@ namespace DreamTextParity
 		TSet<uint32> Codepoints;
 	};
 	const FFaceCoverage& GetFaceCoverage(const FString& InFile);
-	/** The first face of the key, in fallback order, with a glyph for the code point; INDEX_NONE when none has one. */
-	int32 FindCoveringFace(const FFontKey& InKey, uint32 InCodepoint);
+	/** The first face of the key, in the order a text in InLanguage tries them, that may and does draw the code point; INDEX_NONE when none does. */
+	int32 FindCoveringFace(const FFontKey& InKey, uint32 InCodepoint, const FString& InLanguage = FString());
 }

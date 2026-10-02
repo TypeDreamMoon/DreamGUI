@@ -1,5 +1,6 @@
 // The default font from 8 to 48 px, one size to a line: where small text loses its weight and large text its edges.
 // @stage 800x400
+// @variant SmallTextCoverageOff
 
 style Title {
     AnchorData.AnchorMin = (0, 1)

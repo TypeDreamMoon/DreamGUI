@@ -3,6 +3,7 @@
 #include "DreamPixelProbe.h"
 
 #include "DreamUICaptureLibrary.h"
+#include "Dom/JsonObject.h"
 #include "Engine/TextureRenderTarget2D.h"
 #include "IImageWrapper.h"
 #include "IImageWrapperModule.h"
@@ -14,6 +15,8 @@
 #include "Misc/Paths.h"
 #include "Modules/ModuleManager.h"
 #include "RenderingThread.h"
+#include "Serialization/JsonReader.h"
+#include "Serialization/JsonSerializer.h"
 #include "TextureResource.h"
 #include "UnrealClient.h"
 
@@ -155,6 +158,25 @@ FString FDreamPixelProbe::GetGoldenDirectory()
 	return FPaths::ConvertRelativePathToFull(FPaths::Combine(Base, TEXT("Source"), TEXT("DreamGUITests"), TEXT("Resources"), TEXT("Golden")));
 }
 
+FString FDreamPixelProbe::GetPendingGoldenReason(const FString& InName)
+{
+	FString Text;
+	TSharedPtr<FJsonObject> Root;
+	if (!FFileHelper::LoadFileToString(Text, *FPaths::Combine(GetGoldenDirectory(), TEXT("pending.json")))
+		|| !FJsonSerializer::Deserialize(TJsonReaderFactory<>::Create(Text), Root) || !Root.IsValid())
+	{
+		return FString();
+	}
+	const TSharedPtr<FJsonObject>* Pending = nullptr;
+	FString Reason;
+	if (!Root->TryGetObjectField(TEXT("pending"), Pending) || Pending == nullptr || !Pending->IsValid()
+		|| !(*Pending)->TryGetStringField(InName, Reason))
+	{
+		return FString();
+	}
+	return Reason.IsEmpty() ? FString(TEXT("pending")) : Reason;
+}
+
 FString FDreamPixelProbe::SaveCapture(const TArray<FColor>& InPixels, FIntPoint InSize, const FString& InName)
 {
 	const FString Path = FPaths::Combine(GetCaptureDirectory(), InName + TEXT(".png"));
@@ -285,10 +307,13 @@ bool FDreamPixelProbe::ExpectMatchesGolden(FAutomationTestBase& InTest, const TA
 		InTest.AddError(FString::Printf(TEXT("%s: the golden image %s could not be written."), *InName, *GoldenPath));
 		return false;
 	}
+	const FString PendingReason = GetPendingGoldenReason(InName);
 	if (!FPaths::FileExists(GoldenPath))
 	{
-		InTest.AddWarning(FString::Printf(TEXT("%s has no golden image yet. This run's picture is %s: look at it, and once it is right, copy it to %s."),
-			*InName, CapturePath.IsEmpty() ? TEXT("(not written)") : *CapturePath, *GoldenPath));
+		InTest.AddWarning(FString::Printf(TEXT("%s has no golden image yet%s. This run's picture is %s: look at it, and once it is right, copy it to %s%s."),
+			*InName, PendingReason.IsEmpty() ? TEXT("") : *FString::Printf(TEXT(" (pending: %s)"), *PendingReason),
+			CapturePath.IsEmpty() ? TEXT("(not written)") : *CapturePath, *GoldenPath,
+			PendingReason.IsEmpty() ? TEXT("") : TEXT(" and take its entry out of Golden/pending.json")));
 		return true;
 	}
 	TArray<FColor> Golden;
@@ -302,12 +327,25 @@ bool FDreamPixelProbe::ExpectMatchesGolden(FAutomationTestBase& InTest, const TA
 	const int32 Allowed = FMath::FloorToInt32(InAllowedFraction * static_cast<double>(InSize.X) * static_cast<double>(InSize.Y));
 	if (!Difference.bSizesDiffer && Difference.DifferingPixels <= Allowed)
 	{
+		if (!PendingReason.IsEmpty())
+		{
+			InTest.AddInfo(FString::Printf(TEXT("%s matches its golden image, which is pending (%s): if this is the picture it should be, take its entry out of Golden/pending.json."),
+				*InName, *PendingReason));
+		}
 		return true;
 	}
 	const FString DiffPath = Difference.bSizesDiffer ? FString() : SaveDifferenceImage(InPixels, InSize, Golden, InTolerance, InName);
-	InTest.AddError(FString::Printf(TEXT("%s does not match its golden image: %s. This run: %s; the golden: %s; where they differ: %s."),
-		*InName, *DescribeDifference(Difference, InPixels, InSize, Golden, GoldenSize, InTolerance, Allowed),
-		CapturePath.IsEmpty() ? TEXT("(not written)") : *CapturePath, *GoldenPath, DiffPath.IsEmpty() ? TEXT("(no image)") : *DiffPath));
+	const FString Description = FString::Printf(TEXT("%s. This run: %s; the golden: %s; where they differ: %s"),
+		*DescribeDifference(Difference, InPixels, InSize, Golden, GoldenSize, InTolerance, Allowed),
+		CapturePath.IsEmpty() ? TEXT("(not written)") : *CapturePath, *GoldenPath, DiffPath.IsEmpty() ? TEXT("(no image)") : *DiffPath);
+	if (!PendingReason.IsEmpty())
+	{
+		// Expected to differ until the new golden has been written and looked at: said, not failed.
+		InTest.AddWarning(FString::Printf(TEXT("%s differs from its golden image, which is pending (%s): %s. Look at this run's picture; once it is right, run with -DreamGUIWriteGoldens and take the entry out of Golden/pending.json."),
+			*InName, *PendingReason, *Description));
+		return true;
+	}
+	InTest.AddError(FString::Printf(TEXT("%s does not match its golden image: %s."), *InName, *Description));
 	return false;
 }
 

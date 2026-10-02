@@ -194,6 +194,76 @@ namespace DreamTextParity
 			}
 			return Style;
 		}
+
+		/** A face of the fonts table: its file as a string, or an object {file, lang, unicodeRange, scale}. False when it is neither. */
+		bool ReadFace(const TSharedPtr<FJsonValue>& InValue, FFontFace& OutFace)
+		{
+			OutFace = FFontFace();
+			FString Spelling;
+			if (InValue.IsValid() && InValue->TryGetString(Spelling))
+			{
+				OutFace.File = ResolveFontPath(Spelling);
+				return true;
+			}
+			const TSharedPtr<FJsonObject>* Object = nullptr;
+			if (!InValue.IsValid() || !InValue->TryGetObject(Object) || Object == nullptr || !Object->IsValid())
+			{
+				return false;
+			}
+			if (!(*Object)->TryGetStringField(TEXT("file"), Spelling))
+			{
+				return false;
+			}
+			OutFace.File = ResolveFontPath(Spelling);
+			OutFace.Lang = ReadString(*Object, TEXT("lang"), FString()).TrimStartAndEnd();
+			OutFace.UnicodeRange = ReadString(*Object, TEXT("unicodeRange"), FString()).TrimStartAndEnd();
+			if (!OutFace.UnicodeRange.IsEmpty() && !ParseUnicodeRange(OutFace.UnicodeRange, OutFace.Ranges))
+			{
+				// A range nobody can read would otherwise silently let the face draw everything.
+				return false;
+			}
+			OutFace.Scale = FMath::Max(0.1f, ReadFloat(*Object, TEXT("scale"), 1.0f));
+			return true;
+		}
+
+		/** A case's targets: an object of measure names and limits, or the name of one in the corpus's targetSets. */
+		void ReadTargets(const TSharedPtr<FJsonObject>& InCase, const TSharedPtr<FJsonObject>& InTargetSets, TArray<TPair<FString, double>>& OutTargets)
+		{
+			OutTargets.Reset();
+			const TSharedPtr<FJsonObject>* Object = nullptr;
+			FString SetName;
+			if (InCase->TryGetStringField(TEXT("targets"), SetName))
+			{
+				if (!InTargetSets.IsValid() || !InTargetSets->TryGetObjectField(SetName, Object))
+				{
+					Object = nullptr;
+				}
+			}
+			else if (!InCase->TryGetObjectField(TEXT("targets"), Object))
+			{
+				Object = nullptr;
+			}
+			if (Object == nullptr || !Object->IsValid())
+			{
+				return;
+			}
+			for (const TPair<FString, TSharedPtr<FJsonValue>>& Entry : (*Object)->Values)
+			{
+				double Limit = 0.0;
+				if (Entry.Value.IsValid() && Entry.Value->TryGetNumber(Limit))
+				{
+					OutTargets.Emplace(Entry.Key, Limit);
+				}
+			}
+		}
+
+		/** A language tag cut at its subtags, lower case: "zh-Hans" is {"zh", "hans"}. */
+		void SplitLanguageTag(const FString& InTag, TArray<FString>& OutSubtags)
+		{
+			FString Normalized = InTag.TrimStartAndEnd().ToLower();
+			Normalized.ReplaceCharInline(TEXT('_'), TEXT('-'));
+			Normalized.ParseIntoArray(OutSubtags, TEXT("-"), true);
+		}
 	}
 
 	FString GetResourcesDirectory()
@@ -238,11 +308,73 @@ namespace DreamTextParity
 		return Path;
 	}
 
+	bool FFontFace::AllowsCodepoint(uint32 InCodepoint) const
+	{
+		if (Ranges.Num() == 0)
+		{
+			return true;
+		}
+		const int32 Codepoint = static_cast<int32>(InCodepoint);
+		for (const FInt32Interval& Range : Ranges)
+		{
+			if (Codepoint >= Range.Min && Codepoint <= Range.Max)
+			{
+				return true;
+			}
+		}
+		return false;
+	}
+
+	bool FFontKey::HasLanguageFaces() const
+	{
+		for (int32 Index = 1; Index < Faces.Num(); ++Index)
+		{
+			if (!Faces[Index].Lang.IsEmpty())
+			{
+				return true;
+			}
+		}
+		return false;
+	}
+
+	TArray<FString> FFontKey::GetMissingFiles() const
+	{
+		TArray<FString> Missing;
+		for (const FFontFace& Face : Faces)
+		{
+			if (!FPaths::FileExists(Face.File))
+			{
+				Missing.AddUnique(Face.File);
+			}
+		}
+		for (const FString* Style : { &Bold, &Italic, &BoldItalic })
+		{
+			if (!Style->IsEmpty() && !FPaths::FileExists(*Style))
+			{
+				Missing.AddUnique(*Style);
+			}
+		}
+		return Missing;
+	}
+
 	FVector2D FCase::GetBox(int32 InPadding) const
 	{
 		const double BoxWidth = Width > 0.0f ? static_cast<double>(Width) : static_cast<double>(Canvas.X - 2 * InPadding);
 		const double BoxHeight = static_cast<double>(Canvas.Y - 2 * InPadding);
 		return FVector2D(FMath::Max(1.0, BoxWidth), FMath::Max(1.0, BoxHeight));
+	}
+
+	FIntPoint FCase::GetDeviceCanvas() const
+	{
+		// Rounded as the Chrome reference script rounds its expected screenshot size; the corpus picks canvases that the
+		// scale takes to whole pixels, so there is nothing to round in practice.
+		return FIntPoint(FMath::Max(1, FMath::RoundToInt32(static_cast<double>(Canvas.X) * Scale)),
+			FMath::Max(1, FMath::RoundToInt32(static_cast<double>(Canvas.Y) * Scale)));
+	}
+
+	double FCase::GetDeviceScale() const
+	{
+		return Canvas.X > 0 ? static_cast<double>(GetDeviceCanvas().X) / static_cast<double>(Canvas.X) : 1.0;
 	}
 
 	const FCase* FCorpus::FindCase(const FString& InId) const
@@ -259,11 +391,19 @@ namespace DreamTextParity
 		}
 		OutKey = FFontKey();
 		OutKey.Key = InKey;
-		TArray<FString> Spellings;
-		CorpusLocal::ReadStrings(*Entry, TEXT("faces"), Spellings);
-		for (const FString& Spelling : Spellings)
+		const TArray<TSharedPtr<FJsonValue>>* Faces = nullptr;
+		if ((*Entry)->TryGetArrayField(TEXT("faces"), Faces) && Faces != nullptr)
 		{
-			OutKey.Faces.Add(ResolveFontPath(Spelling));
+			for (const TSharedPtr<FJsonValue>& Value : *Faces)
+			{
+				FFontFace Face;
+				if (!CorpusLocal::ReadFace(Value, Face))
+				{
+					// A face that does not read is a corpus error, not a face to leave out quietly: the key means less than it says.
+					return false;
+				}
+				OutKey.Faces.Add(Face);
+			}
 		}
 		FString Spelling;
 		if ((*Entry)->TryGetStringField(TEXT("bold"), Spelling))
@@ -280,6 +420,8 @@ namespace DreamTextParity
 		}
 		FString Kind;
 		OutKey.bBitmap = (*Entry)->TryGetStringField(TEXT("kind"), Kind) && Kind.Equals(TEXT("bitmap"), ESearchCase::IgnoreCase);
+		bool bOptional = false;
+		OutKey.bOptional = (*Entry)->TryGetBoolField(TEXT("optional"), bOptional) && bOptional;
 		return OutKey.Faces.Num() > 0;
 	}
 
@@ -308,6 +450,12 @@ namespace DreamTextParity
 		if (Root->TryGetObjectField(TEXT("fonts"), Fonts) && Fonts != nullptr)
 		{
 			OutCorpus.Fonts = *Fonts;
+		}
+		TSharedPtr<FJsonObject> TargetSets;
+		const TSharedPtr<FJsonObject>* TargetSetsField = nullptr;
+		if (Root->TryGetObjectField(TEXT("targetSets"), TargetSetsField) && TargetSetsField != nullptr)
+		{
+			TargetSets = *TargetSetsField;
 		}
 		const TArray<TSharedPtr<FJsonValue>>* Cases = nullptr;
 		if (!Root->TryGetArrayField(TEXT("cases"), Cases) || Cases == nullptr)
@@ -339,24 +487,40 @@ namespace DreamTextParity
 			Case.bRich = Object->TryGetBoolField(TEXT("rich"), bRich) && bRich;
 			Case.Lang = ReadString(Object, TEXT("lang"), TEXT("en"));
 			Case.Align = ReadString(Object, TEXT("align"), TEXT("start"));
+			Case.TextJustify = ReadString(Object, TEXT("textJustify"), TEXT("auto"));
+			Case.TextAlignLast = ReadString(Object, TEXT("textAlignLast"), TEXT("auto"));
 			Case.Dir = ReadString(Object, TEXT("dir"), TEXT("ltr"));
 			Case.Wrap = ReadString(Object, TEXT("wrap"), TEXT("anywhere"));
 			Case.Overflow = ReadString(Object, TEXT("overflow"), FString());
 			Case.MaxLines = FMath::RoundToInt32(ReadFloat(Object, TEXT("maxLines"), 0.0f));
 			Case.Transform = ReadString(Object, TEXT("transform"), FString());
+			double TabSize = 8.0;
+			Case.bTabSizeSet = Object->TryGetNumberField(TEXT("tabSize"), TabSize);
+			Case.TabSize = FMath::Max(0.0f, static_cast<float>(TabSize));
 			const TSharedPtr<FJsonObject>* Outline = nullptr;
 			if (Object->TryGetObjectField(TEXT("outline"), Outline) && Outline != nullptr && Outline->IsValid())
 			{
 				Case.OutlineEm = ReadFloat(*Outline, TEXT("width"), 0.0f);
 				Case.OutlineColor = FColor::FromHex(ReadString(*Outline, TEXT("color"), TEXT("#000000")));
 			}
+			const TSharedPtr<FJsonObject>* Shadow = nullptr;
+			if (Object->TryGetObjectField(TEXT("shadow"), Shadow) && Shadow != nullptr && Shadow->IsValid())
+			{
+				Case.bShadow = true;
+				Case.ShadowOffsetEm = FVector2f(ReadFloat(*Shadow, TEXT("x"), 0.0f), ReadFloat(*Shadow, TEXT("y"), 0.0f));
+				Case.ShadowColor = FColor::FromHex(ReadString(*Shadow, TEXT("color"), TEXT("#00000080")));
+			}
 			Case.Canvas = ReadPoint(Object, TEXT("canvas"), DefaultCanvas);
+			Case.Scale = FMath::Max(0.25f, ReadFloat(Object, TEXT("scale"), 1.0f));
+			Case.SmallTextRaster = ReadString(Object, TEXT("smallTextRaster"), FString());
+			Case.Reference = ReadString(Object, TEXT("reference"), TEXT("chrome"));
+			ReadTargets(Object, TargetSets, Case.Targets);
 			ReadStrings(Object, TEXT("flags"), Case.Flags);
 			TArray<FString> Variants;
 			ReadStrings(Object, TEXT("variants"), Variants);
 			OutCorpus.Cases.Add(Case);
 
-			// The same two rules Make-ChromeReference.ps1 applies, so the two sides name and size every variant alike.
+			// The same rules Make-ChromeReference.ps1 applies, so the two sides name and size every variant alike.
 			for (const FString& Variant : Variants)
 			{
 				if (Variant.Equals(TEXT("narrow"), ESearchCase::IgnoreCase))
@@ -378,6 +542,14 @@ namespace DreamTextParity
 					Inverse.bInverse = true;
 					OutCorpus.Cases.Add(Inverse);
 				}
+				else if (Variant.Equals(TEXT("field"), ESearchCase::IgnoreCase))
+				{
+					// The same picture asked of the distance field: the two ways DreamGUI draws small text against one reference.
+					FCase Field = Case;
+					Field.Id = Case.Id + TEXT("_Field");
+					Field.SmallTextRaster = TEXT("off");
+					OutCorpus.Cases.Add(Field);
+				}
 			}
 		}
 		return OutCorpus.Cases.Num() > 0;
@@ -388,8 +560,13 @@ namespace DreamTextParity
 		// Weak, so that a font nobody draws with any more goes with the next collection; while a test holds one, every
 		// later test that asks for the same key gets the same object rather than another atlas.
 		static TMap<FString, TWeakObjectPtr<UDreamUIFontData_FreeTypeRender>> Cache;
+		TArray<FString> FaceSpellings;
+		for (const FFontFace& Face : InKey.Faces)
+		{
+			FaceSpellings.Add(FString::Printf(TEXT("%s{%s|%s|%.4f}"), *Face.File, *Face.Lang, *Face.UnicodeRange, Face.Scale));
+		}
 		const FString CacheKey = FString::Printf(TEXT("%s|%s|%s|%s|%s|%s"), InKey.bBitmap ? TEXT("Bitmap") : TEXT("DistanceField"),
-			*InKey.Key, *FString::Join(InKey.Faces, TEXT(";")), *InKey.Bold, *InKey.Italic, *InKey.BoldItalic);
+			*InKey.Key, *FString::Join(FaceSpellings, TEXT(";")), *InKey.Bold, *InKey.Italic, *InKey.BoldItalic);
 		if (const TWeakObjectPtr<UDreamUIFontData_FreeTypeRender>* Found = Cache.Find(CacheKey))
 		{
 			if (UDreamUIFontData_FreeTypeRender* Alive = Found->Get())
@@ -419,16 +596,16 @@ namespace DreamTextParity
 			Face->InitFont();
 			return Face;
 		};
+		// Every face of the key, the colour emoji face too: DreamGUI draws a colour face's glyphs as colour bitmaps in the
+		// same atlas, so leaving it out would compare a text with no emoji against two that have them.
 		TArray<UDreamUIFontData_FreeTypeRender*> Faces;
-		for (const FString& File : InKey.Faces)
+		TArray<const FFontFace*> FaceSettings;
+		for (const FFontFace& Face : InKey.Faces)
 		{
-			if (FPaths::GetBaseFilename(File).Contains(TEXT("ColorEmoji")))
+			if (UDreamUIFontData_FreeTypeRender* Made = MakeFace(Face.File))
 			{
-				continue;
-			}
-			if (UDreamUIFontData_FreeTypeRender* Face = MakeFace(File))
-			{
-				Faces.Add(Face);
+				Faces.Add(Made);
+				FaceSettings.Add(&Face);
 			}
 		}
 		// The primary's true style faces, which Slate and Chrome draw <b> and <i> with as well; a style the key has no
@@ -448,12 +625,17 @@ namespace DreamTextParity
 			}
 			return nullptr;
 		}
-		TArray<UDreamUIFontData_FreeTypeRender*> Fallbacks;
+		// Each fallback with what its face says it is for: the cultures, the ranges and the size-adjust of the table.
+		TArray<FDreamUIFontFallback> Fallbacks;
 		for (int32 Index = 1; Index < Faces.Num(); ++Index)
 		{
-			Fallbacks.Add(Faces[Index]);
+			FDreamUIFontFallback& Entry = Fallbacks.AddDefaulted_GetRef();
+			Entry.Font = Faces[Index];
+			Entry.Ranges = FaceSettings[Index]->Ranges;
+			Entry.Cultures = FaceSettings[Index]->Lang;
+			Entry.Scale = FaceSettings[Index]->Scale;
 		}
-		Faces[0]->SetFallbackFonts(Fallbacks);
+		Faces[0]->SetFallbacks(Fallbacks);
 		Faces[0]->SetStyleFonts(BoldFace, ItalicFace, BoldItalicFace);
 		Cache.Add(CacheKey, Faces[0]);
 		return Faces[0];
@@ -635,6 +817,128 @@ namespace DreamTextParity
 			|| (InCodepoint >= 0xE0000u && InCodepoint <= 0xE0FFFu);
 	}
 
+	bool ParseUnicodeRange(const FString& InSpelling, TArray<FInt32Interval>& OutRanges)
+	{
+		OutRanges.Reset();
+		TArray<FString> Parts;
+		InSpelling.ParseIntoArray(Parts, TEXT(","), true);
+		for (const FString& RawPart : Parts)
+		{
+			FString Part = RawPart.TrimStartAndEnd().ToUpper();
+			if (!Part.StartsWith(TEXT("U+")))
+			{
+				OutRanges.Reset();
+				return false;
+			}
+			Part.RightChopInline(2);
+			FString Low = Part;
+			FString High;
+			if (Part.Split(TEXT("-"), &Low, &High))
+			{
+				Low.TrimStartAndEndInline();
+				High.TrimStartAndEndInline();
+			}
+			else if (Part.Contains(TEXT("?")))
+			{
+				// U+4?? is U+400-4FF: the wildcards stand for every hex digit.
+				Low = Part.Replace(TEXT("?"), TEXT("0"));
+				High = Part.Replace(TEXT("?"), TEXT("F"));
+			}
+			else
+			{
+				High = Low;
+			}
+			auto IsHex = [](const FString& InDigits)
+			{
+				if (InDigits.IsEmpty() || InDigits.Len() > 6)
+				{
+					return false;
+				}
+				for (const TCHAR Digit : InDigits)
+				{
+					if (!FChar::IsHexDigit(Digit))
+					{
+						return false;
+					}
+				}
+				return true;
+			};
+			if (!IsHex(Low) || !IsHex(High))
+			{
+				OutRanges.Reset();
+				return false;
+			}
+			const int32 Min = static_cast<int32>(FParse::HexNumber64(*Low));
+			const int32 Max = static_cast<int32>(FParse::HexNumber64(*High));
+			if (Max < Min || Max > 0x10FFFF)
+			{
+				OutRanges.Reset();
+				return false;
+			}
+			OutRanges.Add(FInt32Interval(Min, Max));
+		}
+		return OutRanges.Num() > 0;
+	}
+
+	bool LanguageMatches(const FString& InFaceLanguages, const FString& InTextLanguage)
+	{
+		TArray<FString> TextSubtags;
+		CorpusLocal::SplitLanguageTag(InTextLanguage, TextSubtags);
+		if (TextSubtags.Num() == 0)
+		{
+			return false;
+		}
+		TArray<FString> FaceLanguages;
+		InFaceLanguages.ParseIntoArray(FaceLanguages, TEXT(";"), true);
+		for (const FString& FaceLanguage : FaceLanguages)
+		{
+			TArray<FString> FaceSubtags;
+			CorpusLocal::SplitLanguageTag(FaceLanguage, FaceSubtags);
+			if (FaceSubtags.Num() == 0 || FaceSubtags.Num() > TextSubtags.Num())
+			{
+				continue;
+			}
+			bool bPrefix = true;
+			for (int32 Index = 0; Index < FaceSubtags.Num() && bPrefix; ++Index)
+			{
+				bPrefix = FaceSubtags[Index] == TextSubtags[Index];
+			}
+			if (bPrefix)
+			{
+				return true;
+			}
+		}
+		return false;
+	}
+
+	void GetFaceOrder(const FFontKey& InKey, const FString& InLanguage, TArray<int32>& OutOrder)
+	{
+		OutOrder.Reset();
+		if (InKey.Faces.Num() == 0)
+		{
+			return;
+		}
+		OutOrder.Add(0);
+		for (int32 Index = 1; Index < InKey.Faces.Num(); ++Index)
+		{
+			if (!InKey.Faces[Index].Lang.IsEmpty() && LanguageMatches(InKey.Faces[Index].Lang, InLanguage))
+			{
+				OutOrder.Add(Index);
+			}
+		}
+		for (int32 Index = 1; Index < InKey.Faces.Num(); ++Index)
+		{
+			if (InKey.Faces[Index].Lang.IsEmpty())
+			{
+				OutOrder.Add(Index);
+			}
+		}
+		for (int32 Index = 1; Index < InKey.Faces.Num(); ++Index)
+		{
+			OutOrder.AddUnique(Index);
+		}
+	}
+
 	const FFaceCoverage& GetFaceCoverage(const FString& InFile)
 	{
 		// Shared, not held by value: a map that grows moves its values, and a caller may hold the last answer.
@@ -673,11 +977,14 @@ namespace DreamTextParity
 		return Coverage.Get();
 	}
 
-	int32 FindCoveringFace(const FFontKey& InKey, uint32 InCodepoint)
+	int32 FindCoveringFace(const FFontKey& InKey, uint32 InCodepoint, const FString& InLanguage)
 	{
-		for (int32 FaceIndex = 0; FaceIndex < InKey.Faces.Num(); ++FaceIndex)
+		TArray<int32> Order;
+		GetFaceOrder(InKey, InLanguage, Order);
+		for (const int32 FaceIndex : Order)
 		{
-			if (GetFaceCoverage(InKey.Faces[FaceIndex]).Codepoints.Contains(InCodepoint))
+			const FFontFace& Face = InKey.Faces[FaceIndex];
+			if (Face.AllowsCodepoint(InCodepoint) && GetFaceCoverage(Face.File).Codepoints.Contains(InCodepoint))
 			{
 				return FaceIndex;
 			}

@@ -1,0 +1,8 @@
+{
+  "about": [
+    "Golden images due to be written for the first time or written again, and not looked at yet: a new scene, or a picture a change made on purpose redraws. A picture named here is still drawn, saved to Saved/DreamGUITests/Captures and compared with its golden when there is one, but a missing golden or a difference is a warning that gives the reason here, never a failure (FDreamPixelProbe::GetPendingGoldenReason).",
+    "To clear an entry: run the test with -DreamGUIWriteGoldens on the editor's command line, look at the golden it wrote, and take the entry out. From then on the picture is held to it again.",
+    "The goldens named <scene>_SmallTextCoverageOff are not pending: they are the pictures from before small-text coverage, which those runs, with the switch off, must still draw."
+  ],
+  "pending": {}
+}

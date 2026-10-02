@@ -1,0 +1,202 @@
+// Justification, tab stops and the middle ellipsis: justified Latin (the default and inter-character), a justified
+// last line, Japanese justified between characters (CJK key), Hebrew justified right to left (Hebrew key), tabs at the
+// default eight spaces, at four, and in a wrapped paragraph, and a line elided in its middle.
+// @stage 760x560
+
+style Title {
+    AnchorData.AnchorMin = (0, 1)
+    AnchorData.AnchorMax = (1, 1)
+    AnchorData.Pivot = (0.5, 1)
+    AnchorData.AnchoredPosition = (0, -8)
+    AnchorData.SizeDelta = (-24, 20)
+    FontSize = 15
+    Color = #1E2230
+    HAlign = Left
+    VAlign = Top
+    OverflowType = HorizontalOverflow
+}
+
+style Note {
+    AnchorData.AnchorMin = (0, 1)
+    AnchorData.AnchorMax = (0, 1)
+    AnchorData.Pivot = (0, 1)
+    AnchorData.SizeDelta = (330, 16)
+    FontSize = 12
+    Color = #5A6172
+    HAlign = Left
+    VAlign = Top
+    OverflowType = HorizontalOverflow
+}
+
+style Box {
+    AnchorData.AnchorMin = (0, 1)
+    AnchorData.AnchorMax = (0, 1)
+    AnchorData.Pivot = (0, 1)
+    Brush.ImageSize = (0, 0)
+    Brush.TintColor = #E4E8F0
+}
+
+style Paragraph {
+    AnchorData.AnchorMin = (0, 1)
+    AnchorData.AnchorMax = (0, 1)
+    AnchorData.Pivot = (0, 1)
+    FontSize = 14
+    Color = #1E2230
+    HAlign = Justify
+    VAlign = Top
+    OverflowType = VerticalOverflow
+    WrappingPolicy = DefaultWrapping
+}
+
+style Tabs {
+    AnchorData.AnchorMin = (0, 1)
+    AnchorData.AnchorMax = (0, 1)
+    AnchorData.Pivot = (0, 1)
+    FontSize = 16
+    Color = #1E2230
+    HAlign = Left
+    VAlign = Top
+    OverflowType = HorizontalOverflow
+    Text = "a\tbb\tccc\tdddd\t1\t22\tend"
+}
+
+Widget Root {
+    Image Page {
+        Brush.TintColor = #F5F3EE
+        AnchorData.AnchorMin = (0, 0)
+        AnchorData.AnchorMax = (1, 1)
+        AnchorData.SizeDelta = (0, 0)
+    }
+
+    Text Heading : Title {
+        Text = "Justification, tab stops and the middle ellipsis"
+    }
+
+    Text LatinLabel : Note {
+        AnchorData.AnchoredPosition = (24, -40)
+        Text = "justified, 14 px, the last line to the start"
+    }
+    Image LatinBox : Box {
+        AnchorData.AnchoredPosition = (24, -58)
+        AnchorData.SizeDelta = (330, 90)
+    }
+    Text Latin : Paragraph {
+        AnchorData.AnchoredPosition = (24, -58)
+        AnchorData.SizeDelta = (330, 90)
+        Text = "Justified text spreads the room a line lacks over the spaces between its words; the last line keeps to the start."
+    }
+
+    Text InterCharacterLabel : Note {
+        AnchorData.AnchoredPosition = (24, -160)
+        Text = "TextJustify InterCharacter"
+    }
+    Image InterCharacterBox : Box {
+        AnchorData.AnchoredPosition = (24, -178)
+        AnchorData.SizeDelta = (330, 72)
+    }
+    Text InterCharacter : Paragraph {
+        AnchorData.AnchoredPosition = (24, -178)
+        AnchorData.SizeDelta = (330, 72)
+        TextJustify = InterCharacter
+        Text = "Every cluster boundary takes a share of the room, not only the spaces between words."
+    }
+
+    Text LastLineLabel : Note {
+        AnchorData.AnchoredPosition = (24, -264)
+        Text = "LastLineAlign Justify, with a newline"
+    }
+    Image LastLineBox : Box {
+        AnchorData.AnchoredPosition = (24, -282)
+        AnchorData.SizeDelta = (330, 72)
+    }
+    Text LastLine : Paragraph {
+        AnchorData.AnchoredPosition = (24, -282)
+        AnchorData.SizeDelta = (330, 72)
+        LastLineAlign = Justify
+        Text = "Every line is justified here, the one a newline ends\nas well as the last one of all."
+    }
+
+    Text JapaneseLabel : Note {
+        AnchorData.AnchoredPosition = (406, -40)
+        Text = "justified Japanese, 16 px, Language ja"
+    }
+    Image JapaneseBox : Box {
+        AnchorData.AnchoredPosition = (406, -58)
+        AnchorData.SizeDelta = (330, 90)
+    }
+    Text Font_CJK_Japanese : Paragraph {
+        AnchorData.AnchoredPosition = (406, -58)
+        AnchorData.SizeDelta = (330, 90)
+        FontSize = 16
+        Language = "ja"
+        Text = "日本語の文章を両端揃えにすると、行に足りない幅が文字の間に配られます。句読点も行頭には来ません。"
+    }
+
+    Text HebrewLabel : Note {
+        AnchorData.AnchoredPosition = (406, -160)
+        Text = "justified Hebrew, right to left"
+    }
+    Image HebrewBox : Box {
+        AnchorData.AnchoredPosition = (406, -178)
+        AnchorData.SizeDelta = (330, 72)
+    }
+    Text Font_Hebrew_Rtl : Paragraph {
+        AnchorData.AnchoredPosition = (406, -178)
+        AnchorData.SizeDelta = (330, 72)
+        FontSize = 16
+        FlowDirection = RightToLeft
+        Language = "he"
+        Text = "שלום עולם, זו פסקה מיושרת לשני הצדדים, מימין לשמאל, עם כמה מילים נוספות."
+    }
+
+    Text MiddleLabel : Note {
+        AnchorData.AnchoredPosition = (406, -264)
+        Text = "MiddleEllipsis in 200 px"
+    }
+    Image MiddleBox : Box {
+        AnchorData.AnchoredPosition = (406, -282)
+        AnchorData.SizeDelta = (200, 24)
+    }
+    Text Middle : Tabs {
+        AnchorData.AnchoredPosition = (406, -282)
+        AnchorData.SizeDelta = (200, 24)
+        OverflowType = MiddleEllipsis
+        Text = "The quick brown fox jumps over the lazy dog"
+    }
+
+    Text TabsDefaultLabel : Note {
+        AnchorData.AnchoredPosition = (24, -372)
+        Text = "tabs, TabSize 8 (the default)"
+    }
+    Text TabsDefault : Tabs {
+        AnchorData.AnchoredPosition = (24, -390)
+        AnchorData.SizeDelta = (712, 24)
+    }
+
+    Text TabsFourLabel : Note {
+        AnchorData.AnchoredPosition = (24, -420)
+        Text = "TabSize 4"
+    }
+    Text TabsFour : Tabs {
+        AnchorData.AnchoredPosition = (24, -438)
+        AnchorData.SizeDelta = (712, 24)
+        TabSize = 4
+    }
+
+    Text TabsWrappedLabel : Note {
+        AnchorData.AnchoredPosition = (24, -468)
+        Text = "tabs in a paragraph wrapped at 260 px"
+    }
+    Image TabsWrappedBox : Box {
+        AnchorData.AnchoredPosition = (24, -486)
+        AnchorData.SizeDelta = (260, 60)
+    }
+    Text TabsWrapped : Tabs {
+        AnchorData.AnchoredPosition = (24, -486)
+        AnchorData.SizeDelta = (260, 60)
+        FontSize = 14
+        OverflowType = VerticalOverflow
+        WrappingPolicy = DefaultWrapping
+        Text = "Name:\tvalue one\tvalue two\tvalue three\tvalue four"
+    }
+}
