@@ -96,6 +96,9 @@ public class DreamGUIEditor : ModuleRules
 				// UDreamUIDesignerSettings: the designer's view preferences live in
 				// EditorPerProjectUserSettings, not in the prefab asset.
 				"DeveloperSettings",
+				// SCulturePicker: the cultures of a font's fallback entries, a text's Language, and the
+				// font's "Resolve Sample" language are picked from the engine's own culture list.
+				"InternationalizationSettings",
 				// ... add private dependencies that you statically link with here ...
 
             }
