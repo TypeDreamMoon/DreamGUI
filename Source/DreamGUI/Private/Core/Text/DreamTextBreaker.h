@@ -4,7 +4,37 @@
 
 #include "CoreMinimal.h"
 #include "Containers/BitArray.h"
+#include "Templates/Function.h"
 #include "Core/DreamUITextData.h"
+
+/** Which of ICU's iterators a boundary analysis runs (FDreamTextBreaker::ComputeBoundaries). */
+enum class EDreamTextBoundaryKind : uint8
+{
+	/** Extended grapheme clusters (UAX #29), Indic conjuncts kept whole: what ComputeGraphemeStarts gives. */
+	Grapheme,
+	/** Where a line may break (UAX #14) as ICU's line iterator finds it, before phrase wrap narrows CJK runs. */
+	Line,
+	/** Word boundaries (UAX #29 and ICU's dictionaries): what phrase wrap narrows a CJK run's breaks to. */
+	Word,
+};
+
+/**
+ * A stretch of the layout's plain text a boundary analysis runs over: one paragraph or several in a row, each with the hard
+ * break that ends it. No rule of the three iterators looks across a hard break, so what is found inside the stretch is
+ * what a run over the whole text finds.
+ */
+struct FDreamTextBoundarySpan
+{
+	/** The layout's plain text, and each element's first code unit in it and its code point (as the functions below take them). */
+	const FString* PlainText = nullptr;
+	const TArray<int32>* ElementPlainStart = nullptr;
+	const TArray<uint32>* ElementCodepoints = nullptr;
+	/** The stretch's elements, [FirstElement, EndElement), and its code units, [PlainBegin, PlainEnd). */
+	int32 FirstElement = 0;
+	int32 EndElement = 0;
+	int32 PlainBegin = 0;
+	int32 PlainEnd = 0;
+};
 
 /**
  * Where a line may end. The answer comes from ICU's line-break rules (UAX #14) over the plain text --
@@ -15,6 +45,40 @@
 class DREAMGUI_API FDreamTextBreaker
 {
 public:
+	/**
+	 * The boundaries of one kind at the starts of the elements [Begin, End) of a span: bit i of OutBits (one bit per element
+	 * of the layout, sized by the caller) says whether one stands at element i's start. ICU is handed the whole span and
+	 * reaches Begin's start by its own random access (following), so a window inside a paragraph comes out as a run over
+	 * the whole paragraph gives it -- what lets an edit be analysed again around itself alone -- provided the element
+	 * before Begin starts at a boundary of that run: the engine's line iterator skips a Hangul word whole from wherever it
+	 * is asked, and asked from inside one it steps over a boundary the whole run found there. The span's first element is a
+	 * grapheme start and no line or word boundary, whatever stands before it.
+	 *
+	 * Grapheme is ICU's character iterator with GB9c (a text with nothing at or above U+0300 asks ICU nothing); Line and Word
+	 * are ICU's line and word iterators as they are. Without ICU, graphemes come from the code points, Line from
+	 * ComputeFallbackBreakOpportunities' rules, and Word marks nothing.
+	 *
+	 * @param Stop     Asked with each element once its bit is written (the bit as written): true ends the walk there.
+	 * @param OutLast  The last element written; Begin - 1 when there was none.
+	 * @return The UTF-16 code units ICU walked, from Begin's start to the end of the last element written; 0 when ICU was not asked.
+	 */
+	static int32 ComputeBoundaries(EDreamTextBoundaryKind Kind, const FDreamTextBoundarySpan& Span, int32 Begin, int32 End,
+		TBitArray<>& OutBits, TFunctionRef<bool(int32 Element, bool bBoundary)> Stop, int32& OutLast);
+
+	/**
+	 * Break opportunities from raw line and word boundaries, as ComputeBreakOpportunities makes them: under phrase wrap, a
+	 * break between two CJK characters stands only where a word ends (and phrase wrap does nothing without ICU, which has
+	 * the dictionary). Writes OutCanBreakBefore's bits for the elements [Begin, End).
+	 */
+	static void CombineBreakOpportunities(const TArray<uint32>& ElementCodepoints, const TBitArray<>& LineBoundaries,
+		const TBitArray<>* WordBoundaries, EDreamTextPhraseWrap PhraseWrap, int32 Begin, int32 End, TBitArray<>& OutCanBreakBefore);
+
+	/**
+	 * Scripts ICU breaks lines in with a dictionary rather than by rule: Thai, Lao, Myanmar, Khmer and the Tai scripts. The
+	 * dictionary reads a run of them whole, so an edit inside one has the whole run read again.
+	 */
+	static bool IsDictionaryLineBreakCodepoint(uint32 Codepoint);
+
 	/**
 	 * @param PlainText          The text as laid out: tags stripped, image placeholders as spaces.
 	 * @param ElementPlainStart  For each layout element, the index of its first UTF-16 unit in PlainText.

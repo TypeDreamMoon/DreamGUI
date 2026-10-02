@@ -12,6 +12,12 @@
 #include "Core/Text/DreamTextBreaker.h"
 #include "Core/FRichTextParser.h"
 #include "Core/DreamUIRichTextCustomStyleData.h"
+#include "Core/DreamUIFontData_DistanceField.h"
+#include "Core/DreamUIFontEmojiData.h"
+#include "Core/Text/DreamTextShaper.h"
+#include "Misc/Paths.h"
+#include "Misc/ScopeExit.h"
+#include "UObject/UnrealType.h"
 
 #include <initializer_list>
 #include "Engine/World.h"
@@ -2203,6 +2209,597 @@ bool FDreamTextMarkOnASpaceTest::RunTest(const FString& Parameters)
 	if (TestEqual(TEXT("for one character"), Chars.Num(), 1))
 	{
 		TestEqual(TEXT("which is the mark"), Chars[0].CharIndex, 1);
+	}
+	return true;
+}
+
+namespace DreamTextLayoutTestLocal
+{
+	/** Where an element's glyph or space starts, from the box's left edge: the left of its pen box. -1 when it has none. */
+	float ElementLeft(const FDreamTextDisplayList& DL, const FDreamTextLayoutInput& In, int32 ElementIndex)
+	{
+		for (const FDreamTextGlyphItem& Item : DL.Items)
+		{
+			if (Item.ElementIndex == ElementIndex && (Item.Kind == EDreamTextItemKind::Glyph || Item.Kind == EDreamTextItemKind::Space))
+			{
+				return Item.Pen.X + Item.DecorationOffset - BoxLeft(In);
+			}
+		}
+		return -1.0f;
+	}
+
+	/** The stop a tab reaches that starts X from its line's start: the next multiple of the interval, at least half a space on. */
+	float NextTabStop(float X, float Interval, float Space)
+	{
+		float Stop = (FMath::FloorToFloat(X / Interval) + 1.0f) * Interval;
+		if (Stop - X < Space * 0.5f)
+		{
+			Stop += Interval;
+		}
+		return Stop;
+	}
+
+	/** The mock font's advance for each character of a string at a size, summed. */
+	float MockAdvance(UDreamTextTestFont* Font, const TCHAR* Text, float Size)
+	{
+		float Sum = 0.0f;
+		for (const TCHAR* C = Text; *C; C++)
+		{
+			Sum += Font->GetCharData((uint32)*C, Size, false).XAdvance;
+		}
+		return Sum;
+	}
+
+	/** The line's ellipsis item, or null. */
+	const FDreamTextGlyphItem* FindDots(const FDreamTextDisplayList& DL, int32 LineIndex)
+	{
+		for (const FDreamTextGlyphItem& Item : DL.Items)
+		{
+			if (Item.Codepoint == 0x2026 && Item.LineIndex == LineIndex && Item.bEmit && !Item.bCountsAsVisible)
+			{
+				return &Item;
+			}
+		}
+		return nullptr;
+	}
+
+	/** Whether an element was drawn: a glyph item of it is emitted. */
+	bool IsElementDrawn(const FDreamTextDisplayList& DL, int32 ElementIndex)
+	{
+		for (const FDreamTextGlyphItem& Item : DL.Items)
+		{
+			if (Item.ElementIndex == ElementIndex && Item.Kind == EDreamTextItemKind::Glyph && Item.bEmit && Item.bCountsAsVisible)
+			{
+				return true;
+			}
+		}
+		return false;
+	}
+
+	UDreamUIFontData_DistanceField* MakeEngineFont(UWorld* World, const TCHAR* RelativePath)
+	{
+		UDreamUIFontData_DistanceField* EngineFont = NewObject<UDreamUIFontData_DistanceField>(World);
+		EngineFont->SetFontFilePath(FPaths::Combine(FPaths::EngineContentDir(), RelativePath), false);
+		EngineFont->InitFont();
+		return EngineFont;
+	}
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamTextTabStopTest,
+	"DreamGUI.Text.Tabs.ATabReachesTheNextStopEightSpacesApartFromTheLineStart",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * A tab was drawn as one space. It reaches the next tab stop, TabSize spaces apart -- 8 by default, as CSS and Chrome
+ * have it -- measured from the line's start edge, with the letter spacing every space carries in the interval.
+ */
+bool FDreamTextTabStopTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamTextLayoutTestLocal;
+	FScopedGameWorld TestWorld;
+	UDreamTextTestFont* Font = NewObject<UDreamTextTestFont>(TestWorld.World);
+	Font->bMockHasKerning = false;
+	const float Size = 10.0f;
+	const float Space = Font->GetCharData(' ', Size, false).XAdvance;
+
+	auto BAfterTab = [Font, Size](const TCHAR* Content, int32 BElement, float LetterSpacing)
+	{
+		FDreamTextLayoutInput In = MakeInput(Font, Content, 600.0f, 200.0f);
+		In.FontSize = Size;
+		In.FontSpace.X = LetterSpacing;
+		FDreamTextDisplayList DL;
+		FDreamTextLayoutEngine::Layout(In, DL);
+		return ElementLeft(DL, In, BElement);
+	};
+	const float Interval = 8.0f * Space;
+	TestEqual(TEXT("a tab at the line start reaches the first stop"), BAfterTab(TEXT("\tb"), 1, 0.0f), Interval, 0.001f);
+	TestEqual(TEXT("a tab after a letter reaches the same stop"), BAfterTab(TEXT("a\tb"), 2, 0.0f),
+		NextTabStop(MockAdvance(Font, TEXT("a"), Size), Interval, Space), 0.001f);
+	const float FourLetters = MockAdvance(Font, TEXT("abcd"), Size);
+	TestTrue(TEXT("four letters run past the first stop"), FourLetters > Interval);
+	TestEqual(TEXT("a tab after them reaches the second"), BAfterTab(TEXT("abcd\tb"), 5, 0.0f), 2.0f * Interval, 0.001f);
+	TestEqual(TEXT("two tabs reach two stops"), BAfterTab(TEXT("\t\tb"), 2, 0.0f), 2.0f * Interval, 0.001f);
+
+	// Letter spacing is in the interval -- TabSize spaces, each with its spacing -- and not after the tab.
+	const float SpacedInterval = 8.0f * (Space + 1.0f);
+	TestEqual(TEXT("with letter spacing the stop is eight spaced spaces on"), BAfterTab(TEXT("\tb"), 1, 1.0f), SpacedInterval, 0.001f);
+	TestEqual(TEXT("and a letter before the tab carries its spacing"), BAfterTab(TEXT("a\tb"), 2, 1.0f),
+		NextTabStop(MockAdvance(Font, TEXT("a"), Size) + 1.0f, SpacedInterval, Space), 0.001f);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamTextTabHalfSpaceTest,
+	"DreamGUI.Text.Tabs.ATabNarrowerThanHalfASpaceJumpsToTheStopAfter",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamTextTabHalfSpaceTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamTextLayoutTestLocal;
+	FScopedGameWorld TestWorld;
+	UDreamTextTestFont* Font = NewObject<UDreamTextTestFont>(TestWorld.World);
+	Font->bMockHasKerning = false;
+	const float Size = 10.0f;
+	const float Space = Font->GetCharData(' ', Size, false).XAdvance;
+	const float Interval = 8.0f * Space;
+
+	auto Layout = [Font, Size](const TCHAR* Content, FDreamTextLayoutInput& OutIn, FDreamTextDisplayList& OutDL)
+	{
+		OutIn = MakeInput(Font, Content, 600.0f, 200.0f);
+		OutIn.FontSize = Size;
+		FDreamTextLayoutEngine::Layout(OutIn, OutDL);
+	};
+	// "aaa" ends less than half a space before the first stop: the tab jumps to the second.
+	const float ThreeA = MockAdvance(Font, TEXT("aaa"), Size);
+	if (!TestTrue(TEXT("three a end within half a space of the first stop"), ThreeA < Interval && Interval - ThreeA < Space * 0.5f))return false;
+	FDreamTextLayoutInput In;
+	FDreamTextDisplayList DL;
+	Layout(TEXT("aaa\tb"), In, DL);
+	TestEqual(TEXT("so the tab reaches the second stop"), ElementLeft(DL, In, 4), 2.0f * Interval, 0.001f);
+	const float Tab = ElementLeft(DL, In, 4) - ElementLeft(DL, In, 3);
+	TestTrue(TEXT("and is never narrower than half a space"), Tab >= Space * 0.5f);
+
+	// "aa" leaves more than half a space: the first stop.
+	const float TwoA = MockAdvance(Font, TEXT("aa"), Size);
+	TestTrue(TEXT("two a leave more than half a space"), Interval - TwoA >= Space * 0.5f);
+	Layout(TEXT("aa\tb"), In, DL);
+	TestEqual(TEXT("and the tab reaches the first stop"), ElementLeft(DL, In, 3), Interval, 0.001f);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamTextTabAfterWrapTest,
+	"DreamGUI.Text.Tabs.ATabOnAWrappedLineIsMeasuredFromThatLinesStart",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * Stops are measured from the start of the line the tab is on, and the line breaker is what knows where that is: a tab
+ * on the second line of a wrapped paragraph is not where it would be on one long line. The preferred width is the
+ * paragraph's width unwrapped, its tabs measured on that one line.
+ */
+bool FDreamTextTabAfterWrapTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamTextLayoutTestLocal;
+	FScopedGameWorld TestWorld;
+	UDreamTextTestFont* Font = NewObject<UDreamTextTestFont>(TestWorld.World);
+	Font->bMockHasKerning = false;
+	const float Size = 10.0f;
+	const float Space = Font->GetCharData(' ', Size, false).XAdvance;
+	const float Interval = 8.0f * Space;
+
+	// "aaaa " fills the first line; "bb<tab>c" goes to the second.
+	FDreamTextLayoutInput In = MakeInput(Font, TEXT("aaaa bb\tc"), 35.0f, 200.0f);
+	In.FontSize = Size;
+	In.OverflowType = EDreamUITextOverflowType::VerticalOverflow;
+	FDreamTextDisplayList DL;
+	FDreamTextLayoutEngine::Layout(In, DL);
+	if (!TestEqual(TEXT("two lines"), DL.Lines.Num(), 2))return false;
+	const FDreamTextGlyphItem* C = FindItem(DL, 8);
+	if (!TestNotNull(TEXT("c is laid out"), C))return false;
+	TestEqual(TEXT("c is on the second line"), C->LineIndex, 1);
+	const float BB = MockAdvance(Font, TEXT("bb"), Size);
+	TestEqual(TEXT("the tab reaches the stop after bb on its own line"), ElementLeft(DL, In, 8), NextTabStop(BB, Interval, Space), 0.001f);
+
+	const float OneLine = MockAdvance(Font, TEXT("aaaa bb"), Size);
+	const float Unwrapped = NextTabStop(OneLine, Interval, Space) + MockAdvance(Font, TEXT("c"), Size);
+	TestEqual(TEXT("the preferred width is the line unwrapped, its tab measured there"), DL.PreferredSize.X, Unwrapped, 0.001f);
+
+	FDreamTextLayoutInput OneLineIn = In;
+	OneLineIn.Width = 600.0f;
+	FDreamTextDisplayList OneLineDL;
+	FDreamTextLayoutEngine::Layout(OneLineIn, OneLineDL);
+	TestEqual(TEXT("which is the width it has in a box it fits"), OneLineDL.PreferredSize.X, Unwrapped, 0.001f);
+	TestEqual(TEXT("where c stands at the stop the long line reaches"), ElementLeft(OneLineDL, OneLineIn, 8), NextTabStop(OneLine, Interval, Space), 0.001f);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamTextTabSizeZeroTest,
+	"DreamGUI.Text.Tabs.TabSizeZeroGivesATabNoRoomAndThePreferredWidthCountsTheStops",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamTextTabSizeZeroTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamTextLayoutTestLocal;
+	FScopedGameWorld TestWorld;
+	UDreamTextTestFont* Font = NewObject<UDreamTextTestFont>(TestWorld.World);
+	Font->bMockHasKerning = false;
+	const float Size = 10.0f;
+	const float Space = Font->GetCharData(' ', Size, false).XAdvance;
+
+	FDreamTextLayoutInput In = MakeInput(Font, TEXT("a\tb"), 600.0f, 200.0f);
+	In.FontSize = Size;
+	In.TabSize = 0.0f;
+	FDreamTextDisplayList DL;
+	FDreamTextLayoutEngine::Layout(In, DL);
+	const float A = MockAdvance(Font, TEXT("a"), Size);
+	TestEqual(TEXT("with TabSize 0, b follows a directly"), ElementLeft(DL, In, 2), A, 0.001f);
+	TestEqual(TEXT("and the text is as wide as a and b"), DL.PreferredSize.X, A + MockAdvance(Font, TEXT("b"), Size), 0.001f);
+
+	In.TabSize = 4.0f;
+	FDreamTextDisplayList Four;
+	FDreamTextLayoutEngine::Layout(In, Four);
+	const float Stop = NextTabStop(A, 4.0f * Space, Space);
+	TestEqual(TEXT("TabSize 4 puts the stops four spaces apart"), ElementLeft(Four, In, 2), Stop, 0.001f);
+	TestEqual(TEXT("and the preferred width ends after b at its stop"), Four.PreferredSize.X, Stop + MockAdvance(Font, TEXT("b"), Size), 0.001f);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamTextShapedTabTest,
+	"DreamGUI.Text.Tabs.AShapedTabStopsWhereEightSpacesEnd",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * The same stops with shaping: a tab in Roboto ends where eight of its spaces end.
+ */
+bool FDreamTextShapedTabTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamTextLayoutTestLocal;
+	FScopedGameWorld TestWorld;
+	UDreamUIFontData_FreeTypeRender::SetAsyncGlyphSyncBudgetOverride(MAX_int32);
+	ON_SCOPE_EXIT { UDreamUIFontData_FreeTypeRender::SetAsyncGlyphSyncBudgetOverride(-1); };
+	UDreamUIFontData_DistanceField* Roboto = MakeEngineFont(TestWorld.World, TEXT("Slate/Fonts/Roboto-Regular.ttf"));
+	if (!TestTrue(TEXT("Roboto shapes"), FDreamTextShaper::CanShape(Roboto)))return false;
+
+	auto CaretOfB = [Roboto](const TCHAR* Content, int32 BElement)
+	{
+		FDreamTextLayoutInput In = MakeInput(Roboto, Content, 1000.0f, 200.0f);
+		In.FontSize = 32.0f;
+		FDreamTextDisplayList DL;
+		FDreamTextLayoutEngine::Layout(In, DL);
+		return DL.Lines.Num() > 0 && DL.Lines[0].CaretPropertyList.IsValidIndex(BElement)
+			? DL.Lines[0].CaretPropertyList[BElement].CaretPosition.X - BoxLeft(In) : -1.0f;
+	};
+	const float AfterSpaces = CaretOfB(TEXT("        b"), 8);
+	TestTrue(TEXT("eight spaces have a width"), AfterSpaces > 1.0f);
+	TestEqual(TEXT("a tab ends where eight spaces do"), CaretOfB(TEXT("\tb"), 1), AfterSpaces, 0.1f);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamTextMiddleEllipsisBalanceTest,
+	"DreamGUI.Text.MiddleEllipsis.ALineThatDoesNotFitKeepsItsStartAndItsEnd",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * The middle of a line gives way to an ellipsis: the gap opens where the line's width is halved and grows on whichever
+ * side keeps the start and the end closest in width, until they and the ellipsis fit the box; the end slides back
+ * against the ellipsis, and a caret inside the gap stands on it.
+ */
+bool FDreamTextMiddleEllipsisBalanceTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamTextLayoutTestLocal;
+	FScopedGameWorld TestWorld;
+	UDreamTextTestFont* Font = NewObject<UDreamTextTestFont>(TestWorld.World);
+	Font->bMockHasKerning = false;
+
+	const FString Content = TEXT("abcdefghijklmnopqrstuvwxyz");
+	FDreamTextLayoutInput In = MakeInput(Font, Content, 200.0f, 200.0f);
+	In.OverflowType = EDreamUITextOverflowType::MiddleEllipsis;
+	FDreamTextDisplayList DL;
+	FDreamTextLayoutEngine::Layout(In, DL);
+	TestTrue(TEXT("the line was elided"), DL.bTruncated);
+	const FDreamTextGlyphItem* Dots = FindDots(DL, 0);
+	if (!TestNotNull(TEXT("an ellipsis stands in the line"), Dots))return false;
+
+	// What is kept is a start and an end, with one gap between.
+	int32 GapStart = INDEX_NONE;
+	int32 GapEnd = INDEX_NONE;
+	for (int32 e = 0; e < Content.Len(); e++)
+	{
+		const bool bDrawn = IsElementDrawn(DL, e);
+		if (!bDrawn && GapStart == INDEX_NONE)GapStart = e;
+		if (bDrawn && GapStart != INDEX_NONE && GapEnd == INDEX_NONE)GapEnd = e;
+		if (bDrawn && GapEnd != INDEX_NONE && e > GapEnd && !IsElementDrawn(DL, e - 1))
+		{
+			AddError(FString::Printf(TEXT("a second gap before element %d"), e));
+		}
+	}
+	if (!TestTrue(TEXT("the start is kept"), GapStart > 0) || !TestTrue(TEXT("and the end"), GapEnd != INDEX_NONE && GapEnd < Content.Len()))return false;
+	TestTrue(TEXT("the last letter is drawn"), IsElementDrawn(DL, Content.Len() - 1));
+
+	const FDreamTextGlyphItem* HeadFirst = FindItem(DL, 0);
+	const FDreamTextGlyphItem* HeadLast = FindItem(DL, GapStart - 1);
+	const FDreamTextGlyphItem* TailFirst = FindItem(DL, GapEnd);
+	const FDreamTextGlyphItem* TailLast = FindItem(DL, Content.Len() - 1);
+	if (!TestNotNull(TEXT("the start's first letter is laid out"), HeadFirst) || !TestNotNull(TEXT("and its last"), HeadLast)
+		|| !TestNotNull(TEXT("the end's first letter is laid out"), TailFirst) || !TestNotNull(TEXT("and its last"), TailLast))
+	{
+		return false;
+	}
+	const float DotsLeft = Dots->Pen.X + Dots->DecorationOffset;
+	const float DotsRight = DotsLeft + Dots->AdvanceWithSpace;
+	TestEqual(TEXT("the start starts at the box's left edge"), HeadFirst->Pen.X, BoxLeft(In), 0.01f);
+	TestEqual(TEXT("the ellipsis follows the start"), DotsLeft, HeadLast->Pen.X + HeadLast->AdvanceWithSpace, 0.01f);
+	TestEqual(TEXT("and the end slid back against it"), TailFirst->Pen.X, DotsRight, 0.01f);
+	TestTrue(TEXT("and the end fits the box"), TailLast->Pen.X + TailLast->AdvanceWithSpace <= BoxRight(In) + 0.01f);
+
+	// Balanced by width: the two halves differ by less than the widest letter.
+	const float HeadWidth = HeadLast->Pen.X + HeadLast->AdvanceWithSpace - HeadFirst->Pen.X;
+	const float TailWidth = TailLast->Pen.X + TailLast->AdvanceWithSpace - TailFirst->Pen.X;
+	float Widest = 0.0f;
+	for (const FDreamTextGlyphItem& Item : DL.Items)
+	{
+		Widest = FMath::Max(Widest, Item.AdvanceWithSpace);
+	}
+	TestTrue(*FString::Printf(TEXT("the start (%.2f) and the end (%.2f) are balanced"), HeadWidth, TailWidth), FMath::Abs(HeadWidth - TailWidth) <= Widest);
+
+	// Every character keeps a caret; those in the gap stand on the ellipsis's leading edge.
+	const TArray<FDreamUITextCaretProperty>& Carets = DL.Lines[0].CaretPropertyList;
+	if (TestEqual(TEXT("one caret per character and the end caret"), Carets.Num(), Content.Len() + 1))
+	{
+		for (int32 e = GapStart; e < GapEnd; e++)
+		{
+			TestEqual(*FString::Printf(TEXT("the caret of cut element %d stands on the ellipsis"), e), Carets[e].CaretPosition.X, DotsLeft, 0.01f);
+		}
+		TestEqual(TEXT("the caret after the gap stands where the end now starts"), Carets[GapEnd].CaretPosition.X, TailFirst->Pen.X, 0.01f);
+	}
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamTextMiddleEllipsisCountsTest,
+	"DreamGUI.Text.MiddleEllipsis.WhatTheEllipsisTakesIsNeitherDrawnNorCounted",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamTextMiddleEllipsisCountsTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamTextLayoutTestLocal;
+	FScopedGameWorld TestWorld;
+	UDreamTextTestFont* Font = NewObject<UDreamTextTestFont>(TestWorld.World);
+	Font->bMockHasKerning = false;
+
+	FDreamTextLayoutInput In = MakeInput(Font, TEXT("abcdefghijklmnopqrstuvwxyz"), 200.0f, 200.0f);
+	In.OverflowType = EDreamUITextOverflowType::MiddleEllipsis;
+	FDreamTextDisplayList DL;
+	FDreamTextLayoutEngine::Layout(In, DL);
+	int32 Drawn = 0;
+	int32 Cut = 0;
+	for (const FDreamTextGlyphItem& Item : DL.Items)
+	{
+		if (Item.Codepoint == 0x2026)
+		{
+			TestFalse(TEXT("the ellipsis is no character"), Item.bCountsAsVisible);
+			continue;
+		}
+		if (Item.bEmit)
+		{
+			Drawn++;
+			TestTrue(TEXT("a drawn character counts"), Item.bCountsAsVisible);
+		}
+		else
+		{
+			Cut++;
+			TestFalse(TEXT("a cut character is not counted"), Item.bCountsAsVisible);
+		}
+	}
+	TestTrue(TEXT("something was cut"), Cut > 0);
+	TestEqual(TEXT("the visible characters are the drawn ones"), DL.VisibleCharCount, Drawn);
+	FDreamUIGeometry Geometry;
+	TArray<FDreamUITextCharProperty> Chars;
+	FDreamTextPainter::Paint(DL, MakePaint(), Geometry, Chars);
+	TestEqual(TEXT("and the painter writes one character for each"), Chars.Num(), Drawn);
+	TestEqual(TEXT("with a quad for each and one for the ellipsis"), Geometry.OriginVertices.Num(), (Drawn + 1) * 4);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamTextMiddleEllipsisPerLineTest,
+	"DreamGUI.Text.MiddleEllipsis.EveryLineIsElidedOnItsOwnAndWrappedTextEndsInOne",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamTextMiddleEllipsisPerLineTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamTextLayoutTestLocal;
+	FScopedGameWorld TestWorld;
+	UDreamTextTestFont* Font = NewObject<UDreamTextTestFont>(TestWorld.World);
+	Font->bMockHasKerning = false;
+
+	// Each hard line on its own: the short one in the middle is untouched, and the last is elided, not cut away.
+	FDreamTextLayoutInput In = MakeInput(Font, TEXT("abcdefghijklmnopqrstuvwxyz\nabc\nabcdefghijklmnopqrstuvwxyz"), 200.0f, 300.0f);
+	In.OverflowType = EDreamUITextOverflowType::MiddleEllipsis;
+	FDreamTextDisplayList DL;
+	FDreamTextLayoutEngine::Layout(In, DL);
+	if (!TestEqual(TEXT("three lines"), DL.Lines.Num(), 3))return false;
+	TestNotNull(TEXT("the first line is elided"), FindDots(DL, 0));
+	TestNull(TEXT("the short line is not"), FindDots(DL, 1));
+	TestNotNull(TEXT("the last line is elided too"), FindDots(DL, 2));
+	for (int32 e = 27; e < 30; e++)
+	{
+		TestTrue(*FString::Printf(TEXT("element %d of the short line is drawn"), e), IsElementDrawn(DL, e));
+	}
+	TestTrue(TEXT("the last line keeps its end"), IsElementDrawn(DL, In.Content.Len() - 1));
+
+	// Wrapped, it is an end ellipsis on the last line that fits the box, as Slate's has no multi-line form either.
+	FDreamTextLayoutInput Wrapped = MakeInput(Font, TEXT("one two three four five six seven eight nine ten eleven twelve thirteen"), 200.0f, 100.0f);
+	Wrapped.OverflowType = EDreamUITextOverflowType::MiddleEllipsis;
+	Wrapped.bAutoWrapText = true;
+	FDreamTextDisplayList WrappedDL;
+	FDreamTextLayoutEngine::Layout(Wrapped, WrappedDL);
+	TestTrue(TEXT("it wraps"), WrappedDL.Lines.Num() > 1);
+	TestTrue(TEXT("into no more lines than fit"), WrappedDL.Lines.Num() <= 4);
+	const FDreamTextGlyphItem* Last = nullptr;
+	for (int32 i = WrappedDL.Items.Num() - 1; i >= 0; i--)
+	{
+		if (WrappedDL.Items[i].bEmit) { Last = &WrappedDL.Items[i]; break; }
+	}
+	if (TestNotNull(TEXT("something is drawn"), Last))
+	{
+		TestEqual(TEXT("the last thing drawn is the ellipsis"), (int32)Last->Codepoint, 0x2026);
+		TestEqual(TEXT("on the last line"), Last->LineIndex, WrappedDL.Lines.Num() - 1);
+	}
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamTextMiddleEllipsisImageTest,
+	"DreamGUI.Text.MiddleEllipsis.AnInlineImageInTheGapGoesWithItAndOneInTheEndMovesWithIt",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamTextMiddleEllipsisImageTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamTextLayoutTestLocal;
+	FScopedGameWorld TestWorld;
+	UDreamTextTestFont* Font = NewObject<UDreamTextTestFont>(TestWorld.World);
+	Font->bMockHasKerning = false;
+
+	auto Layout = [Font](const TCHAR* Content, FDreamTextLayoutInput& OutIn, FDreamTextDisplayList& OutDL)
+	{
+		OutIn = MakeInput(Font, Content, 150.0f, 200.0f);
+		OutIn.bRichText = true;
+		OutIn.OverflowType = EDreamUITextOverflowType::MiddleEllipsis;
+		FDreamTextLayoutEngine::Layout(OutIn, OutDL);
+	};
+	// The image is the middle of a line whose two halves match, so the gap opens on it.
+	FDreamTextLayoutInput In;
+	FDreamTextDisplayList Middle;
+	Layout(TEXT("abcdef<img=x/>abcdef"), In, Middle);
+	TestTrue(TEXT("the line was elided"), Middle.bTruncated);
+	TestEqual(TEXT("the image in the gap is not placed"), Middle.Images.Num(), 0);
+
+	FDreamTextDisplayList End;
+	Layout(TEXT("abcdefghijklmnopqrst<img=y/>"), In, End);
+	TestTrue(TEXT("this line was elided too"), End.bTruncated);
+	if (TestEqual(TEXT("the image at the end is kept"), End.Images.Num(), 1))
+	{
+		const float ImageRight = (float)(End.Images[0].Position.X + End.Images[0].Size.X * 0.5);
+		TestTrue(TEXT("and it slid back into the box with the end"), ImageRight <= BoxRight(In) + 0.01f);
+	}
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamTextMiddleEllipsisRightToLeftTest,
+	"DreamGUI.Text.MiddleEllipsis.ARightToLeftLineKeepsItsStartOnTheRight",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamTextMiddleEllipsisRightToLeftTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamTextLayoutTestLocal;
+	FScopedGameWorld TestWorld;
+	UDreamUIFontData_FreeTypeRender::SetAsyncGlyphSyncBudgetOverride(MAX_int32);
+	ON_SCOPE_EXIT { UDreamUIFontData_FreeTypeRender::SetAsyncGlyphSyncBudgetOverride(-1); };
+	UDreamUIFontData_DistanceField* Arabic = MakeEngineFont(TestWorld.World, TEXT("Slate/Fonts/NotoNaskhArabicUI-Regular.ttf"));
+	if (!TestTrue(TEXT("Noto Naskh shapes"), FDreamTextShaper::CanShape(Arabic)))return false;
+
+	const FString Content = TEXT("مرحبا بالعالم هذا نص عربي طويل جدا");
+	FDreamTextLayoutInput In = MakeInput(Arabic, Content, 180.0f, 200.0f);
+	In.FontSize = 32.0f;
+	In.OverflowType = EDreamUITextOverflowType::MiddleEllipsis;
+	FDreamTextDisplayList DL;
+	FDreamTextLayoutEngine::Layout(In, DL);
+	TestTrue(TEXT("the line was elided"), DL.bTruncated);
+	const FDreamTextGlyphItem* Dots = FindDots(DL, 0);
+	if (!TestNotNull(TEXT("an ellipsis stands in the line"), Dots))return false;
+	const FDreamTextGlyphItem* First = FindItem(DL, 0);
+	const FDreamTextGlyphItem* LastLetter = FindItem(DL, Content.Len() - 1);
+	if (TestNotNull(TEXT("the first letter is laid out"), First) && TestNotNull(TEXT("the last letter is laid out"), LastLetter))
+	{
+		TestTrue(TEXT("the start is kept"), First->bEmit);
+		TestTrue(TEXT("and the end"), LastLetter->bEmit);
+		TestTrue(TEXT("the start reads from the right, right of the ellipsis"), First->Pen.X > Dots->Pen.X);
+		TestTrue(TEXT("the end left of it"), LastLetter->Pen.X < Dots->Pen.X);
+	}
+	for (const FDreamTextGlyphItem& Item : DL.Items)
+	{
+		if (!Item.bEmit)continue;
+		TestTrue(TEXT("what is drawn is inside the box"), Item.Pen.X + Item.DecorationOffset >= BoxLeft(In) - 0.05f
+			&& Item.Pen.X + Item.DecorationOffset + Item.AdvanceWithSpace <= BoxRight(In) + 0.05f);
+	}
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamTextEmojiPrecedenceTest,
+	"DreamGUI.Text.Pipeline.AnEmojiIsItsSequencesPictureThenAColourFacesGlyphThenItsBasesPicture",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * Which of the emoji data and the font's faces draws an emoji: the data's picture for the exact sequence first -- an
+ * author's own art beats any font -- then a colour face that has the whole cluster, then the picture for its base (what
+ * an asset made before sequences has), then whatever face has it, as a glyph.
+ */
+bool FDreamTextEmojiPrecedenceTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamTextLayoutTestLocal;
+	FScopedGameWorld TestWorld;
+	UDreamTextTestFont* Font = NewObject<UDreamTextTestFont>(TestWorld.World);
+	Font->MockFaces.SetNum(2);
+	Font->MockFaces[0].Has = { FInt32Interval(0x20, 0x7E) };
+	Font->MockFaces[1].Has = { FInt32Interval(0x1F300, 0x1FAFF) };
+	Font->MockFaces[1].bColor = true;
+
+	UDreamUIFontEmojiData* Emoji = NewObject<UDreamUIFontEmojiData>(TestWorld.World);
+	TMap<FDreamUIFontEmojiKey, FDreamUIFontEmojiDataItem> Pictures;
+	Pictures.Add(FDreamUIFontEmojiKey(0x1F600), FDreamUIFontEmojiDataItem());
+	Pictures.Add(FDreamUIFontEmojiKey(0x1F44D), FDreamUIFontEmojiDataItem());
+	Emoji->SetDataMap(Pictures);
+	FObjectProperty* EmojiProperty = FindFProperty<FObjectProperty>(UDreamUIFontData_BaseObject::StaticClass(), TEXT("EmojiData"));
+	if (!TestNotNull(TEXT("the emoji data is a property of the font"), EmojiProperty))return false;
+	EmojiProperty->SetObjectPropertyValue_InContainer(Font, Emoji);
+
+	auto Layout = [Font](const TCHAR* Content, FDreamTextDisplayList& OutDL)
+	{
+		FDreamTextLayoutEngine::Layout(MakeInput(Font, Content, 600.0f, 200.0f), OutDL);
+	};
+	// 1. A picture for the exact sequence wins, though a colour face has it too.
+	FDreamTextDisplayList Grinning;
+	Layout(TEXT("\U0001F600"), Grinning);
+	if (TestEqual(TEXT("the grinning face is the data's picture"), Grinning.Emojis.Num(), 1))
+	{
+		TestEqual(TEXT("found by its sequence"), Grinning.Emojis[0].Sequence, FString(TEXT("\U0001F600")));
+		TestEqual(TEXT("its base"), Grinning.Emojis[0].EmojiCode, 0x1F600);
+	}
+	// 2. No picture for the toned thumb, and a colour face has the whole cluster: the face's glyph, tone and all.
+	FDreamTextDisplayList Toned;
+	Layout(TEXT("\U0001F44D\U0001F3FD"), Toned);
+	TestEqual(TEXT("the toned thumb is no picture"), Toned.Emojis.Num(), 0);
+	const FDreamTextGlyphItem* TonedGlyph = FindItem(Toned, 0);
+	if (TestNotNull(TEXT("it is a glyph"), TonedGlyph))
+	{
+		TestEqual(TEXT("from the colour face"), TonedGlyph->Glyph.FaceIndex, 1);
+		TestTrue(TEXT("in colour"), TonedGlyph->Glyph.bColor);
+	}
+	// 3. Without a colour face, the picture for its base, which is better than a monochrome thumb.
+	Font->MockFaces[1].bColor = false;
+	FDreamTextDisplayList Base;
+	Layout(TEXT("\U0001F44D\U0001F3FD"), Base);
+	if (TestEqual(TEXT("with no colour face the toned thumb is its base's picture"), Base.Emojis.Num(), 1))
+	{
+		TestEqual(TEXT("it keeps the sequence it stands for"), Base.Emojis[0].Sequence, FString(TEXT("\U0001F44D\U0001F3FD")));
+		TestEqual(TEXT("and names its base"), Base.Emojis[0].EmojiCode, 0x1F44D);
+	}
+	// 4. No picture at all and no colour face: a monochrome glyph, not a blank.
+	FDreamTextDisplayList Unicorn;
+	Layout(TEXT("\U0001F984"), Unicorn);
+	TestEqual(TEXT("an emoji with no picture is no object"), Unicorn.Emojis.Num(), 0);
+	const FDreamTextGlyphItem* UnicornGlyph = FindItem(Unicorn, 0);
+	if (TestNotNull(TEXT("but a glyph"), UnicornGlyph))
+	{
+		TestTrue(TEXT("which is drawn"), UnicornGlyph->bEmit);
+		TestFalse(TEXT("in monochrome"), UnicornGlyph->Glyph.bColor);
 	}
 	return true;
 }

@@ -76,6 +76,12 @@ namespace DreamUIRichTextParser
 		float ImageWidth = 0.0f;
 		float ImageHeight = 0.0f;
 		EImageVerticalAlign ImageVerticalAlign = EImageVerticalAlign::Middle;
+		/**
+		 * The culture name of the innermost open `<lang=xx>` ("ja", "zh-Hans"): the language the text is in from there,
+		 * which decides its fallback faces and what HarfBuzz shapes it with. None outside every one: the text's own
+		 * language (FDreamTextLayoutInput::Language).
+		 */
+		FName Language;
 
 		int CharIndex = 0;
 	};
@@ -168,6 +174,8 @@ namespace DreamUIRichTextParser
 		TArray<FName>			CustomTagArray;
 		/** Open `<a=Id>` tags, innermost last: `</a>` names no id, so it closes the one most recently opened. */
 		TArray<FName>			HyperlinkTags;
+		/** Open `<lang=xx>` tags, innermost last: `</lang>` closes the one most recently opened, as `</size>` does. */
+		TArray<FName>			LanguageArray;
 		/** How many tags have been opened so far: the order a tag is ranked by (see FRichTextParseResult::BoldOrder). */
 		int32					OpenOrder = 0;
 		/** The open order of every open tag of each kind, innermost last, parallel to the counts and stacks above. */
@@ -204,6 +212,7 @@ namespace DreamUIRichTextParser
 		, bEnableCustomTag = false
 		, bEnableImage = false
 		, bEnableHyperlink = false
+		, bEnableLanguage = false
 		;
 	public:
 		void ClearImageTag()
@@ -251,6 +260,7 @@ namespace DreamUIRichTextParser
 			result.Strikethrough = inStrikethrough;
 			result.Size = inOriginSize;
 			result.Color = inOriginColor;
+			result.Language = NAME_None;
 
 			bEnableBold = inFlags & (1 << (int)EDreamUIText_RichTextTagFilterFlags::Bold);
 			bEnableItalic = inFlags & (1 << (int)EDreamUIText_RichTextTagFilterFlags::Italic);
@@ -263,6 +273,7 @@ namespace DreamUIRichTextParser
 			bEnableCustomTag = inFlags & (1 << (int)EDreamUIText_RichTextTagFilterFlags::CustomTag);
 			bEnableImage = inFlags & (1 << (int)EDreamUIText_RichTextTagFilterFlags::Image);
 			bEnableHyperlink = inFlags & (1 << (int)EDreamUIText_RichTextTagFilterFlags::Hyperlink);
+			bEnableLanguage = inFlags & (1 << (int)EDreamUIText_RichTextTagFilterFlags::Language);
 		}
 		void Clear()
 		{
@@ -275,6 +286,7 @@ namespace DreamUIRichTextParser
 			SupOrSubArray.Reset();
 			CustomTagArray.Reset();
 			HyperlinkTags.Reset();
+			LanguageArray.Reset();
 			OpenOrder = 0;
 			BoldOrders.Reset();
 			ItalicOrders.Reset();
@@ -544,6 +556,26 @@ namespace DreamUIRichTextParser
 						}
 					}
 				}
+				else if (CharIndex + 6 < TextLength
+					&& Text[CharIndex + 1] == 'l'
+					&& Text[CharIndex + 2] == 'a'
+					&& Text[CharIndex + 3] == 'n'
+					&& Text[CharIndex + 4] == 'g'
+					&& Text[CharIndex + 5] == '='
+					)//begin lang=
+				{
+					if (bEnableLanguage)
+					{
+						int charEndIndex;
+						FName parsedLanguage;
+						if (GetLanguage(Text, TextLength, CharIndex + 6, charEndIndex, parsedLanguage))
+						{
+							InOutStartIndex += charEndIndex - CharIndex + 1;
+							LanguageArray.Add(parsedLanguage);
+							bHaveSymbol = true;
+						}
+					}
+				}
 				else if (CharIndex + 1 < TextLength && Text[CharIndex + 1] == '/')//end
 				{
 					if (CharIndex + 3 < TextLength && Text[CharIndex + 3] == '>')
@@ -671,6 +703,22 @@ namespace DreamUIRichTextParser
 							bHaveSymbol = true;
 						}
 					}
+					else if (CharIndex + 6 < TextLength
+						&& Text[CharIndex + 2] == 'l'
+						&& Text[CharIndex + 3] == 'a'
+						&& Text[CharIndex + 4] == 'n'
+						&& Text[CharIndex + 5] == 'g'
+						&& Text[CharIndex + 6] == '>'
+						&& LanguageArray.Num() > 0
+						)//end lang
+					{
+						if (bEnableLanguage)
+						{
+							InOutStartIndex += 7;
+							LanguageArray.Pop();
+							bHaveSymbol = true;
+						}
+					}
 					else if (CustomTagArray.Num() > 0
 						)//end custom tag
 					{
@@ -749,6 +797,7 @@ namespace DreamUIRichTextParser
 				ParseResult.ImageWidth = ImageWidth;
 				ParseResult.ImageHeight = ImageHeight;
 				ParseResult.ImageVerticalAlign = ImageVerticalAlign;
+				ParseResult.Language = LanguageArray.Num() > 0 ? LanguageArray.Last() : FName(NAME_None);
 			}
 			return bHaveSymbol;
 		}
@@ -864,6 +913,30 @@ namespace DreamUIRichTextParser
 				return true;
 			}
 			return false;
+		}
+		/**
+		 * The culture name of a `<lang=xx>`, ending at '>': letters, digits, '-' and '_' ("ja", "zh-Hans", "pt_BR"), as a
+		 * culture name is spelled. Anything else is no language, and the whole tag is then literal text.
+		 */
+		static bool GetLanguage(const FString& Text, int TextLength, int StartIndex, int& OutEndIndex, FName& OutLanguage)
+		{
+			const int EndIndex = FindTokenEnd(Text, TextLength, StartIndex);
+			if (EndIndex == -1 || EndIndex <= StartIndex || Text[EndIndex] != '>')
+			{
+				return false;
+			}
+			for (int i = StartIndex; i < EndIndex; i++)
+			{
+				const TCHAR c = Text[i];
+				const bool bNameChar = (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '-' || c == '_';
+				if (!bNameChar)
+				{
+					return false;
+				}
+			}
+			OutLanguage = FName(FStringView(Text.GetCharArray().GetData() + StartIndex, EndIndex - StartIndex));
+			OutEndIndex = EndIndex;
+			return true;
 		}
 		/** One of the alignment words an `<img>` tag may end with, case-insensitively. */
 		static bool ParseImageAlign(const TCHAR* Str, int Len, EImageVerticalAlign& OutAlign)

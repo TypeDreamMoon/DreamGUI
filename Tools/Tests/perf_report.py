@@ -1,14 +1,23 @@
-"""The DreamGUI benchmark's numbers (DreamGUI.Performance.*, the Perf preset), for comparing two builds on one machine.
+"""The DreamGUI benchmarks' numbers (DreamGUI.Performance.*, the Perf preset), for comparing two builds on one machine.
 
-    python perf_report.py show     <Benchmark.json | directory holding it>
-    python perf_report.py compare  <old Benchmark.json | dir> <new Benchmark.json | dir>
-    python perf_report.py insights <Benchmark.utrace> [--engine <UE root>] [--out <dir>] [--top N]
+    python perf_report.py show         <Benchmark.json | directory holding it>
+    python perf_report.py compare      <old Benchmark.json | dir> <new Benchmark.json | dir>
+    python perf_report.py text         <TextLayout.json | directory holding it> [--stages]
+    python perf_report.py text-compare <old TextLayout.json | dir> <new TextLayout.json | dir>
+    python perf_report.py insights     <Benchmark.utrace | TextLayout.utrace> [--engine <UE root>] [--out <dir>] [--top N]
+                                       [--regions <pattern>]
 
 show prints each stretch of frames the benchmark timed: milliseconds per frame for every stage DreamGUI counts, and
 what it drew and uploaded per frame. compare puts two runs side by side with the change in per cent; a time is only
 worth anything next to another taken on the same machine. insights has Unreal Insights export the CPU timers of the
 trace the benchmark wrote, one file per timed stretch and thread, and prints the DreamGUI scopes and the heaviest
 timers of each -- where the time inside a stage went.
+
+text reads the text layout benchmark (DreamGUI.Performance.TextLayout): for every font and text, each scenario under each
+setting of DreamGUI.Text.ShapeCache and DreamGUI.Text.IncrementalLayout -- a layout's median and 95th percentile, its paint's
+median, its heaviest stages, and what it did per layout (hb_shape calls, lines placed and kept, ICU code units); --stages adds
+every stage and counter. text-compare puts two runs' medians and 95th percentiles side by side. Its trace's regions are
+DreamGUI.TextLayout.*, which insights --regions "DreamGUI.TextLayout.*" breaks down.
 """
 import argparse
 import csv
@@ -70,6 +79,73 @@ def compare(old, new):
             print('  %-24s %10.3f  %10.3f  %s' % (name, a, b, change(a, b)))
 
 
+TEXT_STAGES = ['Prepare', 'Preprocess', 'Lookup', 'Reuse', 'Measure', 'Shape', 'BreakLines', 'Place', 'Finish']
+TEXT_COUNTERS = ['hbShapeCalls', 'shapedCodepoints', 'shapeLookups', 'shapeHits', 'icuCodeUnits', 'linesPlaced', 'linesReused',
+                 'paragraphsMeasured', 'paragraphsReused', 'quadFetches']
+
+
+def load_text(path):
+    if os.path.isdir(path):
+        path = os.path.join(path, 'TextLayout.json')
+    with open(path, encoding='utf-8-sig') as f:
+        return json.load(f)
+
+
+def text_subjects(cases):
+    """(font, text) pairs in the order the benchmark ran them."""
+    subjects = []
+    for case in cases:
+        subject = (case['font'], case['text'])
+        if subject not in subjects:
+            subjects.append(subject)
+    return subjects
+
+
+def show_text(report, stages):
+    print('%d round(s), %d keystroke(s) a typing scenario' % (report.get('rounds', 0), report.get('keystrokes', 0)))
+    cases = report.get('cases', [])
+    for font, text in text_subjects(cases):
+        print('\n%s / %s' % (font, text))
+        print('  %-18s %-30s %9s %9s %9s  %-36s %8s %7s %7s %8s'
+              % ('scenario', 'setting', 'median', 'p95', 'paint', 'heaviest stages, median ms', 'hb_shape', 'placed', 'kept', 'icu'))
+        for case in cases:
+            if (case['font'], case['text']) != (font, text):
+                continue
+            stage_ms = case.get('stagesMs', {})
+            # Shape is inside Measure: the heaviest are picked among the stages that do not overlap.
+            heaviest = sorted(((v.get('median', 0.0), k) for k, v in stage_ms.items() if k != 'Shape'), reverse=True)[:2]
+            per = case.get('perLayout', {})
+            print('  %-18s %-30s %9.3f %9.3f %9.3f  %-36s %8.2f %7.2f %7.2f %8.1f'
+                  % (case['scenario'], case['config'], case['layoutMs']['median'], case['layoutMs']['p95'], case['paintMs']['median'],
+                     ', '.join('%s %.3f' % (k, v) for v, k in heaviest), per.get('hbShapeCalls', 0.0), per.get('linesPlaced', 0.0),
+                     per.get('linesReused', 0.0), per.get('icuCodeUnits', 0.0)))
+            if stages:
+                print('      ' + '  '.join('%s %.3f/%.3f' % (s, stage_ms.get(s, {}).get('median', 0.0), stage_ms.get(s, {}).get('p95', 0.0))
+                                          for s in TEXT_STAGES))
+                print('      ' + '  '.join('%s %.2f' % (c, per.get(c, 0.0)) for c in TEXT_COUNTERS))
+    if report.get('trace'):
+        print('\ntrace: %s (perf_report.py insights <trace> --regions "DreamGUI.TextLayout.*")' % report['trace'])
+
+
+def compare_text(old, new):
+    before = dict(((c['font'], c['text'], c['scenario'], c['config']), c) for c in old.get('cases', []))
+    cases = new.get('cases', [])
+    for font, text in text_subjects(cases):
+        print('\n%s / %s' % (font, text))
+        print('  %-18s %-30s %11s %11s %8s %11s %11s %8s' % ('scenario', 'setting', 'old median', 'new median', 'change', 'old p95', 'new p95', 'change'))
+        for case in cases:
+            if (case['font'], case['text']) != (font, text):
+                continue
+            was = before.get((case['font'], case['text'], case['scenario'], case['config']))
+            if was is None:
+                print('  %-18s %-30s not in the old run' % (case['scenario'], case['config']))
+                continue
+            a, b = was['layoutMs'], case['layoutMs']
+            print('  %-18s %-30s %11.3f %11.3f %s %11.3f %11.3f %s'
+                  % (case['scenario'], case['config'], a['median'], b['median'], change(a['median'], b['median']), a['p95'], b['p95'],
+                     change(a['p95'], b['p95'])))
+
+
 def read_timers(path):
     """(header, rows) of an exported timer statistics file; rows as dicts."""
     with open(path, encoding='utf-8-sig', newline='') as f:
@@ -96,7 +172,7 @@ def number(value):
         return 0.0
 
 
-def insights(trace, engine, out, top):
+def insights(trace, engine, out, top, regions):
     exe = os.path.join(engine, 'Engine', 'Binaries', 'Win64', 'UnrealInsights.exe')
     if not os.path.isfile(exe):
         sys.exit('no Unreal Insights at %s' % exe)
@@ -111,8 +187,8 @@ def insights(trace, engine, out, top):
         for label, pattern in THREADS:
             # Forward slashes: Insights reads the command with escapes on, and a backslash would be taken for one.
             target = os.path.join(out, '{region}_%s.csv' % label).replace(os.sep, '/')
-            f.write('TimingInsights.ExportTimerStatistics "%s" -threads="%s" -region="DreamGUI.Benchmark.*" -sortBy=TotalInclusiveTime\n'
-                    % (target, pattern))
+            f.write('TimingInsights.ExportTimerStatistics "%s" -threads="%s" -region="%s" -sortBy=TotalInclusiveTime\n'
+                    % (target, pattern, regions))
     log = os.path.join(out, 'insights.log')
     # One string, not a list: the engine reads -Name="value", and a path with spaces has to keep its quotes inside it.
     command = '"%s" -OpenTraceFile="%s" -ABSLOG="%s" -AutoQuit -NoUI -ExecOnAnalysisCompleteCmd="@=%s" -log' % (
@@ -154,18 +230,29 @@ def main(argv=None):
     p = sub.add_parser('compare')
     p.add_argument('old')
     p.add_argument('new')
+    p = sub.add_parser('text')
+    p.add_argument('report')
+    p.add_argument('--stages', action='store_true')
+    p = sub.add_parser('text-compare')
+    p.add_argument('old')
+    p.add_argument('new')
     p = sub.add_parser('insights')
     p.add_argument('trace')
     p.add_argument('--engine', default=DEFAULT_ENGINE)
     p.add_argument('--out')
     p.add_argument('--top', type=int, default=25)
+    p.add_argument('--regions', default='DreamGUI.Benchmark.*')
     args = parser.parse_args(argv)
     if args.command == 'show':
         show(load(args.report))
     elif args.command == 'compare':
         compare(load(args.old), load(args.new))
+    elif args.command == 'text':
+        show_text(load_text(args.report), args.stages)
+    elif args.command == 'text-compare':
+        compare_text(load_text(args.old), load_text(args.new))
     else:
-        insights(args.trace, args.engine, args.out, args.top)
+        insights(args.trace, args.engine, args.out, args.top, args.regions)
     return 0
 
 
