@@ -1,0 +1,95 @@
+// Japanese and Chinese wrapped in boxes five and four em wide: no line may begin with a closing mark or end with an
+// opening one. World font key.
+// @stage 640x320
+
+style Title {
+    AnchorData.AnchorMin = (0, 1)
+    AnchorData.AnchorMax = (1, 1)
+    AnchorData.Pivot = (0.5, 1)
+    AnchorData.AnchoredPosition = (0, -8)
+    AnchorData.SizeDelta = (-24, 20)
+    FontSize = 15
+    Color = #1E2230
+    HAlign = Left
+    VAlign = Top
+    OverflowType = HorizontalOverflow
+}
+
+style Note {
+    AnchorData.AnchorMin = (0, 1)
+    AnchorData.AnchorMax = (0, 1)
+    AnchorData.Pivot = (0, 1)
+    AnchorData.SizeDelta = (160, 16)
+    FontSize = 12
+    Color = #5A6172
+    HAlign = Left
+    VAlign = Top
+    OverflowType = HorizontalOverflow
+}
+
+style Box {
+    AnchorData.AnchorMin = (0, 1)
+    AnchorData.AnchorMax = (0, 1)
+    AnchorData.Pivot = (0, 1)
+    Brush.ImageSize = (0, 0)
+    Brush.TintColor = #E4E8F0
+}
+
+style Paragraph {
+    AnchorData.AnchorMin = (0, 1)
+    AnchorData.AnchorMax = (0, 1)
+    AnchorData.Pivot = (0, 1)
+    FontSize = 24
+    Color = #1E2230
+    HAlign = Left
+    VAlign = Top
+    OverflowType = VerticalOverflow
+}
+
+Widget Root {
+    Image Page {
+        Brush.TintColor = #F5F3EE
+        AnchorData.AnchorMin = (0, 0)
+        AnchorData.AnchorMax = (1, 1)
+        AnchorData.SizeDelta = (0, 0)
+    }
+
+    Text Heading : Title {
+        Text = "CJK punctuation at line breaks, 24 px"
+    }
+
+    Text JapaneseLabel : Note {
+        AnchorData.AnchoredPosition = (24, -44)
+        Text = "Japanese, 120 px (5 em)"
+    }
+    Image JapaneseBox : Box {
+        AnchorData.AnchoredPosition = (24, -64)
+        AnchorData.SizeDelta = (120, 220)
+    }
+    Text Font_World_Japanese : Paragraph {
+        AnchorData.AnchoredPosition = (24, -64)
+        AnchorData.SizeDelta = (120, 220)
+        Text = "日本語のテキスト、句読点。「括弧」も（全角）テスト！"
+    }
+
+    Text ChineseLabel : Note {
+        AnchorData.AnchoredPosition = (208, -44)
+        Text = "Chinese, 96 px (4 em)"
+    }
+    Image ChineseBox : Box {
+        AnchorData.AnchoredPosition = (208, -64)
+        AnchorData.SizeDelta = (96, 220)
+    }
+    Text Font_World_Chinese : Paragraph {
+        AnchorData.AnchoredPosition = (208, -64)
+        AnchorData.SizeDelta = (96, 220)
+        Text = "中文排版：标点符号，不应出现在行首。"
+    }
+
+    Text Font_World_Rule : Note {
+        AnchorData.AnchoredPosition = (360, -64)
+        AnchorData.SizeDelta = (264, 96)
+        FontSize = 14
+        Text = "Never at a line start:\n、。，：！」）\nNever at a line end:\n「（"
+    }
+}

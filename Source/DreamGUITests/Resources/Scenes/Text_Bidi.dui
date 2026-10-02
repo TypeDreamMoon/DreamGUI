@@ -1,0 +1,121 @@
+// Right-to-left words among left-to-right ones, in paragraphs of each direction: the Hebrew and Arabic runs read right
+// to left inside, the numbers left to right, and a paragraph's start alignment is its own start. The texts use the
+// corpus's World font key (Roboto, Noto Naskh Arabic, Arial for Hebrew, Droid Sans Fallback, ...).
+// @stage 800x384
+
+style Title {
+    AnchorData.AnchorMin = (0, 1)
+    AnchorData.AnchorMax = (1, 1)
+    AnchorData.Pivot = (0.5, 1)
+    AnchorData.AnchoredPosition = (0, -8)
+    AnchorData.SizeDelta = (-24, 20)
+    FontSize = 15
+    Color = #1E2230
+    HAlign = Left
+    VAlign = Top
+    OverflowType = HorizontalOverflow
+}
+
+style Note {
+    AnchorData.AnchorMin = (0, 1)
+    AnchorData.AnchorMax = (0, 1)
+    AnchorData.Pivot = (0, 1)
+    AnchorData.SizeDelta = (560, 16)
+    FontSize = 12
+    Color = #5A6172
+    HAlign = Left
+    VAlign = Top
+    OverflowType = HorizontalOverflow
+}
+
+style Box {
+    AnchorData.AnchorMin = (0, 1)
+    AnchorData.AnchorMax = (0, 1)
+    AnchorData.Pivot = (0, 1)
+    AnchorData.SizeDelta = (560, 44)
+    Brush.ImageSize = (0, 0)
+    Brush.TintColor = #E4E8F0
+}
+
+style Line {
+    AnchorData.AnchorMin = (0, 1)
+    AnchorData.AnchorMax = (0, 1)
+    AnchorData.Pivot = (0, 1)
+    AnchorData.SizeDelta = (560, 44)
+    FontSize = 28
+    Color = #1E2230
+    HAlign = Left
+    VAlign = Middle
+    OverflowType = HorizontalOverflow
+}
+
+Widget Root {
+    Image Page {
+        Brush.TintColor = #F5F3EE
+        AnchorData.AnchorMin = (0, 0)
+        AnchorData.AnchorMax = (1, 1)
+        AnchorData.SizeDelta = (0, 0)
+    }
+
+    Text Heading : Title {
+        Text = "Bidirectional text, start-aligned"
+    }
+
+    Text HebrewLtrLabel : Note {
+        AnchorData.AnchoredPosition = (24, -44)
+        Text = "Hebrew among English, left-to-right paragraph"
+    }
+    Image HebrewLtrBox : Box {
+        AnchorData.AnchoredPosition = (24, -62)
+    }
+    Text Font_World_HebrewLtr : Line {
+        AnchorData.AnchoredPosition = (24, -62)
+        FlowDirection = LeftToRight
+        Text = "שלום world 123 עולם"
+    }
+
+    Text HebrewRtlLabel : Note {
+        AnchorData.AnchoredPosition = (24, -116)
+        Text = "the same, right-to-left paragraph"
+    }
+    Image HebrewRtlBox : Box {
+        AnchorData.AnchoredPosition = (24, -134)
+    }
+    Text Font_World_HebrewRtl : Line {
+        AnchorData.AnchoredPosition = (24, -134)
+        FlowDirection = RightToLeft
+        Text = "שלום world 123 עולם"
+    }
+
+    Text ArabicLtrLabel : Note {
+        AnchorData.AnchoredPosition = (24, -188)
+        Text = "Arabic among English, left-to-right paragraph"
+    }
+    Image ArabicLtrBox : Box {
+        AnchorData.AnchoredPosition = (24, -206)
+    }
+    Text Font_World_ArabicLtr : Line {
+        AnchorData.AnchoredPosition = (24, -206)
+        FlowDirection = LeftToRight
+        Text = "مرحبا بالعالم Hello 2026 (test)"
+    }
+
+    Text ArabicRtlLabel : Note {
+        AnchorData.AnchoredPosition = (24, -260)
+        Text = "the same, right-to-left paragraph"
+    }
+    Image ArabicRtlBox : Box {
+        AnchorData.AnchoredPosition = (24, -278)
+    }
+    Text Font_World_ArabicRtl : Line {
+        AnchorData.AnchoredPosition = (24, -278)
+        FlowDirection = RightToLeft
+        Text = "مرحبا بالعالم Hello 2026 (test)"
+    }
+
+    Text Expected : Note {
+        AnchorData.AnchoredPosition = (24, -340)
+        AnchorData.SizeDelta = (752, 16)
+        Text = "Expected, as Chrome draws them: a right-to-left paragraph begins at the right of its box, its words in right-to-left order."
+    }
+}

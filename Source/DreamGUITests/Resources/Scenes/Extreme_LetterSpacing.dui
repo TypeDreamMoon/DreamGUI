@@ -1,0 +1,205 @@
+// Letters pushed onto each other: "This is heading 2" at 32 px with letter spacing -5, -2, 0 and +3 px, plain, with an
+// outline, underlined, at half alpha, and in a bitmap font with a shadow and an outline. Where glyphs overlap, an
+// outline or shadow must not cover the face of the glyph before it, and an underline must stay one even line.
+// @stage 1296x416
+
+style Title {
+    AnchorData.AnchorMin = (0, 1)
+    AnchorData.AnchorMax = (1, 1)
+    AnchorData.Pivot = (0.5, 1)
+    AnchorData.AnchoredPosition = (0, -8)
+    AnchorData.SizeDelta = (-24, 20)
+    FontSize = 15
+    Color = #1E2230
+    HAlign = Left
+    VAlign = Top
+    OverflowType = HorizontalOverflow
+}
+
+style Note {
+    AnchorData.AnchorMin = (0, 1)
+    AnchorData.AnchorMax = (0, 1)
+    AnchorData.Pivot = (0, 1)
+    AnchorData.SizeDelta = (136, 16)
+    FontSize = 12
+    Color = #5A6172
+    HAlign = Left
+    VAlign = Top
+    OverflowType = HorizontalOverflow
+}
+
+style Cell {
+    AnchorData.AnchorMin = (0, 1)
+    AnchorData.AnchorMax = (0, 1)
+    AnchorData.Pivot = (0, 1)
+    AnchorData.SizeDelta = (276, 56)
+    FontSize = 32
+    Color = #1E2230
+    HAlign = Left
+    VAlign = Middle
+    OverflowType = HorizontalOverflow
+    Text = "This is heading 2"
+}
+
+Widget Root {
+    Image Page {
+        Brush.TintColor = #F5F3EE
+        AnchorData.AnchorMin = (0, 0)
+        AnchorData.AnchorMax = (1, 1)
+        AnchorData.SizeDelta = (0, 0)
+    }
+
+    Text Heading : Title {
+        Text = "Letter spacing that overlaps glyphs, 32 px"
+    }
+
+    Text ColumnMinus5 : Note {
+        AnchorData.AnchoredPosition = (160, -40)
+        Text = "spacing -5 px"
+    }
+    Text ColumnMinus2 : Note {
+        AnchorData.AnchoredPosition = (444, -40)
+        Text = "spacing -2 px"
+    }
+    Text ColumnZero : Note {
+        AnchorData.AnchoredPosition = (728, -40)
+        Text = "spacing 0"
+    }
+    Text ColumnPlus3 : Note {
+        AnchorData.AnchoredPosition = (1012, -40)
+        Text = "spacing +3 px"
+    }
+
+    Text RowPlain : Note {
+        AnchorData.AnchoredPosition = (16, -84)
+        Text = "plain"
+    }
+    Text PlainMinus5 : Cell {
+        AnchorData.AnchoredPosition = (160, -64)
+        FontSpace = (-5, 0)
+    }
+    Text PlainMinus2 : Cell {
+        AnchorData.AnchoredPosition = (444, -64)
+        FontSpace = (-2, 0)
+    }
+    Text PlainZero : Cell {
+        AnchorData.AnchoredPosition = (728, -64)
+    }
+    Text PlainPlus3 : Cell {
+        AnchorData.AnchoredPosition = (1012, -64)
+        FontSpace = (3, 0)
+    }
+
+    Text RowOutline : Note {
+        AnchorData.AnchoredPosition = (16, -152)
+        Text = "outline 0.1 em"
+    }
+    Text OutlineMinus5 : Cell {
+        AnchorData.AnchoredPosition = (160, -132)
+        FontSpace = (-5, 0)
+        TextStyle.OutlineColor = #E0301EFF
+        TextStyle.OutlineWidth = 0.1
+    }
+    Text OutlineMinus2 : Cell {
+        AnchorData.AnchoredPosition = (444, -132)
+        FontSpace = (-2, 0)
+        TextStyle.OutlineColor = #E0301EFF
+        TextStyle.OutlineWidth = 0.1
+    }
+    Text OutlineZero : Cell {
+        AnchorData.AnchoredPosition = (728, -132)
+        TextStyle.OutlineColor = #E0301EFF
+        TextStyle.OutlineWidth = 0.1
+    }
+    Text OutlinePlus3 : Cell {
+        AnchorData.AnchoredPosition = (1012, -132)
+        FontSpace = (3, 0)
+        TextStyle.OutlineColor = #E0301EFF
+        TextStyle.OutlineWidth = 0.1
+    }
+
+    Text RowUnderline : Note {
+        AnchorData.AnchoredPosition = (16, -220)
+        Text = "underline"
+    }
+    Text UnderlineMinus5 : Cell {
+        AnchorData.AnchoredPosition = (160, -200)
+        FontSpace = (-5, 0)
+        bUnderline = true
+    }
+    Text UnderlineMinus2 : Cell {
+        AnchorData.AnchoredPosition = (444, -200)
+        FontSpace = (-2, 0)
+        bUnderline = true
+    }
+    Text UnderlineZero : Cell {
+        AnchorData.AnchoredPosition = (728, -200)
+        bUnderline = true
+    }
+    Text UnderlinePlus3 : Cell {
+        AnchorData.AnchoredPosition = (1012, -200)
+        FontSpace = (3, 0)
+        bUnderline = true
+    }
+
+    Text RowAlpha : Note {
+        AnchorData.AnchoredPosition = (16, -288)
+        Text = "alpha 0.5"
+    }
+    Text AlphaMinus5 : Cell {
+        AnchorData.AnchoredPosition = (160, -268)
+        FontSpace = (-5, 0)
+        Color = #1E223080
+    }
+    Text AlphaMinus2 : Cell {
+        AnchorData.AnchoredPosition = (444, -268)
+        FontSpace = (-2, 0)
+        Color = #1E223080
+    }
+    Text AlphaZero : Cell {
+        AnchorData.AnchoredPosition = (728, -268)
+        Color = #1E223080
+    }
+    Text AlphaPlus3 : Cell {
+        AnchorData.AnchoredPosition = (1012, -268)
+        FontSpace = (3, 0)
+        Color = #1E223080
+    }
+
+    Text RowBitmap : Note {
+        AnchorData.AnchoredPosition = (16, -348)
+        AnchorData.SizeDelta = (136, 32)
+        Text = "bitmap font,\nshadow + outline"
+    }
+    Text Font_Bitmap_Minus5 : Cell {
+        AnchorData.AnchoredPosition = (160, -336)
+        FontSpace = (-5, 0)
+        TextStyle.UnderlayColor = #00000099
+        TextStyle.UnderlayOffset = (0.06, 0.06)
+        TextStyle.OutlineColor = #F2C14EFF
+        TextStyle.OutlineWidth = 0.06
+    }
+    Text Font_Bitmap_Minus2 : Cell {
+        AnchorData.AnchoredPosition = (444, -336)
+        FontSpace = (-2, 0)
+        TextStyle.UnderlayColor = #00000099
+        TextStyle.UnderlayOffset = (0.06, 0.06)
+        TextStyle.OutlineColor = #F2C14EFF
+        TextStyle.OutlineWidth = 0.06
+    }
+    Text Font_Bitmap_Zero : Cell {
+        AnchorData.AnchoredPosition = (728, -336)
+        TextStyle.UnderlayColor = #00000099
+        TextStyle.UnderlayOffset = (0.06, 0.06)
+        TextStyle.OutlineColor = #F2C14EFF
+        TextStyle.OutlineWidth = 0.06
+    }
+    Text Font_Bitmap_Plus3 : Cell {
+        AnchorData.AnchoredPosition = (1012, -336)
+        FontSpace = (3, 0)
+        TextStyle.UnderlayColor = #00000099
+        TextStyle.UnderlayOffset = (0.06, 0.06)
+        TextStyle.OutlineColor = #F2C14EFF
+        TextStyle.OutlineWidth = 0.06
+    }
+}

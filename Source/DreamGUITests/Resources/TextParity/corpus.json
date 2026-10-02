@@ -1,0 +1,148 @@
+{
+  "about": [
+    "The text parity corpus. Every case is drawn three times -- by DreamGUI on the gallery stage, by Slate through FWidgetRenderer, and by Chrome headless (Tools/TextParity/Make-ChromeReference.ps1) -- and DreamGUI.RHI.TextParity.<id> compares the three. README.md in Tools/TextParity says how the numbers are taken.",
+    "A case: id; text (UTF-8; characters that cannot be seen or that combine with the one before are written as \\u escapes, everything else literally); font (a key of the fonts table); size (font size in pixels); width (the box width in pixels, 0 for no wrapping: the box is then the canvas less the padding); lineHeight ('normal', or a percentage of the font's own line height, the way DreamGUI's LineHeightPercentage and Slate's line height scale it); letterSpacing (pixels); rich (DreamGUI rich-text markup); lang; align (start, end, center, left, right); dir (ltr, rtl, auto); wrap ('anywhere' breaks a word that does not fit a line, 'normal' lets it overflow); overflow ('', 'ellipsis', or 'clamp' with maxLines); transform ('', 'uppercase'); outline ({width in em, color}); canvas ([width, height] in pixels); flags; variants.",
+    "Defaults: width 0, lineHeight normal, letterSpacing 0, rich false, lang en, align start, dir ltr, wrap anywhere, canvas as below. The text is black on white at (padding, padding) of the canvas.",
+    "flags: 'breaks' -- DreamGUI's line starts must equal Chrome's (the one assertion); 'corners' -- a mask difference is counted; 'reportOnly' -- known not to match yet, reported only.",
+    "wordBreak: the CSS word-break Chrome's page uses (normal by default). The Korean cases use keep-all: DreamGUI and Slate break Korean between words (eojeol), as Korean pages ask Chrome to with keep-all; Chrome's own default breaks between any two syllables.",
+    "LongWord_Url is reportOnly: Blink's line breaker never breaks after '/' before a letter, where UAX #14 (which DreamGUI, Slate and Firefox follow) allows it, so the two differ on every path segment by design.",
+    "variants: 'narrow' adds <id>_1px, the same case in a box 1 pixel wide with wrap normal, so that every break opportunity becomes a line break; its canvas is max(512, 2 * padding + 3 * size) wide and min(4096, 2 * padding + (UTF-16 length + 1) * ceil(1.6 * size)) tall. 'inverse' adds <id>_Inverse, white on black.",
+    "fonts: each key names its faces in fallback order, the primary first; bold, italic and boldItalic are the primary's true style faces where it has them. $(EngineDir) is the engine's Engine directory, $(WindowsFonts) the system's font directory. kind 'bitmap' asks DreamGUI for a bitmap font instead of a distance field."
+  ],
+  "padding": 16,
+  "canvas": [1024, 160],
+  "fonts": {
+    "Latin": {
+      "faces": ["$(EngineDir)/Content/Slate/Fonts/Roboto-Regular.ttf"],
+      "bold": "$(EngineDir)/Content/Slate/Fonts/Roboto-Bold.ttf",
+      "italic": "$(EngineDir)/Content/Slate/Fonts/Roboto-Italic.ttf",
+      "boldItalic": "$(EngineDir)/Content/Slate/Fonts/Roboto-BoldItalic.ttf"
+    },
+    "CJK": {
+      "faces": [
+        "$(EngineDir)/Content/Slate/Fonts/Roboto-Regular.ttf",
+        "$(EngineDir)/Content/Slate/Fonts/DroidSansFallback.ttf"
+      ],
+      "bold": "$(EngineDir)/Content/Slate/Fonts/Roboto-Bold.ttf",
+      "italic": "$(EngineDir)/Content/Slate/Fonts/Roboto-Italic.ttf",
+      "boldItalic": "$(EngineDir)/Content/Slate/Fonts/Roboto-BoldItalic.ttf"
+    },
+    "Arabic": {
+      "faces": [
+        "$(EngineDir)/Content/Slate/Fonts/Roboto-Regular.ttf",
+        "$(EngineDir)/Content/Slate/Fonts/NotoNaskhArabicUI-Regular.ttf"
+      ]
+    },
+    "Hebrew": {
+      "faces": [
+        "$(EngineDir)/Content/Slate/Fonts/Roboto-Regular.ttf",
+        "$(WindowsFonts)/arial.ttf"
+      ]
+    },
+    "Thai": {
+      "faces": [
+        "$(EngineDir)/Content/Slate/Fonts/Roboto-Regular.ttf",
+        "$(EngineDir)/Content/Slate/Fonts/NotoSansThai-Regular.ttf"
+      ]
+    },
+    "Devanagari": {
+      "faces": [
+        "$(EngineDir)/Content/Slate/Fonts/Roboto-Regular.ttf",
+        "$(EngineDir)/Content/Editor/Slate/Fonts/NotoSansDevanagari-Regular.ttf"
+      ]
+    },
+    "Emoji": {
+      "faces": [
+        "$(EngineDir)/Content/Slate/Fonts/Roboto-Regular.ttf",
+        "$(EngineDir)/Content/Editor/Slate/Fonts/NotoColorEmoji.ttf"
+      ]
+    },
+    "World": {
+      "faces": [
+        "$(EngineDir)/Content/Slate/Fonts/Roboto-Regular.ttf",
+        "$(EngineDir)/Content/Slate/Fonts/NotoNaskhArabicUI-Regular.ttf",
+        "$(WindowsFonts)/arial.ttf",
+        "$(EngineDir)/Content/Slate/Fonts/DroidSansFallback.ttf",
+        "$(EngineDir)/Content/Editor/Slate/Fonts/NotoSansDevanagari-Regular.ttf",
+        "$(EngineDir)/Content/Slate/Fonts/NotoSansThai-Regular.ttf"
+      ],
+      "bold": "$(EngineDir)/Content/Slate/Fonts/Roboto-Bold.ttf",
+      "italic": "$(EngineDir)/Content/Slate/Fonts/Roboto-Italic.ttf",
+      "boldItalic": "$(EngineDir)/Content/Slate/Fonts/Roboto-BoldItalic.ttf"
+    },
+    "Bitmap": {
+      "faces": ["$(EngineDir)/Content/Slate/Fonts/Roboto-Regular.ttf"],
+      "kind": "bitmap"
+    }
+  },
+  "cases": [
+    { "id": "Kerning", "text": "AV To Wa Ty Yo LT P. F, Vo Te", "font": "Latin", "size": 48, "canvas": [1024, 112] },
+    { "id": "Ligatures", "text": "office fluffy fi fl ffi ffl", "font": "Latin", "size": 48, "canvas": [1024, 112] },
+
+    { "id": "Size_10", "text": "Hamburgefonstiv 0123456789", "font": "Latin", "size": 10, "canvas": [512, 64], "variants": ["inverse"] },
+    { "id": "Size_11", "text": "Hamburgefonstiv 0123456789", "font": "Latin", "size": 11, "canvas": [512, 64] },
+    { "id": "Size_12", "text": "Hamburgefonstiv 0123456789", "font": "Latin", "size": 12, "canvas": [512, 64], "variants": ["inverse"] },
+    { "id": "Size_13", "text": "Hamburgefonstiv 0123456789", "font": "Latin", "size": 13, "canvas": [512, 64] },
+    { "id": "Size_14", "text": "Hamburgefonstiv 0123456789", "font": "Latin", "size": 14, "canvas": [512, 64] },
+    { "id": "Size_16", "text": "Hamburgefonstiv 0123456789", "font": "Latin", "size": 16, "canvas": [512, 64], "variants": ["inverse"] },
+    { "id": "Size_20", "text": "Hamburgefonstiv 0123456789", "font": "Latin", "size": 20, "canvas": [512, 72] },
+    { "id": "Size_24", "text": "Hamburgefonstiv 0123456789", "font": "Latin", "size": 24, "canvas": [512, 80], "variants": ["inverse"] },
+    { "id": "Size_32", "text": "Hamburgefonstiv 0123456789", "font": "Latin", "size": 32, "canvas": [640, 96] },
+    { "id": "Size_48", "text": "Hamburgefonstiv 0123456789", "font": "Latin", "size": 48, "canvas": [768, 112] },
+    { "id": "Size_72", "text": "Hamburgefonstiv 0123456789", "font": "Latin", "size": 72, "canvas": [1152, 152] },
+    { "id": "Size_128", "text": "Hamburgefonstiv 0123456789", "font": "Latin", "size": 128, "canvas": [1920, 232] },
+    { "id": "Size_256", "text": "Hamburgefonstiv 0123456789", "font": "Latin", "size": 256, "canvas": [3776, 424] },
+
+    { "id": "Spacing_Minus5", "text": "This is heading 2", "font": "Latin", "size": 32, "letterSpacing": -5, "canvas": [640, 96] },
+    { "id": "Spacing_Minus2", "text": "This is heading 2", "font": "Latin", "size": 32, "letterSpacing": -2, "canvas": [640, 96] },
+    { "id": "Spacing_0", "text": "This is heading 2", "font": "Latin", "size": 32, "letterSpacing": 0, "canvas": [640, 96] },
+    { "id": "Spacing_Plus3", "text": "This is heading 2", "font": "Latin", "size": 32, "letterSpacing": 3, "canvas": [640, 96] },
+    { "id": "Spacing_Plus10", "text": "This is heading 2", "font": "Latin", "size": 32, "letterSpacing": 10, "canvas": [640, 96] },
+
+    { "id": "ZeroWidth_Space", "text": "a\u200Bb", "font": "Latin", "size": 32, "canvas": [512, 96], "flags": ["breaks"], "variants": ["narrow"] },
+    { "id": "ZeroWidth_SoftHyphen", "text": "a\u00ADb", "font": "Latin", "size": 32, "canvas": [512, 96], "flags": ["breaks"], "variants": ["narrow"] },
+    { "id": "ZeroWidth_Joiner", "text": "a\u200Db", "font": "Latin", "size": 32, "canvas": [512, 96] },
+    { "id": "EAcute_Decomposed", "text": "e\u0301", "font": "Latin", "size": 64, "canvas": [512, 128] },
+    { "id": "EAcute_Precomposed", "text": "é", "font": "Latin", "size": 64, "canvas": [512, 128] },
+
+    { "id": "Cjk_Japanese", "text": "日本語のテキスト、句読点。「括弧」も（全角）テスト！", "font": "CJK", "size": 24, "width": 120, "lang": "ja", "canvas": [512, 256], "flags": ["breaks"], "variants": ["narrow"] },
+    { "id": "Cjk_Chinese", "text": "中文排版：标点符号，不应出现在行首。", "font": "CJK", "size": 24, "width": 96, "lang": "zh-Hans", "canvas": [512, 224], "flags": ["breaks"], "variants": ["narrow"] },
+    { "id": "Cjk_Korean", "text": "한국어 텍스트 줄바꿈 테스트입니다", "font": "CJK", "size": 24, "width": 120, "lang": "ko", "wordBreak": "keep-all", "canvas": [512, 224], "flags": ["breaks"], "variants": ["narrow"] },
+    { "id": "Cjk_MixedJapaneseEnglish", "text": "UE5.8で日本語とEnglishを混ぜるtest", "font": "CJK", "size": 24, "width": 160, "lang": "ja", "canvas": [512, 192], "flags": ["breaks"], "variants": ["narrow"] },
+
+    { "id": "Bidi_HebrewLtr", "text": "שלום world 123 עולם", "font": "Hebrew", "size": 32, "lang": "he", "dir": "ltr", "canvas": [640, 96] },
+    { "id": "Bidi_HebrewRtl", "text": "שלום world 123 עולם", "font": "Hebrew", "size": 32, "lang": "he", "dir": "rtl", "canvas": [640, 96] },
+    { "id": "Bidi_ArabicLtr", "text": "مرحبا بالعالم Hello 2026 (test)", "font": "Arabic", "size": 32, "lang": "ar", "dir": "ltr", "canvas": [768, 112] },
+    { "id": "Bidi_ArabicRtl", "text": "مرحبا بالعالم Hello 2026 (test)", "font": "Arabic", "size": 32, "lang": "ar", "dir": "rtl", "canvas": [768, 112] },
+    { "id": "Bidi_Price", "text": "Price: שלום 100 ₪ today", "font": "Hebrew", "size": 32, "dir": "ltr", "canvas": [640, 96] },
+    { "id": "Bidi_ArabicSpacing", "text": "العربية", "font": "Arabic", "size": 48, "letterSpacing": 3, "lang": "ar", "dir": "rtl", "canvas": [512, 128] },
+
+    { "id": "Thai", "text": "ภาษาไทยไม\u0E48ม\u0E35การเว\u0E49นวรรคระหว\u0E48างคำ กำ ป\u0E31\u0E49น", "font": "Thai", "size": 24, "width": 200, "lang": "th", "canvas": [512, 224], "flags": ["breaks"], "variants": ["narrow"] },
+    { "id": "Devanagari", "text": "ह\u093Fन\u094Dद\u0940 म\u0947\u0902 स\u0902य\u0941क\u094Dत\u093Eक\u094Dषर क\u094Dषत\u094Dरज\u094Dञ क\u093F र\u094Dक", "font": "Devanagari", "size": 32, "lang": "hi", "canvas": [768, 112] },
+    { "id": "Emoji", "text": "👍 👍\uD83C\uDFFD 👨\u200D👩\u200D👧\u200D👦 🏳\uFE0F\u200D🌈 🇯🇵 1\uFE0F\u20E3 ❤\uFE0F ❤", "font": "Emoji", "size": 32, "canvas": [768, 96], "flags": ["reportOnly"] },
+    { "id": "Combining_EDotCircumflex", "text": "e\u0323\u0302", "font": "Latin", "size": 64, "canvas": [512, 128] },
+    { "id": "Combining_Overlays", "text": "Z\u0335a\u0337", "font": "Latin", "size": 64, "canvas": [512, 128] },
+
+    { "id": "LongWord_Url", "text": "https://example.com/very/long/path/with-many-segments_and_underscores?query=1&x=y#fragment", "font": "Latin", "size": 16, "width": 120, "canvas": [512, 320], "flags": ["reportOnly"], "variants": ["narrow"] },
+    { "id": "LongWord_Supercalifragilistic", "text": "Supercalifragilisticexpialidocious", "font": "Latin", "size": 16, "width": 120, "canvas": [512, 160], "flags": ["breaks"], "variants": ["narrow"] },
+    { "id": "Punctuation", "text": "1,234,567.89 −42 ±0.5 50% (a) [b] {c}", "font": "Latin", "size": 24, "canvas": [768, 80], "flags": ["breaks"], "variants": ["narrow"] },
+
+    { "id": "Rich_MixedSizes", "text": "Small <size=32>BIG</size> mid <size=12>tiny</size> x<sup>2</sup> H<sub>2</sub>O <u>under<size=28>line</size></u> <s>s</s> <b>b</b> <i>i</i> <b><i>bi</i></b> end", "font": "Latin", "size": 20, "rich": true, "canvas": [1024, 96] },
+    { "id": "Rich_Link", "text": "Read the <a=docs>documentation</a> now", "font": "Latin", "size": 24, "rich": true, "canvas": [640, 80] },
+    { "id": "Rich_Entities", "text": "&lt;b&gt; &amp; &#x1F600;", "font": "Emoji", "size": 24, "rich": true, "canvas": [512, 80] },
+
+    { "id": "Layout_Whitespace", "text": "a  b\tc", "font": "Latin", "size": 32, "canvas": [512, 96] },
+    { "id": "Layout_CentredPadded", "text": "  padded  ", "font": "Latin", "size": 32, "width": 300, "align": "center", "canvas": [512, 96] },
+    { "id": "Layout_EllipsisLtr", "text": "The quick brown fox jumps over the lazy dog", "font": "Latin", "size": 20, "width": 200, "overflow": "ellipsis", "canvas": [512, 80] },
+    { "id": "Layout_EllipsisRtl", "text": "שלום עולם זהו משפט ארוך מאוד", "font": "Hebrew", "size": 20, "width": 200, "overflow": "ellipsis", "lang": "he", "dir": "rtl", "canvas": [512, 80] },
+    { "id": "Layout_Clamp3", "text": "The quick brown fox jumps over the lazy dog, then naps in the sun for most of the afternoon while the clouds go by.", "font": "Latin", "size": 20, "width": 240, "overflow": "clamp", "maxLines": 3, "canvas": [512, 160] },
+    { "id": "Layout_RtlDefaultAlign", "text": "שלום עולם, זו פסקה מימין לשמאל עם יישור ברירת מחדל.", "font": "Hebrew", "size": 24, "width": 400, "lang": "he", "dir": "rtl", "canvas": [512, 160], "flags": ["breaks"], "variants": ["narrow"] },
+    { "id": "Layout_LineHeight50", "text": "Line height half of the font's own, three lines of it.", "font": "Latin", "size": 24, "width": 220, "lineHeight": "50%", "canvas": [512, 160] },
+    { "id": "Layout_LineHeight150", "text": "Line height half again the font's own, three lines.", "font": "Latin", "size": 24, "width": 220, "lineHeight": "150%", "canvas": [512, 192] },
+    { "id": "Layout_UpperGerman", "text": "straße istanbul", "font": "Latin", "size": 32, "lang": "de", "transform": "uppercase", "canvas": [512, 96] },
+    { "id": "Layout_UpperTurkish", "text": "straße istanbul", "font": "Latin", "size": 32, "lang": "tr", "transform": "uppercase", "canvas": [512, 96] },
+
+    { "id": "Corners_Plain", "text": "AVMWkxz4@", "font": "Latin", "size": 256, "canvas": [1792, 400], "flags": ["corners"], "variants": ["inverse"] },
+    { "id": "Corners_Outline", "text": "AVMWkxz4@", "font": "Latin", "size": 256, "outline": { "width": 0.08, "color": "#E0301E" }, "canvas": [1792, 400], "flags": ["corners"] }
+  ]
+}

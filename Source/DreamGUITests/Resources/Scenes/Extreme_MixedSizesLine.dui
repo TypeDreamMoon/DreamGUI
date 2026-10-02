@@ -1,0 +1,71 @@
+// One line of rich text going from 8 to 72 px and back to 16: every run sits on one shared baseline, and the line
+// is as tall as its tallest run.
+// @stage 960x192
+
+style Title {
+    AnchorData.AnchorMin = (0, 1)
+    AnchorData.AnchorMax = (1, 1)
+    AnchorData.Pivot = (0.5, 1)
+    AnchorData.AnchoredPosition = (0, -8)
+    AnchorData.SizeDelta = (-24, 20)
+    FontSize = 15
+    Color = #1E2230
+    HAlign = Left
+    VAlign = Top
+    OverflowType = HorizontalOverflow
+}
+
+style Note {
+    AnchorData.AnchorMin = (0, 1)
+    AnchorData.AnchorMax = (0, 1)
+    AnchorData.Pivot = (0, 1)
+    AnchorData.SizeDelta = (912, 16)
+    FontSize = 12
+    Color = #5A6172
+    HAlign = Left
+    VAlign = Top
+    OverflowType = HorizontalOverflow
+}
+
+Widget Root {
+    Image Page {
+        Brush.TintColor = #F5F3EE
+        AnchorData.AnchorMin = (0, 0)
+        AnchorData.AnchorMax = (1, 1)
+        AnchorData.SizeDelta = (0, 0)
+    }
+
+    Text Heading : Title {
+        Text = "One line from 8 to 72 px"
+    }
+
+    Text LineLabel : Note {
+        AnchorData.AnchoredPosition = (24, -44)
+        Text = "16 px text with <size=8>, <size=16>, <size=32>, <size=48> and <size=72> runs"
+    }
+
+    Image LineBox {
+        Brush.ImageSize = (0, 0)
+        Brush.TintColor = #E4E8F0
+        AnchorData.AnchorMin = (0, 1)
+        AnchorData.AnchorMax = (0, 1)
+        AnchorData.Pivot = (0, 1)
+        AnchorData.AnchoredPosition = (24, -64)
+        AnchorData.SizeDelta = (912, 112)
+    }
+
+    Text Mixed {
+        AnchorData.AnchorMin = (0, 1)
+        AnchorData.AnchorMax = (0, 1)
+        AnchorData.Pivot = (0, 1)
+        AnchorData.AnchoredPosition = (24, -64)
+        AnchorData.SizeDelta = (912, 112)
+        FontSize = 16
+        Color = #1E2230
+        HAlign = Left
+        VAlign = Middle
+        OverflowType = HorizontalOverflow
+        bRichText = true
+        Text = "<size=8>8 px</size> <size=16>16 px</size> <size=32>32 px</size> <size=48>48 px</size> <size=72>72 px</size> 16 again"
+    }
+}

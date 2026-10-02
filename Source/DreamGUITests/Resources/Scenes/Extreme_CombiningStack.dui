@@ -1,0 +1,72 @@
+// Thirty combining marks on one base letter, U+0300 to U+031D, half of them above and half below, between two plain
+// letters: the stack grows up and down from the a without moving the letters beside it. The marks are character
+// references in rich text, so that the file shows how many there are. World font key.
+// @stage 512x448
+
+style Title {
+    AnchorData.AnchorMin = (0, 1)
+    AnchorData.AnchorMax = (1, 1)
+    AnchorData.Pivot = (0.5, 1)
+    AnchorData.AnchoredPosition = (0, -8)
+    AnchorData.SizeDelta = (-24, 20)
+    FontSize = 15
+    Color = #1E2230
+    HAlign = Left
+    VAlign = Top
+    OverflowType = HorizontalOverflow
+}
+
+style Note {
+    AnchorData.AnchorMin = (0, 1)
+    AnchorData.AnchorMax = (0, 1)
+    AnchorData.Pivot = (0, 1)
+    AnchorData.SizeDelta = (464, 16)
+    FontSize = 12
+    Color = #5A6172
+    HAlign = Left
+    VAlign = Top
+    OverflowType = HorizontalOverflow
+}
+
+Widget Root {
+    Image Page {
+        Brush.TintColor = #F5F3EE
+        AnchorData.AnchorMin = (0, 0)
+        AnchorData.AnchorMax = (1, 1)
+        AnchorData.SizeDelta = (0, 0)
+    }
+
+    Text Heading : Title {
+        Text = "Thirty combining marks on one letter, 48 px"
+    }
+
+    Text StackLabel : Note {
+        AnchorData.AnchoredPosition = (24, -44)
+        Text = "x, then a with U+0300 to U+031D, then x"
+    }
+
+    Image StackBox {
+        Brush.ImageSize = (0, 0)
+        Brush.TintColor = #E4E8F0
+        AnchorData.AnchorMin = (0, 1)
+        AnchorData.AnchorMax = (0, 1)
+        AnchorData.Pivot = (0, 1)
+        AnchorData.AnchoredPosition = (24, -64)
+        AnchorData.SizeDelta = (464, 360)
+    }
+
+    Text Font_World_Stack {
+        AnchorData.AnchorMin = (0, 1)
+        AnchorData.AnchorMax = (0, 1)
+        AnchorData.Pivot = (0, 1)
+        AnchorData.AnchoredPosition = (24, -64)
+        AnchorData.SizeDelta = (464, 360)
+        FontSize = 48
+        Color = #1E2230
+        HAlign = Center
+        VAlign = Middle
+        OverflowType = HorizontalOverflow
+        bRichText = true
+        Text = "xa&#x300;&#x301;&#x302;&#x303;&#x304;&#x305;&#x306;&#x307;&#x308;&#x309;&#x30A;&#x30B;&#x30C;&#x30D;&#x30E;&#x30F;&#x310;&#x311;&#x312;&#x313;&#x314;&#x315;&#x316;&#x317;&#x318;&#x319;&#x31A;&#x31B;&#x31C;&#x31D;x"
+    }
+}

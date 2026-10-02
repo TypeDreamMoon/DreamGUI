@@ -1,0 +1,104 @@
+// A canvas panel in a vertical box (left-aligned, so it is as wide as it measures) holding one 100 x 40 child
+// anchored to its corner (1, 1) -- top right, +Y being up -- with its pivot there and 10 px in from it. The panel
+// measures the child once, plus the inset on the side it is docked to: 110 x 50.
+// The sibling gets its height from a SizeBox override (a label places itself, so the box keeps it): an Image
+// measures as its sprite, not as Brush.ImageSize.
+// @stage 512x288
+
+style Title {
+    AnchorData.AnchorMin = (0, 1)
+    AnchorData.AnchorMax = (1, 1)
+    AnchorData.Pivot = (0.5, 1)
+    AnchorData.AnchoredPosition = (0, -8)
+    AnchorData.SizeDelta = (-24, 20)
+    FontSize = 15
+    Color = #1E2230
+    HAlign = Left
+    VAlign = Top
+    OverflowType = HorizontalOverflow
+}
+
+style Note {
+    AnchorData.AnchorMin = (0, 1)
+    AnchorData.AnchorMax = (0, 1)
+    AnchorData.Pivot = (0, 1)
+    FontSize = 12
+    Color = #5A6172
+    HAlign = Left
+    VAlign = Top
+    OverflowType = HorizontalOverflow
+}
+
+style Box {
+    AnchorData.AnchorMin = (0, 1)
+    AnchorData.AnchorMax = (0, 1)
+    AnchorData.Pivot = (0, 1)
+}
+
+style InBox {
+    bIgnoreLayout = true
+    AnchorData.SizeDelta = (100, 16)
+    FontSize = 12
+    Color = #FFFFFF
+    HAlign = Center
+    VAlign = Middle
+    OverflowType = HorizontalOverflow
+}
+
+Widget Root {
+    Image Page {
+        Brush.TintColor = #F5F3EE
+        AnchorData.AnchorMin = (0, 0)
+        AnchorData.AnchorMax = (1, 1)
+        AnchorData.SizeDelta = (0, 0)
+    }
+
+    Text Heading : Title {
+        Text = "CanvasPanel in a VerticalBox, child docked to its corner (1, 1)"
+    }
+
+    Image Column : Box {
+        Brush.TintColor = #EEF1F7
+        AnchorData.AnchoredPosition = (24, -48)
+        AnchorData.SizeDelta = (400, 196)
+        + VerticalBox {
+            Spacing = 8
+        }
+
+        Image CanvasArea {
+            Brush.TintColor = #AEB9CF
+            + CanvasPanel {}
+            @slot HorizontalAlignment = Left
+            @slot SizeRule = Auto
+
+            Image Docked {
+                Brush.TintColor = #3D7DD8
+                AnchorData.AnchorMin = (1, 1)
+                AnchorData.AnchorMax = (1, 1)
+                AnchorData.Pivot = (1, 1)
+                AnchorData.AnchoredPosition = (-10, -10)
+                AnchorData.SizeDelta = (100, 40)
+                Text DockedLabel : InBox { Text = "100 x 40" }
+            }
+        }
+
+        Image Below {
+            Brush.TintColor = #F2C14E
+            + SizeBox {
+                bOverrideHeight = true
+                HeightOverride = 24
+            }
+            @slot SizeRule = Auto
+            Text BelowLabel : InBox {
+                Text = "sibling"
+                Color = #1E2230
+            }
+        }
+    }
+
+    Text Expected : Note {
+        AnchorData.AnchoredPosition = (24, -252)
+        AnchorData.SizeDelta = (464, 32)
+        Text = "Expected: the grey canvas is 110 x 50, the blue child 10 px in from its top right,\nthe yellow sibling 8 below it."
+    }
+}

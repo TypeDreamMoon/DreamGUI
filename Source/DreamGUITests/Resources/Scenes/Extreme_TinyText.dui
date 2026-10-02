@@ -1,0 +1,89 @@
+// Text at 4, 6 and 8 px, below anything legible, with 12 px for reference: a glyph a few pixels across must still be
+// drawn as ink in its place, not dropped and not smeared over its neighbours.
+// @stage 512x176
+
+style Title {
+    AnchorData.AnchorMin = (0, 1)
+    AnchorData.AnchorMax = (1, 1)
+    AnchorData.Pivot = (0.5, 1)
+    AnchorData.AnchoredPosition = (0, -8)
+    AnchorData.SizeDelta = (-24, 20)
+    FontSize = 15
+    Color = #1E2230
+    HAlign = Left
+    VAlign = Top
+    OverflowType = HorizontalOverflow
+}
+
+style Size {
+    AnchorData.AnchorMin = (0, 1)
+    AnchorData.AnchorMax = (0, 1)
+    AnchorData.Pivot = (0, 1)
+    AnchorData.SizeDelta = (40, 14)
+    FontSize = 11
+    Color = #5A6172
+    HAlign = Right
+    VAlign = Top
+    OverflowType = HorizontalOverflow
+}
+
+style Tiny {
+    AnchorData.AnchorMin = (0, 1)
+    AnchorData.AnchorMax = (0, 1)
+    AnchorData.Pivot = (0, 1)
+    AnchorData.SizeDelta = (420, 16)
+    Color = #1E2230
+    HAlign = Left
+    VAlign = Top
+    OverflowType = HorizontalOverflow
+    Text = "Hamburgefonstiv 0123456789"
+}
+
+Widget Root {
+    Image Page {
+        Brush.TintColor = #F5F3EE
+        AnchorData.AnchorMin = (0, 0)
+        AnchorData.AnchorMax = (1, 1)
+        AnchorData.SizeDelta = (0, 0)
+    }
+
+    Text Heading : Title {
+        Text = "Tiny text, default font"
+    }
+
+    Text Label4 : Size {
+        AnchorData.AnchoredPosition = (16, -48)
+        Text = "4 px"
+    }
+    Text Tiny4 : Tiny {
+        AnchorData.AnchoredPosition = (64, -48)
+        FontSize = 4
+    }
+
+    Text Label6 : Size {
+        AnchorData.AnchoredPosition = (16, -72)
+        Text = "6 px"
+    }
+    Text Tiny6 : Tiny {
+        AnchorData.AnchoredPosition = (64, -72)
+        FontSize = 6
+    }
+
+    Text Label8 : Size {
+        AnchorData.AnchoredPosition = (16, -96)
+        Text = "8 px"
+    }
+    Text Tiny8 : Tiny {
+        AnchorData.AnchoredPosition = (64, -96)
+        FontSize = 8
+    }
+
+    Text Label12 : Size {
+        AnchorData.AnchoredPosition = (16, -124)
+        Text = "12 px"
+    }
+    Text Tiny12 : Tiny {
+        AnchorData.AnchoredPosition = (64, -124)
+        FontSize = 12
+    }
+}

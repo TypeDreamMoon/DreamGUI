@@ -1,0 +1,108 @@
+// Combining marks written as separate characters: e with a dot below and a circumflex, next to the same letter as one
+// precomposed character, and a word with an overlay mark on every letter. The overlay marks are in the file as they
+// are; the decomposed e is written as character references in rich text, since an editor that normalises the file
+// would quietly compose it into the precomposed letter. World font key.
+// @stage 640x288
+
+style Title {
+    AnchorData.AnchorMin = (0, 1)
+    AnchorData.AnchorMax = (1, 1)
+    AnchorData.Pivot = (0.5, 1)
+    AnchorData.AnchoredPosition = (0, -8)
+    AnchorData.SizeDelta = (-24, 20)
+    FontSize = 15
+    Color = #1E2230
+    HAlign = Left
+    VAlign = Top
+    OverflowType = HorizontalOverflow
+}
+
+style Note {
+    AnchorData.AnchorMin = (0, 1)
+    AnchorData.AnchorMax = (0, 1)
+    AnchorData.Pivot = (0, 1)
+    AnchorData.SizeDelta = (280, 16)
+    FontSize = 12
+    Color = #5A6172
+    HAlign = Left
+    VAlign = Top
+    OverflowType = HorizontalOverflow
+}
+
+style Box {
+    AnchorData.AnchorMin = (0, 1)
+    AnchorData.AnchorMax = (0, 1)
+    AnchorData.Pivot = (0, 1)
+    Brush.ImageSize = (0, 0)
+    Brush.TintColor = #E4E8F0
+}
+
+style Glyphs {
+    AnchorData.AnchorMin = (0, 1)
+    AnchorData.AnchorMax = (0, 1)
+    AnchorData.Pivot = (0, 1)
+    Color = #1E2230
+    HAlign = Center
+    VAlign = Middle
+    OverflowType = HorizontalOverflow
+}
+
+Widget Root {
+    Image Page {
+        Brush.TintColor = #F5F3EE
+        AnchorData.AnchorMin = (0, 0)
+        AnchorData.AnchorMax = (1, 1)
+        AnchorData.SizeDelta = (0, 0)
+    }
+
+    Text Heading : Title {
+        Text = "Combining marks, 64 px and 48 px"
+    }
+
+    Text DecomposedLabel : Note {
+        AnchorData.AnchoredPosition = (24, -44)
+        Text = "e + U+0323 + U+0302 (references)"
+    }
+    Image DecomposedBox : Box {
+        AnchorData.AnchoredPosition = (24, -64)
+        AnchorData.SizeDelta = (160, 110)
+    }
+    Text Font_World_Decomposed : Glyphs {
+        AnchorData.AnchoredPosition = (24, -64)
+        AnchorData.SizeDelta = (160, 110)
+        FontSize = 64
+        bRichText = true
+        Text = "e&#x323;&#x302;"
+    }
+
+    Text PrecomposedLabel : Note {
+        AnchorData.AnchoredPosition = (208, -44)
+        Text = "U+1EC7, one character"
+    }
+    Image PrecomposedBox : Box {
+        AnchorData.AnchoredPosition = (208, -64)
+        AnchorData.SizeDelta = (160, 110)
+    }
+    Text Font_World_Precomposed : Glyphs {
+        AnchorData.AnchoredPosition = (208, -64)
+        AnchorData.SizeDelta = (160, 110)
+        FontSize = 64
+        Text = "ệ"
+    }
+
+    Text ZalgoLabel : Note {
+        AnchorData.AnchoredPosition = (24, -188)
+        AnchorData.SizeDelta = (592, 16)
+        Text = "Z a l g o, each with an overlay mark: U+0335 U+0337 U+0338 U+0336 U+0334"
+    }
+    Image ZalgoBox : Box {
+        AnchorData.AnchoredPosition = (24, -208)
+        AnchorData.SizeDelta = (344, 64)
+    }
+    Text Font_World_Zalgo : Glyphs {
+        AnchorData.AnchoredPosition = (24, -208)
+        AnchorData.SizeDelta = (344, 64)
+        FontSize = 48
+        Text = "Z̵a̷l̸g̶o̴"
+    }
+}

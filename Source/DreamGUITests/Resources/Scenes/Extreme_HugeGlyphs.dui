@@ -1,0 +1,72 @@
+// Glyphs at 512 and 256 px, far past the size the distance field was made at: edges stay sharp and corners stay
+// corners at any magnification.
+// @stage 1280x736
+
+style Title {
+    AnchorData.AnchorMin = (0, 1)
+    AnchorData.AnchorMax = (1, 1)
+    AnchorData.Pivot = (0.5, 1)
+    AnchorData.AnchoredPosition = (0, -8)
+    AnchorData.SizeDelta = (-24, 20)
+    FontSize = 15
+    Color = #1E2230
+    HAlign = Left
+    VAlign = Top
+    OverflowType = HorizontalOverflow
+}
+
+style Note {
+    AnchorData.AnchorMin = (0, 1)
+    AnchorData.AnchorMax = (0, 1)
+    AnchorData.Pivot = (0, 1)
+    AnchorData.SizeDelta = (300, 16)
+    FontSize = 12
+    Color = #5A6172
+    HAlign = Left
+    VAlign = Top
+    OverflowType = HorizontalOverflow
+}
+
+style Huge {
+    AnchorData.AnchorMin = (0, 1)
+    AnchorData.AnchorMax = (0, 1)
+    AnchorData.Pivot = (0, 1)
+    Color = #1E2230
+    HAlign = Left
+    VAlign = Top
+    OverflowType = HorizontalOverflow
+    Text = "Ag"
+}
+
+Widget Root {
+    Image Page {
+        Brush.TintColor = #F5F3EE
+        AnchorData.AnchorMin = (0, 0)
+        AnchorData.AnchorMax = (1, 1)
+        AnchorData.SizeDelta = (0, 0)
+    }
+
+    Text Heading : Title {
+        Text = "Huge glyphs, default font"
+    }
+
+    Text Label512 : Note {
+        AnchorData.AnchoredPosition = (24, -44)
+        Text = "512 px"
+    }
+    Text Glyphs512 : Huge {
+        AnchorData.AnchoredPosition = (24, -64)
+        AnchorData.SizeDelta = (740, 660)
+        FontSize = 512
+    }
+
+    Text Label256 : Note {
+        AnchorData.AnchoredPosition = (780, -44)
+        Text = "256 px"
+    }
+    Text Glyphs256 : Huge {
+        AnchorData.AnchoredPosition = (780, -64)
+        AnchorData.SizeDelta = (480, 330)
+        FontSize = 256
+    }
+}
