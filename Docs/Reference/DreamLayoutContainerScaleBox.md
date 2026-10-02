@@ -13,15 +13,16 @@ UMG Scale Box
 | Name | Type | Category | In the details panel | From Blueprint | Description |
 |---|---|---|---|---|---|
 | `Padding` | `FMargin` | ScaleBox | yes | `SetPadding` |  |
-| `Stretch` | `EDreamScaleBoxStretch` | ScaleBox | yes | `SetStretch` |  |
+| `Stretch` | `EDreamScaleBoxStretch` | ScaleBox | yes | `SetStretch` | How the content is scaled. ScaleToFitX, ScaleToFitY, ScaleToFill and UserSpecifiedWithClipping clip it to the box while the widget's own Clipping is left at Inherit, as SScaleBox's paint does. |
 | `UserSpecifiedScale` | `float` | ScaleBox | yes | `SetUserSpecifiedScale` |  |
-| `bIgnoreInheritedScale` | `bool` | ScaleBox | yes | `SetIgnoreInheritedScale` |  |
+| `bIgnoreInheritedScale` | `bool` | ScaleBox | yes | `SetIgnoreInheritedScale` | Divide whatever scale the stretch mode arrived at by the scale this box inherits from above, so the content is drawn at that scale on screen. Every mode, as SScaleBox divides them all -- and measured exactly as it is arranged, so the box asks its parent for the room its content will actually take. |
 | `StretchDirection` | `EDreamScaleBoxStretchDirection` | ScaleBox | yes | `SetStretchDirection` | Which way the box is allowed to scale, matching Slate's EStretchDirection. DownOnly is the one that gets used: art authored at its intended size should shrink to fit a small screen and never be blown up past it, which is a rule the Stretch modes cannot state on their own. |
 
 ## Functions
 
 | Function | Kind | Description |
 |---|---|---|
+| `float GetSafeZoneScale()` | pure | The scale ScaleBySafeZone draws at right now: 1 under any other stretch, and wherever there is no game viewport to ask. |
 | `void SetIgnoreInheritedScale(bool Value)` | callable | Set Ignore Inherited Scale |
 | `void SetPadding(FMargin Value)` | callable | Set Padding |
 | `void SetStretch(EDreamScaleBoxStretch Value)` | callable | Set Stretch |
@@ -34,10 +35,10 @@ Every Blueprint-facing member of the UMG class, and where it went. *adopt*: same
 
 | UMG | Member | Status | Here | Note |
 |---|---|---|---|---|
-| `UScaleBox` | `Stretch` | adopt | `Stretch` | EDreamScaleBoxStretch, with the same seven cases as Slate's EStretch. |
-| `UScaleBox` | `StretchDirection` | adopt | `StretchDirection` | EDreamScaleBoxStretchDirection. Bounds the scale the mode arrived at, and only that: UserSpecified and Fill state a scale rather than derive one, so they are left alone as in Slate. |
+| `UScaleBox` | `Stretch` | adopt | `Stretch` | EDreamScaleBoxStretch, with all nine of Slate's EStretch cases; ScaleBySafeZone and UserSpecifiedWithClipping came last and were appended, so every value saved before them keeps its meaning. ScaleBySafeZone draws at one scale taken from the game viewport's safe margin (GetSafeZoneScale, refreshed when the stretch or the platform's safe frame changes; 1 with no game viewport). ScaleToFitX, ScaleToFitY, ScaleToFill and UserSpecifiedWithClipping clip to the box while the widget's own Clipping is Inherit, as SScaleBox's paint does. |
+| `UScaleBox` | `StretchDirection` | adopt | `StretchDirection` | EDreamScaleBoxStretchDirection. Bounds the scale the mode arrived at, and only that: the stated scales (UserSpecified, UserSpecifiedWithClipping, ScaleBySafeZone) and Fill state a scale rather than derive one, so they are left alone as in Slate. |
 | `UScaleBox` | `UserSpecifiedScale` | adopt | `UserSpecifiedScale` |  |
-| `UScaleBox` | `IgnoreInheritedScale` | map | `bIgnoreInheritedScale` | Same name with this plugin's boolean prefix. |
+| `UScaleBox` | `IgnoreInheritedScale` | map | `bIgnoreInheritedScale` | Same name with this plugin's boolean prefix. Every mode's scale is divided by the inherited one, as SScaleBox divides them all, and measured as it is arranged, so the box asks its parent for the room its content takes. |
 | `UScaleBox` | `SetStretch` | adopt | `SetStretch` |  |
 | `UScaleBox` | `SetStretchDirection` | adopt | `SetStretchDirection` |  |
 | `UScaleBox` | `SetUserSpecifiedScale` | adopt | `SetUserSpecifiedScale` |  |

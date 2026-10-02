@@ -49,8 +49,9 @@
  * one control do its animated thing through the real pointer pipeline and asserts two things: nothing
  * crashed on the way (the test got to the end), and the control arrived where the animation would
  * have taken it. Where a control has a written contract of its own (the menu anchor's, the ring's and
- * the dropdown's snap-to-end fallbacks; the list's reveal, which never animates; the expandable area's
- * own ticked expansion), that is what is asserted; where it has none, the end-state rule is.
+ * the dropdown's snap-to-end fallbacks; the list's reveal, which jumps unless bEnableScrollAnimation asks
+ * it to glide and lands at once where no tween can play the glide; the expandable area's own ticked
+ * expansion), that is what is asserted; where it has none, the end-state rule is.
  *
  * "Arrived" is waited for rather than read at once, for up to SettleSeconds -- longer than any default
  * transition -- so the claim is that the end state is reached, not how.
@@ -398,8 +399,8 @@ bool FDreamNoTweenWorldMenuAnchorTest::RunTest(const FString& Parameters)
 	TestTrue(TEXT("The open popup is awake"), Popup->GetWidgetActive());
 	TestTrue(TEXT("Open, the popup is fully opaque"),
 		SettlesOn(Rig, [Popup]() { return FMath::IsNearlyEqual(Popup->GetRenderOpacity(), 1.0f, 0.001f); }, TEXT("the open popup becoming fully opaque")));
-	// The open lifted the popup to the screen and laid a blocker behind it; two frames for both to be
-	// arranged before a click aims past them.
+	// The open lifted the popup to the screen on the popup layer, which put its outside-click sheet behind
+	// it; two frames for both to be arranged before a click aims past them.
 	Rig.PumpFrames(2);
 
 	// The bottom-right corner of the viewport, which neither the trigger nor any placement reaches.
@@ -733,9 +734,10 @@ bool FDreamNoTweenWorldScrollBoxWheelTest::RunTest(const FString& Parameters)
 }
 
 /*
- * The list's reveal does not animate at all -- UDreamListViewBase::ScrollItemIntoView sets the offset
- * whether or not it was asked to glide -- so it lands in any world. Pinned so that a reveal moved onto a
- * tween has to keep landing where there is none.
+ * The list's reveal jumps unless bEnableScrollAnimation is on (off by default, as here), and when it is on
+ * it glides through the scroll view's glide, which lands at once in a world with no tween manager -- so it
+ * lands in any world. Pinned so that a reveal that does play on a tween has to keep landing where there is
+ * none.
  */
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamNoTweenWorldListRevealTest,

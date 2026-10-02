@@ -1393,6 +1393,89 @@ bool FDreamMeshModifierEasePropertyEmptySelectionTest::RunTest(const FString& Pa
 }
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamMeshModifierTextAnimationMovesOnlyWithAMovingPropertyTest,
+	"DreamGUI.MeshModifier.ATextAnimationSaysItMovesVerticesOnlyWhileAPropertyThatMovesThemIsInstalled",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamMeshModifierTextAnimationMovesOnlyWithAMovingPropertyTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamMeshModifierTestLocal;
+
+	// What a modifier answers for positions and UVs is how a text decides whether it may draw its small sizes from
+	// coverage glyphs on the device pixel grid: an animation that moves glyphs takes them off it, one that only fades or
+	// recolours them does not. A TextAnimation used to answer yes to everything. It answers from its properties now: the
+	// built-in alpha and colour ones do not move a vertex, every other class -- the position, rotation and scale ones,
+	// eased, random or waving -- does. Colours and triangles are still answered yes whatever is installed.
+	UDreamMeshModifierTextAnimation* Animation =
+		NewObject<UDreamMeshModifierTextAnimation>(GetTransientPackage());
+	auto Ask = [Animation](bool& OutPositions, bool& OutUVs, bool& OutColors, bool& OutTriangles)
+	{
+		OutPositions = OutUVs = OutColors = OutTriangles = false;
+		Animation->ModifierWillChangeVertexData(OutTriangles, OutPositions, OutUVs, OutColors);
+	};
+	auto Install = [Animation](std::initializer_list<UClass*> InClasses)
+	{
+		TArray<UDreamMeshModifierTextAnimation_Property*> Properties;
+		for (UClass* PropertyClass : InClasses)
+		{
+			Properties.Add(PropertyClass != nullptr ? NewObject<UDreamMeshModifierTextAnimation_Property>(Animation, PropertyClass) : nullptr);
+		}
+		Animation->SetProperties(Properties);
+	};
+
+	bool bPositions = true, bUVs = true, bColors = false, bTriangles = false;
+	Ask(bPositions, bUVs, bColors, bTriangles);
+	TestFalse(TEXT("With no property installed nothing is moved"), bPositions);
+	TestFalse(TEXT("...nor re-mapped"), bUVs);
+	TestTrue(TEXT("...while colours are still said to change"), bColors);
+	TestTrue(TEXT("...and triangles"), bTriangles);
+
+	UClass* const StillClasses[] = {
+		UDreamMeshModifierTextAnimation_AlphaProperty::StaticClass(),
+		UDreamMeshModifierTextAnimation_ColorProperty::StaticClass(),
+		UDreamMeshModifierTextAnimation_ColorRandomProperty::StaticClass(),
+	};
+	for (UClass* PropertyClass : StillClasses)
+	{
+		Install({ PropertyClass });
+		Ask(bPositions, bUVs, bColors, bTriangles);
+		TestFalse(*FString::Printf(TEXT("%s moves no vertex"), *PropertyClass->GetName()), bPositions || bUVs);
+		TestTrue(*FString::Printf(TEXT("%s changes colours"), *PropertyClass->GetName()), bColors);
+	}
+	Install({ StillClasses[0], StillClasses[1], StillClasses[2], nullptr });
+	Ask(bPositions, bUVs, bColors, bTriangles);
+	TestFalse(TEXT("Every still property at once, with an empty slot among them, moves no vertex"), bPositions || bUVs);
+
+	UClass* const MovingClasses[] = {
+		UDreamMeshModifierTextAnimation_PositionProperty::StaticClass(),
+		UDreamMeshModifierTextAnimation_PositionRandomProperty::StaticClass(),
+		UDreamMeshModifierTextAnimation_RotationProperty::StaticClass(),
+		UDreamMeshModifierTextAnimation_RotationRandomProperty::StaticClass(),
+		UDreamMeshModifierTextAnimation_ScaleProperty::StaticClass(),
+		UDreamMeshModifierTextAnimation_ScaleRandomProperty::StaticClass(),
+		UDreamMeshModifierTextAnimation_PositionWaveProperty::StaticClass(),
+		UDreamMeshModifierTextAnimation_RotationWaveProperty::StaticClass(),
+		UDreamMeshModifierTextAnimation_ScaleWaveProperty::StaticClass(),
+	};
+	for (UClass* PropertyClass : MovingClasses)
+	{
+		Install({ PropertyClass });
+		Ask(bPositions, bUVs, bColors, bTriangles);
+		TestTrue(*FString::Printf(TEXT("%s moves vertices"), *PropertyClass->GetName()), bPositions);
+		TestTrue(*FString::Printf(TEXT("%s is said to re-map them too, being taken off the grid either way"), *PropertyClass->GetName()), bUVs);
+		// After a still one as well: one property that moves is enough.
+		Install({ StillClasses[0], PropertyClass });
+		Ask(bPositions, bUVs, bColors, bTriangles);
+		TestTrue(*FString::Printf(TEXT("%s after an alpha property still moves vertices"), *PropertyClass->GetName()), bPositions);
+	}
+
+	Install({});
+	Ask(bPositions, bUVs, bColors, bTriangles);
+	TestFalse(TEXT("Every property taken off again, nothing is moved"), bPositions || bUVs);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamMeshModifierWavePropertyLifecycleTest,
 	"DreamGUI.MeshModifier.AWavePropertyInitialisesAndTearsDownWithNoTweenManager",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)

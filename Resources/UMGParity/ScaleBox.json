@@ -3,10 +3,10 @@
 	"umgHeader": "Components/ScaleBox.h",
 	"dreamClass": "UDreamLayoutContainerScaleBox",
 	"members": [
-		{"umg": "Stretch", "kind": "property", "status": "adopt", "dream": "", "note": "EDreamScaleBoxStretch, with the same seven cases as Slate's EStretch."},
-		{"umg": "StretchDirection", "kind": "property", "status": "adopt", "dream": "", "note": "EDreamScaleBoxStretchDirection. Bounds the scale the mode arrived at, and only that: UserSpecified and Fill state a scale rather than derive one, so they are left alone as in Slate."},
+		{"umg": "Stretch", "kind": "property", "status": "adopt", "dream": "", "note": "EDreamScaleBoxStretch, with all nine of Slate's EStretch cases; ScaleBySafeZone and UserSpecifiedWithClipping came last and were appended, so every value saved before them keeps its meaning. ScaleBySafeZone draws at one scale taken from the game viewport's safe margin (GetSafeZoneScale, refreshed when the stretch or the platform's safe frame changes; 1 with no game viewport). ScaleToFitX, ScaleToFitY, ScaleToFill and UserSpecifiedWithClipping clip to the box while the widget's own Clipping is Inherit, as SScaleBox's paint does."},
+		{"umg": "StretchDirection", "kind": "property", "status": "adopt", "dream": "", "note": "EDreamScaleBoxStretchDirection. Bounds the scale the mode arrived at, and only that: the stated scales (UserSpecified, UserSpecifiedWithClipping, ScaleBySafeZone) and Fill state a scale rather than derive one, so they are left alone as in Slate."},
 		{"umg": "UserSpecifiedScale", "kind": "property", "status": "adopt", "dream": "", "note": ""},
-		{"umg": "IgnoreInheritedScale", "kind": "property", "status": "map", "dream": "bIgnoreInheritedScale", "note": "Same name with this plugin's boolean prefix."},
+		{"umg": "IgnoreInheritedScale", "kind": "property", "status": "map", "dream": "bIgnoreInheritedScale", "note": "Same name with this plugin's boolean prefix. Every mode's scale is divided by the inherited one, as SScaleBox divides them all, and measured as it is arranged, so the box asks its parent for the room its content takes."},
 		{"umg": "SetStretch", "kind": "function", "status": "adopt", "dream": "", "note": ""},
 		{"umg": "SetStretchDirection", "kind": "function", "status": "adopt", "dream": "", "note": ""},
 		{"umg": "SetUserSpecifiedScale", "kind": "function", "status": "adopt", "dream": "", "note": ""},

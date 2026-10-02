@@ -5,20 +5,17 @@
 #include "Core/DreamUIWidgetRegistry.h"
 
 #include "Core/DreamUIBuilder.h"
+#include "Core/DreamUIInputServices.h"
 #include "Core/DreamUserWidget.h"
 #include "Core/DreamWidgetTree.h"
-#include "Core/Components/DreamCanvas.h"
 #include "Core/Components/DreamPanelLayouts.h"
 #include "Core/Components/DreamPanelSlot.h"
 #include "Core/Components/DreamRectBlock.h"
 #include "Core/Components/DreamVisual.h"
-#include "Core/Components/DreamVisualEmpty.h"
 #include "Core/Components/DreamWidget.h"
 #include "DreamTweener.h"
-#include "Event/DreamEventSystem.h"
 #include "Interaction/DreamContentWidget.h"
 #include "Interaction/DreamUIPopupLayer.h"
-#include "Interaction/UIButton.h"
 #include "Interaction/UISelectable.h"
 
 const FName UDreamMenuAnchor::MenuSlotName(TEXT("Menu"));
@@ -93,12 +90,8 @@ void UDreamMenuAnchor::ApplyStyle()
 	}
 }
 
-void UDreamMenuAnchor::PlacePopup(const FDreamMenuAnchorStyle& InStyle)
+void UDreamMenuAnchor::ComputePlacement(const FDreamMenuAnchorStyle& InStyle, FVector2D& OutTopLeft, FVector2D& OutSize) const
 {
-	if (PopupNode == nullptr)
-	{
-		return;
-	}
 	// A zero on an axis is "leave it to the content": the node keeps whatever size it has, which is
 	// what an authored menu that states its own size wants.
 	const FVector2D AnchorSize(GetWidth(), GetHeight());
@@ -141,13 +134,70 @@ void UDreamMenuAnchor::PlacePopup(const FDreamMenuAnchorStyle& InStyle)
 				TopLeft, Size, AnchorOffset, AnchorSize.X, WindowSize, false, AnchorScale);
 		}
 	}
+	OutTopLeft = TopLeft;
+	OutSize = Size;
+}
 
+void UDreamMenuAnchor::PlacePopup(const FDreamMenuAnchorStyle& InStyle)
+{
+	if (PopupNode == nullptr)
+	{
+		return;
+	}
+	FVector2D TopLeft = FVector2D::ZeroVector;
+	FVector2D Size = FVector2D::ZeroVector;
+	ComputePlacement(InStyle, TopLeft, Size);
 	// Into the widget frame: anchored to the control's TOP-LEFT corner with the popup's own top-left
 	// as its pivot, so the number above IS the anchored position -- once y is negated, because this
 	// framework's local space is y-UP and that function's is y-down.
 	PopupNode->SetHorizontalAndVerticalAnchorMinMax(FVector2D(0.0, 1.0), FVector2D(0.0, 1.0), false, false);
 	PopupNode->SetPivot(FVector2D(0.0, 1.0));
 	PopupNode->SetAnchoredPositionAndSizeDelta(FVector2D(TopLeft.X, -TopLeft.Y), Size);
+}
+
+void UDreamMenuAnchor::PlaceLiftedPopup(UDreamWidget* InPopup)
+{
+	if (InPopup == nullptr || InPopup != PopupNode)
+	{
+		return;
+	}
+	const UDreamWidget* Plane = InPopup->GetParent();
+	if (!IsValid(Plane))
+	{
+		return;
+	}
+	bPopupElevated = true;
+	FVector2D TopLeft = FVector2D::ZeroVector;
+	FVector2D Size = FVector2D::ZeroVector;
+	ComputePlacement(ResolveStyle(Style, &UDreamUIStyleSheet::MenuAnchorStyle), TopLeft, Size);
+	// The lift pinned the popup to a point of the screen root with its top-left pivot kept, so its size is its width and
+	// height, and its anchored position is where its top-left corner sits in the root's plane: this control's own
+	// top-left corner moved by TopLeft -- y negated, this local space being y-up -- carried into that plane, Y across
+	// and Z up, as the lift itself maps.
+	InPopup->SetWidth(static_cast<float>(Size.X));
+	InPopup->SetHeight(static_cast<float>(Size.Y));
+	const FVector Corner(0.0, GetLocalSpaceLeft() + TopLeft.X, GetLocalSpaceTop() - TopLeft.Y);
+	const FVector InPlane = Plane->GetLayoutWorldTransform().InverseTransformPosition(
+		GetLayoutWorldTransform().TransformPosition(Corner));
+	const FVector2D Anchored(InPlane.Y, InPlane.Z);
+	// Only for a real move: the transforms round a little differently from frame to frame, and an exact compare
+	// would lay the menu out again on every one of them.
+	if (!InPopup->GetAnchoredPosition().Equals(Anchored, 0.01))
+	{
+		InPopup->SetAnchoredPosition(Anchored);
+	}
+}
+
+void UDreamMenuAnchor::RefreshOpenPlacement()
+{
+	if (bPopupElevated)
+	{
+		PlaceLiftedPopup(PopupNode);
+	}
+	else
+	{
+		PlacePopup(ResolveStyle(Style, &UDreamUIStyleSheet::MenuAnchorStyle));
+	}
 }
 
 FVector2D UDreamMenuAnchor::ResolveOffsetDirection(EDreamMenuPlacement InPlacement)
@@ -240,19 +290,38 @@ void UDreamMenuAnchor::Open(bool bFocusMenu)
 	EnsureMenuInstance();
 
 	const FDreamMenuAnchorStyle& Active = ResolveStyle(Style, &UDreamUIStyleSheet::MenuAnchorStyle);
-	// The placement first, while the popup is still a child of the anchor: Elevate keeps the world
+	// The placement first, while the popup is still a child of the anchor: the lift keeps the world
 	// position it finds, so positioning against the anchor and THEN lifting is what puts a menu in
 	// the right place without the layer knowing anything about anchors.
 	PlacePopup(Active);
 	PopupNode->SetWidgetActive(true);
 
-	if (bCloseOnClickOutside)
+	bPopupElevated = false;
+	if (UDreamUIPopupLayer* Layer = UDreamUIPopupLayer::Get(this))
 	{
-		CreateBlocker();
+		FDreamPopupParams Params;
+		Params.Popup = PopupNode;
+		// This anchor: what the menu follows, what takes it down when it goes, and what decides its parent -- an
+		// anchor inside an open menu opens a submenu of it. Not where focus comes back to, an anchor being nothing
+		// focus sits on: that is whatever had focus when the menu opened.
+		Params.Opener = this;
+		Params.UserIndex = GetOwningPlayerIndex();
+		Params.OutsideClick = bCloseOnClickOutside ? EDreamPopupOutsideClick::Consume : EDreamPopupOutsideClick::Ignore;
+		Params.bFocusOnOpen = bFocusMenu;
+		Params.InitialFocus = bFocusMenu ? FindFirstMenuControl() : nullptr;
+		Params.Place = FDreamPopupPlaceDelegate::CreateUObject(this, &UDreamMenuAnchor::PlaceLiftedPopup);
+		Params.OnDismissed = FDreamPopupDismissedDelegate::CreateUObject(this, &UDreamMenuAnchor::HandleMenuDismissed);
+		bPopupElevated = Layer->Push(Params);
 	}
-	if (UDreamUIPopupLayer* Popup = UDreamUIPopupLayer::Get(this))
+	if (!bPopupElevated)
 	{
-		bPopupElevated = Popup->Elevate(PopupNode);
+		// No layer to lift it to -- no screen root in this world: the menu opens in place and closing it is the
+		// caller's job, but focus a player moves into it still comes back when it closes.
+		FallbackFocusReturn.Capture(this);
+		if (bFocusMenu)
+		{
+			FocusMenuContent();
+		}
 	}
 
 	if (Active.TransitionDuration > 0.0f)
@@ -270,31 +339,34 @@ void UDreamMenuAnchor::Open(bool bFocusMenu)
 	{
 		PopupNode->SetRenderOpacity(1.0f);
 	}
-	if (bFocusMenu)
-	{
-		FocusMenuContent();
-	}
 	OnMenuOpenChanged.Broadcast(true);
 }
 
-void UDreamMenuAnchor::FocusMenuContent()
+UDreamWidget* UDreamMenuAnchor::FindFirstMenuControl()
 {
 	if (PopupNode == nullptr || GetWorld() == nullptr)
 	{
 		// No world means no event system -- an initialize-time open, or a headless test.
-		return;
+		return nullptr;
 	}
 	UUISelectable* First = UUISelectable::FindDefaultSelectableIn(this, PopupNode);
-	if (First == nullptr || First->GetWidget() == nullptr)
+	return First != nullptr ? First->GetWidget() : nullptr;
+}
+
+void UDreamMenuAnchor::FocusMenuContent()
+{
+	UDreamWidget* First = FindFirstMenuControl();
+	if (First == nullptr)
 	{
 		// A menu with nothing navigable in it (a tooltip, a picture) keeps focus where it is rather
 		// than dropping it somewhere arbitrary. Same rule, same words, as UDreamTabView's.
 		return;
 	}
-	// The player whose menu it is, not player 0.
-	if (UDreamEventSystem* Events = UDreamEventSystem::GetDreamEventSystemInstance(this, GetOwningPlayerIndex()))
+	// The player whose menu it is, not player 0 -- and the navigation cursor with the focus, so the next stick
+	// press walks the menu rather than starting from wherever the cursor was left.
+	if (UDreamUIInputServices* Services = UDreamUIInputServices::Get(this))
 	{
-		Events->SetSelectComponentWithDefault(First->GetWidget());
+		Services->FocusForNavigation(First, GetOwningPlayerIndex());
 	}
 }
 
@@ -329,7 +401,7 @@ void UDreamMenuAnchor::FitInWindow(bool bInFitInWindow)
 	{
 		// An open menu moves now, for SetPlacement's reason: where the popup sits is placement work,
 		// and a clamp that waited for the next open would read as a switch that does nothing.
-		PlacePopup(ResolveStyle(Style, &UDreamUIStyleSheet::MenuAnchorStyle));
+		RefreshOpenPlacement();
 	}
 }
 
@@ -340,23 +412,54 @@ void UDreamMenuAnchor::Close()
 		return;
 	}
 	bIsOpen = false;
-	DestroyBlocker();
 	if (IsValid(PopupNode))
 	{
-		// Home first, then asleep: Restore reparents under the anchor again, and a popup put to sleep
-		// while still lifted would be an inactive widget hanging off the screen root that nothing
-		// would ever come back for.
-		if (bPopupElevated)
+		UDreamUIPopupLayer* Layer = UDreamUIPopupLayer::Get(this);
+		if (bPopupElevated && Layer != nullptr && Layer->IsOpen(PopupNode))
 		{
-			if (UDreamUIPopupLayer* Popup = UDreamUIPopupLayer::Get(this))
-			{
-				Popup->Restore(PopupNode);
-			}
-			bPopupElevated = false;
+			// The layer's close, in its order: every menu opened from inside this one, then the focus that went
+			// into it back where it was when it opened, then home under the anchor -- all before it is put to
+			// sleep, which would otherwise clear that focus first. HandleMenuDismissed finds this anchor closed.
+			Layer->Dismiss(PopupNode, EDreamPopupDismissReason::Explicit);
 		}
+		else
+		{
+			FallbackFocusReturn.Return(PopupNode);
+		}
+	}
+	FinishClose();
+}
+
+void UDreamMenuAnchor::HandleMenuDismissed(UDreamWidget* InPopup, EDreamPopupDismissReason InReason)
+{
+	if (!bIsOpen)
+	{
+		// Close's own dismissal.
+		return;
+	}
+	// Closed from outside -- a press elsewhere, Back, the menu this one was opened from closing, a menu opened in
+	// its place, this anchor hidden or put to sleep. The layer has given focus back and the popup home already.
+	bIsOpen = false;
+	if (InReason == EDreamPopupDismissReason::WorldTeardown)
+	{
+		// The world comes down with the popup in it: nothing was put back, and there is nobody to tell.
+		bPopupElevated = false;
+		return;
+	}
+	FinishClose();
+}
+
+void UDreamMenuAnchor::FinishClose()
+{
+	bPopupElevated = false;
+	if (IsValid(PopupNode))
+	{
+		// Home already -- the layer puts a closing popup back before it says so -- and now asleep. A popup put to
+		// sleep while still lifted would be an inactive widget hanging off the screen root that nothing would ever
+		// come back for.
 		PopupNode->SetWidgetActive(false);
-		// The whole resting scheme, not just the numbers: Elevate re-anchored the popup to a POINT on
-		// the screen root and Restore reparents plainly, so without this the next open works against
+		// The whole resting scheme, not just the numbers: the lift re-anchored the popup to a POINT on
+		// the screen root and the trip home reparents plainly, so without this the next open works against
 		// the wrong anchors. UDreamDropdown measured that one as a zero-width list on the second open.
 		PlacePopup(ResolveStyle(Style, &UDreamUIStyleSheet::MenuAnchorStyle));
 	}
@@ -384,8 +487,9 @@ void UDreamMenuAnchor::SetPlacement(EDreamMenuPlacement InPlacement)
 	{
 		// An open menu moves now. ApplyStyle pushes the look; where the popup SITS is placement work,
 		// and a menu that stayed put until it was closed and opened again would read as a knob that
-		// does nothing.
-		PlacePopup(ResolveStyle(Style, &UDreamUIStyleSheet::MenuAnchorStyle));
+		// does nothing. Lifted, it is placed in the plane it was lifted to rather than against this
+		// anchor's rect, which it no longer hangs in.
+		RefreshOpenPlacement();
 	}
 }
 
@@ -421,25 +525,21 @@ void UDreamMenuAnchor::SetMenuSize(FVector2D InMenuSize)
 	MenuSize = InMenuSize;
 	if (bIsOpen)
 	{
-		PlacePopup(ResolveStyle(Style, &UDreamUIStyleSheet::MenuAnchorStyle));
+		RefreshOpenPlacement();
 	}
 }
 
 void UDreamMenuAnchor::SetCloseOnClickOutside(bool bInCloseOnClickOutside)
 {
 	bCloseOnClickOutside = bInCloseOnClickOutside;
-	if (!bIsOpen)
+	if (!bIsOpen || !bPopupElevated)
 	{
 		return;
 	}
-	// While open, the switch is about a blocker that exists right now.
-	if (bInCloseOnClickOutside)
+	// While open, the switch is about the press that comes next.
+	if (UDreamUIPopupLayer* Layer = UDreamUIPopupLayer::Get(this))
 	{
-		CreateBlocker();
-	}
-	else
-	{
-		DestroyBlocker();
+		Layer->SetOutsideClick(PopupNode, bCloseOnClickOutside ? EDreamPopupOutsideClick::Consume : EDreamPopupOutsideClick::Ignore);
 	}
 }
 
@@ -455,59 +555,21 @@ void UDreamMenuAnchor::ToggleOpen(bool bFocusOnOpen)
 	}
 }
 
+void UDreamMenuAnchor::NativeOnDisable()
+{
+	// A menu lifted to the screen root is not under this anchor, and does not go to sleep with it: an anchor put to
+	// sleep -- or an ancestor of it -- would otherwise leave its menu up, answering for an anchor nobody can see.
+	Close();
+	Super::NativeOnDisable();
+}
+
 void UDreamMenuAnchor::NativeOnDestruct()
 {
-	// An anchor torn down while its menu is open would otherwise leave a lifted popup and a
-	// full-screen blocker on the screen root with nothing left that could close them -- which is the
-	// invisible-sheet-over-everything failure UUIDropdown::Show was fixed for.
+	// An anchor torn down while its menu is open would otherwise leave a lifted popup on the screen root
+	// with nothing left that could close it -- which is the stranded-popup failure UUIDropdown was
+	// fixed for.
 	Close();
 	Super::NativeOnDestruct();
-}
-
-void UDreamMenuAnchor::CreateBlocker()
-{
-	if (IsValid(BlockerNode))
-	{
-		return;
-	}
-	UDreamCanvas* RootCanvas = GetRootCanvas();
-	if (RootCanvas == nullptr || !IsValid(RootCanvas->GetWidget()))
-	{
-		// No screen to cover. The menu still opens -- it is simply the caller's job to close it,
-		// which is exactly what bCloseOnClickOutside=false means.
-		return;
-	}
-	BlockerNode = NewObject<UDreamWidget>(GetOuter());
-	BlockerNode->SetDisplayName(TEXT("MenuAnchor_Blocker"));
-	BlockerNode->SetParent(RootCanvas->GetWidget(), false);
-	BlockerNode->SetAnchorMin(FVector2D(0.0, 0.0));
-	BlockerNode->SetAnchorMax(FVector2D(1.0, 1.0));
-	BlockerNode->SetSizeDelta(FVector2D::ZeroVector);
-	// A visual is what makes a widget raycastable at all, and an empty one draws nothing while still
-	// answering the pointer -- hit testing is the rect range, not the pixels.
-	BlockerNode->CreateNewVisual<UDreamVisualEmpty>();
-	if (UDreamCanvas* BlockerCanvas = BlockerNode->AddComponent<UDreamCanvas>())
-	{
-		BlockerCanvas->SetOverrideSorting(true);
-		BlockerCanvas->SetSortOrderToHighestOfHierarchy();
-		BlockerCanvas->SetTraceChannel(RootCanvas->GetTraceChannel());
-	}
-	if (UUIButton* BlockerButton = BlockerNode->AddComponent<UUIButton>())
-	{
-		BlockerButton->GetOnClickEvent().AddWeakLambda(this, [this]()
-		{
-			Close();
-		});
-	}
-}
-
-void UDreamMenuAnchor::DestroyBlocker()
-{
-	if (IsValid(BlockerNode))
-	{
-		BlockerNode->DestroyWidget();
-	}
-	BlockerNode = nullptr;
 }
 
 // The tag this class answers to in .dui.

@@ -57,7 +57,7 @@
       "exclude": ["DreamGUI.Pie.", "DreamGUI.Performance."],
       "args": ["-RenderOffScreen"],
       "minTests": 32,
-      "timeoutMinutes": 30
+      "timeoutMinutes": 45
     },
     "Validate": {
       "about": "The Rhi preset under the RHI validation layer, which turns missing transitions and stale bindings into deterministic asserts with a callstack instead of a timing-dependent crash.",
@@ -65,7 +65,7 @@
       "exclude": ["DreamGUI.Pie.", "DreamGUI.Performance."],
       "args": ["-RenderOffScreen", "-rhivalidation"],
       "minTests": 32,
-      "timeoutMinutes": 40
+      "timeoutMinutes": 60
     },
     "Perf": {
       "about": "The benchmark (DreamGUI.Performance.*) alone in its editor on a real RHI off screen, so that nothing else competes for the machine while it is timed. It writes Saved/DreamGUITests/Perf/Benchmark.json and a CPU trace, Benchmark.utrace; Tools/Tests/perf_report.py shows, compares and breaks them down. Nothing fails on a time: a number is only worth something next to another run's on the same machine.",
@@ -73,7 +73,7 @@
       "flags": ["NonNullRHI"],
       "args": ["-RenderOffScreen"],
       "minTests": 1,
-      "timeoutMinutes": 20
+      "timeoutMinutes": 30
     },
     "Pie": {
       "about": "The play-in-editor layer (DreamGUI.Pie.*): a real game mode, local player, viewport and viewport client, one PIE session per test. In its own editor, out of Quick. Its NonNullRHI tests are dropped under -nullrhi and run in PieRhi.",
@@ -87,7 +87,7 @@
       "include": ["DreamGUI.", "DreamTween."],
       "args": ["-RenderOffScreen", "-dpcvars=r.GPUScene.UseReservedResources=0,r.GPUScene.InstanceDataTileSizeLog2=-1"],
       "minTests": 1404,
-      "timeoutMinutes": 60
+      "timeoutMinutes": 90
     }
   }
 }

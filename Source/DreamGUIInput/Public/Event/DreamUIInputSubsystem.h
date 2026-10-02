@@ -167,10 +167,29 @@ public:
 	//~ Begin UDreamUIInputServices
 	virtual bool SetFocus(UDreamWidget* InWidget, int32 InUserIndex, int32 InPointerId) override;
 	virtual bool HasFocus(const UDreamWidget* InWidget, int32 InUserIndex, int32 InPointerId) const override;
+	/**
+	 * Takes the navigation cursor off InWidget too, when it was there: a widget that lost focus because it was hidden
+	 * or disabled is no place for the next directional move to start from, nor for the next confirm to press.
+	 */
 	virtual void ClearFocus(UDreamWidget* InWidget, int32 InUserIndex, int32 InPointerId) override;
 	virtual bool HasFocusedDescendant(const UDreamWidget* InWidget, int32 InUserIndex) const override;
 	virtual bool IsHovered(const UDreamWidget* InWidget, int32 InUserIndex) const override;
 	virtual bool HasMouseCapture(const UDreamWidget* InWidget, int32 InUserIndex, int32 InPointerIndex) const override;
+	/** The Users map's keys, players that have been taken down left out. */
+	virtual void GetUserIndices(TArray<int32>& OutUserIndices) const override;
+	virtual UDreamWidget* GetFocusedWidget(int32 InUserIndex) const override;
+	/**
+	 * On the navigation pointer, whose highlight is the cursor every directional move starts from. Makes the player when
+	 * it has none yet, as the event system's selection always did: a scope pushed for player 1 before anything else
+	 * asked about player 1 still puts their focus somewhere.
+	 *
+	 * "In play" is taken as registered with the world, and "active" and "drawn" are read from the widgets' own switches
+	 * up the chain as well as from the hierarchy caches, so a scope focusing from inside the walk that wakes its screen,
+	 * or from its screen's begin play, is not refused for caches and lifecycles that are a moment from settling. The
+	 * focus-return paths ask for play themselves.
+	 */
+	virtual bool FocusForNavigation(UDreamWidget* InWidget, int32 InUserIndex) override;
+	virtual UDreamWidget* ResolveScopeFocusTarget(int32 InUserIndex) const override;
 	virtual UDreamPointerEventData* FindPointer(int32 InUserIndex, int32 InPointerId) const override;
 	virtual bool CanListenForActions() const override;
 	virtual FDreamUIActionHandle RegisterWidgetAction(UDreamWidget* InOwner, const FDataTableRowHandle& InAction,

@@ -17,12 +17,258 @@
 #include "Utils/DreamUIUtils.h"
 #include "Engine/Texture2D.h"
 #include "Engine/Texture2DArray.h"
+#include "Engine/TextureRenderTarget2D.h"
 #include "Engine/World.h"
+#include "Materials/Material.h"
+#include "UObject/Package.h"
 #include "Core/DreamUIWidgetRegistry.h"
+#include "Core/DreamGUISettings.h"
+#include "Core/DreamUISettings.h"
+#include "Core/DreamUIWorldContext.h"
+#include "Internationalization/Culture.h"
+#include "Internationalization/Internationalization.h"
 #include "Internationalization/TextTransformer.h"
+#include "UObject/ObjectKey.h"
 
 
 #define LOCTEXT_NAMESPACE "UIText"
+
+namespace DreamTextSmallTextLocal
+{
+	/** S5: how many sweeps in a row a device scale must stay the same for before a text draws from coverage at it. */
+	constexpr int32 SettleSweeps = 3;
+	/** S5: how far S may stray from the raster scale, as a fraction, before coverage glyphs are made again for it. */
+	constexpr float RasterScaleHysteresis = 0.01f;
+	/** Two device scales this close, as a fraction, are the same scale: what transform arithmetic leaves of an unchanged one. */
+	constexpr float SameScaleTolerance = 1.0e-5f;
+	/** A shift of the device grid this close to whole pixels is a whole-pixel one: well below what a pixel's coverage shows. */
+	constexpr float WholePixelTolerance = 1.0f / 256.0f;
+
+	bool IsSameScale(float A, float B)
+	{
+		return FMath::Abs(A - B) <= SameScaleTolerance * FMath::Max(FMath::Abs(A), FMath::Abs(B));
+	}
+
+	bool IsWholePixel(float InShift)
+	{
+		return FMath::Abs(InShift - FMath::RoundToFloat(InShift)) <= WholePixelTolerance;
+	}
+
+	/** Where a text's device pixel grid lies, when it can be placed on one: FDreamTextCoverageParams' DeviceScale, SnapOrigin and bLinearTarget. */
+	struct FPlacement
+	{
+		float DeviceScale = 0.0f;
+		FVector2f SnapOrigin = FVector2f::ZeroVector;
+		bool bLinearTarget = false;
+	};
+
+	/** How far, in device pixels across the widget, the one S the painter uses for both axes may miss the canvas's own. */
+	constexpr double MaxUnevenGridDrift = 0.125;
+
+	/**
+	 * Whether a widget is drawn straight onto the pixels of what its root canvas renders into -- a render-target canvas,
+	 * or a screen-space canvas drawn at the screen's resolution; no render layer, no perspective or shear, and relative to
+	 * the canvas's widget nothing but a uniform scale and a move in the canvas's plane (UDreamCanvas::Is2DUITransform's
+	 * flatness, with roll, mirroring and uneven scale ruled out as well) -- and if so, where its device grid lies. That is
+	 * measured rather than assumed: the widget's local origin and its unit steps right and up are taken through the
+	 * matrices the renderer draws the canvas with onto the target's pixels (the render target's size, or the viewport's).
+	 * So S and the origin hold whatever the canvas makes of its units -- its canvas scale, a render target's resolution
+	 * scale, a canvas size the projection rounds to whole units, a scaler whose reported scale is not the one on screen.
+	 * Coverage when it can be placed.
+	 */
+	EDreamTextSmallTextGate PlaceOnDeviceGrid(const UDreamWidget* InWidget, FPlacement& OutPlacement)
+	{
+		UDreamCanvas* RenderCanvas = InWidget != nullptr ? InWidget->GetRenderCanvas() : nullptr;
+		UDreamCanvas* RootCanvas = RenderCanvas != nullptr ? RenderCanvas->GetRootCanvas() : nullptr;
+		const UDreamWidget* CanvasWidget = RootCanvas != nullptr ? RootCanvas->GetWidget() : nullptr;
+		if (CanvasWidget == nullptr)
+		{
+			return EDreamTextSmallTextGate::NoCanvas;
+		}
+		const EDreamRenderMode RenderMode = RootCanvas->GetRenderMode();
+		// An editor world draws a screen-space canvas in the level, through the editor's camera (UDreamCanvas::UpdateRootCanvas).
+		const bool bScreen = RenderMode == EDreamRenderMode::ScreenSpaceOverlay && DreamUI::IsGameWorld(RootCanvas);
+		const bool bTarget = RenderMode == EDreamRenderMode::RenderTarget;
+		if (!bScreen && !bTarget)
+		{
+			return EDreamTextSmallTextGate::WorldSpace;
+		}
+		if (InWidget->GetRenderLayer() != nullptr)
+		{
+			return EDreamTextSmallTextGate::RenderLayer;
+		}
+		// Both draw through a matrix the world transform does not hold.
+		if (InWidget->HasPerspectiveApplied() || InWidget->HasShearApplied())
+		{
+			return EDreamTextSmallTextGate::Transform;
+		}
+		const FTransform ToCanvas = InWidget->GetWorldTransform() * CanvasWidget->GetWorldTransform().Inverse();
+		// The widget's right and up in the canvas's space: a uniform scale k on the canvas's own right and up, nothing else.
+		const FVector Right = ToCanvas.TransformVector(FVector(0.0, 1.0, 0.0));
+		const FVector Up = ToCanvas.TransformVector(FVector(0.0, 0.0, 1.0));
+		const double Scale = 0.5 * (Right.Y + Up.Z);
+		// The angle Is2DUITransform lets pass for flat, as a part of k; the same for a roll and for uneven scale.
+		const double Threshold = UDreamUISettings::GetAutoBatchThreshold();
+		const double OffAxis = FMath::Sin(FMath::DegreesToRadians(Threshold)) * FMath::Abs(Scale);
+		if (FMath::Abs(ToCanvas.GetLocation().X) > Threshold
+			|| Right.Y <= 0.0 || Up.Z <= 0.0
+			|| FMath::Abs(Right.X) > OffAxis || FMath::Abs(Up.X) > OffAxis
+			|| FMath::Abs(Right.Z) > OffAxis || FMath::Abs(Up.Y) > OffAxis
+			|| FMath::Abs(Right.Y - Up.Z) > OffAxis)
+		{
+			return EDreamTextSmallTextGate::Transform;
+		}
+
+		// What the canvas renders into, in pixels. A render target that follows the canvas, or is not made yet, is the
+		// canvas's size times its resolution scale (UDreamCanvas::UpdateRenderTarget makes it so before it draws); one the
+		// canvas follows is its own size. The screen is the viewport the canvas sizes itself from -- unless the screen-space
+		// UI is drawn at a fraction of it, into a smaller target scaled up afterwards, or not: the renderer decides that on
+		// its own thread (MSAA, depth testing and post processes refuse it), so there is no pixel grid to be sure of.
+		FIntPoint TargetPixels = FIntPoint::ZeroValue;
+		if (bTarget)
+		{
+			const UTextureRenderTarget2D* Target = RootCanvas->GetRenderTarget();
+			if (IsValid(Target) && RootCanvas->GetRenderTargetSizeMode() != EDreamCanvasRenderTargetSizeMode::RenderTargetFitToCanvas)
+			{
+				TargetPixels = FIntPoint((int32)Target->SizeX, (int32)Target->SizeY);
+			}
+			else
+			{
+				const float ResolutionScale = RootCanvas->GetRenderTargetResolutionScale();
+				TargetPixels = FIntPoint(FMath::TruncToInt32(CanvasWidget->GetWidth() * ResolutionScale),
+					FMath::TruncToInt32(CanvasWidget->GetHeight() * ResolutionScale));
+			}
+		}
+		else
+		{
+			if (RootCanvas->GetScreenSpaceRenderScale() < 1.0f)
+			{
+				return EDreamTextSmallTextGate::RenderScale;
+			}
+			TargetPixels = RootCanvas->GetViewportSize();
+		}
+		if (TargetPixels.X <= 0 || TargetPixels.Y <= 0)
+		{
+			return EDreamTextSmallTextGate::NoCanvas;
+		}
+
+		// Through the matrices the renderer draws the canvas with (FDreamUIRenderer::UpdateViewParameter_GameThread), from the
+		// uncached getters as it reads them, onto the target's pixels: u from its left edge rightward, v from its top edge
+		// upward, so v is negative inside it.
+		const FMatrix ViewRotation = FInverseRotationMatrix(RootCanvas->GetViewRotator()) * FMatrix(
+			FPlane(0, 0, 1, 0),
+			FPlane(1, 0, 0, 0),
+			FPlane(0, 1, 0, 0),
+			FPlane(0, 0, 0, 1));
+		const FMatrix WidgetToClip = InWidget->GetWorldTransform().ToMatrixWithScale()
+			* FTranslationMatrix(-RootCanvas->GetViewLocation()) * ViewRotation * RootCanvas->GetProjectionMatrix();
+		const FVector2D TargetSize((double)TargetPixels.X, (double)TargetPixels.Y);
+		auto ToDevice = [&WidgetToClip, &TargetSize](double InX, double InY, FVector2D& OutDevice)
+		{
+			const FVector4 Clip = WidgetToClip.TransformFVector4(FVector4(0.0, InX, InY, 1.0));
+			if (!(Clip.W > UE_SMALL_NUMBER))
+			{
+				return false;
+			}
+			OutDevice = FVector2D((Clip.X / Clip.W + 1.0) * 0.5 * TargetSize.X, (Clip.Y / Clip.W - 1.0) * 0.5 * TargetSize.Y);
+			return true;
+		};
+		FVector2D Origin = FVector2D::ZeroVector;
+		FVector2D AlongRight = FVector2D::ZeroVector;
+		FVector2D AlongUp = FVector2D::ZeroVector;
+		if (!ToDevice(0.0, 0.0, Origin) || !ToDevice(1.0, 0.0, AlongRight) || !ToDevice(0.0, 1.0, AlongUp))
+		{
+			return EDreamTextSmallTextGate::Transform;
+		}
+		const FVector2D PerRight = AlongRight - Origin;
+		const FVector2D PerUp = AlongUp - Origin;
+		// The painter places both axes with one S, the horizontal one, where the phases are. A canvas whose projection rounds
+		// its size to whole units draws a unit a hair taller than wide, which is harmless while it adds up to less than an
+		// eighth of a pixel across the widget -- and so is a roll that small.
+		const double ReachX = FMath::Max(FMath::Abs((double)InWidget->GetLocalSpaceLeft()), FMath::Abs((double)InWidget->GetLocalSpaceRight()));
+		const double ReachY = FMath::Max(FMath::Abs((double)InWidget->GetLocalSpaceTop()), FMath::Abs((double)InWidget->GetLocalSpaceBottom()));
+		if (!(PerRight.X > UE_KINDA_SMALL_NUMBER) || !(PerUp.Y > UE_KINDA_SMALL_NUMBER)
+			|| FMath::Abs(PerUp.Y - PerRight.X) * ReachY > MaxUnevenGridDrift
+			|| FMath::Abs(PerRight.Y) * ReachX > MaxUnevenGridDrift || FMath::Abs(PerUp.X) * ReachY > MaxUnevenGridDrift)
+		{
+			return EDreamTextSmallTextGate::Transform;
+		}
+		OutPlacement.DeviceScale = (float)PerRight.X;
+		// u = S x + SnapOrigin.X, v = S y + SnapOrigin.Y: the widget's local origin is where it lands.
+		OutPlacement.SnapOrigin = FVector2f((float)Origin.X, (float)Origin.Y);
+		OutPlacement.bLinearTarget = bTarget;
+		return EDreamTextSmallTextGate::Coverage;
+	}
+
+	/**
+	 * Whether a material shades through DreamUIShade.ush, which alone knows a coverage glyph's quad: DreamGUI's default UI
+	 * material (MF_DreamUI_Shade), or an instance of it. Anything else may read the quads any way it likes.
+	 */
+	bool IsDreamGUIShading(const UMaterialInterface* InMaterial)
+	{
+		static const FName DefaultMaterialPackage(TEXT("/DreamGUI/Materials/DreamUI_ImageAndFont"));
+		const UMaterial* BaseMaterial = InMaterial != nullptr ? InMaterial->GetMaterial() : nullptr;
+		return BaseMaterial != nullptr && BaseMaterial->GetPackage()->GetFName() == DefaultMaterialPackage;
+	}
+
+	/**
+	 * Pixel snapping as the gate reads it: Disabled anywhere up the chain, before a widget that says SnapToPixel, rules
+	 * coverage out; Inherit all the way to the root does not.
+	 */
+	bool IsSnappingAllowed(const UDreamWidget* InWidget)
+	{
+		constexpr int32 MaxDepth = 1024;
+		int32 Depth = 0;
+		for (const UDreamWidget* Widget = InWidget; Widget != nullptr && Depth < MaxDepth; Widget = Widget->GetParent(), ++Depth)
+		{
+			switch (Widget->GetPixelSnapping())
+			{
+			case EWidgetPixelSnapping::SnapToPixel:
+				return true;
+			case EWidgetPixelSnapping::Disabled:
+				return false;
+			default:
+				break;
+			}
+		}
+		return true;
+	}
+
+	/**
+	 * The smallest glyph of a display list the painter would look for a coverage glyph for, by its GlyphSize in the text's
+	 * units: an emitted glyph, or one whose field glyph is still being made (coverage may draw it meanwhile); never a colour
+	 * glyph. MAX_flt when there is none.
+	 */
+	float GetSmallestCoverageGlyphSize(const FDreamTextDisplayList& InDisplayList)
+	{
+		float Smallest = MAX_flt;
+		for (const FDreamTextGlyphItem& Item : InDisplayList.Items)
+		{
+			if (Item.Kind != EDreamTextItemKind::Glyph || Item.Glyph.bColor || Item.GlyphSize <= 0.0f
+				|| !(Item.bEmit || (Item.bCountsAsVisible && Item.Glyph.bPending)))
+			{
+				continue;
+			}
+			Smallest = FMath::Min(Smallest, Item.GlyphSize);
+		}
+		return Smallest;
+	}
+
+	/** One world's texts waiting for their device scale to settle, and the binding of its sweep while it holds any. */
+	struct FSharpenSet
+	{
+		TWeakObjectPtr<UDreamUIManagerWorldSubsystem> Manager;
+		TArray<TWeakObjectPtr<UDreamText>> Texts;
+		FDelegateHandle SweepHandle;
+	};
+
+	/** The sharpen sets, one per world's UI manager. Game thread only, as painting is. */
+	TMap<TObjectKey<UDreamUIManagerWorldSubsystem>, FSharpenSet>& GetSharpenSets()
+	{
+		static TMap<TObjectKey<UDreamUIManagerWorldSubsystem>, FSharpenSet> Sets;
+		return Sets;
+	}
+}
 
 FDreamTextLayoutInput UDreamText::MakeLayoutInput(const UDreamText* Text, float InFontSize)
 {
@@ -67,6 +313,12 @@ FDreamTextLayoutInput UDreamText::MakeLayoutInput(const UDreamText* Text, float 
 	Input.bStrikethrough = Text->GetStrikethrough();
 	Input.TextTransform = Text->GetTextTransform();
 	Input.FlowDirection = Text->GetFlowDirection();
+	// Named here when the text names none, rather than left for the layout to look up: the game switching language is then
+	// a change of this input like any other, and the layout it compares equal to is one made in the same language.
+	Input.Language = Text->GetLanguage().IsEmpty() ? FInternationalization::Get().GetCurrentLanguage()->GetName() : Text->GetLanguage();
+	Input.TabSize = Text->GetTabSize();
+	Input.TextJustify = Text->GetTextJustify();
+	Input.LastLineAlign = Text->GetLastLineAlign();
 	Input.bAutoWrapText = Text->GetAutoWrapText();
 	Input.bRichText = Text->GetRichText();
 	Input.RichTextFilterFlags = Text->GetRichTextTagFilterFlags();
@@ -95,8 +347,9 @@ FDreamTextPaintParams UDreamText::MakePaintParams(const UDreamText* Text)
 	Params.ItalicSlope = Style.ItalicSlope;
 	Params.bRequireNormalAndTangent = RenderCanvas ? RenderCanvas->GetActualRequireNormalAndTangent() : false;
 	Params.BaseColor = Text->GetFinalColor();
-	// Rich-text tag colours are stored unfaded, so the fade reaches them here instead of through a layout.
-	Params.RichTextTagOpacity = Widget->GetFinalRenderOpacity();
+	// Rich-text tag colours are stored unfaded, so the fade reaches them here instead of through a layout -- and so does the
+	// alpha of the content tint the text's ancestors lay over it, whose colour leaves a colour the markup chose alone.
+	Params.RichTextTagOpacity = Widget->GetFinalRenderOpacity() * Widget->GetInheritedContentTint().A;
 	Params.FillSegments = &Text->GetFillSegments();
 	Params.FillProgress = Text->GetFillProgress();
 	Params.GlowBoost = Text->GetGlowBoost();
@@ -125,6 +378,8 @@ FDreamTextPaintParams UDreamText::MakePaintParams(const UDreamText* Text)
 		Params.FieldSpreadTexels = Style.FieldSpreadTexels;
 		Params.QuadMarginTexels = Style.QuadMarginTexels;
 		Params.TexelToUV = Style.TexelToUV;
+		// A colour glyph draws its shadow from its own alpha, and only when the style has one.
+		Params.bHasUnderlay = TextStyle.UnderlayColor.A > 0;
 	}
 	else
 	{
@@ -137,6 +392,21 @@ FDreamTextPaintParams UDreamText::MakePaintParams(const UDreamText* Text)
 		Params.BitmapShadowOffsetEm = TextStyle.UnderlayOffset;
 		Params.BitmapOutlineColor = TextStyle.OutlineColor;
 		Params.BitmapOutlineWidthEm = TextStyle.OutlineWidth;
+	}
+	// Small sizes from coverage glyphs, as the gate decided right before this paint (ResolveSmallTextRaster).
+	const FDreamTextSmallTextState& SmallText = Text->GetSmallTextState();
+	if (SmallText.Gate == EDreamTextSmallTextGate::Coverage && IsValid(Text->GetFont()))
+	{
+		FDreamTextCoverageParams& Coverage = Params.Coverage;
+		Coverage.bEnabled = true;
+		Coverage.Font = Text->GetFont();
+		Coverage.DeviceScale = SmallText.DeviceScale;
+		Coverage.RasterScale = SmallText.RasterScale;
+		Coverage.MaxPixelSize = Text->GetFont()->GetCoverageMaxPixelSize();
+		Coverage.SnapOrigin = SmallText.SnapOrigin;
+		Coverage.Contrast = UDreamGUISettings::Get()->SmallTextContrast;
+		Coverage.bLinearTarget = SmallText.bLinearTarget;
+		Coverage.Report = &Text->SmallTextReport;
 	}
 	return Params;
 }
@@ -277,6 +547,8 @@ void UDreamText::OnRegister()
 void UDreamText::OnUnregister()
 {
 	Super::OnUnregister();
+	// Nothing to repaint it in once it is gone from its tree.
+	LeaveSmallTextSharpenSet();
 	if (auto World = this->GetWorld())
 	{
 #if WITH_EDITOR
@@ -313,6 +585,15 @@ void UDreamText::BeginDestroy()
 {
 	Super::BeginDestroy();
 	UnregisterFont();
+}
+
+void UDreamText::OnRenderCanvasChanged(UDreamCanvas* InOldCanvas, UDreamCanvas* InNewCanvas)
+{
+	Super::OnRenderCanvasChanged(InOldCanvas, InNewCanvas);
+	// Another canvas is another device grid, perhaps in another world: the text starts over there, and its first paint
+	// on it counts as settled.
+	LeaveSmallTextSharpenSet();
+	SmallTextState = FDreamTextSmallTextState();
 }
 
 void UDreamText::OnDimensionChanged(bool InPivotChange, bool InWidthChange, bool InHeightChange)
@@ -378,6 +659,55 @@ bool UDreamText::GetShouldAffectByPixelSnapping()const
 	return Super::GetShouldAffectByPixelSnapping();
 }
 
+bool UDreamText::GetRepaintsOnTransformChange()const
+{
+	const FDreamTextSmallTextState& State = SmallTextState;
+	switch (State.Gate)
+	{
+	case EDreamTextSmallTextGate::Coverage:
+	{
+		// Its coverage quads sit on the device grid of its last paint. A move by whole device pixels at the same scale --
+		// a scroll -- keeps them on it; anything else does not, and a move that cannot be placed on a grid at all (into a
+		// render layer, a roll) needs the repaint that puts the text back on the field.
+		DreamTextSmallTextLocal::FPlacement Placement;
+		if (DreamTextSmallTextLocal::PlaceOnDeviceGrid(GetWidget(), Placement) != EDreamTextSmallTextGate::Coverage
+			|| !DreamTextSmallTextLocal::IsSameScale(Placement.DeviceScale, State.DeviceScale))
+		{
+			return true;
+		}
+		const FVector2f Shift = Placement.SnapOrigin - State.SnapOrigin;
+		return !DreamTextSmallTextLocal::IsWholePixel(Shift.X) || !DreamTextSmallTextLocal::IsWholePixel(Shift.Y);
+	}
+	case EDreamTextSmallTextGate::RenderLayer:
+	case EDreamTextSmallTextGate::Transform:
+	{
+		// On the field only because of where it was: the move that makes it placeable again repaints it.
+		DreamTextSmallTextLocal::FPlacement Placement;
+		return DreamTextSmallTextLocal::PlaceOnDeviceGrid(GetWidget(), Placement) == EDreamTextSmallTextGate::Coverage;
+	}
+	case EDreamTextSmallTextGate::Large:
+	{
+		// Too big at the scale it had: the move that shrinks a glyph under the limit repaints it.
+		DreamTextSmallTextLocal::FPlacement Placement;
+		return IsValid(Font) && DreamTextSmallTextLocal::PlaceOnDeviceGrid(GetWidget(), Placement) == EDreamTextSmallTextGate::Coverage
+			&& State.MinGlyphSize * Placement.DeviceScale <= Font->GetCoverageMaxPixelSize();
+	}
+	default:
+		// Field quads land wherever the transform puts them; a text still settling is watched by its world's sweep.
+		return false;
+	}
+}
+
+void UDreamText::OnPixelSnappingChanged()
+{
+	// The layout of a pixel-perfect font reads the snapping, and so does the small-text gate; neither asks again until the
+	// text is repainted, and nothing else here would repaint it.
+	if (GetWidget() != nullptr)
+	{
+		MarkVerticesDirty(true, true, true, false);
+	}
+}
+
 void UDreamText::OnUpdateGeometry(FDreamUIGeometry& InGeo, bool InTriangleChanged, bool InVertexPositionChanged, bool InVertexUVChanged, bool InVertexColorChanged)
 {
 	TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_TextUpdateGeometry);
@@ -388,13 +718,278 @@ void UDreamText::OnUpdateGeometry(FDreamUIGeometry& InGeo, bool InTriangleChange
 		auto Widget = GetWidget();
 		auto RenderCanvas = Widget->GetRenderCanvas();
 		if (!RenderCanvas)return;
+		// Whether this paint draws its small sizes from coverage glyphs, and on which device grid: against the layout
+		// just made, since what is small depends on it. MakePaintParams reads the answer.
+		const bool bDrewFromCoverage = SmallTextState.Gate == EDreamTextSmallTextGate::Coverage;
+		ResolveSmallTextRaster();
 		// The geometry was cleared before this call; painting from the cached display list is what
 		// fills it again, whether or not the layout itself had to run.
 		CacheTextGeometryData.Paint(InGeo, MakePaintParams(this));
-		if (CacheTextGeometryData.GetLayoutInput().bPixelPerfect)
+		// The gate changed its mind in a paint nothing asked to move -- a colour change after coverage was switched off for
+		// the font, say: coverage quads and field quads lie differently, so the vertices are transformed again with them.
+		if (!InVertexPositionChanged && bDrewFromCoverage != (SmallTextState.Gate == EDreamTextSmallTextGate::Coverage))
+		{
+			MarkVertexPositionDirty();
+		}
+		// And a paint not asked to change the triangles that changed how many there are -- a character whose field glyph is
+		// still being made, drawn from its coverage glyph or no longer -- says so, so that this update writes every vertex's
+		// widget record (new memory comes zeroed) and the modifiers hear of it.
+		if (!InTriangleChanged && InGeo.Vertices.Num() != PaintedVertexCount)
+		{
+			MarkVerticesDirty(true, false, false, false);
+		}
+		PaintedVertexCount = InGeo.Vertices.Num();
+		// Never over coverage quads: they are on whole device pixels already, in quarter-pixel phases this would round away.
+		if (CacheTextGeometryData.GetLayoutInput().bPixelPerfect && SmallTextState.Gate != EDreamTextSmallTextGate::Coverage)
 		{
 			FDreamUIGeometry::AdjustPixelPerfectPos_For_UIText(InGeo.OriginVertices, CacheTextGeometryData.GetCharPropertyArray(), RenderCanvas, this);
 		}
+	}
+}
+
+void UDreamText::ResolveSmallTextRaster()
+{
+	FDreamTextSmallTextState& State = SmallTextState;
+	SmallTextReport = FDreamTextCoverageReport();
+	EDreamTextSmallTextGate Gate = GetSmallTextConditionsGate();
+	DreamTextSmallTextLocal::FPlacement Placement;
+	if (Gate == EDreamTextSmallTextGate::Coverage)
+	{
+		Gate = DreamTextSmallTextLocal::PlaceOnDeviceGrid(GetWidget(), Placement);
+	}
+	if (Gate != EDreamTextSmallTextGate::Coverage)
+	{
+		State.Gate = Gate;
+		LeaveSmallTextSharpenSet();
+		return;
+	}
+
+	// What the debounce keeps of S, whatever is decided below: a scale is settled once SettleSweeps sweeps in a row have
+	// seen it unchanged (SweepSmallTextSharpenSet), and the first one a text is painted at counts as settled.
+	if (!State.bScaleSeen)
+	{
+		State.bScaleSeen = true;
+		State.SettlingScale = Placement.DeviceScale;
+		State.SettledSweeps = DreamTextSmallTextLocal::SettleSweeps;
+	}
+	else if (!DreamTextSmallTextLocal::IsSameScale(Placement.DeviceScale, State.SettlingScale))
+	{
+		State.SettlingScale = Placement.DeviceScale;
+		State.SettledSweeps = 0;
+	}
+	const bool bWasCoverage = State.Gate == EDreamTextSmallTextGate::Coverage;
+	State.DeviceScale = Placement.DeviceScale;
+	State.SnapOrigin = Placement.SnapOrigin;
+	State.bLinearTarget = Placement.bLinearTarget;
+	State.MinGlyphSize = DreamTextSmallTextLocal::GetSmallestCoverageGlyphSize(CacheTextGeometryData.GetDisplayList());
+	if (State.MinGlyphSize * Placement.DeviceScale > Font->GetCoverageMaxPixelSize())
+	{
+		// Nothing the painter would draw from coverage: no debounce and no repaints on moves for a text that cannot gain.
+		State.Gate = EDreamTextSmallTextGate::Large;
+		LeaveSmallTextSharpenSet();
+		return;
+	}
+	if (bWasCoverage && FMath::Abs(Placement.DeviceScale / State.RasterScale - 1.0f) <= DreamTextSmallTextLocal::RasterScaleHysteresis)
+	{
+		// Within the hysteresis the glyphs keep their raster; the painter sizes their quads for the new scale.
+		State.Gate = EDreamTextSmallTextGate::Coverage;
+	}
+	else if (State.SettledSweeps >= DreamTextSmallTextLocal::SettleSweeps)
+	{
+		State.Gate = EDreamTextSmallTextGate::Coverage;
+		State.RasterScale = Placement.DeviceScale;
+	}
+	else
+	{
+		// The scale is still moving -- a zoom, a live window resize: on the field until it holds still, so a text is not
+		// rasterized again at every step of it. Its world's sweep repaints it once it has.
+		State.Gate = EDreamTextSmallTextGate::Settling;
+		JoinSmallTextSharpenSet();
+		return;
+	}
+	LeaveSmallTextSharpenSet();
+}
+
+EDreamTextSmallTextGate UDreamText::GetSmallTextConditionsGate()
+{
+	if (SmallTextRaster == EDreamTextSmallTextRaster::Off)
+	{
+		return EDreamTextSmallTextGate::Off;
+	}
+	if (!IsValid(Font) || !Font->SupportsCoverageGlyphs())
+	{
+		return EDreamTextSmallTextGate::Font;
+	}
+	if (IsValid(OverrideMaterial))
+	{
+		return EDreamTextSmallTextGate::OverrideMaterial;
+	}
+	// Otherwise the font's own material draws it, when it has one; else the built-in UI shader, or with that off the canvas's
+	// default material (UDreamCanvas::UpdateDrawCallMaterial). Only DreamGUI's shading knows a coverage quad.
+	UMaterialInterface* DrawingMaterial = Font->GetFontMaterial();
+	if (DrawingMaterial == nullptr && !UDreamUISettings::GetUseBuiltInUIShader())
+	{
+		const UDreamCanvas* RenderCanvas = GetWidget() != nullptr ? GetWidget()->GetRenderCanvas() : nullptr;
+		DrawingMaterial = RenderCanvas != nullptr ? RenderCanvas->GetDefaultMaterial() : nullptr;
+	}
+	if (DrawingMaterial != nullptr && !DreamTextSmallTextLocal::IsDreamGUIShading(DrawingMaterial))
+	{
+		return EDreamTextSmallTextGate::Material;
+	}
+	// The effects are drawn from the field, which a hinted raster does not match edge for edge; softness and dilation are
+	// the field's too.
+	if (TextStyle.HasEffects() || !FMath::IsNearlyZero(TextStyle.FaceSoftness) || !FMath::IsNearlyZero(TextStyle.FaceDilate))
+	{
+		return EDreamTextSmallTextGate::Style;
+	}
+	if (!DreamTextSmallTextLocal::IsSnappingAllowed(GetWidget()))
+	{
+		return EDreamTextSmallTextGate::Snapping;
+	}
+	// Coverage quads are on whole device pixels and sampled texel for texel; a modifier that moves or re-maps vertices
+	// would take them off both.
+	bool bTriangles = false, bPositions = false, bUVs = false, bColors = false;
+	GeometryModifierWillChangeVertexData(bTriangles, bPositions, bUVs, bColors);
+	if (bPositions || bUVs)
+	{
+		return EDreamTextSmallTextGate::Modifier;
+	}
+	return EDreamTextSmallTextGate::Coverage;
+}
+
+void UDreamText::JoinSmallTextSharpenSet()
+{
+	if (SmallTextState.bWaitingToSharpen)
+	{
+		return;
+	}
+	UDreamWidget* Widget = GetWidget();
+	UDreamUIManagerWorldSubsystem* Manager = Widget != nullptr ? Widget->GetRegisteredManager() : nullptr;
+	if (Manager == nullptr)
+	{
+		// No world ticks it: it stays on the field until something repaints it.
+		return;
+	}
+	TMap<TObjectKey<UDreamUIManagerWorldSubsystem>, DreamTextSmallTextLocal::FSharpenSet>& Sets = DreamTextSmallTextLocal::GetSharpenSets();
+	// A world torn down while texts waited in it leaves its set behind; the sets are few.
+	for (auto It = Sets.CreateIterator(); It; ++It)
+	{
+		if (!It->Value.Manager.IsValid())
+		{
+			It.RemoveCurrent();
+		}
+	}
+	DreamTextSmallTextLocal::FSharpenSet& Set = Sets.FindOrAdd(TObjectKey<UDreamUIManagerWorldSubsystem>(Manager));
+	if (!Set.SweepHandle.IsValid())
+	{
+		Set.Manager = Manager;
+		const TWeakObjectPtr<UDreamUIManagerWorldSubsystem> WeakManager(Manager);
+		Set.SweepHandle = Manager->GetOnBeforeRootCanvasesUpdate().AddLambda([WeakManager]()
+		{
+			UDreamText::SweepSmallTextSharpenSet(WeakManager.Get());
+		});
+	}
+	Set.Texts.Add(this);
+	SmallTextState.bWaitingToSharpen = true;
+	SmallTextSharpenManager = Manager;
+}
+
+void UDreamText::LeaveSmallTextSharpenSet()
+{
+	if (!SmallTextState.bWaitingToSharpen)
+	{
+		return;
+	}
+	SmallTextState.bWaitingToSharpen = false;
+	UDreamUIManagerWorldSubsystem* Manager = SmallTextSharpenManager.Get();
+	SmallTextSharpenManager.Reset();
+	if (Manager == nullptr)
+	{
+		return;
+	}
+	TMap<TObjectKey<UDreamUIManagerWorldSubsystem>, DreamTextSmallTextLocal::FSharpenSet>& Sets = DreamTextSmallTextLocal::GetSharpenSets();
+	const TObjectKey<UDreamUIManagerWorldSubsystem> Key(Manager);
+	DreamTextSmallTextLocal::FSharpenSet* Set = Sets.Find(Key);
+	if (Set == nullptr)
+	{
+		return;
+	}
+	Set->Texts.RemoveSingleSwap(TWeakObjectPtr<UDreamText>(this));
+	if (Set->Texts.Num() == 0)
+	{
+		// Nothing waits in this world any more: its manager's tick goes back to costing nothing for it.
+		Manager->GetOnBeforeRootCanvasesUpdate().Remove(Set->SweepHandle);
+		Sets.Remove(Key);
+	}
+}
+
+void UDreamText::SweepSmallTextSharpenSet(UDreamUIManagerWorldSubsystem* InManager)
+{
+	if (InManager == nullptr)
+	{
+		return;
+	}
+	TMap<TObjectKey<UDreamUIManagerWorldSubsystem>, DreamTextSmallTextLocal::FSharpenSet>& Sets = DreamTextSmallTextLocal::GetSharpenSets();
+	const TObjectKey<UDreamUIManagerWorldSubsystem> Key(InManager);
+	DreamTextSmallTextLocal::FSharpenSet* Set = Sets.Find(Key);
+	if (Set == nullptr)
+	{
+		return;
+	}
+	TArray<UDreamText*, TInlineAllocator<8>> Settled;
+	for (int32 Index = Set->Texts.Num() - 1; Index >= 0; --Index)
+	{
+		UDreamText* Text = Set->Texts[Index].Get();
+		bool bStillWaiting = false;
+		if (IsValid(Text) && Text->GetWidget() != nullptr)
+		{
+			FDreamTextSmallTextState& State = Text->SmallTextState;
+			DreamTextSmallTextLocal::FPlacement Placement;
+			const EDreamTextSmallTextGate Gate = DreamTextSmallTextLocal::PlaceOnDeviceGrid(Text->GetWidget(), Placement);
+			if (Gate != EDreamTextSmallTextGate::Coverage)
+			{
+				// Moved somewhere it cannot draw from coverage: whatever moves it back repaints it (GetRepaintsOnTransformChange).
+				State.Gate = Gate;
+			}
+			else
+			{
+				if (DreamTextSmallTextLocal::IsSameScale(Placement.DeviceScale, State.SettlingScale))
+				{
+					++State.SettledSweeps;
+				}
+				else
+				{
+					State.SettlingScale = Placement.DeviceScale;
+					State.SettledSweeps = 0;
+				}
+				bStillWaiting = State.SettledSweeps < DreamTextSmallTextLocal::SettleSweeps;
+				if (!bStillWaiting)
+				{
+					Settled.Add(Text);
+				}
+			}
+		}
+		if (!bStillWaiting)
+		{
+			if (Text != nullptr)
+			{
+				Text->SmallTextState.bWaitingToSharpen = false;
+				Text->SmallTextSharpenManager.Reset();
+			}
+			Set->Texts.RemoveAtSwap(Index);
+		}
+	}
+	if (Set->Texts.Num() == 0)
+	{
+		// Unbound from inside its own broadcast, which the delegate allows; nothing of the binding is touched after this.
+		InManager->GetOnBeforeRootCanvasesUpdate().Remove(Set->SweepHandle);
+		Sets.Remove(Key);
+	}
+	for (UDreamText* Text : Settled)
+	{
+		// This frame's update repaints it, and the gate finds its scale settled: coverage glyphs at that scale. Never a
+		// layout -- nothing the layout reads has changed.
+		Text->MarkVerticesDirty(true, true, true, false);
 	}
 }
 
@@ -416,9 +1011,9 @@ void UDreamText::FillWidgetPropertyDataForMaterial_Extra(UDreamUIDataAsTexture* 
 
 void UDreamText::OnCultureChanged_Implementation()
 {
-	// The culture is read by the layout and is not in its input: the shaper picks the language's own glyph forms by it,
-	// the line breaker its rules, a case transform its mapping. A string that reads the same in the new culture still
-	// has to be laid out again.
+	// The language a text without one of its own is shaped in, and the culture a case transform maps by, are in the layout
+	// input (MakeLayoutInput), so a switch changes it; the line breaker still follows the game's culture from outside it.
+	// So the layout is thrown away all the same, and the text repainted, which is what asks for a new one.
 	MarkLayoutDirty();
 	auto originText = Text;
 	Text = FText::GetEmpty();//just make it work, because SetText will compare text value
@@ -802,6 +1397,70 @@ void UDreamText::SetFlowDirection(EDreamTextFlowDirection Value)
 	}
 }
 
+/*
+ * The language, the tab stops and the justification are layout inputs (MakeLayoutInput): the faces a run is shaped from,
+ * how far a tab reaches and where a justified line's room goes all move glyphs, and a fallback face of another size can
+ * change how tall the paragraph is. So their setters do what SetFlowDirection does.
+ */
+void UDreamText::SetLanguage(const FString& Value)
+{
+	if (!Language.Equals(Value, ESearchCase::CaseSensitive))
+	{
+		Language = Value;
+		MarkVertexPositionDirty();
+		UDreamWidget::MarkLayoutForRebuild(GetWidget());
+	}
+}
+
+void UDreamText::SetTabSize(float Value)
+{
+	Value = FMath::Max(0.0f, Value);
+	if (TabSize != Value)
+	{
+		TabSize = Value;
+		MarkVertexPositionDirty();
+		UDreamWidget::MarkLayoutForRebuild(GetWidget());
+	}
+}
+
+void UDreamText::SetTextJustify(EDreamTextJustify Value)
+{
+	if (TextJustify != Value)
+	{
+		TextJustify = Value;
+		MarkVertexPositionDirty();
+		UDreamWidget::MarkLayoutForRebuild(GetWidget());
+	}
+}
+
+void UDreamText::SetLastLineAlign(EDreamTextLastLineAlign Value)
+{
+	if (LastLineAlign != Value)
+	{
+		LastLineAlign = Value;
+		MarkVertexPositionDirty();
+		UDreamWidget::MarkLayoutForRebuild(GetWidget());
+	}
+}
+
+void UDreamText::SetSmallTextRaster(EDreamTextSmallTextRaster Value)
+{
+	if (SmallTextRaster != Value)
+	{
+		SmallTextRaster = Value;
+		// Coverage glyphs only stand in for quads at paint time, so this is a repaint and never a layout.
+		if (GetWidget() != nullptr)
+		{
+			MarkVerticesDirty(true, true, true, false);
+		}
+	}
+}
+
+void UDreamText::SetIncrementalLayout(bool bInEnabled)
+{
+	CacheTextGeometryData.SetIncrementalLayout(bInEnabled);
+}
+
 void UDreamText::SetUnderline(bool Value)
 {
 	if (bUnderline != Value)
@@ -925,9 +1584,12 @@ void UDreamText::SetParagraphVerticalAlignment(EDreamUITextParagraphVerticalAlig
 void UDreamText::SetOverflowType(EDreamUITextOverflowType Value) {
 	if (OverflowType != Value)
 	{
-		if (OverflowType == EDreamUITextOverflowType::Truncate
-			|| Value == EDreamUITextOverflowType::Truncate
-			)
+		// Truncation, at the end or in the middle, cuts glyphs out of what is drawn: the quad count changes with it.
+		auto CutsGlyphs = [](EDreamUITextOverflowType InType)
+		{
+			return InType == EDreamUITextOverflowType::Truncate || InType == EDreamUITextOverflowType::MiddleEllipsis;
+		};
+		if (CutsGlyphs(OverflowType) || CutsGlyphs(Value))
 			MarkVerticesDirty(true, true, true, true);
 		else
 			MarkVertexPositionDirty();
@@ -1086,6 +1748,9 @@ void UDreamText::SetOverrideMaterial(UMaterialInterface* Value)
 	{
 		OverrideMaterial = Value;
 		MarkMaterialDirty();
+		// And the quads: whether small sizes draw from coverage glyphs depends on it (only the built-in shading reads them),
+		// and the gate is asked again only when the text is repainted.
+		MarkVerticesDirty(true, true, true, false);
 	}
 }
 
@@ -1155,6 +1820,16 @@ void UDreamText::RegisterFont()
 				MarkVerticesDirty(true, true, true, true);
 			}
 		});
+		CoverageGlyphsChangedDelegateHandle = Font->OnCoverageGlyphsChanged.AddWeakLambda(this, [this]()
+		{
+			// Coverage glyphs landed, failed, or were flushed with their cells. A coverage glyph only stands in for a quad
+			// and never changes an advance, so this is a repaint -- positions and UVs -- and never a layout; and only for a
+			// text whose last paint drew from coverage or waited for it.
+			if ((SmallTextReport.CoverageItems > 0 || SmallTextReport.PendingItems > 0) && GetWidget() != nullptr)
+			{
+				MarkVerticesDirty(true, true, true, false);
+			}
+		});
 	}
 }
 
@@ -1168,6 +1843,8 @@ void UDreamText::UnregisterFont()
 		EmojiDataChangedDelegateHandle.Reset();
 		Font->OnGlyphsReady.Remove(GlyphsReadyDelegateHandle);
 		GlyphsReadyDelegateHandle.Reset();
+		Font->OnCoverageGlyphsChanged.Remove(CoverageGlyphsChangedDelegateHandle);
+		CoverageGlyphsChangedDelegateHandle.Reset();
 		bWaitingForGlyphs = false;
 	}
 }
@@ -1603,6 +2280,8 @@ void UDreamText::FindCaretByIndex(int32& inOutCaretPositionIndex, FVector2f& out
 		switch (HAlign)
 		{
 		case EDreamUITextParagraphHorizontalAlign::Left:
+		// An empty line has nothing to spread: a justified paragraph's lone caret stands at the start, as its last line would.
+		case EDreamUITextParagraphHorizontalAlign::Justify:
 		{
 			outCaretPosition.X = pivotOffsetX - Widget->GetWidth() * 0.5f;
 		}

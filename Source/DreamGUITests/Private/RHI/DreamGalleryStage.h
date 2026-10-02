@@ -48,7 +48,11 @@ namespace DreamGalleryStage
 	/** How long the text of a scene may take to have every glyph it asked for in its font's atlas, and to stop changing after. */
 	static constexpr double SettleTimeoutSeconds = 90.0;
 
-	/** What a picture check does when the golden image it is held to does not exist yet. */
+	/**
+	 * What a picture check does when the golden image it is held to does not exist yet. A golden listed in
+	 * Golden/pending.json (FDreamPixelProbe::GetPendingGoldenReason) is due to be written or rewritten: its picture is
+	 * still taken and compared, but a missing golden or a difference only warns, whatever this says.
+	 */
 	enum class EMissingGolden : uint8
 	{
 		/** Pass with a warning that names the file: the gallery's long-standing behaviour. */
@@ -94,6 +98,19 @@ namespace DreamGalleryStage
 		void UseBuiltInShader(bool bInUse);
 		/** Multisampling for every DreamUI renderer, 1 for none; put back when the stage is torn down. */
 		void UseMultisampling(uint8 InSamples);
+		/**
+		 * The project's small-text coverage switch (UDreamGUISettings::bSmallTextCoverage), which every distance-field font
+		 * set to Inherit follows; put back when the stage is torn down. Texts decide at paint time, so set it before the
+		 * scene first draws.
+		 */
+		void UseSmallTextCoverage(bool bInUse);
+		/**
+		 * Lay the root out InLayoutSize units across the target rather than one unit to a pixel: the canvas scale becomes the
+		 * target's width over InLayoutSize.X, the way a DPI scale (or the canvas scaler) gives one, and the root is
+		 * InLayoutSize. For a target of InLayoutSize times a scale, everything a scene places keeps its units and is drawn
+		 * at that scale.
+		 */
+		void UseLayoutSize(const FVector2D& InLayoutSize);
 
 		/** Held until the stage is torn down: a font, a built tree, anything the scene must not lose to a collection meanwhile. */
 		void KeepAlive(UObject* InObject);
@@ -125,6 +142,7 @@ namespace DreamGalleryStage
 		TArray<TStrongObjectPtr<UTexture2D>> Textures;
 		TArray<TStrongObjectPtr<UObject>> KeptAlive;
 		TOptional<bool> SavedBuiltInShader;
+		TOptional<bool> SavedSmallTextCoverage;
 		TOptional<EDreamUIRendererAntiAliasingMethod> SavedAntiAliasing;
 		EDreamUIRendererMSAASampleCount SavedSampleCount = EDreamUIRendererMSAASampleCount::One;
 		bool bTornDown = false;
@@ -167,7 +185,8 @@ namespace DreamGalleryStage
 	void EnqueueSettledPictureCheck(const FStageRef& InStage, const FString& InName, int32 InMinDrawn, EMissingGolden InMissing);
 	/**
 	 * The picture held to Golden/<InName>.png as FDreamPixelProbe::ExpectMatchesGolden does it, with the gallery's
-	 * tolerance, except that with EMissingGolden::Fail a golden that does not exist yet fails the test.
+	 * tolerance, except that with EMissingGolden::Fail a golden that does not exist yet fails the test -- unless the golden
+	 * is pending (Golden/pending.json), when it only warns.
 	 */
 	bool CheckGolden(FAutomationTestBase& InTest, const TArray<FColor>& InPixels, FIntPoint InSize, const FString& InName, EMissingGolden InMissing);
 

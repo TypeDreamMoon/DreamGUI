@@ -43,6 +43,11 @@ geometry it works in and hands it the parts.
 | `Justification` | `EDreamUITextParagraphHorizontalAlign` | Text Input | yes | `GetJustification` / `SetJustification` | How the typed text sits across the field -- UMG's Justification. |
 | `MinimumDesiredWidth` | `float` | Text Input | yes | `GetMinimumDesiredWidth` / `SetMinimumDesiredWidth` | A floor under the width the control asks a content-sized parent for -- UMG's MinimumDesiredWidth. Zero means no opinion, which is every field that exists today. |
 | `TextFlowDirection` | `EDreamTextFlowDirection` | Text Input | yes | `GetTextFlowDirection` / `SetTextFlowDirection` | Which way the paragraph reads -- the half of UMG's ShapedTextOptions that means anything here. |
+| `Language` | `FString` | Text Input | yes | `GetLanguage` / `SetLanguage` | The language the field is typed in, as a culture name ("ja", "zh-Hans"); empty is the game's. Picks the font's fallbacks meant for it and the forms a script draws per language -- see UDreamText::Language. Like the flow direction, it is the whole field's: the placeholder and the error message read it too. |
+| `TabSize` | `float` | Text Input | yes | `GetTabSize` / `SetTabSize` | Tab stops in spaces, from the line's start edge -- CSS tab-size, 8 as browsers have it. |
+| `TextJustify` | `EDreamTextJustify` | Text Input | yes | `GetTextJustify` / `SetTextJustify` | Where a justified line gets its extra room. Read only with Justification Justify. |
+| `LastLineAlign` | `EDreamTextLastLineAlign` | Text Input | yes | `GetLastLineAlign` / `SetLastLineAlign` | How a justified paragraph's last line, and a line a newline ends, align. Read only with Justification Justify. |
+| `SmallTextRaster` | `EDreamTextSmallTextRaster` | Text Input | yes | `GetSmallTextRaster` / `SetSmallTextRaster` | Off keeps the field's text on its font's distance field at every size; see UDreamText::SmallTextRaster. |
 | `OverflowPolicy` | `ETextOverflowPolicy` | Text Input | yes | `GetTextOverflowPolicy` / `SetTextOverflowPolicy` | What a value too long for the box does WHILE NOBODY IS EDITING IT -- UMG's OverflowPolicy. |
 | `KeyboardType` | `TEnumAsByte<EVirtualKeyboardType::Type>` | Text Input | yes | `GetKeyboardType` / `SetKeyboardType` | Which virtual keyboard a mobile platform summons. Default derives it from InputType. |
 | `VirtualKeyboardOptions` | `FVirtualKeyboardOptions` | Text Input | yes | - | Platform options for that keyboard -- autocorrect and whatever the platform adds later. |
@@ -77,6 +82,8 @@ geometry it works in and hands it the parts.
 | `bool GetIsReadOnly()` | pure | Get Is Read Only |
 | `EDreamUITextParagraphHorizontalAlign GetJustification()` | pure | Get Justification |
 | `TEnumAsByte<EVirtualKeyboardType::Type> GetKeyboardType()` | pure | Get Keyboard Type |
+| `FString GetLanguage()` | pure | Get Language |
+| `EDreamTextLastLineAlign GetLastLineAlign()` | pure | Get Last Line Align |
 | `int32 GetMaxLength()` | pure | Get Max Length |
 | `float GetMinimumDesiredWidth()` | pure | Get Minimum Desired Width |
 | `bool GetMultiLine()` | pure | Get Multi Line |
@@ -86,10 +93,13 @@ geometry it works in and hands it the parts.
 | `bool GetRevertTextOnEscape()` | pure | Get Revert Text on Escape |
 | `bool GetSelectAllTextOnCommit()` | pure | Get Select All Text on Commit |
 | `bool GetSelectAllWhenActivateInput()` | pure | Get Select All when Activate Input |
+| `EDreamTextSmallTextRaster GetSmallTextRaster()` | pure | Get Small Text Raster |
 | `FDreamTextInputStyle GetStyle()` | pure | Get Style |
 | `bool GetSubmitWhenDeactivate()` | pure | Get Submit when Deactivate |
+| `float GetTabSize()` | pure | Get Tab Size |
 | `FString GetText()` | pure | Get Text |
 | `EDreamTextFlowDirection GetTextFlowDirection()` | pure | Get Text Flow Direction |
+| `EDreamTextJustify GetTextJustify()` | pure | Get Text Justify |
 | `ETextOverflowPolicy GetTextOverflowPolicy()` | pure | Get Text Overflow Policy |
 | `EVirtualKeyboardDismissAction GetVirtualKeyboardDismissAction()` | pure | Get Virtual Keyboard Dismiss Action |
 | `EVirtualKeyboardTrigger GetVirtualKeyboardTrigger()` | pure | Get Virtual Keyboard Trigger |
@@ -112,6 +122,8 @@ geometry it works in and hands it the parts.
 | `void SetIsReadOnly(bool bInReadOnly)` | callable | Selectable, not editable. A field being typed into when this goes on stops being edited. |
 | `void SetJustification(EDreamUITextParagraphHorizontalAlign InJustification)` | callable | Pushed onto the typed text AND the placeholder: a hint belongs where typing will appear. |
 | `void SetKeyboardType(TEnumAsByte<EVirtualKeyboardType::Type> InKeyboardType)` | callable | Set Keyboard Type |
+| `void SetLanguage(FString InLanguage)` | callable | Onto every paragraph of the field, as the flow direction is. |
+| `void SetLastLineAlign(EDreamTextLastLineAlign InLastLineAlign)` | callable | Set Last Line Align |
 | `void SetMaxLength(int32 InMaxLength)` | callable | 0 means no limit. Shortening it truncates what the field already holds. |
 | `void SetMinDesiredWidth(float InMinDesiredWidth)` | callable | Set Min Desired Width |
 | `void SetMinimumDesiredWidth(float InMinimumDesiredWidth)` | callable | UMG names the setter SetMinDesiredWidth; both spellings are here, one implementation. |
@@ -122,10 +134,13 @@ geometry it works in and hands it the parts.
 | `void SetRevertTextOnEscape(bool bInRevertTextOnEscape)` | callable | Set Revert Text on Escape |
 | `void SetSelectAllTextOnCommit(bool bInSelectAllTextOnCommit)` | callable | Set Select All Text on Commit |
 | `void SetSelectAllWhenActivateInput(bool bInSelectAll)` | callable | Set Select All when Activate Input |
+| `void SetSmallTextRaster(EDreamTextSmallTextRaster InSmallTextRaster)` | callable | Set Small Text Raster |
 | `void SetStyle(FDreamTextInputStyle InStyle)` | callable | The whole look at once, re-pushed. The style struct is one decision, so it moves as one. |
 | `void SetSubmitWhenDeactivate(bool bInSubmitWhenDeactivate)` | callable | Set Submit when Deactivate |
+| `void SetTabSize(float InTabSize)` | callable | Set Tab Size |
 | `void SetText(FString InText)` | callable | Set Text |
 | `void SetTextFlowDirection(EDreamTextFlowDirection InFlowDirection)` | callable | Set Text Flow Direction |
+| `void SetTextJustify(EDreamTextJustify InTextJustify)` | callable | Set Text Justify |
 | `void SetTextOverflowPolicy(ETextOverflowPolicy InOverflowPolicy)` | callable | Forwards to the behaviour, which owns the one field on the paragraph this shares with the line mode. |
 | `void SetVirtualKeyboardDismissAction(EVirtualKeyboardDismissAction InDismissAction)` | callable | Set Virtual Keyboard Dismiss Action |
 | `void SetVirtualKeyboardTrigger(EVirtualKeyboardTrigger InTrigger)` | callable | Set Virtual Keyboard Trigger |

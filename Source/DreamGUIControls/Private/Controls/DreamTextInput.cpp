@@ -116,6 +116,12 @@ void UDreamTextInput::ApplyStyle()
 			// Which way the paragraph reads. Auto is the default and asks the bidi algorithm, which is
 			// what the field always did; the other two state it outright for a screen that knows.
 			TextVisual->SetFlowDirection(TextFlowDirection);
+			// The rest of what the field says about its text, the whole field's as the direction is.
+			TextVisual->SetLanguage(Language);
+			TextVisual->SetTabSize(TabSize);
+			TextVisual->SetTextJustify(TextJustify);
+			TextVisual->SetLastLineAlign(LastLineAlign);
+			TextVisual->SetSmallTextRaster(SmallTextRaster);
 		}
 	};
 	// The placeholder takes the SAME alignment as the typed text: a hint that sat at the other end of
@@ -465,6 +471,57 @@ void UDreamTextInput::SetTextFlowDirection(EDreamTextFlowDirection InFlowDirecti
 	Push(TextNode);
 	Push(PlaceholderNode);
 	Push(ErrorNode);
+}
+
+namespace DreamTextInputControlLocal
+{
+	/** Every paragraph of the field -- the value, the placeholder, the error message -- that is there, in that order. */
+	template<typename FunctorType>
+	void ForEachParagraph(const UDreamTextInput& InControl, FunctorType&& InFunctor)
+	{
+		for (UDreamWidget* Node : { InControl.TextNode.Get(), InControl.PlaceholderNode.Get(), InControl.ErrorNode.Get() })
+		{
+			if (UDreamText* TextVisual = Node != nullptr ? Cast<UDreamText>(Node->GetVisual()) : nullptr)
+			{
+				InFunctor(*TextVisual);
+			}
+		}
+	}
+}
+
+/*
+ * The language, the tab stops, the justification and the small-text switch are the whole field's, as its flow direction
+ * is: a placeholder shaped in another language than the value it stands in for would draw its characters from other
+ * faces the moment the field emptied.
+ */
+void UDreamTextInput::SetLanguage(const FString& InLanguage)
+{
+	Language = InLanguage;
+	DreamTextInputControlLocal::ForEachParagraph(*this, [&InLanguage](UDreamText& InText) { InText.SetLanguage(InLanguage); });
+}
+
+void UDreamTextInput::SetTabSize(float InTabSize)
+{
+	TabSize = FMath::Max(0.0f, InTabSize);
+	DreamTextInputControlLocal::ForEachParagraph(*this, [this](UDreamText& InText) { InText.SetTabSize(TabSize); });
+}
+
+void UDreamTextInput::SetTextJustify(EDreamTextJustify InTextJustify)
+{
+	TextJustify = InTextJustify;
+	DreamTextInputControlLocal::ForEachParagraph(*this, [InTextJustify](UDreamText& InText) { InText.SetTextJustify(InTextJustify); });
+}
+
+void UDreamTextInput::SetLastLineAlign(EDreamTextLastLineAlign InLastLineAlign)
+{
+	LastLineAlign = InLastLineAlign;
+	DreamTextInputControlLocal::ForEachParagraph(*this, [InLastLineAlign](UDreamText& InText) { InText.SetLastLineAlign(InLastLineAlign); });
+}
+
+void UDreamTextInput::SetSmallTextRaster(EDreamTextSmallTextRaster InSmallTextRaster)
+{
+	SmallTextRaster = InSmallTextRaster;
+	DreamTextInputControlLocal::ForEachParagraph(*this, [InSmallTextRaster](UDreamText& InText) { InText.SetSmallTextRaster(InSmallTextRaster); });
 }
 
 void UDreamTextInput::SetTextOverflowPolicy(ETextOverflowPolicy InOverflowPolicy)

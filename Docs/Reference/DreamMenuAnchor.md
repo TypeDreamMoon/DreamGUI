@@ -8,12 +8,11 @@ Declared in `Public/Controls/DreamMenuAnchor.h`.
 
 A place a menu opens from, and the thing that puts it away again.
 
-UMG's MenuAnchor in the DreamGUI idiom. The parts a menu needs were all here already and had never
-been assembled: UDreamUIPopupLayer lifts a widget to the screen root so no ancestor clips it or
-counts it in its layout, and UUIDropdown's blocker is the full-screen click catcher that closes a
-popup when the pointer lands anywhere else. UDreamDropdown owns a private copy of exactly this
-arrangement; this class is that arrangement with the dropdown's list taken out of it, so a menu
-can hold anything.
+UMG's MenuAnchor in the DreamGUI idiom. The menu is a popup on UDreamUIPopupLayer's per-player
+stack, as the dropdown's list is: lifted to the screen root so no ancestor clips it or counts it in
+its layout, closed by a press anywhere else (bCloseOnClickOutside), by Back, and by this anchor
+going away or out of sight; and a menu opened from inside an open menu is its child, closed with
+it. Focus that went into the menu comes back to whatever had it when it opened.
 
 TWO WAYS TO SAY WHAT THE MENU IS, and they are alternatives:
 
@@ -53,7 +52,7 @@ leaving MenuSize at zero on that axis, which hands the axis back to the content.
 
 | Function | Kind | Description |
 |---|---|---|
-| `void Close()` | callable | Take it off screen and hand it home. A no-op while it is already closed. |
+| `void Close()` | callable | Take it off screen and hand it home: any menu opened from inside it first, then every player's focus that was in it back where it was when the menu opened -- unless the player has moved it elsewhere meanwhile. A no-op while it is already closed. |
 | `void FitInWindow(bool bInFitInWindow)` | callable | Named as UMG names the call. Re-places an open menu at once. |
 | `bool GetCloseOnClickOutside()` | pure | Get Close on Click Outside |
 | `bool GetFitInWindow()` | pure | Get Fit in Window |
@@ -65,7 +64,7 @@ leaving MenuSize at zero on that axis, which hands the axis back to the content.
 | `bool HasOpenSubMenus()` | pure | Whether anything inside this menu has a menu of ITS own open -- UMG's HasOpenSubMenus. |
 | `bool IsOpen()` | pure | Is Open |
 | `void Open(bool bFocusMenu)` | callable | Put the menu on screen, positioned by the style. A no-op while it is already open. |
-| `void SetCloseOnClickOutside(bool bInCloseOnClickOutside)` | callable | Adds or takes away the full-screen blocker WHILE the menu is open, rather than only deciding what the next open does -- a menu that became modal only on its second showing would be a switch that appears not to work. |
+| `void SetCloseOnClickOutside(bool bInCloseOnClickOutside)` | callable | Decides what a click elsewhere does WHILE the menu is open, rather than only what the next open does -- a menu that started closing on outside clicks only on its second showing would be a switch that appears not to work. |
 | `void SetMenuClass(TSubclassOf<UDreamUserWidget> InMenuClass)` | callable | Which menu this anchor opens. The instance is built on first open and kept, so a class changed afterwards throws the old instance away rather than leaving the anchor opening the previous menu forever. A change while the menu is OPEN closes it first: swapping the contents of a menu the player is reading is not a thing this can do quietly. |
 | `void SetMenuSize(FVector2D InMenuSize)` | callable | Re-places an open menu at once, so the new size is not something only the next open shows. |
 | `void SetPlacement(EDreamMenuPlacement InPlacement)` | callable | Edits this instance's style and re-places an open menu at once. See UDreamBorder::SetPadding. |
@@ -91,7 +90,7 @@ Every Blueprint-facing member of the UMG class, and where it went. *adopt*: same
 | `UMenuAnchor` | `Placement` | map | `FDreamMenuAnchorStyle::Placement` | In the style, because a project wants every menu to open the same way; the enum is EDreamMenuPlacement, shared with UDreamLayoutContainerMenuAnchor so both roads place a menu identically. GetPlacement answers the RESOLVED value. |
 | `UMenuAnchor` | `bFitInWindow` | adopt | `bFitInWindow` | Clamped against the ROOT widget, which is the rect the whole hierarchy is laid out inside and the nearest thing here to a Slate window. UDreamLayoutContainerMenuAnchor::FitMenuInWindow is CALLED rather than copied, so a menu lands in the same place whichever of the two anchors opened it. Off by default where UMG's and the panel's are on: turning a clamp on for every existing anchor would move menus somebody positioned on purpose. |
 | `UMenuAnchor` | `ShouldDeferPaintingAfterWindowContent` | reject |  | Slate paints a menu into the window's deferred layer so it draws over everything. There are no Slate windows here: a menu is lifted to the popup layer (UDreamUIPopupLayer), which IS the answer to the same question. |
-| `UMenuAnchor` | `UseApplicationMenuStack` | reject |  | The application's menu stack is Slate's own FSlateApplication machinery for native menus. This framework has no such stack; a menu here is a widget lifted to the popup layer. |
+| `UMenuAnchor` | `UseApplicationMenuStack` | map | `UDreamLayoutContainerMenuAnchor::bUseApplicationMenuStack` | The application's menu stack here is each player's stack on the popup layer (UDreamUIPopupLayer::Push): the menu is lifted onto the player's screen root while it is open, above everything and clipped by nothing, closed by a press outside it, Back or its anchor going away, and it follows the anchor. This control always opens its menu there. The panel spelling has UMG's switch, off by default where UMG's is on, so an anchor saved before it existed keeps drawing its menu in place. |
 | `UMenuAnchor` | `ShowMenuBackground` | reject |  | Whether the application menu stack draws its own background behind the menu. No stack, no background of its own -- the menu's face is FDreamMenuAnchorStyle::Background. |
 | `UMenuAnchor` | `OnMenuOpenChanged` | adopt | `OnMenuOpenChanged` | Fires after the move, never during. |
 | `UMenuAnchor` | `SetPlacement` | adopt | `SetPlacement` | Edits this instance's style and re-places an open menu at once. |

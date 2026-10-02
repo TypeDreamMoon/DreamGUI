@@ -10,6 +10,7 @@
 #include "Controls/DreamScrollBar.h"
 #include "Controls/DreamScrollBox.h"
 #include "Core/Components/DreamPanelLayouts.h"
+#include "Core/Components/DreamVisual.h"
 #include "Core/Components/DreamWidget.h"
 #include "Interaction/UIScrollView.h"
 #include "Interaction/UIScrollbar.h"
@@ -181,51 +182,155 @@ bool FDreamScrollBoxBarPaddingTest::RunTest(const FString& Parameters)
 }
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
-	FDreamScrollBoxTrackOutlivesTheBarTest,
-	"DreamGUI.ScrollBox.TheTrackCanOutliveTheBarAndKeepsItsGutterWhenItDoes",
+	FDreamScrollBoxIdleBarFollowsUMGTest,
+	"DreamGUI.ScrollBox.WithNothingToScrollTheBarCollapsesAndTheTrackFlagOnlyBrightensTheIdleTrack",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
 
-bool FDreamScrollBoxTrackOutlivesTheBarTest::RunTest(const FString& Parameters)
+/*
+ * This replaces DreamGUI.ScrollBox.TheTrackCanOutliveTheBarAndKeepsItsGutterWhenItDoes, which pinned the opposite
+ * rule: with AlwaysShowScrollbarTrack on, a box with nothing to scroll kept its bar as a bare groove and kept the
+ * gutter for it. That rule was this library's own, and decision C-3 reverses it to follow UMG. SScrollBar collapses,
+ * gutter and all, while nothing needs scrolling unless AlwaysShowScrollbar is on; AlwaysShowScrollbarTrack only raises
+ * the opacity of an idle track, to half (whole while the bar is hovered or dragged, nothing otherwise). Also checked:
+ * the Hidden setting draws no bar and keeps its room while the content overflows, as a Hidden Slate widget keeps its
+ * slot, and a Permanent bar is shown with its track at half however little there is to scroll.
+ */
+bool FDreamScrollBoxIdleBarFollowsUMGTest::RunTest(const FString& Parameters)
 {
 	using namespace DreamScrollBoxParityTestLocal;
 
-	// An auto-hiding box with nothing in it: the content is exactly the viewport, so there is nothing
-	// to scroll and the bar stands down.
+	// An auto-hiding box with nothing in it: the content is exactly the viewport, so there is nothing to scroll.
 	TDreamTestControl<UDreamScrollBox> Box(NewObject<UDreamScrollBox>(GetTransientPackage()));
 	Box->StyleSource = EDreamUIStyleSource::Inline;
 	Box->Style.Bar.Thickness = 12.0f;
 	Box->SetWidth(300.0f);
 	Box->SetHeight(200.0f);
 	Box->Initialize();
+	UDreamVisual* TrackVisual = Box->ScrollBarNode != nullptr && Box->ScrollBarNode->TrackNode != nullptr
+		? Box->ScrollBarNode->TrackNode->GetVisual() : nullptr;
 	if (!TestNotNull(TEXT("the box built a bar"), Box->ScrollBarNode.Get()) ||
-		!TestNotNull(TEXT("and a viewport"), Box->ViewportNode.Get()))
+		!TestNotNull(TEXT("and a viewport"), Box->ViewportNode.Get()) ||
+		!TestNotNull(TEXT("and the bar draws a track"), TrackVisual))
 	{
 		return false;
 	}
-	TestFalse(TEXT("an empty box auto-hides its bar"), Box->ScrollBarNode->GetWidgetActive());
-	TestEqual(TEXT("and the viewport keeps the whole width -- no gutter taken"),
-		static_cast<float>(Box->ViewportNode->GetSizeDelta().X), 0.0f);
+	// The gutter is what the viewport gives up across its width; the track's opacity is the multiplier the box lays
+	// over the colour the bar's style gives it.
+	auto Gutter = [&Box]() { return -static_cast<float>(Box->ViewportNode->GetSizeDelta().X); };
+	auto TrackOpacity = [TrackVisual]() { return TrackVisual->GetColorMultiplier().A; };
 
-	// The groove stays behind. The gutter stays with it, which is the point of the setting: a list
-	// that gains one row must not reflow its whole content because a bar appeared beside it.
+	TestFalse(TEXT("an empty box collapses its bar"), Box->ScrollBarNode->GetWidgetActive());
+	TestEqual(TEXT("...and takes no gutter for it"), Gutter(), 0.0f);
+	TestEqual(TEXT("an idle track is not drawn by default"), TrackOpacity(), 0.0f);
+
 	Box->SetAlwaysShowScrollbarTrack(true);
-	TestTrue(TEXT("the bar node survives so its track can be seen"), Box->ScrollBarNode->GetWidgetActive());
-	if (TestNotNull(TEXT("the bar has a handle to sleep"), Box->ScrollBarNode->HandleNode.Get()))
-	{
-		TestFalse(TEXT("but the handle is asleep -- a groove with no thumb"),
-			Box->ScrollBarNode->HandleNode->GetWidgetActive());
-	}
-	TestEqual(TEXT("and the gutter is spent anyway, so nothing reflows when the bar comes back"),
-		static_cast<float>(Box->ViewportNode->GetSizeDelta().X), -12.0f);
+	TestFalse(TEXT("the track flag does not bring a collapsed bar back"), Box->ScrollBarNode->GetWidgetActive());
+	TestEqual(TEXT("...nor take a gutter for one"), Gutter(), 0.0f);
+	TestEqual(TEXT("it draws an idle track at half"), TrackOpacity(), 0.5f);
 
-	// Give it something to scroll and the handle comes back with the bar.
+	// Something to scroll: the bar comes out by itself, into a gutter of its thickness, handle and all.
 	FillBox(*Box, 600.0f);
-	Box->ApplyStyle();
 	TestTrue(TEXT("a box with somewhere to scroll shows its bar"), Box->ScrollBarNode->GetWidgetActive());
+	TestEqual(TEXT("...in a gutter of its thickness"), Gutter(), 12.0f);
 	if (Box->ScrollBarNode->HandleNode != nullptr)
 	{
-		TestTrue(TEXT("and its handle"), Box->ScrollBarNode->HandleNode->GetWidgetActive());
+		TestTrue(TEXT("...with its handle"), Box->ScrollBarNode->HandleNode->GetWidgetActive());
 	}
+	TestEqual(TEXT("its idle track is drawn at half"), TrackOpacity(), 0.5f);
+	Box->HandleBarStateChangedForTest(EUISelectableSelectionState::Hovered);
+	TestEqual(TEXT("hovered, the track is drawn whole"), TrackOpacity(), 1.0f);
+	Box->HandleBarStateChangedForTest(EUISelectableSelectionState::Normal);
+	TestEqual(TEXT("left alone again, at half"), TrackOpacity(), 0.5f);
+	Box->SetAlwaysShowScrollbarTrack(false);
+	TestEqual(TEXT("without the flag an idle track is not drawn"), TrackOpacity(), 0.0f);
+	Box->HandleBarStateChangedForTest(EUISelectableSelectionState::Pressed);
+	TestEqual(TEXT("...and a dragged one is, whole"), TrackOpacity(), 1.0f);
+	Box->HandleBarStateChangedForTest(EUISelectableSelectionState::Normal);
+
+	Box->SetScrollBarVisibility(EDreamScrollBoxScrollbarVisibility::Hidden);
+	TestFalse(TEXT("a Hidden bar is not drawn"), Box->ScrollBarNode->GetWidgetActive());
+	TestEqual(TEXT("...but keeps its room while there is something to scroll"), Gutter(), 12.0f);
+
+	// A Permanent bar over a box with nothing to scroll.
+	TDreamTestControl<UDreamScrollBox> Permanent(MakeBox(14.0f));
+	UDreamVisual* PermanentTrack = Permanent->ScrollBarNode != nullptr && Permanent->ScrollBarNode->TrackNode != nullptr
+		? Permanent->ScrollBarNode->TrackNode->GetVisual() : nullptr;
+	if (!TestNotNull(TEXT("the permanent box's bar draws a track"), PermanentTrack))
+	{
+		return false;
+	}
+	TestTrue(TEXT("a Permanent bar is shown with nothing to scroll"), Permanent->ScrollBarNode->GetWidgetActive());
+	TestEqual(TEXT("...in its gutter"), -static_cast<float>(Permanent->ViewportNode->GetSizeDelta().X), 14.0f);
+	TestEqual(TEXT("...with its idle track at half, as AlwaysShowScrollbar draws it"), PermanentTrack->GetColorMultiplier().A, 0.5f);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamScrollBoxStylePushKeepsTheContentTest,
+	"DreamGUI.ScrollBox.AStylePushLeavesTheContentWhereScrollingLeftIt",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * The style push put the control's cached ScrollProgress back into the view. That cache follows the view's change
+ * event, and a range that moves under the content raises none, so after rows were added the next style push -- any
+ * property edit makes one -- moved the content to where the old fraction falls in the new range: a box scrolled 100
+ * into a range of 400 sat at a quarter, and given 400 more rows the push took it to 200. The push now reads the
+ * progress back from the view. The authored value is still pushed until it first lands on content that can scroll,
+ * and again whenever ScrollProgress itself is set, so a box built empty still opens where it was authored to.
+ */
+bool FDreamScrollBoxStylePushKeepsTheContentTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamScrollBoxParityTestLocal;
+
+	TDreamTestControl<UDreamScrollBox> Box(MakeBox());
+	FillBox(*Box, 600.0f);
+	UUIScrollView* View = Box->GetScrollView();
+	if (!TestNotNull(TEXT("the box has a view"), View))
+	{
+		return false;
+	}
+	const double RangeBefore = View->GetScrollableExtent().Y;
+	if (!TestTrue(FString::Printf(TEXT("the box has more than 100 to scroll (%.1f)"), RangeBefore), RangeBefore > 100.0))
+	{
+		return false;
+	}
+	Box->SetScrollOffset(100.0f);
+	TestEqual(TEXT("scrolled 100 in"), Box->GetScrollOffset(), 100.0f, 0.01f);
+
+	FillBox(*Box, 400.0f);
+	const double RangeAfter = View->GetScrollableExtent().Y;
+	TestTrue(TEXT("more rows, more range"), RangeAfter > RangeBefore + 1.0);
+	TestEqual(TEXT("adding rows leaves the content where it was"), Box->GetScrollOffset(), 100.0f, 0.01f);
+	Box->ApplyStyle();
+	TestEqual(TEXT("...and so does the style push after it"), Box->GetScrollOffset(), 100.0f, 0.01f);
+	TestEqual(TEXT("the progress it keeps is the offset's share of the new range"),
+		Box->ScrollProgress, static_cast<float>(100.0 / RangeAfter), 0.001f);
+
+	// Set, the authored value is pushed at once.
+	Box->SetScrollProgress(0.5f);
+	TestEqual(TEXT("setting the progress moves the content"), Box->GetScrollOffset(), static_cast<float>(0.5 * RangeAfter), 0.5f);
+
+	// Authored on a box built empty: nothing to scroll yet, so it waits for the content and lands on it.
+	TDreamTestControl<UDreamScrollBox> Late(NewObject<UDreamScrollBox>(GetTransientPackage()));
+	Late->StyleSource = EDreamUIStyleSource::Inline;
+	Late->ScrollProgress = 0.5f;
+	Late->SetWidth(300.0f);
+	Late->SetHeight(200.0f);
+	Late->Initialize();
+	UUIScrollView* LateView = Late->GetScrollView();
+	if (!TestNotNull(TEXT("the late box has a view"), LateView))
+	{
+		return false;
+	}
+	TestEqual(TEXT("built empty, the box has nowhere to put the authored progress"), Late->GetScrollOffset(), 0.0f, 0.01f);
+	TestEqual(TEXT("...and keeps it rather than reporting the zero it is at"), Late->ScrollProgress, 0.5f);
+	FillBox(*Late, 600.0f);
+	TestEqual(TEXT("content arriving takes the box where it was authored to open"),
+		Late->GetScrollOffset(), static_cast<float>(0.5 * LateView->GetScrollableExtent().Y), 0.5f);
+	// Landed, it is not pushed again over a later scroll.
+	Late->SetScrollOffset(10.0f);
+	Late->ApplyStyle();
+	TestEqual(TEXT("once landed, the authored value is not pushed over a later scroll"), Late->GetScrollOffset(), 10.0f, 0.01f);
 	return true;
 }
 

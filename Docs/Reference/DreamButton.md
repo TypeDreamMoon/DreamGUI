@@ -29,7 +29,7 @@ the default one, so nesting fills it:
 |---|---|---|---|---|---|
 | `Style` | `FDreamButtonStyle` | Button | yes | `GetStyle` / `SetStyle` | This instance's own look. The project sheet wins while StyleSource says so AND a sheet actually exists; with no sheet in the project this IS the look in effect -- which is why it stays editable instead of being gated on the enum: the old edit condition greyed the exact values that were driving the control. |
 | `BackgroundColor` | `FColor` | Button | yes | `GetBackgroundColor` / `SetBackgroundColor` | A tint multiplied over whatever the face is showing -- UMG's BackgroundColor, and the runtime half of the face brush's authored Tint. |
-| `ColorAndOpacity` | `FLinearColor` | Button | yes | `GetColorAndOpacity` / `SetColorAndOpacity` | A tint over the WHOLE button, face and content alike -- UMG's ColorAndOpacity, of which the alpha is the half this framework can honour. |
+| `ColorAndOpacity` | `FLinearColor` | Button | yes | `GetColorAndOpacity` / `SetColorAndOpacity` | A tint over the WHOLE button, face and content alike -- UMG's ColorAndOpacity, of which this property honours the alpha. |
 | `bAllowDragDrop` | `bool` | Button | yes | `GetAllowDragDrop` / `SetAllowDragDrop` | Whether a drag may START on this button -- UMG's bAllowDragDrop, and off as UMG has it. |
 | `ClickMethod` | `EDreamUIClickMethod` | Button | yes | `GetClickMethod` / `SetClickMethod` | WHEN this button's click fires, per input kind -- UMG's three enums, surfaced at the control. |
 | `TouchMethod` | `EDreamUITouchMethod` | Button | yes | `GetTouchMethod` / `SetTouchMethod` |  |

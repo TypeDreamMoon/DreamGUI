@@ -87,6 +87,12 @@ public:
 	static FString GetCaptureDirectory();
 	/** Source/DreamGUITests/Resources/Golden in the plugin: the pictures the tests are held to, kept with the code. */
 	static FString GetGoldenDirectory();
+	/**
+	 * Why the golden image InName is pending, from Golden/pending.json ("pending": { "<name>": "<why>" }), or empty when
+	 * it is not: a golden due to be written for the first time or rewritten -- a new scene, a change to the renderer made
+	 * on purpose -- and not looked at yet. Read from the file each time, so taking an entry out needs no rebuild.
+	 */
+	static FString GetPendingGoldenReason(const FString& InName);
 
 	/** InPixels as <capture directory>/<InName>.png. The file written, or empty when it could not be. */
 	static FString SaveCapture(const TArray<FColor>& InPixels, FIntPoint InSize, const FString& InName);
@@ -115,7 +121,8 @@ public:
 	 *
 	 * A picture with no golden yet passes with a warning naming the file to look at: a golden is a picture someone
 	 * has judged right, and only a person can do that. -DreamGUIWriteGoldens on the command line writes every
-	 * picture over its golden instead, for when the renderer changed on purpose.
+	 * picture over its golden instead, for when the renderer changed on purpose. A pending golden
+	 * (GetPendingGoldenReason) is compared all the same, but a difference is a warning that says why it is pending.
 	 */
 	static bool ExpectMatchesGolden(FAutomationTestBase& InTest, const TArray<FColor>& InPixels, FIntPoint InSize,
 		const FString& InName, uint8 InTolerance = 8, double InAllowedFraction = 0.002);

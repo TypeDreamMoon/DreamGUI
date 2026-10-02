@@ -1138,7 +1138,12 @@ struct DREAMGUICONTROLS_API FDreamListStyle
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "List Style", meta = (InlineEditConditionToggle))
 	bool bOverride_RowHeight = true;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "List Style", meta = (EditCondition = "bOverride_RowHeight"))
+	/**
+	 * A row's extent along the scroll axis (a tile's height in a tile view). At least one unit: a row no
+	 * taller than nothing is drawn by nothing, and the window arithmetic falls back to a fixed sixteen
+	 * lines for a value under that which an old asset or SetStyle can still hand it.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "List Style", meta = (EditCondition = "bOverride_RowHeight", ClampMin = "1.0"))
 	float RowHeight = 30.0f;
 
 	/** Between rows. Zero is the dense list UMG draws by default. */

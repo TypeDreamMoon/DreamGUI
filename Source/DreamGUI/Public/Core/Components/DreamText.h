@@ -6,12 +6,15 @@
 #include "DreamVisualBatchMesh.h"
 #include "Core/IDreamUICultureChangedInterface.h"
 #include "Core/DreamUITextData.h"
+//for FDreamTextCoverageReport, which a text keeps for the painter to write
+#include "Core/Text/DreamTextPainter.h"
 #include "DreamText.generated.h"
 
 
 class UDreamUIFontData_BaseObject;
 class UDreamUIRichTextImageData_BaseObject;
 class UDreamUIRichTextCustomStyleData;
+class UDreamUIManagerWorldSubsystem;
 struct FDreamTextLayoutInput;
 struct FDreamTextPaintParams;
 
@@ -24,6 +27,91 @@ struct FDreamTextPaintParams;
 /** A `<a=Id>` range was clicked; Id is what the markup named it. */
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FDreamTextHyperlinkEvent, FName, Id);
 DECLARE_MULTICAST_DELEGATE_OneParam(FDreamTextHyperlinkCppEvent, FName);
+
+/** Whether a text may draw its small sizes from hinted coverage glyphs rather than from its font's distance field. */
+UENUM(BlueprintType, Category = DreamGUI)
+enum class EDreamTextSmallTextRaster : uint8
+{
+	/** Coverage glyphs wherever the project, the font and the text's situation allow (UDreamGUISettings::bSmallTextCoverage). */
+	Auto,
+	/** Always the distance field. */
+	Off,
+};
+
+/** What decided how a text drew its small sizes at its last paint; see UDreamText::GetSmallTextState. */
+enum class EDreamTextSmallTextGate : uint8
+{
+	/** Not painted since it was made or moved to another canvas. */
+	NotPainted,
+	/** Its small sizes came from coverage glyphs. */
+	Coverage,
+	/** SmallTextRaster is Off. */
+	Off,
+	/** The font draws no coverage glyphs: not an outline (multi-channel) distance field, or coverage is off for it or the project. */
+	Font,
+	/** An override material draws it, and only the built-in shading knows coverage glyphs. */
+	OverrideMaterial,
+	/**
+	 * A material that is not DreamGUI's own draws it -- its font's, or, with the built-in UI shader off, a canvas default
+	 * material other than DreamGUI's -- and only DreamGUI's shading (DreamUIShade.ush) knows coverage glyphs.
+	 */
+	Material,
+	/** Its text style has effects, face softness or face dilation. */
+	Style,
+	/** An enabled mesh modifier moves or re-maps its vertices. */
+	Modifier,
+	/** Pixel snapping resolves to Disabled on it or above it. */
+	Snapping,
+	/** It has no render canvas. */
+	NoCanvas,
+	/** Its root canvas renders in world space. In an editor world a screen-space canvas does too: it is drawn in the level. */
+	WorldSpace,
+	/**
+	 * Its screen-space canvas renders at a fraction of the screen's resolution (UDreamCanvas::ScreenSpaceRenderScale): into
+	 * a smaller target scaled up afterwards, or not, as the renderer decides on its own thread -- no pixel grid to place on.
+	 */
+	RenderScale,
+	/** It is in a render layer, which places it on the GPU. */
+	RenderLayer,
+	/**
+	 * It is not flat, or rolled, mirrored or unevenly scaled relative to its root canvas, or sheared, or under a perspective;
+	 * or its canvas draws its units unevenly on the target (wider than tall, or the other way), by more than an eighth of a
+	 * pixel across the widget.
+	 */
+	Transform,
+	/** None of its glyphs is small enough at its device scale (UDreamUIFontData_BaseObject::GetCoverageMaxPixelSize). */
+	Large,
+	/** Its device scale has not settled yet: drawn from the field meanwhile, and in its world's sharpen set. */
+	Settling,
+};
+
+/**
+ * What the small-text gate decided at a text's last paint, and what its debounce and raster-scale hysteresis keep from one
+ * paint to the next. Device pixels are those of what the text's root canvas renders into -- its render target, or the
+ * screen -- measured through the matrices the canvas is drawn with: S of them to a unit of the text's local space.
+ */
+struct FDreamTextSmallTextState
+{
+	/** Why the last paint drew what it drew: Coverage when its small sizes came from coverage glyphs. */
+	EDreamTextSmallTextGate Gate = EDreamTextSmallTextGate::NotPainted;
+	/** S, at the last paint that could place the text on the device pixel grid. */
+	float DeviceScale = 0.0f;
+	/** The scale coverage glyphs are rasterized at, kept while S stays within 1% of it. */
+	float RasterScale = 0.0f;
+	/** Where the device pixel grid lies in the text's local space (FDreamTextCoverageParams::SnapOrigin), at that paint. */
+	FVector2f SnapOrigin = FVector2f::ZeroVector;
+	/** The root canvas renders to a render target, which blends in linear space. */
+	bool bLinearTarget = false;
+	/** The smallest glyph that paint could draw from coverage, in the text's units; MAX_flt when it had none. */
+	float MinGlyphSize = 0.0f;
+	/** S as a paint or a sweep last saw it, and how many sweeps in a row have seen it unchanged since. */
+	float SettlingScale = 0.0f;
+	int32 SettledSweeps = 0;
+	/** A paint has seen S. The first one counts as settled: a text that appears draws crisp at once. */
+	bool bScaleSeen = false;
+	/** In its world's sharpen set: on the field only because S has not settled, and repainted by the sweep once it has. */
+	bool bWaitingToSharpen = false;
+};
 
 UCLASS(ClassGroup = (DreamGUI), Blueprintable)
 class DREAMGUI_API UDreamText : public UDreamVisualBatchMesh, public IDreamUICultureChangedInterface
@@ -39,6 +127,7 @@ protected:
 	virtual void OnRegister()override;
 	virtual void OnUnregister()override;
 	virtual void BeginDestroy() override;
+	virtual void OnRenderCanvasChanged(UDreamCanvas* InOldCanvas, UDreamCanvas* InNewCanvas)override;
 public:
 #if WITH_EDITOR
 	virtual void PreEditChange(FProperty* PropertyAboutToChange) override;
@@ -178,6 +267,33 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "DreamGUI", Getter, Setter, meta = (AllowPrivateAccess = true))
 	EDreamTextFlowDirection FlowDirection = EDreamTextFlowDirection::Auto;
 	/**
+	 * The language the text is written in, as a culture name ("ja", "zh-Hans", "en-US"): the font's fallbacks meant for it
+	 * are preferred (FDreamUIFontFallback::Cultures), and HarfBuzz picks the forms a script draws differently per language
+	 * (locl). Empty, the default, is the game's current language. A rich text's <lang=xx>...</lang> overrides it for what
+	 * the tag encloses. Line breaking follows the game's culture whatever this says.
+	 */
+	UPROPERTY(EditAnywhere, Category = "DreamGUI", Getter, Setter, meta = (AllowPrivateAccess = true))
+	FString Language;
+	/**
+	 * Tab stops, in spaces of the font at the text's size (plus letter spacing), from the line's start edge: CSS tab-size,
+	 * 8 as browsers have it. A tab narrower than half a space jumps to the next stop; 0 makes a tab take no room.
+	 */
+	UPROPERTY(EditAnywhere, Category = "DreamGUI", Getter, Setter, meta = (AllowPrivateAccess = true, ClampMin = "0.0", UIMax = "16.0"))
+	float TabSize = 8.0f;
+	/** Where a justified line (HAlign Justify) gets its extra room: after word separators, between CJK characters, or everywhere. */
+	UPROPERTY(EditAnywhere, Category = "DreamGUI", Getter, Setter, meta = (AllowPrivateAccess = true))
+	EDreamTextJustify TextJustify = EDreamTextJustify::Auto;
+	/** How a justified paragraph's last line, and a line a newline ends, align (HAlign Justify only). */
+	UPROPERTY(EditAnywhere, Category = "DreamGUI", Getter, Setter, meta = (AllowPrivateAccess = true))
+	EDreamTextLastLineAlign LastLineAlign = EDreamTextLastLineAlign::Auto;
+	/**
+	 * Off keeps this text on its font's distance field at every size. Auto lets small sizes draw from hinted coverage
+	 * glyphs where that can be exact (UDreamGUISettings::bSmallTextCoverage says where): crisper at 10-20 px, the same
+	 * layout, carets and selection.
+	 */
+	UPROPERTY(EditAnywhere, Category = "DreamGUI", AdvancedDisplay, Getter, Setter, meta = (AllowPrivateAccess = true))
+	EDreamTextSmallTextRaster SmallTextRaster = EDreamTextSmallTextRaster::Auto;
+	/**
 	 * Underline the whole text, the way UMG puts it on a text's style rather than only in markup.
 	 * Rich text's `<u>` still works and nests on top of it: a style is where the run starts, a tag is
 	 * what it does from there.
@@ -289,6 +405,14 @@ public:
 
 	virtual void OnBeforeCreateOrUpdateGeometry()override;
 	virtual bool GetShouldAffectByPixelSnapping()const override;
+	/**
+	 * Yes while it draws small-text coverage glyphs, unless the move kept it on the device pixel grid of its last paint (a
+	 * whole-pixel translation at the same device scale); and yes when the move puts a text that was on the field only
+	 * because of where it was (a roll, a render layer, a size above the limit) somewhere it could draw from coverage.
+	 */
+	virtual bool GetRepaintsOnTransformChange()const override;
+	/** Pixel snapping is read by the layout of a pixel-perfect font and by the small-text gate: a change repaints. */
+	virtual void OnPixelSnappingChanged()override;
 	virtual void OnUpdateGeometry(FDreamUIGeometry& InGeo, bool InTriangleChanged, bool InVertexPositionChanged, bool InVertexUVChanged, bool InVertexColorChanged)override;
 	virtual uint8 GetFontMark_WidgetPropertyDataForMaterial() override;
 	virtual void FillWidgetPropertyDataForMaterial_Extra(class UDreamUIDataAsTexture* DataAsTexture) override;
@@ -298,6 +422,13 @@ public:
 	 * the median of three for MTSDF. 0 until the record is first written.
 	 */
 	uint8 GetWidgetPropertyFontMark()const { return WrittenFontMark; }
+	/**
+	 * What the small-text gate decided at this text's last paint -- whether its small sizes came from coverage glyphs and
+	 * at what device scale, or what kept them on the field -- and what its debounce keeps between paints.
+	 */
+	const FDreamTextSmallTextState& GetSmallTextState()const { return SmallTextState; }
+	/** What the last paint the gate let draw from coverage found: how many items did, and how many waited for their glyph. */
+	const FDreamTextCoverageReport& GetSmallTextReport()const { return SmallTextReport; }
 	virtual void OnCultureChanged_Implementation()override;
 
 public:
@@ -353,6 +484,11 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI") bool GetAutoWrapText()const { return bAutoWrapText; }
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI") EDreamUITextTransformPolicy GetTextTransform()const { return TextTransform; }
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI") EDreamTextFlowDirection GetFlowDirection()const { return FlowDirection; }
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI") const FString& GetLanguage()const { return Language; }
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI") float GetTabSize()const { return TabSize; }
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI") EDreamTextJustify GetTextJustify()const { return TextJustify; }
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI") EDreamTextLastLineAlign GetLastLineAlign()const { return LastLineAlign; }
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI") EDreamTextSmallTextRaster GetSmallTextRaster()const { return SmallTextRaster; }
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI") bool GetUnderline()const { return bUnderline; }
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI") bool GetStrikethrough()const { return bStrikethrough; }
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI") bool GetBestFit()const { return bBestFit; }
@@ -443,6 +579,23 @@ public:
 	void SetTextTransform(EDreamUITextTransformPolicy Value);
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
 	void SetFlowDirection(EDreamTextFlowDirection Value);
+	/** A culture name, or empty for the game's current language; see Language. */
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
+	void SetLanguage(const FString& Value);
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
+	void SetTabSize(float Value);
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
+	void SetTextJustify(EDreamTextJustify Value);
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
+	void SetLastLineAlign(EDreamTextLastLineAlign Value);
+	/** A repaint, never a layout: coverage glyphs only replace quads. */
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
+	void SetSmallTextRaster(EDreamTextSmallTextRaster Value);
+	/**
+	 * Keep this text's layout between layouts and lay out again only what an edit touched, while something types into it:
+	 * UITextInput turns it on for its visual. Not saved. See FDreamUITextGeometryCache::SetIncrementalLayout.
+	 */
+	void SetIncrementalLayout(bool bInEnabled);
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
 	void SetUnderline(bool Value);
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
@@ -496,8 +649,36 @@ private:
 	void UnregisterFont();
 	FDelegateHandle EmojiDataChangedDelegateHandle;
 	FDelegateHandle GlyphsReadyDelegateHandle;
+	FDelegateHandle CoverageGlyphsChangedDelegateHandle;
 	/** The last layout had glyphs still on the font's worker; relayout when the font says they landed. */
 	mutable bool bWaitingForGlyphs = false;
+	/** See GetSmallTextState. */
+	FDreamTextSmallTextState SmallTextState;
+	/** What the painter reports through FDreamTextCoverageParams::Report; zeroed before every paint. See GetSmallTextReport. */
+	mutable FDreamTextCoverageReport SmallTextReport;
+	/**
+	 * How many vertices the last paint wrote. A paint not asked to change the triangles can still change their count: a
+	 * coverage glyph draws a character whose field glyph is still being made, or stops drawing it when the gate says no.
+	 */
+	int32 PaintedVertexCount = 0;
+	/** The world whose sharpen set holds this text, while one does. */
+	TWeakObjectPtr<UDreamUIManagerWorldSubsystem> SmallTextSharpenManager;
+	/**
+	 * The small-text gate, run right before every paint against the layout it paints: decides whether small sizes draw
+	 * from coverage glyphs this time and where the device pixel grid lies (MakePaintParams reads the answer from
+	 * SmallTextState), and keeps the debounce and the raster-scale hysteresis.
+	 */
+	void ResolveSmallTextRaster();
+	/** The gate's conditions on the text itself rather than on where it is drawn: Coverage when none of them rules it out. */
+	EDreamTextSmallTextGate GetSmallTextConditionsGate();
+	/** Into the sharpen set of the world this text is registered in, whose sweep binds while the set holds anything. */
+	void JoinSmallTextSharpenSet();
+	void LeaveSmallTextSharpenSet();
+	/**
+	 * The sharpen sweep, right before a world's root canvases update: every text in its set whose device scale has stayed
+	 * the same for long enough is repainted -- from coverage glyphs, at the scale it settled at -- and leaves the set.
+	 */
+	static void SweepSmallTextSharpenSet(UDreamUIManagerWorldSubsystem* InManager);
 	/** What RegisterPerCharacterAnimation was told is animating the characters, each once; gone objects count for nothing. */
 	TArray<TWeakObjectPtr<const UObject>> PerCharacterAnimators;
 	/** The tag colours SetTagColorOverride put in force, as (tag index, colour): handed to the painter as they are. */

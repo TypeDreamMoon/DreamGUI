@@ -36,6 +36,8 @@ UDreamUIFontData_DistanceField::UDreamUIFontData_DistanceField()
 
 bool UDreamUIFontData_DistanceField::GetCharDataFromCache(const FDreamUIGlyphKey& Glyph, float CharSize, bool IsBold, FDreamUICharData& OutResult)
 {
+	// Field glyphs only. A colour glyph (an emoji) is a bitmap at a size, not a field: it is kept and scaled by the base
+	// class (UDreamUIFontData_FreeTypeRender::GetColorGlyphData) and never passes through the shrink and scale below.
 	auto CharKey = FDreamUIDistanceFieldCharKey(Glyph, IsBold);
 	if (auto charData = CharDataMap.Find(CharKey))
 	{
@@ -286,10 +288,56 @@ float UDreamUIFontData_DistanceField::GetAtlasEmTexels() const
 	return UDreamGUISettings::Get()->bSmallTextCorrection ? (float)SampleFontSize : -(float)SampleFontSize;
 }
 
+bool UDreamUIFontData_DistanceField::SupportsCoverageGlyphs() const
+{
+#if WITH_FREETYPE
+	// Coverage cells share the atlas with the field, four phases to a BGRA texel: the single-channel field's R8 atlas has
+	// no room for them.
+	if (SdfSource != EDreamUISdfSource::OutlineMultiChannel)
+	{
+		return false;
+	}
+	switch (SmallTextCoverage)
+	{
+	case EDreamUISmallTextCoverage::On:
+		return true;
+	case EDreamUISmallTextCoverage::Off:
+		return false;
+	default:
+		return UDreamGUISettings::Get()->bSmallTextCoverage;
+	}
+#else
+	return false;
+#endif
+}
+
+float UDreamUIFontData_DistanceField::GetCoverageMaxPixelSize() const
+{
+	return SmallTextMaxPixelSize > 0.0f ? SmallTextMaxPixelSize : UDreamGUISettings::Get()->SmallTextMaxPixelSize;
+}
+
+float UDreamUIFontData_DistanceField::GetColorGlyphReachEm() const
+{
+	return SampleFontSize > 0 ? (float)SDFRadius / (float)SampleFontSize : 0.0f;
+}
+
+void UDreamUIFontData_DistanceField::GetCoverageRasterStyle(uint8& OutHinting, float& OutBoldEm, float& OutItalicSlope) const
+{
+	// The same synthetic styles the field draws: bold grows the stroke by BoldRatio em in all, italic leans by ItalicAngle.
+	OutHinting = (uint8)CoverageHinting;
+	OutBoldEm = BoldRatio;
+	OutItalicSlope = FMath::Tan(FMath::DegreesToRadians(ItalicAngle));
+}
+
 #if WITH_EDITOR
 void UDreamUIFontData_DistanceField::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
 {
 	Super::PostEditChangeProperty(PropertyChangedEvent);
+	// Not on every step of a slider being dragged: the reload comes with the value it is let go at.
+	if (PropertyChangedEvent.ChangeType == EPropertyChangeType::Interactive)
+	{
+		return;
+	}
 	ReloadFont();
 }
 #endif

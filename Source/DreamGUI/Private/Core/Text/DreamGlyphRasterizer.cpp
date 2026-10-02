@@ -168,7 +168,19 @@ void FDreamGlyphRasterizer::RunWorker()
 #if WITH_FREETYPE
 		if (FT_FaceRec_* Face = GetWorkerFace(Job.Key.FaceIndex))
 		{
-			Result.bSucceeded = FDreamGlyphSdf::GenerateMTSDF(Face, Job.Key.GlyphIndex, Job.PixelsPerEm, Job.SpreadPixels, Job.BoldPixels, Result.Sdf);
+			// Each kind fills its own payload and leaves the other two empty.
+			switch (Job.Kind)
+			{
+			case EDreamGlyphJobKind::Field:
+				Result.bSucceeded = FDreamGlyphSdf::GenerateMTSDF(Face, Job.Key.GlyphIndex, Job.PixelsPerEm, Job.SpreadPixels, Job.BoldPixels, Result.Sdf);
+				break;
+			case EDreamGlyphJobKind::Coverage:
+				Result.bSucceeded = FDreamGlyphCoverage::Rasterize(Face, Job.Key.GlyphIndex, Job.Coverage, Result.Coverage);
+				break;
+			case EDreamGlyphJobKind::Color:
+				Result.bSucceeded = FDreamGlyphColor::Rasterize(Face, Job.Key.GlyphIndex, Job.Color, Result.Color);
+				break;
+			}
 		}
 #endif
 		{

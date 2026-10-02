@@ -166,7 +166,13 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Expandable Area")
 	bool GetIsExpanded() const;
 
-	/** Silent when the flag does not move; otherwise pushes the visuals and broadcasts both events. */
+	/**
+	 * Silent when the flag does not move; otherwise pushes the visuals and broadcasts both events.
+	 *
+	 * Collapsing first moves every player's focus that is inside the content onto the header (through
+	 * FDreamFocusReturn::MoveFocusOutOf), so the next stick press starts from the section that closed
+	 * rather than from nowhere.
+	 */
 	UFUNCTION(BlueprintCallable, Category = "Expandable Area")
 	void SetIsExpanded(bool bInIsExpanded);
 
@@ -277,7 +283,17 @@ private:
 	 */
 	float ResolveContentExtent();
 
-	/** Where a running open or close currently stands, 0 collapsed to 1 expanded. */
+	/**
+	 * How much of the content shows, 0 none to 1 all: where a running open or close has got to, else
+	 * the expanded flag's own end. The one number the expansion push and the content-size handler both
+	 * scale the content by, so a re-layout in the middle of a travel cannot show the whole body.
+	 */
+	float GetShownFraction() const;
+
+	/**
+	 * Where a running open or close currently stands, 0 collapsed to 1 expanded. Kept at the flag's end
+	 * while nothing travels, so an open starts from where the section actually is.
+	 */
 	UPROPERTY(Transient)
 	float ExpansionAlpha = 1.0f;
 

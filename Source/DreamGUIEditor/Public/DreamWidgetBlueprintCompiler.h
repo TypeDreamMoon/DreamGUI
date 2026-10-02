@@ -160,6 +160,22 @@ protected:
 	 */
 	TArray<FDreamUIResource> TextResources;
 
+	/** What this compile's read of the .dui came to, for the resource variables declared after it. */
+	enum class ETextSourceOutcome : uint8
+	{
+		/** The class names no .dui: no resources, and none kept from before. */
+		NoSource,
+		/** The file was read and built into the hierarchy: TextResources holds its entries. */
+		Built,
+		/**
+		 * The class names a file this compile could not build -- unreadable, not parsing, or building nothing --
+		 * so the previous hierarchy stays, and the resource variables the last good read declared
+		 * (UDreamWidgetBlueprint::LastGoodResourceVariables) are declared again with it, with a warning.
+		 */
+		KeptPrevious,
+	};
+	ETextSourceOutcome TextSourceOutcome = ETextSourceOutcome::NoSource;
+
 	/**
 	 * Every DUInnnn this compile raised about the .dui, from the parse through to the last check.
 	 *

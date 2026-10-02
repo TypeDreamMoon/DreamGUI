@@ -209,10 +209,28 @@ int32 UDreamWidget::GetLocalPlayerCountForQueries() const
 	return GameInstance != nullptr ? FMath::Max(GameInstance->GetNumLocalPlayers(), 1) : 1;
 }
 
+namespace DreamWidgetFocusQueryLocal
+{
+	/**
+	 * The players an any-player focus query asks about: every one the input system has, script players included. The
+	 * game instance's local players left out a test rig's second player and every player a script drives, so their focus
+	 * answered "nobody's" here. No input system, no players, and no focus to find.
+	 */
+	void GetPlayersToAsk(const UDreamWidget* InWidget, TArray<int32>& OutUserIndices)
+	{
+		OutUserIndices.Reset();
+		if (const UDreamUIInputServices* Services = UDreamUIInputServices::Get(InWidget))
+		{
+			Services->GetUserIndices(OutUserIndices);
+		}
+	}
+}
+
 bool UDreamWidget::HasAnyUserFocus() const
 {
-	const int32 PlayerCount = GetLocalPlayerCountForQueries();
-	for (int32 UserIndex = 0; UserIndex < PlayerCount; ++UserIndex)
+	TArray<int32> UserIndices;
+	DreamWidgetFocusQueryLocal::GetPlayersToAsk(this, UserIndices);
+	for (const int32 UserIndex : UserIndices)
 	{
 		if (HasFocus(UserIndex))
 		{
@@ -232,8 +250,9 @@ bool UDreamWidget::HasFocusedDescendantForUser(int32 InUserIndex) const
 
 bool UDreamWidget::HasFocusedDescendants() const
 {
-	const int32 PlayerCount = GetLocalPlayerCountForQueries();
-	for (int32 UserIndex = 0; UserIndex < PlayerCount; ++UserIndex)
+	TArray<int32> UserIndices;
+	DreamWidgetFocusQueryLocal::GetPlayersToAsk(this, UserIndices);
+	for (const int32 UserIndex : UserIndices)
 	{
 		if (HasFocusedDescendantForUser(UserIndex))
 		{

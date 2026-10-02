@@ -131,6 +131,13 @@ public:
 	UPROPERTY(EditAnywhere, config, Category = "Text", meta = (ClampMin = "0", EditCondition = "bAsyncGlyphRasterization"))
 		int32 AsyncGlyphSyncBudgetPerFrame = 24;
 	/**
+	 * How many new small-text coverage glyphs a frame may rasterize on the game thread before the rest go to the worker. A
+	 * budget of its own, separate from the field glyphs': a coverage glyph is far cheaper to make than a field, and an
+	 * item whose coverage glyph is still on the worker draws from the field meanwhile rather than not at all.
+	 */
+	UPROPERTY(EditAnywhere, config, Category = "Text", meta = (ClampMin = "0", EditCondition = "bAsyncGlyphRasterization"))
+		int32 CoverageGlyphSyncBudgetPerFrame = 48;
+	/**
 	 * How many Texture2DArray slices a font's glyph atlas may grow to. The atlas only grows -- a
 	 * rect-packed atlas cannot hand one glyph's rectangle to a glyph of another size without repacking,
 	 * so there is no "evict one glyph" -- and when it reaches this budget the whole cache is thrown away
@@ -145,6 +152,14 @@ public:
 	 */
 	UPROPERTY(EditAnywhere, config, Category = "Text", meta = (ClampMin = "1", UIMin = "1", UIMax = "64"))
 		int32 MaxFontAtlasSlices = 8;
+	/**
+	 * How many of a font's atlas cells (512x512 on a distance-field font, so about 1 MB each) its small-text coverage glyphs
+	 * may borrow. They are packed apart from the field glyphs, from the same pool of cells; when they need more than this,
+	 * every coverage glyph of the font is flushed at the next frame boundary and the cells are given back, which costs a
+	 * repaint of the texts drawing from them and no layout. The field glyphs are never touched by it.
+	 */
+	UPROPERTY(EditAnywhere, config, Category = "Text", meta = (ClampMin = "1", UIMin = "1", UIMax = "32"))
+		int32 MaxCoverageCells = 4;
 
 	/** If false, ScreenSpaceUI can still do interaction and animation when GamePause */
 	UPROPERTY(EditAnywhere, config, Category = "Game", meta = (DisplayName="ScreenSpaceUI Affect by GamePause"))
@@ -198,8 +213,12 @@ public:
 	static bool GetUseBuiltInUIShader();
 	static bool GetAsyncGlyphRasterization();
 	static int32 GetAsyncGlyphSyncBudgetPerFrame();
+	/** CoverageGlyphSyncBudgetPerFrame, never negative. */
+	static int32 GetCoverageGlyphSyncBudgetPerFrame();
 	/** The configured atlas slice budget, clamped to what the RHI can address. */
 	static int32 GetMaxFontAtlasSlices();
+	/** MaxCoverageCells, at least 1. */
+	static int32 GetMaxCoverageCells();
 private:
 	static const FDreamUIAtlasSettings& GetAtlasSettings(const FName& InPackingTag);
 };

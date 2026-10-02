@@ -5,11 +5,11 @@
 #include "Core/Components/DreamCanvas.h"
 #include "DreamUIBPLibrary.h"
 #include "Core/DreamUIClipData.h"
+#include "Core/DreamUIInputServices.h"
 #include "Core/Components/DreamImage.h"
 #include "Core/Components/DreamWidget.h"
 #include "Core/Components/DreamText.h"
-#include "Core/Components/DreamVisualEmpty.h"
-#include "Interaction/UIButton.h"
+#include "Event/DreamPointerEventData.h"
 
 
 
@@ -18,6 +18,7 @@ UUIDropdown::UUIDropdown()
 	// The list it opens is placed when it opens; the dropdown itself has nothing to do each frame, nor when it moves.
 	DeclareTickUnused(StaticClass());
 	DeclareTransformChangedUnused(StaticClass());
+	ListRaycastableBeforeInert = EDreamWidgetRaycastableType::Inherit;
 }
 
 void UUIDropdown::Awake()
@@ -52,15 +53,23 @@ void UUIDropdown::Awake()
 void UUIDropdown::OnDisable()
 {
 	Super::OnDisable();
-	// An open list cannot outlive the dropdown that would close it. The blocker hangs on the root
-	// canvas above everything and answers a click by calling back into this component, and a list
-	// lifted to a popup layer is not under this widget at all -- so a dropdown hidden or destroyed
-	// while open left an invisible sheet over the whole screen that swallowed every click, with its
-	// list still showing. UDreamMenuAnchor closes on the way out for the same reason. Asked first
-	// because Hide reports a missing list root as an error, and a closed dropdown has nothing to hide.
+	// An open list cannot outlive the dropdown that would close it. A list lifted to the popup layer is
+	// not under this widget at all -- so a dropdown hidden or destroyed while open left its list showing,
+	// its rows calling back into a component that was gone. UDreamMenuAnchor closes on the way out for
+	// the same reason. At once rather than faded: home under this widget now, the list is destroyed with
+	// it. Asked first because CloseList reports a missing list root as an error, and a closed dropdown
+	// has nothing to hide -- unless its last close is still fading, which is put away at once too.
 	if (bIsShow)
 	{
-		Hide();
+		CloseList(false);
+	}
+	else if (bListInert)
+	{
+		if (ShowOrHideTweener.IsValid())
+		{
+			ShowOrHideTweener->Kill();
+		}
+		PutListAway();
 	}
 }
 void UUIDropdown::OnDestroy()
@@ -69,7 +78,15 @@ void UUIDropdown::OnDestroy()
 	// A list opened from code on a dropdown that was never enabled has had no OnDisable to close it.
 	if (bIsShow)
 	{
-		Hide();
+		CloseList(false);
+	}
+	else if (bListInert)
+	{
+		if (ShowOrHideTweener.IsValid())
+		{
+			ShowOrHideTweener->Kill();
+		}
+		PutListAway();
 	}
 }
 #if WITH_EDITOR
@@ -115,12 +132,11 @@ void UUIDropdown::Show()
 	{
 		ShowOrHideTweener->Kill();
 	}
+	// A list still fading out from the last close is taken over where it is: home under the face again
+	// to be placed from scratch below, and answering the pointer and the pad again.
+	ReturnListHome();
+	SetListInert(false);
 
-	//create blocker
-	if (bUseInteractionBlock)
-	{
-		CreateBlocker();
-	}
 	//show list
 	ListRoot->SetWidgetActive(true);
 	ShowOrHideTweener = ListRoot->RenderOpacityTo(1, 0.3f, 0, EDreamTweenEase::OutCubic);
@@ -132,25 +148,14 @@ void UUIDropdown::Show()
 		// either) is zero -- a list that is open, answering the pointer, and invisible.
 		ListRoot->SetRenderOpacity(1.0f);
 	}
+	// Its own canvas over its hierarchy, which is what draws it above its siblings where the list opens in
+	// place. Lifted to the popup layer below, the layer sorts it into the popup band.
 	auto CanvasOnListRoot = ListRoot->GetComponent<UDreamCanvas>();
 	if (!CanvasOnListRoot)
 	{
 		CanvasOnListRoot = ListRoot->AddComponent<UDreamCanvas>();
 	}
-
-	bool bSortOrderSet = false;
-	if (BlockerWidget.IsValid())
-	{
-		if (auto blockerCanvas = BlockerWidget->GetComponent<UDreamCanvas>())
-		{
-			CanvasOnListRoot->SetSortOrder(blockerCanvas->GetSortOrder() + 1, true);
-			bSortOrderSet = true;
-		}
-	}
-	if(!bSortOrderSet)
-	{
-		CanvasOnListRoot->SetSortOrderToHighestOfHierarchy(true);
-	}
+	CanvasOnListRoot->SetSortOrderToHighestOfHierarchy(true);
 	CanvasOnListRoot->SetOverrideSorting(true);
 
 	//create list item as options -- the template was validated at the top, before anything opened
@@ -312,11 +317,29 @@ void UUIDropdown::Show()
 
 	ListRoot->SetPivot(Pivot);
 
-	// Last, after the list is awake and POSITIONED: a listener lifting it to a popup layer wants the
-	// final on-screen placement, not the intent.
+	// After the list is awake and POSITIONED, and before it goes up: a listener sizing it -- a control
+	// that owns its rows' heights -- does it against the face, where the list still hangs.
 	OnListVisibilityChangedCPP.Broadcast(true);
+	if (!bIsShow)
+	{
+		// A handler of the opening closed it again.
+		return;
+	}
+	// Then up on the popup layer, the UMG menu-stack arrangement: lifted to the screen root so no ancestor clips
+	// it, focus moved onto the selected row, closed by a press outside it, by Back, or by this face going away.
+	bListOnPopupLayer = PushListToPopupLayer();
+	if (!bListOnPopupLayer)
+	{
+		// No layer to take it -- no screen root in this world: the list opens where it hangs, and the focus a player
+		// moves into it still comes back to the face when it closes.
+		ListFocusReturn.Capture(GetWidget());
+	}
 }
 void UUIDropdown::Hide()
+{
+	CloseList(true);
+}
+void UUIDropdown::CloseList(bool bInAnimate)
 {
 	if (!ListRoot.IsValid())
 	{
@@ -325,61 +348,212 @@ void UUIDropdown::Hide()
 	}
 	if (!bIsShow)return;
 	bIsShow = false;
-	// First, before the fade: a listener returning the list to its owner should move it while it is
-	// still where the user saw it, and the fade-out plays the same either side of the reparent.
+	UDreamWidget* List = ListRoot.Get();
+	// Focus first, before the fade and before anything moves: every player whose focus is in the list -- or
+	// went nowhere from it -- is back on the face, in one step, so a row no longer takes the confirm or the
+	// stick for the length of the fade, and a face deselected into nothing never gets it back. The popup
+	// layer gives it back as it closes the list; a list it never had was captured at Show.
+	if (bListOnPopupLayer)
+	{
+		bListOnPopupLayer = false;
+		if (UDreamUIPopupLayer* Layer = UDreamUIPopupLayer::Get(this))
+		{
+			Layer->Dismiss(List, EDreamPopupDismissReason::Explicit);
+		}
+	}
+	else
+	{
+		ListFocusReturn.Return(List);
+	}
 	OnListVisibilityChangedCPP.Broadcast(false);
 	if (ShowOrHideTweener.IsValid())
 	{
 		ShowOrHideTweener->Kill();
 	}
-	
+	ShowOrHideTweener = nullptr;
+	if (!IsValid(List) || bIsShow)
+	{
+		// A handler of the close destroyed the list, or opened it again.
+		return;
+	}
+	// The fade plays where the player saw the list -- still lifted, when it went up -- and nothing in it answers
+	// meanwhile.
+	SetListInert(true);
+
 	// Asked before anything is chained onto it. RenderOpacityTo answers null wherever there is no tween
 	// manager -- any world without a game instance, the designer's preview and a headless test among
 	// them -- and chaining OnComplete straight onto that null was an access violation the moment a
 	// list closed there. With no fade to wait for, the end state is written at once, the fallback
 	// UDreamMenuAnchor::Open and UDreamRingMenu::Close already take.
-	UDreamTweener* HideTweener = ListRoot->RenderOpacityTo(0, 0.3f, 0, EDreamTweenEase::InCubic);
+	UDreamTweener* HideTweener = bInAnimate ? List->RenderOpacityTo(0, 0.3f, 0, EDreamTweenEase::InCubic) : nullptr;
 	if (HideTweener != nullptr)
 	{
-		// The list is all the completion needs, and it is what the lambda is bound to -- so it runs only
-		// while the list is alive and never reaches back into this component, which a list can outlive:
-		// a dropdown torn down with its list open hides it on the way out, and is gone before the fade ends.
-		UDreamWidget* FadingList = ListRoot.Get();
-		HideTweener->OnComplete(FSimpleDelegate::CreateWeakLambda(FadingList, [FadingList]
+		// Bound to the list, so it runs only while the list is alive; this component is reached weakly, since
+		// the list can outlive it. One going away puts its list away at once (OnDisable), which kills this tween.
+		UDreamWidget* FadingList = List;
+		TWeakObjectPtr<UUIDropdown> WeakThis(this);
+		HideTweener->OnComplete(FSimpleDelegate::CreateWeakLambda(FadingList, [FadingList, WeakThis]
 		{
+			if (UUIDropdown* Dropdown = WeakThis.Get())
+			{
+				if (!Dropdown->bIsShow)
+				{
+					Dropdown->PutListAway();
+				}
+				return;
+			}
 			FadingList->SetWidgetActive(false);
 		}));
+		ShowOrHideTweener = HideTweener;
 	}
 	else
 	{
-		ListRoot->SetRenderOpacity(0.0f);
-		ListRoot->SetWidgetActive(false);
-	}
-	ShowOrHideTweener = HideTweener;
-
-	if (BlockerWidget.IsValid())
-	{
-		BlockerWidget->DestroyWidget();
-		BlockerWidget = nullptr;
+		List->SetRenderOpacity(0.0f);
+		PutListAway();
 	}
 }
-void UUIDropdown::CreateBlocker()
+void UUIDropdown::PutListAway()
 {
-	BlockerWidget = NewObject<UDreamWidget>(this->GetWidget()->GetOuter());
-	BlockerWidget->SetDisplayName(TEXT("UIDropdown_Blocker"));
-	BlockerWidget->SetParent(this->GetWidget()->GetRootCanvas()->GetWidget(), false);
-	BlockerWidget->SetSizeDelta(FVector2D::ZeroVector);
-	BlockerWidget->SetAnchorMin(FVector2D(0.0f, 0.0f));
-	BlockerWidget->SetAnchorMax(FVector2D(1.0f, 1.0f));
-	BlockerWidget->CreateNewVisual<UDreamVisualEmpty>();//Need visual to do raycast
-	auto BlockerCanvas = BlockerWidget->AddComponent<UDreamCanvas>();
-	BlockerCanvas->SetOverrideSorting(true);
-	BlockerCanvas->SetSortOrderToHighestOfHierarchy();
-	BlockerCanvas->SetTraceChannel(this->GetWidget()->GetRootCanvas()->GetTraceChannel());
-	auto BlockerButton = BlockerWidget->AddComponent<UUIButton>();
-	BlockerButton->GetOnClickEvent().AddWeakLambda(this, [this] {
-		this->Hide();
-		});
+	ShowOrHideTweener = nullptr;
+	if (UDreamWidget* List = ListRoot.Get(); IsValid(List))
+	{
+		// Home first, then asleep: a list put to sleep while still lifted would be an inactive widget hanging off
+		// the screen root that nothing would ever come back for.
+		ReturnListHome();
+		List->SetWidgetActive(false);
+	}
+	SetListInert(false);
+	OnListPutAwayCPP.Broadcast();
+}
+void UUIDropdown::ReturnListHome()
+{
+	UDreamWidget* List = ListRoot.Get();
+	UDreamUIPopupLayer* Layer = UDreamUIPopupLayer::Get(this);
+	if (IsValid(List) && Layer != nullptr && !Layer->IsOpen(List))
+	{
+		// Nothing for a list that never went up.
+		Layer->Restore(List);
+	}
+}
+void UUIDropdown::SetListInert(bool bInInert)
+{
+	if (bListInert == bInInert)
+	{
+		return;
+	}
+	bListInert = bInInert;
+	UDreamWidget* List = ListRoot.Get();
+	if (bInInert)
+	{
+		if (!IsValid(List))
+		{
+			return;
+		}
+		// Out of the pointer's hit test -- the raycast does not read opacity -- and out of the navigation, without
+		// the disabled look switching the rows off would paint over the fade.
+		ListRaycastableBeforeInert = List->GetRaycastable();
+		List->SetRaycastable(EDreamWidgetRaycastableType::Disabled);
+		TArray<UDreamWidget*> InList;
+		UDreamWidget::CollectChildrenWidgets(List, InList, /*IncludeTarget*/true);
+		for (UDreamWidget* Widget : InList)
+		{
+			for (UDreamUIBehaviour* Component : Widget->GetAllComponents())
+			{
+				UUISelectable* Selectable = Cast<UUISelectable>(Component);
+				if (IsValid(Selectable) && Selectable->GetCanNavigateHere())
+				{
+					Selectable->SetCanNavigateHere(false);
+					RowsMadeUnnavigable.Add(Selectable);
+				}
+			}
+		}
+		return;
+	}
+	if (IsValid(List))
+	{
+		List->SetRaycastable(ListRaycastableBeforeInert);
+	}
+	for (const TWeakObjectPtr<UUISelectable>& Row : RowsMadeUnnavigable)
+	{
+		if (UUISelectable* Selectable = Row.Get())
+		{
+			Selectable->SetCanNavigateHere(true);
+		}
+	}
+	RowsMadeUnnavigable.Reset();
+}
+bool UUIDropdown::PushListToPopupLayer()
+{
+	UDreamUIPopupLayer* Layer = UDreamUIPopupLayer::Get(this);
+	UDreamWidget* List = ListRoot.Get();
+	if (Layer == nullptr || !IsValid(List))
+	{
+		return false;
+	}
+	FDreamPopupParams Params;
+	Params.Popup = List;
+	Params.Opener = GetWidget();
+	Params.UserIndex = ResolveListUserIndex();
+	Params.OutsideClick = bUseInteractionBlock ? EDreamPopupOutsideClick::Consume : EDreamPopupOutsideClick::PassThrough;
+	// Into the list, onto the selected row, as SComboBox's list takes the focus when it opens with its
+	// selection highlighted -- so the first stick press moves from the choice the player already has.
+	Params.bFocusOnOpen = true;
+	const UUIDropdownItemComponent* SelectedItem = CreatedItemArray.IsValidIndex(Value) ? CreatedItemArray[Value].Get() : nullptr;
+	UDreamWidget* SelectedRow = SelectedItem != nullptr ? SelectedItem->GetWidget() : nullptr;
+	Params.InitialFocus = IsValid(SelectedRow) && SelectedRow->GetComponent<UUISelectable>() != nullptr ? SelectedRow : nullptr;
+	// Kept up when it closes, to fade out where the player saw it; PutListAway brings it home.
+	Params.bRestoreOnDismiss = false;
+	Params.Place = ListPlacement;
+	Params.OnDismissed = FDreamPopupDismissedDelegate::CreateUObject(this, &UUIDropdown::HandleListDismissed);
+	return Layer->Push(Params);
+}
+void UUIDropdown::HandleListDismissed(UDreamWidget* InList, EDreamPopupDismissReason InReason)
+{
+	bListOnPopupLayer = false;
+	if (!bIsShow)
+	{
+		// This dropdown's own close, already under way.
+		return;
+	}
+	if (InReason == EDreamPopupDismissReason::WorldTeardown)
+	{
+		// The world comes down with the list in it: nothing to fade, nothing to put back, nobody left to tell.
+		bIsShow = false;
+		return;
+	}
+	if (InList == nullptr || !ListRoot.IsValid())
+	{
+		// The list was destroyed while it was open: nothing is left to fade, bring home or put to sleep, and the close
+		// is all there is to announce.
+		bIsShow = false;
+		OnListVisibilityChangedCPP.Broadcast(false);
+		return;
+	}
+	// Closed from outside -- a press elsewhere, Back, a menu opened in its place. An opener gone (hidden, put
+	// to sleep, disabled) takes its list down at once, as a hidden SMenuAnchor hides its menu.
+	CloseList(InReason != EDreamPopupDismissReason::OpenerLost);
+}
+int32 UUIDropdown::ResolveListUserIndex() const
+{
+	if (OpeningUserIndex != INDEX_NONE)
+	{
+		return OpeningUserIndex;
+	}
+	// Opened from code: the player whose focus is on the face, which is who a confirm or a Show bound to one came from.
+	const UDreamWidget* Face = GetWidget();
+	if (const UDreamUIInputServices* Services = UDreamUIInputServices::Get(this); Services != nullptr && IsValid(Face))
+	{
+		TArray<int32> UserIndices;
+		Services->GetUserIndices(UserIndices);
+		for (const int32 UserIndex : UserIndices)
+		{
+			if (Services->GetFocusedWidget(UserIndex) == Face)
+			{
+				return UserIndex;
+			}
+		}
+	}
+	return IsValid(Face) ? Face->GetOwningPlayerIndex() : 0;
 }
 void UUIDropdown::CreateListItems()
 {
@@ -620,12 +794,13 @@ void UUIDropdown::SetUseInteractionBlock(bool InValue)
 	{
 		//was assigned a literal true, so this setter could only ever turn the blocker ON
 		bUseInteractionBlock = InValue;
-		if (!bUseInteractionBlock)
+		// An open list answers the next press by the new setting, not only the next list.
+		if (bListOnPopupLayer)
 		{
-			if (BlockerWidget.IsValid())
+			if (UDreamUIPopupLayer* Layer = UDreamUIPopupLayer::Get(this))
 			{
-				BlockerWidget->DestroyWidget();
-				BlockerWidget = nullptr;
+				Layer->SetOutsideClick(ListRoot.Get(),
+					bUseInteractionBlock ? EDreamPopupOutsideClick::Consume : EDreamPopupOutsideClick::PassThrough);
 			}
 		}
 	}
@@ -708,7 +883,10 @@ bool UUIDropdown::OnPointerClick_Implementation(UDreamPointerEventData* EventDat
 		// reach the click -- the test UUIButton::OnPointerClick makes, made here too.
 		return AllowEventBubbleUp;
 	}
+	// The player whose click it is owns the list: their focus goes into it, their Back and their presses close it.
+	OpeningUserIndex = IsValid(EventData) ? EventData->UserIndex : INDEX_NONE;
 	Show();
+	OpeningUserIndex = INDEX_NONE;
 	return AllowEventBubbleUp;
 }
 bool UUIDropdown::OnPointerDeselect_Implementation(UDreamBaseEventData* EventData)

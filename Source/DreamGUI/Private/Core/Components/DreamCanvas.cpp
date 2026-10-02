@@ -3846,6 +3846,12 @@ void UDreamCanvas::SetRenderTargetResolutionScale(float Value)
 		//this is a divisor of the render target size in CheckAndApplyViewportParameter, so it changes
 		//the canvas's notion of its viewport; nothing else would re-derive that outside the editor
 		CheckAndApplyViewportParameter();
+		//a target that follows the canvas changes its pixels without the canvas changing its size or scale, and
+		//small text drawn from coverage glyphs measures its device grid against those pixels: paint again
+		if (UDreamWidget* DreamWidget = GetWidget())
+		{
+			DreamWidget->MarkAllDirtyRecursive();
+		}
 	}
 }
 
@@ -3885,6 +3891,12 @@ void UDreamCanvas::SetScreenSpaceRenderScale(float Value)
 	{
 		ScreenSpaceRenderScale = Value;
 		bAnythingChangedForRenderTarget = true;
+		//small text decides from this scale whether it can draw from coverage glyphs (below 1 it cannot know the
+		//pixels it lands on): paint again so every text asks once more
+		if (UDreamWidget* DreamWidget = GetWidget())
+		{
+			DreamWidget->MarkAllDirtyRecursive();
+		}
 	}
 }
 

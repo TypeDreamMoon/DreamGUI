@@ -5,9 +5,12 @@
 #include "Misc/AutomationTest.h"
 
 #include "Core/Components/DreamPanelLayouts.h"
+#include "Core/Components/DreamPanelSlot.h"
+#include "Core/Components/DreamScrollBoxInputHandler.h"
 #include "Core/Components/DreamWidget.h"
 #include "Core/DreamUIManager.h"
 #include "Engine/World.h"
+#include "Event/DreamPointerEventData.h"
 #include "Interaction/UIScrollbar.h"
 #include "Interaction/UISelectable.h"
 #include "Misc/ScopeExit.h"
@@ -725,6 +728,307 @@ bool FDreamScrollBoxRevealMeasuresAsArrangedTest::RunTest(const FString& Paramet
 	TestEqual(TEXT("...and the scroll lands its bottom edge on the bottom of the view"), ScrollBox->GetScrollOffset(), 80.0f);
 
 	ScrollWidget->DestroyWidget();
+	return true;
+}
+
+namespace DreamScrollBoxScrollingTestLocal
+{
+	/** The top edge of a child of a vertical box, from the box's top: what the arrangement put it at. */
+	double TopOf(const UDreamWidget* InWidget)
+	{
+		return InWidget->GetParent()->GetHeight() * 0.5 - InWidget->GetAnchoredPosition().Y
+			- InWidget->GetHeight() * (1.0 - InWidget->GetPivot().Y);
+	}
+
+	/** Lay a scroll widget out once, the way the fixture above does, for a box built by hand. */
+	void ArrangeNow(UDreamWidget* InScrollWidget)
+	{
+		InScrollWidget->OnRegister();
+		UDreamWidget::MarkLayoutForRebuild(InScrollWidget);
+		UDreamWidget::RebuildLayoutImmediately(InScrollWidget);
+	}
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamScrollBoxFillStretchesShortContentTest,
+	"DreamGUI.Layout.ScrollBox.AFillSlotStretchesShortContentToTheViewport",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * A Fill slot used to be arranged at its desired size like any other, so a scroll box could not stretch short content
+ * to the window the way SScrollBox does. SScrollBox stacks its children with shrinking off: the Fill slots share the
+ * larger of what they asked for and what the viewport has left, by weight. Here the viewport is 400 and an Auto row
+ * takes 100, so two Fill rows of weight 1 and 3, each asking for 50, share the 300 left as 75 and 225.
+ */
+bool FDreamScrollBoxFillStretchesShortContentTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamScrollBoxScrollingTestLocal;
+	FScopedGameWorld TestWorld;
+	UDreamWidget* ScrollWidget = MakeWidget(TestWorld.World, nullptr, TEXT("Scroll"), 200.0f, 400.0f);
+	UDreamWidget* AutoRow = MakeWidget(TestWorld.World, ScrollWidget, TEXT("Auto"), 180.0f, 100.0f);
+	UDreamWidget* LightRow = MakeWidget(TestWorld.World, ScrollWidget, TEXT("FillOne"), 180.0f, 50.0f);
+	UDreamWidget* HeavyRow = MakeWidget(TestWorld.World, ScrollWidget, TEXT("FillThree"), 180.0f, 50.0f);
+	UDreamLayoutContainerScrollBox* ScrollBox = ScrollWidget->CreateNewLayoutContainer<UDreamLayoutContainerScrollBox>();
+	UDreamPanelSlot* LightSlot = LightRow->GetPanelSlot();
+	UDreamPanelSlot* HeavySlot = HeavyRow->GetPanelSlot();
+	if (!TestNotNull(TEXT("ScrollBox created"), ScrollBox)
+		|| !TestNotNull(TEXT("The first Fill row has a slot"), LightSlot)
+		|| !TestNotNull(TEXT("The second Fill row has a slot"), HeavySlot))
+	{
+		ScrollWidget->DestroyWidget();
+		return false;
+	}
+	LightSlot->SetSizeRule(EDreamPanelSizeRule::Fill);
+	LightSlot->SetFillWeight(1.0f);
+	HeavySlot->SetSizeRule(EDreamPanelSizeRule::Fill);
+	HeavySlot->SetFillWeight(3.0f);
+	ArrangeNow(ScrollWidget);
+
+	TestEqual(TEXT("The Auto row keeps its own height"), AutoRow->GetHeight(), 100.0f, 0.01f);
+	TestEqual(TEXT("The weight-1 row gets a quarter of the 300 left"), LightRow->GetHeight(), 75.0f, 0.01f);
+	TestEqual(TEXT("The weight-3 row gets three quarters of it"), HeavyRow->GetHeight(), 225.0f, 0.01f);
+	TestEqual(TEXT("The rows stack in order: the weight-1 row starts under the Auto one"), TopOf(LightRow), 100.0, 0.01);
+	TestEqual(TEXT("...and the weight-3 row under that"), TopOf(HeavyRow), 175.0, 0.01);
+	// The range is the desired total, 200 here, which fits: stretching to the window adds nothing to scroll.
+	TestEqual(TEXT("Content stretched to the viewport has nothing to scroll"), ScrollBox->GetMaxScrollOffset(), 0.0f);
+
+	// Arranged again, it lands in the same place: the share is worked out on what the rows ask for, not on the
+	// heights the last pass gave them.
+	ArrangeNow(ScrollWidget);
+	TestEqual(TEXT("A second pass leaves the weight-3 row where the first put it"), HeavyRow->GetHeight(), 225.0f, 0.01f);
+
+	ScrollWidget->DestroyWidget();
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamScrollBoxOverflowingFillTest,
+	"DreamGUI.Layout.ScrollBox.OverflowingFillSlotsShareTheirDesiredTotalByWeight",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * With shrinking off, Fill slots never share LESS than their own total, so content longer than the viewport keeps
+ * scrolling: the share is redistributed by weight rather than squeezed into the window. A 200 viewport under an Auto
+ * row of 300 leaves nothing, so the two Fill rows share what they asked for together, 60 + 20 = 80, as 20 and 60. The
+ * range is the desired total, 380, less the viewport.
+ */
+bool FDreamScrollBoxOverflowingFillTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamScrollBoxScrollingTestLocal;
+	FScopedGameWorld TestWorld;
+	UDreamWidget* ScrollWidget = MakeWidget(TestWorld.World, nullptr, TEXT("Scroll"), 200.0f, 200.0f);
+	UDreamWidget* AutoRow = MakeWidget(TestWorld.World, ScrollWidget, TEXT("Auto"), 180.0f, 300.0f);
+	UDreamWidget* LightRow = MakeWidget(TestWorld.World, ScrollWidget, TEXT("FillOne"), 180.0f, 60.0f);
+	UDreamWidget* HeavyRow = MakeWidget(TestWorld.World, ScrollWidget, TEXT("FillThree"), 180.0f, 20.0f);
+	UDreamLayoutContainerScrollBox* ScrollBox = ScrollWidget->CreateNewLayoutContainer<UDreamLayoutContainerScrollBox>();
+	UDreamPanelSlot* LightSlot = LightRow->GetPanelSlot();
+	UDreamPanelSlot* HeavySlot = HeavyRow->GetPanelSlot();
+	if (!TestNotNull(TEXT("ScrollBox created"), ScrollBox)
+		|| !TestNotNull(TEXT("The first Fill row has a slot"), LightSlot)
+		|| !TestNotNull(TEXT("The second Fill row has a slot"), HeavySlot))
+	{
+		ScrollWidget->DestroyWidget();
+		return false;
+	}
+	LightSlot->SetSizeRule(EDreamPanelSizeRule::Fill);
+	LightSlot->SetFillWeight(1.0f);
+	HeavySlot->SetSizeRule(EDreamPanelSizeRule::Fill);
+	HeavySlot->SetFillWeight(3.0f);
+	ArrangeNow(ScrollWidget);
+
+	TestEqual(TEXT("The Auto row keeps its own height"), AutoRow->GetHeight(), 300.0f, 0.01f);
+	TestEqual(TEXT("The weight-1 row gets a quarter of the 80 the Fill rows asked for"), LightRow->GetHeight(), 20.0f, 0.01f);
+	TestEqual(TEXT("The weight-3 row gets three quarters"), HeavyRow->GetHeight(), 60.0f, 0.01f);
+	TestEqual(TEXT("The range is the desired total less the viewport"), ScrollBox->GetMaxScrollOffset(), 180.0f, 0.01f);
+
+	// Scrolled to the end, the last row's bottom edge is the viewport's: arrangement and range agree.
+	ScrollBox->ScrollToEnd();
+	ArrangeNow(ScrollWidget);
+	TestEqual(TEXT("At the end the last row ends at the bottom of the viewport"),
+		TopOf(HeavyRow) + HeavyRow->GetHeight(), 200.0, 0.01);
+
+	ScrollWidget->DestroyWidget();
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamScrollBoxBackPadTest,
+	"DreamGUI.Layout.ScrollBox.BackPadScrollingStartsTheContentOneViewportIn",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * UMG's BackPadScrolling and FrontPadScrolling, as SScrollPanel spends them: each pad is the panel's own length. The
+ * back pad moves the children one viewport in and adds that much to the range; the front pad adds another viewport
+ * after the content. A 120 viewport over 300 of content starts its first row at 120, with 300 to scroll; with both
+ * pads there is 420.
+ */
+bool FDreamScrollBoxBackPadTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamScrollBoxScrollingTestLocal;
+	FScrollFixture Fixture;
+	Fixture.Arrange();
+	TestFalse(TEXT("No pad unless asked for"), Fixture.ScrollBox->GetBackPadScrolling() || Fixture.ScrollBox->GetFrontPadScrolling());
+	TestEqual(TEXT("Without pads the first row starts at the top"), TopOf(Fixture.Blocks[0]), 0.0, 0.01);
+
+	Fixture.ScrollBox->SetBackPadScrolling(true);
+	Fixture.Arrange();
+	TestEqual(TEXT("The back pad starts the first row one viewport in"), TopOf(Fixture.Blocks[0]), 120.0, 0.01);
+	TestEqual(TEXT("...and adds a viewport to the range"), Fixture.ScrollBox->GetMaxScrollOffset(), 300.0f, 0.01f);
+
+	// The far end is where the content's own end meets the bottom of the viewport.
+	Fixture.ScrollBox->ScrollToEnd();
+	Fixture.Arrange();
+	TestEqual(TEXT("Scrolled to the end, the last row ends at the bottom of the viewport"),
+		TopOf(Fixture.Blocks[2]) + Fixture.Blocks[2]->GetHeight(), 120.0, 0.01);
+
+	Fixture.ScrollBox->SetFrontPadScrolling(true);
+	Fixture.ScrollBox->ScrollToStart();
+	Fixture.Arrange();
+	TestEqual(TEXT("With both pads there is a viewport of travel either side of the content"),
+		Fixture.ScrollBox->GetMaxScrollOffset(), 420.0f, 0.01f);
+	TestEqual(TEXT("...and the first row still starts one viewport in"), TopOf(Fixture.Blocks[0]), 120.0, 0.01);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamScrollBoxFittingContentHoldsStillTest,
+	"DreamGUI.Layout.ScrollBox.ContentThatFitsCannotBePulledPastItsEnds",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * SScrollBox holds its offset at zero while its bar is not needed, so content that fits cannot be pulled out of
+ * place at all. This box stretched a rubber band over a box with nothing to scroll -- the drag pulled the content out
+ * and the spring brought it back. Checked: with one 100-tall row in a 400-tall box, neither a drag either way nor a
+ * fling moves anything; and a band left open by content that has since shrunk to fit is closed by the next arrange.
+ */
+bool FDreamScrollBoxFittingContentHoldsStillTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamScrollBoxScrollingTestLocal;
+	{
+		FScopedGameWorld TestWorld;
+		UDreamWidget* ScrollWidget = MakeWidget(TestWorld.World, nullptr, TEXT("Scroll"), 200.0f, 400.0f);
+		UDreamLayoutContainerScrollBox* ScrollBox = ScrollWidget->CreateNewLayoutContainer<UDreamLayoutContainerScrollBox>();
+		MakeWidget(TestWorld.World, ScrollWidget, TEXT("Row"), 180.0f, 100.0f);
+		if (!TestNotNull(TEXT("ScrollBox created"), ScrollBox))
+		{
+			ScrollWidget->DestroyWidget();
+			return false;
+		}
+		ArrangeNow(ScrollWidget);
+		TestFalse(TEXT("A box whose content fits has nothing to scroll"), ScrollBox->IsScrollNeeded());
+
+		ScrollBox->ApplyDragDelta(-60.0f);
+		TestEqual(TEXT("Pulling past the start opens no band"), ScrollBox->GetOverscroll(), 0.0f);
+		ScrollBox->ApplyDragDelta(60.0f);
+		TestEqual(TEXT("Nor does pulling past the end"), ScrollBox->GetOverscroll(), 0.0f);
+		TestEqual(TEXT("...and the content never left its place"), ScrollBox->GetScrollOffset(), 0.0f);
+
+		const float Step = 1.0f / 60.0f;
+		ScrollBox->SetScrollVelocity(900.0f);
+		for (int32 Frame = 0; Frame < 30; ++Frame)
+		{
+			ScrollBox->TickScrollPhysics(Step);
+			if (!FMath::IsNearlyZero(ScrollBox->GetOverscroll()))
+			{
+				break;
+			}
+		}
+		TestEqual(TEXT("A fling over content that fits flies past no end"), ScrollBox->GetOverscroll(), 0.0f);
+		TestFalse(TEXT("...and stops"), ScrollBox->IsScrolling());
+		ScrollWidget->DestroyWidget();
+	}
+
+	// A band open on a box that could scroll, and then the box grows until its content fits.
+	FScrollFixture Fixture;
+	Fixture.Arrange();
+	Fixture.ScrollBox->SetDragging(true);
+	Fixture.ScrollBox->ApplyDragDelta(-40.0f);
+	if (!TestTrue(TEXT("Fixture: a box with something to scroll still rubber-bands"), Fixture.ScrollBox->GetOverscroll() < -1.0f))
+	{
+		return false;
+	}
+	Fixture.ScrollBox->SetDragging(false);
+	Fixture.ScrollWidget->SetHeight(400.0f);
+	Fixture.Arrange();
+	TestFalse(TEXT("Fixture: the grown box has nothing to scroll"), Fixture.ScrollBox->IsScrollNeeded());
+	TestEqual(TEXT("The band is closed once nothing needs scrolling"), Fixture.ScrollBox->GetOverscroll(), 0.0f);
+	TestEqual(TEXT("...and the first row is back at the top"), TopOf(Fixture.Blocks[0]), 0.0, 0.01);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamScrollBoxPanelRightDragOffTest,
+	"DreamGUI.Layout.ScrollBox.ARightButtonDragScrollsNothingWhenRightClickDragScrollingIsOff",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * The panel's input handler took a drag from any button. SScrollBox takes a mouse drag from the right button only,
+ * and only while bAllowRightClickDragScrolling is on and its bar is needed; a finger only while touch scrolling is
+ * on. This library also keeps the left-button drag every existing screen relies on, and refuses the middle button.
+ * Each gesture is fed to the handler directly, with a 40-unit pull up the box, and the offset says whether it took it;
+ * a refused gesture is handed on rather than consumed, so a box around this one could have it.
+ */
+bool FDreamScrollBoxPanelRightDragOffTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamScrollBoxScrollingTestLocal;
+	FScrollFixture Fixture;
+	Fixture.Arrange();
+	// The box makes its own handler when play begins; this fixture never begins play, so it gets one here.
+	UDreamScrollBoxInputHandler* Handler = Fixture.ScrollWidget->GetComponent<UDreamScrollBoxInputHandler>();
+	if (Handler == nullptr)
+	{
+		Handler = Fixture.ScrollWidget->AddComponent<UDreamScrollBoxInputHandler>();
+	}
+	if (!TestNotNull(TEXT("The input handler was made"), Handler))
+	{
+		return false;
+	}
+	Handler->TargetLayout = Fixture.ScrollBox;
+	TestTrue(TEXT("Right-button drag scrolling is on by default, as in UMG"), Fixture.ScrollBox->GetAllowRightClickDragScrolling());
+	TestTrue(TEXT("So is touch scrolling"), Fixture.ScrollBox->GetEnableTouchScrolling());
+
+	// One gesture, start to finish, from the top of the range; answers how far it scrolled and whether its start
+	// was handed on.
+	bool bLastBeginHandedOn = false;
+	auto Drag = [&](EDreamUIMouseButtonType InButton, int32 InPointerId) -> float
+	{
+		Fixture.ScrollBox->SetScrollOffset(0.0f);
+		Fixture.ScrollBox->StopScrolling();
+		UDreamPointerEventData* EventData = NewObject<UDreamPointerEventData>();
+		EventData->MouseButtonType = InButton;
+		EventData->PointerID = InPointerId;
+		EventData->WorldPoint = FVector::ZeroVector;
+		bLastBeginHandedOn = IDreamPointerDragInterface::Execute_OnPointerBeginDrag(Handler, EventData);
+		EventData->WorldPoint = FVector(0.0, 0.0, 40.0);
+		IDreamPointerDragInterface::Execute_OnPointerDrag(Handler, EventData);
+		IDreamPointerDragInterface::Execute_OnPointerEndDrag(Handler, EventData);
+		// Whatever the release flung is not the drag's distance.
+		Fixture.ScrollBox->StopScrolling();
+		return Fixture.ScrollBox->GetScrollOffset();
+	};
+	constexpr int32 MousePointer = 0;
+	constexpr int32 FirstFinger = 100;
+
+	Fixture.ScrollBox->SetAllowRightClickDragScrolling(false);
+	TestEqual(TEXT("With the switch off a right-button drag scrolls nothing"), Drag(EDreamUIMouseButtonType::Right, MousePointer), 0.0f, 0.01f);
+	TestTrue(TEXT("...and is handed on, not swallowed"), bLastBeginHandedOn);
+	TestEqual(TEXT("The left button still scrolls with it off"), Drag(EDreamUIMouseButtonType::Left, MousePointer), 40.0f, 0.01f);
+	TestFalse(TEXT("...and keeps its gesture"), bLastBeginHandedOn);
+
+	Fixture.ScrollBox->SetAllowRightClickDragScrolling(true);
+	TestEqual(TEXT("With it on the right-button drag scrolls"), Drag(EDreamUIMouseButtonType::Right, MousePointer), 40.0f, 0.01f);
+	TestEqual(TEXT("The middle button never does"), Drag(EDreamUIMouseButtonType::Middle, MousePointer), 0.0f, 0.01f);
+
+	Fixture.ScrollBox->SetEnableTouchScrolling(false);
+	TestEqual(TEXT("With touch scrolling off a finger scrolls nothing"), Drag(EDreamUIMouseButtonType::Left, FirstFinger), 0.0f, 0.01f);
+	Fixture.ScrollBox->SetEnableTouchScrolling(true);
+	TestEqual(TEXT("With it on a finger scrolls"), Drag(EDreamUIMouseButtonType::Left, FirstFinger), 40.0f, 0.01f);
+
+	// Nothing to scroll: SScrollBox takes a right drag only while its bar is needed.
+	Fixture.ScrollWidget->SetHeight(400.0f);
+	Fixture.Arrange();
+	Drag(EDreamUIMouseButtonType::Right, MousePointer);
+	TestTrue(TEXT("A right-button drag over content that fits is handed on"), bLastBeginHandedOn);
 	return true;
 }
 

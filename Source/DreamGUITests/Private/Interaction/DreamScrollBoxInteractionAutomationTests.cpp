@@ -11,6 +11,8 @@
 #include "Core/Components/DreamScrollTypes.h"
 #include "Core/Components/DreamWidget.h"
 #include "Event/DreamScreenSpaceRaycaster.h"
+#include "Interaction/UIListView.h"
+#include "Interaction/UIScrollView.h"
 #include "UObject/StrongObjectPtr.h"
 
 #include "Driver/DreamDriver.h"
@@ -20,6 +22,7 @@
 #include "Driver/DreamDriverRig.h"
 #include "Driver/DreamDriverSequence.h"
 #include "Interaction/DreamDragInteractionTestTypes.h"
+#include "Interaction/DreamListsInteractionTestTypes.h"
 
 /*
  * THE SCROLL BOX UNDER A REAL POINTER.
@@ -1096,6 +1099,246 @@ bool FDreamScrollBoxInteractionAutoHideBarTest::RunTest(const FString& Parameter
 	// every frame, so the bar is out as soon as there is something to scroll, however the content got
 	// there. Without it there is no handle to drag.
 	TestTrue(TEXT("Content that overflows brought the auto-hiding bar out"), Box->ScrollBarNode->GetWidgetActiveInHierarchy());
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamScrollViewFittingContentHoldsStillTest,
+	"DreamGUI.ScrollView.ContentThatFitsCannotBePulledPastItsEnds",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamScrollViewFittingContentHoldsStillTest, "DreamGUI.ScrollView.ContentThatFitsCannotBePulledPastItsEnds", "[Pointer][Animated]")
+
+/*
+ * SScrollBox holds its offset at zero while its bar is not needed, so content that fits cannot be pulled anywhere. The
+ * scroll view took a drag over content that fit and stretched a rubber band out of nothing for the spring to pull
+ * back, so a short list wobbled under every grab. CanScrollInSmallSize, the switch that asks for that, now defaults to
+ * off, and with it off a drag over content that fits is refused where it starts and handed on to whatever is around
+ * the view. A right-button drag over content that fits is refused whatever the switch says, as SScrollBox takes one
+ * only while its bar is needed. With the switch on, a left drag stretches the band again.
+ */
+bool FDreamScrollViewFittingContentHoldsStillTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamScrollBoxInteractionTestLocal;
+	FDreamDriverRig Rig = FDreamDriverRig::Headless(ViewportSize);
+	Rig.BindTest(this);
+	if (!TestTrue(TEXT("The headless rig came up"), Rig.IsUsable())
+		|| !TestTrue(TEXT("Its UI has begun play, as a game's has"), DreamDragInteraction::BeginPlayForUI(Rig.GetWorld())))
+	{
+		return false;
+	}
+
+	// Two rows of 100 in a 400-tall window: nothing to scroll.
+	UDreamScrollBox* Box = MakeFilledBox(Rig, TEXT("Box"), nullptr, FVector2D(300.0, 400.0), 2, FVector2D(300.0, 100.0));
+	UUIScrollView* View = Box != nullptr ? Box->GetScrollView() : nullptr;
+	if (!TestTrue(TEXT("The box came up with a viewport and a content node"), HasParts(Box))
+		|| !TestNotNull(TEXT("The box has a scroll view"), View)
+		|| !TestTrue(FString::Printf(TEXT("The content fits its window (end %.1f)"), Box->GetScrollOffsetOfEnd()),
+			Box->GetScrollOffsetOfEnd() <= 0.5f))
+	{
+		return false;
+	}
+	TestFalse(TEXT("Content smaller than its window does not scroll by default"), View->GetCanScrollInSmallSize());
+	const double RestingY = Box->GetContentNode()->GetAnchoredPosition().Y;
+
+	// A grab and a 60-pixel pull up, the first move just past the drag threshold; read with the button still down, and
+	// answered as how far the content was taken from where it rests.
+	const double FirstMove = FMath::Sqrt(static_cast<double>(Rig.Raycaster()->GetScaledDragThresholdSquare())) + 2.0;
+	auto PullAndRead = [&](EDreamUIMouseButtonType InButton) -> float
+	{
+		TestTrue(TEXT("The drag completes"),
+			Rig.Driver()->Sequence()
+				.MoveTo(FDreamBy::Widget(Box->ViewportNode.Get()))
+				.Press(InButton)
+				.MoveBy(FVector2D(0.0, -FirstMove))
+				.MoveBy(FVector2D(0.0, -60.0))
+				.WaitFrames(1)
+				.Perform());
+		return static_cast<float>(Box->GetContentNode()->GetAnchoredPosition().Y - RestingY);
+	};
+	auto LetGo = [&](EDreamUIMouseButtonType InButton)
+	{
+		TestTrue(TEXT("Letting go completes"), Rig.Driver()->Sequence().Release(InButton).Perform());
+		// Longer than any spring-back here.
+		Rig.PumpFrames(90);
+	};
+
+	TestNearlyEqual(TEXT("A left drag over content that fits moves nothing"), PullAndRead(EDreamUIMouseButtonType::Left), 0.0f, 0.5f);
+	TestNearlyEqual(TEXT("...and opens no band"), Box->GetOverscrollOffset(), 0.0f, 0.01f);
+	LetGo(EDreamUIMouseButtonType::Left);
+	TestFalse(TEXT("Let go, nothing is left moving"), Box->GetIsScrolling());
+
+	View->SetCanScrollInSmallSize(true);
+	TestNearlyEqual(TEXT("A right drag over content that fits moves nothing, whatever the switch says"),
+		PullAndRead(EDreamUIMouseButtonType::Right), 0.0f, 0.5f);
+	LetGo(EDreamUIMouseButtonType::Right);
+
+	const float SwitchedOnPull = PullAndRead(EDreamUIMouseButtonType::Left);
+	TestTrue(FString::Printf(TEXT("With the switch on, a left drag stretches the content out of place (by %.1f)"), SwitchedOnPull),
+		FMath::Abs(SwitchedOnPull) > 1.0f);
+	TestTrue(TEXT("...as a band past its end"), FMath::Abs(Box->GetOverscrollOffset()) > 1.0f);
+	LetGo(EDreamUIMouseButtonType::Left);
+	TestNearlyEqual(TEXT("...that springs back once let go"), Box->GetOverscrollOffset(), 0.0f, 0.5f);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamScrollViewGlideCountsAsScrollingTest,
+	"DreamGUI.ScrollView.AGlideToAnOffsetCountsAsScrollingUntilItLands",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamScrollViewGlideCountsAsScrollingTest, "DreamGUI.ScrollView.AGlideToAnOffsetCountsAsScrollingUntilItLands", "[Animated]")
+
+/*
+ * The scroll view could glide only to a child (ScrollTo), never to an offset, and IsScrolling did not count a glide at
+ * all -- so a list that says when scrolling has finished said it on every frame of an animated reveal. Its new
+ * GlideToScrollOffset clamps the offset as SetScrollOffset does and glides there on the same tween every ScrollTo
+ * takes, and IsScrolling is true from the first frame of the glide until it lands. With no duration it is
+ * SetScrollOffset.
+ */
+bool FDreamScrollViewGlideCountsAsScrollingTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamScrollBoxInteractionTestLocal;
+	FDreamDriverRig Rig = FDreamDriverRig::Headless(ViewportSize);
+	Rig.BindTest(this);
+	if (!TestTrue(TEXT("The headless rig came up"), Rig.IsUsable())
+		|| !TestTrue(TEXT("Its UI has begun play, as a game's has"), DreamDragInteraction::BeginPlayForUI(Rig.GetWorld())))
+	{
+		return false;
+	}
+
+	UDreamScrollBox* Box = MakeFilledBox(Rig, TEXT("Box"), nullptr, FVector2D(300.0, 400.0), 20, FVector2D(300.0, 100.0));
+	UUIScrollView* View = Box != nullptr ? Box->GetScrollView() : nullptr;
+	if (!TestTrue(TEXT("The box came up with a viewport and a content node"), HasParts(Box))
+		|| !TestNotNull(TEXT("The box has a scroll view"), View))
+	{
+		return false;
+	}
+	const float End = Box->GetScrollOffsetOfEnd();
+	if (!TestTrue(FString::Printf(TEXT("There is room to glide 500 (end %.1f)"), End), End > 600.0f))
+	{
+		return false;
+	}
+	TestFalse(TEXT("At rest nothing is scrolling"), View->IsScrolling());
+
+	View->GlideToScrollOffset(FVector2D(0.0, 500.0), 0.25f);
+	TestTrue(TEXT("A glide under way counts as scrolling"), View->IsScrolling());
+	TestTrue(TEXT("...and the box says so too"), Box->GetIsScrolling());
+	Rig.PumpFrames(1);
+	TestTrue(FString::Printf(TEXT("A frame in, it has not landed yet (offset %.1f)"), Box->GetScrollOffset()),
+		Box->GetScrollOffset() < 499.5f);
+	TestTrue(TEXT("...and still counts as scrolling"), View->IsScrolling());
+
+	// Longer than the quarter of a second it takes.
+	Rig.PumpFrames(30);
+	TestNearlyEqual(TEXT("It lands on the offset it was given"), Box->GetScrollOffset(), 500.0f, 0.5f);
+	TestFalse(TEXT("...and, landed, is not scrolling any more"), View->IsScrolling());
+
+	View->GlideToScrollOffset(FVector2D(0.0, End + 1000.0f), 0.25f);
+	Rig.PumpFrames(30);
+	TestNearlyEqual(TEXT("A glide aimed past the end stops at the end"), Box->GetScrollOffset(), End, 0.5f);
+
+	View->GlideToScrollOffset(FVector2D(0.0, 200.0), 0.0f);
+	TestNearlyEqual(TEXT("With no duration it is there at once"), Box->GetScrollOffset(), 200.0f, 0.5f);
+	TestFalse(TEXT("...and nothing is left scrolling"), View->IsScrolling());
+	return true;
+}
+
+namespace DreamScrollBoxInteractionTestLocal
+{
+	/**
+	 * A vertical recycling list on the rig, 300 square with cells 100 tall, nothing in it yet: a host the list behaviour
+	 * sits on, a content widget it scrolls, and a cell template under the content carrying the entry the list fills in
+	 * -- the list the recycling-list interaction tests build. Begun play first, since the list lays its cells out in
+	 * Start.
+	 */
+	UUIListView* MakeGlidingList(FDreamDriverRig& InRig, UDreamWidget*& OutHost)
+	{
+		const FVector2D ListSize(300.0, 300.0);
+		OutHost = InRig.MakeWidget(TEXT("ListHost"), nullptr, ListSize);
+		UDreamWidget* Content = OutHost != nullptr ? InRig.MakeWidget(TEXT("Content"), OutHost, ListSize) : nullptr;
+		UDreamWidget* Cell = Content != nullptr ? InRig.MakeWidget(TEXT("Cell"), Content, FVector2D(ListSize.X, 100.0)) : nullptr;
+		if (Cell == nullptr)
+		{
+			return nullptr;
+		}
+		Cell->AddComponent<UUIListEntry>();
+		UUIListView* List = OutHost->AddComponent<UUIListView>();
+		if (List == nullptr)
+		{
+			return nullptr;
+		}
+		List->SetHorizontal(false);
+		List->SetVertical(true);
+		List->SetContent(Content);
+		List->SetCellTemplate(Cell);
+		InRig.PumpFrames(2);
+		return List;
+	}
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamRecyclingListGlideYieldsToADragTest,
+	"DreamGUI.ListView.ARecyclingListGlidingToAnIndexStopsWhereADragTakesTheContent",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamRecyclingListGlideYieldsToADragTest, "DreamGUI.ListView.ARecyclingListGlidingToAnIndexStopsWhereADragTakesTheContent", "[Pointer][Animated]")
+
+/*
+ * The recycling list's animated ScrollToByDataIndex started a tween of its own and forgot it, so it was not the view's
+ * glide: a grab while it ran stopped nothing, the tween wrote the content back on its way the very next frame, and the
+ * content went on to the row as if the player had never touched it. It is the view's glide now, which counts as
+ * scrolling and which a drag stops where it got to.
+ *
+ * Checked here: a hundred rows, a half-second glide to row sixty, a grab a few frames into it held still for longer
+ * than the glide had left, and the content is where the hand stopped it, nowhere near row sixty.
+ */
+bool FDreamRecyclingListGlideYieldsToADragTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamScrollBoxInteractionTestLocal;
+	FDreamDriverRig Rig = FDreamDriverRig::Headless(DreamListsInteraction::ViewportSize());
+	Rig.BindTest(this);
+	if (!TestTrue(TEXT("The headless rig came up"), Rig.IsUsable())
+		|| !TestTrue(TEXT("Its UI has begun play, as a game's has"), DreamDragInteraction::BeginPlayForUI(Rig.GetWorld())))
+	{
+		return false;
+	}
+	UDreamWidget* Host = nullptr;
+	UUIListView* List = MakeGlidingList(Rig, Host);
+	if (!TestNotNull(TEXT("The recycling list was made"), List))
+	{
+		return false;
+	}
+	List->SetListItems(DreamListsInteraction::MakeItems(100));
+	Rig.PumpFrames(1);
+	constexpr float RowSixty = 60.0f * 100.0f;
+
+	List->ScrollToByDataIndex(60, /*InEaseAnimation*/true, 0.5f);
+	TestTrue(TEXT("The glide to the row counts as scrolling"), List->IsScrolling());
+	Rig.PumpFrames(2);
+	if (!TestTrue(FString::Printf(TEXT("A couple of frames in, it is still on its way (offset %.1f)"), List->GetScrollOffset().Y),
+		List->IsScrolling() && List->GetScrollOffset().Y < RowSixty - 1.0))
+	{
+		return false;
+	}
+
+	// A grab: pressed on the list and moved just past the drag threshold, then held still.
+	const double FirstMove = FMath::Sqrt(static_cast<double>(Rig.Raycaster()->GetScaledDragThresholdSquare())) + 2.0;
+	TestTrue(TEXT("The grab completes"),
+		Rig.Driver()->Sequence()
+			.MoveTo(FDreamBy::Widget(Host))
+			.Press(EDreamUIMouseButtonType::Left)
+			.MoveBy(FVector2D(0.0, -FirstMove))
+			.Perform());
+	const float Grabbed = static_cast<float>(List->GetScrollOffset().Y);
+	TestFalse(TEXT("Grabbed, the content is no longer gliding"), List->IsScrolling());
+	// Longer than the half second the glide had in all.
+	Rig.PumpFrames(45);
+	TestNearlyEqual(TEXT("Held still, nothing carries the content on to the row"),
+		static_cast<float>(List->GetScrollOffset().Y), Grabbed, 0.5f);
+
+	TestTrue(TEXT("Letting go completes"), Rig.Driver()->Sequence().Release(EDreamUIMouseButtonType::Left).Perform());
+	Rig.PumpFrames(30);
+	TestTrue(FString::Printf(TEXT("Let go, the content stays where the hand left it (offset %.1f)"), List->GetScrollOffset().Y),
+		FMath::IsNearlyEqual(static_cast<float>(List->GetScrollOffset().Y), Grabbed, 0.5f)
+		&& List->GetScrollOffset().Y < RowSixty - 1.0);
 	return true;
 }
 

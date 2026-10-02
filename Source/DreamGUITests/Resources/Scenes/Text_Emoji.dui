@@ -1,0 +1,160 @@
+// Colour emoji from the engine's Noto Color Emoji (Emoji font key): sizes 12 to 48 px, a <color> tag that leaves the
+// emoji their own colours, an underlay drawn from the glyphs' alpha, a lyric fill stopped half way, and synthetic
+// italic, which colour glyphs keep. Invisible characters (the joiners of the family) are written as references.
+// @stage 900x470
+// @fill Font_Emoji_Fill 0.5
+
+style Title {
+    AnchorData.AnchorMin = (0, 1)
+    AnchorData.AnchorMax = (1, 1)
+    AnchorData.Pivot = (0.5, 1)
+    AnchorData.AnchoredPosition = (0, -8)
+    AnchorData.SizeDelta = (-24, 20)
+    FontSize = 15
+    Color = #1E2230
+    HAlign = Left
+    VAlign = Top
+    OverflowType = HorizontalOverflow
+}
+
+style Label {
+    AnchorData.AnchorMin = (0, 1)
+    AnchorData.AnchorMax = (0, 1)
+    AnchorData.Pivot = (0, 1)
+    FontSize = 11
+    Color = #5A6172
+    HAlign = Right
+    VAlign = Middle
+    OverflowType = HorizontalOverflow
+}
+
+style Line {
+    AnchorData.AnchorMin = (0, 1)
+    AnchorData.AnchorMax = (0, 1)
+    AnchorData.Pivot = (0, 1)
+    Color = #1E2230
+    HAlign = Left
+    VAlign = Middle
+    OverflowType = HorizontalOverflow
+    bRichText = true
+    Text = "Hi 👍 😀 🎉 🌈 🇯🇵 👨&#x200D;👩&#x200D;👧 ok"
+}
+
+Widget Root {
+    Image Page {
+        Brush.TintColor = #F5F3EE
+        AnchorData.AnchorMin = (0, 0)
+        AnchorData.AnchorMax = (1, 1)
+        AnchorData.SizeDelta = (0, 0)
+    }
+
+    Text Heading : Title {
+        Text = "Colour emoji, Noto Color Emoji from the engine's files"
+    }
+
+    Text Label12 : Label {
+        AnchorData.AnchoredPosition = (16, -44)
+        AnchorData.SizeDelta = (120, 20)
+        Text = "12 px"
+    }
+    Text Font_Emoji_Size12 : Line {
+        AnchorData.AnchoredPosition = (148, -44)
+        AnchorData.SizeDelta = (736, 20)
+        FontSize = 12
+    }
+
+    Text Label16 : Label {
+        AnchorData.AnchoredPosition = (16, -68)
+        AnchorData.SizeDelta = (120, 24)
+        Text = "16 px"
+    }
+    Text Font_Emoji_Size16 : Line {
+        AnchorData.AnchoredPosition = (148, -68)
+        AnchorData.SizeDelta = (736, 24)
+        FontSize = 16
+    }
+
+    Text Label24 : Label {
+        AnchorData.AnchoredPosition = (16, -96)
+        AnchorData.SizeDelta = (120, 34)
+        Text = "24 px"
+    }
+    Text Font_Emoji_Size24 : Line {
+        AnchorData.AnchoredPosition = (148, -96)
+        AnchorData.SizeDelta = (736, 34)
+        FontSize = 24
+    }
+
+    Text Label32 : Label {
+        AnchorData.AnchoredPosition = (16, -134)
+        AnchorData.SizeDelta = (120, 44)
+        Text = "32 px"
+    }
+    Text Font_Emoji_Size32 : Line {
+        AnchorData.AnchoredPosition = (148, -134)
+        AnchorData.SizeDelta = (736, 44)
+        FontSize = 32
+    }
+
+    Text Label48 : Label {
+        AnchorData.AnchoredPosition = (16, -182)
+        AnchorData.SizeDelta = (120, 66)
+        Text = "48 px"
+    }
+    Text Font_Emoji_Size48 : Line {
+        AnchorData.AnchoredPosition = (148, -182)
+        AnchorData.SizeDelta = (736, 66)
+        FontSize = 48
+    }
+
+    Text LabelColour : Label {
+        AnchorData.AnchoredPosition = (16, -256)
+        AnchorData.SizeDelta = (120, 44)
+        Text = "<color> tag, 32 px"
+    }
+    Text Font_Emoji_Colour : Line {
+        AnchorData.AnchoredPosition = (148, -256)
+        AnchorData.SizeDelta = (736, 44)
+        FontSize = 32
+        Text = "<color=#E0301E>red text, 👍 🌈 in their own colours</color>"
+    }
+
+    Text LabelUnderlay : Label {
+        AnchorData.AnchoredPosition = (16, -306)
+        AnchorData.SizeDelta = (120, 44)
+        Text = "underlay, 32 px"
+    }
+    Text Font_Emoji_Underlay : Line {
+        AnchorData.AnchoredPosition = (148, -306)
+        AnchorData.SizeDelta = (736, 44)
+        FontSize = 32
+        TextStyle.UnderlayColor = #00000099
+        TextStyle.UnderlayOffset = (0.08, 0.08)
+        Text = "a shadow 👍 😀 🇯🇵 under every glyph"
+    }
+
+    Text LabelFill : Label {
+        AnchorData.AnchoredPosition = (16, -356)
+        AnchorData.SizeDelta = (120, 44)
+        Text = "fill at 50 %, 32 px"
+    }
+    Text Font_Emoji_Fill : Line {
+        AnchorData.AnchoredPosition = (148, -356)
+        AnchorData.SizeDelta = (736, 44)
+        FontSize = 32
+        Text = "half filled 👍 😀 🎉 🌈 🇯🇵 sung"
+    }
+
+    Text LabelItalic : Label {
+        AnchorData.AnchoredPosition = (16, -406)
+        AnchorData.SizeDelta = (120, 44)
+        Text = "italic, 32 px"
+    }
+    Text Font_Emoji_Italic : Line {
+        AnchorData.AnchoredPosition = (148, -406)
+        AnchorData.SizeDelta = (736, 44)
+        FontSize = 32
+        FontStyle = Italic
+        Text = "italic 👍 😀 🇯🇵 leans as well"
+    }
+}

@@ -198,6 +198,9 @@ public:
 	 * on the tab itself, so the next stick press walks along the strip rather than into the page the
 	 * player just opened. Only for a switch the USER made -- an authored index or a two-way binding
 	 * pushing a value in must not steal focus from wherever it is.
+	 *
+	 * Whatever this says, focus that is inside the page being left moves onto the tab now open
+	 * before that page is hidden, rather than being cleared with it.
 	 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintSetter = "SetFocusPageOnTabChange", Category = "Tab View")
 	bool bFocusPageOnTabChange = false;
@@ -259,7 +262,10 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Tab View")
 	void SetTabTemplateClass(TSubclassOf<UDreamUserWidget> InTabTemplateClass);
 
-	/** Show or hide every tab's close button. A restyle: the buttons are woken in the style loop. */
+	/**
+	 * Show or hide every tab's close button. A restyle: the buttons are woken in the style loop. Hiding
+	 * them moves focus that is on one onto its tab first.
+	 */
 	UFUNCTION(BlueprintCallable, Category = "Tab View")
 	void SetTabsClosable(bool bInTabsClosable);
 
@@ -299,7 +305,10 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Tab View")
 	bool IsTabEnabled(int32 InIndex) const;
 
-	/** Grows TabEnabled to reach InIndex when it has to, then re-pushes the strip's colours. */
+	/**
+	 * Grows TabEnabled to reach InIndex when it has to, then re-pushes the strip's colours. Disabling a
+	 * tab that has focus moves it to the tab's right neighbour, else the last enabled tab.
+	 */
 	UFUNCTION(BlueprintCallable, Category = "Tab View")
 	void SetTabEnabled(int32 InIndex, bool bInEnabled);
 
@@ -309,6 +318,9 @@ public:
 	 * The active index follows the way a browser's does -- closing the open tab opens its neighbour,
 	 * closing one before it shifts the index down so the SAME page stays open. Either way OnTabChanged
 	 * reports it, because the open tab or its index moved.
+	 *
+	 * Pad focus on the closed tab (its close button, say) or in its page goes to the tab that took its
+	 * place; focus on any other tab stays on that tab, although every tab is rebuilt.
 	 */
 	UFUNCTION(BlueprintCallable, Category = "Tab View")
 	void CloseTab(int32 InIndex);
@@ -375,8 +387,51 @@ protected:
 #endif
 
 private:
-	/** Destroy the strip and grow it again from TabLabels and the page count. Ends in ApplyStyle. */
-	void RebuildTabs();
+	/**
+	 * One player's focus on the strip -- on a tab or on something inside one, its close button -- kept
+	 * by what survives the tab being rebuilt: the tab widget itself while it lives, the page it opens,
+	 * its authored caption, and its place.
+	 */
+	struct FTabFocusCarry
+	{
+		int32 UserIndex = 0;
+		TWeakObjectPtr<UDreamWidget> TabNode;
+		TWeakObjectPtr<UDreamWidget> Page;
+		FText Caption;
+		int32 TabIndex = INDEX_NONE;
+	};
+
+	/**
+	 * Every player whose focus is on a tab, or on something inside one. InOnlyTabIndex keeps it to one
+	 * tab (INDEX_NONE: all of them); InClosingPage also counts focus inside that page as focus on its
+	 * tab -- the page a close is about to destroy.
+	 */
+	TArray<FTabFocusCarry> CaptureTabFocus(int32 InOnlyTabIndex = INDEX_NONE, const UDreamWidget* InClosingPage = nullptr) const;
+
+	/**
+	 * Put each carried player back on the same tab -- the same widget while it lives, else the tab with
+	 * the same page, else the same caption -- through FocusForNavigation, so the pad's cursor moves too.
+	 * A tab that is gone, or cannot take focus now, hands it to its right neighbour, else the last enabled
+	 * tab, else the first selectable in this view; with none of them, the focus is cleared.
+	 */
+	void RestoreTabFocus(const TArray<FTabFocusCarry>& InCarried);
+
+	/** Where a carried tab is now: its index in the strip, or INDEX_NONE when it is gone. */
+	int32 FindCarriedTab(const FTabFocusCarry& InCarried) const;
+
+	/**
+	 * Destroy the strip and grow it again from TabLabels and the page count. Ends in ApplyStyle.
+	 *
+	 * Pad focus on the strip is carried across (CaptureTabFocus, RestoreTabFocus) -- taken here unless
+	 * InCarriedFocus says the caller took it already, as a close does before it destroys the page.
+	 */
+	void RebuildTabs(const TArray<FTabFocusCarry>* InCarriedFocus = nullptr);
+
+	/**
+	 * Open the tab at InSanitizedIndex without announcing it: what both index setters share. Focus inside
+	 * the page being left goes to the tab now open before the switcher hides that page.
+	 */
+	void SwitchActiveTab(int32 InSanitizedIndex);
 
 	/** Move everything that was already a child of this control into the switcher. */
 	void AdoptAuthoredPages(const TArray<TObjectPtr<UDreamWidget>>& InAuthoredChildren);
@@ -419,7 +474,11 @@ private:
 	 */
 	void BroadcastActiveTabMoved(int32 InIndexBefore, bool bInOpenTabReplaced);
 
-	/** Put focus on the first navigable thing inside the open page. See bFocusPageOnTabChange. */
+	/**
+	 * Put focus on the first navigable thing inside the open page, for the owning player, through
+	 * FocusForNavigation so the pad's cursor goes with it. See bFocusPageOnTabChange. The switcher has
+	 * to have shown the page by then: its selectables are not found while it is still collapsed.
+	 */
 	void FocusActivePage();
 
 	/** Which tab the pointer is over right now, or INDEX_NONE. The reorder drag's whole hit test. */

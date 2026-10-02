@@ -6,6 +6,7 @@
 #include "Misc/Paths.h"
 
 #include "Controls/DreamRichTextBlock.h"
+#include "Controls/DreamTextInput.h"
 #include "Core/Components/DreamCanvas.h"
 #include "Core/Components/DreamPanelLayouts.h"
 #include "Core/Components/DreamPanelSlot.h"
@@ -17,6 +18,8 @@
 #include "Core/Text/DreamTextLayout.h"
 #include "Core/DreamUIManager.h"
 #include "Engine/World.h"
+#include "Internationalization/Culture.h"
+#include "Internationalization/Internationalization.h"
 #include "MeshModifier/DreamMeshModifierTextAnimation.h"
 #include "MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_PropertyWithEase.h"
 #include "MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_Selector.h"
@@ -276,12 +279,18 @@ bool FDreamTextMetricSettersReflowPanelTest::RunTest(const FString& Parameters)
 	}
 	Fixture.Text->SetText(FText::FromString(TEXT("measured text")));
 
-	// Each of these changes the extent the panel would measure, so each has to dirty the panel.
+	// Each of these changes the extent the panel would measure, so each has to dirty the panel. The language can too (a
+	// fallback face of another size grows the line), and the tab stops; the justification is a layout input that is
+	// treated the same way, as the flow direction is.
 	struct FCase { const TCHAR* Name; TFunction<void(UDreamText*)> Apply; };
 	const TArray<FCase> Cases = {
 		{ TEXT("SetFontSize"),   [](UDreamText* T) { T->SetFontSize(T->GetFontSize() + 13.0f); } },
 		{ TEXT("SetFontSpace"),  [](UDreamText* T) { T->SetFontSpace(T->GetFontSpace() + FVector2D(3.0, 2.0)); } },
 		{ TEXT("SetUseKerning"), [](UDreamText* T) { T->SetUseKerning(!T->GetUseKerning()); } },
+		{ TEXT("SetLanguage"),   [](UDreamText* T) { T->SetLanguage(T->GetLanguage() == TEXT("ja") ? TEXT("ko") : TEXT("ja")); } },
+		{ TEXT("SetTabSize"),    [](UDreamText* T) { T->SetTabSize(T->GetTabSize() + 2.0f); } },
+		{ TEXT("SetTextJustify"), [](UDreamText* T) { T->SetTextJustify(T->GetTextJustify() == EDreamTextJustify::InterWord ? EDreamTextJustify::Auto : EDreamTextJustify::InterWord); } },
+		{ TEXT("SetLastLineAlign"), [](UDreamText* T) { T->SetLastLineAlign(T->GetLastLineAlign() == EDreamTextLastLineAlign::Center ? EDreamTextLastLineAlign::Auto : EDreamTextLastLineAlign::Center); } },
 	};
 
 	for (const FCase& Case : Cases)
@@ -1151,6 +1160,188 @@ bool FDreamAutoWrapTextIsMeasuredAgainOnceItsGridNarrowsTest::RunTest(const FStr
 		FMath::IsNearlyEqual(Label->GetHeight(), NarrowHeight, 0.5f));
 
 	Root->DestroyWidget();
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamTextLanguageTabsAndJustificationAreLayoutInputsTest,
+	"DreamGUI.Text.Pipeline.TheLanguageTheTabSizeAndTheJustificationAreLayoutInputs",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * The text's language, its tab stops, where a justified line's room goes and how a justified paragraph's last line sits
+ * all change where glyphs go, so each is in the layout input: set, it reaches the input and the next query lays the text
+ * out again; set again to the value it has, it costs nothing. A negative tab size is none, and an empty language is the
+ * game's, named in the input.
+ */
+bool FDreamTextLanguageTabsAndJustificationAreLayoutInputsTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamTextLayoutInvalidationTestLocal;
+	DreamTests::FScopedGameWorld TestWorld;
+	FTextOnCanvasFixture Fixture;
+	if (!TestTrue(TEXT("The text is on a canvas"),
+		Fixture.Build(TestWorld.World, NewObject<UDreamTextTestFont>(TestWorld.World), FVector2D(300.0, 60.0))))
+	{
+		return false;
+	}
+	UDreamText* Text = Fixture.Text;
+	Text->SetText(FText::FromString(TEXT("a\tb c")));
+	Text->GetPreferredWidth();
+	auto Runs = [Text]() { return Text->GetCacheTextGeometryData().GetLayoutRunCount(); };
+	auto Input = [Text]() { return UDreamText::MakeLayoutInput(Text, Text->GetFontSize()); };
+
+	struct FCase
+	{
+		const TCHAR* What;
+		TFunction<void()> Apply;
+		TFunction<bool(const FDreamTextLayoutInput&)> Carried;
+	};
+	const TArray<FCase> Cases = {
+		{ TEXT("SetLanguage(ja)"), [Text]() { Text->SetLanguage(TEXT("ja")); },
+			[](const FDreamTextLayoutInput& In) { return In.Language.Equals(TEXT("ja"), ESearchCase::CaseSensitive); } },
+		{ TEXT("SetTabSize(4)"), [Text]() { Text->SetTabSize(4.0f); },
+			[](const FDreamTextLayoutInput& In) { return In.TabSize == 4.0f; } },
+		{ TEXT("SetTextJustify(InterCharacter)"), [Text]() { Text->SetTextJustify(EDreamTextJustify::InterCharacter); },
+			[](const FDreamTextLayoutInput& In) { return In.TextJustify == EDreamTextJustify::InterCharacter; } },
+		{ TEXT("SetLastLineAlign(End)"), [Text]() { Text->SetLastLineAlign(EDreamTextLastLineAlign::End); },
+			[](const FDreamTextLayoutInput& In) { return In.LastLineAlign == EDreamTextLastLineAlign::End; } },
+	};
+	for (const FCase& Case : Cases)
+	{
+		const int32 Before = Runs();
+		Case.Apply();
+		TestTrue(*FString::Printf(TEXT("%s reaches the layout input"), Case.What), Case.Carried(Input()));
+		Text->GetPreferredWidth();
+		TestEqual(*FString::Printf(TEXT("%s lays the text out again"), Case.What), Runs(), Before + 1);
+		Case.Apply();
+		Text->GetPreferredWidth();
+		TestEqual(*FString::Printf(TEXT("%s again, to the value it has, costs nothing"), Case.What), Runs(), Before + 1);
+	}
+
+	Text->SetTabSize(-3.0f);
+	TestEqual(TEXT("A negative tab size is none"), Text->GetTabSize(), 0.0f);
+	Text->SetLanguage(FString());
+	TestEqual(TEXT("An empty language is the game's, named in the input"), Input().Language,
+		FInternationalization::Get().GetCurrentLanguage()->GetName());
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamTextCultureSwitchThroughTheInputTest,
+	"DreamGUI.Text.Pipeline.AGameLanguageSwitchLaysATextWithNoLanguageOfItsOwnOutAgainThroughItsLayoutInput",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * A text with no language of its own is shaped in the game's, and its layout input names that language: when the game
+ * switches language the input is another one, and the next query lays the text out again by itself -- before the UI
+ * manager has told any text that the culture changed, which this world's never gets the tick to do. A text with a
+ * language of its own is not laid out again when the game switches back. The culture is switched between two Englishes,
+ * which leaves the editor no translation to load, and put back as it was.
+ */
+bool FDreamTextCultureSwitchThroughTheInputTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamTextLayoutInvalidationTestLocal;
+	DreamTests::FScopedGameWorld TestWorld;
+	FTextOnCanvasFixture Fixture;
+	if (!TestTrue(TEXT("The text is on a canvas"),
+		Fixture.Build(TestWorld.World, NewObject<UDreamTextTestFont>(TestWorld.World), FVector2D(300.0, 60.0))))
+	{
+		return false;
+	}
+	UDreamText* Text = Fixture.Text;
+	Text->SetText(FText::FromString(TEXT("labelled")));
+	FInternationalization& I18N = FInternationalization::Get();
+	const FString GameLanguage = I18N.GetCurrentLanguage()->GetName();
+	TestEqual(TEXT("With no language of its own, the text lays out in the game's"),
+		UDreamText::MakeLayoutInput(Text, Text->GetFontSize()).Language, GameLanguage);
+	Text->GetPreferredWidth();
+	const int32 Laid = Text->GetCacheTextGeometryData().GetLayoutRunCount();
+
+	const FString Other = GameLanguage.Equals(TEXT("en-GB"), ESearchCase::IgnoreCase) ? TEXT("en-US") : TEXT("en-GB");
+	FInternationalization::FCultureStateSnapshot Snapshot;
+	I18N.BackupCultureState(Snapshot);
+	const bool bSwitched = I18N.SetCurrentLanguage(Other);
+	const FString Switched = I18N.GetCurrentLanguage()->GetName();
+	const FString InputLanguage = UDreamText::MakeLayoutInput(Text, Text->GetFontSize()).Language;
+	Text->GetPreferredWidth();
+	const int32 AfterSwitch = Text->GetCacheTextGeometryData().GetLayoutRunCount();
+	Text->SetLanguage(TEXT("ja"));
+	Text->GetPreferredWidth();
+	const int32 OwnLanguageLaid = Text->GetCacheTextGeometryData().GetLayoutRunCount();
+	// Put back before anything is asserted, so a failure leaves the editor in its own language.
+	I18N.RestoreCultureState(Snapshot);
+	Text->GetPreferredWidth();
+	const int32 AfterSwitchBack = Text->GetCacheTextGeometryData().GetLayoutRunCount();
+
+	if (!TestTrue(*FString::Printf(TEXT("The game switched to %s"), *Other), bSwitched))
+	{
+		return false;
+	}
+	TestEqual(TEXT("The layout input names the new language"), InputLanguage, Switched);
+	TestEqual(TEXT("...and the text is laid out again in it, though nothing told it the culture changed"), AfterSwitch, Laid + 1);
+	TestEqual(TEXT("A text with a language of its own is not laid out again when the game switches back"), AfterSwitchBack, OwnLanguageLaid);
+	TestEqual(TEXT("The game's language is put back"), I18N.GetCurrentLanguage()->GetName(), GameLanguage);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamTextControlsForwardTextSettingsTest,
+	"DreamGUI.RichText.TheRichTextBlockAndTheTextInputHandTheirParagraphsTheLanguageTabsJustificationAndSmallTextSwitch",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * The two controls that own paragraphs carry the text settings as properties of their own and hand them on: the rich text
+ * block to its paragraph, the text input to every paragraph it has -- the value, the placeholder and the error message,
+ * as its flow direction goes to all three. A restyle hands them on again rather than dropping them.
+ */
+bool FDreamTextControlsForwardTextSettingsTest::RunTest(const FString& Parameters)
+{
+	FDreamDriverRig Rig = FDreamDriverRig::Headless(FIntPoint(1280, 720));
+	Rig.BindTest(this);
+	auto ExpectSettings = [this](const UDreamWidget* InNode, const TCHAR* InWhose)
+	{
+		const UDreamText* Text = InNode != nullptr ? Cast<UDreamText>(InNode->GetVisual()) : nullptr;
+		if (!TestNotNull(*FString::Printf(TEXT("%s is a text"), InWhose), Text))
+		{
+			return;
+		}
+		TestEqual(*FString::Printf(TEXT("%s language"), InWhose), Text->GetLanguage(), FString(TEXT("ja")));
+		TestEqual(*FString::Printf(TEXT("%s tab size"), InWhose), Text->GetTabSize(), 4.0f);
+		TestTrue(*FString::Printf(TEXT("%s justification"), InWhose), Text->GetTextJustify() == EDreamTextJustify::InterCharacter);
+		TestTrue(*FString::Printf(TEXT("%s last line"), InWhose), Text->GetLastLineAlign() == EDreamTextLastLineAlign::Center);
+		TestTrue(*FString::Printf(TEXT("%s small-text switch"), InWhose), Text->GetSmallTextRaster() == EDreamTextSmallTextRaster::Off);
+	};
+
+	UDreamRichTextBlock* Block = Rig.MakeControl<UDreamRichTextBlock>(TEXT("Prose"), nullptr, FVector2D(400.0, 120.0));
+	if (!TestTrue(TEXT("The rig and the rich text block came up"), Rig.IsUsable() && Block != nullptr))
+	{
+		return false;
+	}
+	Block->SetLanguage(TEXT("ja"));
+	Block->SetTabSize(4.0f);
+	Block->SetTextJustify(EDreamTextJustify::InterCharacter);
+	Block->SetLastLineAlign(EDreamTextLastLineAlign::Center);
+	Block->SetSmallTextRaster(EDreamTextSmallTextRaster::Off);
+	ExpectSettings(Block->TextNode, TEXT("The block's paragraph:"));
+	Block->ApplyStyle();
+	ExpectSettings(Block->TextNode, TEXT("Restyled, the block's paragraph:"));
+
+	UDreamTextInput* Field = Rig.MakeControl<UDreamTextInput>(TEXT("Field"), nullptr, FVector2D(300.0, 40.0));
+	if (!TestNotNull(TEXT("The text input came up"), Field))
+	{
+		return false;
+	}
+	Field->SetLanguage(TEXT("ja"));
+	Field->SetTabSize(4.0f);
+	Field->SetTextJustify(EDreamTextJustify::InterCharacter);
+	Field->SetLastLineAlign(EDreamTextLastLineAlign::Center);
+	Field->SetSmallTextRaster(EDreamTextSmallTextRaster::Off);
+	ExpectSettings(Field->TextNode, TEXT("The field's value:"));
+	ExpectSettings(Field->PlaceholderNode, TEXT("The field's placeholder:"));
+	ExpectSettings(Field->ErrorNode, TEXT("The field's error message:"));
+	Field->ApplyStyle();
+	ExpectSettings(Field->TextNode, TEXT("Restyled, the field's value:"));
+	ExpectSettings(Field->PlaceholderNode, TEXT("Restyled, the field's placeholder:"));
 	return true;
 }
 

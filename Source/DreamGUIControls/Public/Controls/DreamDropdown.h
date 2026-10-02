@@ -6,7 +6,6 @@
 #include "Controls/DreamUIControl.h"
 #include "DreamDropdown.generated.h"
 
-class UDreamUIPopupLayer;
 class UDreamWidget;
 class UUIDropdown;
 
@@ -277,10 +276,24 @@ private:
 	void ApplyListRestingGeometry(const FDreamDropdownStyle& InActive);
 
 	/**
-	 * Size the open list for the rows it holds and lift it to InPopup, from where it hangs under the
-	 * face. What an open does, and what an options push re-does for a list that is already up.
+	 * Size the opening list for the rows it holds, where it hangs under the face, before the behaviour
+	 * lifts it to the popup layer -- which pins the size and the place it finds.
 	 */
-	void LiftOpenList(UDreamUIPopupLayer& InPopup);
+	void PrepareOpenList();
+
+	/**
+	 * The open list's placement on the popup layer (UUIDropdown::SetListPlacement), run as it goes up and
+	 * after every frame's layout: as wide as the face, as tall as its visible rows, centred under the
+	 * face's bottom edge in the plane it was lifted to. So it follows a face that moves, and an options
+	 * push re-sizes the list the player is looking at.
+	 */
+	void PlaceOpenList(UDreamWidget* InList);
+
+	/** The column all-rows tall and every row a fill share of it: what both of the above give the rows. */
+	void SizeOpenColumn(const FDreamDropdownStyle& InActive);
+
+	/** The behaviour put a closed list away, home under the face: back to the resting scheme. */
+	void HandleListPutAway();
 
 	/** The rows the behaviour duplicated out of the template, which is everything in the column but it. */
 	TArray<UDreamWidget*> GetItemRows() const;
@@ -291,7 +304,7 @@ private:
 	 */
 	void PushItemStyle(UDreamWidget* InItem, const FDreamDropdownStyle& InActive);
 
-	/** True between Elevate and Restore; resting geometry must not be written while it is. */
+	/** True between the list going up on the popup layer and it being put away; resting geometry must not be written while it is. */
 	bool bListElevated = false;
 
 	/**

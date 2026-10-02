@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Components/WidgetInteractionComponent.h"
+#include "Input/Events.h"
 #include "Core/DreamUIBehaviour.h"
 #include "Subsystems/WorldSubsystem.h"
 #include "Event/Interface/DreamPointerDownUpInterface.h"
@@ -47,6 +48,12 @@ public:
 /**
  * Perform a raycaster and interaction for DreamUMGWidget, which shows UMG widget.
  * This component should be placed on a actor which have a DreamUMGWidget component.
+ *
+ * Every DreamGUI pointer over the surface is forwarded as a pointer of its own: the mouse as Slate's cursor
+ * (ETouchIndex::CursorPointerIndex), and each finger as a TOUCH, with its own finger index -- a press that
+ * reaches OnTouchStarted, moves while it is down with the first one flagged as
+ * Slate's first move, and a release with no force -- which is what Slate's own touch input sends, and what a
+ * UMG ScrollBox pans on. A second finger's release lets go of the second finger only.
  */
 UCLASS(ClassGroup = DreamGUI, meta = (BlueprintSpawnableComponent), Blueprintable)
 class DREAMGUICONTROLS_API UDreamUMGWidgetInteraction : public UDreamUIBehaviour
@@ -56,10 +63,10 @@ class DREAMGUICONTROLS_API UDreamUMGWidgetInteraction : public UDreamUIBehaviour
 	, public IDreamPointerScrollInterface
 {
 	GENERATED_BODY()
-	
-public:	
+
+public:
 	UDreamUMGWidgetInteraction();
-	
+
 protected:
 	/** inherited events of this component can bubble up? */
 	UPROPERTY(EditAnywhere, Category = DreamGUI)
@@ -82,22 +89,89 @@ protected:
 	virtual bool OnPointerScroll_Implementation(UDreamPointerEventData* EventData)override;
 
 	/**
-	 * The pointer hovering this component, held weakly: the player that owns it retires pointers -- a lifted finger,
-	 * a player who left -- and a raw pointer to one outlived it here and was read every tick.
+	 * The first pointer still over this surface -- the one the key, wheel and focus calls below act for -- held
+	 * weakly: the player that owns it retires pointers -- a lifted finger, a player who left -- and a raw pointer to
+	 * one outlived it here and was read every tick.
 	 */
 	TWeakObjectPtr<UDreamPointerEventData> CurrentPointerEventData;
 
 	/**
-	 * The pointer whose press on this surface is still held, or null -- held weakly, for the reason the hovering one is.
-	 * While it is, the press keeps the shared cursor: an exit waits for the release, and moves go on being forwarded.
+	 * One DreamGUI pointer as this bridge forwards it: the mouse, or one finger. Per pointer because Slate keys a
+	 * press, a capture and a drag by pointer index -- one set of state for the whole surface let a second finger's
+	 * release let go of the first, and sent every finger as the mouse.
 	 */
-	TWeakObjectPtr<UDreamPointerEventData> PressingPointerEventData;
+	struct FForwardedPointer
+	{
+		/** The pointer itself. Weak, for the reason CurrentPointerEventData is. */
+		TWeakObjectPtr<UDreamPointerEventData> Pointer;
+		/** Its index on the virtual Slate user: the finger for a touch, the cursor's index for the mouse. */
+		uint32 SlatePointerIndex = 0;
+		/** A finger: sent to Slate as touch events. */
+		bool bTouch = false;
+		/** Over this surface: entered, and not yet exited. */
+		bool bHovering = false;
+		/**
+		 * A press made on this surface is still held. While it is, the pointer is followed on the plane it pressed,
+		 * moves go on being forwarded, and an exit waits for the release.
+		 */
+		bool bPressing = false;
+		/** An exit that arrived while the press was held, acted on when it is let go. */
+		bool bExitPendingRelease = false;
+		/** A finger that went down here and has not been lifted: an active touch on the Slate side. */
+		bool bTouchDown = false;
+		/** That finger has not moved since it went down, so its next move is Slate's first move. */
+		bool bAwaitingFirstMove = false;
+		/** The mouse buttons this pointer holds down on the surface. */
+		TSet<FKey> PressedKeys;
+		/** Where the pointer was when it was last sent, so a finger that has not moved sends no move. */
+		FVector LastSentPointerPosition = FVector::ZeroVector;
+		/** This pointer's hit on the widget, in its pixels, now and at the previous trace. */
+		FVector2D LocalHitLocation = FVector2D::ZeroVector;
+		FVector2D LastLocalHitLocation = FVector2D::ZeroVector;
+		/** The widgets under this pointer at its last trace, which a press and a release are routed along. */
+		FWeakWidgetPath LastWidgetPath;
+	};
 
-	/** An exit that arrived while a press here was held, acted on when that press is let go. */
-	bool bExitPendingRelease = false;
+	/** Every pointer this bridge is forwarding, keyed by DreamGUI pointer id. */
+	TMap<int32, FForwardedPointer> ForwardedPointers;
 
-	/** What an exit of EventData does: stop following it, and hand the shared cursor back. */
+	/** The entry for EventData's pointer, made when there is none. */
+	FForwardedPointer& TrackPointer(UDreamPointerEventData* EventData);
+
+	/** The entry the key, wheel and focus calls act for: CurrentPointerEventData's, or null. */
+	FForwardedPointer* FindPrimaryPointer();
+
+	/** What an exit of EventData does: stop following it, and hand the shared cursor back once nothing is left. */
 	void EndHover(UDreamPointerEventData* EventData);
+
+	/**
+	 * Hand one pointer event to Slate on this component's virtual user: a press (a touch start first, for a touch),
+	 * a release, a move. The only three roads into Slate's pointer routing, and virtual so a test can read what the
+	 * bridge sends without a drawn UMG widget for it to land on.
+	 */
+	virtual void SendPointerDown(const FWidgetPath& InWidgetPath, const FPointerEvent& InEvent);
+	virtual void SendPointerUp(const FWidgetPath& InWidgetPath, const FPointerEvent& InEvent);
+	virtual void SendPointerMove(const FWidgetPath& InWidgetPath, const FPointerEvent& InEvent);
+
+	/** Whether this component holds the cursor its virtual user shares with every component of that index. */
+	bool HoldsVirtualCursor();
+
+	/** Tick while there is something to forward: the shared cursor is this component's, or a finger is down here. */
+	void UpdateTicking();
+
+	/** Trace InPointer, and send the move it made: a mouse move every time, a touch move only when the finger moved. */
+	void ForwardPointerMove(FForwardedPointer& InPointer);
+
+	/**
+	 * Press or release InKey for InPointer -- a touch's start or end for a touch key, a mouse button otherwise --
+	 * traced where the pointer is at that moment. bInEndsPress also lets go of the press this surface was holding
+	 * (after the trace, which follows a held press on the plane it was made on). Sends last: InPointer is not
+	 * touched again once Slate has been handed the event.
+	 */
+	void ForwardPointerKey(FForwardedPointer& InPointer, const FKey& InKey, bool bInPressed, bool bInEndsPress = false);
+
+	/** A wheel notch for InPointer, routed along the widgets under it now. */
+	void ForwardPointerWheel(FForwardedPointer& InPointer, float InScrollDelta);
 
 public:
 
@@ -111,6 +185,9 @@ public:
 	 * Presses a key as if the mouse/pointer were the source of it.  Normally you would just use
 	 * Left/Right mouse button for the Key.  However - advanced uses could also be imagined where you
 	 * send other keys to signal widgets to take special actions if they're under the cursor.
+	 *
+	 * For the first pointer still over the surface (CurrentPointerEventData); with none, nothing is
+	 * pressed. A touch key presses as that pointer's touch.
 	 */
 	UFUNCTION(BlueprintCallable, Category = DreamGUI)
 	virtual void PressPointerKey(FKey Key);
@@ -119,6 +196,8 @@ public:
 	 * Releases a key as if the mouse/pointer were the source of it.  Normally you would just use
 	 * Left/Right mouse button for the Key.  However - advanced uses could also be imagined where you
 	 * send other keys to signal widgets to take special actions if they're under the cursor.
+	 *
+	 * For the pointer PressPointerKey acts for.
 	 */
 	UFUNCTION(BlueprintCallable, Category = DreamGUI)
 	virtual void ReleasePointerKey(FKey Key);
@@ -217,8 +296,6 @@ public:
 
 
 protected:
-	int32 PrevPointerIndex = -1;
-
 	// Gets the key and char codes for sending keys for the platform.
 	void GetKeyAndCharCodes(const FKey& Key, bool& bHasKeyCode, uint32& KeyCode, bool& bHasCharCode, uint32& CharCode);
 
@@ -235,7 +312,7 @@ protected:
 	 */
 	UDreamUMGWidgetInteractionManager::FInteractionContainer* FindEnrolledInteractions();
 
-	/** Performs the simulation of pointer movement.  Does not run if bEnableHitTesting is set to false. */
+	/** Forward every pointer's move this frame: the mouse while this component holds the shared cursor, each finger while it is down. */
 	void SimulatePointerMovement();
 
 	struct FWidgetTraceResult
@@ -255,20 +332,17 @@ protected:
 
 protected:
 
-	/** The last widget path under the hit result. */
+	/** The widget path under the last hit result, whichever pointer it was. Each pointer keeps its own as well. */
 	FWeakWidgetPath LastWidgetPath;
 
 	/** The modifier keys to simulate during key presses. */
 	FModifierKeysState ModifierKeys;
 
-	/** The current set of pressed keys we maintain the state of. */
-	TSet<FKey> PressedKeys;
-
-	/** The 2D location on the widget component that was hit. */
+	/** The 2D location on the widget component that was hit, by the pointer traced last. */
 	UPROPERTY(Transient)
 	FVector2D LocalHitLocation;
 
-	/** The last 2D location on the widget component that was hit. */
+	/** That pointer's location the time before. */
 	UPROPERTY(Transient)
 	FVector2D LastLocalHitLocation;
 
@@ -290,6 +364,6 @@ protected:
 
 private:
 
-	/** Returns the path to the widget that is currently beneath the pointer */
-	FWidgetPath DetermineWidgetUnderPointer();
+	/** Returns the path to the widget that is currently beneath InPointer, and records where on the widget it is. */
+	FWidgetPath DetermineWidgetUnderPointer(FForwardedPointer& InPointer);
 };

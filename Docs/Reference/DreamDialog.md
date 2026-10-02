@@ -63,8 +63,7 @@ at all:
 | `MessageNode` | `TObjectPtr<UDreamWidget>` | Dialog | - | read only |  |
 | `ButtonRowNode` | `TObjectPtr<UDreamWidget>` | Dialog | - | read only |  |
 | `ButtonWidgets` | `TArray<TObjectPtr<UDreamButton> >` | Dialog | - | read only | One per entry in Buttons, in order. Rebuilt whenever the specs change. |
-| `DimmerBehaviour` | `TObjectPtr<UUIButton>` | Dialog | - | read only | The dimmer's click surface, added only while bCloseOnDimmerClick asks for one. |
-| `BackScope` | `TObjectPtr<UDreamDialogScope>` | Dialog | - | read only | The Back handler, added only while standalone. See UDreamDialogScope. |
+| `BackScope` | `TObjectPtr<UDreamDialogScope>` | Dialog | - | read only | The navigation scope, added only while standalone: it takes focus when the dialog appears, gives it back when the dialog closes, and answers Back while bCloseOnBack asks. See UDreamDialogScope. |
 
 ## Functions
 

@@ -154,4 +154,15 @@ protected:
 	bool bIsScopeActive = false;
 	UPROPERTY(VisibleAnywhere, Category = "DreamGUI-Navigation", AdvancedDisplay)
 	TWeakObjectPtr<UUISelectable> RememberedFocus = nullptr;
+
+private:
+	/** The stack records and reads what came before the push; see UDreamUINavigationStack::PushScope and PopScope. */
+	friend class UDreamUINavigationStack;
+	/**
+	 * Its player's focus when the stack last pushed this scope in front, whatever screen that was on: what popping it gives
+	 * back when the screen underneath asks for nothing -- a modal over a page with no scope of its own.
+	 */
+	TWeakObjectPtr<UDreamWidget> FocusBeforePush;
+	/** Whether the player had any focus then: a focus gone nowhere since is given back only to a player who had one. */
+	bool bHadFocusBeforePush = false;
 };

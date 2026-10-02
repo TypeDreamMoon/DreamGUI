@@ -304,6 +304,31 @@ void UDreamWidget::PostEditChangeProperty(FPropertyChangedEvent& PropertyChanged
 			};
 			LOCAL::MarkDirty(this);
 		}
+		if (MemberName == GET_MEMBER_NAME_CHECKED(UDreamWidget, PixelSnapping))
+		{
+			// Written into the field without SetPixelSnapping, so told the way it tells: every visual of the subtree reads
+			// the snapping through its parents -- a pixel-perfect font's layout, the small-text gate -- and asks only again
+			// when it is repainted.
+			struct FPixelSnappingLocal
+			{
+				static void MarkChanged(const UDreamWidget* Widget)
+				{
+					if (!IsValid(Widget))
+					{
+						return;
+					}
+					if (Widget->Visual)
+					{
+						Widget->Visual->OnPixelSnappingChanged();
+					}
+					for (auto& Child : Widget->Children)
+					{
+						MarkChanged(Child);
+					}
+				}
+			};
+			FPixelSnappingLocal::MarkChanged(this);
+		}
 		DreamUI::DeferToLaterTick([WeakThis = MakeWeakObjectPtr(this)]()
 		{
 			if (WeakThis.IsValid())

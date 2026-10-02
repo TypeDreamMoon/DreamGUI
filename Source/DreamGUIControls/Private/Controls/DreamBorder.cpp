@@ -67,11 +67,12 @@ void UDreamBorder::WireParts()
 	ApplyMouseEventReporting();
 	if (ContentNode != nullptr)
 	{
-		// The authored content tint, applied ONCE at setup rather than on every style push. Render
-		// opacity is a channel the host may also be driving (a tween fading a panel in), and a
-		// restyle that wrote 1 back over a fade in progress would be a style pass undoing an
-		// animation -- which is not what anybody means by restyling.
-		ContentNode->SetRenderOpacity(ContentColorAndOpacity.A);
+		// The authored content tint, applied at setup and by the setter rather than by the style push: it is
+		// this instance's, not the look's. It reaches everything below the hole and nothing of the face. Setup
+		// also puts the hole's own RenderOpacity, which nothing else authors, at whole: the tint carries the
+		// alpha, and a tree saved with that alpha in its opacity would otherwise draw it twice.
+		ContentNode->SetRenderOpacity(1.0f);
+		ContentNode->SetContentTint(ContentColorAndOpacity);
 	}
 }
 
@@ -190,9 +191,9 @@ void UDreamBorder::SetContentColorAndOpacity(FLinearColor InContentColorAndOpaci
 	ContentColorAndOpacity = InContentColorAndOpacity;
 	if (ContentNode != nullptr)
 	{
-		// Straight to the node: the content's opacity says nothing about the face's colours or
-		// rounding, so a whole style push would be a lot of work with one line of effect.
-		ContentNode->SetRenderOpacity(InContentColorAndOpacity.A);
+		// Straight to the hole: the content's tint says nothing about the face's colours or rounding, so a
+		// whole style push would be a lot of work with one line of effect.
+		ContentNode->SetContentTint(InContentColorAndOpacity);
 	}
 }
 

@@ -286,9 +286,16 @@ protected:
 	/** Coordinate contract used to move Content. AnchoredPosition is recommended for layout-managed content. */
 	UPROPERTY(EditAnywhere, Category = "DreamGUI-ScrollView")
 		EDreamScrollCoordinateMode CoordinateMode = EDreamScrollCoordinateMode::RelativeLocation;
-	/** When Content size is smaller than Content's parent size, can we still drag it (and have it spring back)? */
+	/**
+	 * When Content size is smaller than Content's parent size, can we still drag it (and have it spring back)?
+	 *
+	 * Off by default, as UMG's scroll box holds its offset at zero while its bar is not needed: content that fits
+	 * cannot be pulled past its ends, neither by the drag nor by the fling after it, and a drag over a view with
+	 * nothing to scroll on either axis is handed on to whatever is behind it. On, content that fits can be dragged
+	 * out of place and springs back when let go.
+	 */
 	UPROPERTY(EditAnywhere, Category = "DreamGUI-ScrollView")
-		bool CanScrollInSmallSize = true;
+		bool CanScrollInSmallSize = false;
 	/** When Content size is smaller than Content's parent size, rest it against the END edge instead of the start. */
 	UPROPERTY(EditAnywhere, Category = "DreamGUI-ScrollView")
 		bool FlipDirectionInSmallSize = false;
@@ -340,7 +347,11 @@ protected:
 	bool CheckParameters();
 	virtual bool CheckValidHit(UDreamWidget* InHitComp);
 public:
-	/** Whether this drag gesture is one the author left switched on -- the right button, and touch. */
+	/**
+	 * Whether this drag gesture is one the author left switched on -- the right button, and touch -- and one this view
+	 * has something to do with: a right drag over a view with nothing to scroll is refused, as SScrollBox refuses it
+	 * unless its bar IsNeeded, and so is any drag while CanScrollInSmallSize is off and nothing scrolls on either axis.
+	 */
 	bool AcceptsDragGesture(UDreamPointerEventData* InEventData) const;
 
 	/** Subscribe to the three ends of a drag gesture. See FDreamScrollDragGesture. */
@@ -490,6 +501,14 @@ public:
 	/** Clamped to the extent on every axis this view scrolls; axes it does not scroll are left alone. */
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI-ScrollView")
 		void SetScrollOffset(FVector2D InOffset);
+	/**
+	 * SetScrollOffset that glides there over InDuration seconds, with the easing ScrollTo uses: the same offset, clamped
+	 * the same way, other axes left alone; 0 or less jumps, as SetScrollOffset does. Anything that moves the content
+	 * meanwhile -- a drag, a wheel notch, a setter, another glide -- stops it where it got to. IsScrolling stays true
+	 * until it lands, so a list's OnListViewFinishedScrolling is said once, after it.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-ScrollView")
+		void GlideToScrollOffset(FVector2D InOffset, float InDuration = 0.25f);
 	/** SetScrollOffset(GetScrollOffset() + InDelta), which is what a wheel notch and a key press are. */
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI-ScrollView")
 		void ScrollBy(FVector2D InDelta);
@@ -574,7 +593,10 @@ public:
 	/** The same distance as a PERCENTAGE of the window on that axis, which is what UMG reports. */
 	UFUNCTION(BlueprintPure, Category = "DreamGUI-ScrollView")
 		FVector2D GetOverscrollPercentage()const;
-	/** True while momentum or a spring-back still has the content moving -- UMG's GetIsScrolling. */
+	/**
+	 * True while momentum, a spring-back or a glide (ScrollTo, ScrollWidgetIntoView, GlideToScrollOffset, an animated
+	 * wheel notch) still has the content moving -- UMG's GetIsScrolling.
+	 */
 	UFUNCTION(BlueprintPure, Category = "DreamGUI-ScrollView")
 		bool IsScrolling()const;
 	/**

@@ -6,10 +6,54 @@
 #include "Event/DreamPointerEventData.h"
 #include "Engine/World.h"
 
+namespace DreamScrollBoxInputHandlerLocal
+{
+	/**
+	 * The pointer ids the input system gives fingers: the first finger is 100, scripted pointers start at 1000
+	 * (DreamUIPointerIds in DreamGUIInput, which sits above this module). The id is the only thing a pointer event
+	 * carries that tells a finger from the mouse, since a finger presses as the left button.
+	 */
+	constexpr int32 FirstFingerPointerId = 100;
+	constexpr int32 FirstScriptPointerId = 1000;
+
+	static bool IsFingerPointer(const UDreamPointerEventData* InEventData)
+	{
+		return InEventData != nullptr
+			&& InEventData->PointerID >= FirstFingerPointerId
+			&& InEventData->PointerID < FirstScriptPointerId;
+	}
+}
+
 bool UDreamScrollBoxInputHandler::ApplyScroll(float PrimaryDelta) const
 {
 	UDreamLayoutContainerScrollBox* Layout = TargetLayout.Get();
 	return IsValid(Layout) && Layout->ScrollByFromUser(PrimaryDelta);
+}
+
+bool UDreamScrollBoxInputHandler::AcceptsDragGesture(const UDreamPointerEventData* InEventData) const
+{
+	const UDreamLayoutContainerScrollBox* Layout = TargetLayout.Get();
+	if (InEventData == nullptr || !IsValid(Layout))
+	{
+		return false;
+	}
+	if (DreamScrollBoxInputHandlerLocal::IsFingerPointer(InEventData))
+	{
+		// SScrollBox pans for a finger only while bEnableTouchScrolling is on; the button a finger presses as says
+		// nothing about it.
+		return Layout->GetEnableTouchScrolling();
+	}
+	switch (InEventData->MouseButtonType)
+	{
+	case EDreamUIMouseButtonType::Middle:
+		return false;
+	case EDreamUIMouseButtonType::Right:
+		// SScrollBox::OnMouseButtonDown: RightMouseButton && ScrollBar->IsNeeded() && bAllowsRightClickDragScrolling.
+		return Layout->GetAllowRightClickDragScrolling() && Layout->IsScrollNeeded();
+	default:
+		// The left button, and any button a project defines: the drag this box has always taken.
+		return true;
+	}
 }
 
 void UDreamScrollBoxInputHandler::Tick(float DeltaTime)
@@ -30,11 +74,16 @@ void UDreamScrollBoxInputHandler::Tick(float DeltaTime)
 
 bool UDreamScrollBoxInputHandler::OnPointerBeginDrag_Implementation(UDreamPointerEventData* EventData)
 {
-	if (EventData)
-	{
-		PrevPointerPosition = EventData->GetWorldPointInPlane();
-	}
 	DragVelocity = 0.0f;
+	// Decided once, here: a gesture refused at its start -- a button or a finger switched off, a right drag over a
+	// box with nothing to scroll -- is handed on whole, so a scroll box around this one can take it and the content
+	// here never moves under it.
+	bDragAccepted = AcceptsDragGesture(EventData);
+	if (!bDragAccepted)
+	{
+		return true;
+	}
+	PrevPointerPosition = EventData->GetWorldPointInPlane();
 	// Grabbing the content stops whatever it was doing, including a spring-back in progress, and
 	// keeps the physics out of the way until the pointer lets go.
 	if (UDreamLayoutContainerScrollBox* Layout = TargetLayout.Get(); IsValid(Layout))
@@ -48,7 +97,7 @@ bool UDreamScrollBoxInputHandler::OnPointerBeginDrag_Implementation(UDreamPointe
 bool UDreamScrollBoxInputHandler::OnPointerDrag_Implementation(UDreamPointerEventData* EventData)
 {
 	UDreamLayoutContainerScrollBox* Layout = TargetLayout.Get();
-	if (!EventData || !IsValid(Layout))
+	if (!EventData || !IsValid(Layout) || !bDragAccepted)
 	{
 		return true;
 	}
@@ -88,6 +137,12 @@ bool UDreamScrollBoxInputHandler::OnPointerDrag_Implementation(UDreamPointerEven
 
 bool UDreamScrollBoxInputHandler::OnPointerEndDrag_Implementation(UDreamPointerEventData* EventData)
 {
+	if (!bDragAccepted)
+	{
+		// The end of a gesture this box refused: nothing to let go of, and the box that took it has to hear the end.
+		return true;
+	}
+	bDragAccepted = false;
 	if (UDreamLayoutContainerScrollBox* Layout = TargetLayout.Get(); IsValid(Layout))
 	{
 		// Release the physics first, then hand it the speed: the spring and any momentum only start

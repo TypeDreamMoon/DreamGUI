@@ -219,6 +219,26 @@ void UDreamUIModalSubsystem::ShowNow(FPendingModal&& InModal)
 
 	FActiveModal Active;
 	Active.Layer = ModalLayer;
+
+	// The scope before the dialog: the push notes the player's focus as it stands -- what opened the modal -- for the
+	// pop to give back, and a dialog class that focuses one of its own controls as it wakes would otherwise have been
+	// noted instead, leaving the pop nothing outside the dialog to return to. Pushed again once the dialog is built,
+	// below, which moves focus into it; a dialog that fails to build takes the scope down with the layer.
+	UDreamUIModalScope* Scope = Cast<UDreamUIModalScope>(ModalLayer->AddComponent(UDreamUIModalScope::StaticClass()));
+	Active.Scope = Scope;
+	UDreamUINavigationStack* NavStack = IsValid(Scope) ? UDreamUINavigationStack::Get(this) : nullptr;
+	if (IsValid(Scope))
+	{
+		Scope->OwnerSubsystem = this;
+		// The scope carries the user index for the navigation stack AND for Back: pushing without it
+		// confined player two's focus with player one's dialog.
+		Scope->SetUserIndex(InModal.UserIndex);
+		if (NavStack != nullptr)
+		{
+			NavStack->PushScope(Scope);
+		}
+	}
+
 	Active.Dialog = CreateDreamWidget(GetWorld(), InModal.DialogClass, ModalLayer);
 	if (!Active.Dialog.IsValid())
 	{
@@ -228,21 +248,14 @@ void UDreamUIModalSubsystem::ShowNow(FPendingModal&& InModal)
 		return;
 	}
 
-	UDreamUIModalScope* Scope = Cast<UDreamUIModalScope>(ModalLayer->AddComponent(UDreamUIModalScope::StaticClass()));
-	Active.Scope = Scope;
-	if (IsValid(Scope))
+	if (IsValid(Scope) && NavStack != nullptr)
 	{
-		Scope->OwnerSubsystem = this;
-		// The scope carries the user index for the navigation stack AND for Back: pushing without it
-		// confined player two's focus with player one's dialog.
-		Scope->SetUserIndex(InModal.UserIndex);
-		if (UDreamUINavigationStack* NavStack = UDreamUINavigationStack::Get(this))
-		{
-			// The navigation stack is a stack too, and this is where the two agree: pushing confines
-			// focus to the new dialog, popping hands it back to the dialog underneath rather than to
-			// the page, which is the whole reason nesting can work at all.
-			NavStack->PushScope(Scope);
-		}
+		// The navigation stack is a stack too, and this is where the two agree: pushing confines
+		// focus to the new dialog, popping hands it back to the dialog underneath rather than to
+		// the page, which is the whole reason nesting can work at all. Pushed again now there is a
+		// dialog to put focus in: the scope back on top -- over any scope of the dialog's own, so Back
+		// still means this modal's Back -- and focus on its target.
+		NavStack->PushScope(Scope);
 	}
 
 	Active.DynamicResult = InModal.DynamicResult;

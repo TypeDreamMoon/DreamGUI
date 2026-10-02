@@ -9,7 +9,23 @@
 #include "Core/Text/DreamTextBreaker.h"
 #include "Core/Text/DreamTextShaper.h"
 #include "Algo/Reverse.h"
+#include "Engine/Texture2DArray.h"
+#include "HAL/IConsoleManager.h"
+#include "HAL/PlatformTime.h"
+#include "Hash/CityHash.h"
+#include "Internationalization/Culture.h"
+#include "Internationalization/Internationalization.h"
 #include "ProfilingDebugging/CpuProfilerTrace.h"
+#include "UObject/ObjectKey.h"
+
+static int32 GDreamTextIncrementalLayout = 1;
+static FAutoConsoleVariableRef CVarDreamTextIncrementalLayout(
+	TEXT("DreamGUI.Text.IncrementalLayout"),
+	GDreamTextIncrementalLayout,
+	TEXT("1: a text that asks for it (a field being typed into), or a long one (256 elements or more) whose content changed ")
+	TEXT("in two layouts in a row, keeps what its layout found and lays out again only what an edit touched. 0: every layout ")
+	TEXT("starts from nothing, and nothing is kept."),
+	ECVF_Default);
 
 bool FDreamTextLayoutInput::operator==(const FDreamTextLayoutInput& Other) const
 {
@@ -36,6 +52,10 @@ bool FDreamTextLayoutInput::operator==(const FDreamTextLayoutInput& Other) const
 		&& bStrikethrough == Other.bStrikethrough
 		&& TextTransform == Other.TextTransform
 		&& FlowDirection == Other.FlowDirection
+		&& Language.Equals(Other.Language, ESearchCase::CaseSensitive)
+		&& TabSize == Other.TabSize
+		&& TextJustify == Other.TextJustify
+		&& LastLineAlign == Other.LastLineAlign
 		&& bAutoWrapText == Other.bAutoWrapText
 		&& bRichText == Other.bRichText
 		&& RichTextFilterFlags == Other.RichTextFilterFlags
@@ -92,78 +112,415 @@ namespace DreamTextLayoutLocal
 	}
 
 	/**
+	 * What a justified line may widen on either side of under text-justify auto, as Blink does it: ideographs, kana,
+	 * Bopomofo, CJK symbols and punctuation, and the fullwidth forms. Hangul is not among them: Korean is written with
+	 * spaces, and justifies at them.
+	 */
+	bool IsJustifiedLikeCJK(uint32 C)
+	{
+		return (C >= 0x2E80 && C <= 0x2FFF)   // CJK radicals, Kangxi radicals, ideographic description
+			|| (C >= 0x3000 && C <= 0x303F)   // CJK symbols and punctuation
+			|| (C >= 0x3040 && C <= 0x30FF)   // Hiragana, Katakana
+			|| (C >= 0x3100 && C <= 0x312F)   // Bopomofo
+			|| (C >= 0x3190 && C <= 0x31FF)   // Kanbun, Bopomofo extended, CJK strokes, Katakana phonetic extensions
+			|| (C >= 0x3200 && C <= 0x33FF)   // enclosed CJK letters and months, CJK compatibility
+			|| (C >= 0x3400 && C <= 0x4DBF)   // CJK extension A
+			|| (C >= 0x4E00 && C <= 0x9FFF)   // CJK unified ideographs
+			|| (C >= 0xF900 && C <= 0xFAFF)   // CJK compatibility ideographs
+			|| (C >= 0xFE30 && C <= 0xFE4F)   // CJK compatibility forms
+			|| (C >= 0xFF00 && C <= 0xFF60)   // fullwidth forms
+			|| (C >= 0xFFE0 && C <= 0xFFE6)   // fullwidth signs
+			|| (C >= 0x20000 && C <= 0x3134F);// CJK extensions B to G
+	}
+
+	/** What measuring an element found out. */
+	struct FMeasured
+	{
+		FDreamUICharData Glyph;
+		FRichTextParseResult Style;
+		/** How far the pen moves for this element: its glyph advance, plus, on a cluster's first element, the cluster's letter spacing. */
+		float Advance = 0.0f;
+		/** The element's own glyph advances, without letter spacing. */
+		float ClusterAdvance = 0.0f;
+		/** On a cluster's first element: the letter spacing after the cluster, and the cluster's whole glyph advance, which is what the breaker fits. */
+		float LetterSpacing = 0.0f;
+		float ClusterFitWidth = 0.0f;
+		/** Its glyphs, as a range of the run's glyph array; none for a cluster continuation. */
+		int32 GlyphStart = 0;
+		int32 GlyphCount = 0;
+		/** Shaped run this element belongs to, or -1 when measured per code point. */
+		int32 RunIndex = -1;
+		/** Face the element's glyphs came from: 0 is the font, then its fallbacks, then its styled faces. */
+		int32 FaceIndex = 0;
+		/** Bidi embedding level (UAX #9): odd reads right to left. */
+		uint8 BidiLevel = 0;
+		/** Paragraph base direction: a right-to-left paragraph starts at the right and is aligned from there. */
+		bool bBaseRightToLeft = false;
+		/** A newline: ends the paragraph, never placed. */
+		bool bHardBreak = false;
+		/** The second half of a CR LF pair: nothing at all. */
+		bool bSkipped = false;
+		/** Space or tab (not an image placeholder): advances, hangs past the wrap width, never emits. */
+		bool bWhitespace = false;
+		/** A tab: whitespace as wide as the distance to the next tab stop from where it stands on its line. */
+		bool bTab = false;
+		bool bImageSpace = false;
+		/**
+		 * An emoji drawn by the font's emoji data as an inline object: the entry for its exact sequence, or, when no
+		 * colour face has the whole cluster, the one for its base (EmojiItem). Every other emoji is a glyph.
+		 */
+		bool bEmoji = false;
+		const FDreamUIFontEmojiDataItem* EmojiItem = nullptr;
+		/** Which of Languages the element is in: 0 for the text's own language, else the <lang=xx> around it. */
+		uint8 LanguageIndex = 0;
+		/** A glyph the painter will draw. */
+		bool bVisibleGlyph = false;
+		/** The shaper gave this element glyphs of its own, or it is not shaped at all: no shaped cluster continues into it. */
+		bool bShapeClusterStart = true;
+		/**
+		 * A cluster starts here: an extended grapheme cluster that is not inside a shaped cluster (a ligature, a
+		 * conjunct). Lines break only before one, letter spacing follows one, and its glyphs are placed together.
+		 */
+		bool bClusterStart = true;
+		/** A caret stands before this element: a grapheme cluster starts here, inside a ligature or not. */
+		bool bCaretStop = true;
+		/** Bold or italic that the element's face does not have, and the painter makes up. */
+		bool bSyntheticBold = false;
+		bool bSyntheticItalic = false;
+	};
+
+	/** A line as the breaker decided it: a half-open element range, what ended it, and what decided where it ends. */
+	struct FLineRange
+	{
+		int32 Start = 0;
+		int32 End = 0;
+		/** The newline element that ended this line, or -1 for a soft break / the end of the text. */
+		int32 HardBreakElement = -1;
+		/**
+		 * The last element the breaker read to decide where the line ends: the one that did not fit, or the paragraph's end.
+		 * A line is a function of the elements from its start to here alone, which is what lets an edit keep the lines before it.
+		 */
+		int32 DecidedAt = 0;
+	};
+
+	/** A glyph ready to place: its atlas quad and how the shaper positioned it. */
+	struct FGlyphSource
+	{
+		FDreamUICharData Quad;
+		float XAdvance = 0.0f;
+		float XOffset = 0.0f;
+		float YOffset = 0.0f;
+		int32 ElementIndex = 0;
+		/** The size it was shaped and rasterized at, in text units: its style size times its face's scale. */
+		float GlyphSize = 0.0f;
+		/**
+		 * What the quad was asked of the font with (FetchGlyphQuad): a quad kept for the same glyph, size and style is the one
+		 * asking again would give. RasterFace is -1 for a glyph measured per code point, whose quad also carries kerning.
+		 */
+		int32 RasterFace = -1;
+		uint32 RasterGlyph = 0;
+		bool bRasterBold = false;
+		bool bRasterColorFace = false;
+	};
+
+	/** A paragraph: the elements between two hard breaks, the unit the shaper, the breakers and a kept layout work in. */
+	struct FParagraph
+	{
+		/** Its elements, [Start, End); End is its newline, or the text's end. */
+		int32 Start = 0;
+		int32 End = 0;
+		/** The next paragraph's first element: past the newline, past both halves of a CR LF. */
+		int32 Next = 0;
+		/** Its glyphs and shaped runs, half-open. */
+		int32 GlyphStart = 0;
+		int32 GlyphEnd = 0;
+		int32 RunStart = 0;
+		int32 RunEnd = 0;
+		/** Its lines, half-open. */
+		int32 LineStart = 0;
+		int32 LineEnd = 0;
+		/**
+		 * What its measurement depends on -- its text, and each element's size, weight, slant, language, kind, run break and
+		 * inline object size -- and what else of its style its placement reads: what a kept paragraph is found by.
+		 */
+		uint64 MeasureHash = 0;
+		uint64 PlaceHash = 0;
+		/** Its width on one line (the preferred width's part), and whether it has anything to measure. */
+		float PreferredWidth = 0.0f;
+		bool bHasPreferredWidth = false;
+		bool bHasTab = false;
+		/** A glyph of it was still rasterizing: its quads are asked for again rather than kept. */
+		bool bPendingQuads = false;
+
+		/*
+		 * This layout's own bookkeeping against the kept layout.
+		 */
+
+		/** The kept paragraph it is, measured as it was; INDEX_NONE when it was measured. */
+		int32 Source = INDEX_NONE;
+		/** Its style is the kept paragraph's in everything placement reads: its lines may keep their placement. */
+		bool bPlaceSame = false;
+		/** For a measured paragraph: the kept paragraphs it was edited from, whose start and whose end it may share. */
+		int32 PrefixDonor = INDEX_NONE;
+		int32 SuffixDonor = INDEX_NONE;
+		/** Elements at its start and its end whose text is the donors' (TextPrefix, TextSuffix), and of those, how many came out the same. */
+		int32 TextPrefix = 0;
+		int32 TextSuffix = 0;
+		int32 SamePrefix = 0;
+		int32 SameSuffix = 0;
+	};
+
+	/** Where a placed line is in the display list's arrays, its box, and whether it may be kept. */
+	struct FLineSpan
+	{
+		int32 ItemStart = 0;
+		int32 ItemEnd = 0;
+		int32 ImageStart = 0;
+		int32 ImageEnd = 0;
+		int32 EmojiStart = 0;
+		int32 EmojiEnd = 0;
+		int32 VisualRunStart = 0;
+		int32 VisualRunEnd = 0;
+		/** The line's top in the paragraph, 0 for the first and going down, and its height. It is placed at 0; Finish moves it. */
+		float Top = 0.0f;
+		float Height = 0.0f;
+		/** Something on it still waited for its glyph: it is placed again next time. */
+		bool bPending = false;
+		/** It was the text's last line, whose end caret names the text's length. */
+		bool bLastLine = false;
+	};
+
+	/**
+	 * Everything outside the text itself that measuring a paragraph reads: the font and each face it drew from, the atlas
+	 * its quads point into, the raster scale, the shaping switches, the languages. A kept layout is built on only under the
+	 * same key -- a field missing here would be a stale glyph on screen, so when in doubt a field is in.
+	 */
+	struct FMeasureKey
+	{
+		FObjectKey Font;
+		/** The atlas texture: a flush, or a slice added, makes another one, and every kept quad may point at nothing. */
+		FObjectKey Atlas;
+		FObjectKey EmojiData;
+		FObjectKey RichTextImageData;
+		uint32 LayoutEpoch = 0;
+		int32 FaceCount = 0;
+		/** The face table: each fallback entry's ranges, cultures, scale and preference. */
+		uint64 FaceTableHash = 0;
+		float FontSize = 0.0f;
+		float MaxFontSize = 0.0f;
+		float LetterSpacing = 0.0f;
+		float TabSize = 0.0f;
+		float ExpandMeshSize = 0.0f;
+		float RootCanvasScale = 1.0f;
+		float DynamicPixelsPerUnit = 1.0f;
+		float ItalicSlope = 0.0f;
+		bool bPixelPerfect = false;
+		bool bRenderToWorldSpace = false;
+		bool bSupportDynamicPixelsPerUnit = false;
+		bool bUseKerning = false;
+		bool bLigatures = false;
+		bool bCanShape = false;
+		bool bRichText = false;
+		int32 RichTextFilterFlags = 0;
+		EDreamTextFlowDirection FlowDirection = EDreamTextFlowDirection::Auto;
+		EDreamTextPhraseWrap PhraseWrap = EDreamTextPhraseWrap::Off;
+		EDreamUITextParagraphHorizontalAlign ParagraphHAlign = EDreamUITextParagraphHorizontalAlign::Left;
+		EDreamTextJustify TextJustify = EDreamTextJustify::Auto;
+		EDreamTextLastLineAlign LastLineAlign = EDreamTextLastLineAlign::Auto;
+		/** The text's own language as it resolved, and the game's culture, which line breaking follows. */
+		FString Language;
+		FString Culture;
+
+		bool operator==(const FMeasureKey& Other) const
+		{
+			return Font == Other.Font && Atlas == Other.Atlas && EmojiData == Other.EmojiData && RichTextImageData == Other.RichTextImageData
+				&& LayoutEpoch == Other.LayoutEpoch && FaceCount == Other.FaceCount && FaceTableHash == Other.FaceTableHash
+				&& FontSize == Other.FontSize && MaxFontSize == Other.MaxFontSize && LetterSpacing == Other.LetterSpacing
+				&& TabSize == Other.TabSize && ExpandMeshSize == Other.ExpandMeshSize && RootCanvasScale == Other.RootCanvasScale
+				&& DynamicPixelsPerUnit == Other.DynamicPixelsPerUnit && ItalicSlope == Other.ItalicSlope
+				&& bPixelPerfect == Other.bPixelPerfect && bRenderToWorldSpace == Other.bRenderToWorldSpace
+				&& bSupportDynamicPixelsPerUnit == Other.bSupportDynamicPixelsPerUnit && bUseKerning == Other.bUseKerning
+				&& bLigatures == Other.bLigatures && bCanShape == Other.bCanShape && bRichText == Other.bRichText
+				&& RichTextFilterFlags == Other.RichTextFilterFlags && FlowDirection == Other.FlowDirection && PhraseWrap == Other.PhraseWrap
+				&& ParagraphHAlign == Other.ParagraphHAlign && TextJustify == Other.TextJustify && LastLineAlign == Other.LastLineAlign
+				&& Language.Equals(Other.Language, ESearchCase::CaseSensitive) && Culture.Equals(Other.Culture, ESearchCase::CaseSensitive);
+		}
+	};
+
+	/**
+	 * Whether two inputs place a line alike once its content is the same: every field but the content, its colour (a paint
+	 * input), and what only Finish reads -- the pivot, the vertical alignment, the box's height and the space between lines --
+	 * none of which a line's own placement sees outside a Truncate, Ellipsis or MiddleEllipsis, which never keep a line.
+	 */
+	bool SameLinePlacementInputs(const FDreamTextLayoutInput& A, const FDreamTextLayoutInput& B)
+	{
+		return A.Width == B.Width && A.FontSpace.X == B.FontSpace.X && A.FontSize == B.FontSize && A.ParagraphHAlign == B.ParagraphHAlign
+			&& A.OverflowType == B.OverflowType && A.WrappingPolicy == B.WrappingPolicy && A.PhraseWrap == B.PhraseWrap
+			&& A.bUseKerning == B.bUseKerning && A.FontStyle == B.FontStyle && A.bUnderline == B.bUnderline
+			&& A.bStrikethrough == B.bStrikethrough && A.TextTransform == B.TextTransform && A.FlowDirection == B.FlowDirection
+			&& A.Language.Equals(B.Language, ESearchCase::CaseSensitive) && A.TabSize == B.TabSize && A.TextJustify == B.TextJustify
+			&& A.LastLineAlign == B.LastLineAlign && A.bAutoWrapText == B.bAutoWrapText && A.bRichText == B.bRichText
+			&& A.RichTextFilterFlags == B.RichTextFilterFlags && A.LineHeightPercentage == B.LineHeightPercentage
+			&& A.WrapTextAt == B.WrapTextAt && A.ExpandMeshSize == B.ExpandMeshSize && A.DynamicPixelsPerUnit == B.DynamicPixelsPerUnit
+			&& A.RootCanvasScale == B.RootCanvasScale && A.bRenderToWorldSpace == B.bRenderToWorldSpace && A.bPixelPerfect == B.bPixelPerfect
+			&& A.bAllowLigatures == B.bAllowLigatures && A.Font == B.Font && A.RichTextImageData == B.RichTextImageData
+			&& A.RichTextCustomStyleData == B.RichTextCustomStyleData;
+	}
+
+	/** Two elements' styles agree on everything measuring or placing an element reads of them (where they stand in the source aside). */
+	bool SameLayoutStyle(const FRichTextParseResult& A, const FRichTextParseResult& B)
+	{
+		return A.Bold == B.Bold && A.Italic == B.Italic && A.Underline == B.Underline && A.Strikethrough == B.Strikethrough
+			&& A.Size == B.Size && A.Color == B.Color && A.HasColor == B.HasColor && A.bHasMultiplyColor == B.bHasMultiplyColor
+			&& A.MultiplyColor == B.MultiplyColor && A.SupOrSubMode == B.SupOrSubMode && A.BaselineShift == B.BaselineShift
+			&& A.ImageTag == B.ImageTag && A.ImageWidth == B.ImageWidth && A.ImageHeight == B.ImageHeight
+			&& A.ImageVerticalAlign == B.ImageVerticalAlign && A.Language == B.Language;
+	}
+
+	/** Every field of two glyph entries, the advance aside when asked to (a tab's is where its line put it). */
+	bool SameCharData(const FDreamUICharData& A, const FDreamUICharData& B, bool bIgnoreAdvance = false)
+	{
+		return A.Width == B.Width && A.Height == B.Height && A.XOffset == B.XOffset && A.YOffset == B.YOffset
+			&& (bIgnoreAdvance || A.XAdvance == B.XAdvance) && A.MinUV == B.MinUV && A.MaxUV == B.MaxUV && A.SliceIndex == B.SliceIndex
+			&& A.FaceIndex == B.FaceIndex && A.GlyphIndex == B.GlyphIndex && A.bPending == B.bPending && A.bColor == B.bColor
+			&& A.ColorTexelsPerEm == B.ColorTexelsPerEm;
+	}
+
+	bool SameGlyphSource(const FGlyphSource& A, const FGlyphSource& B)
+	{
+		return SameCharData(A.Quad, B.Quad) && A.XAdvance == B.XAdvance && A.XOffset == B.XOffset && A.YOffset == B.YOffset
+			&& A.GlyphSize == B.GlyphSize;
+	}
+
+	/** One step of a running 64-bit hash. */
+	uint64 MixHash(uint64 Hash, uint64 Value)
+	{
+		Hash ^= Value + 0x9E3779B97F4A7C15ull + (Hash << 6) + (Hash >> 2);
+		Hash ^= Hash >> 31;
+		Hash *= 0xBF58476D1CE4E5B9ull;
+		return Hash ^ (Hash >> 27);
+	}
+
+	uint64 FloatPairBits(float A, float B)
+	{
+		return ((uint64)GetTypeHash(A) << 32) | (uint64)GetTypeHash(B);
+	}
+
+	/**
+	 * An element of an edited paragraph stays under this many code units of an edit before its boundaries are taken from
+	 * the kept layout: what ICU's rules read past a boundary to decide it is a few characters, a run of combining marks or
+	 * of digits and separators at most.
+	 */
+	constexpr int32 BoundaryWindowMargin = 32;
+	/** A paragraph shorter than this is analysed whole after an edit: a window would save nothing. */
+	constexpr int32 BoundaryWindowMinElements = 64;
+
+	FDreamTextLayoutStats Stats;
+
+	/** Adds the time from its making to its end to one stage of the stats. */
+	struct FStageTimer
+	{
+		explicit FStageTimer(EDreamTextLayoutStage InStage)
+			: Stage(InStage), Start(FPlatformTime::Cycles64())
+		{
+		}
+		~FStageTimer()
+		{
+			Stats.Cycles[(int32)Stage] += FPlatformTime::Cycles64() - Start;
+		}
+		EDreamTextLayoutStage Stage;
+		uint64 Start;
+	};
+}
+
+/**
+ * The layout a FDreamTextLayoutState keeps: the arrays of its last run, moved in whole when it ended, and what they were
+ * made under. Line-local copies of the display list's arrays (before Finish moved each line to its place) are what kept
+ * lines are taken from.
+ */
+struct FDreamTextLayoutStateData
+{
+	bool bValid = false;
+	DreamTextLayoutLocal::FMeasureKey MeasureKey;
+	/** The faces the kept layout drew from, and who each of them was (UDreamUIFontData_BaseObject::GetFaceIdentity). */
+	TArray<int32> UsedFaces;
+	TArray<FDreamUIFontFaceIdentity> UsedFaceIdentities;
+	/** The input it was laid out from, and its content's length (the last line's end caret). */
+	FDreamTextLayoutInput Input;
+	int32 ContentLength = 0;
+
+	TArray<FDreamUIText_TextProcessingElement> Elements;
+	TBitArray<> FollowsMarkup;
+	FString PlainText;
+	TArray<int32> PlainStart;
+	/** As the layout left them: a tab's advance is where its line put it. */
+	TArray<DreamTextLayoutLocal::FMeasured> Measured;
+	TArray<DreamTextLayoutLocal::FGlyphSource> Glyphs;
+	TBitArray<> GraphemeStart;
+	/** Line-break analysis, when the kept layout wrapped: ICU's raw line and word boundaries, and the opportunities made of them. */
+	bool bHasBreakBits = false;
+	bool bHasWordBits = false;
+	TBitArray<> LineBreakRaw;
+	TBitArray<> WordBreakRaw;
+	TBitArray<> CanBreakBefore;
+	TArray<DreamTextLayoutLocal::FParagraph> Paragraphs;
+	TArray<DreamTextLayoutLocal::FLineRange> LineRanges;
+
+	/** Its lines as they were placed, before Finish moved them; false when nothing of the placement may be kept (a clamp). */
+	bool bLinesKept = false;
+	TArray<DreamTextLayoutLocal::FLineSpan> LineSpans;
+	TArray<FDreamTextGlyphItem> Items;
+	TArray<FDreamUITextLineProperty> Lines;
+	TArray<FDreamUIText_RichTextImageTag> Images;
+	TArray<FDreamUIText_Emoji> Emojis;
+	TArray<FDreamTextVisualRun> VisualRuns;
+
+	void Reset()
+	{
+		*this = FDreamTextLayoutStateData();
+	}
+
+	SIZE_T GetAllocatedSize() const
+	{
+		SIZE_T Size = UsedFaces.GetAllocatedSize() + UsedFaceIdentities.GetAllocatedSize() + Input.Content.GetAllocatedSize()
+			+ Elements.GetAllocatedSize() + FollowsMarkup.GetAllocatedSize() + PlainText.GetAllocatedSize() + PlainStart.GetAllocatedSize()
+			+ Measured.GetAllocatedSize() + Glyphs.GetAllocatedSize() + GraphemeStart.GetAllocatedSize() + LineBreakRaw.GetAllocatedSize()
+			+ WordBreakRaw.GetAllocatedSize() + CanBreakBefore.GetAllocatedSize() + Paragraphs.GetAllocatedSize()
+			+ LineRanges.GetAllocatedSize() + LineSpans.GetAllocatedSize() + Items.GetAllocatedSize() + Lines.GetAllocatedSize()
+			+ Images.GetAllocatedSize() + Emojis.GetAllocatedSize() + VisualRuns.GetAllocatedSize();
+		for (const FDreamUITextLineProperty& Line : Lines)
+		{
+			Size += Line.CaretPropertyList.GetAllocatedSize();
+		}
+		return Size;
+	}
+};
+
+namespace DreamTextLayoutLocal
+{
+	using namespace DreamUIRichTextParser;
+
+	/**
 	 * One layout pass, in the order a browser's inline formatting context does it: measure every
 	 * element, decide where the lines break, place the lines, then align the paragraph. Measuring
 	 * first is what makes the breaker a pure function over widths.
+	 *
+	 * With a kept layout (FDreamTextLayoutStateData) the same pass takes from it what is provably the same: a paragraph whose
+	 * text and measured style match is copied rather than measured, an edited one keeps its lines before and after the edit,
+	 * and a line whose content and inputs match keeps its placement. Every line is placed with its top at 0 and moved into
+	 * the box by Finish, so a kept line comes out bit for bit as placing it again would.
 	 */
 	class FLayoutRun
 	{
 	public:
-		FLayoutRun(const FDreamTextLayoutInput& InInput, FDreamTextDisplayList& InOut)
-			: In(InInput), Out(InOut)
+		FLayoutRun(const FDreamTextLayoutInput& InInput, FDreamTextDisplayList& InOut, FDreamTextLayoutStateData* InState)
+			: In(InInput), Out(InOut), State(InState)
 		{
 		}
 
 		void Run();
 
 	private:
-		/** What measuring an element found out. */
-		struct FMeasured
-		{
-			FDreamUICharData Glyph;
-			FRichTextParseResult Style;
-			/** How far the pen moves for this element: its glyph advance, plus, on a cluster's first element, the cluster's letter spacing. */
-			float Advance = 0.0f;
-			/** The element's own glyph advances, without letter spacing. */
-			float ClusterAdvance = 0.0f;
-			/** On a cluster's first element: the letter spacing after the cluster, and the cluster's whole glyph advance, which is what the breaker fits. */
-			float LetterSpacing = 0.0f;
-			float ClusterFitWidth = 0.0f;
-			/** Its glyphs, as a range of the run's glyph array; none for a cluster continuation. */
-			int32 GlyphStart = 0;
-			int32 GlyphCount = 0;
-			/** Shaped run this element belongs to, or -1 when measured per code point. */
-			int32 RunIndex = -1;
-			/** Face the element's glyphs came from: 0 is the font, then its fallbacks, then its styled faces. */
-			int32 FaceIndex = 0;
-			/** Bidi embedding level (UAX #9): odd reads right to left. */
-			uint8 BidiLevel = 0;
-			/** Paragraph base direction: a right-to-left paragraph starts at the right and is aligned from there. */
-			bool bBaseRightToLeft = false;
-			/** A newline: ends the paragraph, never placed. */
-			bool bHardBreak = false;
-			/** The second half of a CR LF pair: nothing at all. */
-			bool bSkipped = false;
-			/** Space or tab (not an image placeholder): advances, hangs past the wrap width, never emits. */
-			bool bWhitespace = false;
-			bool bImageSpace = false;
-			/** An emoji drawn by the font's emoji data as an inline object. One the emoji data lacks but a face has is a glyph. */
-			bool bEmoji = false;
-			/** A glyph the painter will draw. */
-			bool bVisibleGlyph = false;
-			/** The shaper gave this element glyphs of its own, or it is not shaped at all: no shaped cluster continues into it. */
-			bool bShapeClusterStart = true;
-			/**
-			 * A cluster starts here: an extended grapheme cluster that is not inside a shaped cluster (a ligature, a
-			 * conjunct). Lines break only before one, letter spacing follows one, and its glyphs are placed together.
-			 */
-			bool bClusterStart = true;
-			/** A caret stands before this element: a grapheme cluster starts here, inside a ligature or not. */
-			bool bCaretStop = true;
-			/** Bold or italic that the element's face does not have, and the painter makes up. */
-			bool bSyntheticBold = false;
-			bool bSyntheticItalic = false;
-		};
-
-		/** A line as the breaker decided it: a half-open element range and what ended it. */
-		struct FLineRange
-		{
-			int32 Start = 0;
-			int32 End = 0;
-			/** The newline element that ended this line, or -1 for a soft break / the end of the text. */
-			int32 HardBreakElement = -1;
-		};
-
 		/** A rich-text custom tag as the source has it: where it opened and where it closed, in elements. */
 		struct FTagRecord
 		{
@@ -216,6 +573,16 @@ namespace DreamTextLayoutLocal
 
 		const FDreamTextLayoutInput& In;
 		FDreamTextDisplayList& Out;
+
+		/** What this text's last layout kept, to build on and to keep this one in; null for a layout that keeps nothing. */
+		FDreamTextLayoutStateData* State = nullptr;
+		/** State holds a layout made under this one's measure key: its paragraphs may be taken. */
+		bool bUseState = false;
+		/** ...and its lines were broken at the same width under the same policy: a paragraph taken keeps its lines. */
+		bool bBreakKeySame = false;
+		/** ...and every input a line's placement reads is the same: a line whose content is the same keeps its placement. */
+		bool bLinePlacementSame = false;
+		FMeasureKey MeasureKey;
 
 		UDreamUIFontData_BaseObject* Font = nullptr;
 		UDreamUIRichTextImageData_BaseObject* RichTextImageData = nullptr;
@@ -280,27 +647,41 @@ namespace DreamTextLayoutLocal
 		TMap<int32, EDreamUIFontFaceStyle> FaceStyles;
 		/** What a face itself is -- bold, italic -- which decides what of a style has to be made up. */
 		EDreamUIFontFaceStyle FaceStyleOf(int32 FaceIndex);
+		TMap<int32, bool> FaceColors;
+		/** Whether a face is a colour (emoji) face, asked once per face: its glyphs are never emboldened. */
+		bool IsColorFaceOf(int32 FaceIndex);
+		/** Every regular face's scale (FDreamFontFaceTable::GetScale), copied once: a scaled face's glyphs and line box are at its size. */
+		TArray<float> FaceScales;
+		float FaceScaleOf(int32 FaceIndex) const { return FaceScales.IsValidIndex(FaceIndex) ? FaceScales[FaceIndex] : 1.0f; }
 
-		/** A glyph ready to place: its atlas quad and how the shaper positioned it. */
-		struct FGlyphSource
-		{
-			FDreamUICharData Quad;
-			float XAdvance = 0.0f;
-			float XOffset = 0.0f;
-			float YOffset = 0.0f;
-			int32 ElementIndex = 0;
-		};
-		/** A shaped run: a range of Glyphs in visual order, and the elements it covers. */
-		struct FRunInfo
-		{
-			int32 GlyphStart = 0;
-			int32 GlyphEnd = 0;
-			int32 ElementStart = 0;
-			int32 ElementEnd = 0;
-			bool bRightToLeft = false;
-		};
+		/**
+		 * The languages the text's elements are in, what FMeasured::LanguageIndex and FDreamShapeElement::LanguageIndex
+		 * index: 0 is the text's own (FDreamTextLayoutInput::Language, the game's when empty), then one per distinct
+		 * <lang=xx>. Past 255 of them a tag's text is taken to be in the text's own.
+		 */
+		TArray<FDreamTextLanguage> Languages;
+		TMap<FName, uint8> LanguageIndexByTag;
+		uint8 LanguageIndexFor(FName Tag);
+		/** The face a cluster of code points resolves to in an element's style and language (FDreamFontFaceResolver). */
+		FDreamFontFaceChoice ResolveFace(TConstArrayView<uint32> Cluster, const FRichTextParseResult& Style, uint8 LanguageIndex) const;
+		/** Appends the element's code points after its base -- the rest of an emoji sequence, a variation selector -- from its source span. None for an escaped element. */
+		void AppendSequenceCodepoints(int32 ElementIndex, TArray<uint32>& OutCodepoints) const;
+		/** The element as the text spells it: its source span, or the one character an escaped element stands for. */
+		FString ElementText(int32 ElementIndex) const;
+		/** Scratch for the code points of the cluster being resolved. */
+		TArray<uint32> ClusterCodepoints;
+
+		/** Tab stops (FDreamTextLayoutInput::TabSize), from the primary face's space at the text's size; measured when a tab first asks. */
+		bool bTabMetricsReady = false;
+		float TabSpaceWidth = 0.0f;
+		float TabInterval = 0.0f;
+		/** How wide a tab is that starts X from its line's start edge: to the next stop at least half a space away. */
+		float TabAdvanceAt(float X);
+		void SetTabAdvance(FMeasured& M, float X);
+
 		TArray<FGlyphSource> Glyphs;
-		TArray<FRunInfo> Runs;
+		/** How many shaped runs the paragraphs so far were cut into: what FMeasured::RunIndex counts. */
+		int32 RunCount = 0;
 
 		TArray<FMeasured> Measured;
 		/** The text as laid out -- markup stripped, placeholders as spaces -- and where each element starts in it. */
@@ -309,8 +690,18 @@ namespace DreamTextLayoutLocal
 		TArray<uint32> ElementCodepoints;
 		TBitArray<> GraphemeStart;
 		TBitArray<> ClusterStarts;
+		/** ICU's raw line and word boundaries, and the break opportunities they make once clusters have their say. */
+		TBitArray<> LineBreakRaw;
+		TBitArray<> WordBreakRaw;
 		TBitArray<> CanBreakBefore;
+		TArray<FParagraph> Paragraphs;
 		TArray<FLineRange> LineRanges;
+		/** For each line, the kept line it repeats -- a kept placement it may take -- or INDEX_NONE. */
+		TArray<int32> LineSources;
+		/** Each placed line's stretch of the display list, its top and its height. */
+		TArray<FLineSpan> LineSpans;
+		/** The text's width ignoring automatic wrapping, taken before the line breaker moves the tabs to where their lines put them. */
+		float UnwrappedPreferredWidth = 0.0f;
 
 		// Running state of placement.
 		float CurrentLineHeight = 0.0f;
@@ -329,51 +720,162 @@ namespace DreamTextLayoutLocal
 		TArray<float> LineCaretX;
 		TBitArray<> LineHasCaret;
 		int32 LineDotsItem = INDEX_NONE;
+		/** Per element of the line being placed: the room justification adds after the cluster it leads, in its Spacing. */
+		TArray<float> LineJustify;
+		/** The end caret of the line being placed, when a middle ellipsis took the cluster it stands after: the ellipsis's end. */
+		TOptional<float> LineEndCaretX;
 
 		void Prepare();
+		/** The measure key, and whether the kept layout was made under it: what may be taken from it at all. */
+		void PrepareKept();
+		FMeasureKey MakeMeasureKey() const;
 		void Preprocess();
 		void BuildPlainText();
-		void Measure();
+		/** Sorts every element into its kind -- newline, space, tab, image, emoji, glyph -- and the text into paragraphs. */
+		void Classify();
+		/** Finds the kept paragraph each paragraph is, and for each one that is not, the kept ones it was edited from. */
+		void Lookup();
+		uint64 MeasureHashOf(const FParagraph& P) const;
+		uint64 PlaceHashOf(const FParagraph& P) const;
+		/** Whether a kept paragraph measures exactly as P would: its text, its elements' kinds, sizes, weights, languages, objects. */
+		bool MatchesKept(const FParagraph& P, const FParagraph& K) const;
+		/** How many of P's elements at its start (or its end) are written exactly as the kept paragraph's are. */
+		int32 CountSameText(const FParagraph& P, const FParagraph& K, bool bFromEnd) const;
+		/** Where an element of this text, or of the kept one, starts in its plain text; its length at the end. */
+		int32 PlainAt(int32 ElementIndex) const { return ElementIndex < PlainStart.Num() ? PlainStart[ElementIndex] : PlainText.Len(); }
+		int32 KeptPlainAt(int32 ElementIndex) const { return ElementIndex < State->PlainStart.Num() ? State->PlainStart[ElementIndex] : State->PlainText.Len(); }
+		/** The span a boundary analysis of paragraphs [First, Last] runs over: their elements and text, newlines included. */
+		FDreamTextBoundarySpan SpanOf(int32 FirstParagraph, int32 LastParagraph) const;
+		/**
+		 * Boundaries of one kind for every paragraph: a paragraph taken from the kept layout takes its bits, an edited one is
+		 * analysed again around the edit (AnalyseWindow), and the rest are analysed whole, consecutive ones in one go.
+		 */
+		void AnalyseBoundaries(EDreamTextBoundaryKind Kind, TBitArray<>& Bits, const TBitArray<>* KeptBits);
+		/**
+		 * An edited paragraph's boundaries: its donors' at its unchanged start and end, and ICU's from two boundaries and a
+		 * margin before the edit (before any dictionary run it is in) to the first boundary after it that the kept analysis
+		 * has too -- from a boundary on, what follows depends only on the text that follows, and that is the kept text.
+		 */
+		void AnalyseWindow(EDreamTextBoundaryKind Kind, TBitArray<>& Bits, const TBitArray<>& KeptBits, int32 ParagraphIndex);
+		void AnalyseGraphemes();
+		/** Each paragraph measured, or taken from the kept layout; then the clusters and the unwrapped width. */
+		void MeasureParagraphs();
+		/** Copies a kept paragraph's measurement over P's elements, its glyphs and runs renumbered from here. */
+		void ReuseParagraph(FParagraph& P, const FParagraph& K);
 		void MeasureParagraphByCodepoint(int32 Start, int32 End);
-		bool MeasureParagraphByShaping(int32 Start, int32 End);
+		bool MeasureParagraphByShaping(const FParagraph& P);
+		/** Every shaped glyph's quad in [Begin, End): the kept one for the same glyph where P's donors had it, else the font's. */
+		void FillGlyphQuads(const FParagraph& P, int32 Begin, int32 End);
 		/** Groups a paragraph's elements into clusters and gives each its letter spacing and width. */
 		void FinishClusters(int32 Start, int32 End);
 		float LetterSpacingFor(int32 ElementIndex) const;
-		FDreamUICharData FetchGlyphQuad(int32 FaceIndex, uint32 GlyphIndex, float InFontSize, bool bInBold) const;
-		bool CanDrawEmojiAsGlyph(uint32 Codepoint);
-		void ComputeBreakOpportunities();
+		/** A paragraph's width on one line, the ink of negative letter spacing included; bOutAny is false for one with nothing in it. */
+		float ParagraphPreferredWidth(int32 Start, int32 End, bool& bOutAny) const;
+		/** A shaped glyph's atlas quad at InFontSize (its run's size times its face's scale), measured back in text units. */
+		FDreamUICharData FetchGlyphQuad(int32 FaceIndex, uint32 GlyphIndex, float InFontSize, bool bInBold, bool bColorFace) const;
+		/**
+		 * The size a glyph is asked of the font at, given the size it would be: a colour glyph in world space, where there is no
+		 * device size to raster at, never below 64 px; InOutBackScale is multiplied by what measures it back.
+		 */
+		float RasterSizeFor(bool bColorFace, float InSize, float& InOutBackScale) const;
+		/**
+		 * How an emoji element is drawn, in this order: the emoji data's picture for its exact sequence; a colour face that
+		 * has the whole cluster; the emoji data's picture for its base; else a glyph, from whatever face the shaper finds.
+		 * True for a picture, with M.EmojiItem set.
+		 */
+		bool DrawsEmojiAsImage(int32 ElementIndex, FMeasured& M);
+		void AnalyseBreaks();
+		/** For each edited paragraph, how many of its elements at its start and its end came out exactly as its donors' did. */
+		void CompareWithDonors();
+		/** Element i of this layout and element j of the kept one agree in everything breaking and placing a line reads. */
+		bool SameAsKept(int32 i, int32 j, const FParagraph& P, const FParagraph& K, bool bFromEnd) const;
 		void BreakLines();
+		/**
+		 * P's lines from From, a line start, to its end: greedy, each line decided from its own start alone. Once a line
+		 * starts inside P's unchanged end, where a line of its suffix donor started too, the donor's lines are P's lines.
+		 */
+		void BreakParagraphFrom(const FParagraph& P, int32 From, int32 HardBreak);
+		void AddLine(int32 Start, int32 End, int32 HardBreak, int32 DecidedAt, int32 Source);
+		/**
+		 * The kept paragraph K's lines from FirstLine to its last, moved by Delta elements, the last one ended at HardBreak;
+		 * with bKeepPlacement each may keep its placement too.
+		 */
+		void CopyKeptLines(const FParagraph& K, int32 FirstLine, int32 Delta, int32 HardBreak, bool bKeepPlacement);
+		/** Every tab where its own line puts it: what the lines' placement reads. */
+		void FixTabs();
 		void Place();
-		void PlaceLine(int32 LineIndex, float LineTop);
+		void PlaceLine(int32 LineIndex);
+		/** Whether a kept line's placement is this line's, and by how much its source positions moved. */
+		bool CanReuseLine(int32 LineIndex, int32 KeptIndex, int32& OutSourceDelta) const;
+		void ReuseLine(int32 LineIndex, int32 KeptIndex, int32 SourceDelta, FLineSpan& Span);
 		/** Places one cluster at the pen: its items, its inline object, the carets of its grapheme clusters. */
 		void PlaceCluster(int32 Start, int32 End, bool bRightToLeft, uint8 Level, bool bTrailing, int32 LineIndex, int32 RangeStart,
 			float& InOutPenX, float Baseline, const FLineBox& Box, float LineCentre);
 		/**
+		 * Justification of the line about to be placed (ParagraphHAlign Justify): what it lacks of its target width, spread
+		 * evenly over its opportunities into LineJustify. True when the line was stretched.
+		 */
+		bool JustifyLine(int32 LineIndex, int32 TrailingStart);
+		/** Whether a justified line may widen between two neighbouring clusters, led by these elements, under TextJustify. */
+		bool IsJustifyOpportunity(int32 BeforeElement, int32 AfterElement) const;
+		/**
 		 * Truncate and Ellipsis on a placed line, measured against the box rather than the wrap width, because they are
 		 * about what fits on screen. A line is cut at the end it reads towards -- the right of a left-to-right line, the
 		 * left of a right-to-left one, where Slate puts the ellipsis too -- and bForceEllipsis ends the line with one
-		 * whether or not it overflows (the last line that fits the box vertically).
+		 * whether or not it overflows (the last line that fits the box vertically). MiddleEllipsis without wrapping elides
+		 * each line in its middle (MiddleEllipsizeLine); wrapped, it is an end ellipsis on the last line that fits.
 		 */
 		void ClampLine(int32 LineIndex, bool bBaseRightToLeft, float PenEnd, float Baseline, bool bForceEllipsis,
-			int32 LineItemStart, int32 ImageStart, int32 EmojiStart, FDreamUITextLineProperty& LineProperty);
+			int32 LineItemStart, int32 ImageStart, int32 EmojiStart);
+		/**
+		 * A line that does not fit the box keeps its start and its end and loses its middle to an ellipsis: the gap grows
+		 * from the line's middle by width, on whichever side keeps the two halves closest, until the rest and the ellipsis
+		 * fit; whitespace beside the gap goes with it; the end slides back against the ellipsis, and carets in the gap stand
+		 * on it. Every line on its own; nothing after it is cut.
+		 */
+		void MiddleEllipsizeLine(int32 LineIndex, bool bBaseRightToLeft, float PenEnd, float Baseline);
 		/** Hides a cluster a clamp removed: its glyphs stop counting, its strokes and its inline object go. */
 		void CutCluster(FPlaced& Placed, TArray<int32>& InOutImagesToRemove, TArray<int32>& InOutEmojisToRemove);
 		void RemoveInlineObjects(TArray<int32>& ImagesToRemove, TArray<int32>& EmojisToRemove);
+		/** An ellipsis glyph as MakeEllipsisGlyph made it. */
+		struct FEllipsisGlyph
+		{
+			FDreamUICharData Glyph;
+			/** The size it was shaped and rasterized at: its style size times its face's scale. */
+			float GlyphSize = 0.0f;
+			bool bPending = false;
+			bool bSyntheticBold = false;
+			bool bSyntheticItalic = false;
+		};
 		/**
-		 * The ellipsis in the style of the text it ends: that text's size and weight, from the face that style chooses for
-		 * it. Says whether the glyph is still rasterizing, and what of bold and italic that face lacks and has to be made up.
+		 * The ellipsis in the style of the text it ends: that text's size and weight, from the face that style and that
+		 * text's language choose for it. Says whether the glyph is still rasterizing, and what of bold and italic that face
+		 * lacks and has to be made up.
 		 */
-		FDreamUICharData MakeEllipsisGlyph(const FMeasured& StyleElement, bool& bOutPending, bool& bOutSyntheticBold, bool& bOutSyntheticItalic);
+		FEllipsisGlyph MakeEllipsisGlyph(const FMeasured& StyleElement);
+		/** Adds a line's ellipsis item, its glyph box starting at DotsLeft, in the style of StyleElement; LineDotsItem is it. */
+		void AddEllipsisItem(int32 LineIndex, int32 StyleElement, const FEllipsisGlyph& Dots, float DotsLeft, bool bBaseRightToLeft, float Baseline);
 		/** Slides everything a line owns -- items, carets, inline objects, visual runs -- by the same amount. */
 		void ShiftLine(int32 LineItemStart, int32 ImageStart, int32 EmojiStart, int32 VisualRunStart, FDreamUITextLineProperty& LineProperty, float XOffset);
+		/** The same while a line is still being clamped: its items and inline objects, its element carets and its placed clusters. */
+		void ShiftPlacedLine(int32 LineItemStart, int32 ImageStart, int32 EmojiStart, float XOffset);
 		void Finish();
-		float ComputePreferredWidth() const;
+		/** Copies the lines as placed, before Finish moves them, into the kept layout. */
+		void KeepLines();
+		/** Moves this layout's arrays into the kept layout, or empties it when the atlas changed under the layout. */
+		void KeepState();
 		bool IsLineBaseRightToLeft(const FLineRange& Range) const;
 
 		bool IsRichTextImageSpace(uint32 CharCode, const FRichTextParseResult& RichTextResult) const;
 		void GetRichTextImageCharData(FDreamUICharData& OverrideCharData, float InFontSize, const FRichTextParseResult& RichTextResult) const;
-		void GetEmojiCharData(FDreamUICharData& OverrideCharData, float InFontSize, uint32 EmojiCode) const;
-		FDreamUICharData GetCharGeo(uint32 PrevCharCode, const FDreamUIText_TextProcessingElement& CharElement, float InFontSize, bool bInBold, const FRichTextParseResult& RichTextResult, bool bEmojiPlaceholder) const;
+		void GetEmojiCharData(FDreamUICharData& OverrideCharData, float InFontSize, const FDreamUIFontEmojiDataItem* EmojiItem) const;
+		/** An inline object's box -- an <img> placeholder or an emoji picture -- in text units, as the element's style sizes it. */
+		FDreamUICharData GetInlineObjectGeo(int32 ElementIndex) const;
+		/**
+		 * One code point's glyph from one face at InFontSize (the style size times the face's scale), for a layout that does
+		 * not shape: rasterized at the device size and measured back, and kerned against PrevCharCode (0: no left neighbour).
+		 */
+		FDreamUICharData GetCodepointGlyph(uint32 PrevCharCode, uint32 CharCode, int32 FaceIndex, float InFontSize, bool bInBold, bool bColorFace) const;
 		/** The underline ('_') or strikethrough ('-') an item of this element is drawn with, measured from a pen raised by GlyphYOffset. */
 		FDreamUICharData GetDecorationGlyph(bool bStrikethrough, const FMeasured& M, float GlyphYOffset, bool& bOutPending);
 		/** Gives an item the strokes its style asks for, or takes them away while their glyph is still rasterizing. */
@@ -382,10 +884,16 @@ namespace DreamTextLayoutLocal
 		/** The left-most and right-most x the painter will write for an item's glyph, sheared if italic. */
 		void ItemInkExtent(const FDreamTextGlyphItem& Item, float& OutLeft, float& OutRight) const;
 		int32 CaretIndexOf(int32 ElementIndex) const;
+		/** CaretIndexOf for an element of the kept layout. */
+		int32 KeptCaretIndexOf(int32 ElementIndex) const;
 		/** True when lines wrap: the VerticalOverflow policy, or UMG-style AutoWrapText on top of another. */
 		bool ShouldWrap() const { return In.OverflowType == EDreamUITextOverflowType::VerticalOverflow || In.bAutoWrapText; }
 		/** True when the policy cuts what does not fit rather than letting it hang out. */
-		bool IsClampMode() const { return In.OverflowType == EDreamUITextOverflowType::Truncate || In.OverflowType == EDreamUITextOverflowType::Ellipsis; }
+		bool IsClampMode() const
+		{
+			return In.OverflowType == EDreamUITextOverflowType::Truncate || In.OverflowType == EDreamUITextOverflowType::Ellipsis
+				|| In.OverflowType == EDreamUITextOverflowType::MiddleEllipsis;
+		}
 		/** The line box a line gets: every face and size on it, superscripts and subscripts where they sit, tall inline objects. */
 		FLineBox ComputeLineBox(int32 LineIndex);
 	};
@@ -462,6 +970,219 @@ namespace DreamTextLayoutLocal
 		WrapWidth = In.WrapTextAt > 0.0f ? In.WrapTextAt : In.Width;
 
 		CurrentLineHeight = OriginLineHeight;
+
+		// The text's own language is entry 0; a <lang=xx> met while measuring adds its own.
+		Languages.Reset();
+		Languages.Add(FDreamTextLanguage::Make(In.Language));
+		LanguageIndexByTag.Reset();
+		// Copied rather than held: a font may rebuild its table whenever it is asked for it again.
+		const FDreamFontFaceTable& FaceTable = Font->GetFaceTable();
+		FaceScales.Reset(FaceTable.Faces.Num());
+		for (int32 FaceIndex = 0; FaceIndex < FaceTable.Faces.Num(); FaceIndex++)
+		{
+			FaceScales.Add(FaceTable.GetScale(FaceIndex));
+		}
+		bCanShape = FDreamTextShaper::CanShape(Font);
+		PrepareKept();
+	}
+
+	FMeasureKey FLayoutRun::MakeMeasureKey() const
+	{
+		FMeasureKey Key;
+		Key.Font = FObjectKey(Font);
+		Key.Atlas = FObjectKey(Font->GetFontTexture());
+		Key.EmojiData = FObjectKey(EmojiData);
+		Key.RichTextImageData = FObjectKey(RichTextImageData);
+		Key.LayoutEpoch = Font->GetLayoutEpoch();
+		Key.FaceCount = Font->GetFaceCount();
+		// The face table, whole: a font may change a fallback's ranges, cultures or scale without a layout epoch to say so.
+		const FDreamFontFaceTable& FaceTable = Font->GetFaceTable();
+		uint64 TableHash = FaceTable.bPreferColorEmoji ? 1 : 0;
+		for (const FDreamFontFaceInfo& Face : FaceTable.Faces)
+		{
+			TableHash = MixHash(TableHash, ((uint64)GetTypeHash(Face.Scale) << 1) | (Face.bPreferOverPrimary ? 1 : 0));
+			TableHash = MixHash(TableHash, ((uint64)Face.Ranges.Num() << 32) | (uint32)Face.Cultures.Num());
+			for (const FInt32Interval& Range : Face.Ranges)
+			{
+				TableHash = MixHash(TableHash, ((uint64)(uint32)Range.Min << 32) | (uint32)Range.Max);
+			}
+			for (const FString& Culture : Face.Cultures)
+			{
+				TableHash = MixHash(TableHash, GetTypeHash(Culture));
+			}
+		}
+		Key.FaceTableHash = TableHash;
+		Key.FontSize = FontSize;
+		Key.MaxFontSize = MaxFontSize;
+		Key.LetterSpacing = In.FontSpace.X;
+		Key.TabSize = In.TabSize;
+		Key.ExpandMeshSize = In.ExpandMeshSize;
+		Key.RootCanvasScale = In.RootCanvasScale;
+		Key.DynamicPixelsPerUnit = In.DynamicPixelsPerUnit;
+		Key.ItalicSlope = ItalicSlope;
+		Key.bPixelPerfect = In.bPixelPerfect;
+		Key.bRenderToWorldSpace = In.bRenderToWorldSpace;
+		Key.bSupportDynamicPixelsPerUnit = Font->GetSupportDynamicPixelsPerUnit();
+		Key.bUseKerning = bUseKerning;
+		Key.bLigatures = bLigatures;
+		Key.bCanShape = bCanShape;
+		Key.bRichText = In.bRichText;
+		Key.RichTextFilterFlags = In.RichTextFilterFlags;
+		Key.FlowDirection = In.FlowDirection;
+		Key.PhraseWrap = In.PhraseWrap;
+		Key.ParagraphHAlign = In.ParagraphHAlign;
+		Key.TextJustify = In.TextJustify;
+		Key.LastLineAlign = In.LastLineAlign;
+		Key.Language = Languages[0].Name;
+		Key.Culture = FInternationalization::Get().GetCurrentCulture()->GetName();
+		return Key;
+	}
+
+	void FLayoutRun::PrepareKept()
+	{
+		if (State == nullptr)
+		{
+			return;
+		}
+		MeasureKey = MakeMeasureKey();
+		// A face reloaded since -- a new file, a culture swap -- has another epoch; its glyphs are not the kept ones.
+		bool bFacesSame = true;
+		for (int32 k = 0; k < State->UsedFaces.Num() && bFacesSame; k++)
+		{
+			bFacesSame = Font->GetFaceIdentity(State->UsedFaces[k]) == State->UsedFaceIdentities[k];
+		}
+		bUseState = State->bValid && bFacesSame && State->MeasureKey == MeasureKey;
+		if (!bUseState)
+		{
+			// Made under something else, so of no use: it goes now rather than with the end of this layout.
+			State->Reset();
+			return;
+		}
+		Stats.IncrementalLayouts++;
+		const FDreamTextLayoutInput& Kept = State->Input;
+		const bool bKeptWrap = Kept.OverflowType == EDreamUITextOverflowType::VerticalOverflow || Kept.bAutoWrapText;
+		const float KeptWrapWidth = Kept.WrapTextAt > 0.0f ? Kept.WrapTextAt : Kept.Width;
+		// A paragraph's lines are a function of its elements, the wrap width and the policy alone -- and of break bits, which
+		// the kept layout has only when it wrapped.
+		bBreakKeySame = bKeptWrap == ShouldWrap()
+			&& (!ShouldWrap() || (KeptWrapWidth == WrapWidth && Kept.WrappingPolicy == In.WrappingPolicy && State->bHasBreakBits));
+		bLinePlacementSame = State->bLinesKept && SameLinePlacementInputs(Kept, In);
+	}
+
+	bool FLayoutRun::IsColorFaceOf(int32 FaceIndex)
+	{
+		if (const bool* Found = FaceColors.Find(FaceIndex))
+		{
+			return *Found;
+		}
+		return FaceColors.Add(FaceIndex, Font->IsColorFace(FaceIndex));
+	}
+
+	uint8 FLayoutRun::LanguageIndexFor(FName Tag)
+	{
+		if (Tag.IsNone())
+		{
+			return 0;
+		}
+		if (const uint8* Found = LanguageIndexByTag.Find(Tag))
+		{
+			return *Found;
+		}
+		// A tag naming the text's own language is the text's own language: no run is cut at its edges.
+		const FString Name = Tag.ToString();
+		uint8 Index = 0;
+		if (!Name.Equals(Languages[0].Name, ESearchCase::IgnoreCase) && Languages.Num() <= MAX_uint8)
+		{
+			Index = (uint8)Languages.Num();
+			Languages.Add(FDreamTextLanguage::Make(Name));
+		}
+		LanguageIndexByTag.Add(Tag, Index);
+		return Index;
+	}
+
+	FDreamFontFaceChoice FLayoutRun::ResolveFace(TConstArrayView<uint32> Cluster, const FRichTextParseResult& Style, uint8 LanguageIndex) const
+	{
+		FDreamFontFaceQuery Query;
+		Query.Cluster = Cluster;
+		Query.StyledFace = (Style.Bold || Style.Italic) ? Font->GetStyledFace(Style.Bold, Style.Italic) : 0;
+		const FDreamTextLanguage& Language = Languages.IsValidIndex(LanguageIndex) ? Languages[LanguageIndex] : Languages[0];
+		Query.Cultures = Language.PrioritizedCultureNames;
+		Query.Presentation = FDreamFontFaceResolver::GetPresentation(Cluster);
+		return FDreamFontFaceResolver::Resolve(Font, Query);
+	}
+
+	void FLayoutRun::AppendSequenceCodepoints(int32 ElementIndex, TArray<uint32>& OutCodepoints) const
+	{
+		const FDreamUIText_TextProcessingElement& Element = TextProcessingArray[ElementIndex];
+		// An escaped element is the one character it stands for. Every other element's span starts with its base -- an
+		// <img> placeholder's one unit is no character of its own and holds nothing more.
+		const int32 BaseUnits = Element.Unicode >= FDreamUIText_CodePoint::UNICODE_PLANE01_START ? 2 : 1;
+		if (Element.bEscaped || Element.Length <= BaseUnits)
+		{
+			return;
+		}
+		const int32 End = FMath::Min(Element.StringIndex + Element.Length, In.Content.Len());
+		for (int32 Cursor = Element.StringIndex + BaseUnits; Cursor < End;)
+		{
+			int Units = 1;
+			OutCodepoints.Add(FDreamUIText_CodePoint::DecodeCodePointAt(In.Content, End, Cursor, Units));
+			Cursor += Units;
+		}
+	}
+
+	FString FLayoutRun::ElementText(int32 ElementIndex) const
+	{
+		const FDreamUIText_TextProcessingElement& Element = TextProcessingArray[ElementIndex];
+		if (!Element.bEscaped)
+		{
+			return In.Content.Mid(Element.StringIndex, Element.Length);
+		}
+		FString Text;
+		if (Element.Unicode >= FDreamUIText_CodePoint::UNICODE_PLANE01_START)
+		{
+			const uint32 Value = Element.Unicode - FDreamUIText_CodePoint::UNICODE_PLANE01_START;
+			Text.AppendChar((TCHAR)(FDreamUIText_CodePoint::HIGH_SURROGATE_START + (Value >> 10)));
+			Text.AppendChar((TCHAR)(FDreamUIText_CodePoint::LOW_SURROGATE_START + (Value & 0x3FF)));
+		}
+		else
+		{
+			Text.AppendChar((TCHAR)Element.Unicode);
+		}
+		return Text;
+	}
+
+	float FLayoutRun::TabAdvanceAt(float X)
+	{
+		if (!bTabMetricsReady)
+		{
+			bTabMetricsReady = true;
+			// The primary face's space at the text's own size, plus the letter spacing every character gets: TabSize of
+			// them, set in a row, end exactly on the first stop.
+			TabSpaceWidth = FontSize > 0.0f ? Font->GetFaceCharData(0, ' ', FontSize, false).XAdvance : 0.0f;
+			TabInterval = FMath::Max(In.TabSize, 0.0f) * (TabSpaceWidth + In.FontSpace.X);
+		}
+		if (TabInterval <= KINDA_SMALL_NUMBER)
+		{
+			return 0.0f;
+		}
+		float Distance = TabInterval - FMath::Fmod(FMath::Max(X, 0.0f), TabInterval);
+		// A tab is never narrower than half a space (Blink's rule; CSS asks for 0.5ch): one that would be jumps a stop.
+		if (Distance < TabSpaceWidth * 0.5f)
+		{
+			Distance += TabInterval;
+		}
+		return Distance;
+	}
+
+	void FLayoutRun::SetTabAdvance(FMeasured& M, float X)
+	{
+		// The whole advance is the distance to the stop: no letter spacing after it, so what follows starts on the stop.
+		const float Width = TabAdvanceAt(X);
+		M.ClusterAdvance = Width;
+		M.LetterSpacing = 0.0f;
+		M.Advance = Width;
+		M.ClusterFitWidth = Width;
+		M.Glyph.XAdvance = Width;
 	}
 
 	const FLayoutRun::FSizeMetrics& FLayoutRun::MetricsFor(float Size, int32 FaceIndex)
@@ -536,13 +1257,14 @@ namespace DreamTextLayoutLocal
 		}
 	}
 
-	void FLayoutRun::GetEmojiCharData(FDreamUICharData& OverrideCharData, float InFontSize, uint32 EmojiCode) const
+	void FLayoutRun::GetEmojiCharData(FDreamUICharData& OverrideCharData, float InFontSize, const FDreamUIFontEmojiDataItem* EmojiItem) const
 	{
-		// As tall as the font, in text units, and as wide as the emoji's own aspect ratio makes it.
+		// As tall as the font, in text units, and as wide as the picture the emoji data chose makes it: the one for the
+		// exact sequence, or the one for its base.
 		OverrideCharData.Width = OverrideCharData.Height = OverrideCharData.XAdvance = InFontSize;
 
 		FIntVector2 ImageSize;
-		if (IsValid(EmojiData) && EmojiData->GetImageSize(EmojiCode, ImageSize) && ImageSize.Y != 0)
+		if (EmojiItem != nullptr && UDreamUIFontEmojiData::GetItemImageSize(*EmojiItem, ImageSize) && ImageSize.Y != 0)
 		{
 			const float Ratio = (float)ImageSize.X / ImageSize.Y;
 			OverrideCharData.Width = OverrideCharData.Width * Ratio;
@@ -550,24 +1272,44 @@ namespace DreamTextLayoutLocal
 		}
 	}
 
-	FDreamUICharData FLayoutRun::GetCharGeo(uint32 PrevCharCode, const FDreamUIText_TextProcessingElement& CharElement, float InFontSize, bool bInBold, const FRichTextParseResult& RichTextResult, bool bEmojiPlaceholder) const
+	FDreamUICharData FLayoutRun::GetInlineObjectGeo(int32 ElementIndex) const
 	{
 		// Inline objects are not glyphs. They are sized in text units, from the font size or the size the tag asked
 		// for, so no raster scale applies to them -- passing them the rasterized size made them DynamicPixelsPerUnit
 		// times too big in world space -- and they never kern.
-		if (IsRichTextImageSpace(CharElement.Unicode, RichTextResult))
+		const FMeasured& M = Measured[ElementIndex];
+		FDreamUICharData ObjectData;
+		if (M.bImageSpace)
 		{
-			FDreamUICharData ImageData;
-			GetRichTextImageCharData(ImageData, InFontSize, RichTextResult);
-			return ImageData;
+			GetRichTextImageCharData(ObjectData, M.Style.Size, M.Style);
 		}
-		if (bEmojiPlaceholder)
+		else
 		{
-			FDreamUICharData EmojiCharData;
-			GetEmojiCharData(EmojiCharData, InFontSize, CharElement.Unicode);
-			return EmojiCharData;
+			GetEmojiCharData(ObjectData, M.Style.Size, M.EmojiItem);
 		}
+		return ObjectData;
+	}
 
+	float FLayoutRun::RasterSizeFor(bool bColorFace, float InSize, float& InOutBackScale) const
+	{
+		if (!bColorFace || !In.bRenderToWorldSpace || InSize <= 0.0f)
+		{
+			return InSize;
+		}
+		// World space has no device pixels to match: a colour glyph is rasterized at 64 px at least and minified by the
+		// sampler, since a bitmap rasterized at the size in text units would be magnified into a blur.
+		const float Floor = FMath::Min(64.0f, MaxFontSize);
+		if (InSize >= Floor)
+		{
+			return InSize;
+		}
+		InOutBackScale *= InSize / Floor;
+		return Floor;
+	}
+
+	FDreamUICharData FLayoutRun::GetCodepointGlyph(uint32 PrevCharCode, uint32 CharCode, int32 FaceIndex, float InFontSize, bool bInBold, bool bColorFace) const
+	{
+		Stats.QuadFetches++;
 		FDreamUICharData OverrideCharData;
 		/** Turns a length measured at the rasterized size back into text units; 1 when nothing was scaled. */
 		float BackToTextUnits = 1.0f;
@@ -601,7 +1343,8 @@ namespace DreamTextLayoutLocal
 			{
 				OneDivideScale = OneDivideScale * (ScaledFontSize / InFontSize);
 			}
-			OverrideCharData = Font->GetCharData(CharElement.Unicode, InFontSize, bInBold);
+			InFontSize = RasterSizeFor(bColorFace, InFontSize, OneDivideScale);
+			OverrideCharData = Font->GetFaceCharData(FaceIndex, CharCode, InFontSize, bInBold);
 			OverrideCharData.Width = OverrideCharData.Width * OneDivideScale;
 			OverrideCharData.Height = OverrideCharData.Height * OneDivideScale;
 			OverrideCharData.XAdvance = OverrideCharData.XAdvance * OneDivideScale;
@@ -611,14 +1354,23 @@ namespace DreamTextLayoutLocal
 		}
 		else
 		{
-			OverrideCharData = Font->GetCharData(CharElement.Unicode, InFontSize, bInBold);
+			InFontSize = RasterSizeFor(bColorFace, InFontSize, BackToTextUnits);
+			OverrideCharData = Font->GetFaceCharData(FaceIndex, CharCode, InFontSize, bInBold);
+			if (BackToTextUnits != 1.0f)
+			{
+				OverrideCharData.Width *= BackToTextUnits;
+				OverrideCharData.Height *= BackToTextUnits;
+				OverrideCharData.XAdvance *= BackToTextUnits;
+				OverrideCharData.XOffset *= BackToTextUnits;
+				OverrideCharData.YOffset *= BackToTextUnits;
+			}
 		}
 		// PrevCharCode == 0 is "no left neighbour": the caller says so explicitly rather than passing the
 		// character itself, which used to mean every doubled pair ("TT", "ll", "//") lost its kerning.
 		if (bUseKerning && PrevCharCode != 0)
 		{
 			// Kerning comes back at the size the glyph was measured at, so it converts back the same way.
-			const float KerningValue = Font->GetKerning(PrevCharCode, CharElement.Unicode, InFontSize) * BackToTextUnits;
+			const float KerningValue = Font->GetKerning(PrevCharCode, CharCode, InFontSize) * BackToTextUnits;
 			OverrideCharData.XAdvance += KerningValue;
 			OverrideCharData.XOffset += KerningValue;
 		}
@@ -627,6 +1379,7 @@ namespace DreamTextLayoutLocal
 
 	FDreamUICharData FLayoutRun::GetDecorationGlyph(bool bStrikethrough, const FMeasured& M, float GlyphYOffset, bool& bOutPending)
 	{
+		Stats.QuadFetches++;
 		const float Size = M.Style.Size;
 		FDreamUICharData Glyph = Font->GetCharData(bStrikethrough ? '-' : '_', Size, M.bSyntheticBold);
 		bOutPending = Glyph.bPending;
@@ -817,7 +1570,8 @@ namespace DreamTextLayoutLocal
 					Element.Unicode = EscapedCodepoint;
 					Element.StringIndex = CharIndex;
 					Element.Length = EscapeLength;
-					Element.Type = FDreamUIText_CodePoint::IsEmoji(EscapedCodepoint)
+					// One code point, so its presentation is its own default, as segmentation decides it for any other.
+					Element.Type = FDreamUIText_CodePoint::HasEmojiPresentation(EscapedCodepoint)
 						? EDreamUIText_CodeType::Emoji : EDreamUIText_CodeType::Text;
 					Element.bEscaped = true;
 					TextProcessingArray.Add(Element);
@@ -884,35 +1638,51 @@ namespace DreamTextLayoutLocal
 		return In.bRichText ? RichTextPropertyArray[ElementIndex].CharIndex : TextProcessingArray[ElementIndex].StringIndex;
 	}
 
-	bool FLayoutRun::CanDrawEmojiAsGlyph(uint32 Codepoint)
+	bool FLayoutRun::DrawsEmojiAsImage(int32 ElementIndex, FMeasured& M)
 	{
-		// The emoji data draws an emoji it has. One it does not have is drawn by a face that has the code point, as
-		// a glyph: monochrome, but a blank where the emoji should be tells the reader nothing at all.
-		if (IsValid(EmojiData))
+		M.EmojiItem = nullptr;
+		// Without emoji data every emoji is a glyph: a colour face's, else a monochrome one, else the missing-glyph box --
+		// monochrome, but a blank where the emoji should be tells the reader nothing at all.
+		if (!IsValid(EmojiData))
 		{
-			FIntVector2 ImageSize;
-			if (EmojiData->GetImageSize(Codepoint, ImageSize))
-			{
-				return false;
-			}
+			return false;
 		}
-		const int32 FaceCount = Font->GetFaceCount();
-		for (int32 F = 0; F < FaceCount; F++)
+		// 1. An author's own picture for exactly this sequence beats any font.
+		if (const FDreamUIFontEmojiDataItem* Item = EmojiData->FindBySequence(ElementText(ElementIndex)))
 		{
-			if (Font->FaceHasCodepoint(F, Codepoint))
-			{
-				return true;
-			}
+			M.EmojiItem = Item;
+			return true;
 		}
+		// 2. A colour face that has the whole cluster draws it, sequence and all: the picture for the base alone would
+		// drop its skin tone or the rest of its ZWJ sequence.
+		ClusterCodepoints.Reset();
+		ClusterCodepoints.Add(TextProcessingArray[ElementIndex].Unicode);
+		AppendSequenceCodepoints(ElementIndex, ClusterCodepoints);
+		const FDreamFontFaceChoice Choice = ResolveFace(ClusterCodepoints, M.Style, M.LanguageIndex);
+		if (Choice.bColor && Choice.bCoversCluster)
+		{
+			return false;
+		}
+		// 3. The picture for its base, which is what an asset made before sequences has.
+		if (const FDreamUIFontEmojiDataItem* Item = EmojiData->FindByCodepoint(TextProcessingArray[ElementIndex].Unicode))
+		{
+			M.EmojiItem = Item;
+			return true;
+		}
+		// 4. A monochrome face's glyph, or the missing-glyph box: the shaper's choice.
 		return false;
 	}
 
-	void FLayoutRun::Measure()
+	int32 FLayoutRun::KeptCaretIndexOf(int32 ElementIndex) const
+	{
+		// A rich element's style is its parse result, CharIndex and all (Classify).
+		return State->Input.bRichText ? State->Measured[ElementIndex].Style.CharIndex : State->Elements[ElementIndex].StringIndex;
+	}
+
+	void FLayoutRun::Classify()
 	{
 		const int32 Count = TextProcessingArray.Num();
 		Measured.SetNum(Count);
-		Glyphs.Reset();
-		Runs.Reset();
 		// Classification first, then metrics paragraph by paragraph: a paragraph is the unit the
 		// shaper sees, so nothing kerns or forms across a hard break.
 		for (int32 i = 0; i < Count; i++)
@@ -937,29 +1707,458 @@ namespace DreamTextLayoutLocal
 				}
 				continue;
 			}
+			M.LanguageIndex = LanguageIndexFor(M.Style.Language);
 			M.bImageSpace = IsRichTextImageSpace(Code, M.Style);
-			M.bEmoji = Element.Type == EDreamUIText_CodeType::Emoji && !CanDrawEmojiAsGlyph(Code);
+			// Text-type elements are always glyphs: a bare U+2764 is drawn in colour when only a colour face has it.
+			M.bEmoji = !M.bImageSpace && Element.Type == EDreamUIText_CodeType::Emoji && DrawsEmojiAsImage(i, M);
 			M.bWhitespace = !M.bImageSpace && (Code == ' ' || Code == '\t');
+			M.bTab = M.bWhitespace && Code == '\t';
 			M.bVisibleGlyph = !M.bImageSpace && !M.bEmoji && !M.bWhitespace;
 		}
 
-		bCanShape = FDreamTextShaper::CanShape(Font);
+		// The paragraphs, each with the newline that ends it; the two halves of a CR LF are one newline.
+		Paragraphs.Reset();
 		int32 ParagraphStart = 0;
 		for (int32 i = 0; i <= Count; i++)
 		{
-			if (i == Count || Measured[i].bHardBreak)
+			if (i < Count && (!Measured[i].bHardBreak || Measured[i].bSkipped))
 			{
-				if (i > ParagraphStart)
-				{
-					if (!bCanShape || !MeasureParagraphByShaping(ParagraphStart, i))
-					{
-						MeasureParagraphByCodepoint(ParagraphStart, i);
-					}
-					FinishClusters(ParagraphStart, i);
-				}
-				ParagraphStart = i + 1;
+				continue;
+			}
+			FParagraph& P = Paragraphs.AddDefaulted_GetRef();
+			P.Start = ParagraphStart;
+			P.End = i;
+			int32 Next = FMath::Min(i + 1, Count);
+			if (Next < Count && Measured[Next].bSkipped)
+			{
+				Next++;
+			}
+			P.Next = Next;
+			for (int32 k = P.Start; k < P.End && !P.bHasTab; k++)
+			{
+				P.bHasTab = Measured[k].bTab;
+			}
+			ParagraphStart = Next;
+		}
+	}
+
+	uint64 FLayoutRun::MeasureHashOf(const FParagraph& P) const
+	{
+		const int32 PlainBegin = PlainAt(P.Start);
+		const int32 PlainLength = PlainAt(P.End) - PlainBegin;
+		uint64 Hash = CityHash64(reinterpret_cast<const char*>(*PlainText + PlainBegin), (uint32)(PlainLength * sizeof(TCHAR)));
+		for (int32 i = P.Start; i < P.End; i++)
+		{
+			const FMeasured& M = Measured[i];
+			const FDreamUIText_TextProcessingElement& Element = TextProcessingArray[i];
+			const uint32 Kinds = (M.Style.Bold ? 1u : 0u) | (M.Style.Italic ? 2u : 0u) | (M.bImageSpace ? 4u : 0u) | (M.bEmoji ? 8u : 0u)
+				| (M.bWhitespace ? 16u : 0u) | (M.bTab ? 32u : 0u) | (Element.bEscaped ? 64u : 0u)
+				| (Element.Type == EDreamUIText_CodeType::Emoji ? 128u : 0u) | ((bool)FollowsMarkup[i] ? 256u : 0u);
+			Hash = MixHash(Hash, ((uint64)(uint32)(PlainStart[i] - PlainBegin) << 32) | Kinds);
+			Hash = MixHash(Hash, ((uint64)GetTypeHash(M.Style.Size) << 32) | GetTypeHash(M.Style.Language));
+			if (M.bImageSpace || M.bEmoji)
+			{
+				const FDreamUICharData Geo = GetInlineObjectGeo(i);
+				Hash = MixHash(Hash, FloatPairBits(Geo.Width, Geo.Height));
+				Hash = MixHash(Hash, ((uint64)GetTypeHash(Geo.XAdvance) << 32) | GetTypeHash(M.EmojiItem));
 			}
 		}
+		return Hash;
+	}
+
+	uint64 FLayoutRun::PlaceHashOf(const FParagraph& P) const
+	{
+		uint64 Hash = 0;
+		for (int32 i = P.Start; i < P.End; i++)
+		{
+			const FRichTextParseResult& Style = Measured[i].Style;
+			const uint32 Flags = (Style.HasColor ? 1u : 0u) | (Style.bHasMultiplyColor ? 2u : 0u) | (Style.Underline ? 4u : 0u)
+				| (Style.Strikethrough ? 8u : 0u) | ((uint32)Style.SupOrSubMode << 4) | ((uint32)Style.ImageVerticalAlign << 8);
+			Hash = MixHash(Hash, ((uint64)Style.Color.DWColor() << 32) | Style.MultiplyColor.DWColor());
+			Hash = MixHash(Hash, ((uint64)GetTypeHash(Style.BaselineShift) << 32) | Flags);
+			if (!Style.ImageTag.IsNone())
+			{
+				Hash = MixHash(Hash, GetTypeHash(Style.ImageTag));
+				Hash = MixHash(Hash, FloatPairBits(Style.ImageWidth, Style.ImageHeight));
+			}
+		}
+		return Hash;
+	}
+
+	bool FLayoutRun::MatchesKept(const FParagraph& P, const FParagraph& K) const
+	{
+		const int32 Count = P.End - P.Start;
+		if (K.bPendingQuads || Count != K.End - K.Start)
+		{
+			return false;
+		}
+		// The same text, element for element: the code points the shaper and the breakers see, sequences and all.
+		const int32 PlainBegin = PlainAt(P.Start);
+		const int32 PlainLength = PlainAt(P.End) - PlainBegin;
+		const int32 KeptPlainBegin = KeptPlainAt(K.Start);
+		if (PlainLength != KeptPlainAt(K.End) - KeptPlainBegin
+			|| FMemory::Memcmp(*PlainText + PlainBegin, *State->PlainText + KeptPlainBegin, PlainLength * sizeof(TCHAR)) != 0)
+		{
+			return false;
+		}
+		for (int32 k = 0; k < Count; k++)
+		{
+			const int32 i = P.Start + k;
+			const int32 j = K.Start + k;
+			const FMeasured& M = Measured[i];
+			const FMeasured& O = State->Measured[j];
+			const FDreamUIText_TextProcessingElement& Element = TextProcessingArray[i];
+			const FDreamUIText_TextProcessingElement& KeptElement = State->Elements[j];
+			// What the element is, and everything of its style measuring reads: size, weight, slant, language. A tag edge
+			// before it can end a shaped run, so that is the same too.
+			if (PlainStart[i] - PlainBegin != State->PlainStart[j] - KeptPlainBegin || Element.Type != KeptElement.Type
+				|| Element.bEscaped != KeptElement.bEscaped || (bool)FollowsMarkup[i] != (bool)State->FollowsMarkup[j]
+				|| M.bImageSpace != O.bImageSpace || M.bEmoji != O.bEmoji || M.EmojiItem != O.EmojiItem || M.bWhitespace != O.bWhitespace
+				|| M.bTab != O.bTab || M.bVisibleGlyph != O.bVisibleGlyph || M.Style.Size != O.Style.Size || M.Style.Bold != O.Style.Bold
+				|| M.Style.Italic != O.Style.Italic || M.Style.Language != O.Style.Language)
+			{
+				return false;
+			}
+			// An inline object is as big as its picture says, and the picture may have been changed in its asset.
+			if (M.bImageSpace || M.bEmoji)
+			{
+				const FDreamUICharData Geo = GetInlineObjectGeo(i);
+				if (Geo.Width != O.Glyph.Width || Geo.Height != O.Glyph.Height || Geo.XAdvance != O.Glyph.XAdvance)
+				{
+					return false;
+				}
+			}
+		}
+		return true;
+	}
+
+	int32 FLayoutRun::CountSameText(const FParagraph& P, const FParagraph& K, bool bFromEnd) const
+	{
+		const int32 Limit = FMath::Min(P.End - P.Start, K.End - K.Start);
+		const int32 PlainBegin = PlainAt(P.Start);
+		const int32 PlainEnd = PlainAt(P.End);
+		const int32 KeptPlainBegin = KeptPlainAt(K.Start);
+		const int32 KeptPlainEnd = KeptPlainAt(K.End);
+		int32 Same = 0;
+		for (; Same < Limit; Same++)
+		{
+			const int32 i = bFromEnd ? P.End - 1 - Same : P.Start + Same;
+			const int32 j = bFromEnd ? K.End - 1 - Same : K.Start + Same;
+			const int32 Start = PlainStart[i];
+			const int32 Length = PlainAt(i + 1) - Start;
+			const int32 KeptStart = State->PlainStart[j];
+			const int32 KeptLength = KeptPlainAt(j + 1) - KeptStart;
+			// The same characters at the same distance from the paragraph's start -- or end -- cut into the same elements.
+			const bool bSamePlace = bFromEnd ? PlainEnd - Start == KeptPlainEnd - KeptStart : Start - PlainBegin == KeptStart - KeptPlainBegin;
+			if (!bSamePlace || Length != KeptLength
+				|| FMemory::Memcmp(*PlainText + Start, *State->PlainText + KeptStart, Length * sizeof(TCHAR)) != 0)
+			{
+				break;
+			}
+		}
+		return Same;
+	}
+
+	void FLayoutRun::Lookup()
+	{
+		if (State == nullptr)
+		{
+			return;
+		}
+		TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_TextLayout_Lookup);
+		FStageTimer Timer(EDreamTextLayoutStage::Lookup);
+		// Hashed whether or not anything was kept to look in: they are kept with this layout for the next one.
+		for (FParagraph& P : Paragraphs)
+		{
+			P.MeasureHash = MeasureHashOf(P);
+			P.PlaceHash = PlaceHashOf(P);
+		}
+		if (!bUseState)
+		{
+			return;
+		}
+		const TArray<FParagraph>& Kept = State->Paragraphs;
+		// The kept paragraphs by measure hash, those that share one chained in order.
+		TMap<uint64, int32> FirstByHash;
+		FirstByHash.Reserve(Kept.Num());
+		TArray<int32> NextSameHash;
+		NextSameHash.Init(INDEX_NONE, Kept.Num());
+		for (int32 k = Kept.Num() - 1; k >= 0; k--)
+		{
+			if (const int32* First = FirstByHash.Find(Kept[k].MeasureHash))
+			{
+				NextSameHash[k] = *First;
+			}
+			FirstByHash.Add(Kept[k].MeasureHash, k);
+		}
+		TBitArray<> Taken;
+		Taken.Init(false, Kept.Num());
+		for (FParagraph& P : Paragraphs)
+		{
+			int32* Head = FirstByHash.Find(P.MeasureHash);
+			if (Head == nullptr)
+			{
+				continue;
+			}
+			for (int32 k = *Head; k != INDEX_NONE; k = NextSameHash[k])
+			{
+				if (Taken[k] || !MatchesKept(P, Kept[k]))
+				{
+					continue;
+				}
+				P.Source = k;
+				Taken[k] = true;
+				// Its lines may keep their placement only if every element is styled as it was, colours and strokes included.
+				P.bPlaceSame = P.PlaceHash == Kept[k].PlaceHash;
+				for (int32 e = 0; e < P.End - P.Start && P.bPlaceSame; e++)
+				{
+					P.bPlaceSame = SameLayoutStyle(Measured[P.Start + e].Style, State->Measured[Kept[k].Start + e].Style);
+				}
+				break;
+			}
+			// The chain's head moves past what is taken, so a long run of equal paragraphs pairs up in one pass.
+			while (*Head != INDEX_NONE && Taken[*Head])
+			{
+				*Head = NextSameHash[*Head];
+			}
+		}
+
+		// A paragraph not found was measured afresh. The kept paragraphs nothing took, between the kept ones its neighbours
+		// were found as, are what it was edited from: the first of them may share its start, the last its end -- one paragraph
+		// edited, split in two, or two joined.
+		TArray<int32> NextSource;
+		NextSource.SetNumUninitialized(Paragraphs.Num());
+		int32 Following = Kept.Num();
+		for (int32 p = Paragraphs.Num() - 1; p >= 0; p--)
+		{
+			NextSource[p] = Following;
+			if (Paragraphs[p].Source != INDEX_NONE)
+			{
+				Following = Paragraphs[p].Source;
+			}
+		}
+		int32 PreviousSource = INDEX_NONE;
+		for (int32 p = 0; p < Paragraphs.Num(); p++)
+		{
+			FParagraph& P = Paragraphs[p];
+			if (P.Source != INDEX_NONE)
+			{
+				PreviousSource = P.Source;
+				continue;
+			}
+			int32 First = PreviousSource + 1;
+			while (First < NextSource[p] && Taken[First])
+			{
+				First++;
+			}
+			int32 Last = NextSource[p] - 1;
+			while (Last >= First && Taken[Last])
+			{
+				Last--;
+			}
+			if (First >= NextSource[p] || Last < First)
+			{
+				continue;
+			}
+			P.PrefixDonor = First;
+			P.SuffixDonor = Last;
+			const int32 Count = P.End - P.Start;
+			P.TextPrefix = CountSameText(P, Kept[First], false);
+			// The start and the end never claim the same element twice.
+			int32 SuffixLimit = Count - P.TextPrefix;
+			if (First == Last)
+			{
+				SuffixLimit = FMath::Min(SuffixLimit, (Kept[Last].End - Kept[Last].Start) - P.TextPrefix);
+			}
+			P.TextSuffix = FMath::Clamp(CountSameText(P, Kept[Last], true), 0, FMath::Max(SuffixLimit, 0));
+		}
+	}
+
+	FDreamTextBoundarySpan FLayoutRun::SpanOf(int32 FirstParagraph, int32 LastParagraph) const
+	{
+		FDreamTextBoundarySpan Span;
+		Span.PlainText = &PlainText;
+		Span.ElementPlainStart = &PlainStart;
+		Span.ElementCodepoints = &ElementCodepoints;
+		Span.FirstElement = Paragraphs[FirstParagraph].Start;
+		// Each paragraph with its newline: what ICU's rules see after the last element is what they saw in the whole text.
+		Span.EndElement = Paragraphs[LastParagraph].Next;
+		Span.PlainBegin = PlainAt(Span.FirstElement);
+		Span.PlainEnd = PlainAt(Span.EndElement);
+		return Span;
+	}
+
+	void FLayoutRun::AnalyseBoundaries(EDreamTextBoundaryKind Kind, TBitArray<>& Bits, const TBitArray<>* KeptBits)
+	{
+		auto NoStop = [](int32, bool) { return false; };
+		// Paragraphs analysed whole go together while they come one after another: with nothing kept, the whole text in one
+		// run, as it always was.
+		int32 RunFirst = INDEX_NONE;
+		auto AnalyseRun = [&](int32 EndParagraph)
+		{
+			if (RunFirst != INDEX_NONE)
+			{
+				const FDreamTextBoundarySpan Span = SpanOf(RunFirst, EndParagraph - 1);
+				int32 Last = 0;
+				Stats.IcuCodeUnits += FDreamTextBreaker::ComputeBoundaries(Kind, Span, Span.FirstElement, Span.EndElement, Bits, NoStop, Last);
+				RunFirst = INDEX_NONE;
+			}
+		};
+		for (int32 p = 0; p < Paragraphs.Num(); p++)
+		{
+			const FParagraph& P = Paragraphs[p];
+			if (KeptBits != nullptr && P.Source != INDEX_NONE)
+			{
+				AnalyseRun(p);
+				if (P.End > P.Start)
+				{
+					Bits.SetRangeFromRange(P.Start, P.End - P.Start, *KeptBits, State->Paragraphs[P.Source].Start);
+				}
+				continue;
+			}
+			if (KeptBits != nullptr && (P.PrefixDonor != INDEX_NONE || P.SuffixDonor != INDEX_NONE)
+				&& P.End - P.Start >= BoundaryWindowMinElements)
+			{
+				AnalyseRun(p);
+				AnalyseWindow(Kind, Bits, *KeptBits, p);
+				continue;
+			}
+			if (RunFirst == INDEX_NONE)
+			{
+				RunFirst = p;
+			}
+		}
+		AnalyseRun(Paragraphs.Num());
+		// A paragraph's first element starts a cluster and has no line before it to break from, whatever stands before it.
+		for (const FParagraph& P : Paragraphs)
+		{
+			if (P.End > P.Start)
+			{
+				Bits[P.Start] = Kind == EDreamTextBoundaryKind::Grapheme;
+			}
+		}
+	}
+
+	void FLayoutRun::AnalyseWindow(EDreamTextBoundaryKind Kind, TBitArray<>& Bits, const TBitArray<>& KeptBits, int32 ParagraphIndex)
+	{
+		const FParagraph& P = Paragraphs[ParagraphIndex];
+		const FParagraph* Prefix = P.PrefixDonor != INDEX_NONE ? &State->Paragraphs[P.PrefixDonor] : nullptr;
+		const FParagraph* Suffix = P.SuffixDonor != INDEX_NONE ? &State->Paragraphs[P.SuffixDonor] : nullptr;
+		const int32 TextPrefix = Prefix != nullptr ? P.TextPrefix : 0;
+		const int32 TextSuffix = Suffix != nullptr ? P.TextSuffix : 0;
+		// The text the edit left alone has the boundaries it had.
+		if (TextPrefix > 0)
+		{
+			Bits.SetRangeFromRange(P.Start, TextPrefix, KeptBits, Prefix->Start);
+		}
+		if (TextSuffix > 0)
+		{
+			Bits.SetRangeFromRange(P.End - TextSuffix, TextSuffix, KeptBits, Suffix->End - TextSuffix);
+		}
+		const int32 ChangedBegin = P.Start + TextPrefix;
+		const int32 ChangedEnd = P.End - TextSuffix;
+		// A dictionary reads a run of its script whole -- Thai and its neighbours for lines, CJK for words -- so an edit in one,
+		// or against one, has the whole run read again.
+		auto IsDictionaryAt = [this, Kind](int32 i)
+		{
+			const uint32 C = ElementCodepoints[i];
+			return Kind != EDreamTextBoundaryKind::Grapheme && (FDreamTextBreaker::IsDictionaryLineBreakCodepoint(C)
+				|| (Kind == EDreamTextBoundaryKind::Word && FDreamTextBreaker::IsCJKCodepoint(C)));
+		};
+		int32 From = ChangedBegin;
+		while (From > P.Start && IsDictionaryAt(From - 1))
+		{
+			From--;
+		}
+		// From the word before the edit: two kept boundaries back, and at least as far as ICU's rules could have read past a
+		// boundary to decide the ones before the edit.
+		int32 WindowStart = P.Start;
+		int32 BoundariesBack = 0;
+		for (int32 i = From - 1; i > P.Start; i--)
+		{
+			if (!Bits[i])
+			{
+				continue;
+			}
+			BoundariesBack++;
+			if (BoundariesBack >= 2 && PlainAt(ChangedBegin) - PlainStart[i] >= BoundaryWindowMargin)
+			{
+				WindowStart = i;
+				break;
+			}
+		}
+		int32 ResyncFrom = ChangedEnd;
+		while (ResyncFrom < P.End && IsDictionaryAt(ResyncFrom))
+		{
+			ResyncFrom++;
+		}
+		const int32 SuffixShift = Suffix != nullptr ? Suffix->End - P.End : 0;
+		// The walk resumes from WindowStart as a walk over the whole paragraph goes on from a boundary: WindowStart keeps the
+		// boundary it has, and ICU is asked for the ones after it. Asked to find WindowStart itself, from the code unit before
+		// it, the engine's line iterator -- which skips a Hangul word whole from wherever it is asked -- steps over a boundary
+		// the whole walk found inside one ("(" then a Hangul word breaks after its first syllable).
+		const int32 WalkFrom = WindowStart > P.Start ? WindowStart + 1 : P.Start;
+		int32 Last = 0;
+		Stats.IcuCodeUnits += FDreamTextBreaker::ComputeBoundaries(Kind, SpanOf(ParagraphIndex, ParagraphIndex), WalkFrom, P.End, Bits,
+			[&](int32 Element, bool bBoundary)
+			{
+				// What ICU finds after a boundary depends only on the text after it: at the first boundary past the edit that the
+				// kept text has too, the rest of the paragraph is the kept rest, boundaries included.
+				return Suffix != nullptr && bBoundary && Element >= ResyncFrom && Element > WindowStart && KeptBits[Element + SuffixShift];
+			}, Last);
+	}
+
+	void FLayoutRun::AnalyseGraphemes()
+	{
+		GraphemeStart.Init(true, TextProcessingArray.Num());
+		AnalyseBoundaries(EDreamTextBoundaryKind::Grapheme, GraphemeStart, bUseState ? &State->GraphemeStart : nullptr);
+	}
+
+	void FLayoutRun::MeasureParagraphs()
+	{
+		const int32 Count = TextProcessingArray.Num();
+		Glyphs.Reset();
+		RunCount = 0;
+		UnwrappedPreferredWidth = 0.0f;
+		for (FParagraph& P : Paragraphs)
+		{
+			P.GlyphStart = Glyphs.Num();
+			P.RunStart = RunCount;
+			if (P.Source != INDEX_NONE)
+			{
+				TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_TextLayout_Reuse);
+				FStageTimer Timer(EDreamTextLayoutStage::Reuse);
+				ReuseParagraph(P, State->Paragraphs[P.Source]);
+				Stats.ParagraphsReused++;
+			}
+			else
+			{
+				FStageTimer Timer(EDreamTextLayoutStage::Measure);
+				if (P.End > P.Start)
+				{
+					if (!bCanShape || !MeasureParagraphByShaping(P))
+					{
+						MeasureParagraphByCodepoint(P.Start, P.End);
+					}
+					FinishClusters(P.Start, P.End);
+				}
+				// Before the line breaker sets each tab where its own line puts it: the preferred width is the unwrapped one.
+				P.PreferredWidth = ParagraphPreferredWidth(P.Start, P.End, P.bHasPreferredWidth);
+				Stats.ParagraphsMeasured++;
+			}
+			P.GlyphEnd = Glyphs.Num();
+			P.RunEnd = RunCount;
+			P.bPendingQuads = false;
+			for (int32 g = P.GlyphStart; g < P.GlyphEnd && !P.bPendingQuads; g++)
+			{
+				P.bPendingQuads = Glyphs[g].Quad.bPending;
+			}
+			if (P.bHasPreferredWidth)
+			{
+				UnwrappedPreferredWidth = FMath::Max(UnwrappedPreferredWidth, P.PreferredWidth);
+			}
+		}
+		FStageTimer Timer(EDreamTextLayoutStage::Measure);
 		ClusterStarts.Init(false, Count);
 		for (int32 i = 0; i < Count; i++)
 		{
@@ -967,28 +2166,68 @@ namespace DreamTextLayoutLocal
 		}
 	}
 
+	void FLayoutRun::ReuseParagraph(FParagraph& P, const FParagraph& K)
+	{
+		const int32 ElementDelta = P.Start - K.Start;
+		const int32 GlyphDelta = Glyphs.Num() - K.GlyphStart;
+		const int32 RunDelta = RunCount - K.RunStart;
+		const int32 FirstGlyph = Glyphs.Num();
+		Glyphs.Append(State->Glyphs.GetData() + K.GlyphStart, K.GlyphEnd - K.GlyphStart);
+		for (int32 g = FirstGlyph; g < Glyphs.Num(); g++)
+		{
+			Glyphs[g].ElementIndex += ElementDelta;
+		}
+		RunCount += K.RunEnd - K.RunStart;
+		for (int32 k = 0; k < P.End - P.Start; k++)
+		{
+			// What measuring found. What the element is, its style and its language were found to be the kept element's
+			// (MatchesKept), and stay this layout's: the style's CharIndex is where it stands now.
+			FMeasured& M = Measured[P.Start + k];
+			const FMeasured& Kept = State->Measured[K.Start + k];
+			M.Glyph = Kept.Glyph;
+			M.Advance = Kept.Advance;
+			M.ClusterAdvance = Kept.ClusterAdvance;
+			M.LetterSpacing = Kept.LetterSpacing;
+			M.ClusterFitWidth = Kept.ClusterFitWidth;
+			M.GlyphStart = Kept.GlyphStart + GlyphDelta;
+			M.GlyphCount = Kept.GlyphCount;
+			M.RunIndex = Kept.RunIndex >= 0 ? Kept.RunIndex + RunDelta : Kept.RunIndex;
+			M.FaceIndex = Kept.FaceIndex;
+			M.BidiLevel = Kept.BidiLevel;
+			M.bBaseRightToLeft = Kept.bBaseRightToLeft;
+			M.bShapeClusterStart = Kept.bShapeClusterStart;
+			M.bClusterStart = Kept.bClusterStart;
+			M.bCaretStop = Kept.bCaretStop;
+			M.bSyntheticBold = Kept.bSyntheticBold;
+			M.bSyntheticItalic = Kept.bSyntheticItalic;
+		}
+		// Its tabs are where the kept lines put them; the line breaker and FixTabs put them where this layout's lines do. Its
+		// width on one line was taken before any of that, and is kept.
+		P.PreferredWidth = K.PreferredWidth;
+		P.bHasPreferredWidth = K.bHasPreferredWidth;
+	}
+
 	void FLayoutRun::MeasureParagraphByCodepoint(int32 Start, int32 End)
 	{
 		// One glyph per code point, metrics straight from the font: the path for fonts that cannot
 		// shape. Kerning pairs with the previous character of the paragraph; the first has none, which
-		// GetCharGeo spells as a zero left neighbour.
+		// GetCodepointGlyph spells as a zero left neighbour.
 		//
 		// Direction is the shaper's job, so this path lays every paragraph out left to right and
 		// FlowDirection does nothing here: without HarfBuzz there is no bidi and no reordering to
 		// force. A font that cannot shape cannot draw right-to-left text correctly in the first place.
-		const bool bFaceBold = EnumHasAnyFlags(FaceStyleOf(0), EDreamUIFontFaceStyle::Bold);
-		const bool bFaceItalic = EnumHasAnyFlags(FaceStyleOf(0), EDreamUIFontFaceStyle::Italic);
+		//
+		// Faces are chosen as the shaper chooses them (FDreamFontFaceResolver): per grapheme cluster, in its style and
+		// its language, element by element when no face has the whole cluster. A face's own scale sizes its glyphs.
 		uint32 PrevCharCode = 0;
+		int32 PrevFace = INDEX_NONE;
+		int32 ClusterFace = 0;
+		bool bResolvePerElement = false;
 		for (int32 i = Start; i < End; i++)
 		{
 			FMeasured& M = Measured[i];
 			if (M.bSkipped || M.bHardBreak)continue;
 			const auto& Element = TextProcessingArray[i];
-			M.bSyntheticBold = M.Style.Bold && !bFaceBold;
-			M.bSyntheticItalic = M.Style.Italic && !bFaceItalic;
-			M.Glyph = GetCharGeo(PrevCharCode, Element, M.Style.Size, M.bSyntheticBold, M.Style, M.bEmoji);
-			M.ClusterAdvance = M.Glyph.XAdvance;
-			M.FaceIndex = M.Glyph.FaceIndex;
 			M.RunIndex = -1;
 			M.BidiLevel = 0;
 			M.bBaseRightToLeft = false;
@@ -996,17 +2235,73 @@ namespace DreamTextLayoutLocal
 			M.GlyphStart = Glyphs.Num();
 			M.GlyphCount = 1;
 			FGlyphSource& G = Glyphs.AddDefaulted_GetRef();
+			G.ElementIndex = i;
+			if (M.bImageSpace || M.bEmoji)
+			{
+				// What the primary face lacks of the style still decides the strokes drawn under the object.
+				M.bSyntheticBold = M.Style.Bold && !EnumHasAnyFlags(FaceStyleOf(0), EDreamUIFontFaceStyle::Bold);
+				M.bSyntheticItalic = M.Style.Italic && !EnumHasAnyFlags(FaceStyleOf(0), EDreamUIFontFaceStyle::Italic);
+				M.Glyph = GetInlineObjectGeo(i);
+				M.ClusterAdvance = M.Glyph.XAdvance;
+				M.FaceIndex = 0;
+				G.Quad = M.Glyph;
+				G.XAdvance = M.Glyph.XAdvance;
+				// An inline object is no character to kern the next one against.
+				PrevCharCode = 0;
+				PrevFace = INDEX_NONE;
+				continue;
+			}
+			// A tab is measured as the space it stands for, then widened to its tab stop.
+			const uint32 Codepoint = M.bTab ? (uint32)' ' : Element.Unicode;
+			const bool bGraphemeStart = i == Start || !GraphemeStart.IsValidIndex(i) || GraphemeStart[i];
+			if (bGraphemeStart)
+			{
+				int32 ClusterEnd = i + 1;
+				while (ClusterEnd < End && GraphemeStart.IsValidIndex(ClusterEnd) && !GraphemeStart[ClusterEnd]
+					&& !Measured[ClusterEnd].bHardBreak && !Measured[ClusterEnd].bImageSpace && !Measured[ClusterEnd].bEmoji)
+				{
+					ClusterEnd++;
+				}
+				ClusterCodepoints.Reset();
+				for (int32 k = i; k < ClusterEnd; k++)
+				{
+					ClusterCodepoints.Add(k == i ? Codepoint : TextProcessingArray[k].Unicode);
+					AppendSequenceCodepoints(k, ClusterCodepoints);
+				}
+				const FDreamFontFaceChoice Choice = ResolveFace(ClusterCodepoints, M.Style, M.LanguageIndex);
+				ClusterFace = Choice.FaceIndex;
+				bResolvePerElement = !Choice.bCoversCluster && ClusterEnd - i > 1;
+			}
+			int32 Face = ClusterFace;
+			if (bResolvePerElement)
+			{
+				// No face has the whole cluster ("a" and a skin tone): each part from a face that has it, still one cluster.
+				ClusterCodepoints.Reset();
+				ClusterCodepoints.Add(Codepoint);
+				AppendSequenceCodepoints(i, ClusterCodepoints);
+				Face = ResolveFace(ClusterCodepoints, M.Style, M.LanguageIndex).FaceIndex;
+			}
+			const bool bColorFace = IsColorFaceOf(Face);
+			M.FaceIndex = Face;
+			M.bSyntheticBold = M.Style.Bold && !bColorFace && !EnumHasAnyFlags(FaceStyleOf(Face), EDreamUIFontFaceStyle::Bold);
+			M.bSyntheticItalic = M.Style.Italic && !EnumHasAnyFlags(FaceStyleOf(Face), EDreamUIFontFaceStyle::Italic);
+			// Kerning is the primary face's, so it pairs two of its own glyphs only.
+			const uint32 KernLeft = (Face == 0 && PrevFace == 0) ? PrevCharCode : 0;
+			const float GlyphSize = M.Style.Size * FaceScaleOf(Face);
+			M.Glyph = GetCodepointGlyph(KernLeft, Codepoint, Face, GlyphSize, M.bSyntheticBold, bColorFace);
+			M.ClusterAdvance = M.Glyph.XAdvance;
 			G.Quad = M.Glyph;
 			G.XAdvance = M.Glyph.XAdvance;
-			G.ElementIndex = i;
-			// An inline object is no character to kern the next one against.
-			PrevCharCode = (M.bImageSpace || M.bEmoji) ? 0 : Element.Unicode;
+			G.GlyphSize = GlyphSize;
+			PrevCharCode = Element.Unicode;
+			PrevFace = Face;
 		}
 	}
 
-	FDreamUICharData FLayoutRun::FetchGlyphQuad(int32 FaceIndex, uint32 GlyphIndex, float InFontSize, bool bInBold) const
+	FDreamUICharData FLayoutRun::FetchGlyphQuad(int32 FaceIndex, uint32 GlyphIndex, float InFontSize, bool bInBold, bool bColorFace) const
 	{
-		// The same canvas-scale dance GetCharGeo does for code points: rasterize at the device size and
+		Stats.QuadFetches++;
+		// The same canvas-scale dance GetCodepointGlyph does for code points: rasterize at the device size and
 		// measure back in text units, so a bitmap font stays crisp under a scaled canvas.
 		if (bShouldScaleFontSizeWithRootCanvas)
 		{
@@ -1022,13 +2317,14 @@ namespace DreamTextLayoutLocal
 				OneDivideScale = OneDivideDynamicPixelsPerUnit;
 			}
 			const float WantedSize = InFontSize * Scale;
-			const float ScaledSize = FMath::Clamp(WantedSize, 0.0f, MaxFontSize);
-			// Same as GetCharGeo: once the font's raster cap clamps the size, the measurement has to be
+			float ScaledSize = FMath::Clamp(WantedSize, 0.0f, MaxFontSize);
+			// Same as GetCodepointGlyph: once the font's raster cap clamps the size, the measurement has to be
 			// divided by the ratio that was achieved, not by the one that was asked for.
 			if (ScaledSize > 0.0f && WantedSize > ScaledSize)
 			{
 				OneDivideScale = OneDivideScale * (WantedSize / ScaledSize);
 			}
+			ScaledSize = RasterSizeFor(bColorFace, ScaledSize, OneDivideScale);
 			FDreamUICharData Data = Font->GetGlyphData(FaceIndex, GlyphIndex, ScaledSize, bInBold);
 			Data.Width *= OneDivideScale;
 			Data.Height *= OneDivideScale;
@@ -1037,13 +2333,30 @@ namespace DreamTextLayoutLocal
 			Data.YOffset *= OneDivideScale;
 			return Data;
 		}
-		return Font->GetGlyphData(FaceIndex, GlyphIndex, InFontSize, bInBold);
+		float BackToTextUnits = 1.0f;
+		const float RasterSize = RasterSizeFor(bColorFace, InFontSize, BackToTextUnits);
+		FDreamUICharData Data = Font->GetGlyphData(FaceIndex, GlyphIndex, RasterSize, bInBold);
+		if (BackToTextUnits != 1.0f)
+		{
+			// A colour glyph's ColorTexelsPerEm is per em of its cell whatever size it came at: only lengths scale back.
+			Data.Width *= BackToTextUnits;
+			Data.Height *= BackToTextUnits;
+			Data.XAdvance *= BackToTextUnits;
+			Data.XOffset *= BackToTextUnits;
+			Data.YOffset *= BackToTextUnits;
+		}
+		return Data;
 	}
 
-	bool FLayoutRun::MeasureParagraphByShaping(int32 Start, int32 End)
+	bool FLayoutRun::MeasureParagraphByShaping(const FParagraph& P)
 	{
+		const int32 Start = P.Start;
+		const int32 End = P.End;
 		TArray<FDreamShapeElement> ShapeElements;
 		ShapeElements.Reserve(End - Start);
+		// The code points of each element after its base, so HarfBuzz sees an emoji sequence whole and a ligature over it
+		// forms inside its element.
+		TArray<uint32> SequenceCodepoints;
 		for (int32 i = Start; i < End; i++)
 		{
 			const FMeasured& M = Measured[i];
@@ -1057,16 +2370,36 @@ namespace DreamTextLayoutLocal
 			// With ligatures on, a tag edge ends the run, so a ligature never straddles one: a tag's range, its
 			// colour and its hyperlink all address whole glyphs.
 			E.bRunBreakBefore = bLigatures && i > Start && E.bGraphemeStart && FollowsMarkup.IsValidIndex(i) && FollowsMarkup[i];
+			E.LanguageIndex = M.LanguageIndex;
+			if (!E.bUnshaped)
+			{
+				E.SequenceStart = SequenceCodepoints.Num();
+				AppendSequenceCodepoints(i, SequenceCodepoints);
+				E.SequenceCount = SequenceCodepoints.Num() - E.SequenceStart;
+			}
 			ShapeElements.Add(E);
 		}
+		FDreamShapeParams Params;
+		Params.Font = Font;
+		Params.bUseKerning = bUseKerning;
+		Params.bLigatures = bLigatures;
+		Params.FlowDirection = In.FlowDirection;
+		Params.Languages = &Languages;
+		Params.SequenceCodepoints = SequenceCodepoints.Num() > 0 ? &SequenceCodepoints : nullptr;
 		TArray<FDreamShapedRun> ShapedRuns;
 		TArray<uint8> Levels;
 		bool bBaseRightToLeft = false;
-		if (!FDreamTextShaper::ShapeParagraph(ShapeElements, Font, bUseKerning, In.FlowDirection, ShapedRuns, bBaseRightToLeft, bLigatures, &Levels))
+		bool bShaped = false;
+		{
+			FStageTimer ShapeTimer(EDreamTextLayoutStage::Shape);
+			bShaped = FDreamTextShaper::ShapeParagraph(ShapeElements, Params, ShapedRuns, bBaseRightToLeft, &Levels);
+		}
+		if (!bShaped)
 		{
 			return false;
 		}
 
+		const int32 FirstGlyph = Glyphs.Num();
 		for (int32 i = Start; i < End; i++)
 		{
 			FMeasured& M = Measured[i];
@@ -1081,19 +2414,18 @@ namespace DreamTextLayoutLocal
 			if (M.bImageSpace || M.bEmoji)
 			{
 				// Inline objects are measured by the layout, the way they always were, and never kern.
-				M.Glyph = GetCharGeo(0, TextProcessingArray[i], M.Style.Size, false, M.Style, M.bEmoji);
+				M.Glyph = GetInlineObjectGeo(i);
 				M.ClusterAdvance = M.Glyph.XAdvance;
 			}
 		}
 
 		for (const FDreamShapedRun& ShapedRun : ShapedRuns)
 		{
-			FRunInfo Run;
-			Run.GlyphStart = Glyphs.Num();
-			Run.ElementStart = Start + ShapedRun.ElementStart;
-			Run.ElementEnd = Start + ShapedRun.ElementEnd;
-			Run.bRightToLeft = ShapedRun.bRightToLeft;
-			const int32 RunIndex = Runs.Num();
+			const int32 RunElementStart = Start + ShapedRun.ElementStart;
+			const int32 RunElementEnd = Start + ShapedRun.ElementEnd;
+			const int32 RunIndex = RunCount++;
+			// A scaled face's run was shaped at its style size times the scale, and its glyphs are rasterized there too.
+			const float GlyphSize = ShapedRun.Size * ShapedRun.FaceScale;
 			// Glyphs stay in the shaper's visual order; an element's glyphs are contiguous within it.
 			int32 CurrentElement = -1;
 			for (const FDreamShapedGlyph& Shaped : ShapedRun.Glyphs)
@@ -1107,31 +2439,29 @@ namespace DreamTextLayoutLocal
 					M.FaceIndex = Shaped.FaceIndex;
 					CurrentElement = ElementIndex;
 				}
+				// Its quad is asked for once the paragraph's every glyph is known (FillGlyphQuads).
 				FGlyphSource& G = Glyphs.AddDefaulted_GetRef();
-				G.Quad = FetchGlyphQuad(Shaped.FaceIndex, Shaped.GlyphIndex, ShapedRun.Size, ShapedRun.bSyntheticBold);
+				G.RasterFace = Shaped.FaceIndex;
+				G.RasterGlyph = Shaped.GlyphIndex;
+				G.bRasterBold = ShapedRun.bSyntheticBold;
+				G.bRasterColorFace = ShapedRun.bColorFace;
 				G.XAdvance = Shaped.XAdvance;
 				G.XOffset = Shaped.XOffset;
 				G.YOffset = Shaped.YOffset;
 				G.ElementIndex = ElementIndex;
+				G.GlyphSize = GlyphSize;
 				M.GlyphCount++;
 				M.ClusterAdvance += Shaped.XAdvance;
 				M.RunIndex = RunIndex;
 			}
-			Run.GlyphEnd = Glyphs.Num();
-			Runs.Add(Run);
 			const bool bRunHasGlyphs = ShapedRun.Glyphs.Num() > 0;
-			for (int32 i = Run.ElementStart; i < Run.ElementEnd; i++)
+			for (int32 i = RunElementStart; i < RunElementEnd; i++)
 			{
 				FMeasured& M = Measured[i];
 				// A shaped-cluster continuation -- a combining mark, the second letter of a ligature -- has no glyph of
 				// its own, so no advance, but it still belongs to the run for placement.
 				M.RunIndex = RunIndex;
-				if (M.GlyphCount > 0)
-				{
-					M.Glyph = Glyphs[M.GlyphStart].Quad;
-					M.Glyph.XAdvance = M.ClusterAdvance;
-				}
-				else
+				if (M.GlyphCount == 0)
 				{
 					M.FaceIndex = ShapedRun.FaceIndex;
 					M.bShapeClusterStart = !bRunHasGlyphs;
@@ -1140,7 +2470,47 @@ namespace DreamTextLayoutLocal
 				M.bSyntheticItalic = M.Style.Italic && !EnumHasAnyFlags(FaceStyleOf(M.FaceIndex), EDreamUIFontFaceStyle::Italic);
 			}
 		}
+		FillGlyphQuads(P, FirstGlyph, Glyphs.Num());
+		for (int32 i = Start; i < End; i++)
+		{
+			FMeasured& M = Measured[i];
+			if (M.RunIndex >= 0 && M.GlyphCount > 0)
+			{
+				M.Glyph = Glyphs[M.GlyphStart].Quad;
+				M.Glyph.XAdvance = M.ClusterAdvance;
+			}
+		}
 		return true;
+	}
+
+	void FLayoutRun::FillGlyphQuads(const FParagraph& P, int32 Begin, int32 End)
+	{
+		const FParagraph* Prefix = bUseState && P.PrefixDonor != INDEX_NONE ? &State->Paragraphs[P.PrefixDonor] : nullptr;
+		const FParagraph* Suffix = bUseState && P.SuffixDonor != INDEX_NONE ? &State->Paragraphs[P.SuffixDonor] : nullptr;
+		// The same glyph of the same face at the same size and weight is the same quad while the atlas is the same (the measure
+		// key): asking the font again would hand it back. An edited paragraph's glyphs before and after the edit are where its
+		// donors had them, and are taken from there rather than looked up one by one.
+		auto Donated = [this](const FGlyphSource& G, int32 KeptIndex) -> const FGlyphSource*
+		{
+			const FGlyphSource& K = State->Glyphs[KeptIndex];
+			const bool bSame = !K.Quad.bPending && K.RasterFace >= 0 && K.RasterFace == G.RasterFace && K.RasterGlyph == G.RasterGlyph
+				&& K.GlyphSize == G.GlyphSize && K.bRasterBold == G.bRasterBold && K.bRasterColorFace == G.bRasterColorFace;
+			return bSame ? &K : nullptr;
+		};
+		for (int32 g = Begin; g < End; g++)
+		{
+			FGlyphSource& G = Glyphs[g];
+			const FGlyphSource* Kept = nullptr;
+			if (Prefix != nullptr && Prefix->GlyphStart + (g - Begin) < Prefix->GlyphEnd)
+			{
+				Kept = Donated(G, Prefix->GlyphStart + (g - Begin));
+			}
+			if (Kept == nullptr && Suffix != nullptr && Suffix->GlyphEnd - (End - g) >= Suffix->GlyphStart)
+			{
+				Kept = Donated(G, Suffix->GlyphEnd - (End - g));
+			}
+			G.Quad = Kept != nullptr ? Kept->Quad : FetchGlyphQuad(G.RasterFace, G.RasterGlyph, G.GlyphSize, G.bRasterBold, G.bRasterColorFace);
+		}
 	}
 
 	float FLayoutRun::LetterSpacingFor(int32 ElementIndex) const
@@ -1171,7 +2541,9 @@ namespace DreamTextLayoutLocal
 			const FMeasured* Prev = i > Start ? &Measured[i - 1] : nullptr;
 			const bool bPrevUnshaped = Prev != nullptr && (Prev->bSkipped || Prev->bHardBreak || Prev->bImageSpace || Prev->bEmoji);
 			const bool bGrapheme = GraphemeStart.IsValidIndex(i) ? (bool)GraphemeStart[i] : true;
-			M.bClusterStart = Prev == nullptr || bUnshaped || bPrevUnshaped || Prev->RunIndex != M.RunIndex
+			// A new run starts a cluster only where a grapheme cluster starts too: one no face has whole ("a" and a skin
+			// tone) has its parts in runs of their own faces, and is still one cluster -- one caret, never split.
+			M.bClusterStart = Prev == nullptr || bUnshaped || bPrevUnshaped || (bGrapheme && Prev->RunIndex != M.RunIndex)
 				|| (bGrapheme && M.bShapeClusterStart);
 			M.bCaretStop = M.bClusterStart || bGrapheme;
 			M.LetterSpacing = 0.0f;
@@ -1189,18 +2561,40 @@ namespace DreamTextLayoutLocal
 			M.ClusterFitWidth = Width;
 			M.LetterSpacing = LetterSpacingFor(i);
 		}
+		// A tab reaches to the next stop from where it stands; on one unwrapped line that is from the paragraph's start.
+		// The line breaker measures it again where its own line starts.
+		float X = 0.0f;
 		for (int32 i = Start; i < End; i++)
 		{
 			FMeasured& M = Measured[i];
 			M.Advance = M.ClusterAdvance + (M.bClusterStart ? M.LetterSpacing : 0.0f);
+			if (M.bTab && M.bClusterStart)
+			{
+				SetTabAdvance(M, X);
+			}
+			if (!M.bSkipped)
+			{
+				X += M.Advance;
+			}
 		}
 	}
 
-	void FLayoutRun::ComputeBreakOpportunities()
+	void FLayoutRun::AnalyseBreaks()
 	{
-		FDreamTextBreaker::ComputeBreakOpportunities(PlainText, PlainStart, ElementCodepoints, In.PhraseWrap, CanBreakBefore);
+		const int32 Count = TextProcessingArray.Num();
+		const bool bPhrase = In.PhraseWrap != EDreamTextPhraseWrap::Off;
+		LineBreakRaw.Init(false, Count);
+		AnalyseBoundaries(EDreamTextBoundaryKind::Line, LineBreakRaw, bUseState && State->bHasBreakBits ? &State->LineBreakRaw : nullptr);
+		if (bPhrase)
+		{
+			WordBreakRaw.Init(false, Count);
+			AnalyseBoundaries(EDreamTextBoundaryKind::Word, WordBreakRaw, bUseState && State->bHasWordBits ? &State->WordBreakRaw : nullptr);
+		}
+		CanBreakBefore.Init(false, Count);
+		FDreamTextBreaker::CombineBreakOpportunities(ElementCodepoints, LineBreakRaw, bPhrase ? &WordBreakRaw : nullptr, In.PhraseWrap,
+			0, Count, CanBreakBefore);
 		// A line never ends inside a cluster, whatever the line-break rules allow.
-		for (int32 i = 0; i < CanBreakBefore.Num() && i < Measured.Num(); i++)
+		for (int32 i = 0; i < Count; i++)
 		{
 			if (!Measured[i].bClusterStart)
 			{
@@ -1209,89 +2603,256 @@ namespace DreamTextLayoutLocal
 		}
 	}
 
+	bool FLayoutRun::SameAsKept(int32 i, int32 j, const FParagraph& P, const FParagraph& K, bool bFromEnd) const
+	{
+		const FMeasured& A = Measured[i];
+		const FMeasured& B = State->Measured[j];
+		const FDreamUIText_TextProcessingElement& ElementA = TextProcessingArray[i];
+		const FDreamUIText_TextProcessingElement& ElementB = State->Elements[j];
+		// A tab is as wide as where its line puts it, and the kept one was put by the kept lines: the rest of it has to agree.
+		const bool bTab = A.bTab && A.bClusterStart;
+		if (ElementA.Unicode != ElementB.Unicode || ElementA.Type != ElementB.Type || ElementA.bEscaped != ElementB.bEscaped
+			|| !SameCharData(A.Glyph, B.Glyph, bTab) || A.GlyphCount != B.GlyphCount || A.FaceIndex != B.FaceIndex
+			|| A.BidiLevel != B.BidiLevel || A.bBaseRightToLeft != B.bBaseRightToLeft || A.bHardBreak != B.bHardBreak
+			|| A.bSkipped != B.bSkipped || A.bWhitespace != B.bWhitespace || A.bTab != B.bTab || A.bImageSpace != B.bImageSpace
+			|| A.bEmoji != B.bEmoji || A.EmojiItem != B.EmojiItem || A.bVisibleGlyph != B.bVisibleGlyph
+			|| A.bShapeClusterStart != B.bShapeClusterStart || A.bClusterStart != B.bClusterStart || A.bCaretStop != B.bCaretStop
+			|| A.bSyntheticBold != B.bSyntheticBold || A.bSyntheticItalic != B.bSyntheticItalic || !SameLayoutStyle(A.Style, B.Style))
+		{
+			return false;
+		}
+		if (!bTab && (A.Advance != B.Advance || A.ClusterAdvance != B.ClusterAdvance || A.LetterSpacing != B.LetterSpacing
+			|| A.ClusterFitWidth != B.ClusterFitWidth))
+		{
+			return false;
+		}
+		// Glyphs and runs are numbered from the paragraph's start, or at its end from its end: a line orders a cluster's glyphs
+		// by where they start and cuts pieces where the run changes.
+		const int32 GlyphA = bFromEnd ? A.GlyphStart - P.GlyphEnd : A.GlyphStart - P.GlyphStart;
+		const int32 GlyphB = bFromEnd ? B.GlyphStart - K.GlyphEnd : B.GlyphStart - K.GlyphStart;
+		if (GlyphA != GlyphB || (A.RunIndex < 0) != (B.RunIndex < 0))
+		{
+			return false;
+		}
+		if (A.RunIndex >= 0 && (bFromEnd ? A.RunIndex - P.RunEnd != B.RunIndex - K.RunEnd : A.RunIndex - P.RunStart != B.RunIndex - K.RunStart))
+		{
+			return false;
+		}
+		for (int32 g = 0; g < A.GlyphCount; g++)
+		{
+			if (!SameGlyphSource(Glyphs[A.GlyphStart + g], State->Glyphs[B.GlyphStart + g]))
+			{
+				return false;
+			}
+		}
+		if ((bool)GraphemeStart[i] != (bool)State->GraphemeStart[j])
+		{
+			return false;
+		}
+		return !(ShouldWrap() && State->bHasBreakBits) || (bool)CanBreakBefore[i] == (bool)State->CanBreakBefore[j];
+	}
+
+	void FLayoutRun::CompareWithDonors()
+	{
+		if (!bUseState)
+		{
+			return;
+		}
+		TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_TextLayout_Lookup);
+		FStageTimer Timer(EDreamTextLayoutStage::Lookup);
+		for (FParagraph& P : Paragraphs)
+		{
+			if (P.Source != INDEX_NONE)
+			{
+				continue;
+			}
+			if (P.PrefixDonor != INDEX_NONE)
+			{
+				const FParagraph& K = State->Paragraphs[P.PrefixDonor];
+				while (P.SamePrefix < P.TextPrefix && SameAsKept(P.Start + P.SamePrefix, K.Start + P.SamePrefix, P, K, false))
+				{
+					P.SamePrefix++;
+				}
+			}
+			if (P.SuffixDonor != INDEX_NONE)
+			{
+				const FParagraph& K = State->Paragraphs[P.SuffixDonor];
+				int32 Limit = FMath::Min(P.TextSuffix, (P.End - P.Start) - P.SamePrefix);
+				if (P.SuffixDonor == P.PrefixDonor)
+				{
+					Limit = FMath::Min(Limit, (K.End - K.Start) - P.SamePrefix);
+				}
+				while (P.SameSuffix < Limit && SameAsKept(P.End - 1 - P.SameSuffix, K.End - 1 - P.SameSuffix, P, K, true))
+				{
+					P.SameSuffix++;
+				}
+			}
+		}
+	}
+
+	void FLayoutRun::AddLine(int32 Start, int32 End, int32 HardBreak, int32 DecidedAt, int32 Source)
+	{
+		FLineRange& Range = LineRanges.AddDefaulted_GetRef();
+		Range.Start = Start;
+		Range.End = End;
+		Range.HardBreakElement = HardBreak;
+		Range.DecidedAt = DecidedAt;
+		LineSources.Add(Source);
+	}
+
+	void FLayoutRun::CopyKeptLines(const FParagraph& K, int32 FirstLine, int32 Delta, int32 HardBreak, bool bKeepPlacement)
+	{
+		for (int32 Line = FirstLine; Line < K.LineEnd; Line++)
+		{
+			const FLineRange& Kept = State->LineRanges[Line];
+			AddLine(Kept.Start + Delta, Kept.End + Delta, Line == K.LineEnd - 1 ? HardBreak : -1, Kept.DecidedAt + Delta,
+				bKeepPlacement ? Line : INDEX_NONE);
+		}
+	}
+
 	void FLayoutRun::BreakLines()
 	{
 		const int32 Count = TextProcessingArray.Num();
+		LineRanges.Reset();
+		LineSources.Reset();
+		for (FParagraph& P : Paragraphs)
+		{
+			P.LineStart = LineRanges.Num();
+			const int32 HardBreak = P.End < Count ? P.End : -1;
+			if (bBreakKeySame && P.Source != INDEX_NONE)
+			{
+				// A paragraph measured as it was breaks as it did; its lines keep their placement too if its style is the same.
+				const FParagraph& K = State->Paragraphs[P.Source];
+				CopyKeptLines(K, K.LineStart, P.Start - K.Start, HardBreak, P.bPlaceSame);
+			}
+			else
+			{
+				int32 From = P.Start;
+				if (bBreakKeySame && P.PrefixDonor != INDEX_NONE)
+				{
+					// An edited paragraph keeps its lines before the edit: each one whose every deciding element came out as it was.
+					const FParagraph& K = State->Paragraphs[P.PrefixDonor];
+					const int32 Delta = P.Start - K.Start;
+					for (int32 Line = K.LineStart; Line < K.LineEnd; Line++)
+					{
+						const FLineRange& Kept = State->LineRanges[Line];
+						if (Kept.DecidedAt - K.Start >= P.SamePrefix)
+						{
+							break;
+						}
+						AddLine(Kept.Start + Delta, Kept.End + Delta, -1, Kept.DecidedAt + Delta, Line);
+						From = Kept.End + Delta;
+					}
+				}
+				BreakParagraphFrom(P, From, HardBreak);
+			}
+			P.LineEnd = LineRanges.Num();
+		}
+	}
+
+	void FLayoutRun::BreakParagraphFrom(const FParagraph& P, int32 From, int32 HardBreak)
+	{
 		const bool bWrap = ShouldWrap();
 		const bool bPerCharacter = In.WrappingPolicy == ETextWrappingPolicy::AllowPerCharacterWrapping;
-		LineRanges.Reset();
-
-		int32 LineStart = 0;
-		float X = 0.0f;
-		int32 LastOpportunity = -1;
-		float XAtLastOpportunity = 0.0f;
-		for (int32 i = 0; i < Count; i++)
+		const FParagraph* Suffix = bBreakKeySame && P.SuffixDonor != INDEX_NONE && P.SameSuffix > 0 ? &State->Paragraphs[P.SuffixDonor] : nullptr;
+		int32 LineStart = From;
+		while (true)
 		{
-			const FMeasured& M = Measured[i];
-			if (M.bSkipped)continue;
-			if (M.bHardBreak)
+			// Inside the paragraph's unchanged end, a line that starts where a line of the donor started is that line, and so is
+			// every line after it: a line is decided from its own start and what follows alone.
+			if (Suffix != nullptr && LineStart >= P.End - P.SameSuffix)
 			{
-				FLineRange Range;
-				Range.Start = LineStart;
-				Range.End = i;
-				Range.HardBreakElement = i;
-				LineRanges.Add(Range);
-				LineStart = i + 1;
-				if (LineStart < Count && Measured[LineStart].bSkipped)
+				const int32 KeptStart = LineStart - P.End + Suffix->End;
+				for (int32 Line = Suffix->LineStart; Line < Suffix->LineEnd && State->LineRanges[Line].Start <= KeptStart; Line++)
 				{
-					LineStart++;
+					if (State->LineRanges[Line].Start == KeptStart)
+					{
+						CopyKeptLines(*Suffix, Line, P.End - Suffix->End, HardBreak, true);
+						return;
+					}
 				}
-				X = 0.0f;
-				LastOpportunity = -1;
-				continue;
 			}
-
+			// One line, greedily, from its own start: nothing carries over from the line before, so where a line ends depends
+			// on the elements from its start to the one that did not fit, and on nothing else.
+			int32 Break = INDEX_NONE;
+			int32 DecidedAt = P.End;
 			if (bWrap)
 			{
-				if (i > LineStart && CanBreakBefore.IsValidIndex(i) && CanBreakBefore[i])
+				float X = 0.0f;
+				int32 LastOpportunity = -1;
+				for (int32 i = LineStart; i < P.End; i++)
 				{
-					LastOpportunity = i;
-					XAtLastOpportunity = X;
-				}
-				// A cluster is fitted whole, at its first element. Whitespace hangs: it may run past the wrap width
-				// and never forces a break itself.
-				if (M.bClusterStart && !M.bWhitespace && X + M.ClusterFitWidth > WrapWidth + UE_KINDA_SMALL_NUMBER)
-				{
-					if (LastOpportunity > LineStart)
+					FMeasured& M = Measured[i];
+					if (M.bSkipped)continue;
+					if (i > LineStart && CanBreakBefore[i])
 					{
-						FLineRange Range;
-						Range.Start = LineStart;
-						Range.End = LastOpportunity;
-						LineRanges.Add(Range);
-						LineStart = LastOpportunity;
-						X -= XAtLastOpportunity;
-						LastOpportunity = -1;
+						LastOpportunity = i;
 					}
-					// Still too wide on a line of its own start: a word longer than the box. Break
-					// inside it if the policy allows, otherwise let it overflow. The cut lands between clusters
-					// and avoids stranding closing punctuation at a line start, as a browser's break-all does.
-					if (bPerCharacter && i > LineStart && X + M.ClusterFitWidth > WrapWidth + UE_KINDA_SMALL_NUMBER)
+					// A cluster is fitted whole, at its first element. Whitespace hangs: it may run past the wrap width
+					// and never forces a break itself.
+					if (M.bClusterStart && !M.bWhitespace && X + M.ClusterFitWidth > WrapWidth + UE_KINDA_SMALL_NUMBER)
 					{
-						const int32 Cut = FDreamTextBreaker::FindKinsokuSafeFallback(ElementCodepoints, LineStart, i, &ClusterStarts);
-						if (Cut != INDEX_NONE)
+						if (LastOpportunity > LineStart)
 						{
-							FLineRange Range;
-							Range.Start = LineStart;
-							Range.End = Cut;
-							LineRanges.Add(Range);
-							float XAtCut = 0.0f;
-							for (int32 k = Cut; k < i; k++)
-							{
-								if (!Measured[k].bSkipped)XAtCut += Measured[k].Advance;
-							}
-							LineStart = Cut;
-							X = XAtCut;
-							LastOpportunity = -1;
+							Break = LastOpportunity;
+						}
+						else if (bPerCharacter && i > LineStart)
+						{
+							// Too wide on a line of its own start: a word longer than the box. Break inside it if the policy
+							// allows, otherwise let it overflow. The cut lands between clusters and avoids stranding
+							// closing punctuation at a line start, as a browser's break-all does.
+							Break = FDreamTextBreaker::FindKinsokuSafeFallback(ElementCodepoints, LineStart, i, &ClusterStarts);
+						}
+						if (Break != INDEX_NONE)
+						{
+							DecidedAt = i;
+							break;
 						}
 					}
+					// A tab reaches from where it stands on its own line to the next stop.
+					if (M.bTab && M.bClusterStart)
+					{
+						SetTabAdvance(M, X);
+					}
+					X += M.Advance;
 				}
 			}
-			X += M.Advance;
+			if (Break == INDEX_NONE)
+			{
+				AddLine(LineStart, P.End, HardBreak, P.End, INDEX_NONE);
+				return;
+			}
+			AddLine(LineStart, Break, -1, DecidedAt, INDEX_NONE);
+			LineStart = Break;
 		}
-		FLineRange Last;
-		Last.Start = LineStart;
-		Last.End = Count;
-		LineRanges.Add(Last);
+	}
+
+	void FLayoutRun::FixTabs()
+	{
+		// A tab reaches from where it stands on its own line to the next stop: walked again line by line, kept lines and lines
+		// broken now alike, so each tab is what its line makes it however the line came to be.
+		for (const FParagraph& P : Paragraphs)
+		{
+			if (!P.bHasTab)
+			{
+				continue;
+			}
+			for (int32 Line = P.LineStart; Line < P.LineEnd; Line++)
+			{
+				const FLineRange& Range = LineRanges[Line];
+				float X = 0.0f;
+				for (int32 i = Range.Start; i < Range.End; i++)
+				{
+					FMeasured& M = Measured[i];
+					if (M.bSkipped)continue;
+					if (M.bTab && M.bClusterStart)
+					{
+						SetTabAdvance(M, X);
+					}
+					X += M.Advance;
+				}
+			}
+		}
 	}
 
 	void FLayoutRun::ShiftLine(int32 LineItemStart, int32 ImageStart, int32 EmojiStart, int32 VisualRunStart, FDreamUITextLineProperty& LineProperty, float XOffset)
@@ -1320,6 +2881,31 @@ namespace DreamTextLayoutLocal
 		}
 	}
 
+	void FLayoutRun::ShiftPlacedLine(int32 LineItemStart, int32 ImageStart, int32 EmojiStart, float XOffset)
+	{
+		if (XOffset == 0.0f)return;
+		for (int32 i = LineItemStart; i < Out.Items.Num(); i++)
+		{
+			Out.Items[i].Pen.X += XOffset;
+		}
+		for (int32 i = ImageStart; i < Out.Images.Num(); i++)
+		{
+			Out.Images[i].Position.X += XOffset;
+		}
+		for (int32 i = EmojiStart; i < Out.Emojis.Num(); i++)
+		{
+			Out.Emojis[i].Position.X += XOffset;
+		}
+		for (float& CaretX : LineCaretX)
+		{
+			CaretX += XOffset;
+		}
+		for (FPlaced& P : LinePlaced)
+		{
+			P.X0 += XOffset;
+		}
+	}
+
 	void FLayoutRun::ItemInkExtent(const FDreamTextGlyphItem& Item, float& OutLeft, float& OutRight) const
 	{
 		const float Left = Item.Pen.X + Item.Glyph.XOffset;
@@ -1336,15 +2922,12 @@ namespace DreamTextLayoutLocal
 		}
 	}
 
-	FDreamUICharData FLayoutRun::MakeEllipsisGlyph(const FMeasured& StyleElement, bool& bOutPending, bool& bOutSyntheticBold, bool& bOutSyntheticItalic)
+	FLayoutRun::FEllipsisGlyph FLayoutRun::MakeEllipsisGlyph(const FMeasured& StyleElement)
 	{
 		const uint32 CharCodeOfDots = 0x2026;//'…'
 		const float Size = StyleElement.Style.Size;
-		FDreamUICharData Glyph;
+		FEllipsisGlyph Dots;
 		bool bShaped = false;
-		// Without shaping the glyph comes from the font's own face, as every glyph of that path does.
-		bOutSyntheticBold = StyleElement.Style.Bold && !EnumHasAnyFlags(FaceStyleOf(0), EDreamUIFontFaceStyle::Bold);
-		bOutSyntheticItalic = StyleElement.Style.Italic && !EnumHasAnyFlags(FaceStyleOf(0), EDreamUIFontFaceStyle::Italic);
 		bool bAnyFaceHasDots = false;
 		const int32 FaceCount = Font->GetFaceCount();
 		for (int32 F = 0; F < FaceCount && !bAnyFaceHasDots; F++)
@@ -1354,40 +2937,85 @@ namespace DreamTextLayoutLocal
 		if (bCanShape && bAnyFaceHasDots)
 		{
 			// Shaped like any character of the run it ends, so it comes from the face that run is drawn from -- a bold
-			// face for a bold run -- at the run's size.
+			// face for a bold run, the fallback its language prefers -- at the run's size, in its language.
 			TArray<FDreamShapeElement> DotsElements;
-			FDreamShapeElement& Dots = DotsElements.AddDefaulted_GetRef();
-			Dots.Codepoint = CharCodeOfDots;
-			Dots.Size = Size;
-			Dots.bBold = StyleElement.Style.Bold;
-			Dots.bItalic = StyleElement.Style.Italic;
+			FDreamShapeElement& DotsElement = DotsElements.AddDefaulted_GetRef();
+			DotsElement.Codepoint = CharCodeOfDots;
+			DotsElement.Size = Size;
+			DotsElement.bBold = StyleElement.Style.Bold;
+			DotsElement.bItalic = StyleElement.Style.Italic;
+			DotsElement.LanguageIndex = StyleElement.LanguageIndex;
+			FDreamShapeParams Params;
+			Params.Font = Font;
+			Params.FlowDirection = EDreamTextFlowDirection::LeftToRight;
+			Params.Languages = &Languages;
 			TArray<FDreamShapedRun> DotsRuns;
 			bool bDotsRightToLeft = false;
-			if (FDreamTextShaper::ShapeParagraph(DotsElements, Font, false, EDreamTextFlowDirection::LeftToRight, DotsRuns, bDotsRightToLeft)
-				&& DotsRuns.Num() > 0 && DotsRuns[0].Glyphs.Num() > 0)
+			bool bDotsShaped = false;
+			{
+				FStageTimer ShapeTimer(EDreamTextLayoutStage::Shape);
+				bDotsShaped = FDreamTextShaper::ShapeParagraph(DotsElements, Params, DotsRuns, bDotsRightToLeft);
+			}
+			if (bDotsShaped && DotsRuns.Num() > 0 && DotsRuns[0].Glyphs.Num() > 0)
 			{
 				const FDreamShapedRun& DotsRun = DotsRuns[0];
-				Glyph = FetchGlyphQuad(DotsRun.Glyphs[0].FaceIndex, DotsRun.Glyphs[0].GlyphIndex, Size, DotsRun.bSyntheticBold);
+				Dots.GlyphSize = Size * DotsRun.FaceScale;
+				Dots.Glyph = FetchGlyphQuad(DotsRun.Glyphs[0].FaceIndex, DotsRun.Glyphs[0].GlyphIndex, Dots.GlyphSize, DotsRun.bSyntheticBold, DotsRun.bColorFace);
 				float Advance = 0.0f;
 				for (const FDreamShapedGlyph& Shaped : DotsRun.Glyphs)
 				{
 					Advance += Shaped.XAdvance;
 				}
-				Glyph.XAdvance = Advance;
-				bOutSyntheticBold = DotsRun.bSyntheticBold;
-				bOutSyntheticItalic = StyleElement.Style.Italic
+				Dots.Glyph.XAdvance = Advance;
+				Dots.bSyntheticBold = DotsRun.bSyntheticBold;
+				Dots.bSyntheticItalic = StyleElement.Style.Italic
 					&& !EnumHasAnyFlags(FaceStyleOf(DotsRun.Glyphs[0].FaceIndex), EDreamUIFontFaceStyle::Italic);
 				bShaped = true;
 			}
 		}
 		if (!bShaped)
 		{
-			const FDreamUIText_TextProcessingElement DotsElement{ CharCodeOfDots, 0, 1, EDreamUIText_CodeType::Text };
-			// The ellipsis replaces whatever was there, so it has no left neighbour to kern against.
-			Glyph = GetCharGeo(0, DotsElement, Size, bOutSyntheticBold, StyleElement.Style, false);
+			// Without shaping the glyph comes from the face the text's style and language resolve it to, as every glyph of
+			// that path does. The ellipsis replaces whatever was there, so it has no left neighbour to kern against.
+			const int32 Face = ResolveFace(MakeArrayView(&CharCodeOfDots, 1), StyleElement.Style, StyleElement.LanguageIndex).FaceIndex;
+			const bool bColorFace = IsColorFaceOf(Face);
+			Dots.bSyntheticBold = StyleElement.Style.Bold && !bColorFace && !EnumHasAnyFlags(FaceStyleOf(Face), EDreamUIFontFaceStyle::Bold);
+			Dots.bSyntheticItalic = StyleElement.Style.Italic && !EnumHasAnyFlags(FaceStyleOf(Face), EDreamUIFontFaceStyle::Italic);
+			Dots.GlyphSize = Size * FaceScaleOf(Face);
+			Dots.Glyph = GetCodepointGlyph(0, CharCodeOfDots, Face, Dots.GlyphSize, Dots.bSyntheticBold, bColorFace);
 		}
-		bOutPending = Glyph.bPending;
-		return Glyph;
+		Dots.bPending = Dots.Glyph.bPending;
+		return Dots;
+	}
+
+	void FLayoutRun::AddEllipsisItem(int32 LineIndex, int32 StyleElement, const FEllipsisGlyph& Dots, float DotsLeft, bool bBaseRightToLeft, float Baseline)
+	{
+		const FMeasured& StyleMeasured = Measured[StyleElement];
+		const float DotsSpacing = In.FontSpace.X;
+		FDreamTextGlyphItem Item;
+		Item.Kind = EDreamTextItemKind::Glyph;
+		Item.Codepoint = 0x2026;
+		Item.ElementIndex = StyleElement;
+		Item.SourceIndex = TextProcessingArray.IsValidIndex(StyleElement) ? TextProcessingArray[StyleElement].StringIndex : 0;
+		Item.LineIndex = LineIndex;
+		Item.Pen = FVector2f(DotsLeft, Baseline + StyleMeasured.Style.BaselineShift);
+		Item.Glyph = Dots.Glyph;
+		Item.GlyphSize = Dots.GlyphSize;
+		Item.AdvanceWithSpace = Dots.Glyph.XAdvance + DotsSpacing;
+		Item.DecorationOffset = bBaseRightToLeft ? -DotsSpacing : 0.0f;
+		Item.Style = MakeStyle(StyleMeasured);
+		// What has to be made up depends on the face the ellipsis itself came from, not on the text's.
+		Item.Style.bSyntheticBold = Dots.bSyntheticBold;
+		Item.Style.bSyntheticItalic = Dots.bSyntheticItalic;
+		AssignDecorations(Item, StyleMeasured, 0.0f);
+		// Laid out either way; drawn once its glyph has landed, when the font lays the text out again.
+		Item.bEmit = !Dots.bPending;
+		Item.bCountsAsVisible = false;
+		if (Dots.bPending)
+		{
+			Out.bHasPendingGlyphs = true;
+		}
+		LineDotsItem = Out.Items.Add(Item);
 	}
 
 	void FLayoutRun::CutCluster(FPlaced& Placed, TArray<int32>& InOutImagesToRemove, TArray<int32>& InOutEmojisToRemove)
@@ -1436,9 +3064,15 @@ namespace DreamTextLayoutLocal
 	}
 
 	void FLayoutRun::ClampLine(int32 LineIndex, bool bBaseRightToLeft, float PenEnd, float Baseline, bool bForceEllipsis,
-		int32 LineItemStart, int32 ImageStart, int32 EmojiStart, FDreamUITextLineProperty& LineProperty)
+		int32 LineItemStart, int32 ImageStart, int32 EmojiStart)
 	{
 		if (!IsClampMode() || bHasClampContent)return;
+		const bool bMiddleEllipsis = In.OverflowType == EDreamUITextOverflowType::MiddleEllipsis;
+		if (bMiddleEllipsis && !ShouldWrap())
+		{
+			MiddleEllipsizeLine(LineIndex, bBaseRightToLeft, PenEnd, Baseline);
+			return;
+		}
 		const int32 Count = LinePlaced.Num();
 		// How far a cluster's glyph reaches from the line's start, in the line's own direction: what has to fit the box.
 		auto Extent = [bBaseRightToLeft, PenEnd](const FPlaced& P)
@@ -1468,7 +3102,8 @@ namespace DreamTextLayoutLocal
 		bHasClampContent = true;
 		Out.bTruncated = true;
 		bShouldSetParagraphHeightForClampContent = true;//paragraphHeight is set after the line, so we mark it and read it later
-		const bool bEllipsis = In.OverflowType == EDreamUITextOverflowType::Ellipsis;
+		// A wrapped middle ellipsis ends the last line that fits, as an end ellipsis does: Slate's has no multi-line form either.
+		const bool bEllipsis = In.OverflowType == EDreamUITextOverflowType::Ellipsis || bMiddleEllipsis;
 		if (!bEllipsis && Cut == Count)return;//Truncate on the last line that fits: nothing of the line itself goes
 
 		// The ellipsis takes the style of the text it ends: the last cluster kept in reading order, else the first one.
@@ -1490,16 +3125,13 @@ namespace DreamTextLayoutLocal
 			StyleElement = FMath::Clamp(LineRanges[LineIndex].Start, 0, Measured.Num() - 1);
 		}
 
-		FDreamUICharData DotsGlyph;
+		FEllipsisGlyph Dots;
 		float DotsAdvance = 0.0f;
-		bool bDotsPending = false;
-		bool bDotsSyntheticBold = false;
-		bool bDotsSyntheticItalic = false;
 		bool bDots = false;
 		if (bEllipsis && Measured.IsValidIndex(StyleElement))
 		{
-			DotsGlyph = MakeEllipsisGlyph(Measured[StyleElement], bDotsPending, bDotsSyntheticBold, bDotsSyntheticItalic);
-			DotsAdvance = DotsGlyph.XAdvance;
+			Dots = MakeEllipsisGlyph(Measured[StyleElement]);
+			DotsAdvance = Dots.Glyph.XAdvance;
 			// Not even the ellipsis fits: the line draws nothing, which is all the box can hold.
 			bDots = DotsAdvance <= In.Width + KINDA_SMALL_NUMBER;
 			Cut = bDots ? FindCut(In.Width - DotsAdvance) : 0;
@@ -1535,32 +3167,9 @@ namespace DreamTextLayoutLocal
 		float Shift = 0.0f;
 		if (bDots)
 		{
-			const FMeasured& StyleMeasured = Measured[StyleElement];
 			const float DotsSpacing = In.FontSpace.X;
 			const float DotsLeft = bBaseRightToLeft ? KeptEnd - DotsAdvance : KeptEnd;
-			FDreamTextGlyphItem Dots;
-			Dots.Kind = EDreamTextItemKind::Glyph;
-			Dots.Codepoint = 0x2026;
-			Dots.ElementIndex = StyleElement;
-			Dots.SourceIndex = TextProcessingArray.IsValidIndex(StyleElement) ? TextProcessingArray[StyleElement].StringIndex : 0;
-			Dots.LineIndex = Out.Lines.Num();
-			Dots.Pen = FVector2f(DotsLeft, Baseline + StyleMeasured.Style.BaselineShift);
-			Dots.Glyph = DotsGlyph;
-			Dots.AdvanceWithSpace = DotsAdvance + DotsSpacing;
-			Dots.DecorationOffset = bBaseRightToLeft ? -DotsSpacing : 0.0f;
-			Dots.Style = MakeStyle(StyleMeasured);
-			// What has to be made up depends on the face the ellipsis itself came from, not on the text's.
-			Dots.Style.bSyntheticBold = bDotsSyntheticBold;
-			Dots.Style.bSyntheticItalic = bDotsSyntheticItalic;
-			AssignDecorations(Dots, StyleMeasured, 0.0f);
-			// Laid out either way; drawn once its glyph has landed, when the font lays the text out again.
-			Dots.bEmit = !bDotsPending;
-			Dots.bCountsAsVisible = false;
-			if (bDotsPending)
-			{
-				Out.bHasPendingGlyphs = true;
-			}
-			LineDotsItem = Out.Items.Add(Dots);
+			AddEllipsisItem(LineIndex, StyleElement, Dots, DotsLeft, bBaseRightToLeft, Baseline);
 			if (bBaseRightToLeft)
 			{
 				// The ellipsis's own box, letter spacing included, starts the line.
@@ -1571,13 +3180,207 @@ namespace DreamTextLayoutLocal
 		{
 			Shift = -KeptEnd;//what survived slides back to the line's origin
 		}
-		if (Shift != 0.0f)
+		ShiftPlacedLine(LineItemStart, ImageStart, EmojiStart, Shift);
+	}
+
+	void FLayoutRun::MiddleEllipsizeLine(int32 LineIndex, bool bBaseRightToLeft, float PenEnd, float Baseline)
+	{
+		const int32 Count = LinePlaced.Num();
+		auto ReadingIndex = [bBaseRightToLeft, Count](int32 k)
 		{
-			ShiftLine(LineItemStart, ImageStart, EmojiStart, Out.VisualRuns.Num(), LineProperty, Shift);
-			for (FPlaced& P : LinePlaced)
+			return bBaseRightToLeft ? Count - 1 - k : k;
+		};
+		// Whether the line fits is decided as the end ellipsis decides it: by how far each glyph reaches, whitespace hanging.
+		bool bOverflows = false;
+		for (const FPlaced& P : LinePlaced)
+		{
+			const float Extent = bBaseRightToLeft ? PenEnd - P.GlyphLeft() : P.GlyphLeft() + P.Advance;
+			if (!P.bWhitespace && Extent > In.Width + KINDA_SMALL_NUMBER)
 			{
-				P.X0 += Shift;
+				bOverflows = true;
+				break;
 			}
+		}
+		if (!bOverflows)return;
+		Out.bTruncated = true;
+
+		// What the line holds, in reading order and by width, whitespace hanging off its end left out.
+		int32 ContentCount = Count;
+		while (ContentCount > 0 && LinePlaced[ReadingIndex(ContentCount - 1)].bTrailing)
+		{
+			ContentCount--;
+		}
+		if (ContentCount == 0)return;
+		TArray<float, TInlineAllocator<64>> Widths;
+		Widths.SetNumUninitialized(ContentCount);
+		float Total = 0.0f;
+		for (int32 k = 0; k < ContentCount; k++)
+		{
+			const FPlaced& P = LinePlaced[ReadingIndex(k)];
+			Widths[k] = P.Advance + P.Spacing;
+			Total += Widths[k];
+		}
+		// The gap opens on the cluster the line's middle falls in: [GapStart, GapEnd) in reading order.
+		int32 GapStart = 0;
+		float HeadWidth = 0.0f;
+		while (GapStart + 1 < ContentCount && HeadWidth + Widths[GapStart] <= Total * 0.5f)
+		{
+			HeadWidth += Widths[GapStart];
+			GapStart++;
+		}
+		int32 GapEnd = GapStart + 1;
+		float TailWidth = Total - HeadWidth - Widths[GapStart];
+
+		// The ellipsis is set like the last cluster kept before it -- with nothing kept before it, like the first kept after
+		// it -- and is made again only when that style changes as the gap grows.
+		auto StyleElementFor = [this, &ReadingIndex, ContentCount](int32 InGapStart, int32 InGapEnd)
+		{
+			for (int32 k = InGapStart - 1; k >= 0; k--)
+			{
+				const FPlaced& P = LinePlaced[ReadingIndex(k)];
+				if (!P.bWhitespace)return P.Start;
+			}
+			for (int32 k = InGapEnd; k < ContentCount; k++)
+			{
+				const FPlaced& P = LinePlaced[ReadingIndex(k)];
+				if (!P.bWhitespace)return P.Start;
+			}
+			return LinePlaced[ReadingIndex(0)].Start;
+		};
+		auto SameEllipsis = [this](int32 A, int32 B)
+		{
+			const FRichTextParseResult& StyleA = Measured[A].Style;
+			const FRichTextParseResult& StyleB = Measured[B].Style;
+			return StyleA.Size == StyleB.Size && StyleA.Bold == StyleB.Bold && StyleA.Italic == StyleB.Italic
+				&& Measured[A].LanguageIndex == Measured[B].LanguageIndex;
+		};
+		const float DotsSpacing = In.FontSpace.X;
+		int32 StyleElement = INDEX_NONE;
+		FEllipsisGlyph Dots;
+		float DotsWidth = 0.0f;
+		while (true)
+		{
+			const int32 WantedStyle = StyleElementFor(GapStart, GapEnd);
+			if (StyleElement == INDEX_NONE || !SameEllipsis(StyleElement, WantedStyle))
+			{
+				Dots = MakeEllipsisGlyph(Measured[WantedStyle]);
+				DotsWidth = Dots.Glyph.XAdvance + DotsSpacing;
+			}
+			StyleElement = WantedStyle;
+			if (HeadWidth + DotsWidth + TailWidth <= In.Width + KINDA_SMALL_NUMBER || (GapStart == 0 && GapEnd >= ContentCount))
+			{
+				break;
+			}
+			// One more cluster into the gap, from whichever side leaves the head and the tail closest in width.
+			bool bFromHead = false;
+			if (GapEnd >= ContentCount)
+			{
+				bFromHead = true;
+			}
+			else if (GapStart > 0)
+			{
+				const float IfHead = FMath::Abs((HeadWidth - Widths[GapStart - 1]) - TailWidth);
+				const float IfTail = FMath::Abs(HeadWidth - (TailWidth - Widths[GapEnd]));
+				bFromHead = IfHead < IfTail;
+			}
+			if (bFromHead)
+			{
+				GapStart--;
+				HeadWidth -= Widths[GapStart];
+			}
+			else
+			{
+				TailWidth -= Widths[GapEnd];
+				GapEnd++;
+			}
+		}
+		// Whitespace touching the gap goes with it: the ellipsis stands against the text on either side.
+		while (GapStart > 0 && LinePlaced[ReadingIndex(GapStart - 1)].bWhitespace)
+		{
+			GapStart--;
+		}
+		while (GapEnd < ContentCount && LinePlaced[ReadingIndex(GapEnd)].bWhitespace)
+		{
+			GapEnd++;
+		}
+		// Not even the ellipsis fits: the line draws nothing, which is all the box can hold.
+		const bool bDots = Dots.Glyph.XAdvance <= In.Width + KINDA_SMALL_NUMBER;
+		if (!bDots)
+		{
+			GapStart = 0;
+			GapEnd = ContentCount;
+		}
+
+		// The ellipsis stands where the head ends, in the line's own direction; its box, letter spacing included, ends where
+		// the tail now begins.
+		const FPlaced& GapFirst = LinePlaced[ReadingIndex(GapStart)];
+		const float HeadEnd = bBaseRightToLeft ? GapFirst.BoxRight() : GapFirst.X0;
+		const float DotsAdvance = bDots ? Dots.Glyph.XAdvance : 0.0f;
+		const float DotsBox = bDots ? DotsAdvance + DotsSpacing : 0.0f;
+		const float DotsLeft = bBaseRightToLeft ? HeadEnd - DotsAdvance : HeadEnd;
+		const float DotsFarEdge = bBaseRightToLeft ? HeadEnd - DotsBox : HeadEnd + DotsBox;
+		const int32 RangeStart = LineRanges[LineIndex].Start;
+
+		// The tail slides back against the ellipsis -- its items, its inline objects, its carets -- before anything in the
+		// gap is removed, while the tail's inline objects still have their indices.
+		if (GapEnd < Count)
+		{
+			const FPlaced& TailFirst = LinePlaced[ReadingIndex(GapEnd)];
+			const float TailShift = bBaseRightToLeft ? DotsFarEdge - TailFirst.BoxRight() : DotsFarEdge - TailFirst.X0;
+			for (int32 k = GapEnd; k < Count && TailShift != 0.0f; k++)
+			{
+				FPlaced& P = LinePlaced[ReadingIndex(k)];
+				for (int32 ItemIndex = P.ItemStart; ItemIndex < P.ItemEnd; ItemIndex++)
+				{
+					Out.Items[ItemIndex].Pen.X += TailShift;
+				}
+				if (Out.Images.IsValidIndex(P.ImageIndex))
+				{
+					Out.Images[P.ImageIndex].Position.X += TailShift;
+				}
+				if (Out.Emojis.IsValidIndex(P.EmojiIndex))
+				{
+					Out.Emojis[P.EmojiIndex].Position.X += TailShift;
+				}
+				for (int32 e = P.Start; e < P.End; e++)
+				{
+					LineCaretX[e - RangeStart] += TailShift;
+				}
+				P.X0 += TailShift;
+			}
+		}
+
+		// The gap is not on screen: its glyphs are neither drawn nor counted, its inline objects go, and a caret inside it
+		// stands on the ellipsis's leading edge. The line's end caret, when the gap took the cluster it follows, stands on
+		// the ellipsis's far edge.
+		int32 LastElement = INDEX_NONE;
+		for (int32 i = LineRanges[LineIndex].End - 1; i >= RangeStart; i--)
+		{
+			if (!Measured[i].bSkipped)
+			{
+				LastElement = i;
+				break;
+			}
+		}
+		TArray<int32> ImagesToRemove;
+		TArray<int32> EmojisToRemove;
+		for (int32 k = GapStart; k < GapEnd; k++)
+		{
+			FPlaced& P = LinePlaced[ReadingIndex(k)];
+			for (int32 e = P.Start; e < P.End; e++)
+			{
+				LineCaretX[e - RangeStart] = HeadEnd;
+			}
+			if (LastElement >= P.Start && LastElement < P.End)
+			{
+				LineEndCaretX = DotsFarEdge;
+			}
+			CutCluster(P, ImagesToRemove, EmojisToRemove);
+		}
+		RemoveInlineObjects(ImagesToRemove, EmojisToRemove);
+		if (bDots)
+		{
+			AddEllipsisItem(LineIndex, StyleElement, Dots, DotsLeft, bBaseRightToLeft, Baseline);
 		}
 	}
 
@@ -1600,6 +3403,11 @@ namespace DreamTextLayoutLocal
 			Placed.Advance += Measured[e].ClusterAdvance;
 		}
 		Placed.Spacing = Lead.bClusterStart ? Lead.LetterSpacing : 0.0f;
+		// Justification widens the same slot letter spacing fills, so strokes, carets and runs follow it as they do spacing.
+		if (LineJustify.IsValidIndex(Start - RangeStart))
+		{
+			Placed.Spacing += LineJustify[Start - RangeStart];
+		}
 		const float GlyphLeft = Placed.GlyphLeft();
 		const float ItemBaseline = Baseline + Lead.Style.BaselineShift;
 
@@ -1656,6 +3464,8 @@ namespace DreamTextLayoutLocal
 				AssignDecorations(Item, Lead, 0.0f);
 				FDreamUIText_Emoji Emoji;
 				Emoji.EmojiCode = TextProcessingArray[Start].Unicode;
+				// What the emoji data's picture is looked up by again when the object is made: the whole sequence first.
+				Emoji.Sequence = ElementText(Start);
 				Emoji.Position = FVector2D(CentreX, LineCentre);
 				Emoji.Size = FVector2D(Lead.Glyph.Width, ObjectHeight);
 				Placed.EmojiIndex = Out.Emojis.Add(Emoji);
@@ -1719,6 +3529,7 @@ namespace DreamTextLayoutLocal
 					FDreamTextGlyphItem Item = MakeItem(e, EDreamTextItemKind::Glyph);
 					Item.Pen = FVector2f(GlyphPenX + G.XOffset, ItemBaseline + G.YOffset);
 					Item.Glyph = G.Quad;
+					Item.GlyphSize = G.GlyphSize;
 					// The cluster's letter spacing rides on its last glyph in reading order -- the right-most left to
 					// right, the left-most right to left -- so the glyphs' stretches together cover its whole pen box.
 					const bool bCarriesSpacing = bRightToLeft ? GlyphOrdinal == 0 : GlyphOrdinal == TotalGlyphs - 1;
@@ -1804,7 +3615,8 @@ namespace DreamTextLayoutLocal
 				continue;
 			}
 			if (!In.bRichText && M.FaceIndex == 0)continue;//the strut is this box already
-			AddBox(MetricsFor(M.Style.Size, M.FaceIndex), Shift);
+			// A scaled face's box is its size times its scale: a face drawn larger grows its line, as CSS size-adjust does.
+			AddBox(MetricsFor(M.Style.Size * FaceScaleOf(M.FaceIndex), M.FaceIndex), Shift);
 		}
 		// Objects placed against the line rather than the baseline -- centred on it, on its top or its bottom edge --
 		// once the text has set it: one taller than the line grows it, so it never overlaps the lines around it.
@@ -1845,7 +3657,87 @@ namespace DreamTextLayoutLocal
 		return bCanShape && In.FlowDirection == EDreamTextFlowDirection::RightToLeft;
 	}
 
-	void FLayoutRun::PlaceLine(int32 LineIndex, float LineTop)
+	bool FLayoutRun::IsJustifyOpportunity(int32 BeforeElement, int32 AfterElement) const
+	{
+		const FMeasured& Before = Measured[BeforeElement];
+		const FMeasured& After = Measured[AfterElement];
+		const uint32 BeforeCode = TextProcessingArray[BeforeElement].Unicode;
+		const uint32 AfterCode = TextProcessingArray[AfterElement].Unicode;
+		// Every mode widens after a word separator: a space, a no-break space, a tab (as Blink treats them).
+		if (Before.bWhitespace || BeforeCode == 0x00A0)
+		{
+			return true;
+		}
+		if (In.TextJustify == EDreamTextJustify::InterWord)
+		{
+			return false;
+		}
+		// Auto and InterCharacter: on either side of an ideograph, kana or fullwidth symbol.
+		if (IsJustifiedLikeCJK(BeforeCode) || IsJustifiedLikeCJK(AfterCode))
+		{
+			return true;
+		}
+		if (In.TextJustify != EDreamTextJustify::InterCharacter)
+		{
+			return false;
+		}
+		// InterCharacter: every other boundary, but never inside a cursive word -- room there tears the joined letters
+		// apart -- and never beside an inline object.
+		if (Before.bImageSpace || Before.bEmoji || After.bImageSpace || After.bEmoji)
+		{
+			return false;
+		}
+		return !(IsCursiveScript(BeforeCode) && IsCursiveScript(AfterCode));
+	}
+
+	bool FLayoutRun::JustifyLine(int32 LineIndex, int32 TrailingStart)
+	{
+		if (In.ParagraphHAlign != EDreamUITextParagraphHorizontalAlign::Justify || In.TextJustify == EDreamTextJustify::None)
+		{
+			return false;
+		}
+		const FLineRange& Range = LineRanges[LineIndex];
+		// A line the text wrapped is justified; the paragraph's last line, and one a newline ends, only when LastLineAlign
+		// asks for it. The last line that fits a clamped box ends in an ellipsis instead.
+		const bool bEndsParagraph = Range.HardBreakElement != -1 || LineIndex == LineRanges.Num() - 1;
+		if ((bEndsParagraph && In.LastLineAlign != EDreamTextLastLineAlign::Justify) || bEllipsizeThisLine)
+		{
+			return false;
+		}
+		const float Target = ShouldWrap() ? FMath::Min(WrapWidth, In.Width) : In.Width;
+		// The line's natural width -- its clusters' pen boxes, the whitespace hanging off its end left out -- and the
+		// boundaries between its clusters where it may widen, in logical order. The line's end is never one.
+		float Natural = 0.0f;
+		TArray<int32, TInlineAllocator<64>> Opportunities;
+		int32 PreviousLead = INDEX_NONE;
+		for (int32 i = Range.Start; i < TrailingStart; i++)
+		{
+			const FMeasured& M = Measured[i];
+			if (M.bSkipped)continue;
+			Natural += M.Advance;
+			if (!M.bClusterStart)continue;
+			if (PreviousLead != INDEX_NONE && IsJustifyOpportunity(PreviousLead, i))
+			{
+				Opportunities.Add(PreviousLead);
+			}
+			PreviousLead = i;
+		}
+		// A line too wide already is not shrunk, and a line with nowhere to widen starts at its start edge.
+		const float Room = Target - Natural;
+		if (Opportunities.Num() == 0 || Room <= KINDA_SMALL_NUMBER)
+		{
+			return false;
+		}
+		// The same room at every opportunity, after the cluster before it: no kashida stretches an Arabic word instead.
+		const float Extra = Room / (float)Opportunities.Num();
+		for (const int32 Lead : Opportunities)
+		{
+			LineJustify[Lead - Range.Start] += Extra;
+		}
+		return true;
+	}
+
+	void FLayoutRun::PlaceLine(int32 LineIndex)
 	{
 		const FLineRange& Range = LineRanges[LineIndex];
 		const int32 LineItemStart = Out.Items.Num();
@@ -1859,8 +3751,9 @@ namespace DreamTextLayoutLocal
 		// inline objects anchor on the line's centre, which is the contract they had.
 		const FLineBox Box = ComputeLineBox(LineIndex);
 		CurrentLineHeight = Box.Top + Box.Bottom;
-		const float Baseline = LineTop - Box.Top;
-		const float LineCentre = LineTop - CurrentLineHeight * 0.5f;
+		// Placed with its own top at 0: Finish moves the line to where it stands, so a line placed alike comes out alike.
+		const float Baseline = -Box.Top;
+		const float LineCentre = -CurrentLineHeight * 0.5f;
 
 		const bool bBaseRightToLeft = IsLineBaseRightToLeft(Range);
 		const uint8 ParagraphLevel = bBaseRightToLeft ? 1 : 0;
@@ -1945,6 +3838,11 @@ namespace DreamTextLayoutLocal
 			}
 		}
 
+		// Justification decides each cluster's extra room before anything is placed: it rides in the clusters' Spacing.
+		LineJustify.Init(0.0f, LineLength);
+		LineEndCaretX.Reset();
+		const bool bJustified = !bAfterClamp && JustifyLine(LineIndex, TrailingStart);
+
 		// Place the pieces left to right, each one's clusters in its own direction.
 		LinePlaced.Reset();
 		LineCaretX.Init(0.0f, LineLength);
@@ -1975,9 +3873,42 @@ namespace DreamTextLayoutLocal
 		}
 		const float PenEnd = PenX;
 
-		// The line's end caret: the trailing edge of its last cluster in logical order -- the right of one read left to
-		// right, the left of one read right to left.
+		// Spaces hanging off the line's end are not underlined, as in CSS; the ones between words are.
+		for (const FPlaced& P : LinePlaced)
+		{
+			if (!P.bTrailing)continue;
+			for (int32 ItemIndex = P.ItemStart; ItemIndex < P.ItemEnd; ItemIndex++)
+			{
+				Out.Items[ItemIndex].Style.bUnderline = false;
+				Out.Items[ItemIndex].Style.bStrikethrough = false;
+			}
+		}
+
+		if (bAfterClamp)
+		{
+			// An earlier line was cut: nothing after the cut is drawn, as it never was.
+			TArray<int32> ImagesToRemove;
+			TArray<int32> EmojisToRemove;
+			for (FPlaced& P : LinePlaced)
+			{
+				CutCluster(P, ImagesToRemove, EmojisToRemove);
+			}
+			RemoveInlineObjects(ImagesToRemove, EmojisToRemove);
+		}
+		else
+		{
+			ClampLine(LineIndex, bBaseRightToLeft, PenEnd, Baseline, bEllipsizeThisLine, LineItemStart, ImageStart, EmojiStart);
+		}
+
+		// The carets are read off the line as the clamp left it: a middle ellipsis slid the line's end back and stood the
+		// carets of what it took on itself. The line's end caret is the trailing edge of its last cluster in logical order
+		// -- the right of one read left to right, the left of one read right to left.
 		float EndCaretX = 0.0f;
+		if (LineEndCaretX.IsSet())
+		{
+			EndCaretX = LineEndCaretX.GetValue();
+		}
+		else
 		{
 			int32 LastElement = INDEX_NONE;
 			for (int32 i = Range.End - 1; i >= Range.Start; i--)
@@ -2024,33 +3955,6 @@ namespace DreamTextLayoutLocal
 				CaretProperty.CharIndex = -1;
 			}
 			LineProperty.CaretPropertyList.Add(CaretProperty);
-		}
-
-		// Spaces hanging off the line's end are not underlined, as in CSS; the ones between words are.
-		for (const FPlaced& P : LinePlaced)
-		{
-			if (!P.bTrailing)continue;
-			for (int32 ItemIndex = P.ItemStart; ItemIndex < P.ItemEnd; ItemIndex++)
-			{
-				Out.Items[ItemIndex].Style.bUnderline = false;
-				Out.Items[ItemIndex].Style.bStrikethrough = false;
-			}
-		}
-
-		if (bAfterClamp)
-		{
-			// An earlier line was cut: nothing after the cut is drawn, as it never was.
-			TArray<int32> ImagesToRemove;
-			TArray<int32> EmojisToRemove;
-			for (FPlaced& P : LinePlaced)
-			{
-				CutCluster(P, ImagesToRemove, EmojisToRemove);
-			}
-			RemoveInlineObjects(ImagesToRemove, EmojisToRemove);
-		}
-		else
-		{
-			ClampLine(LineIndex, bBaseRightToLeft, PenEnd, Baseline, bEllipsizeThisLine, LineItemStart, ImageStart, EmojiStart, LineProperty);
 		}
 
 		// Visual runs, left to right: neighbouring clusters that run the same way at the same level over contiguous
@@ -2160,6 +4064,25 @@ namespace DreamTextLayoutLocal
 		// mean start and end, as they do for UMG's text (Left aligns to the start of the flow) and for CSS's
 		// text-align: start; Center is Center either way.
 		EDreamUITextParagraphHorizontalAlign Align = In.ParagraphHAlign;
+		if (Align == EDreamUITextParagraphHorizontalAlign::Justify)
+		{
+			// A justified line already spans its width from the start edge. One that was not stretched -- it has no
+			// opportunity, or it is cut -- starts there too, unless it ends its paragraph: that one is set as
+			// LastLineAlign says (CSS text-align-last).
+			Align = EDreamUITextParagraphHorizontalAlign::Left;
+			const bool bEndsParagraph = Range.HardBreakElement != -1 || LineIndex == LineRanges.Num() - 1;
+			if (!bJustified && bEndsParagraph)
+			{
+				if (In.LastLineAlign == EDreamTextLastLineAlign::Center)
+				{
+					Align = EDreamUITextParagraphHorizontalAlign::Center;
+				}
+				else if (In.LastLineAlign == EDreamTextLastLineAlign::End)
+				{
+					Align = EDreamUITextParagraphHorizontalAlign::Right;
+				}
+			}
+		}
 		if (bBaseRightToLeft)
 		{
 			if (Align == EDreamUITextParagraphHorizontalAlign::Left)
@@ -2190,14 +4113,19 @@ namespace DreamTextLayoutLocal
 
 	void FLayoutRun::Place()
 	{
-		// Lines stack down from the paragraph's top edge at y = 0, each as tall as its line box.
+		// Lines stack down from the paragraph's top edge at y = 0, each as tall as its line box. Each is placed with its own
+		// top at 0, and Finish moves it down to its place: a line placed alike anywhere comes out alike, which is what lets
+		// a kept line stand for placing it again, bit for bit.
 		//
 		// A wrapped paragraph under a clamp policy also has a BOTTOM: a line that does not fit the box
 		// is not placed at all, and the last one that does carries the ellipsis -- Slate's "overflow
 		// line". Without wrapping there is only ever one line, which is why Ellipsis used to be a
 		// single-line feature.
 		const bool bVerticalClamp = IsClampMode() && ShouldWrap() && In.Height > 0.0f;
+		// A clamp reads the lines around a line and what was cut before it: under one, every line is placed again.
+		const bool bMayKeepPlacement = bUseState && bLinePlacementSame && !IsClampMode();
 		float LineTop = 0.0f;
+		LineSpans.Reset(LineRanges.Num());
 		for (int32 LineIndex = 0; LineIndex < LineRanges.Num(); LineIndex++)
 		{
 			if (bVerticalClamp && LineIndex + 1 < LineRanges.Num())
@@ -2211,7 +4139,36 @@ namespace DreamTextLayoutLocal
 				}
 			}
 			const bool bWasLastVisibleLine = bEllipsizeThisLine;
-			PlaceLine(LineIndex, LineTop);
+			FLineSpan Span;
+			Span.Top = LineTop;
+			Span.bLastLine = LineIndex == LineRanges.Num() - 1;
+			const int32 Source = bMayKeepPlacement ? LineSources[LineIndex] : INDEX_NONE;
+			int32 SourceDelta = 0;
+			if (Source != INDEX_NONE && CanReuseLine(LineIndex, Source, SourceDelta))
+			{
+				ReuseLine(LineIndex, Source, SourceDelta, Span);
+			}
+			else
+			{
+				FStageTimer Timer(EDreamTextLayoutStage::Place);
+				Span.ItemStart = Out.Items.Num();
+				Span.ImageStart = Out.Images.Num();
+				Span.EmojiStart = Out.Emojis.Num();
+				Span.VisualRunStart = Out.VisualRuns.Num();
+				// Whether this line itself waits for a glyph: such a line is placed again next time rather than kept.
+				const bool bPendingBefore = Out.bHasPendingGlyphs;
+				Out.bHasPendingGlyphs = false;
+				PlaceLine(LineIndex);
+				Span.bPending = Out.bHasPendingGlyphs;
+				Out.bHasPendingGlyphs |= bPendingBefore;
+				Span.ItemEnd = Out.Items.Num();
+				Span.ImageEnd = Out.Images.Num();
+				Span.EmojiEnd = Out.Emojis.Num();
+				Span.VisualRunEnd = Out.VisualRuns.Num();
+				Span.Height = CurrentLineHeight;
+				Stats.LinesPlaced++;
+			}
+			LineSpans.Add(Span);
 			bEllipsizeThisLine = false;
 			const float LineAdvance = CurrentLineHeight + In.FontSpace.Y;
 			LineTop -= LineAdvance;
@@ -2228,74 +4185,177 @@ namespace DreamTextLayoutLocal
 		}
 	}
 
+	bool FLayoutRun::CanReuseLine(int32 LineIndex, int32 KeptIndex, int32& OutSourceDelta) const
+	{
+		if (!State->LineSpans.IsValidIndex(KeptIndex) || !State->Lines.IsValidIndex(KeptIndex) || !State->LineRanges.IsValidIndex(KeptIndex))
+		{
+			return false;
+		}
+		const FLineSpan& Kept = State->LineSpans[KeptIndex];
+		const FLineRange& Range = LineRanges[LineIndex];
+		const FLineRange& KeptRange = State->LineRanges[KeptIndex];
+		// The text's last line ends in a caret naming the text's length, and a paragraph's last line is set as LastLineAlign
+		// says: a line keeps its placement only where it ends as it did.
+		if (Kept.bPending || Kept.bLastLine != (LineIndex == LineRanges.Num() - 1)
+			|| (KeptRange.HardBreakElement != -1) != (Range.HardBreakElement != -1) || Range.End - Range.Start != KeptRange.End - KeptRange.Start)
+		{
+			return false;
+		}
+		// Every source position on the line -- its items', its carets', its runs' -- moved by one amount, the edit's length.
+		bool bHaveDelta = false;
+		int32 SourceDelta = 0;
+		auto Moved = [&](int32 Element, int32 KeptElement)
+		{
+			const FDreamUIText_TextProcessingElement& Now = TextProcessingArray[Element];
+			const FDreamUIText_TextProcessingElement& Then = State->Elements[KeptElement];
+			const int32 Delta = Now.StringIndex - Then.StringIndex;
+			if (!bHaveDelta)
+			{
+				SourceDelta = Delta;
+				bHaveDelta = true;
+			}
+			return Now.Length == Then.Length && Delta == SourceDelta && CaretIndexOf(Element) - KeptCaretIndexOf(KeptElement) == SourceDelta;
+		};
+		for (int32 k = 0; k < Range.End - Range.Start; k++)
+		{
+			if (!Moved(Range.Start + k, KeptRange.Start + k))
+			{
+				return false;
+			}
+		}
+		if (Range.HardBreakElement != -1 && !Moved(Range.HardBreakElement, KeptRange.HardBreakElement))
+		{
+			return false;
+		}
+		if (Kept.bLastLine)
+		{
+			const int32 Delta = In.Content.Len() - State->ContentLength;
+			if (bHaveDelta && Delta != SourceDelta)
+			{
+				return false;
+			}
+			SourceDelta = Delta;
+		}
+		OutSourceDelta = SourceDelta;
+		return true;
+	}
+
+	void FLayoutRun::ReuseLine(int32 LineIndex, int32 KeptIndex, int32 SourceDelta, FLineSpan& Span)
+	{
+		TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_TextLayout_Reuse);
+		FStageTimer Timer(EDreamTextLayoutStage::Reuse);
+		const FLineSpan& Kept = State->LineSpans[KeptIndex];
+		const int32 ElementDelta = LineRanges[LineIndex].Start - State->LineRanges[KeptIndex].Start;
+		// The line as it was placed, at its own top: only what names an element, a source offset or a line moves.
+		Span.ItemStart = Out.Items.Num();
+		Out.Items.Append(State->Items.GetData() + Kept.ItemStart, Kept.ItemEnd - Kept.ItemStart);
+		Span.ItemEnd = Out.Items.Num();
+		for (int32 i = Span.ItemStart; i < Span.ItemEnd; i++)
+		{
+			FDreamTextGlyphItem& Item = Out.Items[i];
+			Item.ElementIndex += ElementDelta;
+			Item.SourceIndex += SourceDelta;
+			Item.LineIndex = LineIndex;
+		}
+		Span.ImageStart = Out.Images.Num();
+		Out.Images.Append(State->Images.GetData() + Kept.ImageStart, Kept.ImageEnd - Kept.ImageStart);
+		Span.ImageEnd = Out.Images.Num();
+		Span.EmojiStart = Out.Emojis.Num();
+		Out.Emojis.Append(State->Emojis.GetData() + Kept.EmojiStart, Kept.EmojiEnd - Kept.EmojiStart);
+		Span.EmojiEnd = Out.Emojis.Num();
+		Span.VisualRunStart = Out.VisualRuns.Num();
+		Out.VisualRuns.Append(State->VisualRuns.GetData() + Kept.VisualRunStart, Kept.VisualRunEnd - Kept.VisualRunStart);
+		Span.VisualRunEnd = Out.VisualRuns.Num();
+		for (int32 i = Span.VisualRunStart; i < Span.VisualRunEnd; i++)
+		{
+			FDreamTextVisualRun& VisualRun = Out.VisualRuns[i];
+			VisualRun.LineIndex = LineIndex;
+			VisualRun.SourceStart += SourceDelta;
+			VisualRun.SourceEnd += SourceDelta;
+		}
+		FDreamUITextLineProperty& LineProperty = Out.Lines.Add_GetRef(State->Lines[KeptIndex]);
+		for (FDreamUITextCaretProperty& Caret : LineProperty.CaretPropertyList)
+		{
+			// A soft-wrapped line's end caret names no offset (-1).
+			if (Caret.CharIndex >= 0)
+			{
+				Caret.CharIndex += SourceDelta;
+			}
+		}
+		Span.Height = Kept.Height;
+		Span.bPending = false;
+		CurrentLineHeight = Kept.Height;
+		Stats.LinesReused++;
+	}
+
 	void FLayoutRun::Run()
 	{
+		Stats.Layouts++;
 		// A scope a step, so that Insights says which of them a slow layout spent its time in.
 		Out.Reset();
 		{
 			TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_TextLayout_Prepare);
+			FStageTimer Timer(EDreamTextLayoutStage::Prepare);
 			Prepare();
 		}
 		{
 			TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_TextLayout_Preprocess);
+			FStageTimer Timer(EDreamTextLayoutStage::Preprocess);
 			Preprocess();
 			BuildPlainText();
-			FDreamTextBreaker::ComputeGraphemeStarts(PlainText, PlainStart, ElementCodepoints, GraphemeStart);
+			Classify();
+			Out.ElementCount = TextProcessingArray.Num();
 		}
+		Lookup();
 		{
 			TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_TextLayout_Measure);
-			Measure();
+			{
+				FStageTimer Timer(EDreamTextLayoutStage::Measure);
+				AnalyseGraphemes();
+			}
+			MeasureParagraphs();
 		}
 		{
 			TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_TextLayout_BreakLines);
 			if (ShouldWrap())
 			{
-				ComputeBreakOpportunities();
+				FStageTimer Timer(EDreamTextLayoutStage::BreakLines);
+				AnalyseBreaks();
 			}
+			CompareWithDonors();
+			FStageTimer Timer(EDreamTextLayoutStage::BreakLines);
 			BreakLines();
+			FixTabs();
 		}
 		{
 			TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_TextLayout_Place);
 			Place();
+			KeepLines();
 		}
 		{
 			TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_TextLayout_Finish);
-			Finish();
+			{
+				FStageTimer Timer(EDreamTextLayoutStage::Finish);
+				Finish();
+			}
+			KeepState();
 		}
 	}
 
-	float FLayoutRun::ComputePreferredWidth() const
+	float FLayoutRun::ParagraphPreferredWidth(int32 Start, int32 End, bool& bOutAny) const
 	{
-		// The unwrapped width: the widest paragraph as it would be on one line. Under negative letter spacing it also
-		// reaches the paragraph's ink, as a placed line does.
+		// The paragraph as it would be on one line. Under negative letter spacing it also reaches the paragraph's ink, as a
+		// placed line does.
 		const bool bInkCounts = In.FontSpace.X < 0.0f;
 		const float TrailingSpacingFactor = bTrailingLetterSpacingCounts ? 1.0f : 0.0f;
-		float PreferredWidth = 0.0f;
 		float PenWidth = 0.0f;
 		float InkRight = -MAX_FLT;
 		float LastSpacing = 0.0f;
-		bool bAny = false;
-		auto EndParagraph = [&]()
-		{
-			if (bAny)
-			{
-				const float Width = PenWidth - LastSpacing * (1.0f - TrailingSpacingFactor);
-				PreferredWidth = FMath::Max(PreferredWidth, bInkCounts ? FMath::Max(Width, InkRight) : Width);
-			}
-			PenWidth = 0.0f;
-			InkRight = -MAX_FLT;
-			LastSpacing = 0.0f;
-			bAny = false;
-		};
-		for (int32 i = 0; i < Measured.Num(); i++)
+		bOutAny = false;
+		for (int32 i = Start; i < End; i++)
 		{
 			const FMeasured& M = Measured[i];
-			if (M.bSkipped)continue;
-			if (M.bHardBreak)
-			{
-				EndParagraph();
-				continue;
-			}
+			if (M.bSkipped || M.bHardBreak)continue;
 			if (M.bClusterStart)
 			{
 				LastSpacing = M.LetterSpacing;
@@ -2303,7 +4363,7 @@ namespace DreamTextLayoutLocal
 				{
 					// The cluster's glyphs walked from its pen, in logical order: near enough for the ink's reach.
 					float GlyphPenX = PenWidth;
-					for (int32 e = i; e < Measured.Num() && (e == i || !Measured[e].bClusterStart); e++)
+					for (int32 e = i; e < End && (e == i || !Measured[e].bClusterStart); e++)
 					{
 						const FMeasured& Part = Measured[e];
 						if (Part.bSkipped || Part.bHardBreak)break;
@@ -2326,10 +4386,97 @@ namespace DreamTextLayoutLocal
 				}
 			}
 			PenWidth += M.Advance;
-			bAny = true;
+			bOutAny = true;
 		}
-		EndParagraph();
-		return PreferredWidth;
+		if (!bOutAny)
+		{
+			return 0.0f;
+		}
+		const float Width = PenWidth - LastSpacing * (1.0f - TrailingSpacingFactor);
+		return bInkCounts ? FMath::Max(Width, InkRight) : Width;
+	}
+
+	void FLayoutRun::KeepLines()
+	{
+		if (State == nullptr)
+		{
+			return;
+		}
+		FStageTimer Timer(EDreamTextLayoutStage::Reuse);
+		// The lines as they were placed, each at its own top, before Finish moves them: what a later layout takes a line from.
+		// A clamp placed every line against the lines around it, so nothing of that placement is kept.
+		State->bLinesKept = !IsClampMode();
+		if (!State->bLinesKept)
+		{
+			State->LineSpans.Reset();
+			State->Items.Reset();
+			State->Lines.Reset();
+			State->Images.Reset();
+			State->Emojis.Reset();
+			State->VisualRuns.Reset();
+			return;
+		}
+		State->LineSpans = LineSpans;
+		State->Items = Out.Items;
+		State->Lines = Out.Lines;
+		State->Images = Out.Images;
+		State->Emojis = Out.Emojis;
+		State->VisualRuns = Out.VisualRuns;
+	}
+
+	void FLayoutRun::KeepState()
+	{
+		if (State == nullptr)
+		{
+			return;
+		}
+		FStageTimer Timer(EDreamTextLayoutStage::Reuse);
+		// An atlas flushed or grown during the layout may have taken quads this layout handed out with it: nothing is kept,
+		// and the text, which the font told of its new atlas, lays out again from nothing.
+		if (FObjectKey(Font->GetFontTexture()) != MeasureKey.Atlas)
+		{
+			State->Reset();
+			return;
+		}
+		State->bValid = true;
+		State->MeasureKey = MeasureKey;
+		// The faces this layout drew from, and who they were: a face reloaded since has other glyphs.
+		State->UsedFaces.Reset();
+		State->UsedFaceIdentities.Reset();
+		if (bCanShape)
+		{
+			for (const FMeasured& M : Measured)
+			{
+				State->UsedFaces.AddUnique(M.FaceIndex);
+			}
+			for (const FGlyphSource& G : Glyphs)
+			{
+				if (G.RasterFace >= 0)
+				{
+					State->UsedFaces.AddUnique(G.RasterFace);
+				}
+			}
+			for (const int32 FaceIndex : State->UsedFaces)
+			{
+				State->UsedFaceIdentities.Add(Font->GetFaceIdentity(FaceIndex));
+			}
+		}
+		State->Input = In;
+		State->ContentLength = In.Content.Len();
+		State->Elements = MoveTemp(TextProcessingArray);
+		State->FollowsMarkup = MoveTemp(FollowsMarkup);
+		State->PlainText = MoveTemp(PlainText);
+		State->PlainStart = MoveTemp(PlainStart);
+		State->Measured = MoveTemp(Measured);
+		State->Glyphs = MoveTemp(Glyphs);
+		State->GraphemeStart = MoveTemp(GraphemeStart);
+		State->bHasBreakBits = ShouldWrap();
+		State->bHasWordBits = ShouldWrap() && In.PhraseWrap != EDreamTextPhraseWrap::Off;
+		State->LineBreakRaw = MoveTemp(LineBreakRaw);
+		State->WordBreakRaw = MoveTemp(WordBreakRaw);
+		State->CanBreakBefore = MoveTemp(CanBreakBefore);
+		State->Paragraphs = MoveTemp(Paragraphs);
+		State->LineRanges = MoveTemp(LineRanges);
 	}
 
 	void FLayoutRun::Finish()
@@ -2339,7 +4486,7 @@ namespace DreamTextLayoutLocal
 		ParagraphHeight_ForClampContent -= In.FontSpace.Y;
 		const float ParagraphHeightWithClamp = bHasClampContent ? ParagraphHeight_ForClampContent : ParagraphHeight;
 
-		Out.PreferredSize.X = ComputePreferredWidth();
+		Out.PreferredSize.X = UnwrappedPreferredWidth;
 		Out.PreferredSize.Y = ParagraphHeight;
 
 		// Each line is already aligned within the box measured from its left edge; what is left is the box's own
@@ -2358,33 +4505,37 @@ namespace DreamTextLayoutLocal
 			YOffset += ParagraphHeightWithClamp - In.Height * 0.5f;
 			break;
 		}
-		for (auto& LinePropertyItem : Out.Lines)
+		// Every line was placed with its own top at 0: it moves down to its place in the paragraph and, with the paragraph,
+		// into the box, in one step.
+		for (int32 LineIndex = 0; LineIndex < LineSpans.Num() && LineIndex < Out.Lines.Num(); LineIndex++)
 		{
-			for (auto& CharItem : LinePropertyItem.CaretPropertyList)
+			const FLineSpan& Span = LineSpans[LineIndex];
+			const float LineY = Span.Top + YOffset;
+			for (auto& CharItem : Out.Lines[LineIndex].CaretPropertyList)
 			{
 				CharItem.CaretPosition.X += XOffset;
-				CharItem.CaretPosition.Y += YOffset;
+				CharItem.CaretPosition.Y += LineY;
 			}
-		}
-		for (auto& ImageItem : Out.Images)
-		{
-			ImageItem.Position.X += XOffset;
-			ImageItem.Position.Y += YOffset;
-		}
-		for (auto& EmojiItem : Out.Emojis)
-		{
-			EmojiItem.Position.X += XOffset;
-			EmojiItem.Position.Y += YOffset;
-		}
-		for (auto& Item : Out.Items)
-		{
-			Item.Pen.X += XOffset;
-			Item.Pen.Y += YOffset;
-		}
-		for (auto& VisualRun : Out.VisualRuns)
-		{
-			VisualRun.Left += XOffset;
-			VisualRun.Right += XOffset;
+			for (int32 i = Span.ImageStart; i < Span.ImageEnd; i++)
+			{
+				Out.Images[i].Position.X += XOffset;
+				Out.Images[i].Position.Y += LineY;
+			}
+			for (int32 i = Span.EmojiStart; i < Span.EmojiEnd; i++)
+			{
+				Out.Emojis[i].Position.X += XOffset;
+				Out.Emojis[i].Position.Y += LineY;
+			}
+			for (int32 i = Span.ItemStart; i < Span.ItemEnd; i++)
+			{
+				Out.Items[i].Pen.X += XOffset;
+				Out.Items[i].Pen.Y += LineY;
+			}
+			for (int32 i = Span.VisualRunStart; i < Span.VisualRunEnd; i++)
+			{
+				Out.VisualRuns[i].Left += XOffset;
+				Out.VisualRuns[i].Right += XOffset;
+			}
 		}
 
 		// THE numbering of visible characters, built once, here, from the items the painter will walk.
@@ -2461,13 +4612,90 @@ namespace DreamTextLayoutLocal
 	}
 }
 
+FDreamTextLayoutState::FDreamTextLayoutState()
+	: Data(MakeUnique<FDreamTextLayoutStateData>())
+{
+}
+
+FDreamTextLayoutState::~FDreamTextLayoutState() = default;
+
+void FDreamTextLayoutState::Reset()
+{
+	Data->Reset();
+}
+
+bool FDreamTextLayoutState::HasLayout() const
+{
+	return Data->bValid;
+}
+
+SIZE_T FDreamTextLayoutState::GetAllocatedSize() const
+{
+	return sizeof(FDreamTextLayoutStateData) + Data->GetAllocatedSize();
+}
+
+double FDreamTextLayoutStats::GetMilliseconds(EDreamTextLayoutStage Stage) const
+{
+	return FPlatformTime::ToMilliseconds64(Cycles[(int32)Stage]);
+}
+
+const TCHAR* FDreamTextLayoutStats::GetStageName(EDreamTextLayoutStage Stage)
+{
+	switch (Stage)
+	{
+	case EDreamTextLayoutStage::Prepare: return TEXT("Prepare");
+	case EDreamTextLayoutStage::Preprocess: return TEXT("Preprocess");
+	case EDreamTextLayoutStage::Lookup: return TEXT("Lookup");
+	case EDreamTextLayoutStage::Reuse: return TEXT("Reuse");
+	case EDreamTextLayoutStage::Measure: return TEXT("Measure");
+	case EDreamTextLayoutStage::Shape: return TEXT("Shape");
+	case EDreamTextLayoutStage::BreakLines: return TEXT("BreakLines");
+	case EDreamTextLayoutStage::Place: return TEXT("Place");
+	case EDreamTextLayoutStage::Finish: return TEXT("Finish");
+	default: return TEXT("");
+	}
+}
+
 void FDreamTextLayoutEngine::Layout(const FDreamTextLayoutInput& Input, FDreamTextDisplayList& Out)
+{
+	Layout(Input, Out, nullptr);
+}
+
+void FDreamTextLayoutEngine::Layout(const FDreamTextLayoutInput& Input, FDreamTextDisplayList& Out, FDreamTextLayoutState* State)
 {
 	Out.Reset();
 	if (!Input.Font.IsValid())
 	{
 		return;
 	}
-	DreamTextLayoutLocal::FLayoutRun Run(Input, Out);
+	FDreamTextLayoutStateData* Kept = nullptr;
+	if (State != nullptr)
+	{
+		if (IsIncrementalLayoutEnabled())
+		{
+			Kept = State->Data.Get();
+		}
+		else
+		{
+			// Switched off: nothing is built on, and what was kept would only go stale.
+			State->Reset();
+		}
+	}
+	DreamTextLayoutLocal::FLayoutRun Run(Input, Out, Kept);
 	Run.Run();
+}
+
+bool FDreamTextLayoutEngine::IsIncrementalLayoutEnabled()
+{
+	return GDreamTextIncrementalLayout != 0;
+}
+
+FDreamTextLayoutStats FDreamTextLayoutEngine::GetStats()
+{
+	return DreamTextLayoutLocal::Stats;
+}
+
+void FDreamTextLayoutEngine::ResetStats()
+{
+	DreamTextLayoutLocal::Stats = FDreamTextLayoutStats();
 }

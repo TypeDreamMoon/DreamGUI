@@ -151,6 +151,15 @@ public:
 	virtual bool LineTraceUI(FDreamUIHitResult& OutHit, const FVector& Start, const FVector& End)const override;
 	/** is this UI element type support draw-call batching? */
 	virtual bool SupportDrawCallBatching()const { return true; }
+	/**
+	 * Whether a change of this element's transform alone repaints it -- OnUpdateGeometry with the vertex positions marked
+	 * changed, as pixel snapping does -- when nothing else is dirty. Asked by UpdateGeometry only on an update whose
+	 * transform changed. A text drawing small-text coverage glyphs says yes, unless the move kept it on the device pixel
+	 * grid (a whole-pixel translation at the same device scale, as scrolling is), since its quads are placed on that grid;
+	 * a text kept on its font's field only by where it was (rolled, in a render layer) says yes once a move lets it draw
+	 * from coverage again.
+	 */
+	virtual bool GetRepaintsOnTransformChange()const { return false; }
 
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
 		EDreamUIBlendMode GetBlendMode()const { return BlendMode; }

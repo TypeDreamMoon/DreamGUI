@@ -137,6 +137,25 @@ public:
 	int32 GetLastLayoutPassCount()const{return LastLayoutPassCount;}
 
 	/**
+	 * Broadcast on every tick of this world's DreamGUI once the frame's layout passes are done -- every tick, whether a
+	 * pass ran or not -- before the transform flush, the clips and the root canvases' update. For what places something
+	 * against the frame's settled layout: the popup layer re-places its open popups after their openers here, and checks
+	 * that the openers are still usable. A listener may move widgets (the flush right after announces the moves, this
+	 * frame) and may mark layout dirty (the passes run again right after the broadcast, this frame); it must not destroy
+	 * or reparent widgets of a tree a pass is walking -- there is none while it runs. Game thread. Costs nothing while
+	 * nothing is bound: subscribe while there is work, unsubscribe after.
+	 */
+	FSimpleMulticastDelegate& GetOnLayoutPassesFinished() { return OnLayoutPassesFinished; }
+	/**
+	 * Broadcast on every tick of this world's DreamGUI right before the root canvases update their draw calls, after the
+	 * transform flush. For what must repaint this frame and had no earlier moment to ask: the small-text sweep marks the
+	 * vertices of texts whose device scale has settled dirty here. A listener may mark geometry dirty; it must not change
+	 * layout or the widget tree, since nothing lays out again before the canvases update. Game thread. Costs nothing while
+	 * nothing is bound.
+	 */
+	FSimpleMulticastDelegate& GetOnBeforeRootCanvasesUpdate() { return OnBeforeRootCanvasesUpdate; }
+
+	/**
 	 * Moves on whenever what a ray would hit in this world may have changed: a canvas updating (layout,
 	 * transform, visibility, geometry and sort all reach the draw calls through one), a canvas or a
 	 * raycaster coming or going, a widget's active, visible, raycastable or interactable state being
@@ -354,6 +373,15 @@ private:
 	 * eight times and happened to agree" was unobservable in a normal build.
 	 */
 	int32 LastLayoutPassCount = 0;
+	/** See GetOnLayoutPassesFinished and GetOnBeforeRootCanvasesUpdate. */
+	FSimpleMulticastDelegate OnLayoutPassesFinished;
+	FSimpleMulticastDelegate OnBeforeRootCanvasesUpdate;
+	/**
+	 * The layout passes, until nothing is dirty or the per-run cap: the body of TickDreamUI's layout step, which runs a
+	 * second time when the post-layout listeners dirtied layout. InOutPassesThisTick counts across both runs, and is what
+	 * LastLayoutPassCount reports.
+	 */
+	void RunLayoutPasses(int32& InOutPassesThisTick);
 	/** See GetHitTestGeneration. */
 	uint64 HitTestGeneration = 0;
 	/**

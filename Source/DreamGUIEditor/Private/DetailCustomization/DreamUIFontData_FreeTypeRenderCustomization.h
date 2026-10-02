@@ -28,4 +28,21 @@ private:
 
 	FText GetCurrentValue() const;
 	void OnFontFaceComboSelectionChanged(TSharedPtr<FString> InSelectedItem, ESelectInfo::Type SelectInfo, TSharedRef<IPropertyHandle> fontFaceHandle);
+
+	/**
+	 * The "Resolve Sample" row: a sample text and a language, and for each grapheme cluster of the sample the face that
+	 * draws it -- asked of FDreamFontFaceResolver, as a text's layout asks it, so what the row says is what a text does.
+	 */
+	void AddResolveSampleRow(class IDetailCategoryBuilder& Category);
+	/** Resolves the sample again: it changed, its language did, or the fallbacks it is resolved through did. */
+	void RefreshResolveSample();
+	void OnResolveSampleTextChanged(const FText& InText);
+	void OnResolveSampleCulturePicked(const FString& InCultureName);
+	TSharedPtr<class SVerticalBox> ResolveResultsBox;
+	/**
+	 * The sample and its culture (empty for the game's language). They outlive the panel -- a reload or a face change
+	 * builds it again -- and every font's panel shares them, so two fonts can be compared on the same text.
+	 */
+	static FString ResolveSampleText;
+	static FString ResolveSampleCulture;
 };

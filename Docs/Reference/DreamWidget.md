@@ -110,6 +110,7 @@ Base class for almost all UI related things.
 | `UDreamUIBehaviour* GetComponent(TSubclassOf<UDreamUIBehaviour> ComponentClass)` | pure | Get Component |
 | `UDreamUIBehaviour* GetComponentByInterface(UClass* InterfaceClass)` | pure | Get Component by Interface |
 | `TArray<UDreamUIBehaviour*> GetComponents(TSubclassOf<UDreamUIBehaviour> ComponentClass)` | pure | Get Components |
+| `FLinearColor GetContentTint()` | pure | Get Content Tint |
 | `TEnumAsByte<EMouseCursor::Type> GetCursor()` | pure | Get Cursor |
 | `FVector2D GetDesiredSize()` | pure | How big this widget WANTS to be, as its parent panel would measure it. |
 | `FString GetDisplayName()` | pure | Get Display Name |
@@ -122,6 +123,7 @@ Base class for almost all UI related things.
 | `bool GetHitTestVisibleInHierarchy()` | pure | Get Hit Test Visible in Hierarchy |
 | `float GetHorizontalAnchoredPosition()` | pure | Get Horizontal Anchored Position |
 | `bool GetIgnoreLayout()` | pure | Get Ignore Layout |
+| `FLinearColor GetInheritedContentTint()` | pure | The product of every ancestor's ContentTint, this widget's own left out: what this widget's visual is tinted by. White when none tints. |
 | `EDreamWidgetInteractableType GetInteractable()` | pure | Get Interactable |
 | `bool GetInteractableInHierarchy()` | pure | Get if this widget is interactable when use input interaction, considering all parent settings. @return If this widget is interactable |
 | `bool GetIsEnabled()` | pure | This widget's own enabled switch. Ask GetIsEnabledInHierarchy for the answer that counts. |
@@ -260,6 +262,7 @@ Base class for almost all UI related things.
 | `void SetClipping(EDreamWidgetClipping Value)` | callable | Set Clipping |
 | `void SetClippingCornerRadius(FVector4f Value)` | callable | Set Clipping Corner Radius |
 | `void SetClippingMargin(FMargin Value)` | callable | Set Clipping Margin |
+| `void SetContentTint(FLinearColor Value)` | callable | Tint everything drawn below this widget -- its descendants' visuals, never its own -- as UMG's content colour does (a border's ContentColorAndOpacity reaching its child, SCompoundWidget's ColorAndOpacity). Multiplied in linear space, with every ancestor's, into each descendant visual's UDreamVisual::GetFinalColor; marks their colours dirty. White changes nothing. |
 | `void SetCursor(TEnumAsByte<EMouseCursor::Type> Value)` | callable | The cursor to show while the pointer is over this widget. Default means "no opinion" and lets whatever is underneath claim it, which is why there is no separate override flag here as there is in UMG -- DreamPointerPolicy::ResolveCursor walks the hover stack innermost first and takes the first widget with an opinion. |
 | `void SetDisplayName(FString InName)` | callable | Set Display Name |
 | `void SetFlowDirectionPreference(EDreamFlowDirectionPreference Value)` | callable | Changing this re-arranges this widget and every descendant that inherits the answer from it. |

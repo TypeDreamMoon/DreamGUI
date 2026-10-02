@@ -56,6 +56,7 @@
 #include "DetailCustomization/DreamUISpriteDataCustomization.h"
 #include "DetailCustomization/DreamUIStaticSpriteAtlasDataCustomization.h"
 #include "DetailCustomization/DreamUIFontData_FreeTypeRenderCustomization.h"
+#include "DetailCustomization/PropertyType/DreamUIFontFallbackCustomization.h"
 #include "Controls/DreamUIControl.h"
 #include "DetailCustomization/DreamUIControlCustomization.h"
 #include "DetailCustomization/UISelectableCustomization.h"
@@ -246,6 +247,7 @@ void FDreamGUIEditorModule::StartupModule()
 		PropertyModule.RegisterCustomClassLayout(UDreamUISpriteData::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FDreamUISpriteDataCustomization::MakeInstance));
 		PropertyModule.RegisterCustomClassLayout(UDreamUIStaticSpriteAtlasData::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FDreamUIStaticSpriteAtlasDataCustomization::MakeInstance));
 		PropertyModule.RegisterCustomClassLayout(UDreamUIFontData_FreeTypeRender::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FDreamUIFontData_FreeTypeRenderCustomization::MakeInstance));
+		PropertyModule.RegisterCustomPropertyTypeLayout(FDreamUIFontFallback::StaticStruct()->GetFName(), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&FDreamUIFontFallbackCustomization::MakeInstance));
 		
 		PropertyModule.RegisterCustomClassLayout(UUISelectable::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FUISelectableCustomization::MakeInstance));
 		PropertyModule.RegisterCustomClassLayout(UUIToggle::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FUIToggleCustomization::MakeInstance));
@@ -504,6 +506,7 @@ void FDreamGUIEditorModule::ShutdownModule()
 		PropertyModule.UnregisterCustomClassLayout(UDreamUISpriteData::StaticClass()->GetFName());
 		PropertyModule.UnregisterCustomClassLayout(UDreamUIStaticSpriteAtlasData::StaticClass()->GetFName());
 		PropertyModule.UnregisterCustomClassLayout(UDreamUIFontData_FreeTypeRender::StaticClass()->GetFName());
+		PropertyModule.UnregisterCustomPropertyTypeLayout(FDreamUIFontFallback::StaticStruct()->GetFName());
 
 		PropertyModule.UnregisterCustomClassLayout(UUISelectable::StaticClass()->GetFName());
 		PropertyModule.UnregisterCustomClassLayout(UUIToggle::StaticClass()->GetFName());

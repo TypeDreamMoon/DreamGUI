@@ -21,6 +21,16 @@ struct DREAMGUI_API FDreamGUIObjectVersion
 		 * compiler writes it to UDreamWidgetGeneratedClass::DesignSize and nothing reads a prefab.
 		 */
 		PrefabCanvasSizeOnAsset,
+		/**
+		 * A FreeType font's fallbacks are FDreamUIFontFallback entries (ranges, cultures, scale, preference). A font saved
+		 * before has its FallbackFontArray moved into Fallbacks on load, in order and with default settings.
+		 */
+		FontFallbackEntries,
+		/**
+		 * Emoji data is keyed by the whole sequence (FDreamUIFontEmojiKey::Sequence). A key saved before has its Sequence
+		 * filled with {EmojiCode} on load; it hashes and compares the same either way.
+		 */
+		EmojiKeyBySequence,
 
 		VersionPlusOne,
 		LatestVersion = VersionPlusOne - 1

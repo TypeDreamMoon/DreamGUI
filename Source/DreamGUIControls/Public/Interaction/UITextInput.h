@@ -260,10 +260,11 @@ protected:
 	 * arithmetic reads the same field. Two writers would fight over it.
 	 *
 	 * So this one only speaks in the gap: while the field is not being edited, Ellipsis (or
-	 * MultilineEllipsis) shows the value cut short with an ellipsis rather than simply clipped;
-	 * activating the edit puts the line mode's own overflow back, because that is what the caret and
-	 * the wrap need, and leaving the edit restores the ellipsis. Clip is the default and is exactly
-	 * what every field does today.
+	 * MultilineEllipsis) shows the value cut short with an ellipsis rather than simply clipped, and
+	 * MiddleEllipsis keeps its start and its end with the ellipsis between them; activating the edit
+	 * puts the line mode's own overflow back, because that is what the caret and the wrap need, and
+	 * leaving the edit restores the ellipsis. Clip is the default and is exactly what every field
+	 * does today.
 	 */
 	UPROPERTY(EditAnywhere, Category = "DreamGUI-Input")
 		ETextOverflowPolicy OverflowPolicy = ETextOverflowPolicy::Clip;
@@ -580,6 +581,12 @@ public:
 	 * the runtime calls it.
 	 */
 	TSharedPtr<ITextInputMethodContext> GetTextInputMethodContextForTesting() const;
+	/**
+	 * For tests only: the entry a platform's virtual keyboard writes this field's text and selection through --
+	 * made on first ask, as activating the field on a device that needs a virtual keyboard makes it -- so a test
+	 * can play an Android or iOS keyboard's calls without one. Nothing in the runtime calls it.
+	 */
+	TSharedPtr<IVirtualKeyboardEntry> GetVirtualKeyboardEntryForTesting();
 
 	/** Step back through the edit history. @return true if anything changed. */
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Input")
@@ -741,6 +748,20 @@ private:
 	bool DeleteSelection(bool InFireEvent = true);
 	void InsertCharAtCaretPosition(TCHAR c);
 	void InsertStringAtCaretPosition(const FString& value);
+	/**
+	 * A virtual keyboard's whole new text, taken as the one edit it is: the span between the longest common start
+	 * and the longest common end of the old and new text (in UTF-16, and never between the halves of a surrogate
+	 * pair) is typed over the way a selection is -- so it is one undo step, it answers to the field's rules and
+	 * MaxLength, and the caret ends after what went in. A keyboard sends its whole text on every keystroke, and
+	 * SetText, which used to take it, cleared the undo history each time and left the caret where it stood: one
+	 * character behind.
+	 */
+	void ApplyTextFromVirtualKeyboard(const FString& InNewText);
+	/**
+	 * A virtual keyboard's selection, in source offsets: the caret on InSelStart and the anchor on InSelEnd, the
+	 * way Slate reads the pair. An offset between the halves of a surrogate pair stands for the character it is in.
+	 */
+	void ApplySelectionFromVirtualKeyboard(int32 InSelStart, int32 InSelEnd);
 	bool bInputActive = false;
 	/**
 	 * The high surrogate of a character still waiting for its low half, 0 when none is. A platform delivers a

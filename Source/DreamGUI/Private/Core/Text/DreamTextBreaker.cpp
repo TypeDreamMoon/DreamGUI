@@ -50,33 +50,6 @@ namespace DreamTextBreakerLocal
 		}
 	};
 
-	/**
-	 * Collects every boundary an iterator reports for the string. The iterator reports them in increasing order, so
-	 * the array comes out sorted and is read with a cursor that only moves forward; no set has to be built per layout.
-	 */
-	void CollectBoundaries(IBreakIterator& Iterator, const FString& Text, TArray<int32>& OutBoundaries)
-	{
-		OutBoundaries.Reset();
-		Iterator.SetStringRef(Text);
-		Iterator.ResetToBeginning();
-		int32 Boundary;
-		while ((Boundary = Iterator.MoveToNext()) != INDEX_NONE)
-		{
-			OutBoundaries.Add(Boundary);
-		}
-		Iterator.ClearString();
-	}
-
-	/** Whether Position is in the sorted Boundaries, advancing InOutCursor; positions must be asked in increasing order. */
-	bool IsBoundaryAt(const TArray<int32>& Boundaries, int32 Position, int32& InOutCursor)
-	{
-		while (InOutCursor < Boundaries.Num() && Boundaries[InOutCursor] < Position)
-		{
-			InOutCursor++;
-		}
-		return InOutCursor < Boundaries.Num() && Boundaries[InOutCursor] == Position;
-	}
-
 	/** Indic_Conjunct_Break=Linker (Unicode 15.1): the viramas that join two consonants into a conjunct. */
 	bool IsConjunctLinker(uint32 C)
 	{
@@ -102,67 +75,250 @@ namespace DreamTextBreakerLocal
 		return C == 0x093C || C == 0x09BC || C == 0x0ABC || C == 0x0B3C || C == 0x0C3C || C == 0x0D3B || C == 0x0D3C || C == 0x200D;
 	}
 
-	/** A mark that extends the cluster before it, for a build without ICU: the combining diacritical blocks, the joiners and the variation selectors. */
+	/**
+	 * A code point that extends the cluster before it, for a build without ICU (UAX #29's Extend and ZWJ, the part of them
+	 * text meets): the combining diacritical blocks, the joiners, the variation selectors and their supplement, the skin
+	 * tone modifiers -- which stay on whatever they follow, "a" included -- and the tag characters.
+	 */
 	bool IsGraphemeExtender(uint32 C)
 	{
 		return (C >= 0x0300 && C <= 0x036F) || (C >= 0x1AB0 && C <= 0x1AFF) || (C >= 0x1DC0 && C <= 0x1DFF)
 			|| (C >= 0x20D0 && C <= 0x20FF) || (C >= 0xFE20 && C <= 0xFE2F) || (C >= 0xFE00 && C <= 0xFE0F)
-			|| C == 0x200C || C == 0x200D;
+			|| C == 0x200C || C == 0x200D
+			|| (C >= FDreamUIText_CodePoint::UNICODE_SKIN_TONE_START && C <= FDreamUIText_CodePoint::UNICODE_SKIN_TONE_END)
+			|| (C >= FDreamUIText_CodePoint::UNICODE_TAG_START && C <= FDreamUIText_CodePoint::UNICODE_CANCEL_TAG)
+			|| (C >= 0xE0100 && C <= 0xE01EF);
 	}
+
+	/**
+	 * GB9c: Consonant [Extend Linker]* Linker [Extend Linker]* x Consonant. A conjunct is one character to a reader -- a
+	 * caret inside it, or a line break inside it, splits what is written as one letter. Looks back no further than First.
+	 */
+	bool JoinsConjunct(const TArray<uint32>& Codepoints, int32 First, int32 Index)
+	{
+		if (!IsConjunctConsonant(Codepoints[Index]))
+		{
+			return false;
+		}
+		int32 j = Index - 1;
+		bool bLinker = false;
+		while (j >= First && (IsConjunctLinker(Codepoints[j]) || IsConjunctExtend(Codepoints[j])))
+		{
+			bLinker |= IsConjunctLinker(Codepoints[j]);
+			j--;
+		}
+		return bLinker && j >= First && IsConjunctConsonant(Codepoints[j]);
+	}
+
+	/**
+	 * The subset of UAX #14 a build without ICU breaks by, for one pair of neighbours: after spaces, on either side of an
+	 * ideograph, after a hyphen; never a closing mark starting a line or an opening bracket ending one.
+	 */
+	bool CanBreakBetweenFallback(uint32 Prev, uint32 Cur)
+	{
+		// Breaking BEFORE a space is pointless -- ICU reports the boundary after the run of spaces, and
+		// the layout hangs trailing whitespace outside the line either way.
+		if (FDreamTextBreaker::IsBreakingSpace(Cur))
+		{
+			return false;
+		}
+		bool bAllowed = false;
+		if (FDreamTextBreaker::IsBreakingSpace(Prev))
+		{
+			bAllowed = true;//UAX #14 LB18: break after spaces
+		}
+		else if (FDreamTextBreaker::IsCJKCodepoint(Prev) || FDreamTextBreaker::IsCJKCodepoint(Cur))
+		{
+			// LB8a/LB21/ID: an ideograph may start or end a line, so the boundary between one and
+			// anything else is a break -- which is the whole reason CJK wraps at all.
+			bAllowed = true;
+		}
+		else if (Prev == '-' && !(Cur >= '0' && Cur <= '9'))
+		{
+			bAllowed = true;//LB21b-ish: break after a hyphen, but not inside 3-4
+		}
+		// Kinsoku, the part every implementation keeps: no closing mark starts a line, no opening
+		// bracket ends one.
+		return bAllowed && !FDreamTextBreaker::IsClosingPunctuation(Cur) && !FDreamTextBreaker::IsOpeningPunctuation(Prev);
+	}
+
+#if !UE_ENABLE_ICU
+	void LogNoIcuOnce()
+	{
+		// No ICU means no line-break rules and no word dictionary: the engine's legacy iterator breaks on
+		// whitespace and nothing else, so a script that does not write spaces never wrapped at all. The
+		// fallback is the part of UAX #14 that matters for that -- ideographs break per character,
+		// kinsoku keeps the marks where they belong -- computed straight from the code points.
+		// PhraseWrap has no dictionary to consult here, so a CJK run breaks per character.
+		static bool bLoggedNoICU = false;
+		if (!bLoggedNoICU)
+		{
+			bLoggedNoICU = true;
+			UE_LOG(DreamGUI, Warning, TEXT("[%s].%d This target was built without ICU (UE_ENABLE_ICU=0): line breaking uses DreamGUI's own per-code-point fallback (CJK breaks per character, kinsoku respected). Phrase wrap needs ICU's dictionary and is ignored. (reported once)")
+				, ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
+		}
+	}
+#endif
 }
 
 void FDreamTextBreaker::ComputeGraphemeStarts(const FString& PlainText, const TArray<int32>& ElementPlainStart,
 	const TArray<uint32>& ElementCodepoints, TBitArray<>& OutGraphemeStart)
 {
-	using namespace DreamTextBreakerLocal;
-
 	const int32 ElementCount = ElementPlainStart.Num();
 	OutGraphemeStart.Init(true, ElementCount);
 	if (ElementCount <= 1)return;
-	bool bAnyCombining = false;
-	for (const uint32 C : ElementCodepoints)
+	FDreamTextBoundarySpan Span;
+	Span.PlainText = &PlainText;
+	Span.ElementPlainStart = &ElementPlainStart;
+	Span.ElementCodepoints = &ElementCodepoints;
+	Span.FirstElement = 0;
+	Span.EndElement = ElementCount;
+	Span.PlainBegin = 0;
+	Span.PlainEnd = PlainText.Len();
+	int32 Last = 0;
+	ComputeBoundaries(EDreamTextBoundaryKind::Grapheme, Span, 0, ElementCount, OutGraphemeStart, [](int32, bool) { return false; }, Last);
+}
+
+int32 FDreamTextBreaker::ComputeBoundaries(EDreamTextBoundaryKind Kind, const FDreamTextBoundarySpan& Span, int32 Begin, int32 End,
+	TBitArray<>& OutBits, TFunctionRef<bool(int32 Element, bool bBoundary)> Stop, int32& OutLast)
+{
+	using namespace DreamTextBreakerLocal;
+
+	OutLast = Begin - 1;
+	Begin = FMath::Max(Begin, Span.FirstElement);
+	End = FMath::Min(End, Span.EndElement);
+	if (Begin >= End)return 0;
+	const TArray<int32>& PlainStarts = *Span.ElementPlainStart;
+	const TArray<uint32>& Codepoints = *Span.ElementCodepoints;
+	const bool bGrapheme = Kind == EDreamTextBoundaryKind::Grapheme;
+
+	// One element's bit as it is kept: the span's first element starts a cluster and ends no line, and a consonant a virama
+	// joins to the one before it starts no cluster (GB9c, which the engine's ICU predates).
+	auto Write = [&](int32 Element, bool bBoundary)
 	{
-		if (C >= 0x0300)
+		if (Element == Span.FirstElement)
 		{
-			bAnyCombining = true;
-			break;
+			bBoundary = bGrapheme;
+		}
+		else if (bGrapheme && bBoundary && JoinsConjunct(Codepoints, Span.FirstElement, Element))
+		{
+			bBoundary = false;
+		}
+		OutBits[Element] = bBoundary;
+		OutLast = Element;
+		return Stop(Element, bBoundary);
+	};
+
+	if (bGrapheme)
+	{
+		// Text with nothing at or above U+0300 is all single code points: every element starts a cluster, and ICU is not asked.
+		bool bAnyCombining = false;
+		for (int32 i = Span.FirstElement; i < Span.EndElement; i++)
+		{
+			if (Codepoints[i] >= 0x0300)
+			{
+				bAnyCombining = true;
+				break;
+			}
+		}
+		if (!bAnyCombining)
+		{
+			for (int32 i = Begin; i < End; i++)
+			{
+				if (Write(i, true))break;
+			}
+			return 0;
 		}
 	}
-	if (!bAnyCombining)return;
 
-#if UE_ENABLE_ICU
-	FIterators& Iterators = FIterators::Get();
-	TArray<int32> Boundaries;
-	CollectBoundaries(*Iterators.Character, PlainText, Boundaries);
-	int32 Cursor = 0;
-	for (int32 i = 1; i < ElementCount; i++)
+#if !UE_ENABLE_ICU
+	if (bGrapheme)
 	{
-		OutGraphemeStart[i] = IsBoundaryAt(Boundaries, ElementPlainStart[i], Cursor);
+		for (int32 i = Begin; i < End; i++)
+		{
+			const uint32 C = Codepoints[i];
+			// GB11: a pictograph after a joiner that follows a pictograph is one emoji with them. An emoji element holds its
+			// own ZWJ sequence already; this joins one whose base asked for no emoji presentation ("U+2764 U+200D U+1F525").
+			const bool bJoinedPictograph = i - 2 >= Span.FirstElement && Codepoints[i - 1] == FDreamUIText_CodePoint::UNICODE_ZWJ
+				&& FDreamUIText_CodePoint::IsExtendedPictographic(Codepoints[i - 2]) && FDreamUIText_CodePoint::IsExtendedPictographic(C);
+			if (Write(i, !IsGraphemeExtender(C) && !bJoinedPictograph))break;
+		}
 	}
+	else if (Kind == EDreamTextBoundaryKind::Line)
+	{
+		LogNoIcuOnce();
+		for (int32 i = Begin; i < End; i++)
+		{
+			if (Write(i, i > Span.FirstElement && CanBreakBetweenFallback(Codepoints[i - 1], Codepoints[i])))break;
+		}
+	}
+	else
+	{
+		for (int32 i = Begin; i < End; i++)
+		{
+			if (Write(i, false))break;
+		}
+	}
+	return 0;
 #else
-	for (int32 i = 1; i < ElementCount; i++)
+	FIterators& Iterators = FIterators::Get();
+	IBreakIterator& Iterator = bGrapheme ? *Iterators.Character
+		: (Kind == EDreamTextBoundaryKind::Line ? *Iterators.Line : *Iterators.Word);
+	const int32 SpanLength = Span.PlainEnd - Span.PlainBegin;
+	Iterator.SetStringRef(FStringView(**Span.PlainText + Span.PlainBegin, SpanLength));
+	// From the span's start ICU walks forward as it always did. From inside it, ICU's own random access (following) backs up
+	// to a point its rules call safe and walks forward from there, which finds the boundaries a walk from the start finds --
+	// asked from a boundary of that walk, for the engine's line iterator (see the header).
+	const int32 From = PlainStarts[Begin] - Span.PlainBegin;
+	int32 Boundary = From > 0 ? Iterator.MoveToCandidateAfter(From - 1) : Iterator.MoveToNext();
+	int32 WalkedTo = From;
+	for (int32 i = Begin; i < End; i++)
 	{
-		OutGraphemeStart[i] = !IsGraphemeExtender(ElementCodepoints[i]);
+		const int32 Offset = PlainStarts[i] - Span.PlainBegin;
+		while (Boundary != INDEX_NONE && Boundary < Offset)
+		{
+			Boundary = Iterator.MoveToNext();
+		}
+		WalkedTo = i + 1 < Span.EndElement ? PlainStarts[i + 1] - Span.PlainBegin : SpanLength;
+		if (Write(i, Boundary == Offset))break;
 	}
+	Iterator.ClearString();
+	return FMath::Max(WalkedTo - From, 0);
 #endif
+}
 
-	// GB9c: Consonant [Extend Linker]* Linker [Extend Linker]* x Consonant. A conjunct is one character to a reader --
-	// a caret inside it, or a line break inside it, splits what is written as one letter.
-	for (int32 i = 1; i < ElementCount; i++)
+void FDreamTextBreaker::CombineBreakOpportunities(const TArray<uint32>& ElementCodepoints, const TBitArray<>& LineBoundaries,
+	const TBitArray<>* WordBoundaries, EDreamTextPhraseWrap PhraseWrap, int32 Begin, int32 End, TBitArray<>& OutCanBreakBefore)
+{
+#if UE_ENABLE_ICU
+	const bool bPhrase = PhraseWrap != EDreamTextPhraseWrap::Off && WordBoundaries != nullptr;
+#else
+	// No dictionary without ICU: a CJK run breaks per character, as the log said when the line rules were asked.
+	(void)PhraseWrap;
+	const bool bPhrase = false;
+#endif
+	for (int32 i = Begin; i < End; i++)
 	{
-		if (!OutGraphemeStart[i] || !IsConjunctConsonant(ElementCodepoints[i]))continue;
-		int32 j = i - 1;
-		bool bLinker = false;
-		while (j >= 0 && (IsConjunctLinker(ElementCodepoints[j]) || IsConjunctExtend(ElementCodepoints[j])))
+		bool bBreak = LineBoundaries[i];
+		// Inside a CJK run the line rules allow a break everywhere; the dictionary says where the
+		// words are. Between a CJK character and anything else the line rules already decided.
+		if (bBreak && bPhrase && i > 0 && IsCJKCodepoint(ElementCodepoints[i]) && IsCJKCodepoint(ElementCodepoints[i - 1]))
 		{
-			bLinker |= IsConjunctLinker(ElementCodepoints[j]);
-			j--;
+			bBreak = (*WordBoundaries)[i];
 		}
-		if (bLinker && j >= 0 && IsConjunctConsonant(ElementCodepoints[j]))
-		{
-			OutGraphemeStart[i] = false;
-		}
+		OutCanBreakBefore[i] = bBreak;
 	}
+}
+
+bool FDreamTextBreaker::IsDictionaryLineBreakCodepoint(uint32 C)
+{
+	return (C >= 0x0E00 && C <= 0x0EFF)    // Thai, Lao
+		|| (C >= 0x1000 && C <= 0x109F)    // Myanmar
+		|| (C >= 0x1780 && C <= 0x17FF)    // Khmer
+		|| (C >= 0x1950 && C <= 0x19FF)    // Tai Le, New Tai Lue, Khmer symbols
+		|| (C >= 0x1A20 && C <= 0x1AAF)    // Tai Tham
+		|| (C >= 0xA9E0 && C <= 0xA9FF)    // Myanmar extended-B
+		|| (C >= 0xAA60 && C <= 0xAADF);   // Myanmar extended-A, Tai Viet
 }
 
 bool FDreamTextBreaker::IsCJKCodepoint(uint32 C)
@@ -190,89 +346,38 @@ void FDreamTextBreaker::ComputeFallbackBreakOpportunities(const TArray<uint32>& 
 	OutCanBreakBefore.Init(false, ElementCount);
 	for (int32 i = 1; i < ElementCount; i++)
 	{
-		const uint32 Prev = ElementCodepoints[i - 1];
-		const uint32 Cur = ElementCodepoints[i];
-		// Breaking BEFORE a space is pointless -- ICU reports the boundary after the run of spaces, and
-		// the layout hangs trailing whitespace outside the line either way.
-		if (IsBreakingSpace(Cur))continue;
-
-		bool bAllowed = false;
-		if (IsBreakingSpace(Prev))
-		{
-			bAllowed = true;//UAX #14 LB18: break after spaces
-		}
-		else if (IsCJKCodepoint(Prev) || IsCJKCodepoint(Cur))
-		{
-			// LB8a/LB21/ID: an ideograph may start or end a line, so the boundary between one and
-			// anything else is a break -- which is the whole reason CJK wraps at all.
-			bAllowed = true;
-		}
-		else if (Prev == '-' && !(Cur >= '0' && Cur <= '9'))
-		{
-			bAllowed = true;//LB21b-ish: break after a hyphen, but not inside 3-4
-		}
-		if (!bAllowed)continue;
-		// Kinsoku, the part every implementation keeps: no closing mark starts a line, no opening
-		// bracket ends one.
-		if (IsClosingPunctuation(Cur))continue;
-		if (IsOpeningPunctuation(Prev))continue;
-		OutCanBreakBefore[i] = true;
+		OutCanBreakBefore[i] = DreamTextBreakerLocal::CanBreakBetweenFallback(ElementCodepoints[i - 1], ElementCodepoints[i]);
 	}
 }
 
 void FDreamTextBreaker::ComputeBreakOpportunities(const FString& PlainText, const TArray<int32>& ElementPlainStart,
 	const TArray<uint32>& ElementCodepoints, EDreamTextPhraseWrap PhraseWrap, TBitArray<>& OutCanBreakBefore)
 {
-	using namespace DreamTextBreakerLocal;
-
 	const int32 ElementCount = ElementPlainStart.Num();
 	OutCanBreakBefore.Init(false, ElementCount);
 	if (ElementCount == 0)return;
-
-#if !UE_ENABLE_ICU
-	// No ICU means no line-break rules and no word dictionary: the engine's legacy iterator breaks on
-	// whitespace and nothing else, so a script that does not write spaces never wrapped at all. The
-	// fallback below is the part of UAX #14 that matters for that -- ideographs break per character,
-	// kinsoku keeps the marks where they belong -- computed straight from the code points.
-	// PhraseWrap has no dictionary to consult here, so a CJK run breaks per character.
-	static bool bLoggedNoICU = false;
-	if (!bLoggedNoICU)
-	{
-		bLoggedNoICU = true;
-		UE_LOG(DreamGUI, Warning, TEXT("[%s].%d This target was built without ICU (UE_ENABLE_ICU=0): line breaking uses DreamGUI's own per-code-point fallback (CJK breaks per character, kinsoku respected). Phrase wrap needs ICU's dictionary and is ignored. (reported once)")
-			, ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
-	}
-	ComputeFallbackBreakOpportunities(ElementCodepoints, OutCanBreakBefore);
-	return;
-#else
-
-	FIterators& Iterators = FIterators::Get();
-
-	TArray<int32> LineBoundaries;
-	CollectBoundaries(*Iterators.Line, PlainText, LineBoundaries);
-
-	TArray<int32> WordBoundaries;
+	FDreamTextBoundarySpan Span;
+	Span.PlainText = &PlainText;
+	Span.ElementPlainStart = &ElementPlainStart;
+	Span.ElementCodepoints = &ElementCodepoints;
+	Span.FirstElement = 0;
+	Span.EndElement = ElementCount;
+	Span.PlainBegin = 0;
+	Span.PlainEnd = PlainText.Len();
+	auto NoStop = [](int32, bool) { return false; };
+	int32 Last = 0;
+	TBitArray<> LineBoundaries;
+	LineBoundaries.Init(false, ElementCount);
+	ComputeBoundaries(EDreamTextBoundaryKind::Line, Span, 0, ElementCount, LineBoundaries, NoStop, Last);
 	const bool bPhrase = PhraseWrap != EDreamTextPhraseWrap::Off;
+	TBitArray<> WordBoundaries;
 	if (bPhrase)
 	{
-		CollectBoundaries(*Iterators.Word, PlainText, WordBoundaries);
+		WordBoundaries.Init(false, ElementCount);
+		ComputeBoundaries(EDreamTextBoundaryKind::Word, Span, 0, ElementCount, WordBoundaries, NoStop, Last);
 	}
-
-	int32 LineCursor = 0;
-	int32 WordCursor = 0;
-	for (int32 i = 1; i < ElementCount; i++)
-	{
-		const int32 Start = ElementPlainStart[i];
-		if (!IsBoundaryAt(LineBoundaries, Start, LineCursor))continue;
-		if (bPhrase && IsCJKCodepoint(ElementCodepoints[i]) && IsCJKCodepoint(ElementCodepoints[i - 1]))
-		{
-			// Inside a CJK run the line rules allow a break everywhere; the dictionary says where the
-			// words are. Between a CJK character and anything else the line rules already decided.
-			if (!IsBoundaryAt(WordBoundaries, Start, WordCursor))continue;
-		}
-		OutCanBreakBefore[i] = true;
-	}
-#endif
+	CombineBreakOpportunities(ElementCodepoints, LineBoundaries, bPhrase ? &WordBoundaries : nullptr, PhraseWrap, 0, ElementCount,
+		OutCanBreakBefore);
 }
 
 bool FDreamTextBreaker::IsClosingPunctuation(uint32 C)

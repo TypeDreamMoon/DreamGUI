@@ -24,6 +24,7 @@
 #include "Core/Components/DreamText.h"
 #include "Core/Components/DreamTexture.h"
 #include "Core/Components/DreamWidget.h"
+#include "Core/DreamGUISettings.h"
 #include "Core/DreamUIFontData_FreeTypeRender.h"
 #include "Core/DreamUISettings.h"
 #include "Utils/DreamUIUtils.h"
@@ -214,6 +215,31 @@ namespace DreamGalleryStage
 		Settings->MSAASampleCount = static_cast<EDreamUIRendererMSAASampleCount>(InSamples > 1 ? InSamples : 1);
 	}
 
+	void FGalleryStage::UseSmallTextCoverage(bool bInUse)
+	{
+		UDreamGUISettings* Settings = GetMutableDefault<UDreamGUISettings>();
+		if (!SavedSmallTextCoverage.IsSet())
+		{
+			SavedSmallTextCoverage = Settings->bSmallTextCoverage;
+		}
+		Settings->bSmallTextCoverage = bInUse;
+	}
+
+	void FGalleryStage::UseLayoutSize(const FVector2D& InLayoutSize)
+	{
+		UDreamCanvas* Canvas = CanvasComponent.Get();
+		if (!IsValid(Canvas) || InLayoutSize.X <= 0.0 || InLayoutSize.Y <= 0.0)
+		{
+			return;
+		}
+		// The canvas scaler matching the width: the canvas scale is the target's width over the reference's, and the root
+		// is the reference wide and the target's aspect tall -- InLayoutSize, for a target of the same aspect.
+		Canvas->SetScaleMode(EDreamCanvasScaleMode::ScaleWithScreenSize);
+		Canvas->SetScreenMatchMode(EDreamCanvasScreenMatchMode::MatchWidthOrHeight);
+		Canvas->SetMatchFromWidthToHeight(0.0f);
+		Canvas->SetReferenceResolution(InLayoutSize);
+	}
+
 	void FGalleryStage::KeepAlive(UObject* InObject)
 	{
 		if (InObject != nullptr)
@@ -287,6 +313,10 @@ namespace DreamGalleryStage
 		{
 			Settings->AntiAliasingMethod = SavedAntiAliasing.GetValue();
 			Settings->MSAASampleCount = SavedSampleCount;
+		}
+		if (SavedSmallTextCoverage.IsSet())
+		{
+			GetMutableDefault<UDreamGUISettings>()->bSmallTextCoverage = SavedSmallTextCoverage.GetValue();
 		}
 		if (UDreamWidget* Root = RootWidget.Get(); IsValid(Root))
 		{
@@ -454,7 +484,9 @@ namespace DreamGalleryStage
 	{
 		const FString GoldenPath = FPaths::Combine(FDreamPixelProbe::GetGoldenDirectory(), InName + TEXT(".png"));
 		const bool bWriteGoldens = FParse::Param(FCommandLine::Get(), TEXT("DreamGUIWriteGoldens"));
-		if (InMissing == EMissingGolden::Fail && !bWriteGoldens && !FPaths::FileExists(GoldenPath))
+		// A pending golden is ExpectMatchesGolden's to report: missing or different, it warns.
+		const bool bPending = !FDreamPixelProbe::GetPendingGoldenReason(InName).IsEmpty();
+		if (InMissing == EMissingGolden::Fail && !bWriteGoldens && !bPending && !FPaths::FileExists(GoldenPath))
 		{
 			const FString CapturePath = FDreamPixelProbe::SaveCapture(InPixels, InSize, InName);
 			InTest.AddError(FString::Printf(TEXT("%s has no golden image at %s. This run's picture is %s: look at it, and once it is right, run again with -DreamGUIWriteGoldens on the editor's command line to write it."),

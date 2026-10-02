@@ -6,6 +6,7 @@
 #include "Core/DreamUIWidgetRegistry.h"
 
 #include "Core/DreamUIBuilder.h"
+#include "Core/DreamUIInputServices.h"
 #include "Core/DreamUserWidget.h"
 #include "Core/DreamWidgetTree.h"
 #include "Core/Components/DreamImage.h"
@@ -15,8 +16,8 @@
 #include "Core/Components/DreamText.h"
 #include "Core/Components/DreamVisual.h"
 #include "Core/Components/DreamWidget.h"
-#include "Event/DreamEventSystem.h"
 #include "Event/DreamPointerEventData.h"
+#include "Interaction/DreamUIFocusReturn.h"
 #include "Interaction/UIButton.h"
 #include "Interaction/UISelectable.h"
 #include "Interaction/UIToggle.h"
@@ -159,7 +160,7 @@ void UDreamTabView::AttachPage(UDreamWidget* InPage)
 	}
 }
 
-void UDreamTabView::RebuildTabs()
+void UDreamTabView::RebuildTabs(const TArray<FTabFocusCarry>* InCarriedFocus)
 {
 	if (StripNode == nullptr)
 	{
@@ -169,6 +170,11 @@ void UDreamTabView::RebuildTabs()
 	}
 
 	using namespace DreamUI;
+
+	// Every tab is about to be destroyed, the one under the pad's cursor included -- and a player who
+	// closed a tab with the pad was standing on its close button. Taken now, by what outlives the
+	// widgets, and put back once the new strip stands.
+	const TArray<FTabFocusCarry> CarriedFocus = InCarriedFocus != nullptr ? *InCarriedFocus : CaptureTabFocus();
 
 	for (FDreamTabViewTab& Tab : Tabs)
 	{
@@ -354,6 +360,163 @@ void UDreamTabView::RebuildTabs()
 	ActiveTabIndex = SanitizeTabIndex(ActiveTabIndex);
 
 	ApplyStyle();
+	// After the style push, which is what makes a disabled tab refuse focus: the carry must not land
+	// on a tab the push is about to switch off.
+	RestoreTabFocus(CarriedFocus);
+}
+
+TArray<UDreamTabView::FTabFocusCarry> UDreamTabView::CaptureTabFocus(int32 InOnlyTabIndex, const UDreamWidget* InClosingPage) const
+{
+	TArray<FTabFocusCarry> Carried;
+	const UDreamUIInputServices* Services = UDreamUIInputServices::Get(this);
+	if (Services == nullptr || Tabs.Num() == 0)
+	{
+		// No input in this world -- the designer's authoring tree, a headless test -- so nobody's focus to keep.
+		return Carried;
+	}
+	TArray<int32> UserIndices;
+	Services->GetUserIndices(UserIndices);
+	for (const int32 UserIndex : UserIndices)
+	{
+		const UDreamWidget* Focused = Services->GetFocusedWidget(UserIndex);
+		if (!IsValid(Focused))
+		{
+			continue;
+		}
+		for (int32 Index = 0; Index < Tabs.Num(); ++Index)
+		{
+			if (InOnlyTabIndex != INDEX_NONE && Index != InOnlyTabIndex)
+			{
+				continue;
+			}
+			UDreamWidget* TabNode = Tabs[Index].TabNode.Get();
+			UDreamWidget* Page = GetPage(Index);
+			const bool bOnTab = IsValid(TabNode) && (Focused == TabNode || Focused->IsChildOf(TabNode));
+			const bool bInClosingPage = InClosingPage != nullptr && Page == InClosingPage
+				&& (Focused == Page || Focused->IsChildOf(Page));
+			if (!bOnTab && !bInClosingPage)
+			{
+				continue;
+			}
+			FTabFocusCarry& Entry = Carried.AddDefaulted_GetRef();
+			Entry.UserIndex = UserIndex;
+			Entry.TabNode = TabNode;
+			Entry.Page = Page;
+			// The AUTHORED caption only. A tab with none wears its page's node id or its ordinal, and an
+			// ordinal names whichever tab stands at that place after the rebuild, not this one.
+			Entry.Caption = TabLabels.IsValidIndex(Index) ? TabLabels[Index] : FText::GetEmpty();
+			Entry.TabIndex = Index;
+			break;
+		}
+	}
+	return Carried;
+}
+
+int32 UDreamTabView::FindCarriedTab(const FTabFocusCarry& InCarried) const
+{
+	// The widget, while it lives: a restyle keeps every tab, and then the tab IS its identity.
+	if (const UDreamWidget* TabNode = InCarried.TabNode.Get())
+	{
+		const int32 Same = Tabs.IndexOfByPredicate([TabNode](const FDreamTabViewTab& InTab) { return InTab.TabNode.Get() == TabNode; });
+		if (Same != INDEX_NONE)
+		{
+			return Same;
+		}
+	}
+	// A rebuilt tab is a new widget, so then what it stands for: its page, which is one per tab and
+	// carries its place in the switcher...
+	if (const UDreamWidget* Page = InCarried.Page.Get(); Page != nullptr && PageHostNode != nullptr && Page->GetParent() == PageHostNode)
+	{
+		const int32 PageIndex = PageHostNode->GetChildren().IndexOfByKey(Page);
+		if (Tabs.IsValidIndex(PageIndex))
+		{
+			return PageIndex;
+		}
+	}
+	// ...else its caption, which moves with a relabelled strip. Of two tabs with the same caption, the one
+	// nearest where this one stood.
+	if (!InCarried.Caption.IsEmpty())
+	{
+		int32 Nearest = INDEX_NONE;
+		for (int32 Index = 0; Index < Tabs.Num(); ++Index)
+		{
+			if (TabLabels.IsValidIndex(Index) && TabLabels[Index].EqualTo(InCarried.Caption)
+				&& (Nearest == INDEX_NONE || FMath::Abs(Index - InCarried.TabIndex) < FMath::Abs(Nearest - InCarried.TabIndex)))
+			{
+				Nearest = Index;
+			}
+		}
+		return Nearest;
+	}
+	return INDEX_NONE;
+}
+
+void UDreamTabView::RestoreTabFocus(const TArray<FTabFocusCarry>& InCarried)
+{
+	if (InCarried.Num() == 0)
+	{
+		return;
+	}
+	UDreamUIInputServices* Services = UDreamUIInputServices::Get(this);
+	if (Services == nullptr)
+	{
+		return;
+	}
+	// A tab that can take focus now: one the player could press. Asked here rather than left to
+	// FocusForNavigation's refusal, because the tab being refused may be the very one focus is still on.
+	const auto UsableTab = [this](int32 InIndex) -> UDreamWidget*
+	{
+		if (!Tabs.IsValidIndex(InIndex))
+		{
+			return nullptr;
+		}
+		const FDreamTabViewTab& Tab = Tabs[InIndex];
+		return IsValid(Tab.TabNode) && IsValid(Tab.Toggle) && Tab.Toggle->IsInteractable() ? Tab.TabNode.Get() : nullptr;
+	};
+	for (const FTabFocusCarry& Carried : InCarried)
+	{
+		TArray<UDreamWidget*, TInlineAllocator<4>> Candidates;
+		const int32 Found = FindCarriedTab(Carried);
+		Candidates.Add(UsableTab(Found));
+		// Its right neighbour: the one after it when it is still here and cannot take focus (disabled),
+		// and the one that slid into its place when it is gone -- which is also where a tab with nothing
+		// but a place to know it by now stands.
+		Candidates.Add(UsableTab(Found != INDEX_NONE ? Found + 1 : Carried.TabIndex));
+		for (int32 Index = Tabs.Num() - 1; Index >= 0; --Index)
+		{
+			if (UDreamWidget* LastUsable = UsableTab(Index))
+			{
+				Candidates.Add(LastUsable);
+				break;
+			}
+		}
+		if (const UUISelectable* FirstInView = UUISelectable::FindDefaultSelectableIn(this, this))
+		{
+			Candidates.Add(FirstInView->GetWidget());
+		}
+
+		bool bPlaced = false;
+		for (UDreamWidget* Candidate : Candidates)
+		{
+			// FocusForNavigation still has the last word -- it refuses anything not drawn or not in play --
+			// and changes nothing when it refuses, so the walk simply goes on to the next.
+			if (IsValid(Candidate) && Services->FocusForNavigation(Candidate, Carried.UserIndex))
+			{
+				bPlaced = true;
+				break;
+			}
+		}
+		if (!bPlaced)
+		{
+			// Nowhere on this view can hold it. A focus that is still here -- on a part this view is putting
+			// away -- is cleared rather than left on something hidden; a destroyed tab has let go already.
+			UDreamWidget* Focused = Services->GetFocusedWidget(Carried.UserIndex);
+			if (IsValid(Focused) && (Focused == this || Focused->IsChildOf(this)))
+			{
+				Services->ClearFocus(Focused, Carried.UserIndex, 0);
+			}
+		}
+	}
 }
 
 void UDreamTabView::ApplyStyle()
@@ -501,8 +664,12 @@ void UDreamTabView::AddPage(UDreamWidget* InPage)
 
 void UDreamTabView::SetTabLabels(const TArray<FText>& InLabels)
 {
+	// The pad's focus is taken while the strip still wears the old captions. A rebuilt tab is found again by the caption
+	// it had, and taken after the write, a focused tab's caption was read from the new list -- whatever caption that list
+	// put at its place, so a tab moved by a relabelling left focus behind on the tab that took its place.
+	const TArray<FTabFocusCarry> CarriedFocus = CaptureTabFocus();
 	TabLabels = InLabels;
-	RebuildTabs();
+	RebuildTabs(&CarriedFocus);
 }
 
 int32 UDreamTabView::SanitizeTabIndex(int32 InIndex) const
@@ -527,8 +694,7 @@ void UDreamTabView::SetActiveTabIndex(int32 InIndex)
 {
 	const int32 Sanitized = SanitizeTabIndex(InIndex);
 	const bool bChanged = ActiveTabIndex != Sanitized;
-	ActiveTabIndex = Sanitized;
-	ApplyActiveTab();
+	SwitchActiveTab(Sanitized);
 	if (bChanged)
 	{
 		OnTabChanged.Broadcast(Sanitized), OnValueChangedBP.Broadcast(Sanitized);
@@ -537,6 +703,12 @@ void UDreamTabView::SetActiveTabIndex(int32 InIndex)
 			// AFTER the broadcast, so a consumer that rearranges the page from its handler has already
 			// done so and focus lands in the page as it now stands. Only for a user switch -- see
 			// bTabChangeFromUser.
+			//
+			// And after a layout of the switcher, now: moving the index only marks it dirty, and the
+			// new page is shown -- its selectables made findable -- at its next arrange. Searched before
+			// that, the page was still collapsed, nothing in it counted as navigable, and focus stayed
+			// on the tab.
+			UDreamWidget::RebuildLayoutImmediately(PageHostNode);
 			FocusActivePage();
 		}
 	}
@@ -544,7 +716,26 @@ void UDreamTabView::SetActiveTabIndex(int32 InIndex)
 
 void UDreamTabView::SetActiveTabIndexWithoutNotify(int32 InIndex)
 {
-	ActiveTabIndex = SanitizeTabIndex(InIndex);
+	SwitchActiveTab(SanitizeTabIndex(InIndex));
+}
+
+void UDreamTabView::SwitchActiveTab(int32 InSanitizedIndex)
+{
+	if (ActiveTabIndex != InSanitizedIndex)
+	{
+		// The page being left is hidden at the switcher's next arrange, and hiding it clears any focus
+		// still inside it. Before that, focus there moves to the tab now open -- the strip the player is
+		// standing over -- with the pad's cursor, rather than to nowhere. Asked of the switcher before the
+		// index moves, while it still answers with the old page.
+		UDreamWidget* LeavingPage = GetActivePage();
+		const int32 OpenedResolved = Tabs.Num() > 0 ? FMath::Clamp(InSanitizedIndex, 0, Tabs.Num() - 1) : INDEX_NONE;
+		UDreamWidget* OpenedTab = Tabs.IsValidIndex(OpenedResolved) ? Tabs[OpenedResolved].TabNode.Get() : nullptr;
+		if (IsValid(LeavingPage))
+		{
+			FDreamFocusReturn::MoveFocusOutOf(LeavingPage, OpenedTab);
+		}
+	}
+	ActiveTabIndex = InSanitizedIndex;
 	ApplyActiveTab();
 }
 
@@ -697,10 +888,14 @@ void UDreamTabView::SetTabEnabled(int32 InIndex, bool bInEnabled)
 	{
 		return;
 	}
+	// A tab switched off under the pad's cursor would keep focus on a part that refuses every press. The
+	// players on it, taken before it goes, are moved off it once the push below has disabled it.
+	const TArray<FTabFocusCarry> CarriedFocus = bInEnabled ? TArray<FTabFocusCarry>() : CaptureTabFocus(InIndex);
 	TabEnabled[InIndex] = bInEnabled;
 	// The flag is pushed onto the toggles in the style loop, which is also where the disabled colour
 	// comes from -- so this is a restyle and never a rebuild.
 	ApplyStyle();
+	RestoreTabFocus(CarriedFocus);
 }
 
 void UDreamTabView::CloseTab(int32 InIndex)
@@ -716,6 +911,26 @@ void UDreamTabView::CloseTab(int32 InIndex)
 	// BEFORE anything is destroyed, so a consumer that wants to keep the page can take it out of the
 	// switcher from the handler -- the order UDreamDialog::Close broadcasts in, and its reason.
 	OnTabClosed.Broadcast(InIndex);
+
+	// The pad's focus, taken before the page and the tabs go. A close from the pad is a press on the
+	// tab's own close button, which the rebuild destroys with the tab; focus in the page being closed
+	// goes the same way. Both are carried as focus on this tab, which is gone afterwards -- so its
+	// identity is dropped and it lands on whichever tab takes its place -- while focus on any other
+	// tab follows that tab to its new place.
+	TArray<FTabFocusCarry> CarriedFocus = CaptureTabFocus(INDEX_NONE, GetPage(InIndex));
+	for (FTabFocusCarry& Carried : CarriedFocus)
+	{
+		if (Carried.TabIndex == InIndex)
+		{
+			Carried.TabNode.Reset();
+			Carried.Page.Reset();
+			Carried.Caption = FText::GetEmpty();
+		}
+		else if (Carried.TabIndex > InIndex)
+		{
+			--Carried.TabIndex;
+		}
+	}
 
 	if (UDreamWidget* Page = GetPage(InIndex))
 	{
@@ -741,7 +956,7 @@ void UDreamTabView::CloseTab(int32 InIndex)
 	{
 		--ActiveTabIndex;
 	}
-	RebuildTabs();
+	RebuildTabs(&CarriedFocus);
 	BroadcastActiveTabMoved(ActiveBefore, bClosingOpenTab);
 }
 
@@ -951,10 +1166,12 @@ void UDreamTabView::FocusActivePage()
 		// dropping it somewhere arbitrary.
 		return;
 	}
-	// The player whose tab view it is, not player 0.
-	if (UDreamEventSystem* Events = UDreamEventSystem::GetDreamEventSystemInstance(this, GetOwningPlayerIndex()))
+	// The player whose tab view it is, not player 0 -- and through FocusForNavigation, which moves that
+	// player's navigation cursor with the focus. The event system's own selection left the cursor on the
+	// tab, so the next stick press started from the strip as though nothing had moved.
+	if (UDreamUIInputServices* Services = UDreamUIInputServices::Get(this))
 	{
-		Events->SetSelectComponentWithDefault(First->GetWidget());
+		Services->FocusForNavigation(First->GetWidget(), GetOwningPlayerIndex());
 	}
 }
 
@@ -1005,6 +1222,18 @@ void UDreamTabView::SetTabTemplateClass(TSubclassOf<UDreamUserWidget> InTabTempl
 
 void UDreamTabView::SetTabsClosable(bool bInTabsClosable)
 {
+	if (!bInTabsClosable && bTabsClosable)
+	{
+		// The close buttons go to sleep in the push below, and a button asleep under the pad's cursor
+		// holds a focus nothing can use. Before that, focus on one goes to the tab it closes.
+		for (const FDreamTabViewTab& Tab : Tabs)
+		{
+			if (IsValid(Tab.CloseNode))
+			{
+				FDreamFocusReturn::MoveFocusOutOf(Tab.CloseNode, Tab.TabNode);
+			}
+		}
+	}
 	bTabsClosable = bInTabsClosable;
 	ApplyStyle();
 }
@@ -1021,10 +1250,21 @@ void UDreamTabView::SetFocusPageOnTabChange(bool bInFocusPageOnTabChange)
 
 void UDreamTabView::SetTabEnabledStates(const TArray<bool>& InTabEnabled)
 {
+	// SetTabEnabled's rule, for every tab this switches off at once.
+	TArray<FTabFocusCarry> CarriedFocus;
+	for (int32 Index = 0; Index < Tabs.Num(); ++Index)
+	{
+		const bool bEnabledAfter = !InTabEnabled.IsValidIndex(Index) || InTabEnabled[Index];
+		if (IsTabEnabled(Index) && !bEnabledAfter)
+		{
+			CarriedFocus.Append(CaptureTabFocus(Index));
+		}
+	}
 	TabEnabled = InTabEnabled;
 	// The flags are pushed onto the toggles in the style loop, which is also where the disabled colour
 	// comes from -- a restyle, never a rebuild.
 	ApplyStyle();
+	RestoreTabFocus(CarriedFocus);
 }
 
 // The tag this class answers to in .dui.

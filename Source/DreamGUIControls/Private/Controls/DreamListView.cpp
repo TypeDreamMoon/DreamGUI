@@ -373,17 +373,25 @@ void UDreamListViewBase::RefreshContentHeight(const FDreamListStyle& InStyle)
 int32 UDreamListViewBase::ResolveWindowSize() const
 {
 	const float ViewportMain = GetViewportMainExtent();
+	const float Pitch = GetRowPitch();
 	// A viewport with no resolvable extent is one nothing has arranged and nobody authored -- the
 	// first frame of a control a consumer's layout has not reached yet. A fixed window rather than a
 	// guess of zero, because a zero-row window is a list that stays blank until something else
 	// happens to resize it; the dimensions handler re-asks the moment there IS an answer.
-	const int32 FromViewport = ViewportMain > KINDA_SMALL_NUMBER
-		? FMath::CeilToInt(ViewportMain / GetRowPitch()) + 1
+	//
+	// A pitch under one unit gets the same window, for the same reason: a style with no row height (an
+	// old asset, a zero handed to SetStyle) stacks every row on the one before it, so "how many fit"
+	// comes out as all of them -- and the widget per item that followed drew nothing at all.
+	const int64 FromViewport = (ViewportMain > KINDA_SMALL_NUMBER && Pitch >= 1.0f)
+		? static_cast<int64>(FMath::CeilToDouble(static_cast<double>(ViewportMain) / Pitch)) + 1
 		: 16;
 	// LINES times the column count: the arithmetic above is about how far there is to scroll, and a
-	// line of a tile view holds several widgets.
-	const int32 Lines = FMath::Max(1, FromViewport + FMath::Max(0, VirtualizationOverscan) * 2);
-	return Lines * FMath::Max(1, ResolveColumnCount());
+	// line of a tile view holds several widgets. In int64 and clamped to the source, because a grid of
+	// small tiles in a tall viewport can multiply past what an int32 holds, and no window is ever
+	// larger than the items it shows.
+	const int64 Lines = FMath::Max<int64>(1, FromViewport + FMath::Max(0, VirtualizationOverscan) * 2);
+	const int64 Window = Lines * FMath::Max(1, ResolveColumnCount());
+	return static_cast<int32>(FMath::Clamp<int64>(Window, 0, VisibleItemIndices.Num()));
 }
 
 void UDreamListViewBase::RebuildRows()
@@ -471,6 +479,14 @@ void UDreamListViewBase::RebuildRows()
 	// The batch boundary, and it IS the return of this function: this control rebuilds synchronously,
 	// so there is no pending request for a later frame to complete and nothing else to wait for.
 	OnRowsGenerated.Broadcast(RowNodes.Num());
+	// A selection asked for before its items arrived landed in this rebuild (ReconcileSelection). Said
+	// once, and after the rows it selects exist, the way a source edit that takes a selection away is:
+	// a binding that pushed the index first hears it back only now, when it means a row.
+	if (bAnnouncePendingSelection)
+	{
+		bAnnouncePendingSelection = false;
+		AnnounceSelection();
+	}
 }
 
 void UDreamListViewBase::ResizePool(int32 InPoolSize)
@@ -554,11 +570,14 @@ void UDreamListViewBase::RefreshVisibleWindow(bool bInRebindKeptRows)
 		// the column count. Clamped so the LAST window is a full one rather than a short one with
 		// blank rows after it -- and the clamp is allowed to land mid-line, because a row's place is
 		// computed from its own display index rather than from where the window happens to start.
-		const int32 Columns = FMath::Max(1, ResolveColumnCount());
-		const int32 FirstVisibleLine = FMath::FloorToInt(FMath::Max(0.0f, Offset - GetMainPadStart(Active)) / GetRowPitch());
-		const int32 FirstLine = FMath::Max(0, FirstVisibleLine - FMath::Max(0, VirtualizationOverscan));
-		FirstDisplayIndex = FMath::Clamp(FirstLine * Columns,
-			0, FMath::Max(0, RowCount - RowNodes.Num()));
+		// In int64 for the reason ResolveWindowSize gives: a pitch of a fraction of a unit divides an
+		// ordinary offset into more lines than an int32 can count.
+		const int64 Columns = FMath::Max(1, ResolveColumnCount());
+		const double LinesBefore = FMath::FloorToDouble(FMath::Max(0.0f, Offset - GetMainPadStart(Active)) / GetRowPitch());
+		const int64 FirstVisibleLine = static_cast<int64>(FMath::Min(LinesBefore, static_cast<double>(MAX_int32)));
+		const int64 FirstLine = FMath::Max<int64>(0, FirstVisibleLine - FMath::Max(0, VirtualizationOverscan));
+		FirstDisplayIndex = static_cast<int32>(FMath::Clamp<int64>(FirstLine * Columns,
+			0, FMath::Max(0, RowCount - RowNodes.Num())));
 	}
 	WindowStart = FirstDisplayIndex;
 	const int32 WindowEnd = FMath::Min(RowCount, FirstDisplayIndex + RowNodes.Num());
@@ -690,6 +709,8 @@ void UDreamListViewBase::HandleScrollViewMoved(FVector2D InProgress)
 		|| (ScrollBehaviour != nullptr && ScrollBehaviour->IsScrolling());
 	if (!bStillMoving)
 	{
+		// A reveal's glide that has landed, or been stopped, is no longer where the list is heading.
+		bRevealGlideActive = false;
 		OnListViewFinishedScrolling.Broadcast(Offset, GetViewFraction());
 	}
 }
@@ -1415,6 +1436,11 @@ void UDreamListViewBase::HandleScrollGesture(EDreamScrollDragPhase InPhase, bool
 	const float Fraction = GetViewFraction();
 	// Whatever the device: this is what keeps "finished" from being announced in the middle of a drag.
 	bScrollDragInProgress = InPhase != EDreamScrollDragPhase::End;
+	if (InPhase == EDreamScrollDragPhase::Begin)
+	{
+		// A drag stops a reveal's glide where it got to, so the list is no longer heading for its end.
+		bRevealGlideActive = false;
+	}
 	if (InPhase == EDreamScrollDragPhase::End && (ScrollBehaviour == nullptr || !ScrollBehaviour->IsScrolling()))
 	{
 		// Let go with no momentum: no further move is coming to announce the end, so this is it.
@@ -1512,7 +1538,11 @@ void UDreamListViewBase::HandleDimensionsChanged(bool bPivotChanged, bool bWidth
 void UDreamListViewBase::RefreshScrollFurniture(const FDreamListStyle& InStyle)
 {
 	const bool bBarVisible = ShouldShowScrollBar();
-	const float Gutter = bBarVisible ? InStyle.Bar.Thickness : 0.0f;
+	// A Hidden bar keeps its room while the rows overflow, as a Hidden Slate bar keeps its slot (UDreamScrollBox's
+	// rule), so a list that stops overflowing gives the room back and one that starts takes it, drawn or not.
+	const bool bReserveGutter = bBarVisible || (bShowScrollBar
+		&& ScrollBarVisibility == EDreamScrollBoxScrollbarVisibility::Hidden && IsListContentOverflowing());
+	const float Gutter = bReserveGutter ? InStyle.Bar.Thickness : 0.0f;
 	const bool bHorizontal = IsHorizontalList();
 	// What the content was just measured with, by the caller's RefreshContentHeight.
 	const int32 ColumnsMeasured = ResolveColumnCount();
@@ -1585,10 +1615,20 @@ bool UDreamListViewBase::ShouldShowScrollBar() const
 	{
 		return false;
 	}
-	if (ScrollBarVisibility == EDreamScrollBoxScrollbarVisibility::Permanent)
+	switch (ScrollBarVisibility)
 	{
+	case EDreamScrollBoxScrollbarVisibility::Permanent:
 		return true;
+	case EDreamScrollBoxScrollbarVisibility::Hidden:
+		// Never drawn; the list still scrolls by wheel, drag and code. Its room is RefreshScrollFurniture's question.
+		return false;
+	default:
+		return IsListContentOverflowing();
 	}
+}
+
+bool UDreamListViewBase::IsListContentOverflowing() const
+{
 	if (ColumnNode == nullptr || ViewportNode == nullptr)
 	{
 		return true;
@@ -2295,6 +2335,8 @@ void UDreamListViewBase::SetRowTemplateClass(TSubclassOf<UDreamUserWidget> InCla
 
 void UDreamListViewBase::SetSelectedIndices(const TArray<int32>& InIndices)
 {
+	// A selection stated outright replaces one still waiting for its items.
+	PendingSelectedIndex = INDEX_NONE;
 	SelectedIndices = InIndices;
 	// The anchor is re-derived from the set rather than left pointing at whatever it was, and the
 	// rows are repainted: a raw write here used to be picked up only on the next rebuild, which is
@@ -2314,8 +2356,9 @@ void UDreamListViewBase::NavigateToIndex(int32 InItemIndex)
 	}
 	// Both halves, because doing them separately is always wrong the same way: a selection that is
 	// off screen is a selection nobody can see they made. Unless the author asked for navigation to
-	// reveal only -- a list you scroll through without losing the line you were on.
-	if (bSelectItemOnNavigation)
+	// reveal only -- a list you scroll through without losing the line you were on -- or the list
+	// selects nothing at all, which SelectionMode None says and SetSelectedIndex now honours too.
+	if (bSelectItemOnNavigation && SelectionMode != EUIListSelectionMode::None)
 	{
 		SetSelectedIndex(InItemIndex);
 	}
@@ -2424,8 +2467,9 @@ bool UDreamListViewBase::MoveNavigationToItem(int32 InItemIndex, TScriptInterfac
 		EndInertialScrolling();
 	}
 	// Revealed BEFORE the row is named: a recycling list re-binds its window while it scrolls, and the
-	// row that shows the item afterwards is the one focus has to land on.
-	ScrollItemIntoView(InItemIndex);
+	// row that shows the item afterwards is the one focus has to land on. At once, whatever
+	// bEnableScrollAnimation says -- a glide would name a row the window has not reached yet.
+	ScrollItemIntoView(InItemIndex, /*bInAnimate*/false);
 	return KeepNavigationOnItem(InItemIndex, OutResult);
 }
 
@@ -2582,8 +2626,13 @@ void UDreamListViewBase::SetAllowKeepPreselectedItems(bool bInAllow)
 	if (!bInAllow)
 	{
 		// Turning it off is what discards the parked set: leaving it would mean a selection landing
-		// later from a source the author has stopped waiting for.
+		// later from a source the author has stopped waiting for. The one index kept for an EMPTY
+		// source stays, because that one is kept whatever this says.
 		PendingSelectedIndices.Reset();
+		if (GetItemCount() > 0)
+		{
+			PendingSelectedIndex = INDEX_NONE;
+		}
 	}
 }
 
@@ -2714,16 +2763,31 @@ void UDreamListViewBase::SetSelectedIndex(int32 InIndex)
 
 void UDreamListViewBase::SetSelectedIndexWithoutNotify(int32 InIndex)
 {
-	// The veto is asked on this road too, not only on a click or a navigation step: a row the list
-	// says cannot be chosen must not become the choice because the caller happened to be code. Only
-	// for a real row -- clearing the selection is never refused, or a veto would be a trap.
-	if (InIndex >= 0 && InIndex < GetItemCount() && !IsItemSelectableOrNavigable(InIndex))
+	// None selects nothing, on this road as on a click and a navigation press: a list nobody can select
+	// from has no selection for code to put there either. ReconcileSelection keeps it empty, so there is
+	// nothing to clear.
+	if (SelectionMode == EUIListSelectionMode::None)
 	{
 		return;
 	}
+	const int32 Count = GetItemCount();
+	// The veto is asked on this road too, not only on a click or a navigation step: a row the list
+	// says cannot be chosen must not become the choice because the caller happened to be code. Only
+	// for a real row -- clearing the selection is never refused, or a veto would be a trap.
+	if (InIndex >= 0 && InIndex < Count && !IsItemSelectableOrNavigable(InIndex))
+	{
+		return;
+	}
+	// An index the source cannot answer YET is kept for when it can (ReconcileSelection): a screen that
+	// restores "row 7 was selected" before its data loads, or a binding that pushes its value ahead of
+	// the items, used to lose it here. Only while the source is empty -- one that HAS items and stops
+	// short of the index has answered -- unless the author asked for preselections to be kept. Any
+	// other call replaces it, a clear included.
+	const bool bKeepForLater = InIndex >= Count && (Count == 0 || bAllowKeepPreselectedItems);
+	PendingSelectedIndex = bKeepForLater ? InIndex : INDEX_NONE;
 	// Clamped where it becomes a selection, not where it is stored by an author: an index nothing
-	// answers to is no selection at all.
-	SelectedIndex = (InIndex >= 0 && InIndex < GetItemCount()) ? InIndex : INDEX_NONE;
+	// answers to is no selection at all -- not even while it waits.
+	SelectedIndex = (InIndex >= 0 && InIndex < Count) ? InIndex : INDEX_NONE;
 	// "The selected row" is exactly one row, whatever the mode: this is the single-selection road,
 	// and a multi selection that survived it would leave rows highlighted that this call did not name.
 	SelectedIndices.Reset();
@@ -2740,11 +2804,29 @@ void UDreamListViewBase::SetSelectionMode(EUIListSelectionMode InMode)
 	{
 		return;
 	}
+	const int32 AnchorBefore = SelectedIndex;
+	const TArray<int32> SelectionBefore = SelectedIndices;
 	SelectionMode = InMode;
 	// Narrowing the mode narrows the selection -- ReconcileSelection is where that rule lives, and
 	// the repaint has to follow it or rows stay painted as selected after the mode says they are not.
 	ReconcileSelection();
 	RefreshRowColors();
+	// And said, once, when it moved anything. SListView is silent here (SetSelectionMode only clears),
+	// but a `<->` binding then went on holding a row nothing selects any more. Rows a narrowing kept
+	// are no news, so a widening -- Single to Multi -- says nothing.
+	if (SelectedIndex != AnchorBefore || SelectedIndices != SelectionBefore)
+	{
+		// This one announcement covers a kept index ReconcileSelection may have landed on the way.
+		bAnnouncePendingSelection = false;
+		AnnounceSelection();
+	}
+}
+
+void UDreamListViewBase::AnnounceSelection()
+{
+	// Both names, as every other selection change says them: the `<->` desugar listens on the second.
+	OnSelectionChanged.Broadcast(SelectedIndex);
+	OnValueChangedBP.Broadcast(SelectedIndex);
 }
 
 void UDreamListViewBase::SetAlternatingRowColors(bool bInAlternating)
@@ -2841,6 +2923,8 @@ void UDreamListViewBase::SetItemSelection(int32 InItemIndex, bool bInSelected, b
 	{
 		return;
 	}
+	// A selection made now replaces one still waiting for its items: the later arrival must not undo it.
+	PendingSelectedIndex = INDEX_NONE;
 	if (bClearScrollVelocityOnSelection)
 	{
 		// Before the selection, not after: the row the player picked must not slide out from under
@@ -2898,6 +2982,9 @@ void UDreamListViewBase::SetItemSelection(int32 InItemIndex, bool bInSelected, b
 
 void UDreamListViewBase::ClearSelection()
 {
+	// A selection still waiting for its items goes too, silently: nothing was selected yet to say
+	// goodbye to, but clearing means it never lands.
+	PendingSelectedIndex = INDEX_NONE;
 	if (SelectedIndices.Num() == 0 && SelectedIndex == INDEX_NONE)
 	{
 		return;
@@ -2948,6 +3035,9 @@ void UDreamListViewBase::SetScrollOffset(float InOffset)
 void UDreamListViewBase::ReconcileSelection()
 {
 	const int32 Count = GetItemCount();
+	// Asked before the sweep below takes anything out of the set: an anchor that named a row actually selected is a
+	// selection the source has since let go of, not a request still waiting for its items.
+	const bool bAnchorWasSelected = SelectedIndices.Contains(SelectedIndex);
 	// A selection parked earlier, now that the source is long enough to hold it. Before the sweep
 	// below, so an index that has just become valid is kept rather than dropped a second time.
 	if (bAllowKeepPreselectedItems && PendingSelectedIndices.Num() > 0)
@@ -2985,7 +3075,46 @@ void UDreamListViewBase::ReconcileSelection()
 	{
 		SelectedIndices.Reset();
 		SelectedIndex = INDEX_NONE;
+		// Nor anything later: a list nobody can select from does not land a selection when its items come.
+		PendingSelectedIndex = INDEX_NONE;
 		return;
+	}
+
+	// An anchor written before the source could answer it -- a .dui line, or a binding whose value
+	// arrives ahead of its items -- is the same request SetSelectedIndexWithoutNotify keeps, and is kept
+	// the same way rather than dropped by the mirror below. Not one the parked set above already holds,
+	// though: that one comes back as part of the set it was in. Nor a row that WAS selected and whose
+	// items have gone (ClearListItems, a source emptied to be refilled): that is the old selection, and
+	// landing it again on whatever the next items are would select a row nobody chose.
+	if (SelectedIndex >= Count && !bAnchorWasSelected && !SelectedIndices.Contains(SelectedIndex)
+		&& !PendingSelectedIndices.Contains(SelectedIndex)
+		&& (Count == 0 || bAllowKeepPreselectedItems))
+	{
+		PendingSelectedIndex = SelectedIndex;
+	}
+	// A kept index, once the source can answer it: the one row, as SetSelectedIndex makes it, whatever
+	// bAllowKeepPreselectedItems says -- and announced by the rebuild that got here, once its rows exist
+	// (RebuildRows). Dropped when the source arrived without that row and nobody asked to wait longer.
+	if (PendingSelectedIndex != INDEX_NONE && Count > 0)
+	{
+		const int32 Landing = PendingSelectedIndex;
+		if (Landing < Count)
+		{
+			PendingSelectedIndex = INDEX_NONE;
+			const bool bAlreadyTheSelection = SelectedIndex == Landing
+				&& SelectedIndices.Num() == 1 && SelectedIndices[0] == Landing;
+			if (!bAlreadyTheSelection && IsItemSelectableOrNavigable(Landing))
+			{
+				SelectedIndices.Reset();
+				SelectedIndices.Add(Landing);
+				SelectedIndex = Landing;
+				bAnnouncePendingSelection = true;
+			}
+		}
+		else if (!bAllowKeepPreselectedItems)
+		{
+			PendingSelectedIndex = INDEX_NONE;
+		}
 	}
 
 	// An author who wrote SelectedIndex -- a .dui line, a details-panel edit, a `<->` binding -- means
@@ -3050,7 +3179,11 @@ bool UDreamListViewBase::ScrollItemIntoView(int32 InItemIndex, bool bInAnimate)
 	}
 	const float RowTop = GetRowTopOffset(DisplayIndex);
 	const float RowBottom = RowTop + ResolveListStyle().RowHeight;
-	const float Offset = GetScrollOffset();
+	// While a reveal of this list's own is still gliding, the list is on its way to that glide's end,
+	// and that is where the row has to be in view -- measured from wherever the glide has got to this
+	// frame, a row about to slide out reads as already shown and the second reveal does nothing.
+	const bool bHeadingForRevealTarget = bRevealGlideActive && ScrollBehaviour->IsScrolling();
+	const float Offset = bHeadingForRevealTarget ? RevealGlideTarget : GetScrollOffset();
 
 	float Target = Offset;
 	if (bEnableFixedLineOffset)
@@ -3076,6 +3209,22 @@ bool UDreamListViewBase::ScrollItemIntoView(int32 InItemIndex, bool bInAnimate)
 	{
 		return false;
 	}
+	if (bInAnimate && bEnableScrollAnimation)
+	{
+		// UMG's animated reveal, with the wheel's glide: the same ease, and the duration the speed knob
+		// turns into at the push (PushScrollBehaviourSettings). IsScrolling counts the glide, so
+		// OnListViewFinishedScrolling is said once, when it lands, rather than on every step of the way.
+		// Where it will come to rest is clamped as the view clamps it, so the next reveal measures from
+		// a place the list can actually reach.
+		const FVector2D Extent = ScrollBehaviour->GetScrollableExtent();
+		RevealGlideTarget = FMath::Clamp(Target, 0.0f, FMath::Max(0.0f, static_cast<float>(IsHorizontalList() ? Extent.X : Extent.Y)));
+		bRevealGlideActive = true;
+		ScrollBehaviour->GlideToScrollOffset(IsHorizontalList() ? FVector2D(Target, 0.0) : FVector2D(0.0, Target),
+			1.0f / FMath::Max(0.01f, ScrollingAnimationInterpolationSpeed));
+		return true;
+	}
+	// A jump ends a reveal's glide where it stands: the list now rests where this puts it.
+	bRevealGlideActive = false;
 	SetScrollOffset(Target);
 	return true;
 }

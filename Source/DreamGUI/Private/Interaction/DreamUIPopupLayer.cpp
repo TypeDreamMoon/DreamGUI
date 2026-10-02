@@ -2,11 +2,115 @@
 
 #include "Interaction/DreamUIPopupLayer.h"
 
+#include "Core/DreamUIInputServices.h"
 #include "Core/DreamUIManager.h"
 #include "Core/DreamScreenUISubsystem.h"
+#include "Core/DreamWidgetNavigation.h"
+#include "Core/Components/DreamCanvas.h"
+#include "Core/Components/DreamVisualEmpty.h"
 #include "Core/Components/DreamWidget.h"
 #include "DreamGUI.h"
 #include "Engine/World.h"
+
+namespace DreamUIPopupLayerLocal
+{
+	/**
+	 * The drag visual's band (UDreamUIDragDropSubsystem), with the tooltips' 30000 above it. A popup sorts under both: a
+	 * drag or a tooltip started from inside a menu still draws over the menu, as they do over a modal.
+	 */
+	constexpr int32 DragVisualSortOrder = 29000;
+
+	/** How far an opener has to move, in its plane's units, before an unplaced popup moves after it. */
+	constexpr double FollowTolerance = 1.0e-3;
+
+	bool IsInside(const UDreamWidget* InWidget, const UDreamWidget* InRoot)
+	{
+		return IsValid(InWidget) && IsValid(InRoot) && (InWidget == InRoot || InWidget->IsChildOf(InRoot));
+	}
+
+	/**
+	 * What an opener has to stay for its popup to stay open: alive and in play along its whole parent chain -- a parent
+	 * ends play before its children, so a destroy in progress shows above the opener first -- active, drawn and
+	 * interactable. A world that never began play (the designer, a bare test world) has registered widgets only.
+	 */
+	bool IsOpenerUsable(const UDreamWidget* InOpener)
+	{
+		if (!IsValid(InOpener))
+		{
+			return false;
+		}
+		UWorld* OpenerWorld = InOpener->GetWorld();
+		const UDreamUIManagerWorldSubsystem* Manager = OpenerWorld != nullptr ? UDreamUIManagerWorldSubsystem::GetInstance(OpenerWorld) : nullptr;
+		const bool bWorldPlays = Manager != nullptr && Manager->HasBegunPlay();
+		for (const UDreamWidget* Walker = InOpener; Walker != nullptr; Walker = Walker->GetParent())
+		{
+			if (!IsValid(Walker) || (bWorldPlays ? !Walker->HasBegunPlay() : !Walker->HasRegistered()))
+			{
+				return false;
+			}
+		}
+		return InOpener->GetWidgetActiveInHierarchy() && InOpener->GetRenderVisibleInHierarchy() && InOpener->GetInteractableInHierarchy();
+	}
+
+	/** Where InWidget is in InPlane's plane -- Y across, Z up -- which is how Elevate anchors a lifted widget. */
+	FVector2D PositionInPlane(const UDreamWidget* InWidget, const UDreamWidget* InPlane)
+	{
+		const FVector Local = InPlane->GetLayoutWorldTransform().InverseTransformPosition(InWidget->GetLayoutWorldTransform().GetLocation());
+		return FVector2D(Local.Y, Local.Z);
+	}
+
+	/**
+	 * Above everything InScreenRoot's canvases draw below the drag band -- the opener's own canvas, the player's top
+	 * modal, a parent popup -- InPopup's own canvases left out, since they are what is being sorted. Two above, leaving
+	 * the order between free for the player's sheet (UDreamUIPopupLayer::RefreshSheet).
+	 */
+	int32 ComputeSortOrder(UDreamWidget* InScreenRoot, const UDreamWidget* InPopup)
+	{
+		UDreamCanvas* RootCanvas = InScreenRoot->GetRootCanvas();
+		if (RootCanvas == nullptr)
+		{
+			RootCanvas = InScreenRoot->GetComponent<UDreamCanvas>();
+		}
+		int32 Highest = 0;
+		TArray<UDreamCanvas*> Canvases;
+		UDreamCanvas::CollectChildrenCanvas(RootCanvas, Canvases, true);
+		for (const UDreamCanvas* Canvas : Canvases)
+		{
+			if (IsInside(Canvas->GetWidget(), InPopup))
+			{
+				continue;
+			}
+			const int32 Order = Canvas->GetActualSortOrder();
+			if (Order < DragVisualSortOrder)
+			{
+				Highest = FMath::Max(Highest, Order);
+			}
+		}
+		return FMath::Min(Highest + 2, DragVisualSortOrder - 1);
+	}
+
+	/** The first widget under InRoot, in hierarchy order, that navigation can land on now. */
+	UDreamWidget* FindFirstNavigable(UDreamWidget* InRoot)
+	{
+		if (!IsValid(InRoot) || !InRoot->GetWidgetActiveInHierarchy())
+		{
+			return nullptr;
+		}
+		if (UDreamUIBehaviour* Navigation = DreamUINavigationScan::FindNavigationBehaviour(InRoot);
+			Navigation != nullptr && DreamUINavigationScan::CanNavigateTo(Navigation))
+		{
+			return InRoot;
+		}
+		for (UDreamWidget* Child : InRoot->GetChildren())
+		{
+			if (UDreamWidget* Found = FindFirstNavigable(Child))
+			{
+				return Found;
+			}
+		}
+		return nullptr;
+	}
+}
 
 UDreamUIPopupLayer* UDreamUIPopupLayer::Get(const UObject* InWorldContext)
 {
@@ -38,7 +142,19 @@ void UDreamUIPopupLayer::TeardownForWorld(UWorld& InWorld)
 		return;
 	}
 	bTornDownForWorld = true;
+	// Nothing is given back or put back: the trees these popups belong to come down with the world, and so does the
+	// input whose focus Dismiss would return. Their owners are still told, top first, so none of them goes on believing
+	// its popup is up.
+	TArray<FOpenPopup> Closing = MoveTemp(OpenPopups);
+	OpenPopups.Reset();
+	UpdateLayoutHook();
+	for (int32 Index = Closing.Num() - 1; Index >= 0; --Index)
+	{
+		Closing[Index].OnDismissed.ExecuteIfBound(Closing[Index].Popup.Get(), EDreamPopupDismissReason::WorldTeardown);
+	}
 	ElevatedHomes.Reset();
+	// The sheets hang off the screen roots, and go with them.
+	Sheets.Reset();
 }
 
 bool UDreamUIPopupLayer::Elevate(UDreamWidget* InWidget)
@@ -76,6 +192,9 @@ bool UDreamUIPopupLayer::Elevate(UDreamWidget* InWidget)
 	const float Width = InWidget->GetWidth();
 	const float Height = InWidget->GetHeight();
 	const FVector2D Pivot = InWidget->GetPivot();
+	// Read before the move takes it out of its siblings: the trip home puts it back in the same place, so an owner that
+	// draws its children in order -- or a layout that counts them -- finds it where it left it.
+	const int32 HomeSiblingIndex = InWidget->GetSiblingIndex();
 	if (!InWidget->TrySetParent(ScreenRoot, /*InKeepWorldPosition*/false))
 	{
 		return false;
@@ -86,7 +205,9 @@ bool UDreamUIPopupLayer::Elevate(UDreamWidget* InWidget)
 	InWidget->SetPivot(Pivot);
 	const FVector LocalInRoot = ScreenRoot->GetLayoutWorldTransform().InverseTransformPosition(OldWorld.GetLocation());
 	InWidget->SetAnchoredPosition(FVector2D(LocalInRoot.Y, LocalInRoot.Z));
-	ElevatedHomes.Add(FObjectKey(InWidget), Home);
+	FElevatedHome& Entry = ElevatedHomes.Add(FObjectKey(InWidget));
+	Entry.Parent = Home;
+	Entry.SiblingIndex = HomeSiblingIndex;
 	return true;
 }
 
@@ -96,20 +217,547 @@ void UDreamUIPopupLayer::Restore(UDreamWidget* InWidget)
 	{
 		return;
 	}
-	TWeakObjectPtr<UDreamWidget> Home;
+	// A popup still open on the stack is closed the way its owner closing it would close it -- its children, its focus,
+	// its owner told -- before it goes home. Dismiss has taken it home already when it asked to be put back.
+	if (IsOpen(InWidget))
+	{
+		Dismiss(InWidget, EDreamPopupDismissReason::Explicit);
+	}
+	RestoreHome(InWidget);
+}
+
+void UDreamUIPopupLayer::RestoreHome(UDreamWidget* InWidget)
+{
+	if (!IsValid(InWidget))
+	{
+		return;
+	}
+	FElevatedHome Home;
 	if (!ElevatedHomes.RemoveAndCopyValue(FObjectKey(InWidget), Home))
 	{
 		return;
 	}
-	if (UDreamWidget* HomeWidget = Home.Get())
+	if (UDreamWidget* HomeWidget = Home.Parent.Get())
 	{
 		// No position juggling on the way home: the widget is hidden the moment it lands, and the
-		// owner's next open rewrites anchors, size and position from scratch anyway.
-		InWidget->TrySetParent(HomeWidget, /*InKeepWorldPosition*/false);
+		// owner's next open rewrites anchors, size and position from scratch anyway. An index the
+		// home no longer has puts it last, which is where it would have gone before.
+		InWidget->TrySetParent(HomeWidget, /*InKeepWorldPosition*/false, Home.SiblingIndex);
 	}
 	else
 	{
 		UE_LOG(DreamGUI, Warning, TEXT("[%s].%d '%s' has nowhere to return to; its owner is gone."),
 			ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *InWidget->GetDisplayName());
+	}
+}
+
+bool UDreamUIPopupLayer::Push(const FDreamPopupParams& Params)
+{
+	using namespace DreamUIPopupLayerLocal;
+	UDreamWidget* Popup = Params.Popup;
+	if (!IsValid(Popup) || bTornDownForWorld)
+	{
+		return false;
+	}
+	if (IsOpen(Popup))
+	{
+		return true;
+	}
+	// An opener inside the popup is no opener: a popup following something it carries along would chase itself.
+	UDreamWidget* Opener = IsValid(Params.Opener) && !IsInside(Params.Opener, Popup) ? Params.Opener : nullptr;
+	const int32 UserIndex = Params.UserIndex;
+	// The parent is decided against the stack as it stands, before anything below changes it: the player's deepest open
+	// popup holding the opener -- a submenu's anchor sits inside the menu it opens from.
+	UDreamWidget* ParentPopup = Opener != nullptr ? FindPopupContaining(Opener, UserIndex) : nullptr;
+
+	// The lift first, so a popup that cannot go up changes nothing: no sibling is replaced for a popup that never opens.
+	if (!Elevate(Popup))
+	{
+		return false;
+	}
+	UDreamWidget* Plane = Popup->GetParent();
+	UDreamScreenUISubsystem* ScreenUI = UDreamScreenUISubsystem::Get(Popup->GetWorld());
+	UDreamWidget* ScreenRoot = IsValid(ScreenUI) ? ScreenUI->GetOrCreateScreenRootForWidget(Popup) : nullptr;
+	if (!IsValid(Plane) || !IsValid(ScreenRoot))
+	{
+		RestoreHome(Popup);
+		return false;
+	}
+
+	// A new top-level popup replaces the player's others, a child its siblings -- each taking its own children with it.
+	// Before the capture below, so the focus it records is what those popups gave back, not something inside them.
+	TArray<FObjectKey> Replaced;
+	for (const FOpenPopup& Entry : OpenPopups)
+	{
+		if (Entry.UserIndex == UserIndex && !Entry.bDismissing && Entry.Popup.Get() != Popup
+			&& (ParentPopup == nullptr ? Entry.bTopLevel : (!Entry.bTopLevel && Entry.ParentKey == FObjectKey(ParentPopup))))
+		{
+			Replaced.Add(Entry.PopupKey);
+		}
+	}
+	for (const FObjectKey& Sibling : Replaced)
+	{
+		DismissEntry(Sibling, EDreamPopupDismissReason::Replaced);
+	}
+	if (!IsValid(Popup) || IsOpen(Popup))
+	{
+		// A replaced popup's owner, told, destroyed this one or pushed it itself.
+		return IsValid(Popup) && IsOpen(Popup);
+	}
+	if (Popup->GetParent() != Plane)
+	{
+		// Or took it back down from the lift: it does not open, and is lifted no longer.
+		ElevatedHomes.Remove(FObjectKey(Popup));
+		return false;
+	}
+	if (ParentPopup != nullptr && !IsOpen(ParentPopup))
+	{
+		// The parent closed while its siblings were going (its owner's handler did it): a top-level popup now.
+		ParentPopup = nullptr;
+	}
+
+	// A canvas of its own, sorted above everything the player's screen shows under the drag and tooltip bands.
+	UDreamCanvas* Canvas = Popup->GetComponent<UDreamCanvas>();
+	if (!IsValid(Canvas))
+	{
+		Canvas = Popup->AddComponent<UDreamCanvas>();
+	}
+	if (IsValid(Canvas))
+	{
+		Canvas->SetOverrideSorting(true);
+		Canvas->SetSortOrder(ComputeSortOrder(ScreenRoot, Popup), /*PropagateToChildrenCanvas*/true);
+		if (const UDreamCanvas* RootCanvas = ScreenRoot->GetRootCanvas())
+		{
+			Canvas->SetTraceChannel(RootCanvas->GetTraceChannel());
+		}
+	}
+
+	FOpenPopup& Entry = OpenPopups.AddDefaulted_GetRef();
+	Entry.Popup = Popup;
+	Entry.PopupKey = FObjectKey(Popup);
+	Entry.Opener = Opener;
+	Entry.bHasOpener = Opener != nullptr;
+	Entry.bTopLevel = ParentPopup == nullptr;
+	Entry.ParentKey = ParentPopup != nullptr ? FObjectKey(ParentPopup) : FObjectKey();
+	Entry.UserIndex = UserIndex;
+	Entry.OutsideClick = Params.OutsideClick;
+	Entry.bRestoreOnDismiss = Params.bRestoreOnDismiss;
+	Entry.Place = Params.Place;
+	Entry.OnDismissed = Params.OnDismissed;
+	Entry.LastOpenerPosition = Opener != nullptr ? PositionInPlane(Opener, Plane) : FVector2D::ZeroVector;
+	// Every player's focus, before the popup takes any. With no opener the popup itself stands in for one -- it is the
+	// root being closed when focus comes back, so never a place to put it -- and the capture still knows its world.
+	Entry.FocusReturn.Capture(Opener != nullptr ? Opener : Popup);
+	UpdateLayoutHook();
+	RefreshSheet(UserIndex);
+
+	if (Params.Place.IsBound())
+	{
+		Params.Place.Execute(Popup);
+	}
+
+	if (Params.bFocusOnOpen)
+	{
+		if (UDreamUIInputServices* Services = UDreamUIInputServices::Get(Popup))
+		{
+			UDreamWidget* Target = IsInside(Params.InitialFocus, Popup) ? Params.InitialFocus : nullptr;
+			// Opened, and so registered, before focus moves: the deselect handlers it runs find the popup open -- a
+			// dropdown's face losing focus to its own row must not read that as focus leaving the dropdown.
+			if (Target == nullptr || !Services->FocusForNavigation(Target, UserIndex))
+			{
+				// A popup with nothing navigable in it keeps focus where it was rather than dropping it somewhere.
+				if (UDreamWidget* First = FindFirstNavigable(Popup))
+				{
+					Services->FocusForNavigation(First, UserIndex);
+				}
+			}
+		}
+	}
+	return true;
+}
+
+void UDreamUIPopupLayer::Dismiss(UDreamWidget* InPopup, EDreamPopupDismissReason InReason)
+{
+	const int32 Index = FindOpenIndex(InPopup);
+	if (Index != INDEX_NONE)
+	{
+		DismissEntry(OpenPopups[Index].PopupKey, InReason);
+	}
+}
+
+void UDreamUIPopupLayer::DismissEntry(FObjectKey InPopupKey, EDreamPopupDismissReason InReason)
+{
+	int32 Index = FindOpenIndexByKey(InPopupKey);
+	if (Index == INDEX_NONE || OpenPopups[Index].bDismissing)
+	{
+		return;
+	}
+	OpenPopups[Index].bDismissing = true;
+
+	// Children first, the newest first, as Slate's menu stack closes them: a child gives its focus back into this popup,
+	// which is still up to take it. By identity, so a child destroyed meanwhile is closed with the rest.
+	TArray<FObjectKey> Children;
+	for (int32 ChildIndex = OpenPopups.Num() - 1; ChildIndex >= 0; --ChildIndex)
+	{
+		const FOpenPopup& Entry = OpenPopups[ChildIndex];
+		if (!Entry.bTopLevel && Entry.ParentKey == InPopupKey && !Entry.bDismissing)
+		{
+			Children.Add(Entry.PopupKey);
+		}
+	}
+	for (const FObjectKey& Child : Children)
+	{
+		DismissEntry(Child, EDreamPopupDismissReason::ParentClosed);
+	}
+
+	// Found again: the children's handlers may have moved this entry in the array, or destroyed the popup -- which is
+	// closed all the same -- or the world's teardown may have taken the whole stack, telling every owner itself.
+	Index = FindOpenIndexByKey(InPopupKey);
+	if (Index == INDEX_NONE)
+	{
+		return;
+	}
+	// Off the stack before anything runs: returning focus runs deselect handlers, and one that closes this popup again
+	// -- a dropdown hiding on losing focus -- finds it closed.
+	FOpenPopup Closing = MoveTemp(OpenPopups[Index]);
+	OpenPopups.RemoveAt(Index);
+	UpdateLayoutHook();
+	RefreshSheet(Closing.UserIndex);
+
+	// Null for a popup destroyed while open: the focus it held went with it, and only the players left with none get any
+	// back; there is no way home to take.
+	UDreamWidget* Popup = Closing.Popup.Get();
+	// Focus first, while everything is still where the player saw it: hiding is what clears a focus that cannot stay.
+	Closing.FocusReturn.Return(Popup);
+	if (Popup == nullptr)
+	{
+		ElevatedHomes.Remove(InPopupKey);
+	}
+	else if (Closing.bRestoreOnDismiss)
+	{
+		RestoreHome(Popup);
+	}
+	Closing.OnDismissed.ExecuteIfBound(Popup, InReason);
+}
+
+bool UDreamUIPopupLayer::IsOpen(const UDreamWidget* InPopup) const
+{
+	const int32 Index = FindOpenIndex(InPopup);
+	return Index != INDEX_NONE && !OpenPopups[Index].bDismissing;
+}
+
+UDreamWidget* UDreamUIPopupLayer::GetTopPopup(int32 InUserIndex) const
+{
+	for (int32 Index = OpenPopups.Num() - 1; Index >= 0; --Index)
+	{
+		const FOpenPopup& Entry = OpenPopups[Index];
+		if (Entry.UserIndex == InUserIndex && !Entry.bDismissing)
+		{
+			if (UDreamWidget* Popup = Entry.Popup.Get(); IsValid(Popup))
+			{
+				return Popup;
+			}
+		}
+	}
+	return nullptr;
+}
+
+void UDreamUIPopupLayer::GetOpenPopups(int32 InUserIndex, TArray<UDreamWidget*>& OutPopups) const
+{
+	OutPopups.Reset();
+	for (const FOpenPopup& Entry : OpenPopups)
+	{
+		if (Entry.UserIndex == InUserIndex && !Entry.bDismissing)
+		{
+			if (UDreamWidget* Popup = Entry.Popup.Get(); IsValid(Popup))
+			{
+				OutPopups.Add(Popup);
+			}
+		}
+	}
+}
+
+UDreamWidget* UDreamUIPopupLayer::FindPopupContaining(const UDreamWidget* InWidget, int32 InUserIndex) const
+{
+	if (!IsValid(InWidget))
+	{
+		return nullptr;
+	}
+	// The newest first: a player's popups are a chain pushed in depth order, so the first that holds the widget is the
+	// deepest that does.
+	for (int32 Index = OpenPopups.Num() - 1; Index >= 0; --Index)
+	{
+		const FOpenPopup& Entry = OpenPopups[Index];
+		if (Entry.bDismissing || (InUserIndex != INDEX_NONE && Entry.UserIndex != InUserIndex))
+		{
+			continue;
+		}
+		UDreamWidget* Popup = Entry.Popup.Get();
+		if (DreamUIPopupLayerLocal::IsInside(InWidget, Popup))
+		{
+			return Popup;
+		}
+	}
+	return nullptr;
+}
+
+bool UDreamUIPopupLayer::NotifyPointerDown(int32 InUserIndex, UDreamWidget* InHitWidget)
+{
+	TArray<UDreamWidget*> Chain;
+	GetOpenPopups(InUserIndex, Chain);
+	if (Chain.Num() == 0)
+	{
+		return false;
+	}
+	// The popup the press landed in stays, with everything below it; everything above it closes. A press in none of
+	// them closes them all.
+	UDreamWidget* PressedIn = FindPopupContaining(InHitWidget, InUserIndex);
+	const int32 Keep = PressedIn != nullptr ? Chain.IndexOfByKey(PressedIn) : INDEX_NONE;
+	bool bConsume = false;
+	for (int32 ChainIndex = Chain.Num() - 1; ChainIndex > Keep; --ChainIndex)
+	{
+		const int32 Index = FindOpenIndex(Chain[ChainIndex]);
+		if (Index == INDEX_NONE || OpenPopups[Index].bDismissing)
+		{
+			// Gone with a popup closed before it: its parent.
+			continue;
+		}
+		const EDreamPopupOutsideClick OutsideClick = OpenPopups[Index].OutsideClick;
+		if (OutsideClick == EDreamPopupOutsideClick::Ignore)
+		{
+			continue;
+		}
+		// A press on the popup's own opener is the opener's toggle whatever the mode: let through, it would reach the
+		// opener and open the popup it has just closed again -- what UMG's ShouldOpenDueToClick is there to stop.
+		const UDreamWidget* Opener = OpenPopups[Index].Opener.Get();
+		bConsume |= OutsideClick == EDreamPopupOutsideClick::Consume
+			|| (Opener != nullptr && DreamUIPopupLayerLocal::IsInside(InHitWidget, Opener));
+		Dismiss(Chain[ChainIndex], EDreamPopupDismissReason::OutsideClick);
+	}
+	return bConsume;
+}
+
+bool UDreamUIPopupLayer::HandleBack(int32 InUserIndex)
+{
+	// The top one only, whatever it does with outside clicks -- SComboBox's gamepad Back -- where Slate's Escape would
+	// close every menu at once.
+	UDreamWidget* Top = GetTopPopup(InUserIndex);
+	if (Top == nullptr)
+	{
+		return false;
+	}
+	Dismiss(Top, EDreamPopupDismissReason::Back);
+	return true;
+}
+
+void UDreamUIPopupLayer::SetOutsideClick(const UDreamWidget* InPopup, EDreamPopupOutsideClick InOutsideClick)
+{
+	const int32 Index = FindOpenIndex(InPopup);
+	if (Index != INDEX_NONE && !OpenPopups[Index].bDismissing)
+	{
+		OpenPopups[Index].OutsideClick = InOutsideClick;
+		RefreshSheet(OpenPopups[Index].UserIndex);
+	}
+}
+
+bool UDreamUIPopupLayer::IsSheetOfAnotherPlayer(const UDreamWidget* InHitWidget, int32 InUserIndex) const
+{
+	if (InHitWidget == nullptr)
+	{
+		return false;
+	}
+	for (const TPair<int32, TWeakObjectPtr<UDreamWidget>>& Sheet : Sheets)
+	{
+		if (Sheet.Key != InUserIndex && Sheet.Value.Get() == InHitWidget)
+		{
+			return true;
+		}
+	}
+	return false;
+}
+
+int32 UDreamUIPopupLayer::FindOpenIndex(const UDreamWidget* InPopup) const
+{
+	if (InPopup == nullptr)
+	{
+		return INDEX_NONE;
+	}
+	return OpenPopups.IndexOfByPredicate([InPopup](const FOpenPopup& InEntry)
+	{
+		return InEntry.Popup.Get() == InPopup;
+	});
+}
+
+int32 UDreamUIPopupLayer::FindOpenIndexByKey(const FObjectKey& InPopupKey) const
+{
+	return OpenPopups.IndexOfByPredicate([&InPopupKey](const FOpenPopup& InEntry)
+	{
+		return InEntry.PopupKey == InPopupKey;
+	});
+}
+
+void UDreamUIPopupLayer::UpdateLayoutHook()
+{
+	const bool bWantHook = !bTornDownForWorld && OpenPopups.Num() > 0;
+	if (bWantHook == LayoutPassesFinishedHandle.IsValid())
+	{
+		return;
+	}
+	if (bWantHook)
+	{
+		if (UDreamUIManagerWorldSubsystem* Manager = UDreamUIManagerWorldSubsystem::GetInstance(GetWorld()))
+		{
+			LayoutPassesFinishedHandle = Manager->GetOnLayoutPassesFinished().AddUObject(this, &UDreamUIPopupLayer::HandleLayoutPassesFinished);
+			HookedManager = Manager;
+		}
+		return;
+	}
+	if (UDreamUIManagerWorldSubsystem* Manager = HookedManager.Get())
+	{
+		Manager->GetOnLayoutPassesFinished().Remove(LayoutPassesFinishedHandle);
+	}
+	LayoutPassesFinishedHandle.Reset();
+	HookedManager.Reset();
+}
+
+void UDreamUIPopupLayer::HandleLayoutPassesFinished()
+{
+	using namespace DreamUIPopupLayerLocal;
+	SweepVanishedPopups();
+
+	// Over a snapshot, bottom first: a popup dismissed here takes its children, which the walk then finds closed.
+	TArray<TWeakObjectPtr<UDreamWidget>> Snapshot;
+	Snapshot.Reserve(OpenPopups.Num());
+	for (const FOpenPopup& Entry : OpenPopups)
+	{
+		Snapshot.Add(Entry.Popup);
+	}
+	for (const TWeakObjectPtr<UDreamWidget>& WeakPopup : Snapshot)
+	{
+		UDreamWidget* Popup = WeakPopup.Get();
+		int32 Index = IsValid(Popup) ? FindOpenIndex(Popup) : INDEX_NONE;
+		if (Index == INDEX_NONE || OpenPopups[Index].bDismissing)
+		{
+			continue;
+		}
+		// The opener first: one destroyed, out of play, put to sleep, hidden -- collapsed under an ancestor included --
+		// or disabled takes its popup with it, as a hidden SMenuAnchor hides its menu.
+		if (OpenPopups[Index].bHasOpener && !IsOpenerUsable(OpenPopups[Index].Opener.Get()))
+		{
+			Dismiss(Popup, EDreamPopupDismissReason::OpenerLost);
+			continue;
+		}
+		if (OpenPopups[Index].Place.IsBound())
+		{
+			// A copy: the owner's code runs inside, and the array it lives in is not to be held across it.
+			const FDreamPopupPlaceDelegate Place = OpenPopups[Index].Place;
+			Place.Execute(Popup);
+			continue;
+		}
+		// Unplaced: the popup keeps the offset from its opener it had -- moved by what the opener moved since the last
+		// look, so an owner that moved the popup itself keeps its own placement too.
+		UDreamWidget* Opener = OpenPopups[Index].Opener.Get();
+		const UDreamWidget* Plane = Popup->GetParent();
+		if (Opener == nullptr || !IsValid(Plane))
+		{
+			continue;
+		}
+		const FVector2D OpenerNow = PositionInPlane(Opener, Plane);
+		const FVector2D Moved = OpenerNow - OpenPopups[Index].LastOpenerPosition;
+		OpenPopups[Index].LastOpenerPosition = OpenerNow;
+		if (!Moved.IsNearlyZero(FollowTolerance))
+		{
+			Popup->SetAnchoredPosition(Popup->GetAnchoredPosition() + Moved);
+		}
+	}
+}
+
+void UDreamUIPopupLayer::SweepVanishedPopups()
+{
+	// Destroyed while open, without their owners closing them, the newest first: closed the way Dismiss closes a popup
+	// that is gone. The focus each held went with it, and its capture gives some back to the players left with none; its
+	// children have nothing left to hang from, and close first; its owner is told, with no popup to hand over.
+	TArray<FObjectKey> Vanished;
+	for (int32 Index = OpenPopups.Num() - 1; Index >= 0; --Index)
+	{
+		if (!OpenPopups[Index].Popup.IsValid() && !OpenPopups[Index].bDismissing)
+		{
+			Vanished.Add(OpenPopups[Index].PopupKey);
+		}
+	}
+	for (const FObjectKey& Key : Vanished)
+	{
+		DismissEntry(Key, EDreamPopupDismissReason::Explicit);
+	}
+}
+
+void UDreamUIPopupLayer::RefreshSheet(int32 InUserIndex)
+{
+	// The player's open popups: the lowest sort order among them, the root the bottom one hangs in, and whether one of
+	// them eats the presses outside it -- the one kind a sheet is for: a press let through, or ignored, has to reach
+	// what is under it, and so does the hover before it.
+	bool bWanted = false;
+	int32 LowestSort = MAX_int32;
+	UDreamWidget* Root = nullptr;
+	for (const FOpenPopup& Entry : OpenPopups)
+	{
+		UDreamWidget* Popup = Entry.Popup.Get();
+		if (Entry.UserIndex != InUserIndex || Entry.bDismissing || !IsValid(Popup))
+		{
+			continue;
+		}
+		if (Root == nullptr)
+		{
+			Root = Popup->GetParent();
+		}
+		if (const UDreamCanvas* PopupCanvas = Popup->GetComponent<UDreamCanvas>())
+		{
+			LowestSort = FMath::Min(LowestSort, PopupCanvas->GetActualSortOrder());
+		}
+		bWanted |= Entry.OutsideClick == EDreamPopupOutsideClick::Consume;
+	}
+	bWanted = bWanted && !bTornDownForWorld && IsValid(Root) && LowestSort != MAX_int32;
+
+	const TWeakObjectPtr<UDreamWidget>* Existing = Sheets.Find(InUserIndex);
+	UDreamWidget* Sheet = Existing != nullptr ? Existing->Get() : nullptr;
+	if (!bWanted || (IsValid(Sheet) && Sheet->GetParent() != Root))
+	{
+		if (IsValid(Sheet))
+		{
+			Sheet->DestroyWidget();
+		}
+		Sheets.Remove(InUserIndex);
+		Sheet = nullptr;
+		if (!bWanted)
+		{
+			return;
+		}
+	}
+	if (!IsValid(Sheet))
+	{
+		// Built the way the click catchers it replaces were, minus the button: a stretched widget with an empty visual,
+		// which draws nothing and is still what a ray hits, on a canvas of its own.
+		Sheet = NewObject<UDreamWidget>(Root->GetOuter(), NAME_None, RF_Transient);
+		Sheet->SetDisplayName(TEXT("DreamUIPopupSheet"));
+		Sheet->SetParent(Root, /*InKeepWorldPosition*/false);
+		Sheet->SetSizeDelta(FVector2D::ZeroVector);
+		Sheet->SetAnchorMin(FVector2D(0.0, 0.0));
+		Sheet->SetAnchorMax(FVector2D(1.0, 1.0));
+		Sheet->CreateNewVisual<UDreamVisualEmpty>();
+		if (UDreamCanvas* SheetCanvas = Sheet->AddComponent<UDreamCanvas>())
+		{
+			SheetCanvas->SetOverrideSorting(true);
+			if (const UDreamCanvas* RootCanvas = Root->GetRootCanvas())
+			{
+				SheetCanvas->SetTraceChannel(RootCanvas->GetTraceChannel());
+			}
+		}
+		Sheets.Add(InUserIndex, Sheet);
+	}
+	if (UDreamCanvas* SheetCanvas = Sheet->GetComponent<UDreamCanvas>())
+	{
+		// Just under the player's lowest popup, over everything else on the screen: Push sorts each popup two above what
+		// is there, which leaves this order free.
+		SheetCanvas->SetSortOrder(LowestSort - 1, /*PropagateToChildrenCanvas*/true);
 	}
 }

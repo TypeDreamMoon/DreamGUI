@@ -118,6 +118,19 @@ public:
 	TArray<FDreamWidgetEventBinding> EventBindings;
 
 	/**
+	 * The `resources` class variables of the last compile that read this asset's .dui into a hierarchy.
+	 *
+	 * A compile whose file does not parse -- or cannot be read, or builds nothing -- keeps the previous
+	 * hierarchy, and declares these again with it: the Blueprint compiler empties every generated variable
+	 * before a compile declares its own, so the class would otherwise lose every resource, and every graph
+	 * node reading one would fail with an error pointing away from the one mistake in the file. Saved, so
+	 * a file that stopped parsing while the editor was closed still compiles with them. Empty for an asset
+	 * that names no .dui.
+	 */
+	UPROPERTY()
+	TArray<FBPVariableDescription> LastGoodResourceVariables;
+
+	/**
 	 * Create the tree if this asset has none yet, so a fresh asset is editable.
 	 *
 	 * bEnsureRootWidget also puts a bare root in an empty tree, which is what makes a NEW asset

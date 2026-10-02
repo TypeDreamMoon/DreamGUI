@@ -20,6 +20,7 @@ class APlayerController;
 class FAutomationTestBase;
 class FSceneViewport;
 class SWidget;
+class SWindow;
 class UDreamCanvas;
 class UDreamScreenSpaceRaycaster;
 class UDreamVisual;
@@ -374,6 +375,15 @@ private:
 	/** Hand Slate's keyboard focus to the session's viewport, through the engine's own call for that, when the engine has not. */
 	void GiveViewportKeyboardFocus(UGameViewportClient* InClient);
 	/**
+	 * Hide, for the session, every visible window of the editor's own that floats over its main frame -- a floating
+	 * tab (the Message Log, a details panel) the user's saved editor layout restores at every start, a layout the
+	 * test process shares with every editor of this user (UserSettingsDir/UnrealEngine/Editor/EditorLayout.json). The
+	 * session is drawn in the main frame's level viewport; a window over it takes the clicks put in through Slate,
+	 * and under -RenderOffScreen a window's native stand-in is under every point, so one such window anywhere took
+	 * them all. Hidden rather than closed: RestoreEditorState shows them again and the layout saved at exit keeps them.
+	 */
+	void HideFloatingEditorWindows();
+	/**
 	 * Once the session has ended: take back what the rig changed that outlives the session -- the keyboard
 	 * focus it gave, and the size the session carried back into the editor's level viewport. Once.
 	 */
@@ -443,6 +453,8 @@ private:
 	/** The widget the rig handed the keyboard focus to, and the one that had it before. */
 	TWeakPtr<SWidget> KeyboardFocusGivenTo;
 	TWeakPtr<SWidget> KeyboardFocusBeforeGiving;
+	/** The editor's floating windows the rig hid for the session (HideFloatingEditorWindows), shown again by RestoreEditorState. */
+	TArray<TWeakPtr<SWindow>> HiddenEditorWindows;
 
 	/** Play-world objects, raw on purpose (see NO STRONG REFERENCES). Cleared by ReleasePlayWorld. */
 	AActor* HostActor = nullptr;

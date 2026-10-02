@@ -48,6 +48,29 @@ public:
 	/** Whether player InUserIndex's pointer InPointerIndex -- any of them, when negative -- holds InWidget captured. */
 	virtual bool HasMouseCapture(const UDreamWidget* InWidget, int32 InUserIndex, int32 InPointerIndex) const { return false; }
 
+	// ---- players and their focus, for FDreamFocusReturn and the popup-like controls
+
+	/**
+	 * Every player the input system has in this world, in player order: local players and script players (a test rig's
+	 * second player) alike. What anything that has to visit every player's focus walks -- not the game instance's local
+	 * players, which leave the script players out.
+	 */
+	virtual void GetUserIndices(TArray<int32>& OutUserIndices) const {}
+	/** Player InUserIndex's focus now -- whichever of their pointers set it, since focus is the player's -- or null. */
+	virtual UDreamWidget* GetFocusedWidget(int32 InUserIndex) const { return nullptr; }
+	/**
+	 * Focus InWidget for player InUserIndex the way a directional move does: select it AND move the player's navigation
+	 * cursor onto it, so the next move starts there. Unlike UDreamWidget::SetFocus it does not ask bIsFocusable. It refuses
+	 * a widget that is not usable -- not in play, inactive, not drawn, not interactable, or whose selectable is not
+	 * interactable or not navigable -- and then changes nothing. True when focus is on InWidget afterwards.
+	 */
+	virtual bool FocusForNavigation(UDreamWidget* InWidget, int32 InUserIndex) { return false; }
+	/**
+	 * Where player InUserIndex's active navigation scope wants focus (its remembered focus, its authored target, else its
+	 * first navigable control), as that selectable's widget; null without an active scope or a target.
+	 */
+	virtual UDreamWidget* ResolveScopeFocusTarget(int32 InUserIndex) const { return nullptr; }
+
 	// ---- pointers
 
 	/** Player InUserIndex's pointer InPointerId as the event system tracks it, or null. Never creates one. */

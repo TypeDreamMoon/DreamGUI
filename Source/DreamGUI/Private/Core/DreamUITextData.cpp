@@ -4,8 +4,153 @@
 #include "Core/DreamUIGeometry.h"
 #include "Core/Text/DreamTextLayout.h"
 #include "Core/Text/DreamTextPainter.h"
+#include "Hash/CityHash.h"
 #include "Math/Float16.h"
 #include "ProfilingDebugging/CpuProfilerTrace.h"
+
+// ICU is linked into this module wherever HarfBuzz is (DreamGUI.Build.cs): every target but a dedicated server. Its
+// emoji properties need ICU 62 (Extended_Pictographic); a platform on an older ICU answers from the tables.
+#if UE_ENABLE_ICU && !UE_SERVER
+THIRD_PARTY_INCLUDES_START
+#include <unicode/uchar.h>
+THIRD_PARTY_INCLUDES_END
+#if U_ICU_VERSION_MAJOR_NUM >= 62
+#define DREAMUITEXTDATA_EMOJI_FROM_ICU 1
+#endif
+#endif
+#ifndef DREAMUITEXTDATA_EMOJI_FROM_ICU
+#define DREAMUITEXTDATA_EMOJI_FROM_ICU 0
+#endif
+
+namespace DreamUITextDataEmojiLocal
+{
+	/** An inclusive range of code points. */
+	struct FCodepointRange
+	{
+		uint32 First;
+		uint32 Last;
+	};
+
+	/** Emoji_Presentation=Yes, from emoji-data.txt of Emoji 16.0. */
+	constexpr FCodepointRange EmojiPresentationRanges[] =
+	{
+		{0x231A, 0x231B}, {0x23E9, 0x23EC}, {0x23F0, 0x23F0}, {0x23F3, 0x23F3}, {0x25FD, 0x25FE}, {0x2614, 0x2615},
+		{0x2648, 0x2653}, {0x267F, 0x267F}, {0x2693, 0x2693}, {0x26A1, 0x26A1}, {0x26AA, 0x26AB}, {0x26BD, 0x26BE},
+		{0x26C4, 0x26C5}, {0x26CE, 0x26CE}, {0x26D4, 0x26D4}, {0x26EA, 0x26EA}, {0x26F2, 0x26F3}, {0x26F5, 0x26F5},
+		{0x26FA, 0x26FA}, {0x26FD, 0x26FD}, {0x2705, 0x2705}, {0x270A, 0x270B}, {0x2728, 0x2728}, {0x274C, 0x274C},
+		{0x274E, 0x274E}, {0x2753, 0x2755}, {0x2757, 0x2757}, {0x2795, 0x2797}, {0x27B0, 0x27B0}, {0x27BF, 0x27BF},
+		{0x2B1B, 0x2B1C}, {0x2B50, 0x2B50}, {0x2B55, 0x2B55},
+		{0x1F004, 0x1F004}, {0x1F0CF, 0x1F0CF}, {0x1F18E, 0x1F18E}, {0x1F191, 0x1F19A}, {0x1F1E6, 0x1F1FF},
+		{0x1F201, 0x1F201}, {0x1F21A, 0x1F21A}, {0x1F22F, 0x1F22F}, {0x1F232, 0x1F236}, {0x1F238, 0x1F23A},
+		{0x1F250, 0x1F251}, {0x1F300, 0x1F320}, {0x1F32D, 0x1F335}, {0x1F337, 0x1F37C}, {0x1F37E, 0x1F393},
+		{0x1F3A0, 0x1F3CA}, {0x1F3CF, 0x1F3D3}, {0x1F3E0, 0x1F3F0}, {0x1F3F4, 0x1F3F4}, {0x1F3F8, 0x1F43E},
+		{0x1F440, 0x1F440}, {0x1F442, 0x1F4FC}, {0x1F4FF, 0x1F53D}, {0x1F54B, 0x1F54E}, {0x1F550, 0x1F567},
+		{0x1F57A, 0x1F57A}, {0x1F595, 0x1F596}, {0x1F5A4, 0x1F5A4}, {0x1F5FB, 0x1F64F}, {0x1F680, 0x1F6C5},
+		{0x1F6CC, 0x1F6CC}, {0x1F6D0, 0x1F6D2}, {0x1F6D5, 0x1F6D7}, {0x1F6DC, 0x1F6DF}, {0x1F6EB, 0x1F6EC},
+		{0x1F6F4, 0x1F6FC}, {0x1F7E0, 0x1F7EB}, {0x1F7F0, 0x1F7F0}, {0x1F90C, 0x1F93A}, {0x1F93C, 0x1F945},
+		{0x1F947, 0x1F9FF}, {0x1FA70, 0x1FA7C}, {0x1FA80, 0x1FA89}, {0x1FA8F, 0x1FAC6}, {0x1FACE, 0x1FADC},
+		{0x1FADF, 0x1FAE9}, {0x1FAF0, 0x1FAF8},
+	};
+
+	/**
+	 * Extended_Pictographic, from emoji-data.txt of Emoji 16.0, which like every version since 11.0 also covers the
+	 * unassigned code points of the pictographic blocks: an emoji encoded later is a pictograph here already.
+	 */
+	constexpr FCodepointRange ExtendedPictographicRanges[] =
+	{
+		{0x00A9, 0x00A9}, {0x00AE, 0x00AE}, {0x203C, 0x203C}, {0x2049, 0x2049}, {0x2122, 0x2122}, {0x2139, 0x2139},
+		{0x2194, 0x2199}, {0x21A9, 0x21AA}, {0x231A, 0x231B}, {0x2328, 0x2328}, {0x2388, 0x2388}, {0x23CF, 0x23CF},
+		{0x23E9, 0x23F3}, {0x23F8, 0x23FA}, {0x24C2, 0x24C2}, {0x25AA, 0x25AB}, {0x25B6, 0x25B6}, {0x25C0, 0x25C0},
+		{0x25FB, 0x25FE}, {0x2600, 0x2605}, {0x2607, 0x2612}, {0x2614, 0x2685}, {0x2690, 0x2705}, {0x2708, 0x2712},
+		{0x2714, 0x2714}, {0x2716, 0x2716}, {0x271D, 0x271D}, {0x2721, 0x2721}, {0x2728, 0x2728}, {0x2733, 0x2734},
+		{0x2744, 0x2744}, {0x2747, 0x2747}, {0x274C, 0x274C}, {0x274E, 0x274E}, {0x2753, 0x2755}, {0x2757, 0x2757},
+		{0x2763, 0x2767}, {0x2795, 0x2797}, {0x27A1, 0x27A1}, {0x27B0, 0x27B0}, {0x27BF, 0x27BF}, {0x2934, 0x2935},
+		{0x2B05, 0x2B07}, {0x2B1B, 0x2B1C}, {0x2B50, 0x2B50}, {0x2B55, 0x2B55}, {0x3030, 0x3030}, {0x303D, 0x303D},
+		{0x3297, 0x3297}, {0x3299, 0x3299},
+		{0x1F000, 0x1F0FF}, {0x1F10D, 0x1F10F}, {0x1F12F, 0x1F12F}, {0x1F16C, 0x1F171}, {0x1F17E, 0x1F17F},
+		{0x1F18E, 0x1F18E}, {0x1F191, 0x1F19A}, {0x1F1AD, 0x1F1E5}, {0x1F201, 0x1F20F}, {0x1F21A, 0x1F21A},
+		{0x1F22F, 0x1F22F}, {0x1F232, 0x1F23A}, {0x1F23C, 0x1F23F}, {0x1F249, 0x1F3FA}, {0x1F400, 0x1F53D},
+		{0x1F546, 0x1F64F}, {0x1F680, 0x1F6FF}, {0x1F774, 0x1F77F}, {0x1F7D5, 0x1F7FF}, {0x1F80C, 0x1F80F},
+		{0x1F848, 0x1F84F}, {0x1F85A, 0x1F85F}, {0x1F888, 0x1F88F}, {0x1F8AE, 0x1F8FF}, {0x1F90C, 0x1F93A},
+		{0x1F93C, 0x1F945}, {0x1F947, 0x1FAFF}, {0x1FC00, 0x1FFFD},
+	};
+
+	/** Whether a code point is in a table of ranges sorted by code point: a binary search. */
+	bool IsInRanges(const FCodepointRange* Ranges, int32 Count, uint32 Codepoint)
+	{
+		int32 Low = 0;
+		int32 High = Count - 1;
+		while (Low <= High)
+		{
+			const int32 Middle = (Low + High) / 2;
+			if (Codepoint < Ranges[Middle].First)
+			{
+				High = Middle - 1;
+			}
+			else if (Codepoint > Ranges[Middle].Last)
+			{
+				Low = Middle + 1;
+			}
+			else
+			{
+				return true;
+			}
+		}
+		return false;
+	}
+}
+
+bool FDreamUIText_CodePoint::HasEmojiPresentationFromTable(uint32 Codepoint)
+{
+	using namespace DreamUITextDataEmojiLocal;
+	return Codepoint >= 0x231A && IsInRanges(EmojiPresentationRanges, (int32)UE_ARRAY_COUNT(EmojiPresentationRanges), Codepoint);
+}
+
+bool FDreamUIText_CodePoint::IsExtendedPictographicFromTable(uint32 Codepoint)
+{
+	using namespace DreamUITextDataEmojiLocal;
+	return Codepoint >= 0x00A9 && IsInRanges(ExtendedPictographicRanges, (int32)UE_ARRAY_COUNT(ExtendedPictographicRanges), Codepoint);
+}
+
+bool FDreamUIText_CodePoint::HasEmojiPresentation(uint32 Codepoint)
+{
+	if (Codepoint < 0x231A)
+	{
+		return false;
+	}
+#if DREAMUITEXTDATA_EMOJI_FROM_ICU
+	if (Codepoint <= 0x10FFFF)
+	{
+		if (u_hasBinaryProperty((UChar32)Codepoint, UCHAR_EMOJI_PRESENTATION))
+		{
+			return true;
+		}
+		// ICU's data stops at Unicode 12: a code point it knows keeps its answer, one encoded since then asks the table.
+		if (u_charType((UChar32)Codepoint) != U_UNASSIGNED)
+		{
+			return false;
+		}
+	}
+#endif
+	return HasEmojiPresentationFromTable(Codepoint);
+}
+
+bool FDreamUIText_CodePoint::IsExtendedPictographic(uint32 Codepoint)
+{
+	if (Codepoint < 0x00A9)
+	{
+		return false;
+	}
+#if DREAMUITEXTDATA_EMOJI_FROM_ICU
+	// ICU's answer for a code point its data has. One it does not have asks the table: Unicode 12 held U+1FA96-1FFFD for
+	// pictographs to come, and Unicode 13 gave U+1FB00-1FBFF of them to Symbols for Legacy Computing, which are none.
+	if (Codepoint <= 0x10FFFF && u_charType((UChar32)Codepoint) != U_UNASSIGNED)
+	{
+		return u_hasBinaryProperty((UChar32)Codepoint, UCHAR_EXTENDED_PICTOGRAPHIC) != 0;
+	}
+#endif
+	return IsExtendedPictographicFromTable(Codepoint);
+}
 
 bool FDreamTextStyle::HasEffects() const
 {
@@ -89,6 +234,12 @@ void FDreamTextStyle::Pack(TArray<uint8>& OutBytes) const
 	FMemory::Memcpy(OutBytes.GetData(), Pixels, sizeof(Pixels));
 }
 
+namespace DreamUITextGeometryCacheLocal
+{
+	/** Elements a text needs before its cache keeps its layout for edits without being asked to. */
+	constexpr int32 AutomaticIncrementalElements = 256;
+}
+
 FDreamUITextGeometryCache::FDreamUITextGeometryCache()
 	: Input(MakeUnique<FDreamTextLayoutInput>())
 	, DisplayList(MakeUnique<FDreamTextDisplayList>())
@@ -123,6 +274,12 @@ void FDreamUITextGeometryCache::MarkDirty()
 {
 	bIsDirty = true;
 	BestFitKey.Reset();
+	// What changed underneath an unchanged input -- glyphs that landed, an atlas refilled, a style asset edited in place --
+	// may be in what the last layout kept: it goes, and the next layout starts from nothing.
+	if (IncrementalState.IsValid())
+	{
+		IncrementalState->Reset();
+	}
 }
 
 bool FDreamUITextGeometryCache::TryGetBestFit(const FDreamTextLayoutInput& InCeilingInput, float& OutSize) const
@@ -152,8 +309,55 @@ bool FDreamUITextGeometryCache::EnsureLayout()
 	bIsDirty = false;
 	LayoutRunCount++;
 	TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_TextLayout);
-	FDreamTextLayoutEngine::Layout(*Input, *DisplayList);
+	FDreamTextLayoutEngine::Layout(*Input, *DisplayList, PrepareIncrementalState());
+	LastElementCount = DisplayList->ElementCount;
 	return true;
+}
+
+FDreamTextLayoutState* FDreamUITextGeometryCache::PrepareIncrementalState()
+{
+	using namespace DreamUITextGeometryCacheLocal;
+	if (!FDreamTextLayoutEngine::IsIncrementalLayoutEnabled())
+	{
+		IncrementalState.Reset();
+		bAutoIncrementalLayout = false;
+		ContentChangeStreak = 0;
+		bHasContentHash = false;
+		return nullptr;
+	}
+	// A long text whose content changed in this layout and the one before it is being edited, or streamed into: it keeps
+	// its layout from then on, until it falls under the threshold. A text of fewer code units than that has fewer elements
+	// too, and is not even hashed.
+	const FString& Content = Input->Content;
+	if (Content.Len() >= AutomaticIncrementalElements)
+	{
+		const uint64 Hash = CityHash64(reinterpret_cast<const char*>(*Content), (uint32)(Content.Len() * sizeof(TCHAR)));
+		ContentChangeStreak = bHasContentHash && Hash != LastContentHash ? ContentChangeStreak + 1 : 0;
+		LastContentHash = Hash;
+		bHasContentHash = true;
+		bAutoIncrementalLayout = (bAutoIncrementalLayout || ContentChangeStreak >= 2) && LastElementCount >= AutomaticIncrementalElements;
+	}
+	else
+	{
+		ContentChangeStreak = 0;
+		bHasContentHash = false;
+		bAutoIncrementalLayout = false;
+	}
+	if (!bIncrementalLayoutRequested && !bAutoIncrementalLayout)
+	{
+		IncrementalState.Reset();
+		return nullptr;
+	}
+	if (!IncrementalState.IsValid())
+	{
+		IncrementalState = MakeUnique<FDreamTextLayoutState>();
+	}
+	return IncrementalState.Get();
+}
+
+bool FDreamUITextGeometryCache::IsIncrementalLayoutActive() const
+{
+	return IncrementalState.IsValid();
 }
 
 void FDreamUITextGeometryCache::Paint(FDreamUIGeometry& Geometry, const FDreamTextPaintParams& Params)

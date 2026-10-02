@@ -1,22 +1,34 @@
 {
   "about": [
     "The text parity corpus. Every case is drawn three times -- by DreamGUI on the gallery stage, by Slate through FWidgetRenderer, and by Chrome headless (Tools/TextParity/Make-ChromeReference.ps1) -- and DreamGUI.RHI.TextParity.<id> compares the three. README.md in Tools/TextParity says how the numbers are taken.",
-    "A case: id; text (UTF-8; characters that cannot be seen or that combine with the one before are written as \\u escapes, everything else literally); font (a key of the fonts table); size (font size in pixels); width (the box width in pixels, 0 for no wrapping: the box is then the canvas less the padding); lineHeight ('normal', or a percentage of the font's own line height, the way DreamGUI's LineHeightPercentage and Slate's line height scale it); letterSpacing (pixels); rich (DreamGUI rich-text markup); lang; align (start, end, center, left, right); dir (ltr, rtl, auto); wrap ('anywhere' breaks a word that does not fit a line, 'normal' lets it overflow); overflow ('', 'ellipsis', or 'clamp' with maxLines); transform ('', 'uppercase'); outline ({width in em, color}); canvas ([width, height] in pixels); flags; variants.",
-    "Defaults: width 0, lineHeight normal, letterSpacing 0, rich false, lang en, align start, dir ltr, wrap anywhere, canvas as below. The text is black on white at (padding, padding) of the canvas.",
-    "flags: 'breaks' -- DreamGUI's line starts must equal Chrome's (the one assertion); 'corners' -- a mask difference is counted; 'reportOnly' -- known not to match yet, reported only.",
+    "A case: id; text (UTF-8; characters that cannot be seen or that combine with the one before are written as \\u escapes, everything else literally); font (a key of the fonts table); size (font size in pixels); width (the box width in pixels, 0 for no wrapping: the box is then the canvas less the padding); lineHeight ('normal', or a percentage of the font's own line height, the way DreamGUI's LineHeightPercentage and Slate's line height scale it); letterSpacing (pixels); rich (DreamGUI rich-text markup, <lang=xx> included); lang; align (start, end, center, left, right, justify); textJustify and textAlignLast (CSS's, for a justified case: auto, inter-word, inter-character, none; auto, start, center, end, justify); dir (ltr, rtl, auto); wrap ('anywhere' breaks a word that does not fit a line, 'normal' lets it overflow); overflow ('', 'ellipsis', 'middleEllipsis', or 'clamp' with maxLines); transform ('', 'uppercase'); tabSize (CSS tab-size in spaces); outline ({width in em, color}); shadow ({x and y in em, +y down, color}: a drop shadow without blur); canvas ([width, height] in CSS pixels); scale (device pixels per CSS pixel); smallTextRaster ('off' draws DreamGUI's text from the distance field at every size); reference ('chrome', or 'slate' for what Chrome cannot draw); targets; flags; variants.",
+    "Defaults: width 0, lineHeight normal, letterSpacing 0, rich false, lang en, align start, textJustify auto, textAlignLast auto, dir ltr, wrap anywhere, tabSize 8 (which Chrome and DreamGUI use; a case that states one is n/a for Slate, which has no tab size), scale 1, reference chrome, canvas as below. The text is black on white at (padding, padding) of the canvas.",
+    "scale: DreamGUI draws on a stage of canvas times scale pixels with its root laid out at the canvas's size (the canvas scale), Slate at that DPI scale, Chrome with --force-device-scale-factor. Pictures are canvas times scale pixels, every position is in canvas pixels. Give a canvas the scale takes to whole pixels.",
+    "flags: 'breaks' -- DreamGUI's line starts must equal the reference's; 'corners' -- a mask difference is counted; 'reportOnly' -- known not to match yet: neither the breaks nor the targets are asserted, only reported.",
+    "targets: limits on DreamGUI against the reference, asserted unless the case is reportOnly -- inkMass (relative, either way), inkBounds (pixels, every edge of the ink's bounds), caretMax (pixels), baseline and pitch (pixels, either way), edgeWidth (pixels wider than the reference's edges, rows and columns), greyFraction (relative, either way). An object of them, or the name of one in targetSets.",
+    "reference 'slate': the case is measured against Slate and has no Chrome reference (Chrome has no middle ellipsis). Where Slate has no equivalent of a case -- justification, a stated tab size, fallback faces chosen by the text's language -- Slate does not draw it: n/a.",
     "wordBreak: the CSS word-break Chrome's page uses (normal by default). The Korean cases use keep-all: DreamGUI and Slate break Korean between words (eojeol), as Korean pages ask Chrome to with keep-all; Chrome's own default breaks between any two syllables.",
     "LongWord_Url is reportOnly: Blink's line breaker never breaks after '/' before a letter, where UAX #14 (which DreamGUI, Slate and Firefox follow) allows it, so the two differ on every path segment by design.",
-    "variants: 'narrow' adds <id>_1px, the same case in a box 1 pixel wide with wrap normal, so that every break opportunity becomes a line break; its canvas is max(512, 2 * padding + 3 * size) wide and min(4096, 2 * padding + (UTF-16 length + 1) * ceil(1.6 * size)) tall. 'inverse' adds <id>_Inverse, white on black.",
-    "fonts: each key names its faces in fallback order, the primary first; bold, italic and boldItalic are the primary's true style faces where it has them. $(EngineDir) is the engine's Engine directory, $(WindowsFonts) the system's font directory. kind 'bitmap' asks DreamGUI for a bitmap font instead of a distance field."
+    "variants: 'narrow' adds <id>_1px, the same case in a box 1 pixel wide with wrap normal, so that every break opportunity becomes a line break; its canvas is max(512, 2 * padding + 3 * size) wide and min(4096, 2 * padding + (UTF-16 length + 1) * ceil(1.6 * size)) tall. 'inverse' adds <id>_Inverse, white on black. 'field' adds <id>_Field, the same picture asked of DreamGUI's distance field (smallTextRaster off): small text drawn both ways against one reference.",
+    "fonts: each key names its faces in fallback order, the primary first; a face is its file, or {file, lang, unicodeRange, scale} for a fallback meant for some languages (semicolon-separated cultures), some code points (CSS unicode-range) or drawn at a scale (CSS size-adjust). bold, italic and boldItalic are the primary's true style faces where it has them. $(EngineDir) is the engine's Engine directory, $(WindowsFonts) the system's font directory. kind 'bitmap' asks DreamGUI for a bitmap font instead of a distance field. optional true: the key names a file not every machine has, and its cases are skipped where one is missing.",
+    "Emoji: every engine draws the engine's own Noto Color Emoji (CBDT bitmaps) through @font-face, a composite sub-font and a fallback entry. EmojiSegoe is Windows' Segoe UI Emoji, held to carets and metrics only: Chrome paints its COLRv1 gradients, FreeType (DreamGUI and Slate) its COLRv0 layers. Emoji_TextPresentation asks for text presentation the Emoji key has no monochrome face for, so each engine shows what it does then."
   ],
   "padding": 16,
   "canvas": [1024, 160],
+  "targetSets": {
+    "smallText": { "edgeWidth": 0.2, "greyFraction": 0.1, "inkMass": 0.08 },
+    "emoji": { "inkMass": 0.1, "inkBounds": 2, "caretMax": 1 },
+    "metricsOnly": { "caretMax": 1, "baseline": 1, "pitch": 1 }
+  },
   "fonts": {
     "Latin": {
       "faces": ["$(EngineDir)/Content/Slate/Fonts/Roboto-Regular.ttf"],
       "bold": "$(EngineDir)/Content/Slate/Fonts/Roboto-Bold.ttf",
       "italic": "$(EngineDir)/Content/Slate/Fonts/Roboto-Italic.ttf",
       "boldItalic": "$(EngineDir)/Content/Slate/Fonts/Roboto-BoldItalic.ttf"
+    },
+    "Synthetic": {
+      "faces": ["$(EngineDir)/Content/Slate/Fonts/Roboto-Regular.ttf"]
     },
     "CJK": {
       "faces": [
@@ -26,6 +38,19 @@
       "bold": "$(EngineDir)/Content/Slate/Fonts/Roboto-Bold.ttf",
       "italic": "$(EngineDir)/Content/Slate/Fonts/Roboto-Italic.ttf",
       "boldItalic": "$(EngineDir)/Content/Slate/Fonts/Roboto-BoldItalic.ttf"
+    },
+    "CJKLocale": {
+      "faces": [
+        "$(EngineDir)/Content/Slate/Fonts/Roboto-Regular.ttf",
+        { "file": "$(EngineDir)/Content/Editor/Slate/Fonts/GenEiGothicPro-Regular.otf", "lang": "ja" },
+        { "file": "$(EngineDir)/Content/Slate/Fonts/DroidSansFallback.ttf", "lang": "zh-Hans" }
+      ]
+    },
+    "CJKScaled": {
+      "faces": [
+        "$(EngineDir)/Content/Slate/Fonts/Roboto-Regular.ttf",
+        { "file": "$(EngineDir)/Content/Slate/Fonts/DroidSansFallback.ttf", "unicodeRange": "U+3000-30FF, U+4E00-9FFF, U+FF00-FFEF", "scale": 1.2 }
+      ]
     },
     "Arabic": {
       "faces": [
@@ -57,6 +82,13 @@
         "$(EngineDir)/Content/Editor/Slate/Fonts/NotoColorEmoji.ttf"
       ]
     },
+    "EmojiSegoe": {
+      "faces": [
+        "$(EngineDir)/Content/Slate/Fonts/Roboto-Regular.ttf",
+        "$(WindowsFonts)/seguiemj.ttf"
+      ],
+      "optional": true
+    },
     "World": {
       "faces": [
         "$(EngineDir)/Content/Slate/Fonts/Roboto-Regular.ttf",
@@ -79,12 +111,12 @@
     { "id": "Kerning", "text": "AV To Wa Ty Yo LT P. F, Vo Te", "font": "Latin", "size": 48, "canvas": [1024, 112] },
     { "id": "Ligatures", "text": "office fluffy fi fl ffi ffl", "font": "Latin", "size": 48, "canvas": [1024, 112] },
 
-    { "id": "Size_10", "text": "Hamburgefonstiv 0123456789", "font": "Latin", "size": 10, "canvas": [512, 64], "variants": ["inverse"] },
-    { "id": "Size_11", "text": "Hamburgefonstiv 0123456789", "font": "Latin", "size": 11, "canvas": [512, 64] },
-    { "id": "Size_12", "text": "Hamburgefonstiv 0123456789", "font": "Latin", "size": 12, "canvas": [512, 64], "variants": ["inverse"] },
-    { "id": "Size_13", "text": "Hamburgefonstiv 0123456789", "font": "Latin", "size": 13, "canvas": [512, 64] },
-    { "id": "Size_14", "text": "Hamburgefonstiv 0123456789", "font": "Latin", "size": 14, "canvas": [512, 64] },
-    { "id": "Size_16", "text": "Hamburgefonstiv 0123456789", "font": "Latin", "size": 16, "canvas": [512, 64], "variants": ["inverse"] },
+    { "id": "Size_10", "text": "Hamburgefonstiv 0123456789", "font": "Latin", "size": 10, "canvas": [512, 64], "flags": ["reportOnly"], "targets": "smallText", "variants": ["inverse"] },
+    { "id": "Size_11", "text": "Hamburgefonstiv 0123456789", "font": "Latin", "size": 11, "canvas": [512, 64], "flags": ["reportOnly"], "targets": "smallText", "variants": ["inverse"] },
+    { "id": "Size_12", "text": "Hamburgefonstiv 0123456789", "font": "Latin", "size": 12, "canvas": [512, 64], "flags": ["reportOnly"], "targets": "smallText", "variants": ["inverse", "field"] },
+    { "id": "Size_13", "text": "Hamburgefonstiv 0123456789", "font": "Latin", "size": 13, "canvas": [512, 64], "flags": ["reportOnly"], "targets": "smallText", "variants": ["inverse"] },
+    { "id": "Size_14", "text": "Hamburgefonstiv 0123456789", "font": "Latin", "size": 14, "canvas": [512, 64], "flags": ["reportOnly"], "targets": "smallText", "variants": ["inverse"] },
+    { "id": "Size_16", "text": "Hamburgefonstiv 0123456789", "font": "Latin", "size": 16, "canvas": [512, 64], "flags": ["reportOnly"], "targets": "smallText", "variants": ["inverse", "field"] },
     { "id": "Size_20", "text": "Hamburgefonstiv 0123456789", "font": "Latin", "size": 20, "canvas": [512, 72] },
     { "id": "Size_24", "text": "Hamburgefonstiv 0123456789", "font": "Latin", "size": 24, "canvas": [512, 80], "variants": ["inverse"] },
     { "id": "Size_32", "text": "Hamburgefonstiv 0123456789", "font": "Latin", "size": 32, "canvas": [640, 96] },
@@ -92,6 +124,11 @@
     { "id": "Size_72", "text": "Hamburgefonstiv 0123456789", "font": "Latin", "size": 72, "canvas": [1152, 152] },
     { "id": "Size_128", "text": "Hamburgefonstiv 0123456789", "font": "Latin", "size": 128, "canvas": [1920, 232] },
     { "id": "Size_256", "text": "Hamburgefonstiv 0123456789", "font": "Latin", "size": 256, "canvas": [3776, 424] },
+    { "id": "Size_12_Scale125", "text": "Hamburgefonstiv 0123456789", "font": "Latin", "size": 12, "scale": 1.25, "canvas": [512, 64], "flags": ["reportOnly"], "targets": "smallText" },
+    { "id": "Size_14_Scale133", "text": "Hamburgefonstiv 0123456789", "font": "Latin", "size": 14, "scale": 1.3333333333, "canvas": [480, 63], "flags": ["reportOnly"], "targets": "smallText" },
+    { "id": "Phases_iRun", "text": "iiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiii", "font": "Latin", "size": 12, "letterSpacing": 0.25, "canvas": [512, 64], "flags": ["reportOnly"], "targets": "smallText" },
+    { "id": "Cjk_Small12", "text": "中文排版：标点符号，不应出现在行首。", "font": "CJK", "size": 12, "lang": "zh-Hans", "canvas": [512, 64], "flags": ["reportOnly"], "targets": "smallText" },
+    { "id": "Cjk_Small14", "text": "中文排版：标点符号，不应出现在行首。", "font": "CJK", "size": 14, "lang": "zh-Hans", "canvas": [512, 64], "flags": ["reportOnly"], "targets": "smallText" },
 
     { "id": "Spacing_Minus5", "text": "This is heading 2", "font": "Latin", "size": 32, "letterSpacing": -5, "canvas": [640, 96] },
     { "id": "Spacing_Minus2", "text": "This is heading 2", "font": "Latin", "size": 32, "letterSpacing": -2, "canvas": [640, 96] },
@@ -110,6 +147,11 @@
     { "id": "Cjk_Korean", "text": "한국어 텍스트 줄바꿈 테스트입니다", "font": "CJK", "size": 24, "width": 120, "lang": "ko", "wordBreak": "keep-all", "canvas": [512, 224], "flags": ["breaks"], "variants": ["narrow"] },
     { "id": "Cjk_MixedJapaneseEnglish", "text": "UE5.8で日本語とEnglishを混ぜるtest", "font": "CJK", "size": 24, "width": 160, "lang": "ja", "canvas": [512, 192], "flags": ["breaks"], "variants": ["narrow"] },
 
+    { "id": "Han_Ja", "text": "直角骨写今令海返誤 们这", "font": "CJKLocale", "size": 32, "lang": "ja", "canvas": [512, 96] },
+    { "id": "Han_Zh", "text": "直角骨写今令海返誤 们这", "font": "CJKLocale", "size": 32, "lang": "zh-Hans", "canvas": [512, 96] },
+    { "id": "Han_LangTags", "text": "<lang=ja>直角骨写今</lang> <lang=zh-Hans>直角骨写今</lang> 直角骨写今", "font": "CJKLocale", "size": 32, "rich": true, "canvas": [768, 96] },
+    { "id": "Han_ScaledFallback", "text": "Han 漢字 and 中文 scaled", "font": "CJKScaled", "size": 24, "canvas": [512, 80] },
+
     { "id": "Bidi_HebrewLtr", "text": "שלום world 123 עולם", "font": "Hebrew", "size": 32, "lang": "he", "dir": "ltr", "canvas": [640, 96] },
     { "id": "Bidi_HebrewRtl", "text": "שלום world 123 עולם", "font": "Hebrew", "size": 32, "lang": "he", "dir": "rtl", "canvas": [640, 96] },
     { "id": "Bidi_ArabicLtr", "text": "مرحبا بالعالم Hello 2026 (test)", "font": "Arabic", "size": 32, "lang": "ar", "dir": "ltr", "canvas": [768, 112] },
@@ -119,7 +161,17 @@
 
     { "id": "Thai", "text": "ภาษาไทยไม\u0E48ม\u0E35การเว\u0E49นวรรคระหว\u0E48างคำ กำ ป\u0E31\u0E49น", "font": "Thai", "size": 24, "width": 200, "lang": "th", "canvas": [512, 224], "flags": ["breaks"], "variants": ["narrow"] },
     { "id": "Devanagari", "text": "ह\u093Fन\u094Dद\u0940 म\u0947\u0902 स\u0902य\u0941क\u094Dत\u093Eक\u094Dषर क\u094Dषत\u094Dरज\u094Dञ क\u093F र\u094Dक", "font": "Devanagari", "size": 32, "lang": "hi", "canvas": [768, 112] },
-    { "id": "Emoji", "text": "👍 👍\uD83C\uDFFD 👨\u200D👩\u200D👧\u200D👦 🏳\uFE0F\u200D🌈 🇯🇵 1\uFE0F\u20E3 ❤\uFE0F ❤", "font": "Emoji", "size": 32, "canvas": [768, 96], "flags": ["reportOnly"] },
+    { "id": "Emoji", "text": "👍 👍\uD83C\uDFFD 👨\u200D👩\u200D👧\u200D👦 🏳\uFE0F\u200D🌈 🇯🇵 1\uFE0F\u20E3 ❤\uFE0F ❤", "font": "Emoji", "size": 32, "canvas": [768, 96], "flags": ["reportOnly"], "targets": "emoji" },
+    { "id": "Emoji_Size12", "text": "Hi 👍 😀 🎉 ❤\uFE0F 🇯🇵 ok", "font": "Emoji", "size": 12, "canvas": [384, 48], "flags": ["reportOnly"], "targets": "emoji" },
+    { "id": "Emoji_Size16", "text": "Hi 👍 😀 🎉 ❤\uFE0F 🇯🇵 ok", "font": "Emoji", "size": 16, "canvas": [384, 56], "flags": ["reportOnly"], "targets": "emoji" },
+    { "id": "Emoji_Size24", "text": "Hi 👍 😀 🎉 ❤\uFE0F 🇯🇵 ok", "font": "Emoji", "size": 24, "canvas": [512, 72], "flags": ["reportOnly"], "targets": "emoji" },
+    { "id": "Emoji_Size48", "text": "Hi 👍 😀 🎉 ❤\uFE0F 🇯🇵 ok", "font": "Emoji", "size": 48, "canvas": [768, 112], "flags": ["reportOnly"], "targets": "emoji" },
+    { "id": "Emoji_Wrapping", "text": "Emoji wrap: 👍👍\uD83C\uDFFD 👨\u200D👩\u200D👧 🇯🇵🇫🇷 😀😃😄😁 done", "font": "Emoji", "size": 24, "width": 160, "wrap": "normal", "canvas": [512, 224], "flags": ["breaks", "reportOnly"], "targets": "emoji" },
+    { "id": "Emoji_TagFlag", "text": "🏴\uDB40\uDC67\uDB40\uDC62\uDB40\uDC65\uDB40\uDC6E\uDB40\uDC67\uDB40\uDC7F 🏴\uDB40\uDC67\uDB40\uDC62\uDB40\uDC73\uDB40\uDC63\uDB40\uDC74\uDB40\uDC7F 🏴\uDB40\uDC67\uDB40\uDC62\uDB40\uDC77\uDB40\uDC6C\uDB40\uDC73\uDB40\uDC7F", "font": "Emoji", "size": 32, "canvas": [512, 96], "flags": ["reportOnly"], "targets": "emoji" },
+    { "id": "Emoji_TextPresentation", "text": "☺\uFE0E ☺\uFE0F ❤\uFE0E ❤\uFE0F ✌\uFE0E ✌\uFE0F ☀ ☀\uFE0F", "font": "Emoji", "size": 32, "canvas": [640, 96], "flags": ["reportOnly"], "targets": "emoji" },
+    { "id": "Emoji_RichTags", "text": "<color=#E0301E>red 👍 ❤\uFE0F</color> <size=40>big 😀</size> <size=16>small 🎉</size> end", "font": "Emoji", "size": 24, "rich": true, "canvas": [768, 96], "flags": ["reportOnly"], "targets": "emoji" },
+    { "id": "Emoji_Shadow", "text": "Shadow 👍 😀 🇯🇵", "font": "Emoji", "size": 32, "shadow": { "x": 0.08, "y": 0.08, "color": "#00000099" }, "canvas": [512, 96], "flags": ["reportOnly"], "targets": "emoji" },
+    { "id": "Emoji_Segoe", "text": "👍 👍\uD83C\uDFFD 👨\u200D👩\u200D👧\u200D👦 🏳\uFE0F\u200D🌈 🇯🇵 1\uFE0F\u20E3 ❤\uFE0F ❤", "font": "EmojiSegoe", "size": 32, "canvas": [768, 96], "flags": ["reportOnly"], "targets": "metricsOnly" },
     { "id": "Combining_EDotCircumflex", "text": "e\u0323\u0302", "font": "Latin", "size": 64, "canvas": [512, 128] },
     { "id": "Combining_Overlays", "text": "Z\u0335a\u0337", "font": "Latin", "size": 64, "canvas": [512, 128] },
 
@@ -131,10 +183,21 @@
     { "id": "Rich_Link", "text": "Read the <a=docs>documentation</a> now", "font": "Latin", "size": 24, "rich": true, "canvas": [640, 80] },
     { "id": "Rich_Entities", "text": "&lt;b&gt; &amp; &#x1F600;", "font": "Emoji", "size": 24, "rich": true, "canvas": [512, 80] },
 
+    { "id": "Justify_Latin", "text": "Justified text spreads the room a line lacks over the spaces between its words, and its last line keeps to the start.", "font": "Latin", "size": 16, "width": 260, "align": "justify", "wrap": "normal", "canvas": [512, 160], "flags": ["breaks"] },
+    { "id": "Justify_Japanese", "text": "日本語の文章を両端揃えにすると、行に足りない幅が文字の間に配られます。", "font": "CJK", "size": 20, "width": 230, "lang": "ja", "align": "justify", "canvas": [512, 192], "flags": ["breaks"] },
+    { "id": "Justify_HebrewRtl", "text": "שלום עולם, זו פסקה מיושרת לשני הצדדים, מימין לשמאל, עם כמה מילים נוספות.", "font": "Hebrew", "size": 20, "width": 260, "lang": "he", "dir": "rtl", "align": "justify", "wrap": "normal", "canvas": [512, 160], "flags": ["breaks"] },
+    { "id": "Justify_LastLine", "text": "Here every line is justified, the last one and the one a newline ends\nas well, because text-align-last says so.", "font": "Latin", "size": 16, "width": 260, "align": "justify", "textAlignLast": "justify", "wrap": "normal", "canvas": [512, 192], "flags": ["breaks"] },
+
+    { "id": "Tabs_Default", "text": "a\tbb\tccc\tdddd\t1\t22", "font": "Latin", "size": 24, "tabSize": 8, "canvas": [768, 80] },
+    { "id": "Tabs_Size4", "text": "a\tbb\tccc\tdddd\t1\t22", "font": "Latin", "size": 24, "tabSize": 4, "canvas": [768, 80] },
+    { "id": "Tabs_Wrapped", "text": "Name:\tvalue one\tvalue two\tvalue three\tvalue four", "font": "Latin", "size": 20, "width": 260, "wrap": "normal", "tabSize": 8, "canvas": [512, 160] },
+    { "id": "Tabs_LetterSpacing", "text": "a\tb\tc\td", "font": "Latin", "size": 24, "letterSpacing": 2, "tabSize": 8, "canvas": [768, 80] },
+
     { "id": "Layout_Whitespace", "text": "a  b\tc", "font": "Latin", "size": 32, "canvas": [512, 96] },
     { "id": "Layout_CentredPadded", "text": "  padded  ", "font": "Latin", "size": 32, "width": 300, "align": "center", "canvas": [512, 96] },
     { "id": "Layout_EllipsisLtr", "text": "The quick brown fox jumps over the lazy dog", "font": "Latin", "size": 20, "width": 200, "overflow": "ellipsis", "canvas": [512, 80] },
     { "id": "Layout_EllipsisRtl", "text": "שלום עולם זהו משפט ארוך מאוד", "font": "Hebrew", "size": 20, "width": 200, "overflow": "ellipsis", "lang": "he", "dir": "rtl", "canvas": [512, 80] },
+    { "id": "Ellipsis_Middle", "text": "The quick brown fox jumps over the lazy dog", "font": "Latin", "size": 20, "width": 200, "overflow": "middleEllipsis", "reference": "slate", "canvas": [512, 80], "flags": ["reportOnly"] },
     { "id": "Layout_Clamp3", "text": "The quick brown fox jumps over the lazy dog, then naps in the sun for most of the afternoon while the clouds go by.", "font": "Latin", "size": 20, "width": 240, "overflow": "clamp", "maxLines": 3, "canvas": [512, 160] },
     { "id": "Layout_RtlDefaultAlign", "text": "שלום עולם, זו פסקה מימין לשמאל עם יישור ברירת מחדל.", "font": "Hebrew", "size": 24, "width": 400, "lang": "he", "dir": "rtl", "canvas": [512, 160], "flags": ["breaks"], "variants": ["narrow"] },
     { "id": "Layout_LineHeight50", "text": "Line height half of the font's own, three lines of it.", "font": "Latin", "size": 24, "width": 220, "lineHeight": "50%", "canvas": [512, 160] },

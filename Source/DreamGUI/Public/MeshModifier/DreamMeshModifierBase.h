@@ -123,6 +123,10 @@ public:
 	/**
 	 * Will this modifier affect these geometry data? Save some calculation if not affect.
 	 * For blueprint just make all to true, for easier use.
+	 *
+	 * Also how a modifier declares that it moves or re-maps vertices: a text whose enabled modifiers answer
+	 * OutVertexPosition or OutUV stays on its font's distance field instead of small-text coverage glyphs, which are
+	 * placed on the device pixel grid and sampled 1:1. Answer exactly; true where unsure.
 	 */
 	virtual void ModifierWillChangeVertexData(bool& OutTriangleIndices, bool& OutVertexPosition, bool& OutUV, bool& OutColor)
 	{

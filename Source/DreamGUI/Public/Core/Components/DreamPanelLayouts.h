@@ -12,6 +12,8 @@
 #include "DreamTweener.h"
 #include "DreamPanelLayouts.generated.h"
 
+class UDreamUserWidget;
+
 UENUM(BlueprintType)
 enum class EDreamPanelOrientation : uint8
 {
@@ -19,6 +21,10 @@ enum class EDreamPanelOrientation : uint8
 	Vertical,
 };
 
+/**
+ * Slate's EStretch. The order is this plugin's, not Slate's: the last two were appended when they arrived, so every
+ * value saved before them keeps its meaning.
+ */
 UENUM(BlueprintType)
 enum class EDreamScaleBoxStretch : uint8
 {
@@ -29,6 +35,14 @@ enum class EDreamScaleBoxStretch : uint8
 	ScaleToFitX,
 	ScaleToFitY,
 	UserSpecified,
+	/**
+	 * One uniform scale taken from the platform's safe zone: 1 - max(max(Left, Right) / Width, max(Top, Bottom) /
+	 * Height) of the game viewport, so content laid out for the whole screen shrinks until it clears the margin on
+	 * its tighter side. See UDreamLayoutContainerScaleBox::ComputeSafeZoneScale.
+	 */
+	ScaleBySafeZone,
+	/** UserSpecified, clipped to the box: content scaled past the box's own rect is cut off at its edge. */
+	UserSpecifiedWithClipping,
 };
 
 /** Slate's EStretchDirection: which way a scale box is allowed to take its content. */
@@ -371,6 +385,11 @@ public:
 	 * Where a line that did not fill the wrap width sits inside it. UMG enables this for a horizontal
 	 * box only, and so does this: in a vertical box the lines are columns and there is no horizontal
 	 * line length for the value to describe.
+	 *
+	 * Fill stretches every slot of a line by one factor so that the line spans the box: SWrapBox's
+	 * HAlign_Fill, which scales each slot by (allotted width - gaps) / (line length - gaps) and leaves the
+	 * gaps as they are. The target is the box's own width less its padding, not WrapSize, because Slate's
+	 * is the allotted geometry. What the box measures does not change.
 	 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintSetter = SetHorizontalAlignment, Category = "WrapBox", meta = (EditCondition = "Orientation == EDreamPanelOrientation::Horizontal"))
 	EDreamPanelHorizontalAlignment HorizontalAlignment = EDreamPanelHorizontalAlignment::Left;
@@ -573,6 +592,13 @@ protected:
 	virtual void OnRegister() override;
 	virtual void OnUnregister() override;
 	void UpdateClippingOverride();
+	/** Re-read the platform's safe margin into SafeZoneScale while the stretch is ScaleBySafeZone; 1 otherwise, as SScaleBox's is. */
+	void RefreshSafeZoneScale();
+	/** The platform's safe frame moved (a device rotated, a debug safe zone was set): SScaleBox's HandleSafeFrameChangedEvent. */
+	void HandleSafeFrameChanged();
+	FDelegateHandle SafeFrameChangedHandle;
+	/** The scale ScaleBySafeZone arranges at, cached as SScaleBox caches it: refreshed by RefreshSafeZoneScale only. */
+	float SafeZoneScale = 1.0f;
 	TWeakObjectPtr<UDreamWidget> ScaledChild;
 	bool bAppliedDefaultClipping = false;
 public:
@@ -580,10 +606,19 @@ public:
 	virtual void GetRequiredBehaviourClasses(TArray<TSubclassOf<UDreamUIBehaviour>>& OutClasses) const override;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintSetter = SetPadding, Category = "ScaleBox")
 	FMargin Padding;
+	/**
+	 * How the content is scaled. ScaleToFitX, ScaleToFitY, ScaleToFill and UserSpecifiedWithClipping clip it to the box
+	 * while the widget's own Clipping is left at Inherit, as SScaleBox's paint does.
+	 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintSetter = SetStretch, Category = "ScaleBox")
 	EDreamScaleBoxStretch Stretch = EDreamScaleBoxStretch::ScaleToFit;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintSetter = SetUserSpecifiedScale, Category = "ScaleBox", meta = (ClampMin = "0.0"))
 	float UserSpecifiedScale = 1.0f;
+	/**
+	 * Divide whatever scale the stretch mode arrived at by the scale this box inherits from above, so the content is
+	 * drawn at that scale on screen. Every mode, as SScaleBox divides them all -- and measured exactly as it is
+	 * arranged, so the box asks its parent for the room its content will actually take.
+	 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintSetter = SetIgnoreInheritedScale, Category = "ScaleBox")
 	bool bIgnoreInheritedScale = false;
 	/**
@@ -598,7 +633,18 @@ public:
 	UFUNCTION(BlueprintSetter) void SetUserSpecifiedScale(float Value);
 	UFUNCTION(BlueprintSetter) void SetIgnoreInheritedScale(bool Value);
 	UFUNCTION(BlueprintSetter) void SetStretchDirection(EDreamScaleBoxStretchDirection Value);
+	/** The scale ScaleBySafeZone draws at right now: 1 under any other stretch, and wherever there is no game viewport to ask. */
+	UFUNCTION(BlueprintPure, Category = "ScaleBox")
+	float GetSafeZoneScale() const { return SafeZoneScale; }
 	virtual void ArrangeChildren() override;
+
+	/**
+	 * SScaleBox::RefreshSafeZoneScale's arithmetic: 1 - max(max(Left, Right) / Width, max(Top, Bottom) / Height) for the
+	 * safe margin InMargin of a viewport of InViewportSize, both in pixels -- the tighter side decides, because one scale
+	 * has to clear both. 1 for a viewport with no area; never below 0. Static and pure so the arithmetic can be checked
+	 * without a device that has a margin.
+	 */
+	static float ComputeSafeZoneScale(const FMargin& InMargin, const FVector2D& InViewportSize);
 };
 
 UCLASS(BlueprintType, DisplayName = "UMG Safe Zone")
@@ -678,9 +724,13 @@ public:
  * A stack box that clips to its own bounds and scrolls its children — the whole scroll view in one panel.
  *
  * Unlike the UUIScrollView component, there is no separate viewport/content pair to wire up: children are
- * arranged at their desired size along the scroll axis (Fill is meaningless here, since a scroll box exists
- * precisely because content may exceed the viewport), the scrollable extent is derived from that arrangement,
+ * stacked along the scroll axis at their desired size, the scrollable extent is the total of those sizes,
  * and clipping is applied automatically. Drop one in, add children, done.
+ *
+ * A Fill slot is stacked as SScrollBox stacks one, with shrinking off: the Fill slots share whichever is
+ * larger, the total they ask for or the viewport less everything else, by weight. Short content is thereby
+ * stretched to the viewport, and content that overflows keeps exactly the length it asked for -- the scroll
+ * range is always the desired total, so a Fill slot can never make the box unscrollable.
  */
 // EDreamScrollBoxConsumeMouseWheel used to be declared here. It moved to DreamScrollTypes.h (included
 // at the top of this file, so every reader of this header still sees it) once UUIScrollView needed to
@@ -698,6 +748,12 @@ enum class EDreamScrollBoxScrollbarVisibility : uint8
 	Permanent,
 	/** Hidden while the content fits the viewport, which is what UMG's default does. */
 	AutoHide,
+	/**
+	 * Never shown, though the content still scrolls by wheel, drag and code -- UMG's ScrollBarVisibility set to Hidden.
+	 * A bar that takes room beside the content (UDreamScrollBox's) keeps that room while there is something to scroll,
+	 * as a Hidden Slate bar keeps its slot, and gives it back when there is not.
+	 */
+	Hidden,
 };
 
 /** How an eased scroll gets from where it is to where it was asked to go. */
@@ -848,6 +904,29 @@ public:
 	float OverscrollLimit = 120.0f;
 
 	/**
+	 * A whole viewport of empty space BEFORE the content -- UMG's BackPadScrolling: at offset zero the first child sits
+	 * one viewport in, so the first item can be scrolled all the way to the far edge. A viewport rather than half of
+	 * one, which is Slate's arithmetic (SScrollPanel's ScrollPadding is the panel's own length). It adds to the scroll
+	 * range and takes nothing from what a Fill slot is given.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetBackPadScrolling", BlueprintSetter = "SetBackPadScrolling", Category = "ScrollBox")
+	bool bBackPadScrolling = false;
+	/** A whole viewport of empty space AFTER the content -- UMG's FrontPadScrolling, so the last item can reach the near edge. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetFrontPadScrolling", BlueprintSetter = "SetFrontPadScrolling", Category = "ScrollBox")
+	bool bFrontPadScrolling = false;
+	/**
+	 * Whether a drag with the RIGHT button scrolls this box -- UMG's bAllowRightClickDragScrolling, on by default as
+	 * there. Off leaves the right button to whatever wants it for a context menu. On, a right drag is still refused
+	 * while there is nothing to scroll, as SScrollBox refuses it unless its bar IsNeeded. A left-button drag scrolls
+	 * whatever this says: it is this library's own gesture, and existing screens rely on it.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetAllowRightClickDragScrolling", BlueprintSetter = "SetAllowRightClickDragScrolling", Category = "ScrollBox")
+	bool bAllowRightClickDragScrolling = true;
+	/** Whether a finger dragging over the box scrolls it -- UMG's bEnableTouchScrolling, on by default as there. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetEnableTouchScrolling", BlueprintSetter = "SetEnableTouchScrolling", Category = "ScrollBox")
+	bool bEnableTouchScrolling = true;
+
+	/**
 	 * The plain readers and writers for every knob above.
 	 *
 	 * Most of them are one line, and that is the point: a Blueprint write has to land on the setter
@@ -929,6 +1008,30 @@ public:
 	float GetOverscrollLimit() const { return OverscrollLimit; }
 	UFUNCTION(BlueprintCallable, Category = "ScrollBox")
 	void SetOverscrollLimit(float Value);
+	UFUNCTION(BlueprintPure, Category = "ScrollBox")
+	bool GetBackPadScrolling() const { return bBackPadScrolling; }
+	/** Moves where offset zero puts the content and lengthens the range, so the box is re-arranged. */
+	UFUNCTION(BlueprintCallable, Category = "ScrollBox")
+	void SetBackPadScrolling(bool Value);
+	UFUNCTION(BlueprintPure, Category = "ScrollBox")
+	bool GetFrontPadScrolling() const { return bFrontPadScrolling; }
+	UFUNCTION(BlueprintCallable, Category = "ScrollBox")
+	void SetFrontPadScrolling(bool Value);
+	UFUNCTION(BlueprintPure, Category = "ScrollBox")
+	bool GetAllowRightClickDragScrolling() const { return bAllowRightClickDragScrolling; }
+	/** Read when a drag begins, so a gesture already under way keeps the answer it started with. */
+	UFUNCTION(BlueprintCallable, Category = "ScrollBox")
+	void SetAllowRightClickDragScrolling(bool Value) { bAllowRightClickDragScrolling = Value; }
+	UFUNCTION(BlueprintPure, Category = "ScrollBox")
+	bool GetEnableTouchScrolling() const { return bEnableTouchScrolling; }
+	UFUNCTION(BlueprintCallable, Category = "ScrollBox")
+	void SetEnableTouchScrolling(bool Value) { bEnableTouchScrolling = Value; }
+	/**
+	 * Whether there is anything to scroll: content longer than the viewport, as the last layout pass measured it --
+	 * SScrollBar's IsNeeded. False before the first pass, which has measured nothing yet.
+	 */
+	UFUNCTION(BlueprintPure, Category = "ScrollBox")
+	bool IsScrollNeeded() const { return bLayoutMetricsValid && MaxScrollOffset > KINDA_SMALL_NUMBER; }
 
 	/**
 	 * True when a GESTURE on this box has to be read backwards -- a horizontal box in a right-to-left
@@ -1073,11 +1176,32 @@ private:
 	void MarkScrollArrangeDirty();
 	/** The viewport's extent across the scroll axis, less this box's padding. */
 	float GetAvailableCross() const;
+	/** The viewport's extent along the scroll axis, less this box's padding: what each pad is as long as. */
+	float GetAvailablePrimary() const;
 	/**
 	 * How far InChild reaches along the scroll axis, slot padding included, measured exactly as the
 	 * arrangement measures it: against the viewport's cross extent, never against the scroll axis.
 	 */
 	float MeasureScrollExtent(UDreamWidget* InChild, float InAvailableCross) const;
+	/** One child's place along the scroll axis: content-space start (offset not applied) and length, slot padding included. */
+	struct FScrollStackSlot
+	{
+		UDreamWidget* Child = nullptr;
+		float Start = 0.0f;
+		float Length = 0.0f;
+	};
+	/**
+	 * Where every child goes along the scroll axis, and the content length the scroll range is taken from -- the one
+	 * walk ArrangeChildren and GetChildContentExtent both read, so a child is revealed where it is arranged.
+	 *
+	 * SScrollPanel's arrangement: the back pad first, then the children in order with the gaps between them. An Auto
+	 * slot is as long as it measures. The Fill slots share max(their measured total, viewport - everything else) by
+	 * weight, each clamped to its slot's Min/MaxDesiredSize -- the share is never less than what they asked for, which
+	 * is ArrangeChildrenInStack with shrinking off. The pads take no part in that share. OutContentPrimary is the
+	 * measured total, both pads included, which is what SScrollPanel's desired size and so the scroll range are.
+	 */
+	void PlaceScrollStack(const TArray<UDreamWidget*>& InChildren, float InViewportPrimary, float InAvailableCross,
+		TArray<FScrollStackSlot>& OutSlots, float& OutContentPrimary) const;
 	/** Content-space start and extent of the direct child that contains InWidget. */
 	bool GetChildContentExtent(UDreamWidget* InWidget, float& OutStart, float& OutExtent);
 	/**
@@ -1192,10 +1316,15 @@ public:
  * container's statement about where it puts its content. Authors coming from UMG set HorizontalAlignment
  * on the Border, and before this that property had nowhere to live.
  *
- * The background is the owning widget's own visual, which is how every other drawn thing works here;
- * BrushColor writes through to it so UBorder::SetBrushColor has a counterpart. There is no Background
- * FSlateBrush: a DreamGUI widget's art comes from its visual (sprite, rect block, image), and adding a
- * second source of it would be a fork of the render path rather than a port of a panel.
+ * The background is the owning widget's own visual, which is how every other drawn thing works here.
+ * BrushColor tints it, as SBorder multiplies its brush by BorderBackgroundColor, without touching the
+ * visual's own colour (UDreamVisual::SetColorMultiplier). There is no Background FSlateBrush: a DreamGUI
+ * widget's art comes from its visual (sprite, rect block, image), and adding a second source of it would
+ * be a fork of the render path rather than a port of a panel.
+ *
+ * What SBorder adds on top of its brush is here too: ContentColorAndOpacity tints what the border holds
+ * and never the background, a disabled border draws its background at the disabled effect's 45% alpha,
+ * and the background can be mirrored for a right-to-left culture.
  */
 UCLASS(BlueprintType, DisplayName = "UMG Border")
 class DREAMGUI_API UDreamLayoutContainerBorder : public UDreamPanelLayoutBase
@@ -1205,8 +1334,35 @@ protected:
 	virtual FVector2f MeasureLayout(const FDreamMeasureSpec& InWidthSpec, const FDreamMeasureSpec& InHeightSpec) const override;
 	virtual FDreamLayoutControlAnchorData GetLayoutControlAnchor(const UDreamWidget* TargetWidget) const override;
 	virtual void OnRegister() override;
-	/** Push BrushColor onto the owning widget's visual, which is what actually draws the background. */
+	virtual void OnUnregister() override;
+	virtual void BeginPlay() override;
+	virtual void EndPlay() override;
+#if WITH_EDITOR
+	/** A details edit writes past the setters below, so what they push is pushed again here. */
+	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
+#endif
+	/**
+	 * Tint the owning widget's visual -- the background -- by BrushColor, and by the disabled effect's alpha while the
+	 * border is disabled and shows the effect. The visual's own colour is left as it was authored.
+	 */
 	void ApplyBrushColorToVisual() const;
+	/** ContentColorAndOpacity onto the owning widget's content tint, which reaches everything below it and not its visual. */
+	void ApplyContentTint() const;
+	/** The owning widget became enabled or disabled, its own switch or an ancestor's: the background's alpha follows. */
+	void HandleEnabledChanged(bool bInEnabledInHierarchy);
+	FDelegateHandle EnabledChangedHandle;
+	/**
+	 * Make the mirror that flips the background, once there is a reason to: the flip is asked for and the world is a
+	 * game world. Made on the widget at run time and never saved, as UDreamLayoutContainerScrollBox makes its input
+	 * handler: growing a widget's component list while a prefab is still being loaded is not safe, and an editor world
+	 * has no play session for the component to belong to.
+	 */
+	void EnsureFlipModifier();
+	/** Mirror the background exactly while the flip is asked for and this border lays out right to left. */
+	void ApplyFlipState();
+	/** The mirror this border made; weak, the widget owns it. */
+	UPROPERTY(Transient)
+	TWeakObjectPtr<class UDreamMeshModifierMirror> FlipModifier;
 public:
 	virtual int32 GetMaxChildren() const override { return 1; }
 	/** A content widget, like every other single-child panel here. */
@@ -1221,16 +1377,46 @@ public:
 	/** UMG's UBorder::DesiredSizeScale: scales what this border REPORTS, not what it arranges. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintSetter = SetDesiredSizeScale, Category = "Border")
 	FVector2D DesiredSizeScale = FVector2D(1.0, 1.0);
-	/** Written through to the owning widget's visual, which is what actually draws the background. */
+	/**
+	 * A tint over the background -- the owning widget's visual -- multiplied with the visual's own colour in linear
+	 * space, as SBorder multiplies its brush by BorderBackgroundColor. White leaves the visual as authored.
+	 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintSetter = SetBrushColor, Category = "Border")
 	FLinearColor BrushColor = FLinearColor::White;
+	/**
+	 * A tint over everything the border holds and never over its own background -- UMG's ContentColorAndOpacity,
+	 * which SCompoundWidget blends into what its children inherit. It is the owning widget's content tint
+	 * (UDreamWidget::SetContentTint), so it reaches every visual below the border, alpha included.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintSetter = SetContentColorAndOpacity, Category = "Border")
+	FLinearColor ContentColorAndOpacity = FLinearColor::White;
+	/**
+	 * While the border is disabled (UDreamWidget::GetIsEnabledInHierarchy), draw the background at 45% of its alpha:
+	 * SBorder's disabled draw effect, which the default Slate shader spends as alpha x 0.45. Only the background --
+	 * what the border holds shows its own disabled look.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintSetter = SetShowEffectWhenDisabled, Category = "Border")
+	bool bShowEffectWhenDisabled = true;
+	/**
+	 * Mirror the background left to right while this border lays out right to left -- UMG's
+	 * bFlipForRightToLeftFlowDirection, SBorder's render transform of (-1, 1) about the brush's centre. The content is
+	 * not mirrored by it: where the content sits is the layout's to mirror, and it does.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintSetter = SetFlipForRightToLeftFlowDirection, Category = "Border")
+	bool bFlipForRightToLeftFlowDirection = false;
 
 	UFUNCTION(BlueprintSetter) void SetPadding(FMargin Value);
 	UFUNCTION(BlueprintSetter) void SetHorizontalAlignment(EDreamPanelHorizontalAlignment Value);
 	UFUNCTION(BlueprintSetter) void SetVerticalAlignment(EDreamPanelVerticalAlignment Value);
 	UFUNCTION(BlueprintSetter) void SetDesiredSizeScale(FVector2D Value);
 	UFUNCTION(BlueprintSetter) void SetBrushColor(FLinearColor Value);
+	UFUNCTION(BlueprintSetter) void SetContentColorAndOpacity(FLinearColor Value);
+	UFUNCTION(BlueprintSetter) void SetShowEffectWhenDisabled(bool Value);
+	UFUNCTION(BlueprintSetter) void SetFlipForRightToLeftFlowDirection(bool Value);
 	virtual void ArrangeChildren() override;
+
+	/** The alpha factor SBorder's disabled draw effect leaves a brush at in the default Slate shader. */
+	static constexpr float DisabledEffectAlpha = 0.45f;
 };
 
 /** UMG's EMenuPlacement, for the placements a rect-against-rect layout can actually express. */
@@ -1262,6 +1448,14 @@ enum class EDreamMenuPlacement : uint8
 };
 
 /**
+ * Builds a panel menu anchor's menu each time it opens -- UMG's OnGetUserMenuContentEvent. Single-cast, as UMG's is:
+ * two handlers would both build a menu and only one of them could be shown.
+ */
+DECLARE_DYNAMIC_DELEGATE_RetVal(UDreamWidget*, FDreamPanelMenuAnchorGetContent);
+
+enum class EDreamPopupDismissReason : uint8;
+
+/**
  * UMG's UMenuAnchor, layout side.
  *
  * The first child is the anchor -- the button, the combo box face -- and is filled like a Border's
@@ -1269,10 +1463,14 @@ enum class EDreamMenuPlacement : uint8
  * (a menu that grew its own button would be unusable) and is placed against the anchor's rect by
  * Placement, then clamped into the root widget when bFitInWindow is set.
  *
- * What is deliberately NOT here is the popup's lifetime: creating menu content from a class, owning it
- * on a popup layer, dismissing it on a click elsewhere. UIDropdown and DreamUIModal already each carry
- * a version of that, and a third would be a fork rather than a port. This is the placement arithmetic
- * and the open/closed state those two can be expressed in terms of.
+ * With no menu authored as the second child, one is built each time the menu opens -- by OnGetMenuContent,
+ * else from MenuClass -- and destroyed when it closes, as UMG builds and releases its menu content.
+ *
+ * Where the menu is drawn is bUseApplicationMenuStack's question. Off, it is drawn in place: clipped by
+ * the anchor's ancestors and sorted with its siblings, as every saved anchor has always drawn it. On, the
+ * menu goes onto its player's popup layer (UDreamUIPopupLayer::Push) for as long as it is open -- above
+ * everything, dismissed by a press outside it or Back, following the anchor -- and is placed there by this
+ * panel's own Placement and bFitInWindow.
  */
 UCLASS(BlueprintType, DisplayName = "UMG Menu Anchor")
 class DREAMGUI_API UDreamLayoutContainerMenuAnchor : public UDreamPanelLayoutBase
@@ -1292,10 +1490,39 @@ public:
 	bool bFitInWindow = true;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintSetter = SetIsOpen, Category = "MenuAnchor")
 	bool bIsOpen = false;
+	/**
+	 * Open the menu on its player's popup layer rather than in place -- UMG's UseApplicationMenuStack. The menu is
+	 * lifted onto the player's screen root while it is open, so no ancestor clips it; a press outside it, Back, or its
+	 * anchor going away closes it (and bIsOpen with it); and it follows the anchor, placed by Placement and
+	 * bFitInWindow. Off by default, where UMG's is on, so an anchor saved before this existed keeps drawing in place.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintSetter = SetUseApplicationMenuStack, Category = "MenuAnchor")
+	bool bUseApplicationMenuStack = false;
+	/**
+	 * A user widget made each time the menu opens and destroyed when it closes -- UMG's MenuClass. Used when no menu is
+	 * authored as the second child and OnGetMenuContent answers nothing.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintSetter = SetMenuClass, Category = "MenuAnchor")
+	TSubclassOf<UDreamUserWidget> MenuClass;
+	/**
+	 * Asked for the menu each time it opens, ahead of MenuClass -- UMG's OnGetUserMenuContentEvent. What it hands back
+	 * is put under this anchor as its menu and is the anchor's from then on: destroyed when the menu closes, as UMG
+	 * releases the content it was given. Hand a fresh widget each time. Ignored while a menu is authored as the
+	 * second child.
+	 */
+	UPROPERTY(BlueprintReadWrite, Category = "MenuAnchor")
+	FDreamPanelMenuAnchorGetContent OnGetMenuContent;
 
 	UFUNCTION(BlueprintSetter) void SetPlacement(EDreamMenuPlacement Value);
 	UFUNCTION(BlueprintSetter) void SetFitInWindow(bool Value);
-	/** Show or hide the menu child. Collapsed when closed, so it costs no layout and no hit test. */
+	/** Takes effect at once: an open menu is closed and opened again the other way. */
+	UFUNCTION(BlueprintSetter) void SetUseApplicationMenuStack(bool Value);
+	/** Closes a menu that was built from the old class first. */
+	UFUNCTION(BlueprintSetter) void SetMenuClass(TSubclassOf<UDreamUserWidget> Value);
+	/**
+	 * Show or hide the menu. Closed, it is collapsed, so it costs no layout and no hit test. Opening builds the menu
+	 * when none is authored, and pushes it onto the popup layer under bUseApplicationMenuStack.
+	 */
 	UFUNCTION(BlueprintSetter, BlueprintCallable, Category = "MenuAnchor")
 	void SetIsOpen(bool Value);
 	UFUNCTION(BlueprintPure, Category = "MenuAnchor")
@@ -1305,7 +1532,10 @@ public:
 	/** The first child: the thing the menu is anchored to. Null when the panel is empty. */
 	UFUNCTION(BlueprintPure, Category = "MenuAnchor")
 	UDreamWidget* GetAnchorContent() const;
-	/** The second child, if there is one. Null when this anchor has no menu authored under it. */
+	/**
+	 * The menu: the second child, authored or built -- or, while it is lifted onto the popup layer, the lifted widget,
+	 * which is then nobody's child here. Null when this anchor has no menu.
+	 */
 	UFUNCTION(BlueprintPure, Category = "MenuAnchor")
 	UDreamWidget* GetMenuContent() const;
 
@@ -1346,4 +1576,34 @@ public:
 	static bool PlacementMatchesAnchorWidth(EDreamMenuPlacement InPlacement);
 
 	virtual void ArrangeChildren() override;
+
+private:
+	/** The second valid child -- the menu as this panel's own hierarchy holds it, authored or built. */
+	UDreamWidget* GetMenuChild() const;
+	/**
+	 * The rect the menu's slot takes in this panel's top-left content space, before ApplyChildRect insets it by the
+	 * slot's padding: the menu's measured size, the anchor's width under a combo-box placement, put by Placement and
+	 * kept inside the window by bFitInWindow. The one arithmetic the in-place arrangement and the lifted placement
+	 * share.
+	 */
+	void CalculateMenuSlotRect(UDreamWidget* InMenu, FVector2D& OutPosition, FVector2D& OutSize) const;
+	/** Make the menu from OnGetMenuContent, else MenuClass, under this anchor. Null when neither has one to give. */
+	UDreamWidget* BuildMenuContent();
+	/** Destroy the menu BuildMenuContent made, if it made one. */
+	void ReleaseBuiltMenu();
+	/** Hand InMenu to the popup layer; false when there is no layer or it cannot lift the menu (no screen root). */
+	bool PushMenu(UDreamWidget* InMenu);
+	/** FDreamPopupParams::Place: the lifted menu, placed by this panel's rules in its screen root's plane. */
+	void PlaceLiftedMenu(UDreamWidget* InPopup);
+	/** FDreamPopupParams::OnDismissed: however the layer closed the menu, the anchor is closed with it. */
+	void HandleMenuDismissed(UDreamWidget* InPopup, EDreamPopupDismissReason InReason);
+	/** What closing leaves behind: the menu collapsed in place, and a built one destroyed when bInReleaseBuilt says so. */
+	void FinishClosing(bool bInReleaseBuilt);
+
+	/** The menu while it is on the popup layer; reset when the layer hands it back. */
+	TWeakObjectPtr<UDreamWidget> LiftedMenu;
+	/** The menu BuildMenuContent made for the open in progress; destroyed when it closes. */
+	TWeakObjectPtr<UDreamWidget> BuiltMenu;
+	/** Set while this panel unregisters: a menu handed back then is not destroyed, its widget is on its way out anyway. */
+	bool bUnregistering = false;
 };

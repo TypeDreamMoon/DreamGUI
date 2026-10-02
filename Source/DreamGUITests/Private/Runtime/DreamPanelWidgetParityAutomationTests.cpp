@@ -738,4 +738,174 @@ bool FDreamSafeZoneScalesThePlatformMarginTest::RunTest(const FString& Parameter
 	return true;
 }
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamWrapBoxFillAlignmentTest,
+	"DreamGUI.Panel.AWrapBoxSetToFillStretchesEachLineInProportionToItsSlots",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * A wrap box set to Fill was laid out exactly as one set to Left. SWrapBox's HAlign_Fill multiplies every slot of a
+ * line by one factor, (allotted width - gaps) / (line length - gaps), so the line spans the box and the gaps stay as
+ * they were. A 300-wide box holding slots of 80 and 40 with a gap of 10 grows them by 290 / 120, to 193.3 and 96.7,
+ * the second starting at 203.3; what the box measures does not change. Also checked: a slot that asks for a line of
+ * its own takes exactly the line, as SWrapBox sizes it, and not its own width when that is more.
+ */
+bool FDreamWrapBoxFillAlignmentTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamPanelWidgetParityTestLocal;
+	FScopedGameWorld TestWorld;
+	UDreamUIManagerWorldSubsystem* Manager = UDreamUIManagerWorldSubsystem::GetInstance(TestWorld.World);
+	if (!TestNotNull(TEXT("DreamUI manager subsystem exists"), Manager))
+	{
+		return false;
+	}
+	UDreamWidget* Root = MakeWidget(TestWorld.World, nullptr, TEXT("Root"), 300.0f, 200.0f);
+	UDreamWidget* First = MakeWidget(TestWorld.World, Root, TEXT("First"), 80.0f, 30.0f);
+	UDreamWidget* Second = MakeWidget(TestWorld.World, Root, TEXT("Second"), 40.0f, 30.0f);
+	// Wider than the box, so it always takes a line of its own and leaves the first line to the two above.
+	UDreamWidget* Wide = MakeWidget(TestWorld.World, Root, TEXT("Wide"), 400.0f, 30.0f);
+	UDreamLayoutContainerWrapBox* Box = Root->CreateNewLayoutContainer<UDreamLayoutContainerWrapBox>();
+	UDreamPanelSlot* WideSlot = Wide->GetPanelSlot();
+	if (!TestNotNull(TEXT("Wrap box created"), Box) || !TestNotNull(TEXT("The wide child has a slot"), WideSlot))
+	{
+		Root->DestroyWidget();
+		return false;
+	}
+	auto LeftOf = [](const UDreamWidget* InWidget)
+	{
+		return InWidget->GetParent()->GetWidth() * 0.5 + InWidget->GetAnchoredPosition().X - InWidget->GetWidth() * InWidget->GetPivot().X;
+	};
+	Box->SetSpacing(FVector2D(10.0, 0.0));
+	UDreamWidget::MarkLayoutForRebuild(Root);
+	Manager->TickDreamUI(0.016f);
+	const FVector2f MeasuredAsLeft = Box->GetLayoutPreferredSize();
+	TestEqual(TEXT("Fixture: aligned left, the second slot keeps its own width"), Second->GetWidth(), 40.0f, 0.01f);
+
+	Box->SetHorizontalAlignment(EDreamPanelHorizontalAlignment::Fill);
+	UDreamWidget::MarkLayoutForRebuild(Root);
+	Manager->TickDreamUI(0.016f);
+	TestEqual(TEXT("The first slot grows by 290 / 120"), First->GetWidth(), 193.333f, 0.01f);
+	TestEqual(TEXT("...and the second by the same factor"), Second->GetWidth(), 96.667f, 0.01f);
+	TestEqual(TEXT("The first starts at the edge"), LeftOf(First), 0.0, 0.01);
+	TestEqual(TEXT("The second starts after the first's new width and a gap that is still 10"), LeftOf(Second), 203.333, 0.01);
+	TestTrue(TEXT("What the box measures does not change"),
+		FMath::IsNearlyEqual(Box->GetLayoutPreferredSize().X, MeasuredAsLeft.X, 0.01f)
+		&& FMath::IsNearlyEqual(Box->GetLayoutPreferredSize().Y, MeasuredAsLeft.Y, 0.01f));
+
+	// The slot wider than the line asks for a line of its own below a wrap length of 1000, which this box is.
+	Box->SetHorizontalAlignment(EDreamPanelHorizontalAlignment::Left);
+	WideSlot->SetFillSpanWhenLessThan(1000.0f);
+	UDreamWidget::MarkLayoutForRebuild(Root);
+	Manager->TickDreamUI(0.016f);
+	TestEqual(TEXT("A slot spanning the line takes exactly the line"), Wide->GetWidth(), 300.0f, 0.01f);
+	TestEqual(TEXT("...from its start"), LeftOf(Wide), 0.0, 0.01);
+
+	Root->DestroyWidget();
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamScaleBoxSafeZoneScaleTest,
+	"DreamGUI.Panel.ASafeZoneScaleShrinksByTheLargerSideOfTheSafeMargin",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * UMG's ScaleBySafeZone and UserSpecifiedWithClipping were missing from the stretch enum, and the setter turned any
+ * value it did not know into ScaleToFit. SScaleBox's safe-zone scale is 1 - max(max(L, R) / W, max(T, B) / H) of the
+ * game viewport's safe margin: a 192 / 27 / 96 / 54 margin on a 1920 x 1080 screen takes a tenth off the width and a
+ * twentieth off the height, so the content is drawn at 0.9. The arrangement uses that one cached scale whatever room
+ * the box has. UserSpecifiedWithClipping scales as UserSpecified does, and clips as the fitting modes do.
+ */
+bool FDreamScaleBoxSafeZoneScaleTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamPanelWidgetParityTestLocal;
+	using Box = UDreamLayoutContainerScaleBox;
+	TestEqual(TEXT("The larger side of the margin decides: 192 of 1920 is more than 54 of 1080"),
+		Box::ComputeSafeZoneScale(FMargin(192.0f, 27.0f, 96.0f, 54.0f), FVector2D(1920.0, 1080.0)), 0.9f, 0.0001f);
+	TestEqual(TEXT("A deeper margin top or bottom decides the other way"),
+		Box::ComputeSafeZoneScale(FMargin(0.0f, 216.0f, 0.0f, 0.0f), FVector2D(1920.0, 1080.0)), 0.8f, 0.0001f);
+	TestEqual(TEXT("No viewport leaves the scale at one"),
+		Box::ComputeSafeZoneScale(FMargin(192.0f, 27.0f, 96.0f, 54.0f), FVector2D::ZeroVector), 1.0f);
+	TestEqual(TEXT("A margin wider than the screen scales to nothing, never below"),
+		Box::ComputeSafeZoneScale(FMargin(4000.0f, 0.0f, 0.0f, 0.0f), FVector2D(1920.0, 1080.0)), 0.0f);
+
+	FScopedGameWorld TestWorld;
+	UDreamWidget* Root = MakeWidget(TestWorld.World, nullptr, TEXT("Root"), 300.0f, 200.0f);
+	UDreamWidget* Child = MakeWidget(TestWorld.World, Root, TEXT("Child"), 100.0f, 50.0f);
+	UDreamLayoutContainerScaleBox* ScaleBox = Root->CreateNewLayoutContainer<UDreamLayoutContainerScaleBox>();
+	if (!TestNotNull(TEXT("Scale box created"), ScaleBox))
+	{
+		Root->DestroyWidget();
+		return false;
+	}
+	auto ScaleOfFirstChild = [](const FDreamFragment& InFragment)
+	{
+		return InFragment.Children.Num() > 0 ? InFragment.Children[0].LayoutScale.X : -1.0f;
+	};
+
+	ScaleBox->SetStretch(EDreamScaleBoxStretch::ScaleBySafeZone);
+	TestTrue(TEXT("The new value survives the setter rather than turning into ScaleToFit"),
+		ScaleBox->Stretch == EDreamScaleBoxStretch::ScaleBySafeZone);
+	// The scale is the platform's, read from the game viewport; a run with no game viewport reads one. Either way
+	// the room in the box takes no part: fitting this child would have tripled it.
+	TestEqual(TEXT("ScaleBySafeZone draws at the safe-zone scale, not at a fit"),
+		ScaleOfFirstChild(ScaleBox->Arrange()), ScaleBox->GetSafeZoneScale(), 0.001f);
+	TestTrue(TEXT("...and does not clip"), Root->GetClipping() == EDreamWidgetClipping::Inherit);
+
+	ScaleBox->SetUserSpecifiedScale(2.0f);
+	ScaleBox->SetStretch(EDreamScaleBoxStretch::UserSpecifiedWithClipping);
+	TestEqual(TEXT("UserSpecifiedWithClipping scales by the stated scale"), ScaleOfFirstChild(ScaleBox->Arrange()), 2.0f, 0.001f);
+	TestTrue(TEXT("...and clips to the box"), Root->GetClipping() == EDreamWidgetClipping::ClipToBounds);
+	// StretchDirection bounds a scale worked out from the room, not one the box is told.
+	ScaleBox->SetStretchDirection(EDreamScaleBoxStretchDirection::DownOnly);
+	TestEqual(TEXT("A stated scale is not bounded by the stretch direction"), ScaleOfFirstChild(ScaleBox->Arrange()), 2.0f, 0.001f);
+
+	ScaleBox->SetStretch(EDreamScaleBoxStretch::UserSpecified);
+	TestTrue(TEXT("Plain UserSpecified does not clip"), Root->GetClipping() == EDreamWidgetClipping::Inherit);
+	TestTrue(TEXT("Child survived the arrangement"), IsValid(Child));
+	Root->DestroyWidget();
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamScaleBoxIgnoringInheritedScaleMeasureTest,
+	"DreamGUI.Panel.AScaleBoxIgnoringItsInheritedScaleAsksForTheRoomItsContentTakes",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * The measurement divided by the inherited scale for UserSpecified and the two FitX/FitY modes only, while the
+ * arrangement divided every mode. A box set to None under a parent scaled by two, ignoring that scale, drew its
+ * 100 x 50 art at half size and still asked for the room of the full size. SScaleBox divides whatever scale it worked
+ * out, in both places.
+ */
+bool FDreamScaleBoxIgnoringInheritedScaleMeasureTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamPanelWidgetParityTestLocal;
+	FScopedGameWorld TestWorld;
+	UDreamWidget* Root = MakeWidget(TestWorld.World, nullptr, TEXT("Root"), 400.0f, 400.0f);
+	UDreamWidget* BoxWidget = MakeWidget(TestWorld.World, Root, TEXT("ScaleBox"), 300.0f, 200.0f);
+	UDreamWidget* Art = MakeWidget(TestWorld.World, BoxWidget, TEXT("Art"), 100.0f, 50.0f);
+	UDreamLayoutContainerScaleBox* ScaleBox = BoxWidget->CreateNewLayoutContainer<UDreamLayoutContainerScaleBox>();
+	if (!TestNotNull(TEXT("Scale box created"), ScaleBox))
+	{
+		Root->DestroyWidget();
+		return false;
+	}
+	Root->SetRelativeScale(FVector(1.0, 2.0, 2.0));
+	ScaleBox->SetStretch(EDreamScaleBoxStretch::None);
+	ScaleBox->SetIgnoreInheritedScale(true);
+
+	const FDreamFragment Arranged = ScaleBox->Arrange();
+	TestTrue(TEXT("The art is drawn at half size, undoing the parent's two"),
+		Arranged.Children.Num() > 0 && FMath::IsNearlyEqual(Arranged.Children[0].LayoutScale.X, 0.5f, 0.001f)
+		&& FMath::IsNearlyEqual(Arranged.Children[0].LayoutScale.Y, 0.5f, 0.001f));
+	const FVector2f Preferred = ScaleBox->GetLayoutPreferredSize();
+	TestEqual(TEXT("...and the box asks for the width it draws the art at"), Preferred.X, 50.0f, 0.01f);
+	TestEqual(TEXT("...and the height"), Preferred.Y, 25.0f, 0.01f);
+
+	TestTrue(TEXT("Art survived the arrangement"), IsValid(Art));
+	Root->DestroyWidget();
+	return true;
+}
+
 #endif

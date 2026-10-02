@@ -789,8 +789,14 @@ const TSharedPtr<SWidget>& UDreamUMGWidget::GetSlateWidget() const
 
 TArray<FWidgetAndPointer> UDreamUMGWidget::GetHitWidgetPath(FVector2D WidgetSpaceHitCoordinate, bool bIgnoreEnabledStatus, float CursorRadius /*= 0.0f*/)
 {
+	return GetHitWidgetPathForPointer(WidgetSpaceHitCoordinate, LastLocalHitLocation, bIgnoreEnabledStatus, CursorRadius);
+}
+
+TArray<FWidgetAndPointer> UDreamUMGWidget::GetHitWidgetPathForPointer(FVector2D WidgetSpaceHitCoordinate, FVector2D LastWidgetSpaceHitCoordinate,
+	bool bIgnoreEnabledStatus, float CursorRadius /*= 0.0f*/)
+{
 	const FVector2D& LocalHitLocation = WidgetSpaceHitCoordinate;
-	const FVirtualPointerPosition VirtualMouseCoordinate(LocalHitLocation, LastLocalHitLocation);
+	const FVirtualPointerPosition VirtualMouseCoordinate(LocalHitLocation, LastWidgetSpaceHitCoordinate);
 
 	// Cache the location of the hit
 	LastLocalHitLocation = LocalHitLocation;

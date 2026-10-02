@@ -2947,4 +2947,161 @@ bool FDreamDesignerUnrelatedUndoKeepsSequencerTest::RunTest(const FString&)
 	return true;
 }
 
+namespace DreamDesignerEditingTestLocal
+{
+	/** A compiled widget blueprint for an animation asset to name as its preview class, with no designer open on it. */
+	struct FScopedPreviewClass
+	{
+		UPackage* Package = nullptr;
+		UDreamWidgetBlueprint* Blueprint = nullptr;
+
+		explicit FScopedPreviewClass(const TCHAR* InName)
+		{
+			Package = CreatePackage(*FString::Printf(TEXT("/Temp/DreamGUITests/%s"), InName));
+			Package->AddToRoot();
+			Blueprint = Cast<UDreamWidgetBlueprint>(FKismetEditorUtilities::CreateBlueprint(
+				UDreamUserWidget::StaticClass(), Package, FName(InName), BPTYPE_Normal,
+				UDreamWidgetBlueprint::StaticClass(), UDreamWidgetGeneratedClass::StaticClass()));
+			if (Blueprint != nullptr)
+			{
+				// A hierarchy of its own, so an instance of the class is a tree like any other.
+				Blueprint->GetOrCreateWidgetTree();
+				FKismetEditorUtilities::CompileBlueprint(Blueprint, EBlueprintCompileOptions::SkipGarbageCollection);
+			}
+		}
+
+		~FScopedPreviewClass()
+		{
+			if (Package != nullptr)
+			{
+				Package->RemoveFromRoot();
+			}
+		}
+
+		FScopedPreviewClass(const FScopedPreviewClass&) = delete;
+		FScopedPreviewClass& operator=(const FScopedPreviewClass&) = delete;
+
+		UClass* GeneratedClass() const { return Blueprint != nullptr ? Blueprint->GeneratedClass.Get() : nullptr; }
+	};
+
+	/**
+	 * A DreamUI Animation asset in a package of its own, made the way its factory makes one, with its editor open on it.
+	 *
+	 * Transactional, as every asset the factory makes is: the claim under test is about undo, and an asset that the
+	 * transaction buffer cannot record has nothing to undo.
+	 */
+	struct FScopedSequenceAsset
+	{
+		UPackage* Package = nullptr;
+		UDreamUISequence* Sequence = nullptr;
+		bool bOpened = false;
+
+		FScopedSequenceAsset(const TCHAR* InName, UClass* InPreviewClass)
+		{
+			Package = CreatePackage(*FString::Printf(TEXT("/Temp/DreamGUITests/%s"), InName));
+			Package->AddToRoot();
+			Sequence = NewObject<UDreamUISequence>(Package, FName(InName), RF_Public | RF_Standalone | RF_Transactional);
+			const FFrameRate TickResolution = Sequence->GetMovieScene()->GetTickResolution();
+			Sequence->GetMovieScene()->SetPlaybackRange(0, (2.0 * TickResolution).FrameNumber.Value);
+			Sequence->EnsureRootBinding();
+			Sequence->PreviewWidgetClass = InPreviewClass;
+
+			UAssetEditorSubsystem* AssetEditors = GEditor->GetEditorSubsystem<UAssetEditorSubsystem>();
+			bOpened = AssetEditors->OpenEditorForAsset(Sequence) && AssetEditors->FindEditorForAsset(Sequence, false) != nullptr;
+		}
+
+		~FScopedSequenceAsset()
+		{
+			if (GEditor != nullptr && Sequence != nullptr)
+			{
+				GEditor->GetEditorSubsystem<UAssetEditorSubsystem>()->CloseAllEditorsForAsset(Sequence);
+				// The close is deferred, and a toolkit that is still alive still ticks; see FScopedDesigner.
+				FSlateApplication::Get().Tick();
+				// Collectable once the transaction buffer lets go of it, rather than kept for the rest of the session.
+				Sequence->ClearFlags(RF_Standalone);
+			}
+			if (Package != nullptr)
+			{
+				Package->RemoveFromRoot();
+			}
+		}
+
+		FScopedSequenceAsset(const FScopedSequenceAsset&) = delete;
+		FScopedSequenceAsset& operator=(const FScopedSequenceAsset&) = delete;
+	};
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamSequenceEditorUndoPreviewClassTest,
+	"DreamGUI.Editor.Animation.UndoingAPreviewClassChangePutsThePreviousClassBackInThePreview",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * Undoing a change of an animation asset's preview class left the preview on the class the undo had taken away.
+ *
+ * The animation editor rebuilt its preview when a property change named PreviewWidgetClass, and an undo reports its
+ * change with no property name: the asset named one class while the viewport, and every binding the Sequencer resolved,
+ * stayed on the other. The editor is an undo client now and rebuilds the preview for the class the undo or redo put
+ * back. This opens an animation asset on one class, changes it to another in a transaction as the details panel does,
+ * then undoes and redoes the change.
+ */
+bool FDreamSequenceEditorUndoPreviewClassTest::RunTest(const FString&)
+{
+	using namespace DreamDesignerEditingTestLocal;
+	if (GEditor == nullptr || GEditor->Trans == nullptr)
+	{
+		AddError(TEXT("no transaction buffer; this test cannot say anything"));
+		return false;
+	}
+
+	FScopedPreviewClass First(TEXT("SequenceUndoPreviewFirst"));
+	FScopedPreviewClass Second(TEXT("SequenceUndoPreviewSecond"));
+	if (!TestNotNull(TEXT("the first widget class compiled"), First.GeneratedClass())
+		|| !TestNotNull(TEXT("and the second"), Second.GeneratedClass()))
+	{
+		return false;
+	}
+	// Declared after the classes, so the editor closes before they leave the root set.
+	FScopedSequenceAsset Asset(TEXT("SequenceUndoPreviewClass"), First.GeneratedClass());
+	if (!TestTrue(TEXT("the animation editor opened"), Asset.bOpened))
+	{
+		return false;
+	}
+	UDreamUISequence* Sequence = Asset.Sequence;
+	auto PreviewIsA = [Sequence](const UClass* InClass)
+	{
+		const UDreamWidget* Root = Sequence->GetPreviewRoot();
+		return InClass != nullptr && IsValid(Root) && Root->IsA(InClass);
+	};
+	if (!TestTrue(TEXT("the preview shows the class the asset names"), PreviewIsA(First.GeneratedClass())))
+	{
+		return false;
+	}
+
+	// The details panel's order: the asset recorded, the value set and the change reported, all inside the
+	// transaction -- so the new class's preview scene is built while the transaction is still open.
+	FProperty* ClassProperty = FindFProperty<FProperty>(UDreamUISequence::StaticClass(),
+		GET_MEMBER_NAME_CHECKED(UDreamUISequence, PreviewWidgetClass));
+	if (!TestNotNull(TEXT("the asset has its preview class property"), ClassProperty))
+	{
+		return false;
+	}
+	GEditor->BeginTransaction(FText::FromString(TEXT("Test Preview Class Change")));
+	Sequence->Modify();
+	Sequence->PreviewWidgetClass = Second.GeneratedClass();
+	FPropertyChangedEvent ClassChanged(ClassProperty, EPropertyChangeType::ValueSet);
+	Sequence->PostEditChangeProperty(ClassChanged);
+	GEditor->EndTransaction();
+	TestTrue(TEXT("changing the class rebuilds the preview for it"), PreviewIsA(Second.GeneratedClass()));
+
+	TestTrue(TEXT("the change undoes"), GEditor->UndoTransaction());
+	TestTrue(TEXT("the asset names the first class again"), Sequence->PreviewWidgetClass.Get() == First.GeneratedClass());
+	TestTrue(TEXT("and the preview shows it again"), PreviewIsA(First.GeneratedClass()));
+
+	TestTrue(TEXT("the change redoes"), GEditor->RedoTransaction());
+	TestTrue(TEXT("the asset names the second class again"), Sequence->PreviewWidgetClass.Get() == Second.GeneratedClass());
+	TestTrue(TEXT("and the preview follows it"), PreviewIsA(Second.GeneratedClass()));
+	return true;
+}
+
 #endif

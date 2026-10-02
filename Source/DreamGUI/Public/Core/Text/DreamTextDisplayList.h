@@ -73,8 +73,17 @@ struct FDreamTextGlyphItem
 	int32 LineIndex = 0;
 	/** Position the glyph's offsets are measured from: its pen position on the baseline, with the shaper's offsets and any superscript shift applied. */
 	FVector2f Pen = FVector2f::ZeroVector;
-	/** Glyph metrics and atlas UVs, already adjusted for canvas scale, kerning and the font's vertical offset. */
+	/**
+	 * Glyph metrics and atlas UVs, already adjusted for canvas scale, kerning and the font's vertical offset. FaceIndex
+	 * and GlyphIndex name the glyph; bColor marks an emoji drawn from a colour face.
+	 */
 	FDreamUICharData Glyph;
+	/**
+	 * The size the glyph was shaped and rasterized at, in text units: Style.Size times its face's scale
+	 * (FDreamFontFaceTable::GetScale). What the painter holds against the small-text threshold (GlyphSize times the
+	 * device scale) and rasterizes a coverage glyph at (GlyphSize times the raster scale). Set on Glyph items; 0 on others.
+	 */
+	float GlyphSize = 0.0f;
 	/** XAdvance plus the letter spacing it carries: how wide a stretch of underline or strikethrough this item contributes. */
 	float AdvanceWithSpace = 0.0f;
 	/** Where that stretch starts, relative to Pen.X: the pen box of the glyph, not its ink, so a run of them joins up seamlessly. */
@@ -88,7 +97,7 @@ struct FDreamTextGlyphItem
 	FDreamUICharData UnderlineGlyph;
 	/** Same as UnderlineGlyph, for the strikethrough and the font's '-'; valid only when Style.bStrikethrough. */
 	FDreamUICharData StrikethroughGlyph;
-	/** The painter emits a quad for this item. Glyphs past a Truncate/Ellipsis cut are laid out but not emitted. */
+	/** The painter emits a quad for this item. Glyphs a Truncate, Ellipsis or MiddleEllipsis cut are laid out but not emitted. */
 	bool bEmit = false;
 	/** Counts towards the visible-char sequence TextAnimation addresses; the ellipsis glyph does not. */
 	bool bCountsAsVisible = false;
@@ -128,7 +137,7 @@ struct DREAMGUI_API FDreamTextDisplayList
 	TArray<FDreamTextVisualRun> VisualRuns;
 	/** Size of the text ignoring automatic wrapping -- what a content-sized parent asks for. */
 	FVector2f PreferredSize = FVector2f::ZeroVector;
-	/** True when Truncate or Ellipsis cut something off. */
+	/** True when Truncate, Ellipsis or MiddleEllipsis cut something off. */
 	bool bTruncated = false;
 	/** Some glyphs were still on the font's worker: their quads are missing until the font's OnGlyphsReady. */
 	bool bHasPendingGlyphs = false;
@@ -139,6 +148,11 @@ struct DREAMGUI_API FDreamTextDisplayList
 	 * the rich-text tag ranges address.
 	 */
 	int32 VisibleCharCount = 0;
+	/**
+	 * How many elements the text was laid out as -- code points and emoji clusters, newlines included, markup not: what the
+	 * geometry cache counts before it keeps a long text's layout for edits by itself (FDreamUITextGeometryCache).
+	 */
+	int32 ElementCount = 0;
 
 	void Reset()
 	{
@@ -153,5 +167,6 @@ struct DREAMGUI_API FDreamTextDisplayList
 		bTruncated = false;
 		bHasPendingGlyphs = false;
 		VisibleCharCount = 0;
+		ElementCount = 0;
 	}
 };

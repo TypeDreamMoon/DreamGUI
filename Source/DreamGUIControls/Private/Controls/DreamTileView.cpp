@@ -16,6 +16,14 @@ float UDreamTileView::GetTilePitch() const
 
 int32 UDreamTileView::ResolveColumnCount() const
 {
+	if (GetTilePitch() < 1.0f)
+	{
+		// A style with no tile width -- an old asset, a zero handed to SetStyle -- fits every tile into
+		// one sliver, so "how many fit across" comes out in the millions, and lines times that is a
+		// window no int32 holds. One column is the answer that is never wrong, only narrow, as for a
+		// viewport nobody has arranged below.
+		return 1;
+	}
 	const FDreamTileViewStyle& Active = ResolveTileStyle();
 	// The CROSS axis, not the width: a line runs across the scroll axis, so a horizontal tile view
 	// packs its columns down the viewport's height. Everything below is the same arithmetic.
@@ -281,7 +289,9 @@ float UDreamTileView::GetEntryHeight() const
 
 void UDreamTileView::SetEntryHeight(float InHeight)
 {
-	Style.List.RowHeight = FMath::Max(0.0f, InHeight);
+	// One unit at least, as the style's own field is clamped in the panel: a tile no taller than nothing
+	// is drawn by nothing, and a row pitch of nothing turned every item into a widget of its own.
+	Style.List.RowHeight = FMath::Max(1.0f, InHeight);
 	// Written onto the inline style AND switched to it: a size pushed at runtime is this instance's
 	// own answer, and leaving StyleSource pointing at the sheet would mean the next style push
 	// quietly threw the number away.
@@ -296,7 +306,8 @@ float UDreamTileView::GetEntryWidth() const
 
 void UDreamTileView::SetEntryWidth(float InWidth)
 {
-	Style.TileWidth = FMath::Max(0.0f, InWidth);
+	// One unit at least, matching TileWidth's ClampMin, for the reason SetEntryHeight gives.
+	Style.TileWidth = FMath::Max(1.0f, InWidth);
 	StyleSource = EDreamUIStyleSource::Inline;
 	// A different width is a different column count, so this re-flows rather than repaints.
 	ApplyStyle();

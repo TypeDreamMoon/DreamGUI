@@ -38,6 +38,7 @@
 #include "GenericPlatform/InputDeviceRegistry.h"
 #include "Interaction/DreamDragDropOperation.h"
 #include "Interaction/DreamUINavigationScroll.h"
+#include "Interaction/DreamUIPopupLayer.h"
 #include "Interaction/DreamUITextInputTarget.h"
 #include "Interaction/UISelectable.h"
 #include "Misc/ScopeExit.h"
@@ -1176,6 +1177,9 @@ bool UDreamUIInputUser::LineTrace(UDreamPointerEventData* InPointerEventData, FD
 	// place in the frame that walks it while calling out.
 	const TArray<TWeakObjectPtr<UDreamBaseRaycaster>> Raycasters = Manager->GetAllRaycasterArray();
 	FVector RayOrigin(0, 0, 0), RayDir(1, 0, 0), RayEnd(1, 0, 0);
+	// Asked once per trace, and per hit only while some player's popups have a sheet up.
+	const UDreamUIPopupLayer* PopupLayer = UDreamUIPopupLayer::Get(World);
+	const bool bMayHitOtherSheets = PopupLayer != nullptr && PopupLayer->HasSheets();
 	for (const TWeakObjectPtr<UDreamBaseRaycaster>& RaycasterItem : Raycasters)
 	{
 		UDreamBaseRaycaster* Raycaster = RaycasterItem.Get();
@@ -1202,6 +1206,17 @@ bool UDreamUIInputUser::LineTrace(UDreamPointerEventData* InPointerEventData, FD
 			return DreamPointerPolicy::ShouldIgnoreHitWhileDragging(
 				InHit.Widget.Get(), InPointerEventData->DragWidget, InPointerEventData->bIsDragging);
 		});
+		// The sheet behind another player's open popups stops that player's pointer only. Players can share a screen
+		// root, where it can lie over this player's own popup: the presses on it would read as presses outside it and
+		// close it, and the hover over it would go nowhere (UDreamUIPopupLayer::IsSheetOfAnotherPlayer).
+		if (bMayHitOtherSheets)
+		{
+			const int32 SheetViewerIndex = UserIndex;
+			HitResultArray.RemoveAll([PopupLayer, SheetViewerIndex](const FDreamUIHitResult& InSheetHit)
+			{
+				return PopupLayer->IsSheetOfAnotherPlayer(InSheetHit.Widget.Get(), SheetViewerIndex);
+			});
+		}
 		if (HitResultArray.Num() > 0)
 		{
 			// An uninteractable widget in front occludes -- along the ray that struck it only, which is this
@@ -1463,9 +1478,15 @@ void UDreamUIInputUser::ProcessInputForNavigation(UDreamPointerEventData* EventD
 		// press or the last step put it -- or wherever game code has moved it since -- and no hit is announced again.
 		return;
 	}
-	if (bResultHitSomething)
+	// The step's target, or what the confirm pressed, takes the focus -- while the cursor is still on it. A handler the
+	// press or the click ran may have moved focus and cursor on together (a dropdown's chosen row giving them back to its
+	// face, a dialog or a tab page taking them in), or taken the cursor off a widget it hid; selecting the pressed widget
+	// regardless put the focus back on it, under whatever the handler had moved it to. A widget gone meanwhile is
+	// nothing to select either.
+	if (UDreamWidget* NavigatedWidget = HitResult.Widget.Get();
+		bResultHitSomething && NavigatedWidget != nullptr && EventData->HighlightWidgetForNavigation.Get() == NavigatedWidget)
 	{
-		SetSelectWidget(HitResult.Widget.Get(), EventData);
+		SetSelectWidget(NavigatedWidget, EventData);
 	}
 	RaiseHitEvent(bResultHitSomething, HitResult, HitResult.Widget.Get());
 }

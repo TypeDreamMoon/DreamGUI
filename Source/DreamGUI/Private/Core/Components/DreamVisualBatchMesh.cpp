@@ -235,9 +235,10 @@ void UDreamVisualBatchMesh::UpdateGeometry()
 	
 	//when use pixel-perfect, the pixel-perfect calculation will take consider transform matrix, so we need to recalculate geometry if pixel-perfect & bTransformChanged
 	//asked only after a move: the snapping setting is looked up through the parents, and every element that did not move
-	//paid for that walk on every update of its canvas
+	//paid for that walk on every update of its canvas. An element that places its own quads on the device pixel grid -- a
+	//text drawing small-text coverage glyphs -- says whether this move needs the same repaint (GetRepaintsOnTransformChange).
 	const bool pixelPerfectAffectTransform = bTransformChanged
-		&& this->GetShouldAffectByPixelSnapping() && Widget->GetPixelSnappingInHierarchy();
+		&& ((this->GetShouldAffectByPixelSnapping() && Widget->GetPixelSnappingInHierarchy()) || GetRepaintsOnTransformChange());
 	if (GetAnythingDirty() || pixelPerfectAffectTransform)
 	{
 		SCOPE_CYCLE_COUNTER(STAT_DreamUpdateGeometry);

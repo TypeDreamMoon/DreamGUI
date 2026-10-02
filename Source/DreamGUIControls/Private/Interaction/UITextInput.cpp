@@ -943,6 +943,15 @@ TSharedPtr<ITextInputMethodContext> UUITextInput::GetTextInputMethodContextForTe
 	// A test hook and nothing else; see the declaration.
 	return TextInputMethodContext;
 }
+TSharedPtr<IVirtualKeyboardEntry> UUITextInput::GetVirtualKeyboardEntryForTesting()
+{
+	// A test hook and nothing else; see the declaration. Made the way ActivateInput makes it.
+	if (!VirtualKeyboardEntry.IsValid())
+	{
+		VirtualKeyboardEntry = FVirtualKeyboardEntry::Create(this);
+	}
+	return VirtualKeyboardEntry;
+}
 int32 UUITextInput::GetEditingSlateUserIndex() const
 {
 	const UWorld* World = DreamUI::GetWorldSafe(this);
@@ -1726,6 +1735,94 @@ bool UUITextInput::VerifyAndInsertCharAtCaretPosition(TCHAR Value)
 		return true;
 	}
 	return false;
+}
+
+void UUITextInput::ApplyTextFromVirtualKeyboard(const FString& InNewText)
+{
+	// IsReadOnly tells the keyboard; it does not stop it writing, so the refusal is here, as for the IME.
+	if (bReadOnly)return;
+	// The line mode's rule for what a single line holds, as SetText applies it: an Enter the keyboard typed into
+	// its own copy of the text is a submit here, not a character.
+	const FString NewText = bAllowMultiLine ? InNewText : InNewText.Replace(TEXT("\n"), TEXT("")).Replace(TEXT("\t"), TEXT(""));
+	if (Text.Equals(NewText, ESearchCase::CaseSensitive))return;
+
+	// What changed is what lies between the longest common start and the longest common end -- the one place a
+	// keystroke, a deletion or an autocorrection touched -- counted in UTF-16 units and never ending between the
+	// halves of a surrogate pair, which would put half an emoji on each side of the edit.
+	const int32 OldLength = Text.Len();
+	const int32 NewLength = NewText.Len();
+	int32 CommonStart = 0;
+	const int32 MaxCommonStart = FMath::Min(OldLength, NewLength);
+	while (CommonStart < MaxCommonStart && Text[CommonStart] == NewText[CommonStart])
+	{
+		CommonStart++;
+	}
+	if (CommonStart > 0 && StringConv::IsHighSurrogate(Text[CommonStart - 1]))
+	{
+		CommonStart--;
+	}
+	int32 CommonEnd = 0;
+	const int32 MaxCommonEnd = FMath::Min(OldLength, NewLength) - CommonStart;
+	while (CommonEnd < MaxCommonEnd && Text[OldLength - 1 - CommonEnd] == NewText[NewLength - 1 - CommonEnd])
+	{
+		CommonEnd++;
+	}
+	if (CommonEnd > 0 && StringConv::IsLowSurrogate(Text[OldLength - CommonEnd]))
+	{
+		CommonEnd--;
+	}
+	const int32 ReplacedEnd = OldLength - CommonEnd;
+	const FString Typed = NewText.Mid(CommonStart, NewLength - CommonEnd - CommonStart);
+
+	// Replayed the way typing over a selection is (VerifyAndInsertStringAtCaretPosition), in source offsets from
+	// end to end: the span taken out, the new characters let in one at a time against the text they land in -- the
+	// field's rules and MaxLength apply -- one undo step, one change reported, and the caret after what went in.
+	// Offsets rather than a selection of carets, because a caret cannot stand inside a grapheme cluster and an
+	// accent the keyboard changed is exactly a span inside one.
+	FString EditedText = Text;
+	EditedText.RemoveAt(CommonStart, ReplacedEnd - CommonStart);
+	int32 CaretCharIndex = CommonStart;
+	const FString Accepted = InsertValidCharacters(Typed, EditedText, CaretCharIndex);
+	if (Accepted.IsEmpty() && ReplacedEnd == CommonStart)
+	{
+		// Only characters the rules refuse were added: nothing changes, as nothing does for a refused keystroke.
+		return;
+	}
+	PushUndoSnapshot();//before the text changes: an undo lands where the edit began
+	Text = EditedText;
+	SetCaretByCharIndex(CaretCharIndex);
+	UpdateAfterTextChange(true);
+}
+
+void UUITextInput::ApplySelectionFromVirtualKeyboard(int32 InSelStart, int32 InSelEnd)
+{
+	const auto ToCharacterEdge = [this](int32 InOffset)
+	{
+		const int32 Clamped = FMath::Clamp(InOffset, 0, Text.Len());
+		// An offset between the halves of a surrogate pair stands for the character it is inside, as a caret
+		// placed there by a press does (GetCharIndexOfCaret).
+		if (Clamped > 0 && Clamped < Text.Len()
+			&& StringConv::IsHighSurrogate(Text[Clamped - 1]) && StringConv::IsLowSurrogate(Text[Clamped]))
+		{
+			return Clamped + 1;
+		}
+		return Clamped;
+	};
+	// Slate's reading of the pair: the caret on the start and the anchor on the end -- FSlateEditableTextLayout
+	// hands them to its selection that way round whichever is the larger.
+	PressCaretPositionIndex = GetCaretIndexOfChar(ToCharacterEdge(InSelEnd));
+	CaretPositionIndex = GetCaretIndexOfChar(ToCharacterEdge(InSelStart));
+	if (bInputActive && TextVisual.IsValid())
+	{
+		const bool bSelecting = IsAnyTextSelected();
+		UpdateCaretPosition(!bSelecting);
+		if (bSelecting)
+		{
+			TextVisual->GetSelectionProperty(PressCaretPositionIndex - VisibleCaretStartIndex, CaretPositionIndex - VisibleCaretStartIndex, SelectionPropertyArray);
+			UpdateSelection();
+		}
+		UpdateUITextComponent();
+	}
 }
 
 void UUITextInput::UpdateAfterTextChange(bool InFireEvent)
@@ -2562,6 +2659,10 @@ void UUITextInput::ActivateInput(UDreamPointerEventData* EventData)
 		WarnOnceIfNoCharacterEventSource();
 	}
 	bInputActive = true;
+	// While it is typed into, the text keeps its layout between keystrokes and lays out again only what
+	// each edit touched (UDreamText::SetIncrementalLayout): every keystroke, caret move and selection maps
+	// carets through a fresh layout, and a long field would otherwise be laid out whole each time.
+	TextVisual->SetIncrementalLayout(true);
 	// The edit takes the paragraph's overflow back off the display policy: an ellipsis in the middle
 	// of a value somebody is typing into would hide the very characters the caret is standing on.
 	PushOverflowToVisual();
@@ -2807,6 +2908,11 @@ void UUITextInput::DeactivateInput(bool InFireEvent)
 		FSlateApplication::Get().ShowVirtualKeyboard(false, GetEditingSlateUserIndex());
 	}
 	bInputActive = false;
+	// Nothing types into it any more: what the incremental layout kept is let go at the next layout.
+	if (TextVisual.IsValid())
+	{
+		TextVisual->SetIncrementalLayout(false);
+	}
 	// And hands it back to the display policy, which is the state a field spends nearly all its life
 	// in -- the only state an ellipsis was ever meant to describe.
 	PushOverflowToVisual();
@@ -3019,7 +3125,16 @@ void UUITextInput::SetTextVisual(UDreamText* Value)
 			// key. Ended without events, as SetReadOnly ends one -- nobody committed anything.
 			DeactivateInput(false);
 		}
+		if (bInputActive && TextVisual.IsValid())
+		{
+			// Rewired mid-edit: the visual being let go of is typed into no more, and the new one is.
+			TextVisual->SetIncrementalLayout(false);
+		}
 		TextVisual = Value;
+		if (bInputActive && TextVisual.IsValid())
+		{
+			TextVisual->SetIncrementalLayout(true);
+		}
 		if (TextVisual != nullptr)
 		{
 			// The same normalization PostEditChangeProperty applies when the designer rewires it:
@@ -3044,7 +3159,12 @@ void UUITextInput::PushOverflowToVisual()
 		? EDreamUITextOverflowType::VerticalOverflow
 		: EDreamUITextOverflowType::HorizontalOverflow;
 	const bool bPolicySpeaks = !bInputActive && OverflowPolicy != ETextOverflowPolicy::Clip;
-	TextVisual->SetOverflowType(bPolicySpeaks ? EDreamUITextOverflowType::Ellipsis : LineMode);
+	// Slate's middle ellipsis keeps the start and the end of what does not fit, which the text has an answer of
+	// its own for; Ellipsis and MultilineEllipsis are both the end ellipsis here.
+	const EDreamUITextOverflowType PolicyOverflow = OverflowPolicy == ETextOverflowPolicy::MiddleEllipsis
+		? EDreamUITextOverflowType::MiddleEllipsis
+		: EDreamUITextOverflowType::Ellipsis;
+	TextVisual->SetOverflowType(bPolicySpeaks ? PolicyOverflow : LineMode);
 }
 
 void UUITextInput::SetOverflowPolicy(ETextOverflowPolicy Value)
@@ -3252,7 +3372,10 @@ UUITextInput::FVirtualKeyboardEntry::FVirtualKeyboardEntry(UUITextInput* InInput
 }
 void UUITextInput::FVirtualKeyboardEntry::SetTextFromVirtualKeyboard(const FText& InNewText, ETextEntryType TextEntryType)
 {
-	InputComp->SetText(InNewText.ToString());
+	// As an edit, not a replacement: the keyboard sends its whole text on every keystroke, and SetText cleared the
+	// undo history each time and left the caret where it stood, one character behind what was typed. Slate puts
+	// the text in without touching its history either (FSlateEditableTextLayout::SetEditableText).
+	InputComp->ApplyTextFromVirtualKeyboard(InNewText.ToString());
 	// The mobile keyboard's Done button is that platform's Enter, and it was reaching nobody: the
 	// field took the text and never reported a commit, so a mobile player filling in a field looked
 	// to the game exactly like one who had typed nothing.
@@ -3287,18 +3410,19 @@ void UUITextInput::FVirtualKeyboardEntry::SetTextFromVirtualKeyboard(const FText
 }
 void UUITextInput::FVirtualKeyboardEntry::SetSelectionFromVirtualKeyboard(int InSelStart, int SelEnd)
 {
-	//@todo
+	// Applied at once: both calls reach the game thread as tasks in the order the keyboard made them, so the text
+	// this selection is measured against is already in. Slate defers its copy to the next tick only because it
+	// defers the text as well.
+	InputComp->ApplySelectionFromVirtualKeyboard(InSelStart, SelEnd);
 }
 bool UUITextInput::FVirtualKeyboardEntry::GetSelection(int& OutSelStart, int& OutSelEnd)
 {
-	//check(IsInGameThread());
-
-	//const FTextLocation CursorInteractionPosition = OwnerLayout->CursorInfo.GetCursorInteractionLocation();
-	//FTextLocation SelectionLocation = OwnerLayout->SelectionStart.Get(CursorInteractionPosition);
-	//FTextSelection Selection(SelectionLocation, CursorInteractionPosition);
-
-	//OutSelStart = Selection.GetBeginning().GetOffset();
-	//OutSelEnd = Selection.GetEnd().GetOffset();
+	// Source offsets, beginning first, as Slate's own answer is (FTextSelection's beginning and end): the keyboard
+	// counts in its copy of the text, which is the field's text, unmasked.
+	const int32 PressCharIndex = InputComp->GetCharIndexOfCaret(InputComp->PressCaretPositionIndex);
+	const int32 CaretCharIndex = InputComp->GetCharIndexOfCaret(InputComp->CaretPositionIndex);
+	OutSelStart = FMath::Min(PressCharIndex, CaretCharIndex);
+	OutSelEnd = FMath::Max(PressCharIndex, CaretCharIndex);
 	return true;
 }
 FText UUITextInput::FVirtualKeyboardEntry::GetText() const

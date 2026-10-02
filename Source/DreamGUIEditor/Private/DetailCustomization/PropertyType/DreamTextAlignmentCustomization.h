@@ -54,6 +54,10 @@ public:
 				+ SSegmentedControl<EDreamUITextParagraphHorizontalAlign>::Slot(EDreamUITextParagraphHorizontalAlign::Right)
 				.Icon(FAppStyle::GetBrush("HorizontalAlignment_Right"))
 				.ToolTip(LOCTEXT("AlignTextRight", "Align Text Right"))
+				// The editor's "fill" alignment icon: lines that reach both edges.
+				+ SSegmentedControl<EDreamUITextParagraphHorizontalAlign>::Slot(EDreamUITextParagraphHorizontalAlign::Justify)
+				.Icon(FAppStyle::GetBrush("HorizontalAlignment_Fill"))
+				.ToolTip(LOCTEXT("JustifyText", "Justify Text: lines that wrap are spread to both edges"))
 			);
 		}
 		else

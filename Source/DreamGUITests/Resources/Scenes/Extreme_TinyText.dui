@@ -1,6 +1,7 @@
 // Text at 4, 6 and 8 px, below anything legible, with 12 px for reference: a glyph a few pixels across must still be
 // drawn as ink in its place, not dropped and not smeared over its neighbours.
 // @stage 512x176
+// @variant SmallTextCoverageOff
 
 style Title {
     AnchorData.AnchorMin = (0, 1)

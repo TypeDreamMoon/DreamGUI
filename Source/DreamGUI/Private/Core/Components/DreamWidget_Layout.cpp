@@ -987,7 +987,6 @@ void UDreamWidget::MarkAnchorDataChanged_Recursive(bool InPivotChanged, bool InW
 		bCacheAnchorOffsetBottomDirty = true;
 		bCacheAnchorOffsetTopDirty = true;
 	}
-	MarkDimensionChanged(InPivotChanged, InWidthChanged, InHeightChanged);
 
 	// A size change that did not come out of a layout pass is a new authored intent, so the panel slot's
 	// measurement snapshot has to follow it. Without this the snapshot froze at whatever the widget
@@ -996,10 +995,17 @@ void UDreamWidget::MarkAnchorDataChanged_Recursive(bool InPivotChanged, bool InW
 	// straight back. A runtime SetWidth, or UDreamSpriteBase::SetSprite swapping in art of a different size,
 	// visibly flashed and snapped back. This funnel only ever runs on the widget the setter was called on:
 	// the recursion below hands children to the by-layout-container twin instead.
+	//
+	// Before the change is announced, not after: MarkDimensionChanged ends in Call_DimensionsChanged, whose
+	// listeners -- the parent's child-dimension handlers among them (UDreamExpandableArea measures its content
+	// there) -- measure this widget through that snapshot, and taken afterwards they measured the size it had
+	// before. A listener that answers with a layout pass writing this widget's size no longer has that output
+	// captured as authored either: the snapshot is the size the setter asked for.
 	if ((InWidthChanged || InHeightChanged) && !IsLayoutWriting() && IsValid(PanelSlot))
 	{
 		PanelSlot->SyncAuthoredDesiredSizeFromWidget();
 	}
+	MarkDimensionChanged(InPivotChanged, InWidthChanged, InHeightChanged);
 
 	if (!InPropagateToChildren)return;
 	// A copy of the children: each child's resize is announced to user code (Call_DimensionsChanged), which

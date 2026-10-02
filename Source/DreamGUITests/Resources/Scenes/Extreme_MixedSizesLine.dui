@@ -1,6 +1,7 @@
 // One line of rich text going from 8 to 72 px and back to 16: every run sits on one shared baseline, and the line
 // is as tall as its tallest run.
 // @stage 960x192
+// @variant SmallTextCoverageOff
 
 style Title {
     AnchorData.AnchorMin = (0, 1)

@@ -3,6 +3,8 @@
 #if WITH_DEV_AUTOMATION_TESTS
 
 #include "Misc/AutomationTest.h"
+#include "Core/Components/DreamText.h"
+#include "Core/Components/DreamWidget.h"
 #include "Core/DreamUIGeometry.h"
 #include "Core/DreamUITextData.h"
 #include "Core/Text/DreamTextLayout.h"
@@ -331,6 +333,59 @@ bool FDreamTextPainterEffectLayerTest::RunTest(const FString& Parameters)
 		const float FaceLeft = Geometry.OriginVertices[4].Position.Y;
 		TestEqual(TEXT("bold glyph shifts right by one side's dilation"), FaceLeft - RefLeft, Shift - Grow, 0.01f);
 	}
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamTextPaintParamsUnderlayAndContentTintTest,
+	"DreamGUI.Text.Style.PaintParamsSayWhetherThereIsAnUnderlayAndFadeTagColoursByTheContentTintsAlpha",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * Two things the text component hands the painter about its look. Whether the style draws an underlay, which a colour
+ * glyph's shadow copy is made for only when it does: an underlay colour with alpha, never one without. And the opacity a
+ * rich-text tag's own colour is drawn at: the hierarchy's render opacity times the alpha of the content tint the text's
+ * ancestors lay over it -- its own tint left out, that one being for what is under it -- since a tagged colour takes
+ * none of the tint's colour.
+ */
+bool FDreamTextPaintParamsUnderlayAndContentTintTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamTextStyleTestLocal;
+	FScopedGameWorld TestWorld;
+	UDreamWidget* Parent = NewObject<UDreamWidget>(TestWorld.World, NAME_None, RF_Transient);
+	Parent->OnRegister();
+	UDreamWidget* Child = NewObject<UDreamWidget>(TestWorld.World, NAME_None, RF_Transient);
+	Child->OnRegister();
+	UDreamText* Text = Child->TrySetParent(Parent, false) ? Child->CreateNewVisual<UDreamText>() : nullptr;
+	if (!TestNotNull(TEXT("A text under a parent"), Text))
+	{
+		Parent->DestroyWidget();
+		return false;
+	}
+	Text->SetFont(NewObject<UDreamTextTestFont>(TestWorld.World));
+
+	const FDreamTextPaintParams Plain = UDreamText::MakePaintParams(Text);
+	TestTrue(TEXT("The made-up font paints as a distance field"), Plain.bDistanceField);
+	TestFalse(TEXT("A style with no underlay says so"), Plain.bHasUnderlay);
+	TestEqual(TEXT("...and nothing fades the tag colours"), Plain.RichTextTagOpacity, 1.0f, 1.0e-5f);
+
+	FDreamTextStyle Shadowed;
+	Shadowed.UnderlayColor = FColor(0, 0, 0, 128);
+	Text->SetTextStyle(Shadowed);
+	TestTrue(TEXT("An underlay colour with alpha is an underlay"), UDreamText::MakePaintParams(Text).bHasUnderlay);
+	Shadowed.UnderlayColor.A = 0;
+	Text->SetTextStyle(Shadowed);
+	TestFalse(TEXT("...and one without is none"), UDreamText::MakePaintParams(Text).bHasUnderlay);
+
+	Parent->SetContentTint(FLinearColor(1.0f, 0.25f, 0.25f, 0.5f));
+	TestEqual(TEXT("A parent's content tint fades the tag colours by its alpha"), UDreamText::MakePaintParams(Text).RichTextTagOpacity, 0.5f, 1.0e-4f);
+	Child->SetRenderOpacity(0.5f);
+	TestEqual(TEXT("...on top of the render opacity"), UDreamText::MakePaintParams(Text).RichTextTagOpacity, 0.25f, 1.0e-4f);
+	Child->SetContentTint(FLinearColor(1.0f, 1.0f, 1.0f, 0.1f));
+	TestEqual(TEXT("The text's own widget's tint is for what is under it, not for its text"),
+		UDreamText::MakePaintParams(Text).RichTextTagOpacity, 0.25f, 1.0e-4f);
+
+	Parent->DestroyWidget();
 	return true;
 }
 

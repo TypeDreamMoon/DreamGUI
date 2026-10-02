@@ -15,6 +15,7 @@
 #include "Engine/World.h"
 #include "DreamTweenManager.h"
 #include "Core/DreamUIClipData.h"
+#include "Core/DreamUIInputServices.h"
 #include "Core/Components/DreamLayout.h"
 #include "Core/Components/DreamPanelLayouts.h"
 #include "Core/Components/DreamPanelSlot.h"
@@ -499,40 +500,30 @@ namespace DreamWidgetFocusReleaseLocal
 	 * (SetIsFocusable), but one hidden or disabled while it held the focus -- itself, or by an ancestor -- kept it,
 	 * and went on hearing its player's keys under whatever was drawn in front. Slate takes the focus from a widget
 	 * that is hidden or disabled; so does this. Called once a walk under InRoot has hidden or disabled something, and
-	 * asks one question per player before looking further, so a walk that touches nobody's focus costs no more.
+	 * asks each player once where their focus is rather than walking the subtree.
+	 *
+	 * Every player the input system has (UDreamUIInputServices::GetUserIndices), script players included: counting the
+	 * game instance's local players left a test rig's second player -- and any player a script drives -- holding focus
+	 * on whatever was hidden under them.
 	 */
 	void ReleaseFocusThatCannotStay(UDreamWidget* InRoot)
 	{
-		if (!IsValid(InRoot) || (!InRoot->HasAnyUserFocus() && !InRoot->HasFocusedDescendants()))
+		UDreamUIInputServices* Services = IsValid(InRoot) ? UDreamUIInputServices::Get(InRoot) : nullptr;
+		if (Services == nullptr)
 		{
 			return;
 		}
-		// As many players as the any-player focus queries count: at least player 0, outside a game instance too.
-		const UGameInstance* GameInstance = InRoot->GetGameInstance();
-		const int32 PlayerCount = GameInstance != nullptr ? FMath::Max(GameInstance->GetNumLocalPlayers(), 1) : 1;
+		TArray<int32> UserIndices;
+		Services->GetUserIndices(UserIndices);
 		// Gathered before any is let go of: letting go runs the deselect handlers, which are free to change this tree.
 		TArray<TPair<TWeakObjectPtr<UDreamWidget>, int32>, TInlineAllocator<2>> Holders;
-		TArray<UDreamWidget*, TInlineAllocator<32>> Walk;
-		Walk.Add(InRoot);
-		for (int32 WalkIndex = 0; WalkIndex < Walk.Num(); ++WalkIndex)
+		for (const int32 UserIndex : UserIndices)
 		{
-			UDreamWidget* Widget = Walk[WalkIndex];
-			if (!Widget->GetRenderVisibleInHierarchy() || !Widget->GetInteractableInHierarchy())
+			UDreamWidget* Focused = Services->GetFocusedWidget(UserIndex);
+			if (IsValid(Focused) && (Focused == InRoot || Focused->IsChildOf(InRoot))
+				&& (!Focused->GetRenderVisibleInHierarchy() || !Focused->GetInteractableInHierarchy()))
 			{
-				for (int32 UserIndex = 0; UserIndex < PlayerCount; ++UserIndex)
-				{
-					if (Widget->HasFocus(UserIndex))
-					{
-						Holders.Emplace(Widget, UserIndex);
-					}
-				}
-			}
-			for (UDreamWidget* Child : Widget->GetChildren())
-			{
-				if (IsValid(Child))
-				{
-					Walk.Add(Child);
-				}
+				Holders.Emplace(Focused, UserIndex);
 			}
 		}
 		for (const TPair<TWeakObjectPtr<UDreamWidget>, int32>& Holder : Holders)
@@ -644,6 +635,7 @@ void UDreamWidget::CalculateInteractable_Recursive()
 			// together, and a second recursion over the subtree would only make it possible for them
 			// to disagree for a frame.
 			const bool bParentEnabled = !Widget->Parent.IsValid() || Widget->Parent->bCacheEnabledInHierarchy;
+			const bool bWasEnabled = Widget->bCacheEnabledInHierarchy;
 			Widget->bCacheEnabledInHierarchy = Widget->bIsEnabled && bParentEnabled;
 
 			bool bResultInteractable = true;
@@ -673,6 +665,13 @@ void UDreamWidget::CalculateInteractable_Recursive()
 				Widget->bCacheInteractableInHierarchy = bResultInteractable;
 				bOutAnyStoppedInteracting |= !bResultInteractable;
 				Widget->Call_InteractableChanged();
+			}
+			// Its own event, after the interactable one, because the two need not move together: a widget whose
+			// Interactable already said Disabled does not change interactability when it is disabled as well, and a
+			// disabled look that follows UMG's IsEnabled has to hear the flip all the same.
+			if (Widget->bCacheEnabledInHierarchy != bWasEnabled)
+			{
+				Widget->GetEnabledChangedEvent().Broadcast(Widget->bCacheEnabledInHierarchy);
 			}
 			for (auto& Child : Widget->GetChildren())
 			{

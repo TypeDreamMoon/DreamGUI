@@ -1069,8 +1069,9 @@ namespace DreamDriverSequenceLocal
 	 * A finger landing, moving or lifting -- one step, one frame, like every other input.
 	 *
 	 * A finger is its own pointer: the standalone module keys touches by the finger's index, so
-	 * finger 1 and finger 2 are pointers 1 and 2, each with its own press, hover and drag. Finger 0
-	 * shares pointer 0 with the mouse, as it does in a game (ETouchIndex::Touch1 is 0).
+	 * finger 1 and finger 2 are pointers DreamUIPointerIds::ForTouch(1) and ForTouch(2) -- 101 and
+	 * 102 -- each with its own press, hover and drag. No finger shares a pointer with the mouse, which
+	 * is pointer 0: finger 0 is pointer 100.
 	 *
 	 * A lift is aimed where the finger IS -- the pointer's last position, read back from the event
 	 * system -- because a finger comes off the glass where it was, and a lift at some other pixel is a

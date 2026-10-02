@@ -93,13 +93,13 @@ Each input column holds one mark per configuration, in this order: Default (`[An
 | TextInput | `#...` | `....` | `#...` | `#...` | 13 |
 | SpinBox | `#...` | `....` | `....` | `#...` | 14 |
 | InputKeySelector | `#...` | `....` | `....` | `#...` | 14 |
-| ExpandableArea | `#...` | `....` | `....` | `----` | 11 |
+| ExpandableArea | `#...` | `....` | `#...` | `----` | 10 |
 | ListView | `#...` | `....` | `#...` | `----` | 10 |
 | ListRowDragDrop | `#...` | `....` | `....` | `----` | 11 |
 | TileView | `#...` | `....` | `#...` | `----` | 10 |
 | TreeView | `#...` | `....` | `#...` | `----` | 10 |
-| MenuAnchor | `#...` | `....` | `....` | `----` | 11 |
-| NativeWidgetHost | `#...` | `....` | `....` | `----` | 11 |
+| MenuAnchor | `#...` | `....` | `#...` | `----` | 10 |
+| NativeWidgetHost | `#...` | `#...` | `....` | `----` | 10 |
 | ProgressBar | `#...` | `....` | `....` | `----` | 11 |
 | RadioButton | `#...` | `....` | `....` | `----` | 11 |
 | RichText | `#...` | `....` | `....` | `----` | 11 |
@@ -107,7 +107,7 @@ Each input column holds one mark per configuration, in this order: Default (`[An
 | ScrollBar | `#...` | `....` | `....` | `----` | 11 |
 | ScrollBox | `#...` | `....` | `....` | `----` | 11 |
 | Slider | `##..` | `....` | `#...` | `----` | 9 |
-| TabView | `##..` | `....` | `....` | `----` | 10 |
+| TabView | `##..` | `....` | `##..` | `----` | 8 |
 | Toggle | `##..` | `#...` | `....` | `----` | 9 |
 | ToggleGroup | `....` | `....` | `....` | `----` | 12 |
 | EventBlocker | `....` | `....` | `....` | `----` | 12 |
@@ -117,17 +117,21 @@ Each input column holds one mark per configuration, in this order: Default (`[An
 | NavigationStack | `....` | `....` | `....` | `----` | 12 |
 | ActionRouter | `....` | `....` | `....` | `----` | 12 |
 | ActionBar | `....` | `....` | `....` | `----` | 12 |
-| Modal | `....` | `....` | `....` | `----` | 12 |
+| Modal | `....` | `....` | `#...` | `----` | 11 |
 | PopupLayer | `....` | `....` | `....` | `----` | 12 |
 | Tooltip | `#...` | `....` | `....` | `----` | 11 |
 | VirtualCursor | `....` | `....` | `....` | `----` | 12 |
 
-**Holes: 419** of 464 applicable cells.
+**Holes: 413** of 464 applicable cells.
 
 Notes:
 
 - InputKeySelector: Its Text column is the key it listens for, not characters.
 
 - coverage.json excludes classes that no longer exist: UDreamLayoutSelfSpacer
+
+Tagged tests whose name matches no row (add the area to a row in coverage.json):
+
+- `DreamGUI.Focus.BothPlayersInsideAPopupGetTheOpenerBack`
 
 <!-- coverage-matrix:end -->

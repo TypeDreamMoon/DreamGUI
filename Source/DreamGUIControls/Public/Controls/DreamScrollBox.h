@@ -72,7 +72,9 @@ public:
 	/**
 	 * Whether the bar stays put or disappears while the content already fits. AutoHide follows the
 	 * content at run time: every re-measure (AddContent, RefreshContentExtent, a resize) asks again, so
-	 * a box that starts or stops overflowing brings its bar out or puts it away, as UMG's does.
+	 * a box that starts or stops overflowing brings its bar out or puts it away, as UMG's does -- the bar and
+	 * its gutter both collapse while nothing scrolls. Hidden never draws the bar but keeps its gutter while
+	 * there is something to scroll, as a Hidden Slate bar keeps its slot; Permanent is UMG's AlwaysShowScrollbar.
 	 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetScrollBarVisibility", BlueprintSetter = "SetScrollBarVisibility", Category = "Scroll Box", meta = (EditCondition = "bShowScrollBar"))
 	EDreamScrollBoxScrollbarVisibility ScrollBarVisibility = EDreamScrollBoxScrollbarVisibility::AutoHide;
@@ -117,11 +119,12 @@ public:
 	EDreamScrollBoxConsumeMouseWheel ConsumeMouseWheel = EDreamScrollBoxConsumeMouseWheel::WhenScrollingPossible;
 
 	/**
-	 * Whether the bar's TRACK survives the bar auto-hiding -- UMG's AlwaysShowScrollbarTrack, and the
-	 * groove a desktop scroll bar leaves behind when its thumb has nothing to say.
+	 * Whether the bar's TRACK is drawn while the bar is idle -- UMG's AlwaysShowScrollbarTrack, which raises
+	 * an idle track from invisible to half its alpha (SScrollBar::GetTrackOpacity). Hovering or dragging the
+	 * bar draws the track at full alpha whatever this says, and Permanent draws an idle one at half.
 	 *
-	 * The gutter is spent either way while this is on, which is the point: a list that gains a row
-	 * must not reflow its whole content because a bar appeared beside it.
+	 * That is all it does, as in UMG: it keeps neither the bar nor its gutter while nothing scrolls. Only
+	 * ScrollBarVisibility set to Permanent keeps the bar out then.
 	 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "IsAlwaysShowScrollbarTrack", BlueprintSetter = "SetAlwaysShowScrollbarTrack", Category = "Scroll Box")
 	bool bAlwaysShowScrollbarTrack = false;
@@ -195,6 +198,11 @@ public:
 	/**
 	 * Position along the scrolling axis, 0 to 1. Authored in; mirror of the behaviour's out, so a
 	 * `.dui` binding and the designer can both see it.
+	 *
+	 * The authored value is pushed until it lands on content that can scroll -- a box built empty
+	 * and filled later still opens where it was authored to -- and again whenever it is set or edited.
+	 * Every other style push reads the view's progress back into it instead, so restyling a box never
+	 * moves its content.
 	 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetScrollProgress", BlueprintSetter = "SetScrollProgress", Category = "Scroll Box", meta = (ClampMin = "0.0", ClampMax = "1.0"))
 	float ScrollProgress = 0.0f;
@@ -370,7 +378,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Scroll Box")
 	void EndInertialScrolling();
 
-	/** True while momentum or a spring-back still has the content moving. */
+	/** True while momentum, a spring-back or a glide (an animated reveal or wheel notch) still has the content moving. */
 	UFUNCTION(BlueprintPure, Category = "Scroll Box")
 	bool GetIsScrolling() const;
 
@@ -548,10 +556,41 @@ protected:
 	 * so the behaviour's own check never sees the number a scroll box carries.
 	 */
 	virtual void PostLoad() override;
+#if WITH_EDITOR
+	/** An edit of ScrollProgress itself is the one edit whose style push moves the content there. */
+	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
+#endif
 
 private:
 	void HandleScrollViewChanged(FVector2D InProgress);
-	void PushScrollProgress();
+	/**
+	 * Push the authored ScrollProgress into the view, and stop pushing it once it landed on content that can scroll.
+	 * Every other style push reads the view's progress back instead (see ScrollProgress).
+	 */
+	void PushAuthoredScrollProgress();
+
+	/** True until the authored ScrollProgress has been pushed onto content that can scroll; set again by a set or an edit of it. */
+	bool bAuthoredScrollProgressPending = true;
+	/** Set while PushAuthoredScrollProgress pushes, so what the view says back does not overwrite the value being pushed. */
+	bool bPushingAuthoredProgress = false;
+
+	/** Whether the content is longer than the window along the scrolling axis -- what every bar question starts from. */
+	bool IsContentOverflowing() const;
+	/** Whether the gutter the bar sits in is taken from the viewport: whenever the bar shows, and for a Hidden bar while the content overflows. */
+	bool ShouldReserveScrollBarGutter() const;
+	/**
+	 * The bar's track at SScrollBar's idle opacity -- none, or half with AlwaysShowScrollbarTrack or Permanent -- and at
+	 * full while the bar is hovered or dragged. Written as the track visual's colour multiplier, so the bar's own style
+	 * push, which writes the track's colour, never undoes it.
+	 */
+	void ApplyBarTrackOpacity();
+	/** The bar's selectable moved state: hovering or pressing it shows its track. */
+	void HandleBarStateChanged(EUISelectableSelectionState InState, bool bInImmediate);
+	/** Whether the pointer is on the bar or dragging it, the one time an idle track is drawn at full alpha. */
+	bool bBarTrackEngaged = false;
+	FDelegateHandle BarStateHandle;
+	/** Whether the gutter was reserved last time the style push decided, so a re-measure can tell when it has to push again. */
+	bool bScrollBarGutterWasReserved = false;
 
 	/** Re-state every behaviour knob on the view. One list, called from the style push and the setters. */
 	void PushScrollBehaviourSettings();
@@ -591,9 +630,15 @@ public:
 		HandleFaceSelectionStateChanged(InState, false);
 	}
 
+	/** Drive the bar's hover edge directly, for a test: the selectable's state is the event system's to move. */
+	void HandleBarStateChangedForTest(EUISelectableSelectionState InState)
+	{
+		HandleBarStateChanged(InState, true);
+	}
+
 private:
 
-	/** True while the bar has something to say: shown at all, and either permanent or overflowing. */
+	/** True while the bar is drawn: shown at all, and permanent, or auto-hiding with content that overflows. */
 	bool ShouldShowScrollBar() const;
 
 	bool IsHorizontal() const { return Orientation == EDreamPanelOrientation::Horizontal; }

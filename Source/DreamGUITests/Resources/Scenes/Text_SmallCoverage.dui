@@ -1,0 +1,278 @@
+// Small text drawn from coverage glyphs, at canvas scales 1, 1.25 and 1.333: the default font from 10 to 20 px, a
+// rich-text line mixing 11 to 40 px, superscript and subscript, an underline and a strike, synthetic bold and italic
+// (Synthetic key: Roboto with no style faces), Chinese and Japanese at 12 and 14 px (CJK key), a lyric line filled half
+// way, and a line half faded by an alpha TextAnimation. Below about 20 device pixels stems sit on whole pixels; at 1.333
+// the 18 and 20 px lines are past that and draw from the field. The SmallTextCoverageOff run draws all of it from the
+// field, as before the switch.
+// @stage 760x560
+// @canvasScale 1 1.25 1.333
+// @variant SmallTextCoverageOff
+// @fill LyricHalf 0.5
+// @textAnimationAlpha Typewriter 0.15 0.5
+
+style Title {
+    AnchorData.AnchorMin = (0, 1)
+    AnchorData.AnchorMax = (1, 1)
+    AnchorData.Pivot = (0.5, 1)
+    AnchorData.AnchoredPosition = (0, -8)
+    AnchorData.SizeDelta = (-24, 20)
+    FontSize = 15
+    Color = #1E2230
+    HAlign = Left
+    VAlign = Top
+    OverflowType = HorizontalOverflow
+}
+
+style Size {
+    AnchorData.AnchorMin = (0, 1)
+    AnchorData.AnchorMax = (0, 1)
+    AnchorData.Pivot = (0, 1)
+    FontSize = 11
+    Color = #5A6172
+    HAlign = Right
+    VAlign = Middle
+    OverflowType = HorizontalOverflow
+}
+
+style Line {
+    AnchorData.AnchorMin = (0, 1)
+    AnchorData.AnchorMax = (0, 1)
+    AnchorData.Pivot = (0, 1)
+    Color = #1E2230
+    HAlign = Left
+    VAlign = Middle
+    OverflowType = HorizontalOverflow
+    Text = "Hamburgefonstiv 0123456789 The quick brown fox jumps"
+}
+
+Widget Root {
+    Image Page {
+        Brush.TintColor = #F5F3EE
+        AnchorData.AnchorMin = (0, 0)
+        AnchorData.AnchorMax = (1, 1)
+        AnchorData.SizeDelta = (0, 0)
+    }
+
+    Text Heading : Title {
+        Text = "Small text from coverage glyphs, default font"
+    }
+
+    Text Label10 : Size {
+        AnchorData.AnchoredPosition = (8, -40)
+        AnchorData.SizeDelta = (52, 16)
+        Text = "10 px"
+    }
+    Text Sample10 : Line {
+        AnchorData.AnchoredPosition = (68, -40)
+        AnchorData.SizeDelta = (676, 16)
+        FontSize = 10
+    }
+
+    Text Label11 : Size {
+        AnchorData.AnchoredPosition = (8, -58)
+        AnchorData.SizeDelta = (52, 17)
+        Text = "11 px"
+    }
+    Text Sample11 : Line {
+        AnchorData.AnchoredPosition = (68, -58)
+        AnchorData.SizeDelta = (676, 17)
+        FontSize = 11
+    }
+
+    Text Label12 : Size {
+        AnchorData.AnchoredPosition = (8, -77)
+        AnchorData.SizeDelta = (52, 18)
+        Text = "12 px"
+    }
+    Text Sample12 : Line {
+        AnchorData.AnchoredPosition = (68, -77)
+        AnchorData.SizeDelta = (676, 18)
+        FontSize = 12
+    }
+
+    Text Label13 : Size {
+        AnchorData.AnchoredPosition = (8, -97)
+        AnchorData.SizeDelta = (52, 19)
+        Text = "13 px"
+    }
+    Text Sample13 : Line {
+        AnchorData.AnchoredPosition = (68, -97)
+        AnchorData.SizeDelta = (676, 19)
+        FontSize = 13
+    }
+
+    Text Label14 : Size {
+        AnchorData.AnchoredPosition = (8, -118)
+        AnchorData.SizeDelta = (52, 20)
+        Text = "14 px"
+    }
+    Text Sample14 : Line {
+        AnchorData.AnchoredPosition = (68, -118)
+        AnchorData.SizeDelta = (676, 20)
+        FontSize = 14
+    }
+
+    Text Label15 : Size {
+        AnchorData.AnchoredPosition = (8, -140)
+        AnchorData.SizeDelta = (52, 21)
+        Text = "15 px"
+    }
+    Text Sample15 : Line {
+        AnchorData.AnchoredPosition = (68, -140)
+        AnchorData.SizeDelta = (676, 21)
+        FontSize = 15
+    }
+
+    Text Label16 : Size {
+        AnchorData.AnchoredPosition = (8, -163)
+        AnchorData.SizeDelta = (52, 23)
+        Text = "16 px"
+    }
+    Text Sample16 : Line {
+        AnchorData.AnchoredPosition = (68, -163)
+        AnchorData.SizeDelta = (676, 23)
+        FontSize = 16
+    }
+
+    Text Label18 : Size {
+        AnchorData.AnchoredPosition = (8, -188)
+        AnchorData.SizeDelta = (52, 25)
+        Text = "18 px"
+    }
+    Text Sample18 : Line {
+        AnchorData.AnchoredPosition = (68, -188)
+        AnchorData.SizeDelta = (676, 25)
+        FontSize = 18
+    }
+
+    Text Label20 : Size {
+        AnchorData.AnchoredPosition = (8, -215)
+        AnchorData.SizeDelta = (52, 28)
+        Text = "20 px"
+    }
+    Text Sample20 : Line {
+        AnchorData.AnchoredPosition = (68, -215)
+        AnchorData.SizeDelta = (676, 28)
+        FontSize = 20
+    }
+
+    Text LabelRich : Size {
+        AnchorData.AnchoredPosition = (8, -250)
+        AnchorData.SizeDelta = (52, 48)
+        Text = "rich"
+    }
+    Text RichMix : Line {
+        AnchorData.AnchoredPosition = (68, -250)
+        AnchorData.SizeDelta = (676, 48)
+        FontSize = 14
+        bRichText = true
+        Text = "base 14 px, <size=11>11 px</size>, <size=18>18 px</size> and <size=40>40 px</size> on one line"
+    }
+
+    Text LabelMarks : Size {
+        AnchorData.AnchoredPosition = (8, -304)
+        AnchorData.SizeDelta = (52, 24)
+        Text = "marks"
+    }
+    Text Marks : Line {
+        AnchorData.AnchoredPosition = (68, -304)
+        AnchorData.SizeDelta = (676, 24)
+        FontSize = 14
+        bRichText = true
+        Text = "x<sup>2</sup> + H<sub>2</sub>O, <u>an underline across words</u> and <s>a strike</s>"
+    }
+
+    Text LabelBold : Size {
+        AnchorData.AnchoredPosition = (8, -334)
+        AnchorData.SizeDelta = (52, 20)
+        Text = "bold"
+    }
+    Text Font_Synthetic_Bold : Line {
+        AnchorData.AnchoredPosition = (68, -334)
+        AnchorData.SizeDelta = (676, 20)
+        FontSize = 14
+        FontStyle = Bold
+        Text = "Synthetic bold Hamburgefonstiv 0123456789"
+    }
+
+    Text LabelItalic : Size {
+        AnchorData.AnchoredPosition = (8, -358)
+        AnchorData.SizeDelta = (52, 20)
+        Text = "italic"
+    }
+    Text Font_Synthetic_Italic : Line {
+        AnchorData.AnchoredPosition = (68, -358)
+        AnchorData.SizeDelta = (676, 20)
+        FontSize = 14
+        FontStyle = Italic
+        Text = "Synthetic italic Hamburgefonstiv 0123456789"
+    }
+
+    Text LabelBoldItalic : Size {
+        AnchorData.AnchoredPosition = (8, -382)
+        AnchorData.SizeDelta = (52, 20)
+        Text = "both"
+    }
+    Text Font_Synthetic_BoldItalic : Line {
+        AnchorData.AnchoredPosition = (68, -382)
+        AnchorData.SizeDelta = (676, 20)
+        FontSize = 14
+        FontStyle = BoldAndItalic
+        Text = "Synthetic bold italic Hamburgefonstiv 0123456789"
+    }
+
+    Text LabelCjk12 : Size {
+        AnchorData.AnchoredPosition = (8, -410)
+        AnchorData.SizeDelta = (52, 20)
+        Text = "CJK 12"
+    }
+    Text Font_CJK_Small12 : Line {
+        AnchorData.AnchoredPosition = (68, -410)
+        AnchorData.SizeDelta = (676, 20)
+        FontSize = 12
+        Text = "中文小字：标点符号，不应出现在行首。日本語の小さな文字です。"
+    }
+
+    Text LabelCjk14 : Size {
+        AnchorData.AnchoredPosition = (8, -434)
+        AnchorData.SizeDelta = (52, 22)
+        Text = "CJK 14"
+    }
+    Text Font_CJK_Small14 : Line {
+        AnchorData.AnchoredPosition = (68, -434)
+        AnchorData.SizeDelta = (676, 22)
+        FontSize = 14
+        Text = "中文小字：标点符号，不应出现在行首。日本語の小さな文字です。"
+    }
+
+    Text LabelLyric : Size {
+        AnchorData.AnchoredPosition = (8, -462)
+        AnchorData.SizeDelta = (52, 24)
+        Text = "fill 50 %"
+    }
+    Text LyricHalf : Line {
+        AnchorData.AnchoredPosition = (68, -462)
+        AnchorData.SizeDelta = (676, 24)
+        FontSize = 16
+        Text = "A lyric line, half of it sung and half still to come"
+    }
+
+    Text LabelTypewriter : Size {
+        AnchorData.AnchoredPosition = (8, -492)
+        AnchorData.SizeDelta = (52, 22)
+        Text = "alpha"
+    }
+    Text Typewriter : Line {
+        AnchorData.AnchoredPosition = (68, -492)
+        AnchorData.SizeDelta = (676, 22)
+        FontSize = 14
+        Text = "Typewriter: a TextAnimation fades the first half of this line"
+    }
+
+    Text Expected : Size {
+        AnchorData.AnchoredPosition = (8, -524)
+        AnchorData.SizeDelta = (736, 16)
+        HAlign = Left
+        Text = "Expected: hinted stems on whole pixels, the same layout as the field draws, no line moved; fill and alpha as on the field."
+    }
+}

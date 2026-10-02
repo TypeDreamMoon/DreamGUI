@@ -6,8 +6,11 @@
 #include "UObject/StrongObjectPtr.h"
 
 #include "Controls/DreamTabView.h"
+#include "Core/DreamUIInputServices.h"
 #include "Core/Components/DreamWidget.h"
+#include "Event/DreamEventSystem.h"
 #include "Event/DreamScreenSpaceRaycaster.h"
+#include "Interaction/UIButton.h"
 #include "Interaction/UIToggle.h"
 
 #include "Driver/DreamDriver.h"
@@ -77,6 +80,19 @@ namespace DreamPressTabViewTestLocal
 	FString CaptionAt(const UDreamTabView* InTabView, int32 InIndex)
 	{
 		return InTabView->TabLabels.IsValidIndex(InIndex) ? InTabView->TabLabels[InIndex].ToString() : FString();
+	}
+
+	/** The tab InIndex of the strip as it stands now, or null. */
+	UDreamWidget* TabAt(const UDreamTabView* InTabView, int32 InIndex)
+	{
+		return InTabView->Tabs.IsValidIndex(InIndex) ? InTabView->Tabs[InIndex].TabNode.Get() : nullptr;
+	}
+
+	/** Whether player 0's focus is on InWidget or on something inside it. */
+	bool IsFocusOnOrIn(UDreamUIInputServices* InServices, const UDreamWidget* InWidget)
+	{
+		const UDreamWidget* Focused = InServices != nullptr ? InServices->GetFocusedWidget(0) : nullptr;
+		return Focused != nullptr && InWidget != nullptr && (Focused == InWidget || Focused->IsChildOf(InWidget));
 	}
 }
 
@@ -377,6 +393,224 @@ bool FDreamPressTabViewCloseLastOpenTest::RunTest(const FString& Parameters)
 	{
 		TestEqual(TEXT("Naming the neighbour"), Listener->TabChangedIndices[0], 1);
 	}
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamPressTabViewFocusPageTest,
+	"DreamGUI.TabView.AfterOpeningATabWithThePadTheNextConfirmPressesItsPage",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamPressTabViewFocusPageTest, "DreamGUI.TabView.AfterOpeningATabWithThePadTheNextConfirmPressesItsPage", "[Nav][Animated]")
+
+/*
+ * bFocusPageOnTabChange exists so a pad player who opens a tab lands in its page, and it moved focus nowhere: the switcher
+ * only marks itself for layout when its index moves, so the page was still collapsed when it was searched, and nothing in
+ * a collapsed page counts as navigable. The switcher is laid out first now, and the page's first control is focused the
+ * way a stick press focuses -- the navigation cursor goes with it.
+ *
+ * Checked here: two pages, each with a button; the pad's focus on the second tab and its confirm pressed. The second
+ * page is open, its button has focus, and the next confirm presses that button.
+ */
+bool FDreamPressTabViewFocusPageTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamPressTabViewTestLocal;
+	TStrongObjectPtr<UDreamPressInteractionListener> Listener(NewObject<UDreamPressInteractionListener>());
+	FDreamDriverRig Rig = FDreamDriverRig::Headless(ViewportSize);
+	Rig.BindTest(this);
+	if (!TestTrue(TEXT("The headless rig came up"), Rig.IsUsable()))
+	{
+		return false;
+	}
+	UDreamTabView* TabView = Rig.MakeControl<UDreamTabView>(TEXT("Settings"), nullptr, FVector2D(600.0, 300.0));
+	UDreamWidget* PageA = Rig.MakeWidget(TEXT("Video"), nullptr, FVector2D(400.0, 200.0));
+	UDreamWidget* PageB = Rig.MakeWidget(TEXT("Audio"), nullptr, FVector2D(400.0, 200.0));
+	UDreamWidget* ButtonA = PageA != nullptr ? Rig.MakeWidget(TEXT("VideoButton"), PageA, FVector2D(120.0, 40.0)) : nullptr;
+	UDreamWidget* ButtonB = PageB != nullptr ? Rig.MakeWidget(TEXT("AudioButton"), PageB, FVector2D(120.0, 40.0)) : nullptr;
+	if (!TestNotNull(TEXT("A tab view can be made on the rig"), TabView)
+		|| !TestNotNull(TEXT("with a first page and a button on it"), ButtonA)
+		|| !TestNotNull(TEXT("and a second page and a button on it"), ButtonB))
+	{
+		return false;
+	}
+	UUIButton* PressableB = ButtonB->AddComponent<UUIButton>();
+	ButtonA->AddComponent<UUIButton>();
+	if (!TestNotNull(TEXT("The second page's button is a button"), PressableB))
+	{
+		return false;
+	}
+	PressableB->GetOnClickEvent().AddUObject(Listener.Get(), &UDreamPressInteractionListener::HandleClicked);
+	TabView->AddPage(PageA);
+	TabView->AddPage(PageB);
+	TabView->SetFocusPageOnTabChange(true);
+	Rig.PumpFrames(2);
+	UDreamUIInputServices* Services = UDreamUIInputServices::Get(Rig.GetWorld());
+	if (!TestEqual(TEXT("A tab per page"), TabView->Tabs.Num(), 2)
+		|| !TestNotNull(TEXT("The rig's world has input"), Services)
+		|| !TestTrue(TEXT("The pad's focus goes onto the second tab"), Services->FocusForNavigation(TabAt(TabView, 1), 0)))
+	{
+		return false;
+	}
+
+	TestTrue(TEXT("Pressing the pad's confirm completes"),
+		Rig.Driver()->Sequence().NavigationTrigger(true).NavigationTrigger(false).Perform());
+	Rig.PumpFrames(1);
+	TestEqual(TEXT("The second tab is open"), TabView->GetActiveTabIndex(), 1);
+	TestTrue(TEXT("Focus went into its page, onto its button"), Services->GetFocusedWidget(0) == ButtonB);
+	TestTrue(TEXT("which is the event system's selection"), Rig.EventSystem()->GetCurrentSelectedComponent(0) == ButtonB);
+
+	// The cursor went with the focus: the confirm presses what the cursor is on, which is the page's button now.
+	const int32 ClicksBefore = Listener->ClickedCount;
+	TestTrue(TEXT("Pressing the pad's confirm again completes"),
+		Rig.Driver()->Sequence().NavigationTrigger(true).NavigationTrigger(false).Perform());
+	TestEqual(TEXT("and it pressed the page's button"), Listener->ClickedCount, ClicksBefore + 1);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamPressTabViewPadCloseTest,
+	"DreamGUI.TabView.ClosingTheFocusedTabWithThePadLeavesFocusOnItsRightNeighbour",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamPressTabViewPadCloseTest, "DreamGUI.TabView.ClosingTheFocusedTabWithThePadLeavesFocusOnItsRightNeighbour", "[Nav][Animated]")
+
+/*
+ * Closing a tab rebuilds the whole strip, and a pad player closes a tab by pressing its close button -- the very widget
+ * the rebuild destroys -- so their focus went with it, and the next stick press started from nowhere. Every rebuild now
+ * carries pad focus across: to the same tab where it survives, and from a tab that is gone to the one that took its
+ * place, its right neighbour.
+ *
+ * Checked here: Video, Audio, Input, closable; the pad's focus on Audio's close button and its confirm pressed. Audio is
+ * gone, focus is on Input, and a press of Left from there reaches Video, so the cursor is on Input as well.
+ */
+bool FDreamPressTabViewPadCloseTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamPressTabViewTestLocal;
+	TStrongObjectPtr<UDreamPressInteractionListener> Listener(NewObject<UDreamPressInteractionListener>());
+	FDreamDriverRig Rig = FDreamDriverRig::Headless(ViewportSize);
+	const FPlacedTabView Placed = PlaceTabView(*this, Rig, Listener.Get(), true, false, 0);
+	if (!Placed.IsReady())
+	{
+		return false;
+	}
+	UDreamUIInputServices* Services = UDreamUIInputServices::Get(Rig.GetWorld());
+	UDreamWidget* AudioClose = Placed.TabView->Tabs[1].CloseNode.Get();
+	if (!TestNotNull(TEXT("The rig's world has input"), Services)
+		|| !TestNotNull(TEXT("The second tab has a close button"), AudioClose)
+		|| !TestTrue(TEXT("The pad's focus goes onto it"), Services->FocusForNavigation(AudioClose, 0)))
+	{
+		return false;
+	}
+
+	TestTrue(TEXT("Pressing the pad's confirm completes"),
+		Rig.Driver()->Sequence().NavigationTrigger(true).NavigationTrigger(false).Perform());
+	Rig.PumpFrames(1);
+	if (!TestEqual(TEXT("The confirm closed the tab"), Placed.TabView->Tabs.Num(), 2)
+		|| !TestEqual(TEXT("Its right neighbour took its place"), CaptionAt(Placed.TabView, 1), FString(TEXT("Input"))))
+	{
+		return false;
+	}
+	TestTrue(TEXT("Focus is on that neighbour"), Services->GetFocusedWidget(0) == TabAt(Placed.TabView, 1));
+	TestTrue(TEXT("which is the event system's selection"), Rig.EventSystem()->GetCurrentSelectedComponent(0) == TabAt(Placed.TabView, 1));
+
+	// From the neighbour, a step left reaches the first tab -- or its close button, which sits inside it.
+	TestTrue(TEXT("A press of Left completes"), Rig.Driver()->Sequence().Navigate(EDreamUINavigationDirection::Left).Perform());
+	TestTrue(TEXT("and lands on the first tab, so the cursor was on the neighbour"), IsFocusOnOrIn(Services, TabAt(Placed.TabView, 0)));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamPressTabViewRelabelFocusTest,
+	"DreamGUI.TabView.RelabellingTheStripKeepsPadFocusOnTheSameTab",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamPressTabViewRelabelFocusTest, "DreamGUI.TabView.RelabellingTheStripKeepsPadFocusOnTheSameTab", "[Nav][Animated]")
+
+/*
+ * SetTabLabels, AddPage and SetTabTemplateClass all rebuild the strip, which destroyed the tab under the pad's cursor and
+ * left focus nowhere. The rebuild now finds the same tab again -- by its page, else by its caption, else by its place --
+ * and puts focus back on it.
+ *
+ * Checked here: focus on the second of Video, Audio, Input. Renamed in place to Sound, it is still the second tab focus is
+ * on; moved to the front by a relabelling, focus follows the caption there.
+ */
+bool FDreamPressTabViewRelabelFocusTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamPressTabViewTestLocal;
+	TStrongObjectPtr<UDreamPressInteractionListener> Listener(NewObject<UDreamPressInteractionListener>());
+	FDreamDriverRig Rig = FDreamDriverRig::Headless(ViewportSize);
+	const FPlacedTabView Placed = PlaceTabView(*this, Rig, Listener.Get(), false, false, 0);
+	if (!Placed.IsReady())
+	{
+		return false;
+	}
+	UDreamUIInputServices* Services = UDreamUIInputServices::Get(Rig.GetWorld());
+	if (!TestNotNull(TEXT("The rig's world has input"), Services)
+		|| !TestTrue(TEXT("The pad's focus goes onto the second tab"), Services->FocusForNavigation(TabAt(Placed.TabView, 1), 0)))
+	{
+		return false;
+	}
+	UDreamWidget* SecondBefore = TabAt(Placed.TabView, 1);
+
+	Placed.TabView->SetTabLabels({
+		FText::AsCultureInvariant(TEXT("Video")),
+		FText::AsCultureInvariant(TEXT("Sound")),
+		FText::AsCultureInvariant(TEXT("Input")) });
+	Rig.PumpFrames(1);
+	TestTrue(TEXT("The relabelling rebuilt the strip"), TabAt(Placed.TabView, 1) != SecondBefore);
+	TestTrue(TEXT("and focus is on the second tab it built"), Services->GetFocusedWidget(0) == TabAt(Placed.TabView, 1));
+	TestTrue(TEXT("which is the event system's selection"), Rig.EventSystem()->GetCurrentSelectedComponent(0) == TabAt(Placed.TabView, 1));
+
+	Placed.TabView->SetTabLabels({
+		FText::AsCultureInvariant(TEXT("Sound")),
+		FText::AsCultureInvariant(TEXT("Video")),
+		FText::AsCultureInvariant(TEXT("Input")) });
+	Rig.PumpFrames(1);
+	TestTrue(TEXT("Moved to the front by its caption, the focused tab takes focus with it"),
+		Services->GetFocusedWidget(0) == TabAt(Placed.TabView, 0));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamPressTabViewHiddenPartFocusTest,
+	"DreamGUI.TabView.DisablingTheFocusedTabOrHidingItsCloseButtonMovesPadFocusOffIt",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamPressTabViewHiddenPartFocusTest, "DreamGUI.TabView.DisablingTheFocusedTabOrHidingItsCloseButtonMovesPadFocusOffIt", "[Nav][Disabled]")
+
+/*
+ * SetTabEnabled(false) and SetTabsClosable(false) are restyles, not rebuilds, and left the pad's focus where it was: on a
+ * tab that now refuses every press, or on a close button that had gone to sleep. A disabled tab hands focus to its right
+ * neighbour now, and a hidden close button to its own tab.
+ */
+bool FDreamPressTabViewHiddenPartFocusTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamPressTabViewTestLocal;
+	TStrongObjectPtr<UDreamPressInteractionListener> Listener(NewObject<UDreamPressInteractionListener>());
+	FDreamDriverRig Rig = FDreamDriverRig::Headless(ViewportSize);
+	const FPlacedTabView Placed = PlaceTabView(*this, Rig, Listener.Get(), true, false, 0);
+	if (!Placed.IsReady())
+	{
+		return false;
+	}
+	UDreamUIInputServices* Services = UDreamUIInputServices::Get(Rig.GetWorld());
+	if (!TestNotNull(TEXT("The rig's world has input"), Services)
+		|| !TestTrue(TEXT("The pad's focus goes onto the second tab"), Services->FocusForNavigation(TabAt(Placed.TabView, 1), 0)))
+	{
+		return false;
+	}
+
+	Placed.TabView->SetTabEnabled(1, false);
+	Rig.PumpFrames(1);
+	TestTrue(TEXT("Disabling the focused tab moves focus to its right neighbour"),
+		Services->GetFocusedWidget(0) == TabAt(Placed.TabView, 2));
+
+	UDreamWidget* InputClose = Placed.TabView->Tabs[2].CloseNode.Get();
+	if (!TestNotNull(TEXT("The third tab has a close button"), InputClose)
+		|| !TestTrue(TEXT("The pad's focus goes onto it"), Services->FocusForNavigation(InputClose, 0)))
+	{
+		return false;
+	}
+	Placed.TabView->SetTabsClosable(false);
+	Rig.PumpFrames(1);
+	TestTrue(TEXT("Hiding the close buttons moves focus from one onto its tab"),
+		Services->GetFocusedWidget(0) == TabAt(Placed.TabView, 2));
 	return true;
 }
 

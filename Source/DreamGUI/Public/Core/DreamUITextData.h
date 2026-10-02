@@ -18,6 +18,12 @@ enum class EDreamUITextParagraphHorizontalAlign : uint8
 	Left,
 	Center,
 	Right,
+	/**
+	 * Both edges: a line that wrapped gets the room it lacks spread over its justification opportunities (TextJustify);
+	 * the paragraph's last line, and a line a newline ends, align as LastLineAlign says. Never shrinks, never stretches
+	 * Arabic (no kashida). Appended, so saved alignments keep their meaning.
+	 */
+	Justify,
 };
 
 UENUM(BlueprintType, Category = DreamGUI)
@@ -80,6 +86,36 @@ enum class EDreamTextFlowDirection : uint8
 	RightToLeft,
 };
 
+/** Where a justified line gets its extra room -- CSS text-justify. Read only with the Justify alignment. */
+UENUM(BlueprintType, Category = DreamGUI)
+enum class EDreamTextJustify : uint8
+{
+	/** After word separators, and at the boundaries next to a CJK ideograph, kana or fullwidth symbol (Blink's choice). */
+	Auto,
+	/** After word separators only: U+0020, U+00A0 and tab. */
+	InterWord,
+	/** At every cluster boundary, except inside a cursive script and next to an inline object. */
+	InterCharacter,
+	/** Nowhere: a justified line aligns to its start. */
+	None,
+};
+
+/**
+ * How a justified paragraph's last line, and a line ended by a newline, is aligned -- CSS text-align-last. Read only
+ * with the Justify alignment; Start and End follow the paragraph's direction.
+ */
+UENUM(BlueprintType, Category = DreamGUI)
+enum class EDreamTextLastLineAlign : uint8
+{
+	/** The paragraph's start edge, as CSS's auto does under text-align: justify. */
+	Auto,
+	Start,
+	Center,
+	End,
+	/** Justified like the lines before it. */
+	Justify,
+};
+
 UENUM(BlueprintType, Category = DreamGUI)
 enum class EDreamUITextOverflowType :uint8
 {
@@ -91,6 +127,12 @@ enum class EDreamUITextOverflowType :uint8
 	Truncate = 2,
 	/** replace chars with ... if out of range */
 	Ellipsis = 3,
+	/**
+	 * Replace the middle of each line that does not fit with "...", keeping its start and its end -- Slate's
+	 * ETextOverflowPolicy::MiddleEllipsis. Each hard line on its own; with wrapping, an end ellipsis on the last visible
+	 * line instead. Measured against the box, like Truncate and Ellipsis.
+	 */
+	MiddleEllipsis = 4,
 };
 
 /**
@@ -284,8 +326,13 @@ USTRUCT(BlueprintType, Category = DreamGUI)
 struct FDreamUIText_Emoji
 {
 	GENERATED_BODY()
-	/** Emoji char */
+	/** Emoji char: the cluster's base, its first code point. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = DreamGUI) int32 EmojiCode = 0;
+	/**
+	 * The whole emoji cluster as the text spells it -- an escaped element as the one character it stands for: what its
+	 * emoji data entry is found by (UDreamUIFontEmojiData::FindBySequence, then FindByCodepoint on EmojiCode).
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = DreamGUI) FString Sequence;
 	/** image object position */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = DreamGUI) FVector2D Position = FVector2D::ZeroVector;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = DreamGUI) FVector2D Size = FVector2D::ZeroVector;
@@ -296,7 +343,9 @@ enum class EDreamUIText_RichTextTagFilterFlags : uint8
 {
 	Bold, Italic, Underline, Strikethrough, Size, Color, Superscript, Subscript, CustomTag, Image,
 	/** `<a=Id>...</a>`: a custom tag that can also be clicked. Appended, so saved flags keep their meaning. */
-	Hyperlink
+	Hyperlink,
+	/** `<lang=ja>...</lang>`: what is inside is in that language (its fallback faces and its shaping), nested like <size>. Appended. */
+	Language,
 };
 ENUM_CLASS_FLAGS(EDreamUIText_RichTextTagFilterFlags);
 
@@ -366,6 +415,10 @@ namespace FDreamUIText_CodePoint
 	{
 		return (((highSurrogate - FDreamUIText_CodePoint::HIGH_SURROGATE_START) << 10) | (lowSurrogate - FDreamUIText_CodePoint::LOW_SURROGATE_START)) + FDreamUIText_CodePoint::UNICODE_PLANE01_START;
 	}
+	/**
+	 * The emoji blocks, a rough stand-in for Emoji_Presentation that segmentation used before HasEmojiPresentation. Kept
+	 * for callers outside the text pipeline; the pipeline itself asks HasEmojiPresentation and IsExtendedPictographic.
+	 */
 	inline bool IsEmoji(uint32 Codepoint)
 	{
 		// Emoji Block 1
@@ -412,9 +465,33 @@ namespace FDreamUIText_CodePoint
 		if (Codepoint >= 0x1F000 && Codepoint <= 0x1F2FF) return true;//mahjong, cards, enclosed
 		return false;
 	}
+	/**
+	 * Unicode's Emoji_Presentation property: drawn as emoji by default, without U+FE0F. ICU's answer where ICU is compiled
+	 * in (its data is Unicode 12), a table for newer code points and for builds without ICU. The one classifier the face
+	 * resolver's presentation rule (FDreamFontFaceResolver::GetPresentation) and this namespace's segmentation agree on.
+	 */
+	DREAMGUI_API bool HasEmojiPresentation(uint32 Codepoint);
+	/**
+	 * Unicode's Extended_Pictographic property: the pictographs an emoji can be built from, ZWJ sequences joining them
+	 * (UAX #29 rule GB11). ICU's answer for a code point ICU's data has (Unicode 12), the table's for one it does not and
+	 * for builds without ICU: the reserved blocks Unicode 12 gave the property to were partly taken by other symbols since
+	 * (U+1FB00-1FBFF, Unicode 13).
+	 */
+	DREAMGUI_API bool IsExtendedPictographic(uint32 Codepoint);
+	/** The tables HasEmojiPresentation and IsExtendedPictographic fall back to (Emoji 16.0), never asking ICU: what a test holds ICU against. */
+	DREAMGUI_API bool HasEmojiPresentationFromTable(uint32 Codepoint);
+	DREAMGUI_API bool IsExtendedPictographicFromTable(uint32 Codepoint);
 	inline bool IsVariationSelector(uint32 Codepoint)
 	{
 		return Codepoint == UNICODE_VS_BLACK || Codepoint == UNICODE_VS_COLOR;
+	}
+	/**
+	 * Any variation selector: the sixteen of U+FE00-FE0F -- of which only U+FE0E and U+FE0F choose a presentation -- and the
+	 * ideographic ones, U+E0100-E01EF. Each picks a variant of the character before it and draws nothing of its own.
+	 */
+	inline bool IsAnyVariationSelector(uint32 Codepoint)
+	{
+		return (Codepoint >= 0xFE00 && Codepoint <= 0xFE0F) || (Codepoint >= 0xE0100 && Codepoint <= 0xE01EF);
 	}
 	inline bool IsSkinToneModifier(uint32 Codepoint)
 	{
@@ -455,10 +532,13 @@ namespace FDreamUIText_CodePoint
 	 *
 	 * A cluster is a base code point plus, in this order: a variation selector (which decides emoji or
 	 * text presentation), a keycap mark, a partner regional indicator, and then any run of skin tone
-	 * modifiers, tag characters and ZWJ-joined emoji. That is the subset of UAX #29 emoji needs. The
-	 * element's Unicode is the cluster's BASE code point -- the emoji atlas is keyed by one code point
-	 * (FDreamUIFontEmojiKey), so a sequence registers and looks up under its base, which is also why
-	 * ApplyEmoji accepts the whole sequence but keys it the same way.
+	 * modifiers, tag characters and ZWJ-joined pictographs. That is the subset of UAX #29 emoji needs.
+	 * The element's Unicode is the cluster's BASE code point; the whole cluster is its source span
+	 * (StringIndex, Length), which the shaper is handed and the font's emoji data is looked up by.
+	 * Whether it is an emoji -- Type -- is the cluster's presentation: emoji for a base with
+	 * Emoji_Presentation (HasEmojiPresentation, the classifier FDreamFontFaceResolver::GetPresentation
+	 * asks too), U+FE0F on a pictograph, a keycap, a flag, a skin tone on a pictograph; U+FE0E's text
+	 * choice stands, on a keycap too.
 	 *
 	 * Pure function of the string: no font, no asset, so it is directly unit testable.
 	 */
@@ -469,8 +549,11 @@ namespace FDreamUIText_CodePoint
 		const uint32 Base = DecodeCodePointAt(InString, InStringLen, Start, BaseUnits);
 		int32 Cursor = Start + BaseUnits;
 
-		bool bEmoji = IsEmoji(Base);
-		const bool bEmojiCapable = bEmoji || IsTextPresentationEmoji(Base) || IsKeycapBase(Base);
+		// Below U+00A9, the first pictograph, only a keycap's digit or sign can begin an emoji: plain text asks no more.
+		const bool bMaybePictograph = Base >= 0x00A9;
+		bool bEmoji = bMaybePictograph && HasEmojiPresentation(Base);
+		const bool bPictograph = bMaybePictograph && IsExtendedPictographic(Base);
+		const bool bEmojiCapable = bEmoji || bPictograph || IsKeycapBase(Base) || IsRegionalIndicator(Base);
 
 		auto PeekAt = [&InString, InStringLen](int32 At, uint32& OutCode, int32& OutEnd) -> bool
 		{
@@ -484,24 +567,33 @@ namespace FDreamUIText_CodePoint
 		uint32 Next = 0;
 		int32 NextEnd = 0;
 		// A variation selector always belongs to the character before it; swallowing it even on a plain
-		// glyph is what stops it from becoming an element of its own, i.e. a tofu box.
-		if (PeekAt(Cursor, Next, NextEnd) && IsVariationSelector(Next))
+		// glyph is what stops it from becoming an element of its own, i.e. a tofu box or an empty quad. The
+		// shaper is handed it with the element, so a font's variant for the pair (an ideograph's IVS) is drawn.
+		bool bTextChosen = false;
+		if (PeekAt(Cursor, Next, NextEnd) && IsAnyVariationSelector(Next))
 		{
-			if (bEmojiCapable)
+			if (bEmojiCapable && IsVariationSelector(Next))
 			{
 				bEmoji = Next == UNICODE_VS_COLOR;
+				bTextChosen = Next == UNICODE_VS_BLACK;
 			}
 			Cursor = NextEnd;
 		}
 		if (IsKeycapBase(Base) && PeekAt(Cursor, Next, NextEnd) && Next == UNICODE_COMBINING_ENCLOSING_KEYCAP)
 		{
-			bEmoji = true;
+			// A keycap is an emoji unless U+FE0E before its mark asked for the text form, and then that stands.
+			bEmoji = !bTextChosen;
 			Cursor = NextEnd;
 		}
 		else if (IsRegionalIndicator(Base) && PeekAt(Cursor, Next, NextEnd) && IsRegionalIndicator(Next))
 		{
 			bEmoji = true;//a flag is exactly two regional indicators
 			Cursor = NextEnd;
+		}
+		else if (bPictograph && !bTextChosen && PeekAt(Cursor, Next, NextEnd) && IsSkinToneModifier(Next))
+		{
+			// An emoji modifier sequence: a pictograph with a skin tone after it is shown as an emoji, with the tone.
+			bEmoji = true;
 		}
 		if (bEmoji)
 		{
@@ -517,9 +609,9 @@ namespace FDreamUIText_CodePoint
 				{
 					uint32 Joined = 0;
 					int32 JoinedEnd = 0;
-					// A joiner with nothing joinable after it is not part of the cluster: leaving it
-					// out keeps a trailing ZWJ from eating the next character.
-					if (PeekAt(NextEnd, Joined, JoinedEnd) && (IsEmoji(Joined) || IsTextPresentationEmoji(Joined)))
+					// GB11: a joiner glues the next pictograph on. One with no pictograph after it is not part of
+					// the cluster: leaving it out keeps a trailing ZWJ from eating the next character.
+					if (PeekAt(NextEnd, Joined, JoinedEnd) && IsExtendedPictographic(Joined))
 					{
 						Cursor = JoinedEnd;
 						continue;
@@ -542,6 +634,7 @@ namespace FDreamUIText_CodePoint
 struct FDreamTextLayoutInput;
 struct FDreamTextDisplayList;
 struct FDreamTextPaintParams;
+class FDreamTextLayoutState;
 
 /**
  * The text component's layout cache: the last layout input, the display list it produced, and the
@@ -587,7 +680,22 @@ public:
 	 */
 	bool TryGetBestFit(const FDreamTextLayoutInput& InCeilingInput, float& OutSize) const;
 	void SetBestFit(const FDreamTextLayoutInput& InCeilingInput, float InSize);
+
+	/**
+	 * Keep what this text's layout found between layouts and lay out again only what an edit touched (retained incremental
+	 * layout, FDreamTextLayoutState): asked for by a field being typed into (UDreamText::SetIncrementalLayout). Without it the
+	 * cache opts a text in by itself once it has 256+ elements and its content changed in two layouts in a row, and out again
+	 * when it falls under 256. DreamGUI.Text.IncrementalLayout 0 turns both off. MarkDirty drops what was kept; a font,
+	 * an atlas or a layout input that measuring reads being different drops it too, inside the layout.
+	 */
+	void SetIncrementalLayout(bool bInEnabled) { bIncrementalLayoutRequested = bInEnabled; }
+	bool GetIncrementalLayout() const { return bIncrementalLayoutRequested; }
+	/** This text holds a kept layout state: its last layout went through one, asked for or opted into by its own edits. */
+	bool IsIncrementalLayoutActive() const;
 private:
+	/** The state the next layout goes through, made or let go of as the opt-in says; null for a layout that keeps nothing. */
+	FDreamTextLayoutState* PrepareIncrementalState();
+
 	TUniquePtr<FDreamTextLayoutInput> Input;
 	TUniquePtr<FDreamTextDisplayList> DisplayList;
 	TArray<FDreamUITextCharProperty> CharPropertyArray;
@@ -595,4 +703,13 @@ private:
 	float BestFitSize = 0.0f;
 	int32 LayoutRunCount = 0;
 	bool bIsDirty = true;
+	bool bIncrementalLayoutRequested = false;
+	/** What the last layout kept, while incremental layout is on for this text. */
+	TUniquePtr<FDreamTextLayoutState> IncrementalState;
+	/** The automatic opt-in: the content's hash at the last layout, how many layouts in a row changed it, how many elements the last one had. */
+	uint64 LastContentHash = 0;
+	bool bHasContentHash = false;
+	int32 ContentChangeStreak = 0;
+	int32 LastElementCount = 0;
+	bool bAutoIncrementalLayout = false;
 };

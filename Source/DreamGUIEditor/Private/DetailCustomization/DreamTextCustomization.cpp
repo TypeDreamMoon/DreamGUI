@@ -8,13 +8,16 @@
 #include "DreamDetailsMultiSelect.h"
 #include "DetailLayoutBuilder.h"
 #include "DetailCategoryBuilder.h"
+#include "DetailWidgetRow.h"
 #include "IDetailGroup.h"
+#include "IDetailPropertyRow.h"
 #include "IDetailsView.h"
 #include "IPropertyUtilities.h"
 #include "MaterialDomain.h"
 #include "Core/DreamUIFontData_BaseObject.h"
 #include "PropertyType/DreamTextAlignmentCustomization.h"
 #include "PropertyType/DreamTextFontStyleCustomization.h"
+#include "PropertyType/DreamUIFontFallbackCustomization.h"
 
 #define LOCTEXT_NAMESPACE "UITextCustomization"
 FDreamTextCustomization::FDreamTextCustomization()
@@ -52,9 +55,45 @@ void FDreamTextCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuild
 	Font_PH->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FDreamTextCustomization::ForceRefresh, PropertyUtilities));
 	DreamGUICategory.AddProperty(Font_PH);
 	DreamGUICategory.AddProperty(GET_MEMBER_NAME_CHECKED(UDreamText, Text));
+	//language: the culture the text is written in, picked from the engine's cultures; none is the game's language
+	{
+		auto Language_PH = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UDreamText, Language));
+		const FText GameLanguageText = LOCTEXT("GameLanguage", "Game language");
+		DreamGUICategory.AddProperty(Language_PH)
+		.CustomWidget()
+		.NameContent()
+		[
+			Language_PH->CreatePropertyNameWidget()
+		]
+		.ValueContent()
+		.MinDesiredWidth(200.0f)
+		[
+			DreamUICulturePicker::MakeComboButton(
+				TAttribute<FText>::CreateLambda([Language_PH, GameLanguageText]() -> FText
+				{
+					FString Value;
+					switch (Language_PH->GetValue(Value))
+					{
+					case FPropertyAccess::Success: return DreamUICulturePicker::GetCultureDisplayText(Value, GameLanguageText);
+					case FPropertyAccess::MultipleValues: return LOCTEXT("MultipleLanguages", "Multiple Values");
+					default: return FText::GetEmpty();
+					}
+				}),
+				LOCTEXT("Language_Tooltip", "The language the text is written in: the font's fallbacks meant for it are preferred, and the shaper draws its script the way that language does. Game language follows the game's current language."),
+				GameLanguageText,
+				[Language_PH](const FString& InCultureName) { Language_PH->SetValue(InCultureName); },
+				[Language_PH]()
+				{
+					FString Value;
+					Language_PH->GetValue(Value);
+					return Value;
+				})
+		];
+	}
 
 	DreamGUICategory.AddProperty(GET_MEMBER_NAME_CHECKED(UDreamText, FontSize));
 	DreamGUICategory.AddProperty(GET_MEMBER_NAME_CHECKED(UDreamText, FontSpace));
+	DreamGUICategory.AddProperty(GET_MEMBER_NAME_CHECKED(UDreamText, TabSize));
 	DreamGUICategory.AddProperty(GET_MEMBER_NAME_CHECKED(UDreamText, MinDesiredWidth));
 
 	//text alignment
@@ -65,7 +104,20 @@ void FDreamTextCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuild
 			DetailsView->RegisterInstancedCustomPropertyTypeLayout(TEXT("EDreamUITextParagraphHorizontalAlign"), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&FDreamTextAlignmentCustomization::MakeInstance, true));
 			DetailsView->RegisterInstancedCustomPropertyTypeLayout(TEXT("EDreamUITextParagraphVerticalAlign"), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&FDreamTextAlignmentCustomization::MakeInstance, false));
 		}
-		DreamGUICategory.AddProperty(GET_MEMBER_NAME_CHECKED(UDreamText, HAlign));
+		auto HAlign_PH = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UDreamText, HAlign));
+		DreamGUICategory.AddProperty(HAlign_PH);
+		// How a justified line is spread, and how its last line aligns, mean nothing under any other alignment. A
+		// selection that disagrees shows them, for the same reason as bRichText below: some of it is justified.
+		const TAttribute<EVisibility> JustifyOptionsVisibility = TAttribute<EVisibility>::CreateLambda([HAlign_PH]()
+		{
+			uint8 Value = 0;
+			const FPropertyAccess::Result Result = HAlign_PH->GetValue(Value);
+			const bool bJustified = Result == FPropertyAccess::MultipleValues
+				|| (Result == FPropertyAccess::Success && Value == (uint8)EDreamUITextParagraphHorizontalAlign::Justify);
+			return bJustified ? EVisibility::Visible : EVisibility::Collapsed;
+		});
+		DreamGUICategory.AddProperty(GET_MEMBER_NAME_CHECKED(UDreamText, TextJustify)).Visibility(JustifyOptionsVisibility);
+		DreamGUICategory.AddProperty(GET_MEMBER_NAME_CHECKED(UDreamText, LastLineAlign)).Visibility(JustifyOptionsVisibility);
 		DreamGUICategory.AddProperty(GET_MEMBER_NAME_CHECKED(UDreamText, VAlign));
 	}
 	//font style
@@ -207,6 +259,7 @@ void FDreamTextCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuild
 	]
 	;
 	DreamGUICategory.AddProperty(GET_MEMBER_NAME_CHECKED(UDreamText, ExpandMeshSize));
+	DreamGUICategory.AddProperty(DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UDreamText, SmallTextRaster)), EPropertyLocation::Advanced);
 }
 void FDreamTextCustomization::ForceRefresh(TSharedPtr<IPropertyUtilities> PropertyUtilities)
 {

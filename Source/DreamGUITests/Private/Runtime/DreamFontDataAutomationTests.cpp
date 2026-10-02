@@ -11,6 +11,8 @@
 #include "Core/DreamUIFontEmojiData.h"
 #include "Core/DreamUISettings.h"
 #include "Core/Text/DreamGlyphSdf.h"
+#include "Core/Text/DreamGlyphColor.h"
+#include "Core/Text/DreamTextShaper.h"
 #include "Engine/Texture2DArray.h"
 #include "Engine/World.h"
 #include "Serialization/ObjectReader.h"
@@ -72,6 +74,54 @@ namespace DreamFontDataTestLocal
 	{
 		GFrameCounter++;
 		UDreamUIFontData_FreeTypeRender::FlushPendingFontTextures();
+	}
+
+	/** A font the editor ships, for what the runtime fonts do not have: Noto Color Emoji (CBDT, one 109 ppem strike), GenEi. */
+	FString EditorFont(const TCHAR* Name)
+	{
+		return FPaths::Combine(FPaths::EngineContentDir(), TEXT("Editor/Slate/Fonts"), Name);
+	}
+
+	/**
+	 * Roboto on the outline field with its small-text coverage on, whatever the project says, in an atlas small enough to
+	 * fill: InTextureSize texels a side, packed in InCellSize cells.
+	 */
+	UDreamUIFontData_DistanceField* MakeCoverageFont(UWorld* World, EDreamUIAtlasTextureSizeType InTextureSize, EDreamUIAtlasTextureSizeType InCellSize)
+	{
+		UDreamUIFontData_FreeTypeRender::SetAsyncGlyphSyncBudgetOverride(MAX_int32);
+		UDreamUIFontData_DistanceField* Font = NewObject<UDreamUIFontData_DistanceField>(World);
+		SetEnumProperty(Font, TEXT("TextureSizeType"), (int64)InTextureSize);
+		SetEnumProperty(Font, TEXT("RectPackCellSizeType"), (int64)InCellSize);
+		SetEnumProperty(Font, TEXT("SmallTextCoverage"), (int64)EDreamUISmallTextCoverage::On);
+		Font->SetFontFilePath(EngineFont(TEXT("Roboto-Regular.ttf")), false);
+		Font->InitFont();
+		Font->PrepareForLayout(0.0f);
+		return Font;
+	}
+
+	/** Four phases of made-up coverage, Width * Height BGRA texels: what InjectCoverageGlyphForTesting takes. */
+	TArray<uint8> MakeCoveragePixels(int32 Width, int32 Height)
+	{
+		TArray<uint8> Pixels;
+		Pixels.SetNumUninitialized(Width * Height * 4);
+		for (int32 Index = 0; Index < Pixels.Num(); Index++)
+		{
+			Pixels[Index] = (uint8)(Index * 7 + 1);
+		}
+		return Pixels;
+	}
+
+	/** The atlas cell a texel lies in, as (slice, column, row) of cells. */
+	FIntVector CellOf(const FVector2f& InUV, int32 InSlice, int32 InTextureSize, int32 InCellSize)
+	{
+		return FIntVector(InSlice, FMath::FloorToInt(InUV.X * InTextureSize) / InCellSize, FMath::FloorToInt(InUV.Y * InTextureSize) / InCellSize);
+	}
+
+	/** Two field glyphs are the same atlas entry to the bit: where they sample and what quad they draw. */
+	bool SameFieldGlyph(const FDreamUICharData& A, const FDreamUICharData& B)
+	{
+		return A.MinUV == B.MinUV && A.MaxUV == B.MaxUV && A.SliceIndex == B.SliceIndex
+			&& A.Width == B.Width && A.Height == B.Height && A.XOffset == B.XOffset && A.YOffset == B.YOffset;
 	}
 
 #if WITH_FREETYPE
@@ -943,6 +993,474 @@ bool FDreamFontExpandedQuadStaysInItsCellTest::RunTest(const FString& Parameters
 	const float Tolerance = 0.01f * TexelUV;
 	TestTrue(TEXT("no quad reaches past its cell on the left"), Tight.MinUV.X - Huge.MinUV.X <= CellMarginUV + Tolerance);
 	TestTrue(TEXT("...or on the right"), Huge.MaxUV.X - Tight.MaxUV.X <= CellMarginUV + Tolerance);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamFontCoverageCellPoolTest,
+	"DreamGUI.Text.Font.CoverageGlyphsTakeCellsFromThePoolTheFieldGlyphsUse",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * Small-text coverage glyphs live in the font's own atlas, packed apart from the field glyphs: a second packer takes cells
+ * from the same pool, so a coverage glyph never lands in the cell the field packer is filling, and the atlas does not grow
+ * while the pool still has a cell. Checked on a 512 atlas of 256 cells: the field glyphs take the first cell, coverage the
+ * next, a second coverage glyph shares the coverage cell and a field glyph made after both stays in the field's. A
+ * coverage box is exactly its texels, on texel edges; a real one, hinted by FreeType, lands the same way.
+ */
+bool FDreamFontCoverageCellPoolTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamFontDataTestLocal;
+	FScopedGameWorld TestWorld;
+	UDreamUIFontData_DistanceField* Font = MakeCoverageFont(TestWorld.World, EDreamUIAtlasTextureSizeType::SIZE_512x512, EDreamUIAtlasTextureSizeType::SIZE_256x256);
+	if (!TestTrue(TEXT("Roboto loads"), Font->FaceHasCodepoint(0, 'H')))return false;
+	TestTrue(TEXT("and draws small text from coverage"), Font->SupportsCoverageGlyphs());
+	const int32 TextureSize = 512;
+	const int32 CellSize = 256;
+
+	const FDreamUICharData FieldH = Font->GetCharData('H', 32.0f, false);
+	if (!TestTrue(TEXT("H has a field quad, and says which glyph it is"), FieldH.Width > 0.0f && FieldH.GlyphIndex != 0))return false;
+	UTexture2DArray* Atlas = Font->GetFontTexture();
+	if (!TestNotNull(TEXT("the font has an atlas"), Atlas))return false;
+	TestEqual(TEXT("of one slice"), Atlas->GetArraySize(), 1);
+
+	const TArray<uint8> Pixels = MakeCoveragePixels(20, 24);
+	if (!TestTrue(TEXT("a coverage glyph goes in"), Font->InjectCoverageGlyphForTesting(0, FieldH.GlyphIndex, 13 * 64, EDreamUICoverageGlyphFlags::None, 20, 24, -1, 18, Pixels)))return false;
+	FDreamUICoverageGlyph First;
+	if (!TestTrue(TEXT("and the font answers it"), Font->GetCoverageGlyph(0, FieldH.GlyphIndex, 13 * 64, EDreamUICoverageGlyphFlags::None, First)))return false;
+	TestFalse(TEXT("ready, not pending"), First.bPending);
+	TestEqual(TEXT("its left"), First.BitmapLeft, -1);
+	TestEqual(TEXT("its top"), First.BitmapTop, 18);
+	TestEqual(TEXT("its box is its texels: width"), (First.MaxUV.X - First.MinUV.X) * TextureSize, 20.0f, 0.001f);
+	TestEqual(TEXT("...height"), (First.MaxUV.Y - First.MinUV.Y) * TextureSize, 24.0f, 0.001f);
+	TestEqual(TEXT("...on texel edges"), FMath::Frac(First.MinUV.X * TextureSize + 0.5f), 0.5f, 0.001f);
+	TestEqual(TEXT("in the same atlas, which did not grow"), Font->GetFontTexture()->GetArraySize(), 1);
+	const FIntVector FieldCell = CellOf(FieldH.MinUV, FieldH.SliceIndex, TextureSize, CellSize);
+	const FIntVector CoverageCell = CellOf(First.MinUV, First.SliceIndex, TextureSize, CellSize);
+	TestTrue(TEXT("in a cell of its own"), FieldCell != CoverageCell);
+
+	// Another coverage glyph shares the coverage cell; a field glyph made after both shares the field glyphs'.
+	FDreamUICoverageGlyph Second;
+	Font->InjectCoverageGlyphForTesting(0, FieldH.GlyphIndex, 14 * 64, EDreamUICoverageGlyphFlags::None, 20, 24, -1, 19, Pixels);
+	TestTrue(TEXT("a second coverage glyph"), Font->GetCoverageGlyph(0, FieldH.GlyphIndex, 14 * 64, EDreamUICoverageGlyphFlags::None, Second));
+	TestTrue(TEXT("shares the coverage cell"), CellOf(Second.MinUV, Second.SliceIndex, TextureSize, CellSize) == CoverageCell);
+	TestTrue(TEXT("beside the first"), Second.MinUV != First.MinUV);
+	const FDreamUICharData FieldE = Font->GetCharData('e', 32.0f, false);
+	TestTrue(TEXT("a later field glyph stays in the field's cell"), CellOf(FieldE.MinUV, FieldE.SliceIndex, TextureSize, CellSize) == FieldCell);
+
+	// A real one, rasterized on the spot.
+	FDreamUICoverageGlyph Hinted;
+	if (TestTrue(TEXT("Roboto's H rasterizes as coverage at 12 px"), Font->GetCoverageGlyph(0, FieldH.GlyphIndex, 12 * 64, EDreamUICoverageGlyphFlags::None, Hinted)))
+	{
+		TestFalse(TEXT("on the spot"), Hinted.bPending);
+		TestTrue(TEXT("with a box"), Hinted.Width > 0 && Hinted.Height > 0);
+		TestTrue(TEXT("in the coverage cell too"), CellOf(Hinted.MinUV, Hinted.SliceIndex, TextureSize, CellSize) == CoverageCell);
+	}
+	TestEqual(TEXT("the atlas still has one slice"), Font->GetFontTexture()->GetArraySize(), 1);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamFontCoverageFlushTest,
+	"DreamGUI.Text.Font.ACoverageFlushWaitsForTheFrameBoundaryAndLeavesTheFieldGlyphsAlone",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * Coverage glyphs may borrow MaxCoverageCells cells. Outgrowing them asks for a flush, and the glyphs keep coming -- past
+ * the budget -- until the frame ends: a text painted earlier in the frame still draws from the cells it was handed. At the
+ * end of FlushPendingFontTextures every coverage glyph goes and the texts are told to repaint, not to lay out; the cells
+ * are used again from the next frame on, instead of a new slice. The field glyphs are untouched: the same UVs to the bit,
+ * and no atlas flush.
+ */
+bool FDreamFontCoverageFlushTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamFontDataTestLocal;
+	FScopedGameWorld TestWorld;
+	UDreamUISettings* Settings = GetMutableDefault<UDreamUISettings>();
+	const int32 SavedCells = Settings->MaxCoverageCells;
+	const bool bSavedAsync = Settings->bAsyncGlyphRasterization;
+	Settings->MaxCoverageCells = 1;
+	Settings->bAsyncGlyphRasterization = true;
+	ON_SCOPE_EXIT
+	{
+		Settings->MaxCoverageCells = SavedCells;
+		Settings->bAsyncGlyphRasterization = bSavedAsync;
+		UDreamUIFontData_FreeTypeRender::SetAsyncGlyphSyncBudgetOverride(-1);
+	};
+	// A 512 atlas of four 256 cells.
+	UDreamUIFontData_DistanceField* Font = MakeCoverageFont(TestWorld.World, EDreamUIAtlasTextureSizeType::SIZE_512x512, EDreamUIAtlasTextureSizeType::SIZE_256x256);
+	if (!TestTrue(TEXT("Roboto loads"), Font->FaceHasCodepoint(0, 'A')))return false;
+	const int32 TextureSize = 512;
+	const int32 CellSize = 256;
+	const TCHAR* const Letters = TEXT("ABC");
+	TArray<FDreamUICharData> FieldGlyphs;
+	for (int32 Index = 0; Index < 3; Index++)
+	{
+		FieldGlyphs.Add(Font->GetCharData(Letters[Index], 64.0f, false));
+	}
+	if (!TestTrue(TEXT("the field glyphs have quads"), FieldGlyphs[0].Width > 0.0f && FieldGlyphs[2].Width > 0.0f))return false;
+	const uint32 GlyphA = FieldGlyphs[0].GlyphIndex;
+	UTexture2DArray* Atlas = Font->GetFontTexture();
+	int32 CoverageChanges = 0;
+	int32 Relayouts = 0;
+	const FDelegateHandle CoverageHandle = Font->OnCoverageGlyphsChanged.AddLambda([&CoverageChanges]() { CoverageChanges++; });
+	const FDelegateHandle RelayoutHandle = Font->OnGlyphsReady.AddLambda([&Relayouts]() { Relayouts++; });
+	// The counters live on this stack: a flush still asked for when the test ends is announced after it.
+	ON_SCOPE_EXIT
+	{
+		Font->OnCoverageGlyphsChanged.Remove(CoverageHandle);
+		Font->OnGlyphsReady.Remove(RelayoutHandle);
+	};
+
+	// 200 texels square: one to a cell. The second needs a second cell, one past the budget.
+	const TArray<uint8> Pixels = MakeCoveragePixels(200, 200);
+	TestTrue(TEXT("the first coverage glyph goes in"), Font->InjectCoverageGlyphForTesting(0, GlyphA, 100 * 64, EDreamUICoverageGlyphFlags::None, 200, 200, 0, 150, Pixels));
+	TestTrue(TEXT("so does the second, past the budget"), Font->InjectCoverageGlyphForTesting(0, GlyphA, 101 * 64, EDreamUICoverageGlyphFlags::None, 200, 200, 0, 150, Pixels));
+	FDreamUICoverageGlyph First, Second;
+	TestTrue(TEXT("the first is still there for the rest of the frame"), Font->GetCoverageGlyph(0, GlyphA, 100 * 64, EDreamUICoverageGlyphFlags::None, First) && !First.bPending);
+	TestTrue(TEXT("the second too"), Font->GetCoverageGlyph(0, GlyphA, 101 * 64, EDreamUICoverageGlyphFlags::None, Second) && !Second.bPending);
+	const FIntVector FirstCell = CellOf(First.MinUV, First.SliceIndex, TextureSize, CellSize);
+	const FIntVector SecondCell = CellOf(Second.MinUV, Second.SliceIndex, TextureSize, CellSize);
+	TestTrue(TEXT("in two cells"), FirstCell != SecondCell);
+	TestEqual(TEXT("nothing is said in the middle of the frame"), CoverageChanges, 0);
+	TestTrue(TEXT("the atlas did not grow for them"), Font->GetFontTexture() == Atlas && Atlas->GetArraySize() == 1);
+
+	// The frame ends.
+	NextFrame();
+	TestEqual(TEXT("the flush told the texts, once"), CoverageChanges, 1);
+	TestEqual(TEXT("as a repaint: nothing lays out again"), Relayouts, 0);
+	TestTrue(TEXT("the atlas was not flushed"), Font->GetFontTexture() == Atlas && Atlas->GetArraySize() == 1);
+	for (int32 Index = 0; Index < 3; Index++)
+	{
+		const FDreamUICharData Again = Font->GetCharData(Letters[Index], 64.0f, false);
+		TestTrue(FString::Printf(TEXT("%c is where it was, to the bit"), Letters[Index]), SameFieldGlyph(Again, FieldGlyphs[Index]));
+	}
+	// The coverage glyphs went: asked again with no budget to make it on the spot, the first goes to the worker.
+	UDreamUIFontData_FreeTypeRender::SetAsyncGlyphSyncBudgetOverride(0);
+	FDreamUICoverageGlyph Asked;
+	TestTrue(TEXT("a flushed coverage glyph is made again"), Font->GetCoverageGlyph(0, GlyphA, 100 * 64, EDreamUICoverageGlyphFlags::None, Asked) && Asked.bPending);
+	Font->WaitForAsyncGlyphs();
+	UDreamUIFontData_FreeTypeRender::SetAsyncGlyphSyncBudgetOverride(MAX_int32);
+
+	// From the next frame on, the flushed cells are free again: a new coverage glyph takes one rather than a new slice.
+	NextFrame();
+	TestTrue(TEXT("a coverage glyph goes in after the flush"), Font->InjectCoverageGlyphForTesting(0, GlyphA, 102 * 64, EDreamUICoverageGlyphFlags::None, 200, 200, 0, 150, Pixels));
+	FDreamUICoverageGlyph Third;
+	TestTrue(TEXT("and is answered"), Font->GetCoverageGlyph(0, GlyphA, 102 * 64, EDreamUICoverageGlyphFlags::None, Third));
+	const FIntVector ThirdCell = CellOf(Third.MinUV, Third.SliceIndex, TextureSize, CellSize);
+	TestTrue(TEXT("in a cell the flush gave back"), ThirdCell == FirstCell || ThirdCell == SecondCell);
+	TestEqual(TEXT("so the atlas still has one slice"), Font->GetFontTexture()->GetArraySize(), 1);
+	TestEqual(TEXT("and no field glyph moved"), Relayouts, 0);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamFontCoverageAsyncTest,
+	"DreamGUI.Text.Font.CoverageGlyphsFromTheWorkerAreARepaintAtTheEndOfTheFrame",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * Past its own per-frame budget a coverage glyph is made on the worker: it comes back pending (the text draws its field
+ * quad meanwhile), asking again does not queue it twice, synthetic bold is a glyph of its own, and once it lands the font
+ * says so with OnCoverageGlyphsChanged -- from the end of FlushPendingFontTextures only, never from the drain, which can
+ * run with a text in the middle of a paint -- and never with OnGlyphsReady, which would lay the text out again for a glyph
+ * that changes no advance.
+ */
+bool FDreamFontCoverageAsyncTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamFontDataTestLocal;
+	FScopedGameWorld TestWorld;
+	UDreamUISettings* Settings = GetMutableDefault<UDreamUISettings>();
+	const bool bSavedAsync = Settings->bAsyncGlyphRasterization;
+	Settings->bAsyncGlyphRasterization = true;
+	ON_SCOPE_EXIT
+	{
+		Settings->bAsyncGlyphRasterization = bSavedAsync;
+		UDreamUIFontData_FreeTypeRender::SetAsyncGlyphSyncBudgetOverride(-1);
+	};
+	UDreamUIFontData_DistanceField* Font = MakeCoverageFont(TestWorld.World, EDreamUIAtlasTextureSizeType::SIZE_512x512, EDreamUIAtlasTextureSizeType::SIZE_256x256);
+	if (!TestTrue(TEXT("Roboto loads"), Font->FaceHasCodepoint(0, 'H')))return false;
+	// The field glyph on the spot, before the budget goes to 0: only coverage glyphs are on the worker below.
+	const FDreamUICharData FieldH = Font->GetCharData('H', 32.0f, false);
+	if (!TestTrue(TEXT("H has a field glyph"), FieldH.GlyphIndex != 0 && !FieldH.bPending))return false;
+	int32 CoverageChanges = 0;
+	int32 Relayouts = 0;
+	const FDelegateHandle CoverageHandle = Font->OnCoverageGlyphsChanged.AddLambda([&CoverageChanges]() { CoverageChanges++; });
+	const FDelegateHandle RelayoutHandle = Font->OnGlyphsReady.AddLambda([&Relayouts]() { Relayouts++; });
+	ON_SCOPE_EXIT
+	{
+		Font->OnCoverageGlyphsChanged.Remove(CoverageHandle);
+		Font->OnGlyphsReady.Remove(RelayoutHandle);
+	};
+
+	UDreamUIFontData_FreeTypeRender::SetAsyncGlyphSyncBudgetOverride(0);
+	FDreamUICoverageGlyph Pending;
+	if (!TestTrue(TEXT("H at 13 px is asked for"), Font->GetCoverageGlyph(0, FieldH.GlyphIndex, 13 * 64, EDreamUICoverageGlyphFlags::None, Pending)))return false;
+	TestTrue(TEXT("and goes to the worker"), Pending.bPending);
+	TestEqual(TEXT("one glyph on the worker"), Font->GetPendingAsyncGlyphCount(), 1);
+	FDreamUICoverageGlyph Again;
+	Font->GetCoverageGlyph(0, FieldH.GlyphIndex, 13 * 64, EDreamUICoverageGlyphFlags::None, Again);
+	TestTrue(TEXT("asked again it is still pending"), Again.bPending);
+	TestEqual(TEXT("and not queued twice"), Font->GetPendingAsyncGlyphCount(), 1);
+	FDreamUICoverageGlyph PendingBold;
+	Font->GetCoverageGlyph(0, FieldH.GlyphIndex, 13 * 64, EDreamUICoverageGlyphFlags::SyntheticBold, PendingBold);
+	TestTrue(TEXT("synthetic bold is another glyph, on the worker too"), PendingBold.bPending && Font->GetPendingAsyncGlyphCount() == 2);
+
+	Font->WaitForAsyncGlyphs();
+	TestEqual(TEXT("nothing is left on the worker"), Font->GetPendingAsyncGlyphCount(), 0);
+	TestEqual(TEXT("landing is not announced from the drain"), CoverageChanges, 0);
+	NextFrame();
+	TestEqual(TEXT("it is announced at the end of the frame, once"), CoverageChanges, 1);
+	TestEqual(TEXT("and never as a relayout"), Relayouts, 0);
+
+	FDreamUICoverageGlyph Landed;
+	if (!TestTrue(TEXT("the glyph is there"), Font->GetCoverageGlyph(0, FieldH.GlyphIndex, 13 * 64, EDreamUICoverageGlyphFlags::None, Landed)))return false;
+	TestFalse(TEXT("ready"), Landed.bPending);
+	TestTrue(TEXT("with a box"), Landed.Width > 0 && Landed.Height > 0);
+	TestTrue(TEXT("inside the atlas"), Landed.SliceIndex < Font->GetFontTexture()->GetArraySize() && Landed.MaxUV.X <= 1.0f && Landed.MaxUV.Y <= 1.0f);
+	FDreamUICoverageGlyph LandedBold;
+	if (TestTrue(TEXT("the bold one too"), Font->GetCoverageGlyph(0, FieldH.GlyphIndex, 13 * 64, EDreamUICoverageGlyphFlags::SyntheticBold, LandedBold)))
+	{
+		TestTrue(TEXT("no narrower than the regular one"), !LandedBold.bPending && LandedBold.Width >= Landed.Width);
+	}
+	NextFrame();
+	TestEqual(TEXT("a frame with nothing new says nothing"), CoverageChanges, 1);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamFontAtlasFlushClearsCoverageTest,
+	"DreamGUI.Text.Font.AFullAtlasFlushTakesTheCoverageGlyphsWithIt",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * A full atlas flush starts the atlas again from one empty slice, and every glyph in it goes -- the coverage glyphs too,
+ * or they would point into cells that now hold field glyphs. The texts lay out again after a flush and paint, which asks
+ * for them anew.
+ */
+bool FDreamFontAtlasFlushClearsCoverageTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamFontDataTestLocal;
+	FScopedGameWorld TestWorld;
+	UDreamUISettings* Settings = GetMutableDefault<UDreamUISettings>();
+	const bool bSavedAsync = Settings->bAsyncGlyphRasterization;
+	Settings->bAsyncGlyphRasterization = true;
+	ON_SCOPE_EXIT
+	{
+		Settings->bAsyncGlyphRasterization = bSavedAsync;
+		UDreamUIFontData_FreeTypeRender::SetAsyncGlyphSyncBudgetOverride(-1);
+	};
+	UDreamUIFontData_DistanceField* Font = MakeCoverageFont(TestWorld.World, EDreamUIAtlasTextureSizeType::SIZE_512x512, EDreamUIAtlasTextureSizeType::SIZE_256x256);
+	if (!TestTrue(TEXT("Roboto loads"), Font->FaceHasCodepoint(0, 'H')))return false;
+	const FDreamUICharData FieldH = Font->GetCharData('H', 32.0f, false);
+	const TArray<uint8> Pixels = MakeCoveragePixels(12, 14);
+	TestTrue(TEXT("a coverage glyph goes in"), Font->InjectCoverageGlyphForTesting(0, FieldH.GlyphIndex, 13 * 64, EDreamUICoverageGlyphFlags::None, 12, 14, 0, 10, Pixels));
+	FDreamUICoverageGlyph Before;
+	TestTrue(TEXT("and is answered from the cache"), Font->GetCoverageGlyph(0, FieldH.GlyphIndex, 13 * 64, EDreamUICoverageGlyphFlags::None, Before) && !Before.bPending);
+
+	Font->FlushGlyphAtlas();
+	// No budget to make it on the spot: a glyph still in the cache would be answered ready, a dropped one goes to the worker.
+	UDreamUIFontData_FreeTypeRender::SetAsyncGlyphSyncBudgetOverride(0);
+	FDreamUICoverageGlyph After;
+	TestTrue(TEXT("after a full flush it is made again"), Font->GetCoverageGlyph(0, FieldH.GlyphIndex, 13 * 64, EDreamUICoverageGlyphFlags::None, After) && After.bPending);
+	Font->WaitForAsyncGlyphs();
+	TestEqual(TEXT("in an atlas of one slice"), Font->GetFontTexture()->GetArraySize(), 1);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamFontColorBucketTest,
+	"DreamGUI.Text.Font.ColourGlyphsAreCachedBySizeBucket",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * A colour glyph -- an emoji from Noto Color Emoji's 109 ppem strike -- is a bitmap at a size, not a field: it is kept in
+ * a cache of its own by face, glyph and size bucket (FDreamGlyphColor::GetSizeBucket). Two sizes in one bucket share one
+ * bitmap and differ only in the quad; another bucket is another bitmap; past the strike's own size the strike is stored as
+ * it is. Every entry says it is colour, how many texels its cell has to the em, and which face and glyph it is. From the
+ * worker it comes back pending with the strike's advance already, and landing lays the text out again, as a field glyph
+ * does. A full atlas flush takes the colour glyphs too.
+ */
+bool FDreamFontColorBucketTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamFontDataTestLocal;
+	const FString EmojiPath = EditorFont(TEXT("NotoColorEmoji.ttf"));
+	if (!FPaths::FileExists(EmojiPath))
+	{
+		AddInfo(TEXT("The engine's Noto Color Emoji is not installed; nothing to check."));
+		return true;
+	}
+	FScopedGameWorld TestWorld;
+	UDreamUISettings* Settings = GetMutableDefault<UDreamUISettings>();
+	const bool bSavedAsync = Settings->bAsyncGlyphRasterization;
+	Settings->bAsyncGlyphRasterization = true;
+	ON_SCOPE_EXIT
+	{
+		Settings->bAsyncGlyphRasterization = bSavedAsync;
+		UDreamUIFontData_FreeTypeRender::SetAsyncGlyphSyncBudgetOverride(-1);
+	};
+	UDreamUIFontData_DistanceField* Roboto = MakeFieldFont(TestWorld.World, TEXT("Roboto-Regular.ttf"));
+	UDreamUIFontData_DistanceField* Emoji = MakeFileFont<UDreamUIFontData_DistanceField>(TestWorld.World, EmojiPath);
+	Roboto->SetFallbackFonts({ Emoji });
+	Roboto->PrepareForLayout(0.0f);
+	TestFalse(TEXT("Roboto is no colour face"), Roboto->IsColorFace(0));
+	if (!TestTrue(TEXT("Noto Color Emoji is one"), Roboto->IsColorFace(1)))return false;
+
+	const FDreamUICharData Grin = Roboto->GetFaceCharData(1, 0x1F600, 32.0f, false);
+	if (!TestTrue(TEXT("the grin is a colour glyph with a quad"), Grin.bColor && !Grin.bPending && Grin.Width > 0.0f && Grin.Height > 0.0f))return false;
+	TestEqual(TEXT("of face 1"), Grin.FaceIndex, 1);
+	TestTrue(TEXT("which says which glyph it is"), Grin.GlyphIndex != 0);
+	const int32 Bucket32 = FDreamGlyphColor::GetSizeBucket(32.0f);
+	TestEqual(TEXT("its cell has its bucket's texels to the em"), Grin.ColorTexelsPerEm, (float)Bucket32, 0.001f);
+	TestEqual(TEXT("and it advances by the strike: 136 px at 109 ppem"), Grin.XAdvance, 136.0f * 32.0f / 109.0f, 0.1f);
+	TestTrue(TEXT("asked again, the cache answers, to the bit"), SameFieldGlyph(Roboto->GetGlyphData(1, Grin.GlyphIndex, 32.0f, false), Grin));
+
+	// Another size in the same bucket: the same bitmap, its quad scaled.
+	for (const float SameBucketSize : { 32.25f, 31.75f, 32.5f, 31.5f })
+	{
+		if (FDreamGlyphColor::GetSizeBucket(SameBucketSize) != Bucket32)
+		{
+			continue;
+		}
+		const FDreamUICharData Same = Roboto->GetGlyphData(1, Grin.GlyphIndex, SameBucketSize, false);
+		TestTrue(TEXT("a size in the same bucket samples the same bitmap"), Same.MinUV == Grin.MinUV && Same.MaxUV == Grin.MaxUV && Same.SliceIndex == Grin.SliceIndex);
+		TestEqual(TEXT("its quad scaled to its size"), Same.Width, Grin.Width * SameBucketSize / 32.0f, 0.001f);
+		TestEqual(TEXT("its advance too"), Same.XAdvance, Grin.XAdvance * SameBucketSize / 32.0f, 0.001f);
+		TestEqual(TEXT("its texels per em are the cell's"), Same.ColorTexelsPerEm, Grin.ColorTexelsPerEm, 0.001f);
+		break;
+	}
+	// Another bucket: another bitmap.
+	const FDreamUICharData Grin48 = Roboto->GetGlyphData(1, Grin.GlyphIndex, 48.0f, false);
+	TestTrue(TEXT("another bucket is another bitmap"), Grin48.bColor && (Grin48.MinUV != Grin.MinUV || Grin48.SliceIndex != Grin.SliceIndex));
+	TestEqual(TEXT("with its own texels per em"), Grin48.ColorTexelsPerEm, (float)FDreamGlyphColor::GetSizeBucket(48.0f), 0.001f);
+	// Past the strike: stored as it is, 109 texels to the em, and enlarged by the quad.
+	const FDreamUICharData Grin150 = Roboto->GetGlyphData(1, Grin.GlyphIndex, 150.0f, false);
+	TestEqual(TEXT("past its strike the bitmap is the strike's own"), Grin150.ColorTexelsPerEm, 109.0f, 0.001f);
+	TestTrue(TEXT("its quad as large as the size asks"), Grin150.Width > Grin48.Width);
+
+	// From the worker: pending, with the advance the shaper gives it, and a relayout when it lands.
+	int32 Relayouts = 0;
+	const FDelegateHandle RelayoutHandle = Roboto->OnGlyphsReady.AddLambda([&Relayouts]() { Relayouts++; });
+	ON_SCOPE_EXIT
+	{
+		Roboto->OnGlyphsReady.Remove(RelayoutHandle);
+	};
+	UDreamUIFontData_FreeTypeRender::SetAsyncGlyphSyncBudgetOverride(0);
+	const FDreamUICharData Pending = Roboto->GetGlyphData(1, Grin.GlyphIndex, 64.0f, false);
+	TestTrue(TEXT("a new bucket goes to the worker"), Pending.bPending && Pending.bColor);
+	TestEqual(TEXT("with the strike's advance already"), Pending.XAdvance, 136.0f * 64.0f / 109.0f, 0.02f);
+	TestEqual(TEXT("and which glyph it is"), Pending.GlyphIndex, Grin.GlyphIndex);
+	Roboto->WaitForAsyncGlyphs();
+	TestEqual(TEXT("landing lays the text out again"), Relayouts, 1);
+	const FDreamUICharData Landed = Roboto->GetGlyphData(1, Grin.GlyphIndex, 64.0f, false);
+	TestTrue(TEXT("and it is there"), !Landed.bPending && Landed.bColor && Landed.Width > 0.0f);
+
+	// A full flush clears the colour glyphs with the rest: asked again, it is made again (on the worker, with no budget).
+	Roboto->FlushGlyphAtlas();
+	const FDreamUICharData AfterFlush = Roboto->GetGlyphData(1, Grin.GlyphIndex, 32.0f, false);
+	TestTrue(TEXT("a full flush takes the colour glyphs too"), AfterFlush.bPending);
+	Roboto->WaitForAsyncGlyphs();
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamFontColorStrikeMetricsTest,
+	"DreamGUI.Text.Font.ABitmapOnlyColourFaceMeasuresFromItsTables",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * Noto Color Emoji has no outlines, only a 109 ppem strike of bitmaps. FreeType keeps no units per em or ascender for such
+ * a face and refuses it a char size, so it measured as nothing: a line with an emoji on it had no box for it. Its head and
+ * hhea tables still say what its em and its line are. With the hhea option that is hhea scaled to the size; with
+ * FreeType's own (the default) it is grid-fitted as FreeType fits a scalable face -- 38 px of line at 32 px, the pitch
+ * Chrome gives it. As a fallback it measures too.
+ */
+bool FDreamFontColorStrikeMetricsTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamFontDataTestLocal;
+#if WITH_FREETYPE
+	const FString EmojiPath = EditorFont(TEXT("NotoColorEmoji.ttf"));
+	if (!FPaths::FileExists(EmojiPath))
+	{
+		AddInfo(TEXT("The engine's Noto Color Emoji is not installed; nothing to check."));
+		return true;
+	}
+	FScopedGameWorld TestWorld;
+	UDreamUIFontData_DistanceField* Emoji = MakeFileFont<UDreamUIFontData_DistanceField>(TestWorld.World, EmojiPath);
+	FT_FaceRec_* Face = Emoji->GetFreeTypeFace(0);
+	if (!TestNotNull(TEXT("Noto Color Emoji is open"), Face))return false;
+	TestFalse(TEXT("it has no outlines"), FT_IS_SCALABLE(Face) != 0);
+	const TT_Header* Head = static_cast<const TT_Header*>(FT_Get_Sfnt_Table(Face, FT_SFNT_HEAD));
+	const TT_HoriHeader* Hhea = static_cast<const TT_HoriHeader*>(FT_Get_Sfnt_Table(Face, FT_SFNT_HHEA));
+	if (!TestTrue(TEXT("it has head and hhea tables"), Head != nullptr && Hhea != nullptr && Head->Units_Per_EM > 0))return false;
+	const float Size = 32.0f;
+	const float Scale = Size / (float)Head->Units_Per_EM;
+	float Ascent = 0.0f, Descent = 0.0f, LineHeight = 0.0f;
+
+	Emoji->SetVerticalMetrics(EDreamUIFontVerticalMetrics::Hhea);
+	if (!TestTrue(TEXT("it measures from hhea"), Emoji->ComputeFaceMetrics(0, Size, Ascent, Descent, LineHeight)))return false;
+	TestEqual(TEXT("its ascent is hhea's, scaled to the size"), Ascent, Hhea->Ascender * Scale, 0.001f);
+	TestEqual(TEXT("its descent"), Descent, -Hhea->Descender * Scale, 0.001f);
+	TestEqual(TEXT("its line"), LineHeight, (Hhea->Ascender - Hhea->Descender + Hhea->Line_Gap) * Scale, 0.001f);
+
+	Emoji->SetVerticalMetrics(EDreamUIFontVerticalMetrics::FreeType);
+	if (!TestTrue(TEXT("it measures with FreeType's own metrics"), Emoji->ComputeFaceMetrics(0, Size, Ascent, Descent, LineHeight)))return false;
+	TestEqual(TEXT("the ascent grid-fitted up"), Ascent, FMath::CeilToFloat(Hhea->Ascender * Scale), 0.001f);
+	TestEqual(TEXT("the descent grid-fitted down"), Descent, FMath::CeilToFloat(-Hhea->Descender * Scale), 0.001f);
+	TestEqual(TEXT("a line pitch of 38 at 32 px"), LineHeight, 38.0f, 0.001f);
+
+	UDreamUIFontData_DistanceField* Roboto = MakeFieldFont(TestWorld.World, TEXT("Roboto-Regular.ttf"));
+	Roboto->SetFallbackFonts({ Emoji });
+	Roboto->PrepareForLayout(0.0f);
+	TestTrue(TEXT("as a fallback it gives its line a box"), Roboto->GetFaceMetrics(1, Size, Ascent, Descent, LineHeight) && Ascent > 0.0f && LineHeight > 0.0f);
+#else
+	AddInfo(TEXT("Built without FreeType: no font tables."));
+#endif
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamFontColorStrikeAdvanceTest,
+	"DreamGUI.Text.Font.AStrikeFaceShapesWithItsStrikesAdvance",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * HarfBuzz reads a face's advances from hmtx, which for Noto Color Emoji is 2550/2048 em: 39.84 px at 32 px. Its bitmaps are
+ * drawn to the strike's own advance, 136 px at 109 ppem -- 39.93 px at 32 px, which is what Chrome advances by. A strike
+ * face shapes through a font that answers the strike's advances, so a line of emoji does not drift a tenth of a pixel per
+ * emoji from Chrome, and the shaper needs no case of its own. The glyph's quad agrees.
+ */
+bool FDreamFontColorStrikeAdvanceTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamFontDataTestLocal;
+	const FString EmojiPath = EditorFont(TEXT("NotoColorEmoji.ttf"));
+	if (!FPaths::FileExists(EmojiPath))
+	{
+		AddInfo(TEXT("The engine's Noto Color Emoji is not installed; nothing to check."));
+		return true;
+	}
+	FScopedGameWorld TestWorld;
+	UDreamUIFontData_DistanceField* Emoji = MakeFileFont<UDreamUIFontData_DistanceField>(TestWorld.World, EmojiPath);
+	Emoji->PrepareForLayout(0.0f);
+	if (!FDreamTextShaper::CanShape(Emoji))
+	{
+		AddInfo(TEXT("Built without HarfBuzz: nothing is shaped."));
+		return true;
+	}
+	TArray<FDreamShapeElement> Elements;
+	FDreamShapeElement& Grin = Elements.AddDefaulted_GetRef();
+	Grin.Codepoint = 0x1F600;
+	Grin.Size = 32.0f;
+	TArray<FDreamShapedRun> Runs;
+	bool bRightToLeft = false;
+	if (!TestTrue(TEXT("the emoji font shapes"), FDreamTextShaper::ShapeParagraph(Elements, Emoji, false, EDreamTextFlowDirection::Auto, Runs, bRightToLeft)))return false;
+	if (!TestTrue(TEXT("one emoji, one glyph"), Runs.Num() == 1 && Runs[0].Glyphs.Num() == 1))return false;
+	const FDreamShapedGlyph& Glyph = Runs[0].Glyphs[0];
+	TestEqual(TEXT("it advances by its strike: 136 px at 109 ppem, at 32 px"), Glyph.XAdvance, 39.93f, 0.02f);
+	TestTrue(TEXT("not by hmtx"), FMath::Abs(Glyph.XAdvance - 2550.0f * 32.0f / 2048.0f) > 0.05f);
+	const FDreamUICharData Quad = Emoji->GetGlyphData(Glyph.FaceIndex, Glyph.GlyphIndex, 32.0f, false);
+	TestTrue(TEXT("its quad is a colour glyph"), Quad.bColor && Quad.Width > 0.0f);
+	TestEqual(TEXT("which advances as the shaper says"), Quad.XAdvance, Glyph.XAdvance, 0.1f);
 	return true;
 }
 
