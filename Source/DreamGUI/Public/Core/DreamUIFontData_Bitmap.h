@@ -11,22 +11,24 @@ struct FDreamUIBitmapCharKey
 {
 public:
 	FDreamUIBitmapCharKey() {}
-	FDreamUIBitmapCharKey(const FDreamUIGlyphKey& InGlyph, uint16 InCharSize, bool InIsBold)
+	FDreamUIBitmapCharKey(const FDreamUIGlyphKey& InGlyph, float InCharSize, bool InIsBold)
 	{
 		this->Glyph = InGlyph;
-		this->CharSize = InCharSize;
+		// The 26.6 size FreeType is asked to rasterize at. A uint16 of the size truncated it, so every size from 16 to
+		// 16.99 shared the one 16px glyph.
+		this->CharSize26Dot6 = FMath::RoundToInt(FMath::Max(InCharSize, 1.0f) * 64.0f);
 		this->bBold = InIsBold;
 	}
 	FDreamUIGlyphKey Glyph;
-	uint16 CharSize = 0;
+	int32 CharSize26Dot6 = 0;
 	bool bBold = false;
 	bool operator==(const FDreamUIBitmapCharKey& other)const
 	{
-		return this->Glyph == other.Glyph && this->CharSize == other.CharSize && this->bBold == other.bBold;
+		return this->Glyph == other.Glyph && this->CharSize26Dot6 == other.CharSize26Dot6 && this->bBold == other.bBold;
 	}
 	friend FORCEINLINE uint32 GetTypeHash(const FDreamUIBitmapCharKey& other)
 	{
-		return HashCombine(GetTypeHash(other.Glyph), GetTypeHash(other.CharSize), GetTypeHash(other.bBold));
+		return HashCombine(GetTypeHash(other.Glyph), GetTypeHash(other.CharSize26Dot6), GetTypeHash(other.bBold));
 	}
 };
 
@@ -48,6 +50,11 @@ protected:
 public:
 	//Begin UDreamUIFontData_FreeTypeRender interface
 	virtual FDreamTextGlyphPaintStyle GetGlyphPaintStyle(const FVector2f& InWorldScale, float InExpandMeshSize) const override;
+	/**
+	 * How much wider, in em, a bold glyph's advance is than the regular one's: BoldRatio, the strength the raster is
+	 * emboldened by. FreeType's embolden makes the outline that much wider and the advance grows by the same.
+	 */
+	virtual float GetBoldRatio() override { return BoldRatio; }
 	//End UDreamUIFontData_FreeTypeRender interface
 protected:
 	TMap<FDreamUIBitmapCharKey, FDreamUICharData> CharDataMap;

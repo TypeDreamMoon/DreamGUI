@@ -55,6 +55,27 @@ enum class EDreamUIDynamicFontLineHeightType :uint8
 	FontSizeAsLineHeight,
 };
 
+/** Which of a face's own vertical metrics its ascent, descent and line spacing are read from. */
+UENUM(BlueprintType)
+enum class EDreamUIFontVerticalMetrics : uint8
+{
+	/** FreeType's size metrics: the hhea ascender, descender and line gap, grid-fitted (ascender rounded up, descender down, line spacing to the nearest pixel). What DreamGUI has always used. */
+	FreeType UMETA(DisplayName = "FreeType (hhea, grid-fitted)"),
+	/** The hhea ascender, descender and line gap, scaled without rounding. What CoreText on macOS lays text out with. */
+	Hhea UMETA(DisplayName = "hhea"),
+	/** OS/2 sTypoAscender, sTypoDescender and sTypoLineGap, scaled without rounding: the metrics the OpenType spec recommends for line layout. Falls back to hhea when the face has no OS/2 table. */
+	Typo UMETA(DisplayName = "OS/2 Typo"),
+	/** OS/2 usWinAscent and usWinDescent with no line gap: GDI's line box, tall enough that no glyph is clipped. Falls back to hhea when the face has no OS/2 table. */
+	Win UMETA(DisplayName = "OS/2 Win"),
+	/**
+	 * What DirectWrite reports on Windows, and so what Chrome on Windows lays text out with: the typo metrics when the face sets
+	 * OS/2 fsSelection bit 7 (USE_TYPO_METRICS), otherwise usWinAscent and usWinDescent with GDI's external leading as the line
+	 * gap, max(0, hhea lineGap - ((usWinAscent + usWinDescent) - (hhea ascender - hhea descender))). The same rule on every
+	 * platform DreamGUI runs on. Falls back to hhea when the face has no OS/2 table.
+	 */
+	Platform UMETA(DisplayName = "Platform (DirectWrite)"),
+};
+
 #define ONE_DIVIDE_64 0.015625f //(1.0f / 64.0f)
 
 /**
@@ -88,10 +109,14 @@ protected:
 	void UpdateFontOnCultureChanged();
 	FDelegateHandle OnCultureChangedDelegateHandle;
 
+	/** Which face of a font collection (.ttc) to open. Kept across reloads; a file with fewer faces opens its last one. */
 	UPROPERTY(EditAnywhere, Category = "DreamGUI")
 		int FontFace = 0;
 	UPROPERTY(EditAnywhere, Category = "DreamGUI")
 		EDreamUIDynamicFontLineHeightType LineHeightType = EDreamUIDynamicFontLineHeightType::FromFontFace;
+	/** Which of each face's own metrics the line box is built from, for this font's own face, its fallbacks and its style faces alike. LineHeightType then applies on top. */
+	UPROPERTY(EditAnywhere, Category = "DreamGUI")
+		EDreamUIFontVerticalMetrics VerticalMetrics = EDreamUIFontVerticalMetrics::FreeType;
 	/** Current using font face has kerning? */
 	UPROPERTY(VisibleAnywhere, Category = "DreamGUI", Transient, AdvancedDisplay)
 		bool bHasKerning = false;
@@ -115,6 +140,18 @@ protected:
 	/** if not find char in current font, DreamUI will search the char in this font array until find it. */
 	UPROPERTY(EditAnywhere, Category = "DreamGUI")
 		TArray<TObjectPtr<UDreamUIFontData_FreeTypeRender>> FallbackFontArray;
+	/**
+	 * The real bold face of this font. A bold run is drawn from it -- its own outlines and advances -- instead of from this
+	 * font's face made bolder. Its primary face is rendered into this font's atlas, the way a fallback's is.
+	 */
+	UPROPERTY(EditAnywhere, Category = "DreamGUI")
+		TObjectPtr<UDreamUIFontData_FreeTypeRender> BoldFont;
+	/** The real italic face of this font, used for italic runs instead of slanting this font's face. */
+	UPROPERTY(EditAnywhere, Category = "DreamGUI")
+		TObjectPtr<UDreamUIFontData_FreeTypeRender> ItalicFont;
+	/** The real bold-italic face of this font. Without it a bold-italic run takes BoldFont and is slanted, or ItalicFont and is emboldened. */
+	UPROPERTY(EditAnywhere, Category = "DreamGUI")
+		TObjectPtr<UDreamUIFontData_FreeTypeRender> BoldItalicFont;
 
 	virtual void FinishDestroy()override;
 
@@ -148,6 +185,17 @@ public:
 	 * have its own scaling applied twice by a virtual call that came back down into it.
 	 */
 	bool ComputeFaceMetrics(int32 FaceIndex, float FontSize, float& OutAscent, float& OutDescent, float& OutLineHeight);
+	/** BoldFont, ItalicFont or BoldItalicFont's index (GetFaceCount() + 0, 1, 2) when the font has that face and it loads, else 0. */
+	virtual int32 GetStyledFace(bool bBold, bool bItalic)override;
+	/** Bold for BoldFont's index, Italic for ItalicFont's, both for BoldItalicFont's; None for this font's own face and its fallbacks. */
+	virtual EDreamUIFontFaceStyle GetFaceStyleFlags(int32 FaceIndex)override;
+	/**
+	 * From the face's tables, scaled linearly to FontSize: the underline from 'post' (FreeType's underline_position, which
+	 * is already the stroke's centre), the strikethrough from OS/2 (yStrikeoutPosition is the stroke's top). A face with no
+	 * OS/2 strikeout takes Slate's: the underline's thickness, placed where Slate draws it. False for a face that is not
+	 * scalable or has no underline data.
+	 */
+	virtual bool GetDecorationMetrics(int32 FaceIndex, float FontSize, float& OutUnderlinePosition, float& OutUnderlineThickness, float& OutStrikethroughPosition, float& OutStrikethroughThickness)override;
 protected:
 	/**
 	 * Face metrics, per face and per size. Reading them costs an FT size request and a metrics read,
@@ -168,6 +216,24 @@ protected:
 		float LineHeight = 0.0f;
 	};
 	TMap<FFaceMetricsKey, FFaceMetricsValue> FaceMetricsCache;
+	/** A face's underline and strikethrough in em, which scale linearly; dropped with the face metrics. */
+	struct FFaceDecorationMetrics
+	{
+		bool bValid = false;
+		float UnderlinePosition = 0.0f;
+		float UnderlineThickness = 0.0f;
+		float StrikethroughPosition = 0.0f;
+		float StrikethroughThickness = 0.0f;
+	};
+	TMap<int32, FFaceDecorationMetrics> FaceDecorationCache;
+	/** The font asset whose primary face a face index names: this font, a fallback, or a style face. Null when the slot is empty or names this font again. */
+	UDreamUIFontData_FreeTypeRender* GetFaceOwner(int32 FaceIndex);
+	/**
+	 * What has to go when the faces behind the indices change (fallbacks or style faces swapped): the worker, which opened
+	 * the old files by index; the glyphs it was still making; the face metrics; and the glyph cache. Every text using the
+	 * font is told, so it lays out again against the new faces.
+	 */
+	void ResetFaceState();
 public:
 	virtual float GetLineHeight(float FontSize)override;
 	virtual float GetVerticalOffset(float FontSize)override;
@@ -190,6 +256,12 @@ public:
 	/** Replace the fallback list: the faces tried, in order, for code points this font lacks. */
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
 	void SetFallbackFonts(const TArray<UDreamUIFontData_FreeTypeRender*>& InFallbacks);
+	/** Replace the real bold, italic and bold-italic faces; null for a style the font should synthesize. */
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
+	void SetStyleFonts(UDreamUIFontData_FreeTypeRender* InBold, UDreamUIFontData_FreeTypeRender* InItalic, UDreamUIFontData_FreeTypeRender* InBoldItalic);
+	/** Choose which of each face's own metrics the line box is built from; texts using the font lay out again. */
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
+	void SetVerticalMetrics(EDreamUIFontVerticalMetrics InVerticalMetrics);
 protected:
 	/** Collection of UIText which use this font to render. */
 	UPROPERTY(VisibleAnywhere, Transient, Category = "DreamGUI")
@@ -282,6 +354,29 @@ public:
 	 */
 	void FlushGlyphAtlas();
 protected:
+	/**
+	 * A full atlas is not flushed in the middle of a frame's layouts: every glyph handed out earlier in the frame -- the
+	 * first glyphs of the text being laid out, every text laid out before it -- would point into an atlas that no longer
+	 * holds it until that text laid out again. The atlas grows one slice past its budget instead and asks for a flush,
+	 * which happens before the next frame hands out its first glyph (GetGlyphData).
+	 */
+	bool bAtlasFlushRequested = false;
+	uint64 AtlasFlushRequestFrame = 0;
+	/**
+	 * From a flush until the font has gone a frame with nothing on the worker: the glyphs the screen needs are coming back.
+	 * Running out of room in that time means they need more than the budget, and flushing again would only throw them
+	 * away to make them again the next frame, every frame. The threshold is raised to what they need instead, as Slate's
+	 * font atlas does, until the next flush.
+	 */
+	bool bAtlasRefilling = false;
+	uint64 AtlasFlushFrame = 0;
+	/** The slice count at which a full atlas asks for a flush; 0 means the setting's (UDreamUISettings::MaxFontAtlasSlices). */
+	int32 AtlasSliceThreshold = 0;
+	/** One warning per font when the threshold had to be raised. */
+	bool bLoggedAtlasThresholdRaise = false;
+	int32 GetAtlasSliceThreshold() const;
+	/** Out of room at the threshold: ask for a flush, or raise the threshold while the atlas is still refilling. */
+	void RequestAtlasFlush(int32 InSliceCount);
 	bool CopyFontTextureAtlasData(void* DestData, int64 DataSize) const;
 	virtual void InitializeFontTextureAtlasSlice(uint8* SliceData, int64 SliceDataSize) const;
 

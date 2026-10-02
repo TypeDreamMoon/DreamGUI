@@ -117,6 +117,19 @@ public:
 	UPROPERTY(config, EditAnywhere, Category = "Assets", meta = (AllowedClasses = "/Script/DreamGUIControls.DreamUIStyleSheet"))
 	TSoftObjectPtr<class UDataAsset> DefaultStyleSheet;
 
+	// ---------------------------------------------------------------- Text
+
+	/**
+	 * Darken small distance-field text, in the spirit of FreeType's stem darkening and Skia's text contrast: at 12 screen
+	 * pixels per em and below a glyph's stems grow by 0.4 px and its edges get a little more contrast, fading to nothing
+	 * at 24 pixels per em. A field's edge is a linear one-pixel ramp, which reads softer and lighter at those sizes than
+	 * the hinted bitmaps Slate and browsers draw. Larger text and the text effects (outline, glow, underlay) are drawn the
+	 * same either way. Applies to the built-in UI shader and to MF_DreamUI_Shade alike; a canvas takes a change when it
+	 * next rebuilds its draw calls.
+	 */
+	UPROPERTY(config, EditAnywhere, Category = "Text")
+	bool bSmallTextCorrection = true;
+
 
 	/**
 	 * Content folder the shipped control classes live in.

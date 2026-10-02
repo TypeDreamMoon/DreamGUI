@@ -32,7 +32,8 @@
 
 /**
  * FontAtlasInfo: xy atlas slice size in texels, z field range in texels (2 * spread), w texels per em
- * at the atlas's sample size. Only distance-field glyphs read it.
+ * at the atlas's sample size, negated when the font has the small-text correction off (see
+ * DreamUIText_ShadeField). Only distance-field glyphs read it.
  */
 float4 DreamUI_ShadePixel(float2 UV0, float2 UV1, float2 UV2, float2 UV3, float4 RawVertexColor, float3 LocalPosition,
 	Texture2D MainTex, SamplerState MainSampler, Texture2DArray FontTex, SamplerState FontSampler,

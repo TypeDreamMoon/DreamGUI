@@ -79,6 +79,15 @@ struct FDreamTextGlyphPaintStyle
 	float BoldDilateEm = 0.0f;
 };
 
+/** What a face is by design, as opposed to what the layout asks of it. */
+enum class EDreamUIFontFaceStyle : uint8
+{
+	None = 0,
+	Bold = 1 << 0,
+	Italic = 1 << 1,
+};
+ENUM_CLASS_FLAGS(EDreamUIFontFaceStyle);
+
 class UTexture2D;
 class UTexture2DArray;
 class UMaterialInterface;
@@ -101,14 +110,19 @@ public:
 	virtual bool HasKerning() { return false; }
 	/** Distance-field range of the atlas in texels (twice the spread); 0 for atlases that are not fields. */
 	virtual float GetAtlasFieldRangeTexels() const { return 0.0f; }
-	/** Texels per em at the size the atlas was rasterized at; 0 when not applicable. */
+	/**
+	 * Texels per em at the size the atlas was rasterized at; 0 when not applicable. Negative when the shader's small-text
+	 * correction is off for this font: the magnitude is still the size (see DreamUIText_ShadeField).
+	 */
 	virtual float GetAtlasEmTexels() const { return 0.0f; }
 
 	/**
 	 * Shaping interface. A font is a list of faces -- its own first, then its fallbacks in lookup
 	 * order -- and a shaped glyph names a face and a glyph index rather than a code point. A font
 	 * that cannot shape returns null from GetShapingFont, and layout falls back to one glyph per
-	 * code point through GetCharData.
+	 * code point through GetCharData. GetFaceCount counts that list only: a font's own bold, italic
+	 * and bold-italic faces have indices past it, reached through GetStyledFace, so a regular run
+	 * never falls back to a bold face.
 	 */
 	virtual int32 GetFaceCount() { return 1; }
 	/** Whether the face has a glyph for the code point: what decides which face a run is shaped with. */
@@ -144,6 +158,15 @@ public:
 		OutLineHeight = GetLineHeight(FontSize);
 		return true;
 	}
+	/** The face a run with this style should try first: the font's own bold, italic or bold-italic face when it has one, else 0 (the primary). */
+	virtual int32 GetStyledFace(bool bBold, bool bItalic) { return 0; }
+	/** Whether a face is itself bold and/or italic, so the layout does not embolden or slant it a second time. */
+	virtual EDreamUIFontFaceStyle GetFaceStyleFlags(int32 FaceIndex) { return EDreamUIFontFaceStyle::None; }
+	/**
+	 * Where the font puts its underline and strikethrough at this size, in pixels: positions are of the line's centre,
+	 * measured upwards from the baseline (an underline is negative), thicknesses are full heights. False when the face has no such data.
+	 */
+	virtual bool GetDecorationMetrics(int32 FaceIndex, float FontSize, float& OutUnderlinePosition, float& OutUnderlineThickness, float& OutStrikethroughPosition, float& OutStrikethroughThickness) { return false; }
 	virtual bool GetShouldAffectByPixelPerfect() { return true; }
 	virtual bool GetSupportDynamicPixelsPerUnit() { return false; }
 	virtual EDreamUIFontTextureMark GetFontTextureMark() { return EDreamUIFontTextureMark::None; }
@@ -172,6 +195,7 @@ public:
 	static UDreamUIFontData_BaseObject* GetDefaultFont();
 
 	virtual void PostInitProperties() override;
+	virtual void PostLoad() override;
 	virtual void BeginDestroy() override;
 #if WITH_EDITOR
 	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
@@ -193,4 +217,7 @@ protected:
 	 */
 	UPROPERTY(EditAnywhere, Category = "DreamGUI")
 	TArray<TObjectPtr<UMaterialInterface>> PresetMaterials;
+private:
+	/** Listen to EmojiData's changes, once, whichever emoji asset the font holds now. */
+	void BindEmojiData();
 };

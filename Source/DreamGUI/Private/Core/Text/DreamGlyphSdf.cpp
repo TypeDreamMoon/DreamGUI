@@ -24,6 +24,74 @@ namespace DreamGlyphSdfLocal
 	// Corners sharper than ~171 degrees are treated as corners when colouring edges.
 	constexpr double CornerAngleThreshold = 3.0;
 	constexpr int32 MaxSide = 4096;
+	// How far apart, in pixels at the sample size, the rows are that check a reoriented contour's fill.
+	constexpr double FillCheckRowPixels = 0.25;
+	// At most this many rows per contour: a contour taller than 256 sample pixels is checked more coarsely.
+	constexpr int32 MaxFillCheckRowsPerContour = 1024;
+
+	/**
+	 * Give inconsistently wound contours one winding, the way Slate does before it generates a field -- but only when that
+	 * leaves the glyph's fill alone. msdfgen's orientContours reads each contour's direction off the crossing order along a
+	 * scanline, which is the even-odd rule. FreeType, and every other renderer of a TrueType or CFF outline, fills by the
+	 * nonzero rule, under which contours may overlap: a composite accent over its base, a CJK stroke across another. There
+	 * orientContours can turn a correctly wound contour round, and the overlap becomes a hole (the ogonek of Roboto's
+	 * U+0105, a bar of DroidSansFallback's U+C624). Slate pairs it with Skia's overlap removal, which is not here. So the contours are
+	 * oriented on a copy, and the copy is kept only when it fills exactly what the original fills under the nonzero rule.
+	 * That can only change where a contour was turned round, so that is where it is checked: along rows a quarter of a
+	 * sample pixel apart, over each such contour's height. A glyph that only had a contour wound the wrong way, apart from
+	 * the others, keeps its fill and is repaired; one whose overlaps would change keeps its own winding.
+	 * Returns whether the shape was changed.
+	 */
+	bool OrientKeepingNonzeroFill(DreamMsdfgen::msdfgen::Shape& InOutShape, double UnitsPerPixel)
+	{
+		using namespace DreamMsdfgen;
+		msdfgen::Shape Oriented = InOutShape;
+		Oriented.orientContours();
+
+		// The rows across every contour orientContours turned round. Reversing a contour reverses its edge order, so its
+		// first edge is a different edge afterwards.
+		TArray<double> Rows;
+		const double Step = FillCheckRowPixels * UnitsPerPixel;
+		for (int32 ContourIndex = 0; ContourIndex < (int32)InOutShape.contours.size(); ContourIndex++)
+		{
+			const msdfgen::Contour& Before = InOutShape.contours[ContourIndex];
+			const msdfgen::Contour& After = Oriented.contours[ContourIndex];
+			if (Before.edges.empty() || After.edges.empty() || Before.edges.front()->point(.5) == After.edges.front()->point(.5))
+			{
+				continue;
+			}
+			double Left = 1e240, Bottom = 1e240, Right = -1e240, Top = -1e240;
+			Before.bound(Left, Bottom, Right, Top);
+			const int32 RowCount = FMath::Clamp((int32)FMath::CeilToDouble((Top - Bottom) / Step), 1, MaxFillCheckRowsPerContour);
+			const double RowStep = (Top - Bottom) / RowCount;
+			for (int32 Row = 0; Row < RowCount; Row++)
+			{
+				// Off the integer font units a vertex sits at, so no row runs exactly along one.
+				Rows.Add(Bottom + (Row + 0.5618) * RowStep);
+			}
+		}
+		if (Rows.Num() == 0)
+		{
+			return false;
+		}
+
+		const msdfgen::Shape::Bounds Bounds = InOutShape.getBounds();
+		const double XFrom = Bounds.l - 1.0;
+		const double XTo = Bounds.r + 1.0;
+		const double Tolerance = 0.01 * UnitsPerPixel;
+		msdfgen::Scanline BeforeLine, AfterLine;
+		for (const double Y : Rows)
+		{
+			InOutShape.scanline(BeforeLine, Y);
+			Oriented.scanline(AfterLine, Y);
+			if ((XTo - XFrom) - msdfgen::Scanline::overlap(BeforeLine, AfterLine, XFrom, XTo, msdfgen::FILL_NONZERO) > Tolerance)
+			{
+				return false;
+			}
+		}
+		InOutShape.contours.swap(Oriented.contours);
+		return true;
+	}
 }
 #endif
 
@@ -32,8 +100,6 @@ bool FDreamGlyphSdf::GenerateMTSDF(FT_FaceRec_* Face, uint32 GlyphIndex, float P
 #if !WITH_FREETYPE
 	return false;
 #else
-	using namespace DreamMsdfgen;
-	using namespace DreamGlyphSdfLocal;
 	Out = FDreamGlyphSdfResult();
 	if (Face == nullptr || PixelsPerEm <= 0.0f || Face->units_per_EM == 0)
 	{
@@ -47,8 +113,30 @@ bool FDreamGlyphSdf::GenerateMTSDF(FT_FaceRec_* Face, uint32 GlyphIndex, float P
 		return false;
 	}
 	const double Scale = (double)PixelsPerEm / (double)Face->units_per_EM;//pixels per font unit
-	Out.Advance = (float)(Face->glyph->metrics.horiAdvance * Scale) + (BoldPixels > 0.0f ? BoldPixels : 0.0f);
-	if (Face->glyph->outline.n_points <= 0)
+	const float Advance = (float)(Face->glyph->metrics.horiAdvance * Scale) + (BoldPixels > 0.0f ? BoldPixels : 0.0f);
+	const bool bGenerated = GenerateMTSDFFromOutline(&Face->glyph->outline, Scale, SpreadPixels, BoldPixels, Out);
+	if (bGenerated)
+	{
+		Out.Advance = Advance;
+	}
+	return bGenerated;
+#endif
+}
+
+bool FDreamGlyphSdf::GenerateMTSDFFromOutline(FT_Outline_* Outline, double UnitsToPixels, float SpreadPixels, float BoldPixels, FDreamGlyphSdfResult& Out)
+{
+#if !WITH_FREETYPE
+	return false;
+#else
+	using namespace DreamMsdfgen;
+	using namespace DreamGlyphSdfLocal;
+	Out = FDreamGlyphSdfResult();
+	if (Outline == nullptr || UnitsToPixels <= 0.0)
+	{
+		return false;
+	}
+	const double Scale = UnitsToPixels;
+	if (Outline->n_points <= 0)
 	{
 		// Space-like glyph: an advance and nothing to draw.
 		return true;
@@ -58,11 +146,11 @@ bool FDreamGlyphSdf::GenerateMTSDF(FT_FaceRec_* Face, uint32 GlyphIndex, float P
 		// The outline is unscaled, so its coordinates are plain font units and the strength is too:
 		// the 26.6 convention only applies to scaled outlines.
 		const double BoldUnits = BoldPixels / Scale;
-		FT_Outline_Embolden(&Face->glyph->outline, (FT_Pos)FMath::RoundToInt(BoldUnits));
+		FT_Outline_Embolden(Outline, (FT_Pos)FMath::RoundToInt(BoldUnits));
 	}
 
 	msdfgen::Shape Shape;
-	if (msdfgen::readFreetypeOutline(Shape, &Face->glyph->outline, 1.0) != 0 || Shape.contours.empty())
+	if (msdfgen::readFreetypeOutline(Shape, Outline, 1.0) != 0 || Shape.contours.empty())
 	{
 		return false;
 	}
@@ -75,7 +163,8 @@ bool FDreamGlyphSdf::GenerateMTSDF(FT_FaceRec_* Face, uint32 GlyphIndex, float P
 	{
 		return true;//degenerate outline: treat as empty
 	}
-	// An inverted outline (holes wound as fills) would produce an inside-out field; fix it.
+	// A glyph wound the other way round as a whole (PostScript outlines run counter-clockwise) would produce an inside-out
+	// field; checked from a point outside the glyph, as Slate does. Reversing every contour leaves the nonzero fill as it is.
 	{
 		const msdfgen::Point2 OuterPoint(Bounds.l - (Bounds.r - Bounds.l) - 1, Bounds.b - (Bounds.t - Bounds.b) - 1);
 		if (msdfgen::SimpleTrueShapeDistanceFinder::oneShotDistance(Shape, OuterPoint) > 0)
@@ -86,6 +175,9 @@ bool FDreamGlyphSdf::GenerateMTSDF(FT_FaceRec_* Face, uint32 GlyphIndex, float P
 			}
 		}
 	}
+	// Then contour by contour: a contour wound against the rest -- the dot of an i, say -- would otherwise be read as a
+	// hole in nothing and vanish from the field. Only where the fill stays what FreeType fills (see the helper).
+	OrientKeepingNonzeroFill(Shape, 1.0 / Scale);
 
 	const double SpreadUnits = SpreadPixels / Scale;
 	const double WidthPx = (Bounds.r - Bounds.l) * Scale + 2.0 * SpreadPixels;

@@ -16,7 +16,7 @@
 float4x4 DreamUI_MVP;
 /** x: gamma curve adjustment, y: inverse display gamma, z: unused, w: unused */
 float4 DreamUI_GammaValues;
-/** xy: atlas slice size in texels, z: field range in texels (2 * spread), w: texels per em at the sample size */
+/** xy: atlas slice size in texels, z: field range in texels (2 * spread), w: texels per em at the sample size, negative when the small-text correction is off */
 float4 DreamUI_FontAtlasInfo;
 Texture2D DreamUI_MainTex;
 SamplerState DreamUI_MainTexSampler;

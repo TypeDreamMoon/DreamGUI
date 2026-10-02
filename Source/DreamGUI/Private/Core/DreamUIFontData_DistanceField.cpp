@@ -1,6 +1,7 @@
 ﻿// Copyright 2019-present LexLiu. All Rights Reserved.
 
 #include "Core/DreamUIFontData_DistanceField.h"
+#include "DreamGUI.h"
 #include "Core/DreamGUISettings.h"
 #include "Core/Components/DreamText.h"
 #include "Materials/MaterialInterface.h"
@@ -274,6 +275,13 @@ UMaterialInterface* UDreamUIFontData_DistanceField::GetFontMaterial()
 	return nullptr;
 }
 
+float UDreamUIFontData_DistanceField::GetAtlasEmTexels() const
+{
+	// The shader's small-text correction is switched by the sign: FontAtlasInfo has no fifth component, and the built-in
+	// shader and MF_DreamUI_Shade both take this one as it is (DreamUIText.ush reads its magnitude).
+	return UDreamGUISettings::Get()->bSmallTextCorrection ? (float)SampleFontSize : -(float)SampleFontSize;
+}
+
 #if WITH_EDITOR
 void UDreamUIFontData_DistanceField::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
 {
@@ -291,12 +299,18 @@ void UDreamUIFontData_DistanceField::Serialize(FArchive& Ar)
 {
 	Ar.UsingCustomVersion(FDreamGUIObjectVersion::GUID);
 	Super::Serialize(Ar);
-	// Assets saved before the outline field existed were authored against the bitmap one -- and
-	// against a material that samples one channel -- so they keep it until someone switches them.
-	if (Ar.IsLoading() && Ar.CustomVer(FDreamGUIObjectVersion::GUID) < FDreamGUIObjectVersion::SdfSourceOnFont)
+	// Assets saved before the outline field existed have no SdfSource, so they take the class default, the outline field.
+	// They used to be moved to the bitmap-derived field here instead, which is what rounded the corners of every such
+	// font: one channel cannot hold a sharp corner. The shader decodes both kinds the same way, so nothing an old asset was
+	// authored against needs the old field. The warning is said once per load of such a package, and only for a package
+	// (a persistent archive). An in-memory copy never gets here as old anyway: a loading archive with no versions of its
+	// own reads with the versions registered now.
+#if WITH_EDITOR
+	if (Ar.IsLoading() && Ar.IsPersistent() && Ar.CustomVer(FDreamGUIObjectVersion::GUID) < FDreamGUIObjectVersion::SdfSourceOnFont)
 	{
-		SdfSource = EDreamUISdfSource::BitmapSingleChannel;
+		UE_LOG(DreamGUI, Warning, TEXT("Font %s was saved before distance-field fonts chose their field. It now uses the multi-channel field from the glyph outlines (Sdf Source: Outline Multi Channel), which keeps corners sharp; resave it to keep that."), *GetPathName());
 	}
+#endif
 	// Bold used to be FreeType's embolden at 0.08 em, chosen when the atlas baked it. As a field
 	// dilation the same growth is a blob on CJK glyphs, so a font still on that old default moves to
 	// the new one; a value someone set on purpose is kept.

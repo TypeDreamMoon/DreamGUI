@@ -33,16 +33,33 @@ UDreamUIFontData_BaseObject* UDreamUIFontData_BaseObject::GetDefaultFont()
 	return defaultFont;
 }
 
-void UDreamUIFontData_BaseObject::PostInitProperties()
+void UDreamUIFontData_BaseObject::BindEmojiData()
 {
-	UObject::PostInitProperties();
 	if (IsValid(EmojiData))
 	{
+		// Unbound first: a font that is bound here and again on load (or again by an edit) would
+		// otherwise refresh its texts once per binding.
+		EmojiData->OnDataChange.RemoveAll(this);
 		EmojiData->OnDataChange.AddWeakLambda(this, [this]()
 		{
 			OnEmojiDataChanged.Broadcast();
 		});
 	}
+}
+
+void UDreamUIFontData_BaseObject::PostInitProperties()
+{
+	UObject::PostInitProperties();
+	BindEmojiData();
+}
+
+void UDreamUIFontData_BaseObject::PostLoad()
+{
+	UObject::PostLoad();
+	// PostInitProperties runs before a loaded asset's properties are read, so for every font that came
+	// from disk EmojiData was still empty there and nothing was bound: editing the emoji asset never
+	// refreshed a text. Here the property holds what was saved.
+	BindEmojiData();
 }
 
 void UDreamUIFontData_BaseObject::BeginDestroy()
@@ -61,13 +78,7 @@ void UDreamUIFontData_BaseObject::PostEditChangeProperty(FPropertyChangedEvent& 
 	auto PropertyName = PropertyChangedEvent.GetMemberPropertyName();
 	if (PropertyName == GET_MEMBER_NAME_CHECKED(UDreamUIFontData_BaseObject, EmojiData))
 	{
-		if (IsValid(EmojiData))
-		{
-			EmojiData->OnDataChange.AddWeakLambda(this, [this]()
-			{
-				OnEmojiDataChanged.Broadcast();
-			});
-		}
+		BindEmojiData();
 		OnEmojiDataChanged.Broadcast();
 	}
 }
