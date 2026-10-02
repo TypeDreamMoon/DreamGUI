@@ -22,7 +22,9 @@
 #include "Interaction/DreamUIActionRouter.h"
 #include "Interaction/DreamUINavigationScroll.h"
 #include "Layout/WidgetPath.h"
+#include "UnrealClient.h"
 #include "Widgets/SViewport.h"
+#include "Widgets/SWindow.h"
 
 namespace DreamUISlateInputSourceLocal
 {
@@ -50,12 +52,45 @@ namespace DreamUISlateInputSourceLocal
 		Module->GetMousePosition(OutPosition);
 		return true;
 	}
+
+	/**
+	 * The mouse gone from what this world's UI answers for: its pointer is put over nothing -- (-1,-1), where
+	 * FSceneViewport parks a cursor that has left it -- and what it was over is left. Not while a virtual cursor stands
+	 * in for it, which is where it is, nor while the pointer navigates, which traces nothing there.
+	 */
+	void ParkMouseOffTheViewport(UDreamUIInputUser* InUser)
+	{
+		const FVector OffTheViewport(-1.0, -1.0, 0.0);
+		const UDreamPointerEventData* Mouse = InUser->FindPointerEventData(DreamUIPointerIds::Mouse);
+		FVector2D VirtualCursor = FVector2D::ZeroVector;
+		if (Mouse == nullptr || Mouse->InputType != EDreamUIPointerInputType::Pointer || FindVirtualCursor(InUser, VirtualCursor)
+			|| Mouse->PointerPosition.Equals(OffTheViewport))
+		{
+			return;//not the mouse's to move, or over nothing already
+		}
+		InUser->MovePointer(DreamUIPointerIds::Mouse, OffTheViewport);
+	}
 }
 
 FDreamUISlateInputSource::FDreamUISlateInputSource(UDreamUIInputSubsystem* InSubsystem)
 	: Subsystem(InSubsystem)
 	, ConsumePolicy(GetDefault<UDreamGUISettings>()->SlateInputConsumePolicy)
 {
+	// Heard from the start, registered with Slate or not: what it lets go of is what this source holds, not input it
+	// hears.
+	if (FSlateApplication::IsInitialized())
+	{
+		ActivationChangedHandle = FSlateApplication::Get().OnApplicationActivationStateChanged().AddRaw(
+			this, &FDreamUISlateInputSource::HandleApplicationActivationStateChanged);
+	}
+}
+
+FDreamUISlateInputSource::~FDreamUISlateInputSource()
+{
+	if (ActivationChangedHandle.IsValid() && FSlateApplication::IsInitialized())
+	{
+		FSlateApplication::Get().OnApplicationActivationStateChanged().Remove(ActivationChangedHandle);
+	}
 }
 
 void FDreamUISlateInputSource::SetViewportMapperForTesting(TFunction<bool(const FVector2D&, FVector2D&)> InMapper)
@@ -68,25 +103,126 @@ void FDreamUISlateInputSource::SetUserMapperForTesting(TFunction<int32(int32)> I
 	UserMapper = MoveTemp(InMapper);
 }
 
+void FDreamUISlateInputSource::SetCoverMapperForTesting(TFunction<bool(const FVector2D&)> InMapper)
+{
+	CoverMapper = MoveTemp(InMapper);
+}
+
+void FDreamUISlateInputSource::SetKeyboardFocusMapperForTesting(TFunction<bool(int32)> InMapper)
+{
+	KeyboardFocusMapper = MoveTemp(InMapper);
+}
+
+void FDreamUISlateInputSource::SetCursorOnViewportMapperForTesting(TFunction<bool()> InMapper)
+{
+	CursorOnViewportMapper = MoveTemp(InMapper);
+}
+
+void FDreamUISlateInputSource::FollowCursorOffViewport(int32 InMouseSlateUserIndex)
+{
+	UDreamUIInputSubsystem* Input = Subsystem.Get();
+	if (Input == nullptr || DreamUIKeyRouting::IsInputSuspendedByGamePause(GetWorld()))
+	{
+		return;
+	}
+	// Only a player the mouse has moved for already: one with no input yet has no pointer to put anywhere.
+	const int32 UserIndex = FindUserIndex(InMouseSlateUserIndex);
+	UDreamUIInputUser* User = UserIndex != INDEX_NONE ? Input->GetUser(UserIndex) : nullptr;
+	if (User == nullptr || IsCursorOnViewport())
+	{
+		return;
+	}
+	// A press held is followed wherever the mouse goes, as a move off the viewport follows it: its release is still coming.
+	const UDreamPointerEventData* Mouse = User->FindPointerEventData(DreamUIPointerIds::Mouse);
+	if (Mouse == nullptr || Mouse->bNowIsTriggerPressed
+		|| HeldPresses.Contains(TPair<int32, int32>(User->GetUserIndex(), DreamUIPointerIds::Mouse)))
+	{
+		return;
+	}
+	DreamUISlateInputSourceLocal::ParkMouseOffTheViewport(User);
+}
+
+bool FDreamUISlateInputSource::IsCursorOnViewport() const
+{
+	if (CursorOnViewportMapper)
+	{
+		return CursorOnViewportMapper();
+	}
+	if (ViewportMapper)
+	{
+		return true;//a test's world has no viewport for the cursor to leave
+	}
+	const UWorld* World = GetWorld();
+	const UGameViewportClient* Client = World != nullptr ? World->GetGameViewport() : nullptr;
+	FViewport* Viewport = Client != nullptr ? Client->Viewport : nullptr;
+	if (Viewport == nullptr)
+	{
+		return true;//nothing says the cursor has gone
+	}
+	// FSceneViewport's cached cursor, in its pixels: (-1,-1) once the cursor has left it, whether or not a move said so.
+	FIntPoint Cursor;
+	Viewport->GetMousePos(Cursor, /*bLocalPosition*/ true);
+	const FIntPoint Size = Viewport->GetSizeXY();
+	return Cursor.X >= 0 && Cursor.Y >= 0 && Cursor.X < Size.X && Cursor.Y < Size.Y;
+}
+
+void FDreamUISlateInputSource::HandleApplicationActivationStateChanged(bool bInIsActive)
+{
+	if (bInIsActive)
+	{
+		return;
+	}
+	// Taken first: letting go runs game code, and a press it makes is the next one, not one of these.
+	const TSet<TPair<int32, int32>> Presses = MoveTemp(HeldPresses);
+	const TSet<TPair<int32, FKey>> Keys = MoveTemp(RoutedKeys);
+	HeldPresses.Reset();
+	RoutedKeys.Reset();
+	ConsumedPresses.Reset();
+	ConsumedKeys.Reset();
+	// A stick still tilted is at rest as far as this application will hear: nothing more of it comes.
+	RightSticks.Reset();
+	UDreamUIInputSubsystem* Input = Subsystem.Get();
+	if (Input == nullptr)
+	{
+		return;
+	}
+	for (const TPair<int32, int32>& Press : Presses)
+	{
+		UDreamUIInputUser* User = Input->GetUser(Press.Key);
+		if (User == nullptr)
+		{
+			continue;
+		}
+		// The up, and no click and no drop: nothing was let go of over anything here.
+		User->CancelPointerPress(Press.Value);
+		if (Press.Value != DreamUIPointerIds::Mouse)
+		{
+			User->RetirePointer(Press.Value);//a finger lifted elsewhere is gone, as a lifted finger is
+		}
+	}
+	for (const TPair<int32, FKey>& Key : Keys)
+	{
+		if (UDreamUIInputUser* User = Input->GetUser(Key.Key))
+		{
+			DreamUIKeyRouting::AbandonKeyPress(User, Key.Value);
+		}
+	}
+}
+
 UWorld* FDreamUISlateInputSource::GetWorld() const
 {
 	const UDreamUIInputSubsystem* Input = Subsystem.Get();
 	return Input != nullptr ? Input->GetWorld() : nullptr;
 }
 
-UDreamUIInputUser* FDreamUISlateInputSource::FindUser(int32 InSlateUserIndex) const
+int32 FDreamUISlateInputSource::FindUserIndex(int32 InSlateUserIndex) const
 {
-	UDreamUIInputSubsystem* Input = Subsystem.Get();
-	if (Input == nullptr)
-	{
-		return nullptr;
-	}
-	int32 UserIndex = INDEX_NONE;
 	if (UserMapper)
 	{
-		UserIndex = UserMapper(InSlateUserIndex);
+		return UserMapper(InSlateUserIndex);
 	}
-	else if (const UWorld* World = GetWorld(); World != nullptr && World->GetGameInstance() != nullptr)
+	int32 UserIndex = INDEX_NONE;
+	if (const UWorld* World = GetWorld(); World != nullptr && World->GetGameInstance() != nullptr)
 	{
 		const TArray<ULocalPlayer*>& LocalPlayers = World->GetGameInstance()->GetLocalPlayers();
 		for (int32 Index = 0; Index < LocalPlayers.Num(); ++Index)
@@ -106,6 +242,17 @@ UDreamUIInputUser* FDreamUISlateInputSource::FindUser(int32 InSlateUserIndex) co
 			UserIndex = 0;
 		}
 	}
+	return UserIndex;
+}
+
+UDreamUIInputUser* FDreamUISlateInputSource::FindUser(int32 InSlateUserIndex) const
+{
+	UDreamUIInputSubsystem* Input = Subsystem.Get();
+	if (Input == nullptr)
+	{
+		return nullptr;
+	}
+	const int32 UserIndex = FindUserIndex(InSlateUserIndex);
 	return UserIndex != INDEX_NONE ? Input->GetOrCreateUser(UserIndex) : nullptr;
 }
 
@@ -131,8 +278,38 @@ bool FDreamUISlateInputSource::MapToViewport(const FVector2D& InScreen, FVector2
 	return true;
 }
 
+bool FDreamUISlateInputSource::IsCoveredBySlate(const FVector2D& InScreen, int32 InSlateUserIndex) const
+{
+	if (CoverMapper)
+	{
+		return CoverMapper(InScreen);
+	}
+	if (ViewportMapper || !FSlateApplication::IsInitialized())
+	{
+		return false;//a test's world has no viewport for anything to be drawn over
+	}
+	const UWorld* World = GetWorld();
+	UGameViewportClient* Client = World != nullptr ? World->GetGameViewport() : nullptr;
+	const TSharedPtr<SViewport> Viewport = Client != nullptr ? Client->GetGameViewportWidget() : nullptr;
+	if (!Viewport.IsValid())
+	{
+		return false;
+	}
+	// Slate's own hit test, the one it routes this very event by: the deepest widget that takes a pointer there. The
+	// layers the viewport and UMG stack over the scene are hit-test invisible where nothing is drawn -- the layer
+	// manager's panels, the debug canvas, an editor viewport's border -- so over bare viewport that is the viewport
+	// itself. Anything else is what the pointer is over: a UMG widget, or another window on top.
+	FSlateApplication& SlateApp = FSlateApplication::Get();
+	const FWidgetPath Path = SlateApp.LocateWindowUnderMouse(InScreen, SlateApp.GetInteractiveTopLevelWindows(), false, InSlateUserIndex);
+	return !Path.IsValid() || &Path.GetLastWidget().Get() != static_cast<SWidget*>(Viewport.Get());
+}
+
 bool FDreamUISlateInputSource::IsKeyForThisWorld(FSlateApplication& SlateApp, const FKeyEvent& InKeyEvent) const
 {
+	if (KeyboardFocusMapper)
+	{
+		return KeyboardFocusMapper(InKeyEvent.GetUserIndex());
+	}
 	if (ViewportMapper)
 	{
 		return true;//a test's world has no viewport to hold the focus
@@ -141,17 +318,10 @@ bool FDreamUISlateInputSource::IsKeyForThisWorld(FSlateApplication& SlateApp, co
 	UGameViewportClient* Client = World != nullptr ? World->GetGameViewport() : nullptr;
 	const TSharedPtr<SViewport> Viewport = Client != nullptr ? Client->GetGameViewportWidget() : nullptr;
 	const TSharedPtr<SWidget> Focused = SlateApp.GetUserFocusedWidget(InKeyEvent.GetUserIndex());
-	if (!Viewport.IsValid() || !Focused.IsValid())
-	{
-		return false;
-	}
-	if (Focused.Get() == static_cast<SWidget*>(Viewport.Get()))
-	{
-		return true;
-	}
-	// Inside it: a UMG widget in the viewport's overlay holding the focus in a UI-only mode is this world's too.
-	FWidgetPath Path;
-	return SlateApp.FindPathToWidget(Focused.ToSharedRef(), Path) && Path.ContainsWidget(Viewport.Get());
+	// The viewport itself, as Slate routes a key: to the focused widget, so a UMG widget focused in the viewport's
+	// overlay -- a text box being typed into -- has the key before the viewport hears of it. An input mode that names
+	// no widget to focus focuses the viewport.
+	return Viewport.IsValid() && Focused.IsValid() && Focused.Get() == static_cast<SWidget*>(Viewport.Get());
 }
 
 int32 FDreamUISlateInputSource::PointerIDFor(const FPointerEvent& InEvent)
@@ -208,12 +378,18 @@ bool FDreamUISlateInputSource::HandleMouseMoveEvent(FSlateApplication& SlateApp,
 	{
 		return false;
 	}
-	// A pointer held down is followed off the viewport too, as the viewport's own capture follows it: a drag dragged
-	// past the edge is still that drag.
+	// A pointer held down is followed off the viewport too, and over UMG, as the viewport's own capture follows it: a
+	// drag dragged past the edge is still that drag.
 	const UDreamPointerEventData* Existing = User->FindPointerEventData(PointerID);
 	const bool bHeld = Existing != nullptr && Existing->bNowIsTriggerPressed;
-	if (!bInside && !bHeld)
+	if (!bHeld && (!bInside || IsCoveredBySlate(MouseEvent.GetScreenSpacePosition(), MouseEvent.GetUserIndex())))
 	{
+		// Gone from this world's UI -- off the viewport, or onto a widget drawn over it -- the mouse is over none of it.
+		// Left where it last was, its pointer kept hovering the widget at the edge it went out by.
+		if (PointerID == DreamUIPointerIds::Mouse)
+		{
+			DreamUISlateInputSourceLocal::ParkMouseOffTheViewport(User);
+		}
 		return false;
 	}
 	if (PointerID == DreamUIPointerIds::Mouse && !FollowsTheMouse(User))
@@ -239,6 +415,12 @@ bool FDreamUISlateInputSource::HandlePress(const FPointerEvent& InEvent, bool bI
 	{
 		return false;//a button the pointer pipeline has no name for
 	}
+	// A release goes where its press went -- and nowhere, for a press this source did not queue: one a UMG widget drawn
+	// over the viewport took is that widget's, release and all.
+	if (!bInPressed && !HeldPresses.Contains(PressKey))
+	{
+		return false;
+	}
 	FVector2D Pixel;
 	bool bInside = false;
 	if (!MapToViewport(InEvent.GetScreenSpacePosition(), Pixel, bInside))
@@ -251,7 +433,8 @@ bool FDreamUISlateInputSource::HandlePress(const FPointerEvent& InEvent, bool bI
 	const bool bAtVirtualCursor = PointerID == DreamUIPointerIds::Mouse && FindVirtualCursor(User, VirtualCursor);
 	if (bInPressed)
 	{
-		if (!bInside || DreamUIKeyRouting::IsInputSuspendedByGamePause(GetWorld()))
+		if (!bInside || DreamUIKeyRouting::IsInputSuspendedByGamePause(GetWorld())
+			|| IsCoveredBySlate(InEvent.GetScreenSpacePosition(), InEvent.GetUserIndex()))
 		{
 			return false;
 		}
@@ -265,6 +448,7 @@ bool FDreamUISlateInputSource::HandlePress(const FPointerEvent& InEvent, bool bI
 		}
 		User->ReportInputDevice(UDreamEventSystem::GetInputDeviceForKey(InEvent.IsTouchEvent() ? EKeys::TouchKeys[0] : InEvent.GetEffectingButton()));
 		User->QueuePointerButton(PointerID, FVector(Pixel, 0.0), true, Button, InEvent.IsTouchEvent());
+		HeldPresses.Add(PressKey);
 		const bool bConsume = WouldConsumePress(User, PointerID);
 		if (bConsume)
 		{
@@ -272,7 +456,8 @@ bool FDreamUISlateInputSource::HandlePress(const FPointerEvent& InEvent, bool bI
 		}
 		return bConsume;
 	}
-	// A release goes where its press went, on the viewport or off it -- and is kept from the game when its press was.
+	// On the viewport or off it -- and kept from the game when its press was.
+	HeldPresses.Remove(PressKey);
 	if (bAtVirtualCursor)
 	{
 		Pixel = VirtualCursor;
@@ -311,7 +496,8 @@ bool FDreamUISlateInputSource::HandleMouseWheelOrGestureEvent(FSlateApplication&
 	}
 	FVector2D Pixel;
 	bool bInside = false;
-	if (!MapToViewport(InWheelEvent.GetScreenSpacePosition(), Pixel, bInside) || !bInside)
+	if (!MapToViewport(InWheelEvent.GetScreenSpacePosition(), Pixel, bInside) || !bInside
+		|| IsCoveredBySlate(InWheelEvent.GetScreenSpacePosition(), InWheelEvent.GetUserIndex()))
 	{
 		return false;
 	}
@@ -333,7 +519,12 @@ bool FDreamUISlateInputSource::HandleKeyDownEvent(FSlateApplication& SlateApp, c
 	if (InKeyEvent.IsRepeat())
 	{
 		// A held key repeats for typing only: the navigation cursor repeats on its own clock, and a binding fires on
-		// the press. Kept from the game as its press was.
+		// the press. Kept from the game as its press was -- and not heard at all when its press was not, which a UMG
+		// widget holding the focus took.
+		if (!RoutedKeys.Contains(KeyOfUser))
+		{
+			return false;
+		}
 		const bool bTyped = DreamUIKeyRouting::RouteTextKey(User, Key, true, InKeyEvent.GetModifierKeys());
 		return bTyped || ConsumedKeys.Contains(KeyOfUser);
 	}
@@ -397,6 +588,7 @@ bool FDreamUISlateInputSource::HandleAnalogInputEvent(FSlateApplication& SlateAp
 void FDreamUISlateInputSource::Tick(const float DeltaTime, FSlateApplication& SlateApp, TSharedRef<ICursor> Cursor)
 {
 	using namespace DreamUISlateInputSourceLocal;
+	FollowCursorOffViewport(SlateApp.GetUserIndexForMouse());
 	UDreamUIInputSubsystem* Input = Subsystem.Get();
 	if (Input == nullptr || RightSticks.Num() == 0 || DreamUIKeyRouting::IsInputSuspendedByGamePause(GetWorld()))
 	{

@@ -9,17 +9,48 @@
 #include "Event/DreamEventSystem.h"
 #include "Event/DreamUIInputUser.h"
 #include "Event/DreamBaseRaycaster.h"
+#include "Event/Interface/DreamPointerClickInterface.h"
 #include "Event/Interface/DreamPointerSelectDeselectInterface.h"
 #include "Interaction/DreamDragDropOperation.h"
 #include "GameFramework/PlayerController.h"
 #include "Components/PrimitiveComponent.h"
 #include "Event/DreamGestureEventData.h"
 
+namespace DreamPointerInputModuleLocal
+{
+	/**
+	 * Whether the pointer is over what its press would click: the nearest widget at or above the pressed one that answers
+	 * a click -- the pressed widget itself when none does -- or anything inside it. A click is a press and a release both
+	 * on the thing clicked: SButton::OnMouseButtonUp clicks only while the button IsHovered, the pointer on the button or
+	 * on anything in it. A press let go of over something else -- or over something opened on top of it, a context menu
+	 * a long press opened -- ends with its up and no click.
+	 */
+	bool IsPointerOverPressTarget(const UDreamPointerEventData* InEventData)
+	{
+		UDreamWidget* PressWidget = InEventData->PressWidget;
+		const UDreamWidget* Over = InEventData->EnterWidget;
+		if (!IsValid(PressWidget) || !IsValid(Over))
+		{
+			return false;
+		}
+		const UDreamWidget* ClickTarget = UDreamPointerInputModule::GetEventHandle(PressWidget, UDreamPointerClickInterface::StaticClass());
+		if (ClickTarget == nullptr)
+		{
+			ClickTarget = PressWidget;
+		}
+		return Over == ClickTarget || Over->IsChildOf(ClickTarget);
+	}
+}
+
 void UDreamPointerInputModule::ApplyHoverCursor(UDreamUIInputUser* InUser, UDreamPointerEventData* EventData)
 {
 	// In a pointer-driven UI the cursor is not decoration; it is how a player learns what is grabbable and what
 	// will accept a drop.
 	if (InUser == nullptr || EventData == nullptr)return;
+	// The hardware cursor is the mouse's, and only the mouse's pointer moves it. A finger, a second laser or a script's
+	// pointer leaving what it was over says nothing about where the mouse is, and gave away the cursor the widget under
+	// the mouse had claimed.
+	if (EventData->PointerID != DreamUIPointerIds::Mouse)return;
 	EMouseCursor::Type Resolved = EMouseCursor::Default;
 	// EnterWidgetStack runs outermost-first, and the innermost claim should win.
 	TArray<UDreamWidget*, TInlineAllocator<8>> InnermostFirst;
@@ -390,6 +421,21 @@ void UDreamPointerInputModule::ProcessPointerEvent(UDreamUIInputUser* InUser, UD
 		}
 		else//trigger press but not dragging, only concern if trigger drag event
 		{
+			// A navigation press belongs to what the highlight was on when the confirm went down. A step that takes the
+			// highlight off it with the confirm still held ends the press there, with its up and no click -- SButton
+			// lets go of a press when it loses the focus (SButton::OnFocusLost) -- rather than leaving it for the
+			// release to click, over whatever the highlight is on by then.
+			if (EventData->InputType == EDreamUIPointerInputType::Navigation && IsValid(EventData->PressWidget)
+				&& !DreamPointerInputModuleLocal::IsPointerOverPressTarget(EventData))
+			{
+				UDreamWidget* LeftPressWidget = EventData->PressWidget;
+				EventData->PressWidget = nullptr;
+				if (!EventData->bIsUpFiredAtCurrentFrame)
+				{
+					EventData->bIsUpFiredAtCurrentFrame = true;
+					InUser->CallOnPointerUp(LeftPressWidget, EventData);
+				}
+			}
 			if (IsValid(EventData->PressWidget))//if hit something when press
 			{
 				if (IsValid(EventData->PressRaycaster))
@@ -544,9 +590,10 @@ void UDreamPointerInputModule::ProcessPointerEvent(UDreamUIInputUser* InUser, UD
 						EventData->bIsUpFiredAtCurrentFrame = true;
 						InUser->CallOnPointerUp(EventData->PressWidget, EventData);
 					}
-					// The click this press ends in. Its place in the run was settled at the press; the release records
-					// which widget the run's last click landed on and when.
-					if (IsValid(EventData->PressWidget))
+					// The click this press ends in, when it is let go of over what it pressed (IsPointerOverPressTarget).
+					// Its place in the run was settled at the press; the release records which widget the run's last
+					// click landed on and when.
+					if (IsValid(EventData->PressWidget) && DreamPointerInputModuleLocal::IsPointerOverPressTarget(EventData))
 					{
 						EventData->LastClickWidget = EventData->PressWidget;
 						EventData->LastClickMouseButtonType = EventData->MouseButtonType;
@@ -559,8 +606,13 @@ void UDreamPointerInputModule::ProcessPointerEvent(UDreamUIInputUser* InUser, UD
 					EventData->PressWidget = nullptr;
 				}
 			}
-			// A press that landed on an actor is let go as a widget's is, wherever the pointer is now.
-			ReleaseWorldTarget(InUser, EventData, /*bInClick*/ true);
+			// A press that landed on an actor is let go as a widget's is: its up wherever the pointer is now, and its click
+			// only when the pointer is over that actor still (IsPointerOverPressTarget's rule). Read before the release
+			// forgets the press. A release made over nothing -- or while a pause has the raycasters tracing nothing --
+			// clicked the actor pressed before it.
+			AActor* const PressedActor = InUser->GetPressedWorldTarget(EventData->PointerID);
+			const bool bOverPressedActor = PressedActor != nullptr && PressedActor == InUser->GetHoveredWorldTarget(EventData->PointerID);
+			ReleaseWorldTarget(InUser, EventData, bOverPressedActor);
 		}
 	}
 
@@ -570,6 +622,9 @@ void UDreamPointerInputModule::ProcessPointerEvent(UDreamUIInputUser* InUser, UD
 void UDreamPointerInputModule::DetectSwipeGesture(UDreamUIInputUser* InUser, UDreamPointerEventData* EventData)
 {
 	if (InUser == nullptr || EventData == nullptr)return;
+	// A navigation confirm travels nowhere. The pointer it is pressed on is the mouse's too, and where the mouse rests
+	// is no part of the press.
+	if (EventData->InputType == EDreamUIPointerInputType::Navigation)return;
 	const float MinDistance = InUser->GetConfig().SwipeMinDistance;
 	const float MaxDuration = InUser->GetConfig().SwipeMaxDuration;
 	if (MinDistance <= 0.0f || MaxDuration <= 0.0f)return;//either one at zero turns swipes off

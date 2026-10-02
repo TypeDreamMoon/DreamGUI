@@ -491,14 +491,70 @@ void UDreamWidget::CalculateWidgetActive_Recursive()
 	}
 }
 
+namespace DreamWidgetFocusReleaseLocal
+{
+	/**
+	 * Take every player's focus off a widget at InRoot or inside it that is no longer drawn or no longer interactable.
+	 * Focus is refused to such a widget (UDreamWidget::SetFocus) and taken from one made unfocusable
+	 * (SetIsFocusable), but one hidden or disabled while it held the focus -- itself, or by an ancestor -- kept it,
+	 * and went on hearing its player's keys under whatever was drawn in front. Slate takes the focus from a widget
+	 * that is hidden or disabled; so does this. Called once a walk under InRoot has hidden or disabled something, and
+	 * asks one question per player before looking further, so a walk that touches nobody's focus costs no more.
+	 */
+	void ReleaseFocusThatCannotStay(UDreamWidget* InRoot)
+	{
+		if (!IsValid(InRoot) || (!InRoot->HasAnyUserFocus() && !InRoot->HasFocusedDescendants()))
+		{
+			return;
+		}
+		// As many players as the any-player focus queries count: at least player 0, outside a game instance too.
+		const UGameInstance* GameInstance = InRoot->GetGameInstance();
+		const int32 PlayerCount = GameInstance != nullptr ? FMath::Max(GameInstance->GetNumLocalPlayers(), 1) : 1;
+		// Gathered before any is let go of: letting go runs the deselect handlers, which are free to change this tree.
+		TArray<TPair<TWeakObjectPtr<UDreamWidget>, int32>, TInlineAllocator<2>> Holders;
+		TArray<UDreamWidget*, TInlineAllocator<32>> Walk;
+		Walk.Add(InRoot);
+		for (int32 WalkIndex = 0; WalkIndex < Walk.Num(); ++WalkIndex)
+		{
+			UDreamWidget* Widget = Walk[WalkIndex];
+			if (!Widget->GetRenderVisibleInHierarchy() || !Widget->GetInteractableInHierarchy())
+			{
+				for (int32 UserIndex = 0; UserIndex < PlayerCount; ++UserIndex)
+				{
+					if (Widget->HasFocus(UserIndex))
+					{
+						Holders.Emplace(Widget, UserIndex);
+					}
+				}
+			}
+			for (UDreamWidget* Child : Widget->GetChildren())
+			{
+				if (IsValid(Child))
+				{
+					Walk.Add(Child);
+				}
+			}
+		}
+		for (const TPair<TWeakObjectPtr<UDreamWidget>, int32>& Holder : Holders)
+		{
+			if (UDreamWidget* Widget = Holder.Key.Get())
+			{
+				Widget->ClearFocus(Holder.Value);
+			}
+		}
+	}
+}
+
 void UDreamWidget::CalculateVisibility_Recursive()
 {
 	UDreamUIManagerWorldSubsystem::BumpHitTestGenerationFor(this);
 	/** The same hoist as in CalculateWidgetActive_Recursive, and for the same reason. */
 	bool bAnyLayoutVisibilityChanged = false;
+	/** Whether the walk stopped drawing anything: what may have held a player's focus. */
+	bool bAnyStoppedRendering = false;
 	struct FVisibilityCalculator
 	{
-		static void Calculate(UDreamWidget* Widget, bool& bOutAnyLayoutChanged)
+		static void Calculate(UDreamWidget* Widget, bool& bOutAnyLayoutChanged, bool& bOutAnyStoppedRendering)
 		{
 			const bool bParentLayoutVisible = !Widget->Parent.IsValid() || Widget->Parent->bCacheLayoutVisibleInHierarchy;
 			const bool bParentRenderVisible = !Widget->Parent.IsValid() || Widget->Parent->bCacheRenderVisibleInHierarchy;
@@ -546,17 +602,21 @@ void UDreamWidget::CalculateVisibility_Recursive()
 			{
 				Widget->MarkCanvasUpdate(true);
 			}
+			if (bRenderChanged && !bNewRenderVisible)
+			{
+				bOutAnyStoppedRendering = true;
+			}
 
 			for (UDreamWidget* Child : Widget->GetChildren())
 			{
 				if (IsValid(Child))
 				{
-					Calculate(Child, bOutAnyLayoutChanged);
+					Calculate(Child, bOutAnyLayoutChanged, bOutAnyStoppedRendering);
 				}
 			}
 		}
 	};
-	FVisibilityCalculator::Calculate(this, bAnyLayoutVisibilityChanged);
+	FVisibilityCalculator::Calculate(this, bAnyLayoutVisibilityChanged, bAnyStoppedRendering);
 	if (bAnyLayoutVisibilityChanged)
 	{
 		if (UDreamUIManagerWorldSubsystem* DreamUIManager = UDreamUIManagerWorldSubsystem::GetInstance(GetWorld()))
@@ -564,13 +624,20 @@ void UDreamWidget::CalculateVisibility_Recursive()
 			DreamUIManager->MarkRebuildAllLayoutTree();
 		}
 	}
+	// After the walk, so the deselect handlers it runs find the tree's visibility settled.
+	if (bAnyStoppedRendering)
+	{
+		DreamWidgetFocusReleaseLocal::ReleaseFocusThatCannotStay(this);
+	}
 }
 void UDreamWidget::CalculateInteractable_Recursive()
 {
 	UDreamUIManagerWorldSubsystem::BumpHitTestGenerationFor(this);
+	/** Whether the walk took interaction away from anything: what may have held a player's focus. */
+	bool bAnyStoppedInteracting = false;
 	struct LOCAL
 	{
-		static void CalculateInteractable(UDreamWidget* Widget)
+		static void CalculateInteractable(UDreamWidget* Widget, bool& bOutAnyStoppedInteracting)
 		{
 			// The enabled switch cascades on its own terms and is folded in below. It is computed in
 			// this same walk rather than in one of its own because the two answers are always read
@@ -604,6 +671,7 @@ void UDreamWidget::CalculateInteractable_Recursive()
 			if (Widget->bCacheInteractableInHierarchy != bResultInteractable)
 			{
 				Widget->bCacheInteractableInHierarchy = bResultInteractable;
+				bOutAnyStoppedInteracting |= !bResultInteractable;
 				Widget->Call_InteractableChanged();
 			}
 			for (auto& Child : Widget->GetChildren())
@@ -613,12 +681,16 @@ void UDreamWidget::CalculateInteractable_Recursive()
 				// apart is exactly when it will.
 				if (IsValid(Child))
 				{
-					CalculateInteractable(Child);
+					CalculateInteractable(Child, bOutAnyStoppedInteracting);
 				}
 			}
 		}
 	};
-	LOCAL::CalculateInteractable(this);
+	LOCAL::CalculateInteractable(this, bAnyStoppedInteracting);
+	if (bAnyStoppedInteracting)
+	{
+		DreamWidgetFocusReleaseLocal::ReleaseFocusThatCannotStay(this);
+	}
 }
 void UDreamWidget::CalculateRaycastable_Recursive()
 {

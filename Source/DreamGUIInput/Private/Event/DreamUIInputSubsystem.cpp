@@ -832,6 +832,11 @@ namespace DreamUIInputSubsystemLocal
 
 void UDreamUIInputSubsystem::EnsureInteractionForPlayer(int32 InUserIndex, EDreamInteractionKind InKind)
 {
+	EnsureInteraction(InUserIndex, InKind, nullptr);
+}
+
+void UDreamUIInputSubsystem::EnsureInteraction(int32 InUserIndex, EDreamInteractionKind InKind, UDreamCanvas* InScreenRootCanvas)
+{
 	UWorld* World = GetWorld();
 	if (World == nullptr || bTornDownForWorld)return;
 
@@ -915,6 +920,13 @@ void UDreamUIInputSubsystem::EnsureInteractionForPlayer(int32 InUserIndex, EDrea
 			}
 		}
 	}
+	FindOrMakeHostRaycaster(InUserIndex, InKind, InScreenRootCanvas);
+}
+
+UDreamBaseRaycaster* UDreamUIInputSubsystem::FindOrMakeHostRaycaster(int32 InUserIndex, EDreamInteractionKind InKind, UDreamCanvas* InScreenRootCanvas)
+{
+	UWorld* World = GetWorld();
+	if (World == nullptr || bTornDownForWorld)return nullptr;
 
 	TObjectPtr<AActor>& HostSlot = InteractionHosts.FindOrAdd(InUserIndex);
 	if (!IsValid(HostSlot))
@@ -931,24 +943,35 @@ void UDreamUIInputSubsystem::EnsureInteractionForPlayer(int32 InUserIndex, EDrea
 		}
 	}
 	AActor* Host = HostSlot.Get();
-	if (!IsValid(Host))return;
+	if (!IsValid(Host))return nullptr;
 	// Asked again on the host itself, because a raycaster only enrols in the manager's raycaster list when it
 	// activates, and a world that has not begun play never activates one.
 	for (UActorComponent* Component : Host->GetComponents())
 	{
-		const UDreamBaseRaycaster* Existing = Cast<UDreamBaseRaycaster>(Component);
+		UDreamBaseRaycaster* Existing = Cast<UDreamBaseRaycaster>(Component);
 		if (Existing != nullptr && DreamUIInputSubsystemLocal::HasRaycasterOfKind(Existing, InKind))
 		{
-			return;
+			return Existing;
 		}
 	}
 
-	UDreamBaseRaycaster* NewRaycaster = InKind == EDreamInteractionKind::Screen
-		? static_cast<UDreamBaseRaycaster*>(NewObject<UDreamScreenSpaceRaycaster>(Host, NAME_None, RF_Transient))
-		: static_cast<UDreamBaseRaycaster*>(NewObject<UDreamWorldSpaceRaycaster>(Host, NAME_None, RF_Transient));
+	UDreamBaseRaycaster* NewRaycaster = nullptr;
+	if (InKind == EDreamInteractionKind::Screen)
+	{
+		UDreamScreenSpaceRaycaster* ScreenRaycaster = NewObject<UDreamScreenSpaceRaycaster>(Host, NAME_None, RF_Transient);
+		// Before RegisterComponent, which begins the raycaster in a world that has begun play: one beginning with no root
+		// canvas reports that nothing set one.
+		ScreenRaycaster->SetRootCanvas(InScreenRootCanvas);
+		NewRaycaster = ScreenRaycaster;
+	}
+	else
+	{
+		NewRaycaster = NewObject<UDreamWorldSpaceRaycaster>(Host, NAME_None, RF_Transient);
+	}
 	NewRaycaster->SetUserIndex(InUserIndex);
 	Host->AddInstanceComponent(NewRaycaster);
 	NewRaycaster->RegisterComponent();
+	return NewRaycaster;
 }
 
 AActor* UDreamUIInputSubsystem::GetInteractionHost(int32 InUserIndex) const
@@ -971,32 +994,56 @@ void UDreamUIInputSubsystem::PrepareScreenInteraction(UDreamCanvas* InRootCanvas
 	}
 	// A screen page needs the same event system and raycaster a world-space host does. What is particular to a
 	// screen is telling this player's screen raycaster which canvas it projects through.
-	EnsureInteractionForPlayer(InUserIndex, EDreamInteractionKind::Screen);
+	EnsureInteraction(InUserIndex, EDreamInteractionKind::Screen, InRootCanvas);
 
+	// Which of the player's screen raycasters project through InRootCanvas: one that already does, the one this
+	// subsystem made for the player, and one that projects through no overlay root at all. One projecting through an
+	// overlay root of its own was put there for that canvas, and keeps it: every screen raycaster of the player used to
+	// be pointed at whichever root was asked for last, so on a screen with two overlay canvases the first tooltip or
+	// modal took the second canvas's raycaster away from it, and the second canvas stopped answering.
+	const AActor* Host = GetInteractionHost(InUserIndex);
+	bool bServed = false;
+	const auto Serve = [InRootCanvas, InUserIndex, Host, &bServed](UDreamScreenSpaceRaycaster* InRaycaster)
+	{
+		// Only a raycaster that speaks for THIS player: retargeting every player's at whichever root was built last is
+		// what made split screen impossible.
+		if (InRaycaster == nullptr || InRaycaster->GetUserIndex() != InUserIndex)
+		{
+			return;
+		}
+		const UDreamCanvas* Current = InRaycaster->GetRootCanvas();
+		const bool bProjectsThroughAnotherRoot = IsValid(Current) && Current != InRootCanvas && Current->IsRootCanvas()
+			&& Current->GetActualRenderMode() == EDreamRenderMode::ScreenSpaceOverlay;
+		if (bProjectsThroughAnotherRoot && (Host == nullptr || InRaycaster->GetOwner() != Host))
+		{
+			return;
+		}
+		InRaycaster->SetRootCanvas(InRootCanvas);
+		bServed = true;
+	};
 	if (UDreamUIManagerWorldSubsystem* Manager = UDreamUIManagerWorldSubsystem::GetInstance(GetWorld()))
 	{
 		for (const TWeakObjectPtr<UDreamBaseRaycaster>& Raycaster : Manager->GetAllRaycasterArray())
 		{
-			UDreamScreenSpaceRaycaster* ScreenRaycaster = Cast<UDreamScreenSpaceRaycaster>(Raycaster.Get());
-			// Only a raycaster that speaks for THIS player; retargeting every screen raycaster at whichever root was
-			// built last is what made split screen impossible.
-			if (ScreenRaycaster != nullptr && ScreenRaycaster->GetUserIndex() == InUserIndex)
-			{
-				ScreenRaycaster->SetRootCanvas(InRootCanvas);
-			}
+			Serve(Cast<UDreamScreenSpaceRaycaster>(Raycaster.Get()));
 		}
 	}
-	// The one just created is on its host actor and has not necessarily enrolled -- enrolment happens on activation,
-	// which a world that has not begun play never performs.
-	if (const AActor* Host = GetInteractionHost(InUserIndex))
+	// The one this subsystem made is on its host actor and has not necessarily enrolled -- enrolment happens on
+	// activation, which a world that has not begun play never performs.
+	if (Host != nullptr)
 	{
 		for (UActorComponent* Component : Host->GetComponents())
 		{
-			if (UDreamScreenSpaceRaycaster* ScreenRaycaster = Cast<UDreamScreenSpaceRaycaster>(Component);
-				ScreenRaycaster != nullptr && ScreenRaycaster->GetUserIndex() == InUserIndex)
-			{
-				ScreenRaycaster->SetRootCanvas(InRootCanvas);
-			}
+			Serve(Cast<UDreamScreenSpaceRaycaster>(Component));
+		}
+	}
+	if (!bServed)
+	{
+		// Every screen raycaster the player has projects through an overlay canvas of its own: the root is given one of
+		// its own too, beside them.
+		if (UDreamScreenSpaceRaycaster* Made = Cast<UDreamScreenSpaceRaycaster>(FindOrMakeHostRaycaster(InUserIndex, EDreamInteractionKind::Screen, InRootCanvas)))
+		{
+			Made->SetRootCanvas(InRootCanvas);
 		}
 	}
 }

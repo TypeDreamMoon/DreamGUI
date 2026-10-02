@@ -7,9 +7,16 @@
 #include "Core/Components/DreamCanvas.h"
 #include "Core/Components/DreamWidget.h"
 #include "Engine/World.h"
+#include "Event/DreamEventSystem.h"
+#include "Event/DreamUIInputTypes.h"
+#include "Event/DreamUIInputUser.h"
 #include "Interaction/DreamUITooltip.h"
 #include "UObject/UnrealType.h"
 #include "DreamScopedWorld.h"
+
+#include "Driver/DreamDriverInputModule.h"
+#include "Driver/DreamDriverProjection.h"
+#include "Driver/DreamDriverRig.h"
 
 /*
  * The tooltip's pure half: which widget on the hover path owns the tooltip, and where the bubble
@@ -19,6 +26,8 @@
 
 namespace DreamUITooltipTestLocal
 {
+	const FIntPoint ViewportSize(1280, 720);
+
 	UDreamWidget* MakeWidget(const TCHAR* InDisplayName, UDreamWidget* InParent)
 	{
 		UDreamWidget* Widget = NewObject<UDreamWidget>(GetTransientPackage());
@@ -29,6 +38,22 @@ namespace DreamUITooltipTestLocal
 			Widget->SetParentBeforeRegister(InParent);
 		}
 		return Widget;
+	}
+
+	FVector2D CentreOf(const UDreamWidget* InWidget)
+	{
+		const TOptional<FVector2D> Pixel = FDreamDriverProjection::WidgetCentrePixel(InWidget);
+		return Pixel.IsSet() ? Pixel.GetValue() : FVector2D::ZeroVector;
+	}
+
+	/** Frames until player 0's tooltip is up for InWidget, or a generous ten seconds of them: the dwell is the settings'. */
+	bool PumpUntilTooltipOf(FDreamDriverRig& InRig, const UDreamUITooltipSubsystem* InTooltip, const UDreamWidget* InWidget)
+	{
+		for (int32 Frame = 0; Frame < 600 && InTooltip->GetShownForUser(0) != InWidget; ++Frame)
+		{
+			InRig.PumpFrames(1);
+		}
+		return InTooltip->GetShownForUser(0) == InWidget;
 	}
 }
 
@@ -229,6 +254,123 @@ bool FDreamUITooltipWorldSpaceHostTest::RunTest(const FString& Parameters)
 
 	WorldRoot->DestroyWidget();
 	ScreenRoot->DestroyWidget();
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamUITooltipPointerLeavesTest,
+	"DreamGUI.Tooltip.ABubbleGoesWhenThePointerLeavesItsWidgetForTheParentOrForEmptySpace",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamUITooltipPointerLeavesTest, "DreamGUI.Tooltip.ABubbleGoesWhenThePointerLeavesItsWidgetForTheParentOrForEmptySpace", "[Pointer][Animated]")
+
+/*
+ * Which widget the tooltip is for was read off the pointer as each Enter and Exit went out. An Exit goes out while the
+ * pointer still names the widget being left, and a pointer that leaves for empty space -- or for the parent it was inside
+ * all along -- is sent no Enter afterwards to say where it went: the widget it had left stayed the one the tooltip was
+ * for, and its bubble stayed open over nothing. What the pointer is over is now read once the frame's exits and enters
+ * are all out. Checked with the driver's mouse on a child with a tooltip, inside a panel with one of its own: left for
+ * the panel, then for empty space.
+ */
+bool FDreamUITooltipPointerLeavesTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamUITooltipTestLocal;
+	FDreamDriverRig Rig = FDreamDriverRig::Headless(ViewportSize);
+	Rig.BindTest(this);
+	if (!TestTrue(TEXT("The rig came up"), Rig.IsUsable() && Rig.InputModule() != nullptr))
+	{
+		return false;
+	}
+	UDreamUITooltipSubsystem* Tooltip = UDreamUITooltipSubsystem::Get(Rig.GetWorld());
+	UDreamWidget* Panel = Rig.MakeWidget(TEXT("Panel"), nullptr, FVector2D(400.0, 300.0), FVector2D(-200.0, 0.0));
+	UDreamWidget* Child = IsValid(Panel) ? Rig.MakeWidget(TEXT("Child"), Panel, FVector2D(120.0, 60.0)) : nullptr;
+	if (!TestTrue(TEXT("A tooltip service, and a panel with a child in it"), Tooltip != nullptr && IsValid(Child)))
+	{
+		return false;
+	}
+	Panel->SetToolTipText(FText::FromString(TEXT("About the panel")));
+	Child->SetToolTipText(FText::FromString(TEXT("About the child")));
+	Rig.PumpFrames(2);
+	UDreamDriverInputModule* Module = Rig.InputModule();
+	const FVector2D OnChild = CentreOf(Child);
+	const FVector2D OnPanelOnly = OnChild + FVector2D(0.0, 100.0);
+
+	Module->MoveTo(OnChild);
+	if (!TestTrue(TEXT("Resting on the child brings its tooltip up"), PumpUntilTooltipOf(Rig, Tooltip, Child)))
+	{
+		return false;
+	}
+
+	// Onto the panel around it: the child is left, and nothing is entered -- the pointer was in the panel all along.
+	Module->MoveTo(OnPanelOnly);
+	Rig.PumpFrames(2);
+	TestTrue(TEXT("Moving off the child onto its panel takes the child's tooltip down"), Tooltip->GetShownForUser(0) != Child);
+	TestTrue(TEXT("...and the panel's comes up after its own dwell"), PumpUntilTooltipOf(Rig, Tooltip, Panel));
+
+	// Out to empty space.
+	Module->MoveTo(FVector2D(ViewportSize.X - 40.0, ViewportSize.Y - 40.0));
+	Rig.PumpFrames(2);
+	TestNull(TEXT("Moving off the panel onto nothing takes its tooltip down"), Tooltip->GetShownForUser(0));
+	TestNull(TEXT("...bubble and all"), Tooltip->GetBubbleForUser(0));
+	Rig.PumpFrames(60);
+	TestNull(TEXT("...and nothing comes back while the pointer rests on nothing"), Tooltip->GetBubbleForUser(0));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamUITooltipOtherPointerTest,
+	"DreamGUI.Tooltip.AnotherPointerOfThePlayersLeavesTheMousesTooltipUpUntilItReachesATooltipOfItsOwn",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamUITooltipOtherPointerTest, "DreamGUI.Tooltip.AnotherPointerOfThePlayersLeavesTheMousesTooltipUpUntilItReachesATooltipOfItsOwn", "[Pointer][Animated]")
+
+/*
+ * A player has one tooltip, and every pointer of the player's moved it: a second pointer -- a finger, a second laser, a
+ * pointer of a script's own -- arriving at a widget with no tooltip, or leaving one, took down the bubble the mouse had
+ * brought up. The bubble now follows one pointer, the one that last arrived at something with a tooltip; another pointer
+ * takes it over by arriving at a tooltip of its own, and only so. Checked with the mouse resting on a widget with a
+ * tooltip and a pointer of the test's own moving about the player's screen.
+ */
+bool FDreamUITooltipOtherPointerTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamUITooltipTestLocal;
+	FDreamDriverRig Rig = FDreamDriverRig::Headless(ViewportSize);
+	Rig.BindTest(this);
+	if (!TestTrue(TEXT("The rig came up"), Rig.IsUsable() && Rig.InputModule() != nullptr))
+	{
+		return false;
+	}
+	UDreamUITooltipSubsystem* Tooltip = UDreamUITooltipSubsystem::Get(Rig.GetWorld());
+	UDreamUIInputUser* User = Rig.EventSystem()->GetInputUser();
+	UDreamWidget* Help = Rig.MakeWidget(TEXT("Help"), nullptr, FVector2D(200.0, 100.0), FVector2D(-300.0, 0.0));
+	UDreamWidget* Plain = Rig.MakeWidget(TEXT("Plain"), nullptr, FVector2D(200.0, 100.0), FVector2D(300.0, 0.0));
+	UDreamWidget* Other = Rig.MakeWidget(TEXT("Other"), nullptr, FVector2D(200.0, 100.0), FVector2D(0.0, -200.0));
+	if (!TestTrue(TEXT("A tooltip service, a player, and three widgets"),
+		Tooltip != nullptr && User != nullptr && IsValid(Help) && IsValid(Plain) && IsValid(Other)))
+	{
+		return false;
+	}
+	Help->SetToolTipText(FText::FromString(TEXT("About the help")));
+	Other->SetToolTipText(FText::FromString(TEXT("About the other")));
+	Rig.PumpFrames(2);
+
+	Rig.InputModule()->MoveTo(CentreOf(Help));
+	if (!TestTrue(TEXT("The mouse resting on a widget brings its tooltip up"), PumpUntilTooltipOf(Rig, Tooltip, Help)))
+	{
+		return false;
+	}
+
+	const int32 SecondPointer = DreamUIPointerIds::ScriptBase;
+	User->MovePointer(SecondPointer, FVector(CentreOf(Plain), 0.0));
+	Rig.PumpFrames(2);
+	TestEqual(TEXT("Another pointer arriving at a widget with no tooltip leaves the mouse's up"), Tooltip->GetShownForUser(0), Help);
+	User->MovePointer(SecondPointer, FVector(ViewportSize.X - 40.0, ViewportSize.Y - 40.0, 0.0));
+	Rig.PumpFrames(2);
+	TestEqual(TEXT("...and so does its leaving that widget for nothing"), Tooltip->GetShownForUser(0), Help);
+	TestNotNull(TEXT("...bubble and all"), Tooltip->GetBubbleForUser(0));
+
+	User->MovePointer(SecondPointer, FVector(CentreOf(Other), 0.0));
+	TestTrue(TEXT("Arriving at a tooltip of its own, the other pointer takes the tooltip over"), PumpUntilTooltipOf(Rig, Tooltip, Other));
+	User->RetirePointer(SecondPointer);
+	Rig.PumpFrames(1);
 	return true;
 }
 

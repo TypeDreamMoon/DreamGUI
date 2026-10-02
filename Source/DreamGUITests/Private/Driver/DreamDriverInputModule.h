@@ -34,7 +34,7 @@ public:
 	 *
 	 * A driver's pointer is virtual for its whole life, so there is no moment at which reading the
 	 * OS mouse would be the right answer -- and headless there is no mouse to read, which
-	 * GetMousePosition reports as (0,0) rather than as a failure. Done here rather than in the
+	 * GetMousePosition reports as (-1,-1), a pointer over nothing. Done here rather than in the
 	 * constructor so the class default object never runs it.
 	 */
 	virtual void OnRegister() override;

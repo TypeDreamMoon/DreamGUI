@@ -76,10 +76,15 @@ struct FDreamUITooltipUserState
 {
 	GENERATED_BODY()
 
-	/** The pointer's event data object -- mutated in place by the pipeline, so it IS the live position. */
+	/**
+	 * The pointer this tooltip follows -- the player's pointer that last arrived at something with a tooltip -- whose
+	 * event data object is mutated in place by the pipeline, so it IS the live position.
+	 */
 	TWeakObjectPtr<UDreamPointerEventData> LastPointerEvent;
 	/** What the dwell timer is armed for. */
 	TWeakObjectPtr<UDreamWidget> Candidate;
+	/** Set by the followed pointer's enters and exits: the candidate is read from what it is over at the end of the frame. */
+	bool bCandidateStale = false;
 	float HoverSeconds = 0.0f;
 	/** Set from press/drag; a new hover-enter re-arms. */
 	bool bSuppressed = false;
@@ -113,7 +118,8 @@ struct FDreamUITooltipUserState
  * bubble follows the live pointer, and exit / press / drag / input-type change hides it. The bubble lives on its
  * own canvas above the screen stack's sort band and is raycast-disabled throughout -- a tooltip that can steal the
  * pointer hides itself forever. Each player's tooltip is theirs: a second player's hover neither moves nor hides
- * the first player's bubble.
+ * the first player's bubble. Within a player it follows one pointer, the one that last arrived at something with a
+ * tooltip; another of the player's pointers passing over nothing leaves it alone.
  */
 UCLASS()
 class DREAMGUIINPUT_API UDreamUITooltipSubsystem : public UTickableWorldSubsystem, public IDreamUIWorldService
@@ -163,6 +169,11 @@ public:
 
 private:
 	void HandleInputEvent(UDreamBaseEventData* InEventData);
+	/**
+	 * The candidate from what the followed pointer is over now, when its enters and exits have said it moved: a new
+	 * candidate restarts the dwell and hides a bubble shown for another.
+	 */
+	void RefreshCandidate(FDreamUITooltipUserState& InState);
 	void TickUser(FDreamUITooltipUserState& InState, float InDeltaSeconds);
 	void HideUserTooltip(FDreamUITooltipUserState& InState);
 	void ShowFor(FDreamUITooltipUserState& InState, UDreamWidget* InSource);

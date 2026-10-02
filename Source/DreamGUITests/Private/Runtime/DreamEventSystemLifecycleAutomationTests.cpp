@@ -9,8 +9,12 @@
 #include "Engine/World.h"
 #include "Event/DreamEventSystem.h"
 #include "Event/DreamPointerEventData.h"
+#include "Event/DreamStandaloneInputEventSystemActor.h"
 #include "Event/DreamUIInputSubsystem.h"
 #include "Event/DreamUIInputModeLibrary.h"
+#include "Event/DreamUIInputTypes.h"
+#include "Event/DreamUIInputUser.h"
+#include "Event/InputModule/DreamPointerInputModule.h"
 #include "Event/InputModule/DreamStandaloneInputModule.h"
 #include "GameFramework/Actor.h"
 #include "GameFramework/PlayerController.h"
@@ -582,6 +586,111 @@ bool FDreamEventSystemPinchGestureTest::RunTest(const FString& Parameters)
 	Rig.Module->InputTouchTrigger(true, 1, FVector(900.0, 300.0, 0.0));
 	Rig.Module->ProcessInput();
 	TestEqual(TEXT("A finger returning far away does not report the jump"), Counter->PinchCount, PinchesBefore);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamEventSystemCursorIsTheMousesTest,
+	"DreamGUI.Input.Cursor.OnlyTheMousesPointerMovesTheCursor",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * The hardware cursor is the mouse's, but every pointer of the player's set it as it went over things: a finger lifted
+ * off a widget, or a second pointer moving over nothing, put the project's cursor back while the mouse rested on a widget
+ * that claims one of its own. Only the mouse's pointer moves the cursor now. Checked with the hover cursor applied for a
+ * finger's pointer, a script's and the mouse's, each over nothing, while the mouse's hover holds a claim.
+ */
+bool FDreamEventSystemCursorIsTheMousesTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamEventSystemLifecycleTestLocal;
+
+	FScopedGameWorld Scope;
+	if (!TestTrue(TEXT("A world to host the rig"), Scope.World != nullptr))
+	{
+		return false;
+	}
+	FScopedInputRig Rig(Scope.World);
+	UDreamUIInputUser* User = Rig.IsUsable() ? Rig.EventSystem->GetInputUser() : nullptr;
+	if (!TestTrue(TEXT("The rig came up, with a player"), User != nullptr))
+	{
+		return false;
+	}
+	APlayerController* PlayerController = Scope.World->SpawnActor<APlayerController>();
+	if (PlayerController == nullptr)
+	{
+		AddInfo(TEXT("No player controller could be spawned in this world; the cursor assertions were skipped."));
+		return true;
+	}
+	// Enrolled by hand, as in the hover cursor test above: this world never initialized its actors for play.
+	Scope.World->AddController(PlayerController);
+	PlayerController->CurrentMouseCursor = EMouseCursor::Crosshairs;
+
+	// The mouse resting on a widget that claims the hand.
+	Rig.EventSystem->ApplyHoverCursorToPlayer(true, EMouseCursor::Hand);
+	TestEqual(TEXT("The mouse's hover claims the cursor"), (int32)PlayerController->CurrentMouseCursor.GetValue(), (int32)EMouseCursor::Hand);
+
+	UDreamPointerEventData* Finger = User->GetPointerEventData(DreamUIPointerIds::ForTouch(0), true);
+	UDreamPointerInputModule::ApplyHoverCursor(User, Finger);
+	TestEqual(TEXT("A finger over nothing leaves the mouse's cursor alone"), (int32)PlayerController->CurrentMouseCursor.GetValue(), (int32)EMouseCursor::Hand);
+	UDreamPointerEventData* Script = User->GetPointerEventData(DreamUIPointerIds::ScriptBase, true);
+	UDreamPointerInputModule::ApplyHoverCursor(User, Script);
+	TestEqual(TEXT("...and so does a script's pointer"), (int32)PlayerController->CurrentMouseCursor.GetValue(), (int32)EMouseCursor::Hand);
+
+	UDreamPointerEventData* Mouse = User->GetPointerEventData(DreamUIPointerIds::Mouse, true);
+	UDreamPointerInputModule::ApplyHoverCursor(User, Mouse);
+	TestEqual(TEXT("The mouse's own pointer over nothing gives the project's cursor back"),
+		(int32)PlayerController->CurrentMouseCursor.GetValue(), (int32)EMouseCursor::Crosshairs);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamEventSystemPresetPlayerIndexTest,
+	"DreamGUI.Input.EventSystem.APresetPlacedToListenAsTheSecondPlayerIsThatPlayersBeforeAnythingBegins",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * The preset actor made its event system's UserIndex agree with its AutoReceiveInput in its own BeginPlay -- after its
+ * components had begun play, and the event system registers for its player in its own. A preset placed to listen as
+ * Player1, its UserIndex left at 0, registered as player 0 -- refused with an error wherever player 0 had an event system
+ * already -- and never as player 1. The two now agree once the actor's components are initialized, before any of them
+ * begins play. Checked on a preset spawned to listen as Player1, read before anything of it has begun.
+ */
+bool FDreamEventSystemPresetPlayerIndexTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamEventSystemLifecycleTestLocal;
+
+	FScopedGameWorld Scope;
+	if (!TestTrue(TEXT("A world to spawn the preset in"), Scope.World != nullptr))
+	{
+		return false;
+	}
+	FActorSpawnParameters Spawn;
+	Spawn.bDeferConstruction = true;
+	Spawn.ObjectFlags |= RF_Transient;
+	ADreamStandaloneInputEventSystemActor* Preset = Scope.World->SpawnActor<ADreamStandaloneInputEventSystemActor>(
+		ADreamStandaloneInputEventSystemActor::StaticClass(), FTransform::Identity, Spawn);
+	if (!TestNotNull(TEXT("A preset actor"), Preset))
+	{
+		return false;
+	}
+	Preset->AutoReceiveInput = EAutoReceiveInput::Player1;
+	Preset->FinishSpawning(FTransform::Identity);
+	// What AActor::PostActorConstruction does in a world whose actors are initialized, which this one's never were.
+	if (!Preset->IsActorInitialized())
+	{
+		Preset->PreInitializeComponents();
+		Preset->InitializeComponents();
+		Preset->PostInitializeComponents();
+	}
+	const UDreamEventSystem* Events = Preset->GetEventSystem();
+	if (!TestNotNull(TEXT("...with its event system"), Events))
+	{
+		Preset->Destroy();
+		return false;
+	}
+	TestFalse(TEXT("Nothing of it has begun play"), Preset->HasActorBegunPlay() || Events->HasBegunPlay());
+	TestEqual(TEXT("Its event system is already the player it listens as, before anything could register it"), Events->GetUserIndex(), 1);
+	Preset->Destroy();
 	return true;
 }
 

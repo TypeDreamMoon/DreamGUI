@@ -830,6 +830,75 @@ bool FDreamListsListViewFocusAnchorTest::RunTest(const FString& Parameters)
 }
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamListsListViewNavigateRecyclingTest,
+	"DreamGUI.ListView.NavigatingDownARecyclingListKeepsTheFocusOnAShownRowOneItemFurtherEachPress",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamListsListViewNavigateRecyclingTest, "DreamGUI.ListView.NavigatingDownARecyclingListKeepsTheFocusOnAShownRowOneItemFurtherEachPress", "[Pointer][Nav][Animated]")
+
+/*
+ * A widget hidden or put to sleep while it holds the focus gives the focus up, and a recycling list puts rows to sleep
+ * and hands them other items as it scrolls. Had the list put away the row the focus was on at any step of a D-pad walk,
+ * the player would have been left with no focus, and the next press would have started over from the screen's default.
+ * It does not: a press scrolls the next item into view before it names the row that shows it, the row the focus leaves
+ * keeps its item while that item is in the window, and the list puts a row to sleep only when it has fewer items than
+ * rows -- never while it scrolls through a long source.
+ *
+ * Checked here: a hundred items in a window of about fifteen rows, the first row clicked and the pointer taken off the
+ * list, then Down thirty times. After every press the focus is on the row showing the next item, and that row is drawn
+ * and lies inside the list's window; by the end the first item's row has gone round to another item.
+ */
+bool FDreamListsListViewNavigateRecyclingTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamListViewInteractionTestLocal;
+	FDreamDriverRig Rig = FDreamDriverRig::Headless(DreamListsInteraction::ViewportSize());
+	Rig.BindTest(this);
+	if (!TestTrue(TEXT("The headless rig came up"), Rig.IsUsable()))
+	{
+		return false;
+	}
+	TArray<UObject*> Items;
+	UDreamListView* List = MakeList(Rig, 100, Items);
+	if (!TestNotNull(TEXT("The list was made on the rig"), List))
+	{
+		return false;
+	}
+	List->SetVirtualizationThreshold(10);
+	Rig.PumpFrames(2);
+	FDreamElementRef FirstRow = RowElement(Rig, *List, 0);
+	if (!TestTrue(TEXT("The list is recycling"), List->IsVirtualizing() && List->GetRealizedRowCount() < 100)
+		|| !TestTrue(TEXT("Clicking the first row completes"), FirstRow->Click()))
+	{
+		return false;
+	}
+	// Off the list, so the pointer cannot hand the navigation highlight to whatever row scrolls under it.
+	TestTrue(TEXT("Moving the pointer off the list completes"), FirstRow->MoveBy(FVector2D(400.0, 0.0)));
+	const TOptional<FBox2D> WindowRect = Rig.Driver()->Find(FDreamBy::Widget(List->ViewportNode.Get()))->GetPixelRect();
+	if (!TestTrue(TEXT("The list's window projects to pixels"), WindowRect.IsSet()))
+	{
+		return false;
+	}
+
+	for (int32 Step = 1; Step <= 30; ++Step)
+	{
+		if (!TestTrue(FString::Printf(TEXT("Press %d of Down completes"), Step), NavigateTimes(Rig, EDreamUINavigationDirection::Down, 1)))
+		{
+			return false;
+		}
+		UDreamWidget* Row = List->GetRowWidget(Step);
+		const TOptional<FBox2D> RowRect = Row != nullptr ? RowElement(Rig, *List, Step)->GetPixelRect() : TOptional<FBox2D>();
+		// One assertion per press, so a walk that goes wrong says where and stops there.
+		const bool bOnShownRow = Row != nullptr && Row->HasFocus() && Row->GetRenderVisibleInHierarchy() && RowRect.IsSet()
+			&& RowRect->Min.Y >= WindowRect->Min.Y - 1.5 && RowRect->Max.Y <= WindowRect->Max.Y + 1.5;
+		if (!TestTrue(FString::Printf(TEXT("After press %d the focus is on the drawn row of item %d, inside the window"), Step, Step), bOnShownRow))
+		{
+			return false;
+		}
+	}
+	TestNull(TEXT("The first item's row went round to another item on the way"), List->GetRowWidget(0));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamListsListViewSidewaysTest,
 	"DreamGUI.ListView.AListTurnedSidewaysScrollsItsWholeBandAndBringsItsBarOut",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)

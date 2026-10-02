@@ -530,4 +530,74 @@ bool FDreamStandalonePresetAssetPausedClickTest::RunTest(const FString& Paramete
 	return true;
 }
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamStandalonePresetAssetPausedReleaseTest,
+	"DreamGUI.Input.StandalonePreset.AReleaseInAPausedGameLetsGoOfAPressMadeBeforeThePause",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * With UDreamUISettings::bScreenSpaceUIAffectByGamePause on, the preset dropped every key a paused game sent it, the
+ * releases with the presses: a button held when the game paused and let go of during the pause was never let go of, and
+ * the pointer stayed pressed through the pause and after it. A paused game still takes no press, but a release now always
+ * reaches the press it ends -- its up, and a click only where the press earned one. The Enhanced Input preset forwards
+ * its actions through the same rule. Checked on the shipped preset: the left button pressed in play, the game paused, the
+ * button let go of.
+ */
+bool FDreamStandalonePresetAssetPausedReleaseTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamStandalonePresetAssetTestLocal;
+
+	UDreamUISettings* Settings = GetMutableDefault<UDreamUISettings>();
+	const bool bAffectedBefore = Settings->bScreenSpaceUIAffectByGamePause;
+	Settings->bScreenSpaceUIAffectByGamePause = true;
+	ON_SCOPE_EXIT { Settings->bScreenSpaceUIAffectByGamePause = bAffectedBefore; };
+
+	FStandalonePresetHost Host(LoadStandalonePresetClass());
+	if (!TestTrue(StandaloneHostCameUp(Host), Host.IsUp()))
+	{
+		return false;
+	}
+	UWorld* World = Host.Scope.World;
+	AWorldSettings* WorldSettings = World->GetWorldSettings();
+	APlayerState* Pauser = World->SpawnActor<APlayerState>();
+	if (!TestNotNull(TEXT("The world has settings to pause"), WorldSettings) || !TestNotNull(TEXT("and a player state to pause it"), Pauser))
+	{
+		return false;
+	}
+
+	// Pressed in play.
+	Host.SendKey(EKeys::LeftMouseButton, IE_Pressed);
+	Host.RunFrame();
+	UDreamPointerEventData* Pointer = Host.Pointer();
+	if (!TestNotNull(TEXT("A left click in play reached the preset's pointer"), Pointer)
+		|| !TestTrue(TEXT("...and pressed it"), Pointer->bNowIsTriggerPressed))
+	{
+		return false;
+	}
+
+	// Let go of once the game is paused.
+	WorldSettings->SetPauserPlayerState(Pauser);
+	ON_SCOPE_EXIT { WorldSettings->SetPauserPlayerState(nullptr); };
+	if (!TestTrue(TEXT("The game is paused"), World->IsPaused()))
+	{
+		return false;
+	}
+	Host.SendKey(EKeys::LeftMouseButton, IE_Released);
+	Host.RunFrame();
+	TestFalse(TEXT("The release in the paused game let go of the press made before the pause"), Pointer->bNowIsTriggerPressed);
+
+	// A press while paused is still dropped.
+	Host.SendKey(EKeys::LeftMouseButton, IE_Pressed);
+	Host.RunFrame();
+	TestFalse(TEXT("...while a press in the paused game still presses nothing"), Pointer->bNowIsTriggerPressed);
+	Host.SendKey(EKeys::LeftMouseButton, IE_Released);
+	Host.RunFrame();
+
+	// And nothing is left held once the game goes on.
+	WorldSettings->SetPauserPlayerState(nullptr);
+	Host.RunFrame();
+	TestFalse(TEXT("Nothing is left pressed when the game goes on"), Pointer->bNowIsTriggerPressed);
+	return true;
+}
+
 #endif

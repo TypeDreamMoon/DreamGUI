@@ -52,6 +52,19 @@ namespace DreamStandaloneInputEventSystemActorLocal
 		Binding.bConsumeInput = bInConsumeInput;
 		Binding.bExecuteWhenPaused = true;
 	}
+
+	/** A key this preset lets go of through a release binding of its own: a confirm or a direction. */
+	static bool HasReleaseBindingOfItsOwn(const FKey& Key)
+	{
+		for (const FKey& Confirm : DreamUIKeyRouting::GetConfirmKeys())
+		{
+			if (Confirm == Key)
+			{
+				return true;
+			}
+		}
+		return DreamUIKeyRouting::GetDirectionForKey(Key, false) != EDreamUINavigationDirection::None;
+	}
 }
 
 ADreamStandaloneInputEventSystemActor::ADreamStandaloneInputEventSystemActor()
@@ -70,6 +83,16 @@ ADreamStandaloneInputEventSystemActor::ADreamStandaloneInputEventSystemActor()
 
 	// What makes this a drop-in: no project input setup, no possession, it just listens as player 0.
 	AutoReceiveInput = EAutoReceiveInput::Player0;
+}
+
+void ADreamStandaloneInputEventSystemActor::PostInitializeComponents()
+{
+	Super::PostInitializeComponents();
+	// Before any component begins play. The event system registers for its player in its own BeginPlay, which runs
+	// ahead of this actor's: synced only there, a preset placed to listen as Player1 with UserIndex left at 0 registered
+	// as player 0 first -- refused with an error wherever player 0 already had an event system -- and never registered
+	// as player 1, whose settings it then never gave.
+	SyncEventSystemUserIndexWithAutoReceiveInput();
 }
 
 void ADreamStandaloneInputEventSystemActor::BeginPlay()
@@ -327,8 +350,11 @@ void ADreamStandaloneInputEventSystemActor::OnMouseButtonPressed(FKey Key)
 void ADreamStandaloneInputEventSystemActor::OnMouseButtonReleased(FKey Key)
 {
 	using namespace DreamStandaloneInputEventSystemActorLocal;
-	if (ShouldIgnoreInput())return;
-	ReportDeviceForKey(Key);
+	if (ShouldIgnoreRelease())return;
+	if (!IsInputSuspendedByGamePause())
+	{
+		ReportDeviceForKey(Key);
+	}
 
 	for (const TPair<FKey, EDreamUIMouseButtonType>& Button : MouseButtons)
 	{
@@ -384,7 +410,7 @@ void ADreamStandaloneInputEventSystemActor::OnTouchPressed(ETouchIndex::Type Fin
 
 void ADreamStandaloneInputEventSystemActor::OnTouchReleased(ETouchIndex::Type FingerIndex, FVector Location)
 {
-	if (ShouldIgnoreInput())return;
+	if (ShouldIgnoreRelease())return;
 	InputModule->InputTouchTrigger(false, static_cast<int32>(FingerIndex), Location);
 }
 
@@ -407,8 +433,11 @@ void ADreamStandaloneInputEventSystemActor::OnAnyKeyPressed(FKey Key)
 
 void ADreamStandaloneInputEventSystemActor::OnAnyKeyReleased(FKey Key)
 {
-	if (ShouldIgnoreInput())return;
-	if (IsNavigationKey(Key))
+	if (ShouldIgnoreRelease())return;
+	// The confirm and direction keys are let go of through their own release bindings. Every other key's release goes
+	// where its press went -- the page and extent keys' too, whose presses come from bindings of their own and whose
+	// releases arrive only here.
+	if (DreamStandaloneInputEventSystemActorLocal::HasReleaseBindingOfItsOwn(Key))
 	{
 		return;
 	}
@@ -524,7 +553,7 @@ void ADreamStandaloneInputEventSystemActor::OnNavigationTriggerPressed(FKey Key)
 
 void ADreamStandaloneInputEventSystemActor::OnNavigationTriggerReleased(FKey Key)
 {
-	if (ShouldIgnoreInput())return;
+	if (ShouldIgnoreRelease())return;
 	DreamUIKeyRouting::RouteConfirmKey(GetInputUser(), Key, false);
 }
 
@@ -537,7 +566,7 @@ void ADreamStandaloneInputEventSystemActor::OnNavigationDirectionPressed(FKey Ke
 
 void ADreamStandaloneInputEventSystemActor::OnNavigationDirectionReleased(FKey Key)
 {
-	if (ShouldIgnoreInput())return;
+	if (ShouldIgnoreRelease())return;
 	DreamUIKeyRouting::RouteDirectionKeyAs(GetInputUser(), Key, ResolveNavigationDirection(Key), false);
 }
 

@@ -70,7 +70,8 @@ public:
 
 	/**
 	 * Turn pointer tracing and dispatch on or off. Turning it off with bClearEvent lets go of every pointer
-	 * too -- after the event being dispatched, when called from a handler.
+	 * too -- after the event being dispatched, when called from a handler. While it is off a press is not
+	 * taken, and a release ends the press it lets go of without a click or a drop (CancelPointerPress).
 	 */
 	void SetRaycastEnable(bool bEnable, bool bClearEvent);
 	/** Let hovered widgets drive the controller's cursor, or give the cursor back. */
@@ -153,6 +154,15 @@ public:
 	void ClearTextTarget(const UObject* InTarget);
 	/** Bind the text target's keys on the player's controller again, for a target whose keys changed. */
 	void RefreshTextKeys();
+
+	// ---------------------------------------------------------------- keys
+
+	/** Remember where the press of InKey went, until its release asks (DreamUIKeyRouting). A second press overwrites the first. */
+	void NoteKeyPress(const FKey& InKey, const FDreamUIKeyPress& InPress);
+	/** Where the press of InKey went, forgotten as it is read. False for a key whose press this player did not route. */
+	bool TakeKeyPress(const FKey& InKey, FDreamUIKeyPress& OutPress);
+	/** Where the press of InKey went, or null when this player routed no press of it whose release has not come. */
+	const FDreamUIKeyPress* FindKeyPress(const FKey& InKey) const { return KeyPresses.Find(InKey); }
 
 	// ---------------------------------------------------------------- device and cursor
 
@@ -254,6 +264,13 @@ public:
 	 * hovers exited -- the widgets' and the world target's. It stays a pointer.
 	 */
 	void ReleasePointer(int32 InPointerID);
+	/**
+	 * End pointer InPointerID's press without a click or a drop -- its up, its drag ended or cancelled -- for a button let
+	 * go of where this player could not see it: the application lost the focus with it held, or tracing was off. A press
+	 * or release of it still waiting for the next frame is dropped with it, and so is a navigation confirm the next frame
+	 * has not read yet. Its hovers are left as they are. After the event being dispatched, when called from a handler.
+	 */
+	void CancelPointerPress(int32 InPointerID);
 	/** ReleasePointer for every pointer. After the event being dispatched, when called from a handler. */
 	void ReleaseAllPointers();
 	/**
@@ -297,6 +314,12 @@ private:
 	void RunPipelineBody();
 	/** ReleasePointer's body, never deferred: the pipeline itself calls it. */
 	void ReleasePointerNow(int32 InPointerID);
+	/** The press half of ReleasePointerNow: the drag ended or cancelled, the up, the actor let go of, and no click. */
+	void EndPressNow(UDreamPointerEventData* InEventData);
+	/** Keep a lifted finger's click run for the next tap of that finger, which comes as a pointer of its own. */
+	void KeepLiftedFingerClickRun(const UDreamPointerEventData* InEventData);
+	/** Give a finger's new pointer the click run its last tap left, if it left one. */
+	void RestoreLiftedFingerClickRun(UDreamPointerEventData* InEventData);
 	/** Remember the raycaster InEventData's press went through while the press is held, and forget it once it is not. */
 	void NotePressRaycaster(const UDreamPointerEventData* InEventData);
 	/** Let go of every press whose raycaster has gone since: its up, and no click. */
@@ -305,6 +328,15 @@ private:
 	void MirrorFocusOntoPointers();
 	/** One of the text target's keys, pressed or repeating on this player's keyboard. */
 	void HandleTextKey(FKey InKey);
+	/** One of the text target's keys going down: typed, and noted as the field's, so its release is the field's too. */
+	void HandleTextKeyPressed(FKey InKey);
+	/**
+	 * One of the text target's keys coming up. The text keys take their keys from everything below them on the
+	 * controller, the release included, so the release is sent from here to whatever took the press -- a key held since
+	 * before the field began its edit is still the navigation's or the bindings'. A release routed already -- its press
+	 * taken off the books by the source that heard it first -- or one whose press was never routed is left alone.
+	 */
+	void HandleTextKeyReleased(FKey InKey);
 	/** Take the text keys off the controller they are on. */
 	void PopTextKeys();
 
@@ -373,6 +405,27 @@ private:
 	UPROPERTY(Transient)
 	TObjectPtr<UInputComponent> TextKeys;
 	TWeakObjectPtr<APlayerController> TextKeysController;
+	/** Where each held key's press went; see NoteKeyPress. */
+	TMap<FKey, FDreamUIKeyPress> KeyPresses;
+
+	/**
+	 * A lifted finger's click run. A finger's pointer goes when the finger lifts, and the next tap of that finger is a
+	 * pointer of its own; without its predecessor's run it starts a run of its own, and two quick taps were never a
+	 * double tap. Weak: a run does not keep the widget or the actor it landed on alive.
+	 */
+	struct FLiftedFingerClickRun
+	{
+		int32 ClickCount = 0;
+		double ClickTime = 0.0;
+		TWeakObjectPtr<UDreamWidget> LastClickWidget;
+		EDreamUIMouseButtonType LastClickMouseButtonType = EDreamUIMouseButtonType::Left;
+		FVector LastClickPressPointerPosition = FVector::ZeroVector;
+		FVector LastClickPressWorldPoint = FVector::ZeroVector;
+		TWeakObjectPtr<AActor> LastClickedActor;
+		double LastClickedActorTime = 0.0;
+	};
+	/** By the finger's pointer id. */
+	TMap<int32, FLiftedFingerClickRun> LiftedFingerClickRuns;
 
 	/** One pointer's last trace, reused while nothing that could change it has. */
 	struct FTraceCache

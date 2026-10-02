@@ -4,8 +4,11 @@
 
 #include "Misc/AutomationTest.h"
 
+#include "Controls/DreamButton.h"
 #include "Controls/DreamTextInput.h"
+#include "Core/Components/DreamCanvas.h"
 #include "Core/Components/DreamWidget.h"
+#include "Core/DreamScreenUISubsystem.h"
 #include "Core/DreamUIInputServices.h"
 #include "Core/DreamUIManager.h"
 #include "Driver/DreamDriverInputModule.h"
@@ -13,16 +16,22 @@
 #include "Driver/DreamDriverRig.h"
 #include "DreamDragDropTestTypes.h"
 #include "DreamInputPipelineTestTypes.h"
+#include "DreamNavigationTestTypes.h"
 #include "DreamPlayerScreenTestTypes.h"
+#include "Engine/DataTable.h"
 #include "Engine/World.h"
 #include "Event/DreamEventSystem.h"
 #include "Event/DreamPointerEventData.h"
 #include "Event/DreamScreenSpaceRaycaster.h"
 #include "Event/DreamUIInputSubsystem.h"
 #include "Event/DreamUIInputUser.h"
+#include "Event/DreamUIKeyRouting.h"
 #include "GameFramework/Actor.h"
+#include "GenericPlatform/GenericApplication.h"
+#include "Interaction/DreamPressInteractionTestTypes.h"
 #include "Interaction/DreamUIActionRouter.h"
 #include "Interaction/DreamUIDragDrop.h"
+#include "Interaction/DreamUIInputAction.h"
 #include "Interaction/DreamUINavigationStack.h"
 #include "Interaction/DreamUITooltip.h"
 #include "Interaction/UITextInput.h"
@@ -736,6 +745,488 @@ bool FDreamInputDragSourceGoneWhileHeldTest::RunTest(const FString& Parameters)
 	Rig.InputModule()->Release();
 	Rig.PumpFrames(1);
 	TestEqual(TEXT("...and the release does not tell it twice"), Probe->CallCount, 1);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamInputMouseOffTheViewportTest,
+	"DreamGUI.Input.Pipeline.AMouseOnNoPartOfTheViewportIsOverNothingNotOverItsTopLeftCorner",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * The standalone module answered (0,0) for a mouse it could not place -- over another window, no mouse attached, no
+ * viewport at all -- and the presets push its answer into pointer 0 every frame: whatever was drawn in the top-left corner
+ * was hovered, and a drag let go of over another window was dropped onto it. The driver's own module stands a position in
+ * for the mouse and so never asked. The answer is now the viewport's own reckoning, (-1,-1) wherever the cursor is on no
+ * part of it, which is over nothing. Checked with the module's own answer in a world with no viewport, pushed into
+ * pointer 0 as the presets push it, over a widget covering the top-left corner.
+ */
+bool FDreamInputMouseOffTheViewportTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamInputPipelineTestLocal;
+	FDreamDriverRig Rig = FDreamDriverRig::Headless(ViewportSize);
+	Rig.BindTest(this);
+	if (!TestTrue(TEXT("The rig came up"), Rig.IsUsable() && Rig.InputModule() != nullptr))
+	{
+		return false;
+	}
+	// 100 by 100 in the top-left corner: the root's middle is the viewport's, and up is up.
+	UDreamWidget* Corner = Rig.MakeWidget(TEXT("Corner"), nullptr, FVector2D(100.0, 100.0),
+		FVector2D(-0.5 * ViewportSize.X + 50.0, 0.5 * ViewportSize.Y - 50.0));
+	UDreamPointerLedger* Ledger = IsValid(Corner) ? Corner->AddComponent<UDreamPointerLedger>() : nullptr;
+	if (!TestNotNull(TEXT("A widget in the top-left corner, keeping books"), Ledger))
+	{
+		return false;
+	}
+	Rig.PumpFrames(2);
+	const FVector2D CornerCentre = CentreOf(Corner);
+	if (!TestTrue(TEXT("The widget covers the viewport's top-left pixel"), CornerCentre.X > 0.0 && CornerCentre.X < 60.0 && CornerCentre.Y > 0.0 && CornerCentre.Y < 60.0))
+	{
+		return false;
+	}
+	UDreamDriverInputModule* Module = Rig.InputModule();
+	// Pointer 0 somewhere in the middle, over nothing, whatever it was over before.
+	Module->MoveTo(FVector2D(0.5 * ViewportSize.X, 0.5 * ViewportSize.Y));
+	Rig.PumpFrames(1);
+	const int32 EntersBefore = Ledger->Enter;
+	const int32 ExitsBefore = Ledger->Exit;
+
+	// The module's own answer, its stand-in position switched off: this world has no viewport for a mouse to be on.
+	Module->SetOverrideMousePosition(false);
+	FVector2D Answer = FVector2D::ZeroVector;
+	Module->GetMousePosition(Answer);
+	TestTrue(TEXT("A mouse on no viewport is at (-1,-1), where a viewport puts a cursor that is off it"), Answer.Equals(FVector2D(-1.0, -1.0)));
+	Module->InputMouseMove(FVector(Answer, 0.0));
+	Rig.PumpFrames(2);
+	TestEqual(TEXT("...which, pushed into pointer 0 as the presets push it, hovers nothing"), Ledger->Enter, EntersBefore);
+
+	// The corner widget is what the old answer put the mouse over.
+	Module->InputMouseMove(FVector(1.0, 1.0, 0.0));
+	Rig.PumpFrames(1);
+	TestEqual(TEXT("The viewport's top-left pixel is the corner widget's"), Ledger->Enter, EntersBefore + 1);
+	Module->InputMouseMove(FVector(Answer, 0.0));
+	Rig.PumpFrames(1);
+	TestEqual(TEXT("...and the mouse going off the viewport leaves it"), Ledger->Exit, ExitsBefore + 1);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamInputKeyReleaseFollowsPressTest,
+	"DreamGUI.Input.Keys.AKeysReleaseGoesWhereItsPressWentWhateverTakesThatKeyByThen",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * A release was routed by what the key meant when it came up, not by what had taken its press. A dialog that opened over
+ * a held confirm and bound the confirm key took its release, and the button the confirm had pressed was never let go of;
+ * a field that begins its edit on being navigated into, reached with the arrow key held, took the arrow's release as
+ * typing, and the direction went on stepping. Each player now remembers what took each held key, and its release goes
+ * there. Checked through the key routing every input source takes.
+ */
+bool FDreamInputKeyReleaseFollowsPressTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamInputPipelineTestLocal;
+	FDreamDriverRig Rig = FDreamDriverRig::Headless(ViewportSize);
+	Rig.BindTest(this);
+	if (!TestTrue(TEXT("The rig came up"), Rig.IsUsable()))
+	{
+		return false;
+	}
+	UDreamUIInputUser* User = Rig.EventSystem()->GetInputUser();
+	UDreamUIActionRouter* Router = UDreamUIActionRouter::Get(Rig.GetWorld());
+	TStrongObjectPtr<UDreamPressInteractionListener> Listener(NewObject<UDreamPressInteractionListener>());
+	UDreamButton* Button = Rig.MakeControl<UDreamButton>(TEXT("Delete"), nullptr, FVector2D(200.0, 60.0));
+	if (!TestTrue(TEXT("A player, a router and a button"), User != nullptr && Router != nullptr && Button != nullptr))
+	{
+		return false;
+	}
+	Button->OnPressed.AddDynamic(Listener.Get(), &UDreamPressInteractionListener::HandlePressed);
+	Button->OnReleased.AddDynamic(Listener.Get(), &UDreamPressInteractionListener::HandleReleased);
+	Button->OnClicked.AddDynamic(Listener.Get(), &UDreamPressInteractionListener::HandleClicked);
+	Rig.PumpFrames(2);
+	const FModifierKeysState NoModifiers;
+	bool bTyped = false;
+	auto Route = [User, &NoModifiers, &bTyped](const FKey& InKey, bool bInPressed)
+	{
+		return DreamUIKeyRouting::RouteKey(User, InKey, bInPressed, NoModifiers, bTyped);
+	};
+
+	// The highlight onto the button -- the first step lands on the only selectable there is -- and the confirm held on it.
+	Route(EKeys::Down, true);
+	Rig.PumpFrames(1);
+	Route(EKeys::Down, false);
+	Rig.PumpFrames(1);
+	Route(EKeys::Enter, true);
+	Rig.PumpFrames(1);
+	TestEqual(TEXT("The confirm pressed the highlighted button"), Listener->PressedCount, 1);
+
+	// A dialog opens over the held key, and binds it.
+	UDataTable* Table = NewObject<UDataTable>(GetTransientPackage());
+	Table->RowStruct = FDreamUIInputActionData::StaticStruct();
+	FDreamUIInputActionData Row;
+	Row.DisplayName = FText::FromString(TEXT("Confirm"));
+	Row.KeyboardKey = EKeys::Enter;
+	Row.GamepadKey = EKeys::Gamepad_FaceButton_Bottom;
+	Table->AddRow(TEXT("Confirm"), Row);
+	FDataTableRowHandle ConfirmRow;
+	ConfirmRow.DataTable = Table;
+	ConfirmRow.RowName = TEXT("Confirm");
+	TStrongObjectPtr<UDreamActionCallCounter> DialogConfirm(NewObject<UDreamActionCallCounter>());
+	FDreamUIActionExecutedDelegate OnDialogConfirm;
+	OnDialogConfirm.BindUFunction(DialogConfirm.Get(), TEXT("Fire"));
+	const FDreamUIActionHandle DialogBinding = Router->RegisterAction(nullptr, ConfirmRow, OnDialogConfirm);
+
+	Route(EKeys::Enter, false);
+	Rig.PumpFrames(1);
+	TestEqual(TEXT("The confirm's release let go of the button it pressed"), Listener->ReleasedCount, 1);
+	TestEqual(TEXT("...and clicked it, the press having been made on it"), Listener->ClickedCount, 1);
+	TestEqual(TEXT("...and the dialog's binding, which never saw the press, took nothing"), DialogConfirm->CallCount, 0);
+	Router->UnregisterAction(DialogBinding);
+
+	// A field below the button that begins its edit on being navigated into, reached with the arrow held.
+	UDreamTextInput* Field = Rig.MakeControl<UDreamTextInput>(TEXT("Name"), nullptr, FVector2D(320.0, 40.0), FVector2D(0.0, -200.0));
+	if (!TestTrue(TEXT("A field"), Field != nullptr && Field->InputBehaviour != nullptr))
+	{
+		return false;
+	}
+	Field->InputBehaviour->SetAutoActivateInputWhenNavigateIn(true);
+	Rig.PumpFrames(2);
+	Route(EKeys::Down, true);
+	Rig.PumpFrames(2);
+	if (!TestTrue(TEXT("The arrow moved the highlight into the field, which began its edit"), Field->InputBehaviour->IsInputActive()))
+	{
+		Route(EKeys::Down, false);
+		return false;
+	}
+	Route(EKeys::Down, false);
+	TestFalse(TEXT("The arrow's release is no typing for the field its press never reached"), bTyped);
+	const UDreamPointerEventData* Navigation = User->FindPointerEventData(DreamUIPointerIds::Mouse);
+	TestTrue(TEXT("...it lets go of the direction its press held"),
+		Navigation != nullptr && Navigation->NavigateDirection == EDreamUINavigationDirection::None);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamInputTwoDirectionsTest,
+	"DreamGUI.Input.Keys.LettingGoOfOneOfTwoHeldDirectionsLeavesTheOtherStepping",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * Navigation kept one direction per pointer, and the release of any direction emptied it: a D-pad rolled from Down to
+ * Right -- Down pressed, Right pressed, Down let go of -- stopped stepping with Right still held, and so did an arrow key
+ * held while another was tapped beside it. Every direction held is kept now, and letting go of one leaves the latest of
+ * the others stepping. Checked through the key routing every input source takes, on the navigation pointer's own state.
+ */
+bool FDreamInputTwoDirectionsTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamInputPipelineTestLocal;
+	FDreamDriverRig Rig = FDreamDriverRig::Headless(ViewportSize);
+	Rig.BindTest(this);
+	if (!TestTrue(TEXT("The rig came up"), Rig.IsUsable()))
+	{
+		return false;
+	}
+	UDreamUIInputUser* User = Rig.EventSystem()->GetInputUser();
+	if (!TestNotNull(TEXT("A player"), User))
+	{
+		return false;
+	}
+	const FModifierKeysState NoModifiers;
+	bool bTyped = false;
+	auto Route = [User, &NoModifiers, &bTyped](const FKey& InKey, bool bInPressed)
+	{
+		return DreamUIKeyRouting::RouteKey(User, InKey, bInPressed, NoModifiers, bTyped);
+	};
+
+	Route(EKeys::Gamepad_DPad_Down, true);
+	Route(EKeys::Gamepad_DPad_Right, true);
+	const UDreamPointerEventData* Navigation = User->FindPointerEventData(DreamUIPointerIds::Mouse);
+	if (!TestNotNull(TEXT("Navigation has its pointer"), Navigation))
+	{
+		return false;
+	}
+	TestEqual(TEXT("Of two directions held, the later steps"), Navigation->NavigateDirection, EDreamUINavigationDirection::Right);
+	Route(EKeys::Gamepad_DPad_Down, false);
+	TestEqual(TEXT("Letting go of the earlier leaves the later stepping"), Navigation->NavigateDirection, EDreamUINavigationDirection::Right);
+	Route(EKeys::Gamepad_DPad_Right, false);
+	TestEqual(TEXT("...until it is let go of too"), Navigation->NavigateDirection, EDreamUINavigationDirection::None);
+
+	Route(EKeys::Down, true);
+	Route(EKeys::Right, true);
+	Route(EKeys::Right, false);
+	TestEqual(TEXT("Letting go of the later goes back to the one still held"), Navigation->NavigateDirection, EDreamUINavigationDirection::Down);
+	Route(EKeys::Down, false);
+	TestEqual(TEXT("...and letting go of that stops it"), Navigation->NavigateDirection, EDreamUINavigationDirection::None);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamInputScreenKeepsOtherCanvasRaycasterTest,
+	"DreamGUI.Input.Players.APlayersScreenGetsARaycasterOfItsOwnRatherThanTakingOneFromAnotherCanvas",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * Building a player's screen pointed every screen raycaster of that player at the new screen's canvas, whatever canvas
+ * it had been put there to serve: a raycaster placed for an overlay canvas of the project's own was taken from it, and
+ * nothing on that canvas answered the player again. A raycaster projecting through an overlay root of its own now keeps
+ * it, and a screen that finds every one of the player's so taken is given one of its own. Checked with a second player
+ * whose raycaster serves the rig's canvas, and that player's screen then built.
+ */
+bool FDreamInputScreenKeepsOtherCanvasRaycasterTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamInputPipelineTestLocal;
+	// Two overlay canvases for one player compete for one screen, which the manager reports every tick; the
+	// configuration is the point of this test, so the report is expected.
+	AddExpectedMessage(TEXT("rendered with ScreenSpaceOverlay mode"), ELogVerbosity::Error, EAutomationExpectedErrorFlags::Contains, -1);
+	FDreamDriverRig Rig = FDreamDriverRig::Headless(ViewportSize);
+	Rig.BindTest(this);
+	if (!TestTrue(TEXT("The rig came up"), Rig.IsUsable()))
+	{
+		return false;
+	}
+	UDreamUIInputSubsystem* Input = UDreamUIInputSubsystem::Get(Rig.GetWorld());
+	UDreamScreenUISubsystem* ScreenUI = UDreamScreenUISubsystem::Get(Rig.GetWorld());
+	FSecondPlayer Second(Rig, 1);
+	UDreamWidget* Target = Rig.MakeWidget(TEXT("Target"), nullptr, FVector2D(200.0, 100.0));
+	UDreamPointerLedger* Ledger = IsValid(Target) ? Target->AddComponent<UDreamPointerLedger>() : nullptr;
+	if (!TestTrue(TEXT("Input, screens, a second player on the rig's canvas and a widget there"),
+		Input != nullptr && ScreenUI != nullptr && Second.IsUsable() && Ledger != nullptr))
+	{
+		return false;
+	}
+	Rig.PumpFrames(1);
+
+	// Player 1's own screen, as a page pushed for player 1 builds it.
+	UDreamWidget* SecondScreen = ScreenUI->GetOrCreateScreenRootForUserIndex(1);
+	UDreamCanvas* SecondCanvas = SecondScreen != nullptr ? SecondScreen->GetComponent<UDreamCanvas>() : nullptr;
+	if (!TestTrue(TEXT("Player 1 has a screen of its own"), SecondCanvas != nullptr && SecondCanvas != Rig.RootCanvas()))
+	{
+		return false;
+	}
+	TestTrue(TEXT("The raycaster serving the rig's canvas for player 1 keeps it"), Second.Raycaster->GetRootCanvas() == Rig.RootCanvas());
+	const AActor* Host = Input->GetInteractionHost(1);
+	const UDreamScreenSpaceRaycaster* Made = Host != nullptr ? Host->FindComponentByClass<UDreamScreenSpaceRaycaster>() : nullptr;
+	TestTrue(TEXT("...and the new screen was given a raycaster of its own"), Made != nullptr && Made->GetRootCanvas() == SecondCanvas);
+
+	// And player 1 still points at what is on the rig's canvas.
+	Rig.PumpFrames(1);
+	Second.Module->MoveTo(CentreOf(Target));
+	Rig.PumpFrames(1);
+	Second.Module->Press();
+	Rig.PumpFrames(1);
+	Second.Module->Release();
+	Rig.PumpFrames(1);
+	TestEqual(TEXT("Player 1's click on the rig's canvas lands"), Ledger->Click, 1);
+	TestEqual(TEXT("...as player 1's"), Ledger->LastUserIndex, 1);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamInputOverlaySortOrderTest,
+	"DreamGUI.Input.Pipeline.OfTwoOverlayCanvasesUnderThePointerTheOneDrawnOnTopIsWhatItIsOver",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * Two overlay canvases under the pointer, each answered by a screen raycaster of its own, were ordered by distance along
+ * the ray -- which between two overlays drawn one over the other says nothing about which is on top -- and at a tie the
+ * raycaster listed first won, so a canvas drawn over another passed the pointer through to the one below. Within one
+ * raycaster the canvas sort order has always decided; across raycasters it decides now too. Checked with a second overlay
+ * canvas sorted above the rig's, its raycaster listed after the rig's, and a widget over the same pixel as one of the rig's.
+ */
+bool FDreamInputOverlaySortOrderTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamInputPipelineTestLocal;
+	// Two overlay canvases for one player compete for one screen, which the manager reports every tick; the
+	// configuration is the point of this test, so the report is expected.
+	AddExpectedMessage(TEXT("rendered with ScreenSpaceOverlay mode"), ELogVerbosity::Error, EAutomationExpectedErrorFlags::Contains, -1);
+	FDreamDriverRig Rig = FDreamDriverRig::Headless(ViewportSize);
+	Rig.BindTest(this);
+	AActor* Host = Rig.GetHostActor();
+	if (!TestTrue(TEXT("The rig came up"), Rig.IsUsable() && Host != nullptr && Rig.RootCanvas() != nullptr))
+	{
+		return false;
+	}
+	UDreamWidget* Below = Rig.MakeWidget(TEXT("Below"), nullptr, FVector2D(200.0, 100.0));
+	UDreamPointerLedger* BelowLedger = IsValid(Below) ? Below->AddComponent<UDreamPointerLedger>() : nullptr;
+
+	// A second overlay root, built as the rig builds its own, drawn above it, with a raycaster of its own.
+	UDreamWidget* OverlayRoot = NewObject<UDreamWidget>(Rig.GetWorld(), NAME_None, RF_Public | RF_Transactional);
+	OverlayRoot->SetDisplayName(TEXT("Overlay"));
+	OverlayRoot->OnRegister();
+	UDreamCanvas* OverlayCanvas = OverlayRoot->AddComponent<UDreamCanvas>();
+	if (!TestTrue(TEXT("A widget on the rig's canvas, and a second overlay canvas"), BelowLedger != nullptr && OverlayCanvas != nullptr))
+	{
+		OverlayRoot->DestroyWidget();
+		return false;
+	}
+	OverlayCanvas->SetRenderMode(EDreamRenderMode::ScreenSpaceOverlay);
+	OverlayCanvas->SetViewportSizeOverride(ViewportSize);
+	// A root canvas's sort order counts only with sorting overridden; without it every root sorts at 0.
+	OverlayCanvas->SetOverrideSorting(true);
+	OverlayCanvas->SetSortOrder(Rig.RootCanvas()->GetActualSortOrder() + 10);
+	if (!OverlayRoot->HasBegunPlay())
+	{
+		OverlayRoot->BeginPlay();
+	}
+	OverlayRoot->CalculateObjectToWorldTransform(true);
+	UDreamScreenSpaceRaycaster* OverlayRaycaster = NewObject<UDreamScreenSpaceRaycaster>(Host);
+	OverlayRaycaster->SetRootCanvas(OverlayCanvas);
+	Host->AddInstanceComponent(OverlayRaycaster);
+	OverlayRaycaster->RegisterComponent();
+	OverlayRaycaster->ActivateRaycaster();
+	UDreamWidget* Above = Rig.MakeWidget(TEXT("Above"), OverlayRoot, FVector2D(200.0, 100.0));
+	UDreamPointerLedger* AboveLedger = IsValid(Above) ? Above->AddComponent<UDreamPointerLedger>() : nullptr;
+	if (!TestNotNull(TEXT("A widget on the second canvas, over the first one"), AboveLedger))
+	{
+		OverlayRoot->DestroyWidget();
+		return false;
+	}
+	Rig.PumpFrames(2);
+
+	UDreamDriverInputModule* Module = Rig.InputModule();
+	Module->MoveTo(CentreOf(Below));
+	Rig.PumpFrames(1);
+	Module->Press();
+	Rig.PumpFrames(1);
+	Module->Release();
+	Rig.PumpFrames(1);
+	TestEqual(TEXT("The pointer is over the widget on the canvas drawn on top"), AboveLedger->Enter, 1);
+	TestEqual(TEXT("...and clicks it"), AboveLedger->Click, 1);
+	TestEqual(TEXT("...not the one on the canvas below"), BelowLedger->Click, 0);
+	OverlayRoot->DestroyWidget();
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamInputHiddenFocusTest,
+	"DreamGUI.Input.Focus.AButtonHiddenOrDisabledWhileItHoldsTheFocusGivesItUp",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * A widget is refused the focus while it is hidden or disabled, but one that became so while it held the focus kept it,
+ * and went on hearing its player's keys and characters: a page hidden under the one in front still answered Escape with
+ * its own handler. Hiding a widget -- or a widget it is inside -- and disabling one now takes the focus from it, as
+ * making it unfocusable always did, and Slate does; the action router passes over a focused widget that is hidden or
+ * disabled all the same. Checked with three buttons, each focused in turn: one hidden, one disabled, one inside a panel
+ * that is hidden -- and with a key that no longer reaches the hidden one.
+ */
+bool FDreamInputHiddenFocusTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamInputPipelineTestLocal;
+	FDreamDriverRig Rig = FDreamDriverRig::Headless(ViewportSize);
+	Rig.BindTest(this);
+	if (!TestTrue(TEXT("The rig came up"), Rig.IsUsable()))
+	{
+		return false;
+	}
+	UDreamUIInputUser* User = Rig.EventSystem()->GetInputUser();
+	UDreamUIActionRouter* Router = UDreamUIActionRouter::Get(Rig.GetWorld());
+	UDreamButton* Hidden = Rig.MakeControl<UDreamButton>(TEXT("Hidden"), nullptr, FVector2D(200.0, 60.0), FVector2D(-300.0, 0.0));
+	UDreamButton* Disabled = Rig.MakeControl<UDreamButton>(TEXT("Disabled"), nullptr, FVector2D(200.0, 60.0), FVector2D(0.0, 0.0));
+	UDreamWidget* Panel = Rig.MakeWidget(TEXT("Panel"), nullptr, FVector2D(300.0, 200.0), FVector2D(300.0, 0.0));
+	UDreamButton* Inside = IsValid(Panel) ? Rig.MakeControl<UDreamButton>(TEXT("Inside"), Panel, FVector2D(200.0, 60.0)) : nullptr;
+	if (!TestTrue(TEXT("A player, a router, and three buttons, one of them inside a panel"),
+		User != nullptr && Router != nullptr && Hidden != nullptr && Disabled != nullptr && Inside != nullptr
+		&& Hidden->FaceNode != nullptr && Disabled->FaceNode != nullptr && Inside->FaceNode != nullptr))
+	{
+		return false;
+	}
+	UDreamKeyRecordingBehaviour* Recorder = Hidden->FaceNode->AddComponent<UDreamKeyRecordingBehaviour>();
+	if (!TestNotNull(TEXT("The first button's face hears keys"), Recorder))
+	{
+		return false;
+	}
+	Recorder->bKeepTheKey = true;
+	Rig.PumpFrames(1);
+	// The face is what a click or a navigation step focuses: the button's selectable lives there.
+	auto FocusOn = [&Rig, User](UDreamButton* InButton)
+	{
+		Rig.EventSystem()->SetSelectComponentWithDefault(InButton->FaceNode);
+		return User->GetFocusedWidget() == InButton->FaceNode;
+	};
+
+	if (!TestTrue(TEXT("The first button has the focus"), FocusOn(Hidden)))
+	{
+		return false;
+	}
+	TestTrue(TEXT("...and takes a key"), Router->HandleKey(0, EKeys::F, true));
+	Router->HandleKey(0, EKeys::F, false);
+	Hidden->SetVisibility(EDreamWidgetVisibility::Hidden);
+	TestTrue(TEXT("Hidden, it no longer holds the focus"), User->GetFocusedWidget() != Hidden->FaceNode);
+	TestFalse(TEXT("...and a key does not reach it"), Router->HandleKey(0, EKeys::F, true));
+	Router->HandleKey(0, EKeys::F, false);
+	TestEqual(TEXT("...which heard only the key from before"), Recorder->KeyDownCount, 1);
+	Hidden->SetVisibility(EDreamWidgetVisibility::Visible);
+	TestTrue(TEXT("Shown again, it does not take the focus back by itself"), User->GetFocusedWidget() != Hidden->FaceNode);
+
+	TestTrue(TEXT("The second button has the focus"), FocusOn(Disabled));
+	Disabled->SetIsEnabled(false);
+	TestTrue(TEXT("Disabled, it no longer holds the focus"), User->GetFocusedWidget() != Disabled->FaceNode);
+
+	TestTrue(TEXT("The button in the panel has the focus"), FocusOn(Inside));
+	Panel->SetVisibility(EDreamWidgetVisibility::Hidden);
+	TestTrue(TEXT("Its panel hidden, it no longer holds the focus"), User->GetFocusedWidget() != Inside->FaceNode);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamInputReleaseWhileTracingOffTest,
+	"DreamGUI.Input.Pipeline.AReleaseWhileTracingIsOffEndsItsPressThereWithNoClick",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * A player whose tracing was turned off -- a cutscene taking the pointer away, say -- kept a release that was waiting for
+ * the next frame, and dropped any release that came while tracing stayed off: the press held on, and its release landed,
+ * if at all, the frame tracing came back, on whatever was under the pointer by then -- a click nobody made. A release
+ * waiting when tracing goes off, or arriving while it is off, now ends its press at once, with its up and no click.
+ */
+bool FDreamInputReleaseWhileTracingOffTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamInputPipelineTestLocal;
+	FDreamDriverRig Rig = FDreamDriverRig::Headless(ViewportSize);
+	Rig.BindTest(this);
+	if (!TestTrue(TEXT("The rig came up"), Rig.IsUsable()))
+	{
+		return false;
+	}
+	UDreamEventSystem* Events = Rig.EventSystem();
+	UDreamDriverInputModule* Module = Rig.InputModule();
+	UDreamWidget* Target = Rig.MakeWidget(TEXT("Target"), nullptr, FVector2D(200.0, 100.0));
+	UDreamPointerLedger* Ledger = IsValid(Target) ? Target->AddComponent<UDreamPointerLedger>() : nullptr;
+	if (!TestNotNull(TEXT("A widget keeping books"), Ledger))
+	{
+		return false;
+	}
+	Rig.PumpFrames(1);
+	Module->MoveTo(CentreOf(Target));
+	Rig.PumpFrames(1);
+
+	// Let go of in the frame tracing is turned off.
+	Module->Press();
+	Rig.PumpFrames(1);
+	TestEqual(TEXT("Pressed"), Ledger->Down, 1);
+	Module->Release();
+	Events->SetRaycastEnable(false);
+	Rig.PumpFrames(1);
+	TestEqual(TEXT("A release waiting when tracing goes off ends its press"), Ledger->Up, 1);
+	TestEqual(TEXT("...with no click"), Ledger->Click, 0);
+	Events->SetRaycastEnable(true);
+	Rig.PumpFrames(2);
+	TestEqual(TEXT("...and none when tracing comes back"), Ledger->Click, 0);
+
+	// Let go of while tracing is off.
+	Module->Press();
+	Rig.PumpFrames(1);
+	TestEqual(TEXT("Pressed again"), Ledger->Down, 2);
+	Events->SetRaycastEnable(false);
+	Rig.PumpFrames(1);
+	Module->Release();
+	Rig.PumpFrames(1);
+	TestEqual(TEXT("A release while tracing is off ends its press"), Ledger->Up, 2);
+	Events->SetRaycastEnable(true);
+	Rig.PumpFrames(2);
+	TestEqual(TEXT("...and nothing clicks when tracing comes back"), Ledger->Click, 0);
+	const UDreamPointerEventData* Mouse = Events->GetInputUser() != nullptr ? Events->GetInputUser()->FindPointerEventData(DreamUIPointerIds::Mouse) : nullptr;
+	TestTrue(TEXT("...nor is anything left pressed"), Mouse != nullptr && !Mouse->bNowIsTriggerPressed);
 	return true;
 }
 

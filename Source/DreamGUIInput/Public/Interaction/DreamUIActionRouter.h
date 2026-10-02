@@ -79,6 +79,10 @@ public:
 
 	/**
 	 * Offer a key to the bindings for InUserIndex.
+	 *
+	 * A release is answered by what took its press -- the focused widget's handlers or the binding that took it -- and
+	 * by nothing else: a binding registered while the key was held never saw the press, and does not take its release.
+	 * The focused widget hears every release all the same, as UMG's OnKeyUp does.
 	 * @return true when a binding took it, which the caller must read as "do not also treat this as
 	 *         navigation" -- otherwise a Confirm bound to Enter would both fire and press whatever
 	 *         navigation happens to be sitting on.
@@ -168,6 +172,11 @@ private:
 	};
 
 	TArray<FBindingEntry> Bindings;
+	/**
+	 * What took each player's held key, by binding id -- INDEX_NONE when the focused widget kept it -- until its release
+	 * asks. A key taken by none of them is not here, and its release is not this router's.
+	 */
+	TMap<TPair<int32, FKey>, int32> KeyPressTakers;
 	/** Set by TeardownForWorld, which runs once. */
 	bool bTornDownForWorld = false;
 	int32 NextId = 0;

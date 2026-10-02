@@ -15,6 +15,7 @@
 #include "Interaction/DreamUIDragDrop.h"
 #include "DreamDragDropTestTypes.h"
 #include "DreamScopedWorld.h"
+#include "DreamUIDragDropReentryTestTypes.h"
 
 /*
  * The drag-drop framework's decisions: what a source writes onto the drag, what a target accepts,
@@ -360,6 +361,105 @@ bool FDreamUIDragPerPointerTest::RunTest(const FString& Parameters)
 
 	SlotA->DestroyWidget();
 	SlotB->DestroyWidget();
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamUIDragHoverHandlerEndsADragTest,
+	"DreamGUI.DragDrop.ATargetsHandlerEndingADragMidHoverLeavesNoTargetLitForADragNoLongerFollowed",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * A drop target's enter and leave reach game code, and game code ends drags: the leave that cancels the drag, the enter
+ * that ends another finger's. The hover was brought up to date by walking the map of followed drags, through a reference
+ * into it, so a handler ending a drag changed the map under the walk and the reference wrote into an entry no longer
+ * there -- and the target entered after its drag had ended stayed lit for good, with no leave ever to come. Drags are now
+ * walked by key and looked up again after every handler, and one a handler ended goes no further. Checked with two
+ * fingers' drags: a target's leave ending the other finger's drag in the middle of a tick, then a target's leave ending
+ * the very drag that was leaving it.
+ */
+bool FDreamUIDragHoverHandlerEndsADragTest::RunTest(const FString& Parameters)
+{
+	DreamTests::FScopedGameWorld TestWorld;
+
+	UDreamUIDragDropSubsystem* DragDrop = TestWorld.World->GetSubsystem<UDreamUIDragDropSubsystem>();
+	ADreamStandaloneInputEventSystemActor* EventActor =
+		DragDrop != nullptr ? TestWorld.World->SpawnActor<ADreamStandaloneInputEventSystemActor>() : nullptr;
+	UDreamEventSystem* EventSystem = EventActor != nullptr ? EventActor->GetEventSystem() : nullptr;
+	UDreamUIInputSubsystem* InputSubsystem = UDreamUIInputSubsystem::Get(TestWorld.World);
+	if (!TestTrue(TEXT("A drag-drop subsystem, and an event system its events come through"),
+		DragDrop != nullptr && EventSystem != nullptr && InputSubsystem != nullptr))
+	{
+		return false;
+	}
+	// Registered by hand, as the two-finger test above does and for its reasons.
+	InputSubsystem->AddEventSystem(EventSystem);
+	DragDrop->Tick(0.0f);
+
+	UDreamWidget* SlotA = NewObject<UDreamWidget>(TestWorld.World, NAME_None, RF_Transient);
+	UDreamWidget* SlotB = NewObject<UDreamWidget>(TestWorld.World, NAME_None, RF_Transient);
+	UDreamWidget* SlotC = NewObject<UDreamWidget>(TestWorld.World, NAME_None, RF_Transient);
+	UDreamUIDropTarget* TargetA = SlotA->AddComponent<UDreamUIDropTarget>();
+	UDreamUIDropTarget* TargetB = SlotB->AddComponent<UDreamUIDropTarget>();
+	UDreamUIDropTarget* TargetC = SlotC->AddComponent<UDreamUIDropTarget>();
+	if (!TestTrue(TEXT("Three slots, each a drop target"), TargetA != nullptr && TargetB != nullptr && TargetC != nullptr))
+	{
+		return false;
+	}
+	auto MakeDrag = [&TestWorld](int32 InPointerID, UDreamWidget* InEnterWidget)
+	{
+		UDreamPointerEventData* EventData = NewObject<UDreamPointerEventData>(TestWorld.World);
+		EventData->PointerID = InPointerID;
+		EventData->bIsDragging = true;
+		EventData->EnterWidget = InEnterWidget;
+		EventData->EventType = EDreamUIPointerEventType::BeginDrag;
+		EventData->DragOperation = NewObject<UDreamDragDropOperation>(TestWorld.World);
+		return EventData;
+	};
+	auto EndDragOf = [EventSystem](UDreamPointerEventData* InFinger, UDreamWidget* InSource)
+	{
+		InFinger->EventType = EDreamUIPointerEventType::EndDrag;
+		InFinger->bIsDragging = false;
+		EventSystem->CallOnPointerEndDrag(InSource, InFinger);
+	};
+	UDreamPointerEventData* FirstFinger = MakeDrag(0, SlotA);
+	UDreamPointerEventData* SecondFinger = MakeDrag(1, SlotC);
+	EventSystem->CallOnPointerBeginDrag(SlotA, FirstFinger);
+	EventSystem->CallOnPointerBeginDrag(SlotC, SecondFinger);
+	if (!TestEqual(TEXT("Two drags are followed"), DragDrop->GetDragCount(), 2)
+		|| !TestTrue(TEXT("...each lighting the slot its finger is over"), TargetA->IsDragHovered() && TargetC->IsDragHovered()))
+	{
+		return false;
+	}
+
+	// The first finger has moved on to slot B, and slot A's leave ends the second finger's drag -- inside the tick.
+	UDreamDragDropReentryProbe* EndsTheOther = NewObject<UDreamDragDropReentryProbe>(TestWorld.World);
+	EndsTheOther->Action = [EndDragOf, SecondFinger, SlotC]() { EndDragOf(SecondFinger, SlotC); };
+	TargetA->OnDragLeave.AddDynamic(EndsTheOther, &UDreamDragDropReentryProbe::OnOperation);
+	FirstFinger->EnterWidget = SlotB;
+	DragDrop->Tick(0.0f);
+	TestEqual(TEXT("Slot A's leave ran its handler"), EndsTheOther->CallCount, 1);
+	TestEqual(TEXT("...which ended the other finger's drag"), DragDrop->GetDragCount(), 1);
+	TestFalse(TEXT("...leaving the slot that drag lit unlit"), TargetC->IsDragHovered());
+	TestEqual(TEXT("The first finger's drag went on to light the slot it is over"), DragDrop->GetHoveredTargetForPointer(0), TargetB);
+	TestTrue(TEXT("...lit"), TargetB->IsDragHovered());
+	TestFalse(TEXT("...having left the one it was over"), TargetA->IsDragHovered());
+
+	// The first finger moves back to slot A, and slot B's leave ends that very drag.
+	UDreamDragDropReentryProbe* EndsItsOwn = NewObject<UDreamDragDropReentryProbe>(TestWorld.World);
+	EndsItsOwn->Action = [EndDragOf, FirstFinger, SlotB]() { EndDragOf(FirstFinger, SlotB); };
+	TargetB->OnDragLeave.AddDynamic(EndsItsOwn, &UDreamDragDropReentryProbe::OnOperation);
+	FirstFinger->EventType = EDreamUIPointerEventType::Drag;
+	FirstFinger->EnterWidget = SlotA;
+	EventSystem->CallOnPointerDrag(SlotA, FirstFinger);
+	TestEqual(TEXT("Slot B's leave ran its handler"), EndsItsOwn->CallCount, 1);
+	TestEqual(TEXT("...which ended the drag leaving it"), DragDrop->GetDragCount(), 0);
+	TestFalse(TEXT("The slot that drag was moving to is not lit for a drag no longer followed"), TargetA->IsDragHovered());
+	TestFalse(TEXT("...and neither is the one it left"), TargetB->IsDragHovered());
+
+	SlotA->DestroyWidget();
+	SlotB->DestroyWidget();
+	SlotC->DestroyWidget();
 	return true;
 }
 

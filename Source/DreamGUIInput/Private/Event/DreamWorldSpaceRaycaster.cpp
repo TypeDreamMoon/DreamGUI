@@ -55,6 +55,15 @@ bool UDreamWorldSpaceRaycaster::GetAffectByGamePause()const
 	return GetDefault<UDreamUISettings>()->bWorldSpaceUIAffectByGamePause;
 }
 
+FVector2D UDreamWorldSpaceRaycaster::GetViewCentrePixel(const FIntRect& InViewRect)
+{
+	// FSceneView::DeprojectScreenToWorld measures a screen position against the view rectangle it is handed -- the
+	// player's own part of the viewport, on a split screen -- so the middle of the view is the middle of that rectangle.
+	// The middle of the whole viewport put one player's reticle on the bottom edge of their view and the other's on the
+	// top edge of theirs.
+	return FVector2D(InViewRect.Min + InViewRect.Max) * 0.5;
+}
+
 bool UDreamWorldSpaceRaycaster::GenerateRay(UDreamPointerEventData* InPointerEventData, FVector& OutRayOrigin, FVector& OutRayDirection, FVector& OutRayEnd, float& OutRayLength)
 {
 	OutRayLength = RayLength;
@@ -77,12 +86,8 @@ bool UDreamWorldSpaceRaycaster::GenerateRay(UDreamPointerEventData* InPointerEve
 	switch (PointerSource)
 	{
 	case EDreamWorldPointerSource::ScreenCenter:
-	{
-		FVector2D ViewportSize = FVector2D::ZeroVector;
-		LocalPlayer->ViewportClient->GetViewportSize(ViewportSize);
-		ScreenPosition = ViewportSize * 0.5f;
-	}
-	break;
+		ScreenPosition = GetViewCentrePixel(ProjectionData.GetConstrainedViewRect());
+		break;
 	case EDreamWorldPointerSource::Mouse:
 	default:
 		if (InPointerEventData == nullptr)return false;//a mouse ray is a position, and there is none

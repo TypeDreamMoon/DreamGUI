@@ -66,6 +66,9 @@ public:
 	 */
 	virtual void BindDreamInput();
 
+	/** Points the event system at its player before any component begins play; see SyncEventSystemUserIndexWithAutoReceiveInput. */
+	virtual void PostInitializeComponents() override;
+
 protected:
 	virtual void BeginPlay() override;
 
@@ -74,8 +77,9 @@ protected:
 	 *
 	 * AutoReceiveInput and UDreamEventSystem::UserIndex answer the same question -- whose input is
 	 * this? -- and used to be set independently, so a second actor placed for Player1 still produced
-	 * pointers stamped player 0. Called from BeginPlay; does nothing when AutoReceiveInput is Disabled,
-	 * because the project is then driving EnableInput and owns the answer.
+	 * pointers stamped player 0. Called from PostInitializeComponents, before the event system registers
+	 * for its player in its own BeginPlay, and again from BeginPlay; does nothing when AutoReceiveInput is
+	 * Disabled, because the project is then driving EnableInput and owns the answer.
 	 */
 	void SyncEventSystemUserIndexWithAutoReceiveInput();
 
@@ -142,6 +146,12 @@ protected:
 	bool IsStandingDownForSlate() const;
 	/** The one question every handler asks first: suspended by a pause, or standing down for the Slate source. */
 	bool ShouldIgnoreInput() const { return IsStandingDownForSlate() || IsInputSuspendedByGamePause(); }
+	/**
+	 * What a release handler asks instead: only whether this actor stands down for the Slate source. A release goes on
+	 * while the game is paused too -- its press may have come before the pause, and dropping the release held that press
+	 * through the pause and let the next press's release end it -- and one whose press was dropped finds nothing held.
+	 */
+	bool ShouldIgnoreRelease() const { return IsStandingDownForSlate(); }
 	/** The player this actor's event system speaks for, or null. */
 	UDreamUIInputUser* GetInputUser() const;
 

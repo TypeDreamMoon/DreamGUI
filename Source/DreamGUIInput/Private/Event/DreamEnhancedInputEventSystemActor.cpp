@@ -202,12 +202,16 @@ void ADreamEnhancedInputEventSystemActor::ForwardTrigger(const FInputActionInsta
 	// Which trigger event arrived is what says press or release. Reading it from the value instead
 	// depended on EnhancedInput.bAlwaysGetRealValueFromActionInstanceData, and a Canceled -- the reason
 	// the Canceled binding exists at all -- carries no value to read either way.
-	if (ShouldIgnoreInput())
+	const bool bPressed = Instance.GetTriggerEvent() == ETriggerEvent::Started;
+	// A press waits on the pause setting; a release goes on regardless (ShouldIgnoreRelease).
+	if (bPressed ? ShouldIgnoreInput() : ShouldIgnoreRelease())
 	{
 		return;
 	}
-	const bool bPressed = Instance.GetTriggerEvent() == ETriggerEvent::Started;
-	ReportDeviceForAction(Instance.GetSourceAction());
+	if (!IsInputSuspendedByGamePause())
+	{
+		ReportDeviceForAction(Instance.GetSourceAction());
+	}
 	if (IsValid(InputModule))
 	{
 		InputModule->InputTrigger(GetPointerPosition(), bPressed, ButtonType);
