@@ -14,6 +14,7 @@
 #include "Core/Components/DreamVisual.h"
 #include "Core/Components/DreamWidget.h"
 #include "Interaction/DreamContentWidget.h"
+#include "Interaction/DreamUIFocusReturn.h"
 #include "Interaction/UIButton.h"
 
 const FName UDreamExpandableArea::ContentSlotName(TEXT("Content"));
@@ -183,10 +184,11 @@ void UDreamExpandableArea::WireParts()
 void UDreamExpandableArea::HandleContentDimensionsChanged(UDreamWidget* Child, bool bPivotChanged,
 	bool bWidthChanged, bool bHeightChanged)
 {
-	if (!bHeightChanged || !bIsExpanded)
+	if (!bHeightChanged || GetShownFraction() <= 0.0f)
 	{
 		// A collapsed section measures its header and nothing else, so nothing under it is news; and
-		// only the long axis is -- the width is whoever placed this control's to decide.
+		// only the long axis is -- the width is whoever placed this control's to decide. A section that
+		// is still travelling shut shows part of its content, so that is news until it arrives.
 		return;
 	}
 	const FDreamExpandableAreaStyle& Active = ResolveStyle(Style, &UDreamUIStyleSheet::ExpandableAreaStyle);
@@ -194,11 +196,23 @@ void UDreamExpandableArea::HandleContentDimensionsChanged(UDreamWidget* Child, b
 	// activity are decided by the FLAG, which has not moved, and re-pushing them would restate the
 	// style on every keystroke into a text field down there.
 	//
+	// Scaled by the same fraction the push scales by. Writing the whole content here, as this used
+	// to, showed the entire body for the one frame between a re-layout and the next animation step
+	// whenever the content changed size while the section was opening or closing -- the flash Slate
+	// avoids by driving the size and the visibility from one curve.
+	//
 	// Re-entrant only in the harmless direction: writing this control's height cascades to stretched
 	// descendants, which can bring the news back here -- and MeasureContentExtent asks the LAYOUT
 	// (GetDesiredSize walks the fitter and the authored snapshots, never a rect a panel pass wrote),
 	// so the second answer is the first answer and SetHeight's equality gate ends it there.
-	SizeControlHeight(Active.HeaderHeight + ResolveContentExtent());
+	SizeControlHeight(Active.HeaderHeight + ResolveContentExtent() * GetShownFraction());
+}
+
+float UDreamExpandableArea::GetShownFraction() const
+{
+	// The travel while there is one, and the flag's own end while there is not: the one number both the
+	// push and the content-size handler scale the content by, so neither can show more than the other.
+	return bExpansionAnimating ? ExpansionAlpha : (bIsExpanded ? 1.0f : 0.0f);
 }
 
 void UDreamExpandableArea::ApplyStyle()
@@ -281,11 +295,26 @@ void UDreamExpandableArea::SetIsExpanded(bool bInIsExpanded)
 	{
 		return;
 	}
+	if (!bInIsExpanded && ContentNode != nullptr)
+	{
+		// Before anything is hidden: focus inside the body goes to the header that closed it -- what a
+		// player who collapsed a section with the pad is standing on anyway -- instead of being cleared
+		// when the body goes to sleep and leaving the next stick press to start from nowhere.
+		FDreamFocusReturn::MoveFocusOutOf(ContentNode, HeaderNode);
+	}
+	const bool bWasExpanded = bIsExpanded;
 	bIsExpanded = bInIsExpanded;
 	if (ExpansionDuration > KINDA_SMALL_NUMBER)
 	{
 		// Travel FROM WHERE IT IS, not from the end it was last at: a section toggled again mid-open
 		// must turn round from the height it is showing rather than snapping to the other end first.
+		// Settled, it stands at the end it is leaving. Said outright rather than read off the alpha:
+		// an area authored collapsed still held the class default of fully open, and its first
+		// animated open jumped straight to the end.
+		if (!bExpansionAnimating)
+		{
+			ExpansionAlpha = bWasExpanded ? 1.0f : 0.0f;
+		}
 		bExpansionAnimating = true;
 		SetWantsTick(true);
 	}
@@ -352,6 +381,12 @@ void UDreamExpandableArea::NativeOnTick(float DeltaTime)
 		// The tick is the animation's only cost and it leaves with it: a settled expander joins no
 		// tick list at all.
 		SetWantsTick(false);
+		if (!bIsExpanded && ContentNode != nullptr)
+		{
+			// The body stays awake while it travels shut, so a player can step back into it on the way;
+			// the push below puts it to sleep, and focus there goes to the header first, as at the start.
+			FDreamFocusReturn::MoveFocusOutOf(ContentNode, HeaderNode);
+		}
 	}
 	PushExpansionVisuals();
 }
@@ -459,8 +494,13 @@ void UDreamExpandableArea::PushExpansionVisuals()
 	// height is what the page around it lays out against, so travelling it is the only way the page
 	// moves with the section. Instant mode leaves the alpha pinned at the ends, so this line reads
 	// exactly as it did.
-	const float ContentExtent = ResolveContentExtent() * (bExpansionAnimating ? ExpansionAlpha : (bIsExpanded ? 1.0f : 0.0f));
-	SizeControlHeight(Active.HeaderHeight + ContentExtent);
+	if (!bExpansionAnimating)
+	{
+		// Settled, the alpha is the flag's end -- including the first push of an area authored
+		// collapsed, whose alpha still holds the class default of fully open.
+		ExpansionAlpha = bIsExpanded ? 1.0f : 0.0f;
+	}
+	SizeControlHeight(Active.HeaderHeight + ResolveContentExtent() * GetShownFraction());
 }
 
 void UDreamExpandableArea::MoveIntoContent(UDreamWidget* InWidget)

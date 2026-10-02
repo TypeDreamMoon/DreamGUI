@@ -24,7 +24,10 @@
 #include "MovieSceneBindingReferences.h"
 #include "IDetailsView.h"
 #include "KeyPropertyParams.h"
+#include "Misc/ITransaction.h"//FTransactionContext (MatchesContext)
+#include "Misc/TransactionObjectEvent.h"//FTransactionObjectEvent (MatchesContext)
 #include "PropertyPath.h"
+#include "UObject/Package.h"
 #include "UObject/UObjectGlobals.h"
 
 #define LOCTEXT_NAMESPACE "DreamUISequenceEditorToolkit"
@@ -32,6 +35,28 @@
 const FName FDreamUISequenceEditorToolkit::ViewportTabId(TEXT("DreamUISequenceEditor_Viewport"));
 const FName FDreamUISequenceEditorToolkit::SequencerMainTabId(TEXT("DreamUISequenceEditor_Sequencer"));
 const FName FDreamUISequenceEditorToolkit::DetailsTabId(TEXT("DreamUISequenceEditor_Details"));
+
+namespace DreamUISequenceEditorToolkitLocal
+{
+	/**
+	 * The preview scene, made the same way when the editor opens and on every change of preview class.
+	 *
+	 * Not transactional, like the engine's thumbnail scenes: the world, its level and its world settings are never
+	 * recorded by a transaction. That alone does not keep the scene out of one -- the actors a new world spawns for
+	 * itself afterwards (the default physics volume, the builder brush, the gameplay debugger's manager) are spawned
+	 * transactional whatever the scene asked -- so a change of preview class builds its scene with recording switched
+	 * off as well (RebuildPreviewForNewClass). Nothing in a preview needs undo: all of it is rebuilt from the asset.
+	 */
+	TUniquePtr<FDreamWidgetDesignerScene> MakePreviewScene()
+	{
+		return MakeUnique<FDreamWidgetDesignerScene>(
+			FDreamWidgetDesignerScene::ConstructionValues()
+			.AllowAudioPlayback(false)
+			.ShouldSimulatePhysics(false)
+			.SetTransactional(false)
+			.SetEditor(true));
+	}
+}
 
 // Defaulted here rather than left implicit: the implicit one would instantiate the TUniquePtr deleter
 // for the forward-declared FDreamWidgetDesignerScene in every translation unit that creates a toolkit,
@@ -130,6 +155,9 @@ void FDreamUISequenceEditorToolkit::RebuildPreviewTree()
 	// first. No-op when an outer window (a PreviewWidgetClass change) has already evacuated.
 	EvacuateSequencerEntities();
 	DestroyPreviewTree();
+	// What this build is FROM, whether or not it succeeds: an undo compares against it (HandleUndoRedo), and a
+	// class that fails to load must not be retried on every undo that leaves it in place.
+	BuiltPreviewClassPath = Sequence != nullptr ? Sequence->PreviewWidgetClass.ToSoftObjectPath() : FSoftObjectPath();
 	UClass* WidgetClass = Sequence != nullptr ? Sequence->PreviewWidgetClass.LoadSynchronous() : nullptr;
 	if (WidgetClass == nullptr || !PreviewScene.IsValid())
 	{
@@ -179,20 +207,79 @@ void FDreamUISequenceEditorToolkit::OnObjectPropertyChanged(UObject* InObject, F
 	if (InObject == Sequence
 		&& InEvent.GetPropertyName() == GET_MEMBER_NAME_CHECKED(UDreamUISequence, PreviewWidgetClass))
 	{
-		// The whole scene goes here, preview tree included, so the sequencer has to be stepped out of
-		// its entities BEFORE the destruction starts -- RebuildPreviewTree's own evacuation at the end
-		// of this function would come too late for the widgets destroyed on the next line.
-		EvacuateSequencerEntities();
-		// EnsureRootAgent is idempotent -- it hands back the agent it already made -- so the scene has
-		// to go for the new class to get a canvas of its own rather than the last one's.
-		DestroyPreviewTree();
-		PreviewScene.Reset();
-		PreviewScene = MakeUnique<FDreamWidgetDesignerScene>(
-			FDreamWidgetDesignerScene::ConstructionValues()
-			.AllowAudioPlayback(false)
-			.ShouldSimulatePhysics(false)
-			.SetEditor(true));
-		RebuildPreviewTree();
+		RebuildPreviewForNewClass();
+	}
+}
+
+void FDreamUISequenceEditorToolkit::RebuildPreviewForNewClass()
+{
+	// Recorded by no transaction, the way the engine reruns construction scripts (AActor::RerunConstructionScripts).
+	// The details panel reports a PreviewWidgetClass edit while its transaction is still open, and in the editor every
+	// transactional object constructed under an open transaction is recorded as created by it
+	// (StaticConstructObject_Internal): the new world's own actors among them. Undoing the edit marked them garbage, and
+	// redoing it brought them back and registered their components into the world the undo's rebuild (HandleUndoRedo)
+	// had already destroyed. Only the preview is built and torn down below; the asset keeps nothing of it but its
+	// preview root, a plain pointer. An undo or a redo has no transaction open, so there this changes nothing.
+	TGuardValue<ITransaction*> SuppressTransaction(GUndo, nullptr);
+	// The whole scene goes here, preview tree included, so the sequencer has to be stepped out of
+	// its entities BEFORE the destruction starts -- RebuildPreviewTree's own evacuation at the end
+	// of this function would come too late for the widgets destroyed on the next line.
+	EvacuateSequencerEntities();
+	// EnsureRootAgent is idempotent -- it hands back the agent it already made -- so the scene has
+	// to go for the new class to get a canvas of its own rather than the last one's.
+	DestroyPreviewTree();
+	PreviewScene.Reset();
+	PreviewScene = DreamUISequenceEditorToolkitLocal::MakePreviewScene();
+	RebuildPreviewTree();
+}
+
+bool FDreamUISequenceEditorToolkit::MatchesContext(const FTransactionContext& InContext,
+	const TArray<TPair<UObject*, FTransactionObjectEvent>>& TransactionObjectContexts) const
+{
+	if (Sequence == nullptr)
+	{
+		return false;
+	}
+	if (TransactionObjectContexts.Num() == 0)
+	{
+		// A transaction that names nothing says nothing about what it touched, and the engine's default for
+		// the context-less case is to tell everyone. Kept, as the designer keeps it.
+		return true;
+	}
+	// Only a transaction that touched this asset: the rebuild an undo can cause is a whole preview scene, and
+	// an undo of an actor in the level, or of another asset, is none of this editor's business.
+	const UPackage* OwnPackage = Sequence->GetOutermost();
+	for (const TPair<UObject*, FTransactionObjectEvent>& Entry : TransactionObjectContexts)
+	{
+		if (Entry.Key != nullptr && Entry.Key->GetOutermost() == OwnPackage)
+		{
+			return true;
+		}
+	}
+	return false;
+}
+
+void FDreamUISequenceEditorToolkit::PostUndo(bool bSuccess)
+{
+	HandleUndoRedo(bSuccess);
+}
+
+void FDreamUISequenceEditorToolkit::PostRedo(bool bSuccess)
+{
+	HandleUndoRedo(bSuccess);
+}
+
+void FDreamUISequenceEditorToolkit::HandleUndoRedo(bool bSuccess)
+{
+	if (!bSuccess || Sequence == nullptr)
+	{
+		return;
+	}
+	// Only when the class the asset names now is not the one the preview was built from: every other undo on
+	// this asset -- a key moved, a binding renamed -- leaves the preview tree it resolves against alone.
+	if (Sequence->PreviewWidgetClass.ToSoftObjectPath() != BuiltPreviewClassPath)
+	{
+		RebuildPreviewForNewClass();
 	}
 }
 
@@ -360,11 +447,7 @@ void FDreamUISequenceEditorToolkit::Initialize(const EToolkitMode::Type Mode, co
 
 	// Built before InitAssetEditor: the viewport tab spawns inside it and its client asks for this
 	// world immediately.
-	PreviewScene = MakeUnique<FDreamWidgetDesignerScene>(
-		FDreamWidgetDesignerScene::ConstructionValues()
-		.AllowAudioPlayback(false)
-		.ShouldSimulatePhysics(false)
-		.SetEditor(true));
+	PreviewScene = DreamUISequenceEditorToolkitLocal::MakePreviewScene();
 
 	const TSharedRef<FTabManager::FLayout> StandaloneDefaultLayout = FTabManager::NewLayout("Standalone_DreamUISequenceEditor_Layout_v3")
 		->AddArea

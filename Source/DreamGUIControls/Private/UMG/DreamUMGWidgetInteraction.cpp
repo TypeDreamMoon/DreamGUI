@@ -8,8 +8,57 @@
 #include "Framework/Application/SlateUser.h"
 #include "Framework/Application/SlateApplication.h"
 #include "Event/DreamBaseRaycaster.h"
+#include "Event/DreamUIInputTypes.h"
 
 #define LOCTEXT_NAMESPACE "UIWidgetInteraction"
+
+namespace DreamUMGWidgetInteractionLocal
+{
+	/** Whether a pointer is a finger Slate can carry as a touch of its own: one of the ten it numbers. */
+	bool IsForwardableTouch(int32 InPointerId)
+	{
+		return DreamUIPointerIds::IsTouch(InPointerId)
+			&& DreamUIPointerIds::GetFingerIndex(InPointerId) < static_cast<int32>(ETouchIndex::CursorPointerIndex);
+	}
+
+	/**
+	 * The index a DreamGUI pointer has on the virtual Slate user. A finger is its own finger, 0 to 9, as Slate's
+	 * own touch input numbers them. The mouse is Slate's cursor, which sits past the fingers: it used to be index 0,
+	 * the first finger's, so a hover left that index's position behind and the first finger's touch then started
+	 * over a pointer Slate thought was still down. Any other pointer -- one a project or a test made up -- keeps its
+	 * id, which starts past both.
+	 */
+	uint32 SlatePointerIndexOf(int32 InPointerId)
+	{
+		if (IsForwardableTouch(InPointerId))
+		{
+			return static_cast<uint32>(DreamUIPointerIds::GetFingerIndex(InPointerId));
+		}
+		if (InPointerId == DreamUIPointerIds::Mouse)
+		{
+			return static_cast<uint32>(ETouchIndex::CursorPointerIndex);
+		}
+		return static_cast<uint32>(FMath::Max(0, InPointerId));
+	}
+
+	/** The mouse button a pointer pressed or let go of, as the key Slate knows it by. */
+	FKey MouseKeyOf(const UDreamPointerEventData* InEventData)
+	{
+		switch (InEventData->MouseButtonType)
+		{
+		case EDreamUIMouseButtonType::Left:
+			return EKeys::LeftMouseButton;
+		case EDreamUIMouseButtonType::Middle:
+			return EKeys::MiddleMouseButton;
+		case EDreamUIMouseButtonType::Right:
+			return EKeys::RightMouseButton;
+		default:
+			// A project's own buttons have no key on the Slate side, so they press nothing there.
+			break;
+		}
+		return FKey();
+	}
+}
 
 UDreamUMGWidgetInteractionManager* UDreamUMGWidgetInteractionManager::Get(const UObject* InWorldContext)
 {
@@ -28,38 +77,88 @@ UDreamUMGWidgetInteractionManager::FInteractionContainer* UDreamUMGWidgetInterac
 	return Manager != nullptr ? Manager->MapVirtualUserIndexToInteraction.Find(VirtualUserIndex) : nullptr;
 }
 
-bool UDreamUMGWidgetInteraction::OnPointerEnter_Implementation(UDreamPointerEventData* EventData)
+UDreamUMGWidgetInteraction::FForwardedPointer& UDreamUMGWidgetInteraction::TrackPointer(UDreamPointerEventData* EventData)
 {
-	if (CurrentPointerEventData.Get() == EventData || !CurrentPointerEventData.IsValid())
+	using namespace DreamUMGWidgetInteractionLocal;
+	FForwardedPointer& Pointer = ForwardedPointers.FindOrAdd(EventData->PointerID);
+	if (Pointer.Pointer.Get() != EventData)
 	{
-		// Back over this surface before letting go of a press that left it, or a hover starting afresh:
-		// either way no exit is owed any more.
-		bExitPendingRelease = false;
+		// A pointer this id did not stand for before -- the first sight of it, or a finger put down again after
+		// its last one was lifted and retired. Whatever the old one left is not this one's.
+		Pointer = FForwardedPointer();
+		Pointer.Pointer = EventData;
+		Pointer.bTouch = IsForwardableTouch(EventData->PointerID);
+		Pointer.SlatePointerIndex = SlatePointerIndexOf(EventData->PointerID);
 	}
 	if (!CurrentPointerEventData.IsValid())
 	{
 		CurrentPointerEventData = EventData;
+	}
+	return Pointer;
+}
 
-		// Claiming the shared virtual user is only meaningful for a component that has one to claim.
-		// Un-enrolled, there is no cursor to contend for and nothing downstream would do anything
-		// with the tick either -- SimulatePointerMovement refuses on its first line without a
-		// virtual user -- so the hover is recorded and the arbitration is skipped entirely. Both
-		// halves of this used to be unconditional, which is why a hover on a build with no Slate
-		// application was fatal twice over: a null Instance, and then a key the map never got.
-		if (UDreamUMGWidgetInteractionManager::FInteractionContainer* Interactions = FindEnrolledInteractions())
+UDreamUMGWidgetInteraction::FForwardedPointer* UDreamUMGWidgetInteraction::FindPrimaryPointer()
+{
+	const UDreamPointerEventData* Primary = CurrentPointerEventData.Get();
+	FForwardedPointer* Pointer = Primary != nullptr ? ForwardedPointers.Find(Primary->PointerID) : nullptr;
+	return Pointer != nullptr && Pointer->Pointer.Get() == Primary ? Pointer : nullptr;
+}
+
+bool UDreamUMGWidgetInteraction::HoldsVirtualCursor()
+{
+	const UDreamUMGWidgetInteractionManager::FInteractionContainer* Interactions = FindEnrolledInteractions();
+	return Interactions != nullptr && Interactions->CurrentInteraction.Get() == this;
+}
+
+void UDreamUMGWidgetInteraction::UpdateTicking()
+{
+	// The cursor is the mouse's, and a component holding it forwards that pointer every frame. A finger is
+	// nobody else's -- it has its own index on the virtual user -- so one that is down here is forwarded whoever
+	// holds the cursor.
+	bool bWantsTick = HoldsVirtualCursor();
+	for (const TPair<int32, FForwardedPointer>& Entry : ForwardedPointers)
+	{
+		if (bWantsTick)
 		{
-			if (!Interactions->CurrentInteraction.IsValid())
-			{
-				Interactions->CurrentInteraction = this;
-				this->SetCanExecuteTick(true);//hover in, enable update
-			}
+			break;
+		}
+		bWantsTick = Entry.Value.bTouchDown;
+	}
+	this->SetCanExecuteTick(bWantsTick);
+}
+
+bool UDreamUMGWidgetInteraction::OnPointerEnter_Implementation(UDreamPointerEventData* EventData)
+{
+	if (EventData == nullptr)
+	{
+		return bAllowEventBubbleUp;
+	}
+	FForwardedPointer& Pointer = TrackPointer(EventData);
+	Pointer.bHovering = true;
+	// Back over this surface before letting go of a press that left it, or a hover starting afresh: either
+	// way no exit is owed any more.
+	Pointer.bExitPendingRelease = false;
+
+	// Claiming the shared virtual user is only meaningful for a component that has one to claim.
+	// Un-enrolled, there is no cursor to contend for and nothing downstream would do anything
+	// with the tick either -- SimulatePointerMovement refuses on its first line without a
+	// virtual user -- so the hover is recorded and the arbitration is skipped entirely. Both
+	// halves of this used to be unconditional, which is why a hover on a build with no Slate
+	// application was fatal twice over: a null Instance, and then a key the map never got.
+	if (UDreamUMGWidgetInteractionManager::FInteractionContainer* Interactions = FindEnrolledInteractions())
+	{
+		if (!Interactions->CurrentInteraction.IsValid())
+		{
+			Interactions->CurrentInteraction = this;
 		}
 	}
+	UpdateTicking();
 	return bAllowEventBubbleUp;
 }
 bool UDreamUMGWidgetInteraction::OnPointerExit_Implementation(UDreamPointerEventData* EventData)
 {
-	if (CurrentPointerEventData.Get() == EventData && PressingPointerEventData.Get() == EventData)
+	FForwardedPointer* Pointer = EventData != nullptr ? ForwardedPointers.Find(EventData->PointerID) : nullptr;
+	if (Pointer != nullptr && Pointer->Pointer.Get() == EventData && Pointer->bPressing)
 	{
 		// Not while a press made here is held. A press that travels past the drag threshold is a drag,
 		// and the event system takes a dragged widget out of its own hit test -- so this surface hears
@@ -67,7 +166,7 @@ bool UDreamUMGWidgetInteraction::OnPointerExit_Implementation(UDreamPointerEvent
 		// stopped forwarding moves, and a UMG slider's thumb froze where the drag began, though the
 		// thumb had captured the pointer on its press and expects every move until the release. The
 		// exit is acted on at the release instead.
-		bExitPendingRelease = true;
+		Pointer->bExitPendingRelease = true;
 		return bAllowEventBubbleUp;
 	}
 	EndHover(EventData);
@@ -75,42 +174,79 @@ bool UDreamUMGWidgetInteraction::OnPointerExit_Implementation(UDreamPointerEvent
 }
 void UDreamUMGWidgetInteraction::EndHover(UDreamPointerEventData* EventData)
 {
-	if (CurrentPointerEventData.Get() == EventData)
+	FForwardedPointer* Pointer = EventData != nullptr ? ForwardedPointers.Find(EventData->PointerID) : nullptr;
+	if (Pointer == nullptr || Pointer->Pointer.Get() != EventData)
 	{
+		return;
+	}
+	const int32 PointerId = EventData->PointerID;
+	if (CanSendInput())
+	{
+		if (Pointer->bTouchDown)
+		{
+			// A finger gone without its release reaching this surface -- its player retired it, say. Lifted on
+			// the Slate side as well, or the virtual user keeps an active touch the next finger of that number
+			// starts over.
+			ForwardPointerKey(*Pointer, EKeys::TouchKeys[Pointer->SlatePointerIndex], /*bInPressed*/false, /*bInEndsPress*/true);
+		}
+		else if (!Pointer->bTouch && HoldsVirtualCursor())
+		{
+			// The cursor leaving, which Slate learns from a move over nothing of the widget's: the widgets it was
+			// over hear their leave.
+			const FPointerEvent PointerEvent(VirtualUser->GetUserIndex(), Pointer->SlatePointerIndex,
+				Pointer->LocalHitLocation, Pointer->LastLocalHitLocation, Pointer->PressedKeys, FKey(), 0.0f, ModifierKeys);
+			LastWidgetPath = FWeakWidgetPath();
+			Pointer->LastWidgetPath = FWeakWidgetPath();
+			SendPointerMove(FWidgetPath(), PointerEvent);
+		}
+	}
+	// Looked up again: handing Slate an event can run anything, this surface's other pointers included.
+	ForwardedPointers.Remove(PointerId);
+	if (!CurrentPointerEventData.IsValid() || CurrentPointerEventData.Get() == EventData)
+	{
+		// The calls that act for "the" pointer move on to whichever one is still here.
 		CurrentPointerEventData.Reset();
-
+		for (const TPair<int32, FForwardedPointer>& Entry : ForwardedPointers)
+		{
+			if (Entry.Value.Pointer.IsValid())
+			{
+				CurrentPointerEventData = Entry.Value.Pointer;
+				break;
+			}
+		}
+	}
+	if (ForwardedPointers.Num() == 0)
+	{
 		if (UDreamUMGWidgetInteractionManager::FInteractionContainer* Interactions = FindEnrolledInteractions())
 		{
 			if (Interactions->CurrentInteraction.Get() == this)
 			{
-				SimulatePointerMovement();//pointer exit;
+				// Nothing is over this surface any more, so the cursor it shares goes back to whoever hovers next.
 				Interactions->CurrentInteraction.Reset();
-				this->SetCanExecuteTick(false);//hover out, disable update
 			}
 		}
 	}
+	UpdateTicking();
 }
 bool UDreamUMGWidgetInteraction::OnPointerDown_Implementation(UDreamPointerEventData* EventData)
 {
-	FKey PressKey;
-	switch (EventData->MouseButtonType)
+	if (EventData == nullptr)
 	{
-	case EDreamUIMouseButtonType::Left:
-		PressKey = EKeys::LeftMouseButton;
-		break;
-	case EDreamUIMouseButtonType::Middle:
-		PressKey = EKeys::MiddleMouseButton;
-		break;
-	case EDreamUIMouseButtonType::Right:
-		PressKey = EKeys::RightMouseButton;
-		break;
+		return bAllowEventBubbleUp;
 	}
+	FForwardedPointer& Pointer = TrackPointer(EventData);
+	// A finger presses as itself; the mouse presses the button it was pressed with.
+	const FKey PressKey = Pointer.bTouch
+		? EKeys::TouchKeys[Pointer.SlatePointerIndex]
+		: DreamUMGWidgetInteractionLocal::MouseKeyOf(EventData);
 	if (PressKey.IsValid())
 	{
-		PressPointerKey(PressKey);
-		// Whether or not Slate took the key: what this records is the press on this surface, which is what
-		// keeps the hover through a drag -- see OnPointerExit.
-		PressingPointerEventData = EventData;
+		// Whether or not Slate takes the key: what this records is the press on this surface, which is what
+		// keeps the hover through a drag -- see OnPointerExit. Before the send, which is the last thing done.
+		Pointer.bPressing = true;
+		// Traced here, at the press, not left to the next tick: the pointer's index used to be learned only in
+		// Tick, so the first tap on a host nothing had ticked for yet was sent nowhere.
+		ForwardPointerKey(Pointer, PressKey, /*bInPressed*/true);
 	}
 	return bAllowEventBubbleUp;
 }
@@ -121,45 +257,54 @@ bool UDreamUMGWidgetInteraction::OnPointerDoubleClick_Implementation(UDreamPoint
 }
 bool UDreamUMGWidgetInteraction::OnPointerUp_Implementation(UDreamPointerEventData* EventData)
 {
-	FKey ReleaseKey;
-	switch (EventData->MouseButtonType)
+	FForwardedPointer* Pointer = EventData != nullptr ? ForwardedPointers.Find(EventData->PointerID) : nullptr;
+	if (Pointer == nullptr || Pointer->Pointer.Get() != EventData)
 	{
-	case EDreamUIMouseButtonType::Left:
-		ReleaseKey = EKeys::LeftMouseButton;
-		break;
-	case EDreamUIMouseButtonType::Middle:
-		ReleaseKey = EKeys::MiddleMouseButton;
-		break;
-	case EDreamUIMouseButtonType::Right:
-		ReleaseKey = EKeys::RightMouseButton;
-		break;
+		// A release of a press this surface never saw: there is nothing of it here to let go of.
+		return bAllowEventBubbleUp;
 	}
+	// The exit this press held off, owed now that nothing is held: the pointer left during the drag.
+	const bool bExitWaited = Pointer->bPressing && Pointer->bExitPendingRelease;
+	Pointer->bExitPendingRelease = false;
+	const FKey ReleaseKey = Pointer->bTouch
+		? EKeys::TouchKeys[Pointer->SlatePointerIndex]
+		: DreamUMGWidgetInteractionLocal::MouseKeyOf(EventData);
 	if (ReleaseKey.IsValid())
 	{
-		ReleasePointerKey(ReleaseKey);
+		ForwardPointerKey(*Pointer, ReleaseKey, /*bInPressed*/false, /*bInEndsPress*/true);
 	}
-	if (PressingPointerEventData.Get() == EventData)
+	else
 	{
-		PressingPointerEventData.Reset();
-		if (bExitPendingRelease)
-		{
-			// The exit this press held off, now that nothing is held: the pointer left during the drag.
-			bExitPendingRelease = false;
-			EndHover(EventData);
-		}
+		Pointer->bPressing = false;
+	}
+	if (bExitWaited)
+	{
+		EndHover(EventData);
 	}
 	return bAllowEventBubbleUp;
 }
 bool UDreamUMGWidgetInteraction::OnPointerScroll_Implementation(UDreamPointerEventData* EventData)
 {
-	auto inAxisValue = EventData->ScrollAxisValue;
-	ScrollWheel(inAxisValue.Y);
+	if (EventData == nullptr)
+	{
+		return bAllowEventBubbleUp;
+	}
+	// The notch goes where the pointer that turned it is, which is the first pointer over the surface only when
+	// nothing else is tracked for it.
+	FForwardedPointer* Pointer = ForwardedPointers.Find(EventData->PointerID);
+	if (Pointer != nullptr && Pointer->Pointer.Get() == EventData)
+	{
+		if (CanSendInput())
+		{
+			ForwardPointerWheel(*Pointer, EventData->ScrollAxisValue.Y);
+		}
+	}
+	else
+	{
+		ScrollWheel(EventData->ScrollAxisValue.Y);
+	}
 	return bAllowEventBubbleUp;
 }
-
-
-
-
 
 void UDreamUMGWidgetInteraction::Awake()
 {
@@ -208,12 +353,13 @@ void UDreamUMGWidgetInteraction::OnDestroy()
 		VirtualUser.Reset();
 	}
 
-	// A component that never enrolled has no manager to leave.
+	// A component that never enrolled has no manager to leave. The pointers go with the virtual user: unregistering
+	// it above is what lets go of every finger still down on the Slate side, so nothing is sent for them here --
+	// sending into a widget that is coming down is the one thing this teardown must not do.
 	UDreamUMGWidgetInteractionManager* Manager = Helper.Get();
 	Helper.Reset();
 	CurrentPointerEventData.Reset();
-	PressingPointerEventData.Reset();
-	bExitPendingRelease = false;
+	ForwardedPointers.Reset();
 	if (Manager == nullptr)
 	{
 		return;
@@ -282,7 +428,7 @@ bool UDreamUMGWidgetInteraction::CanInteractWithComponent(UDreamUMGWidget* Compo
 	return bCanInteract;
 }
 
-FWidgetPath UDreamUMGWidgetInteraction::DetermineWidgetUnderPointer()
+FWidgetPath UDreamUMGWidgetInteraction::DetermineWidgetUnderPointer(FForwardedPointer& InPointer)
 {
 	FWidgetPath WidgetPathUnderPointer;
 
@@ -290,35 +436,44 @@ FWidgetPath UDreamUMGWidgetInteraction::DetermineWidgetUnderPointer()
 	bIsHoveredWidgetFocusable = false;
 	bIsHoveredWidgetHitTestVisible = false;
 
-	LastLocalHitLocation = LocalHitLocation;
+	InPointer.LastLocalHitLocation = InPointer.LocalHitLocation;
 	FWidgetTraceResult TraceResult;
-	const UDreamPointerEventData* HoveringPointer = CurrentPointerEventData.Get();
-	if (HoveringPointer != nullptr && HoveringPointer == PressingPointerEventData.Get() && IsValid(HoveringPointer->PressRaycaster))
+	bool bTraced = false;
+	const UDreamPointerEventData* TracedPointer = InPointer.Pointer.Get();
+	if (TracedPointer != nullptr && InPointer.bPressing && IsValid(TracedPointer->PressRaycaster))
 	{
 		// While a press made here is held, the pointer is followed on the plane it pressed, through the
 		// raycaster that took the press. The point the hit test found is no use then: a drag takes this
 		// surface out of the hit test, so that point lies on whatever is behind -- or there is none at
 		// all. The plane is the one this surface was pressed on, so the point is where the pointer is ON
 		// the surface, inside its rect or past its edge, which is what a captured UMG widget is owed.
-		const FVector RayOrigin = HoveringPointer->GetDragRayOrigin();
-		const FVector RayEnd = RayOrigin + HoveringPointer->GetDragRayDirection() * HoveringPointer->PressRaycaster->GetRayLength();
+		const FVector RayOrigin = TracedPointer->GetDragRayOrigin();
+		const FVector RayEnd = RayOrigin + TracedPointer->GetDragRayDirection() * TracedPointer->PressRaycaster->GetRayLength();
 
-		WidgetComponent->GetLocalHitLocation(HoveringPointer->FaceIndex, HoveringPointer->GetWorldPointInPlane(), RayOrigin, RayEnd, TraceResult.LocalHitLocation);
-		TraceResult.HitWidgetPath = FWidgetPath(WidgetComponent->GetHitWidgetPath(TraceResult.LocalHitLocation, /*bIgnoreEnabledStatus*/ false));
-
-		LocalHitLocation = TraceResult.LocalHitLocation;
+		WidgetComponent->GetLocalHitLocation(TracedPointer->FaceIndex, TracedPointer->GetWorldPointInPlane(), RayOrigin, RayEnd, TraceResult.LocalHitLocation);
+		bTraced = true;
 	}
-	else if (HoveringPointer != nullptr && HoveringPointer->Raycaster != nullptr)
+	else if (TracedPointer != nullptr && TracedPointer->Raycaster != nullptr)
 	{
-		auto RayOrigin = HoveringPointer->Raycaster->GetRayOrigin();
-		auto RayDirection = HoveringPointer->Raycaster->GetRayDirection();
-		auto RayEnd = RayOrigin + RayDirection * HoveringPointer->Raycaster->GetRayLength();
+		auto RayOrigin = TracedPointer->Raycaster->GetRayOrigin();
+		auto RayDirection = TracedPointer->Raycaster->GetRayDirection();
+		auto RayEnd = RayOrigin + RayDirection * TracedPointer->Raycaster->GetRayLength();
 
-		WidgetComponent->GetLocalHitLocation(HoveringPointer->FaceIndex, HoveringPointer->WorldPoint, RayOrigin, RayEnd, TraceResult.LocalHitLocation);
-		TraceResult.HitWidgetPath = FWidgetPath(WidgetComponent->GetHitWidgetPath(TraceResult.LocalHitLocation, /*bIgnoreEnabledStatus*/ false));
-
-		LocalHitLocation = TraceResult.LocalHitLocation;
+		WidgetComponent->GetLocalHitLocation(TracedPointer->FaceIndex, TracedPointer->WorldPoint, RayOrigin, RayEnd, TraceResult.LocalHitLocation);
+		bTraced = true;
 	}
+	if (bTraced)
+	{
+		// This pointer's own previous position, not the component's: with two fingers on the surface the last
+		// position anyone hit is the other finger's, and the movement Slate reads off the pair would be a jump
+		// between them.
+		TraceResult.HitWidgetPath = FWidgetPath(WidgetComponent->GetHitWidgetPathForPointer(
+			TraceResult.LocalHitLocation, InPointer.LastLocalHitLocation, /*bIgnoreEnabledStatus*/ false));
+		InPointer.LocalHitLocation = TraceResult.LocalHitLocation;
+	}
+	// What the getters report: the pointer traced last.
+	LastLocalHitLocation = InPointer.LastLocalHitLocation;
+	LocalHitLocation = InPointer.LocalHitLocation;
 	WidgetPathUnderPointer = TraceResult.HitWidgetPath;
 
 	WidgetComponent->RequestRenderUpdate();
@@ -354,42 +509,291 @@ FWidgetPath UDreamUMGWidgetInteraction::DetermineWidgetUnderPointer()
 
 void UDreamUMGWidgetInteraction::SimulatePointerMovement()
 {
+	// Pointers retired without their exit reaching this surface are forgotten here, a finger among them lifted on
+	// the Slate side first, so a pointer nobody holds any more cannot keep the cursor or the tick for good.
+	TArray<int32> StalePointerIds;
+	for (const TPair<int32, FForwardedPointer>& Entry : ForwardedPointers)
+	{
+		if (!Entry.Value.Pointer.IsValid())
+		{
+			StalePointerIds.Add(Entry.Key);
+		}
+	}
+	for (const int32 StaleId : StalePointerIds)
+	{
+		FForwardedPointer* Stale = ForwardedPointers.Find(StaleId);
+		if (Stale == nullptr)
+		{
+			continue;
+		}
+		if (Stale->bTouchDown && CanSendInput())
+		{
+			// No pointer to trace any more: the finger ends where it was last sent from.
+			const FPointerEvent TouchEnd(VirtualUser->GetUserIndex(), Stale->SlatePointerIndex,
+				Stale->LocalHitLocation, Stale->LocalHitLocation, 0.0f, /*bPressLeftMouseButton*/true);
+			const FWidgetPath EndPath = Stale->LastWidgetPath.ToWidgetPath();
+			ForwardedPointers.Remove(StaleId);
+			SendPointerUp(EndPath, TouchEnd);
+			continue;
+		}
+		ForwardedPointers.Remove(StaleId);
+	}
+	if (StalePointerIds.Num() > 0)
+	{
+		if (!CurrentPointerEventData.IsValid())
+		{
+			for (const TPair<int32, FForwardedPointer>& Entry : ForwardedPointers)
+			{
+				if (Entry.Value.Pointer.IsValid())
+				{
+					CurrentPointerEventData = Entry.Value.Pointer;
+					break;
+				}
+			}
+		}
+		if (ForwardedPointers.Num() == 0)
+		{
+			if (UDreamUMGWidgetInteractionManager::FInteractionContainer* Interactions = FindEnrolledInteractions())
+			{
+				if (Interactions->CurrentInteraction.Get() == this)
+				{
+					Interactions->CurrentInteraction.Reset();
+				}
+			}
+		}
+		UpdateTicking();
+	}
+
 	if (!CanSendInput())
 	{
 		return;
 	}
-
-	FWidgetPath WidgetPathUnderFinger = DetermineWidgetUnderPointer();
-	if (const UDreamPointerEventData* HoveringPointer = CurrentPointerEventData.Get())
+	// The mouse while this component holds the cursor it shares, every frame, as Slate hears a cursor that rests:
+	// that is what keeps hover and tooltips alive. A finger whenever it is down, whoever holds the cursor.
+	const bool bHoldsCursor = HoldsVirtualCursor();
+	TArray<int32> PointerIds;
+	ForwardedPointers.GenerateKeyArray(PointerIds);
+	for (const int32 PointerId : PointerIds)
 	{
-		PrevPointerIndex = HoveringPointer->PointerID;
+		// Asked again for each: sending one pointer's move can run anything, the others' exits included.
+		FForwardedPointer* Pointer = ForwardedPointers.Find(PointerId);
+		if (Pointer != nullptr && (Pointer->bTouch || bHoldsCursor))
+		{
+			ForwardPointerMove(*Pointer);
+		}
 	}
-	if (PrevPointerIndex >= 0)
-	{
-		FPointerEvent PointerEvent(
-			VirtualUser->GetUserIndex(),
-			(uint32)PrevPointerIndex,
-			LocalHitLocation,
-			LastLocalHitLocation,
-			PressedKeys,
-			FKey(),
-			0.0f,
-			ModifierKeys);
+}
 
+void UDreamUMGWidgetInteraction::ForwardPointerMove(FForwardedPointer& InPointer)
+{
+	if (!CanSendInput())
+	{
+		return;
+	}
+	const UDreamPointerEventData* EventData = InPointer.Pointer.Get();
+	const uint32 UserIndex = VirtualUser->GetUserIndex();
+	if (InPointer.bTouch)
+	{
+		// A finger only while it is down, and only when it moved: Slate hears of a touch when it changes, and a
+		// finger resting on the glass sends nothing -- not even the first move, which is the first REAL one.
+		if (!InPointer.bTouchDown || EventData == nullptr
+			|| EventData->PointerPosition.Equals(InPointer.LastSentPointerPosition, UE_KINDA_SMALL_NUMBER))
+		{
+			return;
+		}
+		const FWidgetPath WidgetPathUnderFinger = DetermineWidgetUnderPointer(InPointer);
+		InPointer.LastSentPointerPosition = EventData->PointerPosition;
 		if (WidgetPathUnderFinger.IsValid())
 		{
-			check(WidgetComponent);
 			LastWidgetPath = WidgetPathUnderFinger;
-			FSlateApplication::Get().RoutePointerMoveEvent(WidgetPathUnderFinger, PointerEvent, false);
+			InPointer.LastWidgetPath = WidgetPathUnderFinger;
+		}
+		const bool bFirstMove = InPointer.bAwaitingFirstMove;
+		InPointer.bAwaitingFirstMove = false;
+		// Copies, because the sends below are the last use of anything here: InPointer is not read after them.
+		const uint32 FingerIndex = InPointer.SlatePointerIndex;
+		const FVector2D Location = InPointer.LocalHitLocation;
+		const FVector2D LastLocation = InPointer.LastLocalHitLocation;
+		if (bFirstMove)
+		{
+			// Slate's first move: the flagged event a platform sends for a finger's first travel, ahead of the
+			// ordinary move for the same travel (FWindowsApplication's touch input sends the pair). The flagged
+			// one goes to OnTouchFirstMove with no mouse fallback, so the ordinary one after it is still what a
+			// ScrollBox pans by.
+			SendPointerMove(WidgetPathUnderFinger, FPointerEvent(UserIndex, FingerIndex, Location, LastLocation,
+				1.0f, /*bPressLeftMouseButton*/true, /*bIsForceChanged*/false, /*bIsFirstMove*/true));
+		}
+		SendPointerMove(WidgetPathUnderFinger, FPointerEvent(UserIndex, FingerIndex, Location, LastLocation,
+			1.0f, /*bPressLeftMouseButton*/true));
+		return;
+	}
+
+	const FWidgetPath WidgetPathUnderPointer = DetermineWidgetUnderPointer(InPointer);
+	if (EventData != nullptr)
+	{
+		InPointer.LastSentPointerPosition = EventData->PointerPosition;
+	}
+	const FPointerEvent PointerEvent(
+		UserIndex,
+		InPointer.SlatePointerIndex,
+		InPointer.LocalHitLocation,
+		InPointer.LastLocalHitLocation,
+		InPointer.PressedKeys,
+		FKey(),
+		0.0f,
+		ModifierKeys);
+	if (WidgetPathUnderPointer.IsValid())
+	{
+		check(WidgetComponent);
+		LastWidgetPath = WidgetPathUnderPointer;
+		InPointer.LastWidgetPath = WidgetPathUnderPointer;
+	}
+	else
+	{
+		LastWidgetPath = FWeakWidgetPath();
+		InPointer.LastWidgetPath = FWeakWidgetPath();
+	}
+	SendPointerMove(WidgetPathUnderPointer, PointerEvent);
+}
+
+void UDreamUMGWidgetInteraction::ForwardPointerKey(FForwardedPointer& InPointer, const FKey& InKey, bool bInPressed, bool bInEndsPress)
+{
+	if (!CanSendInput())
+	{
+		// Nothing to send it to, but a press this surface was holding is still let go of: an exit that waited
+		// for it must not wait for good.
+		if (bInEndsPress)
+		{
+			InPointer.bPressing = false;
+		}
+		return;
+	}
+	const bool bTouchKey = InKey.IsTouch();
+	if (bTouchKey ? InPointer.bTouchDown == bInPressed : InPointer.PressedKeys.Contains(InKey) == bInPressed)
+	{
+		// Already down, or not down to let go of: Slate is told of each edge once.
+		if (bInEndsPress)
+		{
+			InPointer.bPressing = false;
+		}
+		return;
+	}
+
+	// Where the pointer is at this moment -- a tap can go down and come up between two ticks -- traced while a
+	// press being let go of still holds it to the plane it was made on.
+	const FWidgetPath WidgetPathUnderPointer = DetermineWidgetUnderPointer(InPointer);
+	if (bInEndsPress)
+	{
+		InPointer.bPressing = false;
+	}
+	if (const UDreamPointerEventData* EventData = InPointer.Pointer.Get())
+	{
+		InPointer.LastSentPointerPosition = EventData->PointerPosition;
+	}
+	if (WidgetPathUnderPointer.IsValid())
+	{
+		LastWidgetPath = WidgetPathUnderPointer;
+		InPointer.LastWidgetPath = WidgetPathUnderPointer;
+	}
+	const uint32 UserIndex = VirtualUser->GetUserIndex();
+
+	if (bTouchKey)
+	{
+		InPointer.bTouchDown = bInPressed;
+		InPointer.bAwaitingFirstMove = bInPressed;
+		if (bInPressed)
+		{
+			// A touch starts where it is: no movement comes with it.
+			InPointer.LastLocalHitLocation = InPointer.LocalHitLocation;
 		}
 		else
 		{
-			FWidgetPath EmptyWidgetPath;
-			FSlateApplication::Get().RoutePointerMoveEvent(EmptyWidgetPath, PointerEvent, false);
-
-			LastWidgetPath = FWeakWidgetPath();
+			// A lifted finger stops existing on the Slate side, and so does the path it was last over.
+			InPointer.LastWidgetPath = FWeakWidgetPath();
 		}
+		// The tick follows the finger: a finger down here is forwarded whoever holds the shared cursor.
+		UpdateTicking();
+		// Slate's own touch: full force going down, none coming up (FSlateApplication::OnTouchStarted and
+		// OnTouchEnded), and the left button standing in for the finger, which is what a widget that answers
+		// only the mouse falls back to.
+		const FPointerEvent TouchEvent(UserIndex, InPointer.SlatePointerIndex, InPointer.LocalHitLocation,
+			InPointer.LastLocalHitLocation, bInPressed ? 1.0f : 0.0f, /*bPressLeftMouseButton*/true);
+		if (bInPressed)
+		{
+			SendPointerDown(WidgetPathUnderPointer, TouchEvent);
+		}
+		else
+		{
+			SendPointerUp(WidgetPathUnderPointer, TouchEvent);
+		}
+		return;
 	}
+
+	if (bInPressed)
+	{
+		InPointer.PressedKeys.Add(InKey);
+	}
+	else
+	{
+		InPointer.PressedKeys.Remove(InKey);
+	}
+	const FPointerEvent PointerEvent(
+		UserIndex,
+		InPointer.SlatePointerIndex,
+		InPointer.LocalHitLocation,
+		InPointer.LastLocalHitLocation,
+		InPointer.PressedKeys,
+		InKey,
+		0.0f,
+		ModifierKeys);
+	if (bInPressed)
+	{
+		// @TODO Something about double click, expose directly, or automatically do it if key press happens within
+		// the double click timeframe?
+		SendPointerDown(WidgetPathUnderPointer, PointerEvent);
+	}
+	else
+	{
+		SendPointerUp(WidgetPathUnderPointer, PointerEvent);
+	}
+}
+
+void UDreamUMGWidgetInteraction::ForwardPointerWheel(FForwardedPointer& InPointer, float InScrollDelta)
+{
+	if (!CanSendInput())
+	{
+		return;
+	}
+	const FWidgetPath WidgetPathUnderPointer = DetermineWidgetUnderPointer(InPointer);
+	const FPointerEvent MouseWheelEvent(
+		VirtualUser->GetUserIndex(),
+		InPointer.SlatePointerIndex,
+		InPointer.LocalHitLocation,
+		InPointer.LastLocalHitLocation,
+		InPointer.PressedKeys,
+		EKeys::MouseWheelAxis,
+		InScrollDelta,
+		ModifierKeys);
+	FSlateApplication::Get().RouteMouseWheelOrGestureEvent(WidgetPathUnderPointer, MouseWheelEvent, nullptr);
+}
+
+void UDreamUMGWidgetInteraction::SendPointerDown(const FWidgetPath& InWidgetPath, const FPointerEvent& InEvent)
+{
+	// A touch is routed like this too: RoutePointerDownEvent hands a touch event to OnTouchStarted before the mouse
+	// handlers, and the move and release that follow reach OnTouchMoved and OnTouchEnded the same way. What
+	// FSlateApplication::ProcessTouchStartedEvent adds ahead of the press -- FSlateUser::NotifyTouchStarted, which only
+	// feeds Slate's gesture detector -- is out of reach: Slate keeps it for its own module (SLATE_SCOPE).
+	FSlateApplication::Get().RoutePointerDownEvent(InWidgetPath, InEvent);
+}
+
+void UDreamUMGWidgetInteraction::SendPointerUp(const FWidgetPath& InWidgetPath, const FPointerEvent& InEvent)
+{
+	FSlateApplication::Get().RoutePointerUpEvent(InWidgetPath, InEvent);
+}
+
+void UDreamUMGWidgetInteraction::SendPointerMove(const FWidgetPath& InWidgetPath, const FPointerEvent& InEvent)
+{
+	FSlateApplication::Get().RoutePointerMoveEvent(InWidgetPath, InEvent, /*bIsSynthetic*/false);
 }
 
 void UDreamUMGWidgetInteraction::PressPointerKey(FKey Key)
@@ -398,54 +802,11 @@ void UDreamUMGWidgetInteraction::PressPointerKey(FKey Key)
 	{
 		return;
 	}
-
-	if (PressedKeys.Contains(Key))
+	// For the first pointer still over the surface. With none there is nowhere for a press to be: the pointer's
+	// index used to be whatever the last tick had left, and a press before any tick was sent nowhere at all.
+	if (FForwardedPointer* Pointer = FindPrimaryPointer())
 	{
-		return;
-	}
-
-	PressedKeys.Add(Key);
-
-	if (!LastWidgetPath.IsValid())
-	{
-		// If the cached widget path isn't valid, attempt to find a valid widget since we might have received a touch input
-		LastWidgetPath = DetermineWidgetUnderPointer();
-	}
-
-	FWidgetPath WidgetPathUnderFinger = LastWidgetPath.ToWidgetPath();
-	if (PrevPointerIndex >= 0)
-	{
-		FPointerEvent PointerEvent;
-		if (Key.IsTouch())
-		{
-			PointerEvent = FPointerEvent(
-				VirtualUser->GetUserIndex(),
-				(uint32)PrevPointerIndex,
-				LocalHitLocation,
-				LastLocalHitLocation,
-				1.0f,
-				false);
-
-		}
-		else
-		{
-			PointerEvent = FPointerEvent(
-				VirtualUser->GetUserIndex(),
-				(uint32)PrevPointerIndex,
-				LocalHitLocation,
-				LastLocalHitLocation,
-				PressedKeys,
-				Key,
-				0.0f,
-				ModifierKeys);
-		}
-
-
-		FReply Reply = FSlateApplication::Get().RoutePointerDownEvent(WidgetPathUnderFinger, PointerEvent);
-
-		// @TODO Something about double click, expose directly, or automatically do it if key press happens within
-		// the double click timeframe?
-		//Reply = FSlateApplication::Get().RoutePointerDoubleClickEvent( WidgetPathUnderFinger, PointerEvent );
+		ForwardPointerKey(*Pointer, Key, /*bInPressed*/true);
 	}
 }
 
@@ -455,44 +816,9 @@ void UDreamUMGWidgetInteraction::ReleasePointerKey(FKey Key)
 	{
 		return;
 	}
-
-	if (!PressedKeys.Contains(Key))
+	if (FForwardedPointer* Pointer = FindPrimaryPointer())
 	{
-		return;
-	}
-
-	PressedKeys.Remove(Key);
-
-	FWidgetPath WidgetPathUnderFinger = LastWidgetPath.ToWidgetPath();
-	// Need to clear the widget path for cases where the component isn't ticking/clearing itself.
-	LastWidgetPath = FWeakWidgetPath();
-	if (PrevPointerIndex >= 0)
-	{
-		FPointerEvent PointerEvent;
-		if (Key.IsTouch())
-		{
-			PointerEvent = FPointerEvent(
-				VirtualUser->GetUserIndex(),
-				(uint32)PrevPointerIndex,
-				LocalHitLocation,
-				LastLocalHitLocation,
-				1.0f,
-				false);
-		}
-		else
-		{
-			PointerEvent = FPointerEvent(
-				VirtualUser->GetUserIndex(),
-				(uint32)PrevPointerIndex,
-				LocalHitLocation,
-				LastLocalHitLocation,
-				PressedKeys,
-				Key,
-				0.0f,
-				ModifierKeys);
-		}
-
-		FReply Reply = FSlateApplication::Get().RoutePointerUpEvent(WidgetPathUnderFinger, PointerEvent);
+		ForwardPointerKey(*Pointer, Key, /*bInPressed*/false);
 	}
 }
 
@@ -603,21 +929,10 @@ void UDreamUMGWidgetInteraction::ScrollWheel(float ScrollDelta)
 	{
 		return;
 	}
-
-	if (PrevPointerIndex >= 0)
+	// For the first pointer still over the surface, as the key calls are.
+	if (FForwardedPointer* Pointer = FindPrimaryPointer())
 	{
-		FWidgetPath WidgetPathUnderFinger = LastWidgetPath.ToWidgetPath();
-		FPointerEvent MouseWheelEvent(
-			VirtualUser->GetUserIndex(),
-			(uint32)PrevPointerIndex,
-			LocalHitLocation,
-			LastLocalHitLocation,
-			PressedKeys,
-			EKeys::MouseWheelAxis,
-			ScrollDelta,
-			ModifierKeys);
-
-		FSlateApplication::Get().RouteMouseWheelOrGestureEvent(WidgetPathUnderFinger, MouseWheelEvent, nullptr);
+		ForwardPointerWheel(*Pointer, ScrollDelta);
 	}
 }
 

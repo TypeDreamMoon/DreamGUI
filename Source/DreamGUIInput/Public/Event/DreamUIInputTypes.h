@@ -156,6 +156,22 @@ namespace DreamUIPointerIds
 
 	/** The pointer id for finger InFingerIndex: TouchBase plus the finger, so that no finger is the mouse. */
 	DREAMGUIINPUT_API int32 ForTouch(int32 InFingerIndex);
+
+	/**
+	 * Whether InPointerId is a finger's: TouchBase and up, short of the ids projects and tests make up. What
+	 * anything forwarding a pointer elsewhere asks before it decides between a touch and the mouse -- a UMG
+	 * host sends a finger to Slate as a touch of its own.
+	 */
+	constexpr bool IsTouch(int32 InPointerId)
+	{
+		return InPointerId >= TouchBase && InPointerId < ScriptBase;
+	}
+
+	/** The finger a touch pointer id stands for -- ForTouch the other way round. Meaningless where IsTouch says no. */
+	constexpr int32 GetFingerIndex(int32 InPointerId)
+	{
+		return InPointerId - TouchBase;
+	}
 }
 
 namespace DreamUIInputClock

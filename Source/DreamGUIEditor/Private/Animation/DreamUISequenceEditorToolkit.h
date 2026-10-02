@@ -4,7 +4,9 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "EditorUndoClient.h"
 #include "Toolkits/AssetEditorToolkit.h"
+#include "UObject/SoftObjectPath.h"
 #include "UObject/StrongObjectPtr.h"
 #include "DreamGUIEditorSubsystem.h"
 
@@ -24,6 +26,7 @@ class SDreamUISequencePreviewViewport;
 class FDreamUISequenceEditorToolkit
 	: public FAssetEditorToolkit
 	, public IDreamRecompilePreview
+	, public FSelfRegisteringEditorUndoClient
 {
 public:
 	// IDreamRecompilePreview: a recompile of the preview's class takes the preview tree down before the
@@ -32,6 +35,14 @@ public:
 	virtual bool UsesClass(const UClass* InClass) const override;
 	virtual void ReleaseForRecompile() override;
 	virtual void RebuildAfterRecompile() override;
+
+	// FEditorUndoClient: an undo or redo that puts a different PreviewWidgetClass on the asset rebuilds the
+	// preview for it. The property-changed path cannot see one -- an undo reports its change with no property
+	// name -- so the preview went on showing the class the undo had just taken away. Like UMG's
+	// FWidgetBlueprintEditor::PostUndo, which rebuilds its preview the same way.
+	virtual bool MatchesContext(const FTransactionContext& InContext, const TArray<TPair<UObject*, FTransactionObjectEvent>>& TransactionObjectContexts) const override;
+	virtual void PostUndo(bool bSuccess) override;
+	virtual void PostRedo(bool bSuccess) override;
 
 	/** Out of line with the destructor: PreviewScene is a TUniquePtr over a forward-declared type. */
 	FDreamUISequenceEditorToolkit();
@@ -63,6 +74,13 @@ private:
 	/** (Re)instantiates PreviewWidgetClass into the private preview world so the bindings resolve. */
 	void RebuildPreviewTree();
 	void DestroyPreviewTree();
+	/**
+	 * A new PreviewWidgetClass: the whole preview scene goes, not just the tree, so the new class gets a canvas
+	 * of its own rather than the last one's. What a details-panel edit of the class and an undo of one both do.
+	 */
+	void RebuildPreviewForNewClass();
+	/** An undo or a redo touched the asset: rebuild for its preview class when that is not the one built. */
+	void HandleUndoRedo(bool bSuccess);
 	void OnObjectPropertyChanged(UObject* InObject, struct FPropertyChangedEvent& InEvent);
 	/** Bindings created outside the parenting-aware paths float free; adopt them under the root. */
 	void HealStrayBindings();
@@ -98,6 +116,11 @@ private:
 	TUniquePtr<FDreamWidgetDesignerScene> PreviewScene;
 
 	UDreamUISequence* Sequence = nullptr;
+	/**
+	 * The PreviewWidgetClass the preview was last built from -- its path, so a class that failed to load still
+	 * counts as built and an undo that leaves it alone does not rebuild it again.
+	 */
+	FSoftObjectPath BuiltPreviewClassPath;
 	TSharedPtr<ISequencer> Sequencer;
 	TSharedPtr<class IDetailsView> DetailsView;
 	TSharedPtr<SDreamUISequencePreviewViewport> PreviewViewport;

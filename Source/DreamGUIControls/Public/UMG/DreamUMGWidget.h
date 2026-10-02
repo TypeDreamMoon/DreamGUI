@@ -78,6 +78,14 @@ public:
 	/** Returns the list of widgets with their geometry and the cursor position transformed into this Widget space. The widget space is expressed as a Vector2D. */
 	TArray<FWidgetAndPointer> GetHitWidgetPath(FVector2D WidgetSpaceHitCoordinate, bool bIgnoreEnabledStatus, float CursorRadius = 0.0f);
 
+	/**
+	 * GetHitWidgetPath for one pointer of several: the widgets are handed that pointer's own previous position
+	 * rather than the last position anything hit, which with two fingers on the widget is the other finger's.
+	 * Still recorded as the last hit, which is what GetLastLocalHitLocation answers.
+	 */
+	TArray<FWidgetAndPointer> GetHitWidgetPathForPointer(FVector2D WidgetSpaceHitCoordinate, FVector2D LastWidgetSpaceHitCoordinate,
+		bool bIgnoreEnabledStatus, float CursorRadius = 0.0f);
+
 	/** Returns the render target to which the user widget is rendered */
 	UFUNCTION(BlueprintCallable, Category = DreamGUI)
 	UTextureRenderTarget2D* GetRenderTarget() const;

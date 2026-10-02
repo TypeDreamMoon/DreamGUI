@@ -464,4 +464,81 @@ bool FDreamTextInputContextMenuTest::RunTest(const FString& Parameters)
 	return true;
 }
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamTextInputVirtualKeyboardTest,
+	"DreamGUI.TextInput.AVirtualKeyboardsKeystrokesUndoOneAtATimeAndKeepItsCaret",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * An Android or iOS keyboard sends the field's WHOLE text on every keystroke, and the field took each one through
+ * SetText: the undo history was cleared every time, and the caret stayed at its old offset -- one character behind what
+ * had just been typed, so the keyboard's next character landed in front of the last. Its selection calls did nothing,
+ * and GetSelection answered true without saying anything. The keystroke is taken as the edit it is now -- the span
+ * between what the old and new text share at either end, never splitting a surrogate pair -- and both selection calls
+ * work, in source offsets.
+ *
+ * Played here the way a keyboard plays it, against a field with no layout (caret and offset are then the same number):
+ * three keystrokes, a caret moved into the middle and a fourth typed there, four undos back to empty; then an emoji
+ * swapped for another and a caret asked for between the halves of one.
+ */
+bool FDreamTextInputVirtualKeyboardTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamTextInputTestLocal;
+	TStrongObjectPtr<UUITextInput> Input(MakeBehaviour());
+	const TSharedPtr<IVirtualKeyboardEntry> Keyboard = Input->GetVirtualKeyboardEntryForTesting();
+	if (!TestTrue(TEXT("the field has an entry for a virtual keyboard"), Keyboard.IsValid()))
+	{
+		return false;
+	}
+	const auto Keystroke = [&Keyboard](const FString& InWholeText)
+	{
+		Keyboard->SetTextFromVirtualKeyboard(FText::FromString(InWholeText), ETextEntryType::TextEntryUpdated);
+	};
+	const auto Selection = [&Keyboard]()
+	{
+		int SelStart = INDEX_NONE;
+		int SelEnd = INDEX_NONE;
+		Keyboard->GetSelection(SelStart, SelEnd);
+		return FIntPoint(SelStart, SelEnd);
+	};
+
+	Keystroke(TEXT("a"));
+	Keystroke(TEXT("ab"));
+	Keystroke(TEXT("abc"));
+	TestEqual(TEXT("three keystrokes type three characters"), Input->GetText(), FString(TEXT("abc")));
+	TestEqual(TEXT("and the caret follows the last of them"), Selection(), FIntPoint(3, 3));
+
+	// The keyboard puts the caret after the first character and types there.
+	Keyboard->SetSelectionFromVirtualKeyboard(1, 1);
+	TestEqual(TEXT("the keyboard's caret is the field's"), Selection(), FIntPoint(1, 1));
+	Keystroke(TEXT("aXbc"));
+	TestEqual(TEXT("a keystroke in the middle lands where the caret is"), Input->GetText(), FString(TEXT("aXbc")));
+	TestEqual(TEXT("and the caret moves on past it"), Selection(), FIntPoint(2, 2));
+
+	// One step of history per keystroke, each putting the caret back where that keystroke found it.
+	TestTrue(TEXT("the fourth keystroke undoes"), Input->Undo());
+	TestEqual(TEXT("back to three characters"), Input->GetText(), FString(TEXT("abc")));
+	TestEqual(TEXT("with the caret where the keyboard had moved it"), Selection(), FIntPoint(1, 1));
+	TestTrue(TEXT("the third undoes"), Input->Undo());
+	TestEqual(TEXT("back to two"), Input->GetText(), FString(TEXT("ab")));
+	TestTrue(TEXT("the second undoes"), Input->Undo());
+	TestTrue(TEXT("and the first"), Input->Undo());
+	TestEqual(TEXT("back to nothing, one keystroke at a time"), Input->GetText(), FString());
+	TestFalse(TEXT("and there is no more history than there were keystrokes"), Input->Undo());
+
+	// A selection the keyboard makes is read back the way it reads it: beginning first, whichever end the caret is on.
+	Keystroke(TEXT("hello"));
+	Keyboard->SetSelectionFromVirtualKeyboard(4, 1);
+	TestEqual(TEXT("a selection reads back beginning first"), Selection(), FIntPoint(1, 4));
+	TestTrue(TEXT("and it is a selection"), Input->IsAnyTextSelected());
+
+	// Emoji are two UTF-16 units each, and an edit never ends between them.
+	Input->SetText(TEXT("a\U0001F600"));
+	Keystroke(TEXT("a\U0001F601"));
+	TestEqual(TEXT("an emoji the keyboard swapped is swapped whole"), Input->GetText(), FString(TEXT("a\U0001F601")));
+	Keyboard->SetSelectionFromVirtualKeyboard(2, 2);
+	TestEqual(TEXT("a caret asked for between an emoji's halves stands after the emoji"), Selection(), FIntPoint(3, 3));
+	return true;
+}
+
 #endif // WITH_DEV_AUTOMATION_TESTS && WITH_EDITOR

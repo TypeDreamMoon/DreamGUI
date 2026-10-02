@@ -862,4 +862,79 @@ bool FDreamUITextGeneratedNameTakenTest::RunTest(const FString& Parameters)
 	return true;
 }
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamUITextUnparsedKeepsResourcesTest,
+	"DreamGUI.WidgetBlueprint.AFileThatStopsParsingKeepsItsResourceVariablesAndSaysWhy",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * A .dui that stops parsing keeps the hierarchy it last built -- the tree is left where it is -- but its `resources`
+ * variables went: they were declared from the file's entries, which a file that does not parse has none of, and the
+ * Blueprint compiler empties every generated variable before a compile declares its own. Every graph node reading one
+ * then failed, each error pointing away from the one mistake in the file. The last good read's variables are kept on
+ * the asset now and declared again while the file does not build, with a warning saying so.
+ *
+ * Checked here: a file with two resources compiles; then a typo breaks it. The compile fails on the typo, the class
+ * still declares both variables, and the compile says why.
+ */
+bool FDreamUITextUnparsedKeepsResourcesTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamUITextCompileTestLocal;
+
+	FScopedDuiFile File(TEXT("ResourcesUnparsed.dui"));
+	if (!TestTrue(TEXT("the .dui was written"), File.Write({
+		TEXT("resources {"),
+		TEXT("    Number Gap    = 7"),
+		TEXT("    Color  Accent = #FF6600"),
+		TEXT("}"),
+		TEXT(""),
+		TEXT("Widget Root {"),
+		TEXT("}"),
+	})))
+	{
+		return false;
+	}
+	FScopedBlueprint Fixture(TEXT("BP_ResourcesUnparsed"));
+	if (!TestNotNull(TEXT("the Blueprint was created"), Fixture.Blueprint)) return false;
+	if (!TestTrue(TEXT("and points at the file"), Fixture.SetDuiFilePath(File.FilePath))) return false;
+
+	FCompilerResultsLog Results;
+	Compile(Fixture.Blueprint, Results);
+	if (!TestEqual(TEXT("the file compiles clean"), Results.NumErrors, 0)
+		|| !TestNotNull(TEXT("and the class declares the Number resource"), Fixture.Blueprint->GeneratedClass->FindPropertyByName(TEXT("Gap"))))
+	{
+		return false;
+	}
+
+	// The same file with a string left open: it no longer parses.
+	if (!TestTrue(TEXT("the broken .dui was written"), File.Write({
+		TEXT("resources {"),
+		TEXT("    Number Gap    = 7"),
+		TEXT("    Color  Accent = #FF6600"),
+		TEXT("}"),
+		TEXT(""),
+		TEXT("Widget Root {"),
+		TEXT("    Title = \"no closing quote"),
+		TEXT("}"),
+	})))
+	{
+		return false;
+	}
+	AddExpectedError(Code(EDreamUIDiagnosticCode::UnterminatedString), EAutomationExpectedErrorFlags::Contains, 0);
+	// The warning goes to the log as well when the compile logs; counted or not, it is the results that are asserted.
+	AddExpectedMessagePlain(TEXT("keeps the resource variables"), ELogVerbosity::Warning, EAutomationExpectedMessageFlags::Contains, -1);
+
+	FCompilerResultsLog BrokenResults;
+	Compile(Fixture.Blueprint, BrokenResults);
+	TestTrue(TEXT("a file that does not parse still fails the compile"), BrokenResults.NumErrors > 0);
+	UClass* GeneratedClass = Fixture.Blueprint->GeneratedClass;
+	TestNotNull(TEXT("the class still declares the Number resource"),
+		GeneratedClass != nullptr ? GeneratedClass->FindPropertyByName(TEXT("Gap")) : nullptr);
+	TestNotNull(TEXT("and the Color one"),
+		GeneratedClass != nullptr ? GeneratedClass->FindPropertyByName(TEXT("Accent")) : nullptr);
+	TestMessagesContain(*this, TEXT("the compile says it kept them"), BrokenResults, TEXT("keeps the resource variables"));
+	TestMessagesContain(*this, TEXT("naming them"), BrokenResults, TEXT("Gap"));
+	return true;
+}
+
 #endif

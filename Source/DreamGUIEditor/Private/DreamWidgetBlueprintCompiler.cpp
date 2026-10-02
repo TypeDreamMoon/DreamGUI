@@ -131,6 +131,8 @@ void FDreamWidgetBlueprintCompilerContext::SaveSubObjectsFromCleanAndSanitizeCla
 
 void FDreamWidgetBlueprintCompilerContext::BuildWidgetTreeFromTextSource(FDreamUIDiagnosticBag& OutDiagnostics)
 {
+	// Until a file is named, there is none: nothing built, and nothing kept from an earlier build.
+	TextSourceOutcome = ETextSourceOutcome::NoSource;
 	UDreamWidgetBlueprint* DreamBlueprint = DreamWidgetBlueprint();
 	if (DreamBlueprint == nullptr)
 	{
@@ -205,6 +207,10 @@ void FDreamWidgetBlueprintCompilerContext::BuildWidgetTreeFromTextSource(FDreamU
 		// have been before the text pipeline existed: same tree object, same bindings, same messages.
 		return;
 	}
+
+	// A file is named from here on, and every return below that installs nothing keeps the previous hierarchy --
+	// and with it the resource variables the last good read declared (PopulateBlueprintGeneratedVariables).
+	TextSourceOutcome = ETextSourceOutcome::KeptPrevious;
 
 	bool bRootTokenResolved = true;
 	const FString ResolvedPath = DreamUIPaths::Resolve(AuthoredPath, &bRootTokenResolved);
@@ -558,6 +564,7 @@ void FDreamWidgetBlueprintCompilerContext::BuildWidgetTreeFromTextSource(FDreamU
 			TextResources.Add(Imported);
 		}
 	}
+	TextSourceOutcome = ETextSourceOutcome::Built;
 	// And the bindings alongside it, for the same reason -- `<-` lines live in the same file. These
 	// are the AUTHORED list; CompilePropertyBindings resolves them onto the class at the end of the
 	// compile and reports the ones that cannot be honoured, which is how a .dui naming a function the
@@ -1553,6 +1560,7 @@ void FDreamWidgetBlueprintCompilerContext::PopulateBlueprintGeneratedVariables()
 		// not lost because the write-back carries it into the file the moment it is committed; a
 		// panel edit made with the write-back broken is lost at the next compile, which is the same
 		// contract every widget property in the designer already lives under.
+		TArray<FBPVariableDescription> DeclaredResourceVariables;
 		for (const FDreamUIResource& Entry : TextResources)
 		{
 			const FName VariableName(*Entry.Name);
@@ -1634,7 +1642,54 @@ void FDreamWidgetBlueprintCompilerContext::PopulateBlueprintGeneratedVariables()
 				(CPF_Edit | CPF_BlueprintVisible | CPF_BlueprintReadOnly | CPF_DisableEditOnInstance);
 			ResourceVariable.Category = FText::FromString(TEXT("Resources"));
 			ResourceVariable.DefaultValue = MoveTemp(DefaultValue);
+			DeclaredResourceVariables.Add(ResourceVariable);
 			DreamBlueprint->GeneratedVariables.Emplace(MoveTemp(ResourceVariable));
+		}
+
+		if (TextSourceOutcome == ETextSourceOutcome::KeptPrevious)
+		{
+			// The file did not build into a hierarchy, so the previous hierarchy stays -- and its resource
+			// variables stay with it. The compiler emptied every generated variable before this one began
+			// declaring, so without this every `resources` entry left the class, and every graph node
+			// reading one failed with an error pointing away from the one mistake in the file. Declared
+			// under the same refusals as a fresh entry: a name a widget, the parent or the author's own
+			// member has taken since is not taken back.
+			TArray<FString> KeptNames;
+			for (const FBPVariableDescription& Kept : DreamBlueprint->LastGoodResourceVariables)
+			{
+				if (Kept.VarName.IsNone() || DeclaredNames.Contains(Kept.VarName))
+				{
+					continue;
+				}
+				if (Blueprint->ParentClass != nullptr && Blueprint->ParentClass->FindPropertyByName(Kept.VarName) != nullptr)
+				{
+					continue;
+				}
+				if (IsTakenByAuthoredMember(Kept.VarName, LOCTEXT("GeneratedResourceKind", "resource")))
+				{
+					continue;
+				}
+				DeclaredNames.Add(Kept.VarName);
+				DreamBlueprint->GeneratedVariables.Add(Kept);
+				KeptNames.Add(Kept.VarName.ToString());
+			}
+			if (KeptNames.Num() > 0)
+			{
+				// Said, so a value edited in the file meanwhile is not mistaken for one the class has taken.
+				MessageLog.Warning(*FText::Format(
+					LOCTEXT("KeptResourceVariables", "The .dui did not build, so this class keeps the resource variables its last good read declared ({0}), with the values they had then. They follow the file again once the errors above are fixed."),
+					FText::FromString(FString::Join(KeptNames, TEXT(", ")))).ToString());
+			}
+		}
+		else if (TextSourceOutcome == ETextSourceOutcome::Built)
+		{
+			// What the next compile falls back on, should the file stop building.
+			DreamBlueprint->LastGoodResourceVariables = MoveTemp(DeclaredResourceVariables);
+		}
+		else if (DreamBlueprint->LastGoodResourceVariables.Num() > 0)
+		{
+			// The class names no .dui any more, so there is no hierarchy of the file's to keep variables for.
+			DreamBlueprint->LastGoodResourceVariables.Reset();
 		}
 	}
 }

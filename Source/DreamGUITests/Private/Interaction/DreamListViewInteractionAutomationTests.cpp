@@ -5,6 +5,7 @@
 #include "Misc/AutomationTest.h"
 
 #include "Controls/DreamListView.h"
+#include "Controls/DreamTileView.h"
 #include "Core/Components/DreamWidget.h"
 #include "Interaction/UIListView.h"
 #include "UObject/StrongObjectPtr.h"
@@ -965,6 +966,300 @@ bool FDreamListsListViewSidewaysTest::RunTest(const FString& Parameters)
 		TestTrue(FString::Printf(TEXT("The last row ends inside the window (%.1f against %.1f)"), LastRowRect->Max.X, WindowRect->Max.X),
 			LastRowRect->Max.X <= WindowRect->Max.X + 1.5 && LastRowRect->Min.X >= WindowRect->Min.X - 1.5);
 	}
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamListsListViewPreselectedIndexTest,
+	"DreamGUI.ListView.AnIndexSelectedBeforeItsItemsArriveIsSelectedWhenTheyDo",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamListsListViewPreselectedIndexTest, "DreamGUI.ListView.AnIndexSelectedBeforeItsItemsArriveIsSelectedWhenTheyDo", "[Animated]")
+
+/*
+ * A screen that restores "the eighth row was selected" before its data has loaded asks for an index the list cannot
+ * hold yet. SetSelectedIndex stored -1 for it -- only a selection SET was ever kept for later, and only with
+ * bAllowKeepPreselectedItems on -- so the restored selection was lost without a word. An index asked for while the
+ * source is empty is kept now, whatever that flag says, becomes the selection when the items arrive, and is announced
+ * once then; a selection made or cleared in between replaces it. A tile view is a list and does the same.
+ *
+ * Checked on a list and on a tile view: the eighth item asked for with no items, then thirty items given; and a
+ * request cleared before its items come, which then lands nothing.
+ */
+bool FDreamListsListViewPreselectedIndexTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamListViewInteractionTestLocal;
+	FDreamDriverRig Rig = FDreamDriverRig::Headless(DreamListsInteraction::ViewportSize());
+	Rig.BindTest(this);
+	if (!TestTrue(TEXT("The headless rig came up"), Rig.IsUsable()))
+	{
+		return false;
+	}
+	UDreamListView* List = Rig.MakeControl<UDreamListView>(TEXT("List"), nullptr, ListSize, FVector2D(-320.0, 0.0));
+	UDreamTileView* Tiles = Rig.MakeControl<UDreamTileView>(TEXT("Tiles"), nullptr, FVector2D(360.0, 300.0), FVector2D(220.0, 0.0));
+	if (!TestNotNull(TEXT("A list was made on the rig"), List) || !TestNotNull(TEXT("and a tile view"), Tiles))
+	{
+		return false;
+	}
+	List->SetStyleSource(EDreamUIStyleSource::Inline);
+	List->SetStyle(DreamListsInteraction::WithRows(List->GetStyle(), RowHeight));
+	Tiles->SetStyleSource(EDreamUIStyleSource::Inline);
+	FDreamTileViewStyle TileStyle = Tiles->GetStyle();
+	TileStyle.List = DreamListsInteraction::WithRows(TileStyle.List, 60.0f);
+	TileStyle.TileWidth = 80.0f;
+	TileStyle.TileSpacing = 0.0f;
+	Tiles->SetStyle(TileStyle);
+	Rig.PumpFrames(1);
+
+	const TArray<UDreamListViewBase*> Controls = { List, Tiles };
+	for (UDreamListViewBase* Control : Controls)
+	{
+		const TCHAR* Kind = Control == List ? TEXT("list") : TEXT("tile view");
+		TStrongObjectPtr<UDreamListsInteractionProbe> Probe(NewObject<UDreamListsInteractionProbe>());
+		DreamListsInteraction::ListenToList(*Control, *Probe);
+
+		Control->SetSelectedIndex(7);
+		TestEqual(FString::Printf(TEXT("The %s with no items has nothing selected yet"), Kind), Control->GetSelectedIndex(), INDEX_NONE);
+		TestEqual(FString::Printf(TEXT("and the %s has said nothing yet"), Kind), Probe->SelectionChanges.Num(), 0);
+
+		const TArray<UObject*> Items = DreamListsInteraction::MakeItems(30);
+		Control->SetItemObjects(Items);
+		Rig.PumpFrames(1);
+		TestEqual(FString::Printf(TEXT("The %s selects the eighth item once its items arrive"), Kind), Control->GetSelectedIndex(), 7);
+		TestEqual(FString::Printf(TEXT("and only that one in the %s"), Kind), Control->GetNumItemsSelected(), 1);
+		if (TestEqual(FString::Printf(TEXT("The %s announced it once"), Kind), Probe->SelectionChanges.Num(), 1))
+		{
+			TestEqual(FString::Printf(TEXT("naming the eighth item in the %s"), Kind), Probe->SelectionChanges[0], 7);
+		}
+
+		// A request that is cleared before its items come is gone: clearing means it never lands.
+		Control->ClearListItems();
+		Rig.PumpFrames(1);
+		Probe->ClearRecords();
+		Control->SetSelectedIndex(4);
+		Control->ClearSelection();
+		Control->SetItemObjects(Items);
+		Rig.PumpFrames(1);
+		TestEqual(FString::Printf(TEXT("A request the %s was told to clear does not land"), Kind), Control->GetSelectedIndex(), INDEX_NONE);
+		TestEqual(FString::Printf(TEXT("and the %s says nothing about it"), Kind), Probe->SelectionChanges.Num(), 0);
+	}
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamListsListViewSelectionOffTest,
+	"DreamGUI.ListView.SwitchingSelectionOffClearsTheSelectionAndSaysSoOnce",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamListsListViewSelectionOffTest, "DreamGUI.ListView.SwitchingSelectionOffClearsTheSelectionAndSaysSoOnce", "[Pointer][Animated]")
+
+/*
+ * SetSelectionMode re-narrows the selection, and said nothing when that changed it: switching selection off dropped
+ * the chosen row while OnSelectionChanged stayed silent, so a two-way binding went on holding a row nothing selected
+ * any more. SListView is silent here too, but its consumers do not bind both ways. The change is announced once now
+ * -- None as no selection, Multi to Single as the anchor it kept -- and a mode change that keeps the selection whole
+ * says nothing.
+ */
+bool FDreamListsListViewSelectionOffTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamListViewInteractionTestLocal;
+	FDreamDriverRig Rig = FDreamDriverRig::Headless(DreamListsInteraction::ViewportSize());
+	Rig.BindTest(this);
+	if (!TestTrue(TEXT("The headless rig came up"), Rig.IsUsable()))
+	{
+		return false;
+	}
+	TArray<UObject*> Items;
+	UDreamListView* List = MakeList(Rig, 30, Items);
+	if (!TestNotNull(TEXT("The list was made on the rig"), List)
+		|| !TestTrue(TEXT("Clicking the third row completes"), RowElement(Rig, *List, 2)->Click())
+		|| !TestEqual(TEXT("and selects it"), List->GetSelectedIndex(), 2))
+	{
+		return false;
+	}
+	TStrongObjectPtr<UDreamListsInteractionProbe> Probe(NewObject<UDreamListsInteractionProbe>());
+	DreamListsInteraction::ListenToList(*List, *Probe);
+
+	List->SetSelectionMode(EUIListSelectionMode::None);
+	TestEqual(TEXT("Switching selection off leaves nothing selected"), List->GetSelectedIndex(), INDEX_NONE);
+	TestEqual(TEXT("not even in the set"), List->GetNumItemsSelected(), 0);
+	if (TestEqual(TEXT("and says so once"), Probe->SelectionChanges.Num(), 1))
+	{
+		TestEqual(TEXT("as no selection"), Probe->SelectionChanges[0], INDEX_NONE);
+	}
+
+	// Back on: nothing was selected and nothing is, so there is nothing to say.
+	Probe->ClearRecords();
+	List->SetSelectionMode(EUIListSelectionMode::Multi);
+	TestEqual(TEXT("Switching it back on changes nothing and says nothing"), Probe->SelectionChanges.Num(), 0);
+
+	// Multi down to Single keeps the anchor -- the row the last selection landed on -- and says that, once.
+	TestTrue(TEXT("Clicking the third row completes"), RowElement(Rig, *List, 2)->Click());
+	TestTrue(TEXT("Clicking the fifth row completes"), RowElement(Rig, *List, 4)->Click());
+	if (!TestEqual(TEXT("Both rows are selected in Multi"), List->GetNumItemsSelected(), 2))
+	{
+		return false;
+	}
+	Probe->ClearRecords();
+	List->SetSelectionMode(EUIListSelectionMode::Single);
+	TestEqual(TEXT("Narrowing to Single keeps one row"), List->GetNumItemsSelected(), 1);
+	TestEqual(TEXT("the anchor"), List->GetSelectedIndex(), 4);
+	if (TestEqual(TEXT("and says so once"), Probe->SelectionChanges.Num(), 1))
+	{
+		TestEqual(TEXT("naming the row it kept"), Probe->SelectionChanges[0], 4);
+	}
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamListsListViewNoneRefusesCodeTest,
+	"DreamGUI.ListView.ASelectionModeOfNoneRefusesSetSelectedIndexAndNavigateToIndexAlike",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamListsListViewNoneRefusesCodeTest, "DreamGUI.ListView.ASelectionModeOfNoneRefusesSetSelectedIndexAndNavigateToIndexAlike", "[Animated]")
+
+/*
+ * SelectionMode None stopped a click and a navigation press from selecting, and nothing else: SetSelectedIndex and
+ * NavigateToIndex still selected the row they named, so code could put a selection on a list nobody can select
+ * from. Both are refused now, and NavigateToIndex still does its other half, bringing the row into view.
+ */
+bool FDreamListsListViewNoneRefusesCodeTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamListViewInteractionTestLocal;
+	FDreamDriverRig Rig = FDreamDriverRig::Headless(DreamListsInteraction::ViewportSize());
+	Rig.BindTest(this);
+	if (!TestTrue(TEXT("The headless rig came up"), Rig.IsUsable()))
+	{
+		return false;
+	}
+	TArray<UObject*> Items;
+	UDreamListView* List = MakeList(Rig, 30, Items);
+	if (!TestNotNull(TEXT("The list was made on the rig"), List))
+	{
+		return false;
+	}
+	List->SetSelectionMode(EUIListSelectionMode::None);
+	TStrongObjectPtr<UDreamListsInteractionProbe> Probe(NewObject<UDreamListsInteractionProbe>());
+	DreamListsInteraction::ListenToList(*List, *Probe);
+
+	List->SetSelectedIndex(3);
+	TestEqual(TEXT("SetSelectedIndex selects nothing in None"), List->GetSelectedIndex(), INDEX_NONE);
+	TestEqual(TEXT("nothing at all"), List->GetNumItemsSelected(), 0);
+
+	List->NavigateToIndex(25);
+	Rig.PumpFrames(1);
+	TestEqual(TEXT("NavigateToIndex selects nothing in None either"), List->GetSelectedIndex(), INDEX_NONE);
+	TestTrue(TEXT("but still brings the row into view"), List->GetScrollOffset() > 0.5f);
+	TestEqual(TEXT("and no selection was announced"), Probe->SelectionChanges.Num(), 0);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamListsListViewGlidingRevealTest,
+	"DreamGUI.ListView.RevealingAnIndexWithScrollAnimationOnGlidesThereAndFinishesOnce",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamListsListViewGlidingRevealTest, "DreamGUI.ListView.RevealingAnIndexWithScrollAnimationOnGlidesThereAndFinishesOnce", "[Animated]")
+
+/*
+ * ScrollItemIntoView took an animation flag and never read it: with bEnableScrollAnimation on, UMG's reveal glides
+ * and this one jumped. It glides now, through the scroll view's own glide -- which IsScrolling counts, so the list's
+ * "finished" is said once, when the glide lands, rather than on every step of it.
+ *
+ * Checked here: thirty rows forty apart in a window of four hundred, the twenty-sixth revealed. The offset does not
+ * jump to the end, passes through somewhere in between, comes to rest with the row's bottom on the window's, and the
+ * finish is announced once, there.
+ */
+bool FDreamListsListViewGlidingRevealTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamListViewInteractionTestLocal;
+	FDreamDriverRig Rig = FDreamDriverRig::Headless(DreamListsInteraction::ViewportSize());
+	Rig.BindTest(this);
+	if (!TestTrue(TEXT("The headless rig came up"), Rig.IsUsable()))
+	{
+		return false;
+	}
+	TArray<UObject*> Items;
+	UDreamListView* List = MakeList(Rig, 30, Items);
+	if (!TestNotNull(TEXT("The list was made on the rig"), List))
+	{
+		return false;
+	}
+	List->SetEnableScrollAnimation(true);
+	Rig.PumpFrames(1);
+	TStrongObjectPtr<UDreamListsInteractionProbe> Probe(NewObject<UDreamListsInteractionProbe>());
+	DreamListsInteraction::ListenToList(*List, *Probe);
+
+	// The least movement that shows the whole twenty-sixth row: its bottom edge on the window's.
+	const float Target = 26.0f * RowHeight - static_cast<float>(ListSize.Y);
+	List->ScrollIndexIntoView(25);
+	TestTrue(FString::Printf(TEXT("The reveal does not land at once (%.1f against %.1f)"), List->GetScrollOffset(), Target),
+		List->GetScrollOffset() < Target - 0.5f);
+
+	bool bSawInBetween = false;
+	for (int32 Frame = 0; Frame < 60; ++Frame)
+	{
+		Rig.PumpFrames(1);
+		const float Offset = List->GetScrollOffset();
+		bSawInBetween |= Offset > 0.5f && Offset < Target - 0.5f;
+	}
+	TestTrue(TEXT("On the way it stood somewhere in between"), bSawInBetween);
+	TestNearlyEqual(TEXT("It comes to rest with the row's bottom on the window's"), List->GetScrollOffset(), Target, 0.5f);
+	TestTrue(TEXT("Its moves were announced"), Probe->ScrolledOffsets.Num() >= 2);
+	if (TestEqual(TEXT("Finishing was announced exactly once"), Probe->FinishedOffsets.Num(), 1))
+	{
+		TestNearlyEqual(TEXT("where it came to rest"), Probe->FinishedOffsets[0], Target, 0.5f);
+	}
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamListsTileViewNoEntryHeightTest,
+	"DreamGUI.TileView.ATileViewWithNoEntryHeightKeepsAWindowOfTiles",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamListsTileViewNoEntryHeightTest, "DreamGUI.TileView.ATileViewWithNoEntryHeightKeepsAWindowOfTiles", "[Animated]")
+
+/*
+ * A tile view with no entry height -- the setters let a zero through, and a style handed to SetStyle or loaded from an
+ * old asset still can -- had a row pitch of a ten-thousandth of a unit and a tile pitch to match. "How many lines fit"
+ * came out in the millions, lines times columns overflowed an int32, and the pool made a widget for every item, all of
+ * them drawn at nothing. The setters now keep a tile at least one unit each way; a pitch under one unit gets the
+ * sixteen-line window an unarranged viewport gets, and one column; and the window is counted in int64 and clamped to
+ * the items.
+ *
+ * Here split in its two parts: the setters clamp, and a style with no height or width on a thousand items keeps a
+ * window of sixteen lines plus the overscan, one tile wide.
+ */
+bool FDreamListsTileViewNoEntryHeightTest::RunTest(const FString& Parameters)
+{
+	FDreamDriverRig Rig = FDreamDriverRig::Headless(DreamListsInteraction::ViewportSize());
+	Rig.BindTest(this);
+	if (!TestTrue(TEXT("The headless rig came up"), Rig.IsUsable()))
+	{
+		return false;
+	}
+	UDreamTileView* Tiles = Rig.MakeControl<UDreamTileView>(TEXT("Tiles"), nullptr, FVector2D(360.0, 300.0));
+	if (!TestNotNull(TEXT("The tile view was made on the rig"), Tiles))
+	{
+		return false;
+	}
+	// The setters first, while there are no items to make widgets for at a size of one unit.
+	Tiles->SetEntryHeight(0.0f);
+	Tiles->SetEntryWidth(0.0f);
+	TestEqual(TEXT("SetEntryHeight keeps a tile at least one unit tall"), Tiles->GetEntryHeight(), 1.0f);
+	TestEqual(TEXT("and SetEntryWidth one unit wide"), Tiles->GetEntryWidth(), 1.0f);
+
+	// What the setters no longer let through, handed over the way an old asset or a script still can.
+	Tiles->SetStyleSource(EDreamUIStyleSource::Inline);
+	FDreamTileViewStyle TileStyle = Tiles->GetStyle();
+	TileStyle.List = DreamListsInteraction::WithRows(TileStyle.List, 0.0f);
+	TileStyle.TileWidth = 0.0f;
+	TileStyle.TileSpacing = 0.0f;
+	Tiles->SetStyle(TileStyle);
+	Tiles->SetItemObjects(DreamListsInteraction::MakeItems(1000));
+	Rig.PumpFrames(2);
+
+	TestEqual(TEXT("A tile pitch under one unit is one column"), Tiles->GetColumnCount(), 1);
+	TestTrue(TEXT("The thousand items are recycled"), Tiles->IsVirtualizing());
+	const int32 ExpectedWindow = (16 + 2 * Tiles->GetVirtualizationOverscan()) * Tiles->GetColumnCount();
+	TestEqual(TEXT("through a window of sixteen lines and the overscan, not a widget per item"),
+		Tiles->GetRealizedRowCount(), ExpectedWindow);
 	return true;
 }
 

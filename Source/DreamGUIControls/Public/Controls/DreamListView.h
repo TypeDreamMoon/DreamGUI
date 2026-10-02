@@ -355,7 +355,10 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetShowScrollBar", BlueprintSetter = "SetShowScrollBar", Category = "List")
 	bool bShowScrollBar = true;
 
-	/** Whether the bar stays put or disappears while every row already fits. */
+	/**
+	 * Whether the bar stays put or disappears while every row already fits. Hidden never draws it, though the
+	 * list still scrolls, and keeps its gutter while the rows overflow, as a Hidden Slate bar keeps its slot.
+	 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetScrollBarVisibility", BlueprintSetter = "SetScrollBarVisibility", Category = "List", meta = (EditCondition = "bShowScrollBar"))
 	EDreamScrollBoxScrollbarVisibility ScrollBarVisibility = EDreamScrollBoxScrollbarVisibility::AutoHide;
 
@@ -459,6 +462,9 @@ public:
 	 * that shrank and wrong for one that has not been filled yet: a screen that restores "row 7 was
 	 * selected" before its data loads would otherwise silently lose it. With this on, a dropped index
 	 * is parked and re-applied the moment the source is long enough to hold it.
+	 *
+	 * Off, one case is still kept: an index asked for while the source is EMPTY waits for the items
+	 * (see SetSelectedIndex), because an empty source is not one that shrank -- it has not arrived.
 	 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetAllowKeepPreselectedItems", BlueprintSetter = "SetAllowKeepPreselectedItems", Category = "List")
 	bool bAllowKeepPreselectedItems = false;
@@ -474,6 +480,9 @@ public:
 
 	/**
 	 * Whether the reveal and the wheel GLIDE rather than jump -- UMG's bEnableScrollAnimation.
+	 *
+	 * The reveal is ScrollIndexIntoView, NavigateToIndex and ScrollItemIntoView asked to animate; a
+	 * navigation press between rows still jumps, because the row it lands on has to exist at once.
 	 *
 	 * Off by default: every existing list's reveal lands in one frame, and a project that has tuned
 	 * its own timing around that should keep it.
@@ -950,9 +959,8 @@ public:
 	 *
 	 * The two halves in one call because doing them separately is always wrong in the same way: a
 	 * selection that is off screen is a selection nobody can see they made. With
-	 * bSelectItemOnNavigation off it only reveals. A navigation press moving between rows makes the
-	 * same two moves (see UDreamListRowButton), but through SetItemSelection, so it respects
-	 * SelectionMode None.
+	 * bSelectItemOnNavigation off, or SelectionMode None, it only reveals. A navigation press moving
+	 * between rows makes the same two moves (see UDreamListRowButton), through SetItemSelection.
 	 */
 	UFUNCTION(BlueprintCallable, Category = "List")
 	void NavigateToIndex(int32 InItemIndex);
@@ -1249,8 +1257,14 @@ public:
 	/**
 	 * Moves the highlight and fires both selection events. Out of range selects nothing.
 	 *
-	 * Selects exactly ONE row whatever the mode -- this is the single-selection road, and the name
-	 * says so. SetItemSelection is the one that can add to a Multi selection.
+	 * Selects exactly ONE row whatever the mode but None, which selects nothing at all -- this is the
+	 * single-selection road, and the name says so. SetItemSelection is the one that can add to a
+	 * Multi selection.
+	 *
+	 * An index asked for while the source is still EMPTY (or, with bAllowKeepPreselectedItems on, not
+	 * yet long enough) is kept rather than dropped: GetSelectedIndex reads -1 until the items arrive,
+	 * and then the row is selected and both events fire once. Any other selection made meanwhile --
+	 * a click, ClearSelection, another index -- replaces the kept one.
 	 */
 	UFUNCTION(BlueprintCallable, Category = "List")
 	void SetSelectedIndex(int32 InIndex);
@@ -1259,7 +1273,11 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "List")
 	void SetSelectedIndexWithoutNotify(int32 InIndex);
 
-	/** Which mode decides how many rows can be chosen. Re-narrows the selection when it has to. */
+	/**
+	 * Which mode decides how many rows can be chosen. Re-narrows the selection when it has to, and says
+	 * so once when that changed it -- None drops the whole selection, Multi to a single mode keeps the
+	 * anchor -- so a two-way binding is not left holding a row nothing selects any more.
+	 */
 	UFUNCTION(BlueprintCallable, Category = "List")
 	void SetSelectionMode(EUIListSelectionMode InMode);
 
@@ -1379,6 +1397,10 @@ public:
 	 *
 	 * Computed from the row pitch rather than from a widget, so it answers for an item whose row is
 	 * not realized -- which is the only version of this that means anything while recycling.
+	 *
+	 * Glides there, with the wheel's ease and duration, when bInAnimate AND bEnableScrollAnimation are
+	 * both on; jumps otherwise. A navigation press always jumps: the row it lands on has to exist the
+	 * moment the press names it.
 	 */
 	UFUNCTION(BlueprintCallable, Category = "List")
 	bool ScrollItemIntoView(int32 InItemIndex, bool bInAnimate = true);
@@ -1662,6 +1684,29 @@ private:
 	TArray<int32> PendingSelectedIndices;
 
 	/**
+	 * The one index SetSelectedIndex (or an authored SelectedIndex) asked for before the source could
+	 * answer it: while the source is empty, or -- with bAllowKeepPreselectedItems on -- until it is long
+	 * enough. INDEX_NONE while nothing waits. ReconcileSelection makes it the selection the moment it
+	 * can, any other selection replaces it, and SelectedIndex reads -1 until it lands.
+	 */
+	int32 PendingSelectedIndex = INDEX_NONE;
+
+	/** Set by ReconcileSelection when that kept index became the selection; RebuildRows says so once. */
+	bool bAnnouncePendingSelection = false;
+
+	/** OnSelectionChanged and OnValueChangedBP with the selection as it stands. */
+	void AnnounceSelection();
+
+	/**
+	 * Where the reveal's own glide is taking the list, while bRevealGlideActive says one is under way --
+	 * the offset a second reveal measures from, because the row it brings in has to be in view where the
+	 * list comes to rest, not where it happens to be mid-glide. Cleared when the list stops moving or a
+	 * drag takes it over.
+	 */
+	float RevealGlideTarget = 0.0f;
+	bool bRevealGlideActive = false;
+
+	/**
 	 * How many nested batch edits are in flight.
 	 *
 	 * A counter rather than a flag: the batch calls are written in terms of each other (AddItems is
@@ -1718,7 +1763,9 @@ private:
 	 *
 	 * Indices the source no longer answers to are dropped; an anchor an author wrote is taken as a
 	 * selection; a single mode holding several rows keeps the anchor; and the anchor is re-derived
-	 * from the set last, so SelectedIndex always names a row that is actually selected.
+	 * from the set last, so SelectedIndex always names a row that is actually selected. An index
+	 * asked for before the items arrived (PendingSelectedIndex) becomes the selection here, whatever
+	 * bAllowKeepPreselectedItems says, and is announced by the rebuild that landed it.
 	 */
 	void ReconcileSelection();
 
@@ -1804,8 +1851,11 @@ private:
 	/** The gutter, the bar's rect and the scroll range -- everything that follows from the row count. */
 	void RefreshScrollFurniture(const FDreamListStyle& InStyle);
 
-	/** True while the bar has something to say: shown at all, and either permanent or overflowing. */
+	/** True while the bar is drawn: shown at all, and permanent, or auto-hiding with rows that overflow. Never for Hidden. */
 	bool ShouldShowScrollBar() const;
+
+	/** Whether the rows run past the viewport along the scroll axis -- what every bar question starts from. */
+	bool IsListContentOverflowing() const;
 
 	/** How many widgets the window needs: the viewport's worth, plus overscan at both edges. */
 	int32 ResolveWindowSize() const;

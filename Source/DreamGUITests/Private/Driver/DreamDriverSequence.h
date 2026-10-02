@@ -229,8 +229,9 @@ public:
 	/**
 	 * A finger, one step and one frame per phase, like every other input. Each finger index is its
 	 * own pointer -- the module keys touches by index -- so two fingers are two pointers with their
-	 * own press, hover and drag; finger 0 is pointer 0, which it shares with the mouse, as in a game.
-	 * TouchUp lifts the finger where it is. Moving or lifting a finger that is not down fails.
+	 * own press, hover and drag. No finger is the mouse: finger N is pointer DreamUIPointerIds::ForTouch(N),
+	 * 100 + N, and the mouse is pointer 0. TouchUp lifts the finger where it is. Moving or lifting a finger
+	 * that is not down fails.
 	 */
 	FDreamDriverSequence& TouchDown(int32 InFingerId, const FVector2D& InPixel);
 	FDreamDriverSequence& TouchMoveTo(int32 InFingerId, const FVector2D& InPixel);
