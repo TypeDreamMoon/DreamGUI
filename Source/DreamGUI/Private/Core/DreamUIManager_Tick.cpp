@@ -247,109 +247,15 @@ void UDreamUIManagerWorldSubsystem::TickDreamUI(float DeltaTime)
 	}
 
 	//update layout
-	if (LayoutDirtyWidgetArray.Num() > 0)
+	int32 LayoutPassesThisTick = 0;
+	RunLayoutPasses(LayoutPassesThisTick);
+	// What places itself against the settled layout does it here -- the popup layer, after the openers it follows --
+	// and whatever layout that dirtied is laid out right after, so nothing it moved is drawn a frame late.
+	if (OnLayoutPassesFinished.IsBound())
 	{
-		bIsExecutingLayout = true;
-		constexpr int32 MaxLayoutPassesPerFrame = 32;
-		int32 LayoutPassCount = 0;
-		LastLayoutPassCount = 0;
-#if WITH_EDITOR && ENABLED_DreamGUI_DEBUG_LAYOUT_FRAME
-		auto Time = FDateTime::Now();
-		UE_LOG(DreamGUI, Log, TEXT("---Begin layout frame:%d, World:%s---"), GFrameNumber, *GetWorld()->GetPathName());
-#endif
-		LayoutContainerArrayWhichHasSnapshot.Reset();
-		while (LayoutDirtyWidgetArray.Num() > 0 && LayoutPassCount < MaxLayoutPassesPerFrame)
-		{
-			SCOPE_CYCLE_COUNTER(STAT_UpdateLayout);
-			TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_LayoutPass);
-			++LayoutPassCount;
-			LastLayoutPassCount = LayoutPassCount;
-			// Between two passes nothing is walking a cached tree, so a rebuild the previous pass was made to wait
-			// for is done here rather than after the last pass, and this pass walks the trees as they now are. Left
-			// for the end of the frame, a widget attached from inside one pass -- by a listener its writes woke --
-			// was missing from every later pass's walk of that frame, and nothing asked for it again after.
-			FlushPendingLayoutTreeRebuild();
-
-			TArray<TWeakObjectPtr<UDreamWidget>> CopiedLayoutDirtyWidgetArray;
-			Swap(CopiedLayoutDirtyWidgetArray, LayoutDirtyWidgetArray);
-
-			// Collect the live roots up front so ancestry can be tested against the whole batch.
-			TSet<UDreamWidget*> BatchRoots;
-			TArray<UDreamWidget*> OrderedRoots;
-			BatchRoots.Reserve(CopiedLayoutDirtyWidgetArray.Num());
-			OrderedRoots.Reserve(CopiedLayoutDirtyWidgetArray.Num());
-			for (const TWeakObjectPtr<UDreamWidget>& WeakWidget : CopiedLayoutDirtyWidgetArray)
-			{
-				if (UDreamWidget* Widget = WeakWidget.Get(); IsValid(Widget))
-				{
-					bool bAlreadyPresent = false;
-					BatchRoots.Add(Widget, &bAlreadyPresent);
-					if (!bAlreadyPresent)
-					{
-						OrderedRoots.Add(Widget);
-					}
-				}
-			}
-
-			// CalculateLayoutTree walks an entire subtree, so a root sitting under another root in the same
-			// batch is redundant - the ancestor's walk already covers it. It was worse than redundant: this
-			// batch used to be iterated back-to-front, so the descendant usually ran FIRST, laying its
-			// subtree out against the ancestor's stale size and then being laid out a second time when the
-			// ancestor's walk reached it. Both roots are easy to enqueue at once, because
-			// UDreamWidget::MarkLayoutForRebuild falls back to the widget itself when no layout exists yet on
-			// its ancestor chain - sizing a widget before parenting it is enough.
-			// The survivors are pairwise unrelated, so their relative order no longer matters; keep enqueue
-			// order for determinism.
-			constexpr int32 MaxHierarchyDepthGuard = 1024;
-			for (UDreamWidget* Widget : OrderedRoots)
-			{
-				bool bCoveredByAncestor = false;
-				int32 DepthGuard = 0;
-				for (UDreamWidget* Ancestor = Widget->GetParent();
-					IsValid(Ancestor) && DepthGuard < MaxHierarchyDepthGuard;
-					Ancestor = Ancestor->GetParent(), ++DepthGuard)
-				{
-					if (BatchRoots.Contains(Ancestor))
-					{
-						bCoveredByAncestor = true;
-						break;
-					}
-				}
-				if (!bCoveredByAncestor)
-				{
-					CalculateLayoutTree(Widget);
-				}
-			}
-		}
-		if (LayoutDirtyWidgetArray.Num() > 0)
-		{
-			UE_LOG(DreamGUI, Error,
-				TEXT("Layout did not converge after %d passes in World %s. Deferring %d pending widgets to the next frame."),
-				MaxLayoutPassesPerFrame, *GetNameSafe(GetWorld()), LayoutDirtyWidgetArray.Num());
-		}
-		for (auto& SnapshotLayout : LayoutContainerArrayWhichHasSnapshot)
-		{
-			if (UDreamLayoutContainer* Layout = SnapshotLayout.Get(); IsValid(Layout))
-			{
-				Layout->ApplyLayoutResult();
-			}
-		}
-#if WITH_EDITOR && ENABLED_DreamGUI_DEBUG_LAYOUT_FRAME
-		for (auto& CalcCountKeyValue : LayoutCalculationCounterMap)
-		{
-			if (CalcCountKeyValue.Value >= 2)
-			{
-				UE_LOG(DreamGUI, Warning, TEXT("Widget %s has been calculated layout %d times in a frame"), *CalcCountKeyValue.Key, CalcCountKeyValue.Value);
-			}
-		}
-		LayoutCalculationCounterMap.Reset();
-		auto TimeSpan = (FDateTime::Now() - Time).GetTotalMilliseconds();
-		UE_LOG(DreamGUI, Log, TEXT("---end layout frame:%d, count:%d, time:%f"), GFrameNumber, LayoutPassCount, TimeSpan);
-#endif
-		bIsExecutingLayout = false;
-		// Anything that restructured the tree while the pass was running asked for a rebuild and was told
-		// to wait; this is the wait ending. See MarkRebuildLayoutTree.
-		FlushPendingLayoutTreeRebuild();
+		TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_LayoutPassesFinished);
+		OnLayoutPassesFinished.Broadcast();
+		RunLayoutPasses(LayoutPassesThisTick);
 	}
 
 	// Every move since the last flush -- animations, tweens, input, the behaviours and the layout pass
@@ -416,6 +322,14 @@ void UDreamUIManagerWorldSubsystem::TickDreamUI(float DeltaTime)
 	// only a root has clips to refresh (RefreshAllClipData), and a pass of their own over every canvas was two looks at each
 	// of a world of panels a frame for none.
 
+	// The last moment to ask for a repaint this frame: the small-text sweep repaints, from here, the texts whose device
+	// scale has settled. Nothing lays out again before the canvases update.
+	if (OnBeforeRootCanvasesUpdate.IsBound())
+	{
+		TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_BeforeRootCanvasesUpdate);
+		OnBeforeRootCanvasesUpdate.Broadcast();
+	}
+
 	//update draw-call
 	{
 		SCOPE_CYCLE_COUNTER(STAT_DreamUIUpdateRootCanvas);
@@ -476,6 +390,116 @@ void UDreamUIManagerWorldSubsystem::TickDreamUI(float DeltaTime)
 			}
 		}
 	}
+}
+
+void UDreamUIManagerWorldSubsystem::RunLayoutPasses(int32& InOutPassesThisTick)
+{
+	if (LayoutDirtyWidgetArray.Num() == 0)
+	{
+		return;
+	}
+	bIsExecutingLayout = true;
+	constexpr int32 MaxLayoutPassesPerFrame = 32;
+	int32 LayoutPassCount = 0;
+	LastLayoutPassCount = InOutPassesThisTick;
+#if WITH_EDITOR && ENABLED_DreamGUI_DEBUG_LAYOUT_FRAME
+	auto Time = FDateTime::Now();
+	UE_LOG(DreamGUI, Log, TEXT("---Begin layout frame:%d, World:%s---"), GFrameNumber, *GetWorld()->GetPathName());
+#endif
+	LayoutContainerArrayWhichHasSnapshot.Reset();
+	while (LayoutDirtyWidgetArray.Num() > 0 && LayoutPassCount < MaxLayoutPassesPerFrame)
+	{
+		SCOPE_CYCLE_COUNTER(STAT_UpdateLayout);
+		TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_LayoutPass);
+		++LayoutPassCount;
+		LastLayoutPassCount = InOutPassesThisTick + LayoutPassCount;
+		// Between two passes nothing is walking a cached tree, so a rebuild the previous pass was made to wait
+		// for is done here rather than after the last pass, and this pass walks the trees as they now are. Left
+		// for the end of the frame, a widget attached from inside one pass -- by a listener its writes woke --
+		// was missing from every later pass's walk of that frame, and nothing asked for it again after.
+		FlushPendingLayoutTreeRebuild();
+
+		TArray<TWeakObjectPtr<UDreamWidget>> CopiedLayoutDirtyWidgetArray;
+		Swap(CopiedLayoutDirtyWidgetArray, LayoutDirtyWidgetArray);
+
+		// Collect the live roots up front so ancestry can be tested against the whole batch.
+		TSet<UDreamWidget*> BatchRoots;
+		TArray<UDreamWidget*> OrderedRoots;
+		BatchRoots.Reserve(CopiedLayoutDirtyWidgetArray.Num());
+		OrderedRoots.Reserve(CopiedLayoutDirtyWidgetArray.Num());
+		for (const TWeakObjectPtr<UDreamWidget>& WeakWidget : CopiedLayoutDirtyWidgetArray)
+		{
+			if (UDreamWidget* Widget = WeakWidget.Get(); IsValid(Widget))
+			{
+				bool bAlreadyPresent = false;
+				BatchRoots.Add(Widget, &bAlreadyPresent);
+				if (!bAlreadyPresent)
+				{
+					OrderedRoots.Add(Widget);
+				}
+			}
+		}
+
+		// CalculateLayoutTree walks an entire subtree, so a root sitting under another root in the same
+		// batch is redundant - the ancestor's walk already covers it. It was worse than redundant: this
+		// batch used to be iterated back-to-front, so the descendant usually ran FIRST, laying its
+		// subtree out against the ancestor's stale size and then being laid out a second time when the
+		// ancestor's walk reached it. Both roots are easy to enqueue at once, because
+		// UDreamWidget::MarkLayoutForRebuild falls back to the widget itself when no layout exists yet on
+		// its ancestor chain - sizing a widget before parenting it is enough.
+		// The survivors are pairwise unrelated, so their relative order no longer matters; keep enqueue
+		// order for determinism.
+		constexpr int32 MaxHierarchyDepthGuard = 1024;
+		for (UDreamWidget* Widget : OrderedRoots)
+		{
+			bool bCoveredByAncestor = false;
+			int32 DepthGuard = 0;
+			for (UDreamWidget* Ancestor = Widget->GetParent();
+				IsValid(Ancestor) && DepthGuard < MaxHierarchyDepthGuard;
+				Ancestor = Ancestor->GetParent(), ++DepthGuard)
+			{
+				if (BatchRoots.Contains(Ancestor))
+				{
+					bCoveredByAncestor = true;
+					break;
+				}
+			}
+			if (!bCoveredByAncestor)
+			{
+				CalculateLayoutTree(Widget);
+			}
+		}
+	}
+	InOutPassesThisTick += LayoutPassCount;
+	if (LayoutDirtyWidgetArray.Num() > 0)
+	{
+		UE_LOG(DreamGUI, Error,
+			TEXT("Layout did not converge after %d passes in World %s. Deferring %d pending widgets to the next frame."),
+			MaxLayoutPassesPerFrame, *GetNameSafe(GetWorld()), LayoutDirtyWidgetArray.Num());
+	}
+	for (auto& SnapshotLayout : LayoutContainerArrayWhichHasSnapshot)
+	{
+		if (UDreamLayoutContainer* Layout = SnapshotLayout.Get(); IsValid(Layout))
+		{
+			Layout->ApplyLayoutResult();
+		}
+	}
+#if WITH_EDITOR && ENABLED_DreamGUI_DEBUG_LAYOUT_FRAME
+	for (auto& CalcCountKeyValue : LayoutCalculationCounterMap)
+	{
+		if (CalcCountKeyValue.Value >= 2)
+		{
+			UE_LOG(DreamGUI, Warning, TEXT("Widget %s has been calculated layout %d times in a frame"), *CalcCountKeyValue.Key, CalcCountKeyValue.Value);
+		}
+	}
+	LayoutCalculationCounterMap.Reset();
+	auto TimeSpan = (FDateTime::Now() - Time).GetTotalMilliseconds();
+	UE_LOG(DreamGUI, Log, TEXT("---end layout frame:%d, count:%d, time:%f"), GFrameNumber, LayoutPassCount, TimeSpan);
+#endif
+	bIsExecutingLayout = false;
+	// Anything that restructured the tree while the pass was running asked for a rebuild and was told
+	// to wait; this is the wait ending. See MarkRebuildLayoutTree.
+	FlushPendingLayoutTreeRebuild();
 }
 
 namespace DreamUIManagerTickLocal
