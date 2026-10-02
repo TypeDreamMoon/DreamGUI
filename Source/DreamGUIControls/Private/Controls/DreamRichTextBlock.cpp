@@ -78,6 +78,11 @@ void UDreamRichTextBlock::ApplyStyle()
 	TextVisual->SetAutoWrapText(bAutoWrapText);
 	TextVisual->SetTextTransform(TextTransformPolicy);
 	TextVisual->SetMinDesiredWidth(MinDesiredWidth);
+	TextVisual->SetLanguage(Language);
+	TextVisual->SetTabSize(TabSize);
+	TextVisual->SetTextJustify(TextJustify);
+	TextVisual->SetLastLineAlign(LastLineAlign);
+	TextVisual->SetSmallTextRaster(SmallTextRaster);
 }
 
 /*
@@ -182,6 +187,52 @@ void UDreamRichTextBlock::SetMinDesiredWidth(float InMinDesiredWidth)
 		// Onto the paragraph and nowhere else: a rich text block IS its paragraph, stretched to the
 		// control's rect, so the number a content-sized parent reads is the paragraph's.
 		TextVisual->SetMinDesiredWidth(MinDesiredWidth);
+	}
+}
+
+void UDreamRichTextBlock::SetLanguage(const FString& InLanguage)
+{
+	Language = InLanguage;
+	if (UDreamText* TextVisual = TextNode != nullptr ? Cast<UDreamText>(TextNode->GetVisual()) : nullptr)
+	{
+		// A layout input, not a parse decision: the paragraph lays the prose out again by itself, no SetText needed.
+		TextVisual->SetLanguage(InLanguage);
+	}
+}
+
+void UDreamRichTextBlock::SetTabSize(float InTabSize)
+{
+	TabSize = FMath::Max(0.0f, InTabSize);
+	if (UDreamText* TextVisual = TextNode != nullptr ? Cast<UDreamText>(TextNode->GetVisual()) : nullptr)
+	{
+		TextVisual->SetTabSize(TabSize);
+	}
+}
+
+void UDreamRichTextBlock::SetTextJustify(EDreamTextJustify InTextJustify)
+{
+	TextJustify = InTextJustify;
+	if (UDreamText* TextVisual = TextNode != nullptr ? Cast<UDreamText>(TextNode->GetVisual()) : nullptr)
+	{
+		TextVisual->SetTextJustify(InTextJustify);
+	}
+}
+
+void UDreamRichTextBlock::SetLastLineAlign(EDreamTextLastLineAlign InLastLineAlign)
+{
+	LastLineAlign = InLastLineAlign;
+	if (UDreamText* TextVisual = TextNode != nullptr ? Cast<UDreamText>(TextNode->GetVisual()) : nullptr)
+	{
+		TextVisual->SetLastLineAlign(InLastLineAlign);
+	}
+}
+
+void UDreamRichTextBlock::SetSmallTextRaster(EDreamTextSmallTextRaster InSmallTextRaster)
+{
+	SmallTextRaster = InSmallTextRaster;
+	if (UDreamText* TextVisual = TextNode != nullptr ? Cast<UDreamText>(TextNode->GetVisual()) : nullptr)
+	{
+		TextVisual->SetSmallTextRaster(InSmallTextRaster);
 	}
 }
 

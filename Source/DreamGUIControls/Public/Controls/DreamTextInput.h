@@ -10,6 +10,8 @@
 //for EDreamUITextParagraphHorizontalAlign, which the field's Justification is spelled in: one
 //paragraph-alignment enum for the whole library rather than a second one meaning left/centre/right
 #include "Core/DreamUITextData.h"
+//for EDreamTextSmallTextRaster, which the field carries as an authored property and hands its paragraphs
+#include "Core/Components/DreamText.h"
 #include "DreamTextInput.generated.h"
 
 class UDreamText;
@@ -176,6 +178,30 @@ public:
 	 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetTextFlowDirection", BlueprintSetter = "SetTextFlowDirection", Category = "Text Input")
 	EDreamTextFlowDirection TextFlowDirection = EDreamTextFlowDirection::Auto;
+
+	/**
+	 * The language the field is typed in, as a culture name ("ja", "zh-Hans"); empty is the game's. Picks the font's
+	 * fallbacks meant for it and the forms a script draws per language -- see UDreamText::Language. Like the flow
+	 * direction, it is the whole field's: the placeholder and the error message read it too.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetLanguage", BlueprintSetter = "SetLanguage", Category = "Text Input")
+	FString Language;
+
+	/** Tab stops in spaces, from the line's start edge -- CSS tab-size, 8 as browsers have it. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetTabSize", BlueprintSetter = "SetTabSize", Category = "Text Input", meta = (ClampMin = "0.0", UIMax = "16.0"))
+	float TabSize = 8.0f;
+
+	/** Where a justified line gets its extra room. Read only with Justification Justify. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetTextJustify", BlueprintSetter = "SetTextJustify", Category = "Text Input")
+	EDreamTextJustify TextJustify = EDreamTextJustify::Auto;
+
+	/** How a justified paragraph's last line, and a line a newline ends, align. Read only with Justification Justify. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetLastLineAlign", BlueprintSetter = "SetLastLineAlign", Category = "Text Input")
+	EDreamTextLastLineAlign LastLineAlign = EDreamTextLastLineAlign::Auto;
+
+	/** Off keeps the field's text on its font's distance field at every size; see UDreamText::SmallTextRaster. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetSmallTextRaster", BlueprintSetter = "SetSmallTextRaster", Category = "Text Input", AdvancedDisplay)
+	EDreamTextSmallTextRaster SmallTextRaster = EDreamTextSmallTextRaster::Auto;
 
 	/**
 	 * What a value too long for the box does WHILE NOBODY IS EDITING IT -- UMG's OverflowPolicy.
@@ -414,6 +440,37 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Text Input")
 	void SetTextFlowDirection(EDreamTextFlowDirection InFlowDirection);
+
+	UFUNCTION(BlueprintCallable, Category = "Text Input")
+	FString GetLanguage() const { return Language; }
+
+	/** Onto every paragraph of the field, as the flow direction is. */
+	UFUNCTION(BlueprintCallable, Category = "Text Input")
+	void SetLanguage(const FString& InLanguage);
+
+	UFUNCTION(BlueprintCallable, Category = "Text Input")
+	float GetTabSize() const { return TabSize; }
+
+	UFUNCTION(BlueprintCallable, Category = "Text Input")
+	void SetTabSize(float InTabSize);
+
+	UFUNCTION(BlueprintCallable, Category = "Text Input")
+	EDreamTextJustify GetTextJustify() const { return TextJustify; }
+
+	UFUNCTION(BlueprintCallable, Category = "Text Input")
+	void SetTextJustify(EDreamTextJustify InTextJustify);
+
+	UFUNCTION(BlueprintCallable, Category = "Text Input")
+	EDreamTextLastLineAlign GetLastLineAlign() const { return LastLineAlign; }
+
+	UFUNCTION(BlueprintCallable, Category = "Text Input")
+	void SetLastLineAlign(EDreamTextLastLineAlign InLastLineAlign);
+
+	UFUNCTION(BlueprintCallable, Category = "Text Input")
+	EDreamTextSmallTextRaster GetSmallTextRaster() const { return SmallTextRaster; }
+
+	UFUNCTION(BlueprintCallable, Category = "Text Input")
+	void SetSmallTextRaster(EDreamTextSmallTextRaster InSmallTextRaster);
 
 	UFUNCTION(BlueprintCallable, Category = "Text Input")
 	ETextOverflowPolicy GetTextOverflowPolicy() const { return OverflowPolicy; }

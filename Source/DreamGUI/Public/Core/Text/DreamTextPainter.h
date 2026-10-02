@@ -7,6 +7,103 @@
 
 class FDreamUIGeometry;
 
+/**
+ * What UV2.x of a glyph quad tells the shader. DreamUIShade.ush and DreamUIText.ush hold the same numbers: change one,
+ * change both. For font marks 1-3 the shader decodes, in this order:
+ *  1. UV2.x < ColorThreshold: a colour glyph (premultiplied BGRA; vertex RGB ignored, vertex alpha kept). Below
+ *     ColorEffectsThreshold (ColorEffects) it is the glyph's effects copy, which draws the underlay from the glyph's alpha
+ *     in the style's underlay colour -- on a field font sampled at UV minus the underlay offset (the painter insets that
+ *     copy by half the field's spread, which keeps every sample inside the glyph's padded cell), on a bitmap font where
+ *     the copy is (the painter moved it by the shadow offset, as it does its plain glyphs' shadows); otherwise
+ *     (ColorFace) its face. UV3.y holds the cell's texels per em (FDreamUICharData::ColorTexelsPerEm), which turns the
+ *     offset in em into UV.
+ *  2. Otherwise Layer = floor((UV2.x + 8) / 16) and DilateEm = UV2.x - 16 * Layer (DreamUIText_UnpackGlyphChannel).
+ *     Layer 3 (CoverageBase + phase): a coverage glyph, the phase (0 to 3) being what DilateEm holds; UV3.y holds the
+ *     contrast plus CoverageLinearTarget when the target blends in linear space. Layers 0, 1 and 2
+ *     (DilateEm + FieldLayerStride * layer): a field glyph's face, effects, or both, as ever; UV3.y holds the glow boost.
+ * UV2.y and UV3.x hold the lyric fill on every kind of quad. A bitmap font's plain glyphs write 0 and are not decoded.
+ */
+namespace DreamTextQuadCode
+{
+	/** A field glyph writes DilateEm + FieldLayerStride * Layer: Layer 0 its face, 1 its effects, 2 both. DilateEm >= 0. */
+	constexpr float FieldLayerStride = 16.0f;
+	/** A coverage glyph writes CoverageBase + phase, the phase being 0 to 3: layer 3. */
+	constexpr float CoverageBase = 48.0f;
+	/** Added to a coverage glyph's UV3.y (its contrast, below 16) when the target blends in linear space. */
+	constexpr float CoverageLinearTarget = 16.0f;
+	/** A colour glyph's face copy, and its effects copy. */
+	constexpr float ColorFace = -1.0f;
+	constexpr float ColorEffects = -17.0f;
+	/** UV2.x below this is a colour glyph; below ColorEffectsThreshold, its effects copy. */
+	constexpr float ColorThreshold = -0.5f;
+	constexpr float ColorEffectsThreshold = -8.5f;
+}
+
+/** What a paint found out about small-text coverage, written when FDreamTextCoverageParams::Report asks for it. */
+struct FDreamTextCoverageReport
+{
+	/** Items drawn from coverage glyphs. */
+	int32 CoverageItems = 0;
+	/**
+	 * Items under the threshold drawn from their field quad this time because their coverage glyph was still being made
+	 * (or not drawn yet at all, when their field glyph is pending too): the text repaints when the font's
+	 * OnCoverageGlyphsChanged says it landed.
+	 */
+	int32 PendingItems = 0;
+};
+
+/**
+ * Small text from coverage glyphs: whether to, from which font, and where the device pixel grid lies. Filled by the
+ * text component once its gate passed (UDreamText); off by default, which paints exactly as before.
+ *
+ * The grid: x and y are the painter's coordinates -- FDreamTextGlyphItem::Pen's, the text widget's local space, x right
+ * and y UP (vertex positions are (0, x, y)). u = DeviceScale * x + SnapOrigin.X and v = DeviceScale * y + SnapOrigin.Y
+ * are device pixels, u rightward and v upward, and whole values of each lie on pixel boundaries of the render target.
+ * The component measures them through the matrices its root canvas is drawn with, onto the pixels of what the canvas
+ * renders into (its render target, or the screen), from that target's left and top edges (a point there has u = 0,
+ * v = 0; inside the target v is negative). Per item, with GlyphSize the item's:
+ *  - drawn from coverage when it emits a glyph quad (Kind Glyph, bEmit), GlyphSize * DeviceScale <= MaxPixelSize, the
+ *    glyph is not a colour glyph, and Font->GetCoverageGlyph(Glyph.FaceIndex, Glyph.GlyphIndex,
+ *    round(GlyphSize * RasterScale * 64), the item's synthetic bold/italic) answers with a glyph that is not pending;
+ *    otherwise from its field quad, as before. An item whose field glyph is still pending (it counts but does not emit)
+ *    is drawn from coverage the same way once its coverage glyph is ready. A text whose quads come in several copies
+ *    (effects, a bitmap font's shadow or outline) is never drawn from coverage: a coverage glyph is a face alone;
+ *  - the baseline row is v' = floor(v(Pen.Y) + 0.5); the column and phase are q = floor(4 * u(Pen.X) + 0.5),
+ *    I = floor(q / 4), phase = q - 4 * I;
+ *  - the quad is [I + BitmapLeft, I + BitmapLeft + Width] x [v' + BitmapTop - Height, v' + BitmapTop] in (u, v), mapped
+ *    back by x = (u - SnapOrigin.X) / DeviceScale and y = (v - SnapOrigin.Y) / DeviceScale, its UVs the glyph's texels
+ *    exactly; no italic shear and no bold shift (both are in the raster); UV2.x = CoverageBase + phase,
+ *    UV3.y = Contrast + CoverageLinearTarget * bLinearTarget.
+ * While bEnabled, underline and strikethrough strips keep their solid texel and have their top and bottom snapped to
+ * device rows, at least one pixel apart: the thickness rounded to whole rows, placed about the strip's own centre. Lines,
+ * carets, visual runs and every item's place in the display list are the same either way: coverage replaces quads, never
+ * positions the layout made.
+ */
+struct FDreamTextCoverageParams
+{
+	/** The text passed its gate. Off: every item paints from its field quad. */
+	bool bEnabled = false;
+	/** Where coverage glyphs come from: the text's font. Not null while bEnabled; valid for the paint only. */
+	UDreamUIFontData_BaseObject* Font = nullptr;
+	/**
+	 * S: device pixels per local unit, as the canvas draws them -- in the usual case the canvas scale, times a render
+	 * target's resolution scale, times the text's uniform scale relative to the root canvas widget.
+	 */
+	float DeviceScale = 1.0f;
+	/** The scale glyphs are rasterized at, kept within 1% of DeviceScale by the component's hysteresis. */
+	float RasterScale = 1.0f;
+	/** Items above this many device pixels per em paint from the field (UDreamUIFontData_BaseObject::GetCoverageMaxPixelSize). */
+	float MaxPixelSize = 0.0f;
+	/** The device grid's origin in (u, v); see the struct. */
+	FVector2f SnapOrigin = FVector2f::ZeroVector;
+	/** Skia's text contrast, UDreamGUISettings::SmallTextContrast. */
+	float Contrast = 1.0f;
+	/** The canvas blends in linear space (a RenderTarget canvas: gamma 1); the shader then skips its gamma-correcting step. */
+	bool bLinearTarget = false;
+	/** Where the paint reports what it did; reset by the painter first. Null: no report. */
+	FDreamTextCoverageReport* Report = nullptr;
+};
+
 /** What the painter needs beyond the display list: the font's quad conventions and the canvas's. */
 struct FDreamTextPaintParams
 {
@@ -58,9 +155,9 @@ struct FDreamTextPaintParams
 	bool bStrokesPerCharacter = false;
 
 	/**
-	 * Distance-field fonts (either kind). UV2.x carries DilateEm + 16 * Layer per glyph; quads grow into
-	 * the field as far as the face / the effects reach; bold is a dilation of the regular glyph when
-	 * BoldDilateEm is set.
+	 * Distance-field fonts (either kind). UV2.x carries DilateEm + 16 * Layer per glyph (DreamTextQuadCode); quads grow
+	 * into the field as far as the face / the effects reach; bold is a dilation of the regular glyph when BoldDilateEm is
+	 * set. A colour glyph (FDreamUICharData::bColor) in any font is none of this: its quad is its padded cell as it is.
 	 */
 	bool bDistanceField = false;
 	/**
@@ -79,6 +176,15 @@ struct FDreamTextPaintParams
 	float FieldSpreadTexels = 0.0f;
 	float QuadMarginTexels = 0.0f;
 	float TexelToUV = 0.0f;
+	/**
+	 * Distance-field fonts: the text style draws an underlay (its UnderlayColor has alpha). A colour glyph gets an effects
+	 * copy (DreamTextQuadCode::ColorEffects) only then; its outline and glow are never drawn. Bitmap fonts say the same with
+	 * BitmapShadowColor.
+	 */
+	bool bHasUnderlay = false;
+
+	/** Small text from coverage glyphs. */
+	FDreamTextCoverageParams Coverage;
 };
 
 /**

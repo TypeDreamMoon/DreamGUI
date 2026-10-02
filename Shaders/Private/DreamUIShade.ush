@@ -2,8 +2,9 @@
 //
 // One pixel of DreamGUI UI, whoever draws it. The built-in global shader (DreamUIBase.usf) and the
 // thin material host (MF_DreamUI_Shade, for the UE-renderer world-space mode and OverrideMaterial)
-// both call DreamUI_ShadePixel, so sprites, bitmap glyphs, SDF and MTSDF glyphs, the text style
-// record and the clip look the same on every path and can only change in one place.
+// both call DreamUI_ShadePixel, so sprites, bitmap glyphs, SDF and MTSDF glyphs, small-text coverage
+// glyphs, colour glyphs, the text style record and the clip look the same on every path and can only
+// change in one place.
 //
 // What stays with the host: the vertex transform, depth blend / fade against the scene, gamma, and
 // whether the output is premultiplied. The function returns straight (non-premultiplied) colour.
@@ -11,8 +12,9 @@
 // Vertex layout it reads (FDreamUIMeshVertex):
 //   UV0    texture / atlas coordinate
 //   UV1.x  widget property record index, UV1.y atlas slice
-//   UV2    field fonts: DilateEm + 16 * Layer, position across the fill run (see DreamUIText.ush)
-//   UV3    field fonts: fill progress, glow boost
+//   UV2    glyphs: the per-quad code (colour glyph, coverage glyph, or a field glyph's DilateEm + 16 * Layer), position
+//          across the fill run (see DreamUIText.ush)
+//   UV3    glyphs: fill progress; a field glyph's glow boost, a coverage glyph's contrast, a colour glyph's texels per em
 //   A rect block, where the host draws one (DREAMUI_SHADE_RECT_BLOCK): UV0 across its quad, UV2 its body texture's
 //   coordinate, UV3.x its row of rect block data (DreamUIRectBlock.ush)
 //   Colour authored in sRGB
@@ -33,7 +35,8 @@
 /**
  * FontAtlasInfo: xy atlas slice size in texels, z field range in texels (2 * spread), w texels per em
  * at the atlas's sample size, negated when the font has the small-text correction off (see
- * DreamUIText_ShadeField). Only distance-field glyphs read it.
+ * DreamUIText_ShadeField). Only distance-field glyphs read it, and a colour glyph's underlay on a
+ * distance-field font (the atlas size, and the spread its cell is padded by).
  */
 float4 DreamUI_ShadePixel(float2 UV0, float2 UV1, float2 UV2, float2 UV3, float4 RawVertexColor, float3 LocalPosition,
 	Texture2D MainTex, SamplerState MainSampler, Texture2DArray FontTex, SamplerState FontSampler,
@@ -68,21 +71,40 @@ float4 DreamUI_ShadePixel(float2 UV0, float2 UV1, float2 UV2, float2 UV3, float4
 		float4 Texel = DREAMUI_SAMPLE(MainTex, MainSampler, UV0);
 		Color = Texel * VertexColor;
 	}
-	else if (FontMark < 1.5)
+	else if (UV2.x < DREAMUI_TEXT_CODE_COLOR_THRESHOLD)
 	{
-		float4 Texel = DREAMUI_SAMPLE(FontTex, FontSampler, float3(UV0, UV1.y));
-		Color = Texel * VertexColor;
+		// A colour glyph, in an atlas of any kind (DreamUIText.ush's header): its face, or its effects copy for the
+		// underlay. A field font's copy is shifted here by the style's offset; a bitmap font's was moved by the painter.
+		FDreamUITextStyle Style = DreamUIText_ReadStyle(WidgetDataTex, UV1.x);
+		float Dim = DreamUIText_FillDim(Style.FillDimAlpha, Style.FillFadeWidth, UV3.x, UV2.y);
+		Color = DreamUIText_ShadeColorGlyph(FontTex, FontSampler, UV0, UV1.y, UV2.x < DREAMUI_TEXT_CODE_COLOR_EFFECTS_THRESHOLD,
+			FontMark > 1.5, FontAtlasInfo.xy, FontAtlasInfo.z, FontAtlasInfo.w, UV3.y, VertexColor, Style, Dim);
 	}
 	else
 	{
-		// A distance field of either kind: the single-channel one from a rasterized bitmap (2) or the
-		// multi-channel one from the outline (3). Same style, same channels; 3 only adds sharp corners.
-		FDreamUITextStyle Style = DreamUIText_ReadStyle(WidgetDataTex, UV1.x);
 		float Layer, GlyphDilateEm;
 		DreamUIText_UnpackGlyphChannel(UV2.x, Layer, GlyphDilateEm);
-		Color = DreamUIText_ShadeField(FontTex, FontSampler, UV0, UV1.y, FontMark > 2.5,
-			FontAtlasInfo.xy, FontAtlasInfo.z, FontAtlasInfo.w, VertexColor, Style,
-			UV3.x, UV2.y, UV3.y, GlyphDilateEm, Layer);
+		if (Layer > 2.5)
+		{
+			// A coverage glyph (small text), whose phase is what the unpack calls its dilate. Of the style it reads the fill.
+			float2 Fill = DreamUIText_ReadFill(WidgetDataTex, UV1.x);
+			Color = DreamUIText_ShadeCoverage(FontTex, FontSampler, UV0, UV1.y, GlyphDilateEm, UV3.y, VertexColor,
+				DreamUIText_FillDim(Fill.x, Fill.y, UV3.x, UV2.y));
+		}
+		else if (FontMark < 1.5)
+		{
+			float4 Texel = DREAMUI_SAMPLE(FontTex, FontSampler, float3(UV0, UV1.y));
+			Color = Texel * VertexColor;
+		}
+		else
+		{
+			// A distance field of either kind: the single-channel one from a rasterized bitmap (2) or the
+			// multi-channel one from the outline (3). Same style, same channels; 3 only adds sharp corners.
+			FDreamUITextStyle Style = DreamUIText_ReadStyle(WidgetDataTex, UV1.x);
+			Color = DreamUIText_ShadeField(FontTex, FontSampler, UV0, UV1.y, FontMark > 2.5,
+				FontAtlasInfo.xy, FontAtlasInfo.z, FontAtlasInfo.w, VertexColor, Style,
+				UV3.x, UV2.y, UV3.y, GlyphDilateEm, Layer);
+		}
 	}
 
 	Color.a *= DreamUI_CalculateClipData(ClipDataTex, ClipDataCoordinate, LocalPosition);

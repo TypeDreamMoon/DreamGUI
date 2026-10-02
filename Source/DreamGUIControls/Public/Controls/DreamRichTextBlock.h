@@ -102,6 +102,30 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetMinDesiredWidth", BlueprintSetter = "SetMinDesiredWidth", Category = "Rich Text", meta = (ClampMin = "0.0"))
 	float MinDesiredWidth = 0.0f;
 
+	/**
+	 * The language the prose is written in, as a culture name ("ja", "zh-Hans"); empty is the game's. Picks the font's
+	 * fallbacks meant for it and the forms a script draws per language -- see UDreamText::Language. `<lang=xx>` still
+	 * overrides it for what the tag encloses.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetLanguage", BlueprintSetter = "SetLanguage", Category = "Rich Text")
+	FString Language;
+
+	/** Tab stops in spaces, from the line's start edge -- CSS tab-size, 8 as browsers have it. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetTabSize", BlueprintSetter = "SetTabSize", Category = "Rich Text", meta = (ClampMin = "0.0", UIMax = "16.0"))
+	float TabSize = 8.0f;
+
+	/** Where a justified line gets its extra room. Read only with HorizontalAlignment Justify. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetTextJustify", BlueprintSetter = "SetTextJustify", Category = "Rich Text")
+	EDreamTextJustify TextJustify = EDreamTextJustify::Auto;
+
+	/** How a justified paragraph's last line, and a line a newline ends, align. Read only with HorizontalAlignment Justify. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetLastLineAlign", BlueprintSetter = "SetLastLineAlign", Category = "Rich Text")
+	EDreamTextLastLineAlign LastLineAlign = EDreamTextLastLineAlign::Auto;
+
+	/** Off keeps the prose on its font's distance field at every size; see UDreamText::SmallTextRaster. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetSmallTextRaster", BlueprintSetter = "SetSmallTextRaster", Category = "Rich Text", AdvancedDisplay)
+	EDreamTextSmallTextRaster SmallTextRaster = EDreamTextSmallTextRaster::Auto;
+
 	/** The paragraph itself. Public because everything under a control is reachable by name. */
 	UPROPERTY(BlueprintReadOnly, Transient, Category = "Rich Text")
 	TObjectPtr<UDreamWidget> TextNode = nullptr;
@@ -185,6 +209,36 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Rich Text")
 	void SetMinDesiredWidth(float InMinDesiredWidth);
+
+	UFUNCTION(BlueprintCallable, Category = "Rich Text")
+	FString GetLanguage() const { return Language; }
+
+	UFUNCTION(BlueprintCallable, Category = "Rich Text")
+	void SetLanguage(const FString& InLanguage);
+
+	UFUNCTION(BlueprintCallable, Category = "Rich Text")
+	float GetTabSize() const { return TabSize; }
+
+	UFUNCTION(BlueprintCallable, Category = "Rich Text")
+	void SetTabSize(float InTabSize);
+
+	UFUNCTION(BlueprintCallable, Category = "Rich Text")
+	EDreamTextJustify GetTextJustify() const { return TextJustify; }
+
+	UFUNCTION(BlueprintCallable, Category = "Rich Text")
+	void SetTextJustify(EDreamTextJustify InTextJustify);
+
+	UFUNCTION(BlueprintCallable, Category = "Rich Text")
+	EDreamTextLastLineAlign GetLastLineAlign() const { return LastLineAlign; }
+
+	UFUNCTION(BlueprintCallable, Category = "Rich Text")
+	void SetLastLineAlign(EDreamTextLastLineAlign InLastLineAlign);
+
+	UFUNCTION(BlueprintCallable, Category = "Rich Text")
+	EDreamTextSmallTextRaster GetSmallTextRaster() const { return SmallTextRaster; }
+
+	UFUNCTION(BlueprintCallable, Category = "Rich Text")
+	void SetSmallTextRaster(EDreamTextSmallTextRaster InSmallTextRaster);
 
 	/**
 	 * The DEFAULT typeface for undecorated prose -- UMG's SetDefaultFont, minus what FSlateFontInfo

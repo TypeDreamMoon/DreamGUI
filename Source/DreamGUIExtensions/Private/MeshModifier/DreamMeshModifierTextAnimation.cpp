@@ -3,6 +3,23 @@
 #include "MeshModifier/DreamMeshModifierTextAnimation.h"
 #include "DreamGUI.h"
 #include "Core/Components/DreamText.h"
+#include "MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_PropertyWithEase.h"
+
+namespace DreamMeshModifierTextAnimationLocal
+{
+	/**
+	 * Whether a property moves, turns or scales the glyphs -- or might. The built-in alpha and colour properties only
+	 * recolour the vertices they are given; any other class is taken to move them, a project's own included, since
+	 * nothing says what its ApplyProperty does.
+	 */
+	bool MovesVertices(const UDreamMeshModifierTextAnimation_Property* InProperty)
+	{
+		const UClass* PropertyClass = InProperty->GetClass();
+		return PropertyClass != UDreamMeshModifierTextAnimation_AlphaProperty::StaticClass()
+			&& PropertyClass != UDreamMeshModifierTextAnimation_ColorProperty::StaticClass()
+			&& PropertyClass != UDreamMeshModifierTextAnimation_ColorRandomProperty::StaticClass();
+	}
+}
 
 
 UDreamMeshModifierTextAnimation::UDreamMeshModifierTextAnimation()
@@ -88,6 +105,19 @@ void UDreamMeshModifierTextAnimation::PostEditChangeProperty(FPropertyChangedEve
 void UDreamMeshModifierTextAnimation::ModifierWillChangeVertexData(bool& OutTriangleIndices, bool& OutVertexPosition, bool& OutUV, bool& OutColor)
 {
 	Super::ModifierWillChangeVertexData(OutTriangleIndices, OutVertexPosition, OutUV, OutColor);
+	// Whether any glyph is moved is the installed properties' business: alpha and colour ones -- a typewriter, a fade -- leave
+	// every vertex where the text put it, which is what lets a small text keep drawing from coverage glyphs under them.
+	bool bMovesVertices = false;
+	for (const UDreamMeshModifierTextAnimation_Property* PropertyItem : Properties)
+	{
+		if (IsValid(PropertyItem) && DreamMeshModifierTextAnimationLocal::MovesVertices(PropertyItem))
+		{
+			bMovesVertices = true;
+			break;
+		}
+	}
+	OutVertexPosition = bMovesVertices;
+	OutUV = bMovesVertices;
 	// Asked right before the text paints: the last moment a text this modifier has not registered with yet (its visual
 	// was swapped, or there was none when the modifier registered) can still be told to lay out a glyph per character
 	// for the geometry about to be built. Registering after the paint leaves that geometry with ligatures the

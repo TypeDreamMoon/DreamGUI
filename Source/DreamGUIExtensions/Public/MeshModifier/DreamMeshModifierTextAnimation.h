@@ -92,6 +92,11 @@ protected:
 	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)override;
 #endif
 public:
+	/**
+	 * Positions and UVs only while a property that moves glyphs is installed: the built-in Alpha, Color and ColorRandom
+	 * properties do not, every other class is taken to. A text under an animation that only fades or recolours its
+	 * characters keeps drawing small sizes from coverage glyphs (UDreamText::SmallTextRaster).
+	 */
 	virtual void ModifierWillChangeVertexData(bool& OutTriangleIndices, bool& OutVertexPosition, bool& OutUV, bool& OutColor)override;
 	virtual void ModifyUIGeometry(FDreamUIGeometry& InGeometry
 		, bool InTriangleChanged, bool InUVChanged, bool InColorChanged, bool InVertexPositionChanged
