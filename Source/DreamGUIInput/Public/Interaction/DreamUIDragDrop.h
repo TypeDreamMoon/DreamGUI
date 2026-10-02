@@ -246,7 +246,13 @@ private:
 	void BeginFollowingDrag(UDreamPointerEventData* InPointerEvent);
 	void ShowDragVisual(FFollowedDrag& InDrag, UDreamPointerEventData* InPointerEvent);
 	void UpdateDragVisualPosition(FFollowedDrag& InDrag);
-	void UpdateDropHover(FFollowedDrag& InDrag);
+	/**
+	 * Light up the target the drag at InKey is over, and leave the one it was over. By key, not by entry: the targets'
+	 * enter, over and leave reach game code, which can end that drag or begin another, and an entry held across them can
+	 * be gone from the map by the time they return.
+	 */
+	void UpdateDropHover(const FIntPoint& InKey);
+	/** Forget the target InDrag lights up, then tell it the drag left it. */
 	void ClearDropHover(FFollowedDrag& InDrag);
 	/** Tear one drag's bookkeeping down and forget it. Safe for a pointer that is not being followed. */
 	void StopFollowingDrag(const FIntPoint& InKey);

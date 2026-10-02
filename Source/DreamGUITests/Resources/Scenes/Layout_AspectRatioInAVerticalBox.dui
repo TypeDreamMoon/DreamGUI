@@ -1,0 +1,97 @@
+// An image whose width sets its height (aspect ratio 2) in a 300-wide vertical box: the box gives it 300, so it is
+// 150 tall, and the sibling under it starts there.
+// The sibling gets its height from a SizeBox override (a label places itself, so the box keeps it): an Image
+// measures as its sprite, not as Brush.ImageSize.
+// @stage 512x320
+
+style Title {
+    AnchorData.AnchorMin = (0, 1)
+    AnchorData.AnchorMax = (1, 1)
+    AnchorData.Pivot = (0.5, 1)
+    AnchorData.AnchoredPosition = (0, -8)
+    AnchorData.SizeDelta = (-24, 20)
+    FontSize = 15
+    Color = #1E2230
+    HAlign = Left
+    VAlign = Top
+    OverflowType = HorizontalOverflow
+}
+
+style Note {
+    AnchorData.AnchorMin = (0, 1)
+    AnchorData.AnchorMax = (0, 1)
+    AnchorData.Pivot = (0, 1)
+    FontSize = 12
+    Color = #5A6172
+    HAlign = Left
+    VAlign = Top
+    OverflowType = HorizontalOverflow
+}
+
+style Box {
+    AnchorData.AnchorMin = (0, 1)
+    AnchorData.AnchorMax = (0, 1)
+    AnchorData.Pivot = (0, 1)
+}
+
+style InBox {
+    bIgnoreLayout = true
+    AnchorData.SizeDelta = (280, 16)
+    FontSize = 12
+    Color = #FFFFFF
+    HAlign = Center
+    VAlign = Middle
+    OverflowType = HorizontalOverflow
+}
+
+Widget Root {
+    Image Page {
+        Brush.TintColor = #F5F3EE
+        AnchorData.AnchorMin = (0, 0)
+        AnchorData.AnchorMax = (1, 1)
+        AnchorData.SizeDelta = (0, 0)
+    }
+
+    Text Heading : Title {
+        Text = "AspectRatio, width sets height (2), in a 300-wide VerticalBox"
+    }
+
+    Image Column : Box {
+        Brush.TintColor = #C9D3E6
+        AnchorData.AnchoredPosition = (24, -48)
+        AnchorData.SizeDelta = (300, 236)
+        + VerticalBox {
+            Spacing = 8
+        }
+
+        Image Art {
+            Brush.TintColor = #3D7DD8
+            + AspectRatio {
+                AspectRatioType = WidthControlHeight
+                AspectRatio = 2
+            }
+            @slot SizeRule = Auto
+            @slot HorizontalAlignment = Fill
+            Text ArtLabel : InBox { Text = "AspectRatio 2: 300 x 150" }
+        }
+
+        Image Below {
+            Brush.TintColor = #F2C14E
+            + SizeBox {
+                bOverrideHeight = true
+                HeightOverride = 24
+            }
+            @slot SizeRule = Auto
+            Text BelowLabel : InBox {
+                Text = "sibling, top at 158"
+                Color = #1E2230
+            }
+        }
+    }
+
+    Text Expected : Note {
+        AnchorData.AnchoredPosition = (24, -292)
+        AnchorData.SizeDelta = (464, 16)
+        Text = "Expected: the blue art is 300 x 150 and the yellow sibling starts 8 below it."
+    }
+}

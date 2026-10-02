@@ -1,0 +1,151 @@
+// A wrap box in the Fill slot of a horizontal box, which is a row of a vertical box: it is measured at the width the
+// row gives it, wraps its three 120 x 40 items there, and the row is as tall as the wrapped lines.
+// The items get their size from SizeBox overrides (a label places itself, so the box keeps them): an Image
+// measures as its sprite, not as Brush.ImageSize.
+// @stage 512x384
+
+style Title {
+    AnchorData.AnchorMin = (0, 1)
+    AnchorData.AnchorMax = (1, 1)
+    AnchorData.Pivot = (0.5, 1)
+    AnchorData.AnchoredPosition = (0, -8)
+    AnchorData.SizeDelta = (-24, 20)
+    FontSize = 15
+    Color = #1E2230
+    HAlign = Left
+    VAlign = Top
+    OverflowType = HorizontalOverflow
+}
+
+style Note {
+    AnchorData.AnchorMin = (0, 1)
+    AnchorData.AnchorMax = (0, 1)
+    AnchorData.Pivot = (0, 1)
+    FontSize = 12
+    Color = #5A6172
+    HAlign = Left
+    VAlign = Top
+    OverflowType = HorizontalOverflow
+}
+
+style Box {
+    AnchorData.AnchorMin = (0, 1)
+    AnchorData.AnchorMax = (0, 1)
+    AnchorData.Pivot = (0, 1)
+}
+
+style InBox {
+    bIgnoreLayout = true
+    AnchorData.SizeDelta = (120, 16)
+    FontSize = 12
+    Color = #FFFFFF
+    HAlign = Center
+    VAlign = Middle
+    OverflowType = HorizontalOverflow
+}
+
+Widget Root {
+    Image Page {
+        Brush.TintColor = #F5F3EE
+        AnchorData.AnchorMin = (0, 0)
+        AnchorData.AnchorMax = (1, 1)
+        AnchorData.SizeDelta = (0, 0)
+    }
+
+    Text Heading : Title {
+        Text = "WrapBox (Fill) in a HorizontalBox in a VerticalBox"
+    }
+
+    Image Column : Box {
+        Brush.TintColor = #C9D3E6
+        AnchorData.AnchoredPosition = (24, -48)
+        AnchorData.SizeDelta = (336, 296)
+        + VerticalBox {
+            Spacing = 8
+            Padding = (8, 8, 8, 8)
+        }
+
+        Image Row {
+            Brush.TintColor = #AEB9CF
+            + HorizontalBox {
+                Spacing = 8
+            }
+            @slot SizeRule = Auto
+
+            Image Tag {
+                Brush.TintColor = #6B7489
+                + SizeBox {
+                    bOverrideWidth = true
+                    WidthOverride = 56
+                    bOverrideHeight = true
+                    HeightOverride = 40
+                }
+                @slot SizeRule = Auto
+                @slot VerticalAlignment = Top
+                Text TagLabel : InBox {
+                    Text = "Auto 56"
+                    AnchorData.SizeDelta = (56, 16)
+                }
+            }
+
+            Image Flow {
+                Brush.TintColor = #EEF1F7
+                + WrapBox {
+                    Spacing = (4, 4)
+                }
+                @slot SizeRule = Fill
+
+                Image ItemA {
+                    Brush.TintColor = #3D7DD8
+                    + SizeBox {
+                        bOverrideWidth = true
+                        WidthOverride = 120
+                        bOverrideHeight = true
+                        HeightOverride = 40
+                    }
+                    Text LabelA : InBox { Text = "A 120 x 40" }
+                }
+                Image ItemB {
+                    Brush.TintColor = #2BA36B
+                    + SizeBox {
+                        bOverrideWidth = true
+                        WidthOverride = 120
+                        bOverrideHeight = true
+                        HeightOverride = 40
+                    }
+                    Text LabelB : InBox { Text = "B 120 x 40" }
+                }
+                Image ItemC {
+                    Brush.TintColor = #D9534F
+                    + SizeBox {
+                        bOverrideWidth = true
+                        WidthOverride = 120
+                        bOverrideHeight = true
+                        HeightOverride = 40
+                    }
+                    Text LabelC : InBox { Text = "C 120 x 40" }
+                }
+            }
+        }
+
+        Image Below {
+            Brush.TintColor = #F2C14E
+            + SizeBox {
+                bOverrideHeight = true
+                HeightOverride = 24
+            }
+            @slot SizeRule = Auto
+            Text BelowLabel : InBox {
+                Text = "the next row of the column"
+                AnchorData.SizeDelta = (300, 16)
+                Color = #1E2230
+            }
+        }
+    }
+
+    Text Expected : Note {
+        AnchorData.AnchoredPosition = (24, -352)
+        AnchorData.SizeDelta = (464, 16)
+        Text = "Expected: the wrap box is 256 wide, A and B share a line, C wraps; the row is 84 tall, yellow 8 below it."
+    }
+}

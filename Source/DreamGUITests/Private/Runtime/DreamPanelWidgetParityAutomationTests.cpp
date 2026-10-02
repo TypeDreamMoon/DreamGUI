@@ -4,6 +4,7 @@
 
 #include "Misc/AutomationTest.h"
 
+#include "Core/Components/DreamCanvas.h"
 #include "Core/Components/DreamPanelLayouts.h"
 #include "Core/Components/DreamPanelSlot.h"
 #include "Core/Components/DreamWidget.h"
@@ -331,6 +332,145 @@ bool FDreamScaleBoxStretchDirectionTest::RunTest(const FString& Parameters)
 }
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamScaleBoxStretchDirectionMeasureTest,
+	"DreamGUI.Panel.AScaleBoxMeasuresItsContentAtTheScaleItsStretchDirectionAllows",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * The scale box bounded its scale by StretchDirection when it arranged but not when it measured. Set to fit
+ * its width and to shrink only, it measured 100x50 art in a 400-wide column at four times its size, 200 tall,
+ * then drew it at scale one and left 150 of empty space below it; set to grow only, it measured 800x100 art
+ * squeezed to 50 tall and then drew it full size, cut off by its own clip. SScaleBox folds the direction into
+ * the one scale its desired size comes from. This checks both against what the art is drawn at.
+ */
+bool FDreamScaleBoxStretchDirectionMeasureTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamPanelWidgetParityTestLocal;
+	FScopedGameWorld TestWorld;
+	UDreamUIManagerWorldSubsystem* Manager = UDreamUIManagerWorldSubsystem::GetInstance(TestWorld.World);
+	if (!TestNotNull(TEXT("DreamUI manager subsystem exists"), Manager))
+	{
+		return false;
+	}
+	UDreamWidget* Root = MakeWidget(TestWorld.World, nullptr, TEXT("Root"), 400.0f, 600.0f);
+	UDreamWidget* BoxWidget = MakeWidget(TestWorld.World, Root, TEXT("ScaleBox"), 50.0f, 50.0f);
+	UDreamWidget* Art = MakeWidget(TestWorld.World, BoxWidget, TEXT("Art"), 100.0f, 50.0f);
+	UDreamWidget* Below = MakeWidget(TestWorld.World, Root, TEXT("Below"), 100.0f, 30.0f);
+	UDreamLayoutContainerScaleBox* ScaleBox = BoxWidget->CreateNewLayoutContainer<UDreamLayoutContainerScaleBox>();
+	if (!TestNotNull(TEXT("Scale box created"), ScaleBox)
+		|| !TestNotNull(TEXT("Column created"), Root->CreateNewLayoutContainer<UDreamLayoutContainerVerticalBox>()))
+	{
+		Root->DestroyWidget();
+		return false;
+	}
+	ScaleBox->SetStretch(EDreamScaleBoxStretch::ScaleToFitX);
+	ScaleBox->SetStretchDirection(EDreamScaleBoxStretchDirection::DownOnly);
+	auto TopOf = [](const UDreamWidget* Widget)
+	{
+		return Widget->GetParent()->GetHeight() * 0.5 - Widget->GetAnchoredPosition().Y - Widget->GetHeight() * (1.0 - Widget->GetPivot().Y);
+	};
+
+	UDreamWidget::MarkLayoutForRebuild(Root);
+	Manager->TickDreamUI(0.016f);
+	Manager->TickDreamUI(0.016f);
+	// Fitting 100 into 400 asks for four times; shrinking only allows one.
+	TestEqual(TEXT("Shrinking only, the box is as tall as the art at scale one"), BoxWidget->GetHeight(), 50.0f);
+	TestEqual(TEXT("...so what follows it starts right under the art"), TopOf(Below), 50.0, 0.01);
+
+	// Fitting 800 into 400 asks for half; growing only allows one.
+	Art->SetWidth(800.0f);
+	Art->SetHeight(100.0f);
+	ScaleBox->SetStretchDirection(EDreamScaleBoxStretchDirection::UpOnly);
+	Manager->TickDreamUI(0.016f);
+	Manager->TickDreamUI(0.016f);
+	TestEqual(TEXT("Growing only, the box is as tall as the art at scale one"), BoxWidget->GetHeight(), 100.0f);
+	TestEqual(TEXT("...and what follows it starts right under the art"), TopOf(Below), 100.0, 0.01);
+
+	Root->DestroyWidget();
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamGridColumnsIndependentOfChildOrderTest,
+	"DreamGUI.Panel.AGridSizesItsColumnsTheSameWhicheverOrderItsChildrenComeIn",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * A child spanning two columns spread only its SHORTFALL across them, against the columns as the children
+ * before it had left them, so the columns depended on sibling order: a 200-wide child over two columns and a
+ * 150-wide one in the first column made them 150 and 100 in one order and 175 and 25 in the other, and the
+ * ZOrder re-sort ahead of placement reorders exactly that. SGridPanel takes, per column, the largest share any
+ * child asks of it. This checks both orders, and a re-sort, come out at UMG's 150 and 100.
+ */
+bool FDreamGridColumnsIndependentOfChildOrderTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamPanelWidgetParityTestLocal;
+	FScopedGameWorld TestWorld;
+	UDreamUIManagerWorldSubsystem* Manager = UDreamUIManagerWorldSubsystem::GetInstance(TestWorld.World);
+	if (!TestNotNull(TEXT("DreamUI manager subsystem exists"), Manager))
+	{
+		return false;
+	}
+
+	// Spanning: two columns of the first row, 200 wide. First: the first column of the second row, 150 wide.
+	// Second: the second column of the second row, 20 wide and filling its cell, so its width IS the column's.
+	for (const bool bSpanningFirst : { true, false })
+	{
+		const FString Order = bSpanningFirst ? TEXT("spanning child first") : TEXT("spanning child second");
+		UDreamWidget* Root = MakeWidget(TestWorld.World, nullptr, TEXT("Root"), 400.0f, 200.0f);
+		UDreamWidget* Spanning = nullptr;
+		UDreamWidget* First = nullptr;
+		if (bSpanningFirst)
+		{
+			Spanning = MakeWidget(TestWorld.World, Root, TEXT("Spanning"), 200.0f, 40.0f);
+			First = MakeWidget(TestWorld.World, Root, TEXT("First"), 150.0f, 40.0f);
+		}
+		else
+		{
+			First = MakeWidget(TestWorld.World, Root, TEXT("First"), 150.0f, 40.0f);
+			Spanning = MakeWidget(TestWorld.World, Root, TEXT("Spanning"), 200.0f, 40.0f);
+		}
+		UDreamWidget* Second = MakeWidget(TestWorld.World, Root, TEXT("Second"), 20.0f, 40.0f);
+		if (!TestNotNull(*FString::Printf(TEXT("%s: grid created"), *Order), Root->CreateNewLayoutContainer<UDreamLayoutContainerGridPanel>()))
+		{
+			Root->DestroyWidget();
+			return false;
+		}
+		UDreamPanelSlot* SpanningSlot = Spanning->GetPanelSlot();
+		UDreamPanelSlot* FirstSlot = First->GetPanelSlot();
+		UDreamPanelSlot* SecondSlot = Second->GetPanelSlot();
+		if (!SpanningSlot || !FirstSlot || !SecondSlot)
+		{
+			AddError(FString::Printf(TEXT("%s: the grid handed out no slot"), *Order));
+			Root->DestroyWidget();
+			return false;
+		}
+		SpanningSlot->SetColumnSpan(2);
+		FirstSlot->SetRow(1);
+		SecondSlot->SetRow(1);
+		SecondSlot->SetColumn(1);
+
+		UDreamWidget::MarkLayoutForRebuild(Root);
+		Manager->TickDreamUI(0.016f);
+		Manager->TickDreamUI(0.016f);
+		TestEqual(*FString::Printf(TEXT("%s: the first column is the widest single child in it"), *Order), First->GetWidth(), 150.0f);
+		TestEqual(*FString::Printf(TEXT("%s: the second column is the spanning child's half"), *Order), Second->GetWidth(), 100.0f);
+
+		// Raising the spanning child's ZOrder moves it to the back of the sibling list, and the next relayout
+		// for any other reason must come out the same.
+		SpanningSlot->SetZOrder(1);
+		Manager->TickDreamUI(0.016f);
+		Root->SetHeight(210.0f);
+		Manager->TickDreamUI(0.016f);
+		TestEqual(*FString::Printf(TEXT("%s: re-sorted, the first column is unchanged"), *Order), First->GetWidth(), 150.0f);
+		TestEqual(*FString::Printf(TEXT("%s: re-sorted, the second column is unchanged"), *Order), Second->GetWidth(), 100.0f);
+
+		Root->DestroyWidget();
+	}
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamSizeBoxAspectRatioArithmeticTest,
 	"DreamGUI.Panel.ASizeBoxRatioBoundShrinksARectUntilItObeysTheRatio",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
@@ -515,6 +655,84 @@ bool FDreamSafeZoneSidesToPadTest::RunTest(const FString& Parameters)
 	TestTrue(TEXT("The safe area scale defaults to taking the whole reported inset"),
 		FMath::IsNearlyEqual(Zone->SafeAreaScale.Left, 1.0f, 0.001f)
 		&& FMath::IsNearlyEqual(Zone->SafeAreaScale.Bottom, 1.0f, 0.001f));
+
+	Root->DestroyWidget();
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamSafeZoneScalesThePlatformMarginTest,
+	"DreamGUI.Panel.ASafeZoneTakesThePlatformMarginInScreenPixelsAndAppliesItInItsOwnUnits",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * Outside the editor the platform's safe margin comes from GetSafeZoneSize in pixels of the display, and the safe
+ * zone added those pixels to its padding as they were, in its own units. Under a canvas scaled to twice its reference
+ * resolution that is twice the inset UMG applies: SSafeZone divides the margin by its geometry's scale. That branch is
+ * compiled out of an editor build, so this checks the two pieces it is now made of: the arithmetic -- each side over
+ * its axis's scale, rounded to a whole unit, SafeAreaScale after -- and the scale of a widget under a screen-space
+ * canvas, the scaler's and its own.
+ */
+bool FDreamSafeZoneScalesThePlatformMarginTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamPanelWidgetParityTestLocal;
+	using Zone = UDreamLayoutContainerSafeZone;
+	auto MarginIs = [](const FMargin& InActual, const FMargin& InExpected)
+	{
+		return FMath::IsNearlyEqual(InActual.Left, InExpected.Left, 0.001f)
+			&& FMath::IsNearlyEqual(InActual.Top, InExpected.Top, 0.001f)
+			&& FMath::IsNearlyEqual(InActual.Right, InExpected.Right, 0.001f)
+			&& FMath::IsNearlyEqual(InActual.Bottom, InExpected.Bottom, 0.001f);
+	};
+
+	TestTrue(TEXT("Each side is divided by its own axis's scale"),
+		MarginIs(Zone::ScalePlatformSafeMargin(FMargin(40.0f, 30.0f, 80.0f, 60.0f), FVector2D(2.0, 3.0), FMargin(1.0f)),
+			FMargin(20.0f, 10.0f, 40.0f, 20.0f)));
+	TestTrue(TEXT("...and rounded to a whole unit, as SSafeZone rounds it"),
+		MarginIs(Zone::ScalePlatformSafeMargin(FMargin(41.0f, 0.0f, 0.0f, 0.0f), FVector2D(2.0, 2.0), FMargin(1.0f)),
+			FMargin(21.0f, 0.0f, 0.0f, 0.0f)));
+	// Rounded first and scaled after: 30 pixels at a scale of two is 15 units, half of which is 7.5. Scaling first
+	// would have rounded the 7.5 to 8.
+	TestTrue(TEXT("SafeAreaScale applies after the rounding, where SSafeZone applies it"),
+		MarginIs(Zone::ScalePlatformSafeMargin(FMargin(0.0f, 30.0f, 0.0f, 0.0f), FVector2D(2.0, 2.0), FMargin(1.0f, 0.5f, 1.0f, 1.0f)),
+			FMargin(0.0f, 7.5f, 0.0f, 0.0f)));
+	TestTrue(TEXT("A scale of zero counts as one"),
+		MarginIs(Zone::ScalePlatformSafeMargin(FMargin(10.0f, 10.0f, 10.0f, 10.0f), FVector2D(0.0, 0.0), FMargin(1.0f)),
+			FMargin(10.0f, 10.0f, 10.0f, 10.0f)));
+
+	// A 2560 x 1440 screen under a canvas that scales a 1280 x 720 reference resolution up to it: every unit of the
+	// canvas is two pixels.
+	FScopedGameWorld TestWorld;
+	UDreamWidget* Root = MakeWidget(TestWorld.World, nullptr, TEXT("Root"), 100.0f, 100.0f);
+	UDreamCanvas* Canvas = Root->AddComponent<UDreamCanvas>();
+	if (!TestNotNull(TEXT("A canvas on the root"), Canvas))
+	{
+		Root->DestroyWidget();
+		return false;
+	}
+	// The viewport last, the order a headless canvas needs: setting the render mode applies the headless world's
+	// two-pixel fallback, and the substitute is what undoes it.
+	Canvas->SetRenderMode(EDreamRenderMode::ScreenSpaceOverlay);
+	Canvas->SetScaleMode(EDreamCanvasScaleMode::ScaleWithScreenSize);
+	Canvas->SetReferenceResolution(FVector2D(1280.0, 720.0));
+	Canvas->SetViewportSizeOverride(FIntPoint(2560, 1440));
+	if (!TestTrue(TEXT("The canvas sizes its root to the reference resolution"),
+		FMath::IsNearlyEqual(Root->GetWidth(), 1280.0f, 0.01f) && FMath::IsNearlyEqual(Root->GetHeight(), 720.0f, 0.01f)))
+	{
+		Root->DestroyWidget();
+		return false;
+	}
+	UDreamWidget* Plain = MakeWidget(TestWorld.World, Root, TEXT("Plain"), 300.0f, 200.0f);
+	UDreamWidget* Halved = MakeWidget(TestWorld.World, Root, TEXT("Halved"), 300.0f, 200.0f);
+	Halved->SetRelativeScale(FVector(1.0, 0.5, 0.25));
+
+	TestTrue(TEXT("A unit of a widget straight under the canvas is two pixels across and down"),
+		Zone::GetScreenPixelsPerUnit(Plain).Equals(FVector2D(2.0, 2.0), 0.001));
+	TestTrue(TEXT("...and a widget's own scale multiplies in, per axis"),
+		Zone::GetScreenPixelsPerUnit(Halved).Equals(FVector2D(1.0, 0.5), 0.001));
+	TestTrue(TEXT("So a 48-pixel notch and a 64-pixel home bar pad the plain widget by 24 and 32"),
+		MarginIs(Zone::ScalePlatformSafeMargin(FMargin(48.0f, 0.0f, 48.0f, 64.0f), Zone::GetScreenPixelsPerUnit(Plain), FMargin(1.0f)),
+			FMargin(24.0f, 0.0f, 24.0f, 32.0f)));
 
 	Root->DestroyWidget();
 	return true;

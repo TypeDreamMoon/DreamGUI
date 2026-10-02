@@ -3587,7 +3587,8 @@ FName UDreamCanvas::DreamUI_IsRenderByDreamUIRenderer_MaterialParameterName = FN
 FVector4f UDreamCanvas::MakeFontAtlasInfo(const FDreamUIDrawCall& DrawCallItem)
 {
 	// What the MTSDF decode needs from the atlas, for the built-in shader and MF_DreamUI_Shade alike:
-	// xy the slice size in texels, z the field range in texels (twice the spread), w texels per em.
+	// xy the slice size in texels, z the field range in texels (twice the spread), w texels per em,
+	// negated when the project turns the small-text correction off (the shader reads the sign).
 	FVector4f Info(1.0f, 1.0f, 0.0f, 0.0f);
 	if (DrawCallItem.FontTexture.IsValid())
 	{

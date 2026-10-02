@@ -4,6 +4,7 @@
 
 #include "Components/InputComponent.h"
 #include "Components/PrimitiveComponent.h"
+#include "Core/Components/DreamCanvas.h"
 #include "Core/Components/DreamWidget.h"
 #include "Core/DreamGUISettings.h"
 #include "Core/DreamUIManager.h"
@@ -19,6 +20,7 @@
 #include "Event/DreamPointerPolicy.h"
 #include "Event/DreamScreenSpaceRaycaster.h"
 #include "Event/DreamUIInputSubsystem.h"
+#include "Event/DreamUIKeyRouting.h"
 #include "Event/DreamUINestedSurface.h"
 #include "Event/InputModule/DreamBaseInputModule.h"
 #include "Event/InputModule/DreamPointerInputModule.h"
@@ -110,9 +112,22 @@ void UDreamUIInputUser::SetRaycastEnable(bool bEnable, bool bClearEvent)
 	if (!bEnable)
 	{
 		// What is waiting for the next frame would be dispatched the frame tracing comes back, wherever the pointer is
-		// by then. A release is kept, so a press made before this still ends in its up.
-		QueuedButtons.RemoveAll([](const FQueuedButton& InQueued) { return InQueued.bPressed; });
+		// by then. A press is dropped. A release ends its press at once, with its up and without a click or a drop:
+		// kept for later, it landed whenever tracing came back, on whatever was under the place it was let go by then.
+		TArray<int32, TInlineAllocator<4>> ReleasedPointers;
+		for (const FQueuedButton& Queued : QueuedButtons)
+		{
+			if (!Queued.bPressed)
+			{
+				ReleasedPointers.AddUnique(Queued.PointerID);
+			}
+		}
+		QueuedButtons.Reset();
 		QueuedScrolls.Reset();
+		for (const int32 PointerID : ReleasedPointers)
+		{
+			CancelPointerPress(PointerID);
+		}
 	}
 	if (!bEnable && bClearEvent)
 	{
@@ -174,7 +189,59 @@ UDreamPointerEventData* UDreamUIInputUser::GetPointerEventData(int32 InPointerID
 	NewEventData->UserIndex = UserIndex;
 	NewEventData->InputType = Config.DefaultInputType;
 	PointerEventDataMap.Add(InPointerID, NewEventData);
+	RestoreLiftedFingerClickRun(NewEventData);
 	return NewEventData;
+}
+
+void UDreamUIInputUser::KeepLiftedFingerClickRun(const UDreamPointerEventData* InEventData)
+{
+	if (InEventData == nullptr)
+	{
+		return;
+	}
+	if (InEventData->ClickCount <= 0)
+	{
+		LiftedFingerClickRuns.Remove(InEventData->PointerID);
+		return;
+	}
+	// Whether the finger's next tap continues the run is the press's own question (UDreamPointerInputModule::
+	// ProcessPointerEvent): the same widget, the same button, inside DoubleClickTime and the drag threshold. All this
+	// keeps is what that question reads.
+	FLiftedFingerClickRun& Run = LiftedFingerClickRuns.FindOrAdd(InEventData->PointerID);
+	Run.ClickCount = InEventData->ClickCount;
+	Run.ClickTime = InEventData->ClickTime;
+	Run.LastClickWidget = InEventData->LastClickWidget.Get();
+	Run.LastClickMouseButtonType = InEventData->LastClickMouseButtonType;
+	Run.LastClickPressPointerPosition = InEventData->LastClickPressPointerPosition;
+	Run.LastClickPressWorldPoint = InEventData->LastClickPressWorldPoint;
+	Run.LastClickedActor.Reset();
+	Run.LastClickedActorTime = 0.0;
+	if (const FDreamUIPointerWorldTarget* WorldTarget = PointerWorldTargetMap.Find(InEventData->PointerID))
+	{
+		Run.LastClickedActor = WorldTarget->LastClicked;
+		Run.LastClickedActorTime = WorldTarget->LastClickedTime;
+	}
+}
+
+void UDreamUIInputUser::RestoreLiftedFingerClickRun(UDreamPointerEventData* InEventData)
+{
+	FLiftedFingerClickRun Run;
+	if (InEventData == nullptr || !LiftedFingerClickRuns.RemoveAndCopyValue(InEventData->PointerID, Run))
+	{
+		return;
+	}
+	InEventData->ClickCount = Run.ClickCount;
+	InEventData->ClickTime = Run.ClickTime;
+	InEventData->LastClickWidget = Run.LastClickWidget.Get();
+	InEventData->LastClickMouseButtonType = Run.LastClickMouseButtonType;
+	InEventData->LastClickPressPointerPosition = Run.LastClickPressPointerPosition;
+	InEventData->LastClickPressWorldPoint = Run.LastClickPressWorldPoint;
+	if (Run.LastClickedActor.IsValid())
+	{
+		FDreamUIPointerWorldTarget& WorldTarget = PointerWorldTargetMap.FindOrAdd(InEventData->PointerID);
+		WorldTarget.LastClicked = Run.LastClickedActor;
+		WorldTarget.LastClickedTime = Run.LastClickedActorTime;
+	}
 }
 
 void UDreamUIInputUser::RetirePointer(int32 InPointerID)
@@ -354,8 +421,12 @@ void UDreamUIInputUser::RefreshTextKeys()
 		// at the default, the bindings would still consume their keys in a paused game -- UPlayerInput counts a
 		// consuming binding whether or not its delegate runs -- and the keys would reach nothing at all. Whether the
 		// field answers while paused is its own call, made as the key arrives.
-		TextKeys->BindKey(Key, IE_Pressed, this, &UDreamUIInputUser::HandleTextKey).bExecuteWhenPaused = true;
+		TextKeys->BindKey(Key, IE_Pressed, this, &UDreamUIInputUser::HandleTextKeyPressed).bExecuteWhenPaused = true;
 		TextKeys->BindKey(Key, IE_Repeat, this, &UDreamUIInputUser::HandleTextKey).bExecuteWhenPaused = true;
+		// The release too: these bindings take their key from everything below them, the release included, and a key
+		// held since before the edit began -- the arrow that navigated into the field -- is still owed its release by
+		// whatever took its press.
+		TextKeys->BindKey(Key, IE_Released, this, &UDreamUIInputUser::HandleTextKeyReleased).bExecuteWhenPaused = true;
 	}
 	// Pushed last, so it sits above everything the controller already listens to, the preset included: a key taken
 	// by a field being edited is typing -- not a shortcut, not a navigation step, not the pawn's to move with.
@@ -369,6 +440,41 @@ void UDreamUIInputUser::HandleTextKey(FKey InKey)
 	{
 		Target->HandleTextInputKey(InKey, TextKeysController.Get());
 	}
+}
+
+void UDreamUIInputUser::HandleTextKeyPressed(FKey InKey)
+{
+	FDreamUIKeyPress Press;
+	Press.Taker = EDreamUIKeyPressTaker::Text;
+	NoteKeyPress(InKey, Press);
+	HandleTextKey(InKey);
+}
+
+void UDreamUIInputUser::HandleTextKeyReleased(FKey InKey)
+{
+	// Only a press still on the books is owed its release from here. A source that routed the press routes its release
+	// too -- the Slate source, which hears the key before the controller does -- and takes the press as it goes; this
+	// binding hears the same release after it, and routing it again found no press and handed the key-up to the
+	// bindings a second time, the focused widget included.
+	if (FindKeyPress(InKey) != nullptr)
+	{
+		DreamUIKeyRouting::RouteKeyRelease(this, InKey, nullptr);
+	}
+}
+#pragma endregion
+
+#pragma region Keys
+void UDreamUIInputUser::NoteKeyPress(const FKey& InKey, const FDreamUIKeyPress& InPress)
+{
+	if (InKey.IsValid() && !bShutDown)
+	{
+		KeyPresses.Add(InKey, InPress);
+	}
+}
+
+bool UDreamUIInputUser::TakeKeyPress(const FKey& InKey, FDreamUIKeyPress& OutPress)
+{
+	return KeyPresses.RemoveAndCopyValue(InKey, OutPress);
 }
 #pragma endregion
 
@@ -730,13 +836,15 @@ void UDreamUIInputUser::QueuePointerButton(int32 InPointerID, const FVector& InP
 	if (!Config.bRayEventEnable)
 	{
 		// A player whose tracing is off takes no press: kept for later, it would land the frame tracing comes back, on
-		// whatever the pointer is over by then. A release is kept only for a pointer still held, so a press made
-		// before tracing went off still ends in its up.
+		// whatever the pointer is over by then. The release of a pointer still held ends its press now, with its up
+		// and without a click or a drop -- nothing is traced where it was let go -- rather than waiting in the queue to
+		// land wherever the pointer is when tracing comes back.
 		const UDreamPointerEventData* Held = FindPointerEventData(InPointerID);
-		if (bInPressed || Held == nullptr || !Held->bNowIsTriggerPressed)
+		if (!bInPressed && Held != nullptr && Held->bNowIsTriggerPressed)
 		{
-			return;
+			CancelPointerPress(InPointerID);
 		}
+		return;
 	}
 	FQueuedButton& Queued = QueuedButtons.AddDefaulted_GetRef();
 	Queued.PointerID = InPointerID;
@@ -772,16 +880,44 @@ void UDreamUIInputUser::InputNavigation(EDreamUINavigationDirection InDirection,
 	{
 		return;
 	}
+	// Every direction held is remembered, so letting go of one is not letting go of all: a stick or a D-pad rolled
+	// from Down to Right goes Down pressed, Right pressed, Down released, and Right is still held. Each direction is
+	// held once, the newest last: one pressed again -- by a second key, or by a caller that says so every frame -- is
+	// the newest again, and one release lets go of it. None is no direction: pressing it holds nothing, and letting go
+	// of it lets go of every direction.
+	TArray<EDreamUINavigationDirection>& Held = EventData->HeldNavigateDirections;
 	if (bInPressed)
 	{
 		SetPointerInputType(EventData, EDreamUIPointerInputType::Navigation);
-		EventData->NavigateDirection = InDirection;
+		if (InDirection != EDreamUINavigationDirection::None)
+		{
+			Held.Remove(InDirection);
+			Held.Add(InDirection);
+			EventData->NavigateDirection = InDirection;
+			EventData->NavigateTickTime = 0;
+		}
+		return;
 	}
-	else
+	if (InDirection == EDreamUINavigationDirection::None)
 	{
-		EventData->NavigateDirection = EDreamUINavigationDirection::None;
+		Held.Reset();
 	}
-	EventData->NavigateTickTime = 0;
+	else if (Held.Remove(InDirection) == 0)
+	{
+		return;//nothing holds it: the release of a press this pointer never took
+	}
+	const EDreamUINavigationDirection StillHeld = Held.Num() > 0 ? Held.Last() : EDreamUINavigationDirection::None;
+	if (StillHeld == EventData->NavigateDirection)
+	{
+		return;//another key still holds the direction that is stepping, or the one let go of was not stepping
+	}
+	EventData->NavigateDirection = StillHeld;
+	// Back to a direction that was held all along goes on at the repeat the step it took already set; with none
+	// left, the next press is the first of a new sequence.
+	if (StillHeld == EDreamUINavigationDirection::None)
+	{
+		EventData->NavigateTickTime = 0;
+	}
 }
 
 void UDreamUIInputUser::InputTriggerForNavigation(bool bInPressed, int32 InPointerID)
@@ -794,6 +930,23 @@ void UDreamUIInputUser::InputTriggerForNavigation(bool bInPressed, int32 InPoint
 	if (bInPressed)
 	{
 		SetPointerInputType(EventData, EDreamUIPointerInputType::Navigation);
+	}
+	// The confirm's own edges dated on the pointer clock, and its press placed where the pointer is, as a queued press
+	// and release are (QueuePointerButton). Long press and swipe read these, and a confirm that left them as the
+	// mouse's last press set them measured its hold from that press -- a long press at the first step -- and its
+	// travel from where that press was made -- a swipe on every confirm.
+	if (bInPressed != EventData->bNowIsTriggerPressed)
+	{
+		const double ClockSeconds = UDreamEventSystem::GetPointerClockSeconds(GetWorld());
+		if (bInPressed)
+		{
+			EventData->PressTime = ClockSeconds;
+			EventData->PressPointerPosition = EventData->PointerPosition;
+		}
+		else
+		{
+			EventData->ReleaseTime = ClockSeconds;
+		}
 	}
 	EventData->NavigateTickTime = 0;
 	EventData->bNowIsTriggerPressed = bInPressed;
@@ -859,10 +1012,12 @@ void UDreamUIInputUser::RunPipelineBody()
 			TracedByQueue.Add(Queued.PointerID);
 
 			// A lifted finger is not a pointer any more: it would stay in the map holding whatever it last touched
-			// in hover, and be traced every frame from where it left the glass.
+			// in hover, and be traced every frame from where it left the glass. Its click run is kept, so the next tap
+			// of the same finger can be the second of a double tap.
 			if (Queued.bIsTouch && !Queued.bPressed)
 			{
 				ReleasePointerNow(Queued.PointerID);//fires the Exit the release itself does not
+				KeepLiftedFingerClickRun(FindPointerEventData(Queued.PointerID));
 				PointerEventDataMap.Remove(Queued.PointerID);
 				PointerWorldTargetMap.Remove(Queued.PointerID);
 				TraceCache.Remove(Queued.PointerID);
@@ -1080,15 +1235,33 @@ bool UDreamUIInputUser::LineTrace(UDreamPointerEventData* InPointerEventData, FD
 	{
 		if (MultiHitResult.Num() > 1)
 		{
-			// Screen-space first, then by distance. Stable, so two raycasters' answers at one distance keep the
-			// order the raycasters are listed in.
-			MultiHitResult.StableSort([](const FDreamUIHitResultContainer& A, const FDreamUIHitResultContainer& B)
+			// Screen-space first. Two screen-space answers are two overlay canvases drawn over one another, and the
+			// one drawn on top answers -- the higher canvas sort order, as within one raycaster's own answer
+			// (UDreamBaseRaycaster::RaycastCandidates); a distance between them says nothing about which is on top.
+			// Then by distance. Stable, so two raycasters' answers at one sort order and one distance keep the order
+			// the raycasters are listed in.
+			const auto SortOrderOf = [](const FDreamUIHitResultContainer& InHit)
+			{
+				const UDreamWidget* Widget = InHit.HitResult.Widget.Get();
+				const UDreamCanvas* Canvas = Widget != nullptr ? Widget->GetRenderCanvas() : nullptr;
+				return Canvas != nullptr ? Canvas->GetActualSortOrder() : 0;
+			};
+			MultiHitResult.StableSort([&SortOrderOf](const FDreamUIHitResultContainer& A, const FDreamUIHitResultContainer& B)
 			{
 				const bool bAIsScreenSpace = A.Raycaster->IsA(UDreamScreenSpaceRaycaster::StaticClass());
 				const bool bBIsScreenSpace = B.Raycaster->IsA(UDreamScreenSpaceRaycaster::StaticClass());
 				if (bAIsScreenSpace != bBIsScreenSpace)
 				{
 					return bAIsScreenSpace;
+				}
+				if (bAIsScreenSpace)
+				{
+					const int32 ASortOrder = SortOrderOf(A);
+					const int32 BSortOrder = SortOrderOf(B);
+					if (ASortOrder != BSortOrder)
+					{
+						return ASortOrder > BSortOrder;
+					}
 				}
 				return A.HitResult.Distance < B.HitResult.Distance;
 			});
@@ -1243,12 +1416,16 @@ void UDreamUIInputUser::ProcessInputForNavigation(UDreamPointerEventData* EventD
 	const UWorld* World = GetWorld();
 	if (World == nullptr || EventData == nullptr)return;
 
-	// Something has to be happening: a direction held, or a confirm edge. A pointer parked in navigation mode
-	// with nothing held takes no steps -- it used to re-run a step every interval forever, reveal-scrolling its
-	// highlighted widget back into view under a player scrolling the list with the wheel.
+	// Something has to be happening: a direction held, a confirm edge, or a confirm held down. A pointer parked in
+	// navigation mode with nothing held takes no steps -- it used to re-run a step every interval forever,
+	// reveal-scrolling its highlighted widget back into view under a player scrolling the list with the wheel.
 	const bool bHasNavigateDirection = EventData->NavigateDirection != EDreamUINavigationDirection::None;
 	const bool bTriggerStateChanged = EventData->bNowIsTriggerPressed != EventData->bPrevIsTriggerPressed;
-	if (!bHasNavigateDirection && !bTriggerStateChanged)
+	// A held confirm is a press under way, and a press is looked at on every frame it is held: that is where a held mouse
+	// button becomes a long press, and a held confirm becomes one the same way, timed from its own press. Left until it
+	// was let go, it never did.
+	const bool bConfirmHeld = EventData->bNowIsTriggerPressed && EventData->bPrevIsTriggerPressed;
+	if (!bHasNavigateDirection && !bTriggerStateChanged && !bConfirmHeld)
 	{
 		return;
 	}
@@ -1257,7 +1434,7 @@ void UDreamUIInputUser::ProcessInputForNavigation(UDreamPointerEventData* EventD
 	const double TimeSeconds = UDreamEventSystem::GetPointerClockSeconds(World);
 	const bool bRepeatIsDue = TimeSeconds > EventData->NavigateTickTime;
 	const bool bTakeNavigateStep = bHasNavigateDirection && bRepeatIsDue;
-	if (!bTakeNavigateStep && !bTriggerStateChanged)
+	if (!bTakeNavigateStep && !bTriggerStateChanged && !bConfirmHeld)
 	{
 		return;//direction held, but the repeat is not due yet
 	}
@@ -1271,14 +1448,21 @@ void UDreamUIInputUser::ProcessInputForNavigation(UDreamPointerEventData* EventD
 		EventData->NavigateTickTime = TimeSeconds + FMath::Max(TimeInterval, MinNavigateInputInterval);
 	}
 
-	// None on a trigger-only frame: the confirm button must not also move focus. Navigate still resolves the
-	// highlighted widget into the hit result, which is what Down/Up/Click are dispatched to.
+	// None unless a step is due: the confirm button must not also move focus, and holding it is no step either. Navigate
+	// still resolves the highlighted widget into the hit result, which is what Down/Up/Click are dispatched to, and it
+	// reveal-scrolls only for a direction.
 	const EDreamUINavigationDirection StepDirection = bTakeNavigateStep ? EventData->NavigateDirection : EDreamUINavigationDirection::None;
 	FDreamUIHitResultContainer DreamUIHitResult;
 	const bool bSelectValid = Navigate(StepDirection, EventData, DreamUIHitResult);
 	bool bResultHitSomething = false;
 	FDreamUIHitResult HitResult;
 	UDreamPointerInputModule::ProcessPointerEvent(this, EventData, bSelectValid, DreamUIHitResult, bResultHitSomething, HitResult);
+	if (!bTakeNavigateStep && !bTriggerStateChanged)
+	{
+		// A frame that only holds the confirm: its press was looked at, and nothing else moves. The focus stays where the
+		// press or the last step put it -- or wherever game code has moved it since -- and no hit is announced again.
+		return;
+	}
 	if (bResultHitSomething)
 	{
 		SetSelectWidget(HitResult.Widget.Get(), EventData);
@@ -1365,6 +1549,74 @@ void UDreamUIInputUser::ReleasePointer(int32 InPointerID)
 	});
 }
 
+void UDreamUIInputUser::EndPressNow(UDreamPointerEventData* EventData)
+{
+	if (!EventData->bPrevIsTriggerPressed)
+	{
+		return;//no press is held
+	}
+	if (EventData->bIsDragging)
+	{
+		EventData->bIsDragging = false;
+		if (!EventData->bIsEndDragFiredAtCurrentFrame)
+		{
+			EventData->bIsEndDragFiredAtCurrentFrame = true;
+			if (IsValid(EventData->DragWidget))
+			{
+				UDreamWidget* DragWidget = EventData->DragWidget;
+				EventData->DragWidget = nullptr;
+				CallOnPointerEndDrag(DragWidget, EventData);
+			}
+			else if (UDreamDragDropOperation* EndedOperation = EventData->DragOperation.Get())
+			{
+				// With the source destroyed nobody else can deliver the cancel, and a drag that ends in silence
+				// leaves every OnDragCancelled handler -- the one that puts the item back in its slot -- waiting.
+				EndedOperation->NotifyDragCancelled();
+			}
+			EventData->DragOperation = nullptr;
+		}
+	}
+
+	if (!EventData->bIsUpFiredAtCurrentFrame)
+	{
+		EventData->bIsUpFiredAtCurrentFrame = true;
+		if (IsValid(EventData->PressWidget))
+		{
+			UDreamWidget* OldPressWidget = EventData->PressWidget;
+			EventData->PressWidget = nullptr;
+			CallOnPointerUp(OldPressWidget, EventData);
+		}
+		// A press on an actor is let go the same way: its up, and no click -- a pointer taken away is not a
+		// pointer released over what it pressed.
+		UDreamPointerInputModule::ReleaseWorldTarget(this, EventData, /*bInClick*/ false);
+	}
+	EventData->bNowIsTriggerPressed = false;
+	EventData->bPrevIsTriggerPressed = false;
+}
+
+void UDreamUIInputUser::CancelPointerPress(int32 InPointerID)
+{
+	// Dropped now rather than when the cancel runs: a press still waiting for the next frame would land after it and
+	// hold again, and a release still waiting would click or drop.
+	QueuedButtons.RemoveAll([InPointerID](const FQueuedButton& InQueued) { return InQueued.PointerID == InPointerID; });
+	RunOrDefer([WeakThis = TWeakObjectPtr<UDreamUIInputUser>(this), InPointerID]()
+	{
+		UDreamUIInputUser* This = WeakThis.Get();
+		UDreamPointerEventData* EventData = This != nullptr ? This->FindPointerEventData(InPointerID) : nullptr;
+		if (EventData == nullptr)
+		{
+			return;
+		}
+		FDreamUIInputDispatchScope Record(This);
+		This->EndPressNow(EventData);
+		// A navigation confirm goes down on the pointer itself, not through the queue, and one the next frame has not
+		// read yet is dropped the same way.
+		EventData->bNowIsTriggerPressed = false;
+		EventData->bPrevIsTriggerPressed = false;
+		This->PressRaycasters.Remove(InPointerID);
+	});
+}
+
 void UDreamUIInputUser::ReleasePointerNow(int32 InPointerID)
 {
 	UDreamPointerEventData* EventData = FindPointerEventData(InPointerID);
@@ -1373,46 +1625,7 @@ void UDreamUIInputUser::ReleasePointerNow(int32 InPointerID)
 		return;
 	}
 	FDreamUIInputDispatchScope Record(this);
-	if (EventData->bPrevIsTriggerPressed)//the trigger is held
-	{
-		if (EventData->bIsDragging)
-		{
-			EventData->bIsDragging = false;
-			if (!EventData->bIsEndDragFiredAtCurrentFrame)
-			{
-				EventData->bIsEndDragFiredAtCurrentFrame = true;
-				if (IsValid(EventData->DragWidget))
-				{
-					UDreamWidget* DragWidget = EventData->DragWidget;
-					EventData->DragWidget = nullptr;
-					CallOnPointerEndDrag(DragWidget, EventData);
-				}
-				else if (UDreamDragDropOperation* EndedOperation = EventData->DragOperation.Get())
-				{
-					// With the source destroyed nobody else can deliver the cancel, and a drag that ends in silence
-					// leaves every OnDragCancelled handler -- the one that puts the item back in its slot -- waiting.
-					EndedOperation->NotifyDragCancelled();
-				}
-				EventData->DragOperation = nullptr;
-			}
-		}
-
-		if (!EventData->bIsUpFiredAtCurrentFrame)
-		{
-			EventData->bIsUpFiredAtCurrentFrame = true;
-			if (IsValid(EventData->PressWidget))
-			{
-				UDreamWidget* OldPressWidget = EventData->PressWidget;
-				EventData->PressWidget = nullptr;
-				CallOnPointerUp(OldPressWidget, EventData);
-			}
-			// A press on an actor is let go the same way: its up, and no click -- a pointer taken away is not a
-			// pointer released over what it pressed.
-			UDreamPointerInputModule::ReleaseWorldTarget(this, EventData, /*bInClick*/ false);
-		}
-		EventData->bNowIsTriggerPressed = false;
-		EventData->bPrevIsTriggerPressed = false;
-	}
+	EndPressNow(EventData);
 	if (!EventData->bIsExitFiredAtCurrentFrame)
 	{
 		if (IsValid(EventData->EnterWidget) || EventData->EnterWidgetStack.Num() > 0)
@@ -1560,6 +1773,8 @@ void UDreamUIInputUser::Shutdown()
 		This->PointerWorldTargetMap.Reset();
 		This->TraceCache.Reset();
 		This->PressRaycasters.Reset();
+		This->KeyPresses.Reset();
+		This->LiftedFingerClickRuns.Reset();
 		This->bPinchActive = false;
 		This->InputModule.Reset();
 	});

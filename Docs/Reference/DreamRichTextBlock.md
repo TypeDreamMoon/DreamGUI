@@ -33,7 +33,7 @@ second description of them in a control header is a second thing to keep true.
 | `Text` | `FText` | Rich Text | yes | `GetText` / `SetText` | The prose, markup and all. |
 | `TagFilterFlags` | `int32` | Rich Text | yes | `GetTagFilterFlags` / `SetTagFilterFlags` | Which tags the parser is allowed to act on. The default is all of them. |
 | `CustomStyleData` | `TObjectPtr<UDreamUIRichTextCustomStyleData>` | Rich Text | yes | `GetCustomStyleData` / `SetCustomStyleData` | What `<MyTag>` means, as a style. Null leaves custom tags to the char-selection consumers. |
-| `ImageData` | `TObjectPtr<UDreamUIRichTextImageData_BaseObject>` | Rich Text | yes | `GetImageData` / `SetImageData` | What `<img=key/>` means. Null draws nothing for an image tag. |
+| `ImageData` | `TObjectPtr<UDreamUIRichTextImageData_BaseObject>` | Rich Text | yes | `GetImageData` / `SetImageData` | What `<img=key/>` means. Null draws nothing for an image tag. The tag may also give a size and where the image sits on its line: `<img=key,24/>`, `<img=key,24,32/>`, `<img=key,24,baseline/>` -- middle (the default, centred), baseline, top or bottom. An image taller than its line makes the line taller. |
 | `HorizontalAlignment` | `EDreamUITextParagraphHorizontalAlign` | Rich Text | yes | `GetHorizontalAlignment` / `SetHorizontalAlignment` | How the paragraph sits in the control's rect. |
 | `VerticalAlignment` | `EDreamUITextParagraphVerticalAlign` | Rich Text | yes | `GetVerticalAlignment` / `SetVerticalAlignment` |  |
 | `OverflowType` | `EDreamUITextOverflowType` | Rich Text | yes | `GetOverflowType` / `SetOverflowType` | What a line too long for the control does. VerticalOverflow is the one that WRAPS, which is what prose usually wants and what a rich text block almost always is. |
@@ -59,7 +59,7 @@ second description of them in a control header is a second thing to keep true.
 | `FText GetText()` | pure | Get Text |
 | `EDreamUITextTransformPolicy GetTextTransformPolicy()` | pure | Get Text Transform Policy |
 | `EDreamUITextParagraphVerticalAlign GetVerticalAlignment()` | pure | Get Vertical Alignment |
-| `void RefreshTextLayout()` | callable | Refresh Text Layout |
+| `void RefreshTextLayout()` | callable | Re-parse the markup and lay the paragraph out again -- UMG's RefreshTextLayout. |
 | `void SetAutoWrapText(bool bInAutoWrapText)` | callable | Set Auto Wrap Text |
 | `void SetCustomStyleData(UDreamUIRichTextCustomStyleData* InCustomStyleData)` | callable | What the custom tags mean. UMG's TextStyleSet under the name this library gives it: a data asset mapping tag to style, which is the same job its RichTextStyleRow table does. |
 | `void SetDefaultFont(UDreamUIFontData_BaseObject* InFont)` | callable | Set Default Font |

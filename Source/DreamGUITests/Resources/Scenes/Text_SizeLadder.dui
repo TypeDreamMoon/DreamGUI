@@ -1,0 +1,161 @@
+// The default font from 8 to 48 px, one size to a line: where small text loses its weight and large text its edges.
+// @stage 800x400
+
+style Title {
+    AnchorData.AnchorMin = (0, 1)
+    AnchorData.AnchorMax = (1, 1)
+    AnchorData.Pivot = (0.5, 1)
+    AnchorData.AnchoredPosition = (0, -8)
+    AnchorData.SizeDelta = (-24, 20)
+    FontSize = 15
+    Color = #1E2230
+    HAlign = Left
+    VAlign = Top
+    OverflowType = HorizontalOverflow
+}
+
+style Size {
+    AnchorData.AnchorMin = (0, 1)
+    AnchorData.AnchorMax = (0, 1)
+    AnchorData.Pivot = (0, 1)
+    AnchorData.SizeDelta = (44, 14)
+    FontSize = 11
+    Color = #5A6172
+    HAlign = Right
+    VAlign = Top
+    OverflowType = HorizontalOverflow
+}
+
+style Sample {
+    AnchorData.AnchorMin = (0, 1)
+    AnchorData.AnchorMax = (0, 1)
+    AnchorData.Pivot = (0, 1)
+    Color = #1E2230
+    HAlign = Left
+    VAlign = Top
+    OverflowType = HorizontalOverflow
+    Text = "Hamburgefonstiv 0123456789"
+}
+
+Widget Root {
+    Image Page {
+        Brush.TintColor = #F5F3EE
+        AnchorData.AnchorMin = (0, 0)
+        AnchorData.AnchorMax = (1, 1)
+        AnchorData.SizeDelta = (0, 0)
+    }
+
+    Text Heading : Title {
+        Text = "Size ladder, default font, 8 to 48 px"
+    }
+
+    Text Label8 : Size {
+        AnchorData.AnchoredPosition = (8, -48)
+        Text = "8 px"
+    }
+    Text Sample8 : Sample {
+        AnchorData.AnchoredPosition = (60, -48)
+        AnchorData.SizeDelta = (732, 12)
+        FontSize = 8
+    }
+
+    Text Label10 : Size {
+        AnchorData.AnchoredPosition = (8, -64)
+        Text = "10 px"
+    }
+    Text Sample10 : Sample {
+        AnchorData.AnchoredPosition = (60, -64)
+        AnchorData.SizeDelta = (732, 14)
+        FontSize = 10
+    }
+
+    Text Label11 : Size {
+        AnchorData.AnchoredPosition = (8, -83)
+        Text = "11 px"
+    }
+    Text Sample11 : Sample {
+        AnchorData.AnchoredPosition = (60, -83)
+        AnchorData.SizeDelta = (732, 16)
+        FontSize = 11
+    }
+
+    Text Label12 : Size {
+        AnchorData.AnchoredPosition = (8, -103)
+        Text = "12 px"
+    }
+    Text Sample12 : Sample {
+        AnchorData.AnchoredPosition = (60, -103)
+        AnchorData.SizeDelta = (732, 17)
+        FontSize = 12
+    }
+
+    Text Label13 : Size {
+        AnchorData.AnchoredPosition = (8, -124)
+        Text = "13 px"
+    }
+    Text Sample13 : Sample {
+        AnchorData.AnchoredPosition = (60, -124)
+        AnchorData.SizeDelta = (732, 19)
+        FontSize = 13
+    }
+
+    Text Label14 : Size {
+        AnchorData.AnchoredPosition = (8, -147)
+        Text = "14 px"
+    }
+    Text Sample14 : Sample {
+        AnchorData.AnchoredPosition = (60, -147)
+        AnchorData.SizeDelta = (732, 20)
+        FontSize = 14
+    }
+
+    Text Label16 : Size {
+        AnchorData.AnchoredPosition = (8, -171)
+        Text = "16 px"
+    }
+    Text Sample16 : Sample {
+        AnchorData.AnchoredPosition = (60, -171)
+        AnchorData.SizeDelta = (732, 23)
+        FontSize = 16
+    }
+
+    Text Label20 : Size {
+        AnchorData.AnchoredPosition = (8, -197)
+        Text = "20 px"
+    }
+    Text Sample20 : Sample {
+        AnchorData.AnchoredPosition = (60, -197)
+        AnchorData.SizeDelta = (732, 28)
+        FontSize = 20
+    }
+
+    Text Label24 : Size {
+        AnchorData.AnchoredPosition = (8, -228)
+        Text = "24 px"
+    }
+    Text Sample24 : Sample {
+        AnchorData.AnchoredPosition = (60, -228)
+        AnchorData.SizeDelta = (732, 34)
+        FontSize = 24
+    }
+
+    Text Label32 : Size {
+        AnchorData.AnchoredPosition = (8, -264)
+        Text = "32 px"
+    }
+    Text Sample32 : Sample {
+        AnchorData.AnchoredPosition = (60, -264)
+        AnchorData.SizeDelta = (732, 44)
+        FontSize = 32
+    }
+
+    Text Label48 : Size {
+        AnchorData.AnchoredPosition = (8, -310)
+        Text = "48 px"
+    }
+    Text Sample48 : Sample {
+        AnchorData.AnchoredPosition = (60, -310)
+        AnchorData.SizeDelta = (732, 66)
+        FontSize = 48
+    }
+}

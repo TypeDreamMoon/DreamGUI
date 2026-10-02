@@ -72,7 +72,7 @@ struct FDreamUIBuiltInDrawParams
 	FVector2f FontAtlasSize = FVector2f(1.0f, 1.0f);
 	/** Distance-field range in texels (twice the spread); 0 for non-field atlases. */
 	float FontFieldRangeTexels = 0.0f;
-	/** Texels per em at the atlas's sample size. */
+	/** Texels per em at the atlas's sample size; negative when the small-text correction is off (the shader reads the sign). */
 	float FontEmTexels = 0.0f;
 	/** How this draw composites. One per draw-call, because the blend state is set once per draw. */
 	EDreamUIBlendMode BlendMode = EDreamUIBlendMode::Alpha;

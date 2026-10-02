@@ -85,7 +85,7 @@ Each input column holds one mark per configuration, in this order: Default (`[An
 | Row | Mouse (`[Pointer]`) | Touch (`[Touch]`) | Gamepad and keyboard navigation (`[Nav]`) | Keyboard text (`[Text]`) | Holes |
 |---|:---:|:---:|:---:|:---:|---:|
 | Border | `#...` | `....` | `....` | `----` | 11 |
-| Button | `##..` | `....` | `....` | `----` | 10 |
+| Button | `##..` | `#...` | `....` | `----` | 9 |
 | Dialog | `#...` | `....` | `#...` | `----` | 10 |
 | Dropdown | `##..` | `....` | `#...` | `----` | 9 |
 | EditableText | `#...` | `....` | `....` | `#...` | 14 |
@@ -102,13 +102,13 @@ Each input column holds one mark per configuration, in this order: Default (`[An
 | NativeWidgetHost | `#...` | `....` | `....` | `----` | 11 |
 | ProgressBar | `#...` | `....` | `....` | `----` | 11 |
 | RadioButton | `#...` | `....` | `....` | `----` | 11 |
-| RichText | `....` | `....` | `....` | `----` | 12 |
+| RichText | `#...` | `....` | `....` | `----` | 11 |
 | RingMenu | `#...` | `....` | `....` | `----` | 11 |
 | ScrollBar | `#...` | `....` | `....` | `----` | 11 |
 | ScrollBox | `#...` | `....` | `....` | `----` | 11 |
 | Slider | `##..` | `....` | `#...` | `----` | 9 |
 | TabView | `##..` | `....` | `....` | `----` | 10 |
-| Toggle | `##..` | `....` | `....` | `----` | 10 |
+| Toggle | `##..` | `#...` | `....` | `----` | 9 |
 | ToggleGroup | `....` | `....` | `....` | `----` | 12 |
 | EventBlocker | `....` | `....` | `....` | `----` | 12 |
 | EventTrigger | `....` | `....` | `....` | `----` | 12 |
@@ -119,10 +119,10 @@ Each input column holds one mark per configuration, in this order: Default (`[An
 | ActionBar | `....` | `....` | `....` | `----` | 12 |
 | Modal | `....` | `....` | `....` | `----` | 12 |
 | PopupLayer | `....` | `....` | `....` | `----` | 12 |
-| Tooltip | `....` | `....` | `....` | `----` | 12 |
+| Tooltip | `#...` | `....` | `....` | `----` | 11 |
 | VirtualCursor | `....` | `....` | `....` | `----` | 12 |
 
-**Holes: 423** of 464 applicable cells.
+**Holes: 419** of 464 applicable cells.
 
 Notes:
 

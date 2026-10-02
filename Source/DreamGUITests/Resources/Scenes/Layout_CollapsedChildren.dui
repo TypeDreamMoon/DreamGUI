@@ -1,0 +1,149 @@
+// A panel whose children are all collapsed measures nothing, and so does a size box whose only child is collapsed,
+// height override or not: the bars around them touch.
+// The bars get their height from SizeBox overrides (a label places itself, so the box keeps them): an Image measures
+// as its sprite (the default white one is a few pixels), not as Brush.ImageSize. The empty panel is a plain Widget
+// for the same reason, since an Image's own size would count; its red fill places itself (bIgnoreLayout) and shows
+// only if the panel takes room.
+// @stage 512x320
+
+style Title {
+    AnchorData.AnchorMin = (0, 1)
+    AnchorData.AnchorMax = (1, 1)
+    AnchorData.Pivot = (0.5, 1)
+    AnchorData.AnchoredPosition = (0, -8)
+    AnchorData.SizeDelta = (-24, 20)
+    FontSize = 15
+    Color = #1E2230
+    HAlign = Left
+    VAlign = Top
+    OverflowType = HorizontalOverflow
+}
+
+style Note {
+    AnchorData.AnchorMin = (0, 1)
+    AnchorData.AnchorMax = (0, 1)
+    AnchorData.Pivot = (0, 1)
+    FontSize = 12
+    Color = #5A6172
+    HAlign = Left
+    VAlign = Top
+    OverflowType = HorizontalOverflow
+}
+
+style Box {
+    AnchorData.AnchorMin = (0, 1)
+    AnchorData.AnchorMax = (0, 1)
+    AnchorData.Pivot = (0, 1)
+}
+
+style InBox {
+    bIgnoreLayout = true
+    AnchorData.SizeDelta = (220, 16)
+    FontSize = 12
+    Color = #FFFFFF
+    HAlign = Center
+    VAlign = Middle
+    OverflowType = HorizontalOverflow
+}
+
+Widget Root {
+    Image Page {
+        Brush.TintColor = #F5F3EE
+        AnchorData.AnchorMin = (0, 0)
+        AnchorData.AnchorMax = (1, 1)
+        AnchorData.SizeDelta = (0, 0)
+    }
+
+    Text Heading : Title {
+        Text = "Collapsed children: an empty panel and a size box take no room"
+    }
+
+    Image Column : Box {
+        Brush.TintColor = #C9D3E6
+        AnchorData.AnchoredPosition = (24, -48)
+        AnchorData.SizeDelta = (240, 236)
+        + VerticalBox {}
+
+        Image BarA {
+            Brush.TintColor = #3D7DD8
+            + SizeBox {
+                bOverrideHeight = true
+                HeightOverride = 32
+            }
+            Text LabelA : InBox { Text = "A" }
+        }
+
+        Widget EmptyPanel {
+            + HorizontalBox {}
+            Image EmptyPanelFill {
+                bIgnoreLayout = true
+                Brush.TintColor = #D9534F
+                AnchorData.AnchorMin = (0, 0)
+                AnchorData.AnchorMax = (1, 1)
+                AnchorData.SizeDelta = (0, 0)
+            }
+            Image HiddenOne {
+                Brush.TintColor = #8E5BD8
+                Visibility = Collapsed
+                + SizeBox {
+                    bOverrideWidth = true
+                    WidthOverride = 60
+                    bOverrideHeight = true
+                    HeightOverride = 60
+                }
+            }
+            Image HiddenTwo {
+                Brush.TintColor = #8E5BD8
+                Visibility = Collapsed
+                + SizeBox {
+                    bOverrideWidth = true
+                    WidthOverride = 60
+                    bOverrideHeight = true
+                    HeightOverride = 60
+                }
+            }
+        }
+
+        Image BarB {
+            Brush.TintColor = #2BA36B
+            + SizeBox {
+                bOverrideHeight = true
+                HeightOverride = 32
+            }
+            Text LabelB : InBox { Text = "B, right under A" }
+        }
+
+        Image SizedOverNothing {
+            Brush.TintColor = #D9534F
+            + SizeBox {
+                bOverrideHeight = true
+                HeightOverride = 60
+            }
+            Image HiddenThree {
+                Brush.TintColor = #8E5BD8
+                Visibility = Collapsed
+                + SizeBox {
+                    bOverrideWidth = true
+                    WidthOverride = 60
+                    bOverrideHeight = true
+                    HeightOverride = 60
+                }
+            }
+        }
+
+        Image BarC {
+            Brush.TintColor = #8E5BD8
+            + SizeBox {
+                bOverrideHeight = true
+                HeightOverride = 32
+            }
+            Text LabelC : InBox { Text = "C, right under B" }
+        }
+    }
+
+    Text Expected : Note {
+        AnchorData.AnchoredPosition = (24, -292)
+        AnchorData.SizeDelta = (464, 16)
+        Text = "Expected: A, B and C touch, 96 tall together; no red between them."
+    }
+}

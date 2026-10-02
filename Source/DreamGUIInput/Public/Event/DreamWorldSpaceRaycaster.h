@@ -119,6 +119,12 @@ protected:
 
 public:
 	virtual bool GetAffectByGamePause()const override;
+	/**
+	 * The viewport pixel a ScreenCenter pointer aims through, for a player whose view is InViewRect in viewport pixels
+	 * (FSceneViewProjectionData::GetConstrainedViewRect): the middle of that rectangle -- on a split screen the middle
+	 * of the player's own part of the viewport, not of the whole of it.
+	 */
+	static FVector2D GetViewCentrePixel(const FIntRect& InViewRect);
 	/** Kept virtual so a fixture -- or a hand-written pointer device -- can supply a ray directly. */
 	virtual bool GenerateRay(UDreamPointerEventData* InPointerEventData, FVector& OutRayOrigin, FVector& OutRayDirection, FVector& OutRayEnd, float& OutRayLength)override;
 	virtual void Raycast(UDreamPointerEventData* InPointerEventData, FVector& OutRayOrigin, FVector& OutRayDirection, FVector& OutRayEnd, TArray<FDreamUIHitResult>& OutHitResultArray)override;

@@ -11,7 +11,7 @@
 #include "DreamLayoutInvalidationTestTypes.h"
 
 /*
- * Regression coverage for the three acknowledged invalidation holes in the cached layout tree:
+ * Regression coverage for the acknowledged invalidation holes in the cached layout tree:
  *
  *   (a) a collapsed subtree that becomes visible from inside a tick-driven layout pass hits the
  *       bIsExecutingLayout guard in MarkRebuildAllLayoutTree, so the invalidation is swallowed;
@@ -19,10 +19,13 @@
  *       used to stay baked out of it permanently;
  *   (c) UpdateLayout can re-enter CalculateLayoutTree through RebuildLayoutImmediately, and the
  *       FindOrAdd there can rehash the map (or a visibility flip can Empty it) out from under the
- *       outer iteration.
+ *       outer iteration;
+ *   (d) a widget attached from inside a tick-driven pass is in no pre-order that pass collected, and
+ *       the dirty mark its attach raises stops at the container writing its results.
  *
- * The fix collects the full subtree, filters per-widget at update time, and iterates a copy. Each
- * test below fails (or crashes) against the pruned-tree/by-reference implementation.
+ * The first three are closed by collecting the full subtree, filtering per widget at update time,
+ * and iterating a copy; each of their tests fails (or crashes) against the pruned-tree/by-reference
+ * implementation. The fourth is described with its own test, the last in the file.
  */
 
 namespace DreamLayoutInvalidationTestLocal
@@ -287,6 +290,95 @@ bool FDreamLayoutReentrantRebuildSurvivesRehashTest::RunTest(const FString& Para
 	for (UDreamWidget* SideRoot : SideRoots)
 	{
 		SideRoot->DestroyWidget();
+	}
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamLayoutAttachDuringTickLayoutPassTest,
+	"DreamGUI.Layout.Invalidation.AWidgetAttachedWhileItsParentArrangesIsLaidOutInTheSameTick",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * A widget attached from inside a layout pass -- by a listener that one of the pass's own writes woke -- was never
+ * laid out. The pass walks the pre-order it collected before the widget joined, and the attach's dirty mark stops at
+ * the container that is writing, which here is the new parent itself: its arrangement had been decided without the
+ * widget, and nothing queued it again. The tree rebuild the attach asked for waited for the end of the frame, so even
+ * a later pass would have walked the old tree. This checks that a panel attached to an overlay while the overlay
+ * commits its arrangement is placed by the overlay and lays its own child out before the tick ends, for at most one
+ * pass more.
+ */
+bool FDreamLayoutAttachDuringTickLayoutPassTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamLayoutInvalidationTestLocal;
+	FScopedTestWorld TestWorld;
+	UDreamUIManagerWorldSubsystem* Manager = UDreamUIManagerWorldSubsystem::GetInstance(TestWorld.World);
+	if (!TestNotNull(TEXT("DreamUI manager subsystem exists in the test world"), Manager))
+	{
+		return false;
+	}
+	UWorld* World = TestWorld.World;
+	auto MakeWidget = [World](UDreamWidget* InParent, float InWidth, float InHeight)
+	{
+		UDreamWidget* Widget = NewObject<UDreamWidget>(World);
+		Widget->SetWidth(InWidth);
+		Widget->SetHeight(InHeight);
+		Widget->OnRegister();
+		if (InParent != nullptr)
+		{
+			Widget->TrySetParent(InParent, false);
+		}
+		return Widget;
+	};
+	UDreamWidget* Root = MakeWidget(nullptr, 320.0f, 180.0f);
+	UDreamWidget* Resident = MakeWidget(Root, 40.0f, 30.0f);
+	// The newcomer is a panel with a child of its own, laid out on its own first, so that what it is owed after
+	// joining is exactly what a live tree's pass owes a widget it has not seen: placing it, and running it.
+	UDreamWidget* Newcomer = MakeWidget(nullptr, 60.0f, 50.0f);
+	UDreamWidget* NewcomerChild = MakeWidget(Newcomer, 16.0f, 12.0f);
+	if (!TestNotNull(TEXT("Root overlay is created"), Root->CreateNewLayoutContainer<UDreamLayoutContainerOverlay>())
+		|| !TestNotNull(TEXT("Newcomer overlay is created"), Newcomer->CreateNewLayoutContainer<UDreamLayoutContainerOverlay>()))
+	{
+		Root->DestroyWidget();
+		Newcomer->DestroyWidget();
+		return false;
+	}
+	UDreamWidget::MarkLayoutForRebuild(Root);
+	UDreamWidget::MarkLayoutForRebuild(Newcomer);
+	Manager->TickDreamUI(0.016f);
+	if (!TestEqual(TEXT("The resident fills the root before anything is attached"), Resident->GetSize(), Root->GetSize())
+		|| !TestEqual(TEXT("...and the newcomer's child fills the newcomer"), NewcomerChild->GetSize(), Newcomer->GetSize()))
+	{
+		Root->DestroyWidget();
+		Newcomer->DestroyWidget();
+		return false;
+	}
+
+	// A wider root makes the overlay write the resident's new width from inside its commit; the listener hears that
+	// and attaches the newcomer to the overlay that is writing.
+	bool bAttached = false;
+	const FDelegateHandle Listening = Resident->GetDimensionChangedEvent().AddLambda(
+		[Root, Newcomer, &bAttached](bool, bool, bool)
+		{
+			if (!bAttached)
+			{
+				bAttached = Newcomer->TrySetParent(Root, false);
+			}
+		});
+	Root->SetWidth(400.0f);
+	Manager->TickDreamUI(0.016f);
+	Resident->GetDimensionChangedEvent().Remove(Listening);
+
+	TestTrue(TEXT("The newcomer was attached from inside the pass"), bAttached && Newcomer->GetParent() == Root);
+	TestEqual(TEXT("The overlay places the newcomer before the tick ends"), Newcomer->GetSize(), Root->GetSize());
+	TestEqual(TEXT("...and the newcomer lays its own child out"), NewcomerChild->GetSize(), Newcomer->GetSize());
+	TestTrue(FString::Printf(TEXT("...for at most one pass more than the arrange that attached it (%d)"), Manager->GetLastLayoutPassCount()),
+		Manager->GetLastLayoutPassCount() <= 2);
+
+	Root->DestroyWidget();
+	if (!bAttached)
+	{
+		Newcomer->DestroyWidget();
 	}
 	return true;
 }

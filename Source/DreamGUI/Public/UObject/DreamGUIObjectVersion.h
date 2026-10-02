@@ -11,7 +11,7 @@ struct DREAMGUI_API FDreamGUIObjectVersion
 	enum Type
 	{
 		BeforeCustomVersionWasAdded = 0,
-		/** SDF fonts carry SdfSource; assets from before it keep the bitmap-derived field. */
+		/** SDF fonts carry SdfSource; assets from before it take the class default, the outline field (the editor warns once per such asset). */
 		SdfSourceOnFont,
 		/** Bold is a field dilation; fonts still on the embolden-era BoldRatio default (0.08) move to 0.04. */
 		BoldAsDilation,

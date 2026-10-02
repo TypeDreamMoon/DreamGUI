@@ -930,7 +930,10 @@ bool DreamDriverGameHost::Touch(FDreamDriverContext& InContext, EDreamDriverTouc
 	else if (TouchType == ETouchType::Ended)
 	{
 		State.FingersDown.Remove(InFingerId);
-		// FSceneViewport::OnTouchEnded: when the last finger lifts, the cached cursor becomes (-1, -1).
+		// FSceneViewport::OnTouchEnded: when the last finger lifts, the cached cursor becomes (-1, -1). The production
+		// module answers that cache for a cursor the viewport client gives no position for
+		// (UDreamStandaloneInputModule::GetMousePosition), so the preset parks pointer 0 there, over nothing -- which is
+		// where the substituted cursor below puts it too.
 		if (State.FingersDown.Num() == 0 && IsValid(Module))
 		{
 			Module->MoveTo(FVector2D(-1.0, -1.0));

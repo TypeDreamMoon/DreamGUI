@@ -66,6 +66,15 @@ struct DREAMGUI_API FDreamTextLayoutInput
 	bool bRenderToWorldSpace = false;
 	/** True when this text snaps to pixels (the font allows it and the hierarchy asks for it). */
 	bool bPixelPerfect = false;
+	/**
+	 * Let the font's optional ligatures (liga, clig) and contextual alternates (calt) form, as a browser does by default.
+	 * A ligature is one glyph over several characters, so the caller leaves this off while anything animates the text
+	 * character by character. Ligatures stay off whenever FontSpace.X is not 0, as CSS asks of letter-spacing. Off, calt
+	 * goes with them in Latin, Greek, Cyrillic, Armenian, Georgian and runs of digits and punctuation, where it is only
+	 * style; every other script keeps the font's default, since a joining or Brahmic script can need it, and every script
+	 * keeps the forms it requires (Arabic's lam-alef, Indic conjuncts).
+	 */
+	bool bAllowLigatures = false;
 
 	TWeakObjectPtr<UDreamUIFontData_BaseObject> Font;
 	TWeakObjectPtr<UDreamUIRichTextImageData_BaseObject> RichTextImageData;
@@ -76,9 +85,10 @@ struct DREAMGUI_API FDreamTextLayoutInput
 };
 
 /**
- * Lays text out into a display list. Measures only: no vertex is written here. The algorithm is
- * the old UpdateUIText's, line for line, so that swapping the painter in changed nothing visible;
- * the line breaker and the vertical model are what the next phases replace.
+ * Lays text out into a display list. Measures only: no vertex is written here. Elements are shaped
+ * per paragraph, grouped into clusters (UAX #29 graphemes joined with the shaper's own clusters),
+ * broken into lines (UAX #14), ordered per line by their bidi levels (UAX #9 rule L2) and stacked
+ * with CSS's half-leading.
  */
 class DREAMGUI_API FDreamTextLayoutEngine
 {

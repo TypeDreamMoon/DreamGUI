@@ -1,0 +1,93 @@
+// A three-line paragraph at half of the font's own line height, beside the same paragraph at its full height: the
+// lines overlap, and the paragraph must neither fall onto one line nor lose its last line.
+// @stage 640x272
+
+style Title {
+    AnchorData.AnchorMin = (0, 1)
+    AnchorData.AnchorMax = (1, 1)
+    AnchorData.Pivot = (0.5, 1)
+    AnchorData.AnchoredPosition = (0, -8)
+    AnchorData.SizeDelta = (-24, 20)
+    FontSize = 15
+    Color = #1E2230
+    HAlign = Left
+    VAlign = Top
+    OverflowType = HorizontalOverflow
+}
+
+style Note {
+    AnchorData.AnchorMin = (0, 1)
+    AnchorData.AnchorMax = (0, 1)
+    AnchorData.Pivot = (0, 1)
+    AnchorData.SizeDelta = (240, 16)
+    FontSize = 12
+    Color = #5A6172
+    HAlign = Left
+    VAlign = Top
+    OverflowType = HorizontalOverflow
+}
+
+style Box {
+    AnchorData.AnchorMin = (0, 1)
+    AnchorData.AnchorMax = (0, 1)
+    AnchorData.Pivot = (0, 1)
+    AnchorData.SizeDelta = (240, 160)
+    Brush.ImageSize = (0, 0)
+    Brush.TintColor = #E4E8F0
+}
+
+style Paragraph {
+    AnchorData.AnchorMin = (0, 1)
+    AnchorData.AnchorMax = (0, 1)
+    AnchorData.Pivot = (0, 1)
+    AnchorData.SizeDelta = (240, 160)
+    FontSize = 24
+    Color = #1E2230
+    HAlign = Left
+    VAlign = Top
+    OverflowType = VerticalOverflow
+    Text = "Line height at half the font's own, three lines"
+}
+
+Widget Root {
+    Image Page {
+        Brush.TintColor = #F5F3EE
+        AnchorData.AnchorMin = (0, 0)
+        AnchorData.AnchorMax = (1, 1)
+        AnchorData.SizeDelta = (0, 0)
+    }
+
+    Text Heading : Title {
+        Text = "Line height 50% against 100%, 24 px"
+    }
+
+    Text HalfLabel : Note {
+        AnchorData.AnchoredPosition = (24, -44)
+        Text = "LineHeightPercentage 0.5"
+    }
+    Image HalfBox : Box {
+        AnchorData.AnchoredPosition = (24, -64)
+    }
+    Text Half : Paragraph {
+        AnchorData.AnchoredPosition = (24, -64)
+        LineHeightPercentage = 0.5
+    }
+
+    Text FullLabel : Note {
+        AnchorData.AnchoredPosition = (320, -44)
+        Text = "LineHeightPercentage 1"
+    }
+    Image FullBox : Box {
+        AnchorData.AnchoredPosition = (320, -64)
+    }
+    Text Full : Paragraph {
+        AnchorData.AnchoredPosition = (320, -64)
+        LineHeightPercentage = 1
+    }
+
+    Text Expected : Note {
+        AnchorData.AnchoredPosition = (24, -240)
+        AnchorData.SizeDelta = (592, 16)
+        Text = "Expected: three lines on each side; on the left each line half a line below the one above."
+    }
+}

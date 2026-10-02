@@ -128,10 +128,14 @@ protected:
 	 * The two alignment overrides exist for UMG's Border, whose HorizontalAlignment and
 	 * VerticalAlignment belong to the BORDER and describe where it puts its content -- unlike every
 	 * other panel here, where alignment is the slot's. Passing them unset is the ordinary behaviour.
+	 * InOuterPadding is the Border's as well: UBorder::Padding, which Slate holds as its one child's
+	 * slot padding. It is added to the slot's own padding as the margins the child is placed within,
+	 * centring included, rather than taken off the area first.
 	 */
 	void ApplyChildRect(UDreamWidget* Child, const FVector2D& Position, const FVector2D& Size, bool bForceFill = false,
 		TOptional<EDreamPanelHorizontalAlignment> InHorizontalOverride = TOptional<EDreamPanelHorizontalAlignment>(),
-		TOptional<EDreamPanelVerticalAlignment> InVerticalOverride = TOptional<EDreamPanelVerticalAlignment>()) const;
+		TOptional<EDreamPanelVerticalAlignment> InVerticalOverride = TOptional<EDreamPanelVerticalAlignment>(),
+		const FMargin& InOuterPadding = FMargin()) const;
 	/**
 	 * The last step every placement shares: apply the slot's nudge, turn a top-left rect in the panel's
 	 * content space into the child's anchored position, and record it. ApplyChildRect is this with the
@@ -173,10 +177,16 @@ protected:
 	 * preferred size: the fragment states what the panel WANTS, and bounding that by the rect it was
 	 * just given would be the same feedback loop the specs exist to break.
 	 */
-	FVector2f MeasureUnconstrained() const
-	{
-		return MeasureLayout(FDreamMeasureSpec::Undefined(), FDreamMeasureSpec::Undefined());
-	}
+	FVector2f MeasureUnconstrained() const;
+	/**
+	 * Whether this panel has no opinion about its own extent along InAxis, so that a parent measuring the
+	 * widget falls back to its authored rect there.
+	 *
+	 * Everywhere else a panel's measurement is a claim, zero included: a panel whose children are all
+	 * collapsed wants no room, as UMG's do. The one axis that abstains is a scroll box's scroll axis,
+	 * whose content extent must never reach the parent at all.
+	 */
+	virtual bool AbstainsFromMeasure(EDreamPanelOrientation InAxis) const { return false; }
 	virtual FDreamLayoutControlAnchorData GetLayoutControlAnchor(const UDreamWidget* TargetWidget) const override;
 
 	/**
@@ -197,6 +207,14 @@ protected:
 	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
 	virtual void PostEditUndo() override;
 #endif
+
+private:
+	/**
+	 * Set when an arrange re-dirtied children it had measured from their own current size and then resized
+	 * (see FDreamLayoutPassContext::FCurrentSizeReadScope). The next arrange of this panel is the answer to
+	 * that, and does not ask again, so a measurement that never settles costs one extra pass, not the cap.
+	 */
+	bool bCurrentSizeRearrangePending = false;
 
 public:
 	/**
@@ -638,6 +656,22 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "SafeZone")
 	void SetSidesToPad(bool bInPadLeft, bool bInPadRight, bool bInPadTop, bool bInPadBottom);
 	virtual void ArrangeChildren() override;
+
+	/**
+	 * The platform's safe margin, which comes in screen pixels, in the units of a widget one of whose units
+	 * spans InPixelsPerUnit pixels on screen: SSafeZone::ComputeScaledSafeMargin's arithmetic -- each side
+	 * divided by its axis's scale and rounded to a whole unit -- with InSafeAreaScale applied after it, where
+	 * SSafeZone applies it. A scale of zero or less counts as one. Outside the editor this is how the margin
+	 * reaches the padding; static and pure so the arithmetic can be checked without a device that has one.
+	 */
+	static FMargin ScalePlatformSafeMargin(const FMargin& InPixelMargin, const FVector2D& InPixelsPerUnit, const FMargin& InSafeAreaScale);
+	/**
+	 * How many screen pixels one of InWidget's units spans, per axis: what SSafeZone reads as its geometry's
+	 * scale. Under a screen-space or render-target canvas, the root canvas's viewport over its root widget's
+	 * size -- the canvas scaler -- times InWidget's own scale relative to that root widget. One under a
+	 * world-space canvas, which has no screen pixels to offer, and under no canvas at all.
+	 */
+	static FVector2D GetScreenPixelsPerUnit(const UDreamWidget* InWidget);
 };
 
 /**
@@ -691,6 +725,8 @@ protected:
 	bool bAppliedDefaultClipping = false;
 	virtual void ArrangeChildren() override;
 	virtual FVector2f MeasureLayout(const FDreamMeasureSpec& InWidthSpec, const FDreamMeasureSpec& InHeightSpec) const override;
+	/** The scroll axis: see MeasureLayout. */
+	virtual bool AbstainsFromMeasure(EDreamPanelOrientation InAxis) const override;
 #if WITH_EDITOR
 	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
 #endif
@@ -1028,6 +1064,20 @@ private:
 	 * Re-deriving the clamp from the request each pass makes a transient underestimate transient too.
 	 */
 	float RequestedScrollOffset = 0.0f;
+	/**
+	 * Re-arrange this box and nothing above it. An offset or a rubber band moves where the children sit and
+	 * never what any panel measures -- the scroll axis reports no content, and the cross axis does not read
+	 * the offset -- so the ancestors have nothing to recompute, and asking them to was a whole-chain pass
+	 * per wheel notch and per fling frame.
+	 */
+	void MarkScrollArrangeDirty();
+	/** The viewport's extent across the scroll axis, less this box's padding. */
+	float GetAvailableCross() const;
+	/**
+	 * How far InChild reaches along the scroll axis, slot padding included, measured exactly as the
+	 * arrangement measures it: against the viewport's cross extent, never against the scroll axis.
+	 */
+	float MeasureScrollExtent(UDreamWidget* InChild, float InAvailableCross) const;
 	/** Content-space start and extent of the direct child that contains InWidget. */
 	bool GetChildContentExtent(UDreamWidget* InWidget, float& OutStart, float& OutExtent);
 	/**
@@ -1270,7 +1320,10 @@ public:
 	static FVector2D FitMenuInWindow(const FVector2D& MenuPosition, const FVector2D& MenuSize, const FVector2D& WindowSize);
 	/**
 	 * FitMenuInWindow for a rect given in the PANEL's space, which is the space the arrange pass works
-	 * in. PanelOffset is the panel's top-left corner inside the window.
+	 * in. PanelOffset is the panel's top-left corner inside the window, in the window's units, and
+	 * PanelScale is how many of the window's units one of the panel's own spans on each axis -- other than
+	 * one whenever a scale lies between the two, a scale box above the anchor say. The rect is taken into
+	 * the window's units to be fitted, and the answer brought back into the panel's.
 	 *
 	 * bMirrored says the rect is about to be reflected across PanelWidth when it is committed, as every
 	 * child rect is under a right-to-left flow. The rect that has to end up inside the window is then
@@ -1278,7 +1331,17 @@ public:
 	 * still what to COMMIT, and committing it lands the menu where the fit put it.
 	 */
 	static FVector2D FitMenuInWindowFromPanelSpace(const FVector2D& MenuPosition, const FVector2D& MenuSize,
-		const FVector2D& PanelOffset, float PanelWidth, const FVector2D& WindowSize, bool bMirrored);
+		const FVector2D& PanelOffset, float PanelWidth, const FVector2D& WindowSize, bool bMirrored,
+		const FVector2D& PanelScale = FVector2D::UnitVector);
+	/**
+	 * Where InWidget sits in the window bFitInWindow fits against, which is the root widget of its hierarchy:
+	 * OutWindowSize is the root's size, OutOffset is InWidget's top-left corner measured from the root's
+	 * top-left corner in the root's units, and OutScale is how many of the root's units one of InWidget's
+	 * own spans on each axis -- the three things FitMenuInWindowFromPanelSpace takes. Read from the two
+	 * widgets' transforms, so the root's pivot can be anywhere. False when InWidget is its own root, or has
+	 * none, and there is nothing to fit against.
+	 */
+	static bool GetPlacementInWindow(const UDreamWidget* InWidget, FVector2D& OutWindowSize, FVector2D& OutOffset, FVector2D& OutScale);
 	/** True when Placement forces the menu to the anchor's width, as UMG's ComboBox placements do. */
 	static bool PlacementMatchesAnchorWidth(EDreamMenuPlacement InPlacement);
 

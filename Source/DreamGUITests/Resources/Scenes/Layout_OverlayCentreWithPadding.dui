@@ -1,0 +1,98 @@
+// A 100-wide child centred in a 200-wide overlay with 20 px of left padding. Slate's AlignChild centres the child in
+// the whole area and then moves it by the left padding less the right, (200 - 100) / 2 + 20 - 0, so it spans 70 to
+// 170; centring it in what the padding leaves would put it at 60 to 160.
+// The child gets its size from SizeBox overrides (a label places itself, so the box keeps them): an Image
+// measures as its sprite, not as Brush.ImageSize.
+// @stage 512x224
+
+style Title {
+    AnchorData.AnchorMin = (0, 1)
+    AnchorData.AnchorMax = (1, 1)
+    AnchorData.Pivot = (0.5, 1)
+    AnchorData.AnchoredPosition = (0, -8)
+    AnchorData.SizeDelta = (-24, 20)
+    FontSize = 15
+    Color = #1E2230
+    HAlign = Left
+    VAlign = Top
+    OverflowType = HorizontalOverflow
+}
+
+style Note {
+    AnchorData.AnchorMin = (0, 1)
+    AnchorData.AnchorMax = (0, 1)
+    AnchorData.Pivot = (0, 1)
+    FontSize = 12
+    Color = #5A6172
+    HAlign = Left
+    VAlign = Top
+    OverflowType = HorizontalOverflow
+}
+
+style Box {
+    AnchorData.AnchorMin = (0, 1)
+    AnchorData.AnchorMax = (0, 1)
+    AnchorData.Pivot = (0, 1)
+}
+
+style InBox {
+    bIgnoreLayout = true
+    AnchorData.SizeDelta = (100, 16)
+    FontSize = 12
+    Color = #FFFFFF
+    HAlign = Center
+    VAlign = Middle
+    OverflowType = HorizontalOverflow
+}
+
+Widget Root {
+    Image Page {
+        Brush.TintColor = #F5F3EE
+        AnchorData.AnchorMin = (0, 0)
+        AnchorData.AnchorMax = (1, 1)
+        AnchorData.SizeDelta = (0, 0)
+    }
+
+    Text Heading : Title {
+        Text = "Overlay: centred child with padding (20, 0, 0, 0)"
+    }
+
+    Image Ruler : Box {
+        Brush.TintColor = #C9D3E6
+        AnchorData.AnchoredPosition = (24, -48)
+        AnchorData.SizeDelta = (200, 60)
+        + Overlay {}
+
+        Image Child {
+            Brush.TintColor = #3D7DD8
+            + SizeBox {
+                bOverrideWidth = true
+                WidthOverride = 100
+                bOverrideHeight = true
+                HeightOverride = 40
+            }
+            @slot HorizontalAlignment = Center
+            @slot VerticalAlignment = Center
+            @slot Padding = (20, 0, 0, 0)
+            Text ChildLabel : InBox { Text = "100 wide" }
+        }
+    }
+
+    Image TickAt70 : Box {
+        Brush.TintColor = #D9534F
+        AnchorData.AnchoredPosition = (93, -110)
+        AnchorData.SizeDelta = (2, 14)
+    }
+
+    Image TickAt170 : Box {
+        Brush.TintColor = #D9534F
+        AnchorData.AnchoredPosition = (193, -110)
+        AnchorData.SizeDelta = (2, 14)
+    }
+
+    Text Expected : Note {
+        AnchorData.AnchoredPosition = (24, -136)
+        AnchorData.SizeDelta = (464, 48)
+        Text = "Expected: the blue child spans x = 70 to 170 of the 200-wide overlay,\nbetween the red ticks: centred in the whole 200, then moved\nright by the 20 of padding. It is 40 tall, 10 from the top."
+    }
+}

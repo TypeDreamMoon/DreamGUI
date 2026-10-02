@@ -1,0 +1,92 @@
+// Rich text: sizes from 12 to 32 px on one line, a superscript and a subscript, an underline that runs across a change
+// of size, a strikethrough, bold, italic and both, and a link. Nested custom tags need a rich-text style asset, which
+// a .dui cannot name, so they are not here.
+// @stage 1024x256
+
+style Title {
+    AnchorData.AnchorMin = (0, 1)
+    AnchorData.AnchorMax = (1, 1)
+    AnchorData.Pivot = (0.5, 1)
+    AnchorData.AnchoredPosition = (0, -8)
+    AnchorData.SizeDelta = (-24, 20)
+    FontSize = 15
+    Color = #1E2230
+    HAlign = Left
+    VAlign = Top
+    OverflowType = HorizontalOverflow
+}
+
+style Note {
+    AnchorData.AnchorMin = (0, 1)
+    AnchorData.AnchorMax = (0, 1)
+    AnchorData.Pivot = (0, 1)
+    FontSize = 12
+    Color = #5A6172
+    HAlign = Left
+    VAlign = Top
+    OverflowType = HorizontalOverflow
+}
+
+style Box {
+    AnchorData.AnchorMin = (0, 1)
+    AnchorData.AnchorMax = (0, 1)
+    AnchorData.Pivot = (0, 1)
+    Brush.ImageSize = (0, 0)
+    Brush.TintColor = #E4E8F0
+}
+
+style Rich {
+    AnchorData.AnchorMin = (0, 1)
+    AnchorData.AnchorMax = (0, 1)
+    AnchorData.Pivot = (0, 1)
+    Color = #1E2230
+    HAlign = Left
+    VAlign = Middle
+    OverflowType = HorizontalOverflow
+    bRichText = true
+}
+
+Widget Root {
+    Image Page {
+        Brush.TintColor = #F5F3EE
+        AnchorData.AnchorMin = (0, 0)
+        AnchorData.AnchorMax = (1, 1)
+        AnchorData.SizeDelta = (0, 0)
+    }
+
+    Text Heading : Title {
+        Text = "Rich text, default font"
+    }
+
+    Text MixedLabel : Note {
+        AnchorData.AnchoredPosition = (24, -44)
+        AnchorData.SizeDelta = (976, 16)
+        Text = "20 px base: <size=32>, <size=12>, <sup>, <sub>, <u> across <size=28>, <s>, <b>, <i>, <b><i>"
+    }
+    Image MixedBox : Box {
+        AnchorData.AnchoredPosition = (24, -64)
+        AnchorData.SizeDelta = (976, 64)
+    }
+    Text Mixed : Rich {
+        AnchorData.AnchoredPosition = (24, -64)
+        AnchorData.SizeDelta = (976, 64)
+        FontSize = 20
+        Text = "Small <size=32>BIG</size> mid <size=12>tiny</size> x<sup>2</sup> H<sub>2</sub>O <u>under<size=28>line</size></u> <s>s</s> <b>b</b> <i>i</i> <b><i>bi</i></b> end"
+    }
+
+    Text LinkLabel : Note {
+        AnchorData.AnchoredPosition = (24, -144)
+        AnchorData.SizeDelta = (976, 16)
+        Text = "24 px, a link: <a=docs>"
+    }
+    Image LinkBox : Box {
+        AnchorData.AnchoredPosition = (24, -164)
+        AnchorData.SizeDelta = (976, 44)
+    }
+    Text Link : Rich {
+        AnchorData.AnchoredPosition = (24, -164)
+        AnchorData.SizeDelta = (976, 44)
+        FontSize = 24
+        Text = "Read the <a=docs>documentation</a> now"
+    }
+}

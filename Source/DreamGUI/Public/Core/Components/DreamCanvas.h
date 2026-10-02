@@ -786,7 +786,7 @@ public:
 public:
 	static FName DreamUI_MainTextureMaterialParameterName;
 	static FName DreamUI_FontTextureMaterialParameterName;
-	/** xy: atlas slice size in texels, z: field range in texels, w: texels per em (MF_DreamUI_Shade). */
+	/** xy: atlas slice size in texels, z: field range in texels, w: texels per em, negative when the small-text correction is off (MF_DreamUI_Shade). */
 	static FName DreamUI_FontAtlasInfoMaterialParameterName;
 	/** The font atlas geometry a draw call's glyphs decode with (see DreamUIShade.ush's FontAtlasInfo). */
 	static FVector4f MakeFontAtlasInfo(const class FDreamUIDrawCall& DrawCallItem);

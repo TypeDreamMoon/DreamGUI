@@ -204,12 +204,18 @@ struct DREAMGUI_API FDreamTextFillSegment
 /** single char property */
 struct FDreamUITextCaretProperty
 {
-	/** caret position. caret is on left side of char */
+	/**
+	 * Caret position: the leading edge of its grapheme cluster, which is the left of a left-to-right one and the right of
+	 * a right-to-left one. Inside a ligature the clusters share the glyph's advance evenly. A line's end caret stands at the
+	 * trailing edge of the line's last cluster in logical order.
+	 */
 	FVector2f CaretPosition = FVector2f::ZeroVector;
 	/**
 	 * Where the caret is in the text: a UTF-16 offset into it for plain text (an emoji of two code units has no caret
-	 * between them), the character index for rich text. -1 marks the end caret of a line the layout wrapped by itself,
-	 * which stands where the next line begins (UDreamText::GetCharIndexByCaretIndex answers that line's first offset).
+	 * between them), the character index for rich text. Carets stand only where a grapheme cluster starts (UAX #29, with
+	 * Indic conjuncts kept whole), so a base and its combining marks have one caret between them all. -1 marks the end
+	 * caret of a line the layout wrapped by itself, which stands where the next line begins
+	 * (UDreamText::GetCharIndexByCaretIndex answers that line's first offset).
 	 */
 	int32 CharIndex = 0;
 };
@@ -252,7 +258,7 @@ struct FDreamUIText_RichTextCustomTag
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = DreamGUI) FName TagName;
 	/** start char index in cacheCharPropertyArray */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = DreamGUI) int32 CharIndexStart = 0;
-	/** end char index in cacheCharPropertyArray */
+	/** end char index in cacheCharPropertyArray, inclusive; one below CharIndexStart when no visible character is inside the tag */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = DreamGUI) int32 CharIndexEnd = 0;
 	/**
 	 * This range came from `<a=Id>` rather than `<Id>`: it is a hyperlink, and TagName is its id.

@@ -1,0 +1,73 @@
+// Corners at 256 px, the size at which a distance field that rounds them off shows it: the same nine characters plain
+// and with an outline of 0.08 em, whose outer corners are to be mitred as Chrome's stroke is.
+// @stage 1792x720
+
+style Title {
+    AnchorData.AnchorMin = (0, 1)
+    AnchorData.AnchorMax = (1, 1)
+    AnchorData.Pivot = (0.5, 1)
+    AnchorData.AnchoredPosition = (0, -8)
+    AnchorData.SizeDelta = (-24, 20)
+    FontSize = 15
+    Color = #1E2230
+    HAlign = Left
+    VAlign = Top
+    OverflowType = HorizontalOverflow
+}
+
+style Note {
+    AnchorData.AnchorMin = (0, 1)
+    AnchorData.AnchorMax = (0, 1)
+    AnchorData.Pivot = (0, 1)
+    FontSize = 14
+    Color = #5A6172
+    HAlign = Left
+    VAlign = Top
+    OverflowType = HorizontalOverflow
+}
+
+style Big {
+    AnchorData.AnchorMin = (0, 1)
+    AnchorData.AnchorMax = (0, 1)
+    AnchorData.Pivot = (0, 1)
+    AnchorData.SizeDelta = (1744, 300)
+    FontSize = 256
+    Color = #1E2230
+    HAlign = Left
+    VAlign = Top
+    OverflowType = HorizontalOverflow
+    Text = "AVMWkxz4@"
+}
+
+Widget Root {
+    Image Page {
+        Brush.TintColor = #F5F3EE
+        AnchorData.AnchorMin = (0, 0)
+        AnchorData.AnchorMax = (1, 1)
+        AnchorData.SizeDelta = (0, 0)
+    }
+
+    Text Heading : Title {
+        Text = "Corners at 256 px, default font"
+    }
+
+    Text PlainLabel : Note {
+        AnchorData.AnchoredPosition = (24, -40)
+        AnchorData.SizeDelta = (600, 18)
+        Text = "256 px"
+    }
+    Text Plain : Big {
+        AnchorData.AnchoredPosition = (24, -60)
+    }
+
+    Text OutlinedLabel : Note {
+        AnchorData.AnchoredPosition = (24, -380)
+        AnchorData.SizeDelta = (600, 18)
+        Text = "256 px, outline 0.08 em"
+    }
+    Text Outlined : Big {
+        AnchorData.AnchoredPosition = (24, -400)
+        TextStyle.OutlineColor = #E0301EFF
+        TextStyle.OutlineWidth = 0.08
+    }
+}

@@ -50,6 +50,7 @@ void UDreamUIActionRouter::TeardownForWorld(UWorld& InWorld)
 	}
 	bTornDownForWorld = true;
 	Bindings.Reset();
+	KeyPressTakers.Reset();
 }
 
 TStatId UDreamUIActionRouter::GetStatId() const
@@ -179,7 +180,15 @@ UDreamWidget* UDreamUIActionRouter::GetFocusedWidget(int32 InUserIndex) const
 {
 	const UDreamUIInputSubsystem* Input = UDreamUIInputSubsystem::Get(this);
 	const UDreamUIInputUser* User = Input != nullptr ? Input->GetUser(InUserIndex) : nullptr;
-	return User != nullptr ? User->GetFocusedWidget() : nullptr;
+	UDreamWidget* Focused = User != nullptr ? User->GetFocusedWidget() : nullptr;
+	// Focus is only refused to a hidden or disabled widget (UDreamWidget::SetFocus), not taken from one that becomes so
+	// while it holds it. Such a widget hears no keys, characters or sticks: a hidden page's handlers -- an Escape that
+	// closes it -- took them from the page in front.
+	if (!IsValid(Focused) || !Focused->GetRenderVisibleInHierarchy() || !Focused->GetInteractableInHierarchy())
+	{
+		return nullptr;
+	}
+	return Focused;
 }
 
 bool UDreamUIActionRouter::DispatchKeyToFocusedWidget(int32 InUserIndex, const FKey& InKey, bool bPressed,
@@ -303,13 +312,52 @@ bool UDreamUIActionRouter::HandleKeyWithModifiers(int32 InUserIndex, const FKey&
 {
 	if (!InKey.IsValid())return false;
 	RemoveStaleBindings();
+	const TPair<int32, FKey> PressKey(InUserIndex, InKey);
+
+	if (!bPressed)
+	{
+		// The focused widget hears every release, as UMG's OnKeyUp goes to the focus whoever took the down. What it
+		// answers does not decide where the release goes: the release belongs to what took the press.
+		DispatchKeyToFocusedWidget(InUserIndex, InKey, false, bShiftDown, bCtrlDown, bAltDown, bCmdDown);
+		int32 TakerId = INDEX_NONE;
+		if (!KeyPressTakers.RemoveAndCopyValue(PressKey, TakerId))
+		{
+			// No press of this key was taken here. A binding registered while the key was held -- a dialog that opened
+			// over a held confirm -- never saw the press, and taking its release left whatever had taken the press
+			// holding it for good.
+			return false;
+		}
+		FDreamUIActionHandle TakerHandle;
+		TakerHandle.Id = TakerId;
+		if (FBindingEntry* Entry = FindBinding(TakerHandle))
+		{
+			// Letting go before the threshold is a cancel, not a fire.
+			const bool bWasHolding = Entry->bHeld && Entry->Action.HoldTime > 0.0f;
+			Entry->bHeld = false;
+			Entry->HeldSeconds = 0.0f;
+			Entry->bHoldFired = false;
+			if (bWasHolding)
+			{
+				// The ring has to empty on screen too. Broadcast last and nothing read from Entry afterwards: a listener
+				// is free to register or unregister actions, which reallocates the array it points into.
+				HoldProgressEvent.Broadcast(TakerHandle, 0.0f);
+			}
+		}
+		// Consumed whichever took it -- the focused widget, a binding, one unregistered since: the press was kept from
+		// everything else, and leaking only the release would look like a stray keypress.
+		return true;
+	}
+
+	// A press starts over: the release of the last one may never have come.
+	KeyPressTakers.Remove(PressKey);
 
 	// The FOCUSED widget sees the key before any named binding does -- Slate's order and UMG's, and
 	// what lets a text box keep Escape while the same key still closes a dialog when nothing is
 	// focused. Nothing happens here unless a widget in the focus chain actually speaks
 	// IDreamKeyInterface, so a project with no key handlers pays one null check and behaves as before.
-	if (DispatchKeyToFocusedWidget(InUserIndex, InKey, bPressed, bShiftDown, bCtrlDown, bAltDown, bCmdDown))
+	if (DispatchKeyToFocusedWidget(InUserIndex, InKey, true, bShiftDown, bCtrlDown, bAltDown, bCmdDown))
 	{
+		KeyPressTakers.Add(PressKey, INDEX_NONE);
 		return true;
 	}
 
@@ -376,27 +424,8 @@ bool UDreamUIActionRouter::HandleKeyWithModifiers(int32 InUserIndex, const FKey&
 		if (BestIndex != INDEX_NONE)
 		{
 			FBindingEntry& Entry = Bindings[BestIndex];
-
-			if (!bPressed)
-			{
-				// Letting go before the threshold is a cancel, not a fire. Consumed all the same: the
-				// press was consumed, and leaking only the release would look like a stray keypress.
-				const bool bWasHolding = Entry.bHeld && Entry.Action.HoldTime > 0.0f;
-				const int32 EntryId = Entry.Id;
-				Entry.bHeld = false;
-				Entry.HeldSeconds = 0.0f;
-				Entry.bHoldFired = false;
-				if (bWasHolding)
-				{
-					// The ring has to empty on screen too. Broadcast last and nothing read from Entry
-					// afterwards: a listener is free to register or unregister actions, which reallocates
-					// the array this reference points into.
-					FDreamUIActionHandle ReleasedHandle;
-					ReleasedHandle.Id = EntryId;
-					HoldProgressEvent.Broadcast(ReleasedHandle, 0.0f);
-				}
-				return true;
-			}
+			// Its release is this binding's, wherever the key's meaning has moved by then.
+			KeyPressTakers.Add(PressKey, Entry.Id);
 			if (Entry.Action.HoldTime <= 0.0f)
 			{
 				Execute(Entry);

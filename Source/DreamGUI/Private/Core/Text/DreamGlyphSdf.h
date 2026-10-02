@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 
 struct FT_FaceRec_;
+struct FT_Outline_;
 
 /** A glyph's multi-channel distance field, ready for the atlas. */
 struct FDreamGlyphSdfResult
@@ -38,4 +39,12 @@ public:
 	 * @param BoldPixels    Synthetic emboldening, in pixels; 0 for none.
 	 */
 	static bool GenerateMTSDF(FT_FaceRec_* Face, uint32 GlyphIndex, float PixelsPerEm, float SpreadPixels, float BoldPixels, FDreamGlyphSdfResult& Out);
+
+	/**
+	 * The same field from an outline already loaded, in font units (FT_LOAD_NO_SCALE): what GenerateMTSDF does once it has
+	 * loaded the glyph, for a caller -- a test, say -- that has an outline of its own. Emboldening modifies the outline in
+	 * place. Advance is left at zero; it is the glyph's business, not the outline's.
+	 * @param UnitsToPixels  Pixels per font unit at the atlas's sample size.
+	 */
+	static bool GenerateMTSDFFromOutline(FT_Outline_* Outline, double UnitsToPixels, float SpreadPixels, float BoldPixels, FDreamGlyphSdfResult& Out);
 };

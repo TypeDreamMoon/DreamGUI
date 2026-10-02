@@ -188,43 +188,68 @@ void UDreamUITooltipSubsystem::HandleInputEvent(UDreamBaseEventData* InEventData
 	}
 	// The player whose pointer it is: one player's hover never moves or hides another's bubble.
 	FDreamUITooltipUserState& State = UserStates.FindOrAdd(PointerEvent->UserIndex);
-	State.LastPointerEvent = PointerEvent;
-
-	// Navigation arms a tooltip too. The two arrive through the same enter/exit path, so the only difference worth
-	// keeping is WHERE the bubble goes: a pointer position is meaningless in navigation mode, and the bubble is placed
-	// against the focused widget.
-	const bool bIsNavigation = PointerEvent->InputType == EDreamUIPointerInputType::Navigation;
 
 	switch (PointerEvent->EventType)
 	{
 	case EDreamUIPointerEventType::Enter:
 	case EDreamUIPointerEventType::Exit:
 	{
-		UDreamWidget* NewCandidate = DreamUITooltipPolicy::ResolveTooltipSource(PointerEvent->EnterWidget);
-		if (NewCandidate != State.Candidate.Get() || bIsNavigation != State.bArmedByNavigation)
+		// One tooltip per player, following one of the player's pointers: the one that last arrived at something with a
+		// tooltip. Another pointer -- a finger, a second laser, a script's -- takes it over only by arriving at a tooltip
+		// of its own; its moves over nothing leave the bubble under the first one alone.
+		const bool bFollowed = !State.LastPointerEvent.IsValid() || State.LastPointerEvent.Get() == PointerEvent;
+		const bool bTakesOver = !bFollowed && PointerEvent->EventType == EDreamUIPointerEventType::Enter
+			&& DreamUITooltipPolicy::ResolveTooltipSource(PointerEvent->EnterWidget) != nullptr;
+		if (bFollowed || bTakesOver)
 		{
-			State.Candidate = NewCandidate;
-			State.bArmedByNavigation = bIsNavigation;
-			State.HoverSeconds = 0.0f;
-			// A press suppresses only the CURRENT target; moving to a new one re-arms.
-			State.bSuppressed = false;
-			if (State.ShownFor.IsValid() && State.ShownFor.Get() != NewCandidate)
-			{
-				HideUserTooltip(State);
-				State.Candidate = NewCandidate;
-				State.bArmedByNavigation = bIsNavigation;
-			}
+			State.LastPointerEvent = PointerEvent;
+			// What the pointer is over is read once the frame's exits and enters are all out (RefreshCandidate). An
+			// Exit goes out while EnterWidget still names the widget being left, and a pointer that left for nothing --
+			// or for a parent it was already inside -- is sent no Enter afterwards to say where it went: read here, the
+			// candidate stayed the widget it had left, and its bubble opened over empty space and stayed there.
+			State.bCandidateStale = true;
 		}
 		break;
 	}
 	case EDreamUIPointerEventType::Down:
 	case EDreamUIPointerEventType::BeginDrag:
+		// A press in the frame its pointer arrived suppresses what it arrived at, not what it left.
+		RefreshCandidate(State);
 		// Standard tooltip behaviour everywhere: interacting with the thing dismisses its bubble.
 		State.bSuppressed = true;
 		HideUserTooltip(State);
 		break;
 	default:
 		break;
+	}
+}
+
+void UDreamUITooltipSubsystem::RefreshCandidate(FDreamUITooltipUserState& State)
+{
+	if (!State.bCandidateStale)
+	{
+		return;
+	}
+	State.bCandidateStale = false;
+	const UDreamPointerEventData* PointerEvent = State.LastPointerEvent.Get();
+	UDreamWidget* NewCandidate = PointerEvent != nullptr ? DreamUITooltipPolicy::ResolveTooltipSource(PointerEvent->EnterWidget) : nullptr;
+	// Navigation arms a tooltip too. The two arrive through the same enter/exit path, so the only difference worth
+	// keeping is WHERE the bubble goes: a pointer position is meaningless in navigation mode, and the bubble is placed
+	// against the focused widget.
+	const bool bIsNavigation = PointerEvent != nullptr && PointerEvent->InputType == EDreamUIPointerInputType::Navigation;
+	if (NewCandidate != State.Candidate.Get() || bIsNavigation != State.bArmedByNavigation)
+	{
+		State.Candidate = NewCandidate;
+		State.bArmedByNavigation = bIsNavigation;
+		State.HoverSeconds = 0.0f;
+		// A press suppresses only the CURRENT target; moving to a new one re-arms.
+		State.bSuppressed = false;
+		if (State.ShownFor.IsValid() && State.ShownFor.Get() != NewCandidate)
+		{
+			HideUserTooltip(State);
+			State.Candidate = NewCandidate;
+			State.bArmedByNavigation = bIsNavigation;
+		}
 	}
 }
 
@@ -239,6 +264,7 @@ void UDreamUITooltipSubsystem::Tick(float DeltaTime)
 	{
 		if (FDreamUITooltipUserState* State = UserStates.Find(UserIndex))
 		{
+			RefreshCandidate(*State);
 			TickUser(*State, RealDeltaSeconds);
 		}
 	}
@@ -314,6 +340,8 @@ void UDreamUITooltipSubsystem::ShowTooltipFor(UDreamWidget* InSource)
 	State.bArmedByNavigation = true;
 	State.HoverSeconds = 0.0f;
 	State.bSuppressed = false;
+	// Asked for by name, over whatever the pointer's enters and exits this frame said: the next of those re-arms.
+	State.bCandidateStale = false;
 	ShowFor(State, InSource);
 }
 

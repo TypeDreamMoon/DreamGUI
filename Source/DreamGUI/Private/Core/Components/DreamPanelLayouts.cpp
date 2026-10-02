@@ -3,6 +3,8 @@
 
 #include "Core/Components/DreamPanelLayouts.h"
 #include "DreamGUI.h"
+#include "Core/DreamUIManager.h"
+#include "Core/Components/DreamCanvas.h"
 #include "Core/Components/DreamImage.h"
 #include "Core/Components/DreamScrollBoxInputHandler.h"
 #include "Interaction/DreamContentWidget.h"
@@ -233,7 +235,16 @@ namespace DreamPanelLayoutLocal
 		return Result;
 	}
 
-	static void AddSpanRequirement(TArray<float>& Tracks, int32 Start, int32 Span, float RequiredSize, float Spacing)
+	/**
+	 * SGridPanel::ComputeDesiredCellSizes's rule for one child: what it needs, less the gaps it straddles,
+	 * split evenly over the tracks it spans, and each of those tracks raised to at least that share.
+	 *
+	 * Every track ends up the largest share any child asked of it, so the order the children are visited
+	 * in cannot change the answer. The rule this replaces spread only a span's SHORTFALL against the tracks
+	 * as they stood, which made a spanning child's effect depend on which siblings had been counted before
+	 * it -- and the ZOrder re-sort ahead of placement reorders exactly that.
+	 */
+	static void AddSpanContribution(TArray<float>& Tracks, int32 Start, int32 Span, float RequiredSize, float Spacing)
 	{
 		if (Tracks.IsEmpty())
 		{
@@ -241,15 +252,10 @@ namespace DreamPanelLayoutLocal
 		}
 		Start = FMath::Clamp(Start, 0, Tracks.Num() - 1);
 		Span = FMath::Clamp(Span, 1, Tracks.Num() - Start);
-		const float CurrentSize = Sum(Tracks, Start, Span) + NonNegative(Spacing) * (Span - 1);
-		const float MissingSize = NonNegative(RequiredSize) - CurrentSize;
-		if (MissingSize > 0.0f)
+		const float Share = FMath::Max(0.0f, NonNegative(RequiredSize) - NonNegative(Spacing) * (Span - 1)) / Span;
+		for (int32 Index = Start; Index < Start + Span; ++Index)
 		{
-			const float PerTrack = MissingSize / Span;
-			for (int32 Index = Start; Index < Start + Span; ++Index)
-			{
-				Tracks[Index] += PerTrack;
-			}
+			Tracks[Index] = FMath::Max(Tracks[Index], Share);
 		}
 	}
 
@@ -689,6 +695,10 @@ TArray<UDreamWidget*> UDreamPanelLayoutBase::CollectLayoutChildren(bool bEnsureS
 	{
 		return Result;
 	}
+	// Opted-out children are handed back their authored rects after the walk, not during it: a restore
+	// announces the new size to whatever listens, and that code can add or take away a child of this very
+	// panel, which would change the array under the walk.
+	TArray<UDreamPanelSlot*, TInlineAllocator<4>> SlotsToRelease;
 	for (UDreamWidget* Child : Widget->GetChildren())
 	{
 		if (!IsValid(Child))
@@ -703,14 +713,7 @@ TArray<UDreamWidget*> UDreamPanelLayoutBase::CollectLayoutChildren(bool bEnsureS
 			// A collapsed child keeps whatever this panel last gave it, and is re-laid-out when it reappears.
 			if (bIgnored && bEnsureSlots && IsValid(ExistingSlot))
 			{
-				if (ExistingSlot->HasLayoutGeometryApplied())
-				{
-					ExistingSlot->RestoreAuthoredGeometry();
-				}
-				else
-				{
-					ExistingSlot->CaptureAuthoredGeometry(true);
-				}
+				SlotsToRelease.Add(ExistingSlot);
 			}
 			continue;
 		}
@@ -720,6 +723,28 @@ TArray<UDreamWidget*> UDreamPanelLayoutBase::CollectLayoutChildren(bool bEnsureS
 		}
 		Result.Add(Child);
 	}
+	if (SlotsToRelease.IsEmpty())
+	{
+		return Result;
+	}
+	for (UDreamPanelSlot* Slot : SlotsToRelease)
+	{
+		const UDreamWidget* Child = IsValid(Slot) ? Slot->GetWidget() : nullptr;
+		if (!IsValid(Child) || Child->GetParent() != Widget)
+		{
+			continue;//taken away by the code an earlier restore notified
+		}
+		if (Slot->HasLayoutGeometryApplied())
+		{
+			Slot->RestoreAuthoredGeometry();
+		}
+		else
+		{
+			Slot->CaptureAuthoredGeometry(true);
+		}
+	}
+	// Whatever that code took away is no longer this panel's to arrange.
+	Result.RemoveAll([Widget](const UDreamWidget* Child) { return !IsValid(Child) || Child->GetParent() != Widget; });
 	return Result;
 }
 
@@ -806,15 +831,22 @@ FVector2D UDreamPanelLayoutBase::GetDesiredSize(UDreamWidget* Child,
 			// The constraint reaches the child's own panel here, and this is the hop that matters: a wrap
 			// box asked how tall it wants to be now learns how wide it is allowed to be first.
 			const FVector2f LayoutDesired = LayoutContainer->GetLayoutPreferredSize(WidthSpec, HeightSpec);
-			if (const UDreamLayoutContainerSizeBox* SizeBox = Cast<UDreamLayoutContainerSizeBox>(LayoutContainer))
+			if (const UDreamPanelLayoutBase* ChildPanel = Cast<UDreamPanelLayoutBase>(LayoutContainer))
 			{
-				if (SizeBox->bOverrideWidth) SetOverride(Desired.X, bWidthOverridden, LayoutDesired.X);
-				else if (LayoutDesired.X > 0.0f) Accumulate(Desired.X, bWidthOverridden, LayoutDesired.X);
-				if (SizeBox->bOverrideHeight) SetOverride(Desired.Y, bHeightOverridden, LayoutDesired.Y);
-				else if (LayoutDesired.Y > 0.0f) Accumulate(Desired.Y, bHeightOverridden, LayoutDesired.Y);
+				// A panel's answer is a claim, zero included. A list whose rows are all collapsed wants no
+				// room, as an SVerticalBox with nothing visible in it does; reading its zero as "no opinion"
+				// fell back to the authored rect, so the list went on holding its designer height open while
+				// the same list with a pixel of padding collapsed to that pixel. The one axis that abstains
+				// says so itself (AbstainsFromMeasure).
+				const UDreamLayoutContainerSizeBox* SizeBox = Cast<UDreamLayoutContainerSizeBox>(ChildPanel);
+				if (SizeBox != nullptr && SizeBox->bOverrideWidth) SetOverride(Desired.X, bWidthOverridden, LayoutDesired.X);
+				else if (!ChildPanel->AbstainsFromMeasure(EDreamPanelOrientation::Horizontal)) Accumulate(Desired.X, bWidthOverridden, LayoutDesired.X);
+				if (SizeBox != nullptr && SizeBox->bOverrideHeight) SetOverride(Desired.Y, bHeightOverridden, LayoutDesired.Y);
+				else if (!ChildPanel->AbstainsFromMeasure(EDreamPanelOrientation::Vertical)) Accumulate(Desired.Y, bHeightOverridden, LayoutDesired.Y);
 			}
 			else
 			{
+				// Any other container states nothing with a zero (UDreamLayout::GetLayoutPreferredSize).
 				if (LayoutDesired.X > 0.0f) Accumulate(Desired.X, bWidthOverridden, LayoutDesired.X);
 				if (LayoutDesired.Y > 0.0f) Accumulate(Desired.Y, bHeightOverridden, LayoutDesired.Y);
 			}
@@ -828,16 +860,42 @@ FVector2D UDreamPanelLayoutBase::GetDesiredSize(UDreamWidget* Child,
 		}
 		if (!bHasLayoutContainer)
 		{
+			// A content child stretched across this widget is as long as the widget's extent times its anchor
+			// span, plus its size delta -- the delta being its two insets, negated. So it is offered that much
+			// of what the widget is offered, and the widget needs the child's answer with the insets added back
+			// and the span divided out: a label inset 12 either side of its button wants the button 24 wider
+			// than itself, and measuring the button at the label's own width squeezed the label by exactly its
+			// insets. A point-anchored child does not follow the widget's size; it is asked with the widget's
+			// constraint and taken at its word, as before.
+			auto StretchedSpec = [](const FDreamMeasureSpec& InSpec, double InSpan, double InDelta)
+			{
+				return InSpec.IsBounded()
+					? FDreamMeasureSpec::AtMost(static_cast<float>(FMath::Max(0.0, InSpec.Value * InSpan + InDelta)))
+					: FDreamMeasureSpec::Undefined();
+			};
+			auto NeededAlong = [](double InChildDesired, bool bInStretched, double InSpan, double InDelta)
+			{
+				// An abstention stays one, and so does an answer the insets more than cancel.
+				return bInStretched && InChildDesired >= 0.0 ? (InChildDesired - InDelta) / InSpan : InChildDesired;
+			};
 			for (UDreamWidget* ContentChild : Widget->GetChildren())
 			{
 				if (IsValid(ContentChild) && ContentChild->GetLayoutVisibleInHierarchy()
 					&& !ContentChild->GetIgnoreLayout())
 				{
-					// A plain widget is not a panel and spends none of the space itself, so its content
-					// children inherit the constraint unchanged.
-					const FVector2D ContentDesired = GetIntrinsicSize(ContentChild, WidthSpec, HeightSpec, Visited);
-					Accumulate(Desired.X, bWidthOverridden, ContentDesired.X);
-					Accumulate(Desired.Y, bHeightOverridden, ContentDesired.Y);
+					const FDreamUIAnchorData& ContentAnchors = ContentChild->GetAnchorData();
+					const double SpanX = ContentAnchors.AnchorMax.X - ContentAnchors.AnchorMin.X;
+					const double SpanY = ContentAnchors.AnchorMax.Y - ContentAnchors.AnchorMin.Y;
+					const bool bStretchedX = SpanX > UE_KINDA_SMALL_NUMBER;
+					const bool bStretchedY = SpanY > UE_KINDA_SMALL_NUMBER;
+					const FVector2D ContentDesired = GetIntrinsicSize(ContentChild,
+						bStretchedX ? StretchedSpec(WidthSpec, SpanX, ContentAnchors.SizeDelta.X) : WidthSpec,
+						bStretchedY ? StretchedSpec(HeightSpec, SpanY, ContentAnchors.SizeDelta.Y) : HeightSpec,
+						Visited);
+					Accumulate(Desired.X, bWidthOverridden,
+						static_cast<float>(NeededAlong(ContentDesired.X, bStretchedX, SpanX, ContentAnchors.SizeDelta.X)));
+					Accumulate(Desired.Y, bHeightOverridden,
+						static_cast<float>(NeededAlong(ContentDesired.Y, bStretchedY, SpanY, ContentAnchors.SizeDelta.Y)));
 				}
 			}
 		}
@@ -874,15 +932,26 @@ FVector2D UDreamPanelLayoutBase::GetDesiredSize(UDreamWidget* Child,
 	};
 
 	TSet<const UDreamWidget*> Visited;
+	// When this panel is the one arranging, anything below that answers from a widget's own current size
+	// is noted against Child, whose size the arrange is about to decide (FCurrentSizeReadScope).
+	TOptional<FDreamLayoutPassContext::FMeasuredChildScope> MeasuredChild;
 	if (LayoutContext != nullptr)
 	{
 		LayoutContext->NoteDesiredSizeComputed();
+		MeasuredChild.Emplace(*LayoutContext, Panel, Child);
 	}
 	FVector2D Result = GetIntrinsicSize(Child, InWidthSpec, InHeightSpec, Visited);
 	// The legacy "applied but never snapshotted" fallback, at the measure root only -- see the
 	// comment inside the lambda for why it must not run one level down.
-	if (Result.X < 0.0) Result.X = Child->GetWidth();
-	if (Result.Y < 0.0) Result.Y = Child->GetHeight();
+	if (Result.X < 0.0 || Result.Y < 0.0)
+	{
+		if (Result.X < 0.0) Result.X = Child->GetWidth();
+		if (Result.Y < 0.0) Result.Y = Child->GetHeight();
+		if (LayoutContext != nullptr)
+		{
+			LayoutContext->NoteCurrentSizeRead();
+		}
+	}
 	Result = DreamPanelLayoutLocal::CleanSize(Result);
 	// Per-slot Min/MaxDesiredSize, applied here so that every panel gets them and none has to implement
 	// them: this is the one function any panel's measurement goes through. Before the slot carried them,
@@ -906,7 +975,8 @@ FVector2D UDreamPanelLayoutBase::GetDesiredSize(UDreamWidget* Child,
 
 void UDreamPanelLayoutBase::ApplyChildRect(UDreamWidget* Child, const FVector2D& Position, const FVector2D& Size, bool bForceFill,
 	TOptional<EDreamPanelHorizontalAlignment> InHorizontalOverride,
-	TOptional<EDreamPanelVerticalAlignment> InVerticalOverride) const
+	TOptional<EDreamPanelVerticalAlignment> InVerticalOverride,
+	const FMargin& InOuterPadding) const
 {
 	UDreamWidget* Panel = GetWidget();
 	if (!IsValid(Panel) || !IsValid(Child))
@@ -923,41 +993,59 @@ void UDreamPanelLayoutBase::ApplyChildRect(UDreamWidget* Child, const FVector2D&
 	const FVector2D CleanPosition(
 		DreamPanelLayoutLocal::FiniteOrZero(Position.X), DreamPanelLayoutLocal::FiniteOrZero(Position.Y));
 	const FVector2D CleanAreaSize = DreamPanelLayoutLocal::CleanSize(Size);
-	const FVector2D InnerPosition = CleanPosition + FVector2D(
-		DreamPanelLayoutLocal::FiniteOrZero(Slot->Padding.Left), DreamPanelLayoutLocal::FiniteOrZero(Slot->Padding.Top));
+	// The margins the child is placed within: its slot's padding, and whatever padding of the panel's own Slate
+	// would hold as this slot's (InOuterPadding, the Border's).
+	const float PadLeft = DreamPanelLayoutLocal::FiniteOrZero(Slot->Padding.Left) + DreamPanelLayoutLocal::FiniteOrZero(InOuterPadding.Left);
+	const float PadTop = DreamPanelLayoutLocal::FiniteOrZero(Slot->Padding.Top) + DreamPanelLayoutLocal::FiniteOrZero(InOuterPadding.Top);
+	const float PadRight = DreamPanelLayoutLocal::FiniteOrZero(Slot->Padding.Right) + DreamPanelLayoutLocal::FiniteOrZero(InOuterPadding.Right);
+	const float PadBottom = DreamPanelLayoutLocal::FiniteOrZero(Slot->Padding.Bottom) + DreamPanelLayoutLocal::FiniteOrZero(InOuterPadding.Bottom);
+	const FVector2D InnerPosition = CleanPosition + FVector2D(PadLeft, PadTop);
 	const FVector2D InnerSize(
-		FMath::Max(0.0, CleanAreaSize.X - DreamPanelLayoutLocal::HorizontalPadding(Slot->Padding)),
-		FMath::Max(0.0, CleanAreaSize.Y - DreamPanelLayoutLocal::VerticalPadding(Slot->Padding)));
+		FMath::Max(0.0, CleanAreaSize.X - (PadLeft + PadRight)),
+		FMath::Max(0.0, CleanAreaSize.Y - (PadTop + PadBottom)));
+	const EDreamPanelHorizontalAlignment HorizontalAlignment = InHorizontalOverride.Get(Slot->HorizontalAlignment);
+	const EDreamPanelVerticalAlignment VerticalAlignment = InVerticalOverride.Get(Slot->VerticalAlignment);
+	const bool bFillsHorizontally = bForceFill || HorizontalAlignment == EDreamPanelHorizontalAlignment::Fill;
+	const bool bFillsVertically = bForceFill || VerticalAlignment == EDreamPanelVerticalAlignment::Fill;
 	// The inner box is what the child is actually being offered, so that is the constraint it is measured
 	// under. This reaches every panel at once -- Overlay, SizeBox, SafeZone, WidgetSwitcher and the grids
 	// all place through here -- and is what makes a non-Fill wrap box wrap against the room it is getting
-	// instead of against nothing at all.
-	const FVector2D Desired = DreamPanelLayoutLocal::CleanSize(GetDesiredSize(Child,
-		FDreamMeasureSpec::AtMost(static_cast<float>(InnerSize.X)),
-		FDreamMeasureSpec::AtMost(static_cast<float>(InnerSize.Y))));
+	// instead of against nothing at all. An axis the child fills is not a ceiling but the size it is about
+	// to be given, and is stated as one: a child whose height follows its width (an aspect ratio set to
+	// WidthControlHeight) can only answer for the width it will have when it is told that width exactly.
+	const FDreamMeasureSpec WidthSpec = bFillsHorizontally
+		? FDreamMeasureSpec::Exactly(static_cast<float>(InnerSize.X))
+		: FDreamMeasureSpec::AtMost(static_cast<float>(InnerSize.X));
+	const FDreamMeasureSpec HeightSpec = bFillsVertically
+		? FDreamMeasureSpec::Exactly(static_cast<float>(InnerSize.Y))
+		: FDreamMeasureSpec::AtMost(static_cast<float>(InnerSize.Y));
+	const FVector2D Desired = DreamPanelLayoutLocal::CleanSize(GetDesiredSize(Child, WidthSpec, HeightSpec));
 
 	double Width = InnerSize.X;
 	double Height = InnerSize.Y;
 	double Left = InnerPosition.X;
 	double Top = InnerPosition.Y;
-	const EDreamPanelHorizontalAlignment HorizontalAlignment = InHorizontalOverride.Get(Slot->HorizontalAlignment);
-	const EDreamPanelVerticalAlignment VerticalAlignment = InVerticalOverride.Get(Slot->VerticalAlignment);
-	if (!bForceFill && HorizontalAlignment != EDreamPanelHorizontalAlignment::Fill)
+	// Centring is Slate's AlignChild arithmetic: the child centred in the WHOLE area, then moved by the
+	// difference between the two margins -- (Area - Child) / 2 + Pre - Post. Centring inside the padded box
+	// instead lands (Pre - Post) / 2 short of where UMG puts it. Both are worked out before CommitChildRect
+	// mirrors the rect, and the reflection of this one is exactly Slate's right-to-left answer, where the two
+	// margins trade places.
+	if (!bFillsHorizontally)
 	{
 		Width = FMath::Min(Desired.X, InnerSize.X);
 		switch (HorizontalAlignment)
 		{
-		case EDreamPanelHorizontalAlignment::Center: Left += (InnerSize.X - Width) * 0.5; break;
+		case EDreamPanelHorizontalAlignment::Center: Left = CleanPosition.X + (CleanAreaSize.X - Width) * 0.5 + PadLeft - PadRight; break;
 		case EDreamPanelHorizontalAlignment::Right: Left += InnerSize.X - Width; break;
 		default: break;
 		}
 	}
-	if (!bForceFill && VerticalAlignment != EDreamPanelVerticalAlignment::Fill)
+	if (!bFillsVertically)
 	{
 		Height = FMath::Min(Desired.Y, InnerSize.Y);
 		switch (VerticalAlignment)
 		{
-		case EDreamPanelVerticalAlignment::Center: Top += (InnerSize.Y - Height) * 0.5; break;
+		case EDreamPanelVerticalAlignment::Center: Top = CleanPosition.Y + (CleanAreaSize.Y - Height) * 0.5 + PadTop - PadBottom; break;
 		case EDreamPanelVerticalAlignment::Bottom: Top += InnerSize.Y - Height; break;
 		default: break;
 		}
@@ -1081,15 +1169,34 @@ void UDreamPanelLayoutBase::CalculateLayout()
 		}
 		return;
 	}
+	UDreamWidget* Panel = GetWidget();
 	if (bTrace)
 	{
-		UDreamWidget* Panel = GetWidget();
 		UE_LOG(DreamGUI, Log, TEXT("[LayoutTrace] %s (%s): arranging, panel size %s, %d children"),
 			*GetNameSafe(Panel), *GetClass()->GetName(),
 			*(IsValid(Panel) ? Panel->GetSize().ToString() : FString(TEXT("<none>"))),
 			IsValid(Panel) ? Panel->GetChildrenCount() : 0);
 	}
-	const FDreamFragment Fragment = Arrange();
+	// See bCurrentSizeRearrangePending: this arrange may be the one a previous arrange asked for.
+	const bool bAnsweringCurrentSizeReads = bCurrentSizeRearrangePending;
+	bCurrentSizeRearrangePending = false;
+	FDreamFragment Fragment;
+	TArray<UDreamWidget*> ResizedCurrentSizeReaders;
+	{
+		FDreamLayoutPassContext::FCurrentSizeReadScope CurrentSizeReads(Panel->GetLayoutPassContext(), Panel);
+		Fragment = Arrange();
+		// A child placed by an answer it gave from its own current size, and about to get a different size,
+		// was placed by a stale answer. Compared the way the setters compare, so this is exactly the set of
+		// children the commit below is going to resize.
+		for (const FDreamPanelChildRect& Rect : Fragment.Children)
+		{
+			if (IsValid(Rect.Child) && CurrentSizeReads.GetReaders().Contains(FObjectKey(Rect.Child))
+				&& (Rect.Child->GetWidth() != FMath::Max(0.0f, Rect.Size.X) || Rect.Child->GetHeight() != FMath::Max(0.0f, Rect.Size.Y)))
+			{
+				ResizedCurrentSizeReaders.Add(Rect.Child);
+			}
+		}
+	}
 	if (bTrace)
 	{
 		UE_LOG(DreamGUI, Log, TEXT("[LayoutTrace]   fragment has %d child rects"), Fragment.Children.Num());
@@ -1100,6 +1207,32 @@ void UDreamPanelLayoutBase::CalculateLayout()
 		}
 	}
 	CommitFragment(Fragment);
+	// The write stops its invalidation at this panel, which is right for layout output and wrong for these
+	// children: their desired size was read off the size they are only now leaving, so everything that
+	// measured them, this panel and its ancestors, has to measure again. UMG settles the same case a frame
+	// later, when SWrapBox::Tick and the text block's cached wrap width catch up with the new geometry;
+	// here it is the next pass of the same frame, and only once -- the arrange that answers this one does not
+	// ask again, so a measurement that never settles cannot run the pass cap.
+	if (!bAnsweringCurrentSizeReads && ResizedCurrentSizeReaders.Num() > 0)
+	{
+		bCurrentSizeRearrangePending = true;
+		for (UDreamWidget* Child : ResizedCurrentSizeReaders)
+		{
+			UDreamWidget::MarkLayoutForRebuild(Child);
+		}
+	}
+}
+
+FVector2f UDreamPanelLayoutBase::MeasureUnconstrained() const
+{
+	// What a panel publishes about itself places nothing, so a measurement down here that answers from a
+	// widget's own size is not one the arrange has to answer for (FCurrentSizeReadScope).
+	TOptional<FDreamLayoutPassContext::FCurrentSizeReadPause> Pause;
+	if (const UDreamWidget* Panel = GetWidget(); IsValid(Panel))
+	{
+		Pause.Emplace(Panel->GetLayoutPassContext());
+	}
+	return MeasureLayout(FDreamMeasureSpec::Undefined(), FDreamMeasureSpec::Undefined());
 }
 
 FDreamFragment UDreamPanelLayoutBase::Arrange()
@@ -1216,9 +1349,11 @@ void UDreamPanelLayoutBase::OnUnregister()
 {
 	if (UDreamWidget* Panel = GetWidget(); IsValid(Panel))
 	{
-		for (UDreamWidget* Child : Panel->GetChildren())
+		// A copy, as in CollectLayoutChildren: every restore below announces a new size to user code.
+		const TArray<UDreamWidget*, TInlineAllocator<16>> ChildrenAtStart(Panel->GetChildren());
+		for (UDreamWidget* Child : ChildrenAtStart)
 		{
-			if (IsValid(Child))
+			if (IsValid(Child) && Child->GetParent() == Panel)
 			{
 				if (UDreamPanelSlot* Slot = Child->GetPanelSlot(); IsValid(Slot))
 				{
@@ -1470,8 +1605,18 @@ FVector2f UDreamLayoutContainerCanvasPanel::MeasureLayout(const FDreamMeasureSpe
 		const FVector2D AnchorMax = Child->GetAnchorMax();
 		const bool bDockedHorizontally = AnchorMin.X == AnchorMax.X && (AnchorMin.X == 0.0 || AnchorMin.X == 1.0);
 		const bool bDockedVertically = AnchorMin.Y == AnchorMax.Y && (AnchorMin.Y == 0.0 || AnchorMin.Y == 1.0);
-		Result.X = FMath::Max(Result.X, static_cast<float>(Size.X + (bDockedHorizontally ? FMath::Abs(Child->GetAnchorOffsetLeft()) : 0.0)));
-		Result.Y = FMath::Max(Result.Y, static_cast<float>(Size.Y + (bDockedVertically ? FMath::Abs(Child->GetAnchorOffsetTop()) : 0.0)));
+		// SConstraintCanvas adds the docked offset to the child's size: the distance from the canvas edge
+		// the child is docked to, to the near edge of the child. That is the offset of the edge that FACES
+		// the anchor -- the left edge for a child docked left, the right edge for one docked right, and,
+		// anchors being measured from the bottom here, the top edge at 1 and the bottom edge at 0. The left
+		// and top edge offsets were read for every dock, and for a child docked right or bottom the far
+		// edge's offset already contains the child's own width or height, which was then counted twice.
+		const float DockedX = !bDockedHorizontally ? 0.0f
+			: (AnchorMin.X == 0.0 ? Child->GetAnchorOffsetLeft() : Child->GetAnchorOffsetRight());
+		const float DockedY = !bDockedVertically ? 0.0f
+			: (AnchorMin.Y == 0.0 ? Child->GetAnchorOffsetBottom() : Child->GetAnchorOffsetTop());
+		Result.X = FMath::Max(Result.X, static_cast<float>(Size.X + FMath::Abs(DockedX)));
+		Result.Y = FMath::Max(Result.Y, static_cast<float>(Size.Y + FMath::Abs(DockedY)));
 	}
 	return Result;
 }
@@ -1611,27 +1756,68 @@ FVector2f UDreamLayoutContainerStackBox::MeasureLayout(const FDreamMeasureSpec& 
 	const TArray<UDreamWidget*> LayoutChildren = CollectLayoutChildren(false);
 	const bool bHorizontal = Orientation == EDreamPanelOrientation::Horizontal;
 	const float Gap = DreamPanelLayoutLocal::NonNegative(Spacing);
+	auto MainPadding = [bHorizontal](const FMargin& InPadding)
+	{
+		return bHorizontal ? DreamPanelLayoutLocal::HorizontalPadding(InPadding) : DreamPanelLayoutLocal::VerticalPadding(InPadding);
+	};
+	auto CrossPadding = [bHorizontal](const FMargin& InPadding)
+	{
+		return bHorizontal ? DreamPanelLayoutLocal::VerticalPadding(InPadding) : DreamPanelLayoutLocal::HorizontalPadding(InPadding);
+	};
 	// The CROSS axis is the one a stack can constrain: every child gets the whole of it, less padding.
-	// The MAIN axis is not constrained per child -- the children share it by accumulating, and telling
-	// each one it may have the whole thing would be a lie every child after the first pays for.
-	const FDreamMeasureSpec CrossSpec = (bHorizontal ? InHeightSpec : InWidthSpec).ForChild(
-		bHorizontal ? DreamPanelLayoutLocal::VerticalPadding(Padding) : DreamPanelLayoutLocal::HorizontalPadding(Padding));
+	const FDreamMeasureSpec CrossSpec = (bHorizontal ? InHeightSpec : InWidthSpec).ForChild(CrossPadding(Padding));
+	// The MAIN axis is shared out, not handed down whole. An Auto child takes what it asks for, so it is
+	// asked with no limit there. A Fill child gets a share of what the Auto children leave, and when this
+	// stack has been told how long it may be, that share is a number it can be measured against --
+	// ArrangeChildren gives it exactly that much. A wrap box or a wrapping text in a Fill slot is as tall as
+	// its lines are at that width; asked with no limit, it answered from the width it had before, and
+	// nothing asked again once the arrange had handed it the real one. With no limit on the main axis there
+	// is nothing to share, and a Fill child is asked the way an Auto one is.
+	const FDreamMeasureSpec MainSpec = (bHorizontal ? InWidthSpec : InHeightSpec).ForChild(MainPadding(Padding));
+	auto Measure = [&](UDreamWidget* InChild, const UDreamPanelSlot* InSlot, const FDreamMeasureSpec& InChildMain)
+	{
+		const FDreamMeasureSpec ChildCross = CrossSpec.ForChild(CrossPadding(InSlot->Padding));
+		return bHorizontal
+			? GetDesiredSize(InChild, InChildMain, ChildCross)
+			: GetDesiredSize(InChild, ChildCross, InChildMain);
+	};
 	float Primary = Gap * FMath::Max(0, LayoutChildren.Num() - 1);
 	float Secondary = 0.0f;
+	float FillWeight = 0.0f;
+	bool bAnyShared = false;
+	auto AddDesired = [&](const UDreamPanelSlot* InSlot, const FVector2D& InDesired)
+	{
+		Primary += static_cast<float>(bHorizontal ? InDesired.X : InDesired.Y);
+		Secondary = FMath::Max(Secondary, static_cast<float>(bHorizontal ? InDesired.Y : InDesired.X) + CrossPadding(InSlot->Padding));
+	};
 	for (UDreamWidget* Child : LayoutChildren)
 	{
-		const UDreamPanelSlot* ChildSlot = GetSlot(Child);
-		const FDreamMeasureSpec ChildCross = CrossSpec.ForChild(bHorizontal
-			? DreamPanelLayoutLocal::VerticalPadding(ChildSlot->Padding)
-			: DreamPanelLayoutLocal::HorizontalPadding(ChildSlot->Padding));
-		const FVector2D Desired = bHorizontal
-			? GetDesiredSize(Child, FDreamMeasureSpec::Undefined(), ChildCross)
-			: GetDesiredSize(Child, ChildCross, FDreamMeasureSpec::Undefined());
 		const UDreamPanelSlot* Slot = GetSlot(Child);
-		Primary += static_cast<float>(bHorizontal ? Desired.X : Desired.Y)
-			+ (bHorizontal ? DreamPanelLayoutLocal::HorizontalPadding(Slot->Padding) : DreamPanelLayoutLocal::VerticalPadding(Slot->Padding));
-		Secondary = FMath::Max(Secondary, static_cast<float>(bHorizontal ? Desired.Y : Desired.X)
-			+ (bHorizontal ? DreamPanelLayoutLocal::VerticalPadding(Slot->Padding) : DreamPanelLayoutLocal::HorizontalPadding(Slot->Padding)));
+		Primary += MainPadding(Slot->Padding);
+		if (Slot->SizeRule == EDreamPanelSizeRule::Fill && MainSpec.IsBounded())
+		{
+			FillWeight += DreamPanelLayoutLocal::NonNegative(Slot->FillWeight);
+			bAnyShared = true;
+			continue;
+		}
+		AddDesired(Slot, Measure(Child, Slot, FDreamMeasureSpec::Undefined()));
+	}
+	if (bAnyShared)
+	{
+		// Primary is now exactly the fixed extent ArrangeChildren totals before it shares out the rest.
+		const float FillSpace = FMath::Max(0.0f, MainSpec.Value - Primary);
+		for (UDreamWidget* Child : LayoutChildren)
+		{
+			const UDreamPanelSlot* Slot = GetSlot(Child);
+			if (Slot->SizeRule != EDreamPanelSizeRule::Fill)
+			{
+				continue;
+			}
+			const float Share = FillWeight > UE_SMALL_NUMBER
+				? FillSpace * DreamPanelLayoutLocal::NonNegative(Slot->FillWeight) / FillWeight
+				: 0.0f;
+			AddDesired(Slot, Measure(Child, Slot, FDreamMeasureSpec::AtMost(Share)));
+		}
 	}
 	return bHorizontal
 		? FVector2f(Primary + DreamPanelLayoutLocal::HorizontalPadding(Padding), Secondary + DreamPanelLayoutLocal::VerticalPadding(Padding))
@@ -1653,14 +1839,22 @@ void UDreamLayoutContainerStackBox::ArrangeChildren()
 	// Where the spec chain STARTS. An arrange is the one moment a panel legitimately knows a real
 	// number -- its parent has already given it a rect -- so this is where a constraint can be minted
 	// rather than inherited. Everything a child is asked from here down is asked inside it, which is what
-	// stops a wrap box answering "how tall am I" against the width it had on the previous pass.
-	const FDreamMeasureSpec CrossSpec = FDreamMeasureSpec::AtMost(AvailableSecondary);
+	// stops a wrap box answering "how tall am I" against the width it had on the previous pass. A child
+	// that fills across is told the cross extent exactly, because that is the extent it is about to get:
+	// one whose length follows its breadth -- an aspect ratio set to WidthControlHeight in a vertical box
+	// -- can only answer for the breadth it will have.
 	auto ChildCrossSpec = [&](const UDreamPanelSlot* InSlot)
 	{
-		return CrossSpec.ForChild(bHorizontal
+		const float CrossRoom = FMath::Max(0.0f, AvailableSecondary - (bHorizontal
 			? DreamPanelLayoutLocal::VerticalPadding(InSlot->Padding)
-			: DreamPanelLayoutLocal::HorizontalPadding(InSlot->Padding));
+			: DreamPanelLayoutLocal::HorizontalPadding(InSlot->Padding)));
+		const bool bFillsAcross = bHorizontal
+			? InSlot->VerticalAlignment == EDreamPanelVerticalAlignment::Fill
+			: InSlot->HorizontalAlignment == EDreamPanelHorizontalAlignment::Fill;
+		return bFillsAcross ? FDreamMeasureSpec::Exactly(CrossRoom) : FDreamMeasureSpec::AtMost(CrossRoom);
 	};
+	// Asked of Auto children only. A Fill child's length is its share of the room the Auto ones leave,
+	// whatever it would ask for, and ApplyChildRect measures it inside that share.
 	auto MeasureChild = [&](UDreamWidget* InChild, const UDreamPanelSlot* InSlot)
 	{
 		const FDreamMeasureSpec Cross = ChildCrossSpec(InSlot);
@@ -1674,7 +1868,6 @@ void UDreamLayoutContainerStackBox::ArrangeChildren()
 	for (UDreamWidget* Child : LayoutChildren)
 	{
 		const UDreamPanelSlot* Slot = GetSlot(Child);
-		const FVector2D Desired = MeasureChild(Child, Slot);
 		const float SlotPadding = bHorizontal
 			? DreamPanelLayoutLocal::HorizontalPadding(Slot->Padding)
 			: DreamPanelLayoutLocal::VerticalPadding(Slot->Padding);
@@ -1685,6 +1878,7 @@ void UDreamLayoutContainerStackBox::ArrangeChildren()
 		}
 		else
 		{
+			const FVector2D Desired = MeasureChild(Child, Slot);
 			FixedPrimary += static_cast<float>(bHorizontal ? Desired.X : Desired.Y);
 		}
 	}
@@ -1694,13 +1888,21 @@ void UDreamLayoutContainerStackBox::ArrangeChildren()
 	for (UDreamWidget* Child : LayoutChildren)
 	{
 		const UDreamPanelSlot* Slot = GetSlot(Child);
-		const FVector2D Desired = MeasureChild(Child, Slot);
 		const float PrimaryPadding = bHorizontal
 			? DreamPanelLayoutLocal::HorizontalPadding(Slot->Padding)
 			: DreamPanelLayoutLocal::VerticalPadding(Slot->Padding);
-		const float ContentPrimary = Slot->SizeRule == EDreamPanelSizeRule::Fill
-			? (FillWeight > UE_SMALL_NUMBER ? FillContentSpace * DreamPanelLayoutLocal::NonNegative(Slot->FillWeight) / FillWeight : 0.0f)
-			: static_cast<float>(bHorizontal ? Desired.X : Desired.Y);
+		float ContentPrimary = 0.0f;
+		if (Slot->SizeRule == EDreamPanelSizeRule::Fill)
+		{
+			ContentPrimary = FillWeight > UE_SMALL_NUMBER
+				? FillContentSpace * DreamPanelLayoutLocal::NonNegative(Slot->FillWeight) / FillWeight
+				: 0.0f;
+		}
+		else
+		{
+			const FVector2D Desired = MeasureChild(Child, Slot);
+			ContentPrimary = static_cast<float>(bHorizontal ? Desired.X : Desired.Y);
+		}
 		const float SlotPrimary = FMath::Max(0.0f, ContentPrimary + PrimaryPadding);
 		if (bHorizontal)
 		{
@@ -1754,9 +1956,15 @@ FVector2f UDreamLayoutContainerWrapBox::MeasureLayout(const FDreamMeasureSpec& I
 	const float OwnPrimaryFallback = IsValid(GetWidget())
 		? FMath::Max(0.0f, (bHorizontal ? GetWidget()->GetWidth() : GetWidget()->GetHeight()) - PrimaryPadding)
 		: 0.0f;
+	const FDreamMeasureSpec PrimarySpec = (bHorizontal ? InWidthSpec : InHeightSpec).ForChild(PrimaryPadding);
 	const float AvailablePrimary = bExplicitWrapSize
 		? DreamPanelLayoutLocal::NonNegative(WrapSize)
-		: (bHorizontal ? InWidthSpec : InHeightSpec).ForChild(PrimaryPadding).ResolveAvailable(OwnPrimaryFallback);
+		: PrimarySpec.ResolveAvailable(OwnPrimaryFallback);
+	if (!bExplicitWrapSize && !PrimarySpec.IsBounded() && IsValid(GetWidget()))
+	{
+		// The line length just came from this box's own size: whoever is arranging it has to know.
+		GetWidget()->GetLayoutPassContext().NoteCurrentSizeRead();
+	}
 	// Children are measured inside the line, so a child that is itself a wrap box wraps against the room
 	// this one has rather than against its own last width.
 	const FDreamMeasureSpec LineSpec = FDreamMeasureSpec::AtMost(AvailablePrimary);
@@ -1764,6 +1972,10 @@ FVector2f UDreamLayoutContainerWrapBox::MeasureLayout(const FDreamMeasureSpec& I
 	float Across = 0.0f;
 	float LineThickness = 0.0f;
 	float MaxAlong = 0.0f;
+	// Counted, not inferred from Along: an item can be nothing long, and a line holding only that is still
+	// a line with an item on it -- the test ArrangeChildren makes, which the two must share or the box
+	// arranges more lines than it measured room for.
+	int32 ItemsOnLine = 0;
 	bool bBreakBeforeNext = false;
 	for (UDreamWidget* Child : CollectLayoutChildren(false))
 	{
@@ -1783,11 +1995,12 @@ FVector2f UDreamLayoutContainerWrapBox::MeasureLayout(const FDreamMeasureSpec& I
 		const bool bWantsWholeLine = Slot->FillSpanWhenLessThan > 0.0f && AvailablePrimary < Slot->FillSpanWhenLessThan;
 		// UWrapBoxSlot::bForceNewLine breaks before this child whatever room is left. Unlike the span
 		// rule it says nothing about the child AFTER it, so it is not fed into bBreakBeforeNext.
-		if (Along > 0.0f && (bBreakBeforeNext || bWantsWholeLine || Slot->bForceNewLine || Along + ItemAlong > AvailablePrimary))
+		if (ItemsOnLine > 0 && (bBreakBeforeNext || bWantsWholeLine || Slot->bForceNewLine || Along + ItemAlong > AvailablePrimary))
 		{
 			Along = 0.0f;
 			Across += LineThickness + BetweenLineGap;
 			LineThickness = 0.0f;
+			ItemsOnLine = 0;
 		}
 		bBreakBeforeNext = bWantsWholeLine;
 		if (bWantsWholeLine)
@@ -1797,6 +2010,7 @@ FVector2f UDreamLayoutContainerWrapBox::MeasureLayout(const FDreamMeasureSpec& I
 		MaxAlong = FMath::Max(MaxAlong, Along + ItemAlong);
 		Along += ItemAlong + LineGap;
 		LineThickness = FMath::Max(LineThickness, ItemAcross);
+		++ItemsOnLine;
 	}
 	const float TotalAlong = MaxAlong + PrimaryPadding;
 	const float TotalAcross = Across + LineThickness + CrossPadding;
@@ -1880,28 +2094,25 @@ void UDreamLayoutContainerWrapBox::ArrangeChildren()
 	float Across = CrossPaddingStart;
 	for (const FWrapLine& Line : Lines)
 	{
-		// UWrapBoxSlot::bFillEmptySpace: the room the line did not use is split evenly between the
-		// children on it that asked for it. Nothing asks by default, so a wrap box with no configured
-		// slots lays out exactly as it did before.
+		// UWrapBoxSlot::bFillEmptySpace, as SWrapBox applies it: the room the line did not use goes to the
+		// LAST child on it, and only if that child asked for it. A slot that asks from anywhere else on
+		// the line keeps its own length -- UMG reads the flag in FinalizeLine for the line's last child
+		// alone. Nothing asks by default, so a wrap box with no configured slots lays out as it always has.
 		float LineUsed = LineGap * FMath::Max(0, Line.Items.Num() - 1);
-		int32 FillCount = 0;
 		for (const FWrapItem& Item : Line.Items)
 		{
 			LineUsed += Item.Along;
-			if (Item.bFillEmptySpace) ++FillCount;
 		}
-		const float FillShare = FillCount > 0
-			? FMath::Max(0.0f, AvailablePrimary - LineUsed) / static_cast<float>(FillCount)
-			: 0.0f;
+		const float Slack = FMath::Max(0.0f, AvailablePrimary - LineUsed);
+		const bool bLastFills = Line.Items.Num() > 0 && Line.Items.Last().bFillEmptySpace;
 		float Along = PrimaryPaddingStart;
 		// UWrapBox::HorizontalAlignment: where a line that did not fill the wrap length sits inside it.
 		// UMG offers it for a horizontal box only and so does this -- in a vertical box the lines are
 		// columns and there is no horizontal line length for the value to describe. Fill has no
-		// line-level meaning either: a line is filled by the slots on it asking to, which is what the
-		// FillCount branch above just spent the slack on, so both Fill and Left start at the edge.
-		if (bHorizontal && FillCount == 0)
+		// line-level meaning either: a line is filled by its last slot asking to, which is what the
+		// bLastFills branch spends the slack on, so both Fill and Left start at the edge.
+		if (bHorizontal && !bLastFills)
 		{
-			const float Slack = FMath::Max(0.0f, AvailablePrimary - LineUsed);
 			switch (HorizontalAlignment)
 			{
 			case EDreamPanelHorizontalAlignment::Center: Along += Slack * 0.5f; break;
@@ -1909,9 +2120,10 @@ void UDreamLayoutContainerWrapBox::ArrangeChildren()
 			default: break;
 			}
 		}
-		for (const FWrapItem& Item : Line.Items)
+		for (int32 ItemIndex = 0; ItemIndex < Line.Items.Num(); ++ItemIndex)
 		{
-			const float ItemAlong = Item.bFillEmptySpace ? Item.Along + FillShare : Item.Along;
+			const FWrapItem& Item = Line.Items[ItemIndex];
+			const float ItemAlong = bLastFills && ItemIndex == Line.Items.Num() - 1 ? Item.Along + Slack : Item.Along;
 			ApplyChildRect(Item.Widget,
 				bHorizontal ? FVector2D(Along, Across) : FVector2D(Across, Along),
 				bHorizontal ? FVector2D(ItemAlong, Line.Thickness) : FVector2D(Line.Thickness, ItemAlong));
@@ -1947,9 +2159,9 @@ FVector2f UDreamLayoutContainerGridPanel::MeasureLayout(const FDreamMeasureSpec&
 	{
 		const UDreamPanelSlot* Slot = GetSlot(Child);
 		const FVector2D Desired = GetDesiredSize(Child);
-		DreamPanelLayoutLocal::AddSpanRequirement(Columns, Slot->Column, Slot->ColumnSpan,
+		DreamPanelLayoutLocal::AddSpanContribution(Columns, Slot->Column, Slot->ColumnSpan,
 			static_cast<float>(Desired.X) + DreamPanelLayoutLocal::HorizontalPadding(Slot->Padding), Spacing.X);
-		DreamPanelLayoutLocal::AddSpanRequirement(Rows, Slot->Row, Slot->RowSpan,
+		DreamPanelLayoutLocal::AddSpanContribution(Rows, Slot->Row, Slot->RowSpan,
 			static_cast<float>(Desired.Y) + DreamPanelLayoutLocal::VerticalPadding(Slot->Padding), Spacing.Y);
 	}
 	return FVector2f(
@@ -1976,9 +2188,9 @@ void UDreamLayoutContainerGridPanel::ArrangeChildren()
 	{
 		const UDreamPanelSlot* Slot = GetSlot(Child);
 		const FVector2D Desired = GetDesiredSize(Child);
-		DreamPanelLayoutLocal::AddSpanRequirement(DesiredColumns, Slot->Column, Slot->ColumnSpan,
+		DreamPanelLayoutLocal::AddSpanContribution(DesiredColumns, Slot->Column, Slot->ColumnSpan,
 			static_cast<float>(Desired.X) + DreamPanelLayoutLocal::HorizontalPadding(Slot->Padding), Spacing.X);
-		DreamPanelLayoutLocal::AddSpanRequirement(DesiredRows, Slot->Row, Slot->RowSpan,
+		DreamPanelLayoutLocal::AddSpanContribution(DesiredRows, Slot->Row, Slot->RowSpan,
 			static_cast<float>(Desired.Y) + DreamPanelLayoutLocal::VerticalPadding(Slot->Padding), Spacing.Y);
 	}
 
@@ -2091,6 +2303,15 @@ FVector2f UDreamLayoutContainerSizeBox::MeasureLayout(const FDreamMeasureSpec& I
 	UDreamWidget* Content = DreamPanelLayoutLocal::GetFirstValidChild(GetWidget());
 	const bool bContentParticipates = IsValid(Content) && Content->GetLayoutVisibleInHierarchy()
 		&& !Content->GetIgnoreLayout();
+	// SBox::ComputeDesiredSize: while the content is COLLAPSED the box wants no room at all, overrides and
+	// minimums included -- there is nothing for them to size. That is the one case. A box with no content
+	// keeps them, in UMG too, because its null content is hidden rather than collapsed: the empty size box
+	// used as a spacer. So does a box whose content places itself (bIgnoreLayout), which is still there to
+	// be sized around; it is measured below as if the box were empty.
+	if (IsValid(Content) && !Content->GetLayoutVisibleInHierarchy())
+	{
+		return FVector2f::ZeroVector;
+	}
 	// An override is an EXACTLY for the content: the box will be that size whatever the content wants,
 	// so that is the space the content actually gets. Without one the content inherits what this box was
 	// offered, less the paddings.
@@ -2151,9 +2372,12 @@ FDreamLayoutControlAnchorData UDreamLayoutContainerSizeBox::GetLayoutControlAnch
 void UDreamLayoutContainerSizeBox::ArrangeChildren()
 {
 	UDreamWidget* Content = nullptr;
-	for (UDreamWidget* Child : GetWidget()->GetChildren())
+	// A copy of the children: restoring a surplus child's authored rect announces its new size to user
+	// code, which may add or take away children of this very box (see CollectLayoutChildren).
+	const TArray<UDreamWidget*, TInlineAllocator<16>> ChildrenAtStart(GetWidget()->GetChildren());
+	for (UDreamWidget* Child : ChildrenAtStart)
 	{
-		if (!IsValid(Child))
+		if (!IsValid(Child) || Child->GetParent() != GetWidget())
 		{
 			continue;
 		}
@@ -2176,7 +2400,7 @@ void UDreamLayoutContainerSizeBox::ArrangeChildren()
 		// for layout. UDreamPanelLayoutBase::OnUnregister un-suppresses them when the panel goes.
 		Child->SetLayoutVisibilitySuppressed(true);
 	}
-	if (IsValid(Content))
+	if (IsValid(Content) && Content->GetParent() == GetWidget())
 	{
 		if (Content->GetLayoutVisibleInHierarchy() && !Content->GetIgnoreLayout())
 		{
@@ -2229,12 +2453,12 @@ void UDreamLayoutContainerSizeBox::ArrangeContentWithinAspectRatio(UDreamWidget*
 	const FVector2D AreaSize(
 		FMath::Max(0.0, InBoxSize.X - DreamPanelLayoutLocal::HorizontalPadding(Slot->Padding)),
 		FMath::Max(0.0, InBoxSize.Y - DreamPanelLayoutLocal::VerticalPadding(Slot->Padding)));
-	const FVector2D Desired = DreamPanelLayoutLocal::CleanSize(GetDesiredSize(InContent,
-		FDreamMeasureSpec::AtMost(static_cast<float>(AreaSize.X)),
-		FDreamMeasureSpec::AtMost(static_cast<float>(AreaSize.Y))));
-
 	const bool bFillHorizontally = Slot->HorizontalAlignment == EDreamPanelHorizontalAlignment::Fill;
 	const bool bFillVertically = Slot->VerticalAlignment == EDreamPanelVerticalAlignment::Fill;
+	// Measured as ApplyChildRect measures: a filled axis is the size the content gets, not a ceiling.
+	const FVector2D Desired = DreamPanelLayoutLocal::CleanSize(GetDesiredSize(InContent,
+		bFillHorizontally ? FDreamMeasureSpec::Exactly(static_cast<float>(AreaSize.X)) : FDreamMeasureSpec::AtMost(static_cast<float>(AreaSize.X)),
+		bFillVertically ? FDreamMeasureSpec::Exactly(static_cast<float>(AreaSize.Y)) : FDreamMeasureSpec::AtMost(static_cast<float>(AreaSize.Y))));
 	FVector2D Size(
 		bFillHorizontally ? AreaSize.X : FMath::Min(Desired.X, AreaSize.X),
 		bFillVertically ? AreaSize.Y : FMath::Min(Desired.Y, AreaSize.Y));
@@ -2242,17 +2466,25 @@ void UDreamLayoutContainerSizeBox::ArrangeContentWithinAspectRatio(UDreamWidget*
 
 	double Left = AreaPosition.X;
 	double Top = AreaPosition.Y;
+	// Centred as SBox re-aligns it, through Slate's AlignCenter: in the whole box, then moved by the
+	// difference between the slot's paddings (see ApplyChildRect).
 	switch (Slot->HorizontalAlignment)
 	{
 	case EDreamPanelHorizontalAlignment::Fill:
-	case EDreamPanelHorizontalAlignment::Center: Left += (AreaSize.X - Size.X) * 0.5; break;
+	case EDreamPanelHorizontalAlignment::Center:
+		Left = InBoxPosition.X + (InBoxSize.X - Size.X) * 0.5
+			+ DreamPanelLayoutLocal::FiniteOrZero(Slot->Padding.Left) - DreamPanelLayoutLocal::FiniteOrZero(Slot->Padding.Right);
+		break;
 	case EDreamPanelHorizontalAlignment::Right: Left += AreaSize.X - Size.X; break;
 	default: break;
 	}
 	switch (Slot->VerticalAlignment)
 	{
 	case EDreamPanelVerticalAlignment::Fill:
-	case EDreamPanelVerticalAlignment::Center: Top += (AreaSize.Y - Size.Y) * 0.5; break;
+	case EDreamPanelVerticalAlignment::Center:
+		Top = InBoxPosition.Y + (InBoxSize.Y - Size.Y) * 0.5
+			+ DreamPanelLayoutLocal::FiniteOrZero(Slot->Padding.Top) - DreamPanelLayoutLocal::FiniteOrZero(Slot->Padding.Bottom);
+		break;
 	case EDreamPanelVerticalAlignment::Bottom: Top += AreaSize.Y - Size.Y; break;
 	default: break;
 	}
@@ -2296,11 +2528,30 @@ FVector2f UDreamLayoutContainerScaleBox::MeasureLayout(const FDreamMeasureSpec& 
 	{
 		const float AvailableWidth = InWidthSpec.ForChild(SpentWidth).ResolveAvailable(OwnWidthFallback);
 		DesiredScale = FVector2f(DreamPanelLayoutLocal::NonNegative(AvailableWidth / Desired.X));
+		if (!InWidthSpec.IsBounded())
+		{
+			// The room came from this box's own width: whoever is arranging it has to know.
+			GetWidget()->GetLayoutPassContext().NoteCurrentSizeRead();
+		}
 	}
 	else if (Stretch == EDreamScaleBoxStretch::ScaleToFitY && Desired.Y > UE_SMALL_NUMBER)
 	{
 		const float AvailableHeight = InHeightSpec.ForChild(SpentHeight).ResolveAvailable(OwnHeightFallback);
 		DesiredScale = FVector2f(DreamPanelLayoutLocal::NonNegative(AvailableHeight / Desired.Y));
+		if (!InHeightSpec.IsBounded())
+		{
+			GetWidget()->GetLayoutPassContext().NoteCurrentSizeRead();
+		}
+	}
+	// The same bound the arrangement puts on the scale, and in the same place: after the mode has decided
+	// it, before the inherited scale is divided out. SScaleBox folds the stretch direction into the one
+	// scale its desired size is computed from. Without it here a DownOnly box measured its art blown up to
+	// the width offered and then drew it at scale one, leaving the difference as empty space below it --
+	// and an UpOnly one measured the art squeezed and drew it full size, cut off by its own clip.
+	if (Stretch == EDreamScaleBoxStretch::ScaleToFitX || Stretch == EDreamScaleBoxStretch::ScaleToFitY)
+	{
+		DesiredScale.X = DreamPanelLayoutLocal::ApplyStretchDirection(DesiredScale.X, StretchDirection);
+		DesiredScale.Y = DreamPanelLayoutLocal::ApplyStretchDirection(DesiredScale.Y, StretchDirection);
 	}
 	if (bIgnoreInheritedScale && (Stretch == EDreamScaleBoxStretch::UserSpecified
 		|| Stretch == EDreamScaleBoxStretch::ScaleToFitX || Stretch == EDreamScaleBoxStretch::ScaleToFitY))
@@ -2341,9 +2592,11 @@ void UDreamLayoutContainerScaleBox::ArrangeChildren()
 {
 	UpdateClippingOverride();
 	UDreamWidget* Child = nullptr;
-	for (UDreamWidget* Candidate : GetWidget()->GetChildren())
+	/** A copy of the children, for the reason given in UDreamLayoutContainerSizeBox::ArrangeChildren. */
+	const TArray<UDreamWidget*, TInlineAllocator<16>> ChildrenAtStart(GetWidget()->GetChildren());
+	for (UDreamWidget* Candidate : ChildrenAtStart)
 	{
-		if (!IsValid(Candidate))
+		if (!IsValid(Candidate) || Candidate->GetParent() != GetWidget())
 		{
 			continue;
 		}
@@ -2360,6 +2613,10 @@ void UDreamLayoutContainerScaleBox::ArrangeChildren()
 		Candidate->SetLayoutScale(FVector2f::UnitVector);
 		/** A ScaleBox holds one child; see the note in UDreamLayoutContainerSizeBox::ArrangeChildren. */
 		Candidate->SetLayoutVisibilitySuppressed(true);
+	}
+	if (IsValid(Child) && Child->GetParent() != GetWidget())
+	{
+		Child = nullptr;//taken away by the code a restore above notified
 	}
 	if (!IsValid(Child) || !Child->GetLayoutVisibleInHierarchy()
 		|| Child->GetIgnoreLayout())
@@ -2446,15 +2703,25 @@ void UDreamLayoutContainerScaleBox::ArrangeChildren()
 	}
 	double Left = InnerPosition.X;
 	double Top = InnerPosition.Y;
+	// Centred as SScaleBox's AlignChild centres the scaled content: in the box inside this panel's padding,
+	// then moved by the difference between the slot's paddings (see ApplyChildRect).
+	const double BoxWidth = FMath::Max(0.0f, GetWidget()->GetWidth() - DreamPanelLayoutLocal::HorizontalPadding(Padding));
+	const double BoxHeight = FMath::Max(0.0f, GetWidget()->GetHeight() - DreamPanelLayoutLocal::VerticalPadding(Padding));
 	switch (Slot->HorizontalAlignment)
 	{
-	case EDreamPanelHorizontalAlignment::Center: Left += (AvailableWidth - ScaledSize.X) * 0.5; break;
+	case EDreamPanelHorizontalAlignment::Center:
+		Left = DreamPanelLayoutLocal::FiniteOrZero(Padding.Left) + (BoxWidth - ScaledSize.X) * 0.5
+			+ DreamPanelLayoutLocal::FiniteOrZero(Slot->Padding.Left) - DreamPanelLayoutLocal::FiniteOrZero(Slot->Padding.Right);
+		break;
 	case EDreamPanelHorizontalAlignment::Right: Left += AvailableWidth - ScaledSize.X; break;
 	default: break;
 	}
 	switch (Slot->VerticalAlignment)
 	{
-	case EDreamPanelVerticalAlignment::Center: Top += (AvailableHeight - ScaledSize.Y) * 0.5; break;
+	case EDreamPanelVerticalAlignment::Center:
+		Top = DreamPanelLayoutLocal::FiniteOrZero(Padding.Top) + (BoxHeight - ScaledSize.Y) * 0.5
+			+ DreamPanelLayoutLocal::FiniteOrZero(Slot->Padding.Top) - DreamPanelLayoutLocal::FiniteOrZero(Slot->Padding.Bottom);
+		break;
 	case EDreamPanelVerticalAlignment::Bottom: Top += AvailableHeight - ScaledSize.Y; break;
 	default: break;
 	}
@@ -2557,8 +2824,15 @@ FMargin UDreamLayoutContainerSafeZone::GetCombinedSafePadding() const
 		CleanSafe.Right + WidgetSize.X * CombinedNormalized.Right,
 		CleanSafe.Bottom + WidgetSize.Y * CombinedNormalized.Bottom);
 #else
-	const FMargin CleanPlatform = DreamPanelLayoutLocal::GetPlatformSafePadding(
-		bUsePlatformSafeZone, bPadLeft, bPadTop, bPadRight, bPadBottom, WidgetSize, SafeAreaScale);
+	// GetSafeZoneSize answers here in pixels of the primary display -- outside the editor it ignores the size it
+	// is handed -- and a pixel is one of this widget's units only when nothing scales the two apart: a canvas
+	// scaler at twice the reference resolution applied twice the inset UMG does. SSafeZone divides the margin by
+	// its geometry's scale; so does this, by the widget's scale on screen, with SafeAreaScale after the division
+	// as SSafeZone has it. The editor branch above fits the zone to the widget's own size instead.
+	const FMargin CleanPlatform = ScalePlatformSafeMargin(
+		DreamPanelLayoutLocal::GetPlatformSafePadding(
+			bUsePlatformSafeZone, bPadLeft, bPadTop, bPadRight, bPadBottom, WidgetSize, FMargin(1.0f)),
+		GetScreenPixelsPerUnit(Widget), SafeAreaScale);
 	return FMargin(
 		CleanSafe.Left + CleanPlatform.Left
 			+ WidgetSize.X * CleanNormalized.Left,
@@ -2569,6 +2843,50 @@ FMargin UDreamLayoutContainerSafeZone::GetCombinedSafePadding() const
 		CleanSafe.Bottom + CleanPlatform.Bottom
 			+ WidgetSize.Y * CleanNormalized.Bottom);
 #endif
+}
+
+FMargin UDreamLayoutContainerSafeZone::ScalePlatformSafeMargin(const FMargin& InPixelMargin, const FVector2D& InPixelsPerUnit,
+	const FMargin& InSafeAreaScale)
+{
+	// Per axis where SSafeZone has one number: a widget can be scaled differently across and down.
+	auto ToUnits = [](float InPixels, double InScale, float InSideScale)
+	{
+		const float InvScale = InScale > UE_SMALL_NUMBER && FMath::IsFinite(InScale) ? 1.0f / static_cast<float>(InScale) : 1.0f;
+		return FMath::RoundToFloat(DreamPanelLayoutLocal::FiniteOrZero(InPixels) * InvScale)
+			* DreamPanelLayoutLocal::NonNegative(InSideScale);
+	};
+	return DreamPanelLayoutLocal::CleanNonNegativeMargin(FMargin(
+		ToUnits(InPixelMargin.Left, InPixelsPerUnit.X, InSafeAreaScale.Left),
+		ToUnits(InPixelMargin.Top, InPixelsPerUnit.Y, InSafeAreaScale.Top),
+		ToUnits(InPixelMargin.Right, InPixelsPerUnit.X, InSafeAreaScale.Right),
+		ToUnits(InPixelMargin.Bottom, InPixelsPerUnit.Y, InSafeAreaScale.Bottom)));
+}
+
+FVector2D UDreamLayoutContainerSafeZone::GetScreenPixelsPerUnit(const UDreamWidget* InWidget)
+{
+	const UDreamCanvas* RootCanvas = IsValid(InWidget) ? InWidget->GetRootCanvas() : nullptr;
+	const UDreamWidget* CanvasWidget = IsValid(RootCanvas) ? RootCanvas->GetWidget() : nullptr;
+	if (!IsValid(CanvasWidget) || RootCanvas->IsRenderToWorldSpace())
+	{
+		return FVector2D::UnitVector;
+	}
+	// The canvas's root widget is stretched over the whole viewport, which is what makes this the scale the
+	// canvas scaler chose; UDreamCanvas::CalculateCanvasSizeAndScale says why its own CanvasScale is not.
+	const FIntPoint ViewportSize = RootCanvas->GetViewportSize();
+	const double CanvasWidth = CanvasWidget->GetWidth();
+	const double CanvasHeight = CanvasWidget->GetHeight();
+	if (ViewportSize.X <= 0 || ViewportSize.Y <= 0 || CanvasWidth <= UE_KINDA_SMALL_NUMBER || CanvasHeight <= UE_KINDA_SMALL_NUMBER)
+	{
+		return FVector2D::UnitVector;
+	}
+	// Y is the horizontal axis of widget space and Z the vertical one.
+	const FVector RelativeScale = InWidget->GetWorldTransform().GetRelativeTransform(CanvasWidget->GetWorldTransform()).GetScale3D();
+	const FVector2D Result(
+		ViewportSize.X / CanvasWidth * FMath::Abs(RelativeScale.Y),
+		ViewportSize.Y / CanvasHeight * FMath::Abs(RelativeScale.Z));
+	return FVector2D(
+		Result.X > UE_KINDA_SMALL_NUMBER ? Result.X : 1.0,
+		Result.Y > UE_KINDA_SMALL_NUMBER ? Result.Y : 1.0);
 }
 
 FVector2f UDreamLayoutContainerSafeZone::MeasureLayout(const FDreamMeasureSpec& InWidthSpec, const FDreamMeasureSpec& InHeightSpec) const
@@ -2601,8 +2919,13 @@ FVector2f UDreamLayoutContainerSafeZone::MeasureLayout(const FDreamMeasureSpec& 
 		CombinedNormalized.Right + PlatformNormalized.Right,
 		CombinedNormalized.Bottom + PlatformNormalized.Bottom));
 #else
-	const FMargin PlatformPadding = DreamPanelLayoutLocal::GetPlatformSafePadding(
-		bUsePlatformSafeZone, bPadLeft, bPadTop, bPadRight, bPadBottom, FVector2D::ZeroVector, SafeAreaScale);
+	// The platform's margin in this widget's units, taken exactly as GetCombinedSafePadding takes it for the
+	// arrangement. Reserving the raw pixels here asked for twice the room the arrangement then used under a
+	// canvas scaled two to one.
+	const FMargin PlatformPadding = ScalePlatformSafeMargin(
+		DreamPanelLayoutLocal::GetPlatformSafePadding(
+			bUsePlatformSafeZone, bPadLeft, bPadTop, bPadRight, bPadBottom, FVector2D::ZeroVector, FMargin(1.0f)),
+		GetScreenPixelsPerUnit(GetWidget()), SafeAreaScale);
 	AbsolutePadding = FMargin(
 		AbsolutePadding.Left + PlatformPadding.Left,
 		AbsolutePadding.Top + PlatformPadding.Top,
@@ -2657,9 +2980,11 @@ void UDreamLayoutContainerSafeZone::ArrangeChildren()
 {
 	const FMargin Combined = GetCombinedSafePadding();
 	UDreamWidget* Content = nullptr;
-	for (UDreamWidget* Child : GetWidget()->GetChildren())
+	/** A copy of the children, for the reason given in UDreamLayoutContainerSizeBox::ArrangeChildren. */
+	const TArray<UDreamWidget*, TInlineAllocator<16>> ChildrenAtStart(GetWidget()->GetChildren());
+	for (UDreamWidget* Child : ChildrenAtStart)
 	{
-		if (!IsValid(Child)) continue;
+		if (!IsValid(Child) || Child->GetParent() != GetWidget()) continue;
 		if (!IsValid(Content))
 		{
 			Content = Child;
@@ -2670,7 +2995,7 @@ void UDreamLayoutContainerSafeZone::ArrangeChildren()
 		/** A SafeZone holds one child; see the note in UDreamLayoutContainerSizeBox::ArrangeChildren. */
 		Child->SetLayoutVisibilitySuppressed(true);
 	}
-	if (IsValid(Content))
+	if (IsValid(Content) && Content->GetParent() == GetWidget())
 	{
 		if (Content->GetLayoutVisibleInHierarchy() && !Content->GetIgnoreLayout())
 		{
@@ -2785,15 +3110,18 @@ FVector2f UDreamLayoutContainerScrollBox::MeasureLayout(const FDreamMeasureSpec&
 	// Auto-measuring ancestor (a SizeBox with a cleared override, an Auto stack slot) would grow the
 	// viewport to fit ALL content — unscrollable by construction — and the designer and PIE would
 	// disagree wherever the surrounding space differs. The scroll-axis preferred size is padding
-	// only; measurement then falls back to the widget's authored rect (the designer's viewport size),
-	// and the actual viewport comes from that, the slot, a SizeBox override, or anchors. The cross
-	// axis measures like a normal stack.
+	// only, and a parent measuring the box does not take even that (AbstainsFromMeasure): it falls
+	// back to the widget's authored rect (the designer's viewport size), and the actual viewport comes
+	// from that, the slot, a SizeBox override, or anchors. The cross axis measures like a normal stack.
 	//
-	// The specs are forwarded to the stack half, which constrains the CROSS axis only -- exactly right
-	// here: the cross axis is the viewport's and the children must fit it, while the scroll axis is
-	// unbounded by definition and is then thrown away three lines down.
-	FVector2f Result = Super::MeasureLayout(InWidthSpec, InHeightSpec);
-	if (Orientation == EDreamPanelOrientation::Horizontal)
+	// The stack half is asked with no limit on the scroll axis, which is how ArrangeChildren measures
+	// the children too -- a Fill slot is arranged at its desired size here, never at a share of a length
+	// the viewport has -- and the scroll-axis answer is thrown away a few lines down anyway.
+	const bool bHorizontal = Orientation == EDreamPanelOrientation::Horizontal;
+	FVector2f Result = Super::MeasureLayout(
+		bHorizontal ? FDreamMeasureSpec::Undefined() : InWidthSpec,
+		bHorizontal ? InHeightSpec : FDreamMeasureSpec::Undefined());
+	if (bHorizontal)
 	{
 		Result.X = DreamPanelLayoutLocal::HorizontalPadding(Padding);
 	}
@@ -2802,6 +3130,59 @@ FVector2f UDreamLayoutContainerScrollBox::MeasureLayout(const FDreamMeasureSpec&
 		Result.Y = DreamPanelLayoutLocal::VerticalPadding(Padding);
 	}
 	return Result;
+}
+
+bool UDreamLayoutContainerScrollBox::AbstainsFromMeasure(EDreamPanelOrientation InAxis) const
+{
+	return InAxis == DreamPanelLayoutLocal::CleanOrientation(Orientation);
+}
+
+void UDreamLayoutContainerScrollBox::MarkScrollArrangeDirty()
+{
+	MarkLayoutDirty();
+	if (UDreamWidget* Widget = GetWidget(); IsValid(Widget))
+	{
+		if (UDreamUIManagerWorldSubsystem* Manager = UDreamUIManagerWorldSubsystem::GetInstance(Widget->GetWorld()))
+		{
+			Manager->AddLayoutDirtyWidget(Widget);
+		}
+	}
+}
+
+float UDreamLayoutContainerScrollBox::GetAvailableCross() const
+{
+	const UDreamWidget* Panel = GetWidget();
+	if (!IsValid(Panel))
+	{
+		return 0.0f;
+	}
+	return Orientation == EDreamPanelOrientation::Horizontal
+		? FMath::Max(0.0f, Panel->GetHeight() - DreamPanelLayoutLocal::VerticalPadding(Padding))
+		: FMath::Max(0.0f, Panel->GetWidth() - DreamPanelLayoutLocal::HorizontalPadding(Padding));
+}
+
+float UDreamLayoutContainerScrollBox::MeasureScrollExtent(UDreamWidget* InChild, float InAvailableCross) const
+{
+	const bool bHorizontal = Orientation == EDreamPanelOrientation::Horizontal;
+	const UDreamPanelSlot* Slot = GetSlot(InChild);
+	// Constrained on the CROSS axis only, and never on the scroll axis: the cross axis is the
+	// viewport's and a wrapping child has to wrap against it, while a scroll-axis ceiling would be
+	// the "unscrollable by construction" failure this whole panel exists to avoid. A child that fills
+	// across is told the cross extent exactly, as a stack tells it, since that is what it will get.
+	const float CrossRoom = FMath::Max(0.0f, InAvailableCross - (bHorizontal
+		? DreamPanelLayoutLocal::VerticalPadding(Slot->Padding)
+		: DreamPanelLayoutLocal::HorizontalPadding(Slot->Padding)));
+	const bool bFillsAcross = bHorizontal
+		? Slot->VerticalAlignment == EDreamPanelVerticalAlignment::Fill
+		: Slot->HorizontalAlignment == EDreamPanelHorizontalAlignment::Fill;
+	const FDreamMeasureSpec CrossSpec = bFillsAcross ? FDreamMeasureSpec::Exactly(CrossRoom) : FDreamMeasureSpec::AtMost(CrossRoom);
+	const FVector2D Desired = bHorizontal
+		? GetDesiredSize(InChild, FDreamMeasureSpec::Undefined(), CrossSpec)
+		: GetDesiredSize(InChild, CrossSpec, FDreamMeasureSpec::Undefined());
+	const float SlotPadding = bHorizontal
+		? DreamPanelLayoutLocal::HorizontalPadding(Slot->Padding)
+		: DreamPanelLayoutLocal::VerticalPadding(Slot->Padding);
+	return FMath::Max(0.0f, static_cast<float>(bHorizontal ? Desired.X : Desired.Y) + SlotPadding);
 }
 
 #if WITH_EDITOR
@@ -2832,11 +3213,7 @@ void UDreamLayoutContainerScrollBox::SetScrollOffset(float Value)
 		return;
 	}
 	ScrollOffset = Clamped;
-	MarkLayoutDirty();
-	if (UDreamWidget* Widget = GetWidget(); IsValid(Widget))
-	{
-		UDreamWidget::MarkLayoutForRebuild(Widget);
-	}
+	MarkScrollArrangeDirty();
 	SyncScrollbar();
 }
 
@@ -3008,12 +3385,14 @@ void UDreamLayoutContainerScrollBox::SetAllowOverscroll(bool Value)
 		return;
 	}
 	bAllowOverscroll = Value;
-	if (!bAllowOverscroll)
+	if (!bAllowOverscroll && !FMath::IsNearlyZero(Overscroll))
 	{
 		// The band is closed rather than left to spring: with overscroll off nothing would be stepping
-		// it, so an open band would simply stay open for the rest of the box's life.
+		// it, so an open band would simply stay open for the rest of the box's life. Closing it moves the
+		// content, so the box is asked to arrange, not merely marked: a dirty flag nobody queues waits for
+		// whatever lays the tree out next.
 		Overscroll = 0.0f;
-		MarkLayoutDirty();
+		MarkScrollArrangeDirty();
 	}
 }
 
@@ -3021,8 +3400,13 @@ void UDreamLayoutContainerScrollBox::SetOverscrollLimit(float Value)
 {
 	OverscrollLimit = FMath::Max(0.0f, DreamPanelLayoutLocal::FiniteOrZero(Value));
 	// A band already further out than the new ceiling is pulled back to it, so the number means the
-	// same thing the moment it is written as it does on the next drag.
-	Overscroll = FMath::Clamp(Overscroll, -OverscrollLimit, OverscrollLimit);
+	// same thing the moment it is written as it does on the next drag -- and the content moves with it.
+	const float Clamped = FMath::Clamp(Overscroll, -OverscrollLimit, OverscrollLimit);
+	if (Clamped != Overscroll)
+	{
+		Overscroll = Clamped;
+		MarkScrollArrangeDirty();
+	}
 }
 
 void UDreamLayoutContainerScrollBox::EnsureScrollbarBound()
@@ -3121,11 +3505,7 @@ void UDreamLayoutContainerScrollBox::StopScrolling()
 	bAnimatingScroll = false;
 	if (bWasDisplaced)
 	{
-		MarkLayoutDirty();
-		if (UDreamWidget* Widget = GetWidget(); IsValid(Widget))
-		{
-			UDreamWidget::MarkLayoutForRebuild(Widget);
-		}
+		MarkScrollArrangeDirty();
 	}
 }
 
@@ -3179,11 +3559,7 @@ void UDreamLayoutContainerScrollBox::ApplyDragDelta(float Delta)
 		{
 			Overscroll = FMath::Clamp(NewBand, -Limit, Limit);
 		}
-		MarkLayoutDirty();
-		if (UDreamWidget* Widget = GetWidget(); IsValid(Widget))
-		{
-			UDreamWidget::MarkLayoutForRebuild(Widget);
-		}
+		MarkScrollArrangeDirty();
 		return;
 	}
 	const float Before = ScrollOffset;
@@ -3195,11 +3571,7 @@ void UDreamLayoutContainerScrollBox::ApplyDragDelta(float Delta)
 	if (FMath::Abs(Remainder) > OverscrollResidueThreshold)
 	{
 		Overscroll = FMath::Clamp(Remainder, -FMath::Max(OverscrollLimit, KINDA_SMALL_NUMBER), FMath::Max(OverscrollLimit, KINDA_SMALL_NUMBER));
-		MarkLayoutDirty();
-		if (UDreamWidget* Widget = GetWidget(); IsValid(Widget))
-		{
-			UDreamWidget::MarkLayoutForRebuild(Widget);
-		}
+		MarkScrollArrangeDirty();
 	}
 }
 
@@ -3324,11 +3696,7 @@ void UDreamLayoutContainerScrollBox::TickScrollPhysics(float DeltaTime)
 			}
 		}
 	}
-	MarkLayoutDirty();
-	if (UDreamWidget* Widget = GetWidget(); IsValid(Widget))
-	{
-		UDreamWidget::MarkLayoutForRebuild(Widget);
-	}
+	MarkScrollArrangeDirty();
 }
 
 bool UDreamLayoutContainerScrollBox::GetChildContentExtent(UDreamWidget* InWidget, float& OutStart, float& OutExtent)
@@ -3365,14 +3733,14 @@ bool UDreamLayoutContainerScrollBox::GetChildContentExtent(UDreamWidget* InWidge
 	// every time directional navigation weighs a candidate -- i.e. on every press of a stick or d-pad --
 	// so asking "could I scroll to that" was silently rewriting geometry and allocating. GetSlot returns
 	// the class default when a child has no slot, so reading Padding below stays safe.
+	//
+	// Each extent is measured the way ArrangeChildren measures it, against the viewport's cross extent.
+	// Measured with no constraint at all, a child that wraps answered from whatever width it had, and the
+	// offset that was meant to reveal it was worked out for a height it was not arranged at.
+	const float AvailableCross = GetAvailableCross();
 	for (UDreamWidget* Child : CollectLayoutChildren(/*bEnsureSlots*/false))
 	{
-		const UDreamPanelSlot* Slot = GetSlot(Child);
-		const FVector2D Desired = GetDesiredSize(Child);
-		const float SlotPadding = bHorizontal
-			? DreamPanelLayoutLocal::HorizontalPadding(Slot->Padding)
-			: DreamPanelLayoutLocal::VerticalPadding(Slot->Padding);
-		const float Extent = FMath::Max(0.0f, static_cast<float>(bHorizontal ? Desired.X : Desired.Y) + SlotPadding);
+		const float Extent = MeasureScrollExtent(Child, AvailableCross);
 		if (Child == DirectChild)
 		{
 			OutStart = Cursor;
@@ -3478,29 +3846,13 @@ void UDreamLayoutContainerScrollBox::ArrangeChildren()
 	const float AvailablePrimary = bHorizontal
 		? FMath::Max(0.0f, Panel->GetWidth() - DreamPanelLayoutLocal::HorizontalPadding(Padding))
 		: FMath::Max(0.0f, Panel->GetHeight() - DreamPanelLayoutLocal::VerticalPadding(Padding));
-	const float AvailableSecondary = bHorizontal
-		? FMath::Max(0.0f, Panel->GetHeight() - DreamPanelLayoutLocal::VerticalPadding(Padding))
-		: FMath::Max(0.0f, Panel->GetWidth() - DreamPanelLayoutLocal::HorizontalPadding(Padding));
+	const float AvailableSecondary = GetAvailableCross();
 
 	// Children always take their desired size along the scroll axis. Fill would shrink content to the viewport,
 	// which would make the box unscrollable by construction.
 	auto PrimaryExtentOf = [&](UDreamWidget* Child)
 	{
-		const UDreamPanelSlot* Slot = GetSlot(Child);
-		// Constrained on the CROSS axis only, and never on the scroll axis: the cross axis is the
-		// viewport's and a wrapping child has to wrap against it, while a scroll-axis ceiling would be
-		// the "unscrollable by construction" failure this whole function exists to avoid.
-		const float CrossPadding = bHorizontal
-			? DreamPanelLayoutLocal::VerticalPadding(Slot->Padding)
-			: DreamPanelLayoutLocal::HorizontalPadding(Slot->Padding);
-		const FDreamMeasureSpec CrossSpec = FDreamMeasureSpec::AtMost(FMath::Max(0.0f, AvailableSecondary - CrossPadding));
-		const FVector2D Desired = bHorizontal
-			? GetDesiredSize(Child, FDreamMeasureSpec::Undefined(), CrossSpec)
-			: GetDesiredSize(Child, CrossSpec, FDreamMeasureSpec::Undefined());
-		const float SlotPadding = bHorizontal
-			? DreamPanelLayoutLocal::HorizontalPadding(Slot->Padding)
-			: DreamPanelLayoutLocal::VerticalPadding(Slot->Padding);
-		return FMath::Max(0.0f, static_cast<float>(bHorizontal ? Desired.X : Desired.Y) + SlotPadding);
+		return MeasureScrollExtent(Child, AvailableSecondary);
 	};
 
 	float ContentPrimary = Gap * FMath::Max(0, LayoutChildren.Num() - 1);
@@ -3596,10 +3948,22 @@ void UDreamLayoutContainerWidgetSwitcher::ArrangeChildren()
 		ActiveChild = Panel->GetChildren()[ResolvedIndex];
 	}
 	ActiveWidget = ActiveChild;
-	for (int32 Index = 0; Index < Panel->GetChildrenCount(); ++Index)
 	{
-		if (UDreamWidget* Child = Panel->GetChildren()[Index]; IsValid(Child))
+		// Handing a page back its authored rect and collapsing it are this switcher's own output, written
+		// from inside its arrange, so they are written the way the commit writes: under the switcher's write
+		// scope. Without one, each of them walked the invalidation past the switcher -- which had just
+		// consumed its dirty flag -- to the root, and every page switch cost a second whole-tree pass. The
+		// active page is still reached: it is a descendant of the writer, later in this same pass.
+		UDreamWidget::FLayoutWriteScope WriteScope(Panel);
+		// A copy of the children: a restore announces a new size to user code, which may add or take away a
+		// page (see CollectLayoutChildren).
+		const TArray<UDreamWidget*, TInlineAllocator<16>> ChildrenAtStart(Panel->GetChildren());
+		for (UDreamWidget* Child : ChildrenAtStart)
 		{
+			if (!IsValid(Child) || Child->GetParent() != Panel)
+			{
+				continue;
+			}
 			const bool bIsActive = Child == ActiveChild;
 			const bool bIgnored = Child->GetIgnoreLayout();
 			if (!bIsActive || bIgnored)
@@ -3612,7 +3976,7 @@ void UDreamLayoutContainerWidgetSwitcher::ArrangeChildren()
 			Child->SetLayoutVisibilitySuppressed(!bIsActive);
 		}
 	}
-	if (UDreamWidget* Child = ActiveChild; IsValid(Child) && Child->GetLayoutVisibleInHierarchy())
+	if (UDreamWidget* Child = ActiveChild; IsValid(Child) && Child->GetParent() == Panel && Child->GetLayoutVisibleInHierarchy())
 	{
 		if (!Child->GetIgnoreLayout())
 		{
@@ -3629,9 +3993,11 @@ void UDreamLayoutContainerWidgetSwitcher::OnUnregister()
 {
 	if (UDreamWidget* Panel = GetWidget(); IsValid(Panel))
 	{
-		for (UDreamWidget* Child : Panel->GetChildren())
+		/** A copy, as in UDreamPanelLayoutBase::OnUnregister. */
+		const TArray<UDreamWidget*, TInlineAllocator<16>> ChildrenAtStart(Panel->GetChildren());
+		for (UDreamWidget* Child : ChildrenAtStart)
 		{
-			if (IsValid(Child)) Child->SetLayoutVisibilitySuppressed(false);
+			if (IsValid(Child) && Child->GetParent() == Panel) Child->SetLayoutVisibilitySuppressed(false);
 		}
 	}
 	ActiveWidget.Reset();
@@ -3767,9 +4133,11 @@ void UDreamLayoutContainerBorder::ArrangeChildren()
 		return;
 	}
 	UDreamWidget* Content = nullptr;
-	for (UDreamWidget* Child : Panel->GetChildren())
+	/** A copy of the children, for the reason given in UDreamLayoutContainerSizeBox::ArrangeChildren. */
+	const TArray<UDreamWidget*, TInlineAllocator<16>> ChildrenAtStart(Panel->GetChildren());
+	for (UDreamWidget* Child : ChildrenAtStart)
 	{
-		if (!IsValid(Child))
+		if (!IsValid(Child) || Child->GetParent() != Panel)
 		{
 			continue;
 		}
@@ -3786,18 +4154,17 @@ void UDreamLayoutContainerBorder::ArrangeChildren()
 		/** A border holds one child; see the note in UDreamLayoutContainerSizeBox::ArrangeChildren. */
 		Child->SetLayoutVisibilitySuppressed(true);
 	}
-	if (IsValid(Content))
+	if (IsValid(Content) && Content->GetParent() == Panel)
 	{
 		if (Content->GetLayoutVisibleInHierarchy() && !Content->GetIgnoreLayout())
 		{
 			// The alignment handed over here is the BORDER's, which is the one thing this panel does
-			// that an overlay with a rect-block visual cannot.
-			ApplyChildRect(Content,
-				FVector2D(DreamPanelLayoutLocal::FiniteOrZero(Padding.Left), DreamPanelLayoutLocal::FiniteOrZero(Padding.Top)),
-				FVector2D(
-					FMath::Max(0.0f, Panel->GetWidth() - DreamPanelLayoutLocal::HorizontalPadding(Padding)),
-					FMath::Max(0.0f, Panel->GetHeight() - DreamPanelLayoutLocal::VerticalPadding(Padding))),
-				/*bForceFill*/false, HorizontalAlignment, VerticalAlignment);
+			// that an overlay with a rect-block visual cannot. So is the padding: UBorder::Padding is what
+			// SBorder holds as its content slot's padding, so it goes in with the slot's own as the margins
+			// over the whole border rect. Taken off the rect first instead, a centred child was centred in
+			// the padded box -- (Pre - Post) / 2 short of where SBorder puts it, mirrored or not.
+			ApplyChildRect(Content, FVector2D::ZeroVector, FVector2D(Panel->GetWidth(), Panel->GetHeight()),
+				/*bForceFill*/false, HorizontalAlignment, VerticalAlignment, Padding);
 		}
 		else
 		{
@@ -3852,7 +4219,8 @@ FVector2D UDreamLayoutContainerMenuAnchor::CalculateMenuPosition(EDreamMenuPlace
 }
 
 FVector2D UDreamLayoutContainerMenuAnchor::FitMenuInWindowFromPanelSpace(const FVector2D& MenuPosition,
-	const FVector2D& MenuSize, const FVector2D& PanelOffset, float PanelWidth, const FVector2D& WindowSize, bool bMirrored)
+	const FVector2D& MenuSize, const FVector2D& PanelOffset, float PanelWidth, const FVector2D& WindowSize, bool bMirrored,
+	const FVector2D& PanelScale)
 {
 	// Under a right-to-left flow the committed rect is reflected across the panel's width, so the rect
 	// to keep inside the window is the REFLECTED one. Fitting the unreflected rect would hold in the
@@ -3862,12 +4230,43 @@ FVector2D UDreamLayoutContainerMenuAnchor::FitMenuInWindowFromPanelSpace(const F
 	{
 		Position.X = PanelWidth - (Position.X + MenuSize.X);
 	}
-	Position = FitMenuInWindow(Position + PanelOffset, MenuSize, WindowSize) - PanelOffset;
+	// The window is measured in its own units and the menu in the panel's. A panel scaled to nothing has no
+	// menu to see, and is fitted as if unscaled rather than divided by zero.
+	const FVector2D Scale(
+		PanelScale.X > UE_SMALL_NUMBER ? PanelScale.X : 1.0,
+		PanelScale.Y > UE_SMALL_NUMBER ? PanelScale.Y : 1.0);
+	const FVector2D Fitted = FitMenuInWindow(PanelOffset + Position * Scale, MenuSize * Scale, WindowSize);
+	Position = (Fitted - PanelOffset) / Scale;
 	if (bMirrored)
 	{
 		Position.X = PanelWidth - (Position.X + MenuSize.X);
 	}
 	return Position;
+}
+
+bool UDreamLayoutContainerMenuAnchor::GetPlacementInWindow(const UDreamWidget* InWidget,
+	FVector2D& OutWindowSize, FVector2D& OutOffset, FVector2D& OutScale)
+{
+	const UDreamWidget* Root = IsValid(InWidget) ? InWidget->GetRootWidgetInHierarchy() : nullptr;
+	if (!IsValid(Root) || Root == InWidget)
+	{
+		return false;
+	}
+	OutWindowSize = FVector2D(
+		DreamPanelLayoutLocal::NonNegative(Root->GetWidth()),
+		DreamPanelLayoutLocal::NonNegative(Root->GetHeight()));
+	const FTransform& RootTransform = Root->GetWorldTransform();
+	const FTransform& WidgetTransform = InWidget->GetWorldTransform();
+	// Widget space is y-up about the pivot, with Y the horizontal axis and Z the vertical one; the window's
+	// space starts at the root's top-left corner, y down. The root's corner is read from its own pivot: taking
+	// it for half the root's size from the origin put the menu half a root away under any other pivot.
+	const FVector Origin = RootTransform.InverseTransformPosition(WidgetTransform.GetLocation());
+	const FVector RelativeScale = WidgetTransform.GetRelativeTransform(RootTransform).GetScale3D();
+	OutScale = FVector2D(FMath::Abs(RelativeScale.Y), FMath::Abs(RelativeScale.Z));
+	OutOffset = FVector2D(
+		Origin.Y - Root->GetLocalSpaceLeft() - InWidget->GetWidth() * InWidget->GetPivot().X * OutScale.X,
+		Root->GetLocalSpaceTop() - Origin.Z - InWidget->GetHeight() * (1.0 - InWidget->GetPivot().Y) * OutScale.Y);
+	return true;
 }
 
 FVector2D UDreamLayoutContainerMenuAnchor::FitMenuInWindow(const FVector2D& MenuPosition, const FVector2D& MenuSize,
@@ -4009,21 +4408,15 @@ void UDreamLayoutContainerMenuAnchor::ArrangeChildren()
 			{
 				// Against the root widget, the nearest thing here to UMG's window: it is the rect the
 				// whole hierarchy is laid out inside. The result has to come back into this panel's
-				// space, so the panel's own offset within that root goes in and comes back out.
-				if (const UDreamWidget* Root = Panel->GetRootWidgetInHierarchy(); IsValid(Root) && Root != Panel)
+				// space, so the panel's own place within that root -- its offset and its scale -- goes in
+				// and comes back out.
+				FVector2D WindowSize;
+				FVector2D PanelOffset;
+				FVector2D PanelScale;
+				if (GetPlacementInWindow(Panel, WindowSize, PanelOffset, PanelScale))
 				{
-					const FVector2D RootSize(
-						DreamPanelLayoutLocal::NonNegative(Root->GetWidth()),
-						DreamPanelLayoutLocal::NonNegative(Root->GetHeight()));
-					const FVector PanelInRoot = Root->GetWorldTransform().InverseTransformPosition(
-						Panel->GetWorldTransform().GetLocation());
-					// Widget space is y-up about the pivot; this is the panel's top-left corner measured
-					// from the root's top-left corner, which is the space FitMenuInWindow works in.
-					const FVector2D PanelOffset(
-						PanelInRoot.Y + RootSize.X * 0.5 - AnchorSize.X * Panel->GetPivot().X,
-						RootSize.Y * 0.5 - PanelInRoot.Z - AnchorSize.Y * (1.0 - Panel->GetPivot().Y));
 					MenuPosition = FitMenuInWindowFromPanelSpace(MenuPosition, MenuSize, PanelOffset,
-						DreamPanelLayoutLocal::NonNegative(Panel->GetWidth()), RootSize, IsRightToLeft());
+						DreamPanelLayoutLocal::NonNegative(Panel->GetWidth()), WindowSize, IsRightToLeft(), PanelScale);
 				}
 			}
 			ApplyChildRect(Menu, MenuPosition, MenuSize, /*bForceFill*/true);

@@ -41,17 +41,27 @@ bool UUIButton::OnPointerDown_Implementation(UDreamPointerEventData* EventData)
 	// that value is the BUBBLING policy and says nothing about whether the press was honoured. A
 	// button drawn disabled that still broadcast OnPressed is the same bug as one that still clicks.
 	const bool bBubble = Super::OnPointerDown_Implementation(EventData);
-	bPressAccepted = IsInteractable();
-	if (bPressAccepted)
+	if (IsInteractable())
 	{
-		OnPressedCPP.Broadcast();
-		OnPressedBP.Broadcast();
-		if (ShouldClickOnDown(EventData))
+		// A pointer pressing again with its last press still on the books never had that press's up: it starts over
+		// rather than holding the button for good.
+		const FIntPoint PressKey = PointerKeyOf(EventData);
+		AcceptedPresses.Remove(PressKey);
+		const bool bFirstPointer = AcceptedPresses.Num() == 0;
+		AcceptedPresses.Add(PressKey);
+		bPressAccepted = true;
+		// One press however many pointers hold it: only the first says so.
+		if (bFirstPointer)
 		{
-			// MouseDown / Touch Down / ButtonPress: the press IS the click. Fired through the same
-			// body the ordinary click takes, so a button cannot come to mean two different things
-			// depending on which method it was set to.
-			FireClick(EventData);
+			OnPressedCPP.Broadcast();
+			OnPressedBP.Broadcast();
+			if (ShouldClickOnDown(EventData))
+			{
+				// MouseDown / Touch Down / ButtonPress: the press IS the click. Fired through the same
+				// body the ordinary click takes, so a button cannot come to mean two different things
+				// depending on which method it was set to.
+				FireClick(EventData);
+			}
 		}
 	}
 	return bBubble;
@@ -60,24 +70,26 @@ bool UUIButton::OnPointerDown_Implementation(UDreamPointerEventData* EventData)
 bool UUIButton::OnPointerUp_Implementation(UDreamPointerEventData* EventData)
 {
 	// Released only what was pressed, whichever button it is that came up: the pointer pipeline
-	// carries one trigger per pointer, so this up ends whatever press there was. A press this button
-	// took always gets its OnReleased (SButton's Release is gated on bIsPressed, not on the button),
-	// and one it never took -- a button it does not answer, a press while disabled -- gets none, so the
-	// press pair always comes as a pair.
-	const bool bReleasesAPress = bPressAccepted;
-	bPressAccepted = false;
+	// carries one trigger per pointer, so this up ends whatever press that pointer had. A press this
+	// button took always gets its OnReleased (SButton's Release is gated on bIsPressed, not on the
+	// button), and one it never took -- a button it does not answer, a press while disabled -- gets
+	// none, so the press pair always comes as a pair. With another pointer still holding the button the
+	// press goes on, and so does the pair.
+	const bool bReleasesAPress = AcceptedPresses.Remove(PointerKeyOf(EventData)) > 0 && AcceptedPresses.Num() == 0;
+	bPressAccepted = AcceptedPresses.Num() > 0;
 	const bool bAnswered = AcceptsPointerButton(EventData);
-	// Not gated: the selectable lets go of its pressed look whatever came up, which is what keeps a
-	// face from staying pressed after an up it did not answer.
+	// Not gated: the selectable lets go of this pointer's pressed look whatever came up, which is what
+	// keeps a face from staying pressed after an up it did not answer.
 	const bool bBubble = Super::OnPointerUp_Implementation(EventData);
 	if (bReleasesAPress)
 	{
 		OnReleasedCPP.Broadcast();
 		OnReleasedBP.Broadcast();
 	}
-	if (bAnswered && IsInteractable() && ShouldClickOnUp(EventData))
+	if (bAnswered && IsInteractable() && ShouldClickOnUp(EventData) && AcceptedPresses.Num() == 0)
 	{
-		// MouseUp / ButtonRelease: the release alone fires it, wherever the press landed.
+		// MouseUp / ButtonRelease: the release alone fires it, wherever the press landed -- the release that leaves
+		// nothing holding the button.
 		FireClick(EventData);
 	}
 	// An up this button does not answer goes on to whatever heard the press it passed on.
@@ -96,6 +108,12 @@ bool UUIButton::OnPointerClick_Implementation(UDreamPointerEventData* EventData)
 		// The click sound and the pad rumble are inside PlayClickFeedback, so this early return is
 		// what stops a disabled button from sounding and feeling exactly like a working one -- and
 		// the same return is what keeps a method that already fired on the down from firing twice.
+		return AllowEventBubbleUp;
+	}
+	if (AcceptedPresses.Num() > 0)
+	{
+		// Another pointer still holds the button (this pointer's up came first): the press is not over, and its one
+		// click belongs to the release that ends it.
 		return AllowEventBubbleUp;
 	}
 	FireClick(EventData);

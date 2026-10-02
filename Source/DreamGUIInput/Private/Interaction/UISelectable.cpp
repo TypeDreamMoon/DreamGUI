@@ -508,6 +508,7 @@ bool UUISelectable::OnPointerDown_Implementation(UDreamPointerEventData* EventDa
 	{
 		return AllowEventBubbleUp;
 	}
+	PointersDown.Add(PointerKeyOf(EventData));
 	bIsPointerDown = true;
 	CurrentSelectionState = GetSelectionState();
 	ApplyPointerSelectionState(false);
@@ -520,11 +521,17 @@ bool UUISelectable::OnPointerDown_Implementation(UDreamPointerEventData* EventDa
 bool UUISelectable::OnPointerUp_Implementation(UDreamPointerEventData* EventData)
 {
 	// Not gated on IsInteractable: a control disabled BETWEEN the press and the release still has a
-	// press to let go of, and refusing the up would leave it stuck looking pressed for good.
-	bIsPointerDown = false;
+	// press to let go of, and refusing the up would leave it stuck looking pressed for good. Only this
+	// pointer's press ends: another finger still on the control keeps it pressed.
+	PointersDown.Remove(PointerKeyOf(EventData));
+	bIsPointerDown = PointersDown.Num() > 0;
 	CurrentSelectionState = GetSelectionState();
 	ApplyPointerSelectionState(false);
 	return AllowEventBubbleUp;
+}
+FIntPoint UUISelectable::PointerKeyOf(const UDreamPointerEventData* InEventData)
+{
+	return IsValid(InEventData) ? FIntPoint(InEventData->UserIndex, InEventData->PointerID) : FIntPoint(INDEX_NONE, INDEX_NONE);
 }
 bool UUISelectable::OnPointerSelect_Implementation(UDreamBaseEventData* EventData)
 {
@@ -727,6 +734,7 @@ void UUISelectable::SetInteractable(bool Value)
 	// saying so here is what keeps the repaint below from drawing it as Disabled-but-still-pressed.
 	if (!bInteractable)
 	{
+		PointersDown.Reset();
 		bIsPointerDown = false;
 		bIsSelected = false;
 	}

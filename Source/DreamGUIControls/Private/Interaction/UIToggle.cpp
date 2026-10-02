@@ -321,7 +321,9 @@ bool UUIToggle::OnPointerClick_Implementation(UDreamPointerEventData* EventData)
 		// a box disabled mid-press still flipped -- the test UUIButton::OnPointerClick makes, made here.
 		return AllowEventBubbleUp;
 	}
-	if (ShouldClickOnClick(EventData))
+	// Another pointer still holding the toggle means its press is not over: the one flip belongs to the release that
+	// ends it.
+	if (ShouldClickOnClick(EventData) && AcceptedPresses.Num() == 0)
 	{
 		SetValue(!bIsOn);
 	}
@@ -364,15 +366,24 @@ bool UUIToggle::OnPointerDown_Implementation(UDreamPointerEventData* EventData)
 	// value is the BUBBLING policy and says nothing about whether the press was honoured -- the same
 	// reading UUIButton's press pair makes. A toggle drawn disabled must not speak.
 	const bool bBubble = Super::OnPointerDown_Implementation(EventData);
-	bPressAccepted = IsInteractable();
-	if (bPressAccepted)
+	if (IsInteractable())
 	{
-		OnPressedCPP.Broadcast();
-		if (ShouldClickOnDown(EventData))
+		// UUIButton::OnPointerDown's bookkeeping: a pointer pressing again with a press still on the books starts over,
+		// and only the first pointer of a press says so.
+		const FIntPoint PressKey = PointerKeyOf(EventData);
+		AcceptedPresses.Remove(PressKey);
+		const bool bFirstPointer = AcceptedPresses.Num() == 0;
+		AcceptedPresses.Add(PressKey);
+		bPressAccepted = true;
+		if (bFirstPointer)
 		{
-			// MouseDown / Touch Down / ButtonPress: the press IS the toggle. Same body the click
-			// takes, so the value cannot move differently depending on which method was chosen.
-			SetValue(!bIsOn);
+			OnPressedCPP.Broadcast();
+			if (ShouldClickOnDown(EventData))
+			{
+				// MouseDown / Touch Down / ButtonPress: the press IS the toggle. Same body the click
+				// takes, so the value cannot move differently depending on which method was chosen.
+				SetValue(!bIsOn);
+			}
 		}
 	}
 	return bBubble;
@@ -380,16 +391,17 @@ bool UUIToggle::OnPointerDown_Implementation(UDreamPointerEventData* EventData)
 
 bool UUIToggle::OnPointerUp_Implementation(UDreamPointerEventData* EventData)
 {
-	// Released only what was pressed, whichever button came up -- UUIButton::OnPointerUp states why.
-	const bool bReleasesAPress = bPressAccepted;
-	bPressAccepted = false;
+	// Released only what that pointer pressed, whichever button came up, and the press pair only when no pointer of the
+	// press is left -- UUIButton::OnPointerUp states why.
+	const bool bReleasesAPress = AcceptedPresses.Remove(PointerKeyOf(EventData)) > 0 && AcceptedPresses.Num() == 0;
+	bPressAccepted = AcceptedPresses.Num() > 0;
 	const bool bAnswered = AcceptsPointerButton(EventData);
 	const bool bBubble = Super::OnPointerUp_Implementation(EventData);
 	if (bReleasesAPress)
 	{
 		OnReleasedCPP.Broadcast();
 	}
-	if (bAnswered && IsInteractable() && ShouldClickOnUp(EventData))
+	if (bAnswered && IsInteractable() && ShouldClickOnUp(EventData) && AcceptedPresses.Num() == 0)
 	{
 		SetValue(!bIsOn);
 	}

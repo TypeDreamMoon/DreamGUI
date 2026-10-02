@@ -19,6 +19,10 @@
 #include "Event/DreamWorldSpaceRaycaster.h"
 #include "GameFramework/Actor.h"
 
+#include "Driver/DreamDriver.h"
+#include "Driver/DreamDriverRig.h"
+#include "Driver/DreamDriverSequence.h"
+#include "Driver/DreamDriverWorldSpace.h"
 #include "DreamWorldRaycastTestTypes.h"
 #include "DreamScopedWorld.h"
 #include "Lifecycle/DreamLifecycleFixtures.h"
@@ -576,6 +580,101 @@ bool FDreamRaycastParallelVisualsTest::RunTest(const FString& Parameters)
 			Together[Index].Widget.Get() == OneAfterAnother[Index].Widget.Get()
 			&& FMath::IsNearlyEqual(Together[Index].Distance, OneAfterAnother[Index].Distance));
 	}
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamWorldRaycastScreenCentreSplitScreenTest,
+	"DreamGUI.WorldRaycast.AScreenCentrePointerAimsThroughTheMiddleOfItsPlayersOwnView",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * A ScreenCenter pointer -- a first-person reticle -- aimed through the middle of the whole viewport, which on a split
+ * screen is a corner or an edge of each player's own view: every player's ray went somewhere other than their reticle.
+ * It now aims through the middle of the player's own part of the viewport, the view rectangle the engine deprojects that
+ * player's pixels against. A headless test has no split viewport to deproject through, so what is checked is the pixel
+ * the ray is aimed through, for a whole view and for the halves and quarters of a split one.
+ */
+bool FDreamWorldRaycastScreenCentreSplitScreenTest::RunTest(const FString& Parameters)
+{
+	TestEqual(TEXT("A whole view is aimed through the viewport's middle"),
+		UDreamWorldSpaceRaycaster::GetViewCentrePixel(FIntRect(0, 0, 1280, 720)), FVector2D(640.0, 360.0));
+	TestEqual(TEXT("The left half's player through the middle of the left half"),
+		UDreamWorldSpaceRaycaster::GetViewCentrePixel(FIntRect(0, 0, 640, 720)), FVector2D(320.0, 360.0));
+	TestEqual(TEXT("The right half's player through the middle of the right half"),
+		UDreamWorldSpaceRaycaster::GetViewCentrePixel(FIntRect(640, 0, 1280, 720)), FVector2D(960.0, 360.0));
+	TestEqual(TEXT("The top half's player through the middle of the top half"),
+		UDreamWorldSpaceRaycaster::GetViewCentrePixel(FIntRect(0, 0, 1280, 360)), FVector2D(640.0, 180.0));
+	TestEqual(TEXT("The bottom-right quarter's player through the middle of that quarter"),
+		UDreamWorldSpaceRaycaster::GetViewCentrePixel(FIntRect(640, 360, 1280, 720)), FVector2D(960.0, 540.0));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamWorldTargetReleaseAwayTest,
+	"DreamGUI.WorldRaycast.APressOnAnActorLetGoOfAwayFromItIsReleasedThereAndClicksNothing",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * A press on an actor was let go of with a click wherever the pointer had gone by then: moved off the actor, over nothing,
+ * or -- releases being delivered while the game is paused, with its raycasters tracing nothing -- anywhere at all during a
+ * pause, the actor pressed before it was clicked. An actor's click follows a widget's rule now: the press is released to
+ * the actor wherever the pointer is, and clicks it only when let go of over it. Checked with the driver's world pointer
+ * and a solid box ahead of it: pressed and let go of on the box, and pressed on it and let go of past it.
+ */
+bool FDreamWorldTargetReleaseAwayTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamWorldRaycastTestLocal;
+	const FIntPoint ViewportSize(1280, 720);
+	FDreamDriverRig Rig = FDreamDriverRig::Headless(ViewportSize);
+	Rig.BindTest(this);
+	if (!TestTrue(TEXT("The rig came up"), Rig.IsUsable()))
+	{
+		return false;
+	}
+	// The eye at the origin looking down +X, ninety degrees across: the middle of the viewport looks straight at a box a
+	// metre and a half ahead, its near face a metre out, and a corner of the viewport looks well past it.
+	UDreamDriverWorldSpaceRaycaster* Pointer = DreamDriverWorld::AttachWorldPointer(Rig,
+		DreamDriverWorld::MakeView(FVector::ZeroVector, FRotator::ZeroRotator, 90.0f, ViewportSize), EDreamWorldPointerSource::Mouse);
+	UBoxComponent* Box = MakeBlocker(Rig.GetWorld(), FVector(150.0, 0.0, 0.0));
+	UDreamUIInputSubsystem* Input = UDreamUIInputSubsystem::Get(Rig.GetWorld());
+	if (!TestNotNull(TEXT("A world pointer"), Pointer) || !TestNotNull(TEXT("A box ahead of it"), Box)
+		|| !TestNotNull(TEXT("An input subsystem to listen to"), Input))
+	{
+		return false;
+	}
+	Rig.PumpFrames(2);
+	const FVector2D OnTheBox(640.0, 360.0);
+	const FVector2D PastTheBox(40.0, 40.0);
+
+	int32 Ups = 0;
+	int32 Clicks = 0;
+	const FDelegateHandle Listening = Input->GetOnInputEvent().AddLambda([&Ups, &Clicks](UDreamBaseEventData* InEventData)
+	{
+		if (const UDreamPointerEventData* PointerEvent = Cast<UDreamPointerEventData>(InEventData))
+		{
+			Ups += PointerEvent->EventType == EDreamUIPointerEventType::Up ? 1 : 0;
+			Clicks += PointerEvent->EventType == EDreamUIPointerEventType::Click ? 1 : 0;
+		}
+	});
+	const bool bLetGoOnIt = Rig.Driver()->Sequence().MoveToPixel(OnTheBox).Press().Release().WaitFrames(1).Perform();
+	const AActor* HoveredOnIt = Rig.EventSystem()->GetHoveredWorldTarget(0);
+	const int32 UpsOnIt = Ups;
+	const int32 ClicksOnIt = Clicks;
+	// Past the double-click time at the pump's 1/60 s frames, so the next press is one of its own.
+	Rig.PumpFrames(30);
+	const bool bLetGoPastIt = Rig.Driver()->Sequence().MoveToPixel(OnTheBox).Press().MoveToPixel(PastTheBox).Release().WaitFrames(1).Perform();
+	const AActor* HoveredPastIt = Rig.EventSystem()->GetHoveredWorldTarget(0);
+	Input->GetOnInputEvent().Remove(Listening);
+
+	TestTrue(TEXT("A press and a release on the box complete"), bLetGoOnIt);
+	TestTrue(FString::Printf(TEXT("The pointer was over the box (it was over %s)"), *GetNameSafe(HoveredOnIt)), HoveredOnIt == Box->GetOwner());
+	TestEqual(TEXT("Let go of on the box, the press is released"), UpsOnIt, 1);
+	TestEqual(TEXT("...and clicks it"), ClicksOnIt, 1);
+	TestTrue(TEXT("A press on the box let go of past it completes"), bLetGoPastIt);
+	TestNull(TEXT("Past the box, the pointer is over nothing in the world"), HoveredPastIt);
+	TestEqual(TEXT("Let go of past the box, the press is released all the same"), Ups, UpsOnIt + 1);
+	TestEqual(TEXT("...and clicks nothing"), Clicks, ClicksOnIt);
 	return true;
 }
 

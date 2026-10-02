@@ -108,8 +108,9 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintSetter = SetMaxDesiredSize, Category = "Slot", meta = (ClampMin = "0.0"))
 	FVector2D MaxDesiredSize = FVector2D::ZeroVector;
 	/**
-	 * WrapBox only, matching UMG's UWrapBoxSlot: share out whatever room is left over on this child's
-	 * line among the children on it that asked for it. Read by no other panel.
+	 * WrapBox only, matching UMG's UWrapBoxSlot: when this child is the LAST one on its line, it takes
+	 * whatever room the line has left over. Asked by any other child on the line, it does nothing --
+	 * SWrapBox reads the flag for the line's last child alone. Read by no other panel.
 	 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintSetter = SetFillEmptySpace, Category = "Slot")
 	bool bFillEmptySpace = false;

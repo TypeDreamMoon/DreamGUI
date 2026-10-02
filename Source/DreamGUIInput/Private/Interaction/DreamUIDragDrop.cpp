@@ -329,20 +329,28 @@ void UDreamUIDragDropSubsystem::Tick(float DeltaTime)
 	// A drag can die without its EndDrag reaching us (ClearEvent, raycast disabled, the screen torn down). Checked
 	// whether or not a visual exists, because the hover bookkeeping outlives a drag with no visual class just as
 	// easily, and a target left lit is as wrong as a visual left parked.
-	TArray<FIntPoint> Dead;
-	for (TPair<FIntPoint, FFollowedDrag>& Pair : FollowedDrags)
+	if (FollowedDrags.Num() == 0)
 	{
-		if (!IsStillLive(Pair.Value))
+		return;
+	}
+	// Walked by key, each drag looked up as its turn comes: a target's enter and leave reach game code, which can end a
+	// drag -- Escape's cancel -- or begin one, and a loop over the map itself went on through a map changed under it.
+	TArray<FIntPoint, TInlineAllocator<4>> Keys;
+	FollowedDrags.GetKeys(Keys);
+	for (const FIntPoint& Key : Keys)
+	{
+		FFollowedDrag* Drag = FollowedDrags.Find(Key);
+		if (Drag == nullptr)
 		{
-			Dead.Add(Pair.Key);
+			continue;//ended by a handler earlier in this walk
+		}
+		if (!IsStillLive(*Drag))
+		{
+			StopFollowingDrag(Key);
 			continue;
 		}
-		UpdateDragVisualPosition(Pair.Value);
-		UpdateDropHover(Pair.Value);
-	}
-	for (const FIntPoint& Key : Dead)
-	{
-		StopFollowingDrag(Key);
+		UpdateDragVisualPosition(*Drag);
+		UpdateDropHover(Key);
 	}
 }
 
@@ -368,7 +376,7 @@ void UDreamUIDragDropSubsystem::HandleInputEvent(UDreamBaseEventData* InEventDat
 			if (Drag->PointerEvent.Get() == PointerEvent)
 			{
 				UpdateDragVisualPosition(*Drag);
-				UpdateDropHover(*Drag);
+				UpdateDropHover(Key);
 			}
 		}
 		break;
@@ -396,30 +404,52 @@ void UDreamUIDragDropSubsystem::BeginFollowingDrag(UDreamPointerEventData* InPoi
 	Drag.PointerEvent = InPointerEvent;
 	Drag.Operation = Operation;
 	ShowDragVisual(Drag, InPointerEvent);
-	UpdateDropHover(Drag);
+	UpdateDropHover(Key);
 }
 
-void UDreamUIDragDropSubsystem::UpdateDropHover(FFollowedDrag& InDrag)
+void UDreamUIDragDropSubsystem::UpdateDropHover(const FIntPoint& InKey)
 {
-	UDreamPointerEventData* PointerEvent = InDrag.PointerEvent.Get();
-	UDreamDragDropOperation* Operation = InDrag.Operation.Get();
-	if (PointerEvent == nullptr || Operation == nullptr)
+	FFollowedDrag* Drag = FollowedDrags.Find(InKey);
+	if (Drag == nullptr)
 	{
-		ClearDropHover(InDrag);
 		return;
 	}
+	UDreamPointerEventData* PointerEvent = Drag->PointerEvent.Get();
+	UDreamDragDropOperation* Operation = Drag->Operation.Get();
+	if (PointerEvent == nullptr || Operation == nullptr)
+	{
+		ClearDropHover(*Drag);
+		return;
+	}
+	// Whether the drag is still followed once a target's handler has run: one that ended it -- or ended it and began
+	// another on the same pointer -- has had the leave of whatever it lit delivered by StopFollowingDrag, and a target
+	// entered now would never hear it was left.
+	auto IsStillFollowed = [this, &InKey, Operation]()
+	{
+		const FFollowedDrag* Now = FollowedDrags.Find(InKey);
+		return Now != nullptr && Now->Operation.Get() == Operation;
+	};
 	UDreamUIDropTarget* Target = DreamUIDragDropPolicy::ResolveDropTarget(PointerEvent->EnterWidget, Operation);
-	UDreamUIDropTarget* Previous = InDrag.HoveredTarget.Get();
+	UDreamUIDropTarget* Previous = Drag->HoveredTarget.Get();
 	if (Target != Previous)
 	{
+		// Written before either target hears of it, through an entry no handler has had the chance to move yet.
+		Drag->HoveredTarget = Target;
 		if (IsValid(Previous))
 		{
 			Previous->NotifyDragLeave(Operation);
+			if (!IsStillFollowed())
+			{
+				return;
+			}
 		}
-		InDrag.HoveredTarget = Target;
 		if (IsValid(Target))
 		{
 			Target->NotifyDragEnter(Operation);
+			if (!IsStillFollowed())
+			{
+				return;
+			}
 		}
 	}
 	if (IsValid(Target))
@@ -430,11 +460,14 @@ void UDreamUIDragDropSubsystem::UpdateDropHover(FFollowedDrag& InDrag)
 
 void UDreamUIDragDropSubsystem::ClearDropHover(FFollowedDrag& InDrag)
 {
-	if (UDreamUIDropTarget* Previous = InDrag.HoveredTarget.Get())
-	{
-		Previous->NotifyDragLeave(InDrag.Operation.Get());
-	}
+	// Forgotten before the target hears of it: its leave reaches game code, which can change the map InDrag lives in.
+	UDreamUIDropTarget* Previous = InDrag.HoveredTarget.Get();
+	UDreamDragDropOperation* Operation = InDrag.Operation.Get();
 	InDrag.HoveredTarget.Reset();
+	if (Previous != nullptr)
+	{
+		Previous->NotifyDragLeave(Operation);
+	}
 }
 
 void UDreamUIDragDropSubsystem::StopFollowingDrag(const FIntPoint& InKey)

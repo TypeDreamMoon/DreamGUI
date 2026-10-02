@@ -415,6 +415,11 @@ void UDreamWidget::SetHorizontalAnchorMinMax(FVector2D Value, bool bKeepSize, bo
 				}
 				this->AnchorData.AnchoredPosition.X = FMath::Lerp(CurrentLeft, -CurrentRight, this->AnchorData.Pivot.X);
 			}
+			// The two edge offsets were cached by the reads above, against the old anchors. Left as they were,
+			// they hold only while the size follows the anchors: keeping the size across a change of span moves
+			// both edges' distances from the new anchors, and GetAnchorOffsetLeft/Right went on answering the old ones.
+			bCacheAnchorOffsetLeftDirty = true;
+			bCacheAnchorOffsetRightDirty = true;
 			if (bKeepRelativeLocation)
 			{
 				this->SetRelativeLocation(PrevRelativeLocation);
@@ -460,6 +465,9 @@ void UDreamWidget::SetVerticalAnchorMinMax(FVector2D Value, bool bKeepSize, bool
 				}
 				this->AnchorData.AnchoredPosition.Y = FMath::Lerp(CurrentBottom, -CurrentTop, this->AnchorData.Pivot.Y);
 			}
+			/** The vertical twin of the reset in SetHorizontalAnchorMinMax. */
+			bCacheAnchorOffsetBottomDirty = true;
+			bCacheAnchorOffsetTopDirty = true;
 			if (bKeepRelativeLocation)
 			{
 				this->SetRelativeLocation(PrevRelativeLocation);
@@ -931,7 +939,10 @@ void UDreamWidget::MarkDimensionChanged(bool InPivotChanged, bool InWidthChanged
 	}
 	// No clip invalidation here: clip rectangles are recomputed and diffed every tick from the owner's world
 	// transform (see FDreamUIClipData::UpdateData), so there is nothing to mark.
-	OnDimensionChangedEvent.Broadcast(InPivotChanged, InWidthChanged, InHeightChanged);
+	//
+	// OnDimensionChangedEvent is broadcast once, by Call_DimensionsChanged at the end, after the layouts and
+	// the visual below have taken the new size in. It used to be broadcast here as well, so every listener --
+	// each behaviour's OnUIDimensionsChanged, a list view rebuilding its visible rows -- ran twice per change.
 	if (IsValid(LayoutContainer))
 	{
 		LayoutContainer->OnDimensionChanged(InPivotChanged, InWidthChanged, InHeightChanged);
@@ -991,9 +1002,13 @@ void UDreamWidget::MarkAnchorDataChanged_Recursive(bool InPivotChanged, bool InW
 	}
 
 	if (!InPropagateToChildren)return;
-	for (auto& Child : GetChildren())
+	// A copy of the children: each child's resize is announced to user code (Call_DimensionsChanged), which
+	// can add, take away or re-sort children of this very widget while the walk is still going. Walking the
+	// live array, that changed it under the iteration; a child taken away is no longer this widget's to mark.
+	const TArray<UDreamWidget*, TInlineAllocator<16>> ChildrenAtStart(GetChildren());
+	for (UDreamWidget* Child : ChildrenAtStart)
 	{
-		if (!IsValid(Child))continue;
+		if (!IsValid(Child) || Child->GetParent() != this)continue;
 		bool ChildWidthChange = false, ChildHeightChange = false;
 		if (InWidthChanged && Child->AnchorData.IsHorizontalStretched())
 		{
@@ -1094,9 +1109,11 @@ void UDreamWidget::MarkAnchorDataChangedByLayoutContainer_Recursive(bool InPivot
 	MarkDimensionChanged(InPivotChanged, InWidthChanged, InHeightChanged);
 
 	if (!InPropagateToChildren)return;
-	for (auto& Child : GetChildren())
+	// A copy of the children, for the reason given in MarkAnchorDataChanged_Recursive.
+	const TArray<UDreamWidget*, TInlineAllocator<16>> ChildrenAtStart(GetChildren());
+	for (UDreamWidget* Child : ChildrenAtStart)
 	{
-		if (!IsValid(Child))continue;
+		if (!IsValid(Child) || Child->GetParent() != this)continue;
 		bool ChildWidthChange = false, ChildHeightChange = false;
 		if (InWidthChanged && Child->AnchorData.IsHorizontalStretched())
 		{

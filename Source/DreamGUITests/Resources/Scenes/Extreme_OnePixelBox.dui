@@ -1,0 +1,88 @@
+// Paragraphs in a box 1 pixel wide (the red line): wrapping per character puts every character on a line of its own,
+// wrapping between words puts every word on one; neither may hang the layout or lose a character.
+// @stage 512x512
+
+style Title {
+    AnchorData.AnchorMin = (0, 1)
+    AnchorData.AnchorMax = (1, 1)
+    AnchorData.Pivot = (0.5, 1)
+    AnchorData.AnchoredPosition = (0, -8)
+    AnchorData.SizeDelta = (-24, 20)
+    FontSize = 15
+    Color = #1E2230
+    HAlign = Left
+    VAlign = Top
+    OverflowType = HorizontalOverflow
+}
+
+style Note {
+    AnchorData.AnchorMin = (0, 1)
+    AnchorData.AnchorMax = (0, 1)
+    AnchorData.Pivot = (0, 1)
+    AnchorData.SizeDelta = (220, 16)
+    FontSize = 12
+    Color = #5A6172
+    HAlign = Left
+    VAlign = Top
+    OverflowType = HorizontalOverflow
+}
+
+style Rule {
+    AnchorData.AnchorMin = (0, 1)
+    AnchorData.AnchorMax = (0, 1)
+    AnchorData.Pivot = (0, 1)
+    AnchorData.SizeDelta = (1, 430)
+    Brush.ImageSize = (0, 0)
+    Brush.TintColor = #D9534F
+}
+
+style Narrow {
+    AnchorData.AnchorMin = (0, 1)
+    AnchorData.AnchorMax = (0, 1)
+    AnchorData.Pivot = (0, 1)
+    AnchorData.SizeDelta = (1, 430)
+    FontSize = 16
+    Color = #1E2230
+    HAlign = Left
+    VAlign = Top
+    OverflowType = VerticalOverflow
+}
+
+Widget Root {
+    Image Page {
+        Brush.TintColor = #F5F3EE
+        AnchorData.AnchorMin = (0, 0)
+        AnchorData.AnchorMax = (1, 1)
+        AnchorData.SizeDelta = (0, 0)
+    }
+
+    Text Heading : Title {
+        Text = "A paragraph in a 1 px wide box, 16 px"
+    }
+
+    Text PerCharacterLabel : Note {
+        AnchorData.AnchoredPosition = (24, -44)
+        Text = "per-character wrapping"
+    }
+    Image PerCharacterRule : Rule {
+        AnchorData.AnchoredPosition = (100, -64)
+    }
+    Text PerCharacter : Narrow {
+        AnchorData.AnchoredPosition = (100, -64)
+        WrappingPolicy = AllowPerCharacterWrapping
+        Text = "One pixel"
+    }
+
+    Text WordsLabel : Note {
+        AnchorData.AnchoredPosition = (280, -44)
+        Text = "wrapping between words"
+    }
+    Image WordsRule : Rule {
+        AnchorData.AnchoredPosition = (340, -64)
+    }
+    Text Words : Narrow {
+        AnchorData.AnchoredPosition = (340, -64)
+        WrappingPolicy = DefaultWrapping
+        Text = "One pixel wide box"
+    }
+}

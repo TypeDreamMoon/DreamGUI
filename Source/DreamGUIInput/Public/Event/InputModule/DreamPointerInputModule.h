@@ -54,6 +54,13 @@ public:
 	static bool CanHandleInterface(UDreamWidget* InWidget, UClass* InInterfaceClass);
 	static UDreamWidget* GetEventHandle(UDreamWidget* InWidget, UClass* InInterfaceClass);
 
+	/**
+	 * Push the hovered widget's Cursor to the player's controller, for the mouse's pointer: the hardware cursor is the
+	 * mouse's, and another pointer of the player's says nothing about it. See DreamPointerPolicy. Public, like the
+	 * steps above, so the rule can be asked of one pointer without a frame around it.
+	 */
+	static void ApplyHoverCursor(UDreamUIInputUser* InUser, UDreamPointerEventData* InEventData);
+
 protected:
 	/**
 	 * Decide whether the press that has just ended was a swipe, and dispatch it if so. Called from the release
@@ -61,7 +68,5 @@ protected:
 	 * that is the last moment both of its ends are known.
 	 */
 	static void DetectSwipeGesture(UDreamUIInputUser* InUser, UDreamPointerEventData* InEventData);
-	/** Push the hovered widget's Cursor to the player's controller. See DreamPointerPolicy. */
-	static void ApplyHoverCursor(UDreamUIInputUser* InUser, UDreamPointerEventData* InEventData);
 	static void DeselectIfSelectionChanged(UDreamUIInputUser* InUser, UDreamWidget* InPressed, UDreamBaseEventData* InEventData);
 };

@@ -133,6 +133,27 @@ namespace DreamUIKeyRoutingLocal
 		const UPlayerInput* Input = Controller != nullptr ? Controller->PlayerInput.Get() : nullptr;
 		return Input != nullptr && Input->IsShiftPressed();
 	}
+
+	void NotePress(UDreamUIInputUser* InUser, const FKey& InKey, EDreamUIKeyPressTaker InTaker,
+		EDreamUINavigationDirection InDirection = EDreamUINavigationDirection::None)
+	{
+		FDreamUIKeyPress Press;
+		Press.Taker = InTaker;
+		Press.Direction = InDirection;
+		InUser->NoteKeyPress(InKey, Press);
+	}
+
+	/**
+	 * A press of a key whose last press never had its release -- lost to the application losing the focus, say -- lets
+	 * go of that one first, so whatever took it is not left holding it.
+	 */
+	void LetGoOfUnreleasedPress(UDreamUIInputUser* InUser, const FKey& InKey, const FModifierKeysState* InModifiers)
+	{
+		if (InUser->FindKeyPress(InKey) != nullptr)
+		{
+			DreamUIKeyRouting::RouteKeyRelease(InUser, InKey, InModifiers);
+		}
+	}
 }
 
 TConstArrayView<FKey> DreamUIKeyRouting::GetConfirmKeys() { return DreamUIKeyRoutingLocal::ConfirmKeys; }
@@ -210,15 +231,26 @@ bool DreamUIKeyRouting::RouteConfirmKey(UDreamUIInputUser* InUser, const FKey& I
 	{
 		return false;
 	}
-	if (bInPressed)
+	if (!bInPressed)
 	{
-		ReportDevice(InUser, InKey);
+		return RouteKeyRelease(InUser, InKey, InModifiers);
 	}
+	ReportDevice(InUser, InKey);
+	LetGoOfUnreleasedPress(InUser, InKey, InModifiers);
 	// An action explicitly bound to this key outranks its built-in meaning: Confirm is the likeliest thing a screen binds
 	// to Enter, and it must not also press whatever navigation is sitting on. One keypress, one outcome.
-	if (OfferToBindings(InUser, InKey, bInPressed, InModifiers))return true;
-	if (OfferToVirtualCursor(InUser, InKey, bInPressed))return true;
-	InUser->InputTriggerForNavigation(bInPressed, NavigationPointerID);
+	if (OfferToBindings(InUser, InKey, true, InModifiers))
+	{
+		NotePress(InUser, InKey, EDreamUIKeyPressTaker::Bindings);
+		return true;
+	}
+	if (OfferToVirtualCursor(InUser, InKey, true))
+	{
+		NotePress(InUser, InKey, EDreamUIKeyPressTaker::VirtualCursor);
+		return true;
+	}
+	InUser->InputTriggerForNavigation(true, NavigationPointerID);
+	NotePress(InUser, InKey, EDreamUIKeyPressTaker::NavigationConfirm);
 	// Taken only when there is something for it to press: with nothing focused or highlighted, the key is still the
 	// game's -- the space bar in a level with no menu open is a jump.
 	return IsValid(GetKeyTarget(InUser));
@@ -241,16 +273,30 @@ bool DreamUIKeyRouting::RouteDirectionKeyAs(UDreamUIInputUser* InUser, const FKe
 	{
 		return false;
 	}
+	if (!bInPressed)
+	{
+		// The direction its press stepped in, whatever the key would mean now: Tab let go of with shift since pressed is
+		// still the Next it pressed.
+		return RouteKeyRelease(InUser, InKey, InModifiers);
+	}
 	// Reported BEFORE the cursor is consulted: a keyboard arrow reports the keyboard, which is what takes an auto-mode
 	// virtual cursor down, so the same press then falls through to navigation instead of being eaten by a cursor on its
 	// way out.
-	if (bInPressed)
+	ReportDevice(InUser, InKey);
+	LetGoOfUnreleasedPress(InUser, InKey, InModifiers);
+	if (OfferToBindings(InUser, InKey, true, InModifiers))
 	{
-		ReportDevice(InUser, InKey);
+		NotePress(InUser, InKey, EDreamUIKeyPressTaker::Bindings);
+		return true;
 	}
-	if (OfferToBindings(InUser, InKey, bInPressed, InModifiers))return true;
-	if (OfferToVirtualCursor(InUser, InKey, bInPressed))return true;
-	InUser->InputNavigation(InDirection, bInPressed, NavigationPointerID);
+	if (OfferToVirtualCursor(InUser, InKey, true))
+	{
+		// Dropped: a direction is not the cursor's business, and its release has nothing to tell it either.
+		NotePress(InUser, InKey, EDreamUIKeyPressTaker::PressOnly);
+		return true;
+	}
+	InUser->InputNavigation(InDirection, true, NavigationPointerID);
+	NotePress(InUser, InKey, InDirection != EDreamUINavigationDirection::None ? EDreamUIKeyPressTaker::NavigationDirection : EDreamUIKeyPressTaker::PressOnly, InDirection);
 	// As a confirm: a step with nothing focused or highlighted still looks for somewhere to land, but the key is the
 	// game's until the UI has something to move.
 	return IsValid(GetKeyTarget(InUser));
@@ -264,8 +310,14 @@ bool DreamUIKeyRouting::RouteScrollKey(UDreamUIInputUser* InUser, const FKey& In
 		return false;
 	}
 	ReportDevice(InUser, InKey);
+	LetGoOfUnreleasedPress(InUser, InKey, InModifiers);
 	// A screen that binds End to "jump to newest" wins over the built-in meaning.
-	if (OfferToBindings(InUser, InKey, true, InModifiers))return true;
+	if (OfferToBindings(InUser, InKey, true, InModifiers))
+	{
+		NotePress(InUser, InKey, EDreamUIKeyPressTaker::Bindings);
+		return true;
+	}
+	NotePress(InUser, InKey, EDreamUIKeyPressTaker::PressOnly);
 	UDreamWidget* Target = GetKeyTarget(InUser);
 	if (!IsValid(Target))
 	{
@@ -305,14 +357,17 @@ bool DreamUIKeyRouting::RouteOtherKey(UDreamUIInputUser* InUser, const FKey& InK
 	{
 		return false;
 	}
-	if (OfferToBindings(InUser, InKey, bInPressed, InModifiers))
-	{
-		return true;
-	}
 	if (!bInPressed)
 	{
-		return false;
+		return RouteKeyRelease(InUser, InKey, InModifiers);
 	}
+	LetGoOfUnreleasedPress(InUser, InKey, InModifiers);
+	if (OfferToBindings(InUser, InKey, true, InModifiers))
+	{
+		NotePress(InUser, InKey, EDreamUIKeyPressTaker::Bindings);
+		return true;
+	}
+	NotePress(InUser, InKey, EDreamUIKeyPressTaker::PressOnly);
 	// Only once nothing has claimed the key: a project that binds its own Back action defines what Back does, and the
 	// built-in behaviour is the fallback for one that has not.
 	for (const FKey& BackKey : BackKeys)
@@ -337,9 +392,14 @@ bool DreamUIKeyRouting::RouteOtherKey(UDreamUIInputUser* InUser, const FKey& InK
 
 bool DreamUIKeyRouting::RouteTextKey(UDreamUIInputUser* InUser, const FKey& InKey, bool bInPressed, const FModifierKeysState& InModifiers)
 {
-	// The field the player is typing into takes the keys it types with before anything else sees them -- press and
-	// release alike, so no half of a keystroke reaches a binding. Escape is not among them: Back reaches an edit
-	// through the navigation stack, which ends it before anything else.
+	// The field the player is typing into takes the keys it types with before anything else sees them, so no
+	// keystroke it types also reaches a binding. Escape is not among them: Back reaches an edit through the
+	// navigation stack, which ends it before anything else. A release is not asked here: it goes to whatever took its
+	// press (RouteKeyRelease), and the field takes only those it typed.
+	if (!bInPressed)
+	{
+		return false;
+	}
 	IDreamUITextInputTarget* Target = InUser != nullptr ? Cast<IDreamUITextInputTarget>(InUser->GetTextTarget()) : nullptr;
 	if (Target == nullptr || !Target->IsTextInputActive())
 	{
@@ -351,11 +411,70 @@ bool DreamUIKeyRouting::RouteTextKey(UDreamUIInputUser* InUser, const FKey& InKe
 	{
 		return false;
 	}
-	if (bInPressed)
-	{
-		Target->HandleTextInputKeyWithModifiers(InKey, InModifiers);
-	}
+	Target->HandleTextInputKeyWithModifiers(InKey, InModifiers);
 	return true;
+}
+
+bool DreamUIKeyRouting::RouteKeyRelease(UDreamUIInputUser* InUser, const FKey& InKey, const FModifierKeysState* InModifiers)
+{
+	using namespace DreamUIKeyRoutingLocal;
+	if (InUser == nullptr)
+	{
+		return false;
+	}
+	FDreamUIKeyPress Press;
+	const bool bRouted = InUser->TakeKeyPress(InKey, Press);
+	if (bRouted && Press.Taker == EDreamUIKeyPressTaker::Text)
+	{
+		return true;//typed on the press, which nothing else heard
+	}
+	// The bindings hear every other release: the focused widget's key-up, as UMG delivers it to the focus whoever took
+	// the down, and the binding that took the press when one did -- which the router remembers and answers for. A
+	// binding that did not see the press takes nothing.
+	if (OfferToBindings(InUser, InKey, false, InModifiers))
+	{
+		return true;
+	}
+	if (!bRouted)
+	{
+		return false;
+	}
+	switch (Press.Taker)
+	{
+	case EDreamUIKeyPressTaker::Bindings:
+		return true;//the press was kept from everything else, and so is its release
+	case EDreamUIKeyPressTaker::VirtualCursor:
+		if (UDreamUIVirtualCursorSubsystem* Cursor = UDreamUIVirtualCursorSubsystem::Get(WorldOf(InUser)))
+		{
+			Cursor->SetConfirmPressedForUser(InUser->GetUserIndex(), false);
+		}
+		return true;
+	case EDreamUIKeyPressTaker::NavigationConfirm:
+		InUser->InputTriggerForNavigation(false, NavigationPointerID);
+		return IsValid(GetKeyTarget(InUser));
+	case EDreamUIKeyPressTaker::NavigationDirection:
+		InUser->InputNavigation(Press.Direction, false, NavigationPointerID);
+		return IsValid(GetKeyTarget(InUser));
+	default:
+		return false;
+	}
+}
+
+void DreamUIKeyRouting::AbandonKeyPress(UDreamUIInputUser* InUser, const FKey& InKey)
+{
+	using namespace DreamUIKeyRoutingLocal;
+	const FDreamUIKeyPress* Press = InUser != nullptr ? InUser->FindKeyPress(InKey) : nullptr;
+	if (Press == nullptr)
+	{
+		return;
+	}
+	// The confirm's press is a pointer press -- the navigation pointer's, or the virtual cursor's on the same pointer --
+	// and ends first, so the release that follows lands on a pointer no longer pressed and clicks nothing.
+	if (Press->Taker == EDreamUIKeyPressTaker::NavigationConfirm || Press->Taker == EDreamUIKeyPressTaker::VirtualCursor)
+	{
+		InUser->CancelPointerPress(NavigationPointerID);
+	}
+	RouteKeyRelease(InUser, InKey);
 }
 
 bool DreamUIKeyRouting::RouteKey(UDreamUIInputUser* InUser, const FKey& InKey, bool bInPressed, const FModifierKeysState& InModifiers, bool& bOutTyped)
@@ -366,8 +485,18 @@ bool DreamUIKeyRouting::RouteKey(UDreamUIInputUser* InUser, const FKey& InKey, b
 	{
 		return false;
 	}
-	if (RouteTextKey(InUser, InKey, bInPressed, InModifiers))
+	if (!bInPressed)
 	{
+		// Where its press went, not what the key would mean now: a field that began its edit while the key was held --
+		// the arrow that navigated into it -- does not take the release of a press it never saw.
+		const FDreamUIKeyPress* Press = InUser->FindKeyPress(InKey);
+		bOutTyped = Press != nullptr && Press->Taker == EDreamUIKeyPressTaker::Text;
+		return RouteKeyRelease(InUser, InKey, &InModifiers);
+	}
+	LetGoOfUnreleasedPress(InUser, InKey, &InModifiers);
+	if (RouteTextKey(InUser, InKey, true, InModifiers))
+	{
+		NotePress(InUser, InKey, EDreamUIKeyPressTaker::Text);
 		bOutTyped = true;
 		return true;
 	}

@@ -7,6 +7,7 @@
 #include "Event/DreamUIInputTypes.h"
 #include "Event/DreamUIInputUser.h"
 #include "Engine/GameViewportClient.h"
+#include "Slate/SceneViewport.h"
 #include "Core/DreamUIWorldContext.h"
 
 int32 UDreamStandaloneInputModule::GetTouchPointerID(int32 InTouchID)
@@ -39,8 +40,10 @@ void UDreamStandaloneInputModule::InputTrigger(const FVector& InMousePosition, b
 
 void UDreamStandaloneInputModule::GetMousePosition(FVector2D& OutMousePos)const
 {
-	// Written before any early-out, because the documented contract is "(0,0) if the position is not valid".
-	OutMousePos = FVector2D::ZeroVector;
+	// Written before any early-out: with no viewport to ask, the mouse is over none, and (-1,-1) is where
+	// FSceneViewport itself parks a cursor that is over no part of it. (0,0) is the top-left pixel -- the presets push
+	// this answer into pointer 0 every frame, which hovered, and dropped a drag onto, whatever was drawn there.
+	OutMousePos = FVector2D(-1.0, -1.0);
 	if (bOverrideMousePosition)
 	{
 		OutMousePos = OverridePointerPosition;
@@ -48,9 +51,22 @@ void UDreamStandaloneInputModule::GetMousePosition(FVector2D& OutMousePos)const
 	}
 	const UWorld* World = DreamUI::GetWorldSafe(this);
 	if (World == nullptr)return;
-	if (auto Viewport = World->GetGameViewport())
+	UGameViewportClient* Client = World->GetGameViewport();
+	if (Client == nullptr || Client->GetMousePosition(OutMousePos))
 	{
-		Viewport->GetMousePosition(OutMousePos);
+		return;
+	}
+	// The client gives no position for a cursor its viewport's cache puts off it -- (-1,-1) once the cursor has left
+	// the viewport or the last finger has lifted (SceneViewport.cpp, OnMouseLeave and OnTouchEnded), left of or above
+	// it while a drag the viewport captured goes past an edge -- nor for any position while no mouse is attached. The
+	// cache is the viewport's own reckoning of where the cursor is, and that is the answer: off the viewport, so over
+	// nothing, wherever the cursor is not on it.
+	OutMousePos = FVector2D(-1.0, -1.0);
+	if (FViewport* ClientViewport = Client->Viewport)
+	{
+		FIntPoint CachedCursor = FIntPoint(-1, -1);
+		ClientViewport->GetMousePos(CachedCursor);
+		OutMousePos = FVector2D(CachedCursor);
 	}
 }
 

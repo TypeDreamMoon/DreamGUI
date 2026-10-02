@@ -81,6 +81,15 @@ protected:
 	/** use font kerning for better text layout. */
 	UPROPERTY(EditAnywhere, Category = "DreamGUI")
 		bool bUseKerning = true;
+	/**
+	 * Let the font join letters into its standard and contextual ligatures ("fi", "ffl"), as browsers do by default
+	 * (Slate's default shaping of left-to-right text has none). The layout leaves them out on its own while FontSpace.X
+	 * is not zero, which is the CSS rule, and so does a text whose characters something animates one by one (see
+	 * RegisterPerCharacterAnimation): a ligature draws several characters as one glyph. Off, it also turns off the
+	 * font's contextual alternates in Latin, Greek and Cyrillic; scripts that need theirs to join keep them.
+	 */
+	UPROPERTY(EditAnywhere, Category = "DreamGUI", Getter = "GetLigatures", Setter = "SetLigatures", meta = (AllowPrivateAccess = true))
+	bool bLigatures = true;
 	UPROPERTY(EditAnywhere, Category = "DreamGUI")
 		FVector2D FontSpace = FVector2D(0, 0);
 	UPROPERTY(EditAnywhere, Category = "DreamGUI")
@@ -224,6 +233,7 @@ protected:
 	 *     and it broadcasts UDreamText::OnHyperlinkClicked with the id
 	 * <img=smile/> display a image with key "smile" which defined in RichTextImageData property, can be used for emoji
 	 * <img=smile,24/> the same image 24 tall, as wide as its aspect ratio makes it; <img=smile,24,24/> sets both
+	 * <img=smile,24,baseline/> where the image sits on its line: middle (the default, centred), baseline, top or bottom; an image taller than its line grows the line
 	 * &lt; &gt; &amp; &quot; &apos; &nbsp; and &#1234; / &#x1F600; write a character the markup would
 	 *     otherwise eat -- the only way to show a literal '<'. Plain text does NOT unescape, as in UMG.
 	 */
@@ -281,6 +291,12 @@ public:
 	virtual void OnUpdateGeometry(FDreamUIGeometry& InGeo, bool InTriangleChanged, bool InVertexPositionChanged, bool InVertexUVChanged, bool InVertexColorChanged)override;
 	virtual uint8 GetFontMark_WidgetPropertyDataForMaterial() override;
 	virtual void FillWidgetPropertyDataForMaterial_Extra(class UDreamUIDataAsTexture* DataAsTexture) override;
+	/**
+	 * The font mark (an EDreamUIFontTextureMark) this text's record in its canvas's widget property data was last
+	 * written with, which is what the shader decodes the atlas by: one channel for a bitmap or a single-channel field,
+	 * the median of three for MTSDF. 0 until the record is first written.
+	 */
+	uint8 GetWidgetPropertyFontMark()const { return WrittenFontMark; }
 	virtual void OnCultureChanged_Implementation()override;
 
 public:
@@ -289,7 +305,6 @@ public:
 	void ApplyRecreateText();
 	void ApplyFontEmojiChange();
 
-	virtual void MarkVerticesDirty(bool InTriangleDirty, bool InVertexPositionDirty, bool InVertexUVDirty, bool InVertexColorDirty)override;
 	virtual void MarkTextureDirty()override;
 
 	FORCEINLINE static bool IsVisibleChar(uint32 Codepoint)
@@ -327,6 +342,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI")	const FText& GetText()const { return Text; }
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI") float GetFontSize()const { return FontSize; }
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI") bool GetUseKerning()const { return bUseKerning; }
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI") bool GetLigatures()const { return bLigatures; }
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI") FVector2D GetFontSpace()const { return FontSpace; }
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI") EDreamUITextOverflowType GetOverflowType()const { return OverflowType; }
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI") const FMargin& GetMargin()const { return Margin; }
@@ -370,6 +386,24 @@ public:
 		void SetFontSize(float Value);
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
 		void SetUseKerning(bool Value);
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
+	void SetLigatures(bool Value);
+	/**
+	 * Something that animates this text's characters one by one -- TextAnimation, which moves each glyph by its index in
+	 * GetCharPropertyArray -- registers here for as long as it does so. A ligature draws several characters as one glyph,
+	 * which would leave such an animator glyphs short, so the text lays out without ligatures while anything is
+	 * registered; and each character's underline and strikethrough are painted as pieces of its own, which the animator
+	 * moves with it, instead of one strip across a run. Registering the same animator twice counts once, and an animator
+	 * that is destroyed stops counting.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
+	void RegisterPerCharacterAnimation(const UObject* InAnimator);
+	/** The animator is done with this text's characters; see RegisterPerCharacterAnimation. */
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
+	void UnregisterPerCharacterAnimation(const UObject* InAnimator);
+	/** Whether anything registered through RegisterPerCharacterAnimation still animates this text's characters. */
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
+	bool HasPerCharacterAnimation()const;
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
 		void SetFontSpace(FVector2D Value);
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
@@ -463,6 +497,35 @@ private:
 	FDelegateHandle GlyphsReadyDelegateHandle;
 	/** The last layout had glyphs still on the font's worker; relayout when the font says they landed. */
 	mutable bool bWaitingForGlyphs = false;
+	/** What RegisterPerCharacterAnimation was told is animating the characters, each once; gone objects count for nothing. */
+	TArray<TWeakObjectPtr<const UObject>> PerCharacterAnimators;
+	/** The tag colours SetTagColorOverride put in force, as (tag index, colour): handed to the painter as they are. */
+	TArray<TPair<int32, FColor>> TagColorOverrides;
+	/**
+	 * The tag each of TagColorOverrides was put on, in the same order, as the layout described it then. An override names
+	 * its tag by index, and a layout can put another tag at that index -- the text edited, a tag added in front -- so a
+	 * layout takes off every override whose tag is no longer where it was (DropMovedTagColorOverrides) rather than colour
+	 * a tag nobody chose. One put on before the text had a tag at its index has CharIndexStart INDEX_NONE, and takes the
+	 * tag the next layout puts there.
+	 */
+	TArray<FDreamUIText_RichTextCustomTag> TagColorOverrideTags;
+	/** The font mark the widget property record was last written with; see GetWidgetPropertyFontMark. */
+	uint8 WrittenFontMark = 0;
+	/**
+	 * Throw away the layout, and the one measured at an offered width, so the next query or paint lays the text out
+	 * again. Marking the vertices dirty does not: whether a layout is stale is decided when one is asked for, by
+	 * comparing the layout input (SetLayoutInput), which holds everything the layout reads from this text, its widget
+	 * and its canvas -- so a repaint, a TextAnimation frame or a fill sweeping a lyric costs no layout. This is for what
+	 * that comparison cannot see: a data asset or a font changing underneath the same pointer, glyphs landing, the
+	 * culture, the Best Fit settings.
+	 */
+	void MarkLayoutDirty();
+	/** Repaint for a changed tag colour override, when there is a widget to repaint in. */
+	void MarkTagColorsDirty();
+	/** After a layout: take off every tag colour override whose tag is no longer at its index (see TagColorOverrideTags). */
+	void DropMovedTagColorOverrides();
+	/** Lay out again for a changed ligature switch, when there is a widget to repaint in. */
+	void MarkLigaturesDirty();
 protected:
 	virtual void OnDimensionChanged(bool InPivotChange, bool InWidthChange, bool InHeightChange)override;
 public:
@@ -507,6 +570,12 @@ public:
 	 */
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
 	bool FindHyperlinkByWorldPosition(FVector InWorldPosition, FName& OutId)const;
+	/**
+	 * FindHyperlinkByWorldPosition's hit test, answering with the link's index in GetRichTextCustomTagArray rather
+	 * than its id -- two links may share an id -- or INDEX_NONE when no link is under the point.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
+	int32 FindHyperlinkIndexByWorldPosition(FVector InWorldPosition)const;
 	/** Hit-tests the point and, on a hit, broadcasts OnHyperlinkClicked. True when a link was hit. */
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
 	bool TryClickHyperlinkAtWorldPosition(FVector InWorldPosition);
@@ -516,6 +585,29 @@ public:
 	/** The C++ side of the same event, for a native control that cannot bind a dynamic delegate. */
 	FDreamTextHyperlinkCppEvent OnHyperlinkClickedCPP;
 #pragma endregion Hyperlink
+
+#pragma region TagColorOverride
+	/**
+	 * Draw the glyphs of one rich-text tag in InColor instead of the colour the markup gives them, until cleared --
+	 * how UUITextHyperlink shows a link hovered or pressed. InTagIndex indexes GetRichTextCustomTagArray (a link is a
+	 * tag too). The colour is applied when the text is painted, so this repaints the text and never lays it out again.
+	 * It belongs to the tag at InTagIndex now: a layout that puts another tag at that index -- the text edited, a tag
+	 * added in front -- takes it off, rather than colour a tag nobody chose.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
+	void SetTagColorOverride(int32 InTagIndex, FColor InColor);
+	/** Give one tag back the colour its markup gives it. */
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
+	void ClearTagColorOverride(int32 InTagIndex);
+	/** Give every tag back the colour its markup gives it. */
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
+	void ClearTagColorOverrides();
+	/** The colour a tag is drawn in instead of its own, when SetTagColorOverride put one in force. */
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
+	bool GetTagColorOverride(int32 InTagIndex, FColor& OutColor)const;
+	/** Every override in force, as (tag index, colour) pairs: what the painter is handed. */
+	const TArray<TPair<int32, FColor>>& GetTagColorOverrides()const { return TagColorOverrides; }
+#pragma endregion TagColorOverride
 
 	const FDreamUITextGeometryCache& GetCacheTextGeometryData()const { UpdateCacheTextGeometry(); return CacheTextGeometryData; }
 };

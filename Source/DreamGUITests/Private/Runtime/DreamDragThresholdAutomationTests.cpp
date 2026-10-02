@@ -4,6 +4,7 @@
 
 #include "Misc/AutomationTest.h"
 
+#include "Controls/DreamButton.h"
 #include "Core/Components/DreamWidget.h"
 #include "Event/DreamEventSystem.h"
 #include "Event/DreamPointerEventData.h"
@@ -11,14 +12,17 @@
 #include "Interaction/DreamDragDropOperation.h"
 #include "Interaction/DreamUIDragDrop.h"
 #include "Interaction/UIEventTrigger.h"
+#include "Interaction/UISelectable.h"
 #include "DreamPointerEventTestTypes.h"
 #include "UObject/StrongObjectPtr.h"
 
 #include "Driver/DreamDriver.h"
 #include "Driver/DreamDriverElement.h"
+#include "Driver/DreamDriverInputModule.h"
 #include "Driver/DreamDriverLocators.h"
 #include "Driver/DreamDriverRig.h"
 #include "Driver/DreamDriverSequence.h"
+#include "Interaction/DreamPressInteractionTestTypes.h"
 
 /*
  * The decision that A DRAG HAS STARTED.
@@ -621,6 +625,254 @@ bool FDreamPointerSwipeGestureTest::RunTest(const FString& Parameters)
 			.Release()
 			.Perform());
 	TestEqual(TEXT("A slow travel is a drag, not a swipe"), Counter->SwipeCount, 2);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamPointerReleaseAwayIsNoClickTest,
+	"DreamGUI.Input.Click.APressLetGoOfAwayFromWhatItPressedIsNotAClick",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * A click is a press and a release both on the thing clicked -- SButton::OnMouseButtonUp clicks only while the button is
+ * hovered -- but the release sent the pressed widget its click wherever the pointer was by then, unless a drag had begun
+ * on the way. A button that moved out from under a held press was clicked by the release over empty space, and a
+ * navigation confirm held while a step took the highlight to the next button clicked the button the highlight had left.
+ * The release now clicks only what the pointer is over, or something inside it; a step off what a navigation confirm
+ * pressed ends that press there, with its up and no click. Checked with two buttons, the mouse, and the D-pad's road.
+ */
+bool FDreamPointerReleaseAwayIsNoClickTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamDragThresholdTestLocal;
+
+	FDreamDriverRig Rig = FDreamDriverRig::Headless(ViewportSize);
+	Rig.BindTest(this);
+	if (!TestTrue(TEXT("The rig came up"), Rig.IsUsable() && Rig.InputModule() != nullptr))
+	{
+		return false;
+	}
+	TStrongObjectPtr<UDreamPressInteractionListener> WestListener(NewObject<UDreamPressInteractionListener>());
+	TStrongObjectPtr<UDreamPressInteractionListener> EastListener(NewObject<UDreamPressInteractionListener>());
+	UDreamButton* West = Rig.MakeControl<UDreamButton>(TEXT("West"), nullptr, FVector2D(200.0, 60.0), FVector2D(-200.0, 0.0));
+	UDreamButton* East = Rig.MakeControl<UDreamButton>(TEXT("East"), nullptr, FVector2D(200.0, 60.0), FVector2D(200.0, 0.0));
+	if (!TestTrue(TEXT("Two buttons side by side"), West != nullptr && East != nullptr))
+	{
+		return false;
+	}
+	auto Listen = [](UDreamButton* InButton, UDreamPressInteractionListener* InListener)
+	{
+		InButton->OnPressed.AddDynamic(InListener, &UDreamPressInteractionListener::HandlePressed);
+		InButton->OnReleased.AddDynamic(InListener, &UDreamPressInteractionListener::HandleReleased);
+		InButton->OnClicked.AddDynamic(InListener, &UDreamPressInteractionListener::HandleClicked);
+	};
+	Listen(West, WestListener.Get());
+	Listen(East, EastListener.Get());
+	Rig.PumpFrames(2);
+	UDreamDriverInputModule* Module = Rig.InputModule();
+	const TOptional<FVector2D> WestCentre = CentrePixelOf(Rig, West);
+	if (!TestTrue(TEXT("The west button is somewhere the pointer can reach"), WestCentre.IsSet()))
+	{
+		return false;
+	}
+
+	// Pressed and let go of where it was pressed: a click, the premise of everything below.
+	Module->MoveTo(WestCentre.GetValue());
+	Rig.PumpFrames(1);
+	Module->Press();
+	Rig.PumpFrames(1);
+	Module->Release();
+	Rig.PumpFrames(1);
+	TestEqual(TEXT("A press let go of where it was pressed clicks"), WestListener->ClickedCount, 1);
+
+	// Pressed, and the button moved out from under the pointer -- a layout change -- before the release.
+	Module->Press();
+	Rig.PumpFrames(1);
+	West->SetAnchoredPosition(FVector2D(-200.0, -250.0));
+	Rig.PumpFrames(2);
+	Module->Release();
+	Rig.PumpFrames(1);
+	TestEqual(TEXT("A button that moved out from under a held press is pressed"), WestListener->PressedCount, 2);
+	TestEqual(TEXT("...and let go of"), WestListener->ReleasedCount, 2);
+	TestEqual(TEXT("...but the release over empty space does not click it"), WestListener->ClickedCount, 1);
+	West->SetAnchoredPosition(FVector2D(-200.0, 0.0));
+	Module->MoveTo(FVector2D(8.0, 8.0));
+	Rig.PumpFrames(2);
+
+	// The confirm held on the highlighted button while a step takes the highlight to the other one.
+	Module->Navigate(EDreamUINavigationDirection::Right, true);
+	Rig.PumpFrames(1);
+	Module->Navigate(EDreamUINavigationDirection::Right, false);
+	Rig.PumpFrames(1);
+	const UDreamWidget* Highlighted = Rig.EventSystem()->GetHighlightedComponentForNavigation(0);
+	UDreamButton* First = Highlighted != nullptr && (Highlighted == West || Highlighted->IsChildOf(West)) ? West
+		: (Highlighted != nullptr && (Highlighted == East || Highlighted->IsChildOf(East)) ? East : nullptr);
+	if (!TestNotNull(TEXT("Navigation highlighted one of the two buttons"), First))
+	{
+		return false;
+	}
+	UDreamButton* Other = First == West ? East : West;
+	UDreamPressInteractionListener* FirstListener = First == West ? WestListener.Get() : EastListener.Get();
+	UDreamPressInteractionListener* OtherListener = First == West ? EastListener.Get() : WestListener.Get();
+	const int32 FirstPresses = FirstListener->PressedCount;
+	const int32 FirstReleases = FirstListener->ReleasedCount;
+	const int32 FirstClicks = FirstListener->ClickedCount;
+	const int32 OtherPresses = OtherListener->PressedCount;
+	const int32 OtherClicks = OtherListener->ClickedCount;
+	const EDreamUINavigationDirection TowardOther = First == West ? EDreamUINavigationDirection::Right : EDreamUINavigationDirection::Left;
+
+	Module->NavigationTrigger(true);
+	Rig.PumpFrames(1);
+	TestEqual(TEXT("The confirm pressed the highlighted button"), FirstListener->PressedCount, FirstPresses + 1);
+	Module->Navigate(TowardOther, true);
+	Rig.PumpFrames(1);
+	Module->Navigate(TowardOther, false);
+	Rig.PumpFrames(1);
+	const UDreamWidget* Now = Rig.EventSystem()->GetHighlightedComponentForNavigation(0);
+	TestTrue(TEXT("The step took the highlight to the other button"), Now != nullptr && (Now == Other || Now->IsChildOf(Other)));
+	TestEqual(TEXT("...and let go of the press it left"), FirstListener->ReleasedCount, FirstReleases + 1);
+	Module->NavigationTrigger(false);
+	Rig.PumpFrames(1);
+	TestEqual(TEXT("Letting go of the confirm clicks neither the button the highlight left"), FirstListener->ClickedCount, FirstClicks);
+	TestEqual(TEXT("...nor the one it went to, which it never pressed"), OtherListener->ClickedCount, OtherClicks);
+	TestEqual(TEXT("...and which no press reached"), OtherListener->PressedCount, OtherPresses);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamNavigationConfirmOwnPressTest,
+	"DreamGUI.Input.Click.ANavigationConfirmIsTimedAndPlacedByItsOwnPressNotByTheMousesLast",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * The confirm of keyboard or pad navigation goes down on the mouse's pointer, and it left that pointer's press time and
+ * press position as the mouse's last press had set them. A long press measured the confirm's hold from that press -- a
+ * long press on the first frame of any confirm made long enough after a click -- and a swipe measured the confirm's
+ * travel from where that press was made, so a confirm after the mouse had moved on was a swipe as well. The confirm now
+ * stamps its own press and release, and a navigation press is never a swipe. A held confirm was not looked at again until
+ * it was let go, either, so it could not become a long press at all; it is followed on every frame it is held now, as a
+ * held mouse button is. Checked with a mouse click on nothing, left to age past the long-press time while the mouse moved
+ * well away, then a card confirmed through navigation: held for two frames it is no long press -- the frames a stale
+ * press time would have fired one on -- and held past the long-press time from its own press it is one.
+ */
+bool FDreamNavigationConfirmOwnPressTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamDragThresholdTestLocal;
+
+	FDreamDriverRig Rig = FDreamDriverRig::Headless(ViewportSize);
+	Rig.BindTest(this);
+	if (!TestTrue(TEXT("The rig came up"), Rig.IsUsable()))
+	{
+		return false;
+	}
+	// Up and to the left, out of the way of the mouse's travel along the bottom.
+	UDreamWidget* Card = Rig.MakeWidget(TEXT("Card"), nullptr, CardSize, FVector2D(-300.0, 150.0));
+	UUISelectable* Selectable = Card != nullptr ? Card->AddComponent<UUISelectable>() : nullptr;
+	UDreamLongPressCounter* LongPresses = Card != nullptr ? Card->AddComponent<UDreamLongPressCounter>() : nullptr;
+	UDreamGestureCounter* Gestures = Card != nullptr ? Card->AddComponent<UDreamGestureCounter>() : nullptr;
+	UDreamEventSystem* Events = Rig.EventSystem();
+	if (!TestTrue(TEXT("A card that navigation reaches, listening for long presses and swipes"),
+		Selectable != nullptr && LongPresses != nullptr && Gestures != nullptr && Events != nullptr))
+	{
+		return false;
+	}
+	Rig.PumpFrames(1);
+	const float LongPressTime = Events->GetLongPressTime();
+	const float MinDistance = Events->GetSwipeMinDistance();
+	const FVector2D ClickedAt(1000.0, 600.0);
+	const FVector2D RestingAt = ClickedAt - FVector2D(MinDistance * 3.0, 0.0);
+	if (!TestTrue(TEXT("Long presses and swipes are on by default"), LongPressTime > 0.0f && MinDistance > 0.0f)
+		|| !TestTrue(TEXT("The mouse's travel stays on the viewport"), RestingAt.X > 0.0))
+	{
+		return false;
+	}
+	FDreamDriverRef Driver = Rig.Driver();
+
+	// A click on nothing, the mouse moved a long way from it, and the click left to age past the long-press time.
+	TestTrue(TEXT("A click on nothing, a long move and a wait complete"),
+		Driver->Sequence()
+			.MoveToPixel(ClickedAt)
+			.Press()
+			.Release()
+			.MoveToPixel(RestingAt)
+			.WaitSeconds(LongPressTime * 2.0f)
+			.Perform());
+
+	// The card highlighted -- the first step lands on the only selectable there is -- and confirmed at once.
+	TestTrue(TEXT("A step of navigation completes"), Driver->Sequence().Navigate(EDreamUINavigationDirection::Right).Perform());
+	const UDreamWidget* Highlighted = Events->GetHighlightedComponentForNavigation(0);
+	if (!TestTrue(TEXT("Navigation highlighted the card"), Highlighted == Card))
+	{
+		return false;
+	}
+	TestTrue(TEXT("Pressing the confirm completes"), Driver->Sequence().NavigationTrigger(true).WaitFrames(2).Perform());
+	TestEqual(TEXT("A confirm just pressed is no long press, however long ago the mouse last pressed"), LongPresses->LongPressCount, 0);
+	TestTrue(TEXT("Letting go of it completes"), Driver->Sequence().NavigationTrigger(false).Perform());
+	TestEqual(TEXT("...and letting go is no swipe, however far the mouse went since its own press"), Gestures->SwipeCount, 0);
+
+	// Held past the long-press time from its own press, it is one.
+	TestTrue(TEXT("A confirm held past the long-press time completes"),
+		Driver->Sequence().NavigationTrigger(true).WaitSeconds(LongPressTime * 1.5f).NavigationTrigger(false).Perform());
+	TestEqual(TEXT("A confirm held past the long-press time is a long press, once"), LongPresses->LongPressCount, 1);
+	TestEqual(TEXT("...and still no swipe"), Gestures->SwipeCount, 0);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamFingerDoubleTapTest,
+	"DreamGUI.Input.Click.TwoTapsOfAFingerOnTheSameWidgetInTimeAreADoubleClick",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * A finger's pointer goes when the finger lifts, and the click run it was counting went with it: the second tap of a
+ * double tap came down on a new pointer whose run began again at one, so no pair of taps was ever a double click. The run
+ * a lifted finger leaves is now kept for its pointer, and the finger's next tap continues it when it lands on the same
+ * widget in time and near enough -- the question a mouse's second press is asked. Checked with the driver's finger.
+ */
+bool FDreamFingerDoubleTapTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamDragThresholdTestLocal;
+
+	FDreamDriverRig Rig = FDreamDriverRig::Headless(ViewportSize);
+	Rig.BindTest(this);
+	if (!TestTrue(TEXT("The rig came up"), Rig.IsUsable()))
+	{
+		return false;
+	}
+	UDreamWidget* Card = Rig.MakeWidget(TEXT("Card"), nullptr, CardSize, FVector2D(-150.0, 0.0));
+	UDreamWidget* Other = Rig.MakeWidget(TEXT("Other"), nullptr, CardSize, FVector2D(150.0, 0.0));
+	UDreamDoubleClickCounter* CardCounter = Card != nullptr ? Card->AddComponent<UDreamDoubleClickCounter>() : nullptr;
+	UDreamDoubleClickCounter* OtherCounter = Other != nullptr ? Other->AddComponent<UDreamDoubleClickCounter>() : nullptr;
+	UDreamEventSystem* Events = Rig.EventSystem();
+	if (!TestTrue(TEXT("Both widgets are listening for double clicks"), CardCounter != nullptr && OtherCounter != nullptr && Events != nullptr))
+	{
+		return false;
+	}
+	Rig.PumpFrames(1);
+	const TOptional<FVector2D> CardCentre = CentrePixelOf(Rig, Card);
+	const TOptional<FVector2D> OtherCentre = CentrePixelOf(Rig, Other);
+	if (!TestTrue(TEXT("Both are somewhere a finger can reach"), CardCentre.IsSet() && OtherCentre.IsSet()))
+	{
+		return false;
+	}
+	FDreamDriverRef Driver = Rig.Driver();
+	auto TapOn = [&Driver](const FVector2D& InAt) -> bool
+	{
+		return Driver->Sequence().TouchDown(0, InAt).TouchUp(0).Perform();
+	};
+
+	TestTrue(TEXT("A first tap on the card completes"), TapOn(CardCentre.GetValue()));
+	TestEqual(TEXT("One tap is not a double click"), CardCounter->DoubleClickCount, 0);
+	TestTrue(TEXT("A second tap on the card completes"), TapOn(CardCentre.GetValue()));
+	TestEqual(TEXT("Two taps on the card in time are a double click"), CardCounter->DoubleClickCount, 1);
+	TestEqual(TEXT("...the second of a run"), CardCounter->LastReportedClickCount, 2);
+
+	// Another widget starts a run of its own, and so does a tap after the window.
+	TestTrue(TEXT("A tap on the other widget completes"), TapOn(OtherCentre.GetValue()));
+	TestEqual(TEXT("A tap on another widget is nobody's double click"), OtherCounter->DoubleClickCount + CardCounter->DoubleClickCount, 1);
+	TestTrue(TEXT("A tap on the card, then a wait past the window, complete"),
+		Driver->Sequence().TouchDown(0, CardCentre.GetValue()).TouchUp(0).WaitSeconds(Events->GetDoubleClickTime() + 1.0f).Perform());
+	TestTrue(TEXT("A late tap on the card completes"), TapOn(CardCentre.GetValue()));
+	TestEqual(TEXT("A tap after the window starts a new run"), CardCounter->DoubleClickCount, 1);
 	return true;
 }
 

@@ -11,6 +11,7 @@
 
 class AActor;
 class FDreamUISlateInputSource;
+class UDreamBaseRaycaster;
 class ULocalPlayer;
 class UDreamEventSystem;
 class UDreamUIInputSubsystem;
@@ -185,10 +186,24 @@ public:
 	 * that kind wherever it was placed -- which is what lets an authored raycaster override the default.
 	 */
 	virtual void EnsureInteractionForPlayer(int32 InUserIndex, EDreamInteractionKind InKind) override;
+	/**
+	 * EnsureInteractionForPlayer for a screen, and InRootCanvas projected through: by the screen raycaster this
+	 * subsystem made for the player, or one of the player's that projects through no overlay root yet. A raycaster
+	 * projecting through an overlay root of its own keeps it; when every one of the player's does, the root is given a
+	 * raycaster of its own beside them.
+	 */
 	virtual void PrepareScreenInteraction(UDreamCanvas* InRootCanvas, int32 InUserIndex) override;
 	//~ End UDreamUIInputServices
 
 private:
+	/** EnsureInteractionForPlayer, with the overlay root a screen raycaster made for it is to project through. */
+	void EnsureInteraction(int32 InUserIndex, EDreamInteractionKind InKind, UDreamCanvas* InScreenRootCanvas);
+	/**
+	 * The raycaster of InKind on InUserIndex's interaction host, the host and the raycaster made when missing -- a screen
+	 * one projecting through InScreenRootCanvas from before it is registered, since registering one in a world that has
+	 * begun play begins it, and it begins by looking for its root canvas.
+	 */
+	UDreamBaseRaycaster* FindOrMakeHostRaycaster(int32 InUserIndex, EDreamInteractionKind InKind, UDreamCanvas* InScreenRootCanvas = nullptr);
 #if WITH_EDITOR
 	/** The selectables' navigation arrows, drawn when the manager draws its editor helpers. */
 	void DrawNavigationVisualizers(UDreamUIManagerWorldSubsystem* InManager);

@@ -4,6 +4,7 @@
 
 #include "Misc/AutomationTest.h"
 
+#include "Core/Components/DreamLayoutSelfSpacer.h"
 #include "Core/Components/DreamPanelLayouts.h"
 #include "Core/Components/DreamWidget.h"
 #include "Core/DreamUIManager.h"
@@ -145,6 +146,118 @@ bool FDreamLayoutIdleFrameCostsNoPassTest::RunTest(const FString& Parameters)
 	const int32 AfterIdle = Manager->GetLastLayoutPassCount();
 	Manager->TickDreamUI(0.016f);
 	TestEqual(TEXT("An idle frame does not run another pass"), Manager->GetLastLayoutPassCount(), AfterIdle);
+
+	Root->DestroyWidget();
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamLayoutSpacerInAPanelConvergesTest,
+	"DreamGUI.Layout.Convergence.ASpacerInAVerticalBoxTakesTheBoxsWidthAndSettlesInOnePass",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * A spacer wrote its own authored size back over the one its panel had just given it. A vertical box sized
+ * the spacer's width to its own inside its write scope; the spacer's update then set that width back to zero
+ * with no scope open, which re-dirtied the box and every ancestor; the box wrote the width again on the next
+ * pass, and so on until the manager's 32-pass cap and "Layout did not converge" -- every frame. This checks
+ * the spacer keeps the box's width and its own height, and that a resize then costs one pass.
+ */
+bool FDreamLayoutSpacerInAPanelConvergesTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamLayoutConvergenceTestLocal;
+	FScopedTestWorld TestWorld;
+	UDreamUIManagerWorldSubsystem* Manager = UDreamUIManagerWorldSubsystem::GetInstance(TestWorld.World);
+	if (!TestNotNull(TEXT("DreamUI manager subsystem exists"), Manager))
+	{
+		return false;
+	}
+
+	UDreamWidget* Root = NewObject<UDreamWidget>(TestWorld.World);
+	Root->SetWidth(300.0f);
+	Root->SetHeight(200.0f);
+	UDreamWidget* Gap = MakeChild(TestWorld.World, Root, 20.0f, 20.0f);
+	UDreamWidget* Item = MakeChild(TestWorld.World, Root, 100.0f, 40.0f);
+	if (!Root->CreateNewLayoutContainer<UDreamLayoutContainerVerticalBox>())
+	{
+		return false;
+	}
+	UDreamLayoutSelfSpacer* Spacer = Gap->CreateNewLayoutSelf<UDreamLayoutSelfSpacer>();
+	if (!TestNotNull(TEXT("Spacer created"), Spacer))
+	{
+		return false;
+	}
+	Spacer->Size = FVector2D(0.0, 16.0);
+	Root->OnRegister();
+	Gap->OnRegister();
+	Item->OnRegister();
+
+	UDreamWidget::MarkLayoutForRebuild(Root);
+	Manager->TickDreamUI(0.016f);
+	Manager->TickDreamUI(0.016f);
+	TestEqual(TEXT("The box gives the spacer its width, and the spacer keeps its own height"),
+		Gap->GetSize(), FVector2D(300.0, 16.0));
+	TestEqual(TEXT("...and the item below it starts where the spacer ends"),
+		Root->GetHeight() * 0.5 - Item->GetAnchoredPosition().Y - Item->GetHeight() * (1.0 - Item->GetPivot().Y), 16.0, 0.01);
+
+	Root->SetWidth(320.0f);
+	Manager->TickDreamUI(0.016f);
+	TestEqual(TEXT("A resize settles in a single layout pass"), Manager->GetLastLayoutPassCount(), 1);
+	TestEqual(TEXT("...with the spacer at the box's new width"), Gap->GetSize(), FVector2D(320.0, 16.0));
+
+	Root->DestroyWidget();
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamLayoutWidgetSwitcherPageSwitchConvergesTest,
+	"DreamGUI.Layout.Convergence.SwitchingAWidgetSwitcherPageSettlesInOnePass",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * A widget switcher hands the page it stops showing back its authored rect and collapses it, from inside its
+ * own arrange, and un-collapses the page it shows. Those writes were made with no write scope open, so each
+ * of them walked the invalidation past the switcher -- which had just consumed its dirty flag -- to the root,
+ * and every page switch cost a second whole-tree pass. This checks a switch costs one pass and still lands:
+ * the new page fills the switcher and the old one is collapsed.
+ */
+bool FDreamLayoutWidgetSwitcherPageSwitchConvergesTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamLayoutConvergenceTestLocal;
+	FScopedTestWorld TestWorld;
+	UDreamUIManagerWorldSubsystem* Manager = UDreamUIManagerWorldSubsystem::GetInstance(TestWorld.World);
+	if (!TestNotNull(TEXT("DreamUI manager subsystem exists"), Manager))
+	{
+		return false;
+	}
+
+	UDreamWidget* Root = NewObject<UDreamWidget>(TestWorld.World);
+	Root->SetWidth(300.0f);
+	Root->SetHeight(200.0f);
+	UDreamWidget* PageA = MakeChild(TestWorld.World, Root, 80.0f, 40.0f);
+	UDreamWidget* PageB = MakeChild(TestWorld.World, Root, 80.0f, 40.0f);
+	UDreamLayoutContainerWidgetSwitcher* Switcher = Root->CreateNewLayoutContainer<UDreamLayoutContainerWidgetSwitcher>();
+	if (!TestNotNull(TEXT("Widget switcher created"), Switcher))
+	{
+		return false;
+	}
+	Root->OnRegister();
+	PageA->OnRegister();
+	PageB->OnRegister();
+
+	UDreamWidget::MarkLayoutForRebuild(Root);
+	Manager->TickDreamUI(0.016f);
+	Manager->TickDreamUI(0.016f);
+	TestEqual(TEXT("The first page fills the switcher"), PageA->GetSize(), FVector2D(300.0, 200.0));
+	TestFalse(TEXT("...and the second is collapsed"), PageB->GetLayoutVisibleInHierarchy());
+
+	Switcher->SetActiveWidgetIndex(1);
+	Manager->TickDreamUI(0.016f);
+	TestEqual(TEXT("A page switch settles in a single layout pass"), Manager->GetLastLayoutPassCount(), 1);
+	TestTrue(TEXT("...showing the second page"), PageB->GetLayoutVisibleInHierarchy());
+	TestEqual(TEXT("...filling the switcher"), PageB->GetSize(), FVector2D(300.0, 200.0));
+	TestFalse(TEXT("...with the first page collapsed"), PageA->GetLayoutVisibleInHierarchy());
+	TestEqual(TEXT("...and back at its authored size"), PageA->GetSize(), FVector2D(80.0, 40.0));
 
 	Root->DestroyWidget();
 	return true;

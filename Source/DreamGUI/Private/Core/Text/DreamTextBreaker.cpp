@@ -17,6 +17,7 @@ namespace DreamTextBreakerLocal
 	{
 		TSharedPtr<IBreakIterator> Line;
 		TSharedPtr<IBreakIterator> Word;
+		TSharedPtr<IBreakIterator> Character;
 		FDelegateHandle CultureChangedHandle;
 
 		static FIterators& Get()
@@ -30,6 +31,7 @@ namespace DreamTextBreakerLocal
 					FIterators& Self = FIterators::Get();
 					Self.Line.Reset();
 					Self.Word.Reset();
+					Self.Character.Reset();
 				});
 			}
 			if (!Instance.Line.IsValid())
@@ -40,12 +42,19 @@ namespace DreamTextBreakerLocal
 			{
 				Instance.Word = FBreakIterator::CreateWordBreakIterator();
 			}
+			if (!Instance.Character.IsValid())
+			{
+				Instance.Character = FBreakIterator::CreateCharacterBoundaryIterator();
+			}
 			return Instance;
 		}
 	};
 
-	/** Collects every boundary an iterator reports for the string, as a sorted set of indices. */
-	void CollectBoundaries(IBreakIterator& Iterator, const FString& Text, TSet<int32>& OutBoundaries)
+	/**
+	 * Collects every boundary an iterator reports for the string. The iterator reports them in increasing order, so
+	 * the array comes out sorted and is read with a cursor that only moves forward; no set has to be built per layout.
+	 */
+	void CollectBoundaries(IBreakIterator& Iterator, const FString& Text, TArray<int32>& OutBoundaries)
 	{
 		OutBoundaries.Reset();
 		Iterator.SetStringRef(Text);
@@ -56,6 +65,103 @@ namespace DreamTextBreakerLocal
 			OutBoundaries.Add(Boundary);
 		}
 		Iterator.ClearString();
+	}
+
+	/** Whether Position is in the sorted Boundaries, advancing InOutCursor; positions must be asked in increasing order. */
+	bool IsBoundaryAt(const TArray<int32>& Boundaries, int32 Position, int32& InOutCursor)
+	{
+		while (InOutCursor < Boundaries.Num() && Boundaries[InOutCursor] < Position)
+		{
+			InOutCursor++;
+		}
+		return InOutCursor < Boundaries.Num() && Boundaries[InOutCursor] == Position;
+	}
+
+	/** Indic_Conjunct_Break=Linker (Unicode 15.1): the viramas that join two consonants into a conjunct. */
+	bool IsConjunctLinker(uint32 C)
+	{
+		return C == 0x094D || C == 0x09CD || C == 0x0ACD || C == 0x0B4D || C == 0x0C4D || C == 0x0D4D;
+	}
+
+	/** Indic_Conjunct_Break=Consonant (Unicode 15.1): Devanagari, Bengali, Gujarati, Oriya, Telugu and Malayalam consonants. */
+	bool IsConjunctConsonant(uint32 C)
+	{
+		return (C >= 0x0915 && C <= 0x0939) || (C >= 0x0958 && C <= 0x095F) || (C >= 0x0978 && C <= 0x097F)
+			|| (C >= 0x0995 && C <= 0x09A8) || (C >= 0x09AA && C <= 0x09B0) || C == 0x09B2 || (C >= 0x09B6 && C <= 0x09B9)
+			|| C == 0x09DC || C == 0x09DD || C == 0x09DF || C == 0x09F0 || C == 0x09F1
+			|| (C >= 0x0A95 && C <= 0x0AA8) || (C >= 0x0AAA && C <= 0x0AB0) || C == 0x0AB2 || C == 0x0AB3 || (C >= 0x0AB5 && C <= 0x0AB9) || C == 0x0AF9
+			|| (C >= 0x0B15 && C <= 0x0B28) || (C >= 0x0B2A && C <= 0x0B30) || C == 0x0B32 || C == 0x0B33 || (C >= 0x0B35 && C <= 0x0B39)
+			|| C == 0x0B5C || C == 0x0B5D || C == 0x0B5F || C == 0x0B71
+			|| (C >= 0x0C15 && C <= 0x0C28) || (C >= 0x0C2A && C <= 0x0C39) || (C >= 0x0C58 && C <= 0x0C5A)
+			|| (C >= 0x0D15 && C <= 0x0D3A);
+	}
+
+	/** What may sit between a consonant and its virama, or after the virama, without ending the conjunct: nuktas and the joiner. */
+	bool IsConjunctExtend(uint32 C)
+	{
+		return C == 0x093C || C == 0x09BC || C == 0x0ABC || C == 0x0B3C || C == 0x0C3C || C == 0x0D3B || C == 0x0D3C || C == 0x200D;
+	}
+
+	/** A mark that extends the cluster before it, for a build without ICU: the combining diacritical blocks, the joiners and the variation selectors. */
+	bool IsGraphemeExtender(uint32 C)
+	{
+		return (C >= 0x0300 && C <= 0x036F) || (C >= 0x1AB0 && C <= 0x1AFF) || (C >= 0x1DC0 && C <= 0x1DFF)
+			|| (C >= 0x20D0 && C <= 0x20FF) || (C >= 0xFE20 && C <= 0xFE2F) || (C >= 0xFE00 && C <= 0xFE0F)
+			|| C == 0x200C || C == 0x200D;
+	}
+}
+
+void FDreamTextBreaker::ComputeGraphemeStarts(const FString& PlainText, const TArray<int32>& ElementPlainStart,
+	const TArray<uint32>& ElementCodepoints, TBitArray<>& OutGraphemeStart)
+{
+	using namespace DreamTextBreakerLocal;
+
+	const int32 ElementCount = ElementPlainStart.Num();
+	OutGraphemeStart.Init(true, ElementCount);
+	if (ElementCount <= 1)return;
+	bool bAnyCombining = false;
+	for (const uint32 C : ElementCodepoints)
+	{
+		if (C >= 0x0300)
+		{
+			bAnyCombining = true;
+			break;
+		}
+	}
+	if (!bAnyCombining)return;
+
+#if UE_ENABLE_ICU
+	FIterators& Iterators = FIterators::Get();
+	TArray<int32> Boundaries;
+	CollectBoundaries(*Iterators.Character, PlainText, Boundaries);
+	int32 Cursor = 0;
+	for (int32 i = 1; i < ElementCount; i++)
+	{
+		OutGraphemeStart[i] = IsBoundaryAt(Boundaries, ElementPlainStart[i], Cursor);
+	}
+#else
+	for (int32 i = 1; i < ElementCount; i++)
+	{
+		OutGraphemeStart[i] = !IsGraphemeExtender(ElementCodepoints[i]);
+	}
+#endif
+
+	// GB9c: Consonant [Extend Linker]* Linker [Extend Linker]* x Consonant. A conjunct is one character to a reader --
+	// a caret inside it, or a line break inside it, splits what is written as one letter.
+	for (int32 i = 1; i < ElementCount; i++)
+	{
+		if (!OutGraphemeStart[i] || !IsConjunctConsonant(ElementCodepoints[i]))continue;
+		int32 j = i - 1;
+		bool bLinker = false;
+		while (j >= 0 && (IsConjunctLinker(ElementCodepoints[j]) || IsConjunctExtend(ElementCodepoints[j])))
+		{
+			bLinker |= IsConjunctLinker(ElementCodepoints[j]);
+			j--;
+		}
+		if (bLinker && j >= 0 && IsConjunctConsonant(ElementCodepoints[j]))
+		{
+			OutGraphemeStart[i] = false;
+		}
 	}
 }
 
@@ -142,25 +248,27 @@ void FDreamTextBreaker::ComputeBreakOpportunities(const FString& PlainText, cons
 
 	FIterators& Iterators = FIterators::Get();
 
-	TSet<int32> LineBoundaries;
+	TArray<int32> LineBoundaries;
 	CollectBoundaries(*Iterators.Line, PlainText, LineBoundaries);
 
-	TSet<int32> WordBoundaries;
+	TArray<int32> WordBoundaries;
 	const bool bPhrase = PhraseWrap != EDreamTextPhraseWrap::Off;
 	if (bPhrase)
 	{
 		CollectBoundaries(*Iterators.Word, PlainText, WordBoundaries);
 	}
 
+	int32 LineCursor = 0;
+	int32 WordCursor = 0;
 	for (int32 i = 1; i < ElementCount; i++)
 	{
 		const int32 Start = ElementPlainStart[i];
-		if (!LineBoundaries.Contains(Start))continue;
+		if (!IsBoundaryAt(LineBoundaries, Start, LineCursor))continue;
 		if (bPhrase && IsCJKCodepoint(ElementCodepoints[i]) && IsCJKCodepoint(ElementCodepoints[i - 1]))
 		{
 			// Inside a CJK run the line rules allow a break everywhere; the dictionary says where the
 			// words are. Between a CJK character and anything else the line rules already decided.
-			if (!WordBoundaries.Contains(Start))continue;
+			if (!IsBoundaryAt(WordBoundaries, Start, WordCursor))continue;
 		}
 		OutCanBreakBefore[i] = true;
 	}
@@ -195,10 +303,11 @@ bool FDreamTextBreaker::IsOpeningPunctuation(uint32 C)
 	}
 }
 
-int32 FDreamTextBreaker::FindKinsokuSafeFallback(const TArray<uint32>& ElementCodepoints, int32 LineStart, int32 BreakBefore)
+int32 FDreamTextBreaker::FindKinsokuSafeFallback(const TArray<uint32>& ElementCodepoints, int32 LineStart, int32 BreakBefore, const TBitArray<>* ClusterStarts)
 {
 	for (int32 j = BreakBefore; j > LineStart; j--)
 	{
+		if (ClusterStarts != nullptr && ClusterStarts->IsValidIndex(j) && !(*ClusterStarts)[j])continue;
 		if (IsClosingPunctuation(ElementCodepoints[j]))continue;
 		if (IsOpeningPunctuation(ElementCodepoints[j - 1]))continue;
 		return j;

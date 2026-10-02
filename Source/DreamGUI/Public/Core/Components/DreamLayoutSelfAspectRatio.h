@@ -91,7 +91,15 @@ public:
 #endif
 	virtual FDreamLayoutControlAnchorData GetLayoutControlAnchor(const UDreamWidget* Widget)const override;
 	virtual FVector2f GetLayoutPreferredSize() const override;
-	
+	/**
+	 * The same answer for the size a panel is about to give the widget. WidthControlHeight and
+	 * HeightControlWidth derive one axis from the other; the unconstrained answer derives it from the
+	 * widget's CURRENT size, which under a panel is the size from before the panel sized it. Told the
+	 * controlling axis exactly, the dependent one follows from that; told only a ceiling, from the current
+	 * size held under it.
+	 */
+	virtual FVector2f GetLayoutPreferredSize(const FDreamMeasureSpec& InWidthSpec, const FDreamMeasureSpec& InHeightSpec) const override;
+
 	UFUNCTION(BlueprintCallable, Category = "LayoutSelf")
 	EDreamLayoutAspectRatioType GetAspectRatioType()const{return AspectRatioType;}
 	UFUNCTION(BlueprintCallable, Category = "LayoutSelf")

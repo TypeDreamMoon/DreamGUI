@@ -227,6 +227,12 @@ public:
 	TWeakObjectPtr<UDreamWidget> HighlightWidgetForNavigation = nullptr;
 	float NavigateTickTime = 0;
 	EDreamUINavigationDirection NavigateDirection = EDreamUINavigationDirection::None;
+	/**
+	 * Every navigation direction held on this pointer, each once, in the order they went down. NavigateDirection is the
+	 * newest; letting go of it falls back to the newest one still held, and letting go of one that is not stepping
+	 * changes nothing (UDreamUIInputUser::InputNavigation).
+	 */
+	TArray<EDreamUINavigationDirection> HeldNavigateDirections;
 	UFUNCTION(BlueprintCallable, Category = DreamGUI)
 		void SetHighlightedWidgetForNavigation(UDreamWidget* InWidget);
 	UFUNCTION(BlueprintCallable, Category = DreamGUI)

@@ -134,10 +134,13 @@ public:
 	 * How many Texture2DArray slices a font's glyph atlas may grow to. The atlas only grows -- a
 	 * rect-packed atlas cannot hand one glyph's rectangle to a glyph of another size without repacking,
 	 * so there is no "evict one glyph" -- and when it reaches this budget the whole cache is thrown away
-	 * and refilled on demand, which is what Slate's own font cache does when its atlas fills. Every text
-	 * using the font is re-laid-out on the spot, so a flush costs one frame; if that happens repeatedly,
-	 * raise this or the atlas texture size, or use fewer distinct font sizes (a bitmap font caches a
-	 * separate glyph per size, and Best Fit walks several sizes per search).
+	 * and refilled on demand, which is what Slate's own font cache does when its atlas fills. The atlas
+	 * that fills grows one slice for the rest of the frame and is flushed before the next frame's first
+	 * glyph, never in the middle of a layout, and every text using the font is re-laid-out then, so a
+	 * flush costs one frame. When the glyphs on screen need more than the budget, the atlas fills again
+	 * before it has settled after a flush; it then grows up to twice the budget instead of flushing every
+	 * frame. If either happens repeatedly, raise this or the atlas texture size, or use fewer distinct
+	 * font sizes (a bitmap font caches a separate glyph per size, and Best Fit walks several sizes per search).
 	 * Clamped to what the RHI can address (GMaxTextureArrayLayers).
 	 */
 	UPROPERTY(EditAnywhere, config, Category = "Text", meta = (ClampMin = "1", UIMin = "1", UIMax = "64"))

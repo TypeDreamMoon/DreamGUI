@@ -1,0 +1,86 @@
+// Words longer than their 120 px box: a URL, which may break after its slashes and punctuation, and one long word,
+// which can only be broken between its letters. Nothing may run out of the box sideways or vanish.
+// @stage 512x448
+
+style Title {
+    AnchorData.AnchorMin = (0, 1)
+    AnchorData.AnchorMax = (1, 1)
+    AnchorData.Pivot = (0.5, 1)
+    AnchorData.AnchoredPosition = (0, -8)
+    AnchorData.SizeDelta = (-24, 20)
+    FontSize = 15
+    Color = #1E2230
+    HAlign = Left
+    VAlign = Top
+    OverflowType = HorizontalOverflow
+}
+
+style Note {
+    AnchorData.AnchorMin = (0, 1)
+    AnchorData.AnchorMax = (0, 1)
+    AnchorData.Pivot = (0, 1)
+    AnchorData.SizeDelta = (200, 16)
+    FontSize = 12
+    Color = #5A6172
+    HAlign = Left
+    VAlign = Top
+    OverflowType = HorizontalOverflow
+}
+
+style Box {
+    AnchorData.AnchorMin = (0, 1)
+    AnchorData.AnchorMax = (0, 1)
+    AnchorData.Pivot = (0, 1)
+    AnchorData.SizeDelta = (120, 360)
+    Brush.ImageSize = (0, 0)
+    Brush.TintColor = #E4E8F0
+}
+
+style Paragraph {
+    AnchorData.AnchorMin = (0, 1)
+    AnchorData.AnchorMax = (0, 1)
+    AnchorData.Pivot = (0, 1)
+    AnchorData.SizeDelta = (120, 360)
+    FontSize = 16
+    Color = #1E2230
+    HAlign = Left
+    VAlign = Top
+    OverflowType = VerticalOverflow
+}
+
+Widget Root {
+    Image Page {
+        Brush.TintColor = #F5F3EE
+        AnchorData.AnchorMin = (0, 0)
+        AnchorData.AnchorMax = (1, 1)
+        AnchorData.SizeDelta = (0, 0)
+    }
+
+    Text Heading : Title {
+        Text = "Long words in a 120 px box, 16 px"
+    }
+
+    Text UrlLabel : Note {
+        AnchorData.AnchoredPosition = (24, -44)
+        Text = "a URL"
+    }
+    Image UrlBox : Box {
+        AnchorData.AnchoredPosition = (24, -64)
+    }
+    Text Url : Paragraph {
+        AnchorData.AnchoredPosition = (24, -64)
+        Text = "https://example.com/very/long/path/with-many-segments_and_underscores?query=1&x=y#fragment"
+    }
+
+    Text WordLabel : Note {
+        AnchorData.AnchoredPosition = (280, -44)
+        Text = "one long word"
+    }
+    Image WordBox : Box {
+        AnchorData.AnchoredPosition = (280, -64)
+    }
+    Text Word : Paragraph {
+        AnchorData.AnchoredPosition = (280, -64)
+        Text = "Supercalifragilisticexpialidocious"
+    }
+}

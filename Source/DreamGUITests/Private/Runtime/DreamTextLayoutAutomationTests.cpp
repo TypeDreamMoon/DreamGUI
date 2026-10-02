@@ -11,6 +11,7 @@
 #include "Core/Text/DreamTextPainter.h"
 #include "Core/Text/DreamTextBreaker.h"
 #include "Core/FRichTextParser.h"
+#include "Core/DreamUIRichTextCustomStyleData.h"
 
 #include <initializer_list>
 #include "Engine/World.h"
@@ -1360,11 +1361,14 @@ bool FDreamTextBitmapShadowAndOutlineTest::RunTest(const FString& Parameters)
 		if (Vertex.Color.R == 0 && Vertex.Color.G == 0 && Vertex.Color.B == 0)Black++;
 	}
 	TestEqual(TEXT("half the vertices are the shadow's"), Black, PlainVertices);
-	// The shadow is BEHIND the face: it is written first, so it is in the first half of the buffer.
-	if (Shadowed.OriginVertices.Num() == PlainVertices * 2)
+	// A character's vertices are its shadow copy, then its face; the shadow is BEHIND the face because its triangles
+	// are drawn first. The copy is offset from the face it belongs to.
+	if (Shadowed.OriginVertices.Num() == PlainVertices * 2 && ShadowedChars.Num() > 0)
 	{
+		const FDreamUITextCharProperty& First = ShadowedChars[0];
+		const int32 FaceVertex = First.StartVertIndex + First.VertCount - 4;
 		TestTrue(TEXT("and it is offset from the face"),
-			!FMath::IsNearlyEqual(Shadowed.OriginVertices[0].Position.Y, Shadowed.OriginVertices[4].Position.Y, 0.001f));
+			!FMath::IsNearlyEqual(Shadowed.OriginVertices[First.StartVertIndex].Position.Y, Shadowed.OriginVertices[FaceVertex].Position.Y, 0.001f));
 	}
 
 	// An outline is eight taps around the glyph, the standard stand-in for a real one.
@@ -1384,6 +1388,822 @@ bool FDreamTextBitmapShadowAndOutlineTest::RunTest(const FString& Parameters)
 	TArray<FDreamUITextCharProperty> FieldChars;
 	FDreamTextPainter::Paint(DL, Field, FieldGeometry, FieldChars);
 	TestEqual(TEXT("a distance-field font draws one copy"), FieldGeometry.OriginVertices.Num(), PlainVertices);
+	return true;
+}
+
+namespace DreamTextLayoutTestLocal
+{
+	/** The emitted item of an element, or null. */
+	const FDreamTextGlyphItem* FindItem(const FDreamTextDisplayList& DL, int32 ElementIndex)
+	{
+		for (const FDreamTextGlyphItem& Item : DL.Items)
+		{
+			if (Item.ElementIndex == ElementIndex && Item.Kind == EDreamTextItemKind::Glyph)return &Item;
+		}
+		return nullptr;
+	}
+
+	/** Which pass of a bitmap font's painting a vertex colour belongs to: shadow (black), outline (red), face (white). */
+	int32 PassOfColour(const FColor& Colour)
+	{
+		if (Colour.R == 0 && Colour.G == 0 && Colour.B == 0)return 0;
+		if (Colour.R == 255 && Colour.G == 0 && Colour.B == 0)return 1;
+		return 2;
+	}
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamTextBitmapPassesTest,
+	"DreamGUI.Text.Painter.EveryBitmapShadowAndOutlineIsDrawnBeforeAnyFace",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * A bitmap font's shadow and outline were written per glyph -- shadow, eight outline copies, face -- so the next glyph's
+ * outline was drawn over this glyph's face wherever the two met: any negative letter spacing, or a tight pair with an
+ * outline. Slate draws them as whole-run passes. The index buffer has to reference every shadow quad first, then every
+ * outline quad, then every face; and a character's vertex range still covers all of its copies, its triangle range its face.
+ */
+bool FDreamTextBitmapPassesTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamTextLayoutTestLocal;
+	FScopedGameWorld TestWorld;
+	UDreamTextTestFont* Font = NewObject<UDreamTextTestFont>(TestWorld.World);
+
+	FDreamTextLayoutInput In = MakeInput(Font, TEXT("abc"), 600.0f, 200.0f);
+	In.FontSpace.X = -6.0f;
+	FDreamTextDisplayList DL;
+	FDreamTextLayoutEngine::Layout(In, DL);
+
+	FDreamTextPaintParams Params = MakePaint(FColor::White);
+	Params.BitmapShadowColor = FColor(0, 0, 0, 255);
+	Params.BitmapShadowOffsetEm = FVector2f(0.1f, 0.1f);
+	Params.BitmapOutlineColor = FColor(255, 0, 0, 255);
+	Params.BitmapOutlineWidthEm = 0.05f;
+	FDreamUIGeometry Geometry;
+	TArray<FDreamUITextCharProperty> Chars;
+	FDreamTextPainter::Paint(DL, Params, Geometry, Chars);
+	if (!TestEqual(TEXT("three characters"), Chars.Num(), 3))return false;
+	TestEqual(TEXT("a shadow, eight outline taps and a face per glyph"), Geometry.OriginVertices.Num(), 3 * 10 * 4);
+
+	int32 PreviousPass = 0;
+	bool bInOrder = true;
+	for (int32 Index = 0; Index < Geometry.Triangles.Num(); Index++)
+	{
+		const int32 Pass = PassOfColour(Geometry.Vertices[Geometry.Triangles[Index]].Color);
+		if (Pass < PreviousPass)
+		{
+			bInOrder = false;
+			AddError(FString::Printf(TEXT("index %d draws pass %d after pass %d"), Index, Pass, PreviousPass));
+			break;
+		}
+		PreviousPass = Pass;
+	}
+	TestTrue(TEXT("every shadow triangle precedes every outline triangle, and every outline triangle every face triangle"), bInOrder);
+	for (int32 i = 0; i < Chars.Num(); i++)
+	{
+		TestEqual(*FString::Printf(TEXT("character %d covers all ten of its quads"), i), Chars[i].VertCount, 10 * 4);
+		TestEqual(*FString::Printf(TEXT("character %d's triangles are its face's"), i), Chars[i].IndicesCount, 6);
+		TestEqual(*FString::Printf(TEXT("and character %d's sit in the face block"), i),
+			PassOfColour(Geometry.Vertices[Geometry.Triangles[Chars[i].StartTriangleIndex]].Color), 2);
+	}
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamTextAdjacentTagsTest,
+	"DreamGUI.Text.RichText.OneCharacterAdjacentAndRepeatedTagsEachKeepTheirOwnRange",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * A tag's start and its end were one mark on an element. A tag around one character had its start overwritten by its
+ * end and vanished; a closing tag followed straight by an opening one lost its end to the start, so the first tag never
+ * closed and ran to the end of the text (and a click on the next link reported the first); and an end tag closed the
+ * first tag of its name, so a name used twice left the second one open. Every tag keeps exactly its own characters.
+ */
+bool FDreamTextAdjacentTagsTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamTextLayoutTestLocal;
+	FScopedGameWorld TestWorld;
+	UDreamTextTestFont* Font = NewObject<UDreamTextTestFont>(TestWorld.World);
+
+	FDreamTextLayoutInput In = MakeInput(Font, TEXT("<a=x>1</a> and <a=y>22</a><a=z>3</a>"), 900.0f, 200.0f);
+	In.bRichText = true;
+	FDreamTextDisplayList DL;
+	FDreamTextLayoutEngine::Layout(In, DL);
+	// The visible characters are 1, a, n, d, 2, 2, 3.
+	if (!TestEqual(TEXT("three links"), DL.CustomTags.Num(), 3))return false;
+	struct FExpectedTag { const TCHAR* Name; int32 Start; int32 End; };
+	const FExpectedTag Expected[] = { { TEXT("x"), 0, 0 }, { TEXT("y"), 4, 5 }, { TEXT("z"), 6, 6 } };
+	for (int32 i = 0; i < 3; i++)
+	{
+		const FDreamUIText_RichTextCustomTag& Tag = DL.CustomTags[i];
+		TestEqual(*FString::Printf(TEXT("link %d is %s"), i, Expected[i].Name), Tag.TagName, FName(Expected[i].Name));
+		TestTrue(*FString::Printf(TEXT("link %d is a hyperlink"), i), Tag.bHyperlink);
+		TestEqual(*FString::Printf(TEXT("link %s starts at its first character"), Expected[i].Name), Tag.CharIndexStart, Expected[i].Start);
+		TestEqual(*FString::Printf(TEXT("link %s ends at its last character"), Expected[i].Name), Tag.CharIndexEnd, Expected[i].End);
+	}
+
+	// The parser takes every one-letter tag for one of its own (b, i, u, s), so a custom tag needs a longer name.
+	FDreamTextLayoutInput Repeated = MakeInput(Font, TEXT("<kw>a</kw> <kw>b</kw>"), 900.0f, 200.0f);
+	Repeated.bRichText = true;
+	FDreamTextDisplayList RepeatedDL;
+	FDreamTextLayoutEngine::Layout(Repeated, RepeatedDL);
+	if (TestEqual(TEXT("a name used twice is two tags"), RepeatedDL.CustomTags.Num(), 2))
+	{
+		TestEqual(TEXT("the first covers a"), RepeatedDL.CustomTags[0].CharIndexStart, 0);
+		TestEqual(TEXT("and only a"), RepeatedDL.CustomTags[0].CharIndexEnd, 0);
+		TestEqual(TEXT("the second covers b"), RepeatedDL.CustomTags[1].CharIndexStart, 1);
+		TestEqual(TEXT("and closes at b"), RepeatedDL.CustomTags[1].CharIndexEnd, 1);
+	}
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamTextCustomStyleEveryCharacterTest,
+	"DreamGUI.Text.RichText.ACustomStyleColoursEveryCharacterOfItsTagNestedTagsIncluded",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * A custom style's Replace colour set the colour without saying there was one, so the painter drew the text's own colour
+ * instead; and the style reached only the character right after its tag -- the next tag the parser met, a nested <b>,
+ * rebuilt the state without it. Every character of the tag takes the style, a tag nested inside it still has the last
+ * word on what it sets, and a Multiply style multiplies the text's colour when the glyph is painted.
+ */
+bool FDreamTextCustomStyleEveryCharacterTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamTextLayoutTestLocal;
+	FScopedGameWorld TestWorld;
+	UDreamTextTestFont* Font = NewObject<UDreamTextTestFont>(TestWorld.World);
+	UDreamUIRichTextCustomStyleData* Styles = NewObject<UDreamUIRichTextCustomStyleData>(TestWorld.World);
+	TMap<FName, FDreamUIRichTextCustomStyleItemData> StyleMap;
+	FDreamUIRichTextCustomStyleItemData Warn;
+	Warn.colorType = EDreamUIRichTextCustomStyleData_ColorType::Replace;
+	Warn.color = FColor::Red;
+	StyleMap.Add(FName(TEXT("warn")), Warn);
+	FDreamUIRichTextCustomStyleItemData Dim;
+	Dim.colorType = EDreamUIRichTextCustomStyleData_ColorType::Multiply;
+	Dim.color = FColor(0, 255, 0, 255);
+	StyleMap.Add(FName(TEXT("dim")), Dim);
+	Styles->SetDataMap(StyleMap);
+
+	FDreamTextLayoutInput In = MakeInput(Font, TEXT("<warn>ab<b>c</b>d<color=blue>e</color></warn><dim>f</dim>"), 900.0f, 200.0f);
+	In.bRichText = true;
+	In.RichTextCustomStyleData = Styles;
+	FDreamTextDisplayList DL;
+	FDreamTextLayoutEngine::Layout(In, DL);
+	if (!TestEqual(TEXT("six glyphs"), DL.Items.Num(), 6))return false;
+	for (int32 i = 0; i < 4; i++)
+	{
+		TestTrue(*FString::Printf(TEXT("character %d says it has a colour"), i), DL.Items[i].Style.bHasColor);
+		TestEqual(*FString::Printf(TEXT("character %d is red"), i), DL.Items[i].Style.Color, FColor::Red);
+	}
+	TestTrue(TEXT("c is bold as well"), DL.Items[2].Style.bBold);
+	TestFalse(TEXT("d after the bold is not"), DL.Items[3].Style.bBold);
+	TestEqual(TEXT("a colour tag inside the style has the last word"), DL.Items[4].Style.Color, FColor::Blue);
+	TestTrue(TEXT("f waits for the text's colour to multiply"), DL.Items[5].Style.bHasMultiplyColor);
+	TestFalse(TEXT("and has no colour of its own"), DL.Items[5].Style.bHasColor);
+
+	FDreamUIGeometry Geometry;
+	TArray<FDreamUITextCharProperty> Chars;
+	FDreamTextPainter::Paint(DL, MakePaint(FColor(10, 200, 30, 255)), Geometry, Chars);
+	if (!TestEqual(TEXT("six characters painted"), Chars.Num(), 6))return false;
+	TestEqual(TEXT("a paints red"), Geometry.Vertices[Chars[0].StartVertIndex].Color, FColor::Red);
+	TestEqual(TEXT("c paints red too"), Geometry.Vertices[Chars[2].StartVertIndex].Color, FColor::Red);
+	TestEqual(TEXT("f paints the text's colour times the style's"), Geometry.Vertices[Chars[5].StartVertIndex].Color, FColor(0, 200, 0, 255));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamTextClampDropsInlineObjectsTest,
+	"DreamGUI.Text.Pipeline.TruncationTakesTheInlineImagesItCutsOffWithIt",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * Truncate and Ellipsis cut glyphs and nothing else: an image after the cut, or in the stretch an ellipsis strips to
+ * make room for itself, was still handed to the rich text for a sprite and drawn past the edge of the box.
+ */
+bool FDreamTextClampDropsInlineObjectsTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamTextLayoutTestLocal;
+	FScopedGameWorld TestWorld;
+	UDreamTextTestFont* Font = NewObject<UDreamTextTestFont>(TestWorld.World);
+
+	auto Layout = [Font](const TCHAR* Content, EDreamUITextOverflowType Overflow, float Width, FDreamTextDisplayList& OutDL)
+	{
+		FDreamTextLayoutInput In = MakeInput(Font, Content, Width, 200.0f);
+		In.bRichText = true;
+		In.OverflowType = Overflow;
+		FDreamTextLayoutEngine::Layout(In, OutDL);
+	};
+	const float WideLeft = BoxLeft(MakeInput(Font, TEXT(""), 2000.0f, 200.0f));
+
+	// Where the e starts, from the whole line in a wide box; then a box that ends inside the e.
+	FDreamTextDisplayList Wide;
+	Layout(TEXT("abcdefghij<img=x/>k"), EDreamUITextOverflowType::HorizontalOverflow, 2000.0f, Wide);
+	if (!TestEqual(TEXT("the wide box places the image"), Wide.Images.Num(), 1))return false;
+	const FDreamTextGlyphItem* E = FindItem(Wide, 4);
+	if (!TestNotNull(TEXT("the e is laid out"), E))return false;
+	FDreamTextDisplayList Cut;
+	Layout(TEXT("abcdefghij<img=x/>k"), EDreamUITextOverflowType::Truncate, E->Pen.X - WideLeft + 1.0f, Cut);
+	TestTrue(TEXT("the narrow box truncates"), Cut.bTruncated);
+	TestEqual(TEXT("and the image past the cut is not placed"), Cut.Images.Num(), 0);
+
+	// An image just inside the box survives a truncation there, but not the room an ellipsis needs.
+	FDreamTextDisplayList WideImage;
+	Layout(TEXT("abc<img=x/>defghij"), EDreamUITextOverflowType::HorizontalOverflow, 2000.0f, WideImage);
+	float ImageEnd = 0.0f;
+	for (const FDreamTextGlyphItem& Item : WideImage.Items)
+	{
+		if (Item.Kind == EDreamTextItemKind::Image)
+		{
+			ImageEnd = Item.Pen.X - WideLeft + Item.AdvanceWithSpace;
+			break;
+		}
+	}
+	FDreamTextDisplayList Truncated;
+	Layout(TEXT("abc<img=x/>defghij"), EDreamUITextOverflowType::Truncate, ImageEnd + 2.0f, Truncated);
+	TestEqual(TEXT("truncating just after the image keeps it"), Truncated.Images.Num(), 1);
+	FDreamTextDisplayList Elided;
+	Layout(TEXT("abc<img=x/>defghij"), EDreamUITextOverflowType::Ellipsis, ImageEnd + 2.0f, Elided);
+	TestTrue(TEXT("eliding there truncates"), Elided.bTruncated);
+	TestEqual(TEXT("and the ellipsis's room takes the image"), Elided.Images.Num(), 0);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamTextEllipsisTakesTheRunsStyleTest,
+	"DreamGUI.Text.Pipeline.AnEllipsisIsSetInTheSizeAndWeightOfTheTextItEnds",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * The ellipsis was always fetched at the text's own size and never bold, so a bold 48 px run elided inside a 16 px text
+ * ended in a small, light dot-dot-dot. It is set in the size and weight of the text it ends.
+ */
+bool FDreamTextEllipsisTakesTheRunsStyleTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamTextLayoutTestLocal;
+	FScopedGameWorld TestWorld;
+	UDreamTextTestFont* Font = NewObject<UDreamTextTestFont>(TestWorld.World);
+
+	FDreamTextLayoutInput In = MakeInput(Font, TEXT("<size=48><b>abcdefghijklmnopqrstuvwxyz</b></size>"), 300.0f, 200.0f);
+	In.FontSize = 16.0f;
+	In.bRichText = true;
+	In.OverflowType = EDreamUITextOverflowType::Ellipsis;
+	FDreamTextDisplayList DL;
+	FDreamTextLayoutEngine::Layout(In, DL);
+	const FDreamTextGlyphItem* Dots = nullptr;
+	for (const FDreamTextGlyphItem& Item : DL.Items)
+	{
+		if (Item.Codepoint == 0x2026 && Item.bEmit)Dots = &Item;
+	}
+	if (!TestNotNull(TEXT("the line ends in an ellipsis"), Dots))return false;
+	TestEqual(TEXT("as wide as a bold 48 px ellipsis"), Dots->Glyph.XAdvance, Font->GetCharData(0x2026, 48.0f, true).XAdvance, 0.001f);
+	TestEqual(TEXT("and the size it is drawn at is the run's"), Dots->Style.Size, 48.0f, 0.001f);
+	TestTrue(TEXT("and its weight"), Dots->Style.bBold);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamTextTallImageGrowsItsLineTest,
+	"DreamGUI.Text.RichText.ATallInlineImageGrowsItsLineAndCanSitOnTheBaseline",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * A line's box came from its fonts alone while an image was centred on it, so a 48-tall image in 20 px text overlapped
+ * the lines around it and the paragraph's height left it out. The line grows to hold it. An image can also be told to
+ * sit on the baseline, like a letter.
+ */
+bool FDreamTextTallImageGrowsItsLineTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamTextLayoutTestLocal;
+	FScopedGameWorld TestWorld;
+	UDreamTextTestFont* Font = NewObject<UDreamTextTestFont>(TestWorld.World);
+
+	FDreamTextLayoutInput In = MakeInput(Font, TEXT("a<img=x,48/>\nb"), 600.0f, 300.0f);
+	In.FontSize = 20.0f;
+	In.bRichText = true;
+	FDreamTextDisplayList DL;
+	FDreamTextLayoutEngine::Layout(In, DL);
+	if (!TestEqual(TEXT("two lines"), DL.Lines.Num(), 2))return false;
+	if (!TestEqual(TEXT("one image"), DL.Images.Num(), 1))return false;
+	const FDreamTextGlyphItem* B = FindItem(DL, 3);
+	if (!TestNotNull(TEXT("the b is laid out"), B))return false;
+	const float ImageBottom = (float)(DL.Images[0].Position.Y - DL.Images[0].Size.Y * 0.5);
+	const float NextLineTop = B->Pen.Y + 20.0f * 0.95f;
+	TestTrue(*FString::Printf(TEXT("the image (bottom %.2f) stays above the next line's box (top %.2f)"), ImageBottom, NextLineTop),
+		ImageBottom >= NextLineTop - 0.01f);
+	TestTrue(TEXT("and the paragraph is tall enough for both"), DL.PreferredSize.Y >= 48.0f + 20.0f * 1.25f - 0.01f);
+
+	FDreamTextLayoutInput OnBaseline = MakeInput(Font, TEXT("a<img=x,48,baseline/>"), 600.0f, 300.0f);
+	OnBaseline.FontSize = 20.0f;
+	OnBaseline.bRichText = true;
+	FDreamTextDisplayList BaselineDL;
+	FDreamTextLayoutEngine::Layout(OnBaseline, BaselineDL);
+	const FDreamTextGlyphItem* A = FindItem(BaselineDL, 0);
+	if (TestEqual(TEXT("baseline: one image"), BaselineDL.Images.Num(), 1) && TestNotNull(TEXT("baseline: the a is laid out"), A))
+	{
+		const float BaselineImageBottom = (float)(BaselineDL.Images[0].Position.Y - BaselineDL.Images[0].Size.Y * 0.5);
+		TestEqual(TEXT("a baseline image's bottom edge is on the baseline"), BaselineImageBottom, A->Pen.Y, 0.01f);
+	}
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamTextImageSizeIgnoresRasterScaleTest,
+	"DreamGUI.Text.RichText.AnInlineImageIsSizedInTextUnitsUnderAnyScale",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * An image was sized from the size a glyph is rasterized at. In world space with DynamicPixelsPerUnit at 4, a bitmap
+ * font's image came out four times the font size; under a screen canvas scaled by 2, the size a tag asked for came out
+ * halved. Both sizes are in text units, like the font size, and no raster scale applies to them.
+ */
+bool FDreamTextImageSizeIgnoresRasterScaleTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamTextLayoutTestLocal;
+	FScopedGameWorld TestWorld;
+	UDreamTextTestFont* Font = NewObject<UDreamTextTestFont>(TestWorld.World);
+	Font->bMockSupportsDynamicPixelsPerUnit = true;
+
+	FDreamTextLayoutInput WorldSpace = MakeInput(Font, TEXT("a<img=x/>"), 600.0f, 300.0f);
+	WorldSpace.FontSize = 20.0f;
+	WorldSpace.bRichText = true;
+	WorldSpace.bRenderToWorldSpace = true;
+	WorldSpace.DynamicPixelsPerUnit = 4.0f;
+	FDreamTextDisplayList WorldDL;
+	FDreamTextLayoutEngine::Layout(WorldSpace, WorldDL);
+	if (TestEqual(TEXT("world space: one image"), WorldDL.Images.Num(), 1))
+	{
+		TestEqual(TEXT("as tall as the font, not four times it"), (float)WorldDL.Images[0].Size.Y, 20.0f, 0.01f);
+	}
+
+	FDreamTextLayoutInput Scaled = MakeInput(Font, TEXT("a<img=x,48/>"), 600.0f, 300.0f);
+	Scaled.FontSize = 20.0f;
+	Scaled.bRichText = true;
+	Scaled.RootCanvasScale = 2.0f;
+	FDreamTextDisplayList ScaledDL;
+	FDreamTextLayoutEngine::Layout(Scaled, ScaledDL);
+	if (TestEqual(TEXT("scaled canvas: one image"), ScaledDL.Images.Num(), 1))
+	{
+		TestEqual(TEXT("as tall as the tag asked, not half of it"), (float)ScaledDL.Images[0].Size.Y, 48.0f, 0.01f);
+	}
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamTextSpacingSkipsMarksTest,
+	"DreamGUI.Text.Pipeline.LetterSpacingNeverSeparatesAnAccentFromItsLetter",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * Letter spacing was added after every element, so a combining accent -- an element of its own -- was pushed one
+ * spacing away from the letter it belongs on. Spacing goes between grapheme clusters only.
+ */
+bool FDreamTextSpacingSkipsMarksTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamTextLayoutTestLocal;
+	FScopedGameWorld TestWorld;
+	UDreamTextTestFont* Font = NewObject<UDreamTextTestFont>(TestWorld.World);
+
+	auto Positions = [Font](float Spacing, float& OutE, float& OutAccent, float& OutX)
+	{
+		FDreamTextLayoutInput In = MakeInput(Font, TEXT("e\U00000301x"), 600.0f, 200.0f);
+		In.FontSpace.X = Spacing;
+		FDreamTextDisplayList DL;
+		FDreamTextLayoutEngine::Layout(In, DL);
+		const FDreamTextGlyphItem* E = FindItem(DL, 0);
+		const FDreamTextGlyphItem* Accent = FindItem(DL, 1);
+		const FDreamTextGlyphItem* X = FindItem(DL, 2);
+		OutE = E ? E->Pen.X : 0.0f;
+		OutAccent = Accent ? Accent->Pen.X : 0.0f;
+		OutX = X ? X->Pen.X : 0.0f;
+		return E != nullptr && Accent != nullptr && X != nullptr;
+	};
+	float E0 = 0.0f, Accent0 = 0.0f, X0 = 0.0f, E3 = 0.0f, Accent3 = 0.0f, X3 = 0.0f;
+	if (!TestTrue(TEXT("unspaced: three glyphs"), Positions(0.0f, E0, Accent0, X0)))return false;
+	if (!TestTrue(TEXT("spaced: three glyphs"), Positions(3.0f, E3, Accent3, X3)))return false;
+	TestEqual(TEXT("the accent stays where it was on its letter"), Accent3 - E3, Accent0 - E0, 0.001f);
+	TestEqual(TEXT("and the next letter moves by one spacing, not two"), (X3 - E3) - (X0 - E0), 3.0f, 0.001f);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamTextGraphemeClusterTest,
+	"DreamGUI.Text.Breaker.AGraphemeClusterHasOneCaretAndIsNeverSplitAcrossLines",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * Every element had a caret and could be cut from the next one, so a caret stood between a letter and its accent and
+ * the per-character fallback put an accent on a line of its own. A grapheme cluster (UAX #29) is one caret stop and one
+ * unit to the breaker: carets of e, U+0301, e stand at offsets 0, 2 and 3, and a decomposed letter with two accents stays
+ * whole even in a box one pixel wide.
+ */
+bool FDreamTextGraphemeClusterTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamTextLayoutTestLocal;
+	FScopedGameWorld TestWorld;
+	UDreamTextTestFont* Font = NewObject<UDreamTextTestFont>(TestWorld.World);
+
+	FDreamTextDisplayList DL;
+	FDreamTextLayoutEngine::Layout(MakeInput(Font, TEXT("e\U00000301e"), 600.0f, 200.0f), DL);
+	if (!TestEqual(TEXT("one line"), DL.Lines.Num(), 1))return false;
+	const TArray<FDreamUITextCaretProperty>& Carets = DL.Lines[0].CaretPropertyList;
+	if (TestEqual(TEXT("two clusters and the end: three carets"), Carets.Num(), 3))
+	{
+		TestEqual(TEXT("before the accented e"), Carets[0].CharIndex, 0);
+		TestEqual(TEXT("before the plain e, past the accent"), Carets[1].CharIndex, 2);
+		TestEqual(TEXT("at the end"), Carets[2].CharIndex, 3);
+	}
+
+	FDreamTextLayoutInput Narrow = MakeInput(Font, TEXT("e\U00000323\U00000302"), 1.0f, 600.0f);
+	Narrow.OverflowType = EDreamUITextOverflowType::VerticalOverflow;
+	Narrow.WrappingPolicy = ETextWrappingPolicy::AllowPerCharacterWrapping;
+	FDreamTextDisplayList NarrowDL;
+	FDreamTextLayoutEngine::Layout(Narrow, NarrowDL);
+	TestEqual(TEXT("a letter with two accents stays on one line"), NarrowDL.Lines.Num(), 1);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamTextHalfLeadingTest,
+	"DreamGUI.Text.Pipeline.ExtraLineHeightGoesHalfAboveAndHalfBelowTheLine",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * A line-height percentage over 100% put all of its extra space under the line, so a single line in a tall line box sat
+ * at the top of it. CSS splits the leading -- half above, half below -- and the line sits in the middle. At 100% a line set
+ * in one face stays where the old formula put it; a line that mixes faces with different leading can move a little, its
+ * box being the union of the boxes on it, as in CSS.
+ */
+bool FDreamTextHalfLeadingTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamTextLayoutTestLocal;
+	FScopedGameWorld TestWorld;
+	UDreamTextTestFont* Font = NewObject<UDreamTextTestFont>(TestWorld.World);
+	const float Ascent = 24.0f * 0.95f;
+	const float Descent = 24.0f * 0.3f;
+	const float LineHeight = 24.0f * 1.25f;
+
+	FDreamTextLayoutInput Tall = MakeInput(Font, TEXT("Ag"), 600.0f, 200.0f);
+	Tall.LineHeightPercentage = 2.0f;
+	FDreamTextDisplayList TallDL;
+	FDreamTextLayoutEngine::Layout(Tall, TallDL);
+	const float Top = Tall.Height * (0.5f - Tall.Pivot.Y) + Tall.Height * 0.5f;
+	if (!TestTrue(TEXT("something is laid out"), TallDL.Items.Num() > 0))return false;
+	const float Baseline = TallDL.Items[0].Pen.Y;
+	TestEqual(TEXT("the line is twice as tall"), TallDL.PreferredSize.Y, LineHeight * 2.0f, 0.01f);
+	const float Above = (Top - Baseline) - Ascent;
+	const float Below = (Baseline - (Top - LineHeight * 2.0f)) - Descent;
+	TestEqual(TEXT("as much room above the ascent as below the descent"), Above, Below, 0.01f);
+	TestEqual(TEXT("which is half the extra height"), Above, LineHeight * 0.5f, 0.01f);
+
+	// At 100%, lines in one face sit where the old formula put them: the baseline (LineHeight - (Ascent + Descent)) / 2 +
+	// Ascent below the line's top, the next line LineHeight + FontSpace.Y further down.
+	FDreamTextLayoutInput Normal = MakeInput(Font, TEXT("ab\ncd"), 600.0f, 200.0f);
+	Normal.FontSpace.Y = 5.0f;
+	FDreamTextDisplayList NormalDL;
+	FDreamTextLayoutEngine::Layout(Normal, NormalDL);
+	const FDreamTextGlyphItem* FirstLine = FindItem(NormalDL, 0);
+	const FDreamTextGlyphItem* SecondLine = FindItem(NormalDL, 3);
+	if (TestNotNull(TEXT("the first line is laid out"), FirstLine) && TestNotNull(TEXT("the second line is laid out"), SecondLine))
+	{
+		const float OldBaselineDrop = (LineHeight - (Ascent + Descent)) * 0.5f + Ascent;
+		TestEqual(TEXT("the first baseline is where it was"), FirstLine->Pen.Y, Top - OldBaselineDrop, 0.001f);
+		TestEqual(TEXT("and so is the second"), SecondLine->Pen.Y, Top - (LineHeight + 5.0f) - OldBaselineDrop, 0.001f);
+	}
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamTextSuperscriptLineBoxTest,
+	"DreamGUI.Text.RichText.ASuperscriptIsShiftedAsChromeShiftsItAndItsLineMakesRoom",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * Superscript and subscript were 0.8 the size and moved half an em only when painted, so the line box never knew about
+ * them and a superscript could overlap the line above. The layout shifts them now, as Blink does -- at 1/1.2 the size,
+ * the baseline a third of the parent's size plus a pixel up, or a fifth plus a pixel down -- and the line grows to hold them.
+ */
+bool FDreamTextSuperscriptLineBoxTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamTextLayoutTestLocal;
+	FScopedGameWorld TestWorld;
+	UDreamTextTestFont* Font = NewObject<UDreamTextTestFont>(TestWorld.World);
+
+	FDreamTextLayoutInput Sup = MakeInput(Font, TEXT("x<sup>2</sup>"), 600.0f, 200.0f);
+	Sup.bRichText = true;
+	FDreamTextDisplayList SupDL;
+	FDreamTextLayoutEngine::Layout(Sup, SupDL);
+	const FDreamTextGlyphItem* X = FindItem(SupDL, 0);
+	const FDreamTextGlyphItem* Two = FindItem(SupDL, 1);
+	if (TestNotNull(TEXT("x is laid out"), X) && TestNotNull(TEXT("the superscript is laid out"), Two))
+	{
+		TestEqual(TEXT("a superscript is 1/1.2 the size"), Two->Style.Size, 20.0f, 0.01f);
+		TestEqual(TEXT("and its baseline is a third of 24 plus one higher"), Two->Pen.Y, X->Pen.Y + 9.0f, 0.01f);
+		TestEqual(TEXT("its raised box grows the line"), SupDL.PreferredSize.Y, 20.0f * 0.95f + 9.0f + 24.0f * 0.3f, 0.01f);
+	}
+
+	FDreamTextLayoutInput Sub = MakeInput(Font, TEXT("x<sub>2</sub>"), 600.0f, 200.0f);
+	Sub.bRichText = true;
+	FDreamTextDisplayList SubDL;
+	FDreamTextLayoutEngine::Layout(Sub, SubDL);
+	const FDreamTextGlyphItem* SubX = FindItem(SubDL, 0);
+	const FDreamTextGlyphItem* SubTwo = FindItem(SubDL, 1);
+	if (TestNotNull(TEXT("sub: x is laid out"), SubX) && TestNotNull(TEXT("the subscript is laid out"), SubTwo))
+	{
+		TestEqual(TEXT("a subscript's baseline is a fifth of 24 plus one lower"), SubTwo->Pen.Y, SubX->Pen.Y - 5.8f, 0.01f);
+		TestEqual(TEXT("and its lowered box grows the line"), SubDL.PreferredSize.Y, 24.0f * 0.95f + 20.0f * 0.3f + 5.8f, 0.01f);
+	}
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamTextStyleSizeAndSuperscriptTest,
+	"DreamGUI.Text.RichText.ACustomStyleSizeAndASuperscriptFoldInTheOrderTheyNest",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * A custom style's size was written over the size the parser had worked out: a <sup> inside a sized style lost its step
+ * down and was raised by a third of the text's size rather than the style's, and a superscript style around a <size>
+ * shrank the size the tag names. Style sizes, size tags and superscripts fold in the order their tags were opened, as
+ * CSS cascades font-size and vertical-align.
+ */
+bool FDreamTextStyleSizeAndSuperscriptTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamTextLayoutTestLocal;
+	FScopedGameWorld TestWorld;
+	UDreamTextTestFont* Font = NewObject<UDreamTextTestFont>(TestWorld.World);
+	UDreamUIRichTextCustomStyleData* Styles = NewObject<UDreamUIRichTextCustomStyleData>(TestWorld.World);
+	TMap<FName, FDreamUIRichTextCustomStyleItemData> StyleMap;
+	FDreamUIRichTextCustomStyleItemData Warn;
+	Warn.sizeType = EDreamUIRichTextCustomStyleData_SizeType::SizeValue;
+	Warn.size = 30;
+	StyleMap.Add(FName(TEXT("warn")), Warn);
+	FDreamUIRichTextCustomStyleItemData Up;
+	Up.supOrSub = EDreamUIRichTextCustomStyleData_SupOrSubType::Superscript;
+	StyleMap.Add(FName(TEXT("up")), Up);
+	Styles->SetDataMap(StyleMap);
+	auto Layout = [Font, Styles](const TCHAR* Content, FDreamTextDisplayList& OutDL)
+	{
+		FDreamTextLayoutInput In = MakeInput(Font, Content, 600.0f, 200.0f);
+		In.bRichText = true;
+		In.RichTextCustomStyleData = Styles;
+		FDreamTextLayoutEngine::Layout(In, OutDL);
+	};
+
+	// The text is 24 and the style 30: the superscript inside the style is a step down from 30, raised by a third of 30
+	// plus one.
+	FDreamTextDisplayList Sized;
+	Layout(TEXT("a<warn><sup>x</sup></warn>"), Sized);
+	const FDreamTextGlyphItem* A = FindItem(Sized, 0);
+	const FDreamTextGlyphItem* X = FindItem(Sized, 1);
+	if (TestNotNull(TEXT("a is laid out"), A) && TestNotNull(TEXT("x is laid out"), X))
+	{
+		TestEqual(TEXT("a superscript inside a 30 style is 30 / 1.2"), X->Style.Size, 25.0f, 0.01f);
+		TestEqual(TEXT("raised by a third of 30 plus one"), X->Pen.Y, A->Pen.Y + 11.0f, 0.01f);
+	}
+
+	// A <size> inside a superscript style: the size the tag names, on the baseline the superscript raised from 24.
+	FDreamTextDisplayList Raised;
+	Layout(TEXT("a<up><size=40>y</size></up>"), Raised);
+	const FDreamTextGlyphItem* RaisedA = FindItem(Raised, 0);
+	const FDreamTextGlyphItem* Y = FindItem(Raised, 1);
+	if (TestNotNull(TEXT("a is laid out beside y"), RaisedA) && TestNotNull(TEXT("y is laid out"), Y))
+	{
+		TestEqual(TEXT("a size inside a superscript style is the size it names"), Y->Style.Size, 40.0f, 0.01f);
+		TestEqual(TEXT("on a baseline a third of 24 plus one up"), Y->Pen.Y, RaisedA->Pen.Y + 9.0f, 0.01f);
+	}
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamTextUnderlineIsOneStrokeTest,
+	"DreamGUI.Text.Painter.AnUnderlineIsOneStrokeAcrossTheSpacesBetweenWords",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * Each glyph drew its own piece of underline and a space drew none, so `<u>a b</u>` had a gap where a browser draws one
+ * line; and under negative letter spacing the pieces had negative widths and blended twice where they overlapped. A run
+ * of the same decoration is one quad, across the spaces between words and not past a space hanging off the line's end.
+ */
+bool FDreamTextUnderlineIsOneStrokeTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamTextLayoutTestLocal;
+	FScopedGameWorld TestWorld;
+	UDreamTextTestFont* Font = NewObject<UDreamTextTestFont>(TestWorld.World);
+
+	FDreamTextLayoutInput In = MakeInput(Font, TEXT("<u>a b </u>"), 600.0f, 200.0f);
+	In.bRichText = true;
+	FDreamTextDisplayList DL;
+	FDreamTextLayoutEngine::Layout(In, DL);
+	FDreamUIGeometry Geometry;
+	TArray<FDreamUITextCharProperty> Chars;
+	FDreamTextPainter::Paint(DL, MakePaint(), Geometry, Chars);
+	if (!TestEqual(TEXT("two glyphs and one stroke"), Geometry.OriginVertices.Num(), 2 * 4 + 4))return false;
+	const FDreamTextGlyphItem* A = FindItem(DL, 0);
+	const FDreamTextGlyphItem* B = FindItem(DL, 2);
+	if (!TestNotNull(TEXT("a is laid out"), A) || !TestNotNull(TEXT("b is laid out"), B))return false;
+	const float StrokeLeft = Geometry.OriginVertices[8].Position.Y;
+	const float StrokeRight = Geometry.OriginVertices[9].Position.Y;
+	TestEqual(TEXT("the stroke starts at a"), StrokeLeft, A->Pen.X + A->DecorationOffset, 0.001f);
+	TestEqual(TEXT("and runs through the space to the end of b, not past the space after it"), StrokeRight,
+		B->Pen.X + B->DecorationOffset + B->AdvanceWithSpace, 0.001f);
+
+	FDreamTextLayoutInput Tight = MakeInput(Font, TEXT("<u>abc def</u>"), 600.0f, 200.0f);
+	Tight.bRichText = true;
+	Tight.FontSpace.X = -5.0f;
+	FDreamTextDisplayList TightDL;
+	FDreamTextLayoutEngine::Layout(Tight, TightDL);
+	FDreamUIGeometry TightGeometry;
+	TArray<FDreamUITextCharProperty> TightChars;
+	FDreamTextPainter::Paint(TightDL, MakePaint(), TightGeometry, TightChars);
+	const int32 StrokeQuads = TightGeometry.OriginVertices.Num() / 4 - TightChars.Num();
+	TestEqual(TEXT("negative spacing: still one stroke"), StrokeQuads, 1);
+	for (int32 Quad = TightChars.Num(); Quad < TightGeometry.OriginVertices.Num() / 4; Quad++)
+	{
+		const float Left = TightGeometry.OriginVertices[Quad * 4].Position.Y;
+		const float Right = TightGeometry.OriginVertices[Quad * 4 + 1].Position.Y;
+		TestTrue(*FString::Printf(TEXT("stroke %d has no negative width"), Quad), Right >= Left);
+	}
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamTextAnimatedStrokesTest,
+	"DreamGUI.Text.Painter.WhileCharactersAnimateOneByOneEachCarriesItsOwnPieceOfUnderline",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * A stroke drawn as one strip across a run belongs to no character, so TextAnimation, which moves, fades and reveals the
+ * vertices of each character's range, left an underline standing under letters that had flown off or faded out. While
+ * anything animates the characters one by one, every underline vertex lies inside some character's vertex range, and
+ * a glyph's piece reaches across the space after it, so the still text shows no gap between words.
+ */
+bool FDreamTextAnimatedStrokesTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamTextLayoutTestLocal;
+	FScopedGameWorld TestWorld;
+	UDreamWidget* Root = NewObject<UDreamWidget>(TestWorld.World, NAME_None, RF_Public | RF_Transactional);
+	Root->SetWidth(800.0f);
+	Root->SetHeight(600.0f);
+	Root->AddComponent<UDreamCanvas>();
+	Root->OnRegister();
+	Root->SetWidgetActive(true);
+	UDreamWidget* Child = NewObject<UDreamWidget>(TestWorld.World, NAME_None, RF_Public | RF_Transactional);
+	Child->SetWidth(400.0f);
+	Child->SetHeight(80.0f);
+	UDreamText* Text = Child->CreateNewVisual<UDreamText>();
+	if (!TestNotNull(TEXT("text visual"), Text))return false;
+	Text->SetFont(NewObject<UDreamTextTestFont>(TestWorld.World));
+	Child->OnRegister();
+	if (!TestTrue(TEXT("child attaches"), Child->TrySetParent(Root, false)))return false;
+	Text->SetRichText(true);
+	Text->SetText(FText::FromString(TEXT("<u>ab cd</u>")));
+
+	FDreamTextDisplayList DL;
+	FDreamTextLayoutEngine::Layout(UDreamText::MakeLayoutInput(Text, Text->GetFontSize()), DL);
+	const FDreamTextPaintParams Still = UDreamText::MakePaintParams(Text);
+	TestFalse(TEXT("with nothing animating the characters, strokes are drawn in runs"), Still.bStrokesPerCharacter);
+	FDreamUIGeometry StillGeometry;
+	TArray<FDreamUITextCharProperty> StillChars;
+	FDreamTextPainter::Paint(DL, Still, StillGeometry, StillChars);
+
+	// Any live object can stand for an animator; UObject itself is abstract.
+	UObject* Animator = NewObject<UDreamTextTestFont>(TestWorld.World);
+	Text->RegisterPerCharacterAnimation(Animator);
+	const FDreamTextPaintParams Animated = UDreamText::MakePaintParams(Text);
+	TestTrue(TEXT("a registered animator has the strokes drawn per character"), Animated.bStrokesPerCharacter);
+	FDreamUIGeometry Geometry;
+	TArray<FDreamUITextCharProperty> Chars;
+	FDreamTextPainter::Paint(DL, Animated, Geometry, Chars);
+	if (!TestEqual(TEXT("four characters"), Chars.Num(), 4) || !TestEqual(TEXT("four characters in the still text"), StillChars.Num(), 4))return false;
+	for (int32 Vertex = 0; Vertex < Geometry.OriginVertices.Num(); Vertex++)
+	{
+		bool bInsideCharacter = false;
+		for (const FDreamUITextCharProperty& Char : Chars)
+		{
+			bInsideCharacter |= Vertex >= Char.StartVertIndex && Vertex < Char.StartVertIndex + Char.VertCount;
+		}
+		if (!bInsideCharacter)
+		{
+			AddError(FString::Printf(TEXT("vertex %d lies inside no character's range"), Vertex));
+			break;
+		}
+	}
+	for (int32 i = 0; i < Chars.Num(); i++)
+	{
+		TestEqual(*FString::Printf(TEXT("character %d holds its glyph and its piece of underline"), i), Chars[i].VertCount, StillChars[i].VertCount * 2);
+	}
+	// A character's vertices are its glyph's, then its piece's; a piece's first two vertices are its bottom left and right.
+	const int32 PieceUnderB = Chars[1].StartVertIndex + Chars[1].VertCount / 2;
+	const int32 PieceUnderC = Chars[2].StartVertIndex + Chars[2].VertCount / 2;
+	TestTrue(TEXT("the piece under b reaches across the space to the piece under c"),
+		Geometry.OriginVertices[PieceUnderB + 1].Position.Y >= Geometry.OriginVertices[PieceUnderC].Position.Y - 0.001f);
+
+	Text->UnregisterPerCharacterAnimation(Animator);
+	TestFalse(TEXT("once the animator lets go, strokes are runs again"), UDreamText::MakePaintParams(Text).bStrokesPerCharacter);
+	Root->DestroyWidget();
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamTextTagColourOverrideTest,
+	"DreamGUI.Text.Painter.ATagColourOverrideRecoloursItsTagWithoutALayout",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * A hovered or pressed link changes colour at paint time: an override names a tag and the colour its glyphs take, and
+ * painting again with another override must not lay the text out again.
+ */
+bool FDreamTextTagColourOverrideTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamTextLayoutTestLocal;
+	FScopedGameWorld TestWorld;
+	UDreamTextTestFont* Font = NewObject<UDreamTextTestFont>(TestWorld.World);
+
+	FDreamUITextGeometryCache Cache;
+	FDreamTextLayoutInput In = MakeInput(Font, TEXT("<a=x>ab</a> <a=y>cd</a>"), 600.0f, 200.0f);
+	In.bRichText = true;
+	Cache.SetLayoutInput(In);
+	FDreamUIGeometry Geometry;
+
+	TArray<TPair<int32, FColor>> Hovered;
+	Hovered.Add(TPair<int32, FColor>(1, FColor::Red));
+	FDreamTextPaintParams Params = MakePaint(FColor::White);
+	Params.TagColorOverrides = &Hovered;
+	Cache.Paint(Geometry, Params);
+	const int32 LayoutsAfterFirstPaint = Cache.GetLayoutRunCount();
+	const TArray<FDreamUITextCharProperty>& Chars = Cache.GetCharPropertyArray();
+	if (!TestEqual(TEXT("four characters"), Chars.Num(), 4))return false;
+	TestEqual(TEXT("a keeps the text's colour"), Geometry.Vertices[Chars[0].StartVertIndex].Color, FColor::White);
+	TestEqual(TEXT("b too"), Geometry.Vertices[Chars[1].StartVertIndex].Color, FColor::White);
+	TestEqual(TEXT("c takes the second link's override"), Geometry.Vertices[Chars[2].StartVertIndex].Color, FColor::Red);
+	TestEqual(TEXT("and so does d"), Geometry.Vertices[Chars[3].StartVertIndex].Color, FColor::Red);
+
+	TArray<TPair<int32, FColor>> Pressed;
+	Pressed.Add(TPair<int32, FColor>(0, FColor::Blue));
+	Params.TagColorOverrides = &Pressed;
+	Cache.Paint(Geometry, Params);
+	TestEqual(TEXT("painting with another override lays nothing out"), Cache.GetLayoutRunCount(), LayoutsAfterFirstPaint);
+	TestEqual(TEXT("a takes the first link's override"), Geometry.Vertices[Cache.GetCharPropertyArray()[0].StartVertIndex].Color, FColor::Blue);
+	TestEqual(TEXT("and c is back to the text's colour"), Geometry.Vertices[Cache.GetCharPropertyArray()[2].StartVertIndex].Color, FColor::White);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamTextEmojiFallsBackToAGlyphTest,
+	"DreamGUI.Text.Pipeline.AnEmojiTheFontCanDrawIsAGlyphNotABlank",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * An emoji was always an inline placeholder for the font's emoji data, so a font without emoji data drew a blank even
+ * when one of its faces had the code point. A face that has it draws it as a glyph; monochrome beats a blank.
+ */
+bool FDreamTextEmojiFallsBackToAGlyphTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamTextLayoutTestLocal;
+	FScopedGameWorld TestWorld;
+	UDreamTextTestFont* Font = NewObject<UDreamTextTestFont>(TestWorld.World);
+
+	FDreamTextDisplayList DL;
+	FDreamTextLayoutEngine::Layout(MakeInput(Font, TEXT("a\U0001F600b"), 600.0f, 200.0f), DL);
+	TestEqual(TEXT("no emoji object is asked for"), DL.Emojis.Num(), 0);
+	TestEqual(TEXT("three characters are drawn"), DL.VisibleCharCount, 3);
+	const FDreamTextGlyphItem* Emoji = FindItem(DL, 1);
+	if (TestNotNull(TEXT("the emoji is a glyph item"), Emoji))
+	{
+		TestTrue(TEXT("and it is emitted"), Emoji->bEmit);
+		TestEqual(TEXT("its code point is the emoji's"), (int32)Emoji->Codepoint, 0x1F600);
+	}
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamTextMarkOnASpaceTest,
+	"DreamGUI.Text.Pipeline.ACombiningMarkOnASpaceIsDrawn",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * A space and the combining mark after it are one grapheme cluster, and a cluster led by a space was laid out as a Space
+ * item and nothing else, so the mark -- a lone accent is written that way -- took its place and was never drawn. The
+ * space draws nothing and the mark is a glyph of its own.
+ */
+bool FDreamTextMarkOnASpaceTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamTextLayoutTestLocal;
+	FScopedGameWorld TestWorld;
+	UDreamTextTestFont* Font = NewObject<UDreamTextTestFont>(TestWorld.World);
+
+	FDreamTextDisplayList DL;
+	FDreamTextLayoutEngine::Layout(MakeInput(Font, TEXT(" \U00000301"), 600.0f, 200.0f), DL);
+	FDreamUIGeometry Geometry;
+	TArray<FDreamUITextCharProperty> Chars;
+	FDreamTextPainter::Paint(DL, MakePaint(), Geometry, Chars);
+	TestEqual(TEXT("one glyph quad"), Geometry.OriginVertices.Num(), 4);
+	if (TestEqual(TEXT("for one character"), Chars.Num(), 1))
+	{
+		TestEqual(TEXT("which is the mark"), Chars[0].CharIndex, 1);
+	}
 	return true;
 }
 

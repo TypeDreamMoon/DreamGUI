@@ -64,8 +64,8 @@ DECLARE_MULTICAST_DELEGATE_OneParam(FDreamUIGamepadModelChangedDelegate, EDreamU
  * Hover, press, release, click, double click, long press and scroll follow the widget's rules and the
  * widget's moments in UDreamPointerInputModule::ProcessPointerEvent: every Enter is matched by one Exit,
  * exits go out before enters whichever kind of target is being left, a press is released to the actor it
- * landed on wherever the pointer is by then, and the second press of a quick pair is the double click in
- * place of its down. Drags, drops, swipes and pinches stay widgets' only.
+ * landed on wherever the pointer is by then and clicks it only when let go of over it, and the second press
+ * of a quick pair is the double click in place of its down. Drags, drops, swipes and pinches stay widgets' only.
  *
  * Kept per pointer id beside the user's pointers, and dropped with them.
  */
@@ -82,6 +82,35 @@ struct FDreamUIPointerWorldTarget
 	 */
 	TWeakObjectPtr<AActor> LastClicked;
 	double LastClickedTime = 0.0;
+};
+
+/** What took a key's press, and so is owed its release (DreamUIKeyRouting). */
+enum class EDreamUIKeyPressTaker : uint8
+{
+	/** The field the player is typing into, which typed it. */
+	Text,
+	/** The action router: the focused widget's key handlers or a bound action. The router remembers which. */
+	Bindings,
+	/** The virtual cursor's confirm button. */
+	VirtualCursor,
+	/** The navigation confirm. */
+	NavigationConfirm,
+	/** A navigation direction, the one FDreamUIKeyPress::Direction names. */
+	NavigationDirection,
+	/** Something only a press means -- a page, Back, or nothing at all -- which has no release to hear. */
+	PressOnly,
+};
+
+/**
+ * Where one key's press went. A key let go of belongs to whatever took it down, whatever has the focus, the typing or
+ * the bindings by the time it comes up -- a release routed by the state at release time could be swallowed by a field
+ * or a binding that never saw the press, leaving a navigation step or a pressed button held for good.
+ */
+struct FDreamUIKeyPress
+{
+	EDreamUIKeyPressTaker Taker = EDreamUIKeyPressTaker::PressOnly;
+	/** The direction the press stepped in, for NavigationDirection. */
+	EDreamUINavigationDirection Direction = EDreamUINavigationDirection::None;
 };
 
 /**

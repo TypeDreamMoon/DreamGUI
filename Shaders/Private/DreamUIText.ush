@@ -25,9 +25,22 @@
 // Every effect reach is clamped to the atlas's field: what the field cannot represent is not drawn,
 // instead of saturating into a visible rectangle at the quad's edge. The painter sizes the quads to
 // the same clamped reach.
+//
+// The face edge, the outline and a hard underlay are measured on the median of the colour channels,
+// which keeps convex corners mitred; glow and soft edges on the true distance in alpha, which is round
+// (see DreamUIText_MedianWeight). Small text is darkened a little (DreamUIText_SmallTextWeight); a font
+// turns that off by passing its em size negated.
 
 #ifndef DREAMUI_TEXT_USH
 #define DREAMUI_TEXT_USH
+
+// Small-text correction at and below 12 screen pixels per em, fading to nothing at 24: how far the face edge moves out
+// on each side, in screen pixels (FreeType's CFF darkening gives a 1 px stem about 0.4 px more), and how much narrower
+// the anti-aliasing ramp gets.
+#define DREAMUI_TEXT_SMALL_DARKEN_PX 0.2
+#define DREAMUI_TEXT_SMALL_CONTRAST 0.25
+#define DREAMUI_TEXT_SMALL_FULL_PX_PER_EM 12.0
+#define DREAMUI_TEXT_SMALL_NONE_PX_PER_EM 24.0
 
 // Only a pixel shader has screen derivatives and implicit-LOD sampling. The other place this code is
 // compiled is a material's ray-tracing hit shader (a world-space canvas hit by a shadow or reflection
@@ -94,6 +107,12 @@ FDreamUITextStyle DreamUIText_ReadStyle(Texture2D DataTex, float CoordinateInDat
 	float2 Fill = DreamUIText_UnpackHalf2(DataTex.Load(int3(12, Row, 0)).x);
 	S.FillDimAlpha = Fill.x;
 	S.FillFadeWidth = Fill.y;
+	// The effect colours are authored in sRGB like the vertex colour, which DreamUI_ShadePixel turns linear before
+	// anything is blended; read as they are stored, an outline, a shadow or a glow came out one encode lighter than the
+	// colour it was given (#E0301E drew as #F0785F), wherever the face was right.
+	S.OutlineColor.rgb = sRGBToLinear(S.OutlineColor.rgb);
+	S.UnderlayColor.rgb = sRGBToLinear(S.UnderlayColor.rgb);
+	S.GlowColor.rgb = sRGBToLinear(S.GlowColor.rgb);
 	return S;
 }
 
@@ -109,19 +128,25 @@ void DreamUIText_UnpackGlyphChannel(float Packed, out float Layer, out float Dil
 	DilateEm = Packed - Layer * 16.0;
 }
 
-// How many screen pixels one unit of distance (0..1 across the field's range) spans. The standard
-// msdfgen recipe: the field's pixel range scaled by texels-per-screen-pixel, read off the UV
-// derivatives -- so perspective, tilt and minification all fall out of it with no special cases.
-// Returns screen px per field unit; the edge's anti-aliasing band is one screen pixel wide.
-float DreamUIText_ScreenPxRange(float2 UV, float2 AtlasSize, float FieldRangeTexels)
+// How many screen pixels one atlas texel spans here, read off the UV derivatives and averaged over
+// the two axes -- so perspective, tilt and minification all fall out of it with no special cases.
+float DreamUIText_ScreenPxPerTexel(float2 UV, float2 AtlasSize)
 {
 #if DREAMUI_HAS_DERIVATIVES
-	float2 UnitRange = FieldRangeTexels / AtlasSize;
-	float2 ScreenTexSize = 1.0 / fwidth(UV);
-	return max(0.5 * dot(UnitRange, ScreenTexSize), 1.0);
+	float2 ScreenPxPerTexel = 1.0 / (fwidth(UV) * AtlasSize);
+	return 0.5 * (ScreenPxPerTexel.x + ScreenPxPerTexel.y);
 #else
-	return max(FieldRangeTexels, 1.0);
+	return 1.0;
 #endif
+}
+
+// How many screen pixels one unit of distance (0..1 across the field's range) spans. The standard
+// msdfgen recipe: the field's pixel range scaled by screen pixels per texel. Returns screen px per
+// field unit; the edge's anti-aliasing band is one screen pixel wide at every magnification, and
+// never less than the whole range when the glyph is minified that far.
+float DreamUIText_ScreenPxRange(float2 UV, float2 AtlasSize, float FieldRangeTexels)
+{
+	return max(DreamUIText_ScreenPxPerTexel(UV, AtlasSize) * FieldRangeTexels, 1.0);
 }
 
 // Coverage of "distance >= Threshold" with a one-pixel anti-aliasing band, widened by Softness
@@ -136,6 +161,30 @@ float DreamUIText_Coverage(float Distance, float Threshold, float ScreenPxRange,
 float DreamUIText_EmToField(float Em, float FontEmTexels, float FieldRangeTexels)
 {
 	return Em * FontEmTexels / FieldRangeTexels;
+}
+
+// How much of an effect's edge to measure on the median of the colour channels rather than on the
+// true distance in alpha (1 = all median). The median keeps a convex corner mitred -- the way Slate's
+// SDF outline and a browser's text stroke are, and the way a hard shadow of a sharp glyph is -- where
+// the true distance rounds it off. But the median is a distance only near the glyph: further out the
+// three channels follow different edges and stop agreeing. And a soft edge is a blur, which is round.
+// So an edge with no softness that stays within half the field's reach is all median, fading to all
+// true distance as its outer extent nears the end of the field or its softness nears half the reach.
+// A single-channel field has the two equal, so this changes nothing there.
+float DreamUIText_MedianWeight(float OuterReachEm, float SoftEm, float MaxReachEm)
+{
+	float Reach = max(MaxReachEm, 1e-4);
+	return saturate(2.0 - 2.0 * OuterReachEm / Reach) * saturate(1.0 - 2.0 * SoftEm / Reach);
+}
+
+// 1 for text at or below DREAMUI_TEXT_SMALL_FULL_PX_PER_EM screen pixels per em, 0 at and above
+// DREAMUI_TEXT_SMALL_NONE_PX_PER_EM, linear in between. A field's edge is a linear one-pixel ramp
+// centred on the outline, which at those sizes reads softer and lighter than the hinted bitmaps Slate
+// and browsers draw; the correction is a little stem darkening, in the spirit of FreeType's CFF
+// darkening and Skia's, and a little more contrast in the ramp. Large text is never touched.
+float DreamUIText_SmallTextWeight(float ScreenPxPerEm)
+{
+	return saturate((DREAMUI_TEXT_SMALL_NONE_PX_PER_EM - ScreenPxPerEm) / (DREAMUI_TEXT_SMALL_NONE_PX_PER_EM - DREAMUI_TEXT_SMALL_FULL_PX_PER_EM));
 }
 
 struct FDreamUIGlyphSample
@@ -165,13 +214,17 @@ FDreamUIGlyphSample DreamUIText_SampleField(Texture2DArray FontTex, SamplerState
  * The whole text look for one pixel: underlay behind, glow outside, outline around, face on top.
  * Returns straight (non-premultiplied) colour and alpha; VertexColor is the text's own colour.
  * Layer selects what this quad draws (0 face, 1 effects, 2 both); GlyphDilateEm is the glyph's own
- * dilation (synthetic bold) on top of the style's.
+ * dilation (synthetic bold) on top of the style's. FontEmTexels is the atlas's texels per em, negated
+ * when the font has the small-text correction off.
  */
 float4 DreamUIText_ShadeField(Texture2DArray FontTex, SamplerState FontSampler, float2 UV, float Slice, bool bMultiChannel,
 	float2 AtlasSize, float FieldRangeTexels, float FontEmTexels, float4 VertexColor, FDreamUITextStyle Style,
 	float FillProgress, float SegmentX, float GlyphGlowBoost, float GlyphDilateEm, float Layer)
 {
-	float PxRange = DreamUIText_ScreenPxRange(UV, AtlasSize, FieldRangeTexels);
+	const bool bSmallTextCorrection = FontEmTexels > 0.0;
+	FontEmTexels = abs(FontEmTexels);
+	float PxPerTexel = DreamUIText_ScreenPxPerTexel(UV, AtlasSize);
+	float PxRange = max(PxPerTexel * FieldRangeTexels, 1.0);
 	FDreamUIGlyphSample S = DreamUIText_SampleField(FontTex, FontSampler, UV, Slice, bMultiChannel);
 	const bool bDrawFace = Layer != 1.0;
 	const bool bDrawEffects = Layer != 0.0;
@@ -185,16 +238,25 @@ float4 DreamUIText_ShadeField(Texture2DArray FontTex, SamplerState FontSampler, 
 	float DilateEm = clamp(Style.FaceDilate + GlyphDilateEm, -SpreadEm, MaxReachEm);
 	float FaceEdge = 0.5 - DreamUIText_EmToField(DilateEm, FontEmTexels, FieldRangeTexels);
 	float FaceSoftEm = clamp(Style.FaceSoftness, 0.0, 2.0 * (MaxReachEm - DilateEm));
-	float Face = DreamUIText_Coverage(S.MedianDistance, FaceEdge, PxRange, DreamUIText_EmToField(FaceSoftEm, FontEmTexels, FieldRangeTexels));
+	// Small text: the face alone grows by up to DREAMUI_TEXT_SMALL_DARKEN_PX screen pixels a side and its ramp narrows.
+	// Below 4 px per em the darkening stops growing in em, so a glyph minified to a speck does not turn into a blob; and
+	// the effects keep measuring from the undarkened edge, so an outline's outer edge does not move.
+	float ScreenPxPerEm = PxPerTexel * FontEmTexels;
+	float SmallText = bSmallTextCorrection ? DreamUIText_SmallTextWeight(ScreenPxPerEm) : 0.0;
+	float DarkenEm = min(SmallText * DREAMUI_TEXT_SMALL_DARKEN_PX / max(ScreenPxPerEm, 4.0), max(MaxReachEm - DilateEm, 0.0));
+	float Face = DreamUIText_Coverage(S.MedianDistance, FaceEdge - DreamUIText_EmToField(DarkenEm, FontEmTexels, FieldRangeTexels),
+		PxRange * (1.0 + DREAMUI_TEXT_SMALL_CONTRAST * SmallText), DreamUIText_EmToField(FaceSoftEm, FontEmTexels, FieldRangeTexels));
 
-	// Outline: the band between the face edge and OutlineWidth further out, on the true distance.
+	// Outline: the band between the face edge and OutlineWidth further out, mitred at convex corners
+	// within the reach the median holds (DreamUIText_MedianWeight).
 	float OutlineWidthEm = clamp(Style.OutlineWidth, 0.0, MaxReachEm - DilateEm);
 	float OutlineReachEm = DilateEm + OutlineWidthEm;
 	float OutlineSoftEm = clamp(Style.OutlineSoftness, 0.0, 2.0 * (MaxReachEm - OutlineReachEm));
 	float Outline = 0.0;
 	if (bDrawEffects && OutlineWidthEm > 0.0 && Style.OutlineColor.a > 0.0)
 	{
-		Outline = DreamUIText_Coverage(S.Distance, 0.5 - DreamUIText_EmToField(OutlineReachEm, FontEmTexels, FieldRangeTexels), PxRange,
+		float OutlineDistance = lerp(S.Distance, S.MedianDistance, DreamUIText_MedianWeight(OutlineReachEm + 0.5 * OutlineSoftEm, OutlineSoftEm, MaxReachEm));
+		Outline = DreamUIText_Coverage(OutlineDistance, 0.5 - DreamUIText_EmToField(OutlineReachEm, FontEmTexels, FieldRangeTexels), PxRange,
 			DreamUIText_EmToField(OutlineSoftEm, FontEmTexels, FieldRangeTexels));
 	}
 
@@ -213,7 +275,8 @@ float4 DreamUIText_ShadeField(Texture2DArray FontTex, SamplerState FontSampler, 
 	// Underlay: the glyph again, offset and usually softer, behind everything. The offset sample may
 	// leave this glyph's atlas cell near the quad's edge and read a neighbour; it is only trusted where
 	// the unshifted distance proves the shifted sample is still inside the cell (distance to the glyph
-	// is never more than the distance to the cell's edge minus the spread).
+	// is never more than the distance to the cell's edge minus the spread). A hard underlay is the
+	// outlined glyph's own shape, mitred like it; a soft one is a blur and rounds (DreamUIText_MedianWeight).
 	float Underlay = 0.0;
 	if (bDrawEffects && Style.UnderlayColor.a > 0.0)
 	{
@@ -226,7 +289,8 @@ float4 DreamUIText_ShadeField(Texture2DArray FontTex, SamplerState FontSampler, 
 		float2 OffsetUV = OffsetEm * FontEmTexels / AtlasSize;
 		FDreamUIGlyphSample U = DreamUIText_SampleField(FontTex, FontSampler, UV - OffsetUV, Slice, bMultiChannel);
 		float Valid = step(DreamUIText_EmToField(OffsetLenEm, FontEmTexels, FieldRangeTexels), S.Distance);
-		Underlay = DreamUIText_Coverage(U.Distance, 0.5 - DreamUIText_EmToField(UnderlayReachEm, FontEmTexels, FieldRangeTexels), PxRange,
+		float UnderlayDistance = lerp(U.Distance, U.MedianDistance, DreamUIText_MedianWeight(UnderlayReachEm + 0.5 * UnderlaySoftEm, UnderlaySoftEm, MaxReachEm));
+		Underlay = DreamUIText_Coverage(UnderlayDistance, 0.5 - DreamUIText_EmToField(UnderlayReachEm, FontEmTexels, FieldRangeTexels), PxRange,
 			DreamUIText_EmToField(UnderlaySoftEm, FontEmTexels, FieldRangeTexels)) * Style.UnderlayColor.a * Valid;
 	}
 

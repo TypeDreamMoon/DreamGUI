@@ -17,6 +17,10 @@ class UWorld;
  * meaning -- navigation, confirm, Back, paging. The preset actors and the Slate input source both route through here,
  * so a key means the same thing whichever of them heard it.
  *
+ * A key's release goes where its press went (RouteKeyRelease), not where the key would go if it were pressed now. Each
+ * player remembers what took each held key (UDreamUIInputUser::NoteKeyPress), so a field that began its edit, or a
+ * binding that was registered, while the key was held does not swallow a release whose press it never saw.
+ *
  * A null InModifiers reads the chord from the player's controller, which is right for a key that arrived through it;
  * a source that has the chord in hand -- Slate's key event carries it -- passes it.
  */
@@ -61,14 +65,29 @@ namespace DreamUIKeyRouting
 	/** Any other key: the bindings, then -- for a Back key nobody took -- a drag cancelled, or Back. */
 	DREAMGUIINPUT_API bool RouteOtherKey(UDreamUIInputUser* InUser, const FKey& InKey, bool bInPressed, const FModifierKeysState* InModifiers = nullptr);
 	/**
-	 * A key for the field InUser is typing into, when it is one of the keys the field types with: taken -- and, for a
-	 * press or a repeat, typed -- or not. What comes first for every key a source hears.
+	 * A press or a repeat for the field InUser is typing into, when it is one of the keys the field types with: typed and
+	 * taken, or not. What comes first for every press a source hears. A release is not taken here; it goes where its
+	 * press went (RouteKeyRelease).
 	 */
 	DREAMGUIINPUT_API bool RouteTextKey(UDreamUIInputUser* InUser, const FKey& InKey, bool bInPressed, const FModifierKeysState& InModifiers);
 	/**
+	 * A key let go of, to whatever took its press and nowhere else: the field that typed it, the binding that took it,
+	 * the virtual cursor, or navigation. Every release the field did not type still reaches the focused widget, as UMG's
+	 * OnKeyUp does, and a key whose press InUser did not route goes nowhere else. True when the press was taken.
+	 */
+	DREAMGUIINPUT_API bool RouteKeyRelease(UDreamUIInputUser* InUser, const FKey& InKey, const FModifierKeysState* InModifiers = nullptr);
+	/**
+	 * A key whose release will never come -- it was let go of in another application, after this one lost the focus --
+	 * given up where RouteKeyRelease would send its release, except that a confirm it holds, the navigation's or the
+	 * virtual cursor's, ends with its up and no click, as a pointer taken away does (UDreamUIInputUser::CancelPointerPress).
+	 * A held direction stops, a held binding is let go of. Nothing for a key whose press InUser did not route.
+	 */
+	DREAMGUIINPUT_API void AbandonKeyPress(UDreamUIInputUser* InUser, const FKey& InKey);
+	/**
 	 * Any key, whichever of the four above it is -- after the field InUser is typing into, which takes the keys it types
-	 * with before anything else does. What a source that hears every key calls. True when something took it; typing
-	 * is reported in bOutTyped, since a key typed into a field is never anything else's.
+	 * with before anything else does -- and any release, to where its press went. What a source that hears every key
+	 * calls. True when something took it; typing is reported in bOutTyped, since a key typed into a field is never
+	 * anything else's.
 	 */
 	DREAMGUIINPUT_API bool RouteKey(UDreamUIInputUser* InUser, const FKey& InKey, bool bInPressed, const FModifierKeysState& InModifiers, bool& bOutTyped);
 }

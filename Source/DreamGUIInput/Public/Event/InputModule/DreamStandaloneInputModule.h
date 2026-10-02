@@ -46,7 +46,12 @@ public:
 	 */
 	UFUNCTION(BlueprintPure, Category = DreamGUI)
 	static int32 GetTouchPointerID(int32 InTouchID);
-	/** get current mouse position, return (0,0) if mouse position is not valid */
+	/**
+	 * Where the mouse is on the game viewport, in its pixels -- as the viewport itself reckons it, so off the viewport
+	 * whenever the cursor is not on it: (-1,-1) once it has left or with no viewport at all, and the position past the
+	 * left or top edge while a drag the viewport captured is out there. A position off the viewport is over nothing.
+	 * The substituted pointer while SetOverrideMousePosition is on.
+	 */
 	UFUNCTION(BlueprintCallable, Category = DreamGUI)
 	void GetMousePosition(FVector2D& OutMousePos)const;
 

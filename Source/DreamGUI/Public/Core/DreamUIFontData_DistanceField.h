@@ -68,7 +68,7 @@ class DREAMGUI_API UDreamUIFontData_DistanceField : public UDreamUIFontData_Free
 public:
 	UDreamUIFontData_DistanceField();
 private:
-	/** Outline multi-channel is the default; bitmap single-channel is what assets made before it get. */
+	/** Outline multi-channel is the default, for assets saved before this property existed too. */
 	UPROPERTY(EditAnywhere, Category = "DreamGUI")
 	EDreamUISdfSource SdfSource = EDreamUISdfSource::OutlineMultiChannel;
 	/** Font size when render glyph. */
@@ -119,7 +119,8 @@ public:
 	/** The distance range on each side of the edge, in pixels at SampleFontSize. */
 	int32 GetSdfRadius() const { return SDFRadius; }
 	virtual float GetAtlasFieldRangeTexels() const override { return 2.0f * SDFRadius; }
-	virtual float GetAtlasEmTexels() const override { return (float)SampleFontSize; }
+	/** SampleFontSize, negated when the project turns the shader's small-text correction off (UDreamGUISettings::bSmallTextCorrection). */
+	virtual float GetAtlasEmTexels() const override;
 	virtual bool GetAsyncRasterParams(float CharSize, bool IsBold, float& OutPixelsPerEm, float& OutSpreadPixels, float& OutBoldPixels) const override
 	{
 		if (SdfSource != EDreamUISdfSource::OutlineMultiChannel)return false;

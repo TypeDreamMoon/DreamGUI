@@ -19,6 +19,7 @@
 #include "Engine/Texture2DArray.h"
 #include "Engine/World.h"
 #include "Core/DreamUIWidgetRegistry.h"
+#include "Internationalization/TextTransformer.h"
 
 
 #define LOCTEXT_NAMESPACE "UIText"
@@ -31,12 +32,16 @@ FDreamTextLayoutInput UDreamText::MakeLayoutInput(const UDreamText* Text, float 
 
 	FDreamTextLayoutInput Input;
 	Input.Content = Text->GetText().ToString();
-	// Case is presentation: the Text property keeps what was authored, so a caret index, a copy, and
-	// anything reading the text back all still see it. UMG's TextBlock transforms at the same point.
+	// Case is presentation: the Text property keeps what was authored, so a copy and anything reading the
+	// text back still see it. UMG's TextBlock transforms at the same point, and the same way: through ICU,
+	// in the current culture, which is what turns a German sharp s into "SS" and knows Turkish's dotted and
+	// dotless i. FString's own ToUpper maps one code unit to one and gets both wrong. A mapping that changes
+	// the length (the sharp s to "SS") lays out a longer string than the authored one, and its carets count
+	// in that string.
 	switch (Text->GetTextTransform())
 	{
-	case EDreamUITextTransformPolicy::ToLower: Input.Content = Input.Content.ToLower(); break;
-	case EDreamUITextTransformPolicy::ToUpper: Input.Content = Input.Content.ToUpper(); break;
+	case EDreamUITextTransformPolicy::ToLower: Input.Content = FTextTransformer::ToLower(Input.Content); break;
+	case EDreamUITextTransformPolicy::ToUpper: Input.Content = FTextTransformer::ToUpper(Input.Content); break;
 	default: break;
 	}
 	FVector2f ContentSize, ContentPivot;
@@ -54,6 +59,9 @@ FDreamTextLayoutInput UDreamText::MakeLayoutInput(const UDreamText* Text, float 
 	Input.WrappingPolicy = Text->GetWrappingPolicy();
 	Input.PhraseWrap = Text->GetPhraseWrap();
 	Input.bUseKerning = Text->GetUseKerning();
+	// A ligature is one glyph for several characters, and whatever animates the characters one by one moves
+	// glyphs by their index: it would find fewer of them than it counts.
+	Input.bAllowLigatures = Text->GetLigatures() && !Text->HasPerCharacterAnimation();
 	Input.FontStyle = Text->GetFontStyle();
 	Input.bUnderline = Text->GetUnderline();
 	Input.bStrikethrough = Text->GetStrikethrough();
@@ -92,6 +100,11 @@ FDreamTextPaintParams UDreamText::MakePaintParams(const UDreamText* Text)
 	Params.FillSegments = &Text->GetFillSegments();
 	Params.FillProgress = Text->GetFillProgress();
 	Params.GlowBoost = Text->GetGlowBoost();
+	// A hovered or pressed link, recoloured where it is painted: nothing about the layout changes with it.
+	Params.TagColorOverrides = Text->GetTagColorOverrides().Num() > 0 ? &Text->GetTagColorOverrides() : nullptr;
+	// Whatever animates the characters one by one moves, fades and reveals each character's vertices; an underline drawn
+	// as one strip across them would stay put. Each character gets its own piece of stroke while anything animates them.
+	Params.bStrokesPerCharacter = Text->HasPerCharacterAnimation();
 	if (Style.bDistanceField)
 	{
 		const FDreamTextStyle& TextStyle = Text->GetTextStyle();
@@ -145,6 +158,9 @@ void UDreamText::ApplyFontTextureChange()
 		MarkVerticesDirty(true, true, true, true);
 		MarkTextureDirty();
 		UIGeometry->Texture = GetTextureToCreateGeometry();
+		// A new atlas may be another kind of field (an SdfSource edited on the font), and the record's font mark is
+		// what the shader decodes it by: an MTSDF read as one channel has every corner rounded off.
+		bWidgetPropertyDataFontMarkDirty = true;
 	}
 }
 
@@ -162,13 +178,20 @@ void UDreamText::ApplyRecreateText()
 {
 	if (IsValid(Font))
 	{
-		CacheTextGeometryData.MarkDirty();
-		MarkVertexPositionDirty();
+		// For when what the layout reads changed under an unchanged input -- a font's metrics, a style asset edited in
+		// place -- which the input's equality cannot see, so the layout is thrown away rather than compared.
+		MarkLayoutDirty();
+		// Whole: a markup resolved anew can draw a different number of quads (an underline a style turned on) in other
+		// colours, so every vertex channel is stale, and the text may come out another size.
+		MarkVerticesDirty(true, true, true, true);
+		UDreamWidget::MarkLayoutForRebuild(GetWidget());
 	}
 }
 
 void UDreamText::ApplyFontEmojiChange()
 {
+	// The emoji data sizes and places the emoji, and it changed under the same font.
+	MarkLayoutDirty();
 	this->MarkVerticesDirty(false, true, true, false);
 }
 
@@ -377,13 +400,15 @@ void UDreamText::OnUpdateGeometry(FDreamUIGeometry& InGeo, bool InTriangleChange
 
 uint8 UDreamText::GetFontMark_WidgetPropertyDataForMaterial()
 {
-	return static_cast<uint8>(this->Font->GetFontTextureMark());
+	return IsValid(Font) ? static_cast<uint8>(Font->GetFontTextureMark()) : 0;
 }
 
 void UDreamText::FillWidgetPropertyDataForMaterial_Extra(UDreamUIDataAsTexture* DataAsTexture)
 {
 	const int32 StartPosition = GetWidgetPropertyDataStartPosition();
 	if (StartPosition == INDEX_NONE || !DataAsTexture)return;
+	// Called right after the record's marks pixel was written with GetFontMark_WidgetPropertyDataForMaterial.
+	WrittenFontMark = GetFontMark_WidgetPropertyDataForMaterial();
 	TArray<uint8> Packed;
 	TextStyle.Pack(Packed);
 	DataAsTexture->UpdateBlock(FDreamTextStyle::PackedPixelStart, StartPosition, MoveTemp(Packed), FDreamTextStyle::PackedPixelCount);
@@ -391,6 +416,10 @@ void UDreamText::FillWidgetPropertyDataForMaterial_Extra(UDreamUIDataAsTexture* 
 
 void UDreamText::OnCultureChanged_Implementation()
 {
+	// The culture is read by the layout and is not in its input: the shaper picks the language's own glyph forms by it,
+	// the line breaker its rules, a case transform its mapping. A string that reads the same in the new culture still
+	// has to be laid out again.
+	MarkLayoutDirty();
 	auto originText = Text;
 	Text = FText::GetEmpty();//just make it work, because SetText will compare text value
 	SetText(originText);
@@ -455,7 +484,7 @@ void UDreamText::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEv
 			else if (MemberPropertyName == GET_MEMBER_NAME_CHECKED(UDreamText, bUseKerning))
 			{
 				MarkVertexPositionDirty();
-				CacheTextGeometryData.MarkDirty();
+				MarkLayoutDirty();
 			}
 			else if (MemberPropertyName == GET_MEMBER_NAME_CHECKED(UDreamText, TextStyle))
 			{
@@ -514,24 +543,35 @@ void UDreamText::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEv
 void UDreamText::RegisterOnRichTextImageDataChange()
 {
 	RichTextImageDataChangedDelegateHandle = RichTextImageData->OnDataChange.AddWeakLambda(this, [this] {
+		// Edited in place: the layout input still holds the same asset, so it cannot tell.
+		this->MarkLayoutDirty();
 		this->MarkVerticesDirty(true, true, true, false);
 		});
 }
 void UDreamText::UnregisterOnRichTextImageDataChange()
 {
-	RichTextImageData->OnDataChange.Remove(RichTextImageDataChangedDelegateHandle);
+	// Null-safe: the details panel clears the asset and then lets go of it, and a setter lets go of one it is replacing.
+	if (IsValid(RichTextImageData))
+	{
+		RichTextImageData->OnDataChange.Remove(RichTextImageDataChangedDelegateHandle);
+	}
 	RichTextImageDataChangedDelegateHandle.Reset();
 }
 
 void UDreamText::RegisterOnRichTextCustomStyleDataChange()
 {
 	RichTextCustomStyleDataChangedDelegateHandle = RichTextCustomStyleData->OnDataChange.AddWeakLambda(this, [this] {
+		// Edited in place, as above.
+		this->MarkLayoutDirty();
 		this->MarkVerticesDirty(true, true, true, false);
 		});
 }
 void UDreamText::UnregisterOnRichTextCustomStyleDataChange()
 {
-	RichTextCustomStyleData->OnDataChange.Remove(RichTextCustomStyleDataChangedDelegateHandle);
+	if (IsValid(RichTextCustomStyleData))
+	{
+		RichTextCustomStyleData->OnDataChange.Remove(RichTextCustomStyleDataChangedDelegateHandle);
+	}
 	RichTextCustomStyleDataChangedDelegateHandle.Reset();
 }
 
@@ -554,6 +594,15 @@ void UDreamText::SetFont(UDreamUIFontData_BaseObject* Value) {
 		Font = Value;
 
 		MarkTextureDirty();
+		// The quads too, not only the atlas they are drawn from: a texture change alone repaints nothing, and the
+		// old font's quads would go on sampling the new atlas until something else asked for a repaint.
+		MarkVerticesDirty(true, true, true, true);
+		// And the record's font mark, which says how the shader reads the atlas: one channel for a bitmap or a
+		// single-channel field, the median of three for MTSDF. Left as it was, a switch between kinds of font
+		// decoded the new atlas the old way.
+		bWidgetPropertyDataFontMarkDirty = true;
+		// The emoji objects came out of the old font's emoji data, as they do when the font is changed in the editor.
+		ClearEmojiObject();
 		//add to new
 		if (IsValid(Font))
 		{
@@ -589,6 +638,79 @@ void UDreamText::SetUseKerning(bool Value)
 		MarkVertexPositionDirty();
 		UDreamWidget::MarkLayoutForRebuild(GetWidget());
 	}
+}
+void UDreamText::SetLigatures(bool Value)
+{
+	if (bLigatures != Value)
+	{
+		bLigatures = Value;
+		MarkLigaturesDirty();
+	}
+}
+
+void UDreamText::RegisterPerCharacterAnimation(const UObject* InAnimator)
+{
+	if (InAnimator == nullptr)return;
+	const bool bHadAnimation = HasPerCharacterAnimation();
+	PerCharacterAnimators.RemoveAll([](const TWeakObjectPtr<const UObject>& Animator) { return !Animator.IsValid(); });
+	PerCharacterAnimators.AddUnique(TWeakObjectPtr<const UObject>(InAnimator));
+	if (!bHadAnimation)
+	{
+		if (bLigatures)
+		{
+			// Ligatures go: the characters are laid out a glyph each from now on.
+			MarkLigaturesDirty();
+		}
+		// And the underlines and strikethroughs are painted a piece per character (MakePaintParams).
+		if (GetWidget() != nullptr)
+		{
+			MarkVerticesDirty(true, true, true, true);
+		}
+	}
+}
+
+void UDreamText::UnregisterPerCharacterAnimation(const UObject* InAnimator)
+{
+	const bool bHadAnimation = HasPerCharacterAnimation();
+	PerCharacterAnimators.RemoveAll([InAnimator](const TWeakObjectPtr<const UObject>& Animator)
+	{
+		return !Animator.IsValid() || Animator.Get() == InAnimator;
+	});
+	if (bHadAnimation && !HasPerCharacterAnimation())
+	{
+		if (bLigatures)
+		{
+			MarkLigaturesDirty();
+		}
+		// The strokes go back to one strip per run.
+		if (GetWidget() != nullptr)
+		{
+			MarkVerticesDirty(true, true, true, true);
+		}
+	}
+}
+
+void UDreamText::MarkLigaturesDirty()
+{
+	// A ligature replaces several glyphs with one, so the glyphs and the width can both change. An animator lets go
+	// of its text as it is torn down, when the text may have no widget left.
+	if (GetWidget() != nullptr)
+	{
+		MarkVerticesDirty(true, true, true, false);
+		UDreamWidget::MarkLayoutForRebuild(GetWidget());
+	}
+}
+
+bool UDreamText::HasPerCharacterAnimation()const
+{
+	for (const TWeakObjectPtr<const UObject>& Animator : PerCharacterAnimators)
+	{
+		if (Animator.IsValid())
+		{
+			return true;
+		}
+	}
+	return false;
 }
 void UDreamText::SetFontSpace(FVector2D Value) {
 	if (FontSpace != Value)
@@ -706,6 +828,9 @@ void UDreamText::SetBestFit(bool Value)
 	if (bBestFit != Value)
 	{
 		bBestFit = Value;
+		// Neither Best Fit nor its minimum is in the layout input, so the size it remembers for an input may have
+		// been searched for under other settings: it goes with the layout.
+		MarkLayoutDirty();
 		MarkVertexPositionDirty();
 		UDreamWidget::MarkLayoutForRebuild(GetWidget());
 	}
@@ -719,6 +844,8 @@ void UDreamText::SetBestFitMinSize(float Value)
 		BestFitMinSize = Value;
 		if (bBestFit)
 		{
+			// The remembered size was searched for with the old minimum (see SetBestFit).
+			MarkLayoutDirty();
 			MarkVertexPositionDirty();
 			UDreamWidget::MarkLayoutForRebuild(GetWidget());
 		}
@@ -829,6 +956,12 @@ void UDreamText::SetPhraseWrap(EDreamTextPhraseWrap Value)
 	}
 }
 
+/*
+ * The style, the fill and the glow are paint inputs: MakePaintParams reads them, MakeLayoutInput does not, and no
+ * glyph is placed or measured differently for them -- the quads they widen are sized by the painter. So the setters
+ * below only repaint (see MarkLayoutDirty). A lyric line sets its fill segments every frame of a word, and that used
+ * to cost a rich-text parse, a shaping pass and a line break per frame, and with Best Fit on a whole size search.
+ */
 void UDreamText::SetTextStyle(const FDreamTextStyle& Value)
 {
 	if (TextStyle != Value)
@@ -924,6 +1057,9 @@ void UDreamText::SetRichTextImageData(UDreamUIRichTextImageData_BaseObject* Valu
 	if (RichTextImageData != Value)
 	{
 		MarkVerticesDirty(true, true, true, true);
+		// An edit made in place reaches the layout only through this text listening to the asset, so it stops
+		// listening to the one going; the next geometry update listens to the new one (OnBeforeCreateOrUpdateGeometry).
+		UnregisterOnRichTextImageDataChange();
 		RichTextImageData = Value;
 		if (!IsValid(RichTextImageData))//clear richTextImageData, then need to delete created object
 		{
@@ -937,6 +1073,8 @@ void UDreamText::SetRichTextCustomStyleData(UDreamUIRichTextCustomStyleData* Val
 	if (RichTextCustomStyleData != Value)
 	{
 		MarkVerticesDirty(true, true, true, true);
+		// As in SetRichTextImageData.
+		UnregisterOnRichTextCustomStyleDataChange();
 		RichTextCustomStyleData = Value;
 		UDreamWidget::MarkLayoutForRebuild(GetWidget());
 	}
@@ -1001,16 +1139,19 @@ void UDreamText::RegisterFont()
 		EmojiDataChangedDelegateHandle = Font->OnEmojiDataChanged.AddWeakLambda(this, [=, this]()
 		{
 			ClearEmojiObject();
+			// The same font with other emoji data: the emoji are sized and placed by the layout, which cannot tell.
+			MarkLayoutDirty();
 			MarkVerticesDirty(true, true, true, true);
 		});
 		GlyphsReadyDelegateHandle = Font->OnGlyphsReady.AddWeakLambda(this, [this]()
 		{
 			// Only texts that were laid out with missing quads care; the advances were already right,
-			// so this is a repaint with the quads filled in, not a size change.
+			// so this is a repaint with the quads filled in, not a size change -- but the quads are in the
+			// display list, so it is laid out again to take them.
 			if (bWaitingForGlyphs)
 			{
 				bWaitingForGlyphs = false;
-				CacheTextGeometryData.MarkDirty();
+				MarkLayoutDirty();
 				MarkVerticesDirty(true, true, true, true);
 			}
 		});
@@ -1078,6 +1219,10 @@ void UDreamText::UpdateCacheTextGeometry()const
 		auto MutableThis = const_cast<UDreamText*>(this);
 		MutableThis->GenerateRichTextImageObject();
 		MutableThis->GenerateEmojiObject();
+		// The tag colour overrides name their tags by index, and this layout may have put other tags at those indices.
+		// They are taken off before anything paints with them: a layout only runs for a change that has asked for a
+		// repaint already, and that repaint reads what is left.
+		MutableThis->DropMovedTagColorOverrides();
 	}
 }
 
@@ -1093,36 +1238,26 @@ void UDreamText::ConditionalUpdateCacheTextGeometry() const
 	}
 }
 
-void UDreamText::MarkVerticesDirty(bool InTriangleDirty, bool InVertexPositionDirty, bool InVertexUVDirty, bool InVertexColorDirty)
-{
-	// Colour is a paint input, not a layout input: the painter reads it off the text every time.
-	if (InTriangleDirty || InVertexPositionDirty || InVertexUVDirty)
-	{
-		CacheTextGeometryData.MarkDirty();
-		if (MeasureAtWidthCache.IsValid())
-		{
-			MeasureAtWidthCache->MarkDirty();
-		}
-	}
-	Super::MarkVerticesDirty(InTriangleDirty, InVertexPositionDirty, InVertexUVDirty, InVertexColorDirty);
-}
-void UDreamText::MarkTextureDirty()
+void UDreamText::MarkLayoutDirty()
 {
 	CacheTextGeometryData.MarkDirty();
 	if (MeasureAtWidthCache.IsValid())
 	{
 		MeasureAtWidthCache->MarkDirty();
 	}
+}
+
+void UDreamText::MarkTextureDirty()
+{
+	// A new atlas, or the same one refilled: every glyph's UVs in the display list are stale.
+	MarkLayoutDirty();
 	Super::MarkTextureDirty();
 }
 
 void UDreamText::MarkAllDirty()
 {
-	CacheTextGeometryData.MarkDirty();
-	if (MeasureAtWidthCache.IsValid())
-	{
-		MeasureAtWidthCache->MarkDirty();
-	}
+	// Everything, as the canvas asks when the text moves to another canvas or render mode, and the editor after any edit.
+	MarkLayoutDirty();
 	Super::MarkAllDirty();
 }
 int UDreamText::VisibleCharCountInString(const FString& srcStr)
@@ -1222,8 +1357,19 @@ FVector2f UDreamText::GetPreferredSizeWithin(const FDreamMeasureSpec& InWidthSpe
 	// own, and Best Fit picks its size against the box it has -- and only a bounded offer says what that width will be.
 	const bool bWrapsAtItsBox = (OverflowType == EDreamUITextOverflowType::VerticalOverflow || bAutoWrapText)
 		&& WrapTextAt <= 0.0f && !bBestFit;
-	if (!bWrapsAtItsBox || !InWidthSpec.IsBounded() || Own.X < 0.0f || Own.Y < 0.0f)
+	if (!bWrapsAtItsBox || Own.X < 0.0f || Own.Y < 0.0f)
 	{
+		return Own;
+	}
+	if (!InWidthSpec.IsBounded())
+	{
+		// With no width offered, the height answered is the paragraph wrapped at the width the widget has now: what the
+		// previous pass wrote, or what it was authored at. The arranging panel is told it was read, and measures this
+		// text again once it has given it its width (FDreamLayoutPassContext::FCurrentSizeReadScope).
+		if (const UDreamWidget* Widget = GetWidget())
+		{
+			Widget->GetLayoutPassContext().NoteCurrentSizeRead();
+		}
 		return Own;
 	}
 	const float Offered = FMath::Max(0.0f, InWidthSpec.Value);
@@ -1339,19 +1485,18 @@ bool UDreamText::MoveCaret(int32 moveType, int32& inOutCaretPositionIndex, int32
 			accumulatedCaretIndex += cacheLinePropertyArray[lineIndex].CaretPropertyList.Num();
 		}
 		auto originCaretPosition = inOutCaretPosition;
+		// Over the whole line, ties to the later caret, as FindCaretByWorldPosition: carets in the order of the text are
+		// not left to right where directions mix or negative letter spacing overlaps the glyphs, so the first caret
+		// further away than the one before it is not where the nearest one has been passed.
 		for (int caretIndex = 0; caretIndex < lineProperty.CaretPropertyList.Num(); caretIndex++)
 		{
 			auto& caretProperty = lineProperty.CaretPropertyList[caretIndex];
 			auto distance = FMath::Abs(originCaretPosition.X - caretProperty.CaretPosition.X);
-			if (distance < minDistance)
+			if (distance <= minDistance)
 			{
 				minDistance = distance;
 				inOutCaretPositionIndex = accumulatedCaretIndex;
 				inOutCaretPosition = caretProperty.CaretPosition;
-			}
-			else//found min distance at prev
-			{
-				break;
 			}
 			accumulatedCaretIndex++;
 		}
@@ -1592,47 +1737,49 @@ void UDreamText::FindCaretByWorldPosition(FVector inWorldPosition, FVector2f& ou
 		auto localPosition = GetWidget()->GetWorldTransform().InverseTransformPosition(inWorldPosition);
 		auto localPosition2D = FVector2f(localPosition.Y, localPosition.Z);
 
+		// The line first, by height alone: every caret of a line stands on the line's centre.
 		float nearestDistance = MAX_FLT;
-		int accumulatedCaretIndex = 0;
-		//find the nearest line, only need to compare Y
-		int foundLineIndex = -1;
-		for (int lineIndex = 0; lineIndex < cacheLinePropertyArray.Num(); lineIndex++)
+		int32 nearestLineIndex = INDEX_NONE;
+		int32 nearestLineFirstCaretIndex = 0;
+		int32 accumulatedCaretIndex = 0;
+		for (int32 lineIndex = 0; lineIndex < cacheLinePropertyArray.Num(); lineIndex++)
 		{
-			auto& lineItem = cacheLinePropertyArray[lineIndex];
-			float distance = FMath::Abs(lineItem.CaretPropertyList[0].CaretPosition.Y - localPosition2D.Y);
-			if (distance <= nearestDistance)
+			const auto& caretList = cacheLinePropertyArray[lineIndex].CaretPropertyList;
+			if (caretList.Num() > 0)
 			{
-				nearestDistance = distance;
-				outCaretPositionLineIndex = lineIndex;
-				accumulatedCaretIndex += lineItem.CaretPropertyList.Num();
+				const float distance = FMath::Abs(caretList[0].CaretPosition.Y - localPosition2D.Y);
+				if (distance <= nearestDistance)
+				{
+					nearestDistance = distance;
+					nearestLineIndex = lineIndex;
+					nearestLineFirstCaretIndex = accumulatedCaretIndex;
+				}
 			}
-			else
-			{
-				foundLineIndex = lineIndex - 1;
-				break;
-			}
+			accumulatedCaretIndex += caretList.Num();
 		}
-		if (foundLineIndex == -1)
+		if (nearestLineIndex == INDEX_NONE)
 		{
-			foundLineIndex = cacheLinePropertyArray.Num() - 1;
+			outCaretPositionIndex = 0;
+			int tempVisibleCharStartIndex = 0;
+			FindCaretByIndex(outCaretPositionIndex, outCaretPosition, outCaretPositionLineIndex, tempVisibleCharStartIndex);
+			return;
 		}
-		accumulatedCaretIndex -= cacheLinePropertyArray[foundLineIndex].CaretPropertyList.Num();//remove prev line's caret count, because we need to add it when compare X pos
-		//then find nearest char, only need to compare X
+		outCaretPositionLineIndex = nearestLineIndex;
+		// Then the caret nearest by X over the WHOLE line, with ties going to the later caret, as FindCaret does.
+		// Carets come in the order of the text, which is not left to right on a line that mixes directions -- the
+		// carets of a right-to-left word run back across it -- nor where negative letter spacing overlaps the glyphs,
+		// so the first caret further away than the one before it is not where the nearest one has been passed.
 		nearestDistance = MAX_FLT;
-		auto& nearestLine = cacheLinePropertyArray[outCaretPositionLineIndex];
-		for (int caretIndex = 0; caretIndex < nearestLine.CaretPropertyList.Num(); caretIndex++)
+		const auto& nearestLine = cacheLinePropertyArray[nearestLineIndex];
+		for (int32 caretIndex = 0; caretIndex < nearestLine.CaretPropertyList.Num(); caretIndex++)
 		{
-			auto& caretItem = nearestLine.CaretPropertyList[caretIndex];
-			float distance = FMath::Abs(caretItem.CaretPosition.X - localPosition2D.X);
+			const auto& caretItem = nearestLine.CaretPropertyList[caretIndex];
+			const float distance = FMath::Abs(caretItem.CaretPosition.X - localPosition2D.X);
 			if (distance <= nearestDistance)
 			{
 				nearestDistance = distance;
-				outCaretPositionIndex = accumulatedCaretIndex + caretIndex;
+				outCaretPositionIndex = nearestLineFirstCaretIndex + caretIndex;
 				outCaretPosition = caretItem.CaretPosition;
-			}
-			else
-			{
-				break;
 			}
 		}
 	}
@@ -1794,12 +1941,20 @@ TArray<FDreamUIText_RichTextCustomTag> UDreamText::GetHyperlinks()const
 bool UDreamText::FindHyperlinkByWorldPosition(FVector InWorldPosition, FName& OutId)const
 {
 	OutId = NAME_None;
+	const int32 TagIndex = FindHyperlinkIndexByWorldPosition(InWorldPosition);
+	if (TagIndex == INDEX_NONE)return false;
+	OutId = GetRichTextCustomTagArray()[TagIndex].TagName;
+	return true;
+}
+
+int32 UDreamText::FindHyperlinkIndexByWorldPosition(FVector InWorldPosition)const
+{
 	const TArray<FDreamUIText_RichTextCustomTag>& Tags = GetRichTextCustomTagArray();
-	if (Tags.Num() == 0)return false;
+	if (Tags.Num() == 0)return INDEX_NONE;
 	const TArray<FDreamUITextCharProperty>& Chars = GetCharPropertyArray();
-	if (Chars.Num() == 0 || !UIGeometry.IsValid())return false;
+	if (Chars.Num() == 0 || !UIGeometry.IsValid())return INDEX_NONE;
 	const TArray<FDreamUIOriginVertexData>& Vertices = UIGeometry->OriginVertices;
-	if (Vertices.Num() == 0)return false;
+	if (Vertices.Num() == 0)return INDEX_NONE;
 
 	const FVector LocalPosition = GetWidget()->GetWorldTransform().InverseTransformPosition(InWorldPosition);
 	const FVector2f Point(LocalPosition.Y, LocalPosition.Z);
@@ -1808,8 +1963,9 @@ bool UDreamText::FindHyperlinkByWorldPosition(FVector InWorldPosition, FName& Ou
 	// what a pointer is aiming at.
 	const float Padding = FMath::Max(RenderedFontSize, 1.0f) * 0.25f;
 
-	for (const FDreamUIText_RichTextCustomTag& Tag : Tags)
+	for (int32 TagIndex = 0; TagIndex < Tags.Num(); TagIndex++)
 	{
+		const FDreamUIText_RichTextCustomTag& Tag = Tags[TagIndex];
 		if (!Tag.bHyperlink)continue;
 		for (int32 CharIndex = FMath::Max(0, Tag.CharIndexStart); CharIndex <= Tag.CharIndexEnd && CharIndex < Chars.Num(); CharIndex++)
 		{
@@ -1829,12 +1985,11 @@ bool UDreamText::FindHyperlinkByWorldPosition(FVector InWorldPosition, FName& Ou
 			if (Point.X >= MinX - Padding && Point.X <= MaxX + Padding
 				&& Point.Y >= MinY - Padding && Point.Y <= MaxY + Padding)
 			{
-				OutId = Tag.TagName;
-				return true;
+				return TagIndex;
 			}
 		}
 	}
-	return false;
+	return INDEX_NONE;
 }
 
 bool UDreamText::TryClickHyperlinkAtWorldPosition(FVector InWorldPosition)
@@ -1853,64 +2008,187 @@ void UDreamText::GetSelectionProperty(int32 InSelectionStartCaretIndex, int32 In
 {
 	OutSelectionProeprtyArray.Reset();
 	UpdateCacheTextGeometry();
-	auto& cacheTextPropertyArray = CacheTextGeometryData.GetLines();
-	//start
-	FVector2f startCaretPosition;
-	int32 startCaretPositionLineIndex;
-	int visibleCharStartIndex = 0;
-	FindCaretByIndex(InSelectionStartCaretIndex, startCaretPosition, startCaretPositionLineIndex, visibleCharStartIndex);
-	//end
-	FVector2f endCaretPosition;
-	int32 endCaretPositionLineIndex;
-	FindCaretByIndex(InSelectionEndCaretIndex, endCaretPosition, endCaretPositionLineIndex, visibleCharStartIndex);
-	//if select from down to up, then convert it from up to down
-	if (startCaretPositionLineIndex > endCaretPositionLineIndex)
+	const TArray<FDreamUITextLineProperty>& Lines = CacheTextGeometryData.GetLines();
+	// A text that was never laid out has nothing on screen to highlight.
+	if (Lines.Num() == 0)
 	{
-		auto tempInt = endCaretPositionLineIndex;
-		endCaretPositionLineIndex = startCaretPositionLineIndex;
-		startCaretPositionLineIndex = tempInt;
-		auto tempV2 = endCaretPosition;
-		endCaretPosition = startCaretPosition;
-		startCaretPosition = tempV2;
+		return;
 	}
-	
-	if (startCaretPositionLineIndex == endCaretPositionLineIndex)//same line
+	// What is selected is a stretch of the text -- the offsets the two carets stand at, whichever way the selection was
+	// made -- not a stretch of the screen. Where it lies on screen is the layout's visual runs' business.
+	const int32 LastCaretIndex = FMath::Max(0, GetLastCaret());
+	const int32 AnchorOffset = GetCharIndexByCaretIndex(FMath::Clamp(InSelectionStartCaretIndex, 0, LastCaretIndex));
+	const int32 CaretOffset = GetCharIndexByCaretIndex(FMath::Clamp(InSelectionEndCaretIndex, 0, LastCaretIndex));
+	const int32 SelectionStart = FMath::Min(AnchorOffset, CaretOffset);
+	const int32 SelectionEnd = FMath::Max(AnchorOffset, CaretOffset);
+	if (SelectionStart >= SelectionEnd)
 	{
-		// From whichever end is further left. The two ends arrive in the order the selection was made --
-		// anchor, then caret -- so a selection made leftward measured a negative width, which the bar's
-		// widget clamps to nothing: Shift+Left selected text and showed no highlight at all.
-		FDreamUITextSelectionProperty selectionProperty;
-		selectionProperty.Pos = startCaretPosition.X <= endCaretPosition.X ? startCaretPosition : endCaretPosition;
-		selectionProperty.Size = FMath::TruncToInt(FMath::Abs(endCaretPosition.X - startCaretPosition.X));
-		OutSelectionProeprtyArray.Add(selectionProperty);
+		return;
 	}
-	else//different line
+
+	// Where an offset falls across a run. Its two ends are its edges -- the run's logical start is its left edge when
+	// it reads left to right and its right edge when it reads right to left -- and inside, the caret standing at the
+	// offset says, since the layout puts it on the edge between that character and the one before it.
+	auto OffsetX = [](const FDreamTextVisualRun& InRun, const FDreamUITextLineProperty& InLine, int32 InOffset) -> float
 	{
-		//first line
-		FDreamUITextSelectionProperty selectionProperty;
-		selectionProperty.Pos = startCaretPosition;
-		auto& firstLineCharPropertyList = cacheTextPropertyArray[startCaretPositionLineIndex].CaretPropertyList;
-		auto& firstLineLastCharProperty = firstLineCharPropertyList[firstLineCharPropertyList.Num() - 1];
-		selectionProperty.Size = FMath::RoundToInt(firstLineLastCharProperty.CaretPosition.X - startCaretPosition.X);
-		//selectionProperty.Size = (1.0f - this->GetPivot().X) * this->GetWidth() - startCaretPosition.X;
-		OutSelectionProeprtyArray.Add(selectionProperty);
-		//middle line, use this->GetWidth() as size
-		int middleLineCount = endCaretPositionLineIndex - startCaretPositionLineIndex - 1;
-		for (int i = 0; i < middleLineCount; i++)
+		if (InOffset <= InRun.SourceStart)
 		{
-			auto& charPropertyList = cacheTextPropertyArray[startCaretPositionLineIndex + i + 1].CaretPropertyList;
-			auto& firstPosition = charPropertyList[0].CaretPosition;
-			auto& lasPosition = charPropertyList[charPropertyList.Num() - 1].CaretPosition;
-			selectionProperty.Pos = firstPosition;
-			selectionProperty.Size = FMath::RoundToInt(lasPosition.X - firstPosition.X);
-			OutSelectionProeprtyArray.Add(selectionProperty);
+			return InRun.bRightToLeft ? InRun.Right : InRun.Left;
 		}
-		//end line
-		auto& firstPosition = cacheTextPropertyArray[endCaretPositionLineIndex].CaretPropertyList[0].CaretPosition;
-		selectionProperty.Pos = firstPosition;
-		selectionProperty.Size = FMath::RoundToInt(endCaretPosition.X - firstPosition.X);
-		OutSelectionProeprtyArray.Add(selectionProperty);
+		if (InOffset >= InRun.SourceEnd)
+		{
+			return InRun.bRightToLeft ? InRun.Left : InRun.Right;
+		}
+		for (const FDreamUITextCaretProperty& Caret : InLine.CaretPropertyList)
+		{
+			if (Caret.CharIndex == InOffset)
+			{
+				return FMath::Clamp(Caret.CaretPosition.X, InRun.Left, InRun.Right);
+			}
+		}
+		// No caret of its own, as inside a ligature: the run's share of the way to it.
+		const float Fraction = (float)(InOffset - InRun.SourceStart) / (float)(InRun.SourceEnd - InRun.SourceStart);
+		return InRun.bRightToLeft ? FMath::Lerp(InRun.Right, InRun.Left, Fraction) : FMath::Lerp(InRun.Left, InRun.Right, Fraction);
+	};
+
+	// One highlight wherever the selection meets a run, left to right along each line. On a line that mixes directions
+	// one stretch of the text is several stretches of the screen -- "ab" + a right-to-left word + "cd", selected from
+	// inside "ab" into the word, is the end of "ab" and, apart from it, the right end of the word -- and a single bar
+	// from caret to caret covered what was not selected. Measured from the run's edges, no highlight is ever negative.
+	for (const FDreamTextVisualRun& Run : CacheTextGeometryData.GetDisplayList().VisualRuns)
+	{
+		const int32 From = FMath::Max(SelectionStart, Run.SourceStart);
+		const int32 To = FMath::Min(SelectionEnd, Run.SourceEnd);
+		if (From >= To || !Lines.IsValidIndex(Run.LineIndex))
+		{
+			continue;
+		}
+		const FDreamUITextLineProperty& Line = Lines[Run.LineIndex];
+		if (Line.CaretPropertyList.Num() == 0)
+		{
+			continue;
+		}
+		const float FromX = OffsetX(Run, Line, From);
+		const float ToX = OffsetX(Run, Line, To);
+		FDreamUITextSelectionProperty SelectionProperty;
+		// The line's centre, where its carets stand and where the highlight's pivot is.
+		SelectionProperty.Pos = FVector2f(FMath::Min(FromX, ToX), Line.CaretPropertyList[0].CaretPosition.Y);
+		SelectionProperty.Size = FMath::RoundToInt(FMath::Abs(ToX - FromX));
+		OutSelectionProeprtyArray.Add(SelectionProperty);
 	}
+}
+
+namespace DreamTextTagColorLocal
+{
+	/** Whether two descriptions of a tag are the same tag in the same place: its name, its kind and its characters. */
+	static bool IsSameTag(const FDreamUIText_RichTextCustomTag& A, const FDreamUIText_RichTextCustomTag& B)
+	{
+		return A.TagName == B.TagName && A.bHyperlink == B.bHyperlink
+			&& A.CharIndexStart == B.CharIndexStart && A.CharIndexEnd == B.CharIndexEnd;
+	}
+}
+
+void UDreamText::SetTagColorOverride(int32 InTagIndex, FColor InColor)
+{
+	if (InTagIndex < 0)return;
+	// Read off the tags as they are now -- which lays a changed text out first, and takes off the overrides that change
+	// moved -- so the override is on the tag at InTagIndex today, and stays on it only while it is there.
+	const TArray<FDreamUIText_RichTextCustomTag>& Tags = GetRichTextCustomTagArray();
+	FDreamUIText_RichTextCustomTag OnTag;
+	if (Tags.IsValidIndex(InTagIndex))
+	{
+		OnTag = Tags[InTagIndex];
+	}
+	else
+	{
+		// No such tag yet, the text not laid out yet most likely: the next layout says which tag this is.
+		OnTag.CharIndexStart = INDEX_NONE;
+	}
+	const int32 Existing = TagColorOverrides.IndexOfByPredicate([InTagIndex](const TPair<int32, FColor>& Override) { return Override.Key == InTagIndex; });
+	if (Existing != INDEX_NONE)
+	{
+		TagColorOverrideTags[Existing] = OnTag;
+		if (TagColorOverrides[Existing].Value == InColor)return;
+		TagColorOverrides[Existing].Value = InColor;
+	}
+	else
+	{
+		TagColorOverrides.Emplace(InTagIndex, InColor);
+		TagColorOverrideTags.Add(OnTag);
+	}
+	MarkTagColorsDirty();
+}
+
+void UDreamText::ClearTagColorOverride(int32 InTagIndex)
+{
+	bool bRemoved = false;
+	for (int32 Index = TagColorOverrides.Num() - 1; Index >= 0; Index--)
+	{
+		if (TagColorOverrides[Index].Key == InTagIndex)
+		{
+			TagColorOverrides.RemoveAt(Index);
+			TagColorOverrideTags.RemoveAt(Index);
+			bRemoved = true;
+		}
+	}
+	if (bRemoved)
+	{
+		MarkTagColorsDirty();
+	}
+}
+
+void UDreamText::ClearTagColorOverrides()
+{
+	if (TagColorOverrides.Num() > 0)
+	{
+		TagColorOverrides.Reset();
+		TagColorOverrideTags.Reset();
+		MarkTagColorsDirty();
+	}
+}
+
+void UDreamText::DropMovedTagColorOverrides()
+{
+	const TArray<FDreamUIText_RichTextCustomTag>& Tags = CacheTextGeometryData.GetCustomTags();
+	for (int32 Index = TagColorOverrides.Num() - 1; Index >= 0; Index--)
+	{
+		const int32 TagIndex = TagColorOverrides[Index].Key;
+		FDreamUIText_RichTextCustomTag& OnTag = TagColorOverrideTags[Index];
+		if (Tags.IsValidIndex(TagIndex) && OnTag.CharIndexStart == INDEX_NONE)
+		{
+			OnTag = Tags[TagIndex];//put on before there was a tag at its index: this is the tag it is on
+		}
+		else if (!Tags.IsValidIndex(TagIndex) || !DreamTextTagColorLocal::IsSameTag(OnTag, Tags[TagIndex]))
+		{
+			TagColorOverrides.RemoveAt(Index);
+			TagColorOverrideTags.RemoveAt(Index);
+		}
+	}
+}
+
+void UDreamText::MarkTagColorsDirty()
+{
+	// Colour is a paint input: the text is repainted and its layout left alone. Asked from teardown too (a hyperlink
+	// giving its colour back as it goes), when the text may have no widget left to repaint in.
+	if (GetWidget() != nullptr)
+	{
+		MarkVerticesDirty(false, false, false, true);
+	}
+}
+
+bool UDreamText::GetTagColorOverride(int32 InTagIndex, FColor& OutColor)const
+{
+	// As the text will be painted: a changed text is laid out first, which takes off the overrides it moved.
+	UpdateCacheTextGeometry();
+	for (const TPair<int32, FColor>& Override : TagColorOverrides)
+	{
+		if (Override.Key == InTagIndex)
+		{
+			OutColor = Override.Value;
+			return true;
+		}
+	}
+	return false;
 }
 
 #undef LOCTEXT_NAMESPACE

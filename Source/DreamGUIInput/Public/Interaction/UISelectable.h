@@ -347,7 +347,16 @@ protected:
 	 */
 	void PlayClickFeedback(const UDreamPointerEventData* InEventData = nullptr);
 	bool bIsPointerInsideThis = false;
+	/** Whether any pointer holds this control down: PointersDown is not empty. */
 	bool bIsPointerDown = false;
+	/**
+	 * The pointers holding this control down, by player and pointer (PointerKeyOf). It looks pressed while any of them
+	 * does: two fingers on one control used to share a single flag, and the first to lift drew it released under the
+	 * second.
+	 */
+	TSet<FIntPoint> PointersDown;
+	/** The key a pointer's press is kept under: its player and its pointer id. Every pointer without event data is one. */
+	static FIntPoint PointerKeyOf(const UDreamPointerEventData* InEventData);
 	/**
 	 * The pointer resting on this arrived from a navigation move rather than a real pointer. The two
 	 * share the enter/exit path -- that is what makes the confirm button press whatever navigation

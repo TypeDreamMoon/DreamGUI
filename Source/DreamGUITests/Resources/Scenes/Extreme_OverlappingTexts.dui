@@ -1,0 +1,68 @@
+// Two text widgets on almost the same spot, red and blue at 80 % alpha: each blends over what is under it, the later
+// one over the earlier, with no box of either one's background showing.
+// @stage 512x192
+
+style Title {
+    AnchorData.AnchorMin = (0, 1)
+    AnchorData.AnchorMax = (1, 1)
+    AnchorData.Pivot = (0.5, 1)
+    AnchorData.AnchoredPosition = (0, -8)
+    AnchorData.SizeDelta = (-24, 20)
+    FontSize = 15
+    Color = #1E2230
+    HAlign = Left
+    VAlign = Top
+    OverflowType = HorizontalOverflow
+}
+
+style Note {
+    AnchorData.AnchorMin = (0, 1)
+    AnchorData.AnchorMax = (0, 1)
+    AnchorData.Pivot = (0, 1)
+    AnchorData.SizeDelta = (464, 16)
+    FontSize = 12
+    Color = #5A6172
+    HAlign = Left
+    VAlign = Top
+    OverflowType = HorizontalOverflow
+}
+
+style Word {
+    AnchorData.AnchorMin = (0, 1)
+    AnchorData.AnchorMax = (0, 1)
+    AnchorData.Pivot = (0, 1)
+    AnchorData.SizeDelta = (464, 80)
+    FontSize = 64
+    HAlign = Left
+    VAlign = Top
+    OverflowType = HorizontalOverflow
+    Text = "Overlap"
+}
+
+Widget Root {
+    Image Page {
+        Brush.TintColor = #F5F3EE
+        AnchorData.AnchorMin = (0, 0)
+        AnchorData.AnchorMax = (1, 1)
+        AnchorData.SizeDelta = (0, 0)
+    }
+
+    Text Heading : Title {
+        Text = "Two overlapping text widgets, 64 px"
+    }
+
+    Text OverlapLabel : Note {
+        AnchorData.AnchoredPosition = (24, -44)
+        Text = "red first, then blue 8 px right and 6 px down, both #...CC"
+    }
+
+    Text RedWord : Word {
+        AnchorData.AnchoredPosition = (24, -72)
+        Color = #D9534FCC
+    }
+
+    Text BlueWord : Word {
+        AnchorData.AnchoredPosition = (32, -78)
+        Color = #3D7DD8CC
+    }
+}

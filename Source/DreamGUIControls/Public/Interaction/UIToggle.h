@@ -124,10 +124,16 @@ protected:
 	FSimpleMulticastDelegate OnReleasedCPP;
 
 	/**
-	 * Whether the press now under way was one this toggle took -- it said OnPressed for it. What the
-	 * release is gated on, so the press pair always comes as a pair: UUIButton's rule, for its reason.
+	 * Whether a press this toggle took is under way -- it said OnPressed for it, and the last pointer of it has not let
+	 * go. What the release is gated on, so the press pair always comes as a pair: UUIButton's rule, for its reason.
 	 */
 	bool bPressAccepted = false;
+	/**
+	 * The pointers whose presses this toggle took, by player and pointer (UUISelectable::PointerKeyOf): one press from
+	 * the first of them to the last, which flips the toggle once -- UUIButton's rule, for its reason. Two fingers on a
+	 * check box flipped it twice, and so left it as it was.
+	 */
+	TSet<FIntPoint> AcceptedPresses;
 
 	void SetValue(bool Value, bool SendCallback);
 	void ApplyValueToVisual(bool ImmediateSet);

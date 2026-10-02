@@ -81,11 +81,19 @@ protected:
 	void FireClick(const UDreamPointerEventData* InEventData);
 
 	/**
-	 * Whether the press now under way was one this button took -- it said OnPressed for it. What
-	 * OnReleased is gated on, which is SButton's Release: a press that was never taken (a button this
-	 * control does not answer, or a press while disabled) has nothing to let go of.
+	 * Whether a press this button took is under way -- it said OnPressed for it, and the last pointer of it has not let
+	 * go. What OnReleased is gated on, which is SButton's Release: a press that was never taken (a button this control
+	 * does not answer, or a press while disabled) has nothing to let go of.
 	 */
 	bool bPressAccepted = false;
+	/**
+	 * The pointers whose presses this button took, by player and pointer (UUISelectable::PointerKeyOf). The button is
+	 * one press from the first of them to the last: OnPressed when the first goes down, OnReleased when the last lets
+	 * go, and one click, for the release that ends the press. A second finger's tap on a button already held is part of
+	 * that press, not a click of its own -- two fingers resting on a button would otherwise run its action twice, and
+	 * SButton too takes one press at a time and clicks it once.
+	 */
+	TSet<FIntPoint> AcceptedPresses;
 	virtual bool OnPointerDoubleClick_Implementation(UDreamPointerEventData* EventData)override;
 public:
 	FSimpleMulticastDelegate& GetOnClickEvent(){return OnClickCPP;}

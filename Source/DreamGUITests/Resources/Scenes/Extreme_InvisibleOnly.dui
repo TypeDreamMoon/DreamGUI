@@ -1,0 +1,86 @@
+// Texts with nothing to draw: spaces and the zero-width space, non-joiner and joiner (U+200B, U+200C, U+200D, in the
+// file as they are), once plain and once underlined. No glyph and no missing-glyph box may appear.
+// @stage 512x240
+
+style Title {
+    AnchorData.AnchorMin = (0, 1)
+    AnchorData.AnchorMax = (1, 1)
+    AnchorData.Pivot = (0.5, 1)
+    AnchorData.AnchoredPosition = (0, -8)
+    AnchorData.SizeDelta = (-24, 20)
+    FontSize = 15
+    Color = #1E2230
+    HAlign = Left
+    VAlign = Top
+    OverflowType = HorizontalOverflow
+}
+
+style Note {
+    AnchorData.AnchorMin = (0, 1)
+    AnchorData.AnchorMax = (0, 1)
+    AnchorData.Pivot = (0, 1)
+    AnchorData.SizeDelta = (464, 16)
+    FontSize = 12
+    Color = #5A6172
+    HAlign = Left
+    VAlign = Top
+    OverflowType = HorizontalOverflow
+}
+
+style Box {
+    AnchorData.AnchorMin = (0, 1)
+    AnchorData.AnchorMax = (0, 1)
+    AnchorData.Pivot = (0, 1)
+    AnchorData.SizeDelta = (464, 48)
+    Brush.ImageSize = (0, 0)
+    Brush.TintColor = #E4E8F0
+}
+
+style Blank {
+    AnchorData.AnchorMin = (0, 1)
+    AnchorData.AnchorMax = (0, 1)
+    AnchorData.Pivot = (0, 1)
+    AnchorData.SizeDelta = (464, 48)
+    FontSize = 32
+    Color = #1E2230
+    HAlign = Left
+    VAlign = Middle
+    OverflowType = HorizontalOverflow
+    Text = "  ​ ‌ ‍  ​  "
+}
+
+Widget Root {
+    Image Page {
+        Brush.TintColor = #F5F3EE
+        AnchorData.AnchorMin = (0, 0)
+        AnchorData.AnchorMax = (1, 1)
+        AnchorData.SizeDelta = (0, 0)
+    }
+
+    Text Heading : Title {
+        Text = "Only spaces and zero-width characters, 32 px"
+    }
+
+    Text PlainLabel : Note {
+        AnchorData.AnchoredPosition = (24, -44)
+        Text = "plain"
+    }
+    Image PlainBox : Box {
+        AnchorData.AnchoredPosition = (24, -64)
+    }
+    Text Plain : Blank {
+        AnchorData.AnchoredPosition = (24, -64)
+    }
+
+    Text UnderlinedLabel : Note {
+        AnchorData.AnchoredPosition = (24, -128)
+        Text = "underlined"
+    }
+    Image UnderlinedBox : Box {
+        AnchorData.AnchoredPosition = (24, -148)
+    }
+    Text Underlined : Blank {
+        AnchorData.AnchoredPosition = (24, -148)
+        bUnderline = true
+    }
+}

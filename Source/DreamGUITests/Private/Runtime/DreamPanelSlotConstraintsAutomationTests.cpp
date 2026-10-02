@@ -139,6 +139,56 @@ bool FDreamWrapBoxSlotFillsTheRestOfItsLineTest::RunTest(const FString& Paramete
 }
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamWrapBoxOnlyLastSlotFillsItsLineTest,
+	"DreamGUI.PanelSlot.OnlyTheLastSlotOnAWrapBoxLineTakesTheRoomTheLineDidNotUse",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * Every slot on a line that asked to fill grew, splitting the line's leftover between them. SWrapBox reads
+ * bFillEmptySpace for the LAST child on a line only (FinalizeLine): a filling slot anywhere else on the line
+ * keeps its own length. So a filling 100-wide child followed by a plain one on a 300-wide line was 200 wide,
+ * pushing its neighbour to 200, where UMG leaves it at 100 and the neighbour at 100. This checks UMG's numbers.
+ */
+bool FDreamWrapBoxOnlyLastSlotFillsItsLineTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamPanelSlotConstraintsTestLocal;
+	FScopedGameWorld TestWorld;
+	UDreamUIManagerWorldSubsystem* Manager = UDreamUIManagerWorldSubsystem::GetInstance(TestWorld.World);
+	if (!TestNotNull(TEXT("DreamUI manager subsystem exists"), Manager))
+	{
+		return false;
+	}
+	UDreamWidget* Root = MakeWidget(TestWorld.World, nullptr, TEXT("Root"), 300.0f, 200.0f);
+	UDreamWidget* Filler = MakeWidget(TestWorld.World, Root, TEXT("Filler"), 100.0f, 30.0f);
+	UDreamWidget* Fixed = MakeWidget(TestWorld.World, Root, TEXT("Fixed"), 100.0f, 30.0f);
+	if (!TestNotNull(TEXT("Wrap box created"), Root->CreateNewLayoutContainer<UDreamLayoutContainerWrapBox>()))
+	{
+		Root->DestroyWidget();
+		return false;
+	}
+	UDreamPanelSlot* FillerSlot = Filler->GetPanelSlot();
+	if (!TestNotNull(TEXT("The container handed the child a slot"), FillerSlot))
+	{
+		Root->DestroyWidget();
+		return false;
+	}
+	FillerSlot->SetFillEmptySpace(true);
+
+	UDreamWidget::MarkLayoutForRebuild(Root);
+	Manager->TickDreamUI(0.016f);
+
+	TestTrue(TEXT("A filling child that is not last on its line keeps its own width"),
+		FMath::IsNearlyEqual(Filler->GetWidth(), 100.0f, 0.01f));
+	// Anchored positions are relative to the 300-wide box's centre: a left edge at 100 puts the 100-wide
+	// child's centre at 150 - 150 = 0.
+	TestTrue(TEXT("...so the child after it starts where it ends"),
+		FMath::IsNearlyEqual(Fixed->GetAnchoredPosition().X, 0.0, 0.01));
+
+	Root->DestroyWidget();
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamWrapBoxSlotTakesAWholeLineBelowItsThresholdTest,
 	"DreamGUI.PanelSlot.AWrapBoxSlotBelowItsSpanThresholdStopsSharingItsLine",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)

@@ -1,0 +1,73 @@
+// An outline asked to be 0.5 em, wider than the distance field reaches, beside one of 0.25 em: the wide one is held
+// at the field's edge rather than cut off square at the edge of the glyph's quad.
+// @stage 768x240
+
+style Title {
+    AnchorData.AnchorMin = (0, 1)
+    AnchorData.AnchorMax = (1, 1)
+    AnchorData.Pivot = (0.5, 1)
+    AnchorData.AnchoredPosition = (0, -8)
+    AnchorData.SizeDelta = (-24, 20)
+    FontSize = 15
+    Color = #1E2230
+    HAlign = Left
+    VAlign = Top
+    OverflowType = HorizontalOverflow
+}
+
+style Note {
+    AnchorData.AnchorMin = (0, 1)
+    AnchorData.AnchorMax = (0, 1)
+    AnchorData.Pivot = (0, 1)
+    AnchorData.SizeDelta = (340, 16)
+    FontSize = 12
+    Color = #5A6172
+    HAlign = Left
+    VAlign = Top
+    OverflowType = HorizontalOverflow
+}
+
+style Outlined {
+    AnchorData.AnchorMin = (0, 1)
+    AnchorData.AnchorMax = (0, 1)
+    AnchorData.Pivot = (0, 1)
+    AnchorData.SizeDelta = (340, 150)
+    FontSize = 80
+    Color = #FFFFFF
+    HAlign = Center
+    VAlign = Middle
+    OverflowType = HorizontalOverflow
+    TextStyle.OutlineColor = #3D7DD8FF
+    Text = "WAVE"
+}
+
+Widget Root {
+    Image Page {
+        Brush.TintColor = #F5F3EE
+        AnchorData.AnchorMin = (0, 0)
+        AnchorData.AnchorMax = (1, 1)
+        AnchorData.SizeDelta = (0, 0)
+    }
+
+    Text Heading : Title {
+        Text = "The widest outline the field allows, 80 px"
+    }
+
+    Text WideLabel : Note {
+        AnchorData.AnchoredPosition = (24, -44)
+        Text = "outline 0.5 em, past the field's reach"
+    }
+    Text Wide : Outlined {
+        AnchorData.AnchoredPosition = (24, -68)
+        TextStyle.OutlineWidth = 0.5
+    }
+
+    Text QuarterLabel : Note {
+        AnchorData.AnchoredPosition = (404, -44)
+        Text = "outline 0.25 em"
+    }
+    Text Quarter : Outlined {
+        AnchorData.AnchoredPosition = (404, -68)
+        TextStyle.OutlineWidth = 0.25
+    }
+}
