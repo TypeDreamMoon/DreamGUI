@@ -206,9 +206,10 @@ protected:
     TObjectPtr<UMaterialInterface> OverrideMaterial = nullptr;
 	/**
 	 * Expand character's rect area to generate bigger mesh, useful for effects of OverrideMaterial.
-	 * Only valid for SDF font.
+	 * Only valid for SDF font. In pixels at the font's SampleFontSize, and at most the font's SDFRadius
+	 * less 0.02 em: that is all the field a glyph's atlas cell holds, so a larger value draws the same.
 	 */
-	UPROPERTY(EditAnywhere, Category = "DreamUI")
+	UPROPERTY(EditAnywhere, Category = "DreamUI", meta = (ClampMin = "0.0"))
 	float ExpandMeshSize = 0;
 	UPROPERTY(EditAnywhere, Category = "DreamGUI")
 	EDreamUITextFontStyle FontStyle = EDreamUITextFontStyle::None;

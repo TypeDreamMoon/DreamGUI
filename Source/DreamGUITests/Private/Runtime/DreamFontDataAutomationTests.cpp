@@ -898,4 +898,52 @@ bool FDreamFontAtlasFlushTimingTest::RunTest(const FString& Parameters)
 	return true;
 }
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamFontExpandedQuadStaysInItsCellTest,
+	"DreamGUI.Text.Font.AnExpandedGlyphQuadNeverLeavesItsAtlasCell",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * A text's ExpandMeshSize keeps that much of each glyph's field around its quad, but a glyph's atlas cell holds only
+ * SDFRadius texels of field around the glyph. A larger value grew every quad past its cell, and the text drew pieces of
+ * the glyphs next to it in the atlas around each character (61.7 on the default 16-texel field). This checks that a
+ * quad grows with the value up to its cell's edge and not a texel further, in size and in UVs.
+ */
+bool FDreamFontExpandedQuadStaysInItsCellTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamFontDataTestLocal;
+	FScopedGameWorld TestWorld;
+	UDreamUIFontData_DistanceField* Font = MakeFieldFont(TestWorld.World, TEXT("Roboto-Regular.ttf"));
+	if (!TestTrue(TEXT("Roboto loads"), Font->FaceHasCodepoint(0, 'H')))return false;
+	// At the sample size, where a quad's size is in atlas texels.
+	auto CharAt = [Font](float InExpand)
+	{
+		Font->PrepareForLayout(InExpand);
+		return Font->GetCharData('H', 64.0f, false);
+	};
+	const FDreamUICharData Tight = CharAt(0.0f);
+	const FDreamUICharData Some = CharAt(4.0f);
+	const FDreamUICharData WholeField = CharAt((float)Font->GetSdfRadius());
+	const FDreamUICharData Huge = CharAt(61.743332f);
+	if (!TestTrue(TEXT("H has a quad"), Tight.IsValid() && Tight.Width > 0.0f && Tight.Height > 0.0f))return false;
+	TestTrue(TEXT("a small expansion grows the quad"), Some.Width > Tight.Width && Some.Height > Tight.Height);
+	TestTrue(TEXT("...and its UV rect"), Some.MinUV.X < Tight.MinUV.X && Some.MaxUV.X > Tight.MaxUV.X);
+	TestEqual(TEXT("an expansion past the field draws the quad of the whole field: its width"), Huge.Width, WholeField.Width);
+	TestEqual(TEXT("...its height"), Huge.Height, WholeField.Height);
+	TestEqual(TEXT("...its UVs (min x)"), Huge.MinUV.X, WholeField.MinUV.X);
+	TestEqual(TEXT("...(min y)"), Huge.MinUV.Y, WholeField.MinUV.Y);
+	TestEqual(TEXT("...(max x)"), Huge.MaxUV.X, WholeField.MaxUV.X);
+	TestEqual(TEXT("...(max y)"), Huge.MaxUV.Y, WholeField.MaxUV.Y);
+
+	// The cell is the glyph's bounds plus SDFRadius texels on each side; the tight quad sits SDFRadius less 0.02 em inside it.
+	UTexture2DArray* Atlas = Font->GetFontTexture();
+	if (!TestNotNull(TEXT("the font has an atlas"), Atlas))return false;
+	const float TexelUV = 1.0f / (float)FMath::Max(Atlas->GetSizeX(), 1);
+	const float CellMarginUV = ((float)Font->GetSdfRadius() - 64.0f * 0.02f) * TexelUV;
+	const float Tolerance = 0.01f * TexelUV;
+	TestTrue(TEXT("no quad reaches past its cell on the left"), Tight.MinUV.X - Huge.MinUV.X <= CellMarginUV + Tolerance);
+	TestTrue(TEXT("...or on the right"), Huge.MaxUV.X - Tight.MaxUV.X <= CellMarginUV + Tolerance);
+	return true;
+}
+
 #endif

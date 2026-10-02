@@ -187,8 +187,12 @@ void UDreamUIFontData_DistanceField::PrepareForLayout(float InExpandMeshSize)
 float UDreamUIFontData_DistanceField::GetQuadShrinkTexels(float InExpandMeshSize) const
 {
 	// Shrink the quad to the glyph to cut the empty area of the spread; 0.02 em stays so an edge
-	// right at the bounds still has its anti-aliasing band. ExpandMeshSize keeps that much of the spread.
-	const float Keep = InExpandMeshSize > 0 ? InExpandMeshSize : 0.0f;
+	// right at the bounds still has its anti-aliasing band. ExpandMeshSize keeps that much of the spread,
+	// and no more than the spread there is: a glyph's atlas cell is its bounds plus SDFRadius texels, so
+	// a quad grown past that read its neighbours in the atlas and drew pieces of other letters around
+	// every character.
+	const float MaxKeep = FMath::Max(SDFRadius - SampleFontSize * 0.02f, 0.0f);
+	const float Keep = FMath::Clamp(InExpandMeshSize, 0.0f, MaxKeep);
 	return (SDFRadius - Keep) - SampleFontSize * 0.02f;
 }
 
