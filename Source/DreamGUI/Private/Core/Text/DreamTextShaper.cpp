@@ -1,6 +1,7 @@
 // Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
 
 #include "Core/Text/DreamTextShaper.h"
+#include "Core/Text/DreamTextShapeCache.h"
 #include "Core/DreamUIFontData_BaseObject.h"
 #include "Internationalization/Culture.h"
 #include "Internationalization/Internationalization.h"
@@ -30,6 +31,8 @@ bool FDreamTextShaper::CanShape(UDreamUIFontData_BaseObject* Font)
 #if WITH_HARFBUZZ
 namespace DreamTextShaperLocal
 {
+	static_assert(sizeof(hb_codepoint_t) == sizeof(uint32), "the paragraph's code points are handed to HarfBuzz as they are");
+
 	struct FItem
 	{
 		uint8 Level = 0;
@@ -38,11 +41,14 @@ namespace DreamTextShaperLocal
 		float Size = 0.0f;
 		bool bBold = false;
 		bool bUnshaped = false;
+		/** What the face resolver said of FaceIndex; it follows the face, so it cuts no run of its own. */
+		bool bColorFace = false;
+		uint8 LanguageIndex = 0;
 
 		bool SameRun(const FItem& Other) const
 		{
 			return Level == Other.Level && Script == Other.Script && FaceIndex == Other.FaceIndex
-				&& Size == Other.Size && bBold == Other.bBold && bUnshaped == Other.bUnshaped;
+				&& Size == Other.Size && bBold == Other.bBold && bUnshaped == Other.bUnshaped && LanguageIndex == Other.LanguageIndex;
 		}
 	};
 
@@ -218,59 +224,885 @@ namespace DreamTextShaperLocal
 	}
 
 	/**
-	 * The face a grapheme cluster is drawn from: one face for the whole cluster, so a base and its marks never come from
-	 * two fonts. A bold or italic cluster tries the font's face for that style first, then the regular chain in order.
-	 * Styled faces are never part of that chain. A space or a comma between two words of a fallback face's script is
-	 * drawn by the first face that has it too, not by the face of the words around it: what Blink's shaper keeps (it
-	 * reshapes with a fallback only the clusters the font before it could not draw) and what Slate's per-grapheme fallback
-	 * picks. Taking the neighbours' face instead set Hebrew text with Arial's wider spaces and broke its lines earlier
-	 * than both.
+	 * The paragraph as HarfBuzz is handed it: each element's code point, then the rest of its sequence. A glyph's cluster
+	 * is an index into Codepoints, and ElementOf maps it back to the element it belongs to.
 	 */
-	int32 ChooseFace(UDreamUIFontData_BaseObject* Font, int32 FaceCount, const TArray<FDreamShapeElement>& Elements, int32 ClusterStart, int32 ClusterEnd)
+	struct FParagraphCodepoints
 	{
-		auto HasCluster = [Font, &Elements, ClusterStart, ClusterEnd](int32 Face)
+		TArray<uint32> Codepoints;
+		/** Where each element's code points start, and one past the last element: their end. */
+		TArray<int32> ElementStart;
+		TArray<int32> ElementOf;
+
+		void Build(const TArray<FDreamShapeElement>& Elements, const TArray<uint32>* Sequences)
 		{
-			for (int32 k = ClusterStart; k < ClusterEnd; k++)
+			Codepoints.Reset(Elements.Num());
+			ElementOf.Reset(Elements.Num());
+			ElementStart.SetNumUninitialized(Elements.Num() + 1);
+			for (int32 i = 0; i < Elements.Num(); i++)
 			{
-				if (!Font->FaceHasCodepoint(Face, ShapingCodepoint(Elements[k].Codepoint)))
+				const FDreamShapeElement& Element = Elements[i];
+				ElementStart[i] = Codepoints.Num();
+				Codepoints.Add(ShapingCodepoint(Element.Codepoint));
+				ElementOf.Add(i);
+				if (Sequences != nullptr && Element.SequenceCount > 0 && Element.SequenceStart >= 0
+					&& (int64)Element.SequenceStart + Element.SequenceCount <= Sequences->Num())
 				{
-					return false;
+					for (int32 k = 0; k < Element.SequenceCount; k++)
+					{
+						Codepoints.Add((*Sequences)[Element.SequenceStart + k]);
+						ElementOf.Add(i);
+					}
 				}
 			}
+			ElementStart[Elements.Num()] = Codepoints.Num();
+		}
+
+		/** The code points of elements [First, End). */
+		TConstArrayView<uint32> Range(int32 First, int32 End) const
+		{
+			return TConstArrayView<uint32>(Codepoints.GetData() + ElementStart[First], ElementStart[End] - ElementStart[First]);
+		}
+	};
+
+	/** The game's current language as a table of one: kept between calls on the game thread, made into Storage elsewhere. */
+	const TArray<FDreamTextLanguage>& GetGameLanguages(TArray<FDreamTextLanguage>& Storage)
+	{
+		const FString Current = FInternationalization::Get().GetCurrentLanguage()->GetName();
+		if (IsInGameThread())
+		{
+			static TArray<FDreamTextLanguage> Kept;
+			if (Kept.Num() != 1 || !Kept[0].Name.Equals(Current, ESearchCase::CaseSensitive))
+			{
+				Kept.Reset();
+				Kept.Add(FDreamTextLanguage::Make(Current));
+			}
+			return Kept;
+		}
+		Storage.Reset();
+		Storage.Add(FDreamTextLanguage::Make(Current));
+		return Storage;
+	}
+
+	/*
+	 * The shape cache's segments. A run is cut where its words end -- at spaces, and around CJK characters and symbols, as
+	 * Blink's word cache cuts it -- but only where the cut changes nothing: HarfBuzz must shape the two sides apart exactly
+	 * as it shapes them together. So never inside a cluster, and only next to a base no lookup of the face reaches past
+	 * (FDreamTextShapeCache::FFaceRules). The one thing HarfBuzz reads across a cut is the joining context, which the key
+	 * carries.
+	 */
+
+	bool IsWordDelimiter(uint32 C)
+	{
+		return C == 0x0020 || C == 0x00A0;
+	}
+
+	/** Characters that stand as words of their own: CJK ideographs, kana, bopomofo, the CJK symbols and fullwidth forms, and the emoji and pictographs. */
+	bool IsCjkOrSymbol(uint32 C)
+	{
+		return (C >= 0x2E80 && C <= 0x2FFF)
+			|| (C >= 0x3000 && C <= 0x33FF)
+			|| (C >= 0x3400 && C <= 0x4DBF)
+			|| (C >= 0x4E00 && C <= 0x9FFF)
+			|| (C >= 0xF900 && C <= 0xFAFF)
+			|| (C >= 0xFE30 && C <= 0xFE4F)
+			|| (C >= 0xFF00 && C <= 0xFFEF)
+			|| (C >= 0x20000 && C <= 0x3FFFF)
+			|| (C >= 0x2600 && C <= 0x27BF)
+			|| (C >= 0x1F000 && C <= 0x1FAFF);
+	}
+
+	/** Runs whose CJK letters may stand as words: inside another script's word a shaper reads its neighbours (Indic 'init' asks whether a letter stands before a syllable). */
+	bool IsCjkScript(hb_script_t Script)
+	{
+		return Script == HB_SCRIPT_HAN || Script == HB_SCRIPT_HIRAGANA || Script == HB_SCRIPT_KATAKANA
+			|| Script == HB_SCRIPT_BOPOMOFO || Script == HB_SCRIPT_COMMON;
+	}
+
+	/** Letters, marks, format and unassigned characters: what HarfBuzz's shapers count as part of a word (Cf through Mn). */
+	bool IsWordLike(hb_unicode_general_category_t Category)
+	{
+		return Category >= HB_UNICODE_GENERAL_CATEGORY_FORMAT && Category <= HB_UNICODE_GENERAL_CATEGORY_NON_SPACING_MARK;
+	}
+
+	bool IsMarkOrFormat(hb_unicode_general_category_t Category)
+	{
+		return Category == HB_UNICODE_GENERAL_CATEGORY_NON_SPACING_MARK || Category == HB_UNICODE_GENERAL_CATEGORY_SPACING_MARK
+			|| Category == HB_UNICODE_GENERAL_CATEGORY_ENCLOSING_MARK || Category == HB_UNICODE_GENERAL_CATEGORY_FORMAT;
+	}
+
+	/**
+	 * Code points HarfBuzz may fold into the cluster before them, which a cut must never part from it: marks and format
+	 * characters (variation selectors, joiners, tags), skin tone modifiers, the halfwidth kana voicing marks, and the vowel
+	 * and final jamo that compose with the jamo before them.
+	 */
+	bool IsClusterContinuation(hb_unicode_funcs_t* Unicode, uint32 C)
+	{
+		if (FDreamUIText_CodePoint::IsSkinToneModifier(C) || (C >= 0xFF9E && C <= 0xFF9F) || (C >= 0x1160 && C <= 0x11FF) || (C >= 0xD7B0 && C <= 0xD7FF))
+		{
 			return true;
+		}
+		return IsMarkOrFormat(hb_unicode_general_category(Unicode, C));
+	}
+
+	/**
+	 * Whether HarfBuzz reads the code points around a run when it shapes it in this script. Only joining does: the Arabic
+	 * shaper looks past the run's ends for the letters it joins to. A script not listed here is taken to read them, so a
+	 * shaper this does not know of never gets a key without its context.
+	 */
+	bool ScriptReadsContext(hb_script_t Script)
+	{
+		switch (Script)
+		{
+		case HB_SCRIPT_COMMON: case HB_SCRIPT_INHERITED: case HB_SCRIPT_UNKNOWN:
+		case HB_SCRIPT_LATIN: case HB_SCRIPT_GREEK: case HB_SCRIPT_CYRILLIC: case HB_SCRIPT_ARMENIAN: case HB_SCRIPT_GEORGIAN:
+		case HB_SCRIPT_HEBREW: case HB_SCRIPT_THAANA: case HB_SCRIPT_ETHIOPIC: case HB_SCRIPT_CHEROKEE:
+		case HB_SCRIPT_HAN: case HB_SCRIPT_HIRAGANA: case HB_SCRIPT_KATAKANA: case HB_SCRIPT_BOPOMOFO: case HB_SCRIPT_HANGUL: case HB_SCRIPT_YI:
+		case HB_SCRIPT_THAI: case HB_SCRIPT_LAO: case HB_SCRIPT_TIBETAN: case HB_SCRIPT_MYANMAR: case HB_SCRIPT_KHMER:
+		case HB_SCRIPT_DEVANAGARI: case HB_SCRIPT_BENGALI: case HB_SCRIPT_GURMUKHI: case HB_SCRIPT_GUJARATI: case HB_SCRIPT_ORIYA:
+		case HB_SCRIPT_TAMIL: case HB_SCRIPT_TELUGU: case HB_SCRIPT_KANNADA: case HB_SCRIPT_MALAYALAM: case HB_SCRIPT_SINHALA:
+			return false;
+		default:
+			return true;
+		}
+	}
+
+	/** What a run's cuts are decided from. */
+	struct FCutContext
+	{
+		const TArray<FDreamShapeElement>& Elements;
+		const FParagraphCodepoints& Text;
+		hb_unicode_funcs_t* Unicode;
+		hb_font_t* Font;
+		const FDreamTextShapeCache::FFaceRules& Rules;
+		bool bRightToLeft;
+		bool bCjkRun;
+		/** The run's end, exclusive: the last cluster stops there. */
+		int32 RunEnd;
+	};
+
+	/**
+	 * A base no lookup of the face reaches past: what a cut may stand next to. Its cluster is code points [First, End) of
+	 * the paragraph, the base first. The glyph checked must be the one HarfBuzz draws it with: not for a character the face
+	 * lacks (HarfBuzz draws its decomposition, or the space glyph for a space), nor one with a canonical decomposition where
+	 * HarfBuzz may draw its parts (the Brahmic, Khmer, Myanmar and universal shapers decompose whatever the face has, and
+	 * every shaper does when marks follow it; the default shaper the CJK runs get keeps the face's glyph of one standing
+	 * alone), nor one a variation selector or a mark of its cluster turns into another glyph. Unassigned code points are out
+	 * too: HarfBuzz skips some of them as default-ignorable.
+	 */
+	bool IsQuietBase(const FCutContext& Cut, int32 First, int32 End)
+	{
+		const uint32 C = Cut.Text.Codepoints[First];
+		const hb_unicode_general_category_t Category = hb_unicode_general_category(Cut.Unicode, C);
+		if (IsClusterContinuation(Cut.Unicode, C) || Category == HB_UNICODE_GENERAL_CATEGORY_CONTROL || Category == HB_UNICODE_GENERAL_CATEGORY_UNASSIGNED)
+		{
+			return false;
+		}
+		hb_codepoint_t Glyph = 0;
+		hb_codepoint_t PartA = 0;
+		hb_codepoint_t PartB = 0;
+		const bool bMayDecompose = !Cut.bCjkRun || End - First > 1;
+		if (!hb_font_get_nominal_glyph(Cut.Font, C, &Glyph) || (bMayDecompose && hb_unicode_decompose(Cut.Unicode, C, &PartA, &PartB))
+			|| Cut.Rules.IsTouched(Glyph))
+		{
+			return false;
+		}
+		for (int32 Index = First + 1; Index < End; Index++)
+		{
+			const uint32 Next = Cut.Text.Codepoints[Index];
+			hb_codepoint_t Other = 0;
+			if ((hb_font_get_variation_glyph(Cut.Font, C, Next, &Other) && Cut.Rules.IsTouched(Other)) || hb_unicode_compose(Cut.Unicode, C, Next, &Other))
+			{
+				return false;
+			}
+		}
+		// A right-to-left run draws a bracket's mirror image, which is another glyph when the face has it.
+		if (Cut.bRightToLeft)
+		{
+			const hb_codepoint_t Mirrored = hb_unicode_mirroring(Cut.Unicode, C);
+			hb_codepoint_t MirroredGlyph = 0;
+			if (Mirrored != C && hb_font_get_nominal_glyph(Cut.Font, Mirrored, &MirroredGlyph) && Cut.Rules.IsTouched(MirroredGlyph))
+			{
+				return false;
+			}
+		}
+		return true;
+	}
+
+	/** Whether the run may be cut between the cluster that starts at LeftCluster and the one that starts at RightCluster. */
+	bool CanCutBefore(const FCutContext& Cut, int32 LeftCluster, int32 RightCluster)
+	{
+		const TArray<uint32>& Codepoints = Cut.Text.Codepoints;
+		const int32 LeftStart = Cut.Text.ElementStart[LeftCluster];
+		const int32 RightStart = Cut.Text.ElementStart[RightCluster];
+		const uint32 Right = Codepoints[RightStart];
+		const uint32 LeftBase = Codepoints[LeftStart];
+		const uint32 LeftLast = Codepoints[RightStart - 1];
+		// Never between a cluster and what HarfBuzz may fold into it, after a joiner, or between two regional indicators.
+		if (IsClusterContinuation(Cut.Unicode, Right) || LeftLast == FDreamUIText_CodePoint::UNICODE_ZWJ
+			|| (FDreamUIText_CodePoint::IsRegionalIndicator(Right) && FDreamUIText_CodePoint::IsRegionalIndicator(LeftLast)))
+		{
+			return false;
+		}
+		// Nor inside a fraction: HarfBuzz gives the digits on either side of a fraction slash their numerator and denominator
+		// forms by reading them off the buffer, not through a lookup.
+		if (Right == 0x2044 || LeftLast == 0x2044
+			|| (hb_unicode_general_category(Cut.Unicode, Right) == HB_UNICODE_GENERAL_CATEGORY_DECIMAL_NUMBER
+				&& hb_unicode_general_category(Cut.Unicode, LeftLast) == HB_UNICODE_GENERAL_CATEGORY_DECIMAL_NUMBER))
+		{
+			return false;
+		}
+		// Only where a word ends.
+		auto IsWordEdge = [&Cut](uint32 C)
+		{
+			if (IsWordDelimiter(C))
+			{
+				return true;
+			}
+			return IsCjkOrSymbol(C) && (Cut.bCjkRun || !IsWordLike(hb_unicode_general_category(Cut.Unicode, C)));
 		};
-		const FDreamShapeElement& Base = Elements[ClusterStart];
-		const uint32 BaseCodepoint = ShapingCodepoint(Base.Codepoint);
-		const int32 StyledFace = (Base.bBold || Base.bItalic) ? Font->GetStyledFace(Base.bBold, Base.bItalic) : 0;
-		if (StyledFace > 0 && HasCluster(StyledFace))
+		if (!IsWordEdge(Right) && !IsWordEdge(LeftBase))
 		{
-			return StyledFace;
+			return false;
 		}
-		for (int32 F = 0; F < FaceCount; F++)
+		// And only where no lookup reaches across: one side of the cut is a base none of them touches. The right cluster
+		// runs to the next element that starts one.
+		int32 RightEnd = RightCluster + 1;
+		while (RightEnd < Cut.RunEnd && !Cut.Elements[RightEnd].bGraphemeStart)
 		{
-			if (HasCluster(F))
+			RightEnd++;
+		}
+		return IsQuietBase(Cut, RightStart, Cut.Text.ElementStart[RightEnd]) || (RightStart - LeftStart == 1 && IsQuietBase(Cut, LeftStart, RightStart));
+	}
+
+	/** A stretch of a run looked up and stored as one, and where its glyphs went. */
+	struct FSegment
+	{
+		int32 ElementStart = 0;
+		int32 ElementEnd = 0;
+		/** The paragraph code point its glyphs' clusters are counted from. */
+		int32 FlatBase = 0;
+		/** Its glyphs in the run's scratch; INDEX_NONE until they are known. */
+		int32 GlyphStart = INDEX_NONE;
+		int32 GlyphCount = 0;
+		/**
+		 * How many segments its glyphs stand for: 1; more for neighbours shaped together whose glyphs could not be told
+		 * apart (and so were not stored); 0 for a segment whose glyphs the one before it holds.
+		 */
+		int32 Span = 1;
+	};
+
+	using FSegmentArray = TArray<FSegment, TInlineAllocator<32>>;
+
+	void FindSegments(const FCutContext& Cut, int32 RunStart, int32 RunEnd, FSegmentArray& OutSegments)
+	{
+		OutSegments.Reset();
+		int32 SegmentStart = RunStart;
+		if (Cut.Rules.bSegmentable)
+		{
+			int32 LeftCluster = RunStart;
+			for (int32 Element = RunStart + 1; Element < RunEnd; Element++)
 			{
-				return F;
+				if (!Cut.Elements[Element].bGraphemeStart)
+				{
+					continue;
+				}
+				if (CanCutBefore(Cut, LeftCluster, Element))
+				{
+					FSegment& Segment = OutSegments.AddDefaulted_GetRef();
+					Segment.ElementStart = SegmentStart;
+					Segment.ElementEnd = Element;
+					SegmentStart = Element;
+				}
+				LeftCluster = Element;
 			}
 		}
-		// No face has the whole cluster: the first that has its base, so the letter itself is never a box.
-		if (StyledFace > 0 && Font->FaceHasCodepoint(StyledFace, BaseCodepoint))
+		FSegment& Last = OutSegments.AddDefaulted_GetRef();
+		Last.ElementStart = SegmentStart;
+		Last.ElementEnd = RunEnd;
+	}
+
+	/** What every key of a run shares. */
+	struct FRunKey
+	{
+		FDreamUIFontFaceIdentity Face;
+		float Size = 0.0f;
+		hb_script_t Script = HB_SCRIPT_COMMON;
+		hb_language_t Language = nullptr;
+		uint8 Flags = 0;
+		bool bReadsContext = false;
+	};
+
+	void MakeKey(const FRunKey& Run, const TArray<uint32>& Codepoints, int32 Begin, int32 End, FDreamTextShapeCache::FKey& OutKey)
+	{
+		OutKey.Face = Run.Face;
+		OutKey.Size = Run.Size;
+		OutKey.Script = (uint32)Run.Script;
+		OutKey.Language = Run.Language;
+		OutKey.Flags = Run.Flags;
+		// Joining is what reads past a segment, and it never changes a space, so spaces alone need no context.
+		bool bOnlySpaces = true;
+		for (int32 Index = Begin; Index < End && bOnlySpaces; Index++)
 		{
-			return StyledFace;
+			bOnlySpaces = IsWordDelimiter(Codepoints[Index]);
 		}
-		for (int32 F = 0; F < FaceCount; F++)
+		int32 ContextStart = Begin;
+		int32 ContextEnd = End;
+		if (Run.bReadsContext && !bOnlySpaces)
 		{
-			if (Font->FaceHasCodepoint(F, BaseCodepoint))
+			// HarfBuzz keeps five code points of context on either side, and its joining stops at the first that does not
+			// join: a space does not.
+			constexpr int32 MaxContext = 5;
+			while (ContextStart > 0 && Begin - ContextStart < MaxContext && !IsWordDelimiter(Codepoints[ContextStart - 1]))
 			{
-				return F;
+				ContextStart--;
+			}
+			while (ContextEnd < Codepoints.Num() && ContextEnd - End < MaxContext && !IsWordDelimiter(Codepoints[ContextEnd]))
+			{
+				ContextEnd++;
 			}
 		}
-		return 0;//nobody has it: the primary face's .notdef
+		OutKey.PreContext = Begin - ContextStart;
+		OutKey.SegmentLength = End - Begin;
+		OutKey.Codepoints.Reset();
+		OutKey.Codepoints.Append(Codepoints.GetData() + ContextStart, ContextEnd - ContextStart);
+	}
+
+	/** What every HarfBuzz call of a run is set up with. */
+	struct FRunSetup
+	{
+		hb_font_t* Font = nullptr;
+		hb_direction_t Direction = HB_DIRECTION_LTR;
+		hb_script_t Script = HB_SCRIPT_COMMON;
+		hb_language_t Language = nullptr;
+		hb_feature_t Features[4];
+		int32 FeatureCount = 0;
+	};
+
+	/**
+	 * Shapes code points [Begin, End) of the paragraph in one HarfBuzz call, with up to five on either side as pre- and
+	 * post-context, and appends the glyphs to Out, clusters counted from Begin.
+	 */
+	void ShapeRange(hb_buffer_t* Buffer, const FRunSetup& Setup, const TArray<uint32>& Codepoints, int32 Begin, int32 End, TArray<FDreamTextShapeCache::FGlyph>& Out)
+	{
+		hb_buffer_clear_contents(Buffer);
+		hb_buffer_set_direction(Buffer, Setup.Direction);
+		hb_buffer_set_script(Buffer, Setup.Script);
+		hb_buffer_set_language(Buffer, Setup.Language);
+		hb_buffer_set_cluster_level(Buffer, HB_BUFFER_CLUSTER_LEVEL_MONOTONE_GRAPHEMES);
+		hb_buffer_add_codepoints(Buffer, reinterpret_cast<const hb_codepoint_t*>(Codepoints.GetData()), Codepoints.Num(), (unsigned int)Begin, End - Begin);
+		{
+			TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_TextShape);
+			hb_shape(Setup.Font, Buffer, Setup.Features, (unsigned int)Setup.FeatureCount);
+		}
+		FDreamTextShapeCache::CountShape(End - Begin);
+		unsigned int GlyphCount = 0;
+		const hb_glyph_info_t* Infos = hb_buffer_get_glyph_infos(Buffer, &GlyphCount);
+		const hb_glyph_position_t* Positions = hb_buffer_get_glyph_positions(Buffer, &GlyphCount);
+		Out.Reserve(Out.Num() + (int32)GlyphCount);
+		for (unsigned int g = 0; g < GlyphCount; g++)
+		{
+			FDreamTextShapeCache::FGlyph& Glyph = Out.AddDefaulted_GetRef();
+			Glyph.GlyphId = Infos[g].codepoint;
+			Glyph.Cluster = (int32)Infos[g].cluster - Begin;
+			// y_advance is deliberately dropped: the layout is horizontal only, so it is zero for every run it ever asks
+			// for. It comes back with vertical text, not before.
+			Glyph.XAdvance = Positions[g].x_advance;
+			Glyph.XOffset = Positions[g].x_offset;
+			Glyph.YOffset = Positions[g].y_offset;
+		}
+	}
+
+	/**
+	 * A run through the shape cache: its segments looked up, the stretches of neighbouring segments the cache does not
+	 * have shaped in one call each, and every segment of them stored. Fills each segment's glyph range in Shaped.
+	 */
+	void ShapeRunThroughCache(hb_buffer_t* Buffer, const FRunSetup& Setup, const FCutContext& Cut, const FRunKey& RunKey, int32 RunStart, int32 RunEnd,
+		FSegmentArray& Segments, TArray<FDreamTextShapeCache::FGlyph>& Shaped, TArray<FDreamTextShapeCache::FGlyph>& Stretch, FDreamTextShapeCache::FKey& Key)
+	{
+		using FGlyph = FDreamTextShapeCache::FGlyph;
+		const FParagraphCodepoints& Text = Cut.Text;
+		FindSegments(Cut, RunStart, RunEnd, Segments);
+		{
+			TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_TextShape_Lookup);
+			for (FSegment& Segment : Segments)
+			{
+				Segment.FlatBase = Text.ElementStart[Segment.ElementStart];
+				MakeKey(RunKey, Text.Codepoints, Segment.FlatBase, Text.ElementStart[Segment.ElementEnd], Key);
+				if (const TArray<FGlyph>* Found = FDreamTextShapeCache::Find(Key))
+				{
+					Segment.GlyphStart = Shaped.Num();
+					Segment.GlyphCount = Found->Num();
+					Shaped.Append(*Found);
+				}
+			}
+		}
+		const bool bRightToLeft = Setup.Direction == HB_DIRECTION_RTL;
+		TArray<int32, TInlineAllocator<32>> SliceStart;
+		TArray<int32, TInlineAllocator<32>> SliceCount;
+		for (int32 First = 0; First < Segments.Num();)
+		{
+			if (Segments[First].GlyphStart != INDEX_NONE)
+			{
+				First++;
+				continue;
+			}
+			int32 End = First + 1;
+			while (End < Segments.Num() && Segments[End].GlyphStart == INDEX_NONE)
+			{
+				End++;
+			}
+			const int32 Begin = Segments[First].FlatBase;
+			const int32 Finish = Text.ElementStart[Segments[End - 1].ElementEnd];
+			Stretch.Reset();
+			ShapeRange(Buffer, Setup, Text.Codepoints, Begin, Finish, Stretch);
+
+			// Each glyph's segment, from its cluster. Clusters are monotone -- rising left to right, falling right to left --
+			// so each segment's glyphs are one slice; a stretch where that does not hold, or where a segment came out with
+			// no glyph of its own, is kept as it is and not stored.
+			SliceStart.Init(INDEX_NONE, End - First);
+			SliceCount.Init(0, End - First);
+			int32 Current = bRightToLeft ? End - 1 : First;
+			bool bSplit = true;
+			for (int32 g = 0; g < Stretch.Num() && bSplit; g++)
+			{
+				const int32 Flat = Begin + Stretch[g].Cluster;
+				if (bRightToLeft)
+				{
+					while (Current >= First && Flat < Segments[Current].FlatBase)
+					{
+						Current--;
+					}
+					bSplit = Current >= First && Flat < Text.ElementStart[Segments[Current].ElementEnd];
+				}
+				else
+				{
+					while (Current < End && Flat >= Text.ElementStart[Segments[Current].ElementEnd])
+					{
+						Current++;
+					}
+					bSplit = Current < End && Flat >= Segments[Current].FlatBase;
+				}
+				if (bSplit)
+				{
+					if (SliceStart[Current - First] == INDEX_NONE)
+					{
+						SliceStart[Current - First] = g;
+					}
+					SliceCount[Current - First]++;
+				}
+			}
+			for (int32 Index = 0; Index < End - First && bSplit; Index++)
+			{
+				bSplit = SliceCount[Index] > 0;
+			}
+			if (bSplit)
+			{
+				for (int32 Index = First; Index < End; Index++)
+				{
+					FSegment& Segment = Segments[Index];
+					Segment.GlyphStart = Shaped.Num();
+					Segment.GlyphCount = SliceCount[Index - First];
+					for (int32 g = SliceStart[Index - First]; g < SliceStart[Index - First] + Segment.GlyphCount; g++)
+					{
+						FGlyph Glyph = Stretch[g];
+						Glyph.Cluster += Begin - Segment.FlatBase;
+						Shaped.Add(Glyph);
+					}
+					MakeKey(RunKey, Text.Codepoints, Segment.FlatBase, Text.ElementStart[Segment.ElementEnd], Key);
+					FDreamTextShapeCache::Add(Key, TConstArrayView<FGlyph>(Shaped.GetData() + Segment.GlyphStart, Segment.GlyphCount));
+				}
+			}
+			else
+			{
+				FSegment& Block = Segments[First];
+				Block.GlyphStart = Shaped.Num();
+				Block.GlyphCount = Stretch.Num();
+				Block.Span = End - First;
+				Shaped.Append(Stretch);
+				for (int32 Index = First + 1; Index < End; Index++)
+				{
+					Segments[Index].GlyphStart = Shaped.Num();
+					Segments[Index].GlyphCount = 0;
+					Segments[Index].Span = 0;
+				}
+			}
+			First = End;
+		}
+	}
+
+	/** Whether an element carries a default-ignorable code point beside others: one HarfBuzz may give a hidden glyph of its own. */
+	bool HasIgnorableBesideOthers(const FParagraphCodepoints& Text, int32 Element)
+	{
+		const int32 Begin = Text.ElementStart[Element];
+		const int32 End = Text.ElementStart[Element + 1];
+		if (End - Begin < 2)
+		{
+			return false;
+		}
+		for (int32 Index = Begin; Index < End; Index++)
+		{
+			if (FDreamFontFaceResolver::IsDefaultIgnorable(Text.Codepoints[Index]))
+			{
+				return true;
+			}
+		}
+		return false;
+	}
+
+	/**
+	 * HarfBuzz hides a default-ignorable code point it formed into nothing -- a selector after a letter the face has no
+	 * variant for, a joiner that joined nothing -- as the face's space glyph, with no advance and nothing to draw. In an
+	 * element with a glyph of its own besides, that glyph is dropped: it would only be a quad of no size, which the painter
+	 * and per-character animation count as a character's. An element keeps one glyph whatever happens.
+	 */
+	void DropHiddenIgnorables(TArray<FDreamShapedGlyph>& Glyphs, const FParagraphCodepoints& Text, uint32 SpaceGlyph)
+	{
+		auto IsHidden = [&Glyphs, SpaceGlyph](int32 Index)
+		{
+			const FDreamShapedGlyph& Glyph = Glyphs[Index];
+			return Glyph.GlyphIndex == SpaceGlyph && Glyph.XAdvance == 0.0f && Glyph.XOffset == 0.0f && Glyph.YOffset == 0.0f;
+		};
+		int32 Write = 0;
+		int32 First = 0;
+		while (First < Glyphs.Num())
+		{
+			// An element's glyphs are contiguous.
+			const int32 Element = Glyphs[First].ElementIndex;
+			int32 End = First + 1;
+			while (End < Glyphs.Num() && Glyphs[End].ElementIndex == Element)
+			{
+				End++;
+			}
+			bool bAnyHidden = false;
+			bool bAnyShown = false;
+			for (int32 Index = First; Index < End; Index++)
+			{
+				const bool bHidden = IsHidden(Index);
+				bAnyHidden |= bHidden;
+				bAnyShown |= !bHidden;
+			}
+			const bool bDrop = bAnyHidden && End - First > 1 && HasIgnorableBesideOthers(Text, Element);
+			bool bKeptOne = false;
+			for (int32 Index = First; Index < End; Index++)
+			{
+				// Written back in place: Write never passes Index.
+				if (bDrop && IsHidden(Index) && (bAnyShown || bKeptOne))
+				{
+					continue;
+				}
+				Glyphs[Write++] = Glyphs[Index];
+				bKeptOne = true;
+			}
+			First = End;
+		}
+		Glyphs.SetNum(Write);
+	}
+
+	/** ShapeParagraph once HarfBuzz is there: see FDreamTextShaper::ShapeParagraph. */
+	bool ShapeWithHarfBuzz(const TArray<FDreamShapeElement>& Elements, const FDreamShapeParams& Params, TArray<FDreamShapedRun>& OutRuns, bool& OutBaseRightToLeft, TArray<uint8>* OutBidiLevels)
+	{
+		using FGlyph = FDreamTextShapeCache::FGlyph;
+		UDreamUIFontData_BaseObject* Font = Params.Font;
+		if (!FDreamTextShaper::CanShape(Font) || Elements.Num() == 0)
+		{
+			return false;
+		}
+
+		FParagraphCodepoints Text;
+		Text.Build(Elements, Params.SequenceCodepoints);
+		// Only an element with more than one code point can have a hidden glyph beside its own (DropHiddenIgnorables).
+		const bool bHasSequences = Text.Codepoints.Num() > Elements.Num();
+
+		// The languages the elements are in: the caller's, or the game's current language for every element. 'locl' picks
+		// between the forms a script shares across languages -- the Han glyphs Chinese and Japanese draw differently, Serbian
+		// Cyrillic italics -- so each run is shaped in its own language; hb_language_get_default() would read the process
+		// locale, which is the machine's.
+		TArray<FDreamTextLanguage> GameLanguageStorage;
+		const TArray<FDreamTextLanguage>& Languages = Params.Languages != nullptr && Params.Languages->Num() > 0 ? *Params.Languages : GetGameLanguages(GameLanguageStorage);
+		TArray<hb_language_t, TInlineAllocator<4>> HarfBuzzLanguages;
+		HarfBuzzLanguages.Reserve(Languages.Num());
+		for (const FDreamTextLanguage& Language : Languages)
+		{
+			HarfBuzzLanguages.Add(Language.Name.IsEmpty() ? hb_language_get_default() : hb_language_from_string(TCHAR_TO_UTF8(*Language.Name), -1));
+		}
+		auto LanguageIndexOf = [&Languages](const FDreamShapeElement& Element) -> uint8
+		{
+			return (int32)Element.LanguageIndex < Languages.Num() ? Element.LanguageIndex : 0;
+		};
+
+		// Itemize: level, script, language, face, style, per grapheme cluster.
+		TArray<uint8> Levels;
+		bool bBaseRightToLeft = false;
+		ResolveLevels(Elements, Params.FlowDirection, Levels, bBaseRightToLeft);
+		OutBaseRightToLeft = bBaseRightToLeft;
+
+		hb_unicode_funcs_t* Unicode = hb_unicode_funcs_get_default();
+		const int32 FaceCount = Font->GetFaceCount();
+		const FDreamFontFaceTable& FaceTable = Font->GetFaceTable();
+		auto FaceHasCodepoint = [Font](int32 FaceIndex, uint32 Codepoint) { return Font->FaceHasCodepoint(FaceIndex, Codepoint); };
+		auto FaceIsColor = [Font](int32 FaceIndex) { return Font->IsColorFace(FaceIndex); };
+		// The bold, italic and bold-italic faces, asked for once each.
+		int32 StyledFaces[4] = { 0, INDEX_NONE, INDEX_NONE, INDEX_NONE };
+		// The face for elements [First, End) as one cluster, in the style and language of element StyleOf.
+		auto ResolveFace = [&](int32 First, int32 End, int32 StyleOf)
+		{
+			const FDreamShapeElement& Styled = Elements[StyleOf];
+			const int32 Style = (Styled.bBold ? 1 : 0) | (Styled.bItalic ? 2 : 0);
+			if (StyledFaces[Style] == INDEX_NONE)
+			{
+				StyledFaces[Style] = Font->GetStyledFace(Styled.bBold, Styled.bItalic);
+			}
+			FDreamFontFaceQuery Query;
+			Query.Cluster = Text.Range(First, End);
+			Query.StyledFace = StyledFaces[Style];
+			Query.Cultures = Languages[LanguageIndexOf(Styled)].PrioritizedCultureNames;
+			Query.Presentation = FDreamFontFaceResolver::GetPresentation(Query.Cluster);
+			return FDreamFontFaceResolver::Resolve(FaceTable, FaceCount, Query, FaceHasCodepoint, FaceIsColor);
+		};
+
+		TArray<FItem> Items;
+		Items.SetNum(Elements.Num());
+		hb_script_t LastScript = HB_SCRIPT_COMMON;
+		int32 ClusterStart = 0;
+		while (ClusterStart < Elements.Num())
+		{
+			const FDreamShapeElement& E = Elements[ClusterStart];
+			FItem& Item = Items[ClusterStart];
+			Item.Level = Levels[ClusterStart];
+			Item.Size = E.Size;
+			Item.bBold = E.bBold;
+			Item.bUnshaped = E.bUnshaped;
+			Item.LanguageIndex = LanguageIndexOf(E);
+			if (E.bUnshaped)
+			{
+				ClusterStart++;
+				continue;
+			}
+			int32 ClusterEnd = ClusterStart + 1;
+			while (ClusterEnd < Elements.Num() && !Elements[ClusterEnd].bGraphemeStart && !Elements[ClusterEnd].bUnshaped)
+			{
+				ClusterEnd++;
+			}
+			// Neutral characters (punctuation, spaces, marks) take the script of what came before them,
+			// so a run is not cut on every comma.
+			hb_script_t Script = hb_unicode_script(Unicode, Text.Codepoints[Text.ElementStart[ClusterStart]]);
+			if (ScriptIsNeutral(Script))
+			{
+				Script = LastScript;
+			}
+			else
+			{
+				LastScript = Script;
+			}
+			Item.Script = Script;
+			const FDreamFontFaceChoice Choice = ResolveFace(ClusterStart, ClusterEnd, ClusterStart);
+			Item.FaceIndex = Choice.FaceIndex;
+			Item.bColorFace = Choice.bColor;
+			// The rest of a grapheme cluster rides with the element that starts it -- same level, script, size, weight and
+			// language, same face -- so a base and its combining marks are shaped together and one font draws all of them.
+			for (int32 k = ClusterStart + 1; k < ClusterEnd; k++)
+			{
+				Items[k] = Item;
+				Levels[k] = Item.Level;
+			}
+			// Unless no face has the whole cluster -- "a" and a skin tone after it -- when each element takes the face that has
+			// it, rather than the rest being drawn as boxes in the face of the first. It keeps the cluster's level.
+			if (!Choice.bCoversCluster && ClusterEnd - ClusterStart > 1)
+			{
+				for (int32 k = ClusterStart; k < ClusterEnd; k++)
+				{
+					const FDreamFontFaceChoice Own = ResolveFace(k, k + 1, ClusterStart);
+					Items[k].FaceIndex = Own.FaceIndex;
+					Items[k].bColorFace = Own.bColor;
+				}
+			}
+			ClusterStart = ClusterEnd;
+		}
+		// Leading neutrals before the first scripted character take that script.
+		for (int32 i = 0; i < Items.Num(); i++)
+		{
+			if (Items[i].bUnshaped)continue;
+			if (!ScriptIsNeutral(Items[i].Script))
+			{
+				for (int32 j = 0; j < i; j++)
+				{
+					if (!Items[j].bUnshaped && ScriptIsNeutral(Items[j].Script))Items[j].Script = Items[i].Script;
+				}
+				break;
+			}
+		}
+		if (OutBidiLevels != nullptr)
+		{
+			*OutBidiLevels = Levels;
+		}
+
+		// Cut runs and shape each.
+		const float BoldRatio = Font->GetBoldRatio();
+		// CSS size-adjust: a scaled face is shaped -- and its glyphs rasterized -- at the style size times its scale, so the
+		// advances and offsets of its runs carry the scale. Style faces, past the table, are at 1.
+		auto ScaleOf = [&FaceTable, FaceCount](int32 FaceIndex)
+		{
+			const float Scale = FaceIndex < FaceCount ? FaceTable.GetScale(FaceIndex) : 1.0f;
+			return Scale > 0.0f ? Scale : 1.0f;
+		};
+		// The cache belongs to the game thread: a layout made anywhere else shapes every run whole.
+		const bool bUseCache = FDreamTextShapeCache::IsEnabled() && IsInGameThread();
+		hb_buffer_t* Buffer = hb_buffer_create();
+		TArray<FGlyph> Shaped;
+		TArray<FGlyph> Stretch;
+		FSegmentArray Segments;
+		FDreamTextShapeCache::FKey Key;
+		int32 RunStart = 0;
+		while (RunStart < Elements.Num())
+		{
+			int32 RunEnd = RunStart + 1;
+			while (RunEnd < Elements.Num() && Items[RunEnd].SameRun(Items[RunStart]) && !Elements[RunEnd].bRunBreakBefore)
+			{
+				RunEnd++;
+			}
+			const FItem& Item = Items[RunStart];
+			if (!Item.bUnshaped)
+			{
+				int32 FaceIndex = Item.FaceIndex;
+				bool bColorFace = Item.bColorFace;
+				hb_font_t* HBFont = static_cast<hb_font_t*>(Font->GetShapingFont(FaceIndex, Item.Size * ScaleOf(FaceIndex)));
+				if (HBFont == nullptr && FaceIndex != 0)
+				{
+					// The face has no shaping font after all: the run is the primary face's, glyph ids and all.
+					FaceIndex = 0;
+					bColorFace = Font->IsColorFace(0);
+					HBFont = static_cast<hb_font_t*>(Font->GetShapingFont(0, Item.Size * ScaleOf(0)));
+				}
+				FDreamShapedRun& Run = OutRuns.AddDefaulted_GetRef();
+				Run.ElementStart = RunStart;
+				Run.ElementEnd = RunEnd;
+				Run.bRightToLeft = (Item.Level & 1) != 0;
+				Run.BidiLevel = Item.Level;
+				Run.FaceIndex = FaceIndex;
+				Run.Size = Item.Size;
+				Run.FaceScale = ScaleOf(FaceIndex);
+				Run.bColorFace = bColorFace;
+				Run.bBold = Item.bBold;
+				// A real bold face has its weight in its outlines and advances already, and a colour glyph is never emboldened:
+				// only bold that has to be made up widens the advances and emboldens the glyphs.
+				Run.bSyntheticBold = Item.bBold && !bColorFace && !EnumHasAnyFlags(Font->GetFaceStyleFlags(FaceIndex), EDreamUIFontFaceStyle::Bold);
+
+				if (HBFont != nullptr)
+				{
+					const float ShapingSize = Item.Size * Run.FaceScale;
+					const bool bCaltOff = !Params.bLigatures && ContextualAlternatesAreStylistic(Item.Script);
+					FRunSetup Setup;
+					Setup.Direction = Run.bRightToLeft ? HB_DIRECTION_RTL : HB_DIRECTION_LTR;
+					Setup.Script = Item.Script;
+					Setup.Language = HarfBuzzLanguages[Item.LanguageIndex];
+					// Kerning as asked. Ligatures and contextual alternates as a browser has them when the caller allows them:
+					// one glyph may then cover several characters, which the layout splits its carets across. Otherwise liga and
+					// clig are off so a code point keeps its own glyph, which is what per-character animation needs, and calt
+					// goes off with them where it is only a matter of style. A ligature inside an element -- an emoji sequence --
+					// comes from ccmp, which stays on.
+					Setup.Features[Setup.FeatureCount++] = { HB_TAG('k','e','r','n'), Params.bUseKerning ? 1u : 0u, 0, (unsigned int)-1 };
+					Setup.Features[Setup.FeatureCount++] = { HB_TAG('l','i','g','a'), Params.bLigatures ? 1u : 0u, 0, (unsigned int)-1 };
+					Setup.Features[Setup.FeatureCount++] = { HB_TAG('c','l','i','g'), Params.bLigatures ? 1u : 0u, 0, (unsigned int)-1 };
+					if (bCaltOff)
+					{
+						Setup.Features[Setup.FeatureCount++] = { HB_TAG('c','a','l','t'), 0u, 0, (unsigned int)-1 };
+					}
+
+					Shaped.Reset();
+					Segments.Reset();
+					const FDreamUIFontFaceIdentity Identity = bUseCache ? Font->GetFaceIdentity(FaceIndex) : FDreamUIFontFaceIdentity();
+					const FDreamTextShapeCache::FFaceRules* Rules = Identity.IsValid() ? FDreamTextShapeCache::GetFaceRules(Identity, HBFont) : nullptr;
+					// The font is shared between sizes; its scale is set again now that nothing else will ask for it before the
+					// run is shaped.
+					Setup.Font = static_cast<hb_font_t*>(Font->GetShapingFont(FaceIndex, ShapingSize));
+					if (Setup.Font == nullptr)
+					{
+						Setup.Font = HBFont;
+					}
+					if (Rules != nullptr)
+					{
+						FRunKey RunKey;
+						RunKey.Face = Identity;
+						RunKey.Size = ShapingSize;
+						RunKey.Script = Item.Script;
+						RunKey.Language = Setup.Language;
+						RunKey.Flags = (uint8)((Run.bRightToLeft ? FDreamTextShapeCache::FKey::RightToLeft : 0)
+							| (Params.bUseKerning ? FDreamTextShapeCache::FKey::Kerning : 0)
+							| (Params.bLigatures ? FDreamTextShapeCache::FKey::Ligatures : 0)
+							| (bCaltOff ? FDreamTextShapeCache::FKey::NoContextualAlternates : 0));
+						RunKey.bReadsContext = ScriptReadsContext(Item.Script);
+						const FCutContext Cut{ Elements, Text, Unicode, Setup.Font, *Rules, Run.bRightToLeft, IsCjkScript(Item.Script), RunEnd };
+						ShapeRunThroughCache(Buffer, Setup, Cut, RunKey, RunStart, RunEnd, Segments, Shaped, Stretch, Key);
+					}
+					else
+					{
+						// The whole run in one go, the paragraph around it as context: a glyph's cluster is its element's first
+						// code point, or the first of the cluster it was merged into.
+						FSegment& Whole = Segments.AddDefaulted_GetRef();
+						Whole.ElementStart = RunStart;
+						Whole.ElementEnd = RunEnd;
+						Whole.FlatBase = Text.ElementStart[RunStart];
+						Whole.GlyphStart = 0;
+						ShapeRange(Buffer, Setup, Text.Codepoints, Whole.FlatBase, Text.ElementStart[RunEnd], Shaped);
+						Whole.GlyphCount = Shaped.Num();
+					}
+
+					// The run's glyphs in visual order: its segments' own order left to right, backwards right to left. Every glyph
+					// HarfBuzz made of an element's code points belongs to that element.
+					const int32 RunFirstCodepoint = Text.ElementStart[RunStart];
+					const int32 RunLastCodepoint = Text.ElementStart[RunEnd] - 1;
+					Run.Glyphs.Reserve(Shaped.Num());
+					for (int32 Step = 0; Step < Segments.Num(); Step++)
+					{
+						const FSegment& Segment = Segments[Run.bRightToLeft ? Segments.Num() - 1 - Step : Step];
+						if (Segment.Span == 0)
+						{
+							continue;
+						}
+						for (int32 g = Segment.GlyphStart; g < Segment.GlyphStart + Segment.GlyphCount; g++)
+						{
+							const FGlyph& Source = Shaped[g];
+							const int32 Codepoint = FMath::Clamp(Segment.FlatBase + Source.Cluster, RunFirstCodepoint, RunLastCodepoint);
+							FDreamShapedGlyph& Glyph = Run.Glyphs.AddDefaulted_GetRef();
+							Glyph.FaceIndex = FaceIndex;
+							Glyph.GlyphIndex = Source.GlyphId;
+							Glyph.ElementIndex = Text.ElementOf[Codepoint];
+							Glyph.XAdvance = Source.XAdvance / 64.0f;
+							Glyph.XOffset = Source.XOffset / 64.0f;
+							Glyph.YOffset = Source.YOffset / 64.0f;
+						}
+					}
+					hb_codepoint_t SpaceGlyph = 0;
+					if (bHasSequences && hb_font_get_nominal_glyph(Setup.Font, 0x0020, &SpaceGlyph))
+					{
+						DropHiddenIgnorables(Run.Glyphs, Text, SpaceGlyph);
+					}
+					// Synthetic bold widens an element by the emboldening once, on its last glyph: a combining mark has no advance
+					// of its own to widen, and giving it one pushed it off the letter it sits on. A scaled face's glyphs are
+					// emboldened at their own size.
+					if (Run.bSyntheticBold)
+					{
+						const float BoldAdvance = ShapingSize * BoldRatio;
+						for (int32 g = 0; g < Run.Glyphs.Num(); g++)
+						{
+							if (g + 1 == Run.Glyphs.Num() || Run.Glyphs[g + 1].ElementIndex != Run.Glyphs[g].ElementIndex)
+							{
+								Run.Glyphs[g].XAdvance += BoldAdvance;
+							}
+						}
+					}
+				}
+			}
+			RunStart = RunEnd;
+		}
+		hb_buffer_destroy(Buffer);
+		return true;
 	}
 }
 #endif
 
-bool FDreamTextShaper::ShapeParagraph(const TArray<FDreamShapeElement>& Elements, UDreamUIFontData_BaseObject* Font, bool bUseKerning, EDreamTextFlowDirection FlowDirection, TArray<FDreamShapedRun>& OutRuns, bool& OutBaseRightToLeft, bool bLigatures, TArray<uint8>* OutBidiLevels)
+bool FDreamTextShaper::ShapeParagraph(const TArray<FDreamShapeElement>& Elements, const FDreamShapeParams& Params, TArray<FDreamShapedRun>& OutRuns, bool& OutBaseRightToLeft, TArray<uint8>* OutBidiLevels)
 {
 	OutRuns.Reset();
 	OutBaseRightToLeft = false;
@@ -278,191 +1110,9 @@ bool FDreamTextShaper::ShapeParagraph(const TArray<FDreamShapeElement>& Elements
 	{
 		OutBidiLevels->Reset();
 	}
-#if !WITH_HARFBUZZ
-	return false;
+#if WITH_HARFBUZZ
+	return DreamTextShaperLocal::ShapeWithHarfBuzz(Elements, Params, OutRuns, OutBaseRightToLeft, OutBidiLevels);
 #else
-	using namespace DreamTextShaperLocal;
-	if (!CanShape(Font) || Elements.Num() == 0)
-	{
-		return false;
-	}
-
-	// Itemize: level, script, face, style, per grapheme cluster.
-	TArray<uint8> Levels;
-	bool bBaseRightToLeft = false;
-	ResolveLevels(Elements, FlowDirection, Levels, bBaseRightToLeft);
-	OutBaseRightToLeft = bBaseRightToLeft;
-
-	hb_unicode_funcs_t* Unicode = hb_unicode_funcs_get_default();
-	const int32 FaceCount = Font->GetFaceCount();
-	TArray<FItem> Items;
-	Items.SetNum(Elements.Num());
-	hb_script_t LastScript = HB_SCRIPT_COMMON;
-	int32 ClusterStart = INDEX_NONE;
-	for (int32 i = 0; i < Elements.Num(); i++)
-	{
-		const FDreamShapeElement& E = Elements[i];
-		FItem& Item = Items[i];
-		Item.Level = Levels[i];
-		Item.Size = E.Size;
-		Item.bBold = E.bBold;
-		Item.bUnshaped = E.bUnshaped;
-		if (E.bUnshaped)
-		{
-			ClusterStart = INDEX_NONE;
-			continue;
-		}
-		// The rest of a grapheme cluster rides with the element that starts it -- same face, same script, same run --
-		// so a base and its combining marks are shaped together and one font draws all of them.
-		if (!E.bGraphemeStart && ClusterStart != INDEX_NONE)
-		{
-			Item = Items[ClusterStart];
-			Levels[i] = Item.Level;
-			continue;
-		}
-		ClusterStart = i;
-		int32 ClusterEnd = i + 1;
-		while (ClusterEnd < Elements.Num() && !Elements[ClusterEnd].bGraphemeStart && !Elements[ClusterEnd].bUnshaped)
-		{
-			ClusterEnd++;
-		}
-		const uint32 C = ShapingCodepoint(E.Codepoint);
-		// Neutral characters (punctuation, spaces, marks) take the script of what came before them,
-		// so a run is not cut on every comma.
-		hb_script_t Script = hb_unicode_script(Unicode, C);
-		const bool bNeutral = ScriptIsNeutral(Script);
-		if (bNeutral)
-		{
-			Script = LastScript;
-		}
-		else
-		{
-			LastScript = Script;
-		}
-		Item.Script = Script;
-		Item.FaceIndex = ChooseFace(Font, FaceCount, Elements, i, ClusterEnd);
-	}
-	// Leading neutrals before the first scripted character take that script.
-	for (int32 i = 0; i < Items.Num(); i++)
-	{
-		if (Items[i].bUnshaped)continue;
-		if (!ScriptIsNeutral(Items[i].Script))
-		{
-			for (int32 j = 0; j < i; j++)
-			{
-				if (!Items[j].bUnshaped && ScriptIsNeutral(Items[j].Script))Items[j].Script = Items[i].Script;
-			}
-			break;
-		}
-	}
-	if (OutBidiLevels != nullptr)
-	{
-		*OutBidiLevels = Levels;
-	}
-
-	// Cut runs and shape each.
-	const float BoldRatio = Font->GetBoldRatio();
-	// 'locl' picks between the forms a script shares across languages -- the Han glyphs Chinese and
-	// Japanese draw differently, Serbian Cyrillic italics. That choice has to follow the culture the
-	// GAME is running in; hb_language_get_default() reads the process locale, which is the machine's.
-	const FString LanguageName = FInternationalization::Get().GetCurrentLanguage()->GetName();
-	const hb_language_t GameLanguage = LanguageName.IsEmpty()
-		? hb_language_get_default()
-		: hb_language_from_string(TCHAR_TO_UTF8(*LanguageName), -1);
-	hb_buffer_t* Buffer = hb_buffer_create();
-	// Each run is shaped with the paragraph around it as context, the way a browser hands the shaper its text: a cut
-	// that is not the script's own -- a colour, size or weight that changes mid-word, a tag edge -- leaves an Arabic
-	// letter its joined form. A glyph's cluster is an index into this array, so it is the glyph's element.
-	TArray<hb_codepoint_t> Codepoints;
-	Codepoints.SetNumUninitialized(Elements.Num());
-	for (int32 i = 0; i < Elements.Num(); i++)
-	{
-		Codepoints[i] = (hb_codepoint_t)ShapingCodepoint(Elements[i].Codepoint);
-	}
-	int32 RunStart = 0;
-	while (RunStart < Elements.Num())
-	{
-		int32 RunEnd = RunStart + 1;
-		while (RunEnd < Elements.Num() && Items[RunEnd].SameRun(Items[RunStart]) && !Elements[RunEnd].bRunBreakBefore)
-		{
-			RunEnd++;
-		}
-		const FItem& Item = Items[RunStart];
-		if (!Item.bUnshaped)
-		{
-			const bool bRightToLeft = (Item.Level & 1) != 0;
-			FDreamShapedRun Run;
-			Run.ElementStart = RunStart;
-			Run.ElementEnd = RunEnd;
-			Run.bRightToLeft = bRightToLeft;
-			Run.BidiLevel = Item.Level;
-			Run.FaceIndex = Item.FaceIndex;
-			Run.Size = Item.Size;
-			Run.bBold = Item.bBold;
-			// A real bold face has its weight in its outlines and advances already; only bold that has to be made up
-			// widens the advances and emboldens the glyphs.
-			Run.bSyntheticBold = Item.bBold && !EnumHasAnyFlags(Font->GetFaceStyleFlags(Item.FaceIndex), EDreamUIFontFaceStyle::Bold);
-
-			hb_font_t* HBFont = static_cast<hb_font_t*>(Font->GetShapingFont(Item.FaceIndex, Item.Size));
-			if (HBFont == nullptr)
-			{
-				HBFont = static_cast<hb_font_t*>(Font->GetShapingFont(0, Item.Size));
-			}
-			if (HBFont != nullptr)
-			{
-				hb_buffer_clear_contents(Buffer);
-				hb_buffer_set_direction(Buffer, bRightToLeft ? HB_DIRECTION_RTL : HB_DIRECTION_LTR);
-				hb_buffer_set_script(Buffer, Item.Script);
-				hb_buffer_set_language(Buffer, GameLanguage);
-				hb_buffer_set_cluster_level(Buffer, HB_BUFFER_CLUSTER_LEVEL_MONOTONE_GRAPHEMES);
-				// The run's own code points, with up to five on either side as pre- and post-context.
-				hb_buffer_add_codepoints(Buffer, Codepoints.GetData(), Codepoints.Num(), (unsigned int)RunStart, RunEnd - RunStart);
-
-				// Kerning as asked. Ligatures and contextual alternates as a browser has them when the caller allows
-				// them: one glyph may then cover several characters, which the layout splits its carets across.
-				// Otherwise liga and clig are off so a code point keeps its own glyph, which is what per-character
-				// animation needs, and calt goes off with them where it is only a matter of style.
-				hb_feature_t Features[4];
-				int32 FeatureCount = 0;
-				Features[FeatureCount++] = { HB_TAG('k','e','r','n'), bUseKerning ? 1u : 0u, 0, (unsigned int)-1 };
-				Features[FeatureCount++] = { HB_TAG('l','i','g','a'), bLigatures ? 1u : 0u, 0, (unsigned int)-1 };
-				Features[FeatureCount++] = { HB_TAG('c','l','i','g'), bLigatures ? 1u : 0u, 0, (unsigned int)-1 };
-				if (!bLigatures && ContextualAlternatesAreStylistic(Item.Script))
-				{
-					Features[FeatureCount++] = { HB_TAG('c','a','l','t'), 0u, 0, (unsigned int)-1 };
-				}
-				{
-					TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_TextShape);
-					hb_shape(HBFont, Buffer, Features, (unsigned int)FeatureCount);
-				}
-
-				unsigned int GlyphCount = 0;
-				hb_glyph_info_t* Infos = hb_buffer_get_glyph_infos(Buffer, &GlyphCount);
-				hb_glyph_position_t* Positions = hb_buffer_get_glyph_positions(Buffer, &GlyphCount);
-				// Synthetic bold widens a cluster by the emboldening once, on its last glyph: a combining mark has no
-				// advance of its own to widen, and giving it one pushed it off the letter it sits on.
-				const float BoldAdvance = Run.bSyntheticBold ? Item.Size * BoldRatio : 0.0f;
-				Run.Glyphs.Reserve(GlyphCount);
-				for (unsigned int g = 0; g < GlyphCount; g++)
-				{
-					const bool bLastOfCluster = g + 1 == GlyphCount || Infos[g + 1].cluster != Infos[g].cluster;
-					FDreamShapedGlyph Glyph;
-					Glyph.FaceIndex = Item.FaceIndex;
-					Glyph.GlyphIndex = Infos[g].codepoint;
-					Glyph.ElementIndex = (int32)Infos[g].cluster;
-					Glyph.XAdvance = Positions[g].x_advance / 64.0f + (bLastOfCluster ? BoldAdvance : 0.0f);
-					// y_advance is deliberately dropped: the layout is horizontal only, so it is zero
-					// for every run it ever asks for. It comes back with vertical text, not before.
-					Glyph.XOffset = Positions[g].x_offset / 64.0f;
-					Glyph.YOffset = Positions[g].y_offset / 64.0f;
-					Run.Glyphs.Add(Glyph);
-				}
-			}
-			OutRuns.Add(MoveTemp(Run));
-		}
-		RunStart = RunEnd;
-	}
-	hb_buffer_destroy(Buffer);
-	return true;
+	return false;
 #endif
 }

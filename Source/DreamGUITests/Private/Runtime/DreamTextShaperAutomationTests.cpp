@@ -1239,4 +1239,484 @@ bool FDreamTextShapedMarkOnASpaceTest::RunTest(const FString& Parameters)
 	return true;
 }
 
+namespace DreamTextShaperTestLocal
+{
+	/** The editor's colour emoji font, CBDT strikes: the only colour font the engine has. */
+	UDreamUIFontData_DistanceField* MakeEmojiFont(UWorld* World)
+	{
+		return MakeEditorFileFont(World, TEXT("NotoColorEmoji.ttf"));
+	}
+
+	/** Roboto with the colour emoji font behind it, as face 1. */
+	UDreamUIFontData_DistanceField* MakeLatinEmojiFont(UWorld* World)
+	{
+		UDreamUIFontData_DistanceField* Roboto = MakeFileFont(World, TEXT("Roboto-Regular.ttf"));
+		Roboto->SetFallbackFonts({ MakeEmojiFont(World) });
+		return Roboto;
+	}
+
+	/** Elements as the layout hands them over: an emoji sequence is one element, its first code point and the rest in Sequences. */
+	struct FSequenceParagraph
+	{
+		TArray<FDreamShapeElement> Elements;
+		TArray<uint32> Sequences;
+		TArray<FDreamTextLanguage> Languages;
+
+		/** One element per code point of Text, each its own cluster, in Languages[LanguageIndex]. */
+		FSequenceParagraph& Add(const FString& Text, uint8 LanguageIndex = 0)
+		{
+			for (int32 Index = 0; Index < Text.Len(); Index++)
+			{
+				uint32 Codepoint = Text[Index];
+				if (Codepoint >= 0xD800 && Codepoint <= 0xDBFF && Index + 1 < Text.Len())
+				{
+					Codepoint = 0x10000 + ((Codepoint - 0xD800) << 10) + ((uint32)Text[Index + 1] - 0xDC00);
+					Index++;
+				}
+				FDreamShapeElement& Element = Elements.AddDefaulted_GetRef();
+				Element.Codepoint = Codepoint;
+				Element.Size = 32.0f;
+				Element.LanguageIndex = LanguageIndex;
+			}
+			return *this;
+		}
+
+		/** One element holding a whole sequence. */
+		FSequenceParagraph& AddSequence(const TArray<uint32>& Codepoints, bool bGraphemeStart = true, bool bBold = false)
+		{
+			FDreamShapeElement& Element = Elements.AddDefaulted_GetRef();
+			Element.Codepoint = Codepoints[0];
+			Element.Size = 32.0f;
+			Element.bGraphemeStart = bGraphemeStart;
+			Element.bBold = bBold;
+			Element.SequenceStart = Sequences.Num();
+			Element.SequenceCount = Codepoints.Num() - 1;
+			for (int32 Index = 1; Index < Codepoints.Num(); Index++)
+			{
+				Sequences.Add(Codepoints[Index]);
+			}
+			return *this;
+		}
+
+		bool Shape(UDreamUIFontData_BaseObject* Font, TArray<FDreamShapedRun>& OutRuns) const
+		{
+			FDreamShapeParams Params;
+			Params.Font = Font;
+			Params.bUseKerning = true;
+			Params.Languages = &Languages;
+			Params.SequenceCodepoints = &Sequences;
+			bool bRightToLeft = false;
+			return FDreamTextShaper::ShapeParagraph(Elements, Params, OutRuns, bRightToLeft);
+		}
+	};
+
+	/** What the resolver answers for a whole cluster of the font, in its own presentation. */
+	FDreamFontFaceChoice ResolveCluster(UDreamUIFontData_BaseObject* Font, const TArray<uint32>& Cluster)
+	{
+		FDreamFontFaceQuery Query;
+		Query.Cluster = Cluster;
+		Query.Presentation = FDreamFontFaceResolver::GetPresentation(Query.Cluster);
+		return FDreamFontFaceResolver::Resolve(Font, Query);
+	}
+
+	/** The faces of a paragraph's runs, in order. */
+	TArray<int32> RunFaces(const TArray<FDreamShapedRun>& Runs)
+	{
+		TArray<int32> Faces;
+		for (const FDreamShapedRun& Run : Runs)
+		{
+			Faces.Add(Run.FaceIndex);
+		}
+		return Faces;
+	}
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamTextShaperEmojiSequenceTest,
+	"DreamGUI.Text.Shaper.AnEmojiSequenceIsOneElementDrawnAsOneColourGlyph",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * HarfBuzz was handed one code point per element, so no ZWJ, flag, keycap, skin-tone or tag ligature could form. An
+ * element's whole sequence goes in now, every glyph made of it is that element's, and a sequence asking for emoji
+ * presentation is drawn from the colour face.
+ */
+bool FDreamTextShaperEmojiSequenceTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamTextShaperTestLocal;
+	FScopedGameWorld TestWorld;
+	UDreamUIFontData_DistanceField* Font = MakeLatinEmojiFont(TestWorld.World);
+	if (!TestTrue(TEXT("Roboto shapes"), FDreamTextShaper::CanShape(Font)))return false;
+	if (!TestTrue(TEXT("the emoji font is a colour face"), Font->IsColorFace(1)))return false;
+
+	struct FCase
+	{
+		const TCHAR* Name;
+		TArray<uint32> Sequence;
+	};
+	const FCase Cases[] = {
+		{ TEXT("a family"), { 0x1F468, 0x200D, 0x1F469, 0x200D, 0x1F467 } },
+		{ TEXT("a flag"), { 0x1F1EF, 0x1F1F5 } },
+		{ TEXT("a keycap"), { '1', 0xFE0F, 0x20E3 } },
+		{ TEXT("a skin tone"), { 0x1F44D, 0x1F3FD } },
+		{ TEXT("a tag flag"), { 0x1F3F4, 0xE0067, 0xE0062, 0xE0065, 0xE006E, 0xE0067, 0xE007F } },
+	};
+	for (const FCase& Case : Cases)
+	{
+		FSequenceParagraph Paragraph;
+		Paragraph.AddSequence(Case.Sequence);
+		TArray<FDreamShapedRun> Runs;
+		if (!TestTrue(FString::Printf(TEXT("%s shapes"), Case.Name), Paragraph.Shape(Font, Runs))
+			|| !TestEqual(FString::Printf(TEXT("%s is one run"), Case.Name), Runs.Num(), 1))
+		{
+			continue;
+		}
+		const FDreamShapedRun& Run = Runs[0];
+		TestEqual(FString::Printf(TEXT("%s comes from the colour face"), Case.Name), Run.FaceIndex, 1);
+		TestTrue(FString::Printf(TEXT("%s says so"), Case.Name), Run.bColorFace);
+		TestFalse(FString::Printf(TEXT("%s is not emboldened"), Case.Name), Run.bSyntheticBold);
+		if (TestEqual(FString::Printf(TEXT("%s is one glyph, the font's ligature"), Case.Name), Run.Glyphs.Num(), 1))
+		{
+			TestEqual(FString::Printf(TEXT("%s: the glyph is the element's"), Case.Name), Run.Glyphs[0].ElementIndex, 0);
+			TestTrue(FString::Printf(TEXT("%s: a real glyph"), Case.Name), Run.Glyphs[0].GlyphIndex != 0);
+			TestTrue(FString::Printf(TEXT("%s: that advances"), Case.Name), Run.Glyphs[0].XAdvance > 0.0f);
+		}
+	}
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamTextShaperBareHeartTest,
+	"DreamGUI.Text.Shaper.AHeartOnlyTheColourFaceHasIsDrawnFromItWithOrWithoutItsSelector",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * Coverage asked for every code point of a cluster, and the engine's Noto has no U+FE0F, so "red heart" with its
+ * selector had no face. Default-ignorable code points are not asked for; and a bare U+2764, text by default, still goes
+ * to the colour face when no other face has it -- as the browser draws it.
+ */
+bool FDreamTextShaperBareHeartTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamTextShaperTestLocal;
+	FScopedGameWorld TestWorld;
+	UDreamUIFontData_DistanceField* Font = MakeLatinEmojiFont(TestWorld.World);
+	if (!TestTrue(TEXT("Roboto shapes"), FDreamTextShaper::CanShape(Font)))return false;
+	TestFalse(TEXT("Roboto has no heart"), Font->FaceHasCodepoint(0, 0x2764));
+	TestFalse(TEXT("and the emoji font no U+FE0F"), Font->FaceHasCodepoint(1, 0xFE0F));
+
+	const TArray<uint32> Sequences[] = { { 0x2764 }, { 0x2764, 0xFE0F } };
+	for (const TArray<uint32>& Sequence : Sequences)
+	{
+		const FString Name = Sequence.Num() == 1 ? TEXT("a bare heart") : TEXT("a heart with its selector");
+		FSequenceParagraph Paragraph;
+		Paragraph.AddSequence(Sequence);
+		TArray<FDreamShapedRun> Runs;
+		Paragraph.Shape(Font, Runs);
+		if (!TestEqual(Name + TEXT(" is one run"), Runs.Num(), 1))
+		{
+			continue;
+		}
+		TestEqual(Name + TEXT(" comes from the colour face"), Runs[0].FaceIndex, 1);
+		TestTrue(Name + TEXT(" in colour"), Runs[0].bColorFace);
+		// The font's variation sequences name U+2764 U+FE0F, so the selector folds into the heart's glyph.
+		TestEqual(Name + TEXT(" is one glyph"), Runs[0].Glyphs.Num(), 1);
+	}
+	const FDreamFontFaceChoice Choice = ResolveCluster(Font, { 0x2764, 0xFE0F });
+	TestEqual(TEXT("the resolver names the colour face"), Choice.FaceIndex, 1);
+	TestTrue(TEXT("as covering the whole cluster: the selector is not asked for"), Choice.bCoversCluster);
+	TestTrue(TEXT("and as a colour face"), Choice.bColor);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamTextShaperSplitClusterTest,
+	"DreamGUI.Text.Shaper.AClusterNoFaceHasWholeIsDrawnElementByElement",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * "a" with a skin tone after it is one grapheme cluster, and no face has both: the tone was shaped in Roboto with the
+ * letter and came out as a missing-glyph box. Each element takes the face that has it, at the cluster's level.
+ */
+bool FDreamTextShaperSplitClusterTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamTextShaperTestLocal;
+	FScopedGameWorld TestWorld;
+	UDreamUIFontData_DistanceField* Font = MakeLatinEmojiFont(TestWorld.World);
+	if (!TestTrue(TEXT("Roboto shapes"), FDreamTextShaper::CanShape(Font)))return false;
+	TestFalse(TEXT("no face has the whole cluster"), ResolveCluster(Font, { 'a', 0x1F3FD }).bCoversCluster);
+
+	FSequenceParagraph Paragraph;
+	Paragraph.Add(TEXT("a"));
+	Paragraph.AddSequence({ 0x1F3FD }, false);
+	TArray<FDreamShapedRun> Runs;
+	Paragraph.Shape(Font, Runs);
+	if (!TestEqual(TEXT("two runs, one per face"), Runs.Num(), 2))return false;
+	TestEqual(TEXT("the letter from Roboto"), Runs[0].FaceIndex, 0);
+	TestTrue(TEXT("alone"), Runs[0].ElementStart == 0 && Runs[0].ElementEnd == 1);
+	TestEqual(TEXT("the skin tone from the colour face"), Runs[1].FaceIndex, 1);
+	TestTrue(TEXT("alone"), Runs[1].ElementStart == 1 && Runs[1].ElementEnd == 2);
+	TestTrue(TEXT("in colour"), Runs[1].bColorFace);
+	TestEqual(TEXT("both at the cluster's level"), (int32)Runs[1].BidiLevel, (int32)Runs[0].BidiLevel);
+	for (const FDreamShapedRun& Run : Runs)
+	{
+		for (const FDreamShapedGlyph& Glyph : Run.Glyphs)
+		{
+			TestTrue(TEXT("no missing-glyph box"), Glyph.GlyphIndex != 0);
+		}
+	}
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamTextShaperTextPresentationTest,
+	"DreamGUI.Text.Shaper.TextPresentationIsDrawnFromTheMonochromeFace",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * U+FE0E asks for the text form, and a font whose own face has the character keeps it in that form even with a colour
+ * face behind it; U+FE0F sends the same character to the colour face. Segoe UI Symbol is Windows' monochrome symbol
+ * font; the test says so and passes where it is not installed.
+ */
+bool FDreamTextShaperTextPresentationTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamTextShaperTestLocal;
+	const FString SymbolPath = TEXT("C:/Windows/Fonts/seguisym.ttf");
+	if (!FPaths::FileExists(SymbolPath))
+	{
+		AddInfo(TEXT("Segoe UI Symbol is not installed here; nothing to test."));
+		return true;
+	}
+	FScopedGameWorld TestWorld;
+	UDreamUIFontData_DistanceField* Symbol = MakeFontFromPath(TestWorld.World, SymbolPath);
+	Symbol->SetFallbackFonts({ MakeEmojiFont(TestWorld.World) });
+	if (!TestTrue(TEXT("Segoe UI Symbol shapes"), FDreamTextShaper::CanShape(Symbol)))return false;
+	TestFalse(TEXT("it is no colour face"), Symbol->IsColorFace(0));
+	TestTrue(TEXT("and has the heart"), Symbol->FaceHasCodepoint(0, 0x2764));
+
+	auto FaceOf = [Symbol](const TArray<uint32>& Sequence, bool& bOutColor)
+	{
+		FSequenceParagraph Paragraph;
+		Paragraph.AddSequence(Sequence);
+		TArray<FDreamShapedRun> Runs;
+		Paragraph.Shape(Symbol, Runs);
+		bOutColor = Runs.Num() == 1 && Runs[0].bColorFace;
+		return Runs.Num() == 1 ? Runs[0].FaceIndex : INDEX_NONE;
+	};
+	bool bColor = true;
+	TestEqual(TEXT("a heart asking for text is drawn from the symbol face"), FaceOf({ 0x2764, 0xFE0E }, bColor), 0);
+	TestFalse(TEXT("not in colour"), bColor);
+	TestEqual(TEXT("so is a bare heart, text by default"), FaceOf({ 0x2764 }, bColor), 0);
+	TestEqual(TEXT("a heart asking for emoji is drawn from the colour face"), FaceOf({ 0x2764, 0xFE0F }, bColor), 1);
+	TestTrue(TEXT("in colour"), bColor);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamTextShaperLanguageFacesTest,
+	"DreamGUI.Text.Shaper.HanIsDrawnFromTheFaceOfItsLanguage",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * Roboto with GenEi Gothic for Japanese and Droid Sans Fallback for Simplified Chinese behind it. With the engine's
+ * fonts the difference between Japanese and Chinese Han is which face draws it: both cover these nine, GenEi lacks U+4EEC.
+ */
+bool FDreamTextShaperLanguageFacesTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamTextShaperTestLocal;
+	FScopedGameWorld TestWorld;
+	UDreamUIFontData_DistanceField* Roboto = MakeFileFont(TestWorld.World, TEXT("Roboto-Regular.ttf"));
+	UDreamUIFontData_DistanceField* GenEi = MakeEditorFileFont(TestWorld.World, TEXT("GenEiGothicPro-Regular.otf"));
+	UDreamUIFontData_DistanceField* Droid = MakeFileFont(TestWorld.World, TEXT("DroidSansFallback.ttf"));
+	TArray<FDreamUIFontFallback> Fallbacks;
+	Fallbacks.AddDefaulted();
+	Fallbacks[0].Font = GenEi;
+	Fallbacks[0].Cultures = TEXT("ja");
+	Fallbacks.AddDefaulted();
+	Fallbacks[1].Font = Droid;
+	Fallbacks[1].Cultures = TEXT("zh-Hans");
+	Roboto->SetFallbacks(Fallbacks);
+	if (!TestTrue(TEXT("Roboto shapes"), FDreamTextShaper::CanShape(Roboto)))return false;
+	TestEqual(TEXT("three faces"), Roboto->GetFaceCount(), 3);
+
+	const FString Han = TEXT("\u76F4\u89D2\u9AA8\u5199\u4ECA\u4EE4\u6D77\u8FD4\u8AA4");
+	auto ShapeIn = [Roboto](const FString& Text, const TCHAR* Culture)
+	{
+		FSequenceParagraph Paragraph;
+		Paragraph.Languages.Add(FDreamTextLanguage::Make(Culture));
+		Paragraph.Add(Text);
+		TArray<FDreamShapedRun> Runs;
+		Paragraph.Shape(Roboto, Runs);
+		return Runs;
+	};
+	const TArray<FDreamShapedRun> Japanese = ShapeIn(Han, TEXT("ja"));
+	TestEqual(TEXT("Japanese Han is one run"), Japanese.Num(), 1);
+	TestEqual(TEXT("from GenEi"), RunFaces(Japanese), TArray<int32>({ 1 }));
+	TestEqual(TEXT("Simplified Chinese Han from Droid"), RunFaces(ShapeIn(Han, TEXT("zh-Hans"))), TArray<int32>({ 2 }));
+	TestEqual(TEXT("zh-CN too, through the names it falls back to"), RunFaces(ShapeIn(Han, TEXT("zh-CN"))), TArray<int32>({ 2 }));
+	TestEqual(TEXT("in Japanese text, what GenEi lacks comes from Droid"), RunFaces(ShapeIn(TEXT("\u4EEC"), TEXT("ja"))), TArray<int32>({ 2 }));
+
+	// One paragraph in two languages: the runs part where the language does.
+	FSequenceParagraph Mixed;
+	Mixed.Languages.Add(FDreamTextLanguage::Make(TEXT("ja")));
+	Mixed.Languages.Add(FDreamTextLanguage::Make(TEXT("zh-Hans")));
+	Mixed.Add(Han, 0);
+	Mixed.Add(Han, 1);
+	TArray<FDreamShapedRun> MixedRuns;
+	Mixed.Shape(Roboto, MixedRuns);
+	if (TestEqual(TEXT("a run per language"), MixedRuns.Num(), 2))
+	{
+		TestTrue(TEXT("the Japanese half from GenEi"), MixedRuns[0].FaceIndex == 1 && MixedRuns[0].ElementEnd == 9);
+		TestTrue(TEXT("the Chinese half from Droid"), MixedRuns[1].FaceIndex == 2 && MixedRuns[1].ElementStart == 9);
+	}
+	// A change of language parts a run even where the face stays: HarfBuzz shapes each run in its own language.
+	FSequenceParagraph Latin;
+	Latin.Languages.Add(FDreamTextLanguage::Make(TEXT("en")));
+	Latin.Languages.Add(FDreamTextLanguage::Make(TEXT("de")));
+	Latin.Add(TEXT("ab"), 0);
+	Latin.Add(TEXT("cd"), 1);
+	TArray<FDreamShapedRun> LatinRuns;
+	Latin.Shape(Roboto, LatinRuns);
+	TestEqual(TEXT("a run per language in one face"), RunFaces(LatinRuns), TArray<int32>({ 0, 0 }));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamTextShaperScaledFaceTest,
+	"DreamGUI.Text.Shaper.AScaledFallbackIsShapedAtItsScale",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * CSS size-adjust: a fallback entry's scale shapes its runs at the style size times the scale, so their advances carry
+ * it, while the run keeps its style size for everything else.
+ */
+bool FDreamTextShaperScaledFaceTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamTextShaperTestLocal;
+	FScopedGameWorld TestWorld;
+	UDreamUIFontData_DistanceField* Droid = MakeFileFont(TestWorld.World, TEXT("DroidSansFallback.ttf"));
+	auto MakeFamily = [&TestWorld, Droid](float Scale)
+	{
+		UDreamUIFontData_DistanceField* Roboto = MakeFileFont(TestWorld.World, TEXT("Roboto-Regular.ttf"));
+		TArray<FDreamUIFontFallback> Fallbacks;
+		Fallbacks.AddDefaulted();
+		Fallbacks[0].Font = Droid;
+		Fallbacks[0].Scale = Scale;
+		Roboto->SetFallbacks(Fallbacks);
+		return Roboto;
+	};
+	UDreamUIFontData_DistanceField* Plain = MakeFamily(1.0f);
+	UDreamUIFontData_DistanceField* Scaled = MakeFamily(1.5f);
+	if (!TestTrue(TEXT("Roboto shapes"), FDreamTextShaper::CanShape(Plain)))return false;
+
+	FSequenceParagraph Paragraph;
+	Paragraph.Add(TEXT("\u4E16\u754C"));
+	TArray<FDreamShapedRun> PlainRuns;
+	TArray<FDreamShapedRun> ScaledRuns;
+	Paragraph.Shape(Plain, PlainRuns);
+	Paragraph.Shape(Scaled, ScaledRuns);
+	if (!TestEqual(TEXT("one run"), PlainRuns.Num(), 1) || !TestEqual(TEXT("one run scaled"), ScaledRuns.Num(), 1))return false;
+	TestEqual(TEXT("both from the fallback"), ScaledRuns[0].FaceIndex, 1);
+	TestEqual(TEXT("the scaled run says its scale"), ScaledRuns[0].FaceScale, 1.5f);
+	TestEqual(TEXT("and keeps its style size"), ScaledRuns[0].Size, 32.0f);
+	TestEqual(TEXT("the plain one is at 1"), PlainRuns[0].FaceScale, 1.0f);
+	TestEqual(TEXT("the advances carry the scale"), TotalAdvance(ScaledRuns), TotalAdvance(PlainRuns) * 1.5f, 0.2f);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamTextShaperColorBoldTest,
+	"DreamGUI.Text.Shaper.AColourGlyphIsNeverEmboldened",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * Synthetic bold widens and dilates a field glyph; an emoji bitmap has no field to dilate, and Chrome draws it the same
+ * in bold text. A bold run on a colour face is bold but not emboldened, and its advances are the plain ones.
+ */
+bool FDreamTextShaperColorBoldTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamTextShaperTestLocal;
+	FScopedGameWorld TestWorld;
+	UDreamUIFontData_DistanceField* Font = MakeLatinEmojiFont(TestWorld.World);
+	if (!TestTrue(TEXT("Roboto shapes"), FDreamTextShaper::CanShape(Font)))return false;
+
+	FSequenceParagraph Bold;
+	Bold.AddSequence({ 0x1F600 }, true, true);
+	FSequenceParagraph Regular;
+	Regular.AddSequence({ 0x1F600 });
+	TArray<FDreamShapedRun> BoldRuns;
+	TArray<FDreamShapedRun> RegularRuns;
+	Bold.Shape(Font, BoldRuns);
+	Regular.Shape(Font, RegularRuns);
+	if (!TestEqual(TEXT("one bold run"), BoldRuns.Num(), 1) || !TestEqual(TEXT("one regular run"), RegularRuns.Num(), 1))return false;
+	TestTrue(TEXT("the run is bold"), BoldRuns[0].bBold);
+	TestTrue(TEXT("on the colour face"), BoldRuns[0].bColorFace);
+	TestFalse(TEXT("and not emboldened"), BoldRuns[0].bSyntheticBold);
+	TestEqual(TEXT("so it advances as the regular one"), TotalAdvance(BoldRuns), TotalAdvance(RegularRuns), 0.001f);
+
+	// The letters beside it still are.
+	FSequenceParagraph Letter;
+	Letter.AddSequence({ 'x' }, true, true);
+	TArray<FDreamShapedRun> LetterRuns;
+	Letter.Shape(Font, LetterRuns);
+	if (TestEqual(TEXT("one letter run"), LetterRuns.Num(), 1))
+	{
+		TestTrue(TEXT("a bold letter in Roboto is emboldened"), LetterRuns[0].bSyntheticBold);
+	}
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamTextShaperHiddenSelectorTest,
+	"DreamGUI.Text.Shaper.ASelectorTheFaceHasNoUseForLeavesNoGlyphOfItsOwn",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * A letter that took a variation selector into its element hands HarfBuzz both, and a face with no variant for the pair
+ * hides the selector as a space glyph of no advance: a quad of no size that the painter and per-character animation
+ * would count as the letter's. It is dropped -- the element is drawn as the letter alone -- while an element that is
+ * nothing but such a character keeps the one glyph it has.
+ */
+bool FDreamTextShaperHiddenSelectorTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamTextShaperTestLocal;
+	FScopedGameWorld TestWorld;
+	UDreamUIFontData_DistanceField* Font = MakeFileFont(TestWorld.World, TEXT("Roboto-Regular.ttf"));
+	if (!TestTrue(TEXT("Roboto shapes"), FDreamTextShaper::CanShape(Font)))return false;
+	TestFalse(TEXT("Roboto has no variation selector"), Font->FaceHasCodepoint(0, 0xFE0F));
+
+	FSequenceParagraph Alone;
+	Alone.Add(TEXT("a"));
+	TArray<FDreamShapedRun> AloneRuns;
+	Alone.Shape(Font, AloneRuns);
+	if (!TestTrue(TEXT("a plain a is one glyph"), AloneRuns.Num() == 1 && AloneRuns[0].Glyphs.Num() == 1))return false;
+	const FDreamShapedGlyph& Letter = AloneRuns[0].Glyphs[0];
+
+	const uint32 Selectors[] = { 0xFE0F, 0xFE0E };
+	for (const uint32 Selector : Selectors)
+	{
+		FSequenceParagraph Paragraph;
+		Paragraph.AddSequence({ 'a', Selector });
+		TArray<FDreamShapedRun> Runs;
+		Paragraph.Shape(Font, Runs);
+		const FString Name = FString::Printf(TEXT("a with U+%04X"), Selector);
+		if (!TestEqual(Name + TEXT(" is one run"), Runs.Num(), 1) || !TestEqual(Name + TEXT(" is one glyph"), Runs[0].Glyphs.Num(), 1))
+		{
+			continue;
+		}
+		TestEqual(Name + TEXT(" is drawn as the letter"), Runs[0].Glyphs[0].GlyphIndex, Letter.GlyphIndex);
+		TestEqual(Name + TEXT(" advances as the letter"), Runs[0].Glyphs[0].XAdvance, Letter.XAdvance, 0.0001f);
+	}
+
+	// What is nothing but such a character keeps the one glyph it has: an element is never left without one.
+	FSequenceParagraph Joiner;
+	Joiner.AddSequence({ 0x200D, 0xFE0F });
+	TArray<FDreamShapedRun> JoinerRuns;
+	Joiner.Shape(Font, JoinerRuns);
+	if (TestEqual(TEXT("a lone joiner and selector is one run"), JoinerRuns.Num(), 1))
+	{
+		TestEqual(TEXT("which keeps one glyph"), JoinerRuns[0].Glyphs.Num(), 1);
+	}
+	return true;
+}
+
 #endif
