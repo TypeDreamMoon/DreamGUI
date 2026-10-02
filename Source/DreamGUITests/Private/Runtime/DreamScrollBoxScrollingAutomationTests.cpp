@@ -6,10 +6,12 @@
 
 #include "Core/Components/DreamPanelLayouts.h"
 #include "Core/Components/DreamWidget.h"
+#include "Core/DreamUIManager.h"
 #include "Engine/World.h"
 #include "Interaction/UIScrollbar.h"
 #include "Interaction/UISelectable.h"
 #include "Misc/ScopeExit.h"
+#include "DreamLayoutInvalidationTestTypes.h"
 #include "DreamScopedWorld.h"
 
 /*
@@ -602,6 +604,127 @@ bool FDreamScrollBoxLinkedBarTest::RunTest(const FString& Parameters)
 	Fixture.ScrollBox->SetScrollbar(NotABar);
 	TestEqual(TEXT("a behaviour that is not a bar is refused, and the bar stays linked"),
 		(UObject*)Fixture.ScrollBox->GetScrollbar(), (UObject*)Bar);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamScrollBoxScrollArrangesOnlyItselfTest,
+	"DreamGUI.Layout.ScrollBox.ScrollingReArrangesTheBoxAloneAndLeavesItsAncestorsSettled",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * Every offset and rubber-band change called MarkLayoutForRebuild with the default Measure reason, so each
+ * wheel notch and each fling frame dirtied every container above the box, and each of them re-measured the
+ * box -- every row of it -- only to throw the scroll-axis answer away: the offset is read by the box's own
+ * arrangement and nothing else. This checks a scroll re-arranges the box without its parent recomputing, in
+ * one pass, and that the rows really moved.
+ */
+bool FDreamScrollBoxScrollArrangesOnlyItselfTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamScrollBoxScrollingTestLocal;
+	FScopedGameWorld TestWorld;
+	UDreamUIManagerWorldSubsystem* Manager = UDreamUIManagerWorldSubsystem::GetInstance(TestWorld.World);
+	if (!TestNotNull(TEXT("DreamUI manager subsystem exists"), Manager))
+	{
+		return false;
+	}
+	UDreamWidget* Root = MakeWidget(TestWorld.World, nullptr, TEXT("Root"), 200.0f, 120.0f);
+	UDreamWidget* ScrollWidget = MakeWidget(TestWorld.World, Root, TEXT("Scroll"), 200.0f, 120.0f);
+	UDreamLayoutPassCountingOverlay* Overlay = Cast<UDreamLayoutPassCountingOverlay>(
+		Root->CreateNewLayoutContainer(UDreamLayoutPassCountingOverlay::StaticClass()));
+	UDreamLayoutContainerScrollBox* ScrollBox = ScrollWidget->CreateNewLayoutContainer<UDreamLayoutContainerScrollBox>();
+	if (!TestNotNull(TEXT("Counting overlay created"), Overlay) || !TestNotNull(TEXT("ScrollBox created"), ScrollBox))
+	{
+		Root->DestroyWidget();
+		return false;
+	}
+	TArray<UDreamWidget*> Rows;
+	for (int32 i = 0; i < 3; i++)
+	{
+		Rows.Add(MakeWidget(TestWorld.World, ScrollWidget, *FString::Printf(TEXT("Row%d"), i), 180.0f, 100.0f));
+	}
+	Root->OnRegister();
+	ScrollWidget->OnRegister();
+	for (UDreamWidget* Row : Rows)
+	{
+		Row->OnRegister();
+	}
+
+	UDreamWidget::MarkLayoutForRebuild(Root);
+	Manager->TickDreamUI(0.016f);
+	Manager->TickDreamUI(0.016f);
+	Overlay->PassCount = 0;
+	const double RowYBefore = Rows[0]->GetAnchoredPosition().Y;
+
+	TestTrue(TEXT("There is room to scroll"), ScrollBox->ScrollBy(10.0f));
+	Manager->TickDreamUI(0.016f);
+
+	TestEqual(TEXT("The box's parent did not recompute for a scroll"), Overlay->PassCount, 0);
+	TestEqual(TEXT("...the scroll cost one pass"), Manager->GetLastLayoutPassCount(), 1);
+	// Anchored positions are y-up, so content scrolled 10 further down the list sits 10 higher.
+	TestEqual(TEXT("...and the rows moved by exactly the scroll"), Rows[0]->GetAnchoredPosition().Y, RowYBefore + 10.0, 0.01);
+
+	Root->DestroyWidget();
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamScrollBoxRevealMeasuresAsArrangedTest,
+	"DreamGUI.Layout.ScrollBox.ScrollingAWidgetIntoViewMeasuresTheRowsAboveItAsTheBoxArrangesThem",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * Scrolling a widget into view measured the rows above it with no constraint at all, while the arrangement
+ * measures them against the viewport's width. A scale box set to fit its width answers the two questions
+ * differently: offered the 200-wide viewport it scales its 100x50 art by two and is 100 tall, asked with
+ * nothing it scales by its own width and is 50. So the offset meant to bring the next row's bottom edge into
+ * view was worked out 50 short and left that row half hidden. This checks the reveal lands the row flush with
+ * the bottom of the viewport.
+ */
+bool FDreamScrollBoxRevealMeasuresAsArrangedTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamScrollBoxScrollingTestLocal;
+	FScopedGameWorld TestWorld;
+	UDreamWidget* ScrollWidget = MakeWidget(TestWorld.World, nullptr, TEXT("Scroll"), 200.0f, 120.0f);
+	UDreamLayoutContainerScrollBox* ScrollBox = ScrollWidget->CreateNewLayoutContainer<UDreamLayoutContainerScrollBox>();
+	UDreamWidget* Scaled = MakeWidget(TestWorld.World, ScrollWidget, TEXT("Scaled"), 100.0f, 50.0f);
+	UDreamWidget* Art = MakeWidget(TestWorld.World, Scaled, TEXT("Art"), 100.0f, 50.0f);
+	UDreamWidget* Target = MakeWidget(TestWorld.World, ScrollWidget, TEXT("Target"), 180.0f, 100.0f);
+	UDreamLayoutContainerScaleBox* ScaleBox = Scaled->CreateNewLayoutContainer<UDreamLayoutContainerScaleBox>();
+	if (!TestNotNull(TEXT("ScrollBox created"), ScrollBox) || !TestNotNull(TEXT("Scale box created"), ScaleBox))
+	{
+		ScrollWidget->DestroyWidget();
+		return false;
+	}
+	ScaleBox->SetStretch(EDreamScaleBoxStretch::ScaleToFitX);
+	UDreamPanelSlot* ScaledSlot = Scaled->GetPanelSlot();
+	if (!TestNotNull(TEXT("The scroll box handed the scale box a slot"), ScaledSlot))
+	{
+		ScrollWidget->DestroyWidget();
+		return false;
+	}
+	// Left-aligned, so the scale box is arranged at its own width and its height is the one it measured.
+	ScaledSlot->SetHorizontalAlignment(EDreamPanelHorizontalAlignment::Left);
+	ScrollWidget->OnRegister();
+	Scaled->OnRegister();
+	Art->OnRegister();
+	Target->OnRegister();
+	UDreamWidget::MarkLayoutForRebuild(ScrollWidget);
+	UDreamWidget::RebuildLayoutImmediately(ScrollWidget);
+	UDreamWidget::RebuildLayoutImmediately(ScrollWidget);
+	if (!TestEqual(TEXT("Fixture: the scale box is arranged 100 tall, its art scaled to the viewport's width"),
+		Scaled->GetHeight(), 100.0f))
+	{
+		ScrollWidget->DestroyWidget();
+		return false;
+	}
+
+	// The target occupies 100..200 of content in a 120-tall view, so its bottom edge reaches the bottom of
+	// the view at an offset of 80.
+	TestTrue(TEXT("The target needs a scroll to be seen whole"), ScrollBox->ScrollWidgetIntoView(Target, false));
+	TestEqual(TEXT("...and the scroll lands its bottom edge on the bottom of the view"), ScrollBox->GetScrollOffset(), 80.0f);
+
+	ScrollWidget->DestroyWidget();
 	return true;
 }
 

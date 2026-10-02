@@ -264,6 +264,11 @@ void UDreamUIManagerWorldSubsystem::TickDreamUI(float DeltaTime)
 			TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_LayoutPass);
 			++LayoutPassCount;
 			LastLayoutPassCount = LayoutPassCount;
+			// Between two passes nothing is walking a cached tree, so a rebuild the previous pass was made to wait
+			// for is done here rather than after the last pass, and this pass walks the trees as they now are. Left
+			// for the end of the frame, a widget attached from inside one pass -- by a listener its writes woke --
+			// was missing from every later pass's walk of that frame, and nothing asked for it again after.
+			FlushPendingLayoutTreeRebuild();
 
 			TArray<TWeakObjectPtr<UDreamWidget>> CopiedLayoutDirtyWidgetArray;
 			Swap(CopiedLayoutDirtyWidgetArray, LayoutDirtyWidgetArray);

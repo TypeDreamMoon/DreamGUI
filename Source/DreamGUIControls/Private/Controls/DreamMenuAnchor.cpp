@@ -130,21 +130,15 @@ void UDreamMenuAnchor::PlacePopup(const FDreamMenuAnchorStyle& InStyle)
 		// hierarchy is laid out inside. The arithmetic is the panel spelling's, CALLED rather than
 		// copied -- a menu that landed somewhere else depending on which anchor opened it would be
 		// two behaviours wearing one name, which is the same argument as CalculateMenuPosition above.
-		if (const UDreamWidget* Root = GetRootWidgetInHierarchy(); IsValid(Root) && Root != this)
+		// Where this control sits in the root, and at what scale, is the panel's answer too: the root's
+		// pivot can be anywhere and a scale box can sit between the two.
+		FVector2D WindowSize = FVector2D::ZeroVector;
+		FVector2D AnchorOffset = FVector2D::ZeroVector;
+		FVector2D AnchorScale = FVector2D::UnitVector;
+		if (UDreamLayoutContainerMenuAnchor::GetPlacementInWindow(this, WindowSize, AnchorOffset, AnchorScale))
 		{
-			const FVector2D RootSize(
-				FMath::Max(Root->GetWidth(), 0.0f),
-				FMath::Max(Root->GetHeight(), 0.0f));
-			const FVector AnchorInRoot = Root->GetWorldTransform().InverseTransformPosition(
-				GetWorldTransform().GetLocation());
-			// Widget space is y-up about the pivot; this is the anchor's top-left corner measured from
-			// the root's top-left corner, which is the space FitMenuInWindow works in.
-			const FVector2D AnchorOffset(
-				AnchorInRoot.Y + RootSize.X * 0.5 - AnchorSize.X * GetPivot().X,
-				RootSize.Y * 0.5 - AnchorInRoot.Z - AnchorSize.Y * (1.0 - GetPivot().Y));
-			const FVector2D Fitted = UDreamLayoutContainerMenuAnchor::FitMenuInWindow(
-				TopLeft + AnchorOffset, Size, RootSize);
-			TopLeft = Fitted - AnchorOffset;
+			TopLeft = UDreamLayoutContainerMenuAnchor::FitMenuInWindowFromPanelSpace(
+				TopLeft, Size, AnchorOffset, AnchorSize.X, WindowSize, false, AnchorScale);
 		}
 	}
 

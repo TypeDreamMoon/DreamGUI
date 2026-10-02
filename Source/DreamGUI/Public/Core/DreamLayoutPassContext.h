@@ -97,6 +97,105 @@ public:
 	};
 
 	/**
+	 * One panel's arrange, collecting which of its children were measured from a size they already have.
+	 *
+	 * A measurement with no constraint on the axis its answer depends on -- a wrap box asked with no line
+	 * length, a scale box asked to fit with no room named, an aspect ratio asked with no width -- answers from
+	 * the widget's own current size, which is the previous pass's output. When the arrange then changes that
+	 * size, the answer the child was placed by is stale, and nothing asks again: the write stops at the panel
+	 * that made it (FWriteScope). The panel reads what this scope collected and re-dirties those children
+	 * once. Scopes nest and each gives back what it took, because an immediate rebuild can run a whole other
+	 * arrange from inside this one.
+	 */
+	class FCurrentSizeReadScope
+	{
+	public:
+		FCurrentSizeReadScope(FDreamLayoutPassContext& InContext, const UObject* InArrangingWidget)
+			: Context(InContext)
+			, SavedArranger(InContext.CurrentSizeReadArranger)
+			, SavedChild(InContext.CurrentSizeReadChild)
+			, SavedReaders(MoveTemp(InContext.CurrentSizeReaders))
+			, SavedPauseDepth(InContext.CurrentSizeReadPauseDepth)
+		{
+			Context.CurrentSizeReadArranger = FObjectKey(InArrangingWidget);
+			Context.CurrentSizeReadChild = FObjectKey();
+			Context.CurrentSizeReaders.Reset();
+			Context.CurrentSizeReadPauseDepth = 0;
+		}
+		~FCurrentSizeReadScope()
+		{
+			Context.CurrentSizeReadArranger = SavedArranger;
+			Context.CurrentSizeReadChild = SavedChild;
+			Context.CurrentSizeReaders = MoveTemp(SavedReaders);
+			Context.CurrentSizeReadPauseDepth = SavedPauseDepth;
+		}
+		FCurrentSizeReadScope(const FCurrentSizeReadScope&) = delete;
+		FCurrentSizeReadScope& operator=(const FCurrentSizeReadScope&) = delete;
+
+		/** The arranging widget's children whose measurement read a size they already had, each once. */
+		const TArray<FObjectKey>& GetReaders() const { return Context.CurrentSizeReaders; }
+
+	private:
+		FDreamLayoutPassContext& Context;
+		FObjectKey SavedArranger;
+		FObjectKey SavedChild;
+		TArray<FObjectKey> SavedReaders;
+		int32 SavedPauseDepth = 0;
+	};
+
+	/**
+	 * The arranging widget measuring one of its own children. A current-size read anywhere under that
+	 * measurement is noted against the child, since the child's size is the one the arrange is about to set.
+	 * Any other measuring widget -- a nested panel measuring its own children -- leaves the note where it is.
+	 */
+	class FMeasuredChildScope
+	{
+	public:
+		FMeasuredChildScope(FDreamLayoutPassContext& InContext, const UObject* InMeasuringWidget, const UObject* InChild)
+		{
+			if (InContext.CurrentSizeReadArranger != FObjectKey() && InContext.CurrentSizeReadArranger == FObjectKey(InMeasuringWidget))
+			{
+				Context = &InContext;
+				SavedChild = InContext.CurrentSizeReadChild;
+				InContext.CurrentSizeReadChild = FObjectKey(InChild);
+			}
+		}
+		~FMeasuredChildScope()
+		{
+			if (Context != nullptr)
+			{
+				Context->CurrentSizeReadChild = SavedChild;
+			}
+		}
+		FMeasuredChildScope(const FMeasuredChildScope&) = delete;
+		FMeasuredChildScope& operator=(const FMeasuredChildScope&) = delete;
+
+	private:
+		FDreamLayoutPassContext* Context = nullptr;
+		FObjectKey SavedChild;
+	};
+
+	/** A measurement that places nothing -- a panel stating its own natural size -- notes no current-size read. */
+	class FCurrentSizeReadPause
+	{
+	public:
+		explicit FCurrentSizeReadPause(FDreamLayoutPassContext& InContext)
+			: Context(InContext)
+		{
+			++Context.CurrentSizeReadPauseDepth;
+		}
+		~FCurrentSizeReadPause()
+		{
+			--Context.CurrentSizeReadPauseDepth;
+		}
+		FCurrentSizeReadPause(const FCurrentSizeReadPause&) = delete;
+		FCurrentSizeReadPause& operator=(const FCurrentSizeReadPause&) = delete;
+
+	private:
+		FDreamLayoutPassContext& Context;
+	};
+
+	/**
 	 * A desired size per widget and per pair of measure specs: one widget can be measured under several
 	 * constraints in a pass, and each answer is its own.
 	 *
@@ -168,6 +267,19 @@ public:
 		DesiredSizes.Reset();
 	}
 
+	/**
+	 * Notes that the measurement under way read a widget's own current size instead of a constraint. It is
+	 * held against the child the arranging widget is measuring (FMeasuredChildScope); outside an arrange, or
+	 * while paused, there is nothing to hold it against and nothing is kept.
+	 */
+	void NoteCurrentSizeRead()
+	{
+		if (CurrentSizeReadPauseDepth == 0 && CurrentSizeReadChild != FObjectKey())
+		{
+			CurrentSizeReaders.AddUnique(CurrentSizeReadChild);
+		}
+	}
+
 	/** Whether every scope opened on this context has closed. A pass that ends otherwise leaks its state into the next. */
 	bool IsBalanced() const
 	{
@@ -199,4 +311,9 @@ private:
 	int32 MemoDepth = 0;
 	TMap<FDesiredSizeKey, FVector2D> DesiredSizes;
 	int64 DesiredSizeComputeCount = 0;
+	/** See FCurrentSizeReadScope: the widget arranging, the child it is measuring, and what has been noted. */
+	FObjectKey CurrentSizeReadArranger;
+	FObjectKey CurrentSizeReadChild;
+	TArray<FObjectKey> CurrentSizeReaders;
+	int32 CurrentSizeReadPauseDepth = 0;
 };

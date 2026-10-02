@@ -1865,6 +1865,14 @@ namespace DreamUITextBuilderLocal
 		BuildProperties(InNode, Widget, InContext);
 		BuildSlotProperties(InNode, Widget, InContext);
 
+		// Every `AnchorData.X = ...` line above wrote its field in place -- a field inside a struct has no setter
+		// (see AddBinding) -- and TrySetParent had already worked the widget's size, edge offsets and placement out
+		// from the class default by then. Nothing written in place told it otherwise, so the widget went on
+		// reporting 100 x 100, the capture below took that for the authored size every panel measures this child
+		// by, and the children built next stretched against it. Handed back whole through SetAnchorData, the
+		// struct is worked out again exactly as a setter call from code would have it.
+		Widget->SetAnchorData(FDreamUIAnchorData(Widget->GetAnchorData()));
+
 		// The slot a panel parent hands out is minted by TrySetParent above, which is BEFORE this
 		// node's AnchorData was written -- so the geometry it captured is the class default, not what
 		// the file says. CaptureAuthoredGeometry latches on first call and the registration path will

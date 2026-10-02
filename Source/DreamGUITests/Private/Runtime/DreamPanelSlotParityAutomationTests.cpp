@@ -197,6 +197,60 @@ bool FDreamWrapBoxSlotForcedNewLineTest::RunTest(const FString& Parameters)
 }
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamWrapBoxBreakAfterEmptyItemMeasuredTest,
+	"DreamGUI.PanelSlot.AWrapBoxMeasuresTheLineBreakAfterAZeroLengthItemThatItArranges",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * The wrap box's measurement only broke a line once the line had some length, while its arrangement breaks
+ * whenever the line holds an item. A zero-wide first item followed by one that forces a new line was measured
+ * as one line and arranged as two, so the second line was drawn outside the room the parent had made. This
+ * checks a column gives such a wrap box the two lines it arranges, and the widget below starts after them.
+ */
+bool FDreamWrapBoxBreakAfterEmptyItemMeasuredTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamPanelSlotParityTestLocal;
+	FScopedGameWorld TestWorld;
+	UDreamUIManagerWorldSubsystem* Manager = UDreamUIManagerWorldSubsystem::GetInstance(TestWorld.World);
+	if (!TestNotNull(TEXT("DreamUI manager subsystem exists"), Manager))
+	{
+		return false;
+	}
+	UDreamWidget* Root = MakeWidget(TestWorld.World, nullptr, TEXT("Root"), 300.0f, 400.0f);
+	UDreamWidget* WrapWidget = MakeWidget(TestWorld.World, Root, TEXT("Wrap"), 300.0f, 10.0f);
+	UDreamWidget* Empty = MakeWidget(TestWorld.World, WrapWidget, TEXT("Empty"), 0.0f, 40.0f);
+	UDreamWidget* Broken = MakeWidget(TestWorld.World, WrapWidget, TEXT("Broken"), 80.0f, 40.0f);
+	UDreamWidget* Below = MakeWidget(TestWorld.World, Root, TEXT("Below"), 100.0f, 30.0f);
+	if (!TestNotNull(TEXT("Wrap box created"), WrapWidget->CreateNewLayoutContainer<UDreamLayoutContainerWrapBox>())
+		|| !TestNotNull(TEXT("Column created"), Root->CreateNewLayoutContainer<UDreamLayoutContainerVerticalBox>()))
+	{
+		Root->DestroyWidget();
+		return false;
+	}
+	UDreamPanelSlot* BrokenSlot = Broken->GetPanelSlot();
+	if (!TestNotNull(TEXT("The wrap box handed the second child a slot"), BrokenSlot))
+	{
+		Root->DestroyWidget();
+		return false;
+	}
+	BrokenSlot->SetNewLine(true);
+
+	UDreamWidget::MarkLayoutForRebuild(Root);
+	Manager->TickDreamUI(0.016f);
+	Manager->TickDreamUI(0.016f);
+
+	TestTrue(TEXT("The second item is arranged on a line of its own, below the first"),
+		Broken->GetAnchoredPosition().Y < Empty->GetAnchoredPosition().Y - 1.0);
+	TestTrue(TEXT("...and the column gave the wrap box both lines"),
+		FMath::IsNearlyEqual(WrapWidget->GetHeight(), 80.0f, 0.01f));
+	const double BelowTop = Root->GetHeight() * 0.5 - Below->GetAnchoredPosition().Y - Below->GetHeight() * (1.0 - Below->GetPivot().Y);
+	TestTrue(TEXT("...so the widget below starts after the second line"), FMath::IsNearlyEqual(BelowTop, 80.0, 0.01));
+
+	Root->DestroyWidget();
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamSlotLayerIsZOrderUnderAnotherNameTest,
 	"DreamGUI.PanelSlot.GridLayerIsZOrderUnderItsUMGNameRatherThanASecondNumber",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)

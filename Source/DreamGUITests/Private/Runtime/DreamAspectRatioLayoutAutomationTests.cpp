@@ -276,4 +276,59 @@ bool FDreamAspectRatioWithoutParentLayoutStillOwnsGeometryTest::RunTest(const FS
 	return true;
 }
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamAspectRatioWidthControlHeightUnderStackTest,
+	"DreamGUI.Layout.AspectRatio.WidthControlHeightUnderAVerticalBoxFollowsTheWidthTheBoxGivesIt",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * WidthControlHeight measured its height from the width the widget already had, and under a vertical box
+ * that is the width from before the box sized it: a banner authored 50 wide with a ratio of 2 asked for 25,
+ * the box made it 300x25, and AspectRatio itself declined to correct the height because the box owns that
+ * axis -- so it stayed 300x25 until some unrelated relayout. The box now tells a child that fills across the
+ * width it is about to get, exactly, and the ratio answers for that. This checks one tick lands on 300x150.
+ */
+bool FDreamAspectRatioWidthControlHeightUnderStackTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamAspectRatioLayoutTestLocal;
+	FScopedTestWorld TestWorld;
+	UDreamUIManagerWorldSubsystem* Manager = UDreamUIManagerWorldSubsystem::GetInstance(TestWorld.World);
+	if (!TestNotNull(TEXT("DreamUI manager subsystem exists"), Manager))
+	{
+		return false;
+	}
+
+	UDreamWidget* Root = NewObject<UDreamWidget>(TestWorld.World);
+	UDreamWidget* Banner = NewObject<UDreamWidget>(Root);
+	Root->SetWidth(300.0f);
+	Root->SetHeight(400.0f);
+	Banner->SetWidth(50.0f);
+	Banner->SetHeight(50.0f);
+	if (!TestTrue(TEXT("Banner parented"), Banner->TrySetParent(Root, false))
+		|| !TestNotNull(TEXT("Vertical box created"), Root->CreateNewLayoutContainer<UDreamLayoutContainerVerticalBox>()))
+	{
+		return false;
+	}
+	UDreamLayoutSelfAspectRatio* AspectSelf = Banner->CreateNewLayoutSelf<UDreamLayoutSelfAspectRatio>();
+	if (!TestNotNull(TEXT("AspectRatio LayoutSelf created"), AspectSelf))
+	{
+		return false;
+	}
+	AspectSelf->SetAspectRatio(2.0f);
+	AspectSelf->SetAspectRatioType(EDreamLayoutAspectRatioType::WidthControlHeight);
+	Root->OnRegister();
+	Banner->OnRegister();
+
+	UDreamWidget::MarkLayoutForRebuild(Root);
+	Manager->TickDreamUI(0.016f);
+	TestEqual(TEXT("The banner takes the box's width and the height its ratio gives that width"),
+		Banner->GetSize(), FVector2D(300.0, 150.0));
+
+	Manager->TickDreamUI(0.016f);
+	TestEqual(TEXT("The next tick does not move it"), Banner->GetSize(), FVector2D(300.0, 150.0));
+
+	Root->DestroyWidget();
+	return true;
+}
+
 #endif

@@ -295,6 +295,48 @@ FVector2f UDreamLayoutSelfAspectRatio::GetLayoutPreferredSize() const
 	return Solve().PreferredSize;
 }
 
+FVector2f UDreamLayoutSelfAspectRatio::GetLayoutPreferredSize(const FDreamMeasureSpec& InWidthSpec, const FDreamMeasureSpec& InHeightSpec) const
+{
+	FVector2f Preferred = Solve().PreferredSize;
+	const UDreamWidget* Widget = GetWidget();
+	if (!IsValid(Widget))
+	{
+		return Preferred;
+	}
+	const float SafeAspectRatio = DreamAspectRatioLocal::SanitizeAspectRatio(AspectRatio);
+	// The length of the controlling axis the widget will have. Exactly is the panel stating it -- a vertical
+	// box filling the widget across, say -- and is the whole answer. Anything less leaves the current size
+	// standing, held under a ceiling when there is one; that is a size the previous pass wrote, so the
+	// arranging panel is told it was read (FDreamLayoutPassContext::FCurrentSizeReadScope).
+	auto ControllingLength = [Widget](const FDreamMeasureSpec& InSpec, float InCurrent)
+	{
+		if (InSpec.Mode == EDreamMeasureMode::Exactly)
+		{
+			return FMath::Max(0.0f, InSpec.Value);
+		}
+		Widget->GetLayoutPassContext().NoteCurrentSizeRead();
+		return InSpec.Resolve(InCurrent);
+	};
+	switch (AspectRatioType)
+	{
+	case EDreamLayoutAspectRatioType::WidthControlHeight:
+		{
+			const float Width = ControllingLength(InWidthSpec, DreamAspectRatioLocal::NonNegativeFinite(Widget->GetWidth()));
+			Preferred.Y = DreamAspectRatioLocal::NonNegativeFloat(static_cast<double>(Width) / SafeAspectRatio);
+		}
+		break;
+	case EDreamLayoutAspectRatioType::HeightControlWidth:
+		{
+			const float Height = ControllingLength(InHeightSpec, DreamAspectRatioLocal::NonNegativeFinite(Widget->GetHeight()));
+			Preferred.X = DreamAspectRatioLocal::NonNegativeFloat(static_cast<double>(Height) * SafeAspectRatio);
+		}
+		break;
+	default:
+		break;
+	}
+	return Preferred;
+}
+
 void UDreamLayoutSelfAspectRatio::SetAspectRatioType(const EDreamLayoutAspectRatioType& Value)
 {
 	if (AspectRatioType != Value)

@@ -394,6 +394,25 @@ void UDreamWidget::OnHierarchyAttachmentChanged(UDreamCanvas* ParentRenderCanvas
 		
 		MarkAnchorDataChanged_Recursive(false, true, true, false, false);
 		MarkLayoutForRebuild(this);
+		// Attached while a layout pass is running. The pass walks the pre-order of its tree that it collected
+		// before this widget joined, so it never reaches this widget; and the walk above stops at a container that
+		// is writing its results -- which may be the new parent itself, whose arrangement was decided without this
+		// widget. So the parent is told to arrange again and queued for a later pass of the same frame, which walks
+		// the tree as it now is (TickDreamUI rebuilds a tree changed mid-pass between passes), whenever there is a
+		// layout on either side to run. Not on a detach, which has no new root, and not outside a pass, where the
+		// walk above already queues what has to run.
+		if (ParentRoot != nullptr && Parent.IsValid() && IsLayoutWriting())
+		{
+			UDreamLayoutContainer* ParentLayout = Parent->GetLayoutContainer();
+			if (IsValid(ParentLayout))
+			{
+				ParentLayout->MarkLayoutDirty();
+			}
+			if (IsValid(ParentLayout) || IsValid(LayoutContainer) || IsValid(LayoutSelf))
+			{
+				Parent->MarkWidgetLayoutDirty();
+			}
+		}
 	}
 
 	Call_AttachmentChanged();
