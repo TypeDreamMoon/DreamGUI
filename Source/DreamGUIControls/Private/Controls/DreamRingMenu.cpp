@@ -948,6 +948,14 @@ void UDreamRingMenu::Open()
 	{
 		return;
 	}
+	// Every player's focus before the ring can take any -- a wedge a click focuses, a pad's step onto one -- so
+	// Close gives it back. The ring itself stands in for the opener: nothing opened it that focus belongs on, and
+	// as the root being closed it is never where focus is put back. Not again for a ring already open: what it
+	// would note now is focus on its own wedges.
+	if (!bOpen || !FocusReturn.IsCaptured())
+	{
+		FocusReturn.Capture(RingNode);
+	}
 	bOpen = true;
 	// Whatever a Close left running, before anything else: the two write the same two properties in
 	// opposite directions, and a close still fading would otherwise keep pulling the ring back down
@@ -991,6 +999,17 @@ void UDreamRingMenu::Close()
 	if (!IsValid(RingNode))
 	{
 		return;
+	}
+	// Focus first, before anything is hidden: a wedge a click focused kept it through the whole fade, and
+	// the sleep at its end cleared it, leaving the player's focus nowhere. A ring closed without having been
+	// opened -- one that starts open -- has nothing noted, and moves focus off its wedges all the same.
+	if (FocusReturn.IsCaptured())
+	{
+		FocusReturn.Return(RingNode);
+	}
+	else
+	{
+		FDreamFocusReturn::MoveFocusOutOf(RingNode, nullptr);
 	}
 	bOpen = false;
 	// Before the fade, not after: a menu on its way out must stop answering the pointer at once, or

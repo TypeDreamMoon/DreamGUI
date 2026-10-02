@@ -5,6 +5,7 @@
 #include "Misc/AutomationTest.h"
 
 #include "Core/Components/DreamWidget.h"
+#include "Core/DreamUIInputServices.h"
 #include "Interaction/DreamUINavigationScope.h"
 #include "Interaction/DreamUINavigationStack.h"
 #include "Interaction/UISelectable.h"
@@ -228,6 +229,54 @@ bool FDreamNavigationScopeCoverageNotificationTest::RunTest(const FString& Param
 	Dialog->DeactivateScope();
 	TestNull(TEXT("...and nothing comes back, because nothing is left"), Stack->GetActiveScope(0));
 	TestFalse(TEXT("...with no scope claiming to be active"), Page->IsScopeActive());
+
+	Root->DestroyWidget();
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamNavigationScopeFocusNotTakenBackTest,
+	"DreamGUI.Navigation.Scope.ClosingAScreenGivesFocusBackButNeverTakesItBack",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * Closing the screen in front gives focus back to the one underneath -- to a player whose focus is in
+ * the closing screen. It used to do it unconditionally: a player who had moved focus somewhere else
+ * while the dialog was up had it taken back to the page the moment the dialog closed.
+ */
+bool FDreamNavigationScopeFocusNotTakenBackTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamNavigationScopeTestLocal;
+	FScopedGameWorld TestWorld;
+	UDreamUIInputServices* Services = UDreamUIInputServices::Get(TestWorld.World);
+	if (!TestNotNull(TEXT("The world has input"), Services))
+	{
+		return false;
+	}
+	UDreamWidget* Root = MakeWidget(TestWorld.World, nullptr, TEXT("Root"), 0.0f, 0.0f, 800.0f, 600.0f);
+	UDreamWidget* PageWidget = MakeWidget(TestWorld.World, Root, TEXT("Page"), -200.0f, 0.0f, 300.0f, 300.0f);
+	UDreamWidget* DialogWidget = MakeWidget(TestWorld.World, Root, TEXT("Dialog"), 200.0f, 0.0f, 300.0f, 300.0f);
+	UDreamUINavigationScope* Page = MakeScope(PageWidget);
+	UDreamUINavigationScope* Dialog = MakeScope(DialogWidget);
+	UUISelectable* OnPage = MakeWidget(TestWorld.World, PageWidget, TEXT("OnPage"), 0.0f, 0.0f, 80.0f, 40.0f)->AddComponent<UUISelectable>();
+	UUISelectable* OnDialog = MakeWidget(TestWorld.World, DialogWidget, TEXT("OnDialog"), 0.0f, 0.0f, 80.0f, 40.0f)->AddComponent<UUISelectable>();
+	UUISelectable* Elsewhere = MakeWidget(TestWorld.World, Root, TEXT("Elsewhere"), 0.0f, -250.0f, 80.0f, 40.0f)->AddComponent<UUISelectable>();
+
+	Page->ActivateScope();
+	TestEqual(TEXT("The page took focus"), Services->GetFocusedWidget(0), OnPage->GetWidget());
+	Dialog->ActivateScope();
+	TestEqual(TEXT("The dialog in front of it took focus"), Services->GetFocusedWidget(0), OnDialog->GetWidget());
+
+	// The player moves on while the dialog is up.
+	TestTrue(TEXT("Focus can be moved elsewhere"), Services->FocusForNavigation(Elsewhere->GetWidget(), 0));
+	Dialog->DeactivateScope();
+	TestEqual(TEXT("Closing the dialog leaves focus where the player put it"), Services->GetFocusedWidget(0), Elsewhere->GetWidget());
+
+	// Focus still in the dialog when it closes is what the page underneath gets back.
+	Dialog->ActivateScope();
+	TestEqual(TEXT("The dialog took focus again"), Services->GetFocusedWidget(0), OnDialog->GetWidget());
+	Dialog->DeactivateScope();
+	TestEqual(TEXT("Closing it with focus inside gives the page its focus back"), Services->GetFocusedWidget(0), OnPage->GetWidget());
 
 	Root->DestroyWidget();
 	return true;

@@ -4,6 +4,8 @@
 
 #include "CoreMinimal.h"
 #include "Controls/DreamUIControl.h"
+#include "Interaction/DreamUIFocusReturn.h"
+#include "Interaction/DreamUIPopupLayer.h"
 #include "DreamMenuAnchor.generated.h"
 
 class UDreamWidget;
@@ -22,12 +24,11 @@ DECLARE_DYNAMIC_DELEGATE_RetVal(UDreamWidget*, FDreamMenuAnchorGetContent);
 /**
  * A place a menu opens from, and the thing that puts it away again.
  *
- * UMG's MenuAnchor in the DreamGUI idiom. The parts a menu needs were all here already and had never
- * been assembled: UDreamUIPopupLayer lifts a widget to the screen root so no ancestor clips it or
- * counts it in its layout, and UUIDropdown's blocker is the full-screen click catcher that closes a
- * popup when the pointer lands anywhere else. UDreamDropdown owns a private copy of exactly this
- * arrangement; this class is that arrangement with the dropdown's list taken out of it, so a menu
- * can hold anything.
+ * UMG's MenuAnchor in the DreamGUI idiom. The menu is a popup on UDreamUIPopupLayer's per-player
+ * stack, as the dropdown's list is: lifted to the screen root so no ancestor clips it or counts it in
+ * its layout, closed by a press anywhere else (bCloseOnClickOutside), by Back, and by this anchor
+ * going away or out of sight; and a menu opened from inside an open menu is its child, closed with
+ * it. Focus that went into the menu comes back to whatever had it when it opened.
  *
  * TWO WAYS TO SAY WHAT THE MENU IS, and they are alternatives:
  *
@@ -170,8 +171,8 @@ public:
 	bool GetCloseOnClickOutside() const { return bCloseOnClickOutside; }
 
 	/**
-	 * Adds or takes away the full-screen blocker WHILE the menu is open, rather than only deciding
-	 * what the next open does -- a menu that became modal only on its second showing would be a
+	 * Decides what a click elsewhere does WHILE the menu is open, rather than only what the next open
+	 * does -- a menu that started closing on outside clicks only on its second showing would be a
 	 * switch that appears not to work.
 	 */
 	UFUNCTION(BlueprintCallable, Category = "Menu Anchor")
@@ -225,7 +226,11 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Menu Anchor")
 	void Open(bool bFocusMenu = false);
 
-	/** Take it off screen and hand it home. A no-op while it is already closed. */
+	/**
+	 * Take it off screen and hand it home: any menu opened from inside it first, then every player's
+	 * focus that was in it back where it was when the menu opened -- unless the player has moved it
+	 * elsewhere meanwhile. A no-op while it is already closed.
+	 */
 	UFUNCTION(BlueprintCallable, Category = "Menu Anchor")
 	void Close();
 
@@ -249,40 +254,67 @@ protected:
 	virtual void CollectParts(TArray<FDreamControlPart>& OutParts) override;
 	virtual void RealizeBuiltIn() override;
 	virtual void WireParts() override;
+	/** Closing on the way to sleep, as a hidden SMenuAnchor closes its menu: a lifted popup does not go to sleep with its anchor. */
+	virtual void NativeOnDisable() override;
 	/** Closing on the way out, so an anchor destroyed while open does not strand a lifted popup. */
 	virtual void NativeOnDestruct() override;
 
 private:
 	/**
-	 * Point-anchor the popup against this control's rect, per Placement and Offset.
+	 * Where the popup goes against this control's rect, per Placement and Offset, in the placement
+	 * function's frame: OutTopLeft from the control's top-left corner, y down, and OutSize.
 	 *
 	 * The position itself comes from UDreamLayoutContainerMenuAnchor::CalculateMenuPosition -- the
 	 * layout panel's arithmetic, used rather than repeated, so a menu lands in the same place whether
-	 * the panel or this control opened it. This function's own job is the frame change (that one
-	 * answers in top-left space with y down; widgets here are y-up) and the style's gap.
+	 * the panel or this control opened it. This function's own job is the style's gap and the fit.
+	 */
+	void ComputePlacement(const FDreamMenuAnchorStyle& InStyle, FVector2D& OutTopLeft, FVector2D& OutSize) const;
+
+	/**
+	 * Point-anchor the popup against this control's rect, per ComputePlacement: the resting scheme,
+	 * and where a menu that is not lifted opens. The frame change is this function's own (that one
+	 * answers in top-left space with y down; widgets here are y-up).
 	 */
 	void PlacePopup(const FDreamMenuAnchorStyle& InStyle);
+
+	/**
+	 * The open popup's placement on the popup layer (FDreamPopupParams::Place), run as it goes up and
+	 * after every frame's layout: ComputePlacement carried into the plane it was lifted to. So the menu
+	 * follows an anchor that moves, and a placement, size or fit changed while it is open moves it.
+	 */
+	void PlaceLiftedPopup(UDreamWidget* InPopup);
+
+	/** Place the popup the way it is now: on the layer, or in place. */
+	void RefreshOpenPlacement();
 
 	/** Which way the style's Offset widens the gap, in the placement function's y-down space. */
 	static FVector2D ResolveOffsetDirection(EDreamMenuPlacement InPlacement);
 
-	/** The full-screen click catcher, built on open and destroyed on close. */
-	void CreateBlocker();
-	void DestroyBlocker();
-
 	/** Make the MenuClass instance, once, when the slot is empty and there is a world to make it in. */
 	void EnsureMenuInstance();
 
-	/** Give focus to the first navigable thing in the open menu, if there is one. */
+	/** Give focus to the first navigable thing in a menu opened in place, if there is one. */
 	void FocusMenuContent();
+
+	/** The first navigable thing in the menu, or null. */
+	UDreamWidget* FindFirstMenuControl();
+
+	/**
+	 * The popup layer closed the menu: a press elsewhere, Back, the menu it was opened from closing, a
+	 * menu opened in its place, the anchor lost. Close's own dismissal finds it closed already.
+	 */
+	void HandleMenuDismissed(UDreamWidget* InPopup, EDreamPopupDismissReason InReason);
+
+	/** Asleep, home in its resting place, and the close announced: the end of every close. */
+	void FinishClose();
 
 	UPROPERTY(Transient)
 	bool bIsOpen = false;
 
-	/** Set between Elevate and Restore; the popup's resting geometry must not be written while it is. */
+	/** Set while the popup is up on the popup layer; the popup's resting geometry must not be written while it is. */
 	UPROPERTY(Transient)
 	bool bPopupElevated = false;
 
-	UPROPERTY(Transient)
-	TObjectPtr<UDreamWidget> BlockerNode = nullptr;
+	/** Every player's focus when a menu the popup layer could not take opened; the layer keeps its own. */
+	FDreamFocusReturn FallbackFocusReturn;
 };

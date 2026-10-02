@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Controls/DreamUIControl.h"
+#include "Interaction/DreamUIFocusReturn.h"
 #include "DreamRingMenu.generated.h"
 
 class UDreamRingSectorRaycast;
@@ -481,11 +482,14 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Ring Menu")
 	void RebuildItems();
 
-	/** Show the ring, scaling and fading it in when there is a world to tween in. */
+	/** Show the ring, scaling and fading it in when there is a world to tween in. Every player's focus is noted first. */
 	UFUNCTION(BlueprintCallable, Category = "Ring Menu")
 	void Open();
 
-	/** Hide it, clearing the highlight on the way out. */
+	/**
+	 * Hide it, clearing the highlight on the way out. A player whose focus is on a wedge -- or went nowhere
+	 * from the ring -- gets back what they had focused when it opened, before the fade starts.
+	 */
 	UFUNCTION(BlueprintCallable, Category = "Ring Menu")
 	void Close();
 
@@ -566,4 +570,7 @@ private:
 	 */
 	TWeakObjectPtr<UDreamTweener> OpenFadeTweener;
 	TWeakObjectPtr<UDreamTweener> OpenScaleTweener;
+
+	/** Every player's focus when the ring last opened, given back by Close. */
+	FDreamFocusReturn FocusReturn;
 };

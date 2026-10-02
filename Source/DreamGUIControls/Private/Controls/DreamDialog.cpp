@@ -6,6 +6,7 @@
 
 #include "Controls/DreamButton.h"
 #include "Core/DreamUIBuilder.h"
+#include "Core/DreamUIInputServices.h"
 #include "Core/DreamWidgetTree.h"
 #include "Core/Components/DreamPanelLayouts.h"
 #include "Core/Components/DreamPanelSlot.h"
@@ -13,11 +14,12 @@
 #include "Core/Components/DreamText.h"
 #include "Core/Components/DreamVisual.h"
 #include "Core/Components/DreamWidget.h"
-#include "Event/DreamEventSystem.h"
+#include "Event/DreamPointerEventData.h"
 #include "Interaction/DreamContentWidget.h"
 #include "Interaction/DreamUIModal.h"
 #include "Interaction/UIButton.h"
 #include "Interaction/UIEventBlocker.h"
+#include "Interaction/UIEventTrigger.h"
 
 #define LOCTEXT_NAMESPACE "DreamDialog"
 
@@ -185,7 +187,13 @@ void UDreamDialog::NativeOnConstruct()
 void UDreamDialog::NativeOnEnable()
 {
 	Super::NativeOnEnable();
-	if (bFocusDefaultButton)
+	// A navigation scope pushed in front of the screen puts focus in the dialog, and notes as it is pushed what had
+	// focus before the dialog appeared, to give it back when the dialog closes: this dialog's own (BackScope, on a
+	// widget below this one, so pushed right after this), which is told the default and lands on it; or the modal
+	// host's, which the host pushes once the dialog is built. Focusing the default here first had the scope note the
+	// default, and closing the dialog then had nothing outside it to give focus back to.
+	const bool bScopeTakesFocus = BackScope != nullptr || GetComponentInParent<UUIEventBlocker>(false) != nullptr;
+	if (bFocusDefaultButton && !bScopeTakesFocus)
 	{
 		// When the dialog APPEARS, which is enable and not construct: construct runs once, at begin
 		// play, whether or not the dialog is showing. A dialog placed asleep, to be woken when there is
@@ -246,73 +254,73 @@ void UDreamDialog::RefreshDimmer()
 	if (DimmerNode != nullptr)
 	{
 		DimmerNode->SetWidgetActive(bDimmerUp);
+		// A click surface ON the scrim, which is what "click outside to dismiss" is: the blocker already
+		// eats the click, and this is what makes eating it MEAN something. Not a selectable: a press on a
+		// selectable takes focus, and a scrim that took it and then closed the dialog under itself left
+		// the player's focus nowhere -- a press on a bare surface lets go of focus instead, which the
+		// dialog's scope gives back when it closes. Nor anything a pad can land on.
+		UUIEventTrigger* DimmerClick = DimmerNode->GetComponent<UUIEventTrigger>();
 		if (bCloseOnDimmerClick && bDimmerUp)
 		{
-			// A button ON the scrim, which is what "click outside to dismiss" is: the blocker already
-			// eats the click, and this is what makes eating it MEAN something. Added on demand rather
-			// than in the built-in tree, so a dialog that does not offer the gesture carries no
-			// selectable it never uses -- and so the scrim is not quietly navigable furniture.
-			DimmerBehaviour = EnsureComponent<UUIButton>(DimmerNode);
-			if (DimmerBehaviour != nullptr)
+			// Added on demand rather than in the built-in tree, so a dialog that does not offer the
+			// gesture carries no click surface it never uses.
+			if (DimmerClick == nullptr)
 			{
-				// FIVE states, one colour -- the scrim's own. A selectable always tints its target
-				// (and re-points that target at its widget's own visual on register, so simply
-				// leaving it null would not hold), so the way to make a scrim not react to the
-				// pointer is to give it nothing to react WITH. Zero duration for the same reason:
-				// there is no transition to watch.
-				const FDreamDialogStyle& DimmerStyle = ResolveStyle(Style, &UDreamUIStyleSheet::DialogStyle);
-				PushSelectableState(DimmerBehaviour, DimmerStyle.DimmerColor, DimmerStyle.DimmerColor,
-					DimmerStyle.DimmerColor, DimmerStyle.DimmerColor, DimmerStyle.DimmerColor, 0.0f);
-				// And not a place focus can land: a scrim is not furniture a gamepad should reach.
-				DimmerBehaviour->SetCanNavigateHere(false);
+				DimmerClick = EnsureComponent<UUIEventTrigger>(DimmerNode);
+			}
+			if (DimmerClick != nullptr)
+			{
 				// Cleared first: RefreshDimmer runs on every style push, and an unguarded Add would
 				// bind the same handler again on each of them.
-				DimmerBehaviour->GetOnClickEvent().RemoveAll(this);
-				DimmerBehaviour->GetOnClickEvent().AddUObject(this, &UDreamDialog::HandleDimmerClicked);
+				DimmerClick->GetOnPointerClickEvent().RemoveAll(this);
+				DimmerClick->GetOnPointerClickEvent().AddWeakLambda(this, [this](UDreamPointerEventData*)
+				{
+					HandleDimmerClicked();
+				});
 			}
 		}
-		else if (DimmerBehaviour != nullptr)
+		else if (DimmerClick != nullptr)
 		{
 			// Turned off again: the binding goes rather than the component, because destroying a
 			// behaviour mid-style-push is a lifecycle event for the sake of a flag.
-			DimmerBehaviour->GetOnClickEvent().RemoveAll(this);
+			DimmerClick->GetOnPointerClickEvent().RemoveAll(this);
 		}
 	}
 
-	// The Back handler is the STANDALONE arrangement's, for the reason UDreamDialogScope states: the
-	// modal layer above a hosted dialog already answers Back, with the result its own header
-	// promises. Decided here because this is the one place that knows which arrangement we are in.
-	const bool bWantsBackScope = bCloseOnBack && !bHostAlreadyScrims;
-	if (bWantsBackScope)
+	// The scope is the STANDALONE arrangement's: under the modal subsystem the layer wears its own. It
+	// takes focus when the dialog appears and gives back, when it closes, what had focus before -- a
+	// page with no scope of its own included -- so every standalone dialog wears one. Back is a
+	// separate question: the scope answers it only while bCloseOnBack asks, for the reason
+	// UDreamDialogScope states -- the modal layer above a hosted dialog already answers Back, with the
+	// result its own header promises. Decided here because this is the one place that knows which
+	// arrangement we are in.
+	if (!bHostAlreadyScrims && BackScope == nullptr)
 	{
-		if (BackScope == nullptr)
-		{
-			BackScope = EnsureComponent<UDreamDialogScope>(GetContentRoot());
-			if (BackScope != nullptr)
-			{
-				// The scope's own close behaviour must not ALSO run: this dialog answers Back itself and
-				// returns true, and a scope that then closed something else would be two answers to one
-				// press.
-				BackScope->SetCloseOnBack(false);
-			}
-		}
+		BackScope = EnsureComponent<UDreamDialogScope>(GetContentRoot());
 		if (BackScope != nullptr)
 		{
-			// Every time Back is wanted, not only when the scope is first made: turning the knob off
-			// releases the scope by clearing this, and a scope that already existed when the knob came
-			// back on stayed released -- Back passed to the screen underneath for good.
-			BackScope->OwnerDialog = this;
+			// The scope's own close behaviour must not ALSO run: this dialog answers Back itself and
+			// returns true, and a scope that then closed something else would be two answers to one
+			// press.
+			BackScope->SetCloseOnBack(false);
 		}
 	}
-	else if (BackScope != nullptr)
+	if (BackScope != nullptr)
 	{
-		BackScope->OwnerDialog = nullptr;
+		// Every time, not only when the scope is first made: turning the knob off releases the scope by
+		// clearing this, and a scope that already existed when the knob came back on stayed released --
+		// Back passed to the screen underneath for good.
+		const bool bWantsBack = bCloseOnBack && !bHostAlreadyScrims;
+		BackScope->OwnerDialog = bWantsBack ? this : nullptr;
+		// Keeping the pad in, as it always did for a dialog that closes on Back; one that does not keeps
+		// the free navigation it had before it wore a scope at all.
+		BackScope->SetConfineNavigation(bWantsBack);
 	}
 	if (BackScope != nullptr)
 	{
 		// The scope puts focus somewhere each time it is pushed, which is each time the dialog appears --
-		// after the dialog's own enable has focused the default, because the scope sits on a widget below
-		// it. With nothing to go on it takes the first control in reading order, the cancel button, so
+		// it, and not the dialog's own enable, so that the push notes the focus from before the dialog.
+		// With nothing to go on it takes the first control in reading order, the cancel button, so
 		// focus ended there whatever bFocusDefaultButton said. Told the default, the scope agrees with it,
 		// and moves the pad's navigation onto it as well.
 		UDreamButton* Default = bFocusDefaultButton ? GetDefaultButton() : nullptr;
@@ -519,10 +527,12 @@ void UDreamDialog::FocusDefaultButton()
 		// without buttons has nothing to focus and says so by doing nothing.
 		return;
 	}
-	// The player this dialog belongs to: a second player's dialog must not take the first player's focus.
-	if (UDreamEventSystem* Events = UDreamEventSystem::GetDreamEventSystemInstance(this, GetOwningPlayerIndex()))
+	// The player this dialog belongs to: a second player's dialog must not take the first player's focus. And
+	// the navigation cursor with it, so the next stick press starts from the default rather than from wherever
+	// the cursor was left behind the dialog.
+	if (UDreamUIInputServices* Services = UDreamUIInputServices::Get(this))
 	{
-		Events->SetSelectComponentWithDefault(Target);
+		Services->FocusForNavigation(Target, GetOwningPlayerIndex());
 	}
 }
 
@@ -567,7 +577,13 @@ void UDreamDialog::Close(FName InResult)
 		Modal->CloseTopModal(InResult);
 		return;
 	}
-	// Standalone: back to the state a .dui-placed dialog waits in between questions.
+	// Standalone: focus back first, while the dialog is still up -- its scope gives back what had focus
+	// before it appeared, to every player whose focus is in it -- then back to the state a .dui-placed
+	// dialog waits in between questions. Going to sleep pops the scope too, which then finds it popped.
+	if (BackScope != nullptr)
+	{
+		BackScope->DeactivateScope();
+	}
 	SetWidgetActive(false);
 }
 

@@ -18,6 +18,8 @@
 #include "Interaction/DreamUINavigationScroll.h"
 #include "Interaction/DreamUINavigationScope.h"
 #include "Interaction/DreamUINavigationStack.h"
+#include "Interaction/DreamUITooltip.h"
+#include "Core/DreamUIInputServices.h"
 #include "GameFramework/ForceFeedbackEffect.h"
 #include "GameFramework/PlayerController.h"
 #include "Kismet/GameplayStatics.h"
@@ -32,6 +34,29 @@ namespace
 		if (IsValid(InSound) && IsValid(World) && World->IsGameWorld())
 		{
 			UGameplayStatics::PlaySound2D(World, InSound);
+		}
+	}
+}
+
+namespace DreamUISelectableDefaultLocal
+{
+	/** Every player's tooltip bubble showing in InWorld -- the holder everything a tooltip draws hangs off. */
+	void GatherTooltipBubbles(const UWorld* InWorld, TArray<const UDreamWidget*, TInlineAllocator<2>>& OutBubbles)
+	{
+		const UDreamUITooltipSubsystem* Tooltips = UDreamUITooltipSubsystem::Get(InWorld);
+		const UDreamUIInputServices* Services = InWorld != nullptr ? UDreamUIInputServices::Get(InWorld) : nullptr;
+		if (Tooltips == nullptr || Services == nullptr)
+		{
+			return;
+		}
+		TArray<int32> UserIndices;
+		Services->GetUserIndices(UserIndices);
+		for (const int32 UserIndex : UserIndices)
+		{
+			if (const UDreamWidget* Bubble = Tooltips->GetBubbleForUser(UserIndex); IsValid(Bubble))
+			{
+				OutBubbles.Add(Bubble);
+			}
 		}
 	}
 }
@@ -871,12 +896,13 @@ UDreamUIBehaviour* UUISelectable::FindNavigableIn(FVector InDirection, UDreamWid
 	// A screen that confines navigation is a harder boundary than whatever the caller asked for: while
 	// a dialog is on top, no directional move may land on the page behind it, wherever that page sits
 	// in the hierarchy. Applied here rather than one level up so it also holds for the Escape boundary
-	// rule, which would otherwise be a way out of a screen that said nothing may leave.
+	// rule, which would otherwise be a way out of a screen that said nothing may leave. An open popup
+	// holding this control -- a dropdown's list, a menu -- confines the same way, ahead of any screen.
 	if (auto Stack = UDreamUINavigationStack::Get(this))
 	{
-		if (auto Scope = Stack->FindConfiningScopeFor(GetWidget()))
+		if (UDreamWidget* Confining = Stack->FindConfiningWidgetFor(GetWidget()))
 		{
-			InParent = Scope->GetWidget();
+			InParent = Confining;
 		}
 	}
 	const UDreamWidget* RestrictNavNode = nullptr;
@@ -951,8 +977,25 @@ UUISelectable* UUISelectable::FindDefaultSelectableIn(UObject* WorldContextObjec
 		const UDreamWidget* Widget = Item->GetWidget();
 		return IsValid(Widget) && (Widget == InParent || Widget->IsChildOf(InParent));
 	};
+	// A tooltip never takes focus, and neither does anything a custom tooltip shows: a pad's first step with nothing
+	// focused used to land on a button inside the bubble the pointer had just raised.
+	UWorld* World = WorldContextObject != nullptr ? WorldContextObject->GetWorld() : nullptr;
+	TArray<const UDreamWidget*, TInlineAllocator<2>> TooltipBubbles;
+	DreamUISelectableDefaultLocal::GatherTooltipBubbles(World, TooltipBubbles);
+	auto IsInTooltip = [&TooltipBubbles](const UUISelectable* Item)
+	{
+		const UDreamWidget* Widget = Item->GetWidget();
+		for (const UDreamWidget* Bubble : TooltipBubbles)
+		{
+			if (IsValid(Widget) && (Widget == Bubble || Widget->IsChildOf(Bubble)))
+			{
+				return true;
+			}
+		}
+		return false;
+	};
 
-	if (auto DreamUIManager = UDreamUIManagerWorldSubsystem::GetInstance(WorldContextObject->GetWorld()))
+	if (auto DreamUIManager = UDreamUIManagerWorldSubsystem::GetInstance(World))
 	{
 		const auto& SelectableArray = DreamUIManager->GetAllSelectableArray();
 		if (SelectableArray.Num() > 0)
@@ -963,7 +1006,7 @@ UUISelectable* UUISelectable::FindDefaultSelectableIn(UObject* WorldContextObjec
 				// The manager's registry holds behaviours; every entry this class adds is a selectable.
 				UUISelectable* SelectableItem = Cast<UUISelectable>(SelectableArray[i].Get());
 				if (SelectableItem != nullptr && SelectableItem->IsInteractable() && SelectableItem->GetCanNavigateHere()
-					&& IsInsideParent(SelectableItem))
+					&& IsInsideParent(SelectableItem) && !IsInTooltip(SelectableItem))
 				{
 					Selectable = SelectableItem;//find a interactable one
 					break;
@@ -987,6 +1030,7 @@ UUISelectable* UUISelectable::FindDefaultSelectableIn(UObject* WorldContextObjec
 						|| PrevSelectable == Selectable
 						|| FoundSelectables.Contains(PrevSelectable)//incase cycle loop, eg: A is left and B is top, A's top return B, and B's left return A
 						|| !IsInsideParent(PrevSelectable)//the walk must not stroll out of the area we were asked about
+						|| IsInTooltip(PrevSelectable)//nor into a tooltip, which it may sit right next to
 						)
 					{
 						break;

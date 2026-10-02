@@ -37,12 +37,16 @@ public:
 	/**
 	 * Push InScope to the top of its player's stack. The scope losing the top spot is asked to
 	 * remember where focus was first, then focus moves to wherever the new scope wants it.
-	 * Pushing an already-active scope re-raises it rather than stacking a second copy.
+	 * Pushing an already-active scope re-raises it rather than stacking a second copy. A scope that was
+	 * not already in front also records the player's focus as it was, for PopScope to give back.
 	 */
 	void PushScope(UDreamUINavigationScope* InScope);
 	/**
-	 * Remove InScope. When it was the top, focus is restored from whatever is now on top; popping one
-	 * buried in the middle just removes it, since focus was never with it.
+	 * Remove InScope. When it was the top, focus comes back -- to what the scope now on top asks for,
+	 * else to what had it when InScope was pushed -- but only for a player whose focus is inside InScope,
+	 * or gone nowhere although they had some at the push: focus the player moved elsewhere meanwhile is
+	 * theirs, and is never taken back. Popping one buried in the middle just removes it, since focus was
+	 * never with it.
 	 */
 	void PopScope(UDreamUINavigationScope* InScope);
 
@@ -59,14 +63,23 @@ public:
 	 * players' scopes contain different widgets anyway, so containment settles it.
 	 */
 	UDreamUINavigationScope* FindConfiningScopeFor(const UDreamWidget* InWidget, int32 InUserIndex = INDEX_NONE)const;
+	/**
+	 * What directional navigation from InWidget is kept inside: the deepest popup open on the popup
+	 * layer (UDreamUIPopupLayer) that is InWidget or holds it -- a dropdown's list, a menu, which keep
+	 * the pad in as SComboBox's gamepad mode does, and which are lifted out of every scope's subtree --
+	 * else the widget of the scope FindConfiningScopeFor answers; null when navigation is free.
+	 */
+	UDreamWidget* FindConfiningWidgetFor(const UDreamWidget* InWidget, int32 InUserIndex = INDEX_NONE)const;
 
 	/** InUserIndex's open screens, topmost first. */
 	void GetScopeStack(int32 InUserIndex, TArray<UDreamUINavigationScope*>& OutScopes)const;
 
 	/**
 	 * Send Back down InUserIndex's stack. A field being edited swallows it first -- cancelling the edit
-	 * is what the player means, not closing the screen out from under them. Then each screen from the
-	 * top down is offered it, and closes if it neither handled it nor opted out of closing.
+	 * is what the player means, not closing the screen out from under them. Then the player's top open
+	 * popup, if there is one, closes and takes it (UDreamUIPopupLayer::HandleBack): a dropdown's list
+	 * inside a dialog closes, not the dialog. Then each screen from the top down is offered it, and
+	 * closes if it neither handled it nor opted out of closing.
 	 * @return true when something took it.
 	 */
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Navigation")
@@ -78,7 +91,8 @@ public:
 	 * Put focus on InSelectable: both the event system's selection, which is what a control reads to
 	 * draw itself focused, and the navigation cursor, which is where the next directional move starts
 	 * from. Setting only one of them is the bug this exists to prevent -- the highlight and the next
-	 * move would then disagree about where the player is.
+	 * move would then disagree about where the player is. Through UDreamUIInputServices::FocusForNavigation,
+	 * so a selectable that cannot take focus now (hidden, disabled, not navigable) is refused: false.
 	 */
 	static bool FocusSelectable(const UObject* WorldContextObject, int32 InUserIndex, UUISelectable* InSelectable);
 
@@ -91,6 +105,6 @@ private:
 
 	/** Drop entries whose scope has been destroyed; they would otherwise sit on top forever. */
 	void RemoveStaleScopes();
-	/** Focus whatever the top scope for InUserIndex asks for. No-op when that stack is empty. */
-	void RestoreFocusForTopScope(int32 InUserIndex);
+	/** PopScope's focus, for the top scope InPopped that has just come off its player's stack. See PopScope. */
+	void RestoreFocusAfterPop(UDreamUINavigationScope* InPopped);
 };

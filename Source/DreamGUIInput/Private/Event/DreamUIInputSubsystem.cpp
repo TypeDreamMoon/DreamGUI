@@ -29,6 +29,7 @@
 #include "Interaction/DreamUIActionRouter.h"
 #include "Interaction/DreamUIDragDrop.h"
 #include "Interaction/DreamUINavigationScope.h"
+#include "Interaction/DreamUINavigationStack.h"
 #include "Interaction/DreamUITextInputTarget.h"
 #include "Interaction/UISelectable.h"
 #include "Utils/DreamUIUtils.h"
@@ -479,6 +480,119 @@ UDreamEventSystem* UDreamUIInputSubsystem::GetOrCreateImplicitEventSystem(int32 
 #pragma endregion
 
 #pragma region FocusHoverCapture
+namespace DreamUIInputSubsystemFocusLocal
+{
+	/** The pointer whose highlight is the navigation cursor: navigation is single-pointer, on the mouse's pointer. */
+	constexpr int32 NavigationPointerID = 0;
+
+	/**
+	 * Whether focus may be put on InWidget the way a directional move puts it: registered with its world along its whole
+	 * parent chain, active, drawn and interactable, and when it carries a selectable, that selectable interactable and
+	 * navigable.
+	 *
+	 * Active and drawn are read from each widget's own switches up the chain, and not only from the hierarchy caches: a
+	 * screen's navigation scope focuses its target from inside the walk that wakes the screen (bActivateWhenEnabled, the
+	 * screen shown by an ancestor), when the caches of everything below the scope -- and every drawn cache, which a second
+	 * walk settles after the first -- still say asleep. The switches are set before either walk starts, so they already
+	 * say what the walks settle on, whichever way they go. Where the active cache already says awake -- a settled screen
+	 * -- the drawn cache is asked too, since only it knows a page a switcher keeps out of its layout. That also refuses a
+	 * widget the waking walk has passed and the second walk has not reached yet; a scope focuses below itself, where the
+	 * walk has not been.
+	 *
+	 * Registered rather than in play, for the same kind of reason: a new screen's scope focuses from its own begin play,
+	 * which runs parents first, before the controls under it have begun theirs. A widget being torn down is registered
+	 * still while it ends play; the focus-return paths, which may be handed one, ask for play themselves
+	 * (FDreamFocusReturn, UDreamUINavigationStack::PopScope).
+	 */
+	bool IsUsableForNavigationFocus(const UDreamWidget* InWidget)
+	{
+		if (!IsValid(InWidget))
+		{
+			return false;
+		}
+		for (const UDreamWidget* Walker = InWidget; Walker != nullptr; Walker = Walker->GetParent())
+		{
+			if (!IsValid(Walker) || !Walker->HasRegistered() || !Walker->GetWidgetActive() || Walker->IsParked())
+			{
+				return false;
+			}
+			const EDreamWidgetVisibility Visibility = Walker->GetVisibility();
+			if (Visibility == EDreamWidgetVisibility::Hidden || Visibility == EDreamWidgetVisibility::Collapsed)
+			{
+				return false;
+			}
+		}
+		if (InWidget->GetWidgetActiveInHierarchy() && !InWidget->GetRenderVisibleInHierarchy())
+		{
+			return false;
+		}
+		// The interactable walk does not follow activity, so its cache is settled whatever is waking.
+		if (!InWidget->GetInteractableInHierarchy())
+		{
+			return false;
+		}
+		if (const UUISelectable* Selectable = InWidget->GetComponent<UUISelectable>())
+		{
+			// The selectable's own switch: its IsInteractable reads the drawn cache, which is what this function reads
+			// around.
+			return Selectable->GetInteractable() && Selectable->GetCanNavigateHere();
+		}
+		return true;
+	}
+}
+
+void UDreamUIInputSubsystem::GetUserIndices(TArray<int32>& OutUserIndices) const
+{
+	OutUserIndices.Reset();
+	for (const TPair<int32, TObjectPtr<UDreamUIInputUser>>& Entry : Users)
+	{
+		const UDreamUIInputUser* User = Entry.Value.Get();
+		if (IsValid(User) && !User->IsShutDown())
+		{
+			OutUserIndices.Add(Entry.Key);
+		}
+	}
+	OutUserIndices.Sort();
+}
+
+UDreamWidget* UDreamUIInputSubsystem::GetFocusedWidget(int32 InUserIndex) const
+{
+	const UDreamUIInputUser* User = GetUser(InUserIndex);
+	return User != nullptr ? User->GetFocusedWidget() : nullptr;
+}
+
+bool UDreamUIInputSubsystem::FocusForNavigation(UDreamWidget* InWidget, int32 InUserIndex)
+{
+	using namespace DreamUIInputSubsystemFocusLocal;
+	if (!IsUsableForNavigationFocus(InWidget))
+	{
+		return false;
+	}
+	UDreamUIInputUser* User = GetOrCreateUser(InUserIndex);
+	if (User == nullptr || User->IsShutDown())
+	{
+		return false;
+	}
+	UDreamPointerEventData* Navigation = User->GetPointerEventData(NavigationPointerID, true);
+	if (Navigation == nullptr)
+	{
+		return false;
+	}
+	// The cursor before the selection: a select handler that moves focus on again moves the cursor with it, and the two
+	// agree wherever that ends -- written after, the cursor would be left here with the focus somewhere else.
+	Navigation->SetHighlightedWidgetForNavigation(InWidget);
+	User->SetSelectWidget(InWidget, Navigation);
+	return User->GetFocusedWidget() == InWidget;
+}
+
+UDreamWidget* UDreamUIInputSubsystem::ResolveScopeFocusTarget(int32 InUserIndex) const
+{
+	const UDreamUINavigationStack* Stack = UDreamUINavigationStack::Get(this);
+	const UDreamUINavigationScope* Scope = Stack != nullptr ? Stack->GetActiveScope(InUserIndex) : nullptr;
+	const UUISelectable* Target = Scope != nullptr ? Scope->ResolveFocusTarget() : nullptr;
+	return Target != nullptr ? Target->GetWidget() : nullptr;
+}
+
 bool UDreamUIInputSubsystem::SetFocus(UDreamWidget* InWidget, int32 InUserIndex, int32 InPointerId)
 {
 	UDreamUIInputUser* User = GetUser(InUserIndex);
@@ -512,6 +626,15 @@ void UDreamUIInputSubsystem::ClearFocus(UDreamWidget* InWidget, int32 InUserInde
 		return;
 	}
 	User->SetSelectWidget(nullptr, User->GetPointerEventData(InPointerId, true));
+	// The cursor goes with the focus it marked. Left behind on a widget that was just hidden, the next directional move
+	// started from it and the next confirm -- which asks the cursor first -- pressed whatever navigation made of it.
+	if (UDreamPointerEventData* Navigation = User->FindPointerEventData(DreamUIInputSubsystemFocusLocal::NavigationPointerID))
+	{
+		if (Navigation->HighlightWidgetForNavigation.Get() == InWidget)
+		{
+			Navigation->HighlightWidgetForNavigation = nullptr;
+		}
+	}
 }
 
 bool UDreamUIInputSubsystem::HasFocusedDescendant(const UDreamWidget* InWidget, int32 InUserIndex) const

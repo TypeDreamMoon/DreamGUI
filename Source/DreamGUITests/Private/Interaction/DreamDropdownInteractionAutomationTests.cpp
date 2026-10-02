@@ -9,6 +9,7 @@
 #include "Controls/DreamDropdown.h"
 #include "Core/Components/DreamWidget.h"
 #include "Event/DreamEventSystem.h"
+#include "Interaction/DreamUIPopupLayer.h"
 #include "Interaction/UIDropdown.h"
 #include "Interaction/UIScrollView.h"
 
@@ -27,8 +28,9 @@
  * opens the menu (OnOpening fires as it does), clicking an item selects it (OnSelectionChanged with
  * the item) and dismisses the menu, and a click anywhere outside the menu dismisses it through the
  * menu stack without selecting anything. The dropdown's list is its own widget lifted to the screen
- * layer, and "outside" is the full-screen blocker UUIDropdown puts behind it -- the mechanism is
- * different, and the claims below are only about what the player sees happen.
+ * layer, as a popup on UDreamUIPopupLayer's per-player stack, and "outside" is a press that layer hears
+ * before anything else does -- the mechanism is different, and the claims below are only about what
+ * the player sees happen.
  *
  * The option rows are reached the way a consumer reaches them: OnItemGenerated hands each one over
  * as the list is built, and the listener keeps them by option index.
@@ -308,12 +310,12 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamPressDropdownDestroyedOpenTest, "DreamGUI.Dropdown.DestroyingTheDropdownWithItsListOpenLeavesNothingOverTheScreen", "[Pointer][Animated]")
 
 /*
- * A dropdown destroyed while its list was open took none of the list's furniture with it. The
- * full-screen blocker hangs on the root canvas, above everything, with its click bound to the
- * destroyed behaviour, so it went on swallowing every click on the screen; and the list, lifted to the
- * screen root, stayed up showing rows that called into the dead component. The list is opened here,
- * the dropdown destroyed, and a button elsewhere on the screen clicked: the click reaches the button,
- * no blocker is left on the root, and the list went with the dropdown.
+ * A dropdown destroyed while its list was open took none of the list's furniture with it. The list,
+ * lifted to the screen root, stayed up showing rows that called into the dead component, and whatever
+ * closed it on an outside click -- once a full-screen blocker bound to the destroyed behaviour, now the
+ * popup layer -- went on taking every click on the screen. The list is opened here, the dropdown
+ * destroyed, and a button elsewhere on the screen clicked: the click reaches the button, nothing is
+ * left open on the popup layer, and the list went with the dropdown.
  */
 bool FDreamPressDropdownDestroyedOpenTest::RunTest(const FString& Parameters)
 {
@@ -338,7 +340,8 @@ bool FDreamPressDropdownDestroyedOpenTest::RunTest(const FString& Parameters)
 	{
 		return false;
 	}
-	if (!TestNotNull(TEXT("The open list hung a blocker on the root"), Rig.Root()->FindChildByDisplayName(TEXT("UIDropdown_Blocker"))))
+	const UDreamUIPopupLayer* Popups = UDreamUIPopupLayer::Get(Rig.GetWorld());
+	if (!TestTrue(TEXT("The open list is up on the popup layer"), Popups != nullptr && Popups->IsOpen(Placed.Dropdown->ListNode.Get())))
 	{
 		return false;
 	}
@@ -347,7 +350,7 @@ bool FDreamPressDropdownDestroyedOpenTest::RunTest(const FString& Parameters)
 	Placed.Dropdown->DestroyWidget();
 	Rig.PumpFrames(1);
 
-	TestNull(TEXT("No blocker is left on the root"), Rig.Root()->FindChildByDisplayName(TEXT("UIDropdown_Blocker")));
+	TestNull(TEXT("Nothing is left open on the popup layer"), Popups->GetTopPopup(0));
 	TestFalse(TEXT("And the list went with the dropdown rather than staying on the screen"), List.IsValid());
 	TestTrue(TEXT("Clicking the button elsewhere completes"), Rig.Driver()->Find(FDreamBy::Widget(Elsewhere))->Click());
 	TestEqual(TEXT("The click reached the button"), ElsewhereListener->ClickedCount, 1);
@@ -571,12 +574,16 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamPressDropdownPadIntoListTest, "DreamGUI.Dropdown.MovingPadFocusDownIntoTheOpenListKeepsItOpenAndChoosesFromIt", "[Nav][Animated]")
 
 /*
- * A pad opens the list with the accept button and moves down into it. The dropdown reads focus leaving
- * it as the cue to close, and it asked whether the new focus was inside its own widget -- which a row
- * is not once the list has been lifted to the screen layer, so the move into the list closed the list.
- * The face also never gave up its focused look, because the dropdown's deselect never reached the
- * selectable's own. Now the list stays open with focus on its first row, the face stops claiming focus,
- * and one more step and the accept button choose the second option.
+ * A pad opens the list with the accept button and moves down within it. The dropdown reads focus
+ * leaving it as the cue to close, and it asked whether the new focus was inside its own widget -- which
+ * a row is not once the list has been lifted to the screen layer, so a move into the list closed the
+ * list. The face also never gave up its focused look, because the dropdown's deselect never reached the
+ * selectable's own. The list now opens with the pad's cursor on the selected row -- the first, here --
+ * as SComboBox's list takes the focus when it opens, so one step down is on the second row: the list
+ * stays open, the face stops claiming focus, and the accept button chooses the second option.
+ *
+ * It used to take two steps, the first of them only getting from the face into the list: the list
+ * opened with focus left on the face.
  */
 bool FDreamPressDropdownPadIntoListTest::RunTest(const FString& Parameters)
 {
@@ -602,15 +609,16 @@ bool FDreamPressDropdownPadIntoListTest::RunTest(const FString& Parameters)
 	{
 		return false;
 	}
+	TestEqual(TEXT("The pad's cursor opened on the selected row"),
+		Rig.EventSystem()->GetHighlightedComponentForNavigation(0), Listener->GeneratedItems[0].Get());
 
 	TestTrue(TEXT("Moving down completes"), Rig.Driver()->Sequence().Navigate(EDreamUINavigationDirection::Down).Perform());
-	TestTrue(TEXT("Moving into the list leaves it open"), Placed.Dropdown->IsOpen());
-	TestEqual(TEXT("With focus on its first row"), Rig.EventSystem()->GetCurrentSelectedComponent(0), Listener->GeneratedItems[0].Get());
+	TestTrue(TEXT("Moving within the list leaves it open"), Placed.Dropdown->IsOpen());
+	TestEqual(TEXT("With focus on its second row"), Rig.EventSystem()->GetCurrentSelectedComponent(0), Listener->GeneratedItems[1].Get());
 	TestFalse(TEXT("And the face no longer claiming focus"), Placed.Dropdown->DropdownBehaviour->IsFocused());
 
-	TestTrue(TEXT("Moving down once more and accepting completes"),
+	TestTrue(TEXT("Accepting completes"),
 		Rig.Driver()->Sequence()
-			.Navigate(EDreamUINavigationDirection::Down)
 			.NavigationTrigger(true)
 			.NavigationTrigger(false)
 			.Perform());

@@ -30,11 +30,11 @@
  * The seven controls that closed the gap against UMG's palette, plus the tree's hierarchical source.
  *
  * Every one of them is assembled out of machinery this plugin already had -- the tile view is the
- * list with more than one column, the throbber is the widget tick, the menu anchor is the popup layer
- * plus the dropdown's blocker, the rich text block is UDreamText::bRichText, the host is
- * UDreamUMGWidget, the borderless fields are UDreamTextInput with its box switched off -- so what is
- * worth asserting is not that the machinery works (it has its own tests) but that the ASSEMBLY is
- * right: that the control reaches the piece, in the shape the control's header claims.
+ * list with more than one column, the throbber is the widget tick, the menu anchor is a popup on the
+ * popup layer's menu stack as the dropdown's list is, the rich text block is UDreamText::bRichText,
+ * the host is UDreamUMGWidget, the borderless fields are UDreamTextInput with its box switched off --
+ * so what is worth asserting is not that the machinery works (it has its own tests) but that the
+ * ASSEMBLY is right: that the control reaches the piece, in the shape the control's header claims.
  *
  * Headless, like the rest of the control suite: no world, no registration, no layout pass and no
  * tween manager. Three consequences shape what is asserted below. A control with no world instances

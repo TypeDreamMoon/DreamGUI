@@ -269,10 +269,14 @@ void UDreamDropdown::WireParts()
 		});
 	DropdownBehaviour->GetOnValueChangedEvent().AddUObject(this, &UDreamDropdown::HandleValueChanged);
 	// The list is a child of the face for positioning and a citizen of the popup layer for
-	// everything else: Show anchors it against the face, then the layer lifts it to the screen root
-	// with its world position kept -- the UMG menu-stack arrangement -- so an ancestor's clip cannot
-	// cut it and an ancestor's layout never counts it. Hide hands it home before the fade.
+	// everything else: Show anchors it against the face, this control sizes it there, then the
+	// behaviour pushes it on the layer, which lifts it to the screen root with its world position
+	// kept -- the UMG menu-stack arrangement -- so an ancestor's clip cannot cut it and an ancestor's
+	// layout never counts it. The placement below keeps it under the face while it is up; it fades
+	// out where it is when it closes, and comes home once it is out of sight.
 	DropdownBehaviour->GetOnListVisibilityChangedEvent().AddUObject(this, &UDreamDropdown::HandleListVisibilityChanged);
+	DropdownBehaviour->GetOnListPutAwayEvent().AddUObject(this, &UDreamDropdown::HandleListPutAway);
+	DropdownBehaviour->SetListPlacement(FDreamPopupPlaceDelegate::CreateUObject(this, &UDreamDropdown::PlaceOpenList));
 }
 
 void UDreamDropdown::OnPartsReady()
@@ -601,16 +605,13 @@ void UDreamDropdown::PushOptions()
 	// is gone.
 	DropdownBehaviour->SetOptions(Data);
 	DropdownBehaviour->SetValueWithoutNotify(SelectedIndex);
-	if (bIsListOpen && bListElevated && ListNode != nullptr)
+	const UDreamUIPopupLayer* Popup = bIsListOpen && ListNode != nullptr ? UDreamUIPopupLayer::Get(this) : nullptr;
+	if (Popup != nullptr && Popup->IsOpen(ListNode))
 	{
-		// And the list holding them is still the size and the place it was given for the rows it had:
-		// home first, so it is measured against the face again, then up, exactly as an open places it.
-		// Not while the list is still opening -- that open has yet to place it, against these same rows.
-		if (UDreamUIPopupLayer* Popup = UDreamUIPopupLayer::Get(this))
-		{
-			Popup->Restore(ListNode);
-			LiftOpenList(*Popup);
-		}
+		// And the list holding them is still the size it was given for the rows it had: re-placed now,
+		// where it hangs, rather than at the next frame's placement. Not while the list is still opening
+		// -- that open has yet to place it, against these same rows, and is not up on the layer yet.
+		PlaceOpenList(ListNode);
 	}
 }
 
@@ -631,11 +632,11 @@ void UDreamDropdown::HandleListVisibilityChanged(bool bInVisible)
 	// this seam is the one moment either side moves -- so mirroring here cannot go stale the way a
 	// flag written by the opener would.
 	bIsListOpen = bInVisible;
-	// Broadcast FIRST and unconditionally -- before the popup-layer work below, and whether or not
-	// there is a popup layer to do it in. This seam fires from the behaviour's Show and Hide, which
-	// is the moment the list opens and closes; a consumer refreshing its options from OnOpening (the
-	// reason UMG's combo box has the event) must be heard before the rows are placed, and a headless
-	// test has no popup layer at all.
+	// Broadcast FIRST and unconditionally -- before the sizing below, and before the behaviour lifts
+	// the list to the popup layer, whether or not there is one to lift it to. This seam fires from the
+	// behaviour's Show and Hide, which is the moment the list opens and closes; a consumer refreshing
+	// its options from OnOpening (the reason UMG's combo box has the event) must be heard before the
+	// rows are placed.
 	if (bInVisible)
 	{
 		OnOpening.Broadcast();
@@ -645,42 +646,24 @@ void UDreamDropdown::HandleListVisibilityChanged(bool bInVisible)
 		OnClosed.Broadcast();
 	}
 
-	UDreamUIPopupLayer* Popup = UDreamUIPopupLayer::Get(this);
-	if (Popup == nullptr || ListNode == nullptr)
+	if (bInVisible && bIsListOpen)
 	{
-		return;
+		// Sized where it hangs, before the behaviour lifts it -- which pins the size it finds.
+		PrepareOpenList();
 	}
-	if (bInVisible)
-	{
-		LiftOpenList(*Popup);
-	}
-	else
-	{
-		Popup->Restore(ListNode);
-		bListElevated = false;
-		// The whole resting scheme, not just the numbers: Elevate re-anchored the list to a POINT
-		// for the screen root and Restore reparents plainly, so without this the next open (and any
-		// ApplyStyle in between) works against point anchors -- where a zero width delta is a zero
-		// WIDTH. The measured symptom: a 0-wide list on the second open.
-		ApplyListRestingGeometry(ResolveStyle(Style, &UDreamUIStyleSheet::DropdownStyle));
-	}
+	// A close leaves the list where it is: it fades out there, still lifted, and HandleListPutAway
+	// puts the resting scheme back once the behaviour has brought it home.
 }
 
-void UDreamDropdown::LiftOpenList(UDreamUIPopupLayer& InPopup)
+void UDreamDropdown::PrepareOpenList()
 {
 	if (ListNode == nullptr)
 	{
 		return;
 	}
-	bListElevated = true;
 	// The control owns every height in the open list, because nothing else can. The list is
 	// exactly visible-rows tall (past MaxVisibleItems the rest scroll -- the scroll view only
 	// engages when the column outgrows it); the column is all-rows tall, the scrolled content.
-	// The rows go through their SLOTS, not through authored heights: a row is an overlay whose
-	// Auto measure is its TEXT's line height -- 19.7 for the default font, the measured symptom,
-	// and no authored number ever wins against a content measure. Fill does: the column is
-	// exactly rows*ItemHeight tall, so equal fill weights hand every row exactly ItemHeight.
-	// All before the lift, which pins the height it finds.
 	const FDreamDropdownStyle& Active = ResolveStyle(Style, &UDreamUIStyleSheet::DropdownStyle);
 	const int32 RowCount = FMath::Max(1, Options.Num());
 	const int32 VisibleRows = FMath::Min(RowCount, FMath::Max(1, MaxVisibleItems));
@@ -694,13 +677,25 @@ void UDreamDropdown::LiftOpenList(UDreamUIPopupLayer& InPopup)
 	const float OpenWidth = FaceNode != nullptr ? static_cast<float>(FaceNode->GetWidth()) : static_cast<float>(ListNode->GetWidth());
 	ListNode->SetAnchoredPositionAndSizeDelta(
 		FVector2D(0.0, -OpenHeight * 0.5), FVector2D(OpenWidth, OpenHeight));
+	SizeOpenColumn(Active);
+}
+
+void UDreamDropdown::SizeOpenColumn(const FDreamDropdownStyle& InActive)
+{
+	// The rows go through their SLOTS, not through authored heights: a row is an overlay whose
+	// Auto measure is its TEXT's line height -- 19.7 for the default font, the measured symptom,
+	// and no authored number ever wins against a content measure. Fill does: the column is
+	// exactly rows*ItemHeight tall, so equal fill weights hand every row exactly ItemHeight.
+	// Every setter here changes nothing when handed what is already there, so a placement run
+	// on every frame costs no layout.
+	const int32 RowCount = FMath::Max(1, Options.Num());
 	for (UDreamWidget* Child : ListNode->GetChildren())
 	{
 		if (Child == nullptr || Child->GetDisplayName() != TEXT("Column"))
 		{
 			continue;
 		}
-		Child->SetHeight(RowCount * Active.ItemHeight);
+		Child->SetHeight(RowCount * InActive.ItemHeight);
 		for (UDreamWidget* Row : Child->GetChildren())
 		{
 			if (Row == nullptr || Row == ItemTemplateNode)
@@ -714,7 +709,53 @@ void UDreamDropdown::LiftOpenList(UDreamUIPopupLayer& InPopup)
 			}
 		}
 	}
-	InPopup.Elevate(ListNode);
+}
+
+void UDreamDropdown::PlaceOpenList(UDreamWidget* InList)
+{
+	if (InList == nullptr || InList != ListNode || FaceNode == nullptr)
+	{
+		return;
+	}
+	const UDreamWidget* Plane = InList->GetParent();
+	if (!IsValid(Plane))
+	{
+		return;
+	}
+	bListElevated = true;
+	const FDreamDropdownStyle& Active = ResolveStyle(Style, &UDreamUIStyleSheet::DropdownStyle);
+	const int32 RowCount = FMath::Max(1, Options.Num());
+	const int32 VisibleRows = FMath::Min(RowCount, FMath::Max(1, MaxVisibleItems));
+	const float OpenHeight = VisibleRows * Active.ItemHeight;
+	// The lift pinned the list to a point of the screen root with a centre pivot (the resting scheme's), so its
+	// size is its width and height, and its anchored position is where its centre sits in the root's plane.
+	InList->SetWidth(static_cast<float>(FaceNode->GetWidth()));
+	InList->SetHeight(OpenHeight);
+	SizeOpenColumn(Active);
+	// Centred under the face's bottom edge, as the resting scheme hangs it: the face's own bottom-centre, half the
+	// list's height lower, carried into the plane the list was lifted to -- Y across, Z up, as the lift itself maps.
+	const FVector UnderFace(0.0,
+		(FaceNode->GetLocalSpaceLeft() + FaceNode->GetLocalSpaceRight()) * 0.5,
+		FaceNode->GetLocalSpaceBottom() - OpenHeight * 0.5);
+	const FVector InPlane = Plane->GetLayoutWorldTransform().InverseTransformPosition(
+		FaceNode->GetLayoutWorldTransform().TransformPosition(UnderFace));
+	const FVector2D Anchored(InPlane.Y, InPlane.Z);
+	// Only for a real move: the transforms round a little differently from frame to frame, and an exact compare
+	// would lay the list out again on every one of them.
+	if (!InList->GetAnchoredPosition().Equals(Anchored, 0.01))
+	{
+		InList->SetAnchoredPosition(Anchored);
+	}
+}
+
+void UDreamDropdown::HandleListPutAway()
+{
+	bListElevated = false;
+	// The whole resting scheme, not just the numbers: the lift re-anchored the list to a POINT for
+	// the screen root and the trip home reparents plainly, so without this any ApplyStyle before the
+	// next open works against point anchors -- where a zero width delta is a zero WIDTH. The measured
+	// symptom: a 0-wide list on the second open.
+	ApplyListRestingGeometry(ResolveStyle(Style, &UDreamUIStyleSheet::DropdownStyle));
 }
 
 void UDreamDropdown::ApplyListRestingGeometry(const FDreamDropdownStyle& InActive)

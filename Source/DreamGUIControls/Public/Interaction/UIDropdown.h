@@ -4,6 +4,8 @@
 
 #include "CoreMinimal.h"
 #include "Interaction/UISelectable.h"
+#include "Interaction/DreamUIFocusReturn.h"
+#include "Interaction/DreamUIPopupLayer.h"
 #include "Event/Interface/DreamPointerClickInterface.h"
 #include "Event/DreamUIEventDelegate.h"
 #include "Event/DreamDelegateDeclaration.h"
@@ -14,6 +16,7 @@ class UDreamImage;
 class UDreamWidgetContainer;
 class UDreamWidget;
 class UDreamText;
+enum class EDreamWidgetRaycastableType : uint8;
 
 /**
  * Dropdown option selection change.
@@ -79,8 +82,9 @@ public:
 protected:
 	virtual void Awake()override;
 	/**
-	 * Closes an open list. Its blocker sits on the root canvas over everything and a lifted list is no
-	 * longer under this widget, so neither goes away with a dropdown that is hidden or destroyed.
+	 * Closes an open list, at once: a list lifted to the popup layer is no longer under this widget, so
+	 * it does not go away with a dropdown that is put to sleep or destroyed. A list still fading out
+	 * from an earlier close is put away at once too.
 	 */
 	virtual void OnDisable()override;
 	/** The same, for a list opened from code on a dropdown that was never enabled. */
@@ -125,7 +129,11 @@ protected:
 	 * silently discarded. The built-in tree only escaped because the two numbers happened to agree.
 	 */
 	bool bMaxHeightAuthored = false;
-	/** When show the list, create a overlay block to block input on other objects. */
+	/**
+	 * What a press outside the open list does besides closing it: on, it goes no further, as a click
+	 * on the full-screen blocker this used to build went nowhere else; off, it then reaches whatever
+	 * is under the pointer, as Slate's menus let it (EDreamPopupOutsideClick Consume / PassThrough).
+	 */
 	UPROPERTY(EditAnywhere, Category = "DreamGUI-Dropdown")
 		bool bUseInteractionBlock = true;
 
@@ -134,13 +142,11 @@ protected:
 	/** True while RecreateListItems runs: a rebuild asked for from inside it (a row's handler changing the options) waits. */
 	bool bRecreatingListItems = false;
 	TWeakObjectPtr<UDreamTweener> ShowOrHideTweener;
-	TWeakObjectPtr<UDreamWidget> BlockerWidget;
 	UPROPERTY(Transient) TArray<TWeakObjectPtr<class UUIDropdownItemComponent>> CreatedItemArray;
 	virtual bool OnPointerClick_Implementation(UDreamPointerEventData* EventData)override;
 	virtual bool OnPointerDeselect_Implementation(UDreamBaseEventData* EventData)override;
 	void OnSelectItem(int Index);
 	void ApplyValueToVisual();
-	virtual void CreateBlocker();
 	virtual void CreateListItems();
 	/** Destroy the rows the list holds and build one per option again. */
 	void RecreateListItems();
@@ -156,12 +162,62 @@ protected:
 	/** Bind this delegate and set custom data for option list item. */
 	FUIDropdownComponentDelegate_SetItemCustomData OnSetItemCustomDataFunction;
 	void SetValue(int InValue, bool FireEvent);
-	/** Fired with true from Show and false from Hide, so a control can lift the list to a popup layer. */
+	/**
+	 * Fired with true from Show -- the list built and placed under the face, and not yet lifted to the
+	 * popup layer, so a control can size it first -- and with false from Hide, once focus has gone back.
+	 */
 	FDreamUIMulticastDelegateBool OnListVisibilityChangedCPP;
+	/** Fired once a closed list is asleep and back under this widget: after its fade, or at once when it had none. */
+	FSimpleMulticastDelegate OnListPutAwayCPP;
+
+private:
+	/**
+	 * Close the open list: focus back on the face for every player whose focus was in the list (the popup
+	 * layer's dismissal, or the capture below when the list never went up on it), the close announced,
+	 * then the list faded out where it is, kept from the pointer and the pad meanwhile, and put away.
+	 * bInAnimate false puts it away at once, for a dropdown going to sleep or an opener gone.
+	 */
+	void CloseList(bool bInAnimate);
+	/** The popup layer closed the list: an outside press, Back, its opener lost, a menu opened in its place. */
+	void HandleListDismissed(UDreamWidget* InList, EDreamPopupDismissReason InReason);
+	/** Open the list on the popup layer, for the player who opened it. False when the layer cannot take it. */
+	bool PushListToPopupLayer();
+	/** The player whose list this is: the one whose click opened it, else the one focused on the face, else the owner. */
+	int32 ResolveListUserIndex() const;
+	/**
+	 * A closing list neither answers the pointer nor takes the pad while it fades: its rows stop being
+	 * navigation targets and the list stops being hit, so a step from the face cannot land in it. Undone
+	 * when the list is shown again or put away.
+	 */
+	void SetListInert(bool bInInert);
+	/** Back under this widget and asleep, the inert state undone, and OnListPutAwayCPP told. */
+	void PutListAway();
+	/** The list home from the popup layer, when the layer still holds it lifted after a close. */
+	void ReturnListHome();
+
+	/** The click that is opening the list says whose it is; read by Show, through ResolveListUserIndex. */
+	int32 OpeningUserIndex = INDEX_NONE;
+	/** Whether the open list is on the popup layer. */
+	bool bListOnPopupLayer = false;
+	/** Every player's focus when the list opened, for a list the popup layer could not take; the layer keeps its own. */
+	FDreamFocusReturn ListFocusReturn;
+	/** See SetListPlacement. */
+	FDreamPopupPlaceDelegate ListPlacement;
+	/** See SetListInert: the list's own raycastable setting, and the rows it took off the navigation, to give back. */
+	bool bListInert = false;
+	EDreamWidgetRaycastableType ListRaycastableBeforeInert;
+	TArray<TWeakObjectPtr<UUISelectable>> RowsMadeUnnavigable;
+
 public:
 	FDreamUIMulticastDelegateInt32& GetOnValueChangedEvent(){return OnValueChangedCPP;}
 	FDreamUIMulticastDelegateBool& GetOnListVisibilityChangedEvent(){return OnListVisibilityChangedCPP;}
-	
+	FSimpleMulticastDelegate& GetOnListPutAwayEvent(){return OnListPutAwayCPP;}
+	/**
+	 * How the open list is placed while it is up on the popup layer, after its opener on every frame
+	 * (FDreamPopupParams::Place). Unbound, the list keeps the offset from this dropdown it opened with.
+	 */
+	void SetListPlacement(const FDreamPopupPlaceDelegate& InPlacement) { ListPlacement = InPlacement; }
+
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Dropdown")
 		void Show();
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Dropdown")
@@ -221,6 +277,7 @@ public:
 	void AddOptions(const TArray<FUIDropdownOptionData>& InOptions);
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Dropdown")
 	void SetMaxHeight(float InValue) { MaxHeight = InValue; bMaxHeightAuthored = true; }
+	/** See bUseInteractionBlock. An open list answers the next press by the new setting. */
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Dropdown")
 	void SetUseInteractionBlock(bool InValue);
 

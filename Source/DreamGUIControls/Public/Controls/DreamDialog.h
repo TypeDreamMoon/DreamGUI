@@ -15,7 +15,9 @@ class UUIButton;
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FDreamDialogResultEvent, FName, Result);
 
 /**
- * The navigation scope a STANDALONE dialog wears, so Back closes it.
+ * The navigation scope a STANDALONE dialog wears: pushed as the dialog appears, it puts focus in the
+ * dialog and gives back, when the dialog closes, what had focus before (UDreamUINavigationStack); and
+ * while bCloseOnBack asks, it is what Back closes the dialog through.
  *
  * Only ever added when no host is already scrimming -- see UDreamDialog::RefreshDimmer. Under
  * UDreamUIModalSubsystem the LAYER carries UDreamUIModalScope and that scope's contract ("Back means
@@ -356,11 +358,10 @@ public:
 	UPROPERTY(BlueprintReadOnly, Transient, Category = "Dialog")
 	TArray<TObjectPtr<UDreamButton>> ButtonWidgets;
 
-	/** The dimmer's click surface, added only while bCloseOnDimmerClick asks for one. */
-	UPROPERTY(BlueprintReadOnly, Transient, Category = "Dialog")
-	TObjectPtr<UUIButton> DimmerBehaviour = nullptr;
-
-	/** The Back handler, added only while standalone. See UDreamDialogScope. */
+	/**
+	 * The navigation scope, added only while standalone: it takes focus when the dialog appears, gives it back when
+	 * the dialog closes, and answers Back while bCloseOnBack asks. See UDreamDialogScope.
+	 */
 	UPROPERTY(BlueprintReadOnly, Transient, Category = "Dialog")
 	TObjectPtr<UDreamDialogScope> BackScope = nullptr;
 

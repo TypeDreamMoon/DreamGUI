@@ -12,6 +12,7 @@
 #include "Event/Interface/DreamPointerClickInterface.h"
 #include "Event/Interface/DreamPointerSelectDeselectInterface.h"
 #include "Interaction/DreamDragDropOperation.h"
+#include "Interaction/DreamUIPopupLayer.h"
 #include "GameFramework/PlayerController.h"
 #include "Components/PrimitiveComponent.h"
 #include "Event/DreamGestureEventData.h"
@@ -39,6 +40,17 @@ namespace DreamPointerInputModuleLocal
 			ClickTarget = PressWidget;
 		}
 		return Over == ClickTarget || Over->IsChildOf(ClickTarget);
+	}
+
+	/**
+	 * Tell the popup layer about a press before anything else hears of it: one outside a player's open popups closes them
+	 * (UDreamUIPopupLayer::NotifyPointerDown). True when a popup it closed eats its outside clicks, and the press is to go
+	 * no further -- the full-screen click catchers the dropdown and the menu anchor used to build, without the catcher.
+	 */
+	bool IsPressTakenByPopups(const UDreamUIInputUser* InUser, UDreamWidget* InPressed)
+	{
+		UDreamUIPopupLayer* Popups = UDreamUIPopupLayer::Get(InUser);
+		return Popups != nullptr && Popups->NotifyPointerDown(InUser->GetUserIndex(), InPressed);
 	}
 }
 
@@ -483,7 +495,14 @@ void UDreamPointerInputModule::ProcessPointerEvent(UDreamUIInputUser* InUser, UD
 	{
 		if (EventData->bNowIsTriggerPressed)//now is press, prev is release
 		{
-			if (bLineTraceHitSomething)
+			// The popups first, whatever the press landed on -- a widget, the world, nothing -- and before the selection
+			// can change under them. Swallowed, the press is nobody's: no down, no selection change, and with no press
+			// widget its release clicks nothing, drags nothing and presses no actor either.
+			if (DreamPointerInputModuleLocal::IsPressTakenByPopups(InUser, bLineTraceHitSomething ? EventData->EnterWidget.Get() : nullptr))
+			{
+				EventData->PressWidget = nullptr;
+			}
+			else if (bLineTraceHitSomething)
 			{
 				if (IsValid(EventData->EnterWidget))//now object
 				{
