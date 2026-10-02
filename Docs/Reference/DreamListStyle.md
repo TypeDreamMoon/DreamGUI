@@ -14,7 +14,7 @@ selection and hover states have to read the same across every template a project
 | Name | Type | Category | In the details panel | From Blueprint | Description |
 |---|---|---|---|---|---|
 | `Background` | `FColor` | List Style | yes | read / write |  |
-| `RowHeight` | `float` | List Style | yes | read / write |  |
+| `RowHeight` | `float` | List Style | yes | read / write | A row's extent along the scroll axis (a tile's height in a tile view). At least one unit: a row no taller than nothing is drawn by nothing, and the window arithmetic falls back to a fixed sixteen lines for a value under that which an old asset or SetStyle can still hand it. |
 | `RowSpacing` | `float` | List Style | yes | read / write |  |
 | `Padding` | `FMargin` | List Style | yes | read / write |  |
 | `RowNormal` | `FColor` | List Style | yes | read / write |  |

@@ -107,7 +107,7 @@ Reach for `each` when the ROW is the interesting part. Reach for Native.List whe
 | `SelectedIndices` | `TArray<int32>` | List | yes | `GetSelectedIndices` / `SetSelectedIndices` | Every selected row, as source indices, in the order they were chosen. Authorable, but the ordinary road is SetItemSelection / SetSelectedIndex -- those keep SelectedIndex in step and repaint. |
 | `bAlternatingRowColors` | `bool` | List | yes | `GetAlternatingRowColors` / `SetAlternatingRowColors` | Every other row wears FDreamListStyle::RowAlternate. Off is the dense list UMG draws. |
 | `bShowScrollBar` | `bool` | List | yes | `GetShowScrollBar` / `SetShowScrollBar` | Off means no bar at all, and the viewport keeps the gutter it would have cost. |
-| `ScrollBarVisibility` | `EDreamScrollBoxScrollbarVisibility` | List | yes | `GetScrollBarVisibility` / `SetScrollBarVisibility` | Whether the bar stays put or disappears while every row already fits. |
+| `ScrollBarVisibility` | `EDreamScrollBoxScrollbarVisibility` | List | yes | `GetScrollBarVisibility` / `SetScrollBarVisibility` | Whether the bar stays put or disappears while every row already fits. Hidden never draws it, though the list still scrolls, and keeps its gutter while the rows overflow, as a Hidden Slate bar keeps its slot. |
 | `VirtualizationThreshold` | `int32` | List | yes | `GetVirtualizationThreshold` / `SetVirtualizationThreshold` | Above this many rows the list recycles a window of widgets instead of building one per item. |
 | `VirtualizationOverscan` | `int32` | List | yes | `GetVirtualizationOverscan` / `SetVirtualizationOverscan` | Extra rows kept realized past each edge of the window, so a fast scroll never shows a gap. |
 | `WheelScrollMultiplier` | `float` | List | yes | `GetWheelScrollMultiplier` / `SetWheelScrollMultiplier` | How many ROWS a wheel notch travels. One is the only sensitivity a list can state without guessing -- it is the unit the content is made of -- and this is the multiplier on it, for a long list where a row at a time is too slow. Zero stops the wheel. |
@@ -268,7 +268,7 @@ Reach for `each` when the ROW is the interesting part. Reach for Native.List whe
 | `void SetSelectedIndex(int32 InIndex)` | callable | Moves the highlight and fires both selection events. Out of range selects nothing. |
 | `void SetSelectedIndexWithoutNotify(int32 InIndex)` | callable | The same move, silently: for pushing an authored value in, which is not the user choosing. |
 | `void SetSelectedIndices(TArray<int32> InIndices)` | callable | Replace the whole selection at once. Keeps the anchor and the rows' paint in step with it. |
-| `void SetSelectionMode(EUIListSelectionMode InMode)` | callable | Which mode decides how many rows can be chosen. Re-narrows the selection when it has to. |
+| `void SetSelectionMode(EUIListSelectionMode InMode)` | callable | Which mode decides how many rows can be chosen. Re-narrows the selection when it has to, and says so once when that changed it -- None drops the whole selection, Multi to a single mode keeps the anchor -- so a two-way binding is not left holding a row nothing selects any more. |
 | `void SetSelectItemOnNavigation(bool bInSelect)` | callable | Set Select Item on Navigation |
 | `void SetShadowBrush(FDreamUIFaceBrush InShadowBrush)` | callable | The image drawn over the viewport's edges while there is more to scroll to. Pushed at once. |
 | `void SetShadowBrushThickness(float InThickness)` | callable | Set Shadow Brush Thickness |

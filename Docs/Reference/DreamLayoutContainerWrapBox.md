@@ -41,7 +41,7 @@ Every Blueprint-facing member of the UMG class, and where it went. *adopt*: same
 | `UWrapBox` | `InnerSlotPadding` | map | `Spacing` | The same two gaps under the name the rest of this plugin's panels already use: x along a line, y between lines. GetInnerSlotPadding/SetInnerSlotPadding exist under UMG's name and forward. |
 | `UWrapBox` | `WrapSize` | adopt | `WrapSize` | The length of a line whichever way the lines run, so it keeps its meaning in a vertical box. |
 | `UWrapBox` | `bExplicitWrapSize` | adopt | `bExplicitWrapSize` |  |
-| `UWrapBox` | `HorizontalAlignment` | adopt | `HorizontalAlignment` | Where a line that did not fill the wrap length sits inside it, for a horizontal box only -- UMG's own EditCondition. Fill starts at the edge like Left: filling a line is what the slots on it do through bFillEmptySpace. |
+| `UWrapBox` | `HorizontalAlignment` | adopt | `HorizontalAlignment` | Where a line that did not fill the wrap length sits inside it, for a horizontal box only -- UMG's own EditCondition. Fill stretches every slot of a line by one factor, SWrapBox's HAlign_Fill: (allotted width - gaps) / (line length - gaps), so the line spans the box and the gaps stay as they are. The target is the box's own width less its padding, not WrapSize, because Slate's is the allotted geometry; what the box measures does not change. |
 | `UWrapBox` | `Orientation` | adopt | `Orientation` | EDreamPanelOrientation rather than Slate's EOrientation. Measure and arrange are both written along the line and across it, so the two orientations are one algorithm. |
 | `UWrapBox` | `SetInnerSlotPadding` | adopt | `SetInnerSlotPadding` | Forwards to SetSpacing. |
 | `UWrapBox` | `SetHorizontalAlignment` | adopt | `SetHorizontalAlignment` |  |

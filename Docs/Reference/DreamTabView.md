@@ -58,10 +58,10 @@ each one under the switcher. So this is a working tab view, from .dui, with noth
 | `void SetActiveTabIndexWithoutNotify(int32 InIndex)` | callable | The same move without the broadcast. The `<->` desugar looks for precisely this name (the setter's plus "WithoutNotify") so the forward half of a two-way binding cannot echo back into the variable that just drove it. |
 | `void SetFocusPageOnTabChange(bool bInFocusPageOnTabChange)` | callable | Set Focus Page on Tab Change |
 | `void SetStyle(FDreamTabViewStyle InStyle)` | callable | Replace the look and push it. |
-| `void SetTabEnabled(int32 InIndex, bool bInEnabled)` | callable | Grows TabEnabled to reach InIndex when it has to, then re-pushes the strip's colours. |
+| `void SetTabEnabled(int32 InIndex, bool bInEnabled)` | callable | Grows TabEnabled to reach InIndex when it has to, then re-pushes the strip's colours. Disabling a tab that has focus moves it to the tab's right neighbour, else the last enabled tab. |
 | `void SetTabEnabledStates(TArray<bool> InTabEnabled)` | callable | Every tab's enabled flag at once; a missing entry means enabled. SetTabEnabled changes one. |
 | `void SetTabLabels(TArray<FText> InLabels)` | callable | Replace the captions and regenerate the strip. |
-| `void SetTabsClosable(bool bInTabsClosable)` | callable | Show or hide every tab's close button. A restyle: the buttons are woken in the style loop. |
+| `void SetTabsClosable(bool bInTabsClosable)` | callable | Show or hide every tab's close button. A restyle: the buttons are woken in the style loop. Hiding them moves focus that is on one onto its tab first. |
 | `void SetTabsDraggable(bool bInTabsDraggable)` | callable | Set Tabs Draggable |
 | `void SetTabTemplateClass(TSubclassOf<UDreamUserWidget> InTabTemplateClass)` | callable | The authored tab content. Instanced into each tab at build, so a new class means a rebuild. |
 

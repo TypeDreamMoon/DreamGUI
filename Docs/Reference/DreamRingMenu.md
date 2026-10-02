@@ -85,7 +85,7 @@ OnItemActivated fires on every commit even when the same item is chosen twice, b
 | Function | Kind | Description |
 |---|---|---|
 | `void ActivateHighlighted()` | callable | Commit whatever is highlighted: what a "release the button to choose" input calls. |
-| `void Close()` | callable | Hide it, clearing the highlight on the way out. |
+| `void Close()` | callable | Hide it, clearing the highlight on the way out. A player whose focus is on a wedge -- or went nowhere from the ring -- gets back what they had focused when it opened, before the fade starts. |
 | `float GetDeadZoneRadius()` | pure | Get Dead Zone Radius |
 | `int32 GetHighlightedIndex()` | pure | Get Highlighted Index |
 | `EDreamRingHitArea GetHitArea()` | pure | Get Hit Area |
@@ -102,7 +102,7 @@ OnItemActivated fires on every commit even when the same item is chosen twice, b
 | `void HighlightByDirection(FVector2D InDirection)` | callable | Highlight whichever item owns this direction -- the gamepad route. |
 | `int32 IndexAtAngle(float InAngleDegrees)` | pure | Which item owns an angle, or -1 when the sweep does not cover it. |
 | `bool IsOpen()` | pure | Is Open |
-| `void Open()` | callable | Show the ring, scaling and fading it in when there is a world to tween in. |
+| `void Open()` | callable | Show the ring, scaling and fading it in when there is a world to tween in. Every player's focus is noted first. |
 | `void RebuildItems()` | callable | Throw the geometry at the wedges again, growing or shrinking the pool first if the item count moved. Called for you by ApplyStyle -- wedge geometry IS style -- and by SetItems. |
 | `void SetAllowDeselect(bool bInAllowDeselect)` | callable | Set Allow Deselect |
 | `void SetDeadZoneRadius(float InRadius)` | callable | Set Dead Zone Radius |

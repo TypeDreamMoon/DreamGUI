@@ -40,6 +40,11 @@ second description of them in a control header is a second thing to keep true.
 | `bAutoWrapText` | `bool` | Rich Text | yes | `GetAutoWrapText` / `SetAutoWrapText` | Break a line that does not fit rather than letting it run on -- UMG's AutoWrapText. |
 | `TextTransformPolicy` | `EDreamUITextTransformPolicy` | Rich Text | yes | `GetTextTransformPolicy` / `SetTextTransformPolicy` | Case the prose is DRAWN in -- UMG's TextTransformPolicy. The authored string is untouched. |
 | `MinDesiredWidth` | `float` | Rich Text | yes | `GetMinDesiredWidth` / `SetMinDesiredWidth` | A floor under the width the paragraph asks a content-sized parent for -- UMG's MinDesiredWidth. Zero means no opinion, which is every block that exists today. |
+| `Language` | `FString` | Rich Text | yes | `GetLanguage` / `SetLanguage` | The language the prose is written in, as a culture name ("ja", "zh-Hans"); empty is the game's. Picks the font's fallbacks meant for it and the forms a script draws per language -- see UDreamText::Language. `<lang=xx>` still overrides it for what the tag encloses. |
+| `TabSize` | `float` | Rich Text | yes | `GetTabSize` / `SetTabSize` | Tab stops in spaces, from the line's start edge -- CSS tab-size, 8 as browsers have it. |
+| `TextJustify` | `EDreamTextJustify` | Rich Text | yes | `GetTextJustify` / `SetTextJustify` | Where a justified line gets its extra room. Read only with HorizontalAlignment Justify. |
+| `LastLineAlign` | `EDreamTextLastLineAlign` | Rich Text | yes | `GetLastLineAlign` / `SetLastLineAlign` | How a justified paragraph's last line, and a line a newline ends, align. Read only with HorizontalAlignment Justify. |
+| `SmallTextRaster` | `EDreamTextSmallTextRaster` | Rich Text | yes | `GetSmallTextRaster` / `SetSmallTextRaster` | Off keeps the prose on its font's distance field at every size; see UDreamText::SmallTextRaster. |
 | `TextNode` | `TObjectPtr<UDreamWidget>` | Rich Text | - | read only | The paragraph itself. Public because everything under a control is reachable by name. |
 
 ## Functions
@@ -52,11 +57,16 @@ second description of them in a control header is a second thing to keep true.
 | `UDreamUIFontData_BaseObject* GetDefaultFont()` | pure | The DEFAULT typeface for undecorated prose -- UMG's SetDefaultFont, minus what FSlateFontInfo packs in beside it: the size is Style.FontSize and the outline is Style.TextStyle. Markup may still switch the face per run; this is what a run that says nothing gets. |
 | `EDreamUITextParagraphHorizontalAlign GetHorizontalAlignment()` | pure | Get Horizontal Alignment |
 | `UDreamUIRichTextImageData_BaseObject* GetImageData()` | pure | Get Image Data |
+| `FString GetLanguage()` | pure | Get Language |
+| `EDreamTextLastLineAlign GetLastLineAlign()` | pure | Get Last Line Align |
 | `float GetMinDesiredWidth()` | pure | Get Min Desired Width |
 | `EDreamUITextOverflowType GetOverflowType()` | pure | Get Overflow Type |
+| `EDreamTextSmallTextRaster GetSmallTextRaster()` | pure | Get Small Text Raster |
 | `FDreamRichTextStyle GetStyle()` | pure | Get Style |
+| `float GetTabSize()` | pure | Get Tab Size |
 | `int32 GetTagFilterFlags()` | pure | Get Tag Filter Flags |
 | `FText GetText()` | pure | Get Text |
+| `EDreamTextJustify GetTextJustify()` | pure | Get Text Justify |
 | `EDreamUITextTransformPolicy GetTextTransformPolicy()` | pure | Get Text Transform Policy |
 | `EDreamUITextParagraphVerticalAlign GetVerticalAlignment()` | pure | Get Vertical Alignment |
 | `void RefreshTextLayout()` | callable | Re-parse the markup and lay the paragraph out again -- UMG's RefreshTextLayout. |
@@ -66,11 +76,16 @@ second description of them in a control header is a second thing to keep true.
 | `void SetHorizontalAlignment(EDreamUITextParagraphHorizontalAlign InHorizontalAlignment)` | callable | Set Horizontal Alignment |
 | `void SetImageData(UDreamUIRichTextImageData_BaseObject* InImageData)` | callable | Set Image Data |
 | `void SetJustification(EDreamUITextParagraphHorizontalAlign InJustification)` | callable | UMG's Justification, which on a paragraph is the horizontal alignment. One implementation. |
+| `void SetLanguage(FString InLanguage)` | callable | Set Language |
+| `void SetLastLineAlign(EDreamTextLastLineAlign InLastLineAlign)` | callable | Set Last Line Align |
 | `void SetMinDesiredWidth(float InMinDesiredWidth)` | callable | Set Min Desired Width |
 | `void SetOverflowType(EDreamUITextOverflowType InOverflowType)` | callable | Set Overflow Type |
+| `void SetSmallTextRaster(EDreamTextSmallTextRaster InSmallTextRaster)` | callable | Set Small Text Raster |
 | `void SetStyle(FDreamRichTextStyle InStyle)` | callable | The whole look at once, re-pushed. |
+| `void SetTabSize(float InTabSize)` | callable | Set Tab Size |
 | `void SetTagFilterFlags(int32 InTagFilterFlags)` | callable | Set Tag Filter Flags |
 | `void SetText(FText InText)` | callable | Replace the prose. Re-parsed on the way in, which is what the markup costs. |
+| `void SetTextJustify(EDreamTextJustify InTextJustify)` | callable | Set Text Justify |
 | `void SetTextOverflowPolicy(EDreamUITextOverflowType InOverflowPolicy)` | callable | UMG's name for the same decision. Forwards, so there is one writer and one truth. |
 | `void SetTextTransformPolicy(EDreamUITextTransformPolicy InTransformPolicy)` | callable | Set Text Transform Policy |
 | `void SetVerticalAlignment(EDreamUITextParagraphVerticalAlign InVerticalAlignment)` | callable | Set Vertical Alignment |

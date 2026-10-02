@@ -30,6 +30,10 @@ UMG Scroll Box
 | `DecelerationRate` | `float` | ScrollBox | yes | `GetDecelerationRate` / `SetDecelerationRate` | How quickly momentum dies. 0 never slows down; larger values stop sooner. Same units and default as the legacy scroll view, so a value tuned there carries over. |
 | `bAllowOverscroll` | `bool` | ScrollBox | yes | `GetAllowOverscroll` / `SetAllowOverscroll` | Let the content rubber-band past an end while dragging, then spring back on release. |
 | `OverscrollLimit` | `float` | ScrollBox | yes | `GetOverscrollLimit` / `SetOverscrollLimit` | How far past an end the content can be pulled, in local units. The pull saturates towards this rather than stopping at it, so the resistance grows the further out you drag and the content can never be dragged away indefinitely -- which the legacy view's flat damping allowed. |
+| `bBackPadScrolling` | `bool` | ScrollBox | yes | `GetBackPadScrolling` / `SetBackPadScrolling` | A whole viewport of empty space BEFORE the content -- UMG's BackPadScrolling: at offset zero the first child sits one viewport in, so the first item can be scrolled all the way to the far edge. A viewport rather than half of one, which is Slate's arithmetic (SScrollPanel's ScrollPadding is the panel's own length). It adds to the scroll range and takes nothing from what a Fill slot is given. |
+| `bFrontPadScrolling` | `bool` | ScrollBox | yes | `GetFrontPadScrolling` / `SetFrontPadScrolling` | A whole viewport of empty space AFTER the content -- UMG's FrontPadScrolling, so the last item can reach the near edge. |
+| `bAllowRightClickDragScrolling` | `bool` | ScrollBox | yes | `GetAllowRightClickDragScrolling` / `SetAllowRightClickDragScrolling` | Whether a drag with the RIGHT button scrolls this box -- UMG's bAllowRightClickDragScrolling, on by default as there. Off leaves the right button to whatever wants it for a context menu. On, a right drag is still refused while there is nothing to scroll, as SScrollBox refuses it unless its bar IsNeeded. A left-button drag scrolls whatever this says: it is this library's own gesture, and existing screens rely on it. |
+| `bEnableTouchScrolling` | `bool` | ScrollBox | yes | `GetEnableTouchScrolling` / `SetEnableTouchScrolling` | Whether a finger dragging over the box scrolls it -- UMG's bEnableTouchScrolling, on by default as there. |
 | `ScrollOffset` | `float` | ScrollBox | yes | - | Distance scrolled from the start. Editable so the designer can scroll the content in the prefab editor (where no pointer input exists) to reach and edit off-screen children; the authored value is also the initial scroll position at runtime. Clamped to [0, GetMaxScrollOffset()] by layout. |
 
 ## Functions
@@ -39,12 +43,16 @@ UMG Scroll Box
 | `bool CanScrollWidgetIntoView(UDreamWidget* InWidget)` | callable | True when InWidget lives in this box and a scroll would bring more of it into sight. The question directional navigation has to answer before it commits to a candidate it cannot currently see. |
 | `void EndInertialScrolling()` | callable | Drop the fling, keeping the position and whatever rubber band is open -- UMG's name for it. |
 | `bool GetAllowOverscroll()` | pure | Get Allow Overscroll |
+| `bool GetAllowRightClickDragScrolling()` | pure | Get Allow Right Click Drag Scrolling |
 | `FKey GetAnalogMouseWheelKey()` | pure | Get Analog Mouse Wheel Key |
 | `float GetAnimatedScrollTarget()` | pure | Where an eased scroll is heading; the current offset when nothing is animating. |
 | `bool GetAnimateWheelScrolling()` | pure | Get Animate Wheel Scrolling |
+| `bool GetBackPadScrolling()` | pure | Get Back Pad Scrolling |
 | `EDreamScrollBoxConsumeMouseWheel GetConsumeMouseWheel()` | pure | Get Consume Mouse Wheel |
 | `float GetDecelerationRate()` | pure | Get Deceleration Rate |
 | `bool GetEnableInertia()` | pure | Get Enable Inertia |
+| `bool GetEnableTouchScrolling()` | pure | Get Enable Touch Scrolling |
+| `bool GetFrontPadScrolling()` | pure | Get Front Pad Scrolling |
 | `float GetMaxScrollOffset()` | pure | How far this box can scroll: content extent minus viewport extent, or 0 when everything fits. |
 | `EDreamUIScrollDestination GetNavigationDestination()` | pure | Get Navigation Destination |
 | `float GetNavigationScrollPadding()` | pure | Get Navigation Scroll Padding |
@@ -68,16 +76,21 @@ UMG Scroll Box
 | `bool IsAnimatingScroll()` | pure | True while an eased scroll is still running. |
 | `bool IsScrollGestureMirrored()` | pure | True when a GESTURE on this box has to be read backwards -- a horizontal box in a right-to-left layout, and nothing else. |
 | `bool IsScrolling()` | pure | True while momentum or a spring-back is still moving the content. |
+| `bool IsScrollNeeded()` | pure | Whether there is anything to scroll: content longer than the viewport, as the last layout pass measured it -- SScrollBar's IsNeeded. False before the first pass, which has measured nothing yet. |
 | `bool ScrollBy(float Delta)` | callable | Scroll by a signed delta. Returns true when the offset actually changed, false when already at a limit. |
 | `void ScrollToEnd()` | callable | Jump to the end of the content. |
 | `void ScrollToStart()` | callable | Jump to the start of the content. |
 | `bool ScrollWidgetIntoView(UDreamWidget* InWidget, bool bAnimateScroll, EDreamUIScrollDestination InDestination, float InPadding)` | callable | Scroll the minimum distance that brings InWidget into view. Accepts any descendant, not just a direct child. Returns false when the widget is not inside this box or nothing needed to move. Eased by default, as UMG's is -- a jump loses the reader's place on a long list. |
 | `void SetAllowOverscroll(bool Value)` | callable | Set Allow Overscroll |
+| `void SetAllowRightClickDragScrolling(bool Value)` | callable | Read when a drag begins, so a gesture already under way keeps the answer it started with. |
 | `void SetAnalogMouseWheelKey(FKey Value)` | callable | Set Analog Mouse Wheel Key |
 | `void SetAnimateWheelScrolling(bool Value)` | callable | Set Animate Wheel Scrolling |
+| `void SetBackPadScrolling(bool Value)` | callable | Moves where offset zero puts the content and lengthens the range, so the box is re-arranged. |
 | `void SetConsumeMouseWheel(EDreamScrollBoxConsumeMouseWheel Value)` | callable | Set Consume Mouse Wheel |
 | `void SetDecelerationRate(float Value)` | callable | Set Deceleration Rate |
 | `void SetEnableInertia(bool Value)` | callable | Set Enable Inertia |
+| `void SetEnableTouchScrolling(bool Value)` | callable | Set Enable Touch Scrolling |
+| `void SetFrontPadScrolling(bool Value)` | callable | Set Front Pad Scrolling |
 | `void SetNavigationDestination(EDreamUIScrollDestination Value)` | callable | Set Navigation Destination |
 | `void SetNavigationScrollPadding(float Value)` | callable | Set Navigation Scroll Padding |
 | `void SetOverscrollLimit(float Value)` | callable | Set Overscroll Limit |

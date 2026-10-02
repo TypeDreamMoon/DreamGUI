@@ -158,7 +158,7 @@ Every Blueprint-facing member of the UMG class, and where it went. *adopt*: same
 | `UScaleBoxSlot` | `VerticalAlignment` | adopt | `VerticalAlignment` |  |
 | `UScaleBoxSlot` | `SetHorizontalAlignment` | adopt | `SetHorizontalAlignment` |  |
 | `UScaleBoxSlot` | `SetVerticalAlignment` | adopt | `SetVerticalAlignment` |  |
-| `UScrollBoxSlot` | `Size` | map | `SizeRule` | FSlateChildSize is a rule plus a value; the rule is SizeRule (Auto/Fill) and the value is FillWeight. A scroll box arranges along its axis at desired size, so Fill only has meaning across it. |
+| `UScrollBoxSlot` | `Size` | map | `SizeRule` | FSlateChildSize is a rule plus a value; the rule is SizeRule (Auto/Fill) and the value is FillWeight. Along the scroll axis a Fill slot is stacked as SScrollBox stacks one, with shrinking off: the Fill slots share the larger of what they asked for and the viewport less everything else, by weight, each clamped to its own Min/MaxDesiredSize. Short content is stretched to the viewport, content that overflows keeps the length it asked for, and the scroll range is always the desired total. |
 | `UScrollBoxSlot` | `Padding` | adopt | `Padding` |  |
 | `UScrollBoxSlot` | `HorizontalAlignment` | adopt | `HorizontalAlignment` |  |
 | `UScrollBoxSlot` | `VerticalAlignment` | adopt | `VerticalAlignment` |  |
