@@ -66,7 +66,7 @@ than waiting on a fade that will never run.
 | `void SetItemTemplateClass(TSubclassOf<UDreamUserWidget> InItemTemplateClass)` | callable | Rebuilds the rows: what a row IS comes from this class, so a bare write would change nothing. |
 | `void SetMaxVisibleItems(int32 InMaxVisibleItems)` | callable | How many rows the open list shows at most, re-pushed at once. |
 | `void SetOptionIcons(TArray<UObject*> InIcons)` | callable | Replace the per-option pictures and re-push the list, so an open one changes under the pointer. |
-| `void SetOptions(TArray<FText> InOptions)` | callable | Replace the options and rebuild the list next time it opens. |
+| `void SetOptions(TArray<FText> InOptions)` | callable | Replace the options: an open list is rebuilt and re-placed at once, a closed one when it next opens. |
 | `void SetSelectedIndex(int32 InIndex)` | callable | Set Selected Index |
 | `void SetSelectedOption(FText InOption)` | callable | Selects the option with that text. An option nobody offers changes nothing. |
 | `void SetStyle(FDreamDropdownStyle InStyle)` | callable | This instance's whole look, replaced and pushed. See UDreamButton::SetStyle for the caveat. |

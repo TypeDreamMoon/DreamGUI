@@ -53,7 +53,7 @@ each one under the switcher. So this is a working tab view, from .dui, with noth
 | `UDreamWidget* GetPage(int32 InIndex)` | pure | Get Page |
 | `int32 GetPageCount()` | pure | How many pages the switcher holds. Not necessarily how many tabs the strip shows. |
 | `bool IsTabEnabled(int32 InIndex)` | pure | A missing entry means enabled -- see TabEnabled. |
-| `void MoveTab(int32 InFromIndex, int32 InToIndex)` | callable | Move a tab, carrying its page. Both indices are into the strip as it stands. |
+| `void MoveTab(int32 InFromIndex, int32 InToIndex)` | callable | Move a tab, carrying its page. Both indices are into the strip as it stands. The tab's widget moves with it rather than the strip being rebuilt, and OnTabChanged reports the open tab's new index when the move shifted it. |
 | `void SetActiveTabIndex(int32 InIndex)` | callable | Open a tab. Broadcasts when the index actually moved, exactly as a click on the tab would. |
 | `void SetActiveTabIndexWithoutNotify(int32 InIndex)` | callable | The same move without the broadcast. The `<->` desugar looks for precisely this name (the setter's plus "WithoutNotify") so the forward half of a two-way binding cannot echo back into the variable that just drove it. |
 | `void SetFocusPageOnTabChange(bool bInFocusPageOnTabChange)` | callable | Set Focus Page on Tab Change |
@@ -70,7 +70,7 @@ each one under the switcher. So this is a working tab view, from .dui, with noth
 | Event | Signature | Description |
 |---|---|---|
 | `OnTabGenerated` | `void DreamTabViewTabEvent__DelegateSignature(int32 TabIndex, UDreamWidget* Tab)` | One per tab, as the strip is built. The hook for a consumer whose tabs are richer than a word but who would rather not author a whole class: everything under the tab is reachable from here by display name. The tab view's counterpart of the list's OnRowGenerated. |
-| `OnTabChanged` | `void DreamTabViewChangedEvent__DelegateSignature(int32 ActiveTabIndex)` | Fired when the open tab changes, whoever changed it. A consumer binds to this, not to a tab. |
+| `OnTabChanged` | `void DreamTabViewChangedEvent__DelegateSignature(int32 ActiveTabIndex)` | Fired when the open tab changes, whoever changed it -- a click, SetActiveTabIndex, or a close or a reorder that moved it. A consumer binds to this, not to a tab. |
 | `OnValueChangedBP` | `void DreamTabViewChangedEvent__DelegateSignature(int32 ActiveTabIndex)` | The `<->` convention: two-way bindings synthesize their reverse route against this exact name, so a value control carries it alongside its spoken events. Fires with them. |
 | `OnTabClosed` | `void DreamTabViewChangedEvent__DelegateSignature(int32 ActiveTabIndex)` | A tab is closing. Fired BEFORE the page is destroyed and the caption dropped, so a consumer that wants to keep the page can take it out of the switcher from here -- the same order UDreamDialog::Close broadcasts in, and for the same reason. |
 | `OnTabReordered` | `void DreamTabViewReorderEvent__DelegateSignature(int32 FromIndex, int32 ToIndex)` | A tab was dragged to a new place. Both indices are into the strip as it was before the move. |

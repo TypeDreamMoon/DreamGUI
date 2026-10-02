@@ -71,7 +71,7 @@ at all:
 | Function | Kind | Description |
 |---|---|---|
 | `void Close(FName InResult)` | callable | End the dialog with InResult. |
-| `void FocusDefaultButton()` | callable | Put focus on the default button now. Called for you at construct while bFocusDefaultButton is on; public because a dialog whose buttons were replaced after it appeared has a new default. |
+| `void FocusDefaultButton()` | callable | Put focus on the default button now. Called for you whenever the dialog appears while bFocusDefaultButton is on; public because a dialog whose buttons were replaced after it appeared has a new default. |
 | `TArray<FDreamDialogButton> GetButtons()` | pure | Get Buttons |
 | `UDreamButton* GetDefaultButton()` | pure | The primary button, or the last one when none is marked, or null for an empty row. |
 | `FText GetMessage()` | pure | Get Message |

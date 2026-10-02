@@ -21,6 +21,7 @@ Base class for almost all UI related things.
 | `RenderScale` | `FVector` | Render Transform | yes | read only | Render-only scale about RenderTransformPivot. |
 | `RenderTransformPivot` | `FVector2D` | Render Transform | yes | read only | What RenderRotation and RenderScale turn about, normalized within the widget's own rect. (0,0) is bottom-left and (1,1) top-right, matching AnchorData.Pivot rather than UMG's top-left origin -- consistency inside this fork beats consistency with the other engine. Two-dimensional because the rect is: it resolves to a point on the widget's own plane. Independent of AnchorData.Pivot, which belongs to layout. |
 | `RenderShear` | `FVector2D` | Render Transform | yes | read only | Render-only slant about this widget's own pivot, in DEGREES, applied to this widget and its whole subtree. See GetRenderShear for what it does and does not affect. |
+| `RenderLayer` | `EDreamWidgetRenderLayer` | Render Transform | yes | - | Whether this widget may be a render layer of its canvas, and when: once its render transform keeps changing (Auto), whenever it can be (Always), or never. A layer's transform is applied on the GPU to everything under it. |
 | `bPerspective` | `bool` | Perspective | yes | read only | PERSPECTIVE, in the shape CSS uses. |
 | `PerspectiveFieldOfView` | `float` | Perspective | yes | read only | The angle the subtree is viewed through, in degrees. Wider is a stronger effect, and it means exactly what UDreamCanvas::FieldOfView means -- the eye distance is derived from it with the same formula, against this widget's own width. |
 | `PerspectiveOrigin` | `FVector2D` | Perspective | yes | read only | Where the eye stands over this widget's own rect, normalized: (0,0) bottom-left, (1,1) top-right, matching RenderTransformPivot. The CSS `perspective-origin`, and the vanishing point a subtree converges toward. |
@@ -160,6 +161,7 @@ Base class for almost all UI related things.
 | `FRotator GetRelativeRotationEuler()` | pure | Euler-angle mirror of GetRelativeRotation, for animating rotation through Sequencer. |
 | `FVector GetRelativeScale()` | pure | Get Relative Scale |
 | `UDreamCanvas* GetRenderCanvas()` | pure | Get the canvas that render and update this UI element |
+| `EDreamWidgetRenderLayer GetRenderLayerMode()` | pure | Whether this widget may be a render layer of its canvas, and when. IsRenderLayer says whether it is one now. |
 | `float GetRenderOpacity()` | pure | Get Render Opacity |
 | `FRotator GetRenderRotation()` | pure | Get Render Rotation |
 | `FVector GetRenderScale()` | pure | Get Render Scale |
@@ -286,6 +288,7 @@ Base class for almost all UI related things.
 | `void SetRelativeRotation(FQuat Value)` | callable | Set Relative Rotation |
 | `void SetRelativeRotationEuler(FRotator Value)` | callable | Set rotation from euler angles. This is the rotation entry point Sequencer drives. |
 | `void SetRelativeScale(FVector Value)` | callable | Set Relative Scale |
+| `void SetRenderLayerMode(EDreamWidgetRenderLayer Value)` | callable | Whether this widget may be a render layer of its canvas, and when; its canvas makes it one, or takes it back, at its next update. |
 | `void SetRenderOpacity(float Value)` | callable | Set Render Opacity |
 | `void SetRenderRotation(FRotator Value)` | callable | Set Render Rotation |
 | `void SetRenderScale(FVector Value)` | callable | Set Render Scale |
