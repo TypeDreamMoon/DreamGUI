@@ -2,6 +2,9 @@
 
 #include "Core/DreamUIFontData_FreeTypeRender.h"
 #include "Core/Text/DreamGlyphRasterizer.h"
+#include "Core/Text/DreamGlyphColor.h"
+#include "Core/Text/DreamGlyphCoverage.h"
+#include "Core/Text/DreamFontFaceResolver.h"
 #include "DreamGUI.h"
 #include "Misc/FileHelper.h"
 #include "Misc/Paths.h"
@@ -11,7 +14,9 @@
 #include "Engine/Texture2DArray.h"
 #include "RHICommandList.h"
 #include "RHIResources.h"
+#include "Internationalization/Internationalization.h"
 #include "Internationalization/Culture.h"
+#include "UObject/DreamGUIObjectVersion.h"
 #if WITH_FREETYPE
 #include <ft2build.h>
 #include FT_FREETYPE_H
@@ -24,6 +29,7 @@
 #if WITH_FREETYPE
 #include FT_OUTLINE_H
 #include FT_TRUETYPE_TABLES_H
+#include FT_ADVANCES_H
 #endif
 
 namespace
@@ -36,6 +42,61 @@ namespace
 	int32 AsyncGlyphSyncBudgetOverride = -1;
 	uint64 SyncGlyphBudgetFrame = 0;
 	int32 SyncGlyphsThisFrame = 0;
+}
+
+namespace DreamFreeTypeRenderLocal
+{
+	/** Fonts with a coverage flush to make or OnCoverageGlyphsChanged to broadcast at the end of FlushPendingFontTextures. */
+	TSet<TWeakObjectPtr<UDreamUIFontData_FreeTypeRender>> FontsWithCoverageWork;
+	/** Fonts whose coverage glyphs were flushed and are being made again; see bCoverageRefilling. */
+	TSet<TWeakObjectPtr<UDreamUIFontData_FreeTypeRender>> FontsRefillingCoverage;
+	uint64 SyncCoverageBudgetFrame = 0;
+	int32 SyncCoverageGlyphsThisFrame = 0;
+	/** Cached strike advances past this many are dropped together: an animated size would otherwise grow the cache for good. */
+	constexpr int32 MaxStrikeAdvanceCacheEntries = 4096;
+
+	/**
+	 * The game's current language as face resolution takes it, for code points resolved outside any text (GetCharData,
+	 * kerning). Made again only when the language changes: its prioritized culture names are a list of strings. Game thread.
+	 */
+	const FDreamTextLanguage& GetGameLanguage()
+	{
+		static FDreamTextLanguage Language;
+		static FString LanguageName;
+		static bool bMade = false;
+		const FCultureRef CurrentLanguage = FInternationalization::Get().GetCurrentLanguage();
+		const FString& Current = CurrentLanguage->GetName();
+		if (!bMade || LanguageName != Current)
+		{
+			Language = FDreamTextLanguage::Make(FString());
+			LanguageName = Current;
+			bMade = true;
+		}
+		return Language;
+	}
+
+#if WITH_FREETYPE
+	/** Units per em, from the head table when the face's own is 0: FreeType leaves it so for a face without outlines. */
+	int32 GetUnitsPerEm(FT_FaceRec_* InFace)
+	{
+		if (InFace == nullptr)return 0;
+		if (InFace->units_per_EM != 0)return InFace->units_per_EM;
+		const TT_Header* Head = static_cast<const TT_Header*>(FT_Get_Sfnt_Table(InFace, FT_SFNT_HEAD));
+		return Head != nullptr ? (int32)Head->Units_Per_EM : 0;
+	}
+
+	/** A glyph's hmtx advance at a size, in pixels; 0 when the face cannot say. Loads no outline and no bitmap. */
+	float GetDesignAdvance(FT_FaceRec_* InFace, uint32 InGlyphIndex, float InPixelSize)
+	{
+		const int32 UnitsPerEm = GetUnitsPerEm(InFace);
+		FT_Fixed Advance = 0;
+		if (UnitsPerEm <= 0 || FT_Get_Advance(InFace, InGlyphIndex, FT_LOAD_NO_SCALE | FT_LOAD_IGNORE_TRANSFORM, &Advance) != 0)
+		{
+			return 0.0f;
+		}
+		return (float)((double)Advance * (double)InPixelSize / (double)UnitsPerEm);
+	}
+#endif
 }
 
 void UDreamUIFontData_FreeTypeRender::UpdateFontOnCultureChanged()
@@ -116,15 +177,51 @@ namespace DreamFreeTypeMetricsLocal
 	 */
 	bool ReadVerticalMetrics(FT_FaceRec_* InFace, EDreamUIFontVerticalMetrics InSource, float InFontSize, float& OutAscender, float& OutDescender, float& OutLineSpacing)
 	{
-		if (InSource != EDreamUIFontVerticalMetrics::FreeType && FT_IS_SCALABLE(InFace) && InFace->units_per_EM != 0)
+		const bool bScalable = FT_IS_SCALABLE(InFace) && InFace->units_per_EM != 0;
+		if (bScalable && InSource == EDreamUIFontVerticalMetrics::FreeType)
 		{
-			const TT_HoriHeader* Hhea = static_cast<const TT_HoriHeader*>(FT_Get_Sfnt_Table(InFace, FT_SFNT_HHEA));
-			const TT_OS2* OS2 = static_cast<const TT_OS2*>(FT_Get_Sfnt_Table(InFace, FT_SFNT_OS2));
-			const bool bHasOS2 = OS2 != nullptr && OS2->version != 0xFFFFu;
-			// hhea, or what FreeType made of a face without one (it fills the face's own fields from OS/2 then).
-			const double HheaAscender = Hhea != nullptr ? (double)Hhea->Ascender : (double)InFace->ascender;
-			const double HheaDescender = Hhea != nullptr ? -(double)Hhea->Descender : -(double)InFace->descender;
-			const double HheaLineGap = Hhea != nullptr ? (double)Hhea->Line_Gap : (double)InFace->height - (HheaAscender + HheaDescender);
+			if (SetMetricSize(InFace, InFontSize))
+			{
+				return false;
+			}
+			OutAscender = InFace->size->metrics.ascender * ONE_DIVIDE_64;
+			OutDescender = -InFace->size->metrics.descender * ONE_DIVIDE_64;
+			OutLineSpacing = InFace->size->metrics.height * ONE_DIVIDE_64;
+			return true;
+		}
+		// Every other source reads the tables. So does every source for a face without outlines -- colour bitmap strikes,
+		// CBDT/CBLC or sbix -- of which FreeType keeps no units per em and no ascender (they are left at 0), and which takes
+		// no char size at all: FT_Set_Char_Size fails on it. Its head, hhea and OS/2 tables still say what its em and its
+		// line are.
+		const TT_HoriHeader* Hhea = static_cast<const TT_HoriHeader*>(FT_Get_Sfnt_Table(InFace, FT_SFNT_HHEA));
+		const TT_OS2* OS2 = static_cast<const TT_OS2*>(FT_Get_Sfnt_Table(InFace, FT_SFNT_OS2));
+		const bool bHasOS2 = OS2 != nullptr && OS2->version != 0xFFFFu;
+		const double UnitsPerEm = (double)DreamFreeTypeRenderLocal::GetUnitsPerEm(InFace);
+		if (UnitsPerEm > 0.0 && (bScalable || Hhea != nullptr || bHasOS2))
+		{
+			// hhea, or what FreeType makes of a face without one: it fills the face's own fields from OS/2 then. A face without
+			// outlines has nothing in those fields, so it takes OS/2's typo metrics straight away.
+			double HheaAscender = 0.0, HheaDescender = 0.0, HheaLineGap = 0.0;
+			if (Hhea != nullptr)
+			{
+				HheaAscender = Hhea->Ascender;
+				HheaDescender = -(double)Hhea->Descender;
+				HheaLineGap = Hhea->Line_Gap;
+			}
+			else if (bScalable)
+			{
+				HheaAscender = InFace->ascender;
+				HheaDescender = -(double)InFace->descender;
+				HheaLineGap = (double)InFace->height - (HheaAscender + HheaDescender);
+			}
+			if (HheaAscender == 0.0 && HheaDescender == 0.0 && bHasOS2 && !bScalable)
+			{
+				// What FreeType does for a scalable face whose hhea says nothing: typo metrics, else the win ones.
+				const bool bHasTypo = OS2->sTypoAscender != 0 || OS2->sTypoDescender != 0;
+				HheaAscender = bHasTypo ? (double)OS2->sTypoAscender : (double)OS2->usWinAscent;
+				HheaDescender = bHasTypo ? -(double)OS2->sTypoDescender : (double)OS2->usWinDescent;
+				HheaLineGap = bHasTypo ? (double)OS2->sTypoLineGap : 0.0;
+			}
 			double Ascender = HheaAscender, Descender = HheaDescender, LineGap = HheaLineGap;
 			const bool bUseTypoMetrics = bHasOS2 && (OS2->fsSelection & (1u << 7)) != 0;
 			if (bHasOS2 && (InSource == EDreamUIFontVerticalMetrics::Typo || (InSource == EDreamUIFontVerticalMetrics::Platform && bUseTypoMetrics)))
@@ -147,20 +244,35 @@ namespace DreamFreeTypeMetricsLocal
 				Descender = OS2->usWinDescent;
 				LineGap = FMath::Max(0.0, (HheaAscender + HheaDescender + HheaLineGap) - (Ascender + Descender));
 			}
-			const double Scale = (double)InFontSize / (double)InFace->units_per_EM;
+			const double Scale = (double)InFontSize / UnitsPerEm;
+			if (InSource == EDreamUIFontVerticalMetrics::FreeType)
+			{
+				// Only a face without outlines gets here with this source: FreeType's own grid-fitting of a scalable face's size
+				// metrics, done by hand -- the ascender and the descender rounded outwards, the line spacing to the nearest pixel.
+				OutAscender = (float)FMath::CeilToDouble(Ascender * Scale);
+				OutDescender = (float)FMath::CeilToDouble(Descender * Scale);
+				OutLineSpacing = (float)FMath::FloorToDouble((Ascender + Descender + LineGap) * Scale + 0.5);
+				return true;
+			}
 			OutAscender = (float)(Ascender * Scale);
 			OutDescender = (float)(Descender * Scale);
 			OutLineSpacing = (float)((Ascender + Descender + LineGap) * Scale);
 			return true;
 		}
-		if (SetMetricSize(InFace, InFontSize))
+		// No tables to read (a bitmap font that is not an sfnt): the strike chosen for the size, its own metrics scaled to it.
+		if (!bScalable && InFace->num_fixed_sizes > 0)
 		{
-			return false;
+			const int32 Strike = FDreamGlyphColor::ChooseStrike(InFace, InFontSize);
+			if (Strike != INDEX_NONE && FT_Select_Size(InFace, Strike) == 0 && InFace->size->metrics.y_ppem > 0)
+			{
+				const double Scale = (double)InFontSize / (double)InFace->size->metrics.y_ppem;
+				OutAscender = (float)(InFace->size->metrics.ascender * ONE_DIVIDE_64 * Scale);
+				OutDescender = (float)(-InFace->size->metrics.descender * ONE_DIVIDE_64 * Scale);
+				OutLineSpacing = (float)(InFace->size->metrics.height * ONE_DIVIDE_64 * Scale);
+				return true;
+			}
 		}
-		OutAscender = InFace->size->metrics.ascender * ONE_DIVIDE_64;
-		OutDescender = -InFace->size->metrics.descender * ONE_DIVIDE_64;
-		OutLineSpacing = InFace->size->metrics.height * ONE_DIVIDE_64;
-		return true;
+		return false;
 	}
 }
 
@@ -355,6 +467,9 @@ void UDreamUIFontData_FreeTypeRender::InitFreeType()
 		UE_LOG(DreamGUI, Log, TEXT("[%s].%d Success, font:%s"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *(this->GetName()));
 		bAlreadyInitialized = true;
 		bHasKerning = FT_HAS_KERNING(Face) != 0;
+		// A face of its own again: what was shaped or laid out with the last one is not this one's.
+		FaceEpoch++;
+		LayoutEpoch++;
 		InitHarfBuzz();
 
 		// Texts drawing with this font get their atlas back here, and are told to lay out again: the way back from a
@@ -378,18 +493,185 @@ void UDreamUIFontData_FreeTypeRender::FlushGlyphAtlas()
 	bAtlasRefilling = true;
 	AtlasFlushFrame = GFrameCounter;
 	FontsRefillingAtlas.Add(this);
+	// Releasing the atlas resets the packing too: the cell pool, both packers, and with them every coverage cell.
 	ReleaseFontTexture();
-	CurrentTextureSlice = 0;
-	const int32 RectPackCellSize = UDreamUISettings::ConvertAtlasTextureSizeTypeToSize(RectPackCellSizeType);
-	BinPack = rbp::MaxRectsBinPack(RectPackCellSize, RectPackCellSize);
 	const int32 TextureSize = UDreamUISettings::ConvertAtlasTextureSizeTypeToSize(TextureSizeType);
-	BinPack.PrepareRectCellsForText(TextureSize, TextureSize, FreeRectCells, RectPackCellSize, false);
 	// RenewFontTexture tells every text using this font that its atlas changed, which is what makes
 	// them re-lay-out: a display list caches each glyph's UVs, and those all just moved.
 	RenewFontTexture();
+	AddAtlasSliceCells(0);
 	OneDivideTextureSize = 1.0f / TextureSize;
 
+	// The coverage glyphs go with the rest: the texts laying out again paint again, and ask for them anew.
+	ClearAtlasCaches();
+}
+
+void UDreamUIFontData_FreeTypeRender::ResetAtlasPacking()
+{
+	FreeAtlasCells.Reset();
+	FieldPacker = FAtlasPacker();
+	CoveragePacker = FAtlasPacker();
+	CoverageCells.Reset();
+	RetiredCoverageCells.Reset();
+	bCoverageFlushRequested = false;
+}
+
+void UDreamUIFontData_FreeTypeRender::ClearAtlasCaches()
+{
 	ClearCharDataCache();
+	ColorGlyphs.Reset();
+	CoverageGlyphs.Reset();
+}
+
+void UDreamUIFontData_FreeTypeRender::AddAtlasSliceCells(int32 Slice)
+{
+	const int32 TextureSize = UDreamUISettings::ConvertAtlasTextureSizeTypeToSize(TextureSizeType);
+	const int32 CellSize = FMath::Min(UDreamUISettings::ConvertAtlasTextureSizeTypeToSize(RectPackCellSizeType), TextureSize);
+	// Taken from the end of the array: pushed last-used first, so the packers take the top-left cell first and then go down
+	// the first column, then the next -- the order the packer has always filled a slice in.
+	for (int32 X = TextureSize - CellSize; X >= 0; X -= CellSize)
+	{
+		for (int32 Y = TextureSize - CellSize; Y >= 0; Y -= CellSize)
+		{
+			FAtlasCell& Cell = FreeAtlasCells.AddDefaulted_GetRef();
+			Cell.Slice = Slice;
+			Cell.X = X;
+			Cell.Y = Y;
+		}
+	}
+}
+
+void UDreamUIFontData_FreeTypeRender::AddAtlasSlice()
+{
+	const int32 NewSlice = Texture != nullptr ? Texture->GetArraySize() : 0;
+	// The slice count the atlas is about to have.
+	UE_LOG(DreamGUI, Log, TEXT("[%s].%d Expend Texture2DArray slice to: %d"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, NewSlice + 1);
+	RenewFontTexture();
+	AddAtlasSliceCells(NewSlice);
+	OneDivideTextureSize = 1.0f / UDreamUISettings::ConvertAtlasTextureSizeTypeToSize(TextureSizeType);
+}
+
+void UDreamUIFontData_FreeTypeRender::TakeAtlasCell(FAtlasPacker& InOutPacker, bool bCoverage)
+{
+	const int32 TextureSize = UDreamUISettings::ConvertAtlasTextureSizeTypeToSize(TextureSizeType);
+	const int32 CellSize = FMath::Min(UDreamUISettings::ConvertAtlasTextureSizeTypeToSize(RectPackCellSizeType), TextureSize);
+	const FAtlasCell Cell = FreeAtlasCells.Pop(EAllowShrinking::No);
+	rbp::Rect CellRect;
+	CellRect.x = Cell.X;
+	CellRect.y = Cell.Y;
+	CellRect.width = CellSize;
+	CellRect.height = CellSize;
+	// What is left of the packer's last cell is given up, as it always was: glyphs rarely fit the scraps of a full cell.
+	InOutPacker.Bin = rbp::MaxRectsBinPack(CellSize, CellSize);
+	InOutPacker.Bin.DoRectCellsForText(CellRect);
+	InOutPacker.Cell = Cell;
+	InOutPacker.bHasCell = true;
+	if (bCoverage)
+	{
+		CoverageCells.Add(Cell);
+		const int32 Budget = UDreamUISettings::GetMaxCoverageCells();
+		if (CoverageCells.Num() > (CoverageCellThreshold > 0 ? CoverageCellThreshold : Budget))
+		{
+			// Still refilling after the last coverage flush, and out of cells already: the texts on screen need more than the
+			// budget, and another flush would only start the same refill again. Never past twice the budget: a font that keeps
+			// coverage glyphs on the worker frame after frame never counts as settled.
+			if (bCoverageRefilling && CoverageCells.Num() <= 2 * Budget)
+			{
+				CoverageCellThreshold = CoverageCells.Num();
+				if (!bLoggedCoverageThresholdRaise)
+				{
+					bLoggedCoverageThresholdRaise = true;
+					UE_LOG(DreamGUI, Log, TEXT("[%s].%d Font:%s, the small-text coverage glyphs on screen need more than the %d-cell budget (DreamUI settings: Max Coverage Cells), so they keep more cells, up to twice the budget, instead of being flushed every frame. (reported once per font)")
+						, ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *GetName(), Budget);
+				}
+			}
+			else
+			{
+				RequestCoverageFlush();
+			}
+		}
+	}
+}
+
+bool UDreamUIFontData_FreeTypeRender::PackAtlasRect(bool bCoverage, int32 InWidth, int32 InHeight, int32& OutSlice, int32& OutX, int32& OutY)
+{
+	const int32 TextureSize = UDreamUISettings::ConvertAtlasTextureSizeTypeToSize(TextureSizeType);
+	const int32 CellSize = FMath::Min(UDreamUISettings::ConvertAtlasTextureSizeTypeToSize(RectPackCellSizeType), TextureSize);
+	if (InWidth <= 0 || InHeight <= 0)
+	{
+		return false;
+	}
+	if (InWidth > CellSize || InHeight > CellSize)
+	{
+		// No cell can ever hold it. Taking cell after cell for it, as the packer used to, only grew the atlas.
+		if (!bLoggedGlyphLargerThanCell)
+		{
+			bLoggedGlyphLargerThanCell = true;
+			UE_LOG(DreamGUI, Error, TEXT("[%s].%d Font:%s, a %dx%d glyph is larger than the %d-texel cells the atlas is packed in, so it is not drawn. Lower the font's sample size, or raise its rect-pack cell size. (reported once per font)")
+				, ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *GetName(), InWidth, InHeight, CellSize);
+		}
+		return false;
+	}
+	// Cells a coverage flush took back in an earlier frame are free again from here on.
+	ReleaseRetiredCoverageCells();
+	FAtlasPacker& Packer = bCoverage ? CoveragePacker : FieldPacker;
+	bool bFlushedForThisRect = false;
+	for (int32 Attempt = 0; Attempt < 64; Attempt++)
+	{
+		if (Packer.bHasCell)
+		{
+			const rbp::Rect Packed = Packer.Bin.Insert(InWidth, InHeight, rbp::MaxRectsBinPack::RectBestAreaFit);
+			if (Packed.height > 0)
+			{
+				OutSlice = Packer.Cell.Slice;
+				OutX = Packed.x;
+				OutY = Packed.y;
+				return true;
+			}
+		}
+		if (FreeAtlasCells.Num() > 0)
+		{
+			TakeAtlasCell(Packer, bCoverage);
+			continue;
+		}
+		// No cell left anywhere: the atlas grows by a slice.
+		const int32 SliceCount = Texture != nullptr ? Texture->GetArraySize() : 0;
+		const int32 RHILimit = FMath::Max((int32)GMaxTextureArrayLayers, 1);
+		if (SliceCount >= RHILimit)
+		{
+			if (bCoverage)
+			{
+				// The field glyphs are not flushed for coverage glyphs: this one is drawn from its field, and the coverage
+				// glyphs give their cells back at the frame boundary.
+				RequestCoverageFlush();
+				return false;
+			}
+			if (bFlushedForThisRect)
+			{
+				UE_LOG(DreamGUI, Error, TEXT("[%s].%d Font:%s, a %dx%d glyph does not fit an empty %d-slice atlas. Raise DreamUI's atlas texture size, or the font's rect-pack cell size.")
+					, ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *GetName(), InWidth, InHeight, SliceCount);
+				return false;
+			}
+			bFlushedForThisRect = true;
+			UE_LOG(DreamGUI, Warning, TEXT("[%s].%d Font:%s, the glyph atlas reached the %d slices the RHI can address; flushing it now and refilling on demand.")
+				, ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *GetName(), RHILimit);
+			FlushGlyphAtlas();
+			continue;
+		}
+		if (!bCoverage && SliceCount >= GetAtlasSliceThreshold())
+		{
+			// The atlas is as large as it is meant to get. It used to fail the glyph from here on, for the rest of the
+			// session, because it only ever grew. A rect-packed atlas cannot give one glyph's rectangle to a glyph of
+			// another size without repacking, so there is no "evict the least recently used glyph" to do; what there is --
+			// and what Slate's own font cache does when its atlas fills -- is to throw the whole cache away and let it
+			// refill on demand. That happens between frames (see bAtlasFlushRequested); until then the atlas grows past its
+			// budget. Coverage glyphs keep to a budget of cells of their own instead (RequestCoverageFlush).
+			RequestAtlasFlush(SliceCount);
+		}
+		AddAtlasSlice();
+	}
+	UE_LOG(DreamGUI, Error, TEXT("[%s].%d Font:%s, a %dx%d glyph never fit the atlas."), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *GetName(), InWidth, InHeight);
+	return false;
 }
 
 #if WITH_FREETYPE
@@ -397,6 +679,9 @@ void UDreamUIFontData_FreeTypeRender::DeinitFreeType()
 {
 	bAlreadyInitialized = false;
 	bInitFailed = false;
+	// Whatever was shaped or laid out with this face is not the next face's (the shape cache keys runs by this epoch).
+	FaceEpoch++;
+	LayoutEpoch++;
 	// The worker keeps itself (and the font bytes it reads) alive until its task ends; results for
 	// this font are simply dropped with it. Dropping our reference to the shared bytes here is what
 	// makes the next rasterizer take the reloaded file rather than the one that was just replaced.
@@ -404,12 +689,19 @@ void UDreamUIFontData_FreeTypeRender::DeinitFreeType()
 	SharedFaceBytes.Reset();
 	FaceMetricsCache.Reset();
 	FaceDecorationCache.Reset();
+	ColorGlyphInfos.Reset();
+	ResetCodepointFaces();
 	PendingAsyncGlyphs.Reset();
+	PendingColorGlyphs.Reset();
+	PendingCoverageGlyphs.Reset();
 	FontsWithAsyncGlyphs.Remove(this);
 	bAtlasFlushRequested = false;
 	bAtlasRefilling = false;
 	AtlasSliceThreshold = 0;
 	FontsRefillingAtlas.Remove(this);
+	bCoverageRefilling = false;
+	CoverageCellThreshold = 0;
+	DreamFreeTypeRenderLocal::FontsRefillingCoverage.Remove(this);
 	DeinitHarfBuzz();
 	ReleaseFontTexture();
 	if (Library != nullptr)
@@ -426,8 +718,6 @@ void UDreamUIFontData_FreeTypeRender::DeinitFreeType()
 	}
 	Face = nullptr;
 	Library = nullptr;
-	FreeRectCells.Empty();
-	BinPack = rbp::MaxRectsBinPack(256, 256);
 #if WITH_EDITORONLY_DATA
 	SubFaces.Reset();
 #endif
@@ -435,7 +725,8 @@ void UDreamUIFontData_FreeTypeRender::DeinitFreeType()
 	// details panel, a culture switch, a new file path -- so resetting it made face 0 the only face a collection could
 	// ever show. InitFreeType clamps it to the file it opens.
 	bHasKerning = false;
-	ClearCharDataCache();
+	bCoverageGlyphsChanged = false;
+	ClearAtlasCaches();
 }
 #endif
 
@@ -562,8 +853,9 @@ UDreamUIFontData_FreeTypeRender* UDreamUIFontData_FreeTypeRender::GetFaceOwner(i
 	UDreamUIFontData_FreeTypeRender* Owner = nullptr;
 	if (FaceIndex < RegularFaceCount)
 	{
+		// An entry with no font keeps its index: an empty face.
 		const int32 FallbackIndex = FaceIndex - 1;
-		Owner = FallbackFontArray.IsValidIndex(FallbackIndex) ? FallbackFontArray[FallbackIndex].Get() : nullptr;
+		Owner = Fallbacks.IsValidIndex(FallbackIndex) ? Fallbacks[FallbackIndex].Font.Get() : nullptr;
 	}
 	else
 	{
@@ -672,17 +964,82 @@ void UDreamUIFontData_FreeTypeRender::InitHarfBuzz()
 	HarfBuzzFont = hb_font_create(HarfBuzzFace);
 	hb_face_destroy(HarfBuzzFace);
 	hb_ot_font_set_funcs(HarfBuzzFont);
+	// A face drawn from colour bitmap strikes advances by the strike's own advance, which is what its bitmap was drawn to
+	// and what browsers advance by -- Noto Color Emoji's 136 px at 109 ppem is 39.93 px at 32 px, where hmtx says 39.84.
+	// HarfBuzz reads hmtx, so such a face shapes through a sub-font that answers the strike's advances and takes the rest
+	// (cmap, GSUB, GPOS) from its parent.
+	if (FT_HAS_COLOR(Face) && FT_HAS_FIXED_SIZES(Face) && Face->num_fixed_sizes > 0)
+	{
+		// The sub-font's functions: its own horizontal advances, everything else its parent's. Made once and never changed
+		// again (immutable), so every strike font shares them; never destroyed, as they live as long as the module.
+		static hb_font_funcs_t* const StrikeFontFuncs = []()
+		{
+			hb_font_funcs_t* NewFuncs = hb_font_funcs_create();
+			hb_font_funcs_set_glyph_h_advance_func(NewFuncs, &UDreamUIFontData_FreeTypeRender::GetHarfBuzzStrikeAdvance, nullptr, nullptr);
+			hb_font_funcs_make_immutable(NewFuncs);
+			return NewFuncs;
+		}();
+		HarfBuzzStrikeFont = hb_font_create_sub_font(HarfBuzzFont);
+		// The font data is this font, which owns the sub-font and destroys it before it goes (DeinitHarfBuzz).
+		hb_font_set_funcs(HarfBuzzStrikeFont, StrikeFontFuncs, this, nullptr);
+	}
 #endif
 }
 
 void UDreamUIFontData_FreeTypeRender::DeinitHarfBuzz()
 {
+	StrikeAdvanceCache.Reset();
 #if WITH_HARFBUZZ
+	// The sub-font holds a reference to its parent; it goes first.
+	if (HarfBuzzStrikeFont != nullptr)
+	{
+		hb_font_destroy(HarfBuzzStrikeFont);
+		HarfBuzzStrikeFont = nullptr;
+	}
 	if (HarfBuzzFont != nullptr)
 	{
 		hb_font_destroy(HarfBuzzFont);
 		HarfBuzzFont = nullptr;
 	}
+#endif
+}
+
+int32 UDreamUIFontData_FreeTypeRender::GetHarfBuzzStrikeAdvance(hb_font_t* InFont, void* InFontData, uint32 InGlyph, void* InUserData)
+{
+#if WITH_HARFBUZZ && WITH_FREETYPE
+	UDreamUIFontData_FreeTypeRender* Font = static_cast<UDreamUIFontData_FreeTypeRender*>(InFontData);
+	int XScale = 0;
+	int YScale = 0;
+	hb_font_get_scale(InFont, &XScale, &YScale);
+	const uint64 CacheKey = ((uint64)InGlyph << 32) | (uint64)(uint32)XScale;
+	if (const int32* Cached = Font->StrikeAdvanceCache.Find(CacheKey))
+	{
+		return *Cached;
+	}
+	int32 Advance = 0;
+	float AdvancePixels = 0.0f;
+	if (Font->Face != nullptr && FDreamGlyphColor::GetStrikeAdvance(Font->Face, InGlyph, XScale / 64.0f, AdvancePixels))
+	{
+		Advance = FMath::RoundToInt(AdvancePixels * 64.0f);
+	}
+	else
+	{
+		// A glyph the strikes do not hold (a space, a joiner): hmtx, as the parent font reads it, at this font's scale.
+		hb_font_t* Parent = hb_font_get_parent(InFont);
+		int ParentXScale = 0;
+		int ParentYScale = 0;
+		hb_font_get_scale(Parent, &ParentXScale, &ParentYScale);
+		const hb_position_t ParentAdvance = hb_font_get_glyph_h_advance(Parent, InGlyph);
+		Advance = ParentXScale != 0 ? (int32)((int64)ParentAdvance * XScale / ParentXScale) : 0;
+	}
+	if (Font->StrikeAdvanceCache.Num() >= DreamFreeTypeRenderLocal::MaxStrikeAdvanceCacheEntries)
+	{
+		Font->StrikeAdvanceCache.Reset();
+	}
+	Font->StrikeAdvanceCache.Add(CacheKey, Advance);
+	return Advance;
+#else
+	return 0;
 #endif
 }
 
@@ -700,18 +1057,94 @@ bool UDreamUIFontData_FreeTypeRender::HasKerning()
 
 int32 UDreamUIFontData_FreeTypeRender::GetFaceCount()
 {
-	return 1 + FallbackFontArray.Num();
+	return 1 + Fallbacks.Num();
 }
 
 bool UDreamUIFontData_FreeTypeRender::FaceHasCodepoint(int32 FaceIndex, uint32 Codepoint)
 {
 #if WITH_FREETYPE
-	if (FT_FaceRec_* TargetFace = GetFreeTypeFace(FaceIndex))
+	FT_FaceRec_* TargetFace = GetFreeTypeFace(FaceIndex);
+	if (TargetFace == nullptr)
 	{
-		return FT_Get_Char_Index(TargetFace, Codepoint) != 0;
+		return false;
 	}
-#endif
+	// Remembered for the face as it is now. Its font is opened by now (GetFreeTypeFace), so its face epoch is the one of the
+	// face in use: an answer kept under another epoch was another face's, and nothing kept is trusted any more.
+	const bool bCacheable = FaceIndex >= 0 && FaceIndex < 64;
+	const uint64 FaceBit = bCacheable ? (uint64)1 << FaceIndex : 0;
+	if (bCacheable)
+	{
+		const UDreamUIFontData_FreeTypeRender* Owner = GetFaceOwner(FaceIndex);
+		const uint32 OwnerEpoch = Owner != nullptr ? Owner->FaceEpoch : 0;
+		if (CodepointFacesEpochs.Num() <= FaceIndex)
+		{
+			CodepointFacesEpochs.SetNumZeroed(FaceIndex + 1);
+		}
+		if (CodepointFacesEpochs[FaceIndex] != OwnerEpoch)
+		{
+			if (CodepointFacesEpochs[FaceIndex] != 0)
+			{
+				ResetCodepointFaces();
+				CodepointFacesEpochs.SetNumZeroed(FaceIndex + 1);
+			}
+			CodepointFacesEpochs[FaceIndex] = OwnerEpoch;
+		}
+		if (const FCodepointFaces* Known = CodepointFaces.Find(Codepoint); Known != nullptr && (Known->Known & FaceBit) != 0)
+		{
+			return (Known->Has & FaceBit) != 0;
+		}
+	}
+	bool bHas = false;
+	const uint32 GlyphIndex = FT_Get_Char_Index(TargetFace, Codepoint);
+	if (GlyphIndex == 0)
+	{
+		bHas = false;
+	}
+	else if (!FT_HAS_COLOR(TargetFace))
+	{
+		bHas = true;
+	}
+	// A colour face has a code point when what it holds for it can be drawn here; otherwise the next face, or the text's
+	// emoji data, answers for it.
+	else if (!CanHoldColorGlyphs())
+	{
+		// An atlas without colour (the single-channel field) draws a colour face's glyph only from its outline.
+		bHas = FT_IS_SCALABLE(TargetFace)
+			&& FT_Load_Glyph(TargetFace, GlyphIndex, FT_LOAD_NO_SCALE | FT_LOAD_NO_BITMAP | FT_LOAD_NO_HINTING | FT_LOAD_IGNORE_TRANSFORM) == 0
+			&& TargetFace->glyph->format == FT_GLYPH_FORMAT_OUTLINE
+			&& TargetFace->glyph->outline.n_points > 0;
+	}
+	else
+	{
+		// COLRv1 paints with no v0 layers, or SVG alone: nothing FreeType composites, so nothing drawn.
+		bHas = GetGlyphColorKind(FaceIndex, GlyphIndex) != (uint8)EDreamGlyphColorKind::Unsupported;
+	}
+	if (bCacheable)
+	{
+		// Text uses a few thousand code points at the most; a cache past that many is a stream of distinct ones, started again.
+		if (CodepointFaces.Num() >= 65536)
+		{
+			CodepointFaces.Reset();
+		}
+		FCodepointFaces& Entry = CodepointFaces.FindOrAdd(Codepoint);
+		Entry.Known |= FaceBit;
+		if (bHas)
+		{
+			Entry.Has |= FaceBit;
+		}
+	}
+	return bHas;
+#else
 	return false;
+#endif
+}
+
+void UDreamUIFontData_FreeTypeRender::ResetCodepointFaces()
+{
+	CodepointFaces.Reset();
+	CodepointFacesEpochs.Reset();
+	// What a face's glyphs hold goes with what its cmap has: both were asked of the face that is no longer there.
+	ColorGlyphInfos.Reset();
 }
 
 void* UDreamUIFontData_FreeTypeRender::GetShapingFont(int32 FaceIndex, float FontSize)
@@ -724,13 +1157,16 @@ void* UDreamUIFontData_FreeTypeRender::GetShapingFont(int32 FaceIndex, float Fon
 		return Owner != nullptr ? Owner->GetShapingFont(0, FontSize) : nullptr;
 	}
 	InitFreeType();
-	if (HarfBuzzFont == nullptr)
+	// A strike face's font advances by its strikes (InitHarfBuzz); its parent keeps its own scale, which the sub-font's
+	// inherited functions convert from.
+	hb_font_t* ShapingFont = HarfBuzzStrikeFont != nullptr ? HarfBuzzStrikeFont : HarfBuzzFont;
+	if (ShapingFont == nullptr)
 	{
 		return nullptr;
 	}
 	const int32 Scale = FMath::RoundToInt(FontSize * 64.0f);
-	hb_font_set_scale(HarfBuzzFont, Scale, Scale);
-	return HarfBuzzFont;
+	hb_font_set_scale(ShapingFont, Scale, Scale);
+	return ShapingFont;
 #else
 	return nullptr;
 #endif
@@ -739,16 +1175,23 @@ void* UDreamUIFontData_FreeTypeRender::GetShapingFont(int32 FaceIndex, float Fon
 bool UDreamUIFontData_FreeTypeRender::ResolveCodepoint(uint32 Codepoint, FDreamUIGlyphKey& OutKey)
 {
 #if WITH_FREETYPE
-	const int32 FaceCount = GetFaceCount();
-	for (int32 FaceIndex = 0; FaceIndex < FaceCount; FaceIndex++)
+	// One code point as a cluster of its own, in the game's language: the faces a text would try for it, in that order.
+	const FDreamTextLanguage& Language = DreamFreeTypeRenderLocal::GetGameLanguage();
+	FDreamFontFaceQuery Query;
+	Query.Cluster = TConstArrayView<uint32>(&Codepoint, 1);
+	Query.Cultures = Language.PrioritizedCultureNames;
+	Query.Presentation = FDreamFontFaceResolver::GetPresentation(Query.Cluster);
+	const FDreamFontFaceChoice Choice = FDreamFontFaceResolver::Resolve(this, Query);
+	if (Choice.bCoversBase)
 	{
-		FT_FaceRec_* TargetFace = GetFreeTypeFace(FaceIndex);
-		if (TargetFace == nullptr)continue;
-		const uint32 GlyphIndex = FT_Get_Char_Index(TargetFace, Codepoint);
-		if (GlyphIndex != 0)
+		if (FT_FaceRec_* TargetFace = GetFreeTypeFace(Choice.FaceIndex))
 		{
-			OutKey = FDreamUIGlyphKey(FaceIndex, GlyphIndex);
-			return true;
+			const uint32 GlyphIndex = FT_Get_Char_Index(TargetFace, Codepoint);
+			if (GlyphIndex != 0)
+			{
+				OutKey = FDreamUIGlyphKey(Choice.FaceIndex, GlyphIndex);
+				return true;
+			}
 		}
 	}
 	// Nothing has it: the primary face's .notdef, so the text still takes up room.
@@ -759,6 +1202,127 @@ bool UDreamUIFontData_FreeTypeRender::ResolveCodepoint(uint32 Codepoint, FDreamU
 	}
 #endif
 	return false;
+}
+
+const FDreamFontFaceTable& UDreamUIFontData_FreeTypeRender::GetFaceTable()
+{
+	// Rebuilt when the fallbacks changed -- or when an undo put another list back, which says nothing but the count.
+	if (bFaceTableDirty || FaceTable.Faces.Num() != Fallbacks.Num() + 1)
+	{
+		FaceTable.Faces.Reset(Fallbacks.Num() + 1);
+		// Face 0 is the font itself: what its entry would say is never read.
+		FaceTable.Faces.AddDefaulted();
+		for (const FDreamUIFontFallback& Entry : Fallbacks)
+		{
+			FDreamFontFaceInfo& Info = FaceTable.Faces.AddDefaulted_GetRef();
+			Info.Ranges = Entry.Ranges;
+			// "ja; zh-Hans;" is two cultures, as Slate reads the list.
+			TArray<FString> Cultures;
+			Entry.Cultures.ParseIntoArray(Cultures, TEXT(";"), true);
+			for (FString& Culture : Cultures)
+			{
+				Culture.TrimStartAndEndInline();
+				if (!Culture.IsEmpty())
+				{
+					Info.Cultures.Add(MoveTemp(Culture));
+				}
+			}
+			// The property's own lower bound, for an entry made in code.
+			Info.Scale = FMath::Max(Entry.Scale, 0.1f);
+			Info.bPreferOverPrimary = Entry.bPreferOverPrimary;
+		}
+		FaceTable.bPreferColorEmoji = bPreferColorEmoji;
+		bFaceTableDirty = false;
+	}
+	return FaceTable;
+}
+
+bool UDreamUIFontData_FreeTypeRender::IsColorFace(int32 FaceIndex)
+{
+#if WITH_FREETYPE
+	if (!CanHoldColorGlyphs())
+	{
+		return false;
+	}
+	// Asked of the face as it is now, rather than remembered: a fallback that reloads with another file says so at once.
+	FT_FaceRec_* TargetFace = GetFreeTypeFace(FaceIndex);
+	return TargetFace != nullptr && FT_HAS_COLOR(TargetFace);
+#else
+	return false;
+#endif
+}
+
+FDreamUICharData UDreamUIFontData_FreeTypeRender::GetFaceCharData(int32 FaceIndex, uint32 CharCode, float CharSize, bool IsBold)
+{
+	uint32 GlyphIndex = 0;
+#if WITH_FREETYPE
+	// That face's glyph for the code point, its .notdef (glyph 0) when it has none.
+	if (FT_FaceRec_* TargetFace = GetFreeTypeFace(FaceIndex))
+	{
+		GlyphIndex = FT_Get_Char_Index(TargetFace, CharCode);
+	}
+#endif
+	return GetGlyphData(FaceIndex, GlyphIndex, CharSize, IsBold);
+}
+
+FDreamUIFontFaceIdentity UDreamUIFontData_FreeTypeRender::GetFaceIdentity(int32 FaceIndex)
+{
+	FDreamUIFontFaceIdentity Identity;
+#if WITH_FREETYPE
+	UDreamUIFontData_FreeTypeRender* Owner = GetFaceOwner(FaceIndex);
+	// Opened first, so the epoch named is the one of the face being shaped with, not the one before its first load. A face
+	// that does not open is nobody's: nothing is cached for it.
+	if (Owner == nullptr || Owner->GetFreeTypeFace(0) == nullptr)
+	{
+		return Identity;
+	}
+	Identity.Owner = FObjectKey(Owner);
+	Identity.Epoch = Owner->FaceEpoch;
+#endif
+	return Identity;
+}
+
+uint32 UDreamUIFontData_FreeTypeRender::GetLayoutEpoch() const
+{
+	// A kept layout knows the faces it drew from (GetFaceIdentity), not the ones it only asked: a fallback that lacked a code
+	// point, reloaded since with a file that has it, would now draw it in place of the face the kept layout took. Every
+	// fallback and style font's face epoch is in this one, read as it is: a font not opened yet stays unopened, and opening
+	// it later moves this on, which costs a layout from nothing once.
+	uint32 Epoch = LayoutEpoch;
+	auto FoldOwner = [this, &Epoch](const UDreamUIFontData_FreeTypeRender* Owner)
+	{
+		if (Owner != nullptr && Owner != this)
+		{
+			Epoch = HashCombineFast(Epoch, Owner->FaceEpoch);
+		}
+	};
+	for (const FDreamUIFontFallback& Entry : Fallbacks)
+	{
+		FoldOwner(Entry.Font.Get());
+	}
+	FoldOwner(BoldFont.Get());
+	FoldOwner(ItalicFont.Get());
+	FoldOwner(BoldItalicFont.Get());
+	return Epoch;
+}
+
+uint8 UDreamUIFontData_FreeTypeRender::GetGlyphColorKind(int32 FaceIndex, uint32 GlyphIndex)
+{
+#if WITH_FREETYPE
+	const FDreamUIGlyphKey Key(FaceIndex, GlyphIndex);
+	if (const FColorGlyphInfo* Known = ColorGlyphInfos.Find(Key); Known != nullptr && Known->bKindKnown)
+	{
+		return Known->Kind;
+	}
+	FT_FaceRec_* TargetFace = GetFreeTypeFace(FaceIndex);
+	const uint8 Kind = (uint8)(TargetFace != nullptr ? FDreamGlyphColor::GetColorKind(TargetFace, GlyphIndex) : EDreamGlyphColorKind::None);
+	FColorGlyphInfo& Info = ColorGlyphInfos.FindOrAdd(Key);
+	Info.Kind = Kind;
+	Info.bKindKnown = true;
+	return Kind;
+#else
+	return (uint8)EDreamGlyphColorKind::None;
+#endif
 }
 
 UTexture2DArray* UDreamUIFontData_FreeTypeRender::GetFontTexture()
@@ -778,6 +1342,29 @@ void UDreamUIFontData_FreeTypeRender::PostLoad()
 	FString CurrentCulture = FInternationalization::Get().GetCurrentCulture()->GetName();
 	if (CultureFontMap.Contains(CurrentCulture))
 		EngineFont = CultureFontMap[CurrentCulture].LoadSynchronous();
+}
+
+void UDreamUIFontData_FreeTypeRender::Serialize(FArchive& Ar)
+{
+	Ar.UsingCustomVersion(FDreamGUIObjectVersion::GUID);
+	Super::Serialize(Ar);
+	if (Ar.IsLoading())
+	{
+		// Fallbacks were saved with plain font references before they had settings: each becomes an entry with the
+		// defaults -- every code point, any language, scale 1 -- in the same order, so face index i is still entry i - 1. An
+		// empty slot stays an empty face. The old list is emptied, and is saved empty from here on.
+		if (Ar.CustomVer(FDreamGUIObjectVersion::GUID) < FDreamGUIObjectVersion::FontFallbackEntries && FallbackFontArray.Num() > 0)
+		{
+			Fallbacks.Reset(FallbackFontArray.Num());
+			for (const TObjectPtr<UDreamUIFontData_FreeTypeRender>& Fallback : FallbackFontArray)
+			{
+				FDreamUIFontFallback& Entry = Fallbacks.AddDefaulted_GetRef();
+				Entry.Font = Fallback;
+			}
+			FallbackFontArray.Empty();
+		}
+		bFaceTableDirty = true;
+	}
 }
 
 void UDreamUIFontData_FreeTypeRender::BeginDestroy()
@@ -816,7 +1403,8 @@ float UDreamUIFontData_FreeTypeRender::GetKerning(uint32 LeftCharCode, uint32 Ri
 	if (!ResolveCodepoint(LeftCharCode, LeftKey) || !ResolveCodepoint(RightCharCode, RightKey))return 0;
 	if (LeftKey.FaceIndex != RightKey.FaceIndex)return 0;
 	FT_FaceRec_* TargetFace = GetFreeTypeFace(LeftKey.FaceIndex);
-	if (TargetFace == nullptr)return 0;
+	// A face of bitmap strikes (emoji) takes no char size, and kerns nothing.
+	if (TargetFace == nullptr || !FT_IS_SCALABLE(TargetFace))return 0;
 	auto error = DreamFreeTypeMetricsLocal::SetMetricSize(TargetFace, CharSize);
 	if (error)
 	{
@@ -963,6 +1551,13 @@ float UDreamUIFontData_FreeTypeRender::GetVerticalOffset(float FontSize)
 {
 #if WITH_FREETYPE
 	if (Face == nullptr)return FontSize;
+	if (!FT_IS_SCALABLE(Face))
+	{
+		// A face without outlines takes no char size; its line comes from its tables, as its face metrics do.
+		float Ascender = 0.0f, Descender = 0.0f, LineSpacing = 0.0f;
+		if (!DreamFreeTypeMetricsLocal::ReadVerticalMetrics(Face, EDreamUIFontVerticalMetrics::FreeType, FontSize, Ascender, Descender, LineSpacing))return 0;
+		return -(Ascender - Descender) * 0.5f;
+	}
 	auto error = DreamFreeTypeMetricsLocal::SetMetricSize(Face, FontSize);
 	if (error)
 	{
@@ -1007,17 +1602,49 @@ void UDreamUIFontData_FreeTypeRender::SetFontFilePath(const FString& InPath, boo
 
 void UDreamUIFontData_FreeTypeRender::SetFallbackFonts(const TArray<UDreamUIFontData_FreeTypeRender*>& InFallbacks)
 {
-	FallbackFontArray.Reset();
+	TArray<FDreamUIFontFallback> Entries;
+	Entries.Reserve(InFallbacks.Num());
 	for (UDreamUIFontData_FreeTypeRender* Fallback : InFallbacks)
 	{
-		if (Fallback != nullptr && Fallback != this)
+		FDreamUIFontFallback& Entry = Entries.AddDefaulted_GetRef();
+		Entry.Font = Fallback;
+	}
+	SetFallbacks(Entries);
+}
+
+void UDreamUIFontData_FreeTypeRender::SetFallbacks(const TArray<FDreamUIFontFallback>& InFallbacks)
+{
+	Fallbacks.Reset(InFallbacks.Num());
+	for (const FDreamUIFontFallback& Entry : InFallbacks)
+	{
+		if (Entry.Font != nullptr && Entry.Font != this)
 		{
-			FallbackFontArray.Add(Fallback);
+			Fallbacks.Add(Entry);
 		}
 	}
+	ApplyFallbacksChanged();
+}
+
+void UDreamUIFontData_FreeTypeRender::ApplyFallbacksChanged()
+{
+	bFaceTableDirty = true;
+	LayoutEpoch++;
 	// Clearing the glyph cache was not enough: the worker kept reading the old fallback's file and drew the new face's
 	// glyph ids from the old face's outlines, and the face metrics went on answering with the old line box.
 	ResetFaceState();
+	// A fallback's lines join the line box, at its scale: the texts' sizes may change, not only their glyphs.
+	RecreateTexts();
+}
+
+void UDreamUIFontData_FreeTypeRender::RecreateTexts()
+{
+	for (const TWeakObjectPtr<UDreamText>& TextItem : RenderTextArray)
+	{
+		if (TextItem.IsValid())
+		{
+			TextItem->ApplyRecreateText();
+		}
+	}
 }
 
 void UDreamUIFontData_FreeTypeRender::SetStyleFonts(UDreamUIFontData_FreeTypeRender* InBold, UDreamUIFontData_FreeTypeRender* InItalic, UDreamUIFontData_FreeTypeRender* InBoldItalic)
@@ -1026,6 +1653,7 @@ void UDreamUIFontData_FreeTypeRender::SetStyleFonts(UDreamUIFontData_FreeTypeRen
 	BoldFont = InBold != this ? InBold : nullptr;
 	ItalicFont = InItalic != this ? InItalic : nullptr;
 	BoldItalicFont = InBoldItalic != this ? InBoldItalic : nullptr;
+	LayoutEpoch++;
 	ResetFaceState();
 }
 
@@ -1036,32 +1664,32 @@ void UDreamUIFontData_FreeTypeRender::SetVerticalMetrics(EDreamUIFontVerticalMet
 		return;
 	}
 	VerticalMetrics = InVerticalMetrics;
+	LayoutEpoch++;
 	// Glyph quads do not depend on the line box, so the atlas stays; only the line metrics and the layouts built on them go.
 	FaceMetricsCache.Reset();
-	for (const TWeakObjectPtr<UDreamText>& TextItem : RenderTextArray)
-	{
-		if (TextItem.IsValid())
-		{
-			TextItem->ApplyRecreateText();
-		}
-	}
+	RecreateTexts();
 }
 
 void UDreamUIFontData_FreeTypeRender::ResetFaceState()
 {
 	Rasterizer.Reset();
 	PendingAsyncGlyphs.Reset();
+	PendingColorGlyphs.Reset();
+	PendingCoverageGlyphs.Reset();
 	FontsWithAsyncGlyphs.Remove(this);
 	FaceMetricsCache.Reset();
 	FaceDecorationCache.Reset();
+	ColorGlyphInfos.Reset();
+	ResetCodepointFaces();
+	bFaceTableDirty = true;
 	if (Texture != nullptr)
 	{
 		// The atlas holds glyphs keyed by face index, and the faces behind those indices just changed. Starting it again
-		// clears the glyph cache and tells every text using this font to lay out again.
+		// clears the glyph caches -- field, colour and coverage -- and tells every text using this font to lay out again.
 		FlushGlyphAtlas();
 		return;
 	}
-	ClearCharDataCache();
+	ClearAtlasCaches();
 	for (const TWeakObjectPtr<UDreamText>& TextItem : RenderTextArray)
 	{
 		if (TextItem.IsValid())
@@ -1107,14 +1735,45 @@ FDreamUICharData UDreamUIFontData_FreeTypeRender::GetGlyphData(int32 FaceIndex, 
 	{
 		FlushGlyphAtlas();
 	}
+	// Every entry handed out says which glyph of which face it is -- the face sizes the line box, and the pair is what a
+	// coverage glyph is fetched by -- empty and pending ones too.
+	auto Stamped = [FaceIndex, GlyphIndex](FDreamUICharData InData)
+	{
+		InData.FaceIndex = FaceIndex;
+		InData.GlyphIndex = GlyphIndex;
+		return InData;
+	};
 	auto Result = FDreamUICharData();
-	if (CharSize <= 0.0f)return Result;
+	if (CharSize <= 0.0f)return Stamped(Result);
 	const FDreamUIGlyphKey Key(FaceIndex, GlyphIndex);
+#if WITH_FREETYPE
+	// A colour face's colour glyphs never take the field path: msdfgen finds no outline in a strike's glyph and draws nothing,
+	// and a COLR glyph's outline is only a silhouette. They are rasterized in colour, at a size, into a cache of their own.
+	if (IsColorFace(FaceIndex))
+	{
+		const uint8 ColorKind = GetGlyphColorKind(FaceIndex, GlyphIndex);
+		if (ColorKind == (uint8)EDreamGlyphColorKind::Bitmap || ColorKind == (uint8)EDreamGlyphColorKind::Layers)
+		{
+			return Stamped(GetColorGlyphData(FaceIndex, GlyphIndex, CharSize));
+		}
+	}
+#endif
 	// Shader-side bold keeps one atlas glyph per face; only the advance knows about the weight.
 	const bool bShaderBold = IsBold && IsBoldSynthesizedInShader();
 	const bool bAtlasBold = IsBold && !bShaderBold;
 	if (!GetCharDataFromCache(Key, CharSize, bAtlasBold, Result))//if charData not cached, then create it and add to cache
 	{
+#if WITH_FREETYPE
+		// A face with no outlines at all -- a bitmap strike's glyph that has no bitmap (a space), or any glyph of one on an
+		// atlas that holds no colour -- has nothing to rasterize here: its advance, and no quad. Neither the worker nor the
+		// synchronous path is asked, since both would fail on it every time it is asked.
+		FT_FaceRec_* TargetFace = GetFreeTypeFace(FaceIndex);
+		if (TargetFace != nullptr && !FT_IS_SCALABLE(TargetFace))
+		{
+			Result.XAdvance = GetUnrasterizedAdvance(FaceIndex, GlyphIndex, CharSize);
+			return Stamped(Result);
+		}
+#endif
 		// Off-thread when the font can and the frame's synchronous budget is spent.
 		float PixelsPerEm = 0.0f, SpreadPixels = 0.0f, BoldPixels = 0.0f;
 		if (UDreamUISettings::GetAsyncGlyphRasterization() && GetAsyncRasterParams(CharSize, bAtlasBold, PixelsPerEm, SpreadPixels, BoldPixels))
@@ -1125,7 +1784,7 @@ FDreamUICharData UDreamUIFontData_FreeTypeRender::GetGlyphData(int32 FaceIndex, 
 			Request.bBold = bAtlasBold;
 			if (PendingAsyncGlyphs.Contains(Request))
 			{
-				return MakePendingCharData(Key, CharSize, IsBold);
+				return Stamped(MakePendingCharData(Key, CharSize, IsBold));
 			}
 			if (!TakeSyncGlyphBudget())
 			{
@@ -1135,6 +1794,7 @@ FDreamUICharData UDreamUIFontData_FreeTypeRender::GetGlyphData(int32 FaceIndex, 
 				if (Worker != nullptr && Worker->HasFaceSource(Key.FaceIndex))
 				{
 					FDreamGlyphRasterizer::FJob Job;
+					Job.Kind = EDreamGlyphJobKind::Field;
 					Job.Key = Key;
 					Job.CharSize = CharSize;
 					Job.bBold = bAtlasBold;
@@ -1144,7 +1804,7 @@ FDreamUICharData UDreamUIFontData_FreeTypeRender::GetGlyphData(int32 FaceIndex, 
 					Worker->Enqueue(Job);
 					PendingAsyncGlyphs.Add(Request);
 					FontsWithAsyncGlyphs.Add(this);
-					return MakePendingCharData(Key, CharSize, IsBold);
+					return Stamped(MakePendingCharData(Key, CharSize, IsBold));
 				}
 			}
 		}
@@ -1152,13 +1812,13 @@ FDreamUICharData UDreamUIFontData_FreeTypeRender::GetGlyphData(int32 FaceIndex, 
 		FGlyphBitmap glyphBitmap;
 		if (!RenderGlyph(Key, CharSize, bAtlasBold, glyphBitmap))//no valid glyph
 		{
-			return Result;
+			return Stamped(Result);
 		}
 
 		FDreamUICharData uiCharData;
 		if (!InsertGlyphBitmap(glyphBitmap, uiCharData))
 		{
-			return Result;
+			return Stamped(Result);
 		}
 		AddCharDataToCache(Key, CharSize, bAtlasBold, uiCharData);
 		GetCharDataFromCache(Key, CharSize, bAtlasBold, Result);
@@ -1168,8 +1828,7 @@ FDreamUICharData UDreamUIFontData_FreeTypeRender::GetGlyphData(int32 FaceIndex, 
 		Result.XAdvance += CharSize * GetBoldRatio();
 	}
 	// Which face answered, so the layout can size the line box against the face that is actually on it.
-	Result.FaceIndex = FaceIndex;
-	return Result;
+	return Stamped(Result);
 }
 
 bool UDreamUIFontData_FreeTypeRender::InsertGlyphBitmap(const FGlyphBitmap& InGlyphBitmap, FDreamUICharData& OutResult)
@@ -1181,67 +1840,195 @@ bool UDreamUIFontData_FreeTypeRender::InsertGlyphBitmap(const FGlyphBitmap& InGl
 	{
 		FlushGlyphAtlas();
 	}
-	bool bFlushedForThisGlyph = false;
-	for (int32 Attempt = 0; Attempt < 64; Attempt++)
+	if (InGlyphBitmap.width <= 0 || InGlyphBitmap.height <= 0)//glyph no need to display, could be space
 	{
-		if (PackRectAndInsertChar(InGlyphBitmap, BinPack, OutResult))
-		{
-			return true;
-		}
-		if (FreeRectCells.Num() > 0)//use free cells
-		{
-			BinPack.DoRectCellsForText(FreeRectCells[FreeRectCells.Num() - 1]);
-			FreeRectCells.RemoveAt(FreeRectCells.Num() - 1, 1, EAllowShrinking::No);
-		}
-		else//no free cells, move to next slice of Texture2DArray
-		{
-			const int32 SliceCount = Texture != nullptr ? Texture->GetArraySize() : 0;
-			if (SliceCount >= GetAtlasSliceThreshold())
-			{
-				// The atlas is as large as it is meant to get. It used to fail the glyph from here on, for the rest of
-				// the session, because it only ever grew. A rect-packed atlas cannot give one glyph's rectangle to a glyph
-				// of another size without repacking, so there is no "evict the least recently used glyph" to do; what
-				// there is -- and what Slate's own font cache does when its atlas fills -- is to throw the whole cache
-				// away and let it refill on demand. That happens between frames (see bAtlasFlushRequested); until then
-				// the atlas grows past its budget. Only when the RHI cannot address another slice is it flushed on the spot.
-				const int32 RHILimit = FMath::Max((int32)GMaxTextureArrayLayers, 1);
-				if (SliceCount >= RHILimit)
-				{
-					if (bFlushedForThisGlyph)
-					{
-						UE_LOG(DreamGUI, Error, TEXT("[%s].%d Font:%s, a %dx%d glyph does not fit an empty %d-slice atlas. Raise DreamUI's atlas texture size, or the font's rect-pack cell size.")
-							, ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *GetName(), (int32)InGlyphBitmap.width, (int32)InGlyphBitmap.height, SliceCount);
-						return false;
-					}
-					bFlushedForThisGlyph = true;
-					UE_LOG(DreamGUI, Warning, TEXT("[%s].%d Font:%s, the glyph atlas reached the %d slices the RHI can address; flushing it now and refilling on demand.")
-						, ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *GetName(), RHILimit);
-					FlushGlyphAtlas();
-					continue;
-				}
-				RequestAtlasFlush(SliceCount);
-			}
-			CurrentTextureSlice++;
-			// The slice count the atlas is about to have, from the slice index rather than the texture.
-			UE_LOG(DreamGUI, Log, TEXT("[%s].%d Expend Texture2DArray slice to: %d"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, CurrentTextureSlice + 1);
-			//add new slice to Texture2DArray
-			auto RectPackCellSize = UDreamUISettings::ConvertAtlasTextureSizeTypeToSize(RectPackCellSizeType);
-			BinPack = rbp::MaxRectsBinPack(RectPackCellSize, RectPackCellSize);
-			auto TextureSize = UDreamUISettings::ConvertAtlasTextureSizeTypeToSize(TextureSizeType);
-			BinPack.PrepareRectCellsForText(TextureSize, TextureSize, FreeRectCells, RectPackCellSize, false);
+		OutResult.Width = InGlyphBitmap.width;
+		OutResult.Height = InGlyphBitmap.height;
+		OutResult.XOffset = InGlyphBitmap.hOffset;
+		OutResult.YOffset = InGlyphBitmap.vOffset;
+		OutResult.XAdvance = InGlyphBitmap.hAdvance;
+		OutResult.MinUV.X = OutResult.MaxUV.Y = OutResult.MaxUV.X = OutResult.MinUV.Y = 0.0f;//(0,0) point is transparent
+		return true;
+	}
+	const int32 SPACE_NEED_EXPEND = this->Get_SPACE_NEED_EXPEND();
+	const int32 SPACE_NEED_EXPENDx2 = SPACE_NEED_EXPEND + SPACE_NEED_EXPEND;
+	const int32 SPACE_BETWEEN_GLYPH_RECT = this->Get_SPACE_BETWEEN_GLYPH() + SPACE_NEED_EXPEND;
+	const int32 GlyphWidth = (int32)InGlyphBitmap.width;
+	const int32 GlyphHeight = (int32)InGlyphBitmap.height;
+	int32 Slice = 0, PackedX = 0, PackedY = 0;
+	if (!PackAtlasRect(false, GlyphWidth + 2 * SPACE_BETWEEN_GLYPH_RECT, GlyphHeight + 2 * SPACE_BETWEEN_GLYPH_RECT, Slice, PackedX, PackedY))
+	{
+		return false;
+	}
+	//remove space
+	const int32 GlyphX = PackedX + SPACE_BETWEEN_GLYPH_RECT;
+	const int32 GlyphY = PackedY + SPACE_BETWEEN_GLYPH_RECT;
+	if (!UpdateFontTextureRegion(GlyphX, GlyphY, Slice, GlyphWidth, GlyphHeight, GlyphWidth * InGlyphBitmap.pixelSize, InGlyphBitmap.pixelSize, InGlyphBitmap.buffer))
+	{
+		return false;
+	}
+	OutResult.Width = InGlyphBitmap.width + SPACE_NEED_EXPENDx2;
+	OutResult.Height = InGlyphBitmap.height + SPACE_NEED_EXPENDx2;
+	OutResult.XOffset = InGlyphBitmap.hOffset - SPACE_NEED_EXPEND;
+	OutResult.YOffset = InGlyphBitmap.vOffset + SPACE_NEED_EXPEND;
+	OutResult.XAdvance = InGlyphBitmap.hAdvance;
+	OutResult.MinUV.X = OneDivideTextureSize * (GlyphX - SPACE_NEED_EXPEND);
+	OutResult.MaxUV.Y = OneDivideTextureSize * (GlyphY - SPACE_NEED_EXPEND + OutResult.Height);
+	OutResult.MaxUV.X = OneDivideTextureSize * (GlyphX - SPACE_NEED_EXPEND + OutResult.Width);
+	OutResult.MinUV.Y = OneDivideTextureSize * (GlyphY - SPACE_NEED_EXPEND);
+	OutResult.SliceIndex = Slice;
+	return true;
+}
 
-			// An atlas packed as a single cell (cell size equal to the texture size) has no other cells to drop.
-			if (FreeRectCells.Num() > 0)
-			{
-				FreeRectCells.RemoveAt(FreeRectCells.Num() - 1, 1, EAllowShrinking::No);
-			}
-
-			RenewFontTexture();
-			OneDivideTextureSize = 1.0f / TextureSize;
+FDreamUICharData UDreamUIFontData_FreeTypeRender::GetColorGlyphData(int32 FaceIndex, uint32 GlyphIndex, float CharSize)
+{
+#if WITH_FREETYPE
+	auto MakeCharData = [CharSize](const FColorGlyphEntry& InEntry)
+	{
+		// Size-independent within its bucket: the GPU scales the stored bitmap the rest of the way, 6% at most.
+		FDreamUICharData Data = InEntry.Texels;
+		const float Scale = InEntry.TexelsPerEm > 0.0f ? CharSize / InEntry.TexelsPerEm : 0.0f;
+		Data.Width *= Scale;
+		Data.Height *= Scale;
+		Data.XOffset *= Scale;
+		Data.YOffset *= Scale;
+		Data.XAdvance *= Scale;
+		Data.bColor = true;
+		Data.ColorTexelsPerEm = InEntry.TexelsPerEm;
+		return Data;
+	};
+	const FColorGlyphKey ColorKey(FaceIndex, GlyphIndex, FDreamGlyphColor::GetSizeBucket(CharSize));
+	if (const FColorGlyphEntry* Entry = ColorGlyphs.Find(ColorKey))
+	{
+		return MakeCharData(*Entry);
+	}
+	const FDreamUIGlyphKey Key(FaceIndex, GlyphIndex);
+	if (PendingColorGlyphs.Contains(ColorKey))
+	{
+		return MakePendingCharData(Key, CharSize, false);
+	}
+	FDreamGlyphColorParams Params;
+	Params.TargetPixelSize = ColorKey.SizeBucket;
+	Params.ReachEm = GetColorGlyphReachEm();
+	// Off-thread like a field glyph once the frame's synchronous budget -- shared with the field glyphs -- is spent.
+	if (UDreamUISettings::GetAsyncGlyphRasterization() && !TakeSyncGlyphBudget())
+	{
+		FDreamGlyphRasterizer* Worker = GetOrCreateRasterizer();
+		if (Worker != nullptr && Worker->HasFaceSource(FaceIndex))
+		{
+			FDreamGlyphRasterizer::FJob Job;
+			Job.Kind = EDreamGlyphJobKind::Color;
+			Job.Key = Key;
+			Job.CharSize = CharSize;
+			Job.Color = Params;
+			Worker->Enqueue(Job);
+			PendingColorGlyphs.Add(ColorKey);
+			FontsWithAsyncGlyphs.Add(this);
+			return MakePendingCharData(Key, CharSize, false);
 		}
 	}
-	UE_LOG(DreamGUI, Error, TEXT("[%s].%d Font:%s, a %dx%d glyph never fit the atlas."), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *GetName(), (int32)InGlyphBitmap.width, (int32)InGlyphBitmap.height);
-	return false;
+	FColorGlyphEntry NewEntry;
+	FDreamGlyphColorResult Color;
+	if (!FDreamGlyphColor::Rasterize(GetFreeTypeFace(FaceIndex), GlyphIndex, Params, Color) || !InsertColorGlyph(Color, NewEntry))
+	{
+		NewEntry = MakeFailedColorGlyph(FaceIndex, GlyphIndex, ColorKey.SizeBucket);
+	}
+	return MakeCharData(ColorGlyphs.Add(ColorKey, NewEntry));
+#else
+	// Without FreeType no face is a colour face, and nothing asks.
+	return FDreamUICharData();
+#endif
+}
+
+bool UDreamUIFontData_FreeTypeRender::InsertColorGlyph(const FDreamGlyphColorResult& InColor, FColorGlyphEntry& OutEntry)
+{
+	if (Texture == nullptr)
+	{
+		FlushGlyphAtlas();
+	}
+	OutEntry = FColorGlyphEntry();
+	OutEntry.TexelsPerEm = InColor.TexelsPerEm;
+	FDreamUICharData& Texels = OutEntry.Texels;
+	Texels.XAdvance = InColor.Advance;
+	Texels.bColor = true;
+	Texels.ColorTexelsPerEm = InColor.TexelsPerEm;
+	if (InColor.TexelsPerEm <= 0.0f)
+	{
+		return false;
+	}
+	if (InColor.Width <= 0 || InColor.Height <= 0)
+	{
+		// Nothing to draw (an empty bitmap): the advance, and the transparent corner of the atlas.
+		return true;
+	}
+	if (InColor.Pixels.Num() < InColor.Width * InColor.Height * 4)
+	{
+		return false;
+	}
+	// The bitmap already has its transparent padding; one more ring of (0,0,0,0) around the cell keeps a magnified quad's
+	// edge texel from blending with whatever is packed next to it, or with the white the bitmap font's atlas starts as.
+	const int32 PaddedWidth = InColor.Width + 2;
+	const int32 PaddedHeight = InColor.Height + 2;
+	int32 Slice = 0, PackedX = 0, PackedY = 0;
+	if (!PackAtlasRect(false, PaddedWidth, PaddedHeight, Slice, PackedX, PackedY))
+	{
+		return false;
+	}
+	TArray<uint8> Padded;
+	Padded.SetNumZeroed(PaddedWidth * PaddedHeight * 4);
+	for (int32 Row = 0; Row < InColor.Height; Row++)
+	{
+		FMemory::Memcpy(Padded.GetData() + ((int64)(Row + 1) * PaddedWidth + 1) * 4, InColor.Pixels.GetData() + (int64)Row * InColor.Width * 4, InColor.Width * 4);
+	}
+	if (!UpdateFontTextureRegion(PackedX, PackedY, Slice, PaddedWidth, PaddedHeight, PaddedWidth * 4, 4, Padded))
+	{
+		return false;
+	}
+	// The quad is the bitmap's whole padded cell: an underlay sampled at UV minus its offset stays inside it.
+	Texels.Width = InColor.Width;
+	Texels.Height = InColor.Height;
+	Texels.XOffset = InColor.Left;
+	Texels.YOffset = InColor.Top;
+	Texels.MinUV = FVector2f((PackedX + 1) * OneDivideTextureSize, (PackedY + 1) * OneDivideTextureSize);
+	Texels.MaxUV = FVector2f((PackedX + 1 + InColor.Width) * OneDivideTextureSize, (PackedY + 1 + InColor.Height) * OneDivideTextureSize);
+	Texels.SliceIndex = Slice;
+	return true;
+}
+
+UDreamUIFontData_FreeTypeRender::FColorGlyphEntry UDreamUIFontData_FreeTypeRender::MakeFailedColorGlyph(int32 FaceIndex, uint32 GlyphIndex, int32 SizeBucket)
+{
+	FColorGlyphEntry Entry;
+	Entry.TexelsPerEm = (float)FMath::Max(SizeBucket, 1);
+	Entry.Texels.XAdvance = GetUnrasterizedAdvance(FaceIndex, GlyphIndex, Entry.TexelsPerEm);
+	Entry.Texels.bColor = true;
+	Entry.Texels.ColorTexelsPerEm = Entry.TexelsPerEm;
+	if (!bLoggedColorGlyphFailure)
+	{
+		bLoggedColorGlyphFailure = true;
+		UE_LOG(DreamGUI, Warning, TEXT("[%s].%d Font:%s, the colour glyph %u of face %d could not be made at %d px; it takes its room and draws nothing. (reported once per font)")
+			, ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *GetName(), GlyphIndex, FaceIndex, SizeBucket);
+	}
+	return Entry;
+}
+
+float UDreamUIFontData_FreeTypeRender::GetUnrasterizedAdvance(int32 FaceIndex, uint32 GlyphIndex, float CharSize)
+{
+#if WITH_FREETYPE
+	FT_FaceRec_* TargetFace = GetFreeTypeFace(FaceIndex);
+	if (TargetFace == nullptr)
+	{
+		return 0.0f;
+	}
+	// A colour strike face advances by its strike, as its shaping font does (GetHarfBuzzStrikeAdvance); anything else by hmtx.
+	float Advance = 0.0f;
+	if (FT_HAS_COLOR(TargetFace) && FT_HAS_FIXED_SIZES(TargetFace) && FDreamGlyphColor::GetStrikeAdvance(TargetFace, GlyphIndex, CharSize, Advance))
+	{
+		return Advance;
+	}
+	return DreamFreeTypeRenderLocal::GetDesignAdvance(TargetFace, GlyphIndex, CharSize);
+#else
+	return 0.0f;
+#endif
 }
 
 int32 UDreamUIFontData_FreeTypeRender::GetAtlasSliceThreshold() const
@@ -1280,11 +2067,20 @@ FDreamUICharData UDreamUIFontData_FreeTypeRender::MakePendingCharData(const FDre
 	FDreamUICharData Result;
 	Result.bPending = true;
 	Result.FaceIndex = Glyph.FaceIndex;
+	Result.GlyphIndex = Glyph.GlyphIndex;
 #if WITH_FREETYPE
 	// The advance alone, unscaled, so the line lays out where it will end up once the quad lands.
 	if (FT_FaceRec_* TargetFace = GetFreeTypeFace(Glyph.FaceIndex))
 	{
-		if (FT_Load_Glyph(TargetFace, Glyph.GlyphIndex, FT_LOAD_NO_SCALE | FT_LOAD_IGNORE_TRANSFORM | FT_LOAD_NO_HINTING | FT_LOAD_NO_BITMAP) == 0 && TargetFace->units_per_EM != 0)
+		const uint8 ColorKind = IsColorFace(Glyph.FaceIndex) ? GetGlyphColorKind(Glyph.FaceIndex, Glyph.GlyphIndex) : (uint8)EDreamGlyphColorKind::None;
+		if (ColorKind == (uint8)EDreamGlyphColorKind::Bitmap || ColorKind == (uint8)EDreamGlyphColorKind::Layers)
+		{
+			// A colour glyph's advance is its strike's (or hmtx for COLR layers), never emboldened; loading it without its
+			// bitmap, as below, fails on a face that has nothing but bitmaps and left it at 0.
+			Result.bColor = true;
+			Result.XAdvance = GetUnrasterizedAdvance(Glyph.FaceIndex, Glyph.GlyphIndex, CharSize);
+		}
+		else if (FT_Load_Glyph(TargetFace, Glyph.GlyphIndex, FT_LOAD_NO_SCALE | FT_LOAD_IGNORE_TRANSFORM | FT_LOAD_NO_HINTING | FT_LOAD_NO_BITMAP) == 0 && TargetFace->units_per_EM != 0)
 		{
 			Result.XAdvance = (float)(TargetFace->glyph->metrics.horiAdvance * ((double)CharSize / (double)TargetFace->units_per_EM));
 			if (IsBold)
@@ -1313,10 +2109,28 @@ bool UDreamUIFontData_FreeTypeRender::TakeSyncGlyphBudget()
 	return true;
 }
 
+bool UDreamUIFontData_FreeTypeRender::TakeSyncCoverageBudget()
+{
+	using namespace DreamFreeTypeRenderLocal;
+	if (SyncCoverageBudgetFrame != GFrameCounter)
+	{
+		SyncCoverageBudgetFrame = GFrameCounter;
+		SyncCoverageGlyphsThisFrame = 0;
+	}
+	const int32 Budget = AsyncGlyphSyncBudgetOverride >= 0 ? AsyncGlyphSyncBudgetOverride : UDreamUISettings::GetCoverageGlyphSyncBudgetPerFrame();
+	if (SyncCoverageGlyphsThisFrame >= Budget)
+	{
+		return false;
+	}
+	SyncCoverageGlyphsThisFrame++;
+	return true;
+}
+
 void UDreamUIFontData_FreeTypeRender::SetAsyncGlyphSyncBudgetOverride(int32 Budget)
 {
 	AsyncGlyphSyncBudgetOverride = Budget;
 	SyncGlyphBudgetFrame = 0;
+	DreamFreeTypeRenderLocal::SyncCoverageBudgetFrame = 0;
 }
 
 TSharedPtr<const TArray<uint8>, ESPMode::ThreadSafe> UDreamUIFontData_FreeTypeRender::GetOrCreateSharedFaceBytes()
@@ -1398,6 +2212,8 @@ void UDreamUIFontData_FreeTypeRender::DrainAsyncGlyphs()
 	if (!Rasterizer.IsValid())
 	{
 		PendingAsyncGlyphs.Reset();
+		PendingColorGlyphs.Reset();
+		PendingCoverageGlyphs.Reset();
 		return;
 	}
 	TArray<FDreamGlyphRasterizer::FResult> Results;
@@ -1408,12 +2224,53 @@ void UDreamUIFontData_FreeTypeRender::DrainAsyncGlyphs()
 	}
 	bool bAnyLanded = false;
 	bool bAnyFailed = false;
+	bool bAnyCoverage = false;
 	for (FDreamGlyphRasterizer::FResult& Result : Results)
 	{
+		const FDreamGlyphRasterizer::FJob& Job = Result.Job;
+		if (Job.Kind == EDreamGlyphJobKind::Coverage)
+		{
+			// Only a repaint is owed for these, whatever became of them: a text that drew a field quad in their place stops
+			// waiting either way.
+			bAnyCoverage = true;
+			const FCoverageGlyphKey CoverageKey(Job.Key.FaceIndex, Job.Key.GlyphIndex, Job.Coverage.Size26Dot6, (uint8)Job.CoverageFlags, (uint8)Job.Coverage.Hinting);
+			PendingCoverageGlyphs.Remove(CoverageKey);
+			if (CoverageGlyphs.Contains(CoverageKey))
+			{
+				continue;
+			}
+			FCoverageGlyphEntry Entry;
+			Entry.bFailed = !Result.bSucceeded
+				|| !InsertCoverageGlyph(Result.Coverage.Width, Result.Coverage.Height, Result.Coverage.Left, Result.Coverage.Top, Result.Coverage.Pixels, Entry.Glyph);
+			CoverageGlyphs.Add(CoverageKey, Entry);
+			continue;
+		}
+		if (Job.Kind == EDreamGlyphJobKind::Color)
+		{
+			const FColorGlyphKey ColorKey(Job.Key.FaceIndex, Job.Key.GlyphIndex, Job.Color.TargetPixelSize);
+			PendingColorGlyphs.Remove(ColorKey);
+			if (ColorGlyphs.Contains(ColorKey))
+			{
+				continue;//a synchronous request beat the worker to it
+			}
+			// A colour glyph that cannot be made is not made again: its bytes are the same next time. It keeps its advance.
+			FColorGlyphEntry Entry;
+			if (Result.bSucceeded && InsertColorGlyph(Result.Color, Entry))
+			{
+				bAnyLanded = true;
+			}
+			else
+			{
+				Entry = MakeFailedColorGlyph(Job.Key.FaceIndex, Job.Key.GlyphIndex, Job.Color.TargetPixelSize);
+				bAnyFailed = true;
+			}
+			ColorGlyphs.Add(ColorKey, Entry);
+			continue;
+		}
 		FAsyncGlyphRequest Request;
-		Request.Glyph = Result.Job.Key;
-		Request.CharSize = IsGlyphCacheSizeIndependent() ? 0.0f : Result.Job.CharSize;
-		Request.bBold = Result.Job.bBold;
+		Request.Glyph = Job.Key;
+		Request.CharSize = IsGlyphCacheSizeIndependent() ? 0.0f : Job.CharSize;
+		Request.bBold = Job.bBold;
 		PendingAsyncGlyphs.Remove(Request);
 		if (!Result.bSucceeded)
 		{
@@ -1421,13 +2278,13 @@ void UDreamUIFontData_FreeTypeRender::DrainAsyncGlyphs()
 			{
 				bLoggedAsyncGlyphFailure = true;
 				UE_LOG(DreamGUI, Warning, TEXT("[%s].%d Font:%s, face %d glyph %u failed to rasterize on a worker; falling back to synchronous glyphs. (reported once per font)")
-					, ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *GetName(), Result.Job.Key.FaceIndex, Result.Job.Key.GlyphIndex);
+					, ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *GetName(), Job.Key.FaceIndex, Job.Key.GlyphIndex);
 			}
 			bAnyFailed = true;
 			continue;
 		}
 		FDreamUICharData Existing;
-		if (GetCharDataFromCache(Result.Job.Key, Result.Job.CharSize, Result.Job.bBold, Existing))
+		if (GetCharDataFromCache(Job.Key, Job.CharSize, Job.bBold, Existing))
 		{
 			continue;//a synchronous request beat the worker to it
 		}
@@ -1442,7 +2299,7 @@ void UDreamUIFontData_FreeTypeRender::DrainAsyncGlyphs()
 		FDreamUICharData CharData;
 		if (InsertGlyphBitmap(Bitmap, CharData))
 		{
-			AddCharDataToCache(Result.Job.Key, Result.Job.CharSize, Result.Job.bBold, CharData);
+			AddCharDataToCache(Job.Key, Job.CharSize, Job.bBold, CharData);
 			bAnyLanded = true;
 		}
 	}
@@ -1451,6 +2308,13 @@ void UDreamUIFontData_FreeTypeRender::DrainAsyncGlyphs()
 	if (bAnyLanded || bAnyFailed)
 	{
 		OnGlyphsReady.Broadcast();
+	}
+	// Coverage glyphs change no advance, so they are a repaint, announced at the end of FlushPendingFontTextures: here a
+	// text may be in the middle of anything.
+	if (bAnyCoverage)
+	{
+		bCoverageGlyphsChanged = true;
+		DreamFreeTypeRenderLocal::FontsWithCoverageWork.Add(this);
 	}
 }
 
@@ -1465,66 +2329,218 @@ void UDreamUIFontData_FreeTypeRender::WaitForAsyncGlyphs()
 	FontsWithAsyncGlyphs.Remove(this);
 }
 
-bool UDreamUIFontData_FreeTypeRender::PackRectAndInsertChar(const FGlyphBitmap& InGlyphBitmap, rbp::MaxRectsBinPack& InOutBinPack, FDreamUICharData& OutResult)
+bool UDreamUIFontData_FreeTypeRender::GetCoverageGlyph(int32 FaceIndex, uint32 GlyphIndex, int32 Size26Dot6, EDreamUICoverageGlyphFlags Flags, FDreamUICoverageGlyph& OutGlyph)
 {
-	if (InGlyphBitmap.width <= 0 || InGlyphBitmap.height <= 0)//glyph no need to display, could be space
-	{
-		OutResult.Width = InGlyphBitmap.width;
-		OutResult.Height = InGlyphBitmap.height;
-		OutResult.XOffset = InGlyphBitmap.hOffset;
-		OutResult.YOffset = InGlyphBitmap.vOffset;
-		OutResult.XAdvance = InGlyphBitmap.hAdvance;
-		OutResult.MinUV.X = OutResult.MaxUV.Y = OutResult.MaxUV.X = OutResult.MinUV.Y = 0.0f;//(0,0) point is transparent
-		return true;
-	}
-	const auto SPACE_NEED_EXPEND = this->Get_SPACE_NEED_EXPEND();
-	const auto SPACE_NEED_EXPENDx2 = SPACE_NEED_EXPEND + SPACE_NEED_EXPEND;
-	const auto SPACE_BETWEEN_GLYPH_RECT = this->Get_SPACE_BETWEEN_GLYPH() + SPACE_NEED_EXPEND;
-	const auto SPACE_BETWEEN_GLYPH_RECTx2 = SPACE_BETWEEN_GLYPH_RECT + SPACE_BETWEEN_GLYPH_RECT;
-
-	int charRectWidth = InGlyphBitmap.width + SPACE_BETWEEN_GLYPH_RECTx2;
-	int charRectHeight = InGlyphBitmap.height + SPACE_BETWEEN_GLYPH_RECTx2;
-	auto method = rbp::MaxRectsBinPack::RectBestAreaFit;
-
-	auto packedRect = InOutBinPack.Insert(charRectWidth, charRectHeight, method);
-	if (packedRect.height <= 0)//means this area cannot fit the char
+	check(IsInGameThread());
+	OutGlyph = FDreamUICoverageGlyph();
+#if WITH_FREETYPE
+	if (Size26Dot6 <= 0 || !SupportsCoverageGlyphs())
 	{
 		return false;
 	}
-	else//this area can fit the char, so copy pixel color into texture
+	uint8 Hinting = 0;
+	float BoldEm = 0.0f, ItalicSlope = 0.0f;
+	GetCoverageRasterStyle(Hinting, BoldEm, ItalicSlope);
+	const FCoverageGlyphKey Key(FaceIndex, GlyphIndex, Size26Dot6, (uint8)Flags, Hinting);
+	if (const FCoverageGlyphEntry* Entry = CoverageGlyphs.Find(Key))
 	{
-		//remove space
-		packedRect.x += SPACE_BETWEEN_GLYPH_RECT;
-		packedRect.y += SPACE_BETWEEN_GLYPH_RECT;
-		packedRect.width -= SPACE_BETWEEN_GLYPH_RECTx2;
-		packedRect.height -= SPACE_BETWEEN_GLYPH_RECTx2;
-
-		if (!UpdateFontTextureRegion(
-			packedRect.x,
-			packedRect.y,
-			CurrentTextureSlice,
-			InGlyphBitmap.width,
-			InGlyphBitmap.height,
-			packedRect.width * InGlyphBitmap.pixelSize,
-			InGlyphBitmap.pixelSize,
-			InGlyphBitmap.buffer))
+		if (Entry->bFailed)
 		{
 			return false;
 		}
-
-		OutResult.Width = InGlyphBitmap.width + SPACE_NEED_EXPENDx2;
-		OutResult.Height = InGlyphBitmap.height + SPACE_NEED_EXPENDx2;
-		OutResult.XOffset = InGlyphBitmap.hOffset - SPACE_NEED_EXPEND;
-		OutResult.YOffset = InGlyphBitmap.vOffset + SPACE_NEED_EXPEND;
-		OutResult.XAdvance = InGlyphBitmap.hAdvance;
-		OutResult.MinUV.X = OneDivideTextureSize * (packedRect.x - SPACE_NEED_EXPEND);
-		OutResult.MaxUV.Y = OneDivideTextureSize * (packedRect.y - SPACE_NEED_EXPEND + OutResult.Height);
-		OutResult.MaxUV.X = OneDivideTextureSize * (packedRect.x - SPACE_NEED_EXPEND + OutResult.Width);
-		OutResult.MinUV.Y = OneDivideTextureSize * (packedRect.y - SPACE_NEED_EXPEND);
-		OutResult.SliceIndex = CurrentTextureSlice;
+		OutGlyph = Entry->Glyph;
 		return true;
 	}
+	if (PendingCoverageGlyphs.Contains(Key))
+	{
+		OutGlyph.bPending = true;
+		return true;
+	}
+	// Never from coverage: a face that draws in colour, or one with no outline to hint. Remembered, so the painter learns it
+	// once per glyph and size rather than every paint.
+	FT_FaceRec_* TargetFace = GetFreeTypeFace(FaceIndex);
+	if (TargetFace == nullptr || FT_HAS_COLOR(TargetFace) || !FT_IS_SCALABLE(TargetFace))
+	{
+		FCoverageGlyphEntry& Failed = CoverageGlyphs.Add(Key);
+		Failed.bFailed = true;
+		return false;
+	}
+	FDreamGlyphCoverageParams Params;
+	Params.Size26Dot6 = Size26Dot6;
+	Params.Hinting = (EDreamGlyphHinting)Hinting;
+	Params.BoldPixels = EnumHasAnyFlags(Flags, EDreamUICoverageGlyphFlags::SyntheticBold) ? BoldEm * (Size26Dot6 / 64.0f) : 0.0f;
+	Params.ItalicSlope = EnumHasAnyFlags(Flags, EDreamUICoverageGlyphFlags::SyntheticItalic) ? ItalicSlope : 0.0f;
+	// Off-thread once the frame's coverage budget -- its own, not the field glyphs' -- is spent. The text draws the field
+	// quad meanwhile and is told to repaint when this lands (OnCoverageGlyphsChanged).
+	if (UDreamUISettings::GetAsyncGlyphRasterization() && !TakeSyncCoverageBudget())
+	{
+		FDreamGlyphRasterizer* Worker = GetOrCreateRasterizer();
+		if (Worker != nullptr && Worker->HasFaceSource(FaceIndex))
+		{
+			FDreamGlyphRasterizer::FJob Job;
+			Job.Kind = EDreamGlyphJobKind::Coverage;
+			Job.Key = FDreamUIGlyphKey(FaceIndex, GlyphIndex);
+			Job.CharSize = Size26Dot6 / 64.0f;
+			Job.Coverage = Params;
+			Job.CoverageFlags = Flags;
+			Worker->Enqueue(Job);
+			PendingCoverageGlyphs.Add(Key);
+			FontsWithAsyncGlyphs.Add(this);
+			OutGlyph.bPending = true;
+			return true;
+		}
+	}
+	// Made first and cached after: packing it can make the atlas, which starts the caches again.
+	FDreamGlyphCoverageResult Raster;
+	FCoverageGlyphEntry Entry;
+	Entry.bFailed = !FDreamGlyphCoverage::Rasterize(TargetFace, GlyphIndex, Params, Raster)
+		|| !InsertCoverageGlyph(Raster.Width, Raster.Height, Raster.Left, Raster.Top, Raster.Pixels, Entry.Glyph);
+	CoverageGlyphs.Add(Key, Entry);
+	if (Entry.bFailed)
+	{
+		return false;
+	}
+	OutGlyph = Entry.Glyph;
+	return true;
+#else
+	return false;
+#endif
 }
+
+bool UDreamUIFontData_FreeTypeRender::InsertCoverageGlyph(int32 InWidth, int32 InHeight, int32 InLeft, int32 InTop, const TArray<uint8>& InPixels, FDreamUICoverageGlyph& OutGlyph)
+{
+	if (Texture == nullptr)
+	{
+		FlushGlyphAtlas();
+	}
+	OutGlyph = FDreamUICoverageGlyph();
+	OutGlyph.BitmapLeft = InLeft;
+	OutGlyph.BitmapTop = InTop;
+	OutGlyph.Width = FMath::Max(InWidth, 0);
+	OutGlyph.Height = FMath::Max(InHeight, 0);
+	if (InWidth <= 0 || InHeight <= 0)
+	{
+		// Nothing to draw (a space): no cell is needed, and the box is empty.
+		return true;
+	}
+	if (InPixels.Num() < InWidth * InHeight * 4)
+	{
+		return false;
+	}
+	// One texel of zero all round: the painter samples texel centres 1:1, and nothing it reads is a neighbour's.
+	const int32 PaddedWidth = InWidth + 2;
+	const int32 PaddedHeight = InHeight + 2;
+	int32 Slice = 0, PackedX = 0, PackedY = 0;
+	if (!PackAtlasRect(true, PaddedWidth, PaddedHeight, Slice, PackedX, PackedY))
+	{
+		return false;
+	}
+	TArray<uint8> Padded;
+	Padded.SetNumZeroed(PaddedWidth * PaddedHeight * 4);
+	for (int32 Row = 0; Row < InHeight; Row++)
+	{
+		FMemory::Memcpy(Padded.GetData() + ((int64)(Row + 1) * PaddedWidth + 1) * 4, InPixels.GetData() + (int64)Row * InWidth * 4, InWidth * 4);
+	}
+	if (!UpdateFontTextureRegion(PackedX, PackedY, Slice, PaddedWidth, PaddedHeight, PaddedWidth * 4, 4, Padded))
+	{
+		return false;
+	}
+	// The box's texels exactly: corners on texel edges, V down.
+	OutGlyph.MinUV = FVector2f((PackedX + 1) * OneDivideTextureSize, (PackedY + 1) * OneDivideTextureSize);
+	OutGlyph.MaxUV = FVector2f((PackedX + 1 + InWidth) * OneDivideTextureSize, (PackedY + 1 + InHeight) * OneDivideTextureSize);
+	OutGlyph.SliceIndex = Slice;
+	return true;
+}
+
+void UDreamUIFontData_FreeTypeRender::RequestCoverageFlush()
+{
+	if (!bCoverageFlushRequested)
+	{
+		bCoverageFlushRequested = true;
+		DreamFreeTypeRenderLocal::FontsWithCoverageWork.Add(this);
+		if (!bLoggedCoverageFlush)
+		{
+			bLoggedCoverageFlush = true;
+			UE_LOG(DreamGUI, Log, TEXT("[%s].%d Font:%s, the small-text coverage glyphs outgrew their %d atlas cells (DreamUI settings: Max Coverage Cells); they are flushed at the end of the frame and made again as the texts repaint. (reported once per font)")
+				, ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *GetName(), UDreamUISettings::GetMaxCoverageCells());
+		}
+	}
+}
+
+void UDreamUIFontData_FreeTypeRender::FlushCoverageGlyphs()
+{
+	bCoverageFlushRequested = false;
+	CoverageGlyphs.Reset();
+	// The cells are not handed back yet: this frame's draws still read them, and an upload or a field glyph packed into one
+	// before the frame is drawn would show through. They go back to the pool when the next frame packs its first glyph.
+	RetiredCoverageCells.Append(CoverageCells);
+	CoverageCells.Reset();
+	CoverageRetireFrame = GFrameCounter;
+	CoveragePacker = FAtlasPacker();
+	// The texts that drew from them repaint, and ask for their glyphs again: a refill, which the budget alone bounds again.
+	CoverageCellThreshold = 0;
+	bCoverageRefilling = true;
+	CoverageFlushFrame = GFrameCounter;
+	DreamFreeTypeRenderLocal::FontsRefillingCoverage.Add(this);
+	bCoverageGlyphsChanged = true;
+}
+
+void UDreamUIFontData_FreeTypeRender::ReleaseRetiredCoverageCells()
+{
+	if (RetiredCoverageCells.Num() == 0 || CoverageRetireFrame == GFrameCounter)
+	{
+		return;
+	}
+	const int32 TextureSize = UDreamUISettings::ConvertAtlasTextureSizeTypeToSize(TextureSizeType);
+	const int32 CellSize = FMath::Min(UDreamUISettings::ConvertAtlasTextureSizeTypeToSize(RectPackCellSizeType), TextureSize);
+	const int32 SliceCount = Texture != nullptr ? Texture->GetArraySize() : 0;
+	const int64 RowPitch = (int64)TextureSize * FontTextureBytesPerPixel;
+	const int64 SliceBytes = RowPitch * TextureSize;
+	for (const FAtlasCell& Cell : RetiredCoverageCells)
+	{
+		if (Cell.Slice >= SliceCount)
+		{
+			continue;
+		}
+		// Back to what an untouched cell holds -- zero on the outline field's atlas -- and uploaded so with the next glyphs.
+		if (FontTextureBytesPerPixel > 0 && (int64)(Cell.Slice + 1) * SliceBytes <= FontTextureAtlasData.Num())
+		{
+			uint8* CellStart = FontTextureAtlasData.GetData() + Cell.Slice * SliceBytes + (int64)Cell.Y * RowPitch + (int64)Cell.X * FontTextureBytesPerPixel;
+			for (int32 Row = 0; Row < CellSize; Row++)
+			{
+				InitializeFontTextureAtlasSlice(CellStart + Row * RowPitch, (int64)CellSize * FontTextureBytesPerPixel);
+			}
+			MarkAtlasRegionDirty(Cell.Slice, FIntRect(Cell.X, Cell.Y, Cell.X + CellSize, Cell.Y + CellSize));
+			PendingFontTextureUploads.Add(this);
+		}
+		FreeAtlasCells.Add(Cell);
+	}
+	RetiredCoverageCells.Reset();
+}
+
+bool UDreamUIFontData_FreeTypeRender::InjectCoverageGlyphForTesting(int32 FaceIndex, uint32 GlyphIndex, int32 Size26Dot6, EDreamUICoverageGlyphFlags Flags,
+	int32 Width, int32 Height, int32 Left, int32 Top, const TArray<uint8>& Pixels)
+{
+	check(IsInGameThread());
+	if (!SupportsCoverageGlyphs() || Size26Dot6 <= 0 || Width < 0 || Height < 0 || Pixels.Num() < Width * Height * 4)
+	{
+		return false;
+	}
+	uint8 Hinting = 0;
+	float BoldEm = 0.0f, ItalicSlope = 0.0f;
+	GetCoverageRasterStyle(Hinting, BoldEm, ItalicSlope);
+	const FCoverageGlyphKey Key(FaceIndex, GlyphIndex, Size26Dot6, (uint8)Flags, Hinting);
+	FCoverageGlyphEntry Entry;
+	if (!InsertCoverageGlyph(Width, Height, Left, Top, Pixels, Entry.Glyph))
+	{
+		return false;
+	}
+	// Whatever was there, made or on its way, gives way to the injected glyph.
+	CoverageGlyphs.Add(Key, Entry);
+	PendingCoverageGlyphs.Remove(Key);
+	return true;
+}
+
 bool UDreamUIFontData_FreeTypeRender::EnsureFontTextureAtlasData(int32 SliceCount, int32 BytesPerPixel)
 {
 	if (SliceCount <= 0 || BytesPerPixel <= 0)
@@ -1974,7 +2990,7 @@ void UDreamUIFontData_FreeTypeRender::FlushPendingFontTextures()
 				continue;
 			}
 			Font->DrainAsyncGlyphs();
-			if (Font->PendingAsyncGlyphs.Num() == 0)
+			if (!Font->HasPendingAsyncGlyphs())
 			{
 				FontsWithAsyncGlyphs.Remove(Font);
 			}
@@ -1999,10 +3015,49 @@ void UDreamUIFontData_FreeTypeRender::FlushPendingFontTextures()
 			It.RemoveCurrent();
 			continue;
 		}
-		if (Font->PendingAsyncGlyphs.Num() == 0 && GFrameCounter > Font->AtlasFlushFrame + 1)
+		if (Font->PendingAsyncGlyphs.Num() == 0 && Font->PendingColorGlyphs.Num() == 0 && GFrameCounter > Font->AtlasFlushFrame + 1)
 		{
 			Font->bAtlasRefilling = false;
 			It.RemoveCurrent();
+		}
+	}
+	// The same for flushed coverage glyphs: settled a whole frame after the flush with none of the font's on the worker.
+	for (auto It = DreamFreeTypeRenderLocal::FontsRefillingCoverage.CreateIterator(); It; ++It)
+	{
+		UDreamUIFontData_FreeTypeRender* Font = It->Get();
+		if (Font == nullptr)
+		{
+			It.RemoveCurrent();
+			continue;
+		}
+		if (Font->PendingCoverageGlyphs.Num() == 0 && GFrameCounter > Font->CoverageFlushFrame + 1)
+		{
+			Font->bCoverageRefilling = false;
+			It.RemoveCurrent();
+		}
+	}
+	// Coverage last, after this frame's uploads were queued: a coverage flush must leave this frame drawing from the cells
+	// it painted with, and the texts it tells -- coverage glyphs landed, failed, or flushed -- have painted for this frame
+	// already, so they repaint in the next. Only from here: a text may be in the middle of a paint anywhere else.
+	if (DreamFreeTypeRenderLocal::FontsWithCoverageWork.Num() > 0)
+	{
+		TArray<TWeakObjectPtr<UDreamUIFontData_FreeTypeRender>> CoverageFonts = DreamFreeTypeRenderLocal::FontsWithCoverageWork.Array();
+		DreamFreeTypeRenderLocal::FontsWithCoverageWork.Reset();
+		for (const TWeakObjectPtr<UDreamUIFontData_FreeTypeRender>& Font : CoverageFonts)
+		{
+			if (!Font.IsValid())
+			{
+				continue;
+			}
+			if (Font->bCoverageFlushRequested)
+			{
+				Font->FlushCoverageGlyphs();
+			}
+			if (Font->bCoverageGlyphsChanged)
+			{
+				Font->bCoverageGlyphsChanged = false;
+				Font->OnCoverageGlyphsChanged.Broadcast();
+			}
 		}
 	}
 }
@@ -2027,7 +3082,8 @@ void UDreamUIFontData_FreeTypeRender::ReleaseFontTexture()
 	ReleaseAtlasStagingPool();
 	FontTextureAtlasData.Reset();
 	FontTextureBytesPerPixel = 0;
-	CurrentTextureSlice = 0;
+	// No atlas, no cells: the packers and the coverage cells start again with the next one.
+	ResetAtlasPacking();
 	if (IsValid(Texture) && Texture->IsRooted())
 	{
 		Texture->RemoveFromRoot();
@@ -2076,6 +3132,12 @@ void UDreamUIFontData_FreeTypeRender::ReloadFont()
 void UDreamUIFontData_FreeTypeRender::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
 {
 	Super::PostEditChangeProperty(PropertyChangedEvent);
+	// A slider being dragged (a fallback's Scale, say) reports every step: the faces are reset and the texts laid out again
+	// once, for the value it is let go at, not on every frame of the drag.
+	if (PropertyChangedEvent.ChangeType == EPropertyChangeType::Interactive)
+	{
+		return;
+	}
 	if (auto Property = PropertyChangedEvent.Property)
 	{
 		auto PropertyName = Property->GetFName();
@@ -2084,20 +3146,32 @@ void UDreamUIFontData_FreeTypeRender::PostEditChangeProperty(FPropertyChangedEve
 			RectPackCellSizeType = TextureSizeType;
 		}
 		const FName MemberName = PropertyChangedEvent.GetMemberPropertyName();
-		if (MemberName == GET_MEMBER_NAME_CHECKED(UDreamUIFontData_FreeTypeRender, FallbackFontArray)
-			|| MemberName == GET_MEMBER_NAME_CHECKED(UDreamUIFontData_FreeTypeRender, BoldFont)
+		if (MemberName == GET_MEMBER_NAME_CHECKED(UDreamUIFontData_FreeTypeRender, Fallbacks))
+		{
+			// What SetFallbacks does, except that an entry with no font stays: it is one being filled in, and keeps its index.
+			// A font is never its own fallback.
+			for (FDreamUIFontFallback& Entry : Fallbacks)
+			{
+				if (Entry.Font == this)
+				{
+					Entry.Font = nullptr;
+				}
+			}
+			ApplyFallbacksChanged();
+		}
+		else if (MemberName == GET_MEMBER_NAME_CHECKED(UDreamUIFontData_FreeTypeRender, BoldFont)
 			|| MemberName == GET_MEMBER_NAME_CHECKED(UDreamUIFontData_FreeTypeRender, ItalicFont)
 			|| MemberName == GET_MEMBER_NAME_CHECKED(UDreamUIFontData_FreeTypeRender, BoldItalicFont))
 		{
-			// The same as SetFallbackFonts and SetStyleFonts: a font is never its own fallback or style face.
-			for (TObjectPtr<UDreamUIFontData_FreeTypeRender>& Fallback : FallbackFontArray)
-			{
-				if (Fallback == this)
-				{
-					Fallback = nullptr;
-				}
-			}
+			// The same as SetStyleFonts: a font is never its own style face.
 			SetStyleFonts(BoldFont, ItalicFont, BoldItalicFont);
+		}
+		else if (MemberName == GET_MEMBER_NAME_CHECKED(UDreamUIFontData_FreeTypeRender, bPreferColorEmoji))
+		{
+			// The faces stay; the order emoji try them in does not.
+			bFaceTableDirty = true;
+			LayoutEpoch++;
+			RecreateTexts();
 		}
 		if (PropertyName == GET_MEMBER_NAME_CHECKED(UDreamUIFontData_FreeTypeRender, bUseExternalFileOrEmbedInToUAsset)
 			|| PropertyName == GET_MEMBER_NAME_CHECKED(UDreamUIFontData_FreeTypeRender, FontFace)
@@ -2116,6 +3190,13 @@ void UDreamUIFontData_FreeTypeRender::PostEditChangeProperty(FPropertyChangedEve
 			}
 			ReloadFont();
 		}
+	}
+	else
+	{
+		// An undo, or a change the editor does not name: whatever the fallbacks are now, the table is built from them again,
+		// and what was laid out against the old ones is not reused.
+		bFaceTableDirty = true;
+		LayoutEpoch++;
 	}
 }
 

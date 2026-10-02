@@ -12,6 +12,8 @@
 
 class UDreamText;
 class FDreamGlyphRasterizer;
+/** A colour glyph out of the rasterizer (Private/Core/Text/DreamGlyphColor.h). */
+struct FDreamGlyphColorResult;
 /** Render-thread staging textures for partial atlas uploads; defined in DreamUIFontData_FreeTypeRender.cpp. */
 struct FDreamUIFontAtlasStagingPool;
 
@@ -78,6 +80,42 @@ enum class EDreamUIFontVerticalMetrics : uint8
 
 #define ONE_DIVIDE_64 0.015625f //(1.0f / 64.0f)
 
+class UDreamUIFontData_FreeTypeRender;
+
+/**
+ * One face a font falls back to for what its own face lacks: which font, for which characters and which languages, at
+ * what scale. Entry i of a font's Fallbacks is its face index i + 1, as it always was; the resolver
+ * (FDreamFontFaceResolver) decides the order they are tried in from these settings.
+ */
+USTRUCT(BlueprintType)
+struct DREAMGUI_API FDreamUIFontFallback
+{
+	GENERATED_BODY()
+
+	/** The fallback font. Its own face is used -- never its fallbacks or style faces in turn. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DreamGUI")
+	TObjectPtr<UDreamUIFontData_FreeTypeRender> Font = nullptr;
+	/** Code point ranges, inclusive, this face may be used for, matched against a cluster's base; empty means every code point. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DreamGUI")
+	TArray<FInt32Interval> Ranges;
+	/**
+	 * Cultures this face is meant for, semicolon-separated as Slate writes them ("ja", "zh-Hans;zh-Hant"); empty means any
+	 * language. Matched against the text's language (UDreamText::Language, a rich-text <lang=xx>) and the names it falls
+	 * back to, so "zh" matches a Chinese text of any script.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DreamGUI")
+	FString Cultures;
+	/**
+	 * CSS size-adjust: glyphs from this face are shaped and rasterized at the text's size times this, and the line box is
+	 * measured at that size, so a face scaled up grows its lines (as in Chrome; Slate's ScalingFactor does not).
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DreamGUI", meta = (ClampMin = "0.1", UIMin = "0.5", UIMax = "2.0"))
+	float Scale = 1.0f;
+	/** Win over the font's own face for the code points in Ranges when the text's language matches Cultures (Slate's sub-fonts). */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DreamGUI")
+	bool bPreferOverPrimary = false;
+};
+
 /**
  * Font asset for UIText to render
  */
@@ -135,11 +173,26 @@ protected:
 	/** Texture of this font */
 	UPROPERTY(VisibleAnywhere, Category = "DreamGUI")
 		TObjectPtr<UTexture2DArray> Texture;
-	int32 CurrentTextureSlice = 0;
 
-	/** if not find char in current font, DreamUI will search the char in this font array until find it. */
+	/**
+	 * The faces tried for what this font's own face lacks. Entry i is face index i + 1. Which one draws a character is
+	 * decided by FDreamFontFaceResolver from each entry's ranges, cultures and preference, and the text's language.
+	 */
 	UPROPERTY(EditAnywhere, Category = "DreamGUI")
-		TArray<TObjectPtr<UDreamUIFontData_FreeTypeRender>> FallbackFontArray;
+	TArray<FDreamUIFontFallback> Fallbacks;
+	/**
+	 * The fallbacks of an asset saved before they had settings (FDreamGUIObjectVersion::FontFallbackEntries): moved into
+	 * Fallbacks, with default settings and in the same order, when the asset loads, and empty from then on. Not edited.
+	 */
+	UPROPERTY()
+	TArray<TObjectPtr<UDreamUIFontData_FreeTypeRender>> FallbackFontArray;
+	/**
+	 * Clusters asking for emoji presentation (a pictograph that defaults to it, U+FE0F, a flag, a keycap, a skin tone, a
+	 * ZWJ sequence) try the colour faces among this font's faces first, as browsers do; off, every cluster takes the faces
+	 * in order. A cluster in text presentation always tries the monochrome faces first.
+	 */
+	UPROPERTY(EditAnywhere, Category = "DreamGUI")
+	bool bPreferColorEmoji = true;
 	/**
 	 * The real bold face of this font. A bold run is drawn from it -- its own outlines and advances -- instead of from this
 	 * font's face made bolder. Its primary face is rendered into this font's atlas, the way a fallback's is.
@@ -163,6 +216,8 @@ public:
 	//Begin UObject
 	virtual void PostLoad()override;
 	virtual void BeginDestroy()override;
+	/** Moves the FallbackFontArray of an asset saved before FDreamGUIObjectVersion::FontFallbackEntries into Fallbacks. */
+	virtual void Serialize(FArchive& Ar)override;
 	//End UObject
 
 	//Begin UDreamUIFontData_BaseObject interface
@@ -172,11 +227,34 @@ public:
 	virtual FDreamUICharData GetCharData(uint32 CharCode, float CharSize, bool IsBold)override;
 	virtual bool HasKerning()override;
 	virtual int32 GetFaceCount()override;
+	/**
+	 * The face's cmap has the code point, and what it has can be drawn here: a colour face's glyph that has only colour
+	 * data DreamGUI does not draw (COLRv1 paints, SVG) does not count, nor, on a font whose atlas holds no colour (the
+	 * single-channel field), one with no outline. A fallback entry's ranges and cultures are the resolver's business.
+	 */
 	virtual bool FaceHasCodepoint(int32 FaceIndex, uint32 Codepoint)override;
+	/** A face drawn from colour bitmap strikes shapes through a font whose advances are the strike's own (E6), not hmtx's. */
 	virtual void* GetShapingFont(int32 FaceIndex, float FontSize)override;
+	/** Field (or bitmap) glyphs from the atlas; a colour face's colour glyphs from their own cache, by size bucket. */
 	virtual FDreamUICharData GetGlyphData(int32 FaceIndex, uint32 GlyphIndex, float CharSize, bool bBold)override;
-	/** Face and glyph index a code point resolves to, searching this font then its fallbacks; false when no face has it. */
+	/**
+	 * Face and glyph index a code point resolves to, through FDreamFontFaceResolver in the game's current language (the
+	 * fallbacks' ranges, cultures and preference, colour faces first for emoji); the primary face's .notdef when no face has
+	 * it, false only when not even the primary face loads.
+	 */
 	bool ResolveCodepoint(uint32 Codepoint, FDreamUIGlyphKey& OutKey);
+	virtual const FDreamFontFaceTable& GetFaceTable()override;
+	/** FT_HAS_COLOR of the face; false for every face of a font whose atlas cannot hold colour (the single-channel field). */
+	virtual bool IsColorFace(int32 FaceIndex)override;
+	virtual FDreamUICharData GetFaceCharData(int32 FaceIndex, uint32 CharCode, float CharSize, bool IsBold)override;
+	virtual FDreamUIFontFaceIdentity GetFaceIdentity(int32 FaceIndex)override;
+	/**
+	 * This font's own (LayoutEpoch) with the face epoch of every fallback and style font folded in: a layout kept for edits
+	 * asked those fonts whether they have a code point, and a reloaded one may answer otherwise. Read off the fonts as they
+	 * are; nothing is loaded to answer.
+	 */
+	virtual uint32 GetLayoutEpoch() const override;
+	virtual bool GetCoverageGlyph(int32 FaceIndex, uint32 GlyphIndex, int32 Size26Dot6, EDreamUICoverageGlyphFlags Flags, FDreamUICoverageGlyph& OutGlyph)override;
 	virtual float GetKerning(uint32 LeftCharCode, uint32 RightCharCode, float CharSize)override;
 	virtual bool GetFaceMetrics(int32 FaceIndex, float FontSize, float& OutAscent, float& OutDescent, float& OutLineHeight)override;
 	/**
@@ -234,6 +312,33 @@ protected:
 	 * font is told, so it lays out again against the new faces.
 	 */
 	void ResetFaceState();
+	/** What follows a new fallback list (SetFallbacks, an edit): the faces reset, the table rebuilt, the layout epoch moved on, the texts laid out again. */
+	void ApplyFallbacksChanged();
+	/** Lay out every text using the font again, and its widget's layout with it: a line box of the font may have changed. */
+	void RecreateTexts();
+	/** GetFaceTable's answer, built from Fallbacks and bPreferColorEmoji; rebuilt on the next ask once they changed. */
+	FDreamFontFaceTable FaceTable;
+	bool bFaceTableDirty = true;
+	/**
+	 * FaceHasCodepoint's answers -- the resolver asks them face after face for every cluster of every layout -- asked of
+	 * FreeType once per code point and face: bit i of Known says face i was asked, bit i of Has what it answered. Faces past
+	 * 63 are asked every time. Kept for the faces as they are now: dropped when the faces behind the indices change, and
+	 * when the font a face belongs to reloads (CodepointFacesEpochs).
+	 */
+	struct FCodepointFaces
+	{
+		uint64 Known = 0;
+		uint64 Has = 0;
+	};
+	TMap<uint32, FCodepointFaces> CodepointFaces;
+	/** The face epoch of each face's font when its answers were kept; 0 for a face none were kept for. */
+	TArray<uint32> CodepointFacesEpochs;
+	/** Forget what the faces were found to hold: their code points, and their glyphs' colour kinds (ColorGlyphInfos). */
+	void ResetCodepointFaces();
+	/** FDreamUIFontFaceIdentity::Epoch of this font's own face: moves on every time the face is initialized or torn down. */
+	uint32 FaceEpoch = 0;
+	/** This font's own part of what GetLayoutEpoch answers; the fallback and style fonts' face epochs are folded in there. */
+	uint32 LayoutEpoch = 0;
 public:
 	virtual float GetLineHeight(float FontSize)override;
 	virtual float GetVerticalOffset(float FontSize)override;
@@ -253,9 +358,18 @@ public:
 	/** Point the font at a file -- absolute, or relative to the project directory -- and reload it on next use. */
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
 	void SetFontFilePath(const FString& InPath, bool bInRelativeToProjectDir);
-	/** Replace the fallback list: the faces tried, in order, for code points this font lacks. */
+	/** Replace the fallback list with these fonts, each an entry with default settings (every code point, any language, scale 1). */
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
 	void SetFallbackFonts(const TArray<UDreamUIFontData_FreeTypeRender*>& InFallbacks);
+	/**
+	 * Replace the fallback list. Entries with no font, or with this font, are dropped. Resets what the faces behind the
+	 * indices fed (the worker, face metrics, glyph cache, face table), moves the layout epoch on, and lays out every text
+	 * using the font again.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
+	void SetFallbacks(const TArray<FDreamUIFontFallback>& InFallbacks);
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
+	const TArray<FDreamUIFontFallback>& GetFallbacks() const { return Fallbacks; }
 	/** Replace the real bold, italic and bold-italic faces; null for a style the font should synthesize. */
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
 	void SetStyleFonts(UDreamUIFontData_FreeTypeRender* InBold, UDreamUIFontData_FreeTypeRender* InItalic, UDreamUIFontData_FreeTypeRender* InBoldItalic);
@@ -284,9 +398,33 @@ protected:
 	/** The shared buffer above, creating it on first use; null when this font has no bytes anywhere. */
 	TSharedPtr<const TArray<uint8>, ESPMode::ThreadSafe> GetOrCreateSharedFaceBytes();
 
-	/** for rect packing */
-	rbp::MaxRectsBinPack BinPack;
-	TArray<rbp::Rect> FreeRectCells;
+	/**
+	 * Rect packing. The atlas is cut into square cells (RectPackCellSizeType on a side), handed out one at a time from a
+	 * pool to two packers, each packing into a cell of its own: the field packer -- field, bitmap and colour glyphs, which
+	 * stay until the whole atlas is flushed -- and the coverage packer -- small-text coverage glyphs, which are flushed as a
+	 * group when they outgrow their budget and give their cells back to the pool. A new slice only adds its cells to the
+	 * pool: it never resets either packer.
+	 */
+	struct FAtlasCell
+	{
+		int32 Slice = 0;
+		/** The cell's top-left texel. */
+		int32 X = 0;
+		int32 Y = 0;
+	};
+	struct FAtlasPacker
+	{
+		rbp::MaxRectsBinPack Bin;
+		/** The cell Bin packs into; nothing while bHasCell is false. */
+		FAtlasCell Cell;
+		bool bHasCell = false;
+	};
+	/** Cells no packer holds, the next one taken last in the array. */
+	TArray<FAtlasCell> FreeAtlasCells;
+	FAtlasPacker FieldPacker;
+	FAtlasPacker CoveragePacker;
+	/** One warning per font for a glyph larger than a cell, which no packer can place. */
+	bool bLoggedGlyphLargerThanCell = false;
 	/** 1.0 / textureSize */
 	float OneDivideTextureSize;
 
@@ -312,6 +450,16 @@ protected:
 #endif
 	/** The shaping font over Face; null when HarfBuzz is not compiled in or the face failed to load. */
 	hb_font_t* HarfBuzzFont = nullptr;
+	/**
+	 * For a face drawn from colour bitmap strikes (CBDT/CBLC, sbix): a sub-font of HarfBuzzFont whose advances are the
+	 * strike's own -- its horiAdvance times the size over its ppem, what the bitmap was drawn to and what browsers advance
+	 * by -- instead of hmtx's, so the shaper needs no case of its own. Null for every other face.
+	 */
+	hb_font_t* HarfBuzzStrikeFont = nullptr;
+	/** The strike font's advances in 26.6, by glyph and scale: each one costs a strike glyph load. */
+	TMap<uint64, int32> StrikeAdvanceCache;
+	/** HarfBuzzStrikeFont's h_advance callback (hb_font_get_glyph_h_advance_func_t); the font data is this font. */
+	static int32 GetHarfBuzzStrikeAdvance(hb_font_t* InFont, void* InFontData, uint32 InGlyph, void* InUserData);
 	void InitHarfBuzz();
 	void DeinitHarfBuzz();
 #if WITH_FREETYPE
@@ -336,10 +484,23 @@ protected:
 		int pixelSize;
 	};
 	/**
-	 * Insert rect into area, assign pixel if succeed
-	 * return: if glyph can fit in rect area return true, else false
+	 * A rectangle of the atlas for one of the packers: from its cell, from the pool's next cell when that one is full, from
+	 * a new slice when the pool is empty. Past the slice budget the field packer asks for the atlas flush
+	 * (RequestAtlasFlush) and at the RHI's limit flushes on the spot; the coverage packer takes cells past its own budget,
+	 * asking for the coverage flush (RequestCoverageFlush), and fails at the RHI's limit. False when the rectangle is
+	 * larger than a cell or there is no room left.
 	 */
-	bool PackRectAndInsertChar(const FGlyphBitmap& InGlyphBitmap, rbp::MaxRectsBinPack& InOutBinPack, FDreamUICharData& OutResult);
+	bool PackAtlasRect(bool bCoverage, int32 InWidth, int32 InHeight, int32& OutSlice, int32& OutX, int32& OutY);
+	/** Hand a packer the pool's next cell. A coverage cell counts against the coverage budget. */
+	void TakeAtlasCell(FAtlasPacker& InOutPacker, bool bCoverage);
+	/** Grow the atlas by a slice, and put its cells in the pool. */
+	void AddAtlasSlice();
+	/** Put a slice's cells in the pool, in the order the packer has always used them: column by column from the top left. */
+	void AddAtlasSliceCells(int32 Slice);
+	/** No cells, no packer holding one, no coverage glyph or cell: what releasing or flushing the atlas starts from. */
+	void ResetAtlasPacking();
+	/** Forget every glyph the atlas holds: the subclass's cache (ClearCharDataCache), the colour glyphs, the coverage glyphs. */
+	void ClearAtlasCaches();
 	bool UpdateFontTextureRegion(uint32 PosX, uint32 PosY, uint32 Slice, uint32 Width, uint32 Height, uint32 SrcPitch, uint32 SrcBpp, const TArray<uint8>& SrcData);
 	bool FlushFontTexture();
 	bool EnsureFontTextureAtlasData(int32 SliceCount, int32 BytesPerPixel);
@@ -414,16 +575,155 @@ protected:
 	TSharedPtr<FDreamGlyphRasterizer, ESPMode::ThreadSafe> Rasterizer;
 	/** The worker over this font's faces, created on first use. Null when no face has bytes to share. */
 	FDreamGlyphRasterizer* GetOrCreateRasterizer();
-	/** Collect finished worker glyphs into the atlas; fires OnGlyphsReady when any landed. */
+	/**
+	 * Collect finished worker glyphs into the atlas, by the kind of job: field and colour glyphs that landed (or failed) fire
+	 * OnGlyphsReady, a relayout; coverage glyphs only mark OnCoverageGlyphsChanged for the end of FlushPendingFontTextures.
+	 */
 	void DrainAsyncGlyphs();
-	/** Whether a glyph request this frame may still be rasterized synchronously. */
+	/** Whether a glyph request this frame may still be rasterized synchronously. Colour glyphs share this budget with the field's. */
 	static bool TakeSyncGlyphBudget();
+	/** The same for coverage glyphs, whose budget is their own (UDreamUISettings::GetCoverageGlyphSyncBudgetPerFrame). */
+	static bool TakeSyncCoverageBudget();
+	/** Anything of this font's on the worker: field, colour or coverage glyphs. */
+	bool HasPendingAsyncGlyphs() const { return PendingAsyncGlyphs.Num() + PendingColorGlyphs.Num() + PendingCoverageGlyphs.Num() > 0; }
+
+	/**
+	 * Colour glyphs (emoji): CBDT/CBLC and sbix strikes and COLRv0 layers, rasterized by FDreamGlyphColor at a size bucket
+	 * and packed by the field packer into this font's own BGRA atlas. Their cache is their own -- a colour glyph has a
+	 * size, a field glyph does not -- and it is cleared with the field glyphs'. Nothing here for a font whose atlas
+	 * cannot hold colour.
+	 */
+	struct FColorGlyphKey
+	{
+		int32 FaceIndex = 0;
+		uint32 GlyphIndex = 0;
+		/** FDreamGlyphColor::GetSizeBucket of the size asked for. */
+		int32 SizeBucket = 0;
+		FColorGlyphKey() {}
+		FColorGlyphKey(int32 InFaceIndex, uint32 InGlyphIndex, int32 InSizeBucket) : FaceIndex(InFaceIndex), GlyphIndex(InGlyphIndex), SizeBucket(InSizeBucket) {}
+		bool operator==(const FColorGlyphKey& Other) const { return FaceIndex == Other.FaceIndex && GlyphIndex == Other.GlyphIndex && SizeBucket == Other.SizeBucket; }
+		friend FORCEINLINE uint32 GetTypeHash(const FColorGlyphKey& Key) { return HashCombine(HashCombine(::GetTypeHash(Key.FaceIndex), ::GetTypeHash(Key.GlyphIndex)), ::GetTypeHash(Key.SizeBucket)); }
+	};
+	struct FColorGlyphEntry
+	{
+		/** The quad, the advance and the UVs, every length in texels of the stored bitmap. No quad for a glyph that failed. */
+		FDreamUICharData Texels;
+		/** Texels per em of the stored bitmap: what turns those lengths into pixels at a size. */
+		float TexelsPerEm = 0.0f;
+	};
+	TMap<FColorGlyphKey, FColorGlyphEntry> ColorGlyphs;
+	TSet<FColorGlyphKey> PendingColorGlyphs;
+	/** One warning per font for a colour glyph that could not be made. */
+	bool bLoggedColorGlyphFailure = false;
+	/** What colour data a colour face's glyph holds, asked of FreeType once. */
+	struct FColorGlyphInfo
+	{
+		/** Its EDreamGlyphColorKind, once bKindKnown. */
+		uint8 Kind = 0;
+		bool bKindKnown = false;
+	};
+	TMap<FDreamUIGlyphKey, FColorGlyphInfo> ColorGlyphInfos;
+	/** Whether this font's atlas can hold colour glyphs: BGRA, which the single-channel field is not. */
+	virtual bool CanHoldColorGlyphs() const { return true; }
+	/** How far outside a colour glyph anything drawn from it samples, in em: the underlay's reach. The colour cell is padded by it. */
+	virtual float GetColorGlyphReachEm() const { return 0.0f; }
+	/** The colour kind of a glyph of a colour face (an EDreamGlyphColorKind), asked of FreeType once. */
+	uint8 GetGlyphColorKind(int32 FaceIndex, uint32 GlyphIndex);
+	/** A colour glyph at CharSize: from the cache, from the worker (pending), or rasterized on the spot. */
+	FDreamUICharData GetColorGlyphData(int32 FaceIndex, uint32 GlyphIndex, float CharSize);
+	/** Pack a rasterized colour glyph with a ring of transparent texels around it, and describe it. */
+	bool InsertColorGlyph(const FDreamGlyphColorResult& InColor, FColorGlyphEntry& OutEntry);
+	/** A colour glyph that could not be made: its advance, no quad, so it is not tried again before the atlas is flushed. */
+	FColorGlyphEntry MakeFailedColorGlyph(int32 FaceIndex, uint32 GlyphIndex, int32 SizeBucket);
+	/** A glyph's advance from the face itself, for a glyph that has no quad: a strike face's strike advance, else hmtx. */
+	float GetUnrasterizedAdvance(int32 FaceIndex, uint32 GlyphIndex, float CharSize);
+
+	/**
+	 * Coverage glyphs (small text, FDreamUICoverageGlyph): rasterized by FDreamGlyphCoverage, packed by the coverage packer
+	 * into cells borrowed from the pool, at most UDreamUISettings::GetMaxCoverageCells() of them. Needing more asks for a
+	 * coverage flush, which happens at the end of FlushPendingFontTextures -- after that frame's uploads were queued, so
+	 * that frame still draws from the old cells -- and drops every coverage glyph; the cells go back to the pool, zeroed,
+	 * when the next frame first packs anything. The field glyphs are never touched by it. Needing more while the glyphs of
+	 * the last flush are still coming back raises the threshold instead (bCoverageRefilling).
+	 */
+	struct FCoverageGlyphKey
+	{
+		int32 FaceIndex = 0;
+		uint32 GlyphIndex = 0;
+		int32 Size26Dot6 = 0;
+		uint8 Flags = 0;
+		/** EDreamUICoverageHinting: an edit reloads the font, but a glyph hinted one way is still not the other's. */
+		uint8 Hinting = 0;
+		FCoverageGlyphKey() {}
+		FCoverageGlyphKey(int32 InFaceIndex, uint32 InGlyphIndex, int32 InSize26Dot6, uint8 InFlags, uint8 InHinting)
+			: FaceIndex(InFaceIndex), GlyphIndex(InGlyphIndex), Size26Dot6(InSize26Dot6), Flags(InFlags), Hinting(InHinting) {}
+		bool operator==(const FCoverageGlyphKey& Other) const
+		{
+			return FaceIndex == Other.FaceIndex && GlyphIndex == Other.GlyphIndex && Size26Dot6 == Other.Size26Dot6 && Flags == Other.Flags && Hinting == Other.Hinting;
+		}
+		friend FORCEINLINE uint32 GetTypeHash(const FCoverageGlyphKey& Key)
+		{
+			return HashCombine(HashCombine(::GetTypeHash(Key.FaceIndex), ::GetTypeHash(Key.GlyphIndex)), HashCombine(::GetTypeHash(Key.Size26Dot6), ::GetTypeHash((uint32)Key.Flags | ((uint32)Key.Hinting << 8))));
+		}
+	};
+	struct FCoverageGlyphEntry
+	{
+		FDreamUICoverageGlyph Glyph;
+		/** Never from coverage: the face draws in colour or has no outlines, the raster failed, or it did not fit. */
+		bool bFailed = false;
+	};
+	TMap<FCoverageGlyphKey, FCoverageGlyphEntry> CoverageGlyphs;
+	TSet<FCoverageGlyphKey> PendingCoverageGlyphs;
+	/** The cells the coverage packer took since the last coverage flush, the one it packs into included. */
+	TArray<FAtlasCell> CoverageCells;
+	/** Cells of flushed coverage glyphs that a frame may still draw from: back to the pool once GFrameCounter moves on. */
+	TArray<FAtlasCell> RetiredCoverageCells;
+	uint64 CoverageRetireFrame = 0;
+	/** The coverage glyphs outgrew their cells: flush them at the end of FlushPendingFontTextures. */
+	bool bCoverageFlushRequested = false;
+	/** OnCoverageGlyphsChanged is due at the end of FlushPendingFontTextures. */
+	bool bCoverageGlyphsChanged = false;
+	/** One log line per font the first time its coverage glyphs outgrow their cells. */
+	bool bLoggedCoverageFlush = false;
+	/**
+	 * From a coverage flush until the font has gone a frame with no coverage glyph on the worker: the glyphs the texts paint
+	 * with are coming back. Outgrowing the cells in that time means they need more than the budget, and flushing again would
+	 * only throw them away to make them again the next frame, every frame. The cell threshold is raised to what they need
+	 * instead, up to twice the budget, until the next coverage flush -- as the field atlas's slice threshold is.
+	 */
+	bool bCoverageRefilling = false;
+	uint64 CoverageFlushFrame = 0;
+	/** The coverage cell count past which a flush is asked for; 0 means the setting's (UDreamUISettings::GetMaxCoverageCells). */
+	int32 CoverageCellThreshold = 0;
+	/** One log line per font when the coverage cell threshold had to be raised. */
+	bool bLoggedCoverageThresholdRaise = false;
+	/**
+	 * The coverage raster's style beyond its size: the hinting (an EDreamUICoverageHinting value) and the strengths of the
+	 * synthetic styles -- bold in em of stroke growth, the italic slope. Asked only of a font that supports coverage glyphs.
+	 */
+	virtual void GetCoverageRasterStyle(uint8& OutHinting, float& OutBoldEm, float& OutItalicSlope) const { OutHinting = 0; OutBoldEm = 0.0f; OutItalicSlope = 0.0f; }
+	/** Pack four phases of coverage (Width * Height BGRA texels) with a ring of zero texels around them, and describe the glyph. */
+	bool InsertCoverageGlyph(int32 InWidth, int32 InHeight, int32 InLeft, int32 InTop, const TArray<uint8>& InPixels, FDreamUICoverageGlyph& OutGlyph);
+	void RequestCoverageFlush();
+	/** Drop every coverage glyph and retire their cells until the frame has passed; the end of FlushPendingFontTextures does it. */
+	void FlushCoverageGlyphs();
+	/** Back to the pool, re-initialized and re-uploaded, the cells a coverage flush retired, once their frame has passed. */
+	void ReleaseRetiredCoverageCells();
 public:
 	/** Block until the worker has finished every queued glyph and put them in the atlas. Tests and teardown. */
 	void WaitForAsyncGlyphs();
-	int32 GetPendingAsyncGlyphCount() const { return PendingAsyncGlyphs.Num(); }
-	/** Override the per-frame synchronous budget (negative restores the setting). Tests. */
+	/** Glyphs of this font on the worker: field, colour and coverage glyphs together. */
+	int32 GetPendingAsyncGlyphCount() const { return PendingAsyncGlyphs.Num() + PendingColorGlyphs.Num() + PendingCoverageGlyphs.Num(); }
+	/** Override the per-frame synchronous budgets, the field glyphs' and the coverage glyphs' alike (negative restores the settings). Tests. */
 	static void SetAsyncGlyphSyncBudgetOverride(int32 Budget);
+	/**
+	 * Tests: put a coverage glyph made elsewhere -- a known ramp -- into this font's coverage cache, packed and uploaded
+	 * like a rasterized one, so GetCoverageGlyph(FaceIndex, GlyphIndex, Size26Dot6, Flags) answers it. Pixels holds
+	 * Width * Height * 4 bytes, rows top first, phases 0..3 in B, G, R, A; Left and Top are FDreamUICoverageGlyph's
+	 * BitmapLeft and BitmapTop. False when it does not fit, or the font draws nothing from coverage.
+	 */
+	bool InjectCoverageGlyphForTesting(int32 FaceIndex, uint32 GlyphIndex, int32 Size26Dot6, EDreamUICoverageGlyphFlags Flags,
+		int32 Width, int32 Height, int32 Left, int32 Top, const TArray<uint8>& Pixels);
 protected:
 
 	/** CPU source of truth used both for deferred uploads and texture-array expansion. */

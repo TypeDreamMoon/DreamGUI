@@ -101,11 +101,22 @@ int32 UDreamUISettings::GetAsyncGlyphSyncBudgetPerFrame()
 	return GetDefault<UDreamUISettings>()->AsyncGlyphSyncBudgetPerFrame;
 }
 
+int32 UDreamUISettings::GetCoverageGlyphSyncBudgetPerFrame()
+{
+	return FMath::Max(GetDefault<UDreamUISettings>()->CoverageGlyphSyncBudgetPerFrame, 0);
+}
+
 int32 UDreamUISettings::GetMaxFontAtlasSlices()
 {
 	// Past GMaxTextureArrayLayers the create produces a texture the sampler cannot address, so the RHI
 	// has the final word whatever the project asked for.
 	const int32 RHILimit = FMath::Max((int32)GMaxTextureArrayLayers, 1);
 	return FMath::Clamp(GetDefault<UDreamUISettings>()->MaxFontAtlasSlices, 1, RHILimit);
+}
+
+int32 UDreamUISettings::GetMaxCoverageCells()
+{
+	// A config file can say 0 where the details panel cannot; coverage glyphs always have at least one cell.
+	return FMath::Max(GetDefault<UDreamUISettings>()->MaxCoverageCells, 1);
 }
 

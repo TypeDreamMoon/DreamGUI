@@ -3,6 +3,8 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "UObject/ObjectKey.h"
+#include "Core/Text/DreamFontFaceResolver.h"
 #include "DreamUIFontData_BaseObject.generated.h"
 
 
@@ -13,13 +15,27 @@ struct FDreamUICharData
 	float XOffset = 0;
 	float YOffset = 0;
 	float XAdvance = 0;
-	FVector2f MinUV;
-	FVector2f MaxUV;
+	/** Zero for an entry with no quad (a space, a pending or missing glyph): TVector2's default constructor leaves its members unset. */
+	FVector2f MinUV = FVector2f::ZeroVector;
+	FVector2f MaxUV = FVector2f::ZeroVector;
 	int32 SliceIndex = 0;//texture index in Texture2DArray
 	/** Which face of the family the glyph came from: 0 is the font itself, then its fallbacks. */
 	int32 FaceIndex = 0;
+	/**
+	 * The glyph's index in that face, 0 being its .notdef: with FaceIndex, what a coverage glyph is fetched by
+	 * (UDreamUIFontData_BaseObject::GetCoverageGlyph). Set on every entry a font hands out, pending ones included.
+	 */
+	uint32 GlyphIndex = 0;
 	/** The glyph is being rasterized off-thread: advance is right, the quad is empty until the font's OnGlyphsReady. */
 	bool bPending = false;
+	/**
+	 * The quad samples a colour bitmap -- an emoji from a CBDT/sbix strike or COLRv0 layers, premultiplied BGRA -- not a
+	 * field: the painter writes DreamTextQuadCode::ColorFace / ColorEffects for it and ColorTexelsPerEm in UV3.y. The quad
+	 * is the glyph's whole padded cell, the padding (0,0,0,0), so an underlay sampled at UV minus an offset stays inside it.
+	 */
+	bool bColor = false;
+	/** A colour glyph's texels per em in its cell: what the shader turns the underlay offset (in em) into UV with. 0 otherwise. */
+	float ColorTexelsPerEm = 0.0f;
 
 	bool IsValid()const
 	{
@@ -87,6 +103,56 @@ enum class EDreamUIFontFaceStyle : uint8
 	Italic = 1 << 1,
 };
 ENUM_CLASS_FLAGS(EDreamUIFontFaceStyle);
+
+/** Synthetic styles baked into a coverage glyph's raster. Part of its cache key. */
+enum class EDreamUICoverageGlyphFlags : uint8
+{
+	None = 0,
+	/** Emboldened by the font's bold ratio times the size: FreeType keeps the left and bottom edges and grows the glyph right and up by that much. */
+	SyntheticBold = 1 << 0,
+	/** Sheared about the baseline by the font's italic slope, after hinting. */
+	SyntheticItalic = 1 << 1,
+};
+ENUM_CLASS_FLAGS(EDreamUICoverageGlyphFlags);
+
+/**
+ * A coverage glyph in a font's atlas, for small text: the glyph hinted for its pixel size and rasterized as 8-bit
+ * coverage four times, the outline moved right by 0, 1/4, 2/4 and 3/4 px, into the four channels of one cell -- bytes
+ * B, G, R, A hold phases 0, 1, 2, 3, so sampled as float4(R, G, B, A) phase p is component 2, 1, 0, 3. The four share
+ * one box, their union. Lengths are device pixels at the size asked for, measured from the pen's pixel -- its whole
+ * column and its baseline row -- since the painter places the box on whole device pixels and samples its texels 1:1.
+ */
+struct FDreamUICoverageGlyph
+{
+	/** Left edge of the box, in pixels right of the pen's column; may be negative. */
+	int32 BitmapLeft = 0;
+	/** Top edge of the box, in pixels above the baseline row. Row 0 of the bitmap is its top row. */
+	int32 BitmapTop = 0;
+	/** The box in pixels, which is the box in texels. */
+	int32 Width = 0;
+	int32 Height = 0;
+	/** The box's texels exactly: MinUV is its top-left corner, MaxUV its bottom-right (V down, as in FDreamUICharData). */
+	FVector2f MinUV = FVector2f::ZeroVector;
+	FVector2f MaxUV = FVector2f::ZeroVector;
+	/** Slice of the font's Texture2DArray. */
+	int32 SliceIndex = 0;
+	/** Asked for and not in the atlas yet: draw the field quad this time; the font's OnCoverageGlyphsChanged says when it landed. */
+	bool bPending = false;
+};
+
+/** Who a face is beyond one font's face indices: what a cache shared by every font -- the shape cache -- keys runs by. */
+struct FDreamUIFontFaceIdentity
+{
+	/** The font asset whose own face (its face 0) this is: a fallback's or a style face's is that font, not the one asking. */
+	FObjectKey Owner;
+	/** That asset's face epoch, moved on every time its face is (re)initialized: a reload, a new file, a culture font swap. */
+	uint32 Epoch = 0;
+
+	/** False for a face nobody can name: nothing is cached for it. */
+	bool IsValid() const { return Owner != FObjectKey(); }
+	bool operator==(const FDreamUIFontFaceIdentity& Other) const { return Owner == Other.Owner && Epoch == Other.Epoch; }
+	friend uint32 GetTypeHash(const FDreamUIFontFaceIdentity& Identity) { return HashCombineFast(GetTypeHash(Identity.Owner), ::GetTypeHash(Identity.Epoch)); }
+};
 
 class UTexture2D;
 class UTexture2DArray;
@@ -162,6 +228,35 @@ public:
 	virtual int32 GetStyledFace(bool bBold, bool bItalic) { return 0; }
 	/** Whether a face is itself bold and/or italic, so the layout does not embolden or slant it a second time. */
 	virtual EDreamUIFontFaceStyle GetFaceStyleFlags(int32 FaceIndex) { return EDreamUIFontFaceStyle::None; }
+
+	/**
+	 * What face resolution (FDreamFontFaceResolver) knows of the regular faces: each fallback entry's ranges, cultures,
+	 * scale and preference over the primary, and whether emoji go to colour faces first. Rebuilt by the font when its
+	 * fallbacks change, and only then. The base keeps no table: every face takes every code point, in order, at scale 1.
+	 */
+	virtual const FDreamFontFaceTable& GetFaceTable()
+	{
+		static const FDreamFontFaceTable EmptyTable{};
+		return EmptyTable;
+	}
+	/**
+	 * Whether a face -- regular or style -- is a colour face (FT_HAS_COLOR: CBDT/CBLC, sbix, COLR). Asked face by face as
+	 * the resolver reaches it, so a fallback is not loaded before its coverage would be; cached until the faces change.
+	 */
+	virtual bool IsColorFace(int32 FaceIndex) { return false; }
+	/**
+	 * The glyph for a code point from a face the caller chose, at CharSize -- that face's .notdef when it lacks the code
+	 * point -- for a layout that does not shape and resolves faces itself. The base has one face and answers GetCharData.
+	 */
+	virtual FDreamUICharData GetFaceCharData(int32 FaceIndex, uint32 CharCode, float CharSize, bool IsBold) { return GetCharData(CharCode, CharSize, IsBold); }
+	/** Who a face is, for the shape cache. Invalid, the default, means its runs are never cached. */
+	virtual FDreamUIFontFaceIdentity GetFaceIdentity(int32 FaceIndex) { return FDreamUIFontFaceIdentity(); }
+	/**
+	 * Moves on whenever something changes how this font lays text out that a text's layout input cannot see: fallbacks
+	 * edited, vertical metrics or line height type, style faces, a face reloaded. What a layout keeps across edits
+	 * (FDreamUITextGeometryCache::SetIncrementalLayout) is checked against it. 0 for a font that never changes.
+	 */
+	virtual uint32 GetLayoutEpoch() const { return 0; }
 	/**
 	 * Where the font puts its underline and strikethrough at this size, in pixels: positions are of the line's centre,
 	 * measured upwards from the baseline (an underline is negative), thicknesses are full heights. False when the face has no such data.
@@ -184,6 +279,26 @@ public:
 	 * still clean would otherwise paint with whichever text laid out last.
 	 */
 	virtual FDreamTextGlyphPaintStyle GetGlyphPaintStyle(const FVector2f& InWorldScale, float InExpandMeshSize) const { return FDreamTextGlyphPaintStyle(); }
+
+	/**
+	 * Small text from coverage glyphs (FDreamUICoverageGlyph). Whether this font can draw small sizes that way at all: a
+	 * distance-field font on the outline (multi-channel, BGRA) field whose coverage is on -- its own SmallTextCoverage, or
+	 * the project's UDreamGUISettings::bSmallTextCoverage when that is Inherit.
+	 */
+	virtual bool SupportsCoverageGlyphs() const { return false; }
+	/** The most device pixels per em an item may have and still be drawn from coverage: the font's own limit, else the project's. */
+	virtual float GetCoverageMaxPixelSize() const { return 0.0f; }
+	/**
+	 * The coverage glyph for a glyph of a face at a raster size, made on first use: on the spot while the frame's coverage
+	 * budget lasts (UDreamUISettings::GetCoverageGlyphSyncBudgetPerFrame), on the rasterizer's worker after that, in which
+	 * case it comes back bPending. Game thread only. False when the glyph cannot be drawn from coverage at all -- no
+	 * support, a colour or bitmap-only face, a raster that failed -- and the caller draws its field quad and does not wait.
+	 * Every glyph handed out goes stale when the font's coverage cells are flushed (their budget ran out, or the whole
+	 * atlas was flushed); OnCoverageGlyphsChanged is broadcast then.
+	 * @param Size26Dot6  Pixels per em to rasterize at, 26.6 fixed point: round(GlyphSize * RasterScale * 64).
+	 * @param Flags       Synthetic styles to bake into the raster.
+	 */
+	virtual bool GetCoverageGlyph(int32 FaceIndex, uint32 GlyphIndex, int32 Size26Dot6, EDreamUICoverageGlyphFlags Flags, FDreamUICoverageGlyph& OutGlyph) { return false; }
 
 
 	virtual void AddUIText(UDreamText* InText) {}
@@ -208,6 +323,13 @@ public:
 	DECLARE_EVENT(UDreamUIFontData_BaseObject, FDreamUIFontGlyphsReadyEvent);
 	/** Called on the game thread when glyphs that were handed out as pending have landed in the atlas. */
 	FDreamUIFontGlyphsReadyEvent OnGlyphsReady;
+	DECLARE_EVENT(UDreamUIFontData_BaseObject, FDreamUIFontCoverageGlyphsEvent);
+	/**
+	 * Called on the game thread when coverage glyphs handed out as pending have landed (or failed), and when the font's
+	 * coverage cells were flushed. A repaint, never a relayout: a coverage glyph replaces a quad at paint time and changes
+	 * no advance, which is why this is not OnGlyphsReady.
+	 */
+	FDreamUIFontCoverageGlyphsEvent OnCoverageGlyphsChanged;
 protected:
 	UPROPERTY(EditAnywhere, Category = "DreamGUI")
 	TObjectPtr<UDreamUIFontEmojiData> EmojiData;

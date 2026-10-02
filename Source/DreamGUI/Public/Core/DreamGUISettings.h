@@ -130,6 +130,30 @@ public:
 	UPROPERTY(config, EditAnywhere, Category = "Text")
 	bool bSmallTextCorrection = true;
 
+	/**
+	 * Draw small screen text of distance-field fonts from hinted coverage glyphs: each glyph rasterized for its pixel size
+	 * with FreeType's light hinting in four subpixel positions, placed on whole device pixels -- the crisp stems Chrome
+	 * and Slate draw -- instead of from the field. Decided per glyph item at paint time, so layout, carets and selection
+	 * are the same either way. Only where it can be exact: screen-space and render-target canvases, no render layer, a
+	 * flat unrotated unmirrored uniformly scaled transform, no effects, softness or dilate, no override material, no
+	 * modifier that moves vertices, pixel snapping not disabled. A font can override this (its SmallTextCoverage), a text
+	 * can opt out (UDreamText::SmallTextRaster).
+	 */
+	UPROPERTY(config, EditAnywhere, Category = "Text")
+	bool bSmallTextCoverage = true;
+
+	/** Device pixels per em up to which small-text coverage glyphs are used; larger text draws from the field. A font can override it. */
+	UPROPERTY(config, EditAnywhere, Category = "Text", meta = (ClampMin = "1.0", UIMax = "48.0", EditCondition = "bSmallTextCoverage"))
+	float SmallTextMaxPixelSize = 20.0f;
+
+	/**
+	 * Skia's text contrast for coverage glyphs: how much the coverage of light-on-dark and dark-on-light text is boosted
+	 * before it is blended, 1.0 as Chromium ships it. 0 blends the raw coverage, as Slate does. Below 16: it shares a
+	 * vertex channel with a flag (DreamTextQuadCode::CoverageLinearTarget).
+	 */
+	UPROPERTY(config, EditAnywhere, Category = "Text", meta = (ClampMin = "0.0", ClampMax = "8.0", UIMax = "2.0", EditCondition = "bSmallTextCoverage"))
+	float SmallTextContrast = 1.0f;
+
 
 	/**
 	 * Content folder the shipped control classes live in.

@@ -70,12 +70,19 @@ def set_property(asset, name, value):
     log("  " + asset.get_name() + "." + name + " = " + str(shown))
 
 
+def fallback_entry(font):
+    """A fallback entry with the defaults: every code point, any language, scale 1, not preferred over the font's own face."""
+    entry = unreal.DreamUIFontFallback()
+    entry.set_editor_property("font", font)
+    return entry
+
+
 def make_single_face(asset, face):
     """A font that is one engine face and nothing else: no fallbacks, no style faces of its own."""
     set_property(asset, "font_type", unreal.DreamUIDynamicFontDataType.ENGINE_FONT)
     set_property(asset, "engine_font", face)
     set_property(asset, "sdf_source", unreal.DreamUISdfSource.OUTLINE_MULTI_CHANNEL)
-    set_property(asset, "fallback_font_array", [])
+    set_property(asset, "fallbacks", [])
     for _, _, style_property in STYLE_FONTS:
         set_property(asset, style_property, None)
 
@@ -106,7 +113,10 @@ def main():
     log("setting " + package_name(DEFAULT_FONT))
     set_property(default_font, "engine_font", regular_face)
     set_property(default_font, "sdf_source", unreal.DreamUISdfSource.OUTLINE_MULTI_CHANNEL)
-    set_property(default_font, "fallback_font_array", [cjk_font])
+    # The CJK face as a plain entry, as the old fallback list had it: no ranges and no cultures, so it answers for whatever
+    # Roboto lacks, in every language. (A colour emoji face is deliberately not added; see README.md.)
+    default_font.set_editor_property("fallbacks", [fallback_entry(cjk_font)])
+    log("  " + default_font.get_name() + ".fallbacks = [" + cjk_font.get_path_name() + "]")
     for style_font, _, style_property in style_fonts:
         set_property(default_font, style_property, style_font)
 

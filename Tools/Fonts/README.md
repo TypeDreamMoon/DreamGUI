@@ -11,7 +11,7 @@ font assets it is made of.
 | `/DreamGUI/DefaultFont_DistanceField_Bold` | `RobotoBold` | its bold face (`BoldFont`) |
 | `/DreamGUI/DefaultFont_DistanceField_Italic` | `RobotoItalic` | its italic face (`ItalicFont`) |
 | `/DreamGUI/DefaultFont_DistanceField_BoldItalic` | `RobotoBoldItalic` | its bold-italic face (`BoldItalicFont`) |
-| `/DreamGUI/DefaultFont_DistanceField_CJK` | `DroidSansFallback` | its fallback (`FallbackFontArray`), for Chinese, Japanese and Korean |
+| `/DreamGUI/DefaultFont_DistanceField_CJK` | `DroidSansFallback` | its fallback (an entry of `Fallbacks`, with no ranges or cultures), for Chinese, Japanese and Korean |
 
 Every one of them uses the multi-channel field from the glyph outlines (`SdfSource` = Outline Multi Channel), which
 keeps corners sharp; the single-channel field derived from a bitmap rounds them by a texel or two.
@@ -32,6 +32,44 @@ slanted, and CJK from the same fallback.
 
 Switching the default from DroidSansFallback to Roboto re-lays-out every text that uses the default font, since the
 two faces' Latin widths differ. To go back, point the default's engine font face at `DroidSansFallback` again.
+
+## Colour emoji
+
+The default font has no colour emoji face, on purpose. The engine's `NotoColorEmoji.ttf` lives under
+`Engine/Content/Editor/Slate/Fonts`, which is editor content that a packaged game does not get (Slate itself loads it
+only in the editor), and embedding it in the plugin's font asset would add 7.8 MB to every project that uses DreamGUI.
+Without one, an emoji draws from the text's emoji data (`EmojiData`, an image per emoji) when it has an entry, and
+otherwise from whatever monochrome face has the code point, or as the missing-glyph box. DreamGUI's tests and the
+text parity corpus load the engine's file directly, so they need nothing from here.
+
+A game that wants colour emoji ships a colour emoji font of its own and adds it as a fallback:
+
+1. Pick a font whose colour data DreamGUI draws: CBDT/CBLC or sbix bitmap strikes (Noto Color Emoji, OFL), or COLRv0
+   layers. A glyph that only has COLRv1 or SVG data counts as missing. Mind the licence: Noto is OFL, Twemoji's art is
+   CC-BY, and Segoe UI Emoji may not be redistributed.
+2. Make a font asset for the file (a distance-field font). Its own settings hardly matter: a fallback's glyphs are drawn
+   into the atlas of the font the text uses, colour glyphs at their own pixel size rather than as a field. That text font
+   has to be on the outline field (`SdfSource` Outline Multi Channel, the default) or be a bitmap font: the single-channel
+   field's atlas is R8, holds no colour, and draws no colour glyph.
+3. Add it to the text font's `Fallbacks` as an entry whose `Ranges` cover the emoji and nothing else, so its digits,
+   space and symbols never stand in for the text font's own:
+
+   | Range | What |
+   |---|---|
+   | `0x23`, `0x2A`, `0x30`-`0x39` | the keycap bases (`#`, `*`, digits), for sequences like `1` U+FE0F U+20E3 |
+   | `0xA9`, `0xAE` | (c) and (r) |
+   | `0x203C`-`0x3299` | the emoji among the symbols, arrows, dingbats and enclosed ideographs |
+   | `0x1F000`-`0x1FAFF` | the emoji blocks, flags included |
+
+   A range is matched against a cluster's first code point; the joiners, variation selectors, skin tones and tags after
+   it need no range of their own. Leave `Cultures` empty and `Scale` at 1.
+
+Clusters that ask for emoji presentation -- a pictograph that is drawn as emoji by default, or anything followed by
+U+FE0F, a flag, a keycap, a skin tone or a ZWJ sequence -- try the colour faces first (the font's `bPreferColorEmoji`,
+on by default). Everything else is in text presentation -- ordinary text, and anything followed by U+FE0E -- and tries
+the monochrome faces first, so the digits and symbols in those ranges still come from the text font wherever it has
+them. An `EmojiData` entry for the exact sequence still wins over the colour face, and one for the cluster's first code
+point only loses to it.
 
 ## How to run it
 

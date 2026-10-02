@@ -5,9 +5,22 @@
 #include "CoreMinimal.h"
 #include "Core/DreamUIFontData_FreeTypeRender.h"
 #include "Core/Text/DreamGlyphSdf.h"
+#include "Core/Text/DreamGlyphCoverage.h"
+#include "Core/Text/DreamGlyphColor.h"
 
 struct FT_LibraryRec_;
 struct FT_FaceRec_;
+
+/** What a rasterizer job makes, and which payload of its result is filled. */
+enum class EDreamGlyphJobKind : uint8
+{
+	/** A multi-channel distance field (FDreamGlyphSdf::GenerateMTSDF): a distance-field font's glyph. */
+	Field,
+	/** A coverage glyph's four phases (FDreamGlyphCoverage::Rasterize): small text. */
+	Coverage,
+	/** A colour glyph (FDreamGlyphColor::Rasterize): an emoji. */
+	Color,
+};
 
 /**
  * Off-thread glyph rasterization for one font. The worker owns its own FreeType library and
@@ -21,18 +34,27 @@ class FDreamGlyphRasterizer : public TSharedFromThis<FDreamGlyphRasterizer, ESPM
 public:
 	struct FJob
 	{
+		EDreamGlyphJobKind Kind = EDreamGlyphJobKind::Field;
 		FDreamUIGlyphKey Key;
 		float CharSize = 0.0f;
 		bool bBold = false;
-		/** What the generator needs: the atlas sample size, spread and synthetic bold, in pixels. */
+		/** Field: what the generator needs -- the atlas sample size, spread and synthetic bold, in pixels. */
 		float PixelsPerEm = 0.0f;
 		float SpreadPixels = 0.0f;
 		float BoldPixels = 0.0f;
+		/** Coverage: the raster's parameters, and the flags the font's coverage cache keyed the request by. */
+		FDreamGlyphCoverageParams Coverage;
+		EDreamUICoverageGlyphFlags CoverageFlags = EDreamUICoverageGlyphFlags::None;
+		/** Color: the size bucket the font's colour cache keyed the request by, and the padding reach. */
+		FDreamGlyphColorParams Color;
 	};
 	struct FResult
 	{
 		FJob Job;
+		/** The payload of Job.Kind; the other two stay empty. */
 		FDreamGlyphSdfResult Sdf;
+		FDreamGlyphCoverageResult Coverage;
+		FDreamGlyphColorResult Color;
 		bool bSucceeded = false;
 	};
 

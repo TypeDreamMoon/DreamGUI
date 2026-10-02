@@ -60,6 +60,31 @@ enum class EDreamUISdfSource : uint8
 	BitmapSingleChannel,
 };
 
+/** Whether a distance-field font draws small sizes from hinted coverage glyphs instead of its field. */
+UENUM(BlueprintType)
+enum class EDreamUISmallTextCoverage : uint8
+{
+	/** As the project says: UDreamGUISettings::bSmallTextCoverage. */
+	Inherit,
+	On,
+	Off,
+};
+
+/** Which hinter shapes a font's coverage glyphs. Value for value the rasterizer's EDreamGlyphHinting. */
+UENUM(BlueprintType)
+enum class EDreamUICoverageHinting : uint8
+{
+	/**
+	 * FreeType's light target: the face's own hints (vertical only) when it has them, the autohinter when it has none; the
+	 * autohinter too at a fractional size on a face that would round its ppem, so the glyph keeps its size.
+	 */
+	Auto,
+	/** The autohinter (light target) for every face. */
+	Autohint,
+	/** No hinting: the outline at its exact size, in four subpixel phases. */
+	None,
+};
+
 /** SDF(Signed Distance Field) Font asset for render smooth scaled sdf text. */
 UCLASS(BlueprintType)
 class DREAMGUI_API UDreamUIFontData_DistanceField : public UDreamUIFontData_FreeTypeRender
@@ -101,6 +126,19 @@ private:
 	/** Ascent and descent at SampleFontSize; negative means not cached yet. */
 	UPROPERTY(EditAnywhere, Transient, Category = "DreamGUI", Transient)
 	float AdditionalVerticalOffset = 0.0f;
+	/**
+	 * Draw text this small on screen from hinted coverage glyphs -- crisp stems and four subpixel positions, as Chrome and
+	 * Slate draw it -- rather than from the field, which reads soft below about 20 px. Needs the outline field (BGRA atlas).
+	 * Decided per glyph item at paint time; a text can still opt out (UDreamText::SmallTextRaster).
+	 */
+	UPROPERTY(EditAnywhere, Category = "DreamGUI")
+	EDreamUISmallTextCoverage SmallTextCoverage = EDreamUISmallTextCoverage::Inherit;
+	/** Device pixels per em up to which coverage glyphs are used; 0 or less takes the project's UDreamGUISettings::SmallTextMaxPixelSize. */
+	UPROPERTY(EditAnywhere, Category = "DreamGUI", meta = (ClampMin = "0.0", UIMax = "48.0"))
+	float SmallTextMaxPixelSize = 0.0f;
+	/** Which hinter shapes the coverage glyphs. */
+	UPROPERTY(EditAnywhere, Category = "DreamGUI")
+	EDreamUICoverageHinting CoverageHinting = EDreamUICoverageHinting::Auto;
 
 public:
 	//Begin UDreamUIFontData_BaseObject interface
@@ -141,9 +179,18 @@ public:
 	/** How far the layout's glyph quads sit inside the field's spread, in texels at SampleFontSize (see GetCharDataFromCache). */
 	float GetQuadShrinkTexels(float InExpandMeshSize) const;
 	virtual float GetBoldRatio() override{ return BoldRatio; }
+	/** The outline (multi-channel, BGRA) field, and SmallTextCoverage On -- or Inherit with UDreamGUISettings::bSmallTextCoverage. */
+	virtual bool SupportsCoverageGlyphs() const override;
+	/** SmallTextMaxPixelSize when it is set (above 0), else UDreamGUISettings::SmallTextMaxPixelSize. */
+	virtual float GetCoverageMaxPixelSize() const override;
 	//End UDreamUIFontData_BaseObject interface
 	float GetSampleFontSize()const{return SampleFontSize;}
 protected:
+	/** Only the outline field's atlas is BGRA; the single-channel field's is R8 and draws no colour glyph. */
+	virtual bool CanHoldColorGlyphs() const override { return SdfSource == EDreamUISdfSource::OutlineMultiChannel; }
+	/** As far as the text effects reach (SDFRadius / SampleFontSize em): an underlay is drawn from a colour glyph's alpha too. */
+	virtual float GetColorGlyphReachEm() const override;
+	virtual void GetCoverageRasterStyle(uint8& OutHinting, float& OutBoldEm, float& OutItalicSlope) const override;
 	float OneDivideFontSize = 1.0f; float ExpandMeshSize = 0;
 	TMap<FDreamUIDistanceFieldCharKey, FDreamUICharData> CharDataMap;
 	// Kerning is a fraction of a pixel at SampleFontSize as often as not; int16 rounded every one of

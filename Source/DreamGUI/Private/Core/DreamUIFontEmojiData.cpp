@@ -8,6 +8,7 @@
 #include "Core/Components/DreamWidget.h"
 #include "Core/Components/DreamSprite.h"
 #include "Engine/World.h"
+#include "UObject/DreamGUIObjectVersion.h"
 
 #if WITH_EDITOR
 
@@ -17,9 +18,8 @@ void FDreamUIFontEmojiKey::ApplyEmoji()
 	// an author can paste in here is what a text will look up: a plain emoji, a BMP symbol wearing
 	// U+FE0F, a ZWJ family, a skin tone, a flag. Registering used to require a bare surrogate pair and
 	// truncate everything longer to its first pair, which registered a different character than the one
-	// on screen. The key is still the cluster's BASE code point -- FDreamUIFontEmojiKey hashes and
-	// compares EmojiCode alone, and VariantSelector has always been carried but not keyed -- so the
-	// variants of one base share an entry.
+	// on screen. The key is the whole cluster (Sequence), the variation selectors left out because they
+	// choose a presentation, not a picture; EmojiCode is its base, which a key was before sequences.
 	const FString Source = EmojiChar;
 	const int32 SourceLength = Source.Len();
 	if (SourceLength > 0)
@@ -28,23 +28,18 @@ void FDreamUIFontEmojiKey::ApplyEmoji()
 		const auto Element = FDreamUIText_CodePoint::ReadCodePoint(Source, SourceLength, CharIndex);
 		if (Element.Type == EDreamUIText_CodeType::Emoji)
 		{
-			EmojiCode = Element.Unicode;
 			EmojiChar = Source.Mid(Element.StringIndex, Element.Length);
-			VariantSelector = 0;
-			for (int32 i = Element.StringIndex; i < Element.StringIndex + Element.Length; i++)
-			{
-				if (FDreamUIText_CodePoint::IsVariationSelector((uint32)Source[i]))
-				{
-					VariantSelector = (uint16)Source[i];
-					break;
-				}
-			}
+			const FDreamUIFontEmojiKey Key = UDreamUIFontEmojiData::MakeKey(EmojiChar);
+			EmojiCode = Element.Unicode;
+			VariantSelector = Key.VariantSelector;
+			Sequence = Key.Sequence;
 			return;
 		}
 	}
 	EmojiChar = "";
 	EmojiCode = 0;
 	VariantSelector = 0;
+	Sequence.Reset();
 }
 
 void UDreamUIFontEmojiData::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
@@ -53,6 +48,87 @@ void UDreamUIFontEmojiData::PostEditChangeProperty(FPropertyChangedEvent& Proper
 	OnDataChange.Broadcast();
 }
 #endif
+
+void UDreamUIFontEmojiData::Serialize(FArchive& Ar)
+{
+	Ar.UsingCustomVersion(FDreamGUIObjectVersion::GUID);
+	Super::Serialize(Ar);
+	if (Ar.IsLoading() && Ar.CustomVer(FDreamGUIObjectVersion::GUID) < FDreamGUIObjectVersion::EmojiKeyBySequence)
+	{
+		// A key saved before sequences stands for its base alone. Its empty Sequence already hashed and compared as
+		// {EmojiCode}, so writing that in changes neither, and the key is filled in where it sits in the map -- no entry
+		// moves, and none collapses into another.
+		for (TPair<FDreamUIFontEmojiKey, FDreamUIFontEmojiDataItem>& Pair : DataMap)
+		{
+			if (Pair.Key.Sequence.Num() == 0 && Pair.Key.EmojiCode != 0)
+			{
+				Pair.Key.Sequence.Add((int32)Pair.Key.EmojiCode);
+			}
+		}
+	}
+}
+
+FDreamUIFontEmojiKey UDreamUIFontEmojiData::MakeKey(const FString& InCluster)
+{
+	FDreamUIFontEmojiKey Key;
+	const int32 Length = InCluster.Len();
+	for (int32 Index = 0; Index < Length;)
+	{
+		int Units = 0;
+		const uint32 Codepoint = FDreamUIText_CodePoint::DecodeCodePointAt(InCluster, Length, Index, Units);
+		Index += FMath::Max(Units, 1);
+		// U+FE0E and U+FE0F pick the presentation, not the picture: U+2764 U+FE0F and a bare U+2764 find the same entry.
+		if (FDreamUIText_CodePoint::IsVariationSelector(Codepoint))
+		{
+			if (Key.VariantSelector == 0)
+			{
+				Key.VariantSelector = (uint16)Codepoint;
+			}
+			continue;
+		}
+		Key.Sequence.Add((int32)Codepoint);
+	}
+	Key.EmojiCode = Key.Sequence.Num() > 0 ? (uint32)Key.Sequence[0] : 0;
+	return Key;
+}
+
+const FDreamUIFontEmojiDataItem* UDreamUIFontEmojiData::FindBySequence(const FString& InCluster) const
+{
+	const FDreamUIFontEmojiKey Key = MakeKey(InCluster);
+	// Nothing but variation selectors, or nothing at all, is no emoji: never the entry of an empty key.
+	if (Key.Sequence.Num() == 0)
+	{
+		return nullptr;
+	}
+	return DataMap.Find(Key);
+}
+
+const FDreamUIFontEmojiDataItem* UDreamUIFontEmojiData::FindByCodepoint(uint32 InCodepoint) const
+{
+	if (InCodepoint == 0)
+	{
+		return nullptr;
+	}
+	// A key with no sequence stands for its code point alone, which is what every entry from before sequences is.
+	return DataMap.Find(FDreamUIFontEmojiKey(InCodepoint));
+}
+
+bool UDreamUIFontEmojiData::GetItemImageSize(const FDreamUIFontEmojiDataItem& InItem, FIntVector2& OutSize)
+{
+	if (InItem.Frames.Num() == 0)
+	{
+		return false;
+	}
+	UDreamUISpriteData_BaseObject* Sprite = InItem.Frames[0].Get();
+	if (!IsValid(Sprite))
+	{
+		return false;
+	}
+	const auto SpriteWidth = Sprite->GetSpriteInfo().Width;
+	const auto SpriteHeight = Sprite->GetSpriteInfo().Height;
+	OutSize = FIntVector2(SpriteWidth, SpriteHeight);
+	return true;
+}
 
 void UDreamUIFontEmojiData::SetDataMap(const TMap<FDreamUIFontEmojiKey, FDreamUIFontEmojiDataItem>& Value)
 {
@@ -98,7 +174,13 @@ void UDreamUIFontEmojiData::CreateOrUpdateObject(UDreamWidget* parent, const TAr
 			ImageVisual = ImageWidget->CreateNewVisual<UDreamSprite>();
 		}
 		ImageWidget->SetDisplayName(FString::Printf(TEXT("[%d]"), emojiData[i].EmojiCode));
-		if (auto imageItemPtr = DataMap.Find(emojiData[i].EmojiCode))
+		// The entry the layout sized the emoji by: the one for the exact sequence, else the one for its base code point.
+		const FDreamUIFontEmojiDataItem* imageItemPtr = FindBySequence(emojiData[i].Sequence);
+		if (imageItemPtr == nullptr)
+		{
+			imageItemPtr = FindByCodepoint((uint32)emojiData[i].EmojiCode);
+		}
+		if (imageItemPtr != nullptr)
 		{
 			auto& spriteFrames = imageItemPtr->Frames;
 			auto sequencePlayerComp = ImageWidget->GetComponent<UUISpriteSequencePlayer>();
@@ -148,16 +230,6 @@ void UDreamUIFontEmojiData::CreateOrUpdateObject(UDreamWidget* parent, const TAr
 }
 bool UDreamUIFontEmojiData::GetImageSize(const uint32& emojiCode, FIntVector2& outSize)
 {
-	auto ImageItemData = DataMap.Find(emojiCode);
-	if (!ImageItemData)return false;
-	if (ImageItemData->Frames.Num() == 0)
-		return false;
-	UDreamUISpriteData_BaseObject* sprite = ImageItemData->Frames[0].Get();
-	if (!IsValid(sprite))
-		return false;
-
-	auto spriteWidth = sprite->GetSpriteInfo().Width;
-	auto spriteHeight = sprite->GetSpriteInfo().Height;
-	outSize = FIntVector2(spriteWidth, spriteHeight);
-	return true;
+	const FDreamUIFontEmojiDataItem* ImageItemData = FindByCodepoint(emojiCode);
+	return ImageItemData != nullptr && GetItemImageSize(*ImageItemData, outSize);
 }
