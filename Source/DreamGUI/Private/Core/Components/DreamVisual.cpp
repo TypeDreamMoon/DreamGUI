@@ -413,16 +413,35 @@ void UDreamVisual::SetCustomRaycastObject(UDreamVisualCustomRaycast* Value)
 	CustomRaycastObject = Value;
 }
 
+void UDreamVisual::SetColorMultiplier(const FLinearColor& Value)
+{
+	if (ColorMultiplier != Value)
+	{
+		ColorMultiplier = Value;
+		MarkColorDirty();
+	}
+}
+
 FColor UDreamVisual::GetFinalColor()const
 {
+	const UDreamWidget* Widget = GetWidget();
 	FColor Result = this->Color;
-	Result.A = Result.A * GetWidget()->GetFinalRenderOpacity();
+	const FLinearColor Tint = Widget->GetInheritedContentTint() * ColorMultiplier;
+	if (Tint != FLinearColor::White)
+	{
+		// Multiplied in linear space, as Slate multiplies a brush's tints: Color is stored sRGB-encoded, so it is
+		// decoded, tinted and encoded again. Skipped while nothing tints, which keeps every untinted visual's colour
+		// exactly what it always was.
+		Result = (FLinearColor(Result) * Tint).ToFColor(/*bSRGB*/true);
+	}
+	Result.A = Result.A * Widget->GetFinalRenderOpacity();
 	return Result;
 }
 
 uint8 UDreamVisual::GetFinalAlpha()const
 {
-	return Color.A * GetWidget()->GetFinalRenderOpacity();
+	// The alpha GetFinalColor draws with, tints included -- the same expression as ever while nothing tints.
+	return GetFinalColor().A;
 }
 
 float UDreamVisual::GetFinalAlpha01()const

@@ -37,7 +37,18 @@ protected:
 private:
 	/** Scrolls the target along its own orientation. Returns true when the offset actually moved. */
 	bool ApplyScroll(float PrimaryDelta) const;
+	/**
+	 * Whether the drag beginning with InEventData is one the box takes, SScrollBox's rules: a finger only while
+	 * touch scrolling is on; the right button only while right-click drag scrolling is on and there is something to
+	 * scroll; never the middle button. The left button always, which is this library's own gesture.
+	 */
+	bool AcceptsDragGesture(const UDreamPointerEventData* InEventData) const;
 
+	/**
+	 * Whether this handler took the drag in progress, decided when it began and kept for its whole length: a gesture
+	 * refused at the start stays refused, and goes on to whatever is behind the box.
+	 */
+	bool bDragAccepted = false;
 	FVector PrevPointerPosition = FVector::ZeroVector;
 	/**
 	 * Smoothed drag speed carried into momentum on release. The legacy view sampled only the final

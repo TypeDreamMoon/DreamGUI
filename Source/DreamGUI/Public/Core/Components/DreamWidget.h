@@ -229,6 +229,7 @@ public:
 	DECLARE_EVENT(UDreamWidget, FTransformChangedEvent);
 	DECLARE_EVENT(UDreamWidget, FSiblingIndexChangedEvent);
 	DECLARE_EVENT_OneParam(UDreamWidget, FInteractableChangedEvent, bool/*Interactable*/);
+	DECLARE_EVENT_OneParam(UDreamWidget, FEnabledChangedEvent, bool/*EnabledInHierarchy*/);
 	DECLARE_EVENT_OneParam(UDreamWidget, FRaycastableChangedEvent, bool/*Raycastable*/)
 	DECLARE_EVENT_OneParam(UDreamWidget, FComponentsChangedEvent, EDreamWidgetComponentsChangedType/*ChangedType*/)
 	
@@ -1261,6 +1262,7 @@ private:
 	FAttachmentChangedEvent OnAttachmentChangedEvent;
 	FSiblingIndexChangedEvent OnSiblingIndexChangedEvent;
 	FInteractableChangedEvent OnInteractableChangedEvent;
+	FEnabledChangedEvent OnEnabledChangedEvent;
 	FRaycastableChangedEvent OnRaycastableChangedEvent;
 	FComponentsChangedEvent OnComponentsChangedEvent;
 public:
@@ -1274,6 +1276,12 @@ public:
 	FAttachmentChangedEvent& GetAttachmentChangedEvent(){return OnAttachmentChangedEvent;}
 	FSiblingIndexChangedEvent& GetSiblingIndexChangedEvent(){return OnSiblingIndexChangedEvent;}
 	FInteractableChangedEvent& GetInteractableChangedEvent(){return OnInteractableChangedEvent;}
+	/**
+	 * GetIsEnabledInHierarchy flipped -- this widget's own bIsEnabled or an ancestor's -- whether or not GetInteractableInHierarchy
+	 * flipped with it (it does not when Interactable already said Disabled): what a disabled look that follows UMG's
+	 * IsEnabled, not DreamGUI's Interactable, listens to. Broadcast from the same walk as the interactable event, after it.
+	 */
+	FEnabledChangedEvent& GetEnabledChangedEvent(){return OnEnabledChangedEvent;}
 	FRaycastableChangedEvent& GetRaycastableChangedEvent(){return OnRaycastableChangedEvent;}
 	FComponentsChangedEvent& GetComponentsChangedEvent(){return OnComponentsChangedEvent;}
 protected:
@@ -1510,6 +1518,8 @@ private:
 protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "DreamGUI", Getter, Setter, meta = (AllowPrivateAccess = true, UIMin="0", UIMax="1"))
 	float RenderOpacity = 1.0f;
+	/** See SetContentTint. Runtime state, not saved: what exposes a content colour (a border) sets it from its own property. */
+	FLinearColor ContentTint = FLinearColor::White;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "DreamGUI", Getter, Setter, meta = (AllowPrivateAccess = true))
 	EDreamWidgetClipping Clipping = EDreamWidgetClipping::Inherit;
 	TWeakPtr<FDreamUIClipData> ClipData = nullptr;
@@ -1672,6 +1682,19 @@ public:
 	float GetFinalRenderOpacity()const;
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
 	void SetRenderOpacity(float Value);
+	/**
+	 * Tint everything drawn below this widget -- its descendants' visuals, never its own -- as UMG's content colour does
+	 * (a border's ContentColorAndOpacity reaching its child, SCompoundWidget's ColorAndOpacity). Multiplied in linear
+	 * space, with every ancestor's, into each descendant visual's UDreamVisual::GetFinalColor; marks their colours dirty.
+	 * White changes nothing.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
+	void SetContentTint(const FLinearColor& Value);
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
+	FLinearColor GetContentTint()const { return ContentTint; }
+	/** The product of every ancestor's ContentTint, this widget's own left out: what this widget's visual is tinted by. White when none tints. */
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
+	FLinearColor GetInheritedContentTint()const;
 	
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
 	EWidgetPixelSnapping GetPixelSnapping()const { return PixelSnapping; }

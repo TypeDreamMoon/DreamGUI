@@ -4,7 +4,6 @@
 #include "Core/DreamUserWidget.h"
 #include "DreamGUI.h"
 #include "DreamUIBPLibrary.h"
-#include "DreamTweenManager.h"
 #include "Core/Components/DreamWidget.h"
 
 
@@ -305,25 +304,13 @@ void UUIRecyclableScrollView::ScrollToByDataIndex(int InDataIndex, bool InEaseAn
         TargetContentPos = FMath::Clamp(-TargetContentPos, HorizontalRange.X, HorizontalRange.Y);
         if (InEaseAnimation)
         {
-            auto Tweener = UDreamTweenManager::To(this, FDreamTweenFloatGetterFunction::CreateWeakLambda(this
-                , [this] {
-                    auto ContentLocation = Content->GetRelativeLocation();
-                    return ContentLocation.Y;
-                })
-                , FDreamTweenFloatSetterFunction::CreateWeakLambda(this, [this](float value) {
-                    this->SetScrollValue(FVector2D(value, 0));
-                    }), TargetContentPos, InAnimationDuration);
-            if (Tweener)
-            {
-                UDreamWidget::SetWidgetTweenerAffectByGamePauseAndTimeDilation(GetWidget(), Tweener);
-            }
-            else
-            {
-                // No tween manager to ease with -- a world no game instance owns, the designer's preview
-                // among them. The ease's end is the index's position, so the list lands there, exactly
-                // as the un-eased branch below puts it; left alone it would stay where it was.
-                SetScrollValue(FVector2D(TargetContentPos, 0));
-            }
+            // The view's own glide, not a tween of its own: the glide is what a drag, a wheel notch or a setter stops
+            // when it takes the content over, and what IsScrolling counts. A tween started here and forgotten went on
+            // writing the content after the player grabbed it, putting it back on its way the very next frame. With
+            // no tween manager -- a world no game instance owns -- the glide lands at once, as the eased branch did.
+            FVector2D Target = GetContentPosition();
+            Target.X = TargetContentPos;
+            GlideContentTo(Target, true, InAnimationDuration);
         }
         else
         {
@@ -357,23 +344,10 @@ void UUIRecyclableScrollView::ScrollToByDataIndex(int InDataIndex, bool InEaseAn
         TargetContentPos = FMath::Clamp(-TargetContentPos, VerticalRange.X, VerticalRange.Y);
         if (InEaseAnimation)
         {
-            auto Tweener = UDreamTweenManager::To(this, FDreamTweenFloatGetterFunction::CreateWeakLambda(this
-                , [this] {
-                    auto ContentLocation = Content->GetRelativeLocation();
-                    return ContentLocation.Z;
-                })
-                , FDreamTweenFloatSetterFunction::CreateWeakLambda(this, [this](float value) {
-                    this->SetScrollValue(FVector2D(0, value));
-                    }), TargetContentPos, InAnimationDuration);
-            if (Tweener)
-            {
-                UDreamWidget::SetWidgetTweenerAffectByGamePauseAndTimeDilation(GetWidget(), Tweener);
-            }
-            else
-            {
-                // The horizontal branch's fallback, for the same missing tween manager.
-                SetScrollValue(FVector2D(0, TargetContentPos));
-            }
+            // The horizontal branch's glide, on the other axis.
+            FVector2D Target = GetContentPosition();
+            Target.Y = TargetContentPos;
+            GlideContentTo(Target, true, InAnimationDuration);
         }
         else
         {

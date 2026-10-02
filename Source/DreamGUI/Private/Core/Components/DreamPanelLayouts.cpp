@@ -4,16 +4,21 @@
 #include "Core/Components/DreamPanelLayouts.h"
 #include "DreamGUI.h"
 #include "Core/DreamUIManager.h"
+#include "Core/DreamUserWidget.h"
 #include "Core/Components/DreamCanvas.h"
 #include "Core/Components/DreamImage.h"
 #include "Core/Components/DreamScrollBoxInputHandler.h"
 #include "Interaction/DreamContentWidget.h"
+#include "Interaction/DreamUIPopupLayer.h"
 #include "Core/Components/DreamUIScrollbarInterface.h"
 #include "Core/Components/DreamWidget.h"
 #include "Core/Components/DreamVisual.h"
+#include "MeshModifier/DreamMeshModifierMirror.h"
+#include "Engine/World.h"
 #include "Framework/Application/SlateApplication.h"
 #include "HAL/IConsoleManager.h"
 #include "Misc/CoreDelegates.h"
+#include "Widgets/SViewport.h"
 
 /**
  * Frame-by-frame scroll box trace, for the class of bug a console command cannot catch: the state
@@ -208,10 +213,30 @@ namespace DreamPanelLayoutLocal
 		case EDreamScaleBoxStretch::ScaleToFitX:
 		case EDreamScaleBoxStretch::ScaleToFitY:
 		case EDreamScaleBoxStretch::UserSpecified:
+		case EDreamScaleBoxStretch::ScaleBySafeZone:
+		case EDreamScaleBoxStretch::UserSpecifiedWithClipping:
 			return Value;
 		default:
 			return EDreamScaleBoxStretch::ScaleToFit;
 		}
+	}
+
+	/**
+	 * The modes whose scale is a STATEMENT -- a number the author or the platform gave -- rather than an answer worked
+	 * out from the room the box was offered. SScaleBox computes theirs without a normalizing prepass, so they scale
+	 * what the box measures as well as what it draws, and StretchDirection, a bound on derived scales, leaves them be.
+	 */
+	static bool IsStatedScaleStretch(EDreamScaleBoxStretch Value)
+	{
+		return Value == EDreamScaleBoxStretch::UserSpecified
+			|| Value == EDreamScaleBoxStretch::UserSpecifiedWithClipping
+			|| Value == EDreamScaleBoxStretch::ScaleBySafeZone;
+	}
+
+	/** The two modes SScaleBox measures at the content's natural size: the scale they fit by is not known until the arrange. */
+	static bool IsNormalizedStretch(EDreamScaleBoxStretch Value)
+	{
+		return Value == EDreamScaleBoxStretch::ScaleToFit || Value == EDreamScaleBoxStretch::ScaleToFill;
 	}
 
 	static float HorizontalPadding(const FMargin& Padding)
@@ -413,6 +438,9 @@ void UDreamLayoutContainerScaleBox::SetStretch(EDreamScaleBoxStretch Value)
 	const bool bStretchChanged = Stretch != Value;
 	Stretch = Value;
 	UpdateClippingOverride();
+	// Every time, not only on a change: a details edit lands here after the field was already written, and SScaleBox
+	// re-reads the safe zone whenever the stretch is set as well.
+	RefreshSafeZoneScale();
 	if (bStretchChanged)
 	{
 		RequestLayoutRefresh();
@@ -2005,7 +2033,9 @@ FVector2f UDreamLayoutContainerWrapBox::MeasureLayout(const FDreamMeasureSpec& I
 		bBreakBeforeNext = bWantsWholeLine;
 		if (bWantsWholeLine)
 		{
-			ItemAlong = FMath::Max(ItemAlong, AvailablePrimary);
+			// Exactly the line, as SWrapBox gives such a slot the wrap length less nothing (it starts a line):
+			// a child wider than the line is held to it, not let past it.
+			ItemAlong = AvailablePrimary;
 		}
 		MaxAlong = FMath::Max(MaxAlong, Along + ItemAlong);
 		Along += ItemAlong + LineGap;
@@ -2081,8 +2111,9 @@ void UDreamLayoutContainerWrapBox::ArrangeChildren()
 		bBreakBeforeNext = bWantsWholeLine;
 		if (bWantsWholeLine)
 		{
-			// A child on a line of its own takes the whole span, which is what "fill" means here.
-			Item.Along = FMath::Max(Item.Along, AvailablePrimary);
+			// A child on a line of its own takes the whole span, which is what "fill" means here -- exactly the
+			// span, as SWrapBox sizes it, so a child wider than the line is held to it.
+			Item.Along = AvailablePrimary;
 		}
 		if (!CurrentLine.Items.IsEmpty()) CurrentAlong += LineGap;
 		CurrentAlong += Item.Along;
@@ -2091,6 +2122,10 @@ void UDreamLayoutContainerWrapBox::ArrangeChildren()
 	}
 	if (!CurrentLine.Items.IsEmpty()) Lines.Add(MoveTemp(CurrentLine));
 
+	// SWrapBox's HAlign_Fill stretches toward the ALLOTTED width, not the wrap length: a box wrapping at 200 inside a
+	// 300-wide rect fills its lines to 300. Horizontal only, as the alignment is.
+	const bool bFillLines = bHorizontal && HorizontalAlignment == EDreamPanelHorizontalAlignment::Fill;
+	const float FillTarget = FMath::Max(0.0f, GetWidget()->GetWidth() - PrimaryPadding);
 	float Across = CrossPaddingStart;
 	for (const FWrapLine& Line : Lines)
 	{
@@ -2098,7 +2133,8 @@ void UDreamLayoutContainerWrapBox::ArrangeChildren()
 		// LAST child on it, and only if that child asked for it. A slot that asks from anywhere else on
 		// the line keeps its own length -- UMG reads the flag in FinalizeLine for the line's last child
 		// alone. Nothing asks by default, so a wrap box with no configured slots lays out as it always has.
-		float LineUsed = LineGap * FMath::Max(0, Line.Items.Num() - 1);
+		const float LineGaps = LineGap * FMath::Max(0, Line.Items.Num() - 1);
+		float LineUsed = LineGaps;
 		for (const FWrapItem& Item : Line.Items)
 		{
 			LineUsed += Item.Along;
@@ -2108,9 +2144,8 @@ void UDreamLayoutContainerWrapBox::ArrangeChildren()
 		float Along = PrimaryPaddingStart;
 		// UWrapBox::HorizontalAlignment: where a line that did not fill the wrap length sits inside it.
 		// UMG offers it for a horizontal box only and so does this -- in a vertical box the lines are
-		// columns and there is no horizontal line length for the value to describe. Fill has no
-		// line-level meaning either: a line is filled by its last slot asking to, which is what the
-		// bLastFills branch spends the slack on, so both Fill and Left start at the edge.
+		// columns and there is no horizontal line length for the value to describe. A line whose last
+		// slot fills has no slack left to place, so it starts at the edge whatever the alignment says.
 		if (bHorizontal && !bLastFills)
 		{
 			switch (HorizontalAlignment)
@@ -2120,10 +2155,27 @@ void UDreamLayoutContainerWrapBox::ArrangeChildren()
 			default: break;
 			}
 		}
+		// Fill: one factor for every slot of the line, SWrapBox's NewSlotSize = SlotSize / (line - gaps) * (target -
+		// gaps). The line is what the slots took, the last one's filled slack included (SWrapBox's WidthOfCurrentLine
+		// is the whole wrap length then). The gaps are left as they are and every slot after the first moves by
+		// what the ones before it grew -- placed in turn below, which is SWrapBox's LeftStop. A line of nothing but
+		// gaps has no slot to grow: each gets nothing, as Slate's zero-divisor guard gives it.
+		float FillScale = 1.0f;
+		if (bFillLines)
+		{
+			const float LineLength = LineUsed + (bLastFills ? Slack : 0.0f);
+			const float Stretchable = LineLength - LineGaps;
+			FillScale = FMath::IsNearlyZero(Stretchable) ? 0.0f : (FillTarget - LineGaps) / Stretchable;
+		}
 		for (int32 ItemIndex = 0; ItemIndex < Line.Items.Num(); ++ItemIndex)
 		{
 			const FWrapItem& Item = Line.Items[ItemIndex];
-			const float ItemAlong = bLastFills && ItemIndex == Line.Items.Num() - 1 ? Item.Along + Slack : Item.Along;
+			float ItemAlong = bLastFills && ItemIndex == Line.Items.Num() - 1 ? Item.Along + Slack : Item.Along;
+			if (bFillLines)
+			{
+				ItemAlong = FMath::Max(0.0f, ItemAlong * FillScale);
+			}
+			// Mirrored afterwards, as every rect is, by CommitChildRect under a right-to-left flow.
 			ApplyChildRect(Item.Widget,
 				bHorizontal ? FVector2D(Along, Across) : FVector2D(Across, Along),
 				bHorizontal ? FVector2D(ItemAlong, Line.Thickness) : FVector2D(Line.Thickness, ItemAlong));
@@ -2520,9 +2572,13 @@ FVector2f UDreamLayoutContainerScaleBox::MeasureLayout(const FDreamMeasureSpec& 
 	const float OwnWidthFallback = IsValid(GetWidget()) ? FMath::Max(0.0f, GetWidget()->GetWidth() - SpentWidth) : 0.0f;
 	const float OwnHeightFallback = IsValid(GetWidget()) ? FMath::Max(0.0f, GetWidget()->GetHeight() - SpentHeight) : 0.0f;
 	FVector2f DesiredScale = FVector2f::UnitVector;
-	if (Stretch == EDreamScaleBoxStretch::UserSpecified)
+	if (Stretch == EDreamScaleBoxStretch::UserSpecified || Stretch == EDreamScaleBoxStretch::UserSpecifiedWithClipping)
 	{
 		DesiredScale = FVector2f(DreamPanelLayoutLocal::NonNegative(UserSpecifiedScale));
+	}
+	else if (Stretch == EDreamScaleBoxStretch::ScaleBySafeZone)
+	{
+		DesiredScale = FVector2f(DreamPanelLayoutLocal::NonNegative(SafeZoneScale));
 	}
 	else if (Stretch == EDreamScaleBoxStretch::ScaleToFitX && Desired.X > UE_SMALL_NUMBER)
 	{
@@ -2553,8 +2609,11 @@ FVector2f UDreamLayoutContainerScaleBox::MeasureLayout(const FDreamMeasureSpec& 
 		DesiredScale.X = DreamPanelLayoutLocal::ApplyStretchDirection(DesiredScale.X, StretchDirection);
 		DesiredScale.Y = DreamPanelLayoutLocal::ApplyStretchDirection(DesiredScale.Y, StretchDirection);
 	}
-	if (bIgnoreInheritedScale && (Stretch == EDreamScaleBoxStretch::UserSpecified
-		|| Stretch == EDreamScaleBoxStretch::ScaleToFitX || Stretch == EDreamScaleBoxStretch::ScaleToFitY))
+	// Every mode whose scale reaches the measurement divides by the inherited scale, as every mode does in the arrange
+	// below -- SScaleBox divides them all. Leaving any of them out would draw that mode's content at one size and ask
+	// for the room of another: a None box ignoring a scale of two above it drawn at half size and measured at full. The
+	// two normalized modes measure the content at its natural size whatever they scale it by, so nothing reaches them.
+	if (bIgnoreInheritedScale && !DreamPanelLayoutLocal::IsNormalizedStretch(Stretch))
 	{
 		const FVector ParentScale = GetWidget()->GetWorldScale();
 		if (!FMath::IsNearlyZero(ParentScale.Y)) DesiredScale.X /= FMath::Abs(ParentScale.Y);
@@ -2570,8 +2629,11 @@ FVector2f UDreamLayoutContainerScaleBox::MeasureLayout(const FDreamMeasureSpec& 
 	{
 		Desired.X *= DesiredScale.X;
 	}
-	else if (Stretch == EDreamScaleBoxStretch::UserSpecified)
+	else if (Stretch != EDreamScaleBoxStretch::ScaleToFitX && Stretch != EDreamScaleBoxStretch::ScaleToFitY
+		&& !DreamPanelLayoutLocal::IsNormalizedStretch(Stretch))
 	{
+		// None, Fill and the stated scales: SScaleBox's desired size is the content's times the scale it draws at.
+		// For None and Fill that scale is one unless the inherited scale was divided out above.
 		Desired.X *= DesiredScale.X;
 		Desired.Y *= DesiredScale.Y;
 	}
@@ -2651,9 +2713,14 @@ void UDreamLayoutContainerScaleBox::ArrangeChildren()
 	const float ScaleX = Desired.X > UE_SMALL_NUMBER ? AvailableWidth / Desired.X : 1.0f;
 	const float ScaleY = Desired.Y > UE_SMALL_NUMBER ? AvailableHeight / Desired.Y : 1.0f;
 	FVector2f Scale(1.0f, 1.0f);
-	if (Stretch == EDreamScaleBoxStretch::UserSpecified)
+	if (Stretch == EDreamScaleBoxStretch::UserSpecified || Stretch == EDreamScaleBoxStretch::UserSpecifiedWithClipping)
 	{
 		Scale = FVector2f(DreamPanelLayoutLocal::NonNegative(UserSpecifiedScale));
+	}
+	else if (Stretch == EDreamScaleBoxStretch::ScaleBySafeZone)
+	{
+		// One uniform scale, cached when the stretch or the platform's safe frame last changed, as SScaleBox keeps it.
+		Scale = FVector2f(DreamPanelLayoutLocal::NonNegative(SafeZoneScale));
 	}
 	else if (Desired.X > UE_SMALL_NUMBER && Desired.Y > UE_SMALL_NUMBER)
 	{
@@ -2666,15 +2733,17 @@ void UDreamLayoutContainerScaleBox::ArrangeChildren()
 		default: break;
 		}
 	}
-	// EStretchDirection bounds whatever the mode came up with, and only that: UserSpecified and Fill are
+	// EStretchDirection bounds whatever the mode came up with, and only that: the stated scales and Fill are
 	// statements about the scale rather than answers derived from the room available, so Slate leaves
 	// them alone and so does this.
-	if (Stretch != EDreamScaleBoxStretch::UserSpecified && Stretch != EDreamScaleBoxStretch::Fill)
+	if (!DreamPanelLayoutLocal::IsStatedScaleStretch(Stretch) && Stretch != EDreamScaleBoxStretch::Fill)
 	{
 		Scale.X = DreamPanelLayoutLocal::ApplyStretchDirection(Scale.X, StretchDirection);
 		Scale.Y = DreamPanelLayoutLocal::ApplyStretchDirection(Scale.Y, StretchDirection);
 	}
-	if (bIgnoreInheritedScale && Stretch != EDreamScaleBoxStretch::Fill)
+	// Every mode, Fill included, as SScaleBox divides whatever ComputeContentScale answered -- and as MeasureLayout
+	// divides, so the room the box asks for is the room its content takes.
+	if (bIgnoreInheritedScale)
 	{
 		const FVector ParentScale = GetWidget()->GetWorldScale();
 		if (!FMath::IsNearlyZero(ParentScale.Y)) Scale.X /= FMath::Abs(ParentScale.Y);
@@ -2686,11 +2755,8 @@ void UDreamLayoutContainerScaleBox::ArrangeChildren()
 	FVector2D UnscaledSize = Stretch == EDreamScaleBoxStretch::Fill
 		? FVector2D(AvailableWidth, AvailableHeight)
 		: Desired;
-	FVector2D ScaledSize(Desired.X * Scale.X, Desired.Y * Scale.Y);
-	if (Stretch == EDreamScaleBoxStretch::Fill)
-	{
-		ScaledSize = UnscaledSize;
-	}
+	// Fill's scale is one unless the inherited scale was divided out above, so this is the area itself there.
+	FVector2D ScaledSize(UnscaledSize.X * Scale.X, UnscaledSize.Y * Scale.Y);
 	if (Slot->HorizontalAlignment == EDreamPanelHorizontalAlignment::Fill && Scale.X > UE_SMALL_NUMBER)
 	{
 		UnscaledSize.X = AvailableWidth / Scale.X;
@@ -2753,6 +2819,61 @@ void UDreamLayoutContainerScaleBox::OnRegister()
 {
 	Super::OnRegister();
 	UpdateClippingOverride();
+	// The SafeZone panel's subscription, for the same event: SScaleBox listens for the safe frame moving so that a
+	// rotated device or a debug safe zone re-scales the content.
+	if (!SafeFrameChangedHandle.IsValid())
+	{
+		SafeFrameChangedHandle = FCoreDelegates::OnSafeFrameChangedEvent.AddUObject(
+			this, &UDreamLayoutContainerScaleBox::HandleSafeFrameChanged);
+	}
+	RefreshSafeZoneScale();
+}
+
+void UDreamLayoutContainerScaleBox::HandleSafeFrameChanged()
+{
+	RefreshSafeZoneScale();
+	if (Stretch == EDreamScaleBoxStretch::ScaleBySafeZone)
+	{
+		RequestLayoutRefresh();
+	}
+}
+
+float UDreamLayoutContainerScaleBox::ComputeSafeZoneScale(const FMargin& InMargin, const FVector2D& InViewportSize)
+{
+	if (!(InViewportSize.X > 0.0) || !(InViewportSize.Y > 0.0) || !FMath::IsFinite(InViewportSize.X) || !FMath::IsFinite(InViewportSize.Y))
+	{
+		return 1.0f;
+	}
+	const double ScaleDownX = FMath::Max(DreamPanelLayoutLocal::FiniteOrZero(InMargin.Left), DreamPanelLayoutLocal::FiniteOrZero(InMargin.Right)) / InViewportSize.X;
+	const double ScaleDownY = FMath::Max(DreamPanelLayoutLocal::FiniteOrZero(InMargin.Top), DreamPanelLayoutLocal::FiniteOrZero(InMargin.Bottom)) / InViewportSize.Y;
+	// The larger of the two, because one uniform scale has to clear the margin on both axes.
+	return FMath::Max(0.0f, static_cast<float>(1.0 - FMath::Max(ScaleDownX, ScaleDownY)));
+}
+
+void UDreamLayoutContainerScaleBox::RefreshSafeZoneScale()
+{
+	// SScaleBox reads the margin only while the stretch asks for it, and answers one otherwise.
+	float NewScale = 1.0f;
+	if (Stretch == EDreamScaleBoxStretch::ScaleBySafeZone && FSlateApplication::IsInitialized())
+	{
+		// The game viewport's size, and the platform's margin for that size -- RefreshSafeZoneScale's own two numbers.
+		// No game viewport (a commandlet, a headless test) leaves the scale at one rather than guessing a screen.
+		if (const TSharedPtr<SViewport> GameViewport = FSlateApplication::Get().GetGameViewport())
+		{
+			if (const TSharedPtr<ISlateViewport> ViewportInterface = GameViewport->GetViewportInterface().Pin())
+			{
+				const FIntPoint ViewportSize = ViewportInterface->GetSize();
+				FMargin SafeMargin;
+				FSlateApplication::Get().GetSafeZoneSize(SafeMargin, FVector2f(static_cast<float>(ViewportSize.X), static_cast<float>(ViewportSize.Y)));
+				NewScale = ComputeSafeZoneScale(SafeMargin, FVector2D(ViewportSize.X, ViewportSize.Y));
+			}
+		}
+	}
+	if (SafeZoneScale != NewScale)
+	{
+		SafeZoneScale = NewScale;
+		RequestLayoutRefresh();
+	}
 }
 
 void UDreamLayoutContainerScaleBox::UpdateClippingOverride()
@@ -2763,9 +2884,12 @@ void UDreamLayoutContainerScaleBox::UpdateClippingOverride()
 		bAppliedDefaultClipping = false;
 		return;
 	}
+	// SScaleBox's paint clips under these four whenever the widget's own clipping is Inherit, which is exactly when a
+	// layout clipping override is consulted.
 	const bool bNeedsClipping = Stretch == EDreamScaleBoxStretch::ScaleToFill
 		|| Stretch == EDreamScaleBoxStretch::ScaleToFitX
-		|| Stretch == EDreamScaleBoxStretch::ScaleToFitY;
+		|| Stretch == EDreamScaleBoxStretch::ScaleToFitY
+		|| Stretch == EDreamScaleBoxStretch::UserSpecifiedWithClipping;
 	if (bNeedsClipping)
 	{
 		Widget->SetLayoutClippingOverride(EDreamWidgetClipping::ClipToBounds);
@@ -2780,6 +2904,11 @@ void UDreamLayoutContainerScaleBox::UpdateClippingOverride()
 
 void UDreamLayoutContainerScaleBox::OnUnregister()
 {
+	if (SafeFrameChangedHandle.IsValid())
+	{
+		FCoreDelegates::OnSafeFrameChangedEvent.Remove(SafeFrameChangedHandle);
+		SafeFrameChangedHandle.Reset();
+	}
 	if (ScaledChild.IsValid() && ScaledChild->GetParent() == GetWidget())
 	{
 		ScaledChild->SetLayoutScale(FVector2f::UnitVector);
@@ -3161,6 +3290,99 @@ float UDreamLayoutContainerScrollBox::GetAvailableCross() const
 		: FMath::Max(0.0f, Panel->GetWidth() - DreamPanelLayoutLocal::HorizontalPadding(Padding));
 }
 
+float UDreamLayoutContainerScrollBox::GetAvailablePrimary() const
+{
+	const UDreamWidget* Panel = GetWidget();
+	if (!IsValid(Panel))
+	{
+		return 0.0f;
+	}
+	return Orientation == EDreamPanelOrientation::Horizontal
+		? FMath::Max(0.0f, Panel->GetWidth() - DreamPanelLayoutLocal::HorizontalPadding(Padding))
+		: FMath::Max(0.0f, Panel->GetHeight() - DreamPanelLayoutLocal::VerticalPadding(Padding));
+}
+
+void UDreamLayoutContainerScrollBox::PlaceScrollStack(const TArray<UDreamWidget*>& InChildren, float InViewportPrimary,
+	float InAvailableCross, TArray<FScrollStackSlot>& OutSlots, float& OutContentPrimary) const
+{
+	OutSlots.Reset(InChildren.Num());
+	const bool bHorizontal = Orientation == EDreamPanelOrientation::Horizontal;
+	const float Gap = DreamPanelLayoutLocal::NonNegative(Spacing);
+	const float Viewport = DreamPanelLayoutLocal::NonNegative(InViewportPrimary);
+	// SScrollPanel's ScrollPadding: each pad is as long as the panel's own viewport.
+	const float BackPad = bBackPadScrolling ? Viewport : 0.0f;
+	const float FrontPad = bFrontPadScrolling ? Viewport : 0.0f;
+
+	// One measurement per child, the slot padding taken back out, so the Fill share below can be worked out on what
+	// the children themselves asked for.
+	struct FMeasured
+	{
+		float Content = 0.0f;
+		float SlotPadding = 0.0f;
+		bool bFill = false;
+		float Weight = 0.0f;
+	};
+	TArray<FMeasured, TInlineAllocator<16>> Measured;
+	Measured.Reserve(InChildren.Num());
+	float FixedPrimary = Gap * FMath::Max(0, InChildren.Num() - 1);
+	float FillDesired = 0.0f;
+	float FillWeight = 0.0f;
+	float DesiredTotal = FixedPrimary;
+	for (UDreamWidget* Child : InChildren)
+	{
+		const UDreamPanelSlot* Slot = GetSlot(Child);
+		FMeasured& Entry = Measured.AddDefaulted_GetRef();
+		Entry.SlotPadding = bHorizontal
+			? DreamPanelLayoutLocal::HorizontalPadding(Slot->Padding)
+			: DreamPanelLayoutLocal::VerticalPadding(Slot->Padding);
+		Entry.Content = FMath::Max(0.0f, MeasureScrollExtent(Child, InAvailableCross) - Entry.SlotPadding);
+		Entry.bFill = Slot->SizeRule == EDreamPanelSizeRule::Fill;
+		DesiredTotal += Entry.Content + Entry.SlotPadding;
+		// Every slot's padding is space nobody shares, Fill or not: ArrangeChildrenInStack's FixedSizeTotal.
+		FixedPrimary += Entry.SlotPadding;
+		if (Entry.bFill)
+		{
+			Entry.Weight = DreamPanelLayoutLocal::NonNegative(Slot->FillWeight);
+			FillWeight += Entry.Weight;
+			FillDesired += Entry.Content;
+		}
+		else
+		{
+			FixedPrimary += Entry.Content;
+		}
+	}
+	// Shrinking off, as SScrollBox stacks: the Fill slots share at least what they asked for, and the viewport's
+	// leftover when that is more. The pads take no part -- they are travel, not room.
+	const float FillSpace = FMath::Max(FillDesired, Viewport - FixedPrimary);
+
+	float Cursor = (bHorizontal
+		? DreamPanelLayoutLocal::FiniteOrZero(Padding.Left)
+		: DreamPanelLayoutLocal::FiniteOrZero(Padding.Top)) + BackPad;
+	for (int32 Index = 0; Index < InChildren.Num(); ++Index)
+	{
+		const FMeasured& Entry = Measured[Index];
+		float Content = Entry.Content;
+		if (Entry.bFill)
+		{
+			// A Fill slot whose weights add to nothing gets nothing, as a stack's does.
+			Content = FillWeight > UE_SMALL_NUMBER ? FillSpace * Entry.Weight / FillWeight : 0.0f;
+			// The slot's own Min/MaxDesiredSize bound the share on the scroll axis, as SBoxPanel's MinSize and
+			// MaxSize bound a stretched slot's.
+			const UDreamPanelSlot* Slot = GetSlot(InChildren[Index]);
+			const FVector2D Bounded = Slot->ConstrainDesiredSize(FVector2D(Content, Content));
+			Content = DreamPanelLayoutLocal::NonNegative(static_cast<float>(bHorizontal ? Bounded.X : Bounded.Y));
+		}
+		FScrollStackSlot& Placed = OutSlots.AddDefaulted_GetRef();
+		Placed.Child = InChildren[Index];
+		Placed.Start = Cursor;
+		Placed.Length = FMath::Max(0.0f, Content + Entry.SlotPadding);
+		Cursor += Placed.Length + Gap;
+	}
+	// The range is the DESIRED total, as SScrollPanel's desired size is: a Fill slot stretched to the viewport adds
+	// nothing that could scroll, and one squeezed by its maximum leaves the room it asked for.
+	OutContentPrimary = DesiredTotal + BackPad + FrontPad;
+}
+
 float UDreamLayoutContainerScrollBox::MeasureScrollExtent(UDreamWidget* InChild, float InAvailableCross) const
 {
 	const bool bHorizontal = Orientation == EDreamPanelOrientation::Horizontal;
@@ -3343,6 +3565,18 @@ void UDreamLayoutContainerScrollBox::SetScrollbarVisibility(EDreamScrollBoxScrol
 	if (ScrollbarVisibility != Value)
 	{
 		ScrollbarVisibility = Value;
+		if (Value == EDreamScrollBoxScrollbarVisibility::Permanent)
+		{
+			// The push leaves a permanent bar's activity to its author, so the bar AutoHide or Hidden put away is
+			// brought back here, once.
+			if (UDreamUIBehaviour* BarBehaviour = Scrollbar.Get(); IsValid(BarBehaviour))
+			{
+				if (UDreamWidget* BarWidget = BarBehaviour->GetWidget(); IsValid(BarWidget))
+				{
+					BarWidget->SetWidgetActive(true);
+				}
+			}
+		}
 		// The bar's own visibility is decided in the push, so the push is what has to run again.
 		SyncScrollbar();
 	}
@@ -3409,6 +3643,26 @@ void UDreamLayoutContainerScrollBox::SetOverscrollLimit(float Value)
 	}
 }
 
+void UDreamLayoutContainerScrollBox::SetBackPadScrolling(bool Value)
+{
+	if (bBackPadScrolling != Value)
+	{
+		bBackPadScrolling = Value;
+		// Where offset zero puts the content, and how far there is to go: the arrangement's to re-derive, and nothing
+		// above this box measures either.
+		MarkScrollArrangeDirty();
+	}
+}
+
+void UDreamLayoutContainerScrollBox::SetFrontPadScrolling(bool Value)
+{
+	if (bFrontPadScrolling != Value)
+	{
+		bFrontPadScrolling = Value;
+		MarkScrollArrangeDirty();
+	}
+}
+
 void UDreamLayoutContainerScrollBox::EnsureScrollbarBound()
 {
 	IDreamUIScrollbarInterface* Bar = Cast<IDreamUIScrollbarInterface>(Scrollbar.Get());
@@ -3437,11 +3691,13 @@ void UDreamLayoutContainerScrollBox::SyncScrollbar()
 	}
 	const float Fraction = GetViewFraction();
 	const bool bEverythingFits = MaxScrollOffset <= KINDA_SMALL_NUMBER;
-	if (ScrollbarVisibility == EDreamScrollBoxScrollbarVisibility::AutoHide)
+	if (ScrollbarVisibility != EDreamScrollBoxScrollbarVisibility::Permanent)
 	{
 		if (UDreamWidget* BarWidget = BarBehaviour->GetWidget(); IsValid(BarWidget))
 		{
-			BarWidget->SetWidgetActive(!bEverythingFits);
+			// Hidden never shows the bar; the box still scrolls by wheel, drag and code. A linked bar is the
+			// author's widget, somewhere else in the tree, so the room it takes is the author's layout to keep.
+			BarWidget->SetWidgetActive(ScrollbarVisibility == EDreamScrollBoxScrollbarVisibility::AutoHide && !bEverythingFits);
 		}
 	}
 	// A Size of exactly 1 leaves the bar's own slide area at zero width, and its drag maths then
@@ -3523,7 +3779,9 @@ void UDreamLayoutContainerScrollBox::ApplyDragDelta(float Delta)
 	}
 	// A hand on the content beats an eased scroll heading somewhere else.
 	bAnimatingScroll = false;
-	if (!bAllowOverscroll || OverscrollLimit <= KINDA_SMALL_NUMBER)
+	// Content that fits has no end to be pulled past -- SScrollBox holds its offset at zero while its bar is not
+	// needed -- so the drag moves nothing, rather than stretching a band over a box that cannot scroll.
+	if (!bAllowOverscroll || OverscrollLimit <= KINDA_SMALL_NUMBER || !IsScrollNeeded())
 	{
 		ScrollByFromUser(Delta);
 		return;
@@ -3684,9 +3942,10 @@ void UDreamLayoutContainerScrollBox::TickScrollPhysics(float DeltaTime)
 		if (FMath::Abs(Remainder) > OverscrollResidueThreshold)
 		{
 			// Ran into an end: carry the leftover into the rubber band, or stop dead when overscroll
-			// is switched off. Without this the momentum would keep being spent against the clamp
-			// and the box would look frozen while still "scrolling".
-			if (bAllowOverscroll && OverscrollLimit > KINDA_SMALL_NUMBER)
+			// is switched off -- or when there is nothing to scroll, which has no end to fly past.
+			// Without this the momentum would keep being spent against the clamp and the box would
+			// look frozen while still "scrolling".
+			if (bAllowOverscroll && OverscrollLimit > KINDA_SMALL_NUMBER && IsScrollNeeded())
 			{
 				Overscroll = Remainder;
 			}
@@ -3720,34 +3979,31 @@ bool UDreamLayoutContainerScrollBox::GetChildContentExtent(UDreamWidget* InWidge
 		return false;
 	}
 
-	const bool bHorizontal = Orientation == EDreamPanelOrientation::Horizontal;
-	const float Gap = DreamPanelLayoutLocal::NonNegative(Spacing);
-	// Mirrors CalculateLayout's cursor walk, minus the scroll offset: the result is the child's place
-	// in CONTENT space, which is what a scroll target has to be expressed in.
-	float Cursor = bHorizontal
-		? DreamPanelLayoutLocal::FiniteOrZero(Padding.Left)
-		: DreamPanelLayoutLocal::FiniteOrZero(Padding.Top);
+	// The arrangement's own walk, minus the scroll offset: the result is the child's place in CONTENT space, which
+	// is what a scroll target has to be expressed in -- back pad, Fill shares and all, because the same function
+	// placed it.
+	//
 	// bEnsureSlots FALSE: this is a query, and the ensure path writes. It calls RestoreAuthoredGeometry
 	// on every bIgnoreLayout child (a real SetAnchorData on the widget) or else snapshots one, and
 	// creates a UDreamPanelSlot UObject for any child that has none. CanScrollWidgetIntoView runs this
 	// every time directional navigation weighs a candidate -- i.e. on every press of a stick or d-pad --
 	// so asking "could I scroll to that" was silently rewriting geometry and allocating. GetSlot returns
-	// the class default when a child has no slot, so reading Padding below stays safe.
+	// the class default when a child has no slot, so reading Padding stays safe.
 	//
 	// Each extent is measured the way ArrangeChildren measures it, against the viewport's cross extent.
 	// Measured with no constraint at all, a child that wraps answered from whatever width it had, and the
 	// offset that was meant to reveal it was worked out for a height it was not arranged at.
-	const float AvailableCross = GetAvailableCross();
-	for (UDreamWidget* Child : CollectLayoutChildren(/*bEnsureSlots*/false))
+	TArray<FScrollStackSlot> Slots;
+	float ContentPrimary = 0.0f;
+	PlaceScrollStack(CollectLayoutChildren(/*bEnsureSlots*/false), GetAvailablePrimary(), GetAvailableCross(), Slots, ContentPrimary);
+	for (const FScrollStackSlot& Placed : Slots)
 	{
-		const float Extent = MeasureScrollExtent(Child, AvailableCross);
-		if (Child == DirectChild)
+		if (Placed.Child == DirectChild)
 		{
-			OutStart = Cursor;
-			OutExtent = Extent;
+			OutStart = Placed.Start;
+			OutExtent = Placed.Length;
 			return true;
 		}
-		Cursor += Extent + Gap;
 	}
 	return false;
 }
@@ -3839,27 +4095,17 @@ bool UDreamLayoutContainerScrollBox::ScrollWidgetIntoView(UDreamWidget* InWidget
 
 void UDreamLayoutContainerScrollBox::ArrangeChildren()
 {
-	UDreamWidget* Panel = GetWidget();
 	const TArray<UDreamWidget*> LayoutChildren = CollectLayoutChildren();
 	const bool bHorizontal = Orientation == EDreamPanelOrientation::Horizontal;
-	const float Gap = DreamPanelLayoutLocal::NonNegative(Spacing);
-	const float AvailablePrimary = bHorizontal
-		? FMath::Max(0.0f, Panel->GetWidth() - DreamPanelLayoutLocal::HorizontalPadding(Padding))
-		: FMath::Max(0.0f, Panel->GetHeight() - DreamPanelLayoutLocal::VerticalPadding(Padding));
+	const float AvailablePrimary = GetAvailablePrimary();
 	const float AvailableSecondary = GetAvailableCross();
 
-	// Children always take their desired size along the scroll axis. Fill would shrink content to the viewport,
-	// which would make the box unscrollable by construction.
-	auto PrimaryExtentOf = [&](UDreamWidget* Child)
-	{
-		return MeasureScrollExtent(Child, AvailableSecondary);
-	};
-
-	float ContentPrimary = Gap * FMath::Max(0, LayoutChildren.Num() - 1);
-	for (UDreamWidget* Child : LayoutChildren)
-	{
-		ContentPrimary += PrimaryExtentOf(Child);
-	}
+	// Every child's place along the scroll axis, and the content length the range is taken from. An Auto child
+	// takes its desired size; Fill children share the room as SScrollBox shares it, never below what they asked
+	// for, so a Fill slot can stretch short content to the viewport and can never shrink long content into it.
+	TArray<FScrollStackSlot> Slots;
+	float ContentPrimary = 0.0f;
+	PlaceScrollStack(LayoutChildren, AvailablePrimary, AvailableSecondary, Slots, ContentPrimary);
 	MaxScrollOffset = FMath::Max(0.0f, ContentPrimary - AvailablePrimary);
 	// Published for GetViewFraction / ScrollWidgetIntoView, and the flag that tells SetScrollOffset
 	// its clamp bound is real now.
@@ -3878,25 +4124,31 @@ void UDreamLayoutContainerScrollBox::ArrangeChildren()
 	// small moves the view without destroying the position it moved away from.
 	ScrollOffset = FMath::Clamp(RequestedScrollOffset, 0.0f, MaxScrollOffset);
 
+	// Nothing to scroll leaves nothing to pull past an end either: SScrollBox puts its physical offset back to zero
+	// while its bar is not needed, rubber band included. A band left open by content that has since shrunk to fit
+	// is closed here rather than sprung shut.
+	if (MaxScrollOffset <= KINDA_SMALL_NUMBER && !FMath::IsNearlyZero(Overscroll))
+	{
+		Overscroll = 0.0f;
+		ScrollVelocity = 0.0f;
+	}
+
 	// The rubber band displaces the content without moving the scroll position: GetScrollOffset stays
 	// inside the range at all times, and only what the user sees is pulled past the end.
-	float Cursor = (bHorizontal
-		? DreamPanelLayoutLocal::FiniteOrZero(Padding.Left)
-		: DreamPanelLayoutLocal::FiniteOrZero(Padding.Top)) - ScrollOffset - GetOverscroll();
-	for (UDreamWidget* Child : LayoutChildren)
+	const float Displacement = ScrollOffset + GetOverscroll();
+	for (const FScrollStackSlot& Placed : Slots)
 	{
-		const float SlotPrimary = PrimaryExtentOf(Child);
+		const float Cursor = Placed.Start - Displacement;
 		if (bHorizontal)
 		{
-			ApplyChildRect(Child, FVector2D(Cursor, DreamPanelLayoutLocal::FiniteOrZero(Padding.Top)),
-				FVector2D(SlotPrimary, AvailableSecondary));
+			ApplyChildRect(Placed.Child, FVector2D(Cursor, DreamPanelLayoutLocal::FiniteOrZero(Padding.Top)),
+				FVector2D(Placed.Length, AvailableSecondary));
 		}
 		else
 		{
-			ApplyChildRect(Child, FVector2D(DreamPanelLayoutLocal::FiniteOrZero(Padding.Left), Cursor),
-				FVector2D(AvailableSecondary, SlotPrimary));
+			ApplyChildRect(Placed.Child, FVector2D(DreamPanelLayoutLocal::FiniteOrZero(Padding.Left), Cursor),
+				FVector2D(AvailableSecondary, Placed.Length));
 		}
-		Cursor += SlotPrimary + Gap;
 	}
 	PreferredSize = MeasureUnconstrained();
 }
@@ -4066,26 +4318,184 @@ void UDreamLayoutContainerBorder::SetBrushColor(FLinearColor Value)
 	}
 }
 
+void UDreamLayoutContainerBorder::SetContentColorAndOpacity(FLinearColor Value)
+{
+	if (ContentColorAndOpacity != Value)
+	{
+		ContentColorAndOpacity = Value;
+		ApplyContentTint();
+	}
+}
+
+void UDreamLayoutContainerBorder::SetShowEffectWhenDisabled(bool Value)
+{
+	if (bShowEffectWhenDisabled != Value)
+	{
+		bShowEffectWhenDisabled = Value;
+		ApplyBrushColorToVisual();
+	}
+}
+
+void UDreamLayoutContainerBorder::SetFlipForRightToLeftFlowDirection(bool Value)
+{
+	if (bFlipForRightToLeftFlowDirection != Value)
+	{
+		bFlipForRightToLeftFlowDirection = Value;
+		EnsureFlipModifier();
+		ApplyFlipState();
+	}
+}
+
 void UDreamLayoutContainerBorder::ApplyBrushColorToVisual() const
 {
-	// The background IS the owning widget's visual; the border only names its colour, so that UMG's
-	// UBorder::SetBrushColor has somewhere to land. A widget with no visual is a border with no
-	// background, which is a legal thing to author and not worth a warning.
+	// The background IS the owning widget's visual; the border tints it, as SBorder multiplies its brush by
+	// BorderBackgroundColor and by its disabled effect, and leaves the colour the visual was authored with alone. A
+	// widget with no visual is a border with no background, which is a legal thing to author and not worth a warning.
 	if (const UDreamWidget* Widget = GetWidget(); IsValid(Widget))
 	{
 		if (UDreamVisual* Visual = Widget->GetVisual(); IsValid(Visual))
 		{
-			Visual->SetColor(BrushColor.ToFColor(/*bSRGB*/true));
+			FLinearColor Tint = BrushColor;
+			if (bShowEffectWhenDisabled && !Widget->GetIsEnabledInHierarchy())
+			{
+				Tint.A *= DisabledEffectAlpha;
+			}
+			Visual->SetColorMultiplier(Tint);
 		}
 	}
+}
+
+void UDreamLayoutContainerBorder::ApplyContentTint() const
+{
+	if (UDreamWidget* Widget = GetWidget(); IsValid(Widget))
+	{
+		Widget->SetContentTint(ContentColorAndOpacity);
+	}
+}
+
+void UDreamLayoutContainerBorder::HandleEnabledChanged(bool bInEnabledInHierarchy)
+{
+	ApplyBrushColorToVisual();
 }
 
 void UDreamLayoutContainerBorder::OnRegister()
 {
 	Super::OnRegister();
-	// On register rather than only from the setter, so a border loaded from an asset paints the colour
-	// it was saved with instead of whatever colour the visual happens to carry.
+	UDreamWidget* Widget = GetWidget();
+	if (!IsValid(Widget))
+	{
+		return;
+	}
+	// This panel used to WRITE BrushColor into the visual's own colour, on register and from the setter, so an asset
+	// saved since then carries the brush colour twice over: once here and once in the visual. Multiplied now, that
+	// would be the square of what was drawn. A visual whose colour is exactly that write is given back the white the
+	// write replaced, which draws what it always drew.
+	if (UDreamVisual* Visual = Widget->GetVisual(); IsValid(Visual)
+		&& !BrushColor.Equals(FLinearColor::White) && Visual->GetColor() == BrushColor.ToFColor(/*bSRGB*/true))
+	{
+		Visual->SetColor(FColor::White);
+	}
+	// On register rather than only from the setters, so a border loaded from an asset paints with what it was saved
+	// with instead of whatever its visual and its widget happen to carry.
 	ApplyBrushColorToVisual();
+	ApplyContentTint();
+	// UMG's disabled look follows IsEnabled, which DreamGUI's interactable state does not cover on its own: this
+	// widget's switch or an ancestor's, flipped.
+	if (!EnabledChangedHandle.IsValid())
+	{
+		EnabledChangedHandle = Widget->GetEnabledChangedEvent().AddUObject(this, &UDreamLayoutContainerBorder::HandleEnabledChanged);
+	}
+}
+
+void UDreamLayoutContainerBorder::OnUnregister()
+{
+	if (UDreamWidget* Widget = GetWidget(); IsValid(Widget))
+	{
+		if (EnabledChangedHandle.IsValid())
+		{
+			Widget->GetEnabledChangedEvent().Remove(EnabledChangedHandle);
+		}
+		// Removing the border removes what it asserted about its widget, which may outlive it.
+		if (UDreamVisual* Visual = Widget->GetVisual(); IsValid(Visual) && Visual->IsRegistered())
+		{
+			Visual->SetColorMultiplier(FLinearColor::White);
+		}
+		Widget->SetContentTint(FLinearColor::White);
+	}
+	EnabledChangedHandle.Reset();
+	if (UDreamMeshModifierMirror* Mirror = FlipModifier.Get(); IsValid(Mirror))
+	{
+		Mirror->DestroyComponent();
+	}
+	FlipModifier.Reset();
+	Super::OnUnregister();
+}
+
+void UDreamLayoutContainerBorder::BeginPlay()
+{
+	Super::BeginPlay();
+	// A border loaded with the flip on: the run-time mirror is made now that the whole tree has loaded.
+	EnsureFlipModifier();
+	ApplyFlipState();
+}
+
+void UDreamLayoutContainerBorder::EndPlay()
+{
+	// Made for one play session, as the scroll box's input handler is; a second BeginPlay makes it again.
+	if (UDreamMeshModifierMirror* Mirror = FlipModifier.Get(); IsValid(Mirror))
+	{
+		Mirror->DestroyComponent();
+	}
+	FlipModifier.Reset();
+	Super::EndPlay();
+}
+
+#if WITH_EDITOR
+void UDreamLayoutContainerBorder::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
+{
+	Super::PostEditChangeProperty(PropertyChangedEvent);
+	if (!HasAnyFlags(RF_ClassDefaultObject))
+	{
+		ApplyBrushColorToVisual();
+		ApplyContentTint();
+		EnsureFlipModifier();
+		ApplyFlipState();
+	}
+}
+#endif
+
+void UDreamLayoutContainerBorder::EnsureFlipModifier()
+{
+	if (!bFlipForRightToLeftFlowDirection || FlipModifier.IsValid())
+	{
+		return;
+	}
+	UDreamWidget* Widget = GetWidget();
+	const UWorld* World = IsValid(Widget) ? Widget->GetWorld() : nullptr;
+	if (World == nullptr || !World->IsGameWorld())
+	{
+		return;
+	}
+	UDreamMeshModifierMirror* Mirror = Widget->AddComponent<UDreamMeshModifierMirror>();
+	if (!IsValid(Mirror))
+	{
+		return;
+	}
+	// Never saved and never copied with the widget: the border makes it, and makes it again where it is needed.
+	Mirror->SetFlags(RF_Transient);
+	Mirror->SetMirrorHorizontally(true);
+	Mirror->SetMirrorVertically(false);
+	Mirror->SetEnable(false);
+	FlipModifier = Mirror;
+}
+
+void UDreamLayoutContainerBorder::ApplyFlipState()
+{
+	if (UDreamMeshModifierMirror* Mirror = FlipModifier.Get(); IsValid(Mirror))
+	{
+		// SetEnable rebuilds the background only when the answer moved, so this is free on an ordinary arrange.
+		Mirror->SetEnable(bFlipForRightToLeftFlowDirection && IsRightToLeft());
+	}
 }
 
 FDreamLayoutControlAnchorData UDreamLayoutContainerBorder::GetLayoutControlAnchor(const UDreamWidget* TargetWidget) const
@@ -4171,6 +4581,10 @@ void UDreamLayoutContainerBorder::ArrangeChildren()
 			ReleaseSkippedChildGeometry(Content);
 		}
 	}
+	// Re-stated on every arrange, both cheap when nothing moved: a visual given to the widget after this panel
+	// registered has had no tint yet, and a flow direction that flipped re-arranges this panel and nothing else.
+	ApplyBrushColorToVisual();
+	ApplyFlipState();
 	PreferredSize = MeasureUnconstrained();
 }
 
@@ -4287,7 +4701,7 @@ UDreamWidget* UDreamLayoutContainerMenuAnchor::GetAnchorContent() const
 	return DreamPanelLayoutLocal::GetFirstValidChild(GetWidget());
 }
 
-UDreamWidget* UDreamLayoutContainerMenuAnchor::GetMenuContent() const
+UDreamWidget* UDreamLayoutContainerMenuAnchor::GetMenuChild() const
 {
 	const UDreamWidget* Panel = GetWidget();
 	if (!IsValid(Panel))
@@ -4311,22 +4725,250 @@ UDreamWidget* UDreamLayoutContainerMenuAnchor::GetMenuContent() const
 	return nullptr;
 }
 
+UDreamWidget* UDreamLayoutContainerMenuAnchor::GetMenuContent() const
+{
+	// While the popup layer holds the menu it is nobody's child here, and it is still this anchor's menu.
+	if (UDreamWidget* Lifted = LiftedMenu.Get(); IsValid(Lifted))
+	{
+		return Lifted;
+	}
+	return GetMenuChild();
+}
+
+void UDreamLayoutContainerMenuAnchor::SetUseApplicationMenuStack(bool Value)
+{
+	if (bUseApplicationMenuStack == Value)
+	{
+		return;
+	}
+	// An open menu is where the old mode put it: closed that way and opened again this way.
+	const bool bWasOpen = bIsOpen;
+	if (bWasOpen)
+	{
+		SetIsOpen(false);
+	}
+	bUseApplicationMenuStack = Value;
+	if (bWasOpen)
+	{
+		SetIsOpen(true);
+	}
+}
+
+void UDreamLayoutContainerMenuAnchor::SetMenuClass(TSubclassOf<UDreamUserWidget> Value)
+{
+	if (MenuClass == Value)
+	{
+		return;
+	}
+	// A menu built from the old class is closed with it: the next open builds from the new one.
+	if (bIsOpen && BuiltMenu.IsValid())
+	{
+		SetIsOpen(false);
+	}
+	MenuClass = Value;
+}
+
 void UDreamLayoutContainerMenuAnchor::SetIsOpen(bool Value)
 {
-	if (bIsOpen != Value)
+	if (bIsOpen == Value)
 	{
-		bIsOpen = Value;
-		if (UDreamWidget* Menu = GetMenuContent(); IsValid(Menu))
+		return;
+	}
+	bIsOpen = Value;
+	if (bIsOpen)
+	{
+		// The authored menu first; then what OnGetMenuContent or MenuClass gives, made for this open alone.
+		UDreamWidget* Menu = GetMenuChild();
+		if (!IsValid(Menu))
 		{
-			Menu->SetLayoutVisibilitySuppressed(!bIsOpen);
+			Menu = BuildMenuContent();
 		}
-		RequestLayoutRefresh();
+		if (IsValid(Menu))
+		{
+			Menu->SetLayoutVisibilitySuppressed(false);
+			// A layer that cannot take it -- no screen root to lift it onto -- leaves it drawn in place.
+			if (bUseApplicationMenuStack)
+			{
+				PushMenu(Menu);
+			}
+		}
+	}
+	else
+	{
+		UDreamWidget* Lifted = LiftedMenu.Get();
+		UDreamUIPopupLayer* Layer = IsValid(Lifted) ? UDreamUIPopupLayer::Get(Lifted) : nullptr;
+		if (Layer != nullptr && Layer->IsOpen(Lifted))
+		{
+			// The layer returns focus, puts the menu back and then tells HandleMenuDismissed, which finishes here.
+			Layer->Dismiss(Lifted, EDreamPopupDismissReason::Explicit);
+		}
+		else
+		{
+			LiftedMenu.Reset();
+			FinishClosing(/*bInReleaseBuilt*/true);
+		}
+	}
+	RequestLayoutRefresh();
+}
+
+UDreamWidget* UDreamLayoutContainerMenuAnchor::BuildMenuContent()
+{
+	UDreamWidget* Panel = GetWidget();
+	if (!IsValid(Panel))
+	{
+		return nullptr;
+	}
+	UDreamWidget* Built = nullptr;
+	if (OnGetMenuContent.IsBound())
+	{
+		// UMG asks the delegate first and the class only when it is unbound; a handler that answers with nothing
+		// lets the class have its turn instead of the menu opening empty on purpose.
+		UDreamWidget* Provided = OnGetMenuContent.Execute();
+		if (IsValid(Provided) && Provided != Panel && !Panel->IsChildOf(Provided))
+		{
+			Built = Provided;
+		}
+	}
+	if (Built == nullptr && *MenuClass != nullptr && !MenuClass->HasAnyClassFlags(CLASS_Abstract))
+	{
+		if (UWorld* World = Panel->GetWorld())
+		{
+			// Straight into this anchor's tree, as its second child: the panel's own menu from here on.
+			Built = CreateDreamWidget(World, MenuClass, Panel);
+		}
+	}
+	if (Built == nullptr)
+	{
+		return nullptr;
+	}
+	if (Built->GetParent() != Panel && !Built->TrySetParent(Panel, /*InKeepWorldPosition*/false))
+	{
+		// Somewhere the anchor cannot take it -- a second menu beside an authored one cannot be, but a full panel can
+		// refuse. What was handed over is still the anchor's to release.
+		Built->DestroyWidget();
+		return nullptr;
+	}
+	BuiltMenu = Built;
+	return Built;
+}
+
+void UDreamLayoutContainerMenuAnchor::ReleaseBuiltMenu()
+{
+	UDreamWidget* Built = BuiltMenu.Get();
+	BuiltMenu.Reset();
+	if (IsValid(Built))
+	{
+		Built->DestroyWidget();
+	}
+}
+
+bool UDreamLayoutContainerMenuAnchor::PushMenu(UDreamWidget* InMenu)
+{
+	UDreamWidget* Panel = GetWidget();
+	UDreamUIPopupLayer* Layer = IsValid(Panel) ? UDreamUIPopupLayer::Get(Panel) : nullptr;
+	if (Layer == nullptr || !IsValid(InMenu))
+	{
+		return false;
+	}
+	FDreamPopupParams Params;
+	Params.Popup = InMenu;
+	Params.Opener = Panel;
+	Params.UserIndex = Panel->GetOwningPlayerIndex();
+	// What every menu here has always done with a press elsewhere, and what SMenuAnchor's menus do for the layer's
+	// purposes: the press closes the menu.
+	Params.OutsideClick = EDreamPopupOutsideClick::Consume;
+	// SMenuAnchor::SetIsOpen focuses the menu by default.
+	Params.bFocusOnOpen = true;
+	Params.Place = FDreamPopupPlaceDelegate::CreateUObject(this, &UDreamLayoutContainerMenuAnchor::PlaceLiftedMenu);
+	Params.OnDismissed = FDreamPopupDismissedDelegate::CreateUObject(this, &UDreamLayoutContainerMenuAnchor::HandleMenuDismissed);
+	if (!Layer->Push(Params))
+	{
+		return false;
+	}
+	LiftedMenu = InMenu;
+	return true;
+}
+
+void UDreamLayoutContainerMenuAnchor::PlaceLiftedMenu(UDreamWidget* InPopup)
+{
+	UDreamWidget* Panel = GetWidget();
+	const UDreamWidget* Root = IsValid(InPopup) ? InPopup->GetParent() : nullptr;
+	if (!IsValid(Panel) || !IsValid(Root))
+	{
+		return;
+	}
+	// The rect the in-place arrangement would give it, in this panel's top-left space: the slot's rect, inset by the
+	// slot's padding as ApplyChildRect insets a filled child, nudged and mirrored as CommitChildRect would.
+	FVector2D SlotPosition;
+	FVector2D SlotSize;
+	CalculateMenuSlotRect(InPopup, SlotPosition, SlotSize);
+	const UDreamPanelSlot* MenuSlot = GetSlot(InPopup);
+	const float PadLeft = DreamPanelLayoutLocal::FiniteOrZero(MenuSlot->Padding.Left);
+	const float PadTop = DreamPanelLayoutLocal::FiniteOrZero(MenuSlot->Padding.Top);
+	const FVector2D Size(
+		FMath::Max(0.0, SlotSize.X - DreamPanelLayoutLocal::HorizontalPadding(MenuSlot->Padding)),
+		FMath::Max(0.0, SlotSize.Y - DreamPanelLayoutLocal::VerticalPadding(MenuSlot->Padding)));
+	double Left = SlotPosition.X + PadLeft + DreamPanelLayoutLocal::FiniteOrZero(static_cast<float>(MenuSlot->Nudge.X));
+	const double Top = SlotPosition.Y + PadTop + DreamPanelLayoutLocal::FiniteOrZero(static_cast<float>(MenuSlot->Nudge.Y));
+	if (IsRightToLeft())
+	{
+		Left = DreamPanelLayoutLocal::NonNegative(Panel->GetWidth()) - (Left + Size.X);
+	}
+	// From this panel's top-left space to its own plane (Y across, Z up, about its pivot), through the world, into
+	// the screen root's plane -- where the layer's lift left the menu anchored, as Elevate anchors it.
+	const FVector2D Pivot = InPopup->GetPivot();
+	const FVector InPanel(0.0,
+		Panel->GetLocalSpaceLeft() + Left + Size.X * Pivot.X,
+		Panel->GetLocalSpaceTop() - Top - Size.Y * (1.0 - Pivot.Y));
+	const FVector InWorld = Panel->GetLayoutWorldTransform().TransformPosition(InPanel);
+	const FVector InRoot = Root->GetLayoutWorldTransform().InverseTransformPosition(InWorld);
+	InPopup->SetWidth(static_cast<float>(Size.X));
+	InPopup->SetHeight(static_cast<float>(Size.Y));
+	InPopup->SetAnchoredPosition(FVector2D(InRoot.Y, InRoot.Z));
+}
+
+void UDreamLayoutContainerMenuAnchor::HandleMenuDismissed(UDreamWidget* InPopup, EDreamPopupDismissReason InReason)
+{
+	if (InPopup != LiftedMenu.Get())
+	{
+		return;
+	}
+	LiftedMenu.Reset();
+	// However the layer closed it -- a press outside, Back, the anchor going away -- the anchor is closed with it.
+	bIsOpen = false;
+	// Nothing is destroyed while the world comes down or this panel goes: what was handed back goes with them.
+	FinishClosing(/*bInReleaseBuilt*/InReason != EDreamPopupDismissReason::WorldTeardown && !bUnregistering);
+	RequestLayoutRefresh();
+}
+
+void UDreamLayoutContainerMenuAnchor::FinishClosing(bool bInReleaseBuilt)
+{
+	if (UDreamWidget* Menu = GetMenuChild(); IsValid(Menu))
+	{
+		Menu->SetLayoutVisibilitySuppressed(true);
+	}
+	if (bInReleaseBuilt)
+	{
+		ReleaseBuiltMenu();
 	}
 }
 
 void UDreamLayoutContainerMenuAnchor::OnUnregister()
 {
-	if (UDreamWidget* Menu = GetMenuContent(); IsValid(Menu))
+	{
+		TGuardValue<bool> UnregisterGuard(bUnregistering, true);
+		// A menu on the popup layer hangs off the player's screen root, not under this anchor: it has to be brought
+		// home, or it would stay on screen with nothing left to close it.
+		UDreamWidget* Lifted = LiftedMenu.Get();
+		UDreamUIPopupLayer* Layer = IsValid(Lifted) ? UDreamUIPopupLayer::Get(Lifted) : nullptr;
+		if (Layer != nullptr && Layer->IsOpen(Lifted))
+		{
+			Layer->Dismiss(Lifted, EDreamPopupDismissReason::Explicit);
+		}
+		LiftedMenu.Reset();
+	}
+	BuiltMenu.Reset();
+	if (UDreamWidget* Menu = GetMenuChild(); IsValid(Menu))
 	{
 		Menu->SetLayoutVisibilitySuppressed(false);
 	}
@@ -4362,6 +5004,40 @@ FVector2f UDreamLayoutContainerMenuAnchor::MeasureLayout(const FDreamMeasureSpec
 		FVector2D(Desired.X + SpentWidth, Desired.Y + SpentHeight)));
 }
 
+void UDreamLayoutContainerMenuAnchor::CalculateMenuSlotRect(UDreamWidget* InMenu, FVector2D& OutPosition, FVector2D& OutSize) const
+{
+	const UDreamWidget* Panel = GetWidget();
+	const FVector2D AnchorSize = IsValid(Panel)
+		? FVector2D(DreamPanelLayoutLocal::NonNegative(Panel->GetWidth()), DreamPanelLayoutLocal::NonNegative(Panel->GetHeight()))
+		: FVector2D::ZeroVector;
+	const UDreamPanelSlot* MenuSlot = GetSlot(InMenu);
+	const FVector2D MenuDesired = DreamPanelLayoutLocal::CleanSize(GetDesiredSize(InMenu));
+	OutSize = FVector2D(
+		MenuDesired.X + DreamPanelLayoutLocal::HorizontalPadding(MenuSlot->Padding),
+		MenuDesired.Y + DreamPanelLayoutLocal::VerticalPadding(MenuSlot->Padding));
+	if (PlacementMatchesAnchorWidth(Placement))
+	{
+		OutSize.X = AnchorSize.X;
+	}
+	// In this panel's own content space the anchor rect IS the panel, at the origin.
+	OutPosition = CalculateMenuPosition(Placement, FVector2D::ZeroVector, AnchorSize, OutSize);
+	if (bFitInWindow && IsValid(Panel))
+	{
+		// Against the root widget, the nearest thing here to UMG's window: it is the rect the
+		// whole hierarchy is laid out inside. The result has to come back into this panel's
+		// space, so the panel's own place within that root -- its offset and its scale -- goes in
+		// and comes back out.
+		FVector2D WindowSize;
+		FVector2D PanelOffset;
+		FVector2D PanelScale;
+		if (GetPlacementInWindow(Panel, WindowSize, PanelOffset, PanelScale))
+		{
+			OutPosition = FitMenuInWindowFromPanelSpace(OutPosition, OutSize, PanelOffset,
+				static_cast<float>(AnchorSize.X), WindowSize, IsRightToLeft(), PanelScale);
+		}
+	}
+}
+
 void UDreamLayoutContainerMenuAnchor::ArrangeChildren()
 {
 	UDreamWidget* Panel = GetWidget();
@@ -4370,7 +5046,9 @@ void UDreamLayoutContainerMenuAnchor::ArrangeChildren()
 		return;
 	}
 	UDreamWidget* Anchor = GetAnchorContent();
-	UDreamWidget* Menu = GetMenuContent();
+	// The menu as this panel's hierarchy holds it. One on the popup layer is not among the children; the layer's
+	// placement callback places it (PlaceLiftedMenu).
+	UDreamWidget* Menu = GetMenuChild();
 	const FVector2D AnchorSize(
 		DreamPanelLayoutLocal::NonNegative(Panel->GetWidth()),
 		DreamPanelLayoutLocal::NonNegative(Panel->GetHeight()));
@@ -4393,32 +5071,9 @@ void UDreamLayoutContainerMenuAnchor::ArrangeChildren()
 		Menu->SetLayoutVisibilitySuppressed(!bIsOpen);
 		if (bIsOpen && Menu->GetLayoutVisibleInHierarchy() && !Menu->GetIgnoreLayout())
 		{
-			const UDreamPanelSlot* MenuSlot = GetSlot(Menu);
-			const FVector2D MenuDesired = DreamPanelLayoutLocal::CleanSize(GetDesiredSize(Menu));
-			FVector2D MenuSize(
-				MenuDesired.X + DreamPanelLayoutLocal::HorizontalPadding(MenuSlot->Padding),
-				MenuDesired.Y + DreamPanelLayoutLocal::VerticalPadding(MenuSlot->Padding));
-			if (PlacementMatchesAnchorWidth(Placement))
-			{
-				MenuSize.X = AnchorSize.X;
-			}
-			// In this panel's own content space the anchor rect IS the panel, at the origin.
-			FVector2D MenuPosition = CalculateMenuPosition(Placement, FVector2D::ZeroVector, AnchorSize, MenuSize);
-			if (bFitInWindow)
-			{
-				// Against the root widget, the nearest thing here to UMG's window: it is the rect the
-				// whole hierarchy is laid out inside. The result has to come back into this panel's
-				// space, so the panel's own place within that root -- its offset and its scale -- goes in
-				// and comes back out.
-				FVector2D WindowSize;
-				FVector2D PanelOffset;
-				FVector2D PanelScale;
-				if (GetPlacementInWindow(Panel, WindowSize, PanelOffset, PanelScale))
-				{
-					MenuPosition = FitMenuInWindowFromPanelSpace(MenuPosition, MenuSize, PanelOffset,
-						DreamPanelLayoutLocal::NonNegative(Panel->GetWidth()), WindowSize, IsRightToLeft(), PanelScale);
-				}
-			}
+			FVector2D MenuPosition;
+			FVector2D MenuSize;
+			CalculateMenuSlotRect(Menu, MenuPosition, MenuSize);
 			ApplyChildRect(Menu, MenuPosition, MenuSize, /*bForceFill*/true);
 		}
 		else if (!bIsOpen)

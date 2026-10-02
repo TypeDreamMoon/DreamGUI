@@ -400,7 +400,9 @@ FVector2D UUIScrollView::GetOverscrollPercentage() const
 
 bool UUIScrollView::IsScrolling() const
 {
-	return bCanUpdateAfterDrag || !Velocity.IsNearlyZero();
+	// A glide moves the content as surely as a fling does. Leaving it out made a list that reports when scrolling
+	// finishes report it on every frame of an animated reveal.
+	return bCanUpdateAfterDrag || !Velocity.IsNearlyZero() || IsGliding();
 }
 
 void UUIScrollView::EndInertialScrolling()
@@ -484,6 +486,42 @@ void UUIScrollView::SetScrollOffset(FVector2D InOffset)
 	Velocity = FVector2D::ZeroVector;
 	bCanUpdateAfterDrag = false;
 	ApplyContentPosition(Position);
+}
+
+void UUIScrollView::GlideToScrollOffset(FVector2D InOffset, float InDuration)
+{
+	if (!(InDuration > 0.0f) || !FMath::IsFinite(InDuration))
+	{
+		SetScrollOffset(InOffset);
+		return;
+	}
+	if (!CheckParameters())
+	{
+		return;
+	}
+	RecalculateRange();
+	// SetScrollOffset's own arithmetic, aimed at rather than written: clamped on every axis this view scrolls, the
+	// others left where they are.
+	const FVector2D Extent = GetScrollableExtent();
+	const FVector2D Start = GetStartAlignedPosition();
+	FVector2D Target = GetContentPosition();
+	if (Horizontal)
+	{
+		Target.X = Start.X - FMath::Clamp(InOffset.X, 0.0, Extent.X);
+	}
+	if (Vertical)
+	{
+		Target.Y = Start.Y + FMath::Clamp(InOffset.Y, 0.0, Extent.Y);
+	}
+	if (Target.Equals(GetContentPosition(), DreamScrollViewLocal::SettleThreshold))
+	{
+		// Already there: a glide that goes nowhere would still be "scrolling" for its whole duration, and a list
+		// would wait that long to say it had finished.
+		SetScrollOffset(InOffset);
+		return;
+	}
+	// The glide every ScrollTo takes, so anything that moves the content meanwhile stops it where it got to.
+	GlideContentTo(Target, true, InDuration);
 }
 
 void UUIScrollView::ScrollBy(FVector2D InDelta)
@@ -573,11 +611,20 @@ bool UUIScrollView::AcceptsDragGesture(UDreamPointerEventData* InEventData) cons
     {
         return false;
     }
-    if (!bAllowRightClickDragScrolling && InEventData->MouseButtonType == EDreamUIMouseButtonType::Right)
+    const bool bTouch = IsTouchInput(InEventData);
+    const bool bRightButton = !bTouch && InEventData->MouseButtonType == EDreamUIMouseButtonType::Right;
+    if (!bAllowRightClickDragScrolling && bRightButton)
     {
         return false;
     }
-    if (!bEnableTouchScrolling && IsTouchInput(InEventData))
+    if (!bEnableTouchScrolling && bTouch)
+    {
+        return false;
+    }
+    // Nothing to scroll on either axis. A right drag is then not a scroll at all (SScrollBox takes it only while its
+    // bar IsNeeded), and with CanScrollInSmallSize off neither is any other: the content cannot move, so holding the
+    // gesture here would only keep it from a scroll view around this one.
+    if ((bRightButton || !CanScrollInSmallSize) && !CanScrollOnAxis(true) && !CanScrollOnAxis(false))
     {
         return false;
     }
@@ -728,6 +775,14 @@ bool UUIScrollView::OnPointerEndDrag_Implementation(UDreamPointerEventData *Even
         && UDreamEventSystem::GetPointerClockSeconds(this) - LastDragMoveTime <= DreamScrollViewLocal::FlingSampleWindow)
     {
         ReleaseVelocity = LastDragMoveVelocity;
+    }
+    if (!CanScrollInSmallSize)
+    {
+        // An axis with nothing to scroll was held still under the drag, and a fling along it would carry the content
+        // out of a range of nothing for the spring to bring back -- the overscroll the setting is off to prevent.
+        const FVector2D Extent = GetScrollableExtent();
+        if (Extent.X <= DreamScrollViewLocal::SettleThreshold) ReleaseVelocity.X = 0.0;
+        if (Extent.Y <= DreamScrollViewLocal::SettleThreshold) ReleaseVelocity.Y = 0.0;
     }
     if (bGestureHorizontal)
     {
@@ -1022,6 +1077,14 @@ void UUIScrollView::GlideContentTo(const FVector2D& InTargetPosition, bool InEas
         })
         , FDreamTweenVector2DSetterFunction::CreateWeakLambda(this, [this](FVector2D Value)
         {
+            // The step that lands the glide is its last: the tween writes its end value while it is still in
+            // the manager's list, and leaves it only after this returns. Let go of it first, so the move this
+            // step announces is one with nothing left moving the content -- a list says it finished scrolling
+            // on exactly that (IsScrolling), and with the glide still counted it never said so at all.
+            if (const UDreamTweener* Glide = ActiveGlide.Get(); Glide != nullptr && Glide->GetElapsedTime() >= Glide->GetDuration())
+            {
+                ActiveGlide.Reset();
+            }
             ApplyContentPosition(Value);
         }), InTargetPosition, InAnimationDuration);
     if (Tweener)

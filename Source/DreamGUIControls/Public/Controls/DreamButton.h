@@ -82,18 +82,19 @@ public:
 	FColor BackgroundColor = FColor::White;
 
 	/**
-	 * A tint over the WHOLE button, face and content alike -- UMG's ColorAndOpacity, of which the
-	 * alpha is the half this framework can honour.
+	 * A tint over the WHOLE button, face and content alike -- UMG's ColorAndOpacity, of which this
+	 * property honours the alpha.
 	 *
 	 * The alpha is pushed to the control's own RenderOpacity, which cascades down everything under
 	 * it: fading a button fades its face, its label and whatever else was put inside, whatever each
 	 * of those is drawn with. That is the half nearly every caller wants -- a button fading in, or
 	 * greying while a cooldown runs.
 	 *
-	 * The colour half is deliberately not faked, for the reason UDreamBorder::ContentColorAndOpacity
-	 * gives: a colour over a subtree would have to be written onto each visual inside, overwriting
-	 * what the host authored with no way back. BackgroundColor above tints the FACE, which is the
-	 * part this control owns and the part a caller usually means.
+	 * The colour half is not applied by this property, so every existing button draws as it always
+	 * has. The tint that would carry it is UDreamWidget::SetContentTint, which multiplies every visual
+	 * below a widget without writing to any of them (UDreamBorder::ContentColorAndOpacity is that
+	 * tint): a caller who wants the whole button coloured sets it on the button itself. BackgroundColor
+	 * above tints the FACE alone, which is the part this control owns and the part a caller usually means.
 	 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetColorAndOpacity", BlueprintSetter = "SetColorAndOpacity", Category = "Button")
 	FLinearColor ColorAndOpacity = FLinearColor::White;

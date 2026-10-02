@@ -165,11 +165,25 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
 	void SetCustomRaycastObject(UDreamVisualCustomRaycast* Value);
 
+	/**
+	 * A colour this visual's own Color is multiplied by on its way to the screen, in linear space -- what something
+	 * that tints a visual without owning its Color writes: a border's BrushColor, and the alpha it draws at while
+	 * disabled; a scroll box's bar track, dimmed while it is idle. Runtime state, not saved. White changes nothing.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
+	void SetColorMultiplier(const FLinearColor& Value);
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
+	FLinearColor GetColorMultiplier()const { return ColorMultiplier; }
+
 	uint8 GetFinalAlpha()const;
 	/** get final alpha, calculated with CanvasGroup's alpha */
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
 		float GetFinalAlpha01()const;
-	/** get final color, calculated with CanvasGroup's alpha */
+	/**
+	 * The colour this visual is drawn with: Color, times the content tint of every widget above it
+	 * (UDreamWidget::GetInheritedContentTint) and ColorMultiplier, in linear space, with the alpha then scaled by the
+	 * hierarchy's render opacity. Exactly Color with that alpha while both tints are white.
+	 */
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
 		FColor GetFinalColor()const;
 
@@ -297,6 +311,8 @@ public:
 	bool IsRegisteredToCanvas()const{return WidgetPropertyDataStartPosition != INDEX_NONE;}
 	int GetWidgetPropertyDataStartPosition()const{return WidgetPropertyDataStartPosition;}
 protected:
+	/** See SetColorMultiplier. Not a property: whoever tints the visual writes it again when it is made. */
+	FLinearColor ColorMultiplier = FLinearColor::White;
 	uint8 bColorChanged : 1;
 	uint8 bTransformChanged : 1;
 	uint8 bClipDataPositionChanged : 1;

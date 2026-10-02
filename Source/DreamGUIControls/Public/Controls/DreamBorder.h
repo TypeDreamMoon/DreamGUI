@@ -81,18 +81,14 @@ public:
 	FColor BrushColor = FColor::White;
 
 	/**
-	 * A tint over the CONTENT -- UMG's ContentColorAndOpacity, of which the alpha is the half this
-	 * framework can honour.
+	 * A tint over the CONTENT -- UMG's ContentColorAndOpacity, colour and alpha both, and never over
+	 * the border's own face.
 	 *
-	 * The alpha is pushed to the content node's RenderOpacity, which is the one channel that
-	 * CASCADES here: it multiplies down the whole subtree, so fading a border fades everything in it
-	 * whatever each thing inside is drawn with. That is UMG's opacity half exactly, and the half
-	 * nearly every caller wants (a panel fading in, a section greying out).
-	 *
-	 * The colour half has no counterpart and is deliberately not faked: a colour over a subtree would
-	 * have to be WRITTEN onto each visual inside, overwriting whatever the host authored there, and
-	 * the original could not be recovered on the next push. Tint the things inside, or put the border
-	 * under something that fades.
+	 * It is the hole's content tint (UDreamWidget::SetContentTint): every visual below the hole is
+	 * multiplied by it, in linear space, on its way to the screen, as SCompoundWidget blends its
+	 * ColorAndOpacity into the style its children paint with. Nothing inside is written to -- what
+	 * the host authored there is left as authored, and a white tint changes nothing -- and the
+	 * content's RenderOpacity is left free for whatever fades it.
 	 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetContentColorAndOpacity", BlueprintSetter = "SetContentColorAndOpacity", Category = "Border")
 	FLinearColor ContentColorAndOpacity = FLinearColor::White;
@@ -238,7 +234,7 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Border")
 	FLinearColor GetContentColorAndOpacity() const { return ContentColorAndOpacity; }
 
-	/** See the property: the alpha cascades over the content, the colour has nowhere to go. */
+	/** See the property: colour and alpha both tint everything inside, and nothing of the face. */
 	UFUNCTION(BlueprintCallable, Category = "Border")
 	void SetContentColorAndOpacity(FLinearColor InContentColorAndOpacity);
 

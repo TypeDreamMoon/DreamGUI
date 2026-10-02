@@ -7,9 +7,13 @@
 #include "Core/Components/DreamPanelLayouts.h"
 #include "Core/Components/DreamPanelSlot.h"
 #include "Core/Components/DreamRectBlock.h"
+#include "Core/Components/DreamVisual.h"
 #include "Core/Components/DreamWidget.h"
+#include "Core/DreamUIGeometry.h"
 #include "Core/DreamUIManager.h"
+#include "Core/DreamUserWidget.h"
 #include "Engine/World.h"
+#include "MeshModifier/DreamMeshModifierMirror.h"
 #include "DreamScopedWorld.h"
 
 /*
@@ -155,13 +159,217 @@ bool FDreamBorderBrushColorReachesTheVisualTest::RunTest(const FString& Paramete
 		return false;
 	}
 
-	// There is no second brush: a DreamGUI widget's art is its visual, and BrushColor names that
-	// visual's colour so UBorder::SetBrushColor has a counterpart instead of a missing feature.
+	// There is no second brush: a DreamGUI widget's art is its visual, and BrushColor tints that visual so
+	// UBorder::SetBrushColor has a counterpart instead of a missing feature. It tints, as SBorder multiplies its brush
+	// by BorderBackgroundColor: the colour the visual was authored with is kept, and what is drawn is the product.
 	Border->SetBrushColor(FLinearColor(1.0f, 0.0f, 0.0f, 1.0f));
-	const FColor Applied = Background->GetColor();
+	const FColor Applied = Background->GetFinalColor();
 	TestEqual(TEXT("Red reaches the visual"), static_cast<int32>(Applied.R), 255);
 	TestEqual(TEXT("...and nothing else does"), static_cast<int32>(Applied.G), 0);
 	TestEqual(TEXT("...on either channel"), static_cast<int32>(Applied.B), 0);
+	TestTrue(TEXT("The visual's own colour is left as it was authored"), Background->GetColor() == FColor::White);
+
+	// Multiplied in linear space, so a mid-grey visual under a red brush colour draws the same mid red.
+	Background->SetColor(FColor(128, 128, 128, 255));
+	const FColor OverGrey = Background->GetFinalColor();
+	TestTrue(TEXT("A grey visual is drawn red at the grey's level"), FMath::Abs(static_cast<int32>(OverGrey.R) - 128) <= 1);
+	TestEqual(TEXT("...with the other channels taken out"), static_cast<int32>(OverGrey.G), 0);
+
+	BorderWidget->DestroyWidget();
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamBorderContentColourTest,
+	"DreamGUI.Border.ContentColourTintsTheContentAndNotTheBackground",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * UBorder's ContentColorAndOpacity is SCompoundWidget's ColorAndOpacity: blended into what the border's children
+ * paint with and never into the border's own brush. The panel had no such property. It now tints every visual below
+ * the border -- the content's and what the content holds -- multiplied in linear space, and leaves the background
+ * alone.
+ */
+bool FDreamBorderContentColourTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamBorderMenuAnchorTestLocal;
+	FScopedGameWorld TestWorld;
+	UDreamWidget* BorderWidget = MakeWidget(TestWorld.World, nullptr, TEXT("Border"), 300.0f, 200.0f);
+	UDreamWidget* Content = MakeWidget(TestWorld.World, BorderWidget, TEXT("Content"), 100.0f, 50.0f);
+	UDreamWidget* Inner = MakeWidget(TestWorld.World, Content, TEXT("Inner"), 20.0f, 20.0f);
+	UDreamRectBlock* Background = BorderWidget->CreateNewVisual<UDreamRectBlock>();
+	UDreamRectBlock* ContentArt = Content->CreateNewVisual<UDreamRectBlock>();
+	UDreamRectBlock* InnerArt = Inner->CreateNewVisual<UDreamRectBlock>();
+	UDreamLayoutContainerBorder* Border = BorderWidget->CreateNewLayoutContainer<UDreamLayoutContainerBorder>();
+	if (!TestNotNull(TEXT("Background visual created"), Background)
+		|| !TestNotNull(TEXT("Content visual created"), ContentArt)
+		|| !TestNotNull(TEXT("Inner visual created"), InnerArt)
+		|| !TestNotNull(TEXT("Border created"), Border))
+	{
+		BorderWidget->DestroyWidget();
+		return false;
+	}
+	TestTrue(TEXT("White by default, which tints nothing"), Border->ContentColorAndOpacity == FLinearColor::White
+		&& ContentArt->GetFinalColor() == FColor::White);
+
+	Border->SetContentColorAndOpacity(FLinearColor(1.0f, 0.0f, 0.0f, 0.5f));
+	const FColor ContentColour = ContentArt->GetFinalColor();
+	TestEqual(TEXT("The content is drawn red"), static_cast<int32>(ContentColour.R), 255);
+	TestTrue(TEXT("...with green and blue taken out"), ContentColour.G == 0 && ContentColour.B == 0);
+	TestTrue(TEXT("...at half its opacity"), FMath::Abs(static_cast<int32>(ContentColour.A) - 128) <= 1);
+	TestTrue(TEXT("What the content holds is tinted the same way"), InnerArt->GetFinalColor() == ContentColour);
+	TestTrue(TEXT("The background is not tinted"), Background->GetFinalColor() == FColor::White);
+	TestTrue(TEXT("...and no visual's own colour was written"), ContentArt->GetColor() == FColor::White);
+
+	Border->SetContentColorAndOpacity(FLinearColor::White);
+	TestTrue(TEXT("Set back to white, the content draws as authored"), ContentArt->GetFinalColor() == FColor::White);
+
+	BorderWidget->DestroyWidget();
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamBorderDisabledEffectTest,
+	"DreamGUI.Border.ADisabledBorderDrawsItsBackgroundAtFortyFivePercentAlpha",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * UBorder's bShowEffectWhenDisabled: a disabled SBorder draws its brush with the disabled effect, which Slate's default
+ * shader applies as the alpha times 0.45. The panel drew a disabled border as an enabled one. It now takes the
+ * background's alpha to 45 percent while the widget is disabled -- by its own switch or an ancestor's -- and leaves
+ * the content alone, as SBorder's effect reaches its brush only. The look follows the switch the moment it flips,
+ * with no layout pass in between.
+ */
+bool FDreamBorderDisabledEffectTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamBorderMenuAnchorTestLocal;
+	FScopedGameWorld TestWorld;
+	UDreamWidget* Root = MakeWidget(TestWorld.World, nullptr, TEXT("Root"), 400.0f, 300.0f);
+	UDreamWidget* BorderWidget = MakeWidget(TestWorld.World, Root, TEXT("Border"), 300.0f, 200.0f);
+	UDreamWidget* Content = MakeWidget(TestWorld.World, BorderWidget, TEXT("Content"), 100.0f, 50.0f);
+	UDreamRectBlock* Background = BorderWidget->CreateNewVisual<UDreamRectBlock>();
+	UDreamRectBlock* ContentArt = Content->CreateNewVisual<UDreamRectBlock>();
+	UDreamLayoutContainerBorder* Border = BorderWidget->CreateNewLayoutContainer<UDreamLayoutContainerBorder>();
+	if (!TestNotNull(TEXT("Background visual created"), Background)
+		|| !TestNotNull(TEXT("Content visual created"), ContentArt)
+		|| !TestNotNull(TEXT("Border created"), Border))
+	{
+		Root->DestroyWidget();
+		return false;
+	}
+	auto IsAtDisabledAlpha = [](const UDreamVisual* InVisual)
+	{
+		// 0.45 of 255 is 114.75; one either way covers the rounding of the encode.
+		return FMath::Abs(static_cast<int32>(InVisual->GetFinalColor().A) - 115) <= 1;
+	};
+	TestTrue(TEXT("The effect is on by default, as UMG's is"), Border->bShowEffectWhenDisabled);
+	TestEqual(TEXT("Enabled, the background draws at full alpha"), static_cast<int32>(Background->GetFinalColor().A), 255);
+
+	BorderWidget->SetIsEnabled(false);
+	TestTrue(TEXT("Disabled, the background draws at 45 percent"), IsAtDisabledAlpha(Background));
+	TestEqual(TEXT("...in its own colour"), static_cast<int32>(Background->GetFinalColor().R), 255);
+	TestEqual(TEXT("...and the content at full alpha"), static_cast<int32>(ContentArt->GetFinalColor().A), 255);
+
+	BorderWidget->SetIsEnabled(true);
+	TestEqual(TEXT("Enabled again, the background is back at full alpha"), static_cast<int32>(Background->GetFinalColor().A), 255);
+
+	Root->SetIsEnabled(false);
+	TestTrue(TEXT("A disabled ancestor disables the look as well"), IsAtDisabledAlpha(Background));
+	Border->SetShowEffectWhenDisabled(false);
+	TestEqual(TEXT("With the effect off a disabled border draws as an enabled one"), static_cast<int32>(Background->GetFinalColor().A), 255);
+	Border->SetShowEffectWhenDisabled(true);
+	TestTrue(TEXT("...and with it back on, at 45 percent again"), IsAtDisabledAlpha(Background));
+	Root->SetIsEnabled(true);
+	TestEqual(TEXT("Enabling the ancestor gives the full alpha back"), static_cast<int32>(Background->GetFinalColor().A), 255);
+
+	Root->DestroyWidget();
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamBorderFlipForRightToLeftTest,
+	"DreamGUI.Border.FlippingForRightToLeftMirrorsTheBackgroundButNotTheContent",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * UBorder's bFlipForRightToLeftFlowDirection: under a right-to-left flow SBorder draws its brush through a scale of
+ * (-1, 1) about the brush's centre, so the background is mirrored and nothing it holds is. The panel had no flip. It
+ * now puts a mirror modifier on its own widget -- the one whose visual is the background -- switched on while the flag
+ * is on and the flow resolves right to left, and on nothing below it. The reflection itself is checked on a quad built
+ * by hand: across the centre line, with every triangle rewound so it still faces the way it was built to.
+ */
+bool FDreamBorderFlipForRightToLeftTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamBorderMenuAnchorTestLocal;
+	{
+		// A quad across [-150, -50], reflected about a centre line at 0, spans [50, 150].
+		FDreamUIGeometry Quad;
+		Quad.OriginVertices.Add(FDreamUIOriginVertexData(FVector3f(0.0f, -150.0f, -20.0f)));
+		Quad.OriginVertices.Add(FDreamUIOriginVertexData(FVector3f(0.0f, -50.0f, -20.0f)));
+		Quad.OriginVertices.Add(FDreamUIOriginVertexData(FVector3f(0.0f, -150.0f, 20.0f)));
+		Quad.OriginVertices.Add(FDreamUIOriginVertexData(FVector3f(0.0f, -50.0f, 20.0f)));
+		Quad.Triangles = { 0, 3, 2, 0, 1, 3 };
+		UDreamMeshModifierMirror::MirrorGeometry(Quad, FVector2f::ZeroVector, true, false);
+		TestEqual(TEXT("The left edge lands where the right edge's mirror image is"), Quad.OriginVertices[0].Position.Y, 150.0f);
+		TestEqual(TEXT("...and the right edge where the left edge's is"), Quad.OriginVertices[1].Position.Y, 50.0f);
+		TestEqual(TEXT("Up and down are left alone"), Quad.OriginVertices[2].Position.Z, 20.0f);
+		TestEqual(TEXT("The texture runs the other way along the reflected axis"), Quad.OriginVertices[0].Tangent.Y, -1.0f);
+		TestTrue(TEXT("Every triangle is rewound, so it still faces the way it was built to"),
+			Quad.Triangles == TArray<FDreamUIMeshIndex>({ 0, 2, 3, 0, 3, 1 }));
+		// Through both axes about another centre: a half turn, which turns no triangle over.
+		UDreamMeshModifierMirror::MirrorGeometry(Quad, FVector2f(100.0f, 0.0f), true, true);
+		TestEqual(TEXT("About a line at 100, a corner at 150 lands at 50"), Quad.OriginVertices[0].Position.Y, 50.0f);
+		TestEqual(TEXT("...and reflected through the other axis as well, the bottom edge becomes the top"),
+			Quad.OriginVertices[0].Position.Z, 20.0f);
+		TestTrue(TEXT("A half turn leaves the winding as it was"), Quad.Triangles == TArray<FDreamUIMeshIndex>({ 0, 2, 3, 0, 3, 1 }));
+	}
+
+	FScopedGameWorld TestWorld;
+	UDreamUIManagerWorldSubsystem* Manager = UDreamUIManagerWorldSubsystem::GetInstance(TestWorld.World);
+	if (!TestNotNull(TEXT("DreamUI manager subsystem exists"), Manager))
+	{
+		return false;
+	}
+	UDreamWidget* BorderWidget = MakeWidget(TestWorld.World, nullptr, TEXT("Border"), 300.0f, 200.0f);
+	UDreamWidget* Content = MakeWidget(TestWorld.World, BorderWidget, TEXT("Content"), 100.0f, 50.0f);
+	UDreamRectBlock* Background = BorderWidget->CreateNewVisual<UDreamRectBlock>();
+	UDreamLayoutContainerBorder* Border = BorderWidget->CreateNewLayoutContainer<UDreamLayoutContainerBorder>();
+	if (!TestNotNull(TEXT("Background visual created"), Background) || !TestNotNull(TEXT("Border created"), Border))
+	{
+		BorderWidget->DestroyWidget();
+		return false;
+	}
+	auto Relayout = [Manager, BorderWidget]()
+	{
+		UDreamWidget::MarkLayoutForRebuild(BorderWidget);
+		Manager->TickDreamUI(0.016f);
+	};
+	TestNull(TEXT("No mirror until the flag asks for one"), BorderWidget->GetComponent<UDreamMeshModifierMirror>());
+
+	Border->SetFlipForRightToLeftFlowDirection(true);
+	UDreamMeshModifierMirror* Mirror = BorderWidget->GetComponent<UDreamMeshModifierMirror>();
+	if (!TestNotNull(TEXT("The flag puts a mirror on the border's own widget"), Mirror))
+	{
+		BorderWidget->DestroyWidget();
+		return false;
+	}
+	TestFalse(TEXT("...switched off while the flow runs left to right"), Mirror->GetEnable());
+
+	BorderWidget->SetFlowDirectionPreference(EDreamFlowDirectionPreference::RightToLeft);
+	Relayout();
+	TestTrue(TEXT("Right to left, the background is mirrored"), Mirror->GetEnable());
+	TestTrue(TEXT("...left to right only"), Mirror->GetMirrorHorizontally() && !Mirror->GetMirrorVertically());
+	TestNull(TEXT("...and nothing the border holds is"), Content->GetComponent<UDreamMeshModifierMirror>());
+
+	Border->SetFlipForRightToLeftFlowDirection(false);
+	TestFalse(TEXT("With the flag off nothing is mirrored, whatever the flow"), Mirror->GetEnable());
+	Border->SetFlipForRightToLeftFlowDirection(true);
+	TestTrue(TEXT("Back on, the same mirror flips the background again"), Mirror->GetEnable()
+		&& BorderWidget->GetComponent<UDreamMeshModifierMirror>() == Mirror);
+
+	BorderWidget->SetFlowDirectionPreference(EDreamFlowDirectionPreference::LeftToRight);
+	Relayout();
+	TestFalse(TEXT("Left to right again, the background is drawn as authored"), Mirror->GetEnable());
 
 	BorderWidget->DestroyWidget();
 	return true;
@@ -300,6 +508,74 @@ bool FDreamMenuAnchorPlacesAndCollapsesItsMenuTest::RunTest(const FString& Param
 	MenuAnchor->SetIsOpen(false);
 	Manager->TickDreamUI(0.016f);
 	TestFalse(TEXT("Closing it collapses it again"), Menu->GetLayoutVisibleInHierarchy());
+
+	Root->DestroyWidget();
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamMenuAnchorBuildsItsMenuFromItsClassTest,
+	"DreamGUI.MenuAnchor.AMenuBuiltFromItsClassIsMadeOnOpenAndReleasedOnClose",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * UMenuAnchor's MenuClass: with no menu authored under it, the anchor makes one from the class every time it opens and
+ * lets it go when it closes, so a menu showing live data is built fresh each time. The panel could only show a menu
+ * authored as its second child. A menu authored there still wins and is only hidden on close, as it always was. The
+ * application menu stack stays off unless asked for, so a menu still opens in place by default.
+ */
+bool FDreamMenuAnchorBuildsItsMenuFromItsClassTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamBorderMenuAnchorTestLocal;
+	FScopedGameWorld TestWorld;
+	UDreamUIManagerWorldSubsystem* Manager = UDreamUIManagerWorldSubsystem::GetInstance(TestWorld.World);
+	if (!TestNotNull(TEXT("DreamUI manager subsystem exists"), Manager))
+	{
+		return false;
+	}
+	UDreamWidget* Root = MakeWidget(TestWorld.World, nullptr, TEXT("Root"), 1000.0f, 600.0f);
+	UDreamWidget* AnchorWidget = MakeWidget(TestWorld.World, Root, TEXT("Anchor"), 200.0f, 40.0f);
+	UDreamWidget* Face = MakeWidget(TestWorld.World, AnchorWidget, TEXT("Face"), 200.0f, 40.0f);
+	UDreamLayoutContainerMenuAnchor* MenuAnchor = AnchorWidget->CreateNewLayoutContainer<UDreamLayoutContainerMenuAnchor>();
+	if (!TestNotNull(TEXT("Menu anchor created"), MenuAnchor))
+	{
+		Root->DestroyWidget();
+		return false;
+	}
+	TestFalse(TEXT("The application menu stack is off by default"), MenuAnchor->bUseApplicationMenuStack);
+	MenuAnchor->SetMenuClass(UDreamUserWidget::StaticClass());
+	TestNull(TEXT("Nothing is made before the menu opens"), MenuAnchor->GetMenuContent());
+
+	MenuAnchor->SetIsOpen(true);
+	UDreamWidget* FirstMenu = MenuAnchor->GetMenuContent();
+	if (!TestNotNull(TEXT("Opening makes the menu from its class"), FirstMenu))
+	{
+		Root->DestroyWidget();
+		return false;
+	}
+	TestTrue(TEXT("...an instance of that class"), FirstMenu->IsA<UDreamUserWidget>());
+	TestTrue(TEXT("...held by the anchor as its menu"), FirstMenu->GetParent() == AnchorWidget);
+	Manager->TickDreamUI(0.016f);
+	TestTrue(TEXT("...and laid out as an open menu is"), FirstMenu->GetLayoutVisibleInHierarchy());
+
+	const TWeakObjectPtr<UDreamWidget> FirstMenuWeak(FirstMenu);
+	MenuAnchor->SetIsOpen(false);
+	TestNull(TEXT("Closing lets the menu go"), MenuAnchor->GetMenuContent());
+	TestFalse(TEXT("...destroyed rather than kept hidden"), FirstMenuWeak.IsValid());
+	TestTrue(TEXT("The anchor content is still there"), IsValid(Face) && MenuAnchor->GetAnchorContent() == Face);
+
+	MenuAnchor->SetIsOpen(true);
+	UDreamWidget* SecondMenu = MenuAnchor->GetMenuContent();
+	TestTrue(TEXT("Opening again makes a new one"), IsValid(SecondMenu) && SecondMenu != FirstMenu);
+	MenuAnchor->SetIsOpen(false);
+
+	// An authored menu is the anchor's own: shown in place of a built one, and only hidden on close.
+	UDreamWidget* Authored = MakeWidget(TestWorld.World, AnchorWidget, TEXT("Authored"), 90.0f, 150.0f);
+	MenuAnchor->SetIsOpen(true);
+	TestTrue(TEXT("A menu authored under the anchor wins over its class"), MenuAnchor->GetMenuContent() == Authored);
+	MenuAnchor->SetIsOpen(false);
+	Manager->TickDreamUI(0.016f);
+	TestTrue(TEXT("...and closing hides it without destroying it"), IsValid(Authored) && !Authored->GetLayoutVisibleInHierarchy());
 
 	Root->DestroyWidget();
 	return true;

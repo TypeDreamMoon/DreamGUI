@@ -135,6 +135,13 @@ void UDreamScrollBox::WireParts()
 		// scroll values -- one implementation whether the bar is this one or a standalone bar
 		// somebody points at GetScrollView().
 		ScrollBarNode->SetScrollView(ScrollView);
+		// The pointer on the bar or dragging it is what draws an idle track at full alpha (SScrollBar's
+		// GetTrackOpacity), and the bar's selectable already tells hovered and pressed from the rest.
+		if (ScrollBarNode->BarBehaviour != nullptr && !BarStateHandle.IsValid())
+		{
+			BarStateHandle = ScrollBarNode->BarBehaviour->GetOnSelectionStateChangedEvent()
+				.AddUObject(this, &UDreamScrollBox::HandleBarStateChanged);
+		}
 	}
 }
 
@@ -221,10 +228,11 @@ void UDreamScrollBox::ApplyStyle()
 	const float BarSpan = Active.Bar.Thickness + (bHorizontal
 		? BarPad.Top + BarPad.Bottom
 		: BarPad.Left + BarPad.Right);
-	// The groove left behind when the bar has nothing to say. It costs the same gutter, which is the
-	// point: a list that gains one row must not reflow its content because a bar appeared beside it.
-	const bool bShowTrackOnly = !bBarVisible && bAlwaysShowScrollbarTrack;
-	const float Gutter = (bBarVisible || bShowTrackOnly) ? BarSpan : 0.0f;
+	// UMG's: the bar's slot takes room while the bar is shown, and while a Hidden bar would have been. With
+	// nothing to scroll it collapses, gutter and all, unless the bar is Permanent -- AlwaysShowScrollbarTrack
+	// only brightens an idle track (ApplyBarTrackOpacity) and keeps no gutter of its own.
+	const bool bReserveGutter = ShouldReserveScrollBarGutter();
+	const float Gutter = bReserveGutter ? BarSpan : 0.0f;
 
 	if (ViewportNode != nullptr)
 	{
@@ -264,28 +272,40 @@ void UDreamScrollBox::ApplyStyle()
 		}
 		// After its rect, never before: the bar reads its own track's live size to lay the handle out.
 		ScrollBarNode->ApplyStyle();
-		// Last of all, so a bar that is about to appear is already the right shape when it does.
-		ScrollBarNode->SetWidgetActive(bBarVisible || bShowTrackOnly);
+		// Last of all, so a bar that is about to appear is already the right shape when it does. Written
+		// here rather than left to the bar's own auto-hide, because it is the BOX that knows whether this
+		// bar has anything to say -- the bar is wearing the box's style and following the box's view.
+		ScrollBarNode->SetWidgetActive(bBarVisible);
 		if (ScrollBarNode->HandleNode != nullptr)
 		{
-			// Track only means exactly that: the groove stays, the thumb goes. Written here rather
-			// than left to the bar's own auto-hide, because it is the BOX that knows whether this bar
-			// has anything to say -- the bar is wearing the box's style and following the box's view.
-			ScrollBarNode->HandleNode->SetWidgetActive(!bShowTrackOnly);
+			// A shown bar always shows its thumb: this box never leaves a bare groove, whatever the handle was left as.
+			ScrollBarNode->HandleNode->SetWidgetActive(true);
 		}
+		ApplyBarTrackOpacity();
 	}
 
 	RefreshContentExtent();
 	{
-		// The style push is this control moving its own content, not the player: the progress it
-		// re-states is the one that was already there.
+		// The style push is this control moving its own content, not the player.
 		FScopedProgrammaticScroll Guard(*this);
-		PushScrollProgress();
+		if (bAuthoredScrollProgressPending)
+		{
+			PushAuthoredScrollProgress();
+		}
+		else if (ScrollView != nullptr)
+		{
+			// Read back, never pushed: the view knows where the content is, and the cached fraction does not
+			// follow a range that moved under it (a range change is not broadcast), so pushing it would put the
+			// content somewhere scrolling never left it.
+			const FVector2D Progress = ScrollView->GetScrollProgress();
+			ScrollProgress = static_cast<float>(bHorizontal ? Progress.X : Progress.Y);
+		}
 	}
 
 	// Announced after the bar is actually in its new state, and only on a change -- a style push runs
 	// for every property edit, and a consumer that heard "still visible" on each of them would have to
 	// filter the event this control is better placed to filter.
+	bScrollBarGutterWasReserved = bReserveGutter;
 	if (bScrollBarWasVisible != bBarVisible)
 	{
 		bScrollBarWasVisible = bBarVisible;
@@ -414,10 +434,25 @@ float UDreamScrollBox::GetScrollProgress() const
 void UDreamScrollBox::SetScrollProgress(float InProgress)
 {
 	ScrollProgress = InProgress;
+	// The authored value again: pushed now, and kept pushing until it lands on content that can scroll -- a
+	// binding that sets it before the box is filled still opens the box there.
+	bAuthoredScrollProgressPending = true;
 	// Code moving the content, so the event that comes back out is not the player's.
 	FScopedProgrammaticScroll Guard(*this);
-	PushScrollProgress();
+	PushAuthoredScrollProgress();
 }
+
+#if WITH_EDITOR
+void UDreamScrollBox::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
+{
+	// Before the base's style push, which is what pushes it.
+	if (PropertyChangedEvent.GetMemberPropertyName() == GET_MEMBER_NAME_CHECKED(UDreamScrollBox, ScrollProgress))
+	{
+		bAuthoredScrollProgressPending = true;
+	}
+	Super::PostEditChangeProperty(PropertyChangedEvent);
+}
+#endif
 
 void UDreamScrollBox::SetOrientation(EDreamPanelOrientation InOrientation)
 {
@@ -643,8 +678,40 @@ void UDreamScrollBox::SetAlwaysShowScrollbarTrack(bool bInAlwaysShow)
 		return;
 	}
 	bAlwaysShowScrollbarTrack = bInAlwaysShow;
-	// The gutter moves with it, so this is a re-layout and not a visibility flip.
-	ApplyStyle();
+	// A repaint and nothing else: it decides how an idle track is drawn, not whether the bar takes room.
+	ApplyBarTrackOpacity();
+}
+
+void UDreamScrollBox::ApplyBarTrackOpacity()
+{
+	UDreamWidget* Track = ScrollBarNode != nullptr ? ScrollBarNode->TrackNode.Get() : nullptr;
+	UDreamVisual* TrackVisual = Track != nullptr ? Track->GetVisual() : nullptr;
+	if (TrackVisual == nullptr)
+	{
+		return;
+	}
+	// SScrollBar::GetTrackOpacity: whole while the bar is hovered or dragged; half while idle under
+	// AlwaysShowScrollbarTrack or AlwaysShowScrollbar; nothing otherwise, so an idle bar shows its thumb alone.
+	float Opacity = 0.0f;
+	if (bBarTrackEngaged)
+	{
+		Opacity = 1.0f;
+	}
+	else if (bAlwaysShowScrollbarTrack || IsAlwaysShowScrollbar())
+	{
+		Opacity = 0.5f;
+	}
+	TrackVisual->SetColorMultiplier(FLinearColor(1.0f, 1.0f, 1.0f, Opacity));
+}
+
+void UDreamScrollBox::HandleBarStateChanged(EUISelectableSelectionState InState, bool /*bInImmediate*/)
+{
+	const bool bEngaged = InState == EUISelectableSelectionState::Hovered || InState == EUISelectableSelectionState::Pressed;
+	if (bEngaged != bBarTrackEngaged)
+	{
+		bBarTrackEngaged = bEngaged;
+		ApplyBarTrackOpacity();
+	}
 }
 
 void UDreamScrollBox::SetWheelScrollAnimationDuration(float InDuration)
@@ -768,7 +835,7 @@ void UDreamScrollBox::SetScrollOffset(float InOffset)
 	}
 	FScopedProgrammaticScroll Guard(*this);
 	// The other axis is read back rather than zeroed: this control drives one, and the behaviour's
-	// setter takes both at once -- the same shape PushScrollProgress uses.
+	// setter takes both at once -- the same shape PushAuthoredScrollProgress uses.
 	FVector2D Offset = ScrollView->GetScrollOffset();
 	if (IsHorizontal())
 	{
@@ -863,15 +930,16 @@ void UDreamScrollBox::RefreshContentExtent()
 	// that is exactly when a box starts or stops overflowing. SScrollBar shows and hides itself on the
 	// same change (its visibility follows the track's IsNeeded()); an auto-hiding bar decided once, at
 	// Initialize, when a box built empty had nothing to scroll, stayed hidden for good. The whole push,
-	// because the answer decides the viewport's gutter as well as the bar, and only when the answer
-	// MOVED, so an ordinary re-measure costs nothing extra.
-	if (!bApplyingStyle && ShouldShowScrollBar() != bScrollBarWasVisible)
+	// because the answer decides the viewport's gutter as well as the bar, and only when one of the two
+	// answers MOVED, so an ordinary re-measure costs nothing extra.
+	if (!bApplyingStyle
+		&& (ShouldShowScrollBar() != bScrollBarWasVisible || ShouldReserveScrollBarGutter() != bScrollBarGutterWasReserved))
 	{
 		ApplyStyle();
 	}
 }
 
-void UDreamScrollBox::PushScrollProgress()
+void UDreamScrollBox::PushAuthoredScrollProgress()
 {
 	if (ScrollView == nullptr)
 	{
@@ -881,7 +949,8 @@ void UDreamScrollBox::PushScrollProgress()
 	// takes both at once.
 	FVector2D Progress = ScrollView->GetScrollProgress();
 	const float Clamped = FMath::Clamp(ScrollProgress, 0.0f, 1.0f);
-	if (IsHorizontal())
+	const bool bHorizontal = IsHorizontal();
+	if (bHorizontal)
 	{
 		Progress.X = Clamped;
 	}
@@ -889,19 +958,22 @@ void UDreamScrollBox::PushScrollProgress()
 	{
 		Progress.Y = Clamped;
 	}
-	ScrollView->SetScrollProgress(Progress);
+	{
+		// What the view says back about this push is this push: the field keeps the value being pushed, which a box
+		// with nothing to scroll yet would otherwise have reported back as zero.
+		TGuardValue<bool> AuthoredGuard(bPushingAuthoredProgress, true);
+		ScrollView->SetScrollProgress(Progress);
+	}
+	// Landed once there is somewhere to scroll; until then it is still owed to the content that is coming.
+	const FVector2D Extent = ScrollView->GetScrollableExtent();
+	if ((bHorizontal ? Extent.X : Extent.Y) > KINDA_SMALL_NUMBER)
+	{
+		bAuthoredScrollProgressPending = false;
+	}
 }
 
-bool UDreamScrollBox::ShouldShowScrollBar() const
+bool UDreamScrollBox::IsContentOverflowing() const
 {
-	if (!bShowScrollBar)
-	{
-		return false;
-	}
-	if (ScrollBarVisibility == EDreamScrollBoxScrollbarVisibility::Permanent)
-	{
-		return true;
-	}
 	if (ContentNode == nullptr || ViewportNode == nullptr)
 	{
 		return true;
@@ -912,10 +984,43 @@ bool UDreamScrollBox::ShouldShowScrollBar() const
 	return Total > Visible + KINDA_SMALL_NUMBER;
 }
 
+bool UDreamScrollBox::ShouldShowScrollBar() const
+{
+	if (!bShowScrollBar)
+	{
+		return false;
+	}
+	switch (ScrollBarVisibility)
+	{
+	case EDreamScrollBoxScrollbarVisibility::Permanent:
+		return true;
+	case EDreamScrollBoxScrollbarVisibility::Hidden:
+		return false;
+	default:
+		return IsContentOverflowing();
+	}
+}
+
+bool UDreamScrollBox::ShouldReserveScrollBarGutter() const
+{
+	if (!bShowScrollBar)
+	{
+		return false;
+	}
+	// A Hidden bar keeps its slot while it is needed, as a Hidden Slate widget keeps its room; Permanent always.
+	return ScrollBarVisibility == EDreamScrollBoxScrollbarVisibility::Permanent || IsContentOverflowing();
+}
+
 void UDreamScrollBox::HandleScrollViewChanged(FVector2D InProgress)
 {
 	const float Axis = static_cast<float>(IsHorizontal() ? InProgress.X : InProgress.Y);
-	ScrollProgress = Axis;
+	if (!bPushingAuthoredProgress)
+	{
+		ScrollProgress = Axis;
+		// Anything else that moved the content -- the player, or code scrolling it -- is newer than the authored
+		// value, which is not to be pushed over it any more.
+		bAuthoredScrollProgressPending = false;
+	}
 	// The bar follows the view through its own subscription, so there is nothing to push here -- only
 	// the control-level re-broadcast a consumer binds to.
 	OnScrolled.Broadcast(Axis);
