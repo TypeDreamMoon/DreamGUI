@@ -197,10 +197,11 @@ void UDreamRichTextBlock::RefreshTextLayout()
 {
 	if (UDreamText* TextVisual = TextNode != nullptr ? Cast<UDreamText>(TextNode->GetVisual()) : nullptr)
 	{
-		// Pushing the SAME prose is what re-runs the parser, which is the whole of a refresh here:
-		// the markup is resolved during parsing, so a style asset edited in place after the last
-		// parse is not seen until the prose goes through again.
-		TextVisual->SetText(Text);
+		// The markup is resolved while it is parsed, so a style asset edited in place after the last parse is
+		// not seen until the prose goes through the parser again. Nothing the paragraph is keyed on changed --
+		// the prose, the assets, the flags are all the same -- so it has to be told to lay out anew: pushing the
+		// same prose through SetText was a no-op, since a text that equals the one it has is ignored.
+		TextVisual->ApplyRecreateText();
 	}
 }
 

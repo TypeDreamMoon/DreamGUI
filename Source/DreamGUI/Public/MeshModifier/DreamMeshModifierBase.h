@@ -18,7 +18,14 @@ enum class EDreamUIMeshModifierHelper_TextPositionType:uint8
 	//Direct set character's position, relative to UIText's pivot position
 	Absolute,
 };
-/** a helper class for UIGeometryModifierBase to easily modify ui geometry */
+/**
+ * a helper class for UIGeometryModifierBase to easily modify ui geometry
+ *
+ * The UITextHelperFunction_* calls address a text's characters by index, one glyph each. A text joins letters into
+ * ligatures ("fi") by default, which would draw two such characters as one glyph, so a modifier that moves, turns,
+ * scales or colours characters one by one calls UDreamText::RegisterPerCharacterAnimation(Self) when it starts and
+ * UnregisterPerCharacterAnimation when it stops (TextAnimation does this for itself).
+ */
 UCLASS(BlueprintType)
 class DREAMGUI_API UDreamVisualBatchMeshModifierHelper : public UDreamUIGeometryHelper
 {

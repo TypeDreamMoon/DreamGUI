@@ -19,6 +19,24 @@ bool UDreamMeshModifierTextAnimation::CheckDreamText()
 	TextObject = Cast<UDreamText>(GetVisualBatchMesh());
 	return IsValid(TextObject);
 }
+void UDreamMeshModifierTextAnimation::SyncRegisteredText()
+{
+	UDreamText* Current = CheckDreamText() ? TextObject.Get() : nullptr;
+	UDreamText* Previous = RegisteredText.Get();
+	if (Current == Previous)
+	{
+		return;
+	}
+	if (Previous != nullptr)
+	{
+		Previous->UnregisterPerCharacterAnimation(this);
+	}
+	RegisteredText = Current;
+	if (Current != nullptr)
+	{
+		Current->RegisterPerCharacterAnimation(this);
+	}
+}
 void UDreamMeshModifierTextAnimation::OnRegister()
 {
 	Super::OnRegister();
@@ -29,9 +47,16 @@ void UDreamMeshModifierTextAnimation::OnRegister()
 			propertyItem->Init();
 		}
 	}
+	// Every property addresses glyphs by character index, which a ligature would merge.
+	SyncRegisteredText();
 }
 void UDreamMeshModifierTextAnimation::OnUnregister()
 {
+	if (UDreamText* Registered = RegisteredText.Get())
+	{
+		Registered->UnregisterPerCharacterAnimation(this);
+	}
+	RegisteredText.Reset();
 	Super::OnUnregister();
 	for (auto propertyItem : Properties)
 	{
@@ -60,11 +85,27 @@ void UDreamMeshModifierTextAnimation::PostEditChangeProperty(FPropertyChangedEve
 }
 #endif
 
+void UDreamMeshModifierTextAnimation::ModifierWillChangeVertexData(bool& OutTriangleIndices, bool& OutVertexPosition, bool& OutUV, bool& OutColor)
+{
+	Super::ModifierWillChangeVertexData(OutTriangleIndices, OutVertexPosition, OutUV, OutColor);
+	// Asked right before the text paints: the last moment a text this modifier has not registered with yet (its visual
+	// was swapped, or there was none when the modifier registered) can still be told to lay out a glyph per character
+	// for the geometry about to be built. Registering after the paint leaves that geometry with ligatures the
+	// properties would index past, and the repaint the registration asks for is cleared with this update's flags.
+	SyncRegisteredText();
+}
 void UDreamMeshModifierTextAnimation::ModifyUIGeometry(
 	FDreamUIGeometry& InGeometry, bool InTriangleChanged, bool InUVChanged, bool InColorChanged, bool InVertexPositionChanged
 )
 {
 	if (!CheckDreamText())return;
+	if (RegisteredText.Get() != TextObject)
+	{
+		// Painted for a text this modifier has not told it animates the characters of, so possibly with ligatures the
+		// properties cannot address by character index. ModifierWillChangeVertexData registers before every paint, so
+		// this is only a guard: leave the geometry as it is rather than index past its characters.
+		return;
+	}
 	if (InGeometry.Vertices.Num() <= 0)return;
 	if (InTriangleChanged || InUVChanged || InColorChanged || InVertexPositionChanged)
 	{
@@ -73,6 +114,13 @@ void UDreamMeshModifierTextAnimation::ModifyUIGeometry(
 			if (Selector->Select(TextObject, Selection))
 			{
 				if (InGeometry.Vertices.Num() <= 0)return;
+				// Every property reads GetCharPropertyArray()[i] for the selected range unchecked. A selector counts
+				// characters from the text's tags and visible count, which the painted characters bound; keep the
+				// range inside them so a count that ran ahead of the paint never reads past the array.
+				const int32 PaintedCharCount = TextObject->GetCharPropertyArray().Num();
+				Selection.EndCharCount = FMath::Min(Selection.EndCharCount, PaintedCharCount);
+				Selection.EndCharCount = FMath::Min(Selection.EndCharCount, Selection.StartCharIndex + Selection.LerpValueArray.Num());
+				if (Selection.StartCharIndex < 0 || Selection.StartCharIndex >= Selection.EndCharCount)return;
 				for (auto propertyItem : Properties)
 				{
 					if (IsValid(propertyItem))

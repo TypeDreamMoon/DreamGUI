@@ -76,14 +76,23 @@ protected:
 		mutable float SelectorOffset = 0.0f;
 
 	UPROPERTY(Transient)TObjectPtr<UDreamText> TextObject;
+	/**
+	 * The text this animator told that it animates the characters of (UDreamText::RegisterPerCharacterAnimation), so
+	 * the text lays out a glyph per character, and so the same text is let go of again when the visual is swapped or
+	 * the animator unregisters.
+	 */
+	TWeakObjectPtr<UDreamText> RegisteredText;
 	FDreamMeshModifierTextAnimation_SelectResult Selection;
 	bool CheckDreamText();
+	/** Moves the per-character registration to the text the modifier finds now, letting go of the one before. */
+	void SyncRegisteredText();
 	virtual void OnRegister()override;
 	virtual void OnUnregister()override;
 #if WITH_EDITOR
 	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)override;
 #endif
 public:
+	virtual void ModifierWillChangeVertexData(bool& OutTriangleIndices, bool& OutVertexPosition, bool& OutUV, bool& OutColor)override;
 	virtual void ModifyUIGeometry(FDreamUIGeometry& InGeometry
 		, bool InTriangleChanged, bool InUVChanged, bool InColorChanged, bool InVertexPositionChanged
 	)override;

@@ -31,6 +31,7 @@
 #include "Interaction/UIButton.h"
 #include "Misc/Char.h"
 #include "Containers/StringConv.h"
+#include "Internationalization/BreakIterator.h"
 #include "SceneView.h"
 #include "Widgets/SViewport.h"
 
@@ -81,6 +82,101 @@ namespace DreamTextInputLocal
 		return (InIndex + 1 < InString.Len()
 			&& StringConv::IsHighSurrogate(InString[InIndex])
 			&& StringConv::IsLowSurrogate(InString[InIndex + 1])) ? 2 : 1;
+	}
+
+	/**
+	 * The grapheme clusters of a text -- what a reader takes for one character, and so what one press of an arrow key
+	 * steps over and what Delete takes: a letter with its combining accents, a surrogate pair, a whole emoji sequence
+	 * (a ZWJ family, a flag, a keycap, a skin tone). ICU's character boundaries, which is what browsers and Slate use.
+	 */
+	struct FGraphemeClusters
+	{
+		explicit FGraphemeClusters(const FString& InText)
+			: Text(InText)
+			, Iterator(FBreakIterator::CreateCharacterBoundaryIterator())
+		{
+			Iterator->SetStringRef(&Text);
+		}
+		~FGraphemeClusters()
+		{
+			Iterator->ClearString();
+		}
+		/** Whether a caret may stand at InOffset: the two ends of the text, and every edge between two clusters. */
+		bool IsBoundary(int32 InOffset)
+		{
+			return InOffset <= 0 || InOffset >= Text.Len() || After(InOffset - 1) == InOffset;
+		}
+		/** The cluster edge before InOffset, or the start of the text. */
+		int32 Before(int32 InOffset)
+		{
+			if (InOffset <= 0)return 0;
+			const int32 Boundary = Iterator->MoveToCandidateBefore(FMath::Min(InOffset, Text.Len()));
+			return Boundary == INDEX_NONE ? 0 : Boundary;
+		}
+		/** The cluster edge after InOffset, or the end of the text. */
+		int32 After(int32 InOffset)
+		{
+			if (InOffset >= Text.Len())return Text.Len();
+			const int32 Boundary = Iterator->MoveToCandidateAfter(FMath::Max(InOffset, 0));
+			return Boundary == INDEX_NONE ? Text.Len() : FMath::Min(Boundary, Text.Len());
+		}
+		/** Where the cluster holding the code unit at InOffset starts: InOffset itself when a cluster starts there. */
+		int32 StartOf(int32 InOffset)
+		{
+			return IsBoundary(InOffset) ? FMath::Clamp(InOffset, 0, Text.Len()) : Before(InOffset);
+		}
+		const FString& Text;
+		TSharedRef<IBreakIterator> Iterator;
+	};
+
+	/**
+	 * Whether the grapheme cluster starting at InClusterStart is part of a word, for Ctrl+Arrow and a double click: read
+	 * off the character the cluster is built on, so a letter with combining accents is a letter, and an accent never
+	 * reads as the gap between two words.
+	 */
+	static bool IsWordCluster(const FString& InText, int32 InClusterStart)
+	{
+		const TCHAR Base = InText[InClusterStart];
+		return FChar::IsAlnum(Base) || Base == '_';
+	}
+
+	/** A code point that only exists as part of an emoji sequence. */
+	static bool IsEmojiSequencePart(uint32 InCodePoint)
+	{
+		return InCodePoint == FDreamUIText_CodePoint::UNICODE_ZWJ
+			|| (InCodePoint >= 0xFE00 && InCodePoint <= 0xFE0F)//variation selectors
+			|| (InCodePoint >= 0xE0100 && InCodePoint <= 0xE01EF)//ideographic variation selectors
+			|| FDreamUIText_CodePoint::IsSkinToneModifier(InCodePoint)
+			|| FDreamUIText_CodePoint::IsRegionalIndicator(InCodePoint)
+			|| FDreamUIText_CodePoint::IsTagCharacter(InCodePoint)
+			|| InCodePoint == FDreamUIText_CodePoint::UNICODE_COMBINING_ENCLOSING_KEYCAP;
+	}
+
+	/**
+	 * Where Backspace starts deleting, for a caret at InCaret: what Chrome deletes. A cluster that is an emoji
+	 * sequence, a line break written "\r\n", or one code point (a surrogate pair is one) goes whole -- half of any of
+	 * them is not something anyone typed. A letter with combining marks loses its last code point only, so Backspace
+	 * after "e" + an acute accent leaves the "e", taking back the last thing typed rather than the whole letter.
+	 */
+	static int32 BackspaceStart(const FString& InText, int32 InCaret)
+	{
+		InCaret = FMath::Clamp(InCaret, 0, InText.Len());
+		if (InCaret == 0)return 0;
+		FGraphemeClusters Clusters(InText);
+		const int32 ClusterStart = Clusters.Before(InCaret);
+		int32 LastCodePointStart = ClusterStart;
+		int32 CodePointCount = 0;
+		bool bWhole = false;
+		for (int32 Index = ClusterStart; Index < InCaret;)
+		{
+			int Units = 1;
+			const uint32 CodePoint = FDreamUIText_CodePoint::DecodeCodePointAt(InText, InText.Len(), Index, Units);
+			bWhole = bWhole || IsEmojiSequencePart(CodePoint) || CodePoint == '\r';
+			LastCodePointStart = Index;
+			CodePointCount++;
+			Index += Units;
+		}
+		return (bWhole || CodePointCount <= 1) ? ClusterStart : LastCodePointStart;
 	}
 }
 
@@ -1063,7 +1159,21 @@ int32 UUITextInput::GetCharIndexOfCaret(int32 InCaretIndex)
 		return FMath::Clamp(InCaretIndex, 0, Text.Len());
 	}
 	TextVisual->SetText(FText::FromString(GetReplaceText()));
-	return FMath::Clamp(TextVisual->GetCharIndexByCaretIndex(InCaretIndex), 0, Text.Len());
+	const int32 CharIndex = FMath::Clamp(TextVisual->GetCharIndexByCaretIndex(InCaretIndex), 0, Text.Len());
+	// A password mask draws one mask character per code unit, so under it a press or the IME can stand the caret inside
+	// a grapheme cluster of the real text -- between the halves of a surrogate pair. Every edit reads the caret here,
+	// and reads such a caret at the end of its cluster, as UDreamText::GetCaretIndexByCharIndex sends an offset inside a
+	// cluster to the caret just past it: nothing typed, deleted or selected splits a cluster. Unmasked, the layout
+	// keeps a caret at cluster edges only, and there is nothing to snap.
+	if (InputType == EUITextInputType::Password || DisplayType == EUITextInputDisplayType::Password)
+	{
+		DreamTextInputLocal::FGraphemeClusters Clusters(Text);
+		if (!Clusters.IsBoundary(CharIndex))
+		{
+			return Clusters.After(CharIndex);
+		}
+	}
+	return CharIndex;
 }
 int32 UUITextInput::GetCaretIndexOfChar(int32 InCharIndex)
 {
@@ -1138,23 +1248,13 @@ void UUITextInput::BackSpace()
 {
 	if (bReadOnly)return;
 	if (DeleteSelection(true))return;//a selection that covers anything is what goes
-	// In source offsets throughout, never caret indices. The caret one step back can stand at the very
+	// In source offsets throughout, never caret indices: the caret one step back can stand at the very
 	// same position -- the end of a soft-wrapped line and the start of the next are one position, and
-	// stepping back onto that nameless caret used to delete from the start of the text -- and the
-	// character before the caret can be several code units: an emoji, a surrogate pair, the markup in
-	// front of a rich text glyph.
+	// stepping back onto that nameless caret used to delete from the start of the text. What goes is
+	// read off the text itself, as a browser reads it: see DreamTextInputLocal::BackspaceStart.
 	const int32 CaretCharIndex = GetCharIndexOfCaret(CaretPositionIndex);
 	if (CaretCharIndex <= 0)return;
-	int32 RemoveFromCharIndex = CaretCharIndex - 1;
-	for (int32 CaretIndex = CaretPositionIndex - 1; CaretIndex >= 0; CaretIndex--)
-	{
-		const int32 CharIndex = GetCharIndexOfCaret(CaretIndex);
-		if (CharIndex < CaretCharIndex)
-		{
-			RemoveFromCharIndex = CharIndex;
-			break;
-		}
-	}
+	const int32 RemoveFromCharIndex = DreamTextInputLocal::BackspaceStart(Text, CaretCharIndex);
 	PushUndoSnapshot();//before the text changes: an undo lands where the edit began
 	Text.RemoveAt(RemoveFromCharIndex, CaretCharIndex - RemoveFromCharIndex);
 	// Put back by offset against the text as now laid out: a deletion that undoes a wrap above the
@@ -1166,22 +1266,13 @@ void UUITextInput::ForwardSpace()
 {
 	if (bReadOnly)return;
 	if (DeleteSelection(true))return;
-	// BackSpace's mirror, in offsets for the same reasons: the next caret along can stand at this same
-	// position (the start of the line after a soft wrap), and the character after the caret can be
-	// several code units.
+	// BackSpace's mirror, in offsets for the same reason: the next caret along can stand at this same
+	// position (the start of the line after a soft wrap). Delete takes the whole grapheme cluster after
+	// the caret, as every browser does -- a letter with its accents, a whole emoji sequence -- since no
+	// caret stands inside one to delete up to.
 	const int32 CaretCharIndex = GetCharIndexOfCaret(CaretPositionIndex);
 	if (CaretCharIndex >= Text.Len())return;
-	int32 RemoveToCharIndex = CaretCharIndex + 1;
-	const int32 LastCaretIndex = DreamTextInputLocal::CanMapCaretIndices(TextVisual) ? TextVisual->GetLastCaret() : Text.Len();
-	for (int32 CaretIndex = CaretPositionIndex + 1; CaretIndex <= LastCaretIndex; CaretIndex++)
-	{
-		const int32 CharIndex = GetCharIndexOfCaret(CaretIndex);
-		if (CharIndex > CaretCharIndex)
-		{
-			RemoveToCharIndex = CharIndex;
-			break;
-		}
-	}
+	const int32 RemoveToCharIndex = FMath::Max(DreamTextInputLocal::FGraphemeClusters(Text).After(CaretCharIndex), CaretCharIndex + 1);
 	PushUndoSnapshot();
 	Text.RemoveAt(CaretCharIndex, RemoveToCharIndex - CaretCharIndex);
 	SetCaretByCharIndex(CaretCharIndex);
@@ -1262,23 +1353,27 @@ void UUITextInput::SelectWordAtCaret()
 	if (!DreamTextInputLocal::CanMapCaretIndices(TextVisual))return;
 	if (Text.Len() == 0)return;
 	TextVisual->SetText(FText::FromString(GetReplaceText()));
-	const int32 CaretCharIndex = FMath::Clamp(TextVisual->GetCharIndexByCaretIndex(CaretPositionIndex), 0, Text.Len());
-	auto IsWordChar = [](TCHAR c) { return FChar::IsAlnum(c) || c == '_'; };
+	// Grown a whole grapheme cluster at a time, each read as Ctrl+Arrow reads it (DreamTextInputLocal::IsWordCluster):
+	// a letter with combining accents belongs to the word, so the selection never ends between the two.
+	DreamTextInputLocal::FGraphemeClusters Clusters(Text);
+	const int32 CaretCharIndex = Clusters.StartOf(FMath::Clamp(TextVisual->GetCharIndexByCaretIndex(CaretPositionIndex), 0, Text.Len()));
 
 	int32 StartCharIndex = CaretCharIndex;
 	int32 EndCharIndex = CaretCharIndex;
 	// A double click on a space selects the run of spaces, on a word the whole word: the run under
-	// the caret is whatever the character to its right is made of, falling back to the one on its
+	// the caret is whatever the cluster to its right is made of, falling back to the one on its
 	// left at the end of the text.
-	const int32 ProbeIndex = (CaretCharIndex < Text.Len()) ? CaretCharIndex : CaretCharIndex - 1;
-	const bool bWantWordChars = IsWordChar(Text[ProbeIndex]);
-	while (StartCharIndex > 0 && IsWordChar(Text[StartCharIndex - 1]) == bWantWordChars)
+	const int32 ProbeIndex = (CaretCharIndex < Text.Len()) ? CaretCharIndex : Clusters.Before(CaretCharIndex);
+	const bool bWantWordChars = DreamTextInputLocal::IsWordCluster(Text, ProbeIndex);
+	while (StartCharIndex > 0)
 	{
-		StartCharIndex--;
+		const int32 PreviousClusterStart = FMath::Min(Clusters.Before(StartCharIndex), StartCharIndex - 1);
+		if (DreamTextInputLocal::IsWordCluster(Text, PreviousClusterStart) != bWantWordChars)break;
+		StartCharIndex = PreviousClusterStart;
 	}
-	while (EndCharIndex < Text.Len() && IsWordChar(Text[EndCharIndex]) == bWantWordChars)
+	while (EndCharIndex < Text.Len() && DreamTextInputLocal::IsWordCluster(Text, EndCharIndex) == bWantWordChars)
 	{
-		EndCharIndex++;
+		EndCharIndex = FMath::Max(Clusters.After(EndCharIndex), EndCharIndex + 1);
 	}
 	if (StartCharIndex == EndCharIndex)return;
 
@@ -1693,7 +1788,24 @@ void UUITextInput::MoveCaret(int32 moveType, bool withSelection)
 
 	auto CaretPosition3D = CaretWidget->GetRelativeLocation();
 	auto CaretPosition = FVector2f(CaretPosition3D.Y, CaretPosition3D.Z);
-	if (uiText->MoveCaret(moveType, CaretPositionIndex, CaretPositionLineIndex, CaretPosition))
+	const bool bMoved = uiText->MoveCaret(moveType, CaretPositionIndex, CaretPositionLineIndex, CaretPosition);
+	// Left and Right step over a whole grapheme cluster of the field's text, as in a browser. The layout keeps one caret
+	// per cluster of the text it draws, and that is the field's text except under a password mask, which draws one mask
+	// character per code unit: there carets stand inside the field's clusters -- between a letter and its combining
+	// accent, between the halves of a surrogate pair -- and are stepped past, so one press never stops halfway through
+	// what the player typed as one character.
+	if (bMoved && (moveType == 0 || moveType == 1) && DreamTextInputLocal::CanMapCaretIndices(TextVisual))
+	{
+		DreamTextInputLocal::FGraphemeClusters Clusters(Text);
+		while (!Clusters.IsBoundary(uiText->GetCharIndexByCaretIndex(CaretPositionIndex)))
+		{
+			if (!uiText->MoveCaret(moveType, CaretPositionIndex, CaretPositionLineIndex, CaretPosition))
+			{
+				break;//either end of the text, which is a boundary of its own
+			}
+		}
+	}
+	if (bMoved)
 	{
 		UpdateCaretPosition(!withSelection);
 		UpdateUITextComponent();
@@ -1728,25 +1840,31 @@ void UUITextInput::MoveCaretByWord(int32 InDirection, bool withSelection)
 	// Built on the single-step move rather than beside it, so word motion inherits the caret /
 	// line-index / scroll bookkeeping MoveCaret already does instead of keeping a second copy of it.
 	const int32 MoveType = (InDirection < 0) ? 0 : 1;
-	auto IsWordChar = [](TCHAR c) { return FChar::IsAlnum(c) || c == '_'; };
-	auto CharAcross = [&](int32 InCaretIndex)->TCHAR
+	// A step crosses a whole grapheme cluster (see MoveCaret), and is read by that cluster: a letter with combining
+	// accents is a letter (DreamTextInputLocal::IsWordCluster), so an accent never ends the word it is in.
+	DreamTextInputLocal::FGraphemeClusters Clusters(Text);
+	enum class ECrossing : uint8 { Nothing, Word, Gap };
+	auto ClusterAcross = [&](int32 InCaretIndex)
 	{
-		//the character the caret would step over, which is the one BEFORE it when moving left
-		const int32 CharIndex = TextVisual->GetCharIndexByCaretIndex(InCaretIndex) + (InDirection < 0 ? -1 : 0);
-		return (CharIndex >= 0 && CharIndex < Text.Len()) ? Text[CharIndex] : TEXT('\0');
+		//the cluster the caret would step over, which is the one BEFORE it when moving left
+		const int32 CharIndex = FMath::Clamp(TextVisual->GetCharIndexByCaretIndex(InCaretIndex), 0, Text.Len());
+		const int32 Crossed = (InDirection < 0) ? CharIndex - 1 : CharIndex;
+		if (Crossed < 0 || Crossed >= Text.Len())return ECrossing::Nothing;
+		return DreamTextInputLocal::IsWordCluster(Text, Clusters.StartOf(Crossed)) ? ECrossing::Word : ECrossing::Gap;
 	};
 
 	TextVisual->SetText(FText::FromString(GetReplaceText()));
 	//first skip the run of separators next to the caret, then the run of word characters: this is
 	//what every editor's Ctrl+Arrow does, and it is why one press can cross " , " and land on a word
 	bool bSeenWordChar = false;
-	for (int32 Step = 0; Step < Text.Len() + 1; Step++)
+	// Each step moves the caret on or ends the loop, so there are never more steps than carets.
+	const int32 StepLimit = FMath::Max(TextVisual->GetLastCaret(), 0) + 2;
+	for (int32 Step = 0; Step < StepLimit; Step++)
 	{
 		const int32 BeforeIndex = CaretPositionIndex;
-		const TCHAR Across = CharAcross(CaretPositionIndex);
-		if (Across == TEXT('\0') && Step > 0)break;
-		const bool bIsWordChar = IsWordChar(Across);
-		if (bIsWordChar)
+		const ECrossing Across = ClusterAcross(CaretPositionIndex);
+		if (Across == ECrossing::Nothing && Step > 0)break;
+		if (Across == ECrossing::Word)
 		{
 			bSeenWordChar = true;
 		}
@@ -2006,6 +2124,9 @@ void UUITextInput::UpdateCaretPosition(FVector2f InCaretPosition, bool InHideSel
 			, FVector2D(0, 0.5), FVector2D(0, 0.5)
 			, FVector2D::Zero(), FVector2D(CaretWidth, TextVisual->GetFontSize())});
 		auto CaretVisual = CaretWidget->CreateNewVisual<UDreamImage>();
+		// Drawn over the text, never hit: the caret sits where the last press landed, and a second press there has to
+		// reach the text as the first did, or it is a press on another widget and no double click.
+		CaretVisual->SetRaycastTarget(false);
 		CaretVisual->SetColor(CaretColor);
 		CaretVisual->SetBrush_DreamUISprite(UDreamUISpriteData::GetDefaultWhiteSolid());
 	}
@@ -2034,6 +2155,8 @@ void UUITextInput::UpdateSelection()
 			SpriteWidget->SetHeight(TextVisual->GetFontSize());
 			SpriteWidget->SetPivot(FVector2D(0, 0.5f));
 			auto SelectionVisual = SpriteWidget->CreateNewVisual<UDreamImage>();
+			// Like the caret, drawn over the text and never hit, so presses on selected text still reach the text.
+			SelectionVisual->SetRaycastTarget(false);
 			SelectionVisual->SetColor(SelectionColor);
 			SelectionVisual->SetBrush_DreamUISprite(UDreamUISpriteData::GetDefaultWhiteSolid());
 			SelectionMaskObjectArray.Add(SelectionVisual);
@@ -2097,6 +2220,7 @@ void UUITextInput::UpdateCompositionUnderline()
 			StripWidget->SetHeight(CompositionUnderlineThickness);
 			StripWidget->SetPivot(FVector2D(0, 0.5f));
 			auto StripVisual = StripWidget->CreateNewVisual<UDreamImage>();
+			StripVisual->SetRaycastTarget(false);
 			StripVisual->SetColor(CompositionUnderlineColor);
 			StripVisual->SetBrush_DreamUISprite(UDreamUISpriteData::GetDefaultWhiteSolid());
 			CompositionUnderlineObjectArray.Add(StripVisual);

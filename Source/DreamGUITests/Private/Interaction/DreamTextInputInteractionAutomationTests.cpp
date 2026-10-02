@@ -1259,4 +1259,194 @@ bool FDreamTextInputImeContextOutlivesItsFieldTest::RunTest(const FString& Param
 	return true;
 }
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamTextInputGraphemeClustersTest,
+	"DreamGUI.TextInput.ArrowsAndDeleteCrossWholeCharactersAndBackspaceTakesAnAccentAlone",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamTextInputGraphemeClustersTest, "DreamGUI.TextInput.ArrowsAndDeleteCrossWholeCharactersAndBackspaceTakesAnAccentAlone", "[Pointer][Text][Animated]")
+
+/*
+ * What a reader takes for one character is a grapheme cluster, and the field stepped over one laid-out element instead,
+ * which is not always the same thing: a letter and its combining accent are two elements, so Right stopped between them
+ * and Delete took the letter and left the accent standing alone. Browsers move over a whole cluster and delete forward a
+ * whole cluster; backward they take a whole emoji sequence but only the accent off a letter that has one. Here a ZWJ
+ * family -- eight code units, one character -- is stepped over with Right and taken by one Backspace, and "e" with a
+ * combining acute accent is stepped over with Right, loses only the accent to Backspace, and goes whole to Delete.
+ */
+bool FDreamTextInputGraphemeClustersTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamTextInputInteractionTestLocal;
+	FDreamDriverRig Rig = FDreamDriverRig::Headless(ViewportSize);
+	Rig.BindTest(this);
+	UDreamTextInput* Field = MakeObservedField(Rig, nullptr);
+	const FString Family(TEXT("\U0001F468\u200D\U0001F469\u200D\U0001F467"));
+	const FString Accented(TEXT("e\u0301"));
+	if (!TestTrue(TEXT("The rig and the field came up"), Rig.IsUsable() && Field != nullptr)
+		|| !TestEqual(TEXT("The family is eight code units"), Family.Len(), 8))
+	{
+		return false;
+	}
+	Field->SetText(TEXT("a") + Family + TEXT("b"));
+	Rig.PumpFrames(1);
+
+	// Clicked into (which selects everything), then Home to stand before the "a".
+	FDreamElementRef FieldElement = Rig.Driver()->Find(FDreamBy::Name(TEXT("Username")));
+	FieldElement->Type(EKeys::Home);
+	FieldElement->Type(EKeys::Right);
+	FieldElement->Type(EKeys::Right);
+	FieldElement->Type(TEXT("X"));
+	TestEqualSensitive(TEXT("Two presses of Right step over the letter and the whole family"), Field->GetText(), TEXT("a") + Family + TEXT("Xb"));
+	FieldElement->Type(EKeys::Left);
+	FieldElement->Type(EKeys::BackSpace);
+	TestEqualSensitive(TEXT("Backspace after the family takes all of it"), Field->GetText(), FString(TEXT("aXb")));
+
+	// Enter ends the edit, so the next key clicks in again.
+	FieldElement->Type(EKeys::Enter);
+	Field->SetText(Accented + TEXT("x"));
+	FieldElement->Type(EKeys::Home);
+	FieldElement->Type(EKeys::Right);
+	FieldElement->Type(TEXT("Y"));
+	TestEqualSensitive(TEXT("Right steps over a letter and its accent together"), Field->GetText(), Accented + TEXT("Yx"));
+	FieldElement->Type(EKeys::Left);
+	FieldElement->Type(EKeys::BackSpace);
+	TestEqualSensitive(TEXT("Backspace after them takes the accent alone, as Chrome does"), Field->GetText(), FString(TEXT("eYx")));
+
+	FieldElement->Type(EKeys::Enter);
+	Field->SetText(Accented + TEXT("x"));
+	FieldElement->Type(EKeys::Home);
+	FieldElement->Type(EKeys::Delete);
+	TestEqualSensitive(TEXT("Delete before them takes the letter and its accent together"), Field->GetText(), FString(TEXT("x")));
+
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamTextInputWordsAreWholeClustersTest,
+	"DreamGUI.TextInput.CtrlLeftAndADoubleClickTakeAnAccentedLetterAsPartOfItsWord",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamTextInputWordsAreWholeClustersTest, "DreamGUI.TextInput.CtrlLeftAndADoubleClickTakeAnAccentedLetterAsPartOfItsWord", "[Pointer][Text][Animated]")
+
+/*
+ * Ctrl+Arrow and a double click found the edges of a word by reading the code unit next to the caret, and a combining
+ * accent is neither a letter nor a digit, so it read as the gap between two words. In "voir etude" with the first "e" of
+ * "etude" written as an "e" and a combining acute accent, Ctrl+Left from the end stopped after the accented letter, and a
+ * double click inside "tude" selected "tude" alone. A word is grown a grapheme cluster at a time, each cluster read by the
+ * character it is built on. Here Ctrl+Left from the end has to land before the accented letter, and a double click on the
+ * caret before the "u" has to select the whole word, each shown by where the next character typed goes.
+ */
+bool FDreamTextInputWordsAreWholeClustersTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamTextInputInteractionTestLocal;
+	FDreamDriverRig Rig = FDreamDriverRig::Headless(ViewportSize);
+	Rig.BindTest(this);
+	UDreamTextInput* Field = MakeObservedField(Rig, nullptr);
+	UDreamEventSystem* EventSystem = Rig.EventSystem();
+	const FString Word(TEXT("e\u0301tude"));
+	const FString Value = TEXT("voir ") + Word;
+	if (!TestTrue(TEXT("The rig and the field came up"), Rig.IsUsable() && Field != nullptr && Field->TextNode != nullptr)
+		|| !TestNotNull(TEXT("The rig has an event system, whose clock says how quick a double click is"), EventSystem)
+		|| !TestEqual(TEXT("The word is six code units, the accent one of them"), Word.Len(), 6))
+	{
+		return false;
+	}
+	Field->SetText(Value);
+	Rig.PumpFrames(1);
+
+	// Clicked into (which selects everything), then End to stand after the last letter.
+	FDreamElementRef FieldElement = Rig.Driver()->Find(FDreamBy::Name(TEXT("Username")));
+	FieldElement->Type(EKeys::End);
+	FieldElement->TypeChord(EKeys::LeftControl, EKeys::Left);
+	FieldElement->Type(TEXT("X"));
+	TestEqualSensitive(TEXT("Ctrl+Left from the end lands at the start of the word, before the accented letter"), Field->GetText(), TEXT("voir X") + Word);
+	FieldElement->Type(EKeys::BackSpace);
+	UDreamText* Shown = Cast<UDreamText>(Field->TextNode->GetVisual());
+	if (!TestEqualSensitive(TEXT("Backspace takes the X back out"), Field->GetText(), Value)
+		|| !TestNotNull(TEXT("The field has a text part to draw with"), Shown)
+		|| !TestEqualSensitive(TEXT("All of it is on show"), Shown->GetText().ToString(), Value))
+	{
+		return false;
+	}
+
+	// Pressed twice on the caret before the "u": inside the word, past its accented letter.
+	const TOptional<FVector2D> BeforeU = CaretPixel(*Shown, Shown->GetCaretIndexByCharIndex(Value.Len() - 3));
+	if (!TestTrue(TEXT("The caret before the u is on screen"), BeforeU.IsSet())
+		|| !TestTrue(TEXT("The double-click time is longer than a pair of clicks takes"), EventSystem->GetDoubleClickTime() > 0.1f))
+	{
+		return false;
+	}
+	// Past the double-click time since the click that started the edit, so the pair is a run of its own.
+	Rig.PumpFrames(FMath::CeilToInt(EventSystem->GetDoubleClickTime() / Rig.Context().FrameSeconds) + 1);
+	TestTrue(TEXT("Two quick presses on one spot inside the word complete"),
+		Rig.Driver()->Sequence()
+			.MoveToPixel(BeforeU.GetValue()).Press().Release()
+			.MoveToPixel(BeforeU.GetValue()).Press().Release()
+			.Perform());
+	const UDreamPointerEventData* Pointer = Rig.Context().GetPointerEventData(0);
+	if (!TestNotNull(TEXT("The pointer has a state to read"), Pointer)
+		|| !TestEqual(TEXT("The two presses were one double click"), Pointer->ClickCount, 2))
+	{
+		return false;
+	}
+	FieldElement->Type(TEXT("Y"));
+	TestEqualSensitive(TEXT("The double click selected the whole word, its accented letter included"), Field->GetText(), FString(TEXT("voir Y")));
+
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamTextInputMaskedCaretInsideAnEmojiTest,
+	"DreamGUI.TextInput.UnderAPasswordMaskACaretBetweenTheHalvesOfAnEmojiNeverSplitsIt",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamTextInputMaskedCaretInsideAnEmojiTest, "DreamGUI.TextInput.UnderAPasswordMaskACaretBetweenTheHalvesOfAnEmojiNeverSplitsIt", "[Pointer][Text][Animated]")
+
+/*
+ * A password mask draws one mask character per code unit, so an emoji is drawn as two of them, with a caret between them
+ * that stands inside the emoji's surrogate pair -- and a press or the IME can put the field's caret there. Backspace then
+ * took the high half alone and Delete the low half alone, leaving half a pair in the text. Every edit now reads such a
+ * caret at the end of the character it stands in. Here the IME puts the caret between the halves of the emoji in "a",
+ * the emoji, "b": Backspace takes the whole emoji, and, with the caret put there again, Delete takes the "b" after the
+ * emoji and leaves the emoji whole.
+ */
+bool FDreamTextInputMaskedCaretInsideAnEmojiTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamTextInputInteractionTestLocal;
+	FDreamDriverRig Rig = FDreamDriverRig::Headless(ViewportSize);
+	Rig.BindTest(this);
+	UDreamTextInput* Field = MakeObservedField(Rig, nullptr);
+	const FString Emoji(EmojiText);
+	const FString Value = TEXT("a") + Emoji + TEXT("b");
+	if (!TestTrue(TEXT("The rig and the field came up"), Rig.IsUsable() && Field != nullptr)
+		|| !TestEqual(TEXT("The emoji is two code units"), Emoji.Len(), 2))
+	{
+		return false;
+	}
+	Field->SetIsPassword(true);
+	Field->SetText(Value);
+	Rig.PumpFrames(1);
+
+	// Clicked into, which selects everything, then End, which leaves nothing selected.
+	FDreamElementRef FieldElement = Rig.Driver()->Find(FDreamBy::Name(TEXT("Username")));
+	FieldElement->Type(EKeys::End);
+	const TSharedPtr<ITextInputMethodContext> Ime = ImeOf(Field);
+	const UDreamText* Shown = Field->TextNode != nullptr ? Cast<UDreamText>(Field->TextNode->GetVisual()) : nullptr;
+	if (!TestTrue(TEXT("The field is being edited, with an IME context"), IsEditing(Field) && Ime.IsValid())
+		|| !TestNotNull(TEXT("The field has a text part to draw with"), Shown)
+		|| !TestEqual(TEXT("The emoji is drawn as two mask characters, one per code unit"), Shown->GetText().ToString(), FString(TEXT("****"))))
+	{
+		return false;
+	}
+
+	// Offset 2 is between the emoji's two halves, where the mask has a caret of its own.
+	Ime->SetSelectionRange(2, 0, ITextInputMethodContext::ECaretPosition::Ending);
+	FieldElement->Type(EKeys::BackSpace);
+	TestEqualSensitive(TEXT("Backspace takes the whole emoji"), Field->GetText(), FString(TEXT("ab")));
+
+	Field->SetText(Value);
+	Ime->SetSelectionRange(2, 0, ITextInputMethodContext::ECaretPosition::Ending);
+	FieldElement->Type(EKeys::Delete);
+	TestEqualSensitive(TEXT("Delete takes what follows the emoji and leaves the emoji whole"), Field->GetText(), TEXT("a") + Emoji);
+
+	return true;
+}
+
 #endif

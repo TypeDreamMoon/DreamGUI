@@ -59,7 +59,11 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetCustomStyleData", BlueprintSetter = "SetCustomStyleData", Category = "Rich Text")
 	TObjectPtr<UDreamUIRichTextCustomStyleData> CustomStyleData = nullptr;
 
-	/** What `<img=key/>` means. Null draws nothing for an image tag. */
+	/**
+	 * What `<img=key/>` means. Null draws nothing for an image tag. The tag may also give a size and where the image sits
+	 * on its line: `<img=key,24/>`, `<img=key,24,32/>`, `<img=key,24,baseline/>` -- middle (the default, centred), baseline,
+	 * top or bottom. An image taller than its line makes the line taller.
+	 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetImageData", BlueprintSetter = "SetImageData", Category = "Rich Text")
 	TObjectPtr<UDreamUIRichTextImageData_BaseObject> ImageData = nullptr;
 
@@ -183,13 +187,6 @@ public:
 	void SetMinDesiredWidth(float InMinDesiredWidth);
 
 	/**
-	 * Re-parse the markup and lay the paragraph out again -- UMG's RefreshTextLayout.
-	 *
-	 * The prose has not changed, so this is not SetText: what may have changed is what the markup
-	 * RESOLVES against (a style asset edited in place, an image data asset reloaded), and the parser
-	 * only reads those while it is parsing.
-	 */
-	/**
 	 * The DEFAULT typeface for undecorated prose -- UMG's SetDefaultFont, minus what FSlateFontInfo
 	 * packs in beside it: the size is Style.FontSize and the outline is Style.TextStyle. Markup may
 	 * still switch the face per run; this is what a run that says nothing gets.
@@ -203,6 +200,13 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Rich Text")
 	void SetDefaultFont(UDreamUIFontData_BaseObject* InFont);
 
+	/**
+	 * Re-parse the markup and lay the paragraph out again -- UMG's RefreshTextLayout.
+	 *
+	 * The prose has not changed, so this is not SetText: what may have changed is what the markup
+	 * RESOLVES against (a style asset edited in place, an image data asset reloaded), and the parser
+	 * only reads those while it is parsing.
+	 */
 	UFUNCTION(BlueprintCallable, Category = "Rich Text")
 	void RefreshTextLayout();
 
