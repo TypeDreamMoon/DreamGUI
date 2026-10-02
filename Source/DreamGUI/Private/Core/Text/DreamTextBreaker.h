@@ -34,6 +34,15 @@ public:
 	 */
 	static void ComputeFallbackBreakOpportunities(const TArray<uint32>& ElementCodepoints, TBitArray<>& OutCanBreakBefore);
 
+	/**
+	 * One bit per element: an extended grapheme cluster (UAX #29) starts at this element, so a caret may stand before it
+	 * and a line may be cut there. ICU's character iterator decides, plus the Indic conjunct rule of Unicode 15.1 (GB9c:
+	 * a consonant, a virama and the next consonant are one cluster) that the engine's ICU predates. Text with nothing at
+	 * or above U+0300 is all single code points and never asks ICU.
+	 */
+	static void ComputeGraphemeStarts(const FString& PlainText, const TArray<int32>& ElementPlainStart,
+		const TArray<uint32>& ElementCodepoints, TBitArray<>& OutGraphemeStart);
+
 	/** Han, Kana, Hangul: the scripts whose "words" the line-break rules cannot see. */
 	static bool IsCJKCodepoint(uint32 Codepoint);
 	/** A space a line may break after: ASCII space and tab, the ideographic space, the en/em family. */
@@ -44,9 +53,11 @@ public:
 	 * fallback has to pick somewhere, and a browser's break-all still keeps closing punctuation off
 	 * the start of a line and opening brackets off the end of one. Returns the element index to
 	 * break before, searching back from BreakBefore to just after LineStart, or INDEX_NONE when no
-	 * cut on this line is safe -- then the run overflows, which is also what a browser does.
+	 * cut on this line is safe -- then the run overflows, which is also what a browser does. With
+	 * ClusterStarts, only an element whose bit is set is a cut: a base and its marks, a conjunct and
+	 * a ligature stay on one line.
 	 */
-	static int32 FindKinsokuSafeFallback(const TArray<uint32>& ElementCodepoints, int32 LineStart, int32 BreakBefore);
+	static int32 FindKinsokuSafeFallback(const TArray<uint32>& ElementCodepoints, int32 LineStart, int32 BreakBefore, const TBitArray<>* ClusterStarts = nullptr);
 	static bool IsClosingPunctuation(uint32 Codepoint);
 	static bool IsOpeningPunctuation(uint32 Codepoint);
 };

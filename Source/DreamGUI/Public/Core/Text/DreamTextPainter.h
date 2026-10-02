@@ -37,12 +37,25 @@ struct FDreamTextPaintParams
 	 * -- what there is, and what UMG's own ShadowOffset does, is to draw the glyphs again, offset, in
 	 * another colour. The outline is that eight times around the glyph, which is the standard stand-in
 	 * for a real one. Offsets and widths are in em, like every other length in FDreamTextStyle, and are
-	 * ignored entirely when bDistanceField is set (the shader draws the real thing there).
+	 * ignored entirely when bDistanceField is set (the shader draws the real thing there). Every shadow
+	 * is drawn before any outline and every outline before any face, as Slate draws them in whole-run
+	 * passes, so one glyph's outline never lands on its neighbour's face.
 	 */
 	FColor BitmapShadowColor = FColor(0, 0, 0, 0);
 	FVector2f BitmapShadowOffsetEm = FVector2f::ZeroVector;
 	FColor BitmapOutlineColor = FColor(0, 0, 0, 0);
 	float BitmapOutlineWidthEm = 0.0f;
+
+	/** Colours that replace a rich-text tag's glyph colour at paint time (a hovered or pressed link): pairs of an index into DisplayList.CustomTags and the colour. Applied without laying out again. */
+	const TArray<TPair<int32, FColor>>* TagColorOverrides = nullptr;
+
+	/**
+	 * Draw each character's underline and strikethrough as a piece of its own, inside that character's vertex range,
+	 * so whatever animates the characters one by one moves, fades and reveals the strokes with them; a piece reaches
+	 * across what follows its glyph with no piece of its own, a space or an emoji. Otherwise a stroke is one strip per
+	 * run of matching decoration, across the spaces between words, as a browser draws it.
+	 */
+	bool bStrokesPerCharacter = false;
 
 	/**
 	 * Distance-field fonts (either kind). UV2.x carries DilateEm + 16 * Layer per glyph; quads grow into
@@ -70,16 +83,20 @@ struct FDreamTextPaintParams
 
 /**
  * Turns a display list into quads. The only place in the plugin that knows what a glyph's vertices
- * look like: the glyph quad, the italic shear, the superscript lift, the underline and strikethrough
- * strips, which UV channel carries what. Runs from a cached display list, so it is cheap enough to
- * run every time the geometry is rebuilt.
+ * look like: the glyph quad, the italic shear, the underline and strikethrough strips, which UV
+ * channel carries what. Runs from a cached display list, so it is cheap enough to run every time the
+ * geometry is rebuilt.
  */
 class DREAMGUI_API FDreamTextPainter
 {
 public:
 	/**
 	 * Appends nothing: the geometry is sized to exactly what the display list emits. OutCharProperties
-	 * lists the emitted glyphs in order, which is the contract TextAnimation and pixel snapping read.
+	 * lists the emitted glyphs in order, which is the contract TextAnimation and pixel snapping read; a
+	 * character's vertex range covers every copy of its quad, its triangle range the face copy. An
+	 * underline or strikethrough is one strip per run of identical decoration, written after all the
+	 * glyphs and belonging to no character -- or, with bStrokesPerCharacter, one piece per glyph inside
+	 * its character's range.
 	 */
 	static void Paint(const FDreamTextDisplayList& DisplayList, const FDreamTextPaintParams& Params,
 		FDreamUIGeometry& OutGeometry, TArray<FDreamUITextCharProperty>& OutCharProperties);

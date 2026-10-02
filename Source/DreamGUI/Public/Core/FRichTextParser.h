@@ -17,6 +17,18 @@ namespace DreamUIRichTextParser
 	{
 		None, Start, End,
 	};
+	/** Where an inline image sits on its line: `<img=Tag,...,baseline/>` and so on. */
+	enum class EImageVerticalAlign : uint8
+	{
+		/** Centred on the line, which is where an image with no alignment has always gone. */
+		Middle,
+		/** Bottom edge on the baseline, like a letter. */
+		Baseline,
+		/** Top edge on the top of the line. */
+		Top,
+		/** Bottom edge on the bottom of the line. */
+		Bottom,
+	};
 	struct FRichTextParseResult
 	{
 		bool Bold = false;
@@ -28,21 +40,121 @@ namespace DreamUIRichTextParser
 
 		FColor Color = FColor::Black;
 		bool HasColor = false;
+		/**
+		 * A custom style's Multiply that found no colour of its own to multiply: the text's colour is a paint input, so the
+		 * product is taken when the glyph is painted. MultiplyColor is what to multiply it by.
+		 */
+		bool bHasMultiplyColor = false;
+		FColor MultiplyColor = FColor::White;
 
 		ESupOrSubMode SupOrSubMode = ESupOrSubMode::None;
+		/** How far a superscript (up, positive) or subscript (down, negative) moves its baseline, in the units of the font size. */
+		float BaselineShift = 0.0f;
 
+		/**
+		 * Which open tag last set each property, as the order the tags were opened in (0: none, the text's own style). A
+		 * custom style only overrides a property that no tag nested inside it has set, so `<warn><b>x</b></warn>` stays
+		 * bold whatever the warn style says about bold.
+		 */
+		int32 BoldOrder = 0;
+		int32 ItalicOrder = 0;
+		int32 UnderlineOrder = 0;
+		int32 StrikethroughOrder = 0;
+		int32 SizeOrder = 0;
+		int32 ColorOrder = 0;
+		int32 SupOrSubOrder = 0;
+
+		/** What the last Parse found: the start or the end of a custom tag, and its name. */
 		ECustomTagMode CustomTagMode = ECustomTagMode::None;
 		FName CustomTag;
 		/** The custom tag above came from `<a=Id>`: it is a hyperlink, and something may be clicked on it. */
 		bool bHyperlink = false;
+		/** For a custom tag start, the order it was opened in, which is what its style is ranked by against nested tags. */
+		int32 CustomTagOrder = 0;
 		FName ImageTag;
 		/** Size the `<img=Tag,W,H/>` asked for, in the same units as the font size; 0 means "the font size". */
 		float ImageWidth = 0.0f;
 		float ImageHeight = 0.0f;
+		EImageVerticalAlign ImageVerticalAlign = EImageVerticalAlign::Middle;
 
 		int CharIndex = 0;
 	};
-	
+
+	/**
+	 * Superscript and subscript as Chrome's user-agent style draws them: `font-size: smaller`, which is the parent's size
+	 * over 1.2, and `vertical-align: super` / `sub`, which Blink resolves to the baseline raised by a third of the PARENT's
+	 * font size plus one pixel, or lowered by a fifth of it plus one pixel. InOutResult.Size is the parent's size on entry.
+	 */
+	inline void ApplySupOrSub(FRichTextParseResult& InOutResult, ESupOrSubMode InMode)
+	{
+		InOutResult.SupOrSubMode = InMode;
+		if (InMode == ESupOrSubMode::None)
+		{
+			InOutResult.BaselineShift = 0.0f;
+			return;
+		}
+		const float ParentSize = InOutResult.Size;
+		InOutResult.Size = ParentSize / 1.2f;
+		InOutResult.BaselineShift = InMode == ESupOrSubMode::Sup ? ParentSize / 3.0f + 1.0f : -(ParentSize / 5.0f + 1.0f);
+	}
+
+	/** What an open tag does to the font size: sets it, or makes the text a superscript or subscript of it. */
+	struct FSizeEffect
+	{
+		/** The order the tag was opened in: effects fold outermost first. */
+		int32 Order = 0;
+		/** The tag sets the size to Size, or with bAdditional adds Size to the size around it. */
+		bool bSetsSize = false;
+		bool bAdditional = false;
+		float Size = 0.0f;
+		/** Otherwise the tag makes a superscript or subscript, or with None takes the text back to the baseline. */
+		ESupOrSubMode SupOrSub = ESupOrSubMode::None;
+	};
+
+	/**
+	 * The size and baseline shift of text inside every open tag that sets either, folded outermost first, the way CSS
+	 * cascades font-size and vertical-align (see ApplySupOrSub for the steps): nested superscripts add up, and a size set
+	 * inside a superscript replaces its smaller size while the text stays on the raised baseline. Writes Size,
+	 * BaselineShift, SupOrSubMode and the orders of the innermost size and superscript tags. Effects of one tag keep the
+	 * order they were added in.
+	 */
+	inline void FoldSizeEffects(float OriginSize, TArray<FSizeEffect>& Effects, FRichTextParseResult& InOutResult)
+	{
+		Effects.StableSort([](const FSizeEffect& A, const FSizeEffect& B) { return A.Order < B.Order; });
+		float Size = OriginSize;
+		float Shift = 0.0f;
+		ESupOrSubMode Mode = ESupOrSubMode::None;
+		int32 SizeOrder = 0;
+		int32 SupOrSubOrder = 0;
+		for (const FSizeEffect& Effect : Effects)
+		{
+			if (Effect.bSetsSize)
+			{
+				Size = Effect.bAdditional ? Size + Effect.Size : Effect.Size;
+				SizeOrder = Effect.Order;
+			}
+			else if (Effect.SupOrSub == ESupOrSubMode::None)
+			{
+				Mode = ESupOrSubMode::None;
+				Shift = 0.0f;
+				SupOrSubOrder = Effect.Order;
+			}
+			else
+			{
+				const float ParentSize = Size;
+				Size = ParentSize / 1.2f;
+				Shift += Effect.SupOrSub == ESupOrSubMode::Sup ? ParentSize / 3.0f + 1.0f : -(ParentSize / 5.0f + 1.0f);
+				Mode = Effect.SupOrSub;
+				SupOrSubOrder = Effect.Order;
+			}
+		}
+		InOutResult.Size = FMath::Max(Size, 0.0f);
+		InOutResult.BaselineShift = Shift;
+		InOutResult.SupOrSubMode = Mode;
+		InOutResult.SizeOrder = SizeOrder;
+		InOutResult.SupOrSubOrder = SupOrSubOrder;
+	}
+
 	struct FRichTextParser
 	{
 	private:
@@ -56,9 +168,20 @@ namespace DreamUIRichTextParser
 		TArray<FName>			CustomTagArray;
 		/** Open `<a=Id>` tags, innermost last: `</a>` names no id, so it closes the one most recently opened. */
 		TArray<FName>			HyperlinkTags;
+		/** How many tags have been opened so far: the order a tag is ranked by (see FRichTextParseResult::BoldOrder). */
+		int32					OpenOrder = 0;
+		/** The open order of every open tag of each kind, innermost last, parallel to the counts and stacks above. */
+		TArray<int32>			BoldOrders;
+		TArray<int32>			ItalicOrders;
+		TArray<int32>			UnderlineOrders;
+		TArray<int32>			StrikethroughOrders;
+		TArray<int32>			SizeOrders;
+		TArray<int32>			ColorOrders;
+		TArray<int32>			SupOrSubOrders;
 		FName ImageTag = NAME_None;
 		float ImageWidth = 0.0f;
 		float ImageHeight = 0.0f;
+		EImageVerticalAlign ImageVerticalAlign = EImageVerticalAlign::Middle;
 
 		/** Float, because font sizes are: an int here quantised every size a tag computed against it. */
 		float OriginSize = 0.0f;
@@ -87,7 +210,27 @@ namespace DreamUIRichTextParser
 		{
 			ImageTag = NAME_None;
 			ImageWidth = ImageHeight = 0.0f;
+			ImageVerticalAlign = EImageVerticalAlign::Middle;
 		}
+		/** The size and superscript/subscript tags still open, for FoldSizeEffects. */
+		void GetSizeEffects(TArray<FSizeEffect>& OutEffects) const
+		{
+			for (int32 i = 0; i < SizeArray.Num(); i++)
+			{
+				FSizeEffect& Effect = OutEffects.AddDefaulted_GetRef();
+				Effect.Order = SizeOrders.IsValidIndex(i) ? SizeOrders[i] : 0;
+				Effect.bSetsSize = true;
+				Effect.Size = SizeArray[i];
+			}
+			for (int32 i = 0; i < SupOrSubArray.Num(); i++)
+			{
+				FSizeEffect& Effect = OutEffects.AddDefaulted_GetRef();
+				Effect.Order = SupOrSubOrders.IsValidIndex(i) ? SupOrSubOrders[i] : 0;
+				Effect.SupOrSub = SupOrSubArray[i];
+			}
+		}
+		/** The text's own size: what every size tag folds from. */
+		float GetOriginSize() const { return OriginSize; }
 		/**
 		 * Tag colours come out with the alpha the author wrote. Render opacity is applied by the painter
 		 * (FDreamTextPaintParams::RichTextTagOpacity) instead of being baked in here, so that fading a
@@ -132,8 +275,17 @@ namespace DreamUIRichTextParser
 			SupOrSubArray.Reset();
 			CustomTagArray.Reset();
 			HyperlinkTags.Reset();
+			OpenOrder = 0;
+			BoldOrders.Reset();
+			ItalicOrders.Reset();
+			UnderlineOrders.Reset();
+			StrikethroughOrders.Reset();
+			SizeOrders.Reset();
+			ColorOrders.Reset();
+			SupOrSubOrders.Reset();
 			ImageTag = NAME_None;
 			ImageWidth = ImageHeight = 0.0f;
+			ImageVerticalAlign = EImageVerticalAlign::Middle;
 		}
 		/**
 		 * A character reference, which is how a rich text writes a character the markup would otherwise
@@ -231,6 +383,7 @@ namespace DreamUIRichTextParser
 						{
 							InOutStartIndex += 3;
 							BoldCount++;
+							BoldOrders.Add(++OpenOrder);
 							bHaveSymbol = true;
 						}
 					}
@@ -240,6 +393,7 @@ namespace DreamUIRichTextParser
 						{
 							InOutStartIndex += 3;
 							ItalicCount++;
+							ItalicOrders.Add(++OpenOrder);
 							bHaveSymbol = true;
 						}
 					}
@@ -249,6 +403,7 @@ namespace DreamUIRichTextParser
 						{
 							InOutStartIndex += 3;
 							UnderlineCount++;
+							UnderlineOrders.Add(++OpenOrder);
 							bHaveSymbol = true;
 						}
 					}
@@ -258,6 +413,7 @@ namespace DreamUIRichTextParser
 						{
 							InOutStartIndex += 3;
 							StrikethroughCount++;
+							StrikethroughOrders.Add(++OpenOrder);
 							bHaveSymbol = true;
 						}
 					}
@@ -286,6 +442,7 @@ namespace DreamUIRichTextParser
 							{
 								SizeArray.Add(OriginSize + parsedSize);
 							}
+							SizeOrders.Add(++OpenOrder);
 							bHaveSymbol = true;
 						}
 					}
@@ -307,6 +464,7 @@ namespace DreamUIRichTextParser
 						{
 							InOutStartIndex += charEndIndex - CharIndex + 1;
 							ColorArray.Add(parsedColor);
+							ColorOrders.Add(++OpenOrder);
 							bHaveSymbol = true;
 						}
 					}
@@ -322,6 +480,7 @@ namespace DreamUIRichTextParser
 					{
 						InOutStartIndex += 5;
 						SupOrSubArray.Add(ESupOrSubMode::Sup);
+						SupOrSubOrders.Add(++OpenOrder);
 						bHaveSymbol = true;
 					}
 				}
@@ -336,6 +495,7 @@ namespace DreamUIRichTextParser
 					{
 						InOutStartIndex += 5;
 						SupOrSubArray.Add(ESupOrSubMode::Sub);
+						SupOrSubOrders.Add(++OpenOrder);
 						bHaveSymbol = true;
 					}
 				}
@@ -349,7 +509,7 @@ namespace DreamUIRichTextParser
 					if (bEnableImage)
 					{
 						int charEndIndex;
-						if (GetImageTag(Text, TextLength, CharIndex + 5, charEndIndex, ImageTag, ImageWidth, ImageHeight))
+						if (GetImageTag(Text, TextLength, CharIndex + 5, charEndIndex, ImageTag, ImageWidth, ImageHeight, ImageVerticalAlign))
 						{
 							InOutStartIndex += charEndIndex - CharIndex + 1;
 							bHaveSymbol = true;
@@ -378,6 +538,7 @@ namespace DreamUIRichTextParser
 								ParseResult.CustomTag = tag;
 								ParseResult.CustomTagMode = ECustomTagMode::Start;
 								ParseResult.bHyperlink = true;
+								ParseResult.CustomTagOrder = ++OpenOrder;
 								bHaveSymbol = true;
 							}
 						}
@@ -393,6 +554,7 @@ namespace DreamUIRichTextParser
 							{
 								InOutStartIndex += 4;
 								BoldCount--;
+								PopOrder(BoldOrders);
 								bHaveSymbol = true;
 							}
 						}
@@ -402,6 +564,7 @@ namespace DreamUIRichTextParser
 							{
 								InOutStartIndex += 4;
 								ItalicCount--;
+								PopOrder(ItalicOrders);
 								bHaveSymbol = true;
 							}
 						}
@@ -411,6 +574,7 @@ namespace DreamUIRichTextParser
 							{
 								InOutStartIndex += 4;
 								UnderlineCount--;
+								PopOrder(UnderlineOrders);
 								bHaveSymbol = true;
 							}
 						}
@@ -420,6 +584,7 @@ namespace DreamUIRichTextParser
 							{
 								InOutStartIndex += 4;
 								StrikethroughCount--;
+								PopOrder(StrikethroughOrders);
 								bHaveSymbol = true;
 							}
 						}
@@ -452,6 +617,7 @@ namespace DreamUIRichTextParser
 						{
 							InOutStartIndex += 7;
 							SizeArray.Pop();
+							PopOrder(SizeOrders);
 							bHaveSymbol = true;
 						}
 					}
@@ -469,6 +635,7 @@ namespace DreamUIRichTextParser
 						{
 							InOutStartIndex += 8;
 							ColorArray.Pop();
+							PopOrder(ColorOrders);
 							bHaveSymbol = true;
 						}
 					}
@@ -484,6 +651,7 @@ namespace DreamUIRichTextParser
 						{
 							InOutStartIndex += 6;
 							SupOrSubArray.Pop();
+							PopOrder(SupOrSubOrders);
 							bHaveSymbol = true;
 						}
 					}
@@ -499,6 +667,7 @@ namespace DreamUIRichTextParser
 						{
 							InOutStartIndex += 6;
 							SupOrSubArray.Pop();
+							PopOrder(SupOrSubOrders);
 							bHaveSymbol = true;
 						}
 					}
@@ -540,6 +709,7 @@ namespace DreamUIRichTextParser
 								CustomTagArray.Add(tag);
 								ParseResult.CustomTag = tag;
 								ParseResult.CustomTagMode = ECustomTagMode::Start;
+								ParseResult.CustomTagOrder = ++OpenOrder;
 								bHaveSymbol = true;
 							}
 						}
@@ -552,22 +722,49 @@ namespace DreamUIRichTextParser
 				ParseResult.Italic = ItalicCount > 0 || OriginItalic;
 				ParseResult.Underline = UnderlineCount > 0 || OriginUnderline;
 				ParseResult.Strikethrough = StrikethroughCount > 0 || OriginStrikethrough;
-				ParseResult.Size = SizeArray.Num() > 0 ? SizeArray[SizeArray.Num() - 1] : OriginSize;
-				ParseResult.Size = FMath::Max(ParseResult.Size, 0.0f);
 				ParseResult.HasColor = ColorArray.Num() > 0;
 				ParseResult.Color = ParseResult.HasColor ? ColorArray[ColorArray.Num() - 1] : OriginColor;
-				ParseResult.SupOrSubMode = SupOrSubArray.Num() > 0 ? SupOrSubArray[SupOrSubArray.Num() - 1] : ESupOrSubMode::None;
-				if (ParseResult.SupOrSubMode != ESupOrSubMode::None)
+				if (SizeArray.Num() == 0 && SupOrSubArray.Num() == 0)
 				{
-					ParseResult.Size *= 0.8f;//sup or sub size
+					ParseResult.Size = FMath::Max(OriginSize, 0.0f);
+					ParseResult.BaselineShift = 0.0f;
+					ParseResult.SupOrSubMode = ESupOrSubMode::None;
+					ParseResult.SizeOrder = 0;
+					ParseResult.SupOrSubOrder = 0;
 				}
+				else
+				{
+					// <size> and <sup>/<sub> fold in the order they were opened: `<sup><size=40>` is 40 on a raised
+					// baseline, `<size=40><sup>` is 40/1.2 raised by a third of 40.
+					TArray<FSizeEffect> SizeEffects;
+					GetSizeEffects(SizeEffects);
+					FoldSizeEffects(OriginSize, SizeEffects, ParseResult);
+				}
+				ParseResult.BoldOrder = TopOrder(BoldOrders);
+				ParseResult.ItalicOrder = TopOrder(ItalicOrders);
+				ParseResult.UnderlineOrder = TopOrder(UnderlineOrders);
+				ParseResult.StrikethroughOrder = TopOrder(StrikethroughOrders);
+				ParseResult.ColorOrder = TopOrder(ColorOrders);
 				ParseResult.ImageTag = ImageTag;
 				ParseResult.ImageWidth = ImageWidth;
 				ParseResult.ImageHeight = ImageHeight;
+				ParseResult.ImageVerticalAlign = ImageVerticalAlign;
 			}
 			return bHaveSymbol;
 		}
 	private:
+		/** The open order of the innermost open tag of a kind, or 0 when none is open. */
+		static int32 TopOrder(const TArray<int32>& InOrders)
+		{
+			return InOrders.Num() > 0 ? InOrders.Last() : 0;
+		}
+		static void PopOrder(TArray<int32>& InOutOrders)
+		{
+			if (InOutOrders.Num() > 0)
+			{
+				InOutOrders.Pop();
+			}
+		}
 		//scan from StartIndex for the first tag-value terminator ('>', '<', space, '\n' or '\t').
 		//returns its index, or -1 if none found before TextLength.
 		static int FindTokenEnd(const FString& Text, int TextLength, int StartIndex)
@@ -668,15 +865,42 @@ namespace DreamUIRichTextParser
 			}
 			return false;
 		}
+		/** One of the alignment words an `<img>` tag may end with, case-insensitively. */
+		static bool ParseImageAlign(const TCHAR* Str, int Len, EImageVerticalAlign& OutAlign)
+		{
+			struct FAlignName { const TCHAR* Name; EImageVerticalAlign Align; };
+			static const FAlignName Names[] =
+			{
+				{ TEXT("middle"), EImageVerticalAlign::Middle },
+				{ TEXT("baseline"), EImageVerticalAlign::Baseline },
+				{ TEXT("top"), EImageVerticalAlign::Top },
+				{ TEXT("bottom"), EImageVerticalAlign::Bottom },
+			};
+			for (const FAlignName& Name : Names)
+			{
+				const int NameLen = (int)FCString::Strlen(Name.Name);
+				if (Len == NameLen && FCString::Strnicmp(Str, Name.Name, NameLen) == 0)
+				{
+					OutAlign = Name.Align;
+					return true;
+				}
+			}
+			return false;
+		}
 		/**
-		 * `<img=Tag/>`, `<img=Tag,Size/>` or `<img=Tag,Width,Height/>`. One size sets the height and lets
-		 * the width follow the image's aspect ratio, which is what the default -- the font size -- does;
-		 * two set both. Sizes are in the same units as the font size. A malformed size is not a size, and
-		 * the whole tag is then literal text rather than a silently mis-sized image.
+		 * `<img=Tag/>`, `<img=Tag,Size/>` or `<img=Tag,Width,Height/>`, each optionally followed by where the
+		 * image sits on its line: `<img=Tag,baseline/>`, `<img=Tag,48,top/>`, `<img=Tag,30,60,bottom/>`.
+		 * One size sets the height and lets the width follow the image's aspect ratio, which is what the
+		 * default -- the font size -- does; two set both. Sizes are in the same units as the font size. The
+		 * alignment is middle (centred on the line, the default), baseline (bottom edge on the baseline, like
+		 * a letter), top or bottom (on that edge of the line); a tall image grows its line to fit in every
+		 * case. A malformed size or an unknown word is not an argument, and the whole tag is then literal
+		 * text rather than a silently mis-sized or mis-placed image.
 		 */
-		static bool GetImageTag(const FString& Text, int TextLength, int StartIndex, int& OutEndIndex, FName& OutTag, float& OutWidth, float& OutHeight)
+		static bool GetImageTag(const FString& Text, int TextLength, int StartIndex, int& OutEndIndex, FName& OutTag, float& OutWidth, float& OutHeight, EImageVerticalAlign& OutAlign)
 		{
 			OutWidth = OutHeight = 0.0f;
+			OutAlign = EImageVerticalAlign::Middle;
 			//image is a self-closing tag, must end with '/>'; scan from the char after the first tag char
 			int EndIndex = FindTokenEnd(Text, TextLength, StartIndex + 1);
 			if (EndIndex == -1 || EndIndex <= StartIndex || Text[EndIndex] != '>' || Text[EndIndex - 1] != '/')//no valid end
@@ -693,19 +917,28 @@ namespace DreamUIRichTextParser
 			if (NameLen <= 0)return false;
 			float Sizes[2] = { 0.0f, 0.0f };
 			int SizeCount = 0;
+			bool bHaveAlign = false;
+			EImageVerticalAlign Align = EImageVerticalAlign::Middle;
 			int Cursor = NameLen;
-			while (Cursor < TokenLen && SizeCount < 2)
+			while (Cursor < TokenLen)
 			{
 				if (TokenPtr[Cursor] != ',')return false;
-				const int NumberStart = ++Cursor;
+				const int ArgumentStart = ++Cursor;
 				while (Cursor < TokenLen && TokenPtr[Cursor] != ',')Cursor++;
-				if (Cursor <= NumberStart)return false;
-				if (!ParseFloat(TokenPtr + NumberStart, Cursor - NumberStart, Sizes[SizeCount]))return false;
+				if (Cursor <= ArgumentStart)return false;//an empty argument: a trailing or doubled comma
+				if (bHaveAlign)return false;//nothing may follow the alignment
+				if (ParseImageAlign(TokenPtr + ArgumentStart, Cursor - ArgumentStart, Align))
+				{
+					bHaveAlign = true;
+					continue;
+				}
+				if (SizeCount >= 2)return false;//a third size
+				if (!ParseFloat(TokenPtr + ArgumentStart, Cursor - ArgumentStart, Sizes[SizeCount]))return false;
 				if (Sizes[SizeCount] < 0.0f)return false;
 				SizeCount++;
 			}
-			if (Cursor != TokenLen)return false;//a third size, or a trailing comma
 			OutTag = FName(FStringView(TokenPtr, NameLen));
+			OutAlign = Align;
 			if (SizeCount == 1)
 			{
 				OutHeight = Sizes[0];

@@ -1,4 +1,4 @@
-﻿// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
+// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
 
 #pragma once
 
@@ -34,13 +34,29 @@ struct FDreamTextItemStyle
 {
 	float Size = 0.0f;
 	FColor Color = FColor::White;
-	/** True when the colour came from a <color> tag rather than the text's own colour. */
+	/** True when the colour came from a <color> tag, or a custom style that replaces it, rather than the text's own colour. */
 	bool bHasColor = false;
+	/**
+	 * A custom style's Multiply colour that met no colour of its own to multiply. It multiplies whatever the glyph is
+	 * painted with, at paint time, because the text's own colour is a paint input the layout never sees.
+	 */
+	bool bHasMultiplyColor = false;
+	FColor MultiplyColor = FColor::White;
 	bool bBold = false;
 	bool bItalic = false;
+	/**
+	 * Bold or italic that the face drawing the item does not have, so the painter makes it: bold as a dilation (distance
+	 * fields) or an emboldened raster, italic as a shear. False when a real bold or italic face draws the item, and when
+	 * the item does not ask for the style at all.
+	 */
+	bool bSyntheticBold = false;
+	bool bSyntheticItalic = false;
 	bool bUnderline = false;
 	bool bStrikethrough = false;
-	/** 0 none, 1 superscript, 2 subscript. Mirrors DreamUIRichTextParser::ESupOrSubMode without pulling the parser in. */
+	/**
+	 * 0 none, 1 superscript, 2 subscript. Mirrors DreamUIRichTextParser::ESupOrSubMode without pulling the parser in. The
+	 * baseline shift it stands for is already in the item's Pen and in its line's box.
+	 */
 	uint8 SupOrSub = 0;
 };
 
@@ -55,16 +71,22 @@ struct FDreamTextGlyphItem
 	int32 SourceIndex = 0;
 	/** Which line this item sits on. */
 	int32 LineIndex = 0;
-	/** Position the glyph's offsets are measured from: the old pen position (line offset) at emission. */
+	/** Position the glyph's offsets are measured from: its pen position on the baseline, with the shaper's offsets and any superscript shift applied. */
 	FVector2f Pen = FVector2f::ZeroVector;
 	/** Glyph metrics and atlas UVs, already adjusted for canvas scale, kerning and the font's vertical offset. */
 	FDreamUICharData Glyph;
-	/** XAdvance plus the horizontal font space: the width decorations span. */
+	/** XAdvance plus the letter spacing it carries: how wide a stretch of underline or strikethrough this item contributes. */
 	float AdvanceWithSpace = 0.0f;
+	/** Where that stretch starts, relative to Pen.X: the pen box of the glyph, not its ink, so a run of them joins up seamlessly. */
+	float DecorationOffset = 0.0f;
 	FDreamTextItemStyle Style;
-	/** Glyph used to draw the underline (the font's '_' collapsed to one texel column); valid only when Style.bUnderline. */
+	/**
+	 * Texels and placement the underline is drawn with; valid only when Style.bUnderline. YOffset is the top of the strip
+	 * and Height its thickness, both measured from Pen.Y. With the font's own underline metrics the UVs are one texel inside
+	 * its '_' (the atlas has no white texel); without them they are the '_' collapsed to its centre column.
+	 */
 	FDreamUICharData UnderlineGlyph;
-	/** Glyph used to draw the strikethrough (the font's '-' collapsed to one texel column); valid only when Style.bStrikethrough. */
+	/** Same as UnderlineGlyph, for the strikethrough and the font's '-'; valid only when Style.bStrikethrough. */
 	FDreamUICharData StrikethroughGlyph;
 	/** The painter emits a quad for this item. Glyphs past a Truncate/Ellipsis cut are laid out but not emitted. */
 	bool bEmit = false;
@@ -72,15 +94,38 @@ struct FDreamTextGlyphItem
 	bool bCountsAsVisible = false;
 };
 
+/** A stretch of one line that runs in one direction, in visual order: what selection highlights are drawn from. */
+struct FDreamTextVisualRun
+{
+	int32 LineIndex = 0;
+	/** Source range, in the same UTF-16 offsets as FDreamTextGlyphItem::SourceIndex, half-open. */
+	int32 SourceStart = 0;
+	int32 SourceEnd = 0;
+	/** Left and right edges in the text's local space, after alignment. */
+	float Left = 0.0f;
+	float Right = 0.0f;
+	bool bRightToLeft = false;
+};
+
 /** Everything layout knows after a pass. */
 struct DREAMGUI_API FDreamTextDisplayList
 {
 	TArray<FDreamTextGlyphItem> Items;
-	/** Caret lines, first line first -- the caret contract UITextInput reads. */
+	/**
+	 * Caret lines, first line first -- the caret contract UITextInput reads. Each line lists one caret per grapheme
+	 * cluster in logical order, then the line's end caret; a caret stands at its cluster's leading edge.
+	 */
 	TArray<FDreamUITextLineProperty> Lines;
 	TArray<FDreamUIText_RichTextCustomTag> CustomTags;
+	/**
+	 * The elements each custom tag covers, inclusive, parallel to CustomTags (Y below X when the tag holds nothing). The
+	 * painter matches items against these, spaces included, which a range of visible characters cannot do.
+	 */
+	TArray<FIntPoint> CustomTagElementRanges;
 	TArray<FDreamUIText_RichTextImageTag> Images;
 	TArray<FDreamUIText_Emoji> Emojis;
+	/** Every line's directional runs, line by line and left to right within a line. */
+	TArray<FDreamTextVisualRun> VisualRuns;
 	/** Size of the text ignoring automatic wrapping -- what a content-sized parent asks for. */
 	FVector2f PreferredSize = FVector2f::ZeroVector;
 	/** True when Truncate or Ellipsis cut something off. */
@@ -100,8 +145,10 @@ struct DREAMGUI_API FDreamTextDisplayList
 		Items.Reset();
 		Lines.Reset();
 		CustomTags.Reset();
+		CustomTagElementRanges.Reset();
 		Images.Reset();
 		Emojis.Reset();
+		VisualRuns.Reset();
 		PreferredSize = FVector2f::ZeroVector;
 		bTruncated = false;
 		bHasPendingGlyphs = false;

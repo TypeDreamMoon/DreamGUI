@@ -19,6 +19,8 @@ class UDreamTextTestFont : public UDreamUIFontData_DistanceField
 public:
 	/** Kerning is on by default so the kerning path is covered; flip it to cover the other one. */
 	bool bMockHasKerning = true;
+	/** Rasterize at DynamicPixelsPerUnit, as a bitmap font does; off by default, as for every distance field. */
+	bool bMockSupportsDynamicPixelsPerUnit = false;
 
 	virtual void InitFont() override {}
 	virtual UTexture2DArray* GetFontTexture() override { return nullptr; }
@@ -31,10 +33,13 @@ public:
 	virtual float GetDescent(float FontSize) override { return FontSize * 0.3f; }
 	virtual float GetFontSizeLimit() override { return 200.0f; }
 	virtual bool GetShouldAffectByPixelPerfect() override { return false; }
+	virtual bool GetSupportDynamicPixelsPerUnit() override { return bMockSupportsDynamicPixelsPerUnit; }
 	virtual void AddUIText(UDreamText* InText) override {}
 	virtual void RemoveUIText(UDreamText* InText) override {}
 	/** No FreeType face, so no shaping: layout takes the one-glyph-per-code-point path. */
 	virtual int32 GetFaceCount() override { return 1; }
 	virtual bool FaceHasCodepoint(int32 FaceIndex, uint32 Codepoint) override { return true; }
 	virtual void* GetShapingFont(int32 FaceIndex, float FontSize) override { return nullptr; }
+	/** No face to read a post or OS/2 table from: underlines and strikethroughs are placed from the '_' and '-' glyphs. */
+	virtual bool GetDecorationMetrics(int32 FaceIndex, float FontSize, float& OutUnderlinePosition, float& OutUnderlineThickness, float& OutStrikethroughPosition, float& OutStrikethroughThickness) override { return false; }
 };
