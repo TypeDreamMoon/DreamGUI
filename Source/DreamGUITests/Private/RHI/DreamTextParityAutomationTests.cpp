@@ -50,6 +50,7 @@
 #include "Core/DreamUIFontData_FreeTypeRender.h"
 #include "Core/DreamUITextData.h"
 #include "Core/Text/DreamTextDisplayList.h"
+#include "Core/Text/DreamTextPaint.h"
 #include "DreamUICaptureLibrary.h"
 
 #include "DreamGalleryStage.h"
@@ -82,11 +83,17 @@
  * writes. Without them the case says so and compares DreamGUI and Slate with nothing. A case whose "reference" is
  * "slate" (a middle ellipsis, which Chrome cannot draw) is measured against Slate instead and has no Chrome reference.
  *
+ * A fill case -- a "fill" gradient over the whole text, or a rich text's <gradient=...> run -- is drawn twice on each
+ * side: painted, and as a solid mask in the ink colour with nothing painted, outlined or shadowed (Chrome's
+ * <case>.mask.png). Slate has no gradient fill and is n/a. On the pixels both masks cover fully the two painted pictures'
+ * colours are compared: the mean and the 95th percentile of each pixel's largest channel difference, and the largest
+ * difference of the average colour in 32 bands along the gradient's axis. Reported only.
+ *
  * Everything goes to Saved/DreamGUITextParity: <case>_dream.png, <case>_slate.png, <case>_compare.png (DreamGUI | Slate
- * | Chrome), <case>_mask.png for the corner cases, cases/<case>.json, and report.json and report.md over every case on
- * disk. Asserted, unless the case is flagged reportOnly: where it is flagged "breaks", DreamGUI starts its lines where
- * the reference does, and every target it names (ink, carets, crispness) holds. The rest is reported, to be tightened
- * into assertions once the numbers have been looked at.
+ * | Chrome), <case>_mask.png for the corner cases, <case>_dream_mask.png for the fill cases, cases/<case>.json, and
+ * report.json and report.md over every case on disk. Asserted, unless the case is flagged reportOnly: where it is
+ * flagged "breaks", DreamGUI starts its lines where the reference does, and every target it names (ink, carets,
+ * crispness) holds. The rest is reported, to be tightened into assertions once the numbers have been looked at.
  */
 namespace DreamTextParityTestLocal
 {
@@ -109,6 +116,17 @@ namespace DreamTextParityTestLocal
 	/** Crispness: grey is strictly between these, of what is strictly above the first. */
 	static constexpr double GreyLow = 0.15;
 	static constexpr double GreyHigh = 0.85;
+	/**
+	 * Edge width per stroke: a run of a row or a column above EdgePaper is a stroke once its peak reaches StrokePeak, and
+	 * its edges are its pixels below StrokeEdgeHigh of the peak and above StrokeEdgeLow of it (and above EdgePaper).
+	 */
+	static constexpr double StrokePeak = 0.5;
+	static constexpr double StrokeEdgeHigh = 0.9;
+	static constexpr double StrokeEdgeLow = 0.1;
+	/** A fill case's colours are compared on the pixels both masks cover at least this much. */
+	static constexpr double FillCovered = 0.99;
+	/** And their average colours in this many bands along the gradient's axis. */
+	static constexpr int32 FillBands = 32;
 
 	/** A caret, in canvas pixels from the top-left. */
 	struct FCaretSample
@@ -140,7 +158,10 @@ namespace DreamTextParityTestLocal
 	{
 		bool bAny = false;
 		FIntRect Bounds = FIntRect(0, 0, 0, 0);
+		/** The sum of the coverage, sRGB-encoded as the pixels are: what the reports before linear ink compared. */
 		double Mass = 0.0;
+		/** The sum of the coverage in linear light: each pixel and the paper decoded before they are differenced. */
+		double LinearMass = 0.0;
 	};
 
 	/** How crisp a picture's edges are; see MeasureCrispness. */
@@ -157,6 +178,37 @@ namespace DreamTextParityTestLocal
 		double GreyFraction = 0.0;
 		/** The sum of |grad c| over the picture, over the ink mass. */
 		double GradientPerInk = 0.0;
+		/** Edges of strokes found reading the rows and the columns (two per stroke), and their mean width in pixels. */
+		int32 RowStrokeEdges = 0;
+		int32 ColumnStrokeEdges = 0;
+		double StrokeEdgeRows = 0.0;
+		double StrokeEdgeColumns = 0.0;
+	};
+
+	/** A picture of a fill case's solid mask. */
+	struct FMaskPicture
+	{
+		bool bPicture = false;
+		TArray<FColor> Pixels;
+		FIntPoint Size = FIntPoint::ZeroValue;
+	};
+
+	/** How a fill case's colours stand against Chrome's, on the pixels both masks cover fully; see MeasureFill. */
+	struct FFillMeasure
+	{
+		bool bMeasured = false;
+		/** Why nothing was measured. */
+		FString Why;
+		/** The pixels both masks cover fully. */
+		int32 Pixels = 0;
+		/** Each pixel's largest channel difference between the two painted pictures, in 8-bit codes: mean and 95th percentile. */
+		double MeanDifference = 0.0;
+		int32 P95Difference = 0;
+		/** The largest channel difference of the two average colours of a band along the axis, and which band (0 first). */
+		double BandDifference = 0.0;
+		int32 WorstBand = INDEX_NONE;
+		/** The axis the bands are cut along: a linear gradient's angle, else horizontal. */
+		FString Axis;
 	};
 
 	/** A leaf widget that paints one FSlateTextLayout in the box it was made for. */
@@ -218,6 +270,13 @@ namespace DreamTextParityTestLocal
 		FEngineResult Dream;
 		FEngineResult Slate;
 		FEngineResult Chrome;
+		/** A case's fill as FDreamGradient::ParseCss reads it; unset when the case has no fill. */
+		TOptional<FDreamGradient> FillGradient;
+		/** The text's style before the case's outline, shadow and fill were put on it: what a fill case's mask is drawn with. */
+		FDreamTextStyle PlainStyle;
+		/** A fill case's solid masks: DreamGUI's text drawn again with nothing painted, and Chrome's <case>.mask.png. */
+		FMaskPicture DreamMask;
+		FMaskPicture ChromeMask;
 		TWeakObjectPtr<UDreamText> DreamText;
 		TSharedPtr<FStandaloneCompositeFont> SlateFont;
 		TSharedPtr<FSlateStyleSet> SlateStyles;
@@ -323,11 +382,16 @@ namespace DreamTextParityTestLocal
 
 	/**
 	 * Why Slate has no equivalent of what the case shows, or empty when it has one. Slate does not justify, has no tab
-	 * size (a tab is a fixed width of its own), and chooses a composite font's sub-fonts by the game's culture rather than
-	 * by a text's language, so a case about any of those would compare Slate against something it cannot be asked for.
+	 * size (a tab is a fixed width of its own), chooses a composite font's sub-fonts by the game's culture rather than
+	 * by a text's language, and cannot fill text with a gradient, so a case about any of those would compare Slate
+	 * against something it cannot be asked for.
 	 */
 	FString GetSlateNotApplicable(const FCase& InCase, const FFontKey& InKey)
 	{
+		if (InCase.HasFill())
+		{
+			return TEXT("Slate has no gradient fill for text");
+		}
 		if (InCase.Align.Equals(TEXT("justify"), ESearchCase::IgnoreCase))
 		{
 			return TEXT("Slate has no justified alignment");
@@ -351,6 +415,30 @@ namespace DreamTextParityTestLocal
 		return static_cast<double>(Delta) / 255.0;
 	}
 
+	/** An 8-bit sRGB-encoded value in linear light, the exact transfer. */
+	double DecodeSrgbCode(uint8 InCode)
+	{
+		static const TArray<double> Decoded = []()
+		{
+			TArray<double> Values;
+			Values.SetNumUninitialized(256);
+			for (int32 Code = 0; Code < 256; ++Code)
+			{
+				const double Encoded = static_cast<double>(Code) / 255.0;
+				Values[Code] = Encoded <= 0.04045 ? Encoded / 12.92 : FMath::Pow((Encoded + 0.055) / 1.055, 2.4);
+			}
+			return Values;
+		}();
+		return Decoded[InCode];
+	}
+
+	/** How far a pixel is from the paper in linear light, 0..1, on its farthest channel: both decoded, then differenced. */
+	double LinearCoverage(const FColor& InPixel, const FColor& InPaper)
+	{
+		return FMath::Max3(FMath::Abs(DecodeSrgbCode(InPixel.R) - DecodeSrgbCode(InPaper.R)), FMath::Abs(DecodeSrgbCode(InPixel.G) - DecodeSrgbCode(InPaper.G)),
+			FMath::Abs(DecodeSrgbCode(InPixel.B) - DecodeSrgbCode(InPaper.B)));
+	}
+
 	FInk MeasureInk(const FEngineResult& InResult, const FColor& InPaper)
 	{
 		FInk Ink;
@@ -362,8 +450,10 @@ namespace DreamTextParityTestLocal
 		{
 			for (int32 X = 0; X < InResult.Size.X; ++X)
 			{
-				const double Amount = Coverage(InResult.Pixels[Y * InResult.Size.X + X], InPaper);
+				const FColor& Pixel = InResult.Pixels[Y * InResult.Size.X + X];
+				const double Amount = Coverage(Pixel, InPaper);
 				Ink.Mass += Amount;
+				Ink.LinearMass += LinearCoverage(Pixel, InPaper);
 				if (Amount > InkThreshold)
 				{
 					if (!Ink.bAny)
@@ -383,11 +473,67 @@ namespace DreamTextParityTestLocal
 	}
 
 	/**
-	 * How sharp the edges of a picture are, the three measures small text is judged by:
-	 *  - edge width: reading each row, and separately each column, the pixels strictly between paper (c <= 0.1) and ink
-	 *    (c >= 0.9) wherever the line goes from one to the other; their mean per transition. A hinted, pixel-aligned stem
-	 *    has edges of about a pixel or less, a soft one several. A run that leaves paper and comes back to it without
-	 *    reaching ink is not a transition;
+	 * The strokes of one line of coverage values, a row or a column (InCount values from InStart, InStride apart): every
+	 * run of values above EdgePaper whose peak p reaches StrokePeak, and the pixels of its two edges -- from where the run
+	 * starts to where it first reaches StrokeEdgeHigh * p, and from where it last does to where it ends -- that are above
+	 * max(StrokeEdgeLow * p, EdgePaper). Two edges a stroke, however thin: a one-pixel line that peaks at 0.83 counts as
+	 * well as a stem that reaches full ink.
+	 */
+	void AddStrokeEdges(const TArray<double>& InValues, int32 InStart, int32 InStride, int32 InCount, int32& InOutEdges, double& InOutEdgePixels)
+	{
+		int32 Step = 0;
+		while (Step < InCount)
+		{
+			if (InValues[InStart + Step * InStride] <= EdgePaper)
+			{
+				++Step;
+				continue;
+			}
+			const int32 RunStart = Step;
+			double Peak = 0.0;
+			while (Step < InCount && InValues[InStart + Step * InStride] > EdgePaper)
+			{
+				Peak = FMath::Max(Peak, InValues[InStart + Step * InStride]);
+				++Step;
+			}
+			if (Peak < StrokePeak)
+			{
+				continue;
+			}
+			const double High = StrokeEdgeHigh * Peak;
+			const double Low = FMath::Max(StrokeEdgeLow * Peak, EdgePaper);
+			int32 EdgePixels = 0;
+			for (int32 Along = RunStart; Along < Step; ++Along)
+			{
+				const double Value = InValues[InStart + Along * InStride];
+				if (Value >= High)
+				{
+					break;
+				}
+				EdgePixels += Value > Low ? 1 : 0;
+			}
+			for (int32 Along = Step - 1; Along >= RunStart; --Along)
+			{
+				const double Value = InValues[InStart + Along * InStride];
+				if (Value >= High)
+				{
+					break;
+				}
+				EdgePixels += Value > Low ? 1 : 0;
+			}
+			InOutEdges += 2;
+			InOutEdgePixels += EdgePixels;
+		}
+	}
+
+	/**
+	 * How sharp the edges of a picture are, the measures small text is judged by:
+	 *  - edge width per stroke (AddStrokeEdges), reading each row and separately each column: the mean width of a
+	 *    stroke's edges. What the targets hold DreamGUI to (strokeEdge);
+	 *  - edge width per transition, the measure before it, reported alongside for one round: reading each row, and
+	 *    separately each column, the pixels strictly between paper (c <= 0.1) and ink (c >= 0.9) wherever the line goes
+	 *    from one to the other; their mean per transition. A run that leaves paper and comes back to it without reaching
+	 *    ink is not a transition, so a thin stroke that peaks below 0.9 is not counted at all;
 	 *  - grey fraction: of the pixels with any ink (c > 0.15), the share that is neither paper nor ink (c < 0.85);
 	 *  - gradient: the sum over the picture of |grad c| (forward differences) over the ink mass, higher for sharper edges.
 	 */
@@ -449,6 +595,18 @@ namespace DreamTextParityTestLocal
 		{
 			WalkLine(X, Width, Height, Crisp.ColumnTransitions, ColumnEdgePixels);
 		}
+		double RowStrokePixels = 0.0;
+		double ColumnStrokePixels = 0.0;
+		for (int32 Y = 0; Y < Height; ++Y)
+		{
+			AddStrokeEdges(Values, Y * Width, 1, Width, Crisp.RowStrokeEdges, RowStrokePixels);
+		}
+		for (int32 X = 0; X < Width; ++X)
+		{
+			AddStrokeEdges(Values, X, Width, Height, Crisp.ColumnStrokeEdges, ColumnStrokePixels);
+		}
+		Crisp.StrokeEdgeRows = Crisp.RowStrokeEdges > 0 ? RowStrokePixels / Crisp.RowStrokeEdges : 0.0;
+		Crisp.StrokeEdgeColumns = Crisp.ColumnStrokeEdges > 0 ? ColumnStrokePixels / Crisp.ColumnStrokeEdges : 0.0;
 		double Gradient = 0.0;
 		for (int32 Y = 0; Y + 1 < Height; ++Y)
 		{
@@ -518,6 +676,133 @@ namespace DreamTextParityTestLocal
 		}
 	}
 
+	/**
+	 * A fill case's colours against Chrome's, on the pixels that both masks -- DreamGUI's and Chrome's solid picture of
+	 * the same text -- cover at least FillCovered: each such pixel's largest channel difference between the two painted
+	 * pictures, its mean and 95th percentile; and the pixels in FillBands bands of equal width along the gradient's axis
+	 * (a linear fill's angle; horizontal for any other kind and for a rich text's runs), the largest channel difference
+	 * between the two average colours of a band. Pixel noise along the glyphs' edges averages out in a band; a gradient
+	 * placed, turned or mixed differently does not.
+	 */
+	FFillMeasure MeasureFill(const FCaseRun& InRun)
+	{
+		FFillMeasure Measure;
+		const FIntPoint Expected = InRun.Case.GetDeviceCanvas();
+		const FColor Paper = InRun.Case.GetPaper();
+		if (!InRun.Dream.bPicture || !InRun.DreamMask.bPicture)
+		{
+			Measure.Why = TEXT("DreamGUI has no picture of the fill or of its mask");
+			return Measure;
+		}
+		if (!InRun.Chrome.bPicture || !InRun.ChromeMask.bPicture)
+		{
+			Measure.Why = TEXT("Chrome has no picture of the fill or of its mask");
+			return Measure;
+		}
+		if (InRun.Dream.Size != Expected || InRun.DreamMask.Size != Expected || InRun.Chrome.Size != Expected || InRun.ChromeMask.Size != Expected)
+		{
+			Measure.Why = FString::Printf(TEXT("the four pictures are not all the case's %d x %d"), Expected.X, Expected.Y);
+			return Measure;
+		}
+		FVector2D Axis(1.0, 0.0);
+		Measure.Axis = TEXT("horizontal");
+		if (InRun.FillGradient.IsSet() && InRun.FillGradient->Type == EDreamPaintType::Linear)
+		{
+			// CSS's angle, 0 up and clockwise, in the picture's space (+Y down): what the gradient's line points along.
+			const double Radians = FMath::DegreesToRadians(static_cast<double>(InRun.FillGradient->Angle));
+			Axis = FVector2D(FMath::Sin(Radians), -FMath::Cos(Radians));
+			Measure.Axis = FString::Printf(TEXT("%gdeg"), InRun.FillGradient->Angle);
+		}
+		const int32 Width = Expected.X;
+		TArray<int32> Covered;
+		TArray<int32> Histogram;
+		Histogram.Init(0, 256);
+		double DifferenceSum = 0.0;
+		double AlongMin = TNumericLimits<double>::Max();
+		double AlongMax = TNumericLimits<double>::Lowest();
+		auto AlongAxis = [&Axis, Width](int32 InIndex)
+		{
+			return (static_cast<double>(InIndex % Width) + 0.5) * Axis.X + (static_cast<double>(InIndex / Width) + 0.5) * Axis.Y;
+		};
+		for (int32 Index = 0; Index < Expected.X * Expected.Y; ++Index)
+		{
+			if (Coverage(InRun.DreamMask.Pixels[Index], Paper) < FillCovered || Coverage(InRun.ChromeMask.Pixels[Index], Paper) < FillCovered)
+			{
+				continue;
+			}
+			const FColor& DreamPixel = InRun.Dream.Pixels[Index];
+			const FColor& ChromePixel = InRun.Chrome.Pixels[Index];
+			const int32 Difference = FMath::Max3(FMath::Abs(static_cast<int32>(DreamPixel.R) - ChromePixel.R), FMath::Abs(static_cast<int32>(DreamPixel.G) - ChromePixel.G),
+				FMath::Abs(static_cast<int32>(DreamPixel.B) - ChromePixel.B));
+			++Histogram[Difference];
+			DifferenceSum += Difference;
+			Covered.Add(Index);
+			const double Along = AlongAxis(Index);
+			AlongMin = FMath::Min(AlongMin, Along);
+			AlongMax = FMath::Max(AlongMax, Along);
+		}
+		if (Covered.Num() == 0)
+		{
+			Measure.Why = TEXT("no pixel is fully covered in both masks");
+			return Measure;
+		}
+		Measure.bMeasured = true;
+		Measure.Pixels = Covered.Num();
+		Measure.MeanDifference = DifferenceSum / Covered.Num();
+		const int32 Rank = FMath::Max(1, FMath::CeilToInt32(0.95 * Covered.Num()));
+		int32 Counted = 0;
+		for (int32 Difference = 0; Difference < Histogram.Num(); ++Difference)
+		{
+			Counted += Histogram[Difference];
+			if (Counted >= Rank)
+			{
+				Measure.P95Difference = Difference;
+				break;
+			}
+		}
+		struct FFillBand
+		{
+			double DreamSum[3] = { 0.0, 0.0, 0.0 };
+			double ChromeSum[3] = { 0.0, 0.0, 0.0 };
+			int32 Count = 0;
+		};
+		TArray<FFillBand> Bands;
+		Bands.SetNum(FillBands);
+		const double Span = AlongMax - AlongMin;
+		for (const int32 Index : Covered)
+		{
+			const int32 BandIndex = Span > 0.0 ? FMath::Clamp(FMath::FloorToInt32((AlongAxis(Index) - AlongMin) / Span * FillBands), 0, FillBands - 1) : 0;
+			FFillBand& Band = Bands[BandIndex];
+			const FColor& DreamPixel = InRun.Dream.Pixels[Index];
+			const FColor& ChromePixel = InRun.Chrome.Pixels[Index];
+			Band.DreamSum[0] += DreamPixel.R;
+			Band.DreamSum[1] += DreamPixel.G;
+			Band.DreamSum[2] += DreamPixel.B;
+			Band.ChromeSum[0] += ChromePixel.R;
+			Band.ChromeSum[1] += ChromePixel.G;
+			Band.ChromeSum[2] += ChromePixel.B;
+			++Band.Count;
+		}
+		for (int32 BandIndex = 0; BandIndex < Bands.Num(); ++BandIndex)
+		{
+			const FFillBand& Band = Bands[BandIndex];
+			if (Band.Count == 0)
+			{
+				continue;
+			}
+			for (int32 Channel = 0; Channel < 3; ++Channel)
+			{
+				const double Apart = FMath::Abs(Band.DreamSum[Channel] - Band.ChromeSum[Channel]) / Band.Count;
+				if (Apart > Measure.BandDifference || Measure.WorstBand == INDEX_NONE)
+				{
+					Measure.BandDifference = Apart;
+					Measure.WorstBand = BandIndex;
+				}
+			}
+		}
+		return Measure;
+	}
+
 	/** DreamGUI | Slate | Chrome, each in a panel the size of the device canvas, grey between them; n/a panels hatched. */
 	void ComposeComparison(const FCaseRun& InRun, TArray<FColor>& OutPixels, FIntPoint& OutSize)
 	{
@@ -550,11 +835,14 @@ namespace DreamTextParityTestLocal
 		}
 	}
 
-	/** The DreamGUI text for a case, its box's top-left at (padding, padding) of the canvas. */
-	UDreamText* AddDreamText(FGalleryStage& InStage, const FCaseRun& InRun, UDreamUIFontData_BaseObject* InFont)
+	/**
+	 * The DreamGUI text for a case, its box's top-left at (padding, padding) of the canvas. A fill is the text's FacePaint,
+	 * measured across the text as a block on both axes (the paint boxes' default), CSS's background box of the paragraph.
+	 */
+	UDreamText* AddDreamText(FGalleryStage& InStage, FCaseRun& InOutRun, UDreamUIFontData_BaseObject* InFont)
 	{
-		const FCase& Case = InRun.Case;
-		const int32 Padding = InRun.Corpus.Padding;
+		const FCase& Case = InOutRun.Case;
+		const int32 Padding = InOutRun.Corpus.Padding;
 		FVector2D Box = Case.GetBox(Padding);
 		const bool bClamp = Case.Overflow.Equals(TEXT("clamp"), ESearchCase::IgnoreCase) && Case.MaxLines > 0;
 		if (bClamp)
@@ -618,7 +906,8 @@ namespace DreamTextParityTestLocal
 		{
 			Text->SetSmallTextRaster(EDreamTextSmallTextRaster::Off);
 		}
-		if (Case.OutlineEm > 0.0f || Case.bShadow)
+		InOutRun.PlainStyle = Text->GetTextStyle();
+		if (Case.OutlineEm > 0.0f || Case.bShadow || InOutRun.FillGradient.IsSet())
 		{
 			FDreamTextStyle Style = Text->GetTextStyle();
 			if (Case.OutlineEm > 0.0f)
@@ -634,10 +923,36 @@ namespace DreamTextParityTestLocal
 				Style.UnderlaySoftness = 0.0f;
 				Style.UnderlayDilate = 0.0f;
 			}
+			if (InOutRun.FillGradient.IsSet())
+			{
+				// Chrome's color: transparent with background-clip: text: the face is the gradient, the text's colour unused.
+				Style.FacePaint.bEnabled = true;
+				Style.FacePaint.Gradient = InOutRun.FillGradient.GetValue();
+			}
 			Text->SetTextStyle(Style);
 		}
 		Text->SetText(FText::FromString(Case.Text));
 		return Text;
+	}
+
+	/**
+	 * Turns a fill case's text into its mask: the style it had before the case's outline, shadow and fill, in the ink
+	 * colour, a rich text's <gradient=...> tags taken out -- the same glyphs, solid, as Chrome's mask page draws them.
+	 */
+	void ShowDreamMask(FCaseRun& InOutRun)
+	{
+		UDreamText* Text = InOutRun.DreamText.Get();
+		if (Text == nullptr)
+		{
+			InOutRun.Dream.Notes.Add(TEXT("the text is gone, so there is no mask"));
+			return;
+		}
+		Text->SetTextStyle(InOutRun.PlainStyle);
+		Text->SetColor(InOutRun.Case.GetInk());
+		if (InOutRun.Case.bRich)
+		{
+			Text->SetText(FText::FromString(GetMaskText(InOutRun.Case)));
+		}
 	}
 
 	/** DreamGUI's numbers, read off the text's display list once the stage has settled. */
@@ -1093,6 +1408,17 @@ namespace DreamTextParityTestLocal
 			Result.Notes.Add(FString::Printf(TEXT("the reference picture is %d x %d, not the case's %d x %d: it was made from another corpus"),
 				Result.Size.X, Result.Size.Y, InOutRun.Case.GetDeviceCanvas().X, InOutRun.Case.GetDeviceCanvas().Y));
 		}
+		if (InOutRun.Case.HasFill())
+		{
+			// The same text solid, in the ink colour: which pixels Chrome's face covers fully.
+			const FString MaskPath = FPaths::Combine(Directory, InOutRun.Case.Id + TEXT(".mask.png"));
+			FMaskPicture& Mask = InOutRun.ChromeMask;
+			Mask.bPicture = FPaths::FileExists(MaskPath) && FDreamPixelProbe::LoadPng(MaskPath, Mask.Pixels, Mask.Size);
+			if (!Mask.bPicture)
+			{
+				Result.Notes.Add(FString::Printf(TEXT("no mask reference at %s; Tools/TextParity/Make-ChromeReference.ps1 makes it"), *MaskPath));
+			}
+		}
 		FString Text;
 		TSharedPtr<FJsonObject> Root;
 		if (!FFileHelper::LoadFileToString(Text, *JsonPath) || !FJsonSerializer::Deserialize(TJsonReaderFactory<>::Create(Text), Root) || !Root.IsValid())
@@ -1185,6 +1511,17 @@ namespace DreamTextParityTestLocal
 		double EdgeWidthColumns = 0.0;
 		TOptional<double> GreyFraction;
 		TOptional<double> GradientPerInk;
+		/** Edge widths per stroke as differences in pixels, when both pictures have strokes on both axes. */
+		bool bStrokeEdge = false;
+		double StrokeEdgeRows = 0.0;
+		double StrokeEdgeColumns = 0.0;
+		/** Ink in linear light, a relative difference. */
+		TOptional<double> InkLinear;
+		/**
+		 * DreamGUI's grey fraction against Slate's, whatever the reference, a relative difference: both are plain grayscale
+		 * coverage, where Chrome's DirectWrite masks are filtered across. Dark text on light paper only. Set by FinishCase.
+		 */
+		TOptional<double> GreyVsSlate;
 	};
 
 	FDeviation Compare(const FEngineResult& InEngine, const FEngineResult& InReference, const FInk& InEngineInk, const FInk& InReferenceInk,
@@ -1224,6 +1561,10 @@ namespace DreamTextParityTestLocal
 			{
 				Deviation.InkMass = (InEngineInk.Mass - InReferenceInk.Mass) / InReferenceInk.Mass;
 			}
+			if (InReferenceInk.LinearMass > 0.0)
+			{
+				Deviation.InkLinear = (InEngineInk.LinearMass - InReferenceInk.LinearMass) / InReferenceInk.LinearMass;
+			}
 		}
 		if (InEngineCrisp.bAny && InReferenceCrisp.bAny)
 		{
@@ -1237,6 +1578,12 @@ namespace DreamTextParityTestLocal
 			if (InReferenceCrisp.GradientPerInk > 0.0)
 			{
 				Deviation.GradientPerInk = (InEngineCrisp.GradientPerInk - InReferenceCrisp.GradientPerInk) / InReferenceCrisp.GradientPerInk;
+			}
+			if (InEngineCrisp.RowStrokeEdges > 0 && InEngineCrisp.ColumnStrokeEdges > 0 && InReferenceCrisp.RowStrokeEdges > 0 && InReferenceCrisp.ColumnStrokeEdges > 0)
+			{
+				Deviation.bStrokeEdge = true;
+				Deviation.StrokeEdgeRows = InEngineCrisp.StrokeEdgeRows - InReferenceCrisp.StrokeEdgeRows;
+				Deviation.StrokeEdgeColumns = InEngineCrisp.StrokeEdgeColumns - InReferenceCrisp.StrokeEdgeColumns;
 			}
 		}
 		if (bInMask)
@@ -1261,7 +1608,10 @@ namespace DreamTextParityTestLocal
 	/**
 	 * The case's targets against DreamGUI's deviation: inkMass (relative, either way), inkBounds (pixels, every edge),
 	 * caretMax (pixels), baseline and pitch (pixels, either way), edgeWidth (pixels wider than the reference's, rows and
-	 * columns alike) and greyFraction (relative, either way). A name it does not know is reported as not measured.
+	 * columns alike) and greyFraction (relative, either way) -- the measures before this round's, which small text is no
+	 * longer held to -- and strokeEdge (edge width per stroke, pixels wider than the reference's, rows and columns alike),
+	 * inkLinear (ink in linear light, relative, either way) and greyVsSlate (the grey fraction against Slate's, relative,
+	 * either way; dark text on light paper only). A name it does not know is reported as not measured.
 	 */
 	void EvaluateTargets(const FCase& InCase, const FDeviation& InDeviation, TArray<FTargetResult>& OutResults)
 	{
@@ -1333,12 +1683,47 @@ namespace DreamTextParityTestLocal
 					Result.Text = FString::Printf(TEXT("grey %+.0f%% (within %.0f%%)"), Value * 100.0, Limit * 100.0);
 				}
 			}
+			else if (Name == TEXT("strokeEdge"))
+			{
+				if (InDeviation.bStrokeEdge)
+				{
+					const double Wider = FMath::Max(InDeviation.StrokeEdgeRows, InDeviation.StrokeEdgeColumns);
+					Result.bMeasured = true;
+					Result.bMet = Wider <= Limit;
+					Result.Text = FString::Printf(TEXT("stroke edges %+.2f / %+.2f px (rows / columns; at most +%.2f)"),
+						InDeviation.StrokeEdgeRows, InDeviation.StrokeEdgeColumns, Limit);
+				}
+			}
+			else if (Name == TEXT("inkLinear"))
+			{
+				if (InDeviation.InkLinear.IsSet())
+				{
+					const double Value = InDeviation.InkLinear.GetValue();
+					Result.bMeasured = true;
+					Result.bMet = FMath::Abs(Value) <= Limit;
+					Result.Text = FString::Printf(TEXT("linear ink %+.1f%% (within %.0f%%)"), Value * 100.0, Limit * 100.0);
+				}
+			}
+			else if (Name == TEXT("greyVsSlate"))
+			{
+				if (InDeviation.GreyVsSlate.IsSet())
+				{
+					const double Value = InDeviation.GreyVsSlate.GetValue();
+					Result.bMeasured = true;
+					Result.bMet = FMath::Abs(Value) <= Limit;
+					Result.Text = FString::Printf(TEXT("grey %+.0f%% of Slate's (within %.0f%%)"), Value * 100.0, Limit * 100.0);
+				}
+				else if (InCase.bInverse)
+				{
+					Result.Text = TEXT("greyVsSlate: measured on dark text on light paper only");
+				}
+			}
 			else
 			{
 				Result.Text = FString::Printf(TEXT("%s: not a measure the test knows"), *Name);
 				continue;
 			}
-			if (!Result.bMeasured)
+			if (!Result.bMeasured && Result.Text.IsEmpty())
 			{
 				Result.Text = FString::Printf(TEXT("%s: nothing to measure"), *Name);
 			}
@@ -1382,11 +1767,16 @@ namespace DreamTextParityTestLocal
 			TSharedRef<FJsonObject> Ink = MakeShared<FJsonObject>();
 			Ink->SetField(TEXT("bounds"), IntArrayValue({ InInk.Bounds.Min.X, InInk.Bounds.Min.Y, InInk.Bounds.Max.X, InInk.Bounds.Max.Y }));
 			Ink->SetNumberField(TEXT("mass"), InInk.Mass);
+			Ink->SetNumberField(TEXT("linearMass"), InInk.LinearMass);
 			Object->SetObjectField(TEXT("ink"), Ink);
 		}
 		if (InCrisp.bAny)
 		{
 			TSharedRef<FJsonObject> Crisp = MakeShared<FJsonObject>();
+			Crisp->SetNumberField(TEXT("strokeEdgeRows"), InCrisp.StrokeEdgeRows);
+			Crisp->SetNumberField(TEXT("strokeEdgeColumns"), InCrisp.StrokeEdgeColumns);
+			Crisp->SetNumberField(TEXT("rowStrokeEdges"), InCrisp.RowStrokeEdges);
+			Crisp->SetNumberField(TEXT("columnStrokeEdges"), InCrisp.ColumnStrokeEdges);
 			Crisp->SetNumberField(TEXT("edgeWidthRows"), InCrisp.EdgeWidthRows);
 			Crisp->SetNumberField(TEXT("edgeWidthColumns"), InCrisp.EdgeWidthColumns);
 			Crisp->SetNumberField(TEXT("rowTransitions"), InCrisp.RowTransitions);
@@ -1438,10 +1828,47 @@ namespace DreamTextParityTestLocal
 				Object->SetNumberField(TEXT("gradientPerInk"), InDeviation.GradientPerInk.GetValue());
 			}
 		}
+		if (InDeviation.bStrokeEdge)
+		{
+			Object->SetNumberField(TEXT("strokeEdgeRows"), InDeviation.StrokeEdgeRows);
+			Object->SetNumberField(TEXT("strokeEdgeColumns"), InDeviation.StrokeEdgeColumns);
+		}
+		if (InDeviation.InkLinear.IsSet())
+		{
+			Object->SetNumberField(TEXT("inkLinear"), InDeviation.InkLinear.GetValue());
+		}
+		if (InDeviation.GreyVsSlate.IsSet())
+		{
+			Object->SetNumberField(TEXT("greyVsSlate"), InDeviation.GreyVsSlate.GetValue());
+		}
 		if (InDeviation.MaskDifference >= 0)
 		{
 			Object->SetNumberField(TEXT("maskDifference"), InDeviation.MaskDifference);
 		}
+		return Object;
+	}
+
+	TSharedRef<FJsonObject> FillJson(const FCase& InCase, const FFillMeasure& InMeasure, const FString& InDreamMaskPath)
+	{
+		TSharedRef<FJsonObject> Object = MakeShared<FJsonObject>();
+		Object->SetStringField(TEXT("css"), InCase.Fill);
+		Object->SetBoolField(TEXT("richRuns"), InCase.Fill.IsEmpty());
+		Object->SetBoolField(TEXT("measured"), InMeasure.bMeasured);
+		if (!InMeasure.bMeasured)
+		{
+			Object->SetStringField(TEXT("why"), InMeasure.Why);
+		}
+		else
+		{
+			Object->SetNumberField(TEXT("pixels"), InMeasure.Pixels);
+			Object->SetNumberField(TEXT("meanDifference"), InMeasure.MeanDifference);
+			Object->SetNumberField(TEXT("p95Difference"), InMeasure.P95Difference);
+			Object->SetNumberField(TEXT("bandDifference"), InMeasure.BandDifference);
+			Object->SetNumberField(TEXT("worstBand"), InMeasure.WorstBand);
+			Object->SetNumberField(TEXT("bands"), FillBands);
+			Object->SetStringField(TEXT("axis"), InMeasure.Axis);
+		}
+		Object->SetStringField(TEXT("dreamMask"), InDreamMaskPath);
 		return Object;
 	}
 
@@ -1525,7 +1952,8 @@ namespace DreamTextParityTestLocal
 			const TOptional<double> Value = Number(InDelta, TEXT("maskDifference"));
 			return Value.IsSet() ? FString::Printf(TEXT("%.0f"), Value.GetValue()) : FString(TEXT("-"));
 		};
-		// An engine's own crispness, rows and columns of edge width, its grey share and its gradient per ink.
+		// An engine's own crispness: rows and columns of edge width per transition (0) and per stroke (3), its grey share
+		// (1) and its gradient per ink (2).
 		auto Crisp = [&Field, &Number](const TSharedPtr<FJsonObject>& InEngine, int32 InWhich) -> FString
 		{
 			const TSharedPtr<FJsonObject> Values = Field(InEngine, TEXT("crispness"));
@@ -1540,6 +1968,12 @@ namespace DreamTextParityTestLocal
 			if (InWhich == 1)
 			{
 				return FString::Printf(TEXT("%.0f%%"), Number(Values, TEXT("greyFraction")).Get(0.0) * 100.0);
+			}
+			if (InWhich == 3)
+			{
+				const TOptional<double> Rows = Number(Values, TEXT("strokeEdgeRows"));
+				const TOptional<double> Columns = Number(Values, TEXT("strokeEdgeColumns"));
+				return Rows.IsSet() && Columns.IsSet() ? FString::Printf(TEXT("%.2f:%.2f"), Rows.GetValue(), Columns.GetValue()) : FString(TEXT("-"));
 			}
 			return FString::Printf(TEXT("%.2f"), Number(Values, TEXT("gradientPerInk")).Get(0.0));
 		};
@@ -1593,18 +2027,60 @@ namespace DreamTextParityTestLocal
 		const bool bHasEqual = DreamDelta.IsValid() && DreamDelta->TryGetBoolField(TEXT("lineStartsEqual"), bEqual);
 		FString Id;
 		InCase->TryGetStringField(TEXT("id"), Id);
-		return FString::Printf(TEXT("| %s | %s | %s | %s | %s | %s | %s | %s | %s | %s | %s | %s | %s / %s / %s | %s / %s / %s | %s / %s / %s | %s |"),
+		return FString::Printf(TEXT("| %s | %s | %s | %s | %s | %s | %s | %s | %s | %s | %s | %s / %s / %s | %s | %s | %s | %s / %s / %s | %s / %s / %s | %s / %s / %s | %s |"),
 			*Id, bHeldToSlate ? TEXT("S") : TEXT("C"), *Lines(Dream), *Lines(Slate), *Lines(Reference),
 			bHasEqual ? (bEqual ? TEXT("yes") : TEXT("**no**")) : TEXT("-"),
 			*Caret(DreamDelta), *SlateCaret,
 			*SlatePair(Signed(Number(DreamDelta, TEXT("baseline"))), Signed(Number(SlateDelta, TEXT("baseline")))),
 			*SlatePair(Signed(Number(DreamDelta, TEXT("pitch"))), Signed(Number(SlateDelta, TEXT("pitch")))),
+			*SlatePair(Percent(DreamDelta, TEXT("inkLinear")), Percent(SlateDelta, TEXT("inkLinear"))),
+			*Crisp(Dream, 3), *Crisp(Slate, 3), *Crisp(Reference, 3),
+			*Percent(DreamDelta, TEXT("greyVsSlate")),
 			*SlatePair(Percent(DreamDelta, TEXT("inkMass")), Percent(SlateDelta, TEXT("inkMass"))),
 			*SlatePair(Mask(DreamDelta), Mask(SlateDelta)),
 			*Crisp(Dream, 0), *Crisp(Slate, 0), *Crisp(Reference, 0),
 			*Crisp(Dream, 1), *Crisp(Slate, 1), *Crisp(Reference, 1),
 			*Crisp(Dream, 2), *Crisp(Slate, 2), *Crisp(Reference, 2),
 			*Targets);
+	}
+
+	/** One row of report.md's gradient fill table for a case's JSON; empty for a case with no fill. */
+	FString FillReportRow(const TSharedPtr<FJsonObject>& InCase)
+	{
+		const TSharedPtr<FJsonObject>* FillField = nullptr;
+		if (!InCase.IsValid() || !InCase->TryGetObjectField(TEXT("fill"), FillField) || FillField == nullptr || !FillField->IsValid())
+		{
+			return FString();
+		}
+		const TSharedPtr<FJsonObject>& FillObject = *FillField;
+		FString Id;
+		InCase->TryGetStringField(TEXT("id"), Id);
+		FString Css;
+		FillObject->TryGetStringField(TEXT("css"), Css);
+		const FString Paint = Css.IsEmpty() ? FString(TEXT("`<gradient>` runs")) : FString::Printf(TEXT("`%s`"), *Css);
+		bool bMeasured = false;
+		if (!FillObject->TryGetBoolField(TEXT("measured"), bMeasured) || !bMeasured)
+		{
+			FString Why;
+			FillObject->TryGetStringField(TEXT("why"), Why);
+			return FString::Printf(TEXT("| %s | %s | - | - | - | - | - | %s |"), *Id, *Paint, Why.IsEmpty() ? TEXT("not measured") : *Why);
+		}
+		double Pixels = 0.0;
+		double Mean = 0.0;
+		double Percentile95 = 0.0;
+		double BandApart = 0.0;
+		double WorstBand = 0.0;
+		double Bands = 0.0;
+		FString Axis;
+		FillObject->TryGetNumberField(TEXT("pixels"), Pixels);
+		FillObject->TryGetNumberField(TEXT("meanDifference"), Mean);
+		FillObject->TryGetNumberField(TEXT("p95Difference"), Percentile95);
+		FillObject->TryGetNumberField(TEXT("bandDifference"), BandApart);
+		FillObject->TryGetNumberField(TEXT("worstBand"), WorstBand);
+		FillObject->TryGetNumberField(TEXT("bands"), Bands);
+		FillObject->TryGetStringField(TEXT("axis"), Axis);
+		return FString::Printf(TEXT("| %s | %s | %.0f | %.1f | %.0f | %.1f (band %.0f of %.0f) | %s | - |"), *Id, *Paint, Pixels, Mean, Percentile95,
+			BandApart, WorstBand + 1.0, Bands, *Axis);
 	}
 
 	/** report.json and report.md over every case written so far, so that a run of a few cases still reports the rest. */
@@ -1616,6 +2092,7 @@ namespace DreamTextParityTestLocal
 		Files.Sort();
 		TArray<TSharedPtr<FJsonValue>> Cases;
 		TArray<FString> Rows;
+		TArray<FString> FillRows;
 		FString ChromeVersion;
 		for (const FString& File : Files)
 		{
@@ -1634,6 +2111,11 @@ namespace DreamTextParityTestLocal
 				ChromeVersion = Version;
 			}
 			Rows.Add(ReportRow(Case));
+			const FString FillRow = FillReportRow(Case);
+			if (!FillRow.IsEmpty())
+			{
+				FillRows.Add(FillRow);
+			}
 			Cases.Add(MakeShared<FJsonValueObject>(Case));
 		}
 		TSharedRef<FJsonObject> Report = MakeShared<FJsonObject>();
@@ -1649,16 +2131,37 @@ namespace DreamTextParityTestLocal
 		Markdown += TEXT("Positions are canvas (CSS) pixels, pictures device pixels. Ref is what a case is measured against: C Chrome, S Slate ");
 		Markdown += TEXT("(Chrome cannot draw the case). Lines are the UTF-16 offsets where lines start. Caret is the largest and the mean ");
 		Markdown += TEXT("distance in x from the reference's caret over the offsets both have. Baseline and pitch are signed differences from ");
-		Markdown += TEXT("the reference. Ink is the difference in the sum of coverage. Mask counts the pixels solid in one picture and not in ");
-		Markdown += TEXT("the reference's (corner cases). Edge is the mean width in pixels of an edge between paper and ink, reading rows : ");
-		Markdown += TEXT("columns; grey the share of inked pixels that are neither; grad the sum of the gradient over the ink -- each for ");
-		Markdown += TEXT("DreamGUI / Slate / the reference. Targets are the case's limits on DreamGUI, met of measured. D is DreamGUI and ");
-		Markdown += TEXT("S is Slate; n/a: Slate has no equivalent of the case. `<case>_compare.png` shows DreamGUI | Slate | Chrome.\n\n");
-		Markdown += TEXT("| Case | Ref | Lines D | Lines S | Lines Ref | D breaks = Ref | Caret D max/mean | Caret S | Baseline D / S | Pitch D / S | Ink D / S | Mask D / S | Edge D / S / Ref | Grey D / S / Ref | Grad D / S / Ref | Targets |\n");
-		Markdown += TEXT("|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|\n");
+		Markdown += TEXT("the reference. Ink lin is the difference in the sum of coverage in linear light (pixel and paper decoded, then ");
+		Markdown += TEXT("differenced). Stroke edge is the mean width in pixels of a stroke's edges -- a run of a row or a column that peaks ");
+		Markdown += TEXT("at p >= 0.5, its pixels between 0.1 p and 0.9 p before it first reaches 0.9 p and after it last does -- reading rows ");
+		Markdown += TEXT(": columns. Grey D vs S is DreamGUI's grey share against Slate's, dark on light only. The columns marked old are ");
+		Markdown += TEXT("the measures before those, reported alongside for one round: ink summed in sRGB-encoded coverage, the mean width ");
+		Markdown += TEXT("of an edge between paper (0.1) and ink (0.9), which misses a stroke that never reaches 0.9, and the grey share ");
+		Markdown += TEXT("against the reference. Mask counts the pixels solid in one picture and not in the reference's (corner cases); ");
+		Markdown += TEXT("grad is the sum of the gradient over the ink. Each is for DreamGUI / Slate / the reference where three are given. ");
+		Markdown += TEXT("Targets are the case's limits on DreamGUI, met of measured. D is DreamGUI and S is Slate; n/a: Slate has no ");
+		Markdown += TEXT("equivalent of the case. `<case>_compare.png` shows DreamGUI | Slate | Chrome.\n\n");
+		Markdown += TEXT("| Case | Ref | Lines D | Lines S | Lines Ref | D breaks = Ref | Caret D max/mean | Caret S | Baseline D / S | Pitch D / S | Ink lin D / S | Stroke edge D / S / Ref | Grey D vs S | Ink D / S (old) | Mask D / S | Edge D / S / Ref (old) | Grey D / S / Ref (old) | Grad D / S / Ref | Targets |\n");
+		Markdown += TEXT("|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|\n");
 		for (const FString& Row : Rows)
 		{
 			Markdown += Row + TEXT("\n");
+		}
+		if (FillRows.Num() > 0)
+		{
+			Markdown += TEXT("\n## Gradient fills\n\n");
+			Markdown += TEXT("Reported only. Each fill case is drawn twice on each side, painted and as a solid mask; on the pixels both ");
+			Markdown += TEXT("masks cover fully (Pixels), Mean and 95th percentile are those of each pixel's largest channel ");
+			Markdown += TEXT("difference between DreamGUI's and Chrome's painted pictures, in 8-bit codes, and Worst band the largest channel ");
+			Markdown += TEXT("difference of the two average colours of a band, the pixels cut into bands of equal width along the axis (a ");
+			Markdown += TEXT("linear fill's angle, else horizontal). `<case>_dream_mask.png` is DreamGUI's mask, Chrome's is `<case>.mask.png` ");
+			Markdown += TEXT("beside its picture.\n\n");
+			Markdown += TEXT("| Case | Paint | Pixels | Mean | 95th percentile | Worst band | Axis | Not measured |\n");
+			Markdown += TEXT("|---|---|---|---|---|---|---|---|\n");
+			for (const FString& Row : FillRows)
+			{
+				Markdown += Row + TEXT("\n");
+			}
 		}
 		FFileHelper::SaveStringToFile(Markdown, *FPaths::Combine(GetOutputDirectory(), TEXT("report.md")), FFileHelper::EEncodingOptions::ForceUTF8WithoutBOM);
 	}
@@ -1686,19 +2189,32 @@ namespace DreamTextParityTestLocal
 		const FInk& ReferenceInk = bHeldToSlate ? SlateInk : ChromeInk;
 		const FCrispness& ReferenceCrisp = bHeldToSlate ? SlateCrisp : ChromeCrisp;
 		const bool bCorners = Case.HasFlag(TEXT("corners"));
-		const FDeviation DreamDeviation = Compare(InOutRun.Dream, Reference, DreamInk, ReferenceInk, DreamCrisp, ReferenceCrisp, bCorners, Paper);
+		FDeviation DreamDeviation = Compare(InOutRun.Dream, Reference, DreamInk, ReferenceInk, DreamCrisp, ReferenceCrisp, bCorners, Paper);
+		// The grey share against Slate's whatever the reference: for dark text on light paper both are plain grayscale
+		// coverage, where Chrome's DirectWrite masks are filtered across; light on dark is left unmeasured.
+		if (!Case.bInverse && InOutRun.Slate.bPicture && DreamCrisp.bAny && SlateCrisp.bAny && SlateCrisp.GreyFraction > 0.0)
+		{
+			DreamDeviation.GreyVsSlate = (DreamCrisp.GreyFraction - SlateCrisp.GreyFraction) / SlateCrisp.GreyFraction;
+		}
 		const bool bSlateCompared = !bHeldToSlate && InOutRun.Slate.NotApplicable.IsEmpty();
 		const FDeviation SlateDeviation = bSlateCompared
 			? Compare(InOutRun.Slate, Reference, SlateInk, ReferenceInk, SlateCrisp, ReferenceCrisp, bCorners, Paper) : FDeviation();
 		TArray<FTargetResult> Targets;
 		EvaluateTargets(Case, DreamDeviation, Targets);
+		const bool bFill = Case.HasFill();
+		const FFillMeasure FillResult = bFill ? MeasureFill(InOutRun) : FFillMeasure();
 
 		const FString DreamPath = FPaths::Combine(Directory, Case.Id + TEXT("_dream.png"));
 		const FString SlatePath = FPaths::Combine(Directory, Case.Id + TEXT("_slate.png"));
 		const FString ComparePath = FPaths::Combine(Directory, Case.Id + TEXT("_compare.png"));
+		const FString DreamMaskPath = FPaths::Combine(Directory, Case.Id + TEXT("_dream_mask.png"));
 		if (InOutRun.Dream.bPicture)
 		{
 			UDreamUICaptureLibrary::SavePixelsToPng(InOutRun.Dream.Pixels, InOutRun.Dream.Size, DreamPath);
+		}
+		if (bFill && InOutRun.DreamMask.bPicture)
+		{
+			UDreamUICaptureLibrary::SavePixelsToPng(InOutRun.DreamMask.Pixels, InOutRun.DreamMask.Size, DreamMaskPath);
 		}
 		if (InOutRun.Slate.bPicture)
 		{
@@ -1727,6 +2243,10 @@ namespace DreamTextParityTestLocal
 		Entry->SetField(TEXT("canvas"), IntArrayValue({ Case.Canvas.X, Case.Canvas.Y }));
 		Entry->SetStringField(TEXT("reference"), bHeldToSlate ? TEXT("Slate") : TEXT("Chrome"));
 		Entry->SetBoolField(TEXT("reportOnly"), Case.IsReportOnly());
+		if (bFill)
+		{
+			Entry->SetObjectField(TEXT("fill"), FillJson(Case, FillResult, DreamMaskPath));
+		}
 		TArray<TSharedPtr<FJsonValue>> Flags;
 		for (const FString& Flag : Case.Flags)
 		{
@@ -1778,9 +2298,28 @@ namespace DreamTextParityTestLocal
 			bSlateCompared ? *FString::Printf(TEXT(" and %.1f px (Slate)"), SlateDeviation.CaretMax) : TEXT(""), *ComparePath));
 		if (DreamCrisp.bAny && ReferenceCrisp.bAny)
 		{
-			InTest.AddInfo(FString::Printf(TEXT("%s: edges %.2f / %.2f px (rows / columns) against %s's %.2f / %.2f, grey %.0f%% against %.0f%%, gradient per ink %.2f against %.2f."),
+			InTest.AddInfo(FString::Printf(TEXT("%s: stroke edges %.2f / %.2f px (rows / columns, %d / %d edges) against %s's %.2f / %.2f (%d / %d); linear ink %s; grey %s."),
+				*Case.Id, DreamCrisp.StrokeEdgeRows, DreamCrisp.StrokeEdgeColumns, DreamCrisp.RowStrokeEdges, DreamCrisp.ColumnStrokeEdges, *Reference.Engine,
+				ReferenceCrisp.StrokeEdgeRows, ReferenceCrisp.StrokeEdgeColumns, ReferenceCrisp.RowStrokeEdges, ReferenceCrisp.ColumnStrokeEdges,
+				DreamDeviation.InkLinear.IsSet() ? *FString::Printf(TEXT("%+.1f%% of %s's"), DreamDeviation.InkLinear.GetValue() * 100.0, *Reference.Engine) : TEXT("not measured"),
+				DreamDeviation.GreyVsSlate.IsSet() ? *FString::Printf(TEXT("%.0f%% against Slate's %.0f%%"), DreamCrisp.GreyFraction * 100.0, SlateCrisp.GreyFraction * 100.0)
+					: TEXT("not measured against Slate")));
+			InTest.AddInfo(FString::Printf(TEXT("%s (the measures before, for one round): edges %.2f / %.2f px (rows / columns) against %s's %.2f / %.2f, grey %.0f%% against %.0f%%, gradient per ink %.2f against %.2f."),
 				*Case.Id, DreamCrisp.EdgeWidthRows, DreamCrisp.EdgeWidthColumns, *Reference.Engine, ReferenceCrisp.EdgeWidthRows, ReferenceCrisp.EdgeWidthColumns,
 				DreamCrisp.GreyFraction * 100.0, ReferenceCrisp.GreyFraction * 100.0, DreamCrisp.GradientPerInk, ReferenceCrisp.GradientPerInk));
+		}
+		if (bFill)
+		{
+			if (FillResult.bMeasured)
+			{
+				InTest.AddInfo(FString::Printf(TEXT("%s (report only): over the %d pixel(s) both masks cover fully, the fill is %.1f codes from Chrome's on average and %d at the 95th percentile; the average colours of the %d bands along the %s axis differ by at most %.1f codes (band %d)."),
+					*Case.Id, FillResult.Pixels, FillResult.MeanDifference, FillResult.P95Difference, FillBands, *FillResult.Axis, FillResult.BandDifference,
+					FillResult.WorstBand + 1));
+			}
+			else
+			{
+				InTest.AddInfo(FString::Printf(TEXT("%s: the fill is not measured: %s."), *Case.Id, *FillResult.Why));
+			}
 		}
 		if (bCorners && DreamDeviation.MaskDifference >= 0)
 		{
@@ -1860,7 +2399,8 @@ void FDreamTextParityTest::GetTests(TArray<FString>& OutBeautifiedNames, TArray<
  * One corpus case drawn by DreamGUI, Slate and Chrome (when the reference exists): the pictures and the numbers are
  * written and reported; unless the case is reportOnly, for a case flagged "breaks" DreamGUI's line starts must equal the
  * reference's, and every target the case names must hold. A missing Chrome reference is reported, never a failure; a
- * case whose font key is optional and missing a file on this machine is skipped.
+ * case whose font key is optional and missing a file on this machine is skipped. A fill case is drawn a second time as
+ * its solid mask, and fails only when its fill does not read as a gradient.
  */
 bool FDreamTextParityTest::RunTest(const FString& Parameters)
 {
@@ -1908,6 +2448,18 @@ bool FDreamTextParityTest::RunTest(const FString& Parameters)
 		AddError(FString::Printf(TEXT("%s is held to Slate, which cannot draw it: %s."), *Run->Case.Id, *Run->Slate.NotApplicable));
 		return false;
 	}
+	if (!Run->Case.Fill.IsEmpty())
+	{
+		// The string Chrome's page paints with, read the way a .dui file's or a property's CSS is.
+		FDreamGradient FillGradient;
+		FString FillError;
+		if (!FDreamGradient::ParseCss(Run->Case.Fill, FillGradient, &FillError))
+		{
+			AddError(FString::Printf(TEXT("%s: the fill \"%s\" does not read as a gradient: %s."), *Run->Case.Id, *Run->Case.Fill, *FillError));
+			return false;
+		}
+		Run->FillGradient = FillGradient;
+	}
 
 	// The stage is the case's canvas in device pixels; at a scale other than 1 its root is laid out at the canvas's own
 	// size, so the canvas scale is the case's and every number stays in canvas pixels.
@@ -1954,6 +2506,24 @@ bool FDreamTextParityTest::RunTest(const FString& Parameters)
 			Run->Slate.Notes.Add(FString::Printf(TEXT("n/a: %s"), *Run->Slate.NotApplicable));
 		}
 	});
+	if (Run->Case.HasFill())
+	{
+		// The same text again as a solid mask: which pixels its face covers fully, where the fills' colours are compared.
+		EnqueueDo([Run]()
+		{
+			ShowDreamMask(*Run);
+		});
+		EnqueueFrames(Stage, 2);
+		EnqueueFramesUntilSettled(Stage);
+		EnqueueDo([Stage, Run]()
+		{
+			Run->DreamMask.bPicture = Stage->ReadBack(Run->DreamMask.Pixels, Run->DreamMask.Size);
+			if (!Run->DreamMask.bPicture)
+			{
+				Run->Dream.Notes.Add(TEXT("the stage could not be read back for the mask"));
+			}
+		});
+	}
 	// Slate rasterises a glyph the first time it paints it and uploads its atlas with a later frame.
 	EnqueueFrames(Stage, 2);
 	EnqueueDo([this, Run]()

@@ -109,6 +109,14 @@ namespace DreamDriverGameHost
 	bool TypeKey(FDreamDriverContext& InContext, const FKey& InKey, const FKey& InModifier, FString& OutWhyNot);
 
 	/**
+	 * Half a keystroke through the controller's input stack, for a key held across frames (FDreamDriverSequence::KeyDown
+	 * and KeyUp): on the press the modifier keys of InModifiers go down first, then InKey, all in the same input frame
+	 * so every binding dispatched in it sees them held; on the release InKey comes up first, then the modifiers in
+	 * reverse. Nothing is released for the caller -- the other half is a step of its own.
+	 */
+	bool PressKey(FDreamDriverContext& InContext, const FKey& InKey, EDreamDriverModifierKeys InModifiers, bool bInPressed, FString& OutWhyNot);
+
+	/**
 	 * One phase of one finger, through APlayerController::InputTouch. Also moves the driver module's
 	 * cursor the way FSceneViewport moves its cached cursor on every touch -- to the touch, and to
 	 * (-1, -1) when the last finger lifts -- because the preset re-reads the "mouse" position every

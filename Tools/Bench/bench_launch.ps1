@@ -11,6 +11,7 @@
 .EXAMPLE
     pwsh -File Tools/Bench/bench_launch.ps1 -Mode world -Tag w1 -Csv 1
     pwsh -File Tools/Bench/bench_launch.ps1 -Mode screen -Tag s1 -Game -Csv 1
+    pwsh -File Tools/Bench/bench_launch.ps1 -Mode screen -Tag cov1 -Game -Csv 1 -StatsCmds 'DreamUI.Stats' -AbCmds 'DreamGUI.Text.SmallTextCoverage 0'
 #>
 param(
     # The host project; DREAMGUI_TEST_PROJECT when not given.
@@ -36,6 +37,9 @@ param(
     [string]$StatsCmds = '',
     # Console commands for an A/B run: side A measured first, then these, then side B (';'-separated).
     [string]$AbCmds = '',
+    # Console commands for the whole session, both sides alike, run as the game starts (';'-separated), e.g.
+    # 'r.DreamUI.RenderLayers 0' to measure an A/B with render layers off.
+    [string]$SetupCmds = '',
     [double]$Warmup = 20,
     [double]$Window = 8,
     [int]$Rounds = 4,
@@ -82,6 +86,7 @@ $env:DREAMBENCH_TRACE_CHANNELS = $TraceChannels
 $env:DREAMBENCH_CSV = "$Csv"
 $env:DREAMBENCH_STATS_CMDS = $StatsCmds
 $env:DREAMBENCH_AB_CMDS = $AbCmds
+$env:DREAMBENCH_SETUP_CMDS = $SetupCmds
 $env:DREAMBENCH_WARMUP = "$Warmup"
 $env:DREAMBENCH_WINDOW = "$Window"
 $env:DREAMBENCH_ROUNDS = "$Rounds"

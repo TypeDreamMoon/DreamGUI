@@ -1,0 +1,152 @@
+// Gradient paints in rich text: a <gradient=...> run among plain words (the name read as CSS written without spaces),
+// <color> inside a gradient run and a gradient run inside <color> -- the innermost of the two wins, a colour making its
+// characters solid -- a run wrapped across two lines and painted in slices, a name that resolves to nothing (solid), a
+// face paint over a whole rich text with a link, an underline and a strike, colour emoji in a painted text (they keep
+// their own colours), and synthetic bold and italic (Synthetic key: Roboto with no style faces) painted.
+// @stage 1024x480
+
+style Title {
+    AnchorData.AnchorMin = (0, 1)
+    AnchorData.AnchorMax = (1, 1)
+    AnchorData.Pivot = (0.5, 1)
+    AnchorData.AnchoredPosition = (0, -8)
+    AnchorData.SizeDelta = (-24, 20)
+    FontSize = 15
+    Color = #1E2230
+    HAlign = Left
+    VAlign = Top
+    OverflowType = HorizontalOverflow
+}
+
+style Note {
+    AnchorData.AnchorMin = (0, 1)
+    AnchorData.AnchorMax = (0, 1)
+    AnchorData.Pivot = (0, 1)
+    FontSize = 12
+    Color = #5A6172
+    HAlign = Left
+    VAlign = Top
+    OverflowType = HorizontalOverflow
+}
+
+style Rich {
+    AnchorData.AnchorMin = (0, 1)
+    AnchorData.AnchorMax = (0, 1)
+    AnchorData.Pivot = (0, 1)
+    Color = #1E2230
+    HAlign = Left
+    VAlign = Middle
+    OverflowType = HorizontalOverflow
+    bRichText = true
+}
+
+Widget Root {
+    Image Page {
+        Brush.TintColor = #F5F3EE
+        AnchorData.AnchorMin = (0, 0)
+        AnchorData.AnchorMax = (1, 1)
+        AnchorData.SizeDelta = (0, 0)
+    }
+
+    Text Heading : Title {
+        Text = "Gradient paints in rich text: tags, nesting with colour, slices, links, emoji, synthetic styles"
+    }
+
+    Text RunLabel : Note {
+        AnchorData.AnchoredPosition = (24, -40)
+        AnchorData.SizeDelta = (976, 16)
+        Text = "a <gradient=linear-gradient(90deg,#ff2d55,#5856d6)> run among plain words, measured across the run"
+    }
+    Text Run : Rich {
+        AnchorData.AnchoredPosition = (24, -58)
+        AnchorData.SizeDelta = (976, 40)
+        FontSize = 28
+        Text = "Plain words, <gradient=linear-gradient(90deg,#ff2d55,#5856d6)>a painted run of text</gradient>, plain again"
+    }
+
+    Text NestingLabel : Note {
+        AnchorData.AnchoredPosition = (24, -110)
+        AnchorData.SizeDelta = (976, 16)
+        Text = "<color> inside a gradient run is solid; a gradient run inside <color> is painted: the innermost wins"
+    }
+    Text Nesting : Rich {
+        AnchorData.AnchoredPosition = (24, -128)
+        AnchorData.SizeDelta = (976, 40)
+        FontSize = 24
+        Text = "<gradient=linear-gradient(90deg,#e8b64a,#c2185b)>paint <color=#2E7D32>solid green</color> paint</gradient> and <color=#1565C0>blue <gradient=linear-gradient(90deg,#ff9500,#ff2d55)>paint in colour</gradient> blue</color>"
+    }
+
+    Text SliceLabel : Note {
+        AnchorData.AnchoredPosition = (24, -180)
+        AnchorData.SizeDelta = (480, 16)
+        Text = "a run wrapped across lines, painted in slices"
+    }
+    Text Slices : Rich {
+        AnchorData.AnchoredPosition = (24, -198)
+        AnchorData.SizeDelta = (320, 72)
+        FontSize = 22
+        VAlign = Top
+        OverflowType = VerticalOverflow
+        Text = "A <gradient=linear-gradient(90deg,#34c759,#0a84ff,#bf5af2)>gradient run that wraps across two lines in slices</gradient> ends."
+    }
+
+    Text UnresolvedLabel : Note {
+        AnchorData.AnchoredPosition = (520, -180)
+        AnchorData.SizeDelta = (480, 16)
+        Text = "a name that is no style, no preset and no CSS: solid"
+    }
+    Text Unresolved : Rich {
+        AnchorData.AnchoredPosition = (520, -198)
+        AnchorData.SizeDelta = (480, 40)
+        FontSize = 24
+        Text = "before <gradient=NoSuchPaint>an unresolved name</gradient> after"
+    }
+
+    Text LinkLabel : Note {
+        AnchorData.AnchoredPosition = (24, -282)
+        AnchorData.SizeDelta = (976, 16)
+        Text = "a face paint over a whole rich text: a link, an underline and a strike are painted with it"
+    }
+    Text Linked : Rich {
+        AnchorData.AnchoredPosition = (24, -300)
+        AnchorData.SizeDelta = (976, 40)
+        FontSize = 26
+        Text = "Read the <a=docs>documentation</a> now, <u>underlined words</u> and <s>a struck word</s>"
+        TextStyle.FacePaint.bEnabled = true
+        TextStyle.FacePaint.Gradient = "linear-gradient(90deg, #E65100, #4A148C)"
+    }
+
+    Text EmojiLabel : Note {
+        AnchorData.AnchoredPosition = (24, -352)
+        AnchorData.SizeDelta = (480, 16)
+        Text = "emoji in a painted text keep their own colours (Emoji key)"
+    }
+    Text Font_Emoji_Painted : Rich {
+        AnchorData.AnchoredPosition = (24, -370)
+        AnchorData.SizeDelta = (480, 44)
+        FontSize = 30
+        Text = "Paint 👍 😀 🎉 ❤&#xFE0F; keeps"
+        TextStyle.FacePaint.bEnabled = true
+        TextStyle.FacePaint.Gradient = "linear-gradient(90deg, #0A84FF, #BF5AF2)"
+    }
+
+    Text SyntheticLabel : Note {
+        AnchorData.AnchoredPosition = (520, -352)
+        AnchorData.SizeDelta = (480, 16)
+        Text = "synthetic bold and italic, painted (Synthetic key)"
+    }
+    Text Font_Synthetic_Styles : Rich {
+        AnchorData.AnchoredPosition = (520, -370)
+        AnchorData.SizeDelta = (480, 44)
+        FontSize = 28
+        Text = "<b>bold</b> <i>italic</i> <b><i>both</i></b> plain"
+        TextStyle.FacePaint.bEnabled = true
+        TextStyle.FacePaint.Gradient = "linear-gradient(180deg, #FFB300, #C2185B)"
+    }
+
+    Text Expected : Note {
+        AnchorData.AnchoredPosition = (24, -440)
+        AnchorData.SizeDelta = (976, 16)
+        Text = "Expected: runs painted across their own length, solid colour where <color> is innermost, emoji in their colours."
+    }
+}

@@ -12,9 +12,14 @@
     for -- the text at (padding, padding) in a box of the case's width, white-space: pre-wrap (pre when the box is not to
     wrap), the case's line height, letter spacing, tab size, lang, dir, alignment (justification included) and drop
     shadow, black on white or white on black, drawn at the case's device scale. Rich cases are DreamGUI markup turned
-    into HTML: <size=N> becomes a font-size span, <a=id> a link, <lang=xx> a span with that lang, <b> <i> <u> <s> <sup>
-    <sub> stay what they are. A case held to Slate (reference 'slate': Chrome cannot draw it) is skipped, and so is a
-    case whose optional font key names a file this machine does not have.
+    into HTML: <size=N> becomes a font-size span, <a=id> a link, <lang=xx> a span with that lang, <gradient=css> a span
+    painted with that gradient, <b> <i> <u> <s> <sup> <sub> stay what they are. A case held to Slate (reference 'slate':
+    Chrome cannot draw it) is skipped, and so is a case whose optional font key names a file this machine does not have.
+
+    A fill case (a 'fill' gradient, or <gradient=...> runs) is painted with background-image and background-clip: text,
+    color: transparent; its outline and shadow go on a copy of the paragraph underneath, so that they lie outside the
+    painted face as DreamGUI's do. Its page is drawn a second time as a mask, the same text solid in the ink colour with
+    nothing painted, outlined or shadowed (<case>.mask.png).
 
     Chrome runs twice per page. The first run takes the screenshot (<case>.png). The second dumps the DOM, into which
     the page's own script has written, once document.fonts.ready has resolved: the caret x and y for every UTF-16
@@ -28,7 +33,8 @@
 .PARAMETER Corpus
     The corpus; Source/DreamGUITests/Resources/TextParity/corpus.json of this plugin by default.
 .PARAMETER OutDir
-    Where <case>.png and <case>.json go; Source/DreamGUITests/Resources/TextParity/Chrome by default.
+    Where <case>.png, <case>.json and a fill case's <case>.mask.png go; Source/DreamGUITests/Resources/TextParity/Chrome
+    by default.
 .PARAMETER EngineDir
     The engine's Engine directory, which $(EngineDir) in the fonts table stands for.
 .PARAMETER Browser
@@ -130,9 +136,12 @@ function ConvertTo-HtmlText([string]$Text) {
     return $Text.Replace('&', '&amp;').Replace('<', '&lt;').Replace('>', '&gt;')
 }
 
-# DreamGUI's rich-text markup as HTML. Character references (&lt; &#x1F600;) are HTML already.
-function Convert-RichMarkup([string]$Markup) {
+# DreamGUI's rich-text markup as HTML. Character references (&lt; &#x1F600;) are HTML already. A <gradient=css> run is a
+# span painted with the gradient (CSS written without spaces, which DreamGUI reads as the tag's name); in a mask, a plain
+# span.
+function Convert-RichMarkup([string]$Markup, [switch]$Mask) {
     $pattern = '<(/?)([A-Za-z_][A-Za-z0-9_]*)(?:=([^>]*))?(/?)>'
+    $maskMode = [bool]$Mask
     $evaluator = {
         param($Match)
         $closing = $Match.Groups[1].Value -eq '/'
@@ -142,6 +151,11 @@ function Convert-RichMarkup([string]$Markup) {
         switch ($name) {
             { $_ -in @('b', 'i', 'u', 's', 'sup', 'sub') } {
                 if ($closing) { return "</$name>" } else { return "<$name>" }
+            }
+            'gradient' {
+                if ($closing) { return '</span>' }
+                if ($maskMode) { return '<span>' }
+                return "<span style=`"background-image: $value; -webkit-background-clip: text; background-clip: text; color: transparent; -webkit-text-fill-color: transparent;`">"
             }
             'size' {
                 if ($closing) { return '</span>' }
@@ -167,8 +181,13 @@ function Convert-RichMarkup([string]$Markup) {
                 return "<span data-tag=`"$name`">"
             }
         }
-    }
+    }.GetNewClosure()
     return [regex]::Replace($Markup, $pattern, $evaluator)
+}
+
+# Whether a case paints with a gradient: a fill, or a rich text's <gradient=...> runs. FCase::HasFill.
+function Test-HasFill($Item) {
+    return [bool]$Item.fill -or ($Item.rich -and $Item.text -match '(?i)<gradient=')
 }
 
 function Get-LineHeightFactor([string]$Spelling) {
@@ -211,6 +230,7 @@ function Expand-Cases($Data) {
             shadowX       = if ($null -ne $shadow) { [double](Get-Prop $shadow 'x' 0) } else { 0.0 }
             shadowY       = if ($null -ne $shadow) { [double](Get-Prop $shadow 'y' 0) } else { 0.0 }
             shadowColor   = if ($null -ne $shadow) { [string](Get-Prop $shadow 'color' '#00000080') } else { '' }
+            fill          = ([string](Get-Prop $entry 'fill' '')).Trim()
             canvas        = @(Get-Prop $entry 'canvas' $defaultCanvas)
             scale         = [double](Get-Prop $entry 'scale' 1)
             reference     = [string](Get-Prop $entry 'reference' 'chrome')
@@ -237,6 +257,7 @@ function Expand-Cases($Data) {
             elseif ($variant -eq 'field') {
                 # DreamGUI draws this one from its distance field; Chrome's picture is the case's own, under the variant's name.
                 $copy.id = "$($item.id)_Field"
+                $copy.flags = @(@($item.flags) + @('reportOnly') | Select-Object -Unique)
             }
             else {
                 continue
@@ -324,6 +345,8 @@ $MeasureScript = @'
       const normal = probe.getBoundingClientRect().height;
       probe.remove();
       p.style.lineHeight = (normal * parityCase.lineHeightFactor) + 'px';
+      // A fill case's outline and shadow copy underneath keeps to the paragraph's lines.
+      document.querySelectorAll('.para.under').forEach((under) => { under.style.lineHeight = p.style.lineHeight; });
       out.normalLineHeight = round(normal);
     }
     const faces = [];
@@ -469,7 +492,8 @@ $MeasureScript = @'
 })();
 '@
 
-function New-CasePage($Item, $FontKey, [int]$Padding) {
+# The case's page; with -Mask, its mask: the same text solid in the ink colour, nothing painted, outlined or shadowed.
+function New-CasePage($Item, $FontKey, [int]$Padding, [switch]$Mask) {
     $canvasWidth = [int]$Item.canvas[0]
     $canvasHeight = [int]$Item.canvas[1]
     $ink = if ($Item.inverse) { '#ffffff' } else { '#000000' }
@@ -515,19 +539,39 @@ function New-CasePage($Item, $FontKey, [int]$Padding) {
         $extra.Add("display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: $($Item.maxLines); overflow: hidden;")
     }
     if ($Item.transform -eq 'uppercase') { $extra.Add('text-transform: uppercase;') }
-    if ($Item.outlineEm -gt 0) {
+    $decoration = [System.Collections.Generic.List[string]]::new()
+    if ($Item.outlineEm -gt 0 -and -not $Mask) {
         # DreamGUI's outline lies wholly outside the face; a stroke straddles the edge, so it is twice as wide and painted under the fill.
         $stroke = (2.0 * $Item.outlineEm).ToString($invariant)
-        $extra.Add("-webkit-text-stroke: ${stroke}em $($Item.outlineColor); paint-order: stroke fill;")
+        $decoration.Add("-webkit-text-stroke: ${stroke}em $($Item.outlineColor); paint-order: stroke fill;")
     }
-    if ($Item.shadowColor) {
+    if ($Item.shadowColor -and -not $Mask) {
         # In em, as DreamGUI's underlay offset is: the text's own size makes them pixels. No blur, as the case's underlay has none.
         $shadowX = $Item.shadowX.ToString($invariant)
         $shadowY = $Item.shadowY.ToString($invariant)
-        $extra.Add("text-shadow: ${shadowX}em ${shadowY}em 0 $($Item.shadowColor);")
+        $decoration.Add("text-shadow: ${shadowX}em ${shadowY}em 0 $($Item.shadowColor);")
     }
 
-    $content = if ($Item.rich) { Convert-RichMarkup $Item.text } else { ConvertTo-HtmlText $Item.text }
+    $content = if ($Item.rich) { Convert-RichMarkup $Item.text -Mask:$Mask } else { ConvertTo-HtmlText $Item.text }
+    # A fill paints the face through the text's own shapes, under the text's foreground: a stroke on the paragraph would
+    # cover the face's edge with its inner half, and a shadow would fall over the face. Both go on a copy of the paragraph
+    # underneath, in the outline's colour (stroke and face together: the face grown by the outline), so that they lie
+    # outside the painted face as DreamGUI's outline and underlay do.
+    $fillCss = ''
+    $underlayCss = ''
+    $underlay = ''
+    if ((Test-HasFill $Item) -and -not $Mask) {
+        if ($Item.fill) {
+            $fillCss = "#p { background-image: $($Item.fill); -webkit-background-clip: text; background-clip: text; color: transparent; -webkit-text-fill-color: transparent; }"
+        }
+        if ($decoration.Count -gt 0) {
+            $underColor = if ($Item.outlineEm -gt 0) { $Item.outlineColor } else { 'transparent' }
+            $underlayCss = ".para.under { color: $underColor; $($decoration -join ' ') }"
+            $underContent = if ($Item.rich) { Convert-RichMarkup $Item.text -Mask } else { $content }
+            $underlay = "<div class=`"para under`" aria-hidden=`"true`" lang=`"$($Item.lang)`" dir=`"$($Item.dir)`">$underContent</div>"
+            $decoration.Clear()
+        }
+    }
     $caseJson = [ordered]@{
         id               = $Item.id
         size             = $Item.size
@@ -559,12 +603,14 @@ body { width: ${canvasWidth}px; height: ${canvasHeight}px; overflow: hidden; bac
   white-space: $whiteSpace; overflow-wrap: $wrap; word-break: $($Item.wordBreak); line-break: auto; tab-size: $tabSize;
   color: $ink; text-align: $($Item.align); text-justify: $($Item.textJustify); text-align-last: $($Item.textAlignLast);
   font-kerning: normal; -webkit-font-smoothing: antialiased;
-  $($extra -join ' ')
+  $($extra -join ' ') $($decoration -join ' ')
 }
+$underlayCss
+$fillCss
 $($langCss.ToString())
 </style>
 </head>
-<body><div id="p" class="para" lang="$($Item.lang)" dir="$($Item.dir)">$content</div>
+<body>$underlay<div id="p" class="para" lang="$($Item.lang)" dir="$($Item.dir)">$content</div>
 <script>
 const parityCase = $caseJson;
 $MeasureScript
@@ -654,10 +700,11 @@ foreach ($item in $Cases) {
     $lines = '-'
     $png = Join-Path $OutDir "$($item.id).png"
     $json = Join-Path $OutDir "$($item.id).json"
+    $maskPng = Join-Path $OutDir "$($item.id).mask.png"
     try {
-        # Both of the case's old files go first: a picture or numbers left from an earlier run would be paired with
-        # this run's other half.
-        foreach ($stale in @($png, $json)) {
+        # Every old file of the case goes first: a picture, a mask or numbers left from an earlier run would be paired
+        # with this run's others.
+        foreach ($stale in @($png, $json, $maskPng)) {
             if (Test-Path -LiteralPath $stale) { Remove-Item -LiteralPath $stale -Force }
         }
         if ($item.reference -eq 'slate') {
@@ -695,6 +742,25 @@ foreach ($item in $Cases) {
             $pngSize = Get-PngSize $png
             if ($null -ne $pngSize -and ($pngSize[0] -ne $expectedWidth -or $pngSize[1] -ne $expectedHeight)) {
                 $notes.Add("the screenshot is $($pngSize[0]) x $($pngSize[1]), not $expectedWidth x $expectedHeight")
+            }
+        }
+
+        if (Test-HasFill $item) {
+            # The same text solid, which says where the painted face covers its pixels fully.
+            $maskPage = Join-Path $PagesDir "$($item.id).mask.html"
+            [System.IO.File]::WriteAllText($maskPage, (New-CasePage $item $fontKey $Padding -Mask), [System.Text.UTF8Encoding]::new($false))
+            $maskShot = Invoke-Browser $Browser ($Common + @($scaleFactor, $windowSize, "--screenshot=$maskPng", (ConvertTo-FileUri $maskPage)))
+            if ($maskShot.TimedOut) {
+                $notes.Add("the mask's screenshot run did not finish within $TimeoutSeconds s and was killed")
+            }
+            elseif (-not (Test-Path -LiteralPath $maskPng)) {
+                $notes.Add("no mask screenshot (exit $($maskShot.ExitCode)): $($maskShot.Err.Trim())")
+            }
+            else {
+                $maskSize = Get-PngSize $maskPng
+                if ($null -ne $maskSize -and ($maskSize[0] -ne $expectedWidth -or $maskSize[1] -ne $expectedHeight)) {
+                    $notes.Add("the mask's screenshot is $($maskSize[0]) x $($maskSize[1]), not $expectedWidth x $expectedHeight")
+                }
             }
         }
 

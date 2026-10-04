@@ -1,0 +1,283 @@
+// Gradient text, the paints a text style has (TextStyle.FacePaint, OutlinePaint): a gold title filled top to bottom
+// under a dark outline, a dark face inside a gradient outline, a paragraph wrapped across three lines and filled left to
+// right and at 135 degrees across its whole block, radial paints (an ellipse and a circle), conic, diamond and
+// four-corner paints, the same red-to-blue stops mixed in sRGB, in linear light and in Oklab, each line and each glyph
+// painted in a box of its own, a dark stop fading to transparent, and an outlined painted text at render opacity 0.5,
+// whose outline fades with it.
+// @stage 960x720
+
+style Title {
+    AnchorData.AnchorMin = (0, 1)
+    AnchorData.AnchorMax = (1, 1)
+    AnchorData.Pivot = (0.5, 1)
+    AnchorData.AnchoredPosition = (0, -8)
+    AnchorData.SizeDelta = (-24, 20)
+    FontSize = 15
+    Color = #1E2230
+    HAlign = Left
+    VAlign = Top
+    OverflowType = HorizontalOverflow
+}
+
+style Note {
+    AnchorData.AnchorMin = (0, 1)
+    AnchorData.AnchorMax = (0, 1)
+    AnchorData.Pivot = (0, 1)
+    FontSize = 12
+    Color = #5A6172
+    HAlign = Left
+    VAlign = Top
+    OverflowType = HorizontalOverflow
+}
+
+style Painted {
+    AnchorData.AnchorMin = (0, 1)
+    AnchorData.AnchorMax = (0, 1)
+    AnchorData.Pivot = (0, 1)
+    Color = #1E2230
+    HAlign = Left
+    VAlign = Middle
+    OverflowType = HorizontalOverflow
+    TextStyle.FacePaint.bEnabled = true
+}
+
+Widget Root {
+    Image Page {
+        Brush.TintColor = #F5F3EE
+        AnchorData.AnchorMin = (0, 0)
+        AnchorData.AnchorMax = (1, 1)
+        AnchorData.SizeDelta = (0, 0)
+    }
+
+    Text Heading : Title {
+        Text = "Gradient text: face and outline paints, every type, every box, every colour space"
+    }
+
+    Text GoldLabel : Note {
+        AnchorData.AnchoredPosition = (24, -40)
+        AnchorData.SizeDelta = (440, 16)
+        Text = "linear 180deg, gold, under a 0.06 em outline"
+    }
+    Text Gold : Painted {
+        AnchorData.AnchoredPosition = (24, -58)
+        AnchorData.SizeDelta = (440, 72)
+        FontSize = 60
+        Text = "GOLDEN"
+        TextStyle.FacePaint.Gradient = "linear-gradient(180deg, #FFF3B0, #E8B64A 55%, #9C6A12)"
+        TextStyle.OutlineColor = #3A2500FF
+        TextStyle.OutlineWidth = 0.06
+    }
+
+    Text OutlineLabel : Note {
+        AnchorData.AnchoredPosition = (496, -40)
+        AnchorData.SizeDelta = (440, 16)
+        Text = "a dark face in a 0.12 em gradient outline (white outline colour)"
+    }
+    Text OutlinePainted : Painted {
+        AnchorData.AnchoredPosition = (496, -58)
+        AnchorData.SizeDelta = (440, 72)
+        FontSize = 60
+        Text = "OUTLINE"
+        TextStyle.FacePaint.bEnabled = false
+        TextStyle.OutlineColor = #FFFFFFFF
+        TextStyle.OutlineWidth = 0.12
+        TextStyle.OutlinePaint.bEnabled = true
+        TextStyle.OutlinePaint.Gradient = "linear-gradient(90deg, #FF2D55, #FF9500, #34C759, #0A84FF, #BF5AF2)"
+    }
+
+    Text ParagraphLabel : Note {
+        AnchorData.AnchoredPosition = (24, -140)
+        AnchorData.SizeDelta = (440, 16)
+        Text = "linear 90deg across the whole wrapped block (TextBlock on both axes)"
+    }
+    Text Paragraph90 : Painted {
+        AnchorData.AnchoredPosition = (24, -158)
+        AnchorData.SizeDelta = (440, 100)
+        FontSize = 22
+        VAlign = Top
+        OverflowType = VerticalOverflow
+        Text = "The quick brown fox jumps over the lazy dog, painted left to right across its whole block, every line alike."
+        TextStyle.FacePaint.Gradient = "linear-gradient(90deg, #C2185B, #1565C0 50%, #2E7D32)"
+    }
+
+    Text Paragraph135Label : Note {
+        AnchorData.AnchoredPosition = (496, -140)
+        AnchorData.SizeDelta = (440, 16)
+        Text = "linear 135deg across the same block: CSS's corner to corner"
+    }
+    Text Paragraph135 : Painted {
+        AnchorData.AnchoredPosition = (496, -158)
+        AnchorData.SizeDelta = (440, 100)
+        FontSize = 22
+        VAlign = Top
+        OverflowType = VerticalOverflow
+        Text = "The quick brown fox jumps over the lazy dog, painted left to right across its whole block, every line alike."
+        TextStyle.FacePaint.Gradient = "linear-gradient(135deg, #C2185B, #1565C0 50%, #2E7D32)"
+    }
+
+    Text RadialLabel : Note {
+        AnchorData.AnchoredPosition = (24, -270)
+        AnchorData.SizeDelta = (440, 16)
+        Text = "radial: an ellipse to the farthest corner"
+    }
+    Text RadialEllipse : Painted {
+        AnchorData.AnchoredPosition = (24, -288)
+        AnchorData.SizeDelta = (440, 72)
+        FontSize = 60
+        Text = "ELLIPSE"
+        TextStyle.FacePaint.Gradient = "radial-gradient(ellipse at 50% 50%, #FFCC00, #FF2D55 50%, #5856D6)"
+    }
+
+    Text CircleLabel : Note {
+        AnchorData.AnchoredPosition = (496, -270)
+        AnchorData.SizeDelta = (440, 16)
+        Text = "radial: a circle to the closest side, at 30% 50%"
+    }
+    Text RadialCircle : Painted {
+        AnchorData.AnchoredPosition = (496, -288)
+        AnchorData.SizeDelta = (440, 72)
+        FontSize = 60
+        Text = "CIRCLE"
+        TextStyle.FacePaint.Gradient = "radial-gradient(circle closest-side at 30% 50%, #FFFFFF, #34C759 60%, #1E2230)"
+    }
+
+    Text ConicLabel : Note {
+        AnchorData.AnchoredPosition = (24, -370)
+        AnchorData.SizeDelta = (288, 16)
+        Text = "conic, from 12 o'clock"
+    }
+    Text Conic : Painted {
+        AnchorData.AnchoredPosition = (24, -388)
+        AnchorData.SizeDelta = (288, 72)
+        FontSize = 56
+        Text = "Conic"
+        TextStyle.FacePaint.Gradient = "conic-gradient(from 0deg, #FF2D55, #FFCC00, #34C759, #0A84FF, #BF5AF2, #FF2D55)"
+    }
+
+    Text DiamondLabel : Note {
+        AnchorData.AnchoredPosition = (336, -370)
+        AnchorData.SizeDelta = (288, 16)
+        Text = "diamond (DreamGUI's own)"
+    }
+    Text Diamond : Painted {
+        AnchorData.AnchoredPosition = (336, -388)
+        AnchorData.SizeDelta = (288, 72)
+        FontSize = 56
+        Text = "Diamond"
+        TextStyle.FacePaint.Gradient = "diamond-gradient(#FFFFFF, #0A84FF 50%, #1E2230)"
+    }
+
+    Text CornersLabel : Note {
+        AnchorData.AnchoredPosition = (648, -370)
+        AnchorData.SizeDelta = (288, 16)
+        Text = "four corners (TextMeshPro's)"
+    }
+    Text Corners : Painted {
+        AnchorData.AnchoredPosition = (648, -388)
+        AnchorData.SizeDelta = (288, 72)
+        FontSize = 56
+        Text = "Corners"
+        TextStyle.FacePaint.Gradient = "corners-gradient(#FF2D55, #FFCC00, #0A84FF, #34C759)"
+    }
+
+    Text SrgbLabel : Note {
+        AnchorData.AnchoredPosition = (24, -470)
+        AnchorData.SizeDelta = (288, 16)
+        Text = "red to blue in sRGB"
+    }
+    Text MixSrgb : Painted {
+        AnchorData.AnchoredPosition = (24, -488)
+        AnchorData.SizeDelta = (288, 48)
+        FontSize = 40
+        Text = "MIXING"
+        TextStyle.FacePaint.Gradient = "linear-gradient(90deg in srgb, #FF0000, #0000FF)"
+    }
+
+    Text LinearLabel : Note {
+        AnchorData.AnchoredPosition = (336, -470)
+        AnchorData.SizeDelta = (288, 16)
+        Text = "in linear light (srgb-linear)"
+    }
+    Text MixLinear : Painted {
+        AnchorData.AnchoredPosition = (336, -488)
+        AnchorData.SizeDelta = (288, 48)
+        FontSize = 40
+        Text = "MIXING"
+        TextStyle.FacePaint.Gradient = "linear-gradient(90deg in srgb-linear, #FF0000, #0000FF)"
+    }
+
+    Text OklabLabel : Note {
+        AnchorData.AnchoredPosition = (648, -470)
+        AnchorData.SizeDelta = (288, 16)
+        Text = "in Oklab"
+    }
+    Text MixOklab : Painted {
+        AnchorData.AnchoredPosition = (648, -488)
+        AnchorData.SizeDelta = (288, 48)
+        FontSize = 40
+        Text = "MIXING"
+        TextStyle.FacePaint.Gradient = "linear-gradient(90deg in oklab, #FF0000, #0000FF)"
+    }
+
+    Text LineBoxLabel : Note {
+        AnchorData.AnchoredPosition = (24, -550)
+        AnchorData.SizeDelta = (440, 16)
+        Text = "each line in its own box (Line across and down)"
+    }
+    Text LineBoxes : Painted {
+        AnchorData.AnchoredPosition = (24, -568)
+        AnchorData.SizeDelta = (440, 72)
+        FontSize = 28
+        VAlign = Top
+        Text = "a short line\nand a much longer second line"
+        TextStyle.FacePaint.Gradient = "linear-gradient(90deg, #FF9500, #AF52DE)"
+        TextStyle.PaintBoxHorizontal = Line
+        TextStyle.PaintBoxVertical = Line
+    }
+
+    Text GlyphBoxLabel : Note {
+        AnchorData.AnchoredPosition = (496, -550)
+        AnchorData.SizeDelta = (440, 16)
+        Text = "each glyph in its own box (Glyph across and down), 180deg"
+    }
+    Text GlyphBoxes : Painted {
+        AnchorData.AnchoredPosition = (496, -568)
+        AnchorData.SizeDelta = (440, 72)
+        FontSize = 56
+        Text = "GLYPHS"
+        TextStyle.FacePaint.Gradient = "linear-gradient(180deg, #FFD60A, #FF375F)"
+        TextStyle.PaintBoxHorizontal = Glyph
+        TextStyle.PaintBoxVertical = Glyph
+    }
+
+    Text FadeLabel : Note {
+        AnchorData.AnchoredPosition = (24, -648)
+        AnchorData.SizeDelta = (440, 16)
+        Text = "a dark stop fading to transparent"
+    }
+    Text FadeOut : Painted {
+        AnchorData.AnchoredPosition = (24, -666)
+        AnchorData.SizeDelta = (440, 48)
+        FontSize = 40
+        Text = "FADING AWAY"
+        TextStyle.FacePaint.Gradient = "linear-gradient(90deg, #1E2230 20%, transparent)"
+    }
+
+    Text OpacityLabel : Note {
+        AnchorData.AnchoredPosition = (496, -648)
+        AnchorData.SizeDelta = (440, 16)
+        Text = "painted face and outline at render opacity 0.5: both fade"
+    }
+    Text HalfOpacity : Painted {
+        AnchorData.AnchoredPosition = (496, -666)
+        AnchorData.SizeDelta = (440, 48)
+        RenderOpacity = 0.5
+        FontSize = 40
+        Text = "HALF FADED"
+        TextStyle.FacePaint.Gradient = "linear-gradient(180deg, #FFF3B0, #E8B64A 55%, #9C6A12)"
+        TextStyle.OutlineColor = #FFFFFFFF
+        TextStyle.OutlineWidth = 0.1
+        TextStyle.OutlinePaint.bEnabled = true
+        TextStyle.OutlinePaint.Gradient = "linear-gradient(90deg, #1E2230, #5856D6)"
+    }
+}

@@ -34,8 +34,13 @@ held to it again. The same list covers the gallery's goldens (`Gallery_Text`).
 Round 4 put every scene there: small text under 20 px now draws from coverage glyphs by default
 (`UDreamGUISettings::bSmallTextCoverage`), and every scene has headings and labels at 12 and 15 px. The three scenes
 about small text -- `Text_SizeLadder`, `Extreme_TinyText` and `Extreme_MixedSizesLine` -- also run as
-`<scene>_SmallTextCoverageOff`, with the switch off, held strictly to their goldens from before the switch
-(`Scene_<scene>_SmallTextCoverageOff.png`, copies of the old ones): with the switch off, nothing may have moved.
+`<scene>_SmallTextCoverageOff`, with the switch off: every size from the distance field.
+
+Round 5 puts every multisampled picture there again: the renderer's multisampled target now takes the render target's
+sRGB flag, so a blend is stored encoded, as on a single-sampled target, and the resolve averages decoded samples. Dark
+colours and edges move by up to about 7 codes, the gallery backdrop's green from 28 to 30; `Gallery_Aliased` is drawn
+single-sampled and does not move. The `_SmallTextCoverageOff` goldens are redrawn with the rest and are no longer copies
+of the pictures from before small-text coverage. The gradient scenes and `Text_SmallEffects` are new and pending too.
 
 ## What a scene file may say beyond the language
 
@@ -134,6 +139,17 @@ places itself.
 | `Extreme_InvisibleOnly` | A text of spaces and zero-width characters only |
 | `Extreme_OverlappingTexts` | Two translucent texts over each other |
 | `Extreme_WidestOutline` | An outline wider than the distance field reaches |
+| `Text_Gradient` | Face and outline paints (`TextStyle.FacePaint`, `OutlinePaint`, written as CSS): gold top to bottom under an outline, a gradient outline, a wrapped paragraph at 90 and 135 degrees, radial ellipse and circle, conic, diamond, four corners, sRGB / linear / Oklab mixing, Line and Glyph boxes, a fade to transparent, a painted outlined text at render opacity 0.5 |
+| `Text_GradientSmall` | Painted small text from coverage glyphs, 10 to 16 px, across and down, in a gradient outline, rich, on a dark plate; `_SmallTextCoverageOff` the same from the field |
+| `Text_GradientRich` | `<gradient=...>` runs (a name read as CSS written without spaces), nesting with `<color>` (the innermost wins), a run wrapped in slices, a name that resolves to nothing, a painted rich text with a link, an underline and a strike, painted emoji text, synthetic bold and italic |
+| `Text_GradientBitmap` | Gradient paints on a bitmap font; its outline and shadow copies stay solid |
+| `Extreme_GradientHardStops` | Hard stops and bands, a hard split, repeating stripes, a reflecting gradient, hard rings and sectors, sixteen stops and seventeen (the last not drawn) |
+| `Text_GradientShimmer` | The overlay band (`TextStyle.OverlayPaint`, blend Add) at five places set through `OverlayPaintPhase`, over a gold face with blend Normal, and a face moved by `FacePaintPhase` |
+| `Text_SmallEffects` | 10 to 16 px with 1 and 2 px outlines, a drop shadow and a glow: faces from coverage glyphs, effects from the field |
+
+A gradient in a scene is the CSS spelling of `FDreamGradient` (`FDreamGradient::ParseCss`): `TextStyle.FacePaint.Gradient =
+"linear-gradient(180deg, #FFF3B0, #E8B64A 55%, #9C6A12)"` with `TextStyle.FacePaint.bEnabled = true`. In a `<gradient=...>`
+tag the CSS has no spaces, since a space ends the tag's value; stops then sit where CSS places them by default.
 
 Nested custom tags with a style are not in `Text_RichText`: a custom tag's look comes from a rich-text style asset
 (`UDreamUIRichTextCustomStyleData`), the plugin ships none, and a `.dui` cannot make one.

@@ -27,8 +27,9 @@ pwsh -File Tools/Bench/bench_series.ps1 -Runs world:warm,world:w1,world:w2,scree
 Everything goes to `<host>/Saved/DreamGUIBench`: the copied log, the trace (`-Trace 1`), samples (`-Sample 1`).
 
 - `bench_launch.ps1` -- one session. Measures an idle window, then the animated windows, and prints the `[DreamPerf]`
-  lines (frame count, average, median, p95, max). `-AbCmds` measures a side B after console commands; `-StatsCmds` runs
-  commands around the windows (`DreamUI.Stats`). Turns the test host's verification switches off for the session
+  lines (frame count, average, median, p95, max). `-AbCmds` measures a side B after console commands; `-SetupCmds` runs
+  console commands for the whole session, both sides alike, as the game starts; `-StatsCmds` runs commands around the
+  windows (`DreamUI.Stats`). Turns the test host's verification switches off for the session
   (`r.DreamUI.VerifyPartialPrepare`, `r.DreamUI.VerifyKeptPointers`): they cost what the shortcuts save.
 - `bench_series.ps1` -- several sessions, with the CSV medians of each in one report.
 - `csv_summary.py` -- medians, averages and p95 of a CSV profile's columns (`--columns=`, `--dir=`).
@@ -37,6 +38,47 @@ Everything goes to `<host>/Saved/DreamGUIBench`: the copied log, the trace (`-Tr
 - `frame_breakdown.py` -- the slowest frames of a trace, broken down one by one: what a spike was made of.
 - `run_sampler.ps1`, `StackSampler.cs`, `cmp_samples.py` -- a sampling profiler for one thread of the running process
   (`bench_launch.ps1 -Sample 1 -SamplePhase window|all|edges|ends`), and a comparison of two of its reports.
+
+## Small text under motion: the coverage A/B
+
+Small text (20 device pixels and under) draws from coverage glyphs, which have to be repainted when a text moves off
+the device's pixel grid. What that costs while things move is measured as an A/B in one session, coverage on (side A)
+against off (side B, `DreamGUI.Text.SmallTextCoverage 0`):
+
+```
+# twice: the first launch after a build compiles shaders in the background, and is discarded
+pwsh -File Tools/Bench/bench_launch.ps1 -Mode screen -Game -Csv 1 -Trace 0 -Tag covwarm -StatsCmds 'DreamUI.Stats' -AbCmds 'DreamGUI.Text.SmallTextCoverage 0'
+pwsh -File Tools/Bench/bench_launch.ps1 -Mode screen -Game -Csv 1 -Trace 0 -Tag cov1 -StatsCmds 'DreamUI.Stats' -AbCmds 'DreamGUI.Text.SmallTextCoverage 0'
+# the same with render layers off on both sides
+pwsh -File Tools/Bench/bench_launch.ps1 -Mode screen -Game -Csv 1 -Trace 0 -Tag cov2 -StatsCmds 'DreamUI.Stats' -AbCmds 'DreamGUI.Text.SmallTextCoverage 0' -SetupCmds 'r.DreamUI.RenderLayers 0'
+# controls, once each: the world wall and Lvl_Test_UI (DevProject's, copied into the host as the walls are) are
+# world-space, where coverage never runs, so their two sides should not differ
+pwsh -File Tools/Bench/bench_launch.ps1 -Mode world -Game -Csv 1 -Trace 0 -Tag covworld -StatsCmds 'DreamUI.Stats' -AbCmds 'DreamGUI.Text.SmallTextCoverage 0'
+pwsh -File Tools/Bench/bench_launch.ps1 -Mode world -Game -Csv 1 -Trace 0 -Tag covui -Map /Game/Maps/Lvl_Test_UI -StatsCmds 'DreamUI.Stats' -AbCmds 'DreamGUI.Text.SmallTextCoverage 0'
+```
+
+The screen wall's labels are its buttons' own text at 16 px, so every one of them is small text; the 5000 of them start
+turning in one frame. Read side A against side B from the `[DreamPerf] screen anim A` and `anim B` lines (the CSV covers
+side A only), and the counters from the `DreamUI.Stats` output at the start and the end of each side's rounds
+(`DreamUIRenderStats`: TextPaints, TextMoveRepaints, SmallTextPlacements, SharpenSweepTexts, SharpenRepaints,
+CoverageItemsDrawn, CoverageGlyphLookups, CoverageRastersSync, CoverageJobs, CoverageFlushes, FontAtlasUploadBytes).
+Something is wrong when:
+
+- the worst frame of the rounds' first frames (every button starting to turn) is 5 ms or more above side B's;
+- TextMoveRepaints per frame comes near the number of moving texts during a scroll (a repaint on every move);
+- SmallTextPlacements per frame comes near the number of animated texts once they are render layers;
+- CoverageFlushes is anything but 0 in the steady rounds.
+
+The motion switches that change what a player sees are measured the same way and left at today's behaviour until the
+numbers decide: `-AbCmds 'DreamGUI.Text.SmallTextOnMove 1'` (keep the painted coverage quads while a text moves, repaint
+once it is still) or `2` (the field while it moves), and `-AbCmds 'DreamGUI.Scroll.SnapToDevicePixels 1'` (scroll views
+move their content by whole device pixels, which keeps coverage with no repaint).
+
+The same question on a fixed scene, inside the editor, is the Perf preset's render benchmark
+(`DreamGUI.Performance.RHI.TheBenchmarkSceneRecordsWhatEachStageOfItsFramesCosts`): its labels slide by 0.37 of a
+pixel a frame, scroll by whole pixels, tween their scale, turn (with render layers on and off), zoom and pulse their
+colour, each motion timed with coverage on and off, and `Saved/DreamGUITests/Perf/Benchmark.json` holds each phase's
+counters per frame (`<motion>.CoverageOn`, `<motion>.CoverageOff`), which `Tools/Tests/perf_report.py` compares.
 
 ## A packaged build
 

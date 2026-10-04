@@ -30,6 +30,7 @@
 #include "Input/Events.h"
 #include "Input/Reply.h"
 #include "Interaction/UITextInput.h"
+#include "Kismet/GameplayStatics.h"
 #include "Layout/Geometry.h"
 #include "Layout/WidgetPath.h"
 #include "LevelEditor.h"
@@ -51,6 +52,7 @@
 #include "Driver/DreamDriverGameHost.h"
 // Complete, because IsValid has to see that the context's module is a UObject.
 #include "Driver/DreamDriverInputModule.h"
+#include "Driver/DreamDriverKeys.h"
 #include "Driver/DreamDriverVirtualCamera.h"
 #include "Driver/DreamDriverWorldSpace.h"
 
@@ -413,7 +415,132 @@ namespace DreamDriverPieRigLocal
 	{
 		return FString::Printf(TEXT("%dx%d"), InSize.X, InSize.Y);
 	}
+
+	/** The Slate user the platform's keyboard is in a session with one player: the one KeyThroughSlate's events belong to. */
+	constexpr uint32 PieKeyboardSlateUser = 0;
+
+	/** A key event for Slate user 0 the way FSlateApplication::OnKeyDown and OnKeyUp make one from a platform message. */
+	FKeyEvent MakePieKeyEvent(const FKey& InKey, TConstArrayView<FKey> InHeldModifierKeys)
+	{
+		uint32 KeyCode = 0;
+		uint32 CharacterCode = 0;
+		DreamDriverKeys::GetKeyCodes(InKey, KeyCode, CharacterCode);
+		return FKeyEvent(InKey, DreamDriverKeys::MakeModifierKeysState(InHeldModifierKeys), PieKeyboardSlateUser,
+			/*bInIsRepeat*/ false, CharacterCode, KeyCode);
+	}
+
+	/**
+	 * Half of a key the platform delivers to the editor, through FSlateApplication the way its message handler hands
+	 * Slate a key: the press -- each modifier's key-down, the key's, and for Tab the '\t' its WM_CHAR carries -- or the
+	 * release -- the key's key-up, then the modifiers' in reverse. Slate routes each along user 0's focus path, whatever
+	 * holds the focus, and runs its own navigation for a key nobody handled; the input pre-processors (a world's Slate
+	 * source among them) hear it first. Where it lands is what a test reads afterwards, so nothing here checks the focus.
+	 *
+	 * Process*Event rather than the message handler's OnKeyDown: the modifier state is the step's, not the desk's -- the
+	 * person at it may be holding Shift -- and Slate takes the event as it is given.
+	 */
+	class FDreamPieSlateKeyStep : public IDreamDriverStep
+	{
+	public:
+		FDreamPieSlateKeyStep(const FKey& InKey, EDreamDriverModifierKeys InModifiers, bool bInPressed)
+			: Key(InKey)
+			, Modifiers(InModifiers)
+			, bPressed(bInPressed)
+		{
+		}
+
+		virtual EDreamDriverStepResult Execute(FDreamDriverContext& /*InContext*/, float /*InDeltaSeconds*/) override
+		{
+			if (bSent)
+			{
+				return EDreamDriverStepResult::Done;
+			}
+			if (!FSlateApplication::IsInitialized())
+			{
+				FailureReason = TEXT("Slate is not running, and a key through Slate is Slate's to deliver");
+				return EDreamDriverStepResult::Failed;
+			}
+			if (!Key.IsValid())
+			{
+				FailureReason = TEXT("the key is not a valid key");
+				return EDreamDriverStepResult::Failed;
+			}
+			FSlateApplication& SlateApp = FSlateApplication::Get();
+			TArray<FKey> ModifierKeys;
+			DreamDriverKeys::GetModifierKeys(Modifiers, ModifierKeys);
+			if (bPressed)
+			{
+				// Each modifier's own event carries itself among the held ones, as the platform marks a modifier down
+				// before reporting it.
+				TArray<FKey> Down;
+				for (const FKey& Modifier : ModifierKeys)
+				{
+					Down.Add(Modifier);
+					SlateApp.ProcessKeyDownEvent(MakePieKeyEvent(Modifier, Down));
+				}
+				SlateApp.ProcessKeyDownEvent(MakePieKeyEvent(Key, Down));
+				if (Key == EKeys::Tab)
+				{
+					// The WM_CHAR that follows Tab's WM_KEYDOWN, to the focus as every character goes.
+					SlateApp.ProcessKeyCharEvent(FCharacterEvent(TEXT('\t'), DreamDriverKeys::MakeModifierKeysState(Down), PieKeyboardSlateUser, /*bInIsRepeat*/ false));
+				}
+			}
+			else
+			{
+				TArray<FKey> Down = ModifierKeys;
+				SlateApp.ProcessKeyUpEvent(MakePieKeyEvent(Key, Down));
+				for (int32 Index = Down.Num() - 1; Index >= 0; --Index)
+				{
+					const FKey Modifier = Down[Index];
+					Down.RemoveAt(Index);
+					SlateApp.ProcessKeyUpEvent(MakePieKeyEvent(Modifier, Down));
+				}
+			}
+			bSent = true;
+			// The next engine frame is this step's: the session's controller processes the key in its own tick.
+			return EDreamDriverStepResult::Again;
+		}
+
+		virtual FString Describe() const override
+		{
+			return FString::Printf(TEXT("KeyThroughSlate(%s, %s)"), *DreamDriverKeys::Describe(Key, Modifiers), bPressed ? TEXT("down") : TEXT("up"));
+		}
+
+		virtual FString GetFailureReason() const override { return FailureReason; }
+
+	private:
+		FKey Key;
+		EDreamDriverModifierKeys Modifiers;
+		bool bPressed;
+		bool bSent = false;
+		FString FailureReason;
+	};
 }
+
+/**
+ * A travel Travel queued, run by the latent command it queued. The world it leaves is held weakly: the end of the
+ * travel collects that world, and a strong reference to anything in it is the leak the engine checks for.
+ */
+struct FDreamDriverPieRig::FTravelRequest
+{
+	enum class EPhase : uint8
+	{
+		NotStarted,
+		WaitForArrival,
+		Settle,
+		Done,
+	};
+
+	FString MapPackage;
+	TFunction<void(UWorld&)> BeforeTravel;
+	TFunction<void(UWorld&)> AfterTravel;
+	EPhase Phase = EPhase::NotStarted;
+	TWeakObjectPtr<UWorld> FromWorld;
+	double PhaseStartSeconds = 0.0;
+	/** Consecutive frames the new world's player has been ready; see WaitForPlayer in UpdateStart. */
+	int32 ReadyFramesSeen = 0;
+	int32 SettleFramesLeft = 0;
+};
 
 TSharedRef<FDreamDriverPieRig> FDreamDriverPieRig::Create(FAutomationTestBase& InTest, const FDreamPieRigOptions& InOptions)
 {
@@ -532,6 +659,173 @@ FDreamDriverSequence& FDreamDriverPieRig::TypeThroughViewport(FDreamDriverSequen
 	return InSequence;
 }
 
+FDreamDriverSequence& FDreamDriverPieRig::KeyThroughSlate(FDreamDriverSequence& InSequence, const FKey& InKey, EDreamDriverModifierKeys InModifiers)
+{
+	// Two steps, a frame each: the release on the engine frame after the press, as a key held for one frame.
+	InSequence.Add(MakeShared<DreamDriverPieRigLocal::FDreamPieSlateKeyStep>(InKey, InModifiers, /*bInPressed*/ true));
+	return InSequence.Add(MakeShared<DreamDriverPieRigLocal::FDreamPieSlateKeyStep>(InKey, InModifiers, /*bInPressed*/ false));
+}
+
+bool FDreamDriverPieRig::IsKeyboardFocusOnViewport() const
+{
+	if (!bAlive || ViewportClient == nullptr || !FSlateApplication::IsInitialized())
+	{
+		return false;
+	}
+	const TSharedPtr<SViewport> ViewportWidget = ViewportClient->GetGameViewportWidget();
+	if (!ViewportWidget.IsValid())
+	{
+		return false;
+	}
+	// The widget itself (see the declaration): the test FDreamUISlateInputSource makes of a key being this world's.
+	const TSharedPtr<SWidget> Focused = FSlateApplication::Get().GetUserFocusedWidget(DreamDriverPieRigLocal::PieKeyboardSlateUser);
+	return Focused.IsValid() && Focused.Get() == static_cast<SWidget*>(ViewportWidget.Get());
+}
+
+void FDreamDriverPieRig::Travel(const FString& InMapPackage, TFunction<void(UWorld&)> InBeforeTravel, TFunction<void(UWorld&)> InAfterTravel)
+{
+	const TSharedRef<FDreamDriverPieRig> Self = AsShared();
+	const TSharedRef<FTravelRequest> Request = MakeShared<FTravelRequest>();
+	Request->MapPackage = InMapPackage;
+	Request->BeforeTravel = MoveTemp(InBeforeTravel);
+	Request->AfterTravel = MoveTemp(InAfterTravel);
+	Enqueue([Self, Request]() -> bool
+	{
+		return Self->UpdateTravel(*Request);
+	});
+}
+
+bool FDreamDriverPieRig::UpdateTravel(FTravelRequest& InRequest)
+{
+	const double Now = FPlatformTime::Seconds();
+	switch (InRequest.Phase)
+	{
+	case FTravelRequest::EPhase::NotStarted:
+	{
+		if (!bAlive)
+		{
+			// A rig that failed has said why; one that never came up or has finished is a test queued out of order.
+			if (!HasFailed() && Test != nullptr)
+			{
+				Test->AddError(TEXT("A travel was queued on a play-in-editor rig that is not up: Start was not queued before it, or Finish ran before it."));
+			}
+			InRequest.Phase = FTravelRequest::EPhase::Done;
+			return true;
+		}
+		UWorld* LeavingWorld = DriverContext->World;
+		if (LeavingWorld == nullptr || GEditor == nullptr || GEditor->PlayWorld.Get() != LeavingWorld)
+		{
+			return FailTravel(InRequest, TEXT("the rig's world is not the editor's play world any more"));
+		}
+		if (InRequest.BeforeTravel)
+		{
+			InRequest.BeforeTravel(*LeavingWorld);
+		}
+		InRequest.FromWorld = LeavingWorld;
+		// What the rig added to the world goes as Finish takes it down -- the input actor while its world is whole, then
+		// every pointer into the world -- because the travel collects the world and treats anything of it still
+		// referenced as a leak. The screen root and the host actor stay: they are the world's to destroy, as a game's
+		// screens are when its level changes.
+		TearDownInputHost();
+		bAlive = false;
+		ReleasePlayWorld();
+		// The base game mode, as the session started with (FRequestPlaySessionParams::GameModeOverride reaches only the
+		// first level): a project's game mode in the new level would spawn its own pawn and UI in front of the test.
+		const FString GameModeOption = FString::Printf(TEXT("game=%s"), *AGameModeBase::StaticClass()->GetPathName());
+		UGameplayStatics::OpenLevel(LeavingWorld, FName(*InRequest.MapPackage), /*bAbsolute*/ true, GameModeOption);
+		InRequest.Phase = FTravelRequest::EPhase::WaitForArrival;
+		InRequest.PhaseStartSeconds = Now;
+		InRequest.ReadyFramesSeen = 0;
+		return false;
+	}
+
+	case FTravelRequest::EPhase::WaitForArrival:
+	{
+		if (GEditor == nullptr || !GEditor->IsPlayingSessionInEditor())
+		{
+			return FailTravel(InRequest, TEXT("the play session ended before the travel arrived"));
+		}
+		// Arrived once the play world is another one: the weak pointer answers null for the old world once it has been
+		// collected, so a new world at the old one's address still counts as arrived. The editor points PlayWorld at the
+		// world the load made only as it goes on ticking the session, so a play world it does not name yet is waited for,
+		// not taken for the end of the session.
+		UWorld* PlayWorld = GEditor->PlayWorld.Get();
+		const bool bArrived = PlayWorld != nullptr && PlayWorld != InRequest.FromWorld.Get();
+		if (bArrived && IsPlayerReady())
+		{
+			// Two frames with the player in place, for the reason WaitForPlayer gives.
+			if (++InRequest.ReadyFramesSeen < 2)
+			{
+				return false;
+			}
+			const FString WhyNot = BuildOnPlayWorld();
+			if (!WhyNot.IsEmpty())
+			{
+				return FailTravel(InRequest, WhyNot);
+			}
+			bAlive = true;
+			++TravelCount;
+			if (InRequest.AfterTravel)
+			{
+				InRequest.AfterTravel(*PlayWorld);
+			}
+			InRequest.SettleFramesLeft = FMath::Max(Options.SettleFrames, 0);
+			InRequest.Phase = FTravelRequest::EPhase::Settle;
+			if (InRequest.SettleFramesLeft == 0)
+			{
+				InRequest.Phase = FTravelRequest::EPhase::Done;
+				return true;
+			}
+			return false;
+		}
+		InRequest.ReadyFramesSeen = 0;
+		if (Now - InRequest.PhaseStartSeconds > Options.StartTimeoutSeconds)
+		{
+			return FailTravel(InRequest, FString::Printf(
+				TEXT("it had not arrived after %.1f seconds (the play world %s, its player %s)"),
+				Options.StartTimeoutSeconds,
+				bArrived ? TEXT("is a new one") : TEXT("is still the one it left"),
+				bArrived && IsPlayerReady() ? TEXT("ready") : TEXT("not ready")));
+		}
+		return false;
+	}
+
+	case FTravelRequest::EPhase::Settle:
+	{
+		// Start's settle: yield while frames are owed, done on the Update after the last yield.
+		if (InRequest.SettleFramesLeft > 0)
+		{
+			--InRequest.SettleFramesLeft;
+			if (InRequest.SettleFramesLeft > 0)
+			{
+				return false;
+			}
+		}
+		InRequest.Phase = FTravelRequest::EPhase::Done;
+		return true;
+	}
+
+	case FTravelRequest::EPhase::Done:
+	default:
+		return true;
+	}
+}
+
+bool FDreamDriverPieRig::FailTravel(FTravelRequest& InRequest, const FString& InReason)
+{
+	Failure = FString::Printf(TEXT("the travel to %s did not arrive: %s"), *InRequest.MapPackage, *InReason);
+	bAlive = false;
+	if (Test != nullptr)
+	{
+		Test->AddError(FString::Printf(TEXT("The play-in-editor rig's travel to %s did not arrive: %s."), *InRequest.MapPackage, *InReason));
+	}
+	// Whatever the new world was given before the failure goes now, while the pointers are good; Finish ends the session.
+	TearDownInputHost();
+	ReleasePlayWorld();
+	InRequest.Phase = FTravelRequest::EPhase::Done;
+	return true;
+}
+
 bool FDreamDriverPieRig::FailStart(const FString& InReason)
 {
 	Failure = InReason;
@@ -603,6 +897,11 @@ bool FDreamDriverPieRig::UpdateStart()
 			// The headless rig's arrangement feeds the module directly, which is exactly the shortcut
 			// this layer exists to not take.
 			return FailStart(TEXT("a play-in-editor rig takes its input through an input actor; ModuleOnly is the headless rig's arrangement"));
+		}
+		if (Options.InputHost == EDreamRigInputHost::SlateSource)
+		{
+			// The headless arrangement plays Slate's part with events of its own; a session has Slate itself.
+			return FailStart(TEXT("a play-in-editor rig takes its input through an input actor; SlateSource is the headless rig's arrangement -- in a session the world's Slate source is one of Slate's own pre-processors, so turn it on from WhenReady (UDreamUIInputSubsystem::SetSlateInputSourceEnabled) and press keys through Slate with KeyThroughSlate"));
 		}
 		if (GEditor->IsPlaySessionInProgress())
 		{
@@ -1272,10 +1571,14 @@ void FDreamDriverPieRig::GiveViewportKeyboardFocus(UGameViewportClient* InClient
 		if (FocusedNow != FocusedAtStart)
 		{
 			// Both ends remembered, so that Finish takes back exactly this move and nothing a test or a
-			// person did with the focus afterwards.
+			// person did with the focus afterwards. A give after a travel keeps the first one's "before":
+			// that is the editor's focus, which Finish hands back.
+			if (!Report.bKeyboardFocusGiven)
+			{
+				KeyboardFocusBeforeGiving = FocusedAtStart;
+			}
 			Report.bKeyboardFocusGiven = true;
 			KeyboardFocusGivenTo = FocusedNow;
-			KeyboardFocusBeforeGiving = FocusedAtStart;
 		}
 	}
 	Report.bKeyboardFocusOnViewportWhenUp = DreamDriverPieRigLocal::IsOnOrInside(SlateApp.GetUserFocusedWidget(KeyboardUser), ViewportAsWidget);

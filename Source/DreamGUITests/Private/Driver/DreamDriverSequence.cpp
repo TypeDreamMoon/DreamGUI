@@ -13,6 +13,8 @@
 #include "Engine/World.h"
 #include "Event/DreamEventSystem.h"
 #include "Event/DreamUIInputSubsystem.h"
+#include "Event/DreamUIInputUser.h"
+#include "Event/DreamUIKeyRouting.h"
 #include "Event/DreamBaseRaycaster.h"
 #include "Event/DreamPointerEventData.h"
 #include "Event/DreamScreenSpaceRaycaster.h"
@@ -36,7 +38,9 @@
 
 #include "Driver/DreamDriverGameHost.h"
 #include "Driver/DreamDriverInputModule.h"
+#include "Driver/DreamDriverKeys.h"
 #include "Driver/DreamDriverProjection.h"
+#include "Driver/DreamDriverSlateHost.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogDreamDriver, Log, All);
 
@@ -130,15 +134,18 @@ namespace DreamDriverPumpLocal
 	}
 
 	/**
-	 * One tick group's worth of tweens: the call ADreamTweenTickHelperActor (DuringPhysics, from its
-	 * own Tick) and its three UDreamTweenTickHelperComponent (PrePhysics, PostPhysics, PostUpdateWork)
-	 * make, made directly.
+	 * One tick group's worth of tweens: what ADreamTweenTickHelperActor (DuringPhysics, from its own
+	 * Tick) and its three UDreamTweenTickHelperComponent (PrePhysics, PostPhysics, PostUpdateWork) step
+	 * in a game, stepped here directly.
 	 *
-	 * Directly, because the helper cannot be the one to make it here: it only learns which manager to
+	 * Directly, because the helper cannot be the one to do it here: it only learns which manager to
 	 * drive in its BeginPlay (SetupTick), and a rig's world never begins play as a whole -- the rig
 	 * opens the UI manager's gate, not UWorld::BeginPlay -- so the helper that
 	 * UDreamTweenTickHelperWorldSubsystem spawns into every Game world sits there with no target, and
-	 * the world is never ticked anyway. The call is the same one; only the caller differs.
+	 * the world is never ticked anyway. Not through the call the helpers make,
+	 * UDreamTweenManager::TickFromWorld: that steps a tick group at most once per engine frame, so
+	 * that a second helper cannot double every tween's speed, and the headless pump runs many frames
+	 * inside one engine frame, each a frame of its own for the tweens. Tick steps the group every time.
 	 *
 	 * Regardless of pause, because the helper's tick functions all set bTickEvenWhenPaused: the
 	 * engine runs them in a paused frame too, and it is each tween that decides whether a pause
@@ -233,14 +240,14 @@ void FDreamDriverContext::PumpOneFrame(float InDeltaSeconds)
 		AdvanceWorldClock(*World, InDeltaSeconds);
 	}
 
-	if (InputHost != EDreamRigInputHost::ModuleOnly && PlayerController != nullptr)
+	if (IsActorInputHost(InputHost) && PlayerController != nullptr)
 	{
 		/*
 		 * The player controller's own input frame, when input comes through one: the keys and
 		 * buttons queued on it since the last frame go through its input stack now, the input
 		 * actor's bindings hand them to its module, and the module queues them for the event system
 		 * below -- the same frame, in the same order, as TG_PrePhysics then TG_DuringPhysics in a game.
-		 * Under ModuleOnly nothing is queued on a controller, so there is nothing to tick.
+		 * Under ModuleOnly and SlateSource nothing is queued on a controller, so there is nothing to tick.
 		 */
 		DreamDriverGameHost::TickPlayerInput(*this, InDeltaSeconds);
 	}
@@ -442,20 +449,96 @@ namespace DreamDriverSequenceLocal
 	 * Whether this context's buttons, wheel, navigation, keys and touches go through a player
 	 * controller and an input actor rather than straight into the driver's module.
 	 *
-	 * The pointer's POSITION is the one thing that never does: under every host it is written through
-	 * the module's override seam, because there is no system mouse to move and the one on the desk is
-	 * the user's. Everything a real device would send as an event, an actor host sends as one.
+	 * The pointer's POSITION is the one thing that never does: under both actor hosts it is written
+	 * through the module's override seam, because there is no system mouse to move and the one on the
+	 * desk is the user's. Everything a real device would send as an event, an actor host sends as one.
 	 */
 	bool IsActorHost(const FDreamDriverContext& InContext)
 	{
-		return InContext.InputHost != EDreamRigInputHost::ModuleOnly;
+		return IsActorInputHost(InContext.InputHost);
 	}
 
-	/** The game host's explanation as a step failure, never an empty one. */
+	/**
+	 * Whether this context's input reaches the world's Slate input source as Slate's own events --
+	 * the pointer's position included, as mouse moves (DreamDriverSlateHost).
+	 */
+	bool IsSlateHost(const FDreamDriverContext& InContext)
+	{
+		return InContext.InputHost == EDreamRigInputHost::SlateSource;
+	}
+
+	/** The host's explanation as a step failure, never an empty one. */
 	FString DescribeHostFailure(const TCHAR* InWhat, const FString& InWhyNot)
 	{
 		return FString::Printf(TEXT("the input host could not deliver %s: %s"), InWhat,
-			InWhyNot.IsEmpty() ? TEXT("the game host gave no reason") : *InWhyNot);
+			InWhyNot.IsEmpty() ? TEXT("the host gave no reason") : *InWhyNot);
+	}
+
+	/**
+	 * Where the pointer the steps move is, in viewport pixels: Slate's mouse under SlateSource, where
+	 * the module keeps no cursor of its own, and the module's cursor under every other host.
+	 */
+	FVector2D PointerPixelOf(const FDreamDriverContext& InContext)
+	{
+		return IsSlateHost(InContext) ? DreamDriverSlateHost::GetMousePixel(InContext) : InContext.InputModule->GetVirtualCursor();
+	}
+
+	/** The pointer put at InPixel by the host's road. False having set OutFailureReason. */
+	bool MovePointerTo(FDreamDriverContext& InContext, const FVector2D& InPixel, FString& OutFailureReason)
+	{
+		if (IsSlateHost(InContext))
+		{
+			FString WhyNot;
+			if (!DreamDriverSlateHost::MovePointer(InContext, InPixel, WhyNot))
+			{
+				OutFailureReason = DescribeHostFailure(TEXT("a mouse move"), WhyNot);
+				return false;
+			}
+			return true;
+		}
+		InContext.InputModule->MoveTo(InPixel);
+		return true;
+	}
+
+	/** The player whose keyboard the context's keys and characters are typed on: its event system's. */
+	int32 KeyboardPlayerOf(const FDreamDriverContext& InContext)
+	{
+		return IsValid(InContext.EventSystem) ? InContext.EventSystem->GetUserIndex() : 0;
+	}
+
+	/**
+	 * A key's press or release down DreamUIKeyRouting::RouteKey for the context's player, the chord as
+	 * the modifier state a key event carries: the one road every input source takes, so the field
+	 * being edited, a binding, navigation, Back, paging and tab switching each get the key in the
+	 * order a game gives it to them. What took it is dropped -- that is the pipeline's decision, and
+	 * what a test is there to watch. False having set OutFailureReason when there is no player.
+	 */
+	bool RouteKeyForPlayer(FDreamDriverContext& InContext, const FKey& InKey, EDreamDriverModifierKeys InModifiers, bool bInPressed, FString& OutFailureReason)
+	{
+		UDreamUIInputUser* User = IsValid(InContext.EventSystem) ? InContext.EventSystem->GetInputUser() : nullptr;
+		if (User == nullptr)
+		{
+			OutFailureReason = TEXT("the event system speaks for no player, so the key has nobody to be routed for: it was never registered with the world's input (UDreamUIInputSubsystem::AddEventSystem), which the rig does as it opens its begin-play gate");
+			return false;
+		}
+		bool bTyped = false;
+		DreamUIKeyRouting::RouteKey(User, InKey, bInPressed, DreamDriverKeys::MakeModifierKeysState(InModifiers), bTyped);
+		return true;
+	}
+
+	/**
+	 * A character by the viewport's road -- what a game viewport client's InputChar hands DreamGUI,
+	 * UDreamUIInputSubsystem::HandleViewportCharacter -- whether or not anything is there to take it:
+	 * the answer is dropped. The character Tab makes goes this way right after the key, as a WM_CHAR
+	 * follows a WM_KEYDOWN.
+	 */
+	void TypeViewportCharacter(const FDreamDriverContext& InContext, TCHAR InCharacter)
+	{
+		UDreamUIInputSubsystem* Input = InContext.World != nullptr ? UDreamUIInputSubsystem::Get(InContext.World) : nullptr;
+		if (Input != nullptr)
+		{
+			Input->HandleViewportCharacter(KeyboardPlayerOf(InContext), InCharacter);
+		}
 	}
 
 	void ReportStepFailure(const FDreamDriverContext& InContext, const FDreamDriverStepRef& InStep)
@@ -495,6 +578,7 @@ namespace DreamDriverSequenceLocal
 		{
 			if (bHasApplied)
 			{
+				FinishAfterFrame(InContext);
 				return EDreamDriverStepResult::Done;
 			}
 			if (!InContext.IsUsable())
@@ -515,6 +599,14 @@ namespace DreamDriverSequenceLocal
 	protected:
 		/** Returns false having set FailureReason. InDeltaSeconds is deliberately not offered: input is instantaneous. */
 		virtual bool Apply(FDreamDriverContext& InContext) = 0;
+
+		/**
+		 * Once, when the frame after Apply's has passed and before the step reports done: where a
+		 * whole keystroke sent as Slate's events lets its key go, so the pipeline has acted on the
+		 * press before the release comes -- as it has through the controller, which releases after
+		 * its next input frame.
+		 */
+		virtual void FinishAfterFrame(FDreamDriverContext& InContext) {}
 
 		FString FailureReason;
 
@@ -542,8 +634,7 @@ namespace DreamDriverSequenceLocal
 				FailureReason = FString::Printf(TEXT("could not work out a viewport pixel for %s"), *Description);
 				return false;
 			}
-			InContext.InputModule->MoveTo(Pixel.GetValue());
-			return true;
+			return MovePointerTo(InContext, Pixel.GetValue(), FailureReason);
 		}
 
 	private:
@@ -575,6 +666,17 @@ namespace DreamDriverSequenceLocal
 				// holds, which the move steps wrote through the override seam.
 				FString WhyNot;
 				if (!DreamDriverGameHost::PressMouseButton(InContext, Button, bPress, WhyNot))
+				{
+					FailureReason = DescribeHostFailure(bPress ? TEXT("a button press") : TEXT("a button release"), WhyNot);
+					return false;
+				}
+				return true;
+			}
+			if (IsSlateHost(InContext))
+			{
+				// As Slate's mouse button event, at the mouse.
+				FString WhyNot;
+				if (!DreamDriverSlateHost::PressMouseButton(InContext, Button, bPress, WhyNot))
 				{
 					FailureReason = DescribeHostFailure(bPress ? TEXT("a button press") : TEXT("a button release"), WhyNot);
 					return false;
@@ -623,6 +725,16 @@ namespace DreamDriverSequenceLocal
 				}
 				return true;
 			}
+			if (IsSlateHost(InContext))
+			{
+				FString WhyNot;
+				if (!DreamDriverSlateHost::Scroll(InContext, AxisValue, WhyNot))
+				{
+					FailureReason = DescribeHostFailure(TEXT("a wheel turn"), WhyNot);
+					return false;
+				}
+				return true;
+			}
 			InContext.InputModule->Scroll(AxisValue);
 			return true;
 		}
@@ -659,6 +771,17 @@ namespace DreamDriverSequenceLocal
 				}
 				return true;
 			}
+			if (IsSlateHost(InContext))
+			{
+				// The same keys the actor hosts press, as Slate's key events.
+				FString WhyNot;
+				if (!DreamDriverSlateHost::Navigate(InContext, Direction, bPressOrRelease, WhyNot))
+				{
+					FailureReason = DescribeHostFailure(TEXT("a navigation direction"), WhyNot);
+					return false;
+				}
+				return true;
+			}
 			InContext.InputModule->Navigate(Direction, bPressOrRelease, 0);
 			return true;
 		}
@@ -688,6 +811,17 @@ namespace DreamDriverSequenceLocal
 			{
 				FString WhyNot;
 				if (!DreamDriverGameHost::NavigationTrigger(InContext, bTriggerPress, WhyNot))
+				{
+					FailureReason = DescribeHostFailure(TEXT("the accept button"), WhyNot);
+					return false;
+				}
+				return true;
+			}
+			if (IsSlateHost(InContext))
+			{
+				// The pad's accept button, the key the actor hosts press for it, as Slate's key event.
+				FString WhyNot;
+				if (!DreamDriverSlateHost::SendKey(InContext, EKeys::Gamepad_FaceButton_Bottom, EDreamDriverModifierKeys::None, bTriggerPress, WhyNot))
 				{
 					FailureReason = DescribeHostFailure(TEXT("the accept button"), WhyNot);
 					return false;
@@ -736,6 +870,18 @@ namespace DreamDriverSequenceLocal
 				// which hands it to whichever field owns the keyboard process-wide.
 				FString HostWhyNot;
 				if (!DreamDriverGameHost::TypeCharacter(InContext, Character, HostWhyNot))
+				{
+					FailureReason = DescribeHostFailure(TEXT("a character"), HostWhyNot);
+					return false;
+				}
+				return true;
+			}
+			if (IsSlateHost(InContext))
+			{
+				// Slate hands a typed character to the focused viewport, not to its input pre-processors: the
+				// viewport's road, UDreamUIInputSubsystem::HandleViewportCharacter.
+				FString HostWhyNot;
+				if (!DreamDriverSlateHost::TypeCharacter(InContext, Character, HostWhyNot))
 				{
 					FailureReason = DescribeHostFailure(TEXT("a character"), HostWhyNot);
 					return false;
@@ -846,13 +992,124 @@ namespace DreamDriverSequenceLocal
 				}
 				return true;
 			}
+			if (IsSlateHost(InContext))
+			{
+				// As Slate's key events, the source deciding who hears them; the press now and the release once
+				// the frame after it has passed (FinishAfterFrame), as the controller's road releases.
+				FString WhyNot;
+				const TArray<FKey> Held = HeldModifierKeys();
+				if (!DreamDriverSlateHost::SendKey(InContext, Key, Held, true, WhyNot))
+				{
+					FailureReason = DescribeHostFailure(TEXT("a key"), WhyNot);
+					return false;
+				}
+				bReleaseOwed = true;
+				return true;
+			}
 			return RouteKeyInModule(InContext, Key, Modifier, FailureReason);
+		}
+
+		virtual void FinishAfterFrame(FDreamDriverContext& InContext) override
+		{
+			if (!bReleaseOwed)
+			{
+				return;
+			}
+			bReleaseOwed = false;
+			// Nothing to report: the press went through the same source a frame ago.
+			FString WhyNot;
+			const TArray<FKey> Held = HeldModifierKeys();
+			DreamDriverSlateHost::SendKey(InContext, Key, Held, false, WhyNot);
+		}
+
+	private:
+		TArray<FKey> HeldModifierKeys() const
+		{
+			TArray<FKey> Held;
+			if (Modifier.IsValid())
+			{
+				Held.Add(Modifier);
+			}
+			return Held;
+		}
+
+		FKey Key;
+		/** Unset for a bare key. */
+		FKey Modifier;
+		/** Under SlateSource, between the press and the release FinishAfterFrame sends. */
+		bool bReleaseOwed = false;
+	};
+
+	/**
+	 * Half a keystroke -- the press, or the release, of a key with modifiers held -- the way the
+	 * context's input host delivers keys: ModuleOnly down DreamUIKeyRouting::RouteKey for the
+	 * context's player, the actor hosts through the controller's input stack with the modifier keys
+	 * pressed around it, SlateSource as Slate's key events to the world's source. See
+	 * FDreamDriverSequence::Key. The press of Tab() and ShiftTab() types the character '\t' right
+	 * after the key, by the viewport's road for characters.
+	 */
+	class FDreamKeyStep : public FDreamInputStep
+	{
+	public:
+		FDreamKeyStep(const FKey& InKey, EDreamDriverModifierKeys InModifiers, bool bInPressed, bool bInTypesTabCharacter)
+			: Key(InKey)
+			, Modifiers(InModifiers)
+			, bPressed(bInPressed)
+			, bTypesTabCharacter(bInTypesTabCharacter)
+		{
+		}
+
+		virtual FString Describe() const override
+		{
+			return FString::Printf(TEXT("%s(%s)"), bPressed ? TEXT("KeyDown") : TEXT("KeyUp"), *DreamDriverKeys::Describe(Key, Modifiers));
+		}
+
+	protected:
+		virtual bool Apply(FDreamDriverContext& InContext) override
+		{
+			if (!Key.IsValid())
+			{
+				FailureReason = TEXT("the key is not a valid key");
+				return false;
+			}
+			const TCHAR* const What = bPressed ? TEXT("a key press") : TEXT("a key release");
+			if (IsActorHost(InContext))
+			{
+				FString WhyNot;
+				if (!DreamDriverGameHost::PressKey(InContext, Key, Modifiers, bPressed, WhyNot))
+				{
+					FailureReason = DescribeHostFailure(What, WhyNot);
+					return false;
+				}
+			}
+			else if (IsSlateHost(InContext))
+			{
+				FString WhyNot;
+				if (!DreamDriverSlateHost::SendKey(InContext, Key, Modifiers, bPressed, WhyNot))
+				{
+					FailureReason = DescribeHostFailure(What, WhyNot);
+					return false;
+				}
+			}
+			else if (!RouteKeyForPlayer(InContext, Key, Modifiers, bPressed, FailureReason))
+			{
+				return false;
+			}
+			if (bPressed && bTypesTabCharacter)
+			{
+				// After the key, as the platform's character message follows its key-down message. Through the
+				// controller the key itself waits for the controller's next input frame and the character does
+				// not -- which is a game's order too: the viewport hands a character on as it arrives.
+				TypeViewportCharacter(InContext, TEXT('\t'));
+			}
+			return true;
 		}
 
 	private:
 		FKey Key;
-		/** Unset for a bare key. */
-		FKey Modifier;
+		EDreamDriverModifierKeys Modifiers;
+		bool bPressed;
+		bool bTypesTabCharacter;
 	};
 
 	/**
@@ -924,8 +1181,7 @@ namespace DreamDriverSequenceLocal
 			// Past the threshold rather than onto it: the comparison is strictly greater than, so
 			// landing exactly on it is still a press.
 			const FVector2D Next = PressPixel + Direction.GetSafeNormal() * (ThresholdPixels + 2.0);
-			InContext.InputModule->MoveTo(Next);
-			return true;
+			return MovePointerTo(InContext, Next, FailureReason);
 		}
 
 	private:
@@ -1149,6 +1405,16 @@ namespace DreamDriverSequenceLocal
 				}
 				return true;
 			}
+			if (IsSlateHost(InContext))
+			{
+				FString WhyNot;
+				if (!DreamDriverSlateHost::Touch(InContext, Phase, FingerId, Pixel, WhyNot))
+				{
+					FailureReason = DescribeHostFailure(TEXT("a touch"), WhyNot);
+					return false;
+				}
+				return true;
+			}
 			switch (Phase)
 			{
 			case EDreamDriverTouchPhase::Began:
@@ -1213,8 +1479,10 @@ namespace DreamDriverSequenceLocal
 	 * Under an actor host it is the gamepad's Back button (Gamepad_FaceButton_Right) through the
 	 * player controller, which reaches ADreamStandaloneInputEventSystemActor::OnAnyKeyPressed: an
 	 * action bound to it first, then a drag in flight, then UDreamUINavigationStack::HandleBack.
-	 * Under ModuleOnly it is exactly Type(EKeys::Escape) -- the same entry, an armed key selector
-	 * first, then HandleBack -- because there is no actor to offer it to first.
+	 * Under SlateSource it is the same button as Slate's key events, pressed now and let go of once
+	 * the frame after has passed. Under ModuleOnly it is exactly Type(EKeys::Escape) -- the same
+	 * entry, an armed key selector first, then HandleBack -- because there is no actor to offer it
+	 * to first.
 	 */
 	class FDreamBackStep : public FDreamInputStep
 	{
@@ -1234,8 +1502,33 @@ namespace DreamDriverSequenceLocal
 				}
 				return true;
 			}
+			if (IsSlateHost(InContext))
+			{
+				FString WhyNot;
+				if (!DreamDriverSlateHost::SendKey(InContext, EKeys::Gamepad_FaceButton_Right, EDreamDriverModifierKeys::None, true, WhyNot))
+				{
+					FailureReason = DescribeHostFailure(TEXT("Back"), WhyNot);
+					return false;
+				}
+				bReleaseOwed = true;
+				return true;
+			}
 			return RouteKeyInModule(InContext, EKeys::Escape, FKey(), FailureReason);
 		}
+
+		virtual void FinishAfterFrame(FDreamDriverContext& InContext) override
+		{
+			if (bReleaseOwed)
+			{
+				bReleaseOwed = false;
+				FString WhyNot;
+				DreamDriverSlateHost::SendKey(InContext, EKeys::Gamepad_FaceButton_Right, EDreamDriverModifierKeys::None, false, WhyNot);
+			}
+		}
+
+	private:
+		/** Under SlateSource, between the press and the release FinishAfterFrame sends. */
+		bool bReleaseOwed = false;
 	};
 
 	/** The world's virtual cursor, or null with the reason why there is none to drive. */
@@ -1515,7 +1808,7 @@ FDreamDriverSequence& FDreamDriverSequence::MoveBy(const FVector2D& InPixelDelta
 	return Add(MakeShared<FDreamMoveStep>(
 		[Delta](FDreamDriverContext& InStepContext) -> TOptional<FVector2D>
 		{
-			return InStepContext.InputModule->GetVirtualCursor() + Delta;
+			return PointerPixelOf(InStepContext) + Delta;
 		},
 		FString::Printf(TEXT("offset %s"), *Delta.ToString())));
 }
@@ -1578,7 +1871,7 @@ FDreamDriverSequence& FDreamDriverSequence::DragTo(const FDreamLocatorRef& InFro
 			{
 				return TOptional<FVector2D>();
 			}
-			return (InStepContext.InputModule->GetVirtualCursor() + TargetPixel.GetValue()) * 0.5;
+			return (PointerPixelOf(InStepContext) + TargetPixel.GetValue()) * 0.5;
 		},
 		FString::Printf(TEXT("halfway to %s"), *InTo->Describe())));
 	MoveTo(InTo);
@@ -1615,7 +1908,7 @@ FDreamDriverSequence& FDreamDriverSequence::DragBy(const FDreamLocatorRef& InFro
 			{
 				return TOptional<FVector2D>();
 			}
-			return (InStepContext.InputModule->GetVirtualCursor() + Destination.GetValue()) * 0.5;
+			return (PointerPixelOf(InStepContext) + Destination.GetValue()) * 0.5;
 		},
 		FString::Printf(TEXT("halfway to offset %s"), *Delta.ToString())));
 	Add(MakeShared<FDreamMoveStep>(DestinationResolver, FString::Printf(TEXT("offset %s"), *Delta.ToString())));
@@ -1731,6 +2024,40 @@ FDreamDriverSequence& FDreamDriverSequence::TypeChord(const FKey& InModifier, co
 {
 	using namespace DreamDriverSequenceLocal;
 	return Add(MakeShared<FDreamTypeKeyStep>(InKey, InModifier));
+}
+
+FDreamDriverSequence& FDreamDriverSequence::Key(const FKey& InKey, EDreamDriverModifierKeys InModifiers)
+{
+	// Pressed, given a frame for the pipeline to act on the press, then released and given a frame: Navigate's shape.
+	KeyDown(InKey, InModifiers);
+	return KeyUp(InKey, InModifiers);
+}
+
+FDreamDriverSequence& FDreamDriverSequence::KeyDown(const FKey& InKey, EDreamDriverModifierKeys InModifiers)
+{
+	using namespace DreamDriverSequenceLocal;
+	return Add(MakeShared<FDreamKeyStep>(InKey, InModifiers, /*bInPressed*/ true, /*bInTypesTabCharacter*/ false));
+}
+
+FDreamDriverSequence& FDreamDriverSequence::KeyUp(const FKey& InKey, EDreamDriverModifierKeys InModifiers)
+{
+	using namespace DreamDriverSequenceLocal;
+	return Add(MakeShared<FDreamKeyStep>(InKey, InModifiers, /*bInPressed*/ false, /*bInTypesTabCharacter*/ false));
+}
+
+FDreamDriverSequence& FDreamDriverSequence::Tab()
+{
+	using namespace DreamDriverSequenceLocal;
+	Add(MakeShared<FDreamKeyStep>(EKeys::Tab, EDreamDriverModifierKeys::None, /*bInPressed*/ true, /*bInTypesTabCharacter*/ true));
+	return KeyUp(EKeys::Tab, EDreamDriverModifierKeys::None);
+}
+
+FDreamDriverSequence& FDreamDriverSequence::ShiftTab()
+{
+	using namespace DreamDriverSequenceLocal;
+	// The character is '\t' with Shift held too: a keyboard makes the same character for both.
+	Add(MakeShared<FDreamKeyStep>(EKeys::Tab, EDreamDriverModifierKeys::Shift, /*bInPressed*/ true, /*bInTypesTabCharacter*/ true));
+	return KeyUp(EKeys::Tab, EDreamDriverModifierKeys::Shift);
 }
 
 FDreamDriverSequence& FDreamDriverSequence::WaitFrames(int32 InFrameCount)

@@ -23,6 +23,7 @@
 
 #include "Driver/DreamDriverGameHost.h"
 #include "Driver/DreamDriverInputModule.h"
+#include "Driver/DreamDriverSlateHost.h"
 #include "DreamScopedGameInstanceWorld.h"
 #include "DreamScopedWorld.h"
 
@@ -94,7 +95,7 @@ FDreamDriverRig::FDreamDriverRig(const FDreamRigOptions& InOptions)
 	}
 
 	// 3. Where input enters.
-	if (Options.InputHost != EDreamRigInputHost::ModuleOnly)
+	if (IsActorInputHost(Options.InputHost))
 	{
 		// A real input actor behind a real player controller: the game host builds the local player,
 		// the controller and the actor, and hands back the actor's own event system and module. The
@@ -127,6 +128,19 @@ FDreamDriverRig::FDreamDriverRig(const FDreamRigOptions& InOptions)
 		BuiltInputModule->RegisterComponent();
 		BuiltInputModule->RegisterInputModuleToEventSystem(BuiltEventSystem);
 		DriverContext->InputModule = BuiltInputModule;
+
+		// The Slate source on top of the same pieces: the event system and the module still carry the player's
+		// pointers -- in a game the preset actor's do -- and the world's source feeds them, as Slate would.
+		if (Options.InputHost == EDreamRigInputHost::SlateSource)
+		{
+			FString WhyNot;
+			if (!DreamDriverSlateHost::Build(*DriverContext, InViewportSize, WhyNot))
+			{
+				BuildFailure = FString::Printf(TEXT("the Slate input source could not be set up: %s"),
+					WhyNot.IsEmpty() ? TEXT("the Slate host gave no reason") : *WhyNot);
+				return;
+			}
+		}
 	}
 
 	// 4. The root, its canvas and the screen-space raycaster.
@@ -499,10 +513,15 @@ FDreamDriverRig::~FDreamDriverRig()
 	{
 		// The input host first, as it was built last of the input pieces: its local player would
 		// otherwise outlive the world (local players belong to the game instance, not the world), and
-		// its actor would still be delivering input into a tree that is being taken apart.
-		if (DriverContext->InputHost != EDreamRigInputHost::ModuleOnly)
+		// its actor would still be delivering input into a tree that is being taken apart. The Slate
+		// source the same way: off before the tree it feeds goes.
+		if (IsActorInputHost(DriverContext->InputHost))
 		{
 			DreamDriverGameHost::Teardown(*DriverContext);
+		}
+		else if (DriverContext->InputHost == EDreamRigInputHost::SlateSource)
+		{
+			DreamDriverSlateHost::Teardown(*DriverContext);
 		}
 		// Asked before the tree goes, while "is it under the rig's root" still has an answer.
 		UUITextInput* EditInRigTree = FindEditInRigTree();
@@ -516,7 +535,7 @@ FDreamDriverRig::~FDreamDriverRig()
 		}
 		// Only the module the rig made itself. An input actor's module is the actor's, and the game
 		// host's tear-down is what releases it.
-		if (DriverContext->InputHost == EDreamRigInputHost::ModuleOnly)
+		if (!IsActorInputHost(DriverContext->InputHost))
 		{
 			if (UDreamDriverInputModule* RigInputModule = DriverContext->InputModule; IsValid(RigInputModule))
 			{

@@ -28,6 +28,7 @@
 
 #include "Driver/DreamDriverInputActors.h"
 #include "Driver/DreamDriverInputModule.h"
+#include "Driver/DreamDriverKeys.h"
 #include "Driver/DreamDriverSequence.h"
 
 namespace DreamDriverGameHostLocal
@@ -884,6 +885,47 @@ bool DreamDriverGameHost::TypeKey(FDreamDriverContext& InContext, const FKey& In
 	if (InContext.bEnginePumped)
 	{
 		EnsureEnginePumpRelease(*Controller);
+	}
+	return true;
+}
+
+bool DreamDriverGameHost::PressKey(FDreamDriverContext& InContext, const FKey& InKey, EDreamDriverModifierKeys InModifiers, bool bInPressed, FString& OutWhyNot)
+{
+	using namespace DreamDriverGameHostLocal;
+
+	APlayerController* Controller = ControllerFor(InContext, OutWhyNot);
+	if (Controller == nullptr)
+	{
+		return false;
+	}
+	if (!InKey.IsValid())
+	{
+		OutWhyNot = TEXT("the key to press is not a valid key");
+		return false;
+	}
+	if (InKey.IsAnalog())
+	{
+		OutWhyNot = FString::Printf(TEXT("%s is an axis, and an axis has no press; ScrollBy turns the wheel"), *InKey.ToString());
+		return false;
+	}
+	TArray<FKey> Modifiers;
+	DreamDriverKeys::GetModifierKeys(InModifiers, Modifiers);
+	if (bInPressed)
+	{
+		// The modifiers in the same input frame as the key, ahead of it: a key pressed in a frame counts as down for every
+		// binding dispatched in it (UPlayerInput::ProcessNonAxesKeys), so whoever asks PlayerInput what is held while the
+		// key's binding runs is told.
+		for (const FKey& Modifier : Modifiers)
+		{
+			SendKey(*Controller, Modifier, IE_Pressed);
+		}
+		SendKey(*Controller, InKey, IE_Pressed);
+		return true;
+	}
+	SendKey(*Controller, InKey, IE_Released);
+	for (int32 Index = Modifiers.Num() - 1; Index >= 0; --Index)
+	{
+		SendKey(*Controller, Modifiers[Index], IE_Released);
 	}
 	return true;
 }

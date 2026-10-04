@@ -9,6 +9,8 @@
 #include "Interfaces/IPluginManager.h"
 #include "Kismet2/CompilerResultsLog.h"
 #include "Kismet2/KismetEditorUtilities.h"
+#include "Materials/MaterialInterface.h"
+#include "Materials/MaterialParameters.h"
 #include "Misc/Paths.h"
 #include "UObject/Package.h"
 
@@ -22,6 +24,7 @@
 #include "Core/DreamWidgetGeneratedClass.h"
 #include "DreamWidgetBlueprint.h"
 #include "Core/DreamUITextData.h"
+#include "Core/Text/DreamTextPaint.h"
 #include "Extensions/Effects/DreamBackgroundBlur.h"
 #include "Extensions/Effects/DreamBackgroundPixelate.h"
 #include "Extensions/Effects/DreamPixelSort.h"
@@ -61,6 +64,19 @@ namespace DreamRenderGalleryTestLocal
 		InStage.AddBlock(TEXT("Opaque"), FVector2D(64.0, 64.0), FVector2D(44.0, -44.0), FColor(255, 0, 0, 255));
 		InStage.AddBlock(TEXT("TwoThirds"), FVector2D(64.0, 64.0), FVector2D(64.0, -64.0), FColor(0, 255, 0, 170));
 		InStage.AddBlock(TEXT("OneThird"), FVector2D(64.0, 64.0), FVector2D(84.0, -84.0), FColor(0, 0, 255, 85));
+	}
+
+	/**
+	 * Whether a material shades through MF_DreamUI_Shade as it is now, with the paint rows: its default value of the shading's
+	 * marker parameter (DreamUIShadeMaterial::ShadeMarkerParameter) is above 0.5, the test the text itself makes. A material
+	 * made before that has no marker, and draws small text from the field and a paint in its vertex colours.
+	 */
+	bool GalleryMaterialShadesThroughDreamGUI(const UMaterialInterface* InMaterial)
+	{
+		float Marker = 0.0f;
+		return InMaterial != nullptr
+			&& InMaterial->GetScalarParameterDefaultValue(FHashedMaterialParameterInfo(DreamUIShadeMaterial::ShadeMarkerParameter), Marker)
+			&& Marker > 0.5f;
 	}
 }
 
@@ -282,7 +298,7 @@ bool FDreamShippedSampleTest::RunTest(const FString& Parameters)
 		Package->RemoveFromRoot();
 		return false;
 	}
-	// Pick Text Source, as the designer's toolbar does it: the class default the compile reads the file from.
+	// Set Source File..., as the designer's toolbar does it: the class default the compile reads the file from.
 	Defaults->SourceFile.FilePath = SamplePath;
 	FCompilerResultsLog Results;
 	FKismetEditorUtilities::CompileBlueprint(Blueprint, EBlueprintCompileOptions::SkipGarbageCollection, &Results);
@@ -576,6 +592,138 @@ bool FDreamGalleryMultisamplingTest::RunTest(const FString& Parameters)
 }
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamGalleryMultisamplingAgreesTest,
+	"DreamGUI.RHI.Gallery.FourSamplesAndOneDrawFlatColoursWithinOneCodeAndTheRestWithinThree",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter | EAutomationTestFlags::NonNullRHI)
+
+bool FDreamGalleryMultisamplingAgreesTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamRenderGalleryTestLocal;
+	// A scene with no edge for multisampling to soften -- blocks on whole pixels, partial alpha over the backdrop, a
+	// filtered gradient, text whose quads end in the field's empty padding -- drawn with one sample and with four. A pixel
+	// every sample of which is covered is shaded once and stored four times, so the resolve has nothing to average: where
+	// the picture is flat (the backdrop, the blocks' and the glyphs' solid insides) the two are the same, to the code the
+	// resolve's decode and encode can round by. The renderer's multisampled target used to lack the stage target's sRGB
+	// flag and kept its linear blend in 8 bits: every dark colour then landed on one of a dozen levels (the backdrop's 30
+	// green read 28, flat colours moved by up to 7 codes).
+	//
+	// Where the colour changes from pixel to pixel the two may differ by a little more. A pixel on the diagonal the two
+	// triangles of a quad share is covered by both under four samples, shaded once for each and resolved to the average,
+	// where one sample takes one triangle's colour: a colour that is not linear across the quad (the gradient's four
+	// corners) is two codes apart along that diagonal, and glyph edges round the same way. Those pixels are held to three
+	// codes, and only a few of them may be more than one apart.
+	FStageRef Stage = BeginStage(*this);
+	if (!Stage->IsUsable())
+	{
+		Stage->TearDown();
+		return false;
+	}
+	Stage->UseMultisampling(1);
+	BuildBlocks(*Stage);
+	Stage->AddText(TEXT("Dark"), TEXT("dark ink 0123"), 22.0f, FVector2D(240.0, 32.0), FVector2D(0.0, 0.0), FColor(52, 58, 76, 255));
+	Stage->AddText(TEXT("Light"), TEXT("light ink"), 16.0f, FVector2D(240.0, 24.0), FVector2D(0.0, -116.0), FColor(230, 236, 250, 255));
+	TSharedRef<TArray<FColor>> OneSample = MakeShared<TArray<FColor>>();
+	TSharedRef<FIntPoint> OneSampleSize = MakeShared<FIntPoint>(FIntPoint::ZeroValue);
+	EnqueueFrames(Stage, 3);
+	EnqueueFramesUntilDrawn(Stage, 20000);
+	EnqueueFramesUntilSettled(Stage);
+	EnqueueDo([Stage, OneSample, OneSampleSize]()
+	{
+		if (Stage->ReadBack(*OneSample, *OneSampleSize))
+		{
+			FDreamPixelProbe::SaveCapture(*OneSample, *OneSampleSize, TEXT("Gallery_OneSample"));
+		}
+		Stage->UseMultisampling(4);
+	});
+	EnqueueFrames(Stage, 3);
+	EnqueueFramesUntilDrawn(Stage, 20000);
+	EnqueueFramesUntilSettled(Stage);
+	EnqueueDo([this, Stage, OneSample, OneSampleSize]()
+	{
+		TArray<FColor> FourSamples;
+		FIntPoint FourSamplesSize = FIntPoint::ZeroValue;
+		if (!TestTrue(TEXT("Both pictures read back"), OneSample->Num() > 0 && Stage->ReadBack(FourSamples, FourSamplesSize))
+			|| !TestTrue(TEXT("...at one size"), FourSamplesSize == *OneSampleSize))
+		{
+			return;
+		}
+		FDreamPixelProbe::SaveCapture(FourSamples, FourSamplesSize, TEXT("Gallery_FourSamples"));
+		// The colours, not what each path leaves in the target's alpha, which nothing here draws with.
+		TArray<FColor> OneSampleColours = *OneSample;
+		for (FColor& Pixel : OneSampleColours)
+		{
+			Pixel.A = 255;
+		}
+		for (FColor& Pixel : FourSamples)
+		{
+			Pixel.A = 255;
+		}
+		// A pixel is flat when every pixel around it (3 x 3, in the picture drawn with one sample) is within one code of it.
+		const int32 Width = FourSamplesSize.X;
+		const int32 Height = FourSamplesSize.Y;
+		const int32 PixelCount = Width * Height;
+		auto ChannelsApart = [](const FColor& InA, const FColor& InB)
+		{
+			return FMath::Max3(FMath::Abs(static_cast<int32>(InA.R) - InB.R), FMath::Abs(static_cast<int32>(InA.G) - InB.G),
+				FMath::Abs(static_cast<int32>(InA.B) - InB.B));
+		};
+		int32 FlatPixels = 0;
+		int32 FlatApart = 0;
+		int32 FlatLargest = 0;
+		FIntPoint FlatFirst(INDEX_NONE, INDEX_NONE);
+		int32 VaryingApart = 0;
+		int32 VaryingLargest = 0;
+		FIntPoint VaryingFirst(INDEX_NONE, INDEX_NONE);
+		for (int32 Y = 0; Y < Height; ++Y)
+		{
+			for (int32 X = 0; X < Width; ++X)
+			{
+				const FColor& Single = OneSampleColours[Y * Width + X];
+				bool bFlat = true;
+				for (int32 NeighbourY = FMath::Max(0, Y - 1); bFlat && NeighbourY <= FMath::Min(Height - 1, Y + 1); ++NeighbourY)
+				{
+					for (int32 NeighbourX = FMath::Max(0, X - 1); bFlat && NeighbourX <= FMath::Min(Width - 1, X + 1); ++NeighbourX)
+					{
+						bFlat = ChannelsApart(OneSampleColours[NeighbourY * Width + NeighbourX], Single) <= 1;
+					}
+				}
+				const int32 Apart = ChannelsApart(FourSamples[Y * Width + X], Single);
+				if (bFlat)
+				{
+					++FlatPixels;
+					FlatLargest = FMath::Max(FlatLargest, Apart);
+					if (Apart > 1 && FlatApart++ == 0)
+					{
+						FlatFirst = FIntPoint(X, Y);
+					}
+				}
+				else
+				{
+					VaryingLargest = FMath::Max(VaryingLargest, Apart);
+					if (Apart > 1 && VaryingApart++ == 0)
+					{
+						VaryingFirst = FIntPoint(X, Y);
+					}
+				}
+			}
+		}
+		const FColor BackdropOne = OneSampleColours[0];
+		const FColor BackdropFour = FourSamples[0];
+		TestTrue(FString::Printf(TEXT("Where the picture is flat, every pixel drawn with four samples is within one code of the same pixel drawn with one (%d of %d flat pixel(s) further apart, the largest by %d, the first at (%d, %d); the backdrop reads %s with four samples and %s with one)"),
+			FlatApart, FlatPixels, FlatLargest, FlatFirst.X, FlatFirst.Y, *FDreamPixelProbe::Describe(BackdropFour), *FDreamPixelProbe::Describe(BackdropOne)),
+			FlatApart == 0);
+		TestTrue(FString::Printf(TEXT("...which is most of the picture (%d of %d pixels flat)"), FlatPixels, PixelCount), FlatPixels >= PixelCount / 2);
+		TestTrue(FString::Printf(TEXT("Where the colour varies, every pixel is within three codes (the largest by %d)"), VaryingLargest), VaryingLargest <= 3);
+		TestTrue(FString::Printf(TEXT("...and few are more than one apart (%d, at most %d; the first at (%d, %d))"), VaryingApart, PixelCount / 200,
+			VaryingFirst.X, VaryingFirst.Y), VaryingApart <= PixelCount / 200);
+		TestTrue(FString::Printf(TEXT("...and the backdrop is the colour it was cleared to with four samples (%s)"), *FDreamPixelProbe::Describe(BackdropFour)),
+			FDreamPixelProbe::IsNear(BackdropFour, Backdrop, 1));
+	});
+	EnqueueTearDown(Stage);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamGalleryBuiltInAgainstMaterialTest,
 	"DreamGUI.RHI.Gallery.TheBuiltInShaderAndTheMaterialPathDrawTheSamePicture",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter | EAutomationTestFlags::NonNullRHI)
@@ -583,9 +731,11 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 bool FDreamGalleryBuiltInAgainstMaterialTest::RunTest(const FString& Parameters)
 {
 	using namespace DreamRenderGalleryTestLocal;
-	// A plain widget -- a texture, a tint, a glyph -- is drawn by the renderer's own shader or by the default UI
-	// material, as the project chooses, and the choice is meant to be invisible. The same scene both ways, each held to
-	// its own golden image and the two held to each other.
+	// A plain widget -- a texture, a tint, a glyph, a glyph painted with a gradient -- is drawn by the renderer's own
+	// shader or by the default UI material, as the project chooses, and the choice is meant to be invisible. The same scene
+	// both ways, each held to its own golden image and the two held to each other. The painted text needs the material
+	// built on MF_DreamUI_Shade with the paint rows (DreamUI_PaintDataTexture): a material without them paints it in its
+	// vertex colours, close to the gradient but not the same.
 	FStageRef Stage = BeginStage(*this);
 	if (!Stage->IsUsable())
 	{
@@ -595,6 +745,14 @@ bool FDreamGalleryBuiltInAgainstMaterialTest::RunTest(const FString& Parameters)
 	Stage->UseBuiltInShader(true);
 	BuildBlocks(*Stage);
 	Stage->AddText(TEXT("Label"), TEXT("Built-in / Material"), 22.0f, FVector2D(240.0, 36.0), FVector2D(0.0, 0.0), FColor::White);
+	if (UDreamText* Painted = Stage->AddText(TEXT("Painted"), TEXT("Painted alike"), 18.0f, FVector2D(240.0, 24.0), FVector2D(0.0, 116.0), FColor::White))
+	{
+		FDreamTextPaint Paint;
+		Paint.bEnabled = true;
+		TestTrue(TEXT("The painted text's gradient reads"),
+			FDreamGradient::ParseCss(TEXT("linear-gradient(90deg, #FF3B30, #FFCC00, #34C759, #0A84FF)"), Paint.Gradient));
+		Painted->SetFacePaint(Paint);
+	}
 	TSharedRef<TArray<FColor>> BuiltIn = MakeShared<TArray<FColor>>();
 	TSharedRef<FIntPoint> BuiltInSize = MakeShared<FIntPoint>(FIntPoint::ZeroValue);
 	EnqueuePictureCheck(Stage, TEXT("Gallery_BuiltInShader"), 20000);
@@ -611,6 +769,16 @@ bool FDreamGalleryBuiltInAgainstMaterialTest::RunTest(const FString& Parameters)
 		FIntPoint MaterialSize = FIntPoint::ZeroValue;
 		if (TestTrue(TEXT("both pictures read back"), BuiltIn->Num() > 0 && Stage->ReadBack(Material, MaterialSize)))
 		{
+			// The painted text, at 18 px, is drawn alike only by a default material built on MF_DreamUI_Shade as it is now: one
+			// made before that has neither the paint rows nor the shading's marker, so the text is drawn from the field (no
+			// coverage glyphs) in its vertex colours, where the built-in shader draws coverage glyphs painted per pixel.
+			const UMaterialInterface* DefaultMaterial = Stage->GetCanvas() != nullptr ? Stage->GetCanvas()->GetDefaultMaterial() : nullptr;
+			if (DefaultMaterial != nullptr && !GalleryMaterialShadesThroughDreamGUI(DefaultMaterial))
+			{
+				AddWarning(FString::Printf(TEXT("Gallery_BuiltInAgainstMaterial is not compared: the default UI material %s has no %s parameter, so it predates MF_DreamUI_Shade with the paint rows. Regenerate MF_DreamUI_Shade and DreamUI_ImageAndFont from DShader/ and run this test again."),
+					*DefaultMaterial->GetPathName(), *DreamUIShadeMaterial::ShadeMarkerParameter.ToString()));
+				return;
+			}
 			FDreamPixelProbe::ExpectPicturesMatch(*this, *BuiltIn, *BuiltInSize, Material, MaterialSize, TEXT("Gallery_BuiltInAgainstMaterial"), 12, 0.01);
 		}
 	});

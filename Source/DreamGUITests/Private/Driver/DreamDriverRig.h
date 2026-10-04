@@ -47,8 +47,9 @@ namespace DreamTests
  * off the engine's list, so the next test does not find it.
  *
  * WHERE INPUT ENTERS is an option too (FDreamRigOptions::InputHost): straight into the driver's
- * module, as it always did, or through a real input actor behind a real player controller, built by
- * DreamDriverGameHost. Either way the steps are the same; see FDreamDriverSequence.
+ * module, as it always did, through a real input actor behind a real player controller, built by
+ * DreamDriverGameHost, or as Slate's own events to the world's Slate input source, set up by
+ * DreamDriverSlateHost. Whichever it is, the steps are the same; see FDreamDriverSequence.
  *
  * PROCESS-WIDE STATE the rig disturbs is put back when it goes -- UUITextInput's "a host delivers
  * characters" switch -- and the counters are checked settled: the rig world's layout pass and
@@ -113,7 +114,7 @@ public:
 	UGameInstance* GetGameInstance() const;
 	/** Player 0's controller; null until EnsureGameInputHost or an actor input host has made one. */
 	APlayerController* GetPlayerController() const;
-	/** The actor the rig hangs its raycaster on -- and, under ModuleOnly, its event system and input module. */
+	/** The actor the rig hangs its raycaster on -- and, under ModuleOnly and SlateSource, its event system and input module. */
 	AActor* GetHostActor() const;
 	/** Why IsUsable() is false, in words; empty while it is true. */
 	const FString& GetBuildFailure() const;

@@ -1,0 +1,143 @@
+// The shimmer: an overlay paint -- a narrow white band at 105 degrees -- mixed onto the face, moved along by the text's
+// OverlayPaintPhase, which the scene sets through the property, as Sequencer keys it: the band at five places across a
+// solid face (added), a gold-painted face with the band laid over it (normal), and a face paint moved by FacePaintPhase.
+// A phase moves the gradient forward along its line by that fraction of its length.
+// @stage 760x480
+
+style Title {
+    AnchorData.AnchorMin = (0, 1)
+    AnchorData.AnchorMax = (1, 1)
+    AnchorData.Pivot = (0.5, 1)
+    AnchorData.AnchoredPosition = (0, -8)
+    AnchorData.SizeDelta = (-24, 20)
+    FontSize = 15
+    Color = #1E2230
+    HAlign = Left
+    VAlign = Top
+    OverflowType = HorizontalOverflow
+}
+
+style Phase {
+    AnchorData.AnchorMin = (0, 1)
+    AnchorData.AnchorMax = (0, 1)
+    AnchorData.Pivot = (0, 1)
+    FontSize = 12
+    Color = #8E95A8
+    HAlign = Right
+    VAlign = Middle
+    OverflowType = HorizontalOverflow
+}
+
+style Shimmer {
+    AnchorData.AnchorMin = (0, 1)
+    AnchorData.AnchorMax = (0, 1)
+    AnchorData.Pivot = (0, 1)
+    FontSize = 40
+    Color = #8E95A8
+    HAlign = Left
+    VAlign = Middle
+    OverflowType = HorizontalOverflow
+    Text = "SHIMMERING TITLE"
+    TextStyle.OverlayPaint.bEnabled = true
+    TextStyle.OverlayPaint.Gradient = "linear-gradient(105deg, transparent 40%, #FFFFFFD0 50%, transparent 60%)"
+    TextStyle.OverlayBlend = Add
+}
+
+Widget Root {
+    Image Page {
+        Brush.TintColor = #1E2230
+        AnchorData.AnchorMin = (0, 0)
+        AnchorData.AnchorMax = (1, 1)
+        AnchorData.SizeDelta = (0, 0)
+    }
+
+    Text Heading : Title {
+        Color = #F5F3EE
+        Text = "The shimmer: an overlay band moved by OverlayPaintPhase"
+    }
+
+    Text PhaseMinus40 : Phase {
+        AnchorData.AnchoredPosition = (8, -40)
+        AnchorData.SizeDelta = (72, 52)
+        Text = "-0.4"
+    }
+    Text ShimmerMinus40 : Shimmer {
+        AnchorData.AnchoredPosition = (96, -40)
+        AnchorData.SizeDelta = (640, 52)
+        OverlayPaintPhase = -0.4
+    }
+
+    Text PhaseMinus20 : Phase {
+        AnchorData.AnchoredPosition = (8, -96)
+        AnchorData.SizeDelta = (72, 52)
+        Text = "-0.2"
+    }
+    Text ShimmerMinus20 : Shimmer {
+        AnchorData.AnchoredPosition = (96, -96)
+        AnchorData.SizeDelta = (640, 52)
+        OverlayPaintPhase = -0.2
+    }
+
+    Text Phase0 : Phase {
+        AnchorData.AnchoredPosition = (8, -152)
+        AnchorData.SizeDelta = (72, 52)
+        Text = "0"
+    }
+    Text Shimmer0 : Shimmer {
+        AnchorData.AnchoredPosition = (96, -152)
+        AnchorData.SizeDelta = (640, 52)
+        OverlayPaintPhase = 0
+    }
+
+    Text PhasePlus20 : Phase {
+        AnchorData.AnchoredPosition = (8, -208)
+        AnchorData.SizeDelta = (72, 52)
+        Text = "0.2"
+    }
+    Text ShimmerPlus20 : Shimmer {
+        AnchorData.AnchoredPosition = (96, -208)
+        AnchorData.SizeDelta = (640, 52)
+        OverlayPaintPhase = 0.2
+    }
+
+    Text PhasePlus40 : Phase {
+        AnchorData.AnchoredPosition = (8, -264)
+        AnchorData.SizeDelta = (72, 52)
+        Text = "0.4"
+    }
+    Text ShimmerPlus40 : Shimmer {
+        AnchorData.AnchoredPosition = (96, -264)
+        AnchorData.SizeDelta = (640, 52)
+        OverlayPaintPhase = 0.4
+    }
+
+    Text PhaseGold : Phase {
+        AnchorData.AnchoredPosition = (8, -330)
+        AnchorData.SizeDelta = (72, 52)
+        Text = "gold, 0.1"
+    }
+    Text GoldShimmer : Shimmer {
+        AnchorData.AnchoredPosition = (96, -330)
+        AnchorData.SizeDelta = (640, 52)
+        Text = "GOLDEN SHIMMER"
+        OverlayPaintPhase = 0.1
+        TextStyle.FacePaint.bEnabled = true
+        TextStyle.FacePaint.Gradient = "linear-gradient(180deg, #FFF3B0, #E8B64A 55%, #9C6A12)"
+        TextStyle.OverlayBlend = Normal
+    }
+
+    Text PhaseFace : Phase {
+        AnchorData.AnchoredPosition = (8, -396)
+        AnchorData.SizeDelta = (72, 52)
+        Text = "face 0.25"
+    }
+    Text FacePhase : Shimmer {
+        AnchorData.AnchoredPosition = (96, -396)
+        AnchorData.SizeDelta = (640, 52)
+        Text = "MOVED BY ITS PHASE"
+        FacePaintPhase = 0.25
+        TextStyle.OverlayPaint.bEnabled = false
+        TextStyle.FacePaint.bEnabled = true
+        TextStyle.FacePaint.Gradient = "repeating-linear-gradient(90deg, #FF2D55, #FFCC00 25%, #FF2D55 50%)"
+    }
+}
