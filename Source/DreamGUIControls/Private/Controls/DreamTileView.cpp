@@ -258,8 +258,8 @@ int32 UDreamTileView::GetNavigationTarget(int32 InDisplayIndex, EDreamUINavigati
 int32 UDreamTileView::ResolveNavigationTarget(int32 InDisplayIndex, EDreamUINavigationDirection InDirection) const
 {
 	// The four directions a grid has an answer for: STileView steps across a line itself and hands up
-	// and down to SListView, which steps a whole line. Next and Prev are neither's, so they go on to the
-	// ordinary scan, as they would leave a UMG tile view.
+	// and down to SListView, which steps a whole line. Next and Prev are neither's: the tile view is one
+	// Tab stop, and Tab leaves it, as it leaves a UMG tile view.
 	switch (InDirection)
 	{
 	case EDreamUINavigationDirection::Left:

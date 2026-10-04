@@ -16,7 +16,9 @@
 #include "Core/Components/DreamText.h"
 #include "Core/Components/DreamVisual.h"
 #include "Core/Components/DreamWidget.h"
+#include "Engine/World.h"
 #include "Event/DreamPointerEventData.h"
+#include "Interaction/DreamUIActionRouter.h"
 #include "Interaction/DreamUIFocusReturn.h"
 #include "Interaction/UIButton.h"
 #include "Interaction/UISelectable.h"
@@ -602,6 +604,127 @@ void UDreamTabView::ApplyStyle()
 	// No SizeControlHeight: unlike a button, a tab view is a region rather than a thing of a
 	// particular size. Its height is its content's -- the strip plus whatever the pages need -- and
 	// how much room it gets belongs to whoever placed it.
+
+	// Last: the push is where tabs come and go (RebuildTabs ends here) and where their enabled flags land,
+	// and either can decide whether the shoulder buttons have another tab to go to.
+	RefreshTabSwitchAvailability();
+}
+
+void UDreamTabView::NativeOnEnable()
+{
+	Super::NativeOnEnable();
+	RefreshTabSwitchAvailability();
+}
+
+void UDreamTabView::NativeOnDisable()
+{
+	// Before the base's, and whatever the flags still read: a view going to sleep, or away, takes the shoulder
+	// buttons' prompts off the bar with it.
+	RefreshTabSwitchAvailability(/*bInSleeping*/true);
+	Super::NativeOnDisable();
+}
+
+int32 UDreamTabView::FindSwitchTarget(int32 InDelta) const
+{
+	const int32 Count = Tabs.Num();
+	if (InDelta == 0 || Count < 2)
+	{
+		return INDEX_NONE;
+	}
+	// From the tab the strip has lit: the request resolved as ApplyActiveTab resolves it.
+	const int32 Current = FMath::Clamp(ActiveTabIndex, 0, Count - 1);
+	const int32 Direction = InDelta > 0 ? 1 : -1;
+	int32 Target = Current;
+	for (int32 Remaining = FMath::Abs(InDelta); Remaining > 0; --Remaining)
+	{
+		// One enabled tab further along, round at the ends. At most a lap: a strip with nothing else enabled
+		// comes back to where it started, which is no switch.
+		int32 Candidate = Target;
+		bool bFound = false;
+		for (int32 Lap = 0; Lap < Count && !bFound; ++Lap)
+		{
+			Candidate = (Candidate + Direction + Count) % Count;
+			bFound = IsTabEnabled(Candidate);
+		}
+		if (!bFound)
+		{
+			return INDEX_NONE;
+		}
+		Target = Candidate;
+	}
+	return Target != Current ? Target : INDEX_NONE;
+}
+
+bool UDreamTabView::CanSwitchTab(int32 InUserIndex) const
+{
+	// What a click asks of a tab, asked of the view: in play, awake, drawn and enabled -- and somewhere to go.
+	// The routing has already decided which player's keys these are by where it found the view.
+	return HasBegunPlay() && GetWidgetActiveInHierarchy() && GetRenderVisibleInHierarchy() && GetInteractableInHierarchy()
+		&& FindSwitchTarget(1) != INDEX_NONE;
+}
+
+bool UDreamTabView::SwitchTab(int32 InUserIndex, int32 InDelta)
+{
+	if (!CanSwitchTab(InUserIndex))
+	{
+		return false;
+	}
+	const int32 Target = FindSwitchTarget(InDelta);
+	if (Target == INDEX_NONE)
+	{
+		return false;
+	}
+	// Where the player's focus is before the switch. On the strip -- a tab, a close button -- it goes onto the tab
+	// now open, where a click on that tab would have put it; in the page being left, SwitchActiveTab already moves it
+	// to that tab before the page is hidden; anywhere else it is not the tab view's to move.
+	UDreamUIInputServices* Services = UDreamUIInputServices::Get(this);
+	const UDreamWidget* FocusedBefore = Services != nullptr ? Services->GetFocusedWidget(InUserIndex) : nullptr;
+	const bool bFocusOnStrip = IsValid(FocusedBefore) && StripNode != nullptr
+		&& (FocusedBefore == StripNode || FocusedBefore->IsChildOf(StripNode));
+	const int32 ActiveBefore = ActiveTabIndex;
+	{
+		// The player's own switch, as a click is: announced, and followed into the page while bFocusPageOnTabChange
+		// says so -- for the player who pressed, who need not be the owner.
+		TGuardValue<bool> UserChange(bTabChangeFromUser, true);
+		TGuardValue<int32> ChangeUser(TabChangeUserIndex, InUserIndex);
+		SetActiveTabIndex(Target);
+	}
+	if (bFocusOnStrip && Services != nullptr && Tabs.IsValidIndex(ActiveTabIndex))
+	{
+		UDreamWidget* OpenedTab = Tabs[ActiveTabIndex].TabNode.Get();
+		const UDreamWidget* FocusedAfter = Services->GetFocusedWidget(InUserIndex);
+		// Still on the strip -- no page focus asked for, or a page with nothing to focus in it -- and not yet on
+		// the opened tab.
+		if (IsValid(OpenedTab) && IsValid(FocusedAfter) && FocusedAfter != OpenedTab
+			&& (FocusedAfter == StripNode || FocusedAfter->IsChildOf(StripNode)))
+		{
+			Services->FocusForNavigation(OpenedTab, InUserIndex);
+		}
+	}
+	return ActiveTabIndex != ActiveBefore;
+}
+
+void UDreamTabView::RefreshTabSwitchAvailability(bool bInSleeping)
+{
+	const int32 OwnerIndex = GetOwningPlayerIndex();
+	const bool bAvailable = !bInSleeping && CanSwitchTab(OwnerIndex);
+	if (bAvailable == bTabSwitchAvailable)
+	{
+		return;
+	}
+	bTabSwitchAvailable = bAvailable;
+	// The action bar shows the shoulder buttons' prompts while some tab view would take them, asked when it
+	// rebuilds -- and it rebuilds when the router says what a bar shows has moved, which this just did. Not
+	// while the world is coming down: no bar there is going to be looked at again.
+	const UWorld* World = GetWorld();
+	if (World == nullptr || World->bIsTearingDown)
+	{
+		return;
+	}
+	if (UDreamUIActionRouter* Router = UDreamUIActionRouter::Get(this))
+	{
+		Router->GetBindingsChangedEvent().Broadcast(OwnerIndex);
+	}
 }
 
 int32 UDreamTabView::GetTabCount() const
@@ -1166,12 +1289,13 @@ void UDreamTabView::FocusActivePage()
 		// dropping it somewhere arbitrary.
 		return;
 	}
-	// The player whose tab view it is, not player 0 -- and through FocusForNavigation, which moves that
-	// player's navigation cursor with the focus. The event system's own selection left the cursor on the
-	// tab, so the next stick press started from the strip as though nothing had moved.
+	// The player whose shoulder button switched the tab, else the player whose tab view it is -- not player 0
+	// -- and through FocusForNavigation, which moves that player's navigation cursor with the focus. The event
+	// system's own selection left the cursor on the tab, so the next stick press started from the strip as
+	// though nothing had moved.
 	if (UDreamUIInputServices* Services = UDreamUIInputServices::Get(this))
 	{
-		Services->FocusForNavigation(First->GetWidget(), GetOwningPlayerIndex());
+		Services->FocusForNavigation(First->GetWidget(), TabChangeUserIndex != INDEX_NONE ? TabChangeUserIndex : GetOwningPlayerIndex());
 	}
 }
 

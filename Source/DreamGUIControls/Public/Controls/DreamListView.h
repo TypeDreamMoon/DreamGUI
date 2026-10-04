@@ -238,6 +238,14 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FDreamListDraggingStateEvent, bool, 
  * to whatever is beside the list -- STableViewBase::OnNavigation's answer. Arriving at a list from
  * outside is that same scan, which lands on the nearest row and does not select it.
  *
+ * TAB SEES ONE STOP
+ * -----------------
+ * A list is one Tab stop, as a browser's list box is: TabNavigation is Once, Tab enters at
+ * ResolveTabEntry's row -- the selected item's, else the first item's, the last's for Shift+Tab, found
+ * by index, scrolled into view and built, because the rows exist only for what shows -- and the next
+ * Tab leaves the list. The arrows move inside it. Next and Prev are never the rows' to step through
+ * (HandleRowNavigation leaves them to the Tab walk), and the bar is no stop at all.
+ *
  * WHY THE PLAIN SCROLL VIEW, NOT UUIListView
  * ------------------------------------------
  * The recycling stack (UUIRecyclableScrollView, and UUIListView on top of it) is the right answer
@@ -275,6 +283,18 @@ class DREAMGUICONTROLS_API UDreamListViewBase : public UDreamUIControl
 	GENERATED_BODY()
 
 public:
+	/** List, tile and tree views are one Tab stop each (TabNavigation Once); see TAB SEES ONE STOP above. */
+	UDreamListViewBase();
+
+	/**
+	 * Where Tab lands as it enters the list: the selected item's row while it shows and the veto lets it be
+	 * navigated to, else the first such item's -- the last's when bInBackward -- in display order (a tile
+	 * view's source order, a tree's visible rows). Scrolled into view at once and so built, as a recycling
+	 * list only has rows for what shows. Not selected: entering a list is not choosing in it. Null for a
+	 * list with nothing to land on.
+	 */
+	virtual UDreamWidget* ResolveTabEntry(bool bInBackward) override;
+
 	/**
 	 * The rows, as text. The common case, and the control's job is to be the common case -- the same
 	 * call UDreamDropdown's Options make. Parallel to ItemObjects when both are given: the object
@@ -1219,8 +1239,10 @@ public:
 	 *
 	 * The base answers along the scroll axis by item (ResolveNavigationTarget), selecting the item it
 	 * lands on while bSelectItemOnNavigation is on and scrolling it into view before naming its row.
-	 * The tree adds its left and right. Called only by UDreamListRowButton, and only for a press that
-	 * is really being taken -- never for a query -- so it is free to change things.
+	 * The tree adds its left and right. Next and Prev are declined whatever a subclass's
+	 * ResolveNavigationTarget says: the list is one Tab stop, and Tab and Shift+Tab leave it. Called only
+	 * by UDreamListRowButton, and only for a press that is really being taken -- never for a query -- so
+	 * it is free to change things.
 	 */
 	virtual bool HandleRowNavigation(int32 InPoolIndex, EDreamUINavigationDirection InDirection,
 		TScriptInterface<IDreamNavigationInterface>& OutResult);

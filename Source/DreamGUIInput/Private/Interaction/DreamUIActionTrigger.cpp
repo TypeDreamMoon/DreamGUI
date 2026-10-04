@@ -61,6 +61,18 @@ void UDreamUIActionTrigger::SetAction(const FDataTableRowHandle& InAction)
 	}
 }
 
+int32 UDreamUIActionTrigger::GetUserIndex() const
+{
+	if (UserIndex >= 0)
+	{
+		return UserIndex;
+	}
+	// The player who owns the widget: a button on player 2's screen answers player 2's key with nobody having
+	// told it so -- the index used to default to 0, and a scoped binding of player 0's never fired there.
+	const UDreamWidget* Widget = GetWidget();
+	return IsValid(Widget) ? Widget->GetOwningPlayerIndex() : 0;
+}
+
 void UDreamUIActionTrigger::SetUserIndex(int32 Value)
 {
 	if (UserIndex == Value)return;
@@ -99,7 +111,7 @@ void UDreamUIActionTrigger::RegisterAction()
 	FDreamUIActionExecutedDelegate Callback;
 	Callback.BindUFunction(this, TEXT("HandleActionExecuted"));
 	UDreamUINavigationScope* Scope = bBindGlobally ? nullptr : FindOwningScope();
-	Handle = Router->RegisterAction(Scope, Action, Callback, UserIndex, bDisplayInActionBar);
+	Handle = Router->RegisterAction(Scope, Action, Callback, GetUserIndex(), bDisplayInActionBar);
 }
 
 void UDreamUIActionTrigger::UnregisterAction()
@@ -134,7 +146,7 @@ void UDreamUIActionTrigger::TriggerAction()
 		SyntheticPointerEvent = NewObject<UDreamPointerEventData>(this);
 	}
 	SyntheticPointerEvent->PointerID = INDEX_NONE;//not a pointer anyone can look up; that is deliberate
-	SyntheticPointerEvent->UserIndex = UserIndex;
+	SyntheticPointerEvent->UserIndex = GetUserIndex();
 	SyntheticPointerEvent->PressWidget = Widget;
 	SyntheticPointerEvent->EnterWidget = Widget;
 	SyntheticPointerEvent->PointerPosition = Widget->GetWorldLocation();

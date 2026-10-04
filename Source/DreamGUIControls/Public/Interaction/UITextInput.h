@@ -149,6 +149,15 @@ protected:
 	 */
 	UPROPERTY(EditAnywhere, Category = "DreamGUI-Input", meta = (EditCondition="bAllowMultiLine"))
 		TArray<FKey> MultiLineSubmitFunctionKeys;
+	/**
+	 * Tab types a tab character -- Shift+Tab too, which a keyboard sends as the same character -- and Ctrl+Tab
+	 * (Ctrl+Shift+Tab backwards) is what leaves: what a notes or a code box wants. Multi-line only. Off, the
+	 * default and a single-line field's only answer, Tab and Shift+Tab end the edit -- committed as navigating
+	 * away commits (bSubmitWhenDeactivate) -- and move on to the next control or the previous one, as a
+	 * browser's fields do; arriving there by Tab starts its edit when UDreamGUISettings::bTabStartsTextEdit.
+	 */
+	UPROPERTY(EditAnywhere, Category = "DreamGUI-Input", meta = (EditCondition = "bAllowMultiLine"))
+		bool bTabTypesTabCharacter = false;
 	/** If PlaceHolderActor is a UITextActor, then mobile virtual keyboard's hint text will get from PlaceHolderActor. */
 	UPROPERTY(EditAnywhere, Category = "DreamGUI-Input")
 		TWeakObjectPtr<UDreamWidget> PlaceHolder;
@@ -179,10 +188,17 @@ protected:
 		float CompositionUnderlineThickness = 1.5f;
 	UPROPERTY(EditAnywhere, Category = "DreamGUI-Input")
 		FVirtualKeyboardOptions VirtualKeyboardOptions;
-	//Ignore these keys input. eg, if use tab and arrow keys for navigation then you should put tab and arrow keys in this array
+	/**
+	 * Keys the field leaves alone while it is edited: they go on to the game and to navigation instead -- the
+	 * arrows, say, on a field the pad's arrows should leave. Tab needs no entry: it ends the edit and moves on
+	 * by itself (see bTabTypesTabCharacter), and so does the pad's confirm button.
+	 */
 	UPROPERTY(EditAnywhere, Category = "DreamGUI-Input")
 		TArray<FKey> IgnoreKeys;
-	/** Automatic activate input when use navigation input and navigate in this. */
+	/**
+	 * Automatic activate input when use navigation input and navigate in this. Tab is the exception that needs
+	 * no switch here: a field Tab lands on starts its edit while UDreamGUISettings::bTabStartsTextEdit.
+	 */
 	UPROPERTY(EditAnywhere, Category = "DreamGUI-Input")
 		bool bAutoActivateInputWhenNavigateIn = false;
 	/** Select all text value when activate input. */
@@ -370,6 +386,8 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Input")
 		const TArray<FKey>& GetMultiLineSubmitFunctionKeys()const { return MultiLineSubmitFunctionKeys; }
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Input")
+		bool GetTabTypesTabCharacter()const { return bTabTypesTabCharacter; }
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Input")
 		UDreamWidget* GetPlaceHolderActor()const { return PlaceHolder.Get(); }
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Input")
 		float GetCaretBlinkRate()const { return CaretBlinkRate; }
@@ -432,6 +450,13 @@ public:
 		void SetAllowMultiLine(bool Value);
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Input")
 		void SetMultiLineSubmitFunctionKeys(const TArray<FKey>& Value);
+	/**
+	 * Read at each Tab, so an edit already under way follows the new answer from the next key -- with one exception:
+	 * with UDreamGUISettings::bTabNavigation off, a field that typed no tabs when its edit began did not bind Tab on
+	 * the player's controller (GetTextInputKeys, bound once an edit begins), and there only its next edit takes Tab.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Input")
+		void SetTabTypesTabCharacter(bool Value);
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Input")
 		void SetPlaceHolder(UDreamWidget* Value);
 	/**
@@ -543,10 +568,14 @@ public:
 	 * Only presses act, as on the bound road, which listens for press and repeat and never for a
 	 * release; a key listed in IgnoreKeys is ignored here too, because the bound road never binds it.
 	 * Escape is not a key this field handles on either road -- Back reaches an edit through
-	 * UDreamUINavigationStack::HandleBack, which calls CancelInput.
+	 * UDreamUINavigationStack::HandleBack, which calls CancelInput. On both roads Tab ends the edit and
+	 * asks the player's input for the next step (see bTabTypesTabCharacter), and the pad's confirm button
+	 * submits and ends it.
 	 *
 	 * @return true if the field was being edited and took the key -- not a promise the key changed
-	 *         anything: Home with the caret already at the start is taken and does nothing.
+	 *         anything: Home with the caret already at the start is taken and does nothing. Every key
+	 *         is taken while an IME composes (the IME's, and left alone here); Ctrl, Alt or Cmd with Tab
+	 *         is not taken where the field has no use for it.
 	 */
 	bool HandleKeyInput(const FKey& InKey, bool bInPressed);
 	/** HandleKeyInput with the modifiers the host says are held, which is how a chord -- Ctrl+A, Shift+Left, Ctrl+Enter -- arrives. */
@@ -686,6 +715,28 @@ private:
 	 * one of MultiLineSubmitFunctionKeys is down alongside Enter.
 	 */
 	void ProcessKeyPressed(const FKey& InKey, bool bInCtrl, bool bInShift, bool bInAlt, TFunctionRef<bool(const FKey&)> InIsKeyHeld);
+	/**
+	 * Tab while the field is edited, with the modifiers held, on either road. Without Ctrl, Alt or Cmd: typed
+	 * as a tab character where bTabTypesTabCharacter allows one, else the edit ends (committed as navigating
+	 * away commits) and the editing player's input is asked for a Next step -- Prev with Shift -- from the
+	 * field, which keeps the focus until that step moves it (UDreamUIInputUser::RequestNavigationStep). Ctrl
+	 * leaves a field that types tabs the same way, and is nothing to one that does not; Alt and Cmd are the
+	 * system's; and with UDreamGUISettings::bTabNavigation off Tab leaves no field (GetTextInputKeys then leaves
+	 * it to the game). @return whether the field took the key.
+	 */
+	bool HandleTabKey(bool bInShift, bool bInCtrl, bool bInAlt, bool bInCmd);
+	/**
+	 * The pad's confirm button, InPadKey, on a field being edited: submitted and ended, as Enter commits -- a pad
+	 * has no other way to say it is done. Not while it is the press that began the edit, still held and
+	 * repeating (the player's input has that press on its books as another's): that is no word on the value.
+	 */
+	void EndEditFromPadConfirm(const FKey& InPadKey);
+	/**
+	 * Set when the key road typed a Tab's tab character itself, no host having delivered a character yet, and
+	 * spent by the next character event: a host that delivers its character after the key -- Slate's order --
+	 * sends that same tab, and it is not typed twice. Cleared by any other key and by the end of the edit.
+	 */
+	bool bKeyRoadTypedTab = false;
 	/**
 	 * Validate one character against a GIVEN text and caret, not against the member Text.
 	 *

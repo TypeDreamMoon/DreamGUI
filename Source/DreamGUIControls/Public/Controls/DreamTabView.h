@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Controls/DreamUIControl.h"
+#include "Interaction/DreamUITabSwitchTarget.h"
 #include "DreamTabView.generated.h"
 
 class UDreamLayoutContainerWidgetSwitcher;
@@ -104,13 +105,29 @@ struct DREAMGUICONTROLS_API FDreamTabViewTab
  * only until the next hover -- the toggle's box-and-tick split, restated); and the label colour has
  * no transition left, so the control pushes it directly. Three appearances, two transitions, one
  * explicit push.
+ *
+ * THE SHOULDER BUTTONS switch tabs (IDreamUITabSwitchTarget): the project's PreviousTabKeys and
+ * NextTabKeys, LB and RB by default, reach the tab view the player's focus is in -- else the first one on
+ * their active screen -- and step to the previous or next enabled tab, round at the ends, as
+ * CommonUI's tab list does; the action bar shows the two prompts while there is such a tab view.
  */
 UCLASS(BlueprintType, Blueprintable, DisplayName = "Dream Tab View")
-class DREAMGUICONTROLS_API UDreamTabView : public UDreamUIControl
+class DREAMGUICONTROLS_API UDreamTabView : public UDreamUIControl, public IDreamUITabSwitchTarget
 {
 	GENERATED_BODY()
 
 public:
+	//~ IDreamUITabSwitchTarget
+	/** In play, active, drawn and enabled, with an enabled tab other than the open one to go to. */
+	virtual bool CanSwitchTab(int32 InUserIndex) const override;
+	/**
+	 * Open the enabled tab InDelta steps away -- -1 the previous, 1 the next -- round at the ends, as a click
+	 * on it would: announced, and the page focused while bFocusPageOnTabChange says so. Player InUserIndex's
+	 * focus goes with it when it was on the strip or in the page being left: onto the tab now open, or into
+	 * its page; focus anywhere else stays where it is.
+	 */
+	virtual bool SwitchTab(int32 InUserIndex, int32 InDelta) override;
+
 	/**
 	 * This instance's own look. The project sheet wins while StyleSource says so AND a sheet
 	 * actually exists; with no sheet in the project this IS the look in effect -- which is why
@@ -380,6 +397,9 @@ protected:
 	virtual void RealizeBuiltIn() override;
 	virtual void WireParts() override;
 	virtual void OnPartsReady() override;
+	/** Waking and sleeping is the shoulder buttons' prompts coming and going: see RefreshTabSwitchAvailability. */
+	virtual void NativeOnEnable() override;
+	virtual void NativeOnDisable() override;
 
 #if WITH_EDITOR
 	/** The base re-applies style; the label list lives outside ApplyStyle and regenerates here. */
@@ -387,6 +407,29 @@ protected:
 #endif
 
 private:
+	/**
+	 * The enabled tab InDelta steps from the open one, going round at the ends and over the disabled tabs;
+	 * INDEX_NONE when there is no other enabled tab to go to.
+	 */
+	int32 FindSwitchTarget(int32 InDelta) const;
+
+	/**
+	 * Whether the owning player's shoulder buttons may switch tabs here (CanSwitchTab), and when that answer
+	 * changed, the news to the action router -- the action bar shows the two prompts only while some tab
+	 * view would take the keys, and rebuilds when the router says the prompts moved. bInSleeping says the
+	 * answer is no whatever the flags read: the view is going to sleep, or away.
+	 */
+	void RefreshTabSwitchAvailability(bool bInSleeping = false);
+
+	/** The answer RefreshTabSwitchAvailability last gave the router. */
+	bool bTabSwitchAvailable = false;
+
+	/**
+	 * The player a user change is for while bTabChangeFromUser is set by a shoulder button (SwitchTab), so
+	 * the page is focused for the player who switched; INDEX_NONE for a click, which is the owner's.
+	 */
+	int32 TabChangeUserIndex = INDEX_NONE;
+
 	/**
 	 * One player's focus on the strip -- on a tab or on something inside one, its close button -- kept
 	 * by what survives the tab being rebuilt: the tab widget itself while it lives, the page it opens,
@@ -475,9 +518,10 @@ private:
 	void BroadcastActiveTabMoved(int32 InIndexBefore, bool bInOpenTabReplaced);
 
 	/**
-	 * Put focus on the first navigable thing inside the open page, for the owning player, through
-	 * FocusForNavigation so the pad's cursor goes with it. See bFocusPageOnTabChange. The switcher has
-	 * to have shown the page by then: its selectables are not found while it is still collapsed.
+	 * Put focus on the first navigable thing inside the open page, for the player whose shoulder button
+	 * switched the tab (TabChangeUserIndex), else the owning player, through FocusForNavigation so the pad's
+	 * cursor goes with it. See bFocusPageOnTabChange. The switcher has to have shown the page by then: its
+	 * selectables are not found while it is still collapsed.
 	 */
 	void FocusActivePage();
 

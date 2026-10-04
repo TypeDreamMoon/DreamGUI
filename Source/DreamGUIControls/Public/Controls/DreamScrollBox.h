@@ -545,6 +545,14 @@ public:
 	/** Re-measure the content and re-state the scroll range after this control is resized. */
 	void HandleDimensionsChanged(bool bPivotChanged, bool bWidthChanged, bool bHeightChanged);
 
+	/**
+	 * The viewport, which carries this box's scroll view: paging, Home and End and the stick, aimed at a
+	 * focused box, scroll the box itself rather than whatever scrolls around it (an EULA, a credits roll).
+	 * The view sits on a child, below the face that takes the focus, so the ordinary search -- this widget's
+	 * containers, then its ancestors' -- never met it.
+	 */
+	virtual UDreamWidget* GetScrollTargetForNavigation() const override;
+
 protected:
 	virtual void CollectParts(TArray<FDreamControlPart>& OutParts) override;
 	virtual void RealizeBuiltIn() override;
@@ -600,7 +608,9 @@ private:
 	 *
 	 * A UUISelectable on the FACE, added on demand and slept rather than destroyed: the selectable is
 	 * what the event system hands focus to, and it is also what already distinguishes a resting
-	 * pointer from focus -- so subscribing to its state is the whole of received and lost.
+	 * pointer from focus -- so its state report is the whole of received and lost. The report is the
+	 * moment, and the selectable's IsFocused the answer: the state it draws says Normal for a box a
+	 * click focused, since focus is drawn only after keys or a pad.
 	 */
 	void RefreshFocusTarget();
 	void HandleFaceSelectionStateChanged(EUISelectableSelectionState InState, bool bInImmediate);
@@ -610,7 +620,7 @@ private:
 	UPROPERTY(Transient)
 	TObjectPtr<UUISelectable> FocusSelectable = nullptr;
 
-	/** Whether the face was focused last time its state moved, so an edge can be told from a repaint. */
+	/** Whether the face had the focus last time its state moved, so an edge can be told from a repaint. */
 	bool bWasFocused = false;
 
 	/** Kept so the content-focus subscription is made exactly once, however often ApplyStyle runs. */
@@ -618,12 +628,12 @@ private:
 
 public:
 	/**
-	 * Drive the focus edge directly, for a test.
+	 * Run the face's state report directly, for a test, as a repaint in InState would.
 	 *
 	 * The selectable's state is moved by the event system, which needs a viewport, a player and a
 	 * press -- none of which exist headless. What is worth pinning is this control's own rule (an
-	 * edge, not a state, and only while focusable), and that rule lives here rather than in the
-	 * event system.
+	 * edge, not a state, only while focusable, and the focus asked of the selectable whatever state
+	 * it draws), and that rule lives here rather than in the event system.
 	 */
 	void HandleFaceSelectionStateChangedForTest(EUISelectableSelectionState InState)
 	{

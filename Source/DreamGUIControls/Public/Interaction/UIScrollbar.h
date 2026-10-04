@@ -52,6 +52,14 @@ enum class EUIScrollbarDirectionType:uint8
  *
  * A bar with no scroll view is a value control in its own right. Point one at a UUIScrollView (see
  * UDreamScrollBar) and both numbers become the view's: progress in, progress out.
+ *
+ * NOT A FOCUS TARGET, BY DEFAULT
+ * ------------------------------
+ * Navigation does not land on a bar and Tab does not stop at it: bCanNavigateHere starts off, and the
+ * widget the bar sits on is left unfocusable when it registers -- Slate's scroll bar cannot be focused
+ * at all, and a bar that took the pad's focus swallowed every press along its axis. The pointer drives
+ * it as before. A bar meant as a value control the pad steps (NavigationChangeInterval a press) turns
+ * bCanNavigateHere on before it registers; turned on later, its widget also needs SetIsFocusable(true).
  */
 UCLASS(ClassGroup = (DreamGUI), Blueprintable, meta = (BlueprintSpawnableComponent))
 class DREAMGUICONTROLS_API UUIScrollbar : public UUISelectable, public IDreamPointerDragInterface, public IDreamUIScrollbarInterface
@@ -68,6 +76,8 @@ public:
 	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
 #endif
 protected:
+	/** After the selectable's, which makes every selectable's widget focusable: a bar's stays unfocusable unless navigation may land on it. */
+	virtual void OnRegister()override;
 	virtual void OnEnable()override;
 	virtual void OnDimensionsChanged(bool PivotChanged, bool WidthChanged, bool HeightChanged)override;
 	virtual void OnChildDimensionsChanged(UDreamWidget* Child, bool PivotChanged, bool WidthChanged, bool HeightChanged)override;

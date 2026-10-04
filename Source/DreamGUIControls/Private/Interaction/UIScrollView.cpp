@@ -4,14 +4,37 @@
 #include "Interaction/UIScrollView.h"
 #include "DreamGUI.h"
 #include "DreamTweenManager.h"
+#include "Core/DreamUIWorldContext.h"
+#include "Core/Components/DreamCanvas.h"
 #include "Core/Components/DreamWidget.h"
+#include "Engine/TextureRenderTarget2D.h"
 // For the touch-scrolling gate: what the player's hands are on is the event system's answer, not
 // something the pointer event carries -- touch id zero and mouse id zero are the same number.
 #include "Event/DreamEventSystem.h"
 #include "Event/DreamUIInputTypes.h"
+#include "HAL/IConsoleManager.h"
 
 namespace DreamScrollViewLocal
 {
+	/** See UUIScrollView::SetContentPosition. Off until measured: whole-pixel scrolling changes what a slow glide looks like. */
+	static TAutoConsoleVariable<int32> CVarScrollSnapToDevicePixels(
+		TEXT("DreamGUI.Scroll.SnapToDevicePixels"),
+		0,
+		TEXT("1: a scroll view drawn on a 2D canvas (screen space in a game, or a render target) moves its content in whole device pixels, ")
+		TEXT("so small text drawn from coverage glyphs keeps its pixels while it scrolls instead of being repainted at every fraction. ")
+		TEXT("0 (the default): the content goes exactly where the offset puts it."),
+		ECVF_Default);
+
+	static bool IsSnappingToDevicePixels()
+	{
+		return CVarScrollSnapToDevicePixels.GetValueOnGameThread() != 0;
+	}
+
+	/** Within this, the position a content widget hands back is the one it was given: it stores what it is told. */
+	static constexpr double SnapReadBackTolerance = 1.0e-4;
+	/** How far, in device pixels, a unit step along one axis may stray onto the other before there is no grid to snap to. */
+	static constexpr double DeviceGridSkewTolerance = 1.0e-3;
+
 	/**
 	 * Under this many LOCAL UNITS per notch, a wheel cannot visibly move anything, so a value here is
 	 * almost certainly a MULTIPLIER left over from what this property used to mean (it shipped at 1,
@@ -244,7 +267,7 @@ bool UUIScrollView::CheckValidHit(UDreamWidget *InHitComp)
 		&& (InHitComp->IsChildOf(Widget) || InHitComp == Widget);
 }
 
-FVector2D UUIScrollView::GetContentPosition() const
+FVector2D UUIScrollView::GetAppliedContentPosition() const
 {
 	if (!Content.IsValid())
 	{
@@ -258,21 +281,160 @@ FVector2D UUIScrollView::GetContentPosition() const
 	return FVector2D(RelativeLocation.Y, RelativeLocation.Z);
 }
 
+FVector2D UUIScrollView::GetContentPosition() const
+{
+	const FVector2D Applied = GetAppliedContentPosition();
+	// The position the view asked for, while the content stands where that request was snapped to: the snap is the
+	// drawing's, and the offset, the progress and the physics go on in the fractions they were asked in -- else a slow
+	// fling, rounded back to the same pixel every frame, would never move again. Moved by anything else, the content
+	// is where it is.
+	if (bHasSnappedContentPosition && DreamScrollViewLocal::IsSnappingToDevicePixels()
+		&& Applied.Equals(SnappedContentPosition, DreamScrollViewLocal::SnapReadBackTolerance))
+	{
+		return UnsnappedContentPosition;
+	}
+	return Applied;
+}
+
 void UUIScrollView::SetContentPosition(const FVector2D& Value) const
 {
 	if (!Content.IsValid())
 	{
 		return;
 	}
+	FVector2D Applied = Value;
+	bHasSnappedContentPosition = false;
+	if (DreamScrollViewLocal::IsSnappingToDevicePixels() && SnapContentPositionToDevicePixels(Value, Applied))
+	{
+		bHasSnappedContentPosition = true;
+		UnsnappedContentPosition = Value;
+		SnappedContentPosition = Applied;
+	}
 	if (CoordinateMode == EDreamScrollCoordinateMode::AnchoredPosition)
 	{
-		Content->SetAnchoredPosition(Value);
+		Content->SetAnchoredPosition(Applied);
 		return;
 	}
 	FVector RelativeLocation = Content->GetRelativeLocation();
-	RelativeLocation.Y = Value.X;
-	RelativeLocation.Z = Value.Y;
+	RelativeLocation.Y = Applied.X;
+	RelativeLocation.Z = Applied.Y;
 	Content->SetRelativeLocation(RelativeLocation);
+}
+
+bool UUIScrollView::SnapContentPositionToDevicePixels(const FVector2D& InPosition, FVector2D& OutSnapped) const
+{
+	const UDreamWidget* ContentWidget = Content.Get();
+	const UDreamWidget* Viewport = ContentWidget != nullptr ? ContentWidget->GetParent() : nullptr;
+	UDreamCanvas* RenderCanvas = Viewport != nullptr ? Viewport->GetRenderCanvas() : nullptr;
+	UDreamCanvas* RootCanvas = RenderCanvas != nullptr ? RenderCanvas->GetRootCanvas() : nullptr;
+	if (RootCanvas == nullptr || RootCanvas->GetWidget() == nullptr)
+	{
+		return false;
+	}
+	// The 2D canvases, which draw straight onto the pixels of what they render into: screen space in a game (an
+	// editor world draws it in the level, through the editor's camera), and a render target. World space has no
+	// grid that holds still.
+	const EDreamRenderMode RenderMode = RootCanvas->GetRenderMode();
+	const bool bScreen = RenderMode == EDreamRenderMode::ScreenSpaceOverlay && DreamUI::IsGameWorld(RootCanvas);
+	const bool bTarget = RenderMode == EDreamRenderMode::RenderTarget;
+	if (!bScreen && !bTarget)
+	{
+		return false;
+	}
+	// Drawn through a matrix the world transform does not hold.
+	if (ContentWidget->HasPerspectiveApplied() || ContentWidget->HasShearApplied())
+	{
+		return false;
+	}
+
+	// What the canvas renders into, in pixels, read the way the small-text placement reads it (UDreamText): a render
+	// target the canvas follows is its own size, one that follows the canvas is the canvas's size times its resolution
+	// scale, and the screen is the viewport -- unless the UI is drawn at a fraction of it, whose grid the renderer
+	// settles on its own thread.
+	FIntPoint TargetPixels = FIntPoint::ZeroValue;
+	if (bTarget)
+	{
+		const UTextureRenderTarget2D* Target = RootCanvas->GetRenderTarget();
+		if (IsValid(Target) && RootCanvas->GetRenderTargetSizeMode() != EDreamCanvasRenderTargetSizeMode::RenderTargetFitToCanvas)
+		{
+			TargetPixels = FIntPoint((int32)Target->SizeX, (int32)Target->SizeY);
+		}
+		else
+		{
+			const float ResolutionScale = RootCanvas->GetRenderTargetResolutionScale();
+			TargetPixels = FIntPoint(FMath::TruncToInt32(RootCanvas->GetWidget()->GetWidth() * ResolutionScale),
+				FMath::TruncToInt32(RootCanvas->GetWidget()->GetHeight() * ResolutionScale));
+		}
+	}
+	else
+	{
+		if (RootCanvas->GetScreenSpaceRenderScale() < 1.0f)
+		{
+			return false;
+		}
+		TargetPixels = RootCanvas->GetViewportSize();
+	}
+	if (TargetPixels.X <= 0 || TargetPixels.Y <= 0)
+	{
+		return false;
+	}
+
+	// The viewport's own space through the matrices the renderer draws the canvas with, onto the target's pixels: u
+	// from its left edge rightward, v from its top edge upward.
+	const FMatrix ViewRotation = FInverseRotationMatrix(RootCanvas->GetViewRotator()) * FMatrix(
+		FPlane(0, 0, 1, 0),
+		FPlane(1, 0, 0, 0),
+		FPlane(0, 1, 0, 0),
+		FPlane(0, 0, 0, 1));
+	const FMatrix ViewportToClip = Viewport->GetWorldTransform().ToMatrixWithScale()
+		* FTranslationMatrix(-RootCanvas->GetViewLocation()) * ViewRotation * RootCanvas->GetProjectionMatrix();
+	const FVector2D TargetSize((double)TargetPixels.X, (double)TargetPixels.Y);
+	auto ToDevice = [&ViewportToClip, &TargetSize](double InX, double InY, FVector2D& OutDevice)
+	{
+		const FVector4 Clip = ViewportToClip.TransformFVector4(FVector4(0.0, InX, InY, 1.0));
+		if (!(Clip.W > UE_SMALL_NUMBER))
+		{
+			return false;
+		}
+		OutDevice = FVector2D((Clip.X / Clip.W + 1.0) * 0.5 * TargetSize.X, (Clip.Y / Clip.W - 1.0) * 0.5 * TargetSize.Y);
+		return true;
+	};
+
+	// Where InPosition would put the content's origin in the viewport's space: the content moves one for one with
+	// its position, in either coordinate mode, so it is where the content is now plus the difference.
+	const FVector Location = ContentWidget->GetRelativeLocation();
+	const FVector2D Applied = GetAppliedContentPosition();
+	const double OriginX = Location.Y + (InPosition.X - Applied.X);
+	const double OriginY = Location.Z + (InPosition.Y - Applied.Y);
+	FVector2D Origin = FVector2D::ZeroVector;
+	FVector2D AlongX = FVector2D::ZeroVector;
+	FVector2D AlongY = FVector2D::ZeroVector;
+	if (!ToDevice(OriginX, OriginY, Origin) || !ToDevice(OriginX + 1.0, OriginY, AlongX) || !ToDevice(OriginX, OriginY + 1.0, AlongY))
+	{
+		return false;
+	}
+	const FVector2D PerX = AlongX - Origin;
+	const FVector2D PerY = AlongY - Origin;
+	// A grid whose rows and columns are the viewport's: no turn, no mirror -- what a scroll moves along stays one
+	// device axis.
+	if (!(PerX.X > UE_KINDA_SMALL_NUMBER) || !(PerY.Y > UE_KINDA_SMALL_NUMBER)
+		|| FMath::Abs(PerX.Y) > DreamScrollViewLocal::DeviceGridSkewTolerance
+		|| FMath::Abs(PerY.X) > DreamScrollViewLocal::DeviceGridSkewTolerance)
+	{
+		return false;
+	}
+	// The least move that lands the origin on a pixel corner, along the axes this view scrolls; the other axis is
+	// the layout's, and stays where it put the content.
+	OutSnapped = InPosition;
+	if (Horizontal)
+	{
+		OutSnapped.X += (FMath::RoundToDouble(Origin.X) - Origin.X) / PerX.X;
+	}
+	if (Vertical)
+	{
+		OutSnapped.Y += (FMath::RoundToDouble(Origin.Y) - Origin.Y) / PerY.Y;
+	}
+	return true;
 }
 
 void UUIScrollView::ApplyContentPosition(const FVector2D& InPosition, bool bInFireEvent)
@@ -296,7 +458,7 @@ FVector2D UUIScrollView::GetStartAlignedPosition() const
 {
 	if (!Content.IsValid() || !ContentParent.IsValid())
 	{
-		return GetContentPosition();
+		return GetAppliedContentPosition();
 	}
 	const UDreamWidget* Viewport = ContentParent.Get();
 	const FVector ContentLocation = Content->GetRelativeLocation();
@@ -330,7 +492,9 @@ FVector2D UUIScrollView::GetStartAlignedPosition() const
 	const FVector2D Leading = GetLeadingScrollPad();
 	Delta.X += Leading.X;
 	Delta.Y -= Leading.Y;
-	return GetContentPosition() + Delta;
+	// From the position the content is drawn at, which is the one its rect was measured at -- not a snapped
+	// position's unsnapped request (GetContentPosition), which would put the start off by the snap.
+	return GetAppliedContentPosition() + Delta;
 }
 
 FVector2D UUIScrollView::GetLeadingScrollPad() const
@@ -1233,16 +1397,19 @@ bool UUIScrollView::CalculateRevealContentPosition(UDreamWidget* InChild, FVecto
         return 0.0f;
     };
 
+    // A move is measured from where the content is DRAWN, which is where the child's box was read: the same
+    // position, unless DreamGUI.Scroll.SnapToDevicePixels put the drawing on a whole pixel a fraction away.
+    const FVector2D Drawn = GetAppliedContentPosition();
     FVector2D Position = OutPosition;
     if (Horizontal)
     {
         const float Delta = DeltaAlongAxis(ChildLeft, ChildRight, ViewLeft, ViewRight, /*bLeadingIsMaxEdge*/false);
-        Position.X = FMath::Clamp(Position.X + Delta, HorizontalRange.X, HorizontalRange.Y);
+        Position.X = FMath::Clamp((Delta != 0.0f ? Drawn.X : Position.X) + Delta, HorizontalRange.X, HorizontalRange.Y);
     }
     if (Vertical)
     {
         const float Delta = DeltaAlongAxis(ChildBottom, ChildTop, ViewBottom, ViewTop, /*bLeadingIsMaxEdge*/true);
-        Position.Y = FMath::Clamp(Position.Y + Delta, VerticalRange.X, VerticalRange.Y);
+        Position.Y = FMath::Clamp((Delta != 0.0f ? Drawn.Y : Position.Y) + Delta, VerticalRange.X, VerticalRange.Y);
     }
     if (Position.Equals(OutPosition))
     {
