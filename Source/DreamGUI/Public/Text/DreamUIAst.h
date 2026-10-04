@@ -168,6 +168,12 @@ struct DREAMGUI_API FDreamUIProperty
 	bool bSynthesized = false;
 
 	/**
+	 * A value a `rows` line gave its widget: Name is the column, and Location and Value.Location are both the cell, the
+	 * one place the text spells it. The write-back replaces such a value where it stands and adds no line beside it.
+	 */
+	bool bRowCell = false;
+
+	/**
 	 * Set when this is `<->`: the FieldNotify variable on the user widget the property mirrors,
 	 * both ways. The compiler's thunk pass desugars it -- a generated getter lands in
 	 * BindingFunction (this field then rides into the binding's NotifyField), and a synthesized
@@ -259,6 +265,14 @@ struct DREAMGUI_API FDreamUINode
 
 	/** NamedSlot only: this is a host filling a component's slot (it has children), not a declaration. */
 	bool bFillsSlot = false;
+
+	/**
+	 * Non-empty on a widget a `rows` block made, one per line: the line's first value, as its key. The widget is
+	 * anonymous, and its id is made from the key -- `<scope id>__<type>_<key>` -- rather than from a count, so inserting
+	 * or reordering rows moves no other row's id, nor the localization keys made from it. Location is the line's first
+	 * value; the write-back reads this to know that the node's header is a row, not a type and an id.
+	 */
+	FString RowKey;
 
 	/** `: StyleName` -- properties from that style are applied first, then these override. */
 	FString StyleName;

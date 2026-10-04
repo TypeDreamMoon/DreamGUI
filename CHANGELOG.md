@@ -8,6 +8,14 @@ the next -- what loads differently, which defaults moved, what C++ has to change
 
 ### New
 
+- **`rows`: a table of instances in `.dui`.** `rows Row : ListRow (Label, Description) { "City Ruins", "…" … }`
+  writes the type, the style and the property names once, then one line per instance -- the same component N times
+  differing in a few values, which a settings page or a list of menu entries is made of. Read into the ordinary
+  unnamed children the lines stand for, so nothing downstream changed; each row is named from its first value
+  (`Page_0__Row_City_Ruins`), so inserting or reordering rows moves no other row's id or localization keys. A line may
+  end in a block for what that row needs beyond the columns. The designer writes a column's value back into its cell
+  and refuses, with the reason, what a row's line cannot spell (DUI7004). New codes DUI2020 MalformedRows and DUI3023
+  DuplicateRowKey (a warning). See Docs/DuiLanguage.md, "`rows`".
 - **Components by a short name in `.dui`.** `@Row Row1 { }` is a node whose type the `Asset` entry `Row` of a
   `resources` block names -- this file's, or one a `use` brought in -- so a family of components is named once in the
   library that styles it and each screen writes `@Row` instead of the asset path on every line. An entry that is
