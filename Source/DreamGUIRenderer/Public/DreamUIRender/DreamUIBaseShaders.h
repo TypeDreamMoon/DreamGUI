@@ -7,6 +7,7 @@
 #include "ShaderParameterStruct.h"
 #include "RHIStaticStates.h"
 #include "RHITextureReference.h"
+#include "UObject/WeakObjectPtr.h"
 #include "UObject/WeakObjectPtrTemplates.h"
 #include "DreamUIRender/DreamUIBlendMode.h"
 
