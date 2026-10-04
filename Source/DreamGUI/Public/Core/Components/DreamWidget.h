@@ -2431,6 +2431,22 @@ public:
 	UFUNCTION(BlueprintCallable, meta = (AdvancedDisplay = "delay,ease"), Category = "DreamTweenGUI")
 	UDreamTweener* VerticalAnchoredPositionTo(float endValue, float duration = 0.5f, float delay = 0.0f, EDreamTweenEase ease = EDreamTweenEase::OutCubic);
 
+	/**
+	 * The render transform's tweens: they move, scale and turn what is drawn and hit and never the layout, so they are the
+	 * ones for a widget a panel places -- a row of a vertical box sliding in, a tab nudged aside, a line growing from its
+	 * left. The anchored-position and size tweens above write the widget's layout instead, which its panel overrides on
+	 * its next pass. RenderTranslationTo is in local space (X depth, Y right, Z up); RenderOffsetTo is the same move on
+	 * the canvas plane (x right, y up), depth kept; RenderAngleTo is the in-plane angle (SetRenderTransformAngle).
+	 */
+	UFUNCTION(BlueprintCallable, meta = (AdvancedDisplay = "delay,ease"), Category = "DreamTweenGUI")
+	UDreamTweener* RenderTranslationTo(const FVector& endValue, float duration = 0.5f, float delay = 0.0f, EDreamTweenEase ease = EDreamTweenEase::OutCubic);
+	UFUNCTION(BlueprintCallable, meta = (AdvancedDisplay = "delay,ease"), Category = "DreamTweenGUI")
+	UDreamTweener* RenderOffsetTo(const FVector2D& endValue, float duration = 0.5f, float delay = 0.0f, EDreamTweenEase ease = EDreamTweenEase::OutCubic);
+	UFUNCTION(BlueprintCallable, meta = (AdvancedDisplay = "delay,ease"), Category = "DreamTweenGUI")
+	UDreamTweener* RenderScaleTo(const FVector& endValue, float duration = 0.5f, float delay = 0.0f, EDreamTweenEase ease = EDreamTweenEase::OutCubic);
+	UFUNCTION(BlueprintCallable, meta = (AdvancedDisplay = "delay,ease"), Category = "DreamTweenGUI")
+	UDreamTweener* RenderAngleTo(float endValue, float duration = 0.5f, float delay = 0.0f, EDreamTweenEase ease = EDreamTweenEase::OutCubic);
+
 	UFUNCTION(BlueprintCallable, Category = "DreamTweenGUI")
 	static void SetWidgetTweenerAffectByGamePauseAndTimeDilation(UDreamWidget* Widget, UDreamTweener* Tweener);
 #pragma endregion

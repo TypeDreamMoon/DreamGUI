@@ -369,6 +369,34 @@ on demand.
 Copy it into your own project before editing it; a plugin update overwrites the copy in the plugin
 folder.
 
+### Components
+
+A widget Blueprint is a node type in another `.dui`: write its asset path as the type, and the
+instance's lines set its properties (`/Game/UI/WBP_Row Row1 { Label = "Audio" }`). A family of
+components is easier to name once: an `Asset` entry of a `resources` block names the class, and `@`
+uses it as a type. Put the entries and the family's styles in one library file and `use` it from
+each screen:
+
+```
+// UI/Library.dui -- styles and resources only, no root
+resources {
+    Asset Row = /Game/UI/WBP_Row
+}
+style Wide { AnchorData.SizeDelta = (1100, 48) }
+
+// UI/Settings.dui
+use "UI/Library.dui"
+Widget Root {
+    + VerticalBox { Spacing = 29 }
+    @Row Audio : Wide { Label = "Audio" }
+    @Row Video : Wide { Label = "Video" }
+}
+```
+
+Inside a panel, animate a component through its render transform (`RenderOffsetTo`,
+`RenderScaleTo`, `RenderAngleTo`, `RenderTranslationTo`): the panel writes its anchored position
+and size back on its next pass.
+
 ### In the world
 
 The same class can be a surface in the level instead of a layer on the screen. Drag a widget

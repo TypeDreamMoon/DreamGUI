@@ -1668,6 +1668,55 @@ namespace DreamUITextBuilderLocal
 		{
 			return true;
 		}
+		// A user widget class at an asset path, `/Game/UI/WBP_Card` or `/Script/Module.Class`: written as the type, or
+		// named by an Asset resource (`@Card`).
+		auto ResolveWidgetClassAt = [&InNode, &InContext, &OutWidgetClass](const FString& InPath)
+		{
+			UClass* Loaded = ResolveWidgetClassFromPath(InPath);
+			if (Loaded == nullptr)
+			{
+				InContext.Diagnostics->AddError(EDreamUIDiagnosticCode::AssetNotFound, InNode.Location,
+					FString::Printf(TEXT("'%s' could not be loaded"), *InPath));
+				return false;
+			}
+			if (!Loaded->IsChildOf(UDreamUserWidget::StaticClass()))
+			{
+				// A widget blueprint is what nesting means here: the node becomes an instance whose
+				// contents come from its own class. A plain UDreamWidget subclass has no class-level
+				// hierarchy to expand and would silently place an empty node.
+				InContext.Diagnostics->AddError(EDreamUIDiagnosticCode::NotAUserWidgetClass, InNode.Location,
+					FString::Printf(TEXT("'%s' is a %s, and a nested node must be a DreamUI user widget"),
+						*InPath, *Loaded->GetName()));
+				return false;
+			}
+			OutWidgetClass = Loaded;
+			return true;
+		};
+		// `@Row` -- the class an Asset entry of a resources block names, this file's or one a `use` brought in: a family of
+		// components is named once, in the library that styles it, and each screen writes `@Row Row1 { }` instead of the
+		// asset path on every line.
+		if (InNode.TypeName.StartsWith(TEXT("@")))
+		{
+			const FString ResourceName = InNode.TypeName.Mid(1);
+			const FDreamUIResource* Resource = InContext.Ast != nullptr ? InContext.Ast->FindResource(ResourceName) : nullptr;
+			if (Resource == nullptr)
+			{
+				InContext.Diagnostics->AddError(EDreamUIDiagnosticCode::UnknownResource, InNode.Location,
+					FString::Printf(TEXT("'%s' names no entry in a resources block; a node type written with '@' is an Asset resource, as in 'Asset %s = /Game/UI/WBP_%s'"),
+						*InNode.TypeName, *ResourceName, *ResourceName));
+				return false;
+			}
+			const bool bIsAsset = Resource->TypeName.Equals(TEXT("Asset"), ESearchCase::IgnoreCase)
+				&& (Resource->Value.Kind == EDreamUIValueKind::AssetPath || Resource->Value.Kind == EDreamUIValueKind::String);
+			if (!bIsAsset)
+			{
+				InContext.Diagnostics->AddError(EDreamUIDiagnosticCode::ResourceTypeMismatch, InNode.Location,
+					FString::Printf(TEXT("'%s' is a node type, so resource '%s' must be an Asset naming a widget class, not a %s"),
+						*InNode.TypeName, *ResourceName, *Resource->TypeName));
+				return false;
+			}
+			return ResolveWidgetClassAt(Resource->Value.Raw);
+		}
 		// `Native.Toggle` -- a scoped tag, resolved through the widget registry. What it accepts is
 		// exactly what DECLARE_DREAM_GUI_WIDGET declared, so the language never carries a list of the
 		// library's controls -- or of anyone else's: a project plugin registering under its own scope
@@ -1702,25 +1751,7 @@ namespace DreamUITextBuilderLocal
 
 		if (InNode.TypeName.StartsWith(TEXT("/")))
 		{
-			UClass* Loaded = ResolveWidgetClassFromPath(InNode.TypeName);
-			if (Loaded == nullptr)
-			{
-				InContext.Diagnostics->AddError(EDreamUIDiagnosticCode::AssetNotFound, InNode.Location,
-					FString::Printf(TEXT("'%s' could not be loaded"), *InNode.TypeName));
-				return false;
-			}
-			if (!Loaded->IsChildOf(UDreamUserWidget::StaticClass()))
-			{
-				// A widget blueprint is what nesting means here: the node becomes an instance whose
-				// contents come from its own class. A plain UDreamWidget subclass has no class-level
-				// hierarchy to expand and would silently place an empty node.
-				InContext.Diagnostics->AddError(EDreamUIDiagnosticCode::NotAUserWidgetClass, InNode.Location,
-					FString::Printf(TEXT("'%s' is a %s, and a nested node must be a DreamUI user widget"),
-						*InNode.TypeName, *Loaded->GetName()));
-				return false;
-			}
-			OutWidgetClass = Loaded;
-			return true;
+			return ResolveWidgetClassAt(InNode.TypeName);
 		}
 
 		bool bIsKnownTag = false;

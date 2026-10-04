@@ -1362,6 +1362,81 @@ UDreamTweener* UDreamWidget::VerticalAnchoredPositionTo(float endValue, float du
 	return Tweener;
 }
 
+UDreamTweener* UDreamWidget::RenderTranslationTo(const FVector& endValue, float duration, float delay, EDreamTweenEase ease)
+{
+	auto Tweener = UDreamTweenManager::To(this
+		, FDreamTweenVectorGetterFunction::CreateWeakLambda(this, [this]
+		{
+			return this->GetRenderTranslation();
+		})
+		, FDreamTweenVectorSetterFunction::CreateWeakLambda(this, [this](FVector Value)
+		{
+			this->SetRenderTranslation(Value);
+		})
+		, endValue, duration);
+	if (Tweener)
+	{
+		Tweener->SetEase(ease)->SetDelay(delay);
+		UDreamWidget::SetWidgetTweenerAffectByGamePauseAndTimeDilation(this, Tweener);
+	}
+	return Tweener;
+}
+
+UDreamTweener* UDreamWidget::RenderOffsetTo(const FVector2D& endValue, float duration, float delay, EDreamTweenEase ease)
+{
+	// The canvas plane is local Y (right) and Z (up); the depth the translation already has is left where it is.
+	auto Tweener = UDreamTweenManager::To(this
+		, FDreamTweenVector2DGetterFunction::CreateWeakLambda(this, [this]
+		{
+			return FVector2D(this->GetRenderTranslation().Y, this->GetRenderTranslation().Z);
+		})
+		, FDreamTweenVector2DSetterFunction::CreateWeakLambda(this, [this](FVector2D Value)
+		{
+			this->SetRenderTranslation(FVector(this->GetRenderTranslation().X, Value.X, Value.Y));
+		})
+		, endValue, duration);
+	if (Tweener)
+	{
+		Tweener->SetEase(ease)->SetDelay(delay);
+		UDreamWidget::SetWidgetTweenerAffectByGamePauseAndTimeDilation(this, Tweener);
+	}
+	return Tweener;
+}
+
+UDreamTweener* UDreamWidget::RenderScaleTo(const FVector& endValue, float duration, float delay, EDreamTweenEase ease)
+{
+	auto Tweener = UDreamTweenManager::To(this
+		, FDreamTweenVectorGetterFunction::CreateWeakLambda(this, [this]
+		{
+			return this->GetRenderScale();
+		})
+		, FDreamTweenVectorSetterFunction::CreateWeakLambda(this, [this](FVector Value)
+		{
+			this->SetRenderScale(Value);
+		})
+		, endValue, duration);
+	if (Tweener)
+	{
+		Tweener->SetEase(ease)->SetDelay(delay);
+		UDreamWidget::SetWidgetTweenerAffectByGamePauseAndTimeDilation(this, Tweener);
+	}
+	return Tweener;
+}
+
+UDreamTweener* UDreamWidget::RenderAngleTo(float endValue, float duration, float delay, EDreamTweenEase ease)
+{
+	auto Tweener = UDreamTweenManager::To(this
+		, FDreamTweenFloatGetterFunction::CreateUObject(this, &UDreamWidget::GetRenderTransformAngle)
+		, FDreamTweenFloatSetterFunction::CreateUObject(this, &UDreamWidget::SetRenderTransformAngle)
+		, endValue, duration);
+	if (Tweener)
+	{
+		Tweener->SetEase(ease)->SetDelay(delay);
+		UDreamWidget::SetWidgetTweenerAffectByGamePauseAndTimeDilation(this, Tweener);
+	}
+	return Tweener;
+}
+
 void UDreamWidget::SetWidgetTweenerAffectByGamePauseAndTimeDilation(UDreamWidget* Widget, UDreamTweener* Tweener)
 {
 	if (Tweener)
