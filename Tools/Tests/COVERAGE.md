@@ -105,7 +105,7 @@ Each input column holds one mark per configuration, in this order: Default (`[An
 | RichText | `#...` | `....` | `....` | `----` | 11 |
 | RingMenu | `#...` | `....` | `....` | `----` | 11 |
 | ScrollBar | `#...` | `....` | `....` | `----` | 11 |
-| ScrollBox | `#...` | `....` | `....` | `----` | 11 |
+| ScrollBox | `#...` | `....` | `#...` | `----` | 10 |
 | Slider | `##..` | `....` | `#...` | `----` | 9 |
 | TabView | `##..` | `....` | `##..` | `----` | 8 |
 | Toggle | `##..` | `#...` | `....` | `----` | 9 |
@@ -117,12 +117,12 @@ Each input column holds one mark per configuration, in this order: Default (`[An
 | NavigationStack | `....` | `....` | `....` | `----` | 12 |
 | ActionRouter | `....` | `....` | `....` | `----` | 12 |
 | ActionBar | `....` | `....` | `....` | `----` | 12 |
-| Modal | `....` | `....` | `#...` | `----` | 11 |
-| PopupLayer | `....` | `....` | `....` | `----` | 12 |
+| Modal | `#...` | `....` | `#...` | `----` | 10 |
+| PopupLayer | `#...` | `....` | `#...` | `----` | 10 |
 | Tooltip | `#...` | `....` | `....` | `----` | 11 |
 | VirtualCursor | `....` | `....` | `....` | `----` | 12 |
 
-**Holes: 413** of 464 applicable cells.
+**Holes: 409** of 464 applicable cells.
 
 Notes:
 

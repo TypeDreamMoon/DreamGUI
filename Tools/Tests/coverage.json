@@ -53,7 +53,7 @@
     { "id": "ActionRouter", "classes": ["UDreamUIActionRouter", "UDreamUIActionTrigger"], "areas": ["ActionRouter", "Navigation.Actions"] },
     { "id": "ActionBar", "classes": ["UDreamUIActionBar", "UDreamUIActionBarEntry"], "areas": ["ActionBar", "Navigation.ActionBar"] },
     { "id": "Modal", "classes": ["UDreamUIModalScope", "UDreamUIModalSubsystem"], "areas": ["Modal"] },
-    { "id": "PopupLayer", "classes": ["UDreamUIPopupLayer"], "areas": ["PopupLayer"] },
+    { "id": "PopupLayer", "classes": ["UDreamUIPopupLayer"], "areas": ["PopupLayer", "Popup"] },
     { "id": "Tooltip", "classes": ["UDreamUITooltipSubsystem"], "areas": ["Tooltip"] },
     { "id": "VirtualCursor", "classes": ["UDreamUIVirtualCursorSubsystem"], "areas": ["VirtualCursor"] }
   ],
