@@ -373,8 +373,8 @@ public:
 	FDreamUIInputDeviceChangedDelegate& GetInputDeviceChangedEvent();
 
 	/**
-	 * Which pad the player is holding. Generic until one is used and named by the platform. Re-detected when the
-	 * device becomes Gamepad rather than polled.
+	 * Which pad the player is holding. Generic until one is used and named by the platform. Read from the pad that sent
+	 * the player's latest pad input, again whenever that is another pad, rather than polled.
 	 */
 	UFUNCTION(BlueprintCallable, Category = DreamGUI)
 	EDreamUIGamepadModel GetCurrentGamepadModel()const;
@@ -384,7 +384,7 @@ public:
 	 */
 	UFUNCTION(BlueprintCallable, Category = DreamGUI)
 	void SetGamepadModelOverride(bool bInOverride, EDreamUIGamepadModel InModel = EDreamUIGamepadModel::Generic);
-	/** Ask the platform again. Called automatically when the input device becomes Gamepad. */
+	/** Ask the platform again, about the pad the player used last. Pad input from another pad asks by itself. */
 	UFUNCTION(BlueprintCallable, Category = DreamGUI)
 	bool RefreshGamepadModel();
 	/**

@@ -12,14 +12,17 @@
 #include "Core/Components/DreamImage.h"
 #include "Core/Components/DreamWidget.h"
 #include "Core/DreamWidgetNavigation.h"
-#include "Core/DreamWidgetPresenterComponentBase.h"
+#include "Core/DreamGUISettings.h"
 #include "Interaction/UINavigationInputSelectionHandler.h"
 #include "Interaction/DreamSelectableStyle.h"
 #include "Interaction/DreamUINavigationScroll.h"
 #include "Interaction/DreamUINavigationScope.h"
 #include "Interaction/DreamUINavigationStack.h"
+#include "Interaction/DreamUITabOrder.h"
 #include "Interaction/DreamUITooltip.h"
 #include "Core/DreamUIInputServices.h"
+#include "Event/DreamUIInputSubsystem.h"
+#include "Event/DreamUIInputUser.h"
 #include "GameFramework/ForceFeedbackEffect.h"
 #include "GameFramework/PlayerController.h"
 #include "Kismet/GameplayStatics.h"
@@ -182,6 +185,9 @@ void UUISelectable::OnRegister()
 }
 void UUISelectable::OnUnregister()
 {
+	// The ring is left where it is rather than faded: it hangs under this widget, and goes down with it.
+	StopListeningForFocusVisibility();
+	bShowsFocusRing = false;
 	Super::OnUnregister();
 	UDreamUIManagerWorldSubsystem::RemoveSelectable(this);
 }
@@ -471,21 +477,98 @@ bool UUISelectable::CheckNavigationSelectionState()
 {
 	if (!NavigationSelection.IsValid())
 	{
-		if (auto Widget = GetWidget())
+		if (UDreamWidget* Widget = GetWidget())
 		{
-			// The presenter that hosts this tree owns the selection cursor -- it is the thing that
-			// knows which cursor class the project configured and where the cursor may live. The
-			// resolve was commented out, which left NavigationSelection with no writer anywhere in
-			// the plugin: the branch below it could never be taken, UUINavigationInputSelectionHandler
-			// was unreachable from the only code that would have driven it, and the gamepad
-			// selection cursor was a feature that shipped switched off.
-			if (auto Presenter = Cast<UDreamWidgetPresenterComponentBase>(Widget->GetAttachedRootSceneComponent()))
-			{
-				NavigationSelection = Presenter->GetNavigationSelection();
-			}
+			// The presenter hosting this tree owns its ring, since it knows which ring class its owner configured; every
+			// other screen gets one per root canvas from the project's class. Only a presenter ever made one, so the pages
+			// the screen subsystem shows -- most of a game's UI -- had none.
+			NavigationSelection = UUINavigationInputSelectionHandler::FindOrCreateFor(Widget);
 		}
 	}
 	return NavigationSelection.IsValid();
+}
+
+int32 UUISelectable::GetFocusUserIndex() const
+{
+	if (FocusUserIndex != INDEX_NONE)
+	{
+		return FocusUserIndex;
+	}
+	const UDreamWidget* Widget = GetWidget();
+	return Widget != nullptr ? Widget->GetOwningPlayerIndex() : 0;
+}
+
+bool UUISelectable::IsFocusShown() const
+{
+	const UDreamUIInputServices* Services = UDreamUIInputServices::Get(this);
+	return Services == nullptr || Services->IsFocusVisible(GetFocusUserIndex());
+}
+
+void UUISelectable::ListenForFocusVisibility()
+{
+	UDreamUIInputSubsystem* Input = UDreamUIInputSubsystem::Get(this);
+	UDreamUIInputUser* User = Input != nullptr ? Input->GetUser(GetFocusUserIndex()) : nullptr;
+	if (User != nullptr && User == FocusVisibleUser.Get() && FocusVisibleHandle.IsValid())
+	{
+		return;
+	}
+	StopListeningForFocusVisibility();
+	if (User == nullptr)
+	{
+		return;
+	}
+	FocusVisibleHandle = User->GetFocusVisibleChangedEvent().AddUObject(this, &UUISelectable::HandleFocusVisibleChanged);
+	FocusVisibleUser = User;
+}
+
+void UUISelectable::StopListeningForFocusVisibility()
+{
+	if (UDreamUIInputUser* User = FocusVisibleUser.Get())
+	{
+		User->GetFocusVisibleChangedEvent().Remove(FocusVisibleHandle);
+	}
+	FocusVisibleHandle.Reset();
+	FocusVisibleUser.Reset();
+}
+
+void UUISelectable::HandleFocusVisibleChanged(bool bInVisible)
+{
+	if (!IsFocused())
+	{
+		StopListeningForFocusVisibility();
+		return;
+	}
+	// The same focus, drawn or not: a click elsewhere hides it, the next key shows it again (CSS's :focus-visible).
+	CurrentSelectionState = GetSelectionState();
+	ApplyPointerSelectionState(false);
+	if (bInVisible)
+	{
+		ShowFocusRing();
+	}
+	else
+	{
+		HideFocusRing();
+	}
+}
+
+void UUISelectable::ShowFocusRing()
+{
+	if (!CheckNavigationSelectionState())
+	{
+		return;
+	}
+	NavigationSelection->SelectWidget(GetWidget());
+	bShowsFocusRing = true;
+}
+
+void UUISelectable::HideFocusRing()
+{
+	// Faded rather than retired (SelectWidget, not SelectNone), so the next focus to be drawn takes the same ring.
+	if (bShowsFocusRing && NavigationSelection.IsValid())
+	{
+		NavigationSelection->SelectWidget(nullptr);
+	}
+	bShowsFocusRing = false;
 }
 
 bool UUISelectable::OnPointerEnter_Implementation(UDreamPointerEventData* EventData)
@@ -496,21 +579,18 @@ bool UUISelectable::OnPointerEnter_Implementation(UDreamPointerEventData* EventD
 	// the enter/exit path is driven by code that can clear a pointer without one.
 	const bool bIsNavigationEnter = IsValid(EventData) && EventData->InputType == EDreamUIPointerInputType::Navigation;
 	bIsEnteredByNavigation = bIsNavigationEnter;
-	CurrentSelectionState = GetSelectionState();
-	ApplyPointerSelectionState(false);
 	if (bIsNavigationEnter)
 	{
-		if (CheckNavigationSelectionState())
-		{
-			NavigationSelection->SelectWidget(GetWidget());
-		}
+		FocusUserIndex = EventData->UserIndex;
+		ListenForFocusVisibility();
 	}
-	else
+	CurrentSelectionState = GetSelectionState();
+	ApplyPointerSelectionState(false);
+	// The ring marks the focus where the focus is drawn: a navigation landing brings it here. A pointer passing over a
+	// control is not focus, so it leaves the ring alone -- it used to retire the ring outright, at every hover.
+	if (bIsNavigationEnter && IsFocusShown())
 	{
-		if (NavigationSelection.IsValid())
-		{
-			NavigationSelection->SelectNone();
-		}
+		ShowFocusRing();
 	}
 	return AllowEventBubbleUp;
 }
@@ -520,6 +600,12 @@ bool UUISelectable::OnPointerExit_Implementation(UDreamPointerEventData* EventDa
 	bIsEnteredByNavigation = false;
 	CurrentSelectionState = GetSelectionState();
 	ApplyPointerSelectionState(false);
+	if (!IsFocused())
+	{
+		// The navigation cursor moved on: wherever it landed takes the ring, and this control no longer answers for it.
+		StopListeningForFocusVisibility();
+		bShowsFocusRing = false;
+	}
 	return AllowEventBubbleUp;
 }
 bool UUISelectable::OnPointerDown_Implementation(UDreamPointerEventData* EventData)
@@ -567,8 +653,23 @@ bool UUISelectable::OnPointerSelect_Implementation(UDreamBaseEventData* EventDat
 		return AllowEventBubbleUp;
 	}
 	bIsSelected = true;
+	if (const UDreamPointerEventData* PointerEventData = Cast<UDreamPointerEventData>(EventData))
+	{
+		FocusUserIndex = PointerEventData->UserIndex;
+	}
+	ListenForFocusVisibility();
 	CurrentSelectionState = GetSelectionState();
 	ApplyPointerSelectionState(false);
+	// The ring comes with focus that is to be drawn -- a key step, a pad, a screen giving focus while the player was on
+	// keys -- including the focus a scope gives as its screen opens, which used to come with no ring at all.
+	if (IsFocusShown())
+	{
+		ShowFocusRing();
+	}
+	else
+	{
+		HideFocusRing();
+	}
 	return AllowEventBubbleUp;
 }
 bool UUISelectable::OnPointerDeselect_Implementation(UDreamBaseEventData* EventData)
@@ -576,6 +677,31 @@ bool UUISelectable::OnPointerDeselect_Implementation(UDreamBaseEventData* EventD
 	bIsSelected = false;
 	CurrentSelectionState = GetSelectionState();
 	ApplyPointerSelectionState(false);
+	if (!IsFocused())
+	{
+		StopListeningForFocusVisibility();
+		// The player's focus has moved on already (their focus changes before the deselect goes out). Where it went takes
+		// the ring over when it is a control on the same screen whose focus is drawn, and flies it there; anywhere else,
+		// or focus that is not to be drawn, and the ring fades out here.
+		if (bShowsFocusRing)
+		{
+			const UDreamUIInputServices* Services = UDreamUIInputServices::Get(this);
+			const int32 UserIndex = GetFocusUserIndex();
+			UDreamWidget* NewFocus = Services != nullptr ? Services->GetFocusedWidget(UserIndex) : nullptr;
+			const UUISelectable* NewSelectable = IsValid(NewFocus) && NewFocus != GetWidget() ? NewFocus->GetComponent<UUISelectable>() : nullptr;
+			const bool bTakenOver = NewSelectable != nullptr && NewSelectable->IsInteractable()
+				&& Services->IsFocusVisible(UserIndex)
+				&& UUINavigationInputSelectionHandler::FindFor(NewFocus) == NavigationSelection.Get();
+			if (bTakenOver)
+			{
+				bShowsFocusRing = false;
+			}
+			else
+			{
+				HideFocusRing();
+			}
+		}
+	}
 	return AllowEventBubbleUp;
 }
 
@@ -588,11 +714,12 @@ EUISelectableSelectionState UUISelectable::GetSelectionState()const
 	// Navigation and a real pointer both arrive as an enter, because the confirm button has to press
 	// whatever navigation landed on. Which of them it was is the whole difference between hover and
 	// focus, and it is only knowable here, at the moment the enter came in.
-	if (bIsPointerInsideThis)
-		return bIsEnteredByNavigation ? EUISelectableSelectionState::Focused : EUISelectableSelectionState::Hovered;
-	// Still the selected control with the pointer somewhere else: focused, and drawn as such.
-	if (bIsSelected)
-		return EUISelectableSelectionState::Focused;
+	if (bIsPointerInsideThis && !bIsEnteredByNavigation)
+		return EUISelectableSelectionState::Hovered;
+	// Focus -- landed on by navigation, or still the selected control with the pointer somewhere else -- drawn as such
+	// only while the player's focus is to be drawn: after keys or a pad, not after a click (CSS's :focus-visible).
+	if (bIsPointerInsideThis || bIsSelected)
+		return IsFocusShown() ? EUISelectableSelectionState::Focused : EUISelectableSelectionState::Normal;
 	return EUISelectableSelectionState::Normal;
 }
 
@@ -762,15 +889,23 @@ void UUISelectable::SetInteractable(bool Value)
 		PointersDown.Reset();
 		bIsPointerDown = false;
 		bIsSelected = false;
+		// Nor is it marked as the focus any more.
+		StopListeningForFocusVisibility();
+		HideFocusRing();
 	}
 	CurrentSelectionState = GetSelectionState();
 	ApplyPointerSelectionState(false);
+}
+bool UUISelectable::CanBeNavigatedTo()const
+{
+	const UDreamWidget* Widget = GetWidget();
+	return IsValid(Widget) && Widget->GetIsFocusable() && IsInteractable() && GetCanNavigateHere();
 }
 
 #pragma region Navigation
 bool UUISelectable::CanNavigateHere_Implementation() const
 {
-	return IsInteractable() && GetCanNavigateHere();
+	return CanBeNavigatedTo();
 }
 bool UUISelectable::OnNavigate_Implementation(EDreamUINavigationDirection direction, TScriptInterface<IDreamNavigationInterface>& result)
 {
@@ -787,6 +922,13 @@ bool UUISelectable::OnNavigate_Implementation(EDreamUINavigationDirection direct
 }
 UDreamUIBehaviour* UUISelectable::FindNavigableOn(EDreamUINavigationDirection InDirection)
 {
+	// Next and Prev are a sequence, the widget tree's (FDreamUITabOrder), which reads the widget's rules and this
+	// component's links itself; the old geometric pair stays behind the project setting for one version.
+	if ((InDirection == EDreamUINavigationDirection::Next || InDirection == EDreamUINavigationDirection::Prev)
+		&& UDreamGUISettings::Get()->TabOrder == EDreamUITabOrder::Hierarchy)
+	{
+		return FindTabNavigableOn(InDirection);
+	}
 	// A rule authored on the WIDGET outranks this component's own per-direction mode. Without that
 	// order, which of the two answers would depend on which component the pipeline's walk reached
 	// first, and that is a property of the order things were added in -- invisible to the author.
@@ -858,6 +1000,46 @@ UDreamUIBehaviour* UUISelectable::FindNavigableOn(EDreamUINavigationDirection In
 		return nullptr;
 	}
 }
+UDreamUIBehaviour* UUISelectable::FindTabNavigableOn(EDreamUINavigationDirection InDirection)
+{
+	UDreamWidget* Widget = GetWidget();
+	if (!IsValid(Widget))
+	{
+		return nullptr;//a behaviour outliving its widget has nowhere to navigate from
+	}
+	const bool bBackward = InDirection == EDreamUINavigationDirection::Prev;
+	// Switched off for this direction, with no rule on the widget saying otherwise: null, as for the arrows.
+	const UDreamWidgetNavigation* Navigation = Widget->GetNavigation();
+	const bool bWidgetRule = Navigation != nullptr && Navigation->HasRuleFor(InDirection);
+	if (!bWidgetRule && (bBackward ? NavigationPrev : NavigationNext) == EUISelectableNavigationMode::None)
+	{
+		return nullptr;
+	}
+	// A question, not a key: Peek closes no popup and scrolls no list on the way to its answer.
+	const FDreamUITabStep TabStep = FDreamUITabOrder::Peek(this, ResolveNavigatingUserIndex(), Widget, bBackward);
+	return TabStep.Receiver != nullptr ? TabStep.Receiver : this;
+}
+int32 UUISelectable::ResolveNavigatingUserIndex() const
+{
+	if (FocusUserIndex != INDEX_NONE && IsFocused())
+	{
+		return FocusUserIndex;
+	}
+	const UDreamWidget* Widget = GetWidget();
+	if (const UDreamUIInputServices* Services = UDreamUIInputServices::Get(this); Services != nullptr && Widget != nullptr)
+	{
+		TArray<int32> UserIndices;
+		Services->GetUserIndices(UserIndices);
+		for (const int32 UserIndex : UserIndices)
+		{
+			if (Services->GetFocusedWidget(UserIndex) == Widget)
+			{
+				return UserIndex;
+			}
+		}
+	}
+	return Widget != nullptr ? Widget->GetOwningPlayerIndex() : 0;
+}
 UUISelectable* UUISelectable::FindSelectable(FVector InDirection)
 {
 	return Cast<UUISelectable>(FindNavigableIn(InDirection, nullptr, /*bResolveCanvasParent*/true));
@@ -915,41 +1097,9 @@ UDreamUIBehaviour* UUISelectable::FindNavigableIn(FVector InDirection, UDreamWid
 
 UDreamUIBehaviour* UUISelectable::FindNavigableWithin(const FVector& InDirection, UDreamWidget* InParent, const UDreamWidget* InRestrictNode, int32 InEscapeDepth)
 {
-	UDreamUIBehaviour* Found = DreamUINavigationScan::ScanDirectional(this, InDirection, InParent, InRestrictNode);
-	if (Found != this)
-	{
-		return Found;//the scan moved, so the edge was never reached
-	}
-	// Nothing that way. Whether that is the end of the story is the area's decision, and with no area
-	// around us there is nobody to ask -- stopping is the only thing "the edge of everything" can mean.
-	if (!IsValid(InRestrictNode))
-	{
-		return this;
-	}
-	switch (InRestrictNode->GetNavigationBoundaryRule())
-	{
-	case EDreamUINavigationBoundaryRule::Wrap:
-		return DreamUINavigationScan::ScanWrap(this, InDirection, InParent, InRestrictNode);
-	case EDreamUINavigationBoundaryRule::Escape:
-		{
-			// One area out, and only if there is one: past the outermost area the move has genuinely
-			// left everything that could restrict it, and the plain scan already covered that ground.
-			if (InEscapeDepth >= MaxNavigationEscapeDepth)
-			{
-				return this;
-			}
-			const UDreamWidget* AreaParent = InRestrictNode->GetParent();
-			const UDreamWidget* Enclosing = IsValid(AreaParent) ? AreaParent->GetRestrictNavigationAreaWidget() : nullptr;
-			if (Enclosing == nullptr)
-			{
-				return DreamUINavigationScan::ScanDirectional(this, InDirection, InParent, nullptr);
-			}
-			return FindNavigableWithin(InDirection, InParent, Enclosing, InEscapeDepth + 1);
-		}
-	case EDreamUINavigationBoundaryRule::Stop:
-	default:
-		return this;
-	}
+	// The core's, shared with the navigation-only widgets (UDreamWidgetNavigation), so the two stop, wrap and escape alike:
+	// the scan, and at the edge the area's boundary rule.
+	return DreamUINavigationScan::ScanWithinArea(this, InDirection, InParent, InRestrictNode, InEscapeDepth);
 }
 
 UUISelectable* UUISelectable::FindDefaultSelectable(UObject* WorldContextObject, int32 InUserIndex)
@@ -966,7 +1116,18 @@ UUISelectable* UUISelectable::FindDefaultSelectable(UObject* WorldContextObject,
 			}
 		}
 	}
-	return FindDefaultSelectableIn(WorldContextObject, nullptr);
+	// No scope to ask: the player's own screen, theirs first. The whole world used to be searched -- a HUD's buttons, a
+	// panel in the level, the other player's half of a split screen -- and whatever registered first won.
+	TArray<UDreamWidget*> ScreenRoots;
+	FDreamUITabOrder::GetPlayerScreenRoots(WorldContextObject, InUserIndex, ScreenRoots);
+	for (const UDreamWidget* ScreenRoot : ScreenRoots)
+	{
+		if (UUISelectable* Found = FindDefaultSelectableIn(WorldContextObject, ScreenRoot))
+		{
+			return Found;
+		}
+	}
+	return nullptr;
 }
 
 UUISelectable* UUISelectable::FindDefaultSelectableIn(UObject* WorldContextObject, const UDreamWidget* InParent)
@@ -1005,7 +1166,7 @@ UUISelectable* UUISelectable::FindDefaultSelectableIn(UObject* WorldContextObjec
 			{
 				// The manager's registry holds behaviours; every entry this class adds is a selectable.
 				UUISelectable* SelectableItem = Cast<UUISelectable>(SelectableArray[i].Get());
-				if (SelectableItem != nullptr && SelectableItem->IsInteractable() && SelectableItem->GetCanNavigateHere()
+				if (SelectableItem != nullptr && SelectableItem->CanBeNavigatedTo()
 					&& IsInsideParent(SelectableItem) && !IsInTooltip(SelectableItem))
 				{
 					Selectable = SelectableItem;//find a interactable one
@@ -1067,9 +1228,9 @@ UUISelectable* UUISelectable::ResolveExplicitTarget(UUISelectable* InTarget, EDr
 	UUISelectable* Candidate = InTarget;
 	while (IsValid(Candidate))
 	{
-		// The same two questions the Auto scan asks of every candidate it considers, so that an
+		// The questions the Auto scan asks of every candidate it considers (CanNavigateHere), so that an
 		// explicit link and a scanned one agree on what "can be navigated to" means.
-		if (Candidate->IsInteractable() && Candidate->GetCanNavigateHere())
+		if (Candidate->CanBeNavigatedTo())
 		{
 			return Candidate;
 		}

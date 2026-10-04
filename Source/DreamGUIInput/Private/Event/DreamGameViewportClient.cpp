@@ -3,6 +3,8 @@
 #include "Event/DreamGameViewportClient.h"
 
 #include "Engine/Console.h"
+#include "Engine/LocalPlayer.h"
+#include "Event/DreamUIInputSubsystem.h"
 #include "GameFramework/PlayerController.h"
 #include "Interaction/DreamUITextInputTarget.h"
 
@@ -48,6 +50,25 @@ bool UDreamGameViewportClient::InputTouch(FViewport* const InViewport, const FTo
 		return DreamGameViewportClientLocal::RouteAsIfListening(*this, [&]() { return Super::InputTouch(InViewport, TouchId, Type, TouchLocation, Force, Timestamp); });
 	}
 	return Super::InputTouch(InViewport, TouchId, Type, TouchLocation, Force, Timestamp);
+}
+
+bool UDreamGameViewportClient::HandleNavigation(const uint32 InUserIndex, TSharedPtr<SWidget> InDestination)
+{
+	// Asked before the base class's OnNavigationOverride, which a project may have rebound since the input subsystem
+	// chained its guard there: the guard holds for this client whatever the delegate holds now.
+	const UDreamUIInputSubsystem* Input = UDreamUIInputSubsystem::Get(GetWorld());
+	if (Input != nullptr && Input->ShouldSwallowSlateNavigation(InUserIndex))
+	{
+		return true;
+	}
+	return Super::HandleNavigation(InUserIndex, InDestination);
+}
+
+bool UDreamGameViewportClient::IsDreamUIOnlyInputFor(const APlayerController* InPlayerController)
+{
+	const ULocalPlayer* LocalPlayer = InPlayerController != nullptr ? InPlayerController->GetLocalPlayer() : nullptr;
+	const UDreamGameViewportClient* Client = LocalPlayer != nullptr ? Cast<UDreamGameViewportClient>(LocalPlayer->ViewportClient.Get()) : nullptr;
+	return Client != nullptr && Client->IsDreamUIOnlyInput();
 }
 
 void UDreamGameViewportClient::SetDreamUIOnlyInput(APlayerController* InPlayerController, bool bInDreamUIOnly)

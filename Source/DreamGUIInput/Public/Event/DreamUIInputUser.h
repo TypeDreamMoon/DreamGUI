@@ -6,8 +6,12 @@
 #include "UObject/Object.h"
 #include "GenericPlatform/ICursor.h"
 #include "InputCoreTypes.h"
+#include "Core/DreamUIInputServices.h"
 #include "Event/DreamUIInputTypes.h"
 #include "DreamUIInputUser.generated.h"
+
+/** Whether a player's focus is now to be drawn (UDreamUIInputUser::IsFocusVisible). */
+DECLARE_MULTICAST_DELEGATE_OneParam(FDreamUIFocusVisibleChangedDelegate, bool);
 
 class AActor;
 class APlayerController;
@@ -132,12 +136,38 @@ public:
 	 * Focus InWidget, on behalf of InEventData's pointer: Deselect to what the player had focused, Select to InWidget.
 	 * The focus is the player's, not the pointer's -- whichever pointer moved it, and it stays when that pointer goes:
 	 * a finger lifted from a field leaves the field focused, as a click does. Every pointer's record of it
-	 * (SelectedComponent, which Blueprint reads) follows.
+	 * (SelectedComponent, which Blueprint reads) follows. What moved it (GetFocusCause) is read off InEventData: a
+	 * pointer's press is Pointer, anything else Script; see SetSelectWidgetForCause.
 	 */
 	void SetSelectWidget(UDreamWidget* InWidget, UDreamBaseEventData* InEventData);
+	/**
+	 * SetSelectWidget, saying what moved the focus. The cause is recorded before anything hears of the change, so a
+	 * widget's Select handler reads the cause of its own selection -- and a navigation step under way records its own
+	 * cause instead, whatever asked: a handler that moves the focus on from inside the step moves it as part of it. Also
+	 * recorded when InWidget has the focus already: a click on a button Tab reached takes its focus look away.
+	 */
+	void SetSelectWidgetForCause(UDreamWidget* InWidget, UDreamBaseEventData* InEventData, EDreamUIFocusCause InCause);
 	/** What this player has focused: the widget their keys, characters and sticks go to. */
 	UFUNCTION(BlueprintPure, Category = DreamGUI)
 	UDreamWidget* GetFocusedWidget() const { return FocusedWidget.Get(); }
+	/**
+	 * What last moved this player's focus: a pointer's press, a directional step, Tab, or code. Recorded by the input
+	 * system as it moves the focus -- the pointer module's selection, the navigation step, FocusForNavigation -- and read
+	 * through UDreamUIInputServices::GetFocusCause by what draws the focus and by a text field Tab lands on.
+	 */
+	UFUNCTION(BlueprintPure, Category = DreamGUI)
+	EDreamUIFocusCause GetFocusCause() const;
+	/** UDreamUIInputServices::IsFocusVisible for this player. */
+	UFUNCTION(BlueprintPure, Category = DreamGUI)
+	bool IsFocusVisible() const;
+	/** Broadcast when IsFocusVisible changes for this player, with its new answer: a focused control redraws its Focused look then. */
+	FDreamUIFocusVisibleChangedDelegate& GetFocusVisibleChangedEvent() { return FocusVisibleChangedEvent; }
+	/**
+	 * A navigation step from this player's focus, on their next input frame, as though InDirection's key had been pressed
+	 * and let go of: what a text field asks for when Tab ends its edit (Next, or Prev with Shift), and what a step taken
+	 * from inside a key handler is queued as. A second request before that frame replaces the first.
+	 */
+	void RequestNavigationStep(EDreamUINavigationDirection InDirection);
 
 	// ---------------------------------------------------------------- text
 
@@ -167,10 +197,28 @@ public:
 	// ---------------------------------------------------------------- device and cursor
 
 	EDreamUIInputDevice GetCurrentInputDevice() const { return CurrentInputDevice; }
-	/** Tell this player which device was just used. Broadcasts only a change. @return true when it changed. */
-	bool ReportInputDevice(EDreamUIInputDevice InDevice);
+	/**
+	 * Tell this player which device was just used. Broadcasts only a change. @return true when it changed.
+	 *
+	 * Every pad input asks which pad sent it -- InDeviceId, when the source knows it (a Slate event carries it), else the
+	 * platform's most recently used device for the player -- and reads the model from that device whenever it is another
+	 * one than last time: a second pad of another make picked up mid-session changes the glyphs, which only a change of
+	 * device class used to, and from the player's lowest-numbered device (on a desktop, the keyboard). The model change
+	 * goes out before the device change. Where DreamGUI shows the cursor (its UI-only input mode), a pad hides it and the
+	 * keyboard and mouse bring it back, as UDreamGUISettings::bHideCursorOnGamepad says.
+	 */
+	bool ReportInputDevice(EDreamUIInputDevice InDevice, FInputDeviceId InDeviceId = INPUTDEVICEID_NONE);
+	/**
+	 * InKey was just used by this player: its device reported (ReportInputDevice), and whether it was a key or a pad's
+	 * button rather than a pointer's -- a mouse button, the wheel, a finger -- noted for what code-moved focus looks like
+	 * (IsFocusVisible). What every key routed for the player goes through.
+	 */
+	void ReportInputKey(const FKey& InKey, FInputDeviceId InDeviceId = INPUTDEVICEID_NONE);
+	/** Whether this player's latest input was a key or a pad (true) rather than a pointer: the mouse moving or pressing, the wheel, a finger. */
+	bool IsLatestInputFromKeys() const { return bLatestInputFromKeys; }
 	EDreamUIGamepadModel GetCurrentGamepadModel() const { return CurrentGamepadModel; }
 	void SetGamepadModelOverride(bool bInOverride, EDreamUIGamepadModel InModel);
+	/** Read the model again from the pad this player used last (else the platform's most recently used device): what dropping an override does. */
 	bool RefreshGamepadModel();
 
 	/** Push the cursor a hovered widget asked for onto this player's controller, or put back the project's. */
@@ -245,9 +293,15 @@ public:
 	/**
 	 * Move pointer InPointerID to InPosition: state the next frame reads. A pointer that actually moves is in pointer
 	 * mode, not navigation -- but only an actual move, so a source reporting the position every frame does not keep
-	 * taking navigation away.
+	 * taking navigation away. A pointer nothing has moved yet is off the viewport (DreamUIPointerPosition::OffViewport).
 	 */
 	void MovePointer(int32 InPointerID, const FVector& InPosition);
+	/**
+	 * Whether pointer InPointerID has really moved -- MovePointer to another place, a press or a release somewhere else --
+	 * since its last trace. What lets its hover move the navigation highlight: a screen opening under a mouse at rest, or a
+	 * list scrolling under it, is no reason to take the highlight off what the keys left it on.
+	 */
+	bool HasPointerMovedSinceTrace(int32 InPointerID) const { return PointersMovedSinceTrace.Contains(InPointerID); }
 	/** A navigation direction pressed -- the pointer goes into navigation mode, stepping that way -- or released. */
 	void InputNavigation(EDreamUINavigationDirection InDirection, bool bInPressed, int32 InPointerID);
 	/** The navigation confirm pressed or released, for the navigation cursor on InPointerID. */
@@ -298,7 +352,13 @@ public:
 	bool LineTrace(UDreamPointerEventData* InEventData, FDreamUIHitResultContainer& OutHitResult);
 	/** One navigation step or confirm edge for a pointer in navigation mode. */
 	void ProcessInputForNavigation(UDreamPointerEventData* InEventData);
-	/** Resolve where a navigation step lands. @return true when it found something. */
+	/**
+	 * Resolve where a navigation step lands, starting from the player's focus -- never from the hover highlight. Next and
+	 * Prev walk the tab order (FDreamUITabOrder::Step) while UDreamGUISettings::TabOrder is Hierarchy; a direction steps
+	 * from the behaviour that receives the move on the focus (DreamUINavigationScan::FindNavigationBehaviour); with
+	 * nothing focused a direction or a Tab with no stop to go to looks for the player's default selectable, and a confirm
+	 * (None) presses nothing. @return true when it found something.
+	 */
 	bool Navigate(EDreamUINavigationDirection InDirection, UDreamPointerEventData* InEventData, FDreamUIHitResultContainer& OutHitResult);
 	/** Two pressed fingers moving apart or together. */
 	void ProcessPinchGesture();
@@ -339,6 +399,26 @@ private:
 	void HandleTextKeyReleased(FKey InKey);
 	/** Take the text keys off the controller they are on. */
 	void PopTextKeys();
+	/**
+	 * One frame of the navigation pointer: InStepDirection's step (None: the confirm resolving what it presses), the
+	 * pointer's press, release and hover over what that lands on, and -- when bInAnnounce -- the focus moved to it and the
+	 * hit announced. The whole of it records focus changes with the step's cause (Tab for Next and Prev, else Navigation).
+	 */
+	void RunNavigationFrame(UDreamPointerEventData* InEventData, EDreamUINavigationDirection InStepDirection, bool bInAnnounce);
+	/** The step RequestNavigationStep asked for, taken now on the navigation pointer. */
+	void RunRequestedNavigationStep();
+	/** Note whether the latest input was a key or a pad (true) or a pointer, and tell the focus-visible listeners if that changes the answer. */
+	void NoteInputFromKeys(bool bInFromKeys);
+	/** Broadcast FocusVisibleChangedEvent when IsFocusVisible no longer answers what it last broadcast. */
+	void UpdateFocusVisible();
+	/** A pad input from InDeviceId (none: not known by the source): the model read again when the device is another one. */
+	void NoteGamepadDevice(FInputDeviceId InDeviceId, bool bInPickedUp);
+	/** The platform's most recently used input device for this player, or none; never the keyboard and mouse. */
+	FInputDeviceId FindMostRecentGamepadDevice() const;
+	/** Make InModel the current one, telling the listeners when it changed. @return true when it changed. */
+	bool ApplyGamepadModel(EDreamUIGamepadModel InModel);
+	/** Where DreamGUI shows the cursor (its UI-only input mode), hide it for a pad and show it for the keyboard and mouse. */
+	void ApplyCursorForDevice(EDreamUIInputDevice InDevice);
 
 	int32 UserIndex = 0;
 	bool bIsScriptUser = false;
@@ -362,6 +442,26 @@ private:
 	EDreamUIInputDevice CurrentInputDevice = EDreamUIInputDevice::MouseAndKeyboard;
 	EDreamUIGamepadModel CurrentGamepadModel = EDreamUIGamepadModel::Generic;
 	bool bGamepadModelOverridden = false;
+	/** The pad device the model was last read from: the model is read again only when a pad input comes from another one. */
+	FInputDeviceId GamepadModelDevice = INPUTDEVICEID_NONE;
+	/**
+	 * The engine frame a source last named the pad that sent an input (ReportInputDevice with a device id). The platform's
+	 * most recently used device is not asked for the rest of that frame: the input that named its device is newer.
+	 */
+	uint64 GamepadDeviceNamedFrame = MAX_uint64;
+
+	/** What last moved the focus; see GetFocusCause. */
+	EDreamUIFocusCause FocusCause = EDreamUIFocusCause::None;
+	/** While a navigation step lands, its cause: every focus change inside it is recorded with it (SetSelectWidgetForCause). */
+	EDreamUIFocusCause StepFocusCause = EDreamUIFocusCause::None;
+	/** Whether the latest input was a key or a pad rather than a pointer; see IsLatestInputFromKeys. */
+	bool bLatestInputFromKeys = false;
+	/** What FocusVisibleChangedEvent last told its listeners. */
+	bool bFocusVisibleBroadcast = false;
+	/** The step RequestNavigationStep asked for, to be taken on the next frame; None when none is waiting. */
+	EDreamUINavigationDirection RequestedNavigationStep = EDreamUINavigationDirection::None;
+	/** The pointers that have really moved since their last trace; see HasPointerMovedSinceTrace. */
+	TSet<int32> PointersMovedSinceTrace;
 
 	/** What the controller's cursor was before a widget first claimed it, so it can be put back. */
 	TEnumAsByte<EMouseCursor::Type> CursorBeforeHoverOverride = EMouseCursor::Default;
@@ -372,6 +472,7 @@ private:
 	FDreamUIPointerInputTypeChangedDelegate PointerInputTypeChangedEvent;
 	FDreamUIInputDeviceChangedDelegate InputDeviceChangedEvent;
 	FDreamUIGamepadModelChangedDelegate GamepadModelChangedEvent;
+	FDreamUIFocusVisibleChangedDelegate FocusVisibleChangedEvent;
 
 	struct FQueuedButton
 	{

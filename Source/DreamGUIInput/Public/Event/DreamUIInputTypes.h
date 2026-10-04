@@ -174,6 +174,20 @@ namespace DreamUIPointerIds
 	}
 }
 
+namespace DreamUIPointerPosition
+{
+	/**
+	 * Off the viewport, over nothing: (-1,-1), where FSceneViewport parks a cursor that has left it. Where a pointer is
+	 * before anything has placed it, and where the mouse is put when it leaves the viewport. A pointer used to be born at
+	 * (0,0), the top-left pixel -- the one the navigation cursor or a script pointer was made on, before any mouse moved
+	 * it -- and was traced there every frame, hovering whatever was drawn in that corner.
+	 */
+	inline FVector OffViewport()
+	{
+		return FVector(-1.0, -1.0, 0.0);
+	}
+}
+
 namespace DreamUIInputClock
 {
 	/**

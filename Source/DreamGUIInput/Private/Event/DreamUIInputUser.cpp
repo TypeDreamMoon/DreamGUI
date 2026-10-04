@@ -4,17 +4,20 @@
 
 #include "Components/InputComponent.h"
 #include "Components/PrimitiveComponent.h"
+#include "CoreGlobals.h"
 #include "Core/Components/DreamCanvas.h"
 #include "Core/Components/DreamWidget.h"
 #include "Core/DreamGUISettings.h"
 #include "Core/DreamUIManager.h"
 #include "Core/DreamUIWorldContext.h"
+#include "Core/DreamWidgetNavigation.h"
 #include "DreamGUI.h"
 #include "Engine/GameInstance.h"
 #include "Engine/LocalPlayer.h"
 #include "Engine/World.h"
 #include "Event/DreamBaseRaycaster.h"
 #include "Event/DreamEventSystem.h"
+#include "Event/DreamGameViewportClient.h"
 #include "Event/DreamGestureEventData.h"
 #include "Event/DreamPointerEventData.h"
 #include "Event/DreamPointerPolicy.h"
@@ -32,6 +35,7 @@
 #include "Event/Interface/DreamPointerLongPressInterface.h"
 #include "Event/Interface/DreamPointerScrollInterface.h"
 #include "GameFramework/Actor.h"
+#include "GameFramework/InputDeviceSubsystem.h"
 #include "GameFramework/InputSettings.h"
 #include "GameFramework/PlayerController.h"
 #include "GenericPlatform/GenericPlatformInputDeviceMapper.h"
@@ -39,6 +43,7 @@
 #include "Interaction/DreamDragDropOperation.h"
 #include "Interaction/DreamUINavigationScroll.h"
 #include "Interaction/DreamUIPopupLayer.h"
+#include "Interaction/DreamUITabOrder.h"
 #include "Interaction/DreamUITextInputTarget.h"
 #include "Interaction/UISelectable.h"
 #include "Misc/ScopeExit.h"
@@ -81,6 +86,8 @@ void UDreamUIInputUser::InitializeUser(int32 InUserIndex, bool bInIsScriptUser)
 {
 	UserIndex = InUserIndex;
 	bIsScriptUser = bInIsScriptUser;
+	// What the focus-visible listeners are told is a change from, so the first focus does not announce one that is not.
+	bFocusVisibleBroadcast = IsFocusVisible();
 }
 
 UDreamUIInputSubsystem* UDreamUIInputUser::GetInputSubsystem() const
@@ -189,6 +196,9 @@ UDreamPointerEventData* UDreamUIInputUser::GetPointerEventData(int32 InPointerID
 	// is: handlers read EventData->UserIndex to find their own player back.
 	NewEventData->UserIndex = UserIndex;
 	NewEventData->InputType = Config.DefaultInputType;
+	// Off the viewport until something places it. Born at (0,0) -- the navigation cursor's pointer, made by a focus or a
+	// key before any mouse moved it -- it was traced at the top-left pixel every frame, hovering whatever was there.
+	NewEventData->PointerPosition = DreamUIPointerPosition::OffViewport();
 	PointerEventDataMap.Add(InPointerID, NewEventData);
 	RestoreLiftedFingerClickRun(NewEventData);
 	return NewEventData;
@@ -256,6 +266,7 @@ void UDreamUIInputUser::RetirePointer(int32 InPointerID)
 			This->PointerWorldTargetMap.Remove(InPointerID);
 			This->TraceCache.Remove(InPointerID);
 			This->PressRaycasters.Remove(InPointerID);
+			This->PointersMovedSinceTrace.Remove(InPointerID);
 		}
 	});
 }
@@ -272,6 +283,7 @@ void UDreamUIInputUser::RemovePointerEventData(int32 InPointerID)
 			This->PointerWorldTargetMap.Remove(InPointerID);
 			This->TraceCache.Remove(InPointerID);
 			This->PressRaycasters.Remove(InPointerID);
+			This->PointersMovedSinceTrace.Remove(InPointerID);
 		}
 	});
 }
@@ -310,10 +322,25 @@ AActor* UDreamUIInputUser::GetPressedWorldTarget(int32 InPointerID) const
 
 void UDreamUIInputUser::SetSelectWidget(UDreamWidget* InSelectWidget, UDreamBaseEventData* InEventData)
 {
+	// A pointer's own press -- a selectable taking the focus as it is clicked or tapped -- is Pointer; anything else that
+	// moves the focus without saying what it is (a Blueprint, a control selecting itself) is code.
+	const UDreamPointerEventData* PointerEventData = Cast<UDreamPointerEventData>(InEventData);
+	const bool bPointerPress = PointerEventData != nullptr && PointerEventData->InputType == EDreamUIPointerInputType::Pointer;
+	SetSelectWidgetForCause(InSelectWidget, InEventData, bPointerPress ? EDreamUIFocusCause::Pointer : EDreamUIFocusCause::Script);
+}
+
+void UDreamUIInputUser::SetSelectWidgetForCause(UDreamWidget* InSelectWidget, UDreamBaseEventData* InEventData, EDreamUIFocusCause InCause)
+{
 	if (InEventData == nullptr)
 	{
 		return;
 	}
+	// Recorded before anything hears of the change: a widget's Select handler -- a field deciding whether to begin its
+	// edit, a control drawing its Focused look -- reads the cause of its own selection. Inside a navigation step it is
+	// the step's, whoever asked: a handler that moves the focus on from inside the step moves it as part of it.
+	FocusCause = !IsValid(InSelectWidget) ? EDreamUIFocusCause::None
+		: StepFocusCause != EDreamUIFocusCause::None ? StepFocusCause : InCause;
+	ON_SCOPE_EXIT{ UpdateFocusVisible(); };
 	// The player's focus is what changes, whichever pointer asks. A pointer used to keep a focus of its own, and a
 	// finger's went with the finger: tap a field, lift, and nothing was focused -- while the field went on editing
 	// with nothing able to end it.
@@ -358,6 +385,64 @@ void UDreamUIInputUser::MirrorFocusOntoPointers()
 			EventData->SelectedComponent = Focus;
 		}
 	}
+}
+#pragma endregion
+
+#pragma region Focus
+EDreamUIFocusCause UDreamUIInputUser::GetFocusCause() const
+{
+	return IsValid(FocusedWidget.Get()) ? FocusCause : EDreamUIFocusCause::None;
+}
+
+bool UDreamUIInputUser::IsFocusVisible() const
+{
+	if (!UDreamGUISettings::Get()->bFocusVisibleOnlyFromKeys)
+	{
+		return true;
+	}
+	// CSS's :focus-visible. Keys and the pad draw the focus, a pointer does not -- a clicked button is not drawn focused --
+	// and code that moves the focus draws it when the player was last on the keys or the pad: a dialog Enter opened shows
+	// where its focus is, one a click opened does not. A step landing right now is a key's, whatever it lands on.
+	const EDreamUIFocusCause Cause = StepFocusCause != EDreamUIFocusCause::None ? StepFocusCause : FocusCause;
+	switch (Cause)
+	{
+	case EDreamUIFocusCause::Navigation:
+	case EDreamUIFocusCause::Tab:
+		return true;
+	case EDreamUIFocusCause::Pointer:
+		return false;
+	default:
+		return bLatestInputFromKeys;
+	}
+}
+
+void UDreamUIInputUser::RequestNavigationStep(EDreamUINavigationDirection InDirection)
+{
+	if (!bShutDown)
+	{
+		RequestedNavigationStep = InDirection;
+	}
+}
+
+void UDreamUIInputUser::NoteInputFromKeys(bool bInFromKeys)
+{
+	if (bLatestInputFromKeys == bInFromKeys)
+	{
+		return;
+	}
+	bLatestInputFromKeys = bInFromKeys;
+	UpdateFocusVisible();
+}
+
+void UDreamUIInputUser::UpdateFocusVisible()
+{
+	const bool bVisible = IsFocusVisible();
+	if (bVisible == bFocusVisibleBroadcast)
+	{
+		return;
+	}
+	bFocusVisibleBroadcast = bVisible;
+	FocusVisibleChangedEvent.Broadcast(bVisible);
 }
 #pragma endregion
 
@@ -480,19 +565,40 @@ bool UDreamUIInputUser::TakeKeyPress(const FKey& InKey, FDreamUIKeyPress& OutPre
 #pragma endregion
 
 #pragma region DeviceAndCursor
-bool UDreamUIInputUser::ReportInputDevice(EDreamUIInputDevice InDevice)
+namespace DreamUIInputUserDeviceLocal
 {
+	/** The model InDeviceId's descriptor names (the registry rather than FInputDeviceScope, which is deprecated in 5.8 and valid only inside the platform's own dispatch); Generic for a device with none. */
+	EDreamUIGamepadModel DetectModelOf(FInputDeviceId InDeviceId)
+	{
+		if (const TOptional<FInputDeviceDescriptor> Descriptor = FInputDeviceRegistry::FindDescriptor(InDeviceId))
+		{
+			return UDreamEventSystem::GetGamepadModelForDeviceName(Descriptor->InputDeviceName, Descriptor->HardwareDeviceIdentifier);
+		}
+		return EDreamUIGamepadModel::Generic;
+	}
+}
+
+bool UDreamUIInputUser::ReportInputDevice(EDreamUIInputDevice InDevice, FInputDeviceId InDeviceId)
+{
+	// A pad's button or stick is a key as far as code-moved focus is concerned, and a finger is a pointer. The keyboard
+	// and the mouse share a device, so which of the two it was is noted where the key or the move is in hand.
+	if (InDevice == EDreamUIInputDevice::Gamepad)
+	{
+		NoteInputFromKeys(true);
+		// Every pad input, not only the first after another device: a second pad of another make picked up mid-session is
+		// still a pad. Before the device change goes out, so a prompt bar rebuilding from it already sees the right glyphs.
+		NoteGamepadDevice(InDeviceId, CurrentInputDevice != EDreamUIInputDevice::Gamepad);
+	}
+	else if (InDevice == EDreamUIInputDevice::Touch)
+	{
+		NoteInputFromKeys(false);
+	}
 	if (CurrentInputDevice == InDevice)
 	{
 		return false;//every key comes through here; broadcasting each one would rebuild prompts per frame
 	}
 	CurrentInputDevice = InDevice;
-	// Picking up a pad is the only moment the model can have changed, and it is rare. Done before the device
-	// change goes out so that a prompt bar rebuilding from it already sees the right glyphs.
-	if (InDevice == EDreamUIInputDevice::Gamepad)
-	{
-		RefreshGamepadModel();
-	}
+	ApplyCursorForDevice(InDevice);
 	InputDeviceChangedEvent.Broadcast(InDevice);
 	if (UDreamUIInputSubsystem* Subsystem = GetInputSubsystem())
 	{
@@ -505,29 +611,111 @@ bool UDreamUIInputUser::ReportInputDevice(EDreamUIInputDevice InDevice)
 	return true;
 }
 
-bool UDreamUIInputUser::RefreshGamepadModel()
+void UDreamUIInputUser::ReportInputKey(const FKey& InKey, FInputDeviceId InDeviceId)
 {
-	if (bGamepadModelOverridden)return false;//the project has told us; the platform does not get a vote
-
-	EDreamUIGamepadModel DetectedModel = EDreamUIGamepadModel::Generic;
-	if (const ULocalPlayer* LocalPlayer = GetLocalPlayer())
+	if (!InKey.IsValid())
 	{
-		// The registry rather than FInputDeviceScope: the scope is deprecated in 5.8, is only valid inside the
-		// platform's own dispatch call, and we are asking from a UI frame.
-		const FInputDeviceId DeviceId = IPlatformInputDeviceMapper::Get().GetPrimaryInputDeviceForUser(LocalPlayer->GetPlatformUserId());
-		if (const TOptional<FInputDeviceDescriptor> Descriptor = FInputDeviceRegistry::FindDescriptor(DeviceId))
+		return;
+	}
+	// The mouse's keys -- its buttons, its axes, the wheel -- and a finger are pointers; every other key is the keyboard's
+	// or the pad's.
+	const EDreamUIInputDevice Device = UDreamEventSystem::GetInputDeviceForKey(InKey);
+	if (Device == EDreamUIInputDevice::MouseAndKeyboard)
+	{
+		NoteInputFromKeys(!InKey.IsMouseButton());
+	}
+	ReportInputDevice(Device, InDeviceId);
+}
+
+void UDreamUIInputUser::NoteGamepadDevice(FInputDeviceId InDeviceId, bool bInPickedUp)
+{
+	FInputDeviceId Device = InDeviceId;
+	if (Device.IsValid())
+	{
+		GamepadDeviceNamedFrame = GFrameCounter;
+	}
+	else if (GamepadDeviceNamedFrame == GFrameCounter)
+	{
+		return;//the source that heard this input first named its pad; the platform's guess is no newer than that
+	}
+	else
+	{
+		Device = FindMostRecentGamepadDevice();
+		if (!Device.IsValid() && bInPickedUp)
 		{
-			DetectedModel = UDreamEventSystem::GetGamepadModelForDeviceName(Descriptor->InputDeviceName, Descriptor->HardwareDeviceIdentifier);
+			// No record of recent use -- a platform without the input device subsystem: the player's primary device, as
+			// before, on the press that picks a pad up.
+			if (const ULocalPlayer* LocalPlayer = GetLocalPlayer())
+			{
+				Device = IPlatformInputDeviceMapper::Get().GetPrimaryInputDeviceForUser(LocalPlayer->GetPlatformUserId());
+			}
 		}
 	}
-	if (CurrentGamepadModel == DetectedModel)return false;
-	CurrentGamepadModel = DetectedModel;
+	if (!Device.IsValid() || Device == GamepadModelDevice)
+	{
+		return;//the same pad as last time says the same thing
+	}
+	// Remembered under an override as well, so dropping it reads the pad in the player's hands then.
+	GamepadModelDevice = Device;
+	if (!bGamepadModelOverridden)//the project has told us; the platform does not get a vote
+	{
+		ApplyGamepadModel(DreamUIInputUserDeviceLocal::DetectModelOf(Device));
+	}
+}
+
+FInputDeviceId UDreamUIInputUser::FindMostRecentGamepadDevice() const
+{
+	const ULocalPlayer* LocalPlayer = GetLocalPlayer();
+	const UInputDeviceSubsystem* Devices = LocalPlayer != nullptr ? UInputDeviceSubsystem::Get() : nullptr;
+	if (Devices == nullptr)
+	{
+		return INPUTDEVICEID_NONE;
+	}
+	// What the engine's own input pre-processor saw last for this player -- the device that sent the input being handled
+	// now, which reached the engine before it reached any binding. Never the keyboard and mouse: a key pressed after the
+	// pad's in the same frame says nothing about which pad is in the player's hands.
+	const FInputDeviceId Latest = Devices->GetMostRecentlyUsedInputDeviceId(LocalPlayer->GetPlatformUserId());
+	if (!Latest.IsValid() || Devices->GetInputDeviceHardwareIdentifier(Latest).PrimaryDeviceType == EHardwareDevicePrimaryType::KeyboardAndMouse)
+	{
+		return INPUTDEVICEID_NONE;
+	}
+	return Latest;
+}
+
+bool UDreamUIInputUser::ApplyGamepadModel(EDreamUIGamepadModel InModel)
+{
+	if (CurrentGamepadModel == InModel)
+	{
+		return false;
+	}
+	CurrentGamepadModel = InModel;
 	GamepadModelChangedEvent.Broadcast(CurrentGamepadModel);
 	for (UDreamEventSystem* Facade : GetEventSystemFacades())
 	{
 		Facade->BroadcastBlueprintGamepadModelChanged(CurrentGamepadModel);
 	}
 	return true;
+}
+
+bool UDreamUIInputUser::RefreshGamepadModel()
+{
+	if (bGamepadModelOverridden)return false;//the project has told us; the platform does not get a vote
+
+	// The pad this player used last, else what the platform saw last; with neither, nothing names a pad: Generic.
+	FInputDeviceId Device = GamepadModelDevice;
+	if (!Device.IsValid())
+	{
+		Device = FindMostRecentGamepadDevice();
+	}
+	if (!Device.IsValid())
+	{
+		if (const ULocalPlayer* LocalPlayer = GetLocalPlayer())
+		{
+			Device = IPlatformInputDeviceMapper::Get().GetPrimaryInputDeviceForUser(LocalPlayer->GetPlatformUserId());
+		}
+	}
+	GamepadModelDevice = Device;
+	return ApplyGamepadModel(Device.IsValid() ? DreamUIInputUserDeviceLocal::DetectModelOf(Device) : EDreamUIGamepadModel::Generic);
 }
 
 void UDreamUIInputUser::SetGamepadModelOverride(bool bInOverride, EDreamUIGamepadModel InModel)
@@ -538,13 +726,23 @@ void UDreamUIInputUser::SetGamepadModelOverride(bool bInOverride, EDreamUIGamepa
 		RefreshGamepadModel();//back to whatever the platform says, right now rather than at the next press
 		return;
 	}
-	if (CurrentGamepadModel == InModel)return;
-	CurrentGamepadModel = InModel;
-	GamepadModelChangedEvent.Broadcast(CurrentGamepadModel);
-	for (UDreamEventSystem* Facade : GetEventSystemFacades())
+	ApplyGamepadModel(InModel);
+}
+
+void UDreamUIInputUser::ApplyCursorForDevice(EDreamUIInputDevice InDevice)
+{
+	// A finger says nothing about the cursor, and the cursor is only DreamGUI's to hide while DreamGUI is what shows it:
+	// its UI-only input mode, held by its viewport client. Any other mode leaves it to the game.
+	if (InDevice == EDreamUIInputDevice::Touch || !UDreamGUISettings::Get()->bHideCursorOnGamepad)
 	{
-		Facade->BroadcastBlueprintGamepadModelChanged(CurrentGamepadModel);
+		return;
 	}
+	APlayerController* PlayerController = GetPlayerController();
+	if (PlayerController == nullptr || !UDreamGameViewportClient::IsDreamUIOnlyInputFor(PlayerController))
+	{
+		return;
+	}
+	PlayerController->bShowMouseCursor = InDevice != EDreamUIInputDevice::Gamepad;
 }
 
 void UDreamUIInputUser::ApplyHoverCursorToPlayer(bool bWidgetClaimedCursor, EMouseCursor::Type InCursor)
@@ -847,6 +1045,10 @@ void UDreamUIInputUser::QueuePointerButton(int32 InPointerID, const FVector& InP
 		}
 		return;
 	}
+	if (bInPressed)
+	{
+		NoteInputFromKeys(false);//a press is a pointer's: code that moves the focus after it does not draw it
+	}
 	FQueuedButton& Queued = QueuedButtons.AddDefaulted_GetRef();
 	Queued.PointerID = InPointerID;
 	Queued.Position = InPosition;
@@ -870,6 +1072,8 @@ void UDreamUIInputUser::MovePointer(int32 InPointerID, const FVector& InPosition
 	if (!InPosition.Equals(EventData->PointerPosition))
 	{
 		SetPointerInputType(EventData, EDreamUIPointerInputType::Pointer);
+		// And only an actual move lets the pointer's hover take the navigation highlight on its next trace.
+		PointersMovedSinceTrace.Add(InPointerID);
 	}
 	EventData->PointerPosition = InPosition;
 }
@@ -959,6 +1163,10 @@ void UDreamUIInputUser::QueuePointerScroll(int32 InPointerID, const FVector2D& I
 	{
 		return;
 	}
+	if (!InAxisValue.IsZero())
+	{
+		NoteInputFromKeys(false);//the wheel is the mouse's
+	}
 	QueuedScrolls.Add({ InPointerID, InAxisValue });
 }
 
@@ -970,6 +1178,14 @@ void UDreamUIInputUser::RunPipelineBody()
 	ReleasePressesWhoseRaycasterWent();
 
 	TSet<int32, DefaultKeyFuncs<int32>, TInlineSetAllocator<8>> TracedByQueue;
+
+	// A step asked for from inside a key handler -- the text field Tab commits -- before the pointers: it was asked for
+	// by the keys the player pressed since the last frame. Its pointer takes no second step this frame.
+	if (RequestedNavigationStep != EDreamUINavigationDirection::None)
+	{
+		RunRequestedNavigationStep();
+		TracedByQueue.Add(DreamUIPointerIds::Mouse);
+	}
 
 	// The presses and releases, in the order they arrived. Taken by value first: dispatch runs game code, and game
 	// code that presses or releases anything queues more -- which is simply the next frame's. Each is one record:
@@ -990,6 +1206,12 @@ void UDreamUIInputUser::RunPipelineBody()
 			{
 				continue;
 			}
+			// A press or a release somewhere else than the pointer was is the pointer moving there: a tap is a finger's whole
+			// journey, and what it lands on takes the highlight as a mouse's hover would.
+			if (!Queued.Position.Equals(EventData->PointerPosition))
+			{
+				PointersMovedSinceTrace.Add(Queued.PointerID);
+			}
 			EventData->PointerPosition = Queued.Position;
 			EventData->bNowIsTriggerPressed = Queued.bPressed;
 			if (Queued.bPressed)
@@ -1008,6 +1230,7 @@ void UDreamUIInputUser::RunPipelineBody()
 			bool bResultHitSomething = false;
 			FDreamUIHitResult HitResult;
 			UDreamPointerInputModule::ProcessPointerEvent(this, EventData, bLineTraceHitSomething, HitContainer, bResultHitSomething, HitResult);
+			PointersMovedSinceTrace.Remove(Queued.PointerID);
 			NotePressRaycaster(EventData);
 			RaiseHitEvent(bResultHitSomething, HitResult, HitResult.Widget.Get());
 			TracedByQueue.Add(Queued.PointerID);
@@ -1023,6 +1246,7 @@ void UDreamUIInputUser::RunPipelineBody()
 				PointerWorldTargetMap.Remove(Queued.PointerID);
 				TraceCache.Remove(Queued.PointerID);
 				PressRaycasters.Remove(Queued.PointerID);
+				PointersMovedSinceTrace.Remove(Queued.PointerID);
 			}
 		}
 	}
@@ -1067,6 +1291,8 @@ void UDreamUIInputUser::RunPipelineBody()
 			ProcessInputForNavigation(EventData);
 			break;
 		}
+		// Traced: whatever it enters from now on, until it moves again, it enters with the pointer at rest.
+		PointersMovedSinceTrace.Remove(PointerID);
 	}
 
 	// The wheel turns, after the traces: a wheel goes to what the pointer is over now, not to what it was over
@@ -1358,56 +1584,135 @@ bool UDreamUIInputUser::LineTrace(UDreamPointerEventData* InPointerEventData, FD
 #pragma endregion
 
 #pragma region Navigation
-bool UDreamUIInputUser::Navigate(EDreamUINavigationDirection InDirection, UDreamPointerEventData* InPointerEventData, FDreamUIHitResultContainer& OutDreamUIHitResult)
+namespace DreamUIInputUserNavigationLocal
 {
-	UDreamWidget* CurrentHover = InPointerEventData->HighlightWidgetForNavigation.Get();
-	UDreamUIBehaviour* CurrentNavigateObject = nullptr;
-	if (IsValid(CurrentHover))
+	/** The behaviour on InWidget that receives a move, when it can be moved to now. */
+	UDreamUIBehaviour* FindReceiverOn(UDreamWidget* InWidget)
 	{
-		auto FindNavigationInterface = [](UDreamWidget* InWidget)
-		{
-			for (UDreamUIBehaviour* Comp : InWidget->GetAllComponents())
-			{
-				if (IsValid(Comp) && Comp->GetClass()->ImplementsInterface(UDreamNavigationInterface::StaticClass()))
-				{
-					if (IDreamNavigationInterface::Execute_CanNavigateHere(Comp))
-					{
-						return Comp;
-					}
-				}
-			}
-			return (UDreamUIBehaviour*)nullptr;
-		};
-		for (UDreamWidget* SearchWidget = CurrentHover; IsValid(SearchWidget); SearchWidget = SearchWidget->GetParent())
-		{
-			CurrentNavigateObject = FindNavigationInterface(SearchWidget);
-			if (CurrentNavigateObject != nullptr)
-			{
-				break;
-			}
-		}
+		UDreamUIBehaviour* Receiver = DreamUINavigationScan::FindNavigationBehaviour(InWidget);
+		return Receiver != nullptr && DreamUINavigationScan::CanNavigateTo(Receiver) ? Receiver : nullptr;
 	}
 
-	if (CurrentNavigateObject == nullptr)//no valid selectable to navigate from: this player's default one
+	/**
+	 * The behaviour a move from InFrom -- the player's focus -- starts on: InFrom's, else the nearest widget's above it
+	 * that has one, chosen as DreamUINavigationScan::FindNavigationBehaviour chooses -- a widget navigation component with
+	 * rules before a selectable, whatever order the components were added in, where the pipeline used to take whichever it
+	 * reached first -- else the first one inside InFrom, depth first: a control given the focus itself, whose selectable
+	 * lives on one of its parts (a button's face). Null when there is none.
+	 */
+	UDreamUIBehaviour* FindNavigationReceiver(UDreamWidget* InFrom)
 	{
-		CurrentNavigateObject = UUISelectable::FindDefaultSelectable(this, UserIndex);
+		if (!IsValid(InFrom))
+		{
+			return nullptr;
+		}
+		for (UDreamWidget* Walker = InFrom; IsValid(Walker); Walker = Walker->GetParent())
+		{
+			if (UDreamUIBehaviour* Receiver = FindReceiverOn(Walker))
+			{
+				return Receiver;
+			}
+		}
+		TArray<UDreamWidget*, TInlineAllocator<16>> Pending;
+		const TArray<UDreamWidget*>& FromChildren = InFrom->GetChildren();
+		for (int32 Index = FromChildren.Num() - 1; Index >= 0; --Index)
+		{
+			Pending.Add(FromChildren[Index]);
+		}
+		while (Pending.Num() > 0)
+		{
+			UDreamWidget* Candidate = Pending.Pop(EAllowShrinking::No);
+			if (!IsValid(Candidate) || !Candidate->GetWidgetActiveInHierarchy())
+			{
+				continue;
+			}
+			if (UDreamUIBehaviour* Receiver = FindReceiverOn(Candidate))
+			{
+				return Receiver;
+			}
+			const TArray<UDreamWidget*>& CandidateChildren = Candidate->GetChildren();
+			for (int32 Index = CandidateChildren.Num() - 1; Index >= 0; --Index)
+			{
+				Pending.Add(CandidateChildren[Index]);
+			}
+		}
+		return nullptr;
+	}
+
+	/** The player's default control's widget (UUISelectable::FindDefaultSelectable), or null. */
+	UDreamWidget* FindDefaultTarget(UDreamUIInputUser* InUser)
+	{
+		UUISelectable* Default = UUISelectable::FindDefaultSelectable(InUser, InUser->GetUserIndex());
+		return Default != nullptr ? Default->GetWidget() : nullptr;
+	}
+
+	/** What a focus moved by a step in InDirection is recorded as: Tab for the sequence, Navigation for a direction or the confirm. */
+	EDreamUIFocusCause CauseOfStep(EDreamUINavigationDirection InDirection)
+	{
+		return InDirection == EDreamUINavigationDirection::Next || InDirection == EDreamUINavigationDirection::Prev
+			? EDreamUIFocusCause::Tab : EDreamUIFocusCause::Navigation;
+	}
+}
+
+bool UDreamUIInputUser::Navigate(EDreamUINavigationDirection InDirection, UDreamPointerEventData* InPointerEventData, FDreamUIHitResultContainer& OutDreamUIHitResult)
+{
+	using namespace DreamUIInputUserNavigationLocal;
+	// Every step starts from the player's focus, never from the hover highlight, which every hover rewrote: a Tab from the
+	// first field with the mouse resting on the third went to the fourth, and the confirm pressed what the mouse had last
+	// passed over rather than what the keys had reached.
+	UDreamWidget* Focus = FocusedWidget.Get();
+	if (!IsValid(Focus))
+	{
+		Focus = nullptr;
+	}
+	UDreamUIBehaviour* From = FindNavigationReceiver(Focus);
+	UDreamWidget* Target = nullptr;
+	const bool bSequential = InDirection == EDreamUINavigationDirection::Next || InDirection == EDreamUINavigationDirection::Prev;
+	if (bSequential && UDreamGUISettings::Get()->TabOrder == EDreamUITabOrder::Hierarchy)
+	{
+		// The tab order: the next stop of the player's domain after the focus -- the first (the last, backwards) with nothing
+		// focused or the focus outside it -- an explicit link first, and popups that close on Tab closed on the way.
+		const FDreamUITabStep Step = FDreamUITabOrder::Step(this, UserIndex, Focus, InDirection == EDreamUINavigationDirection::Prev);
+		Target = IsValid(Step.Target) ? Step.Target : nullptr;
+		if (Target == nullptr && Step.bClosedPopups)
+		{
+			// The popups closed on the way and gave the focus back to their opener, with nowhere after it to go -- a dropdown
+			// that is its screen's only control: the focus stays where the closing put it. What was focused before the step
+			// is in a popup that is gone, and taking the focus back there would leave it on a hidden row.
+			UDreamWidget* FocusAfterClose = FocusedWidget.Get();
+			const UDreamUIBehaviour* ReceiverAfterClose = FindNavigationReceiver(IsValid(FocusAfterClose) ? FocusAfterClose : nullptr);
+			Target = ReceiverAfterClose != nullptr ? ReceiverAfterClose->GetWidget() : nullptr;
+		}
+		else if (Target == nullptr)
+		{
+			// An end that holds, or nowhere to go: the focus stays where it is. With nothing focused and no stop in the
+			// domain at all, the player's default control, as a direction would find it.
+			Target = From != nullptr ? From->GetWidget() : (Focus == nullptr ? FindDefaultTarget(this) : nullptr);
+		}
+	}
+	else if (From == nullptr)
+	{
+		// Nothing focused to move from. A direction lands on the player's default control -- and no further: that press only
+		// finds where to begin. A confirm presses nothing: the keys act on the focus, and there is none.
+		Target = InDirection != EDreamUINavigationDirection::None ? FindDefaultTarget(this) : nullptr;
 	}
 	else
 	{
+		UDreamUIBehaviour* Landing = From;
 		TScriptInterface<IDreamNavigationInterface> NextNavigateInterface = nullptr;
-		if (IDreamNavigationInterface::Execute_OnNavigate(CurrentNavigateObject, InDirection, NextNavigateInterface))
+		if (InDirection != EDreamUINavigationDirection::None && IDreamNavigationInterface::Execute_OnNavigate(From, InDirection, NextNavigateInterface))
 		{
 			if (UDreamUIBehaviour* NextNavigateObject = Cast<UDreamUIBehaviour>(NextNavigateInterface.GetObject()))
 			{
-				CurrentNavigateObject = NextNavigateObject;
+				Landing = NextNavigateObject;
 			}
 		}
+		Target = Landing->GetWidget();
 	}
-	if (CurrentNavigateObject == nullptr || !IsValid(CurrentNavigateObject->GetWidget()))
+	if (!IsValid(Target))
 	{
 		return false;
 	}
-	UDreamWidget* Target = CurrentNavigateObject->GetWidget();
 	OutDreamUIHitResult.HitResult.Widget = Target;
 	OutDreamUIHitResult.HitResult.Location = Target->GetWorldLocation();
 	OutDreamUIHitResult.HitResult.Normal = Target->GetWorldTransform().TransformVector(FVector(0, 0, 1));
@@ -1464,15 +1769,25 @@ void UDreamUIInputUser::ProcessInputForNavigation(UDreamPointerEventData* EventD
 	}
 
 	// None unless a step is due: the confirm button must not also move focus, and holding it is no step either. Navigate
-	// still resolves the highlighted widget into the hit result, which is what Down/Up/Click are dispatched to, and it
-	// reveal-scrolls only for a direction.
+	// still resolves the focused widget into the hit result, which is what Down/Up/Click are dispatched to, and it
+	// reveal-scrolls only for a direction. A frame that only holds the confirm looks at its press, and announces nothing.
 	const EDreamUINavigationDirection StepDirection = bTakeNavigateStep ? EventData->NavigateDirection : EDreamUINavigationDirection::None;
+	RunNavigationFrame(EventData, StepDirection, bTakeNavigateStep || bTriggerStateChanged);
+}
+
+void UDreamUIInputUser::RunNavigationFrame(UDreamPointerEventData* EventData, EDreamUINavigationDirection InStepDirection, bool bInAnnounce)
+{
+	// Everything this frame does to the focus -- the step's landing, and whatever a handler of the press, the click or the
+	// selection moves it on to -- is a key's or the pad's: recorded so, and drawn so (IsFocusVisible). The listeners hear
+	// the answer once the step is over (declared first, so it runs after the cause is given back).
+	ON_SCOPE_EXIT{ UpdateFocusVisible(); };
+	TGuardValue<EDreamUIFocusCause> StepCause(StepFocusCause, DreamUIInputUserNavigationLocal::CauseOfStep(InStepDirection));
 	FDreamUIHitResultContainer DreamUIHitResult;
-	const bool bSelectValid = Navigate(StepDirection, EventData, DreamUIHitResult);
+	const bool bSelectValid = Navigate(InStepDirection, EventData, DreamUIHitResult);
 	bool bResultHitSomething = false;
 	FDreamUIHitResult HitResult;
 	UDreamPointerInputModule::ProcessPointerEvent(this, EventData, bSelectValid, DreamUIHitResult, bResultHitSomething, HitResult);
-	if (!bTakeNavigateStep && !bTriggerStateChanged)
+	if (!bInAnnounce)
 	{
 		// A frame that only holds the confirm: its press was looked at, and nothing else moves. The focus stays where the
 		// press or the last step put it -- or wherever game code has moved it since -- and no hit is announced again.
@@ -1486,9 +1801,29 @@ void UDreamUIInputUser::ProcessInputForNavigation(UDreamPointerEventData* EventD
 	if (UDreamWidget* NavigatedWidget = HitResult.Widget.Get();
 		bResultHitSomething && NavigatedWidget != nullptr && EventData->HighlightWidgetForNavigation.Get() == NavigatedWidget)
 	{
-		SetSelectWidget(NavigatedWidget, EventData);
+		SetSelectWidgetForCause(NavigatedWidget, EventData, StepFocusCause);
 	}
 	RaiseHitEvent(bResultHitSomething, HitResult, HitResult.Widget.Get());
+}
+
+void UDreamUIInputUser::RunRequestedNavigationStep()
+{
+	const EDreamUINavigationDirection Direction = RequestedNavigationStep;
+	RequestedNavigationStep = EDreamUINavigationDirection::None;
+	// As a key step is: off in gameplay, as the key itself would be (DreamUIKeyRouting::HasBuiltInMeanings).
+	if (Direction == EDreamUINavigationDirection::None || bShutDown || !DreamUIKeyRouting::HasBuiltInMeanings(this))
+	{
+		return;
+	}
+	UDreamPointerEventData* EventData = GetPointerEventData(DreamUIPointerIds::Mouse, true);
+	if (!IsValid(EventData))
+	{
+		return;
+	}
+	FDreamUIInputDispatchScope Record(this);
+	// The navigation cursor's, as a key's step: the pointer stops being the mouse's until the mouse moves it again.
+	SetPointerInputType(EventData, EDreamUIPointerInputType::Navigation);
+	RunNavigationFrame(EventData, Direction, true);
 }
 
 void UDreamUIInputUser::ProcessPinchGesture()
@@ -1740,6 +2075,7 @@ void UDreamUIInputUser::RetireAllPointers()
 			This->PointerWorldTargetMap.Remove(PointerID);
 			This->TraceCache.Remove(PointerID);
 			This->PressRaycasters.Remove(PointerID);
+			This->PointersMovedSinceTrace.Remove(PointerID);
 		}
 	});
 }
@@ -1796,6 +2132,9 @@ void UDreamUIInputUser::Shutdown()
 		This->PressRaycasters.Reset();
 		This->KeyPresses.Reset();
 		This->LiftedFingerClickRuns.Reset();
+		This->PointersMovedSinceTrace.Reset();
+		This->RequestedNavigationStep = EDreamUINavigationDirection::None;
+		This->FocusCause = EDreamUIFocusCause::None;
 		This->bPinchActive = false;
 		This->InputModule.Reset();
 	});

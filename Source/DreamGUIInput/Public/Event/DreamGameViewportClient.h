@@ -42,7 +42,14 @@ class APlayerController;
  * the client. So while UDreamUIInputModeLibrary::SetInputModeUIOnly holds the mode, this client routes
  * that input on exactly as it would with the mode off, and holds the player's movement and look input
  * still, since the player controller now hears what DreamGUI hears. A UI-only mode set any other way --
- * UMG's library, APlayerController::SetInputMode -- keeps the engine's meaning.
+ * UMG's library, APlayerController::SetInputMode -- keeps the engine's meaning. While DreamGUI's mode holds, the cursor
+ * is DreamGUI's to show: a pad hides it and the keyboard and mouse bring it back (UDreamGUISettings::bHideCursorOnGamepad).
+ *
+ * And it keeps Slate's own navigation out of UMG while DreamGUI has the keys (HandleNavigation): Slate turns a Tab
+ * nobody handled into a step of its own, which from the bare viewport descends into the viewport's children -- the
+ * UMG layers -- and gives the keyboard focus to the first focusable widget there, after which DreamGUI hears no key
+ * until the viewport has the focus back. The world's input subsystem guards the same road through the base class's
+ * OnNavigationOverride for any other client.
  */
 UCLASS(BlueprintType)
 class DREAMGUIINPUT_API UDreamGameViewportClient : public UGameViewportClient
@@ -61,6 +68,18 @@ public:
 	 */
 	void SetDreamUIOnlyInput(APlayerController* InPlayerController, bool bInDreamUIOnly);
 	bool IsDreamUIOnlyInput() const { return bDreamUIOnlyInput; }
+	/**
+	 * Whether InPlayerController's viewport client is one of these, holding DreamGUI's UI-only mode: the cursor is then
+	 * DreamGUI's to hide on a pad and show again on the mouse. False for a controller with no local player.
+	 */
+	static bool IsDreamUIOnlyInputFor(const APlayerController* InPlayerController);
+
+	/**
+	 * Slate's navigation, with its destination known: swallowed while Slate user InUserIndex's keyboard focus is on this
+	 * world's bare viewport and DreamGUI has UI up for that player (UDreamUIInputSubsystem::ShouldSwallowSlateNavigation),
+	 * else what the base class does -- OnNavigationOverride, then nothing.
+	 */
+	virtual bool HandleNavigation(const uint32 InUserIndex, TSharedPtr<SWidget> InDestination) override;
 
 	/**
 	 * A character the platform resolved, on the player's own keyboard layout.

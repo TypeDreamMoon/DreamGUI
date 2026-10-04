@@ -11,7 +11,9 @@
 
 class AActor;
 class FDreamUISlateInputSource;
+class SWidget;
 class UDreamBaseRaycaster;
+class UGameViewportClient;
 class ULocalPlayer;
 class UDreamEventSystem;
 class UDreamUIInputSubsystem;
@@ -87,6 +89,16 @@ public:
 	 * script user a test or a headless rig drives by hand. Null once the world's input has been torn down.
 	 */
 	UDreamUIInputUser* GetOrCreateUser(int32 InUserIndex);
+	/**
+	 * Whether InUserIndex is somebody: a player made already, an event system placed for the index, a local player at
+	 * it, or the first player -- the one a world with no local players at all, a test's or a headless rig's, is driven
+	 * as. What a request that would make a player on the way asks first (FocusForNavigation, a Blueprint's implicit
+	 * event system): one made for any index -- a scope set to player 3 in a one-player game -- was a phantom, counted
+	 * among the players and given a focus nobody could see or move.
+	 */
+	bool HasPlayerAt(int32 InUserIndex) const;
+	/** The player of this world Slate user InSlateUserIndex is: the local player whose Slate user it is, every Slate user with one local player; INDEX_NONE for none. */
+	int32 FindUserIndexForSlateUser(int32 InSlateUserIndex) const;
 	/** Every player, in player order. */
 	void GetUsers(TArray<UDreamUIInputUser*>& OutUsers) const;
 	/** Take player InUserIndex away: every hover exited, every press let go, then forgotten. */
@@ -119,6 +131,24 @@ public:
 	/** Hear this world's input from Slate, or stop: what the setting does when play begins, at any time. */
 	void SetSlateInputSourceEnabled(bool bInEnabled);
 	TSharedPtr<FDreamUISlateInputSource> GetSlateInputSource() const { return SlateInputSource; }
+
+	/**
+	 * Whether Slate's own navigation for Slate user InSlateUserIndex is to be swallowed now: that user's keyboard focus is
+	 * on this world's bare game viewport, and the DreamGUI player the user is has UI up -- something focused, or a Tab stop
+	 * to land on (DreamUIKeyRouting::HasTabStops). Slate turns a Tab nobody handled into a step of its own, and from the
+	 * bare viewport that step descends into the viewport's children, the UMG layers: the first focusable UMG widget took
+	 * the keyboard focus, and DreamGUI heard no key until the viewport had it back. Asked by the guard this subsystem chains
+	 * onto the game viewport client's OnNavigationOverride, and by UDreamGameViewportClient::HandleNavigation.
+	 */
+	bool ShouldSwallowSlateNavigation(uint32 InSlateUserIndex) const;
+	/**
+	 * Chain this world's Slate navigation guard onto InClient's OnNavigationOverride, keeping whatever was bound there to
+	 * be asked whenever the guard lets a navigation through -- the delegate holds one binding, and a project's own is not
+	 * dropped. UnbindSlateNavigationGuard gives InClient its binding back, if the guard is still the one bound there.
+	 * Begin play does the first for the world's game viewport client, the teardown the second.
+	 */
+	void BindSlateNavigationGuard(UGameViewportClient* InClient);
+	void UnbindSlateNavigationGuard();
 
 	/**
 	 * One frame of every player's input, in player order. What the tick function runs -- and what a rig that pumps
@@ -155,7 +185,7 @@ public:
 	void ForgetEventSystem(UDreamEventSystem* InEventSystem);
 	/**
 	 * The event system a Blueprint is handed for player InUserIndex when none is placed: an unregistered component
-	 * no actor carries, speaking for that player. Null when the player cannot be made.
+	 * no actor carries, speaking for that player. Null when the player cannot be made, or the index is nobody's (HasPlayerAt).
 	 */
 	UDreamEventSystem* GetOrCreateImplicitEventSystem(int32 InUserIndex);
 
@@ -169,7 +199,7 @@ public:
 	virtual bool HasFocus(const UDreamWidget* InWidget, int32 InUserIndex, int32 InPointerId) const override;
 	/**
 	 * Takes the navigation cursor off InWidget too, when it was there: a widget that lost focus because it was hidden
-	 * or disabled is no place for the next directional move to start from, nor for the next confirm to press.
+	 * or disabled is no longer where navigation stands.
 	 */
 	virtual void ClearFocus(UDreamWidget* InWidget, int32 InUserIndex, int32 InPointerId) override;
 	virtual bool HasFocusedDescendant(const UDreamWidget* InWidget, int32 InUserIndex) const override;
@@ -179,9 +209,10 @@ public:
 	virtual void GetUserIndices(TArray<int32>& OutUserIndices) const override;
 	virtual UDreamWidget* GetFocusedWidget(int32 InUserIndex) const override;
 	/**
-	 * On the navigation pointer, whose highlight is the cursor every directional move starts from. Makes the player when
-	 * it has none yet, as the event system's selection always did: a scope pushed for player 1 before anything else
-	 * asked about player 1 still puts their focus somewhere.
+	 * On the navigation pointer, whose highlight follows the focus every move starts from, and recorded as code's
+	 * (EDreamUIFocusCause::Script) unless a navigation step is landing. Makes the player when it has none yet -- a scope
+	 * pushed for player 1 before anything else asked about player 1 still puts their focus somewhere -- but only for an
+	 * index that is somebody's (HasPlayerAt): one for any index was a phantom player nobody could see or drive.
 	 *
 	 * "In play" is taken as registered with the world, and "active" and "drawn" are read from the widgets' own switches
 	 * up the chain as well as from the hierarchy caches, so a scope focusing from inside the walk that wakes its screen,
@@ -190,6 +221,10 @@ public:
 	 */
 	virtual bool FocusForNavigation(UDreamWidget* InWidget, int32 InUserIndex) override;
 	virtual UDreamWidget* ResolveScopeFocusTarget(int32 InUserIndex) const override;
+	/** The player's own record (UDreamUIInputUser::GetFocusCause); None for an index that has no player. */
+	virtual EDreamUIFocusCause GetFocusCause(int32 InUserIndex) const override;
+	/** The player's own answer (UDreamUIInputUser::IsFocusVisible); for an index that has no player, only while the setting draws every focus. */
+	virtual bool IsFocusVisible(int32 InUserIndex) const override;
 	virtual UDreamPointerEventData* FindPointer(int32 InUserIndex, int32 InPointerId) const override;
 	virtual bool CanListenForActions() const override;
 	virtual FDreamUIActionHandle RegisterWidgetAction(UDreamWidget* InOwner, const FDataTableRowHandle& InAction,
@@ -231,6 +266,8 @@ private:
 	void HandleLocalPlayerRemoved(ULocalPlayer* InLocalPlayer);
 	/** The event system actor and the interaction host made for player InUserIndex, destroyed. */
 	void DestroyCreatedInteraction(int32 InUserIndex);
+	/** What the guard chained onto OnNavigationOverride answers Slate with: swallowed (ShouldSwallowSlateNavigation), else the binding it replaced. */
+	bool HandleSlateNavigation(const uint32 InSlateUserIndex, TSharedPtr<SWidget> InDestination);
 
 	UPROPERTY(Transient)
 	TMap<int32, TObjectPtr<UDreamUIInputUser>> Users;
@@ -272,4 +309,7 @@ private:
 	bool bHostDeliversCharacters = false;
 	/** Registered with Slate while this world's input is heard from it. */
 	TSharedPtr<FDreamUISlateInputSource> SlateInputSource;
+	/** The game viewport client the Slate navigation guard is chained onto, and the binding it found there. */
+	TWeakObjectPtr<UGameViewportClient> SlateGuardClient;
+	TDelegate<bool(const uint32, TSharedPtr<SWidget>)> PreviousNavigationOverride;
 };

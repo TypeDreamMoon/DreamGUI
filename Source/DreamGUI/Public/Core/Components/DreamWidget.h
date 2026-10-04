@@ -185,6 +185,29 @@ enum class EDreamWidgetRenderLayer : uint8
 	Never,
 };
 
+/**
+ * How the Tab stops inside a widget take part in Tab order (UDreamWidget::TabNavigation), which is the hierarchy's, depth
+ * first, siblings by TabIndex. The widget's own stop, when it is one, comes before those inside it.
+ */
+UENUM(BlueprintType)
+enum class EDreamWidgetTabNavigation : uint8
+{
+	/** Its stops are walked where it stands, and Tab goes on past the last of them into what follows it. */
+	Continue,
+	/** Tab at its last stop goes round to its first, and Shift+Tab the other way: it holds Tab once it has it. Entered from outside as usual. */
+	Cycle,
+	/** Tab at its last stop stays there, and Shift+Tab at its first: it holds Tab once it has it, without going round. Entered from outside as usual. */
+	Contained,
+	/**
+	 * One stop: Tab enters it at one widget -- what ResolveTabEntry answers, a list's selected row; else its first stop, its
+	 * last for Shift+Tab -- and the next Tab leaves it. What list, tile and tree views are, as a browser's list boxes and tab
+	 * strips are; the arrows move inside.
+	 */
+	Once,
+	/** Nothing in it is a Tab stop, itself included; arrows, pointers and code still reach it. */
+	None,
+};
+
 enum class EDreamWidgetComponentsChangedType : uint8
 {
 	//New component added to this widget
@@ -482,6 +505,19 @@ public:
 	void SetRenderLayerMode(EDreamWidgetRenderLayer Value);
 	/** Its row in its world's render layer table while it is a render layer (UDreamUIRenderLayerTable); 0 when it is none. */
 	int32 GetRenderLayerRow()const { return RenderLayerRow; }
+	/**
+	 * The frame its canvas last moved it as a render layer -- or made it one -- (UDreamCanvas::MarkRenderLayerMoved), stamped
+	 * once a frame; 0 for never. What small text inside it reads to know whether the layer has held still.
+	 */
+	uint64 GetRenderLayerMovedFrame()const { return RenderLayerMovedFrame; }
+	/**
+	 * Some small text inside this render layer draws from coverage glyphs and asks to hear of the layer's moves: its canvas
+	 * then calls UDreamText::OnRenderLayerMoved when the layer moves. Set by small text inside it that draws from coverage
+	 * glyphs, or that the layer's own turn or scale keeps on the field; cleared by UDreamText::OnRenderLayerMoved once no
+	 * such text is listed, and when the layer is taken back or forgotten.
+	 */
+	bool GetLayerHoldsCoverageText()const { return bLayerHoldsCoverageText; }
+	void SetLayerHoldsCoverageText(bool bInHolds) { bLayerHoldsCoverageText = bInHolds; }
 private:
 	/** Set and cleared by the canvas that makes this widget a render layer; IsRenderLayer. */
 	uint32 bIsRenderLayer : 1 = false;
@@ -489,6 +525,8 @@ private:
 	uint32 bRenderLayerRefused : 1 = false;
 	/** Listed with its canvas as one to make a layer at the canvas's next update. */
 	uint32 bRenderLayerCandidate : 1 = false;
+	/** See GetLayerHoldsCoverageText. */
+	uint32 bLayerHoldsCoverageText : 1 = false;
 	/** See GetRenderLayerRow: held for it by the canvas that made it a layer. */
 	int32 RenderLayerRow = 0;
 	/**
@@ -497,6 +535,8 @@ private:
 	 */
 	uint64 RenderLayerLastChangeFrame = 0;
 	int32 RenderLayerChangeStreak = 0;
+	/** See GetRenderLayerMovedFrame: written by the canvas. */
+	uint64 RenderLayerMovedFrame = 0;
 	/** GetRenderLayer's answer, and the generation of the answers it was worked out in (InvalidateRenderLayerCaches). */
 	mutable TWeakObjectPtr<UDreamWidget> CachedRenderLayer;
 	mutable uint64 CachedRenderLayerGeneration = 0;
@@ -1604,6 +1644,18 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Interaction|Focus", Getter = "GetIsFocusable", Setter = "SetIsFocusable", meta = (AllowPrivateAccess = true))
 	bool bIsFocusable = false;
+	/**
+	 * Tab and Shift+Tab stop here, when it is focusable and can be navigated to. Off leaves it to the arrows, the pad, a
+	 * pointer and code -- a browser's tabindex="-1".
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Interaction|Focus", Getter = "GetIsTabStop", Setter = "SetIsTabStop", meta = (AllowPrivateAccess = true))
+	bool bIsTabStop = true;
+	/** Its place in Tab order among its siblings: lower first, siblings with the same index in the hierarchy's order. Only siblings are compared. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Interaction|Focus", Getter, Setter, meta = (AllowPrivateAccess = true))
+	int32 TabIndex = 0;
+	/** How the Tab stops inside it take part in Tab order; see EDreamWidgetTabNavigation. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Interaction|Focus", Getter, Setter, meta = (AllowPrivateAccess = true))
+	EDreamWidgetTabNavigation TabNavigation = EDreamWidgetTabNavigation::Continue;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Interaction", Getter, Setter, meta = (AllowPrivateAccess = true))
 	TEnumAsByte<EMouseCursor::Type> Cursor = EMouseCursor::Default;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Interaction", Getter, Setter, meta = (AllowPrivateAccess = true, MultiLine = true))
@@ -1762,6 +1814,35 @@ public:
 	 */
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI|Focus")
 	void SetIsFocusable(bool Value);
+	/** See bIsTabStop. */
+	UFUNCTION(BlueprintPure, Category = "DreamGUI|Focus")
+	bool GetIsTabStop()const { return bIsTabStop; }
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI|Focus")
+	void SetIsTabStop(bool Value);
+	/** See TabIndex. */
+	UFUNCTION(BlueprintPure, Category = "DreamGUI|Focus")
+	int32 GetTabIndex()const { return TabIndex; }
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI|Focus")
+	void SetTabIndex(int32 Value);
+	/** See TabNavigation. */
+	UFUNCTION(BlueprintPure, Category = "DreamGUI|Focus")
+	EDreamWidgetTabNavigation GetTabNavigation()const { return TabNavigation; }
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI|Focus")
+	void SetTabNavigation(EDreamWidgetTabNavigation Value);
+	/**
+	 * The widget Tab lands on as it enters this one as a single stop (TabNavigation Once), bInBackward for Shift+Tab: a
+	 * list, tile or tree view answers the row of its selected item -- its first item's when none is selected, its last's
+	 * entered backwards -- scrolled into view and built first, as its rows exist only for what shows. Null: the walk takes
+	 * this widget's first stop, or its last, as for any other. The base answers null. Called by the Tab walk alone, on the
+	 * game thread, inside a navigation step.
+	 */
+	virtual UDreamWidget* ResolveTabEntry(bool bInBackward) { return nullptr; }
+	/**
+	 * The widget whose scrolling container scrolls this widget's own content, for the keys and the stick aimed at it while
+	 * it has focus (paging, Home and End, the right stick): a scroll box control answers its viewport, which carries its
+	 * scroll view. Null, the base's answer: this widget's own containers, then its ancestors', as the search always goes.
+	 */
+	virtual UDreamWidget* GetScrollTargetForNavigation() const { return nullptr; }
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI|Focus")
 	bool SetFocus(int32 UserIndex = 0, int32 PointerId = 0);
 	UFUNCTION(BlueprintPure, Category = "DreamGUI|Focus")

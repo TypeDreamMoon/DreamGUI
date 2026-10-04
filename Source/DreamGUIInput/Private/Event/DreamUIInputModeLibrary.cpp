@@ -4,9 +4,12 @@
 
 #include "DreamGUI.h"
 #include "Core/Components/DreamWidget.h"
+#include "Core/DreamGUISettings.h"
 #include "Engine/LocalPlayer.h"
 #include "Event/DreamEventSystem.h"
 #include "Event/DreamGameViewportClient.h"
+#include "Event/DreamUIInputSubsystem.h"
+#include "Event/DreamUIInputUser.h"
 #include "GameFramework/PlayerController.h"
 
 namespace DreamUIInputModeLibraryLocal
@@ -51,6 +54,22 @@ namespace DreamUIInputModeLibraryLocal
 				*ViewportClient->GetClass()->GetName());
 		}
 	}
+
+	/**
+	 * Whether DreamGUI's UI-only mode, just entered for InPlayerController, starts with the cursor hidden: DreamGUI holds
+	 * the mode (its viewport client), the settings hide the cursor on a pad, and the player's latest device is one. The
+	 * player's next device change shows or hides it from then on (UDreamUIInputUser::ReportInputDevice).
+	 */
+	bool StartsWithCursorHidden(const UObject* InWorldContext, const APlayerController* InPlayerController, int32 InUserIndex)
+	{
+		if (!UDreamGUISettings::Get()->bHideCursorOnGamepad || !UDreamGameViewportClient::IsDreamUIOnlyInputFor(InPlayerController))
+		{
+			return false;
+		}
+		const UDreamUIInputSubsystem* Input = UDreamUIInputSubsystem::Get(InWorldContext);
+		const UDreamUIInputUser* User = Input != nullptr ? Input->GetUser(InUserIndex) : nullptr;
+		return User != nullptr && User->GetCurrentInputDevice() == EDreamUIInputDevice::Gamepad;
+	}
 }
 
 APlayerController* UDreamUIInputModeLibrary::GetPlayerControllerForUser(UObject* WorldContextObject, int32 UserIndex)
@@ -71,7 +90,8 @@ void UDreamUIInputModeLibrary::SetInputModeUIOnly(UObject* WorldContextObject, U
 	InputMode.SetLockMouseToViewportBehavior(MouseLockMode);
 	PlayerController->SetInputMode(InputMode);
 	DreamUIInputModeLibraryLocal::SetDreamUIOnly(PlayerController, true);
-	PlayerController->bShowMouseCursor = true;
+	// DreamGUI shows the cursor from now on: a pad hides it, the keyboard and mouse bring it back.
+	PlayerController->bShowMouseCursor = !DreamUIInputModeLibraryLocal::StartsWithCursorHidden(WorldContextObject, PlayerController, UserIndex);
 	if (bFlushInput)
 	{
 		PlayerController->FlushPressedKeys();

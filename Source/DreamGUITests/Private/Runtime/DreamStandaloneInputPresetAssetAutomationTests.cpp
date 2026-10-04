@@ -6,6 +6,7 @@
 
 #include "Components/InputComponent.h"
 #include "Components/SceneComponent.h"
+#include "Core/Components/DreamWidget.h"
 #include "Core/DreamUISettings.h"
 #include "Engine/BlueprintGeneratedClass.h"
 #include "Engine/Engine.h"
@@ -415,6 +416,9 @@ bool FDreamStandalonePresetAssetBindingsTest::RunTest(const FString& Parameters)
  * (Slate's KeyEventRules pair it with the arrows), arriving as the D-pad's own direction -- the graph
  * bound neither the D-pad nor any direction but None -- and the space bar is confirm (Slate's
  * Accept), which the graph never bound either.
+ *
+ * The space bar presses what the player has focused, as Enter and the pad's accept button do; with nothing focused it
+ * is the game's key, so the press is checked both ways.
  */
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamStandalonePresetAssetNavigationTest,
@@ -452,14 +456,43 @@ bool FDreamStandalonePresetAssetNavigationTest::RunTest(const FString& Parameter
 			static_cast<int32>(Pointer->NavigateDirection), static_cast<int32>(EDreamUINavigationDirection::None));
 	}
 
+	// A confirm presses what the player has focused (DreamUIKeyRouting::RouteConfirmKey). With nothing focused -- the
+	// D-pad found nothing to land on here -- the space bar is the game's: a jump in a level with no menu open.
 	Host.SendKey(EKeys::SpaceBar, IE_Pressed);
 	Host.RunFrame();
 	UDreamPointerEventData* Pointer = Host.Pointer();
+	if (!TestNotNull(TEXT("Player 0's pointer is still there"), Pointer))
+	{
+		return false;
+	}
+	TestFalse(TEXT("With nothing focused the space bar presses nothing"), Pointer->bNowIsTriggerPressed);
+	Host.SendKey(EKeys::SpaceBar, IE_Released);
+	Host.RunFrame();
+
+	// Something focused: a widget with nothing on it to press, so the press stays navigation's trigger.
+	UWorld* World = Host.Scope.World;
+	UDreamWidget* Focused = NewObject<UDreamWidget>(World, NAME_None, RF_Transient);
+	Focused->OnRegister();
+	ON_SCOPE_EXIT
+	{
+		if (IsValid(Focused))
+		{
+			Focused->DestroyWidget();
+		}
+	};
+	UDreamUIInputSubsystem* Input = UDreamUIInputSubsystem::Get(World);
+	if (!TestTrue(TEXT("Player 0 has something focused"), Input != nullptr && Input->FocusForNavigation(Focused, 0)))
+	{
+		return false;
+	}
+	Host.SendKey(EKeys::SpaceBar, IE_Pressed);
+	Host.RunFrame();
+	Pointer = Host.Pointer();
 	if (!TestNotNull(TEXT("The space bar reached the preset's navigation"), Pointer))
 	{
 		return false;
 	}
-	TestTrue(TEXT("The space bar is confirm: it presses navigation's trigger"), Pointer->bNowIsTriggerPressed);
+	TestTrue(TEXT("The space bar is confirm: it presses navigation's trigger on the focus"), Pointer->bNowIsTriggerPressed);
 	TestEqual(TEXT("...as navigation, not as a pointer"), static_cast<int32>(Pointer->InputType), static_cast<int32>(EDreamUIPointerInputType::Navigation));
 	Host.SendKey(EKeys::SpaceBar, IE_Released);
 	Host.RunFrame();

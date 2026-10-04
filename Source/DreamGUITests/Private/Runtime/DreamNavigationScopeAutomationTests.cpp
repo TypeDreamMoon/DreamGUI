@@ -5,6 +5,7 @@
 #include "Misc/AutomationTest.h"
 
 #include "Core/Components/DreamWidget.h"
+#include "Core/DreamGUISettings.h"
 #include "Core/DreamUIInputServices.h"
 #include "Interaction/DreamUINavigationScope.h"
 #include "Interaction/DreamUINavigationStack.h"
@@ -277,6 +278,98 @@ bool FDreamNavigationScopeFocusNotTakenBackTest::RunTest(const FString& Paramete
 	TestEqual(TEXT("The dialog took focus again"), Services->GetFocusedWidget(0), OnDialog->GetWidget());
 	Dialog->DeactivateScope();
 	TestEqual(TEXT("Closing it with focus inside gives the page its focus back"), Services->GetFocusedWidget(0), OnPage->GetWidget());
+
+	Root->DestroyWidget();
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamNavigationScopeOwnerTest,
+	"DreamGUI.Navigation.Scope.AScopeThatNamesNoPlayerBelongsToItsWidgetsPlayer",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * A scope's player used to default to 0, so every screen on player 2's half of a split screen confined player 1, answered
+ * player 1's Back and kept player 2's action bindings dead. -1, the default now, is the player who owns the scope's
+ * widget, resolved when asked; a number still wins.
+ */
+bool FDreamNavigationScopeOwnerTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamNavigationScopeTestLocal;
+	FScopedGameWorld TestWorld;
+	UDreamUINavigationStack* Stack = TestWorld.World->GetSubsystem<UDreamUINavigationStack>();
+	if (!TestNotNull(TEXT("Navigation stack subsystem exists"), Stack))
+	{
+		return false;
+	}
+	UDreamWidget* Root = MakeWidget(TestWorld.World, nullptr, TEXT("Root"), 0.0f, 0.0f, 800.0f, 600.0f);
+	UDreamWidget* PageWidget = MakeWidget(TestWorld.World, Root, TEXT("Page"), 0.0f, 0.0f, 400.0f, 400.0f);
+	UDreamUINavigationScope* Page = MakeScope(PageWidget);
+
+	TestEqual(TEXT("a scope that names no player answers its widget's player"), Page->GetUserIndex(), PageWidget->GetOwningPlayerIndex());
+	Page->ActivateScope();
+	TestEqual(TEXT("and goes on that player's stack"), Stack->GetActiveScope(PageWidget->GetOwningPlayerIndex()), Page);
+	Page->DeactivateScope();
+
+	Page->SetUserIndex(1);
+	TestEqual(TEXT("a player it names wins"), Page->GetUserIndex(), 1);
+	Page->ActivateScope();
+	TestEqual(TEXT("and it goes on that player's stack"), Stack->GetActiveScope(1), Page);
+	TestNull(TEXT("not the owner's"), Stack->GetActiveScope(PageWidget->GetOwningPlayerIndex()));
+	Page->DeactivateScope();
+
+	Page->SetUserIndex(-1);
+	TestEqual(TEXT("-1 is the owner again"), Page->GetUserIndex(), PageWidget->GetOwningPlayerIndex());
+
+	Root->DestroyWidget();
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamNavigationScopeInputModeTest,
+	"DreamGUI.Navigation.Scope.ThePlayersInputModeIsTheirActiveScopesElseTheProjectsDefault",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * CommonUI's Menu / Game / All, per screen: what the key routing asks before DreamGUI navigates, confirms or goes Back for
+ * a player, and what a game's own input asks to know whether a menu is up.
+ */
+bool FDreamNavigationScopeInputModeTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamNavigationScopeTestLocal;
+	FScopedGameWorld TestWorld;
+	UDreamUINavigationStack* Stack = TestWorld.World->GetSubsystem<UDreamUINavigationStack>();
+	if (!TestNotNull(TEXT("Navigation stack subsystem exists"), Stack))
+	{
+		return false;
+	}
+	TGuardValue<EDreamUIScopeInputMode> WithoutScope(GetMutableDefault<UDreamGUISettings>()->InputModeWithoutScope, EDreamUIScopeInputMode::All);
+	UDreamWidget* Root = MakeWidget(TestWorld.World, nullptr, TEXT("Root"), 0.0f, 0.0f, 800.0f, 600.0f);
+	UDreamUINavigationScope* Hud = MakeScope(MakeWidget(TestWorld.World, Root, TEXT("Hud"), 0.0f, 0.0f, 400.0f, 400.0f));
+	UDreamUINavigationScope* Menu = MakeScope(MakeWidget(TestWorld.World, Root, TEXT("Menu"), 0.0f, 0.0f, 200.0f, 200.0f));
+	Hud->SetUserIndex(0);
+	Menu->SetUserIndex(0);
+	Hud->SetConfineNavigation(false);
+
+	TestEqual(TEXT("a scope keeps All unless told otherwise"), Hud->GetInputMode(), EDreamUIScopeInputMode::All);
+	TestEqual(TEXT("with no scope, the project's default"), Stack->GetEffectiveInputMode(0), EDreamUIScopeInputMode::All);
+	{
+		TGuardValue<EDreamUIScopeInputMode> GameWithoutScope(GetMutableDefault<UDreamGUISettings>()->InputModeWithoutScope, EDreamUIScopeInputMode::Game);
+		TestEqual(TEXT("whatever the project says it is"), Stack->GetEffectiveInputMode(0), EDreamUIScopeInputMode::Game);
+	}
+
+	Hud->SetInputMode(EDreamUIScopeInputMode::Game);
+	Hud->ActivateScope();
+	TestEqual(TEXT("a gameplay HUD in front makes the player's mode Game"), Stack->GetEffectiveInputMode(0), EDreamUIScopeInputMode::Game);
+	TestEqual(TEXT("for that player only"), Stack->GetEffectiveInputMode(1), EDreamUIScopeInputMode::All);
+
+	Menu->SetInputMode(EDreamUIScopeInputMode::Menu);
+	Menu->ActivateScope();
+	TestEqual(TEXT("a menu pushed over it gives the player Menu"), Stack->GetEffectiveInputMode(0), EDreamUIScopeInputMode::Menu);
+	Menu->DeactivateScope();
+	TestEqual(TEXT("and closing it gives Game back"), Stack->GetEffectiveInputMode(0), EDreamUIScopeInputMode::Game);
+	Hud->DeactivateScope();
+	TestEqual(TEXT("with nothing up, the default again"), Stack->GetEffectiveInputMode(0), EDreamUIScopeInputMode::All);
 
 	Root->DestroyWidget();
 	return true;

@@ -8,6 +8,7 @@
 #include "Core/DreamWidgetNavigation.h"
 #include "Engine/World.h"
 #include "Event/Interface/DreamNavigationInterface.h"
+#include "Interaction/DreamUINavigationScope.h"
 #include "Interaction/UISelectable.h"
 #include "DreamNavigationTestTypes.h"
 #include "DreamScopedWorld.h"
@@ -305,6 +306,141 @@ bool FDreamWidgetNavigationCustomBoundaryTest::RunTest(const FString& Parameters
 	TestFalse(TEXT("unbinding clears the rule"), Navigation->HasRuleFor(EDreamUINavigationDirection::Left));
 
 	Root->DestroyWidget();
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamWidgetNavigationConfinedTest,
+	"DreamGUI.Navigation.PerWidget.ANavigationOnlyWidgetInsideADialogCannotLeaveIt",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamWidgetNavigationConfinedTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamWidgetNavigationTestLocal;
+	FScopedGameWorld TestWorld;
+
+	/*
+	 * The rules' own scans passed no limit at all: a widget whose only navigation is these rules walked out of a dialog, a
+	 * menu and its own player's screen, where a selectable beside it stayed in. They are now kept where a selectable's
+	 * scan is kept -- the open popup or confining screen that holds the widget, else its root canvas.
+	 */
+	UDreamWidget* Root = MakeWidget(TestWorld.World, TEXT("Root"), 0.0f, 0.0f);
+	UDreamWidget* Dialog = MakeWidget(TestWorld.World, TEXT("Dialog"), 0.0f, 0.0f);
+	UDreamWidget* Inside = MakeWidget(TestWorld.World, TEXT("Inside"), 0.0f, 0.0f);
+	UDreamWidget* InsideLeft = MakeWidget(TestWorld.World, TEXT("InsideLeft"), -200.0f, 0.0f);
+	UDreamWidget* Outside = MakeWidget(TestWorld.World, TEXT("Outside"), 600.0f, 0.0f);
+	Dialog->TrySetParent(Root, false);
+	Inside->TrySetParent(Dialog, false);
+	InsideLeft->TrySetParent(Dialog, false);
+	Outside->TrySetParent(Root, false);
+	UDreamWidgetNavigation* Navigation = Inside->GetOrCreateNavigation();
+	InsideLeft->GetOrCreateNavigation();
+	Outside->GetOrCreateNavigation();
+
+	TestEqual(TEXT("with nothing holding it, Right reaches the widget outside"),
+		Navigate(Navigation, EDreamUINavigationDirection::Right), Outside);
+
+	UDreamUINavigationScope* Scope = Dialog->AddComponent<UDreamUINavigationScope>();
+	Scope->SetActivateWhenEnabled(false);
+	Scope->ActivateScope();
+	TestNull(TEXT("with the dialog holding it, Right finds nothing outside"),
+		Navigate(Navigation, EDreamUINavigationDirection::Right));
+	TestEqual(TEXT("and Left still reaches what is inside"),
+		Navigate(Navigation, EDreamUINavigationDirection::Left), InsideLeft);
+
+	// Wrap comes back in on the far side of the dialog, never onto the page.
+	Navigation->SetRule(EDreamUINavigationDirection::Right, EDreamUINavigationRule::Wrap);
+	TestEqual(TEXT("a Wrap rule on Right comes back in on the dialog's far side"),
+		Navigate(Navigation, EDreamUINavigationDirection::Right), InsideLeft);
+	// And on Next, which used to ignore it: the far end of the sequence, inside the dialog.
+	Navigation->SetRule(EDreamUINavigationDirection::Next, EDreamUINavigationRule::Wrap);
+	TestEqual(TEXT("a Wrap rule on Next goes round to the far end of the sequence"),
+		Navigate(Navigation, EDreamUINavigationDirection::Next), InsideLeft);
+
+	Scope->DeactivateScope();
+	TestEqual(TEXT("closed, the dialog holds nothing: the scan finds the widget outside first"),
+		Navigate(Navigation, EDreamUINavigationDirection::Right), Outside);
+
+	Root->DestroyWidget();
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamWidgetNavigationDefersToSelectableTest,
+	"DreamGUI.Navigation.PerWidget.ADirectionWithNoRuleIsAnsweredByTheSelectableBesideIt",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamWidgetNavigationDefersToSelectableTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamWidgetNavigationTestLocal;
+	FScopedGameWorld TestWorld;
+
+	/*
+	 * Once any direction has a rule, the pipeline hands every move to the rules component (FindNavigationBehaviour) --
+	 * including the directions it has no rule for, which are still the selectable's: its explicit links, its None.
+	 */
+	UDreamWidget* FromWidget = MakeWidget(TestWorld.World, TEXT("From"), 0.0f, 0.0f);
+	UDreamWidget* ByRule = MakeWidget(TestWorld.World, TEXT("ByRule"), 300.0f, 0.0f);
+	UDreamWidget* BySelectable = MakeWidget(TestWorld.World, TEXT("BySelectable"), -600.0f, 0.0f);
+	UUISelectable* Selectable = FromWidget->AddComponent<UUISelectable>();
+	UUISelectable* SelectableTarget = BySelectable->AddComponent<UUISelectable>();
+	ByRule->AddComponent<UUISelectable>();
+	if (!TestNotNull(TEXT("the source carries a selectable"), Selectable)
+		|| !TestNotNull(TEXT("and so does the selectable's target"), SelectableTarget))
+	{
+		return false;
+	}
+	Selectable->SetNavigationUp(EUISelectableNavigationMode::Explicit);
+	Selectable->SetNavigationUpExplicit(SelectableTarget);
+	UDreamWidgetNavigation* Navigation = FromWidget->GetOrCreateNavigation();
+	Navigation->SetExplicitTarget(EDreamUINavigationDirection::Right, ByRule);
+
+	TestTrue(TEXT("with a rule authored, the rules component receives the widget's moves"),
+		DreamUINavigationScan::FindNavigationBehaviour(FromWidget) == Navigation);
+	TestEqual(TEXT("the direction with a rule is the rule's"),
+		Navigate(Navigation, EDreamUINavigationDirection::Right), ByRule);
+	TestEqual(TEXT("the direction without one is the selectable's own explicit link"),
+		Navigate(Navigation, EDreamUINavigationDirection::Up), BySelectable);
+	Selectable->SetNavigationDown(EUISelectableNavigationMode::None);
+	TestNull(TEXT("and its None"), Navigate(Navigation, EDreamUINavigationDirection::Down));
+
+	FromWidget->DestroyWidget();
+	ByRule->DestroyWidget();
+	BySelectable->DestroyWidget();
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamWidgetNavigationUnfocusableTest,
+	"DreamGUI.Navigation.PerWidget.AWidgetMadeUnfocusableIsNoLandingSpot",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamWidgetNavigationUnfocusableTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamWidgetNavigationTestLocal;
+	FScopedGameWorld TestWorld;
+
+	// SetFocus refuses a widget that is not focusable; navigation used to land on one anyway and strand the player there.
+	UDreamWidget* PanelA = MakeWidget(TestWorld.World, TEXT("PanelA"), 0.0f, 0.0f);
+	UDreamWidget* PanelB = MakeWidget(TestWorld.World, TEXT("PanelB"), 300.0f, 0.0f);
+	UDreamWidget* Button = MakeWidget(TestWorld.World, TEXT("Button"), -300.0f, 0.0f);
+	UDreamWidgetNavigation* NavA = PanelA->GetOrCreateNavigation();
+	UDreamWidgetNavigation* NavB = PanelB->GetOrCreateNavigation();
+	UUISelectable* ButtonSelectable = Button->AddComponent<UUISelectable>();
+	NavA->SetExplicitTarget(EDreamUINavigationDirection::Right, PanelB);
+	TestEqual(TEXT("a focusable target is landed on"), Navigate(NavA, EDreamUINavigationDirection::Right), PanelB);
+
+	PanelB->SetIsFocusable(false);
+	TestFalse(TEXT("a navigation-only widget made unfocusable refuses navigation"), IDreamNavigationInterface::Execute_CanNavigateHere(NavB));
+	TestNull(TEXT("so a link to it lands nowhere"), Navigate(NavA, EDreamUINavigationDirection::Right));
+
+	Button->SetIsFocusable(false);
+	TestFalse(TEXT("and so does a control"), IDreamNavigationInterface::Execute_CanNavigateHere(ButtonSelectable));
+	TestNull(TEXT("which the scan passes over too"), Navigate(NavA, EDreamUINavigationDirection::Left));
+
+	PanelA->DestroyWidget();
+	PanelB->DestroyWidget();
+	Button->DestroyWidget();
 	return true;
 }
 

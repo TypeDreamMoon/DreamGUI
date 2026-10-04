@@ -8,6 +8,8 @@
 #include "Core/Components/DreamWidget.h"
 #include "Interaction/DreamUINavigationScroll.h"
 #include "Engine/World.h"
+#include "InputCoreTypes.h"
+#include "DreamNavigationTestTypes.h"
 #include "DreamScopedWorld.h"
 
 /*
@@ -178,6 +180,79 @@ bool FDreamNavigationScrollPagingTest::RunTest(const FString& Parameters)
 	TestFalse(TEXT("...and neither does an end key"), FDreamUINavigationScroll::ScrollToExtent(Loose, false));
 
 	Loose->DestroyWidget();
+	ScrollWidget->DestroyWidget();
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamNavigationScrollSelfTest,
+	"DreamGUI.Navigation.Scroll.TheFocusedWidgetsOwnContainerIsWhatItsKeysAndStickScroll",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamNavigationScrollSelfTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamNavigationScrollTestLocal;
+	FScopedGameWorld TestWorld;
+
+	/*
+	 * The search for what a page key or the right stick scrolls started at the focused widget's PARENT, so a focused scroll
+	 * box could not scroll itself: an EULA or a credits panel with nothing to focus inside it did not move by PageDown or
+	 * the stick. The keys now start at the widget itself -- and, at each level, at the widget it names for its own content
+	 * (GetScrollTargetForNavigation), as a scroll box control names its viewport while the focus sits on its face.
+	 */
+	UDreamWidget* ScrollWidget = nullptr;
+	TArray<UDreamWidget*> Rows;
+	UDreamLayoutContainerScrollBox* ScrollBox = MakeListOfThree(TestWorld.World, ScrollWidget, Rows);
+	if (!TestNotNull(TEXT("a list to scroll"), ScrollBox))
+	{
+		return false;
+	}
+	TestTrue(TEXT("the list itself pages its own content"), FDreamUINavigationScroll::ScrollByPages(ScrollWidget, 1.0f, false));
+	TestEqual(TEXT("...by one viewport"), ScrollBox->GetScrollOffset(), 120.0f);
+	TestTrue(TEXT("its End key goes to its own end"), FDreamUINavigationScroll::ScrollToExtent(ScrollWidget, false));
+	TestEqual(TEXT("...all the way"), ScrollBox->GetScrollOffset(), 180.0f);
+	TestTrue(TEXT("and the stick moves it"), FDreamUINavigationScroll::ScrollByAnalogAxis(ScrollWidget, EKeys::Gamepad_RightY, FVector2D(0.0f, -30.0f)));
+	TestEqual(TEXT("...by what it was given"), ScrollBox->GetScrollOffset(), 150.0f);
+	// Reveal and reachability still start at the parent: a widget is not revealed by scrolling its own children.
+	TestFalse(TEXT("its own container is still no scrolling ANCESTOR"), FDreamUINavigationScroll::HasScrollableAncestor(ScrollWidget));
+
+	// A control whose scrolling lives on a child while its focus sits on another child, a scroll box's shape.
+	UDreamScrollTargetTestWidget* Control = NewObject<UDreamScrollTargetTestWidget>(TestWorld.World, NAME_None, RF_Public | RF_Transactional);
+	Control->SetDisplayName(TEXT("Control"));
+	Control->SetWidth(200.0f);
+	Control->SetHeight(120.0f);
+	Control->OnRegister();
+	UDreamWidget* Face = MakeWidget(TestWorld.World, Control, TEXT("Face"), 200.0f, 120.0f);
+	Face->OnRegister();
+	UDreamWidget* Viewport = MakeWidget(TestWorld.World, Control, TEXT("Viewport"), 200.0f, 120.0f);
+	UDreamLayoutContainerScrollBox* ViewportBox = Viewport->CreateNewLayoutContainer<UDreamLayoutContainerScrollBox>();
+	for (int32 i = 0; i < 3; i++)
+	{
+		MakeWidget(TestWorld.World, Viewport, *FString::Printf(TEXT("ViewportRow%d"), i), 180.0f, 100.0f);
+	}
+	Viewport->OnRegister();
+	UDreamWidget::MarkLayoutForRebuild(Viewport);
+	UDreamWidget::RebuildLayoutImmediately(Viewport);
+	if (!TestNotNull(TEXT("the viewport scrolls"), ViewportBox))
+	{
+		Control->DestroyWidget();
+		ScrollWidget->DestroyWidget();
+		return false;
+	}
+
+	TestFalse(TEXT("with no scroll target named, the focused face has nothing to scroll"),
+		FDreamUINavigationScroll::ScrollByPages(Face, 1.0f, false));
+	Control->ScrollTarget = Viewport;
+	TestTrue(TEXT("once the control names its viewport, a page key on the face scrolls it"),
+		FDreamUINavigationScroll::ScrollByPages(Face, 1.0f, false));
+	TestEqual(TEXT("...by one of its screenfuls"), ViewportBox->GetScrollOffset(), 120.0f);
+	TestTrue(TEXT("Home on the face goes to the viewport's start"), FDreamUINavigationScroll::ScrollToExtent(Face, true));
+	TestEqual(TEXT("...all the way"), ViewportBox->GetScrollOffset(), 0.0f);
+	TestTrue(TEXT("the right stick on the face scrolls the viewport"),
+		FDreamUINavigationScroll::ScrollByAnalogAxis(Face, EKeys::Gamepad_RightY, FVector2D(0.0f, 45.0f)));
+	TestEqual(TEXT("...by what it was given"), ViewportBox->GetScrollOffset(), 45.0f);
+
+	Control->DestroyWidget();
 	ScrollWidget->DestroyWidget();
 	return true;
 }

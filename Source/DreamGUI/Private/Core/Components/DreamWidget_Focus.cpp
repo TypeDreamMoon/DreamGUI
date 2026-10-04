@@ -54,6 +54,23 @@ void UDreamWidget::SetIsFocusable(bool Value)
 	}
 }
 
+// The three Tab properties are read by the Tab walk at each press (FDreamUITabOrder), and nothing keeps an answer worked
+// out from them, so a change takes effect at the next press with nothing to drop.
+void UDreamWidget::SetIsTabStop(bool Value)
+{
+	bIsTabStop = Value;
+}
+
+void UDreamWidget::SetTabIndex(int32 Value)
+{
+	TabIndex = Value;
+}
+
+void UDreamWidget::SetTabNavigation(EDreamWidgetTabNavigation Value)
+{
+	TabNavigation = Value;
+}
+
 bool UDreamWidget::SetFocus(int32 UserIndex, int32 PointerId)
 {
 	if (!bIsFocusable || !GetRenderVisibleInHierarchy() || !GetInteractableInHierarchy())

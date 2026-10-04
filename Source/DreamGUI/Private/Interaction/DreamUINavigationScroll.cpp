@@ -45,6 +45,51 @@ namespace DreamUINavigationScrollLocal
 
 	// Defined with the analog-scroll helpers further down; declared here because the reveal above them asks it too.
 	static FScrollAncestor FindInnermostScrollAncestor(const UDreamWidget* InWidget);
+
+	/** InWidget's own scrolling container, the scroll box layout first: what scrolls its children. Empty when it has none. */
+	static FScrollAncestor FindOwnScrollContainer(const UDreamWidget* InWidget)
+	{
+		FScrollAncestor Found;
+		if (!IsValid(InWidget))
+		{
+			return Found;
+		}
+		if (auto Box = Cast<UDreamLayoutContainerScrollBox>(InWidget->GetLayoutContainer()))
+		{
+			Found.Box = Box;
+			return Found;
+		}
+		Found.View = Cast<IDreamUIScrollable>(InWidget->GetComponentByInterface(UDreamUIScrollable::StaticClass()));
+		return Found;
+	}
+
+	/**
+	 * The scrolling container a key or the stick aimed at InWidget acts on: the innermost one, starting at InWidget itself.
+	 * At each level, from InWidget up, the container of the widget it names for its own content
+	 * (UDreamWidget::GetScrollTargetForNavigation -- a scroll box control names its viewport, which carries its view) is
+	 * asked first, then the level's own. Starting at the parent, as reveal does, left a focused scroll box unable to scroll
+	 * itself: its view sits on a child, and the focus on its face.
+	 */
+	static FScrollAncestor FindScrollContainerForFocus(const UDreamWidget* InWidget)
+	{
+		for (const UDreamWidget* Level = InWidget; IsValid(Level); Level = Level->GetParent())
+		{
+			if (const UDreamWidget* Target = Level->GetScrollTargetForNavigation(); IsValid(Target) && Target != Level)
+			{
+				const FScrollAncestor FromTarget = FindOwnScrollContainer(Target);
+				if (FromTarget.Box != nullptr || FromTarget.View != nullptr)
+				{
+					return FromTarget;
+				}
+			}
+			const FScrollAncestor Own = FindOwnScrollContainer(Level);
+			if (Own.Box != nullptr || Own.View != nullptr)
+			{
+				return Own;
+			}
+		}
+		return FScrollAncestor();
+	}
 }
 
 bool FDreamUINavigationScroll::IsReachableByScrolling(const UDreamWidget* InWidget)
@@ -134,7 +179,7 @@ bool FDreamUINavigationScroll::ScrollByAnalogAxis(UDreamWidget* InWidget, const 
 		return false;
 	}
 	const DreamUINavigationScrollLocal::FScrollAncestor Ancestor =
-		DreamUINavigationScrollLocal::FindInnermostScrollAncestor(InWidget);
+		DreamUINavigationScrollLocal::FindScrollContainerForFocus(InWidget);
 	// An unset key means "whatever the preset already routes here", which is how every container
 	// behaved before the key existed and is therefore what an untouched project still gets.
 	FKey Declared;
@@ -164,11 +209,11 @@ bool FDreamUINavigationScroll::ScrollByAnalogAxis(UDreamWidget* InWidget, const 
 namespace DreamUINavigationScrollLocal
 {
 	/**
-	 * The scrolling container closest to InWidget, or an empty entry when it has none.
-	 *
-	 * Paging acts on the INNERMOST one, unlike RevealWidget which walks the whole chain: a page key
-	 * pressed inside a list means "this list", and scrolling the page around it as well would move
-	 * the thing the player is reading out from under them.
+	 * The scrolling ancestor closest to InWidget, its own container left out, or an empty entry when it has none: what
+	 * HasScrollableAncestor asks about. The keys and the stick take FindScrollContainerForFocus instead, which starts at
+	 * the widget itself -- and like it, act on the INNERMOST container only, unlike RevealWidget which walks the whole
+	 * chain: a page key pressed inside a list means "this list", and scrolling the page around it as well would move the
+	 * thing the player is reading out from under them.
 	 */
 	static FScrollAncestor FindInnermostScrollAncestor(const UDreamWidget* InWidget)
 	{
@@ -228,7 +273,7 @@ bool FDreamUINavigationScroll::ScrollByPages(UDreamWidget* InWidget, float InPag
 		return false;
 	}
 	const DreamUINavigationScrollLocal::FScrollAncestor Ancestor =
-		DreamUINavigationScrollLocal::FindInnermostScrollAncestor(InWidget);
+		DreamUINavigationScrollLocal::FindScrollContainerForFocus(InWidget);
 	const float PageExtent = DreamUINavigationScrollLocal::GetPageExtent(Ancestor);
 	if (PageExtent <= 0.0f)
 	{
@@ -268,7 +313,7 @@ bool FDreamUINavigationScroll::ScrollToExtent(UDreamWidget* InWidget, bool bToSt
 		return false;
 	}
 	const DreamUINavigationScrollLocal::FScrollAncestor Ancestor =
-		DreamUINavigationScrollLocal::FindInnermostScrollAncestor(InWidget);
+		DreamUINavigationScrollLocal::FindScrollContainerForFocus(InWidget);
 	if (Ancestor.Box != nullptr)
 	{
 		const float Before = Ancestor.Box->GetScrollOffset();
@@ -298,7 +343,7 @@ bool FDreamUINavigationScroll::ScrollByDelta(UDreamWidget* InWidget, const FVect
 		return false;
 	}
 	const DreamUINavigationScrollLocal::FScrollAncestor Ancestor =
-		DreamUINavigationScrollLocal::FindInnermostScrollAncestor(InWidget);
+		DreamUINavigationScrollLocal::FindScrollContainerForFocus(InWidget);
 	if (Ancestor.Box != nullptr)
 	{
 		// A box scrolls on one axis, and which component of the stick to take is decided by that axis

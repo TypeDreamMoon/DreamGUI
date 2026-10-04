@@ -37,6 +37,9 @@ namespace DreamSelectableInteractableTestLocal
 		Widget->SetDisplayName(InName);
 		Widget->SetWidth(100.0f);
 		Widget->SetHeight(40.0f);
+		// Focusable, as registering the selectable would make it: this widget is never registered, and navigation does not
+		// land on a widget that cannot take focus (UUISelectable::CanBeNavigatedTo).
+		Widget->SetIsFocusable(true);
 		return Widget->AddComponent<UUISelectable>();
 	}
 }

@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "Subsystems/WorldSubsystem.h"
 #include "Core/DreamUIWorldService.h"
+#include "Core/DreamUIInputServices.h"
 #include "DreamUINavigationStack.generated.h"
 
 class UDreamUINavigationScope;
@@ -54,6 +55,13 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Navigation")
 	UDreamUINavigationScope* GetActiveScope(int32 InUserIndex = 0)const;
 	/**
+	 * What player InUserIndex's keys and pad do now: their active scope's InputMode, else UDreamGUISettings::
+	 * InputModeWithoutScope. What the key routing asks before it navigates, confirms or goes Back for the player -- and what
+	 * a project's own gameplay input asks to know whether a menu is up.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Navigation")
+	EDreamUIScopeInputMode GetEffectiveInputMode(int32 InUserIndex = 0)const;
+	/**
 	 * The top scope that confines navigation and contains InWidget. Null when navigation is free --
 	 * no scope, a scope that does not confine, or focus currently outside the confining one, which
 	 * happens while a scope is opening and is not a reason to refuse every move.
@@ -70,6 +78,12 @@ public:
 	 * else the widget of the scope FindConfiningScopeFor answers; null when navigation is free.
 	 */
 	UDreamWidget* FindConfiningWidgetFor(const UDreamWidget* InWidget, int32 InUserIndex = INDEX_NONE)const;
+	/**
+	 * The widget of player InUserIndex's top scope when it confines navigation, wherever their focus is: what their Tab
+	 * is kept inside -- and enters from outside -- when no popup of theirs is open (FDreamUITabOrder::FindDomain). Null
+	 * when their top scope does not confine, or they have none.
+	 */
+	UDreamWidget* FindConfiningWidgetForUser(int32 InUserIndex)const;
 
 	/** InUserIndex's open screens, topmost first. */
 	void GetScopeStack(int32 InUserIndex, TArray<UDreamUINavigationScope*>& OutScopes)const;

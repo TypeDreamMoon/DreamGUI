@@ -3,6 +3,8 @@
 #include "Event/DreamUIKeyRouting.h"
 
 #include "Core/Components/DreamWidget.h"
+#include "Core/DreamGUISettings.h"
+#include "Core/DreamScreenUISubsystem.h"
 #include "Core/DreamUISettings.h"
 #include "Engine/World.h"
 #include "Event/DreamEventSystem.h"
@@ -10,67 +12,209 @@
 #include "GameFramework/PlayerController.h"
 #include "GameFramework/PlayerInput.h"
 #include "GenericPlatform/GenericApplication.h"
+#include "HAL/PlatformInput.h"
 #include "Interaction/DreamUIActionRouter.h"
 #include "Interaction/DreamUIDragDrop.h"
+#include "Interaction/DreamUINavigationScope.h"
 #include "Interaction/DreamUINavigationScroll.h"
 #include "Interaction/DreamUINavigationStack.h"
+#include "Interaction/DreamUITabOrder.h"
+#include "Interaction/DreamUITabSwitchTarget.h"
 #include "Interaction/DreamUITextInputTarget.h"
 #include "Interaction/DreamUIVirtualCursor.h"
 
 namespace DreamUIKeyRoutingLocal
 {
-	/**
-	 * Written out instead of read through the virtual accept key: a static table can be built before EKeys has
-	 * registered its keys (a monolithic build runs every static initialiser first), and an unregistered virtual key
-	 * resolves to nothing. What it resolves to -- FGenericPlatformInput::GetGamepadAcceptKey, which no platform this
-	 * engine carries overrides -- is Gamepad_FaceButton_Bottom.
-	 */
-	static const FKey ConfirmKeys[] = {
-		EKeys::Enter,
-		EKeys::SpaceBar,
-		EKeys::Gamepad_FaceButton_Bottom,
-	};
-
-	/** A project that wants its own Back puts Back in its action table and binds it; that is offered the key first and wins. */
-	static const FKey BackKeys[] = {
-		EKeys::Escape,
-		EKeys::Gamepad_FaceButton_Right,
-	};
-
-	/**
-	 * The arrow keys and the D-pad are the rows of Slate's own table (FNavigationConfig's KeyEventRules pairs Left with
-	 * Gamepad_DPad_Left, and so on round), so a D-pad moves the highlight exactly as an arrow key does. The left stick's
-	 * direction keys stand in for Slate's analog navigation on Gamepad_LeftX/LeftY. Tab is Next -- the sequential-focus
-	 * half of navigation, which nothing reached before this table had a row for it.
-	 */
-	static const TPair<FKey, EDreamUINavigationDirection> DirectionKeys[] = {
-		{ EKeys::Left,                     EDreamUINavigationDirection::Left },
-		{ EKeys::Right,                    EDreamUINavigationDirection::Right },
-		{ EKeys::Up,                       EDreamUINavigationDirection::Up },
-		{ EKeys::Down,                     EDreamUINavigationDirection::Down },
-		{ EKeys::Tab,                      EDreamUINavigationDirection::Next },
-		{ EKeys::Gamepad_DPad_Left,        EDreamUINavigationDirection::Left },
-		{ EKeys::Gamepad_DPad_Right,       EDreamUINavigationDirection::Right },
-		{ EKeys::Gamepad_DPad_Up,          EDreamUINavigationDirection::Up },
-		{ EKeys::Gamepad_DPad_Down,        EDreamUINavigationDirection::Down },
-		{ EKeys::Gamepad_LeftStick_Left,   EDreamUINavigationDirection::Left },
-		{ EKeys::Gamepad_LeftStick_Right,  EDreamUINavigationDirection::Right },
-		{ EKeys::Gamepad_LeftStick_Up,     EDreamUINavigationDirection::Up },
-		{ EKeys::Gamepad_LeftStick_Down,   EDreamUINavigationDirection::Down },
-	};
-
-	/** A list longer than a screen was reachable a row at a time and no faster; these move by a screenful. */
-	static const TPair<FKey, float> PageKeys[] = {
-		{ EKeys::PageUp,   -1.0f },
-		{ EKeys::PageDown,  1.0f },
-	};
-	static const TPair<FKey, bool> ExtentKeys[] = {
-		{ EKeys::Home, true },
-		{ EKeys::End,  false },
-	};
-
 	/** Navigation is single-pointer: the navigation cursor lives on the mouse's pointer. */
 	static constexpr int32 NavigationPointerID = 0;
+
+	bool IsSequential(EDreamUINavigationDirection InDirection)
+	{
+		return InDirection == EDreamUINavigationDirection::Next || InDirection == EDreamUINavigationDirection::Prev;
+	}
+
+	/**
+	 * The key tables the routing reads: UDreamGUISettings's, with the platform's own accept and back put in when the
+	 * settings say so, in the shapes DreamUIKeyRouting's Get*Keys answer with. Rebuilt whenever what they are made from
+	 * has changed -- compared at every read, because a remapping screen or a test edits the settings object without
+	 * telling anyone, and a remap takes effect at the next key. Game thread, as every key is.
+	 */
+	struct FKeyTables
+	{
+		bool bBuilt = false;
+
+		// What the tables were made from.
+		TArray<FKey> SourceConfirmKeys;
+		TArray<FKey> SourceBackKeys;
+		TArray<FDreamUIDirectionKey> SourceDirectionKeys;
+		TArray<FDreamUIPageKey> SourcePageKeys;
+		TArray<FDreamUIExtentKey> SourceExtentKeys;
+		TArray<FKey> SourcePreviousTabKeys;
+		TArray<FKey> SourceNextTabKeys;
+		bool bSourceUsePlatformAcceptBack = false;
+		bool bSourceTabNavigation = true;
+
+		// The tables.
+		TArray<FKey> ConfirmKeys;
+		TArray<FKey> BackKeys;
+		TArray<TPair<FKey, EDreamUINavigationDirection>> DirectionKeys;
+		TArray<TPair<FKey, float>> PageKeys;
+		TArray<TPair<FKey, bool>> ExtentKeys;
+		TArray<FKey> PreviousTabKeys;
+		TArray<FKey> NextTabKeys;
+
+		bool IsBuiltFrom(const UDreamGUISettings& InSettings) const
+		{
+			if (!bBuilt || bSourceUsePlatformAcceptBack != InSettings.bUsePlatformAcceptBack || bSourceTabNavigation != InSettings.bTabNavigation
+				|| SourceConfirmKeys != InSettings.ConfirmKeys || SourceBackKeys != InSettings.BackKeys
+				|| SourcePreviousTabKeys != InSettings.PreviousTabKeys || SourceNextTabKeys != InSettings.NextTabKeys
+				|| SourceDirectionKeys.Num() != InSettings.DirectionKeys.Num() || SourcePageKeys.Num() != InSettings.PageKeys.Num()
+				|| SourceExtentKeys.Num() != InSettings.ExtentKeys.Num())
+			{
+				return false;
+			}
+			for (int32 Index = 0; Index < SourceDirectionKeys.Num(); ++Index)
+			{
+				if (SourceDirectionKeys[Index].Key != InSettings.DirectionKeys[Index].Key || SourceDirectionKeys[Index].Direction != InSettings.DirectionKeys[Index].Direction)
+				{
+					return false;
+				}
+			}
+			for (int32 Index = 0; Index < SourcePageKeys.Num(); ++Index)
+			{
+				if (SourcePageKeys[Index].Key != InSettings.PageKeys[Index].Key || SourcePageKeys[Index].Pages != InSettings.PageKeys[Index].Pages)
+				{
+					return false;
+				}
+			}
+			for (int32 Index = 0; Index < SourceExtentKeys.Num(); ++Index)
+			{
+				if (SourceExtentKeys[Index].Key != InSettings.ExtentKeys[Index].Key || SourceExtentKeys[Index].bToStart != InSettings.ExtentKeys[Index].bToStart)
+				{
+					return false;
+				}
+			}
+			return true;
+		}
+
+		void Build(const UDreamGUISettings& InSettings)
+		{
+			bBuilt = true;
+			SourceConfirmKeys = InSettings.ConfirmKeys;
+			SourceBackKeys = InSettings.BackKeys;
+			SourceDirectionKeys = InSettings.DirectionKeys;
+			SourcePageKeys = InSettings.PageKeys;
+			SourceExtentKeys = InSettings.ExtentKeys;
+			SourcePreviousTabKeys = InSettings.PreviousTabKeys;
+			SourceNextTabKeys = InSettings.NextTabKeys;
+			bSourceUsePlatformAcceptBack = InSettings.bUsePlatformAcceptBack;
+			bSourceTabNavigation = InSettings.bTabNavigation;
+
+			const auto CopyValidKeys = [](const TArray<FKey>& InFrom, TArray<FKey>& OutTo)
+			{
+				OutTo.Reset();
+				for (const FKey& Candidate : InFrom)
+				{
+					if (Candidate.IsValid())
+					{
+						OutTo.AddUnique(Candidate);
+					}
+				}
+			};
+			CopyValidKeys(InSettings.ConfirmKeys, ConfirmKeys);
+			CopyValidKeys(InSettings.BackKeys, BackKeys);
+			CopyValidKeys(InSettings.PreviousTabKeys, PreviousTabKeys);
+			CopyValidKeys(InSettings.NextTabKeys, NextTabKeys);
+			if (InSettings.bUsePlatformAcceptBack)
+			{
+				// Read when the tables are built, not when the settings were: a static table can be built before EKeys has
+				// registered its keys, and an unregistered key resolves to nothing. A face button the platform uses the
+				// other way leaves the other table -- on a Switch, where accept is the right face button, the bottom one
+				// confirms no more and the right one is no longer Back.
+				const FKey PlatformAccept = FPlatformInput::GetGamepadAcceptKey();
+				const FKey PlatformBack = FPlatformInput::GetGamepadBackKey();
+				if (PlatformAccept != PlatformBack)
+				{
+					ConfirmKeys.Remove(PlatformBack);
+					BackKeys.Remove(PlatformAccept);
+				}
+				if (PlatformAccept.IsValid())
+				{
+					ConfirmKeys.AddUnique(PlatformAccept);
+				}
+				if (PlatformBack.IsValid())
+				{
+					BackKeys.AddUnique(PlatformBack);
+				}
+			}
+
+			DirectionKeys.Reset();
+			for (const FDreamUIDirectionKey& Row : InSettings.DirectionKeys)
+			{
+				// With Tab navigation off, Tab is a key like any other: the game's.
+				if (!Row.Key.IsValid() || Row.Direction == EDreamUINavigationDirection::None
+					|| (IsSequential(Row.Direction) && !InSettings.bTabNavigation))
+				{
+					continue;
+				}
+				DirectionKeys.Emplace(Row.Key, Row.Direction);
+			}
+			PageKeys.Reset();
+			for (const FDreamUIPageKey& Row : InSettings.PageKeys)
+			{
+				if (Row.Key.IsValid())
+				{
+					PageKeys.Emplace(Row.Key, Row.Pages);
+				}
+			}
+			ExtentKeys.Reset();
+			for (const FDreamUIExtentKey& Row : InSettings.ExtentKeys)
+			{
+				if (Row.Key.IsValid())
+				{
+					ExtentKeys.Emplace(Row.Key, Row.bToStart);
+				}
+			}
+		}
+	};
+
+	const FKeyTables& GetTables()
+	{
+		static FKeyTables Tables;
+		if (const UDreamGUISettings* Settings = UDreamGUISettings::Get(); Settings != nullptr && !Tables.IsBuiltFrom(*Settings))
+		{
+			Tables.Build(*Settings);
+		}
+		return Tables;
+	}
+
+	/** How many screenfuls InKey pages, when it is a page key. Looked up into a value: what the routing does next can rebuild the tables. */
+	bool FindPages(const FKey& InKey, float& OutPages)
+	{
+		for (const TPair<FKey, float>& Page : GetTables().PageKeys)
+		{
+			if (Page.Key == InKey)
+			{
+				OutPages = Page.Value;
+				return true;
+			}
+		}
+		return false;
+	}
+
+	/** Which extent InKey scrolls to, when it is an extent key. */
+	bool FindExtent(const FKey& InKey, bool& bOutToStart)
+	{
+		for (const TPair<FKey, bool>& Extent : GetTables().ExtentKeys)
+		{
+			if (Extent.Key == InKey)
+			{
+				bOutToStart = Extent.Value;
+				return true;
+			}
+		}
+		return false;
+	}
 
 	UWorld* WorldOf(const UDreamUIInputUser* InUser)
 	{
@@ -106,32 +250,32 @@ namespace DreamUIKeyRoutingLocal
 		{
 			return false;
 		}
-		for (const FKey& Confirm : ConfirmKeys)
+		if (DreamUIKeyRouting::IsConfirmKey(InKey))
 		{
-			if (Confirm == InKey)
-			{
-				Cursor->SetConfirmPressedForUser(UserIndex, bInPressed);
-				return true;
-			}
+			Cursor->SetConfirmPressedForUser(UserIndex, bInPressed);
 		}
 		return true;
 	}
 
 	void ReportDevice(UDreamUIInputUser* InUser, const FKey& InKey)
 	{
-		InUser->ReportInputDevice(UDreamEventSystem::GetInputDeviceForKey(InKey));
+		InUser->ReportInputKey(InKey);
 	}
 
-	bool IsShiftHeld(const UDreamUIInputUser* InUser, const FModifierKeysState* InModifiers)
+	/** The chord a key arrived with: stated by the source, or read from this player's controller. */
+	void ReadChord(const UDreamUIInputUser* InUser, const FModifierKeysState* InModifiers, bool& bOutShift, bool& bOutCtrlAltOrCmd)
 	{
 		if (InModifiers != nullptr)
 		{
-			return InModifiers->IsShiftDown();
+			bOutShift = InModifiers->IsShiftDown();
+			bOutCtrlAltOrCmd = InModifiers->IsControlDown() || InModifiers->IsAltDown() || InModifiers->IsCommandDown();
+			return;
 		}
 		// This player's controller, not the first one: on a split screen the other player's shift is not ours.
 		const APlayerController* Controller = InUser->GetPlayerController();
 		const UPlayerInput* Input = Controller != nullptr ? Controller->PlayerInput.Get() : nullptr;
-		return Input != nullptr && Input->IsShiftPressed();
+		bOutShift = Input != nullptr && Input->IsShiftPressed();
+		bOutCtrlAltOrCmd = Input != nullptr && (Input->IsCtrlPressed() || Input->IsAltPressed() || Input->IsCmdPressed());
 	}
 
 	void NotePress(UDreamUIInputUser* InUser, const FKey& InKey, EDreamUIKeyPressTaker InTaker,
@@ -154,43 +298,177 @@ namespace DreamUIKeyRoutingLocal
 			DreamUIKeyRouting::RouteKeyRelease(InUser, InKey, InModifiers);
 		}
 	}
+
+	/**
+	 * Whether a navigation press in InDirection is the UI's rather than the game's. A Tab is while the player has a Tab
+	 * stop to go to -- a Tab that moves DreamGUI's focus is kept from the game where the policy keeps what the UI takes --
+	 * and a direction while the player has something focused to move: a step with nothing focused still looks for
+	 * somewhere to land, but the key is the game's until the UI has something to move.
+	 */
+	bool IsNavigationTaken(const UDreamUIInputUser* InUser, EDreamUINavigationDirection InDirection)
+	{
+		if (IsSequential(InDirection) && UDreamGUISettings::Get()->TabOrder == EDreamUITabOrder::Hierarchy)
+		{
+			return DreamUIKeyRouting::HasTabStops(InUser);
+		}
+		return IsValid(DreamUIKeyRouting::GetKeyTarget(InUser));
+	}
+
+	bool CanSwitchTabsOn(UDreamWidget* InWidget, int32 InUserIndex)
+	{
+		const IDreamUITabSwitchTarget* Target = Cast<IDreamUITabSwitchTarget>(InWidget);
+		return Target != nullptr && Target->CanSwitchTab(InUserIndex);
+	}
+
+	/** The first widget under InRoot, depth first and InRoot included, that switches tabs for player InUserIndex now. */
+	UDreamWidget* FindTabSwitchTargetUnder(UDreamWidget* InRoot, int32 InUserIndex)
+	{
+		TArray<UDreamWidget*, TInlineAllocator<64>> Pending;
+		if (IsValid(InRoot))
+		{
+			Pending.Add(InRoot);
+		}
+		while (Pending.Num() > 0)
+		{
+			UDreamWidget* Candidate = Pending.Pop(EAllowShrinking::No);
+			if (!IsValid(Candidate) || !Candidate->GetWidgetActiveInHierarchy())
+			{
+				continue;//nothing asleep switches tabs, and nothing under it does either
+			}
+			if (CanSwitchTabsOn(Candidate, InUserIndex))
+			{
+				return Candidate;
+			}
+			// Pushed last child first, so the first child is the next one looked at: depth first, in hierarchy order.
+			const TArray<UDreamWidget*>& Children = Candidate->GetChildren();
+			for (int32 Index = Children.Num() - 1; Index >= 0; --Index)
+			{
+				Pending.Add(Children[Index]);
+			}
+		}
+		return nullptr;
+	}
 }
 
-TConstArrayView<FKey> DreamUIKeyRouting::GetConfirmKeys() { return DreamUIKeyRoutingLocal::ConfirmKeys; }
-TConstArrayView<FKey> DreamUIKeyRouting::GetBackKeys() { return DreamUIKeyRoutingLocal::BackKeys; }
-TConstArrayView<TPair<FKey, EDreamUINavigationDirection>> DreamUIKeyRouting::GetDirectionKeys() { return DreamUIKeyRoutingLocal::DirectionKeys; }
-TConstArrayView<TPair<FKey, float>> DreamUIKeyRouting::GetPageKeys() { return DreamUIKeyRoutingLocal::PageKeys; }
-TConstArrayView<TPair<FKey, bool>> DreamUIKeyRouting::GetExtentKeys() { return DreamUIKeyRoutingLocal::ExtentKeys; }
+TConstArrayView<FKey> DreamUIKeyRouting::GetConfirmKeys() { return DreamUIKeyRoutingLocal::GetTables().ConfirmKeys; }
+TConstArrayView<FKey> DreamUIKeyRouting::GetBackKeys() { return DreamUIKeyRoutingLocal::GetTables().BackKeys; }
+TConstArrayView<TPair<FKey, EDreamUINavigationDirection>> DreamUIKeyRouting::GetDirectionKeys() { return DreamUIKeyRoutingLocal::GetTables().DirectionKeys; }
+TConstArrayView<TPair<FKey, float>> DreamUIKeyRouting::GetPageKeys() { return DreamUIKeyRoutingLocal::GetTables().PageKeys; }
+TConstArrayView<TPair<FKey, bool>> DreamUIKeyRouting::GetExtentKeys() { return DreamUIKeyRoutingLocal::GetTables().ExtentKeys; }
 
 EDreamUINavigationDirection DreamUIKeyRouting::GetDirectionForKey(const FKey& InKey, bool bInShiftDown)
 {
-	for (const TPair<FKey, EDreamUINavigationDirection>& Direction : DreamUIKeyRoutingLocal::DirectionKeys)
+	using namespace DreamUIKeyRoutingLocal;
+	for (const TPair<FKey, EDreamUINavigationDirection>& Direction : GetTables().DirectionKeys)
 	{
-		if (Direction.Key == InKey)
+		if (Direction.Key != InKey)
 		{
-			// Tab is the one key in the table whose meaning depends on a modifier.
-			return (Direction.Value == EDreamUINavigationDirection::Next && bInShiftDown) ? EDreamUINavigationDirection::Prev : Direction.Value;
+			continue;
 		}
+		// Tab is the one key in the table whose meaning depends on a modifier: shift walks the sequence the other way.
+		if (bInShiftDown && IsSequential(Direction.Value))
+		{
+			return Direction.Value == EDreamUINavigationDirection::Next ? EDreamUINavigationDirection::Prev : EDreamUINavigationDirection::Next;
+		}
+		return Direction.Value;
 	}
 	return EDreamUINavigationDirection::None;
+}
+
+EDreamUINavigationDirection DreamUIKeyRouting::GetDirectionForChord(const FKey& InKey, bool bInShiftDown, bool bInCtrlAltOrCmdDown)
+{
+	const EDreamUINavigationDirection Direction = GetDirectionForKey(InKey, bInShiftDown);
+	return bInCtrlAltOrCmdDown && DreamUIKeyRoutingLocal::IsSequential(Direction) ? EDreamUINavigationDirection::None : Direction;
 }
 
 bool DreamUIKeyRouting::IsNavigationKey(const FKey& InKey)
 {
 	using namespace DreamUIKeyRoutingLocal;
-	for (const FKey& Confirm : ConfirmKeys)
+	float Pages = 0.0f;
+	bool bToStart = false;
+	return IsConfirmKey(InKey) || GetDirectionForKey(InKey, false) != EDreamUINavigationDirection::None
+		|| FindPages(InKey, Pages) || FindExtent(InKey, bToStart) || GetTabSwitchDelta(InKey) != 0;
+}
+
+FKey DreamUIKeyRouting::GetGamepadAcceptKey()
+{
+	return UDreamGUISettings::Get()->bUsePlatformAcceptBack ? FPlatformInput::GetGamepadAcceptKey() : EKeys::Gamepad_FaceButton_Bottom;
+}
+
+FKey DreamUIKeyRouting::GetGamepadBackKey()
+{
+	return UDreamGUISettings::Get()->bUsePlatformAcceptBack ? FPlatformInput::GetGamepadBackKey() : EKeys::Gamepad_FaceButton_Right;
+}
+
+bool DreamUIKeyRouting::IsConfirmKey(const FKey& InKey)
+{
+	return DreamUIKeyRoutingLocal::GetTables().ConfirmKeys.Contains(InKey);
+}
+
+bool DreamUIKeyRouting::IsBackKey(const FKey& InKey)
+{
+	return DreamUIKeyRoutingLocal::GetTables().BackKeys.Contains(InKey);
+}
+
+int32 DreamUIKeyRouting::GetTabSwitchDelta(const FKey& InKey)
+{
+	const DreamUIKeyRoutingLocal::FKeyTables& Tables = DreamUIKeyRoutingLocal::GetTables();
+	if (Tables.PreviousTabKeys.Contains(InKey))
 	{
-		if (Confirm == InKey)return true;
+		return -1;
 	}
-	for (const TPair<FKey, float>& Page : PageKeys)
+	return Tables.NextTabKeys.Contains(InKey) ? 1 : 0;
+}
+
+UDreamWidget* DreamUIKeyRouting::FindTabSwitchTarget(const UDreamUIInputUser* InUser)
+{
+	using namespace DreamUIKeyRoutingLocal;
+	if (InUser == nullptr)
 	{
-		if (Page.Key == InKey)return true;
+		return nullptr;
 	}
-	for (const TPair<FKey, bool>& Extent : ExtentKeys)
+	const int32 UserIndex = InUser->GetUserIndex();
+	// The nearest one around the focus: a tab view inside another's page switches its own tabs, not the outer one's.
+	for (UDreamWidget* Walker = InUser->GetFocusedWidget(); IsValid(Walker); Walker = Walker->GetParent())
 	{
-		if (Extent.Key == InKey)return true;
+		if (CanSwitchTabsOn(Walker, UserIndex))
+		{
+			return Walker;
+		}
 	}
-	return GetDirectionForKey(InKey, false) != EDreamUINavigationDirection::None;
+	// With the focus in none: the first one on the screen in front -- the active scope's, else the player's screen.
+	UWorld* World = WorldOf(InUser);
+	const UDreamUINavigationStack* Stack = UDreamUINavigationStack::Get(World);
+	const UDreamUINavigationScope* Scope = Stack != nullptr ? Stack->GetActiveScope(UserIndex) : nullptr;
+	if (UDreamWidget* ScopeWidget = Scope != nullptr ? Scope->GetWidget() : nullptr; IsValid(ScopeWidget))
+	{
+		return FindTabSwitchTargetUnder(ScopeWidget, UserIndex);
+	}
+	const UDreamScreenUISubsystem* ScreenUI = World != nullptr ? UDreamScreenUISubsystem::Get(World) : nullptr;
+	return ScreenUI != nullptr ? FindTabSwitchTargetUnder(ScreenUI->GetScreenRoot(InUser->GetPlayerController()), UserIndex) : nullptr;
+}
+
+bool DreamUIKeyRouting::HasBuiltInMeanings(const UDreamUIInputUser* InUser)
+{
+	if (InUser == nullptr)
+	{
+		return false;
+	}
+	const UDreamUINavigationStack* Stack = UDreamUINavigationStack::Get(InUser);
+	const EDreamUIScopeInputMode Mode = Stack != nullptr
+		? Stack->GetEffectiveInputMode(InUser->GetUserIndex())
+		: UDreamGUISettings::Get()->InputModeWithoutScope;
+	return Mode != EDreamUIScopeInputMode::Game;
+}
+
+bool DreamUIKeyRouting::HasTabStops(const UDreamUIInputUser* InUser)
+{
+	if (InUser == nullptr)
+	{
+		return false;
+	}
+	const FDreamUITabDomain Domain = FDreamUITabOrder::FindDomain(InUser, InUser->GetUserIndex(), InUser->GetFocusedWidget());
+	return Domain.IsValid() && FDreamUITabOrder::FindFirstStop(Domain) != nullptr;
 }
 
 bool DreamUIKeyRouting::ShouldReceiveInputWhilePaused()
@@ -212,16 +490,12 @@ UDreamWidget* DreamUIKeyRouting::GetKeyTarget(const UDreamUIInputUser* InUser)
 	{
 		return nullptr;
 	}
-	// The navigation highlight first, because that is what the player is looking at during gamepad input; the focus
-	// is the answer after a click, when there is no highlight.
-	if (const UDreamPointerEventData* Navigation = InUser->FindPointerEventData(DreamUIKeyRoutingLocal::NavigationPointerID))
-	{
-		if (UDreamWidget* Highlighted = Navigation->HighlightWidgetForNavigation.Get(); IsValid(Highlighted))
-		{
-			return Highlighted;
-		}
-	}
-	return InUser->GetFocusedWidget();
+	// The focus, and never the hover highlight. The highlight was asked first, as what a player looks at during pad input,
+	// but every hover rewrote it: Enter pressed the button under a resting mouse rather than the one Tab had reached, and a
+	// screen opening under an idle cursor made the button there what the next confirm pressed. A widget hidden or disabled
+	// while it holds the focus is nothing a key can act on, as the router finds too (UDreamUIActionRouter::GetFocusedWidget).
+	UDreamWidget* Focused = InUser->GetFocusedWidget();
+	return IsValid(Focused) && Focused->GetRenderVisibleInHierarchy() && Focused->GetInteractableInHierarchy() ? Focused : nullptr;
 }
 
 bool DreamUIKeyRouting::RouteConfirmKey(UDreamUIInputUser* InUser, const FKey& InKey, bool bInPressed, const FModifierKeysState* InModifiers)
@@ -249,11 +523,17 @@ bool DreamUIKeyRouting::RouteConfirmKey(UDreamUIInputUser* InUser, const FKey& I
 		NotePress(InUser, InKey, EDreamUIKeyPressTaker::VirtualCursor);
 		return true;
 	}
+	// In gameplay (input mode Game) a confirm is the game's: the jump button does not press the HUD's buttons. And so it is
+	// with nothing focused, which leaves the confirm nothing to press: the space bar in a level with no menu open is a jump,
+	// and the mouse's pointer -- which a confirm turns into the navigation cursor -- keeps its hover.
+	if (!HasBuiltInMeanings(InUser) || !IsValid(GetKeyTarget(InUser)))
+	{
+		NotePress(InUser, InKey, EDreamUIKeyPressTaker::PressOnly);
+		return false;
+	}
 	InUser->InputTriggerForNavigation(true, NavigationPointerID);
 	NotePress(InUser, InKey, EDreamUIKeyPressTaker::NavigationConfirm);
-	// Taken only when there is something for it to press: with nothing focused or highlighted, the key is still the
-	// game's -- the space bar in a level with no menu open is a jump.
-	return IsValid(GetKeyTarget(InUser));
+	return true;
 }
 
 bool DreamUIKeyRouting::RouteDirectionKey(UDreamUIInputUser* InUser, const FKey& InKey, bool bInPressed, const FModifierKeysState* InModifiers)
@@ -263,7 +543,14 @@ bool DreamUIKeyRouting::RouteDirectionKey(UDreamUIInputUser* InUser, const FKey&
 	{
 		return false;
 	}
-	return RouteDirectionKeyAs(InUser, InKey, GetDirectionForKey(InKey, IsShiftHeld(InUser, InModifiers)), bInPressed, InModifiers);
+	if (!bInPressed)
+	{
+		return RouteKeyRelease(InUser, InKey, InModifiers);
+	}
+	bool bShiftDown = false;
+	bool bCtrlAltOrCmdDown = false;
+	ReadChord(InUser, InModifiers, bShiftDown, bCtrlAltOrCmdDown);
+	return RouteDirectionKeyAs(InUser, InKey, GetDirectionForChord(InKey, bShiftDown, bCtrlAltOrCmdDown), true, InModifiers);
 }
 
 bool DreamUIKeyRouting::RouteDirectionKeyAs(UDreamUIInputUser* InUser, const FKey& InKey, EDreamUINavigationDirection InDirection, bool bInPressed, const FModifierKeysState* InModifiers)
@@ -278,6 +565,12 @@ bool DreamUIKeyRouting::RouteDirectionKeyAs(UDreamUIInputUser* InUser, const FKe
 		// The direction its press stepped in, whatever the key would mean now: Tab let go of with shift since pressed is
 		// still the Next it pressed.
 		return RouteKeyRelease(InUser, InKey, InModifiers);
+	}
+	if (InDirection == EDreamUINavigationDirection::None)
+	{
+		// A direction key that is no direction for this press -- Tab with Ctrl, Alt or Cmd held -- is an ordinary key: the
+		// bindings, and nothing after them. Ctrl+Tab used to navigate as Tab does.
+		return RouteOtherKey(InUser, InKey, true, InModifiers);
 	}
 	// Reported BEFORE the cursor is consulted: a keyboard arrow reports the keyboard, which is what takes an auto-mode
 	// virtual cursor down, so the same press then falls through to navigation instead of being eaten by a cursor on its
@@ -295,11 +588,15 @@ bool DreamUIKeyRouting::RouteDirectionKeyAs(UDreamUIInputUser* InUser, const FKe
 		NotePress(InUser, InKey, EDreamUIKeyPressTaker::PressOnly);
 		return true;
 	}
+	// In gameplay the D-pad and the stick are the game's: the HUD's buttons are not walked onto.
+	if (!HasBuiltInMeanings(InUser))
+	{
+		NotePress(InUser, InKey, EDreamUIKeyPressTaker::PressOnly);
+		return false;
+	}
 	InUser->InputNavigation(InDirection, true, NavigationPointerID);
-	NotePress(InUser, InKey, InDirection != EDreamUINavigationDirection::None ? EDreamUIKeyPressTaker::NavigationDirection : EDreamUIKeyPressTaker::PressOnly, InDirection);
-	// As a confirm: a step with nothing focused or highlighted still looks for somewhere to land, but the key is the
-	// game's until the UI has something to move.
-	return IsValid(GetKeyTarget(InUser));
+	NotePress(InUser, InKey, EDreamUIKeyPressTaker::NavigationDirection, InDirection);
+	return IsNavigationTaken(InUser, InDirection);
 }
 
 bool DreamUIKeyRouting::RouteScrollKey(UDreamUIInputUser* InUser, const FKey& InKey, const FModifierKeysState* InModifiers)
@@ -318,26 +615,51 @@ bool DreamUIKeyRouting::RouteScrollKey(UDreamUIInputUser* InUser, const FKey& In
 		return true;
 	}
 	NotePress(InUser, InKey, EDreamUIKeyPressTaker::PressOnly);
+	if (!HasBuiltInMeanings(InUser))
+	{
+		return false;//gameplay: the triggers are the game's
+	}
 	UDreamWidget* Target = GetKeyTarget(InUser);
 	if (!IsValid(Target))
 	{
 		return false;//nothing has focus, so there is no list to page
 	}
-	for (const TPair<FKey, float>& Page : PageKeys)
+	float Pages = 0.0f;
+	if (FindPages(InKey, Pages))
 	{
-		if (Page.Key == InKey)
-		{
-			return FDreamUINavigationScroll::ScrollByPages(Target, Page.Value);
-		}
+		return FDreamUINavigationScroll::ScrollByPages(Target, Pages);
 	}
-	for (const TPair<FKey, bool>& Extent : ExtentKeys)
+	bool bToStart = false;
+	if (FindExtent(InKey, bToStart))
 	{
-		if (Extent.Key == InKey)
-		{
-			return FDreamUINavigationScroll::ScrollToExtent(Target, Extent.Value);
-		}
+		return FDreamUINavigationScroll::ScrollToExtent(Target, bToStart);
 	}
 	return false;
+}
+
+bool DreamUIKeyRouting::RouteTabSwitchKey(UDreamUIInputUser* InUser, const FKey& InKey, const FModifierKeysState* InModifiers)
+{
+	using namespace DreamUIKeyRoutingLocal;
+	if (InUser == nullptr)
+	{
+		return false;
+	}
+	ReportDevice(InUser, InKey);
+	LetGoOfUnreleasedPress(InUser, InKey, InModifiers);
+	// A screen that binds the shoulder buttons -- a character sheet's previous and next hero -- wins over the tab view.
+	if (OfferToBindings(InUser, InKey, true, InModifiers))
+	{
+		NotePress(InUser, InKey, EDreamUIKeyPressTaker::Bindings);
+		return true;
+	}
+	NotePress(InUser, InKey, EDreamUIKeyPressTaker::PressOnly);
+	const int32 Delta = GetTabSwitchDelta(InKey);
+	if (Delta == 0 || !HasBuiltInMeanings(InUser))
+	{
+		return false;
+	}
+	IDreamUITabSwitchTarget* Target = Cast<IDreamUITabSwitchTarget>(FindTabSwitchTarget(InUser));
+	return Target != nullptr && Target->SwitchTab(InUser->GetUserIndex(), Delta);
 }
 
 bool DreamUIKeyRouting::RouteOtherKey(UDreamUIInputUser* InUser, const FKey& InKey, bool bInPressed, const FModifierKeysState* InModifiers)
@@ -370,24 +692,25 @@ bool DreamUIKeyRouting::RouteOtherKey(UDreamUIInputUser* InUser, const FKey& InK
 	NotePress(InUser, InKey, EDreamUIKeyPressTaker::PressOnly);
 	// Only once nothing has claimed the key: a project that binds its own Back action defines what Back does, and the
 	// built-in behaviour is the fallback for one that has not.
-	for (const FKey& BackKey : BackKeys)
+	if (!IsBackKey(InKey))
 	{
-		if (BackKey != InKey)
-		{
-			continue;
-		}
-		// A drag in flight outranks Back: Escape is the universal "put it back" while something is held. This player's
-		// drags only -- any player's Escape used to cancel player 0's.
-		UWorld* World = WorldOf(InUser);
-		if (UDreamUIDragDropSubsystem* DragDrop = UDreamUIDragDropSubsystem::Get(World);
-			DragDrop != nullptr && DragDrop->CancelActiveDragForUser(InUser->GetUserIndex()))
-		{
-			return true;
-		}
-		UDreamUINavigationStack* Stack = UDreamUINavigationStack::Get(World);
-		return Stack != nullptr && Stack->HandleBack(InUser->GetUserIndex());
+		return false;
 	}
-	return false;
+	// A drag in flight outranks Back: Escape is the universal "put it back" while something is held. This player's drags
+	// only -- any player's Escape used to cancel player 0's. A drag is a pointer's, and pointers work in gameplay too.
+	UWorld* World = WorldOf(InUser);
+	if (UDreamUIDragDropSubsystem* DragDrop = UDreamUIDragDropSubsystem::Get(World);
+		DragDrop != nullptr && DragDrop->CancelActiveDragForUser(InUser->GetUserIndex()))
+	{
+		return true;
+	}
+	// In gameplay Back is the game's: the pause menu it opens is the game's to open.
+	if (!HasBuiltInMeanings(InUser))
+	{
+		return false;
+	}
+	UDreamUINavigationStack* Stack = UDreamUINavigationStack::Get(World);
+	return Stack != nullptr && Stack->HandleBack(InUser->GetUserIndex());
 }
 
 bool DreamUIKeyRouting::RouteTextKey(UDreamUIInputUser* InUser, const FKey& InKey, bool bInPressed, const FModifierKeysState& InModifiers)
@@ -411,8 +734,11 @@ bool DreamUIKeyRouting::RouteTextKey(UDreamUIInputUser* InUser, const FKey& InKe
 	{
 		return false;
 	}
-	Target->HandleTextInputKeyWithModifiers(InKey, InModifiers);
-	return true;
+	// Typing is keys: what code moves the focus to next is drawn, as it is after a step (IsFocusVisible).
+	InUser->ReportInputKey(InKey);
+	// The field's own answer: a chord it does not take -- Ctrl, Alt or Cmd with Tab, in a field that leaves Tab to the
+	// bindings -- goes on to them, as an ordinary key, rather than being swallowed as typing.
+	return Target->HandleTextInputKeyWithModifiers(InKey, InModifiers);
 }
 
 bool DreamUIKeyRouting::RouteKeyRelease(UDreamUIInputUser* InUser, const FKey& InKey, const FModifierKeysState* InModifiers)
@@ -454,7 +780,7 @@ bool DreamUIKeyRouting::RouteKeyRelease(UDreamUIInputUser* InUser, const FKey& I
 		return IsValid(GetKeyTarget(InUser));
 	case EDreamUIKeyPressTaker::NavigationDirection:
 		InUser->InputNavigation(Press.Direction, false, NavigationPointerID);
-		return IsValid(GetKeyTarget(InUser));
+		return IsNavigationTaken(InUser, Press.Direction);
 	default:
 		return false;
 	}
@@ -500,30 +826,25 @@ bool DreamUIKeyRouting::RouteKey(UDreamUIInputUser* InUser, const FKey& InKey, b
 		bOutTyped = true;
 		return true;
 	}
-	for (const FKey& Confirm : ConfirmKeys)
+	if (IsConfirmKey(InKey))
 	{
-		if (Confirm == InKey)
-		{
-			return RouteConfirmKey(InUser, InKey, bInPressed, &InModifiers);
-		}
+		return RouteConfirmKey(InUser, InKey, true, &InModifiers);
 	}
+	// A direction key whatever its chord makes of it: Ctrl+Tab goes on from there as an ordinary key.
 	if (GetDirectionForKey(InKey, false) != EDreamUINavigationDirection::None)
 	{
-		return RouteDirectionKey(InUser, InKey, bInPressed, &InModifiers);
+		return RouteDirectionKey(InUser, InKey, true, &InModifiers);
 	}
-	for (const TPair<FKey, float>& Page : PageKeys)
+	float Pages = 0.0f;
+	bool bToStart = false;
+	if (FindPages(InKey, Pages) || FindExtent(InKey, bToStart))
 	{
-		if (Page.Key == InKey)
-		{
-			return bInPressed && RouteScrollKey(InUser, InKey, &InModifiers);
-		}
+		return RouteScrollKey(InUser, InKey, &InModifiers);
 	}
-	for (const TPair<FKey, bool>& Extent : ExtentKeys)
+	// After the field had its turn: a field being edited may take a shoulder button for its own, and then it is typing.
+	if (GetTabSwitchDelta(InKey) != 0)
 	{
-		if (Extent.Key == InKey)
-		{
-			return bInPressed && RouteScrollKey(InUser, InKey, &InModifiers);
-		}
+		return RouteTabSwitchKey(InUser, InKey, &InModifiers);
 	}
-	return RouteOtherKey(InUser, InKey, bInPressed, &InModifiers);
+	return RouteOtherKey(InUser, InKey, true, &InModifiers);
 }

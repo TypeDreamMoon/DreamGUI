@@ -4,12 +4,13 @@
 
 #include "CoreMinimal.h"
 #include "UObject/Object.h"
+#include "Core/Components/DreamUIScrollbarInterface.h"
+#include "Core/Components/DreamWidget.h"
+#include "Core/DreamUIBehaviour.h"
 #include "Core/DreamWidgetNavigation.h"
 #include "Interaction/DreamUIActionBar.h"
 #include "Interaction/DreamUINavigationScope.h"
 #include "DreamNavigationTestTypes.generated.h"
-
-class UDreamWidget;
 
 /**
  * Somewhere for a Custom navigation rule to ask.
@@ -91,4 +92,58 @@ protected:
 		++BackOfferCount;
 		return bHandleBack;
 	}
+};
+
+/**
+ * A single-stop container that answers where Tab enters it, as a list answers its selected row
+ * (UDreamWidget::ResolveTabEntry), and counts the asks: entering is the real step's to do, never a question's.
+ */
+UCLASS()
+class UDreamTabEntryTestWidget : public UDreamWidget
+{
+	GENERATED_BODY()
+
+public:
+	virtual UDreamWidget* ResolveTabEntry(bool bInBackward) override
+	{
+		++EntryCalls;
+		bLastEntryBackward = bInBackward;
+		return Entry;
+	}
+
+	UPROPERTY(Transient)
+	TObjectPtr<UDreamWidget> Entry = nullptr;
+
+	int32 EntryCalls = 0;
+	bool bLastEntryBackward = false;
+};
+
+/** A widget whose own content scrolls on a child of its, as a scroll box control's does on its viewport (GetScrollTargetForNavigation). */
+UCLASS()
+class UDreamScrollTargetTestWidget : public UDreamWidget
+{
+	GENERATED_BODY()
+
+public:
+	virtual UDreamWidget* GetScrollTargetForNavigation() const override
+	{
+		return ScrollTarget;
+	}
+
+	UPROPERTY(Transient)
+	TObjectPtr<UDreamWidget> ScrollTarget = nullptr;
+};
+
+/** A part of a scroll bar, for the Tab walk to leave out: anything carrying the scroll bar interface is one. */
+UCLASS()
+class UDreamScrollbarPartTestBehaviour : public UDreamUIBehaviour, public IDreamUIScrollbarInterface
+{
+	GENERATED_BODY()
+
+public:
+	virtual void SetScrollValueAndSize(float InValue, float InSize, bool bInFireEvent) override {}
+	virtual FDreamUIMulticastDelegateFloat& GetScrollValueChangedEvent() override { return ScrollValueChanged; }
+
+private:
+	FDreamUIMulticastDelegateFloat ScrollValueChanged;
 };
