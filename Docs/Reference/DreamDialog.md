@@ -63,7 +63,7 @@ at all:
 | `MessageNode` | `TObjectPtr<UDreamWidget>` | Dialog | - | read only |  |
 | `ButtonRowNode` | `TObjectPtr<UDreamWidget>` | Dialog | - | read only |  |
 | `ButtonWidgets` | `TArray<TObjectPtr<UDreamButton> >` | Dialog | - | read only | One per entry in Buttons, in order. Rebuilt whenever the specs change. |
-| `BackScope` | `TObjectPtr<UDreamDialogScope>` | Dialog | - | read only | The navigation scope, added only while standalone: it takes focus when the dialog appears, gives it back when the dialog closes, and answers Back while bCloseOnBack asks. See UDreamDialogScope. |
+| `BackScope` | `TObjectPtr<UDreamDialogScope>` | Dialog | - | read only | The navigation scope, added only while standalone: it takes focus when the dialog appears, gives it back when the dialog closes, answers Back while bCloseOnBack asks, and keeps the pad and Tab inside the dialog while it is dimmed, whatever bCloseOnBack says. It belongs to the dialog's owning player. See UDreamDialogScope. |
 
 ## Functions
 

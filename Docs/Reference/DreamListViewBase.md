@@ -64,6 +64,14 @@ either end, or across a one-column list) is left to the ordinary geometric scan,
 to whatever is beside the list -- STableViewBase::OnNavigation's answer. Arriving at a list from
 outside is that same scan, which lands on the nearest row and does not select it.
 
+TAB SEES ONE STOP
+-----------------
+A list is one Tab stop, as a browser's list box is: TabNavigation is Once, Tab enters at
+ResolveTabEntry's row -- the selected item's, else the first item's, the last's for Shift+Tab, found
+by index, scrolled into view and built, because the rows exist only for what shows -- and the next
+Tab leaves the list. The arrows move inside it. Next and Prev are never the rows' to step through
+(HandleRowNavigation leaves them to the Tab walk), and the bar is no stop at all.
+
 WHY THE PLAIN SCROLL VIEW, NOT UUIListView
 ------------------------------------------
 The recycling stack (UUIRecyclableScrollView, and UUIListView on top of it) is the right answer

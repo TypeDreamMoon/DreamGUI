@@ -60,6 +60,7 @@
 ## Function libraries
 
 - [UDreamLyricsLibrary](DreamLyricsLibrary.md)
+- [UDreamTextPaintLibrary](DreamTextPaintLibrary.md)
 - [UDreamUIAnimationLibrary](DreamUIAnimationLibrary.md)
 - [UDreamUIBPLibrary](DreamUIBPLibrary.md)
 - [UDreamUICaptureLibrary](DreamUICaptureLibrary.md)

@@ -33,6 +33,11 @@ the ends, and a drag from that press carries on from there -- SScrollBar's behav
 checked against the 5.8 source a track click paged one handle length toward the pointer (Unity's
 behaviour), so existing screens now jump where they used to step.
 
+Neither the track nor the arrows are a place the pad's navigation lands or Tab stops, which is how
+SScrollBar behaves: the track's UUIScrollbar starts with bCanNavigateHere off (see its class comment)
+and the arrows are made the same in WireParts. The keys and the stick scroll whatever the bar
+follows through the focused control instead.
+
 ## Properties
 
 | Name | Type | Category | In the details panel | From Blueprint | Description |

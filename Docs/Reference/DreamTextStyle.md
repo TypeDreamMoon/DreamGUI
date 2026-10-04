@@ -30,4 +30,10 @@ styles still batch into one draw.
 | `GlowPower` | `float` | Glow | yes | read / write | Glow falloff exponent; higher keeps the glow tight to the face. |
 | `FillDimAlpha` | `float` | Fill | yes | read / write | Alpha of the part of a glyph run that the fill progress has not reached yet (lyrics). |
 | `FillFadeWidth` | `float` | Fill | yes | read / write | Width of the lit/unlit transition as a fraction of the run, 0..1. |
+| `FacePaint` | `FDreamTextPaint` | Paint | yes | read / write | Fill the face with a gradient instead of the text's colour, as CSS's `background-clip: text` with `color: transparent` does: the face is the gradient times the content tint, a custom style's Multiply and TextAnimation's colour, and the text's own Color is not used for it. A <color> run inside stays solid, and so does a hovered link. Emoji keep their colours. Works on every kind of glyph -- distance field, small-text coverage, bitmap -- and on underlines and strikethroughs; drawn by the built-in shader and by materials built on MF_DreamUI_Shade, approximated in the vertex colours for any other material. |
+| `OutlinePaint` | `FDreamTextPaint` | Paint | yes | read / write | Fill the outline with a gradient, times OutlineColor (white shows the gradient as it is). Needs an outline: OutlineColor's alpha and OutlineWidth. |
+| `OverlayPaint` | `FDreamTextPaint` | Paint | yes | read / write | A gradient mixed onto the face, solid or painted, as OverlayBlend says: a highlight band, which UDreamText::SetOverlayPaintPhase moves across the text. |
+| `OverlayBlend` | `EDreamTextOverlayBlend` | Paint | yes | read / write |  |
+| `PaintBoxHorizontal` | `EDreamTextPaintBox` | Paint | yes | read / write | What the text's paints are measured across, across and down; the text as a block on both, CSS's background box, by default. |
+| `PaintBoxVertical` | `EDreamTextPaintBox` | Paint | yes | read / write |  |
 

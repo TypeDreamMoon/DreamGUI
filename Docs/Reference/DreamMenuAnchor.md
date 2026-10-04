@@ -76,7 +76,7 @@ leaving MenuSize at zero on that axis, which hands the axis back to the content.
 
 | Event | Signature | Description |
 |---|---|---|
-| `OnMenuOpenChanged` | `void DreamMenuAnchorOpenChangedEvent__DelegateSignature(bool bIsOpen)` | Open and closed, as the anchor announces them. Fires after the move, never during. |
+| `OnMenuOpenChanged` | `void DreamMenuAnchorOpenChangedEvent__DelegateSignature(bool bIsOpen)` | Open and closed, as the anchor announces them. Fires after the move, never during. An open that closed again before Open returned -- the focus moving into the menu ran a handler that closed it -- announces neither. |
 
 ## Compared with UMG
 

@@ -19,8 +19,8 @@ else from MenuClass -- and destroyed when it closes, as UMG builds and releases 
 Where the menu is drawn is bUseApplicationMenuStack's question. Off, it is drawn in place: clipped by
 the anchor's ancestors and sorted with its siblings, as every saved anchor has always drawn it. On, the
 menu goes onto its player's popup layer (UDreamUIPopupLayer::Push) for as long as it is open -- above
-everything, dismissed by a press outside it or Back, following the anchor -- and is placed there by this
-panel's own Placement and bFitInWindow.
+everything, dismissed by a press outside it, Back or Tab, following the anchor -- and is placed there by this
+panel's own Placement and bFitInWindow, with the slot it has here (padding, nudge), so it lands where it would in place.
 
 ## Properties
 
