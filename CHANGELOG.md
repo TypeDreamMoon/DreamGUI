@@ -75,6 +75,20 @@ the next -- what loads differently, which defaults moved, what C++ has to change
   the control it left heard no exit until the next navigation step, so it went on drawing itself Focused -- and
   answering Focused to `GetCurrentSelectionState` -- beside the control that had the focus, through a screen opening a
   sub-list or a dialog and through being hidden and shown again. A deselect now ends the navigation's hold on it.
+- **What the built-in shader draws after an image through a material is drawn by the built-in shader again.** On a
+  screen or render-target canvas, a draw through a material bound the material's pipeline but left the pass's cache
+  of the built-in pipeline saying it was still bound, so the next text or block drew through the material's shaders:
+  text after a material-drawn image went blank or turned to boxes, and the RHI ensured on parameters set for a vertex
+  shader that was not bound. World-space canvases already set the built-in pipeline again; screen ones now do too.
+- **A brush material whose only parameter of the canvas's is the renderer flag is told the renderer.** The canvas
+  asked a material for its texture parameters only, so `DreamUI_IsRenderByDreamUIRenderer`, a scalar, never counted:
+  a procedural material that premultiplies by it was drawn as it was, the flag at its default, and premultiplied a
+  second time by DreamGUI's renderer.
+- **A material instance given to an image shows the parameters its owner sets on it.** The canvas draws a material
+  through a proxy of its own that caches the material's uniform expressions, and made that cache again only when
+  DreamGUI's own parameters changed: a `SetScalarParameterValue` on the instance after its first draw never reached the
+  screen, so an animated material stood still. The proxy now makes its cache again whenever the instance's own render
+  proxy has, as the draw is gathered.
 
 ## 2.1.0
 

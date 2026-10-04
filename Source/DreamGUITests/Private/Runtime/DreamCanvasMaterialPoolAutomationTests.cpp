@@ -11,6 +11,8 @@
 #include "Core/DreamUIDataAsTexture.h"
 #include "Core/DreamUIManager.h"
 #include "Engine/Texture2D.h"
+#include "Materials/Material.h"
+#include "Materials/MaterialExpressionScalarParameter.h"
 #include "Materials/MaterialInstanceDynamic.h"
 #include "UObject/UObjectHash.h"
 #include "Utils/DreamUIUtils.h"
@@ -122,6 +124,36 @@ bool FDreamCanvasMaterialProxiesTest::RunTest(const FString& Parameters)
 	TestEqual(TEXT("No material instance of the material was made"), InstancesMadeFrom(Canvas, Material).Num(), 0);
 	TestNull(TEXT("The instance given was not given the property data texture"), PropertyDataTextureOf(Given));
 	TestEqual(TEXT("...nor any texture at all"), Given->TextureParameterValues.Num(), 0);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamCanvasRendererFlagOnlyMaterialTest,
+	"DreamGUI.Canvas.AMaterialWhoseOnlyParameterOfTheCanvasIsTheRendererFlagIsAnsweredFor",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamCanvasRendererFlagOnlyMaterialTest::RunTest(const FString& Parameters)
+{
+	/*
+	 * A procedural brush material samples none of the canvas's textures, but premultiplies by the renderer flag. Asked
+	 * about texture parameters alone, the canvas drew it as it was, the flag at its default, and DreamGUI's renderer
+	 * premultiplied it a second time. The flag is a parameter of the canvas's like the textures; any other scalar is not.
+	 */
+	auto MakeMaterialWithScalar = [](FName InName)
+	{
+		UMaterial* Material = NewObject<UMaterial>(GetTransientPackage(), NAME_None, RF_Transient);
+		UMaterialExpressionScalarParameter* Scalar = NewObject<UMaterialExpressionScalarParameter>(Material);
+		Scalar->ParameterName = InName;
+		Material->GetExpressionCollection().AddExpression(Scalar);
+		Material->GetEditorOnlyData()->EmissiveColor.Connect(0, Scalar);
+		Material->UpdateCachedExpressionData();
+		return Material;
+	};
+	UMaterial* FlagOnly = MakeMaterialWithScalar(UDreamCanvas::DreamUI_IsRenderByDreamUIRenderer_MaterialParameterName);
+	UMaterial* Unrelated = MakeMaterialWithScalar(TEXT("Brightness"));
+	TestTrue(TEXT("A material with the renderer flag and no texture of the canvas's takes the canvas's parameters"),
+		UDreamCanvas::IsMaterialContainsDreamUIParameter(FlagOnly));
+	TestFalse(TEXT("A material with another scalar only does not"), UDreamCanvas::IsMaterialContainsDreamUIParameter(Unrelated));
 	return true;
 }
 

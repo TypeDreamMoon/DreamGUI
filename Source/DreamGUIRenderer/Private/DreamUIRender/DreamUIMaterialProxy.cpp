@@ -6,6 +6,7 @@
 #include "MaterialDomain.h"
 #include "Materials/Material.h"
 #include "Materials/MaterialInterface.h"
+#include "RenderGraphBuilder.h"
 #include "RenderingThread.h"
 #include "UObject/UObjectGlobals.h"
 
@@ -114,6 +115,27 @@ void FDreamUIMaterialProxy::SetParameters_GameThread(const FDreamUIMaterialParam
 			// What the material shaders read: made again from the new values, the proxy made a render resource on the way.
 			Proxy->CacheUniformExpressions(RHICmdList, false);
 		});
+}
+
+void FDreamUIMaterialProxy::FollowSource_RenderThread(FRHICommandListBase& RHICmdList, ERHIFeatureLevel::Type InFeatureLevel)
+{
+	const FMaterialRenderProxy* Parent = GetParent();
+	// The serial moves whenever the source's own cache is let go of or made again, which is what a parameter set on a
+	// material instance does to it.
+	const int32 Serial = Parent->GetExpressionCacheSerialNumber();
+	if (Parent == FollowedParent && Serial == FollowedSerial)
+	{
+		return;
+	}
+	FollowedParent = Parent;
+	FollowedSerial = Serial;
+	// What UpdateUniformExpressionCacheIfNeeded reads as out of date, and makes again at once from GetParameterValue --
+	// the source's current values. Not InvalidateUniformExpressionCache, which also waits on the uniform expression
+	// updater's task and broadcasts editor invalidations, from a gathering of dynamic meshes that may run on a task. The
+	// passes a graph still executes asynchronously read this cache, so they are waited for first, as the update does.
+	FRDGBuilder::WaitForAsyncExecuteTask();
+	UniformExpressionCache[InFeatureLevel].CachedUniformExpressionShaderMap = nullptr;
+	UpdateUniformExpressionCacheIfNeeded(RHICmdList, InFeatureLevel);
 }
 
 void FDreamUIMaterialProxy::LetGoOfUnreachable()

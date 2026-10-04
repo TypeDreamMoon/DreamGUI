@@ -50,6 +50,13 @@ public:
 	/** Game thread: the parameters the proxy answers with from the next frame on. The last ones given are kept here too. */
 	void SetParameters_GameThread(const FDreamUIMaterialParameters& InParameters);
 	const FDreamUIMaterialParameters& GetParameters_GameThread() const { return GameThreadParameters; }
+	/**
+	 * Render thread, as a draw through the proxy is collected: when the source's own render proxy has made its uniform
+	 * expressions again since this one last looked -- the material instance it answers for had a parameter set by its
+	 * owner -- this one's are made again too, from the source's new values. They are otherwise made only when DreamGUI's
+	 * parameters change, which froze a material instance's own animation at the frame it was first drawn.
+	 */
+	void FollowSource_RenderThread(FRHICommandListBase& RHICmdList, ERHIFeatureLevel::Type InFeatureLevel);
 
 	//~ Begin FMaterialRenderProxy Interface
 	virtual const FMaterial* GetMaterialNoFallback(ERHIFeatureLevel::Type InFeatureLevel) const override;
@@ -69,4 +76,7 @@ private:
 	UMaterialInterface* RenderThreadSource = nullptr;
 	FDreamUIMaterialParameters GameThreadParameters;
 	FDreamUIMaterialParameters RenderThreadParameters;
+	/** The source's render proxy and its cache's serial number, as FollowSource_RenderThread last saw them. Render thread. */
+	const FMaterialRenderProxy* FollowedParent = nullptr;
+	int32 FollowedSerial = -1;
 };
