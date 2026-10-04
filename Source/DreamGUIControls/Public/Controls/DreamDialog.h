@@ -360,7 +360,8 @@ public:
 
 	/**
 	 * The navigation scope, added only while standalone: it takes focus when the dialog appears, gives it back when
-	 * the dialog closes, and answers Back while bCloseOnBack asks. See UDreamDialogScope.
+	 * the dialog closes, answers Back while bCloseOnBack asks, and keeps the pad and Tab inside the dialog while it is
+	 * dimmed, whatever bCloseOnBack says. It belongs to the dialog's owning player. See UDreamDialogScope.
 	 */
 	UPROPERTY(BlueprintReadOnly, Transient, Category = "Dialog")
 	TObjectPtr<UDreamDialogScope> BackScope = nullptr;

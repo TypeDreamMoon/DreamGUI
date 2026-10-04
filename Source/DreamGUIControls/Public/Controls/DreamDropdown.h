@@ -93,6 +93,14 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetHasDownArrow", BlueprintSetter = "SetHasDownArrow", Category = "Dropdown")
 	bool bHasDownArrow = true;
 
+	/**
+	 * Tab or Shift+Tab in the open list chooses the row the player is on, then the list closes and the Tab moves on past
+	 * the dropdown -- what an HTML select does. Off, Tab only closes the list and chooses nothing. Tab never walks the rows:
+	 * the arrow keys and the pad do that.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetTabCommitsHighlightedRow", BlueprintSetter = "SetTabCommitsHighlightedRow", Category = "Dropdown")
+	bool bTabCommitsHighlightedRow = true;
+
 	/** Re-broadcast from the behaviour, so a consumer binds to the control, not to a part of it. */
 	UPROPERTY(BlueprintAssignable, Category = "Dropdown")
 	FDreamDropdownChangedEvent OnSelectionChanged;
@@ -204,6 +212,13 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Dropdown")
 	void SetHasDownArrow(bool bInHasDownArrow);
+
+	UFUNCTION(BlueprintCallable, Category = "Dropdown")
+	bool GetTabCommitsHighlightedRow() const { return bTabCommitsHighlightedRow; }
+
+	/** See bTabCommitsHighlightedRow. Pushed to the behaviour at once, so an open list answers the next Tab by it. */
+	UFUNCTION(BlueprintCallable, Category = "Dropdown")
+	void SetTabCommitsHighlightedRow(bool bInTabCommitsHighlightedRow);
 
 	/** Replace the per-option pictures and re-push the list, so an open one changes under the pointer. */
 	UFUNCTION(BlueprintCallable, Category = "Dropdown")

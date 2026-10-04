@@ -1469,8 +1469,8 @@ enum class EDreamPopupDismissReason : uint8;
  * Where the menu is drawn is bUseApplicationMenuStack's question. Off, it is drawn in place: clipped by
  * the anchor's ancestors and sorted with its siblings, as every saved anchor has always drawn it. On, the
  * menu goes onto its player's popup layer (UDreamUIPopupLayer::Push) for as long as it is open -- above
- * everything, dismissed by a press outside it or Back, following the anchor -- and is placed there by this
- * panel's own Placement and bFitInWindow.
+ * everything, dismissed by a press outside it, Back or Tab, following the anchor -- and is placed there by this
+ * panel's own Placement and bFitInWindow, with the slot it has here (padding, nudge), so it lands where it would in place.
  */
 UCLASS(BlueprintType, DisplayName = "UMG Menu Anchor")
 class DREAMGUI_API UDreamLayoutContainerMenuAnchor : public UDreamPanelLayoutBase
@@ -1591,8 +1591,17 @@ private:
 	UDreamWidget* BuildMenuContent();
 	/** Destroy the menu BuildMenuContent made, if it made one. */
 	void ReleaseBuiltMenu();
-	/** Hand InMenu to the popup layer; false when there is no layer or it cannot lift the menu (no screen root). */
+	/**
+	 * Hand InMenu to the popup layer; false when there is no layer, it cannot lift the menu (no screen root), or the menu
+	 * closed again before the push returned -- which HandleMenuDismissed has made this anchor's state already.
+	 */
 	bool PushMenu(UDreamWidget* InMenu);
+	/**
+	 * The menu's panel slot: its own while it hangs here; while it is lifted -- the screen root hands out none -- the one
+	 * it had here, which the popup layer keeps (UDreamUIPopupLayer::GetHomeSlot), so its padding, nudge and size bounds
+	 * place it the same lifted as in place. The default slot when it has neither.
+	 */
+	const UDreamPanelSlot* GetMenuSlot(const UDreamWidget* InMenu) const;
 	/** FDreamPopupParams::Place: the lifted menu, placed by this panel's rules in its screen root's plane. */
 	void PlaceLiftedMenu(UDreamWidget* InPopup);
 	/** FDreamPopupParams::OnDismissed: however the layer closed the menu, the anchor is closed with it. */

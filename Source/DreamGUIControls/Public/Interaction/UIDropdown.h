@@ -136,6 +136,13 @@ protected:
 	 */
 	UPROPERTY(EditAnywhere, Category = "DreamGUI-Dropdown")
 		bool bUseInteractionBlock = true;
+	/**
+	 * What Tab and Shift+Tab do in the open list besides closing it: on, the row the player is on is chosen first, as an
+	 * HTML select does, and the Tab then moves on past the dropdown; off, the list only closes. Tab never stays in an open
+	 * list (it is pushed with EDreamPopupTabBehavior::CloseAndContinue).
+	 */
+	UPROPERTY(EditAnywhere, Category = "DreamGUI-Dropdown")
+		bool bTabCommitsHighlightedRow = true;
 
 	bool bIsShow = false;
 	bool bNeedRecreate = true;
@@ -178,8 +185,15 @@ private:
 	 * bInAnimate false puts it away at once, for a dropdown going to sleep or an opener gone.
 	 */
 	void CloseList(bool bInAnimate);
-	/** The popup layer closed the list: an outside press, Back, its opener lost, a menu opened in its place. */
+	/** The popup layer closed the list: an outside press, Back, Tab, its opener lost, a menu opened in its place. */
 	void HandleListDismissed(UDreamWidget* InList, EDreamPopupDismissReason InReason);
+	/**
+	 * The popup layer is about to close the list, with the player's focus still on the row they were on: on Tab, and while
+	 * bTabCommitsHighlightedRow, that row is noted for HandleListDismissed to choose.
+	 */
+	void HandleListClosing(UDreamWidget* InList, EDreamPopupDismissReason InReason);
+	/** The option index of the row player ListUserIndex has focused, or of the row holding their focus; INDEX_NONE for none. */
+	int32 FindHighlightedRow() const;
 	/** Open the list on the popup layer, for the player who opened it. False when the layer cannot take it. */
 	bool PushListToPopupLayer();
 	/** The player whose list this is: the one whose click opened it, else the one focused on the face, else the owner. */
@@ -197,7 +211,14 @@ private:
 
 	/** The click that is opening the list says whose it is; read by Show, through ResolveListUserIndex. */
 	int32 OpeningUserIndex = INDEX_NONE;
-	/** Whether the open list is on the popup layer. */
+	/** The player the open list was pushed for: whose focus picks the row a Tab chooses. */
+	int32 ListUserIndex = 0;
+	/** The row HandleListClosing noted for a Tab to choose, until HandleListDismissed chooses it; INDEX_NONE otherwise. */
+	int32 PendingTabCommit = INDEX_NONE;
+	/**
+	 * Whether the open list is on the popup layer. Set before the push, not after: the push moves focus into the list, and
+	 * a handler that closes the list then must find it on the layer to take it off (CloseList).
+	 */
 	bool bListOnPopupLayer = false;
 	/** Every player's focus when the list opened, for a list the popup layer could not take; the layer keeps its own. */
 	FDreamFocusReturn ListFocusReturn;
@@ -243,6 +264,11 @@ public:
 		UDreamWidget* GetListRoot()const { return ListRoot.Get(); }
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Dropdown")
 		bool GetUseInteractionBlock()const { return bUseInteractionBlock; }
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Dropdown")
+		bool GetTabCommitsHighlightedRow()const { return bTabCommitsHighlightedRow; }
+	/** See bTabCommitsHighlightedRow. An open list answers the next Tab by the new setting. */
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Dropdown")
+		void SetTabCommitsHighlightedRow(bool InValue) { bTabCommitsHighlightedRow = InValue; }
 
 	/**
 	 * The parts, settable from code. All four are EditAnywhere weak references the designer and .dui

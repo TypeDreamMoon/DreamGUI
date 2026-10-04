@@ -312,9 +312,15 @@ void UDreamDialog::RefreshDimmer()
 		// Back passed to the screen underneath for good.
 		const bool bWantsBack = bCloseOnBack && !bHostAlreadyScrims;
 		BackScope->OwnerDialog = bWantsBack ? this : nullptr;
-		// Keeping the pad in, as it always did for a dialog that closes on Back; one that does not keeps
-		// the free navigation it had before it wore a scope at all.
-		BackScope->SetConfineNavigation(bWantsBack);
+		// The pad and Tab are kept in whenever the dialog covers the screen behind it: dimmed, it is in front of everything
+		// there whatever Back does, and a dialog that does not close on Back used to let them walk onto the page under its
+		// dimmer. Hosted by the modal subsystem it wears no scope of its own, and the modal's confines it. Undimmed --
+		// shown over a live screen on purpose -- it leaves navigation free, Back or no Back.
+		BackScope->SetConfineNavigation(bDimmerUp);
+		// Whose navigation: the scope's player is left at -1, the owner of its widget (UDreamUINavigationScope::
+		// GetUserIndex) -- the dialog's content root, inside the dialog, so the dialog's own owning player. The second
+		// player's dialog -- on a page pushed for them, or given them as its owner -- confines and answers Back for that
+		// player, not the first.
 	}
 	if (BackScope != nullptr)
 	{

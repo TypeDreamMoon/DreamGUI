@@ -178,7 +178,10 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Menu Anchor")
 	void SetCloseOnClickOutside(bool bInCloseOnClickOutside);
 
-	/** Open and closed, as the anchor announces them. Fires after the move, never during. */
+	/**
+	 * Open and closed, as the anchor announces them. Fires after the move, never during. An open that closed again before
+	 * Open returned -- the focus moving into the menu ran a handler that closed it -- announces neither.
+	 */
 	UPROPERTY(BlueprintAssignable, Category = "Menu Anchor")
 	FDreamMenuAnchorOpenChangedEvent OnMenuOpenChanged;
 
@@ -314,6 +317,12 @@ private:
 	/** Set while the popup is up on the popup layer; the popup's resting geometry must not be written while it is. */
 	UPROPERTY(Transient)
 	bool bPopupElevated = false;
+
+	/**
+	 * Set once OnMenuOpenChanged has said open, until it says closed: an open that closed again before it finished -- the
+	 * focus moving into the menu ran a handler that closed it -- announces neither.
+	 */
+	bool bOpenAnnounced = false;
 
 	/** Every player's focus when a menu the popup layer could not take opened; the layer keeps its own. */
 	FDreamFocusReturn FallbackFocusReturn;
