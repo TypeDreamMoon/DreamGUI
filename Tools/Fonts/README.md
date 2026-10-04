@@ -35,41 +35,14 @@ two faces' Latin widths differ. To go back, point the default's engine font face
 
 ## Colour emoji
 
-The default font has no colour emoji face, on purpose. The engine's `NotoColorEmoji.ttf` lives under
-`Engine/Content/Editor/Slate/Fonts`, which is editor content that a packaged game does not get (Slate itself loads it
-only in the editor), and embedding it in the plugin's font asset would add 7.8 MB to every project that uses DreamGUI.
-Without one, an emoji draws from the text's emoji data (`EmojiData`, an image per emoji) when it has an entry, and
-otherwise from whatever monochrome face has the code point, or as the missing-glyph box. DreamGUI's tests and the
-text parity corpus load the engine's file directly, so they need nothing from here.
+The default font has no colour emoji face, on purpose: the engine's `NotoColorEmoji.ttf` is editor content a packaged game
+does not get, and embedding it in the plugin's font would add 7.8 MB to every project that uses DreamGUI. DreamGUI's tests
+and the text parity corpus load the engine's file directly, so they need nothing from here.
 
-A game that wants colour emoji ships a colour emoji font of its own and adds it as a fallback:
-
-1. Pick a font whose colour data DreamGUI draws: CBDT/CBLC or sbix bitmap strikes (Noto Color Emoji, OFL), or COLRv0
-   layers. A glyph that only has COLRv1 or SVG data counts as missing. Mind the licence: Noto is OFL, Twemoji's art is
-   CC-BY, and Segoe UI Emoji may not be redistributed.
-2. Make a font asset for the file (a distance-field font). Its own settings hardly matter: a fallback's glyphs are drawn
-   into the atlas of the font the text uses, colour glyphs at their own pixel size rather than as a field. That text font
-   has to be on the outline field (`SdfSource` Outline Multi Channel, the default) or be a bitmap font: the single-channel
-   field's atlas is R8, holds no colour, and draws no colour glyph.
-3. Add it to the text font's `Fallbacks` as an entry whose `Ranges` cover the emoji and nothing else, so its digits,
-   space and symbols never stand in for the text font's own:
-
-   | Range | What |
-   |---|---|
-   | `0x23`, `0x2A`, `0x30`-`0x39` | the keycap bases (`#`, `*`, digits), for sequences like `1` U+FE0F U+20E3 |
-   | `0xA9`, `0xAE` | (c) and (r) |
-   | `0x203C`-`0x3299` | the emoji among the symbols, arrows, dingbats and enclosed ideographs |
-   | `0x1F000`-`0x1FAFF` | the emoji blocks, flags included |
-
-   A range is matched against a cluster's first code point; the joiners, variation selectors, skin tones and tags after
-   it need no range of their own. Leave `Cultures` empty and `Scale` at 1.
-
-Clusters that ask for emoji presentation -- a pictograph that is drawn as emoji by default, or anything followed by
-U+FE0F, a flag, a keycap, a skin tone or a ZWJ sequence -- try the colour faces first (the font's `bPreferColorEmoji`,
-on by default). Everything else is in text presentation -- ordinary text, and anything followed by U+FE0E -- and tries
-the monochrome faces first, so the digits and symbols in those ranges still come from the text font wherever it has
-them. An `EmojiData` entry for the exact sequence still wins over the colour face, and one for the cluster's first code
-point only loses to it.
+How a game adds one -- which fonts DreamGUI draws colour from and their licences, the three ways to make the font asset
+(embedded, engine font face, external file), the emoji ranges of its fallback entry, why the text font has to be on the
+outline field, and what it costs -- is in [`Docs/FontsAndPackaging.md`](../../Docs/FontsAndPackaging.md), which ships with
+the plugin. So is what the packaging preset's ICU data changes for CJK fallbacks and line breaking.
 
 ## How to run it
 

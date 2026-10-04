@@ -17,7 +17,8 @@ The suite used to be built and run inside the working project (DevTest). That ha
 The host fixes all three. Its `Plugins/DreamGUI` is a separate **git worktree** of the DreamGUI
 repository, with its own `Binaries/` and `Intermediate/`, so it builds and runs while the working
 project's editor stays open; it enables nothing but DreamGUI and Enhanced Input; and it has no code of its
-own, and no content but the old-asset fixtures (below).
+own but the packaged text smoke probe (below), off unless a game asks for it, and no content but the old-asset fixtures
+and the smoke test's assets (below).
 
 ## Layout
 
@@ -28,8 +29,10 @@ DreamGUITestHost/                       (default I:\UnrealProject_Moon\DEV_58\Dr
   Config/DefaultInput.ini               from Template/
   Config/DefaultGame.ini                from Template/
   Source/DreamGUITestHost*.Target.cs    from Template/
-  Source/DreamGUITestHost/              from Template/ -- an empty primary game module
+  Source/DreamGUITestHost/              from Template/ -- the primary game module, with the packaged text smoke probe
   Content/DreamGUIFixtures/             from Template/ -- the old-asset fixtures (below)
+  DUI/TextSmoke.dui                     from Template/ -- the smoke test's screen (below)
+  Content/DreamGUISmoke/                made by make_text_smoke_assets.py -- the smoke test's assets (below)
   Plugins/DreamGUI/                     a git worktree of the DreamGUI repository
   .dreamgui-testhost.json               what the host was made from (template version, repo, branch)
   Binaries/ Intermediate/ Saved/        created by the first build and run
@@ -59,6 +62,94 @@ UnrealEditor-Cmd.exe <host>\DreamGUITestHost.uproject -ExecCmds="DreamGUI.OldAss
 They are inputs, never outputs. Remade after a class has moved, they would be new assets posing as old
 ones, and the tests would prove nothing; the Write command refuses to replace a fixture that exists. See
 `Source/DreamGUITests/Private/Compatibility/DreamOldAssetFixtures.h` for what each one holds.
+
+## The packaged text smoke test
+
+Everything else the suite runs is in the editor, on uncooked content. This one is a packaged game: a screen of the text
+cases that depend on what a cook and the packaging preset ship -- fonts read from their cooked bytes, fallbacks by
+culture, colour emoji, small text from coverage glyphs, a justified paragraph, Japanese line breaks, the safe zone --
+written down field by field by a probe and held to the same build run on uncooked content.
+
+| Piece | Where |
+| --- | --- |
+| The screen | `Template/DUI/TextSmoke.dui`, copied to the host's `DUI/` |
+| Its assets: `Font_Emoji` (the engine's Noto Color Emoji, embedded), `Font_Text` (the default font with fallbacks for zh-Hans, ja at scale 1.2 and the emoji), `WBP_TextSmoke`, `L_TextSmoke` | `/Game/DreamGUISmoke`, made by `make_text_smoke_assets.py`; always cooked (`Template/Config/DefaultGame.ini`) |
+| The probe | `Template/Source/DreamGUITestHost/DreamGUIPackagedSmoke.cpp`: switched on by `-DreamGUITextSmoke=<dir>`, Shipping included |
+| The comparison | `Tools/Tests/compare_text_smoke.py` |
+
+The probe waits for the game's player, puts `WBP_TextSmoke` on the viewport, times every frame from there (the first
+frame that paints the texts is where a cold glyph atlas costs), waits until every glyph has landed and the small text
+has settled, and then writes into `<dir>`:
+
+- `TextSmoke.json`: each text's display list (every glyph's face, glyph, colour flag and pen position; each line's start
+  and reach), its small-text gate, the fonts' answers for `A`, a Han ideograph, a kana and an emoji, the fallback
+  entries, what `zh-CN` and `ja` fall back to in ICU, the safe zone's inset beside what the platform asks for, how
+  colourful the picture is where the emoji are, the frame times, and the memory report (`DreamGUI.Memory Json`);
+- `TextSmoke.png`: the viewport.
+
+Then it asks the game to exit. The comparison checks each run by itself (the list is at the top of the script) and the
+two runs against each other, field by field, positions to a hundredth of a unit. Its exit code is 0 when they agree.
+
+### Running it
+
+In PowerShell, from anywhere; `$Host_` is the host directory. The steps build two targets and cook, so they take a while
+(roughly an hour on this machine): run them as one script in the background.
+
+```powershell
+$Engine = 'C:\Program Files\Epic Games\UE_5.8'
+$Host_  = 'I:\UnrealProject_Moon\DEV_58\DreamGUITestHost'
+$Proj   = "$Host_\DreamGUITestHost.uproject"
+$Out    = "$Host_\Saved\TextSmoke"
+$env:NO_PROXY = "$env:NO_PROXY,[::1]"
+
+# The editor target, which the asset script and the reference run use.
+& "$Engine\Engine\Build\BatchFiles\Build.bat" DreamGUITestHostEditor Win64 Development -Project="$Proj" -WaitMutex -NoHotReloadFromIDE -NoEngineChanges -DisableAdaptiveUnity
+
+# The assets (once, and again after the screen or the fonts change).
+& "$Engine\Engine\Binaries\Win64\UnrealEditor-Cmd.exe" "$Proj" -EnablePlugins=PythonScriptPlugin -run=pythonscript `
+    -script="$Host_\Plugins\DreamGUI\Tools\TestHost\make_text_smoke_assets.py" -unattended -nullrhi
+
+# The game target, Development and Shipping.
+& "$Engine\Engine\Build\BatchFiles\Build.bat" DreamGUITestHost Win64 Development -Project="$Proj" -WaitMutex -NoHotReloadFromIDE -NoEngineChanges -DisableAdaptiveUnity
+& "$Engine\Engine\Build\BatchFiles\Build.bat" DreamGUITestHost Win64 Shipping -Project="$Proj" -WaitMutex -NoHotReloadFromIDE -NoEngineChanges -DisableAdaptiveUnity
+
+# The reference: the same build on uncooked content.
+& "$Engine\Engine\Binaries\Win64\UnrealEditor.exe" "$Proj" /Game/DreamGUISmoke/L_TextSmoke -game -windowed -ResX=1280 -ResY=720 `
+    -DreamGUITextSmoke="$Out\ref" -dpcvars=r.DebugSafeZone.TitleRatio=0.9 -unattended -nosound -abslog="$Out\ref.log"
+
+# Cook, stage and pack, with the ICU data a CJK game ships with; then run the packaged game the same way.
+Remove-Item -Recurse -Force "$Host_\Saved\Cooked", "$Host_\Saved\StagedBuilds" -ErrorAction SilentlyContinue
+& "$Engine\Engine\Build\BatchFiles\RunUAT.bat" BuildCookRun -project="$Proj" -noP4 -platform=Win64 -clientconfig=Development `
+    -skipbuild -cook -map=/Game/DreamGUISmoke/L_TextSmoke -stage -pak -I18NPreset=EFIGSCJK -unattended -utf8output -WaitForUATMutex
+& "$Host_\Saved\StagedBuilds\Windows\DreamGUITestHost\Binaries\Win64\DreamGUITestHost.exe" /Game/DreamGUISmoke/L_TextSmoke `
+    -windowed -ResX=1280 -ResY=720 -DreamGUITextSmoke="$Out\cooked" -dpcvars=r.DebugSafeZone.TitleRatio=0.9 -unattended -nosound -abslog="$Out\cooked.log"
+
+python "$Host_\Plugins\DreamGUI\Tools\Tests\compare_text_smoke.py" "$Out\ref" "$Out\cooked"
+```
+
+Variants, each a cook and a run of its own into another directory, compared with the same reference:
+
+- **`-I18NPreset=English`**, the engine's default preset: only what `Docs/FontsAndPackaging.md` says degrades may differ
+  -- what `zh-CN` falls back to (compare with `--allow-icu-differences`), and with it possibly the Chinese text's face,
+  and the Japanese paragraph's line breaks.
+- **`-clientconfig=Shipping`**: the executable is `DreamGUITestHost-Win64-Shipping.exe`. Shipping writes no log and keeps
+  the debug safe zone off, so the comparison checks the JSON alone and skips the safe zone.
+
+Things to know:
+
+- **A host made before the smoke test** gets the template's new files (the probe, `DUI/TextSmoke.dui`) from
+  `New-DreamGUITestHost.ps1` as it is, and the changed ones -- the game module, its `Build.cs` and `Target.cs`,
+  `Config/DefaultGame.ini` -- with `-Force`, which keeps a copy of each file it replaces.
+- **The safe zone is not compared between the runs, by design.** An editor build fits the platform's safe zone to the
+  viewport it is given; a cooked one answers in pixels of the primary display, as UMG's `SSafeZone` does
+  (`FSlateApplicationBase::GetSafeZoneSize`). Each run is checked against what the platform asked for in that run.
+- **The game target and the engine.** Against a launcher (installed) engine the game target links the engine's
+  precompiled libraries and compiles only the host module and the plugin. Against a source engine it is monolithic
+  with a build environment of its own, which compiles the whole engine into this project (see "Building and running")
+  -- build it there only on purpose.
+- **What the probe needs from the host:** the screen's assets in `/Game/DreamGUISmoke` (the script),
+  `DirectoriesToAlwaysCook` (the template's `DefaultGame.ini`, since nothing references the screen: the probe loads it
+  by name), and the template's game module with `DreamGUI`, `Json`, `Slate` and `SlateCore` as its private dependencies.
 
 ## Creating it
 
@@ -134,7 +225,8 @@ every run. With an engine that lacks that fix, a host build refused by `-NoEngin
 alone is this race, not a stale engine.
 
 Never build the game target (`DreamGUITestHost`) casually: a game target against a source engine is
-monolithic with its own build environment, which compiles the whole engine into this project.
+monolithic with its own build environment, which compiles the whole engine into this project. The packaged text smoke
+test builds it on purpose (above); against a launcher engine that costs a plugin build, not an engine build.
 
 ## Moving to another branch or commit
 
@@ -193,7 +285,7 @@ put them elsewhere, which matters on a cold cache. And the trace server keeps it
 | --- | --- | --- |
 | Game viewport client | the engine's `UGameViewportClient` | `UDreamGameViewportClient`, as the plugin's README asks of a game: characters reach text fields through `InputChar`, not the US-only key table |
 | Plugins | DreamGUI plus about thirty others | DreamGUI and Enhanced Input |
-| Content | the project's own, including `/Game/UI/WBP_ControlsGallery` | none |
+| Content | the project's own, including `/Game/UI/WBP_ControlsGallery` | the old-asset fixtures, and the smoke test's assets once `make_text_smoke_assets.py` made them |
 | Startup map | a full showcase level | `/Engine/Maps/Entry` (one PlayerStart) |
 | `[CoreRedirects]` | the project's own copy, older than the plugin's | none of its own: the plugin's `Config/DefaultDreamGUI.ini` applies |
 | MoonToon ramp atlases | loaded from the MoonToon project plugin | `None` (the plugin is not there) |

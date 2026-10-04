@@ -94,7 +94,7 @@ $ErrorActionPreference = 'Stop'
 $PSNativeCommandUseErrorActionPreference = $false
 
 # Bump whenever anything under Template\ changes, so a host records which template it was made from.
-$TemplateVersion = 3
+$TemplateVersion = 4
 $ProjectFileName = 'DreamGUITestHost.uproject'
 $MetadataFileName = '.dreamgui-testhost.json'
 $TemplateEngineIniRelative = 'Config\DefaultEngine.ini'

@@ -20,10 +20,24 @@ names is then reported as
                touches the object; a header only for a use that needs the definition -- a member or base by value,
                a template argument other than a smart pointer's, a scope (X::) or a construction.
 
+Engine macros and globals are checked the same way: a function-like macro the engine defines (a trace or stats
+scope, ENQUEUE_RENDER_COMMAND, LOCTEXT) and a global it declares extern (GFrameCounter, GUndo, GEngine) are reported as
+
+  macro        the file uses it, and no header in reach defines it;
+  global       the file uses it, and no header in reach declares it.
+
+Two checks need no type at all:
+
+  editor header  a game build of the file includes a header that exists only in the engine's Editor or Developer
+                 source, which a game target does not compile;
+  editor module  a runtime module's Build.cs depends on an engine Editor module outside a branch that only an
+                 editor target takes (an `if` whose condition names Editor, bBuildEditor or WITH_EDITOR).
+
 The output is a list of candidates to read, not a verdict: a name used only through a pointer in a function body, an
 opaque enum declared with its underlying type, or a member that happens to share an engine type's name is fine as
 it is. The engine index -- definitions (types with a body, enums, aliases, and what the shader-parameter and
-delegate macros declare) and forward declarations -- is built once per engine and cached in the temp directory.
+delegate macros declare), forward declarations, macros, extern globals, and the editor and developer headers -- is
+built once per engine and cached in the temp directory.
 """
 import argparse
 import hashlib
@@ -74,6 +88,18 @@ KNOWN = {'WITH_EDITOR': 0, 'WITH_EDITORONLY_DATA': 0, 'UE_EDITOR': 0, 'UE_GAME':
          'PLATFORM_MAC': 0, 'PLATFORM_LINUX': 0, 'PLATFORM_ANDROID': 0, 'PLATFORM_IOS': 0}
 DEPRECATED_ORDER = re.compile(r'\bUE_ENABLE_INCLUDE_ORDER_DEPRECATED_IN_\d+_\d+\b')
 DIRECTIVE = re.compile(r'^\s*#\s*(if|ifdef|ifndef|elif|else|endif)\b(.*)$')
+# Bump when the index changes shape, so a cache from an older version of this script is not read.
+INDEX_VERSION = 2
+MACRO_DEFINE = re.compile(r'^\s*#\s*define\s+([A-Z][A-Z0-9_]*)\s*\(', re.M)
+# A function-like use of an upper-case name with an underscore in it: TRACE_CPUPROFILER_EVENT_SCOPE(...), LOCTEXT(...).
+MACRO_USE = re.compile(r'\b([A-Z][A-Z0-9]*_[A-Z0-9_]+)\s*\(')
+EXTERN_GLOBAL = re.compile(r'\bextern\s+(?:[A-Z0-9_]+_API\s+)?[^;(){}=]*?\b(G[A-Z][A-Za-z0-9_]*)\s*(?:\[[^\]]*\]\s*)?;')
+# A global named on its own, not a member reached through ::, . or -> (FDreamGUIObjectVersion::GUID is no global).
+GLOBAL_USE = re.compile(r'(?<![:.>\w])(G[A-Z][A-Za-z0-9_]*)\b')
+# Reflection and boilerplate macros UHT and the module system read; their own headers come with any reflected type.
+SKIP_MACROS = {'GENERATED_BODY', 'GENERATED_UCLASS_BODY', 'GENERATED_USTRUCT_BODY', 'GENERATED_IINTERFACE_BODY',
+               'GENERATED_UINTERFACE_BODY', 'IMPLEMENT_MODULE', 'IMPLEMENT_GAME_MODULE', 'IMPLEMENT_PRIMARY_GAME_MODULE',
+               'DEFINE_LOG_CATEGORY', 'DECLARE_LOG_CATEGORY_EXTERN', 'UE_LOG', 'UE_CLOG', 'UE_LOGFMT'}
 
 
 def strip(text):
@@ -129,16 +155,24 @@ def game_text(text):
     return '\n'.join(out)
 
 
-def build_engine_index(engine):
+SKIPPED_DIRS = ('Private', 'ThirdParty', 'Binaries', 'Intermediate', 'Content', 'Resources', 'Shaders', 'Tests',
+                'Android', 'Apple', 'IOS', 'Mac', 'Linux', 'Unix', 'TVOS', 'VisionOS', 'Solaris')
+
+
+def public_roots(bases):
     roots = []
-    for base in (os.path.join(engine, 'Source', 'Runtime'), os.path.join(engine, 'Plugins')):
+    for base in bases:
         for dirpath, dirnames, _ in os.walk(base):
             roots.extend(os.path.join(dirpath, d) for d in dirnames if d in ROOT_DIRS)
             # Platform directories and the private, test and third-party trees define look-alikes of core names
             # that a Win64 build never sees.
-            dirnames[:] = [d for d in dirnames if d not in ('Private', 'ThirdParty', 'Binaries', 'Intermediate', 'Content', 'Resources', 'Shaders', 'Tests',
-                                                             'Android', 'Apple', 'IOS', 'Mac', 'Linux', 'Unix', 'TVOS', 'VisionOS', 'Solaris')]
-    by_rel, defines, forwards, includes = {}, {}, {}, {}
+            dirnames[:] = [d for d in dirnames if d not in SKIPPED_DIRS]
+    return roots
+
+
+def build_engine_index(engine):
+    roots = public_roots((os.path.join(engine, 'Source', 'Runtime'), os.path.join(engine, 'Plugins')))
+    by_rel, defines, forwards, includes, macros, globals_ = {}, {}, {}, {}, {}, {}
     for root in roots:
         for dirpath, _, files in os.walk(root):
             for f in files:
@@ -150,7 +184,12 @@ def build_engine_index(engine):
                     text = open(full, encoding='utf-8', errors='replace').read()
                 except OSError:
                     continue
-                includes[full] = INCLUDE.findall(game_text(text))
+                game = game_text(text)
+                includes[full] = INCLUDE.findall(game)
+                for name in MACRO_DEFINE.findall(game):
+                    macros.setdefault(name, set()).add(full)
+                for name in EXTERN_GLOBAL.findall(strip(game)):
+                    globals_.setdefault(name, set()).add(full)
                 if f in SKIP_HEADERS:
                     continue
                 body = strip(text)
@@ -160,12 +199,22 @@ def build_engine_index(engine):
                 for rx in FORWARD:
                     for name in rx.findall(body):
                         forwards.setdefault(name, set()).add(full)
-    return by_rel, defines, forwards, includes
+    # Headers a game target never compiles: those of the engine's Editor and Developer modules, by the path an include
+    # names them with, and the Editor modules by name.
+    editor_headers = set()
+    for root in public_roots((os.path.join(engine, 'Source', 'Editor'), os.path.join(engine, 'Source', 'Developer'))):
+        for dirpath, _, files in os.walk(root):
+            for f in files:
+                if f.endswith(('.h', '.inl')):
+                    editor_headers.add(os.path.relpath(os.path.join(dirpath, f), root).replace(os.sep, '/'))
+    editor_dir = os.path.join(engine, 'Source', 'Editor')
+    editor_modules = set(d for d in os.listdir(editor_dir) if os.path.isdir(os.path.join(editor_dir, d))) if os.path.isdir(editor_dir) else set()
+    return by_rel, defines, forwards, includes, macros, globals_, editor_headers, editor_modules
 
 
 def load_engine_index(engine, rebuild):
     key = hashlib.sha1(os.path.normcase(os.path.abspath(engine)).encode('utf-8')).hexdigest()[:12]
-    cache = os.path.join(tempfile.gettempdir(), 'dreamgui_game_includes_%s.pickle' % key)
+    cache = os.path.join(tempfile.gettempdir(), 'dreamgui_game_includes_v%d_%s.pickle' % (INDEX_VERSION, key))
     if os.path.exists(cache) and not rebuild:
         return pickle.load(open(cache, 'rb'))
     print('indexing %s (once per engine)' % engine)
@@ -177,6 +226,62 @@ def load_engine_index(engine, rebuild):
 def runtime_modules():
     plugin = json.load(open(os.path.join(PLUGIN, 'DreamGUI.uplugin'), encoding='utf-8-sig'))
     return [m['Name'] for m in plugin.get('Modules', []) if m.get('Type') == 'Runtime']
+
+
+EDITOR_CONDITION = re.compile(r'Editor|bBuildEditor|WITH_EDITOR')
+DEPENDENCY_LIST = re.compile(r'(?:Public|Private)DependencyModuleNames\s*\.\s*(?:AddRange|Add)\s*\(')
+
+
+def build_cs_editor_dependencies(build_cs, editor_modules):
+    """(module, line) for each engine Editor module the Build.cs depends on outside an editor-only branch."""
+    text = re.sub(r'//[^\n]*|/\*.*?\*/', lambda m: re.sub(r'[^\n]', ' ', m.group(0)), open(build_cs, encoding='utf-8-sig', errors='replace').read(), flags=re.S)
+    # The condition of every block that is open at each brace: a block an `if` opens carries its condition.
+    found, stack, pending = [], [], None
+    i = 0
+    while i < len(text):
+        m = re.match(r'\bif\s*\(', text[i:])
+        if m and (i == 0 or not (text[i - 1].isalnum() or text[i - 1] == '_')):
+            depth, j = 0, i + m.end() - 1
+            while j < len(text):
+                if text[j] == '(':
+                    depth += 1
+                elif text[j] == ')':
+                    depth -= 1
+                    if depth == 0:
+                        break
+                j += 1
+            pending = text[i:j + 1]
+            i = j + 1
+            continue
+        c = text[i]
+        if c == '{':
+            stack.append(pending or '')
+            pending = None
+        elif c == '}':
+            if stack:
+                stack.pop()
+        elif c == ';':
+            pending = None
+        m = DEPENDENCY_LIST.match(text, i)
+        if m:
+            depth, j = 0, m.end() - 1
+            while j < len(text):
+                if text[j] == '(':
+                    depth += 1
+                elif text[j] == ')':
+                    depth -= 1
+                    if depth == 0:
+                        break
+                j += 1
+            guarded = any(EDITOR_CONDITION.search(cond) for cond in stack) or (pending and EDITOR_CONDITION.search(pending))
+            if not guarded:
+                for name in re.findall(r'"([A-Za-z0-9_]+)"', text[m.end():j]):
+                    if name in editor_modules:
+                        found.append((name, text.count('\n', 0, i) + 1))
+            i = j + 1
+            continue
+        i += 1
+    return found
 
 
 def needs_definition(body, name):
@@ -202,7 +307,7 @@ def main():
     ap.add_argument('--engine', default=DEFAULT_ENGINE)
     ap.add_argument('--rebuild-index', action='store_true')
     ns = ap.parse_args()
-    by_rel, defines, forwards, engine_includes = load_engine_index(ns.engine, ns.rebuild_index)
+    by_rel, defines, forwards, engine_includes, macros, extern_globals, editor_headers, editor_modules = load_engine_index(ns.engine, ns.rebuild_index)
 
     source = os.path.join(PLUGIN, 'Source')
     roots = [os.path.join(source, m, sub) for m in os.listdir(source) for sub in ('Public', 'Private', 'Classes')
@@ -215,10 +320,12 @@ def main():
                 files[full] = game_text(open(full, encoding='utf-8-sig', errors='replace').read())
     # Types the plugin defines itself. A plugin file forward-declaring an ENGINE type does not make it the plugin's.
     plugin_defined = set()
+    plugin_macros = set()
     for text in files.values():
         body = strip(text)
         for rx in DEFINE:
             plugin_defined.update(rx.findall(body))
+        plugin_macros.update(re.findall(r'^\s*#\s*define\s+([A-Z][A-Z0-9_]*)', text, re.M))
 
     def resolve(frm, inc):
         for c in [os.path.normpath(os.path.join(os.path.dirname(frm), inc))] + [os.path.normpath(os.path.join(r, inc)) for r in roots]:
@@ -280,6 +387,23 @@ def main():
                 declared_here.update(rx.findall(pbody))
             declared_here.update(ELABORATED.findall(pbody))
         found = []
+        for inc in INCLUDE.findall(files[f]):
+            if resolve(f, inc) is None and inc not in by_rel and inc in editor_headers:
+                found.append(('editor header', inc, 'an Editor or Developer module of the engine', ''))
+        for name in sorted(set(MACRO_USE.findall(body))):
+            if name in SKIP_MACROS or name in plugin_macros or name.endswith('_API') or name not in macros:
+                continue
+            if not macros[name] & have:
+                where = ' | '.join(sorted(os.path.relpath(d, ns.engine).replace(os.sep, '/') for d in macros[name])[:2])
+                found.append(('macro', name, where, ''))
+        for name in sorted(set(GLOBAL_USE.findall(body))):
+            # An engine global has a lower-case letter in its name (GFrameCounter, GRHISupportsX); an all-capitals name
+            # such as GUID is a constant or a type that happens to start with G.
+            if name in GLOBALS or name not in extern_globals or name in plugin_defined or name.upper() == name:
+                continue
+            if not extern_globals[name] & have:
+                where = ' | '.join(sorted(os.path.relpath(d, ns.engine).replace(os.sep, '/') for d in extern_globals[name])[:2])
+                found.append(('global', name, where, ''))
         for name in sorted(set(token.findall(body))):
             if name in plugin_defined or name in ALWAYS or name.startswith('FPlatform'):
                 continue
@@ -305,6 +429,16 @@ def main():
             print(rel)
             for kind, name, where, use in found:
                 print('    %-10s %-40s %s%s' % (kind, name, where, ('   <- ' + use) if use else ''))
+    for module in sorted(modules):
+        build_cs = os.path.join(source, module, module + '.Build.cs')
+        if not os.path.isfile(build_cs):
+            continue
+        dependencies = build_cs_editor_dependencies(build_cs, editor_modules)
+        if dependencies:
+            reported += 1
+            print('%s/%s.Build.cs' % (module, module))
+            for name, line in dependencies:
+                print('    %-10s %-40s line %d, outside an editor-only branch' % ('editor module', name, line))
     print('%d file(s) to read' % reported)
 
 
