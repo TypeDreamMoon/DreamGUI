@@ -107,6 +107,9 @@ gamepad navigation, and what it takes to ship. `DreamGUI.uplugin` is version 3. 
 - **Viewport capture in a game**: `UDreamUICaptureLibrary::SaveViewportToPng` and `ReadViewportPixels` read a game's
   viewport, which is drawn straight into its window and has no texture between frames: that fired an ensure and gave a
   black picture. They now return false there, and say to use the engine's screenshot request.
+- **Chinese fallbacks in a packaged game**: the ICU data a game is cooked with (English or EFIGSCJK) has no likely
+  subtags, so the engine expands `zh-CN` to `zh-CN, zh` with no `zh-Hans`, and fallback entries for `"zh-Hans"` or
+  `"zh-Hant"` matched in the editor but never in the package. DreamGUI puts the script back for Chinese culture names.
 - **Crashes on the render thread**: a renderer freed while its render commands were still waiting (the intermittent
   all-preset crash); render roots and render-graph passes that held a raw pointer to something that could go first now
   hold it by reference.

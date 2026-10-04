@@ -413,6 +413,45 @@ bool FDreamTextLanguageMakeTest::RunTest(const FString& Parameters)
 	const FDreamTextLanguage Unknown = FDreamTextLanguage::Make(TEXT("xx-YY"));
 	TestTrue(TEXT("an unknown culture keeps its language"), ContainsCulture(Unknown.PrioritizedCultureNames, TEXT("xx")));
 	TestFalse(TEXT("and is not English"), ContainsCulture(Unknown.PrioritizedCultureNames, TEXT("en")));
+
+	// With the editor's full ICU data the engine already names the script; a packaged game's cut-down data does not, and
+	// AddImpliedChineseScript (below) makes up for it there.
+	const FDreamTextLanguage Simplified = FDreamTextLanguage::Make(TEXT("zh-CN"));
+	TestTrue(TEXT("zh-CN falls back to zh-Hans"), ContainsCulture(Simplified.PrioritizedCultureNames, TEXT("zh-Hans")));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamTextLanguageImpliedScriptTest,
+	"DreamGUI.Text.FaceResolver.ChineseNamesWithoutTheirScriptGetItBackAsTheFullDataGivesIt",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * What a game cooked with the EFIGSCJK ICU data gets for zh-CN is "zh-CN", "zh": no likely subtags, so no script, and a
+ * fallback written for "zh-Hans" would match in the editor and not in the game. The script comes back as the full data
+ * would put it; names that carry one, and other languages, stay as they are.
+ */
+bool FDreamTextLanguageImpliedScriptTest::RunTest(const FString& Parameters)
+{
+	auto Fix = [](const TCHAR* Culture, TArray<FString> Names)
+	{
+		FDreamTextLanguage::AddImpliedChineseScript(Culture, Names);
+		return Names;
+	};
+	const TArray<FString> Simplified = { TEXT("zh-Hans-CN"), TEXT("zh-CN"), TEXT("zh-Hans"), TEXT("zh") };
+	TestEqual(TEXT("zh-CN as the packaged game names it"), Fix(TEXT("zh-CN"), { TEXT("zh-CN"), TEXT("zh") }), Simplified);
+	TestEqual(TEXT("zh_CN, either separator"), Fix(TEXT("zh_CN"), { TEXT("zh-CN"), TEXT("zh") }), Simplified);
+	TestEqual(TEXT("zh-TW is Traditional"), Fix(TEXT("zh-TW"), { TEXT("zh-TW"), TEXT("zh") }),
+		TArray<FString>({ TEXT("zh-Hant-TW"), TEXT("zh-TW"), TEXT("zh-Hant"), TEXT("zh") }));
+	TestEqual(TEXT("zh-HK is Traditional"), Fix(TEXT("zh-HK"), { TEXT("zh-HK"), TEXT("zh") }),
+		TArray<FString>({ TEXT("zh-Hant-HK"), TEXT("zh-HK"), TEXT("zh-Hant"), TEXT("zh") }));
+	TestEqual(TEXT("zh-SG is Simplified"), Fix(TEXT("zh-SG"), { TEXT("zh-SG"), TEXT("zh") }),
+		TArray<FString>({ TEXT("zh-Hans-SG"), TEXT("zh-SG"), TEXT("zh-Hans"), TEXT("zh") }));
+	TestEqual(TEXT("zh alone is Simplified"), Fix(TEXT("zh"), { TEXT("zh") }), TArray<FString>({ TEXT("zh-Hans"), TEXT("zh") }));
+	TestEqual(TEXT("a script the name gives is kept"), Fix(TEXT("zh-Hant"), { TEXT("zh") }), TArray<FString>({ TEXT("zh-Hant"), TEXT("zh") }));
+	TestEqual(TEXT("names that carry a script stay as they are"), Fix(TEXT("zh-CN"), Simplified), Simplified);
+	const TArray<FString> Japanese = { TEXT("ja-JP"), TEXT("ja") };
+	TestEqual(TEXT("another language stays as it is"), Fix(TEXT("ja-JP"), Japanese), Japanese);
 	return true;
 }
 

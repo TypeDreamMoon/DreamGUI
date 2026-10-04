@@ -9,6 +9,7 @@
 #include "Core/Components/DreamWidget.h"
 #include "Core/DreamUIFontData_FreeTypeRender.h"
 #include "Core/DreamUserWidget.h"
+#include "Core/Text/DreamFontFaceResolver.h"
 #include "Core/Text/DreamTextDisplayList.h"
 #include "Core/Text/DreamTextLayout.h"
 #include "Dom/JsonObject.h"
@@ -790,6 +791,9 @@ namespace DreamGUIPackagedSmokeLocal
 			Culture->SetStringField(TEXT("language"), I18N.GetCurrentLanguage()->GetName());
 			Culture->SetArrayField(TEXT("prioritizedZhCN"), StringsToJson(I18N.GetPrioritizedCultureNames(TEXT("zh-CN"))));
 			Culture->SetArrayField(TEXT("prioritizedJa"), StringsToJson(I18N.GetPrioritizedCultureNames(TEXT("ja"))));
+			// What DreamGUI matches fallbacks against: the engine's names, with what cut-down ICU data leaves out put back.
+			Culture->SetArrayField(TEXT("dreamZhCN"), StringsToJson(FDreamTextLanguage::Make(TEXT("zh-CN")).PrioritizedCultureNames));
+			Culture->SetArrayField(TEXT("dreamJa"), StringsToJson(FDreamTextLanguage::Make(TEXT("ja")).PrioritizedCultureNames));
 			Root->SetObjectField(TEXT("culture"), Culture);
 
 			TSharedRef<FJsonObject> Timing = MakeShared<FJsonObject>();

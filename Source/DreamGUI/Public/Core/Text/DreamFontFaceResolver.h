@@ -44,6 +44,15 @@ struct DREAMGUI_API FDreamTextLanguage
 
 	/** The language InCultureName names; the game's current language (FInternationalization::GetCurrentLanguage) when it is empty. */
 	static FDreamTextLanguage Make(const FString& InCultureName);
+
+	/**
+	 * Puts back the script a Chinese culture name implies when InOutNames, the engine's names for InCultureName, carry none:
+	 * "zh-CN" then reads "zh-Hans-CN", "zh-CN", "zh-Hans", "zh", as with the engine's full data; "zh-TW", "zh-HK" and "zh-MO"
+	 * get "Hant", any other Chinese name "Hans". The engine finds the script in ICU's likely subtags, which the ICU data a
+	 * game is cooked with (the EFIGSCJK preset) leaves out, so a packaged game matched zh-CN text to no "zh-Hans" fallback
+	 * where the editor did. Names that already carry a script, and every other language, are left as they are.
+	 */
+	static void AddImpliedChineseScript(const FString& InCultureName, TArray<FString>& InOutNames);
 };
 
 /** What the resolver knows about one regular face of a font: its fallback entry's settings (FDreamUIFontFallback). */

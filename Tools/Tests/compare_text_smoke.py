@@ -23,8 +23,10 @@ What is checked:
   Between the two runs
     every text's display list: lines (where each starts in the source, how far its glyphs reach), items (code
     point, kind, line, source index, face, glyph, colour, pen position, advance, size) -- positions within the
-    tolerance; the small text's gate; the fonts' faces, fallbacks and code point answers; the ICU culture names
-    zh-CN and ja expand to; the font atlases' shape and glyph counts in the memory report.
+    tolerance; the small text's gate; the fonts' faces, fallbacks and code point answers; the culture names DreamGUI
+    matches zh-CN and ja text's fallbacks against (an error when they differ) and the ICU names the engine expands them
+    to (a warning: the ICU data a game is cooked with has no likely subtags, which DreamGUI makes up for); the font
+    atlases' shape and glyph counts in the memory report.
 
   Not compared, by design: the safe zone (an editor build fits it to the viewport, a cooked one answers in pixels of
   the primary display, as SSafeZone does), the timings (reported side by side), and the worlds' memory lines (other
@@ -146,7 +148,8 @@ def check_run(findings, label, run, log_path):
     chinese = items_with(text_named(run, 'Chinese'), HAN)
     japanese = items_with(text_named(run, 'Japanese'), HAN)
     if chinese and japanese and chinese[0].get('face') == japanese[0].get('face'):
-        names = run.get('culture', {}).get('prioritizedZhCN', [])
+        culture = run.get('culture', {})
+        names = culture.get('dreamZhCN', culture.get('prioritizedZhCN', []))
         level = WARNING if 'zh-Hans' not in names else ERROR
         findings.add(level, where, 'the zh-CN and ja texts draw the ideograph from one face (%s); zh-CN expands to %s'
                      % (chinese[0].get('face'), ', '.join(names) or 'nothing'))
@@ -308,7 +311,8 @@ def main(argv=None):
     parser.add_argument('--ref-log', help='the reference run\'s log (default: <reference>.log)')
     parser.add_argument('--packaged-log', help='the packaged run\'s log (default: <packaged>.log)')
     parser.add_argument('--allow-icu-differences', action='store_true',
-                        help='report a difference in what zh-CN and ja expand to as a warning: a run packaged with another ICU preset')
+                        help='report a difference in the names DreamGUI matches zh-CN and ja text against as a warning: a run '
+                             'packaged with another ICU preset')
     parser.add_argument('--tolerance', type=float, default=0.01, help='how far positions and sizes may differ, in units (default 0.01)')
     args = parser.parse_args(argv)
 
@@ -325,12 +329,19 @@ def main(argv=None):
     compare_texts(findings, ref, other, args.tolerance)
     compare_fonts(findings, ref, other)
     compare_memory(findings, ref, other)
-    for key in ('prioritizedZhCN', 'prioritizedJa'):
+    # What DreamGUI matches fallbacks against has to agree; the engine's own expansion differs with the ICU data a game
+    # is cooked with (no likely subtags in the EFIGSCJK preset: zh-CN gives no zh-Hans), which DreamGUI makes up for.
+    for key, engine_key in (('dreamZhCN', 'prioritizedZhCN'), ('dreamJa', 'prioritizedJa')):
         a = ref.get('culture', {}).get(key)
         b = other.get('culture', {}).get(key)
         if a != b:
             findings.add(WARNING if args.allow_icu_differences else ERROR, 'culture',
-                         '%s expands to %s in the reference and %s packaged' % (key[len('prioritized'):], a, b))
+                         'DreamGUI matches %s text to %s in the reference and %s packaged' % (key[len('dream'):], a, b))
+        a = ref.get('culture', {}).get(engine_key)
+        b = other.get('culture', {}).get(engine_key)
+        if a != b:
+            findings.add(WARNING, 'culture', 'the engine expands %s to %s in the reference and %s packaged'
+                         % (engine_key[len('prioritized'):], a, b))
     compare_value(findings, 'picture', 'size', [ref.get('picture', {}).get('width'), ref.get('picture', {}).get('height')],
                   [other.get('picture', {}).get('width'), other.get('picture', {}).get('height')])
 

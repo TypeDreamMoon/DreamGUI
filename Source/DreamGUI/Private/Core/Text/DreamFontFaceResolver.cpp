@@ -85,7 +85,29 @@ namespace DreamFontFaceResolverLocal
 				Names.Add(Language);
 			}
 		}
+		FDreamTextLanguage::AddImpliedChineseScript(CultureName, Names);
 		return Names;
+	}
+
+	/** A script subtag: four letters ("Hans", "Latn"). */
+	bool IsScriptSubtag(const FString& Subtag)
+	{
+		return Subtag.Len() == 4 && FChar::IsAlpha(Subtag[0]) && FChar::IsAlpha(Subtag[3]);
+	}
+
+	/** A region subtag: two letters ("CN") or three digits ("419"). */
+	bool IsRegionSubtag(const FString& Subtag)
+	{
+		return (Subtag.Len() == 2 && FChar::IsAlpha(Subtag[0]) && FChar::IsAlpha(Subtag[1]))
+			|| (Subtag.Len() == 3 && FChar::IsDigit(Subtag[0]) && FChar::IsDigit(Subtag[1]) && FChar::IsDigit(Subtag[2]));
+	}
+
+	/** A culture name's subtags, either separator. */
+	TArray<FString> SplitCultureName(const FString& CultureName)
+	{
+		TArray<FString> Subtags;
+		CultureName.Replace(TEXT("_"), TEXT("-")).ParseIntoArray(Subtags, TEXT("-"));
+		return Subtags;
 	}
 
 	FDreamFontFaceChoice MakeChoice(int32 FaceIndex, bool bCoversCluster, bool bCoversBase, bool bColor)
@@ -96,6 +118,58 @@ namespace DreamFontFaceResolverLocal
 		Choice.bCoversBase = bCoversBase;
 		Choice.bColor = bColor;
 		return Choice;
+	}
+}
+
+void FDreamTextLanguage::AddImpliedChineseScript(const FString& InCultureName, TArray<FString>& InOutNames)
+{
+	using namespace DreamFontFaceResolverLocal;
+	const TArray<FString> Subtags = SplitCultureName(InCultureName);
+	if (Subtags.Num() == 0 || !Subtags[0].Equals(TEXT("zh"), ESearchCase::IgnoreCase))
+	{
+		return;
+	}
+	for (const FString& Name : InOutNames)
+	{
+		const TArray<FString> NameSubtags = SplitCultureName(Name);
+		if (NameSubtags.Num() > 1 && IsScriptSubtag(NameSubtags[1]))
+		{
+			return;
+		}
+	}
+	FString Script;
+	FString Region;
+	for (int32 Index = 1; Index < Subtags.Num(); ++Index)
+	{
+		if (Script.IsEmpty() && IsScriptSubtag(Subtags[Index]))
+		{
+			Script = Subtags[Index];
+		}
+		else if (Region.IsEmpty() && IsRegionSubtag(Subtags[Index]))
+		{
+			Region = Subtags[Index].ToUpper();
+		}
+	}
+	if (Script.IsEmpty())
+	{
+		// What ICU's likely subtags say: Traditional where Taiwan, Hong Kong and Macao write it, Simplified elsewhere.
+		Script = Region == TEXT("TW") || Region == TEXT("HK") || Region == TEXT("MO") ? TEXT("Hant") : TEXT("Hans");
+	}
+	const FString Language = Subtags[0].ToLower();
+	const FString WithScript = Language + TEXT("-") + Script;
+	if (!Region.IsEmpty())
+	{
+		const FString Full = WithScript + TEXT("-") + Region;
+		if (!InOutNames.Contains(Full))
+		{
+			InOutNames.Insert(Full, 0);
+		}
+	}
+	if (!InOutNames.Contains(WithScript))
+	{
+		// Before the language alone, where the full data puts it.
+		const int32 LanguageAlone = InOutNames.IndexOfByPredicate([&Language](const FString& Name) { return Name.Equals(Language, ESearchCase::IgnoreCase); });
+		InOutNames.Insert(WithScript, LanguageAlone == INDEX_NONE ? InOutNames.Num() : LanguageAlone);
 	}
 }
 

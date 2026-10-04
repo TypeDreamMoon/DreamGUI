@@ -120,14 +120,19 @@ overrides it. The editor always has all of it, so text can lay out one way in th
 **Package with EFIGSCJK** for any game with Chinese, Japanese or Korean text, **or All** for Thai, Lao, Khmer or
 Burmese. Under the English preset:
 
-- **Fallback entries by culture misfire.** Without the data, `"zh-CN"` falls back to `zh-CN, zh` only, never to
-  `zh-Hans`, so an entry for `"zh-Hans"` never matches a zh-CN text (it may still draw the text, as one of the faces
-  nobody prefers, in the order the entries are listed). A `"zh-Hant"` or `"ja"` split goes the same way.
 - **The game cannot switch its culture** to Chinese or Japanese at all.
 - **Line breaking loses its dictionaries.** English carries the basic character, word and line rules only. CJK text then
   breaks between any two characters with no dictionary for phrases (`PhraseWrap`, CSS `word-break: auto-phrase`, falls
   back to per-character breaks) and without the Japanese and Chinese line tailorings; Thai, Lao, Khmer and Burmese,
   which need the dictionaries only `All` has, break only at spaces.
+
+**Chinese fallbacks by script.** The engine finds the script a culture is written in from ICU's likely subtags, which
+neither the English nor the EFIGSCJK data carries: in a packaged game `"zh-CN"` falls back to `zh-CN, zh` only, where
+the editor has `zh-Hans-CN, zh-CN, zh-Hans, zh`. Since 2.1 DreamGUI puts the script back for Chinese names -- `zh-CN`,
+`zh-SG` and `zh` get `Hans`, `zh-TW`, `zh-HK` and `zh-MO` get `Hant` -- so fallback entries for `"zh-Hans"` and
+`"zh-Hant"` match in the package as in the editor. Before, they never matched a zh-CN text in a package, and a font with
+a Japanese and a Simplified Chinese fallback could draw Chinese ideographs in their Japanese forms. Entries for other
+languages are matched by language and region, which every preset has.
 
 **Line breaking follows the game's culture.** Since 2.1 the line and word iterators are made for the current culture's
 locale (FInternationalization's current culture) and made again when it changes. Before, they followed the operating
