@@ -28,6 +28,30 @@
 #include "Engine/Engine.h"
 #include "Engine/GameInstance.h"
 #include "UObject/GarbageCollection.h"
+#include "HAL/IConsoleManager.h"
+
+namespace DreamTweenManagerLocal
+{
+	/**
+	 * The longest step one frame may move the tweens the world ticks. A frame that took longer -- a screen loading its
+	 * assets, the first draw of new text, the window being dragged -- carried every tween in flight through that whole
+	 * time at once, so an entrance played in the frame before such a hitch simply appeared at its end. Capped, the tweens
+	 * lose the hitch instead and play on from where they were. Off (0) by default: a tween that keeps time with the game
+	 * -- an actor moved alongside physics -- must take the whole delta. Manual ticks are never capped; their caller
+	 * already chose the step.
+	 */
+	TAutoConsoleVariable<float> CVarMaxStepSeconds(
+		TEXT("DreamTween.MaxStepSeconds"),
+		0.0f,
+		TEXT("The longest step, in seconds, one frame moves the tweens the world ticks; a longer frame moves them this far only. 0 (default) takes every frame's whole delta. Manual ticks are never capped."),
+		ECVF_Default);
+
+	float CapStep(float InDeltaTime)
+	{
+		const float MaxStep = CVarMaxStepSeconds.GetValueOnGameThread();
+		return MaxStep > 0.0f ? FMath::Min(InDeltaTime, MaxStep) : InDeltaTime;
+	}
+}
 
 UDreamTweenTickHelperComponent::UDreamTweenTickHelperComponent()
 {
@@ -196,13 +220,14 @@ void UDreamTweenManager::Tick(EDreamTweenTickType TickType, float DeltaTime)
 	}
 	else
 	{
+		using DreamTweenManagerLocal::CapStep;
 		if (auto World = GetWorld())
 		{
-			OnTick(TickType, World->DeltaTimeSeconds, World->DeltaRealTimeSeconds);
+			OnTick(TickType, CapStep(World->DeltaTimeSeconds), CapStep(World->DeltaRealTimeSeconds));
 		}
 		else
 		{
-			OnTick(TickType, DeltaTime, DeltaTime);
+			OnTick(TickType, CapStep(DeltaTime), CapStep(DeltaTime));
 		}
 	}
 }
