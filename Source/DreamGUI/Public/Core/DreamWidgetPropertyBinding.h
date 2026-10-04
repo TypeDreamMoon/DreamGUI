@@ -69,7 +69,12 @@ struct DREAMGUI_API FDreamWidgetPropertyBinding
 	UPROPERTY()
 	FName PropertyName;
 
-	/** Its setter, resolved by the compiler so the runtime does no name-guessing. */
+	/**
+	 * Its setter, resolved by the compiler so the runtime does no name-guessing. None for the one property a binding
+	 * writes directly: a variable of a user widget (a component's `props` entry, a Blueprint variable with no SetX),
+	 * written into the instance and announced through its FieldNotify field, which is what the component's own
+	 * bindings on it listen to.
+	 */
 	UPROPERTY()
 	FName SetterName;
 

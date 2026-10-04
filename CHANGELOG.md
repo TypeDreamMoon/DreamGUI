@@ -12,6 +12,33 @@ the next -- what loads differently, which defaults moved, what C++ has to change
   `resources` block names -- this file's, or one a `use` brought in -- so a family of components is named once in the
   library that styles it and each screen writes `@Row` instead of the asset path on every line. An entry that is
   missing, is not an `Asset`, or names no user widget is reported as such.
+- **`use … as` in `.dui`.** `use "Components/Row.dui" as Row` names the class a component file compiles into -- its
+  `class` line, or the Blueprint whose Source File it is -- and `use /Game/UI/WBP_Row as Row` a class with no `.dui`;
+  `Row Row1 { }` is then an instance. `use "Lib.dui" as nier` on a library enters its styles, resources and component
+  names under `nier.` (`: nier.Label`, `@nier.Ink`, `nier.Row`), so two libraries can be used side by side, and the
+  `use … as` lines of a library travel with it. `@Row` keeps working.
+- **Components written in `.dui` alone.** A file declares what its class offers its hosts: `props { Text Label }` (Blueprint
+  variables, with defaults, which a host sets or binds -- `Label <- GetName()` -- though they have no setter; a C++
+  parent's property of the same name is used), `events { Picked(Number Index) }` (event
+  dispatchers, raised with `OnClick -> emit Picked(Index)` and routed by a host like any event), and slots that carry a
+  layout and a style and are marked `default` -- the slot nested content goes to, in place of a `GetDefaultSlotName`
+  override. A host fills a named slot with `slot Detail { … }` inside the instance.
+- **Shorter layout in `.dui`.** A layout container is a node type (`VerticalBox Column { Spacing = 29 }`), a node nobody
+  refers to needs no id (`HorizontalBox { … }`), slot lines group into `@slot { … }` and `@fill` / `@fill 2` stand for the
+  two written most, and a style can carry `+ Component` blocks and slot lines, so a kind of column is one name.
+- **`if` and `for` in `.dui`.** `if Cond { } else if … { } else { }` shows one branch's widgets at a time (each gets a
+  `Shown` bound to its branch; a hidden branch keeps its state), `Shown <- Expr` is visibility as a yes or no on every
+  widget (`UDreamWidget::Shown`), and `for Item in Items { … }` makes one copy of its template per item inside any panel,
+  where `each` keeps filling a virtualized list view.
+- **The language reference.** [Docs/DuiLanguage.md](Docs/DuiLanguage.md) describes the whole of `.dui` -- file structure,
+  types, values, styles, `use`, components, bindings, the control statements, timelines -- with a table of every
+  diagnostic, and the editor's symbol dump (`DUI/.dui-symbols.json`) lists the keywords, the container types and their
+  properties for an editor's completion.
+- **The designer writes the new syntax back.** An edit lands on the line that holds the value whatever the node's type is
+  written as, inside a `@slot { … }` block when there is one, on a node with no id by the id made for it; a node made in
+  the designer is written by the file's alias for its class, or as its container; content dropped into a component's
+  named slot is written into that slot's fill. What no line spells is said rather than written: a visibility an `if`
+  decides and a shorthand that cannot take the change are DUI7004, a value from a style's component DUI7005.
 - **Render-transform tweens.** `UDreamWidget::RenderTranslationTo`, `RenderOffsetTo` (on the canvas plane, depth
   kept), `RenderScaleTo` and `RenderAngleTo` move, scale and turn what is drawn and never the layout: the tweens for a
   widget a panel places, whose anchored position and size the panel writes back on its next pass.

@@ -71,6 +71,23 @@ struct FDreamWidgetDesignerData
 };
 
 /**
+ * One `events` entry as a compile declared it: the dispatcher's name and its parameters, as the variable descriptions
+ * (name and pin type) its signature graph is made from. Kept so a compile whose .dui does not build can declare the
+ * dispatcher again -- see UDreamWidgetBlueprint::LastGoodDispatchers.
+ */
+USTRUCT()
+struct FDreamWidgetTextDispatcher
+{
+	GENERATED_BODY()
+
+	UPROPERTY()
+	FName Name;
+
+	UPROPERTY()
+	TArray<FBPVariableDescription> Parameters;
+};
+
+/**
  * The authoring asset for a DreamUI hierarchy that is a class -- UMG's UWidgetBlueprint, for DreamUI.
  *
  * It holds the hierarchy a designer edits; compiling duplicates that onto the generated class as the
@@ -129,6 +146,23 @@ public:
 	 */
 	UPROPERTY()
 	TArray<FBPVariableDescription> LastGoodResourceVariables;
+
+	/**
+	 * The `props` variables, `events` dispatchers and hidden anonymous-widget variable names of the last compile that
+	 * read this asset's .dui into a hierarchy -- LastGoodResourceVariables' reason, for the class members the file
+	 * declares beside its resources. A file that stops parsing keeps the previous hierarchy, and that hierarchy's
+	 * bindings read these props, its emit handlers call these dispatchers and its unnamed widgets need their variables
+	 * hidden; without them every one of those fails with an error pointing away from the one mistake in the file.
+	 * Empty for an asset that names no .dui.
+	 */
+	UPROPERTY()
+	TArray<FBPVariableDescription> LastGoodPropVariables;
+
+	UPROPERTY()
+	TArray<FDreamWidgetTextDispatcher> LastGoodDispatchers;
+
+	UPROPERTY()
+	TArray<FName> LastGoodHiddenWidgetNames;
 
 	/**
 	 * Create the tree if this asset has none yet, so a fresh asset is editable.

@@ -50,8 +50,9 @@ struct DREAMGUI_API FDreamUISourceFile
 	 * text), false when it resolves to nothing readable. Resolution lives INSIDE the reader so a
 	 * test can serve spellings from a map while the real one walks the DUI roots; the resolved path
 	 * is what the cycle guard keys on and what Imports records for the watcher. The plain overload
-	 * above passes no reader, under which a `use` line reports ImportFailed -- a caller that
-	 * offered no way to read files gets no silent half-import.
+	 * above passes no reader, under which a `use` of a FILE reports ImportFailed -- a caller that
+	 * offered no way to read files gets no silent half-import. (`use /Game/UI/WBP_Row as Row`
+	 * reads no file, and needs no reader.)
 	 */
 	static bool Parse(const FString& InText, const FString& InSourceName,
 		FDreamUIAst& OutAst, FDreamUIDiagnosticBag& OutDiagnostics,

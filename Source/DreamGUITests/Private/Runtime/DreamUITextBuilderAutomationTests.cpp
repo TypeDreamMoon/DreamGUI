@@ -654,7 +654,7 @@ bool FDreamUITextBuilderLocalizableTextTest::RunTest(const FString& Parameters)
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamUITextBuilderLoopSkippedTest,
-	"DreamGUI.Text.AForIsRefusedOutrightBecauseCompileTimeExpansionIsNotImplemented",
+	"DreamGUI.Text.AForOnlyWarnsWhenTheCallerOfferedNowhereToRecordIt",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
 
 bool FDreamUITextBuilderLoopSkippedTest::RunTest(const FString& Parameters)
@@ -674,19 +674,15 @@ bool FDreamUITextBuilderLoopSkippedTest::RunTest(const FString& Parameters)
 	Root.Children.Add(MakeNode(TEXT("Image"), TEXT("Footer")));
 
 	const FBuildOutcome Outcome = BuildFrom(AstWith(Root));
-	// An ERROR now, which is what makes Build refuse the whole tree. It was a warning, and the trade
-	// that bought -- "the author previewing a screen wants the parts that do work" -- turned out to
-	// cost more than it paid: `for` has no semantics anybody has decided on, so the body is not
-	// pending, it is never coming, and a class shipped with a whole subtree missing and one line in
-	// the Output Log about it. `each`, which IS implemented, keeps the warning; see the next test.
-	TestNull(TEXT("no tree comes back, because the file asked for something that does not exist"), Outcome.Root());
-	TestTrue(TEXT("and the build failed"), Outcome.Diagnostics.HasErrors());
+	// `for` is implemented now (an in-panel repetition, recorded beside the `each` bindings), so it degrades exactly
+	// as `each` does when the caller -- a hand-built AST like this one -- offers nowhere to record it: a warning, and
+	// the rest of the file still builds. It used to be an error, back when `for` meant nothing yet.
+	TestNotNull(TEXT("the tree still comes back"), Outcome.Root());
+	TestFalse(TEXT("and the build did not fail"), Outcome.Diagnostics.HasErrors());
 	TestEqual(TEXT("with one diagnostic"), Outcome.Diagnostics.Diagnostics.Num(), 1);
 	if (Outcome.Diagnostics.Diagnostics.Num() == 1)
 	{
-		TestEqual(TEXT("which is an error"), Outcome.Diagnostics.Diagnostics[0].Severity, EDreamUISeverity::Error);
-		// Its own code, so the docs page for it can say "not implemented" and so retiring loops means
-		// retiring one number rather than hunting for which UnknownNodeType sites meant this.
+		TestEqual(TEXT("which is a warning"), Outcome.Diagnostics.Diagnostics[0].Severity, EDreamUISeverity::Warning);
 		TestEqual(TEXT("under the code that says why"), Outcome.Diagnostics.Diagnostics[0].Code,
 			EDreamUIDiagnosticCode::LoopNotExpanded);
 	}
@@ -702,9 +698,8 @@ bool FDreamUITextBuilderEachWithoutSinkTest::RunTest(const FString& Parameters)
 {
 	using namespace DreamUITextBuilderTestLocal;
 
-	// The same shape as the `for` case above and the opposite verdict, which is the whole point of
-	// the pair: `each` is implemented, and this build is missing only the array BuildFrom does not
-	// offer. The rest of the file is still a tree worth having.
+	// The same shape and the same verdict as the `for` case above: this build is missing only the array BuildFrom
+	// does not offer. The rest of the file is still a tree worth having.
 	FDreamUINode Root = MakeNode(TEXT("Widget"), TEXT("Root"));
 
 	FDreamUINode Loop;

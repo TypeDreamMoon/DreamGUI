@@ -3,11 +3,18 @@
 #include "Text/DreamUIExpressionThunks.h"
 
 #include "DreamWidgetBlueprint.h"
+#include "Core/DreamWidgetPropertyBinding.h"
+#include "Core/DreamWidgetTree.h"
+#include "Core/Components/DreamWidget.h"
+// An emit route may leave from an FDreamUIEventDelegate as well as from a multicast delegate, and the
+// handler's parameter is then the one the struct declares it fires with.
+#include "Event/DreamUIEventDelegate.h"
 #include "Text/DreamUIAst.h"
 #include "Text/DreamUIDiagnostics.h"
 
 #include "EdGraph/EdGraph.h"
 #include "EdGraphSchema_K2.h"
+#include "K2Node_CallDelegate.h"
 #include "K2Node_CallFunction.h"
 #include "K2Node_FunctionEntry.h"
 #include "K2Node_FunctionResult.h"
@@ -19,6 +26,7 @@
 namespace DreamUIExpressionThunks
 {
 const TCHAR* GeneratedGraphPrefix = TEXT("__DreamBinding_");
+const TCHAR* GeneratedEmitPrefix = TEXT("__DreamEmit_");
 }
 
 namespace DreamUIExpressionThunksLocal
@@ -75,10 +83,33 @@ namespace DreamUIExpressionThunksLocal
 	 */
 	const FDreamUIAst* GLoweringAst = nullptr;
 
+	/**
+	 * Where the emit routes of the same call go, and which events they may not raise -- the same arrangement as
+	 * GLoweringAst and for the same reason: LowerPropertyList is the one function that sees a route, and threading
+	 * two more parameters through every walk above it would be five signatures carrying what none of them reads.
+	 * Null outside Generate, and null inside it for a caller that asked for no routes.
+	 */
+	TArray<DreamUIExpressionThunks::FEmitRoute>* GEmitRoutes = nullptr;
+	const TSet<FString>* GRefusedEvents = nullptr;
+
 	struct FThunkContext
 	{
 		UDreamWidgetBlueprint* Blueprint = nullptr;
 		FDreamUIDiagnosticBag* Diagnostics = nullptr;
+		/**
+		 * The code a refusal is raised under. BindingExpressionUnsupported for everything an expression can get
+		 * wrong; an emit handler switches it to EmitArgumentMismatch for the one step that is the ROUTE's mistake
+		 * rather than the expression's -- an argument of the wrong type for the event it is handed to.
+		 */
+		EDreamUIDiagnosticCode FailCode = EDreamUIDiagnosticCode::BindingExpressionUnsupported;
+		/** Put in front of a refusal's message while set, so an argument's says which emit it belongs to. */
+		FString FailPrefix;
+		/**
+		 * Names an expression may read that are not members of the class: an emit handler's parameters, which are
+		 * whatever the source event sends (`OnValueChanged -> emit Changed(Value)`). Looked up before the class, as a
+		 * function's parameters shadow its members in any language that has both.
+		 */
+		TMap<FString, UEdGraphPin*> LocalPins;
 		/**
 		 * The tree the expression came out of, for `@Name`.
 		 *
@@ -97,7 +128,7 @@ namespace DreamUIExpressionThunksLocal
 		{
 			if (!bFailed)
 			{
-				Diagnostics->AddError(EDreamUIDiagnosticCode::BindingExpressionUnsupported, InLocation, InMessage);
+				Diagnostics->AddError(FailCode, InLocation, FailPrefix + InMessage);
 			}
 			bFailed = true;
 		}
@@ -152,6 +183,23 @@ namespace DreamUIExpressionThunksLocal
 	bool ConnectOrDefault(UEdGraphPin* InPin, const FEmitted& InSource, FThunkContext& InContext, const FDreamUISourceLocation& InLocation)
 	{
 		const UEdGraphSchema_K2* Schema = GetDefault<UEdGraphSchema_K2>();
+		if (InSource.IsLiteral() && InPin->PinType.PinCategory == UEdGraphSchema_K2::PC_Text
+			&& InPin->PinType.ContainerType == EPinContainerType::None)
+		{
+			// A text pin keeps its default in DefaultTextValue, and TrySetDefaultValue writes the STRING one, which a
+			// text pin never reads: `"Hello"` handed to a text input compiled green and arrived empty. Only a string
+			// literal is a text -- a number or a bool given where text is wanted is the author's type mistake, and
+			// converting it silently would be the generator deciding what they meant.
+			if (Classify(InSource.PinType) != EScalarKind::String)
+			{
+				InContext.Fail(InLocation, FString::Printf(
+					TEXT("'%s' cannot be the '%s' input: it takes text, and only a quoted string is one"),
+					*InSource.LiteralDefault, *InPin->PinName.ToString()));
+				return false;
+			}
+			Schema->TrySetDefaultText(*InPin, FText::FromString(InSource.LiteralDefault));
+			return true;
+		}
 		if (InSource.IsLiteral())
 		{
 			// Asked BEFORE the write, because TrySetDefaultValue returns void and does not refuse:
@@ -337,6 +385,15 @@ namespace DreamUIExpressionThunksLocal
 
 	FEmitted EmitVariableRef(const FDreamUIExpression& InExpression, FThunkContext& InContext)
 	{
+		// A parameter of the function being generated: no node to make, the entry's own pin IS the value.
+		if (UEdGraphPin* const* LocalPin = InContext.LocalPins.Find(InExpression.Symbol))
+		{
+			FEmitted Local;
+			Local.Pin = *LocalPin;
+			Local.PinType = Local.Pin->PinType;
+			return Local;
+		}
+
 		FEdGraphPinType VariableType;
 		if (!FindVariablePinType(InContext.Blueprint, InExpression.Symbol, VariableType))
 		{
@@ -637,6 +694,7 @@ namespace DreamUIExpressionThunksLocal
 	bool IsThunkGraphName(const FString& InName)
 	{
 		return InName.StartsWith(DreamUIExpressionThunks::GeneratedGraphPrefix)
+			|| InName.StartsWith(DreamUIExpressionThunks::GeneratedEmitPrefix)
 			|| InName.StartsWith(TEXT("__DreamTwoWayGet_"))
 			|| InName.StartsWith(TEXT("__DreamTwoWaySet_"));
 	}
@@ -860,6 +918,84 @@ namespace DreamUIExpressionThunksLocal
 		Route.Location = InProperty.Location;
 	}
 
+	/** "Picked(Number Index, Text Label)" -- an `events` entry as its author wrote it, for messages. */
+	FString DescribeEvent(const FDreamUIEventDecl& InEvent)
+	{
+		TArray<FString> Parameters;
+		for (const FDreamUIEventParam& Parameter : InEvent.Params)
+		{
+			Parameters.Add(Parameter.EnumPath.IsEmpty()
+				? FString::Printf(TEXT("%s %s"), *Parameter.TypeName, *Parameter.Name)
+				: FString::Printf(TEXT("%s %s %s"), *Parameter.TypeName, *Parameter.EnumPath, *Parameter.Name));
+		}
+		return FString::Printf(TEXT("%s(%s)"), *InEvent.Name, *FString::Join(Parameters, TEXT(", ")));
+	}
+
+	/**
+	 * The first half of an emit route: check it against the file's `events` block, name its handler, and hand the
+	 * rest to GenerateEmitHandlers through GEmitRoutes.
+	 *
+	 * Named here, before the builder, because the name is all the builder needs -- with EventHandler set the route
+	 * is an ordinary one and is recorded like any other -- and the body cannot be made here at all: it has to take
+	 * the source event's parameters, and only the builder knows whose event that is.
+	 *
+	 * A refusal leaves EventHandler EMPTY with EmitEvent still set, the same shape a refused `<-` leaves behind (an
+	 * expression and no function name): the builder skips such a route without a word, because the word has been
+	 * said here, and clearing EmitEvent too would send the line down the literal path to complain about a value
+	 * that was never the author's mistake.
+	 */
+	void LowerEmit(const FString& InOwnerName, FDreamUIProperty& InProperty, FDreamUIDiagnosticBag& InDiagnostics,
+		TSet<FString>& InOutClaimedNames)
+	{
+		if (GEmitRoutes == nullptr || !InProperty.EventHandler.IsEmpty())
+		{
+			return;
+		}
+
+		// This file's events only, never an import's: a dispatcher is a member of the class this file compiles into,
+		// so `emit` raising another file's event would be raising something this class does not have.
+		const FDreamUIEventDecl* Event = GLoweringAst != nullptr ? GLoweringAst->FindEvent(InProperty.EmitEvent) : nullptr;
+		if (Event == nullptr)
+		{
+			TArray<FString> Declared;
+			if (GLoweringAst != nullptr)
+			{
+				for (const FDreamUIEventDecl& Candidate : GLoweringAst->Events)
+				{
+					Declared.Add(Candidate.Name);
+				}
+			}
+			InDiagnostics.AddError(EDreamUIDiagnosticCode::EmitUnknownEvent, InProperty.Location, Declared.Num() > 0
+				? FString::Printf(TEXT("'emit %s' names no entry of this file's events block, which declares %s"),
+					*InProperty.EmitEvent, *FString::Join(Declared, TEXT(", ")))
+				: FString::Printf(TEXT("'emit %s' names no event: this file has no events block, and an emit raises one of its own file's events"),
+					*InProperty.EmitEvent));
+			return;
+		}
+		if (GRefusedEvents != nullptr && GRefusedEvents->Contains(Event->Name))
+		{
+			// Declared, and refused by the compiler with the reason on the declaration's own line. A second error
+			// here would only say that line's mistake again from further away.
+			return;
+		}
+		if (InProperty.EmitArguments.Num() != Event->Params.Num())
+		{
+			InDiagnostics.AddError(EDreamUIDiagnosticCode::EmitArgumentMismatch, InProperty.Location, FString::Printf(
+				TEXT("'emit %s' passes %d argument(s), and the event is declared %s, which takes %d"),
+				*Event->Name, InProperty.EmitArguments.Num(), *DescribeEvent(*Event), Event->Params.Num()));
+			return;
+		}
+
+		const FString HandlerName = MakeThunkName(DreamUIExpressionThunks::GeneratedEmitPrefix, InOwnerName, InProperty.Name, InOutClaimedNames);
+		InProperty.EventHandler = HandlerName;
+
+		DreamUIExpressionThunks::FEmitRoute& Route = GEmitRoutes->AddDefaulted_GetRef();
+		Route.HandlerName = HandlerName;
+		Route.EventName = Event->Name;
+		Route.Arguments = InProperty.EmitArguments;
+		Route.Location = InProperty.Location;
+	}
+
 	/**
 	 * Lower every `<-` expression and every `<->` in one property list, under one owner name.
 	 *
@@ -875,7 +1011,11 @@ namespace DreamUIExpressionThunksLocal
 		TArray<FDreamUIProperty> Synthesized;
 		for (FDreamUIProperty& Property : InOutProperties)
 		{
-			if (Property.BindingExpression.IsSet())
+			if (!Property.EmitEvent.IsEmpty())
+			{
+				LowerEmit(InOwnerName, Property, InDiagnostics, InOutClaimedNames);
+			}
+			else if (Property.BindingExpression.IsSet())
 			{
 				LowerProperty(InBlueprint, InOwnerName, Property, InDiagnostics, InOutClaimedNames);
 			}
@@ -885,6 +1025,40 @@ namespace DreamUIExpressionThunksLocal
 			}
 		}
 		InOutProperties.Append(MoveTemp(Synthesized));
+	}
+
+	/**
+	 * Every `-> emit` inside a `for` or `each` body, said out loud.
+	 *
+	 * Not lowered, for the reason the body's `<-` lines are not: its widgets are copies the loop makes, and a handler
+	 * on the class has no way to say which copy fired or to read the item it was made for -- the arguments an author
+	 * writes there (`emit Chosen(Item.Index)`) name the loop's variable, which the class does not have. Left alone
+	 * it would be skipped in silence, which is the one outcome a route must never have.
+	 */
+	void ReportEmitsInLoopBody(const FDreamUINode& InNode, FDreamUIDiagnosticBag& InDiagnostics)
+	{
+		auto ReportList = [&InDiagnostics](const TArray<FDreamUIProperty>& InProperties)
+		{
+			for (const FDreamUIProperty& Property : InProperties)
+			{
+				if (!Property.EmitEvent.IsEmpty())
+				{
+					InDiagnostics.AddError(EDreamUIDiagnosticCode::EmitRouteUnsupported, Property.Location, FString::Printf(
+						TEXT("'%s -> emit %s' is inside a for or each body, whose widgets are the loop's copies -- route the event to a function of the class and raise '%s' from there"),
+						*Property.Name, *Property.EmitEvent, *Property.EmitEvent));
+				}
+			}
+		};
+		ReportList(InNode.Properties);
+		ReportList(InNode.SlotProperties);
+		for (const FDreamUIComponent& Component : InNode.Components)
+		{
+			ReportList(Component.Properties);
+		}
+		for (const FDreamUINode& Child : InNode.Children)
+		{
+			ReportEmitsInLoopBody(Child, InDiagnostics);
+		}
 	}
 
 	void WalkNode(UDreamWidgetBlueprint* InBlueprint, FDreamUINode& InNode, FDreamUIDiagnosticBag& InDiagnostics,
@@ -907,6 +1081,10 @@ namespace DreamUIExpressionThunksLocal
 			// variable only the iteration has.
 			if (Child.Kind == EDreamUINodeKind::EachLoop || Child.Kind == EDreamUINodeKind::ForLoop)
 			{
+				if (GEmitRoutes != nullptr)
+				{
+					ReportEmitsInLoopBody(Child, InDiagnostics);
+				}
 				continue;
 			}
 			WalkNode(InBlueprint, Child, InDiagnostics, InOutClaimedNames);
@@ -978,15 +1156,490 @@ namespace DreamUIExpressionThunksLocal
 					break;
 				}
 				Lowered.Add(Style);
-				LowerPropertyList(InBlueprint, FString(TEXT("Style_")) + Style->Name, Style->Properties,
-					InDiagnostics, InOutClaimedNames);
+				const FString OwnerName = FString(TEXT("Style_")) + Style->Name;
+				LowerPropertyList(InBlueprint, OwnerName, Style->Properties, InDiagnostics, InOutClaimedNames);
+				// A style carries components and `@slot` lines too, and a line in either is a line like any other: an
+				// expression there left un-lowered is the silent binding this pass was extended to styles to end. One
+				// owner name for all three lists; a component's `Spacing` meeting the style's own `Spacing` is exactly
+				// the collision MakeThunkName disambiguates.
+				for (FDreamUIComponent& Component : Style->Components)
+				{
+					LowerPropertyList(InBlueprint, OwnerName, Component.Properties, InDiagnostics, InOutClaimedNames);
+				}
+				LowerPropertyList(InBlueprint, OwnerName, Style->SlotProperties, InDiagnostics, InOutClaimedNames);
 				Link = Style->BaseName;
 			}
 		}
 	}
 }
 
-void DreamUIExpressionThunks::Generate(UDreamWidgetBlueprint* InBlueprint, FDreamUIAst& InAst, FDreamUIDiagnosticBag& InDiagnostics)
+namespace DreamUIExpressionThunksLocal
+{
+	/** What an emit handler has to take: the source event's own signature, or the one value a struct event fires with. */
+	struct FSourceSignature
+	{
+		/** A multicast delegate's signature. The handler's parameters are copied from it whole, reference flags and all. */
+		const UFunction* SignatureFunction = nullptr;
+		/** An FDreamUIEventDelegate's value: nothing for one that fires empty, one parameter named Value otherwise. */
+		TArray<TPair<FName, FEdGraphPinType>> Parameters;
+	};
+
+	/**
+	 * The pin an FDreamUIEventDelegate's parameter type is, or false for the widths no Blueprint function can take.
+	 *
+	 * The inverse of UDreamUIEventDelegateParameterHelper::IsPropertyCompatible, which is what judges the handler
+	 * when the route is checked and again when it fires: a pin made here becomes a parameter that function answers
+	 * with the same type, which is the whole of what "fits" means for this kind of event.
+	 */
+	bool MakeStructEventPinType(const EDreamUIEventDelegateParameterType InType, FEdGraphPinType& OutPinType)
+	{
+		OutPinType = FEdGraphPinType();
+		auto AsStruct = [&OutPinType](UScriptStruct* InStruct)
+		{
+			OutPinType.PinCategory = UEdGraphSchema_K2::PC_Struct;
+			OutPinType.PinSubCategoryObject = InStruct;
+			return true;
+		};
+		auto AsObject = [&OutPinType](const FName InCategory, UClass* InClass)
+		{
+			OutPinType.PinCategory = InCategory;
+			OutPinType.PinSubCategoryObject = InClass;
+			return true;
+		};
+		switch (InType)
+		{
+		case EDreamUIEventDelegateParameterType::Bool: OutPinType.PinCategory = UEdGraphSchema_K2::PC_Boolean; return true;
+		case EDreamUIEventDelegateParameterType::Float:
+			OutPinType.PinCategory = UEdGraphSchema_K2::PC_Real;
+			OutPinType.PinSubCategory = UEdGraphSchema_K2::PC_Float;
+			return true;
+		case EDreamUIEventDelegateParameterType::Double:
+			OutPinType.PinCategory = UEdGraphSchema_K2::PC_Real;
+			OutPinType.PinSubCategory = UEdGraphSchema_K2::PC_Double;
+			return true;
+		case EDreamUIEventDelegateParameterType::UInt8: OutPinType.PinCategory = UEdGraphSchema_K2::PC_Byte; return true;
+		case EDreamUIEventDelegateParameterType::Int32: OutPinType.PinCategory = UEdGraphSchema_K2::PC_Int; return true;
+		case EDreamUIEventDelegateParameterType::Int64: OutPinType.PinCategory = UEdGraphSchema_K2::PC_Int64; return true;
+		case EDreamUIEventDelegateParameterType::String: OutPinType.PinCategory = UEdGraphSchema_K2::PC_String; return true;
+		case EDreamUIEventDelegateParameterType::Name: OutPinType.PinCategory = UEdGraphSchema_K2::PC_Name; return true;
+		case EDreamUIEventDelegateParameterType::Text: OutPinType.PinCategory = UEdGraphSchema_K2::PC_Text; return true;
+		case EDreamUIEventDelegateParameterType::Vector2: return AsStruct(TBaseStructure<FVector2D>::Get());
+		case EDreamUIEventDelegateParameterType::Vector3: return AsStruct(TBaseStructure<FVector>::Get());
+		case EDreamUIEventDelegateParameterType::Vector4: return AsStruct(TBaseStructure<FVector4>::Get());
+		case EDreamUIEventDelegateParameterType::Color: return AsStruct(TBaseStructure<FColor>::Get());
+		case EDreamUIEventDelegateParameterType::LinearColor: return AsStruct(TBaseStructure<FLinearColor>::Get());
+		case EDreamUIEventDelegateParameterType::Quaternion: return AsStruct(TBaseStructure<FQuat>::Get());
+		case EDreamUIEventDelegateParameterType::Rotator: return AsStruct(TBaseStructure<FRotator>::Get());
+		case EDreamUIEventDelegateParameterType::Asset: return AsObject(UEdGraphSchema_K2::PC_Object, UObject::StaticClass());
+		case EDreamUIEventDelegateParameterType::DreamWidget: return AsObject(UEdGraphSchema_K2::PC_Object, UDreamWidget::StaticClass());
+		case EDreamUIEventDelegateParameterType::PointerEvent: return AsObject(UEdGraphSchema_K2::PC_Object, UDreamPointerEventData::StaticClass());
+		case EDreamUIEventDelegateParameterType::Class: return AsObject(UEdGraphSchema_K2::PC_Class, UObject::StaticClass());
+		default:
+			// Int8, the unsigned widths past a byte, and a generic USTRUCT whose type the event does not say: no
+			// Blueprint pin is any of them.
+			return false;
+		}
+	}
+
+	/**
+	 * Find the event a recorded route leaves from, on the tree the builder just made, and say what its handler takes.
+	 *
+	 * Through ResolveDreamWidgetBindingTarget, the resolver the compiler checks routes with and the run time binds
+	 * them through: the handler is built against the very object it will be attached to.
+	 */
+	bool ResolveSourceSignature(const FDreamWidgetEventBinding& InBinding, UDreamWidgetTree* InTree, FSourceSignature& OutSignature,
+		FString& OutRefusal)
+	{
+		const UDreamWidget* Widget = InTree != nullptr ? InTree->FindWidgetByVariableName(InBinding.WidgetName) : nullptr;
+		const UObject* Target = Widget != nullptr
+			? ResolveDreamWidgetBindingTarget(Widget, InBinding.Target, InBinding.BehaviourIndex) : nullptr;
+		const FProperty* EventProperty = Target != nullptr ? Target->GetClass()->FindPropertyByName(InBinding.EventName) : nullptr;
+
+		if (const FMulticastDelegateProperty* Event = CastField<FMulticastDelegateProperty>(EventProperty))
+		{
+			if (Event->SignatureFunction == nullptr)
+			{
+				OutRefusal = FString::Printf(TEXT("'%s' declares no signature for a handler to copy"), *InBinding.EventName.ToString());
+				return false;
+			}
+			OutSignature.SignatureFunction = Event->SignatureFunction;
+			return true;
+		}
+
+		const FStructProperty* StructEvent = CastField<FStructProperty>(EventProperty);
+		if (StructEvent != nullptr && StructEvent->Struct == FDreamUIEventDelegate::StaticStruct())
+		{
+			const FDreamUIEventDelegate* EventValue = StructEvent->ContainerPtrToValuePtr<FDreamUIEventDelegate>(Target);
+			const EDreamUIEventDelegateParameterType ParameterType = EventValue != nullptr
+				? EventValue->GetNativeParameterType() : EDreamUIEventDelegateParameterType::None;
+			if (ParameterType == EDreamUIEventDelegateParameterType::Empty)
+			{
+				return true;
+			}
+			FEdGraphPinType PinType;
+			if (!MakeStructEventPinType(ParameterType, PinType))
+			{
+				OutRefusal = FString::Printf(TEXT("'%s' fires with a %s, which no Blueprint function can take as a parameter"),
+					*InBinding.EventName.ToString(), *UDreamUIEventDelegateParameterHelper::ParameterTypeToName(ParameterType));
+				return false;
+			}
+			OutSignature.Parameters.Emplace(FName(TEXT("Value")), PinType);
+			return true;
+		}
+
+		OutRefusal = FString::Printf(TEXT("internal: the route's event '%s' could not be found again on the hierarchy the file built"),
+			*InBinding.EventName.ToString());
+		return false;
+	}
+
+	/**
+	 * `Cycle` handed to an enum parameter: a bare word the expression grammar can only read as a variable, meant as
+	 * the enumerator. Taken as one when it names no parameter and no variable, and the enum has it -- the same order
+	 * of meanings the word would have anywhere else, with the enumerator as the last resort rather than the first.
+	 */
+	bool TryEmitEnumeratorLiteral(const FDreamUIExpression& InArgument, const UEdGraphPin* InTarget, const FThunkContext& InContext,
+		FEmitted& OutLiteral)
+	{
+		if (InArgument.Kind != FDreamUIExpression::EKind::VariableRef || InTarget == nullptr)
+		{
+			return false;
+		}
+		const UEnum* Enum = Cast<UEnum>(InTarget->PinType.PinSubCategoryObject.Get());
+		if (Enum == nullptr
+			|| (InTarget->PinType.PinCategory != UEdGraphSchema_K2::PC_Byte && InTarget->PinType.PinCategory != UEdGraphSchema_K2::PC_Enum))
+		{
+			return false;
+		}
+		FEdGraphPinType Unused;
+		if (InContext.LocalPins.Contains(InArgument.Symbol) || FindVariablePinType(InContext.Blueprint, InArgument.Symbol, Unused))
+		{
+			return false;
+		}
+		const int32 Index = Enum->GetIndexByNameString(InArgument.Symbol);
+		if (Index == INDEX_NONE)
+		{
+			return false;
+		}
+		OutLiteral = FEmitted();
+		OutLiteral.LiteralDefault = Enum->GetNameStringByIndex(Index);
+		OutLiteral.PinType = InTarget->PinType;
+		return true;
+	}
+
+	/** Whether two pin types are the same declared type, for retyping a pin an old signature grew. */
+	bool IsSameDeclaredType(const FEdGraphPinType& InA, const FEdGraphPinType& InB)
+	{
+		return InA.PinCategory == InB.PinCategory
+			&& InA.PinSubCategoryObject == InB.PinSubCategoryObject
+			&& InA.ContainerType == InB.ContainerType;
+	}
+
+	/**
+	 * The body of one emit handler: a function taking what the source event sends, evaluating the arguments and
+	 * calling the dispatcher -- "Call Picked", exactly the node an author would drag out of My Blueprint.
+	 */
+	bool BuildEmitHandler(UDreamWidgetBlueprint* InBlueprint, const DreamUIExpressionThunks::FEmitRoute& InRoute,
+		const FSourceSignature& InSignature, FDreamUIDiagnosticBag& InDiagnostics)
+	{
+		const FDreamUIEventDecl* Event = GLoweringAst != nullptr ? GLoweringAst->FindEvent(InRoute.EventName) : nullptr;
+		if (Event == nullptr || Event->Params.Num() != InRoute.Arguments.Num())
+		{
+			// Both were checked when the route was named; the AST is the one both halves read, so this is not a state
+			// a file can reach.
+			InDiagnostics.AddError(EDreamUIDiagnosticCode::EmitRouteUnsupported, InRoute.Location, FString::Printf(
+				TEXT("internal: 'emit %s' no longer matches the events block it was checked against"), *InRoute.EventName));
+			return false;
+		}
+
+		UEdGraph* Graph = FBlueprintEditorUtils::CreateNewGraph(InBlueprint, FName(*InRoute.HandlerName), UEdGraph::StaticClass(),
+			UEdGraphSchema_K2::StaticClass());
+		InBlueprint->FunctionGraphs.Add(Graph);
+
+		// The entry BARE, its reference set only after Finalize. BeginThunkGraph sets it first, and a thunk can live
+		// with what follows from that -- Finalize resolves the reference against the skeleton, finds last compile's
+		// function of this name and grows its parameters -- because a thunk's one parameter never changes. A
+		// handler's parameters are the source event's, and an author moving the route to another event would get
+		// the old event's parameters AND the new one's: a signature no event has, refused as a mismatch on a line
+		// that is right. With no reference to resolve, the node grows nothing but its exec pin.
+		FGraphNodeCreator<UK2Node_FunctionEntry> EntryCreator(*Graph);
+		UK2Node_FunctionEntry* Entry = EntryCreator.CreateNode(/*bSelectNewNode*/false);
+		EntryCreator.Finalize();
+		Entry->FunctionReference.SetSelfMember(Graph->GetFName());
+		if (InSignature.SignatureFunction != nullptr)
+		{
+			// The schema's own copy of a signature, the one "create a matching function" uses: a `const FText&`
+			// parameter arrives by reference, and IsSignatureCompatibleWith compares those flags.
+			Entry->CreateUserDefinedPinsForFunctionEntryExit(InSignature.SignatureFunction, /*bForFunctionEntry*/ true);
+		}
+		for (const TPair<FName, FEdGraphPinType>& Parameter : InSignature.Parameters)
+		{
+			Entry->CreateUserDefinedPin(Parameter.Key, Parameter.Value, EGPD_Output);
+		}
+
+		FThunkContext Context;
+		Context.Blueprint = InBlueprint;
+		Context.Diagnostics = &InDiagnostics;
+		Context.Ast = GLoweringAst;
+		Context.Graph = Graph;
+		Context.LastExecPin = Entry->FindPin(UEdGraphSchema_K2::PN_Then);
+		for (UEdGraphPin* Pin : Entry->Pins)
+		{
+			if (Pin != nullptr && Pin->Direction == EGPD_Output && Pin->PinType.PinCategory != UEdGraphSchema_K2::PC_Exec)
+			{
+				Context.LocalPins.Add(Pin->PinName.ToString(), Pin);
+			}
+		}
+
+		// The dispatcher, by self reference and by name. On the first compile that declares it the skeleton this
+		// resolves against does not have it yet, so the node comes without its parameter pins and they are made here
+		// by name and type, which is all the compile matches them on -- the getter nodes of the expressions above
+		// rely on the same thing.
+		FGraphNodeCreator<UK2Node_CallDelegate> CallCreator(*Graph);
+		UK2Node_CallDelegate* Call = CallCreator.CreateNode(/*bSelectNewNode*/false);
+		Call->DelegateReference.SetSelfMember(FName(*Event->Name));
+		CallCreator.Finalize();
+
+		TArray<UEdGraphPin*> ParameterPins;
+		for (const FDreamUIEventParam& Parameter : Event->Params)
+		{
+			FEdGraphPinType DeclaredType;
+			FString Reason;
+			const bool bDeclared = DreamUIExpressionThunks::MakeDeclaredPinType(Parameter.TypeName, Parameter.EnumPath, DeclaredType, Reason);
+			UEdGraphPin* Pin = Call->FindPin(FName(*Parameter.Name), EGPD_Input);
+			if (Pin != nullptr)
+			{
+				// Grown from last compile's signature, which may say another type if the file changed it since. A
+				// parent's dispatcher the file reuses is left as it is: it was accepted for having these types.
+				if (bDeclared && !IsSameDeclaredType(Pin->PinType, DeclaredType)
+					&& !(Pin->PinType.PinCategory == UEdGraphSchema_K2::PC_Real && DeclaredType.PinCategory == UEdGraphSchema_K2::PC_Real))
+				{
+					Pin->PinType = DeclaredType;
+				}
+			}
+			else if (bDeclared)
+			{
+				Pin = Call->CreatePin(EGPD_Input, DeclaredType, FName(*Parameter.Name));
+			}
+			if (Pin == nullptr)
+			{
+				Context.Fail(Parameter.Location, FString::Printf(TEXT("internal: '%s' has no pin for parameter '%s': %s"),
+					*Event->Name, *Parameter.Name, *Reason));
+				break;
+			}
+			ParameterPins.Add(Pin);
+		}
+		// And nothing else: a parameter the file has since removed is a pin the old signature grew, and an input the
+		// call no longer has.
+		for (int32 PinIndex = Call->Pins.Num() - 1; PinIndex >= 0 && !Context.bFailed; --PinIndex)
+		{
+			UEdGraphPin* Pin = Call->Pins[PinIndex];
+			if (Pin != nullptr && Pin->Direction == EGPD_Input && Pin->PinType.PinCategory != UEdGraphSchema_K2::PC_Exec
+				&& Pin->PinName != UEdGraphSchema_K2::PN_Self && !ParameterPins.Contains(Pin))
+			{
+				Call->RemovePin(Pin);
+			}
+		}
+
+		for (int32 Index = 0; Index < InRoute.Arguments.Num() && !Context.bFailed; ++Index)
+		{
+			const FDreamUIExpression& Argument = InRoute.Arguments[Index];
+			UEdGraphPin* ParameterPin = ParameterPins[Index];
+			FEmitted Value;
+			if (!TryEmitEnumeratorLiteral(Argument, ParameterPin, Context, Value))
+			{
+				Value = EmitExpression(Argument, Context);
+				if (Context.bFailed)
+				{
+					break;
+				}
+			}
+			// The one step that is the ROUTE's mistake rather than the expression's: the expression made a value, and
+			// it is not the type the event declares for this parameter.
+			Context.FailCode = EDreamUIDiagnosticCode::EmitArgumentMismatch;
+			Context.FailPrefix = FString::Printf(TEXT("argument %d of 'emit %s' is its '%s', declared %s, and "),
+				Index + 1, *Event->Name, *Event->Params[Index].Name, *Event->Params[Index].TypeName);
+			ConnectOrDefault(ParameterPin, Value, Context, Argument.Location);
+			Context.FailCode = EDreamUIDiagnosticCode::BindingExpressionUnsupported;
+			Context.FailPrefix.Reset();
+		}
+
+		if (!Context.bFailed)
+		{
+			// After the arguments, so a call an argument makes has run before the broadcast reads its value -- the
+			// order EmitCall keeps for the same reason.
+			UEdGraphPin* Execute = Call->FindPin(UEdGraphSchema_K2::PN_Execute);
+			if (Execute == nullptr || Context.LastExecPin == nullptr
+				|| !GetDefault<UEdGraphSchema_K2>()->TryCreateConnection(Context.LastExecPin, Execute))
+			{
+				Context.Fail(InRoute.Location, FString::Printf(TEXT("internal: the call to '%s' would not wire into its handler"), *Event->Name));
+			}
+		}
+		if (Context.bFailed)
+		{
+			FBlueprintEditorUtils::RemoveGraph(InBlueprint, Graph);
+			return false;
+		}
+
+		// Private like every function this pass makes, and never pure: a broadcast is the side effect it exists for.
+		Entry->AddExtraFlags(FUNC_Private);
+		return true;
+	}
+}
+
+bool DreamUIExpressionThunks::MakeDeclaredPinType(const FString& InTypeName, const FString& InEnumPath, FEdGraphPinType& OutPinType,
+	FString& OutReason)
+{
+	OutPinType = FEdGraphPinType();
+	const FString Type = InTypeName.TrimStartAndEnd();
+	auto Is = [&Type](const TCHAR* InName) { return Type.Equals(InName, ESearchCase::IgnoreCase); };
+
+	if (Is(TEXT("Text")))
+	{
+		OutPinType.PinCategory = UEdGraphSchema_K2::PC_Text;
+		return true;
+	}
+	if (Is(TEXT("String")))
+	{
+		OutPinType.PinCategory = UEdGraphSchema_K2::PC_String;
+		return true;
+	}
+	if (Is(TEXT("Number")))
+	{
+		// A double, which is what a Blueprint "Float" variable has been since reals: the language's Number is the
+		// type an author gets by declaring a number in the Blueprint editor, and binds float targets by conversion.
+		OutPinType.PinCategory = UEdGraphSchema_K2::PC_Real;
+		OutPinType.PinSubCategory = UEdGraphSchema_K2::PC_Double;
+		return true;
+	}
+	if (Is(TEXT("Integer")))
+	{
+		OutPinType.PinCategory = UEdGraphSchema_K2::PC_Int;
+		return true;
+	}
+	if (Is(TEXT("Bool")))
+	{
+		OutPinType.PinCategory = UEdGraphSchema_K2::PC_Boolean;
+		return true;
+	}
+	if (Is(TEXT("Color")))
+	{
+		OutPinType.PinCategory = UEdGraphSchema_K2::PC_Struct;
+		OutPinType.PinSubCategoryObject = TBaseStructure<FLinearColor>::Get();
+		return true;
+	}
+	if (Is(TEXT("Vector2")))
+	{
+		OutPinType.PinCategory = UEdGraphSchema_K2::PC_Struct;
+		OutPinType.PinSubCategoryObject = TBaseStructure<FVector2D>::Get();
+		return true;
+	}
+	if (Is(TEXT("Asset")))
+	{
+		// A HARD reference, unlike a `resources` Asset, and on purpose. A resource is a constant the Class Defaults
+		// panel edits, where the asset picker of a soft pin is the point. A prop is a value a host hands in and this
+		// file binds onto its widgets, every one of which holds what it draws by hard pointer -- so a soft prop would
+		// put a load into every binding that reads it, and the builder already loads the asset a host's
+		// `Icon = /Game/T_Icon` names, as it does for any object-typed property.
+		OutPinType.PinCategory = UEdGraphSchema_K2::PC_Object;
+		OutPinType.PinSubCategoryObject = UObject::StaticClass();
+		return true;
+	}
+	if (Is(TEXT("Class")))
+	{
+		OutPinType.PinCategory = UEdGraphSchema_K2::PC_Class;
+		OutPinType.PinSubCategoryObject = UObject::StaticClass();
+		return true;
+	}
+	if (Is(TEXT("Enum")))
+	{
+		const FString EnumPath = InEnumPath.TrimStartAndEnd();
+		if (EnumPath.IsEmpty())
+		{
+			OutReason = TEXT("'Enum' is followed by the enum's path, as in 'Enum /Script/MyGame.EMyKind Kind'");
+			return false;
+		}
+		UEnum* Enum = FindObject<UEnum>(nullptr, *EnumPath);
+		if (Enum == nullptr)
+		{
+			Enum = LoadObject<UEnum>(nullptr, *EnumPath, nullptr, LOAD_NoWarn | LOAD_Quiet);
+		}
+		if (Enum == nullptr)
+		{
+			OutReason = FString::Printf(TEXT("there is no enum at '%s'"), *EnumPath);
+			return false;
+		}
+		if (!UEdGraphSchema_K2::IsAllowableBlueprintVariableType(Enum))
+		{
+			OutReason = FString::Printf(TEXT("'%s' is not a BlueprintType enum, so no Blueprint variable can hold one"), *EnumPath);
+			return false;
+		}
+		// The byte pin of the enum, which is what a Blueprint variable of an enum type is; the compiler makes an
+		// FEnumProperty of it for an `enum class` and an FByteProperty otherwise, exactly as for a hand-made one.
+		OutPinType.PinCategory = UEdGraphSchema_K2::PC_Byte;
+		OutPinType.PinSubCategoryObject = Enum;
+		return true;
+	}
+	OutReason = FString::Printf(
+		TEXT("'%s' is not a type a prop or an event parameter can have -- Text, String, Number, Integer, Bool, Color, Vector2, Asset, Class or Enum <path>"),
+		*Type);
+	return false;
+}
+
+void DreamUIExpressionThunks::GenerateEmitHandlers(UDreamWidgetBlueprint* InBlueprint, const FDreamUIAst& InAst,
+	const TArray<FEmitRoute>& InRoutes, UDreamWidgetTree* InTree, TArray<FDreamWidgetEventBinding>& InOutEventBindings,
+	FDreamUIDiagnosticBag& InDiagnostics)
+{
+	using namespace DreamUIExpressionThunksLocal;
+
+	if (InBlueprint == nullptr || InRoutes.Num() == 0)
+	{
+		return;
+	}
+	TGuardValue<const FDreamUIAst*> LoweringAstGuard(GLoweringAst, &InAst);
+
+	auto DropRoutes = [&InOutEventBindings](const FName InHandlerName)
+	{
+		InOutEventBindings.RemoveAll([InHandlerName](const FDreamWidgetEventBinding& InBinding)
+		{
+			return InBinding.FunctionName == InHandlerName;
+		});
+	};
+
+	for (const FEmitRoute& Route : InRoutes)
+	{
+		const FName HandlerName(*Route.HandlerName);
+		// The first route recorded under this handler. There is more than one when the line sits in a style several
+		// nodes wear; each wearer's event is checked against the handler by the compile, as any route is, so a style
+		// worn by two kinds of control that fire different signatures is said there, on the route that does not fit.
+		const FDreamWidgetEventBinding* Binding = InOutEventBindings.FindByPredicate([HandlerName](const FDreamWidgetEventBinding& InBinding)
+		{
+			return InBinding.FunctionName == HandlerName;
+		});
+		if (Binding == nullptr)
+		{
+			// The builder recorded no route, and said why on this line (no such event, nothing to carry it): there is
+			// nothing to give a body to.
+			continue;
+		}
+
+		FSourceSignature Signature;
+		FString Refusal;
+		if (!ResolveSourceSignature(*Binding, InTree, Signature, Refusal))
+		{
+			InDiagnostics.AddError(EDreamUIDiagnosticCode::EmitRouteUnsupported, Route.Location, FString::Printf(
+				TEXT("'emit %s' needs a handler that takes what its event sends, and %s"), *Route.EventName, *Refusal));
+			DropRoutes(HandlerName);
+			continue;
+		}
+		if (!BuildEmitHandler(InBlueprint, Route, Signature, InDiagnostics))
+		{
+			DropRoutes(HandlerName);
+		}
+	}
+}
+
+void DreamUIExpressionThunks::Generate(UDreamWidgetBlueprint* InBlueprint, FDreamUIAst& InAst, FDreamUIDiagnosticBag& InDiagnostics,
+	TArray<FEmitRoute>* OutEmitRoutes, const TSet<FString>* InRefusedEvents)
 {
 	using namespace DreamUIExpressionThunksLocal;
 
@@ -1014,6 +1667,9 @@ void DreamUIExpressionThunks::Generate(UDreamWidgetBlueprint* InBlueprint, FDrea
 		// The AST, for the whole of the lowering: `@Name` inside an expression resolves against the
 		// resources block of the file the expression was written in, and the guard is what scopes it.
 		TGuardValue<const FDreamUIAst*> LoweringAstGuard(GLoweringAst, &InAst);
+		// And where the emit routes go, for the same span; see GEmitRoutes.
+		TGuardValue<TArray<FEmitRoute>*> EmitRoutesGuard(GEmitRoutes, OutEmitRoutes);
+		TGuardValue<const TSet<FString>*> RefusedEventsGuard(GRefusedEvents, InRefusedEvents);
 		// Styles first, and sharing the node walk's claim set: a style thunk is named after the
 		// style, so the only way it can meet a node's name is a node literally called Style_<name>,
 		// and one set across both passes is what makes MakeThunkName disambiguate that instead of

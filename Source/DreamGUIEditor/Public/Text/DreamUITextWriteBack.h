@@ -240,6 +240,19 @@ public:
 	 * the one name the language has -- UDreamWidget::GetDisplayName, which the builder sets from
 	 * FDreamUINode::Id -- and the walk stops at each nested widget blueprint instance, whose
 	 * contents belong to another file.
+	 *
+	 * What the newer syntax adds to the walk, each for the same reason -- the comparison must not
+	 * report a value the file already produces, nor write one where the author did not write:
+	 *
+	 *   - An anonymous node pairs by the id the parser made for it, exactly like a named one.
+	 *   - A node whose TYPE is a layout container (`VerticalBox Column { Spacing = 29 }`) has that
+	 *     container's values compared with its own and written as bare lines, as its author wrote them.
+	 *   - The `+` lines and `@slot` lines of a node's STYLE are in both trees, so untouched they cancel
+	 *     out; a changed slot value becomes an override on the node, and a changed value of a style's
+	 *     component is said (DUI7005), never written into the shared style.
+	 *   - `Shown` and Visibility are one value: only the face the file spells is compared.
+	 *   - A slot FILL is the component's slot, not a widget of this file, and a transient widget (the
+	 *     copies a `for` makes at run time) is nobody's line; both are left out.
 	 */
 	/*
 	 * bInUseDirtySet: honour what NoteDirtyProperty was told about InLiveTree, when anything was.
@@ -282,6 +295,12 @@ public:
 	 * A rename is deliberately not inferred: from a diff it is a delete plus an insert, and guessing
 	 * which pairs with which would write `(was:)` clauses that migrate the wrong thing. A caller that
 	 * KNOWS a rename happened issues FDreamUIStructuralEdit directly.
+	 *
+	 * A node added is written with the type this FILE would use for it: its `use … as` alias when the
+	 * class has one here (`Row Item_9`, `nier.Row Item_9`), else its `@Resource`, else the registry tag
+	 * or the path; and a plain widget that lays out its children as the container (`VerticalBox Box`),
+	 * the one spelling that keeps the container through the next compile. Transient widgets -- what a
+	 * `for` makes at run time -- are never added, and a slot fill is never removed.
 	 */
 	static void CollectStructuralEdits(const FDreamUIAst& InAst, const UDreamWidgetTree* InLiveTree,
 		const UDreamWidgetTree* InTextTree, TArray<FDreamUIStructuralEdit>& OutEdits);

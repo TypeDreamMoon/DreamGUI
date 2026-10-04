@@ -525,6 +525,46 @@ namespace DreamUIWriteBackLocal
 	}
 
 	/**
+	 * The object on InWidget a `+ Class` line built, when nothing in InClaimed already answers for it.
+	 *
+	 * Exact class, not IsA: two `+` blocks of related classes would otherwise both claim the first one, and the
+	 * second's properties would be compared against the wrong object.
+	 */
+	const UObject* FindComponentObject(const UDreamWidget* InWidget, const UClass* InComponentClass,
+		const TSet<const UObject*>& InClaimed)
+	{
+		if (!IsValid(InWidget) || InComponentClass == nullptr)
+		{
+			return nullptr;
+		}
+		const UObject* Found = nullptr;
+		if (InComponentClass->IsChildOf(UDreamLayoutContainer::StaticClass()))
+		{
+			Found = InWidget->GetLayoutContainer();
+		}
+		else if (InComponentClass->IsChildOf(UDreamLayoutSelf::StaticClass()))
+		{
+			Found = InWidget->GetLayoutSelf();
+		}
+		else
+		{
+			for (UDreamUIBehaviour* Behaviour : InWidget->GetAllComponents())
+			{
+				if (IsValid(Behaviour) && Behaviour->GetClass() == InComponentClass && !InClaimed.Contains(Behaviour))
+				{
+					Found = Behaviour;
+					break;
+				}
+			}
+		}
+		if (Found == nullptr || Found->GetClass() != InComponentClass || InClaimed.Contains(Found))
+		{
+			return nullptr;
+		}
+		return Found;
+	}
+
+	/**
 	 * The objects the node's `+` blocks produced, in the order the author wrote them.
 	 *
 	 * NOT UDreamWidget::GetAllComponents() read straight through, and the difference is the whole
@@ -550,43 +590,48 @@ namespace DreamUIWriteBackLocal
 		TSet<const UObject*> Claimed;
 		for (const FDreamUIComponent& Component : InNode.Components)
 		{
-			UClass* ComponentClass = FDreamUITextBuilder::ResolveComponentClass(Component.ClassName);
-			const UObject* Found = nullptr;
-
-			if (ComponentClass != nullptr)
-			{
-				if (ComponentClass->IsChildOf(UDreamLayoutContainer::StaticClass()))
-				{
-					Found = InWidget->GetLayoutContainer();
-				}
-				else if (ComponentClass->IsChildOf(UDreamLayoutSelf::StaticClass()))
-				{
-					Found = InWidget->GetLayoutSelf();
-				}
-				else
-				{
-					for (UDreamUIBehaviour* Behaviour : InWidget->GetAllComponents())
-					{
-						if (IsValid(Behaviour) && Behaviour->GetClass() == ComponentClass && !Claimed.Contains(Behaviour))
-						{
-							Found = Behaviour;
-							break;
-						}
-					}
-				}
-			}
-
-			// Exact class, not IsA: two `+` blocks of related classes would otherwise both claim the
-			// first one, and the second's properties would be compared against the wrong object.
-			if (Found != nullptr && Found->GetClass() != ComponentClass)
-			{
-				Found = nullptr;
-			}
+			const UObject* Found = FindComponentObject(InWidget,
+				FDreamUITextBuilder::ResolveComponentClass(Component.ClassName), Claimed);
 			if (Found != nullptr)
 			{
 				Claimed.Add(Found);
 			}
 			OutObjects.Add(Found);
+		}
+	}
+
+	/**
+	 * The style a node wears and every base it inherits, BASE FIRST -- the order the builder applies them in. Empty on a
+	 * cycle, where the builder applies nothing either.
+	 *
+	 * A style that came in under a namespace (`: nier.Card`) was written inside its library, where `: Label` meant the
+	 * library's Label; here that one is `nier.Label`, so a base is looked for under the derived style's namespace first.
+	 */
+	void CollectStyleChain(const FDreamUIAst& InAst, const FString& InStyleName, TArray<const FDreamUIStyle*>& OutChain)
+	{
+		OutChain.Reset();
+		TSet<const FDreamUIStyle*> Visited;
+		const FDreamUIStyle* Link = InStyleName.IsEmpty() ? nullptr : InAst.FindStyle(InStyleName);
+		while (Link != nullptr)
+		{
+			if (Visited.Contains(Link))
+			{
+				OutChain.Reset();
+				return;
+			}
+			Visited.Add(Link);
+			OutChain.Insert(Link, 0);
+			if (Link->BaseName.IsEmpty())
+			{
+				break;
+			}
+			const FDreamUIStyle* Base = nullptr;
+			int32 Dot = INDEX_NONE;
+			if (Link->Name.FindLastChar(TEXT('.'), Dot) && !Link->BaseName.Contains(TEXT(".")))
+			{
+				Base = InAst.FindStyle(Link->Name.Left(Dot + 1) + Link->BaseName);
+			}
+			Link = Base != nullptr ? Base : InAst.FindStyle(Link->BaseName);
 		}
 	}
 
@@ -609,7 +654,10 @@ namespace DreamUIWriteBackLocal
 		CollectDreamWidgetsToNestedBoundary(InTree->RootWidget, Widgets);
 		for (UDreamWidget* Widget : Widgets)
 		{
-			if (!IsValid(Widget) || Widget->GetDisplayName().IsEmpty())
+			// A transient widget is run time's, not the file's: the copies a `for` makes of its template are the case,
+			// and one that carried the template's name would be paired with the template's node in its place -- its
+			// per-item values then written into the template's lines, and a copy's visibility over the template's.
+			if (!IsValid(Widget) || Widget->GetDisplayName().IsEmpty() || Widget->HasAnyFlags(RF_Transient))
 			{
 				continue;
 			}
@@ -798,14 +846,138 @@ namespace DreamUIWriteBackLocal
 	}
 
 	/**
-	 * How a `.dui` would write this widget's TYPE: a built-in tag, or the class path it nests.
+	 * Whether a path, as a `.dui` writes one, names this class.
+	 *
+	 * Three spellings reach a Blueprint class and all three are in use: the package (`/Game/UI/WBP_Row`, what an author
+	 * types and what the builder loads), the Blueprint asset (`/Game/UI/WBP_Row.WBP_Row`, what Copy Reference gives) and
+	 * the generated class (`/Game/UI/WBP_Row.WBP_Row_C`). A native class has one, its script path, and a bare package
+	 * there names a module, never a class.
+	 */
+	bool PathNamesClass(const FString& InPath, const UClass* InClass)
+	{
+		const FString Path = InPath.TrimStartAndEnd();
+		if (InClass == nullptr || Path.IsEmpty())
+		{
+			return false;
+		}
+		const FString ClassPath = InClass->GetPathName();
+		if (Path.Equals(ClassPath, ESearchCase::IgnoreCase))
+		{
+			return true;
+		}
+		FString AssetPath = ClassPath;
+		if (AssetPath.RemoveFromEnd(TEXT("_C"), ESearchCase::CaseSensitive) && Path.Equals(AssetPath, ESearchCase::IgnoreCase))
+		{
+			return true;
+		}
+		return !ClassPath.StartsWith(TEXT("/Script/")) && !Path.Contains(TEXT("."))
+			&& Path.Equals(InClass->GetPackage()->GetName(), ESearchCase::IgnoreCase);
+	}
+
+	/**
+	 * The short name this file already has for a widget class, when it has one.
+	 *
+	 * A `use … as` alias first -- the file's own, then those its libraries brought, which is the order FindComponentAlias
+	 * reads them in, and only an alias that lookup would actually answer with (a shadowed one names another class here).
+	 * Then an `Asset` resource, written `@Name`, the older spelling of the same thing. A file that says `Row` for a class
+	 * on fifty lines would otherwise get the class's path on the fifty-first, from the designer -- correct, and the one
+	 * line in the file a reader has to stop at.
+	 */
+	FString FindShortNameForClass(const FDreamUIAst& InAst, const UClass* InClass)
+	{
+		auto AliasNamesClass = [&InAst, InClass](const FDreamUIComponentAlias& InAlias)
+		{
+			if (InAst.FindComponentAlias(InAlias.Alias) != &InAlias)
+			{
+				return false;
+			}
+			if (!InAlias.ClassPath.IsEmpty())
+			{
+				return PathNamesClass(InAlias.ClassPath, InClass);
+			}
+			// An alias of a .dui with no `class` line: the editor knows which Blueprint reads that file.
+			const TFunction<UClass*(const FString&)>& Resolver = FDreamUITextBuilder::SourceClassResolver();
+			return !InAlias.SourcePath.IsEmpty() && Resolver && Resolver(InAlias.SourcePath) == InClass;
+		};
+		for (const FDreamUIComponentAlias& Alias : InAst.ComponentAliases)
+		{
+			if (AliasNamesClass(Alias))
+			{
+				return Alias.Alias;
+			}
+		}
+		for (const FDreamUIComponentAlias& Alias : InAst.ImportedComponentAliases)
+		{
+			if (AliasNamesClass(Alias))
+			{
+				return Alias.Alias;
+			}
+		}
+
+		// `@Name` takes one word after the '@' -- a namespaced entry (`nier.Row`) has no spelling as a type.
+		auto ResourceNamesClass = [&InAst, InClass](const FDreamUIResource& InEntry)
+		{
+			return InEntry.TypeName.Equals(TEXT("Asset"), ESearchCase::IgnoreCase)
+				&& (InEntry.Value.Kind == EDreamUIValueKind::AssetPath || InEntry.Value.Kind == EDreamUIValueKind::String)
+				&& !InEntry.Name.Contains(TEXT("."))
+				&& InAst.FindResource(InEntry.Name) == &InEntry
+				&& PathNamesClass(InEntry.Value.Raw, InClass);
+		};
+		for (const FDreamUIResource& Entry : InAst.Resources)
+		{
+			if (ResourceNamesClass(Entry))
+			{
+				return TEXT("@") + Entry.Name;
+			}
+		}
+		for (const FDreamUIResource& Entry : InAst.ImportedResources)
+		{
+			if (ResourceNamesClass(Entry))
+			{
+				return TEXT("@") + Entry.Name;
+			}
+		}
+		return FString();
+	}
+
+	/**
+	 * The node type that builds this layout container, verified against the builder's own answer, or empty.
+	 *
+	 * The builder's prefix search run backwards -- `DreamLayoutContainerVerticalBox` tried as `VerticalBox` -- and kept
+	 * only when FindContainerClassForType answers with this very class, so a name is never written that the next
+	 * compile reads as something else.
+	 */
+	FString FindContainerTypeName(const UClass* InContainerClass)
+	{
+		if (InContainerClass == nullptr)
+		{
+			return FString();
+		}
+		static const TCHAR* Prefixes[] = { TEXT("DreamLayoutContainer"), TEXT("Dream"), TEXT("UI") };
+		const FString Full = InContainerClass->GetName();
+		for (const TCHAR* Prefix : Prefixes)
+		{
+			FString Candidate = Full;
+			if (Candidate.RemoveFromStart(Prefix, ESearchCase::CaseSensitive) && !Candidate.IsEmpty()
+				&& FDreamUITextBuilder::FindContainerClassForType(Candidate) == InContainerClass)
+			{
+				return Candidate;
+			}
+		}
+		return FDreamUITextBuilder::FindContainerClassForType(Full) == InContainerClass ? Full : FString();
+	}
+
+	/**
+	 * How a `.dui` would write this widget's TYPE: the file's own short name for the class, a built-in tag, a layout
+	 * container, or the class path it nests.
 	 *
 	 * Through FDreamUITextBuilder::GetVisualTags rather than a table of its own, for the reason that
 	 * function was exported: the completion list, the compiler and this all have to offer exactly the
 	 * tags the builder accepts, and a second copy is how "the designer wrote RectBlock and the
-	 * compile rejected it" happens.
+	 * compile rejected it" happens. Container names go through FindContainerClassForType for the same
+	 * reason.
 	 */
-	FString DescribeWidgetForText(const UDreamWidget* InWidget)
+	FString DescribeWidgetForText(const UDreamWidget* InWidget, const FDreamUIAst& InAst)
 	{
 		if (!IsValid(InWidget))
 		{
@@ -813,6 +985,11 @@ namespace DreamUIWriteBackLocal
 		}
 		if (InWidget->IsA<UDreamUserWidget>())
 		{
+			const FString ShortName = FindShortNameForClass(InAst, InWidget->GetClass());
+			if (!ShortName.IsEmpty())
+			{
+				return ShortName;
+			}
 			// A native control by its tag -- `Native.Button` -- when one is declared: a class path would
 			// name the module the class happens to live in, and the file written today has to read back
 			// after the class has moved to another. Nothing but a tag is stable across that.
@@ -832,6 +1009,20 @@ namespace DreamUIWriteBackLocal
 		}
 		const UDreamVisual* Visual = InWidget->GetVisual();
 		const UClass* VisualClass = Visual != nullptr ? Visual->GetClass() : nullptr;
+		if (VisualClass == nullptr)
+		{
+			// A plain widget that lays its children out -- what the palette's Vertical Box makes -- is written as the
+			// container (`VerticalBox Column { }`), which is the one spelling that keeps the container: `Widget Column`
+			// would build a widget without it, and the value pass would then have no object to write its spacing onto.
+			if (const UDreamLayoutContainer* Container = InWidget->GetLayoutContainer())
+			{
+				const FString ContainerType = FindContainerTypeName(Container->GetClass());
+				if (!ContainerType.IsEmpty())
+				{
+					return ContainerType;
+				}
+			}
+		}
 		TArray<TPair<FString, UClass*>> Tags;
 		FDreamUITextBuilder::GetVisualTags(Tags);
 		for (const TPair<FString, UClass*>& Tag : Tags)
@@ -988,11 +1179,27 @@ void FDreamUITextWriteBack::CollectEdits(const FDreamUIAst& InAst, const UDreamW
 	MapWidgetsByNodeId(const_cast<UDreamWidgetTree*>(InLiveTree), LiveWidgets);
 	MapWidgetsByNodeId(const_cast<UDreamWidgetTree*>(InTextTree), TextWidgets);
 
+	// What FindContainerClassForType answered per node type, for this one walk: it is a class search, and a file names
+	// the same handful of types on every row.
+	TMap<FString, UClass*> ContainerClassesByType;
+	auto ContainerClassFor = [&ContainerClassesByType](const FString& InTypeName) -> UClass*
+	{
+		if (UClass* const* Found = ContainerClassesByType.Find(InTypeName))
+		{
+			return *Found;
+		}
+		return ContainerClassesByType.Add(InTypeName, FDreamUITextBuilder::FindContainerClassForType(InTypeName));
+	};
+
 	InAst.ForEachNode([&](const FDreamUINode& InNode)
 	{
-		// A `slot Footer` has no block to write into (the patcher refuses one outright), and a loop
-		// node is not built at all -- its body's widgets do not exist on either tree yet.
-		if (InNode.Kind != EDreamUINodeKind::Widget || InNode.Id.IsEmpty())
+		// A loop node is not built at all -- its body's widgets are the template's, which ForEachNode
+		// reaches on their own. A slot DECLARATION is a widget of this file like any other (a bare one
+		// has no block, which the patcher says if anything on it was edited); a slot FILL is not: its
+		// id pairs with the slot widget the COMPONENT declares, whose values are that file's to write.
+		const bool bWidgetOfThisFile = InNode.Kind == EDreamUINodeKind::Widget
+			|| (InNode.Kind == EDreamUINodeKind::NamedSlot && !InNode.bFillsSlot);
+		if (!bWidgetOfThisFile || InNode.Id.IsEmpty())
 		{
 			return;
 		}
@@ -1014,21 +1221,55 @@ void FDreamUITextWriteBack::CollectEdits(const FDreamUIAst& InAst, const UDreamW
 			return;
 		}
 
-		// ---- bare `Name = Value`: the widget, or its visual -------------------------------------
+		// The objects the node's own `+` lines built, paired by the author's count. Three passes below
+		// need to know which objects those are: the `+` pass writes them, and the container and style
+		// passes must leave them to it.
+		TArray<const UObject*> LiveComponentObjects;
+		TArray<const UObject*> TextComponentObjects;
+		CollectComponentObjectsInAuthorOrder(InNode, LiveWidget, LiveComponentObjects);
+		CollectComponentObjectsInAuthorOrder(InNode, TextWidget, TextComponentObjects);
+
+		// A layout container the node's TYPE names (`VerticalBox Column { Spacing = 29 }`): its lines
+		// are the node's own, bare, so its values are compared in the bare pass and written as bare
+		// lines -- there is no `+` block to write them into, and writing one would be a second
+		// container (DUI5022). Only when it really is the container the type built, on both trees.
+		const UObject* LiveTypeContainer = nullptr;
+		const UObject* TextTypeContainer = nullptr;
+		if (InNode.Kind == EDreamUINodeKind::Widget)
+		{
+			if (const UClass* TypeContainerClass = ContainerClassFor(InNode.TypeName))
+			{
+				const UDreamLayoutContainer* LiveContainer = LiveWidget->GetLayoutContainer();
+				const UDreamLayoutContainer* TextContainer = TextWidget->GetLayoutContainer();
+				if (LiveContainer != nullptr && TextContainer != nullptr
+					&& LiveContainer->GetClass() == TypeContainerClass && TextContainer->GetClass() == TypeContainerClass
+					&& !LiveComponentObjects.Contains(LiveContainer))
+				{
+					LiveTypeContainer = LiveContainer;
+					TextTypeContainer = TextContainer;
+				}
+			}
+		}
+
+		TArray<const FDreamUIStyle*> StyleChain;
+		CollectStyleChain(InAst, InNode.StyleName, StyleChain);
+
+		// ---- bare `Name = Value`: the widget, its visual, the container its type names ----------
 		{
 			FComparison Comparison;
 			Comparison.NodeId = InNode.Id;
 			Comparison.Location = InNode.Location;
 			Comparison.Target = EDreamUIPatchTarget::Node;
-			Comparison.LiveCandidates = { LiveWidget, LiveWidget->GetVisual() };
-			Comparison.TextCandidates = { TextWidget, TextWidget->GetVisual() };
+			// The builder's order, which decides where a name lands when two of them declare it.
+			Comparison.LiveCandidates = { LiveWidget, LiveWidget->GetVisual(), LiveTypeContainer };
+			Comparison.TextCandidates = { TextWidget, TextWidget->GetVisual(), TextTypeContainer };
 
 			TArray<FString> Names;
 			TSet<FString> Seen;
 			// The style's names count as names the file mentions for this node, so a designer edit to
 			// a styled property produces an override ON THE NODE. Never a write into the style: that
 			// block is shared, and one drag would move every other node using it.
-			if (const FDreamUIStyle* Style = InNode.StyleName.IsEmpty() ? nullptr : InAst.FindStyle(InNode.StyleName))
+			for (const FDreamUIStyle* Style : StyleChain)
 			{
 				for (const FDreamUIProperty& Property : Style->Properties)
 				{
@@ -1058,13 +1299,48 @@ void FDreamUITextWriteBack::CollectEdits(const FDreamUIAst& InAst, const UDreamW
 					AddCandidateName(Path, Names, Seen);
 				}
 			}
+			if (LiveTypeContainer != nullptr)
+			{
+				for (const FString& Path : DreamUIReflection::GetWritableLeafPaths(LiveTypeContainer->GetClass()))
+				{
+					AddCandidateName(Path, Names, Seen);
+				}
+			}
+
+			// `Shown` and Visibility are ONE value under two names: Shown keeps nothing of its own, it
+			// reads and writes Visibility. Compared under both, one hidden widget is two edits -- a
+			// `Visibility = Collapsed` and a `Shown = false` written one under the other, each
+			// restating the other. The sweep never lists Shown (it is DuiHidden for that reason), but
+			// a file that spells it puts it in the list above by name. So exactly one face is
+			// compared: Shown where the file spells it (`Shown = false`, `Shown <- HasSave()`, or the
+			// `Shown` an `if` gives its branches, which the patcher then refuses with the `if`'s
+			// line), Visibility everywhere else.
+			auto SpellsShown = [](const TArray<FDreamUIProperty>& InProperties)
+			{
+				return InProperties.ContainsByPredicate([](const FDreamUIProperty& InProperty) { return InProperty.Name == TEXT("Shown"); });
+			};
+			bool bFileSpellsShown = SpellsShown(InNode.Properties);
+			for (const FDreamUIStyle* Style : StyleChain)
+			{
+				bFileSpellsShown |= SpellsShown(Style->Properties);
+			}
+			const FString SkippedFace = bFileSpellsShown ? TEXT("Visibility") : TEXT("Shown");
 
 			for (const FString& Name : Names)
 			{
+				if (Name == SkippedFace)
+				{
+					continue;
+				}
 				// The dirty set narrows the sweep when somebody reported; see NoteDirtyProperty. The
 				// list above is still built in full, so the ORDER a name would be written in does not
-				// depend on what happened to be touched this session.
-				if (!KeepName(InNode.Id, EDreamUIPatchTarget::Node, INDEX_NONE, Name))
+				// depend on what happened to be touched this session. A report of either face of the
+				// visibility keeps the face that is compared: the details panel reports Visibility,
+				// and a node that spells Shown is asked about Shown.
+				const bool bReported = KeepName(InNode.Id, EDreamUIPatchTarget::Node, INDEX_NONE, Name)
+					|| (Name == TEXT("Shown") && KeepName(InNode.Id, EDreamUIPatchTarget::Node, INDEX_NONE, TEXT("Visibility")))
+					|| (Name == TEXT("Visibility") && KeepName(InNode.Id, EDreamUIPatchTarget::Node, INDEX_NONE, TEXT("Shown")));
+				if (!bReported)
 				{
 					continue;
 				}
@@ -1116,10 +1392,8 @@ void FDreamUITextWriteBack::CollectEdits(const FDreamUIAst& InAst, const UDreamW
 		// ---- `+ Class { … }`: one destination per authored block, by ordinal --------------------
 		if (InNode.Components.Num() > 0)
 		{
-			TArray<const UObject*> LiveObjects;
-			TArray<const UObject*> TextObjects;
-			CollectComponentObjectsInAuthorOrder(InNode, LiveWidget, LiveObjects);
-			CollectComponentObjectsInAuthorOrder(InNode, TextWidget, TextObjects);
+			const TArray<const UObject*>& LiveObjects = LiveComponentObjects;
+			const TArray<const UObject*>& TextObjects = TextComponentObjects;
 
 			for (int32 ComponentIndex = 0; ComponentIndex < InNode.Components.Num(); ++ComponentIndex)
 			{
@@ -1158,6 +1432,70 @@ void FDreamUITextWriteBack::CollectEdits(const FDreamUIAst& InAst, const UDreamW
 					}
 					Comparison.PropertyName = Name;
 					CompareAndAppend(Comparison, OutEdits, OutDiagnostics);
+				}
+			}
+		}
+
+		// ---- `+ Class { … }` lines of the STYLE: compared, never written ------------------------
+		//
+		// A style may carry components (`style RowColumn { + VerticalBox { Spacing = 15 } }`), and the
+		// node wearing it has the objects they built without a line of its own for them. Untouched, both
+		// trees agree -- the reference tree is built by the same builder from the same style -- so
+		// nothing is written, which is the duplication this pass must never cause. Edited, the value
+		// has no home this pass may write: the style is shared, and a `+` block of the node's own is a
+		// change of shape. So the difference is SAID (DUI7005), with the line that would hold it.
+		//
+		// A component the node also writes is the same object (the style's values first, the node's
+		// after) and is the `+` pass's above; the container the node's type names is the bare pass's.
+		if (StyleChain.Num() > 0)
+		{
+			TSet<const UObject*> LiveClaimed;
+			TSet<const UObject*> TextClaimed;
+			LiveClaimed.Append(LiveComponentObjects);
+			TextClaimed.Append(TextComponentObjects);
+			if (LiveTypeContainer != nullptr)
+			{
+				LiveClaimed.Add(LiveTypeContainer);
+				TextClaimed.Add(TextTypeContainer);
+			}
+			for (const FDreamUIStyle* Style : StyleChain)
+			{
+				for (const FDreamUIComponent& Component : Style->Components)
+				{
+					const UClass* ComponentClass = FDreamUITextBuilder::ResolveComponentClass(Component.ClassName);
+					const UObject* LiveObject = FindComponentObject(LiveWidget, ComponentClass, LiveClaimed);
+					const UObject* TextObject = FindComponentObject(TextWidget, ComponentClass, TextClaimed);
+					if (LiveObject == nullptr || TextObject == nullptr)
+					{
+						continue;
+					}
+					LiveClaimed.Add(LiveObject);
+					TextClaimed.Add(TextObject);
+
+					FComparison Comparison;
+					Comparison.NodeId = InNode.Id;
+					Comparison.Location = InNode.Location;
+					Comparison.Target = EDreamUIPatchTarget::Component;
+					Comparison.LiveCandidates = { LiveObject };
+					Comparison.TextCandidates = { TextObject };
+
+					TArray<FDreamUIPropertyEdit> Differences;
+					for (const FString& Name : DreamUIReflection::GetWritableLeafPaths(LiveObject->GetClass()))
+					{
+						if (!KeepName(InNode.Id, EDreamUIPatchTarget::Component, INDEX_NONE, Name))
+						{
+							continue;
+						}
+						Comparison.PropertyName = Name;
+						CompareAndAppend(Comparison, Differences, OutDiagnostics);
+					}
+					for (const FDreamUIPropertyEdit& Difference : Differences)
+					{
+						OutDiagnostics.AddError(EDreamUIDiagnosticCode::PatchStyleComponentNotWritable, InNode.Location,
+							FString::Printf(TEXT("'%s' on '%s' comes from the '+ %s' of style '%s' (line %d), which is shared, and the node has no '+ %s' of its own to hold the change: write '+ %s { %s = %s }' on the node, or change the style"),
+								*Difference.PropertyName, *InNode.Id, *Component.ClassName, *Style->Name, Component.Location.Line,
+								*Component.ClassName, *Component.ClassName, *Difference.PropertyName, *Difference.NewValueText));
+					}
 				}
 			}
 		}
@@ -1239,7 +1577,9 @@ void FDreamUITextWriteBack::CollectStructuralEdits(const FDreamUIAst& InAst, con
 	// ---- removed: in the file, built into the reference tree, gone from the live one --------------
 	InAst.ForEachNode([&](const FDreamUINode& InNode)
 	{
-		if (InNode.Id.IsEmpty()
+		// A slot FILL is not a widget of this file: its id is the name of a slot the component declares,
+		// and the widget the trees hold under that name is the component's. Nothing here removes it.
+		if (InNode.Id.IsEmpty() || InNode.bFillsSlot
 			|| (InNode.Kind != EDreamUINodeKind::Widget && InNode.Kind != EDreamUINodeKind::NamedSlot))
 		{
 			return;
@@ -1265,7 +1605,10 @@ void FDreamUITextWriteBack::CollectStructuralEdits(const FDreamUIAst& InAst, con
 	TSet<FString> Inserted;
 	for (UDreamWidget* LiveWidget : LiveWidgetsInOrder)
 	{
-		if (!IsValid(LiveWidget))
+		// Transient is run time's: the copies a `for` makes of its template stand among the host
+		// panel's children -- a parent the file declares -- and without this every copy would be
+		// written into the file as a node of its own, once per item, on every flush.
+		if (!IsValid(LiveWidget) || LiveWidget->HasAnyFlags(RF_Transient))
 		{
 			continue;
 		}
@@ -1293,7 +1636,25 @@ void FDreamUITextWriteBack::CollectStructuralEdits(const FDreamUIAst& InAst, con
 		Edit.ParentId = Parent == InLiveTree->RootWidget ? FString() : ParentId;
 		Edit.NewId = Id;
 		Edit.ChildIndex = Parent->GetChildIndex(LiveWidget);
-		Edit.TypeName = DescribeWidgetForText(LiveWidget);
+		Edit.TypeName = DescribeWidgetForText(LiveWidget, InAst);
+		// Content of a component instance hangs off the instance whichever slot it fills; the slot is in the instance's
+		// NamedSlotContent, and only for a NAMED slot -- the default one is nesting alone. Written as an ordinary child,
+		// named-slot content would be default-slot content on the next compile, so the slot rides along and the patcher
+		// writes it into the instance's `slot Name { … }` fill.
+		if (const UDreamUserWidget* Instance = Cast<UDreamUserWidget>(Parent))
+		{
+			TArray<FName> SlotNames;
+			UDreamUserWidget::CollectDeclaredSlotNames(Instance->GetClass(), SlotNames);
+			const FName DefaultSlot = Instance->GetDefaultSlotName();
+			for (const FName& SlotName : SlotNames)
+			{
+				if (SlotName != DefaultSlot && Instance->GetContentForNamedSlot(SlotName) == LiveWidget)
+				{
+					Edit.FillSlotName = SlotName.ToString();
+					break;
+				}
+			}
+		}
 		Inserted.Add(Id);
 	}
 }

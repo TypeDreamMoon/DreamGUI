@@ -367,35 +367,53 @@ and nothing else needs configuring — the screen root, the raycaster and the ev
 on demand.
 
 Copy it into your own project before editing it; a plugin update overwrites the copy in the plugin
-folder.
+folder. Everything the file can say is in the language reference,
+[Docs/DuiLanguage.md](Docs/DuiLanguage.md).
 
 ### Components
 
-A widget Blueprint is a node type in another `.dui`: write its asset path as the type, and the
-instance's lines set its properties (`/Game/UI/WBP_Row Row1 { Label = "Audio" }`). A family of
-components is easier to name once: an `Asset` entry of a `resources` block names the class, and `@`
-uses it as a type. Put the entries and the family's styles in one library file and `use` it from
-each screen:
+A widget Blueprint is a node type in another `.dui`, and the instance's lines set its properties.
+Name the class once with `use … as`, from its `.dui` or by its path, and write the name as the type:
 
 ```
-// UI/Library.dui -- styles and resources only, no root
-resources {
-    Asset Row = /Game/UI/WBP_Row
+use "UI/Components/Row.dui" as Row        // the class the file compiles into
+use /Game/UI/WBP_Slider as Slider          // a class with no .dui
+
+VerticalBox Root {
+    Spacing = 29
+    Row Audio { Label = "Audio" }
+    Row Video { Label = "Video" }
 }
+```
+
+A family of components is named in a library -- a file with styles, resources and `use … as` lines
+and no root -- and every screen that uses it gets the names. Used under a namespace, the library's
+names stay apart from the screen's own:
+
+```
+// UI/Library.dui
+use "UI/Components/Row.dui" as Row
 style Wide { AnchorData.SizeDelta = (1100, 48) }
 
 // UI/Settings.dui
-use "UI/Library.dui"
-Widget Root {
-    + VerticalBox { Spacing = 29 }
-    @Row Audio : Wide { Label = "Audio" }
-    @Row Video : Wide { Label = "Video" }
+use "UI/Library.dui" as lib
+VerticalBox Root {
+    lib.Row Audio : lib.Wide { Label = "Audio" }
 }
 ```
+
+A component written in `.dui` declares what its hosts set and hear -- `props { Text Label }`,
+`events { Picked(Number Index) }`, raised with `OnClick -> emit Picked(Index)` -- and opens slots a
+host fills by nesting (`slot Rows default`) or by name (`slot Detail { … }`). The older spelling still
+works: an `Asset` entry of a `resources` block names the class and `@Row Audio { … }` uses it, as does
+the class's asset path written as the type.
 
 Inside a panel, animate a component through its render transform (`RenderOffsetTo`,
 `RenderScaleTo`, `RenderAngleTo`, `RenderTranslationTo`): the panel writes its anchored position
 and size back on its next pass.
+
+The whole language -- nodes, values, styles, `use`, components, bindings, `if`, `for` and `each`,
+timelines, and every diagnostic -- is in [Docs/DuiLanguage.md](Docs/DuiLanguage.md).
 
 ### In the world
 

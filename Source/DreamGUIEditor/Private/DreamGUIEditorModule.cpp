@@ -175,6 +175,11 @@ void FDreamGUIEditorModule::StartupModule()
 				CastChecked<UDreamWidgetBlueprint>(InBlueprint), InMessageLog, InCompileOptions));
 		});
 
+	// And the builder's answer to `use "Row.dui" as Row` on a file with no `class` line: the Blueprint whose Source
+	// File is Row.dui. With the compiler and for the same reason -- it serves every compile of a host, wherever one
+	// runs -- and the runtime module cannot answer it, because only this one knows which assets read which sources.
+	FDreamUISourceWatcher::InstallSourceClassResolver();
+
 	// Everything below serves an editor session, which a game run on uncooked content is not: nothing
 	// there shows a menu, a tab or a details panel, the bridge would take requests meant for an editor
 	// the external tools are talking to, and the symbol export would rewrite files that editor owns.
@@ -461,8 +466,12 @@ void FDreamGUIEditorModule::ShutdownModule()
 	// This function may be called during shutdown to clean up your module.  For modules that support dynamic reloading,
 	// we call this function before unloading the module.
 
-	// All of it takes down the editor session; the compiler registration, the one thing a game run on
-	// uncooked content starts, has no counterpart (see the end of this function).
+	// Before the session check, because it went in before it: the resolver is installed in every process. Left
+	// behind, the builder's static would go on calling into a module that is gone.
+	FDreamUISourceWatcher::UninstallSourceClassResolver();
+
+	// All of it takes down the editor session; the compiler registration, which a game run on uncooked
+	// content starts as well, has no counterpart (see the end of this function).
 	if (!bStartedEditorSession)
 	{
 		return;

@@ -221,6 +221,86 @@ namespace DreamUISymbolExportLocal
 		}
 		return FString();
 	}
+
+	/**
+	 * The node type a layout container is written as (`VerticalBox`), or empty when the builder would not read one back
+	 * as this class. The same reverse-and-verify as ShortComponentName, against the builder's judge of what a TYPE is --
+	 * which is narrower than what `+` takes: a behaviour is a component, never a node type.
+	 */
+	FString ContainerTypeName(UClass* InClass)
+	{
+		static const TCHAR* Prefixes[] = { TEXT("DreamLayoutContainer"), TEXT("Dream"), TEXT("UI") };
+		const FString Full = InClass->GetName();
+		for (const TCHAR* Prefix : Prefixes)
+		{
+			FString Candidate = Full;
+			if (Candidate.RemoveFromStart(Prefix, ESearchCase::CaseSensitive) && !Candidate.IsEmpty()
+				&& FDreamUITextBuilder::FindContainerClassForType(Candidate) == InClass)
+			{
+				return Candidate;
+			}
+		}
+		return FDreamUITextBuilder::FindContainerClassForType(Full) == InClass ? Full : FString();
+	}
+
+	/**
+	 * Every keyword of the grammar, for completion and highlighting. Kept here as a list, and that is the one table in
+	 * this file: keywords are the parser's, which has no reflection to export them from. Contextual ones are in it too
+	 * (`as` only means something after `use`, `default` after a slot's name, `emit` after `->`), because what an editor
+	 * colours is the word, and a word that is sometimes a keyword is still worth colouring there.
+	 */
+	TArray<TSharedPtr<FJsonValue>> DescribeKeywords()
+	{
+		static const TCHAR* Keywords[] =
+		{
+			// file scope
+			TEXT("class"), TEXT("use"), TEXT("as"), TEXT("resources"), TEXT("style"), TEXT("timeline"), TEXT("external"),
+			TEXT("props"), TEXT("events"),
+			// inside a node
+			TEXT("slot"), TEXT("default"), TEXT("for"), TEXT("each"), TEXT("in"), TEXT("if"), TEXT("else"), TEXT("was"),
+			// after an arrow, and inside a timeline
+			TEXT("emit"), TEXT("ease"), TEXT("duration"), TEXT("loop"),
+		};
+		TArray<TSharedPtr<FJsonValue>> Out;
+		for (const TCHAR* Keyword : Keywords)
+		{
+			Out.Add(MakeShared<FJsonValueString>(Keyword));
+		}
+		return Out;
+	}
+
+	/**
+	 * `Shown`, made sure of. It is how `Shown <- HasSave()` is written and what an `if` binds on its branches, so
+	 * completion must offer it -- and the reflective sweep does not list it: it is DuiHidden, a face over Visibility the
+	 * write-back must not write as a second copy of one value. What the sweep may write and what a file may say are two
+	 * lists here, and this is the one name on the second and not the first.
+	 */
+	void EnsureShownListed(TArray<TSharedPtr<FJsonValue>>& InOutWidgetProperties)
+	{
+		for (const TSharedPtr<FJsonValue>& Value : InOutWidgetProperties)
+		{
+			const TSharedPtr<FJsonObject>* Object = nullptr;
+			if (Value.IsValid() && Value->TryGetObject(Object) && Object != nullptr
+				&& (*Object)->GetStringField(TEXT("name")) == TEXT("Shown"))
+			{
+				return;
+			}
+		}
+		const FProperty* Shown = FindFProperty<FProperty>(UDreamWidget::StaticClass(), TEXT("Shown"));
+		if (Shown == nullptr)
+		{
+			return;
+		}
+		TSharedPtr<FJsonObject> Entry = MakeShared<FJsonObject>();
+		Entry->SetStringField(TEXT("name"), TEXT("Shown"));
+		Entry->SetStringField(TEXT("type"), Shown->GetCPPType());
+		const FString Tooltip = Shown->GetToolTipText().ToString();
+		if (!Tooltip.IsEmpty())
+		{
+			Entry->SetStringField(TEXT("tooltip"), Tooltip);
+		}
+		InOutWidgetProperties.Add(MakeShared<FJsonValueObject>(Entry));
+	}
 }
 
 void FDreamUISymbolExport::Register()
@@ -263,6 +343,9 @@ FString FDreamUISymbolExport::ExportNow()
 	for (const TPair<FString, UClass*>& Tag : TagTable)
 	{
 		TSharedPtr<FJsonObject> Entry = MakeShared<FJsonObject>();
+		// Which of the three kinds of node type an entry is: a visual's tag, a layout container, or a registered widget.
+		// The extension reads properties the same way for all three; the kind is for what it shows beside them.
+		Entry->SetStringField(TEXT("kind"), TEXT("visual"));
 		if (Tag.Value != nullptr)
 		{
 			Entry->SetStringField(TEXT("class"), Tag.Value->GetName());
@@ -293,6 +376,7 @@ FString FDreamUISymbolExport::ExportNow()
 			continue;
 		}
 		TSharedPtr<FJsonObject> TagEntry = MakeShared<FJsonObject>();
+		TagEntry->SetStringField(TEXT("kind"), TEXT("widget"));
 		TagEntry->SetStringField(TEXT("class"), Class->GetName());
 		const FString ClassTooltip = Class->GetToolTipText().ToString();
 		if (!ClassTooltip.IsEmpty())
@@ -305,12 +389,58 @@ FString FDreamUISymbolExport::ExportNow()
 		Tags->SetObjectField(FString::Printf(TEXT("%s.%s"),
 			*Entry.Scope.ToString(), *Entry.Name.ToString()), TagEntry);
 	}
+	// ---- and the layout containers, which are node types too (`VerticalBox Column { Spacing = 29 }`)
+	//
+	// Under the name the builder reads as the type -- FindContainerClassForType is the judge, so completion offers
+	// exactly the containers a compile accepts -- with the CONTAINER's properties, which is what such a node's own lines
+	// set beyond the widget's. A name a visual tag already has stays the visual's: the tag table is what the builder
+	// asks first.
+	for (TObjectIterator<UClass> It; It; ++It)
+	{
+		UClass* Class = *It;
+		if (!Class->IsChildOf(UDreamLayoutContainer::StaticClass())
+			|| Class->HasAnyClassFlags(CLASS_Abstract | CLASS_Deprecated | CLASS_NewerVersionExists | CLASS_HideDropDown))
+		{
+			continue;
+		}
+		const FString TypeName = ContainerTypeName(Class);
+		if (TypeName.IsEmpty() || Tags->HasField(TypeName))
+		{
+			continue;
+		}
+		TSharedPtr<FJsonObject> Entry = MakeShared<FJsonObject>();
+		Entry->SetStringField(TEXT("kind"), TEXT("container"));
+		Entry->SetStringField(TEXT("class"), Class->GetName());
+		const FString ClassTooltip = Class->GetToolTipText().ToString();
+		if (!ClassTooltip.IsEmpty())
+		{
+			Entry->SetStringField(TEXT("tooltip"), ClassTooltip);
+		}
+		Entry->SetArrayField(TEXT("properties"), DescribeProperties(Class, Enums, Class->GetDefaultObject()));
+		Entry->SetArrayField(TEXT("events"), DescribeEvents(Class));
+		Tags->SetObjectField(TypeName, Entry);
+	}
 
 	Root->SetObjectField(TEXT("tags"), Tags);
 
+	// ---- the words of the grammar itself
+	Root->SetArrayField(TEXT("keywords"), DescribeKeywords());
+	{
+		// What may follow an '@' at the start of a line, besides a resource used as a node type: the slot line or block,
+		// and its shorthand. `@key("…")` follows a value and is listed for the same completion.
+		TArray<TSharedPtr<FJsonValue>> Annotations;
+		for (const TCHAR* Annotation : { TEXT("slot"), TEXT("fill"), TEXT("key") })
+		{
+			Annotations.Add(MakeShared<FJsonValueString>(Annotation));
+		}
+		Root->SetArrayField(TEXT("annotations"), Annotations);
+	}
+
 	// ---- the two classes every node line can address regardless of tag
-	Root->SetArrayField(TEXT("widgetProperties"), DescribeProperties(UDreamWidget::StaticClass(), Enums,
-		UDreamWidget::StaticClass()->GetDefaultObject()));
+	TArray<TSharedPtr<FJsonValue>> WidgetProperties = DescribeProperties(UDreamWidget::StaticClass(), Enums,
+		UDreamWidget::StaticClass()->GetDefaultObject());
+	EnsureShownListed(WidgetProperties);
+	Root->SetArrayField(TEXT("widgetProperties"), WidgetProperties);
 	Root->SetArrayField(TEXT("widgetEvents"), DescribeEvents(UDreamWidget::StaticClass()));
 	Root->SetArrayField(TEXT("slotProperties"), DescribeProperties(UDreamPanelSlot::StaticClass(), Enums,
 		UDreamPanelSlot::StaticClass()->GetDefaultObject()));
@@ -359,6 +489,15 @@ FString FDreamUISymbolExport::ExportNow()
 		ResourceTypes.Add(MakeShared<FJsonValueString>(Type));
 	}
 	Root->SetArrayField(TEXT("resourceTypes"), ResourceTypes);
+
+	// The types a `props` line and an `events` parameter take (FDreamUIPropDecl); `Enum` is followed by the enum's path.
+	TArray<TSharedPtr<FJsonValue>> PropTypes;
+	for (const TCHAR* Type : { TEXT("Text"), TEXT("String"), TEXT("Number"), TEXT("Integer"), TEXT("Bool"), TEXT("Color"),
+		TEXT("Vector2"), TEXT("Asset"), TEXT("Class"), TEXT("Enum") })
+	{
+		PropTypes.Add(MakeShared<FJsonValueString>(Type));
+	}
+	Root->SetArrayField(TEXT("propTypes"), PropTypes);
 
 	FString Serialized;
 	const TSharedRef<TJsonWriter<>> Writer = TJsonWriterFactory<>::Create(&Serialized);

@@ -80,6 +80,15 @@ struct DREAMGUI_API FDreamWidgetEachBinding
 	UPROPERTY()
 	FName LoopVariable;
 
+	/**
+	 * A `for` rather than an `each`: one copy of the template per item, made inside the host panel itself -- no list
+	 * view, no virtualization, no synthesized content (ContentWidgetName stays None). The template stays in the tree
+	 * collapsed, and the copies take its place among the host's children, in item order. Run by the core
+	 * (UDreamUIForAdapter); an `each` is run by the list views' module through IDreamUIEachBindingHandler.
+	 */
+	UPROPERTY()
+	bool bInPanel = false;
+
 #if WITH_EDITORONLY_DATA
 	/**
 	 * Where the `each` header was written, 1-based, 0 for a block that came from anywhere but a

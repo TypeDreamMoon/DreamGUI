@@ -151,6 +151,23 @@ struct DREAMGUI_API FDreamUIProperty
 	FString EventHandler;
 
 	/**
+	 * Set when this is `Event -> emit Name(args)`: the event declared in this file's `events` block that the route
+	 * raises, with its arguments as expressions over the user widget (`OnClicked -> emit Picked(Index)`). Lowered by
+	 * the compiler's thunk pass into a generated handler that broadcasts the dispatcher; the pass writes that
+	 * handler's name into EventHandler, so downstream of it an emit route is an ordinary route.
+	 */
+	FString EmitEvent;
+	TArray<FDreamUIExpression> EmitArguments;
+
+	/**
+	 * Made by the front end rather than written on a line of its own: the `Shown <- Cond` an `if` block puts on each
+	 * widget of its branches, and the slot properties a shorthand (`@fill`, `@fill 2`) stands for. Location is the
+	 * line that produced it. The write-back never edits one in place -- there is no line that spells it -- and says
+	 * so (PatchSyntaxNotWritable) when a designer edit would have to.
+	 */
+	bool bSynthesized = false;
+
+	/**
 	 * Set when this is `<->`: the FieldNotify variable on the user widget the property mirrors,
 	 * both ways. The compiler's thunk pass desugars it -- a generated getter lands in
 	 * BindingFunction (this field then rides into the binding's NotifyField), and a synthesized
@@ -159,7 +176,7 @@ struct DREAMGUI_API FDreamUIProperty
 	FString TwoWayProperty;
 
 	bool IsBinding() const { return !BindingFunction.IsEmpty() || BindingExpression.IsSet() || !TwoWayProperty.IsEmpty(); }
-	bool IsEventBinding() const { return !EventHandler.IsEmpty(); }
+	bool IsEventBinding() const { return !EventHandler.IsEmpty() || !EmitEvent.IsEmpty(); }
 
 	FDreamUISourceLocation Location;
 };
@@ -177,11 +194,22 @@ enum class EDreamUINodeKind : uint8
 {
 	/** `Type Id { … }` -- the ordinary case. */
 	Widget,
-	/** `slot Name` -- declares a UDreamNamedSlot the host fills. */
+	/**
+	 * `slot Name` -- declares a UDreamNamedSlot the host fills. With a block it may carry components, properties and
+	 * `@slot` lines (`slot Rows default { + VerticalBox { Spacing = 15 } }`), never children: a declaration is a hole.
+	 *
+	 * Written INSIDE a component instance with children (`ListPage Page2 { slot Detail { Text Note {} } }`) it is the
+	 * host FILLING that component's slot Detail instead -- the builder tells the two apart by whether the node has
+	 * children (bFillsSlot).
+	 */
 	NamedSlot,
-	/** `for Var in Func() { … }` -- expanded at compile time into N copies. */
+	/**
+	 * `for Var in Source { … }` -- one copy of the body per item, made at run time inside the enclosing panel itself
+	 * (no list view, no virtualization: a settings page's options, a tab bar). Built like an `each`: one template
+	 * widget, `Prop <- Var.Member` lines per copy, a FieldNotify variable source refreshing it.
+	 */
 	ForLoop,
-	/** `each Var in Func() { … }` -- bound at run time to a list. Parsed now, built later. */
+	/** `each Var in Func() { … }` -- bound at run time to a list view's cells, virtualized. */
 	EachLoop,
 };
 
@@ -190,8 +218,11 @@ struct DREAMGUI_API FDreamUINode
 	EDreamUINodeKind Kind = EDreamUINodeKind::Widget;
 
 	/**
-	 * Widget: the built-in tag ("Widget", "Image", "Text", …) or an asset path to a
-	 * UDreamUserWidget subclass. NamedSlot: unused. Loops: unused.
+	 * Widget, as written: a built-in tag ("Widget", "Image", "Text", …); a layout container's name ("VerticalBox",
+	 * "Overlay", … -- a plain widget carrying that container, whose properties the node's lines set); a component
+	 * alias from `use … as` ("Row", "nier.Row"); a registry tag ("Native.Button"); an asset path to a
+	 * UDreamUserWidget subclass; or `@Name`, an Asset resource. Which is decided by the builder. NamedSlot and
+	 * loops: unused.
 	 */
 	FString TypeName;
 
@@ -199,7 +230,8 @@ struct DREAMGUI_API FDreamUINode
 	bool bLoopSourceIsFunction = true;
 
 	/**
-	 * The node's identity. Required on Widget and NamedSlot, empty on loops.
+	 * The node's identity. Always set on Widget and NamedSlot -- by the author, or by the parser for an anonymous
+	 * widget (bAnonymous) -- and empty on loops.
 	 *
 	 * This one string is the guid source, the class member variable name, the binding key and the
 	 * localization key. Unique across the whole tree -- see DuplicateNodeId for why that is an
@@ -209,6 +241,24 @@ struct DREAMGUI_API FDreamUINode
 
 	/** `(was: OldId)` -- the previous id, so a rename can carry graph, binding and animation across. */
 	FString WasId;
+
+	/**
+	 * The author wrote no id (`HorizontalBox { … }`, `Text { Text = "Status" }`), and Id was made by the parser:
+	 * `<parent id>__<type><n>` -- the parent's id (or `Root`), two underscores, the type with every character an id
+	 * cannot hold turned into '_', and the count of earlier anonymous siblings of that type. Made in the same pass on
+	 * every parse of the same text, so it is as stable as an authored id while the file's shape is; bumped with a
+	 * further `_<n>` should it collide with an id the author did write.
+	 *
+	 * An anonymous widget still gets a class member variable -- the run time finds the widget of every binding by
+	 * one -- but a hidden one: not visible to graphs, not editable, not in the variable list.
+	 */
+	bool bAnonymous = false;
+
+	/** NamedSlot only: `slot Rows default` -- the slot that content a host nests without naming a slot goes to. */
+	bool bDefaultSlot = false;
+
+	/** NamedSlot only: this is a host filling a component's slot (it has children), not a declaration. */
+	bool bFillsSlot = false;
 
 	/** `: StyleName` -- properties from that style are applied first, then these override. */
 	FString StyleName;
@@ -230,13 +280,23 @@ struct DREAMGUI_API FDreamUINode
 	FDreamUISourceLocation Location;
 };
 
-/** `style Card { … }` -- a named bag of properties, applied by name. No inheritance yet. */
+/**
+ * `style Card { … }` -- a named bag of properties, applied by name; `style Danger : Card` takes Card's first.
+ *
+ * A style may also carry components and slot lines (`style RowColumn { + VerticalBox { Spacing = 15 }  @fill }`): a
+ * kind of column is then one name. Applied before the node's own: a component the node also adds is the same
+ * component (the style's properties on it first, the node's after), and the node's own `@slot` lines win.
+ */
 struct DREAMGUI_API FDreamUIStyle
 {
 	FString Name;
 	/** `style Danger : Button` -- Button's properties apply first, then these override. Empty = none. */
 	FString BaseName;
 	TArray<FDreamUIProperty> Properties;
+	/** `+ Component { … }` lines inside the style. */
+	TArray<FDreamUIComponent> Components;
+	/** `@slot …` lines (and their shorthands) inside the style. */
+	TArray<FDreamUIProperty> SlotProperties;
 	FDreamUISourceLocation Location;
 
 	/**
@@ -269,6 +329,70 @@ struct DREAMGUI_API FDreamUIResource
 
 	/** The file this entry was read from; see FDreamUIStyle::SourceName. Empty for a hand-built AST. */
 	FString SourceName;
+};
+
+/**
+ * `use "Components/Row.dui" as Row` or `use /Game/UI/WBP_Row as Row` -- a widget class by a short name, written
+ * as a node type afterwards (`Row Row1 { … }`). The Vue `import Row from`: the name is the importer's choice.
+ *
+ * From a file, the class is the one the file says it compiles into (its `class` line), else the Blueprint whose
+ * Source File is that file (FDreamUITextBuilder::SourceClassResolver, the editor's answer). From a path, the path.
+ *
+ * `use "Lib.dui" as nier` on a file with no root is not this: it is a namespace (FDreamUIAst::Namespaces), and the
+ * library's styles, resources and aliases are entered under `nier.` -- `nier.Row`, `: nier.Label`, `@nier.Ink`.
+ * Aliases a library declares come along with it whichever way it is used, which is what lets one library name a
+ * family of components for every screen that uses it.
+ */
+struct DREAMGUI_API FDreamUIComponentAlias
+{
+	/** The name a node type writes: `Row`, or `nier.Row` for one that came in under a namespace. */
+	FString Alias;
+	/** The class's asset or script path, when known: `/Game/UI/WBP_Row`. Empty while only SourcePath is. */
+	FString ClassPath;
+	/** The imported .dui, resolved (what the watcher keys on), when the alias came from a file. */
+	FString SourcePath;
+	FDreamUISourceLocation Location;
+	/** The file this declaration was read from; see FDreamUIStyle::SourceName. */
+	FString SourceName;
+};
+
+/**
+ * One line of a `props { … }` block: a property this file's class declares for its hosts to set and itself to bind
+ * (`Text Label`, `Number ValueIndex = 0`, `Enum /Script/DevProject.ENieRRowKind Kind = Cycle`). Compiled into a
+ * Blueprint variable, editable on instances; a C++ parent's UPROPERTY of the same name is used instead of declaring
+ * one. Types: Text, String, Number, Integer, Bool, Color, Vector2, Asset, Class, and `Enum <path>`.
+ */
+struct DREAMGUI_API FDreamUIPropDecl
+{
+	/** As written: `Text`, `Number`, …, or `Enum` (with EnumPath set). */
+	FString TypeName;
+	/** `Enum` only: the enum's path. */
+	FString EnumPath;
+	FString Name;
+	/** `= value`, when written. */
+	TOptional<FDreamUIValue> DefaultValue;
+	FDreamUISourceLocation Location;
+};
+
+/** One parameter of an `events` entry: `Number Index`. Types as FDreamUIPropDecl's. */
+struct DREAMGUI_API FDreamUIEventParam
+{
+	FString TypeName;
+	FString EnumPath;
+	FString Name;
+	FDreamUISourceLocation Location;
+};
+
+/**
+ * One entry of an `events { Picked(Number Index) }` block: an event this file's class raises, compiled into a
+ * Blueprint event dispatcher. A host routes it like any event (`Picked -> HandlePicked`), and this file raises it
+ * with `SomeEvent -> emit Picked(Index)`.
+ */
+struct DREAMGUI_API FDreamUIEventDecl
+{
+	FString Name;
+	TArray<FDreamUIEventParam> Params;
+	FDreamUISourceLocation Location;
 };
 
 /**
@@ -366,6 +490,21 @@ struct DREAMGUI_API FDreamUIAst
 	TArray<FDreamUIResource> ImportedResources;
 	/** Every `use` path, RESOLVED, in encounter order -- what the watcher's dependency table eats. */
 	TArray<FString> Imports;
+
+	/** `use … as Name` lines of this file, and the aliases its libraries brought (already `ns.`-prefixed when used under a namespace). */
+	TArray<FDreamUIComponentAlias> ComponentAliases;
+	TArray<FDreamUIComponentAlias> ImportedComponentAliases;
+	/** The alias a node type names, or null. Own first, then imported; first declaration wins. */
+	const FDreamUIComponentAlias* FindComponentAlias(const FString& InName) const;
+
+	/** `use "Lib.dui" as nier` prefixes, in declaration order: `nier`. Their entries sit in the Imported* arrays as `nier.X`. */
+	TArray<FString> Namespaces;
+
+	/** `props { … }` -- the properties this file's class declares. */
+	TArray<FDreamUIPropDecl> Props;
+	/** `events { … }` -- the event dispatchers this file's class declares. */
+	TArray<FDreamUIEventDecl> Events;
+	const FDreamUIEventDecl* FindEvent(const FString& InName) const;
 
 	/**
 	 * `timeline` blocks, in declaration order.

@@ -1043,6 +1043,16 @@ void UDreamWidget::SetWidgetActive(bool Value)
 	}
 }
 
+void UDreamWidget::SetShown(bool Value)
+{
+	// Only a change of side moves anything: a shown widget that is Hidden or HitTestInvisible stays exactly that, so a
+	// binding re-asserting `true` every frame does not undo what code did to it in between.
+	if (Value != GetShown())
+	{
+		SetVisibility(Value ? EDreamWidgetVisibility::Visible : EDreamWidgetVisibility::Collapsed);
+	}
+}
+
 void UDreamWidget::SetVisibility(EDreamWidgetVisibility Value)
 {
 	if (Visibility != Value)

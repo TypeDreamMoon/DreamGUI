@@ -737,9 +737,9 @@ public:
 	bool HasPolledPropertyBindings() const { return PolledBindingCount > 0; }
 
 	/**
-	 * Re-read every `each` source and refresh its list. A source that is a FieldNotify variable
-	 * calls this for you when it broadcasts; a function source has nothing to broadcast, so code
-	 * that changed what it returns calls this by hand.
+	 * Re-read every `each` and `for` source and refresh its list or its copies. A source that is a
+	 * FieldNotify variable calls this for you when it broadcasts; a function source has nothing to
+	 * broadcast, so code that changed what it returns calls this by hand.
 	 */
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI|UserWidget")
 	void RefreshEachBindings();
@@ -1077,6 +1077,8 @@ private:
 		TWeakObjectPtr<UObject> Target;
 		UFunction* SourceFunction = nullptr;
 		UFunction* Setter = nullptr;
+		/** Instead of Setter, for a user widget's variable written directly (FDreamWidgetPropertyBinding::SetterName). */
+		FProperty* DirectProperty = nullptr;
 		/**
 		 * The source function's FieldNotify id on this class, when it has one. A valid id means the
 		 * binding is subscription-driven; an invalid one means it stays on the per-frame poll.
@@ -1098,15 +1100,20 @@ private:
 	void ResolvePropertyBindings();
 	/** Adds each compiled `Event -> Handler` route as a delegate on its live target. */
 	void BindEventBindings();
-	/** Wires each `each` block: template and data source onto the host's list view, one adapter per block. */
+	/**
+	 * Wires each `each` block -- template and data source onto the host's list view -- and each `for` block, which
+	 * makes its copies right away; one adapter per block. A `for` is skipped in the designer's preview, where its
+	 * template stands in for the copies as written.
+	 */
 	void ResolveEachBindings();
 	/** A FieldNotify array source broadcast: refresh the adapters reading that field. */
 	void HandleEachSourceChanged(UObject* InObject, UE::FieldNotification::FFieldId InFieldId);
 
 	/**
-	 * One per `each` block, kept alive here; the view holds them only as its data source interface. Typed
-	 * as UObject because the adapter is the list views', which the core does not name: the registered
-	 * IDreamUIEachBindingHandler makes them and refreshes them.
+	 * One per `each` and per `for` block, kept alive here. An `each` adapter is the list views', which the
+	 * core does not name -- the registered IDreamUIEachBindingHandler makes and refreshes those, and the view
+	 * holds them only as its data source interface -- so the array is typed as UObject; a `for` adapter is a
+	 * UDreamUIForAdapter, the core's own, and is told apart by a cast.
 	 */
 	UPROPERTY(Transient)
 	TArray<TObjectPtr<UObject>> EachAdapters;

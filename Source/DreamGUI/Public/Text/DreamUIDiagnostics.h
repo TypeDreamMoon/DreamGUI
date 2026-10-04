@@ -123,6 +123,16 @@ enum class EDreamUIDiagnosticCode : int32
 	 * with no name after it, an `@time` without its `->`.
 	 */
 	MalformedTimeline = 2014,
+	/** `use … as Name` without its name after `as`, or with something after it that is not a name. */
+	MalformedUseDeclaration = 2015,
+	/** A `props` block or one of its lines that is not `Type Name` or `Type Name = value` (or `Enum <path> Name …`). */
+	MalformedPropsBlock = 2016,
+	/** An `events` block or one of its entries that is not `Name` or `Name(Type Param, …)`. */
+	MalformedEventsBlock = 2017,
+	/** An `if` without its condition or block, or an `else` with no `if` before it. */
+	MalformedConditional = 2018,
+	/** A `slot` line the grammar does not take: `default` twice, a block holding both declaration lines and children. */
+	MalformedSlotDeclaration = 2019,
 
 	// --- 3xxx semantic ---
 	/**
@@ -205,6 +215,18 @@ enum class EDreamUIDiagnosticCode : int32
 	 * as UMG does for UWidgetAnimation), so two of them is a variable nobody can address.
 	 */
 	DuplicateTimeline = 3016,
+	/** Two `use … as` lines give the same name; the first one wins everywhere, so the second is refused. */
+	DuplicateComponentAlias = 3017,
+	/** A `use … as` name that is a built-in tag or a layout container's name, which it could never be written as. */
+	AliasShadowsBuiltIn = 3018,
+	/** Two `props` lines declare one name. */
+	DuplicateProp = 3019,
+	/** Two `events` entries declare one name, or one entry declares a parameter twice. */
+	DuplicateEvent = 3020,
+	/** A `ns.Name` (style, resource) whose `ns` no `use … as ns` declares. */
+	UnknownNamespace = 3021,
+	/** More than one `slot … default` in one file: content nested without a slot name has one place to go. */
+	MultipleDefaultSlots = 3022,
 
 	// --- 4xxx values ---
 	/** No property of that name on the target object. Message suggests the nearest match. */
@@ -318,6 +340,23 @@ enum class EDreamUIDiagnosticCode : int32
 	 * nowhere to put one). One word list for the whole plugin was the point of borrowing it.
 	 */
 	UnknownEaseName = 5017,
+	/**
+	 * A component alias that names no class: its file has no `class` line and no Blueprint uses it as its Source File,
+	 * or the path loads nothing a node can be.
+	 */
+	ComponentAliasUnresolved = 5018,
+	/** `slot Name { children }` -- filling a slot -- under a node that is not a component instance. */
+	SlotFillOutsideComponent = 5019,
+	/** `slot Name { children }` naming a slot the component does not declare. */
+	UnknownSlotToFill = 5020,
+	/** A `for` that is the root, sits in another `for` or `each`, or has no single template widget in its body. */
+	ForMisplaced = 5021,
+	/**
+	 * A second layout container on one node: a `+ Container` on a node whose type is already one (`VerticalBox Column
+	 * { + HorizontalBox {} }`), or two containers from its own `+` lines and its style's. A widget arranges its children
+	 * one way, and the second container used to replace the first without a word, taking its values with it.
+	 */
+	SecondLayoutContainer = 5022,
 
 	// --- 6xxx compile ---
 	/** The class's Source File names a file that does not exist or cannot be read. */
@@ -362,6 +401,27 @@ enum class EDreamUIDiagnosticCode : int32
 	 * "not found" would go looking for a misspelling that is not there.
 	 */
 	EachSourceNotObjectArray = 6007,
+	/** A `props` or `events` type the compiler has no Blueprint pin for. */
+	PropTypeUnknown = 6008,
+	/** A `props` name another member of the class already has with a different type, or a widget's name. */
+	PropNameTaken = 6009,
+	/** `-> emit Name` naming no entry of this file's `events` block. */
+	EmitUnknownEvent = 6010,
+	/** `-> emit Name(args)` whose arguments are not the event's parameters, in count or type. */
+	EmitArgumentMismatch = 6011,
+	/**
+	 * `-> emit` where no generated handler can stand: inside a `for` or `each` body, whose copies are the loop's and
+	 * not the class's, or on an event whose parameter no Blueprint function can take (an FDreamUIEventDelegate of a
+	 * width Blueprints have no pin for). Said rather than dropped, so the route is never silently missing.
+	 */
+	EmitRouteUnsupported = 6012,
+	/** A `props` default its declared type cannot hold: `Integer Count = 1.5`, an enum value the enum lacks, an asset that is not there. */
+	PropDefaultInvalid = 6013,
+	/**
+	 * An `events` name another member of the class already answers to: a prop, a widget, a resource, the author's own
+	 * variable or function, or a parent's member that is not a dispatcher of the same parameters.
+	 */
+	EventNameTaken = 6014,
 
 	// --- 7xxx write-back ---
 	/** The patcher was asked to write a property it cannot locate a home for. */
@@ -381,6 +441,20 @@ enum class EDreamUIDiagnosticCode : int32
 	 * the value has no spelling.
 	 */
 	PatchValueNotRepresentable = 7003,
+	/**
+	 * A designer edit that would have to change text the front end made rather than read: a property an `if` block
+	 * or a shorthand stands for, or the made-up id of an anonymous widget. Said instead of written, so the file is
+	 * never edited somewhere the author did not write.
+	 */
+	PatchSyntaxNotWritable = 7004,
+	/**
+	 * A designer edit to a value the node takes from a `+ Component { … }` line of its STYLE, on a node that writes no
+	 * `+` line of that class itself. The value has two homes and the write-back takes neither: the style is shared, so
+	 * writing there would move every node that wears it, and a `+` block of the node's own is a change to the file's
+	 * shape the value pass does not make. Its own code rather than 7004's, because nothing here was made up -- the
+	 * author wrote the line, and the fix is to write one more.
+	 */
+	PatchStyleComponentNotWritable = 7005,
 };
 
 /**
