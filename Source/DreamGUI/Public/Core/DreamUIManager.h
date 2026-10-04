@@ -4,6 +4,7 @@
 #pragma once
 #include "CoreMinimal.h"
 #include "Subsystems/WorldSubsystem.h"
+#include "Engine/EngineBaseTypes.h"
 #include "Tickable.h"
 #include "Containers/Ticker.h"
 #include "UObject/ObjectKey.h"
@@ -28,6 +29,9 @@ class UDreamUIDataAsTexture;
 class UDreamUIRenderLayerTable;
 class UTexture;
 enum class EDreamUIDataAsTexturePixelFormat : uint8;
+struct FDreamGradient;
+/** The paint rows' bookkeeping, defined where the paint rows are (DreamUIManager_Registry.cpp). */
+struct FDreamUIPaintRowsState;
 
 DECLARE_MULTICAST_DELEGATE_OneParam(FDreamUIEditorTickMulticastDelegate, float);
 class UDreamUIManagerWorldSubsystem;
@@ -111,6 +115,13 @@ class DREAMGUI_API UDreamUIManagerWorldSubsystem : public UTickableWorldSubsyste
 	GENERATED_BODY()
 public:	
 	virtual bool ShouldCreateSubsystem(UObject* Outer) const override;
+	/**
+	 * Whether a world in InNetMode gets a manager: every mode but NM_DedicatedServer. A dedicated server -- a server
+	 * process, or a play-in-editor server -- draws nothing, so it gets no manager and none of what one makes (the
+	 * canvases' draw data, render resources, the paint rows). ShouldCreateSubsystem asks it with the world's net mode,
+	 * and with NM_DedicatedServer whenever IsRunningDedicatedServer().
+	 */
+	static bool ShouldRunForNetMode(ENetMode InNetMode);
 	/** The engine's three, and editor previews: a preview's widgets need a manager as much as a level's. */
 	virtual bool DoesSupportWorldType(const EWorldType::Type WorldType) const override;
 	virtual void Initialize(FSubsystemCollectionBase& Collection)override;
@@ -230,6 +241,40 @@ public:
 	 * first canvas makes a layer, and gone with the world. Flushed once a frame, after the canvases placed their layers.
 	 */
 	UDreamUIRenderLayerTable* GetRenderLayerTable();
+
+	/*
+	 * PAINT ROWS: the world's gradients for painted text (FDreamTextPaint), as one RGBA32F texture of rows
+	 * DreamPaintRows::RowWidth pixels wide -- a text table per painted text, a gradient row per distinct gradient, shared by
+	 * every text that paints with it (DreamPaintRows has the layout). Made by PostInitialize, before any canvas binds its
+	 * textures -- a canvas made earlier would bind the fallback until its next rebuild -- and gone with the world. Game
+	 * thread throughout. Rows are written as they are asked for and sent to the render thread together once a frame, before
+	 * the canvases submit their draw calls (FlushPaintRows); a write after that goes with the next frame's.
+	 */
+	/** Make the paint rows, once; what PostInitialize calls. */
+	void CreatePaintRows();
+	/** The paint rows, as a built-in draw and a material bind them (DreamUIShadeMaterial::PaintDataTextureParameter); null when there are none. */
+	UTexture* GetPaintRowsTexture() const;
+	/**
+	 * A text table for a painted text: a row of its own, every pixel NoRow-filled for its slots and 0 elsewhere until the
+	 * text writes it. INDEX_NONE when there are no paint rows, or DreamPaintRows::MaxTextTableRows are taken: the text then
+	 * paints nothing. The text gives it back with ReleasePaintTextRow when it stops painting, leaves the world, or goes.
+	 */
+	int32 AcquirePaintTextRow();
+	void ReleasePaintTextRow(int32 InRow);
+	/**
+	 * The row InGradient is drawn from (FDreamGradient::PackRow): one already holding exactly those pixels, shared, or a new
+	 * row written with them. Every acquire is matched by one ReleasePaintGradientRow; the row is free again once the last
+	 * holder released it. Changing a text's gradient is releasing the old row and acquiring the new one -- a row is never
+	 * rewritten under its other holders. INDEX_NONE when there are no paint rows.
+	 */
+	int32 AcquirePaintGradientRow(const FDreamGradient& InGradient);
+	void ReleasePaintGradientRow(int32 InRow);
+	/** Write InPixels into row InRow from pixel InFirstPixel on: a text writing its own table. Gradient rows are written by acquiring them only. */
+	void WritePaintRowPixels(int32 InRow, int32 InFirstPixel, TConstArrayView<FVector4f> InPixels);
+	/** Send the rows written since the last flush to the render thread, in one go. SubmitCanvasDrawCall calls it each frame. */
+	void FlushPaintRows();
+	/** For the memory report: rows the texture has, text tables and gradient rows taken, and the texture's bytes. */
+	void GetPaintRowsMemoryInfo(int32& OutTextureRows, int32& OutTextRows, int32& OutGradientRows, int64& OutTextureBytes) const;
 #if WITH_EDITOR
 	/**
 	 * Broadcast on every editor tick of a world nobody plays -- the level editor's, a preview's -- for what
@@ -272,6 +317,11 @@ private:
 	/** See GetRenderLayerTable. */
 	UPROPERTY(Transient, DuplicateTransient, TextExportTransient)
 	TObjectPtr<UDreamUIRenderLayerTable> RenderLayerTable;
+	/** See CreatePaintRows: the rows, the manager's, and never saved, duplicated or copied, as the rect block rows. */
+	UPROPERTY(Transient, DuplicateTransient, TextExportTransient)
+	TObjectPtr<UDreamUIDataAsTexture> PaintRows;
+	/** What the paint rows hold: which rows are taken, and the gradient rows by content with their holders. Made with PaintRows. */
+	TSharedPtr<FDreamUIPaintRowsState> PaintRowsState;
 	
 	UPROPERTY(VisibleAnywhere, Category = "DreamGUI")
 	TArray<TWeakObjectPtr<UDreamCanvas>> AllCanvasArray;

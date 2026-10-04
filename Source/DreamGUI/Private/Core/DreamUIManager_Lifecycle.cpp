@@ -77,7 +77,23 @@ void UDreamUIManagerWorldSubsystem::OnEnginePreExit()
 
 bool UDreamUIManagerWorldSubsystem::ShouldCreateSubsystem(UObject* Outer) const
 {
-	return !IsRunningCommandlet() && Super::ShouldCreateSubsystem(Outer);
+	if (IsRunningCommandlet() || !Super::ShouldCreateSubsystem(Outer))
+	{
+		return false;
+	}
+	// Asked while the world is being made, which is early enough to trust its net mode: a play-in-editor server answers
+	// the mode it was created in before it has a net driver (UWorld::InternalGetNetMode). A server process is a dedicated
+	// server whatever its world would say.
+	const UWorld* World = Cast<UWorld>(Outer);
+	const ENetMode NetMode = IsRunningDedicatedServer() ? NM_DedicatedServer : (World != nullptr ? World->GetNetMode() : NM_Standalone);
+	return ShouldRunForNetMode(NetMode);
+}
+
+bool UDreamUIManagerWorldSubsystem::ShouldRunForNetMode(ENetMode InNetMode)
+{
+	// A dedicated server draws nothing and has no player to hear: its widgets, when a level holds any, build without a
+	// manager, as they do in a commandlet's world, and every caller of GetInstance already answers a world without one.
+	return InNetMode != NM_DedicatedServer;
 }
 
 bool UDreamUIManagerWorldSubsystem::DoesSupportWorldType(const EWorldType::Type WorldType) const
@@ -125,6 +141,11 @@ void UDreamUIManagerWorldSubsystem::PostInitialize()
 {
 	Super::PostInitialize();
 	FWorldDelegates::OnWorldPreSendAllEndOfFrameUpdates.AddUObject(this, &UDreamUIManagerWorldSubsystem::OnWorldPreSendAllEndOfFrameUpdates);
+
+	// What every canvas of this world binds, made before the first canvas asks for it: one that bound before the rows
+	// existed would draw its painted text with the fallback texture until something rebuilt its draw calls. A world that
+	// draws nothing gets no manager at all (ShouldCreateSubsystem), and so none of this.
+	CreatePaintRows();
 }
 void UDreamUIManagerWorldSubsystem::Deinitialize()
 {

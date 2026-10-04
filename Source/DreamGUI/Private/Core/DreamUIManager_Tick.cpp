@@ -748,6 +748,9 @@ void UDreamUIManagerWorldSubsystem::SubmitCanvasDrawCall()
 	SCOPE_CYCLE_COUNTER(STAT_DreamUISubmitCanvasDrawCall);
 	DREAMUI_STAGE_SCOPE(DrawCallSubmit);
 	UDreamUIFontData_FreeTypeRender::FlushPendingFontTextures();
+	// The frame's writes to the paint rows -- a text's table, a gradient taken up -- go up before the draw calls that read
+	// them: a phase animated from a tick, a Blueprint or Sequencer, or written while the canvases updated.
+	FlushPaintRows();
 	//update draw-call
 	{
 		/**

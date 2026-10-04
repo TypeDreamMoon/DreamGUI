@@ -8,6 +8,9 @@
 #include "Core/DreamUIWorldContext.h"
 #include "Core/Components/DreamRectBlock.h"
 #include "Core/DreamGUISettings.h"
+#include "Core/Text/DreamTextPaint.h"
+#include "Core/Text/DreamTextPainter.h"
+#include "Hash/CityHash.h"
 
 #include "DreamGUI.h"
 #include "Utils/DreamUIUtils.h"
@@ -548,4 +551,279 @@ UDreamUIRenderLayerTable* UDreamUIManagerWorldSubsystem::GetRenderLayerTable()
 		RenderLayerTable = NewObject<UDreamUIRenderLayerTable>(this, NAME_None, DreamUI::RuntimeObjectFlags);
 	}
 	return RenderLayerTable;
+}
+
+/*
+ * PAINT ROWS (DreamUIManager.h has the contract, DreamPaintRows the layout). One allocator, the data texture's, hands out
+ * text tables and gradient rows alike; this keeps which row is which. A gradient row is found by its packed pixels -- the
+ * hash first, then the pixels themselves -- and never written again while anyone holds it: changing a gradient is taking
+ * another row. Writes wait in the data texture's batch until FlushPaintRows sends the frame's in one go.
+ */
+struct FDreamUIPaintRowsState
+{
+	/** A gradient row: the pixels it holds, their hash, and how many acquires it is answering. */
+	struct FGradientRow
+	{
+		TArray<FVector4f> Pixels;
+		uint64 Hash = 0;
+		int32 Holders = 0;
+	};
+
+	/** Text tables taken, by row. */
+	TSet<int32> TextRows;
+	/** Gradient rows taken, by row; and the same rows by the hash of their pixels, since different pixels may share one. */
+	TMap<int32, FGradientRow> GradientRows;
+	TMap<uint64, TArray<int32>> GradientRowsByHash;
+	/** Each said once a world: the texture could not grow any further, a text table's row is past what a record can link. */
+	bool bLoggedFull = false;
+	bool bLoggedLinkLimit = false;
+
+	bool IsTaken(int32 InRow) const
+	{
+		return TextRows.Contains(InRow) || GradientRows.Contains(InRow);
+	}
+};
+
+namespace DreamUIPaintRowsLocal
+{
+	/** Rows the texture starts with; it doubles in place as they run out. Sixteen kilobytes. */
+	constexpr int32 InitialPaintRows = 32;
+
+	TArray<uint8> PaintPixelBytes(TConstArrayView<FVector4f> InPixels)
+	{
+		TArray<uint8> Bytes;
+		Bytes.SetNumUninitialized(InPixels.Num() * DreamPaintRows::BytesPerPixel);
+		FMemory::Memcpy(Bytes.GetData(), InPixels.GetData(), Bytes.Num());
+		return Bytes;
+	}
+
+	/** What FDreamGradient::GetRowHash answers for the gradient these pixels were packed from. */
+	uint64 HashPaintPixels(const TArray<FVector4f>& InPixels)
+	{
+		return CityHash64(reinterpret_cast<const char*>(InPixels.GetData()), static_cast<uint32>(InPixels.Num() * sizeof(FVector4f)));
+	}
+
+	bool SamePaintPixels(const TArray<FVector4f>& InA, const TArray<FVector4f>& InB)
+	{
+		return InA.Num() == InB.Num() && FMemory::Memcmp(InA.GetData(), InB.GetData(), InA.Num() * sizeof(FVector4f)) == 0;
+	}
+
+	/**
+	 * A text table with nothing in it: every slot's layers NoRow, so a record still linking to it paints nothing; each
+	 * slot's animation and transform neutral -- no phase, aspect 1, no turn or shift, scale 1 -- so a slot the text starts
+	 * using reads as unanimated until the text writes its own; the header and the rest 0.
+	 */
+	TArray<FVector4f> MakeEmptyTextTable()
+	{
+		TArray<FVector4f> Pixels;
+		Pixels.SetNumZeroed(DreamPaintRows::RowWidth);
+		for (int32 Slot = DreamTextQuadCode::TextSlot; Slot <= DreamTextQuadCode::MaxSlot; ++Slot)
+		{
+			Pixels[DreamPaintRows::GetSlotRowsPixel(Slot)] = FVector4f(DreamPaintRows::NoRow, DreamPaintRows::NoRow, DreamPaintRows::NoRow, 0.0f);
+			Pixels[DreamPaintRows::GetSlotAnimationPixel(Slot)] = FVector4f(0.0f, 0.0f, 0.0f, 1.0f);
+			Pixels[DreamPaintRows::GetSlotTransformPixel(Slot)] = FVector4f(0.0f, 0.0f, 0.0f, 1.0f);
+		}
+		return Pixels;
+	}
+
+	/**
+	 * A row of InRows for a new table or gradient, or INDEX_NONE when the texture is at the largest size the platform
+	 * allows: the data texture then hands its last row out again, which is somebody's already.
+	 */
+	int32 TakePaintRow(UDreamUIDataAsTexture& InRows, FDreamUIPaintRowsState& InOutState, const UObject& InOwner)
+	{
+		const int32 Row = InRows.RegisterBuffer();
+		if (Row < 0 || Row >= InRows.GetTextureHeight() || InOutState.IsTaken(Row))
+		{
+			if (!InOutState.bLoggedFull)
+			{
+				InOutState.bLoggedFull = true;
+				UE_LOG(DreamGUI, Warning, TEXT("%s: the paint rows are full at %d rows; painted text that needs another row draws in its solid colours."),
+					*InOwner.GetPathName(), InRows.GetTextureHeight());
+			}
+			return INDEX_NONE;
+		}
+		return Row;
+	}
+}
+
+void UDreamUIManagerWorldSubsystem::CreatePaintRows()
+{
+	if (IsValid(PaintRows) || HasTornDownWorld())
+	{
+		return;
+	}
+	// The manager's, and never saved, duplicated or copied, as the rect block rows: a play session's copy of this world
+	// makes its own when its manager starts.
+	UDreamUIDataAsTexture* Rows = NewObject<UDreamUIDataAsTexture>(this, NAME_None, DreamUI::RuntimeObjectFlags);
+	Rows->Init(DreamPaintRows::RowBytes, EDreamUIDataAsTexturePixelFormat::R32G32B32A32, DreamUIPaintRowsLocal::InitialPaintRows);
+	Rows->PrepareForBatchUpdate();
+	PaintRows = Rows;
+	PaintRowsState = MakeShared<FDreamUIPaintRowsState>();
+}
+
+UTexture* UDreamUIManagerWorldSubsystem::GetPaintRowsTexture() const
+{
+	return IsValid(PaintRows) ? PaintRows->GetDataTexture() : nullptr;
+}
+
+int32 UDreamUIManagerWorldSubsystem::AcquirePaintTextRow()
+{
+	// After the teardown nothing is handed out: what the world's texts give back on their way out is ignored too.
+	if (!IsValid(PaintRows) || !PaintRowsState.IsValid() || HasTornDownWorld())
+	{
+		return INDEX_NONE;
+	}
+	FDreamUIPaintRowsState& State = *PaintRowsState;
+	const int32 Row = DreamUIPaintRowsLocal::TakePaintRow(*PaintRows, State, *this);
+	if (Row == INDEX_NONE)
+	{
+		return INDEX_NONE;
+	}
+	// A record links to its table through 16 bits, as the row + 1: a row past that cannot be linked to. It goes back to
+	// the allocator, where a gradient row may still use it.
+	if (static_cast<uint32>(Row) + 1u > DreamPaintRows::RecordRowLinkMask)
+	{
+		PaintRows->UnregisterBuffer(Row);
+		if (!State.bLoggedLinkLimit)
+		{
+			State.bLoggedLinkLimit = true;
+			UE_LOG(DreamGUI, Warning, TEXT("%s: %d painted texts is as many as a world's records can link to; the next draws in its solid colours."),
+				*GetPathName(), DreamPaintRows::MaxTextTableRows);
+		}
+		return INDEX_NONE;
+	}
+	State.TextRows.Add(Row);
+	PaintRows->UpdateBlock(0, Row, DreamUIPaintRowsLocal::PaintPixelBytes(DreamUIPaintRowsLocal::MakeEmptyTextTable()), DreamPaintRows::RowWidth);
+	return Row;
+}
+
+void UDreamUIManagerWorldSubsystem::ReleasePaintTextRow(int32 InRow)
+{
+	if (!IsValid(PaintRows) || !PaintRowsState.IsValid() || HasTornDownWorld() || InRow == INDEX_NONE)
+	{
+		return;
+	}
+	if (PaintRowsState->TextRows.Remove(InRow) == 0)
+	{
+		return;
+	}
+	// Emptied on the way back, so that a record still linking to it until its widget's data is next written paints
+	// nothing rather than whatever the row is taken for next. A row taken again in the same frame is written after this.
+	PaintRows->UpdateBlock(0, InRow, DreamUIPaintRowsLocal::PaintPixelBytes(DreamUIPaintRowsLocal::MakeEmptyTextTable()), DreamPaintRows::RowWidth);
+	PaintRows->UnregisterBuffer(InRow);
+}
+
+int32 UDreamUIManagerWorldSubsystem::AcquirePaintGradientRow(const FDreamGradient& InGradient)
+{
+	if (!IsValid(PaintRows) || !PaintRowsState.IsValid() || HasTornDownWorld())
+	{
+		return INDEX_NONE;
+	}
+	using namespace DreamUIPaintRowsLocal;
+	FDreamUIPaintRowsState& State = *PaintRowsState;
+	TArray<FVector4f> Pixels;
+	InGradient.PackRow(Pixels);
+	const uint64 Hash = HashPaintPixels(Pixels);
+	if (const TArray<int32>* SameHash = State.GradientRowsByHash.Find(Hash))
+	{
+		for (const int32 Candidate : *SameHash)
+		{
+			FDreamUIPaintRowsState::FGradientRow& Shared = State.GradientRows.FindChecked(Candidate);
+			if (SamePaintPixels(Shared.Pixels, Pixels))
+			{
+				++Shared.Holders;
+				return Candidate;
+			}
+		}
+	}
+	const int32 Row = TakePaintRow(*PaintRows, State, *this);
+	if (Row == INDEX_NONE)
+	{
+		return INDEX_NONE;
+	}
+	PaintRows->UpdateBlock(0, Row, PaintPixelBytes(Pixels), DreamPaintRows::RowWidth);
+	FDreamUIPaintRowsState::FGradientRow& Taken = State.GradientRows.Add(Row);
+	Taken.Pixels = MoveTemp(Pixels);
+	Taken.Hash = Hash;
+	Taken.Holders = 1;
+	State.GradientRowsByHash.FindOrAdd(Hash).Add(Row);
+	return Row;
+}
+
+void UDreamUIManagerWorldSubsystem::ReleasePaintGradientRow(int32 InRow)
+{
+	if (!IsValid(PaintRows) || !PaintRowsState.IsValid() || HasTornDownWorld() || InRow == INDEX_NONE)
+	{
+		return;
+	}
+	FDreamUIPaintRowsState& State = *PaintRowsState;
+	FDreamUIPaintRowsState::FGradientRow* Held = State.GradientRows.Find(InRow);
+	if (Held == nullptr)
+	{
+		return;
+	}
+	if (--Held->Holders > 0)
+	{
+		return;
+	}
+	// The last holder: the row goes back. Its pixels stay until it is taken again -- nothing reads a row nobody holds.
+	const uint64 Hash = Held->Hash;
+	if (TArray<int32>* SameHash = State.GradientRowsByHash.Find(Hash))
+	{
+		SameHash->RemoveSingleSwap(InRow);
+		if (SameHash->IsEmpty())
+		{
+			State.GradientRowsByHash.Remove(Hash);
+		}
+	}
+	State.GradientRows.Remove(InRow);
+	PaintRows->UnregisterBuffer(InRow);
+}
+
+void UDreamUIManagerWorldSubsystem::WritePaintRowPixels(int32 InRow, int32 InFirstPixel, TConstArrayView<FVector4f> InPixels)
+{
+	if (!IsValid(PaintRows) || !PaintRowsState.IsValid() || HasTornDownWorld())
+	{
+		return;
+	}
+	// Into a text table only, and inside its row: a gradient row is written by acquiring it, a row given back by nobody.
+	if (!PaintRowsState->TextRows.Contains(InRow) || InFirstPixel < 0 || InFirstPixel >= DreamPaintRows::RowWidth || InPixels.Num() <= 0)
+	{
+		return;
+	}
+	const int32 Count = FMath::Min(InPixels.Num(), DreamPaintRows::RowWidth - InFirstPixel);
+	PaintRows->UpdateBlock(InFirstPixel, InRow, DreamUIPaintRowsLocal::PaintPixelBytes(InPixels.Left(Count)), Count);
+}
+
+void UDreamUIManagerWorldSubsystem::FlushPaintRows()
+{
+	if (!IsValid(PaintRows))
+	{
+		return;
+	}
+	if (PaintRows->GetIsBatchUpdateMode())
+	{
+		PaintRows->Flush();
+	}
+	PaintRows->PrepareForBatchUpdate();
+}
+
+void UDreamUIManagerWorldSubsystem::GetPaintRowsMemoryInfo(int32& OutTextureRows, int32& OutTextRows, int32& OutGradientRows, int64& OutTextureBytes) const
+{
+	OutTextureRows = 0;
+	OutTextRows = 0;
+	OutGradientRows = 0;
+	OutTextureBytes = 0;
+	if (!IsValid(PaintRows))
+	{
+		return;
+	}
+	OutTextureRows = PaintRows->GetTextureHeight();
+	OutTextureBytes = static_cast<int64>(OutTextureRows) * DreamPaintRows::RowBytes;
+	if (PaintRowsState.IsValid())
+	{
+		OutTextRows = PaintRowsState->TextRows.Num();
+		OutGradientRows = PaintRowsState->GradientRows.Num();
+	}
 }

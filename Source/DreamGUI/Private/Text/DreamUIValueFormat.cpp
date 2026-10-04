@@ -3,6 +3,7 @@
 #include "Text/DreamUIValueFormat.h"
 #include "DreamGUI.h"
 
+#include "Core/Text/DreamTextPaint.h"
 #include "Layout/Margin.h"
 #include "Math/Color.h"
 #include "Math/UnrealMathUtility.h"
@@ -57,6 +58,8 @@ namespace DreamUIValueFormatLocal
 		LinearColor,
 		Color,
 		Margin,
+		/** FDreamGradient, written as its CSS in a string: its stops are an array, which nothing else could carry. */
+		Gradient,
 	};
 
 	/**
@@ -108,7 +111,48 @@ namespace DreamUIValueFormatLocal
 		{
 			return EShortForm::Margin;
 		}
+		if (Struct == FDreamGradient::StaticStruct())
+		{
+			return EShortForm::Gradient;
+		}
 		return EShortForm::None;
+	}
+
+	/**
+	 * A string literal as the lexer reads one back: the five escapes it resolves, the backslash first so that escaping the
+	 * quote is not escaped again. The write-back's QuoteString, for the one short form that is a string.
+	 */
+	static FString QuoteGradientText(const FString& InText)
+	{
+		FString Escaped = InText;
+		Escaped.ReplaceInline(TEXT("\\"), TEXT("\\\\"), ESearchCase::CaseSensitive);
+		Escaped.ReplaceInline(TEXT("\""), TEXT("\\\""), ESearchCase::CaseSensitive);
+		Escaped.ReplaceInline(TEXT("\r"), TEXT("\\r"), ESearchCase::CaseSensitive);
+		Escaped.ReplaceInline(TEXT("\n"), TEXT("\\n"), ESearchCase::CaseSensitive);
+		Escaped.ReplaceInline(TEXT("\t"), TEXT("\\t"), ESearchCase::CaseSensitive);
+		return TEXT("\"") + Escaped + TEXT("\"");
+	}
+
+	/** Whether every number of a gradient has a spelling: one that is not finite has none, as a vector component has none. */
+	static bool IsGradientFinite(const FDreamGradient& InGradient)
+	{
+		const float Numbers[] = { InGradient.Angle, InGradient.Center.X, InGradient.Center.Y, InGradient.Radius.X,
+			InGradient.Radius.Y, InGradient.Scale, InGradient.Offset };
+		for (const float Number : Numbers)
+		{
+			if (!FMath::IsFinite(Number))
+			{
+				return false;
+			}
+		}
+		for (const FDreamGradientStop& Stop : InGradient.Stops)
+		{
+			if (!FMath::IsFinite(Stop.Position))
+			{
+				return false;
+			}
+		}
+		return true;
 	}
 
 	/**
@@ -384,6 +428,28 @@ int32 DreamUIValueFormat::GetExpectedTupleArity(const FProperty* InProperty)
 	}
 }
 
+EDreamUIValueKind DreamUIValueFormat::GetShortFormLiteralKind(const FProperty* InProperty)
+{
+	using namespace DreamUIValueFormatLocal;
+
+	switch (Classify(InProperty))
+	{
+	case EShortForm::Vector2Double:
+	case EShortForm::Vector2Float:
+	case EShortForm::Vector3Double:
+	case EShortForm::Rotator:
+	case EShortForm::Margin:
+		return EDreamUIValueKind::Tuple;
+	case EShortForm::LinearColor:
+	case EShortForm::Color:
+		return EDreamUIValueKind::HexColor;
+	case EShortForm::Gradient:
+		return EDreamUIValueKind::String;
+	default:
+		return EDreamUIValueKind::Identifier;
+	}
+}
+
 /**
  * Note on what this function does with a value it cannot represent: it REFUSES, and says which kind
  * of refusal it was through OutValueIsUnrepresentable.
@@ -547,6 +613,25 @@ bool DreamUIValueFormat::Print(const FProperty* InProperty, const void* InValueP
 			*PrintScalar(Value.Right, true), *PrintScalar(Value.Bottom, true));
 		return true;
 	}
+	case EShortForm::Gradient:
+	{
+		// The gradient's CSS, which reads back field for field (FDreamGradient::ToCss): its numbers go through this file's
+		// PrintScalar, so a non-finite one would print as "nan" and fail the next compile. Refused for it, as above.
+		const FDreamGradient& Value = *static_cast<const FDreamGradient*>(InValuePtr);
+		if (!IsGradientFinite(Value))
+		{
+			if (OutValueIsUnrepresentable != nullptr)
+			{
+				*OutValueIsUnrepresentable = true;
+			}
+			UE_LOG(DreamGUI, Verbose,
+				TEXT("DUI7003: '%s' holds a gradient with a non-finite number, which has no text spelling; its line is left untouched."),
+				InProperty != nullptr ? *InProperty->GetName() : TEXT("<null>"));
+			return false;
+		}
+		OutText = QuoteGradientText(Value.ToCss());
+		return true;
+	}
 	default:
 		return false;
 	}
@@ -653,6 +738,16 @@ bool DreamUIValueFormat::Parse(const FProperty* InProperty, const FDreamUIValue&
 		}
 		*static_cast<FColor*>(OutValuePtr) = Parsed;
 		return true;
+	}
+	case EShortForm::Gradient:
+	{
+		// A quoted string only: CSS has spaces, commas and brackets, none of which an unquoted literal can hold. ParseCss
+		// leaves the destination as it was when it refuses, so a refusal never half-writes a gradient.
+		if (InValue.Kind != EDreamUIValueKind::String)
+		{
+			return false;
+		}
+		return FDreamGradient::ParseCss(InValue.Raw, *static_cast<FDreamGradient*>(OutValuePtr));
 	}
 	default:
 		return false;
