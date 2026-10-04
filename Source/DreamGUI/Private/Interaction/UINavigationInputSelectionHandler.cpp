@@ -35,6 +35,41 @@ namespace UINavigationInputSelectionHandlerLocal
 			}
 		}
 	}
+
+	/**
+	 * Make the picture of a ring the handler sizes follow that size. The handler sizes the ring's root to the control it
+	 * marks; a picture placed on the root's centre at a fixed size -- the plugin's own ring is a 100x100 frame drawn that
+	 * way -- stayed 100x100 over a full-width row and a small icon alike. Each child of the root that covers it (anchored
+	 * to its centre, at least its size) is anchored to stretch with it instead, keeping the margin it was authored with: a
+	 * frame drawn a few pixels outside the root stays outside by the same few pixels. A child smaller than the root (a dot
+	 * on the centre) or anchored elsewhere (a corner bracket) already places itself by the root's size, and keeps what it
+	 * was authored with.
+	 */
+	void FitRingPicture(UDreamWidget* InRingWidget)
+	{
+		const float RootWidth = InRingWidget->GetWidth();
+		const float RootHeight = InRingWidget->GetHeight();
+		if (RootWidth <= UE_KINDA_SMALL_NUMBER || RootHeight <= UE_KINDA_SMALL_NUMBER)
+		{
+			return;
+		}
+		const FVector2D Centre(0.5, 0.5);
+		constexpr float Tolerance = 0.5f;
+		for (UDreamWidget* Child : InRingWidget->GetChildren())
+		{
+			if (!IsValid(Child) || !Child->GetAnchorMin().Equals(Centre, UE_KINDA_SMALL_NUMBER)
+				|| !Child->GetAnchorMax().Equals(Centre, UE_KINDA_SMALL_NUMBER))
+			{
+				continue;
+			}
+			if (Child->GetWidth() + Tolerance < RootWidth || Child->GetHeight() + Tolerance < RootHeight)
+			{
+				continue;
+			}
+			// Same rectangle, new anchors: the size it keeps becomes a size relative to the root's.
+			Child->SetHorizontalAndVerticalAnchorMinMax(FVector2D::ZeroVector, FVector2D::UnitVector, true, true);
+		}
+	}
 }
 
 UUINavigationInputSelectionHandler::UUINavigationInputSelectionHandler()
@@ -88,6 +123,11 @@ UUINavigationInputSelectionHandler* UUINavigationInputSelectionHandler::FindOrCr
 		return Existing;
 	}
 	ForgetGoneRings();
+	// No ring class is a project with no ring, not a mistake to report at every focus change.
+	if (UDreamGUISettings::Get()->NavigationSelectionClass.IsNull())
+	{
+		return nullptr;
+	}
 	const TSubclassOf<UDreamUserWidget> SelectionClass = UDreamGUISettings::LoadSettingClass(
 		UDreamGUISettings::Get()->NavigationSelectionClass, TEXT("NavigationSelectionClass"));
 	if (SelectionClass == nullptr)
@@ -110,6 +150,7 @@ UUINavigationInputSelectionHandler* UUINavigationInputSelectionHandler::FindOrCr
 
 UUINavigationInputSelectionHandler* UUINavigationInputSelectionHandler::MakeRing(UDreamWidget* InRingWidget)
 {
+	using namespace UINavigationInputSelectionHandlerLocal;
 	if (!IsValid(InRingWidget))
 	{
 		return nullptr;
@@ -125,6 +166,11 @@ UUINavigationInputSelectionHandler* UUINavigationInputSelectionHandler::MakeRing
 	if (Ring != nullptr)
 	{
 		MakeRingInert(InRingWidget);
+		// A Blueprint ring places its own picture; this handler sizes the root of every other, so the picture follows it.
+		if (!Ring->bCanExecuteBlueprintEvent)
+		{
+			FitRingPicture(InRingWidget);
+		}
 	}
 	return Ring;
 }
@@ -215,6 +261,13 @@ void UUINavigationInputSelectionHandler::SelectWidget(UDreamWidget* InSelected)
 	CurrentSelected = InSelected;
 	if (InSelected != nullptr && PrevSelected.IsValid())
 	{
+		// The fade-in of a ring that has only just appeared was among the tweens killed above: a step taken inside its
+		// quarter second -- or the same focus arriving twice, as a select and then a navigation enter -- left the ring at
+		// whatever opacity the fade had reached, which on its first frame is none at all.
+		if (Widget->GetRenderOpacity() < 1.0f)
+		{
+			FadeCursorTo(Widget, 1.0f);
+		}
 		Widget->SetParent(InSelected, true);
 		const FVector2D Pos2D = InSelected->GetLocalSpaceCenter();
 		const FVector Pos3D(0, Pos2D.X, Pos2D.Y);

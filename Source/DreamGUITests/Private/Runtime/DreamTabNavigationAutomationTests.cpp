@@ -673,6 +673,123 @@ bool FDreamTabNavigationRingTest::RunTest(const FString& Parameters)
 	return true;
 }
 
+namespace DreamTabNavigationTestLocal
+{
+	/**
+	 * The ring's root is on InMarked at its size, and every picture under the root covers it: at least its size, and no
+	 * more than a frame's few pixels over. The project's ring class is the plugin's, whose frame is a child authored at a
+	 * fixed size; it stayed that size over every control.
+	 */
+	void ExpectRingCovers(FAutomationTestBase& InTest, UUINavigationInputSelectionHandler* InRing, const UDreamWidget* InMarked, const TCHAR* InWhat)
+	{
+		const UDreamWidget* RingWidget = InRing != nullptr ? InRing->GetWidget() : nullptr;
+		if (!InTest.TestNotNull(*FString::Printf(TEXT("the ring marks %s"), InWhat), InMarked)
+			|| !InTest.TestNotNull(TEXT("the ring has a widget"), RingWidget))
+		{
+			return;
+		}
+		InTest.TestEqual(*FString::Printf(TEXT("the ring's root is %s's width"), InWhat), RingWidget->GetWidth(), InMarked->GetWidth(), 0.5f);
+		InTest.TestEqual(*FString::Printf(TEXT("the ring's root is %s's height"), InWhat), RingWidget->GetHeight(), InMarked->GetHeight(), 0.5f);
+		constexpr float MaxFrameMargin = 16.0f;
+		int32 Pictures = 0;
+		for (const UDreamWidget* Child : RingWidget->GetChildren())
+		{
+			if (!IsValid(Child) || Child->GetVisual() == nullptr)
+			{
+				continue;
+			}
+			++Pictures;
+			const bool bCovers = Child->GetWidth() >= InMarked->GetWidth() - 0.5f && Child->GetHeight() >= InMarked->GetHeight() - 0.5f
+				&& Child->GetWidth() <= InMarked->GetWidth() + MaxFrameMargin && Child->GetHeight() <= InMarked->GetHeight() + MaxFrameMargin;
+			InTest.TestTrue(*FString::Printf(TEXT("the ring's picture '%s' (%.1f x %.1f) covers %s (%.1f x %.1f)"), *Child->GetDisplayName(),
+				Child->GetWidth(), Child->GetHeight(), InWhat, InMarked->GetWidth(), InMarked->GetHeight()), bCovers);
+		}
+		InTest.TestTrue(TEXT("the project's ring draws a picture"), Pictures > 0);
+	}
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamTabNavigationRingFitsAndStaysOffTest,
+	"DreamGUI.Navigation.Focus.TheRingCoversTheControlItMarksAndKeepsOffOneThatMarksItsOwn",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamTabNavigationRingFitsAndStaysOffTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamTabNavigationTestLocal;
+	FTabSettingsGuard Settings;
+	FDreamDriverRig Rig = FDreamDriverRig::Headless(ViewportSize);
+	Rig.BindTest(this);
+	if (!TestTrue(TEXT("The rig came up"), Rig.IsUsable()))
+	{
+		return false;
+	}
+	// A wide button and a tall one, so a ring of any fixed size fits neither; one that marks its own focus; one after it.
+	UDreamButton* Wide = Rig.MakeControl<UDreamButton>(TEXT("Wide"), nullptr, FVector2D(420.0, 36.0), FVector2D(-300.0, 150.0));
+	UDreamButton* Tall = Rig.MakeControl<UDreamButton>(TEXT("Tall"), nullptr, FVector2D(60.0, 140.0), FVector2D(100.0, 150.0));
+	UDreamButton* OwnLook = PlaceButton(*this, Rig, TEXT("OwnLook"), nullptr, FVector2D(-200.0, -100.0));
+	UDreamButton* After = PlaceButton(*this, Rig, TEXT("After"), nullptr, FVector2D(200.0, -100.0));
+	if (!TestTrue(TEXT("the wide and tall buttons have faces and behaviours"), Wide != nullptr && Tall != nullptr
+			&& Wide->ButtonBehaviour != nullptr && Tall->ButtonBehaviour != nullptr)
+		|| OwnLook == nullptr || After == nullptr)
+	{
+		return false;
+	}
+	OwnLook->ButtonBehaviour->SetUseFocusRing(false);
+	Rig.PumpFrames(1);
+	const TArray<UDreamButton*> Buttons = { Wide, Tall, OwnLook, After };
+	// Long enough for the ring's flight and fade to end (UUINavigationInputSelectionHandler's AnimDuration, 0.25 s).
+	constexpr int32 SettleFrames = 40;
+
+	TestEqual(TEXT("Tab focuses the wide button"), PressTab(*this, Rig, Buttons, 1, false), TEXT("Wide"));
+	UUINavigationInputSelectionHandler* Ring = UUINavigationInputSelectionHandler::FindFor(Wide->FaceNode.Get());
+	if (!TestNotNull(TEXT("focus drawn by keys brings the project's ring"), Ring))
+	{
+		return false;
+	}
+	Rig.PumpFrames(SettleFrames);
+	ExpectRingCovers(*this, Ring, MarkedBy(*this, Ring), TEXT("the wide button"));
+
+	TestEqual(TEXT("Tab moves on to the tall button"), PressTab(*this, Rig, Buttons, 1, false), TEXT("Tall"));
+	Rig.PumpFrames(SettleFrames);
+	ExpectRingCovers(*this, Ring, MarkedBy(*this, Ring), TEXT("the tall button"));
+
+	// A control that marks its own focus takes no ring, and the ring does not stay behind on the one the focus left.
+	TestEqual(TEXT("Tab moves on to the button that marks its own focus"), PressTab(*this, Rig, Buttons, 1, false), TEXT("OwnLook"));
+	Rig.PumpFrames(SettleFrames);
+	TestNull(TEXT("the ring marks nothing while that button has the focus"), MarkedBy(*this, Ring));
+	TestTrue(TEXT("and has faded out"), Ring->GetWidget() != nullptr && Ring->GetWidget()->GetRenderOpacity() < 0.01f);
+	TestEqual(TEXT("the button drew its focus with its own look"), OwnLook->ButtonBehaviour->GetCurrentSelectionState(), EUISelectableSelectionState::Focused);
+
+	// The ring fades back in on the next control that uses it, though the focus arrives there twice -- selected, then
+	// entered by navigation -- and the second arrival moves the ring while its fade-in has only just started.
+	TestEqual(TEXT("Tab moves on to the next button"), PressTab(*this, Rig, Buttons, 1, false), TEXT("After"));
+	Rig.PumpFrames(SettleFrames);
+	if (UUINavigationInputSelectionHandler* NextRing = UUINavigationInputSelectionHandler::FindFor(After->FaceNode.Get()))
+	{
+		TestTrue(TEXT("the ring comes back on a control that uses it"), NextRing->GetWidget() != nullptr && NextRing->GetWidget()->GetRenderOpacity() > 0.99f);
+		ExpectRingCovers(*this, NextRing, MarkedBy(*this, NextRing), TEXT("the next button"));
+	}
+	else
+	{
+		AddError(TEXT("the screen has a ring for the next button"));
+	}
+
+	// Asked for the ring again while it has the focus, the button gets it at once.
+	TestEqual(TEXT("Shift+Tab goes back to the button that marks its own focus"), PressTab(*this, Rig, Buttons, 1, true), TEXT("OwnLook"));
+	OwnLook->ButtonBehaviour->SetUseFocusRing(true);
+	Rig.PumpFrames(SettleFrames);
+	if (UUINavigationInputSelectionHandler* OwnRing = UUINavigationInputSelectionHandler::FindFor(OwnLook->FaceNode.Get()))
+	{
+		TestTrue(TEXT("the ring shows on the button that now uses it"), OwnRing->GetWidget() != nullptr && OwnRing->GetWidget()->GetRenderOpacity() > 0.99f);
+		ExpectRingCovers(*this, OwnRing, MarkedBy(*this, OwnRing), TEXT("the button that now uses it"));
+	}
+	else
+	{
+		AddError(TEXT("the screen has a ring for the button that now uses it"));
+	}
+	return true;
+}
+
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamTabNavigationScrollBoxTest,
 	"DreamGUI.Navigation.Scroll.AFocusedScrollBoxScrollsItselfByPageDownAndTheStick",

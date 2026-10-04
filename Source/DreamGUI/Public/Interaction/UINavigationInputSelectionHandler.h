@@ -87,8 +87,10 @@ public:
 	/**
 	 * Make InRingWidget, freshly made from a ring class, a ring: the handler its class put on its root, else one added there
 	 * -- the class then only draws, and this handler moves, sizes and fades it -- and the widget made inert (MakeRingInert).
-	 * The plugin's own NavigationSelectionInputHandler class is drawing only. What every place that makes a ring calls;
-	 * null for no widget.
+	 * The plugin's own NavigationSelectionInputHandler class is drawing only. Unless the class's handler is a Blueprint's,
+	 * which places its own picture, each child of the root that covers it (centre-anchored, at least the root's size) is
+	 * anchored to stretch with the root, its authored margin kept, so the picture marks the control's whole rectangle
+	 * whatever its size. What every place that makes a ring calls; null for no widget.
 	 */
 	static UUINavigationInputSelectionHandler* MakeRing(UDreamWidget* InRingWidget);
 };

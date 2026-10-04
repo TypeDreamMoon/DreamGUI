@@ -553,7 +553,8 @@ void UUISelectable::HandleFocusVisibleChanged(bool bInVisible)
 
 void UUISelectable::ShowFocusRing()
 {
-	if (!CheckNavigationSelectionState())
+	// Asked for no ring, this control does not make one either: a screen whose controls all mark their own focus has none.
+	if (!bUseFocusRing || !CheckNavigationSelectionState())
 	{
 		return;
 	}
@@ -602,8 +603,16 @@ bool UUISelectable::OnPointerExit_Implementation(UDreamPointerEventData* EventDa
 	ApplyPointerSelectionState(false);
 	if (!IsFocused())
 	{
-		// The navigation cursor moved on: wherever it landed takes the ring, and this control no longer answers for it.
+		// The navigation cursor moved on: wherever it landed takes the ring, and this control no longer answers for it --
+		// unless it landed on a control that marks its own focus, which takes no ring and would leave this one's here.
 		StopListeningForFocusVisibility();
+		const UDreamUIInputServices* Services = bShowsFocusRing ? UDreamUIInputServices::Get(this) : nullptr;
+		UDreamWidget* NewFocus = Services != nullptr ? Services->GetFocusedWidget(GetFocusUserIndex()) : nullptr;
+		const UUISelectable* NewSelectable = IsValid(NewFocus) && NewFocus != GetWidget() ? NewFocus->GetComponent<UUISelectable>() : nullptr;
+		if (NewSelectable != nullptr && !NewSelectable->GetUseFocusRing())
+		{
+			HideFocusRing();
+		}
 		bShowsFocusRing = false;
 	}
 	return AllowEventBubbleUp;
@@ -681,15 +690,15 @@ bool UUISelectable::OnPointerDeselect_Implementation(UDreamBaseEventData* EventD
 	{
 		StopListeningForFocusVisibility();
 		// The player's focus has moved on already (their focus changes before the deselect goes out). Where it went takes
-		// the ring over when it is a control on the same screen whose focus is drawn, and flies it there; anywhere else,
-		// or focus that is not to be drawn, and the ring fades out here.
+		// the ring over when it is a control on the same screen whose focus is drawn and that uses the ring, and flies it
+		// there; anywhere else, focus that is not to be drawn, or a control that marks its own, and the ring fades out here.
 		if (bShowsFocusRing)
 		{
 			const UDreamUIInputServices* Services = UDreamUIInputServices::Get(this);
 			const int32 UserIndex = GetFocusUserIndex();
 			UDreamWidget* NewFocus = Services != nullptr ? Services->GetFocusedWidget(UserIndex) : nullptr;
 			const UUISelectable* NewSelectable = IsValid(NewFocus) && NewFocus != GetWidget() ? NewFocus->GetComponent<UUISelectable>() : nullptr;
-			const bool bTakenOver = NewSelectable != nullptr && NewSelectable->IsInteractable()
+			const bool bTakenOver = NewSelectable != nullptr && NewSelectable->IsInteractable() && NewSelectable->GetUseFocusRing()
 				&& Services->IsFocusVisible(UserIndex)
 				&& UUINavigationInputSelectionHandler::FindFor(NewFocus) == NavigationSelection.Get();
 			if (bTakenOver)
@@ -1306,6 +1315,22 @@ UUISelectable* UUISelectable::FindSelectableOnPrev()
 void UUISelectable::SetCanNavigateHere(bool Value)
 {
 	bCanNavigateHere = Value;
+}
+void UUISelectable::SetUseFocusRing(bool Value)
+{
+	if (bUseFocusRing == Value)
+	{
+		return;
+	}
+	bUseFocusRing = Value;
+	if (!bUseFocusRing)
+	{
+		HideFocusRing();
+	}
+	else if (IsFocused() && IsFocusShown())
+	{
+		ShowFocusRing();
+	}
 }
 void UUISelectable::SetNavigationLeft(EUISelectableNavigationMode Value)
 {

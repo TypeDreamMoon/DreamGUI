@@ -395,7 +395,10 @@ protected:
 	void HandleFocusVisibleChanged(bool bInVisible);
 	TWeakObjectPtr<UDreamUIInputUser> FocusVisibleUser;
 	FDelegateHandle FocusVisibleHandle;
-	/** Put the ring on this control while its focus is shown, and take it off again; see bShowsFocusRing. */
+	/**
+	 * Put the ring on this control while its focus is shown, and take it off again; see bShowsFocusRing. A control that
+	 * does not use the ring (bUseFocusRing) never asks for one, and so never makes one.
+	 */
 	void ShowFocusRing();
 	void HideFocusRing();
 	/** This control put the ring on itself and has not taken it off: what decides whether a deselect or a hidden focus hides it. */
@@ -437,6 +440,14 @@ protected:
 	 */
 	UPROPERTY(EditAnywhere, Category = "DreamGUI-Selectable-Navigation")
 		bool bCanNavigateHere = true;
+	/**
+	 * Mark this control's focus with the screen's focus ring (the project's NavigationSelectionClass) while that focus is
+	 * drawn. Off for a control whose own look marks its focus -- a row that turns dark, a tab that rises -- so no ring
+	 * draws a second mark over it; the focus moving onto such a control takes the ring away with it rather than leaving
+	 * it on the control the focus came from.
+	 */
+	UPROPERTY(EditAnywhere, Category = "DreamGUI-Selectable-Navigation")
+		bool bUseFocusRing = true;
 	UPROPERTY(EditAnywhere, Category = "DreamGUI-Selectable-Navigation")
 		EUISelectableNavigationMode NavigationLeft = EUISelectableNavigationMode::Auto;
 	UPROPERTY(EditAnywhere, Category = "DreamGUI-Selectable-Navigation")
@@ -656,6 +667,8 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Selectable-Navigation")
 		bool GetCanNavigateHere()const { return bCanNavigateHere; }
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Selectable-Navigation")
+		bool GetUseFocusRing()const { return bUseFocusRing; }
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Selectable-Navigation")
 		EUISelectableNavigationMode GetNavigationLeft()const { return NavigationLeft; }
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Selectable-Navigation")
 		EUISelectableNavigationMode GetNavigationRight()const { return NavigationRight; }
@@ -683,6 +696,9 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Selectable-Navigation")
 		void SetCanNavigateHere(bool Value);
+	/** Off while the ring marks this control, the ring leaves it; on while its focus is drawn, the ring comes. */
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Selectable-Navigation")
+		void SetUseFocusRing(bool Value);
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Selectable-Navigation")
 		void SetNavigationLeft(EUISelectableNavigationMode Value);
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Selectable-Navigation")

@@ -342,4 +342,88 @@ bool FDreamNavigationRingLookupTest::RunTest(const FString& Parameters)
 	return true;
 }
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamNavigationRingPictureFitsTest,
+	"DreamGUI.Navigation.Selection.ARingsPictureCoversWhateverSizeItMarks",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamNavigationRingPictureFitsTest::RunTest(const FString& Parameters)
+{
+	/*
+	 * The handler sizes a ring's root to the control it marks. The plugin's own ring draws its frame on a child placed on
+	 * that root's centre at a fixed 100x100, so the frame stayed 100x100 over a full-width row and a small icon alike.
+	 * MakeRing anchors a child that covers the root to stretch with it, its margin kept; a child smaller than the root, or
+	 * anchored elsewhere, places itself by the root's size already and keeps what it was authored with.
+	 */
+	UDreamWidgetTree* Tree = NewObject<UDreamWidgetTree>(GetTransientPackage());
+	UDreamWidget* Wide = Tree->ConstructWidget(UDreamWidget::StaticClass(), TEXT("Wide"));
+	UDreamWidget* Small = Tree->ConstructWidget(UDreamWidget::StaticClass(), TEXT("Small"));
+	UDreamWidget* RingWidget = Tree->ConstructWidget(UDreamWidget::StaticClass(), TEXT("Ring"));
+	UDreamWidget* Frame = Tree->ConstructWidget(UDreamWidget::StaticClass(), TEXT("Frame"));
+	UDreamWidget* Dot = Tree->ConstructWidget(UDreamWidget::StaticClass(), TEXT("Dot"));
+	UDreamWidget* Corner = Tree->ConstructWidget(UDreamWidget::StaticClass(), TEXT("Corner"));
+	if (!TestNotNull(TEXT("a wide widget to mark"), Wide) || !TestNotNull(TEXT("a small widget to mark"), Small)
+		|| !TestNotNull(TEXT("a ring root"), RingWidget) || !TestNotNull(TEXT("a frame"), Frame)
+		|| !TestNotNull(TEXT("a dot"), Dot) || !TestNotNull(TEXT("a corner bracket"), Corner))
+	{
+		return false;
+	}
+	Tree->RootWidget = Wide;
+	Small->SetParent(Wide, false);
+	Wide->SetWidth(300.0f);
+	Wide->SetHeight(60.0f);
+	Small->SetWidth(64.0f);
+	Small->SetHeight(32.0f);
+
+	// The ring as a picture-only class authors it: a 100x100 root, a frame drawn 4 px outside it on every side, a dot on
+	// its centre and a bracket on its top-left corner.
+	const FVector2D Centre(0.5, 0.5);
+	const FVector2D TopLeft(0.0, 1.0);
+	RingWidget->SetWidth(100.0f);
+	RingWidget->SetHeight(100.0f);
+	Frame->SetParent(RingWidget, false);
+	Frame->SetAnchorMin(Centre);
+	Frame->SetAnchorMax(Centre);
+	Frame->SetWidth(108.0f);
+	Frame->SetHeight(108.0f);
+	Dot->SetParent(RingWidget, false);
+	Dot->SetAnchorMin(Centre);
+	Dot->SetAnchorMax(Centre);
+	Dot->SetWidth(10.0f);
+	Dot->SetHeight(10.0f);
+	Corner->SetParent(RingWidget, false);
+	Corner->SetAnchorMin(TopLeft);
+	Corner->SetAnchorMax(TopLeft);
+	Corner->SetWidth(12.0f);
+	Corner->SetHeight(12.0f);
+
+	UUINavigationInputSelectionHandler* Ring = UUINavigationInputSelectionHandler::MakeRing(RingWidget);
+	if (!TestNotNull(TEXT("a picture-only ring gets the handler that moves and sizes it"), Ring))
+	{
+		return false;
+	}
+	TestTrue(TEXT("no tween can be made here, so the ring is sized outright"), RingWidget->RenderOpacityTo(0.5f) == nullptr);
+
+	Ring->SelectWidget(Wide);
+	TestEqual(TEXT("the ring's root takes the wide widget's size"), RingWidget->GetSizeDelta(), Wide->GetSize());
+	TestEqual(TEXT("the frame spans the wide widget, its 4 px margin kept (width)"), Frame->GetWidth(), 308.0f, 0.01f);
+	TestEqual(TEXT("the frame spans the wide widget, its 4 px margin kept (height)"), Frame->GetHeight(), 68.0f, 0.01f);
+	TestEqual(TEXT("the dot keeps its own width"), Dot->GetWidth(), 10.0f, 0.01f);
+	TestEqual(TEXT("the dot keeps its own height"), Dot->GetHeight(), 10.0f, 0.01f);
+	TestEqual(TEXT("the bracket keeps its own width"), Corner->GetWidth(), 12.0f, 0.01f);
+	TestEqual(TEXT("the bracket keeps its own height"), Corner->GetHeight(), 12.0f, 0.01f);
+	TestTrue(TEXT("and stays on its corner"), Corner->GetAnchorMin().Equals(TopLeft) && Corner->GetAnchorMax().Equals(TopLeft));
+
+	// Moving on to a smaller widget: the frame follows that size too.
+	Ring->SelectWidget(Small);
+	TestEqual(TEXT("the frame spans the small widget (width)"), Frame->GetWidth(), 72.0f, 0.01f);
+	TestEqual(TEXT("the frame spans the small widget (height)"), Frame->GetHeight(), 40.0f, 0.01f);
+	TestEqual(TEXT("the dot still keeps its size"), Dot->GetWidth(), 10.0f, 0.01f);
+
+	RingWidget->DestroyWidget();
+	Small->DestroyWidget();
+	Wide->DestroyWidget();
+	return true;
+}
+
 #endif
