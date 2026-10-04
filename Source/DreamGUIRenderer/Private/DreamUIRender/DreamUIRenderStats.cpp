@@ -26,7 +26,7 @@ namespace DreamUIRenderStats
 			TEXT("DrawCallSubmit"),
 			TEXT("RenderRecord"),
 		};
-		const TCHAR* const CounterNames[CounterCount] =
+		const TCHAR* const CounterNames[] =
 		{
 			TEXT("BatchesRecorded"),
 			TEXT("VerticesRecorded"),
@@ -42,7 +42,19 @@ namespace DreamUIRenderStats
 			TEXT("RenderLayerMoves"),
 			TEXT("RenderLayerPromotions"),
 			TEXT("RenderLayerDemotions"),
+			TEXT("TextPaints"),
+			TEXT("TextMoveRepaints"),
+			TEXT("SmallTextPlacements"),
+			TEXT("SharpenSweepTexts"),
+			TEXT("SharpenRepaints"),
+			TEXT("CoverageItemsDrawn"),
+			TEXT("CoverageGlyphLookups"),
+			TEXT("CoverageRastersSync"),
+			TEXT("CoverageJobs"),
+			TEXT("CoverageFlushes"),
+			TEXT("FontAtlasUploadBytes"),
 		};
+		static_assert(UE_ARRAY_COUNT(CounterNames) == CounterCount, "every counter has its name");
 	}
 
 	void AddTime(EStage InStage, uint64 InCycles)

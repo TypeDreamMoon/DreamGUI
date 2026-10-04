@@ -153,6 +153,8 @@ void UDreamMeshModifierLongShadow::ModifyUIGeometry(
 			}
 		}
 	}
+	// The copies paint nothing, and a colour glyph's copies are its silhouette.
+	PrepareMeshCopies(InGeometry, singleChannelVerticesCount);
 }
 
 void UDreamMeshModifierLongShadow::SetShadowColor(FColor Value)

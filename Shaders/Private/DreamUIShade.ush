@@ -3,7 +3,7 @@
 // One pixel of DreamGUI UI, whoever draws it. The built-in global shader (DreamUIBase.usf) and the
 // thin material host (MF_DreamUI_Shade, for the UE-renderer world-space mode and OverrideMaterial)
 // both call DreamUI_ShadePixel, so sprites, bitmap glyphs, SDF and MTSDF glyphs, small-text coverage
-// glyphs, colour glyphs, the text style record and the clip look the same on every path and can only
+// glyphs, colour glyphs, painted text, the text style record and the clip look the same on every path and can only
 // change in one place.
 //
 // What stays with the host: the vertex transform, depth blend / fade against the scene, gamma, and
@@ -12,9 +12,10 @@
 // Vertex layout it reads (FDreamUIMeshVertex):
 //   UV0    texture / atlas coordinate
 //   UV1.x  widget property record index, UV1.y atlas slice
-//   UV2    glyphs: the per-quad code (colour glyph, coverage glyph, or a field glyph's DilateEm + 16 * Layer), position
-//          across the fill run (see DreamUIText.ush)
+//   UV2    glyphs: the per-quad code (colour glyph, coverage glyph, or a field glyph's DilateEm + 16 * Layer) plus 128 times
+//          its paint slot, position across the fill run (see DreamUIText.ush)
 //   UV3    glyphs: fill progress; a field glyph's glow boost, a coverage glyph's contrast, a colour glyph's texels per em
+//   UV4    painted glyphs: where the quad sits in its paint slot's boxes (DreamUIPaint.ush); (0, 0) on everything else
 //   A rect block, where the host draws one (DREAMUI_SHADE_RECT_BLOCK): UV0 across its quad, UV2 its body texture's
 //   coordinate, UV3.x its row of rect block data (DreamUIRectBlock.ush)
 //   Colour authored in sRGB
@@ -26,6 +27,7 @@
 #include "/Plugin/DreamGUI/Private/DreamUIWidgetProperty.ush"
 #include "/Plugin/DreamGUI/Private/DreamUIClip.ush"
 #include "/Plugin/DreamGUI/Private/DreamUIText.ush"
+#include "/Plugin/DreamGUI/Private/DreamUIPaint.ush"
 // The built-in UI shader draws rect blocks too, and says so before including this. A material host does not: there a
 // rect block's mark falls to the sprite branch, as a mark of 0 did before rect blocks had one.
 #if DREAMUI_SHADE_RECT_BLOCK
@@ -33,14 +35,18 @@
 #endif
 
 /**
- * FontAtlasInfo: xy atlas slice size in texels, z field range in texels (2 * spread), w texels per em
- * at the atlas's sample size, negated when the font has the small-text correction off (see
- * DreamUIText_ShadeField). Only distance-field glyphs read it, and a colour glyph's underlay on a
- * distance-field font (the atlas size, and the spread its cell is padded by).
+ * The whole pixel, with the switches the hosts set; the DreamUI_ShadePixel overloads below set them for a host that does
+ * not know them.
+ *
+ * FontAtlasInfo: xy atlas slice size in texels, z field range in texels (2 * spread), negated when the project runs the
+ * field face through the coverage correction (UDreamGUISettings::bFieldTextCorrection), w texels per em at the atlas's
+ * sample size, negated when the font has the small-text correction off (see DreamUIText_ShadeField). Only glyphs read it.
+ * PaintDataTex is the world's paint rows, read only with bPaints: without, a painted quad draws as if it had no slot.
+ * bLinearTarget says whether the target blends in linear light, which the field face's correction asks.
  */
-float4 DreamUI_ShadePixel(float2 UV0, float2 UV1, float2 UV2, float2 UV3, float4 RawVertexColor, float3 LocalPosition,
+float4 DreamUI_ShadePixelWith(float2 UV0, float2 UV1, float2 UV2, float2 UV3, float2 UV4, float4 RawVertexColor, float3 LocalPosition,
 	Texture2D MainTex, SamplerState MainSampler, Texture2DArray FontTex, SamplerState FontSampler,
-	Texture2D WidgetDataTex, Texture2D ClipDataTex, float4 FontAtlasInfo
+	Texture2D WidgetDataTex, Texture2D ClipDataTex, float4 FontAtlasInfo, Texture2D PaintDataTex, bool bPaints, bool bLinearTarget
 #if DREAMUI_SHADE_RECT_BLOCK
 	, Texture2D RectBlockDataTex
 #endif
@@ -71,44 +77,144 @@ float4 DreamUI_ShadePixel(float2 UV0, float2 UV1, float2 UV2, float2 UV3, float4
 		float4 Texel = DREAMUI_SAMPLE(MainTex, MainSampler, UV0);
 		Color = Texel * VertexColor;
 	}
-	else if (UV2.x < DREAMUI_TEXT_CODE_COLOR_THRESHOLD)
-	{
-		// A colour glyph, in an atlas of any kind (DreamUIText.ush's header): its face, or its effects copy for the
-		// underlay. A field font's copy is shifted here by the style's offset; a bitmap font's was moved by the painter.
-		FDreamUITextStyle Style = DreamUIText_ReadStyle(WidgetDataTex, UV1.x);
-		float Dim = DreamUIText_FillDim(Style.FillDimAlpha, Style.FillFadeWidth, UV3.x, UV2.y);
-		Color = DreamUIText_ShadeColorGlyph(FontTex, FontSampler, UV0, UV1.y, UV2.x < DREAMUI_TEXT_CODE_COLOR_EFFECTS_THRESHOLD,
-			FontMark > 1.5, FontAtlasInfo.xy, FontAtlasInfo.z, FontAtlasInfo.w, UV3.y, VertexColor, Style, Dim);
-	}
 	else
 	{
-		float Layer, GlyphDilateEm;
-		DreamUIText_UnpackGlyphChannel(UV2.x, Layer, GlyphDilateEm);
-		if (Layer > 2.5)
+		// A glyph quad. Its paint slot comes off its code first, and everything below decodes the code without it; a quad of
+		// slot 0 -- every quad of a text with no paint -- has its code exactly as it was written.
+		float Slot, Code;
+		DreamUIText_UnpackPaintSlot(UV2.x, Slot, Code);
+		FDreamUIPaintSlot Paint = DreamUIPaint_NoSlot();
+		bool bPainted = false;
+		BRANCH
+		if (bPaints && Slot > 0.5)
 		{
-			// A coverage glyph (small text), whose phase is what the unpack calls its dilate. Of the style it reads the fill.
+			bPainted = DreamUIPaint_ReadSlot(PaintDataTex, WidgetDataTex, UV1.x, Slot, Paint);
+		}
+		const float FieldRangeTexels = abs(FontAtlasInfo.z);
+		const bool bFieldCorrection = FontAtlasInfo.z < 0.0;
+
+		if (Code < DREAMUI_TEXT_CODE_COLOR_SILHOUETTE_THRESHOLD)
+		{
+			// A colour glyph a mesh modifier copied: its silhouette in the copy's colour. Of the style it reads the fill.
 			float2 Fill = DreamUIText_ReadFill(WidgetDataTex, UV1.x);
-			Color = DreamUIText_ShadeCoverage(FontTex, FontSampler, UV0, UV1.y, GlyphDilateEm, UV3.y, VertexColor,
+			Color = DreamUIText_ShadeColorSilhouette(FontTex, FontSampler, UV0, UV1.y, VertexColor,
 				DreamUIText_FillDim(Fill.x, Fill.y, UV3.x, UV2.y));
 		}
-		else if (FontMark < 1.5)
+		else if (Code < DREAMUI_TEXT_CODE_COLOR_THRESHOLD)
 		{
-			float4 Texel = DREAMUI_SAMPLE(FontTex, FontSampler, float3(UV0, UV1.y));
-			Color = Texel * VertexColor;
+			// A colour glyph, in an atlas of any kind (DreamUIText.ush's header): its face, or its effects copy for the
+			// underlay. A field font's copy is shifted here by the style's offset; a bitmap font's was moved by the painter.
+			FDreamUITextStyle Style = DreamUIText_ReadStyle(WidgetDataTex, UV1.x);
+			float Dim = DreamUIText_FillDim(Style.FillDimAlpha, Style.FillFadeWidth, UV3.x, UV2.y);
+			Color = DreamUIText_ShadeColorGlyph(FontTex, FontSampler, UV0, UV1.y, Code < DREAMUI_TEXT_CODE_COLOR_EFFECTS_THRESHOLD,
+				FontMark > 1.5, FontAtlasInfo.xy, FieldRangeTexels, FontAtlasInfo.w, UV3.y, VertexColor, Style, Dim);
 		}
 		else
 		{
-			// A distance field of either kind: the single-channel one from a rasterized bitmap (2) or the
-			// multi-channel one from the outline (3). Same style, same channels; 3 only adds sharp corners.
-			FDreamUITextStyle Style = DreamUIText_ReadStyle(WidgetDataTex, UV1.x);
-			Color = DreamUIText_ShadeField(FontTex, FontSampler, UV0, UV1.y, FontMark > 2.5,
-				FontAtlasInfo.xy, FontAtlasInfo.z, FontAtlasInfo.w, VertexColor, Style,
-				UV3.x, UV2.y, UV3.y, GlyphDilateEm, Layer);
+			float Layer, GlyphDilateEm;
+			DreamUIText_UnpackGlyphChannel(Code, Layer, GlyphDilateEm);
+			if (Layer > 2.5)
+			{
+				// A coverage glyph (small text), whose phase is what the unpack calls its dilate. Of the style it reads the fill.
+				// A painted face goes into the correction with the colour it has at this pixel.
+				float2 Fill = DreamUIText_ReadFill(WidgetDataTex, UV1.x);
+				float4 FaceColor = VertexColor;
+				BRANCH
+				if (bPainted)
+				{
+					FaceColor = DreamUIPaint_PaintFace(PaintDataTex, Paint, UV4, VertexColor);
+				}
+				Color = DreamUIText_ShadeCoverage(FontTex, FontSampler, UV0, UV1.y, GlyphDilateEm, UV3.y, FaceColor,
+					DreamUIText_FillDim(Fill.x, Fill.y, UV3.x, UV2.y));
+			}
+			else if (FontMark < 1.5)
+			{
+				// A bitmap glyph: the texel in the face's colour, painted or not.
+				float4 FaceColor = VertexColor;
+				BRANCH
+				if (bPainted)
+				{
+					FaceColor = DreamUIPaint_PaintFace(PaintDataTex, Paint, UV4, VertexColor);
+				}
+				float4 Texel = DREAMUI_SAMPLE(FontTex, FontSampler, float3(UV0, UV1.y));
+				Color = Texel * FaceColor;
+			}
+			else
+			{
+				// A distance field of either kind: the single-channel one from a rasterized bitmap (2) or the
+				// multi-channel one from the outline (3). Same style, same channels; 3 only adds sharp corners.
+				FDreamUITextStyle Style = DreamUIText_ReadStyle(WidgetDataTex, UV1.x);
+				// The slot's gradients, on the parts of the glyph this quad draws: the face (and the overlay over it) on a
+				// face, the outline on an effects copy.
+				float4 FaceColor = VertexColor;
+				float4 OutlinePaint = float4(1.0, 1.0, 1.0, 1.0);
+				BRANCH
+				if (bPainted)
+				{
+					if (Layer != 1.0)
+					{
+						FaceColor = DreamUIPaint_PaintFace(PaintDataTex, Paint, UV4, VertexColor);
+					}
+					if (Layer != 0.0)
+					{
+						OutlinePaint = DreamUIPaint_PaintOutline(PaintDataTex, Paint, UV4);
+					}
+				}
+				// An effects copy carries the text's opacity, not its colour's alpha, in its vertex alpha (the painter's
+				// EffectOpacity): its outline, glow and underlay fade by it. A quad that draws the face leaves them as they are.
+				float EffectAlpha = Layer == 1.0 ? VertexColor.a : 1.0;
+				Color = DreamUIText_ShadeField(FontTex, FontSampler, UV0, UV1.y, FontMark > 2.5,
+					FontAtlasInfo.xy, FieldRangeTexels, FontAtlasInfo.w, FaceColor, Style,
+					UV3.x, UV2.y, UV3.y, GlyphDilateEm, Layer, OutlinePaint, EffectAlpha, bFieldCorrection, bLinearTarget);
+			}
 		}
 	}
 
 	Color.a *= DreamUI_CalculateClipData(ClipDataTex, ClipDataCoordinate, LocalPosition);
 	return Color;
+}
+
+/**
+ * The pixel, painted text included: what MF_DreamUI_Shade calls, and what a material that shades through DreamGUI calls
+ * with UV4 = TexCoord(4) and the world's paint rows (DreamUI_PaintDataTexture). A host that cannot tell how its target
+ * blends is taken to blend in linear light, as UE's renderer does: only the field face's correction asks.
+ */
+float4 DreamUI_ShadePixel(float2 UV0, float2 UV1, float2 UV2, float2 UV3, float2 UV4, float4 RawVertexColor, float3 LocalPosition,
+	Texture2D MainTex, SamplerState MainSampler, Texture2DArray FontTex, SamplerState FontSampler,
+	Texture2D WidgetDataTex, Texture2D ClipDataTex, float4 FontAtlasInfo, Texture2D PaintDataTex
+#if DREAMUI_SHADE_RECT_BLOCK
+	, Texture2D RectBlockDataTex
+#endif
+	)
+{
+	return DreamUI_ShadePixelWith(UV0, UV1, UV2, UV3, UV4, RawVertexColor, LocalPosition,
+		MainTex, MainSampler, FontTex, FontSampler, WidgetDataTex, ClipDataTex, FontAtlasInfo, PaintDataTex, true, true
+#if DREAMUI_SHADE_RECT_BLOCK
+		, RectBlockDataTex
+#endif
+		);
+}
+
+/**
+ * The pixel as it was before paints, for a custom material that calls DreamUI_ShadePixel itself with the arguments it
+ * always passed: paints off, so a painted quad draws its vertex colour. Such a material carries no
+ * DreamUI_ShadeMarker, so its texts are given no slots anyway (their gradients go into the vertex colours instead).
+ */
+float4 DreamUI_ShadePixel(float2 UV0, float2 UV1, float2 UV2, float2 UV3, float4 RawVertexColor, float3 LocalPosition,
+	Texture2D MainTex, SamplerState MainSampler, Texture2DArray FontTex, SamplerState FontSampler,
+	Texture2D WidgetDataTex, Texture2D ClipDataTex, float4 FontAtlasInfo
+#if DREAMUI_SHADE_RECT_BLOCK
+	, Texture2D RectBlockDataTex
+#endif
+	)
+{
+	// The widget data stands in for the paint rows, which are never read with paints off.
+	return DreamUI_ShadePixelWith(UV0, UV1, UV2, UV3, float2(0.0, 0.0), RawVertexColor, LocalPosition,
+		MainTex, MainSampler, FontTex, FontSampler, WidgetDataTex, ClipDataTex, FontAtlasInfo, WidgetDataTex, false, true
+#if DREAMUI_SHADE_RECT_BLOCK
+		, RectBlockDataTex
+#endif
+		);
 }
 
 #endif // DREAMUI_SHADE_USH

@@ -1,0 +1,393 @@
+// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
+//
+// Gradient paints on text, per pixel: the reference evaluation on FDreamGradient (DreamTextPaint.h) worked out on the GPU,
+// step for step and in the order FDreamGradient::Evaluate works it out on the CPU, in float. Change one, change both: a
+// GPU test holds them to each other.
+//
+// What a painted glyph quad brings: its paint slot on top of its code in UV2.x (DreamUIText_UnpackPaintSlot), its place
+// in the slot's boxes in UV4 (x from the box's left edge, y from its TOP, as CSS measures), and its widget record, whose
+// marks pixel links to the text's text table in the world's paint rows (bits 0..15: the table's row + 1, 0 for none).
+// The table says, for each slot, which gradient row its face, its outline and its overlay paint with, how the overlay
+// mixes, and what the text animates them by. The layouts are the DREAMUI_PAINT_* block of DreamUIText.ush (DreamPaintRows
+// on the CPU).
+//
+// A world with no paint rows binds a black texture, every pixel of which reads gradient type 0 (None): a quad drawn
+// without them stays solid, never garbage. So does a quad whose record links to no table, whatever its slot says.
+
+#ifndef DREAMUI_PAINT_USH
+#define DREAMUI_PAINT_USH
+
+#include "/Engine/Private/GammaCorrectionCommon.ush"
+#include "/Plugin/DreamGUI/Private/DreamUIWidgetProperty.ush"
+#include "/Plugin/DreamGUI/Private/DreamUIText.ush"
+
+// A slot's layers: what FDreamUIPaintSlot::Rows and Phases are indexed by.
+#define DREAMUI_PAINT_LAYER_FACE 0
+#define DREAMUI_PAINT_LAYER_OUTLINE 1
+#define DREAMUI_PAINT_LAYER_OVERLAY 2
+
+/** One slot of a painted text, as its text table holds it. */
+struct FDreamUIPaintSlot
+{
+	/** The gradient rows its face, outline and overlay paint with; below 0 for a layer the slot does not paint. */
+	float3 Rows;
+	/** How the overlay mixes onto the face: DREAMUI_PAINT_OVERLAY_NORMAL or DREAMUI_PAINT_OVERLAY_ADD. */
+	float OverlayBlend;
+	/** How far each layer's gradient is moved along its line: the face's, the outline's and the overlay's phase. */
+	float3 Phases;
+	/** The box's width over its height for a single box (the text block or the content box), 1 for every other. */
+	float Aspect;
+	/** Degrees added to every layer's angle. */
+	float AngleOffset;
+	/** Fractions of the box added to every layer's centre. */
+	float2 CenterOffset;
+	/** What every layer's scale is multiplied by. */
+	float ScaleMultiplier;
+};
+
+/** A slot that paints nothing. */
+FDreamUIPaintSlot DreamUIPaint_NoSlot()
+{
+	FDreamUIPaintSlot Slot;
+	Slot.Rows = float3(DREAMUI_PAINT_NO_ROW, DREAMUI_PAINT_NO_ROW, DREAMUI_PAINT_NO_ROW);
+	Slot.OverlayBlend = DREAMUI_PAINT_OVERLAY_NORMAL;
+	Slot.Phases = float3(0.0, 0.0, 0.0);
+	Slot.Aspect = 1.0;
+	Slot.AngleOffset = 0.0;
+	Slot.CenterOffset = float2(0.0, 0.0);
+	Slot.ScaleMultiplier = 1.0;
+	return Slot;
+}
+
+/**
+ * Slot Slot (1 to DREAMUI_TEXT_CODE_MAX_SLOT) of the text whose widget record is the one at RecordCoordinate (UV1.x), from
+ * the text table the record links to. False, with OutSlot painting nothing, when the record links to no table, the slot is
+ * out of range, or the slot paints no layer.
+ */
+bool DreamUIPaint_ReadSlot(Texture2D PaintDataTex, Texture2D WidgetDataTex, float RecordCoordinate, float Slot, out FDreamUIPaintSlot OutSlot)
+{
+	OutSlot = DreamUIPaint_NoSlot();
+	const uint Marks = asuint(WidgetDataTex.Load(int3(DREAMUI_WIDGET_PROPERTY_PIXEL_MARKS, (int)round(RecordCoordinate), 0)).x);
+	const uint Link = Marks & DREAMUI_PAINT_RECORD_ROW_LINK_MASK;
+	const int SlotIndex = (int)round(Slot);
+	if (Link == 0 || SlotIndex < 1 || SlotIndex > (int)DREAMUI_TEXT_CODE_MAX_SLOT)
+	{
+		return false;
+	}
+	const int TableRow = (int)Link - 1;
+	const float4 Rows = PaintDataTex.Load(int3(DREAMUI_PAINT_TEXT_SLOT_ROWS_PIXEL + SlotIndex, TableRow, 0));
+	const float4 Animation = PaintDataTex.Load(int3(DREAMUI_PAINT_TEXT_SLOT_ANIMATION_PIXEL + SlotIndex, TableRow, 0));
+	const float4 Transform = PaintDataTex.Load(int3(DREAMUI_PAINT_TEXT_SLOT_TRANSFORM_PIXEL + SlotIndex, TableRow, 0));
+	OutSlot.Rows = Rows.xyz;
+	OutSlot.OverlayBlend = Rows.w;
+	OutSlot.Phases = Animation.xyz;
+	OutSlot.Aspect = Animation.w;
+	OutSlot.AngleOffset = Transform.x;
+	OutSlot.CenterOffset = Transform.yz;
+	OutSlot.ScaleMultiplier = Transform.w;
+	return OutSlot.Rows.x >= 0.0 || OutSlot.Rows.y >= 0.0 || OutSlot.Rows.z >= 0.0;
+}
+
+/** Component Index (0 to 3) of Value. */
+float DreamUIPaint_Component(float4 Value, int Index)
+{
+	return Index == 0 ? Value.x : (Index == 1 ? Value.y : (Index == 2 ? Value.z : Value.w));
+}
+
+/** Oklab to linear sRGB, by Bjorn Ottosson's matrices: the way back from what the gradient row's packing made of a stop. */
+float3 DreamUIPaint_OklabToLinear(float3 Lab)
+{
+	const float L = Lab.x + 0.3963377774 * Lab.y + 0.2158037573 * Lab.z;
+	const float M = Lab.x - 0.1055613458 * Lab.y - 0.0638541728 * Lab.z;
+	const float S = Lab.x - 0.0894841775 * Lab.y - 1.2914855480 * Lab.z;
+	const float LCubed = L * L * L;
+	const float MCubed = M * M * M;
+	const float SCubed = S * S * S;
+	return float3(
+		4.0767416621 * LCubed - 3.3077115913 * MCubed + 0.2309699292 * SCubed,
+		-1.2684380046 * LCubed + 2.6097574011 * MCubed - 0.3413193965 * SCubed,
+		-0.0041960863 * LCubed - 0.7034186147 * MCubed + 1.7076147010 * SCubed);
+}
+
+/**
+ * A colour as the stops are mixed -- premultiplied, in the gradient's interpolation space -- made what a paint is drawn
+ * with (step 5 of the reference): un-premultiplied (0 where its alpha is 0), turned into linear light, and clamped at 0.
+ * The sRGB decode is the text's own, which clamps to [0, 1] first, as the CPU's does.
+ */
+float4 DreamUIPaint_ToStraightLinear(float4 Premultiplied, int Interpolation)
+{
+	float3 Straight = float3(0.0, 0.0, 0.0);
+	if (Premultiplied.a > 0.0)
+	{
+		Straight = Premultiplied.rgb / Premultiplied.a;
+	}
+	float3 LinearRgb = Straight;
+	if (Interpolation == DREAMUI_PAINT_INTERPOLATION_SRGB)
+	{
+		LinearRgb = float3(DreamUIText_DecodeSrgb(Straight.r), DreamUIText_DecodeSrgb(Straight.g), DreamUIText_DecodeSrgb(Straight.b));
+	}
+	else if (Interpolation == DREAMUI_PAINT_INTERPOLATION_OKLAB)
+	{
+		LinearRgb = DreamUIPaint_OklabToLinear(Straight);
+	}
+	return float4(max(LinearRgb, 0.0), Premultiplied.a);
+}
+
+/**
+ * The two radii of a Radial's ending shape -- or a Diamond's, which is always an ellipse -- in box heights, for a centre
+ * Center of a box Aspect wide for its height (step 1 of the reference): CSS's size keywords, measured from the centre to the
+ * box's sides (the nearer of each pair for the Closest sizes, the farther for the Farthest ones; a distance, so a centre
+ * moved out of the box measures to both sides from outside), or Explicit's radii as fractions of the box's width and
+ * height (a circle's of its width). Each at least 1e-6.
+ */
+float2 DreamUIPaint_RadialRadii(int Type, int Shape, int Size, float2 Center, float2 Radius, float Aspect)
+{
+	const bool bClosest = Size == DREAMUI_PAINT_SIZE_CLOSEST_SIDE || Size == DREAMUI_PAINT_SIZE_CLOSEST_CORNER;
+	const bool bCorner = Size == DREAMUI_PAINT_SIZE_CLOSEST_CORNER || Size == DREAMUI_PAINT_SIZE_FARTHEST_CORNER;
+	const float ToLeft = abs(Center.x) * Aspect;
+	const float ToRight = abs(1.0 - Center.x) * Aspect;
+	const float ToTop = abs(Center.y);
+	const float ToBottom = abs(1.0 - Center.y);
+	const float SideX = bClosest ? min(ToLeft, ToRight) : max(ToLeft, ToRight);
+	const float SideY = bClosest ? min(ToTop, ToBottom) : max(ToTop, ToBottom);
+	float2 Radii = float2(SideX, SideY);
+	if (Type == DREAMUI_PAINT_TYPE_RADIAL && Shape == DREAMUI_PAINT_SHAPE_CIRCLE)
+	{
+		float Circle = bClosest ? min(SideX, SideY) : max(SideX, SideY);
+		if (Size == DREAMUI_PAINT_SIZE_EXPLICIT)
+		{
+			Circle = Radius.x * Aspect;
+		}
+		else if (bCorner)
+		{
+			Circle = sqrt(SideX * SideX + SideY * SideY);
+		}
+		Radii = float2(Circle, Circle);
+	}
+	else if (Size == DREAMUI_PAINT_SIZE_EXPLICIT)
+	{
+		Radii = float2(Radius.x * Aspect, Radius.y);
+	}
+	else if (bCorner)
+	{
+		// CSS: the ellipse through the corner keeps the aspect of the one through the sides.
+		Radii = sqrt(2.0) * float2(SideX, SideY);
+	}
+	return max(Radii, 1e-6);
+}
+
+/**
+ * The colour of the gradient in paint row Row at BoxUV (a vertex's UV4) in a box Aspect wide for its height, moved by Phase
+ * and the text's angle offset, centre offset and scale multiplier: straight alpha, RGB in linear light. False, with
+ * OutColor white and opaque, when the row paints nothing (type None, no stop).
+ */
+bool DreamUIPaint_Evaluate(Texture2D PaintDataTex, float Row, float2 BoxUV, float Aspect, float Phase,
+	float AngleOffset, float2 CenterOffset, float ScaleMultiplier, out float4 OutColor)
+{
+	OutColor = float4(1.0, 1.0, 1.0, 1.0);
+	const int GradientRow = (int)round(Row);
+	const float4 Header = PaintDataTex.Load(int3(DREAMUI_PAINT_GRADIENT_HEADER_PIXEL, GradientRow, 0));
+	const int Type = (int)round(Header.x);
+	const int Spread = (int)round(Header.y);
+	const int Interpolation = (int)round(Header.z);
+	const int Count = clamp((int)round(Header.w), 0, DREAMUI_PAINT_MAX_STOPS);
+	if (Type <= DREAMUI_PAINT_TYPE_NONE || Type > DREAMUI_PAINT_TYPE_CORNERS || Count < 1)
+	{
+		return false;
+	}
+
+	float4 Mixed;
+	if (Type == DREAMUI_PAINT_TYPE_CORNERS)
+	{
+		// The first four stops at the corners -- top left, top right, bottom left, bottom right -- the last stop standing in
+		// for any that is missing, mixed across the box. No line: positions, spread, scale and phase do not apply.
+		const float4 TopLeft = PaintDataTex.Load(int3(DREAMUI_PAINT_GRADIENT_COLORS_PIXEL, GradientRow, 0));
+		const float4 TopRight = PaintDataTex.Load(int3(DREAMUI_PAINT_GRADIENT_COLORS_PIXEL + min(1, Count - 1), GradientRow, 0));
+		const float4 BottomLeft = PaintDataTex.Load(int3(DREAMUI_PAINT_GRADIENT_COLORS_PIXEL + min(2, Count - 1), GradientRow, 0));
+		const float4 BottomRight = PaintDataTex.Load(int3(DREAMUI_PAINT_GRADIENT_COLORS_PIXEL + min(3, Count - 1), GradientRow, 0));
+		const float2 Corner = saturate(BoxUV);
+		Mixed = lerp(lerp(TopLeft, TopRight, Corner.x), lerp(BottomLeft, BottomRight, Corner.x), Corner.y);
+	}
+	else
+	{
+		const float4 ShapeInfo = PaintDataTex.Load(int3(DREAMUI_PAINT_GRADIENT_SHAPE_PIXEL, GradientRow, 0));
+		const float4 CenterInfo = PaintDataTex.Load(int3(DREAMUI_PAINT_GRADIENT_CENTER_PIXEL, GradientRow, 0));
+		const float4 SizeInfo = PaintDataTex.Load(int3(DREAMUI_PAINT_GRADIENT_SIZE_PIXEL, GradientRow, 0));
+		const float Angle = ShapeInfo.x + AngleOffset;
+
+		// 1. The gradient parameter, lengths in box heights: a point is ((u - cx) * Aspect, v - cy) from the centre.
+		float T = 0.0;
+		if (Type == DREAMUI_PAINT_TYPE_LINEAR)
+		{
+			// Through the box's centre at Angle (0 up, clockwise), the gradient line as long as CSS makes it: the corners
+			// the line points between land on 0 and 1.
+			const float2 Center = float2(0.5, 0.5) + CenterOffset;
+			const float2 FromCenter = float2((BoxUV.x - Center.x) * Aspect, BoxUV.y - Center.y);
+			float SinA, CosA;
+			sincos(radians(Angle), SinA, CosA);
+			T = dot(FromCenter, float2(SinA, -CosA)) / max(abs(Aspect * SinA) + abs(CosA), 1e-6) + 0.5;
+		}
+		else
+		{
+			const float2 Center = CenterInfo.xy + CenterOffset;
+			const float2 FromCenter = float2((BoxUV.x - Center.x) * Aspect, BoxUV.y - Center.y);
+			if (Type == DREAMUI_PAINT_TYPE_CONIC)
+			{
+				// Around the centre from Angle, 0 up and clockwise; one turn is the whole gradient.
+				const float AngleDegrees = (FromCenter.x != 0.0 || FromCenter.y != 0.0) ? degrees(atan2(FromCenter.x, -FromCenter.y)) : 0.0;
+				T = frac((AngleDegrees - Angle) / 360.0);
+			}
+			else
+			{
+				const float2 Radii = DreamUIPaint_RadialRadii(Type, (int)round(ShapeInfo.w), (int)round(SizeInfo.x), Center, CenterInfo.zw, Aspect);
+				if (Type == DREAMUI_PAINT_TYPE_RADIAL)
+				{
+					T = length(FromCenter / Radii);
+				}
+				else
+				{
+					// Diamond: the point turned back by Angle, then |x| / Rx + |y| / Ry.
+					float SinA, CosA;
+					sincos(radians(Angle), SinA, CosA);
+					const float2 Turned = float2(FromCenter.x * CosA + FromCenter.y * SinA, -FromCenter.x * SinA + FromCenter.y * CosA);
+					T = abs(Turned.x) / Radii.x + abs(Turned.y) / Radii.y;
+				}
+			}
+		}
+
+		// 2. Scaled -- about the middle for a Linear, about the start for the others -- and moved forward by the offset and
+		// the phase.
+		const float Scale = max(ShapeInfo.y * ScaleMultiplier, 1e-4);
+		const float Offset = ShapeInfo.z + Phase;
+		if (Type == DREAMUI_PAINT_TYPE_LINEAR)
+		{
+			T = (T - 0.5) / Scale + 0.5 - Offset;
+		}
+		else
+		{
+			T = T / Scale - Offset;
+		}
+
+		// 3. Spread over the span from the first stop to the last (Pad where the span is empty).
+		float4 Positions[4];
+		UNROLL
+		for (int PixelIndex = 0; PixelIndex < 4; ++PixelIndex)
+		{
+			Positions[PixelIndex] = PaintDataTex.Load(int3(DREAMUI_PAINT_GRADIENT_POSITIONS_PIXEL + PixelIndex, GradientRow, 0));
+		}
+		const float First = Positions[0].x;
+		const float Last = DreamUIPaint_Component(Positions[(Count - 1) >> 2], (Count - 1) & 3);
+		const float Span = Last - First;
+		if (Span > 0.0)
+		{
+			if (Spread == DREAMUI_PAINT_SPREAD_REPEAT)
+			{
+				T = First + frac((T - First) / Span) * Span;
+			}
+			else if (Spread == DREAMUI_PAINT_SPREAD_REFLECT)
+			{
+				const float Along = (T - First) / Span;
+				T = First + (1.0 - abs(frac(Along * 0.5) * 2.0 - 1.0)) * Span;
+			}
+		}
+
+		// 4. The stops: the first colour at or before the first position, the last at or after the last, else the segment
+		// holding T. Positions never go back, so the stops at or before T are the first Below of them, and a hard edge (two
+		// stops at one place) belongs to the later segment. Asked as "not after the first", as the CPU asks it, so a T that
+		// is not a number takes the first colour too (and the segment below only ever sees two stops or more).
+		if (!(T > First))
+		{
+			Mixed = PaintDataTex.Load(int3(DREAMUI_PAINT_GRADIENT_COLORS_PIXEL, GradientRow, 0));
+		}
+		else if (T >= Last)
+		{
+			Mixed = PaintDataTex.Load(int3(DREAMUI_PAINT_GRADIENT_COLORS_PIXEL + Count - 1, GradientRow, 0));
+		}
+		else
+		{
+			int Below = 0;
+			UNROLL
+			for (int PixelIndex = 0; PixelIndex < 4; ++PixelIndex)
+			{
+				const float4 StopIndices = float4(0.0, 1.0, 2.0, 3.0) + 4.0 * (float)PixelIndex;
+				const float4 Counted = (float4)(StopIndices < (float)Count) * (float4)(Positions[PixelIndex] <= T);
+				Below += (int)dot(Counted, float4(1.0, 1.0, 1.0, 1.0));
+			}
+			const int From = clamp(Below - 1, 0, Count - 2);
+			const float FromPosition = DreamUIPaint_Component(Positions[From >> 2], From & 3);
+			const float ToPosition = DreamUIPaint_Component(Positions[(From + 1) >> 2], (From + 1) & 3);
+			const float4 FromColor = PaintDataTex.Load(int3(DREAMUI_PAINT_GRADIENT_COLORS_PIXEL + From, GradientRow, 0));
+			const float4 ToColor = PaintDataTex.Load(int3(DREAMUI_PAINT_GRADIENT_COLORS_PIXEL + From + 1, GradientRow, 0));
+			Mixed = lerp(FromColor, ToColor, (T - FromPosition) / max(ToPosition - FromPosition, 1e-9));
+		}
+	}
+
+	// 5. Straight, in linear light.
+	OutColor = DreamUIPaint_ToStraightLinear(Mixed, Interpolation);
+	return true;
+}
+
+/** Layer Layer (DREAMUI_PAINT_LAYER_*) of Slot at BoxUV. False, with OutColor white and opaque, where the slot does not paint it. */
+bool DreamUIPaint_EvaluateLayer(Texture2D PaintDataTex, FDreamUIPaintSlot Slot, int Layer, float2 BoxUV, out float4 OutColor)
+{
+	OutColor = float4(1.0, 1.0, 1.0, 1.0);
+	const float Row = Slot.Rows[Layer];
+	if (Row < 0.0)
+	{
+		return false;
+	}
+	return DreamUIPaint_Evaluate(PaintDataTex, Row, BoxUV, Slot.Aspect, Slot.Phases[Layer], Slot.AngleOffset, Slot.CenterOffset,
+		Slot.ScaleMultiplier, OutColor);
+}
+
+/**
+ * The colour a painted glyph's face is drawn in: Color -- the vertex colour, made linear, which the painter writes as white
+ * times the text's tint where the slot paints the face -- times the slot's face gradient, then the slot's overlay mixed
+ * over that: Normal over the face by the overlay's alpha (source-over), Add added to it (plus-lighter, a highlight that
+ * never darkens). The overlay fades with the text: its alpha is times Color's. Straight colour; Color itself where the slot
+ * paints neither.
+ */
+float4 DreamUIPaint_PaintFace(Texture2D PaintDataTex, FDreamUIPaintSlot Slot, float2 BoxUV, float4 Color)
+{
+	float4 Face = Color;
+	float4 Gradient;
+	if (DreamUIPaint_EvaluateLayer(PaintDataTex, Slot, DREAMUI_PAINT_LAYER_FACE, BoxUV, Gradient))
+	{
+		Face *= Gradient;
+	}
+	float4 Overlay;
+	if (DreamUIPaint_EvaluateLayer(PaintDataTex, Slot, DREAMUI_PAINT_LAYER_OVERLAY, BoxUV, Overlay))
+	{
+		const float OverlayAlpha = Overlay.a * Color.a;
+		float Alpha;
+		float3 Premultiplied;
+		if (Slot.OverlayBlend > 0.5)
+		{
+			// DREAMUI_PAINT_OVERLAY_ADD: the two added premultiplied, clamped.
+			Alpha = min(Face.a + OverlayAlpha, 1.0);
+			Premultiplied = min(Face.rgb * Face.a + Overlay.rgb * OverlayAlpha, 1.0);
+		}
+		else
+		{
+			// DREAMUI_PAINT_OVERLAY_NORMAL: the overlay over the face.
+			Alpha = OverlayAlpha + Face.a * (1.0 - OverlayAlpha);
+			Premultiplied = Overlay.rgb * OverlayAlpha + Face.rgb * Face.a * (1.0 - OverlayAlpha);
+		}
+		Face = float4(0.0, 0.0, 0.0, Alpha);
+		if (Alpha > 0.0)
+		{
+			Face.rgb = Premultiplied / Alpha;
+		}
+	}
+	return Face;
+}
+
+/** What a painted outline's colour is multiplied by at BoxUV: the slot's outline gradient, white and opaque where it paints none. */
+float4 DreamUIPaint_PaintOutline(Texture2D PaintDataTex, FDreamUIPaintSlot Slot, float2 BoxUV)
+{
+	float4 Gradient;
+	DreamUIPaint_EvaluateLayer(PaintDataTex, Slot, DREAMUI_PAINT_LAYER_OUTLINE, BoxUV, Gradient);
+	return Gradient;
+}
+
+#endif // DREAMUI_PAINT_USH

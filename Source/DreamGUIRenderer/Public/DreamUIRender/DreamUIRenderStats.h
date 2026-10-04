@@ -67,6 +67,28 @@ namespace DreamUIRenderStats
 		RenderLayerPromotions,
 		/** Game thread: render layers taken back, each costing its canvas one rebuild. */
 		RenderLayerDemotions,
+		/** Game thread: texts painted -- their quads written from their display list (UDreamText's geometry update). */
+		TextPaints,
+		/** Game thread: of those, the paints a move asked for: a text drawing from coverage moved off its device pixel grid. */
+		TextMoveRepaints,
+		/** Game thread: texts placed on the device pixel grid, each one measurement through their root canvas's matrices (the small-text gate). */
+		SmallTextPlacements,
+		/** Game thread: texts the small-text sweep looked at, waiting for their device scale or their render layer to settle. */
+		SharpenSweepTexts,
+		/** Game thread: texts the sweep and the render layer wake-ups repainted onto coverage, within the per-world repaint budget. */
+		SharpenRepaints,
+		/** Game thread: glyph items the painter drew from coverage glyphs. */
+		CoverageItemsDrawn,
+		/** Game thread: coverage glyphs asked of fonts (UDreamUIFontData_BaseObject::GetCoverageGlyph), found or not. */
+		CoverageGlyphLookups,
+		/** Game thread: coverage glyphs rasterized on the spot, within the frame's coverage budget. */
+		CoverageRastersSync,
+		/** Game thread: coverage glyphs queued for the rasterizer's worker. */
+		CoverageJobs,
+		/** Game thread: coverage flushes: a font's coverage glyphs all dropped at once, its cells retired. */
+		CoverageFlushes,
+		/** Game thread: bytes of font atlas sent to the render thread -- field, colour and coverage glyphs, and whole slices. */
+		FontAtlasUploadBytes,
 		Num
 	};
 

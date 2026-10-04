@@ -9,6 +9,13 @@
 #include "RenderMath.h"
 
 #define LEXUI_VERTEX_TEXCOORDINATE_COUNT 4
+/**
+ * The vertex attribute FDreamUIMeshVertex::UV4 is declared as. The attributes go Position (0), Color (1), the
+ * TextureCoordinate channels (2 to 5), TangentX (6), TangentZ (7), then UV4: last, so that no attribute before it moved.
+ */
+#define LEXUI_VERTEX_UV4_ATTRIBUTE 8
+/** Every UV channel a vertex carries, UV4 included: what the UE renderer's split vertex buffers are made with. */
+#define LEXUI_VERTEX_UV_CHANNEL_COUNT (LEXUI_VERTEX_TEXCOORDINATE_COUNT + 1)
 
 struct DREAMGUIRENDERER_API FDreamUIMeshVertex
 {
@@ -67,12 +74,20 @@ struct DREAMGUIRENDERER_API FDreamUIMeshVertex
 	FVector2f TextureCoordinate[LEXUI_VERTEX_TEXCOORDINATE_COUNT];
 	FPackedNormal TangentX;
 	FPackedNormal TangentZ;
+	/**
+	 * A painted glyph quad's place in its gradient's boxes (FDreamTextPaints, DreamTextQuadCode's slots): x from the box's
+	 * left edge (0) to its right (1), y from its top (0) down to its bottom (1). (0, 0) on everything else, which nothing
+	 * reads -- every constructor zeroes it, and whatever grows a vertex array without constructing writes it. Vertex
+	 * attribute LEXUI_VERTEX_UV4_ATTRIBUTE; TexCoord(4) to a material.
+	 */
+	FVector2f UV4 = FVector2f(0.0f, 0.0f);
 
 	FVector3f GetTangentY() const
 	{
 		return FVector3f(GenerateYAxis(TangentX, TangentZ));
 	};
 };
+static_assert(sizeof(FDreamUIMeshVertex) == 64, "FDreamUIMeshVertex is 64 bytes: the vertex declaration, the uploads and the byte compares of geometry assume no padding");
 
 class DREAMGUIRENDERER_API FDreamUIMeshVertexDeclaration : public FRenderResource
 {
@@ -80,6 +95,12 @@ public:
 	FVertexDeclarationRHIRef VertexDeclarationRHI;
 	virtual void InitRHI(FRHICommandListBase& RHICmdList)override;
 	virtual void ReleaseRHI()override;
+	/**
+	 * The elements the declaration is made of, one per field of FDreamUIMeshVertex in stream 0, each at the attribute
+	 * index the vertex shaders read it as (UV4 at LEXUI_VERTEX_UV4_ATTRIBUTE). No RHI work: InitRHI makes the declaration
+	 * from these.
+	 */
+	static void MakeElements(FVertexDeclarationElementList& OutElements);
 };
 DREAMGUIRENDERER_API FVertexDeclarationRHIRef& GetDreamUIMeshVertexDeclaration();
 

@@ -91,7 +91,7 @@ public:
 			if (FilteredBlurStrength >= i)
 			{
 				FRDGTextureRef DownSampleTexture = DownSampleTextures[i - 1];
-				DoBlur(DownSampleTexture, FilteredBlurStrength - i, MagicNumber, GraphBuilder, Renderer, GlobalShaderMap);
+				DoBlur(DownSampleTexture, FilteredBlurStrength - i, MagicNumber, GraphBuilder, GlobalShaderMap);
 				FRDGTextureRef NextTexture = i == 1 ? BlurTexture : DownSampleTextures[i - 2];
 				if (FilteredBlurStrength >= i + 1)
 				{
@@ -105,17 +105,19 @@ public:
 				}
 			}
 		}
-		DoBlur(BlurTexture, FilteredBlurStrength, MagicNumber, GraphBuilder, Renderer, GlobalShaderMap);
+		DoBlur(BlurTexture, FilteredBlurStrength, MagicNumber, GraphBuilder, GlobalShaderMap);
 
 		WriteBack_RenderThread(GraphBuilder, Renderer, GlobalShaderMap, SceneDepth, Screen, BlurTexture, bUseFullSize, ModelViewProjectionMatrix
 			, bIsWorldSpace, BlendDepthForWorld, DepthFadeForWorld, DepthTextureScaleOffset, ViewRect, TStaticSamplerState<SF_Bilinear, AM_Clamp, AM_Clamp, AM_Clamp>::GetRHI());
 	}
-	/** Blurs SourceTexture in place, through a texture of the same size. */
-	void DoBlur(FRDGTextureRef SourceTexture
+	/**
+	 * Blurs SourceTexture in place, through a texture of the same size. Its two passes hold nothing of the proxy's or the
+	 * renderer's: what they draw with is captured by value.
+	 */
+	static void DoBlur(FRDGTextureRef SourceTexture
 		, float BlurAmount
 		, float MagicNumber
 		, FRDGBuilder& GraphBuilder
-		, FDreamUIRenderer* Renderer
 		, FGlobalShaderMap* GlobalShaderMap
 		)
 	{
@@ -136,7 +138,7 @@ public:
 			RDG_EVENT_NAME("DreamUIBackgroundBlur_Pass_Horizontal"),
 			VerticalPassParameters,
 			ERDGPassFlags::Raster,
-			[this, VertexShader, PixelShader, Renderer, SourceTexture, BlurTexture, SamplerState, BlurAmount](FRHICommandListImmediate& RHICmdList)
+			[VertexShader, PixelShader, SourceTexture, BlurTexture, SamplerState, BlurAmount](FRHICommandListImmediate& RHICmdList)
 			{
 				SourceTexture->MarkResourceAsUsed();
 				FGraphicsPipelineStateInitializer GraphicsPSOInit;
@@ -156,7 +158,7 @@ public:
 				Parameters.MainTexSampler = SamplerState;
 				Parameters.BlurStrength = FVector2f(1.0f / SourceTexture->Desc.Extent.X * BlurAmount, 0);
 				SetShaderParameters(RHICmdList, PixelShader, PixelShader.GetPixelShader(), Parameters);
-				Renderer->DrawFullScreenQuad(RHICmdList);
+				FDreamUIRenderer::DrawFullScreenQuad(RHICmdList);
 			});
 
 		auto* HorizontalPassParameters = GraphBuilder.AllocParameters<FDreamUIBackgroundBlurPassParameters>();
@@ -166,7 +168,7 @@ public:
 			RDG_EVENT_NAME("DreamUIBackgroundBlur_Pass_Vertical"),
 			HorizontalPassParameters,
 			ERDGPassFlags::Raster,
-			[this, VertexShader, PixelShader, Renderer, SourceTexture, BlurTexture, SamplerState, BlurAmount](FRHICommandListImmediate& RHICmdList)
+			[VertexShader, PixelShader, SourceTexture, BlurTexture, SamplerState, BlurAmount](FRHICommandListImmediate& RHICmdList)
 			{
 				BlurTexture->MarkResourceAsUsed();
 				FGraphicsPipelineStateInitializer GraphicsPSOInit;
@@ -186,7 +188,7 @@ public:
 				Parameters.MainTexSampler = SamplerState;
 				Parameters.BlurStrength = FVector2f(0, 1.0f / BlurTexture->Desc.Extent.Y * BlurAmount);
 				SetShaderParameters(RHICmdList, PixelShader, PixelShader.GetPixelShader(), Parameters);
-				Renderer->DrawFullScreenQuad(RHICmdList);
+				FDreamUIRenderer::DrawFullScreenQuad(RHICmdList);
 			});
 
 	}

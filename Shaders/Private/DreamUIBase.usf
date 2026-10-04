@@ -16,7 +16,10 @@
 float4x4 DreamUI_MVP;
 /** x: gamma curve adjustment, y: inverse display gamma, z: unused, w: unused */
 float4 DreamUI_GammaValues;
-/** xy: atlas slice size in texels, z: field range in texels (2 * spread), w: texels per em at the sample size, negative when the small-text correction is off */
+/**
+ * xy: atlas slice size in texels, z: field range in texels (2 * spread), negative when the field face is corrected, w: texels
+ * per em at the sample size, negative when the small-text correction is off
+ */
 float4 DreamUI_FontAtlasInfo;
 Texture2D DreamUI_MainTex;
 SamplerState DreamUI_MainTexSampler;
@@ -26,6 +29,8 @@ Texture2D DreamUI_WidgetDataTex;
 Texture2D DreamUI_ClipDataTex;
 /** The world's rows of rect block data: what a rect block drawn here reads its shape from. */
 Texture2D DreamUI_RectBlockDataTex;
+/** The world's paint rows: the gradients painted text is filled with, and each painted text's table (DreamUIPaint.ush). */
+Texture2D DreamUI_PaintDataTex;
 
 #if LEXUI_BLEND_DEPTH
 Texture2D DreamUI_SceneDepthTex;
@@ -48,6 +53,7 @@ struct FDreamUIBaseVSToPS
 	float2 UV3 : TEXCOORD3;
 	float3 LocalPosition : TEXCOORD4;
 	float4 ScreenPosition : TEXCOORD5;
+	float2 UV4 : TEXCOORD6;
 };
 
 void MainVS(
@@ -59,6 +65,8 @@ void MainVS(
 	in float2 TextureCoord3 : ATTRIBUTE5,
 	in half3 TangentX : ATTRIBUTE6,
 	in half4 TangentZ : ATTRIBUTE7,
+	// FDreamUIMeshVertex::UV4, after the tangents (LEXUI_VERTEX_UV4_ATTRIBUTE).
+	in float2 TextureCoord4 : ATTRIBUTE8,
 	out FDreamUIBaseVSToPS Out
 )
 {
@@ -77,6 +85,7 @@ void MainVS(
 	Out.UV1 = TextureCoord1;
 	Out.UV2 = TextureCoord2;
 	Out.UV3 = TextureCoord3;
+	Out.UV4 = TextureCoord4;
 }
 
 half3 DreamUIBase_GammaCorrect(half3 InColor, half4 GammaValues)
@@ -99,10 +108,14 @@ void MainPS(
 	// vertex colour is the whole answer. It shares this shader only for the transform and the blend.
 	float4 Color = float4(sRGBToLinear(In.Color.rgb), In.Color.a);
 #else
-	// Everything a UI pixel is comes from the shared function; this shader adds depth, gamma, premultiply.
-	float4 Color = DreamUI_ShadePixel(In.UV0, In.UV1, In.UV2, In.UV3, In.Color, In.LocalPosition,
+	// Everything a UI pixel is comes from the shared function; this shader adds depth, gamma, premultiply. It knows how its
+	// target blends: encoded values where it gamma-corrects (the viewport), linear light where it does not (a render
+	// target, whose sRGB format encodes after the blend).
+	const bool bLinearTarget = DreamUI_GammaValues.y == 1.0;
+	float4 Color = DreamUI_ShadePixelWith(In.UV0, In.UV1, In.UV2, In.UV3, In.UV4, In.Color, In.LocalPosition,
 		DreamUI_MainTex, DreamUI_MainTexSampler, DreamUI_FontTex, DreamUI_FontTexSampler,
-		DreamUI_WidgetDataTex, DreamUI_ClipDataTex, DreamUI_FontAtlasInfo, DreamUI_RectBlockDataTex);
+		DreamUI_WidgetDataTex, DreamUI_ClipDataTex, DreamUI_FontAtlasInfo, DreamUI_PaintDataTex, true, bLinearTarget,
+		DreamUI_RectBlockDataTex);
 #endif
 
 #if LEXUI_BLEND_DEPTH

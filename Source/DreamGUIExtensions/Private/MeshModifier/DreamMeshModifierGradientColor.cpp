@@ -36,6 +36,9 @@ void UDreamMeshModifierGradientColor::ModifyUIGeometry(
 	int32 triangleCount = triangles.Num();
 	if (triangleCount == 0 || vertexCount == 0)return;
 
+	// Vertex colours, and nothing else. A painted text's quads keep the paint slot in their code (UV2.x) and their place in
+	// the gradient's boxes (UV4), which are the painter's: on such a text these colours multiply its gradient, as a tint does.
+
 	// Every direction below paints a whole quad per pass and steps the cursor four times inside the
 	// loop body, so the bound has to clear all four -- testing only the first corner walks off the
 	// end of a geometry whose vertex count is not a multiple of four. That is not a hypothetical

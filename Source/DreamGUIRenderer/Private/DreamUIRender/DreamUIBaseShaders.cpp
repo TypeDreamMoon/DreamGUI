@@ -17,6 +17,7 @@ FDreamUIBuiltInTextures FDreamUIBuiltInDrawParams::GetTexturesForRenderCommand()
 	Textures.ClipData = ClipDataTexture.Get();
 	Textures.RenderLayerTable = RenderLayerTable.Get();
 	Textures.RectBlockData = RectBlockData.Get();
+	Textures.PaintData = PaintData.Get();
 	return Textures;
 }
 
@@ -42,6 +43,7 @@ void FDreamUIBuiltInDrawParams::ResolveTextures_RenderThread(const FDreamUIBuilt
 	ClipDataTextureRHI = Reference(InTextures.ClipData);
 	RenderLayerTableRHI = Reference(InTextures.RenderLayerTable);
 	RectBlockDataRHI = Reference(InTextures.RectBlockData);
+	PaintDataRHI = Reference(InTextures.PaintData);
 }
 
 IMPLEMENT_GLOBAL_SHADER(FDreamUIBaseVS, "/Plugin/DreamGUI/Private/DreamUIBase.usf", "MainVS", SF_Vertex);

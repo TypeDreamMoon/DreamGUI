@@ -11,17 +11,27 @@
 // Result is straight (non-premultiplied) colour in rgb and opacity in a. The host decides whether
 // to premultiply: DreamUI_ImageAndFont does, except when DreamGUI's own renderer is drawing it.
 //
+// Painted text (gradients on the face, the outline and an overlay) comes through here too: the quad's place in its
+// gradient boxes is UV4 = TexCoord(4), and the gradients are the world's paint rows, which the canvas sets as
+// DreamUI_PaintDataTexture on every UI material instance (DreamUIShadeMaterial::PaintDataTextureParameter).
+//
+// DreamUI_ShadeMarker says that a material shades through here: a text whose material lacks it -- or has it at 0 -- draws
+// no small-text coverage glyphs and no colour faces, and puts its gradients into its vertex colours, all of which only
+// DreamUIShade.ush can draw (DreamUIShadeMaterial::ShadeMarkerParameter, read with GetScalarParameterDefaultValue, which a
+// cooked game answers too). The HLSL does not read it: it is an input of the Custom node only so that the material keeps
+// it, since a parameter wired to nothing is dropped from a cooked material.
+//
 // SelfContained: the body is embedded in the Custom node and the #include is attached to that node
 // directly (see MF_DreamUI_Clip.dsf for why the Inline form would cache a build-artifact path).
 // FontTexSampler / MainTexSampler are the samplers DreamShader adds after every texture input.
-Function SelfContained float4 DreamUIShade(in float2 UV0, in float2 UV1, in float2 UV2, in float2 UV3,
+Function SelfContained float4 DreamUIShade(in float2 UV0, in float2 UV1, in float2 UV2, in float2 UV3, in float2 UV4,
 	in float4 RawVertexColor, in float3 LocalPosition,
 	in Texture2D MainTex, in Texture2DArray FontTex, in Texture2D WidgetDataTex, in Texture2D ClipDataTex,
-	in float4 FontAtlasInfo)
+	in float4 FontAtlasInfo, in Texture2D PaintDataTex, in float ShadeMarker)
 {
 	#include "/Plugin/DreamGUI/Private/DreamUIShade.ush"
-	return DreamUI_ShadePixel(UV0, UV1, UV2, UV3, RawVertexColor, LocalPosition,
-		MainTex, MainTexSampler, FontTex, FontTexSampler, WidgetDataTex, ClipDataTex, FontAtlasInfo);
+	return DreamUI_ShadePixel(UV0, UV1, UV2, UV3, UV4, RawVertexColor, LocalPosition,
+		MainTex, MainTexSampler, FontTex, FontTexSampler, WidgetDataTex, ClipDataTex, FontAtlasInfo, PaintDataTex);
 }
 
 ShaderFunction(Name="Materials/MF_DreamUI_Shade", Root="Plugin.DreamGUI")
@@ -49,6 +59,16 @@ ShaderFunction(Name="Materials/MF_DreamUI_Shade", Root="Plugin.DreamGUI")
 		VectorParameter DreamUI_FontAtlasInfo = float4(1.0, 1.0, 0.0, 0.0) [
 			Group="DreamUI";
 		];
+		// The world's paint rows. Black until the canvas sets them: it reads as no gradient anywhere, so painted text
+		// draws solid rather than from garbage.
+		TextureObjectParameter DreamUI_PaintDataTexture = Path(Engine, "EngineResources/Black") [
+			Group="DreamUI";
+			SamplerType="SAMPLERTYPE_Color";
+		];
+		// See the header: what tells a text that this material shades through DreamUIShade.ush. Leave it at 1.
+		ScalarParameter DreamUI_ShadeMarker = 1.0 [
+			Group="DreamUI";
+		];
 	}
 
 	Inputs = {
@@ -65,14 +85,16 @@ ShaderFunction(Name="Materials/MF_DreamUI_Shade", Root="Plugin.DreamGUI")
 		float2 UV1 = UE.TexCoord(Index=1);
 		float2 UV2 = UE.TexCoord(Index=2);
 		float2 UV3 = UE.TexCoord(Index=3);
+		// FDreamUIMeshVertex::UV4: a painted glyph's place in its gradient boxes, (0, 0) on everything else.
+		float2 UV4 = UE.TexCoord(Index=4);
 		// The VertexColor node's main pin is rgb; its alpha is a separate pin. Rebuild the float4 so the
 		// Custom input gets all four channels (a bare float4-typed read only carries the rgb pin).
 		float4 VertexColorNode = UE.Expression(Class="VertexColor", OutputType="float4");
 		float4 RawVertexColor = float4(VertexColorNode.rgb, VertexColorNode.a);
 		float3 LocalPosition = UE.Expression(Class="LocalPosition", OutputType="float3");
-		float4 Shaded = DreamUIShade(UV0, UV1, UV2, UV3, RawVertexColor, LocalPosition,
+		float4 Shaded = DreamUIShade(UV0, UV1, UV2, UV3, UV4, RawVertexColor, LocalPosition,
 			DreamUI_MainTexture, DreamUI_FontTexture, DreamUI_WidgetPropertyDataTexture, DreamUI_ClipDataTexture,
-			DreamUI_FontAtlasInfo);
+			DreamUI_FontAtlasInfo, DreamUI_PaintDataTexture, DreamUI_ShadeMarker);
 
 		Result = (Shaded * Tint);
 	}
@@ -82,6 +104,7 @@ ShaderFunction(Name="Materials/MF_DreamUI_Shade", Root="Plugin.DreamGUI")
 		Node(Var="UV1", X=-1104, Y=-64);
 		Node(Var="UV2", X=-1104, Y=48);
 		Node(Var="UV3", X=-1104, Y=160);
+		Node(Var="UV4", X=-1360, Y=160);
 		Node(Var="VertexColorNode", X=-1360, Y=272);
 		Node(Var="RawVertexColor", X=-1104, Y=272);
 		Node(Var="LocalPosition", X=-1104, Y=384);
@@ -90,6 +113,8 @@ ShaderFunction(Name="Materials/MF_DreamUI_Shade", Root="Plugin.DreamGUI")
 		Node(Var="DreamUI_WidgetPropertyDataTexture", X=-1104, Y=848);
 		Node(Var="DreamUI_ClipDataTexture", X=-1104, Y=1024);
 		Node(Var="DreamUI_FontAtlasInfo", X=-1104, Y=1200);
+		Node(Var="DreamUI_PaintDataTexture", X=-1104, Y=1312);
+		Node(Var="DreamUI_ShadeMarker", X=-1104, Y=1488);
 		Node(Var="Shaded", X=-560, Y=160);
 		Node(Var="Tint", X=-560, Y=480);
 		Node(Var="Result", X=-128, Y=208);
