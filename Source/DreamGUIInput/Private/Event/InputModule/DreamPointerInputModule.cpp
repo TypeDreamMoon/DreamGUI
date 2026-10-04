@@ -52,6 +52,17 @@ namespace DreamPointerInputModuleLocal
 		UDreamUIPopupLayer* Popups = UDreamUIPopupLayer::Get(InUser);
 		return Popups != nullptr && Popups->NotifyPointerDown(InUser->GetUserIndex(), InPressed);
 	}
+
+	/**
+	 * Whether entering a widget takes the navigation highlight onto it: navigation's own landing does, and a pointer's
+	 * hover only when the pointer has really moved since its last trace (UDreamUIInputUser::HasPointerMovedSinceTrace). A
+	 * screen opening under a mouse at rest, or a list scrolling under it, used to take the highlight off what the keys had
+	 * left it on.
+	 */
+	bool DoesEnterTakeHighlight(const UDreamUIInputUser* InUser, const UDreamPointerEventData* InEventData)
+	{
+		return InEventData->InputType == EDreamUIPointerInputType::Navigation || InUser->HasPointerMovedSinceTrace(InEventData->PointerID);
+	}
 }
 
 void UDreamPointerInputModule::ApplyHoverCursor(UDreamUIInputUser* InUser, UDreamPointerEventData* EventData)
@@ -118,7 +129,10 @@ void UDreamPointerInputModule::ProcessPointerEnterExit(UDreamUIInputUser* InUser
 		{
 			int insertIndex = EventData->EnterWidgetStack.Num();
 			InUser->CallOnPointerEnter(newObj, EventData);
-			EventData->HighlightWidgetForNavigation = newObj;
+			if (DreamPointerInputModuleLocal::DoesEnterTakeHighlight(InUser, EventData))
+			{
+				EventData->HighlightWidgetForNavigation = newObj;
+			}
 			EventData->EnterWidgetStack.Add(newObj);
 			enterObjectActor = IsValid(enterObjectActor) ? enterObjectActor->GetParent() : nullptr;
 			while (enterObjectActor != nullptr)
@@ -167,7 +181,10 @@ void UDreamPointerInputModule::ProcessPointerEnterExit(UDreamUIInputUser* InUser
 				int insertIndex = EventData->EnterWidgetStack.Num();
 				EventData->EnterWidget = newObj;
 				InUser->CallOnPointerEnter(newObj, EventData);
-				EventData->HighlightWidgetForNavigation = newObj;
+				if (DreamPointerInputModuleLocal::DoesEnterTakeHighlight(InUser, EventData))
+				{
+					EventData->HighlightWidgetForNavigation = newObj;
+				}
 				EventData->EnterWidgetStack.Add(newObj);
 				enterObjectActor = IsValid(enterObjectActor) ? enterObjectActor->GetParent() : nullptr;
 				while (enterObjectActor != nullptr)

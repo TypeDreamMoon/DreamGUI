@@ -13,7 +13,7 @@ that rasterises a glyph.
 | Submodule | `ThirdParty/msdfgen`, branch `all-in-one`, pinned to `b32de12` (2025-07-29) |
 | Compiled from | `ThirdParty/msdfgen-single-file/msdfgen.cpp` (the generated pair, committed) |
 | Used by | the `DreamGUI` runtime module, under `WITH_FREETYPE` |
-| License | MIT; the text is embedded in the generated `msdfgen.cpp` |
+| License | MIT; `msdfgen-single-file/LICENSE.txt` (packaged by `Config/FilterPlugin.ini`) and the header of the generated `msdfgen.cpp` |
 
 ### Why there are two directories
 

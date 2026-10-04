@@ -326,8 +326,27 @@ void UUIDropdown::Show()
 		return;
 	}
 	// Then up on the popup layer, the UMG menu-stack arrangement: lifted to the screen root so no ancestor clips
-	// it, focus moved onto the selected row, closed by a press outside it, by Back, or by this face going away.
-	bListOnPopupLayer = PushListToPopupLayer();
+	// it, focus moved onto the selected row, closed by a press outside it, by Back, by Tab, or by this face going away.
+	// On the layer as far as a close is concerned from before the push: the push moves focus into the list, and a handler
+	// that closes it then -- a deselect handler, game code -- must take it off the layer, not leave it there open and
+	// asleep. A capture left from an earlier open the layer could not take is not this open's.
+	ListFocusReturn.Reset();
+	bListOnPopupLayer = true;
+	const bool bPushed = PushListToPopupLayer();
+	if (!bIsShow)
+	{
+		// Closed again while the push ran, and taken off the layer by that close: it stays closed. A close made before the
+		// layer had the list -- an owner of a popup the push replaced closing this dropdown -- found nothing to take off,
+		// and the layer opened the list after it: taken off now.
+		bListOnPopupLayer = false;
+		UDreamUIPopupLayer* Layer = bPushed ? UDreamUIPopupLayer::Get(this) : nullptr;
+		if (Layer != nullptr && Layer->IsOpen(ListRoot.Get()))
+		{
+			Layer->Dismiss(ListRoot.Get(), EDreamPopupDismissReason::Explicit);
+		}
+		return;
+	}
+	bListOnPopupLayer = bPushed;
 	if (!bListOnPopupLayer)
 	{
 		// No layer to take it -- no screen root in this world: the list opens where it hangs, and the focus a player
@@ -494,7 +513,12 @@ bool UUIDropdown::PushListToPopupLayer()
 	Params.Popup = List;
 	Params.Opener = GetWidget();
 	Params.UserIndex = ResolveListUserIndex();
+	ListUserIndex = Params.UserIndex;
+	PendingTabCommit = INDEX_NONE;
 	Params.OutsideClick = bUseInteractionBlock ? EDreamPopupOutsideClick::Consume : EDreamPopupOutsideClick::PassThrough;
+	// Tab leaves an open list rather than walking its rows, as it leaves an HTML select: the list closes -- choosing the row
+	// the player is on, while bTabCommitsHighlightedRow -- the focus comes back to the face, and the Tab goes on from there.
+	Params.TabBehavior = EDreamPopupTabBehavior::CloseAndContinue;
 	// Into the list, onto the selected row, as SComboBox's list takes the focus when it opens with its
 	// selection highlighted -- so the first stick press moves from the choice the player already has.
 	Params.bFocusOnOpen = true;
@@ -505,11 +529,40 @@ bool UUIDropdown::PushListToPopupLayer()
 	Params.bRestoreOnDismiss = false;
 	Params.Place = ListPlacement;
 	Params.OnDismissed = FDreamPopupDismissedDelegate::CreateUObject(this, &UUIDropdown::HandleListDismissed);
+	Params.OnClosing = FDreamPopupDismissedDelegate::CreateUObject(this, &UUIDropdown::HandleListClosing);
 	return Layer->Push(Params);
+}
+void UUIDropdown::HandleListClosing(UDreamWidget* InList, EDreamPopupDismissReason InReason)
+{
+	// Now or never: the layer gives the player's focus back to the face as soon as this returns, and the row they were on
+	// is known only by where their focus is.
+	PendingTabCommit = InReason == EDreamPopupDismissReason::Tab && bTabCommitsHighlightedRow ? FindHighlightedRow() : INDEX_NONE;
+}
+int32 UUIDropdown::FindHighlightedRow() const
+{
+	const UDreamUIInputServices* Services = UDreamUIInputServices::Get(this);
+	const UDreamWidget* Focus = Services != nullptr ? Services->GetFocusedWidget(ListUserIndex) : nullptr;
+	if (!IsValid(Focus))
+	{
+		return INDEX_NONE;
+	}
+	// A row is built per option, in option order, so a row's place among them is its option's index.
+	for (int32 RowIndex = 0; RowIndex < CreatedItemArray.Num(); ++RowIndex)
+	{
+		const UUIDropdownItemComponent* Item = CreatedItemArray[RowIndex].Get();
+		const UDreamWidget* Row = Item != nullptr ? Item->GetWidget() : nullptr;
+		if (IsValid(Row) && (Focus == Row || Focus->IsChildOf(Row)))
+		{
+			return RowIndex;
+		}
+	}
+	return INDEX_NONE;
 }
 void UUIDropdown::HandleListDismissed(UDreamWidget* InList, EDreamPopupDismissReason InReason)
 {
 	bListOnPopupLayer = false;
+	const int32 TabCommit = PendingTabCommit;
+	PendingTabCommit = INDEX_NONE;
 	if (!bIsShow)
 	{
 		// This dropdown's own close, already under way.
@@ -529,7 +582,25 @@ void UUIDropdown::HandleListDismissed(UDreamWidget* InList, EDreamPopupDismissRe
 		OnListVisibilityChangedCPP.Broadcast(false);
 		return;
 	}
-	// Closed from outside -- a press elsewhere, Back, a menu opened in its place. An opener gone (hidden, put
+	if (InReason == EDreamPopupDismissReason::Tab && Options.IsValidIndex(TabCommit))
+	{
+		// Tab chose the row the player was on (HandleListClosing noted it), in a click's order: the choice, then the close.
+		// The focus is on the face already, and the Tab goes on from there once this returns.
+		SetValue(TabCommit, true);
+		if (!bIsShow)
+		{
+			// A handler of the choice closed the list itself.
+			return;
+		}
+		if (!ListRoot.IsValid())
+		{
+			// Or took it away: the close is all there is left to announce, as for a list destroyed while open.
+			bIsShow = false;
+			OnListVisibilityChangedCPP.Broadcast(false);
+			return;
+		}
+	}
+	// Closed from outside -- a press elsewhere, Back, Tab, a menu opened in its place. An opener gone (hidden, put
 	// to sleep, disabled) takes its list down at once, as a hidden SMenuAnchor hides its menu.
 	CloseList(InReason != EDreamPopupDismissReason::OpenerLost);
 }

@@ -72,6 +72,11 @@ void UDreamUIFontData_Bitmap::ClearCharDataCache()
 	CharDataMap.Empty();
 }
 
+int32 UDreamUIFontData_Bitmap::GetCharDataCacheCount() const
+{
+	return CharDataMap.Num();
+}
+
 UTexture2DArray* UDreamUIFontData_Bitmap::CreateFontTexture(int InTextureSize, int InSliceCount)
 {
 	static int TextureNameSuffix = 0;
@@ -150,6 +155,15 @@ void UDreamUIFontData_Bitmap::PostEditChangeProperty(FPropertyChangedEvent& Prop
 				}
 			}
 		}
+	}
+	else
+	{
+		// An undo or a redo, or an edit the editor does not name: the fallbacks, the style faces, the file may all be other
+		// than they were, and the glyph cache, the worker, the face metrics and the code points the faces were found to hold
+		// were all made from the old ones. The font opens again, as the distance-field font does for every edit, and its
+		// texts lay out again against it, their widgets too (a fallback's lines join the line box).
+		ReloadFont();
+		RecreateTexts();
 	}
 }
 #endif

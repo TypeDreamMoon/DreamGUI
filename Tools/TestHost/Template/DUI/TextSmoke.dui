@@ -1,0 +1,117 @@
+// The packaged text smoke test's screen (Tools/TestHost/README.md, "The packaged text smoke test").
+//
+// Tools/TestHost/make_text_smoke_assets.py builds /Game/DreamGUISmoke/WBP_TextSmoke from this file, with the fonts it
+// names; the probe in the host's game module (DreamGUIPackagedSmoke.cpp) puts it on the viewport of a packaged game and of
+// the same build run on uncooked content, and Tools/Tests/compare_text_smoke.py holds the two runs to each other. What
+// each text is for:
+//   Small12        12 px Latin, which draws from hinted coverage glyphs once it has settled
+//   Mixed          a Latin letter, a Han ideograph, a kana and an emoji in one line: the font's faces, one each
+//   Chinese        Han ideographs in zh-CN, from the fallback entry meant for zh-Hans
+//   Japanese       the same ideographs in ja, from the entry meant for ja (scaled 1.2): another face than Chinese's
+//   Emoji          colour emoji from the Noto Color Emoji fallback, which the picture has to show in colour
+//   Justified      a justified paragraph: every line but the last reaches both edges of its box
+//   JapaneseWrap   a Japanese paragraph wrapped narrow: its line breaks follow the game's culture and the ICU data
+//   SafeFrame      a safe zone over the whole screen, whose child the platform's safe zone insets
+class /Game/DreamGUISmoke/WBP_TextSmoke
+
+style Line {
+    AnchorData.AnchorMin = (0, 1)
+    AnchorData.AnchorMax = (0, 1)
+    AnchorData.Pivot = (0, 1)
+    Font = /Game/DreamGUISmoke/Font_Text
+    Color = #E6E9F0
+    HAlign = Left
+    VAlign = Top
+    OverflowType = HorizontalOverflow
+}
+
+style Paragraph {
+    AnchorData.AnchorMin = (0, 1)
+    AnchorData.AnchorMax = (0, 1)
+    AnchorData.Pivot = (0, 1)
+    Font = /Game/DreamGUISmoke/Font_Text
+    Color = #E6E9F0
+    HAlign = Left
+    VAlign = Top
+    OverflowType = VerticalOverflow
+    WrappingPolicy = DefaultWrapping
+}
+
+Widget Root {
+    AnchorData.AnchorMin = (0, 0)
+    AnchorData.AnchorMax = (1, 1)
+    AnchorData.SizeDelta = (0, 0)
+
+    Image Page {
+        Brush.TintColor = #14161CFF
+        AnchorData.AnchorMin = (0, 0)
+        AnchorData.AnchorMax = (1, 1)
+        AnchorData.SizeDelta = (0, 0)
+    }
+
+    Widget SafeFrame {
+        AnchorData.AnchorMin = (0, 0)
+        AnchorData.AnchorMax = (1, 1)
+        AnchorData.SizeDelta = (0, 0)
+
+        + SafeZone {}
+
+        Image SafeInner {
+            Brush.TintColor = #FFFFFF14
+        }
+    }
+
+    Text Small12 : Line {
+        AnchorData.AnchoredPosition = (80, -60)
+        AnchorData.SizeDelta = (560, 18)
+        FontSize = 12
+        Text = "Small text at twelve pixels is drawn from hinted coverage glyphs."
+    }
+
+    Text Mixed : Line {
+        AnchorData.AnchoredPosition = (80, -96)
+        AnchorData.SizeDelta = (560, 44)
+        FontSize = 32
+        Language = "ja"
+        Text = "A 漢 あ 😀"
+    }
+
+    Text Chinese : Line {
+        AnchorData.AnchoredPosition = (80, -150)
+        AnchorData.SizeDelta = (560, 44)
+        FontSize = 32
+        Language = "zh-CN"
+        Text = "漢字 简体中文"
+    }
+
+    Text Japanese : Line {
+        AnchorData.AnchoredPosition = (80, -204)
+        AnchorData.SizeDelta = (560, 44)
+        FontSize = 32
+        Language = "ja"
+        Text = "漢字 ひらがな"
+    }
+
+    Text Emoji : Line {
+        AnchorData.AnchoredPosition = (80, -260)
+        AnchorData.SizeDelta = (560, 64)
+        FontSize = 48
+        Text = "😀 👍 🎉 🌈"
+    }
+
+    Text Justified : Paragraph {
+        AnchorData.AnchoredPosition = (680, -60)
+        AnchorData.SizeDelta = (420, 120)
+        FontSize = 16
+        HAlign = Justify
+        Text = "Justified text spreads the room a line lacks over the spaces between its words, so that every line but the last reaches both edges of its box."
+    }
+
+    Text JapaneseWrap : Paragraph {
+        AnchorData.AnchoredPosition = (680, -200)
+        AnchorData.SizeDelta = (230, 200)
+        FontSize = 18
+        Language = "ja"
+        Text = "日本語の文章を狭い幅で折り返すと、句読点や小さな仮名は行頭に来ないように改行されます。"
+    }
+}

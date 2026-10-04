@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Framework/Text/TextLayout.h"
+#include "Core/Text/DreamTextPaint.h"
 #include "DreamUITextData.generated.h"
 
 class FDreamUIGeometry;
@@ -203,6 +204,34 @@ struct DREAMGUI_API FDreamTextStyle
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Fill", meta = (ClampMin = "0.001", ClampMax = "1"))
 	float FillFadeWidth = 0.15f;
 
+	/**
+	 * Fill the face with a gradient instead of the text's colour, as CSS's `background-clip: text` with `color: transparent`
+	 * does: the face is the gradient times the content tint, a custom style's Multiply and TextAnimation's colour, and the
+	 * text's own Color is not used for it. A <color> run inside stays solid, and so does a hovered link. Emoji keep their
+	 * colours. Works on every kind of glyph -- distance field, small-text coverage, bitmap -- and on underlines and
+	 * strikethroughs; drawn by the built-in shader and by materials built on MF_DreamUI_Shade, approximated in the vertex
+	 * colours for any other material.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Paint")
+	FDreamTextPaint FacePaint;
+	/** Fill the outline with a gradient, times OutlineColor (white shows the gradient as it is). Needs an outline: OutlineColor's alpha and OutlineWidth. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Paint")
+	FDreamTextPaint OutlinePaint;
+	/** A gradient mixed onto the face, solid or painted, as OverlayBlend says: a highlight band, which UDreamText::SetOverlayPaintPhase moves across the text. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Paint")
+	FDreamTextPaint OverlayPaint;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Paint")
+	EDreamTextOverlayBlend OverlayBlend = EDreamTextOverlayBlend::Normal;
+	/** What the text's paints are measured across, across and down; the text as a block on both, CSS's background box, by default. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Paint")
+	EDreamTextPaintBox PaintBoxHorizontal = EDreamTextPaintBox::TextBlock;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Paint")
+	EDreamTextPaintBox PaintBoxVertical = EDreamTextPaintBox::TextBlock;
+
+	/** Whether any of FacePaint, OutlinePaint and OverlayPaint paints (FDreamTextPaint::IsPainting). */
+	bool HasPaints() const;
+
+	/** Compares the paints and their boxes too. */
 	bool operator==(const FDreamTextStyle& Other) const;
 	bool operator!=(const FDreamTextStyle& Other) const { return !(*this == Other); }
 
@@ -217,7 +246,11 @@ struct DREAMGUI_API FDreamTextStyle
 	static constexpr int32 PackedPixelCount = 9;
 	/** Pixel index of the first style pixel in the record (after the four every widget has). */
 	static constexpr int32 PackedPixelStart = 4;
-	/** Packs the style the way DreamUIText.ush's DreamUIText_ReadStyle reads it: PackedPixelCount * 4 bytes. */
+	/**
+	 * Packs the style the way DreamUIText.ush's DreamUIText_ReadStyle reads it: PackedPixelCount * 4 bytes. The paints are
+	 * not in it (they live in the world's paint rows). No pixel reads back as a denormal: a pair whose first half would be
+	 * zero has it nudged to the smallest normal half, and a colour with alpha 128 is packed with alpha 129.
+	 */
 	void Pack(TArray<uint8>& OutBytes) const;
 };
 
@@ -346,6 +379,12 @@ enum class EDreamUIText_RichTextTagFilterFlags : uint8
 	Hyperlink,
 	/** `<lang=ja>...</lang>`: what is inside is in that language (its fallback faces and its shaping), nested like <size>. Appended. */
 	Language,
+	/**
+	 * `<gradient=Name>...</gradient>`: what is inside is painted with the gradient Name resolves to -- the custom style
+	 * entry of that name, a project preset (UDreamGUISettings::GradientPresets), or Name read as CSS written without
+	 * spaces -- measured across the run. Nested like <color>, and against it: the innermost of the two wins. Appended.
+	 */
+	Gradient,
 };
 ENUM_CLASS_FLAGS(EDreamUIText_RichTextTagFilterFlags);
 

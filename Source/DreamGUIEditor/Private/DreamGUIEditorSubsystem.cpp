@@ -341,6 +341,12 @@ void UDreamGUIEditorSubsystem::RebuildReleasedTrees()
 		FTSTicker::GetCoreTicker().RemoveTicker(RebuildTickerHandle);
 		RebuildTickerHandle.Reset();
 	}
+	// Nothing built here goes into a transaction. This runs from a ticker a frame after the compile, and a transaction can
+	// be open across frames then -- a slider, a gizmo or a Sequencer key being dragged, a nudge held down -- so every Modify
+	// the hosts, the screens, the sequence toolkit and the designer's preview make while rebuilding would be recorded into
+	// the user's edit, and its undo would put back what they replaced: trees detached from their canvas, preview widgets
+	// left for the next collection.
+	TGuardValue<ITransaction*> NoTransaction(GUndo, nullptr);
 	const TArray<TWeakObjectPtr<UObject>> Hosts = MoveTemp(ReleasedHosts);
 	const TArray<TWeakObjectPtr<UDreamScreenUISubsystem>> Screens = MoveTemp(ReleasedScreens);
 	const TArray<IDreamRecompilePreview*> ReleasedNow = MoveTemp(ReleasedPreviews);

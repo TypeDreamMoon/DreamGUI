@@ -222,9 +222,15 @@ UUINavigationInputSelectionHandler* UDreamWidgetPresenterComponentBase::GetNavig
 		}
 		if (auto Widget = CreateDreamWidget(this->GetWorld(), SelectionClass, this->LoadedWidget.Get()))
 		{
-			NavigationSelection = Widget->GetComponent<UUINavigationInputSelectionHandler>();
+			// The class's handler, else one added: the plugin's own ring class is the picture alone.
+			NavigationSelection = UUINavigationInputSelectionHandler::MakeRing(Widget);
 		}
 	}
+	return NavigationSelection.Get();
+}
+
+UUINavigationInputSelectionHandler* UDreamWidgetPresenterComponentBase::FindNavigationSelection() const
+{
 	return NavigationSelection.Get();
 }
 

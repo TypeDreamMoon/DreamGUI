@@ -1,0 +1,232 @@
+// Small text with effects, from 10 to 16 px: an outline one device pixel wide and one two pixels wide (OutlineWidth is in
+// em, so each size states its own), a drop shadow (underlay) and a glow. Effects no longer rule coverage out: the face is
+// drawn from coverage glyphs -- unhinted under a thin outline, so the outline is even all round -- and the effects from
+// the distance field, moved by the face's own snap to the pixel grid so that the two stay together.
+// @stage 760x320
+
+style Title {
+    AnchorData.AnchorMin = (0, 1)
+    AnchorData.AnchorMax = (1, 1)
+    AnchorData.Pivot = (0.5, 1)
+    AnchorData.AnchoredPosition = (0, -8)
+    AnchorData.SizeDelta = (-24, 20)
+    FontSize = 15
+    Color = #1E2230
+    HAlign = Left
+    VAlign = Top
+    OverflowType = HorizontalOverflow
+}
+
+style Head {
+    AnchorData.AnchorMin = (0, 1)
+    AnchorData.AnchorMax = (0, 1)
+    AnchorData.Pivot = (0, 1)
+    FontSize = 12
+    Color = #5A6172
+    HAlign = Left
+    VAlign = Top
+    OverflowType = HorizontalOverflow
+}
+
+style Size {
+    AnchorData.AnchorMin = (0, 1)
+    AnchorData.AnchorMax = (0, 1)
+    AnchorData.Pivot = (0, 1)
+    FontSize = 11
+    Color = #5A6172
+    HAlign = Right
+    VAlign = Middle
+    OverflowType = HorizontalOverflow
+}
+
+style Sample {
+    AnchorData.AnchorMin = (0, 1)
+    AnchorData.AnchorMax = (0, 1)
+    AnchorData.Pivot = (0, 1)
+    Color = #1E2230
+    HAlign = Left
+    VAlign = Middle
+    OverflowType = HorizontalOverflow
+    Text = "Hamburgefons 0123"
+}
+
+style Outline1 : Sample {
+    TextStyle.OutlineColor = #E8B64AFF
+}
+
+style Outline2 : Sample {
+    TextStyle.OutlineColor = #E8B64AFF
+}
+
+style Shadow : Sample {
+    TextStyle.UnderlayColor = #00000099
+    TextStyle.UnderlayOffset = (0.08, 0.08)
+}
+
+style Glow : Sample {
+    Color = #F5F3EE
+    TextStyle.GlowColor = #FFCC00C0
+    TextStyle.GlowWidth = 0.3
+    TextStyle.GlowPower = 1
+}
+
+Widget Root {
+    Image Page {
+        Brush.TintColor = #F5F3EE
+        AnchorData.AnchorMin = (0, 0)
+        AnchorData.AnchorMax = (1, 1)
+        AnchorData.SizeDelta = (0, 0)
+    }
+
+    Image GlowPlate {
+        Brush.TintColor = #1E2230
+        AnchorData.AnchorMin = (0, 1)
+        AnchorData.AnchorMax = (0, 1)
+        AnchorData.Pivot = (0, 1)
+        AnchorData.AnchoredPosition = (580, -60)
+        AnchorData.SizeDelta = (172, 200)
+    }
+
+    Text Heading : Title {
+        Text = "Small text with effects: faces from coverage glyphs, effects from the field"
+    }
+
+    Text HeadOutline1 : Head {
+        AnchorData.AnchoredPosition = (64, -40)
+        AnchorData.SizeDelta = (160, 16)
+        Text = "1 px outline"
+    }
+    Text HeadOutline2 : Head {
+        AnchorData.AnchoredPosition = (236, -40)
+        AnchorData.SizeDelta = (160, 16)
+        Text = "2 px outline"
+    }
+    Text HeadShadow : Head {
+        AnchorData.AnchoredPosition = (408, -40)
+        AnchorData.SizeDelta = (160, 16)
+        Text = "drop shadow"
+    }
+    Text HeadGlow : Head {
+        AnchorData.AnchoredPosition = (584, -40)
+        AnchorData.SizeDelta = (160, 16)
+        Text = "glow"
+    }
+
+    Text Label10 : Size {
+        AnchorData.AnchoredPosition = (8, -66)
+        AnchorData.SizeDelta = (48, 40)
+        Text = "10 px"
+    }
+    Text Outline1Size10 : Outline1 {
+        AnchorData.AnchoredPosition = (64, -66)
+        AnchorData.SizeDelta = (160, 40)
+        FontSize = 10
+        TextStyle.OutlineWidth = 0.1
+    }
+    Text Outline2Size10 : Outline2 {
+        AnchorData.AnchoredPosition = (236, -66)
+        AnchorData.SizeDelta = (160, 40)
+        FontSize = 10
+        TextStyle.OutlineWidth = 0.2
+    }
+    Text ShadowSize10 : Shadow {
+        AnchorData.AnchoredPosition = (408, -66)
+        AnchorData.SizeDelta = (160, 40)
+        FontSize = 10
+    }
+    Text GlowSize10 : Glow {
+        AnchorData.AnchoredPosition = (588, -66)
+        AnchorData.SizeDelta = (160, 40)
+        FontSize = 10
+    }
+
+    Text Label12 : Size {
+        AnchorData.AnchoredPosition = (8, -112)
+        AnchorData.SizeDelta = (48, 40)
+        Text = "12 px"
+    }
+    Text Outline1Size12 : Outline1 {
+        AnchorData.AnchoredPosition = (64, -112)
+        AnchorData.SizeDelta = (160, 40)
+        FontSize = 12
+        TextStyle.OutlineWidth = 0.0833
+    }
+    Text Outline2Size12 : Outline2 {
+        AnchorData.AnchoredPosition = (236, -112)
+        AnchorData.SizeDelta = (160, 40)
+        FontSize = 12
+        TextStyle.OutlineWidth = 0.1667
+    }
+    Text ShadowSize12 : Shadow {
+        AnchorData.AnchoredPosition = (408, -112)
+        AnchorData.SizeDelta = (160, 40)
+        FontSize = 12
+    }
+    Text GlowSize12 : Glow {
+        AnchorData.AnchoredPosition = (588, -112)
+        AnchorData.SizeDelta = (160, 40)
+        FontSize = 12
+    }
+
+    Text Label14 : Size {
+        AnchorData.AnchoredPosition = (8, -158)
+        AnchorData.SizeDelta = (48, 40)
+        Text = "14 px"
+    }
+    Text Outline1Size14 : Outline1 {
+        AnchorData.AnchoredPosition = (64, -158)
+        AnchorData.SizeDelta = (160, 40)
+        FontSize = 14
+        TextStyle.OutlineWidth = 0.0714
+    }
+    Text Outline2Size14 : Outline2 {
+        AnchorData.AnchoredPosition = (236, -158)
+        AnchorData.SizeDelta = (160, 40)
+        FontSize = 14
+        TextStyle.OutlineWidth = 0.1429
+    }
+    Text ShadowSize14 : Shadow {
+        AnchorData.AnchoredPosition = (408, -158)
+        AnchorData.SizeDelta = (160, 40)
+        FontSize = 14
+    }
+    Text GlowSize14 : Glow {
+        AnchorData.AnchoredPosition = (588, -158)
+        AnchorData.SizeDelta = (160, 40)
+        FontSize = 14
+    }
+
+    Text Label16 : Size {
+        AnchorData.AnchoredPosition = (8, -204)
+        AnchorData.SizeDelta = (48, 40)
+        Text = "16 px"
+    }
+    Text Outline1Size16 : Outline1 {
+        AnchorData.AnchoredPosition = (64, -204)
+        AnchorData.SizeDelta = (160, 40)
+        FontSize = 16
+        TextStyle.OutlineWidth = 0.0625
+    }
+    Text Outline2Size16 : Outline2 {
+        AnchorData.AnchoredPosition = (236, -204)
+        AnchorData.SizeDelta = (160, 40)
+        FontSize = 16
+        TextStyle.OutlineWidth = 0.125
+    }
+    Text ShadowSize16 : Shadow {
+        AnchorData.AnchoredPosition = (408, -204)
+        AnchorData.SizeDelta = (160, 40)
+        FontSize = 16
+    }
+    Text GlowSize16 : Glow {
+        AnchorData.AnchoredPosition = (588, -204)
+        AnchorData.SizeDelta = (160, 40)
+        FontSize = 16
+    }
+
+    Text Expected : Head {
+        AnchorData.AnchoredPosition = (8, -280)
+        AnchorData.SizeDelta = (744, 16)
+        Text = "Expected: crisp faces on whole pixels, outlines even all round, shadows and glows where the field puts them."
+    }
+}

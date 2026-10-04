@@ -34,6 +34,29 @@ rather than Slate's, and it buys three things UMG cannot do as directly:
 
 It costs you Slate's ecosystem: none of UMG's widgets, styles or bindings apply.
 
+## New in 2.1
+
+- **Gradient text.** A text's face, its outline and an overlay over the face can be painted with a gradient --
+  linear, radial, conic, diamond or four-corner, written as CSS writes gradients -- on the whole text, on a rich-text
+  run (`<gradient=Name>`), or from a shared preset (a gradient asset, or a CSS string in the project settings), and
+  moved, turned or swept by a shimmer without laying the text out again (`FDreamTextPaint`, `UDreamTextPaintLibrary`).
+- **Tab and the gamepad.** Tab and Shift+Tab walk a screen in hierarchy order (`TabIndex`, `bIsTabStop` and
+  `TabNavigation` on every widget); modals, dimmed dialogs and popups that cycle keep them inside, a dropdown's list or a
+  menu closes and lets Tab go on, and text fields commit and move on. Keys and the pad act on the focus, never on what
+  the mouse hovers. A navigation scope says whether its screen takes menu or game input; the focus look shows only when
+  keys or a pad moved the focus; the accept and back buttons are the platform's, read at run time, and the key tables are
+  project settings; the shoulder buttons switch tabs.
+- **Text.** Small text draws from hinted coverage glyphs on the device pixel grid, crisp as Slate's -- with an outline, a
+  glow or an underlay too, its effects from the field, and inside a render layer once the layer holds still; colour
+  emoji, and fallback faces by range, culture and presentation; line breaking follows the game's culture; long texts lay
+  out again only where an edit touched them.
+- **Shipping it.** `DreamGUI.Memory` prints what the fonts, atlases and canvases hold;
+  [Docs/FontsAndPackaging.md](Docs/FontsAndPackaging.md) says how to ship fonts, colour emoji and ICU data; the test
+  host has a packaged text smoke test, which the [release gate](#platforms) runs.
+
+Everything that changed, version by version, is in [CHANGELOG.md](CHANGELOG.md); what to check when moving a project from
+2.0 is in [Docs/Migration.md](Docs/Migration.md#from-20-to-21).
+
 ## Modules
 
 The runtime is split into modules by layer. A module depends only on modules in the layers below its
@@ -198,7 +221,7 @@ delete that copy.** Earlier versions shipped it as a template, `Config/DefaultEn
 belief that a plugin's config is read too late for redirects; it is not. Two redirects for one old
 name with different new names are an error, and the copy is older than the file that ships.
 
-**Removed in this version.** These have no redirect, because there is nothing left to point at:
+**Removed in 2.0.** These have no redirect, because there is nothing left to point at:
 
 - the root Blueprints `WorldSpaceRoot_DreamRenderer`, `WorldSpaceRoot_UERenderer`, `ScreenSpaceRoot`
   and `DreamWorldSpaceRaycasterSource_Mouse`;
@@ -338,7 +361,7 @@ through `UDreamNamedSlotHost`.
 [`Content/Samples/HelloDreamGUI.dui`](./Content/Samples/HelloDreamGUI.dui) is the smallest `.dui`
 that is still a real screen — an anchored root, an overlay, a card, a vertical column of text. The
 file's own header says what to do with it: make a Dream Widget Blueprint, point it at the file with
-*Pick Text Source* in the designer toolbar, compile, and add it to the viewport with
+*Set Source File...* in the designer toolbar, compile, and add it to the viewport with
 `UDreamUIBPLibrary::AddWidgetOfClassToViewport`. That is the whole path from text to a UI on screen,
 and nothing else needs configuring — the screen root, the raycaster and the event system are created
 on demand.
@@ -499,40 +522,50 @@ read the CSV profiles and traces they leave (`Tools/Bench/README.md`).
 
 ## Platforms
 
-What is *claimed* and what has been *run* are different lists, so both are here.
+What is *claimed* and what has been *run* are different lists, so both are here. Only Win64 has been built or run.
 
-| | Builds | Verified |
+| | Compiled | Run |
 | --- | --- | --- |
-| **Win64** | yes | **yes** — the editor and the whole automation suite |
-| Mac, Linux | yes | no — no machine here to run them on |
-| iOS, Android | yes | no — never run on a device |
-| Dedicated server | see below | no — this project has no server target to build |
+| **Win64** | the editor; the game target in Development and Shipping | **the editor with the whole automation suite**; a packaged Development game, once the release gate has run the packaged text smoke test |
+| Mac, Linux | never | never -- there is no machine or toolchain for them here |
+| iOS, Android | never | never -- no SDK here, and never on a device |
+| Consoles | no | not in any module's `PlatformAllowList` |
+| Dedicated server | never -- no server target has been built | no |
 
-The per-module `PlatformAllowList` and the descriptor's `SupportedTargetPlatforms` name the five
-platforms the code is written for, and they are kept in step with each other by a test. They are a
-statement about what compiles and what gets cooked, not a claim that anyone has shipped on them.
+**The release gate** is what a version goes through before it is tagged: BuildPlugin, which compiles the plugin for the
+editor and for the game target in Development and Shipping, and the test host's packaged text smoke test, which cooks
+and packages a Development game, runs it, and holds what it draws to the same build run on uncooked content
+(`Tools/TestHost/README.md`). Until the gate has run for a version, no packaged game of that version has been run.
 
-**Mobile** is better supported than "untested" suggests, and worse than "supported" would: touch is
-routed end to end (`BindTouch` → the standalone input module), the virtual keyboard is implemented
-(`FPlatformApplicationMisc::RequiresVirtualKeyboard` → `ShowVirtualKeyboard`), and the one live
-platform branch in the renderer flips culling for Android GLES. MSAA is *not* available on GLES, and
-the renderer now falls back rather than pretending — see `AntiAliasingMethod`.
+The per-module `PlatformAllowList` and the descriptor's `SupportedTargetPlatforms` name the five platforms the code is
+written for, and a test keeps them in step with each other. They say what the build tools will try to compile and what
+the cooker will cook, not that anyone has compiled, run or shipped on those platforms: the shaders, the engine's
+third-party libraries the text uses and the C++ (which clang, unlike MSVC, builds with warnings as errors) have only
+ever been built for Win64.
 
-**Dedicated server.** There is no server target in this project, so the honest statement is that the
-server configuration has never been compiled. What has been done is the part that can be checked by
-reading: `Config/DefaultEngine.ini`-style guesses are not involved, the `#if !UE_SERVER` blocks are
-balanced, and — the thing that actually breaks a server build — *no member or function referenced
-outside a server guard is declared inside one*. `UDreamUMGWidget` is the only class with `UE_SERVER`
-blocks, and every field they touch (`SlateWindow`, `SlateWidget`, `WidgetRenderer`) is declared
-unconditionally. `WITH_FREETYPE=0` / `WITH_HARFBUZZ=0` are handled the same way: every function the
-text path exposes is *defined* unconditionally with the body guarded, so nothing goes undefined at
-link time. Six interaction subsystems already decline to exist on a server
-(`ShouldCreateSubsystem` → `!IsRunningDedicatedServer()`).
+**Mobile** has code paths that have never run: touch is routed end to end (`BindTouch` → the standalone input module),
+the virtual keyboard is implemented (`FPlatformApplicationMisc::RequiresVirtualKeyboard` → `ShowVirtualKeyboard`), and
+the one live platform branch in the renderer flips culling for Android GLES. MSAA is *not* available on GLES, and the
+renderer falls back rather than pretending -- see `AntiAliasingMethod`.
+
+**Dedicated server.** There is no server target in this project, so the server configuration has never been compiled.
+What has been done is the part that can be checked by reading: the `#if !UE_SERVER` blocks are balanced, and -- the thing
+that actually breaks a server build -- *no member or function referenced outside a server guard is declared inside one*.
+`UDreamUMGWidget` is the only class with `UE_SERVER` blocks, and every field they touch (`SlateWindow`, `SlateWidget`,
+`WidgetRenderer`) is declared unconditionally. `WITH_FREETYPE=0` / `WITH_HARFBUZZ=0` are handled the same way: every
+function the text path exposes is *defined* unconditionally with the body guarded, so nothing goes undefined at link time.
+At run time a dedicated server draws nothing, and since 2.1 the UI manager does not start in its worlds
+(`UDreamUIManagerWorldSubsystem::ShouldRunForNetMode`), a play-in-editor server included: no canvas is drawn, and no
+renderer or paint rows are made. Six interaction subsystems already declined to exist in a server process
+(`ShouldCreateSubsystem` → `!IsRunningDedicatedServer()`); in a play-in-editor server's worlds they find no manager and
+stand down.
 
 ## Status
 
-1480 automation tests are declared — run them with `Automation RunTests DreamGUI`, or a preset of
-`Tools/Tests/Invoke-DreamGUITests.ps1`. There were none before this fork.
+The automation suite is part of the plugin -- upstream had none. Run it with `Automation RunTests DreamGUI`, or by
+preset with `Tools/Tests/Invoke-DreamGUITests.ps1`, which says how many tests ran; `Tools/Tests/README.md` describes the
+presets. A packaged game is checked by the test host's packaged text smoke test (`Tools/TestHost/README.md`), which the
+release gate runs (see [Platforms](#platforms)).
 
 Known gaps:
 

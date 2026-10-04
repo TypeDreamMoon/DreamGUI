@@ -6,10 +6,15 @@
 #include "Core/Components/DreamRectBlock.h"
 #include "Core/DreamUIFontData_BaseObject.h"
 #include "Core/DreamUISpriteData.h"
+#include "Core/Text/DreamTextPaint.h"
 #include "Engine/StaticMesh.h"
 #include "Engine/Texture2D.h"
 #include "Materials/MaterialInterface.h"
 #include "GameFramework/Actor.h"
+#include "Misc/ScopeLock.h"
+#if WITH_EDITOR
+#include "UObject/UnrealType.h"
+#endif
 
 #define LOCTEXT_NAMESPACE "DreamGUISettings"
 
@@ -83,6 +88,119 @@ UObject* UDreamGUISettings::LoadSetting(const FSoftObjectPath& Path, const TCHAR
 			ANSI_TO_TCHAR(__FUNCTION__), __LINE__, PropertyName, *Path.ToString());
 	}
 	return Loaded;
+}
+
+/*
+ * GRADIENT PRESETS (GradientPresets, read by FDreamTextPaint::ResolveTagPaint). A tag's name is resolved when its text
+ * paints a changed display list, which a long rich text or a list of them does often enough that reading the same CSS
+ * every time would show. Each string is read once and kept, its answer -- a gradient, or none -- with it. Kept by the string
+ * rather than by the preset's name, and the map read as it is at every lookup, an added or edited preset is found at its
+ * next lookup whatever changed it; in the editor the settings' change event also drops the old parses and is passed on
+ * (DreamGradientPresets::OnPresetsChanged) for the texts that resolved a preset already. The cache is bounded, because tag
+ * names read as CSS are whatever a rich text says, typed in by a player included.
+ */
+namespace DreamGUISettingsGradientLocal
+{
+	struct FCachedGradientParse
+	{
+		FDreamGradient Gradient;
+		bool bRead = false;
+	};
+
+	/** Far more than a project's presets and the CSS its texts name; when it is reached the cache starts again. */
+	constexpr int32 MaxCachedGradientParses = 256;
+
+	FCriticalSection& GetGradientParseLock()
+	{
+		static FCriticalSection Lock;
+		return Lock;
+	}
+
+	/** By the CSS string, compared as FString compares, ignoring case: CSS's keywords and hex digits do too. */
+	TMap<FString, FCachedGradientParse>& GetGradientParseCache()
+	{
+		static TMap<FString, FCachedGradientParse> Cache;
+		return Cache;
+	}
+
+#if WITH_EDITOR
+	/**
+	 * Follows the settings' own change event from the first lookup on: an edit of the presets drops every parse kept (the
+	 * strings an edit replaced would otherwise stay until the cache filled) and tells whoever resolved a preset. Bound on
+	 * the game thread only, which is where the event is raised and where texts resolve their names.
+	 */
+	void FollowGradientPresetEdits()
+	{
+		static bool bFollowing = false;
+		if (bFollowing || !IsInGameThread())
+		{
+			return;
+		}
+		UDreamGUISettings* Settings = GetMutableDefault<UDreamGUISettings>();
+		if (Settings == nullptr)
+		{
+			return;
+		}
+		bFollowing = true;
+		Settings->OnSettingChanged().AddLambda([](UObject*, FPropertyChangedEvent& InChange)
+		{
+			const FName Changed = InChange.GetMemberPropertyName();
+			if (!Changed.IsNone() && Changed != GET_MEMBER_NAME_CHECKED(UDreamGUISettings, GradientPresets))
+			{
+				return;
+			}
+			{
+				FScopeLock Lock(&GetGradientParseLock());
+				GetGradientParseCache().Reset();
+			}
+			DreamGradientPresets::OnPresetsChanged().Broadcast();
+		});
+	}
+#endif
+}
+
+FSimpleMulticastDelegate& DreamGradientPresets::OnPresetsChanged()
+{
+	static FSimpleMulticastDelegate PresetsChanged;
+	return PresetsChanged;
+}
+
+bool DreamGradientPresets::ParseCssCached(const FString& InCss, FDreamGradient& OutGradient)
+{
+	using namespace DreamGUISettingsGradientLocal;
+	FScopeLock Lock(&GetGradientParseLock());
+	TMap<FString, FCachedGradientParse>& Cache = GetGradientParseCache();
+	const FCachedGradientParse* Cached = Cache.Find(InCss);
+	if (Cached == nullptr)
+	{
+		if (Cache.Num() >= MaxCachedGradientParses)
+		{
+			Cache.Reset();
+		}
+		FCachedGradientParse Entry;
+		Entry.bRead = FDreamGradient::ParseCss(InCss, Entry.Gradient);
+		Cached = &Cache.Add(InCss, MoveTemp(Entry));
+	}
+	if (!Cached->bRead)
+	{
+		return false;
+	}
+	OutGradient = Cached->Gradient;
+	return true;
+}
+
+bool DreamGradientPresets::FindPreset(FName InName, FDreamGradient& OutGradient)
+{
+#if WITH_EDITOR
+	DreamGUISettingsGradientLocal::FollowGradientPresetEdits();
+#endif
+	if (InName.IsNone())
+	{
+		return false;
+	}
+	const UDreamGUISettings* Settings = UDreamGUISettings::Get();
+	const FString* Css = Settings != nullptr ? Settings->GradientPresets.Find(InName) : nullptr;
+	return Css != nullptr && ParseCssCached(*Css, OutGradient);
 }
 
 

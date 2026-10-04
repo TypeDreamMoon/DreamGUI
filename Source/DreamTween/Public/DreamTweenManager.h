@@ -69,7 +69,15 @@ public:
 	//~End of USubsystem interface
 	
 	void Tick(EDreamTweenTickType TickType, float DeltaTime);
-	
+	/**
+	 * The tick a world's ADreamTweenTickHelperActor and its components make: Tick, at most once per tick group per
+	 * engine frame. Every game world of this game instance spawns a helper of its own, and each one ticked the
+	 * manager with the full frame delta, so a second game world sharing the game instance (a GamePreview world, say)
+	 * ran every tween at twice the speed. Tick itself steps every time it is called -- a caller pumping frames of
+	 * its own makes several in one engine frame on purpose.
+	 */
+	void TickFromWorld(EDreamTweenTickType TickType, float DeltaTime);
+
 	UFUNCTION(BlueprintPure, Category = DreamTween, meta = (WorldContext = "WorldContextObject", DisplayName = "Get DreamTween Instance"))
 	static UDreamTweenManager* GetDreamTweenInstance(UObject* WorldContextObject);
 	static FDreamTweenManagerCreated OnDreamTweenManagerCreated;
@@ -77,7 +85,21 @@ private:
 	/** current active tweener collection*/
 	UPROPERTY(VisibleAnywhere, Category=DreamTween)TArray<TObjectPtr<UDreamTweener>> tweenerList;
 	void OnTick(EDreamTweenTickType TickType, float DeltaTime, float UnscaledDeltaTime);
+	/**
+	 * Takes a tween the caller has already dropped from the list out of play for good: marks it retired and
+	 * garbage, so handles to it read as invalid and the collector takes it -- along with the hold its outer
+	 * reference has on whatever it animated.
+	 */
+	void RetireTweener(UDreamTweener* Tweener);
 	bool bTickPaused = false;
+	/** GFrameCounter + 1 of the engine frame each tick group was last stepped by TickFromWorld, indexed by tick type; 0 for never. */
+	uint64 LastWorldTickFrames[8] = {};
+	/**
+	 * The list as a tick walks it, kept from one tick to the next so four ticks a frame do not allocate four copies.
+	 * Raw pointers, read only inside OnTick; TickDepth says whether one is already walking it.
+	 */
+	TArray<UDreamTweener*> TickSnapshot;
+	int32 TickDepth = 0;
 public:
 	UE_DEPRECATED(5.1, "Use Tweener->SetTickType(EDreamTweenTickType::Manual) then call this->ManualTick.")
 	/**
@@ -150,7 +172,9 @@ public:
 	static UDreamTweener* VirtualTo(UObject* WorldContextObject, float duration);
 	/**
 	 * Drive a float with a damped spring (see FDreamSpringParams): no duration, completes at rest,
-	 * and the returned tweener's SetTarget moves the goal at any time without losing velocity.
+	 * and the returned tweener's SetTarget moves the goal at any time without losing velocity. At rest
+	 * the spring is held, not retired, so SetTarget can wake it; Kill it once it is no longer wanted
+	 * (or SetAutoKill(true) before it starts, to have it retire at rest).
 	 */
 	static class UDreamTweenerSpring* SpringTo(UObject* WorldContextObject, const FDreamTweenFloatGetterFunction& getter, const FDreamTweenFloatSetterFunction& setter, float target, const FDreamSpringParams& params);
 	static UDreamTweener* DelayFrameCall(UObject* WorldContextObject, int delayFrame);

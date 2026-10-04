@@ -83,6 +83,23 @@ namespace DreamUIRichTextParser
 		 */
 		FName Language;
 
+		/**
+		 * The paint of the innermost tag that set one: an open `<gradient=Name>`'s Name, or a custom style's own tag name when
+		 * its entry's paintType is Set (the text resolves the name when it paints: the custom style's entry first). None
+		 * when nothing set a paint -- the text's own paints apply -- and when a custom style's paintType None took the paint
+		 * away (bPaintRemoved).
+		 */
+		FName PaintName;
+		/**
+		 * Which open tag last set the paint, as the order it was opened in (0: none), the same count as ColorOrder: whichever
+		 * of the two is higher is the innermost, and wins -- a solid colour inside a gradient run is solid, a gradient inside a
+		 * coloured run paints. Also what tells two runs of the same name apart: a paint run is the elements one tag's order
+		 * covers.
+		 */
+		int32 PaintOrder = 0;
+		/** A custom style's paintType None set the paint, at PaintOrder: no paint at all here, the text's own included. */
+		bool bPaintRemoved = false;
+
 		int CharIndex = 0;
 	};
 
@@ -176,6 +193,8 @@ namespace DreamUIRichTextParser
 		TArray<FName>			HyperlinkTags;
 		/** Open `<lang=xx>` tags, innermost last: `</lang>` closes the one most recently opened, as `</size>` does. */
 		TArray<FName>			LanguageArray;
+		/** Open `<gradient=Name>` tags' names, innermost last: `</gradient>` closes the one most recently opened, as `</color>` does. */
+		TArray<FName>			GradientArray;
 		/** How many tags have been opened so far: the order a tag is ranked by (see FRichTextParseResult::BoldOrder). */
 		int32					OpenOrder = 0;
 		/** The open order of every open tag of each kind, innermost last, parallel to the counts and stacks above. */
@@ -186,6 +205,8 @@ namespace DreamUIRichTextParser
 		TArray<int32>			SizeOrders;
 		TArray<int32>			ColorOrders;
 		TArray<int32>			SupOrSubOrders;
+		/** Parallel to GradientArray: the paint's order is ranked against ColorOrder, so the innermost of the two wins. */
+		TArray<int32>			GradientOrders;
 		FName ImageTag = NAME_None;
 		float ImageWidth = 0.0f;
 		float ImageHeight = 0.0f;
@@ -213,6 +234,7 @@ namespace DreamUIRichTextParser
 		, bEnableImage = false
 		, bEnableHyperlink = false
 		, bEnableLanguage = false
+		, bEnableGradient = false
 		;
 	public:
 		void ClearImageTag()
@@ -261,6 +283,9 @@ namespace DreamUIRichTextParser
 			result.Size = inOriginSize;
 			result.Color = inOriginColor;
 			result.Language = NAME_None;
+			result.PaintName = NAME_None;
+			result.PaintOrder = 0;
+			result.bPaintRemoved = false;
 
 			bEnableBold = inFlags & (1 << (int)EDreamUIText_RichTextTagFilterFlags::Bold);
 			bEnableItalic = inFlags & (1 << (int)EDreamUIText_RichTextTagFilterFlags::Italic);
@@ -274,6 +299,7 @@ namespace DreamUIRichTextParser
 			bEnableImage = inFlags & (1 << (int)EDreamUIText_RichTextTagFilterFlags::Image);
 			bEnableHyperlink = inFlags & (1 << (int)EDreamUIText_RichTextTagFilterFlags::Hyperlink);
 			bEnableLanguage = inFlags & (1 << (int)EDreamUIText_RichTextTagFilterFlags::Language);
+			bEnableGradient = inFlags & (1 << (int)EDreamUIText_RichTextTagFilterFlags::Gradient);
 		}
 		void Clear()
 		{
@@ -287,6 +313,7 @@ namespace DreamUIRichTextParser
 			CustomTagArray.Reset();
 			HyperlinkTags.Reset();
 			LanguageArray.Reset();
+			GradientArray.Reset();
 			OpenOrder = 0;
 			BoldOrders.Reset();
 			ItalicOrders.Reset();
@@ -295,6 +322,7 @@ namespace DreamUIRichTextParser
 			SizeOrders.Reset();
 			ColorOrders.Reset();
 			SupOrSubOrders.Reset();
+			GradientOrders.Reset();
 			ImageTag = NAME_None;
 			ImageWidth = ImageHeight = 0.0f;
 			ImageVerticalAlign = EImageVerticalAlign::Middle;
@@ -576,6 +604,34 @@ namespace DreamUIRichTextParser
 						}
 					}
 				}
+				else if (CharIndex + 10 < TextLength
+					&& Text[CharIndex + 1] == 'g'
+					&& Text[CharIndex + 2] == 'r'
+					&& Text[CharIndex + 3] == 'a'
+					&& Text[CharIndex + 4] == 'd'
+					&& Text[CharIndex + 5] == 'i'
+					&& Text[CharIndex + 6] == 'e'
+					&& Text[CharIndex + 7] == 'n'
+					&& Text[CharIndex + 8] == 't'
+					&& Text[CharIndex + 9] == '='
+					)//begin gradient=
+				{
+					if (bEnableGradient)
+					{
+						// The name is read as a custom tag's is, up to '>', '<', a space, a newline or a tab: a custom style's,
+						// a project preset's, or CSS written without spaces. What it stands for is the text's to find when it
+						// paints (FDreamTextPaint::ResolveTagPaint), so a name nothing answers to is still a tag, painting nothing.
+						int charEndIndex;
+						FName parsedName;
+						if (GetCustomTag(Text, TextLength, CharIndex + 10, charEndIndex, parsedName))
+						{
+							InOutStartIndex += charEndIndex - CharIndex + 1;
+							GradientArray.Add(parsedName);
+							GradientOrders.Add(++OpenOrder);
+							bHaveSymbol = true;
+						}
+					}
+				}
 				else if (CharIndex + 1 < TextLength && Text[CharIndex + 1] == '/')//end
 				{
 					if (CharIndex + 3 < TextLength && Text[CharIndex + 3] == '>')
@@ -719,6 +775,27 @@ namespace DreamUIRichTextParser
 							bHaveSymbol = true;
 						}
 					}
+					else if (CharIndex + 10 < TextLength
+						&& Text[CharIndex + 2] == 'g'
+						&& Text[CharIndex + 3] == 'r'
+						&& Text[CharIndex + 4] == 'a'
+						&& Text[CharIndex + 5] == 'd'
+						&& Text[CharIndex + 6] == 'i'
+						&& Text[CharIndex + 7] == 'e'
+						&& Text[CharIndex + 8] == 'n'
+						&& Text[CharIndex + 9] == 't'
+						&& Text[CharIndex + 10] == '>'
+						&& GradientArray.Num() > 0
+						)//end gradient
+					{
+						if (bEnableGradient)
+						{
+							InOutStartIndex += 11;
+							GradientArray.Pop();
+							PopOrder(GradientOrders);
+							bHaveSymbol = true;
+						}
+					}
 					else if (CustomTagArray.Num() > 0
 						)//end custom tag
 					{
@@ -798,6 +875,10 @@ namespace DreamUIRichTextParser
 				ParseResult.ImageHeight = ImageHeight;
 				ParseResult.ImageVerticalAlign = ImageVerticalAlign;
 				ParseResult.Language = LanguageArray.Num() > 0 ? LanguageArray.Last() : FName(NAME_None);
+				// The innermost open <gradient>; a custom style composed on top may take it over (ApplyToRichTextParseResult).
+				ParseResult.PaintName = GradientArray.Num() > 0 ? GradientArray.Last() : FName(NAME_None);
+				ParseResult.PaintOrder = TopOrder(GradientOrders);
+				ParseResult.bPaintRemoved = false;
 			}
 			return bHaveSymbol;
 		}
@@ -906,7 +987,9 @@ namespace DreamUIRichTextParser
 		static bool GetCustomTag(const FString& Text, int TextLength, int StartIndex, int& OutEndIndex, FName& OutTag)
 		{
 			int EndIndex = FindTokenEnd(Text, TextLength, StartIndex);
-			if (EndIndex != -1 && EndIndex > StartIndex && Text[EndIndex] == '>')//found end
+			// An FName holds at most NAME_SIZE - 1 characters and asserts on more, so a longer token -- typed into a field, or a
+			// CSS gradient written into <gradient=...> -- is no tag at all, and stays literal text.
+			if (EndIndex != -1 && EndIndex > StartIndex && Text[EndIndex] == '>' && EndIndex - StartIndex < NAME_SIZE)//found end
 			{
 				OutTag = FName(FStringView(Text.GetCharArray().GetData() + StartIndex, EndIndex - StartIndex));
 				OutEndIndex = EndIndex;
@@ -921,7 +1004,7 @@ namespace DreamUIRichTextParser
 		static bool GetLanguage(const FString& Text, int TextLength, int StartIndex, int& OutEndIndex, FName& OutLanguage)
 		{
 			const int EndIndex = FindTokenEnd(Text, TextLength, StartIndex);
-			if (EndIndex == -1 || EndIndex <= StartIndex || Text[EndIndex] != '>')
+			if (EndIndex == -1 || EndIndex <= StartIndex || Text[EndIndex] != '>' || EndIndex - StartIndex >= NAME_SIZE)
 			{
 				return false;
 			}
@@ -987,7 +1070,7 @@ namespace DreamUIRichTextParser
 			{
 				if (TokenPtr[i] == ',') { NameLen = i; break; }
 			}
-			if (NameLen <= 0)return false;
+			if (NameLen <= 0 || NameLen >= NAME_SIZE)return false;
 			float Sizes[2] = { 0.0f, 0.0f };
 			int SizeCount = 0;
 			bool bHaveAlign = false;

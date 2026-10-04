@@ -89,12 +89,15 @@ void UDreamScrollBar::WireParts()
 	{
 		ArrowStartBehaviour->SetTransitionTarget(ArrowStartNode->GetVisual());
 		ArrowStartBehaviour->GetOnClickEvent().AddUObject(this, &UDreamScrollBar::HandleArrowStartClicked);
+		// A stepper the pointer clicks, never a stop for the pad or for Tab, as the track is not.
+		ArrowStartBehaviour->SetCanNavigateHere(false);
 	}
 	ArrowEndBehaviour = EnsureComponent<UUIButton>(ArrowEndNode);
 	if (ArrowEndBehaviour != nullptr && ArrowEndNode != nullptr)
 	{
 		ArrowEndBehaviour->SetTransitionTarget(ArrowEndNode->GetVisual());
 		ArrowEndBehaviour->GetOnClickEvent().AddUObject(this, &UDreamScrollBar::HandleArrowEndClicked);
+		ArrowEndBehaviour->SetCanNavigateHere(false);
 	}
 
 	BarBehaviour = EnsureComponent<UUIScrollbar>(TrackNode);

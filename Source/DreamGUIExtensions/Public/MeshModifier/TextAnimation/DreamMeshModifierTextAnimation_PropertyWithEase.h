@@ -45,7 +45,7 @@ private:
 	UPROPERTY(EditAnywhere, Category = "Property")
 		FVector Position;
 public:
-	virtual void ApplyProperty(class UDreamText* InUIText, const FDreamMeshModifierTextAnimation_SelectResult& InSelection, FDreamUIGeometry* InGeometry) override;
+	virtual void ApplyPropertyToCharacters(const TArray<FDreamUITextCharProperty>& InCharProperties, const FDreamMeshModifierTextAnimation_SelectResult& InSelection, FDreamUIGeometry* InGeometry) override;
 
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
 		FVector GetPosition()const { return Position; }
@@ -69,7 +69,7 @@ private:
 	UPROPERTY(EditAnywhere, Category = "Property")
 		FVector Max = FVector(0, 10, 0);
 public:
-	virtual void ApplyProperty(class UDreamText* InUIText, const FDreamMeshModifierTextAnimation_SelectResult& InSelection, FDreamUIGeometry* InGeometry) override;
+	virtual void ApplyPropertyToCharacters(const TArray<FDreamUITextCharProperty>& InCharProperties, const FDreamMeshModifierTextAnimation_SelectResult& InSelection, FDreamUIGeometry* InGeometry) override;
 
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
 		int GetSeed()const { return Seed; }
@@ -94,7 +94,7 @@ private:
 	UPROPERTY(EditAnywhere, Category = "Property")
 		FRotator rotator;
 public:
-	virtual void ApplyProperty(class UDreamText* InUIText, const FDreamMeshModifierTextAnimation_SelectResult& InSelection, FDreamUIGeometry* InGeometry) override;
+	virtual void ApplyPropertyToCharacters(const TArray<FDreamUITextCharProperty>& InCharProperties, const FDreamMeshModifierTextAnimation_SelectResult& InSelection, FDreamUIGeometry* InGeometry) override;
 
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
 		FRotator GetRotator()const { return rotator; }
@@ -118,7 +118,7 @@ private:
 	UPROPERTY(EditAnywhere, Category = "Property")
 		FRotator Max = FRotator(0, 90, 0);
 public:
-	virtual void ApplyProperty(class UDreamText* InUIText, const FDreamMeshModifierTextAnimation_SelectResult& InSelection, FDreamUIGeometry* InGeometry) override;
+	virtual void ApplyPropertyToCharacters(const TArray<FDreamUITextCharProperty>& InCharProperties, const FDreamMeshModifierTextAnimation_SelectResult& InSelection, FDreamUIGeometry* InGeometry) override;
 
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
 		int GetSeed()const { return Seed; }
@@ -143,7 +143,7 @@ private:
 	UPROPERTY(EditAnywhere, Category = "Property")
 		FVector Scale = FVector::OneVector;
 public:
-	virtual void ApplyProperty(class UDreamText* InUIText, const FDreamMeshModifierTextAnimation_SelectResult& InSelection, FDreamUIGeometry* InGeometry) override;
+	virtual void ApplyPropertyToCharacters(const TArray<FDreamUITextCharProperty>& InCharProperties, const FDreamMeshModifierTextAnimation_SelectResult& InSelection, FDreamUIGeometry* InGeometry) override;
 
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
 		FVector GetScale()const { return Scale; }
@@ -167,7 +167,7 @@ private:
 	UPROPERTY(EditAnywhere, Category = "Property")
 		FVector Max = FVector(2, 2, 2);
 public:
-	virtual void ApplyProperty(class UDreamText* InUIText, const FDreamMeshModifierTextAnimation_SelectResult& InSelection, FDreamUIGeometry* InGeometry) override;
+	virtual void ApplyPropertyToCharacters(const TArray<FDreamUITextCharProperty>& InCharProperties, const FDreamMeshModifierTextAnimation_SelectResult& InSelection, FDreamUIGeometry* InGeometry) override;
 
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
 		int GetSeed()const { return Seed; }
@@ -193,7 +193,7 @@ private:
 	UPROPERTY(EditAnywhere, Category = "Property", meta = (ClampMin = "0.0", ClampMax = "1.0"))
 		float Alpha;
 public:
-	virtual void ApplyProperty(class UDreamText* InUIText, const FDreamMeshModifierTextAnimation_SelectResult& InSelection, FDreamUIGeometry* InGeometry) override;
+	virtual void ApplyPropertyToCharacters(const TArray<FDreamUITextCharProperty>& InCharProperties, const FDreamMeshModifierTextAnimation_SelectResult& InSelection, FDreamUIGeometry* InGeometry) override;
 
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
 		float GetAlpha()const { return Alpha; }
@@ -213,7 +213,7 @@ private:
 	UPROPERTY(EditAnywhere, Category = "Property")
 		bool bUseHSV = true;
 public:
-	virtual void ApplyProperty(class UDreamText* InUIText, const FDreamMeshModifierTextAnimation_SelectResult& InSelection, FDreamUIGeometry* InGeometry) override;
+	virtual void ApplyPropertyToCharacters(const TArray<FDreamUITextCharProperty>& InCharProperties, const FDreamMeshModifierTextAnimation_SelectResult& InSelection, FDreamUIGeometry* InGeometry) override;
 
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
 		FColor GetColor()const { return Color; }
@@ -244,7 +244,7 @@ private:
 	UPROPERTY(EditAnywhere, Category = "Property")
 		bool bUseHSV = true;
 public:
-	virtual void ApplyProperty(class UDreamText* InUIText, const FDreamMeshModifierTextAnimation_SelectResult& InSelection, FDreamUIGeometry* InGeometry) override;
+	virtual void ApplyPropertyToCharacters(const TArray<FDreamUITextCharProperty>& InCharProperties, const FDreamMeshModifierTextAnimation_SelectResult& InSelection, FDreamUIGeometry* InGeometry) override;
 
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
 		int GetSeed()const { return Seed; }

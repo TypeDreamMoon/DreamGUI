@@ -170,8 +170,11 @@ protected:
 	UPROPERTY(VisibleAnywhere, Category = "DreamGUI")
 	EDreamUIAtlasTextureSizeType RectPackCellSizeType = EDreamUIAtlasTextureSizeType::SIZE_256x256;
 
-	/** Texture of this font */
-	UPROPERTY(VisibleAnywhere, Category = "DreamGUI")
+	/**
+	 * Texture of this font. Kept out of undo: it is the atlas the font made, not something edited, and an undo that put an
+	 * older pointer back left the live atlas rooted with nothing pointing at it.
+	 */
+	UPROPERTY(VisibleAnywhere, NonTransactional, Category = "DreamGUI")
 		TObjectPtr<UTexture2DArray> Texture;
 
 	/**
@@ -255,6 +258,15 @@ public:
 	 */
 	virtual uint32 GetLayoutEpoch() const override;
 	virtual bool GetCoverageGlyph(int32 FaceIndex, uint32 GlyphIndex, int32 Size26Dot6, EDreamUICoverageGlyphFlags Flags, FDreamUICoverageGlyph& OutGlyph)override;
+	/** CoverageEpoch while the font supports coverage glyphs (SupportsCoverageGlyphs), else 0. */
+	virtual uint32 GetCoverageEpoch() const override;
+	virtual void MoveCoverageHold(uint32 InFromEpoch, uint32 InToEpoch) override;
+	/**
+	 * The atlas as it is now (a font that has made none reports none). Its cells add up -- field, coverage, retired and free
+	 * -- to the slices' cells; retired counts every group not given back yet. FaceBytes is this asset's own: its embedded or
+	 * loaded file and the worker's shared copy of it (a style face, like a fallback, is a font asset that reports its own).
+	 */
+	virtual void GetMemoryInfo(FDreamUIFontMemoryInfo& OutInfo) const override;
 	virtual float GetKerning(uint32 LeftCharCode, uint32 RightCharCode, float CharSize)override;
 	virtual bool GetFaceMetrics(int32 FaceIndex, float FontSize, float& OutAscent, float& OutDescent, float& OutLineHeight)override;
 	/**
@@ -323,7 +335,7 @@ protected:
 	 * FaceHasCodepoint's answers -- the resolver asks them face after face for every cluster of every layout -- asked of
 	 * FreeType once per code point and face: bit i of Known says face i was asked, bit i of Has what it answered. Faces past
 	 * 63 are asked every time. Kept for the faces as they are now: dropped when the faces behind the indices change, and
-	 * when the font a face belongs to reloads (CodepointFacesEpochs).
+	 * when the font a face belongs to reloads (CodepointFacesIdentities).
 	 */
 	struct FCodepointFaces
 	{
@@ -331,8 +343,12 @@ protected:
 		uint64 Has = 0;
 	};
 	TMap<uint32, FCodepointFaces> CodepointFaces;
-	/** The face epoch of each face's font when its answers were kept; 0 for a face none were kept for. */
-	TArray<uint32> CodepointFacesEpochs;
+	/**
+	 * Who each face was when its answers were kept (GetFaceIdentity): the font and its face epoch; invalid for a face none
+	 * were kept for. The font as well as the epoch -- two fonts opened as often have the same epoch number, so a fallback
+	 * put back in place by an undo, which resets nothing, passed a check of the number alone with the other font's answers.
+	 */
+	TArray<FDreamUIFontFaceIdentity> CodepointFacesIdentities;
 	/** Forget what the faces were found to hold: their code points, and their glyphs' colour kinds (ColorGlyphInfos). */
 	void ResetCodepointFaces();
 	/** FDreamUIFontFaceIdentity::Epoch of this font's own face: moves on every time the face is initialized or torn down. */
@@ -377,8 +393,8 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
 	void SetVerticalMetrics(EDreamUIFontVerticalMetrics InVerticalMetrics);
 protected:
-	/** Collection of UIText which use this font to render. */
-	UPROPERTY(VisibleAnywhere, Transient, Category = "DreamGUI")
+	/** Collection of UIText which use this font to render. Out of undo, as the atlas is: an undo of a font edit unregisters no text. */
+	UPROPERTY(VisibleAnywhere, Transient, NonTransactional, Category = "DreamGUI")
 		TArray<TWeakObjectPtr<UDreamText>> RenderTextArray;
 
 	friend class FDreamUIFontData_FreeTypeRenderCustomization;
@@ -547,6 +563,8 @@ protected:
 	virtual void AddCharDataToCache(const FDreamUIGlyphKey& Glyph, float CharSize, bool IsBold, FDreamUICharData& CharData) {};
 	virtual bool RenderGlyph(const FDreamUIGlyphKey& Glyph, float CharSize, bool IsBold, FGlyphBitmap& OutResult) { return false; };
 	virtual void ClearCharDataCache() {};
+	/** How many glyphs the subclass's cache holds (GetCharDataFromCache's), for the memory report. */
+	virtual int32 GetCharDataCacheCount() const { return 0; }
 
 	/**
 	 * Asynchronous rasterization. A font that can generate its glyphs on a worker (outline fields)
@@ -642,9 +660,14 @@ protected:
 	 * Coverage glyphs (small text, FDreamUICoverageGlyph): rasterized by FDreamGlyphCoverage, packed by the coverage packer
 	 * into cells borrowed from the pool, at most UDreamUISettings::GetMaxCoverageCells() of them. Needing more asks for a
 	 * coverage flush, which happens at the end of FlushPendingFontTextures -- after that frame's uploads were queued, so
-	 * that frame still draws from the old cells -- and drops every coverage glyph; the cells go back to the pool, zeroed,
-	 * when the next frame first packs anything. The field glyphs are never touched by it. Needing more while the glyphs of
-	 * the last flush are still coming back raises the threshold instead (bCoverageRefilling).
+	 * that frame still draws from the old cells -- and drops every coverage glyph. The field glyphs are never touched by it.
+	 * Needing more while the glyphs of the last flush are still coming back raises the threshold instead (bCoverageRefilling).
+	 *
+	 * The glyphs handed out between two flushes are one epoch (CoverageEpoch), and a text holds the epoch it last painted
+	 * coverage from (MoveCoverageHold). A flush retires its epoch's cells as a group: they go back to the pool, zeroed, the
+	 * first time anything is packed once the frame of the flush has passed and no text holds the epoch -- a text in a world
+	 * that draws without ticking keeps drawing from them. While live and retired cells together are more than twice the
+	 * budget, a new coverage glyph is not made (it comes back pending, and the texts are told when cells came back).
 	 */
 	struct FCoverageGlyphKey
 	{
@@ -652,7 +675,10 @@ protected:
 		uint32 GlyphIndex = 0;
 		int32 Size26Dot6 = 0;
 		uint8 Flags = 0;
-		/** EDreamUICoverageHinting: an edit reloads the font, but a glyph hinted one way is still not the other's. */
+		/**
+		 * The EDreamUICoverageHinting the raster is made with: the font's, None for an Unhinted glyph. An edit reloads the font,
+		 * but a glyph hinted one way is still not the other's.
+		 */
 		uint8 Hinting = 0;
 		FCoverageGlyphKey() {}
 		FCoverageGlyphKey(int32 InFaceIndex, uint32 InGlyphIndex, int32 InSize26Dot6, uint8 InFlags, uint8 InHinting)
@@ -674,11 +700,37 @@ protected:
 	};
 	TMap<FCoverageGlyphKey, FCoverageGlyphEntry> CoverageGlyphs;
 	TSet<FCoverageGlyphKey> PendingCoverageGlyphs;
-	/** The cells the coverage packer took since the last coverage flush, the one it packs into included. */
+	/**
+	 * The key a coverage glyph is cached and queued under, and the synthetic styles it is rasterized with: the font's raster
+	 * style (GetCoverageRasterStyle), with the hinter off for an Unhinted glyph -- the key's hinting is the one the raster
+	 * is made with, so a glyph back from the worker finds the request it answers.
+	 */
+	FCoverageGlyphKey MakeCoverageGlyphKey(int32 FaceIndex, uint32 GlyphIndex, int32 Size26Dot6, EDreamUICoverageGlyphFlags Flags, float& OutBoldEm, float& OutItalicSlope) const;
+	/** The cells the coverage packer took since the last coverage flush, the one it packs into included: the current epoch's. */
 	TArray<FAtlasCell> CoverageCells;
-	/** Cells of flushed coverage glyphs that a frame may still draw from: back to the pool once GFrameCounter moves on. */
-	TArray<FAtlasCell> RetiredCoverageCells;
-	uint64 CoverageRetireFrame = 0;
+	/** The cells one coverage flush retired: those of one epoch, and the frame of the flush. */
+	struct FRetiredCoverageCells
+	{
+		uint32 Epoch = 0;
+		uint64 Frame = 0;
+		TArray<FAtlasCell> Cells;
+	};
+	/** Retired cells not given back yet, oldest flush first. */
+	TArray<FRetiredCoverageCells> RetiredCoverageCells;
+	/** The epoch of the coverage glyphs handed out now; never 0. See GetCoverageEpoch. */
+	uint32 CoverageEpoch = 1;
+	/** How many texts hold each epoch (MoveCoverageHold). An epoch nobody holds has no entry. */
+	TMap<uint32, int32> CoverageEpochHolders;
+	/** The cell cap kept a coverage glyph from being made since cells last came back: the texts are told once they do. */
+	bool bCoverageCapRefused = false;
+	/** One warning per font the first time the cell cap keeps a coverage glyph from being made. */
+	bool bLoggedCoverageCap = false;
+	/** The next epoch, past 0 when the count wraps. */
+	void AdvanceCoverageEpoch();
+	/** Cells in RetiredCoverageCells, every group together. */
+	int32 CountRetiredCoverageCells() const;
+	/** Live and retired coverage cells together are more than twice UDreamUISettings::GetMaxCoverageCells(). */
+	bool IsCoverageOverCap() const;
 	/** The coverage glyphs outgrew their cells: flush them at the end of FlushPendingFontTextures. */
 	bool bCoverageFlushRequested = false;
 	/** OnCoverageGlyphsChanged is due at the end of FlushPendingFontTextures. */
@@ -705,10 +757,16 @@ protected:
 	/** Pack four phases of coverage (Width * Height BGRA texels) with a ring of zero texels around them, and describe the glyph. */
 	bool InsertCoverageGlyph(int32 InWidth, int32 InHeight, int32 InLeft, int32 InTop, const TArray<uint8>& InPixels, FDreamUICoverageGlyph& OutGlyph);
 	void RequestCoverageFlush();
-	/** Drop every coverage glyph and retire their cells until the frame has passed; the end of FlushPendingFontTextures does it. */
+	/**
+	 * Drop every coverage glyph, retire their cells as the current epoch's group, and move the epoch on; the end of
+	 * FlushPendingFontTextures does it.
+	 */
 	void FlushCoverageGlyphs();
-	/** Back to the pool, re-initialized and re-uploaded, the cells a coverage flush retired, once their frame has passed. */
-	void ReleaseRetiredCoverageCells();
+	/**
+	 * Back to the pool, re-initialized and re-uploaded, the cells of every retired group whose flush was in an earlier frame
+	 * and whose epoch no text holds. True when any came back.
+	 */
+	bool ReleaseRetiredCoverageCells();
 public:
 	/** Block until the worker has finished every queued glyph and put them in the atlas. Tests and teardown. */
 	void WaitForAsyncGlyphs();
@@ -724,6 +782,12 @@ public:
 	 */
 	bool InjectCoverageGlyphForTesting(int32 FaceIndex, uint32 GlyphIndex, int32 Size26Dot6, EDreamUICoverageGlyphFlags Flags,
 		int32 Width, int32 Height, int32 Left, int32 Top, const TArray<uint8>& Pixels);
+	/**
+	 * Tests: a coverage glyph's texels as the font's CPU copy of the atlas holds them, Width * Height * 4 bytes, rows top
+	 * first, phases 0..3 in B, G, R, A -- what FDreamGlyphCoverage made for it. False for an empty or pending glyph, or one
+	 * outside the atlas.
+	 */
+	bool GetCoverageGlyphTexelsForTesting(const FDreamUICoverageGlyph& Glyph, TArray<uint8>& OutPixels) const;
 protected:
 
 	/** CPU source of truth used both for deferred uploads and texture-array expansion. */

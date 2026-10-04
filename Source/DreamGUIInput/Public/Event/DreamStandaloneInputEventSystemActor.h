@@ -95,20 +95,31 @@ protected:
 	 */
 	virtual void BindMouseInput();
 
-	/** Navigation keys and touch, which both presets bind the same legacy way. */
+	/**
+	 * Navigation keys and touch, which both presets bind the same legacy way: every key of the project's key tables
+	 * (UDreamGUISettings: confirm, the directions, paging, the extents, the tab switches) by name, press and release.
+	 */
 	virtual void BindNavigationAndTouchInput();
 
 	/**
 	 * One AnyKey binding, so a named action can live on any key without the preset knowing which.
 	 *
-	 * Navigation keys are deliberately skipped here and routed from their own handlers instead. Input
+	 * Keys bound by name are deliberately skipped here and routed from their own handlers instead. Input
 	 * gives no ordering guarantee between an AnyKey binding and a specific one, so a key that both saw
 	 * would be offered to the router twice and a bound action would fire twice.
 	 */
 	virtual void BindActionRouting();
 
-	/** True for a key this preset already binds by name, and which therefore routes itself. */
+	/** True for a key with a built-in meaning of its own in the key tables as they are now (DreamUIKeyRouting::IsNavigationKey). */
 	static bool IsNavigationKey(const FKey& Key);
+
+	/**
+	 * Route Key, pressed or let go of, by what it means when it arrives -- the key tables are read then, so a remap takes
+	 * effect at the next key: a confirm, a direction (as ResolveNavigationDirection reads it, chord and all), a page or an
+	 * extent, a tab switch, or any other key. A release goes where its press went. What every key handler of this preset
+	 * ends in.
+	 */
+	void RouteKeyByMeaning(const FKey& Key, bool bPressed);
 
 	/**
 	 * Whether the UI this preset feeds is meant to go on taking input while the game is paused: the
@@ -184,12 +195,13 @@ protected:
 	static EDreamUINavigationDirection GetNavigationDirectionForKey(const FKey& Key);
 
 	/**
-	 * What Key means for THIS press, modifiers included: Tab is Next, Shift+Tab is Prev.
+	 * What Key means for THIS press, modifiers included: Tab is Next, Shift+Tab is Prev, and Tab with Ctrl, Alt or Cmd
+	 * held is no direction at all (None), which routes it as an ordinary key -- the bindings, then nothing.
 	 *
 	 * Not static, and not part of the table, because the answer is not a property of the key. A
-	 * legacy binding fires for Tab whether or not shift is down and FKey carries no modifier state,
-	 * so the only place the distinction exists is the live shift state on UPlayerInput at the moment
-	 * the key arrives.
+	 * legacy binding fires for Tab whatever modifiers are held and FKey carries no modifier state,
+	 * so the only place the distinction exists is the live modifier state on UPlayerInput at the
+	 * moment the key arrives.
 	 */
 	virtual EDreamUINavigationDirection ResolveNavigationDirection(const FKey& Key) const;
 
@@ -215,8 +227,10 @@ private:
 
 	void OnAnyKeyPressed(FKey Key);
 	void OnAnyKeyReleased(FKey Key);
+	/** A key bound by name, for its built-in meaning: routed by what it means now (RouteKeyByMeaning). */
+	void OnBuiltInKeyPressed(FKey Key);
+	void OnBuiltInKeyReleased(FKey Key);
 
-	void OnScrollKeyPressed(FKey Key);
 	void OnGamepadScrollX(float AxisValue);
 	void OnGamepadScrollY(float AxisValue);
 	void OnGamepadLeftX(float AxisValue);
@@ -226,8 +240,6 @@ private:
 	/** InValue of analog axis InKey, to what this player has focused. True when a widget kept the axis. */
 	bool RouteAnalog(const FKey& InKey, float InValue);
 
-	void OnNavigationTriggerPressed(FKey Key);
-	void OnNavigationTriggerReleased(FKey Key);
-	void OnNavigationDirectionPressed(FKey Key);
-	void OnNavigationDirectionReleased(FKey Key);
+	/** The keys BindNavigationAndTouchInput bound by name, which the AnyKey binding leaves to their own bindings. */
+	TSet<FKey> KeysBoundByName;
 };

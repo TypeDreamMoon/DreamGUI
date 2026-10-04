@@ -73,6 +73,10 @@ public:
 	 * Show InDialogClass modally for InUserIndex, on top of any modal that player already has up.
 	 * OnResult fires exactly once.
 	 *
+	 * The player's open popups -- a dropdown's list, a menu -- close first (UDreamUIPopupLayer, reason Replaced): the
+	 * modal comes up in front of them, and the popups hear a press and Back before anything else does, so one left open
+	 * behind the scrim would take the modal's first click and its first Back.
+	 *
 	 * Every call takes a user index because a modal is a per-PLAYER thing: on a split screen, player
 	 * one's "are you sure?" must not scrim player two's half of the display, must not take player
 	 * two's gamepad focus, and must not be closed by player two's Back. There was one stack and one

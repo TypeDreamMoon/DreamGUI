@@ -59,6 +59,11 @@ void UDreamLayoutAnimation_CommonTween::OnApplyLayoutResults(const TArray<FLayou
 {
 	for (auto& SnapshotData : SnapshotDataArray)
 	{
+		UDreamWidget* AnimatedWidget = SnapshotData.Widget;
+		if (!IsValid(AnimatedWidget))
+		{
+			continue;
+		}
 		auto NewPos = SnapshotData.Widget->GetAnchoredPosition();
 		auto NewSize = SnapshotData.Widget->GetSizeDelta();
 		auto OldPos = SnapshotData.Position;
@@ -84,26 +89,34 @@ void UDreamLayoutAnimation_CommonTween::OnApplyLayoutResults(const TArray<FLayou
 		// every child where the OLD layout had put it, for good. The tween reads nothing from the widget
 		// and only ticks from the next frame, so writing the start after asking changes nothing when
 		// there is one.
+		//
+		// The setter is weak to the child. It used to capture the snapshot by value, and with it a
+		// TObjectPtr to the child that the collector cannot see inside a lambda: a child destroyed while
+		// its parent animated was collected under the tween, which then wrote its rect into freed memory.
+		// The tween's outer is this handler, not the child, so nothing else ends it when the child goes.
 		UDreamTweener* Tweener = UDreamTweenManager::To(this
-		, FDreamTweenFloatGetterFunction::CreateLambda([=]()
+		, FDreamTweenFloatGetterFunction::CreateLambda([]()
 		{
-			return 0;
-		}), FDreamTweenFloatSetterFunction::CreateLambda([=](float Value)
+			return 0.0f;
+		}), FDreamTweenFloatSetterFunction::CreateWeakLambda(AnimatedWidget, [AnimatedWidget, OldPos, NewPos, OldSize, NewSize](float Value)
 		{
-			auto Pos = FMath::Lerp(OldPos, NewPos, Value);
-			auto Size = FMath::Lerp(OldSize, NewSize, Value);
-			SnapshotData.Widget->SetPositionAndSizeForLayoutAnimation(Pos, Size);
+			const FVector2D Pos = FMath::Lerp(OldPos, NewPos, Value);
+			const FVector2D Size = FMath::Lerp(OldSize, NewSize, Value);
+			AnimatedWidget->SetPositionAndSizeForLayoutAnimation(Pos, Size);
 		}), 1.0f, Duration);
 		if (!IsValid(Tweener))
 		{
 			continue;
 		}
-		SnapshotData.Widget->SetPositionAndSizeForLayoutAnimation(OldPos, OldSize);
+		AnimatedWidget->SetPositionAndSizeForLayoutAnimation(OldPos, OldSize);
 		Tweener->SetEase(Ease);
 		if (Ease == EDreamTweenEase::CurveFloat)
 		{
 			Tweener->SetRuntimeFloatCurve(EaseCurve);
 		}
+		// On the screen's clock, as every other widget tween is: a pause menu's list laid out while the game
+		// is paused animates into place instead of waiting, frozen at its old rect, for the game to resume.
+		UDreamWidget::SetWidgetTweenerAffectByGamePauseAndTimeDilation(AnimatedWidget, Tweener);
 		ResultTweenerArray.Add(Tweener);
 	}
 }
@@ -111,10 +124,12 @@ void UDreamLayoutAnimation_CommonTween::OnApplyLayoutResults(const TArray<FLayou
 void UDreamLayoutAnimation_SlideIn::OnApplyLayoutResults(const TArray<FLayoutAnimationSnapshotData>& SnapshotDataArray,
 	TArray<TWeakObjectPtr<UDreamTweener>>& ResultTweenerArray)
 {
-	auto LayoutWidget = GetLayoutContainer()->GetWidget();
+	UDreamLayoutContainer* Container = GetLayoutContainer();
+	auto LayoutWidget = Container != nullptr ? Container->GetWidget() : nullptr;
 	for (auto& SnapshotData : SnapshotDataArray)
 	{
-		if (SnapshotData.Widget == LayoutWidget)continue;
+		UDreamWidget* AnimatedWidget = SnapshotData.Widget;
+		if (!IsValid(AnimatedWidget) || AnimatedWidget == LayoutWidget)continue;
 		auto NewPos = SnapshotData.Widget->GetAnchoredPosition();
 		auto NewSize = SnapshotData.Widget->GetSizeDelta();
 		auto NewOpacity = SnapshotData.Widget->GetRenderOpacity();
@@ -126,28 +141,31 @@ void UDreamLayoutAnimation_SlideIn::OnApplyLayoutResults(const TArray<FLayoutAni
 		// faded start is written only once a tween exists to slide the child in from it. With none, the
 		// child keeps its laid-out place and opacity -- where the slide would have ended -- rather than
 		// sitting at the offset, possibly fully transparent, for good.
+		// Weak to the child, for the reason given in UDreamLayoutAnimation_CommonTween.
 		UDreamTweener* Tweener = UDreamTweenManager::To(this
-		, FDreamTweenFloatGetterFunction::CreateLambda([=]()
+		, FDreamTweenFloatGetterFunction::CreateLambda([]()
 		{
-			return 0;
-		}), FDreamTweenFloatSetterFunction::CreateLambda([=](float Value)
+			return 0.0f;
+		}), FDreamTweenFloatSetterFunction::CreateWeakLambda(AnimatedWidget, [AnimatedWidget, OldPos, NewPos, OldSize, NewSize, OldOpacity, NewOpacity](float Value)
 		{
-			auto Pos = FMath::Lerp(OldPos, NewPos, Value);
-			auto Size = FMath::Lerp(OldSize, NewSize, Value);
-			SnapshotData.Widget->SetPositionAndSizeForLayoutAnimation(Pos, Size);
-			SnapshotData.Widget->SetRenderOpacity(FMath::Lerp(OldOpacity, NewOpacity, Value));
+			const FVector2D Pos = FMath::Lerp(OldPos, NewPos, Value);
+			const FVector2D Size = FMath::Lerp(OldSize, NewSize, Value);
+			AnimatedWidget->SetPositionAndSizeForLayoutAnimation(Pos, Size);
+			AnimatedWidget->SetRenderOpacity(FMath::Lerp(OldOpacity, NewOpacity, Value));
 		}), 1.0f, Duration);
 		if (!IsValid(Tweener))
 		{
 			continue;
 		}
-		SnapshotData.Widget->SetPositionAndSizeForLayoutAnimation(OldPos, OldSize);
-		SnapshotData.Widget->SetRenderOpacity(OldOpacity);
+		AnimatedWidget->SetPositionAndSizeForLayoutAnimation(OldPos, OldSize);
+		AnimatedWidget->SetRenderOpacity(OldOpacity);
 		Tweener->SetEase(Ease);
 		if (Ease == EDreamTweenEase::CurveFloat)
 		{
 			Tweener->SetRuntimeFloatCurve(EaseCurve);
 		}
+		// On the screen's clock, as in UDreamLayoutAnimation_CommonTween.
+		UDreamWidget::SetWidgetTweenerAffectByGamePauseAndTimeDilation(AnimatedWidget, Tweener);
 		ResultTweenerArray.Add(Tweener);
 	}
 }
@@ -179,6 +197,19 @@ void UDreamLayoutContainer::OnRegister()
 	{
 		UDreamWidget::MarkLayoutForRebuild(Widget);
 	}
+}
+
+void UDreamLayoutContainer::OnUnregister()
+{
+	// Killed, not completed: a widget leaving the manager is being destroyed, detached or replaced, and the
+	// children are not to be written to on the way out. One that comes back is laid out again on register.
+	if (LayoutAnimTweenerArray.Num() > 0)
+	{
+		UDreamTweenBPLibrary::ArrayKillIfIsTweening(this, LayoutAnimTweenerArray);
+		LayoutAnimTweenerArray.Reset();
+	}
+	LayoutAnimSnapshotDataArray.Reset();
+	Super::OnUnregister();
 }
 
 void UDreamLayoutContainer::SnapshotLayout()

@@ -45,7 +45,9 @@ class DREAMGUIINPUT_API UDreamUIInputModeLibrary : public UBlueprintFunctionLibr
 
 public:
 	/**
-	 * Only the UI sees input, and the cursor is shown.
+	 * Only the UI sees input, and the cursor is shown -- while the player is on the keyboard and mouse:
+	 * with UDreamGUISettings::bHideCursorOnGamepad, DreamGUI hides it while they use a pad and shows it
+	 * again when they go back to the mouse, for as long as this mode holds.
 	 *
 	 * The engine's UI-only mode ignores input at the game viewport client, and DreamGUI's input arrives
 	 * behind it, so DreamGUI hears nothing in it unless the client is UDreamGameViewportClient (or

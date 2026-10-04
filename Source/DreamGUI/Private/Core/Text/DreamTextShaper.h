@@ -91,6 +91,62 @@ struct FDreamShapeParams
 	const TArray<FDreamTextLanguage>* Languages = nullptr;
 	/** What FDreamShapeElement::SequenceStart/SequenceCount index. Null when no element has more than one code point. */
 	const TArray<uint32>* SequenceCodepoints = nullptr;
+	/** Colour faces may draw clusters (FDreamFontFaceQuery::bAllowColorFaces); off, every cluster is itemized as if the font had none. */
+	bool bAllowColorFaces = true;
+};
+
+/**
+ * What the itemizer and the shape cache decided per element: what a later window over the same paragraph has to agree
+ * with (FDreamTextShaper::ShapeWindow), and so what a layout keeps of a paragraph besides its glyphs.
+ */
+struct FDreamShapeAnalysis
+{
+	/**
+	 * Per element: its script as the itemizer resolved it (an hb_script_t): its own, or for a neutral one (punctuation,
+	 * spaces, marks) the script before it, and at a paragraph's start the first script after it. 0 for an unshaped element.
+	 */
+	TArray<uint32> Scripts;
+	/** Per element: it has a script of its own, not Common, Inherited or Unknown (the whole grapheme cluster it starts, or is in). */
+	TBitArray<> OwnScripts;
+	/**
+	 * Per element: a segment starts at it -- a run starts there, it is unshaped, or the shape cache cut the run before it
+	 * (where HarfBuzz shapes the two sides apart exactly as together). Shaping in one window or in another never moves
+	 * glyphs across one.
+	 */
+	TBitArray<> SegmentStarts;
+};
+
+/** A stretch of a paragraph to shape again on its own (FDreamTextShaper::ShapeWindow). */
+struct FDreamShapeWindow
+{
+	/**
+	 * The elements to shape, [Begin, End) of the span handed in; the span's other elements are context only (HarfBuzz and
+	 * the shape cache read up to five code points on either side). Both ends must be where the paragraph's own shaping
+	 * started a segment, and the span must hold the whole grapheme cluster that starts at End.
+	 */
+	int32 Begin = 0;
+	int32 End = 0;
+	/**
+	 * The script the itemizer carries into Begin: the last script of its own (FDreamShapeAnalysis::OwnScripts) before the
+	 * window -- not the resolved script of the element right before it, which is 0 for an unshaped one. 0 (and any value
+	 * with bParagraphStart) starts from Common, as a paragraph's itemizer does.
+	 */
+	uint32 SeedScript = 0;
+	/** Begin is its paragraph's first element: neutrals before the window's first script of its own take that script. */
+	bool bParagraphStart = false;
+};
+
+/** What ShapeWindow found besides the glyphs. */
+struct FDreamShapeWindowResult
+{
+	/** The window's elements, [Begin, End) of the span, indexed from Begin. */
+	FDreamShapeAnalysis Analysis;
+	/** The script an element after the window that has none of its own inherits: the window's last script of its own, else the seed. */
+	uint32 LastScript = 0;
+	/** An element of the window has a script of its own. */
+	bool bAnyOwnScript = false;
+	/** The span's element at End would continue the window's last run (same level, script, face, size, weight and language, no run break before it). */
+	bool bLastRunContinues = false;
 };
 
 /**
@@ -123,8 +179,26 @@ public:
 	 * Georgian and runs of digits and punctuation, where it is only style; every other script keeps the font's default,
 	 * since the fonts of the joining and Brahmic scripts can put required forms there. Ligatures inside an element (an
 	 * emoji sequence) form whatever it says, through ccmp.
+	 * @param OutAnalysis    When given, each element's resolved script and where the segments start (FDreamShapeAnalysis).
 	 */
-	static bool ShapeParagraph(const TArray<FDreamShapeElement>& Elements, const FDreamShapeParams& Params, TArray<FDreamShapedRun>& OutRuns, bool& OutBaseRightToLeft, TArray<uint8>* OutBidiLevels = nullptr);
+	static bool ShapeParagraph(const TArray<FDreamShapeElement>& Elements, const FDreamShapeParams& Params, TArray<FDreamShapedRun>& OutRuns, bool& OutBaseRightToLeft, TArray<uint8>* OutBidiLevels = nullptr, FDreamShapeAnalysis* OutAnalysis = nullptr);
+
+	/**
+	 * Shapes a window of a left-to-right paragraph again on its own, coming out exactly as shaping the whole paragraph
+	 * does for those elements: what an edit inside a long paragraph re-measures instead of all of it. The window is
+	 * itemized from Window.SeedScript (every bidi level 0: the caller has made sure nothing in the paragraph can turn right
+	 * to left), cut into runs and shaped through the shape cache, which has to be on; the span's elements outside it are
+	 * context. Runs come back in logical order with their element ranges in the span's indices, starting at Window.Begin and
+	 * ending at Window.End -- the caller numbers them and decides whether the first continues the run before the window.
+	 * @return false when the font cannot shape, the shape cache is off, or this is not the game thread.
+	 */
+	static bool ShapeWindow(const TArray<FDreamShapeElement>& SpanElements, const FDreamShapeParams& Params, const FDreamShapeWindow& Window,
+		TArray<FDreamShapedRun>& OutRuns, FDreamShapeWindowResult& OutResult);
+
+	/** Whether the bidi algorithm can have anything to say about a code point (a right-to-left letter or digit, a direction control). */
+	static bool CanTurnRightToLeft(uint32 Codepoint);
+	/** Whether HarfBuzz reads the code points around a run in this script (an hb_script_t): the joining scripts, and any it does not know. */
+	static bool ScriptReadsContext(uint32 Script);
 
 	/** The form before FDreamShapeParams: every element one code point, in the game's current language. */
 	static bool ShapeParagraph(const TArray<FDreamShapeElement>& Elements, UDreamUIFontData_BaseObject* Font, bool bUseKerning, EDreamTextFlowDirection FlowDirection, TArray<FDreamShapedRun>& OutRuns, bool& OutBaseRightToLeft, bool bLigatures = false, TArray<uint8>* OutBidiLevels = nullptr)

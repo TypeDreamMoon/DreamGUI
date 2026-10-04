@@ -27,6 +27,8 @@ ANIM_PERIOD_S = float(os.environ.get("DREAMBENCH_ANIM_PERIOD", "2.3"))
 ANIM_ROUNDS = int(os.environ.get("DREAMBENCH_ROUNDS", "4"))
 SCREEN_WIDGET = os.environ.get("DREAMBENCH_SCREEN_WIDGET", "/Game/UI/DW_Benchmark_Button_SW.DW_Benchmark_Button_SW_C")
 AB = [c.strip() for c in os.environ.get("DREAMBENCH_AB_CMDS", "").split(";") if c.strip()]
+# Console commands for the whole session, both sides of an A/B alike: run on the game's world before the warm-up.
+SETUP = [c.strip() for c in os.environ.get("DREAMBENCH_SETUP_CMDS", "").split(";") if c.strip()]
 STATS = [c.strip() for c in os.environ.get("DREAMBENCH_STATS_CMDS", "").split(";") if c.strip()]
 TRACE = os.environ.get("DREAMBENCH_TRACE", "0") != "0"
 TRACE_CHANNELS = os.environ.get("DREAMBENCH_TRACE_CHANNELS", "") or "default,counters,region"
@@ -198,6 +200,11 @@ def tick(delta):
             return
         for command in VERIFY_OFF:
             unreal.SystemLibrary.execute_console_command(at_world, command)
+        # Before the wall exists and before the warm-up: what the whole session runs with, side A and side B.
+        for command in SETUP:
+            unreal.SystemLibrary.execute_console_command(at_world, command)
+        if SETUP:
+            log("session: %s" % "; ".join(SETUP))
         if MODE == "screen":
             subsystem = unreal.DreamScreenUISubsystem.get_dream_screen_ui_subsystem(at_world)
             widget_class = unreal.load_class(None, SCREEN_WIDGET)

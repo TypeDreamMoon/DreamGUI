@@ -164,10 +164,15 @@ protected:
 #endif
 	
 	virtual void OnSupplyMeshSection(TWeakObjectPtr<UDreamUIMeshComponent> InMesh, TWeakPtr<FDreamUIRenderSection_DirectMesh> InSection)override;
+	/** Lets go of the section the old canvas's mesh supplied; see the definition. */
+	virtual void OnRenderCanvasChanged(UDreamCanvas* InOldCanvas, UDreamCanvas* InNewCanvas)override;
 	void CreateGeometry();
 	virtual void UpdateGeometry()override;
+	/** False as well for a mesh with more vertices than one draw call can index, which is refused with an error, once per mesh. */
 	virtual bool HaveValidData()const override;
 	virtual UMaterialInterface* GetMaterial()const override;
+	/** The mesh data whose vertex count HaveValidData last refused, so the error is said once and not on every update. */
+	mutable TWeakObjectPtr<const UDreamUIStaticMeshCacheData> ReportedOversizeCache;
 
 	/**
 	 * The cached mesh bounds flattened onto the UI plane, or a negative pair when the cache has no

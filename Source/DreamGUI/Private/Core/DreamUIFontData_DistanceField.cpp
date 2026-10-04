@@ -13,12 +13,31 @@
 #include "Utils/sdf/sdf.h"
 #include "Core/Text/DreamGlyphSdf.h"
 #include "UObject/DreamGUIObjectVersion.h"
+#include "HAL/IConsoleManager.h"
 #if WITH_FREETYPE
 #include <ft2build.h>
 #include FT_FREETYPE_H
 #endif
 
 #define LOCTEXT_NAMESPACE "DreamUIFontData_DistanceField"
+
+namespace DreamFontDataDistanceFieldLocal
+{
+	/**
+	 * DreamGUI.Text.SmallTextCoverage at 0: small-text coverage off for every font, the ones set On included. The project's
+	 * answer (UDreamGUISettings::IsSmallTextCoverageEnabled) is for the fonts that inherit it, and cannot tell 0 from a project
+	 * that has it off, so the variable itself is read. Found once, by name: it is registered with the module.
+	 */
+	bool IsSmallTextCoverageForcedOff()
+	{
+		static IConsoleVariable* CoverageVariable = nullptr;
+		if (CoverageVariable == nullptr)
+		{
+			CoverageVariable = IConsoleManager::Get().FindConsoleVariable(TEXT("DreamGUI.Text.SmallTextCoverage"), false);
+		}
+		return CoverageVariable != nullptr && CoverageVariable->GetInt() == 0;
+	}
+}
 
 UDreamUIFontData_DistanceField::UDreamUIFontData_DistanceField()
 {
@@ -138,6 +157,11 @@ void UDreamUIFontData_DistanceField::ClearCharDataCache()
 	// Ascent and descent are no longer cached here: they come from the base class's per-face cache,
 	// which DeinitFreeType drops, so they cannot survive a reload the way these two used to.
 	LineHeight = VerticalOffset = -1;
+}
+
+int32 UDreamUIFontData_DistanceField::GetCharDataCacheCount() const
+{
+	return CharDataMap.Num();
 }
 
 UTexture2DArray* UDreamUIFontData_DistanceField::CreateFontTexture(int InTextureSize, int InSliceCount)
@@ -297,14 +321,16 @@ bool UDreamUIFontData_DistanceField::SupportsCoverageGlyphs() const
 	{
 		return false;
 	}
+	// The project's answer goes through the console variables (UDreamGUISettings::IsSmallTextCoverageEnabled), so an A/B
+	// switch reaches every font; its 0 turns off a font set On as well.
 	switch (SmallTextCoverage)
 	{
 	case EDreamUISmallTextCoverage::On:
-		return true;
+		return !DreamFontDataDistanceFieldLocal::IsSmallTextCoverageForcedOff();
 	case EDreamUISmallTextCoverage::Off:
 		return false;
 	default:
-		return UDreamGUISettings::Get()->bSmallTextCoverage;
+		return UDreamGUISettings::IsSmallTextCoverageEnabled();
 	}
 #else
 	return false;
@@ -313,7 +339,7 @@ bool UDreamUIFontData_DistanceField::SupportsCoverageGlyphs() const
 
 float UDreamUIFontData_DistanceField::GetCoverageMaxPixelSize() const
 {
-	return SmallTextMaxPixelSize > 0.0f ? SmallTextMaxPixelSize : UDreamGUISettings::Get()->SmallTextMaxPixelSize;
+	return SmallTextMaxPixelSize > 0.0f ? SmallTextMaxPixelSize : UDreamGUISettings::GetSmallTextMaxPixelSize();
 }
 
 float UDreamUIFontData_DistanceField::GetColorGlyphReachEm() const

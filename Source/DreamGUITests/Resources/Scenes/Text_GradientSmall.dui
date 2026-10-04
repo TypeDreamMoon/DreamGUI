@@ -1,0 +1,216 @@
+// Small painted text, drawn from coverage glyphs: the default font from 10 to 16 px with a face painted left to right
+// and one painted top to bottom, small text in a gradient outline, a painted run with a superscript and an underline, and
+// light painted text on a dark plate. A face paint never turns coverage off: the shader paints coverage faces too, and the
+// small-text contrast is worked out on the painted colour. The SmallTextCoverageOff run draws all of it from the field.
+// @stage 760x420
+// @variant SmallTextCoverageOff
+
+style Title {
+    AnchorData.AnchorMin = (0, 1)
+    AnchorData.AnchorMax = (1, 1)
+    AnchorData.Pivot = (0.5, 1)
+    AnchorData.AnchoredPosition = (0, -8)
+    AnchorData.SizeDelta = (-24, 20)
+    FontSize = 15
+    Color = #1E2230
+    HAlign = Left
+    VAlign = Top
+    OverflowType = HorizontalOverflow
+}
+
+style Size {
+    AnchorData.AnchorMin = (0, 1)
+    AnchorData.AnchorMax = (0, 1)
+    AnchorData.Pivot = (0, 1)
+    FontSize = 11
+    Color = #5A6172
+    HAlign = Right
+    VAlign = Middle
+    OverflowType = HorizontalOverflow
+}
+
+style Line {
+    AnchorData.AnchorMin = (0, 1)
+    AnchorData.AnchorMax = (0, 1)
+    AnchorData.Pivot = (0, 1)
+    Color = #1E2230
+    HAlign = Left
+    VAlign = Middle
+    OverflowType = HorizontalOverflow
+    Text = "Hamburgefonstiv 0123456789 The quick brown fox jumps"
+    TextStyle.FacePaint.bEnabled = true
+    TextStyle.FacePaint.Gradient = "linear-gradient(90deg, #C2185B, #1565C0 50%, #2E7D32)"
+}
+
+Widget Root {
+    Image Page {
+        Brush.TintColor = #F5F3EE
+        AnchorData.AnchorMin = (0, 0)
+        AnchorData.AnchorMax = (1, 1)
+        AnchorData.SizeDelta = (0, 0)
+    }
+
+    Text Heading : Title {
+        Text = "Small painted text from coverage glyphs, default font"
+    }
+
+    Text Label10 : Size {
+        AnchorData.AnchoredPosition = (8, -40)
+        AnchorData.SizeDelta = (52, 16)
+        Text = "10 px"
+    }
+    Text Sample10 : Line {
+        AnchorData.AnchoredPosition = (68, -40)
+        AnchorData.SizeDelta = (676, 16)
+        FontSize = 10
+    }
+
+    Text Label11 : Size {
+        AnchorData.AnchoredPosition = (8, -58)
+        AnchorData.SizeDelta = (52, 17)
+        Text = "11 px"
+    }
+    Text Sample11 : Line {
+        AnchorData.AnchoredPosition = (68, -58)
+        AnchorData.SizeDelta = (676, 17)
+        FontSize = 11
+    }
+
+    Text Label12 : Size {
+        AnchorData.AnchoredPosition = (8, -77)
+        AnchorData.SizeDelta = (52, 18)
+        Text = "12 px"
+    }
+    Text Sample12 : Line {
+        AnchorData.AnchoredPosition = (68, -77)
+        AnchorData.SizeDelta = (676, 18)
+        FontSize = 12
+    }
+
+    Text Label13 : Size {
+        AnchorData.AnchoredPosition = (8, -97)
+        AnchorData.SizeDelta = (52, 19)
+        Text = "13 px"
+    }
+    Text Sample13 : Line {
+        AnchorData.AnchoredPosition = (68, -97)
+        AnchorData.SizeDelta = (676, 19)
+        FontSize = 13
+    }
+
+    Text Label14 : Size {
+        AnchorData.AnchoredPosition = (8, -118)
+        AnchorData.SizeDelta = (52, 20)
+        Text = "14 px"
+    }
+    Text Sample14 : Line {
+        AnchorData.AnchoredPosition = (68, -118)
+        AnchorData.SizeDelta = (676, 20)
+        FontSize = 14
+    }
+
+    Text Label16 : Size {
+        AnchorData.AnchoredPosition = (8, -140)
+        AnchorData.SizeDelta = (52, 23)
+        Text = "16 px"
+    }
+    Text Sample16 : Line {
+        AnchorData.AnchoredPosition = (68, -140)
+        AnchorData.SizeDelta = (676, 23)
+        FontSize = 16
+    }
+
+    Text LabelVertical : Size {
+        AnchorData.AnchoredPosition = (8, -172)
+        AnchorData.SizeDelta = (52, 22)
+        Text = "180deg"
+    }
+    Text Vertical14 : Line {
+        AnchorData.AnchoredPosition = (68, -172)
+        AnchorData.SizeDelta = (676, 22)
+        FontSize = 14
+        TextStyle.FacePaint.Gradient = "linear-gradient(180deg, #E65100, #4A148C)"
+    }
+
+    Text LabelOutline : Size {
+        AnchorData.AnchoredPosition = (8, -204)
+        AnchorData.SizeDelta = (52, 24)
+        Text = "outline"
+    }
+    Text Outlined14 : Line {
+        AnchorData.AnchoredPosition = (68, -204)
+        AnchorData.SizeDelta = (676, 24)
+        FontSize = 14
+        Color = #F5F3EE
+        TextStyle.FacePaint.bEnabled = false
+        TextStyle.OutlineColor = #FFFFFFFF
+        TextStyle.OutlineWidth = 0.12
+        TextStyle.OutlinePaint.bEnabled = true
+        TextStyle.OutlinePaint.Gradient = "linear-gradient(90deg, #C2185B, #1565C0)"
+    }
+
+    Text LabelRich : Size {
+        AnchorData.AnchoredPosition = (8, -236)
+        AnchorData.SizeDelta = (52, 26)
+        Text = "rich"
+    }
+    Text RichSmall : Line {
+        AnchorData.AnchoredPosition = (68, -236)
+        AnchorData.SizeDelta = (676, 26)
+        FontSize = 13
+        bRichText = true
+        Text = "painted with x<sup>2</sup>, H<sub>2</sub>O, <u>an underline across words</u> and <s>a strike</s>"
+    }
+
+    Image DarkPlate {
+        Brush.TintColor = #1E2230
+        AnchorData.AnchorMin = (0, 1)
+        AnchorData.AnchorMax = (0, 1)
+        AnchorData.Pivot = (0, 1)
+        AnchorData.AnchoredPosition = (60, -276)
+        AnchorData.SizeDelta = (692, 112)
+    }
+
+    Text LabelDark12 : Size {
+        AnchorData.AnchoredPosition = (0, -286)
+        AnchorData.SizeDelta = (52, 18)
+        Text = "dark 12"
+    }
+    Text Dark12 : Line {
+        AnchorData.AnchoredPosition = (68, -286)
+        AnchorData.SizeDelta = (676, 18)
+        FontSize = 12
+        TextStyle.FacePaint.Gradient = "linear-gradient(90deg, #FFD60A, #64D2FF 50%, #BF5AF2)"
+    }
+
+    Text LabelDark14 : Size {
+        AnchorData.AnchoredPosition = (0, -314)
+        AnchorData.SizeDelta = (52, 20)
+        Text = "dark 14"
+    }
+    Text Dark14 : Line {
+        AnchorData.AnchoredPosition = (68, -314)
+        AnchorData.SizeDelta = (676, 20)
+        FontSize = 14
+        TextStyle.FacePaint.Gradient = "linear-gradient(90deg, #FFD60A, #64D2FF 50%, #BF5AF2)"
+    }
+
+    Text LabelDark16 : Size {
+        AnchorData.AnchoredPosition = (0, -344)
+        AnchorData.SizeDelta = (52, 23)
+        Text = "dark 16"
+    }
+    Text Dark16 : Line {
+        AnchorData.AnchoredPosition = (68, -344)
+        AnchorData.SizeDelta = (676, 23)
+        FontSize = 16
+        TextStyle.FacePaint.Gradient = "linear-gradient(180deg, #FFFFFF, #FF9F0A)"
+    }
+
+    Text Expected : Size {
+        AnchorData.AnchoredPosition = (8, -396)
+        AnchorData.SizeDelta = (736, 16)
+        HAlign = Left
+        Text = "Expected: the same stems and layout as unpainted small text, the paint smooth across them, no step at a glyph's edge."
+    }
+}

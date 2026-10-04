@@ -120,8 +120,11 @@ public:
 	 * cannot make, because the tile it should land on is at the opposite edge of the control.
 	 *
 	 * What a navigation press on a tile steps by, for the four directions STileView and SListView
-	 * answer (Next and Prev are left to the ordinary scan): the tile it names is selected while
-	 * bSelectItemOnNavigation is on and scrolled into view, and INDEX_NONE hands the press on.
+	 * answer: the tile it names is selected while bSelectItemOnNavigation is on and scrolled into view,
+	 * and INDEX_NONE hands the press on. Next and Prev are no press's to step: a tile view is one Tab
+	 * stop, which Tab and Shift+Tab leave (UDreamListViewBase::HandleRowNavigation). Their answer here is
+	 * the source order, which is the order Tab enters the view in -- at its first tile, or Shift+Tab at its
+	 * last, while nothing is selected (UDreamListViewBase::ResolveTabEntry).
 	 */
 	UFUNCTION(BlueprintPure, Category = "Tile View")
 	int32 GetNavigationTarget(int32 InDisplayIndex, EDreamUINavigationDirection InDirection) const;

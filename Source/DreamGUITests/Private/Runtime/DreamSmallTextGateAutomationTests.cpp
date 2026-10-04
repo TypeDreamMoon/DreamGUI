@@ -12,7 +12,10 @@
 #include "Core/DreamUIGeometry.h"
 #include "Core/DreamUIManager.h"
 #include "Core/Text/DreamTextPainter.h"
+#include "DreamUIRender/DreamUIRenderStats.h"
 #include "Engine/World.h"
+#include "HAL/IConsoleManager.h"
+#include "Materials/Material.h"
 #include "Materials/MaterialInterface.h"
 #include "MeshModifier/DreamMeshModifierTextAnimation.h"
 #include "MeshModifier/TextAnimation/DreamMeshModifierTextAnimation_PropertyWithEase.h"
@@ -20,6 +23,7 @@
 
 #include "DreamScopedWorld.h"
 #include "DreamTextTestFont.h"
+#include "DreamTextHoldRecordingFont.h"
 #include "Driver/DreamDriverRig.h"
 
 /*
@@ -30,7 +34,8 @@
  * in the made-up font, whose coverage glyphs come from MockCoverageGlyph: a ready-made box for any glyph, ready or still
  * being made as the test says. What is read back is UDreamText::GetSmallTextState, the gate's answer at the last paint,
  * and the painter's report. A frame of the rig is a frame of the game: transform changes flushed, the sharpen sweep, the
- * canvases updated, the fonts' pending work handed over.
+ * canvases updated, the fonts' pending work handed over. What counts frames by the engine's frame counter -- a render
+ * layer's moves -- is given frames by the tests that need it (FLabelStage::EngineFrames): the rig does not move it.
  */
 namespace DreamSmallTextGateTestLocal
 {
@@ -48,16 +53,23 @@ namespace DreamSmallTextGateTestLocal
 		OutGlyph.bPending = bInPending;
 	}
 
-	/** The made-up font, offering coverage glyphs that come back as *bInPending says when they are asked for. */
-	UDreamTextTestFont* MakeCoverageFont(UObject* InOuter, const bool* bInPending)
+	/** InFont offering coverage glyphs that come back as *bInPending says when they are asked for. */
+	template<class TFont>
+	TFont* MakeCoverageFontOf(UObject* InOuter, const bool* bInPending)
 	{
-		UDreamTextTestFont* Font = NewObject<UDreamTextTestFont>(InOuter);
+		TFont* Font = NewObject<TFont>(InOuter);
 		Font->MockCoverageGlyph = [bInPending](int32 InFaceIndex, uint32 InGlyphIndex, int32 InSize26Dot6, EDreamUICoverageGlyphFlags InFlags, FDreamUICoverageGlyph& OutGlyph)
 		{
 			MakeMockGlyph(InSize26Dot6, bInPending != nullptr && *bInPending, OutGlyph);
 			return true;
 		};
 		return Font;
+	}
+
+	/** The made-up font, offering coverage glyphs that come back as *bInPending says when they are asked for. */
+	UDreamTextTestFont* MakeCoverageFont(UObject* InOuter, const bool* bInPending)
+	{
+		return MakeCoverageFontOf<UDreamTextTestFont>(InOuter, bInPending);
 	}
 
 	const TCHAR* GateName(EDreamTextSmallTextGate InGate)
@@ -80,6 +92,8 @@ namespace DreamSmallTextGateTestLocal
 		case EDreamTextSmallTextGate::Transform: return TEXT("Transform");
 		case EDreamTextSmallTextGate::Large: return TEXT("Large");
 		case EDreamTextSmallTextGate::Settling: return TEXT("Settling");
+		case EDreamTextSmallTextGate::StyleFace: return TEXT("StyleFace");
+		case EDreamTextSmallTextGate::RenderLayerMoving: return TEXT("RenderLayerMoving");
 		}
 		return TEXT("?");
 	}
@@ -90,6 +104,41 @@ namespace DreamSmallTextGateTestLocal
 		const EDreamTextSmallTextGate Actual = InText->GetSmallTextState().Gate;
 		return InTest.TestTrue(FString::Printf(TEXT("%s: %s (it was %s)"), InWhat, GateName(InExpected), GateName(Actual)), Actual == InExpected);
 	}
+
+	/** A counter of the render stats, as counted since the last ResetCounters. */
+	int64 ReadCounter(DreamUIRenderStats::ECounter InCounter)
+	{
+		return DreamUIRenderStats::TakeSnapshot(/*bInReset*/ false).Counters[static_cast<int32>(InCounter)];
+	}
+
+	void ResetCounters()
+	{
+		DreamUIRenderStats::TakeSnapshot(/*bInReset*/ true);
+	}
+
+	/** A console variable set from code for as long as this lives, then put back as it was. */
+	struct FScopedConsoleVariable
+	{
+		IConsoleVariable* Variable = nullptr;
+		FString Saved;
+
+		FScopedConsoleVariable(const TCHAR* InName, const TCHAR* InValue)
+		{
+			Variable = IConsoleManager::Get().FindConsoleVariable(InName);
+			if (Variable != nullptr)
+			{
+				Saved = Variable->GetString();
+				Variable->Set(InValue, ECVF_SetByCode);
+			}
+		}
+		~FScopedConsoleVariable()
+		{
+			if (Variable != nullptr)
+			{
+				Variable->Set(*Saved, ECVF_SetByCode);
+			}
+		}
+	};
 
 	/**
 	 * A label on the rig's screen-space canvas: a card the tests move, turn and scale, a 300x40 widget on it, and on that a
@@ -106,13 +155,13 @@ namespace DreamSmallTextGateTestLocal
 
 		explicit FLabelStage(FDreamDriverRig& InRig) : Rig(InRig) {}
 
-		bool Build(FAutomationTestBase& InTest)
+		bool Build(FAutomationTestBase& InTest, UDreamTextTestFont* InFont = nullptr)
 		{
 			if (!InTest.TestTrue(TEXT("The rig came up"), Rig.IsUsable()))
 			{
 				return false;
 			}
-			Font = MakeCoverageFont(Rig.GetWorld(), &bPendingGlyphs);
+			Font = InFont != nullptr ? InFont : MakeCoverageFont(Rig.GetWorld(), &bPendingGlyphs);
 			Card = Rig.MakeWidget(TEXT("Card"), nullptr, FVector2D(400.0, 100.0));
 			Label = Card != nullptr ? Rig.MakeWidget(TEXT("Label"), Card, FVector2D(300.0, 40.0)) : nullptr;
 			Text = Label != nullptr ? Label->CreateNewVisual<UDreamText>() : nullptr;
@@ -129,6 +178,22 @@ namespace DreamSmallTextGateTestLocal
 		}
 
 		void Frames(int32 InCount) { Rig.PumpFrames(InCount); }
+		/** Frames that move the engine's frame counter on too, as a game's do: one for each frame pumped. */
+		void EngineFrames(int32 InCount)
+		{
+			for (int32 Index = 0; Index < InCount; ++Index)
+			{
+				++GFrameCounter;
+				Rig.PumpFrames(1);
+			}
+		}
+		/** InChange made inside the next engine frame, as an animation's write is, and that frame pumped. */
+		void EngineFrameWith(TFunctionRef<void()> InChange)
+		{
+			++GFrameCounter;
+			InChange();
+			Rig.PumpFrames(1);
+		}
 		const FDreamTextSmallTextState& State() const { return Text->GetSmallTextState(); }
 	};
 }
@@ -141,8 +206,10 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 /*
  * The gate's conditions on the text itself. A 14-unit label on a screen canvas one pixel to the unit draws from coverage
  * at its first paint. Then, one at a time and each taken back again: the text's own switch, a font that offers no coverage
- * glyphs, an override material, an outline, face softness and face dilation, a TextAnimation that lifts the glyphs (where
- * one that only fades them changes nothing), and a size past the limit -- each sends the text to the field, saying why.
+ * glyphs, an override material that does not shade through MF_DreamUI_Shade, face softness and face dilation, an outline
+ * while the project keeps effects on the field, a TextAnimation that lifts the glyphs (where one that only fades them
+ * changes nothing), and a size past the limit -- each sends the text to the field, saying why. An outline alone does not:
+ * its effects come from the field, under a coverage face (UDreamGUISettings::SmallTextEffectFace).
  */
 bool FDreamSmallTextGateTextConditionsTest::RunTest(const FString& Parameters)
 {
@@ -180,43 +247,84 @@ bool FDreamSmallTextGateTextConditionsTest::RunTest(const FString& Parameters)
 	Stage.Frames(1);
 	ExpectGate(*this, Text, EDreamTextSmallTextGate::Coverage, TEXT("The coverage font again"));
 
-	UMaterialInterface* Material = UDreamGUISettings::LoadSetting(UDreamGUISettings::Get()->DefaultUIMaterial, TEXT("DefaultUIMaterial"));
-	if (TestNotNull(TEXT("A material to override the text's with"), Material))
+	// The engine's default surface material knows nothing of DreamGUI's quads: it carries no shading marker.
+	UMaterialInterface* Material = UMaterial::GetDefaultMaterial(MD_Surface);
+	if (TestNotNull(TEXT("A material that does not shade through MF_DreamUI_Shade"), Material))
 	{
 		Text->SetOverrideMaterial(Material);
 		Stage.Frames(1);
-		ExpectGate(*this, Text, EDreamTextSmallTextGate::OverrideMaterial, TEXT("An override material"));
+		ExpectGate(*this, Text, EDreamTextSmallTextGate::OverrideMaterial, TEXT("An override material that does not shade through DreamGUI"));
 		Text->SetOverrideMaterial(nullptr);
 		Stage.Frames(1);
 		ExpectGate(*this, Text, EDreamTextSmallTextGate::Coverage, TEXT("The override material taken off"));
 	}
 
-	FDreamTextStyle Outlined;
-	Outlined.OutlineColor = FColor::Black;
-	Outlined.OutlineWidth = 0.1f;
 	FDreamTextStyle Softened;
 	Softened.FaceSoftness = 0.05f;
 	FDreamTextStyle Dilated;
 	Dilated.FaceDilate = 0.05f;
+	FDreamTextStyle SoftenedAndOutlined = Softened;
+	SoftenedAndOutlined.OutlineColor = FColor::Black;
+	SoftenedAndOutlined.OutlineWidth = 0.1f;
 	struct FStyled
 	{
 		const TCHAR* What;
 		FDreamTextStyle Style;
 	};
-	const FStyled Styles[] = {
-		{ TEXT("An outline"), Outlined },
+	const FStyled FaceStyles[] = {
 		{ TEXT("Face softness"), Softened },
 		{ TEXT("Face dilation"), Dilated },
+		{ TEXT("Face softness with an outline"), SoftenedAndOutlined },
 	};
-	for (const FStyled& Styled : Styles)
+	for (const FStyled& Styled : FaceStyles)
 	{
 		Text->SetTextStyle(Styled.Style);
 		Stage.Frames(1);
-		ExpectGate(*this, Text, EDreamTextSmallTextGate::Style, Styled.What);
+		ExpectGate(*this, Text, EDreamTextSmallTextGate::StyleFace, Styled.What);
 		Text->SetTextStyle(FDreamTextStyle());
 		Stage.Frames(1);
 		ExpectGate(*this, Text, EDreamTextSmallTextGate::Coverage, *FString::Printf(TEXT("%s taken off"), Styled.What));
 	}
+
+	FDreamTextStyle Outlined;
+	Outlined.OutlineColor = FColor::Black;
+	Outlined.OutlineWidth = 0.1f;
+	FDreamTextStyle Shadowed;
+	Shadowed.UnderlayColor = FColor(0, 0, 0, 160);
+	Shadowed.UnderlayOffset = FVector2f(0.05f, -0.05f);
+	const FStyled EffectStyles[] = {
+		{ TEXT("An outline"), Outlined },
+		{ TEXT("An underlay"), Shadowed },
+	};
+	UDreamGUISettings* Settings = GetMutableDefault<UDreamGUISettings>();
+	const EDreamSmallTextEffectFace SavedEffectFace = Settings->SmallTextEffectFace;
+	for (const FStyled& Styled : EffectStyles)
+	{
+		Settings->SmallTextEffectFace = EDreamSmallTextEffectFace::Auto;
+		Text->SetTextStyle(Styled.Style);
+		Stage.Frames(1);
+		ExpectGate(*this, Text, EDreamTextSmallTextGate::Coverage, *FString::Printf(TEXT("%s, its face from coverage over the field's effects"), Styled.What));
+		TestEqual(*FString::Printf(TEXT("%s: the painter is told how the face goes over the effects"), Styled.What),
+			(int32)UDreamText::MakePaintParams(Text).Coverage.EffectFace, (int32)EDreamSmallTextEffectFace::Auto);
+		Settings->SmallTextEffectFace = EDreamSmallTextEffectFace::Field;
+		// The setting is read at paint time, and nothing repaints for it: the style set again does.
+		Text->SetTextStyle(FDreamTextStyle());
+		Text->SetTextStyle(Styled.Style);
+		Stage.Frames(1);
+		ExpectGate(*this, Text, EDreamTextSmallTextGate::Style, *FString::Printf(TEXT("%s, with the project keeping effects on the field"), Styled.What));
+		Text->SetTextStyle(FDreamTextStyle());
+		Stage.Frames(1);
+		ExpectGate(*this, Text, EDreamTextSmallTextGate::Coverage, *FString::Printf(TEXT("%s taken off"), Styled.What));
+	}
+	Settings->SmallTextEffectFace = SavedEffectFace;
+	Text->SetTextStyle(Outlined);
+	Stage.Frames(1);
+	TestEqual(TEXT("The outline's width reaches the painter, for Auto to measure"), UDreamText::MakePaintParams(Text).Coverage.OutlineWidthEm, 0.1f, 1.0e-6f);
+	Outlined.OutlineColor.A = 0;
+	Text->SetTextStyle(Outlined);
+	TestEqual(TEXT("...and no width for an outline with no alpha"), UDreamText::MakePaintParams(Text).Coverage.OutlineWidthEm, 0.0f, 1.0e-6f);
+	Text->SetTextStyle(FDreamTextStyle());
+	Stage.Frames(1);
 
 	UDreamMeshModifierTextAnimation* Animation = Stage.Label->AddComponent<UDreamMeshModifierTextAnimation>();
 	if (TestNotNull(TEXT("The label took a TextAnimation"), Animation))
@@ -246,21 +354,30 @@ bool FDreamSmallTextGateTextConditionsTest::RunTest(const FString& Parameters)
 	Text->SetFontSize(14.0f);
 	Stage.Frames(1);
 	ExpectGate(*this, Text, EDreamTextSmallTextGate::Coverage, TEXT("14 again"));
+
+	// A face paint rules nothing out: the shader paints a coverage face as it paints a field one.
+	FDreamTextPaint Gold;
+	Gold.bEnabled = true;
+	Gold.Gradient.Stops = { FDreamGradientStop(0.0f, FColor(255, 243, 176)), FDreamGradientStop(1.0f, FColor(156, 106, 18)) };
+	Text->SetFacePaint(Gold);
+	Stage.Frames(1);
+	ExpectGate(*this, Text, EDreamTextSmallTextGate::Coverage, TEXT("A face painted with a gradient"));
+	TestTrue(TEXT("...its small sizes still from coverage glyphs"), Text->GetSmallTextReport().CoverageItems > 0);
 	return true;
 }
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamSmallTextGatePlacementTest,
-	"DreamGUI.Text.SmallText.OnlyAFlatUnrolledUnmirroredEvenlyScaledTextOutsideARenderLayerWithSnappingAllowedDrawsFromCoverage",
+	"DreamGUI.Text.SmallText.OnlyAFlatUnrolledUnmirroredEvenlyScaledTextWithSnappingAllowedDrawsFromCoverage",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
 
 /*
  * The gate's conditions on where the text is drawn. The label's card is rolled, scaled unevenly, mirrored and turned out of
- * the canvas's plane, the label's and the card's pixel snapping disabled, and the card made a render layer -- each sends
- * the text to the field, and the move or the setting taken back brings it back to coverage at once, its scale being the
- * one it settled at before. Pixel snapping is read up the chain: Disabled above it rules coverage out unless the label
- * itself says SnapToPixel, and Inherit all the way to the root does not. A screen-space canvas drawn below the screen's
- * resolution rules it out too.
+ * the canvas's plane, and the label's and the card's pixel snapping disabled -- each sends the text to the field. A move
+ * of a text on the field because of where it is measures nothing: the move is noted, and its world's sweep places it once
+ * it has held still for three frames, which brings it back to coverage at the scale it settled at before. Pixel snapping is
+ * read up the chain: Disabled above it rules coverage out unless the label itself says SnapToPixel, and Inherit all the way
+ * to the root does not. A screen-space canvas drawn below the screen's resolution rules it out too.
  */
 bool FDreamSmallTextGatePlacementTest::RunTest(const FString& Parameters)
 {
@@ -300,7 +417,13 @@ bool FDreamSmallTextGatePlacementTest::RunTest(const FString& Parameters)
 		Card->SetRelativeRotationEuler(FRotator::ZeroRotator);
 		Card->SetRelativeScale(FVector::OneVector);
 		Stage.Frames(1);
-		ExpectGate(*this, Text, EDreamTextSmallTextGate::Coverage, *FString::Printf(TEXT("%s, put back"), Move.What));
+		ExpectGate(*this, Text, EDreamTextSmallTextGate::Transform, *FString::Printf(TEXT("%s, put back: the move is only noted"), Move.What));
+		TestTrue(*FString::Printf(TEXT("%s, put back: ...and the text watched by its world's sweep"), Move.What), Stage.State().bWaitingToSharpen);
+		Stage.Frames(2);
+		ExpectGate(*this, Text, EDreamTextSmallTextGate::Transform, *FString::Printf(TEXT("%s, put back, two frames held still"), Move.What));
+		Stage.Frames(1);
+		ExpectGate(*this, Text, EDreamTextSmallTextGate::Coverage, *FString::Printf(TEXT("%s, put back, three frames held still"), Move.What));
+		TestFalse(*FString::Printf(TEXT("%s: ...and out of the sweep's set"), Move.What), Stage.State().bWaitingToSharpen);
 	}
 
 	Stage.Label->SetPixelSnapping(EWidgetPixelSnapping::Disabled);
@@ -320,17 +443,6 @@ bool FDreamSmallTextGatePlacementTest::RunTest(const FString& Parameters)
 	Stage.Frames(1);
 	ExpectGate(*this, Text, EDreamTextSmallTextGate::Coverage, TEXT("Both back to Inherit"));
 
-	Card->SetRenderLayerMode(EDreamWidgetRenderLayer::Always);
-	Stage.Frames(2);
-	if (TestTrue(TEXT("The card, set to Always, is a render layer"), Card->IsRenderLayer()))
-	{
-		ExpectGate(*this, Text, EDreamTextSmallTextGate::RenderLayer, TEXT("A text in a render layer, placed on the GPU"));
-	}
-	Card->SetRenderLayerMode(EDreamWidgetRenderLayer::Never);
-	Stage.Frames(2);
-	TestFalse(TEXT("Set to Never, the card is a layer no longer"), Card->IsRenderLayer());
-	ExpectGate(*this, Text, EDreamTextSmallTextGate::Coverage, TEXT("Out of the layer again"));
-
 	// A screen-space UI drawn at a fraction of the screen's resolution has no pixel grid to place on: the renderer scales
 	// it up, or not, on its own thread. The render scale repaints nothing by itself, so the text is asked to.
 	UDreamCanvas* Canvas = Rig.RootCanvas();
@@ -346,6 +458,97 @@ bool FDreamSmallTextGatePlacementTest::RunTest(const FString& Parameters)
 	Canvas->SetScreenSpaceRenderScale(1.0f);
 	Repaint();
 	ExpectGate(*this, Text, EDreamTextSmallTextGate::Coverage, TEXT("...and at its full resolution again"));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamSmallTextGateRenderLayerTest,
+	"DreamGUI.Text.SmallText.SmallTextInARenderLayerDrawsFromCoverageOnceTheLayerHasHeldStillForThreeFrames",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * Render layers (Tier 1). A layer is drawn through its row, written from where it stands, at the target's own resolution:
+ * small text in a layer that holds still is on the device grid its world transform says, and draws from coverage. The
+ * card made a layer (Always) counts as moved then: its label waits on the field, and three frames later -- nothing measured
+ * meanwhile -- the layer wakes it, and it draws from coverage. A move of the layer by whole device pixels keeps its quads; a
+ * move by half a pixel sends it to the field in the same frame (RenderLayerMoving), and it comes back three frames later.
+ * A turned layer leaves it on the field once the layer holds still (Transform), and the turn taken back brings it back. A
+ * layer taken back repaints nothing: the text's place is the same.
+ */
+bool FDreamSmallTextGateRenderLayerTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamSmallTextGateTestLocal;
+	FDreamDriverRig Rig = FDreamDriverRig::Headless(FIntPoint(1280, 720));
+	Rig.BindTest(this);
+	FLabelStage Stage(Rig);
+	if (!Stage.Build(*this))
+	{
+		return false;
+	}
+	UDreamText* Text = Stage.Text;
+	UDreamWidget* Card = Stage.Card;
+	if (!ExpectGate(*this, Text, EDreamTextSmallTextGate::Coverage, TEXT("Outside any render layer")))
+	{
+		return false;
+	}
+
+	Card->SetRenderLayerMode(EDreamWidgetRenderLayer::Always);
+	Stage.EngineFrames(1);
+	if (!TestTrue(TEXT("The card, set to Always, is a render layer"), Card->IsRenderLayer()))
+	{
+		return false;
+	}
+	TestEqual(TEXT("...made one this frame, which counts as a move"), Card->GetRenderLayerMovedFrame(), GFrameCounter);
+	ExpectGate(*this, Text, EDreamTextSmallTextGate::RenderLayerMoving, TEXT("The label, just put into a layer"));
+	TestEqual(TEXT("...drawn from the field meanwhile"), Text->GetSmallTextReport().CoverageItems, 0);
+	ResetCounters();
+	Stage.EngineFrames(2);
+	ExpectGate(*this, Text, EDreamTextSmallTextGate::RenderLayerMoving, TEXT("Two frames of the layer holding still"));
+	TestEqual(TEXT("...and nothing placed on the grid while it waits"), ReadCounter(DreamUIRenderStats::ECounter::SmallTextPlacements), (int64)0);
+	Stage.EngineFrames(1);
+	ExpectGate(*this, Text, EDreamTextSmallTextGate::Coverage, TEXT("Three frames of it: drawn from coverage in the layer"));
+	TestTrue(TEXT("...the painter drew from coverage"), Text->GetSmallTextReport().CoverageItems > 0);
+	TestTrue(TEXT("...and the layer tells it of its moves now"), Card->GetLayerHoldsCoverageText());
+	TestEqual(TEXT("...its scale counted as settled: no second wait"), Stage.State().RasterScale, 1.0f, 1.0e-4f);
+
+	// Whole device pixels at the same scale: every coverage quad of the layer stays on the grid.
+	const FVector2f PaintedOrigin = Stage.State().SnapOrigin;
+	ResetCounters();
+	Stage.EngineFrameWith([Card]() { Card->SetRenderTranslation(FVector(0.0, 3.0, -2.0)); });
+	ExpectGate(*this, Text, EDreamTextSmallTextGate::Coverage, TEXT("The layer moved 3 pixels across and 2 down"));
+	TestEqual(TEXT("...its quads kept: no repaint"), ReadCounter(DreamUIRenderStats::ECounter::TextMoveRepaints), (int64)0);
+	TestTrue(TEXT("...on the grid they were painted on"), Stage.State().SnapOrigin.Equals(PaintedOrigin, 1.0e-4f));
+	TestTrue(TEXT("...and the layer still tells the text of its moves"), Card->GetLayerHoldsCoverageText());
+
+	// Half a pixel: off the grid, repainted from the field in the same frame, and from coverage once the layer holds still.
+	Stage.EngineFrameWith([Card]() { Card->SetRenderTranslation(FVector(0.0, 3.5, -2.0)); });
+	ExpectGate(*this, Text, EDreamTextSmallTextGate::RenderLayerMoving, TEXT("The layer moved half a pixel: on the field in the same frame"));
+	TestFalse(TEXT("...the layer no longer calls"), Card->GetLayerHoldsCoverageText());
+	Stage.EngineFrames(2);
+	ExpectGate(*this, Text, EDreamTextSmallTextGate::RenderLayerMoving, TEXT("Two frames later"));
+	Stage.EngineFrames(1);
+	ExpectGate(*this, Text, EDreamTextSmallTextGate::Coverage, TEXT("Three frames later: coverage again"));
+	const float GridMove = Stage.State().SnapOrigin.X - PaintedOrigin.X;
+	TestEqual(TEXT("...on a grid moved half a pixel with the layer"), GridMove - FMath::FloorToFloat(GridMove), 0.5f, 1.0e-3f);
+
+	// Turned: on the field while it turns, and still on the field -- turned -- once the layer holds still.
+	Stage.EngineFrameWith([Card]() { Card->SetRenderRotation(FRotator(0.0, 0.0, 5.0)); });
+	ExpectGate(*this, Text, EDreamTextSmallTextGate::RenderLayerMoving, TEXT("The layer rolled 5 degrees"));
+	Stage.EngineFrames(3);
+	ExpectGate(*this, Text, EDreamTextSmallTextGate::Transform, TEXT("...held still, rolled"));
+	Stage.EngineFrameWith([Card]() { Card->SetRenderRotation(FRotator::ZeroRotator); });
+	ExpectGate(*this, Text, EDreamTextSmallTextGate::RenderLayerMoving, TEXT("The roll taken back: the layer moved"));
+	Stage.EngineFrames(3);
+	ExpectGate(*this, Text, EDreamTextSmallTextGate::Coverage, TEXT("...and held still flat again: coverage"));
+
+	// Taken back: what is under it is transformed out of it, and lies where it lay.
+	ResetCounters();
+	Card->SetRenderLayerMode(EDreamWidgetRenderLayer::Never);
+	Stage.EngineFrames(1);
+	TestFalse(TEXT("Set to Never, the card is a layer no longer"), Card->IsRenderLayer());
+	ExpectGate(*this, Text, EDreamTextSmallTextGate::Coverage, TEXT("Out of the layer"));
+	TestEqual(TEXT("...with no repaint for it"), ReadCounter(DreamUIRenderStats::ECounter::TextMoveRepaints), (int64)0);
+	TestFalse(TEXT("...and the bit that called the text cleared"), Card->GetLayerHoldsCoverageText());
 	return true;
 }
 
@@ -474,6 +677,7 @@ bool FDreamSmallTextGateCanvasesTest::RunTest(const FString& Parameters)
 			Manager->TickDreamUI(1.0f / 30.0f);
 			Manager->TickDreamUI(1.0f / 30.0f);
 			ExpectGate(*this, Text, EDreamTextSmallTextGate::WorldSpace, TEXT("A screen-space canvas in an editor world, drawn in the level"));
+			TestFalse(TEXT("...whose canvas says it is in no game world"), Canvas->IsInGameWorld());
 		}
 		if (Root != nullptr)
 		{
@@ -733,6 +937,369 @@ bool FDreamSmallTextGateRepaintOnlyTest::RunTest(const FString& Parameters)
 	ExpectGate(*this, Text, EDreamTextSmallTextGate::Coverage, TEXT("Switched on again"));
 	TestTrue(TEXT("...the label is drawn from coverage again"), Text->GetSmallTextReport().CoverageItems > 0);
 	TestEqual(TEXT("Neither switch laid it out"), Text->GetCacheTextGeometryData().GetLayoutRunCount(), Laid);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamSmallTextGateMeasuresOnceStillTest,
+	"DreamGUI.Text.SmallText.ATextOnTheFieldBecauseOfWhereItIsIsPlacedOnceItHasHeldStillNotAtEveryMove",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * A text kept on the field by where it is -- here a card turning -- is not placed on the device grid at each move: the
+ * move is noted, and nothing is measured. While the card keeps turning, frame after frame, no placement is made at all;
+ * once it has held still for three frames, its world's sweep places the text once, and repaints it from coverage there.
+ */
+bool FDreamSmallTextGateMeasuresOnceStillTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamSmallTextGateTestLocal;
+	FDreamDriverRig Rig = FDreamDriverRig::Headless(FIntPoint(1280, 720));
+	Rig.BindTest(this);
+	FLabelStage Stage(Rig);
+	if (!Stage.Build(*this))
+	{
+		return false;
+	}
+	UDreamText* Text = Stage.Text;
+	UDreamWidget* Card = Stage.Card;
+	Card->SetRelativeRotationEuler(FRotator(0.0, 0.0, 5.0));
+	Stage.Frames(1);
+	if (!ExpectGate(*this, Text, EDreamTextSmallTextGate::Transform, TEXT("A card rolled 5 degrees")))
+	{
+		return false;
+	}
+	ResetCounters();
+	for (int32 Step = 1; Step <= 6; ++Step)
+	{
+		Card->SetRelativeRotationEuler(FRotator(0.0, 0.0, 5.0 + 3.0 * Step));
+		Stage.Frames(1);
+	}
+	ExpectGate(*this, Text, EDreamTextSmallTextGate::Transform, TEXT("Six frames of the card turning"));
+	TestEqual(TEXT("...with not one placement on the device grid"), ReadCounter(DreamUIRenderStats::ECounter::SmallTextPlacements), (int64)0);
+	TestEqual(TEXT("...nor one repaint for a move"), ReadCounter(DreamUIRenderStats::ECounter::TextMoveRepaints), (int64)0);
+	TestTrue(TEXT("...the text watched by its world's sweep all the while"), Stage.State().bWaitingToSharpen);
+	// It joined the set in the first frame's update, after that frame's sweep: the other five looked at it.
+	TestTrue(TEXT("...which looked at it every frame since it joined"), ReadCounter(DreamUIRenderStats::ECounter::SharpenSweepTexts) >= 5);
+
+	Card->SetRelativeRotationEuler(FRotator::ZeroRotator);
+	Stage.Frames(3);
+	TestEqual(TEXT("Put back, and two frames held still: still nothing placed"), ReadCounter(DreamUIRenderStats::ECounter::SmallTextPlacements), (int64)0);
+	Stage.Frames(1);
+	ExpectGate(*this, Text, EDreamTextSmallTextGate::Coverage, TEXT("Three frames held still: drawn from coverage"));
+	TestEqual(TEXT("...placed by the sweep once, and once more by the paint it asked for"), ReadCounter(DreamUIRenderStats::ECounter::SmallTextPlacements), (int64)2);
+	TestEqual(TEXT("...and the sweep counted the one repaint"), ReadCounter(DreamUIRenderStats::ECounter::SharpenRepaints), (int64)1);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamSmallTextGateOnMoveTest,
+	"DreamGUI.Text.SmallText.SmallTextOnMoveKeepsTheCoverageQuadsOrDrawsFromTheFieldWhileTheTextMoves",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * DreamGUI.Text.SmallTextOnMove, which the A/B decides: 0, the default, repaints from coverage at every move off the grid
+ * (the moves test). With 1 a text sliding by half a pixel a frame keeps its coverage quads as they are, with no repaint,
+ * and once it has held still for three frames it is repainted from coverage on its new grid. With 2 the first move off the
+ * grid repaints it from the field, and nothing more until it has held still for three frames, when it is repainted from
+ * coverage.
+ */
+bool FDreamSmallTextGateOnMoveTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamSmallTextGateTestLocal;
+	FDreamDriverRig Rig = FDreamDriverRig::Headless(FIntPoint(1280, 720));
+	Rig.BindTest(this);
+	FLabelStage Stage(Rig);
+	if (!Stage.Build(*this))
+	{
+		return false;
+	}
+	UDreamText* Text = Stage.Text;
+	UDreamWidget* Label = Stage.Label;
+	const FVector Home = Label->GetRelativeLocation();
+	{
+		FScopedConsoleVariable OnMove(TEXT("DreamGUI.Text.SmallTextOnMove"), TEXT("1"));
+		if (!TestNotNull(TEXT("DreamGUI.Text.SmallTextOnMove exists"), OnMove.Variable))
+		{
+			return false;
+		}
+		const FVector2f PaintedOrigin = Stage.State().SnapOrigin;
+		ResetCounters();
+		for (int32 Step = 1; Step <= 3; ++Step)
+		{
+			Label->SetRelativeLocation(Home + FVector(0.0, 0.5 * Step, 0.0));
+			Stage.Frames(1);
+		}
+		ExpectGate(*this, Text, EDreamTextSmallTextGate::Coverage, TEXT("1: sliding half a pixel a frame"));
+		TestTrue(TEXT("1: ...moving, its quads kept"), Stage.State().bMoving);
+		TestEqual(TEXT("1: ...with no repaint for the moves"), ReadCounter(DreamUIRenderStats::ECounter::TextMoveRepaints), (int64)0);
+		TestTrue(TEXT("1: ...still on the grid they were painted on"), Stage.State().SnapOrigin.Equals(PaintedOrigin, 1.0e-4f));
+		Stage.Frames(3);
+		ExpectGate(*this, Text, EDreamTextSmallTextGate::Coverage, TEXT("1: held still for three frames"));
+		TestFalse(TEXT("1: ...moving no more"), Stage.State().bMoving);
+		const float GridMove = Stage.State().SnapOrigin.X - PaintedOrigin.X;
+		TestEqual(TEXT("1: ...repainted on the grid it ended on, a pixel and a half on"), GridMove, 1.5f, 1.0e-3f);
+	}
+	Label->SetRelativeLocation(Home);
+	Stage.Frames(1);
+	{
+		FScopedConsoleVariable OnMove(TEXT("DreamGUI.Text.SmallTextOnMove"), TEXT("2"));
+		ResetCounters();
+		Label->SetRelativeLocation(Home + FVector(0.0, 0.5, 0.0));
+		Stage.Frames(1);
+		ExpectGate(*this, Text, EDreamTextSmallTextGate::Settling, TEXT("2: moved half a pixel: on the field"));
+		TestEqual(TEXT("2: ...one repaint, for that"), ReadCounter(DreamUIRenderStats::ECounter::TextMoveRepaints), (int64)1);
+		Label->SetRelativeLocation(Home + FVector(0.0, 1.0, 0.0));
+		Stage.Frames(1);
+		Label->SetRelativeLocation(Home + FVector(0.0, 1.5, 0.0));
+		Stage.Frames(1);
+		ExpectGate(*this, Text, EDreamTextSmallTextGate::Settling, TEXT("2: still sliding"));
+		TestEqual(TEXT("2: ...and no more repaints"), ReadCounter(DreamUIRenderStats::ECounter::TextMoveRepaints), (int64)1);
+		Stage.Frames(2);
+		ExpectGate(*this, Text, EDreamTextSmallTextGate::Settling, TEXT("2: two frames held still"));
+		Stage.Frames(1);
+		ExpectGate(*this, Text, EDreamTextSmallTextGate::Coverage, TEXT("2: three frames held still: coverage"));
+	}
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamSmallTextGateRepaintBudgetTest,
+	"DreamGUI.Text.SmallText.TheSweepRepaintsNoMoreTextsAFrameThanItsWorldsBudget",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * When a screen's labels all stop moving at once, the sweep spreads their repaints over frames: no more than
+ * UDreamGUISettings::SmallTextRepaintBudgetPerFrame a frame for a world. Three labels scaled together, with a budget of
+ * one, sharpen one a frame once their scale has settled, the sweep staying bound until the last has.
+ */
+bool FDreamSmallTextGateRepaintBudgetTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamSmallTextGateTestLocal;
+	FDreamDriverRig Rig = FDreamDriverRig::Headless(FIntPoint(1280, 720));
+	Rig.BindTest(this);
+	FLabelStage Stage(Rig);
+	if (!Stage.Build(*this))
+	{
+		return false;
+	}
+	TArray<UDreamText*> Texts = { Stage.Text };
+	for (int32 Index = 0; Index < 2; ++Index)
+	{
+		UDreamWidget* Label = Rig.MakeWidget(FString::Printf(TEXT("Label%d"), Index + 2), Stage.Card, FVector2D(300.0, 40.0));
+		UDreamText* Text = Label != nullptr ? Label->CreateNewVisual<UDreamText>() : nullptr;
+		if (!TestNotNull(TEXT("Another label"), Text))
+		{
+			return false;
+		}
+		Text->SetFont(Stage.Font);
+		Text->SetFontSize(14.0f);
+		Text->SetText(FText::FromString(TEXT("Small print")));
+		Texts.Add(Text);
+	}
+	Stage.Frames(2);
+	UDreamGUISettings* Settings = GetMutableDefault<UDreamGUISettings>();
+	TGuardValue<int32> Budget(Settings->SmallTextRepaintBudgetPerFrame, 1);
+	auto CountCoverage = [&Texts]()
+	{
+		int32 Count = 0;
+		for (const UDreamText* Text : Texts)
+		{
+			Count += Text->GetSmallTextState().Gate == EDreamTextSmallTextGate::Coverage ? 1 : 0;
+		}
+		return Count;
+	};
+	if (!TestEqual(TEXT("Three labels drawn from coverage"), CountCoverage(), 3))
+	{
+		return false;
+	}
+	Stage.Card->SetRelativeScale(FVector(1.05));
+	Stage.Frames(1);
+	TestEqual(TEXT("Scaled by 5 percent: all three settling"), CountCoverage(), 0);
+	Stage.Frames(2);
+	TestEqual(TEXT("Two frames of the scale holding"), CountCoverage(), 0);
+	Stage.Frames(1);
+	TestEqual(TEXT("Three: one sharpened, the budget spent"), CountCoverage(), 1);
+	Stage.Frames(1);
+	TestEqual(TEXT("The next frame, one more"), CountCoverage(), 2);
+	Stage.Frames(1);
+	TestEqual(TEXT("And the last"), CountCoverage(), 3);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamSmallTextGateConsoleVariablesTest,
+	"DreamGUI.Text.SmallText.TheSmallTextConsoleVariablesAnswerForTheProjectAndRepaintEveryText",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * The A/B switches: DreamGUI.Text.SmallTextCoverage (-1 the project's choice, 0 off, 1 on) and
+ * DreamGUI.Text.SmallTextMaxPixelSize (above 0 the size limit, else the project's), as the settings answer them for every
+ * font. Changing either repaints every text that has been painted -- its gate asked again -- and never lays one out.
+ */
+bool FDreamSmallTextGateConsoleVariablesTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamSmallTextGateTestLocal;
+	FDreamDriverRig Rig = FDreamDriverRig::Headless(FIntPoint(1280, 720));
+	Rig.BindTest(this);
+	FLabelStage Stage(Rig);
+	if (!Stage.Build(*this))
+	{
+		return false;
+	}
+	const UDreamGUISettings* Settings = UDreamGUISettings::Get();
+	const int32 Laid = Stage.Text->GetCacheTextGeometryData().GetLayoutRunCount();
+	{
+		FScopedConsoleVariable Coverage(TEXT("DreamGUI.Text.SmallTextCoverage"), TEXT("0"));
+		FScopedConsoleVariable MaxSize(TEXT("DreamGUI.Text.SmallTextMaxPixelSize"), TEXT("0"));
+		if (!TestTrue(TEXT("Both console variables exist"), Coverage.Variable != nullptr && MaxSize.Variable != nullptr))
+		{
+			return false;
+		}
+		TestFalse(TEXT("0: coverage off"), UDreamGUISettings::IsSmallTextCoverageEnabled());
+		Coverage.Variable->Set(TEXT("1"), ECVF_SetByCode);
+		TestTrue(TEXT("1: coverage on"), UDreamGUISettings::IsSmallTextCoverageEnabled());
+		Coverage.Variable->Set(TEXT("-1"), ECVF_SetByCode);
+		TestEqual(TEXT("-1: as the project says"), UDreamGUISettings::IsSmallTextCoverageEnabled(), (bool)Settings->bSmallTextCoverage);
+		TestEqual(TEXT("A size limit of 0 is the project's"), UDreamGUISettings::GetSmallTextMaxPixelSize(), Settings->SmallTextMaxPixelSize);
+		MaxSize.Variable->Set(TEXT("15"), ECVF_SetByCode);
+		TestEqual(TEXT("Above 0, the console's"), UDreamGUISettings::GetSmallTextMaxPixelSize(), 15.0f);
+
+		// A frame with nothing changed places nothing; the change asks every painted text's gate again.
+		Stage.Frames(1);
+		ResetCounters();
+		Stage.Frames(1);
+		TestEqual(TEXT("A quiet frame places nothing"), ReadCounter(DreamUIRenderStats::ECounter::SmallTextPlacements), (int64)0);
+		MaxSize.Variable->Set(TEXT("16"), ECVF_SetByCode);
+		Stage.Frames(1);
+		TestTrue(TEXT("A change of the size limit repaints the label, its gate asked again"), ReadCounter(DreamUIRenderStats::ECounter::SmallTextPlacements) >= 1);
+		ExpectGate(*this, Stage.Text, EDreamTextSmallTextGate::Coverage, TEXT("...from coverage, its first paint since counting as settled"));
+	}
+	TestEqual(TEXT("None of it laid the label out"), Stage.Text->GetCacheTextGeometryData().GetLayoutRunCount(), Laid);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamSmallTextGateCoverageHoldTest,
+	"DreamGUI.Text.SmallText.ATextHoldsTheCoverageEpochItsLastPaintDrewFromAndLetsGoOfIt",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * Stale coverage cells: a font frees the cells of a coverage epoch only once no text holds it. A text holds the epoch of
+ * its last paint when the paint drew anything from coverage, and none when it drew nothing: it moves its hold with every
+ * paint, lets go of it when it stops drawing from coverage, and when it lets go of the font.
+ */
+bool FDreamSmallTextGateCoverageHoldTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamSmallTextGateTestLocal;
+	FDreamDriverRig Rig = FDreamDriverRig::Headless(FIntPoint(1280, 720));
+	Rig.BindTest(this);
+	if (!TestTrue(TEXT("The rig came up"), Rig.IsUsable()))
+	{
+		return false;
+	}
+	FLabelStage Stage(Rig);
+	UDreamTextHoldRecordingFont* Font = MakeCoverageFontOf<UDreamTextHoldRecordingFont>(Rig.GetWorld(), nullptr);
+	if (!Stage.Build(*this, Font))
+	{
+		return false;
+	}
+	UDreamText* Text = Stage.Text;
+	if (!ExpectGate(*this, Text, EDreamTextSmallTextGate::Coverage, TEXT("A label drawn from coverage")))
+	{
+		return false;
+	}
+	TestEqual(TEXT("...holds the font's epoch, once"), Font->GetHolders(1), 1);
+
+	// A flush moves the font on to another epoch, and the glyphs come back: the repaint moves the hold.
+	Font->MockCoverageEpoch = 2;
+	Font->OnCoverageGlyphsChanged.Broadcast();
+	Stage.Frames(1);
+	TestEqual(TEXT("Repainted after the flush, it lets go of the old epoch"), Font->GetHolders(1), 0);
+	TestEqual(TEXT("...and holds the new one"), Font->GetHolders(2), 1);
+
+	Text->SetSmallTextRaster(EDreamTextSmallTextRaster::Off);
+	Stage.Frames(1);
+	TestEqual(TEXT("Drawn from the field, it holds nothing"), Font->GetHolders(2), 0);
+	Text->SetSmallTextRaster(EDreamTextSmallTextRaster::Auto);
+	Stage.Frames(1);
+	TestEqual(TEXT("From coverage again, it holds the epoch again"), Font->GetHolders(2), 1);
+
+	const int32 MovesBefore = Font->MoveCalls;
+	Text->SetColor(FColor(200, 220, 255));
+	Stage.Frames(1);
+	TestEqual(TEXT("A repaint at the same epoch moves nothing"), Font->MoveCalls, MovesBefore);
+
+	Text->SetFont(NewObject<UDreamTextTestFont>(Rig.GetWorld()));
+	TestEqual(TEXT("Switched to another font, it lets go of the old one's epoch"), Font->GetHolders(2), 0);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamSmallTextGateUndrawnHoldTest,
+	"DreamGUI.Text.SmallText.ATextLetsGoOfItsCoverageEpochWhileItIsNotDrawnAndHoldsItAgainBeforeItIs",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * A text that is not drawn is not repainted when its font flushes the coverage cells, so a hold it kept would keep the
+ * flushed cells from the pool for as long as it stays so. Hidden -- itself, or a parent -- it lets go of its epoch; shown
+ * again while that epoch is still the font's, it holds it again with no repaint; shown after the font moved on, it is
+ * repainted before it is drawn and holds the new epoch. Emptied, and unregistered, it holds nothing either.
+ */
+bool FDreamSmallTextGateUndrawnHoldTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamSmallTextGateTestLocal;
+	FDreamDriverRig Rig = FDreamDriverRig::Headless(FIntPoint(1280, 720));
+	Rig.BindTest(this);
+	if (!TestTrue(TEXT("The rig came up"), Rig.IsUsable()))
+	{
+		return false;
+	}
+	FLabelStage Stage(Rig);
+	UDreamTextHoldRecordingFont* Font = MakeCoverageFontOf<UDreamTextHoldRecordingFont>(Rig.GetWorld(), nullptr);
+	if (!Stage.Build(*this, Font))
+	{
+		return false;
+	}
+	UDreamText* Text = Stage.Text;
+	if (!ExpectGate(*this, Text, EDreamTextSmallTextGate::Coverage, TEXT("A label drawn from coverage"))
+		|| !TestEqual(TEXT("...holds the font's epoch"), Font->GetHolders(1), 1))
+	{
+		return false;
+	}
+
+	Stage.Label->SetVisibility(EDreamWidgetVisibility::Hidden);
+	Stage.Frames(1);
+	TestEqual(TEXT("Hidden, it lets go of the epoch"), Font->GetHolders(1), 0);
+	ResetCounters();
+	Stage.Label->SetVisibility(EDreamWidgetVisibility::Visible);
+	Stage.Frames(1);
+	TestEqual(TEXT("Shown again, the epoch still the font's: held again"), Font->GetHolders(1), 1);
+	TestEqual(TEXT("...with no repaint"), ReadCounter(DreamUIRenderStats::ECounter::TextPaints), (int64)0);
+
+	Stage.Card->SetVisibility(EDreamWidgetVisibility::Hidden);
+	Stage.Frames(1);
+	TestEqual(TEXT("Its parent hidden, it lets go of the epoch too"), Font->GetHolders(1), 0);
+	// The font moves on with nothing said: the cells the quads drew from may hold other glyphs now.
+	Font->MockCoverageEpoch = 2;
+	Stage.Frames(1);
+	TestEqual(TEXT("...and holds nothing while it stays hidden"), Font->GetHolders(2), 0);
+	ResetCounters();
+	Stage.Card->SetVisibility(EDreamWidgetVisibility::Visible);
+	Stage.Frames(1);
+	TestTrue(TEXT("Shown after the font moved on, it is repainted before it is drawn"), ReadCounter(DreamUIRenderStats::ECounter::TextPaints) >= 1);
+	TestEqual(TEXT("...and holds the font's new epoch"), Font->GetHolders(2), 1);
+	TestEqual(TEXT("...never the old one"), Font->GetHolders(1), 0);
+
+	Text->SetText(FText::GetEmpty());
+	Stage.Frames(1);
+	TestEqual(TEXT("Emptied, it holds nothing"), Font->GetHolders(2), 0);
+	Text->SetText(FText::FromString(TEXT("Small print")));
+	Stage.Frames(1);
+	TestEqual(TEXT("Given its text back, it holds the epoch again"), Font->GetHolders(2), 1);
+
+	Stage.Label->DestroyWidget();
+	TestEqual(TEXT("Unregistered, it holds nothing"), Font->GetHolders(2), 0);
+	Stage.Frames(1);
 	return true;
 }
 

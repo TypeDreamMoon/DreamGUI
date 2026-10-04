@@ -64,8 +64,9 @@ enum class EDreamUISdfSource : uint8
 UENUM(BlueprintType)
 enum class EDreamUISmallTextCoverage : uint8
 {
-	/** As the project says: UDreamGUISettings::bSmallTextCoverage. */
+	/** As the project says: UDreamGUISettings::bSmallTextCoverage, unless the console variable DreamGUI.Text.SmallTextCoverage is 0 or 1. */
 	Inherit,
+	/** On, unless the console variable DreamGUI.Text.SmallTextCoverage is 0. */
 	On,
 	Off,
 };
@@ -179,9 +180,13 @@ public:
 	/** How far the layout's glyph quads sit inside the field's spread, in texels at SampleFontSize (see GetCharDataFromCache). */
 	float GetQuadShrinkTexels(float InExpandMeshSize) const;
 	virtual float GetBoldRatio() override{ return BoldRatio; }
-	/** The outline (multi-channel, BGRA) field, and SmallTextCoverage On -- or Inherit with UDreamGUISettings::bSmallTextCoverage. */
+	/**
+	 * The outline (multi-channel, BGRA) field, and SmallTextCoverage On -- or Inherit with the project's answer,
+	 * UDreamGUISettings::IsSmallTextCoverageEnabled. The console variable DreamGUI.Text.SmallTextCoverage at 0 turns a font set
+	 * On off too.
+	 */
 	virtual bool SupportsCoverageGlyphs() const override;
-	/** SmallTextMaxPixelSize when it is set (above 0), else UDreamGUISettings::SmallTextMaxPixelSize. */
+	/** SmallTextMaxPixelSize when it is set (above 0), else the project's, UDreamGUISettings::GetSmallTextMaxPixelSize. */
 	virtual float GetCoverageMaxPixelSize() const override;
 	//End UDreamUIFontData_BaseObject interface
 	float GetSampleFontSize()const{return SampleFontSize;}
@@ -202,6 +207,7 @@ protected:
 	virtual void AddCharDataToCache(const FDreamUIGlyphKey& Glyph, float CharSize, bool IsBold, FDreamUICharData& CharData)override;
 	virtual bool RenderGlyph(const FDreamUIGlyphKey& Glyph, float CharSize, bool IsBold, FGlyphBitmap& OutResult)override;
 	virtual void ClearCharDataCache()override;
+	virtual int32 GetCharDataCacheCount() const override;
 
 	//SDF font already have space between glyphs
 	virtual int32 Get_SPACE_NEED_EXPEND()const override { return 0; };

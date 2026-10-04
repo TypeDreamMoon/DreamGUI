@@ -39,6 +39,12 @@ public:
 	bool bMockHasKerning = true;
 	/** Rasterize at DynamicPixelsPerUnit, as a bitmap font does; off by default, as for every distance field. */
 	bool bMockSupportsDynamicPixelsPerUnit = false;
+	/**
+	 * Every advance rounded to a whole number of these units at the size it is asked for, as a hinted font rounds to whole
+	 * pixels; 0, the default, leaves advances as they are. Under a scaled canvas a glyph is asked for at the device size and
+	 * measured back, so its advance then differs from the one at the text's own size.
+	 */
+	float MockAdvanceGrid = 0.0f;
 
 	virtual void InitFont() override {}
 	virtual UTexture2DArray* GetFontTexture() override { return nullptr; }

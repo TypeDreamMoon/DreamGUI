@@ -65,6 +65,7 @@ protected:
 	virtual void AddCharDataToCache(const FDreamUIGlyphKey& Glyph, float CharSize, bool IsBold, FDreamUICharData& CharData)override;
 	virtual bool RenderGlyph(const FDreamUIGlyphKey& Glyph, float CharSize, bool IsBold, FGlyphBitmap& OutResult)override;
 	virtual void ClearCharDataCache()override;
+	virtual int32 GetCharDataCacheCount() const override;
 
 	virtual bool GetSupportDynamicPixelsPerUnit()override { return true; }
 	virtual EDreamUIFontTextureMark GetFontTextureMark() override{ return EDreamUIFontTextureMark::Bitmap; }

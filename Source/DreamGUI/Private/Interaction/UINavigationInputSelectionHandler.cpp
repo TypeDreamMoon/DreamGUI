@@ -4,9 +4,142 @@
 #include "DreamTweenBPLibrary.h"
 #include "Core/Components/DreamCanvas.h"
 #include "Core/Components/DreamWidget.h"
+#include "Core/DreamGUISettings.h"
+#include "Core/DreamUserWidget.h"
+#include "Core/DreamWidgetPresenterComponentBase.h"
+#include "Engine/World.h"
+
+namespace UINavigationInputSelectionHandlerLocal
+{
+	/**
+	 * The ring of each root canvas no presenter hosts, by the canvas's widget. Weak both ways: a ring goes with the tree it
+	 * hangs in -- moved under the widget it marks, it is destroyed with that widget -- and the next ask makes another; an
+	 * entry whose canvas or ring is gone is cleared by the next ask that makes one. Game thread.
+	 */
+	TMap<TWeakObjectPtr<UDreamWidget>, TWeakObjectPtr<UUINavigationInputSelectionHandler>> GCanvasFocusRings;
+
+	/** Where a ring for InWidget's screen hangs: its root canvas's widget, or null while no canvas draws it. */
+	UDreamWidget* FindRingHost(const UDreamWidget* InWidget)
+	{
+		const UDreamCanvas* RootCanvas = InWidget->GetRootCanvas();
+		return RootCanvas != nullptr ? RootCanvas->GetWidget() : nullptr;
+	}
+
+	void ForgetGoneRings()
+	{
+		for (auto It = GCanvasFocusRings.CreateIterator(); It; ++It)
+		{
+			if (!It->Key.IsValid() || !It->Value.IsValid())
+			{
+				It.RemoveCurrent();
+			}
+		}
+	}
+}
 
 UUINavigationInputSelectionHandler::UUINavigationInputSelectionHandler()
 {
+}
+
+UUINavigationInputSelectionHandler* UUINavigationInputSelectionHandler::FindFor(const UDreamWidget* InWidget)
+{
+	using namespace UINavigationInputSelectionHandlerLocal;
+	if (!IsValid(InWidget))
+	{
+		return nullptr;
+	}
+	if (const UDreamWidgetPresenterComponentBase* Presenter = Cast<UDreamWidgetPresenterComponentBase>(InWidget->GetAttachedRootSceneComponent()))
+	{
+		return Presenter->FindNavigationSelection();
+	}
+	UDreamWidget* Host = FindRingHost(InWidget);
+	if (Host == nullptr)
+	{
+		return nullptr;
+	}
+	const TWeakObjectPtr<UUINavigationInputSelectionHandler>* Found = GCanvasFocusRings.Find(TWeakObjectPtr<UDreamWidget>(Host));
+	return Found != nullptr ? Found->Get() : nullptr;
+}
+
+UUINavigationInputSelectionHandler* UUINavigationInputSelectionHandler::FindOrCreateFor(UDreamWidget* InWidget)
+{
+	using namespace UINavigationInputSelectionHandlerLocal;
+	if (!IsValid(InWidget))
+	{
+		return nullptr;
+	}
+	// A presenter keeps its own ring: it is what knows which ring class its owner configured.
+	if (UDreamWidgetPresenterComponentBase* Presenter = Cast<UDreamWidgetPresenterComponentBase>(InWidget->GetAttachedRootSceneComponent()))
+	{
+		return Presenter->GetNavigationSelection();
+	}
+	// Every other screen -- the pages the screen subsystem shows above all -- had no ring at all, since only a presenter
+	// ever made one. One per root canvas, from the project's class, made with no parent -- the manager's pool of free
+	// roots holds it -- since the selection that asks for it may come from inside a walk over the canvas's tree (a scope
+	// focusing as its screen wakes) that a new child must not land in; SelectWidget moves it onto the widget it marks.
+	UDreamWidget* Host = FindRingHost(InWidget);
+	UWorld* World = InWidget->GetWorld();
+	if (Host == nullptr || World == nullptr || !World->IsGameWorld())
+	{
+		return nullptr;
+	}
+	if (UUINavigationInputSelectionHandler* Existing = FindFor(InWidget))
+	{
+		return Existing;
+	}
+	ForgetGoneRings();
+	const TSubclassOf<UDreamUserWidget> SelectionClass = UDreamGUISettings::LoadSettingClass(
+		UDreamGUISettings::Get()->NavigationSelectionClass, TEXT("NavigationSelectionClass"));
+	if (SelectionClass == nullptr)
+	{
+		return nullptr;
+	}
+	UDreamUserWidget* RingWidget = CreateDreamWidget(World, SelectionClass, nullptr);
+	UUINavigationInputSelectionHandler* Ring = MakeRing(RingWidget);
+	if (Ring == nullptr)
+	{
+		if (RingWidget != nullptr)
+		{
+			RingWidget->DestroyWidget();
+		}
+		return nullptr;
+	}
+	GCanvasFocusRings.Add(TWeakObjectPtr<UDreamWidget>(Host), TWeakObjectPtr<UUINavigationInputSelectionHandler>(Ring));
+	return Ring;
+}
+
+UUINavigationInputSelectionHandler* UUINavigationInputSelectionHandler::MakeRing(UDreamWidget* InRingWidget)
+{
+	if (!IsValid(InRingWidget))
+	{
+		return nullptr;
+	}
+	// The class's own handler when it has one -- a Blueprint ring drives itself. The plugin's class has none: it is the
+	// picture alone, and every ring made from it used to be thrown away (or, on a presenter, left null), so the ring never
+	// showed anywhere. The handler added here moves, sizes and fades the root the picture is drawn on.
+	UUINavigationInputSelectionHandler* Ring = InRingWidget->GetComponent<UUINavigationInputSelectionHandler>();
+	if (Ring == nullptr)
+	{
+		Ring = InRingWidget->AddComponent<UUINavigationInputSelectionHandler>();
+	}
+	if (Ring != nullptr)
+	{
+		MakeRingInert(InRingWidget);
+	}
+	return Ring;
+}
+
+void UUINavigationInputSelectionHandler::MakeRingInert(UDreamWidget* InRingWidget)
+{
+	if (!IsValid(InRingWidget))
+	{
+		return;
+	}
+	// The ring is parented under the control it marks and sized over it: hit, it would take the click meant for that
+	// control; laid out, a control with a layout container would place it among its own children.
+	InRingWidget->SetRaycastable(EDreamWidgetRaycastableType::Disabled);
+	InRingWidget->SetIgnoreLayout(true);
+	InRingWidget->SetIsTabStop(false);
 }
 
 UDreamTweener* UUINavigationInputSelectionHandler::FadeCursorTo(UDreamWidget* InWidget, float InOpacity)

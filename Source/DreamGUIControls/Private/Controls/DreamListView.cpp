@@ -23,6 +23,46 @@
 #include "Interaction/UIButton.h"
 #include "Interaction/UIScrollView.h"
 
+UDreamListViewBase::UDreamListViewBase()
+{
+	// One Tab stop, entered at ResolveTabEntry's row: the arrows move inside a list, and Tab moves past it
+	// -- what a browser's list box does, and what keeps a thousand rows from being a thousand Tabs.
+	TabNavigation = EDreamWidgetTabNavigation::Once;
+}
+
+UDreamWidget* UDreamListViewBase::ResolveTabEntry(bool bInBackward)
+{
+	// The selected item first, while its row could show at all (a tree folds items away) and the veto lets
+	// navigation land there; else the first item that may be landed on, from whichever end Tab came in at.
+	int32 EntryItem = INDEX_NONE;
+	if (SelectedIndex != INDEX_NONE && VisibleItemIndices.Contains(SelectedIndex) && IsItemSelectableOrNavigable(SelectedIndex))
+	{
+		EntryItem = SelectedIndex;
+	}
+	for (int32 Step = 0; EntryItem == INDEX_NONE && Step < VisibleItemIndices.Num(); ++Step)
+	{
+		const int32 Candidate = VisibleItemIndices[bInBackward ? VisibleItemIndices.Num() - 1 - Step : Step];
+		if (IsItemSelectableOrNavigable(Candidate))
+		{
+			EntryItem = Candidate;
+		}
+	}
+	if (EntryItem == INDEX_NONE)
+	{
+		return nullptr;
+	}
+	// By index, and at once, as a navigation press reveals what it lands on: a recycling list has rows only
+	// for what shows, and the row standing for the item exists once the window has moved onto it.
+	ScrollItemIntoView(EntryItem, /*bInAnimate*/false);
+	UDreamWidget* Row = GetRowWidget(EntryItem);
+	if (IsValid(Row))
+	{
+		// Focus goes to the row that shows the item, so an item a re-bound row was keeping for it is done with.
+		ClearFocusAnchor();
+	}
+	return Row;
+}
+
 void UDreamListViewBase::CollectParts(TArray<FDreamControlPart>& OutParts)
 {
 	OutParts.Emplace(TEXT("Face"), FaceNode);
@@ -183,6 +223,14 @@ void UDreamListViewBase::WireParts()
 		// The bar owns the two-way link, so the list hands it the view and stops thinking about
 		// scroll values -- one implementation, shared with the scroll box.
 		ScrollBarNode->SetScrollView(ScrollBehaviour);
+		// Never a stop, whatever a bar's own defaults say: the track used to be the second Tab's landing
+		// place, between a row and whatever followed the list, and the pad's press along its axis moved
+		// the bar instead of the rows. The list is one stop and the arrows step its rows.
+		ScrollBarNode->SetTabNavigation(EDreamWidgetTabNavigation::None);
+		if (ScrollBarNode->BarBehaviour != nullptr)
+		{
+			ScrollBarNode->BarBehaviour->SetCanNavigateHere(false);
+		}
 	}
 }
 
@@ -1477,10 +1525,19 @@ void UDreamListViewBase::SkinRowForState(int32 InPoolIndex, EUISelectableSelecti
 void UDreamListViewBase::HandleRowSelectionStateChanged(int32 InPoolIndex, EUISelectableSelectionState InState)
 {
 	// A row that was handed another item while focus stayed on it answers navigation from the item focus
-	// was on (GetNavigationItemIndex) -- until the pointer takes the row over or focus leaves it.
-	if (InPoolIndex == FocusAnchorPoolIndex && InState != EUISelectableSelectionState::Focused)
+	// was on (GetNavigationItemIndex) -- until the pointer takes the row over or focus leaves it. Whether
+	// focus left is the row's button's to say, not the state it draws: focus is drawn only after keys or
+	// a pad, so a row focused by a click draws Normal while it keeps the focus, and every re-bind repaints
+	// it -- reading the drawn state dropped the anchor the moment it was set.
+	if (InPoolIndex == FocusAnchorPoolIndex)
 	{
-		ClearFocusAnchor();
+		const UDreamWidget* Row = RowNodes.IsValidIndex(InPoolIndex) ? RowNodes[InPoolIndex].Get() : nullptr;
+		const UUIButton* RowButton = IsValid(Row) ? Row->GetComponent<UUIButton>() : nullptr;
+		const bool bPointerTookRow = InState == EUISelectableSelectionState::Hovered || InState == EUISelectableSelectionState::Pressed;
+		if (bPointerTookRow || RowButton == nullptr || !RowButton->IsFocused())
+		{
+			ClearFocusAnchor();
+		}
 	}
 	// The ITEM is what is hovered, not the widget: a row re-bound under a resting pointer is a
 	// different item hovered, and a consumer keyed by index would otherwise be told about the old one
@@ -2394,6 +2451,12 @@ bool UDreamListRowButton::OnNavigate_Implementation(EDreamUINavigationDirection 
 bool UDreamListViewBase::HandleRowNavigation(int32 InPoolIndex, EDreamUINavigationDirection InDirection,
 	TScriptInterface<IDreamNavigationInterface>& OutResult)
 {
+	if (InDirection == EDreamUINavigationDirection::Next || InDirection == EDreamUINavigationDirection::Prev)
+	{
+		// Tab's, never the rows': the list is one Tab stop, so Tab and Shift+Tab leave it rather than step
+		// from row to row -- whatever a subclass's arithmetic would answer for them.
+		return false;
+	}
 	// Which item the press steps FROM, asked NOW: a recycled row stands for a different item every few
 	// scrolls, and a row that was handed another one while focus stayed on it steps from the item focus
 	// was on (GetNavigationItemIndex) -- not from the stranger it shows.

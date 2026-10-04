@@ -175,7 +175,8 @@ public:
 	 * Drives a float with a damped spring instead of a curve: no duration, no ease, and it finishes
 	 * when it comes to rest. SetTarget on the returned spring moves the goal at any time and the
 	 * velocity carries over, which is what makes a list of items glide to a new position instead of
-	 * restarting from it.
+	 * restarting from it. At rest the spring is held rather than retired, so SetTarget can wake it again:
+	 * Kill it once it is no longer wanted.
 	 *
 	 * The spring math and the tween have been here all along (FDreamSpring, UDreamTweenerSpring); this
 	 * node is what a graph reaches them through. The value lives with the node -- a spring drives a
@@ -366,7 +367,7 @@ public:
 	 * Repeatedly call function.
 	 * @param delayTime delay time before the first call
 	 * @param interval interval time between every call
-	 * @param repeatCount repeat count, -1 means infinite
+	 * @param repeatCount repeat count, -1 means infinite, 0 calls nothing
 	 * @return tweener
 	 */
 	static UDreamTweener* RepeatCall(UObject* WorldContextObject, const TFunction<void()>& callFunction, float delayTime, float interval, int repeatCount = 1)
@@ -377,8 +378,11 @@ public:
 			Tweener
 				->SetDelay(delayTime)
 				->SetLoop(repeatCount == 1 || repeatCount == 0 ? EDreamTweenLoop::Once : EDreamTweenLoop::Restart, repeatCount)
-				->OnCycleStart(callFunction)
 				;
+			if (!EndRepeatCallWithNoRepeats(Tweener, repeatCount))
+			{
+				Tweener->OnCycleStart(callFunction);
+			}
 		}
 		return Tweener;
 	}
@@ -386,7 +390,7 @@ public:
 	 * Repeatedly call function.
 	 * @param delayTime delay time before the first call
 	 * @param interval interval time between every call
-	 * @param repeatCount repeat count, -1 means infinite
+	 * @param repeatCount repeat count, -1 means infinite, 0 calls nothing
 	 * \return tweener
 	 */
 	static UDreamTweener* RepeatCall(UObject* WorldContextObject, const FSimpleDelegate& callFunction, float delayTime, float interval, int repeatCount = 1)
@@ -397,8 +401,11 @@ public:
 			Tweener
 				->SetDelay(delayTime)
 				->SetLoop(repeatCount == 1 || repeatCount == 0 ? EDreamTweenLoop::Once : EDreamTweenLoop::Restart, repeatCount)
-				->OnCycleStart(callFunction)
 				;
+			if (!EndRepeatCallWithNoRepeats(Tweener, repeatCount))
+			{
+				Tweener->OnCycleStart(callFunction);
+			}
 		}
 		return Tweener;
 	}
@@ -406,7 +413,7 @@ public:
 	 * Repeatedly call function.
 	 * @param delayTime delay time before the first call
 	 * @param interval interval time between every call
-	 * @param repeatCount repeat count, -1 means infinite
+	 * @param repeatCount repeat count, -1 means infinite, 0 calls nothing
 	 * @return tweener
 	 */
 	UFUNCTION(BlueprintCallable, meta = (WorldContext = "WorldContextObject"), Category = DreamTween)
@@ -418,11 +425,30 @@ public:
 			Tweener
 				->SetDelay(delayTime)
 				->SetLoop(repeatCount == 1 || repeatCount == 0 ? EDreamTweenLoop::Once : EDreamTweenLoop::Restart, repeatCount)
-				->OnCycleStart(callFunction)
 				;
+			if (!EndRepeatCallWithNoRepeats(Tweener, repeatCount))
+			{
+				Tweener->OnCycleStart(callFunction);
+			}
 		}
 		return Tweener;
 	}
+private:
+	/**
+	 * A repeat count of 0 is no call at all. It used to set the same single cycle a count of 1 does, so the
+	 * function was called once anyway. The tween is still made and handed back -- callers chain on it --
+	 * but killed at once, with nothing bound to it. True when it was.
+	 */
+	static bool EndRepeatCallWithNoRepeats(UDreamTweener* InTweener, int InRepeatCount)
+	{
+		if (InRepeatCount != 0)
+		{
+			return false;
+		}
+		InTweener->Kill();
+		return true;
+	}
+public:
 	UFUNCTION(BlueprintCallable, meta = (WorldContext = "WorldContextObject"), Category = DreamTween)
 		static class UDreamTweenerSequence* CreateSequence(UObject* WorldContextObject)
 	{

@@ -135,6 +135,13 @@ void UDreamScrollBox::WireParts()
 		// scroll values -- one implementation whether the bar is this one or a standalone bar
 		// somebody points at GetScrollView().
 		ScrollBarNode->SetScrollView(ScrollView);
+		// The box's furniture, never a stop: Tab passes the whole bar by, and the pad scrolls the box
+		// through whatever has focus (GetScrollTargetForNavigation) instead of landing on the track.
+		ScrollBarNode->SetTabNavigation(EDreamWidgetTabNavigation::None);
+		if (ScrollBarNode->BarBehaviour != nullptr)
+		{
+			ScrollBarNode->BarBehaviour->SetCanNavigateHere(false);
+		}
 		// The pointer on the bar or dragging it is what draws an idle track at full alpha (SScrollBar's
 		// GetTrackOpacity), and the bar's selectable already tells hovered and pressed from the rest.
 		if (ScrollBarNode->BarBehaviour != nullptr && !BarStateHandle.IsValid())
@@ -336,13 +343,14 @@ void UDreamScrollBox::RefreshFocusTarget()
 			return;
 		}
 		// The selectable is what the event system hands focus to, and what already tells a resting
-		// pointer from focus -- so its state IS received and lost, with nothing else to subscribe to.
+		// pointer from focus -- and every select, deselect and pointer move reaches its state report,
+		// so that report is where received and lost are noticed, with nothing else to subscribe to.
 		FocusSelectable->GetOnSelectionStateChangedEvent().AddUObject(
 			this, &UDreamScrollBox::HandleFaceSelectionStateChanged);
 	}
 }
 
-void UDreamScrollBox::HandleFaceSelectionStateChanged(EUISelectableSelectionState InState, bool /*bInImmediate*/)
+void UDreamScrollBox::HandleFaceSelectionStateChanged(EUISelectableSelectionState /*InState*/, bool /*bInImmediate*/)
 {
 	// The gate lives here because the selectable cannot be switched off: a box whose bIsFocusable was
 	// turned back off keeps the behaviour (destroying it costs the designer a details rebuild) but
@@ -353,8 +361,11 @@ void UDreamScrollBox::HandleFaceSelectionStateChanged(EUISelectableSelectionStat
 	}
 	// The EDGE, not the state: the selectable re-applies its state for a repaint as well as for a
 	// change, and a box that announced "focused" on every repaint would fire dozens of times for one
-	// press.
-	const bool bFocused = InState == EUISelectableSelectionState::Focused;
+	// press. And the focus is asked of the selectable, not read off the state it draws: focus is drawn
+	// only after keys or a pad, so a box focused by a click draws Normal -- and Hovered under the
+	// pointer -- the whole time it has the focus, and reading the drawn state announced a loss that
+	// never happened.
+	const bool bFocused = FocusSelectable != nullptr && FocusSelectable->IsFocused();
 	if (bFocused == bWasFocused)
 	{
 		return;
@@ -372,6 +383,12 @@ void UDreamScrollBox::HandleFaceSelectionStateChanged(EUISelectableSelectionStat
 	{
 		NotifyFocusLost(FocusUserIndex, INDEX_NONE);
 	}
+}
+
+UDreamWidget* UDreamScrollBox::GetScrollTargetForNavigation() const
+{
+	// Null on a template whose viewport carries no scroll view: the search then goes on as for any widget.
+	return ScrollView != nullptr ? ScrollView->GetWidget() : nullptr;
 }
 
 void UDreamScrollBox::HandleContentFocusMoved(UDreamWidget* InFocusedWidget)

@@ -1110,6 +1110,18 @@ void UDreamRectBlock::SetRaycastSupportCornerRadius(bool value)
 #pragma region TweenAnimation
 #include "DreamTweenManager.h"
 #include "Core/DreamUIWidgetRegistry.h"
+namespace DreamRectBlockAlphaTweenLocal
+{
+	/**
+	 * An alpha tween's value as the byte it is stored in. The eases that overshoot carry it past 0..1 (OutBack
+	 * reaches 1.1), and the plain cast of 280 into a byte wrapped it to 24: a fade-in that flashed nearly
+	 * transparent just before it settled.
+	 */
+	uint8 AlphaToByte(float InAlpha)
+	{
+		return static_cast<uint8>(FMath::Clamp(FMath::RoundToInt(InAlpha * 255.0f), 0, 255));
+	}
+}
 UDreamTweener* UDreamRectBlock::BodyColorTo(FColor endValue, float duration, float delay, EDreamTweenEase ease)
 {
 	auto Tweener = UDreamTweenManager::To(this, FDreamTweenColorGetterFunction::CreateWeakLambda(this, [this] {
@@ -1130,7 +1142,7 @@ UDreamTweener* UDreamRectBlock::BodyAlphaTo(float endValue, float duration, floa
 		return FDreamUIUtils::ByteToFloat01(this->BodyColor.A);
 		}), FDreamTweenFloatSetterFunction::CreateWeakLambda(this, [this](float value) {
 			auto PropertyValue = this->BodyColor;
-			PropertyValue.A = static_cast<uint8>(value * 255.0f);
+			PropertyValue.A = DreamRectBlockAlphaTweenLocal::AlphaToByte(value);
 			this->SetBodyColor(PropertyValue);
 			}), endValue, duration);
 	if (Tweener)
@@ -1168,7 +1180,7 @@ UDreamTweener* UDreamRectBlock::Function##AlphaTo(float endValue, float duration
 		return FDreamUIUtils::ByteToFloat01(this->Property.A);\
 		}), FDreamTweenFloatSetterFunction::CreateWeakLambda(this, [this](float value) {\
 			auto PropertyValue = this->Property;\
-			PropertyValue.A = (uint8)(value * 255.0f);\
+			PropertyValue.A = DreamRectBlockAlphaTweenLocal::AlphaToByte(value);\
 			this->Set##Property(PropertyValue);\
 			}), endValue, duration);\
 	if (Tweener)\

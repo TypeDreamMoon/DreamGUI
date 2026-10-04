@@ -260,6 +260,37 @@ void FDreamTextCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuild
 	;
 	DreamGUICategory.AddProperty(GET_MEMBER_NAME_CHECKED(UDreamText, ExpandMeshSize));
 	DreamGUICategory.AddProperty(DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UDreamText, SmallTextRaster)), EPropertyLocation::Advanced);
+
+	//paint: the gradients a text is filled with, and what animates them, as one group under the style. The fields are split
+	//between the style (where rich-text styles and the lyrics view get them too) and the text (the phases Sequencer keys),
+	//so either half on its own would show half of the feature.
+	{
+		auto TextStyle_PH = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UDreamText, TextStyle));
+		DreamGUICategory.AddProperty(TextStyle_PH);
+		IDetailGroup& PaintGroup = DreamGUICategory.AddGroup(FName(TEXT("TextPaint")), LOCTEXT("PaintGroup", "Paint"));
+		for (const FName StyleField : {
+			GET_MEMBER_NAME_CHECKED(FDreamTextStyle, FacePaint),
+			GET_MEMBER_NAME_CHECKED(FDreamTextStyle, OutlinePaint),
+			GET_MEMBER_NAME_CHECKED(FDreamTextStyle, OverlayPaint),
+			GET_MEMBER_NAME_CHECKED(FDreamTextStyle, OverlayBlend),
+			GET_MEMBER_NAME_CHECKED(FDreamTextStyle, PaintBoxHorizontal),
+			GET_MEMBER_NAME_CHECKED(FDreamTextStyle, PaintBoxVertical) })
+		{
+			// Taken out of the style's own rows by being placed here.
+			if (const TSharedPtr<IPropertyHandle> Field = TextStyle_PH->GetChildHandle(StyleField, /*bRecurse*/ false))
+			{
+				PaintGroup.AddPropertyRow(Field.ToSharedRef());
+			}
+		}
+		for (const FName TextField : {
+			GET_MEMBER_NAME_CHECKED(UDreamText, FacePaintPhase),
+			GET_MEMBER_NAME_CHECKED(UDreamText, OutlinePaintPhase),
+			GET_MEMBER_NAME_CHECKED(UDreamText, OverlayPaintPhase),
+			GET_MEMBER_NAME_CHECKED(UDreamText, PaintAngleOffset) })
+		{
+			PaintGroup.AddPropertyRow(DetailBuilder.GetProperty(TextField));
+		}
+	}
 }
 void FDreamTextCustomization::ForceRefresh(TSharedPtr<IPropertyUtilities> PropertyUtilities)
 {

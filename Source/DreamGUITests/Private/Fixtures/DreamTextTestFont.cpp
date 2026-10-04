@@ -8,9 +8,13 @@ FDreamUICharData UDreamTextTestFont::GetCharData(uint32 CharCode, float CharSize
 	if (CharSize <= 0.0f)return Data;
 
 	const float Em = CharSize;
+	auto RoundAdvance = [this](float Advance)
+	{
+		return MockAdvanceGrid > 0.0f ? FMath::RoundToFloat(Advance / MockAdvanceGrid) * MockAdvanceGrid : Advance;
+	};
 	if (CharCode == ' ' || CharCode == '\t')
 	{
-		Data.XAdvance = Em * 0.3f;
+		Data.XAdvance = RoundAdvance(Em * 0.3f);
 		return Data;
 	}
 	// Widths and heights vary with the code point so alignment, wrapping and truncation all see
@@ -21,7 +25,7 @@ FDreamUICharData UDreamTextTestFont::GetCharData(uint32 CharCode, float CharSize
 	Data.Height = Em * (0.5f + 0.4f * HeightUnit);
 	Data.XOffset = Em * 0.05f * (float)(CharCode % 3u);
 	Data.YOffset = Data.Height * 0.8f;
-	Data.XAdvance = Data.Width + Em * 0.1f;
+	Data.XAdvance = RoundAdvance(Data.Width + Em * 0.1f);
 	const float CellU = (float)(CharCode % 64u) / 64.0f;
 	const float CellV = (float)((CharCode / 64u) % 64u) / 64.0f;
 	Data.MinUV = FVector2f(CellU, CellV);

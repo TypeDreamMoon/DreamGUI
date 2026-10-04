@@ -25,11 +25,13 @@
 #include "Editor.h"
 #include "EditorViewportClient.h"
 #endif
+#include "Core/Components/DreamText.h"
 #include "Core/Components/DreamVisual.h"
 #include "Core/Components/DreamVisualBatchMesh.h"
 #include "Core/Components/DreamVisualPostProcess.h"
 #include "Core/Components/DreamVisualDirectMesh.h"
 #include "Core/Components/DreamWidget.h"
+#include "Core/Text/DreamTextPaint.h"
 #include "Materials/MaterialInstanceDynamic.h"
 #include "GameFramework/PlayerController.h"
 #include "Engine/LocalPlayer.h"
@@ -820,6 +822,18 @@ bool UDreamCanvas::IsRenderByDreamUIRendererOrUERenderer()const
 	return false;
 }
 
+bool UDreamCanvas::IsInGameWorld()const
+{
+	// The manager this canvas registered with is its world's (see RegisteredWithManager), and alive while it is set: its
+	// world is one read away, where the canvas's own is a walk up its outers.
+	if (RegisteredWithManager != nullptr)
+	{
+		const UWorld* World = RegisteredWithManager->GetWorld();
+		return World != nullptr && World->IsGameWorld();
+	}
+	return DreamUI::IsGameWorld(this);
+}
+
 void UDreamCanvas::RefreshAllClipData()
 {
 	// All children canvas clip data is stored in the root canvas, so only the root has a list to walk -- and a root with
@@ -933,6 +947,22 @@ void UDreamCanvas::NoteRenderTransformChanged(UDreamWidget* InWidget)
 
 void UDreamCanvas::MarkRenderLayerMoved(UDreamWidget* InLayer)
 {
+	if (InLayer != nullptr)
+	{
+		// The frame it moved on, for the small text inside it to tell whether it has held still: written once a frame, before
+		// the early-out below, which a canvas takes for every layer but its first of the frame. Small text drawing coverage
+		// glyphs in it hears of every move -- a second one in a frame, or one announced at the end of it, may take its quads
+		// off the grid the first left them on -- and only a layer such text holds pays for more than the stamp and the bit.
+		const uint64 Frame = GFrameCounter;
+		if (InLayer->RenderLayerMovedFrame != Frame)
+		{
+			InLayer->RenderLayerMovedFrame = Frame;
+		}
+		if (InLayer->bLayerHoldsCoverageText)
+		{
+			UDreamText::OnRenderLayerMoved(InLayer);
+		}
+	}
 	// Once a frame is enough for what a move means to the rest: a render target to draw again, and a pointer to trace again.
 	// What this reads of the canvas is declared together (see RegisteredWithManager): every animated layer of a world of
 	// panels comes here, each on a canvas of its own.
@@ -1046,6 +1076,9 @@ void UDreamCanvas::SetWidgetIsRenderLayer(UDreamWidget* InWidget, bool bInIsLaye
 	Table->WriteRow(Row, Record.Placed);
 	InWidget->RenderLayerRow = Row;
 	InWidget->bIsRenderLayer = true;
+	// Made one now counts as moved now: what is under it is transformed into it this frame, and its small text waits for it
+	// to hold still before drawing from coverage in it (UDreamText's render-layer gate).
+	InWidget->RenderLayerMovedFrame = GFrameCounter;
 	UDreamWidget::InvalidateRenderLayerCaches();
 	// Relative to it now, in another space: every element under it is transformed again, and the draw calls made again.
 	DreamCanvasLocal::MarkElementsForRenderLayerChange(InWidget, InWidget->GetRenderCanvas());
@@ -1069,6 +1102,9 @@ void UDreamCanvas::TakeBackRenderLayer(int32 InIndex)
 	}
 	Layer->bIsRenderLayer = false;
 	Layer->RenderLayerRow = 0;
+	// No layer moves for its small text to hear of any more: its coverage quads were placed through the layer's place,
+	// which is where they stay once transformed out of it.
+	Layer->bLayerHoldsCoverageText = false;
 	UDreamWidget::InvalidateRenderLayerCaches();
 	// Relative to the layer above it now, or to the canvas: every element under it is transformed out of it, and the draw
 	// calls made again.
@@ -1558,6 +1594,7 @@ void UDreamCanvas::ForgetRenderLayers()
 		{
 			Layer->bIsRenderLayer = false;
 			Layer->RenderLayerRow = 0;
+			Layer->bLayerHoldsCoverageText = false;
 		}
 		if (Table != nullptr)
 		{
@@ -3007,10 +3044,20 @@ void UDreamCanvas::UpdateCanvasDrawCall()
 					DREAMUI_DETAIL_SCOPE(DreamUI_UpdateWidgetClip);
 					Widget->UpdateClip(Root->ClipDataAsTexture, Root->ClipDataList);
 				}
-				if (Widget->GetRenderVisibleInHierarchy() && Widget->GetRenderCanvas() == this)
+				if (Widget->GetRenderCanvas() != this)
+				{
+					return;
+				}
+				if (Widget->GetRenderVisibleInHierarchy())
 				{
 					DREAMUI_DETAIL_SCOPE(DreamUI_UpdateWidgetVisual);
 					Widget->UpdateVisual();
+				}
+				else if (UDreamText* NotDrawnText = Cast<UDreamText>(Widget->GetVisual()))
+				{
+					// Looked at because it stopped being drawn (or something about it changed meanwhile): a text lets go of
+					// the coverage cells its quads drew from, which no repaint will move on while it is not drawn.
+					NotDrawnText->OnNotDrawn();
 				}
 			};
 			// Taken now: a widget that asks again while this update runs -- its geometry asking for its block data, say --
@@ -3600,6 +3647,12 @@ FVector4f UDreamCanvas::MakeFontAtlasInfo(const FDreamUIDrawCall& DrawCallItem)
 		Info.Z = DrawCallItem.Font->GetAtlasFieldRangeTexels();
 		Info.W = DrawCallItem.Font->GetAtlasEmTexels();
 	}
+	// And z negated when the project runs the field's face through the coverage correction above the small-text cut-off
+	// (bFieldTextCorrection): there is no fifth component either, and the shaders read z's magnitude.
+	if (UDreamGUISettings::Get()->bFieldTextCorrection)
+	{
+		Info.Z = -Info.Z;
+	}
 	return Info;
 }
 
@@ -3623,6 +3676,7 @@ bool UDreamCanvas::IsMaterialContainsDreamUIParameter(const UMaterialInterface* 
 				|| Item.Name == DreamUI_ClipDataTexture_MaterialParameterName
 				|| Item.Name == DreamUI_WidgetPropertyDataTexture_MaterialParameterName
 				|| Item.Name == DreamUI_IsRenderByDreamUIRenderer_MaterialParameterName
+				|| Item.Name == DreamUIShadeMaterial::PaintDataTextureParameter
 				;
 		});
 	return FoundIndex != INDEX_NONE;
@@ -3685,6 +3739,12 @@ void UDreamCanvas::UpdateDrawCallMaterial()
 	UDreamUIManagerWorldSubsystem* const RowsManager = RegisteredWithManager != nullptr ? RegisteredWithManager : UDreamUIManagerWorldSubsystem::GetInstance(GetWorld());
 	const UTexture* RectBlockRowsTexture = bUseBuiltInShader && RowsManager != nullptr ? RowsManager->GetBuiltInRectBlockRowsTexture() : nullptr;
 	/**
+	 * The world's paint rows: the gradients painted text is filled with, and every painted text's table, which its widget
+	 * record links to. Given to every draw of the world, built-in or through a material, painted or not -- a draw call
+	 * never splits for a paint -- and made with the world, before any canvas binds it (CreatePaintRows).
+	 */
+	const UTexture* PaintRowsTexture = RowsManager != nullptr ? RowsManager->GetPaintRowsTexture() : nullptr;
+	/**
 	 * What a section a material draws is given of the built-in parameters: nothing, unless it holds a render layer's
 	 * elements, whose vertices its vertex shader places through the widget data and the table (DreamUIRenderLayer.ush).
 	 */
@@ -3741,6 +3801,8 @@ void UDreamCanvas::UpdateDrawCallMaterial()
 				Parameters.SetTexture(DreamUI_ClipDataTexture_MaterialParameterName, RootCanvas->ClipDataAsTexture->GetDataTexture());
 				Parameters.SetTexture(DreamUI_MainTextureMaterialParameterName, DrawCallItem.Texture.Get());
 				Parameters.SetTexture(DreamUI_FontTextureMaterialParameterName, DrawCallItem.FontTexture.Get());
+				// A world with no paint rows leaves the material its own default, which MF_DreamUI_Shade makes black: no paint.
+				Parameters.SetTexture(DreamUIShadeMaterial::PaintDataTextureParameter, PaintRowsTexture);
 				const FVector4f AtlasInfo = MakeFontAtlasInfo(DrawCallItem);
 				Parameters.SetVector(DreamUI_FontAtlasInfoMaterialParameterName, FLinearColor(AtlasInfo.X, AtlasInfo.Y, AtlasInfo.Z, AtlasInfo.W));
 				for (const TWeakObjectPtr<UDreamVisualBatchMesh>& BatchMeshVisual : DrawCallItem.BatchMeshVisualArray)
@@ -3772,6 +3834,7 @@ void UDreamCanvas::UpdateDrawCallMaterial()
 				BuiltIn.ClipDataTexture = RootCanvas->ClipDataAsTexture->GetDataTexture();
 				BuiltIn.RenderLayerTable = LayerTableTexture;
 				BuiltIn.RectBlockData = RectBlockRowsTexture;
+				BuiltIn.PaintData = PaintRowsTexture;
 				const FVector4f AtlasInfo = MakeFontAtlasInfo(DrawCallItem);
 				BuiltIn.FontAtlasSize = FVector2f(AtlasInfo.X, AtlasInfo.Y);
 				BuiltIn.FontFieldRangeTexels = AtlasInfo.Z;
@@ -4141,6 +4204,11 @@ void UDreamCanvas::SetOverrideSorting(bool Value)
 			RootCanvas->RequestRenderPrioritySort();
 		}
 		MarkCanvasUpdate(false);
+		// The parent draws it as a child canvas no longer, or again: see SetForceRenderToTarget.
+		if (UDreamCanvas* Parent = ParentCanvas.Get())
+		{
+			Parent->MarkWidgetUpdate(GetWidget(), true);
+		}
 	}
 }
 
@@ -4345,6 +4413,12 @@ void UDreamCanvas::SetForceRenderToTarget(bool Value)
 		{
 			MarkCanvasUpdate(true);
 			GetWidget()->MarkAllDirtyRecursive();
+		}
+		// And the parent no longer draws it as a child canvas, or does again (AppendRenderDataOf): its prepare kept the
+		// entry for this canvas's widget, or the lack of one, from before, and makes it again only for a widget that asked.
+		if (UDreamCanvas* Parent = ParentCanvas.Get())
+		{
+			Parent->MarkWidgetUpdate(GetWidget(), true);
 		}
 	}
 }

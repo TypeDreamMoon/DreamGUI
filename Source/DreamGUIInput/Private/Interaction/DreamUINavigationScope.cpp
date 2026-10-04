@@ -18,6 +18,19 @@ void UDreamUINavigationScope::SetDesiredFocusTarget(UUISelectable* Value)
 	DesiredFocusTarget = Value;
 }
 
+int32 UDreamUINavigationScope::GetUserIndex() const
+{
+	if (UserIndex >= 0)
+	{
+		return UserIndex;
+	}
+	// The player whose screen the scope's widget is on, asked each time rather than kept: the stack reads it at the push
+	// and again at the pop, and both have to name the player the screen belongs to then. A fixed 0 used to make every
+	// screen on player 2's half of a split screen player 1's -- its Back, its confinement, its action bindings.
+	const UDreamWidget* Widget = GetWidget();
+	return Widget != nullptr ? Widget->GetOwningPlayerIndex() : 0;
+}
+
 void UDreamUINavigationScope::OnEnable()
 {
 	Super::OnEnable();
@@ -92,7 +105,7 @@ UUISelectable* UDreamUINavigationScope::ResolveFocusTarget() const
 {
 	auto IsUsable = [](UUISelectable* Selectable)
 	{
-		return IsValid(Selectable) && Selectable->IsInteractable() && Selectable->GetCanNavigateHere();
+		return IsValid(Selectable) && Selectable->CanBeNavigatedTo();
 	};
 
 	if (bRestoreLastFocus && IsUsable(RememberedFocus.Get()))

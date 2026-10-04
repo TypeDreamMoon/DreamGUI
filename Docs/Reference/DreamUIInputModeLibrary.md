@@ -22,7 +22,7 @@ given piece of UI belongs to at every call site.
 | `bool GetShowMouseCursor(UObject* WorldContextObject, int32 UserIndex)` | pure | Get Show Mouse Cursor |
 | `void SetInputModeGameAndUI(UObject* WorldContextObject, UDreamWidget* InWidgetToFocus, int32 UserIndex, EMouseLockMode MouseLockMode, bool bHideCursorDuringCapture, bool bFlushInput)` | callable | Both the game and the UI see input. |
 | `void SetInputModeGameOnly(UObject* WorldContextObject, int32 UserIndex, bool bFlushInput)` | callable | Only the game sees input. |
-| `void SetInputModeUIOnly(UObject* WorldContextObject, UDreamWidget* InWidgetToFocus, int32 UserIndex, EMouseLockMode MouseLockMode, bool bFlushInput)` | callable | Only the UI sees input, and the cursor is shown. |
+| `void SetInputModeUIOnly(UObject* WorldContextObject, UDreamWidget* InWidgetToFocus, int32 UserIndex, EMouseLockMode MouseLockMode, bool bFlushInput)` | callable | Only the UI sees input, and the cursor is shown -- while the player is on the keyboard and mouse: with UDreamGUISettings::bHideCursorOnGamepad, DreamGUI hides it while they use a pad and shows it again when they go back to the mouse, for as long as this mode holds. |
 | `void SetMouseLockMode(UObject* WorldContextObject, EMouseLockMode MouseLockMode, int32 UserIndex)` | callable | Lock the cursor to the viewport (or stop locking it) without changing the input mode. |
 | `void SetShowMouseCursor(UObject* WorldContextObject, bool bShowCursor, int32 UserIndex)` | callable | Show or hide the hardware cursor for a player. |
 

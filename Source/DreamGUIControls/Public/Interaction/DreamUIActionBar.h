@@ -94,8 +94,14 @@ private:
  * the keys actually do -- the failure mode of every hand-authored prompt bar, where a screen changes
  * a binding and the hint underneath keeps advertising the old one.
  *
- * Rebuilt only when the answer changes: when bindings come or go, and when the player switches
- * device. Polling would mean reloading a prefab per entry per frame.
+ * Rebuilt only when the answer changes: when bindings come or go, when the player switches device, and
+ * when they pick up another model of pad (the glyphs are per model). Polling would mean reloading a
+ * prefab per entry per frame.
+ *
+ * After the screen's own actions come the shoulder buttons' two prompts, "previous tab" and "next tab",
+ * while the player has a tab view those keys would switch (DreamUIKeyRouting::FindTabSwitchTarget,
+ * asked at the rebuild): the project's PreviousTabKeys and NextTabKeys, the first of each for the device
+ * in use -- none on a device the tables have no key for.
  */
 UCLASS(ClassGroup = (DreamGUI), Blueprintable, meta = (BlueprintSpawnableComponent))
 class DREAMGUICONTROLS_API UDreamUIActionBar : public UDreamUIBehaviour
@@ -108,13 +114,21 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Navigation")
 	virtual void Rebuild();
 
+	/** Whose prompts: UserIndex when it names a player, else the player who owns this widget (UDreamWidget::GetOwningPlayerIndex). */
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Navigation")
-	int32 GetUserIndex()const{ return UserIndex; }
+	int32 GetUserIndex()const;
+	/** -1: the owning player. */
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Navigation")
 	void SetUserIndex(int32 Value);
 	/** The entry widgets currently on the bar, in the order they are shown. */
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Navigation")
 	const TArray<UDreamWidget*>& GetEntryWidgets()const{ return EntryWidgets; }
+	/**
+	 * What the last rebuild put on the bar, in order, MaxEntries at most: one prompt per entry -- the same list
+	 * with no entry prefab to draw it, which is how a test or a bar drawn some other way reads it.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Navigation")
+	const TArray<FDreamUIActionBinding>& GetPrompts()const{ return Prompts; }
 
 protected:
 	virtual void OnEnable()override;
@@ -124,9 +138,9 @@ protected:
 	/** Loaded once per prompt, as a child of this widget. Nothing is shown without one. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DreamGUI-Navigation")
 	TSubclassOf<UDreamUserWidget> EntryClass = nullptr;
-	/** Whose prompts these are. Matches the event system's user index. */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DreamGUI-Navigation")
-	int32 UserIndex = 0;
+	/** Whose prompts these are. Matches the event system's user index. -1, the default: the player who owns this widget. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DreamGUI-Navigation", meta = (ClampMin = "-1"))
+	int32 UserIndex = -1;
 	/** Guard against a runaway table filling the screen with prompts. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DreamGUI-Navigation", meta = (ClampMin = "1"))
 	int32 MaxEntries = 8;
@@ -142,10 +156,18 @@ private:
 	void UnsubscribeFromSources();
 	void HandleBindingsChanged(int32 InUserIndex);
 	void HandleInputDeviceChanged(EDreamUIInputDevice InDevice);
+	void HandleGamepadModelChanged(EDreamUIGamepadModel InModel);
 	void ClearEntries();
+	/** The two tab-switch prompts, after InOutPrompts, while player InUserIndex has a tab view to switch. */
+	void AppendTabSwitchPrompts(int32 InUserIndex, TArray<FDreamUIActionBinding>& InOutPrompts) const;
+
+	/** See GetPrompts. */
+	UPROPERTY(Transient)
+	TArray<FDreamUIActionBinding> Prompts;
 
 	FDelegateHandle BindingsChangedHandle;
 	FDelegateHandle InputDeviceChangedHandle;
+	FDelegateHandle GamepadModelChangedHandle;
 	TWeakObjectPtr<UDreamUIActionRouter> SubscribedRouter;
 	TWeakObjectPtr<UDreamEventSystem> SubscribedEventSystem;
 };

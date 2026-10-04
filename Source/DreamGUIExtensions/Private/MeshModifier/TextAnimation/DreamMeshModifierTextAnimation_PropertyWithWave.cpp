@@ -40,10 +40,10 @@ void UDreamMeshModifierTextAnimation_PropertyWithWave::OnUpdate(float deltaTime)
 	}
 }
 
-void UDreamMeshModifierTextAnimation_PositionWaveProperty::ApplyProperty(UDreamText* InUIText, const FDreamMeshModifierTextAnimation_SelectResult& InSelection, FDreamUIGeometry* InGeometry)
+void UDreamMeshModifierTextAnimation_PositionWaveProperty::ApplyPropertyToCharacters(const TArray<FDreamUITextCharProperty>& InCharProperties, const FDreamMeshModifierTextAnimation_SelectResult& InSelection, FDreamUIGeometry* InGeometry)
 {
 	auto& originVertices = InGeometry->OriginVertices;
-	auto& charProperties = InUIText->GetCharPropertyArray();
+	auto& charProperties = InCharProperties;
 	// A wave needs a clock, and one of the three places this runs has none: a mesh modifier rebuilds
 	// geometry in a Blueprint's authoring tree and in a headless test, and this property is a plain
 	// UObject whose GetWorld walks an outer chain that ends at the widget tree rather than at a world.
@@ -55,6 +55,10 @@ void UDreamMeshModifierTextAnimation_PositionWaveProperty::ApplyProperty(UDreamT
 	for (int charIndex = InSelection.StartCharIndex; charIndex < InSelection.EndCharCount; charIndex++)
 	{
 		auto charPropertyItem = charProperties[charIndex];
+		if (!CanReadCharVertices(charPropertyItem, originVertices.Num()))
+		{
+			continue;
+		}
 		int startVertIndex = charPropertyItem.StartVertIndex;
 		int endVertIndex = charPropertyItem.StartVertIndex + charPropertyItem.VertCount;
 		float lerpValue = FMath::Clamp(InSelection.LerpValueArray[charIndex - InSelection.StartCharIndex], 0.0f, 1.0f);
@@ -75,10 +79,10 @@ void UDreamMeshModifierTextAnimation_PositionWaveProperty::SetPosition(FVector V
 	}
 }
 
-void UDreamMeshModifierTextAnimation_RotationWaveProperty::ApplyProperty(UDreamText* InUIText, const FDreamMeshModifierTextAnimation_SelectResult& InSelection, FDreamUIGeometry* InGeometry)
+void UDreamMeshModifierTextAnimation_RotationWaveProperty::ApplyPropertyToCharacters(const TArray<FDreamUITextCharProperty>& InCharProperties, const FDreamMeshModifierTextAnimation_SelectResult& InSelection, FDreamUIGeometry* InGeometry)
 {
 	auto& originVertices = InGeometry->OriginVertices;
-	auto& charProperties = InUIText->GetCharPropertyArray();
+	auto& charProperties = InCharProperties;
 	// A wave needs a clock, and one of the three places this runs has none: a mesh modifier rebuilds
 	// geometry in a Blueprint's authoring tree and in a headless test, and this property is a plain
 	// UObject whose GetWorld walks an outer chain that ends at the widget tree rather than at a world.
@@ -90,6 +94,12 @@ void UDreamMeshModifierTextAnimation_RotationWaveProperty::ApplyProperty(UDreamT
 	for (int charIndex = InSelection.StartCharIndex; charIndex < InSelection.EndCharCount; charIndex++)
 	{
 		auto charPropertyItem = charProperties[charIndex];
+		// The centre below is read from the glyph's first vertex and divided by its count: neither exists for a
+		// glyph the rasterizer has not delivered yet, and its first "vertex" is one past the end of the array.
+		if (!CanReadCharVertices(charPropertyItem, originVertices.Num()))
+		{
+			continue;
+		}
 		int startVertIndex = charPropertyItem.StartVertIndex;
 		int endVertIndex = charPropertyItem.StartVertIndex + charPropertyItem.VertCount;
 		auto charCenterPos = originVertices[startVertIndex].Position;
@@ -118,10 +128,10 @@ void UDreamMeshModifierTextAnimation_RotationWaveProperty::SetRotator(FRotator V
 	}
 }
 
-void UDreamMeshModifierTextAnimation_ScaleWaveProperty::ApplyProperty(UDreamText* InUIText, const FDreamMeshModifierTextAnimation_SelectResult& InSelection, FDreamUIGeometry* InGeometry)
+void UDreamMeshModifierTextAnimation_ScaleWaveProperty::ApplyPropertyToCharacters(const TArray<FDreamUITextCharProperty>& InCharProperties, const FDreamMeshModifierTextAnimation_SelectResult& InSelection, FDreamUIGeometry* InGeometry)
 {
 	auto& originVertices = InGeometry->OriginVertices;
-	auto& charProperties = InUIText->GetCharPropertyArray();
+	auto& charProperties = InCharProperties;
 	// A wave needs a clock, and one of the three places this runs has none: a mesh modifier rebuilds
 	// geometry in a Blueprint's authoring tree and in a headless test, and this property is a plain
 	// UObject whose GetWorld walks an outer chain that ends at the widget tree rather than at a world.
@@ -133,6 +143,11 @@ void UDreamMeshModifierTextAnimation_ScaleWaveProperty::ApplyProperty(UDreamText
 	for (int charIndex = InSelection.StartCharIndex; charIndex < InSelection.EndCharCount; charIndex++)
 	{
 		auto charPropertyItem = charProperties[charIndex];
+		// No centre to scale about for a glyph with no vertices yet; see the rotation wave.
+		if (!CanReadCharVertices(charPropertyItem, originVertices.Num()))
+		{
+			continue;
+		}
 		int startVertIndex = charPropertyItem.StartVertIndex;
 		int endVertIndex = charPropertyItem.StartVertIndex + charPropertyItem.VertCount;
 		auto charCenterPos = originVertices[startVertIndex].Position;

@@ -816,6 +816,9 @@ void FDreamWidgetBlueprintEditor::Tick(float DeltaTime)
 	// many edits went into the gesture.
 	if (PreviewHost.IsValid())
 	{
+		// A drag in the details panel keeps a transaction open across frames; the preview is not the user's edit and
+		// must never be recorded into it, or an undo would hand back objects the rebuild already threw away.
+		TGuardValue<ITransaction*> SuppressTransaction(GUndo, nullptr);
 		PreviewHost->RebuildPreviewIfInvalidated();
 	}
 	// Fill Screen has no resize event to hang off -- the viewport is an FViewport, not a Slate

@@ -289,6 +289,11 @@ public:
 	bool IsRenderToRenderTarget()const;
 	bool IsRenderToWorldSpace()const;
 	bool IsRenderByDreamUIRendererOrUERenderer()const;
+	/**
+	 * DreamUI::IsGameWorld of this canvas: whether its world plays. Answered by the manager it is registered with -- one
+	 * read -- rather than by walking its outers, which the small-text gate asked of a root canvas for every text it placed.
+	 */
+	bool IsInGameWorld()const;
 
 	TWeakObjectPtr<UDreamCanvas> GetParentCanvas()const { return ParentCanvas; }
 
@@ -786,9 +791,16 @@ public:
 public:
 	static FName DreamUI_MainTextureMaterialParameterName;
 	static FName DreamUI_FontTextureMaterialParameterName;
-	/** xy: atlas slice size in texels, z: field range in texels, w: texels per em, negative when the small-text correction is off (MF_DreamUI_Shade). */
+	/**
+	 * xy: atlas slice size in texels, z: field range in texels, negative when the field text correction is on
+	 * (UDreamGUISettings::bFieldTextCorrection), w: texels per em, negative when the small-text correction is off
+	 * (MF_DreamUI_Shade).
+	 */
 	static FName DreamUI_FontAtlasInfoMaterialParameterName;
-	/** The font atlas geometry a draw call's glyphs decode with (see DreamUIShade.ush's FontAtlasInfo). */
+	/**
+	 * The font atlas geometry a draw call's glyphs decode with (see DreamUIShade.ush's FontAtlasInfo), and the two
+	 * project switches it carries in its signs. A canvas takes a change of either when it next rebuilds its draw calls.
+	 */
 	static FVector4f MakeFontAtlasInfo(const class FDreamUIDrawCall& DrawCallItem);
 	static FName DreamUI_ClipDataTexture_MaterialParameterName;
 	static FName DreamUI_WidgetPropertyDataTexture_MaterialParameterName;
@@ -959,7 +971,10 @@ public:
 	 * A render layer's transform relative to this canvas changed (UDreamWidget::IsRenderLayer): its row of the render
 	 * layer table is written, and nothing in the layer is transformed again. That is done at the frame's submit
 	 * (PlaceRenderLayers), which looks at where each layer is whether or not the canvas updated; nothing of the canvas's
-	 * own update is needed for it.
+	 * own update is needed for it. The layer's moved frame is stamped first (UDreamWidget::GetRenderLayerMovedFrame), once
+	 * a frame, and a layer some small text draws coverage glyphs in (GetLayerHoldsCoverageText) has its texts told
+	 * (UDreamText::OnRenderLayerMoved): a stamp and a bit test, on a path a wall of turning widgets takes thousands of times
+	 * a frame.
 	 */
 	void MarkRenderLayerMoved(UDreamWidget* InLayer);
 	/** InWidget's RenderLayer setting changed (UDreamWidget::SetRenderLayerMode): the next update makes it a layer or takes it back. */

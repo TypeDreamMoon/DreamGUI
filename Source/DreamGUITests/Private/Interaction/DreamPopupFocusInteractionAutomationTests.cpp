@@ -11,6 +11,9 @@
 #include "Controls/DreamExpandableArea.h"
 #include "Controls/DreamMenuAnchor.h"
 #include "Controls/DreamTabView.h"
+#include "Core/Components/DreamCanvas.h"
+#include "Core/Components/DreamPanelLayouts.h"
+#include "Core/Components/DreamPanelSlot.h"
 #include "Core/Components/DreamWidget.h"
 #include "Core/DreamUIInputServices.h"
 #include "Event/DreamEventSystem.h"
@@ -28,6 +31,7 @@
 #include "Driver/DreamDriverProjection.h"
 #include "Driver/DreamDriverRig.h"
 #include "Driver/DreamDriverSequence.h"
+#include "Interaction/DreamPopupTestTypes.h"
 #include "Interaction/DreamPressInteractionTestTypes.h"
 
 /*
@@ -202,6 +206,39 @@ namespace DreamPopupFocusTestLocal
 		Placed.MenuButton = PlaceButton(InTest, InRig, TEXT("MenuButton"), Placed.Anchor->MenuNode.Get(), FVector2D::ZeroVector);
 		InRig.PumpFrames(1);
 		return Placed;
+	}
+
+	/** Under the drag band (29000) and above anything a test's popups sort to: a layer put up in front of them all. */
+	constexpr int32 LayerInFrontSortOrder = 28000;
+
+	/**
+	 * A widget with a canvas of its own sorted in front of everything on the rig's screen -- a dialog's or a page's layer
+	 * put up after a popup opened -- hit and walked like the rest of the root's canvases.
+	 */
+	UDreamWidget* MakeLayerInFront(FAutomationTestBase& InTest, FDreamDriverRig& InRig, const TCHAR* InName, const FVector2D& InSize,
+		const FVector2D& InAnchoredPosition = FVector2D::ZeroVector)
+	{
+		UDreamWidget* Layer = InRig.MakeWidget(InName, nullptr, InSize, InAnchoredPosition);
+		UDreamCanvas* LayerCanvas = Layer != nullptr ? Layer->AddComponent<UDreamCanvas>() : nullptr;
+		if (!InTest.TestNotNull(*FString::Printf(TEXT("A layer '%s' with a canvas of its own can be made"), InName), LayerCanvas))
+		{
+			return nullptr;
+		}
+		LayerCanvas->SetOverrideSorting(true);
+		LayerCanvas->SetSortOrder(LayerInFrontSortOrder, /*PropagateToChildrenCanvas*/true);
+		if (const UDreamCanvas* RootCanvas = InRig.RootCanvas())
+		{
+			LayerCanvas->SetTraceChannel(RootCanvas->GetTraceChannel());
+		}
+		return Layer;
+	}
+
+	/** InWidget's top-left and bottom-right corners in the world: where it is laid out, whichever parent it hangs under. */
+	void GetLaidOutCorners(const UDreamWidget* InWidget, FVector& OutTopLeft, FVector& OutBottomRight)
+	{
+		const FTransform Transform = InWidget->GetLayoutWorldTransform();
+		OutTopLeft = Transform.TransformPosition(FVector(0.0, InWidget->GetLocalSpaceLeft(), InWidget->GetLocalSpaceTop()));
+		OutBottomRight = Transform.TransformPosition(FVector(0.0, InWidget->GetLocalSpaceRight(), InWidget->GetLocalSpaceBottom()));
 	}
 }
 
@@ -890,6 +927,511 @@ bool FDreamPopupFocusMenuReturnTest::RunTest(const FString& Parameters)
 	TestFalse(TEXT("The menu closed"), Placed.Anchor->IsOpen());
 	TestEqual(TEXT("And focus is back on the trigger that had it"), FocusOf(Rig, 0), Placed.Trigger->FaceNode.Get());
 	TestEqual(TEXT("With the pad's cursor on it"), CursorOf(Rig), Placed.Trigger->FaceNode.Get());
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamPopupFocusModalOverListClickTest,
+	"DreamGUI.Modal.AModalOpenedOverAnOpenListTakesItsFirstClick",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamPopupFocusModalOverListClickTest, "DreamGUI.Modal.AModalOpenedOverAnOpenListTakesItsFirstClick", "[Pointer][Animated]")
+
+/*
+ * A modal that came up while a dropdown's list was open -- a timer, a message, the screen asking "are you sure?" -- left the
+ * list open behind its scrim, and the popup layer hears a press before anything the press hits: the first click on the
+ * modal's button went to closing a list nobody could see, and went no further. A modal now closes the player's popups as it
+ * comes up, and its first click answers it.
+ */
+bool FDreamPopupFocusModalOverListClickTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamPopupFocusTestLocal;
+	TStrongObjectPtr<UDreamPressInteractionListener> Listener(NewObject<UDreamPressInteractionListener>());
+	FDreamDriverRig Rig = FDreamDriverRig::Headless(ViewportSize);
+	Rig.BindTest(this);
+	if (!TestTrue(TEXT("The headless rig came up"), Rig.IsUsable()))
+	{
+		return false;
+	}
+	UDreamUIModalSubsystem* Modals = UDreamUIModalSubsystem::Get(Rig.GetWorld());
+	if (!TestNotNull(TEXT("The rig's world has the modal subsystem"), Modals))
+	{
+		return false;
+	}
+	UDreamDropdown* Dropdown = PlaceDropdown(*this, Rig, Listener.Get(), nullptr, FVector2D(0.0, 200.0));
+	if (Dropdown == nullptr || !OpenByClicking(*this, Rig, Dropdown))
+	{
+		return false;
+	}
+
+	TArray<FName> Results;
+	Modals->ShowModalNative(UDreamDialog::StaticClass(), [&Results](FName InResult) { Results.Add(InResult); }, 0);
+	Rig.PumpFrames(2);
+	UDreamDialog* Dialog = Cast<UDreamDialog>(Modals->GetActiveModalWidget(0));
+	if (!TestNotNull(TEXT("The modal opened with its dialog"), Dialog))
+	{
+		return false;
+	}
+	TestFalse(TEXT("And closed the list behind it as it came up"), Dropdown->IsOpen());
+	const UDreamUIPopupLayer* Popups = UDreamUIPopupLayer::Get(Rig.GetWorld());
+	TestTrue(TEXT("Nothing of the player's is left open on the popup layer"), Popups != nullptr && Popups->GetTopPopup(0) == nullptr);
+
+	UDreamButton* Confirm = Dialog->GetDefaultButton();
+	if (!TestNotNull(TEXT("The dialog has its default button"), Confirm))
+	{
+		return false;
+	}
+	TestTrue(TEXT("Clicking it completes"), Rig.Driver()->Find(FDreamBy::Widget(Confirm))->Click());
+
+	if (TestEqual(TEXT("The first click answered the modal"), Results.Num(), 1))
+	{
+		TestEqual(TEXT("With the button's result"), Results[0], FName(TEXT("Confirm")));
+	}
+	TestFalse(TEXT("Which is closed"), Modals->IsModalActive(0));
+	TestEqual(TEXT("And nothing was chosen from the list on the way"), Listener->SelectionIndices.Num(), 0);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamPopupFocusModalOverListBackTest,
+	"DreamGUI.Modal.AModalOpenedOverAnOpenListTakesTheFirstBack",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamPopupFocusModalOverListBackTest, "DreamGUI.Modal.AModalOpenedOverAnOpenListTakesTheFirstBack", "[Nav][Animated]")
+
+/*
+ * The Back variant: the open popups hear Back before any screen, so the first Back after a modal came up over an open list
+ * closed the list behind the scrim and left the modal waiting. The modal closes the list as it comes up; Back then goes to
+ * the modal, which answers "Back" -- and gives the focus to the dropdown's face, which is what the list gave back as it
+ * closed, the focus the modal noted for its way out.
+ */
+bool FDreamPopupFocusModalOverListBackTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamPopupFocusTestLocal;
+	TStrongObjectPtr<UDreamPressInteractionListener> Listener(NewObject<UDreamPressInteractionListener>());
+	FDreamDriverRig Rig = FDreamDriverRig::Headless(ViewportSize);
+	Rig.BindTest(this);
+	if (!TestTrue(TEXT("The headless rig came up"), Rig.IsUsable()))
+	{
+		return false;
+	}
+	UDreamUIModalSubsystem* Modals = UDreamUIModalSubsystem::Get(Rig.GetWorld());
+	if (!TestNotNull(TEXT("The rig's world has the modal subsystem"), Modals))
+	{
+		return false;
+	}
+	UDreamDropdown* Dropdown = PlaceDropdown(*this, Rig, Listener.Get(), nullptr, FVector2D(0.0, 200.0));
+	if (Dropdown == nullptr || !OpenByClicking(*this, Rig, Dropdown))
+	{
+		return false;
+	}
+	TestTrue(TEXT("The open list has the player's focus"), IsInside(FocusOf(Rig, 0), Dropdown->ListNode.Get()));
+
+	TArray<FName> Results;
+	Modals->ShowModalNative(UDreamDialog::StaticClass(), [&Results](FName InResult) { Results.Add(InResult); }, 0);
+	Rig.PumpFrames(2);
+	UDreamUserWidget* Dialog = Modals->GetActiveModalWidget(0);
+	if (!TestNotNull(TEXT("The modal opened"), Dialog))
+	{
+		return false;
+	}
+	TestFalse(TEXT("And closed the list behind it"), Dropdown->IsOpen());
+	TestTrue(TEXT("And took the focus into its dialog"), IsInside(FocusOf(Rig, 0), Dialog));
+
+	TestTrue(TEXT("Pressing Back completes"), Rig.Driver()->Sequence().Back().Perform());
+
+	if (TestEqual(TEXT("The first Back reached the modal"), Results.Num(), 1))
+	{
+		TestEqual(TEXT("As its Back"), Results[0], FName(TEXT("Back")));
+	}
+	TestFalse(TEXT("Which is closed"), Modals->IsModalActive(0));
+	TestFalse(TEXT("The list did not open again on the way"), Dropdown->IsOpen());
+	TestEqual(TEXT("And focus is on the dropdown's face, where the list left it"), FocusOf(Rig, 0), Dropdown->FaceNode.Get());
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamPopupFocusPressInFrontTest,
+	"DreamGUI.Popup.APressOnALayerSortedAboveAnOpenListClosesTheListAndReachesTheLayer",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamPopupFocusPressInFrontTest, "DreamGUI.Popup.APressOnALayerSortedAboveAnOpenListClosesTheListAndReachesTheLayer", "[Pointer][Animated]")
+
+/*
+ * Not every layer that comes up over an open list closes it: a dialog or a page put up by the game sorts above the list and
+ * leaves it open underneath. A press on that layer is outside the list, and closed it -- and, the list eating its outside
+ * presses, went no further, so the button on the layer in front never got the click the player aimed at it. A press on
+ * something sorted above the popup is now that thing's: the list still closes, and the button is clicked.
+ */
+bool FDreamPopupFocusPressInFrontTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamPopupFocusTestLocal;
+	TStrongObjectPtr<UDreamPressInteractionListener> Listener(NewObject<UDreamPressInteractionListener>());
+	FDreamDriverRig Rig = FDreamDriverRig::Headless(ViewportSize);
+	Rig.BindTest(this);
+	if (!TestTrue(TEXT("The headless rig came up"), Rig.IsUsable()))
+	{
+		return false;
+	}
+	UDreamDropdown* Dropdown = PlaceDropdown(*this, Rig, Listener.Get(), nullptr, FVector2D(0.0, 200.0));
+	if (Dropdown == nullptr || !OpenByClicking(*this, Rig, Dropdown))
+	{
+		return false;
+	}
+	// Put up after the list opened, so the list -- sorted above everything there when it opened -- is under it.
+	UDreamWidget* Layer = MakeLayerInFront(*this, Rig, TEXT("LayerInFront"), FVector2D(300.0, 120.0), FVector2D(-350.0, -200.0));
+	UDreamButton* OnTheLayer = Layer != nullptr ? PlaceButton(*this, Rig, TEXT("OnTheLayer"), Layer, FVector2D::ZeroVector) : nullptr;
+	if (OnTheLayer == nullptr)
+	{
+		return false;
+	}
+	OnTheLayer->OnClicked.AddDynamic(Listener.Get(), &UDreamPressInteractionListener::HandleClicked);
+	Rig.PumpFrames(1);
+	if (!TestTrue(TEXT("The list is still open under the layer"), Dropdown->IsOpen()))
+	{
+		return false;
+	}
+
+	TestTrue(TEXT("Clicking the button on the layer completes"), Rig.Driver()->Find(FDreamBy::Widget(OnTheLayer))->Click());
+
+	TestEqual(TEXT("The button in front got the click"), Listener->ClickedCount, 1);
+	TestFalse(TEXT("And the press, outside the list, closed it"), Dropdown->IsOpen());
+	TestEqual(TEXT("Choosing nothing from it"), Listener->SelectionIndices.Num(), 0);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamPopupFocusBackInFrontTest,
+	"DreamGUI.Popup.BackGoesToADialogInFrontOfAnOpenListBeforeTheList",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamPopupFocusBackInFrontTest, "DreamGUI.Popup.BackGoesToADialogInFrontOfAnOpenListBeforeTheList", "[Nav][Animated]")
+
+/*
+ * The newest layer gets Back first. A dialog put up in front of an open list -- sorted above it, with the player's focus in
+ * it -- had the popups hear Back before any screen, so the first Back closed the list behind the dialog and left the
+ * dialog up. Back now goes to the dialog while the focus is in front of the list; the Back after it, the focus given back
+ * into the list, closes the list.
+ */
+bool FDreamPopupFocusBackInFrontTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamPopupFocusTestLocal;
+	TStrongObjectPtr<UDreamPressInteractionListener> Listener(NewObject<UDreamPressInteractionListener>());
+	FDreamDriverRig Rig = FDreamDriverRig::Headless(ViewportSize);
+	Rig.BindTest(this);
+	if (!TestTrue(TEXT("The headless rig came up"), Rig.IsUsable()))
+	{
+		return false;
+	}
+	UDreamDropdown* Dropdown = PlaceDropdown(*this, Rig, Listener.Get(), nullptr, FVector2D(0.0, 200.0));
+	if (Dropdown == nullptr || !OpenByClicking(*this, Rig, Dropdown))
+	{
+		return false;
+	}
+	// The dialog's layer after the list opened, so it sorts in front of it; the dialog takes the focus as it appears.
+	UDreamWidget* Layer = MakeLayerInFront(*this, Rig, TEXT("DialogLayer"), FVector2D(ViewportSize.X, ViewportSize.Y));
+	UDreamDialog* Dialog = Layer != nullptr ? Rig.MakeControl<UDreamDialog>(TEXT("Ask"), Layer, FVector2D(ViewportSize.X, ViewportSize.Y)) : nullptr;
+	if (!TestNotNull(TEXT("A dialog can be put up in front of the list"), Dialog))
+	{
+		return false;
+	}
+	Dialog->OnDialogClosed.AddDynamic(Listener.Get(), &UDreamPressInteractionListener::HandleDialogClosed);
+	Rig.PumpFrames(2);
+	if (!TestTrue(TEXT("The list is still open behind the dialog"), Dropdown->IsOpen())
+		|| !TestTrue(TEXT("And the dialog has the player's focus"), IsInside(FocusOf(Rig, 0), Dialog)))
+	{
+		return false;
+	}
+
+	TestTrue(TEXT("Pressing Back completes"), Rig.Driver()->Sequence().Back().Perform());
+	if (TestEqual(TEXT("The first Back went to the dialog in front"), Listener->DialogClosedResults.Num(), 1))
+	{
+		TestEqual(TEXT("As a cancel"), Listener->DialogClosedResults[0], Dialog->ResolveCancelResult());
+	}
+	TestTrue(TEXT("And not to the list behind it"), Dropdown->IsOpen());
+
+	TestTrue(TEXT("Pressing Back again completes"), Rig.Driver()->Sequence().Back().Perform());
+	TestFalse(TEXT("The second Back closed the list"), Dropdown->IsOpen());
+	TestEqual(TEXT("And nothing more reached the dialog"), Listener->DialogClosedResults.Num(), 1);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamPopupFocusMenuClosedWhileOpeningTest,
+	"DreamGUI.MenuAnchor.AMenuClosedWhileItTakesFocusEndsClosed",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamPopupFocusMenuClosedWhileOpeningTest, "DreamGUI.MenuAnchor.AMenuClosedWhileItTakesFocusEndsClosed", "[Nav][Animated]")
+
+/*
+ * Opening a menu moves the focus into it, and the focus leaving the trigger runs game code -- here, code that closes the
+ * menu. The popup layer closed it and told the anchor, and then answered the push with true regardless: the anchor took the
+ * menu for up and announced it open after it had announced it closed. The push now answers whether the menu is open as it
+ * returns, and the anchor goes by its own state: closed, home, asleep, and an open that never stood announced neither way.
+ */
+bool FDreamPopupFocusMenuClosedWhileOpeningTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamPopupFocusTestLocal;
+	TStrongObjectPtr<UDreamPressInteractionListener> Listener(NewObject<UDreamPressInteractionListener>());
+	TStrongObjectPtr<UDreamPopupFocusLostAction> Closer(NewObject<UDreamPopupFocusLostAction>());
+	FDreamDriverRig Rig = FDreamDriverRig::Headless(ViewportSize);
+	Rig.BindTest(this);
+	if (!TestTrue(TEXT("The headless rig came up"), Rig.IsUsable()))
+	{
+		return false;
+	}
+	const FPlacedMenu Placed = PlaceMenu(*this, Rig);
+	if (!Placed.IsReady() || !FocusForNavigation(*this, Rig, Placed.Trigger->FaceNode.Get(), 0))
+	{
+		return false;
+	}
+	UDreamMenuAnchor* Anchor = Placed.Anchor;
+	Anchor->OnMenuOpenChanged.AddDynamic(Listener.Get(), &UDreamPressInteractionListener::HandleMenuOpenChanged);
+	Closer->Action = [Anchor]() { Anchor->Close(); };
+	Placed.Trigger->FaceNode->OnFocusLost.AddDynamic(Closer.Get(), &UDreamPopupFocusLostAction::HandleFocusLost);
+
+	Anchor->Open(/*bFocusMenu*/true);
+
+	if (!TestEqual(TEXT("The focus moving into the menu ran the trigger's handler, which closed it"), Closer->FocusLostCount, 1))
+	{
+		return false;
+	}
+	TestFalse(TEXT("The anchor ends closed"), Anchor->IsOpen());
+	TestEqual(TEXT("Having announced neither an open nor a close"), Listener->MenuOpenStates.Num(), 0);
+	const UDreamUIPopupLayer* Popups = UDreamUIPopupLayer::Get(Rig.GetWorld());
+	TestTrue(TEXT("The menu is not up on the popup layer"), Popups != nullptr && !Popups->IsOpen(Anchor->PopupNode.Get()) && Popups->GetTopPopup(0) == nullptr);
+	TestTrue(TEXT("It is home in the anchor"), Anchor->PopupNode->IsChildOf(Anchor));
+	TestFalse(TEXT("And asleep"), Anchor->PopupNode->GetWidgetActive());
+	Rig.PumpFrames(1);
+	TestEqual(TEXT("The focus is back on the trigger"), FocusOf(Rig, 0), Placed.Trigger->FaceNode.Get());
+
+	// Nothing stale left behind: the next open opens, and says so once.
+	Anchor->Open(/*bFocusMenu*/true);
+	Rig.PumpFrames(1);
+	TestTrue(TEXT("Opened again, it opens"), Anchor->IsOpen() && Popups != nullptr && Popups->IsOpen(Anchor->PopupNode.Get()));
+	if (TestEqual(TEXT("And announces it"), Listener->MenuOpenStates.Num(), 1))
+	{
+		TestTrue(TEXT("As open"), Listener->MenuOpenStates[0]);
+	}
+	TestEqual(TEXT("With the focus on its button"), FocusOf(Rig, 0), Placed.MenuButton->FaceNode.Get());
+	Anchor->Close();
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamPopupFocusPanelMenuClosedWhileOpeningTest,
+	"DreamGUI.MenuAnchor.APanelMenuClosedWhileItTakesFocusEndsClosed",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamPopupFocusPanelMenuClosedWhileOpeningTest, "DreamGUI.MenuAnchor.APanelMenuClosedWhileItTakesFocusEndsClosed", "[Nav][Animated]")
+
+/*
+ * The panel spelling of the anchor, opening on the popup layer, kept the menu as lifted only once the push had returned. A
+ * close made while the push moved the focus into the menu therefore went past the layer -- the menu collapsed in place
+ * while the layer held it open -- and a dismissal the layer made then was a popup the anchor did not know, ignored, with
+ * the anchor left open. The menu is the anchor's from before the push: closed while opening, the anchor ends closed, the
+ * menu home under it and collapsed, and the layer has nothing up.
+ */
+bool FDreamPopupFocusPanelMenuClosedWhileOpeningTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamPopupFocusTestLocal;
+	TStrongObjectPtr<UDreamPopupFocusLostAction> Closer(NewObject<UDreamPopupFocusLostAction>());
+	FDreamDriverRig Rig = FDreamDriverRig::Headless(ViewportSize);
+	Rig.BindTest(this);
+	if (!TestTrue(TEXT("The headless rig came up"), Rig.IsUsable()))
+	{
+		return false;
+	}
+	// The anchor content first -- a button, what the menu opens from -- then the menu, holding one button of its own.
+	UDreamWidget* AnchorWidget = Rig.MakeWidget(TEXT("PanelAnchor"), nullptr, FVector2D(200.0, 40.0), FVector2D(-300.0, 100.0));
+	UDreamButton* Face = AnchorWidget != nullptr ? PlaceButton(*this, Rig, TEXT("PanelFace"), AnchorWidget, FVector2D::ZeroVector) : nullptr;
+	UDreamWidget* Menu = Face != nullptr ? Rig.MakeWidget(TEXT("PanelMenu"), AnchorWidget, FVector2D(160.0, 100.0)) : nullptr;
+	UDreamButton* Item = Menu != nullptr ? PlaceButton(*this, Rig, TEXT("PanelItem"), Menu, FVector2D::ZeroVector) : nullptr;
+	UDreamLayoutContainerMenuAnchor* MenuAnchor = Item != nullptr ? AnchorWidget->CreateNewLayoutContainer<UDreamLayoutContainerMenuAnchor>() : nullptr;
+	if (!TestNotNull(TEXT("A panel menu anchor can be built on the rig"), MenuAnchor))
+	{
+		return false;
+	}
+	MenuAnchor->SetUseApplicationMenuStack(true);
+	Rig.PumpFrames(1);
+	if (!FocusForNavigation(*this, Rig, Face->FaceNode.Get(), 0))
+	{
+		return false;
+	}
+	Closer->Action = [MenuAnchor]() { MenuAnchor->SetIsOpen(false); };
+	Face->FaceNode->OnFocusLost.AddDynamic(Closer.Get(), &UDreamPopupFocusLostAction::HandleFocusLost);
+
+	MenuAnchor->SetIsOpen(true);
+
+	if (!TestEqual(TEXT("The focus moving into the menu ran the face's handler, which closed it"), Closer->FocusLostCount, 1))
+	{
+		return false;
+	}
+	TestFalse(TEXT("The anchor ends closed"), MenuAnchor->IsOpen());
+	const UDreamUIPopupLayer* Popups = UDreamUIPopupLayer::Get(Rig.GetWorld());
+	TestTrue(TEXT("The menu is not up on the popup layer"), Popups != nullptr && !Popups->IsOpen(Menu) && Popups->GetTopPopup(0) == nullptr);
+	TestTrue(TEXT("It is home under the anchor"), Menu->GetParent() == AnchorWidget);
+	TestTrue(TEXT("Which answers it as its menu"), MenuAnchor->GetMenuContent() == Menu);
+	Rig.PumpFrames(1);
+	TestFalse(TEXT("And, closed, collapsed in place"), Menu->GetLayoutVisibleInHierarchy());
+	TestEqual(TEXT("The focus is back on the face"), FocusOf(Rig, 0), Face->FaceNode.Get());
+
+	// The next open opens.
+	MenuAnchor->SetIsOpen(true);
+	Rig.PumpFrames(1);
+	TestTrue(TEXT("Opened again, the anchor is open"), MenuAnchor->IsOpen());
+	TestTrue(TEXT("With its menu up on the popup layer"), Popups != nullptr && Popups->IsOpen(Menu) && Menu->GetParent() != AnchorWidget);
+	MenuAnchor->SetIsOpen(false);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamPopupFocusListClosedWhileOpeningTest,
+	"DreamGUI.Dropdown.AListClosedWhileItTakesFocusEndsClosed",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamPopupFocusListClosedWhileOpeningTest, "DreamGUI.Dropdown.AListClosedWhileItTakesFocusEndsClosed", "[Nav][Animated]")
+
+/*
+ * The dropdown's spelling of the same: its list counted as on the popup layer only once the push had returned, so a close
+ * made while the push moved the focus into the list did not take the list off the layer -- it faded and slept there, open
+ * as far as the layer knew -- and the push's true then marked a closed list as up. The list is on the layer for its own
+ * close from before the push: closed while opening, it is closed everywhere, and the next open is an ordinary one.
+ */
+bool FDreamPopupFocusListClosedWhileOpeningTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamPopupFocusTestLocal;
+	TStrongObjectPtr<UDreamPressInteractionListener> Listener(NewObject<UDreamPressInteractionListener>());
+	TStrongObjectPtr<UDreamPopupFocusLostAction> Closer(NewObject<UDreamPopupFocusLostAction>());
+	FDreamDriverRig Rig = FDreamDriverRig::Headless(ViewportSize);
+	Rig.BindTest(this);
+	if (!TestTrue(TEXT("The headless rig came up"), Rig.IsUsable()))
+	{
+		return false;
+	}
+	UDreamDropdown* Dropdown = PlaceDropdown(*this, Rig, Listener.Get(), nullptr, FVector2D(0.0, 200.0));
+	if (Dropdown == nullptr || !FocusForNavigation(*this, Rig, Dropdown->FaceNode.Get(), 0))
+	{
+		return false;
+	}
+	UUIDropdown* Behaviour = Dropdown->DropdownBehaviour.Get();
+	UDreamWidget* List = Dropdown->ListNode.Get();
+	Closer->Action = [Behaviour]() { Behaviour->Hide(); };
+	Dropdown->FaceNode->OnFocusLost.AddDynamic(Closer.Get(), &UDreamPopupFocusLostAction::HandleFocusLost);
+
+	Behaviour->Show();
+
+	if (!TestEqual(TEXT("The focus moving into the list ran the face's handler, which closed it"), Closer->FocusLostCount, 1))
+	{
+		return false;
+	}
+	TestFalse(TEXT("The dropdown ends closed"), Dropdown->IsOpen());
+	const UDreamUIPopupLayer* Popups = UDreamUIPopupLayer::Get(Rig.GetWorld());
+	TestTrue(TEXT("The list is not up on the popup layer"), Popups != nullptr && !Popups->IsOpen(List) && Popups->GetTopPopup(0) == nullptr);
+	TestEqual(TEXT("The focus is back on the face"), FocusOf(Rig, 0), Dropdown->FaceNode.Get());
+	// The fade out, which ends home and asleep.
+	Rig.PumpFrames(30);
+	TestTrue(TEXT("The list is home under the dropdown"), List->IsChildOf(Dropdown));
+	TestFalse(TEXT("And asleep"), List->GetWidgetActive());
+
+	Behaviour->Show();
+	Rig.PumpFrames(1);
+	TestTrue(TEXT("Opened again, the list opens"), Dropdown->IsOpen());
+	TestTrue(TEXT("Up on the popup layer"), Popups != nullptr && Popups->IsOpen(List));
+	Behaviour->Hide();
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamPopupFocusLiftedMenuSlotTest,
+	"DreamGUI.MenuAnchor.ALiftedPanelMenuIsPlacedWithItsSlotAndKeepsTheSlotWhenItComesBack",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamPopupFocusLiftedMenuSlotTest, "DreamGUI.MenuAnchor.ALiftedPanelMenuIsPlacedWithItsSlotAndKeepsTheSlotWhenItComesBack", "[Animated]")
+
+/*
+ * A panel menu lifted onto the popup layer leaves its panel, and the move took its panel slot with it: placed lifted, the
+ * menu read the default slot -- no padding, no nudge -- and opened somewhere else than the same menu opens in place; and
+ * the slot made on its way home started from defaults, so the authored padding and nudge were gone for good. The layer now
+ * keeps the slot for the lifted menu and gives it back on the way home -- and takes back the canvas it gave the menu.
+ */
+bool FDreamPopupFocusLiftedMenuSlotTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamPopupFocusTestLocal;
+	FDreamDriverRig Rig = FDreamDriverRig::Headless(ViewportSize);
+	Rig.BindTest(this);
+	if (!TestTrue(TEXT("The headless rig came up"), Rig.IsUsable()))
+	{
+		return false;
+	}
+	UDreamWidget* AnchorWidget = Rig.MakeWidget(TEXT("PanelAnchor"), nullptr, FVector2D(200.0, 40.0), FVector2D(-200.0, 150.0));
+	UDreamWidget* Face = AnchorWidget != nullptr ? Rig.MakeWidget(TEXT("PanelFace"), AnchorWidget, FVector2D(200.0, 40.0)) : nullptr;
+	UDreamWidget* Menu = Face != nullptr ? Rig.MakeWidget(TEXT("PanelMenu"), AnchorWidget, FVector2D(90.0, 150.0)) : nullptr;
+	UDreamLayoutContainerMenuAnchor* MenuAnchor = Menu != nullptr ? AnchorWidget->CreateNewLayoutContainer<UDreamLayoutContainerMenuAnchor>() : nullptr;
+	if (!TestNotNull(TEXT("A panel menu anchor can be built on the rig"), MenuAnchor))
+	{
+		return false;
+	}
+	// Below the anchor, as authored -- no width forced, no fit -- so the slot alone moves it.
+	MenuAnchor->SetPlacement(EDreamMenuPlacement::BelowAnchor);
+	MenuAnchor->SetFitInWindow(false);
+	Rig.PumpFrames(1);
+	UDreamPanelSlot* MenuSlot = Menu->GetPanelSlot();
+	if (MenuSlot == nullptr)
+	{
+		MenuSlot = Menu->CreateNewPanelSlot(UDreamPanelSlot::StaticClass());
+	}
+	if (!TestNotNull(TEXT("The menu has a slot in the anchor"), MenuSlot))
+	{
+		return false;
+	}
+	const FMargin Padding(10.0f, 20.0f, 30.0f, 40.0f);
+	const FVector2D Nudge(5.0, -3.0);
+	MenuSlot->SetPadding(Padding);
+	MenuSlot->SetNudge(Nudge);
+
+	// In place.
+	MenuAnchor->SetIsOpen(true);
+	Rig.PumpFrames(2);
+	FVector2D InPlaceSize(Menu->GetWidth(), Menu->GetHeight());
+	FVector InPlaceTopLeft;
+	FVector InPlaceBottomRight;
+	GetLaidOutCorners(Menu, InPlaceTopLeft, InPlaceBottomRight);
+	MenuAnchor->SetIsOpen(false);
+	Rig.PumpFrames(1);
+
+	// Lifted.
+	MenuAnchor->SetUseApplicationMenuStack(true);
+	MenuAnchor->SetIsOpen(true);
+	Rig.PumpFrames(2);
+	const UDreamUIPopupLayer* Popups = UDreamUIPopupLayer::Get(Rig.GetWorld());
+	if (!TestTrue(TEXT("Opened on the application menu stack, the menu is up on the popup layer"), Popups != nullptr && Popups->IsOpen(Menu))
+		|| !TestTrue(TEXT("Lifted out of the anchor"), Menu->GetParent() != AnchorWidget))
+	{
+		MenuAnchor->SetIsOpen(false);
+		return false;
+	}
+	const UDreamPanelSlot* KeptSlot = Popups->GetHomeSlot(Menu);
+	TestTrue(TEXT("The layer keeps the slot the menu had in the anchor"),
+		KeptSlot != nullptr && KeptSlot->Padding == Padding && KeptSlot->Nudge.Equals(Nudge));
+	FVector LiftedTopLeft;
+	FVector LiftedBottomRight;
+	GetLaidOutCorners(Menu, LiftedTopLeft, LiftedBottomRight);
+	TestTrue(TEXT("Lifted, the menu is the size it is in place"), FVector2D(Menu->GetWidth(), Menu->GetHeight()).Equals(InPlaceSize, 0.5));
+	TestTrue(TEXT("Its top-left corner where it is in place, padding and nudge included"), LiftedTopLeft.Equals(InPlaceTopLeft, 0.5));
+	TestTrue(TEXT("And its bottom-right corner"), LiftedBottomRight.Equals(InPlaceBottomRight, 0.5));
+
+	MenuAnchor->SetIsOpen(false);
+	Rig.PumpFrames(1);
+	TestTrue(TEXT("Closed, the menu is home under the anchor"), Menu->GetParent() == AnchorWidget);
+	TestNull(TEXT("With nothing kept for it on the layer"), Popups->GetHomeSlot(Menu));
+	const UDreamPanelSlot* SlotBack = Menu->GetPanelSlot();
+	TestTrue(TEXT("And with the slot it had: the padding"), SlotBack != nullptr && SlotBack->Padding == Padding);
+	TestTrue(TEXT("And the nudge"), SlotBack != nullptr && SlotBack->Nudge.Equals(Nudge));
+	TestNull(TEXT("The canvas the layer gave it to sort it is taken back"), Menu->GetComponent<UDreamCanvas>());
+
+	// And in place again, where it was the first time.
+	MenuAnchor->SetUseApplicationMenuStack(false);
+	MenuAnchor->SetIsOpen(true);
+	Rig.PumpFrames(2);
+	FVector AgainTopLeft;
+	FVector AgainBottomRight;
+	GetLaidOutCorners(Menu, AgainTopLeft, AgainBottomRight);
+	TestTrue(TEXT("Opened in place again, it lands where it did the first time"),
+		AgainTopLeft.Equals(InPlaceTopLeft, 0.5) && AgainBottomRight.Equals(InPlaceBottomRight, 0.5));
+	MenuAnchor->SetIsOpen(false);
 	return true;
 }
 

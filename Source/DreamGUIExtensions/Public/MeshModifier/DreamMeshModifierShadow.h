@@ -21,6 +21,8 @@ protected:
 		bool bMultiplySourceAlpha = true;
 	UPROPERTY(EditAnywhere, Category = "DreamGUI")
 		FVector3f ShadowOffset = FVector3f(0, 1, -1);
+	/** Set once a mesh has been reported as too large for its shadow, so a rebuild every frame does not repeat the message. */
+	bool bLoggedVertexLimitWarning = false;
 public:
 	virtual void ModifyUIGeometry(FDreamUIGeometry& InGeometry
 		, bool InTriangleChanged, bool InUVChanged, bool InColorChanged, bool InVertexPositionChanged

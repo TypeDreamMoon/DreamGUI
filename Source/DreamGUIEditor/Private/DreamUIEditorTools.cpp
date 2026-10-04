@@ -346,7 +346,12 @@ UDreamWidget* FDreamUIEditorTools::CreateWidgetAndReturn(TFunction<UDreamWidget*
 		}
 		return Created;
 	}
-	UDreamUISelection::GetInstance(SelectedWidget->GetWorld())->Modify();
+	// None in a world that runs no UI manager (a dedicated server's).
+	UDreamUISelection* EditorSelection = UDreamUISelection::GetInstance(SelectedWidget->GetWorld());
+	if (EditorSelection)
+	{
+		EditorSelection->Modify();
+	}
 	ModifyForHierarchyChange(SelectedWidget);
 	auto NewWidget = NewObject<UDreamWidget>(SelectedWidget->GetOuter(), UDreamWidget::StaticClass(), NAME_None, RF_Public | RF_Transactional);
 	if (IsValid(NewWidget))
@@ -358,8 +363,11 @@ UDreamWidget* FDreamUIEditorTools::CreateWidgetAndReturn(TFunction<UDreamWidget*
 		{
 			NewWidget->SetParent(SelectedWidget, false);
 			NewWidget->SetAnchoredPosition(FVector2D::ZeroVector);
-			UDreamUISelection::GetInstance(SelectedWidget->GetWorld())->SelectNone();
-		} 
+			if (EditorSelection)
+			{
+				EditorSelection->SelectNone();
+			}
+		}
 		if (VisualClass)
 		{
 			FDreamUIEditorTools::ApplyEditorDefaults(NewWidget->CreateNewVisual(VisualClass));
@@ -369,7 +377,10 @@ UDreamWidget* FDreamUIEditorTools::CreateWidgetAndReturn(TFunction<UDreamWidget*
 			Callback(NewWidget);
 		}
 		EnsureUniqueWidgetDisplayNames(FDreamUIEditorToolsHelperFunctionHolder::GetNamingRoot(NewWidget));
-		UDreamUISelection::GetInstance(SelectedWidget->GetWorld())->SelectWidget(NewWidget);
+		if (EditorSelection)
+		{
+			EditorSelection->SelectWidget(NewWidget);
+		}
 	}
 	return NewWidget;
 }
@@ -455,7 +466,12 @@ UDreamWidget* FDreamUIEditorTools::PlaceControlClassAndReturn(TFunction<UDreamWi
 	// the shipped Button never reached a single Button anyone had already dropped -- there was no link
 	// left to follow. An instance keeps one.
 	const FScopedTransaction Transaction(LOCTEXT("CreateUIControl_Transaction", "DreamUI Create UI Control"));
-	UDreamUISelection::GetInstance(SelectedWidget->GetWorld())->Modify();
+	// None in a world that runs no UI manager (a dedicated server's).
+	UDreamUISelection* EditorSelection = UDreamUISelection::GetInstance(SelectedWidget->GetWorld());
+	if (EditorSelection)
+	{
+		EditorSelection->Modify();
+	}
 	ModifyForHierarchyChange(SelectedWidget);
 
 	UDreamWidget* CreatedWidget = CreateDreamWidget(SelectedWidget->GetWorld(), ControlClass, SelectedWidget);
@@ -466,8 +482,11 @@ UDreamWidget* FDreamUIEditorTools::PlaceControlClassAndReturn(TFunction<UDreamWi
 	}
 	if (Callback)Callback(CreatedWidget);
 	EnsureUniqueWidgetDisplayNames(FDreamUIEditorToolsHelperFunctionHolder::GetNamingRoot(CreatedWidget));
-	UDreamUISelection::GetInstance(SelectedWidget->GetWorld())->SelectNone();
-	UDreamUISelection::GetInstance(SelectedWidget->GetWorld())->SelectWidget(CreatedWidget);
+	if (EditorSelection)
+	{
+		EditorSelection->SelectNone();
+		EditorSelection->SelectWidget(CreatedWidget);
+	}
 	return CreatedWidget;
 }
 
@@ -480,7 +499,7 @@ UDreamWidget* FDreamUIEditorTools::CreateUIControlsAndReturn(TFunction<UDreamWid
 	UClass* ControlClass = ControlBlueprint != nullptr ? ControlBlueprint->GeneratedClass.Get() : nullptr;
 	if (ControlClass == nullptr || !ControlClass->IsChildOf(UDreamUserWidget::StaticClass()))
 	{
-		UE_LOG(DreamGUIEditor, Error, TEXT("[%s].%d Load control class error! Path:%s. Missing some content of the DreamUI plugin; reinstalling it may fix this."), ANSI_TO_TCHAR(__FUNCDNAME__), __LINE__, *InControlClassPath);
+		UE_LOG(DreamGUIEditor, Error, TEXT("[%s].%d Load control class error! Path:%s. Missing some content of the DreamUI plugin; reinstalling it may fix this."), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *InControlClassPath);
 		return nullptr;
 	}
 	// The BLUEPRINT's name, not the class's: a generated class is BP_TextInput_C, and that suffix
@@ -629,8 +648,13 @@ void FDreamUIEditorTools::DuplicateWidgets(TFunction<TArray<UDreamWidget*>()> Ge
 	}
 	const FScopedTransaction Transaction(LOCTEXT("DuplicateWidget_Transaction", "DreamUI Duplicate Widgets"));
 	auto World = SelectedWidgets[0]->GetWorld();
-	UDreamUISelection::GetInstance(World)->Modify();
-	UDreamUISelection::GetInstance(World)->SelectNone();
+	// None in a world that runs no UI manager (a dedicated server's).
+	UDreamUISelection* EditorSelection = UDreamUISelection::GetInstance(World);
+	if (EditorSelection)
+	{
+		EditorSelection->Modify();
+		EditorSelection->SelectNone();
+	}
 	for (auto Widget : RootWidgetList)
 	{
 		Widget->GetOuter()->Modify();
@@ -655,7 +679,10 @@ void FDreamUIEditorTools::DuplicateWidgets(TFunction<TArray<UDreamWidget*>()> Ge
 			CopiedWidget->SetDisplayName(CopiedWidgetName);
 		});
 		EnsureUniqueWidgetDisplayNames(FDreamUIEditorToolsHelperFunctionHolder::GetNamingRoot(CopiedWidget));
-		UDreamUISelection::GetInstance(World)->SelectWidget(CopiedWidget);
+		if (EditorSelection)
+		{
+			EditorSelection->SelectWidget(CopiedWidget);
+		}
 	}
 	UDreamUIManagerWorldSubsystem::RefreshAllUI();
 }

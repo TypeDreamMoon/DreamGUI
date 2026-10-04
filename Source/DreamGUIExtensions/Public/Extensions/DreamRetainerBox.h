@@ -127,6 +127,10 @@ private:
 	bool bHasSavedCanvasState = false;
 	bool bSavedForceRenderToTarget = false;
 	uint8 bSavedRenderTargetUpdateMode = 0;
+	/** The canvas's RenderMode before it was set to RenderTarget, as the byte of an EDreamRenderMode. */
+	uint8 SavedRenderMode = 0;
+	/** The warning for an empty DisplayVisual has been given; once is enough. */
+	bool bWarnedAboutNoDisplayVisual = false;
 
 	void ApplyCanvasConfiguration();
 	void RestoreCanvasConfiguration();

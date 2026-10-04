@@ -170,18 +170,22 @@ namespace DreamTextShapeCacheLocal
 		uint32 SizeBits = 0;
 		FMemory::Memcpy(&SizeBits, &Key.Size, sizeof(SizeBits));
 		const uint64 LanguageBits = (uint64)(UPTRINT)Key.Language;
-		TArray<uint32, TInlineAllocator<64>> Words;
-		Words.Reserve(8 + Key.Codepoints.Num());
-		Words.Add(GetTypeHash(Key.Face));
-		Words.Add(Key.Face.Epoch);
-		Words.Add(SizeBits);
-		Words.Add(Key.Script);
-		Words.Add((uint32)LanguageBits);
-		Words.Add((uint32)(LanguageBits >> 32));
-		Words.Add((uint32)Key.Flags | ((uint32)Key.PreContext << 8));
-		Words.Add((uint32)Key.SegmentLength);
-		Words.Append(Key.Codepoints.GetData(), Key.Codepoints.Num());
-		return FXxHash64::HashBuffer(Words.GetData(), (uint64)Words.Num() * sizeof(uint32)).Hash;
+		// The key's fields, then its code points as they are, streamed into one hash: nothing is copied to be hashed.
+		const uint32 Header[8] =
+		{
+			GetTypeHash(Key.Face),
+			Key.Face.Epoch,
+			SizeBits,
+			Key.Script,
+			(uint32)LanguageBits,
+			(uint32)(LanguageBits >> 32),
+			(uint32)Key.Flags | ((uint32)Key.PreContext << 8),
+			(uint32)Key.SegmentLength,
+		};
+		FXxHash64Builder Builder;
+		Builder.Update(Header, sizeof(Header));
+		Builder.Update(Key.Codepoints.GetData(), (uint64)Key.Codepoints.Num() * sizeof(uint32));
+		return Builder.Finalize().Hash;
 	}
 
 #if WITH_HARFBUZZ

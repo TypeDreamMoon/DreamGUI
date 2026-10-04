@@ -109,6 +109,7 @@ struct FDreamUIRenderSection_ChildCanvas : public FDreamUIRenderSection
 class FDreamUIRenderer;
 class IDreamUIRendererPrimitive;
 class UDreamCanvas;
+struct FStaticMeshVertexBuffers;
 
 class FDreamUIRenderRoot;
 /**
@@ -223,6 +224,22 @@ public:
 
 	/** The render thread's side of the sections, while the mesh has one (see EnsureRenderRoot). */
 	FDreamUIRenderRoot* GetRenderRoot() const { return RenderRoot.Get(); }
+	/**
+	 * What this mesh's sections hold on the game thread, for the memory report (DreamGUI.Memory): mesh sections in use and
+	 * waiting in the pools, and the bytes their vertex and index arrays have allocated. The render thread keeps a copy of
+	 * what was uploaded besides. Game thread.
+	 */
+	void GetMemoryInfo(int32& OutSections, int32& OutPooledSections, int64& OutVertexBytes, int64& OutIndexBytes) const;
+
+	/**
+	 * UE's renderer draws a section from split vertex buffers -- positions, colours, tangents and UVs, through a local
+	 * vertex factory -- filled from the section's vertices. InitUERendererVertexBuffers sizes them for InNumVertices with
+	 * every UV channel a vertex carries (LEXUI_VERTEX_UV_CHANNEL_COUNT, at full precision); WriteUERendererVertex copies one
+	 * vertex in: its position, its colour, TextureCoordinate[0..3] as channels 0 to 3 and UV4 as channel 4, which a material
+	 * reads as TexCoord(4), and its tangents when bInTangents. The CPU copies only: their RHI resources are the caller's.
+	 */
+	static void InitUERendererVertexBuffers(FStaticMeshVertexBuffers& OutBuffers, int32 InNumVertices);
+	static void WriteUERendererVertex(FStaticMeshVertexBuffers& InOutBuffers, int32 InIndex, const FDreamUIMeshVertex& InVertex, bool bInTangents);
 protected:
 	/** Both send the render root the transform UE's scene has for the proxy. */
 	virtual void CreateRenderState_Concurrent(FRegisterComponentContext* Context) override;
@@ -312,6 +329,8 @@ private:
 	FBox GetMeshSectionBounds(const FDreamUIDrawCall& InDrawCallData) const;
 
 	friend class FDreamUIRenderSceneProxy;
+	/** A child canvas's section takes the child mesh's root by its shared reference (see FDreamUIRenderRoot::CreateSectionData). */
+	friend class FDreamUIRenderRoot;
 
 	/**
 	 * Made with the first section set up while the mesh is registered, from the settings it has then; released by

@@ -209,6 +209,8 @@ void UDreamMeshModifierOutline::ModifyUIGeometry(
 			channelVertIndex5++, channelVertIndex6++, channelVertIndex7++, channelVertIndex8++;
 		}
 	}
+	// The copies paint nothing, and a colour glyph's copies are its silhouette.
+	PrepareMeshCopies(InGeometry, singleChannelVerticesCount);
 }
 
 void UDreamMeshModifierOutline::SetOutlineColor(FColor Value)

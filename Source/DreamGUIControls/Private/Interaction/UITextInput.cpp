@@ -17,6 +17,8 @@
 #include "Core/DreamUIWorldContext.h"
 #include "Core/Components/DreamCanvas.h"
 #include "Core/Components/DreamVisualEmpty.h"
+#include "Core/DreamGUISettings.h"
+#include "Core/DreamUIInputServices.h"
 #include "Core/DreamUISettings.h"
 #include "Engine/Engine.h"
 #include "Engine/GameInstance.h"
@@ -26,6 +28,7 @@
 #include "Event/DreamGameViewportClient.h"
 #include "Event/DreamUIInputSubsystem.h"
 #include "Event/DreamUIInputUser.h"
+#include "Event/DreamUIKeyRouting.h"
 #include "Framework/Application/SlateUser.h"
 #include "UObject/UObjectIterator.h"
 #include "Interaction/UIButton.h"
@@ -74,6 +77,17 @@ namespace DreamTextInputLocal
 	{
 		const UWorld* World = InField != nullptr ? InField->GetWorld() : nullptr;
 		return World != nullptr ? World->GetRealTimeSeconds() : FPlatformTime::Seconds();
+	}
+
+	/**
+	 * The pad's confirm button: a pad key that confirms (DreamUIKeyRouting::IsConfirmKey, which counts the platform's
+	 * accept button in and a face button the project made Back out). It types nothing, so on a field being edited it
+	 * is the field's Enter (UUITextInput::EndEditFromPadConfirm). Enter and the space bar confirm too, but they are a
+	 * keyboard's and type.
+	 */
+	static bool IsPadConfirmKey(const FKey& InKey)
+	{
+		return InKey.IsValid() && InKey.IsGamepadKey() && DreamUIKeyRouting::IsConfirmKey(InKey);
 	}
 
 	/** How many code units the character at InIndex of InString takes: two for a surrogate pair, one otherwise. */
@@ -364,6 +378,15 @@ bool UUITextInput::HandleTextInputKey(const FKey& InKey, const APlayerController
 	// The bound road's held keys come from the typing player's input state -- not the first player's; what a
 	// key then does to the edit is ProcessKeyPressed, shared with HandleKeyInput so the two roads cannot drift apart.
 	UPlayerInput* const HeldKeys = InPlayer->PlayerInput;
+	if (InKey == EKeys::Tab)
+	{
+		return HandleTabKey(HeldKeys->IsShiftPressed(), HeldKeys->IsCtrlPressed(), HeldKeys->IsAltPressed(), HeldKeys->IsCmdPressed());
+	}
+	if (DreamTextInputLocal::IsPadConfirmKey(InKey))
+	{
+		EndEditFromPadConfirm(InKey);
+		return true;
+	}
 	ProcessKeyPressed(InKey, HeldKeys->IsCtrlPressed(), HeldKeys->IsShiftPressed(), HeldKeys->IsAltPressed(),
 		[HeldKeys](const FKey& InHeldKey) { return HeldKeys->IsPressed(InHeldKey); });
 	return true;
@@ -382,9 +405,21 @@ bool UUITextInput::HandleKeyInput(const FKey& InKey, bool bInPressed, const FMod
 	// HandleTextInputKey's own gates, minus the player controller: standing in for what the controller
 	// would have supplied is the whole of what this entry is for.
 	if (bInputActive == false)return false;
-	if (TextInputMethodContext.IsValid() && TextInputMethodContext->IsComposing())return false;
+	// The composition's: the IME is driving the text with these very keys, so the field does nothing with them
+	// -- and says it took them, so that a host which acts on a key nobody took does not act on the IME's
+	// Enter or Tab as well (a confirm pressing the focused control, a step out of the field mid-word).
+	if (TextInputMethodContext.IsValid() && TextInputMethodContext->IsComposing())return true;
 	if (TextVisual == nullptr)return false;
 
+	if (InKey == EKeys::Tab)
+	{
+		return HandleTabKey(InModifierKeys.IsShiftDown(), InModifierKeys.IsControlDown(), InModifierKeys.IsAltDown(), InModifierKeys.IsCommandDown());
+	}
+	if (DreamTextInputLocal::IsPadConfirmKey(InKey))
+	{
+		EndEditFromPadConfirm(InKey);
+		return true;
+	}
 	ProcessKeyPressed(InKey, InModifierKeys.IsControlDown(), InModifierKeys.IsShiftDown(), InModifierKeys.IsAltDown(),
 		[&InModifierKeys](const FKey& InHeldKey)
 		{
@@ -403,8 +438,75 @@ bool UUITextInput::HandleKeyInput(const FKey& InKey, bool bInPressed, const FMod
 	return true;
 }
 
+bool UUITextInput::HandleTabKey(bool bInShift, bool bInCtrl, bool bInAlt, bool bInCmd)
+{
+	// Alt+Tab and Cmd+Tab switch windows: the system's, and nothing a field types or steps with.
+	if (bInAlt || bInCmd)
+	{
+		return false;
+	}
+	const bool bTypesTabs = bAllowMultiLine && bTabTypesTabCharacter;
+	if (bTypesTabs && !bInCtrl)
+	{
+		// A tab character where the caret is. A keyboard sends the character with the key, and where a host
+		// delivers characters that is what types it (HandleCharacterInput); the key types it only where none
+		// has yet -- and then says so, so that the same character arriving after the key is not typed again.
+		if (!IsHostDeliveringCharacterEvents(this))
+		{
+			VerifyAndInsertCharAtCaretPosition(TEXT('\t'));
+			bKeyRoadTypedTab = true;
+		}
+		return true;
+	}
+	if (bInCtrl && !bTypesTabs)
+	{
+		// Ctrl+Tab is no step out of a field Tab already leaves, and no character: left to whatever binds it.
+		return false;
+	}
+	const UDreamGUISettings* Settings = UDreamGUISettings::Get();
+	if (Settings != nullptr && !Settings->bTabNavigation)
+	{
+		// The project took Tab away from navigation: it is the game's key, and no way out of a field either.
+		return false;
+	}
+	// Out of the field, as a browser's Tab goes: the edit ends the way navigating away ends it, and the step is the
+	// editing player's next one, from the field, which keeps the focus until the step moves it. Asked for rather
+	// than taken here, inside the key's own routing -- and the key is reported taken, so that the routing does not
+	// step a second time.
+	const int32 StepUserIndex = EditingUserIndex;
+	DeactivateInput();
+	if (UDreamUIInputSubsystem* Input = UDreamUIInputSubsystem::Get(this))
+	{
+		if (UDreamUIInputUser* User = Input->GetUser(StepUserIndex))
+		{
+			User->RequestNavigationStep(bInShift ? EDreamUINavigationDirection::Prev : EDreamUINavigationDirection::Next);
+		}
+	}
+	return true;
+}
+
+void UUITextInput::EndEditFromPadConfirm(const FKey& InPadKey)
+{
+	// The press that began this edit -- the confirm that pressed the field -- is still down and repeating into it:
+	// its press is on the player's books as the navigation's, where a press made during the edit is the field's.
+	const UDreamUIInputSubsystem* Input = UDreamUIInputSubsystem::Get(this);
+	const UDreamUIInputUser* User = Input != nullptr ? Input->GetUser(EditingUserIndex) : nullptr;
+	const FDreamUIKeyPress* Press = User != nullptr ? User->FindKeyPress(InPadKey) : nullptr;
+	if (Press != nullptr && Press->Taker != EDreamUIKeyPressTaker::Text)
+	{
+		return;
+	}
+	// The pad's Enter: submitted, and the edit over whatever bClearKeyboardFocusOnCommit says -- kept going, a pad
+	// player's only way out of the field would be Back. Submit marks the value as reported, so the end of the edit
+	// does not report it again.
+	Submit();
+	DeactivateInput();
+}
+
 void UUITextInput::ProcessKeyPressed(const FKey& InKey, bool bInCtrl, bool bInShift, bool bInAlt, TFunctionRef<bool(const FKey&)> InIsKeyHeld)
 {
+	// Another key: the window in which a host's character could echo a tab the key road typed has closed.
+	bKeyRoadTypedTab = false;
 	// The names the key table below has always used.
 	const FKey& Key = InKey;
 	TCHAR inputChar = 127;
@@ -864,6 +966,22 @@ bool UUITextInput::HandleCharacterInput(TCHAR InCharacter)
 	if (UDreamUIInputSubsystem* Input = UDreamUIInputSubsystem::Get(this))
 	{
 		Input->NoteHostDeliversCharacters();
+	}
+	// A tab the key road typed a moment ago, because no host had delivered a character yet, has now arrived as the
+	// character it was: typed once already. Any other character closes that window as well.
+	const bool bTabAlreadyTypedByKey = bKeyRoadTypedTab;
+	bKeyRoadTypedTab = false;
+	if (InCharacter == TEXT('\t'))
+	{
+		PendingHighSurrogate = 0;//a half still waiting is resolved by whatever comes next, this included
+		// Text only in a field that types tabs. Anywhere else Tab is the key that leaves the field, and the
+		// character its keystroke also sends is nothing to type -- before the key arrives, as a game viewport
+		// delivers it, or after, as Slate does, by which time this field is no longer being edited.
+		if (!(bAllowMultiLine && bTabTypesTabCharacter))
+		{
+			return false;
+		}
+		return bTabAlreadyTypedByKey ? true : VerifyAndInsertCharAtCaretPosition(TEXT('\t'));
 	}
 	// A character past the Basic Multilingual Plane -- an emoji -- comes in as two events, its high
 	// surrogate and then its low one. Each half on its own is not a character: inserted as it came, the
@@ -2428,6 +2546,22 @@ bool UUITextInput::OnPointerSelect_Implementation(UDreamBaseEventData* EventData
 {
 	Super::OnPointerSelect_Implementation(EventData);
 	//ActivateInput(EventData);//handled at PointerClick
+	// Except for a field Tab lands on, which starts its edit as a browser's does -- its text selected as the field
+	// says (bSelectAllWhenActivateInput) -- because no click is coming: the keyboard moved the focus here, and
+	// the next characters are meant for it. The cause is the selecting player's, recorded before this event.
+	const UDreamGUISettings* Settings = UDreamGUISettings::Get();
+	UDreamWidget* OwnWidget = GetWidget();
+	if (!bInputActive && Settings != nullptr && Settings->bTabStartsTextEdit
+		&& IsValid(EventData) && OwnWidget != nullptr && EventData->SelectedComponent == OwnWidget)
+	{
+		UDreamPointerEventData* PointerEventData = Cast<UDreamPointerEventData>(EventData);
+		const int32 SelectingUserIndex = PointerEventData != nullptr ? PointerEventData->UserIndex : OwnWidget->GetOwningPlayerIndex();
+		const UDreamUIInputServices* Services = UDreamUIInputServices::Get(this);
+		if (Services != nullptr && Services->GetFocusCause(SelectingUserIndex) == EDreamUIFocusCause::Tab)
+		{
+			ActivateInput(PointerEventData);
+		}
+	}
 	return AllowEventBubbleUp;
 }
 bool UUITextInput::OnPointerDeselect_Implementation(UDreamBaseEventData* EventData)
@@ -2867,14 +3001,32 @@ void UUITextInput::GetTextInputKeys(TArray<FKey>& OutKeys) const
 	};
 
 	// Every key in the table but the ones this field was told to leave alone: those it never binds, so they still
-	// reach the game while it is being edited.
-	OutKeys.Reset(AllKeys.Num());
+	// reach the game while it is being edited. Tab is the field's while it types tabs or leaves the field; with Tab
+	// navigation turned off in a field that types none, it has no use for it, and the game has it.
+	const UDreamGUISettings* Settings = UDreamGUISettings::Get();
+	const bool bTakesTab = (bAllowMultiLine && bTabTypesTabCharacter) || Settings == nullptr || Settings->bTabNavigation;
+	OutKeys.Reset(AllKeys.Num() + 2);
 	for (const FKey& Key : AllKeys)
 	{
-		if (!IgnoreKeys.Contains(Key))
+		if (!IgnoreKeys.Contains(Key) && (bTakesTab || Key != EKeys::Tab))
 		{
 			OutKeys.Add(Key);
 		}
+	}
+	// And the pad's confirm button, which ends the edit (EndEditFromPadConfirm): read from the platform and the
+	// project's confirm table each time, so a remap holds from the next edit on. Taken here, it no longer also
+	// reaches the confirm that would press the field again and keep the edit going.
+	auto AddPadConfirmKey = [this, &OutKeys](const FKey& InPadKey)
+	{
+		if (DreamTextInputLocal::IsPadConfirmKey(InPadKey) && !IgnoreKeys.Contains(InPadKey))
+		{
+			OutKeys.AddUnique(InPadKey);
+		}
+	};
+	AddPadConfirmKey(DreamUIKeyRouting::GetGamepadAcceptKey());
+	for (const FKey& ConfirmKey : DreamUIKeyRouting::GetConfirmKeys())
+	{
+		AddPadConfirmKey(ConfirmKey);
 	}
 }
 void UUITextInput::DeactivateInput(bool InFireEvent)
@@ -2903,6 +3055,7 @@ void UUITextInput::DeactivateInput(bool InFireEvent)
 		TextInputMethodContext->CloseComposition(InFireEvent);
 	}
 	PendingHighSurrogate = 0;//the first half of a character that never got its second is not text
+	bKeyRoadTypedTab = false;//nor is a tab's echo still owed to an edit that is over
 	if (FSlateApplication::IsInitialized() && FPlatformApplicationMisc::RequiresVirtualKeyboard())
 	{
 		FSlateApplication::Get().ShowVirtualKeyboard(false, GetEditingSlateUserIndex());
@@ -3109,6 +3262,10 @@ void UUITextInput::SetAllowMultiLine(bool Value)
 void UUITextInput::SetMultiLineSubmitFunctionKeys(const TArray<FKey>& Value)
 {
 	MultiLineSubmitFunctionKeys = Value;
+}
+void UUITextInput::SetTabTypesTabCharacter(bool Value)
+{
+	bTabTypesTabCharacter = Value;
 }
 void UUITextInput::SetPlaceHolder(UDreamWidget* Value)
 {

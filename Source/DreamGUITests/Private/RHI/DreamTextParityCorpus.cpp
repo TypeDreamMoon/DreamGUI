@@ -377,6 +377,11 @@ namespace DreamTextParity
 		return Canvas.X > 0 ? static_cast<double>(GetDeviceCanvas().X) / static_cast<double>(Canvas.X) : 1.0;
 	}
 
+	bool FCase::HasFill() const
+	{
+		return !Fill.IsEmpty() || (bRich && Text.Contains(TEXT("<gradient="), ESearchCase::IgnoreCase));
+	}
+
 	const FCase* FCorpus::FindCase(const FString& InId) const
 	{
 		return Cases.FindByPredicate([&InId](const FCase& Case) { return Case.Id == InId; });
@@ -510,6 +515,7 @@ namespace DreamTextParity
 				Case.ShadowOffsetEm = FVector2f(ReadFloat(*Shadow, TEXT("x"), 0.0f), ReadFloat(*Shadow, TEXT("y"), 0.0f));
 				Case.ShadowColor = FColor::FromHex(ReadString(*Shadow, TEXT("color"), TEXT("#00000080")));
 			}
+			Case.Fill = ReadString(Object, TEXT("fill"), FString()).TrimStartAndEnd();
 			Case.Canvas = ReadPoint(Object, TEXT("canvas"), DefaultCanvas);
 			Case.Scale = FMath::Max(0.25f, ReadFloat(Object, TEXT("scale"), 1.0f));
 			Case.SmallTextRaster = ReadString(Object, TEXT("smallTextRaster"), FString());
@@ -548,6 +554,9 @@ namespace DreamTextParity
 					FCase Field = Case;
 					Field.Id = Case.Id + TEXT("_Field");
 					Field.SmallTextRaster = TEXT("off");
+					// Reported only, whatever the case asserts: the field is the other way of drawing small text, kept in the
+					// report to compare the two, and held to nothing.
+					Field.Flags.AddUnique(TEXT("reportOnly"));
 					OutCorpus.Cases.Add(Field);
 				}
 			}
@@ -776,6 +785,45 @@ namespace DreamTextParity
 		FString Plain;
 		ParseRichText(InCase.Text, InCase.Size, Runs, Plain);
 		return Plain;
+	}
+
+	FString GetMaskText(const FCase& InCase)
+	{
+		if (!InCase.bRich)
+		{
+			return InCase.Text;
+		}
+		// A <gradient=...> tag runs to its '>', as DreamGUI's parser reads it (the name is CSS written without spaces).
+		static const TCHAR* const OpenTag = TEXT("<gradient=");
+		static const TCHAR* const CloseTag = TEXT("</gradient>");
+		const int32 OpenLength = FCString::Strlen(OpenTag);
+		const int32 CloseLength = FCString::Strlen(CloseTag);
+		const FString& Markup = InCase.Text;
+		const int32 Length = Markup.Len();
+		FString Masked;
+		Masked.Reserve(Length);
+		int32 Index = 0;
+		while (Index < Length)
+		{
+			const TCHAR* Here = *Markup + Index;
+			if (FCString::Strnicmp(Here, OpenTag, OpenLength) == 0)
+			{
+				const int32 Close = Markup.Find(TEXT(">"), ESearchCase::CaseSensitive, ESearchDir::FromStart, Index + OpenLength);
+				if (Close != INDEX_NONE)
+				{
+					Index = Close + 1;
+					continue;
+				}
+			}
+			else if (FCString::Strnicmp(Here, CloseTag, CloseLength) == 0)
+			{
+				Index += CloseLength;
+				continue;
+			}
+			Masked.AppendChar(Markup[Index]);
+			++Index;
+		}
+		return Masked;
 	}
 
 	void DecodeCodepoints(const FString& InText, TArray<uint32>& OutCodepoints, TArray<int32>& OutOffsets)

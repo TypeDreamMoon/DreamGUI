@@ -41,6 +41,11 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FDreamScrollBarValueChangedEvent, fl
  * the ends, and a drag from that press carries on from there -- SScrollBar's behaviour. Until this was
  * checked against the 5.8 source a track click paged one handle length toward the pointer (Unity's
  * behaviour), so existing screens now jump where they used to step.
+ *
+ * Neither the track nor the arrows are a place the pad's navigation lands or Tab stops, which is how
+ * SScrollBar behaves: the track's UUIScrollbar starts with bCanNavigateHere off (see its class comment)
+ * and the arrows are made the same in WireParts. The keys and the stick scroll whatever the bar
+ * follows through the focused control instead.
  */
 UCLASS(BlueprintType, Blueprintable, DisplayName = "Dream Scroll Bar")
 class DREAMGUICONTROLS_API UDreamScrollBar : public UDreamUIControl

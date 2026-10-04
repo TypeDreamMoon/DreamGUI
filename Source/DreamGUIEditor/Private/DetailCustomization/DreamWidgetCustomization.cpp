@@ -393,6 +393,11 @@ void FDreamWidgetCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBui
 	auto Interactable_PH = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UDreamWidget, Interactable));
 	auto Raycastable_PH = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UDreamWidget, Raycastable));
 	auto Focusable_PH = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UDreamWidget, bIsFocusable));
+	// Tab order. They live in "Interaction|Focus", which goes with the Interaction category hidden above, so they are
+	// re-added like the rest -- under "Is Focusable", the switch a Tab stop needs first.
+	auto TabStop_PH = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UDreamWidget, bIsTabStop));
+	auto TabIndex_PH = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UDreamWidget, TabIndex));
+	auto TabNavigation_PH = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UDreamWidget, TabNavigation));
 	auto RestrictNavigation_PH = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UDreamWidget, bRestrictNavigationArea));
 	// The rule the flag above selects. Both live in the "DreamGUI" category, which is hidden wholesale
 	// a few lines up and then re-added row by row -- and this one was never on that list, so checking
@@ -407,7 +412,7 @@ void FDreamWidgetCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBui
 	auto AccessibleSummaryText_PH = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UDreamWidget, AccessibleSummaryText));
 	for (const TSharedPtr<IPropertyHandle>& Property : {
 		DisplayName_PH, WidgetActive_PH, Visibility_PH, Interactable_PH, Raycastable_PH,
-		Focusable_PH, RestrictNavigation_PH, NavigationBoundaryRule_PH, Cursor_PH, ToolTip_PH, RenderOpacity_PH,
+		Focusable_PH, TabStop_PH, TabIndex_PH, TabNavigation_PH, RestrictNavigation_PH, NavigationBoundaryRule_PH, Cursor_PH, ToolTip_PH, RenderOpacity_PH,
 		PixelSnapping_PH, AccessibleBehavior_PH, AccessibleText_PH, AccessibleSummaryText_PH })
 	{
 		DetailBuilder.HideProperty(Property);
@@ -418,6 +423,9 @@ void FDreamWidgetCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBui
 	BehaviorCategory.AddProperty(Interactable_PH);
 	BehaviorCategory.AddProperty(Raycastable_PH);
 	BehaviorCategory.AddProperty(Focusable_PH).DisplayName(LOCTEXT("Focusable", "Is Focusable"));
+	BehaviorCategory.AddProperty(TabStop_PH).DisplayName(LOCTEXT("TabStop", "Is Tab Stop"));
+	BehaviorCategory.AddProperty(TabIndex_PH);
+	BehaviorCategory.AddProperty(TabNavigation_PH);
 	BehaviorCategory.AddProperty(Cursor_PH);
 	BehaviorCategory.AddProperty(ToolTip_PH);
 	BehaviorCategory.AddProperty(RestrictNavigation_PH, EPropertyLocation::Advanced);

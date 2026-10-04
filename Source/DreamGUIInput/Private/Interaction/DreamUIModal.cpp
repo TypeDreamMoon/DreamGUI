@@ -10,6 +10,7 @@
 #include "Core/Components/DreamRectBlock.h"
 #include "Core/Components/DreamWidget.h"
 #include "Interaction/DreamUINavigationStack.h"
+#include "Interaction/DreamUIPopupLayer.h"
 #include "Interaction/UIEventBlocker.h"
 #include "DreamGUI.h"
 #include "Engine/World.h"
@@ -176,6 +177,15 @@ void UDreamUIModalSubsystem::ShowNow(FPendingModal&& InModal)
 		UE_LOG(DreamGUI, Warning, TEXT("[UDreamUIModalSubsystem] ShowModal with no dialog class; delivering 'Invalid' immediately."));
 		FailPendingModal(InModal, TEXT("Invalid"));
 		return;
+	}
+	// The player's popups close first, as a new top-level popup closes the ones before it. A modal comes up in front of
+	// them, and a list or a menu left open behind its scrim heard the player first -- a press reaches the popup layer before
+	// it reaches anything it hits, and so does Back -- so the modal's first click went to closing a list nobody could see,
+	// and its first Back too. Before the scope's push below, so the focus it notes for the modal to give back is what the
+	// popups gave back: the face of the dropdown whose list was open, not a row of it.
+	if (UDreamUIPopupLayer* Popups = UDreamUIPopupLayer::Get(this))
+	{
+		Popups->DismissAll(InModal.UserIndex, EDreamPopupDismissReason::Replaced);
 	}
 	UDreamScreenUISubsystem* ScreenUI = UDreamScreenUISubsystem::Get(GetWorld());
 	// That player's own screen. A scrim on the shared root would darken both halves of a split screen

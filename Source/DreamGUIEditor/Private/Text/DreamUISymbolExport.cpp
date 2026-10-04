@@ -154,9 +154,11 @@ namespace DreamUISymbolExportLocal
 			}
 			else if (DreamUIValueFormat::HasShortForm(Leaf))
 			{
+				// A gradient's short form is its CSS in a quoted string, not a colour.
+				const EDreamUIValueKind LiteralKind = DreamUIValueFormat::GetShortFormLiteralKind(Leaf);
 				const int32 Arity = DreamUIValueFormat::GetExpectedTupleArity(Leaf);
-				Entry->SetStringField(TEXT("literal"), Arity != INDEX_NONE
-					? FString::Printf(TEXT("tuple%d"), Arity) : TEXT("color"));
+				Entry->SetStringField(TEXT("literal"), LiteralKind == EDreamUIValueKind::String ? FString(TEXT("string"))
+					: Arity != INDEX_NONE ? FString::Printf(TEXT("tuple%d"), Arity) : FString(TEXT("color")));
 			}
 			Out.Add(MakeShared<FJsonValueObject>(Entry));
 		}

@@ -13,10 +13,27 @@ private:
 	UPROPERTY(VisibleAnywhere, Category = DreamTween)TArray<TObjectPtr<UDreamTweener>> finishedTweenerList;
 	float lastTweenStartTime = 0;
 	/**
+	 * How many Goto or Restart calls on this sequence are on the stack, one inside another. A child's
+	 * callback that seeks the sequence past its own position runs a pass that reaches the callback
+	 * again, which seeks again; the depth is what stops that before the stack runs out.
+	 */
+	int32 seekDepth = 0;
+	/**
 	 * Put a tween that is joining this sequence onto the sequence's clock, so it plays from the
 	 * position the sequence just gave it rather than from wherever its own run had got to.
 	 */
 	void AdoptTweenerClock(UDreamTweener* tweener);
+	/**
+	 * Drop the children that are gone: collected (the list holds null), garbage, or made on an object that
+	 * is. Children are often made on other objects than the sequence -- a widget verb outers its tween to
+	 * the widget -- and streaming out a level, loading a map or destroying a widget marks those garbage
+	 * while the sequence lives on; every loop over the children dereferenced them unchecked.
+	 */
+	void RemoveInvalidChildren();
+	/** Whether a Goto or Restart may run, refusing (with an error) one nested too deep; see seekDepth. */
+	bool CanSeekFromHere()const;
+	/** Every child back on the list, sorted, its value put back at its start and its clock at zero: what Restart and Goto both begin with. */
+	void RewindChildrenToStart();
 	/** The one implementation behind all four callback entry points. */
 	UDreamTweenerSequence* InsertCallbackInternal(float timePosition, const TFunction<void()>& callback);
 public:

@@ -115,6 +115,13 @@ bool UDreamUICaptureLibrary::ReadViewportPixels(FViewport* InViewport, TArray<FC
 		return false;
 	}
 	FlushRenderingCommands();
+	// A viewport drawn straight into its window -- a game's, standalone or packaged -- has its back buffer for a target
+	// only while it draws a frame: read here, between frames, there is no texture (ReadSurfaceData ensured and the picture
+	// came back black). The engine's screenshot request reads it inside the frame (FScreenshotRequest, HighResShot).
+	if (!InViewport->GetRenderTargetTexture().IsValid())
+	{
+		return false;
+	}
 	OutSize = InViewport->GetSizeXY();
 	if (OutSize.X <= 0 || OutSize.Y <= 0 || !InViewport->ReadPixels(OutPixels) || OutPixels.Num() < OutSize.X * OutSize.Y)
 	{
@@ -203,7 +210,7 @@ bool UDreamUICaptureLibrary::SaveViewportToPng(const UObject* InWorldContextObje
 	FIntPoint Size;
 	if (!ReadViewportPixels(Viewport, Pixels, Size))
 	{
-		UE_LOG(DreamGUI, Warning, TEXT("[%s].%d The viewport showing %s could not be read back; in a packaged game the engine's HighResShot writes the same picture."),
+		UE_LOG(DreamGUI, Warning, TEXT("[%s].%d The viewport showing %s could not be read back; a game's viewport, drawn straight into its window, is read only by the engine's screenshot request (HighResShot)."),
 			ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *GetNameSafe(World));
 		return false;
 	}

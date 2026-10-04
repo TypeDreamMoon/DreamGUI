@@ -12,6 +12,9 @@
 #include "Core/Components/DreamPanelLayouts.h"
 #include "Core/Components/DreamVisual.h"
 #include "Core/Components/DreamWidget.h"
+#include "Event/DreamPointerEventData.h"
+#include "Event/Interface/DreamPointerEnterExitInterface.h"
+#include "Event/Interface/DreamPointerSelectDeselectInterface.h"
 #include "Interaction/UIScrollView.h"
 #include "Interaction/UIScrollbar.h"
 #include "Interaction/UISelectable.h"
@@ -56,6 +59,14 @@ namespace DreamScrollBoxParityTestLocal
 		Filler->SetHeight(InHeight);
 		InBox.AddContent(Filler);
 		return Filler;
+	}
+
+	/** A pointer's event, to move the face's selectable the way the event system would. */
+	UDreamPointerEventData* MakePointerEvent()
+	{
+		UDreamPointerEventData* Event = NewObject<UDreamPointerEventData>();
+		Event->InputType = EDreamUIPointerInputType::Pointer;
+		return Event;
 	}
 }
 
@@ -669,22 +680,31 @@ bool FDreamScrollBoxFocusTest::RunTest(const FString& Parameters)
 	}
 	TestEqual(TEXT("and nothing has been announced yet"), Probe->FocusReceivedCount, 0);
 
+	// The face selected, as the event system selects what takes the focus.
+	IDreamPointerSelectDeselectInterface::Execute_OnPointerSelect(Selectable, MakePointerEvent());
+	TestEqual(TEXT("taking focus is announced once"), Probe->FocusReceivedCount, 1);
 	// The EDGE, not the state: a selectable re-applies its state for a repaint as well as for a
 	// change, and a box that announced on every repaint would fire dozens of times for one press.
 	Box->HandleFaceSelectionStateChangedForTest(EUISelectableSelectionState::Focused);
-	TestEqual(TEXT("taking focus is announced once"), Probe->FocusReceivedCount, 1);
-	Box->HandleFaceSelectionStateChangedForTest(EUISelectableSelectionState::Focused);
 	TestEqual(TEXT("and re-applying the same state announces nothing"), Probe->FocusReceivedCount, 1);
-
+	// And the focus is the selectable's to say, not the state it draws: focus is drawn only after keys
+	// or a pad, so a box a click focused draws Normal, or Hovered under the pointer, and keeps the focus.
 	Box->HandleFaceSelectionStateChangedForTest(EUISelectableSelectionState::Normal);
+	TestEqual(TEXT("a repaint that draws the focused box Normal is no loss"), Probe->FocusLostCount, 0);
+	IDreamPointerEnterExitInterface::Execute_OnPointerEnter(Selectable, MakePointerEvent());
+	TestEqual(TEXT("nor is the pointer coming to rest on it"), Probe->FocusLostCount, 0);
+
+	IDreamPointerSelectDeselectInterface::Execute_OnPointerDeselect(Selectable, MakePointerEvent());
 	TestEqual(TEXT("losing it is announced once"), Probe->FocusLostCount, 1);
+	IDreamPointerEnterExitInterface::Execute_OnPointerExit(Selectable, nullptr);
 	Box->HandleFaceSelectionStateChangedForTest(EUISelectableSelectionState::Hovered);
 	TestEqual(TEXT("and a hover is not a second loss"), Probe->FocusLostCount, 1);
+	TestEqual(TEXT("nor a second focus"), Probe->FocusReceivedCount, 1);
 
 	// Turned back off, the behaviour is KEPT -- destroying it costs the designer a details rebuild --
 	// but the box stops answering, which is what "not a focus target" has to mean from outside.
 	Box->SetIsFocusable(false);
-	Box->HandleFaceSelectionStateChangedForTest(EUISelectableSelectionState::Focused);
+	IDreamPointerSelectDeselectInterface::Execute_OnPointerSelect(Selectable, MakePointerEvent());
 	TestEqual(TEXT("a box that stopped being focusable stops announcing"), Probe->FocusReceivedCount, 1);
 	return true;
 }

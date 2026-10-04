@@ -169,6 +169,7 @@ void UDreamDropdown::WireParts()
 	// a separate surface with a separate style, and the face's state says nothing about them.
 	UseStateFaces(DropdownBehaviour, FaceNode, CaptionNode);
 	DropdownBehaviour->SetListRoot(ListNode);
+	DropdownBehaviour->SetTabCommitsHighlightedRow(bTabCommitsHighlightedRow);
 	if (UUIScrollView* Scroll = ListNode != nullptr ? ListNode->GetComponent<UUIScrollView>() : nullptr)
 	{
 		Scroll->SetContent(FindPart(TEXT("Column")));
@@ -563,6 +564,15 @@ void UDreamDropdown::SetHasDownArrow(bool bInHasDownArrow)
 	}
 }
 
+void UDreamDropdown::SetTabCommitsHighlightedRow(bool bInTabCommitsHighlightedRow)
+{
+	bTabCommitsHighlightedRow = bInTabCommitsHighlightedRow;
+	if (DropdownBehaviour != nullptr)
+	{
+		DropdownBehaviour->SetTabCommitsHighlightedRow(bTabCommitsHighlightedRow);
+	}
+}
+
 void UDreamDropdown::SetOptionIcons(const TArray<UObject*>& InIcons)
 {
 	OptionIcons.Reset(InIcons.Num());
@@ -623,6 +633,8 @@ void UDreamDropdown::PostEditChangeProperty(FPropertyChangedEvent& PropertyChang
 	// initialize. Re-pushing unconditionally is fine: rows rebuild from the template either way.
 	Super::PostEditChangeProperty(PropertyChangedEvent);
 	PushOptions();
+	// The behaviour's switch too, for the same reason: it is read by the behaviour, not by a style push.
+	SetTabCommitsHighlightedRow(bTabCommitsHighlightedRow);
 }
 #endif
 

@@ -11,7 +11,7 @@ class FProperty;
  * The short text forms, and the only place that knows them.
  *
  * Everything else in a .dui is written with the reflected name and the reflected value, so there
- * is no table to keep in sync. Three struct types are the exception, because their ExportTextItem
+ * is no table to keep in sync. A few struct types are the exception, because their ExportTextItem
  * form is what an author would actually see every day:
  *
  *   FVector2D / FVector2f      (400, 240)
@@ -19,6 +19,12 @@ class FProperty;
  *   FRotator                   (0, 0, 45)        Pitch, Yaw, Roll, in degrees
  *   FLinearColor / FColor      #1E1E1E
  *   FMargin                    (8, 8, 8, 8)
+ *   FDreamGradient             "linear-gradient(180deg, #FFF3B0, #E8B64A 55%, #9C6A12)"   a string: its CSS
+ *
+ * FDreamGradient is here for its stops, an array: the write-back skips an array inside a struct, so without one spelling
+ * for the whole gradient every edit to a text's paint (TextStyle.FacePaint.Gradient) was dropped at the next flush. The
+ * spelling is FDreamGradient::ToCss, read back by FDreamGradient::ParseCss. FDreamTextPaint itself has none: its preset
+ * is an asset and its switch a bool, both leaves of their own (TextStyle.FacePaint.bEnabled, .Preset).
  *
  * FDreamUIAnchorData is deliberately NOT here: nested structs are written with dotted paths
  * (AnchorData.SizeDelta = (400, 240)), so it never appears as a whole value -- only its leaves do.
@@ -41,6 +47,9 @@ class FProperty;
  *                                     carries the euler field as authored, so 370 stays 370 --
  *                                     which is what lets an animation cross a full turn.
  *   FColor                            Exact. The text IS the eight bits.
+ *   FDreamGradient                    Exact, field for field, for every gradient whose numbers are
+ *                                     finite: ParseCss(ToCss(g)) == g. One that is not finite has no
+ *                                     spelling, as a vector's does not.
  *   FLinearColor                      Quantised once through sRGB, then stable. Parse(Print(v)) is
  *                                     the colour that hex code point names, not v; what is exact is
  *                                     Print(Parse(Print(v))) == Print(v), so a value survives the
@@ -84,6 +93,12 @@ namespace DreamUIValueFormat
 	 * Exposed so a caller can report arity before attempting the write.
 	 */
 	DREAMGUI_API int32 GetExpectedTupleArity(const FProperty* InProperty);
+
+	/**
+	 * The kind of literal this property's short form is written as: Tuple, HexColor, or String (a gradient's CSS).
+	 * Identifier when it has no short form. For a caller that describes the literal -- the symbol export's hover.
+	 */
+	DREAMGUI_API EDreamUIValueKind GetShortFormLiteralKind(const FProperty* InProperty);
 
 	/**
 	 * "#RRGGBB" or "#RRGGBBAA" (whichever is lossless) from a linear or 8-bit colour.

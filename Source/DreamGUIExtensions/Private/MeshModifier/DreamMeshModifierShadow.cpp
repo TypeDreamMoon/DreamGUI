@@ -25,6 +25,19 @@ void UDreamMeshModifierShadow::ModifyUIGeometry(
 	
 	const int32 singleChannelTriangleIndicesCount = triangleCount;
 	const int32 singleChannelVerticesCount = vertexCount;
+	// The copy doubles the vertex count, and a triangle index cannot address past LEXUI_MAX_VERTEX_COUNT: a mesh whose copy
+	// would not fit was dropped whole, its shadow and itself. It is drawn without its shadow instead, as Outline and
+	// LongShadow leave out what does not fit.
+	if (LEXUI_MAX_VERTEX_COUNT / singleChannelVerticesCount < 2)
+	{
+		if (!bLoggedVertexLimitWarning)
+		{
+			bLoggedVertexLimitWarning = true;
+			UE_LOG(DreamGUI, Warning, TEXT("[%s].%d mesh is too large to cast a shadow (%d vertices, limit %d for the mesh and its copy); no shadow drawn.")
+				, ANSI_TO_TCHAR(__FUNCTION__), __LINE__, singleChannelVerticesCount, LEXUI_MAX_VERTEX_COUNT);
+		}
+		return;
+	}
 	//create additional triangle pass
 	triangles.AddUninitialized(singleChannelTriangleIndicesCount);
 	//put origin triangles on last pass, this will make the origin triangle render at top
@@ -74,6 +87,8 @@ void UDreamMeshModifierShadow::ModifyUIGeometry(
 		vertices[channelIndex1].TangentX = vertices[channelIndexOrigin].TangentX;
 		vertices[channelIndex1].TangentZ = vertices[channelIndexOrigin].TangentZ;
 	}
+	// The copy paints nothing, and a colour glyph's copy is its silhouette.
+	PrepareMeshCopies(InGeometry, singleChannelVerticesCount);
 }
 
 void UDreamMeshModifierShadow::SetShadowColor(FColor Value)

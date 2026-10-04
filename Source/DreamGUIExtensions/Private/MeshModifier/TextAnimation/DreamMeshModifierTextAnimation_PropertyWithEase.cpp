@@ -156,14 +156,18 @@ void UDreamMeshModifierTextAnimation_PropertyWithEase::SetEaseCurve(UCurveFloat*
 	}
 }
 
-void UDreamMeshModifierTextAnimation_PositionProperty::ApplyProperty(UDreamText* InUIText, const FDreamMeshModifierTextAnimation_SelectResult& InSelection, FDreamUIGeometry* InGeometry)
+void UDreamMeshModifierTextAnimation_PositionProperty::ApplyPropertyToCharacters(const TArray<FDreamUITextCharProperty>& InCharProperties, const FDreamMeshModifierTextAnimation_SelectResult& InSelection, FDreamUIGeometry* InGeometry)
 {
 	auto easeFunction = GetEaseFunction();
 	auto& originVertices = InGeometry->OriginVertices;
-	auto& charProperties = InUIText->GetCharPropertyArray();
+	auto& charProperties = InCharProperties;
 	for (int charIndex = InSelection.StartCharIndex; charIndex < InSelection.EndCharCount; charIndex++)
 	{
 		auto charPropertyItem = charProperties[charIndex];
+		if (!CanReadCharVertices(charPropertyItem, originVertices.Num()))
+		{
+			continue;
+		}
 		int startVertIndex = charPropertyItem.StartVertIndex;
 		int endVertIndex = charPropertyItem.StartVertIndex + charPropertyItem.VertCount;
 		float lerpValue = FMath::Clamp(InSelection.LerpValueArray[charIndex - InSelection.StartCharIndex], 0.0f, 1.0f);
@@ -176,7 +180,7 @@ void UDreamMeshModifierTextAnimation_PositionProperty::ApplyProperty(UDreamText*
 	}
 }
 
-void UDreamMeshModifierTextAnimation_PositionRandomProperty::ApplyProperty(UDreamText* InUIText, const FDreamMeshModifierTextAnimation_SelectResult& InSelection, FDreamUIGeometry* InGeometry)
+void UDreamMeshModifierTextAnimation_PositionRandomProperty::ApplyPropertyToCharacters(const TArray<FDreamUITextCharProperty>& InCharProperties, const FDreamMeshModifierTextAnimation_SelectResult& InSelection, FDreamUIGeometry* InGeometry)
 {
 	// A stream of this property's own rather than FMath::RandInit plus FMath::FRandRange. Seeding is
 	// meant to make THIS scatter repeatable, and reseeding the engine's global generator to do it
@@ -187,7 +191,7 @@ void UDreamMeshModifierTextAnimation_PositionRandomProperty::ApplyProperty(UDrea
 	FRandomStream RandomStream(Seed);
 	auto easeFunction = GetEaseFunction();
 	auto& originVertices = InGeometry->OriginVertices;
-	auto& charProperties = InUIText->GetCharPropertyArray();
+	auto& charProperties = InCharProperties;
 	for (int charIndex = InSelection.StartCharIndex; charIndex < InSelection.EndCharCount; charIndex++)
 	{
 		auto charPropertyItem = charProperties[charIndex];
@@ -196,6 +200,12 @@ void UDreamMeshModifierTextAnimation_PositionRandomProperty::ApplyProperty(UDrea
 		float lerpValue = FMath::Clamp(InSelection.LerpValueArray[charIndex - InSelection.StartCharIndex], 0.0f, 1.0f);
 		lerpValue = easeFunction.Execute(1.0f, 0.0f, lerpValue, 1.0f);
 		auto position = FVector3f(RandomStream.FRandRange(Min.X, Max.X), RandomStream.FRandRange(Min.Y, Max.Y), RandomStream.FRandRange(Min.Z, Max.Z));
+		// Skipped only after its draws, so a glyph still waiting for its vertices does not shift the scatter of
+		// every character after it for the frames it waits.
+		if (!CanReadCharVertices(charPropertyItem, originVertices.Num()))
+		{
+			continue;
+		}
 		for (int vertIndex = startVertIndex; vertIndex < endVertIndex; vertIndex++)
 		{
 			auto& pos = originVertices[vertIndex].Position;
@@ -204,14 +214,20 @@ void UDreamMeshModifierTextAnimation_PositionRandomProperty::ApplyProperty(UDrea
 	}
 }
 
-void UDreamMeshModifierTextAnimation_RotationProperty::ApplyProperty(UDreamText* InUIText, const FDreamMeshModifierTextAnimation_SelectResult& InSelection, FDreamUIGeometry* InGeometry)
+void UDreamMeshModifierTextAnimation_RotationProperty::ApplyPropertyToCharacters(const TArray<FDreamUITextCharProperty>& InCharProperties, const FDreamMeshModifierTextAnimation_SelectResult& InSelection, FDreamUIGeometry* InGeometry)
 {
 	auto easeFunction = GetEaseFunction();
 	auto& originVertices = InGeometry->OriginVertices;
-	auto& charProperties = InUIText->GetCharPropertyArray();
+	auto& charProperties = InCharProperties;
 	for (int charIndex = InSelection.StartCharIndex; charIndex < InSelection.EndCharCount; charIndex++)
 	{
 		auto charPropertyItem = charProperties[charIndex];
+		// The centre below is read from the glyph's first vertex and divided by its count: neither exists for a
+		// glyph the rasterizer has not delivered yet, and its first "vertex" is one past the end of the array.
+		if (!CanReadCharVertices(charPropertyItem, originVertices.Num()))
+		{
+			continue;
+		}
 		int startVertIndex = charPropertyItem.StartVertIndex;
 		int endVertIndex = charPropertyItem.StartVertIndex + charPropertyItem.VertCount;
 		auto charCenterPos = originVertices[startVertIndex].Position;
@@ -232,15 +248,22 @@ void UDreamMeshModifierTextAnimation_RotationProperty::ApplyProperty(UDreamText*
 	}
 }
 
-void UDreamMeshModifierTextAnimation_RotationRandomProperty::ApplyProperty(UDreamText* InUIText, const FDreamMeshModifierTextAnimation_SelectResult& InSelection, FDreamUIGeometry* InGeometry)
+void UDreamMeshModifierTextAnimation_RotationRandomProperty::ApplyPropertyToCharacters(const TArray<FDreamUITextCharProperty>& InCharProperties, const FDreamMeshModifierTextAnimation_SelectResult& InSelection, FDreamUIGeometry* InGeometry)
 {
 	FRandomStream RandomStream(Seed);
 	auto easeFunction = GetEaseFunction();
 	auto& originVertices = InGeometry->OriginVertices;
-	auto& charProperties = InUIText->GetCharPropertyArray();
+	auto& charProperties = InCharProperties;
 	for (int charIndex = InSelection.StartCharIndex; charIndex < InSelection.EndCharCount; charIndex++)
 	{
 		auto charPropertyItem = charProperties[charIndex];
+		// Drawn first and skipped after, for the reason given in the position scatter: the characters after a
+		// glyph still waiting for its vertices keep the angles they will have once it arrives.
+		auto rotator = FRotator3f(RandomStream.FRandRange(Min.Pitch, Max.Pitch), RandomStream.FRandRange(Min.Yaw, Max.Yaw), RandomStream.FRandRange(Min.Roll, Max.Roll));
+		if (!CanReadCharVertices(charPropertyItem, originVertices.Num()))
+		{
+			continue;
+		}
 		int startVertIndex = charPropertyItem.StartVertIndex;
 		int endVertIndex = charPropertyItem.StartVertIndex + charPropertyItem.VertCount;
 		auto charCenterPos = originVertices[startVertIndex].Position;
@@ -251,7 +274,6 @@ void UDreamMeshModifierTextAnimation_RotationRandomProperty::ApplyProperty(UDrea
 		charCenterPos /= charPropertyItem.VertCount;
 		float lerpValue = FMath::Clamp(InSelection.LerpValueArray[charIndex - InSelection.StartCharIndex], 0.0f, 1.0f);
 		lerpValue = easeFunction.Execute(1.0f, 0.0f, lerpValue, 1.0f);
-		auto rotator = FRotator3f(RandomStream.FRandRange(Min.Pitch, Max.Pitch), RandomStream.FRandRange(Min.Yaw, Max.Yaw), RandomStream.FRandRange(Min.Roll, Max.Roll));
 		auto calcRotationMatrix = FRotationMatrix44f(rotator * lerpValue);
 		for (int vertIndex = startVertIndex; vertIndex < endVertIndex; vertIndex++)
 		{
@@ -262,14 +284,19 @@ void UDreamMeshModifierTextAnimation_RotationRandomProperty::ApplyProperty(UDrea
 	}
 }
 
-void UDreamMeshModifierTextAnimation_ScaleProperty::ApplyProperty(UDreamText* InUIText, const FDreamMeshModifierTextAnimation_SelectResult& InSelection, FDreamUIGeometry* InGeometry)
+void UDreamMeshModifierTextAnimation_ScaleProperty::ApplyPropertyToCharacters(const TArray<FDreamUITextCharProperty>& InCharProperties, const FDreamMeshModifierTextAnimation_SelectResult& InSelection, FDreamUIGeometry* InGeometry)
 {
 	auto easeFunction = GetEaseFunction();
 	auto& originVertices = InGeometry->OriginVertices;
-	auto& charProperties = InUIText->GetCharPropertyArray();
+	auto& charProperties = InCharProperties;
 	for (int charIndex = InSelection.StartCharIndex; charIndex < InSelection.EndCharCount; charIndex++)
 	{
 		auto charPropertyItem = charProperties[charIndex];
+		// No centre to scale about for a glyph with no vertices yet; see the rotation property.
+		if (!CanReadCharVertices(charPropertyItem, originVertices.Num()))
+		{
+			continue;
+		}
 		int startVertIndex = charPropertyItem.StartVertIndex;
 		int endVertIndex = charPropertyItem.StartVertIndex + charPropertyItem.VertCount;
 		auto charCenterPos = originVertices[startVertIndex].Position;
@@ -290,15 +317,21 @@ void UDreamMeshModifierTextAnimation_ScaleProperty::ApplyProperty(UDreamText* In
 	}
 }
 
-void UDreamMeshModifierTextAnimation_ScaleRandomProperty::ApplyProperty(UDreamText* InUIText, const FDreamMeshModifierTextAnimation_SelectResult& InSelection, FDreamUIGeometry* InGeometry)
+void UDreamMeshModifierTextAnimation_ScaleRandomProperty::ApplyPropertyToCharacters(const TArray<FDreamUITextCharProperty>& InCharProperties, const FDreamMeshModifierTextAnimation_SelectResult& InSelection, FDreamUIGeometry* InGeometry)
 {
 	FRandomStream RandomStream(Seed);
 	auto easeFunction = GetEaseFunction();
 	auto& originVertices = InGeometry->OriginVertices;
-	auto& charProperties = InUIText->GetCharPropertyArray();
+	auto& charProperties = InCharProperties;
 	for (int charIndex = InSelection.StartCharIndex; charIndex < InSelection.EndCharCount; charIndex++)
 	{
 		auto charPropertyItem = charProperties[charIndex];
+		// Drawn first and skipped after; see the rotation scatter.
+		auto scale = FVector3f(RandomStream.FRandRange(Min.X, Max.X), RandomStream.FRandRange(Min.Y, Max.Y), RandomStream.FRandRange(Min.Z, Max.Z));
+		if (!CanReadCharVertices(charPropertyItem, originVertices.Num()))
+		{
+			continue;
+		}
 		int startVertIndex = charPropertyItem.StartVertIndex;
 		int endVertIndex = charPropertyItem.StartVertIndex + charPropertyItem.VertCount;
 		auto charCenterPos = originVertices[startVertIndex].Position;
@@ -309,7 +342,6 @@ void UDreamMeshModifierTextAnimation_ScaleRandomProperty::ApplyProperty(UDreamTe
 		charCenterPos /= charPropertyItem.VertCount;
 		float lerpValue = FMath::Clamp(InSelection.LerpValueArray[charIndex - InSelection.StartCharIndex], 0.0f, 1.0f);
 		lerpValue = easeFunction.Execute(1.0f, 0.0f, lerpValue, 1.0f);
-		auto scale = FVector3f(RandomStream.FRandRange(Min.X, Max.X), RandomStream.FRandRange(Min.Y, Max.Y), RandomStream.FRandRange(Min.Z, Max.Z));
 		auto calcScale = FMath::Lerp(FVector3f::OneVector, scale, lerpValue);
 		for (int vertIndex = startVertIndex; vertIndex < endVertIndex; vertIndex++)
 		{
@@ -320,14 +352,18 @@ void UDreamMeshModifierTextAnimation_ScaleRandomProperty::ApplyProperty(UDreamTe
 	}
 }
 
-void UDreamMeshModifierTextAnimation_AlphaProperty::ApplyProperty(UDreamText* InUIText, const FDreamMeshModifierTextAnimation_SelectResult& InSelection, FDreamUIGeometry* InGeometry)
+void UDreamMeshModifierTextAnimation_AlphaProperty::ApplyPropertyToCharacters(const TArray<FDreamUITextCharProperty>& InCharProperties, const FDreamMeshModifierTextAnimation_SelectResult& InSelection, FDreamUIGeometry* InGeometry)
 {
 	auto easeFunction = GetEaseFunction();
 	auto& vertices = InGeometry->Vertices;
-	auto& charProperties = InUIText->GetCharPropertyArray();
+	auto& charProperties = InCharProperties;
 	for (int charIndex = InSelection.StartCharIndex; charIndex < InSelection.EndCharCount; charIndex++)
 	{
 		auto charPropertyItem = charProperties[charIndex];
+		if (!CanReadCharVertices(charPropertyItem, vertices.Num()))
+		{
+			continue;
+		}
 		int startVertIndex = charPropertyItem.StartVertIndex;
 		int endVertIndex = charPropertyItem.StartVertIndex + charPropertyItem.VertCount;
 		float lerpValue = FMath::Clamp(InSelection.LerpValueArray[charIndex - InSelection.StartCharIndex], 0.0f, 1.0f);
@@ -340,11 +376,11 @@ void UDreamMeshModifierTextAnimation_AlphaProperty::ApplyProperty(UDreamText* In
 	}
 }
 
-void UDreamMeshModifierTextAnimation_ColorProperty::ApplyProperty(UDreamText* InUIText, const FDreamMeshModifierTextAnimation_SelectResult& InSelection, FDreamUIGeometry* InGeometry)
+void UDreamMeshModifierTextAnimation_ColorProperty::ApplyPropertyToCharacters(const TArray<FDreamUITextCharProperty>& InCharProperties, const FDreamMeshModifierTextAnimation_SelectResult& InSelection, FDreamUIGeometry* InGeometry)
 {
 	auto easeFunction = GetEaseFunction();
 	auto& vertices = InGeometry->Vertices;
-	auto& charProperties = InUIText->GetCharPropertyArray();
+	auto& charProperties = InCharProperties;
 	FVector colorHsv;
 	if (bUseHSV)
 	{
@@ -353,6 +389,10 @@ void UDreamMeshModifierTextAnimation_ColorProperty::ApplyProperty(UDreamText* In
 	for (int charIndex = InSelection.StartCharIndex; charIndex < InSelection.EndCharCount; charIndex++)
 	{
 		auto charPropertyItem = charProperties[charIndex];
+		if (!CanReadCharVertices(charPropertyItem, vertices.Num()))
+		{
+			continue;
+		}
 		int startVertIndex = charPropertyItem.StartVertIndex;
 		int endVertIndex = charPropertyItem.StartVertIndex + charPropertyItem.VertCount;
 		float lerpValue = FMath::Clamp(InSelection.LerpValueArray[charIndex - InSelection.StartCharIndex], 0.0f, 1.0f);
@@ -391,18 +431,23 @@ void UDreamMeshModifierTextAnimation_ColorProperty::SetUseHSV(bool Value)
 	}
 }
 
-void UDreamMeshModifierTextAnimation_ColorRandomProperty::ApplyProperty(UDreamText* InUIText, const FDreamMeshModifierTextAnimation_SelectResult& InSelection, FDreamUIGeometry* InGeometry)
+void UDreamMeshModifierTextAnimation_ColorRandomProperty::ApplyPropertyToCharacters(const TArray<FDreamUITextCharProperty>& InCharProperties, const FDreamMeshModifierTextAnimation_SelectResult& InSelection, FDreamUIGeometry* InGeometry)
 {
 	FRandomStream RandomStream(Seed);
 	auto easeFunction = GetEaseFunction();
 	auto& vertices = InGeometry->Vertices;
-	auto& charProperties = InUIText->GetCharPropertyArray();
+	auto& charProperties = InCharProperties;
 	for (int charIndex = InSelection.StartCharIndex; charIndex < InSelection.EndCharCount; charIndex++)
 	{
 		auto charPropertyItem = charProperties[charIndex];
 		int startVertIndex = charPropertyItem.StartVertIndex;
 		int endVertIndex = charPropertyItem.StartVertIndex + charPropertyItem.VertCount;
 		auto color = FColor((uint8)RandomStream.RandRange(Min.R, Max.R), (uint8)RandomStream.RandRange(Min.G, Max.G), (uint8)RandomStream.RandRange(Min.B, Max.B), (uint8)RandomStream.RandRange(Min.A, Max.A));
+		// Drawn first and skipped after; see the position scatter.
+		if (!CanReadCharVertices(charPropertyItem, vertices.Num()))
+		{
+			continue;
+		}
 		float lerpValue = FMath::Clamp(InSelection.LerpValueArray[charIndex - InSelection.StartCharIndex], 0.0f, 1.0f);
 		lerpValue = easeFunction.Execute(1.0f, 0.0f, lerpValue, 1.0f);
 		FVector colorHsv;

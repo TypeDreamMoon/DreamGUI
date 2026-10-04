@@ -9,6 +9,7 @@
 
 #include "Components/InputComponent.h"
 #include "Core/Components/DreamWidget.h"
+#include "Core/DreamGUISettings.h"
 #include "Core/DreamUISettings.h"
 #include "DreamGUI.h"
 #include "Event/InputModule/DreamStandaloneInputModule.h"
@@ -53,17 +54,24 @@ namespace DreamStandaloneInputEventSystemActorLocal
 		Binding.bExecuteWhenPaused = true;
 	}
 
-	/** A key this preset lets go of through a release binding of its own: a confirm or a direction. */
-	static bool HasReleaseBindingOfItsOwn(const FKey& Key)
+	/** A key that pages or scrolls to an extent, by the tables as they are now. */
+	static bool IsScrollKey(const FKey& Key)
 	{
-		for (const FKey& Confirm : DreamUIKeyRouting::GetConfirmKeys())
+		for (const TPair<FKey, float>& Page : DreamUIKeyRouting::GetPageKeys())
 		{
-			if (Confirm == Key)
+			if (Page.Key == Key)
 			{
 				return true;
 			}
 		}
-		return DreamUIKeyRouting::GetDirectionForKey(Key, false) != EDreamUINavigationDirection::None;
+		for (const TPair<FKey, bool>& Extent : DreamUIKeyRouting::GetExtentKeys())
+		{
+			if (Extent.Key == Key)
+			{
+				return true;
+			}
+		}
+		return false;
 	}
 }
 
@@ -186,33 +194,51 @@ void ADreamStandaloneInputEventSystemActor::BindNavigationAndTouchInput()
 	ConfigurePresetBinding(InputComponent->BindTouch(IE_Repeat, this, &ADreamStandaloneInputEventSystemActor::OnTouchMoved),
 		bConsumeBoundInput);
 
-	for (const FKey& Key : DreamUIKeyRouting::GetConfirmKeys())
+	// Every key with a built-in meaning -- confirm, a direction, a page, an extent, a tab switch -- by name, press and
+	// release, once each, from the project's key tables as they are now. What each one does is read when it arrives
+	// (RouteKeyByMeaning), so a remap takes effect at the next key: a key the tables gave up goes on as an ordinary key
+	// through its binding, and one they took on since reaches its meaning through AnyKey.
+	KeysBoundByName.Reset();
+	const auto BindByName = [this](const FKey& InBoundKey)
 	{
-		ConfigurePresetBinding(InputComponent->BindKey(Key, IE_Pressed, this, &ADreamStandaloneInputEventSystemActor::OnNavigationTriggerPressed),
+		bool bAlreadyBound = false;
+		if (!InBoundKey.IsValid())
+		{
+			return;
+		}
+		KeysBoundByName.Add(InBoundKey, &bAlreadyBound);
+		if (bAlreadyBound)
+		{
+			return;
+		}
+		ConfigurePresetBinding(InputComponent->BindKey(InBoundKey, IE_Pressed, this, &ADreamStandaloneInputEventSystemActor::OnBuiltInKeyPressed),
 			bConsumeBoundInput);
-		ConfigurePresetBinding(InputComponent->BindKey(Key, IE_Released, this, &ADreamStandaloneInputEventSystemActor::OnNavigationTriggerReleased),
+		ConfigurePresetBinding(InputComponent->BindKey(InBoundKey, IE_Released, this, &ADreamStandaloneInputEventSystemActor::OnBuiltInKeyReleased),
 			bConsumeBoundInput);
+	};
+	for (const FKey& Confirm : DreamUIKeyRouting::GetConfirmKeys())
+	{
+		BindByName(Confirm);
 	}
-
 	for (const TPair<FKey, EDreamUINavigationDirection>& Direction : DreamUIKeyRouting::GetDirectionKeys())
 	{
-		ConfigurePresetBinding(InputComponent->BindKey(Direction.Key, IE_Pressed, this, &ADreamStandaloneInputEventSystemActor::OnNavigationDirectionPressed),
-			bConsumeBoundInput);
-		ConfigurePresetBinding(InputComponent->BindKey(Direction.Key, IE_Released, this, &ADreamStandaloneInputEventSystemActor::OnNavigationDirectionReleased),
-			bConsumeBoundInput);
+		BindByName(Direction.Key);
 	}
-
-	// Paging. Bound by name like the directions, and for the same reason: a key this preset gives its
-	// own meaning must not also reach the AnyKey handler, or the router would be offered it twice.
 	for (const TPair<FKey, float>& Page : DreamUIKeyRouting::GetPageKeys())
 	{
-		ConfigurePresetBinding(InputComponent->BindKey(Page.Key, IE_Pressed, this, &ADreamStandaloneInputEventSystemActor::OnScrollKeyPressed),
-			bConsumeBoundInput);
+		BindByName(Page.Key);
 	}
 	for (const TPair<FKey, bool>& Extent : DreamUIKeyRouting::GetExtentKeys())
 	{
-		ConfigurePresetBinding(InputComponent->BindKey(Extent.Key, IE_Pressed, this, &ADreamStandaloneInputEventSystemActor::OnScrollKeyPressed),
-			bConsumeBoundInput);
+		BindByName(Extent.Key);
+	}
+	for (const FKey& PreviousTab : UDreamGUISettings::Get()->PreviousTabKeys)
+	{
+		BindByName(PreviousTab);
+	}
+	for (const FKey& NextTab : UDreamGUISettings::Get()->NextTabKeys)
+	{
+		BindByName(NextTab);
 	}
 	// The right stick is the gamepad's wheel. Two axes rather than one vector key because there is no
 	// Gamepad_Right2D, and an axis binding that reads zero every frame costs nothing.
@@ -289,21 +315,20 @@ EDreamUINavigationDirection ADreamStandaloneInputEventSystemActor::GetNavigation
 EDreamUINavigationDirection ADreamStandaloneInputEventSystemActor::ResolveNavigationDirection(const FKey& Key) const
 {
 	const EDreamUINavigationDirection Direction = GetNavigationDirectionForKey(Key);
-	// Tab is the one key in the table whose meaning depends on a modifier, and a legacy binding fires
-	// for Tab whether or not shift is down -- FKey carries no modifier state. The live shift state on
-	// UPlayerInput is where the answer actually is at the moment the key arrives.
-	if (Direction == EDreamUINavigationDirection::Next && Key == EKeys::Tab)
+	// Tab -- a row of Next or Prev -- is the one key in the table whose meaning depends on the modifiers, and a legacy
+	// binding fires for it whatever is held -- FKey carries no modifier state. The live state on UPlayerInput is where
+	// the answer is at the moment the key arrives: Shift steps back, and Ctrl, Alt or Cmd make it no step at all.
+	if (Direction != EDreamUINavigationDirection::Next && Direction != EDreamUINavigationDirection::Prev)
 	{
-		//this actor's player, not the first one: on a split screen the other player's shift is not ours
-		const UDreamEventSystem* Events = GetEventSystem();
-		const APlayerController* PlayerController = Events != nullptr ? Events->GetPlayerController() : nullptr;
-		const UPlayerInput* Input = PlayerController != nullptr ? PlayerController->PlayerInput.Get() : nullptr;
-		if (Input != nullptr && Input->IsShiftPressed())
-		{
-			return EDreamUINavigationDirection::Prev;
-		}
+		return Direction;
 	}
-	return Direction;
+	//this actor's player, not the first one: on a split screen the other player's shift is not ours
+	const UDreamEventSystem* Events = GetEventSystem();
+	const APlayerController* PlayerController = Events != nullptr ? Events->GetPlayerController() : nullptr;
+	const UPlayerInput* Input = PlayerController != nullptr ? PlayerController->PlayerInput.Get() : nullptr;
+	const bool bShiftDown = Input != nullptr && Input->IsShiftPressed();
+	const bool bCtrlAltOrCmdDown = Input != nullptr && (Input->IsCtrlPressed() || Input->IsAltPressed() || Input->IsCmdPressed());
+	return DreamUIKeyRouting::GetDirectionForChord(Key, bShiftDown, bCtrlAltOrCmdDown);
 }
 
 
@@ -321,10 +346,11 @@ FVector ADreamStandaloneInputEventSystemActor::GetPointerPosition() const
 void ADreamStandaloneInputEventSystemActor::ReportDeviceForKey(const FKey& Key)
 {
 	// Every bound handler goes through here. Which device the player has their hands on is only ever
-	// visible at the moment a key arrives, and a prompt bar drawn from anything else is guessing.
-	if (UDreamEventSystem* Events = GetEventSystem())
+	// visible at the moment a key arrives, and a prompt bar drawn from anything else is guessing. The
+	// player hears the key itself, so a mouse key is told from the keyboard's (UDreamUIInputUser::ReportInputKey).
+	if (UDreamUIInputUser* User = GetInputUser())
 	{
-		Events->ReportInputDevice(UDreamEventSystem::GetInputDeviceForKey(Key));
+		User->ReportInputKey(Key);
 	}
 }
 
@@ -423,36 +449,78 @@ void ADreamStandaloneInputEventSystemActor::OnTouchMoved(ETouchIndex::Type Finge
 void ADreamStandaloneInputEventSystemActor::OnAnyKeyPressed(FKey Key)
 {
 	if (ShouldIgnoreInput())return;
-	if (IsNavigationKey(Key))
+	if (KeysBoundByName.Contains(Key))
 	{
 		ReportDeviceForKey(Key);
-		return;//routed from its own handler; doing it here too would fire a bound action twice
+		return;//routed from its own binding; doing it here too would fire a bound action twice
 	}
-	DreamUIKeyRouting::RouteOtherKey(GetInputUser(), Key, true);
+	// Any other key, by what it means now: an ordinary key, or one the key tables gave a meaning since the bindings were made.
+	RouteKeyByMeaning(Key, true);
 }
 
 void ADreamStandaloneInputEventSystemActor::OnAnyKeyReleased(FKey Key)
 {
 	if (ShouldIgnoreRelease())return;
-	// The confirm and direction keys are let go of through their own release bindings. Every other key's release goes
-	// where its press went -- the page and extent keys' too, whose presses come from bindings of their own and whose
-	// releases arrive only here.
-	if (DreamStandaloneInputEventSystemActorLocal::HasReleaseBindingOfItsOwn(Key))
+	// A key bound by name is let go of through its own release binding. Every other key's release goes where its press went.
+	if (KeysBoundByName.Contains(Key))
 	{
 		return;
 	}
-	DreamUIKeyRouting::RouteOtherKey(GetInputUser(), Key, false);
+	RouteKeyByMeaning(Key, false);
+}
+
+void ADreamStandaloneInputEventSystemActor::OnBuiltInKeyPressed(FKey Key)
+{
+	// Every handler starts here: the bindings execute while paused (ConfigurePresetBinding), so the setting that decides
+	// whether a paused game's UI answers is asked now.
+	if (ShouldIgnoreInput())return;
+	RouteKeyByMeaning(Key, true);
+}
+
+void ADreamStandaloneInputEventSystemActor::OnBuiltInKeyReleased(FKey Key)
+{
+	if (ShouldIgnoreRelease())return;
+	RouteKeyByMeaning(Key, false);
+}
+
+void ADreamStandaloneInputEventSystemActor::RouteKeyByMeaning(const FKey& Key, bool bPressed)
+{
+	UDreamUIInputUser* User = GetInputUser();
+	if (!bPressed)
+	{
+		// Where its press went, whatever the key means by now: Tab let go of with shift since pressed is still the Next it
+		// pressed, and a confirm let go of after a remap still lets go of the press it made.
+		DreamUIKeyRouting::RouteOtherKey(User, Key, false);
+		return;
+	}
+	// The one key road, by the tables as they are now: the bindings first in each, the built-in meaning after them.
+	if (DreamUIKeyRouting::IsConfirmKey(Key))
+	{
+		DreamUIKeyRouting::RouteConfirmKey(User, Key, true);
+	}
+	else if (GetNavigationDirectionForKey(Key) != EDreamUINavigationDirection::None)
+	{
+		// Resolved here, where a subclass can say what a key means (ResolveNavigationDirection), the chord included: a
+		// legacy binding fires for Tab whatever modifiers are held, and Ctrl+Tab is no step (None goes on as any key).
+		DreamUIKeyRouting::RouteDirectionKeyAs(User, Key, ResolveNavigationDirection(Key), true);
+	}
+	else if (DreamStandaloneInputEventSystemActorLocal::IsScrollKey(Key))
+	{
+		DreamUIKeyRouting::RouteScrollKey(User, Key);
+	}
+	else if (DreamUIKeyRouting::GetTabSwitchDelta(Key) != 0)
+	{
+		DreamUIKeyRouting::RouteTabSwitchKey(User, Key);
+	}
+	else
+	{
+		DreamUIKeyRouting::RouteOtherKey(User, Key, true);
+	}
 }
 
 UDreamWidget* ADreamStandaloneInputEventSystemActor::GetFocusedWidget() const
 {
 	return DreamUIKeyRouting::GetKeyTarget(GetInputUser());
-}
-
-void ADreamStandaloneInputEventSystemActor::OnScrollKeyPressed(FKey Key)
-{
-	if (ShouldIgnoreInput())return;
-	DreamUIKeyRouting::RouteScrollKey(GetInputUser(), Key);
 }
 
 bool ADreamStandaloneInputEventSystemActor::RouteAnalog(const FKey& InKey, float InValue)
@@ -493,8 +561,9 @@ void ADreamStandaloneInputEventSystemActor::OnGamepadScrollX(float AxisValue)
 		return;
 	}
 	// A resting stick fires this every frame; anything below the deadzone is the stick sitting still.
-	// A stick held by a pause reads as sitting still too, as the engine would have zeroed it.
-	if (FMath::Abs(AxisValue) < GamepadScrollDeadzone || ShouldIgnoreInput())
+	// A stick held by a pause reads as sitting still too, as the engine would have zeroed it. In gameplay
+	// (input mode Game) the right stick is the game's camera, not the HUD's scroll bar.
+	if (FMath::Abs(AxisValue) < GamepadScrollDeadzone || ShouldIgnoreInput() || !DreamUIKeyRouting::HasBuiltInMeanings(GetInputUser()))
 	{
 		return;
 	}
@@ -524,7 +593,7 @@ void ADreamStandaloneInputEventSystemActor::OnGamepadScrollY(float AxisValue)
 	{
 		return;
 	}
-	if (FMath::Abs(AxisValue) < GamepadScrollDeadzone || ShouldIgnoreInput())
+	if (FMath::Abs(AxisValue) < GamepadScrollDeadzone || ShouldIgnoreInput() || !DreamUIKeyRouting::HasBuiltInMeanings(GetInputUser()))
 	{
 		return;
 	}
@@ -542,32 +611,6 @@ void ADreamStandaloneInputEventSystemActor::OnGamepadScrollY(float AxisValue)
 	{
 		ReportDeviceForKey(EKeys::Gamepad_RightY);
 	}
-}
-
-void ADreamStandaloneInputEventSystemActor::OnNavigationTriggerPressed(FKey Key)
-{
-	if (ShouldIgnoreInput())return;
-	// The one key road: the bindings first, the virtual cursor second, the navigation highlight's press last.
-	DreamUIKeyRouting::RouteConfirmKey(GetInputUser(), Key, true);
-}
-
-void ADreamStandaloneInputEventSystemActor::OnNavigationTriggerReleased(FKey Key)
-{
-	if (ShouldIgnoreRelease())return;
-	DreamUIKeyRouting::RouteConfirmKey(GetInputUser(), Key, false);
-}
-
-void ADreamStandaloneInputEventSystemActor::OnNavigationDirectionPressed(FKey Key)
-{
-	if (ShouldIgnoreInput())return;
-	// Resolved here, where a subclass can say what a key means (ResolveNavigationDirection); routed the one way.
-	DreamUIKeyRouting::RouteDirectionKeyAs(GetInputUser(), Key, ResolveNavigationDirection(Key), true);
-}
-
-void ADreamStandaloneInputEventSystemActor::OnNavigationDirectionReleased(FKey Key)
-{
-	if (ShouldIgnoreRelease())return;
-	DreamUIKeyRouting::RouteDirectionKeyAs(GetInputUser(), Key, ResolveNavigationDirection(Key), false);
 }
 
 #undef LOCTEXT_NAMESPACE

@@ -93,12 +93,18 @@ struct DREAMGUI_API FDreamTextLayoutInput
 	 * keeps the forms it requires (Arabic's lam-alef, Indic conjuncts).
 	 */
 	bool bAllowLigatures = false;
+	/**
+	 * Colour faces may draw emoji. Off when the text's material does not shade through MF_DreamUI_Shade (its
+	 * DreamUIShadeMaterial::ShadeMarkerParameter), which alone decodes a colour glyph's quad: an emoji then resolves as if
+	 * the font had no colour face -- its emoji data's image, else a monochrome face's glyph.
+	 */
+	bool bAllowColorFaces = true;
 
 	TWeakObjectPtr<UDreamUIFontData_BaseObject> Font;
 	TWeakObjectPtr<UDreamUIRichTextImageData_BaseObject> RichTextImageData;
 	TWeakObjectPtr<UDreamUIRichTextCustomStyleData> RichTextCustomStyleData;
 
-	/** Every field but Color takes part, Language, TabSize, TextJustify and LastLineAlign included. */
+	/** Every field but Color takes part, Language, TabSize, TextJustify, LastLineAlign and bAllowColorFaces included. */
 	bool operator==(const FDreamTextLayoutInput& Other) const;
 	bool operator!=(const FDreamTextLayoutInput& Other) const { return !(*this == Other); }
 };
@@ -108,11 +114,16 @@ struct FDreamTextLayoutStateData;
 
 /**
  * What one text's layout keeps between layouts, so that the next lays out again only what changed (retained incremental
- * layout): each paragraph as it was measured -- its elements, glyphs and quads, bidi levels, grapheme and break bits --
- * its lines, and each line as it was placed, before Finish moved it into the box. A layout through a state takes a
- * paragraph whose text and style are unchanged as it was, measures the others again (an edited one keeps the lines before
- * the edit and those after it that still start where they did), and places again only the lines whose content or place
- * changed. What it produces is what a layout without one produces, field for field.
+ * layout): each paragraph as it was measured -- its elements, glyphs and quads, bidi levels, grapheme and break bits, the
+ * scripts and segments its shaping found -- its lines, and each line as it was placed, before Finish moved it into the
+ * box. A layout through a state finds what the edit changed from the text itself (the common start and end of the old and
+ * the new content), takes every paragraph the edit did not touch where it stands, reads, measures and analyses only a
+ * window around the edit inside the paragraph it touched, and edits the display list it wrote last time in place: the
+ * lines the edit changed are placed again and spliced in, those after them moved. An edit it cannot see that way -- one
+ * that adds or removes a paragraph, touches rich-text markup or an image, or edits a long paragraph that cannot be measured
+ * through a window (right to left, or with the shape cache off) -- is laid out as round-4 layouts were: every element read
+ * again, paragraphs found by their content. A text with tag paints, or under a clamp, has its display list placed whole.
+ * What it produces is what a layout without one produces, field for field.
  *
  * Opaque: only FDreamTextLayoutEngine reads or writes it. A font, an atlas, a font's layout or face epoch, or any input
  * that measuring reads being different drops what was kept; Reset drops it too.
@@ -141,21 +152,27 @@ private:
 enum class EDreamTextLayoutStage : uint8
 {
 	Prepare,
-	/** Rich-text parsing, the plain text, and sorting the elements into kinds and paragraphs. */
+	/** Rich-text parsing, the plain text, and sorting the elements into kinds and paragraphs; for an edit seen from the text, the window's elements spliced into the kept ones. */
 	Preprocess,
-	/** Finding the kept paragraphs that are this layout's, and comparing an edited one with what it was. */
+	/** Finding the kept paragraphs that are this layout's, by their content. */
 	Lookup,
 	/** Taking paragraphs and lines from the kept layout, and keeping this one. */
 	Reuse,
 	/** Grapheme clusters, and measuring the paragraphs that were not taken. Shape is part of it. */
 	Measure,
-	/** Inside Measure (and inside Place, for an ellipsis): the shaper's calls (FDreamTextShaper::ShapeParagraph), its shape cache included. */
+	/** Inside Measure (and inside Place, for an ellipsis): the shaper's calls (FDreamTextShaper::ShapeParagraph and ShapeWindow), its shape cache included. */
 	Shape,
 	/** Break opportunities, and breaking the paragraphs into lines. */
 	BreakLines,
 	/** Placing the lines that were not taken. */
 	Place,
 	Finish,
+	/** The edit found from the content: the common start and end of the text and the kept one, and the kept elements they come to. */
+	Diff,
+	/** Comparing a paragraph measured whole after an edit with the kept paragraphs it was edited from, element by element. */
+	Compare,
+	/** Editing the display list in place: the lines an edit changed spliced in, the lines after them rebased. */
+	Patch,
 	Count
 };
 
@@ -168,7 +185,10 @@ struct DREAMGUI_API FDreamTextLayoutStats
 	int64 Layouts = 0;
 	/** Layouts that built on a layout their state had kept. */
 	int64 IncrementalLayouts = 0;
-	/** Paragraphs taken from a kept layout as they were, and paragraphs measured (shaped, or measured per code point). */
+	/**
+	 * Paragraphs found in a kept layout by their content and taken as they were (those taken where they stood count in
+	 * ParagraphsPositional), and paragraphs measured (shaped, or measured per code point).
+	 */
 	int64 ParagraphsReused = 0;
 	int64 ParagraphsMeasured = 0;
 	/** Lines placed, and lines whose placement was taken from a kept layout. */
@@ -178,6 +198,42 @@ struct DREAMGUI_API FDreamTextLayoutStats
 	int64 IcuCodeUnits = 0;
 	/** Glyph quads asked of the font: shaped glyphs, code points measured one by one, underline and strikethrough strokes. */
 	int64 QuadFetches = 0;
+
+	/*
+	 * What the work an edit costs scales with: each counts the elements, paragraphs or items a step touched.
+	 */
+	/** Elements read from the source (ReadCodePoint, rich-text parsing): every one for a layout from nothing, the window's for an edit. */
+	int64 ElementsParsed = 0;
+	/** Elements an edit wrote into the kept arrays in place of the ones it replaced. */
+	int64 ElementsSpliced = 0;
+	/** Elements after an edit's window whose kept records were moved and their indices rebased, rather than read and measured again. */
+	int64 ElementsRebased = 0;
+	/** Paragraphs taken where they stood because the edit did not touch them: no hash, no comparison. */
+	int64 ParagraphsPositional = 0;
+	/** Paragraphs whose content hashes were worked out (they are worked out when a lookup needs them, and kept). */
+	int64 ParagraphsHashed = 0;
+	/** Elements measured: a window's inside an edited paragraph, or every element of a paragraph measured whole. */
+	int64 WindowElements = 0;
+	/** Elements grouped into clusters, given their letter spacing and fit width (FinishClusters). */
+	int64 ClustersFinished = 0;
+	/** Elements the preferred width's running pen was summed over. */
+	int64 PenSumElements = 0;
+	/** Elements whose grapheme, line or word boundary or break opportunity was worked out again. */
+	int64 BitsRecomputed = 0;
+	/** Display-list items made by placing a line. */
+	int64 ItemsPlaced = 0;
+	/** Items an in-place edit moved to another index in the display list. */
+	int64 ItemsMoved = 0;
+	/** Items an in-place edit gave another element, source or line index. */
+	int64 ItemsRebased = 0;
+	/** Items an in-place edit moved to a new position from where they were placed (their line moved down, or the box). */
+	int64 ItemsRefinished = 0;
+	/** Items copied from or into a kept layout's copy of the display list (DreamGUI.Text.InPlaceDisplayList 0). */
+	int64 ItemsCopied = 0;
+	/** Layouts DreamGUI.Text.VerifyIncremental held against a layout from nothing, and those that came out different. */
+	int64 VerifiedLayouts = 0;
+	int64 VerifyMismatches = 0;
+
 	/** Time spent in each stage, in FPlatformTime::Cycles64 units. */
 	uint64 Cycles[(int32)EDreamTextLayoutStage::Count] = {};
 
@@ -205,6 +261,29 @@ public:
 	static void Layout(const FDreamTextLayoutInput& Input, FDreamTextDisplayList& Out, FDreamTextLayoutState* State);
 	/** DreamGUI.Text.IncrementalLayout is not 0. */
 	static bool IsIncrementalLayoutEnabled();
+	/**
+	 * The switches of what an incremental layout does by itself, each falling back to how round-4 layouts did it when it is 0:
+	 * DreamGUI.Text.IncrementalParse (the edit found from the content, paragraphs it did not touch taken where they stand,
+	 * only its window read and spliced in), DreamGUI.Text.IncrementalMeasure (only a window inside the edited paragraph
+	 * shaped again; needs the first), DreamGUI.Text.InPlaceDisplayList (the display list edited where it is rather than
+	 * copied).
+	 */
+	static bool IsIncrementalParseEnabled();
+	static bool IsIncrementalMeasureEnabled();
+	static bool IsInPlaceDisplayListEnabled();
 	static FDreamTextLayoutStats GetStats();
 	static void ResetStats();
+
+#if !UE_BUILD_SHIPPING
+	/**
+	 * Whether two states hold the same layout: every measured element field for field, glyphs, boundary bits, paragraphs,
+	 * line ranges and spans, the lines' local coordinates, tag records, languages and inline objects; what only says how a
+	 * state came to be (hashes not worked out yet, which kept paragraph a paragraph came from, the faces a state remembers
+	 * using beyond the other's, the quads it remembers) is left out. A state an incremental layout kept is held against the
+	 * state a layout from nothing keeps. False with the first difference in OutDifference.
+	 */
+	static bool DebugCompareStates(const FDreamTextLayoutState& A, const FDreamTextLayoutState& B, FString& OutDifference);
+	/** Whether two display lists are the same field for field, Generation and LineStamps aside. False with the first difference. */
+	static bool DebugCompareDisplayLists(const FDreamTextDisplayList& A, const FDreamTextDisplayList& B, FString& OutDifference);
+#endif
 };

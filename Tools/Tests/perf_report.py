@@ -8,15 +8,18 @@
                                        [--regions <pattern>]
 
 show prints each stretch of frames the benchmark timed: milliseconds per frame for every stage DreamGUI counts, and
-what it drew and uploaded per frame. compare puts two runs side by side with the change in per cent; a time is only
+what it drew and uploaded per frame -- the texts it painted and why, what their coverage glyphs cost, and the font atlas
+bytes it sent too. compare puts two runs side by side with the change in per cent; a time is only
 worth anything next to another taken on the same machine. insights has Unreal Insights export the CPU timers of the
 trace the benchmark wrote, one file per timed stretch and thread, and prints the DreamGUI scopes and the heaviest
 timers of each -- where the time inside a stage went.
 
 text reads the text layout benchmark (DreamGUI.Performance.TextLayout): for every font and text, each scenario under each
-setting of DreamGUI.Text.ShapeCache and DreamGUI.Text.IncrementalLayout -- a layout's median and 95th percentile, its paint's
-median, its heaviest stages, and what it did per layout (hb_shape calls, lines placed and kept, ICU code units); --stages adds
-every stage and counter. text-compare puts two runs' medians and 95th percentiles side by side. Its trace's regions are
+setting of DreamGUI.Text.ShapeCache and DreamGUI.Text.IncrementalLayout, and with incremental layout as round 4 did it (the
+switches DreamGUI.Text.IncrementalParse, IncrementalMeasure and InPlaceDisplayList off) -- a layout's median and 95th
+percentile, its paint's median, its heaviest stages, and what it did per layout (hb_shape calls, lines placed and kept, ICU
+code units); --stages adds every stage and counter, the elements an edit read, spliced and rebased and the display-list
+items it placed, moved and copied among them. text-compare puts two runs' medians and 95th percentiles side by side. Its trace's regions are
 DreamGUI.TextLayout.*, which insights --regions "DreamGUI.TextLayout.*" breaks down.
 """
 import argparse
@@ -30,7 +33,9 @@ import sys
 STAGES = ['ManagerTick', 'CanvasUpdate', 'Batching', 'DrawCallSubmit', 'RenderRecord']
 COUNTERS = ['BatchesRecorded', 'VerticesRecorded', 'SectionUploads', 'UploadedBytes', 'DataTextureUpdates',
             'GeometryCopies', 'SectionReuses', 'WidgetsUpdated', 'SectionPatches', 'DrawCallRebuilds', 'InPlaceRefreshes',
-            'RenderLayerMoves', 'RenderLayerPromotions', 'RenderLayerDemotions']
+            'RenderLayerMoves', 'RenderLayerPromotions', 'RenderLayerDemotions', 'TextPaints', 'TextMoveRepaints',
+            'SmallTextPlacements', 'SharpenSweepTexts', 'SharpenRepaints', 'CoverageItemsDrawn', 'CoverageGlyphLookups',
+            'CoverageRastersSync', 'CoverageJobs', 'CoverageFlushes', 'FontAtlasUploadBytes']
 DEFAULT_ENGINE = os.environ.get('DREAMGUI_ENGINE', r'C:\Program Files\Epic Games\UE_5.8')
 THREADS = [('GameThread', 'GameThread'), ('RenderThread', 'RenderThread*'), ('Workers', '*Worker*')]
 
@@ -79,9 +84,12 @@ def compare(old, new):
             print('  %-24s %10.3f  %10.3f  %s' % (name, a, b, change(a, b)))
 
 
-TEXT_STAGES = ['Prepare', 'Preprocess', 'Lookup', 'Reuse', 'Measure', 'Shape', 'BreakLines', 'Place', 'Finish']
+TEXT_STAGES = ['Prepare', 'Diff', 'Preprocess', 'Lookup', 'Reuse', 'Measure', 'Shape', 'Compare', 'BreakLines', 'Place', 'Patch',
+               'Finish']
 TEXT_COUNTERS = ['hbShapeCalls', 'shapedCodepoints', 'shapeLookups', 'shapeHits', 'icuCodeUnits', 'linesPlaced', 'linesReused',
-                 'paragraphsMeasured', 'paragraphsReused', 'quadFetches']
+                 'paragraphsMeasured', 'paragraphsReused', 'quadFetches', 'elementsParsed', 'elementsSpliced', 'elementsRebased',
+                 'paragraphsPositional', 'paragraphsHashed', 'windowElements', 'clustersFinished', 'penSumElements',
+                 'bitsRecomputed', 'itemsPlaced', 'itemsMoved', 'itemsRebased', 'itemsRefinished', 'itemsCopied']
 
 
 def load_text(path):
@@ -106,7 +114,7 @@ def show_text(report, stages):
     cases = report.get('cases', [])
     for font, text in text_subjects(cases):
         print('\n%s / %s' % (font, text))
-        print('  %-18s %-30s %9s %9s %9s  %-36s %8s %7s %7s %8s'
+        print('  %-18s %-34s %9s %9s %9s  %-36s %8s %7s %7s %8s'
               % ('scenario', 'setting', 'median', 'p95', 'paint', 'heaviest stages, median ms', 'hb_shape', 'placed', 'kept', 'icu'))
         for case in cases:
             if (case['font'], case['text']) != (font, text):
@@ -115,7 +123,7 @@ def show_text(report, stages):
             # Shape is inside Measure: the heaviest are picked among the stages that do not overlap.
             heaviest = sorted(((v.get('median', 0.0), k) for k, v in stage_ms.items() if k != 'Shape'), reverse=True)[:2]
             per = case.get('perLayout', {})
-            print('  %-18s %-30s %9.3f %9.3f %9.3f  %-36s %8.2f %7.2f %7.2f %8.1f'
+            print('  %-18s %-34s %9.3f %9.3f %9.3f  %-36s %8.2f %7.2f %7.2f %8.1f'
                   % (case['scenario'], case['config'], case['layoutMs']['median'], case['layoutMs']['p95'], case['paintMs']['median'],
                      ', '.join('%s %.3f' % (k, v) for v, k in heaviest), per.get('hbShapeCalls', 0.0), per.get('linesPlaced', 0.0),
                      per.get('linesReused', 0.0), per.get('icuCodeUnits', 0.0)))
@@ -132,16 +140,16 @@ def compare_text(old, new):
     cases = new.get('cases', [])
     for font, text in text_subjects(cases):
         print('\n%s / %s' % (font, text))
-        print('  %-18s %-30s %11s %11s %8s %11s %11s %8s' % ('scenario', 'setting', 'old median', 'new median', 'change', 'old p95', 'new p95', 'change'))
+        print('  %-18s %-34s %11s %11s %8s %11s %11s %8s' % ('scenario', 'setting', 'old median', 'new median', 'change', 'old p95', 'new p95', 'change'))
         for case in cases:
             if (case['font'], case['text']) != (font, text):
                 continue
             was = before.get((case['font'], case['text'], case['scenario'], case['config']))
             if was is None:
-                print('  %-18s %-30s not in the old run' % (case['scenario'], case['config']))
+                print('  %-18s %-34s not in the old run' % (case['scenario'], case['config']))
                 continue
             a, b = was['layoutMs'], case['layoutMs']
-            print('  %-18s %-30s %11.3f %11.3f %s %11.3f %11.3f %s'
+            print('  %-18s %-34s %11.3f %11.3f %s %11.3f %11.3f %s'
                   % (case['scenario'], case['config'], a['median'], b['median'], change(a['median'], b['median']), a['p95'], b['p95'],
                      change(a['p95'], b['p95'])))
 

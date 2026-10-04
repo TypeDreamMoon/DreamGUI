@@ -130,7 +130,7 @@ void FDreamPixelSortRenderProxy::OnRenderPostProcess_RenderThread(
 		PassParameters->SourceTexture = SourceTexture;
 		PassParameters->RenderTargets[0] = FRenderTargetBinding(DestinationTexture, ERenderTargetLoadAction::ENoAction);
 		GraphBuilder.AddPass(RDG_EVENT_NAME("DreamUIPixelSort_Rank"), PassParameters, ERDGPassFlags::Raster,
-			[VertexShader, RankShader, Renderer, SourceTexture, DestinationTexture, SortSampler,
+			[VertexShader, RankShader, SourceTexture, DestinationTexture, SortSampler,
 			RegionSizeFloat, Band = this->Band, AxisFlag, KeyFlag, DescendingFlag, RadiusFloat, IntervalParams]
 			(FRHICommandListImmediate& RHICmdList)
 			{
@@ -157,7 +157,7 @@ void FDreamPixelSortRenderProxy::OnRenderPostProcess_RenderThread(
 				Parameters.SearchRadius = RadiusFloat;
 				Parameters.IntervalParams = IntervalParams;
 				SetShaderParameters(RHICmdList, RankShader, RankShader.GetPixelShader(), Parameters);
-				Renderer->DrawFullScreenQuad(RHICmdList);
+				FDreamUIRenderer::DrawFullScreenQuad(RHICmdList);
 			});
 	}
 
@@ -168,7 +168,7 @@ void FDreamPixelSortRenderProxy::OnRenderPostProcess_RenderThread(
 		PassParameters->DestinationTexture = DestinationTexture;
 		PassParameters->RenderTargets[0] = FRenderTargetBinding(ResultRDGTexture, ERenderTargetLoadAction::ENoAction);
 		GraphBuilder.AddPass(RDG_EVENT_NAME("DreamUIPixelSort_Gather"), PassParameters, ERDGPassFlags::Raster,
-			[VertexShader, GatherShader, Renderer, SourceTexture, DestinationTexture, ResultRDGTexture,
+			[VertexShader, GatherShader, SourceTexture, DestinationTexture, ResultRDGTexture,
 			SortSampler, RegionSizeFloat, AxisFlag, RadiusFloat](FRHICommandListImmediate& RHICmdList)
 			{
 				SourceTexture->MarkResourceAsUsed();
@@ -193,7 +193,7 @@ void FDreamPixelSortRenderProxy::OnRenderPostProcess_RenderThread(
 				Parameters.SortAxis = AxisFlag;
 				Parameters.SearchRadius = RadiusFloat;
 				SetShaderParameters(RHICmdList, GatherShader, GatherShader.GetPixelShader(), Parameters);
-				Renderer->DrawFullScreenQuad(RHICmdList);
+				FDreamUIRenderer::DrawFullScreenQuad(RHICmdList);
 			});
 	}
 

@@ -397,7 +397,7 @@ namespace DreamUIRendererLocal
 	 * The pass of the three CopyRenderTarget functions: Src over the whole of Dst, the colour linearized or the alpha
 	 * scaled by BlendAlpha and blended over what Dst holds. PassName names the pass and Dst in the graph, SourceName Src.
 	 */
-	static void AddCopyTargetPass(FDreamUIRenderer* Renderer, FRDGBuilder& GraphBuilder, FGlobalShaderMap* GlobalShaderMap
+	static void AddCopyTargetPass(FRDGBuilder& GraphBuilder, FGlobalShaderMap* GlobalShaderMap
 		, FRDGTextureRef SourceTexture, FRDGTextureRef DestinationTexture, FRHISamplerState* SrcTextureSamplerState
 		, bool bColorCorrect, bool bBlendAlpha, float BlendAlpha, const TCHAR* PassName)
 	{
@@ -409,7 +409,7 @@ namespace DreamUIRendererLocal
 			RDG_EVENT_NAME("%s", PassName),
 			PassParameters,
 			ERDGPassFlags::Raster,
-			[Renderer, GlobalShaderMap, SourceTexture, DestinationTexture, SrcTextureSamplerState, bColorCorrect, bBlendAlpha, BlendAlpha](FRHICommandListImmediate& RHICmdList)
+			[GlobalShaderMap, SourceTexture, DestinationTexture, SrcTextureSamplerState, bColorCorrect, bBlendAlpha, BlendAlpha](FRHICommandListImmediate& RHICmdList)
 			{
 				SourceTexture->MarkResourceAsUsed();
 				const FIntPoint DestinationExtent = DestinationTexture->Desc.Extent;
@@ -440,7 +440,7 @@ namespace DreamUIRendererLocal
 				Parameters.BlendAlpha = BlendAlpha;
 				SetShaderParameters(RHICmdList, PixelShader, PixelShader.GetPixelShader(), Parameters);
 
-				Renderer->DrawFullScreenQuad(RHICmdList);
+				FDreamUIRenderer::DrawFullScreenQuad(RHICmdList);
 			});
 	}
 }
@@ -456,7 +456,7 @@ void FDreamUIRenderer::CopyRenderTarget(FRDGBuilder& GraphBuilder, FGlobalShader
 void FDreamUIRenderer::CopyRenderTarget(FRDGBuilder& GraphBuilder, FGlobalShaderMap* GlobalShaderMap, FRDGTextureRef Src, FRDGTextureRef Dst
 	, FRHISamplerState* SrcTextureSamplerState)
 {
-	DreamUIRendererLocal::AddCopyTargetPass(this, GraphBuilder, GlobalShaderMap, Src, Dst, SrcTextureSamplerState, false, false, 1.0f
+	DreamUIRendererLocal::AddCopyTargetPass(GraphBuilder, GlobalShaderMap, Src, Dst, SrcTextureSamplerState, false, false, 1.0f
 		, TEXT("DreamUICopyRenderTarget"));
 }
 
@@ -470,7 +470,7 @@ void FDreamUIRenderer::CopyRenderTarget_ColorCorrect(FRDGBuilder& GraphBuilder, 
 void FDreamUIRenderer::CopyRenderTarget_ColorCorrect(FRDGBuilder& GraphBuilder, FGlobalShaderMap* GlobalShaderMap, FRDGTextureRef Src, FRDGTextureRef Dst
 	, FRHISamplerState* SrcTextureSamplerState)
 {
-	DreamUIRendererLocal::AddCopyTargetPass(this, GraphBuilder, GlobalShaderMap, Src, Dst, SrcTextureSamplerState, true, false, 1.0f
+	DreamUIRendererLocal::AddCopyTargetPass(GraphBuilder, GlobalShaderMap, Src, Dst, SrcTextureSamplerState, true, false, 1.0f
 		, TEXT("DreamUICopyRenderTarget_ColorCorrect"));
 }
 
@@ -484,7 +484,7 @@ void FDreamUIRenderer::CopyRenderTarget_BlendAlpha(FRDGBuilder& GraphBuilder, FG
 void FDreamUIRenderer::CopyRenderTarget_BlendAlpha(FRDGBuilder& GraphBuilder, FGlobalShaderMap* GlobalShaderMap, FRDGTextureRef Src, FRDGTextureRef Dst
 	, float BlendAlpha, FRHISamplerState* SrcTextureSamplerState)
 {
-	DreamUIRendererLocal::AddCopyTargetPass(this, GraphBuilder, GlobalShaderMap, Src, Dst, SrcTextureSamplerState, false, true, BlendAlpha
+	DreamUIRendererLocal::AddCopyTargetPass(GraphBuilder, GlobalShaderMap, Src, Dst, SrcTextureSamplerState, false, true, BlendAlpha
 		, TEXT("DreamUICopyRenderTarget_BlendAlpha"));
 }
 
@@ -738,6 +738,24 @@ namespace DreamUIRendererLocal
 		}
 		return Depth != nullptr ? Depth : GSystemTextures.GetDepthDummy(GraphBuilder);
 	}
+
+	/**
+	 * The multisampled target the UI is drawn into before the resolve writes it into InTarget: InTarget's size and format,
+	 * InNumSamples samples, sRGB when InTarget is, and a shader resource for the resolve to read. The sRGB flag is the
+	 * point. Without it the target of a canvas drawn into an sRGB texture (a render-target canvas) stored the linear values
+	 * the UI blends in 8 bits, and only the resolve encoded them: every dark level fell on one of a dozen steps -- the gallery
+	 * backdrop (28,30,38) came out (28,28,38) -- and the clear colour was rounded with them. With it the target encodes as it
+	 * is written and decodes as the resolve reads it, like the single-sampled path. One description for both branches, the
+	 * render-target canvas's and the view's.
+	 */
+	FPooledRenderTargetDesc MakeMultisampledTargetDesc(const FRHITexture& InTarget, uint8 InNumSamples)
+	{
+		const ETextureCreateFlags SRGBFlag = EnumHasAnyFlags(InTarget.GetFlags(), TexCreate_SRGB) ? TexCreate_SRGB : TexCreate_None;
+		FPooledRenderTargetDesc Desc(FPooledRenderTargetDesc::Create2DDesc(InTarget.GetSizeXY(), InTarget.GetFormat(), FClearValueBinding::Black
+			, SRGBFlag, TexCreate_RenderTargetable | TexCreate_ShaderResource, false));
+		Desc.NumSamples = InNumSamples;
+		return Desc;
+	}
 }
 
 /**
@@ -878,6 +896,8 @@ void FDreamUIRenderer::DrawBuiltInBatch(FRHICommandList& RHICmdList, FGraphicsPi
 	PSParameters.DreamUI_WidgetDataTex = TextureOrFallback(Params.WidgetDataTextureRHI.GetReference(), GBlackTexture);
 	PSParameters.DreamUI_ClipDataTex = TextureOrFallback(Params.ClipDataTextureRHI.GetReference(), GBlackTexture);
 	PSParameters.DreamUI_RectBlockDataTex = TextureOrFallback(Params.RectBlockDataRHI.GetReference(), GBlackTexture);
+	// Black where the world has no paint rows: it reads gradient type 0, None, so a painted quad drawn without them is solid.
+	PSParameters.DreamUI_PaintDataTex = TextureOrFallback(Params.PaintDataRHI.GetReference(), GBlackTexture);
 	PSParameters.DreamUI_SceneDepthTex = SceneDepthTexture ? SceneDepthTexture : GBlackTexture->TextureRHI.GetReference();
 	PSParameters.DreamUI_SceneDepthTexSampler = TStaticSamplerState<SF_Point, AM_Clamp, AM_Clamp, AM_Clamp>::GetRHI();
 	PSParameters.DreamUI_SceneDepthTextureScaleOffset = SceneDepthTexST;
@@ -1067,9 +1087,8 @@ bool FDreamUIRenderer::PrepareTargets_RenderThread(FRDGBuilder& GraphBuilder, FS
 
 			if (NumSamples > 1)
 			{
-				//get msaa render target
-				FPooledRenderTargetDesc desc(FPooledRenderTargetDesc::Create2DDesc(ScreenColorRenderTargetTexture->GetSizeXY(), ScreenColorRenderTargetTexture->GetFormat(), FClearValueBinding::Black, TexCreate_None, TexCreate_RenderTargetable, false));
-				desc.NumSamples = NumSamples;
+				//get msaa render target, sRGB as the canvas's own target is (MakeMultisampledTargetDesc)
+				const FPooledRenderTargetDesc desc = DreamUIRendererLocal::MakeMultisampledTargetDesc(*ScreenColorRenderTargetTexture, NumSamples);
 				GRenderTargetPool.FindFreeElement(RHICmdList, desc, MSAARenderTarget, TEXT("DreamUI_MSAA_RenderTarget"));
 				if (!MSAARenderTarget.IsValid())
 					return false;
@@ -1122,9 +1141,8 @@ bool FDreamUIRenderer::PrepareTargets_RenderThread(FRDGBuilder& GraphBuilder, FS
 
 		if (NumSamples > 1)
 		{
-			//get msaa render target
-			FPooledRenderTargetDesc desc(FPooledRenderTargetDesc::Create2DDesc(ScreenColorRenderTargetTexture->GetSizeXY(), ScreenColorRenderTargetTexture->GetFormat(), FClearValueBinding::Black, TexCreate_None, TexCreate_RenderTargetable, false));
-			desc.NumSamples = NumSamples;
+			//get msaa render target, sRGB when the view's target is (MakeMultisampledTargetDesc), which it normally is not
+			const FPooledRenderTargetDesc desc = DreamUIRendererLocal::MakeMultisampledTargetDesc(*ScreenColorRenderTargetTexture, NumSamples);
 			GRenderTargetPool.FindFreeElement(RHICmdList, desc, MSAARenderTarget, TEXT("DreamUI_MSAA_RenderTarget"));
 			if (!MSAARenderTarget.IsValid())
 				return false;
@@ -1429,8 +1447,9 @@ void FDreamUIRenderer::RecordWorldSpace_RenderThread(FRDGBuilder& GraphBuilder, 
 					//FRHICommandList&, so RDG may record this pass on a task rather than inline on
 					//the render thread -- the more UI draw-calls there are, the longer that
 					//serial stretch used to be. Everything below is FRHICommandList API, and it
-					//reads only what was collected when the pass was recorded.
-					[this, Draws = PendingDraws, RenderView, ViewRect, PassParameters
+					//reads only what was collected when the pass was recorded: it calls the
+					//renderer's static helpers alone, and holds no pointer to the renderer.
+					[Draws = PendingDraws, RenderView, ViewRect, PassParameters
 						, SceneDepthTexST = DepthTextureScaleOffset, NumSamples, GammaValue
 						, bRenderWireframe, bRenderLit, WireframeMaterialInstance](FRHICommandList& RHICmdList)
 					{
@@ -1908,7 +1927,7 @@ void FDreamUIRenderer::RecordScreenSpace_RenderThread(FRDGBuilder& GraphBuilder,
 					PassParameters,
 					ERDGPassFlags::Raster,
 					//FRHICommandList&: see the note on the world-space mesh pass above
-					[this, Collected, RenderView, ViewRect, SceneDepthTexST = DepthTextureScaleOffset
+					[Collected, RenderView, ViewRect, SceneDepthTexST = DepthTextureScaleOffset
 						, NumSamples, ValidDepth = DreamUIScreenSpaceDepthRDGTexture != nullptr, GammaValue
 						, bRenderLit, bRenderWireframe, WireframeMaterialInstance](FRHICommandList& RHICmdList)
 					{
@@ -2307,7 +2326,9 @@ void FDreamUIRenderer::RenderGizmoMesh_RenderThread(const TArray<TSharedPtr<FDre
 		RDG_EVENT_NAME("DreamUI_RenderHelperLine"),
 		PassParameters,
 		ERDGPassFlags::Raster,
-		[this, Gizmos = TArray<TSharedPtr<FDreamUIGizmoMesh>>(HelperGizmoDataMap), RenderView, ViewRect, NumSamples](FRHICommandListImmediate& RHICmdList)
+		// What it reads of the renderer, by value: the pass holds no pointer to it.
+		[Gizmos = TArray<TSharedPtr<FDreamUIGizmoMesh>>(HelperGizmoDataMap), RenderView, ViewRect, NumSamples
+			, bFrustumCulling = RenderThreadViewParameter.bFrustumCulling](FRHICommandListImmediate& RHICmdList)
 		{
 			RHICmdList.SetViewport(ViewRect.Min.X, ViewRect.Min.Y, 0.0f, ViewRect.Max.X, ViewRect.Max.Y, 1.0f);
 
@@ -2323,7 +2344,7 @@ void FDreamUIRenderer::RenderGizmoMesh_RenderThread(const TArray<TSharedPtr<FDre
 				auto& LocalBounds = RenderParameter->LocalBounds;
 				auto& LocalToWorldMatrix = RenderParameter->LocalToWorldMatrix;
 				auto WorldBounds = LocalBounds.TransformBy(LocalToWorldMatrix);
-				if (RenderThreadViewParameter.bFrustumCulling)
+				if (bFrustumCulling)
 				{
 					if (!RenderView->GetCullingFrustum().IntersectBox(WorldBounds.Origin, WorldBounds.BoxExtent))continue;
 				}
@@ -2379,6 +2400,7 @@ void FDreamUIRenderer::RenderGizmoMesh_RenderThread(const TArray<TSharedPtr<FDre
 				PSParameters.DreamUI_WidgetDataTex = GBlackTexture->TextureRHI;
 				PSParameters.DreamUI_ClipDataTex = GBlackTexture->TextureRHI;
 				PSParameters.DreamUI_RectBlockDataTex = GBlackTexture->TextureRHI;
+				PSParameters.DreamUI_PaintDataTex = GBlackTexture->TextureRHI;
 				PSParameters.DreamUI_SceneDepthTex = GBlackTexture->TextureRHI;
 				PSParameters.DreamUI_SceneDepthTexSampler = TStaticSamplerState<SF_Point, AM_Clamp, AM_Clamp, AM_Clamp>::GetRHI();
 				PSParameters.DreamUI_SceneDepthTextureScaleOffset = FVector4f(1.0f, 1.0f, 0.0f, 0.0f);

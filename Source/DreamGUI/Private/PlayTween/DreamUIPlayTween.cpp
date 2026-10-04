@@ -76,7 +76,7 @@ void UDreamUIPlayTween::Start()
 		// No tween manager to run on: it is a game instance subsystem, and a world no game instance owns
 		// -- the designer's preview is one -- has none, so To answers null. The run is played out here
 		// and now instead, in the tween's own order: the start; then per cycle the value it ends on, the
-		// progress at one and the cycle's completion; then the completion. So the target lands where the
+		// progress it ends at and the cycle's completion; then the completion. So the target lands where the
 		// tween would have left it, and whatever waits for the end -- a sequence component moving on to
 		// its next tween -- still hears it. Returning here instead left the target at its start and a
 		// sequence stuck on its first tween for good. An endless loop has no end to land on: it plays one
@@ -101,9 +101,12 @@ void UDreamUIPlayTween::Start()
 		for (int32 Cycle = 1; Cycle <= CycleCount; ++Cycle)
 		{
 			OnUpdate(CycleEndValue(EaseType, EaseCurve.Get(), CycleStart, bBackwards, Duration));
-			OnUpdateProgress.FireEvent(1.0f);
-			OnUpdateProgressCPP.Broadcast(1.0f);
-			OnUpdateProgressBP.Broadcast(1.0f);
+			// The progress the cycle ends at, as UDreamTweener reports it: one, or zero for a cycle running
+			// backwards -- a yoyo on its way back ends where the tween began.
+			const float CycleEndProgress = bBackwards ? 0.0f : 1.0f;
+			OnUpdateProgress.FireEvent(CycleEndProgress);
+			OnUpdateProgressCPP.Broadcast(CycleEndProgress);
+			OnUpdateProgressBP.Broadcast(CycleEndProgress);
 			OnCycleComplete.FireEvent(Cycle);
 			OnCycleCompleteCPP.Broadcast(Cycle);
 			OnCycleCompleteBP.Broadcast(Cycle);

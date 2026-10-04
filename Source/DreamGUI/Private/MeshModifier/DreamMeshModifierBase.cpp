@@ -4,6 +4,7 @@
 #include "DreamGUI.h"
 #include "Core/Components/DreamVisualBatchMesh.h"
 #include "Core/Components/DreamWidget.h"
+#include "Core/Text/DreamTextPainter.h"
 
 UDreamMeshModifierBase::UDreamMeshModifierBase()
 {
@@ -145,6 +146,26 @@ void UDreamMeshModifierBase::ModifyUIGeometry(
 		GeometryModifierHelper->UIGeo = &InGeometry;
 		SCOPE_CYCLE_COUNTER(STAT_UIGeometryModifierBase_ModifyUIGeometry);
 		ReceiveModifyUIGeometry(GeometryModifierHelper);
+	}
+}
+
+void UDreamMeshModifierBase::PrepareMeshCopies(FDreamUIGeometry& InGeometry, int32 InFirstCopy)
+{
+	TArray<FDreamUIMeshVertex>& Vertices = InGeometry.Vertices;
+	for (int32 Index = FMath::Max(InFirstCopy, 0); Index < Vertices.Num(); ++Index)
+	{
+		FDreamUIMeshVertex& Copy = Vertices[Index];
+		Copy.UV4 = FVector2f(0.0f, 0.0f);
+		// UV2.x is a quad code only on a text's quads: an image's UV2 is whatever its own visual or a modifier put there.
+		if (InGeometry.bIsFont)
+		{
+			float Code = DreamTextQuadCode::StripSlot(Copy.TextureCoordinate[2].X);
+			if (Code < DreamTextQuadCode::ColorThreshold && Code >= DreamTextQuadCode::ColorEffectsThreshold)
+			{
+				Code = DreamTextQuadCode::ColorSilhouette;
+			}
+			Copy.TextureCoordinate[2].X = Code;
+		}
 	}
 }
 

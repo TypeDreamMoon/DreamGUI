@@ -106,6 +106,12 @@ namespace DreamTextParity
 		bool bShadow = false;
 		FVector2f ShadowOffsetEm = FVector2f::ZeroVector;
 		FColor ShadowColor = FColor::Black;
+		/**
+		 * A gradient the whole text's face is filled with, as CSS: DreamGUI reads it with FDreamGradient::ParseCss into the
+		 * text's FacePaint (measured across the text as a block), Chrome's page paints it with background-clip: text on the
+		 * paragraph. Empty for a solid text; a rich case can paint a run with <gradient=css-without-spaces> instead.
+		 */
+		FString Fill;
 		/** The canvas in CSS pixels, which is DreamGUI's canvas units and Slate's layout units. */
 		FIntPoint Canvas = FIntPoint(1024, 160);
 		/** Device pixels per CSS pixel: DreamGUI's canvas scale, Slate's DPI scale, Chrome's device scale factor. */
@@ -122,6 +128,11 @@ namespace DreamTextParity
 		bool HasFlag(const TCHAR* InFlag) const { return Flags.Contains(InFlag); }
 		/** Nothing about the case is asserted, neither its breaks nor its targets: known not to match yet. */
 		bool IsReportOnly() const { return HasFlag(TEXT("reportOnly")); }
+		/**
+		 * The case paints with a gradient -- a Fill, or a rich text's <gradient=...> run -- and each side draws it a second
+		 * time as a solid mask (GetMaskText), against which the two fills' colours are compared.
+		 */
+		bool HasFill() const;
 		bool IsHeldToSlate() const { return Reference.Equals(TEXT("slate"), ESearchCase::IgnoreCase); }
 		FColor GetInk() const { return bInverse ? FColor::White : FColor::Black; }
 		FColor GetPaper() const { return bInverse ? FColor::Black : FColor::White; }
@@ -191,6 +202,11 @@ namespace DreamTextParity
 		TArray<int32>* OutSourceOffsets = nullptr);
 	/** The case's text as it is read on screen: the markup taken out for a rich case. */
 	FString GetPlainText(const FCase& InCase);
+	/**
+	 * The text a fill case's mask is drawn from: a rich case's <gradient=...> and </gradient> tags taken out, the rest of
+	 * its markup kept, so that the mask is the same text in the ink colour; any other case's text as it is.
+	 */
+	FString GetMaskText(const FCase& InCase);
 
 	/** Code points of a UTF-16 string, surrogate pairs joined, each with the offset of its first unit. */
 	void DecodeCodepoints(const FString& InText, TArray<uint32>& OutCodepoints, TArray<int32>& OutOffsets);

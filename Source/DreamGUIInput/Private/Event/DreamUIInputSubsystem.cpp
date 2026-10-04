@@ -12,6 +12,7 @@
 #include "Engine/DataTable.h"
 #include "Engine/Engine.h"
 #include "Engine/GameInstance.h"
+#include "Engine/GameViewportClient.h"
 #include "Engine/LocalPlayer.h"
 #include "Engine/World.h"
 #include "EngineUtils.h"
@@ -20,8 +21,11 @@
 #include "Event/DreamPointerEventData.h"
 #include "Event/DreamScreenSpaceRaycaster.h"
 #include "Event/DreamUIInputUser.h"
+#include "Event/DreamUIKeyRouting.h"
 #include "Event/DreamUISlateInputSource.h"
 #include "Framework/Application/SlateApplication.h"
+#include "Framework/Application/SlateUser.h"
+#include "Widgets/SViewport.h"
 #include "Event/DreamWorldSpaceRaycaster.h"
 #include "Camera/PlayerCameraManager.h"
 #include "GameFramework/Actor.h"
@@ -129,6 +133,8 @@ void UDreamUIInputSubsystem::OnWorldBeginPlay(UWorld& InWorld)
 	{
 		SetSlateInputSourceEnabled(true);
 	}
+	// Slate's own Tab kept out of UMG while DreamGUI has the keys, for whichever viewport client the project uses.
+	BindSlateNavigationGuard(InWorld.GetGameViewport());
 }
 
 void UDreamUIInputSubsystem::SetSlateInputSourceEnabled(bool bInEnabled)
@@ -151,6 +157,70 @@ void UDreamUIInputSubsystem::SetSlateInputSourceEnabled(bool bInEnabled)
 		FSlateApplication::Get().UnregisterInputPreProcessor(SlateInputSource);
 	}
 	SlateInputSource.Reset();
+}
+
+void UDreamUIInputSubsystem::BindSlateNavigationGuard(UGameViewportClient* InClient)
+{
+	if (InClient == nullptr || bTornDownForWorld || SlateGuardClient.Get() == InClient)
+	{
+		return;
+	}
+	UnbindSlateNavigationGuard();
+	// The delegate holds one binding: whatever a project bound there is kept, and asked whenever the guard lets Slate's
+	// navigation through.
+	PreviousNavigationOverride = InClient->OnNavigationOverride();
+	InClient->OnNavigationOverride().BindUObject(this, &UDreamUIInputSubsystem::HandleSlateNavigation);
+	SlateGuardClient = InClient;
+}
+
+void UDreamUIInputSubsystem::UnbindSlateNavigationGuard()
+{
+	// Given back only while the guard is still what is bound there: a binding made since is the project's, and stays.
+	if (UGameViewportClient* Client = SlateGuardClient.Get(); Client != nullptr && Client->OnNavigationOverride().IsBoundToObject(this))
+	{
+		Client->OnNavigationOverride() = PreviousNavigationOverride;
+	}
+	PreviousNavigationOverride.Unbind();
+	SlateGuardClient.Reset();
+}
+
+bool UDreamUIInputSubsystem::HandleSlateNavigation(const uint32 InSlateUserIndex, TSharedPtr<SWidget> InDestination)
+{
+	if (ShouldSwallowSlateNavigation(InSlateUserIndex))
+	{
+		return true;//handled: Slate leaves its focus where it is
+	}
+	return PreviousNavigationOverride.IsBound() && PreviousNavigationOverride.Execute(InSlateUserIndex, InDestination);
+}
+
+bool UDreamUIInputSubsystem::ShouldSwallowSlateNavigation(uint32 InSlateUserIndex) const
+{
+	if (bTornDownForWorld || !FSlateApplication::IsInitialized())
+	{
+		return false;
+	}
+	const UWorld* World = GetWorld();
+	const UGameViewportClient* Client = World != nullptr ? World->GetGameViewport() : nullptr;
+	const TSharedPtr<SViewport> Viewport = Client != nullptr ? Client->GetGameViewportWidget() : nullptr;
+	if (!Viewport.IsValid())
+	{
+		return false;
+	}
+	// Only from the bare viewport. A UMG widget that has the focus navigates as UMG does, among its own.
+	const TSharedPtr<SWidget> Focused = FSlateApplication::Get().GetUserFocusedWidget(InSlateUserIndex);
+	if (!Focused.IsValid() || Focused.Get() != static_cast<SWidget*>(Viewport.Get()))
+	{
+		return false;
+	}
+	// And only while DreamGUI has the keys: its UI up for the player that Slate user is -- something focused, or a Tab stop
+	// to land on. A game with no DreamGUI menu open keeps Slate's navigation as the engine has it.
+	const int32 UserIndex = FindUserIndexForSlateUser(static_cast<int32>(InSlateUserIndex));
+	const UDreamUIInputUser* User = UserIndex != INDEX_NONE ? GetUser(UserIndex) : nullptr;
+	if (User == nullptr || User->IsShutDown())
+	{
+		return false;
+	}
+	return IsValid(User->GetFocusedWidget()) || DreamUIKeyRouting::HasTabStops(User);
 }
 
 void UDreamUIInputSubsystem::Deinitialize()
@@ -192,6 +262,8 @@ void UDreamUIInputSubsystem::TeardownForWorld(UWorld& InWorld)
 	}
 	// Slate stops being heard first: nothing it delivers now has a player to go to.
 	SetSlateInputSourceEnabled(false);
+	// And the viewport client gets back the navigation binding it had: the client outlives this world on a level change.
+	UnbindSlateNavigationGuard();
 	bTornDownForWorld = true;
 	if (TickFunction.IsTickFunctionRegistered())
 	{
@@ -261,6 +333,49 @@ UDreamUIInputUser* UDreamUIInputSubsystem::GetOrCreateUser(int32 InUserIndex)
 	return User;
 }
 
+bool UDreamUIInputSubsystem::HasPlayerAt(int32 InUserIndex) const
+{
+	if (InUserIndex < 0 || bTornDownForWorld)
+	{
+		return false;
+	}
+	if (GetUser(InUserIndex) != nullptr || GetEventSystemByUserIndex(InUserIndex) != nullptr)
+	{
+		return true;
+	}
+	const UWorld* World = GetWorld();
+	const UGameInstance* GameInstance = World != nullptr ? World->GetGameInstance() : nullptr;
+	if (GameInstance != nullptr && GameInstance->GetLocalPlayerByIndex(InUserIndex) != nullptr)
+	{
+		return true;
+	}
+	// The first player, whom every world has: the one the screen UI and a null owning player resolve to, and the one a
+	// world with no local players at all -- a test's, a headless rig's -- is driven as.
+	return InUserIndex == (World != nullptr ? UDreamWidget::GetLocalPlayerIndexOf(World->GetFirstPlayerController()) : 0);
+}
+
+int32 UDreamUIInputSubsystem::FindUserIndexForSlateUser(int32 InSlateUserIndex) const
+{
+	const UWorld* World = GetWorld();
+	const UGameInstance* GameInstance = World != nullptr ? World->GetGameInstance() : nullptr;
+	if (GameInstance == nullptr)
+	{
+		return INDEX_NONE;
+	}
+	const TArray<ULocalPlayer*>& LocalPlayers = GameInstance->GetLocalPlayers();
+	for (int32 Index = 0; Index < LocalPlayers.Num(); ++Index)
+	{
+		const ULocalPlayer* LocalPlayer = LocalPlayers[Index];
+		const TSharedPtr<const FSlateUser> SlateUser = LocalPlayer != nullptr ? LocalPlayer->GetSlateUser() : nullptr;
+		if (SlateUser.IsValid() && SlateUser->GetUserIndex() == InSlateUserIndex)
+		{
+			return Index;
+		}
+	}
+	// With one local player every Slate user is theirs: the keyboard and the mouse are Slate user 0, whoever holds the pad.
+	return LocalPlayers.Num() == 1 ? 0 : INDEX_NONE;
+}
+
 void UDreamUIInputSubsystem::GetUsers(TArray<UDreamUIInputUser*>& OutUsers) const
 {
 	OutUsers.Reset();
@@ -300,6 +415,14 @@ void UDreamUIInputSubsystem::ProcessFrame(float InDeltaSeconds)
 		return;
 	}
 	TGuardValue<bool> InFrame(bInFrame, true);
+	// The Slate guard, for a world whose game viewport client arrived after its play began.
+	if (!SlateGuardClient.IsValid())
+	{
+		if (const UWorld* World = GetWorld())
+		{
+			BindSlateNavigationGuard(World->GetGameViewport());
+		}
+	}
 	// In player order, and over a copy: a handler may add or remove a player.
 	TArray<UDreamUIInputUser*> AllUsers;
 	GetUsers(AllUsers);
@@ -465,7 +588,9 @@ UDreamEventSystem* UDreamUIInputSubsystem::GetOrCreateImplicitEventSystem(int32 
 	{
 		return Found->Get();
 	}
-	UDreamUIInputUser* User = GetOrCreateUser(InUserIndex);
+	// Somebody's: a Blueprint asking for player 3's event system in a one-player game is told there is none, rather than
+	// handed one that speaks for a player made up on the spot.
+	UDreamUIInputUser* User = HasPlayerAt(InUserIndex) ? GetOrCreateUser(InUserIndex) : nullptr;
 	if (User == nullptr)
 	{
 		return nullptr;
@@ -568,7 +693,13 @@ bool UDreamUIInputSubsystem::FocusForNavigation(UDreamWidget* InWidget, int32 In
 	{
 		return false;
 	}
-	UDreamUIInputUser* User = GetOrCreateUser(InUserIndex);
+	// The player is made when it has none yet -- a scope pushed for player 1 before anything else asked about player 1
+	// still puts their focus somewhere -- but only for an index that is somebody's (HasPlayerAt).
+	UDreamUIInputUser* User = GetUser(InUserIndex);
+	if (User == nullptr && HasPlayerAt(InUserIndex))
+	{
+		User = GetOrCreateUser(InUserIndex);
+	}
 	if (User == nullptr || User->IsShutDown())
 	{
 		return false;
@@ -579,10 +710,23 @@ bool UDreamUIInputSubsystem::FocusForNavigation(UDreamWidget* InWidget, int32 In
 		return false;
 	}
 	// The cursor before the selection: a select handler that moves focus on again moves the cursor with it, and the two
-	// agree wherever that ends -- written after, the cursor would be left here with the focus somewhere else.
+	// agree wherever that ends -- written after, the cursor would be left here with the focus somewhere else. Code moved
+	// it, unless a navigation step is landing, which records its own cause.
 	Navigation->SetHighlightedWidgetForNavigation(InWidget);
-	User->SetSelectWidget(InWidget, Navigation);
+	User->SetSelectWidgetForCause(InWidget, Navigation, EDreamUIFocusCause::Script);
 	return User->GetFocusedWidget() == InWidget;
+}
+
+EDreamUIFocusCause UDreamUIInputSubsystem::GetFocusCause(int32 InUserIndex) const
+{
+	const UDreamUIInputUser* User = GetUser(InUserIndex);
+	return User != nullptr ? User->GetFocusCause() : EDreamUIFocusCause::None;
+}
+
+bool UDreamUIInputSubsystem::IsFocusVisible(int32 InUserIndex) const
+{
+	const UDreamUIInputUser* User = GetUser(InUserIndex);
+	return User != nullptr ? User->IsFocusVisible() : !UDreamGUISettings::Get()->bFocusVisibleOnlyFromKeys;
 }
 
 UDreamWidget* UDreamUIInputSubsystem::ResolveScopeFocusTarget(int32 InUserIndex) const
@@ -601,9 +745,8 @@ bool UDreamUIInputSubsystem::SetFocus(UDreamWidget* InWidget, int32 InUserIndex,
 		return false;
 	}
 	UDreamPointerEventData* EventData = User->GetPointerEventData(InPointerId, true);
-	User->SetSelectWidget(InWidget, EventData);
-	// The navigation cursor has to move with focus, or the next directional press starts from wherever focus USED
-	// to be and appears to teleport.
+	User->SetSelectWidgetForCause(InWidget, EventData, EDreamUIFocusCause::Script);
+	// The navigation cursor moves with the focus, as a step moves both: what reads the highlight finds it on the focus.
 	if (EventData != nullptr)
 	{
 		EventData->SetHighlightedWidgetForNavigation(InWidget);
@@ -626,8 +769,8 @@ void UDreamUIInputSubsystem::ClearFocus(UDreamWidget* InWidget, int32 InUserInde
 		return;
 	}
 	User->SetSelectWidget(nullptr, User->GetPointerEventData(InPointerId, true));
-	// The cursor goes with the focus it marked. Left behind on a widget that was just hidden, the next directional move
-	// started from it and the next confirm -- which asks the cursor first -- pressed whatever navigation made of it.
+	// The cursor goes with the focus it marked: left behind on a widget that was just hidden, it went on marking it for
+	// everything that reads the highlight.
 	if (UDreamPointerEventData* Navigation = User->FindPointerEventData(DreamUIInputSubsystemFocusLocal::NavigationPointerID))
 	{
 		if (Navigation->HighlightWidgetForNavigation.Get() == InWidget)

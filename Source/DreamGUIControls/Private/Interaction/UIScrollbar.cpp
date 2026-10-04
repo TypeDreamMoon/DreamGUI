@@ -11,6 +11,23 @@ UUIScrollbar::UUIScrollbar()
 	// Driven by the pointer and by its scroll view, never by the frame or by its own move.
 	DeclareTickUnused(StaticClass());
 	DeclareTransformChangedUnused(StaticClass());
+	// Not a place navigation lands, nor a Tab stop: see the class comment.
+	bCanNavigateHere = false;
+}
+
+void UUIScrollbar::OnRegister()
+{
+	Super::OnRegister();
+	// The selectable has just made the widget focusable, as it does for every control. A bar navigation
+	// cannot land on is not one the player focuses either: SetFocus refuses it, and the Tab walk, which
+	// asks for a focusable stop, passes it by.
+	if (!bCanNavigateHere)
+	{
+		if (UDreamWidget* Widget = GetWidget())
+		{
+			Widget->SetIsFocusable(false);
+		}
+	}
 }
 
 void UUIScrollbar::Awake()

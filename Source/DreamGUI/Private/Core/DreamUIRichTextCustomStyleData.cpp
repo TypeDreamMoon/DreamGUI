@@ -66,7 +66,7 @@ bool FDreamUIRichTextCustomStyleItemData::UpgradeLegacyBools()
 	return bChanged;
 }
 
-void FDreamUIRichTextCustomStyleItemData::ApplyToRichTextParseResult(DreamUIRichTextParser::FRichTextParseResult& value, int32 InTagOrder)const
+void FDreamUIRichTextCustomStyleItemData::ApplyToRichTextParseResult(DreamUIRichTextParser::FRichTextParseResult& value, int32 InTagOrder, FName InStyleName)const
 {
 	using namespace DreamUIRichTextCustomStyleLocal;
 	ApplyBool(this->boldType, value.Bold, value.BoldOrder, InTagOrder);
@@ -145,6 +145,29 @@ void FDreamUIRichTextCustomStyleItemData::ApplyToRichTextParseResult(DreamUIRich
 		if (TakeProperty(value.SupOrSubOrder, InTagOrder))
 		{
 			DreamUIRichTextParser::ApplySupOrSub(value, DreamUIRichTextParser::ESupOrSubMode::Sub);
+		}
+		break;
+	}
+	// The paint takes its order as the colour takes ColorOrder, and the layout lets the higher of the two win: the innermost
+	// of a <color>, a <gradient>, a style's colour and a style's paint. Set names the paint after the entry -- the text looks
+	// it up by that name when it paints (FDreamTextPaint::ResolveTagPaint) -- so without a name it has nothing to set.
+	switch (this->paintType)
+	{
+	default:
+	case EDreamUIRichTextCustomStyleData_PaintType::KeepOrigin:
+		break;
+	case EDreamUIRichTextCustomStyleData_PaintType::Set:
+		if (!InStyleName.IsNone() && TakeProperty(value.PaintOrder, InTagOrder))
+		{
+			value.PaintName = InStyleName;
+			value.bPaintRemoved = false;
+		}
+		break;
+	case EDreamUIRichTextCustomStyleData_PaintType::None:
+		if (TakeProperty(value.PaintOrder, InTagOrder))
+		{
+			value.PaintName = NAME_None;
+			value.bPaintRemoved = true;
 		}
 		break;
 	}

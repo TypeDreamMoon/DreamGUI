@@ -23,6 +23,12 @@ void DreamUITextInputRouter::SetActiveTarget(UObject* InTarget, int32 InUserInde
 	}
 	// A field is one player's at a time: claiming a player's keyboard lets go of any other player's it held.
 	ClearActiveTarget(InTarget);
+	// Only a player who is somebody (UDreamUIInputSubsystem::HasPlayerAt): a claim for an index nobody is would make a
+	// phantom player to hold it, whose keyboard nobody types on.
+	if (!Input->HasPlayerAt(FMath::Max(0, InUserIndex)))
+	{
+		return;
+	}
 	if (UDreamUIInputUser* User = Input->GetOrCreateUser(FMath::Max(0, InUserIndex)))
 	{
 		User->SetTextTarget(InTarget);

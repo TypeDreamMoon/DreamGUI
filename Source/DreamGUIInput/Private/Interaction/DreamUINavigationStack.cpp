@@ -1,8 +1,10 @@
 // Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
 
 #include "Interaction/DreamUINavigationStack.h"
+#include "Core/DreamGUISettings.h"
 #include "Core/DreamUIInputServices.h"
 #include "Core/DreamUIManager.h"
+#include "Core/DreamWidgetNavigation.h"
 #include "Interaction/DreamUINavigationScope.h"
 #include "Interaction/DreamUIPopupLayer.h"
 #include "Interaction/UISelectable.h"
@@ -13,6 +15,17 @@
 
 namespace DreamUINavigationStackLocal
 {
+	/**
+	 * FindConfiningWidgetFor of InWidget's world's stack, for every player: what the core's navigation-only widgets are
+	 * kept inside (DreamUINavigationScan::FindConfiningWidget). The core cannot reach this module, so the stack hands it
+	 * this function when it starts.
+	 */
+	UDreamWidget* ResolveConfiningWidgetForCore(const UDreamWidget* InWidget)
+	{
+		const UDreamUINavigationStack* Stack = UDreamUINavigationStack::Get(InWidget);
+		return Stack != nullptr ? Stack->FindConfiningWidgetFor(InWidget, INDEX_NONE) : nullptr;
+	}
+
 	/**
 	 * InWidget and every widget above it in play -- registered, in a world that never began play (the designer, a bare
 	 * test world). A widget being torn down ends play parents first, so one coming down shows it above itself first.
@@ -43,6 +56,8 @@ void UDreamUINavigationStack::Initialize(FSubsystemCollectionBase& Collection)
 {
 	Super::Initialize(Collection);
 	DreamUI::EnrolWorldService(Collection, *this, *this);
+	// Process-wide and the same for every world, so every stack can set it: the function finds the asking widget's stack.
+	DreamUINavigationScan::SetConfiningWidgetResolver(&DreamUINavigationStackLocal::ResolveConfiningWidgetForCore);
 }
 
 void UDreamUINavigationStack::Deinitialize()
@@ -218,6 +233,28 @@ UDreamUINavigationScope* UDreamUINavigationStack::GetActiveScope(int32 InUserInd
 		}
 	}
 	return nullptr;
+}
+
+EDreamUIScopeInputMode UDreamUINavigationStack::GetEffectiveInputMode(int32 InUserIndex) const
+{
+	if (const UDreamUINavigationScope* Scope = GetActiveScope(InUserIndex))
+	{
+		return Scope->GetInputMode();
+	}
+	return UDreamGUISettings::Get()->InputModeWithoutScope;
+}
+
+UDreamWidget* UDreamUINavigationStack::FindConfiningWidgetForUser(int32 InUserIndex) const
+{
+	// The top scope only, as FindConfiningScopeFor reads it: a top scope that does not confine leaves the player free
+	// rather than handing the job down to a buried one that once did.
+	const UDreamUINavigationScope* Scope = GetActiveScope(InUserIndex);
+	if (Scope == nullptr || !Scope->GetConfineNavigation())
+	{
+		return nullptr;
+	}
+	UDreamWidget* ScopeWidget = Scope->GetWidget();
+	return IsValid(ScopeWidget) ? ScopeWidget : nullptr;
 }
 
 UDreamUINavigationScope* UDreamUINavigationStack::FindConfiningScopeFor(const UDreamWidget* InWidget, int32 InUserIndex) const

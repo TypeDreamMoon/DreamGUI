@@ -85,7 +85,29 @@ namespace DreamFontFaceResolverLocal
 				Names.Add(Language);
 			}
 		}
+		FDreamTextLanguage::AddImpliedChineseScript(CultureName, Names);
 		return Names;
+	}
+
+	/** A script subtag: four letters ("Hans", "Latn"). */
+	bool IsScriptSubtag(const FString& Subtag)
+	{
+		return Subtag.Len() == 4 && FChar::IsAlpha(Subtag[0]) && FChar::IsAlpha(Subtag[3]);
+	}
+
+	/** A region subtag: two letters ("CN") or three digits ("419"). */
+	bool IsRegionSubtag(const FString& Subtag)
+	{
+		return (Subtag.Len() == 2 && FChar::IsAlpha(Subtag[0]) && FChar::IsAlpha(Subtag[1]))
+			|| (Subtag.Len() == 3 && FChar::IsDigit(Subtag[0]) && FChar::IsDigit(Subtag[1]) && FChar::IsDigit(Subtag[2]));
+	}
+
+	/** A culture name's subtags, either separator. */
+	TArray<FString> SplitCultureName(const FString& CultureName)
+	{
+		TArray<FString> Subtags;
+		CultureName.Replace(TEXT("_"), TEXT("-")).ParseIntoArray(Subtags, TEXT("-"));
+		return Subtags;
 	}
 
 	FDreamFontFaceChoice MakeChoice(int32 FaceIndex, bool bCoversCluster, bool bCoversBase, bool bColor)
@@ -96,6 +118,58 @@ namespace DreamFontFaceResolverLocal
 		Choice.bCoversBase = bCoversBase;
 		Choice.bColor = bColor;
 		return Choice;
+	}
+}
+
+void FDreamTextLanguage::AddImpliedChineseScript(const FString& InCultureName, TArray<FString>& InOutNames)
+{
+	using namespace DreamFontFaceResolverLocal;
+	const TArray<FString> Subtags = SplitCultureName(InCultureName);
+	if (Subtags.Num() == 0 || !Subtags[0].Equals(TEXT("zh"), ESearchCase::IgnoreCase))
+	{
+		return;
+	}
+	for (const FString& Name : InOutNames)
+	{
+		const TArray<FString> NameSubtags = SplitCultureName(Name);
+		if (NameSubtags.Num() > 1 && IsScriptSubtag(NameSubtags[1]))
+		{
+			return;
+		}
+	}
+	FString Script;
+	FString Region;
+	for (int32 Index = 1; Index < Subtags.Num(); ++Index)
+	{
+		if (Script.IsEmpty() && IsScriptSubtag(Subtags[Index]))
+		{
+			Script = Subtags[Index];
+		}
+		else if (Region.IsEmpty() && IsRegionSubtag(Subtags[Index]))
+		{
+			Region = Subtags[Index].ToUpper();
+		}
+	}
+	if (Script.IsEmpty())
+	{
+		// What ICU's likely subtags say: Traditional where Taiwan, Hong Kong and Macao write it, Simplified elsewhere.
+		Script = Region == TEXT("TW") || Region == TEXT("HK") || Region == TEXT("MO") ? TEXT("Hant") : TEXT("Hans");
+	}
+	const FString Language = Subtags[0].ToLower();
+	const FString WithScript = Language + TEXT("-") + Script;
+	if (!Region.IsEmpty())
+	{
+		const FString Full = WithScript + TEXT("-") + Region;
+		if (!InOutNames.Contains(Full))
+		{
+			InOutNames.Insert(Full, 0);
+		}
+	}
+	if (!InOutNames.Contains(WithScript))
+	{
+		// Before the language alone, where the full data puts it.
+		const int32 LanguageAlone = InOutNames.IndexOfByPredicate([&Language](const FString& Name) { return Name.Equals(Language, ESearchCase::IgnoreCase); });
+		InOutNames.Insert(WithScript, LanguageAlone == INDEX_NONE ? InOutNames.Num() : LanguageAlone);
 	}
 }
 
@@ -215,12 +289,23 @@ FDreamFontFaceChoice FDreamFontFaceResolver::Resolve(const FDreamFontFaceTable& 
 		{
 			continue;
 		}
+		// A caller that cannot draw a colour glyph never gets one: the face is passed over as if the font did not have it.
+		// Asked here, of a face that has the base, so the order of questions stays what it is with colour faces allowed.
+		int32 KnownKind = INDEX_NONE;
+		if (!Query.bAllowColorFaces)
+		{
+			if (IsColorFace(FaceIndex))
+			{
+				continue;
+			}
+			KnownKind = 0;
+		}
 		const bool bWhole = HasRest(FaceIndex);
 		if (Order == EColorOrder::AsListed)
 		{
 			if (bWhole)
 			{
-				return DreamFontFaceResolverLocal::MakeChoice(FaceIndex, true, true, IsColorFace(FaceIndex));
+				return DreamFontFaceResolverLocal::MakeChoice(FaceIndex, true, true, KnownKind == 0 ? false : IsColorFace(FaceIndex));
 			}
 			if (FirstBase[0] == INDEX_NONE)
 			{
@@ -228,7 +313,7 @@ FDreamFontFaceChoice FDreamFontFaceResolver::Resolve(const FDreamFontFaceTable& 
 			}
 			continue;
 		}
-		const int32 Kind = IsColorFace(FaceIndex) ? 1 : 0;
+		const int32 Kind = KnownKind != INDEX_NONE ? KnownKind : (IsColorFace(FaceIndex) ? 1 : 0);
 		if (bWhole)
 		{
 			// Nothing before it in the reordered list had the whole cluster.
@@ -251,7 +336,7 @@ FDreamFontFaceChoice FDreamFontFaceResolver::Resolve(const FDreamFontFaceTable& 
 	{
 		if (FirstBase[0] != INDEX_NONE)
 		{
-			return DreamFontFaceResolverLocal::MakeChoice(FirstBase[0], false, true, IsColorFace(FirstBase[0]));
+			return DreamFontFaceResolverLocal::MakeChoice(FirstBase[0], false, true, Query.bAllowColorFaces && IsColorFace(FirstBase[0]));
 		}
 	}
 	else
@@ -270,8 +355,8 @@ FDreamFontFaceChoice FDreamFontFaceResolver::Resolve(const FDreamFontFaceTable& 
 			return DreamFontFaceResolverLocal::MakeChoice(FirstBase[OtherKind], false, true, OtherKind == 1);
 		}
 	}
-	// Nobody has it: the primary face's .notdef.
-	return DreamFontFaceResolverLocal::MakeChoice(0, false, false, IsColorFace(0));
+	// Nobody has it: the primary face's .notdef, never drawn in colour for a caller that cannot draw colour.
+	return DreamFontFaceResolverLocal::MakeChoice(0, false, false, Query.bAllowColorFaces && IsColorFace(0));
 }
 
 FDreamFontFaceChoice FDreamFontFaceResolver::Resolve(UDreamUIFontData_BaseObject* Font, const FDreamFontFaceQuery& Query)

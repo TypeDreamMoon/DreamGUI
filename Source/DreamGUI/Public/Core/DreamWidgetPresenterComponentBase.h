@@ -112,8 +112,14 @@ protected:
 	void NotifyWidgetLoaded();
 
 public:
+	/**
+	 * The focus ring of the tree this component hosts, made from NavigationSelectionClass (else the project's) the first
+	 * time it is asked for. Shown and hidden by the selectables it marks, while their player's focus is to be drawn.
+	 */
 	UFUNCTION(BlueprintCallable, Category=DreamGUI)
 	UUINavigationInputSelectionHandler* GetNavigationSelection();
+	/** GetNavigationSelection's ring when it exists already; never makes one. */
+	UUINavigationInputSelectionHandler* FindNavigationSelection() const;
 	UFUNCTION(BlueprintCallable, Category=DreamGUI)
 	UDreamCanvas* GetLoadedCanvas()const{return RootCanvas.Get();}
 	UFUNCTION(BlueprintCallable, Category=DreamGUI)

@@ -53,7 +53,11 @@ struct FDreamPieRigOptions
 	 * to overrule it.
 	 */
 	FIntPoint ViewportSize = FIntPoint(1280, 720);
-	/** Which input actor carries the player's input. ModuleOnly is the headless rig's and is refused here. */
+	/**
+	 * Which input actor carries the player's input. ModuleOnly and SlateSource are the headless rig's and are refused
+	 * here: a play session's Slate source is Slate's own pre-processor, so a test that wants it turns it on from WhenReady
+	 * (UDreamUIInputSubsystem::SetSlateInputSourceEnabled) and presses keys through Slate with KeyThroughSlate.
+	 */
 	EDreamRigInputHost InputHost = EDreamRigInputHost::StandaloneActor;
 	EDreamPieViewportDestination Destination = EDreamPieViewportDestination::LevelEditorViewport;
 	/** Where the player starts and which way they look. The map is blank, so this is the only thing in view that anybody put there. */
@@ -257,6 +261,35 @@ public:
 	 */
 	static FDreamDriverSequence& TypeThroughViewport(FDreamDriverSequence& InSequence, const FString& InText);
 
+	/**
+	 * Add steps to InSequence that press and let go of InKey the way the platform delivers a key to the editor: Slate user
+	 * 0's FSlateApplication::ProcessKeyDownEvent with InModifiers as its modifier state -- for Tab, ProcessKeyCharEvent with
+	 * '\t' right after, as a WM_CHAR follows the WM_KEYDOWN -- then, on the next engine frame, ProcessKeyUpEvent. Sent to
+	 * wherever Slate's keyboard focus is, unchecked: what a test of where the focus goes reads afterwards
+	 * (IsKeyboardFocusOnViewport), Slate's own Tab moving it into a focusable UMG widget on the viewport being the case.
+	 */
+	static FDreamDriverSequence& KeyThroughSlate(FDreamDriverSequence& InSequence, const FKey& InKey, EDreamDriverModifierKeys InModifiers = EDreamDriverModifierKeys::None);
+	/** Whether Slate user 0's keyboard focus is on the session's viewport widget itself now (not on a widget inside it). False when the rig is not up. */
+	bool IsKeyboardFocusOnViewport() const;
+	/*
+	 * Read as the viewport widget itself. Every widget inside it belongs to what the viewport shows -- the game's layers,
+	 * a UMG widget added to the viewport among them, and in a level editor viewport the editor's own toolbar -- so the
+	 * keyboard focus on any of them is focus Slate has taken from the viewport: Slate's Tab moving it into a focusable
+	 * UMG widget answers false, which is what a test of that reads this for. KeyThroughSlate's modifier keys go down and
+	 * up as their own key events around the key's, as a keyboard sends them, so a player's input sees them held.
+	 */
+
+	/**
+	 * Queue a level travel the way a game changes level: InBeforeTravel on the play world (where a test takes weak pointers
+	 * to what must come down), every play-world pointer of the rig and its context let go of, UGameplayStatics::OpenLevel
+	 * to InMapPackage ("/Engine/Maps/Entry"), then -- once the new world's player is ready -- the rig built on the new world
+	 * as Start builds it (input actor, screen root, camera, SettleFrames) and InAfterTravel run on it. WhenReady and Sequence
+	 * aim at the new world afterwards. A travel that has not arrived in StartTimeoutSeconds fails the rig, as a start does.
+	 */
+	void Travel(const FString& InMapPackage, TFunction<void(UWorld&)> InBeforeTravel = nullptr, TFunction<void(UWorld&)> InAfterTravel = nullptr);
+	/** Travels that arrived since Start. */
+	int32 GetTravelCount() const { return TravelCount; }
+
 	// ---------------------------------------------------------------- state
 
 	/** Up: the session is running, the context is filled, and Finish has not begun. */
@@ -357,6 +390,13 @@ public:
 private:
 	/** One Update of the way up, called once per engine frame by the command Start queues. True when done, either way. */
 	bool UpdateStart();
+
+	/** A travel Travel queued: what it was asked for and how far it has got. Defined in the .cpp. */
+	struct FTravelRequest;
+	/** One Update of a travel, called once per engine frame by the command Travel queues. True when done, either way. */
+	bool UpdateTravel(FTravelRequest& InRequest);
+	/** Report InReason on the test, stay down, and end the travel. */
+	bool FailTravel(FTravelRequest& InRequest, const FString& InReason);
 	/** One Update of the way down. */
 	bool UpdateFinish();
 
@@ -426,6 +466,8 @@ private:
 	EStartPhase StartPhase = EStartPhase::NotStarted;
 	EFinishPhase FinishPhase = EFinishPhase::NotStarted;
 	bool bAlive = false;
+	/** See GetTravelCount. */
+	int32 TravelCount = 0;
 	/** This rig asked for the session that is (or was) running, so ending it is this rig's job. */
 	bool bSessionStarted = false;
 	bool bSessionEnded = false;

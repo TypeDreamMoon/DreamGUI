@@ -7,6 +7,7 @@
 #include "ShaderParameterStruct.h"
 #include "RHIStaticStates.h"
 #include "RHITextureReference.h"
+#include "UObject/WeakObjectPtr.h"
 #include "UObject/WeakObjectPtrTemplates.h"
 #include "DreamUIRender/DreamUIBlendMode.h"
 
@@ -26,6 +27,7 @@ struct FDreamUIBuiltInTextures
 	const UTexture* ClipData = nullptr;
 	const UTexture* RenderLayerTable = nullptr;
 	const UTexture* RectBlockData = nullptr;
+	const UTexture* PaintData = nullptr;
 };
 
 /**
@@ -59,6 +61,12 @@ struct FDreamUIBuiltInDrawParams
 	 * the draws of a world of panels bind the same textures one after another.
 	 */
 	TWeakObjectPtr<const UTexture> RectBlockData;
+	/**
+	 * The world's paint rows (UDreamUIManagerWorldSubsystem::GetPaintRowsTexture): the gradients painted text is filled
+	 * with and every painted text's table. Bound with every built-in draw of a world, painted or not, as the rect block rows
+	 * are; null where the world has none.
+	 */
+	TWeakObjectPtr<const UTexture> PaintData;
 	/** Render thread: what a draw binds. Null where there is no texture; the draw then binds a fallback. */
 	FTextureReferenceRHIRef MainTextureRHI;
 	FSamplerStateRHIRef MainSamplerRHI;
@@ -68,9 +76,13 @@ struct FDreamUIBuiltInDrawParams
 	FTextureReferenceRHIRef ClipDataTextureRHI;
 	FTextureReferenceRHIRef RenderLayerTableRHI;
 	FTextureReferenceRHIRef RectBlockDataRHI;
+	FTextureReferenceRHIRef PaintDataRHI;
 	/** Atlas slice size in texels. */
 	FVector2f FontAtlasSize = FVector2f(1.0f, 1.0f);
-	/** Distance-field range in texels (twice the spread); 0 for non-field atlases. */
+	/**
+	 * Distance-field range in texels (twice the spread); 0 for non-field atlases. Negative when UDreamGUISettings::
+	 * bFieldTextCorrection is on (UDreamCanvas::MakeFontAtlasInfo); the shaders read abs(z) and the sign.
+	 */
 	float FontFieldRangeTexels = 0.0f;
 	/** Texels per em at the atlas's sample size; negative when the small-text correction is off (the shader reads the sign). */
 	float FontEmTexels = 0.0f;
@@ -130,6 +142,8 @@ public:
 		SHADER_PARAMETER_TEXTURE(Texture2D, DreamUI_WidgetDataTex)
 		SHADER_PARAMETER_TEXTURE(Texture2D, DreamUI_ClipDataTex)
 		SHADER_PARAMETER_TEXTURE(Texture2D, DreamUI_RectBlockDataTex)
+		/** The world's paint rows (FDreamUIBuiltInDrawParams::PaintData), read by Load: no sampler. */
+		SHADER_PARAMETER_TEXTURE(Texture2D, DreamUI_PaintDataTex)
 		SHADER_PARAMETER_TEXTURE(Texture2D, DreamUI_SceneDepthTex)
 		SHADER_PARAMETER_SAMPLER(SamplerState, DreamUI_SceneDepthTexSampler)
 		SHADER_PARAMETER(FVector4f, DreamUI_SceneDepthTextureScaleOffset)

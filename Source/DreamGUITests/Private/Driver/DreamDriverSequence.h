@@ -63,8 +63,18 @@ struct FDreamDriverContext
 	ULocalPlayer* LocalPlayer = nullptr;
 	/** The ADream*InputEventSystemActor the input goes through, when the input host is an actor. */
 	AActor* InputActor = nullptr;
-	/** Where input enters. Anything but ModuleOnly routes buttons, wheel, navigation, keys and touch through the game host. */
+	/**
+	 * Where input enters. The two actor hosts route buttons, wheel, navigation, keys and touch through the game host
+	 * (DreamDriverGameHost); SlateSource sends them to the world's Slate input source as Slate's events
+	 * (DreamDriverSlateHost); ModuleOnly puts them straight into the module.
+	 */
 	EDreamRigInputHost InputHost = EDreamRigInputHost::ModuleOnly;
+	/**
+	 * Under SlateSource, Slate's mouse as the driver last left it: where it is in viewport pixels, and the buttons held
+	 * down on it. The module keeps no cursor of its own then, so this is where a relative move starts.
+	 */
+	FVector2D SlateMousePixel = FVector2D::ZeroVector;
+	TSet<FKey> SlateMouseButtonsHeld;
 	/** The eye a world-space pointer looks through, once one has been attached. Null keeps every pixel computation exactly as it was. */
 	TSharedPtr<FDreamDriverVirtualCamera> Camera;
 	/** Set by a rig whose frames are the ENGINE's (PIE). Perform and PumpOneFrame refuse to run then: the engine is already the pump. */
@@ -292,6 +302,26 @@ public:
 	 * key selector -- which is how a real key event carries it.
 	 */
 	FDreamDriverSequence& TypeChord(const FKey& InModifier, const FKey& InKey);
+
+	/**
+	 * A key pressed and let go of the way the rig's input host delivers a key, with InModifiers held: under ModuleOnly
+	 * through DreamUIKeyRouting::RouteKey for the context's player, the chord as its FModifierKeysState; under an actor
+	 * host through the player controller's input stack, the modifier keys pressed around it; under SlateSource as
+	 * FKeyEvents to the world's Slate input source. So a field being edited, a binding, navigation, Back, paging and tab
+	 * switching each get it in the order a game gives it to them, unlike Type. KeyDown then KeyUp: two steps, a frame each,
+	 * as Navigate's, so the pipeline acts on the press before the release comes. Fails when the rig has no player to route for.
+	 */
+	FDreamDriverSequence& Key(const FKey& InKey, EDreamDriverModifierKeys InModifiers = EDreamDriverModifierKeys::None);
+	/** Key's press alone, and its release alone, each a step of one frame: a key held across frames, which navigation repeats. */
+	FDreamDriverSequence& KeyDown(const FKey& InKey, EDreamDriverModifierKeys InModifiers = EDreamDriverModifierKeys::None);
+	FDreamDriverSequence& KeyUp(const FKey& InKey, EDreamDriverModifierKeys InModifiers = EDreamDriverModifierKeys::None);
+	/**
+	 * Tab, and Shift+Tab, as a keyboard sends them: Key(EKeys::Tab) -- with Shift for ShiftTab -- and, in the press's step
+	 * right after the key, the character '\t' through the road characters take in the rig's host (the viewport's
+	 * characters, UDreamUIInputSubsystem::HandleViewportCharacter), which a field being edited might type and must not.
+	 */
+	FDreamDriverSequence& Tab();
+	FDreamDriverSequence& ShiftTab();
 
 	/** Let InFrameCount frames pass. */
 	FDreamDriverSequence& WaitFrames(int32 InFrameCount);

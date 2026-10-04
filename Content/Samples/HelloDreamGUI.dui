@@ -3,7 +3,7 @@
 // WHAT TO DO WITH IT
 //   1. Content Browser > right click > User Interface > Dream Widget Blueprint. Put it wherever the
 //      `class` line below says, or edit that line to match where you put it -- the two have to agree.
-//   2. Open it, and in the designer toolbar use Pick Text Source to point the class at this file.
+//   2. Open it, and in the designer toolbar use Set Source File... to point the class at this file.
 //      Copy it into your own project first if you want to edit it; the one in the plugin folder is a
 //      reference, and a plugin update overwrites it.
 //   3. Compile. The hierarchy below is what you get, and the designer edits the same class.

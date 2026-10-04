@@ -112,8 +112,49 @@ enum class EDreamUICoverageGlyphFlags : uint8
 	SyntheticBold = 1 << 0,
 	/** Sheared about the baseline by the font's italic slope, after hinting. */
 	SyntheticItalic = 1 << 1,
+	/**
+	 * Rasterized with no hinting at all, the outline where the field has it: the face a coverage glyph draws over the
+	 * field's effects copy when its outline is thin, so the two line up exactly once the snap shift is taken out
+	 * (UDreamGUISettings::SmallTextEffectFace).
+	 */
+	Unhinted = 1 << 2,
 };
 ENUM_CLASS_FLAGS(EDreamUICoverageGlyphFlags);
+
+/**
+ * What a font's glyph atlas takes, for the memory report (DreamGUI.Memory). A font with no atlas of its own leaves it all
+ * zero; a fallback or style face's font reports its own, so a family is the sum of its fonts.
+ */
+struct FDreamUIFontMemoryInfo
+{
+	/** Slices of the atlas's Texture2DArray, each slice's side in texels, and the bytes a texel takes. */
+	int32 AtlasSlices = 0;
+	int32 AtlasSliceSize = 0;
+	int32 AtlasBytesPerTexel = 0;
+	/** The atlas on the GPU, and the copy of it the font keeps on the CPU (what uploads and growth are made from), in bytes. */
+	int64 AtlasGPUBytes = 0;
+	int64 AtlasCPUBytes = 0;
+	/**
+	 * The atlas's cells: all of them; held by the field packer (field and colour glyphs); held by coverage glyphs; retired
+	 * coverage cells not given back yet (held by texts, or retired this frame); free. They add up to the total.
+	 */
+	int32 CellsTotal = 0;
+	int32 FieldCells = 0;
+	int32 CoverageCells = 0;
+	int32 RetiredCoverageCells = 0;
+	int32 FreeCells = 0;
+	/** Glyphs cached: field glyphs, colour glyphs (emoji) and small-text coverage glyphs, and the texels the colour glyphs cover. */
+	int32 FieldGlyphs = 0;
+	int32 ColorGlyphs = 0;
+	int64 ColorGlyphTexels = 0;
+	int32 CoverageGlyphs = 0;
+	/**
+	 * Font file bytes this asset holds in memory for its own face: its embedded or loaded file and the worker's shared copy
+	 * of it. Fallbacks and style faces report their own -- each is a font asset of its own -- so the sum over every font
+	 * counts each file once.
+	 */
+	int64 FaceBytes = 0;
+};
 
 /**
  * A coverage glyph in a font's atlas, for small text: the glyph hinted for its pixel size and rasterized as 8-bit
@@ -283,7 +324,8 @@ public:
 	/**
 	 * Small text from coverage glyphs (FDreamUICoverageGlyph). Whether this font can draw small sizes that way at all: a
 	 * distance-field font on the outline (multi-channel, BGRA) field whose coverage is on -- its own SmallTextCoverage, or
-	 * the project's UDreamGUISettings::bSmallTextCoverage when that is Inherit.
+	 * the project's answer when that is Inherit (UDreamGUISettings::IsSmallTextCoverageEnabled: bSmallTextCoverage, or the
+	 * console variable DreamGUI.Text.SmallTextCoverage). The variable at 0 turns off a font set On as well.
 	 */
 	virtual bool SupportsCoverageGlyphs() const { return false; }
 	/** The most device pixels per em an item may have and still be drawn from coverage: the font's own limit, else the project's. */
@@ -295,10 +337,33 @@ public:
 	 * support, a colour or bitmap-only face, a raster that failed -- and the caller draws its field quad and does not wait.
 	 * Every glyph handed out goes stale when the font's coverage cells are flushed (their budget ran out, or the whole
 	 * atlas was flushed); OnCoverageGlyphsChanged is broadcast then.
+	 * Past the cell cap -- the font's coverage cells in use and its retired ones not given back yet (held by texts,
+	 * MoveCoverageHold) more than twice UDreamUISettings::GetMaxCoverageCells() -- a glyph not made yet is neither made nor
+	 * queued, and comes back true with bPending, not false: the caller draws its field quad meanwhile, as for any pending
+	 * glyph, and paints again when OnCoverageGlyphsChanged says cells came back (a false would leave a text whose glyphs were
+	 * all refused never asking again). The cap is logged once per font. A glyph made already is still answered.
 	 * @param Size26Dot6  Pixels per em to rasterize at, 26.6 fixed point: round(GlyphSize * RasterScale * 64).
 	 * @param Flags       Synthetic styles to bake into the raster.
 	 */
 	virtual bool GetCoverageGlyph(int32 FaceIndex, uint32 GlyphIndex, int32 Size26Dot6, EDreamUICoverageGlyphFlags Flags, FDreamUICoverageGlyph& OutGlyph) { return false; }
+	/**
+	 * The epoch the coverage glyphs this font hands out now belong to: it moves on at every coverage flush, and when a whole
+	 * atlas flush drops the coverage glyphs. Never 0 for a font that draws from coverage, which starts at 1; 0 for one
+	 * that never does. Game thread.
+	 */
+	virtual uint32 GetCoverageEpoch() const { return 0; }
+	/**
+	 * A text that drew coverage glyphs of epoch InToEpoch at its last paint holds that epoch; it lets go of the one it held,
+	 * InFromEpoch, in the same call. 0 on either side is no epoch. The cells a coverage flush retires stay out of the pool
+	 * -- never zeroed, never handed out again -- while any text holds their epoch, and go back once the frame of the flush
+	 * has passed and none does. So a world that draws without ticking (a paused play session) never samples a cell another
+	 * world reused. Every text balances its holds: after each paint (the font's current epoch when the paint drew any item
+	 * from coverage, else 0), and back to 0 when it lets go of the font or is destroyed. A hold never let go keeps its cells
+	 * out for good, and they count towards the cap past which new glyphs wait (GetCoverageGlyph). Game thread.
+	 */
+	virtual void MoveCoverageHold(uint32 InFromEpoch, uint32 InToEpoch) {}
+	/** What the atlas takes; see FDreamUIFontMemoryInfo. Game thread. */
+	virtual void GetMemoryInfo(FDreamUIFontMemoryInfo& OutInfo) const {}
 
 
 	virtual void AddUIText(UDreamText* InText) {}
@@ -325,9 +390,9 @@ public:
 	FDreamUIFontGlyphsReadyEvent OnGlyphsReady;
 	DECLARE_EVENT(UDreamUIFontData_BaseObject, FDreamUIFontCoverageGlyphsEvent);
 	/**
-	 * Called on the game thread when coverage glyphs handed out as pending have landed (or failed), and when the font's
-	 * coverage cells were flushed. A repaint, never a relayout: a coverage glyph replaces a quad at paint time and changes
-	 * no advance, which is why this is not OnGlyphsReady.
+	 * Called on the game thread when coverage glyphs handed out as pending have landed (or failed), when the font's
+	 * coverage cells were flushed, and when cells came back after their cap kept new glyphs from being made. A repaint, never
+	 * a relayout: a coverage glyph replaces a quad at paint time and changes no advance, which is why this is not OnGlyphsReady.
 	 */
 	FDreamUIFontCoverageGlyphsEvent OnCoverageGlyphsChanged;
 protected:

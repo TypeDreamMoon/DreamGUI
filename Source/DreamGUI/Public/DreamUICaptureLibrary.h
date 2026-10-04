@@ -47,7 +47,9 @@ public:
 
 	/**
 	 * The viewport InWorldContextObject's world is shown in -- the game's, or in the editor a level viewport showing
-	 * that world -- as a PNG at InFilePath: the scene with every panel on it, as a player sees it.
+	 * that world -- as a PNG at InFilePath: the scene with every panel on it, as a player sees it. A game's viewport is
+	 * drawn straight into its window and can be read only while it draws a frame, so in a game this returns false; take
+	 * the picture with the engine's screenshot request there (HighResShot, FScreenshotRequest).
 	 */
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI|Capture", meta = (WorldContext = "InWorldContextObject"))
 	static bool SaveViewportToPng(const UObject* InWorldContextObject, const FString& InFilePath);
@@ -68,7 +70,8 @@ public:
 
 	/**
 	 * The pixels InViewport shows, top row first, made opaque: a viewport's alpha is whatever the scene left in it,
-	 * not how much of each pixel was drawn, and a PNG shows it as holes.
+	 * not how much of each pixel was drawn, and a PNG shows it as holes. False, with nothing read, for a viewport drawn
+	 * straight into its window (a game's): between frames it has no texture to read.
 	 */
 	static bool ReadViewportPixels(FViewport* InViewport, TArray<FColor>& OutPixels, FIntPoint& OutSize);
 

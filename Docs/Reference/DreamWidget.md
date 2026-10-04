@@ -51,6 +51,9 @@ Base class for almost all UI related things.
 | `LayoutSelf` | `TObjectPtr<UDreamLayoutSelf>` | LayoutSelf | yes | read only |  |
 | `PanelSlot` | `TObjectPtr<UDreamPanelSlot>` | PanelSlot | yes | read only | Parent-panel-owned layout data. This is separate from LayoutSelf so legacy Flex/Grid assets remain valid. |
 | `bIsFocusable` | `bool` | Interaction|Focus | yes | read only |  |
+| `bIsTabStop` | `bool` | Interaction|Focus | yes | read only | Tab and Shift+Tab stop here, when it is focusable and can be navigated to. Off leaves it to the arrows, the pad, a pointer and code -- a browser's tabindex="-1". |
+| `TabIndex` | `int32` | Interaction|Focus | yes | read only | Its place in Tab order among its siblings: lower first, siblings with the same index in the hierarchy's order. Only siblings are compared. |
+| `TabNavigation` | `EDreamWidgetTabNavigation` | Interaction|Focus | yes | read only | How the Tab stops inside it take part in Tab order; see EDreamWidgetTabNavigation. |
 | `Cursor` | `TEnumAsByte<EMouseCursor::Type>` | Interaction | yes | read only |  |
 | `ToolTipText` | `FText` | Interaction | yes | read only |  |
 | `ToolTipWidgetClass` | `TSubclassOf<UDreamUserWidget>` | Interaction | yes | read only | Show THIS widget class as the tooltip instead of the built-in text bubble. Beats ToolTipText when both are set, matching the order the tooltip service already resolves its two content paths in. |
@@ -129,6 +132,7 @@ Base class for almost all UI related things.
 | `bool GetIsEnabled()` | pure | This widget's own enabled switch. Ask GetIsEnabledInHierarchy for the answer that counts. |
 | `bool GetIsEnabledInHierarchy()` | pure | True when this widget and every ancestor are enabled. The cascaded answer. |
 | `bool GetIsFocusable()` | pure | Get Is Focusable |
+| `bool GetIsTabStop()` | pure | See bIsTabStop. |
 | `UDreamLayoutContainer* GetLayoutContainer()` | pure | Get Layout Container |
 | `UDreamLayoutSelf* GetLayoutSelf()` | pure | Get Layout Self |
 | `bool GetLayoutVisibleInHierarchy()` | pure | Hidden still participates in layout; Collapsed does not. |
@@ -181,6 +185,8 @@ Base class for almost all UI related things.
 | `int32 GetSiblingIndex()` | pure | Get Sibling Index |
 | `FVector2D GetSize()` | pure | Get Size |
 | `FVector2D GetSizeDelta()` | pure | Get Size Delta |
+| `int32 GetTabIndex()` | pure | See TabIndex. |
+| `EDreamWidgetTabNavigation GetTabNavigation()` | pure | See TabNavigation. |
 | `FText GetToolTipText()` | pure | Get Tool Tip Text |
 | `TSubclassOf<UDreamUserWidget> GetToolTipWidgetClass()` | pure | Get Tool Tip Widget Class |
 | `FVector GetUpVector()` | pure | Get Up Vector |
@@ -275,6 +281,7 @@ Base class for almost all UI related things.
 | `void SetInteractable(EDreamWidgetInteractableType Value)` | callable | Set Interactable |
 | `void SetIsEnabled(bool bInIsEnabled)` | callable | Disable (or re-enable) this widget and everything under it: the subtree stops taking input and every control in it takes on its disabled look, because both read GetInteractableInHierarchy and this is AND-ed into it. |
 | `void SetIsFocusable(bool Value)` | callable | Turning this off also gives up any focus the widget currently holds. |
+| `void SetIsTabStop(bool Value)` | callable | Set Is Tab Stop |
 | `bool SetKeyboardFocus()` | callable | Take focus on the owning player's event system. Returns false when it could not be given. |
 | `void SetNavigationBoundaryRule(EDreamUINavigationBoundaryRule Value)` | callable | Set Navigation Boundary Rule |
 | `void SetParent(UDreamWidget* InParent, bool InKeepWorldPosition, int32 InSiblingIndex)` | callable | Set parent of this widget, could use null to detach it from origin parent. @InKeepWorldPosition true - keep world position & rotation & scale after change parent, false - keep relative position & rotation & scale. @InSiblingIndex if InParent is a valid widget, then put the widget at specific index in parent's children list, -1 or other out of range value means the widget will be put at tail. |
@@ -303,6 +310,8 @@ Base class for almost all UI related things.
 | `void SetSiblingIndex(int32 Value)` | callable | Set the sibling index of this widget in its parent's children list. |
 | `void SetSizeDelta(FVector2D Value)` | callable | Set Size Delta |
 | `void SetSizeForLayoutAnimation(FVector2D Position)` | callable | Set Size for Layout Animation |
+| `void SetTabIndex(int32 Value)` | callable | Set Tab Index |
+| `void SetTabNavigation(EDreamWidgetTabNavigation Value)` | callable | Set Tab Navigation |
 | `void SetToolTipText(FText Value)` | callable | Set Tool Tip Text |
 | `void SetToolTipWidgetClass(TSubclassOf<UDreamUserWidget> Value)` | callable | UMG's SetToolTip, by class. Null goes back to the text bubble. |
 | `bool SetUserFocus(APlayerController* InPlayerController)` | callable | Take focus on a named player's event system. |

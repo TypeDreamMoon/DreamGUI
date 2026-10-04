@@ -116,7 +116,8 @@ bool FDreamWidgetDetailsReAddsEveryHiddenCategoryRowTest::RunTest(const FString&
 		// The rest of the same list, so a future edit that drops one fails here rather than in a bug
 		// report six months later.
 		TEXT("DisplayName"), TEXT("bWidgetActive"), TEXT("Visibility"), TEXT("Interactable"),
-		TEXT("Raycastable"), TEXT("bIsFocusable"), TEXT("Cursor"), TEXT("ToolTipText"),
+		TEXT("Raycastable"), TEXT("bIsFocusable"), TEXT("bIsTabStop"), TEXT("TabIndex"), TEXT("TabNavigation"),
+		TEXT("Cursor"), TEXT("ToolTipText"),
 		TEXT("RenderOpacity"), TEXT("PixelSnapping"), TEXT("bIgnoreLayout"),
 		TEXT("AccessibleBehavior"), TEXT("AccessibleText"), TEXT("AccessibleSummaryText") })
 	{

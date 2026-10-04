@@ -60,5 +60,15 @@ domain + Unlit (or UI domain): `FDreamUIScreenRenderPS::ShouldCompilePermutation
 else, and a `ShadingModel = "Substrate"` material is reported as Substrate rather than Unlit while
 `r.Substrate` is off, so DreamGUI's renderer silently skips it.
 
+Painted text (gradient faces, outlines and overlays) shades there too. `MF_DreamUI_Shade` reads the
+vertex's `UV4` as `TexCoord(4)` and takes two more parameters: `DreamUI_PaintDataTexture`, the
+world's paint rows, which the canvas sets on every UI material instance (black by default: no
+gradient anywhere, painted text draws solid), and `DreamUI_ShadeMarker` (scalar, 1), which tells a
+text that its material shades through `DreamUIShade.ush`. The marker is wired into the Custom node
+only so that a cooked material keeps it; the HLSL never reads it. A material without the marker gets
+no coverage glyphs, no colour faces and no gradient slots: its texts put their gradients into their
+vertex colours instead. A custom material that calls `DreamUI_ShadePixel` itself with the old
+13-argument list still compiles against an overload with paints off.
+
 Retired with the built-in text shader: `UnderlayAndOutline.dsm`, `MF_DreamUI_SDF_Font*.dsf` and the
 `Materials/TextEffects` instances -- outline, underlay and glow are `FDreamTextStyle` on the text now.

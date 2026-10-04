@@ -157,7 +157,11 @@ public:
 	void CopyRenderTargetOnMeshRegion(FRDGBuilder& GraphBuilder, FRDGTextureRef Dst, FRDGTextureRef Src, FGlobalShaderMap* GlobalShaderMap,
 		const TArray<FDreamUIPostProcessCopyMeshRegionVertex>& RegionVertexData, const FMatrix44f& MVP, bool bIsRenderTarget,
 		const FIntRect& ViewRect, const FVector4f& SrcTextureScaleOffset, bool ColorCorrect = false);
-	void DrawFullScreenQuad(
+	/**
+	 * The quad over the whole viewport, from the global quad buffers. Static: a pass that draws it has no renderer to hold
+	 * on to, and needs none.
+	 */
+	static void DrawFullScreenQuad(
 		FRHICommandListImmediate& RHICmdList
 	);
 	void AddResolvePass(

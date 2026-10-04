@@ -400,7 +400,18 @@ protected:
 
 	void UpdateAfterDrag(float deltaTime);
 	virtual void ApplyContentPositionWithProgress();
+	/**
+	 * Where this view has put the content, in the coordinate the setter writes. With DreamGUI.Scroll.SnapToDevicePixels
+	 * on, the position the view asked for, while the content still stands where that request was snapped to: the
+	 * offset, the progress and a fling go on in fractions of a pixel, and only the drawing moves by whole ones.
+	 */
 	FVector2D GetContentPosition() const;
+	/**
+	 * Put the content at Value. With DreamGUI.Scroll.SnapToDevicePixels on and the content drawn on a 2D canvas
+	 * (screen space in a game, or a render target), along the axes this view scrolls it lands on the nearest whole
+	 * device pixel: text drawn from coverage glyphs keeps its pixels through the move, so it is neither blurred
+	 * nor repainted. Off, the default, exactly at Value.
+	 */
 	void SetContentPosition(const FVector2D& Value) const;
 	void ReleaseRangeHelper();
 	float GetSafeDeltaTime() const;
@@ -418,6 +429,27 @@ protected:
 
 	/** Move the content and update progress, with no physics and no clamping. One writer, one place. */
 	void ApplyContentPosition(const FVector2D& InPosition, bool bInFireEvent = true);
+
+private:
+	/** The content's position as its widget holds it, snapped or not: what the geometry is measured against. */
+	FVector2D GetAppliedContentPosition() const;
+	/**
+	 * InPosition moved, along the axes this view scrolls, by the least that puts the content's origin on a whole
+	 * device pixel of the canvas it is drawn on. False, OutSnapped untouched, where there is no such grid to be
+	 * sure of: a world-space canvas, an editor world, a screen drawn at a reduced resolution, a turned, sheared
+	 * or perspective transform.
+	 */
+	bool SnapContentPositionToDevicePixels(const FVector2D& InPosition, FVector2D& OutSnapped) const;
+	/**
+	 * The last position SetContentPosition was asked for while it snapped, and what it wrote instead. Read back by
+	 * GetContentPosition only while the content still stands at SnappedContentPosition: anything else that moves
+	 * the content -- a recycler, a layout, a caller -- has the last word, as it always had.
+	 */
+	mutable bool bHasSnappedContentPosition = false;
+	mutable FVector2D UnsnappedContentPosition = FVector2D::ZeroVector;
+	mutable FVector2D SnappedContentPosition = FVector2D::ZeroVector;
+
+protected:
 
 	FDreamUIMulticastDelegateVector2 OnValueChangedCPP;
 	/** Native only, like OnValueChangedCPP: the phase enum is not a reflected type. */

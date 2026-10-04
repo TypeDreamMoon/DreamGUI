@@ -27,6 +27,7 @@
 #include "Engine/World.h"
 #include "Engine/Engine.h"
 #include "Engine/GameInstance.h"
+#include "UObject/GarbageCollection.h"
 
 UDreamTweenTickHelperComponent::UDreamTweenTickHelperComponent()
 {
@@ -44,7 +45,8 @@ void UDreamTweenTickHelperComponent::TickComponent(float DeltaTime, ELevelTick T
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 	if (Target.IsValid())
 	{
-		Target->Tick((EDreamTweenTickType)((uint8)PrimaryComponentTick.TickGroup), DeltaTime);
+		// Once per tick group per frame, however many worlds' helpers drive this manager: see TickFromWorld.
+		Target->TickFromWorld((EDreamTweenTickType)((uint8)PrimaryComponentTick.TickGroup), DeltaTime);
 	}
 }
 void UDreamTweenTickHelperComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
@@ -79,7 +81,7 @@ void ADreamTweenTickHelperActor::Tick(float DeltaSeconds)
 	Super::Tick(DeltaSeconds);
 	if (Target.IsValid())
 	{
-		Target->Tick(EDreamTweenTickType::DuringPhysics, DeltaSeconds);
+		Target->TickFromWorld(EDreamTweenTickType::DuringPhysics, DeltaSeconds);
 	}
 }
 void ADreamTweenTickHelperActor::EndPlay(EEndPlayReason::Type EndPlayReason)
@@ -205,6 +207,23 @@ void UDreamTweenManager::Tick(EDreamTweenTickType TickType, float DeltaTime)
 	}
 }
 
+void UDreamTweenManager::TickFromWorld(EDreamTweenTickType TickType, float DeltaTime)
+{
+	// Keyed on the engine frame, not on the world: each world's helper reads the same game-instance world's delta
+	// (see Tick), so whichever helper comes first in a frame steps the group and the rest find it already stepped.
+	const int32 TickIndex = static_cast<int32>(TickType);
+	if (TickIndex >= 0 && TickIndex < UE_ARRAY_COUNT(LastWorldTickFrames))
+	{
+		const uint64 FrameMark = GFrameCounter + 1;
+		if (LastWorldTickFrames[TickIndex] == FrameMark)
+		{
+			return;
+		}
+		LastWorldTickFrames[TickIndex] = FrameMark;
+	}
+	Tick(TickType, DeltaTime);
+}
+
 #include "Kismet/GameplayStatics.h"
 UDreamTweenManager* UDreamTweenManager::GetDreamTweenInstance(UObject* WorldContextObject)
 {
@@ -217,50 +236,113 @@ UDreamTweenManager* UDreamTweenManager::GetDreamTweenInstance(UObject* WorldCont
 void UDreamTweenManager::OnTick(EDreamTweenTickType TickType, float DeltaTime, float UnscaledDeltaTime)
 {
 	SCOPE_CYCLE_COUNTER(STAT_Update);
-	
+
+	// No time is the only safe reading of a step that is negative or not a number. ManualTick hands over
+	// whatever its caller worked out, and a negative step ran every clock backwards: a tween parked in its
+	// delay for good, or easing a time below zero, where OutCirc answers NaN.
+	if (!FMath::IsFinite(DeltaTime) || DeltaTime < 0.0f)
+	{
+		DeltaTime = 0.0f;
+	}
+	if (!FMath::IsFinite(UnscaledDeltaTime) || UnscaledDeltaTime < 0.0f)
+	{
+		UnscaledDeltaTime = 0.0f;
+	}
+
 	// A tween's own callbacks run inside ToNext, and they are free to start a tween, kill every tween, or
 	// remove this one -- so the list can be grown, emptied or reordered underneath the walk. Walking it by
 	// index meant the removal below used an index that no longer named the tween that had just finished:
 	// it deleted whatever had shifted into that slot, or ran off the end of a list a callback had emptied.
-	// So the walk is over a snapshot, and the finished ones come out afterwards by identity.
-	TArray<TObjectPtr<UDreamTweener>> tweenersToTick = tweenerList;
-	TArray<TObjectPtr<UDreamTweener>> tweenersToRemove;
-	TArray<UDreamTweener*> tweenersToDestroy;
-	for (auto& tweener : tweenersToTick)
+	// So the walk is over a snapshot, and the finished ones come out afterwards, in one pass over the list
+	// (a search per finished tween made a mass completion quadratic). The snapshot keeps its allocation from
+	// one tick to the next; a callback that ticks the manager from inside a tick walks one of its own.
+	TArray<UDreamTweener*> NestedSnapshot;
+	TArray<UDreamTweener*>& Snapshot = TickDepth == 0 ? TickSnapshot : NestedSnapshot;
+	TGuardValue<int32> TickDepthGuard(TickDepth, TickDepth + 1);
+	Snapshot.Reset(tweenerList.Num());
+	for (const TObjectPtr<UDreamTweener>& Item : tweenerList)
 	{
-		if (!IsValid(tweener))
+		Snapshot.Add(Item.Get());
+	}
+
+	// What finished, with its clock generation at the moment it did: a callback later in this tick may still
+	// restart it, seek it or hand it to a sequence, and one that did has taken it back (see clockGeneration).
+	struct FFinishedTweener
+	{
+		UDreamTweener* Tweener = nullptr;
+		int32 Generation = 0;
+	};
+	TArray<FFinishedTweener, TInlineAllocator<16>> Finished;
+	bool bListHasDeadEntries = false;
+	for (UDreamTweener* Tweener : Snapshot)
+	{
+		if (!IsValid(Tweener) || Tweener->bRetired)
 		{
-			tweenersToRemove.Add(tweener);
+			// Gone -- swept away with the widget it was made on -- or retired since the snapshot was taken.
+			bListHasDeadEntries = true;
 		}
-		else if (tweener->IsMarkedToKill())
+		else if (Tweener->IsMarkedToKill() || Tweener->IsOwnerGone())
 		{
 			// Ahead of the tick-type filter, deliberately. Kill only raises a flag; the list entry goes
 			// away when a tick sees it. A tween set to Manual tick is only ever seen by ManualTick, so
 			// a killed one that nobody ticks again stayed in this list forever -- holding its outer,
 			// which is usually the very widget it was animating, alive for the rest of the run.
-			tweenersToRemove.Add(tweener);
-			tweenersToDestroy.Add(tweener);
+			// A tween whose outer is gone is over the same way, and without a callback: what it animated
+			// no longer exists, and an endless loop or a held tween made on an actor that was destroyed
+			// used to go on stepping -- and calling its callbacks on the remains -- until the map changed.
+			Finished.Add({ Tweener, Tweener->clockGeneration });
 		}
 		else
 		{
-			if (tweener->GetTickType() != TickType)continue;
-			if (tweener->ToNext(DeltaTime, UnscaledDeltaTime) == false)
+			if (Tweener->GetTickType() != TickType)continue;
+			if (Tweener->ToNext(DeltaTime, UnscaledDeltaTime) == false)
 			{
-				tweenersToRemove.Add(tweener);
-				tweenersToDestroy.Add(tweener);
+				Finished.Add({ Tweener, Tweener->clockGeneration });
 			}
 		}
 	}
-	for (auto& tweener : tweenersToRemove)
+
+	TArray<UDreamTweener*, TInlineAllocator<16>> RetiredNow;
+	for (const FFinishedTweener& Candidate : Finished)
 	{
-		tweenerList.RemoveSingle(tweener);
-	}
-	for (auto tweener : tweenersToDestroy)
-	{
-		if (IsValid(tweener))
+		UDreamTweener* Tweener = Candidate.Tweener;
+		if (!IsValid(Tweener) || Tweener->bRetired)
 		{
-			tweener->ConditionalBeginDestroy();
+			continue;
 		}
+		// Taken over since it finished, by a callback later in this tick, and not to end: it runs on.
+		if (Tweener->clockGeneration != Candidate.Generation && !Tweener->IsMarkedToKill() && !Tweener->IsOwnerGone())
+		{
+			continue;
+		}
+		Tweener->bRetired = true;
+		RetiredNow.Add(Tweener);
+	}
+	if (RetiredNow.Num() > 0 || bListHasDeadEntries)
+	{
+		tweenerList.RemoveAll([](const TObjectPtr<UDreamTweener>& Item)
+		{
+			return !IsValid(Item) || Item->bRetired;
+		});
+	}
+	for (UDreamTweener* Tweener : RetiredNow)
+	{
+		RetireTweener(Tweener);
+	}
+	Snapshot.Reset();
+}
+
+void UDreamTweenManager::RetireTweener(UDreamTweener* Tweener)
+{
+	Tweener->bRetired = true;
+	// Marked garbage rather than ConditionalBeginDestroy'd. Destroying it while something still held it --
+	// a Blueprint variable, a game-instance object, a raw pointer -- left a half-destroyed tween that still
+	// answered IsValid, completed a second time on Kill(true) or ForceComplete, and, if the holder outlived
+	// the map, pinned the old world through the tween's outer until the stale-world check stopped the game.
+	// Garbage, every handle reads it as gone, and the collector takes it along with that hold.
+	if (!Tweener->IsRooted() && !IsGarbageCollecting())
+	{
+		Tweener->MarkAsGarbage();
 	}
 }
 
@@ -284,11 +366,23 @@ void UDreamTweenManager::KillAllTweens(bool callComplete)
 	// completion handler land in the now-empty member and survive, as they would from anywhere else.
 	TArray<TObjectPtr<UDreamTweener>> tweenersToKill = MoveTemp(tweenerList);
 	tweenerList.Reset();
-	for (auto item : tweenersToKill)
+	for (UDreamTweener* item : tweenersToKill)
 	{
-		if (IsValid(item))
+		if (!IsValid(item))
 		{
-			item->Kill(callComplete);
+			continue;
+		}
+		item->Kill(callComplete);
+		if (item->IsMarkedToKill())
+		{
+			// Out of the list already, so no tick will see it again to retire it: retired here.
+			RetireTweener(item);
+		}
+		else if (!tweenerList.Contains(item))
+		{
+			// Its own completion handler restarted it. It runs on, back in the list it was taken out of --
+			// a tween restarted from a handler keeps running wherever the kill came from.
+			tweenerList.Add(item);
 		}
 	}
 }

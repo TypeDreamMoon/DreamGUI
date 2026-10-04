@@ -55,8 +55,10 @@ public:
 	 * grapheme start and no line or word boundary, whatever stands before it.
 	 *
 	 * Grapheme is ICU's character iterator with GB9c (a text with nothing at or above U+0300 asks ICU nothing); Line and Word
-	 * are ICU's line and word iterators as they are. Without ICU, graphemes come from the code points, Line from
-	 * ComputeFallbackBreakOpportunities' rules, and Word marks nothing.
+	 * are ICU's line and word iterators for the game's current culture (its locale's tailorings, such as the Japanese and
+	 * Chinese line rules, where the packaged data has them), with the engine's Hangul rule
+	 * (Localization.HangulTextWrappingMethod) on the line iterator. Without ICU, graphemes come from the code points, Line
+	 * from ComputeFallbackBreakOpportunities' rules, and Word marks nothing.
 	 *
 	 * @param Stop     Asked with each element once its bit is written (the bit as written): true ends the walk there.
 	 * @param OutLast  The last element written; Begin - 1 when there was none.
@@ -124,4 +126,15 @@ public:
 	static int32 FindKinsokuSafeFallback(const TArray<uint32>& ElementCodepoints, int32 LineStart, int32 BreakBefore, const TBitArray<>* ClusterStarts = nullptr);
 	static bool IsClosingPunctuation(uint32 Codepoint);
 	static bool IsOpeningPunctuation(uint32 Codepoint);
+
+	/*
+	 * What the iterators were made for: what a test reads to see a culture switch reach line breaking, which on most text
+	 * looks the same in every locale. Game thread.
+	 */
+	/** The culture the line, word and character iterators were last made for; empty before the first boundary analysis. */
+	static FString GetIteratorCultureName();
+	/** How many times the iterators have been made: once, and again after each switch of the game's culture. */
+	static int32 GetIteratorBuildCount();
+	/** The iterators carry that culture's own ICU locale; false when ICU could not make them for it and the engine's, made for the default culture, stand in. */
+	static bool AreIteratorsForCulture();
 };

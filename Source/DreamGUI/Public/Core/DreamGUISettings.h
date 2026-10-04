@@ -4,6 +4,9 @@
 
 #include "CoreMinimal.h"
 #include "Engine/DeveloperSettings.h"
+#include "InputCoreTypes.h"
+#include "Core/DreamUIInputServices.h"
+#include "Event/DreamPointerEventData.h"
 #include "DreamGUISettings.generated.h"
 
 class UDreamUIFontData_BaseObject;
@@ -11,6 +14,83 @@ class UDreamUserWidget;
 class UDreamUISpriteData;
 class UMaterialInterface;
 class UTexture2D;
+
+/** What Tab and Shift+Tab walk (UDreamGUISettings::TabOrder). */
+UENUM(BlueprintType)
+enum class EDreamUITabOrder : uint8
+{
+	/**
+	 * The widget hierarchy, depth first, siblings by their Tab Index (UDreamWidget::TabIndex) and then in order: a sequence
+	 * that reverses exactly, as a browser's and Slate's do.
+	 */
+	Hierarchy,
+	/** The nearest control to the right, else the nearest below -- what Tab did before this setting. Kept for one version. */
+	LegacyGeometric,
+};
+
+/**
+ * How small text with effects (outline, glow, underlay) draws from coverage glyphs (UDreamGUISettings::bSmallTextCoverage):
+ * the effects always come from the distance field, moved by the coverage face's snap so the two line up; this says what
+ * the face is drawn from. Face softness and dilation keep a text on the field whatever this says.
+ */
+UENUM(BlueprintType)
+enum class EDreamSmallTextEffectFace : uint8
+{
+	/** The field, effects and face: a text with effects never draws from coverage, as before. */
+	Field,
+	/** A hinted coverage glyph: the crispest face; its edges may stand up to half a pixel off the field's outline on thin outlines. */
+	Hinted,
+	/** An unhinted coverage glyph, the outline where the field has it: exact against the outline, a little softer than Hinted. */
+	Unhinted,
+	/** Hinted, but Unhinted for a glyph whose outline is under 2 device pixels, where Hinted's offset shows. */
+	Auto,
+};
+
+/** One row of the direction key table (UDreamGUISettings::DirectionKeys): a key and the way it moves the focus. */
+USTRUCT()
+struct DREAMGUI_API FDreamUIDirectionKey
+{
+	GENERATED_BODY()
+
+	FDreamUIDirectionKey() = default;
+	FDreamUIDirectionKey(const FKey& InKey, EDreamUINavigationDirection InDirection) : Key(InKey), Direction(InDirection) {}
+
+	UPROPERTY(EditAnywhere, Category = "Keys")
+	FKey Key;
+	/** Next is Tab's: with Shift held it is Prev. */
+	UPROPERTY(EditAnywhere, Category = "Keys")
+	EDreamUINavigationDirection Direction = EDreamUINavigationDirection::None;
+};
+
+/** One row of the page key table (UDreamGUISettings::PageKeys): a key and how many screenfuls it scrolls, negative back towards the start. */
+USTRUCT()
+struct DREAMGUI_API FDreamUIPageKey
+{
+	GENERATED_BODY()
+
+	FDreamUIPageKey() = default;
+	FDreamUIPageKey(const FKey& InKey, float InPages) : Key(InKey), Pages(InPages) {}
+
+	UPROPERTY(EditAnywhere, Category = "Keys")
+	FKey Key;
+	UPROPERTY(EditAnywhere, Category = "Keys")
+	float Pages = 1.0f;
+};
+
+/** One row of the extent key table (UDreamGUISettings::ExtentKeys): a key that scrolls all the way to the start, or to the end. */
+USTRUCT()
+struct DREAMGUI_API FDreamUIExtentKey
+{
+	GENERATED_BODY()
+
+	FDreamUIExtentKey() = default;
+	FDreamUIExtentKey(const FKey& InKey, bool bInToStart) : Key(InKey), bToStart(bInToStart) {}
+
+	UPROPERTY(EditAnywhere, Category = "Keys")
+	FKey Key;
+	UPROPERTY(EditAnywhere, Category = "Keys")
+	bool bToStart = true;
+};
 
 /** What DreamGUI's input keeps from the game, with the Slate input source. */
 UENUM(BlueprintType)
@@ -134,10 +214,11 @@ public:
 	 * Draw small screen text of distance-field fonts from hinted coverage glyphs: each glyph rasterized for its pixel size
 	 * with FreeType's light hinting in four subpixel positions, placed on whole device pixels -- the crisp stems Chrome
 	 * and Slate draw -- instead of from the field. Decided per glyph item at paint time, so layout, carets and selection
-	 * are the same either way. Only where it can be exact: screen-space and render-target canvases, no render layer, a
-	 * flat unrotated unmirrored uniformly scaled transform, no effects, softness or dilate, no override material, no
-	 * modifier that moves vertices, pixel snapping not disabled. A font can override this (its SmallTextCoverage), a text
-	 * can opt out (UDreamText::SmallTextRaster).
+	 * are the same either way. Only where it can be exact: screen-space and render-target canvases, a render layer only
+	 * once it has held still for a few frames, a flat unrotated unmirrored uniformly scaled transform, no softness or
+	 * dilate (outline, glow and underlay are drawn from the field under a coverage face, see SmallTextEffectFace), a
+	 * material that shades through MF_DreamUI_Shade, no modifier that moves vertices, pixel snapping not disabled. A font
+	 * can override this (its SmallTextCoverage), a text can opt out (UDreamText::SmallTextRaster).
 	 */
 	UPROPERTY(config, EditAnywhere, Category = "Text")
 	bool bSmallTextCoverage = true;
@@ -153,6 +234,44 @@ public:
 	 */
 	UPROPERTY(config, EditAnywhere, Category = "Text", meta = (ClampMin = "0.0", ClampMax = "8.0", UIMax = "2.0", EditCondition = "bSmallTextCoverage"))
 	float SmallTextContrast = 1.0f;
+
+	/** How small text with an outline, a glow or an underlay draws from coverage glyphs; see EDreamSmallTextEffectFace. */
+	UPROPERTY(config, EditAnywhere, Category = "Text", meta = (EditCondition = "bSmallTextCoverage"))
+	EDreamSmallTextEffectFace SmallTextEffectFace = EDreamSmallTextEffectFace::Auto;
+
+	/**
+	 * How many texts a world may repaint onto coverage glyphs in one frame once their device scale or their render layer has
+	 * settled: the rest wait for the next frames. Spreads the repaints of a screen whose labels all stop moving at once.
+	 */
+	UPROPERTY(config, EditAnywhere, Category = "Text", meta = (ClampMin = "1", UIMax = "4096", EditCondition = "bSmallTextCoverage"))
+	int32 SmallTextRepaintBudgetPerFrame = 512;
+
+	/**
+	 * Run the face of distance-field text above SmallTextMaxPixelSize through the same coverage correction small text gets
+	 * (the contrast and the linear-light blend), so its weight does not jump at the cut-off. Off by default until measured
+	 * against Chrome. Drawn by the shaders: the canvases pass it with the font atlas's geometry (FontAtlasInfo.z negated).
+	 */
+	UPROPERTY(config, EditAnywhere, Category = "Text")
+	bool bFieldTextCorrection = false;
+
+	/**
+	 * Gradients a rich text's `<gradient=Name>` finds by name, written as CSS (FDreamGradient::ParseCss), e.g. Gold =
+	 * "linear-gradient(180deg, #FFF3B0, #E8B64A 55%, #9C6A12)". Looked up after the text's custom style entries and before
+	 * the name itself is read as CSS; the editor's gradient picker offers them beside the gradient assets.
+	 */
+	UPROPERTY(config, EditAnywhere, Category = "Text")
+	TMap<FName, FString> GradientPresets;
+
+	/**
+	 * Whether small text draws from coverage glyphs: bSmallTextCoverage, unless the console variable
+	 * DreamGUI.Text.SmallTextCoverage says 0 (off for every font, those set On included) or 1 (on for the fonts that
+	 * inherit the project's choice). What a font asks (UDreamUIFontData_BaseObject::SupportsCoverageGlyphs).
+	 */
+	static bool IsSmallTextCoverageEnabled();
+	/** SmallTextMaxPixelSize, unless the console variable DreamGUI.Text.SmallTextMaxPixelSize is above 0. What a font that has no limit of its own asks. */
+	static float GetSmallTextMaxPixelSize();
+	/** Broadcast on the game thread when either console variable above changes: every text drawing small sizes repaints. */
+	static FSimpleMulticastDelegate& GetOnSmallTextCoverageChanged();
 
 
 	/**
@@ -196,6 +315,102 @@ public:
 	/** With the Slate input source: what the UI keeps from the game. A key typed into a field being edited is always kept. */
 	UPROPERTY(config, EditAnywhere, Category = "Input", meta = (EditCondition = "bUseSlateInputSource"))
 	EDreamUIInputConsumePolicy SlateInputConsumePolicy = EDreamUIInputConsumePolicy::Never;
+
+	/** With the Slate input source: how fast the right stick scrolls what has focus, in canvas units a second at full tilt. */
+	UPROPERTY(config, EditAnywhere, Category = "Input", meta = (ClampMin = "0.0", UIMax = "5000.0", EditCondition = "bUseSlateInputSource"))
+	float SlateInputStickScrollSpeed = 1500.0f;
+
+	/**
+	 * What a player's keys and pad do while no navigation scope of theirs is active (see EDreamUIScopeInputMode). With no focus
+	 * and no active scope, a navigation press looks for somewhere to land on that player's own screen-space canvases only.
+	 */
+	UPROPERTY(config, EditAnywhere, Category = "Input")
+	EDreamUIScopeInputMode InputModeWithoutScope = EDreamUIScopeInputMode::All;
+
+	/** Hide the cursor while a player uses a pad, and show it again on the mouse -- where DreamGUI is what shows it (its UI-only input mode). */
+	UPROPERTY(config, EditAnywhere, Category = "Input")
+	bool bHideCursorOnGamepad = true;
+
+	/**
+	 * Draw the focus -- a control's Focused look and the focus ring -- only when keys or a pad put it there, as CSS's
+	 * :focus-visible does: a clicked button is not drawn focused. Off: focus is always drawn.
+	 */
+	UPROPERTY(config, EditAnywhere, Category = "Input")
+	bool bFocusVisibleOnlyFromKeys = true;
+
+	/**
+	 * The pad's confirm and Back are the platform's own (FPlatformInput::GetGamepadAcceptKey and GetGamepadBackKey, which a
+	 * Switch swaps): they are added to ConfirmKeys and BackKeys when the game runs, and a face button listed there that
+	 * the platform uses the other way is left out. Off: the tables as they are.
+	 */
+	UPROPERTY(config, EditAnywhere, Category = "Input")
+	bool bUsePlatformAcceptBack = true;
+
+	// ---------------------------------------------------------------- Navigation
+
+	/** Tab and Shift+Tab move the focus from control to control. Off: Tab is a key like any other, the game's. */
+	UPROPERTY(config, EditAnywhere, Category = "Navigation")
+	bool bTabNavigation = true;
+
+	/** What Tab walks; see EDreamUITabOrder. */
+	UPROPERTY(config, EditAnywhere, Category = "Navigation", meta = (EditCondition = "bTabNavigation"))
+	EDreamUITabOrder TabOrder = EDreamUITabOrder::Hierarchy;
+
+	/** At the last control of a player's screen Tab goes round to the first, and Shift+Tab the other way. Popups and dialogs always go round. */
+	UPROPERTY(config, EditAnywhere, Category = "Navigation", meta = (EditCondition = "bTabNavigation"))
+	bool bTabWrapsAtScreenEnd = true;
+
+	/** A text field Tab lands on starts its edit, its text selected as the field says, as a browser's does. */
+	UPROPERTY(config, EditAnywhere, Category = "Navigation", meta = (EditCondition = "bTabNavigation"))
+	bool bTabStartsTextEdit = true;
+
+	/** Keys that confirm: press what has the focus. */
+	UPROPERTY(config, EditAnywhere, Category = "Navigation|Keys")
+	TArray<FKey> ConfirmKeys = { EKeys::Enter, EKeys::SpaceBar, EKeys::Gamepad_FaceButton_Bottom };
+
+	/** Keys that mean Back when nothing has bound an action to them. */
+	UPROPERTY(config, EditAnywhere, Category = "Navigation|Keys")
+	TArray<FKey> BackKeys = { EKeys::Escape, EKeys::Gamepad_FaceButton_Right };
+
+	/** Keys that move the focus, and which way. Tab is Next, and Prev with Shift held -- with neither Ctrl, Alt nor Cmd. */
+	UPROPERTY(config, EditAnywhere, Category = "Navigation|Keys")
+	TArray<FDreamUIDirectionKey> DirectionKeys = {
+		FDreamUIDirectionKey(EKeys::Left, EDreamUINavigationDirection::Left),
+		FDreamUIDirectionKey(EKeys::Right, EDreamUINavigationDirection::Right),
+		FDreamUIDirectionKey(EKeys::Up, EDreamUINavigationDirection::Up),
+		FDreamUIDirectionKey(EKeys::Down, EDreamUINavigationDirection::Down),
+		FDreamUIDirectionKey(EKeys::Tab, EDreamUINavigationDirection::Next),
+		FDreamUIDirectionKey(EKeys::Gamepad_DPad_Left, EDreamUINavigationDirection::Left),
+		FDreamUIDirectionKey(EKeys::Gamepad_DPad_Right, EDreamUINavigationDirection::Right),
+		FDreamUIDirectionKey(EKeys::Gamepad_DPad_Up, EDreamUINavigationDirection::Up),
+		FDreamUIDirectionKey(EKeys::Gamepad_DPad_Down, EDreamUINavigationDirection::Down),
+		FDreamUIDirectionKey(EKeys::Gamepad_LeftStick_Left, EDreamUINavigationDirection::Left),
+		FDreamUIDirectionKey(EKeys::Gamepad_LeftStick_Right, EDreamUINavigationDirection::Right),
+		FDreamUIDirectionKey(EKeys::Gamepad_LeftStick_Up, EDreamUINavigationDirection::Up),
+		FDreamUIDirectionKey(EKeys::Gamepad_LeftStick_Down, EDreamUINavigationDirection::Down),
+	};
+
+	/** Keys that page the scrolling container around the focus, by screenfuls. The triggers page as Page Up and Page Down do. */
+	UPROPERTY(config, EditAnywhere, Category = "Navigation|Keys")
+	TArray<FDreamUIPageKey> PageKeys = {
+		FDreamUIPageKey(EKeys::PageUp, -1.0f),
+		FDreamUIPageKey(EKeys::PageDown, 1.0f),
+		FDreamUIPageKey(EKeys::Gamepad_LeftTrigger, -1.0f),
+		FDreamUIPageKey(EKeys::Gamepad_RightTrigger, 1.0f),
+	};
+
+	/** Keys that scroll the container around the focus all the way: Home and End. */
+	UPROPERTY(config, EditAnywhere, Category = "Navigation|Keys")
+	TArray<FDreamUIExtentKey> ExtentKeys = {
+		FDreamUIExtentKey(EKeys::Home, true),
+		FDreamUIExtentKey(EKeys::End, false),
+	};
+
+	/** Keys that switch the player's active tab view to the previous tab, and to the next (IDreamUITabSwitchTarget); prompts show them on the action bar. */
+	UPROPERTY(config, EditAnywhere, Category = "Navigation|Keys")
+	TArray<FKey> PreviousTabKeys = { EKeys::Gamepad_LeftShoulder };
+	UPROPERTY(config, EditAnywhere, Category = "Navigation|Keys")
+	TArray<FKey> NextTabKeys = { EKeys::Gamepad_RightShoulder };
 
 	// ---------------------------------------------------------------- Tooltip
 

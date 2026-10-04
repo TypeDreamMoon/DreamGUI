@@ -3,8 +3,10 @@
 #include "Core/DreamWidgetNavigation.h"
 
 #include "Core/DreamUIManager.h"
+#include "Core/Components/DreamCanvas.h"
 #include "Core/Components/DreamWidget.h"
 #include "Interaction/DreamUINavigationScroll.h"
+#include "Interaction/DreamUIPopupLayer.h"
 
 namespace
 {
@@ -50,6 +52,61 @@ namespace
 			}
 		}
 		return nullptr;
+	}
+}
+
+namespace DreamWidgetNavigationLocal
+{
+	/** How many nested navigation areas a single Escape move may climb out of before it gives up. */
+	constexpr int32 MaxNavigationEscapeDepth = 8;
+
+	/** The input system's answer to "what keeps navigation from here inside it"; see DreamUINavigationScan::SetConfiningWidgetResolver. */
+	DreamUINavigationScan::FConfiningWidgetResolver GDreamConfiningWidgetResolver = nullptr;
+
+	/**
+	 * Another component on InWidget that takes navigation and can be navigated to now -- the selectable beside a
+	 * navigation component -- or null. A UDreamWidgetNavigation is never the answer: two of them on one widget is not a
+	 * case either component speaks for.
+	 */
+	UDreamUIBehaviour* FindOtherNavigationComponent(UDreamWidget* InWidget, const UDreamUIBehaviour* InSelf)
+	{
+		for (UDreamUIBehaviour* Component : InWidget->GetAllComponents())
+		{
+			if (!IsValid(Component) || Component == InSelf || Component->IsA<UDreamWidgetNavigation>())
+			{
+				continue;
+			}
+			if (DreamUINavigationScan::CanNavigateTo(Component))
+			{
+				return Component;
+			}
+		}
+		return nullptr;
+	}
+
+	/**
+	 * The far end of the legacy Next/Prev sequence from InSelf, the way InDirection wraps: the opposite sequence walked
+	 * until it stops, as ScanWrap walks a direction backwards.
+	 */
+	UDreamUIBehaviour* ScanSequentialWrap(UDreamUIBehaviour* InSelf, EDreamUINavigationDirection InDirection,
+		UDreamWidget* InParent, const UDreamWidget* InRestrictNode)
+	{
+		const EDreamUINavigationDirection Backwards = InDirection == EDreamUINavigationDirection::Next
+			? EDreamUINavigationDirection::Prev : EDreamUINavigationDirection::Next;
+		UDreamUIBehaviour* Walker = InSelf;
+		TSet<UDreamUIBehaviour*> Visited;
+		Visited.Add(InSelf);
+		for (;;)
+		{
+			UDreamUIBehaviour* Back = DreamUINavigationScan::ScanSequential(Walker, Backwards, InParent, InRestrictNode);
+			if (Back == nullptr || Back == Walker || Visited.Contains(Back))
+			{
+				break;//at the far end, or round a cycle a strange layout built
+			}
+			Visited.Add(Back);
+			Walker = Back;
+		}
+		return Walker;
 	}
 }
 
@@ -201,7 +258,9 @@ bool UDreamWidgetNavigation::CanNavigateHere_Implementation() const
 	{
 		return false;
 	}
-	return Widget->GetRenderVisibleInHierarchy() && Widget->GetInteractableInHierarchy();
+	// Focusable too: SetFocus refuses a widget that is not, and a move landing where focus cannot be is a move that strands
+	// the player. OnRegister makes the widget focusable, so only a widget turned unfocusable afterwards is refused.
+	return Widget->GetIsFocusable() && Widget->GetRenderVisibleInHierarchy() && Widget->GetInteractableInHierarchy();
 }
 
 UDreamWidget* UDreamWidgetNavigation::ResolveTarget(EDreamUINavigationDirection InDirection, bool& bOutHandled)
@@ -271,6 +330,22 @@ bool UDreamWidgetNavigation::OnNavigate_Implementation(EDreamUINavigationDirecti
 	{
 		return false;
 	}
+	UDreamWidget* Widget = GetWidget();
+	if (!IsValid(Widget))
+	{
+		return false;
+	}
+
+	// No opinion about this direction, and a selectable beside us that has one: it answers. The pipeline hands every move
+	// to this component once any direction has a rule (FindNavigationBehaviour), and a direction left at Escape here is
+	// still the selectable's -- its explicit links, its None -- as UUISelectable::FindNavigableOn reads the two from its side.
+	if (!HasRuleFor(InDirection))
+	{
+		if (UDreamUIBehaviour* Other = DreamWidgetNavigationLocal::FindOtherNavigationComponent(Widget, this))
+		{
+			return IDreamNavigationInterface::Execute_OnNavigate(Other, InDirection, OutResult);
+		}
+	}
 
 	bool bHandled = false;
 	UDreamWidget* Target = ResolveTarget(InDirection, bHandled);
@@ -281,35 +356,32 @@ bool UDreamWidgetNavigation::OnNavigate_Implementation(EDreamUINavigationDirecti
 		return true;
 	}
 
-	// Escape and Wrap: run the scan. The boundary rule on the surrounding navigation area decides what
-	// happens at the edge, exactly as it does for a selectable -- with one addition, that a direction
-	// explicitly set to Wrap wraps whether or not the area asked for it.
-	UDreamWidget* Widget = GetWidget();
-	if (!IsValid(Widget))
-	{
-		return false;
-	}
+	// Escape, Wrap and CustomBoundary: run the scan, kept where a selectable's is kept -- inside the open popup or the
+	// confining screen that holds this widget, else its root canvas, and inside its navigation area, whose boundary rule
+	// decides at the area's edge. These scans used to pass no limit at all, so a navigation-only widget walked out of a
+	// dialog, a menu and its own player's screen. A direction explicitly set to Wrap wraps whether or not the area asked.
+	UDreamWidget* Parent = DreamUINavigationScan::FindScanParent(Widget);
+	const UDreamWidget* Area = Widget->GetRestrictNavigationAreaWidget();
+	const bool bWrapRule = GetNavigationData(InDirection).Rule == EDreamUINavigationRule::Wrap;
 	const FVector Direction = DreamUINavigationScan::GetWorldDirection(Widget, InDirection);
+	UDreamUIBehaviour* Found = nullptr;
 	if (Direction.IsNearlyZero())
 	{
-		// Next and Prev have no direction of their own: they are right-then-down and left-then-up.
-		UDreamUIBehaviour* Found = DreamUINavigationScan::ScanSequential(this, InDirection);
-		if (Found == this)
+		// Next and Prev have no direction of their own: here they are the legacy right-then-down and left-then-up, and a
+		// Wrap rule goes round to the far end of that sequence.
+		Found = DreamUINavigationScan::ScanSequential(this, InDirection, Parent, Area);
+		if (Found == this && bWrapRule)
 		{
-			// The sequence ran out, which for Next and Prev IS the boundary.
-			if (UDreamWidget* FromDelegate = AskBoundaryDelegate(InDirection))
-			{
-				OutResult = DreamUINavigationScan::FindNavigationBehaviour(FromDelegate);
-				return true;
-			}
+			Found = DreamWidgetNavigationLocal::ScanSequentialWrap(this, InDirection, Parent, Area);
 		}
-		OutResult = Found != this ? Found : nullptr;
-		return true;
 	}
-	UDreamUIBehaviour* Found = DreamUINavigationScan::ScanDirectional(this, Direction, nullptr, nullptr);
-	if (Found == this && GetNavigationData(InDirection).Rule == EDreamUINavigationRule::Wrap)
+	else
 	{
-		Found = DreamUINavigationScan::ScanWrap(this, Direction, nullptr, nullptr);
+		Found = DreamUINavigationScan::ScanWithinArea(this, Direction, Parent, Area);
+		if (Found == this && bWrapRule)
+		{
+			Found = DreamUINavigationScan::ScanWrap(this, Direction, Parent, Area);
+		}
 	}
 	if (Found == this)
 	{
@@ -335,6 +407,7 @@ UDreamUIBehaviour* DreamUINavigationScan::FindNavigationBehaviour(UDreamWidget* 
 		return nullptr;
 	}
 	UDreamUIBehaviour* Selectable = nullptr;
+	UDreamUIBehaviour* SecondSelectable = nullptr;
 	UDreamWidgetNavigation* Navigation = nullptr;
 	for (UDreamUIBehaviour* Component : InWidget->GetAllComponents())
 	{
@@ -347,9 +420,30 @@ UDreamUIBehaviour* DreamUINavigationScan::FindNavigationBehaviour(UDreamWidget* 
 			Navigation = AsNavigation;
 			continue;
 		}
-		if (Selectable == nullptr && Component->GetClass()->ImplementsInterface(UDreamNavigationInterface::StaticClass()))
+		if (Component->GetClass()->ImplementsInterface(UDreamNavigationInterface::StaticClass()))
 		{
-			Selectable = Component;
+			if (Selectable == nullptr)
+			{
+				Selectable = Component;
+			}
+			else if (SecondSelectable == nullptr)
+			{
+				SecondSelectable = Component;
+			}
+		}
+	}
+	// More than one other taker -- a user widget's event bridge, which refuses navigation until its widget opts in, and a
+	// selectable an author added beside it: the first that can be navigated to now, rather than whichever sits first.
+	if (SecondSelectable != nullptr && !CanNavigateTo(Selectable))
+	{
+		for (UDreamUIBehaviour* Component : InWidget->GetAllComponents())
+		{
+			if (IsValid(Component) && Component != Selectable && !Component->IsA<UDreamWidgetNavigation>()
+				&& Component->GetClass()->ImplementsInterface(UDreamNavigationInterface::StaticClass()) && CanNavigateTo(Component))
+			{
+				Selectable = Component;
+				break;
+			}
 		}
 	}
 	// A navigation component with no rule at all is a participant but not an authority: a widget that
@@ -368,6 +462,87 @@ bool DreamUINavigationScan::CanNavigateTo(UDreamUIBehaviour* InBehaviour)
 		return false;
 	}
 	return IDreamNavigationInterface::Execute_CanNavigateHere(InBehaviour);
+}
+
+void DreamUINavigationScan::SetConfiningWidgetResolver(FConfiningWidgetResolver InResolver)
+{
+	DreamWidgetNavigationLocal::GDreamConfiningWidgetResolver = InResolver;
+}
+
+UDreamWidget* DreamUINavigationScan::FindConfiningWidget(const UDreamWidget* InWidget)
+{
+	if (!IsValid(InWidget))
+	{
+		return nullptr;
+	}
+	if (DreamWidgetNavigationLocal::GDreamConfiningWidgetResolver != nullptr)
+	{
+		return DreamWidgetNavigationLocal::GDreamConfiningWidgetResolver(InWidget);
+	}
+	// No input system in this process to ask about screens: the popups, which the core keeps, still hold the pad in.
+	const UDreamUIPopupLayer* Popups = UDreamUIPopupLayer::Get(InWidget);
+	return Popups != nullptr ? Popups->FindPopupContaining(InWidget, INDEX_NONE) : nullptr;
+}
+
+UDreamWidget* DreamUINavigationScan::FindScanParent(const UDreamWidget* InWidget)
+{
+	if (!IsValid(InWidget))
+	{
+		return nullptr;
+	}
+	if (UDreamWidget* Confining = FindConfiningWidget(InWidget))
+	{
+		return Confining;
+	}
+	// The selectable's canvas limit (UUISelectable::FindNavigableIn): a screen's controls are reached from that screen only.
+	if (InWidget->IsScreenSpaceOverlayUI() || InWidget->IsRenderTargetUI())
+	{
+		if (const UDreamCanvas* RootCanvas = InWidget->GetRootCanvas())
+		{
+			return RootCanvas->GetWidget();
+		}
+	}
+	return nullptr;
+}
+
+UDreamUIBehaviour* DreamUINavigationScan::ScanWithinArea(UDreamUIBehaviour* InSelf, const FVector& InDirection,
+	UDreamWidget* InParent, const UDreamWidget* InRestrictNode, int32 InEscapeDepth)
+{
+	UDreamUIBehaviour* Found = ScanDirectional(InSelf, InDirection, InParent, InRestrictNode);
+	if (Found != InSelf)
+	{
+		return Found;//the scan moved, so the edge was never reached
+	}
+	// Nothing that way. Whether that is the end of the story is the area's decision, and with no area
+	// around us there is nobody to ask -- stopping is the only thing "the edge of everything" can mean.
+	if (!IsValid(InRestrictNode))
+	{
+		return InSelf;
+	}
+	switch (InRestrictNode->GetNavigationBoundaryRule())
+	{
+	case EDreamUINavigationBoundaryRule::Wrap:
+		return ScanWrap(InSelf, InDirection, InParent, InRestrictNode);
+	case EDreamUINavigationBoundaryRule::Escape:
+		{
+			// One area out, and only if there is one: past the outermost area the move has genuinely
+			// left everything that could restrict it, and the plain scan already covered that ground.
+			if (InEscapeDepth >= DreamWidgetNavigationLocal::MaxNavigationEscapeDepth)
+			{
+				return InSelf;
+			}
+			const UDreamWidget* AreaParent = InRestrictNode->GetParent();
+			const UDreamWidget* Enclosing = IsValid(AreaParent) ? AreaParent->GetRestrictNavigationAreaWidget() : nullptr;
+			if (Enclosing == nullptr)
+			{
+				return ScanDirectional(InSelf, InDirection, InParent, nullptr);
+			}
+			return ScanWithinArea(InSelf, InDirection, InParent, Enclosing, InEscapeDepth + 1);
+		}
+	case EDreamUINavigationBoundaryRule::Stop:
+	default:
+		return InSelf;
+	}
 }
 
 UDreamUIBehaviour* DreamUINavigationScan::ScanDirectional(UDreamUIBehaviour* InSelf, const FVector& InDirection,
@@ -526,7 +701,8 @@ UDreamUIBehaviour* DreamUINavigationScan::ScanWrap(UDreamUIBehaviour* InSelf, co
 	return Walker;
 }
 
-UDreamUIBehaviour* DreamUINavigationScan::ScanSequential(UDreamUIBehaviour* InSelf, EDreamUINavigationDirection InDirection)
+UDreamUIBehaviour* DreamUINavigationScan::ScanSequential(UDreamUIBehaviour* InSelf, EDreamUINavigationDirection InDirection,
+	UDreamWidget* InParent, const UDreamWidget* InRestrictNode)
 {
 	if (!IsValid(InSelf))
 	{
@@ -541,10 +717,17 @@ UDreamUIBehaviour* DreamUINavigationScan::ScanSequential(UDreamUIBehaviour* InSe
 	const EDreamUINavigationDirection First = bForward ? EDreamUINavigationDirection::Right : EDreamUINavigationDirection::Left;
 	const EDreamUINavigationDirection Second = bForward ? EDreamUINavigationDirection::Down : EDreamUINavigationDirection::Up;
 
-	UDreamUIBehaviour* Found = ScanDirectional(InSelf, GetWorldDirection(Widget, First), nullptr, nullptr);
+	UDreamUIBehaviour* Found = ScanDirectional(InSelf, GetWorldDirection(Widget, First), InParent, InRestrictNode);
 	if (Found != InSelf)
 	{
 		return Found;
 	}
-	return ScanDirectional(InSelf, GetWorldDirection(Widget, Second), nullptr, nullptr);
+	return ScanDirectional(InSelf, GetWorldDirection(Widget, Second), InParent, InRestrictNode);
+}
+
+UDreamUIBehaviour* DreamUINavigationScan::ScanSequential(UDreamUIBehaviour* InSelf, EDreamUINavigationDirection InDirection)
+{
+	const UDreamWidget* Widget = IsValid(InSelf) ? InSelf->GetWidget() : nullptr;
+	return ScanSequential(InSelf, InDirection, FindScanParent(Widget),
+		IsValid(Widget) ? Widget->GetRestrictNavigationAreaWidget() : nullptr);
 }

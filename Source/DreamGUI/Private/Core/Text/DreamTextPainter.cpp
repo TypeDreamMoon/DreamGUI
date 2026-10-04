@@ -4,7 +4,11 @@
 #include "Core/DreamUIGeometry.h"
 #include "Core/DreamUITextData.h"
 #include "Core/DreamUIFontData_BaseObject.h"
+#include "Core/DreamGUISettings.h"
+#include "DreamUIRender/DreamUIRenderStats.h"
 #include "Utils/DreamUIUtils.h"
+#include "CoreGlobals.h"
+#include "Misc/ScopeExit.h"
 #include "DreamGUI.h"
 
 namespace DreamTextPainterLocal
@@ -62,7 +66,11 @@ namespace DreamTextPainterLocal
 			float GlowBoost = 0.0f;
 		};
 
-		/** UV2.x is the quad's code (DreamTextQuadCode), UV3.y what that kind of quad keeps there: see DreamTextQuadCode. */
+		/**
+		 * UV2.x is the quad's code (DreamTextQuadCode), UV3.y what that kind of quad keeps there: see DreamTextQuadCode. UV4 is
+		 * (0, 0), a quad that paints nothing, until the quad is given its paint slot -- written here every time, because the
+		 * geometry's memory may be the last paint's and still hold its UV4.
+		 */
 		void WriteQuad(float Left, float Right, float Bottom, float Top, const FDreamUICharData& Glyph,
 			const FColor& Color, float UV2X, float UV3Y, const FFill& Fill, int32& IndexCursor)
 		{
@@ -85,6 +93,7 @@ namespace DreamTextPainterLocal
 				Vertex.TextureCoordinate[2] = FVector2f(UV2X, RunX);
 				Vertex.TextureCoordinate[3] = FVector2f(Fill.Progress, UV3Y);
 				Vertex.Color = Color;
+				Vertex.UV4 = FVector2f::ZeroVector;
 			}
 
 			Triangles[IndexCursor] = Start;
@@ -118,10 +127,13 @@ namespace DreamTextPainterLocal
 	/**
 	 * What an item is painted with. A <color> tag's colour keeps the alpha the author wrote; the hierarchy's fade is
 	 * applied here, at paint time, so changing it never invalidates the layout (BaseColor carries it already). A custom
-	 * style's pending Multiply multiplies whatever that gives, and a tag colour override replaces it outright.
+	 * style's pending Multiply multiplies whatever that gives, and a tag colour override replaces it outright --
+	 * bOutRecoloured says one did, which makes the item solid whatever paints the text has (a hovered link).
 	 */
-	static FColor ResolveItemColor(const FDreamTextDisplayList& DisplayList, const FDreamTextPaintParams& Params, const FDreamTextGlyphItem& Item)
+	static FColor ResolveItemColor(const FDreamTextDisplayList& DisplayList, const FDreamTextPaintParams& Params, const FDreamTextGlyphItem& Item,
+		bool& bOutRecoloured)
 	{
+		bOutRecoloured = false;
 		FColor Color = Params.BaseColor;
 		if (Item.Style.bHasColor)
 		{
@@ -142,16 +154,69 @@ namespace DreamTextPainterLocal
 				if (Item.ElementIndex >= Range.X && Item.ElementIndex <= Range.Y)
 				{
 					Color = FadeAuthoredColor(Override.Value, Params.RichTextTagOpacity);
+					bOutRecoloured = true;
 				}
 			}
 		}
 		return Color;
 	}
 
-	/** One underline or strikethrough strip: a run of items on one line that draw the same stroke in the same colour. */
+	/**
+	 * The slot an item paints with (FDreamTextPaintParams::Paints), a colour glyph's exception aside: none for a hovered link
+	 * and for an item a custom style took every paint off; its tag paint's slot when the name resolved to one; none for an
+	 * item with a solid colour of its own (a <color>, a custom style's Replace), which, being innermost, wins over the text's
+	 * paints; else the text's own slot, when it paints the face or the overlay.
+	 */
+	static int32 ResolveItemSlot(const FDreamTextPaints& Paints, const FDreamTextGlyphItem& Item, bool bRecoloured)
+	{
+		if (bRecoloured || Item.Style.bPaintRemoved)
+		{
+			return 0;
+		}
+		if (Item.Style.PaintIndex != INDEX_NONE && Paints.NameSlots != nullptr && Paints.NameSlots->IsValidIndex(Item.Style.PaintIndex))
+		{
+			const int32 NameSlot = (*Paints.NameSlots)[Item.Style.PaintIndex];
+			if (NameSlot >= DreamTextQuadCode::FirstTagSlot && NameSlot <= DreamTextQuadCode::MaxSlot && Paints.Slots[NameSlot].IsUsed())
+			{
+				return NameSlot;
+			}
+		}
+		if (Item.Style.bHasColor)
+		{
+			return 0;
+		}
+		const FDreamTextPaintSlot& OwnSlot = Paints.Slots[DreamTextQuadCode::TextSlot];
+		return (OwnSlot.Face != nullptr || OwnSlot.Overlay != nullptr) ? DreamTextQuadCode::TextSlot : 0;
+	}
+
+	/** What one item paints with, worked out once a paint. */
+	struct FItemPaint
+	{
+		/** Its own colour, as ever (ResolveItemColor): what a quad that paints nothing is written in. */
+		FColor Color = FColor::White;
+		/**
+		 * What its glyph's face and its strokes are written in: PaintBaseColor, times a custom style's pending Multiply, when
+		 * Slot paints the face -- the gradient takes the text's own colour's place -- else Color.
+		 */
+		FColor SlotColor = FColor::White;
+		/** The slot of its strokes, and of its glyph's face -- unless that is a colour glyph, which keeps its own colours (FaceSlot 0). */
+		uint8 Slot = 0;
+		uint8 FaceSlot = 0;
+		/** The slot of its effects copies: the text's own when it paints the outline and no custom style took that off the item. */
+		uint8 EffectsSlot = 0;
+	};
+
+	/** The extent of a run of the lyric fill across: the quads in it. */
+	struct FRunBounds
+	{
+		float MinX = FLT_MAX;
+		float MaxX = -FLT_MAX;
+	};
+
+	/** One underline or strikethrough strip: a run of items on one line that draw the same stroke in the same colour and paint. */
 	struct FDecorationRun
 	{
-		/** The run's first item, which its fill channels and size are read from. */
+		/** The run's first item, which its fill channels, its size and -- for its paint's boxes -- its line and its tag run are read from. */
 		int32 FirstItem = 0;
 		int32 LineIndex = 0;
 		float Left = 0.0f;
@@ -162,6 +227,12 @@ namespace DreamTextPainterLocal
 		FColor Color = FColor::White;
 		int32 Segment = INDEX_NONE;
 		float DilateEm = 0.0f;
+		/** The slots of its face and effects copies (FItemPaint), and under a tag's Run box the piece of the run it stays inside. */
+		uint8 Slot = 0;
+		uint8 EffectsSlot = 0;
+		int32 Fragment = INDEX_NONE;
+		/** One character's piece, under a Glyph box: nothing joins it. */
+		bool bAlone = false;
 	};
 
 	/** How many copies of one quad go into each block of the index buffer, the blocks drawn back to front. */
@@ -205,13 +276,114 @@ namespace DreamTextPainterLocal
 		/** The glyph's texels: only MinUV, MaxUV and SliceIndex are read. */
 		FDreamUICharData Texels;
 		int32 Phase = 0;
+		/**
+		 * Delta, the face's snap shift: how far landing on the grid moved it from the pen, in local units -- the pen drawn at
+		 * (q / 4, Row) in device pixels instead of at (U, V). The effects hybrid moves the field's effects copy by it.
+		 */
+		FVector2f Shift = FVector2f::ZeroVector;
 	};
+
+	/**
+	 * A painted quad's boxes for one item (FDreamTextPaintSlot's HorizontalBox and VerticalBox): UV4 = ((Offset + x - Left) /
+	 * Width, (Top - y) / Height) in the text's local space, x right and y up -- u from the box's left edge, v from its top,
+	 * as CSS measures a background. A box under 1e-6 across or down gives 0 on that axis.
+	 */
+	struct FPaintBoxes
+	{
+		float Left = 0.0f;
+		/** A Run box's pieces laid end to end: how far into the run this piece's left edge is. */
+		float Offset = 0.0f;
+		float Width = 0.0f;
+		float Top = 0.0f;
+		float Height = 0.0f;
+
+		FVector2f At(float X, float Y) const
+		{
+			return FVector2f(Width >= 1e-6f ? (Offset + X - Left) / Width : 0.0f, Height >= 1e-6f ? (Top - Y) / Height : 0.0f);
+		}
+	};
+
+	/** A quad as the layout places it, before any copy is made of it: what every copy of a glyph or a stroke starts from. */
+	struct FQuadSource
+	{
+		/** The item it belongs to: its fill channels, and the item its paint's boxes are measured for. */
+		int32 ItemIndex = 0;
+		const FDreamUICharData* Glyph = nullptr;
+		/** What its lengths in em are of: the glyph's own size, or the style's for a stroke. */
+		float Em = 0.0f;
+		float Left = 0.0f;
+		float Right = 0.0f;
+		float Bottom = 0.0f;
+		float Top = 0.0f;
+		/** Its synthetic bold as a dilation of the field, in em per side. */
+		float DilateEm = 0.0f;
+		bool bItalic = false;
+		/** What an italic copy is sheared about. */
+		float BaselineY = 0.0f;
+	};
+
+	/**
+	 * A paint's working arrays, kept from one paint to the next: a burst of thousands of paints in one frame -- every label of
+	 * a wall that starts to turn at once -- then allocates nothing once they have grown. Texts paint on the game thread, which
+	 * keeps one set; a paint anywhere else, or one started while another is under way, uses a set of its own.
+	 */
+	struct FPaintScratch
+	{
+		TArray<FItemPaint> ItemPaints;
+		TArray<EItemQuad> ItemQuads;
+		TArray<FCoverageQuad> CoverageQuads;
+		TArray<int32> ItemCoverageQuad;
+		TArray<FRunBounds> SegmentBounds;
+		TArray<FRunBounds> LineBounds;
+		TArray<int32> ItemSegment;
+		TArray<FDecorationRun> Decorations;
+		/** A Run box measured on the text's own paints: per line, its piece of the whole text laid end to end. */
+		TArray<FDreamTextPaintFragment> LineRunPieces;
+		bool bInUse = false;
+	};
+
+	/** Items a kept set of arrays stays sized for: one text longer than this lets them go when it is painted. */
+	constexpr int32 PaintScratchKeptItems = 16384;
+
+	/** The game thread's set while nobody uses it, else InLocal. */
+	static FPaintScratch& AcquirePaintScratch(FPaintScratch& InLocal)
+	{
+		if (IsInGameThread())
+		{
+			static FPaintScratch GameThreadScratch;
+			if (!GameThreadScratch.bInUse)
+			{
+				GameThreadScratch.bInUse = true;
+				return GameThreadScratch;
+			}
+		}
+		return InLocal;
+	}
+
+	static void ReleasePaintScratch(FPaintScratch& InScratch)
+	{
+		if (!InScratch.bInUse)return;
+		InScratch.bInUse = false;
+		if (InScratch.ItemPaints.Max() > PaintScratchKeptItems || InScratch.Decorations.Max() > PaintScratchKeptItems
+			|| InScratch.LineBounds.Max() > PaintScratchKeptItems)
+		{
+			InScratch = FPaintScratch();
+		}
+	}
 }
 
 void FDreamTextPainter::Paint(const FDreamTextDisplayList& DisplayList, const FDreamTextPaintParams& Params,
 	FDreamUIGeometry& OutGeometry, TArray<FDreamUITextCharProperty>& OutCharProperties)
 {
 	using namespace DreamTextPainterLocal;
+
+	DreamUIRenderStats::AddCount(DreamUIRenderStats::ECounter::TextPaints, 1);
+	FPaintScratch LocalScratch;
+	FPaintScratch& Scratch = AcquirePaintScratch(LocalScratch);
+	ON_SCOPE_EXIT
+	{
+		ReleasePaintScratch(Scratch);
+	};
 
 	OutCharProperties.Reset();
 	const TArray<FDreamTextGlyphItem>& Items = DisplayList.Items;
@@ -254,36 +426,78 @@ void FDreamTextPainter::Paint(const FDreamTextDisplayList& DisplayList, const FD
 	ColorCopies.Shadow = ShadowCopies;
 	ColorCopies.Effects = (Params.bDistanceField && Params.bHasUnderlay) ? 1 : 0;
 	ColorCopies.Face = 1;
+	// A coverage glyph standing in for a field glyph still pending: its face alone, there being no field quad to draw the
+	// effects from yet.
+	FQuadCopies FaceOnlyCopies;
+	FaceOnlyCopies.Face = 1;
 	// An index is a vertex ordinal, and FDreamUIMeshIndex is 16 bits wide unless the 32-bit buffer is
 	// compiled in: past the limit every index wraps and the whole block draws as garbage. Stop adding
 	// quads at the limit instead.
 	const int32 MaxQuads = LEXUI_MAX_VERTEX_COUNT / 4;
 
-	TArray<FColor> ItemColors;
-	ItemColors.SetNumUninitialized(Items.Num());
+	// The effects -- a field's effects copy, a colour glyph's underlay copy, a bitmap font's shadow and outline copies -- fade
+	// with the render opacity and the content tint (EffectOpacity), never with the colour of the text or of a tag: a text
+	// with a clear face still draws its outline. Whatever animates the characters fades them through their vertices still.
+	auto FadeEffectAlpha = [&Params](uint8 InAlpha)
+	{
+		return (uint8)FMath::Clamp(FMath::RoundToInt(InAlpha * Params.EffectOpacity), 0, 255);
+	};
+	const uint8 EffectAlpha = FadeEffectAlpha(255);
+
+	// Paints (FDreamTextPaintParams::Paints): per item, the slots its quads take and the colour its face is written in. With
+	// no paint every slot is 0 and every colour the item's own, which is what a text wrote before paints existed.
+	const FDreamTextPaints& Paints = Params.Paints;
+	const bool bPaints = Paints.HasAny();
+	const uint8 OutlinePaintSlot = (uint8)((bPaints && Paints.Slots[DreamTextQuadCode::TextSlot].Outline != nullptr) ? DreamTextQuadCode::TextSlot : 0);
+	TArray<FItemPaint>& ItemPaints = Scratch.ItemPaints;
+	ItemPaints.Reset();
+	ItemPaints.SetNumUninitialized(Items.Num());
 	for (int32 ItemIndex = 0; ItemIndex < Items.Num(); ItemIndex++)
 	{
-		ItemColors[ItemIndex] = ResolveItemColor(DisplayList, Params, Items[ItemIndex]);
+		const FDreamTextGlyphItem& Item = Items[ItemIndex];
+		FItemPaint& ItemPaint = ItemPaints[ItemIndex];
+		bool bRecoloured = false;
+		ItemPaint.Color = ResolveItemColor(DisplayList, Params, Item, bRecoloured);
+		const int32 Slot = bPaints ? ResolveItemSlot(Paints, Item, bRecoloured) : 0;
+		ItemPaint.Slot = (uint8)Slot;
+		ItemPaint.FaceSlot = (uint8)(Item.Glyph.bColor ? 0 : Slot);
+		ItemPaint.EffectsSlot = Item.Style.bPaintRemoved ? (uint8)0 : OutlinePaintSlot;
+		ItemPaint.SlotColor = ItemPaint.Color;
+		if (Slot != 0 && Paints.Slots[Slot].Face != nullptr)
+		{
+			ItemPaint.SlotColor = Item.Style.bHasMultiplyColor
+				? FDreamUIUtils::MultiplyColor(Params.PaintBaseColor, Item.Style.MultiplyColor) : Params.PaintBaseColor;
+		}
 	}
 
-	// Small text from coverage glyphs (FDreamTextCoverageParams). A coverage glyph is a face and nothing else, so a text
-	// whose quads come in several copies -- effects, a bitmap font's shadow or outline -- keeps its field quads; the text's
-	// gate never lets one through.
+	// Small text from coverage glyphs (FDreamTextCoverageParams). A coverage glyph is a face and nothing else: a text whose
+	// quads come with a bitmap font's shadow or outline copies keeps its field quads, and a text with effects draws from
+	// coverage only through the effects hybrid (EffectFace), each coverage item's field effects copy under its coverage face.
+	const bool bEffectsHybrid = PlainCopies.Effects > 0 && Coverage.EffectFace != EDreamSmallTextEffectFace::Field;
 	const bool bCoverage = Coverage.bEnabled && Coverage.Font != nullptr && Coverage.DeviceScale > 0.0f
-		&& Coverage.RasterScale > 0.0f && PlainCopies.Total() == 1;
+		&& Coverage.RasterScale > 0.0f && PlainCopies.Shadow == 0 && PlainCopies.Outline == 0
+		&& (PlainCopies.Effects == 0 || bEffectsHybrid);
 	const float CoverageCodeY = Coverage.Contrast + (Coverage.bLinearTarget ? DreamTextQuadCode::CoverageLinearTarget : 0.0f);
-	TArray<EItemQuad> ItemQuads;
+	TArray<EItemQuad>& ItemQuads = Scratch.ItemQuads;
+	ItemQuads.Reset();
 	ItemQuads.SetNumZeroed(Items.Num());
-	TArray<FCoverageQuad> CoverageQuads;
-	TArray<int32> ItemCoverageQuad;
+	TArray<FCoverageQuad>& CoverageQuads = Scratch.CoverageQuads;
+	CoverageQuads.Reset();
+	TArray<int32>& ItemCoverageQuad = Scratch.ItemCoverageQuad;
+	ItemCoverageQuad.Reset();
 	if (bCoverage)
 	{
-		ItemCoverageQuad.Init(INDEX_NONE, Items.Num());
+		ItemCoverageQuad.SetNumUninitialized(Items.Num());
+		for (int32& CoverageQuadIndex : ItemCoverageQuad)
+		{
+			CoverageQuadIndex = INDEX_NONE;
+		}
 	}
 
 	// The coverage glyph on the device grid: the pen's baseline row rounded, its column and quarter-pixel phase from the
 	// pen's x rounded to a quarter, the box from there in whole pixels, mapped back by 1/S. The UVs are the glyph's texels
-	// exactly, so with the box on whole pixels every pixel centre samples one texel centre.
+	// exactly, so with the box on whole pixels every pixel centre samples one texel centre. Its Shift is how far that moved
+	// the pen, which the effects hybrid moves the field's effects copy by.
 	auto PlaceCoverageQuad = [&Coverage](const FDreamTextGlyphItem& Item, const FDreamUICoverageGlyph& Glyph)
 	{
 		const double Scale = Coverage.DeviceScale;
@@ -303,7 +517,27 @@ void FDreamTextPainter::Paint(const FDreamTextDisplayList& DisplayList, const FD
 		Quad.Texels.MinUV = Glyph.MinUV;
 		Quad.Texels.MaxUV = Glyph.MaxUV;
 		Quad.Texels.SliceIndex = Glyph.SliceIndex;
+		Quad.Shift = FVector2f((float)((0.25 * Quarter - U) / Scale), (float)(((double)Row - V) / Scale));
 		return Quad;
+	};
+
+	// The effects hybrid's face (FDreamTextCoverageParams::EffectFace): unhinted where a hinted face would stand visibly off
+	// the field's outline -- an outline under 2 device pixels, for Auto -- or always, as the setting says. A text with a glow
+	// or an underlay and no outline keeps the crisper hinted face under Auto: nothing it draws shows the offset.
+	auto WantsUnhintedFace = [&Coverage](const FDreamTextGlyphItem& Item)
+	{
+		switch (Coverage.EffectFace)
+		{
+		case EDreamSmallTextEffectFace::Unhinted:
+			return true;
+		case EDreamSmallTextEffectFace::Auto:
+		{
+			const float OutlinePixels = Coverage.OutlineWidthEm * Item.GlyphSize * Coverage.DeviceScale;
+			return OutlinePixels > 0.0f && OutlinePixels < 2.0f;
+		}
+		default:
+			return false;
+		}
 	};
 
 	// Where an item's quad comes from. Small text asks the font for a coverage glyph for an item that has a quad, and for one
@@ -327,6 +561,10 @@ void FDreamTextPainter::Paint(const FDreamTextDisplayList& DisplayList, const FD
 		if (Item.Style.bSyntheticItalic)
 		{
 			Flags |= EDreamUICoverageGlyphFlags::SyntheticItalic;
+		}
+		if (bEffectsHybrid && WantsUnhintedFace(Item))
+		{
+			Flags |= EDreamUICoverageGlyphFlags::Unhinted;
 		}
 		FDreamUICoverageGlyph Glyph;
 		if (!Coverage.Font->GetCoverageGlyph(Item.Glyph.FaceIndex, Item.Glyph.GlyphIndex,
@@ -361,7 +599,20 @@ void FDreamTextPainter::Paint(const FDreamTextDisplayList& DisplayList, const FD
 		ItemQuads[ItemIndex] = PlanItem(ItemIndex);
 		if (!DrawsQuad(ItemIndex))continue;
 		FQuadCopies ItemCopies;
-		ItemCopies.Add(ItemQuads[ItemIndex] == EItemQuad::Color ? ColorCopies : PlainCopies, 1);
+		if (ItemQuads[ItemIndex] == EItemQuad::Color)
+		{
+			ItemCopies.Add(ColorCopies, 1);
+		}
+		else if (ItemQuads[ItemIndex] == EItemQuad::Coverage && !Items[ItemIndex].bEmit)
+		{
+			ItemCopies.Add(FaceOnlyCopies, 1);
+		}
+		else
+		{
+			// A field or bitmap glyph's copies; a coverage glyph's under the effects hybrid are the same two, its field
+			// effects copy and its face.
+			ItemCopies.Add(PlainCopies, 1);
+		}
 		ItemCopies.Add(PlainCopies, CharacterStrokes(ItemIndex));
 		if (Blocks.Total() + ItemCopies.Total() > MaxQuads)
 		{
@@ -383,13 +634,15 @@ void FDreamTextPainter::Paint(const FDreamTextDisplayList& DisplayList, const FD
 	// Fill runs. A glyph belongs to the first segment covering its character, else to its line;
 	// each run's horizontal extent comes from the glyph quads in it, so UV2.y spans exactly the ink.
 	// Every item gets its segment, spaces included, since an underline spans them.
-	struct FRunBounds { float MinX = FLT_MAX; float MaxX = -FLT_MAX; };
 	const int32 SegmentCount = Params.FillSegments ? Params.FillSegments->Num() : 0;
-	TArray<FRunBounds> SegmentBounds;
+	TArray<FRunBounds>& SegmentBounds = Scratch.SegmentBounds;
+	SegmentBounds.Reset();
 	SegmentBounds.SetNum(SegmentCount);
-	TArray<FRunBounds> LineBounds;
+	TArray<FRunBounds>& LineBounds = Scratch.LineBounds;
+	LineBounds.Reset();
 	LineBounds.SetNum(DisplayList.Lines.Num());
-	TArray<int32> ItemSegment;
+	TArray<int32>& ItemSegment = Scratch.ItemSegment;
+	ItemSegment.Reset();
 	ItemSegment.SetNumUninitialized(Items.Num());
 	for (int32 ItemIndex = 0; ItemIndex < Items.Num(); ItemIndex++)
 	{
@@ -457,11 +710,54 @@ void FDreamTextPainter::Paint(const FDreamTextDisplayList& DisplayList, const FD
 		return Item.GlyphSize > 0.0f ? Item.GlyphSize : Item.Style.Size;
 	};
 
+	// Per slot, for its strokes: cut into a piece per character when it measures a Glyph box, so every piece has its own
+	// character's box; kept inside one tag run's piece when a tag slot measures a Run box. And whether any slot measures a
+	// Run box at all.
+	bool bSlotStrokesPerCharacter[DreamTextQuadCode::SlotCount] = {};
+	bool bSlotStrokesPerRun[DreamTextQuadCode::SlotCount] = {};
+	bool bAnyRunBox = false;
+	if (bPaints)
+	{
+		for (int32 SlotIndex = DreamTextQuadCode::TextSlot; SlotIndex < DreamTextQuadCode::SlotCount; SlotIndex++)
+		{
+			const FDreamTextPaintSlot& PaintSlot = Paints.Slots[SlotIndex];
+			if (!PaintSlot.IsUsed())continue;
+			bSlotStrokesPerCharacter[SlotIndex] = PaintSlot.HorizontalBox == EDreamTextPaintBox::Glyph || PaintSlot.VerticalBox == EDreamTextPaintBox::Glyph;
+			const bool bRunBox = PaintSlot.HorizontalBox == EDreamTextPaintBox::Run || PaintSlot.VerticalBox == EDreamTextPaintBox::Run;
+			bSlotStrokesPerRun[SlotIndex] = bRunBox && SlotIndex >= DreamTextQuadCode::FirstTagSlot;
+			bAnyRunBox |= bRunBox;
+		}
+	}
+	// A Run box for an item no tag run covers -- the text's own paints measured across Runs: the whole text as one run, its
+	// lines laid end to end in line order (CSS's slice, as for an inline element holding all of it), each line's piece its
+	// line box.
+	TArray<FDreamTextPaintFragment>& LineRunPieces = Scratch.LineRunPieces;
+	LineRunPieces.Reset();
+	if (bAnyRunBox)
+	{
+		float WholeRunWidth = 0.0f;
+		for (int32 LineIndex = 0; LineIndex < DisplayList.LineBoxes.Num(); LineIndex++)
+		{
+			FDreamTextPaintFragment& Piece = LineRunPieces.AddDefaulted_GetRef();
+			Piece.LineIndex = LineIndex;
+			Piece.Box = DisplayList.LineBoxes[LineIndex];
+			Piece.RunOffset = WholeRunWidth;
+			WholeRunWidth += FMath::Max(Piece.Box.GetWidth(), 0.0f);
+		}
+		for (FDreamTextPaintFragment& Piece : LineRunPieces)
+		{
+			Piece.RunWidth = WholeRunWidth;
+		}
+	}
+
 	// Underlines and strikethroughs: one strip per run of items on a line that draw the same stroke in the same
 	// colour, spaces included -- the layout clears the flag on the spaces that hang off a line's end and on anything a
 	// clamp removed. A strip per glyph left a gap at every space and, under negative letter spacing, quads of negative
 	// width that blended twice where they overlapped. Drawn per character instead, the strokes are in the glyph loop.
-	TArray<FDecorationRun> Decorations;
+	// A painted strip is measured in one box, so a run is also cut where the paint's slot changes, where its tag run does
+	// under a Run box, and at every character under a Glyph box.
+	TArray<FDecorationRun>& Decorations = Scratch.Decorations;
+	Decorations.Reset();
 	for (int32 Kind = 0; Kind < 2 && !bStrokesPerCharacter; Kind++)
 	{
 		const bool bStrikethrough = Kind == 1;
@@ -490,9 +786,13 @@ void FDreamTextPainter::Paint(const FDreamTextDisplayList& DisplayList, const FD
 			const float EdgeA = Item.Pen.X + Item.DecorationOffset;
 			const float EdgeB = EdgeA + Item.AdvanceWithSpace;
 			const float DilateEm = DilateOf(Item);
-			if (bOpen && Open.LineIndex == Item.LineIndex && FMath::IsNearlyEqual(Open.Top, Top, 0.01f)
-				&& FMath::IsNearlyEqual(Open.Height, Glyph.Height, 0.01f) && Open.Color == ItemColors[ItemIndex]
-				&& Open.Segment == ItemSegment[ItemIndex] && Open.DilateEm == DilateEm)
+			const FItemPaint& ItemPaint = ItemPaints[ItemIndex];
+			const bool bAlone = bSlotStrokesPerCharacter[ItemPaint.Slot];
+			const int32 Fragment = bSlotStrokesPerRun[ItemPaint.Slot] ? Item.PaintFragment : INDEX_NONE;
+			if (bOpen && !bAlone && !Open.bAlone && Open.LineIndex == Item.LineIndex && FMath::IsNearlyEqual(Open.Top, Top, 0.01f)
+				&& FMath::IsNearlyEqual(Open.Height, Glyph.Height, 0.01f) && Open.Color == ItemPaint.SlotColor
+				&& Open.Segment == ItemSegment[ItemIndex] && Open.DilateEm == DilateEm && Open.Slot == ItemPaint.Slot
+				&& Open.EffectsSlot == ItemPaint.EffectsSlot && Open.Fragment == Fragment)
 			{
 				Open.Left = FMath::Min(Open.Left, FMath::Min(EdgeA, EdgeB));
 				Open.Right = FMath::Max(Open.Right, FMath::Max(EdgeA, EdgeB));
@@ -507,9 +807,13 @@ void FDreamTextPainter::Paint(const FDreamTextDisplayList& DisplayList, const FD
 			Open.Top = Top;
 			Open.Height = Glyph.Height;
 			Open.Glyph = Glyph;
-			Open.Color = ItemColors[ItemIndex];
+			Open.Color = ItemPaint.SlotColor;
 			Open.Segment = ItemSegment[ItemIndex];
 			Open.DilateEm = DilateEm;
+			Open.Slot = ItemPaint.Slot;
+			Open.EffectsSlot = ItemPaint.EffectsSlot;
+			Open.Fragment = Fragment;
+			Open.bAlone = bAlone;
 			bOpen = true;
 		}
 		Flush();
@@ -518,7 +822,7 @@ void FDreamTextPainter::Paint(const FDreamTextDisplayList& DisplayList, const FD
 	const int32 RoomForStrips = (MaxQuads - Blocks.Total()) / PlainCopies.Total();
 	if (Decorations.Num() > RoomForStrips)
 	{
-		Decorations.SetNum(FMath::Max(0, RoomForStrips));
+		Decorations.SetNum(FMath::Max(0, RoomForStrips), EAllowShrinking::No);
 	}
 	Blocks.Add(PlainCopies, Decorations.Num());
 
@@ -536,70 +840,258 @@ void FDreamTextPainter::Paint(const FDreamTextDisplayList& DisplayList, const FD
 	int32 EffectIndexCursor = (Blocks.Shadow + Blocks.Outline) * 6;
 	int32 FaceIndexCursor = (Blocks.Shadow + Blocks.Outline + Blocks.Effects) * 6;
 
-	// Every copy of one quad. They share the item's fill channels and its alpha, so a faded text fades whole; the
-	// effect copy of a field may be grown further into the field than the face copy. A solid strip -- a stroke drawn
-	// from one texel inside its glyph -- has no field around it to grow into: grown, it would only get thicker. Em is
-	// what the quad's lengths in em are of: the glyph's own (GlyphEmOf), or the style's for a stroke.
-	auto WriteCopies = [&](int32 ItemIndex, const FDreamUICharData& Glyph, float Em, float Left, float Right, float Bottom, float Top,
-		const FColor& Color, float DilateEm, bool bItalic, float BaselineY)
+	// The boxes a slot's paints are measured in, for one item (FDreamTextPaintSlot, the display list's boxes): the text
+	// block, the content box, the item's line, its own glyph box (its pen box across, its ascent to its descent down), or its
+	// run -- a tag run's piece on the item's line, the run's pieces laid end to end; the whole text as one run for the text's
+	// own paints. A box the display list does not have is no box: 0 on that axis.
+	auto LineBoxOf = [&DisplayList](const FDreamTextGlyphItem& BoxItem) -> const FDreamTextBox*
 	{
-		const FQuadWriter::FFill Fill = MakeFill(ItemIndex, Left, Right);
-		const bool bSolidStrip = Glyph.MinUV == Glyph.MaxUV;
-		auto WriteOne = [&](EGlyphLayer Layer, float ReachEm, const FVector2f& Offset, const FColor& CopyColor, int32& IndexCursor)
+		return DisplayList.LineBoxes.IsValidIndex(BoxItem.LineIndex) ? &DisplayList.LineBoxes[BoxItem.LineIndex] : nullptr;
+	};
+	auto RunPieceOf = [&DisplayList, &LineRunPieces](int32 InSlot, const FDreamTextGlyphItem& BoxItem) -> const FDreamTextPaintFragment*
+	{
+		if (InSlot >= DreamTextQuadCode::FirstTagSlot && DisplayList.PaintFragments.IsValidIndex(BoxItem.PaintFragment))
 		{
-			const FDreamUICharData Grown = bSolidStrip ? Glyph : GrowIntoField(Glyph, ReachEm, Em, Params);
-			const float Grow = Grown.XOffset - Glyph.XOffset;// negative or zero: how far each edge moved out
-			const int32 Start = Writer.VertexCursor;
-			// Fonts without a field leave UV2.x at zero.
-			const float UV2X = Params.bDistanceField
-				? DilateEm + DreamTextQuadCode::FieldLayerStride * static_cast<float>(static_cast<int32>(Layer)) : 0.0f;
-			const float CopyLeft = Left + Grow + Offset.X;
-			const float CopyRight = Right - Grow + Offset.X;
-			const float CopyBottom = Bottom + Grow + Offset.Y;
-			const float CopyTop = Top - Grow + Offset.Y;
-			Writer.WriteQuad(CopyLeft, CopyRight, CopyBottom, CopyTop, Grown, CopyColor, UV2X, Fill.GlowBoost, Fill, IndexCursor);
-			if (bItalic)
+			return &DisplayList.PaintFragments[BoxItem.PaintFragment];
+		}
+		return LineRunPieces.IsValidIndex(BoxItem.LineIndex) ? &LineRunPieces[BoxItem.LineIndex] : nullptr;
+	};
+	auto MakePaintBoxes = [&](int32 InSlot, int32 InBoxItem)
+	{
+		const FDreamTextPaintSlot& PaintSlot = Paints.Slots[InSlot];
+		const FDreamTextGlyphItem& BoxItem = Items[InBoxItem];
+		FPaintBoxes Boxes;
+		switch (PaintSlot.HorizontalBox)
+		{
+		case EDreamTextPaintBox::ContentBox:
+		{
+			Boxes.Left = DisplayList.ContentBox.Left;
+			Boxes.Width = DisplayList.ContentBox.GetWidth();
+			break;
+		}
+		case EDreamTextPaintBox::Line:
+		{
+			if (const FDreamTextBox* LineBox = LineBoxOf(BoxItem))
 			{
-				// Shear about the baseline: an edge moves right by its height above the baseline times the slope.
-				const float CopyBaseline = BaselineY + Offset.Y;
-				Writer.ShearQuad(Start, (CopyBaseline - CopyBottom) * Params.ItalicSlope, (CopyTop - CopyBaseline) * Params.ItalicSlope);
+				Boxes.Left = LineBox->Left;
+				Boxes.Width = LineBox->GetWidth();
 			}
-		};
+			break;
+		}
+		case EDreamTextPaintBox::Glyph:
+		{
+			const float PenEdge = BoxItem.Pen.X + BoxItem.DecorationOffset;
+			Boxes.Left = FMath::Min(PenEdge, PenEdge + BoxItem.AdvanceWithSpace);
+			Boxes.Width = FMath::Abs(BoxItem.AdvanceWithSpace);
+			break;
+		}
+		case EDreamTextPaintBox::Run:
+		{
+			if (const FDreamTextPaintFragment* Piece = RunPieceOf(InSlot, BoxItem))
+			{
+				Boxes.Left = Piece->Box.Left;
+				Boxes.Offset = Piece->RunOffset;
+				Boxes.Width = Piece->RunWidth;
+			}
+			break;
+		}
+		default:
+		{
+			Boxes.Left = DisplayList.TextBlockBox.Left;
+			Boxes.Width = DisplayList.TextBlockBox.GetWidth();
+			break;
+		}
+		}
+		switch (PaintSlot.VerticalBox)
+		{
+		case EDreamTextPaintBox::ContentBox:
+		{
+			Boxes.Top = DisplayList.ContentBox.Top;
+			Boxes.Height = DisplayList.ContentBox.GetHeight();
+			break;
+		}
+		case EDreamTextPaintBox::Line:
+		{
+			if (const FDreamTextBox* LineBox = LineBoxOf(BoxItem))
+			{
+				Boxes.Top = LineBox->Top;
+				Boxes.Height = LineBox->GetHeight();
+			}
+			break;
+		}
+		case EDreamTextPaintBox::Glyph:
+		{
+			Boxes.Top = BoxItem.Pen.Y + BoxItem.Ascent;
+			Boxes.Height = BoxItem.Ascent + BoxItem.Descent;
+			break;
+		}
+		case EDreamTextPaintBox::Run:
+		{
+			if (const FDreamTextPaintFragment* Piece = RunPieceOf(InSlot, BoxItem))
+			{
+				Boxes.Top = Piece->Box.Top;
+				Boxes.Height = Piece->Box.GetHeight();
+			}
+			break;
+		}
+		default:
+		{
+			Boxes.Top = DisplayList.TextBlockBox.Top;
+			Boxes.Height = DisplayList.TextBlockBox.GetHeight();
+			break;
+		}
+		}
+		return Boxes;
+	};
+
+	// The quad just written at Start, its corners final -- sheared, snapped -- given its slot's paints, measured for the item
+	// at BoxItem. Slot 0 leaves it as written: UV4 (0, 0), its code as it is. Otherwise each vertex's UV4 is its place in the
+	// slot's boxes and the code carries the slot (DreamTextQuadCode::AddSlot) -- or, under the vertex-colour fallback, a
+	// face takes the gradient into its vertex colours there, the shader's product of the two in linear light, and stays slot
+	// 0; nothing else is painted then.
+	auto PaintQuad = [&](int32 Start, int32 InSlot, int32 InBoxItem, bool bInFace)
+	{
+		if (InSlot == 0)return;
+		const FDreamTextPaintSlot& PaintSlot = Paints.Slots[InSlot];
+		if (Paints.bVertexColorFallback && (!bInFace || PaintSlot.Face == nullptr))return;
+		const FPaintBoxes Boxes = MakePaintBoxes(InSlot, InBoxItem);
+		for (int32 Corner = Start; Corner < Start + 4; Corner++)
+		{
+			const FVector3f& Position = Writer.OriginVertices[Corner].Position;
+			const FVector2f BoxUV = Boxes.At(Position.Y, Position.Z);
+			FDreamUIMeshVertex& Vertex = Writer.Vertices[Corner];
+			if (Paints.bVertexColorFallback)
+			{
+				const FLinearColor Gradient = PaintSlot.Face->Evaluate(BoxUV, PaintSlot.BoxAspect, Paints.FaceAnimation);
+				Vertex.Color = (FLinearColor(Vertex.Color) * Gradient).ToFColor(true);
+			}
+			else
+			{
+				Vertex.UV4 = BoxUV;
+				Vertex.TextureCoordinate[2].X = DreamTextQuadCode::AddSlot(Vertex.TextureCoordinate[2].X, InSlot);
+			}
+		}
+	};
+
+	// One copy of a quad: grown into the field by ReachEm unless it is a solid strip -- a stroke drawn from one texel inside
+	// its glyph has no field around it to grow into; grown, it would only get thicker -- moved by Offset, raised by Lift,
+	// and, when italic, sheared about its baseline moved by Offset but not raised. Returns where its vertices start.
+	auto WriteCopy = [&](const FQuadSource& Source, EGlyphLayer Layer, float ReachEm, const FVector2f& Offset, float Lift,
+		const FColor& CopyColor, const FQuadWriter::FFill& Fill, int32& IndexCursor)
+	{
+		const FDreamUICharData& SourceGlyph = *Source.Glyph;
+		const bool bSolidStrip = SourceGlyph.MinUV == SourceGlyph.MaxUV;
+		const FDreamUICharData Grown = bSolidStrip ? SourceGlyph : GrowIntoField(SourceGlyph, ReachEm, Source.Em, Params);
+		const float Grow = Grown.XOffset - SourceGlyph.XOffset;// negative or zero: how far each edge moved out
+		const int32 Start = Writer.VertexCursor;
+		// Fonts without a field leave UV2.x at zero.
+		const float UV2X = Params.bDistanceField
+			? Source.DilateEm + DreamTextQuadCode::FieldLayerStride * static_cast<float>(static_cast<int32>(Layer)) : 0.0f;
+		const float CopyLeft = Source.Left + Grow + Offset.X;
+		const float CopyRight = Source.Right - Grow + Offset.X;
+		const float CopyBottom = Source.Bottom + Grow + Offset.Y + Lift;
+		const float CopyTop = Source.Top - Grow + Offset.Y + Lift;
+		Writer.WriteQuad(CopyLeft, CopyRight, CopyBottom, CopyTop, Grown, CopyColor, UV2X, Fill.GlowBoost, Fill, IndexCursor);
+		if (Source.bItalic)
+		{
+			// Shear about the baseline: an edge moves right by its height above the baseline times the slope.
+			const float CopyBaseline = Source.BaselineY + Offset.Y;
+			Writer.ShearQuad(Start, (CopyBaseline - CopyBottom) * Params.ItalicSlope, (CopyTop - CopyBaseline) * Params.ItalicSlope);
+		}
+		return Start;
+	};
+
+	// Every copy of one quad. They share the item's fill channels, measured on the quad as the layout placed it, and the
+	// effect copy of a field may be grown further into the field than the face copy. The face copy is in Color and paints
+	// with FaceSlot. The effects fade with EffectOpacity instead of the item's alpha: a field's effects copy paints with
+	// EffectsSlot, a bitmap font's shadow and outline copies -- in their own colours, at their own alpha times that -- with
+	// nothing.
+	auto WriteCopies = [&](const FQuadSource& Source, const FColor& Color, int32 FaceSlot, int32 EffectsSlot)
+	{
+		const FQuadWriter::FFill Fill = MakeFill(Source.ItemIndex, Source.Left, Source.Right);
 		if (bBitmapShadow)
 		{
 			FColor ShadowColor = Params.BitmapShadowColor;
-			ShadowColor.A = (uint8)FMath::Clamp(FMath::RoundToInt(ShadowColor.A * (Color.A / 255.0f)), 0, 255);
+			ShadowColor.A = FadeEffectAlpha(ShadowColor.A);
 			// +Y is down in FDreamTextStyle's offset, and up in the text's own space.
-			WriteOne(EGlyphLayer::Both, 0.0f, FVector2f(Params.BitmapShadowOffsetEm.X * Em, -Params.BitmapShadowOffsetEm.Y * Em), ShadowColor, ShadowIndexCursor);
+			const FVector2f ShadowOffset(Params.BitmapShadowOffsetEm.X * Source.Em, -Params.BitmapShadowOffsetEm.Y * Source.Em);
+			WriteCopy(Source, EGlyphLayer::Both, 0.0f, ShadowOffset, 0.0f, ShadowColor, Fill, ShadowIndexCursor);
 		}
 		if (bBitmapOutline)
 		{
 			FColor OutlineColor = Params.BitmapOutlineColor;
-			OutlineColor.A = (uint8)FMath::Clamp(FMath::RoundToInt(OutlineColor.A * (Color.A / 255.0f)), 0, 255);
-			const float Width = Params.BitmapOutlineWidthEm * Em;
+			OutlineColor.A = FadeEffectAlpha(OutlineColor.A);
+			const float OutlineWidth = Params.BitmapOutlineWidthEm * Source.Em;
 			for (int32 Tap = 0; Tap < UE_ARRAY_COUNT(OutlineTaps); Tap++)
 			{
-				WriteOne(EGlyphLayer::Both, 0.0f, OutlineTaps[Tap] * Width, OutlineColor, OutlineIndexCursor);
+				WriteCopy(Source, EGlyphLayer::Both, 0.0f, OutlineTaps[Tap] * OutlineWidth, 0.0f, OutlineColor, Fill, OutlineIndexCursor);
 			}
 		}
+		const float BothReachEm = FMath::Max(Params.EffectReachEm, Params.FaceReachEm);
 		if (bSeparateEffectLayer)
 		{
-			WriteOne(EGlyphLayer::Effects, FMath::Max(Params.EffectReachEm, Params.FaceReachEm), FVector2f::ZeroVector, Color, EffectIndexCursor);
-			WriteOne(EGlyphLayer::Face, Params.FaceReachEm, FVector2f::ZeroVector, Color, FaceIndexCursor);
+			FColor EffectsColor = Color;
+			EffectsColor.A = EffectAlpha;
+			const int32 EffectsStart = WriteCopy(Source, EGlyphLayer::Effects, BothReachEm, FVector2f::ZeroVector, 0.0f, EffectsColor, Fill, EffectIndexCursor);
+			PaintQuad(EffectsStart, EffectsSlot, Source.ItemIndex, false);
+			const int32 FaceStart = WriteCopy(Source, EGlyphLayer::Face, Params.FaceReachEm, FVector2f::ZeroVector, 0.0f, Color, Fill, FaceIndexCursor);
+			PaintQuad(FaceStart, FaceSlot, Source.ItemIndex, true);
 		}
 		else
 		{
-			WriteOne(EGlyphLayer::Both, FMath::Max(Params.EffectReachEm, Params.FaceReachEm), FVector2f::ZeroVector, Color, FaceIndexCursor);
+			const int32 FaceStart = WriteCopy(Source, EGlyphLayer::Both, BothReachEm, FVector2f::ZeroVector, 0.0f, Color, Fill, FaceIndexCursor);
+			PaintQuad(FaceStart, FaceSlot, Source.ItemIndex, true);
 		}
 	};
 
-	// A coverage glyph: one face quad on the device grid, in the item's colour. Bold and italic are in its raster, so it
-	// is neither shifted nor sheared. UV3.y carries the contrast and whether the target blends in linear space.
+	// An item's glyph quad as the layout placed it. Shader-side bold dilates the regular glyph by BoldDilateEm per side, in
+	// the glyph's own em. The layout already gave the cluster twice that much extra advance; shifting the quad right by one
+	// side's worth keeps the left bearing where it was and spends the whole extra advance on the right.
+	auto MakeGlyphSource = [&](int32 ItemIndex)
+	{
+		const FDreamTextGlyphItem& Item = Items[ItemIndex];
+		FQuadSource Source;
+		Source.ItemIndex = ItemIndex;
+		Source.Glyph = &Item.Glyph;
+		Source.Em = GlyphEmOf(Item);
+		Source.DilateEm = DilateOf(Item);
+		Source.Left = Item.Pen.X + Item.Glyph.XOffset + Source.DilateEm * Source.Em;
+		Source.Right = Source.Left + Item.Glyph.Width;
+		Source.Top = Item.Pen.Y + Item.Glyph.YOffset;
+		Source.Bottom = Source.Top - Item.Glyph.Height;
+		Source.bItalic = Item.Style.bSyntheticItalic;
+		Source.BaselineY = Item.Pen.Y;
+		return Source;
+	};
+
+	// A coverage glyph: one face quad on the device grid, in the item's colour or its paint's. Bold and italic are in its
+	// raster, so it is neither shifted nor sheared, and it is measured in its paint's boxes at its snapped corners. UV3.y
+	// carries the contrast and whether the target blends in linear space.
 	auto WriteCoverageQuad = [&](int32 ItemIndex, const FCoverageQuad& Quad)
 	{
+		const FItemPaint& CoveragePaint = ItemPaints[ItemIndex];
 		const FQuadWriter::FFill Fill = MakeFill(ItemIndex, Quad.Left, Quad.Right);
-		Writer.WriteQuad(Quad.Left, Quad.Right, Quad.Bottom, Quad.Top, Quad.Texels, ItemColors[ItemIndex],
+		const int32 Start = Writer.VertexCursor;
+		Writer.WriteQuad(Quad.Left, Quad.Right, Quad.Bottom, Quad.Top, Quad.Texels, CoveragePaint.SlotColor,
 			DreamTextQuadCode::CoverageBase + static_cast<float>(Quad.Phase), CoverageCodeY, Fill, FaceIndexCursor);
+		PaintQuad(Start, CoveragePaint.FaceSlot, ItemIndex, true);
+	};
+
+	// The effects hybrid (FDreamTextCoverageParams::EffectFace): a coverage item's effects from the field, in the effects block
+	// under its coverage face -- the layout's field quad, grown and dilated as a field item's effects copy is, moved by the
+	// face's snap shift so the two line up; for synthetic bold also raised by half the bold, since FreeType grows a bold
+	// coverage glyph right and up where the field dilates it both ways (the right half is the field's bold shift already).
+	// The raise comes before the italic shear, as the bold does in the raster.
+	auto WriteCoverageEffects = [&](int32 ItemIndex, const FCoverageQuad& Quad)
+	{
+		const FQuadSource Source = MakeGlyphSource(ItemIndex);
+		const FItemPaint& EffectsPaint = ItemPaints[ItemIndex];
+		FColor EffectsColor = EffectsPaint.SlotColor;
+		EffectsColor.A = EffectAlpha;
+		const FQuadWriter::FFill Fill = MakeFill(ItemIndex, Source.Left + Quad.Shift.X, Source.Right + Quad.Shift.X);
+		const int32 Start = WriteCopy(Source, EGlyphLayer::Effects, FMath::Max(Params.EffectReachEm, Params.FaceReachEm), Quad.Shift,
+			Source.DilateEm * Source.Em, EffectsColor, Fill, EffectIndexCursor);
+		PaintQuad(Start, EffectsPaint.EffectsSlot, ItemIndex, false);
 	};
 
 	// The shader draws a colour glyph's underlay from its alpha sampled at UV minus the style's offset, and keeps that offset
@@ -608,8 +1100,9 @@ void FDreamTextPainter::Paint(const FDreamTextDisplayList& DisplayList, const FD
 	const float ColorUnderlayInsetEm = (Params.bDistanceField && Params.EmTexels > 0.0f) ? 0.5f * Params.FieldSpreadTexels / Params.EmTexels : 0.0f;
 	// A colour glyph: the padded cell the layout placed, sampled as a colour bitmap -- not grown into a field it has not
 	// got, not dilated or shifted for bold, but sheared for italic like any glyph. Its vertex RGB is white (an emoji keeps
-	// its own colours; the shader ignores it) and its alpha the item's, so a fade or an alpha animation still reaches it.
-	// UV3.y is the cell's texels per em, which the shader turns the underlay's offset in em into UV with.
+	// its own colours; the shader ignores it) and its alpha the item's, so a fade or an alpha animation still reaches it;
+	// its underlay copy fades as every effect does. It paints nothing: every copy is slot 0. UV3.y is the cell's texels per
+	// em, which the shader turns the underlay's offset in em into UV with.
 	auto WriteColorCopies = [&](int32 ItemIndex)
 	{
 		const FDreamTextGlyphItem& Item = Items[ItemIndex];
@@ -619,12 +1112,13 @@ void FDreamTextPainter::Paint(const FDreamTextDisplayList& DisplayList, const FD
 		const float Top = Item.Pen.Y + Glyph.YOffset;
 		const float Bottom = Top - Glyph.Height;
 		const FQuadWriter::FFill Fill = MakeFill(ItemIndex, Left, Right);
-		const FColor White(255, 255, 255, ItemColors[ItemIndex].A);
+		const FColor White(255, 255, 255, ItemPaints[ItemIndex].Color.A);
+		const FColor EffectsWhite(255, 255, 255, EffectAlpha);
 		auto WriteOne = [&](const FDreamUICharData& CopyGlyph, float CopyLeft, float CopyRight, float CopyBottom, float CopyTop,
-			float CopyBaseline, float Code, const FQuadWriter::FFill& CopyFill, int32& IndexCursor)
+			float CopyBaseline, float Code, const FColor& CopyColor, const FQuadWriter::FFill& CopyFill, int32& IndexCursor)
 		{
 			const int32 Start = Writer.VertexCursor;
-			Writer.WriteQuad(CopyLeft, CopyRight, CopyBottom, CopyTop, CopyGlyph, White, Code, Glyph.ColorTexelsPerEm, CopyFill, IndexCursor);
+			Writer.WriteQuad(CopyLeft, CopyRight, CopyBottom, CopyTop, CopyGlyph, CopyColor, Code, Glyph.ColorTexelsPerEm, CopyFill, IndexCursor);
 			if (Item.Style.bSyntheticItalic)
 			{
 				Writer.ShearQuad(Start, (CopyBaseline - CopyBottom) * Params.ItalicSlope, (CopyTop - CopyBaseline) * Params.ItalicSlope);
@@ -632,13 +1126,12 @@ void FDreamTextPainter::Paint(const FDreamTextDisplayList& DisplayList, const FD
 		};
 		if (ColorCopies.Shadow > 0)
 		{
-			// A bitmap font's drop shadow, moved by its offset as its plain glyphs' shadows are, and dimmed with its glyph: the
-			// shader draws the glyph's alpha where the copy is, in the style's underlay colour. +Y is down in the offset, up
-			// in the text's space.
+			// A bitmap font's drop shadow, moved by its offset as its plain glyphs' shadows are: the shader draws the glyph's
+			// alpha where the copy is, in the style's underlay colour. +Y is down in the offset, up in the text's space.
 			const float Em = GlyphEmOf(Item);
 			const FVector2f Offset(Params.BitmapShadowOffsetEm.X * Em, -Params.BitmapShadowOffsetEm.Y * Em);
 			WriteOne(Glyph, Left + Offset.X, Right + Offset.X, Bottom + Offset.Y, Top + Offset.Y, Item.Pen.Y + Offset.Y,
-				DreamTextQuadCode::ColorEffects, Fill, ShadowIndexCursor);
+				DreamTextQuadCode::ColorEffects, EffectsWhite, Fill, ShadowIndexCursor);
 		}
 		if (ColorCopies.Effects > 0)
 		{
@@ -659,9 +1152,9 @@ void FDreamTextPainter::Paint(const FDreamTextDisplayList& DisplayList, const FD
 				Inset.MaxUV -= FVector2f(InsetUV, InsetUV);
 			}
 			WriteOne(Inset, Left + InsetX, Right - InsetX, Bottom + InsetY, Top - InsetY, Item.Pen.Y,
-				DreamTextQuadCode::ColorEffects, MakeFill(ItemIndex, Left + InsetX, Right - InsetX), EffectIndexCursor);
+				DreamTextQuadCode::ColorEffects, EffectsWhite, MakeFill(ItemIndex, Left + InsetX, Right - InsetX), EffectIndexCursor);
 		}
-		WriteOne(Glyph, Left, Right, Bottom, Top, Item.Pen.Y, DreamTextQuadCode::ColorFace, Fill, FaceIndexCursor);
+		WriteOne(Glyph, Left, Right, Bottom, Top, Item.Pen.Y, DreamTextQuadCode::ColorFace, White, Fill, FaceIndexCursor);
 	};
 
 	// While coverage is on, a stroke's top and bottom go to device rows, as the glyphs' baselines do: its thickness rounded
@@ -689,6 +1182,7 @@ void FDreamTextPainter::Paint(const FDreamTextDisplayList& DisplayList, const FD
 		const int32 StartVertIndex = Writer.VertexCursor;
 		const int32 StartFaceIndex = FaceIndexCursor;
 		const EItemQuad ItemQuad = ItemQuads[ItemIndex];
+		const FItemPaint& ItemPaint = ItemPaints[ItemIndex];
 		if (ItemQuad == EItemQuad::CoveragePending)
 		{
 			Report.PendingItems++;
@@ -699,7 +1193,14 @@ void FDreamTextPainter::Paint(const FDreamTextDisplayList& DisplayList, const FD
 			const float DilateEm = DilateOf(Item);
 			if (ItemQuad == EItemQuad::Coverage)
 			{
-				WriteCoverageQuad(ItemIndex, CoverageQuads[ItemCoverageQuad[ItemIndex]]);
+				const FCoverageQuad& CoverageQuad = CoverageQuads[ItemCoverageQuad[ItemIndex]];
+				// Under the effects hybrid the field's effects go first -- unless the coverage glyph stands in for a field
+				// glyph still pending, which has no field quad to draw them from yet.
+				if (bSeparateEffectLayer && Item.bEmit)
+				{
+					WriteCoverageEffects(ItemIndex, CoverageQuad);
+				}
+				WriteCoverageQuad(ItemIndex, CoverageQuad);
 				Report.CoverageItems++;
 			}
 			else if (ItemQuad == EItemQuad::Color)
@@ -708,20 +1209,13 @@ void FDreamTextPainter::Paint(const FDreamTextDisplayList& DisplayList, const FD
 			}
 			else
 			{
-				// Shader-side bold dilates the regular glyph by BoldDilateEm per side, in the glyph's own em. The layout
-				// already gave the cluster twice that much extra advance; shifting the quad right by one side's worth keeps
-				// the left bearing where it was and spends the whole extra advance on the right.
-				const float GlyphEm = GlyphEmOf(Item);
-				const float BoldShift = DilateEm * GlyphEm;
-				const float OffsetX = Item.Pen.X + Item.Glyph.XOffset + BoldShift;
-				const float OffsetY = Item.Pen.Y + Item.Glyph.YOffset;
-				WriteCopies(ItemIndex, Item.Glyph, GlyphEm, OffsetX, OffsetX + Item.Glyph.Width, OffsetY - Item.Glyph.Height, OffsetY,
-					ItemColors[ItemIndex], DilateEm, Item.Style.bSyntheticItalic, Item.Pen.Y);
+				WriteCopies(MakeGlyphSource(ItemIndex), ItemPaint.SlotColor, ItemPaint.FaceSlot, ItemPaint.EffectsSlot);
 			}
 			// Strokes drawn per character: this glyph's own piece of each, under its pen box, right after it in the
 			// vertex buffer so that whatever moves or fades the character takes its strokes along. What comes right
 			// after it on its line with the stroke but no piece of its own -- a space, an emoji, a glyph still on the
 			// rasterizer -- is under its piece, so a still text shows the same unbroken stroke as one drawn in runs.
+			// A piece paints as its glyph's strokes do, a colour glyph's too.
 			for (int32 Kind = 0; Kind < 2 && CharacterStrokes(ItemIndex) > 0; Kind++)
 			{
 				const bool bStrikethrough = Kind == 1;
@@ -748,8 +1242,17 @@ void FDreamTextPainter::Paint(const FDreamTextDisplayList& DisplayList, const FD
 				{
 					SnapStroke(StrokeBottom, StrokeTop);
 				}
-				WriteCopies(ItemIndex, StrokeGlyph, Item.Style.Size, StrokeLeft, StrokeRight, StrokeBottom, StrokeTop,
-					ItemColors[ItemIndex], DilateEm, false, Item.Pen.Y);
+				FQuadSource Stroke;
+				Stroke.ItemIndex = ItemIndex;
+				Stroke.Glyph = &StrokeGlyph;
+				Stroke.Em = Item.Style.Size;
+				Stroke.Left = StrokeLeft;
+				Stroke.Right = StrokeRight;
+				Stroke.Bottom = StrokeBottom;
+				Stroke.Top = StrokeTop;
+				Stroke.DilateEm = DilateEm;
+				Stroke.BaselineY = Item.Pen.Y;
+				WriteCopies(Stroke, ItemPaint.SlotColor, ItemPaint.Slot, ItemPaint.EffectsSlot);
 			}
 		}
 
@@ -781,19 +1284,30 @@ void FDreamTextPainter::Paint(const FDreamTextDisplayList& DisplayList, const FD
 	// The strips come after every glyph and belong to no character: a stroke spans many of them.
 	for (const FDecorationRun& Run : Decorations)
 	{
-		float Bottom = Run.Top - Run.Height;
-		float Top = Run.Top;
+		FQuadSource Strip;
+		Strip.ItemIndex = Run.FirstItem;
+		Strip.Glyph = &Run.Glyph;
+		Strip.Em = Items[Run.FirstItem].Style.Size;
+		Strip.Left = Run.Left;
+		Strip.Right = Run.Right;
+		Strip.Bottom = Run.Top - Run.Height;
+		Strip.Top = Run.Top;
 		if (bCoverage)
 		{
-			SnapStroke(Bottom, Top);
+			SnapStroke(Strip.Bottom, Strip.Top);
 		}
-		WriteCopies(Run.FirstItem, Run.Glyph, Items[Run.FirstItem].Style.Size, Run.Left, Run.Right, Bottom, Top,
-			Run.Color, Run.DilateEm, false, Run.Top);
+		Strip.DilateEm = Run.DilateEm;
+		Strip.BaselineY = Run.Top;
+		WriteCopies(Strip, Run.Color, Run.Slot, Run.EffectsSlot);
 	}
 
 	if (Coverage.Report != nullptr)
 	{
 		*Coverage.Report = Report;
+	}
+	if (Report.CoverageItems > 0)
+	{
+		DreamUIRenderStats::AddCount(DreamUIRenderStats::ECounter::CoverageItemsDrawn, Report.CoverageItems);
 	}
 
 	if (Params.bRequireNormalAndTangent)

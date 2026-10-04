@@ -47,8 +47,17 @@
  * CPU trace of the whole run beside it for Unreal Insights, each stretch a region of its own. Tools/Tests/perf_report.py
  * reads both and compares two runs.
  *
- * Nothing here fails on a number. A time is only worth something next to another run's on the same machine, and a
- * test that failed on one would fail on a slow day. What the test does hold is that the scene came up and drew.
+ * Then the labels -- 13 px, small text drawn from coverage glyphs -- move the ways small text moves in a game, each way
+ * timed twice in the one session: with coverage on and with it off (DreamGUI.Text.SmallTextCoverage 1 and 0), so the
+ * cost of coverage under motion is read off one machine at one moment. A label slides by 0.37 of a pixel a frame (every
+ * frame off the pixel grid), the labels scroll a whole pixel a frame the way a scroll view moves its content, each
+ * label's scale tweens as a pressed button's does, each label turns -- once with render layers on and once with them
+ * off -- the whole column zooms, and the labels' colour pulses. The side with coverage on must have drawn some coverage
+ * glyphs, and the side with it off none: otherwise the pair measured nothing.
+ *
+ * Nothing here fails on a time. A time is only worth something next to another run's on the same machine, and a
+ * test that failed on one would fail on a slow day. What the test does hold is that the scene came up and drew, and that
+ * each side of a coverage pair drew what its switch says.
  */
 namespace DreamRenderBenchmarkTestLocal
 {
@@ -62,6 +71,14 @@ namespace DreamRenderBenchmarkTestLocal
 	static constexpr int32 TimedFrames = 150;
 	/** Widgets destroyed and made again, per canvas per frame, while the scene churns. */
 	static constexpr int32 ChurnPerFrame = 4;
+	/** The label motions: frames timed per side, and frames each side is given first to settle after its switch. */
+	static constexpr int32 MotionTimedFrames = 120;
+	static constexpr int32 MotionSettleFrames = 30;
+	/** How far a sliding label moves a frame: never a whole pixel, so every frame lands somewhere else on the grid. */
+	static constexpr double SlidePixelsPerFrame = 0.37;
+	/** The labels' colours while they pulse, and at rest. */
+	static const FColor LabelColour(220, 225, 240, 255);
+	static const FColor PulseColour(255, 196, 80, 255);
 
 	struct FPanel
 	{
@@ -71,8 +88,23 @@ namespace DreamRenderBenchmarkTestLocal
 		TArray<TWeakObjectPtr<UDreamWidget>> Blocks;
 		TArray<FVector2D> BlockHomes;
 		TArray<TWeakObjectPtr<UDreamText>> Labels;
+		/** The labels' own widgets, which the label motions move, scale and turn. */
+		TArray<TWeakObjectPtr<UDreamWidget>> LabelWidgets;
+		/** What holds the labels, the size of the panel: what scrolls and zooms. */
+		TWeakObjectPtr<UDreamWidget> LabelColumn;
 		TArray<TWeakObjectPtr<UDreamWidget>> Churned;
 		TWeakObjectPtr<UDreamWidget> ChurnParent;
+	};
+
+	/** How the labels move in a motion phase, frame by frame. */
+	enum class ELabelMotion : uint8
+	{
+		SubpixelSlide,
+		WholePixelScroll,
+		ScaleTween,
+		Rotate,
+		CanvasZoom,
+		ColorPulse,
 	};
 
 	class FBenchmarkStage
@@ -124,8 +156,8 @@ namespace DreamRenderBenchmarkTestLocal
 			int32 Count = 0;
 			for (const FPanel& Panel : Panels)
 			{
-				// the root, its backdrop, the blocks, the labels, the clip and what it holds, and the blur
-				Count += 2 + Panel.Blocks.Num() + Panel.Labels.Num() + 1 + ClippedCount + Panel.Churned.Num();
+				// the root, its backdrop, the label column, the blocks, the labels, the clip and what it holds, and the blur
+				Count += 3 + Panel.Blocks.Num() + Panel.Labels.Num() + 1 + ClippedCount + Panel.Churned.Num();
 			}
 			return Count;
 		}
@@ -214,6 +246,92 @@ namespace DreamRenderBenchmarkTestLocal
 					const int32 Slot = (InFrame * ChurnPerFrame + Index) % 32;
 					const FVector2D Position(-180.0 + (Slot % 8) * 48.0, -200.0 + (Slot / 8) * 20.0);
 					Panel.Churned.Add(AddBlock(TEXT("Churned"), FVector2D(40.0, 14.0), Position, FColor(120, 200, 255, 255), Panel.ChurnParent.Get()));
+				}
+			}
+		}
+
+		/** Every label as the scene was built: no render transform, at home, in its own colour. */
+		void ResetLabels()
+		{
+			for (FPanel& Panel : Panels)
+			{
+				if (UDreamWidget* Column = Panel.LabelColumn.Get(); IsValid(Column))
+				{
+					Column->ClearRenderTransform();
+					Column->SetAnchoredPosition(FVector2D::ZeroVector);
+				}
+				for (const TWeakObjectPtr<UDreamWidget>& LabelWidget : Panel.LabelWidgets)
+				{
+					if (UDreamWidget* Widget = LabelWidget.Get(); IsValid(Widget))
+					{
+						Widget->ClearRenderTransform();
+					}
+				}
+				for (const TWeakObjectPtr<UDreamText>& LabelText : Panel.Labels)
+				{
+					if (UDreamText* Label = LabelText.Get(); IsValid(Label))
+					{
+						Label->SetColor(LabelColour);
+					}
+				}
+			}
+		}
+
+		/** One frame of InMotion for every label of every panel. */
+		void MoveLabels(ELabelMotion InMotion, int32 InFrame)
+		{
+			for (FPanel& Panel : Panels)
+			{
+				UDreamWidget* Column = Panel.LabelColumn.Get();
+				if (InMotion == ELabelMotion::WholePixelScroll && IsValid(Column))
+				{
+					// Laid out a whole pixel further each frame, the way a scroll view moves its content: by position, not
+					// by a render transform, so the column is never a render layer.
+					Column->SetAnchoredPosition(FVector2D(0.0, static_cast<double>(InFrame % 40)));
+					continue;
+				}
+				if (InMotion == ELabelMotion::CanvasZoom && IsValid(Column))
+				{
+					// The whole column zooming, every label's device scale changing every frame.
+					const double Zoom = 1.0 + 0.25 * FMath::Sin(InFrame * 0.05);
+					Column->SetRenderScale(FVector(1.0, Zoom, Zoom));
+					continue;
+				}
+				for (int32 Index = 0; Index < Panel.LabelWidgets.Num(); ++Index)
+				{
+					UDreamWidget* Widget = Panel.LabelWidgets[Index].Get();
+					if (!IsValid(Widget))
+					{
+						continue;
+					}
+					switch (InMotion)
+					{
+					case ELabelMotion::SubpixelSlide:
+						// Back to the start every 100 frames, 37 pixels on: the slide stays inside the panel.
+						Widget->SetRenderTranslation(FVector(0.0, SlidePixelsPerFrame * (InFrame % 100), 0.0));
+						break;
+					case ELabelMotion::ScaleTween:
+					{
+						const double Scale = 1.0 + 0.06 * FMath::Sin(InFrame * 0.15 + Index);
+						Widget->SetRenderScale(FVector(1.0, Scale, Scale));
+						break;
+					}
+					case ELabelMotion::Rotate:
+						Widget->SetRenderRotation(FRotator(0.0, 0.0, static_cast<double>((InFrame * 2 + Index * 15) % 360)));
+						break;
+					case ELabelMotion::ColorPulse:
+						if (Index < Panel.Labels.Num())
+						{
+							if (UDreamText* Label = Panel.Labels[Index].Get(); IsValid(Label))
+							{
+								const float Blend = 0.5f + 0.5f * FMath::Sin(InFrame * 0.2f + Index * 0.3f);
+								Label->SetColor(FLinearColor::LerpUsingHSV(FLinearColor(LabelColour), FLinearColor(PulseColour), Blend).ToFColor(true));
+							}
+						}
+						break;
+					default:
+						break;
+					}
 				}
 			}
 		}
@@ -321,16 +439,20 @@ namespace DreamRenderBenchmarkTestLocal
 				}
 			}
 
+			// The labels in a column of their own, the size of the panel, so that it can scroll and zoom them all at once.
+			UDreamWidget* ColumnWidget = AddWidget(TEXT("LabelColumn"), FVector2D(TargetExtent, TargetExtent), FVector2D::ZeroVector, Root);
+			Panel.LabelColumn = ColumnWidget;
 			for (int32 Index = 0; Index < LabelCount; ++Index)
 			{
 				const FVector2D Position(Index < LabelCount / 2 ? -150.0 : -30.0, -10.0 - (Index % (LabelCount / 2)) * 18.0);
-				UDreamWidget* Widget = AddWidget(TEXT("Label"), FVector2D(110.0, 16.0), Position, Root);
+				UDreamWidget* Widget = AddWidget(TEXT("Label"), FVector2D(110.0, 16.0), Position, ColumnWidget);
 				if (UDreamText* Label = Widget->CreateNewVisual<UDreamText>())
 				{
 					Label->SetText(FText::FromString(FString::Printf(TEXT("Item %03d of panel %d"), Index, InIndex)));
 					Label->SetFontSize(13.0f);
-					Label->SetColor(FColor(220, 225, 240, 255));
+					Label->SetColor(LabelColour);
 					Panel.Labels.Add(Label);
+					Panel.LabelWidgets.Add(Widget);
 				}
 			}
 
@@ -370,6 +492,11 @@ namespace DreamRenderBenchmarkTestLocal
 		double WallSeconds = 0.0;
 		int32 DrawCalls = 0;
 		DreamUIRenderStats::FSnapshot Stats;
+		/** How the coverage switch and the render layers stood: "on", "off", or "project" for as the project has them. */
+		FString SmallTextCoverage = TEXT("project");
+		FString RenderLayers = TEXT("project");
+		/** Coverage glyph items drawn while the phase settled after its switches were set, before it was timed; -1 when it did not settle. */
+		int64 CoverageItemsWhileSettling = -1;
 	};
 
 	struct FRun
@@ -378,7 +505,36 @@ namespace DreamRenderBenchmarkTestLocal
 		double PhaseStart = 0.0;
 		bool bStartedTrace = false;
 		FString TracePath;
+		/** What the next phase is recorded with: set while it settles, taken when it is recorded. */
+		FString NextSmallTextCoverage = TEXT("project");
+		FString NextRenderLayers = TEXT("project");
+		int64 NextCoverageItemsWhileSettling = -1;
 	};
+
+	/** One label motion, timed with coverage on and with it off; Rotate twice, with render layers on and off. */
+	struct FMotionCase
+	{
+		const TCHAR* Name;
+		ELabelMotion Motion;
+		/** r.DreamUI.RenderLayers for the pair: -1 is the value the run found, which a pair before it may have changed. */
+		int32 RenderLayers;
+	};
+	static const FMotionCase MotionCases[] =
+	{
+		{ TEXT("SubpixelSlide"), ELabelMotion::SubpixelSlide, -1 },
+		{ TEXT("WholePixelScroll"), ELabelMotion::WholePixelScroll, -1 },
+		{ TEXT("ScaleTween"), ELabelMotion::ScaleTween, -1 },
+		{ TEXT("Rotate.LayersOn"), ELabelMotion::Rotate, 1 },
+		{ TEXT("Rotate.LayersOff"), ELabelMotion::Rotate, 0 },
+		{ TEXT("CanvasZoom"), ELabelMotion::CanvasZoom, -1 },
+		{ TEXT("ColorPulse"), ELabelMotion::ColorPulse, -1 },
+	};
+	/** The phases before the label motions: Static, Sparse, Animated and Churn. */
+	static constexpr int32 ScenePhaseCount = 4;
+
+	/** The console variable a coverage pair switches, and the render layers' switch. */
+	static const TCHAR* const SmallTextCoverageVariable = TEXT("DreamGUI.Text.SmallTextCoverage");
+	static const TCHAR* const RenderLayersVariable = TEXT("r.DreamUI.RenderLayers");
 
 	void EnqueueStep(TFunction<bool()> InStep)
 	{
@@ -415,7 +571,8 @@ namespace DreamRenderBenchmarkTestLocal
 		return FString::Printf(TEXT("DreamGUI.Benchmark.%s"), *InPhase);
 	}
 
-	void EnqueuePhase(const FStageRef& InStage, const TSharedRef<FRun>& InRun, const FString& InName, TFunction<void(int32)> InEachFrame)
+	void EnqueuePhase(const FStageRef& InStage, const TSharedRef<FRun>& InRun, const FString& InName, TFunction<void(int32)> InEachFrame,
+		int32 InFrames = TimedFrames)
 	{
 		EnqueueDo([InRun, InName]()
 		{
@@ -423,7 +580,7 @@ namespace DreamRenderBenchmarkTestLocal
 			DreamUIRenderStats::TakeSnapshot(/*bInReset*/ true);
 			InRun->PhaseStart = FPlatformTime::Seconds();
 		});
-		EnqueueFrames(InStage, TimedFrames, InEachFrame);
+		EnqueueFrames(InStage, InFrames, InEachFrame);
 		EnqueueDo([InStage, InRun, InName]()
 		{
 			FPhase& Phase = InRun->Phases.AddDefaulted_GetRef();
@@ -432,8 +589,93 @@ namespace DreamRenderBenchmarkTestLocal
 			Phase.Stats = DreamUIRenderStats::TakeSnapshot(/*bInReset*/ true);
 			Phase.Frames = static_cast<int32>(Phase.Stats.Frames);
 			Phase.DrawCalls = InStage->CountDrawCalls();
+			Phase.SmallTextCoverage = InRun->NextSmallTextCoverage;
+			Phase.RenderLayers = InRun->NextRenderLayers;
+			Phase.CoverageItemsWhileSettling = InRun->NextCoverageItemsWhileSettling;
+			InRun->NextSmallTextCoverage = TEXT("project");
+			InRun->NextRenderLayers = TEXT("project");
+			InRun->NextCoverageItemsWhileSettling = -1;
 			TRACE_END_REGION(*BenchmarkRegion(InName));
 		});
+	}
+
+	/** An int console variable set by code, when it exists. */
+	void SetConsoleInt(const TCHAR* InName, int32 InValue)
+	{
+		if (IConsoleVariable* Variable = IConsoleManager::Get().FindConsoleVariable(InName))
+		{
+			Variable->Set(InValue, ECVF_SetByCode);
+		}
+	}
+
+	/**
+	 * The console variables the run sets, as it found them, put back once: by the run's last step -- or, when the framework
+	 * drops the queued steps of a run that was stopped, as the last step holding this goes, so that no test after it runs
+	 * with coverage or render layers switched by this one. Held by the queued steps, not by the test body, which has
+	 * returned long before they run.
+	 */
+	class FConsoleVariablesAsFound
+	{
+	public:
+		FConsoleVariablesAsFound() = default;
+		FConsoleVariablesAsFound(const FConsoleVariablesAsFound&) = delete;
+		FConsoleVariablesAsFound& operator=(const FConsoleVariablesAsFound&) = delete;
+		~FConsoleVariablesAsFound()
+		{
+			PutBack();
+		}
+
+		/** InVariable's value now, to be put back; nothing for a variable that does not exist. */
+		void Remember(IConsoleVariable* InVariable)
+		{
+			if (InVariable != nullptr)
+			{
+				Found.Emplace(InVariable, InVariable->GetInt());
+			}
+		}
+
+		/** Every remembered variable back to the value it had, once. */
+		void PutBack()
+		{
+			for (const TPair<IConsoleVariable*, int32>& Entry : Found)
+			{
+				Entry.Key->Set(Entry.Value, ECVF_SetByCode);
+			}
+			Found.Reset();
+		}
+
+	private:
+		TArray<TPair<IConsoleVariable*, int32>> Found;
+	};
+
+	/**
+	 * One side of a coverage pair: the labels back at rest, the coverage switch and the render layers set -- the case's
+	 * value, or InLayersAsFound for a case that leaves them to the project, since an earlier pair may have turned them
+	 * off -- MotionSettleFrames frames for every text to repaint as the switch asks -- what they draw counted -- then
+	 * MotionTimedFrames frames of the motion, timed.
+	 */
+	void EnqueueMotionSide(const FStageRef& InStage, const TSharedRef<FRun>& InRun, const FMotionCase& InCase, bool bInCoverageOn,
+		int32 InLayersAsFound)
+	{
+		const FString Name = FString::Printf(TEXT("%s.Coverage%s"), InCase.Name, bInCoverageOn ? TEXT("On") : TEXT("Off"));
+		const ELabelMotion Motion = InCase.Motion;
+		const int32 RenderLayers = InCase.RenderLayers;
+		EnqueueDo([InStage, InRun, bInCoverageOn, RenderLayers, InLayersAsFound]()
+		{
+			InStage->ResetLabels();
+			SetConsoleInt(SmallTextCoverageVariable, bInCoverageOn ? 1 : 0);
+			SetConsoleInt(RenderLayersVariable, RenderLayers >= 0 ? RenderLayers : InLayersAsFound);
+			InRun->NextSmallTextCoverage = bInCoverageOn ? TEXT("on") : TEXT("off");
+			InRun->NextRenderLayers = RenderLayers < 0 ? TEXT("project") : (RenderLayers > 0 ? TEXT("on") : TEXT("off"));
+			DreamUIRenderStats::TakeSnapshot(/*bInReset*/ true);
+		});
+		EnqueueFrames(InStage, MotionSettleFrames, nullptr);
+		EnqueueDo([InRun]()
+		{
+			const DreamUIRenderStats::FSnapshot Settling = DreamUIRenderStats::TakeSnapshot(/*bInReset*/ true);
+			InRun->NextCoverageItemsWhileSettling = Settling.Counters[static_cast<int32>(DreamUIRenderStats::ECounter::CoverageItemsDrawn)];
+		});
+		EnqueuePhase(InStage, InRun, Name, [InStage, Motion](int32 InFrame) { InStage->MoveLabels(Motion, InFrame); }, MotionTimedFrames);
 	}
 
 	TSharedRef<FJsonObject> PhaseToJson(const FPhase& InPhase)
@@ -443,6 +685,12 @@ namespace DreamRenderBenchmarkTestLocal
 		Object->SetNumberField(TEXT("frames"), InPhase.Frames);
 		Object->SetNumberField(TEXT("wallMsPerFrame"), InPhase.Frames > 0 ? InPhase.WallSeconds * 1000.0 / InPhase.Frames : 0.0);
 		Object->SetNumberField(TEXT("drawCalls"), InPhase.DrawCalls);
+		Object->SetStringField(TEXT("smallTextCoverage"), InPhase.SmallTextCoverage);
+		Object->SetStringField(TEXT("renderLayers"), InPhase.RenderLayers);
+		if (InPhase.CoverageItemsWhileSettling >= 0)
+		{
+			Object->SetNumberField(TEXT("coverageItemsWhileSettling"), static_cast<double>(InPhase.CoverageItemsWhileSettling));
+		}
 		TSharedRef<FJsonObject> Stages = MakeShared<FJsonObject>();
 		TSharedRef<FJsonObject> Runs = MakeShared<FJsonObject>();
 		for (int32 Index = 0; Index < DreamUIRenderStats::StageCount; ++Index)
@@ -484,17 +732,31 @@ bool FDreamRenderBenchmarkTest::RunTest(const FString& Parameters)
 		Stage->TearDown();
 		return false;
 	}
+	// The two switches the label motions flip, as they were: put back when the run ends (AsFound, below).
+	IConsoleVariable* const CoverageSwitch = IConsoleManager::Get().FindConsoleVariable(SmallTextCoverageVariable);
+	IConsoleVariable* const LayersSwitch = IConsoleManager::Get().FindConsoleVariable(RenderLayersVariable);
+	if (!TestNotNull(*FString::Printf(TEXT("The small-text coverage switch %s exists"), SmallTextCoverageVariable), CoverageSwitch))
+	{
+		Stage->TearDown();
+		return false;
+	}
+	const int32 LayersBefore = LayersSwitch != nullptr ? LayersSwitch->GetInt() : 1;
+	// Held by the run's last step, which puts every switch back; dropped with the queued steps of a stopped run, it puts them
+	// back as it goes.
+	const TSharedRef<FConsoleVariablesAsFound> AsFound = MakeShared<FConsoleVariablesAsFound>();
+	AsFound->Remember(CoverageSwitch);
+	AsFound->Remember(LayersSwitch);
 	// The suite has every prepare a canvas makes from its last one checked against a full one (r.DreamUI.VerifyPartialPrepare,
 	// in the test host's config): what is measured here is the prepare alone. Likewise every pointer kept while the count
 	// of objects gone reads the same is looked up as well (r.DreamUI.VerifyKeptPointers): measured here without the look-ups.
 	IConsoleVariable* const Verify = IConsoleManager::Get().FindConsoleVariable(TEXT("r.DreamUI.VerifyPartialPrepare"));
-	const int32 VerifyBefore = Verify != nullptr ? Verify->GetInt() : 0;
+	AsFound->Remember(Verify);
 	if (Verify != nullptr)
 	{
 		Verify->Set(0, ECVF_SetByCode);
 	}
 	IConsoleVariable* const VerifyKept = IConsoleManager::Get().FindConsoleVariable(TEXT("r.DreamUI.VerifyKeptPointers"));
-	const int32 VerifyKeptBefore = VerifyKept != nullptr ? VerifyKept->GetInt() : 0;
+	AsFound->Remember(VerifyKept);
 	if (VerifyKept != nullptr)
 	{
 		VerifyKept->Set(0, ECVF_SetByCode);
@@ -516,6 +778,16 @@ bool FDreamRenderBenchmarkTest::RunTest(const FString& Parameters)
 	EnqueuePhase(Stage, Run, TEXT("Sparse"), [Stage](int32 InFrame) { Stage->Nudge(InFrame); });
 	EnqueuePhase(Stage, Run, TEXT("Animated"), [Stage](int32 InFrame) { Stage->Animate(InFrame); });
 	EnqueuePhase(Stage, Run, TEXT("Churn"), [Stage](int32 InFrame) { Stage->Churn(InFrame); });
+	// The labels' motions, each with coverage on and then off, in this one session.
+	for (const FMotionCase& Case : MotionCases)
+	{
+		EnqueueMotionSide(Stage, Run, Case, /*bInCoverageOn*/ true, LayersBefore);
+		EnqueueMotionSide(Stage, Run, Case, /*bInCoverageOn*/ false, LayersBefore);
+	}
+	EnqueueDo([Stage]()
+	{
+		Stage->ResetLabels();
+	});
 	EnqueueDo([this, Stage, Run]()
 	{
 		if (Run->bStartedTrace)
@@ -550,25 +822,32 @@ bool FDreamRenderBenchmarkTest::RunTest(const FString& Parameters)
 		FJsonSerializer::Serialize(Root, Writer);
 		const FString ReportPath = FPaths::Combine(PerfDirectory(), TEXT("Benchmark.json"));
 		TestTrue(FString::Printf(TEXT("The benchmark's numbers are written to %s"), *ReportPath), FFileHelper::SaveStringToFile(Json, *ReportPath));
-		TestEqual(TEXT("Every stretch of frames was timed"), Run->Phases.Num(), 4);
+		const int32 MotionCaseCount = UE_ARRAY_COUNT(MotionCases);
+		TestEqual(TEXT("Every stretch of frames was timed"), Run->Phases.Num(), ScenePhaseCount + 2 * MotionCaseCount);
 		for (const FPhase& Phase : Run->Phases)
 		{
 			TestTrue(FString::Printf(TEXT("%s drew: its panels made draw calls"), *Phase.Name), Phase.DrawCalls > 0);
 			TestTrue(FString::Printf(TEXT("%s recorded passes on the render thread"), *Phase.Name),
 				Phase.Stats.Counters[static_cast<int32>(DreamUIRenderStats::ECounter::BatchesRecorded)] > 0);
+			// A pair measures coverage against no coverage only if each side drew what its switch says: the side with
+			// coverage on some coverage glyphs, settling or timed; the side with it off none while it was timed.
+			const int64 TimedCoverage = Phase.Stats.Counters[static_cast<int32>(DreamUIRenderStats::ECounter::CoverageItemsDrawn)];
+			if (Phase.SmallTextCoverage == TEXT("on"))
+			{
+				const int64 Drawn = FMath::Max<int64>(Phase.CoverageItemsWhileSettling, 0) + TimedCoverage;
+				TestTrue(FString::Printf(TEXT("%s drew from coverage glyphs (%lld item(s) while it settled, %lld while it was timed)"),
+					*Phase.Name, FMath::Max<int64>(Phase.CoverageItemsWhileSettling, 0), TimedCoverage), Drawn > 0);
+			}
+			else if (Phase.SmallTextCoverage == TEXT("off"))
+			{
+				TestEqual(FString::Printf(TEXT("%s drew nothing from coverage glyphs while it was timed"), *Phase.Name), TimedCoverage, static_cast<int64>(0));
+			}
 		}
 	});
-	EnqueueDo([Stage, Verify, VerifyBefore, VerifyKept, VerifyKeptBefore]()
+	EnqueueDo([Stage, AsFound]()
 	{
 		Stage->TearDown();
-		if (Verify != nullptr)
-		{
-			Verify->Set(VerifyBefore, ECVF_SetByCode);
-		}
-		if (VerifyKept != nullptr)
-		{
-			VerifyKept->Set(VerifyKeptBefore, ECVF_SetByCode);
-		}
+		AsFound->PutBack();
 	});
 	return true;
 }

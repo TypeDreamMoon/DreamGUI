@@ -479,6 +479,7 @@ bool FDreamSplitOffTypesAnswerToTheirOldPathTest::RunTest(const FString& Paramet
 		TEXT("/Script/DreamGUIInput.DreamUIInputTickFunction"),
 		TEXT("/Script/DreamGUIInput.DreamUITooltipUserState"),
 		TEXT("/Script/DreamGUIInput.DreamUIVirtualCursorUserState"),
+		TEXT("/Script/DreamGUIInput.DreamUITabSwitchTarget"),
 	};
 	const FName Core(TEXT("/Script/DreamGUI"));
 	int32 NumModules = 0;

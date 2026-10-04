@@ -43,6 +43,8 @@ protected:
 		float LineWidthOffset = 0.5f;
 
 	static TArray<FVector2D> EmptyArray;
+	/** How many points the strip's triangles, UVs and colours were last written for; see OnBeforeCreateOrUpdateGeometry. */
+	int32 LastGeometryPointCount = INDEX_NONE;
 	virtual const TArray<FVector2D>& GetCalcaultedPointArray()PURE_VIRTUAL(UUI2DLineRendererBase::GetCalcaultedPointArray, return EmptyArray;)
 	virtual void CalculatePoints()PURE_VIRTUAL(UUI2DLineRendererBase::CalculatePoints, );
 	//override start point tangent direction when EndType == Cap

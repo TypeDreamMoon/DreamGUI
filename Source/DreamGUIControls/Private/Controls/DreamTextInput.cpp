@@ -162,6 +162,7 @@ void UDreamTextInput::ApplyStyle()
 		InputBehaviour->SetReadOnly(bReadOnly);
 		InputBehaviour->SetIgnoreKeys(IgnoreKeys);
 		InputBehaviour->SetMultiLineSubmitFunctionKeys(MultiLineSubmitFunctionKeys);
+		InputBehaviour->SetTabTypesTabCharacter(bTabTypesTabCharacter);
 		InputBehaviour->SetSelectAllWhenActivateInput(bSelectAllWhenActivateInput);
 		InputBehaviour->SetAutoActivateInputWhenNavigateIn(bAutoActivateInputWhenNavigateIn);
 		InputBehaviour->SetSubmitWhenDeactivate(bSubmitWhenDeactivate);
@@ -363,6 +364,15 @@ void UDreamTextInput::SetMultiLineSubmitFunctionKeys(const TArray<FKey>& InKeys)
 	if (InputBehaviour != nullptr)
 	{
 		InputBehaviour->SetMultiLineSubmitFunctionKeys(InKeys);
+	}
+}
+
+void UDreamTextInput::SetTabTypesTabCharacter(bool bInTabTypesTabCharacter)
+{
+	bTabTypesTabCharacter = bInTabTypesTabCharacter;
+	if (InputBehaviour != nullptr)
+	{
+		InputBehaviour->SetTabTypesTabCharacter(bInTabTypesTabCharacter);
 	}
 }
 

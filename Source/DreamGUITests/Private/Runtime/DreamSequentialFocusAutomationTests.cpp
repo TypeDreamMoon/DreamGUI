@@ -14,8 +14,9 @@
  * Tab and Shift+Tab, which the framework could express and no key produced.
  *
  * EDreamUINavigationDirection has carried Next and Prev from the start and UUISelectable implements
- * both -- Next tries right, then down; Prev tries left, then up -- so sequential focus was fully
- * built. What was missing was the one line that connects it to a keyboard: the preset actor's
+ * both -- now as the widget tree's Tab order (FDreamUITabOrder; the order itself is pinned in
+ * DreamTabOrderAutomationTests and the whole key press in DreamTabNavigationAutomationTests). What was
+ * missing here was the one line that connects it to a keyboard: the preset actor's
  * direction table listed the four arrows and the four stick directions and nothing that meant Next
  * or Prev, so the feature was unreachable from the drop-in event system every project starts with.
  *

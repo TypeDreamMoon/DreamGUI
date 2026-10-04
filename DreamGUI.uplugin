@@ -1,9 +1,9 @@
 ﻿{
 	"FileVersion": 3,
-	"Version": 2,
-	"VersionName": "2.0.0",
+	"Version": 3,
+	"VersionName": "2.1.0",
 	"FriendlyName": "DreamGUI",
-	"Description": "DreamGUI - 3D UI System, Event Framework, Widget Blueprints and Designer, Tween Animation. A fork of LGUI/LexUI by Lex Liu (MIT). Platform status: Win64 is verified (editor plus the automation suite); Mac, Linux, iOS and Android build and carry the mobile touch and virtual-keyboard paths, but none has been run on a device; no dedicated-server target has been built. See the Platforms section of README.md.",
+	"Description": "DreamGUI - 3D UI System, Event Framework, Widget Blueprints and Designer, Tween Animation. A fork of LGUI/LexUI by Lex Liu (MIT). Platforms: only Win64 is built and run -- the editor and the automation suite, and a packaged Development game once the release gate (BuildPlugin and the packaged text smoke test) has run for this version. Mac, Linux, iOS and Android are listed but have never been compiled; consoles are not in any module's allow list; no dedicated-server target has been built, and the UI manager does not start on a dedicated server. See the Platforms section of README.md.",
 	"Category": "UI",
 	"CreatedBy": "TypeDreamMoon",
 	"CreatedByURL": "https://github.com/TypeDreamMoon",

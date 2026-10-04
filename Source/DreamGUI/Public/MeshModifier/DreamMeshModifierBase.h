@@ -145,6 +145,16 @@ public:
 	 * component happened to be added first, with nothing on screen to say so.
 	 */
 	virtual bool GetDuplicatesMesh()const { return false; }
+	/**
+	 * What a modifier that appends copies of a mesh (GetDuplicatesMesh) does to them once it has given them their colours
+	 * and positions: the vertices from InFirstCopy to the end of InGeometry. A copy paints nothing -- a shadow is never a
+	 * gradient -- so its UV4 is (0, 0), and on a text (InGeometry.bIsFont) its quad code loses its paint slot
+	 * (DreamTextQuadCode::StripSlot). A colour glyph's face becomes its silhouette (DreamTextQuadCode::ColorSilhouette),
+	 * drawn in the copy's colour at the glyph's alpha, where it was the glyph's own colours drawn again. A colour glyph's
+	 * effects copy keeps its code: it draws in the style's underlay colour already, as a field glyph's effects copy draws its
+	 * effects. Copies of copies are left as they are.
+	 */
+	static void PrepareMeshCopies(FDreamUIGeometry& InGeometry, int32 InFirstCopy);
 protected:
 	UPROPERTY(Transient) TObjectPtr<UDreamVisualBatchMeshModifierHelper> GeometryModifierHelper = nullptr;
 	/**

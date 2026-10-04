@@ -45,19 +45,20 @@ bool UDreamUIRenderTargetInteraction::ResolveSource()
 			return false;
 		}
 	}
+	// Asked of the source every time rather than kept from the first answer: the source shows whichever canvas it
+	// was last given (SetCanvas), and one kept until it died sent every pointer to a canvas that was no longer on
+	// the surface -- clicks landing on widgets nobody could see. The source answers from its own cache, so asking
+	// is cheap.
+	TargetCanvas = IDreamUIRenderTargetInteractionSourceInterface::Execute_GetTargetCanvas(LineTraceSource);
 	if (!TargetCanvas.IsValid())
 	{
-		TargetCanvas = IDreamUIRenderTargetInteractionSourceInterface::Execute_GetTargetCanvas(LineTraceSource);
-		if (!TargetCanvas.IsValid())
+		if (!bReportedMissingSource)
 		{
-			if (!bReportedMissingSource)
-			{
-				bReportedMissingSource = true;
-				UE_LOG(DreamGUI, Error, TEXT("[%s].%d TargetCanvas is not valid! DreamGUIRenderTargetInteraction need to get a vaild DreamGUICanvas from InteractionSource!")
-					, ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
-			}
-			return false;
+			bReportedMissingSource = true;
+			UE_LOG(DreamGUI, Error, TEXT("[%s].%d TargetCanvas is not valid! DreamGUIRenderTargetInteraction need to get a vaild DreamGUICanvas from InteractionSource!")
+				, ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
 		}
+		return false;
 	}
 	return true;
 }

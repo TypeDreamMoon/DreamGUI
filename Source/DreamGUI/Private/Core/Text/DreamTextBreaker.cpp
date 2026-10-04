@@ -2,51 +2,365 @@
 
 #include "Core/Text/DreamTextBreaker.h"
 #include "DreamGUI.h"
+#include "HAL/IConsoleManager.h"
 #include "Internationalization/BreakIterator.h"
 #include "Internationalization/IBreakIterator.h"
 #include "Internationalization/Internationalization.h"
 #include "Internationalization/Culture.h"
 
+// ICU's own break iterators, made for the game's culture, wherever this module has ICU's headers: the targets that link
+// HarfBuzz, which DreamGUI.Build.cs gives ICU too (the shaper reads bidi levels from it there). They read the text as
+// UTF-16 in place, so a build whose TCHAR is not UTF-16 takes the engine's iterators.
+#if UE_ENABLE_ICU && WITH_HARFBUZZ && !PLATFORM_TCHAR_IS_UTF8CHAR
+#define DREAMTEXTBREAKER_CULTURE_ICU 1
+THIRD_PARTY_INCLUDES_START
+#include <unicode/brkiter.h>
+#include <unicode/locid.h>
+#include <unicode/utext.h>
+#if !IS_MONOLITHIC
+#include <unicode/putil.h>
+#include <unicode/uclean.h>
+#include <unicode/udata.h>
+#endif
+THIRD_PARTY_INCLUDES_END
+#if !IS_MONOLITHIC
+#include "HAL/FileManager.h"
+#include "Misc/FileHelper.h"
+#include "Misc/Paths.h"
+#endif
+#else
+#define DREAMTEXTBREAKER_CULTURE_ICU 0
+#endif
+
 namespace DreamTextBreakerLocal
 {
+	enum class EIteratorKind : uint8
+	{
+		Character,
+		Word,
+		Line,
+	};
+
+	/** Hangul syllables, which the engine's line iterator keeps whole as words. */
+	bool IsHangulSyllable(uint32 C)
+	{
+		return C >= 0xAC00 && C <= 0xD7A3;
+	}
+
+#if DREAMTEXTBREAKER_CULTURE_ICU && !IS_MONOLITHIC
 	/**
-	 * Layout runs on the game thread, and creating an ICU iterator clones a rule set, so keep one of
-	 * each and hand it out. Rebuilt when the culture changes, since the line rules are per locale.
+	 * ICU is a static library on these targets, so a modular build (the editor, and -game run from its binaries) gives this
+	 * module a copy of ICU of its own, apart from the one Core loads its data into. Without data that copy makes no break
+	 * iterator at all and the engine's default-culture ones would always stand in, so the editor would break lines by the
+	 * machine's language while a packaged game breaks them by the game's. Point this copy at the loose data the engine
+	 * reads, through the engine's file system as Core does (FICUInternationalization::Initialize), once. A monolithic game
+	 * has one ICU, which Core has set up.
+	 */
+	struct FDreamTextBreakerIcuData
+	{
+		/** The data's own folder, normalized: requests outside it are refused, as Core refuses them. */
+		FString DataDirectory;
+		bool bTried = false;
+		bool bReady = false;
+
+		static FDreamTextBreakerIcuData& Get()
+		{
+			static FDreamTextBreakerIcuData Value;
+			return Value;
+		}
+
+#if defined(WITH_ICU_V78) && WITH_ICU_V78
+		static UBool U_CALLCONV Open(const void* InContext, void** OutFileContext, void** OutContents, const char* InPath, int32_t* OutLength)
+#else
+		static UBool U_CALLCONV Open(const void* InContext, void** OutFileContext, void** OutContents, const char* InPath)
+#endif
+		{
+			*OutFileContext = nullptr;
+			*OutContents = nullptr;
+			const FDreamTextBreakerIcuData* This = static_cast<const FDreamTextBreakerIcuData*>(InContext);
+			FString PathName = StringCast<TCHAR>(InPath).Get();
+			FPaths::NormalizeFilename(PathName);
+			if (This == nullptr || !PathName.StartsWith(This->DataDirectory))
+			{
+				return false;
+			}
+			TArray<uint8>* Bytes = new TArray<uint8>();
+			if (!FFileHelper::LoadFileToArray(*Bytes, *PathName, FILEREAD_Silent) || Bytes->Num() == 0)
+			{
+				delete Bytes;
+				return false;
+			}
+			*OutFileContext = Bytes;
+			*OutContents = Bytes->GetData();
+#if defined(WITH_ICU_V78) && WITH_ICU_V78
+			*OutLength = Bytes->Num();
+#endif
+			return true;
+		}
+
+		static void U_CALLCONV Close(const void* InContext, void* const InFileContext, void* const InContents)
+		{
+			delete static_cast<TArray<uint8>*>(InFileContext);
+		}
+
+		/** Whether this module's ICU can read its data; set up on the first call (game thread). */
+		static bool Ensure()
+		{
+			FDreamTextBreakerIcuData& Data = Get();
+			if (Data.bTried)
+			{
+				return Data.bReady;
+			}
+			Data.bTried = true;
+#if defined(WITH_ICU_V78) && WITH_ICU_V78
+			const TCHAR* DataFolder = TEXT("icudt78l");
+#elif defined(WITH_ICU_V64) && WITH_ICU_V64
+			const TCHAR* DataFolder = TEXT("icudt64l");
+#else
+			const TCHAR* DataFolder = TEXT("icudt53l");
+#endif
+			const FString Candidates[] =
+			{
+				FPaths::ProjectContentDir() / TEXT("Internationalization"),
+				FPaths::EngineContentDir() / TEXT("Internationalization"),
+			};
+			for (const FString& Candidate : Candidates)
+			{
+				if (FPaths::DirectoryExists(Candidate / DataFolder))
+				{
+					UErrorCode Status = U_ZERO_ERROR;
+					Data.DataDirectory = Candidate / DataFolder / TEXT("");
+					FPaths::NormalizeFilename(Data.DataDirectory);
+					u_setDataDirectory(StringCast<char>(*Candidate).Get());
+					udata_setFileAccess(UDATA_FILES_FIRST, &Status);
+					u_setDataFileFunctions(&Data, &FDreamTextBreakerIcuData::Open, &FDreamTextBreakerIcuData::Close, &Status);
+					u_init(&Status);
+					Data.bReady = U_SUCCESS(Status) != 0;
+					if (!Data.bReady)
+					{
+						UE_LOG(DreamGUI, Warning, TEXT("Line breaking falls back to the engine's iterators in this build: ICU could not read its data from %s (%hs)."), *Candidate, u_errorName(Status));
+					}
+					break;
+				}
+			}
+			return Data.bReady;
+		}
+	};
+#endif
+
+	/** Localization.HangulTextWrappingMethod as the engine's line iterator reads it: 0 per syllable, anything else per word (the default). */
+	bool IsHangulWrappedPerWord()
+	{
+		static IConsoleVariable* Variable = IConsoleManager::Get().FindConsoleVariable(TEXT("Localization.HangulTextWrappingMethod"));
+		return Variable == nullptr || Variable->GetInt() != 0;
+	}
+
+	/**
+	 * One kind of boundary, walked over a stretch of the layout's plain text: ICU's iterator for the game's culture, or --
+	 * for a culture ICU cannot make one for, and on a build without ICU's headers here -- the engine's, which FBreakIterator
+	 * always makes for the default culture, the machine's.
+	 */
+	struct FBoundaryIterator
+	{
+		EIteratorKind Kind = EIteratorKind::Line;
+#if DREAMTEXTBREAKER_CULTURE_ICU
+		static_assert(sizeof(TCHAR) == sizeof(UChar), "the text is handed to ICU as the UTF-16 it is");
+		/** The culture's own iterator; null when the engine's stands in. */
+		TUniquePtr<icu::BreakIterator> Culture;
+		const TCHAR* Chars = nullptr;
+		int32 Length = 0;
+		int32 Current = 0;
+#endif
+		TSharedPtr<IBreakIterator> Engine;
+
+		~FBoundaryIterator()
+		{
+#if DREAMTEXTBREAKER_CULTURE_ICU
+			// Kept to the end of the process, by when ICU may have dropped the data its rules point into: left to the process
+			// to free rather than freed after that.
+			(void)Culture.Release();
+#endif
+		}
+
+		void SetText(FStringView Text)
+		{
+#if DREAMTEXTBREAKER_CULTURE_ICU
+			if (Culture.IsValid())
+			{
+				Chars = Text.GetData();
+				Length = Text.Len();
+				Current = 0;
+				UText Handle = UTEXT_INITIALIZER;
+				UErrorCode Status = U_ZERO_ERROR;
+				utext_openUChars(&Handle, reinterpret_cast<const UChar*>(Chars), Length, &Status);
+				// The iterator keeps a shallow copy of the handle: the text itself is read in place until the next SetText.
+				Culture->setText(&Handle, Status);
+				utext_close(&Handle);
+				return;
+			}
+#endif
+			Engine->SetStringRef(Text);
+		}
+
+		/** The first boundary after Offset, or INDEX_NONE past the last. */
+		int32 Following(int32 Offset)
+		{
+#if DREAMTEXTBREAKER_CULTURE_ICU
+			if (Culture.IsValid())
+			{
+				int32 At = Offset;
+				// The engine's line iterator, asked from a Hangul syllable, looks on from the last syllable of its word, so a Korean
+				// word is never broken inside (Localization.HangulTextWrappingMethod 1). Done the same here, so lines break
+				// where they always did.
+				if (Kind == EIteratorKind::Line && At >= 0 && At < Length && IsHangulSyllable((uint32)Chars[At]) && IsHangulWrappedPerWord())
+				{
+					while (At + 1 < Length && IsHangulSyllable((uint32)Chars[At + 1]))
+					{
+						At++;
+					}
+				}
+				Current = Culture->following(At);
+				return Current == icu::BreakIterator::DONE ? INDEX_NONE : Current;
+			}
+#endif
+			return Engine->MoveToCandidateAfter(Offset);
+		}
+
+		/** The boundary after the last one found. */
+		int32 Next()
+		{
+#if DREAMTEXTBREAKER_CULTURE_ICU
+			if (Culture.IsValid())
+			{
+				if (Current == icu::BreakIterator::DONE)
+				{
+					return INDEX_NONE;
+				}
+				// The engine's line iterator steps on as it is asked from a position: the Hangul rule applies at every step.
+				if (Kind == EIteratorKind::Line)
+				{
+					return Following(Current);
+				}
+				Current = Culture->next();
+				return Current == icu::BreakIterator::DONE ? INDEX_NONE : Current;
+			}
+#endif
+			return Engine->MoveToNext();
+		}
+
+		/** Lets go of the text, which belongs to the layout. */
+		void ClearText()
+		{
+#if DREAMTEXTBREAKER_CULTURE_ICU
+			if (Culture.IsValid())
+			{
+				static const UChar NoText = 0;
+				UText Handle = UTEXT_INITIALIZER;
+				UErrorCode Status = U_ZERO_ERROR;
+				utext_openUChars(&Handle, &NoText, 0, &Status);
+				Culture->setText(&Handle, Status);
+				utext_close(&Handle);
+				Chars = nullptr;
+				Length = 0;
+				Current = 0;
+				return;
+			}
+#endif
+			Engine->ClearString();
+		}
+	};
+
+	/**
+	 * The three iterators boundary analysis runs. Layout runs on the game thread, and making an ICU iterator loads and copies a
+	 * rule set, so one of each is made and kept. Line breaking follows the game's current culture, as the layout's measure key
+	 * says it does (a culture switch lays every kept layout out again): the iterators are made for that culture's ICU locale
+	 * -- the Japanese and Chinese line tailorings, where the packaged ICU data has them; the dictionaries of the scripts
+	 * written without spaces serve every locale -- and made again when the culture changes. FBreakIterator alone would not
+	 * do: it always clones the default culture's, the machine's language. A culture with no tailoring of its own gets ICU's
+	 * root rules; one ICU cannot make a locale or iterators for falls back to the engine's.
 	 */
 	struct FIterators
 	{
-		TSharedPtr<IBreakIterator> Line;
-		TSharedPtr<IBreakIterator> Word;
-		TSharedPtr<IBreakIterator> Character;
-		FDelegateHandle CultureChangedHandle;
+		/** The culture they were made for, how many times they were made, and whether they carry its locale. */
+		FString CultureName;
+		int32 BuildCount = 0;
+		bool bForCulture = false;
+		FBoundaryIterator Character;
+		FBoundaryIterator Word;
+		FBoundaryIterator Line;
 
+		/** The iterators as they are, made or not. */
+		static FIterators& Instance()
+		{
+			static FIterators Value;
+			return Value;
+		}
+
+		/** The iterators for the game's culture as it is now. */
 		static FIterators& Get()
 		{
-			static FIterators Instance;
 			check(IsInGameThread());
-			if (!Instance.CultureChangedHandle.IsValid())
+			FIterators& Iterators = Instance();
+			const FCultureRef Current = FInternationalization::Get().GetCurrentCulture();
+			if (Iterators.BuildCount == 0 || !Iterators.CultureName.Equals(Current->GetName(), ESearchCase::CaseSensitive))
 			{
-				Instance.CultureChangedHandle = FInternationalization::Get().OnCultureChanged().AddLambda([]()
+				Iterators.Build(Current->GetName());
+			}
+			return Iterators;
+		}
+
+		void Build(const FString& InCultureName)
+		{
+			CultureName = InCultureName;
+			BuildCount++;
+			Character.Kind = EIteratorKind::Character;
+			Word.Kind = EIteratorKind::Word;
+			Line.Kind = EIteratorKind::Line;
+			bForCulture = false;
+#if DREAMTEXTBREAKER_CULTURE_ICU
+			// The locale as the engine makes one from a culture's name ("ja-JP", "zh-Hans"); ICU reads either separator.
+			const icu::Locale Locale(TCHAR_TO_ANSI(*InCultureName));
+			bForCulture = !Locale.isBogus();
+#if !IS_MONOLITHIC
+			bForCulture = bForCulture && FDreamTextBreakerIcuData::Ensure();
+#endif
+			auto Make = [&Locale](icu::BreakIterator* (*Factory)(const icu::Locale&, UErrorCode&)) -> icu::BreakIterator*
+			{
+				UErrorCode Status = U_ZERO_ERROR;
+				icu::BreakIterator* Made = Factory(Locale, Status);
+				if (Made != nullptr && U_FAILURE(Status))
 				{
-					FIterators& Self = FIterators::Get();
-					Self.Line.Reset();
-					Self.Word.Reset();
-					Self.Character.Reset();
-				});
-			}
-			if (!Instance.Line.IsValid())
+					delete Made;
+					Made = nullptr;
+				}
+				return Made;
+			};
+			if (bForCulture)
 			{
-				Instance.Line = FBreakIterator::CreateLineBreakIterator();
+				Character.Culture.Reset(Make(&icu::BreakIterator::createCharacterInstance));
+				Word.Culture.Reset(Make(&icu::BreakIterator::createWordInstance));
+				Line.Culture.Reset(Make(&icu::BreakIterator::createLineInstance));
+				bForCulture = Character.Culture.IsValid() && Word.Culture.IsValid() && Line.Culture.IsValid();
 			}
-			if (!Instance.Word.IsValid())
+			if (!bForCulture)
 			{
-				Instance.Word = FBreakIterator::CreateWordBreakIterator();
+				Character.Culture.Reset();
+				Word.Culture.Reset();
+				Line.Culture.Reset();
 			}
-			if (!Instance.Character.IsValid())
+#endif
+			if (bForCulture)
 			{
-				Instance.Character = FBreakIterator::CreateCharacterBoundaryIterator();
+				Character.Engine.Reset();
+				Word.Engine.Reset();
+				Line.Engine.Reset();
 			}
-			return Instance;
+			else
+			{
+				Character.Engine = FBreakIterator::CreateCharacterBoundaryIterator();
+				Word.Engine = FBreakIterator::CreateWordBreakIterator();
+				Line.Engine = FBreakIterator::CreateLineBreakIterator();
+			}
 		}
 	};
 
@@ -262,27 +576,27 @@ int32 FDreamTextBreaker::ComputeBoundaries(EDreamTextBoundaryKind Kind, const FD
 	return 0;
 #else
 	FIterators& Iterators = FIterators::Get();
-	IBreakIterator& Iterator = bGrapheme ? *Iterators.Character
-		: (Kind == EDreamTextBoundaryKind::Line ? *Iterators.Line : *Iterators.Word);
+	FBoundaryIterator& Iterator = bGrapheme ? Iterators.Character
+		: (Kind == EDreamTextBoundaryKind::Line ? Iterators.Line : Iterators.Word);
 	const int32 SpanLength = Span.PlainEnd - Span.PlainBegin;
-	Iterator.SetStringRef(FStringView(**Span.PlainText + Span.PlainBegin, SpanLength));
+	Iterator.SetText(FStringView(**Span.PlainText + Span.PlainBegin, SpanLength));
 	// From the span's start ICU walks forward as it always did. From inside it, ICU's own random access (following) backs up
 	// to a point its rules call safe and walks forward from there, which finds the boundaries a walk from the start finds --
-	// asked from a boundary of that walk, for the engine's line iterator (see the header).
+	// asked from a boundary of that walk, for the line iterator's Hangul rule (see the header).
 	const int32 From = PlainStarts[Begin] - Span.PlainBegin;
-	int32 Boundary = From > 0 ? Iterator.MoveToCandidateAfter(From - 1) : Iterator.MoveToNext();
+	int32 Boundary = From > 0 ? Iterator.Following(From - 1) : Iterator.Next();
 	int32 WalkedTo = From;
 	for (int32 i = Begin; i < End; i++)
 	{
 		const int32 Offset = PlainStarts[i] - Span.PlainBegin;
 		while (Boundary != INDEX_NONE && Boundary < Offset)
 		{
-			Boundary = Iterator.MoveToNext();
+			Boundary = Iterator.Next();
 		}
 		WalkedTo = i + 1 < Span.EndElement ? PlainStarts[i + 1] - Span.PlainBegin : SpanLength;
 		if (Write(i, Boundary == Offset))break;
 	}
-	Iterator.ClearString();
+	Iterator.ClearText();
 	return FMath::Max(WalkedTo - From, 0);
 #endif
 }
@@ -418,4 +732,19 @@ int32 FDreamTextBreaker::FindKinsokuSafeFallback(const TArray<uint32>& ElementCo
 		return j;
 	}
 	return INDEX_NONE;
+}
+
+FString FDreamTextBreaker::GetIteratorCultureName()
+{
+	return DreamTextBreakerLocal::FIterators::Instance().CultureName;
+}
+
+int32 FDreamTextBreaker::GetIteratorBuildCount()
+{
+	return DreamTextBreakerLocal::FIterators::Instance().BuildCount;
+}
+
+bool FDreamTextBreaker::AreIteratorsForCulture()
+{
+	return DreamTextBreakerLocal::FIterators::Instance().bForCulture;
 }

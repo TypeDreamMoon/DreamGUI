@@ -192,6 +192,30 @@ void UDreamMeshModifierTextAnimation::SetSelector(UDreamMeshModifierTextAnimatio
 }
 void UDreamMeshModifierTextAnimation::SetProperties(const TArray<UDreamMeshModifierTextAnimation_Property*>& Value)
 {
+	// What OnUnregister and OnRegister do for the whole list, done for the part of it that changes. A property
+	// assigned at run time never had Init, so a wave never got the tween that drives it and never moved; one
+	// replaced never had Deinit, so its tween ran on -- holding the property alive and marking the text dirty
+	// every frame -- for the rest of the run.
+	if (bIsRegisteredWithWidget)
+	{
+		// Each once per property, however often it is listed.
+		for (int32 OutgoingIndex = 0; OutgoingIndex < Properties.Num(); ++OutgoingIndex)
+		{
+			UDreamMeshModifierTextAnimation_Property* Outgoing = Properties[OutgoingIndex];
+			if (IsValid(Outgoing) && !Value.Contains(Outgoing) && Properties.IndexOfByKey(Outgoing) == OutgoingIndex)
+			{
+				Outgoing->Deinit();
+			}
+		}
+		for (int32 IncomingIndex = 0; IncomingIndex < Value.Num(); ++IncomingIndex)
+		{
+			UDreamMeshModifierTextAnimation_Property* Incoming = Value[IncomingIndex];
+			if (IsValid(Incoming) && !Properties.Contains(Incoming) && Value.IndexOfByKey(Incoming) == IncomingIndex)
+			{
+				Incoming->Init();
+			}
+		}
+	}
 	Properties = Value;
 	if (CheckDreamText())
 	{
@@ -207,12 +231,40 @@ void UDreamMeshModifierTextAnimation::SetProperty(int Index, UDreamMeshModifierT
 	}
 	if (Properties[Index] != Value)
 	{
+		UDreamMeshModifierTextAnimation_Property* Outgoing = Properties[Index];
+		const bool bIncomingAlreadyListed = Properties.Contains(Value);
 		Properties[Index] = Value;
+		// As in SetProperties: the property leaving is wound down unless it is still listed elsewhere, and the one
+		// arriving is started unless it already was.
+		if (bIsRegisteredWithWidget)
+		{
+			if (IsValid(Outgoing) && !Properties.Contains(Outgoing))
+			{
+				Outgoing->Deinit();
+			}
+			if (IsValid(Value) && !bIncomingAlreadyListed)
+			{
+				Value->Init();
+			}
+		}
 		if (CheckDreamText())
 		{
 			TextObject->MarkVerticesDirty(true, true, true, true);
 		}
 	}
+}
+
+void UDreamMeshModifierTextAnimation_Property::ApplyProperty(UDreamText* InUIText, const FDreamMeshModifierTextAnimation_SelectResult& InSelection, FDreamUIGeometry* InGeometry)
+{
+	if (InUIText != nullptr && InGeometry != nullptr)
+	{
+		ApplyPropertyToCharacters(InUIText->GetCharPropertyArray(), InSelection, InGeometry);
+	}
+}
+
+bool UDreamMeshModifierTextAnimation_Property::CanReadCharVertices(const FDreamUITextCharProperty& InChar, int32 InVertexCount)
+{
+	return InChar.VertCount > 0 && InChar.StartVertIndex >= 0 && InChar.StartVertIndex + InChar.VertCount <= InVertexCount;
 }
 
 UDreamText* UDreamMeshModifierTextAnimation_Selector::GetDreamText()const

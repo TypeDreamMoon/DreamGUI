@@ -309,4 +309,37 @@ bool FDreamNavigationSelectionMovesTheCursorTest::RunTest(const FString& Paramet
 	return true;
 }
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamNavigationRingLookupTest,
+	"DreamGUI.Navigation.Selection.ARingIsOnlyForAScreenAndOnlyDraws",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamNavigationRingLookupTest::RunTest(const FString& Parameters)
+{
+	/*
+	 * The ring used to exist only where a presenter component made one; every other screen now gets one per root canvas
+	 * (UUINavigationInputSelectionHandler::FindOrCreateFor). A widget no canvas draws has no screen to ring, and a ring is
+	 * made inert: it lies over the control it marks, so a pointer must pass through it and that control's layout must not
+	 * place it, whatever its class authored.
+	 */
+	UDreamWidgetTree* Tree = NewObject<UDreamWidgetTree>(GetTransientPackage());
+	UDreamWidget* Loose = Tree->ConstructWidget(UDreamWidget::StaticClass(), TEXT("Loose"));
+	UDreamWidget* RingWidget = Tree->ConstructWidget(UDreamWidget::StaticClass(), TEXT("Ring"));
+	if (!TestNotNull(TEXT("a widget"), Loose) || !TestNotNull(TEXT("a widget to be a ring"), RingWidget))
+	{
+		return false;
+	}
+	TestNull(TEXT("a widget no canvas draws gets no ring"), UUINavigationInputSelectionHandler::FindOrCreateFor(Loose));
+	TestNull(TEXT("and has none to find"), UUINavigationInputSelectionHandler::FindFor(Loose));
+
+	UUINavigationInputSelectionHandler::MakeRingInert(RingWidget);
+	TestEqual(TEXT("a ring is never hit"), RingWidget->GetRaycastable(), EDreamWidgetRaycastableType::Disabled);
+	TestTrue(TEXT("never laid out by the control it marks"), RingWidget->GetIgnoreLayout());
+	TestFalse(TEXT("and never a Tab stop"), RingWidget->GetIsTabStop());
+
+	RingWidget->DestroyWidget();
+	Loose->DestroyWidget();
+	return true;
+}
+
 #endif

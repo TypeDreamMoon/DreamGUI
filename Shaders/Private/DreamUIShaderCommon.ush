@@ -11,6 +11,8 @@ struct FDreamUIVertexFactoryInterpolantsVSToPS
 	
     HALF4_TYPE Color : COLOR0;
 
+	// As many UV channels as the material reads, two to an interpolator: five -- TEXCOORD0 to TEXCOORD2 -- for one that
+	// reads TexCoord(4), the vertex's UV4 (MF_DreamUI_Shade does, for painted text).
 #if NUM_TEX_COORD_INTERPOLATORS
 	float4	TexCoords[(NUM_TEX_COORD_INTERPOLATORS + 1) / 2]	: TEXCOORD0;
 #endif

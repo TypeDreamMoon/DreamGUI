@@ -99,7 +99,10 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetMaxLength", BlueprintSetter = "SetMaxLength", Category = "Text Input", meta = (ClampMin = "0"))
 	int32 MaxLength = 0;
 
-	/** Keys the field must not swallow -- put navigation keys here, e.g. Tab and the arrows. */
+	/**
+	 * Keys the field must not swallow while it is edited -- the arrows, say, where the pad's arrows should leave
+	 * the field. Tab needs no entry: it ends the edit and moves on by itself (see bTabTypesTabCharacter).
+	 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetIgnoreKeys", BlueprintSetter = "SetIgnoreKeys", Category = "Text Input")
 	TArray<FKey> IgnoreKeys;
 
@@ -107,11 +110,19 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetMultiLineSubmitFunctionKeys", BlueprintSetter = "SetMultiLineSubmitFunctionKeys", Category = "Text Input", meta = (EditCondition = "bMultiLine"))
 	TArray<FKey> MultiLineSubmitFunctionKeys;
 
+	/**
+	 * In multiline mode, Tab types a tab character and Ctrl+Tab leaves the field -- a notes or code box. Off, the
+	 * default, Tab leaves as it does a single-line field: the edit ends and the next control takes the focus, as a
+	 * browser's textarea does. See UUITextInput::bTabTypesTabCharacter.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetTabTypesTabCharacter", BlueprintSetter = "SetTabTypesTabCharacter", Category = "Text Input", meta = (EditCondition = "bMultiLine"))
+	bool bTabTypesTabCharacter = false;
+
 	/** Select the whole value when the field starts being edited. UMG's SelectAllTextWhenFocused. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetSelectAllWhenActivateInput", BlueprintSetter = "SetSelectAllWhenActivateInput", Category = "Text Input")
 	bool bSelectAllWhenActivateInput = true;
 
-	/** Start editing as soon as gamepad/keyboard navigation lands on the field. */
+	/** Start editing as soon as the arrows or the pad land on the field. Tab starts it anyway while UDreamGUISettings::bTabStartsTextEdit. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetAutoActivateInputWhenNavigateIn", BlueprintSetter = "SetAutoActivateInputWhenNavigateIn", Category = "Text Input")
 	bool bAutoActivateInputWhenNavigateIn = false;
 
@@ -369,6 +380,12 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Text Input")
 	void SetMultiLineSubmitFunctionKeys(const TArray<FKey>& InKeys);
+
+	UFUNCTION(BlueprintCallable, Category = "Text Input")
+	bool GetTabTypesTabCharacter() const { return bTabTypesTabCharacter; }
+
+	UFUNCTION(BlueprintCallable, Category = "Text Input")
+	void SetTabTypesTabCharacter(bool bInTabTypesTabCharacter);
 
 	UFUNCTION(BlueprintCallable, Category = "Text Input")
 	bool GetSelectAllWhenActivateInput() const { return bSelectAllWhenActivateInput; }

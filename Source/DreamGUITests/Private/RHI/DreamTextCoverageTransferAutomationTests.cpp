@@ -44,7 +44,8 @@
  * black on white paper and white on black. The picture is searched for rows that are the ramp (an ink column, paper,
  * ..., ink, and the end), and each of the 256 steps is held to the formula:
  *  - on a render target (DreamGUI.RHI.SmallText...), which DreamGUI draws in linear space -- the gallery's stage, drawn
- *    single-sampled so the blend lands in its sRGB target itself;
+ *    with four samples into the renderer's multisampled target, which carries the stage target's sRGB flag and so stores
+ *    the blend encoded, as the stage's own target would;
  *  - on the screen (DreamGUI.Pie.RHI.SmallText...), a play session's viewport, which blends in gamma space.
  * Both should come out the same: the correction stands in for a linear blend where the target blends encoded values.
  *
@@ -172,11 +173,14 @@ namespace DreamCoverageTransferTestLocal
 		return InLinear <= 0.0031308 ? InLinear * 12.92 : 1.055 * FMath::Pow(InLinear, 1.0 / 2.4) - 0.055;
 	}
 
-	/** A colour's luma, encoded, as Skia takes the text colour's. */
+	/**
+	 * A colour's luma as Skia takes the text colour's, and as DreamUIText_ShadeCoverage does: its sRGB-encoded channels
+	 * weighted as SkComputeLuminance weighs them, 54, 183 and 19 in 256ths -- not the encoding of its linear luminance,
+	 * which reads a saturated colour as a much lighter source. Black and white come out alike either way.
+	 */
 	double EncodedLuma(const FColor& InColour)
 	{
-		const double Linear = 0.2126 * LinearOfEncoded(InColour.R / 255.0) + 0.7152 * LinearOfEncoded(InColour.G / 255.0) + 0.0722 * LinearOfEncoded(InColour.B / 255.0);
-		return EncodedOfLinear(Linear);
+		return (54.0 * InColour.R + 183.0 * InColour.G + 19.0 * InColour.B) / (256.0 * 255.0);
 	}
 
 	/**
@@ -325,9 +329,11 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 
 /*
  * The ramp, black on white and white on black, on the gallery's render-target stage: a RenderTarget canvas, which
- * DreamGUI draws with gamma 1 into an sRGB target, so the blend is linear and the shader skips its correction. Drawn
- * single-sampled, straight into that target, which stores the blend encoded. Each of the 256 steps must come out within
- * TransferTolerance of the formula.
+ * DreamGUI draws with gamma 1 into an sRGB target, so the blend is linear and the shader skips its correction. Drawn with
+ * four samples, as the test host draws everything: into the renderer's multisampled target, which takes the stage
+ * target's sRGB flag, so the blend is stored encoded there as it would be in the stage's own target, and the resolve
+ * averages decoded samples and encodes the result. Each of the 256 steps must come out within TransferTolerance of the
+ * formula, the tolerance the single-sampled path is held to.
  */
 bool FDreamCoverageTransferRenderTargetTest::RunTest(const FString& Parameters)
 {
@@ -340,11 +346,11 @@ bool FDreamCoverageTransferRenderTargetTest::RunTest(const FString& Parameters)
 	}
 	Stage->UseBuiltInShader(true);
 	Stage->UseSmallTextCoverage(true);
-	// Single-sampled, so the canvas blends straight into the stage's sRGB target: in linear light, stored encoded, as the
-	// formula's linear branch has it. With multisampling on, as a project may have it, the canvas draws into a target of the
-	// renderer's own with the stage's pixel format but not its sRGB flag, which keeps the linear blend in 8 bits until the
-	// resolve encodes it: one step near black is then 13 encoded ones, and black on white at coverage 244 reads 0, not 6.
-	Stage->UseMultisampling(1);
+	// Four samples, stated rather than left to the host's settings. The renderer's multisampled target used to have the
+	// stage's pixel format without its sRGB flag, which kept the linear blend in 8 bits until the resolve encoded it -- one
+	// step near black was then 13 encoded ones, and black on white at coverage 244 read 0, not 6 -- so this test drew
+	// single-sampled. With the flag carried over, the multisampled path stores what the single-sampled one does.
+	Stage->UseMultisampling(4);
 	// One target pixel per canvas unit, as the ramp goes in for (a device scale of 1): no canvas scaler, and the target at
 	// the canvas's own resolution. A coverage glyph's device scale includes both, so they are stated here, not assumed.
 	if (UDreamCanvas* Canvas = Stage->GetCanvas())

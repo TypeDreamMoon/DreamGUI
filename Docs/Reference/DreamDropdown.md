@@ -34,6 +34,7 @@ than waiting on a fade that will never run.
 | `MaxVisibleItems` | `int32` | Dropdown | yes | `GetMaxVisibleItems` / `SetMaxVisibleItems` | How many rows the open list shows at most. The list is always exactly as tall as its visible rows -- rows-times-row-height, no more -- and past this many the rest scroll: the cap is a count because that is how a designer thinks about a dropdown, not in pixels. |
 | `OptionIcons` | `TArray<TObjectPtr<UObject> >` | Dropdown | yes | `SetOptionIcons` | A picture per option, index-matched to Options -- the same parallel-array idiom TabLabels and TabEnabled use, and for the same reason: a struct per option would make the common case (no icons at all) cost an array literal the language cannot write. |
 | `bHasDownArrow` | `bool` | Dropdown | yes | `GetHasDownArrow` / `SetHasDownArrow` | Whether the face draws its own arrow glyph -- UMG's HasDownArrow. Off is for a face that says "open me" some other way (an icon of its own, a border). |
+| `bTabCommitsHighlightedRow` | `bool` | Dropdown | yes | `GetTabCommitsHighlightedRow` / `SetTabCommitsHighlightedRow` | Tab or Shift+Tab in the open list chooses the row the player is on, then the list closes and the Tab moves on past the dropdown -- what an HTML select does. Off, Tab only closes the list and chooses nothing. Tab never walks the rows: the arrow keys and the pad do that. |
 | `ItemTemplateClass` | `TSubclassOf<UDreamUserWidget>` | Dropdown | yes | `GetItemTemplateClass` / `SetItemTemplateClass` | An option row's CONTENT, authored elsewhere: one instance of this class is created inside every item widget, filling it, and the built-in label steps aside. The row's face, its check mark, its hover and its selection stay the control's, so a template only has to draw an option. |
 | `FaceNode` | `TObjectPtr<UDreamWidget>` | Dropdown | - | read only |  |
 | `CaptionNode` | `TObjectPtr<UDreamWidget>` | Dropdown | - | read only |  |
@@ -59,6 +60,7 @@ than waiting on a fade that will never run.
 | `int32 GetSelectedIndex()` | pure | Get Selected Index |
 | `FText GetSelectedOption()` | pure | The selected option's text, or empty while nothing is selected. |
 | `FDreamDropdownStyle GetStyle()` | pure | Get Style |
+| `bool GetTabCommitsHighlightedRow()` | pure | Get Tab Commits Highlighted Row |
 | `bool IsOpen()` | pure | Whether the list is up. Mirrored from the behaviour's own visibility seam rather than kept by whoever opened it, so a list closed by a click elsewhere is not still "open" here. |
 | `void RefreshOptions()` | callable | Rebuild the rows from the current options. For a caller who edited the array in place. |
 | `bool RemoveOption(FText InOption)` | callable | False when no option matched, as UMG's returns. Takes the matching icon with it. |
@@ -70,6 +72,7 @@ than waiting on a fade that will never run.
 | `void SetSelectedIndex(int32 InIndex)` | callable | Set Selected Index |
 | `void SetSelectedOption(FText InOption)` | callable | Selects the option with that text. An option nobody offers changes nothing. |
 | `void SetStyle(FDreamDropdownStyle InStyle)` | callable | This instance's whole look, replaced and pushed. See UDreamButton::SetStyle for the caveat. |
+| `void SetTabCommitsHighlightedRow(bool bInTabCommitsHighlightedRow)` | callable | See bTabCommitsHighlightedRow. Pushed to the behaviour at once, so an open list answers the next Tab by it. |
 
 ## Events
 

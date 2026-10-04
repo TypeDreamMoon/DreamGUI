@@ -15,6 +15,8 @@
 #include "Core/DreamUIFontData_DistanceField.h"
 #include "Core/DreamUIFontEmojiData.h"
 #include "Core/Text/DreamTextShaper.h"
+#include "Internationalization/Culture.h"
+#include "Internationalization/Internationalization.h"
 #include "Misc/Paths.h"
 #include "Misc/ScopeExit.h"
 #include "UObject/UnrealType.h"
@@ -2801,6 +2803,444 @@ bool FDreamTextEmojiPrecedenceTest::RunTest(const FString& Parameters)
 		TestTrue(TEXT("which is drawn"), UnicornGlyph->bEmit);
 		TestFalse(TEXT("in monochrome"), UnicornGlyph->Glyph.bColor);
 	}
+	return true;
+}
+
+namespace DreamTextLayoutTestLocal
+{
+	/** The left and right of an item's pen box, and its bottom and top: what a paint run's piece is made of. */
+	FDreamTextBox ItemPenBox(const FDreamTextGlyphItem& Item)
+	{
+		FDreamTextBox Box;
+		Box.Left = Item.Pen.X + Item.DecorationOffset;
+		Box.Right = Box.Left + Item.AdvanceWithSpace;
+		Box.Bottom = Item.Pen.Y - Item.Descent;
+		Box.Top = Item.Pen.Y + Item.Ascent;
+		return Box;
+	}
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamTextBoxesTest,
+	"DreamGUI.Text.Boxes.TheContentBoxTheTextBlockAndEachLinesBoxFollowAlignmentAndPivot",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * The boxes the painter measures a gradient in, in the text's local space with y up. The content box is the rect the
+ * text was laid out in, around its pivot; the text block is the content box across and the lines' total height down, from
+ * the first line's top to the last line's bottom, wherever the vertical alignment put them; each line's box spans its
+ * visual runs across and its own line box down, the space between lines left out. Every item carries its face's ascent
+ * and descent from its pen.
+ */
+bool FDreamTextBoxesTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamTextLayoutTestLocal;
+	FScopedGameWorld TestWorld;
+	UDreamTextTestFont* Font = NewObject<UDreamTextTestFont>(TestWorld.World);
+	const FString Content = TEXT("The quick brown fox jumps over the lazy dog and keeps running through the field");
+
+	struct FCase
+	{
+		const TCHAR* Name;
+		EDreamUITextParagraphHorizontalAlign HAlign;
+		EDreamUITextParagraphVerticalAlign VAlign;
+		FVector2f Pivot;
+	};
+	const FCase Cases[] =
+	{
+		{ TEXT("left, top, centred pivot"), EDreamUITextParagraphHorizontalAlign::Left, EDreamUITextParagraphVerticalAlign::Top, FVector2f(0.5f, 0.5f) },
+		{ TEXT("centre, middle, pivot at the bottom left"), EDreamUITextParagraphHorizontalAlign::Center, EDreamUITextParagraphVerticalAlign::Middle, FVector2f(0.0f, 0.0f) },
+		{ TEXT("right, bottom, pivot right"), EDreamUITextParagraphHorizontalAlign::Right, EDreamUITextParagraphVerticalAlign::Bottom, FVector2f(1.0f, 0.25f) },
+		{ TEXT("justified, top, pivot off centre"), EDreamUITextParagraphHorizontalAlign::Justify, EDreamUITextParagraphVerticalAlign::Top, FVector2f(0.3f, 0.8f) },
+	};
+	for (const FCase& Case : Cases)
+	{
+		FDreamTextLayoutInput In = MakeInput(Font, Content, 200.0f, 300.0f);
+		In.OverflowType = EDreamUITextOverflowType::VerticalOverflow;
+		In.ParagraphHAlign = Case.HAlign;
+		In.ParagraphVAlign = Case.VAlign;
+		In.Pivot = Case.Pivot;
+		In.FontSpace.Y = 4.0f;
+		FDreamTextDisplayList DL;
+		FDreamTextLayoutEngine::Layout(In, DL);
+		const FString What = Case.Name;
+		const FDreamTextBox& ContentBox = DL.ContentBox;
+		TestEqual(What + TEXT(": the content box's left is the width times the pivot left of it"), ContentBox.Left, -In.Width * In.Pivot.X, 0.001f);
+		TestEqual(What + TEXT(": its right is the width on"), ContentBox.Right, ContentBox.Left + In.Width, 0.001f);
+		TestEqual(What + TEXT(": its bottom is the height times the pivot below it"), ContentBox.Bottom, -In.Height * In.Pivot.Y, 0.001f);
+		TestEqual(What + TEXT(": its top is the height up"), ContentBox.Top, ContentBox.Bottom + In.Height, 0.001f);
+		if (!TestTrue(What + TEXT(": the text wraps"), DL.Lines.Num() >= 3))
+		{
+			continue;
+		}
+		if (!TestEqual(What + TEXT(": a line box for every line"), DL.LineBoxes.Num(), DL.Lines.Num()))
+		{
+			continue;
+		}
+		const FDreamTextBox& Block = DL.TextBlockBox;
+		TestEqual(What + TEXT(": the text block spans the content box across"), Block.Left, ContentBox.Left);
+		TestEqual(What + TEXT(": ...to its right"), Block.Right, ContentBox.Right);
+		TestEqual(What + TEXT(": the text block starts at the first line's top"), Block.Top, DL.LineBoxes[0].Top);
+		TestEqual(What + TEXT(": and ends at the last line's bottom"), Block.Bottom, DL.LineBoxes.Last().Bottom);
+		switch (Case.VAlign)
+		{
+		case EDreamUITextParagraphVerticalAlign::Top:
+			TestEqual(What + TEXT(": aligned to the top, the block's top is the content box's"), Block.Top, ContentBox.Top, 0.001f);
+			break;
+		case EDreamUITextParagraphVerticalAlign::Bottom:
+			TestEqual(What + TEXT(": aligned to the bottom, the block's bottom is the content box's"), Block.Bottom, ContentBox.Bottom, 0.001f);
+			break;
+		default:
+			TestEqual(What + TEXT(": centred, the block's middle is the content box's"), (Block.Top + Block.Bottom) * 0.5f,
+				(ContentBox.Top + ContentBox.Bottom) * 0.5f, 0.001f);
+			break;
+		}
+		for (int32 LineIndex = 0; LineIndex < DL.LineBoxes.Num(); LineIndex++)
+		{
+			const FDreamTextBox& Box = DL.LineBoxes[LineIndex];
+			const FString Line = What + FString::Printf(TEXT(", line %d"), LineIndex);
+			float RunLeft = MAX_flt;
+			float RunRight = -MAX_flt;
+			for (const FDreamTextVisualRun& Run : DL.VisualRuns)
+			{
+				if (Run.LineIndex == LineIndex)
+				{
+					RunLeft = FMath::Min(RunLeft, Run.Left);
+					RunRight = FMath::Max(RunRight, Run.Right);
+				}
+			}
+			TestEqual(Line + TEXT(": the box starts at its leftmost visual run"), Box.Left, RunLeft);
+			TestEqual(Line + TEXT(": and ends at its rightmost"), Box.Right, RunRight);
+			TestTrue(Line + TEXT(": it has a height"), Box.Top > Box.Bottom);
+			if (LineIndex > 0)
+			{
+				TestEqual(Line + TEXT(": its top is the line above's bottom less the space between lines"), Box.Top,
+					DL.LineBoxes[LineIndex - 1].Bottom - In.FontSpace.Y, 0.001f);
+			}
+			if (Case.HAlign == EDreamUITextParagraphHorizontalAlign::Left || Case.HAlign == EDreamUITextParagraphHorizontalAlign::Justify)
+			{
+				TestEqual(Line + TEXT(": a line set from the left starts at the content box's left"), Box.Left, ContentBox.Left, 0.001f);
+			}
+			for (const FDreamTextGlyphItem& Item : DL.Items)
+			{
+				if (Item.LineIndex != LineIndex || Item.Kind != EDreamTextItemKind::Glyph)
+				{
+					continue;
+				}
+				TestTrue(Line + TEXT(": a glyph's box is inside its line's"), Item.Pen.Y + Item.Ascent <= Box.Top + 0.01f
+					&& Item.Pen.Y - Item.Descent >= Box.Bottom - 0.01f);
+			}
+		}
+		if (Case.HAlign == EDreamUITextParagraphHorizontalAlign::Right)
+		{
+			TestEqual(What + TEXT(": the last line, set from the right, ends at the content box's right"), DL.LineBoxes.Last().Right,
+				ContentBox.Right, 0.001f);
+		}
+		for (const FDreamTextGlyphItem& Item : DL.Items)
+		{
+			// One size, one face: every item's box up and down from its pen is the font's ascent and descent at that size.
+			if (!TestEqual(What + TEXT(": an item's ascent is its face's"), Item.Ascent, Font->GetAscent(In.FontSize), 0.0001f)
+				|| !TestEqual(What + TEXT(": and its descent"), Item.Descent, Font->GetDescent(In.FontSize), 0.0001f))
+			{
+				break;
+			}
+		}
+	}
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamTextPaintRunPiecesTest,
+	"DreamGUI.Text.Boxes.AGradientRunAcrossLinesHasAPieceOnEachLaidEndToEnd",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * A <gradient> run that wraps is measured as CSS slices a decorated inline box: a piece on each line, spanning the run's
+ * items there -- the whitespace hanging off the line's end left out -- and the pieces laid end to end in line order, each
+ * starting where the ones before it end. Its items name the paint, and the piece of their line; the text around the run
+ * names neither.
+ */
+bool FDreamTextPaintRunPiecesTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamTextLayoutTestLocal;
+	FScopedGameWorld TestWorld;
+	UDreamTextTestFont* Font = NewObject<UDreamTextTestFont>(TestWorld.World);
+	FDreamTextLayoutInput In = MakeInput(Font, TEXT("aa <gradient=Gold>bbbb bbbb bbbb bbbb</gradient> cc"), 150.0f, 300.0f);
+	In.bRichText = true;
+	In.OverflowType = EDreamUITextOverflowType::VerticalOverflow;
+	FDreamTextDisplayList DL;
+	FDreamTextLayoutEngine::Layout(In, DL);
+	if (!TestEqual(TEXT("The layout names the one paint"), DL.PaintNames.Num(), 1) || !TestTrue(TEXT("...Gold"), DL.PaintNames[0] == FName(TEXT("Gold"))))
+	{
+		return false;
+	}
+	if (!TestTrue(TEXT("The run is on more than one line, a piece on each"), DL.PaintFragments.Num() >= 2))
+	{
+		return false;
+	}
+	float RunWidth = 0.0f;
+	for (const FDreamTextPaintFragment& Piece : DL.PaintFragments)
+	{
+		RunWidth += Piece.Box.GetWidth();
+	}
+	float Offset = 0.0f;
+	for (int32 k = 0; k < DL.PaintFragments.Num(); k++)
+	{
+		const FDreamTextPaintFragment& Piece = DL.PaintFragments[k];
+		const FString What = FString::Printf(TEXT("Piece %d"), k);
+		TestEqual(What + TEXT(" is Gold's"), Piece.PaintIndex, 0);
+		if (k > 0)
+		{
+			TestEqual(What + TEXT(" is on the line after the piece before"), Piece.LineIndex, DL.PaintFragments[k - 1].LineIndex + 1);
+		}
+		TestEqual(What + TEXT(" starts where the pieces before it end"), Piece.RunOffset, Offset, 0.001f);
+		TestEqual(What + TEXT(" knows the whole run's width"), Piece.RunWidth, RunWidth, 0.001f);
+		Offset += Piece.Box.GetWidth();
+		// The piece spans the run's letters on its line: the leftmost one's pen box to the rightmost one's.
+		FDreamTextBox Letters;
+		Letters.Left = MAX_flt;
+		Letters.Right = -MAX_flt;
+		Letters.Bottom = MAX_flt;
+		Letters.Top = -MAX_flt;
+		for (int32 ItemIndex = 0; ItemIndex < DL.Items.Num(); ItemIndex++)
+		{
+			const FDreamTextGlyphItem& Item = DL.Items[ItemIndex];
+			if (Item.Codepoint != 'b' || Item.LineIndex != Piece.LineIndex)
+			{
+				continue;
+			}
+			const FDreamTextBox Box = ItemPenBox(Item);
+			Letters.Left = FMath::Min(Letters.Left, Box.Left);
+			Letters.Right = FMath::Max(Letters.Right, Box.Right);
+			Letters.Bottom = FMath::Min(Letters.Bottom, Box.Bottom);
+			Letters.Top = FMath::Max(Letters.Top, Box.Top);
+			TestEqual(What + TEXT(": its letters name the piece"), Item.PaintFragment, k);
+			TestEqual(What + TEXT(": and the paint"), Item.Style.PaintIndex, 0);
+		}
+		TestEqual(What + TEXT("'s left is its leftmost letter's"), Piece.Box.Left, Letters.Left, 0.0001f);
+		TestEqual(What + TEXT("'s right is its rightmost letter's"), Piece.Box.Right, Letters.Right, 0.0001f);
+		TestEqual(What + TEXT("'s bottom is its letters'"), Piece.Box.Bottom, Letters.Bottom, 0.0001f);
+		TestEqual(What + TEXT("'s top is its letters'"), Piece.Box.Top, Letters.Top, 0.0001f);
+	}
+	for (const FDreamTextGlyphItem& Item : DL.Items)
+	{
+		if (Item.Codepoint == 'a' || Item.Codepoint == 'c')
+		{
+			TestEqual(TEXT("A letter outside the run names no piece"), Item.PaintFragment, (int32)INDEX_NONE);
+			TestEqual(TEXT("and no paint"), Item.Style.PaintIndex, (int32)INDEX_NONE);
+		}
+	}
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamTextPaintInnermostTest,
+	"DreamGUI.Text.Boxes.AColourInsideAGradientRunIsSolidInItsPieceAndAMultiplyTintsThePaint",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * Whichever of a colour and a paint is innermost wins: a <color> inside a gradient run is solid, though it stays part of
+ * the run's piece. A custom style that multiplies sets no colour of its own: inside the run it tints the paint rather than
+ * ending it.
+ */
+bool FDreamTextPaintInnermostTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamTextLayoutTestLocal;
+	FScopedGameWorld TestWorld;
+	UDreamTextTestFont* Font = NewObject<UDreamTextTestFont>(TestWorld.World);
+	UDreamUIRichTextCustomStyleData* Styles = NewObject<UDreamUIRichTextCustomStyleData>(TestWorld.World);
+	FDreamUIRichTextCustomStyleItemData Tint;
+	Tint.colorType = EDreamUIRichTextCustomStyleData_ColorType::Multiply;
+	Tint.color = FColor(128, 128, 255);
+	TMap<FName, FDreamUIRichTextCustomStyleItemData> Entries;
+	Entries.Add(TEXT("Tint"), Tint);
+	Styles->SetDataMap(Entries);
+
+	FDreamTextLayoutInput In = MakeInput(Font, TEXT("<gradient=Gold>ab<color=#ff0000>cd</color>ef<Tint>gh</Tint></gradient>"), 600.0f, 200.0f);
+	In.bRichText = true;
+	In.RichTextCustomStyleData = Styles;
+	FDreamTextDisplayList DL;
+	FDreamTextLayoutEngine::Layout(In, DL);
+	if (!TestEqual(TEXT("One line, one run, one piece"), DL.PaintFragments.Num(), 1))
+	{
+		return false;
+	}
+	for (const FDreamTextGlyphItem& Item : DL.Items)
+	{
+		const FString What = FString::Printf(TEXT("'%c'"), (TCHAR)Item.Codepoint);
+		TestEqual(What + TEXT(" is part of the run's piece"), Item.PaintFragment, 0);
+		if (Item.Codepoint == 'c' || Item.Codepoint == 'd')
+		{
+			TestEqual(What + TEXT(", coloured inside the run, is solid"), Item.Style.PaintIndex, (int32)INDEX_NONE);
+			TestTrue(What + TEXT(" in its colour"), Item.Style.bHasColor);
+		}
+		else
+		{
+			TestEqual(What + TEXT(" is painted"), Item.Style.PaintIndex, 0);
+		}
+		if (Item.Codepoint == 'g' || Item.Codepoint == 'h')
+		{
+			TestTrue(What + TEXT(", in the multiplying style, has the multiply to tint the paint with"), Item.Style.bHasMultiplyColor);
+		}
+	}
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamTextLineBreakCultureTest,
+	"DreamGUI.Text.Breaking.LineBreakingFollowsTheGamesCultureAndMakesItsIteratorsAgainWhenItChanges",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * Line breaking follows the game's culture, not the machine's: the line, word and character iterators are made for the
+ * current culture's locale, kept while it holds, and made again when it changes. On most text the locales break alike, so
+ * what the test reads is which culture the iterators were made for, and how many times. The culture is switched between
+ * two Englishes, which leaves the editor no translation to load, and put back as it was.
+ */
+bool FDreamTextLineBreakCultureTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamTextLayoutTestLocal;
+	FScopedGameWorld TestWorld;
+	UDreamTextTestFont* Font = NewObject<UDreamTextTestFont>(TestWorld.World);
+	FInternationalization& I18N = FInternationalization::Get();
+	FInternationalization::FCultureStateSnapshot Before;
+	I18N.BackupCultureState(Before);
+	ON_SCOPE_EXIT
+	{
+		FInternationalization::Get().RestoreCultureState(Before);
+	};
+	auto LayOutWrapped = [Font]()
+	{
+		FDreamTextLayoutInput In = MakeInput(Font, TEXT("Words enough to wrap onto a second line, \u65E5\u672C\u8A9E\u306E\u6587\u7AE0\u3082"), 120.0f, 300.0f);
+		In.OverflowType = EDreamUITextOverflowType::VerticalOverflow;
+		FDreamTextDisplayList DL;
+		FDreamTextLayoutEngine::Layout(In, DL);
+		return DL.Lines.Num();
+	};
+	const FString Original = I18N.GetCurrentCulture()->GetName();
+	TestTrue(TEXT("The text wraps"), LayOutWrapped() > 1);
+	TestEqual(TEXT("The iterators are the game culture's"), FDreamTextBreaker::GetIteratorCultureName(), Original);
+	const int32 Builds = FDreamTextBreaker::GetIteratorBuildCount();
+	LayOutWrapped();
+	TestEqual(TEXT("A layout in the same culture makes none again"), FDreamTextBreaker::GetIteratorBuildCount(), Builds);
+
+	const FString Other = Original.Equals(TEXT("en-GB"), ESearchCase::IgnoreCase) ? TEXT("en-US") : TEXT("en-GB");
+	if (!TestTrue(TEXT("The game's language can be switched"), I18N.SetCurrentLanguage(Other)))
+	{
+		return false;
+	}
+	const FString Switched = I18N.GetCurrentCulture()->GetName();
+	LayOutWrapped();
+	TestEqual(TEXT("After a switch they are the new culture's"), FDreamTextBreaker::GetIteratorCultureName(), Switched);
+	TestEqual(TEXT("made once more"), FDreamTextBreaker::GetIteratorBuildCount(), Builds + 1);
+#if UE_ENABLE_ICU && !PLATFORM_TCHAR_IS_UTF8CHAR
+	// An editor always has ICU's own iterators here: made for the culture's locale, not fallen back to the engine's
+	// default-culture ones, which would read the same by name and count.
+	TestTrue(TEXT("with that culture's own ICU locale"), FDreamTextBreaker::AreIteratorsForCulture());
+#endif
+	LayOutWrapped();
+	TestEqual(TEXT("and kept for the next layout"), FDreamTextBreaker::GetIteratorBuildCount(), Builds + 1);
+
+	I18N.RestoreCultureState(Before);
+	LayOutWrapped();
+	TestEqual(TEXT("Switched back, they are the first culture's again"), FDreamTextBreaker::GetIteratorCultureName(), Original);
+	TestEqual(TEXT("made once more"), FDreamTextBreaker::GetIteratorBuildCount(), Builds + 2);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamTextScaledTabStopTest,
+	"DreamGUI.Text.Tabs.UnderAScaledCanvasATabStopIsTabSizeSpacesAsTheTextMeasuresThem",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * Under a scaled canvas a glyph is asked of the font at the device size and measured back, and a font that rounds its
+ * advances to whole pixels there gives a space another width than at the text's own size. A tab stop is TabSize of the
+ * spaces the text is set with, so a tab reaches exactly as far as TabSize spaces do.
+ */
+bool FDreamTextScaledTabStopTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamTextLayoutTestLocal;
+	FScopedGameWorld TestWorld;
+	UDreamTextTestFont* Font = NewObject<UDreamTextTestFont>(TestWorld.World);
+	Font->bMockHasKerning = false;
+	Font->MockAdvanceGrid = 1.0f;
+	const float Size = 16.0f;
+	const float Scale = 1.5f;
+
+	auto XLeft = [Font, Size, Scale](const TCHAR* Content, int32 XElement)
+	{
+		FDreamTextLayoutInput In = MakeInput(Font, Content, 600.0f, 200.0f);
+		In.FontSize = Size;
+		In.RootCanvasScale = Scale;
+		FDreamTextDisplayList DL;
+		FDreamTextLayoutEngine::Layout(In, DL);
+		return ElementLeft(DL, In, XElement);
+	};
+	// A space asked for at 24 px is 7.2 px, rounded to 7, and 7 / 1.5 in the text's units; at 16 px it would be 5.
+	const float Space = FMath::RoundToFloat(0.3f * Size * Scale) * (1.0f / Scale);
+	const float AfterSpaces = XLeft(TEXT("        X"), 8);
+	const float AfterTab = XLeft(TEXT("\tX"), 1);
+	TestEqual(TEXT("Eight spaces are eight scaled spaces"), AfterSpaces, 8.0f * Space, 0.001f);
+	TestEqual(TEXT("A tab reaches as far as eight spaces"), AfterTab, AfterSpaces, 0.001f);
+	TestTrue(TEXT("not as far as eight spaces at the text's own size"), FMath::Abs(AfterTab - 8.0f * FMath::RoundToFloat(0.3f * Size)) > 1.0f);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamTextNoColorFacesTest,
+	"DreamGUI.Text.Pipeline.WithColourFacesExcludedAnEmojiIsItsPictureOrAMonochromeGlyph",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * A text whose material cannot draw a colour glyph lays out with FDreamTextLayoutInput::bAllowColorFaces off: an emoji
+ * then resolves as if the font had no colour face -- its emoji data's picture, else a glyph from a monochrome face.
+ */
+bool FDreamTextNoColorFacesTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamTextLayoutTestLocal;
+	FScopedGameWorld TestWorld;
+	UDreamTextTestFont* Font = NewObject<UDreamTextTestFont>(TestWorld.World);
+	Font->MockFaces.SetNum(2);
+	Font->MockFaces[0].Has = { FInt32Interval(0x20, 0x7E) };
+	Font->MockFaces[1].Has = { FInt32Interval(0x1F300, 0x1FAFF) };
+	Font->MockFaces[1].bColor = true;
+	UDreamUIFontEmojiData* Emoji = NewObject<UDreamUIFontEmojiData>(TestWorld.World);
+	TMap<FDreamUIFontEmojiKey, FDreamUIFontEmojiDataItem> Pictures;
+	Pictures.Add(FDreamUIFontEmojiKey(0x1F44D), FDreamUIFontEmojiDataItem());
+	Emoji->SetDataMap(Pictures);
+	FObjectProperty* EmojiProperty = FindFProperty<FObjectProperty>(UDreamUIFontData_BaseObject::StaticClass(), TEXT("EmojiData"));
+	if (!TestNotNull(TEXT("the emoji data is a property of the font"), EmojiProperty))
+	{
+		return false;
+	}
+	EmojiProperty->SetObjectPropertyValue_InContainer(Font, Emoji);
+
+	auto Layout = [Font](const TCHAR* Content, bool bAllowColorFaces, FDreamTextDisplayList& OutDL)
+	{
+		FDreamTextLayoutInput In = MakeInput(Font, Content, 600.0f, 200.0f);
+		In.bAllowColorFaces = bAllowColorFaces;
+		FDreamTextLayoutEngine::Layout(In, OutDL);
+	};
+	FDreamTextDisplayList Colour;
+	Layout(TEXT("\U0001F44D\U0001F3FD"), true, Colour);
+	TestEqual(TEXT("With colour faces, the toned thumb is the colour face's glyph"), Colour.Emojis.Num(), 0);
+	FDreamTextDisplayList Picture;
+	Layout(TEXT("\U0001F44D\U0001F3FD"), false, Picture);
+	TestEqual(TEXT("Without them, its base's picture"), Picture.Emojis.Num(), 1);
+	FDreamTextDisplayList Unicorn;
+	Layout(TEXT("\U0001F984"), false, Unicorn);
+	TestEqual(TEXT("An emoji with no picture is no object"), Unicorn.Emojis.Num(), 0);
+	const FDreamTextGlyphItem* Glyph = FindItem(Unicorn, 0);
+	if (TestNotNull(TEXT("but a glyph"), Glyph))
+	{
+		TestFalse(TEXT("in monochrome"), Glyph->Glyph.bColor);
+		TestNotEqual(TEXT("from no colour face"), Glyph->Glyph.FaceIndex, 1);
+	}
+	FDreamTextLayoutInput With = MakeInput(Font, TEXT("x"), 600.0f, 200.0f);
+	FDreamTextLayoutInput Without = With;
+	Without.bAllowColorFaces = false;
+	TestTrue(TEXT("The flag is a layout input"), With != Without);
 	return true;
 }
 

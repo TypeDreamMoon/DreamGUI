@@ -30,8 +30,6 @@ namespace DreamUISlateInputSourceLocal
 {
 	/** Below this the right stick is at rest. */
 	static constexpr float StickDeadzone = 0.2f;
-	/** How fast the right stick scrolls what has focus, in canvas units a second at full tilt: the presets' default. */
-	static constexpr float StickScrollSpeed = 1500.0f;
 
 	bool ToButton(const FKey& InKey, EDreamUIMouseButtonType& OutButton)
 	{
@@ -60,7 +58,7 @@ namespace DreamUISlateInputSourceLocal
 	 */
 	void ParkMouseOffTheViewport(UDreamUIInputUser* InUser)
 	{
-		const FVector OffTheViewport(-1.0, -1.0, 0.0);
+		const FVector OffTheViewport = DreamUIPointerPosition::OffViewport();
 		const UDreamPointerEventData* Mouse = InUser->FindPointerEventData(DreamUIPointerIds::Mouse);
 		FVector2D VirtualCursor = FVector2D::ZeroVector;
 		if (Mouse == nullptr || Mouse->InputType != EDreamUIPointerInputType::Pointer || FindVirtualCursor(InUser, VirtualCursor)
@@ -221,28 +219,10 @@ int32 FDreamUISlateInputSource::FindUserIndex(int32 InSlateUserIndex) const
 	{
 		return UserMapper(InSlateUserIndex);
 	}
-	int32 UserIndex = INDEX_NONE;
-	if (const UWorld* World = GetWorld(); World != nullptr && World->GetGameInstance() != nullptr)
-	{
-		const TArray<ULocalPlayer*>& LocalPlayers = World->GetGameInstance()->GetLocalPlayers();
-		for (int32 Index = 0; Index < LocalPlayers.Num(); ++Index)
-		{
-			const ULocalPlayer* LocalPlayer = LocalPlayers[Index];
-			const TSharedPtr<const FSlateUser> SlateUser = LocalPlayer != nullptr ? LocalPlayer->GetSlateUser() : nullptr;
-			if (SlateUser.IsValid() && SlateUser->GetUserIndex() == InSlateUserIndex)
-			{
-				UserIndex = Index;
-				break;
-			}
-		}
-		// With one local player every Slate user is theirs: the keyboard and the mouse are Slate user 0, whoever holds
-		// the pad.
-		if (UserIndex == INDEX_NONE && LocalPlayers.Num() == 1)
-		{
-			UserIndex = 0;
-		}
-	}
-	return UserIndex;
+	// The local player whose Slate user it is -- every Slate user, with one local player -- as the world's Slate guard
+	// reckons it too.
+	const UDreamUIInputSubsystem* Input = Subsystem.Get();
+	return Input != nullptr ? Input->FindUserIndexForSlateUser(InSlateUserIndex) : INDEX_NONE;
 }
 
 UDreamUIInputUser* FDreamUISlateInputSource::FindUser(int32 InSlateUserIndex) const
@@ -372,6 +352,12 @@ bool FDreamUISlateInputSource::HandleMouseMoveEvent(FSlateApplication& SlateApp,
 		return false;
 	}
 	const int32 PointerID = PointerIDFor(MouseEvent);
+	// The mouse really moving is the player on the mouse: the device it reports brings the cursor back where a pad hid it,
+	// and the prompts back to the keyboard's. A finger reports itself as it presses.
+	if (PointerID == DreamUIPointerIds::Mouse && !MouseEvent.GetCursorDelta().IsNearlyZero())
+	{
+		User->ReportInputKey(EKeys::Mouse2D);
+	}
 	FVector2D Pixel;
 	bool bInside = false;
 	if (!MapToViewport(MouseEvent.GetScreenSpacePosition(), Pixel, bInside))
@@ -446,7 +432,7 @@ bool FDreamUISlateInputSource::HandlePress(const FPointerEvent& InEvent, bool bI
 		{
 			User->MovePointer(PointerID, FVector(Pixel, 0.0));
 		}
-		User->ReportInputDevice(UDreamEventSystem::GetInputDeviceForKey(InEvent.IsTouchEvent() ? EKeys::TouchKeys[0] : InEvent.GetEffectingButton()));
+		User->ReportInputKey(InEvent.IsTouchEvent() ? EKeys::TouchKeys[0] : InEvent.GetEffectingButton(), InEvent.GetInputDeviceId());
 		User->QueuePointerButton(PointerID, FVector(Pixel, 0.0), true, Button, InEvent.IsTouchEvent());
 		HeldPresses.Add(PressKey);
 		const bool bConsume = WouldConsumePress(User, PointerID);
@@ -501,7 +487,7 @@ bool FDreamUISlateInputSource::HandleMouseWheelOrGestureEvent(FSlateApplication&
 	{
 		return false;
 	}
-	User->ReportInputDevice(UDreamEventSystem::GetInputDeviceForKey(EKeys::MouseWheelAxis));
+	User->ReportInputKey(EKeys::MouseWheelAxis);
 	// Both components carry the wheel: a mouse wheel has no horizontal axis to tell apart.
 	User->QueuePointerScroll(DreamUIPointerIds::Mouse, FVector2D(Delta, Delta));
 	return WouldConsumePress(User, DreamUIPointerIds::Mouse);
@@ -533,7 +519,10 @@ bool FDreamUISlateInputSource::HandleKeyDownEvent(FSlateApplication& SlateApp, c
 		return false;
 	}
 	RoutedKeys.Add(KeyOfUser);
+	// The event names the device that sent it: a pad's model is read from that pad, not guessed.
+	User->ReportInputKey(Key, InKeyEvent.GetInputDeviceId());
 	bool bTyped = false;
+	// With its chord: Tab is no step with Ctrl, Alt or Cmd held, and Shift+Tab steps back.
 	const bool bTaken = DreamUIKeyRouting::RouteKey(User, Key, true, InKeyEvent.GetModifierKeys(), bTyped);
 	const bool bConsume = WouldConsumeKey(bTaken, bTyped);
 	if (bConsume)
@@ -579,7 +568,7 @@ bool FDreamUISlateInputSource::HandleAnalogInputEvent(FSlateApplication& SlateAp
 		(Key == EKeys::Gamepad_RightX ? Stick.X : Stick.Y) = bTaken ? 0.0f : Value;
 		if (FMath::Abs(Value) >= DreamUISlateInputSourceLocal::StickDeadzone)
 		{
-			User->ReportInputDevice(UDreamEventSystem::GetInputDeviceForKey(Key));
+			User->ReportInputDevice(UDreamEventSystem::GetInputDeviceForKey(Key), InAnalogInputEvent.GetInputDeviceId());
 		}
 	}
 	return WouldConsumeKey(bTaken, false);
@@ -594,12 +583,15 @@ void FDreamUISlateInputSource::Tick(const float DeltaTime, FSlateApplication& Sl
 	{
 		return;
 	}
-	// The UI clock: a stick scrolls a list as fast in a slowed-down game as at full speed.
+	// The UI clock: a stick scrolls a list as fast in a slowed-down game as at full speed. The speed is the project's
+	// (UDreamGUISettings::SlateInputStickScrollSpeed), read every tick so a change takes at once.
 	const float DeltaSeconds = DreamUIInputClock::GetUIDeltaSeconds(GetWorld(), DeltaTime);
+	const float StickScrollSpeed = FMath::Max(0.0f, UDreamGUISettings::Get()->SlateInputStickScrollSpeed);
 	for (const TPair<int32, FVector2D>& Stick : RightSticks)
 	{
 		UDreamUIInputUser* User = Input->GetUser(Stick.Key);
-		UDreamWidget* Target = DreamUIKeyRouting::GetKeyTarget(User);
+		// In gameplay (input mode Game) the right stick is the game's camera, not the HUD's scroll bar.
+		UDreamWidget* Target = DreamUIKeyRouting::HasBuiltInMeanings(User) ? DreamUIKeyRouting::GetKeyTarget(User) : nullptr;
 		if (!IsValid(Target))
 		{
 			continue;

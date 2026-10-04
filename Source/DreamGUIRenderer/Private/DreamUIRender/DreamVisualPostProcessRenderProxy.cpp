@@ -195,6 +195,9 @@ void FDreamVisualPostProcessRenderProxy::RenderMeshOnScreen_RenderThread(
 	PSShaderParameters->MeshRegionTexture = MeshRegionRDGTexture;
 	PSShaderParameters->RenderTargets[0] = FRenderTargetBinding(ScreenTarget, ERenderTargetLoadAction::ELoad);
 
+	// The proxy is read when the pass runs, and lives until then: on the immediate list the pass runs inline, inside the
+	// graph's Execute, which the render command that recorded it reaches before it returns -- and the mesh section that
+	// holds the proxy can only let go of it in a later render command.
 	GraphBuilder.AddPass(
 		RDG_EVENT_NAME("UIPostProcess_RenderMeshToScreen"),
 		PSShaderParameters,

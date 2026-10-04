@@ -297,6 +297,7 @@ void UDreamMenuAnchor::Open(bool bFocusMenu)
 	PopupNode->SetWidgetActive(true);
 
 	bPopupElevated = false;
+	bool bPushed = false;
 	if (UDreamUIPopupLayer* Layer = UDreamUIPopupLayer::Get(this))
 	{
 		FDreamPopupParams Params;
@@ -309,10 +310,28 @@ void UDreamMenuAnchor::Open(bool bFocusMenu)
 		Params.OutsideClick = bCloseOnClickOutside ? EDreamPopupOutsideClick::Consume : EDreamPopupOutsideClick::Ignore;
 		Params.bFocusOnOpen = bFocusMenu;
 		Params.InitialFocus = bFocusMenu ? FindFirstMenuControl() : nullptr;
+		// Tab leaves a menu as it leaves a dropdown's list: the whole chain closes, submenus and all, the focus comes back
+		// to what had it when the menu opened, and the Tab goes on from this anchor.
+		Params.TabBehavior = EDreamPopupTabBehavior::CloseAndContinue;
 		Params.Place = FDreamPopupPlaceDelegate::CreateUObject(this, &UDreamMenuAnchor::PlaceLiftedPopup);
 		Params.OnDismissed = FDreamPopupDismissedDelegate::CreateUObject(this, &UDreamMenuAnchor::HandleMenuDismissed);
-		bPopupElevated = Layer->Push(Params);
+		bPushed = Layer->Push(Params);
 	}
+	if (!bIsOpen)
+	{
+		// Closed again before the push returned: the focus moving into the menu ran a handler that closed it, and the
+		// close has been made -- asleep, home, at rest. An open that never stood is announced neither way. A close made
+		// before the layer had the menu -- an owner of a popup the push replaced closing this anchor -- found nothing on
+		// the layer to take off, and the layer opened the menu after it: taken off now, and home.
+		UDreamUIPopupLayer* Layer = bPushed ? UDreamUIPopupLayer::Get(this) : nullptr;
+		if (Layer != nullptr && Layer->IsOpen(PopupNode))
+		{
+			Layer->Dismiss(PopupNode, EDreamPopupDismissReason::Explicit);
+		}
+		bPopupElevated = false;
+		return;
+	}
+	bPopupElevated = bPushed;
 	if (!bPopupElevated)
 	{
 		// No layer to lift it to -- no screen root in this world: the menu opens in place and closing it is the
@@ -322,12 +341,19 @@ void UDreamMenuAnchor::Open(bool bFocusMenu)
 		{
 			FocusMenuContent();
 		}
+		if (!bIsOpen)
+		{
+			// The same, for the focus moved here.
+			return;
+		}
 	}
 
-	if (Active.TransitionDuration > 0.0f)
+	// Asked again rather than held across the push: a handler it ran may have restyled this anchor.
+	const float TransitionDuration = ResolveStyle(Style, &UDreamUIStyleSheet::MenuAnchorStyle).TransitionDuration;
+	if (TransitionDuration > 0.0f)
 	{
 		PopupNode->SetRenderOpacity(0.0f);
-		if (PopupNode->RenderOpacityTo(1.0f, Active.TransitionDuration, 0.0f, EDreamTweenEase::OutCubic) == nullptr)
+		if (PopupNode->RenderOpacityTo(1.0f, TransitionDuration, 0.0f, EDreamTweenEase::OutCubic) == nullptr)
 		{
 			// The tween manager is a world subsystem and hands back null without one, which is every
 			// headless test and every designer preview. Snapping to the END state is the only correct
@@ -339,6 +365,7 @@ void UDreamMenuAnchor::Open(bool bFocusMenu)
 	{
 		PopupNode->SetRenderOpacity(1.0f);
 	}
+	bOpenAnnounced = true;
 	OnMenuOpenChanged.Broadcast(true);
 }
 
@@ -444,6 +471,7 @@ void UDreamMenuAnchor::HandleMenuDismissed(UDreamWidget* InPopup, EDreamPopupDis
 	{
 		// The world comes down with the popup in it: nothing was put back, and there is nobody to tell.
 		bPopupElevated = false;
+		bOpenAnnounced = false;
 		return;
 	}
 	FinishClose();
@@ -463,7 +491,13 @@ void UDreamMenuAnchor::FinishClose()
 		// the wrong anchors. UDreamDropdown measured that one as a zero-width list on the second open.
 		PlacePopup(ResolveStyle(Style, &UDreamUIStyleSheet::MenuAnchorStyle));
 	}
-	OnMenuOpenChanged.Broadcast(false);
+	// Only after an open that was announced: one that closed again before Open finished announced nothing, and its close
+	// announces nothing either -- a listener never hears closed without having heard open.
+	if (bOpenAnnounced)
+	{
+		bOpenAnnounced = false;
+		OnMenuOpenChanged.Broadcast(false);
+	}
 }
 
 void UDreamMenuAnchor::SetStyle(const FDreamMenuAnchorStyle& InStyle)

@@ -4735,6 +4735,23 @@ UDreamWidget* UDreamLayoutContainerMenuAnchor::GetMenuContent() const
 	return GetMenuChild();
 }
 
+const UDreamPanelSlot* UDreamLayoutContainerMenuAnchor::GetMenuSlot(const UDreamWidget* InMenu) const
+{
+	// Lifted, the menu has lost the slot it had here -- the screen root hands out none -- and placing it with the default
+	// one put it at zero padding and zero nudge, a different place from where the same menu opens in place.
+	if (IsValid(InMenu) && InMenu->GetPanelSlot() == nullptr)
+	{
+		if (const UDreamUIPopupLayer* Layer = UDreamUIPopupLayer::Get(InMenu))
+		{
+			if (const UDreamPanelSlot* HomeSlot = Layer->GetHomeSlot(InMenu))
+			{
+				return HomeSlot;
+			}
+		}
+	}
+	return GetSlot(InMenu);
+}
+
 void UDreamLayoutContainerMenuAnchor::SetUseApplicationMenuStack(bool Value)
 {
 	if (bUseApplicationMenuStack == Value)
@@ -4786,7 +4803,9 @@ void UDreamLayoutContainerMenuAnchor::SetIsOpen(bool Value)
 		if (IsValid(Menu))
 		{
 			Menu->SetLayoutVisibilitySuppressed(false);
-			// A layer that cannot take it -- no screen root to lift it onto -- leaves it drawn in place.
+			// A layer that cannot take it -- no screen root to lift it onto -- leaves it drawn in place. One that took it
+			// and closed it again as the focus moved in has closed this anchor with it (HandleMenuDismissed): bIsOpen
+			// says so from here on.
 			if (bUseApplicationMenuStack)
 			{
 				PushMenu(Menu);
@@ -4879,13 +4898,35 @@ bool UDreamLayoutContainerMenuAnchor::PushMenu(UDreamWidget* InMenu)
 	Params.OutsideClick = EDreamPopupOutsideClick::Consume;
 	// SMenuAnchor::SetIsOpen focuses the menu by default.
 	Params.bFocusOnOpen = true;
+	// Tab leaves the menu as it leaves a dropdown's list: closed, the focus back where it was, the walk going on from here.
+	Params.TabBehavior = EDreamPopupTabBehavior::CloseAndContinue;
 	Params.Place = FDreamPopupPlaceDelegate::CreateUObject(this, &UDreamLayoutContainerMenuAnchor::PlaceLiftedMenu);
 	Params.OnDismissed = FDreamPopupDismissedDelegate::CreateUObject(this, &UDreamLayoutContainerMenuAnchor::HandleMenuDismissed);
-	if (!Layer->Push(Params))
+	// The menu counts as lifted from before the push: the push moves focus into it, and a handler that closes the menu then
+	// -- or the layer dismissing it -- must find it this anchor's. Recorded after, a dismissal inside the push was ignored
+	// (HandleMenuDismissed did not know the popup) and the anchor stayed open with its menu back in place, or a close inside
+	// it closed the menu in place while the layer still held it up.
+	LiftedMenu = InMenu;
+	const bool bPushed = Layer->Push(Params);
+	if (bPushed && !bIsOpen)
 	{
+		// Closed before the layer had the menu -- an owner of a popup the push replaced closing this anchor -- the close
+		// found nothing on the layer to take off, and the layer opened the menu after it. Taken off now, as this anchor's,
+		// and HandleMenuDismissed leaves everything as that close meant to.
+		LiftedMenu = InMenu;
+		Layer->Dismiss(InMenu, EDreamPopupDismissReason::Explicit);
 		return false;
 	}
-	LiftedMenu = InMenu;
+	if (!bPushed)
+	{
+		// Not lifted -- or lifted and closed again already, which HandleMenuDismissed has finished: either way not this
+		// anchor's on the layer. One a handler pushed again meanwhile is left as it is.
+		if (LiftedMenu.Get() == InMenu && !Layer->IsOpen(InMenu))
+		{
+			LiftedMenu.Reset();
+		}
+		return false;
+	}
 	return true;
 }
 
@@ -4898,11 +4939,12 @@ void UDreamLayoutContainerMenuAnchor::PlaceLiftedMenu(UDreamWidget* InPopup)
 		return;
 	}
 	// The rect the in-place arrangement would give it, in this panel's top-left space: the slot's rect, inset by the
-	// slot's padding as ApplyChildRect insets a filled child, nudged and mirrored as CommitChildRect would.
+	// slot's padding as ApplyChildRect insets a filled child, nudged and mirrored as CommitChildRect would -- with the slot
+	// it has here, which the lift took off it and the popup layer keeps.
 	FVector2D SlotPosition;
 	FVector2D SlotSize;
 	CalculateMenuSlotRect(InPopup, SlotPosition, SlotSize);
-	const UDreamPanelSlot* MenuSlot = GetSlot(InPopup);
+	const UDreamPanelSlot* MenuSlot = GetMenuSlot(InPopup);
 	const float PadLeft = DreamPanelLayoutLocal::FiniteOrZero(MenuSlot->Padding.Left);
 	const float PadTop = DreamPanelLayoutLocal::FiniteOrZero(MenuSlot->Padding.Top);
 	const FVector2D Size(
@@ -5010,8 +5052,14 @@ void UDreamLayoutContainerMenuAnchor::CalculateMenuSlotRect(UDreamWidget* InMenu
 	const FVector2D AnchorSize = IsValid(Panel)
 		? FVector2D(DreamPanelLayoutLocal::NonNegative(Panel->GetWidth()), DreamPanelLayoutLocal::NonNegative(Panel->GetHeight()))
 		: FVector2D::ZeroVector;
-	const UDreamPanelSlot* MenuSlot = GetSlot(InMenu);
-	const FVector2D MenuDesired = DreamPanelLayoutLocal::CleanSize(GetDesiredSize(InMenu));
+	const UDreamPanelSlot* MenuSlot = GetMenuSlot(InMenu);
+	FVector2D MenuDesired = DreamPanelLayoutLocal::CleanSize(GetDesiredSize(InMenu));
+	if (IsValid(InMenu) && InMenu->GetPanelSlot() == nullptr)
+	{
+		// GetDesiredSize bounds a child by its own slot's minimum and maximum, and a lifted menu has none of its own: the
+		// one it has here bounds it, as it does in place.
+		MenuDesired = DreamPanelLayoutLocal::CleanSize(MenuSlot->ConstrainDesiredSize(MenuDesired));
+	}
 	OutSize = FVector2D(
 		MenuDesired.X + DreamPanelLayoutLocal::HorizontalPadding(MenuSlot->Padding),
 		MenuDesired.Y + DreamPanelLayoutLocal::VerticalPadding(MenuSlot->Padding));

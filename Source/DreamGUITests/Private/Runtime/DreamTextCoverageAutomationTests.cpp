@@ -3,10 +3,13 @@
 #if WITH_DEV_AUTOMATION_TESTS
 
 #include "Misc/AutomationTest.h"
+#include "Core/DreamGUISettings.h"
 #include "Core/DreamUIGeometry.h"
 #include "Core/DreamUITextData.h"
 #include "Core/Text/DreamTextLayout.h"
+#include "Core/Text/DreamTextPaint.h"
 #include "Core/Text/DreamTextPainter.h"
+#include "DreamUIRender/DreamUIRenderStats.h"
 #include "Engine/World.h"
 #include "DreamTextTestFont.h"
 #include "DreamScopedWorld.h"
@@ -785,8 +788,8 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 
 /*
  * Coverage off paints exactly what a paint that never heard of it does, whatever else the coverage block holds, and resets
- * the report. So does coverage on for a text whose quads come in several copies (it has effects): a coverage glyph is a
- * face alone, and the font is not even asked.
+ * the report. So does coverage on for a text whose quads come in several copies (it has effects) while its EffectFace is
+ * Field, the zero value: the effects hybrid is off, and the font is not even asked.
  */
 bool FDreamTextCoverageOffIsUnchangedTest::RunTest(const FString& Parameters)
 {
@@ -851,7 +854,7 @@ bool FDreamTextCoverageOffIsUnchangedTest::RunTest(const FString& Parameters)
 		TestTrue(TEXT("over the limit: nothing reported"), Report.CoverageItems == 0 && Report.PendingItems == 0);
 	}
 
-	// On, for a text with effects: its quads come as an effects copy and a face copy, which coverage cannot make.
+	// On, for a text with effects under EffectFace Field: its quads come as an effects copy and a face copy, both from the field.
 	{
 		FDreamTextPaintParams Effects = Plain;
 		Effects.bSeparateEffectLayer = true;
@@ -863,6 +866,7 @@ bool FDreamTextCoverageOffIsUnchangedTest::RunTest(const FString& Parameters)
 		FDreamTextCoverageReport Report;
 		FDreamTextPaintParams EffectsOn = Effects;
 		EffectsOn.Coverage = MakeCoverageParams(Font, 1.0f, FVector2f::ZeroVector, &Report).Coverage;
+		EffectsOn.Coverage.EffectFace = EDreamSmallTextEffectFace::Field;
 		FDreamUIGeometry Geometry;
 		TArray<FDreamUITextCharProperty> Chars;
 		FDreamTextPainter::Paint(DL, EffectsOn, Geometry, Chars);
@@ -944,6 +948,359 @@ bool FDreamTextCoverageFillTest::RunTest(const FString& Parameters)
 		TestEqual(*(What + TEXT(": its right edge's place across the run")), Quad.RunX1, (Quad.BottomRight.X - Run.X) / (Run.Y - Run.X), 1e-4f);
 		TestEqual(*(What + TEXT(": the top-left vertex sweeps like the bottom-left")), Geometry.Vertices[Index * 4 + 2].TextureCoordinate[2].Y, Quad.RunX0);
 	}
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamTextCoverageEffectsHybridTest,
+	"DreamGUI.Text.Coverage.TheEffectsHybridMovesTheFieldEffectsByTheSnapShiftUnderTheCoverageFace",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * A text with effects whose EffectFace is not Field (the effects hybrid): each coverage item writes the field's effects copy
+ * -- the very quad the same text writes from the field, grown and dilated as ever, with its code and its texels -- moved by
+ * the coverage face's snap shift Delta = ((q / 4 - U), (Row - V)) / S, and for synthetic bold half the bold higher before the
+ * italic shear (so an italic one moves right by that times the slope as well), into the effects block; then its coverage
+ * face into the face block. Every character's range is what it is from the field: both quads, the face's triangles.
+ */
+bool FDreamTextCoverageEffectsHybridTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamTextCoverageTestLocal;
+	FScopedGameWorld TestWorld;
+	UDreamTextTestFont* Font = NewObject<UDreamTextTestFont>(TestWorld.World);
+	TArray<FCoverageRequest> Requests;
+	MockCoverage(Font, Requests);
+
+	const float Scale = 1.25f;
+	const FVector2f Origin(-3.3f, -47.6f);
+	FDreamTextDisplayList DL;
+	DL.Lines.AddDefaulted(1);
+	DL.Items.Add(MakeGlyph('a', 0, FVector2f(10.3f, -20.37f), 12.0f));
+	FDreamTextGlyphItem Bold = MakeGlyph('b', 1, FVector2f(17.9f, -20.37f), 12.0f);
+	Bold.Style.bBold = Bold.Style.bSyntheticBold = true;
+	DL.Items.Add(Bold);
+	FDreamTextGlyphItem BoldItalic = MakeGlyph('c', 2, FVector2f(25.15f, -20.37f), 12.0f);
+	BoldItalic.Style.bBold = BoldItalic.Style.bSyntheticBold = true;
+	BoldItalic.Style.bItalic = BoldItalic.Style.bSyntheticItalic = true;
+	DL.Items.Add(BoldItalic);
+
+	FDreamTextCoverageReport Report;
+	FDreamTextPaintParams Params = MakeCoverageParams(Font, Scale, Origin, &Report);
+	Params.bSeparateEffectLayer = true;
+	Params.EffectReachEm = 0.1f;
+	Params.FaceReachEm = 0.02f;
+	Params.BoldDilateEm = 0.05f;
+	Params.Coverage.OutlineWidthEm = 0.1f;
+
+	// The reference: the same text from the field.
+	FDreamTextPaintParams FieldParams = Params;
+	FieldParams.Coverage.EffectFace = EDreamSmallTextEffectFace::Field;
+	FieldParams.Coverage.Report = nullptr;
+	FDreamUIGeometry Field;
+	TArray<FDreamUITextCharProperty> FieldChars;
+	FDreamTextPainter::Paint(DL, FieldParams, Field, FieldChars);
+	TestEqual(TEXT("under Field the font is not asked"), Requests.Num(), 0);
+	if (!TestEqual(TEXT("from the field: an effects copy and a face a glyph"), Field.OriginVertices.Num(), 6 * 4))return false;
+
+	Params.Coverage.EffectFace = EDreamSmallTextEffectFace::Hinted;
+	FDreamUIGeometry Hybrid;
+	TArray<FDreamUITextCharProperty> HybridChars;
+	FDreamTextPainter::Paint(DL, Params, Hybrid, HybridChars);
+	TestEqual(TEXT("every glyph from coverage"), Report.CoverageItems, 3);
+	if (!TestEqual(TEXT("still an effects copy and a face a glyph"), Hybrid.OriginVertices.Num(), 6 * 4)
+		|| !TestEqual(TEXT("and their indices"), Hybrid.Triangles.Num(), 6 * 6))
+	{
+		return false;
+	}
+	TestTrue(TEXT("every character's range is the field's"), SameCharProperties(HybridChars, FieldChars));
+
+	for (int32 Index = 0; Index < 3; Index++)
+	{
+		const FDreamTextGlyphItem& Item = DL.Items[Index];
+		const FString What = FString::Printf(TEXT("glyph %d"), Index);
+		const FGridPlace Place = PlaceOnGrid(Item.Pen, Scale, Origin);
+		const double SnappedX = (double)Place.Column + 0.25 * Place.Phase;
+		const FVector2f Delta((float)((SnappedX - ToDevice(Item.Pen.X, Scale, Origin.X)) / Scale),
+			(float)(((double)Place.Row - ToDevice(Item.Pen.Y, Scale, Origin.Y)) / Scale));
+		// Half the bold, before the shear: the whole quad that much higher, and along the slope that much further right.
+		const float Lift = Item.Style.bSyntheticBold ? Params.BoldDilateEm * Item.GlyphSize : 0.0f;
+		const FVector2f Move(Delta.X + (Item.Style.bSyntheticItalic ? Lift * Params.ItalicSlope : 0.0f), Delta.Y + Lift);
+		const FQuadView Effects = ReadQuad(Hybrid, Index * 2);
+		const FQuadView Reference = ReadQuad(Field, Index * 2);
+		TestTrue(*(What + TEXT("'s effects copy is the field's, moved by Delta and the bold")),
+			Effects.BottomLeft.Equals(Reference.BottomLeft + Move, 1e-4f) && Effects.BottomRight.Equals(Reference.BottomRight + Move, 1e-4f)
+			&& Effects.TopLeft.Equals(Reference.TopLeft + Move, 1e-4f) && Effects.TopRight.Equals(Reference.TopRight + Move, 1e-4f));
+		TestEqual(*(What + TEXT("'s effects copy keeps the field's code, its own dilation included")), Effects.Code, Reference.Code);
+		TestEqual(*(What + TEXT("'s effects copy is layer 1")), FMath::FloorToInt32((Effects.Code + 8.0f) / 16.0f), 1);
+		TestTrue(*(What + TEXT("'s effects copy samples the field's texels, grown as ever")),
+			Effects.UVBottomLeft == Reference.UVBottomLeft && Effects.UVTopRight == Reference.UVTopRight);
+		const FQuadView Face = ReadQuad(Hybrid, Index * 2 + 1);
+		TestEqual(*(What + TEXT("'s face is its coverage glyph at its phase")), Face.Code, DreamTextQuadCode::CoverageBase + (float)Place.Phase);
+	}
+	// The effects block first, holding every effects copy and nothing else; then the faces.
+	bool bBlocks = true;
+	for (int32 Index = 0; Index < Hybrid.Triangles.Num(); Index++)
+	{
+		const bool bEffectsQuad = ((int32)Hybrid.Triangles[Index] / 4) % 2 == 0;
+		bBlocks &= Index < Hybrid.Triangles.Num() / 2 ? bEffectsQuad : !bEffectsQuad;
+	}
+	TestTrue(TEXT("every effects copy draws before any face"), bBlocks);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamTextCoverageEffectFaceFlagsTest,
+	"DreamGUI.Text.Coverage.TheEffectsHybridAsksForAnUnhintedFaceUnderAThinOutline",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * EffectFace decides the effects hybrid's coverage face: Field draws no coverage at all, Hinted asks for a hinted face,
+ * Unhinted for an unhinted one (EDreamUICoverageGlyphFlags::Unhinted), Auto for an unhinted one under an outline thinner
+ * than 2 device pixels -- where a hinted face stands visibly off the field's outline -- and for a hinted one otherwise, with
+ * no outline too: a glow or an underlay shows no offset. A text without effects asks as ever, whatever the setting says.
+ */
+bool FDreamTextCoverageEffectFaceFlagsTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamTextCoverageTestLocal;
+	FScopedGameWorld TestWorld;
+	UDreamTextTestFont* Font = NewObject<UDreamTextTestFont>(TestWorld.World);
+	TArray<FCoverageRequest> Requests;
+	MockCoverage(Font, Requests);
+
+	FDreamTextDisplayList DL;
+	DL.Items.Add(MakeGlyph('a', 0, FVector2f(3.3f, -14.6f), 12.0f));
+	struct FCase
+	{
+		EDreamSmallTextEffectFace Face;
+		float OutlineWidthEm;
+		bool bEffects;
+		bool bAsked;
+		bool bUnhinted;
+		const TCHAR* What;
+	};
+	// 12 px at a device scale of 1: an outline of 0.1 em is 1.2 device pixels, of 0.2 em 2.4.
+	const FCase Cases[] =
+	{
+		{ EDreamSmallTextEffectFace::Field, 0.1f, true, false, false, TEXT("Field keeps a text with effects on the field") },
+		{ EDreamSmallTextEffectFace::Hinted, 0.1f, true, true, false, TEXT("Hinted asks for a hinted face") },
+		{ EDreamSmallTextEffectFace::Unhinted, 0.3f, true, true, true, TEXT("Unhinted asks for an unhinted face, whatever the outline") },
+		{ EDreamSmallTextEffectFace::Auto, 0.1f, true, true, true, TEXT("Auto under a 1.2 px outline asks for an unhinted face") },
+		{ EDreamSmallTextEffectFace::Auto, 0.2f, true, true, false, TEXT("Auto under a 2.4 px outline asks for a hinted face") },
+		{ EDreamSmallTextEffectFace::Auto, 0.0f, true, true, false, TEXT("Auto with no outline asks for a hinted face") },
+		{ EDreamSmallTextEffectFace::Unhinted, 0.1f, false, true, false, TEXT("a text without effects asks for a hinted face, whatever the setting") },
+	};
+	for (const FCase& Case : Cases)
+	{
+		Requests.Reset();
+		FDreamTextCoverageReport Report;
+		FDreamTextPaintParams Params = MakeCoverageParams(Font, 1.0f, FVector2f::ZeroVector, &Report);
+		Params.bSeparateEffectLayer = Case.bEffects;
+		Params.EffectReachEm = Case.bEffects ? 0.1f : 0.0f;
+		Params.Coverage.EffectFace = Case.Face;
+		Params.Coverage.OutlineWidthEm = Case.OutlineWidthEm;
+		FDreamUIGeometry Geometry;
+		TArray<FDreamUITextCharProperty> Chars;
+		FDreamTextPainter::Paint(DL, Params, Geometry, Chars);
+		TestEqual(*FString::Printf(TEXT("%s: the font is asked"), Case.What), Requests.Num(), Case.bAsked ? 1 : 0);
+		TestEqual(*FString::Printf(TEXT("%s: the glyph is drawn from coverage"), Case.What), Report.CoverageItems, Case.bAsked ? 1 : 0);
+		if (Requests.Num() == 1)
+		{
+			TestTrue(*FString::Printf(TEXT("%s: the face's flags"), Case.What),
+				EnumHasAnyFlags(Requests[0].Flags, EDreamUICoverageGlyphFlags::Unhinted) == Case.bUnhinted);
+		}
+	}
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamTextCoverageHybridPendingTest,
+	"DreamGUI.Text.Coverage.UnderTheEffectsHybridAGlyphStandingInForAPendingOneIsItsFaceAlone",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * Copies under the effects hybrid: a coverage item writes two quads, its field effects copy and its face; a coverage glyph
+ * standing in for a field glyph still pending writes one, its face -- there is no field quad to draw effects from yet --
+ * and counts as one copy; an item whose coverage glyph is pending draws both copies from the field, and one whose field
+ * and coverage glyphs are both pending draws nothing yet. The buffers are sized to exactly that, each block holding its own.
+ */
+bool FDreamTextCoverageHybridPendingTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamTextCoverageTestLocal;
+	FScopedGameWorld TestWorld;
+	UDreamTextTestFont* Font = NewObject<UDreamTextTestFont>(TestWorld.World);
+	TArray<FCoverageRequest> Requests;
+	MockCoverage(Font, Requests, TSet<uint32>{ (uint32)'c', (uint32)'d' });
+
+	// What the layout makes of a glyph still on the worker: the advance and the names, no quad.
+	auto Waiting = [](uint32 Codepoint, int32 ElementIndex, const FVector2f& Pen)
+	{
+		FDreamTextGlyphItem Item = MakeGlyph(Codepoint, ElementIndex, Pen, 12.0f);
+		Item.Glyph.Width = 0.0f;
+		Item.Glyph.Height = 0.0f;
+		Item.Glyph.bPending = true;
+		Item.bEmit = false;
+		Item.bCountsAsVisible = true;
+		return Item;
+	};
+	FDreamTextDisplayList DL;
+	DL.Lines.AddDefaulted(1);
+	DL.Items.Add(MakeGlyph('a', 0, FVector2f(0.0f, -15.0f), 12.0f));
+	DL.Items.Add(Waiting('b', 1, FVector2f(7.2f, -15.0f)));
+	DL.Items.Add(Waiting('c', 2, FVector2f(14.4f, -15.0f)));
+	DL.Items.Add(MakeGlyph('d', 3, FVector2f(21.6f, -15.0f), 12.0f));
+
+	FDreamTextCoverageReport Report;
+	FDreamTextPaintParams Params = MakeCoverageParams(Font, 1.0f, FVector2f::ZeroVector, &Report);
+	Params.bSeparateEffectLayer = true;
+	Params.EffectReachEm = 0.1f;
+	Params.Coverage.EffectFace = EDreamSmallTextEffectFace::Hinted;
+	FDreamUIGeometry Geometry;
+	TArray<FDreamUITextCharProperty> Chars;
+	FDreamTextPainter::Paint(DL, Params, Geometry, Chars);
+	TestEqual(TEXT("'a' and 'b' from coverage"), Report.CoverageItems, 2);
+	TestEqual(TEXT("'c' and 'd' waiting for theirs"), Report.PendingItems, 2);
+	if (!TestEqual(TEXT("five quads: two, one, none, two"), Geometry.OriginVertices.Num(), 5 * 4)
+		|| !TestEqual(TEXT("their indices and no more"), Geometry.Triangles.Num(), 5 * 6)
+		|| !TestEqual(TEXT("four characters"), Chars.Num(), 4))
+	{
+		return false;
+	}
+	TestTrue(TEXT("'a' covers its effects copy and its face"), Chars[0].StartVertIndex == 0 && Chars[0].VertCount == 8 && Chars[0].IndicesCount == 6);
+	TestTrue(TEXT("'b' its face alone"), Chars[1].StartVertIndex == 8 && Chars[1].VertCount == 4 && Chars[1].IndicesCount == 6);
+	TestTrue(TEXT("'c' nothing yet, in its place"), Chars[2].StartVertIndex == 12 && Chars[2].VertCount == 0);
+	TestTrue(TEXT("'d' its two field copies"), Chars[3].StartVertIndex == 12 && Chars[3].VertCount == 8 && Chars[3].IndicesCount == 6);
+	auto LayerOf = [&Geometry](int32 Quad)
+	{
+		return FMath::FloorToInt32((ReadQuad(Geometry, Quad).Code + 8.0f) / 16.0f);
+	};
+	TestEqual(TEXT("'a''s first quad is its field effects copy"), LayerOf(0), 1);
+	TestEqual(TEXT("'a''s second its coverage face"), LayerOf(1), 3);
+	TestEqual(TEXT("'b''s one quad is its coverage face"), LayerOf(2), 3);
+	TestEqual(TEXT("'d''s first quad is its field effects copy"), LayerOf(3), 1);
+	TestEqual(TEXT("'d''s second its field face"), LayerOf(4), 0);
+	bool bBlocks = true;
+	for (int32 Index = 0; Index < Geometry.Triangles.Num(); Index++)
+	{
+		const int32 Layer = LayerOf((int32)Geometry.Triangles[Index] / 4);
+		bBlocks &= Index < 2 * 6 ? Layer == 1 : Layer != 1;
+	}
+	TestTrue(TEXT("the two effects copies draw first, then the three faces"), bBlocks);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamTextCoveragePaintedQuadTest,
+	"DreamGUI.Text.Coverage.APaintedCoverageQuadIsMeasuredAtItsSnappedCorners",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * A coverage face paints as a field face does: slot 1 on its code (the coverage code and its phase under it), the paint
+ * colour, and each vertex's UV4 its place in the text block measured at the corner it has on the device grid -- where it is
+ * drawn -- rather than at the field quad's.
+ */
+bool FDreamTextCoveragePaintedQuadTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamTextCoverageTestLocal;
+	FScopedGameWorld TestWorld;
+	UDreamTextTestFont* Font = NewObject<UDreamTextTestFont>(TestWorld.World);
+	TArray<FCoverageRequest> Requests;
+	MockCoverage(Font, Requests);
+
+	const float Scale = 1.25f;
+	const FVector2f Origin(-3.3f, -47.6f);
+	FDreamTextDisplayList DL;
+	DL.Lines.AddDefaulted(1);
+	DL.Items.Add(MakeGlyph('a', 0, FVector2f(10.3f, -20.37f), 12.0f));
+	DL.Items.Add(MakeGlyph('b', 1, FVector2f(17.9f, -20.37f), 12.0f));
+	DL.Items.Add(MakeGlyph('c', 2, FVector2f(25.15f, -20.37f), 12.0f));
+	DL.TextBlockBox.Left = 5.0f;
+	DL.TextBlockBox.Right = 40.0f;
+	DL.TextBlockBox.Bottom = -30.0f;
+	DL.TextBlockBox.Top = -10.0f;
+
+	FDreamGradient Gradient;
+	Gradient.Stops.Add(FDreamGradientStop(0.0f, FColor(255, 0, 0, 255)));
+	Gradient.Stops.Add(FDreamGradientStop(1.0f, FColor(0, 0, 255, 255)));
+	FDreamTextCoverageReport Report;
+	FDreamTextPaintParams Params = MakeCoverageParams(Font, Scale, Origin, &Report);
+	Params.Paints.Slots[DreamTextQuadCode::TextSlot].Face = &Gradient;
+	Params.PaintBaseColor = FColor(200, 210, 220, 255);
+	FDreamUIGeometry Geometry;
+	TArray<FDreamUITextCharProperty> Chars;
+	FDreamTextPainter::Paint(DL, Params, Geometry, Chars);
+	TestEqual(TEXT("every glyph from coverage"), Report.CoverageItems, 3);
+	if (!TestEqual(TEXT("one quad per glyph"), Geometry.OriginVertices.Num(), 3 * 4))return false;
+
+	const FDreamTextBox& Block = DL.TextBlockBox;
+	const int32 Size26Dot6 = FMath::RoundToInt32(12.0f * Scale * 64.0f);
+	for (int32 Index = 0; Index < 3; Index++)
+	{
+		const FDreamTextGlyphItem& Item = DL.Items[Index];
+		const FString What = FString::Printf(TEXT("glyph %d"), Index);
+		const FDreamUICoverageGlyph Glyph = MakeCoverageGlyph(Item.Glyph.GlyphIndex, Size26Dot6);
+		const FGridPlace Place = PlaceOnGrid(Item.Pen, Scale, Origin);
+		const FQuadView Quad = ReadQuad(Geometry, Index);
+		const double Left = (double)(Place.Column + Glyph.BitmapLeft);
+		const double Top = (double)(Place.Row + Glyph.BitmapTop);
+		TestEqual(*(What + TEXT(" stands on its snapped left edge")), ToDevice(Quad.BottomLeft.X, Scale, Origin.X), Left, 1e-3);
+		TestEqual(*(What + TEXT(" and its snapped top")), ToDevice(Quad.TopLeft.Y, Scale, Origin.Y), Top, 1e-3);
+		TestEqual(*(What + TEXT(" carries slot 1")), DreamTextQuadCode::GetSlot(Quad.Code), DreamTextQuadCode::TextSlot);
+		TestEqual(*(What + TEXT(" with the coverage code and its phase under it")), DreamTextQuadCode::StripSlot(Quad.Code),
+			DreamTextQuadCode::CoverageBase + (float)Place.Phase);
+		TestTrue(*(What + TEXT(" is in the paint colour")), Quad.Color == Params.PaintBaseColor);
+		bool bMeasured = true;
+		for (int32 Vertex = Index * 4; Vertex < Index * 4 + 4; Vertex++)
+		{
+			const FVector3f& Position = Geometry.OriginVertices[Vertex].Position;
+			const FVector2f Expected((Position.Y - Block.Left) / Block.GetWidth(), (Block.Top - Position.Z) / Block.GetHeight());
+			bMeasured &= Geometry.Vertices[Vertex].UV4.Equals(Expected, 1e-5f);
+		}
+		TestTrue(*(What + TEXT("'s every vertex is measured in the block where it stands")), bMeasured);
+	}
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamTextCoverageCountersTest,
+	"DreamGUI.Text.Coverage.ThePainterCountsItsPaintsAndTheItemsItDrawsFromCoverage",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * DreamUIRenderStats: TextPaints goes up by one a paint, coverage or not, and CoverageItemsDrawn by the items a paint drew
+ * from coverage glyphs -- what a benchmark reads to know that coverage drew at all.
+ */
+bool FDreamTextCoverageCountersTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamTextCoverageTestLocal;
+	FScopedGameWorld TestWorld;
+	UDreamTextTestFont* Font = NewObject<UDreamTextTestFont>(TestWorld.World);
+	TArray<FCoverageRequest> Requests;
+	MockCoverage(Font, Requests);
+
+	FDreamTextDisplayList DL;
+	DL.Lines.AddDefaulted(1);
+	for (int32 Index = 0; Index < 3; Index++)
+	{
+		DL.Items.Add(MakeGlyph('a' + Index, Index, FVector2f(0.4f + 7.3f * Index, -12.5f), 12.0f));
+	}
+	const DreamUIRenderStats::FSnapshot Before = DreamUIRenderStats::TakeSnapshot(/*bInReset*/ false);
+	{
+		FDreamTextCoverageReport Report;
+		FDreamTextPaintParams Params = MakeCoverageParams(Font, 1.0f, FVector2f::ZeroVector, &Report);
+		FDreamUIGeometry Geometry;
+		TArray<FDreamUITextCharProperty> Chars;
+		FDreamTextPainter::Paint(DL, Params, Geometry, Chars);
+		FDreamTextPainter::Paint(DL, Params, Geometry, Chars);
+		Params.Coverage.bEnabled = false;
+		FDreamTextPainter::Paint(DL, Params, Geometry, Chars);
+	}
+	const DreamUIRenderStats::FSnapshot After = DreamUIRenderStats::TakeSnapshot(/*bInReset*/ false);
+	auto Counted = [&Before, &After](DreamUIRenderStats::ECounter InCounter)
+	{
+		return After.Counters[static_cast<int32>(InCounter)] - Before.Counters[static_cast<int32>(InCounter)];
+	};
+	TestEqual(TEXT("three paints counted"), Counted(DreamUIRenderStats::ECounter::TextPaints), (int64)3);
+	TestEqual(TEXT("three coverage items in each of the two paints with coverage"), Counted(DreamUIRenderStats::ECounter::CoverageItemsDrawn), (int64)6);
 	return true;
 }
 

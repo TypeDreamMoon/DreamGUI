@@ -43,8 +43,10 @@ public:
 	UFUNCTION(BlueprintPure, Category = "DreamGUI-Navigation")
 	bool IsActionBound()const{ return Handle.IsValidHandle(); }
 
+	/** Whose key: UserIndex when it names a player, else the player who owns this widget (UDreamWidget::GetOwningPlayerIndex). */
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Navigation")
-	int32 GetUserIndex()const{ return UserIndex; }
+	int32 GetUserIndex()const;
+	/** -1: the owning player. */
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Navigation")
 	void SetUserIndex(int32 Value);
 
@@ -78,9 +80,9 @@ protected:
 	/** Offer this action to prompt bars. And-ed with the action row's own flag, which can still hide it. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "DreamGUI-Navigation")
 	bool bDisplayInActionBar = true;
-	/** Whose key. Matches the event system's user index. */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "DreamGUI-Navigation")
-	int32 UserIndex = 0;
+	/** Whose key. Matches the event system's user index. -1, the default: the player who owns this widget. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "DreamGUI-Navigation", meta = (ClampMin = "-1"))
+	int32 UserIndex = -1;
 
 private:
 	void RegisterAction();

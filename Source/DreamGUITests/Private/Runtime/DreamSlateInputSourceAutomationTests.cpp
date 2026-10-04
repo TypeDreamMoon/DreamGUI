@@ -8,6 +8,7 @@
 #include "Controls/DreamButton.h"
 #include "Controls/DreamTextInput.h"
 #include "Core/Components/DreamWidget.h"
+#include "Core/DreamUIInputServices.h"
 #include "Engine/World.h"
 #include "Event/DreamEventSystem.h"
 #include "Event/DreamPointerEventData.h"
@@ -15,7 +16,10 @@
 #include "Event/DreamUIInputUser.h"
 #include "Event/DreamUISlateInputSource.h"
 #include "Framework/Application/SlateApplication.h"
+#include "GenericPlatform/GenericApplication.h"
+#include "GenericPlatform/InputDeviceRegistry.h"
 #include "Input/Events.h"
+#include "Misc/ScopeExit.h"
 #include "InputCoreTypes.h"
 #include "Interaction/UITextInput.h"
 
@@ -87,6 +91,24 @@ namespace DreamSlateInputSourceTestLocal
 	FKeyEvent Key(const FKey& InKey, bool bInRepeat = false)
 	{
 		return FKeyEvent(InKey, FModifierKeysState(), 0, bInRepeat, 0, 0);
+	}
+
+	/** A key pressed with a chord held, as Slate delivers one: the modifiers ride on the event. */
+	FKeyEvent KeyWith(const FKey& InKey, bool bInShift, bool bInCtrl)
+	{
+		const FModifierKeysState Chord(bInShift, false, bInCtrl, false, false, false, false, false, false);
+		return FKeyEvent(InKey, Chord, 0, false, 0, 0);
+	}
+
+	/** A key from a particular input device, for Slate user 0. */
+	FKeyEvent KeyFrom(const FKey& InKey, FInputDeviceId InDeviceId)
+	{
+		return FKeyEvent(InKey, FModifierKeysState(), InDeviceId, false, 0, 0, TOptional<int32>(0));
+	}
+
+	UDreamWidget* FaceOf(const UDreamButton* InButton)
+	{
+		return InButton != nullptr ? InButton->FaceNode.Get() : nullptr;
 	}
 
 	UDreamButton* MakeListenedButton(FDreamDriverRig& InRig, const TCHAR* InName, const FVector2D& InPosition, UDreamPressInteractionListener* InListener)
@@ -363,7 +385,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
  * held D-pad direction went on stepping the highlight, and a held confirm clicked whenever a release finally came. The
  * source now lets go of everything it holds when FSlateApplication announces the application is no longer active: a press
  * gets its up and no click, a held direction stops. Checked by broadcasting that announcement as Slate makes it, with the
- * left button held on a button, then the D-pad held, then the confirm key held on the highlighted button.
+ * left button held on a button, then the D-pad held, then the confirm key held on the focused button.
  */
 bool FDreamSlateSourceFocusLostTest::RunTest(const FString& Parameters)
 {
@@ -421,12 +443,12 @@ bool FDreamSlateSourceFocusLostTest::RunTest(const FString& Parameters)
 	Source->HandleKeyUpEvent(Slate, Key(EKeys::Gamepad_DPad_Right));
 	Rig.PumpFrames(1);
 
-	// The confirm held on whichever button the D-pad left the highlight on.
+	// The confirm held on whichever button the D-pad left the focus on.
 	const int32 PressesBefore = Presses();
 	const int32 ReleasesBefore = Releases();
 	Source->HandleKeyDownEvent(Slate, Key(EKeys::Enter));
 	Rig.PumpFrames(1);
-	TestEqual(TEXT("The confirm heard from Slate pressed the highlighted button"), Presses(), PressesBefore + 1);
+	TestEqual(TEXT("The confirm heard from Slate pressed the focused button"), Presses(), PressesBefore + 1);
 	Slate.OnApplicationActivationStateChanged().Broadcast(false);
 	Rig.PumpFrames(2);
 	TestEqual(TEXT("The application losing the focus let go of the confirm's press"), Releases(), ReleasesBefore + 1);
@@ -638,6 +660,134 @@ bool FDreamSlateSourceCursorLeftWindowTest::RunTest(const FString& Parameters)
 	Source->HandleMouseButtonUpEvent(Slate, LeftButtonAt(At, false));
 	Rig.PumpFrames(1);
 	TestEqual(TEXT("...and its release lets go of it"), Ledger->Up, 1);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamSlateSourceTabConsumeTest,
+	"DreamGUI.Input.SlateSource.ATabThatMovesTheFocusIsKeptFromTheGameAndOneWithNowhereToGoIsNot",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * Whether Tab was the UI's was judged from the hover highlight, and modifiers were not asked at all. A Tab is the UI's now
+ * while the player has a Tab stop to go to -- kept from the game under a policy that keeps what the UI takes -- and Slate's
+ * chord rides on the key: Shift+Tab steps back, Ctrl+Tab is no step and not the UI's. Two buttons side by side.
+ */
+bool FDreamSlateSourceTabConsumeTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamSlateInputSourceTestLocal;
+	FDreamDriverRig Rig = FDreamDriverRig::Headless(ViewportSize);
+	Rig.BindTest(this);
+	if (!TestTrue(TEXT("The rig came up"), Rig.IsUsable()))
+	{
+		return false;
+	}
+	UDreamButton* Left = MakeListenedButton(Rig, TEXT("Left"), FVector2D(-250.0, 0.0), nullptr);
+	UDreamButton* Right = MakeListenedButton(Rig, TEXT("Right"), FVector2D(250.0, 0.0), nullptr);
+	UDreamUIInputServices* Services = UDreamUIInputServices::Get(Rig.GetWorld());
+	if (!TestTrue(TEXT("Two buttons and the world's input"), FaceOf(Left) != nullptr && FaceOf(Right) != nullptr && Services != nullptr))
+	{
+		return false;
+	}
+	Rig.PumpFrames(2);
+	const TSharedRef<FDreamUISlateInputSource> Source = MakeSource(Rig);
+	FSlateApplication& Slate = FSlateApplication::Get();
+	Source->SetConsumePolicy(EDreamUIInputConsumePolicy::WhenHandled);
+	if (!TestTrue(TEXT("The left button has the focus"), Services->FocusForNavigation(FaceOf(Left), 0)))
+	{
+		return false;
+	}
+	// A press, a frame for the step it asked for, its release.
+	auto Press = [&](const FKeyEvent& InEvent, bool& bOutPressKept, bool& bOutReleaseKept)
+	{
+		bOutPressKept = Source->HandleKeyDownEvent(Slate, InEvent);
+		Rig.PumpFrames(1);
+		bOutReleaseKept = Source->HandleKeyUpEvent(Slate, InEvent);
+		Rig.PumpFrames(1);
+	};
+	bool bPressKept = false, bReleaseKept = false;
+
+	Press(Key(EKeys::Tab), bPressKept, bReleaseKept);
+	TestEqual(TEXT("Tab moved the focus on"), Services->GetFocusedWidget(0), FaceOf(Right));
+	TestTrue(TEXT("...and was kept from the game"), bPressKept && bReleaseKept);
+
+	Press(KeyWith(EKeys::Tab, /*bInShift*/ true, /*bInCtrl*/ false), bPressKept, bReleaseKept);
+	TestEqual(TEXT("Shift+Tab, its shift on the event, stepped back"), Services->GetFocusedWidget(0), FaceOf(Left));
+	TestTrue(TEXT("...and was kept too"), bPressKept);
+
+	Press(KeyWith(EKeys::Tab, /*bInShift*/ false, /*bInCtrl*/ true), bPressKept, bReleaseKept);
+	TestEqual(TEXT("Ctrl+Tab is no step"), Services->GetFocusedWidget(0), FaceOf(Left));
+	TestFalse(TEXT("...and, nothing having taken it, is the game's"), bPressKept || bReleaseKept);
+
+	Source->SetConsumePolicy(EDreamUIInputConsumePolicy::Never);
+	Press(Key(EKeys::Tab), bPressKept, bReleaseKept);
+	TestEqual(TEXT("Under Never, Tab still steps"), Services->GetFocusedWidget(0), FaceOf(Right));
+	TestFalse(TEXT("...and keeps nothing from the game"), bPressKept || bReleaseKept);
+	Source->SetConsumePolicy(EDreamUIInputConsumePolicy::WhenHandled);
+
+	// No Tab stop anywhere: the Tab goes nowhere, and is the game's.
+	FaceOf(Left)->SetIsTabStop(false);
+	FaceOf(Right)->SetIsTabStop(false);
+	Press(Key(EKeys::Tab), bPressKept, bReleaseKept);
+	TestEqual(TEXT("With no Tab stop the focus stays"), Services->GetFocusedWidget(0), FaceOf(Right));
+	TestFalse(TEXT("...and the Tab, which moved nothing, is not kept"), bPressKept || bReleaseKept);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamSlateSourcePadModelTest,
+	"DreamGUI.Input.SlateSource.APadsModelIsReadFromTheDeviceItsKeyCameFrom",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * A Slate key event names the input device that sent it, and the pad's model is read from that device: a key from a
+ * PlayStation pad says PlayStation, and then one from an Xbox pad says Xbox, with the device class Gamepad all along.
+ * Two pads the device registry is told about for the test.
+ */
+bool FDreamSlateSourcePadModelTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamSlateInputSourceTestLocal;
+	FDreamDriverRig Rig = FDreamDriverRig::Headless(ViewportSize);
+	Rig.BindTest(this);
+	UDreamUIInputUser* User = Rig.IsUsable() ? UDreamUIInputSubsystem::Get(Rig.GetWorld())->GetUser(0) : nullptr;
+	if (!TestNotNull(TEXT("A player"), User))
+	{
+		return false;
+	}
+	const FInputDeviceId XboxPad = FInputDeviceId::CreateFromInternalId(4201);
+	const FInputDeviceId SonyPad = FInputDeviceId::CreateFromInternalId(4202);
+	FInputDeviceDescriptor XboxDescriptor;
+	XboxDescriptor.HardwareDeviceHandle = XboxPad;
+	XboxDescriptor.InputDeviceName = TEXT("XInputInterface");
+	XboxDescriptor.HardwareDeviceIdentifier = TEXT("XInputController");
+	FInputDeviceDescriptor SonyDescriptor;
+	SonyDescriptor.HardwareDeviceHandle = SonyPad;
+	SonyDescriptor.InputDeviceName = TEXT("PS5Controller");
+	SonyDescriptor.HardwareDeviceIdentifier = TEXT("DualSense");
+	FInputDeviceRegistry::SetSimulatedDescriptor(XboxPad, XboxDescriptor);
+	FInputDeviceRegistry::SetSimulatedDescriptor(SonyPad, SonyDescriptor);
+	ON_SCOPE_EXIT
+	{
+		FInputDeviceRegistry::ClearSimulatedDescriptor(XboxPad);
+		FInputDeviceRegistry::ClearSimulatedDescriptor(SonyPad);
+	};
+	int32 ModelChanges = 0;
+	const FDelegateHandle Listening = User->GetGamepadModelChangedEvent().AddLambda([&ModelChanges](EDreamUIGamepadModel) { ++ModelChanges; });
+	ON_SCOPE_EXIT{ User->GetGamepadModelChangedEvent().Remove(Listening); };
+	const TSharedRef<FDreamUISlateInputSource> Source = MakeSource(Rig);
+	FSlateApplication& Slate = FSlateApplication::Get();
+
+	Source->HandleKeyDownEvent(Slate, KeyFrom(EKeys::Gamepad_FaceButton_Left, SonyPad));
+	Source->HandleKeyUpEvent(Slate, KeyFrom(EKeys::Gamepad_FaceButton_Left, SonyPad));
+	TestEqual(TEXT("A key from the PlayStation pad"), User->GetCurrentInputDevice(), EDreamUIInputDevice::Gamepad);
+	TestEqual(TEXT("...reads that pad's model"), User->GetCurrentGamepadModel(), EDreamUIGamepadModel::PlayStation);
+	const int32 ChangesAfterSony = ModelChanges;
+
+	Source->HandleKeyDownEvent(Slate, KeyFrom(EKeys::Gamepad_FaceButton_Left, XboxPad));
+	Source->HandleKeyUpEvent(Slate, KeyFrom(EKeys::Gamepad_FaceButton_Left, XboxPad));
+	TestEqual(TEXT("A key from the Xbox pad, the device class unchanged, reads the Xbox pad's"), User->GetCurrentGamepadModel(), EDreamUIGamepadModel::Xbox);
+	TestEqual(TEXT("...and says so, once"), ModelChanges, ChangesAfterSony + 1);
+	Rig.PumpFrames(1);
 	return true;
 }
 

@@ -145,6 +145,8 @@ public:
 
 protected:
 	friend class UDreamTweenerSequence;
+	/** The manager retires a tween (bRetired) and reads clockGeneration to keep one a callback brought back. */
+	friend class UDreamTweenManager;
 	/** animation duration */
 	float duration = 0.0f;
 	/** delay time before animation start */
@@ -195,6 +197,22 @@ protected:
 	bool bSpeedBased = false;
 	/** This tween's own multiplier on time, on top of any world dilation. DOTween's timeScale. */
 	float timeScale = 1.0f;
+	/**
+	 * Moved on by everything that takes this tween's clock over from outside the step in progress: Restart, Goto,
+	 * ForceComplete and Kill, and a sequence adopting the tween. A step notes it before raising each callback and
+	 * compares after: a callback that restarted, seeked, completed or killed this very tween has replaced the state the
+	 * rest of the step was about to finish off, so the step ends there and what the callback did stands. Carrying on
+	 * used to undo it -- a Restart from OnComplete was retired by the manager on the same tick, with the value left at
+	 * the start. The manager reads it the same way, to keep a tween that a later callback of the same tick revived.
+	 */
+	int32 clockGeneration = 0;
+	/**
+	 * Set when the manager lets this tween go for good -- it finished with auto-kill on, was killed, or outlived the
+	 * object it was made on -- and marks it garbage, so every handle to it reads as invalid. Kill, ForceComplete,
+	 * Restart and Goto then do nothing: the old ConditionalBeginDestroy left a half-destroyed tween that still answered
+	 * them, completing it a second time over whatever had happened to the target since.
+	 */
+	bool bRetired = false;
 
 	/**
 	 * Which ease the caller asked for. Kept ALONGSIDE the bound function rather than instead of it,
@@ -209,19 +227,18 @@ protected:
 	/** tween function */
 	FDreamTweenFunction tweenFunc;
 	/**
-	 * The curve SetCurveFloat bound the tween function to, held for as long as this tween lives. The
-	 * binding is a WEAK lambda over the curve, and every subclass calls tweenFunc.Execute unconditionally:
-	 * once the curve is collected the delegate reports itself unbound, but Execute on a dead weak binding
-	 * only checkSlow's before running the lambda over the freed curve. Owning a reference is what keeps
-	 * the curve alive for exactly as long as something can still evaluate it.
+	 * The curve SetCurveFloat bound the tween function to, held for as long as this tween lives, so the
+	 * curve stays loaded for as long as something can still evaluate it. The tween function itself reads
+	 * the curve through a weak pointer it checks on every evaluation: a curve that is marked garbage --
+	 * deleted or replaced in the editor -- is let go of by the collector whatever this holds, and the raw
+	 * pointer the function used to keep was then read after the curve was freed.
 	 */
 	UPROPERTY(Transient)
 	TObjectPtr<UCurveFloat> curveFloat = nullptr;
 	/**
 	 * The ExternalCurve of the FRuntimeFloatCurve SetRuntimeFloatCurve was given, held for the same
-	 * reason and against the same failure: the tween function there closes over a COPY of that struct,
-	 * whose TObjectPtr the collector cannot see, and GetRichCurveConst reaches straight into the asset.
-	 * Null for a runtime curve that carries its keys inline, which the copy owns outright.
+	 * reason, and read by the tween function through a weak pointer for the same reason. Null for a
+	 * runtime curve that carries its keys inline, which the function owns a copy of outright.
 	 */
 	UPROPERTY(Transient)
 	TObjectPtr<UCurveFloat> runtimeExternalCurve = nullptr;
@@ -443,6 +460,8 @@ public:
 		UDreamTweener* SetCurveFloat(UCurveFloat* newCurveFloat);
 	/**
 	 * Set RuntimeFloatCurve as animation curve.
+	 * A curve with no keys evaluates to zero everywhere and would hold the tween at its start, so with the
+	 * CurveFloat ease it falls back to linear, with a warning.
 	 * Has no effect if the Tween has already started.
 	 */
 	UFUNCTION(BlueprintCallable, Category = "DreamTween")
@@ -455,10 +474,16 @@ public:
 	 * @return false: the tween is complete and need to be killed. true: the tween is still processing.
 	 */
 	bool ToNextWithElapsedTime(float InElapseTime);
-	/** Force stop this animation. if callComplete = true, will call OnComplete after stop*/
+	/**
+	 * Force stop this animation. if callComplete = true, will call OnComplete after stop.
+	 * Once only: a tween already killed, or retired by the manager, is left alone, so OnKill (and OnComplete) fire once.
+	 */
 	UFUNCTION(BlueprintCallable, Category = "DreamTween")
 		virtual void Kill(bool callComplete = false);
-	/** Force stop this animation at this frame, set value to end, call OnComplete. */
+	/**
+	 * Force stop this animation at this frame, set value to end, call OnComplete.
+	 * Does nothing to a tween already killed, or retired by the manager.
+	 */
 	UFUNCTION(BlueprintCallable, Category = "DreamTween")
 		virtual void ForceComplete();
 	/**
@@ -495,6 +520,7 @@ public:
 	 * This tween's own speed multiplier, on top of everything else: 2 runs it twice as fast, 0.5 half
 	 * as fast, 0 holds it still. Changeable at any time, like the two switches above and unlike the
 	 * setters that describe the tween's shape -- changing how fast something is running is the point.
+	 * A negative scale is taken as 0 and one that is not a number is refused, each with a warning.
 	 */
 	UFUNCTION(BlueprintCallable, Category = "DreamTween")
 		UDreamTweener* SetTimeScale(float value = 1.0f);
@@ -542,13 +568,16 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "DreamTween")
 		UDreamTweener* SetAutoPlay(bool value);
 	/**
-	 * Restart animation.
-	 * Has no effect if the Tween is not started.
+	 * Restart animation. Called from the tween's own OnComplete it keeps the tween running.
+	 * Has no effect if the Tween is not started, or once the manager has retired it (finished with
+	 * auto-kill on, or killed): keep it with SetAutoKill(false) to restart it after it finishes.
 	 */
 	UFUNCTION(BlueprintCallable, Category = "DreamTween")
 		virtual void Restart();
 	/**
-	 * Send the tween to the given position in time.
+	 * Send the tween to the given position in time. 0 applies the start value; reaching the end
+	 * completes the tween once (with auto-kill off it is then held at its end).
+	 * Has no effect on a tween that is killed or retired.
 	 * @param timePoint Time position to reach (if higher than the whole tween duration the tween will simply reach its end).
 	 */
 	UFUNCTION(BlueprintCallable, Category = "DreamTween")
@@ -585,6 +614,34 @@ protected:
 		isMarkedPause = true;
 		return true;
 	}
+	/**
+	 * The start of the animation: the start value read, From and SetSpeedBased applied once, OnCycleStart
+	 * and OnStart raised. False when one of those callbacks took the tween over (see clockGeneration).
+	 */
+	bool BeginTween();
+	/**
+	 * Whether the last cycle has been played, so the clock has nothing left to step until Restart or Goto
+	 * rewinds it. A tween with no end (an endless loop) never has.
+	 */
+	bool HasCompletedAllCycles()const;
+	/**
+	 * Over for good: retired by the manager, or garbage -- swept away with the widget it was made on, whose
+	 * parts DestroyWidget marks with it.
+	 */
+	bool IsRetired()const;
+	/**
+	 * Whether the object this tween was made on (its outer, the world context it was given) is gone: a
+	 * tween animating something that no longer exists is over, without callbacks into its remains.
+	 */
+	bool IsOwnerGone()const;
+	/** What a step answers once a callback has taken the tween over: running, unless that left it killed or finished. */
+	bool IsRunningAfterTakeover()const;
+	/**
+	 * Delay and duration as the clock can use them. A delay that is not a number is never waited out (every
+	 * comparison against it is false) and a duration that is not one never completes; either, or a negative one,
+	 * is replaced with 0, with a warning when it was not a number.
+	 */
+	void SanitizeTiming();
 	/**
 	 * Swap the start and end of this tween, for SetFrom. Called once, right after the start value has
 	 * been taken from the getter -- "from the target back to here" is only expressible then.
@@ -718,7 +775,12 @@ public:
 	static float InExpo(float c, float b, float t, float d)
 	{
 		if (d < KINDA_SMALL_NUMBER)return c + b;
-		return (t == 0.0f) ? b : c * FMath::Pow(2.0f, 10.0f * (t / d - 1.0f)) + b - c * 0.001f;
+		if (t == 0.0f)return b;
+		// The end exactly, as OutExpo answers its end. The thousandth the curve is lowered by, so that it
+		// starts at 0, was still subtracted here, and every InExpo tween stopped that much short: a 1920
+		// unit slide two units early, an alpha fade at 254.
+		if (t >= d)return b + c;
+		return c * FMath::Pow(2.0f, 10.0f * (t / d - 1.0f)) + b - c * 0.001f;
 	}
 	static float OutExpo(float c, float b, float t, float d)
 	{

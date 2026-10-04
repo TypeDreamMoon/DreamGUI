@@ -134,7 +134,8 @@ void UDreamStandaloneInputModule::InputTouchMoved(int InTouchID, const FVector& 
 	if (EventData == nullptr)return;
 	// Same reason as InputMouseMove: a moving touch is pointer input and has to say so.
 	User->SetPointerInputType(EventData, EDreamUIPointerInputType::Pointer);
-	EventData->PointerPosition = InTouchPointPosition;
+	// Through the player, as the mouse's moves are: a finger that really moved lets its hover take the navigation highlight.
+	User->MovePointer(GetTouchPointerID(InTouchID), InTouchPointPosition);
 }
 
 void UDreamStandaloneInputModule::InputNavigation(EDreamUINavigationDirection InDirection, bool InPressOrRelease, int InPointerID)

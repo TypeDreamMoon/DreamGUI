@@ -198,6 +198,11 @@ public:
 	virtual void PostReinitProperties()override;
 
 	virtual void OnRegister() override;
+	/**
+	 * Ends the layout animation in flight: its tweens are killed where they stand. Nothing else ended them when
+	 * the container left its widget -- SnapshotLayout kills the previous run only when the next one starts.
+	 */
+	virtual void OnUnregister() override;
 	/** INDEX_NONE means this container does not impose a child-count limit. */
 	virtual int32 GetMaxChildren() const { return INDEX_NONE; }
 	/**

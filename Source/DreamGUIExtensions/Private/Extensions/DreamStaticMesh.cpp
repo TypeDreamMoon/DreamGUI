@@ -215,22 +215,32 @@ void UDreamStaticMesh::UpdateGeometry()
 }
 void UDreamStaticMesh::CreateGeometry()
 {
+	if (!HaveValidData())return;
 	const auto& SourceVertexData = MeshCache->GetVertexData();
 	const auto& SourceIndexData = MeshCache->GetIndexData();
 	auto NumVertices = SourceVertexData.Num();
 	auto NumIndices = SourceIndexData.Num();
-	if (NumVertices <= 0 || NumIndices <= 0)return;
 
-	auto Widget = GetWidget();
-	auto RenderCanvas = Widget->GetRenderCanvas();
+	// Only into a section supplied while the widget draws in the canvas it is in now. Mesh and MeshSection are weak
+	// pointers to a pooled section that stays tagged to this visual, so both still answered valid after the widget
+	// left its canvas (detached, parked, recycled by a list): SetMesh then reached here with no render canvas and
+	// dereferenced it. OnRenderCanvasChanged lets go of both whenever the canvas changes, so a section still held
+	// here is one the current canvas's draw calls supplied.
+	UDreamWidget* Widget = GetWidget();
+	UDreamCanvas* RenderCanvas = Widget != nullptr ? Widget->GetRenderCanvas() : nullptr;
+	UDreamWidget* CanvasUIItem = RenderCanvas != nullptr ? RenderCanvas->GetWidget() : nullptr;
+	TSharedPtr<FDreamUIRenderSection_DirectMesh> PinnedSection = MeshSection.Pin();
+	if (CanvasUIItem == nullptr || !Mesh.IsValid() || !PinnedSection.IsValid())
+	{
+		return;
+	}
 	FTransform ItemToCanvasTf;
-	auto CanvasUIItem = RenderCanvas->GetWidget();
 	auto InverseCanvasTf = CanvasUIItem->GetWorldTransform().Inverse();
 	const auto& ItemTf = Widget->GetWorldTransform();
 	FTransform::Multiply(&ItemToCanvasTf, &ItemTf, &InverseCanvasTf);
-	
+
 	bool bNeedExpandMeshSection = false;
-	auto MeshSectionPtr = MeshSection.Pin().Get();
+	auto MeshSectionPtr = PinnedSection.Get();
 	auto& VertexData = MeshSectionPtr->Vertices;
 
 	if (VertexData.Num() < NumVertices)
@@ -241,12 +251,23 @@ void UDreamStaticMesh::CreateGeometry()
 	MeshSectionPtr->ValidVerticesNum = NumVertices;
 	bool RequireNormalAndTangent = RenderCanvas->GetActualRequireNormalAndTangent();
 	auto tempVertexColorType = VertexColorType;
+	// The section's bounds are canvas space, as every other section's are: SetupDirectMeshRenderSection takes them
+	// on to world space with the canvas's transform. The cache's bounds are the mesh's own space, which is this
+	// widget's -- they were stored as they were, the widget's place on the canvas never applied, and the canvas's
+	// bounds (culling, sorting) followed the wrong box. Gathered from the vertices as they are placed.
+	FBox CanvasSpaceBounds(ForceInit);
 
 	for (int i = 0; i < NumVertices; i++)
 	{
 		auto& sourceVert = SourceVertexData[i];
 		auto& vert = VertexData[i];
-		vert.Position = FVector3f(ItemToCanvasTf.TransformPosition(sourceVert.Position));
+		// Built whole, from a vertex with every channel at its default, then filled in: the section's memory is
+		// reused and freshly grown slots are uninitialised, so any channel not written below -- the tangents on a
+		// canvas that does not ask for them, a texture coordinate the mesh has no source for, UV4 (a painted
+		// glyph's gradient place, which a mesh has none of: the constructor leaves it (0, 0)) -- would otherwise
+		// carry garbage to the draw.
+		vert = FDreamUIMeshVertex(FVector3f(ItemToCanvasTf.TransformPosition(sourceVert.Position)));
+		CanvasSpaceBounds += FVector(vert.Position);
 		if (RequireNormalAndTangent)
 		{
 			vert.TangentZ = ItemToCanvasTf.TransformVector(sourceVert.TangentZ);
@@ -292,13 +313,23 @@ void UDreamStaticMesh::CreateGeometry()
 	MeshSectionPtr->ValidTriangleIndicesNum = NumIndices;
 	for (int i = 0; i < NumIndices; i++)
 	{
-		IndexData[i] = SourceIndexData[i];
+		// Every source index fits: HaveValidData refuses a mesh with more vertices than the index type can name.
+		IndexData[i] = static_cast<FDreamUIMeshIndex>(SourceIndexData[i]);
 	}
-	MeshSectionPtr->BoundingBox = MeshCache->GetMeshBounds();
+	MeshSectionPtr->BoundingBox = CanvasSpaceBounds;
 
 	PostFillMeshData();
-	
+
 	Mesh->SetupDirectMeshRenderSection(MeshSectionPtr, bNeedExpandMeshSection, ReplaceMaterial);
+}
+
+void UDreamStaticMesh::OnRenderCanvasChanged(UDreamCanvas* InOldCanvas, UDreamCanvas* InNewCanvas)
+{
+	// The section came from the old canvas's mesh, and is that mesh's to pool and hand out again; this visual is
+	// supplied a section of the new canvas's mesh when that canvas next builds its draw calls.
+	Mesh.Reset();
+	MeshSection.Reset();
+	Super::OnRenderCanvasChanged(InOldCanvas, InNewCanvas);
 }
 
 #if WITH_EDITOR
@@ -395,7 +426,21 @@ bool UDreamStaticMesh::HaveValidData()const
 {
 	if (IsValid(MeshCache))
 	{
-		return MeshCache->GetVertexData().Num() > 0 && MeshCache->GetIndexData().Num() > 0;
+		const int32 NumVertices = MeshCache->GetVertexData().Num();
+		// A mesh with more vertices than one index can name is refused, and said so once per mesh. It used to be
+		// copied anyway, every index truncated into the 16-bit index type, and drawn as garbage without a word;
+		// batched elements have always been checked against this budget, this direct mesh never was.
+		if (NumVertices >= LEXUI_MAX_VERTEX_COUNT)
+		{
+			if (ReportedOversizeCache.Get() != MeshCache.Get())
+			{
+				ReportedOversizeCache = MeshCache.Get();
+				UE_LOG(DreamGUI, Error, TEXT("[%s].%d StaticMesh '%s' uses mesh data '%s' with %d vertices, at or past the %d one draw call can index, so it is not drawn. Use a smaller mesh, or build with a 32-bit index buffer (LEXUI_USE_32BIT_INDEXBUFFER in DreamGUI.Build.cs).")
+					, ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *GetPathName(), *MeshCache->GetPathName(), NumVertices, LEXUI_MAX_VERTEX_COUNT);
+			}
+			return false;
+		}
+		return NumVertices > 0 && MeshCache->GetIndexData().Num() > 0;
 	}
 	return false;
 }
@@ -451,12 +496,17 @@ void UDreamStaticMesh::SetMesh(UDreamUIStaticMeshCacheData* Value)
 	if (MeshCache != Value)
 	{
 		MeshCache = Value;
-		if (HaveValidData())
+		if (HaveValidData() && Mesh.IsValid() && MeshSection.IsValid())
 		{
-			if (Mesh.IsValid() && MeshSection.IsValid())
-			{
-				CreateGeometry();
-			}
+			CreateGeometry();
+		}
+		else if (UDreamWidget* Widget = GetWidget())
+		{
+			// No section to write into yet -- or none any more, the widget having left its canvas -- or a mesh with
+			// nothing to draw: the canvas rebuilds its draw calls, which supplies a section when there is something
+			// to put in it and takes the old drawing away when there is not.
+			bLocalVertexPositionChanged = true;
+			Widget->MarkCanvasUpdate(true);
 		}
 	}
 }

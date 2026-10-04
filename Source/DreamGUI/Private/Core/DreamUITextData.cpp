@@ -185,6 +185,11 @@ float FDreamTextStyle::GetEffectReachEm(float ExtraDilateEm, float MaxGlowBoost)
 	return FMath::Max(Reach, 0.0f);
 }
 
+bool FDreamTextStyle::HasPaints() const
+{
+	return FacePaint.IsPainting() || OutlinePaint.IsPainting() || OverlayPaint.IsPainting();
+}
+
 bool FDreamTextStyle::operator==(const FDreamTextStyle& Other) const
 {
 	return FaceSoftness == Other.FaceSoftness
@@ -200,20 +205,51 @@ bool FDreamTextStyle::operator==(const FDreamTextStyle& Other) const
 		&& GlowWidth == Other.GlowWidth
 		&& GlowPower == Other.GlowPower
 		&& FillDimAlpha == Other.FillDimAlpha
-		&& FillFadeWidth == Other.FillFadeWidth;
+		&& FillFadeWidth == Other.FillFadeWidth
+		&& FacePaint == Other.FacePaint
+		&& OutlinePaint == Other.OutlinePaint
+		&& OverlayPaint == Other.OverlayPaint
+		&& OverlayBlend == Other.OverlayBlend
+		&& PaintBoxHorizontal == Other.PaintBoxHorizontal
+		&& PaintBoxVertical == Other.PaintBoxVertical;
 }
 
+/*
+ * Every style pixel is a 32-bit pattern the shader loads as a FLOAT before it takes the bits apart (asuint), as every
+ * pixel of the widget record is (UDreamVisual::PackWidgetMarks). A pattern whose float exponent is all zeros and whose
+ * mantissa is not is a denormal, which a GPU that flushes denormals -- most mobile ones -- loads as 0, and the pixel's
+ * values are gone. The exponent is bits 23..30: for two halves, the first half's exponent and its three top mantissa
+ * bits; for a colour, alpha's low seven bits and red's top bit. So the packing keeps them off zero where it matters.
+ */
 namespace DreamTextStyleLocal
 {
+	/** 2^-14, the smallest normal half: what a first half too small to give the pixel an exponent is nudged to. */
+	constexpr uint32 SmallestNormalHalf = 0x0400;
+
 	// The shader decodes x from the high 16 bits and y from the low 16.
 	static uint32 PackHalf2(float X, float Y)
 	{
-		return (uint32(FFloat16(X).Encoded) << 16) | uint32(FFloat16(Y).Encoded);
+		uint32 XBits = uint32(FFloat16(X).Encoded);
+		const uint32 YBits = uint32(FFloat16(Y).Encoded);
+		// A zero (or a value under 2^-17) first with anything second -- no softness with a dilation, an underlay offset
+		// straight down, no fill dim with a fade width -- would be a denormal: the first half becomes the smallest normal
+		// one, 0.00006 em or alpha, with its sign, and the second is kept exactly.
+		const bool bNoExponent = ((XBits >> 7) & 0xFF) == 0;
+		const bool bAnyMantissa = (XBits & 0x7F) != 0 || YBits != 0;
+		if (bNoExponent && bAnyMantissa)
+		{
+			XBits = (XBits & 0x8000) | SmallestNormalHalf;
+		}
+		return (XBits << 16) | YBits;
 	}
 	// r = bits 16..23, g = 8..15, b = 0..7, a = 24..31
 	static uint32 PackColor(const FColor& C)
 	{
-		return (uint32(C.A) << 24) | (uint32(C.R) << 16) | (uint32(C.G) << 8) | uint32(C.B);
+		// Alpha 128 leaves the exponent to red's top bit alone, so a colour of alpha 128 and red under 128 would be a
+		// denormal and lose its RGB: 129 is indistinguishable and never is. (Alpha 0 can be one as well, and reads back as
+		// the transparent colour it was.)
+		const uint32 Alpha = C.A == 128 ? 129u : uint32(C.A);
+		return (Alpha << 24) | (uint32(C.R) << 16) | (uint32(C.G) << 8) | uint32(C.B);
 	}
 }
 

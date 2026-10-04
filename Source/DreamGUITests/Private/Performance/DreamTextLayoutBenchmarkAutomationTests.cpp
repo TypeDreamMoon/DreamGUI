@@ -37,18 +37,23 @@
  * Each text goes through the same scenarios: a layout from nothing (the shape cache emptied), the same text laid out again
  * in a new widget, 200 keystrokes at its end, 200 in its middle, 200 backspaces in its middle, the SetText flip a caret
  * move makes (the field's text and the text with one more character, in turn), a sweep of the box's width, and Best Fit's
- * search. Every scenario runs under the four settings of DreamGUI.Text.ShapeCache and DreamGUI.Text.IncrementalLayout,
- * one after another within a round and again in a second round, so a slow moment of the machine lands on all four alike.
+ * search. Every scenario runs under the four settings of DreamGUI.Text.ShapeCache and DreamGUI.Text.IncrementalLayout, and
+ * under a fifth that lays out incrementally as round-4 layouts did -- DreamGUI.Text.IncrementalParse, IncrementalMeasure and
+ * InPlaceDisplayList off -- so the two ways compare inside one run; one setting after another within a round and again in a
+ * second round, so a slow moment of the machine lands on all of them alike.
  *
  * For every scenario and setting the median and 95th percentile of a layout, of its paint and of each stage
  * (FDreamTextLayoutStats: the DreamUI_TextLayout_* scopes and the shaper's) are written to
  * Saved/DreamGUITests/Perf/TextLayout.json with what the layouts did per layout -- hb_shape calls, code points shaped,
- * ICU code units, lines placed and kept, glyph quads asked for -- and a CPU trace of the run beside it, TextLayout.utrace,
- * a region per scenario. Tools/Tests/perf_report.py text reads the report.
+ * ICU code units, lines placed and kept, glyph quads asked for, the elements an edit read again, spliced in and moved, the
+ * paragraphs it took where they stood, the display-list items it placed, moved and copied -- and a CPU trace of the run beside
+ * it, TextLayout.utrace, a region per scenario. Tools/Tests/perf_report.py text reads the report.
  *
  * No time fails the test. The counters do: they are exact -- the same in both rounds -- and hold what the caches promise:
  * nothing kept is used with incremental layout off, nothing comes from the shape cache with it off, and a keystroke at
- * the end of a paragraph measures that paragraph alone and places at most two lines.
+ * the end of a paragraph measures that paragraph alone and places at most two lines. Seen from the text, a keystroke reads no
+ * more than four elements again, hashes no paragraph, takes every other paragraph where it stands, copies no display-list
+ * item, rebases exactly the elements after it, and at the text's end asks the shape cache about a handful of words.
  */
 namespace DreamTextLayoutBenchmarkTestLocal
 {
@@ -90,18 +95,22 @@ namespace DreamTextLayoutBenchmarkTestLocal
 		}
 	}
 
-	/** One setting of the two console switches. */
+	/**
+	 * One setting of the two console switches, and whether an incremental layout does what round-4 layouts did:
+	 * DreamGUI.Text.IncrementalParse, IncrementalMeasure and InPlaceDisplayList off.
+	 */
 	struct FConfig
 	{
 		bool bShapeCache = true;
 		bool bIncremental = true;
+		bool bRound4 = false;
 
 		FString Name() const
 		{
-			return FString::Printf(TEXT("ShapeCache%d_Incremental%d"), bShapeCache ? 1 : 0, bIncremental ? 1 : 0);
+			return FString::Printf(TEXT("ShapeCache%d_Incremental%d%s"), bShapeCache ? 1 : 0, bIncremental ? 1 : 0, bRound4 ? TEXT("_Round4") : TEXT(""));
 		}
 	};
-	const FConfig Configs[] = { { true, true }, { true, false }, { false, true }, { false, false } };
+	const FConfig Configs[] = { { true, true, false }, { true, false, false }, { false, true, false }, { false, false, false }, { true, true, true } };
 
 	/** What a layout did, in the order the report and the exactness check read them. */
 	enum ECounter : int32
@@ -117,6 +126,20 @@ namespace DreamTextLayoutBenchmarkTestLocal
 		ParagraphsReused,
 		QuadFetches,
 		IncrementalLayouts,
+		ElementsParsed,
+		ElementsSpliced,
+		ElementsRebased,
+		ParagraphsPositional,
+		ParagraphsHashed,
+		WindowElements,
+		ClustersFinished,
+		PenSumElements,
+		BitsRecomputed,
+		ItemsPlaced,
+		ItemsMoved,
+		ItemsRebased,
+		ItemsRefinished,
+		ItemsCopied,
 		CounterCount
 	};
 
@@ -124,7 +147,10 @@ namespace DreamTextLayoutBenchmarkTestLocal
 	{
 		static const TCHAR* const Names[CounterCount] = { TEXT("hbShapeCalls"), TEXT("shapedCodepoints"), TEXT("shapeLookups"),
 			TEXT("shapeHits"), TEXT("icuCodeUnits"), TEXT("linesPlaced"), TEXT("linesReused"), TEXT("paragraphsMeasured"),
-			TEXT("paragraphsReused"), TEXT("quadFetches"), TEXT("incrementalLayouts") };
+			TEXT("paragraphsReused"), TEXT("quadFetches"), TEXT("incrementalLayouts"), TEXT("elementsParsed"), TEXT("elementsSpliced"),
+			TEXT("elementsRebased"), TEXT("paragraphsPositional"), TEXT("paragraphsHashed"), TEXT("windowElements"), TEXT("clustersFinished"),
+			TEXT("penSumElements"), TEXT("bitsRecomputed"), TEXT("itemsPlaced"), TEXT("itemsMoved"), TEXT("itemsRebased"), TEXT("itemsRefinished"),
+			TEXT("itemsCopied") };
 		return Names[Counter];
 	}
 
@@ -135,8 +161,11 @@ namespace DreamTextLayoutBenchmarkTestLocal
 		double PaintMs = 0.0;
 		double StageMs[(int32)EDreamTextLayoutStage::Count] = {};
 		int64 Counters[CounterCount] = {};
-		/** Paragraphs the text had: a backspace across a newline joins two. */
+		/** Paragraphs the text had, and had before the edit: a backspace across a newline joins two. */
 		int32 Paragraphs = 1;
+		int32 ParagraphsBefore = 1;
+		/** For an edit inside the text: the elements after it, which it moves without reading; INDEX_NONE for any other layout. */
+		int32 ElementsAfterEdit = INDEX_NONE;
 	};
 
 	/** Every sample of one scenario on one text and font under one setting, and its counters summed round by round. */
@@ -281,6 +310,12 @@ namespace DreamTextLayoutBenchmarkTestLocal
 		/** One layout through the scenario's state, timed with its paint; true when it is kept as a sample. */
 		void Layout(const FDreamTextLayoutInput& In, bool bTimed = true)
 		{
+			const int32 ParagraphsBefore = Paragraphs;
+			Paragraphs = 1;
+			for (const TCHAR Character : In.Content)
+			{
+				Paragraphs += Character == TEXT('\n') ? 1 : 0;
+			}
 			FDreamTextLayoutEngine::ResetStats();
 			FDreamTextShapeCache::ResetStats();
 			const uint64 Start = FPlatformTime::Cycles64();
@@ -312,14 +347,49 @@ namespace DreamTextLayoutBenchmarkTestLocal
 			Sample.Counters[ParagraphsReused] = LayoutStats.ParagraphsReused;
 			Sample.Counters[QuadFetches] = LayoutStats.QuadFetches;
 			Sample.Counters[IncrementalLayouts] = LayoutStats.IncrementalLayouts;
-			for (const TCHAR Character : In.Content)
-			{
-				Sample.Paragraphs += Character == TEXT('\n') ? 1 : 0;
-			}
+			Sample.Counters[ElementsParsed] = LayoutStats.ElementsParsed;
+			Sample.Counters[ElementsSpliced] = LayoutStats.ElementsSpliced;
+			Sample.Counters[ElementsRebased] = LayoutStats.ElementsRebased;
+			Sample.Counters[ParagraphsPositional] = LayoutStats.ParagraphsPositional;
+			Sample.Counters[ParagraphsHashed] = LayoutStats.ParagraphsHashed;
+			Sample.Counters[WindowElements] = LayoutStats.WindowElements;
+			Sample.Counters[ClustersFinished] = LayoutStats.ClustersFinished;
+			Sample.Counters[PenSumElements] = LayoutStats.PenSumElements;
+			Sample.Counters[BitsRecomputed] = LayoutStats.BitsRecomputed;
+			Sample.Counters[ItemsPlaced] = LayoutStats.ItemsPlaced;
+			Sample.Counters[ItemsMoved] = LayoutStats.ItemsMoved;
+			Sample.Counters[ItemsRebased] = LayoutStats.ItemsRebased;
+			Sample.Counters[ItemsRefinished] = LayoutStats.ItemsRefinished;
+			Sample.Counters[ItemsCopied] = LayoutStats.ItemsCopied;
+			Sample.Paragraphs = Paragraphs;
+			Sample.ParagraphsBefore = ParagraphsBefore;
+			Sample.ElementsAfterEdit = ElementsAfterEdit;
+			ElementsAfterEdit = INDEX_NONE;
 			for (int32 Counter = 0; Counter < CounterCount; Counter++)
 			{
 				RoundCounters[Counter] += Sample.Counters[Counter];
 			}
+		}
+
+		/**
+		 * For the next layout, an edit inside the text: how many elements follow it, as the layout finds the edit -- from the
+		 * two texts' common start and then their common end, so a character typed or deleted beside one like it is found after
+		 * that one. The texts are one element a code unit.
+		 */
+		void ExpectElementsAfterEdit(const FString& Before, const FString& After)
+		{
+			const int32 Shorter = FMath::Min(Before.Len(), After.Len());
+			int32 Prefix = 0;
+			while (Prefix < Shorter && Before[Prefix] == After[Prefix])
+			{
+				Prefix++;
+			}
+			int32 Suffix = 0;
+			while (Suffix < Shorter - Prefix && Before[Before.Len() - 1 - Suffix] == After[After.Len() - 1 - Suffix])
+			{
+				Suffix++;
+			}
+			ElementsAfterEdit = Suffix;
 		}
 
 		/** A new widget: what was kept goes. */
@@ -369,7 +439,9 @@ namespace DreamTextLayoutBenchmarkTestLocal
 				int32 Caret = Scenario == EScenario::TypeAtEnd ? In.Content.Len() : Subject.Middle;
 				for (int32 Key = 0; Key < Keystrokes; Key++)
 				{
+					const FString Before = In.Content;
 					In.Content.InsertAt(Caret++, Typed[Key % TypedLength]);
+					ExpectElementsAfterEdit(Before, In.Content);
 					Layout(In);
 				}
 				break;
@@ -380,7 +452,9 @@ namespace DreamTextLayoutBenchmarkTestLocal
 				for (int32 Key = 0; Key < Keystrokes && Caret > 0; Key++)
 				{
 					// The texts are all in the Basic Multilingual Plane: one code unit is one character.
+					const FString Before = In.Content;
 					In.Content.RemoveAt(--Caret, 1);
+					ExpectElementsAfterEdit(Before, In.Content);
 					Layout(In);
 				}
 				break;
@@ -489,6 +563,9 @@ namespace DreamTextLayoutBenchmarkTestLocal
 		FDreamUIGeometry Geometry;
 		TArray<FDreamUITextCharProperty> CharProperties;
 		TArray<int64> RoundCounters;
+		/** The paragraphs of the text the last layout had. */
+		int32 Paragraphs = 1;
+		int32 ElementsAfterEdit = INDEX_NONE;
 	};
 
 	/** The value at Fraction of the sorted values, by nearest rank. */
@@ -526,6 +603,7 @@ namespace DreamTextLayoutBenchmarkTestLocal
 		Object->SetStringField(TEXT("config"), Configs[Case.Config].Name());
 		Object->SetBoolField(TEXT("shapeCache"), Configs[Case.Config].bShapeCache);
 		Object->SetBoolField(TEXT("incremental"), Configs[Case.Config].bIncremental);
+		Object->SetBoolField(TEXT("round4"), Configs[Case.Config].bRound4);
 		Object->SetNumberField(TEXT("layouts"), Case.Samples.Num());
 		TArray<double> LayoutMs, PaintMs;
 		for (const FSample& Sample : Case.Samples)
@@ -577,6 +655,9 @@ bool FDreamTextLayoutBenchmarkTest::RunTest(const FString& Parameters)
 	FScopedGameWorld TestWorld;
 	const int32 ShapeCacheBefore = GetConsoleInt(TEXT("DreamGUI.Text.ShapeCache"), 1);
 	const int32 IncrementalBefore = GetConsoleInt(TEXT("DreamGUI.Text.IncrementalLayout"), 1);
+	const int32 ParseBefore = GetConsoleInt(TEXT("DreamGUI.Text.IncrementalParse"), 1);
+	const int32 MeasureBefore = GetConsoleInt(TEXT("DreamGUI.Text.IncrementalMeasure"), 1);
+	const int32 InPlaceBefore = GetConsoleInt(TEXT("DreamGUI.Text.InPlaceDisplayList"), 1);
 
 	UDreamUIFontData_DistanceField* Roboto = MakeFileFont(TestWorld.World, TEXT("Roboto-Regular.ttf"));
 	Roboto->SetFallbackFonts({ MakeFileFont(TestWorld.World, TEXT("DroidSansFallback.ttf")) });
@@ -639,6 +720,9 @@ bool FDreamTextLayoutBenchmarkTest::RunTest(const FString& Parameters)
 					FCase& Case = Cases[CaseIndex++];
 					SetConsoleInt(TEXT("DreamGUI.Text.ShapeCache"), Configs[Config].bShapeCache ? 1 : 0);
 					SetConsoleInt(TEXT("DreamGUI.Text.IncrementalLayout"), Configs[Config].bIncremental ? 1 : 0);
+					SetConsoleInt(TEXT("DreamGUI.Text.IncrementalParse"), Configs[Config].bRound4 ? 0 : 1);
+					SetConsoleInt(TEXT("DreamGUI.Text.IncrementalMeasure"), Configs[Config].bRound4 ? 0 : 1);
+					SetConsoleInt(TEXT("DreamGUI.Text.InPlaceDisplayList"), Configs[Config].bRound4 ? 0 : 1);
 					const FString Region = FString::Printf(TEXT("DreamGUI.TextLayout.%s.%s.%s.%s"), *Subject.FontName, *Subject.TextName,
 						ScenarioName((EScenario)Scenario), *Configs[Config].Name());
 					TRACE_BEGIN_REGION(*Region);
@@ -650,6 +734,9 @@ bool FDreamTextLayoutBenchmarkTest::RunTest(const FString& Parameters)
 	}
 	SetConsoleInt(TEXT("DreamGUI.Text.ShapeCache"), ShapeCacheBefore);
 	SetConsoleInt(TEXT("DreamGUI.Text.IncrementalLayout"), IncrementalBefore);
+	SetConsoleInt(TEXT("DreamGUI.Text.IncrementalParse"), ParseBefore);
+	SetConsoleInt(TEXT("DreamGUI.Text.IncrementalMeasure"), MeasureBefore);
+	SetConsoleInt(TEXT("DreamGUI.Text.InPlaceDisplayList"), InPlaceBefore);
 	if (bStartedTrace)
 	{
 		FTraceAuxiliary::Stop();
@@ -714,9 +801,47 @@ bool FDreamTextLayoutBenchmarkTest::RunTest(const FString& Parameters)
 				const FString Key = What + FString::Printf(TEXT(", layout %d"), Index);
 				if (!TestEqual(Key + TEXT(" built on the kept layout"), Sample.Counters[IncrementalLayouts], (int64)1)
 					|| !TestEqual(Key + TEXT(" measured the edited paragraph alone"), Sample.Counters[ParagraphsMeasured], (int64)1)
-					|| !TestEqual(Key + TEXT(" took every other paragraph as it was"), Sample.Counters[ParagraphsReused], (int64)(Sample.Paragraphs - 1)))
+					|| !TestEqual(Key + TEXT(" took every other paragraph as it was, where it stood or found by its content"),
+						Sample.Counters[ParagraphsReused] + Sample.Counters[ParagraphsPositional], (int64)(Sample.Paragraphs - 1)))
 				{
 					break;
+				}
+				// An edit that leaves the paragraphs as they were is seen from the text, unless round-4 layouts are asked for, or a
+				// shaped paragraph this long cannot be measured through a window (the window splices at the shape cache's cuts); one
+				// that joins two (a backspace across a newline) is laid out as round-4 layouts did.
+				const bool bWindowed = Config.bShapeCache || Case.Font == TEXT("Mock");
+				const bool bFromTheText = !Config.bRound4 && bWindowed && Sample.Paragraphs == Sample.ParagraphsBefore;
+				if (bFromTheText)
+				{
+					// What is read again is the element before the edit, whose read reached it, and what was typed.
+					const int64 Typed = Case.Scenario == EScenario::BackspaceInMiddle ? 0 : 1;
+					if (!TestEqual(Key + TEXT(" read again the element before the edit and what was typed"), Sample.Counters[ElementsParsed], 1 + Typed)
+						|| !TestTrue(Key + TEXT(" read at most four elements"), Sample.Counters[ElementsParsed] <= 4)
+						|| !TestEqual(Key + TEXT(" spliced in what was typed"), Sample.Counters[ElementsSpliced], Typed)
+						|| !TestEqual(Key + TEXT(" hashed no paragraph"), Sample.Counters[ParagraphsHashed], (int64)0)
+						|| !TestEqual(Key + TEXT(" took every other paragraph where it stood"), Sample.Counters[ParagraphsPositional], (int64)(Sample.Paragraphs - 1))
+						|| !TestEqual(Key + TEXT(" copied no display-list item"), Sample.Counters[ItemsCopied], (int64)0)
+						|| !TestEqual(Key + TEXT(" rebased exactly the elements after it"), Sample.Counters[ElementsRebased], (int64)FMath::Max(Sample.ElementsAfterEdit, 0)))
+					{
+						break;
+					}
+					if (Case.Scenario == EScenario::TypeAtEnd
+						&& (!TestEqual(Key + TEXT(" moved no line it kept: nothing comes after it"), Sample.Counters[ItemsRefinished], (int64)0)
+							|| (Config.bShapeCache && Case.Font != TEXT("Mock")
+								&& !TestTrue(Key + FString::Printf(TEXT(" asked the shape cache about a handful of words (%lld)"), Sample.Counters[ShapeLookups]),
+									Sample.Counters[ShapeLookups] <= 4))))
+					{
+						break;
+					}
+				}
+				else if (Config.bRound4)
+				{
+					if (!TestEqual(Key + TEXT(" took no paragraph where it stood"), Sample.Counters[ParagraphsPositional], (int64)0)
+						|| !TestEqual(Key + TEXT(" spliced nothing in"), Sample.Counters[ElementsSpliced], (int64)0)
+						|| !TestTrue(Key + TEXT(" copied the display list's items"), Sample.Counters[ItemsCopied] > 0))
+					{
+						break;
+					}
 				}
 				if (Case.Scenario == EScenario::TypeAtEnd)
 				{
@@ -735,7 +860,7 @@ bool FDreamTextLayoutBenchmarkTest::RunTest(const FString& Parameters)
 	}
 	for (const FCase& Case : Cases)
 	{
-		if (Case.Config == 0 || Case.Config == 3)
+		if (Case.Config == 0 || Case.Config == 3 || Configs[Case.Config].bRound4)
 		{
 			TArray<double> LayoutMs;
 			for (const FSample& Sample : Case.Samples)

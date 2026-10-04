@@ -15,6 +15,43 @@ enum class EDreamInteractionKind : uint8;
 struct FDataTableRowHandle;
 
 /**
+ * What a player's keys and pad do while a screen is in front: CommonUI's input modes, per navigation scope
+ * (UDreamUINavigationScope::InputMode), and for a player with no active scope UDreamGUISettings::InputModeWithoutScope.
+ */
+UENUM(BlueprintType)
+enum class EDreamUIScopeInputMode : uint8
+{
+	/** DreamGUI's built-in keys work -- navigation, confirm, Back, paging, tab switching -- and the game hears what DreamGUI does not keep: as before. */
+	All,
+	/**
+	 * A menu: DreamGUI's built-in keys work as with All, and the game is expected to stand down -- a project's gameplay
+	 * input asks UDreamUINavigationStack::GetEffectiveInputMode and ignores the player while it says Menu.
+	 */
+	Menu,
+	/**
+	 * Gameplay: DreamGUI's built-in navigation, confirm and Back are off for the player -- a HUD's buttons are not walked
+	 * onto by the D-pad, nor pressed by the jump button. Bindings registered by widgets, pointers and typing still work.
+	 */
+	Game,
+};
+
+/** What last moved a player's focus (UDreamUIInputServices::GetFocusCause). */
+UENUM(BlueprintType)
+enum class EDreamUIFocusCause : uint8
+{
+	/** Nothing has, or the focus was cleared. */
+	None,
+	/** A pointer: a click, a tap. */
+	Pointer,
+	/** A directional step: the arrow keys, the D-pad, the stick. */
+	Navigation,
+	/** Tab or Shift+Tab. */
+	Tab,
+	/** Code: SetFocus, a scope taking focus, focus given back as a popup or a dialog closed. */
+	Script,
+};
+
+/**
  * Everything the core asks of the input system, and the only way it asks.
  *
  * The event systems, the raycasters' setup, the action router and drag and drop belong to the input system.
@@ -70,6 +107,14 @@ public:
 	 * first navigable control), as that selectable's widget; null without an active scope or a target.
 	 */
 	virtual UDreamWidget* ResolveScopeFocusTarget(int32 InUserIndex) const { return nullptr; }
+	/** What last moved player InUserIndex's focus; recorded by the input system as it moves it. None for a player it does not know. */
+	virtual EDreamUIFocusCause GetFocusCause(int32 InUserIndex) const { return EDreamUIFocusCause::None; }
+	/**
+	 * Whether player InUserIndex's focus is to be drawn -- a control's Focused look, the focus ring: always, unless
+	 * UDreamGUISettings::bFocusVisibleOnlyFromKeys, and then only while the focus was last moved by keys or a pad
+	 * (Navigation or Tab), or by code since the player last used keys or a pad, as CSS's :focus-visible decides.
+	 */
+	virtual bool IsFocusVisible(int32 InUserIndex) const { return true; }
 
 	// ---- pointers
 

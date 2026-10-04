@@ -57,8 +57,11 @@ FDreamUIVertexFactoryInterpolantsVSToPS VertexFactoryGetInterpolantsVSToPS(float
 	return Interpolants;
 }
 
-/** Converts from vertex factory specific input to a FMaterialVertexParameters, which is used by vertex shader material inputs. */
-FMaterialVertexParameters GetMaterialVertexParameters(HALF4_TYPE VertexColor, float3 WorldPosition, float2 UVs[4], half3x3 TangentToWorld)
+/**
+ * Converts from vertex factory specific input to a FMaterialVertexParameters, which is used by vertex shader material inputs.
+ * UVs are the vertex's five channels: TextureCoordinate[0..3] and UV4, which a material reads as TexCoord(4).
+ */
+FMaterialVertexParameters GetMaterialVertexParameters(HALF4_TYPE VertexColor, float3 WorldPosition, float2 UVs[5], half3x3 TangentToWorld)
 {
     FMaterialVertexParameters Result = (FMaterialVertexParameters) 0;
     Result.WorldPosition = WorldPosition;
@@ -67,7 +70,7 @@ FMaterialVertexParameters GetMaterialVertexParameters(HALF4_TYPE VertexColor, fl
     Result.TangentToWorld = TangentToWorld;
 	
 #if NUM_MATERIAL_TEXCOORDS_VERTEX
-	int MaxCount = min(NUM_MATERIAL_TEXCOORDS_VERTEX, 4);
+	int MaxCount = min(NUM_MATERIAL_TEXCOORDS_VERTEX, 5);
     UNROLL
     for (int CoordinateIndex = 0; CoordinateIndex < MaxCount; CoordinateIndex++)
     {
@@ -101,6 +104,8 @@ void MainVS(
 	in HALF3_TYPE TangentX : ATTRIBUTE6,
 	// TangentZ.w contains sign of tangent basis determinant
 	in HALF4_TYPE TangentZ : ATTRIBUTE7,
+	// FDreamUIMeshVertex::UV4, after the tangents (LEXUI_VERTEX_UV4_ATTRIBUTE): a painted glyph's place in its boxes.
+	in float2 TextureCoord4 : ATTRIBUTE8,
 	out FDreamUIBasePassVSToPS Output
 )
 {
@@ -120,11 +125,12 @@ void MainVS(
     half3x3 TangentToWorld = CalcTangentToWorld(TangentToLocal, DFDemote(Primitive.LocalToWorld), Primitive.InvNonUniformScale);
     float TangentToWorldSign = TangentSign * GetPrimitive_DeterminantSign_FromFlags(Primitive.Flags);
 
-    float2 UVs[4];
+    float2 UVs[5];
     UVs[0] = TextureCoord0;
     UVs[1] = TextureCoord1;
     UVs[2] = TextureCoord2;
     UVs[3] = TextureCoord3;
+    UVs[4] = TextureCoord4;
 
     FMaterialVertexParameters VertexParameters = GetMaterialVertexParameters(Color, WorldPosition.xyz, UVs, TangentToWorld);
     HALF3_TYPE WorldPositionOffset = GetMaterialWorldPositionOffset(VertexParameters);

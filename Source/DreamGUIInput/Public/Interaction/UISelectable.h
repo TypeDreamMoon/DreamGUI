@@ -13,6 +13,7 @@
 
 class UUINavigationInputSelectionHandler;
 class UUISelectable;
+class UDreamUIInputUser;
 class UDreamVisual;
 class UDreamTweener;
 class UDreamSelectableStyle;
@@ -365,8 +366,40 @@ protected:
 	bool bIsEnteredByNavigation = false;
 	/** Selected by the event system, whether or not a pointer is on it. Survives the pointer moving away. */
 	bool bIsSelected = false;
+	/**
+	 * The focus ring for this control's screen (UUINavigationInputSelectionHandler::FindOrCreateFor): its presenter's, or
+	 * its root canvas's on a page no presenter hosts. True when it is, and false when the ring has none to give.
+	 */
 	bool CheckNavigationSelectionState();
 	TWeakObjectPtr<UUINavigationInputSelectionHandler> NavigationSelection;
+
+	/**
+	 * Whose focus this control holds or was navigated onto: the player of the selection or of the navigation enter, INDEX_NONE
+	 * before either. Read through GetFocusUserIndex, which falls back to the owning player.
+	 */
+	int32 FocusUserIndex = INDEX_NONE;
+	int32 GetFocusUserIndex() const;
+	/**
+	 * Whether the focus this control holds is to be drawn -- its Focused look and the ring: the player's focus is visible
+	 * (UDreamUIInputServices::IsFocusVisible, CSS's :focus-visible -- after keys or a pad, not after a click). True where
+	 * no input system answers, which draws focus as before.
+	 */
+	bool IsFocusShown() const;
+	/**
+	 * While this control holds focus it hears its player's focus visibility change (UDreamUIInputUser::
+	 * GetFocusVisibleChangedEvent), and redraws: a click elsewhere takes the Focused look and the ring away, a key brings
+	 * them back. Bound when focus arrives, unbound when it leaves and on unregister.
+	 */
+	void ListenForFocusVisibility();
+	void StopListeningForFocusVisibility();
+	void HandleFocusVisibleChanged(bool bInVisible);
+	TWeakObjectPtr<UDreamUIInputUser> FocusVisibleUser;
+	FDelegateHandle FocusVisibleHandle;
+	/** Put the ring on this control while its focus is shown, and take it off again; see bShowsFocusRing. */
+	void ShowFocusRing();
+	void HideFocusRing();
+	/** This control put the ring on itself and has not taken it off: what decides whether a deselect or a hidden focus hides it. */
+	bool bShowsFocusRing = false;
 #pragma endregion
 	/**
 	 * WHEN this control's click fires, per input kind -- UMG's three, and resolved the way UMG's
@@ -467,7 +500,12 @@ public:
 	UFUNCTION(BlueprintPure, Category = "DreamGUI-Selectable")
 	UDreamSelectableStyle* GetStyle()const { return Style; }
 	
-	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Selectable") 
+	/**
+	 * The state the pointer flags and the focus say: Disabled, Pressed, Hovered, Focused, else Normal. Focused only while
+	 * the focus is to be drawn (IsFocusShown, CSS's :focus-visible): a control focused by a click draws Normal once the
+	 * pointer leaves it, and IsFocused still says it has the focus.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Selectable")
 		EUISelectableSelectionState GetSelectionState()const;
 	/**
 	 * The state IN EFFECT -- the one the transition was last run for and the one on screen.
@@ -554,6 +592,12 @@ public:
 	 */
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Selectable")
 		bool IsInteractable()const;
+	/**
+	 * Whether a navigation move may land here: interactable, bCanNavigateHere, and its widget focusable -- SetFocus refuses
+	 * a widget that is not, and navigation used to land on one anyway. What CanNavigateHere answers, and what an explicit
+	 * link, a scope's focus target and the default control are all held to.
+	 */
+	bool CanBeNavigatedTo()const;
 	/**
 	 * This control's OWN flag, without the hierarchy. Read it to find out what was authored here;
 	 * read IsInteractable to find out whether the player can use the thing.
@@ -673,10 +717,6 @@ public:
 	 * Find UISelectable component inside InParent on specific direction.
 	 */
 	virtual UUISelectable* FindSelectable(FVector InDirection, UDreamWidget* InParent);
-protected:
-	/** How many nested areas a single Escape move may climb out of before it gives up. */
-	static constexpr int32 MaxNavigationEscapeDepth = 8;
-public:
 	/**
 	 * Where InDirection leads, as the BEHAVIOUR that will receive the move.
 	 *
@@ -688,6 +728,11 @@ public:
 	 *
 	 * Returns this when there is nothing that way, and null when navigation is switched off for that
 	 * direction; the two are different and the caller is expected to tell them apart.
+	 *
+	 * Next and Prev follow UDreamGUISettings::TabOrder: under Hierarchy they are the Tab order's answer
+	 * (FDreamUITabOrder::Peek -- the widget tree, explicit links first), asked as a question, so no popup
+	 * closes and no list scrolls; under LegacyGeometric, the right hop else the down hop, and the left hop
+	 * else the up hop, as before.
 	 */
 	virtual UDreamUIBehaviour* FindNavigableOn(EDreamUINavigationDirection InDirection);
 	/**
@@ -696,9 +741,6 @@ public:
 	 * @param bResolveCanvasParent  ignore InParent and derive it from this widget's root canvas.
 	 */
 	UDreamUIBehaviour* FindNavigableIn(FVector InDirection, UDreamWidget* InParent, bool bResolveCanvasParent = false);
-protected:
-	/** Scan, and when it finds nothing let InRestrictNode's boundary rule decide what happens next. */
-	UDreamUIBehaviour* FindNavigableWithin(const FVector& InDirection, UDreamWidget* InParent, const UDreamWidget* InRestrictNode, int32 InEscapeDepth);
 	/**
 	 * Where an EXPLICIT link in InDirection actually lands: InTarget when it can be navigated to, or
 	 * the next hop of the author's own chain when it cannot, or null when the chain runs out.
@@ -709,8 +751,18 @@ protected:
 	 * Disabled look, and be unable to leave -- the next hop was computed from that same dead control.
 	 * Following the chain rather than refusing outright keeps a hand-authored row usable when one of
 	 * its entries is conditionally hidden, which is the ordinary reason for one to be.
+	 *
+	 * Public for the Tab order (FDreamUITabOrder), which follows a selectable's NavigationNext and
+	 * NavigationPrev links the same way.
 	 */
 	static UUISelectable* ResolveExplicitTarget(UUISelectable* InTarget, EDreamUINavigationDirection InDirection);
+protected:
+	/** Scan, and when it finds nothing let InRestrictNode's boundary rule decide what happens next (DreamUINavigationScan::ScanWithinArea). */
+	UDreamUIBehaviour* FindNavigableWithin(const FVector& InDirection, UDreamWidget* InParent, const UDreamWidget* InRestrictNode, int32 InEscapeDepth);
+	/** FindNavigableOn's Next and Prev under the hierarchy order; see FindNavigableOn. */
+	UDreamUIBehaviour* FindTabNavigableOn(EDreamUINavigationDirection InDirection);
+	/** The player navigating from this control: whoever's focus is on it, else its owning player. */
+	int32 ResolveNavigatingUserIndex() const;
 	/**
 	 * The Prev target this control WOULD have under Auto, whatever its authored navigation modes say.
 	 *
@@ -726,12 +778,16 @@ public:
      * Default selectable is the most "Prev" one (left top most).
 	 *
 	 * When a navigation scope is active for InUserIndex it answers instead, because a scope knows
-	 * where its screen wants focus and this scan only knows what registered first.
+	 * where its screen wants focus and this scan only knows what registered first. Without one, only
+	 * player InUserIndex's own screen-space canvases are searched (FDreamUITabOrder::GetPlayerScreenRoots),
+	 * their screen root first: never world-space UI, never another player's screen -- a first press with
+	 * nothing focused used to land on whatever selectable in the level registered first, a HUD's, a panel's
+	 * in the world, the other half of a split screen's.
 	 */
 	static UUISelectable* FindDefaultSelectable(UObject* WorldContextObject, int32 InUserIndex = 0);
 	/**
 	 * The most "Prev" selectable inside InParent, never leaving it. A null InParent searches
-	 * everything, which is what FindDefaultSelectable falls back to.
+	 * everything.
 	 */
 	static UUISelectable* FindDefaultSelectableIn(UObject* WorldContextObject, const UDreamWidget* InParent);
 	virtual UUISelectable* FindSelectableOnLeft();

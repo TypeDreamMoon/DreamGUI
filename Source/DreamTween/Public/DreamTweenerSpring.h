@@ -12,7 +12,9 @@
  * A tween driven by a spring instead of a clock: no duration, no ease. It pulls the value toward
  * the target every tick and completes when the spring is at rest. SetTarget may be called at any
  * time, including mid-flight -- the velocity carries over, which is what makes a list of lyric
- * lines glide instead of restarting.
+ * lines glide instead of restarting -- and at rest, which wakes the spring: a spring is held at
+ * rest by default (SetAutoKill(false)) rather than retired, so the handle stays good to retarget.
+ * Kill it when it is no longer wanted, or SetAutoKill(true) before it starts to retire it at rest.
  */
 // BlueprintType, unlike its siblings: every one of its setters below is already BlueprintCallable,
 // and a spring is steered AFTER it starts (SetTarget mid-flight is the whole point of it), so a
@@ -23,6 +25,13 @@ class DREAMTWEEN_API UDreamTweenerSpring : public UDreamTweener
 {
 	GENERATED_BODY()
 public:
+	UDreamTweenerSpring()
+	{
+		// Held at rest. A spring retired the moment it settled could not be retargeted afterwards -- the
+		// "SetTarget at any time" above only held while it was moving, and a retired tween's handle is gone.
+		bAutoKill = false;
+	}
+
 	void SetInitialValue(const FDreamTweenFloatGetterFunction& InGetter, const FDreamTweenFloatSetterFunction& InSetter, float InTarget, const FDreamSpringParams& InParams)
 	{
 		Getter = InGetter;
@@ -31,11 +40,22 @@ public:
 		Params = InParams;
 	}
 
-	/** Move the goal; the current velocity is kept. */
+	/** Move the goal; the current velocity is kept. A spring held at rest wakes and goes to the new goal. */
 	UFUNCTION(BlueprintCallable, Category = "DreamTween")
 	UDreamTweenerSpring* SetTarget(float InTarget)
 	{
 		State.Target = InTarget;
+		// Woken only if the new goal is not where it already rests, and only from the pause coming to rest put
+		// it in -- one the caller asked for with Pause stays.
+		if (bRestingHeld && !State.IsAtRest(Params))
+		{
+			bRestingHeld = false;
+			isMarkedPause = false;
+		}
+		else if (bRetired)
+		{
+			UE_LOG(DreamTween, Warning, TEXT("[UDreamTweenerSpring::SetTarget] %s was retired when it came to rest (SetAutoKill(true)), so nothing will move it to the new goal."), *GetName());
+		}
 		return this;
 	}
 	UFUNCTION(BlueprintCallable, Category = "DreamTween")
@@ -63,6 +83,8 @@ protected:
 	FDreamTweenFloatSetterFunction Setter;
 	FDreamSpringParams Params;
 	FDreamSpringState State;
+	/** Came to rest and was paused there by FinishOrHold; SetTarget wakes such a spring, and only such a spring. */
+	bool bRestingHeld = false;
 
 	virtual void OnStartGetValue() override
 	{
@@ -76,7 +98,7 @@ protected:
 		// A killed spring is finished whether or not the game is paused; answering the pause first left
 		// anything killed during a pause in the manager's list until the game resumed. Same order as
 		// UDreamTweener::ToNext, which this overrides.
-		if (isMarkedToKill)return false;
+		if (isMarkedToKill || IsRetired())return false;
 		if (auto world = GetWorld())
 		{
 			if (world->IsPaused() && affectByGamePause)return true;
@@ -102,7 +124,18 @@ protected:
 		{
 			onCycleCompleteCpp.Broadcast();
 			onCompleteCpp.Broadcast();
-			// Through FinishOrHold, as every ToNext does; see UDreamTweener::SetAutoKill.
+			if (isMarkedToKill)
+			{
+				return false;
+			}
+			// A completion handler that gave it a new goal woke it before it could be put down: it runs on.
+			if (!State.IsAtRest(Params))
+			{
+				return true;
+			}
+			// Through FinishOrHold, as every ToNext does; see UDreamTweener::SetAutoKill. Held (the default),
+			// it waits at rest, paused, for SetTarget to wake it.
+			bRestingHeld = !bAutoKill;
 			return FinishOrHold(false);
 		}
 		return true;
@@ -122,10 +155,12 @@ protected:
 		// back at the start of the animation, and for a spring that call means "settle at the goal" --
 		// the exact opposite. The clock, the pause and the kill flag still reset, and dropping the
 		// velocity is what makes the chase start over rather than continue.
-		if (elapseTime == 0)
+		if (elapseTime == 0 || IsRetired())
 		{
 			return;
 		}
+		clockGeneration++;
+		bRestingHeld = false;
 		isMarkedPause = false;
 		isMarkedToKill = false;
 		elapseTime = 0;

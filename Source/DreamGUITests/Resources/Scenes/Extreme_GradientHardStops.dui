@@ -1,0 +1,151 @@
+// Gradients at their edges: hard stops (two stops at one place, and CSS's two positions to a stop), a hard split in
+// the middle, repeating stripes at 45 degrees, a reflecting gradient running back and forth, hard rings and hard sectors,
+// the sixteen stops a gradient row holds, and seventeen, whose last is not drawn. Hard edges belong to the later segment,
+// so no stripe has a blended pixel row of its own beyond the glyph's antialiasing.
+// @stage 960x560
+
+style Title {
+    AnchorData.AnchorMin = (0, 1)
+    AnchorData.AnchorMax = (1, 1)
+    AnchorData.Pivot = (0.5, 1)
+    AnchorData.AnchoredPosition = (0, -8)
+    AnchorData.SizeDelta = (-24, 20)
+    FontSize = 15
+    Color = #1E2230
+    HAlign = Left
+    VAlign = Top
+    OverflowType = HorizontalOverflow
+}
+
+style Note {
+    AnchorData.AnchorMin = (0, 1)
+    AnchorData.AnchorMax = (0, 1)
+    AnchorData.Pivot = (0, 1)
+    FontSize = 12
+    Color = #5A6172
+    HAlign = Left
+    VAlign = Top
+    OverflowType = HorizontalOverflow
+}
+
+style Painted {
+    AnchorData.AnchorMin = (0, 1)
+    AnchorData.AnchorMax = (0, 1)
+    AnchorData.Pivot = (0, 1)
+    Color = #1E2230
+    HAlign = Left
+    VAlign = Middle
+    OverflowType = HorizontalOverflow
+    FontSize = 80
+    TextStyle.FacePaint.bEnabled = true
+}
+
+Widget Root {
+    Image Page {
+        Brush.TintColor = #F5F3EE
+        AnchorData.AnchorMin = (0, 0)
+        AnchorData.AnchorMax = (1, 1)
+        AnchorData.SizeDelta = (0, 0)
+    }
+
+    Text Heading : Title {
+        Text = "Gradients at their edges: hard stops, repeats, reflections, the most stops a row holds"
+    }
+
+    Text StripesLabel : Note {
+        AnchorData.AnchoredPosition = (24, -40)
+        AnchorData.SizeDelta = (440, 16)
+        Text = "four hard bands, two positions to a stop"
+    }
+    Text Stripes : Painted {
+        AnchorData.AnchoredPosition = (24, -58)
+        AnchorData.SizeDelta = (440, 96)
+        Text = "STRIPES"
+        TextStyle.FacePaint.Gradient = "linear-gradient(90deg, #FF2D55 0% 25%, #FFCC00 25% 50%, #34C759 50% 75%, #0A84FF 75% 100%)"
+    }
+
+    Text SplitLabel : Note {
+        AnchorData.AnchoredPosition = (496, -40)
+        AnchorData.SizeDelta = (440, 16)
+        Text = "a hard split in the middle, top to bottom"
+    }
+    Text Split : Painted {
+        AnchorData.AnchoredPosition = (496, -58)
+        AnchorData.SizeDelta = (440, 96)
+        Text = "SPLIT"
+        TextStyle.FacePaint.Gradient = "linear-gradient(180deg, #1E2230 50%, #E8B64A 50%)"
+    }
+
+    Text RepeatLabel : Note {
+        AnchorData.AnchoredPosition = (24, -170)
+        AnchorData.SizeDelta = (440, 16)
+        Text = "repeating stripes at 45deg"
+    }
+    Text Repeating : Painted {
+        AnchorData.AnchoredPosition = (24, -188)
+        AnchorData.SizeDelta = (440, 96)
+        Text = "REPEAT"
+        TextStyle.FacePaint.Gradient = "repeating-linear-gradient(45deg, #1E2230 0%, #1E2230 5%, #E8B64A 5%, #E8B64A 10%)"
+    }
+
+    Text ReflectLabel : Note {
+        AnchorData.AnchoredPosition = (496, -170)
+        AnchorData.SizeDelta = (440, 16)
+        Text = "reflecting: the first quarter back and forth (DreamGUI's own)"
+    }
+    Text Reflecting : Painted {
+        AnchorData.AnchoredPosition = (496, -188)
+        AnchorData.SizeDelta = (440, 96)
+        Text = "REFLECT"
+        TextStyle.FacePaint.Gradient = "reflecting-linear-gradient(90deg, #FF2D55, #0A84FF 25%)"
+    }
+
+    Text RingsLabel : Note {
+        AnchorData.AnchoredPosition = (24, -300)
+        AnchorData.SizeDelta = (440, 16)
+        Text = "hard rings: a repeating radial circle"
+    }
+    Text Rings : Painted {
+        AnchorData.AnchoredPosition = (24, -318)
+        AnchorData.SizeDelta = (440, 96)
+        Text = "RINGS"
+        TextStyle.FacePaint.Gradient = "repeating-radial-gradient(circle at 50% 50%, #1E2230 0% 10%, #34C759 10% 20%)"
+    }
+
+    Text SectorsLabel : Note {
+        AnchorData.AnchoredPosition = (496, -300)
+        AnchorData.SizeDelta = (440, 16)
+        Text = "hard sectors: a conic, each stop where the one before ends"
+    }
+    Text Sectors : Painted {
+        AnchorData.AnchoredPosition = (496, -318)
+        AnchorData.SizeDelta = (440, 96)
+        Text = "SECTOR"
+        TextStyle.FacePaint.Gradient = "conic-gradient(#FF2D55 0% 25%, #FFCC00 0% 50%, #34C759 0% 75%, #0A84FF 0% 100%)"
+    }
+
+    Text SixteenLabel : Note {
+        AnchorData.AnchoredPosition = (24, -430)
+        AnchorData.SizeDelta = (440, 16)
+        Text = "sixteen stops, all drawn"
+    }
+    Text Sixteen : Painted {
+        AnchorData.AnchoredPosition = (24, -448)
+        AnchorData.SizeDelta = (440, 96)
+        Text = "SIXTEEN"
+        TextStyle.FacePaint.Gradient = "linear-gradient(90deg, #FF0000, #FF6000, #FFC000, #DFFF00, #7FFF00, #20FF00, #00FF40, #00FF9F, #00FFFF, #009FFF, #0040FF, #2000FF, #7F00FF, #DF00FF, #FF00C0, #FF0060)"
+    }
+
+    Text SeventeenLabel : Note {
+        AnchorData.AnchoredPosition = (496, -430)
+        AnchorData.SizeDelta = (440, 16)
+        Text = "seventeen stops: the seventeenth, black, is not drawn"
+    }
+    Text Seventeen : Painted {
+        AnchorData.AnchoredPosition = (496, -448)
+        AnchorData.SizeDelta = (440, 96)
+        Text = "SEVENTEEN"
+        FontSize = 64
+        TextStyle.FacePaint.Gradient = "linear-gradient(90deg, #FF0000, #FF6000, #FFC000, #DFFF00, #7FFF00, #20FF00, #00FF40, #00FF9F, #00FFFF, #009FFF, #0040FF, #2000FF, #7F00FF, #DF00FF, #FF00C0, #FF0060, #000000)"
+    }
+}

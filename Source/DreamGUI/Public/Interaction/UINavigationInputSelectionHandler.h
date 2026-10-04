@@ -64,4 +64,31 @@ public:
 	virtual void SelectWidget(UDreamWidget* InSelected);
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
 	virtual void SelectNone();
+
+	/**
+	 * The focus ring that marks focus on InWidget's screen, made when there is none yet: the ring of the presenter
+	 * component hosting InWidget's tree (UDreamWidgetPresenterComponentBase::GetNavigationSelection), else one ring per
+	 * root canvas -- a page the screen subsystem shows, an authored canvas -- built from UDreamGUISettings::
+	 * NavigationSelectionClass, in game worlds only, with no parent until SelectWidget moves it onto what it marks. Null
+	 * when the project names no ring class, or InWidget is drawn by no canvas.
+	 *
+	 * Asked by a selectable when its focus is to be drawn (UUISelectable), which is what shows the ring and hides it
+	 * again: the ring itself does not know whose focus it marks, or whether that focus is visible.
+	 */
+	static UUINavigationInputSelectionHandler* FindOrCreateFor(UDreamWidget* InWidget);
+	/** The ring FindOrCreateFor would answer for InWidget, when it exists already; never makes one. */
+	static UUINavigationInputSelectionHandler* FindFor(const UDreamWidget* InWidget);
+	/**
+	 * Make InRingWidget, a ring's freshly made root, something that only draws: never hit by a pointer (it lies over the
+	 * control it marks), never placed by that control's layout container (it sizes itself to the control), never a Tab
+	 * stop. Whatever the ring class authored.
+	 */
+	static void MakeRingInert(UDreamWidget* InRingWidget);
+	/**
+	 * Make InRingWidget, freshly made from a ring class, a ring: the handler its class put on its root, else one added there
+	 * -- the class then only draws, and this handler moves, sizes and fades it -- and the widget made inert (MakeRingInert).
+	 * The plugin's own NavigationSelectionInputHandler class is drawing only. What every place that makes a ring calls;
+	 * null for no widget.
+	 */
+	static UUINavigationInputSelectionHandler* MakeRing(UDreamWidget* InRingWidget);
 };

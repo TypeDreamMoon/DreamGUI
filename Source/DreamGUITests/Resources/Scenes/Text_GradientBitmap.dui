@@ -1,0 +1,109 @@
+// Gradient paints on a bitmap font (Bitmap key: Roboto as a bitmap font rather than a distance field): a face painted
+// top to bottom and one painted left to right, a painted face over a bitmap font's outline and shadow copies -- which are
+// never painted, they stay their own solid colours -- and a painted rich text with an underline.
+// @stage 768x320
+
+style Title {
+    AnchorData.AnchorMin = (0, 1)
+    AnchorData.AnchorMax = (1, 1)
+    AnchorData.Pivot = (0.5, 1)
+    AnchorData.AnchoredPosition = (0, -8)
+    AnchorData.SizeDelta = (-24, 20)
+    FontSize = 15
+    Color = #1E2230
+    HAlign = Left
+    VAlign = Top
+    OverflowType = HorizontalOverflow
+}
+
+style Note {
+    AnchorData.AnchorMin = (0, 1)
+    AnchorData.AnchorMax = (0, 1)
+    AnchorData.Pivot = (0, 1)
+    FontSize = 12
+    Color = #5A6172
+    HAlign = Left
+    VAlign = Top
+    OverflowType = HorizontalOverflow
+}
+
+style Painted {
+    AnchorData.AnchorMin = (0, 1)
+    AnchorData.AnchorMax = (0, 1)
+    AnchorData.Pivot = (0, 1)
+    Color = #1E2230
+    HAlign = Left
+    VAlign = Middle
+    OverflowType = HorizontalOverflow
+    TextStyle.FacePaint.bEnabled = true
+}
+
+Widget Root {
+    Image Page {
+        Brush.TintColor = #F5F3EE
+        AnchorData.AnchorMin = (0, 0)
+        AnchorData.AnchorMax = (1, 1)
+        AnchorData.SizeDelta = (0, 0)
+    }
+
+    Text Heading : Title {
+        Text = "Gradient paints on a bitmap font"
+    }
+
+    Text VerticalLabel : Note {
+        AnchorData.AnchoredPosition = (24, -40)
+        AnchorData.SizeDelta = (352, 16)
+        Text = "40 px, 180deg"
+    }
+    Text Font_Bitmap_Vertical : Painted {
+        AnchorData.AnchoredPosition = (24, -58)
+        AnchorData.SizeDelta = (352, 56)
+        FontSize = 40
+        Text = "Bitmap 0123"
+        TextStyle.FacePaint.Gradient = "linear-gradient(180deg, #FFB300, #C2185B)"
+    }
+
+    Text HorizontalLabel : Note {
+        AnchorData.AnchoredPosition = (400, -40)
+        AnchorData.SizeDelta = (352, 16)
+        Text = "24 px, 90deg"
+    }
+    Text Font_Bitmap_Horizontal : Painted {
+        AnchorData.AnchoredPosition = (400, -58)
+        AnchorData.SizeDelta = (352, 56)
+        FontSize = 24
+        Text = "Hamburgefonstiv 0123"
+        TextStyle.FacePaint.Gradient = "linear-gradient(90deg, #1565C0, #2E7D32)"
+    }
+
+    Text EffectsLabel : Note {
+        AnchorData.AnchoredPosition = (24, -136)
+        AnchorData.SizeDelta = (728, 16)
+        Text = "a painted face over the bitmap font's outline and shadow copies, which stay solid"
+    }
+    Text Font_Bitmap_Effects : Painted {
+        AnchorData.AnchoredPosition = (24, -154)
+        AnchorData.SizeDelta = (728, 64)
+        FontSize = 48
+        Text = "Copies stay solid"
+        TextStyle.FacePaint.Gradient = "linear-gradient(90deg, #FFD60A, #FF375F)"
+        TextStyle.OutlineColor = #1E2230FF
+        TextStyle.OutlineWidth = 0.05
+        TextStyle.UnderlayColor = #00000080
+        TextStyle.UnderlayOffset = (0.06, 0.06)
+    }
+
+    Text RichLabel : Note {
+        AnchorData.AnchoredPosition = (24, -236)
+        AnchorData.SizeDelta = (728, 16)
+        Text = "rich text with an underline, painted"
+    }
+    Text Font_Bitmap_Rich : Painted {
+        AnchorData.AnchoredPosition = (24, -254)
+        AnchorData.SizeDelta = (728, 44)
+        FontSize = 28
+        bRichText = true
+        Text = "a <u>painted underline</u> and <s>a painted strike</s>"
+        TextStyle.FacePaint.Gradient = "linear-gradient(90deg, #E65100, #4A148C)"
+    }
+}

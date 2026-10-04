@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Core/DreamUIBehaviour.h"
+#include "Core/DreamUIInputServices.h"
 #include "DreamUINavigationScope.generated.h"
 
 class UUISelectable;
@@ -40,10 +41,17 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Navigation")
 	bool IsScopeActive()const{ return bIsScopeActive; }
 
+	/** The player this scope belongs to: UserIndex when it names one, else the player who owns the scope's widget (UDreamWidget::GetOwningPlayerIndex). */
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Navigation")
-	int32 GetUserIndex()const{ return UserIndex; }
+	int32 GetUserIndex()const;
+	/** -1: the owning player. */
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Navigation")
 	void SetUserIndex(int32 Value){ UserIndex = Value; }
+	/** What the player's keys and pad do while this is their active scope; see EDreamUIScopeInputMode. */
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Navigation")
+	EDreamUIScopeInputMode GetInputMode()const{ return InputMode; }
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Navigation")
+	void SetInputMode(EDreamUIScopeInputMode Value){ InputMode = Value; }
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Navigation")
 	bool GetConfineNavigation()const{ return bConfineNavigation; }
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Navigation")
@@ -146,9 +154,18 @@ protected:
 	/** Where focus starts. Empty means the first navigable control inside this scope. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DreamGUI-Navigation")
 	TWeakObjectPtr<UUISelectable> DesiredFocusTarget = nullptr;
-	/** Which player's focus this scope governs; matches the event system's user index. */
+	/**
+	 * Which player's focus this scope governs; matches the event system's user index. -1, the default: the player who owns
+	 * the scope's widget, so a screen on player 2's half of a split screen is player 2's without saying so.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DreamGUI-Navigation", meta = (ClampMin = "-1"))
+	int32 UserIndex = -1;
+	/**
+	 * What the player's keys and pad do while this is their active scope: All and Menu keep DreamGUI's navigation, confirm
+	 * and Back; Game turns them off, for a HUD that should not be walked onto during play. See EDreamUIScopeInputMode.
+	 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DreamGUI-Navigation")
-	int32 UserIndex = 0;
+	EDreamUIScopeInputMode InputMode = EDreamUIScopeInputMode::All;
 
 	UPROPERTY(VisibleAnywhere, Category = "DreamGUI-Navigation", AdvancedDisplay)
 	bool bIsScopeActive = false;

@@ -30,10 +30,11 @@ geometry it works in and hands it the parts.
 | `PasswordChar` | `FString` | Text Input | yes | `GetPasswordChar` / `SetPasswordChar` | The character a password field draws. One character; anything longer keeps its first. |
 | `bReadOnly` | `bool` | Text Input | yes | `GetIsReadOnly` / `SetIsReadOnly` | Selectable and copyable, not editable. UMG's IsReadOnly. |
 | `MaxLength` | `int32` | Text Input | yes | `GetMaxLength` / `SetMaxLength` | Longest text the field will hold. 0 means no limit. |
-| `IgnoreKeys` | `TArray<FKey>` | Text Input | yes | `GetIgnoreKeys` / `SetIgnoreKeys` | Keys the field must not swallow -- put navigation keys here, e.g. Tab and the arrows. |
+| `IgnoreKeys` | `TArray<FKey>` | Text Input | yes | `GetIgnoreKeys` / `SetIgnoreKeys` | Keys the field must not swallow while it is edited -- the arrows, say, where the pad's arrows should leave the field. Tab needs no entry: it ends the edit and moves on by itself (see bTabTypesTabCharacter). |
 | `MultiLineSubmitFunctionKeys` | `TArray<FKey>` | Text Input | yes | `GetMultiLineSubmitFunctionKeys` / `SetMultiLineSubmitFunctionKeys` | In multiline mode, Enter with one of these held submits instead of adding a line. |
+| `bTabTypesTabCharacter` | `bool` | Text Input | yes | `GetTabTypesTabCharacter` / `SetTabTypesTabCharacter` | In multiline mode, Tab types a tab character and Ctrl+Tab leaves the field -- a notes or code box. Off, the default, Tab leaves as it does a single-line field: the edit ends and the next control takes the focus, as a browser's textarea does. See UUITextInput::bTabTypesTabCharacter. |
 | `bSelectAllWhenActivateInput` | `bool` | Text Input | yes | `GetSelectAllWhenActivateInput` / `SetSelectAllWhenActivateInput` | Select the whole value when the field starts being edited. UMG's SelectAllTextWhenFocused. |
-| `bAutoActivateInputWhenNavigateIn` | `bool` | Text Input | yes | `GetAutoActivateInputWhenNavigateIn` / `SetAutoActivateInputWhenNavigateIn` | Start editing as soon as gamepad/keyboard navigation lands on the field. |
+| `bAutoActivateInputWhenNavigateIn` | `bool` | Text Input | yes | `GetAutoActivateInputWhenNavigateIn` / `SetAutoActivateInputWhenNavigateIn` | Start editing as soon as the arrows or the pad land on the field. Tab starts it anyway while UDreamGUISettings::bTabStartsTextEdit. |
 | `bSubmitWhenDeactivate` | `bool` | Text Input | yes | `GetSubmitWhenDeactivate` / `SetSubmitWhenDeactivate` | Commit the value when the edit ends without an Enter -- clicking away, navigating away. |
 | `bAllowContextMenu` | `bool` | Text Input | yes | `GetAllowContextMenu` / `SetAllowContextMenu` | The edit menu on right click / long press / the pad's Menu button. UMG's AllowContextMenu. |
 | `bRevertTextOnEscape` | `bool` | Text Input | yes | `GetRevertTextOnEscape` / `SetRevertTextOnEscape` | Escape / Back throws the edit away instead of keeping it -- UMG's RevertTextOnEscape. The text the edit began with is put back (OnTextChanged fires for it) and then committed once -- OnTextCommitted and OnSubmitted carry the restored text, as UMG commits a revert -- and the edit ends. An edit that changed nothing reverts and commits nothing. Off, as UMG's is and as this field behaved before the knob existed. |
@@ -97,6 +98,7 @@ geometry it works in and hands it the parts.
 | `FDreamTextInputStyle GetStyle()` | pure | Get Style |
 | `bool GetSubmitWhenDeactivate()` | pure | Get Submit when Deactivate |
 | `float GetTabSize()` | pure | Get Tab Size |
+| `bool GetTabTypesTabCharacter()` | pure | Get Tab Types Tab Character |
 | `FString GetText()` | pure | Get Text |
 | `EDreamTextFlowDirection GetTextFlowDirection()` | pure | Get Text Flow Direction |
 | `EDreamTextJustify GetTextJustify()` | pure | Get Text Justify |
@@ -138,6 +140,7 @@ geometry it works in and hands it the parts.
 | `void SetStyle(FDreamTextInputStyle InStyle)` | callable | The whole look at once, re-pushed. The style struct is one decision, so it moves as one. |
 | `void SetSubmitWhenDeactivate(bool bInSubmitWhenDeactivate)` | callable | Set Submit when Deactivate |
 | `void SetTabSize(float InTabSize)` | callable | Set Tab Size |
+| `void SetTabTypesTabCharacter(bool bInTabTypesTabCharacter)` | callable | Set Tab Types Tab Character |
 | `void SetText(FString InText)` | callable | Set Text |
 | `void SetTextFlowDirection(EDreamTextFlowDirection InFlowDirection)` | callable | Set Text Flow Direction |
 | `void SetTextJustify(EDreamTextJustify InTextJustify)` | callable | Set Text Justify |
