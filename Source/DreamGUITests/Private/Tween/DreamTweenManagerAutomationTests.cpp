@@ -14,6 +14,8 @@
 #include "DreamTweenerSpring.h"
 #include "Engine/World.h"
 #include "DreamScopedGameInstanceWorld.h"
+#include "HAL/IConsoleManager.h"
+#include "Misc/ScopeExit.h"
 
 /*
  * The tween manager's side of a tween's life: when it is let go of, what a callback may still do to it on the
@@ -472,6 +474,69 @@ bool FDreamTweenManagerSmallFixesTest::RunTest(const FString& Parameters)
 	Manager->ManualTick(-1.0f);
 	TestEqual(TEXT("A negative step moves nothing back"), *Value.Value, 0.25f, 0.001f);
 	Sequence->Kill();
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamTweenManagerMaxStepTest,
+	"DreamGUI.Tween.Manager.AFrameLongerThanTheMaxStepMovesTheTweensByTheMaxStepOnly",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamTweenManagerMaxStepTest::RunTest(const FString& Parameters)
+{
+	/*
+	 * DreamTween.MaxStepSeconds: a frame that took longer -- a screen loading its assets, the first draw of new text --
+	 * carried every tween through that whole time at once, so an entrance started just before it appeared at its end.
+	 * Capped, a long frame moves the tweens the world ticks by the cap only; a manual tick is its caller's step.
+	 */
+	using namespace DreamTweenManagerTestLocal;
+	IConsoleVariable* MaxStep = IConsoleManager::Get().FindConsoleVariable(TEXT("DreamTween.MaxStepSeconds"));
+	if (!TestNotNull(TEXT("DreamTween.MaxStepSeconds exists"), MaxStep))
+	{
+		return false;
+	}
+	const float SavedMaxStep = MaxStep->GetFloat();
+	ON_SCOPE_EXIT
+	{
+		MaxStep->Set(SavedMaxStep, ECVF_SetByCode);
+	};
+	DreamTests::FScopedGameInstanceWorld TestWorld;
+	UWorld* World = TestWorld.World;
+	UDreamTweenManager* Manager = UDreamTweenManager::GetDreamTweenInstance(World);
+	if (!TestNotNull(TEXT("The world has a tween manager"), Manager))
+	{
+		return false;
+	}
+	FTweenedFloat Value;
+	UDreamTweener* Tween = UDreamTweenManager::To(World, Value.Getter(), Value.Setter(), 1.0f, 1.0f);
+	FTweenedFloat ManualValue;
+	UDreamTweener* Manual = MakeManualTween(World, ManualValue, 1.0f, 1.0f);
+	if (!TestNotNull(TEXT("A tween on the default tick group"), Tween) || !TestNotNull(TEXT("A tween on Manual tick"), Manual))
+	{
+		return false;
+	}
+	Tween->SetEase(EDreamTweenEase::Linear);
+
+	// Off, which is the default: a long frame moves the tween by all of it.
+	MaxStep->Set(0.0f, ECVF_SetByCode);
+	World->DeltaTimeSeconds = 0.3f;
+	World->DeltaRealTimeSeconds = 0.3f;
+	Manager->Tick(EDreamTweenTickType::DuringPhysics, 0.3f);
+	TestEqual(TEXT("With no cap a 0.3 s frame moves the tween 0.3 s"), *Value.Value, 0.3f, 0.001f);
+
+	// On: a frame longer than the cap moves it by the cap, a shorter one by itself.
+	MaxStep->Set(0.05f, ECVF_SetByCode);
+	Manager->Tick(EDreamTweenTickType::DuringPhysics, 0.3f);
+	TestEqual(TEXT("A 0.3 s frame under a 0.05 s cap moves the tween 0.05 s"), *Value.Value, 0.35f, 0.001f);
+	World->DeltaTimeSeconds = 0.02f;
+	World->DeltaRealTimeSeconds = 0.02f;
+	Manager->Tick(EDreamTweenTickType::DuringPhysics, 0.02f);
+	TestEqual(TEXT("and a 0.02 s frame its own 0.02 s"), *Value.Value, 0.37f, 0.001f);
+
+	Manager->ManualTick(0.3f);
+	TestEqual(TEXT("A manual tick is never capped"), *ManualValue.Value, 0.3f, 0.001f);
+	Tween->Kill();
+	Manual->Kill();
 	return true;
 }
 

@@ -13,6 +13,10 @@ the next -- what loads differently, which defaults moved, what C++ has to change
   control takes the ring away instead of leaving it on the control it came from, and a screen whose controls all
   refuse it never makes one. An unset `NavigationSelectionClass` now means no ring anywhere, without a warning at
   every focus change.
+- **A cap on how far one frame moves the tweens.** `DreamTween.MaxStepSeconds` (console variable, 0 = off, the
+  default): a frame longer than it -- a screen loading its assets, the first draw of new text -- moves the tweens the
+  world ticks by the cap only, so an entrance started just before such a hitch plays on from where it was instead of
+  appearing at its end. Manual ticks are never capped.
 
 ### Fixed
 
