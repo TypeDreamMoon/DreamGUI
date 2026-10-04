@@ -63,8 +63,11 @@ void SDreamWidgetDesignerDetails::Construct(const FArguments& Args, UWorld* InWo
 	}
 	else
 	{
-		//if open in WidgetInspector then sync selection by DreamUISelection
-		UDreamUISelection::GetInstance(World.Get())->OnSelectionChanged.AddRaw(this, &SDreamWidgetDesignerDetails::OnEditorSelectionChanged);
+		//if open in WidgetInspector then sync selection by DreamUISelection (none in a world that runs no UI manager)
+		if (UDreamUISelection* InspectorSelection = UDreamUISelection::GetInstance(World.Get()))
+		{
+			InspectorSelection->OnSelectionChanged.AddRaw(this, &SDreamWidgetDesignerDetails::OnEditorSelectionChanged);
+		}
 	}
 
     FPropertyEditorModule& PropPlugin = FModuleManager::LoadModuleChecked<FPropertyEditorModule>("PropertyEditor");

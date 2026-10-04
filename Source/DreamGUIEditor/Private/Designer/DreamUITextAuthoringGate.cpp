@@ -14,6 +14,7 @@
 #include "Core/Components/DreamVisual.h"
 #include "Core/Components/DreamWidget.h"
 #include "Core/Components/DreamWidgetSubObjectBehaviour.h"
+#include "DetailCustomization/PropertyType/DreamGradientCustomization.h"
 #include "Text/DreamUIPaths.h"
 #include "Text/DreamUIReflectionPolicy.h"
 
@@ -625,7 +626,15 @@ namespace DreamUITextAuthoring
 
 	bool IsCustomRowReadOnly(const UObject* InOwner, const FName InRowName, const FName InCategoryName)
 	{
-		(void)InRowName;
+		// A gradient's CSS box and stop editor write the gradient through its property handle, as the property rows beside
+		// them do: whether that may happen is the gradient property's own question, which those rows ask this gate
+		// themselves, with the gradient's chain, for their enabled state (DreamGradientCustomization.cpp) -- a child row is
+		// not greyed out with its parent's. Judged by their category here, they would be refused on every text-authored
+		// widget even where the gradient itself has a spelling and is live.
+		if (InRowName == DreamGradientDetails::CssRowTag || InRowName == DreamGradientDetails::StopsRowTag)
+		{
+			return false;
+		}
 		if (!IsValid(InOwner))
 		{
 			return false;

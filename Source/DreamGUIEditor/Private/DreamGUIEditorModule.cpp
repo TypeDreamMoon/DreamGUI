@@ -31,6 +31,7 @@
 #include "Thumbnail/DreamUISpriteThumbnailRenderer.h"
 #include "Thumbnail/DreamWidgetBlueprintThumbnailRenderer.h"
 #include "Thumbnail/DreamUISpriteDataBaseObjectThumbnailRenderer.h"
+#include "Thumbnail/DreamGradientThumbnailRenderer.h"
 #include "ContentBrowserExtensions/DreamUIContentBrowserExtensions.h"
 #include "Window/DreamUIDynamicSpriteAtlasViewer.h"
 
@@ -42,6 +43,7 @@
 #include "AssetTypeActions/AssetTypeActions_DreamUIRichTextCustomStyleData.h"
 #include "AssetTypeActions/AssetTypeActions_DreamUIRichTextImageData.h"
 #include "AssetTypeActions/AssetTypeActions_DreamUIFontData_DistanceField.h"
+#include "AssetTypeActions/AssetTypeActions_DreamGradientAsset.h"
 
 #include "DetailCustomization/DreamWidgetCustomization.h"
 #include "DetailCustomization/DreamVisualCustomization.h"
@@ -57,6 +59,8 @@
 #include "DetailCustomization/DreamUIStaticSpriteAtlasDataCustomization.h"
 #include "DetailCustomization/DreamUIFontData_FreeTypeRenderCustomization.h"
 #include "DetailCustomization/PropertyType/DreamUIFontFallbackCustomization.h"
+#include "DetailCustomization/PropertyType/DreamGradientCustomization.h"
+#include "DetailCustomization/PropertyType/DreamUIRichTextCustomStyleItemCustomization.h"
 #include "Controls/DreamUIControl.h"
 #include "DetailCustomization/DreamUIControlCustomization.h"
 #include "DetailCustomization/UISelectableCustomization.h"
@@ -86,6 +90,8 @@
 
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "AssetTypeActions/AssetTypeActions_DreamUIFontEmojiData.h"
+#include "Core/DreamGradientAsset.h"
+#include "Core/DreamUIRichTextCustomStyleData.h"
 #include "Core/DreamUIFontData_FreeTypeRender.h"
 #include "Core/DreamUIFontEmojiData.h"
 #include "Core/DreamUIImageBrush.h"
@@ -248,7 +254,10 @@ void FDreamGUIEditorModule::StartupModule()
 		PropertyModule.RegisterCustomClassLayout(UDreamUIStaticSpriteAtlasData::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FDreamUIStaticSpriteAtlasDataCustomization::MakeInstance));
 		PropertyModule.RegisterCustomClassLayout(UDreamUIFontData_FreeTypeRender::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FDreamUIFontData_FreeTypeRenderCustomization::MakeInstance));
 		PropertyModule.RegisterCustomPropertyTypeLayout(FDreamUIFontFallback::StaticStruct()->GetFName(), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&FDreamUIFontFallbackCustomization::MakeInstance));
-		
+		// A text's paints, a gradient asset and a custom style's paint all show their gradients through this one.
+		PropertyModule.RegisterCustomPropertyTypeLayout(FDreamGradient::StaticStruct()->GetFName(), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&FDreamGradientCustomization::MakeInstance));
+		PropertyModule.RegisterCustomPropertyTypeLayout(FDreamUIRichTextCustomStyleItemData::StaticStruct()->GetFName(), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&FDreamUIRichTextCustomStyleItemCustomization::MakeInstance));
+
 		PropertyModule.RegisterCustomClassLayout(UUISelectable::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FUISelectableCustomization::MakeInstance));
 		PropertyModule.RegisterCustomClassLayout(UUIToggle::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FUIToggleCustomization::MakeInstance));
 		PropertyModule.RegisterCustomClassLayout(UUITextInput::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FUITextInputCustomization::MakeInstance));
@@ -331,6 +340,7 @@ void FDreamGUIEditorModule::StartupModule()
 		TSharedPtr<FAssetTypeActions_Base> RichTextImageDataAction = MakeShareable(new FAssetTypeActions_DreamUIRichTextImageData(DreamUIAssetCategoryBit));
 		TSharedPtr<FAssetTypeActions_Base> FontEmojiDataAction = MakeShareable(new FAssetTypeActions_DreamUIFontEmojiData(DreamUIAssetCategoryBit));
 		TSharedPtr<FAssetTypeActions_Base> DistanceFieldFontDataTypeAction = MakeShareable(new FAssetTypeActions_DreamUIFontData_DistanceField(DreamUIAssetCategoryBit));
+		TSharedPtr<FAssetTypeActions_Base> GradientAssetAction = MakeShareable(new FAssetTypeActions_DreamGradientAsset(DreamUIAssetCategoryBit));
 		AssetTools.RegisterAssetTypeActions(SpriteDataAction.ToSharedRef());
 		AssetTools.RegisterAssetTypeActions(StaticSpriteAtlasDataAction.ToSharedRef());
 		AssetTools.RegisterAssetTypeActions(BitmapFontDataAction.ToSharedRef());
@@ -341,6 +351,7 @@ void FDreamGUIEditorModule::StartupModule()
 		AssetTools.RegisterAssetTypeActions(RichTextImageDataAction.ToSharedRef());
 		AssetTools.RegisterAssetTypeActions(FontEmojiDataAction.ToSharedRef());
 		AssetTools.RegisterAssetTypeActions(DistanceFieldFontDataTypeAction.ToSharedRef());
+		AssetTools.RegisterAssetTypeActions(GradientAssetAction.ToSharedRef());
 		AssetTypeActionsArray.Add(SpriteDataAction);
 		AssetTypeActionsArray.Add(StaticSpriteAtlasDataAction);
 		AssetTypeActionsArray.Add(BitmapFontDataAction);
@@ -351,6 +362,7 @@ void FDreamGUIEditorModule::StartupModule()
 		AssetTypeActionsArray.Add(RichTextImageDataAction);
 		AssetTypeActionsArray.Add(FontEmojiDataAction);
 		AssetTypeActionsArray.Add(DistanceFieldFontDataTypeAction);
+		AssetTypeActionsArray.Add(GradientAssetAction);
 	}
 	//register Thumbnail
 	{
@@ -360,6 +372,8 @@ void FDreamGUIEditorModule::StartupModule()
 		// in the browser was the same generic Blueprint icon, so a folder of screens was a column of
 		// identical tiles with only the names to tell them apart.
 		UThumbnailManager::Get().RegisterCustomRenderer(UDreamWidgetBlueprint::StaticClass(), UDreamWidgetBlueprintThumbnailRenderer::StaticClass());
+		// The gradient itself, as it paints a square, so a folder of gradient assets reads as their colours.
+		UThumbnailManager::Get().RegisterCustomRenderer(UDreamGradientAsset::StaticClass(), UDreamGradientThumbnailRenderer::StaticClass());
 	}
 	//register right mouse button in content browser
 	{
@@ -507,6 +521,8 @@ void FDreamGUIEditorModule::ShutdownModule()
 		PropertyModule.UnregisterCustomClassLayout(UDreamUIStaticSpriteAtlasData::StaticClass()->GetFName());
 		PropertyModule.UnregisterCustomClassLayout(UDreamUIFontData_FreeTypeRender::StaticClass()->GetFName());
 		PropertyModule.UnregisterCustomPropertyTypeLayout(FDreamUIFontFallback::StaticStruct()->GetFName());
+		PropertyModule.UnregisterCustomPropertyTypeLayout(FDreamGradient::StaticStruct()->GetFName());
+		PropertyModule.UnregisterCustomPropertyTypeLayout(FDreamUIRichTextCustomStyleItemData::StaticStruct()->GetFName());
 
 		PropertyModule.UnregisterCustomClassLayout(UUISelectable::StaticClass()->GetFName());
 		PropertyModule.UnregisterCustomClassLayout(UUIToggle::StaticClass()->GetFName());
@@ -579,6 +595,7 @@ void FDreamGUIEditorModule::ShutdownModule()
 		UThumbnailManager::Get().UnregisterCustomRenderer(UDreamUISpriteData::StaticClass());
 		UThumbnailManager::Get().UnregisterCustomRenderer(UDreamUISpriteData_BaseObject::StaticClass());
 		UThumbnailManager::Get().UnregisterCustomRenderer(UDreamWidgetBlueprint::StaticClass());
+		UThumbnailManager::Get().UnregisterCustomRenderer(UDreamGradientAsset::StaticClass());
 	}
 	//unregister right mouse button in content browser
 	{
