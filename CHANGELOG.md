@@ -29,6 +29,10 @@ the next -- what loads differently, which defaults moved, what C++ has to change
   fade-in of a ring shown a moment before among them, so a second key press inside a quarter second -- or the same
   focus arriving as a select and then a navigation enter -- left the ring at the opacity the fade had reached. Moving
   now finishes the fade.
+- **Focus moved by code leaves the control it came from.** `SetFocus` moves the navigation cursor with the focus, but
+  the control it left heard no exit until the next navigation step, so it went on drawing itself Focused -- and
+  answering Focused to `GetCurrentSelectionState` -- beside the control that had the focus, through a screen opening a
+  sub-list or a dialog and through being hidden and shown again. A deselect now ends the navigation's hold on it.
 
 ## 2.1.0
 

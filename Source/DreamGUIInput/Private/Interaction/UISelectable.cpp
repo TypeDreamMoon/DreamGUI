@@ -684,6 +684,15 @@ bool UUISelectable::OnPointerSelect_Implementation(UDreamBaseEventData* EventDat
 bool UUISelectable::OnPointerDeselect_Implementation(UDreamBaseEventData* EventData)
 {
 	bIsSelected = false;
+	// The navigation cursor leaves with the focus. A key step sends this control its exit before the deselect; focus moved
+	// by code (UDreamUIInputServices::SetFocus, a screen opening a sub-list) or taken from a hidden control moves the cursor
+	// with no exit until the next step, and until then this control went on drawing -- and answering -- Focused beside the
+	// control that had the focus.
+	if (bIsEnteredByNavigation)
+	{
+		bIsPointerInsideThis = false;
+		bIsEnteredByNavigation = false;
+	}
 	CurrentSelectionState = GetSelectionState();
 	ApplyPointerSelectionState(false);
 	if (!IsFocused())
