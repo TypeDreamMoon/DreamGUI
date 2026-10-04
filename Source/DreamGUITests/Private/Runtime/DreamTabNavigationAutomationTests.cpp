@@ -791,6 +791,60 @@ bool FDreamTabNavigationRingFitsAndStaysOffTest::RunTest(const FString& Paramete
 }
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamTabNavigationScriptFocusLeavesTest,
+	"DreamGUI.Navigation.Focus.FocusMovedByCodeLeavesTheControlItCameFromUnfocused",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamTabNavigationScriptFocusLeavesTest::RunTest(const FString& Parameters)
+{
+	/*
+	 * Code moves the focus -- a screen opening a sub-list or a dialog does -- and the navigation cursor goes with it
+	 * (UDreamUIInputServices::SetFocus). The control the cursor left heard no exit until the next navigation step, so it
+	 * went on drawing itself Focused, and answering Focused, beside the control that had the focus.
+	 */
+	using namespace DreamTabNavigationTestLocal;
+	FTabSettingsGuard Settings;
+	FDreamDriverRig Rig = FDreamDriverRig::Headless(ViewportSize);
+	Rig.BindTest(this);
+	if (!TestTrue(TEXT("The rig came up"), Rig.IsUsable()))
+	{
+		return false;
+	}
+	UDreamButton* First = PlaceButton(*this, Rig, TEXT("First"), nullptr, FVector2D(-200.0, 0.0));
+	UDreamButton* Second = PlaceButton(*this, Rig, TEXT("Second"), nullptr, FVector2D(200.0, 0.0));
+	if (First == nullptr || Second == nullptr)
+	{
+		return false;
+	}
+	Rig.PumpFrames(1);
+	const TArray<UDreamButton*> Buttons = { First, Second };
+	UUIButton* FirstBehaviour = First->ButtonBehaviour.Get();
+	UUIButton* SecondBehaviour = Second->ButtonBehaviour.Get();
+
+	TestEqual(TEXT("Tab focuses the first button"), PressTab(*this, Rig, Buttons, 1, false), TEXT("First"));
+	TestEqual(TEXT("which draws its focus"), FirstBehaviour->GetCurrentSelectionState(), EUISelectableSelectionState::Focused);
+
+	TestTrue(TEXT("code can focus the second button"), Second->FaceNode->SetFocus(0));
+	Rig.PumpFrames(1);
+	TestEqual(TEXT("the focus is on the second button"), FocusedName(Rig, Buttons), TEXT("Second"));
+	TestEqual(TEXT("which draws its focus"), SecondBehaviour->GetCurrentSelectionState(), EUISelectableSelectionState::Focused);
+	TestEqual(TEXT("and the first button no longer does"), FirstBehaviour->GetCurrentSelectionState(), EUISelectableSelectionState::Normal);
+
+	// Hidden and shown again before any key is pressed, it still does not.
+	First->SetVisibility(EDreamWidgetVisibility::Collapsed);
+	Rig.PumpFrames(1);
+	First->SetVisibility(EDreamWidgetVisibility::Visible);
+	Rig.PumpFrames(1);
+	TestEqual(TEXT("shown again, the first button draws no focus"), FirstBehaviour->GetCurrentSelectionState(), EUISelectableSelectionState::Normal);
+
+	// The next key step starts from the focus the code gave.
+	TestEqual(TEXT("Shift+Tab steps back from where code put the focus"), PressTab(*this, Rig, Buttons, 1, true), TEXT("First"));
+	TestEqual(TEXT("and the first button draws its focus again"), FirstBehaviour->GetCurrentSelectionState(), EUISelectableSelectionState::Focused);
+	TestEqual(TEXT("while the second does not"), SecondBehaviour->GetCurrentSelectionState(), EUISelectableSelectionState::Normal);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamTabNavigationScrollBoxTest,
 	"DreamGUI.Navigation.Scroll.AFocusedScrollBoxScrollsItselfByPageDownAndTheStick",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
