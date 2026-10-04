@@ -80,8 +80,9 @@ protected:
 	UPROPERTY(VisibleAnywhere, Transient, Category = DreamGUI, AdvancedDisplay) TWeakObjectPtr<UDreamCanvas> TargetCanvas = nullptr;
 	UPROPERTY(VisibleAnywhere, Transient, Category = DreamGUI, AdvancedDisplay) TObjectPtr<UActorComponent> LineTraceSource = nullptr;
 	/**
-	 * Find the source component on this actor and the canvas it shows, once. False, with an error in the log, when
-	 * the actor has no source or the source no canvas.
+	 * Find the source component on this actor, once, and the canvas it shows now -- asked on every call, since the
+	 * source can be handed another canvas at any time. False, with an error in the log, when the actor has no source
+	 * or the source no canvas.
 	 */
 	bool ResolveSource();
 	/** The error for a missing source or canvas is logged once, not once per pointer per frame. */

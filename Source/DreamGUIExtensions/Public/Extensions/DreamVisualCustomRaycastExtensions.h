@@ -5,22 +5,6 @@
 #include "Core/Components/DreamVisual.h"
 #include "DreamVisualCustomRaycastExtensions.generated.h"
 
-#if 0
-/**
- * Raycast hit test in circle area.
- */
-UCLASS(ClassGroup = (DreamGUI), BlueprintType)
-class DREAMGUIEXTENSIONS_API UUIRenderableCustomRaycast_Circle : public UUIRenderableCustomRaycast
-{
-	GENERATED_BODY()
-protected:
-	UPROPERTY(EditAnywhere, Category = "DreamGUI", meta = (UIMin = "0.0", UIMax = "1.0"))
-		float RadiusRange = 1.0f;
-public:
-	virtual bool Raycast(UUIBaseRenderable* InUIRenderable, const FVector& InLocalSpaceRayStart, const FVector& InLocalSpaceRayEnd, FVector& OutHitPoint, FVector& OutHitNormal)override;
-};
-#endif
-
 /**
  * Raycast hit test in visible pixel.
  * Only support UI element type which can read pixel value from texture:

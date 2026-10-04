@@ -100,8 +100,18 @@ namespace DreamLyricsLocal
 
 	struct FXmlReader
 	{
+		/**
+		 * How deep elements may nest. Real TTML goes a handful of levels (tt, body, div, p, span, a span inside that);
+		 * every level is a frame of ReadElement's recursion and of every walk over the tree afterwards (InnerText,
+		 * FindDescendant, CollectDescendants, the tree's own destruction), so a broken or hostile file nested a few
+		 * hundred thousand deep ran the stack out instead of failing to parse.
+		 */
+		static constexpr int32 MaxElementDepth = 256;
+
 		const FString& Source;
 		int32 Pos = 0;
+		/** How many elements ReadElement is inside of; see MaxElementDepth. */
+		int32 Depth = 0;
 		FString Error;
 
 		explicit FXmlReader(const FString& InSource) : Source(InSource) {}
@@ -160,6 +170,8 @@ namespace DreamLyricsLocal
 		TSharedPtr<FXmlElement> ReadElement()
 		{
 			if (AtEnd() || Source[Pos] != TEXT('<')) { Error = TEXT("expected '<'"); return nullptr; }
+			if (Depth >= MaxElementDepth) { Error = FString::Printf(TEXT("elements nested deeper than %d"), MaxElementDepth); return nullptr; }
+			TGuardValue<int32> DepthGuard(Depth, Depth + 1);
 			Pos++;
 			TSharedPtr<FXmlElement> Element = MakeShared<FXmlElement>();
 			Element->Tag = ReadName();

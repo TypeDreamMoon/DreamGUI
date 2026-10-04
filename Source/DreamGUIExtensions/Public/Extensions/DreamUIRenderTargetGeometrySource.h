@@ -64,6 +64,12 @@ private:
 		bool bFlipVerticalOnGLES = true;
 	mutable TWeakObjectPtr<class UStaticMeshComponent> StaticMeshComp = nullptr;
 	mutable TWeakObjectPtr<class UDreamCanvas> TargetCanvasObject = nullptr;
+	/**
+	 * GetCanvas has said why the named presenter's canvas will not do. Said once until a canvas is found again:
+	 * the render-target poll and the interaction ask on every frame and every pointer, and repeated the warning
+	 * at that rate.
+	 */
+	mutable bool bReportedCanvasProblem = false;
 
 
 	/** The body setup of the displayed quad */

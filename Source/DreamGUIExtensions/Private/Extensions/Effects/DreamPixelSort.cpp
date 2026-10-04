@@ -245,6 +245,8 @@ void UDreamPixelSort::SetSortStrength(float Value)
 }
 void UDreamPixelSort::SetMaxSortPasses(int32 Value)
 {
+	// The range the property's own metadata declares, which the details panel kept to and this did not.
+	Value = FMath::Clamp(Value, 1, 512);
 	if (MaxSortPasses != Value) { MaxSortPasses = Value; SendOthersDataToRenderProxy(); }
 }
 void UDreamPixelSort::SetThresholdMin(float Value)

@@ -201,8 +201,10 @@ void UDream2DLineRendererBase::Update2DLineRendererBaseVertex(FDreamUIGeometry& 
 				capSize = Brush.ImageSize.Y * 0.5f;
 				spriteWidth = Brush.ImageSize.X * 0.5f;
 			}
-			
-			if (bEndCapSizeAffectByLineWidth)
+
+			// A brush with no width gives nothing to scale against; the cap keeps its own size rather than
+			// dividing by zero into every cap vertex.
+			if (bEndCapSizeAffectByLineWidth && spriteWidth > KINDA_SMALL_NUMBER)
 			{
 				capSize *= LineWidth / spriteWidth;
 			}
@@ -290,7 +292,8 @@ void UDream2DLineRendererBase::Update2DLineRendererBaseVertex(FDreamUIGeometry& 
 					capSize = Brush.ImageSize.Y * 0.5f;
 					spriteWidth = Brush.ImageSize.X * 0.5f;
 				}
-				if (bEndCapSizeAffectByLineWidth)
+				// See the start cap: no width, no scaling.
+				if (bEndCapSizeAffectByLineWidth && spriteWidth > KINDA_SMALL_NUMBER)
 				{
 					capSize *= LineWidth / spriteWidth;
 				}
@@ -459,6 +462,17 @@ void UDream2DLineRendererBase::OnUpdateGeometry(FDreamUIGeometry& InGeo, bool In
 void UDream2DLineRendererBase::OnBeforeCreateOrUpdateGeometry()
 {
 	CalculatePoints();
+	// A new number of points is a new strip: the triangles, UVs and colours were written for the old count, and
+	// OnUpdateGeometry resizes the arrays to the new one without touching memory it is not told is dirty. A child
+	// added to or taken from a children-as-points line marked only its positions dirty, so the old indices stayed
+	// -- with ConnectStartAndEnd, ones past the new last vertex, which a mesh raycast then read past -- and the
+	// new vertices drew with no colour and no UV.
+	const int32 PointCount = GetCalcaultedPointArray().Num();
+	if (PointCount != LastGeometryPointCount)
+	{
+		LastGeometryPointCount = PointCount;
+		MarkVerticesDirty(true, true, true, true);
+	}
 }
 
 FVector2D UDream2DLineRendererBase::GetStartPointTangentDirection()

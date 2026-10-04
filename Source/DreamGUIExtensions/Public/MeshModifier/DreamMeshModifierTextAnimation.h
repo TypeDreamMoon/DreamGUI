@@ -3,6 +3,7 @@
 #pragma once
 
 #include "MeshModifier/DreamMeshModifierBase.h"
+#include "Core/DreamUITextData.h"
 #include "DreamMeshModifierTextAnimation.generated.h"
 
 struct FDreamMeshModifierTextAnimation_SelectResult
@@ -50,10 +51,27 @@ class DREAMGUIEXTENSIONS_API UDreamMeshModifierTextAnimation_Property : public U
 protected:
 	UDreamText* GetDreamText();
 	void MarkUITextPositionDirty();
+	/**
+	 * Whether a painted character's vertices are there to read among InVertexCount. A glyph still on its way from
+	 * the rasterizer is counted as painted with no vertices of its own, at a StartVertIndex one past the last vertex
+	 * when it is the last character; a rotation or scale averaged its "centre" from the vertex past the end.
+	 */
+	static bool CanReadCharVertices(const FDreamUITextCharProperty& InChar, int32 InVertexCount);
 public:
 	virtual void Init() {};
 	virtual void Deinit() {};
-	virtual void ApplyProperty(UDreamText* InUIText, const FDreamMeshModifierTextAnimation_SelectResult& InSelection, FDreamUIGeometry* InGeometry) PURE_VIRTUAL(UUIEffectTextAnimation_Property::ApplyEffect, );
+	/** Applies this property to InUIText's painted characters: ApplyPropertyToCharacters over GetCharPropertyArray. */
+	virtual void ApplyProperty(UDreamText* InUIText, const FDreamMeshModifierTextAnimation_SelectResult& InSelection, FDreamUIGeometry* InGeometry);
+	/**
+	 * The work of ApplyProperty over a character list handed in, which is where the built-in properties do it: the
+	 * per-character work is then reachable with any characters at all, a character with no vertices among them,
+	 * without a text to paint them.
+	 *
+	 * A property moves and colours the painter's quads and does nothing else to them: the texture coordinates stay
+	 * as painted, UV2.x (the quad's code and paint slot) and UV4 (its place in its gradient's box) included, so a
+	 * painted gradient follows each glyph and the property's colours multiply it.
+	 */
+	virtual void ApplyPropertyToCharacters(const TArray<FDreamUITextCharProperty>& InCharProperties, const FDreamMeshModifierTextAnimation_SelectResult& InSelection, FDreamUIGeometry* InGeometry) {}
 };
 
 //per character animation control for DreamText
@@ -114,8 +132,10 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
 		void SetSelector(UDreamMeshModifierTextAnimation_Selector* Value);
+	/** Replaces the properties. Registered, the ones going out are wound down and the ones coming in started, as on unregister and register. */
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
 		void SetProperties(const TArray<UDreamMeshModifierTextAnimation_Property*>& Value);
+	/** Replaces one property, winding the old one down and starting the new one when registered; see SetProperties. */
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
 		void SetProperty(int Index, UDreamMeshModifierTextAnimation_Property* Value);
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI")

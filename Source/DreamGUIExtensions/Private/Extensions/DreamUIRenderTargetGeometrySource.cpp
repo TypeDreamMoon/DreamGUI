@@ -192,9 +192,11 @@ public:
 			RHICmdList.UnlockBuffer(VertexBuffer.TexCoordVertexBuffer.VertexBufferRHI);
 		}
 
-		// Lock index buffer
-		auto IndexBufferData = RHICmdList.LockBuffer(Section->IndexBuffer.IndexBufferRHI, 0, NumIndex, RLM_WriteOnly);
-		FMemory::Memcpy(IndexBufferData, (void*)MeshIndexData, NumIndex);
+		// Lock index buffer. NumIndex counts indices, and each is two bytes: locking and copying NumIndex bytes
+		// wrote only the first half of the buffer.
+		const uint32 IndexBytes = static_cast<uint32>(NumIndex) * sizeof(uint16);
+		auto IndexBufferData = RHICmdList.LockBuffer(Section->IndexBuffer.IndexBufferRHI, 0, IndexBytes, RLM_WriteOnly);
+		FMemory::Memcpy(IndexBufferData, (void*)MeshIndexData, IndexBytes);
 		RHICmdList.UnlockBuffer(Section->IndexBuffer.IndexBufferRHI);
 
 #if RHI_RAYTRACING
@@ -516,20 +518,12 @@ bool UDreamUIRenderTargetGeometrySource::CheckStaticMesh()const
 			{
 				if (MaterialInstance != nullptr)//already called UpdateMaterialInstance, so we need to manually set material to static mesh
 				{
-					if (bOverrideStaticMeshMaterial)
+					// Only in a game world. In the editor the static mesh component is the user's own, saved with the
+					// level, and slot 0 is part of what they authored: the instance put there is transient, so saving
+					// wrote null over their override, and nothing put the original back when the mode, the flag or this
+					// component changed. A game world's component is a copy, and the instance goes with it.
+					if (bOverrideStaticMeshMaterial && DreamUI::IsGameWorld(this))
 					{
-#if WITH_EDITOR
-						if (!DreamUI::IsGameWorld(this))
-						{
-							DreamUI::DeferToLaterTick([WeakThis = TWeakObjectPtr<const UDreamUIRenderTargetGeometrySource>(this)] {
-								if (WeakThis.IsValid() && WeakThis->StaticMeshComp.IsValid())
-								{
-									WeakThis->StaticMeshComp->SetMaterial(0, WeakThis->MaterialInstance);
-								}
-								}, 1);
-						}
-						else
-#endif
 						//delay call, or the bPostTickComponentUpdate check will break.
 						//A frame is long enough for this component to be torn down, so the callback holds a weak
 						//reference rather than a bare this. And there is no return value to dereference: DelayFrameCall
@@ -652,12 +646,15 @@ FBoxSphereBounds UDreamUIRenderTargetGeometrySource::CalcBounds(const FTransform
 {
 	auto RenderTargetSize = GetRenderTargetSize();
 	const float Width = ComputeComponentWidth();
-		const float Height = ComputeComponentHeight();
-		const float Thickness = ComputeComponentThickness();
-		const FVector Origin = FVector(
-			Thickness * 0.5f,
-			Width * (0.5f - Pivot.X),
-			Height * (0.5f - Pivot.Y));
+	const float Height = ComputeComponentHeight();
+	const float Thickness = ComputeComponentThickness();
+	// A negative arc bends the surface the other way (UpdateMeshData lays the vertices on -X), so the box sits on
+	// that side; its extent stays positive either way.
+	const float ThicknessSide = (GeometryMode == EDreamUIRenderTargetGeometryMode::Cylinder && CylinderArcAngle < 0.0f) ? -1.0f : 1.0f;
+	const FVector Origin = FVector(
+		ThicknessSide * Thickness * 0.5f,
+		Width * (0.5f - Pivot.X),
+		Height * (0.5f - Pivot.Y));
 	auto BoxExtent = FVector(Thickness * 0.5f, Width * 0.5f, Height * 0.5f);
 
 	FBoxSphereBounds NewBounds(Origin, BoxExtent, RenderTargetSize.Size() / 2.0f);
@@ -1029,7 +1026,8 @@ void UDreamUIRenderTargetGeometrySource::PostEditChangeProperty(FPropertyChanged
 		auto PropertyName = Property->GetName();
 		if (PropertyName == GET_MEMBER_NAME_STRING_CHECKED(UDreamUIRenderTargetGeometrySource, CylinderArcAngle))
 		{
-			CylinderArcAngle = FMath::Sign(CylinderArcAngle) * FMath::Clamp(FMath::Abs(CylinderArcAngle), 1.0f, 180.0f);
+			// Signed, with 0 taken as the smallest positive arc: Sign(0) is 0, and an arc of 0 divided the width by it.
+			CylinderArcAngle = (CylinderArcAngle < 0.0f ? -1.0f : 1.0f) * FMath::Clamp(FMath::Abs(CylinderArcAngle), 1.0f, 180.0f);
 		}
 		else if (PropertyName == GET_MEMBER_NAME_STRING_CHECKED(UDreamUIRenderTargetGeometrySource, TargetWidgetPresenter))
 		{
@@ -1060,28 +1058,38 @@ UDreamCanvas* UDreamUIRenderTargetGeometrySource::GetCanvas()const
 		// to warn about; a presenter that is named but will not do, below, is.
 		return nullptr;
 	}
+	// Each reason is said once, until a canvas is found again; see bReportedCanvasProblem.
+	const auto ReportCanvasProblem = [this](const TCHAR* InProblem)
+	{
+		if (!bReportedCanvasProblem)
+		{
+			bReportedCanvasProblem = true;
+			UE_LOG(DreamGUI, Warning, TEXT("[UDreamUIRenderTargetGeometrySource::GetCanvas] %s: %s"), *GetPathName(), InProblem);
+		}
+	};
 	auto WidgetPresenter = TargetWidgetPresenter.GetComponent<UDreamWidgetPresenterComponentBase>();
 	if (WidgetPresenter == nullptr)
 	{
-		UE_LOG(DreamGUI, Warning, TEXT("[%s].%d TargetWidgetPresenter not valid!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
+		ReportCanvasProblem(TEXT("TargetWidgetPresenter not valid!"));
 		return nullptr;
 	}
 	auto Canvas = WidgetPresenter->GetLoadedCanvas();
 	if (Canvas == nullptr)
 	{
-		UE_LOG(DreamGUI, Warning, TEXT("[%s].%d TargetCanvas not valid!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
+		ReportCanvasProblem(TEXT("TargetCanvas not valid!"));
 		return nullptr;
 	}
 	if (!Canvas->IsRootCanvas())
 	{
-		UE_LOG(DreamGUI, Warning, TEXT("[%s].%d TargetCanvas must be a root canvas!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
+		ReportCanvasProblem(TEXT("TargetCanvas must be a root canvas!"));
 		return nullptr;
 	}
 	if (Canvas->GetRenderMode() != EDreamRenderMode::RenderTarget || !IsValid(Canvas->GetRenderTarget()))
 	{
-		UE_LOG(DreamGUI, Warning, TEXT("[%s].%d TargetCanvas's render mode must be RenderTarget!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
+		ReportCanvasProblem(TEXT("TargetCanvas's render mode must be RenderTarget!"));
 		return nullptr;
 	}
+	bReportedCanvasProblem = false;
 	TargetCanvasObject = Canvas;
 	ListenToCanvas(Canvas);
 	return Canvas;
@@ -1183,7 +1191,9 @@ void UDreamUIRenderTargetGeometrySource::SetCylinderArcAngle(float Value)
 	if (CylinderArcAngle != Value)
 	{
 		CylinderArcAngle = Value;
-		CylinderArcAngle = FMath::Sign(CylinderArcAngle) * FMath::Clamp(FMath::Abs(CylinderArcAngle), 1.0f, 180.0f);
+		// Signed, with 0 taken as the smallest positive arc: Sign(0) is 0, and the arc of 0 it kept divided the
+		// surface's width by zero in the bounds and the body, which then held NaN.
+		CylinderArcAngle = (CylinderArcAngle < 0.0f ? -1.0f : 1.0f) * FMath::Clamp(FMath::Abs(CylinderArcAngle), 1.0f, 180.0f);
 		
 		UpdateMeshData();
 		UpdateLocalBounds(); // Update overall bounds
@@ -1228,7 +1238,14 @@ void UDreamUIRenderTargetGeometrySource::UpdateLocalBounds()
 }
 void UDreamUIRenderTargetGeometrySource::UpdateBodySetup(bool bIsDirty)
 {
-	if (!GetRenderTarget())return;
+	if (!GetRenderTarget())
+	{
+		// No target is no surface, and the body of the last one goes with it. It used to be kept: SetCanvas to a
+		// canvas without a target emptied the mesh and left the old body catching world traces, and the
+		// nested-surface lookup then handed the cylinder trace a hit on a mesh with no vertices to index.
+		BodySetup = nullptr;
+		return;
+	}
 	if (!BodySetup || bIsDirty)
 	{
 		BodySetup = NewObject<UBodySetup>(this, NAME_None, DreamUI::RuntimeObjectFlags);
@@ -1271,22 +1288,12 @@ void UDreamUIRenderTargetGeometrySource::UpdateMaterialInstance()
 			// each of those drop the instance instead of carrying a reference to this component's --
 			// and, through the texture it samples, this canvas's -- runtime objects along.
 			MaterialInstance->SetFlags(DreamUI::RuntimeObjectFlags);
-			if (GeometryMode == EDreamUIRenderTargetGeometryMode::StaticMesh && bOverrideStaticMeshMaterial)
+			// Only in a game world, for the reason given in CheckStaticMesh: in the editor slot 0 of the static mesh
+			// is the user's authored material.
+			if (GeometryMode == EDreamUIRenderTargetGeometryMode::StaticMesh && bOverrideStaticMeshMaterial && DreamUI::IsGameWorld(this))
 			{
 				if (CheckStaticMesh())
 				{
-#if WITH_EDITOR
-					if (!DreamUI::IsGameWorld(this))
-					{
-						DreamUI::DeferToLaterTick([WeakThis = TWeakObjectPtr<UDreamUIRenderTargetGeometrySource>(this)] {
-							if (WeakThis.IsValid() && WeakThis->StaticMeshComp.IsValid())
-							{
-								WeakThis->StaticMeshComp->SetMaterial(0, WeakThis->MaterialInstance);
-							}
-							}, 1);
-					}
-					else
-#endif
 					//delay call, or the bPostTickComponentUpdate check will break.
 					//Weak capture and no dereference of the return value, for the reasons given in CheckStaticMesh.
 					UDreamTweenBPLibrary::DelayFrameCall(this, 1, [WeakThis = TWeakObjectPtr<UDreamUIRenderTargetGeometrySource>(this)] {
@@ -1351,7 +1358,9 @@ float UDreamUIRenderTargetGeometrySource::ComputeComponentWidth() const
 		break;
 
 	case EDreamUIRenderTargetGeometryMode::Cylinder:
-		const float ArcAngleRadians = FMath::DegreesToRadians(CylinderArcAngle);
+		// The arc UpdateMeshData builds: its size, never under 0.01 radians. An arc of 0 (Sign(0) kept it so) made
+		// this X / 0 * sin(0), NaN, which went on into the bounds and the body.
+		const float ArcAngleRadians = FMath::Max(FMath::DegreesToRadians(FMath::Abs(CylinderArcAngle)), 0.01f);
 		const float Radius = RenderTargetSize.X / ArcAngleRadians;
 		return 2.0f * Radius * FMath::Sin(0.5f * ArcAngleRadians);
 		break;
@@ -1386,7 +1395,9 @@ float UDreamUIRenderTargetGeometrySource::ComputeComponentThickness() const
 		break;
 
 	case EDreamUIRenderTargetGeometryMode::Cylinder:
-		const float ArcAngleRadians = FMath::DegreesToRadians(CylinderArcAngle);
+		// As in ComputeComponentWidth, and unsigned: a negative arc gave a negative thickness, and an inverted box.
+		// Which side the surface bends to is CalcBounds' business.
+		const float ArcAngleRadians = FMath::Max(FMath::DegreesToRadians(FMath::Abs(CylinderArcAngle)), 0.01f);
 		const float Radius = RenderTargetSize.X / ArcAngleRadians;
 		return Radius * (1.0f - FMath::Cos(0.5f * ArcAngleRadians));
 		break;
@@ -1423,6 +1434,10 @@ bool UDreamUIRenderTargetGeometrySource::LineTraceHitUV(const int32& InHitFaceIn
 				int32 Index0 = Triangles[InHitFaceIndex * 3 + 0];
 				int32 Index1 = Triangles[InHitFaceIndex * 3 + 1];
 				int32 Index2 = Triangles[InHitFaceIndex * 3 + 2];
+				if (!Vertices.IsValidIndex(Index0) || !Vertices.IsValidIndex(Index1) || !Vertices.IsValidIndex(Index2))
+				{
+					return false;
+				}
 
 				auto Pos0 = (FVector)Vertices[Index0].Position;
 				auto Pos1 = (FVector)Vertices[Index1].Position;
@@ -1448,9 +1463,17 @@ bool UDreamUIRenderTargetGeometrySource::LineTraceHitUV(const int32& InHitFaceIn
 			auto LocalSpaceRayEnd = InverseTf.TransformPosition(InLineEnd);
 
 			auto RenderTargetSize = this->GetRenderTargetSize();
-			auto ArcAngle = FMath::DegreesToRadians(FMath::Abs(GetCylinderArcAngle()));
+			// The arc UpdateMeshData built, segment count included.
+			auto ArcAngle = FMath::Max(FMath::DegreesToRadians(FMath::Abs(GetCylinderArcAngle())), 0.01f);
 
 			const int32 NumSegments = FMath::Lerp(MIN_SEG, MAX_SEG, ArcAngle / PI);
+			// The mesh this walks is the one built for the current target, and with no target there is none: the
+			// world raycaster always arrives here (it passes no face index), so a ray over a surface whose canvas
+			// lost its target -- or over the frame mesh of the same actor -- indexed an empty array.
+			if (Vertices.Num() < 2 + 2 * NumSegments)
+			{
+				return false;
+			}
 
 			auto Vert0 = Vertices[0];
 			auto Vert1 = Vertices[1];

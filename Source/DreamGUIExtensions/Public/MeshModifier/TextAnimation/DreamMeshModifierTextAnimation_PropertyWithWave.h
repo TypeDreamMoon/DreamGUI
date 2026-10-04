@@ -59,7 +59,7 @@ private:
 	UPROPERTY(EditAnywhere, Category = "Property")
 		FVector Position;
 public:
-	virtual void ApplyProperty(class UDreamText* InUIText, const FDreamMeshModifierTextAnimation_SelectResult& InSelection, FDreamUIGeometry* InGeometry) override;
+	virtual void ApplyPropertyToCharacters(const TArray<FDreamUITextCharProperty>& InCharProperties, const FDreamMeshModifierTextAnimation_SelectResult& InSelection, FDreamUIGeometry* InGeometry) override;
 
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
 		FVector GetPosition()const { return Position; }
@@ -77,7 +77,7 @@ private:
 	UPROPERTY(EditAnywhere, Category = "Property")
 		FRotator Rotator;
 public:
-	virtual void ApplyProperty(class UDreamText* InUIText, const FDreamMeshModifierTextAnimation_SelectResult& InSelection, FDreamUIGeometry* InGeometry) override;
+	virtual void ApplyPropertyToCharacters(const TArray<FDreamUITextCharProperty>& InCharProperties, const FDreamMeshModifierTextAnimation_SelectResult& InSelection, FDreamUIGeometry* InGeometry) override;
 
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
 		FRotator GetRotator()const { return Rotator; }
@@ -95,7 +95,7 @@ private:
 	UPROPERTY(EditAnywhere, Category = "Property")
 		FVector Scale = FVector::OneVector;
 public:
-	virtual void ApplyProperty(class UDreamText* InUIText, const FDreamMeshModifierTextAnimation_SelectResult& InSelection, FDreamUIGeometry* InGeometry) override;
+	virtual void ApplyPropertyToCharacters(const TArray<FDreamUITextCharProperty>& InCharProperties, const FDreamMeshModifierTextAnimation_SelectResult& InSelection, FDreamUIGeometry* InGeometry) override;
 
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
 		FVector GetScale()const { return Scale; }

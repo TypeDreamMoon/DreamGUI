@@ -396,6 +396,9 @@ void UDreamUMGWidget::SetComponentTickEnabled(bool bEnable)
 #endif
 			{
 				Tweener = UDreamTweenBPLibrary::UpdateCall(this, FDreamTweenUpdateDelegate::CreateUObject(this, &UDreamUMGWidget::TickComponent));
+				// On the screen's clock, as every other widget tween is: an embedded UMG widget on a pause menu
+				// keeps redrawing while the game is paused instead of freezing with it.
+				UDreamWidget::SetWidgetTweenerAffectByGamePauseAndTimeDilation(GetWidget(), Tweener.Get());
 			}
 		}
 		else

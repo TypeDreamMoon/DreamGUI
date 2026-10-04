@@ -119,6 +119,13 @@ void UDreamPostProcessRenderElement_Text::SetMaterialParameter()
 
 void UDreamPostProcessRenderElement_Text::CheckMaterialInstanceDynamic()
 {
+	// Made from the override material, and made again when that is another one: SetOverrideMaterial marks the
+	// material dirty and nothing more, so the instance kept from the material before went on drawing it. With no
+	// override material there is nothing to instance, and the old instance is let go too.
+	if (IsValid(MaterialInstanceDynamic) && MaterialInstanceDynamic->Parent != OverrideMaterial)
+	{
+		MaterialInstanceDynamic = nullptr;
+	}
 	if (!IsValid(MaterialInstanceDynamic))
 	{
 		if (IsValid(OverrideMaterial))

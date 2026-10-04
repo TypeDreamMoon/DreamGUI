@@ -82,6 +82,10 @@ FDreamVisualPostProcessRenderProxyPtr UDreamBackgroundPixelate::GetRenderProxy()
 		RenderProxy = DreamUIPostProcessEffects::CreateBackgroundPixelateProxy();
 		SendRegionVertexDataToRenderProxy();
 		SendMaskTextureToRenderProxy();
+		// The output target too, as Blur and PixelSort send theirs. The base class sends it only when it makes or
+		// resizes the target, which in the usual order happens before this proxy exists: with RenderType set to
+		// RenderTarget the pixelation went to the screen and the target stayed empty.
+		SendRenderTargetToRenderProxy();
 	}
 	return RenderProxy;
 }

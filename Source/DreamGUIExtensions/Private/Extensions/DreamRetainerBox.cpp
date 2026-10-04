@@ -5,6 +5,7 @@
 #include "DreamGUI.h"
 #include "Core/Components/DreamCanvas.h"
 #include "Core/Components/DreamWidget.h"
+#include "Core/DreamUIWorldContext.h"
 #include "Extensions/DreamCanvasRenderTargetPreviewer.h"
 #include "Materials/MaterialInterface.h"
 
@@ -46,7 +47,14 @@ UDreamCanvas* UDreamRetainerBox::GetRetainedCanvas()const
 void UDreamRetainerBox::OnRegister()
 {
 	Super::OnRegister();
-	ApplyCanvasConfiguration();
+	// Only in a game world. Behaviours register in editor worlds too, and the canvas settings written here are the
+	// canvas's saved properties: an asset saved while the retainer had them set recorded the forced state as the
+	// canvas's own, and taking the retainer off afterwards left the canvas rendering to a target for good. The
+	// designer draws the subtree live, which is also the honest preview of it.
+	if (DreamUI::IsGameWorld(this))
+	{
+		ApplyCanvasConfiguration();
+	}
 	ApplyGroupCompositing();
 }
 
@@ -73,8 +81,15 @@ void UDreamRetainerBox::ApplyCanvasConfiguration()
 		bHasSavedCanvasState = true;
 		bSavedForceRenderToTarget = Canvas->GetForceRenderToTarget();
 		bSavedRenderTargetUpdateMode = (uint8)Canvas->GetRenderTargetUpdateMode();
+		SavedRenderMode = (uint8)Canvas->GetRenderMode();
 	}
+	// Forced to its own target AND in RenderTarget mode, the pair the details panel sets when the flag is ticked
+	// there. The flag alone left a child canvas in the WorldSpace mode it defaults to, which is what it then
+	// reported as its actual mode: it never drew its target, the parent skipped the forced subtree, the previewer
+	// had no texture -- and the subtree disappeared. In this order, so the canvas is its own root by the time the
+	// mode is set and works its render mode out from its own.
 	Canvas->SetForceRenderToTarget(true);
+	Canvas->SetRenderMode(EDreamRenderMode::RenderTarget);
 	//WhenRequest is what makes retaining retaining: the canvas redraws its target only when asked,
 	//and Tick below is what decides when to ask
 	Canvas->SetRenderTargetUpdateMode(EDreamCanvasRenderTargetUpdateMode::WhenRequest);
@@ -91,7 +106,10 @@ void UDreamRetainerBox::RestoreCanvasConfiguration()
 	bHasSavedCanvasState = false;
 	if (auto Canvas = GetRetainedCanvas())
 	{
+		// The reverse order: no longer its own root first, so the mode it gets back is worked out against the
+		// parent's again.
 		Canvas->SetForceRenderToTarget(bSavedForceRenderToTarget);
+		Canvas->SetRenderMode((EDreamRenderMode)SavedRenderMode);
 		Canvas->SetRenderTargetUpdateMode((EDreamCanvasRenderTargetUpdateMode)bSavedRenderTargetUpdateMode);
 		//it stopped being asked to update, so give it one so it is not left showing a stale texture
 		Canvas->RequestUpdateForRenderTarget();
@@ -103,6 +121,15 @@ void UDreamRetainerBox::ApplyGroupCompositing()
 	auto Display = DisplayVisual.Get();
 	if (Display == nullptr)
 	{
+		// The warning the property promises: retaining with nothing to show the texture is a subtree that vanishes,
+		// and nothing else would say why. Only where retaining actually happens, and once.
+		if (bHasSavedCanvasState && !bWarnedAboutNoDisplayVisual)
+		{
+			bWarnedAboutNoDisplayVisual = true;
+			UE_LOG(DreamGUI, Warning, TEXT("[%s].%d DreamRetainerBox on '%s' retains its subtree into a texture, but has no DisplayVisual to show that texture, so nothing is drawn for it. Set DisplayVisual to a DreamCanvasRenderTargetPreviewer outside the retained subtree.")
+				, ANSI_TO_TCHAR(__FUNCTION__), __LINE__
+				, GetWidget() != nullptr ? *GetWidget()->GetDisplayName() : TEXT("none"));
+		}
 		return;
 	}
 	if (auto Canvas = GetRetainedCanvas())
