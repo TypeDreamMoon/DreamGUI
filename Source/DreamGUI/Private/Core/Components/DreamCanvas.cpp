@@ -3668,18 +3668,30 @@ bool UDreamCanvas::IsMaterialContainsDreamUIParameter(const UMaterialInterface* 
 	TArray<FMaterialParameterInfo> ParameterInfos;
 	TArray<FGuid> ParameterIds;
 	InMaterial->GetAllTextureParameterInfo(ParameterInfos, ParameterIds);
-	auto FoundIndex = ParameterInfos.IndexOfByPredicate([](const FMaterialParameterInfo& Item)
+	const bool bHasTexture = ParameterInfos.ContainsByPredicate([](const FMaterialParameterInfo& Item)
 		{
 			return
 				Item.Name == DreamUI_MainTextureMaterialParameterName
 				|| Item.Name == DreamUI_FontTextureMaterialParameterName
 				|| Item.Name == DreamUI_ClipDataTexture_MaterialParameterName
 				|| Item.Name == DreamUI_WidgetPropertyDataTexture_MaterialParameterName
-				|| Item.Name == DreamUI_IsRenderByDreamUIRenderer_MaterialParameterName
 				|| Item.Name == DreamUIShadeMaterial::PaintDataTextureParameter
 				;
 		});
-	return FoundIndex != INDEX_NONE;
+	if (bHasTexture)
+	{
+		return true;
+	}
+	// The renderer flag is a scalar, which the texture list above never held: a material whose only parameter of the
+	// canvas's is that flag -- a procedural brush material that premultiplies by it -- was drawn as it is, the flag left
+	// at its default, and so premultiplied twice under DreamGUI's renderer.
+	ParameterInfos.Reset();
+	ParameterIds.Reset();
+	InMaterial->GetAllScalarParameterInfo(ParameterInfos, ParameterIds);
+	return ParameterInfos.ContainsByPredicate([](const FMaterialParameterInfo& Item)
+		{
+			return Item.Name == DreamUI_IsRenderByDreamUIRenderer_MaterialParameterName;
+		});
 }
 
 DECLARE_CYCLE_STAT(TEXT("Canvas UpdateDrawCallMaterial"), STAT_UpdateDrawCallMaterial, STATGROUP_DreamGUI);

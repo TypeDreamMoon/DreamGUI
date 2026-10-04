@@ -12,6 +12,7 @@
 #include "HAL/IConsoleManager.h"
 #include "HAL/PlatformTime.h"
 #include "Materials/MaterialInstanceDynamic.h"
+#include "MaterialShared.h"
 #include "PixelFormat.h"
 #include "RenderingThread.h"
 #include "UObject/Package.h"
@@ -24,6 +25,7 @@
 #include "Core/DreamGUISettings.h"
 #include "Core/DreamUIDataTexture.h"
 #include "Core/DreamUISettings.h"
+#include "DreamUIRender/DreamUIMaterialProxy.h"
 #include "DreamUIRender/DreamUIRenderStats.h"
 #include "Engine/Texture2D.h"
 #include "TextureResource.h"
@@ -1067,6 +1069,127 @@ bool FDreamRhiMaterialInstanceGivenIsAnsweredForTest::RunTest(const FString& Par
 	});
 	EnqueueDo([Keep]() { Keep->Reset(); });
 	EnqueueTearDown(Stage);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamRhiBuiltInAfterMaterialTest,
+	"DreamGUI.RHI.ABlockTheBuiltInShaderDrawsAfterAnImageThroughAMaterialDrawsItsOwnColour",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter | EAutomationTestFlags::NonNullRHI)
+
+bool FDreamRhiBuiltInAfterMaterialTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamRenderStabilityTestLocal;
+
+	// A draw through a material binds that material's pipeline, so the built-in draw after it in the same pass sets its
+	// own again. The pass's cache of the built-in pipeline, set by the block drawn before the image, once still said it
+	// was bound: the block after the image went through the material's shaders, and the RHI ensured on parameters set for
+	// a vertex shader that was not bound.
+	FStageRef Stage = BeginStage(*this);
+	if (!Stage->IsUsable())
+	{
+		Stage->TearDown();
+		return false;
+	}
+	UMaterialInterface* Material = UDreamGUISettings::LoadSetting(UDreamGUISettings::Get()->DefaultUIMaterial, TEXT("DefaultUIMaterial"));
+	UTexture2D* RedTexture = MakeSolidTexture(Red);
+	if (!TestNotNull(TEXT("the default UI material, used here as a custom one"), Material) || !TestNotNull(TEXT("a red texture"), RedTexture))
+	{
+		Stage->TearDown();
+		return false;
+	}
+	// Its shaders ready before the first frame: a material still compiling is not drawn at all, which would read as this
+	// test's failure when it runs before anything else has drawn the material in this editor.
+	if (FMaterialResource* Resource = Material->GetMaterialResource(GMaxRHIShaderPlatform))
+	{
+		Resource->FinishCompilation();
+	}
+	const TSharedRef<TArray<TStrongObjectPtr<UObject>>> Keep = MakeShared<TArray<TStrongObjectPtr<UObject>>>();
+	Keep->Emplace(RedTexture);
+	UDreamWidget* Before = Stage->AddBlock(TEXT("BuiltInBeforeIt"), FVector2D(50.0, 50.0), FVector2D(-90.0, 70.0), Blue);
+	UDreamWidget* Image = Stage->AddWidget(TEXT("ThroughTheMaterial"), FVector2D(60.0, 60.0), FVector2D(-60.0, 0.0));
+	if (UDreamTexture* Visual = Image->CreateNewVisual<UDreamTexture>())
+	{
+		Visual->SetTexture(RedTexture);
+		Visual->SetColor(FColor::White);
+		Visual->SetOverrideMaterial(Material);
+	}
+	// Over the image's edge, so the canvas cannot batch it with the block before the image: it is drawn after the image.
+	UDreamWidget* Block = Stage->AddBlock(TEXT("BuiltInAfterIt"), FVector2D(60.0, 60.0), FVector2D(-20.0, 0.0), Green);
+	const FIntPoint BeforeCentre = Stage->PixelOf(Before, FVector2D::ZeroVector);
+	// The image's left half: the block covers its right one.
+	const FIntPoint ImageCentre = Stage->PixelOf(Image, FVector2D(-15.0, 0.0));
+	const FIntPoint BlockCentre = Stage->PixelOf(Block, FVector2D::ZeroVector);
+
+	EnqueueSettledFrames(Stage);
+	// The first material draw of an editor session can take a few more frames to start (seen when this test ran before
+	// any other RHI test): wait for the image to show, so that what is judged is the block drawn after it.
+	TSharedRef<int32> Waited = MakeShared<int32>(0);
+	EnqueueStep([Stage, ImageCentre, Waited]()
+	{
+		const TOptional<FColor> Colour = ColourAt(Stage, ImageCentre);
+		if ((Colour.IsSet() && Colour->R > 200 && Colour->G < 60 && Colour->B < 60) || *Waited >= 120)
+		{
+			return true;
+		}
+		Stage->RequestRedraw();
+		++(*Waited);
+		return false;
+	});
+	EnqueueDo([Stage, BeforeCentre, ImageCentre, BlockCentre]()
+	{
+		CheckPixel(Stage, BeforeCentre, Blue, TEXT("the block the built-in shader draws before the image"));
+		CheckPixel(Stage, ImageCentre, Red, TEXT("the image through the material"));
+		CheckPixel(Stage, BlockCentre, Green, TEXT("the block the built-in shader draws after it"));
+	});
+	EnqueueDo([Keep]() { Keep->Reset(); });
+	EnqueueTearDown(Stage);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamRhiMaterialProxyFollowsItsSourceTest,
+	"DreamGUI.RHI.ACanvasMaterialProxyMakesItsCacheAgainWhenTheInstanceItAnswersForChanges",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter | EAutomationTestFlags::NonNullRHI)
+
+bool FDreamRhiMaterialProxyFollowsItsSourceTest::RunTest(const FString& Parameters)
+{
+	// A material instance given to an image is drawn through the canvas's proxy of it, which caches its own uniform
+	// expressions. A parameter the instance's owner sets re-caches the instance's own render proxy only, so the canvas's
+	// proxy has to notice and make its cache again when the draw is gathered -- or the image goes on drawing the instance
+	// as it first was: a hologram whose reveal was animated stayed at nothing. And it makes nothing while nothing changed.
+	UMaterialInterface* Material = UDreamGUISettings::LoadSetting(UDreamGUISettings::Get()->DefaultUIMaterial, TEXT("DefaultUIMaterial"));
+	UMaterialInstanceDynamic* Given = Material != nullptr ? UMaterialInstanceDynamic::Create(Material, GetTransientPackage()) : nullptr;
+	if (!TestNotNull(TEXT("a material instance of the default UI material"), Given))
+	{
+		return false;
+	}
+	const TStrongObjectPtr<UMaterialInstanceDynamic> Keep(Given);
+	const TSharedRef<FDreamUIMaterialProxy, ESPMode::ThreadSafe> Proxy = FDreamUIMaterialProxy::Create(Given);
+	Proxy->SetParameters_GameThread(FDreamUIMaterialParameters());
+	FlushRenderingCommands();
+	// What the gathering of a draw does, and the cache's serial number after it.
+	auto Gather = [Proxy]()
+	{
+		TSharedRef<int32> Serial = MakeShared<int32>(0);
+		ENQUEUE_RENDER_COMMAND(FDreamTestFollowSource)([Proxy, Serial](FRHICommandListImmediate& RHICmdList)
+		{
+			// What a frame starts with: every cache asked for since is made, so none is left to move the serial later.
+			if (FMaterialRenderProxy::HasDeferredUniformExpressionCacheRequests())
+			{
+				FMaterialRenderProxy::UpdateDeferredCachedUniformExpressions(RHICmdList);
+			}
+			Proxy->FollowSource_RenderThread(RHICmdList, GMaxRHIFeatureLevel);
+			*Serial = Proxy->GetExpressionCacheSerialNumber();
+		});
+		FlushRenderingCommands();
+		return *Serial;
+	};
+	const int32 Settled = Gather();
+	TestEqual(TEXT("Gathered again with nothing changed, it makes nothing"), Gather(), Settled);
+	Given->SetVectorParameterValue(TEXT("DreamUI_FontAtlasInfo"), FLinearColor(2.0f, 2.0f, 0.0f, 0.0f));
+	FlushRenderingCommands();
+	TestNotEqual(TEXT("Gathered after the instance's owner set a parameter, it made its cache again"), Gather(), Settled);
 	return true;
 }
 

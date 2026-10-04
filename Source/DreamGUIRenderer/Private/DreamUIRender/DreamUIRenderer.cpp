@@ -2009,6 +2009,10 @@ void FDreamUIRenderer::RecordScreenSpace_RenderThread(FRDGBuilder& GraphBuilder,
 									GraphicsPSOInit.PrimitiveType = EPrimitiveType::PT_TriangleList;
 									GraphicsPSOInit.NumSamples = NumSamples;
 									SetGraphicsPipelineState(RHICmdList, GraphicsPSOInit, 0, EApplyRendertargetOption::CheckApply);
+									// The built-in draws' pipeline is no longer the one bound, as in the world-space pass: the next of them
+									// sets its own again. Kept, the cache let it draw through this material's shaders -- a text after a
+									// material-drawn image went blank or boxed, and the RHI ensured on parameters set for an unbound shader.
+									BuiltInCache.Pipeline.bSet = false;
 
 									VertexShader->SetMaterialShaderParameters(RHICmdList, *RenderView, MaterialRenderProxy, Material, Mesh.Elements[0].PrimitiveUniformBufferResource, MeshBatchContainer.GetBuiltIn().RenderLayerTableRHI.GetReference(), MeshBatchContainer.GetBuiltIn().WidgetDataTextureRHI.GetReference());
 									PixelShader->SetMaterialShaderParameters(RHICmdList, *RenderView, MaterialRenderProxy, Material, Mesh.Elements[0].PrimitiveUniformBufferResource);

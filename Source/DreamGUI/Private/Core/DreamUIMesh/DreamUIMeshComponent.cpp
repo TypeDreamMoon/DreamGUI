@@ -949,6 +949,11 @@ public:
 			{
 				continue;//nothing to draw it with
 			}
+			if (!bWireframe && Section->MaterialProxy.IsValid())
+			{
+				// A material instance whose owner set a parameter since the last frame is drawn with its new values.
+				Section->MaterialProxy->FollowSource_RenderThread(Collector.GetRHICommandList(), ViewFamily.GetFeatureLevel());
+			}
 
 			// Built where it is kept. A batch made on the stack and copied in was a mesh batch copied, and every render
 			// resource reference it holds taken twice and let go once -- for each of a wall of world panels' sections, each
@@ -1246,6 +1251,11 @@ public:
 				FMaterialRenderProxy* MaterialProxy = bWireframe
 					? static_cast<FMaterialRenderProxy*>(WireframeMaterialInstance)
 					: (SectionMaterialProxy != nullptr ? SectionMaterialProxy : InFallbackMaterial);
+				if (!bWireframe && Section->MaterialProxy.IsValid())
+				{
+					// As in the DreamUI renderer's gathering: a material instance's own parameter changes reach the draw.
+					Section->MaterialProxy->FollowSource_RenderThread(Collector.GetRHICommandList(), ViewFamily.GetFeatureLevel());
+				}
 
 				// For each view..
 				for (int32 ViewIndex = 0; ViewIndex < Views.Num(); ViewIndex++)
