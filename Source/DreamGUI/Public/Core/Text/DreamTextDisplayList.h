@@ -58,6 +58,51 @@ struct FDreamTextItemStyle
 	 * baseline shift it stands for is already in the item's Pen and in its line's box.
 	 */
 	uint8 SupOrSub = 0;
+	/**
+	 * The tag paint the item is drawn with, as an index into FDreamTextDisplayList::PaintNames; INDEX_NONE when no tag paint
+	 * is the innermost of the paints and colours set on it (FRichTextParseResult::PaintOrder against ColorOrder). Then the
+	 * item is solid when bHasColor or bPaintRemoved says so, and takes the text's own paints otherwise.
+	 */
+	int32 PaintIndex = INDEX_NONE;
+	/** A custom style took every paint off it, the text's own too (FRichTextParseResult::bPaintRemoved, the innermost). */
+	bool bPaintRemoved = false;
+};
+
+/** A box in the text's local space -- x right and y UP, the painter's coordinates, after every alignment -- by its four edges. */
+struct FDreamTextBox
+{
+	float Left = 0.0f;
+	float Right = 0.0f;
+	float Bottom = 0.0f;
+	float Top = 0.0f;
+
+	float GetWidth() const { return Right - Left; }
+	float GetHeight() const { return Top - Bottom; }
+	bool operator==(const FDreamTextBox& Other) const { return Left == Other.Left && Right == Other.Right && Bottom == Other.Bottom && Top == Other.Top; }
+	bool operator!=(const FDreamTextBox& Other) const { return !(*this == Other); }
+};
+
+/**
+ * One line's piece of a paint run -- the elements one `<gradient>` tag (or one custom style that sets a paint) covers --
+ * for the painter's Run box: CSS's `box-decoration-break: slice`, every piece of the run laid end to end in line order, as
+ * if the run were on one line. Spaces in the run count; a run interrupted by a solid <color> run keeps one piece per line
+ * across it.
+ */
+struct FDreamTextPaintFragment
+{
+	/** Into FDreamTextDisplayList::PaintNames: the run's paint. */
+	int32 PaintIndex = INDEX_NONE;
+	int32 LineIndex = 0;
+	/**
+	 * The piece on its line: from the left edge of its leftmost item's pen box (Pen.X + DecorationOffset) to the right edge of
+	 * its rightmost (that plus AdvanceWithSpace), and from the lowest item bottom (Pen.Y - Descent) to the highest item top
+	 * (Pen.Y + Ascent).
+	 */
+	FDreamTextBox Box;
+	/** Where the piece's left edge sits in the run laid end to end: the widths of the run's pieces on the lines before it. */
+	float RunOffset = 0.0f;
+	/** The whole run laid end to end: the sum of its pieces' widths, the same on every piece of the run. */
+	float RunWidth = 0.0f;
 };
 
 /** One laid-out element of the text. Positions are in the text's local space, after every alignment. */
@@ -88,6 +133,16 @@ struct FDreamTextGlyphItem
 	float AdvanceWithSpace = 0.0f;
 	/** Where that stretch starts, relative to Pen.X: the pen box of the glyph, not its ink, so a run of them joins up seamlessly. */
 	float DecorationOffset = 0.0f;
+	/**
+	 * The item's own box vertically, as distances from Pen.Y: up to its face's ascent and down to its descent at the size
+	 * it was drawn at (GlyphSize; for an item that is not a glyph, its style's size on the primary face), with the shaper's
+	 * vertical offset taken back out, so a mark sits in its base's box. Every item has them. What the painter's Glyph box
+	 * spans vertically, and a Run piece's top and bottom.
+	 */
+	float Ascent = 0.0f;
+	float Descent = 0.0f;
+	/** The item's piece of a paint run (FDreamTextDisplayList::PaintFragments), for an item a paint tag covers; INDEX_NONE otherwise. */
+	int32 PaintFragment = INDEX_NONE;
 	FDreamTextItemStyle Style;
 	/**
 	 * Texels and placement the underline is drawn with; valid only when Style.bUnderline. YOffset is the top of the strip
@@ -154,6 +209,43 @@ struct DREAMGUI_API FDreamTextDisplayList
 	 */
 	int32 ElementCount = 0;
 
+	/*
+	 * THE PAINTER'S BOXES (EDreamTextPaintBox), all in the text's local space after every alignment, as Pen is: x right, y up.
+	 */
+	/** The content box: the rect the text was laid out in (FDreamTextLayoutInput's Width, Height and Pivot). */
+	FDreamTextBox ContentBox;
+	/**
+	 * The text as a block, CSS's background box of a block element: the content box's left and right, from the first
+	 * line's top to the last placed line's bottom. A text with no line has the content box's left and right and Top ==
+	 * Bottom at the content box's top.
+	 */
+	FDreamTextBox TextBlockBox;
+	/**
+	 * Per line, parallel to Lines: across, from the left edge of its leftmost visual run to the right edge of its rightmost
+	 * (an empty line: Left == Right where its caret stands); down, its line box -- its top to its top less its height, the
+	 * line's own share of the spacing between lines left out.
+	 */
+	TArray<FDreamTextBox> LineBoxes;
+	/**
+	 * The names of the tag paints items are drawn with (FDreamTextItemStyle::PaintIndex), each once, in the order the items
+	 * first name them: what the text resolves to gradients when it paints. Empty for a text with no paint tag.
+	 */
+	TArray<FName> PaintNames;
+	/** The pieces of every paint run, run by run and line by line within a run (FDreamTextPaintFragment). */
+	TArray<FDreamTextPaintFragment> PaintFragments;
+
+	/*
+	 * WHAT CHANGED SINCE THE LAST LAYOUT, for whatever keeps a copy of what it made from this list.
+	 */
+	/** Moves on with every layout that writes this list, whole or in place; never reset, Reset included. */
+	uint64 Generation = 0;
+	/**
+	 * Per line, parallel to Lines: a stamp from a process-wide counter, new whenever any of the line's items, carets, runs or
+	 * inline objects is written (placed, moved, rebased). A line whose stamp is the one seen before is the line seen before,
+	 * value for value, whatever happened around it.
+	 */
+	TArray<uint64> LineStamps;
+
 	void Reset()
 	{
 		Items.Reset();
@@ -168,5 +260,11 @@ struct DREAMGUI_API FDreamTextDisplayList
 		bHasPendingGlyphs = false;
 		VisibleCharCount = 0;
 		ElementCount = 0;
+		ContentBox = FDreamTextBox();
+		TextBlockBox = FDreamTextBox();
+		LineBoxes.Reset();
+		PaintNames.Reset();
+		PaintFragments.Reset();
+		LineStamps.Reset();
 	}
 };

@@ -215,12 +215,23 @@ FDreamFontFaceChoice FDreamFontFaceResolver::Resolve(const FDreamFontFaceTable& 
 		{
 			continue;
 		}
+		// A caller that cannot draw a colour glyph never gets one: the face is passed over as if the font did not have it.
+		// Asked here, of a face that has the base, so the order of questions stays what it is with colour faces allowed.
+		int32 KnownKind = INDEX_NONE;
+		if (!Query.bAllowColorFaces)
+		{
+			if (IsColorFace(FaceIndex))
+			{
+				continue;
+			}
+			KnownKind = 0;
+		}
 		const bool bWhole = HasRest(FaceIndex);
 		if (Order == EColorOrder::AsListed)
 		{
 			if (bWhole)
 			{
-				return DreamFontFaceResolverLocal::MakeChoice(FaceIndex, true, true, IsColorFace(FaceIndex));
+				return DreamFontFaceResolverLocal::MakeChoice(FaceIndex, true, true, KnownKind == 0 ? false : IsColorFace(FaceIndex));
 			}
 			if (FirstBase[0] == INDEX_NONE)
 			{
@@ -228,7 +239,7 @@ FDreamFontFaceChoice FDreamFontFaceResolver::Resolve(const FDreamFontFaceTable& 
 			}
 			continue;
 		}
-		const int32 Kind = IsColorFace(FaceIndex) ? 1 : 0;
+		const int32 Kind = KnownKind != INDEX_NONE ? KnownKind : (IsColorFace(FaceIndex) ? 1 : 0);
 		if (bWhole)
 		{
 			// Nothing before it in the reordered list had the whole cluster.
@@ -251,7 +262,7 @@ FDreamFontFaceChoice FDreamFontFaceResolver::Resolve(const FDreamFontFaceTable& 
 	{
 		if (FirstBase[0] != INDEX_NONE)
 		{
-			return DreamFontFaceResolverLocal::MakeChoice(FirstBase[0], false, true, IsColorFace(FirstBase[0]));
+			return DreamFontFaceResolverLocal::MakeChoice(FirstBase[0], false, true, Query.bAllowColorFaces && IsColorFace(FirstBase[0]));
 		}
 	}
 	else
@@ -270,8 +281,8 @@ FDreamFontFaceChoice FDreamFontFaceResolver::Resolve(const FDreamFontFaceTable& 
 			return DreamFontFaceResolverLocal::MakeChoice(FirstBase[OtherKind], false, true, OtherKind == 1);
 		}
 	}
-	// Nobody has it: the primary face's .notdef.
-	return DreamFontFaceResolverLocal::MakeChoice(0, false, false, IsColorFace(0));
+	// Nobody has it: the primary face's .notdef, never drawn in colour for a caller that cannot draw colour.
+	return DreamFontFaceResolverLocal::MakeChoice(0, false, false, Query.bAllowColorFaces && IsColorFace(0));
 }
 
 FDreamFontFaceChoice FDreamFontFaceResolver::Resolve(UDreamUIFontData_BaseObject* Font, const FDreamFontFaceQuery& Query)

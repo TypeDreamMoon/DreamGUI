@@ -36,6 +36,11 @@ struct DREAMGUI_API FDreamTextLanguage
 	 * them ("zh-Hans-CN", "zh-CN", "zh-Hans", "zh"): what a fallback entry's cultures are matched against.
 	 */
 	TArray<FString> PrioritizedCultureNames;
+	/**
+	 * What the shaper hands HarfBuzz for Name (an hb_language_t), worked out the first time it shapes in this language and
+	 * kept here, so a table of languages that lives from one layout to the next asks HarfBuzz for it once. Null until then.
+	 */
+	mutable const void* ShapingLanguage = nullptr;
 
 	/** The language InCultureName names; the game's current language (FInternationalization::GetCurrentLanguage) when it is empty. */
 	static FDreamTextLanguage Make(const FString& InCultureName);
@@ -88,6 +93,11 @@ struct FDreamFontFaceQuery
 	TConstArrayView<FString> Cultures;
 	/** GetPresentation(Cluster), unless the caller knows better. */
 	EDreamTextPresentation Presentation = EDreamTextPresentation::Text;
+	/**
+	 * Colour faces may draw the cluster. Off for a text whose material cannot decode a colour glyph's quad
+	 * (FDreamTextLayoutInput::bAllowColorFaces): a colour face is then never a candidate, as if the font had none.
+	 */
+	bool bAllowColorFaces = true;
 };
 
 /** The resolver's answer. */
@@ -116,7 +126,8 @@ public:
 	 * colour faces first; Text puts them last. The first candidate with the whole cluster wins; failing that, the first
 	 * with its base; failing that, face 0. Cultures match when any of a face's cultures equals any of Query.Cultures,
 	 * ignoring case. IsColorFace is asked only of a face the walk reaches, so a fallback is loaded no sooner than its
-	 * coverage is asked for.
+	 * coverage is asked for. Without Query.bAllowColorFaces every colour face is passed over (face 0 still answers when
+	 * nobody has the cluster, whatever it is).
 	 * @param FaceCount  The font's regular faces (UDreamUIFontData_BaseObject::GetFaceCount), style faces excluded.
 	 */
 	static FDreamFontFaceChoice Resolve(const FDreamFontFaceTable& Table, int32 FaceCount, const FDreamFontFaceQuery& Query,

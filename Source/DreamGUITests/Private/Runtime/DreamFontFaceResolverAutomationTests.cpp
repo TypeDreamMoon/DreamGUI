@@ -37,12 +37,13 @@ namespace DreamFontFaceResolverTestLocal
 
 		/** Resolves Cluster with every face but the style faces regular (RegularFaces of them). */
 		FDreamFontFaceChoice Resolve(const FDreamFontFaceTable& Table, int32 RegularFaces, const TArray<uint32>& Cluster,
-			TConstArrayView<FString> Cultures = TConstArrayView<FString>(), int32 StyledFace = 0)
+			TConstArrayView<FString> Cultures = TConstArrayView<FString>(), int32 StyledFace = 0, bool bAllowColorFaces = true)
 		{
 			FDreamFontFaceQuery Query;
 			Query.Cluster = Cluster;
 			Query.Cultures = Cultures;
 			Query.StyledFace = StyledFace;
+			Query.bAllowColorFaces = bAllowColorFaces;
 			Query.Presentation = FDreamFontFaceResolver::GetPresentation(Query.Cluster);
 			return FDreamFontFaceResolver::Resolve(Table, RegularFaces, Query,
 				[this](int32 FaceIndex, uint32 Codepoint)
@@ -412,6 +413,44 @@ bool FDreamTextLanguageMakeTest::RunTest(const FString& Parameters)
 	const FDreamTextLanguage Unknown = FDreamTextLanguage::Make(TEXT("xx-YY"));
 	TestTrue(TEXT("an unknown culture keeps its language"), ContainsCulture(Unknown.PrioritizedCultureNames, TEXT("xx")));
 	TestFalse(TEXT("and is not English"), ContainsCulture(Unknown.PrioritizedCultureNames, TEXT("en")));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamFontFaceResolverNoColorFacesTest,
+	"DreamGUI.Text.FaceResolver.WithColourFacesExcludedAClusterResolvesAsIfTheFontHadNone",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * A caller that cannot draw a colour glyph (FDreamFontFaceQuery::bAllowColorFaces off) never gets a colour face: an emoji
+ * goes to a monochrome face that has it, else to the primary's missing glyph, and text resolves as it always does.
+ */
+bool FDreamFontFaceResolverNoColorFacesTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamFontFaceResolverTestLocal;
+	FMockFaces Faces(3);
+	Faces.Has[0] = { 'A' };
+	Faces.Has[1] = { 0x1F600 };
+	Faces.Color[1] = true;
+	Faces.Has[2] = { 0x1F600 };
+	FDreamFontFaceTable Table = MakeTable(3);
+	Table.bPreferColorEmoji = true;
+
+	const FDreamFontFaceChoice Colour = Faces.Resolve(Table, 3, { 0x1F600 });
+	TestEqual(TEXT("An emoji goes to the colour face first"), Colour.FaceIndex, 1);
+	TestTrue(TEXT("in colour"), Colour.bColor);
+	const FDreamFontFaceChoice Monochrome = Faces.Resolve(Table, 3, { 0x1F600 }, TConstArrayView<FString>(), 0, false);
+	TestEqual(TEXT("With colour faces excluded, to the monochrome face that has it"), Monochrome.FaceIndex, 2);
+	TestFalse(TEXT("not in colour"), Monochrome.bColor);
+	TestTrue(TEXT("which covers it"), Monochrome.bCoversCluster);
+
+	Faces.Has[2].Remove(0x1F600);
+	const FDreamFontFaceChoice Missing = Faces.Resolve(Table, 3, { 0x1F600 }, TConstArrayView<FString>(), 0, false);
+	TestNotEqual(TEXT("When only a colour face has it, not to that face"), Missing.FaceIndex, 1);
+	TestFalse(TEXT("nor in colour"), Missing.bColor);
+	TestFalse(TEXT("and said to be missing"), Missing.bCoversBase);
+
+	TestEqual(TEXT("Text resolves as it always does"), Faces.Resolve(Table, 3, { 'A' }, TConstArrayView<FString>(), 0, false).FaceIndex, 0);
 	return true;
 }
 
