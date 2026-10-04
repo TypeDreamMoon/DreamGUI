@@ -3,6 +3,7 @@
 
 #include "Core/Components/DreamVisual.h"
 #include "Core/DreamUITextData.h"
+#include "Core/Text/DreamTextPaint.h"
 #include "Engine/World.h"
 #include "DreamGUI.h"
 #include "Core/Components/DreamCanvas.h"
@@ -125,7 +126,7 @@ void UDreamVisual::PostReinitProperties()
 void UDreamVisual::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
 {
 	Super::PostEditChangeProperty(PropertyChangedEvent);
-	if (!this->GetName().StartsWith("Default__"))
+	if (!this->GetName().StartsWith("Default__") && MarksAllDirtyOnPropertyEdit(PropertyChangedEvent))
 	{
 		MarkAllDirty();
 	}
@@ -438,6 +439,20 @@ FColor UDreamVisual::GetFinalColor()const
 	return Result;
 }
 
+FColor UDreamVisual::GetFinalTintColor()const
+{
+	// GetFinalColor's expression, word for word, with white for Color.
+	const UDreamWidget* Widget = GetWidget();
+	FColor Result = FColor::White;
+	const FLinearColor Tint = Widget->GetInheritedContentTint() * ColorMultiplier;
+	if (Tint != FLinearColor::White)
+	{
+		Result = (FLinearColor(Result) * Tint).ToFColor(/*bSRGB*/true);
+	}
+	Result.A = Result.A * Widget->GetFinalRenderOpacity();
+	return Result;
+}
+
 uint8 UDreamVisual::GetFinalAlpha()const
 {
 	// The alpha GetFinalColor draws with, tints included -- the same expression as ever while nothing tints.
@@ -465,7 +480,7 @@ bool UDreamVisual::GetHitGeometryFitsWidgetRect()const
 
 DECLARE_CYCLE_STAT(TEXT("DreamVisual FillWidgetPropertyDataForMaterial"), STAT_FillWidgetPropertyData, STATGROUP_DreamGUI);
 int UDreamVisual::WidgetPropertyDataLength =
-	sizeof(float)//1st pixel, marks: constant top byte, then font mark, then extra marks (see PackWidgetMarks)
+	sizeof(float)//1st pixel, marks: constant top byte, then font mark, then a painted text's paint table link (see PackTextWidgetMarks)
 	+ sizeof(float)//2nd pixel, clip data coordinate, as a float VALUE
 	+ sizeof(float)//3rd pixel, widget width, as a float VALUE
 	+ sizeof(float)//4th pixel, widget height, as a float VALUE
@@ -502,6 +517,15 @@ uint32 UDreamVisual::PackWidgetMarks(uint8 InFontMark, uint8 InExtraMark)
 	return WidgetMarksNormalFloatMarker
 		| ((uint32)InFontMark << 16)
 		| ((uint32)InExtraMark << 8)
+		;
+}
+uint32 UDreamVisual::PackTextWidgetMarks(uint8 InFontMark, uint32 InRecordRowLink)
+{
+	// The link takes the extra mark's byte and the one below it, which nothing else wrote: still a bit field under the
+	// constant top byte, so the shader reads it with asuint() as it reads the font mark (DREAMUI_PAINT_RECORD_ROW_LINK_MASK).
+	return WidgetMarksNormalFloatMarker
+		| ((uint32)InFontMark << 16)
+		| (InRecordRowLink & DreamPaintRows::RecordRowLinkMask)
 		;
 }
 void UDreamVisual::FillWidgetPropertyDataForMaterial(bool bNeedSize, bool bNeedCenterPosition)const
@@ -598,8 +622,8 @@ void UDreamVisual::FillWidgetPropertyDataForMaterial_InitialMark(UDreamUIDataAsT
 	TArray<uint8> BlockBuffer;
 	BlockBuffer.SetNumUninitialized(4);
 
-	const uint8 ExtraMark = 0;
-	const uint32 Marks = PackWidgetMarks(FontMark, ExtraMark);
+	// No visual writes an extra mark: bits 0..15 are a painted text's link to its paint table, 0 for everything else.
+	const uint32 Marks = PackTextWidgetMarks(FontMark, GetWidgetMarksRecordLink());
 	FMemory::Memcpy(BlockBuffer.GetData(), &Marks, 4);
 	DataAsTexture->UpdateBlock(0, StartPosition, MoveTemp(BlockBuffer), 1);
 }

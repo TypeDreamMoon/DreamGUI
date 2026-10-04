@@ -108,6 +108,12 @@ protected:
 #if WITH_EDITOR
 	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
 	virtual bool CanEditChange(const FProperty* InProperty) const override;
+	/**
+	 * Whether an edit in the details panel marks everything of this visual dirty (MarkAllDirty), as every edit does by
+	 * default. A visual that has given the edit all it costs already -- a text's paint, written into its paint table --
+	 * answers no.
+	 */
+	virtual bool MarksAllDirtyOnPropertyEdit(const FPropertyChangedEvent& InEvent) const { return true; }
 #endif
 	EDreamVisualType VisualType = EDreamVisualType::None;
 
@@ -186,6 +192,11 @@ public:
 	 */
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
 		FColor GetFinalColor()const;
+	/**
+	 * GetFinalColor's answer for a Color of white: the content tint of every widget above it and ColorMultiplier, in linear
+	 * space, at the hierarchy's render opacity. What a painted text's gradient is tinted with in place of its Color.
+	 */
+	FColor GetFinalTintColor()const;
 
 	UFUNCTION(BlueprintCallable, Category = "DreamUI")
 	virtual bool LineTraceUI(FDreamUIHitResult& OutHit, const FVector& Start, const FVector& End)const;
@@ -306,6 +317,13 @@ public:
 	static constexpr uint32 WidgetMarksNormalFloatMarker = 0x3f000000;
 	/** Pack the marks pixel: constant top byte, font mark, extra mark. Mirrored by DreamUI_ReadWidgetProperty. */
 	static uint32 PackWidgetMarks(uint8 InFontMark, uint8 InExtraMark);
+	/**
+	 * Pack a text's marks pixel: constant top byte, font mark, and in bits 0..15 -- where other visuals keep their extra
+	 * mark, which a text has none of -- the link to its paint table, the table's row of the world's paint rows plus one, 0
+	 * for none (DreamPaintRows::RecordRowLinkMask). The word stays a normal float whatever the link: its exponent is the
+	 * constant's.
+	 */
+	static uint32 PackTextWidgetMarks(uint8 InFontMark, uint32 InRecordRowLink);
 
 	void SetWidgetPropertyDataStartPosition(int InPosition);
 	bool IsRegisteredToCanvas()const{return WidgetPropertyDataStartPosition != INDEX_NONE;}
@@ -329,6 +347,11 @@ protected:
 	void FillWidgetPropertyDataForMaterial_RenderLayerRow(class UDreamUIDataAsTexture* DataAsTexture, int32 InRow);
 	// Fill initial mark data, only do this when first create widget property data or when render canvas changed
 	void FillWidgetPropertyDataForMaterial_InitialMark(class UDreamUIDataAsTexture* DataAsTexture, uint8 FontMark)const;
+	/**
+	 * What bits 0..15 of the marks pixel hold for this visual (PackTextWidgetMarks): a painted text's link to its paint
+	 * table; 0, the default, for everything else. Written with the marks.
+	 */
+	virtual uint32 GetWidgetMarksRecordLink()const { return 0; }
 public:
 #pragma region TweenAnimation
 	UFUNCTION(BlueprintCallable, meta = (AdvancedDisplay = "delay,ease"), Category = "DreamTweenGUI")

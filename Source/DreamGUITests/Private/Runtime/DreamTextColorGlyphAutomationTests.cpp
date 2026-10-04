@@ -253,7 +253,8 @@ bool FDreamTextColorGlyphEffectsCopyTest::RunTest(const FString& Parameters)
 		FDreamTextPainter::Paint(DL, Params, Geometry, Chars);
 		if (!TestEqual(TEXT("two quads each"), Geometry.OriginVertices.Num(), 6 * 4) || !TestEqual(TEXT("still three characters"), Chars.Num(), 3))return false;
 		TestTrue(TEXT("the colour glyph's range covers both its copies"), Chars[1].StartVertIndex == 8 && Chars[1].VertCount == 8 && Chars[1].IndicesCount == 6);
-		TestTrue(TEXT("its first copy is the effects copy, white at the text's alpha"), IsColorCopy(Geometry, 2, DreamTextQuadCode::ColorEffects, 128));
+		// An effects copy fades with the effect opacity (1 here), never with the text colour's alpha (FDreamTextPaintParams::EffectOpacity).
+		TestTrue(TEXT("its first copy is the effects copy, white at the effect opacity"), IsColorCopy(Geometry, 2, DreamTextQuadCode::ColorEffects, 255));
 		TestTrue(TEXT("its second the face"), IsColorCopy(Geometry, 3, DreamTextQuadCode::ColorFace, 128));
 		bool bBlocks = true;
 		for (int32 Index = 0; Index < Geometry.Triangles.Num(); Index++)
@@ -285,7 +286,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 /*
  * A bitmap font's shadow and outline are copies of the glyph. Around a colour glyph the outline's eight taps are left
  * out; its shadow is one copy moved by the shadow's offset, coded as the colour glyph's effects copy -- which the shader
- * draws as the glyph's alpha in the shadow colour -- and white at the item's alpha, in the shadow block with the rest.
+ * draws as the glyph's alpha in the shadow colour -- and white at the effect opacity, in the shadow block with the rest.
  */
 bool FDreamTextColorGlyphBitmapFontTest::RunTest(const FString& Parameters)
 {
@@ -314,7 +315,7 @@ bool FDreamTextColorGlyphBitmapFontTest::RunTest(const FString& Parameters)
 			return false;
 		}
 		TestTrue(TEXT("the colour glyph's range is its two copies"), Chars[1].StartVertIndex == 40 && Chars[1].VertCount == 8);
-		TestTrue(TEXT("its shadow copy carries the effects code, white at the item's alpha"), IsColorCopy(Geometry, 10, DreamTextQuadCode::ColorEffects, 255));
+		TestTrue(TEXT("its shadow copy carries the effects code, white at the effect opacity"), IsColorCopy(Geometry, 10, DreamTextQuadCode::ColorEffects, 255));
 		TestTrue(TEXT("its face the face code"), IsColorCopy(Geometry, 11, DreamTextQuadCode::ColorFace, 255));
 		TestTrue(TEXT("the shadow copy is moved by the offset (+y down in the style)"), Corner(Geometry, 40).Equals(Corner(Geometry, 44) + FVector2f(2.4f, -2.4f), 1e-4f));
 		bool bPlainCodes = true;

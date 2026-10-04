@@ -748,6 +748,8 @@ void UDreamUIGeometryHelper::SetMesh(const TArray<FDreamUIGeometryVertex>& InVer
 		vert.TextureCoordinate[1] = FVector2f(originVert.uv1);
 		vert.TextureCoordinate[2] = FVector2f(originVert.uv2);
 		vert.TextureCoordinate[3] = FVector2f(originVert.uv3);
+		//the array grew uninitialized: the gradient channel, which only text writes, says none
+		vert.UV4 = FVector2f(0.0f, 0.0f);
 	}
 }
 

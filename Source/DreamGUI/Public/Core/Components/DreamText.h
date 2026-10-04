@@ -8,6 +8,7 @@
 #include "Core/DreamUITextData.h"
 //for FDreamTextCoverageReport, which a text keeps for the painter to write
 #include "Core/Text/DreamTextPainter.h"
+#include "UObject/ObjectKey.h"
 #include "DreamText.generated.h"
 
 
@@ -15,14 +16,20 @@ class UDreamUIFontData_BaseObject;
 class UDreamUIRichTextImageData_BaseObject;
 class UDreamUIRichTextCustomStyleData;
 class UDreamUIManagerWorldSubsystem;
+class UDreamWidget;
+class UDreamGradientAsset;
 struct FDreamTextLayoutInput;
 struct FDreamTextPaintParams;
 
 /**
- * UV channels-
- *		UV0: FontTexture coordinate
- *		UV1: Default DreamCanvas use, check DreamCanvas
- *		UV2: X- font-size * object-scale, Y- not used
+ * The vertex channels of a text's quads (FDreamUIMeshVertex; DreamTextQuadCode in DreamTextPainter.h says what each kind
+ * of quad writes):
+ *		UV0: its glyph's texels in the font's atlas
+ *		UV1: X its widget record in its canvas's widget property data, Y the atlas slice
+ *		UV2: X its quad code -- the kind of glyph quad, its field layer and dilation or its coverage phase -- plus 128 times
+ *		     its paint slot (DreamTextQuadCode::SlotStride), Y where it sits along its lyric fill run
+ *		UV3: X the lyric fill progress, Y the glow boost (a coverage glyph: its contrast; a colour glyph: texels per em)
+ *		UV4: where it sits in the boxes its paint slot is measured across, (0, 0) for a quad that is not painted
  */
 /** A `<a=Id>` range was clicked; Id is what the markup named it. */
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FDreamTextHyperlinkEvent, FName, Id);
@@ -49,14 +56,17 @@ enum class EDreamTextSmallTextGate : uint8
 	Off,
 	/** The font draws no coverage glyphs: not an outline (multi-channel) distance field, or coverage is off for it or the project. */
 	Font,
-	/** An override material draws it, and only the built-in shading knows coverage glyphs. */
+	/**
+	 * An override material that does not shade through MF_DreamUI_Shade draws it (it lacks the shading's marker,
+	 * DreamUIShadeMaterial::ShadeMarkerParameter), and only DreamGUI's shading knows coverage glyphs.
+	 */
 	OverrideMaterial,
 	/**
-	 * A material that is not DreamGUI's own draws it -- its font's, or, with the built-in UI shader off, a canvas default
-	 * material other than DreamGUI's -- and only DreamGUI's shading (DreamUIShade.ush) knows coverage glyphs.
+	 * A material that does not shade through MF_DreamUI_Shade draws it -- its font's, or, with the built-in UI shader off,
+	 * the canvas's default material -- and only DreamGUI's shading (DreamUIShade.ush) knows coverage glyphs.
 	 */
 	Material,
-	/** Its text style has effects, face softness or face dilation. */
+	/** Its text style has effects (an outline, a glow, an underlay) and UDreamGUISettings::SmallTextEffectFace is Field. */
 	Style,
 	/** An enabled mesh modifier moves or re-maps its vertices. */
 	Modifier,
@@ -71,7 +81,10 @@ enum class EDreamTextSmallTextGate : uint8
 	 * a smaller target scaled up afterwards, or not, as the renderer decides on its own thread -- no pixel grid to place on.
 	 */
 	RenderScale,
-	/** It is in a render layer, which places it on the GPU. */
+	/**
+	 * It is in a render layer, which places it on the GPU. No longer given: a text in a layer is placed on the device grid
+	 * as any other once the layer has held still, and is RenderLayerMoving until then.
+	 */
 	RenderLayer,
 	/**
 	 * It is not flat, or rolled, mirrored or unevenly scaled relative to its root canvas, or sheared, or under a perspective;
@@ -81,8 +94,19 @@ enum class EDreamTextSmallTextGate : uint8
 	Transform,
 	/** None of its glyphs is small enough at its device scale (UDreamUIFontData_BaseObject::GetCoverageMaxPixelSize). */
 	Large,
-	/** Its device scale has not settled yet: drawn from the field meanwhile, and in its world's sharpen set. */
+	/**
+	 * Its device scale has not settled yet -- or, with DreamGUI.Text.SmallTextOnMove 2, it is moving off its device grid:
+	 * drawn from the field meanwhile, and in its world's sharpen set.
+	 */
 	Settling,
+	/**
+	 * Its text style softens or dilates the face (FaceSoftness, FaceDilate), which reshapes the face a coverage glyph cannot:
+	 * effects alone no longer rule coverage out (UDreamGUISettings::SmallTextEffectFace), and Style keeps meaning that the
+	 * setting is Field.
+	 */
+	StyleFace,
+	/** Its render layer moved within the last few frames: drawn from the field until the layer holds still, then repainted. */
+	RenderLayerMoving,
 };
 
 /**
@@ -104,13 +128,79 @@ struct FDreamTextSmallTextState
 	bool bLinearTarget = false;
 	/** The smallest glyph that paint could draw from coverage, in the text's units; MAX_flt when it had none. */
 	float MinGlyphSize = 0.0f;
-	/** S as a paint or a sweep last saw it, and how many sweeps in a row have seen it unchanged since. */
+	/**
+	 * S as a paint last saw it, and how many sweeps in a row have found the text holding still since: its scale unchanged,
+	 * and, while its world's sweep watches it, its transform not changed at all (a move only starts the count again).
+	 */
 	float SettlingScale = 0.0f;
 	int32 SettledSweeps = 0;
 	/** A paint has seen S. The first one counts as settled: a text that appears draws crisp at once. */
 	bool bScaleSeen = false;
-	/** In its world's sharpen set: on the field only because S has not settled, and repainted by the sweep once it has. */
+	/**
+	 * In its world's sharpen set: on the field only because S has not settled, or watched since a move it did not measure
+	 * (a rolled, too large, settling or moving text, or one in a render layer), and looked at by the sweep once it has held
+	 * still -- repainted from coverage when it can draw from it there.
+	 */
 	bool bWaitingToSharpen = false;
+	/**
+	 * It moved off the device grid of its coverage quads with DreamGUI.Text.SmallTextOnMove 1 or 2 and has not held still
+	 * since: those quads are kept as they are (1), or it is on the field (2), until the sweep finds it still.
+	 */
+	bool bMoving = false;
+};
+
+/** One layer of a painted text's slot, as its paint table holds it: the gradient it paints with, and the row holding that. */
+struct FDreamTextPaintLayerState
+{
+	/** What the layer paints with, as last taken up; the painter is handed this copy (FDreamTextPaintSlot). */
+	FDreamGradient Gradient;
+	/** The row of the world's paint rows holding Gradient; INDEX_NONE while the layer holds none. */
+	int32 Row = INDEX_NONE;
+	/** The layer paints. */
+	bool bPainting = false;
+};
+
+/**
+ * What a painted text holds of its world's paint rows (DreamPaintRows has their layout): made when the text first paints
+ * anything -- its own paints, or a rich-text tag paint whose name resolved -- and let go of when it paints nothing any
+ * more, leaves its tree or its world, or goes. Game thread.
+ */
+struct FDreamTextPaintState
+{
+	FDreamTextPaintState()
+	{
+		for (FVector4f& Pixel : TablePixels)
+		{
+			Pixel = FVector4f(0.0f, 0.0f, 0.0f, 0.0f);
+		}
+	}
+
+	/** The manager the rows were taken from, and are given back to. */
+	TWeakObjectPtr<UDreamUIManagerWorldSubsystem> Manager;
+	/** The text's table, which its widget record links to (row + 1); INDEX_NONE while it has none. */
+	int32 TextRow = INDEX_NONE;
+	/** Slot 1 (DreamTextQuadCode::TextSlot), the style's own paints: [0] the face, [1] the outline, [2] the overlay. */
+	FDreamTextPaintLayerState Own[3];
+	/** Slots FirstTagSlot to MaxSlot, the rich-text tag paints, in order: their faces. */
+	FDreamTextPaintLayerState Tags[DreamTextQuadCode::MaxSlot - DreamTextQuadCode::FirstTagSlot + 1];
+	/** The display list's PaintNames as last resolved, at which of its generations, and each name's slot (FDreamTextPaints::NameSlots). */
+	TArray<FName> ResolvedNames;
+	uint64 ResolvedGeneration = 0;
+	TArray<uint8> NameSlots;
+	/**
+	 * Something a name resolved through changed (a custom style, a gradient asset, the project's gradient presets): resolved
+	 * again by the next update.
+	 */
+	bool bTagPaintsStale = true;
+	/** The text's material does not shade through MF_DreamUI_Shade: painted in its vertex colours, holding no rows at all. */
+	bool bVertexColorFallback = false;
+	/** Slot 1's box aspect (FDreamTextPaintSlot::BoxAspect), from the boxes of the layout last painted. */
+	float OwnBoxAspect = 1.0f;
+	/** The table as last written, so that a write sends only what changed; nothing is assumed of a table not written yet. */
+	FVector4f TablePixels[DreamPaintRows::RowWidth];
+	bool bTableWritten = false;
+	/** The gradient assets the paints come from (a paint's Preset, a custom style entry's), each with its change binding. */
+	TArray<TPair<TWeakObjectPtr<UDreamGradientAsset>, FDelegateHandle>> PresetBindings;
 };
 
 UCLASS(ClassGroup = (DreamGUI), Blueprintable)
@@ -131,8 +221,17 @@ protected:
 public:
 #if WITH_EDITOR
 	virtual void PreEditChange(FProperty* PropertyAboutToChange) override;
+	/**
+	 * The details panel edits a field inside TextStyle -- a paint's gradient, one of its stops -- through a chain whose active
+	 * node is that field, and only the chain names the member it is in: TextStyle's state before the edit is kept from here.
+	 */
+	virtual void PreEditChange(class FEditPropertyChain& PropertyAboutToChange) override;
 	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)override;
+	/** An undo that put another font in Font lets go of the one the text was added to, and of the coverage it held with it. */
+	virtual void PostEditUndo() override;
 protected:
+	/** No, for an edit of the paints alone or of their animation: PostEditChangeProperty gave it what a setter would. */
+	virtual bool MarksAllDirtyOnPropertyEdit(const FPropertyChangedEvent& InEvent) const override;
 #endif
 	void RegisterOnRichTextImageDataChange();
 	void UnregisterOnRichTextImageDataChange();
@@ -212,6 +311,22 @@ protected:
 	/** Character runs with their own fill progress; see FDreamTextFillSegment. */
 	UPROPERTY(Transient)
 	TArray<FDreamTextFillSegment> FillSegments;
+	/**
+	 * Where the face paint's gradient stands along its line, in fractions of its length (FDreamPaintAnimation::Phase): 1
+	 * moves it one whole gradient on. Animated -- keyed in Sequencer, tweened by UDreamTextPaintLibrary::PaintPhaseTo -- it
+	 * writes one pixel of the text's paint table: no repaint, no layout. Applies to the text's tag paints too.
+	 */
+	UPROPERTY(Interp, EditAnywhere, BlueprintReadWrite, BlueprintSetter = SetFacePaintPhase, Category = "DreamGUI|Paint", meta = (UIMin = "-2", UIMax = "2"))
+	float FacePaintPhase = 0.0f;
+	/** The same for the outline paint. */
+	UPROPERTY(Interp, EditAnywhere, BlueprintReadWrite, BlueprintSetter = SetOutlinePaintPhase, Category = "DreamGUI|Paint", meta = (UIMin = "-2", UIMax = "2"))
+	float OutlinePaintPhase = 0.0f;
+	/** The same for the overlay paint: what moves a shimmer band across (UDreamTextPaintLibrary::PlayShimmer runs it from -1 to 1). */
+	UPROPERTY(Interp, EditAnywhere, BlueprintReadWrite, BlueprintSetter = SetOverlayPaintPhase, Category = "DreamGUI|Paint", meta = (UIMin = "-2", UIMax = "2"))
+	float OverlayPaintPhase = 0.0f;
+	/** Degrees added to every paint's angle (a Linear's direction, a Conic's start, a Diamond's turn). One pixel of the paint table a change, as the phases. */
+	UPROPERTY(Interp, EditAnywhere, BlueprintReadWrite, BlueprintSetter = SetPaintAngleOffset, Category = "DreamGUI|Paint", meta = (UIMin = "-360", UIMax = "360"))
+	float PaintAngleOffset = 0.0f;
 	/**
 	 * Padding between the widget's rect and the text laid out inside it, the way UMG's text Margin
 	 * works. The text is wrapped, aligned and overflow-tested against the rect MINUS this, so a
@@ -379,6 +494,11 @@ protected:
 	TArray<TObjectPtr<UDreamWidget>> CreatedEmojiObjectArray;
 private:
 	bool bHasAddToFont = false;
+	/**
+	 * The font RegisterFont added the text to, while bHasAddToFont: what UnregisterFont takes it off. An undo puts another
+	 * font in Font with nothing told first, so Font is not always that font.
+	 */
+	TWeakObjectPtr<UDreamUIFontData_BaseObject> FontAddedTo;
 
 	mutable FDreamUITextGeometryCache CacheTextGeometryData;
 	/**
@@ -407,8 +527,10 @@ public:
 	virtual bool GetShouldAffectByPixelSnapping()const override;
 	/**
 	 * Yes while it draws small-text coverage glyphs, unless the move kept it on the device pixel grid of its last paint (a
-	 * whole-pixel translation at the same device scale); and yes when the move puts a text that was on the field only
-	 * because of where it was (a roll, a render layer, a size above the limit) somewhere it could draw from coverage.
+	 * whole-pixel translation at the same device scale) -- or DreamGUI.Text.SmallTextOnMove 1 keeps its quads while it
+	 * moves. A text on the field only because of where it is or how it moves (rolled, too large, in a moving render layer,
+	 * settling or moving) is never measured for a move: the move is noted, and its world's sharpen sweep places it once it
+	 * has held still, repainting it then if it can draw from coverage there.
 	 */
 	virtual bool GetRepaintsOnTransformChange()const override;
 	/** Pixel snapping is read by the layout of a pixel-perfect font and by the small-text gate: a change repaints. */
@@ -565,6 +687,85 @@ public:
 	void SetFillSegments(const TArray<FDreamTextFillSegment>& Value);
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
 	void ClearFillSegments();
+
+	/*
+	 * PAINTS (FDreamTextPaint, the paint fields of FDreamTextStyle). Each setter does what SetTextStyle does with the one
+	 * field changed, at the least cost: a layer turned on or off, or the boxes, repaint the quads (their slots, UV4 and
+	 * colours); another gradient or preset for a layer still painting, and the overlay blend, write rows and the table
+	 * only -- another gradient row taken and the text's table written, with no repaint; nothing here lays the text out
+	 * again.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI|Paint")
+	void SetFacePaint(const FDreamTextPaint& Value);
+	UFUNCTION(BlueprintPure, Category = "DreamGUI|Paint")
+	const FDreamTextPaint& GetFacePaint()const { return TextStyle.FacePaint; }
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI|Paint")
+	void SetOutlinePaint(const FDreamTextPaint& Value);
+	UFUNCTION(BlueprintPure, Category = "DreamGUI|Paint")
+	const FDreamTextPaint& GetOutlinePaint()const { return TextStyle.OutlinePaint; }
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI|Paint")
+	void SetOverlayPaint(const FDreamTextPaint& Value);
+	UFUNCTION(BlueprintPure, Category = "DreamGUI|Paint")
+	const FDreamTextPaint& GetOverlayPaint()const { return TextStyle.OverlayPaint; }
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI|Paint")
+	void SetOverlayBlend(EDreamTextOverlayBlend Value);
+	/** What the text's own paints are measured across, across and down (FDreamTextStyle::PaintBoxHorizontal, PaintBoxVertical). */
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI|Paint")
+	void SetPaintBoxes(EDreamTextPaintBox InHorizontal, EDreamTextPaintBox InVertical);
+
+	/*
+	 * PAINT ANIMATION: what the text moves its paints by, one pixel of its paint table a change -- no repaint, no layout
+	 * (a text whose material does not shade through MF_DreamUI_Shade, painted in its vertex colours, repaints instead).
+	 */
+	UFUNCTION(BlueprintSetter)
+	void SetFacePaintPhase(float Value);
+	UFUNCTION(BlueprintPure, Category = "DreamGUI|Paint")
+	float GetFacePaintPhase()const { return FacePaintPhase; }
+	UFUNCTION(BlueprintSetter)
+	void SetOutlinePaintPhase(float Value);
+	UFUNCTION(BlueprintPure, Category = "DreamGUI|Paint")
+	float GetOutlinePaintPhase()const { return OutlinePaintPhase; }
+	UFUNCTION(BlueprintSetter)
+	void SetOverlayPaintPhase(float Value);
+	UFUNCTION(BlueprintPure, Category = "DreamGUI|Paint")
+	float GetOverlayPaintPhase()const { return OverlayPaintPhase; }
+	UFUNCTION(BlueprintSetter)
+	void SetPaintAngleOffset(float Value);
+	UFUNCTION(BlueprintPure, Category = "DreamGUI|Paint")
+	float GetPaintAngleOffset()const { return PaintAngleOffset; }
+	/** Fractions of the box added to every paint's centre (and to a Linear's mid-point). Not saved. */
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI|Paint")
+	void SetPaintCenterOffset(FVector2D Value);
+	UFUNCTION(BlueprintPure, Category = "DreamGUI|Paint")
+	FVector2D GetPaintCenterOffset()const;
+	/** Times every paint's Scale: above 1 stretches the gradients, below 1 squeezes them. Not saved. */
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI|Paint")
+	void SetPaintScale(float Value);
+	UFUNCTION(BlueprintPure, Category = "DreamGUI|Paint")
+	float GetPaintScale()const;
+	/** The row of the world's paint rows this text's table is, while it paints; INDEX_NONE otherwise. For tests and the memory report. */
+	int32 GetPaintTextRow()const;
+	/**
+	 * What this text last wrote into pixel InPixel of its paint table (DreamPaintRows: the slots' gradient rows, phases,
+	 * box aspects, angle offset, centre offset and scale); false while it has no table. For tests.
+	 */
+	bool GetPaintTablePixel(int32 InPixel, FVector4f& OutPixel)const;
+
+	/**
+	 * InLayer, a render layer whose canvas found UDreamWidget::GetLayerHoldsCoverageText set, moved: called by that canvas
+	 * from UDreamCanvas::MarkRenderLayerMoved, at every move announced while the layer's bit is set, with the layer's
+	 * moved frame already stamped. The texts drawing coverage glyphs inside it are measured against the layer's new place once: a whole-pixel
+	 * move at the same scale keeps their quads; anything else marks them for a repaint from the field until the layer has
+	 * held still for a few frames, and clears the layer's bit. Game thread; costs nothing for a layer no such text holds.
+	 */
+	static void OnRenderLayerMoved(UDreamWidget* InLayer);
+	/**
+	 * Told by its canvas when its widget is looked at while it is not drawn -- hidden, collapsed, inactive, or under a canvas
+	 * that is: the text lets go of the coverage epoch its quads drew from (UDreamUIFontData_BaseObject::MoveCoverageHold), so
+	 * that the font can give those cells back. The geometry update that comes before its quads are drawn again holds that
+	 * epoch again while it is still the font's own, and repaints first when it is not. Game thread.
+	 */
+	void OnNotDrawn();
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
 	void SetMargin(const FMargin& Value);
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
@@ -675,8 +876,11 @@ private:
 	void JoinSmallTextSharpenSet();
 	void LeaveSmallTextSharpenSet();
 	/**
-	 * The sharpen sweep, right before a world's root canvases update: every text in its set whose device scale has stayed
-	 * the same for long enough is repainted -- from coverage glyphs, at the scale it settled at -- and leaves the set.
+	 * The sharpen sweep, right before a world's root canvases update. Every text in its set that has held still for long
+	 * enough is placed on the device grid once, repainted from coverage glyphs -- at the scale it settled at -- when it can
+	 * draw from them there, and leaves the set; and the texts waiting on a render layer that has held still are repainted.
+	 * Within the world's repaint budget for the frame (UDreamGUISettings::SmallTextRepaintBudgetPerFrame): the rest wait for
+	 * the next frame.
 	 */
 	static void SweepSmallTextSharpenSet(UDreamUIManagerWorldSubsystem* InManager);
 	/** What RegisterPerCharacterAnimation was told is animating the characters, each once; gone objects count for nothing. */
@@ -708,7 +912,117 @@ private:
 	void DropMovedTagColorOverrides();
 	/** Lay out again for a changed ligature switch, when there is a widget to repaint in. */
 	void MarkLigaturesDirty();
+
+	/*
+	 * SMALL TEXT ON THE MOVE, IN RENDER LAYERS, AND THE CELLS IT DRAWS FROM.
+	 */
+	/** Its place in its world's sharpen set (SmallTextSharpenManager's), for leaving the set without a search. */
+	int32 SmallTextSharpenIndex = INDEX_NONE;
+	/**
+	 * The render layer whose lists this text is on in its world's small-text set -- drawing coverage glyphs in the layer, or
+	 * waiting for it to hold still (bSmallTextLayerWaiting) -- by key, which finds the lists after the layer has gone; the
+	 * world's manager; and the text's place on its list.
+	 */
+	TObjectKey<UDreamWidget> SmallTextLayerKey;
+	TWeakObjectPtr<UDreamUIManagerWorldSubsystem> SmallTextLayerManager;
+	int32 SmallTextLayerIndex = INDEX_NONE;
+	bool bSmallTextLayerWaiting = false;
+	/**
+	 * The coverage epoch this text holds (UDreamUIFontData_BaseObject::MoveCoverageHold), and the font it holds it with.
+	 * Plain members, never properties: a transaction, a duplicate for play or a save must never copy a hold.
+	 */
+	TWeakObjectPtr<UDreamUIFontData_BaseObject> CoverageHoldFont;
+	uint32 CoverageHoldEpoch = 0;
+	/**
+	 * The epoch, and its font, that the quads drew from when they stopped being drawn and the text let go of its hold
+	 * (OnNotDrawn): held again by the next geometry update while it is still the font's own, else the text repaints first.
+	 * 0 when nothing was let go of that way.
+	 */
+	TWeakObjectPtr<UDreamUIFontData_BaseObject> CoverageUndrawnFont;
+	uint32 CoverageUndrawnEpoch = 0;
+	/**
+	 * A transform change the gate did not measure (DreamGUI.Text.SmallTextOnMove, and a text kept on the field by where it
+	 * is): the text joins its world's sharpen set, whose sweep looks at it once it has held still. bInMoving: its coverage
+	 * quads left their grid.
+	 */
+	void WatchSmallTextMove(bool bInMoving);
+	/**
+	 * The sweep's look at a watched text that has held still: one placement on the device grid. True: repaint it.
+	 * bOutListedWithLayer: left on the field by where it is, it is to go on its render layer's lists, if it is in one -- to
+	 * wait for a moving layer to hold still, or to hear of a turned or scaled one's next move (SetSmallTextLayer).
+	 */
+	bool RecheckSmallTextPlacement(bool& bOutListedWithLayer);
+	/** Bind the sweep of InManager's world to its manager's tick (GetOnBeforeRootCanvasesUpdate), once, while its set holds texts to sweep. */
+	static void BindSmallTextSweep(UDreamUIManagerWorldSubsystem* InManager);
+	/**
+	 * Onto InLayer's list of the texts that hear of its moves -- drawing coverage glyphs in it, or kept on the field by its
+	 * turn or its scale (bInWaiting false) -- or of those waiting for it to hold still (true), and off any list it was on;
+	 * null takes it off every list.
+	 */
+	void SetSmallTextLayer(UDreamWidget* InLayer, bool bInWaiting);
+	void LeaveSmallTextLayer();
+	/** Forget the layer list this text was on: the list has let go of it already. */
+	void ForgetSmallTextLayer();
+	/**
+	 * Bound once, by the first text registered: every painted text repaints when a small-text console variable changes
+	 * (UDreamGUISettings::GetOnSmallTextCoverageChanged), and every text whose tag paints were resolved resolves them again
+	 * when the project's gradient presets are edited (DreamGradientPresets::OnPresetsChanged).
+	 */
+	static void BindProjectSettingsChanges();
+	static void OnSmallTextSettingsChanged();
+	static void OnGradientPresetsChanged();
+	/** Hold coverage epoch InEpoch of InFont, letting go of the one held before; null or 0 holds none. */
+	void HoldCoverageEpoch(UDreamUIFontData_BaseObject* InFont, uint32 InEpoch);
+	/**
+	 * What draws this text: its override material, else its font's, else its canvas's default material where the canvas does
+	 * not draw with the built-in UI shader (UDreamCanvas::UpdateDrawCallMaterial); null for the built-in UI shader.
+	 */
+	UMaterialInterface* GetDrawingMaterial()const;
+	/**
+	 * What draws it shades through MF_DreamUI_Shade -- the built-in UI shader does -- and so knows coverage glyphs, colour
+	 * glyphs and paints: DreamUIShadeMaterial::ShadeMarkerParameter, read as a cooked game reads it.
+	 */
+	bool IsShadingThroughDreamGUI()const;
+
+	/*
+	 * PAINTS: what the text holds of its world's paint rows (FDreamTextPaintState).
+	 */
+	/** See FDreamTextPaintState: null while the text paints nothing. */
+	TUniquePtr<FDreamTextPaintState> PaintState;
+	/** See SetPaintCenterOffset and SetPaintScale. Not saved. */
+	FVector2f PaintCenterOffset = FVector2f::ZeroVector;
+	float PaintScaleMultiplier = 1.0f;
+	/**
+	 * The text style as it was when the details panel began an edit of it (PreEditChange), to tell an edit of the paints
+	 * alone -- which costs what their setters cost -- from any other; and whether the edit being finished was one of those.
+	 */
+	TUniquePtr<FDreamTextStyle> StyleBeforeEdit;
+	bool bPaintEditHandled = false;
+	/**
+	 * Bring PaintState up to what the text's style and its display list's tag paints ask for: the tag names resolved when
+	 * they changed, gradient rows taken and given back, the table written, the record's link. True when the quads paint
+	 * with something else than before -- a layer on or off, a name's slot, the table or the fallback came or went -- which
+	 * only a repaint shows.
+	 */
+	bool UpdatePaintState();
+	/** Give the rows back (the table and every gradient row), keeping what the layers paint with. */
+	void ReleasePaintRows();
+	/** Give the rows back and forget the paints: the text paints nothing. */
+	void ReleasePaintState();
+	/** Write what changed of the table: the slots in use, their rows, phases, aspects, angle offset, centre offset and scale. */
+	void WritePaintTable();
+	/** A paint setter's change: a layer turned on or off repaints; another gradient takes other rows, without a repaint. */
+	void OnPaintsChanged(bool bInLayerTurnedOnOrOff);
+	/** The rows and the table brought up to date outside a paint; a repaint when only that can show the change. */
+	void RefreshPaintRowsWithoutRepaint();
+	/** A phase, the angle offset, the centre offset or the scale changed: the table written, or (vertex colours) a repaint. */
+	void OnPaintAnimationChanged();
+	/** A gradient asset a paint comes from changed. */
+	void OnPaintPresetChanged();
+	/** What the face paint is animated by (FDreamPaintAnimation): what the table holds, for the vertex-colour fallback. */
+	FDreamPaintAnimation GetFacePaintAnimation()const;
 protected:
+	virtual uint32 GetWidgetMarksRecordLink()const override;
 	virtual void OnDimensionChanged(bool InPivotChange, bool InWidthChange, bool InHeightChange)override;
 public:
 #pragma region UITextInputComponent
