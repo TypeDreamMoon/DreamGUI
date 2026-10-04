@@ -3,12 +3,15 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "DreamWidgetBlueprint.h"
 #include "KismetCompiler.h"
 #include "Text/DreamUIAst.h"
 #include "Text/DreamUIDiagnostics.h"
+#include "UObject/StrongObjectPtr.h"
 
 class UDreamWidget;
 class UDreamWidgetBlueprint;
+class UEdGraph;
 class UDreamWidgetGeneratedClass;
 class UDreamWidgetTree;
 struct FDreamUIAst;
@@ -190,6 +193,24 @@ protected:
 	 */
 	FDreamUIDiagnosticBag TextDiagnostics;
 	virtual void FinishCompilingClass(UClass* Class) override;
+	/**
+	 * Hand the `events` dispatchers' signature graphs back to the Blueprint before the function list is made.
+	 *
+	 * They are generated at STAGE V with the variables, which is what gives the skeleton its signatures at STAGE
+	 * VIII -- and then the compilation manager's conform pass at STAGE IX takes every signature graph whose name no
+	 * NewVariables entry carries out of DelegateSignatureGraphs (FBlueprintEditorUtils::ConformDelegateSignatureGraphs),
+	 * which is every one of these: a generated dispatcher is a GeneratedVariables entry, by design, so that it is
+	 * nobody's to rename or delete in the Blueprint editor. This is the last moment they can come back, and the
+	 * moment the compile needs them: CreateFunctionList is where a signature graph becomes the UFunction the
+	 * dispatcher property is pointed at.
+	 */
+	virtual void CreateFunctionList() override;
+	/**
+	 * The `props` defaults of the props a parent class already declares. Such a prop gets no variable of its own --
+	 * it IS the parent's property -- so the default the file writes for it has no variable description to ride on,
+	 * and is written onto the class defaults here, after the generated variables' own, as the file's last word.
+	 */
+	virtual void CopyTermDefaultsToDefaultObject(UObject* DefaultObject) override;
 	// End FKismetCompilerContext
 
 	UDreamWidgetBlueprint* DreamWidgetBlueprint() const;
@@ -207,6 +228,53 @@ private:
 	void BuildWidgetTreeFromTextSource(FDreamUIDiagnosticBag& OutDiagnostics);
 	/** Every DUInnnn the read raised, as message log lines. Errors fail the compile; warnings do not. */
 	void ReportTextDiagnostics(const FDreamUIDiagnosticBag& InDiagnostics);
+
+	/**
+	 * Declare the file's `props` as Blueprint variables and its `events` as event dispatchers.
+	 *
+	 * Called the moment the file has parsed, ahead of the thunk pass and the builder rather than beside the widget
+	 * and resource variables further down, because both read what it declares: `Text <- Label` lowers into a getter
+	 * of Label, which the thunk pass looks up in GeneratedVariables, and an emit route raises a dispatcher this has
+	 * to have refused or accepted first. Every name is checked here against everything else that answers to one in
+	 * the class -- the file's widgets and resources, the author's own members, the parent's -- because two members
+	 * of one name is a class every graph node reads wrongly (PropNameTaken, EventNameTaken).
+	 */
+	void DeclareTextMembers(const FDreamUIAst& InAst, FDreamUIDiagnosticBag& OutDiagnostics);
+	/**
+	 * One generated event dispatcher: the multicast delegate variable an author's Event Dispatcher is, and the
+	 * signature graph that gives it its parameters -- RF_Transient, so that no save ever keeps it, and rebuilt on
+	 * every compile like the variable. Null when the graph could not be made under that name.
+	 */
+	UEdGraph* DeclareDispatcher(FName InName, const TArray<FBPVariableDescription>& InParameters);
+
+	/** Whether a member of InName is the author's own: a variable, function, macro, event graph or timeline. */
+	bool IsAuthoredMemberName(FName InName) const;
+
+	/**
+	 * The props and dispatchers this compile has declared or adopted from the parent, by name. The widget and
+	 * resource variables declared after them stay off these names.
+	 */
+	TSet<FName> TextMemberNames;
+	/** Declared by the file and refused, with the reason already in the bag; emit routes raising them are left alone. */
+	TSet<FString> RefusedEventNames;
+	/** What this compile declared, kept for UDreamWidgetBlueprint's last-good copies when the file builds. */
+	TArray<FBPVariableDescription> DeclaredPropVariables;
+	TArray<FDreamWidgetTextDispatcher> DeclaredDispatchers;
+	/** Props the parent declares, with the default the file gives them; see CopyTermDefaultsToDefaultObject. */
+	TArray<TPair<FName, FString>> InheritedPropDefaults;
+	/**
+	 * The signature graphs of this compile's dispatchers, held for the span between the conform pass that takes them
+	 * out of the Blueprint and CreateFunctionList that puts them back -- out of the array they have no other referrer,
+	 * and a collection in between would leave a dispatcher with no signature.
+	 */
+	TArray<TStrongObjectPtr<UEdGraph>> DispatcherSignatureGraphs;
+	/** Whether this compile read the file's members (it parsed), as opposed to keeping the last good read's. */
+	bool bTextMembersDeclared = false;
+	/**
+	 * The variables of anonymous widgets, which are declared hidden: the run time finds every bound widget through
+	 * its class variable, so one must exist, but the author never named the widget and has nothing to reach it by.
+	 */
+	TSet<FName> HiddenWidgetVariableNames;
 
 	/**
 	 * Act on every `(was: OldId)` in the file, once the tree it describes has been installed.

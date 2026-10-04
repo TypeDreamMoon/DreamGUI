@@ -112,6 +112,14 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "NamedSlot")
 	bool bAcceptsSeveral = false;
 
+	/**
+	 * The hole content goes to when its host names no slot -- `slot Rows default` in a .dui. What
+	 * UDreamUserWidget::GetDefaultSlotName answers when a class does not override it, so a component written entirely
+	 * in .dui has a default slot without a line of C++. One per class; the builder refuses a second (DUI3022).
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "NamedSlot")
+	bool bIsDefaultSlot = false;
+
 	virtual int32 GetMaxWidgetChildren() const override { return bAcceptsSeveral ? INDEX_NONE : 1; }
 
 	/** The name the host binds content to: this widget's display name. */

@@ -70,6 +70,20 @@ namespace DreamUIPatchLocal
 			&& (InChars[InOffset + 1] == TEXT('/') || InChars[InOffset + 1] == TEXT('*'));
 	}
 
+	/**
+	 * The lexer's identifier rule (IsIdentifierChar in DreamUISourceFile.cpp), copied for the reason the classes above
+	 * are: the scans below decide where a WORD ends -- a node type, the `fill` of a shorthand, an `else` -- and a word
+	 * that ends one character earlier here than in the lexer is an edit spliced into the middle of a name.
+	 */
+	FORCEINLINE bool IsIdentifierChar(TCHAR InChar)
+	{
+		return (InChar >= TEXT('0') && InChar <= TEXT('9'))
+			|| InChar == TEXT('_')
+			|| (InChar >= TEXT('a') && InChar <= TEXT('z'))
+			|| (InChar >= TEXT('A') && InChar <= TEXT('Z'))
+			|| InChar > 0x7F;
+	}
+
 	FString Ellipsize(const FString& InText, int32 InMaxLength = 24)
 	{
 		const FString OneLine = InText.Replace(TEXT("\r"), TEXT(" ")).Replace(TEXT("\n"), TEXT(" "));
@@ -615,6 +629,284 @@ namespace DreamUIPatchLocal
 		return INDEX_NONE;
 	}
 
+	/**
+	 * Whether a node's TYPE is spelled at InOffset, and where it stops.
+	 *
+	 * The anchor every node edit is confirmed by, and it outgrew a plain substring compare the day a type could be more
+	 * than one token. `nier.Row` and `@Row` reach the AST joined -- the parser glues `nier`, `.` and `Row` into one
+	 * TypeName, and keeps the '@' of a resource type -- while the text may hold them with spaces between (`nier . Row`,
+	 * `@ Row`), which the lexer reads the same. So whitespace is allowed where the lexer allows it, after a '.' or an
+	 * '@' and before a '.', and nowhere else.
+	 *
+	 * The word must also END here: `TextBox Title` does not confirm a node the tree says is a `Text`, which the old
+	 * prefix compare let through. That is the stale-tree guard doing its job one character further.
+	 *
+	 * OutEnd is the offset just past the type, which is where an id goes -- or, for an anonymous node, where one is
+	 * written when it is given a name.
+	 */
+	bool MatchTypeAt(const FString& InText, int32 InOffset, const FString& InTypeName, int32& OutEnd)
+	{
+		OutEnd = INDEX_NONE;
+		const TCHAR* Chars = *InText;
+		const int32 Length = InText.Len();
+		if (InOffset < 0 || InOffset >= Length || InTypeName.IsEmpty())
+		{
+			return false;
+		}
+
+		int32 Cursor = InOffset;
+		for (int32 Index = 0; Index < InTypeName.Len(); ++Index)
+		{
+			const TCHAR Expected = InTypeName[Index];
+			// Inside an asset path a '.' is part of one unbroken token, and there is no whitespace to skip -- so the
+			// skipping below is a no-op there and the dotted-tag case is the only one it changes.
+			const bool bJoiner = Expected == TEXT('.') || (Expected == TEXT('@') && Index == 0);
+			if (Expected == TEXT('.'))
+			{
+				while (Cursor < Length && IsInlineWhitespace(Chars[Cursor]))
+				{
+					++Cursor;
+				}
+			}
+			// Case insensitive, as TextAtIs is: names are FNames downstream, and the parser keeps the spelling it read,
+			// so the two only ever differ in a tree that is stale anyway.
+			if (Cursor >= Length || FChar::ToLower(Chars[Cursor]) != FChar::ToLower(Expected))
+			{
+				return false;
+			}
+			++Cursor;
+			if (bJoiner)
+			{
+				while (Cursor < Length && IsInlineWhitespace(Chars[Cursor]))
+				{
+					++Cursor;
+				}
+			}
+		}
+		if (Cursor < Length && (IsIdentifierChar(Chars[Cursor]) || Chars[Cursor] == TEXT('.') || Chars[Cursor] == TEXT('/')))
+		{
+			return false;
+		}
+		OutEnd = Cursor;
+		return true;
+	}
+
+	/**
+	 * How many blocks deep InOffset sits inside the block whose '{' is at InOpen: 0 for a statement of that block itself.
+	 *
+	 * The question every insert has to ask now that a block can hold blocks that are not nodes. An `if` holds the nodes
+	 * of its branches, a `@slot { … }` holds slot properties, and the AST lowers both away -- a branch's nodes become the
+	 * enclosing node's children, the slot block's lines its slot properties -- so "after the last child" or "after the
+	 * last property" can name a line that sits INSIDE one of them. A new line written there would join the branch, or
+	 * become a slot property, which is a different file from the one the caller asked for.
+	 */
+	int32 DepthWithin(const FString& InText, int32 InOpen, int32 InOffset)
+	{
+		const TCHAR* Chars = *InText;
+		const int32 Length = InText.Len();
+		const int32 Stop = FMath::Min(InOffset, Length);
+		int32 Depth = 0;
+		int32 Offset = InOpen + 1;
+		while (Offset < Stop)
+		{
+			const TCHAR Char = Chars[Offset];
+			if (Char == TEXT('"'))
+			{
+				const int32 End = MeasureString(InText, Offset);
+				if (End == INDEX_NONE)
+				{
+					break;
+				}
+				Offset = End;
+				continue;
+			}
+			if (StartsComment(Chars, Length, Offset))
+			{
+				Offset = SkipComment(InText, Offset);
+				continue;
+			}
+			if (Char == TEXT('{'))
+			{
+				++Depth;
+			}
+			else if (Char == TEXT('}'))
+			{
+				Depth = FMath::Max(0, Depth - 1);
+			}
+			++Offset;
+		}
+		return Depth;
+	}
+
+	/** Offset of the next character that is not whitespace, a line break or a comment, from InOffset, or InStop. */
+	int32 NextSignificant(const FString& InText, int32 InOffset, int32 InStop)
+	{
+		const TCHAR* Chars = *InText;
+		const int32 Length = InText.Len();
+		int32 Offset = InOffset;
+		while (Offset < InStop)
+		{
+			const TCHAR Char = Chars[Offset];
+			if (IsInlineWhitespace(Char) || IsLineBreak(Char) || Char == TEXT(';'))
+			{
+				++Offset;
+				continue;
+			}
+			if (StartsComment(Chars, Length, Offset))
+			{
+				Offset = SkipComment(InText, Offset);
+				continue;
+			}
+			return Offset;
+		}
+		return InStop;
+	}
+
+	/** True when the keyword InWord, case sensitive like every keyword, stands whole at InOffset. */
+	bool KeywordAt(const FString& InText, int32 InOffset, const TCHAR* InWord)
+	{
+		const int32 WordLength = FCString::Strlen(InWord);
+		if (InOffset < 0 || InOffset + WordLength > InText.Len()
+			|| !InText.Mid(InOffset, WordLength).Equals(InWord, ESearchCase::CaseSensitive))
+		{
+			return false;
+		}
+		return InOffset + WordLength >= InText.Len() || !IsIdentifierChar(InText[InOffset + WordLength]);
+	}
+
+	/**
+	 * InOffset, moved out to the end of the line that closes whatever block construct it sits in, so that it is a place
+	 * at the level of the block whose '{' is at InOpen. INDEX_NONE when no such line exists before InClose.
+	 *
+	 * An `if` is followed through its `else` and `else if` arms -- a line written between `}` and `else` would cut the
+	 * chain in two, which no longer parses -- and the closing brace must end its line, or the place found would be in
+	 * front of whatever statement shares it.
+	 */
+	int32 LeaveNestedConstructs(const FString& InText, int32 InOpen, int32 InClose, int32 InOffset)
+	{
+		int32 Depth = DepthWithin(InText, InOpen, InOffset);
+		if (Depth == 0)
+		{
+			return InOffset;
+		}
+
+		const TCHAR* Chars = *InText;
+		const int32 Length = InText.Len();
+		int32 Offset = InOffset;
+		while (Offset < InClose)
+		{
+			const TCHAR Char = Chars[Offset];
+			if (Char == TEXT('"'))
+			{
+				const int32 End = MeasureString(InText, Offset);
+				if (End == INDEX_NONE)
+				{
+					return INDEX_NONE;
+				}
+				Offset = End;
+				continue;
+			}
+			if (StartsComment(Chars, Length, Offset))
+			{
+				Offset = SkipComment(InText, Offset);
+				continue;
+			}
+			if (Char == TEXT('{'))
+			{
+				++Depth;
+			}
+			else if (Char == TEXT('}'))
+			{
+				if (--Depth == 0)
+				{
+					// `else` is a keyword only before its '{' or `if` -- the parser's own rule, so that a property
+					// called else still reads as one.
+					const int32 Next = NextSignificant(InText, Offset + 1, InClose);
+					const int32 AfterElse = NextSignificant(InText, Next + 4, InClose);
+					if (KeywordAt(InText, Next, TEXT("else"))
+						&& ((AfterElse < InClose && Chars[AfterElse] == TEXT('{')) || KeywordAt(InText, AfterElse, TEXT("if"))))
+					{
+						Offset = Next + 4;
+						continue;
+					}
+					if (!RestOfLineIsBlank(InText, Offset + 1, /*bInAllowTerminators*/ true))
+					{
+						return INDEX_NONE;
+					}
+					return FindLineEnd(InText, Offset);
+				}
+			}
+			++Offset;
+		}
+		return INDEX_NONE;
+	}
+
+	/**
+	 * The '@' of the last `@slot { … }` block written directly in the block whose '{' is at InOpen, or INDEX_NONE.
+	 *
+	 * Found in the text because the AST does not keep it: the block's lines arrive as the node's slot properties, like
+	 * any `@slot Name = Value` line, and nothing records where the block itself stood. It is where a new slot property
+	 * goes when the node has one -- the author chose to group them, and a stray `@slot` line under the group is the kind
+	 * of edit that reads as the tool not knowing what it was looking at.
+	 */
+	int32 FindSlotBlock(const FString& InText, int32 InOpen, int32 InClose)
+	{
+		const TCHAR* Chars = *InText;
+		const int32 Length = InText.Len();
+		int32 Found = INDEX_NONE;
+		int32 Depth = 0;
+		int32 Offset = InOpen + 1;
+		while (Offset < InClose)
+		{
+			const TCHAR Char = Chars[Offset];
+			if (Char == TEXT('"'))
+			{
+				const int32 End = MeasureString(InText, Offset);
+				if (End == INDEX_NONE)
+				{
+					return Found;
+				}
+				Offset = End;
+				continue;
+			}
+			if (StartsComment(Chars, Length, Offset))
+			{
+				Offset = SkipComment(InText, Offset);
+				continue;
+			}
+			if (Char == TEXT('{'))
+			{
+				++Depth;
+			}
+			else if (Char == TEXT('}'))
+			{
+				Depth = FMath::Max(0, Depth - 1);
+			}
+			else if (Char == TEXT('@') && Depth == 0)
+			{
+				int32 Cursor = Offset + 1;
+				while (Cursor < InClose && IsInlineWhitespace(Chars[Cursor]))
+				{
+					++Cursor;
+				}
+				if (KeywordAt(InText, Cursor, TEXT("slot")))
+				{
+					Cursor += 4;
+					while (Cursor < InClose && IsInlineWhitespace(Chars[Cursor]))
+					{
+						++Cursor;
+					}
+					if (Cursor < InClose && Chars[Cursor] == TEXT('{'))
+					{
+						Found = Offset;
+					}
+				}
+			}
+			++Offset;
+		}
+		return Found;
+	}
+
 	// --------------------------------------------------------------------------------------------
 	// Finding things in the AST
 	// --------------------------------------------------------------------------------------------
@@ -656,6 +948,48 @@ namespace DreamUIPatchLocal
 			}
 		}
 		return Found;
+	}
+
+	/** The node whose Children hold InChild, or null for the root and for a node of another tree. */
+	const FDreamUINode* FindParentIn(const FDreamUINode& InScope, const FDreamUINode* InChild, int32 InDepth)
+	{
+		// The same crash guard ForEachNode has: a parsed tree cannot reach it, a hand-assembled one might.
+		if (InDepth >= DreamUIAst::MaxNestingDepth)
+		{
+			return nullptr;
+		}
+		for (const FDreamUINode& Child : InScope.Children)
+		{
+			if (&Child == InChild)
+			{
+				return &InScope;
+			}
+			if (const FDreamUINode* Found = FindParentIn(Child, InChild, InDepth + 1))
+			{
+				return Found;
+			}
+		}
+		return nullptr;
+	}
+
+	const FDreamUINode* FindParentOf(const FDreamUIAst& InAst, const FDreamUINode* InChild)
+	{
+		return InAst.bHasRoot ? FindParentIn(InAst.Root, InChild, 0) : nullptr;
+	}
+
+	/**
+	 * The word a node's header starts with: its type, or the `slot` keyword -- TypeName is empty on a named slot. Loops
+	 * are never asked: they have no id, so nothing addresses one.
+	 */
+	FString HeaderWordOf(const FDreamUINode& InNode)
+	{
+		return InNode.Kind == EDreamUINodeKind::NamedSlot ? FString(TEXT("slot")) : InNode.TypeName;
+	}
+
+	/** True when the text at InNode's location begins with its header word. OutTypeEnd: just past that word. */
+	bool MatchNodeHeader(const FString& InText, const FDreamUINode& InNode, int32& OutTypeEnd)
+	{
+		return MatchTypeAt(InText, OffsetOf(InText, InNode.Location), HeaderWordOf(InNode), OutTypeEnd);
 	}
 
 	// --------------------------------------------------------------------------------------------
@@ -860,6 +1194,8 @@ namespace DreamUIPatchLocal
 		FString LinePrefix;
 		/** Where a diagnostic about this target points. */
 		FDreamUISourceLocation Location;
+		/** The node the edit is on; null for a style. */
+		const FDreamUINode* Node = nullptr;
 	};
 
 	bool ResolveTarget(const FString& InText, const FDreamUIAst& InAst, const FDreamUIPropertyEdit& InEdit,
@@ -908,26 +1244,45 @@ namespace DreamUIPatchLocal
 		}
 
 		OutTarget.Location = Node->Location;
+		OutTarget.Node = Node;
 
-		if (Node->Kind == EDreamUINodeKind::NamedSlot)
+		const int32 NodeOffset = OffsetOf(InText, Node->Location);
+		int32 TypeEnd = INDEX_NONE;
+		if (!MatchNodeHeader(InText, *Node, TypeEnd))
 		{
-			// Not an oversight and not a TODO: `slot Footer` declares a hole, and the grammar refuses
-			// a block on it outright. There is nowhere in the file for the property to go, and
-			// writing one anyway would produce a .dui that no longer parses -- the single outcome
-			// this component is not allowed to have. If named slots ever need properties, the
-			// grammar has to grow a block for them first.
-			RefuseTarget(OutDiagnostics, Node->Location,
-				FString::Printf(TEXT("'%s' is a named slot: the grammar gives it no block, so it can hold no properties"),
-					*Node->Id));
+			RefuseStale(OutDiagnostics, Node->Location,
+				FString::Printf(TEXT("line %d does not begin with '%s'"), Node->Location.Line, *HeaderWordOf(*Node)));
 			return false;
 		}
 
-		const int32 NodeOffset = OffsetOf(InText, Node->Location);
-		if (!TextAtIs(InText, NodeOffset, Node->TypeName))
+		if (Node->Kind == EDreamUINodeKind::NamedSlot)
 		{
-			RefuseStale(OutDiagnostics, Node->Location,
-				FString::Printf(TEXT("line %d does not begin with '%s'"), Node->Location.Line, *Node->TypeName));
-			return false;
+			// A slot may carry a block now -- `slot Rows default : RowList { + VerticalBox { Spacing = 15 } }` -- and a
+			// DECLARATION's block is an ordinary home for properties, written into like any node's. Two cases still
+			// have none.
+			//
+			// A FILL (`slot Detail { Text Note { } }`, inside a component instance) is the host handing content to a
+			// slot the component declares; its block holds that content and nothing else, and the slot widget its
+			// properties would describe belongs to the component's own file.
+			if (Node->bFillsSlot)
+			{
+				RefuseTarget(OutDiagnostics, Node->Location,
+					FString::Printf(TEXT("'slot %s' here fills a slot of its component: its block holds the content, and the slot's own properties are written in the file that declares it"),
+						*Node->Id));
+				return false;
+			}
+			// A declaration written bare, `slot Footer`, is a hole and nothing else, and it stays one until its author
+			// says otherwise: a designer drag growing a block on it would turn a line that reads "content goes here"
+			// into a styled panel nobody wrote. The way to give it properties is to give it the block.
+			int32 Open = INDEX_NONE;
+			int32 Close = INDEX_NONE;
+			if (!FindBlock(InText, NodeOffset, Open, Close))
+			{
+				RefuseTarget(OutDiagnostics, Node->Location,
+					FString::Printf(TEXT("'slot %s' is written without a block, so there is nowhere in the file for a property of it; write 'slot %s { }' to give it one"),
+						*Node->Id, *Node->Id));
+				return false;
+			}
 		}
 
 		if (InEdit.Target == EDreamUIPatchTarget::Component)
@@ -976,13 +1331,34 @@ namespace DreamUIPatchLocal
 		{
 			OutTarget.Statements.Add(&Property);
 		}
+
+		// A node that groups its slot lines in a `@slot { … }` block gets a new one there, bare: the block is the owner
+		// of the insert, the `@slot` in front of the name is the block's to say, and the statements that count are the
+		// ones inside it -- PlanInsert keeps to the owner's block, so naming the node's others costs nothing. A REPLACE
+		// does not come through here at all; it edits the value where it stands, inside the block or on its own line.
+		if (InEdit.Target == EDreamUIPatchTarget::Slot)
+		{
+			int32 Open = INDEX_NONE;
+			int32 Close = INDEX_NONE;
+			if (FindBlock(InText, NodeOffset, Open, Close))
+			{
+				const int32 SlotBlock = FindSlotBlock(InText, Open, Close);
+				if (SlotBlock != INDEX_NONE)
+				{
+					OutTarget.OwnerOffset = SlotBlock;
+					OutTarget.LinePrefix.Reset();
+				}
+			}
+		}
 		return true;
 	}
 
 	/** Where a property statement's text stops, so the insert after it clears its whole line. */
 	int32 StatementSearchOffset(const FString& InText, const FDreamUIProperty& InProperty, int32 InNameOffset)
 	{
-		if (InProperty.IsBinding())
+		// A made-up property has no value text of its own to measure: its location is the line that produced it (an
+		// `@fill`, an `if`), and the end of that line is all an insert needs from it.
+		if (InProperty.IsBinding() || InProperty.bSynthesized)
 		{
 			return InNameOffset;
 		}
@@ -1054,9 +1430,12 @@ namespace DreamUIPatchLocal
 			return false;
 		}
 
+		// A slot property starts at its '@' when it has a line of its own, and at its name when it stands inside a
+		// `@slot { … }` block -- the block's '@' speaks for every line in it. Either is the statement the tree located.
 		const int32 NameOffset = OffsetOf(InText, InProperty.Location);
-		const FString Expected = bInSlotNotation ? FString(TEXT("@")) : FirstSegmentOf(InProperty.Name);
-		if (!TextAtIs(InText, NameOffset, Expected))
+		const bool bNameAgrees = TextAtIs(InText, NameOffset, FirstSegmentOf(InProperty.Name))
+			|| (bInSlotNotation && TextAtIs(InText, NameOffset, TEXT("@")));
+		if (!bNameAgrees)
 		{
 			RefuseStale(OutDiagnostics, InProperty.Location,
 				FString::Printf(TEXT("line %d does not hold '%s'"), InProperty.Location.Line, *InProperty.Name));
@@ -1142,7 +1521,12 @@ namespace DreamUIPatchLocal
 			// No block at all -- `Text OkText` on a line of its own, or `+ UIButton` with nothing
 			// after it. Both are legal and both are common, so this is not an error case: the block
 			// gets written, opening brace on the header line where the grammar requires it.
-			if (InTarget.Statements.Num() > 0)
+			//
+			// Made-up properties do not count: the `Shown <- …` an `if` gives every node of its branches stands on the
+			// `if`'s line, not in the node's block, so a blockless node inside a branch has one and is still blockless.
+			const bool bTreeHasStatements = InTarget.Statements.ContainsByPredicate(
+				[](const FDreamUIProperty* InProperty) { return !InProperty->bSynthesized; });
+			if (bTreeHasStatements)
 			{
 				// Except when the tree says this node already has properties, which can only be
 				// inside a block. Text and tree disagree, so this is a stale tree, and writing a
@@ -1207,12 +1591,17 @@ namespace DreamUIPatchLocal
 		// interleaved with its children is one nobody can read the shape of at a glance, and since
 		// the AST hands over each statement's location, "last property" is a question with an answer
 		// rather than a guess.
+		//
+		// Statements of THIS block only, at its own level. The lines of a `@slot { … }` block arrive as the node's slot
+		// properties and the `Shown` an `if` gives its branches as theirs, so the last statement the tree names can sit
+		// inside a block of its own -- and a bare property written after it would become a slot property, or land in a
+		// branch.
 		const FDreamUIProperty* Anchor = nullptr;
 		int32 AnchorOffset = INDEX_NONE;
 		for (const FDreamUIProperty* Property : InTarget.Statements)
 		{
 			const int32 Offset = OffsetOf(InText, Property->Location);
-			if (Offset > AnchorOffset && Offset > Open && Offset < Close)
+			if (Offset > AnchorOffset && Offset > Open && Offset < Close && DepthWithin(InText, Open, Offset) == 0)
 			{
 				Anchor = Property;
 				AnchorOffset = Offset;
@@ -1267,12 +1656,228 @@ namespace DreamUIPatchLocal
 
 		// The ordinary case, and the one the brace-tree grammar was chosen for: find the line, put a
 		// line after it. No reflowing, no bracket counting, no decision about where to break.
+		//
+		// Except the one count that keeps the line in its block: a statement whose line goes on to open a block of
+		// another kind (`Spacing = 4  @slot {`) ends INSIDE that block, and the line is carried out past its close.
+		const int32 AtBlockLevel = LeaveNestedConstructs(InText, Open, Close, InsertAt);
+		if (AtBlockLevel == INDEX_NONE)
+		{
+			RefuseStale(OutDiagnostics, InTarget.Location,
+				TEXT("the last line of this block opens another block that does not end on a line of its own, so there is no line to write after"));
+			return false;
+		}
 		FSplice& Splice = OutSplices.AddDefaulted_GetRef();
-		Splice.Offset = InsertAt;
+		Splice.Offset = AtBlockLevel;
 		Splice.Length = 0;
 		Splice.Text = LineEnding + Indent + NewLine;
 		Splice.Order = InOutOrder++;
 		return true;
+	}
+
+	// --------------------------------------------------------------------------------------------
+	// Properties the front end made
+	//
+	// Two constructs put properties into the tree that no line spells: an `if` gives every node of its branches a
+	// `Shown <- Cond` standing on the `if`'s line, and `@fill` / `@fill 2` stand for `SizeRule = Fill` and
+	// `FillWeight = 2`. The tree marks them (FDreamUIProperty::bSynthesized) and points them at the line that made
+	// them, which is right for a diagnostic and wrong for a splice: there is no `Shown` on an `if` line to replace,
+	// and treating it as one either refused as a stale tree -- the wrong reason -- or, worse, matched something.
+	//
+	// So each is decided on its own terms. The shorthand is rewritten when the result plainly means the same thing
+	// with the one value changed, and refused otherwise; everything else is refused with DUI7004, which says the line
+	// to go to.
+	// --------------------------------------------------------------------------------------------
+
+	/** Where an `@fill` statement stands in the text: its '@', its weight when it has one, and its end. */
+	struct FFillShorthand
+	{
+		int32 Start = INDEX_NONE;
+		int32 WeightStart = INDEX_NONE;
+		int32 WeightEnd = INDEX_NONE;
+		int32 End = INDEX_NONE;
+	};
+
+	/**
+	 * The `@fill` a made-up slot property came from, measured in the text, or false when its location is not one.
+	 *
+	 * The location may be the '@' or the word after it -- the statement starts at the '@' either way, the way a
+	 * `@slot` line's does -- and anything else there means the property came from a shorthand this scan does not
+	 * know, which is a refusal, never a guess.
+	 */
+	bool MeasureFillShorthand(const FString& InText, const FDreamUIProperty& InProperty, FFillShorthand& OutFill)
+	{
+		const TCHAR* Chars = *InText;
+		const int32 Length = InText.Len();
+		int32 Start = OffsetOf(InText, InProperty.Location);
+		if (Start == INDEX_NONE || Start >= Length)
+		{
+			return false;
+		}
+		if (Chars[Start] != TEXT('@'))
+		{
+			int32 Back = Start;
+			while (Back > 0 && IsInlineWhitespace(Chars[Back - 1]))
+			{
+				--Back;
+			}
+			if (Back == 0 || Chars[Back - 1] != TEXT('@'))
+			{
+				return false;
+			}
+			Start = Back - 1;
+		}
+
+		int32 Cursor = Start + 1;
+		while (Cursor < Length && IsInlineWhitespace(Chars[Cursor]))
+		{
+			++Cursor;
+		}
+		if (!KeywordAt(InText, Cursor, TEXT("fill")))
+		{
+			return false;
+		}
+		Cursor += 4;
+		OutFill.Start = Start;
+		OutFill.End = Cursor;
+
+		int32 Weight = Cursor;
+		while (Weight < Length && IsInlineWhitespace(Chars[Weight]))
+		{
+			++Weight;
+		}
+		if (Weight < Length && ((Chars[Weight] >= TEXT('0') && Chars[Weight] <= TEXT('9')) || Chars[Weight] == TEXT('.')))
+		{
+			const int32 WeightEnd = MeasureValue(InText, Weight);
+			if (WeightEnd == INDEX_NONE)
+			{
+				return false;
+			}
+			OutFill.WeightStart = Weight;
+			OutFill.WeightEnd = WeightEnd;
+			OutFill.End = WeightEnd;
+		}
+		return true;
+	}
+
+	/**
+	 * Whether `@fill <weight>` reads back with exactly this weight -- asked of the parser, as ValidateValueText asks it
+	 * about values, because the judge of what the shorthand takes has to be the thing that reads it.
+	 */
+	bool FillShorthandTakesWeight(const FString& InWeight)
+	{
+		const FString Probe = FString::Printf(
+			TEXT("Widget DreamUIPatchProbe {\n\tWidget DreamUIPatchProbeChild {\n\t\t@fill %s\n\t}\n}"), *InWeight);
+		FDreamUIAst ProbeAst;
+		FDreamUIDiagnosticBag ProbeDiagnostics;
+		if (!FDreamUISourceFile::Parse(Probe, FString(), ProbeAst, ProbeDiagnostics) || ProbeAst.Root.Children.Num() != 1)
+		{
+			return false;
+		}
+		const FDreamUIProperty* Weight = FindProperty(ProbeAst.Root.Children[0].SlotProperties, TEXT("FillWeight"));
+		return Weight != nullptr && Weight->Value.Raw.Equals(InWeight, ESearchCase::CaseSensitive);
+	}
+
+	void RefuseNotWritable(FDreamUIDiagnosticBag& OutDiagnostics, const FDreamUISourceLocation& InLocation, FString InMessage)
+	{
+		OutDiagnostics.AddError(EDreamUIDiagnosticCode::PatchSyntaxNotWritable, InLocation, MoveTemp(InMessage));
+	}
+
+	/**
+	 * The refusal for a property an `if` decides: the same words whichever of its two faces was edited. The location is
+	 * the `if` (or `else`) that made the Shown -- or, for a node that wrote a Shown of its own, that line, which the
+	 * front end has joined to the branch's condition.
+	 */
+	void RefuseConditionalVisibility(FDreamUIDiagnosticBag& OutDiagnostics, const FDreamUIProperty& InShown,
+		const FString& InNodeId, const FString& InEditedName)
+	{
+		RefuseNotWritable(OutDiagnostics, InShown.Location,
+			FString::Printf(TEXT("'%s' on '%s' is decided by the 'if' block it stands in (see line %d): the branch shows or hides it, and no line of its own says so -- change the condition, or move the node out of the branch"),
+				*InEditedName, *InNodeId, InShown.Location.Line));
+	}
+
+	bool PlanSynthesizedEdit(const FString& InText, const FDreamUIPropertyEdit& InEdit, const FResolvedTarget& InTarget,
+		const FDreamUIProperty& InProperty, TArray<FSplice>& OutSplices, int32& InOutOrder,
+		FDreamUIDiagnosticBag& OutDiagnostics)
+	{
+		const FString NewValue = InEdit.NewValueText.TrimStartAndEnd();
+		const FString NodeId = InTarget.Node != nullptr ? InTarget.Node->Id : InEdit.NodeId;
+
+		FFillShorthand Fill;
+		if (InEdit.Target == EDreamUIPatchTarget::Slot && MeasureFillShorthand(InText, InProperty, Fill))
+		{
+			if (InProperty.Name == TEXT("FillWeight"))
+			{
+				// The number after `fill`, and nothing else on the line: the shorthand still means Fill with a weight,
+				// which is what the author wrote, with the weight the designer chose.
+				if (Fill.WeightStart == INDEX_NONE)
+				{
+					// A weight the front end gave a bare `@fill` has no text to change, and growing the shorthand into
+					// `@fill 3` would collide with a rewrite of the same word in the same batch. A line of its own after
+					// the others is the plain override: the later line wins, as two lines naming one property always do.
+					return PlanInsert(InText, InEdit, InTarget, OutSplices, InOutOrder, OutDiagnostics);
+				}
+				const FString Slice = InText.Mid(Fill.WeightStart, Fill.WeightEnd - Fill.WeightStart);
+				if (!Slice.Equals(InProperty.Value.Raw, ESearchCase::CaseSensitive))
+				{
+					RefuseStale(OutDiagnostics, InProperty.Location,
+						FString::Printf(TEXT("the '@fill' on line %d reads '%s' where the tree says '%s'"),
+							InProperty.Location.Line, *Ellipsize(Slice), *Ellipsize(InProperty.Value.Raw)));
+					return false;
+				}
+				if (Slice.Equals(NewValue, ESearchCase::CaseSensitive))
+				{
+					return true;
+				}
+				if (!FillShorthandTakesWeight(NewValue))
+				{
+					RefuseNotWritable(OutDiagnostics, InProperty.Location,
+						FString::Printf(TEXT("'%s' is not a weight '@fill' can be written with; write '@slot FillWeight = %s' in place of the shorthand"),
+							*Ellipsize(NewValue), *Ellipsize(NewValue)));
+					return false;
+				}
+				FSplice& Splice = OutSplices.AddDefaulted_GetRef();
+				Splice.Offset = Fill.WeightStart;
+				Splice.Length = Fill.WeightEnd - Fill.WeightStart;
+				Splice.Text = NewValue;
+				Splice.Order = InOutOrder++;
+				return true;
+			}
+			if (InProperty.Name == TEXT("SizeRule"))
+			{
+				if (NewValue.Equals(InProperty.Value.Raw, ESearchCase::CaseSensitive))
+				{
+					return true;
+				}
+				if (Fill.WeightStart != INDEX_NONE)
+				{
+					// `@fill 2` is two properties in one word, and taking the Fill out of it leaves a weight with nothing
+					// to say it -- the rewrite would be two lines where the author wrote one, which is theirs to choose.
+					RefuseNotWritable(OutDiagnostics, InProperty.Location,
+						FString::Printf(TEXT("the '@fill' on line %d also sets the weight, so it cannot simply stop meaning Fill; write '@slot SizeRule = %s' and '@slot FillWeight = %s' in its place"),
+							InProperty.Location.Line, *Ellipsize(NewValue),
+							*Ellipsize(InText.Mid(Fill.WeightStart, Fill.WeightEnd - Fill.WeightStart))));
+					return false;
+				}
+				// A bare `@fill` is exactly `@slot SizeRule = Fill`, so it is replaced by the long spelling with the new value
+				// -- the one rewrite of a shorthand that leaves nothing else it meant behind.
+				FSplice& Splice = OutSplices.AddDefaulted_GetRef();
+				Splice.Offset = Fill.Start;
+				Splice.Length = Fill.End - Fill.Start;
+				Splice.Text = FString(TEXT("@slot SizeRule = ")) + NewValue;
+				Splice.Order = InOutOrder++;
+				return true;
+			}
+		}
+
+		if (InProperty.Name == TEXT("Shown") && InProperty.IsBinding())
+		{
+			RefuseConditionalVisibility(OutDiagnostics, InProperty, NodeId, InEdit.PropertyName);
+			return false;
+		}
+		RefuseNotWritable(OutDiagnostics, InProperty.Location,
+			FString::Printf(TEXT("'%s' on '%s' was made from line %d rather than written on a line of its own, so there is no text to edit in place"),
+				*InProperty.Name, *NodeId, InProperty.Location.Line));
+		return false;
 	}
 
 	bool PlanEdit(const FString& InText, const FDreamUIAst& InAst, const FDreamUIPropertyEdit& InEdit,
@@ -1317,6 +1922,30 @@ namespace DreamUIPatchLocal
 
 		const FDreamUIProperty* Existing = FindProperty(*Target.Properties, InEdit.PropertyName);
 
+		// `Shown` is a face over Visibility -- reading one reads the other -- so a node whose Shown is BOUND has its
+		// visibility decided by that binding, whichever of the two names the edit arrives under. A Visibility line
+		// written next to `Shown <- HasSave()` would be undone by the binding on the next tick; one written into a
+		// branch of an `if` would quietly fight the condition the file states two lines up.
+		if (InEdit.Target == EDreamUIPatchTarget::Node && Target.Node != nullptr
+			&& (InEdit.PropertyName == TEXT("Visibility") || InEdit.PropertyName == TEXT("Shown")))
+		{
+			const FDreamUIProperty* Shown = FindProperty(Target.Node->Properties, TEXT("Shown"));
+			if (Shown != nullptr && Shown->IsBinding())
+			{
+				if (Shown->bSynthesized)
+				{
+					RefuseConditionalVisibility(OutDiagnostics, *Shown, Target.Node->Id, InEdit.PropertyName);
+				}
+				else
+				{
+					RefuseTarget(OutDiagnostics, Shown->Location,
+						FString::Printf(TEXT("'%s' on '%s' is decided by the 'Shown <-' binding on line %d: a value written back would be overwritten by it"),
+							*InEdit.PropertyName, *Target.Node->Id, Shown->Location.Line));
+				}
+				return false;
+			}
+		}
+
 		// Validated before anything is planned, and against the line it would land on, so the
 		// diagnostic points at the file the author is looking at rather than at the value in the
 		// abstract.
@@ -1326,6 +1955,10 @@ namespace DreamUIPatchLocal
 			return false;
 		}
 
+		if (Existing != nullptr && Existing->bSynthesized)
+		{
+			return PlanSynthesizedEdit(InText, InEdit, Target, *Existing, OutSplices, InOutOrder, OutDiagnostics);
+		}
 		if (Existing != nullptr)
 		{
 			return PlanReplace(InText, InEdit, *Existing, InEdit.Target == EDreamUIPatchTarget::Slot,
@@ -1510,13 +2143,22 @@ namespace DreamUIPatchLocal
 	/** True when the text at this node's location still begins with what the tree says is there. */
 	bool ConfirmNodeAnchor(const FString& InText, const FDreamUINode& InNode)
 	{
-		const int32 Offset = OffsetOf(InText, InNode.Location);
-		if (Offset == INDEX_NONE)
-		{
-			return false;
-		}
-		// A named slot's header starts with the keyword, not a type -- TypeName is empty on one.
-		return TextAtIs(InText, Offset, InNode.Kind == EDreamUINodeKind::NamedSlot ? FString(TEXT("slot")) : InNode.TypeName);
+		// A named slot's header starts with the keyword, not a type -- TypeName is empty on one -- and a type may be
+		// more than one token (`nier.Row`, `@Row`). MatchNodeHeader knows both.
+		int32 TypeEnd = INDEX_NONE;
+		return MatchNodeHeader(InText, InNode, TypeEnd);
+	}
+
+	/**
+	 * A node that is the one template of a `for` or an `each`: the widget written once and made per item. Taking it out,
+	 * or moving it away, leaves a loop with nothing to repeat (DUI5012, DUI5021) -- a file that parses and does not
+	 * build, which the write-back would then refuse wholesale. Said here instead, about the node, with what to do.
+	 */
+	const FDreamUINode* FindEnclosingLoop(const FDreamUIAst& InAst, const FDreamUINode& InNode)
+	{
+		const FDreamUINode* Parent = FindParentOf(InAst, &InNode);
+		return Parent != nullptr && (Parent->Kind == EDreamUINodeKind::ForLoop || Parent->Kind == EDreamUINodeKind::EachLoop)
+			? Parent : nullptr;
 	}
 
 	/** The children of InParent a caller may address by index: the authored ones, in file order. */
@@ -1538,12 +2180,19 @@ namespace DreamUIPatchLocal
 	/**
 	 * Where a new child's text goes inside InParent's block, and what indentation it wears.
 	 *
-	 * Returns false when the parent has no block; the caller then writes one, exactly as PlanInsert
-	 * does for a property on a blockless node.
+	 * Returns false when there is no place: bOutParentHasBlock then says which kind of false it is. A parent with no
+	 * block gets one from the caller, exactly as PlanInsert does for a property on a blockless node; a parent that HAS
+	 * one and still yields no place is a text that shares its lines in a way a whole-line edit cannot work in, and the
+	 * caller refuses. The two used to be one false, and a parent with a block was then given a second one.
+	 *
+	 * Every place found is at the level of the parent's own block. A child of an `if` branch is a child of the parent
+	 * in the tree (the branch is lowered away) and inside the `if` in the text, so "after that child" is carried out
+	 * past the whole `if … else …` -- a node written into the branch would quietly come and go with its condition.
 	 */
 	bool FindChildInsertPoint(const FString& InText, const FDreamUINode& InParent, int32 InChildIndex,
-		int32& OutOffset, FString& OutIndent)
+		int32& OutOffset, FString& OutIndent, bool& bOutParentHasBlock)
 	{
+		bOutParentHasBlock = false;
 		const int32 HeaderOffset = OffsetOf(InText, InParent.Location);
 		int32 Open = INDEX_NONE;
 		int32 Close = INDEX_NONE;
@@ -1551,6 +2200,7 @@ namespace DreamUIPatchLocal
 		{
 			return false;
 		}
+		bOutParentHasBlock = true;
 
 		TArray<const FDreamUINode*> Children;
 		CollectAddressableChildren(InParent, Children);
@@ -1558,17 +2208,23 @@ namespace DreamUIPatchLocal
 		const FString ParentIndent = IndentAt(InText, HeaderOffset);
 		OutIndent = ParentIndent + DetectIndentUnit(InText);
 
-		if (Children.Num() > 0)
+		// One level in from the header is only the FALLBACK: a block that already holds children
+		// says how far in this file puts them, and copying that is what keeps a two-space file
+		// two-space and a tab file tabs. The first child written at the block's own level -- one
+		// inside an `if` branch is indented for the branch, a level deeper than the place found.
+		for (const FDreamUINode* Child : Children)
 		{
-			// One level in from the header is only the FALLBACK: a block that already holds children
-			// says how far in this file puts them, and copying that is what keeps a two-space file
-			// two-space and a tab file tabs.
-			const int32 FirstChildOffset = OffsetOf(InText, Children[0]->Location);
-			if (FirstChildOffset != INDEX_NONE
-				&& FindLineStart(InText, FirstChildOffset) != FindLineStart(InText, HeaderOffset))
+			const int32 ChildOffset = OffsetOf(InText, Child->Location);
+			if (ChildOffset == INDEX_NONE || ChildOffset <= Open || ChildOffset >= Close
+				|| DepthWithin(InText, Open, ChildOffset) != 0)
 			{
-				OutIndent = IndentAt(InText, FirstChildOffset);
+				continue;
 			}
+			if (FindLineStart(InText, ChildOffset) != FindLineStart(InText, HeaderOffset))
+			{
+				OutIndent = IndentAt(InText, ChildOffset);
+			}
+			break;
 		}
 
 		const int32 Index = InChildIndex == INDEX_NONE ? Children.Num() : FMath::Clamp(InChildIndex, 0, Children.Num());
@@ -1576,17 +2232,25 @@ namespace DreamUIPatchLocal
 		{
 			// Before the first child, which for an empty block means after everything else in it:
 			// properties and `+` blocks come first by the convention PlanInsert already keeps, so
-			// the anchor is the last statement of any kind, or the brace itself.
+			// the anchor is the last statement of any kind, or the brace itself -- of any kind at the
+			// block's own level, that is: a slot property inside `@slot { … }` is the block's last line,
+			// not the parent's.
 			int32 Anchor = Open;
+			auto ConsiderProperty = [&InText, &Anchor, Open, Close](const FDreamUIProperty& InProperty)
+			{
+				const int32 Offset = OffsetOf(InText, InProperty.Location);
+				if (Offset > Anchor && Offset < Close && DepthWithin(InText, Open, Offset) == 0)
+				{
+					Anchor = StatementSearchOffset(InText, InProperty, Offset);
+				}
+			};
 			for (const FDreamUIProperty& Property : InParent.Properties)
 			{
-				const int32 Offset = OffsetOf(InText, Property.Location);
-				Anchor = (Offset > Anchor && Offset < Close) ? StatementSearchOffset(InText, Property, Offset) : Anchor;
+				ConsiderProperty(Property);
 			}
 			for (const FDreamUIProperty& Property : InParent.SlotProperties)
 			{
-				const int32 Offset = OffsetOf(InText, Property.Location);
-				Anchor = (Offset > Anchor && Offset < Close) ? StatementSearchOffset(InText, Property, Offset) : Anchor;
+				ConsiderProperty(Property);
 			}
 			for (const FDreamUIComponent& Component : InParent.Components)
 			{
@@ -1597,8 +2261,8 @@ namespace DreamUIPatchLocal
 					Anchor = End;
 				}
 			}
-			OutOffset = FindLineEnd(InText, Anchor);
-			return true;
+			OutOffset = LeaveNestedConstructs(InText, Open, Close, FindLineEnd(InText, Anchor));
+			return OutOffset != INDEX_NONE;
 		}
 
 		int32 Start = INDEX_NONE;
@@ -1607,8 +2271,8 @@ namespace DreamUIPatchLocal
 		{
 			return false;
 		}
-		OutOffset = End;
-		return true;
+		OutOffset = LeaveNestedConstructs(InText, Open, Close, End);
+		return OutOffset != INDEX_NONE;
 	}
 
 	/** Every line of InBlock re-indented from InFromIndent to InToIndent, first line included. */
@@ -1664,46 +2328,103 @@ namespace DreamUIPatchLocal
 				FString::Printf(TEXT("no node in this file is named %s to insert into"), *Ellipsize(InEdit.ParentId)));
 			return false;
 		}
-		if (Parent->Kind == EDreamUINodeKind::NamedSlot)
+		if (Parent->Kind == EDreamUINodeKind::NamedSlot && !Parent->bFillsSlot)
 		{
+			// A DECLARATION is a hole: its block may style it, never fill it -- the content comes from the host, and a
+			// block holding both is DUI2019. A FILL (`slot Detail { … }` inside a component instance) is the opposite:
+			// its block is nothing but content, and a node goes in like into any other block.
 			RefuseTarget(OutDiagnostics, Parent->Location,
-				FString::Printf(TEXT("%s is a named slot: the grammar gives it no block, so nothing can be written inside it"),
+				FString::Printf(TEXT("%s declares a slot, which a host fills: nothing can be written inside it"),
 					*Parent->Id));
 			return false;
 		}
 		if (!ConfirmNodeAnchor(InText, *Parent))
 		{
 			RefuseStale(OutDiagnostics, Parent->Location,
-				FString::Printf(TEXT("line %d does not begin with %s"), Parent->Location.Line, *Parent->TypeName));
+				FString::Printf(TEXT("line %d does not begin with %s"), Parent->Location.Line, *HeaderWordOf(*Parent)));
 			return false;
 		}
 
+		// Content for a NAMED slot of a component instance goes into the instance's fill of that slot -- the one already
+		// written, or a new one around the node. Nested in the instance's own block instead, it would be the instance's
+		// default-slot content on the next compile, which is not where it was dropped.
+		const FDreamUINode* Destination = Parent;
+		bool bWriteFill = false;
+		if (!InEdit.FillSlotName.IsEmpty())
+		{
+			if (Parent->Kind != EDreamUINodeKind::Widget)
+			{
+				RefuseTarget(OutDiagnostics, Parent->Location,
+					FString::Printf(TEXT("%s is not a component instance, so it has no slot %s to fill"), *Parent->Id, *InEdit.FillSlotName));
+				return false;
+			}
+			const FDreamUINode* Fill = Parent->Children.FindByPredicate([&InEdit](const FDreamUINode& InChild)
+			{
+				return InChild.Kind == EDreamUINodeKind::NamedSlot && InChild.bFillsSlot && InChild.Id == InEdit.FillSlotName;
+			});
+			if (Fill != nullptr)
+			{
+				if (!ConfirmNodeAnchor(InText, *Fill))
+				{
+					RefuseStale(OutDiagnostics, Fill->Location,
+						FString::Printf(TEXT("line %d does not begin with 'slot'"), Fill->Location.Line));
+					return false;
+				}
+				Destination = Fill;
+			}
+			else
+			{
+				bWriteFill = true;
+			}
+		}
+
 		const FString LineEnding = DetectLineEnding(InText);
+		const FString IndentUnit = DetectIndentUnit(InText);
+		// The new statement at a given indentation, its line ending in front: the node, or the fill holding it.
+		auto StatementText = [&InEdit, &LineEnding, &IndentUnit, bWriteFill](const FString& InIndent)
+		{
+			const FString NodeIndent = bWriteFill ? InIndent + IndentUnit : InIndent;
+			const FString Node = LineEnding + NodeIndent + InEdit.TypeName + TEXT(" ") + InEdit.NewId + TEXT(" {")
+				+ LineEnding + NodeIndent + TEXT("}");
+			return bWriteFill
+				? LineEnding + InIndent + TEXT("slot ") + InEdit.FillSlotName + TEXT(" {") + Node + LineEnding + InIndent + TEXT("}")
+				: Node;
+		};
+
 		int32 InsertAt = INDEX_NONE;
 		FString Indent;
-		if (FindChildInsertPoint(InText, *Parent, InEdit.ChildIndex, InsertAt, Indent))
+		bool bParentHasBlock = false;
+		// A position among the instance's children means nothing inside a fill, and a new fill goes after them all.
+		const int32 ChildIndex = (Destination != Parent || bWriteFill) ? INDEX_NONE : InEdit.ChildIndex;
+		if (FindChildInsertPoint(InText, *Destination, ChildIndex, InsertAt, Indent, bParentHasBlock))
 		{
 			FSplice& Splice = OutSplices.AddDefaulted_GetRef();
 			Splice.Offset = InsertAt;
 			Splice.Length = 0;
-			Splice.Text = LineEnding + Indent + InEdit.TypeName + TEXT(" ") + InEdit.NewId + TEXT(" {")
-				+ LineEnding + Indent + TEXT("}");
+			Splice.Text = StatementText(Indent);
 			Splice.Order = InOutOrder++;
 			return true;
+		}
+		if (bParentHasBlock)
+		{
+			RefuseStale(OutDiagnostics, Destination->Location,
+				FString::Printf(TEXT("there is no line in %s's block to write a node after: the child before the place shares its lines with another statement"),
+					*Destination->Id));
+			return false;
 		}
 
 		// No block on the parent -- `Widget Root` alone on a line. The block is written with the
 		// child in it, opening brace on the header line where the grammar requires it. Same two
 		// splices and the same planning order as PlanInsert's blockless path.
-		const int32 HeaderOffset = OffsetOf(InText, Parent->Location);
+		const int32 HeaderOffset = OffsetOf(InText, Destination->Location);
 		const int32 End = HeaderEnd(InText, HeaderOffset);
 		if (End <= HeaderOffset)
 		{
-			RefuseStale(OutDiagnostics, Parent->Location, TEXT("the header this node would go inside is not there"));
+			RefuseStale(OutDiagnostics, Destination->Location, TEXT("the header this node would go inside is not there"));
 			return false;
 		}
 		const FString ParentIndent = IndentAt(InText, HeaderOffset);
-		const FString ChildIndent = ParentIndent + DetectIndentUnit(InText);
+		const FString ChildIndent = ParentIndent + IndentUnit;
 
 		FSplice& Brace = OutSplices.AddDefaulted_GetRef();
 		Brace.Offset = End;
@@ -1714,9 +2435,7 @@ namespace DreamUIPatchLocal
 		FSplice& Body = OutSplices.AddDefaulted_GetRef();
 		Body.Offset = FindLineEnd(InText, End);
 		Body.Length = 0;
-		Body.Text = LineEnding + ChildIndent + InEdit.TypeName + TEXT(" ") + InEdit.NewId + TEXT(" {")
-			+ LineEnding + ChildIndent + TEXT("}")
-			+ LineEnding + ParentIndent + TEXT("}");
+		Body.Text = StatementText(ChildIndent) + LineEnding + ParentIndent + TEXT("}");
 		Body.Order = InOutOrder++;
 		return true;
 	}
@@ -1754,10 +2473,17 @@ namespace DreamUIPatchLocal
 				FString::Printf(TEXT("%s is the root: a .dui holds exactly one, so it cannot be removed"), *Node->Id));
 			return false;
 		}
+		if (const FDreamUINode* Loop = FindEnclosingLoop(InAst, *Node))
+		{
+			RefuseTarget(OutDiagnostics, Node->Location,
+				FString::Printf(TEXT("%s is what the '%s' on line %d repeats, and a loop with nothing to repeat does not build; remove the loop instead"),
+					*Node->Id, Loop->Kind == EDreamUINodeKind::ForLoop ? TEXT("for") : TEXT("each"), Loop->Location.Line));
+			return false;
+		}
 		if (!ConfirmNodeAnchor(InText, *Node))
 		{
 			RefuseStale(OutDiagnostics, Node->Location,
-				FString::Printf(TEXT("line %d does not begin with %s"), Node->Location.Line, *Node->TypeName));
+				FString::Printf(TEXT("line %d does not begin with %s"), Node->Location.Line, *HeaderWordOf(*Node)));
 			return false;
 		}
 
@@ -1801,6 +2527,19 @@ namespace DreamUIPatchLocal
 				FString::Printf(TEXT("no node in this file is named %s to move into"), *Ellipsize(InEdit.ParentId)));
 			return false;
 		}
+		if (const FDreamUINode* Loop = FindEnclosingLoop(InAst, *Node))
+		{
+			RefuseTarget(OutDiagnostics, Node->Location,
+				FString::Printf(TEXT("%s is what the '%s' on line %d repeats; moving it out would leave the loop nothing to repeat -- move the loop"),
+					*Node->Id, Loop->Kind == EDreamUINodeKind::ForLoop ? TEXT("for") : TEXT("each"), Loop->Location.Line));
+			return false;
+		}
+		if (Parent->Kind == EDreamUINodeKind::NamedSlot && !Parent->bFillsSlot)
+		{
+			RefuseTarget(OutDiagnostics, Parent->Location,
+				FString::Printf(TEXT("%s declares a slot, which a host fills: nothing can be moved inside it"), *Parent->Id));
+			return false;
+		}
 		if (!ConfirmNodeAnchor(InText, *Node) || !ConfirmNodeAnchor(InText, *Parent))
 		{
 			RefuseStale(OutDiagnostics, Node->Location,
@@ -1819,13 +2558,17 @@ namespace DreamUIPatchLocal
 		const FString LineEnding = DetectLineEnding(InText);
 		int32 InsertAt = INDEX_NONE;
 		FString Indent;
-		if (!FindChildInsertPoint(InText, *Parent, InEdit.ChildIndex, InsertAt, Indent))
+		bool bParentHasBlock = false;
+		if (!FindChildInsertPoint(InText, *Parent, InEdit.ChildIndex, InsertAt, Indent, bParentHasBlock))
 		{
 			// A blockless destination would mean writing the brace AND lifting the subtree into it in
 			// one planning pass, with the lifted text overlapping its own insertion point when the
 			// two nodes are adjacent. Refused with the way out, which is one insert then one move.
 			RefuseTarget(OutDiagnostics, Parent->Location,
-				FString::Printf(TEXT("%s has no block to move %s into; give it one first"), *Parent->Id, *Node->Id));
+				bParentHasBlock
+					? FString::Printf(TEXT("there is no line in %s's block to move %s after: the child before the place shares its lines with another statement"),
+						*Parent->Id, *Node->Id)
+					: FString::Printf(TEXT("%s has no block to move %s into; give it one first"), *Parent->Id, *Node->Id));
 			return false;
 		}
 		if (InsertAt > Start && InsertAt < End)
@@ -1873,21 +2616,50 @@ namespace DreamUIPatchLocal
 				FString::Printf(TEXT("this file already declares a node called %s"), *InEdit.NewId));
 			return false;
 		}
-		if (!ConfirmNodeAnchor(InText, *Node))
+		// The id sits after the type (or after the `slot` keyword), which the anchor check confirms
+		// and measures. Found by scanning rather than from a location because the AST records where
+		// the NODE starts, not where its id does -- and a scan checked against the id the tree says is
+		// there cannot land on the wrong word.
+		int32 TypeEnd = INDEX_NONE;
+		if (!MatchNodeHeader(InText, *Node, TypeEnd))
 		{
 			RefuseStale(OutDiagnostics, Node->Location,
-				FString::Printf(TEXT("line %d does not begin with %s"), Node->Location.Line, *Node->TypeName));
+				FString::Printf(TEXT("line %d does not begin with %s"), Node->Location.Line, *HeaderWordOf(*Node)));
 			return false;
 		}
 
-		// The id sits after the type (or after the `slot` keyword), which the anchor check has just
-		// confirmed. Found by scanning rather than from a location because the AST records where the
-		// NODE starts, not where its id does -- and a scan checked against the id the tree says is
-		// there cannot land on the wrong word.
-		const int32 HeaderOffset = OffsetOf(InText, Node->Location);
-		const FString Keyword = Node->Kind == EDreamUINodeKind::NamedSlot ? FString(TEXT("slot")) : Node->TypeName;
-		int32 Cursor = HeaderOffset + Keyword.Len();
-		const int32 LineEnd = FindLineEnd(InText, HeaderOffset);
+		if (Node->bAnonymous)
+		{
+			// An anonymous node has no id in the text: the one in the tree was made up from where it stands, and the
+			// rename is the author's first name for it. It goes where an id goes, straight after the type -- the
+			// header then reads exactly as if it had been written with one from the start.
+			//
+			// Without `(was:)`, and on purpose. The made-up id named a member nothing can see (hidden from graphs,
+			// from the variable list), so there are no graph references for the clause to carry; and the made-up id
+			// does not go away -- the next anonymous sibling of the same type takes it over on the next parse, so a
+			// clause naming it would be DUI3010, a rename from an id still in use, and the file would stop building.
+			int32 After = TypeEnd;
+			while (After < InText.Len() && IsInlineWhitespace(InText[After]))
+			{
+				++After;
+			}
+			if (After < InText.Len() && IsIdentifierChar(InText[After]))
+			{
+				// A word where the tree says there is none: the text has an id the tree does not know about.
+				RefuseStale(OutDiagnostics, Node->Location,
+					FString::Printf(TEXT("line %d names a node where the tree says it has no name"), Node->Location.Line));
+				return false;
+			}
+			FSplice& Named = OutSplices.AddDefaulted_GetRef();
+			Named.Offset = TypeEnd;
+			Named.Length = 0;
+			Named.Text = TEXT(" ") + InEdit.NewId;
+			Named.Order = InOutOrder++;
+			return true;
+		}
+
+		const int32 LineEnd = FindLineEnd(InText, TypeEnd);
+		int32 Cursor = TypeEnd;
 		while (Cursor < LineEnd && IsInlineWhitespace(InText[Cursor]))
 		{
 			++Cursor;
@@ -1938,16 +2710,10 @@ namespace DreamUIPatchLocal
 				FString::Printf(TEXT("no node in this file is named %s"), *Ellipsize(InEdit.NodeId)));
 			return false;
 		}
-		if (Node->Kind == EDreamUINodeKind::NamedSlot)
-		{
-			RefuseTarget(OutDiagnostics, Node->Location,
-				FString::Printf(TEXT("%s is a named slot and takes no block, so it can carry no behaviours"), *Node->Id));
-			return false;
-		}
 		if (!ConfirmNodeAnchor(InText, *Node))
 		{
 			RefuseStale(OutDiagnostics, Node->Location,
-				FString::Printf(TEXT("line %d does not begin with %s"), Node->Location.Line, *Node->TypeName));
+				FString::Printf(TEXT("line %d does not begin with %s"), Node->Location.Line, *HeaderWordOf(*Node)));
 			return false;
 		}
 
@@ -1958,7 +2724,19 @@ namespace DreamUIPatchLocal
 
 		int32 Open = INDEX_NONE;
 		int32 Close = INDEX_NONE;
-		if (!FindBlock(InText, HeaderOffset, Open, Close))
+		const bool bHasBlock = FindBlock(InText, HeaderOffset, Open, Close);
+		if (Node->Kind == EDreamUINodeKind::NamedSlot && (Node->bFillsSlot || !bHasBlock))
+		{
+			// A declaration's block may carry behaviours (`slot Rows default { + VerticalBox { } }`); a bare
+			// declaration is left the hole its author wrote, for the reason ResolveTarget gives, and a fill's block
+			// is content only.
+			RefuseTarget(OutDiagnostics, Node->Location,
+				Node->bFillsSlot
+					? FString::Printf(TEXT("'slot %s' here fills a slot of its component: its block holds content, not behaviours"), *Node->Id)
+					: FString::Printf(TEXT("'slot %s' is written without a block; write 'slot %s { }' to give it behaviours"), *Node->Id, *Node->Id));
+			return false;
+		}
+		if (!bHasBlock)
 		{
 			const int32 End = HeaderEnd(InText, HeaderOffset);
 			if (End <= HeaderOffset)
@@ -1988,8 +2766,9 @@ namespace DreamUIPatchLocal
 		FString Indent = NodeIndent + DetectIndentUnit(InText);
 		for (const FDreamUIProperty& Property : Node->Properties)
 		{
+			// The node's own lines only: a `Shown` an `if` made stands on the `if`'s line, outside this block.
 			const int32 Offset = OffsetOf(InText, Property.Location);
-			if (Offset > Anchor && Offset < Close)
+			if (Offset > Anchor && Offset < Close && DepthWithin(InText, Open, Offset) == 0)
 			{
 				Anchor = StatementSearchOffset(InText, Property, Offset);
 				Indent = IndentAt(InText, Offset);
@@ -2006,8 +2785,15 @@ namespace DreamUIPatchLocal
 			}
 		}
 
+		const int32 InsertAt = LeaveNestedConstructs(InText, Open, Close, FindLineEnd(InText, Anchor));
+		if (InsertAt == INDEX_NONE)
+		{
+			RefuseStale(OutDiagnostics, Node->Location,
+				TEXT("the last line of this block opens another block that does not end on a line of its own, so there is no line to write after"));
+			return false;
+		}
 		FSplice& Splice = OutSplices.AddDefaulted_GetRef();
-		Splice.Offset = FindLineEnd(InText, Anchor);
+		Splice.Offset = InsertAt;
 		Splice.Length = 0;
 		Splice.Text = LineEnding + Indent + NewLine;
 		Splice.Order = InOutOrder++;

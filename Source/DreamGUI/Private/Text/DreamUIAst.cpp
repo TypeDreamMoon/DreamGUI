@@ -79,6 +79,37 @@ const FDreamUIResource* FDreamUIAst::FindResource(const FString& InName) const
 	return nullptr;
 }
 
+const FDreamUIComponentAlias* FDreamUIAst::FindComponentAlias(const FString& InName) const
+{
+	for (const FDreamUIComponentAlias& Alias : ComponentAliases)
+	{
+		if (Alias.Alias == InName)
+		{
+			return &Alias;
+		}
+	}
+	for (const FDreamUIComponentAlias& Alias : ImportedComponentAliases)
+	{
+		if (Alias.Alias == InName)
+		{
+			return &Alias;
+		}
+	}
+	return nullptr;
+}
+
+const FDreamUIEventDecl* FDreamUIAst::FindEvent(const FString& InName) const
+{
+	for (const FDreamUIEventDecl& Event : Events)
+	{
+		if (Event.Name == InName)
+		{
+			return &Event;
+		}
+	}
+	return nullptr;
+}
+
 const FDreamUITimeline* FDreamUIAst::FindTimeline(const FString& InName) const
 {
 	// No import chain to fall through to, on purpose -- see the field's own note: a timeline is an

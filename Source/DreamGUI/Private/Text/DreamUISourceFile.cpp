@@ -31,6 +31,12 @@
  *   token index and forcing an advance if a statement made no progress -- without it a recovery
  *   path that returns without consuming turns a malformed file into a hang, which is the one
  *   failure mode a syntax checker is never allowed to have.
+ *
+ * And one rule about the words the language grew later -- `as`, `props`, `events`, `emit`, `if`,
+ * `else`, `default`, `fill`: they are keywords only in the one position each leads, decided by a token
+ * or two of lookahead, and never reserved as names. Files written before they existed used them as
+ * property names and ids, and a grammar that grows must not take a working file away from its author.
+ * The words that were keywords from the start (IsReservedWord) stay as strict as they always were.
  */
 
 namespace DreamUIText
@@ -891,6 +897,190 @@ namespace DreamUIText
 		const TFunction<bool(const FString&, FString&, FString&)>& InImportReader, TSet<FString> InAncestors,
 		bool bInAllowRootless = false);
 
+	bool ParseHeaderOnly(const FString& InText, const FString& InSourceName,
+		FDreamUIAst& OutAst, FDreamUIDiagnosticBag& OutDiagnostics);
+
+	/** A resolved import path as the cycle guard and every dedupe compare it: normalized, lowercased. */
+	FString MakeImportKey(const FString& InPath)
+	{
+		FString Key = InPath;
+		FPaths::NormalizeFilename(Key);
+		Key.ToLowerInline();
+		return Key;
+	}
+
+	/**
+	 * The identity of one declaration however many routes bring it into a file: the file it was read from and the name
+	 * it is entered under. The name is part of it because one file may come in twice under two names -- plainly and as
+	 * `nier`, or as `a` and as `b` -- and those are two sets of entries, not one entry seen twice.
+	 */
+	FString MakeDeclarationKey(const FString& InSourceName, const FString& InName)
+	{
+		return MakeImportKey(InSourceName) + TEXT("|") + InName.ToLower();
+	}
+
+	FString DeclarationKeyOf(const FDreamUIStyle& InStyle) { return MakeDeclarationKey(InStyle.SourceName, InStyle.Name); }
+	FString DeclarationKeyOf(const FDreamUIResource& InResource) { return MakeDeclarationKey(InResource.SourceName, InResource.Name); }
+	FString DeclarationKeyOf(const FDreamUIComponentAlias& InAlias) { return MakeDeclarationKey(InAlias.SourceName, InAlias.Alias); }
+
+	/**
+	 * Moves a library's own entries and then its imported ones into OutInto, each renamed by InRename first, skipping
+	 * any whose declaration is there already -- including one that arrived earlier in this same call, so a duplicate
+	 * inside the library's own lists is caught as well as one against what OutInto held.
+	 */
+	template <typename TDeclaration, typename TRename>
+	void MergeDeclarations(TArray<TDeclaration>& OutInto, TArray<TDeclaration>& InOwn, TArray<TDeclaration>& InImported, const TRename& InRename)
+	{
+		TSet<FString> Keys;
+		for (const TDeclaration& Existing : OutInto)
+		{
+			Keys.Add(DeclarationKeyOf(Existing));
+		}
+		for (TArray<TDeclaration>* From : { &InOwn, &InImported })
+		{
+			for (TDeclaration& Declaration : *From)
+			{
+				InRename(Declaration);
+				bool bAlreadyIn = false;
+				Keys.Add(DeclarationKeyOf(Declaration), &bAlreadyIn);
+				if (!bAlreadyIn)
+				{
+					OutInto.Add(MoveTemp(Declaration));
+				}
+			}
+		}
+	}
+
+	/**
+	 * Renames a library's declarations into the namespace a `use … as ns` puts them under -- and the references between
+	 * them along with them, which is the part that is easy to forget and the reason this is a type of its own.
+	 *
+	 * A library style `Danger : Card` that arrived as `nier.Danger : Card` would look for Card in the IMPORTER, where it
+	 * may be a different style altogether, or nothing. So a style's base, and every `@Resource` -- as a value, inside an
+	 * expression, on a style's components and slot lines -- that names one of the library's own entries (its own or
+	 * those it brought in itself) is renamed with the entry. A name the library does not declare is left alone: it was
+	 * never the library's to resolve, and it still resolves wherever it always did.
+	 *
+	 * An empty prefix renames nothing, which is the plain `use`.
+	 */
+	struct FNamespacePrefixer
+	{
+		FString Prefix;
+		/** The library's names BEFORE renaming, own and imported; FString keys, so case insensitive as every lookup is. */
+		TSet<FString> StyleNames;
+		TSet<FString> ResourceNames;
+
+		FNamespacePrefixer(const FString& InPrefix, const FDreamUIAst& InLibrary)
+			: Prefix(InPrefix)
+		{
+			if (Prefix.IsEmpty())
+			{
+				return;
+			}
+			for (const TArray<FDreamUIStyle>* Styles : { &InLibrary.Styles, &InLibrary.ImportedStyles })
+			{
+				for (const FDreamUIStyle& Style : *Styles)
+				{
+					StyleNames.Add(Style.Name);
+				}
+			}
+			for (const TArray<FDreamUIResource>* Resources : { &InLibrary.Resources, &InLibrary.ImportedResources })
+			{
+				for (const FDreamUIResource& Resource : *Resources)
+				{
+					ResourceNames.Add(Resource.Name);
+				}
+			}
+		}
+
+		FString Prefixed(const FString& InName) const
+		{
+			return Prefix + TEXT(".") + InName;
+		}
+
+		void PrefixStyle(FDreamUIStyle& InOutStyle) const
+		{
+			if (Prefix.IsEmpty())
+			{
+				return;
+			}
+			InOutStyle.Name = Prefixed(InOutStyle.Name);
+			if (!InOutStyle.BaseName.IsEmpty() && StyleNames.Contains(InOutStyle.BaseName))
+			{
+				InOutStyle.BaseName = Prefixed(InOutStyle.BaseName);
+			}
+			PrefixReferences(InOutStyle.Properties);
+			for (FDreamUIComponent& Component : InOutStyle.Components)
+			{
+				PrefixReferences(Component.Properties);
+			}
+			PrefixReferences(InOutStyle.SlotProperties);
+		}
+
+		void PrefixResource(FDreamUIResource& InOutResource) const
+		{
+			if (Prefix.IsEmpty())
+			{
+				return;
+			}
+			InOutResource.Name = Prefixed(InOutResource.Name);
+			PrefixReference(InOutResource.Value);
+		}
+
+		void PrefixAlias(FDreamUIComponentAlias& InOutAlias) const
+		{
+			if (!Prefix.IsEmpty())
+			{
+				InOutAlias.Alias = Prefixed(InOutAlias.Alias);
+			}
+		}
+
+		void PrefixReferences(TArray<FDreamUIProperty>& InOutProperties) const
+		{
+			for (FDreamUIProperty& Property : InOutProperties)
+			{
+				PrefixReference(Property.Value);
+				if (Property.BindingExpression.IsSet())
+				{
+					PrefixReferences(Property.BindingExpression.GetValue(), 0);
+				}
+				for (FDreamUIExpression& Argument : Property.EmitArguments)
+				{
+					PrefixReferences(Argument, 0);
+				}
+			}
+		}
+
+		void PrefixReference(FDreamUIValue& InOutValue) const
+		{
+			if (InOutValue.Kind == EDreamUIValueKind::ResourceRef && ResourceNames.Contains(InOutValue.Raw))
+			{
+				InOutValue.Raw = Prefixed(InOutValue.Raw);
+			}
+		}
+
+		void PrefixReferences(FDreamUIExpression& InOutExpression, int32 InDepth) const
+		{
+			// The crash guard, as on every walk of a tree: the parser already refuses an expression deeper than the
+			// nesting budget, so a PARSED one never gets here, and stopping leaves a reference unrenamed rather than
+			// the editor gone.
+			if (InDepth >= 2 * DreamUIAst::MaxNestingDepth)
+			{
+				return;
+			}
+			if (InOutExpression.Kind == FDreamUIExpression::EKind::Literal
+				&& InOutExpression.LiteralKind == EDreamUIValueKind::ResourceRef
+				&& ResourceNames.Contains(InOutExpression.LiteralRaw))
+			{
+				InOutExpression.LiteralRaw = Prefixed(InOutExpression.LiteralRaw);
+			}
+			for (FDreamUIExpression& Operand : InOutExpression.Operands)
+			{
+				PrefixReferences(Operand, InDepth + 1);
+			}
+		}
+	};
+
 	class FParser
 	{
 	public:
@@ -907,6 +1097,19 @@ namespace DreamUIText
 		TSet<FString> ImportAncestors;
 		/** True for a file reached through `use`: a style library legitimately has no root node. */
 		bool bAllowRootless = false;
+		/** This file's own path as MakeImportKey spells it, so a file that names itself as a component is caught. */
+		FString SelfKey;
+		/**
+		 * Read only what a `use … as` needs to know about the file it names -- whether it has a root, and the class its
+		 * `class` line gives -- and nothing that needs another file: its own `use` lines are stepped over unread, and
+		 * the whole-file checks that would miss what those lines bring are not run.
+		 *
+		 * Not an optimisation, or not only one. A library that names its components (`use "Row.dui" as Row`) is very
+		 * often also what those components style themselves from (`use "Common.dui"` inside Row.dui), and following
+		 * that second line from inside the first would walk straight back into the library and report a cycle. There
+		 * is none: a component's class is all an importer takes from it, and its class does not depend on its styles.
+		 */
+		bool bHeaderOnly = false;
 
 		void ParseFile(FDreamUIAst& OutAst)
 		{
@@ -931,6 +1134,25 @@ namespace DreamUIText
 				else if (CheckKeyword(TEXT("resources")))
 				{
 					ParseResourcesDeclaration(OutAst);
+				}
+				else if (CheckKeyword(TEXT("props")) && Peek(1).Kind == ETokenKind::OpenBrace)
+				{
+					// Only with its brace: `props` with anything else after it is whatever it was before the block
+					// existed, so a file that happened to use the word keeps meaning what it meant.
+					ParsePropsDeclaration(OutAst);
+				}
+				else if (CheckKeyword(TEXT("events")) && Peek(1).Kind == ETokenKind::OpenBrace)
+				{
+					ParseEventsDeclaration(OutAst);
+				}
+				else if (CheckKeyword(TEXT("if")) || CheckKeyword(TEXT("else")))
+				{
+					// A condition chooses between children, and the file's top level has no parent to give them to
+					// -- one root is the whole of what it can hold. Said here rather than left to read as a root
+					// node of type `if`, which is what it would otherwise parse as.
+					Diagnostics.AddError(EDreamUIDiagnosticCode::MalformedConditional, Current().Location,
+						FString::Printf(TEXT("'%s' chooses between the children of a node, so it belongs inside one"), *Current().Text));
+					RecoverToStatementBoundary();
 				}
 				else if (CheckKeyword(TEXT("style")))
 				{
@@ -974,7 +1196,7 @@ namespace DreamUIText
 							// author who pasted a second tree sees which one is the intruder rather
 							// than a complaint about the file as a whole.
 							Diagnostics.AddError(EDreamUIDiagnosticCode::MalformedRoot, Node.Location,
-								FString::Printf(TEXT("a .dui holds exactly one root node, and '%s' is a second one"), *Node.Id));
+								FString::Printf(TEXT("a .dui holds exactly one root node, and '%s' is a second one"), *DescribeNode(Node)));
 						}
 					}
 				}
@@ -995,6 +1217,17 @@ namespace DreamUIText
 					TEXT("this file declares no root node"));
 			}
 
+			// A header-only read skipped the `use` lines, so every check that asks what they brought would answer
+			// wrongly; and nothing is ever built from one, so the made-up ids would be work for nobody.
+			if (bHeaderOnly)
+			{
+				return;
+			}
+
+			// The ids first: the whole-file check below is about ids, and a made-up one has to exist before anything
+			// can ask whether it collides.
+			NameAnonymousNodes(OutAst);
+			CheckNamespaceReferences(OutAst);
 			CheckNamesAcrossTheTree(OutAst);
 		}
 
@@ -1006,6 +1239,45 @@ namespace DreamUIText
 
 		/** The loop variables in scope at the current point, innermost last. Only used for shadowing. */
 		TArray<FString> ActiveLoopVariables;
+
+		/**
+		 * Every `ns.` written in a style clause, a style's base or a resource reference, with where it was written.
+		 *
+		 * Checked once the whole file has been read (CheckNamespaceReferences) rather than where each one stands, the
+		 * same way styles resolve: a `use … as ns` below the line that writes `@ns.Ink` declares it no less.
+		 */
+		struct FNamespaceReference
+		{
+			FString Prefix;
+			FString Name;
+			FDreamUISourceLocation Location;
+		};
+		TArray<FNamespaceReference> NamespaceReferences;
+
+		/**
+		 * The names this file's own `use … as` lines gave, aliases and namespaces alike, with where each was given.
+		 * One table for both because a node type, a style clause and a resource reference all spell them the same way
+		 * -- `Row`, `nier.Row` -- so a second `as Row` is the same collision whichever kind either one is.
+		 */
+		TMap<FString, FDreamUISourceLocation> OwnAsNames;
+
+		/**
+		 * Files whose declarations are already in this AST unprefixed, as MakeImportKey spells them -- what lets a
+		 * second plain `use` of one return without parsing it again. Its own set rather than a scan of Imports,
+		 * because Imports also lists files that came in as components (nothing merged) or under a namespace (merged
+		 * under other names), and a plain `use` of either still has everything to contribute.
+		 */
+		TSet<FString> PlainMergedPaths;
+
+		/** The first `slot … default` of the file, for the one MultipleDefaultSlots names when there is a second. */
+		FString FirstDefaultSlotName;
+		FDreamUISourceLocation FirstDefaultSlotLocation;
+
+		/** A node as a message should name it: its id, or the type it was written as when it has none yet. */
+		static FString DescribeNode(const FDreamUINode& InNode)
+		{
+			return InNode.Id.IsEmpty() ? InNode.TypeName : InNode.Id;
+		}
 
 		/**
 		 * How many nested blocks / parenthesised sub-expressions the cursor is inside.
@@ -1235,27 +1507,61 @@ namespace DreamUIText
 		}
 
 		/**
-		 * `use "Styles/Common.dui"` -- pull another file's styles and resources into this one's
-		 * lookup, shadowed by local declarations. Paths resolve exactly like SourceFile paths
-		 * (DUI-root-relative, Plugin.X:-qualified, or absolute); the imported file's OWN imports
-		 * ride along, so a style library can layer. An import that fails parses nothing into this
-		 * file and says so once, here, at the line that asked for it -- its internal errors are its
-		 * own to show when IT is compiled.
+		 * `use` -- another file, or a class, made available to this one. Four forms, told apart by what follows the
+		 * word and by what the named file turns out to hold:
+		 *
+		 *   `use "Styles/Common.dui"` pulls that file's styles, resources and component aliases into this one's lookup,
+		 *   shadowed by local declarations. The imported file's OWN imports ride along, so a style library can layer,
+		 *   and so can a library that names a family of components for every screen that uses it.
+		 *
+		 *   `use "Components/Row.dui" as Row`, on a file with a root node, names that file's CLASS -- a component --
+		 *   and takes nothing else from it. Its styles and resources are its own business: a screen that borrowed them
+		 *   by accident would change its look the day the component's author renamed one.
+		 *
+		 *   `use /Game/UI/WBP_Row as Row` names a class that has no .dui to read, by its path.
+		 *
+		 *   `use "Lib.dui" as nier`, on a file with no root, is a namespace: everything the library declares or brought
+		 *   in is entered as `nier.X`, so two libraries that both say `Label` can be used side by side.
+		 *
+		 * Paths resolve exactly like SourceFile paths (DUI-root-relative, Plugin.X:-qualified, or absolute). An import
+		 * that fails puts nothing into this file and says so once, here, at the line that asked for it -- its internal
+		 * errors are its own to show when IT is compiled.
 		 */
 		void ParseUseDeclaration(FDreamUIAst& OutAst)
 		{
 			const FDreamUISourceLocation UseLocation = Current().Location;
 			Advance(); // 'use'
 
+			if (bHeaderOnly)
+			{
+				// Stepped over unread, the whole line: see bHeaderOnly for why that is the point rather than a shortcut.
+				RecoverToStatementBoundary();
+				return;
+			}
+
+			if (Check(ETokenKind::AssetPath))
+			{
+				ParseUseClassPath(OutAst, UseLocation);
+				return;
+			}
 			if (!Check(ETokenKind::String))
 			{
 				Diagnostics.AddError(EDreamUIDiagnosticCode::ImportFailed, UseLocation,
-					TEXT("'use' takes a quoted path, as in 'use \"Styles/Common.dui\"'"));
+					TEXT("'use' takes a quoted path, as in 'use \"Styles/Common.dui\"', or a class path and a name for it, as in 'use /Game/UI/WBP_Row as Row'"));
 				RecoverToStatementBoundary();
 				return;
 			}
 			const FString Spelling = Current().Text;
 			Advance();
+
+			// `as` is a keyword here, after a path, and nowhere else.
+			FString AsName;
+			FDreamUISourceLocation AsLocation;
+			const bool bHasAs = CheckKeyword(TEXT("as"));
+			if (bHasAs && !ParseUseAsName(Spelling, AsName, AsLocation))
+			{
+				return;
+			}
 
 			if (ImportReader == nullptr || !(*ImportReader))
 			{
@@ -1271,109 +1577,270 @@ namespace DreamUIText
 					FString::Printf(TEXT("'%s' resolves to no readable file under any DUI root"), *Spelling));
 				return;
 			}
-			FString Normalized = Resolved;
-			FPaths::NormalizeFilename(Normalized);
-			Normalized = Normalized.ToLower();
-			if (ImportAncestors.Contains(Normalized))
+			const FString Key = MakeImportKey(Resolved);
+
+			if (!bHasAs)
 			{
-				Diagnostics.AddError(EDreamUIDiagnosticCode::ImportFailed, UseLocation,
-					FString::Printf(TEXT("'%s' is already being imported further up this chain -- the imports form a cycle"), *Spelling));
-				return;
-			}
-			// A file THIS one has already pulled in -- directly, or through something else it uses --
-			// contributes nothing a second time, so it is not parsed a second time either. A diamond
-			// (A uses B and C, both of which use D) otherwise merged D's styles and resources into A
-			// twice and paid a full recursive parse of D for the privilege; deeper graphs multiply,
-			// which is how a handful of layered style libraries turn one write-back flush into
-			// exponential work. Silent rather than diagnosed, because writing `use` twice for a
-			// library you reach two ways is not a mistake -- first declaration wins in FindStyle
-			// either way, so the duplicates never changed an answer, only the cost of finding it.
-			bool bAlreadyMerged = false;
-			for (const FString& Already : OutAst.Imports)
-			{
-				FString AlreadyNormalized = Already;
-				FPaths::NormalizeFilename(AlreadyNormalized);
-				if (AlreadyNormalized.ToLower() == Normalized)
+				if (ReportsImportCycle(Key, Spelling, UseLocation))
 				{
-					bAlreadyMerged = true;
-					break;
+					return;
 				}
-			}
-			if (bAlreadyMerged)
-			{
+				// A file whose declarations are already here unprefixed -- pulled in directly, or through something else
+				// this file uses -- contributes nothing a second time, so it is not parsed a second time either. A
+				// diamond (A uses B and C, both of which use D) otherwise paid a full recursive parse of D for nothing,
+				// and deeper graphs multiply, which is how a handful of layered style libraries turn one write-back flush
+				// into exponential work. Silent rather than diagnosed, because writing `use` twice for a library you
+				// reach two ways is not a mistake. PlainMergedPaths rather than Imports, which also lists the files that
+				// came in as components or under a namespace -- a plain `use` of one of those has everything to add.
+				if (PlainMergedPaths.Contains(Key))
+				{
+					return;
+				}
+				FDreamUIAst Imported;
+				if (!ParseImportedFile(ImportedText, Resolved, Key, Spelling, UseLocation, Imported))
+				{
+					return;
+				}
+
+				// Asked before the merge moves the entries out.
+				const bool bPlainThroughout = IsPlainThroughout(Imported);
+				MergeImported(OutAst, Imported, FString());
+				// A plain `use` merges everything, the library's namespaced entries included, so the namespaces they sit
+				// under come along: `@pal.Ink` resolves here exactly as it did in the library that declared `pal`.
+				for (const FString& Namespace : Imported.Namespaces)
+				{
+					OutAst.Namespaces.AddUnique(Namespace);
+				}
+				PlainMergedPaths.Add(Key);
+				if (bPlainThroughout)
+				{
+					for (const FString& Import : Imported.Imports)
+					{
+						PlainMergedPaths.Add(MakeImportKey(Import));
+					}
+				}
+				AddImport(OutAst, Resolved);
+				for (const FString& Import : Imported.Imports)
+				{
+					AddImport(OutAst, Import);
+				}
 				return;
 			}
 
-			FDreamUIAst Imported;
-			FDreamUIDiagnosticBag ImportedDiagnostics;
-			TSet<FString> BranchAncestors = ImportAncestors;
-			BranchAncestors.Add(Normalized);
-			if (!ParseWithImports(ImportedText, Resolved, Imported, ImportedDiagnostics, *ImportReader, MoveTemp(BranchAncestors), /*bInAllowRootless*/true))
+			// `as`: a component or a namespace, and only the file can say which. Read for its header alone first --
+			// a component's class is all an importer takes from it, and following its own `use` lines from here is how
+			// a library that names its components, and is what they style themselves from, met itself as a cycle.
+			FDreamUIAst Header;
+			FDreamUIDiagnosticBag HeaderDiagnostics;
+			if (!ParseHeaderOnly(ImportedText, Resolved, Header, HeaderDiagnostics))
 			{
 				Diagnostics.AddError(EDreamUIDiagnosticCode::ImportFailed, UseLocation,
 					FString::Printf(TEXT("'%s' failed to parse (%d error(s)); compile it directly to see them"),
-						*Spelling, ImportedDiagnostics.NumErrors()));
+						*Spelling, HeaderDiagnostics.NumErrors()));
+				return;
+			}
+			if (Header.bHasRoot)
+			{
+				if (Key == SelfKey)
+				{
+					Diagnostics.AddError(EDreamUIDiagnosticCode::ImportFailed, UseLocation,
+						FString::Printf(TEXT("'%s' is this file, and a component cannot be made of itself"), *Spelling));
+					return;
+				}
+				FDreamUIComponentAlias& Alias = OutAst.ComponentAliases.AddDefaulted_GetRef();
+				Alias.Alias = AsName;
+				// Empty when the file has no `class` line: the builder then asks the editor which Blueprint has this
+				// file as its Source File, which is an answer this stage has no way to reach.
+				Alias.ClassPath = Header.ClassPath;
+				Alias.SourcePath = Resolved;
+				Alias.Location = AsLocation;
+				Alias.SourceName = Diagnostics.SourceName;
+				// Listed although nothing of the file was merged: a component whose `class` line moves is a component
+				// this file must be recompiled against, and Imports is the list the watcher recompiles from.
+				AddImport(OutAst, Resolved);
 				return;
 			}
 
-			// Whether a FILE has already put its declarations into this AST, asked of the resolved
-			// path each declaration was read from (FDreamUIStyle::SourceName). This is what closes
-			// the diamond properly: skipping the second `use` of the same spelling (above) only
-			// catches the shallow case, while A-uses-B-and-C with both using D arrives here as C's
-			// TRANSITIVE list carrying D's styles a second time. Duplicates never changed an answer
-			// -- FindStyle takes the first -- but they grow both arrays, and every lookup through
-			// them, with the shape of the import graph rather than with the number of styles.
-			auto AlreadyMerged = [&OutAst](const FString& InPath) -> bool
+			if (ReportsImportCycle(Key, Spelling, UseLocation))
 			{
-				if (InPath.IsEmpty())
-				{
-					return false;
-				}
-				FString Key = InPath;
-				FPaths::NormalizeFilename(Key);
-				Key.ToLowerInline();
-				for (const FString& Existing : OutAst.Imports)
-				{
-					FString ExistingKey = Existing;
-					FPaths::NormalizeFilename(ExistingKey);
-					ExistingKey.ToLowerInline();
-					if (ExistingKey == Key)
-					{
-						return true;
-					}
-				}
-				return false;
-			};
+				return;
+			}
+			FDreamUIAst Imported;
+			if (!ParseImportedFile(ImportedText, Resolved, Key, Spelling, UseLocation, Imported))
+			{
+				return;
+			}
+			MergeImported(OutAst, Imported, AsName);
+			OutAst.Namespaces.AddUnique(AsName);
+			AddImport(OutAst, Resolved);
+			for (const FString& Import : Imported.Imports)
+			{
+				AddImport(OutAst, Import);
+			}
+		}
 
-			// The imported file's OWN declarations go in whole: this is the first time it has been
-			// merged, or the early-out above would have fired.
-			OutAst.ImportedStyles.Append(MoveTemp(Imported.Styles));
-			OutAst.ImportedResources.Append(MoveTemp(Imported.Resources));
-			for (FDreamUIStyle& Style : Imported.ImportedStyles)
+		/**
+		 * `as Name` after a `use` path, the cursor on `as`. False, with the line consumed and the reason reported, when
+		 * there is no usable name -- and then nothing of the import happens: a component or a namespace nobody can
+		 * write is not worth reading a file for.
+		 */
+		bool ParseUseAsName(const FString& InWhat, FString& OutName, FDreamUISourceLocation& OutLocation)
+		{
+			const FDreamUISourceLocation AsKeywordLocation = Current().Location;
+			Advance(); // 'as'
+
+			if (!Check(ETokenKind::Identifier) || IsReservedWord(Current().Text))
 			{
-				if (!AlreadyMerged(Style.SourceName))
-				{
-					OutAst.ImportedStyles.Add(MoveTemp(Style));
-				}
+				// A keyword cannot be the name, for the reason it cannot be an id: `use "Row.dui" as for` would turn
+				// every `for Row1 { }` after it into a loop header.
+				Diagnostics.AddError(EDreamUIDiagnosticCode::MalformedUseDeclaration,
+					Check(ETokenKind::Identifier) ? Current().Location : AsKeywordLocation,
+					FString::Printf(TEXT("'use %s as' needs a name after 'as', as in 'use %s as Row', found '%s'"),
+						*InWhat, *InWhat, *DescribeCurrent()));
+				RecoverToStatementBoundary();
+				return false;
 			}
-			for (FDreamUIResource& Resource : Imported.ImportedResources)
+			OutName = Current().Text;
+			OutLocation = Current().Location;
+			Advance();
+
+			if (!Check(ETokenKind::Separator) && !IsAtEnd())
 			{
-				if (!AlreadyMerged(Resource.SourceName))
-				{
-					OutAst.ImportedResources.Add(MoveTemp(Resource));
-				}
+				// `as nier.Row` included: the name is the importer's one word, and a dot in it would read as a namespace
+				// nobody declared.
+				Diagnostics.AddError(EDreamUIDiagnosticCode::MalformedUseDeclaration, Current().Location,
+					FString::Printf(TEXT("'%s' after 'as' is the whole name, and '%s' cannot follow it"), *OutName, *DescribeCurrent()));
+				RecoverToStatementBoundary();
+				return false;
 			}
-			OutAst.Imports.Add(Resolved);
-			for (FString& Import : Imported.Imports)
+
+			if (const FDreamUISourceLocation* First = OwnAsNames.Find(OutName))
 			{
-				// Read against the list as it grows, so a duplicate inside this one list is caught
-				// too. The watcher's dependency table eats this array; naming a file twice there
-				// would recompile the importer once per path the graph reaches it by.
-				if (!AlreadyMerged(Import))
-				{
-					OutAst.Imports.Add(MoveTemp(Import));
-				}
+				// Refused rather than letting the later line win: every `Row` and `nier.X` written between the two would
+				// otherwise change meaning because of a line nowhere near it.
+				Diagnostics.AddError(EDreamUIDiagnosticCode::DuplicateComponentAlias, OutLocation,
+					FString::Printf(TEXT("'%s' is already the name the 'use' on line %d gave"), *OutName, First->Line));
+				return false;
 			}
+			OwnAsNames.Add(OutName, OutLocation);
+			return true;
+		}
+
+		/** `use /Game/UI/WBP_Row as Row` -- a class with no .dui behind it, named by its path. The cursor is on the path. */
+		void ParseUseClassPath(FDreamUIAst& OutAst, const FDreamUISourceLocation& InUseLocation)
+		{
+			const FString Path = Current().Text;
+			const FDreamUISourceLocation PathLocation = Current().Location;
+			Advance();
+
+			if (Path.Len() <= 1)
+			{
+				Diagnostics.AddError(EDreamUIDiagnosticCode::MalformedUseDeclaration, PathLocation,
+					TEXT("this 'use' has an empty path"));
+				RecoverToStatementBoundary();
+				return;
+			}
+			if (!CheckKeyword(TEXT("as")))
+			{
+				// Required here, unlike after a quoted path. A .dui used without `as` still has styles to give; a class
+				// path has nothing to offer but the class, and a class nobody can write is a line that does nothing.
+				Diagnostics.AddError(EDreamUIDiagnosticCode::MalformedUseDeclaration, InUseLocation,
+					FString::Printf(TEXT("'use %s' names a class, and needs a name to write it by, as in 'use %s as Row'"), *Path, *Path));
+				RecoverToStatementBoundary();
+				return;
+			}
+			FString Name;
+			FDreamUISourceLocation NameLocation;
+			if (!ParseUseAsName(Path, Name, NameLocation))
+			{
+				return;
+			}
+
+			FDreamUIComponentAlias& Alias = OutAst.ComponentAliases.AddDefaulted_GetRef();
+			Alias.Alias = Name;
+			Alias.ClassPath = Path;
+			Alias.Location = NameLocation;
+			Alias.SourceName = Diagnostics.SourceName;
+		}
+
+		bool ReportsImportCycle(const FString& InKey, const FString& InSpelling, const FDreamUISourceLocation& InUseLocation)
+		{
+			if (!ImportAncestors.Contains(InKey))
+			{
+				return false;
+			}
+			Diagnostics.AddError(EDreamUIDiagnosticCode::ImportFailed, InUseLocation,
+				FString::Printf(TEXT("'%s' is already being imported further up this chain -- the imports form a cycle"), *InSpelling));
+			return true;
+		}
+
+		/** The named file parsed whole, its own imports followed, to be merged. False, and reported, when it fails. */
+		bool ParseImportedFile(const FString& InText, const FString& InResolved, const FString& InKey, const FString& InSpelling,
+			const FDreamUISourceLocation& InUseLocation, FDreamUIAst& OutImported)
+		{
+			FDreamUIDiagnosticBag ImportedDiagnostics;
+			TSet<FString> BranchAncestors = ImportAncestors;
+			BranchAncestors.Add(InKey);
+			if (!ParseWithImports(InText, InResolved, OutImported, ImportedDiagnostics, *ImportReader, MoveTemp(BranchAncestors), /*bInAllowRootless*/true))
+			{
+				Diagnostics.AddError(EDreamUIDiagnosticCode::ImportFailed, InUseLocation,
+					FString::Printf(TEXT("'%s' failed to parse (%d error(s)); compile it directly to see them"),
+						*InSpelling, ImportedDiagnostics.NumErrors()));
+				return false;
+			}
+			return true;
+		}
+
+		/**
+		 * Whether every file an imported AST lists in Imports went into it unprefixed: no namespace anywhere in its
+		 * graph (they propagate through plain merges, see ParseUseDeclaration), and no component, whose file is listed
+		 * for the watcher with nothing of it merged. Only then does its Imports list say what a later plain `use` of
+		 * one of those files would add -- nothing -- so that the files can join PlainMergedPaths.
+		 */
+		static bool IsPlainThroughout(const FDreamUIAst& InAst)
+		{
+			if (InAst.Namespaces.Num() > 0)
+			{
+				return false;
+			}
+			auto NamesAFile = [](const FDreamUIComponentAlias& InAlias) { return !InAlias.SourcePath.IsEmpty(); };
+			return !InAst.ComponentAliases.ContainsByPredicate(NamesAFile)
+				&& !InAst.ImportedComponentAliases.ContainsByPredicate(NamesAFile);
+		}
+
+		/** Appends a path to Imports unless it is listed already: the watcher would recompile this file once per entry. */
+		static void AddImport(FDreamUIAst& OutAst, const FString& InPath)
+		{
+			const FString Key = MakeImportKey(InPath);
+			const bool bListed = OutAst.Imports.ContainsByPredicate([&Key](const FString& InExisting)
+			{
+				return MakeImportKey(InExisting) == Key;
+			});
+			if (!bListed)
+			{
+				OutAst.Imports.Add(InPath);
+			}
+		}
+
+		/**
+		 * Everything a library declares or brought in -- styles, resources and component aliases -- entered into this
+		 * AST's Imported* arrays: as they are for a plain `use`, or renamed under `InPrefix.` for `use … as InPrefix`.
+		 *
+		 * The library's own entries first, then what it imported, which is the order its own lookup takes them in
+		 * (FindStyle tries Styles before ImportedStyles), so a name the library shadowed stays shadowed here. And
+		 * deduped by declaration (MakeDeclarationKey), not by file: a diamond -- A uses B and C, both of which use D --
+		 * delivers D's entries twice and they are one set, but one file reached plainly and under a namespace, or under
+		 * two namespaces, is two sets under two names, and keying on the file alone dropped whichever arrived second.
+		 */
+		static void MergeImported(FDreamUIAst& OutAst, FDreamUIAst& InImported, const FString& InPrefix)
+		{
+			const FNamespacePrefixer Prefixer(InPrefix, InImported);
+			MergeDeclarations(OutAst.ImportedStyles, InImported.Styles, InImported.ImportedStyles,
+				[&Prefixer](FDreamUIStyle& InOutStyle) { Prefixer.PrefixStyle(InOutStyle); });
+			MergeDeclarations(OutAst.ImportedResources, InImported.Resources, InImported.ImportedResources,
+				[&Prefixer](FDreamUIResource& InOutResource) { Prefixer.PrefixResource(InOutResource); });
+			MergeDeclarations(OutAst.ImportedComponentAliases, InImported.ComponentAliases, InImported.ImportedComponentAliases,
+				[&Prefixer](FDreamUIComponentAlias& InOutAlias) { Prefixer.PrefixAlias(InOutAlias); });
 		}
 
 		/**
@@ -1492,7 +1959,8 @@ namespace DreamUIText
 			if (Check(ETokenKind::Colon))
 			{
 				// `style Danger : Button` -- the same ':' a node uses to wear a style, because it is
-				// the same relationship: properties from over there, then mine on top.
+				// the same relationship: properties from over there, then mine on top. `: nier.Button`
+				// takes a library's, the same way a node's clause does.
 				Advance();
 				if (!Check(ETokenKind::Identifier))
 				{
@@ -1500,8 +1968,7 @@ namespace DreamUIText
 					RecoverToStatementBoundary();
 					return;
 				}
-				Style.BaseName = Current().Text;
-				Advance();
+				Style.BaseName = ParseQualifiedName(nullptr);
 			}
 
 			if (!Check(ETokenKind::OpenBrace))
@@ -1512,7 +1979,7 @@ namespace DreamUIText
 			}
 			const FDreamUISourceLocation OpenLocation = Current().Location;
 			Advance();
-			ParsePropertyOnlyBlock(Style.Properties, OpenLocation, TEXT("a style"));
+			ParseStyleBody(Style, OpenLocation);
 
 			// Own styles only, not the import chain: a local name matching an imported one is the
 			// SHADOWING rule working, not a duplicate -- FindStyle looks locally first, so declaring
@@ -1529,6 +1996,320 @@ namespace DreamUIText
 				return;
 			}
 			OutAst.Styles.Add(MoveTemp(Style));
+		}
+
+		/**
+		 * A style's block: property lines, and also `+ Component { … }` and `@slot` lines (with their block and their
+		 * shorthands), so that a KIND of column -- a vertical box with this spacing that fills its parent -- is one name.
+		 *
+		 * Its own loop rather than a wider ParsePropertyOnlyBlock, which a behaviour's block shares: a `+` inside a
+		 * behaviour, or a slot line, would be a component on a component and a slot on something that has none, and
+		 * those blocks must go on refusing both.
+		 */
+		void ParseStyleBody(FDreamUIStyle& OutStyle, const FDreamUISourceLocation& InOpenLocation)
+		{
+			if (IsTooDeep(InOpenLocation))
+			{
+				SkipBalancedBlockBody();
+				return;
+			}
+			const FNestingScope Scope(NestingDepth);
+			for (;;)
+			{
+				SkipSeparators();
+				if (Check(ETokenKind::CloseBrace))
+				{
+					Advance();
+					return;
+				}
+				if (IsAtEnd())
+				{
+					Diagnostics.AddError(EDreamUIDiagnosticCode::UnclosedBlock, InOpenLocation,
+						TEXT("this '{' never reaches its '}'"));
+					return;
+				}
+
+				const int32 IndexBefore = Index;
+				if (Check(ETokenKind::Plus))
+				{
+					ParseComponent(OutStyle.Components);
+				}
+				else if (IsFillShorthand())
+				{
+					ParseFillShorthand(OutStyle.SlotProperties);
+				}
+				else if (Check(ETokenKind::At) && Peek(1).Kind == ETokenKind::Identifier
+					&& Peek(1).Text.Equals(TEXT("slot"), ESearchCase::CaseSensitive))
+				{
+					ParseSlotLine(OutStyle.SlotProperties);
+				}
+				else if (LooksLikeProperty())
+				{
+					FDreamUIProperty Property;
+					if (ParseProperty(Property, nullptr))
+					{
+						OutStyle.Properties.Add(MoveTemp(Property));
+					}
+				}
+				else
+				{
+					RaiseUnexpectedToken(TEXT("a style holds only 'Name = Value', '+ Component { ... }' and '@slot' lines"));
+					RecoverToStatementBoundary();
+				}
+
+				if (Index == IndexBefore)
+				{
+					Advance();
+				}
+			}
+		}
+
+		// --- props and events ---------------------------------------------------------------------
+
+		/**
+		 * `Text Label`, `Number Gap = 4`, `Enum /Script/MyGame.ERowKind Kind = Cycle` -- the head shared by a `props`
+		 * line and an `events` parameter. The type is recorded as written and checked by the compiler, which is where the
+		 * list of Blueprint pin types lives; only `Enum` changes the SHAPE of the line, by taking a path, so only `Enum` is
+		 * known here.
+		 */
+		bool ParseTypedName(FString& OutTypeName, FString& OutEnumPath, FString& OutName, FDreamUISourceLocation& OutLocation,
+			EDreamUIDiagnosticCode InCode, const TCHAR* InWhatItIs)
+		{
+			if (!Check(ETokenKind::Identifier))
+			{
+				Diagnostics.AddError(InCode, Current().Location,
+					FString::Printf(TEXT("%s is written 'Type Name', as in 'Text Label', found '%s'"), InWhatItIs, *DescribeCurrent()));
+				return false;
+			}
+			OutLocation = Current().Location;
+			OutTypeName = Current().Text;
+			Advance();
+
+			if (OutTypeName.Equals(TEXT("Enum"), ESearchCase::CaseSensitive))
+			{
+				if (!Check(ETokenKind::AssetPath))
+				{
+					Diagnostics.AddError(InCode, Current().Location,
+						FString::Printf(TEXT("'Enum' takes the enum's path before the name, as in 'Enum /Script/MyGame.ERowKind Kind', found '%s'"),
+							*DescribeCurrent()));
+					return false;
+				}
+				OutEnumPath = Current().Text;
+				Advance();
+			}
+
+			if (!Check(ETokenKind::Identifier))
+			{
+				Diagnostics.AddError(InCode, Current().Location,
+					FString::Printf(TEXT("expected a name after '%s', found '%s'"), *OutTypeName, *DescribeCurrent()));
+				return false;
+			}
+			OutName = Current().Text;
+			Advance();
+			return true;
+		}
+
+		/** True at the end of a line, at a ';', at a '}' or at the end of the file: where a one-line declaration may stop. */
+		bool AtStatementEnd() const
+		{
+			return Check(ETokenKind::Separator) || Check(ETokenKind::CloseBrace) || IsAtEnd();
+		}
+
+		/**
+		 * `props { Text Label  …  Number ValueIndex = 0 }` -- the properties this file's class declares for its hosts to
+		 * set and itself to bind. One per line. Blocks accumulate, as `resources` blocks do, and a name declared twice is
+		 * refused with the first one kept, for the reason a duplicate resource is: everything downstream must agree on
+		 * what the name means.
+		 */
+		void ParsePropsDeclaration(FDreamUIAst& OutAst)
+		{
+			Advance(); // 'props'
+			const FDreamUISourceLocation OpenLocation = Current().Location;
+			Advance(); // '{', which ParseFile saw before it called here
+
+			for (;;)
+			{
+				SkipSeparators();
+				if (Check(ETokenKind::CloseBrace))
+				{
+					Advance();
+					return;
+				}
+				if (IsAtEnd())
+				{
+					Diagnostics.AddError(EDreamUIDiagnosticCode::UnclosedBlock, OpenLocation,
+						TEXT("this 'props' block never reaches its '}'"));
+					return;
+				}
+
+				const int32 IndexBefore = Index;
+				ParsePropLine(OutAst);
+				if (Index == IndexBefore)
+				{
+					Advance();
+				}
+			}
+		}
+
+		void ParsePropLine(FDreamUIAst& OutAst)
+		{
+			FDreamUIPropDecl Prop;
+			if (!ParseTypedName(Prop.TypeName, Prop.EnumPath, Prop.Name, Prop.Location,
+				EDreamUIDiagnosticCode::MalformedPropsBlock, TEXT("a 'props' line")))
+			{
+				RecoverToStatementBoundary();
+				return;
+			}
+
+			if (Check(ETokenKind::Equals))
+			{
+				Advance();
+				if (AtStatementEnd())
+				{
+					// Said as the props line it is, rather than as a property missing its value: there is no property here
+					// yet, only a declaration whose default was begun and not written.
+					Diagnostics.AddError(EDreamUIDiagnosticCode::MalformedPropsBlock, Current().Location,
+						FString::Printf(TEXT("'%s =' needs its default value, or no '=' at all"), *Prop.Name));
+					RecoverToStatementBoundary();
+					return;
+				}
+				FDreamUIValue Default;
+				if (!ParseValue(Default))
+				{
+					RecoverToStatementBoundary();
+					return;
+				}
+				Prop.DefaultValue = MoveTemp(Default);
+			}
+
+			if (!AtStatementEnd())
+			{
+				Diagnostics.AddError(EDreamUIDiagnosticCode::MalformedPropsBlock, Current().Location,
+					FString::Printf(TEXT("a 'props' line declares one name, and '%s' cannot follow '%s'"), *DescribeCurrent(), *Prop.Name));
+				RecoverToStatementBoundary();
+				return;
+			}
+
+			if (const FDreamUIPropDecl* First = OutAst.Props.FindByPredicate(
+				[&Prop](const FDreamUIPropDecl& InExisting) { return InExisting.Name == Prop.Name; }))
+			{
+				Diagnostics.AddError(EDreamUIDiagnosticCode::DuplicateProp, Prop.Location,
+					FString::Printf(TEXT("'%s' is already declared on line %d"), *Prop.Name, First->Location.Line));
+				return;
+			}
+			OutAst.Props.Add(MoveTemp(Prop));
+		}
+
+		/**
+		 * `events { Picked(Number Index); Closed }` -- the event dispatchers this file's class declares. Entries end at a
+		 * line break or a ';', so a short list fits on the line that opens it.
+		 */
+		void ParseEventsDeclaration(FDreamUIAst& OutAst)
+		{
+			Advance(); // 'events'
+			const FDreamUISourceLocation OpenLocation = Current().Location;
+			Advance(); // '{', which ParseFile saw before it called here
+
+			for (;;)
+			{
+				SkipSeparators();
+				if (Check(ETokenKind::CloseBrace))
+				{
+					Advance();
+					return;
+				}
+				if (IsAtEnd())
+				{
+					Diagnostics.AddError(EDreamUIDiagnosticCode::UnclosedBlock, OpenLocation,
+						TEXT("this 'events' block never reaches its '}'"));
+					return;
+				}
+
+				const int32 IndexBefore = Index;
+				ParseEventEntry(OutAst);
+				if (Index == IndexBefore)
+				{
+					Advance();
+				}
+			}
+		}
+
+		void ParseEventEntry(FDreamUIAst& OutAst)
+		{
+			if (!Check(ETokenKind::Identifier))
+			{
+				Diagnostics.AddError(EDreamUIDiagnosticCode::MalformedEventsBlock, Current().Location,
+					FString::Printf(TEXT("an 'events' entry is 'Name' or 'Name(Type Param, ...)', found '%s'"), *DescribeCurrent()));
+				RecoverToStatementBoundary();
+				return;
+			}
+
+			FDreamUIEventDecl Event;
+			Event.Name = Current().Text;
+			Event.Location = Current().Location;
+			Advance();
+
+			if (Check(ETokenKind::OpenParen))
+			{
+				Advance();
+				if (!Check(ETokenKind::CloseParen))
+				{
+					for (;;)
+					{
+						FDreamUIEventParam Param;
+						if (!ParseTypedName(Param.TypeName, Param.EnumPath, Param.Name, Param.Location,
+							EDreamUIDiagnosticCode::MalformedEventsBlock, TEXT("an event parameter")))
+						{
+							SkipPastCloseParen();
+							RecoverToStatementBoundary();
+							return;
+						}
+						// A parameter is a pin on the dispatcher's signature, and two pins of one name are a signature
+						// the Blueprint compiler refuses with no line to point at. The first one is kept.
+						if (const FDreamUIEventParam* First = Event.Params.FindByPredicate(
+							[&Param](const FDreamUIEventParam& InExisting) { return InExisting.Name == Param.Name; }))
+						{
+							Diagnostics.AddError(EDreamUIDiagnosticCode::DuplicateEvent, Param.Location,
+								FString::Printf(TEXT("'%s' already has a parameter '%s'"), *Event.Name, *Param.Name));
+						}
+						else
+						{
+							Event.Params.Add(MoveTemp(Param));
+						}
+						if (!Check(ETokenKind::Comma))
+						{
+							break;
+						}
+						Advance();
+					}
+				}
+				if (!Check(ETokenKind::CloseParen))
+				{
+					Diagnostics.AddError(EDreamUIDiagnosticCode::MalformedEventsBlock, Current().Location,
+						FString::Printf(TEXT("the parameters of '%s' are separated by ',' and closed by ')', found '%s'"),
+							*Event.Name, *DescribeCurrent()));
+					RecoverToStatementBoundary();
+					return;
+				}
+				Advance();
+			}
+
+			if (!AtStatementEnd())
+			{
+				Diagnostics.AddError(EDreamUIDiagnosticCode::MalformedEventsBlock, Current().Location,
+					FString::Printf(TEXT("expected the end of the line or a ';' after event '%s', found '%s'"), *Event.Name, *DescribeCurrent()));
+				RecoverToStatementBoundary();
+				return;
+			}
+
+			if (const FDreamUIEventDecl* First = OutAst.Events.FindByPredicate(
+				[&Event](const FDreamUIEventDecl& InExisting) { return InExisting.Name == Event.Name; }))
+			{
+				Diagnostics.AddError(EDreamUIDiagnosticCode::DuplicateEvent, Event.Location,
+					FString::Printf(TEXT("event '%s' is already declared on line %d"), *Event.Name, First->Location.Line));
+				return;
+			}
+			OutAst.Events.Add(MoveTemp(Event));
 		}
 
 		// --- timelines ----------------------------------------------------------------------------
@@ -1905,18 +2686,26 @@ namespace DreamUIText
 			FString TypeName = OutNode.TypeName;
 			Advance();
 
-			// `Native.Toggle` -- a scoped tag, resolved through the widget registry. The lexer hands
-			// it over as three tokens (identifier, dot, identifier) because a dot elsewhere separates
-			// property path segments; the tag position is the one place they mean a single name, so
-			// they are joined here rather than taught to the lexer. LooksLikeProperty has already
-			// ruled out the property reading before ParseNode is entered. One dot only: a second
-			// segment has no meaning the registry knows.
-			if (!bResourceType && Check(ETokenKind::Dot) && Peek(1).Kind == ETokenKind::Identifier)
+			// `Native.Toggle` -- a scoped tag, resolved through the widget registry -- or `nier.Row`, a
+			// component alias a namespace brought in. The lexer hands it over as three tokens
+			// (identifier, dot, identifier) because a dot elsewhere separates property path segments;
+			// the tag position is the one place they mean a single name, so they are joined here
+			// rather than taught to the lexer. LooksLikeProperty has already ruled out the property
+			// reading before ParseNode is entered. As many dots as are written: a library's own
+			// namespace arrives under the importer's (`nier.pal.Swatch`), and which spellings mean
+			// something is the builder's to say, as it is for every other type.
+			while (Check(ETokenKind::Dot) && Peek(1).Kind == ETokenKind::Identifier)
 			{
 				Advance();
 				TypeName = FString::Printf(TEXT("%s.%s"), *TypeName, *Current().Text);
 				OutNode.TypeName = TypeName;
 				Advance();
+			}
+			if (bResourceType)
+			{
+				// `@nier.Row` is a resource reference like any other, so its namespace is held to the same rule.
+				// A scoped tag is not: `Native` is the registry's scope, which no `use` declares.
+				NoteNamespaceReference(TypeName.Mid(1), TypeLocation);
 			}
 
 			// The type is taken exactly as written and never checked. Whether `Image` is a tag and
@@ -1947,14 +2736,26 @@ namespace DreamUIText
 						*Ellipsize(Current().Text)));
 				Advance();
 			}
+			else if (Check(ETokenKind::OpenBrace) || Check(ETokenKind::Colon))
+			{
+				// `HorizontalBox { … }`, `Text : Caption { … }` -- a node nothing refers to by name, so the
+				// author need not invent one. The id is made once the whole tree is read (NameAnonymousNodes),
+				// because the rule that keeps it from colliding needs every id the author DID write, and some of
+				// those are further down the file.
+				//
+				// Only before a block or a style clause. A type alone on a line is still the mistake it always
+				// was -- as likely a property whose '=' went missing as a node -- and a '(' still wants the id
+				// a rename clause would carry references to.
+				OutNode.bAnonymous = true;
+			}
 			else
 			{
 				// Reported against the type, because that is the word the author looks at, and the
-				// message offers the other reading: a lone identifier on a line is just as likely to
+				// message offers the other readings: a lone identifier on a line is just as likely to
 				// be a property whose '=' went missing.
 				Diagnostics.AddError(EDreamUIDiagnosticCode::MissingNodeId, TypeLocation,
-					FString::Printf(TEXT("'%s' needs an id, as in '%s MyName' -- or an '=' if it was meant to be a property"),
-						*TypeName, *TypeName));
+					FString::Printf(TEXT("'%s' needs an id or a block, as in '%s MyName' or '%s { ... }' -- or an '=' if it was meant to be a property"),
+						*TypeName, *TypeName, *TypeName));
 			}
 
 			// The two optional clauses in either order. The canonical spelling puts (was:) first, but
@@ -1979,6 +2780,16 @@ namespace DreamUIText
 				break;
 			}
 
+			if (OutNode.bAnonymous && bHadWasClause && !OutNode.WasId.IsEmpty())
+			{
+				// A rename carries the old name's graph references, bindings and animation tracks to the new one, and
+				// an anonymous widget's variable is hidden from graphs: the references would be moved onto a name
+				// nothing can see. The node needs an id of its own for the clause to mean anything.
+				Diagnostics.AddError(EDreamUIDiagnosticCode::MissingNodeId, TypeLocation,
+					FString::Printf(TEXT("'%s (was: %s)' renames a node, so it needs the new id written: '%s MyName : ...'"),
+						*TypeName, *OutNode.WasId, *TypeName));
+			}
+
 			if (Check(ETokenKind::OpenBrace))
 			{
 				const FDreamUISourceLocation OpenLocation = Current().Location;
@@ -1987,7 +2798,7 @@ namespace DreamUIText
 			}
 			else if (!Check(ETokenKind::Separator) && !Check(ETokenKind::CloseBrace) && !IsAtEnd())
 			{
-				RaiseUnexpectedToken(FString::Printf(TEXT("expected '{' or the end of the line after node '%s'"), *OutNode.Id));
+				RaiseUnexpectedToken(FString::Printf(TEXT("expected '{' or the end of the line after node '%s'"), *DescribeNode(OutNode)));
 				RecoverToStatementBoundary();
 			}
 
@@ -2039,8 +2850,43 @@ namespace DreamUIText
 				RaiseUnexpectedToken(TEXT("expected a style name after ':'"));
 				return;
 			}
-			OutNode.StyleName = Current().Text;
+			// `: Card`, or `: nier.Card` -- a style a namespace brought in, under the name it was entered as.
+			OutNode.StyleName = ParseQualifiedName(nullptr);
+		}
+
+		/**
+		 * `Card`, or `nier.Card` -- a name a namespace may qualify, the cursor on its first word. The words are joined
+		 * with their dots, as a scoped node type's are, and a qualified one is noted for CheckNamespaceReferences at
+		 * InReferenceLocation (the '@' of a resource reference), or else at its first word.
+		 */
+		FString ParseQualifiedName(const FDreamUISourceLocation* InReferenceLocation)
+		{
+			const FDreamUISourceLocation Location = InReferenceLocation != nullptr ? *InReferenceLocation : Current().Location;
+			FString Name = Current().Text;
 			Advance();
+			// Only a dot with a word after it. A trailing one is left where it stands, so whatever the statement
+			// expected next reports it -- the same lookahead the property path and the node type use.
+			while (Check(ETokenKind::Dot) && Peek(1).Kind == ETokenKind::Identifier)
+			{
+				Advance();
+				Name += TEXT(".");
+				Name += Current().Text;
+				Advance();
+			}
+			NoteNamespaceReference(Name, Location);
+			return Name;
+		}
+
+		void NoteNamespaceReference(const FString& InName, const FDreamUISourceLocation& InLocation)
+		{
+			int32 Dot = INDEX_NONE;
+			if (InName.FindChar(TEXT('.'), Dot))
+			{
+				FNamespaceReference& Reference = NamespaceReferences.AddDefaulted_GetRef();
+				Reference.Prefix = InName.Left(Dot);
+				Reference.Name = InName;
+				Reference.Location = InLocation;
+			}
 		}
 
 		void ParseNodeBody(FDreamUINode& OutNode, const FDreamUISourceLocation& InOpenLocation)
@@ -2082,13 +2928,21 @@ namespace DreamUIText
 		{
 			if (Check(ETokenKind::Plus))
 			{
-				ParseComponent(OutNode);
+				ParseComponent(OutNode.Components);
 				return;
 			}
 			if (Check(ETokenKind::At))
 			{
-				// `@slot Padding = ...` annotates this node's slot; `@Row Row1 { }` is a child whose type an Asset entry of a
-				// resources block names (ParseNode). `slot` is a keyword, so no resource it could name is ever meant.
+				// `@slot Padding = ...` (or `@slot { … }`) annotates this node's slot, and `@fill` / `@fill 2` stand for
+				// the two lines of it written most; `@Row Row1 { }` is a child whose type an Asset entry of a resources
+				// block names (ParseNode). `slot` is a keyword, so no resource it could name is ever meant. `fill` is
+				// one only where a resource node cannot stand -- alone, or before a number -- so a resource that
+				// happens to be called fill still names a node type.
+				if (IsFillShorthand())
+				{
+					ParseFillShorthand(OutNode.SlotProperties);
+					return;
+				}
 				if (Peek(1).Kind == ETokenKind::Identifier && Peek(1).Text != TEXT("slot"))
 				{
 					FDreamUINode Child;
@@ -2098,7 +2952,7 @@ namespace DreamUIText
 					}
 					return;
 				}
-				ParseSlotProperty(OutNode);
+				ParseSlotLine(OutNode.SlotProperties);
 				return;
 			}
 
@@ -2120,6 +2974,44 @@ namespace DreamUIText
 			{
 				Diagnostics.AddError(EDreamUIDiagnosticCode::MalformedClassDeclaration, Current().Location,
 					TEXT("'class' belongs at the top of the file, not inside a node"));
+				RecoverToStatementBoundary();
+				return;
+			}
+			if ((CheckKeyword(TEXT("props")) || CheckKeyword(TEXT("events"))) && Peek(1).Kind == ETokenKind::OpenBrace)
+			{
+				// What the CLASS declares, so the top of the file, like `class`. Read here as a block rather than as
+				// the anonymous node of type `props` it would otherwise parse as -- no widget is called that, and the
+				// message that names the real mistake is worth the two words.
+				const bool bProps = CheckKeyword(TEXT("props"));
+				Diagnostics.AddError(bProps ? EDreamUIDiagnosticCode::MalformedPropsBlock : EDreamUIDiagnosticCode::MalformedEventsBlock,
+					Current().Location,
+					FString::Printf(TEXT("'%s' declares what this file's class has, so it belongs at the top of the file, not inside a node"),
+						*Current().Text));
+				Advance();
+				SkipBalancedBlock();
+				return;
+			}
+			// `if` leads a statement only before something a condition can begin with (or a '{', the condition
+			// forgotten), and `else` only before '{' or `if`: a property named either -- `if = 1`, `else <- F()` --
+			// has an operator there instead and keeps reading as the property it is.
+			if (CheckKeyword(TEXT("if")) && CanBeginCondition(Peek(1).Kind))
+			{
+				ParseConditional(OutNode);
+				return;
+			}
+			if (CheckKeyword(TEXT("else"))
+				&& (Peek(1).Kind == ETokenKind::OpenBrace
+					|| (Peek(1).Kind == ETokenKind::Identifier && Peek(1).Text.Equals(TEXT("if"), ESearchCase::CaseSensitive))))
+			{
+				// Reached only when no `if` came before it: an `else` that follows a branch is read by ParseConditional
+				// as part of the same statement and never gets back here.
+				Diagnostics.AddError(EDreamUIDiagnosticCode::MalformedConditional, Current().Location,
+					TEXT("this 'else' follows no 'if' block"));
+				Advance();
+				if (CheckKeyword(TEXT("if")))
+				{
+					Advance();
+				}
 				RecoverToStatementBoundary();
 				return;
 			}
@@ -2159,7 +3051,8 @@ namespace DreamUIText
 			{
 				// A dot no longer settles it: `AnchorData.SizeDelta = ...` is a property, and
 				// `Native.Toggle Mute {` is a node whose tag has a scope. Walk the dotted run and let
-				// what FOLLOWS it decide -- and only an id or an open brace reads as a node, so that a
+				// what FOLLOWS it decide -- and only an id, an open brace or a style clause reads as a
+				// node (`nier.Row { … }` and `nier.Row : Card { … }` have no id to show), so that a
 				// property missing its '=' (`AnchorData.SizeDelta` alone on a line) still fails as
 				// the property it was meant to be, with the diagnostic that says so.
 				int32 Ahead = 1;
@@ -2168,12 +3061,43 @@ namespace DreamUIText
 					Ahead += 2;
 				}
 				const ETokenKind After = Peek(Ahead).Kind;
-				return After != ETokenKind::Identifier && After != ETokenKind::OpenBrace;
+				return After != ETokenKind::Identifier && After != ETokenKind::OpenBrace && After != ETokenKind::Colon;
 			}
 			return Next == ETokenKind::Equals || Next == ETokenKind::Arrow
 				|| Next == ETokenKind::EventArrow || Next == ETokenKind::TwoWayArrow;
 		}
 
+		/**
+		 * True when the cursor is on another property line -- a name, dotted or not, and then `=`, `<-`, `->` or `<->`.
+		 * Narrower than LooksLikeProperty on purpose: it is asked where a statement may END, and only a line that cannot
+		 * be read any other way may start there.
+		 */
+		bool StartsAnotherProperty() const
+		{
+			if (!Check(ETokenKind::Identifier))
+			{
+				return false;
+			}
+			int32 Ahead = 1;
+			while (Peek(Ahead).Kind == ETokenKind::Dot && Peek(Ahead + 1).Kind == ETokenKind::Identifier)
+			{
+				Ahead += 2;
+			}
+			const ETokenKind After = Peek(Ahead).Kind;
+			return After == ETokenKind::Equals || After == ETokenKind::Arrow
+				|| After == ETokenKind::EventArrow || After == ETokenKind::TwoWayArrow;
+		}
+
+		/**
+		 * `slot Name`, `slot Name default : Style { … }`, or `slot Name { children }` -- the first two DECLARE a hole in
+		 * this file's class; the third, written inside a component instance, FILLS the hole of that name the component
+		 * declares.
+		 *
+		 * One spelling for both because they are the two ends of one thing, the way Vue's `<slot name>` and `<template
+		 * #name>` are, and the block tells them apart: a declaration may say how the hole is laid out -- components,
+		 * properties, `@slot` lines, a style holding those -- and has no children, since what it holds is the host's to
+		 * give; a fill is nothing but children. A block with both is neither, and is refused rather than guessed at.
+		 */
 		void ParseNamedSlot(FDreamUINode& OutNode)
 		{
 			FDreamUINode Slot;
@@ -2190,6 +3114,8 @@ namespace DreamUIText
 			}
 			Advance();
 
+			// The clauses, each at most once and in any order, as a widget's are.
+			//
 			// `(was: OldId)`, the same clause a widget node takes, and for a reason that is not
 			// symmetry: a slot's id becomes a class member variable exactly like a widget's (it is
 			// why two slots colliding is DuplicateNodeId and not a code of its own), so a renamed
@@ -2197,21 +3123,94 @@ namespace DreamUIText
 			// way to say what it used to be called. Migration is the whole point of the clause, and a
 			// slot is the one declaration that could not use it.
 			//
-			// No `: Style` here, and that is not an oversight either: a style is a bag of PROPERTIES
-			// and a slot declaration has no properties to give them to -- the grammar refuses it a
-			// block for the same reason. Accepting the clause would parse a promise nothing could
-			// keep.
-			if (Check(ETokenKind::OpenParen))
+			// `default` -- the slot content a host nests WITHOUT naming a slot goes to, which a C++
+			// class used to say by overriding GetDefaultSlotName and a pure .dui component could not
+			// say at all. A word rather than a clause shape, and a keyword only here.
+			//
+			// `: Style` -- now that a declaration may carry components, properties and `@slot` lines,
+			// a style is something it can wear: a style holds exactly those three.
+			bool bHadWasClause = false;
+			bool bHadStyleClause = false;
+			bool bDefault = false;
+			FDreamUISourceLocation DefaultLocation;
+			for (;;)
 			{
-				ParseWasClause(Slot);
+				if (Check(ETokenKind::OpenParen) && !bHadWasClause)
+				{
+					ParseWasClause(Slot);
+					bHadWasClause = true;
+					continue;
+				}
+				if (CheckKeyword(TEXT("default")))
+				{
+					if (bDefault)
+					{
+						Diagnostics.AddError(EDreamUIDiagnosticCode::MalformedSlotDeclaration, Current().Location,
+							FString::Printf(TEXT("slot '%s' says 'default' twice"), *Slot.Id));
+					}
+					else
+					{
+						bDefault = true;
+						DefaultLocation = Current().Location;
+					}
+					Advance();
+					continue;
+				}
+				if (Check(ETokenKind::Colon) && !bHadStyleClause)
+				{
+					ParseStyleClause(Slot);
+					bHadStyleClause = true;
+					continue;
+				}
+				break;
 			}
 
 			if (Check(ETokenKind::OpenBrace))
 			{
-				// A named slot declares a hole; what fills it comes from the host, so a block here
-				// would describe contents that the declaration cannot own.
-				RaiseUnexpectedToken(FString::Printf(TEXT("slot '%s' declares a hole and takes no block"), *Slot.Id));
-				SkipBalancedBlock();
+				const FDreamUISourceLocation OpenLocation = Current().Location;
+				Advance();
+				// The node body's own grammar, and which of its two halves the block used decides what it is. Read
+				// whole rather than refused at the first line of the wrong kind, so a mistake reports the line that
+				// mixes the two rather than whatever the block happened to open with.
+				ParseNodeBody(Slot, OpenLocation);
+
+				const bool bDeclares = Slot.Components.Num() > 0 || Slot.Properties.Num() > 0 || Slot.SlotProperties.Num() > 0;
+				if (Slot.Children.Num() > 0 && bDeclares)
+				{
+					Diagnostics.AddError(EDreamUIDiagnosticCode::MalformedSlotDeclaration, Slot.Children[0].Location,
+						FString::Printf(TEXT("slot '%s' both declares (components, properties, '@slot' lines) and fills (widgets); a declaration holds no widgets and a fill holds nothing else"),
+							*Slot.Id));
+				}
+				else if (Slot.Children.Num() > 0)
+				{
+					Slot.bFillsSlot = true;
+					// What the HOLE is -- the default, its style, its old name -- is said where the hole is declared, in
+					// the component's file. Written on the host's side it would describe a slot this file does not own.
+					if (bDefault || bHadStyleClause || !Slot.WasId.IsEmpty())
+					{
+						Diagnostics.AddError(EDreamUIDiagnosticCode::MalformedSlotDeclaration, Slot.Location,
+							FString::Printf(TEXT("slot '%s' is filled here (it holds widgets), and 'default', a style or a rename belongs on the slot's declaration"),
+								*Slot.Id));
+					}
+				}
+			}
+
+			if (bDefault && !Slot.bFillsSlot)
+			{
+				if (FirstDefaultSlotLocation.IsValid())
+				{
+					// Content nested without a slot name has one place to go, and two candidates is a choice nothing in
+					// the file makes. The first keeps the role, so the hosts that compiled against it still agree.
+					Diagnostics.AddError(EDreamUIDiagnosticCode::MultipleDefaultSlots, DefaultLocation,
+						FString::Printf(TEXT("slot '%s' is a second default; '%s' on line %d already is one"),
+							*Slot.Id, *FirstDefaultSlotName, FirstDefaultSlotLocation.Line));
+				}
+				else
+				{
+					FirstDefaultSlotLocation = DefaultLocation;
+					FirstDefaultSlotName = Slot.Id;
+					Slot.bDefaultSlot = true;
+				}
 			}
 
 			OutNode.Children.Add(MoveTemp(Slot));
@@ -2301,7 +3300,294 @@ namespace DreamUIText
 			OutNode.Children.Add(MoveTemp(Loop));
 		}
 
-		void ParseComponent(FDreamUINode& OutNode)
+		// --- conditions ---------------------------------------------------------------------------
+
+		/** Whether a token can begin an `if`'s condition -- or is the '{' of one whose condition was left out. */
+		static bool CanBeginCondition(ETokenKind InKind)
+		{
+			switch (InKind)
+			{
+			case ETokenKind::Identifier:
+			case ETokenKind::OpenParen:
+			case ETokenKind::Bang:
+			case ETokenKind::Minus:
+			case ETokenKind::Number:
+			case ETokenKind::String:
+			case ETokenKind::At:
+			case ETokenKind::OpenBrace:
+				return true;
+			default:
+				return false;
+			}
+		}
+
+		static FDreamUIExpression MakeNot(const FDreamUIExpression& InOperand, const FDreamUISourceLocation& InLocation)
+		{
+			FDreamUIExpression Not;
+			Not.Kind = FDreamUIExpression::EKind::Unary;
+			Not.Symbol = TEXT("!");
+			Not.Location = InLocation;
+			Not.Operands.Add(InOperand);
+			return Not;
+		}
+
+		static FDreamUIExpression MakeAnd(FDreamUIExpression InLeft, FDreamUIExpression InRight, const FDreamUISourceLocation& InLocation)
+		{
+			FDreamUIExpression And;
+			And.Kind = FDreamUIExpression::EKind::Binary;
+			And.Symbol = TEXT("&&");
+			And.Location = InLocation;
+			And.Operands.Add(MoveTemp(InLeft));
+			And.Operands.Add(MoveTemp(InRight));
+			return And;
+		}
+
+		/**
+		 * When a branch is the one taken: its own condition, after none of the earlier ones held. `if A` is A, `else if B`
+		 * is `!(A) && B`, a final `else` is `!(A) && !(B)` -- built from the same Unary and Binary nodes a hand-written
+		 * expression parses into, so the compiler's lowering needs to know nothing about where they came from.
+		 */
+		static FDreamUIExpression MakeBranchCondition(const TArray<FDreamUIExpression>& InEarlier,
+			const TOptional<FDreamUIExpression>& InOwn, const FDreamUISourceLocation& InLocation)
+		{
+			TOptional<FDreamUIExpression> Condition;
+			for (const FDreamUIExpression& Earlier : InEarlier)
+			{
+				FDreamUIExpression Negated = MakeNot(Earlier, InLocation);
+				if (Condition.IsSet())
+				{
+					Condition = MakeAnd(MoveTemp(Condition.GetValue()), MoveTemp(Negated), InLocation);
+				}
+				else
+				{
+					Condition = MoveTemp(Negated);
+				}
+			}
+			if (InOwn.IsSet())
+			{
+				if (Condition.IsSet())
+				{
+					Condition = MakeAnd(MoveTemp(Condition.GetValue()), InOwn.GetValue(), InLocation);
+				}
+				else
+				{
+					Condition = InOwn.GetValue();
+				}
+			}
+			// Always set: the first branch has a condition of its own, and every later one has an earlier branch.
+			return Condition.IsSet() ? MoveTemp(Condition.GetValue()) : FDreamUIExpression();
+		}
+
+		/**
+		 * `if HasSave() { … } else if Loading() { … } else { … }` -- a subtree shown or not by a condition.
+		 *
+		 * Lowered here, in the front end, into what the tree already has rather than into a node kind of its own: every
+		 * widget of every branch becomes a child of the enclosing node, in order, carrying a made `Shown <- …` that holds
+		 * exactly when its branch is the one taken. The builder, the compiler and the run time then see widgets and
+		 * bindings they have always handled. A hidden branch is collapsed rather than destroyed, so it keeps its state,
+		 * and switching is a visibility change rather than a rebuild -- what the feature promised, for free.
+		 *
+		 * A widget that already writes its own Shown keeps it, ANDed after the branch's: shown when its branch is taken
+		 * and its own condition holds. The condition is the existing binding expression grammar up to the '{'.
+		 */
+		void ParseConditional(FDreamUINode& OutNode)
+		{
+			FDreamUISourceLocation HeaderLocation = Current().Location;
+			Advance(); // 'if'
+
+			// The conditions of the branches read so far: a later branch is taken only when none of them held.
+			TArray<FDreamUIExpression> EarlierConditions;
+			bool bFinalElse = false;
+			for (;;)
+			{
+				TOptional<FDreamUIExpression> OwnCondition;
+				if (!bFinalElse)
+				{
+					if (Check(ETokenKind::OpenBrace))
+					{
+						Diagnostics.AddError(EDreamUIDiagnosticCode::MalformedConditional, HeaderLocation,
+							TEXT("this 'if' has no condition before its '{'"));
+						SkipBalancedBlock();
+						return;
+					}
+					FDreamUIExpression Condition;
+					if (!ParseBindingExpression(Condition, /*InMinPrecedence*/1))
+					{
+						// Reported, and the statement recovered, by the expression grammar itself.
+						return;
+					}
+					OwnCondition = MoveTemp(Condition);
+				}
+
+				if (!Check(ETokenKind::OpenBrace))
+				{
+					Diagnostics.AddError(EDreamUIDiagnosticCode::MalformedConditional, Current().Location,
+						FString::Printf(TEXT("expected the '{ ... }' block of this branch, found '%s'"), *DescribeCurrent()));
+					RecoverToStatementBoundary();
+					return;
+				}
+				const FDreamUISourceLocation OpenLocation = Current().Location;
+				Advance();
+				FDreamUINode Branch;
+				ParseNodeBody(Branch, OpenLocation);
+
+				TakeBranch(OutNode, Branch, MakeBranchCondition(EarlierConditions, OwnCondition, HeaderLocation), HeaderLocation);
+				if (bFinalElse)
+				{
+					return;
+				}
+				EarlierConditions.Add(MoveTemp(OwnCondition.GetValue()));
+
+				// The chain goes on through an `else`, on the line the '}' closed or on the next one -- C writes both. The
+				// separators stepped over to look are not given back: between statements they mean nothing.
+				SkipSeparators();
+				if (!CheckKeyword(TEXT("else")) || StartsAnotherProperty())
+				{
+					return;
+				}
+				HeaderLocation = Current().Location;
+				const bool bElseIf = Peek(1).Kind == ETokenKind::Identifier && Peek(1).Text.Equals(TEXT("if"), ESearchCase::CaseSensitive);
+				if (!bElseIf && Peek(1).Kind != ETokenKind::OpenBrace)
+				{
+					Diagnostics.AddError(EDreamUIDiagnosticCode::MalformedConditional, HeaderLocation,
+						TEXT("'else' is followed by its '{ ... }' block, or by 'if' and another condition"));
+					Advance();
+					RecoverToStatementBoundary();
+					return;
+				}
+				// Every branch nests the conditions before it one level deeper (`!(A) && !(B) && C`), and everything after
+				// the parser walks that tree recursively -- a chain of thousands would overflow the stack there rather
+				// than be reported here. Counted against the same budget as any other nesting.
+				if (IsTooDeep(HeaderLocation, EarlierConditions.Num()))
+				{
+					RecoverToStatementBoundary();
+					return;
+				}
+				Advance(); // 'else'
+				if (bElseIf)
+				{
+					Advance(); // 'if'
+				}
+				else
+				{
+					bFinalElse = true;
+				}
+			}
+		}
+
+		/** Moves a branch's widgets into the enclosing node, each shown under InCondition; refuses whatever is not a widget. */
+		void TakeBranch(FDreamUINode& OutNode, FDreamUINode& InBranch, const FDreamUIExpression& InCondition,
+			const FDreamUISourceLocation& InHeaderLocation)
+		{
+			// A branch chooses WIDGETS. A property, a component or a slot line in one has no widget of its own to be set
+			// on: the enclosing node's would be set whichever branch were taken, which is not what the block says.
+			for (const FDreamUIProperty& Property : InBranch.Properties)
+			{
+				Diagnostics.AddError(EDreamUIDiagnosticCode::MalformedConditional, Property.Location,
+					FString::Printf(TEXT("'%s' is a property, and an 'if' block holds widgets: put it on a widget inside the block"), *Property.Name));
+			}
+			for (const FDreamUIProperty& Property : InBranch.SlotProperties)
+			{
+				Diagnostics.AddError(EDreamUIDiagnosticCode::MalformedConditional, Property.Location,
+					FString::Printf(TEXT("'@slot %s' is a slot line, and an 'if' block holds widgets: put it on a widget inside the block"), *Property.Name));
+			}
+			for (const FDreamUIComponent& Component : InBranch.Components)
+			{
+				Diagnostics.AddError(EDreamUIDiagnosticCode::MalformedConditional, Component.Location,
+					FString::Printf(TEXT("'+ %s' attaches to a widget, and an 'if' block holds widgets: put it on a widget inside the block"), *Component.ClassName));
+			}
+
+			for (FDreamUINode& Child : InBranch.Children)
+			{
+				if (Child.Kind != EDreamUINodeKind::Widget)
+				{
+					// A slot and a loop have no Shown to carry the condition: a slot declaration is a hole in the class,
+					// not something on screen, and a loop's copies are made at run time from a template the made
+					// binding would never reach.
+					Diagnostics.AddError(EDreamUIDiagnosticCode::MalformedConditional, Child.Location,
+						TEXT("only widgets can be shown and hidden by an 'if' block; a slot or a loop cannot sit in one"));
+					continue;
+				}
+				ApplyBranchCondition(Child, InCondition, InHeaderLocation);
+				OutNode.Children.Add(MoveTemp(Child));
+			}
+		}
+
+		void ApplyBranchCondition(FDreamUINode& InOutChild, const FDreamUIExpression& InCondition,
+			const FDreamUISourceLocation& InHeaderLocation)
+		{
+			// The child's own Shown, when it writes one: the last such line, which is the one the builder would leave
+			// standing. FString's comparison, case insensitive, because the property it names is found the same way.
+			FDreamUIProperty* Own = nullptr;
+			for (int32 PropertyIndex = InOutChild.Properties.Num() - 1; PropertyIndex >= 0; --PropertyIndex)
+			{
+				FDreamUIProperty& Property = InOutChild.Properties[PropertyIndex];
+				if (Property.Name == TEXT("Shown") && !Property.IsEventBinding())
+				{
+					Own = &Property;
+					break;
+				}
+			}
+
+			if (Own == nullptr)
+			{
+				// Located at the `if` / `else` that made it: there is no line spelling it, and the header is the line
+				// that answers "why is this hidden".
+				FDreamUIProperty& Shown = InOutChild.Properties.AddDefaulted_GetRef();
+				Shown.Name = TEXT("Shown");
+				// The shape `Shown <- Cond` would have parsed into, so nothing downstream can tell the two apart: a bare
+				// `HasSave()` rides BindingFunction, as ParseBindingFunction keeps it, and anything richer the expression.
+				if (InCondition.IsBareCall())
+				{
+					Shown.BindingFunction = InCondition.Symbol;
+				}
+				else
+				{
+					Shown.BindingExpression = InCondition;
+				}
+				Shown.Location = InHeaderLocation;
+				Shown.bSynthesized = true;
+				return;
+			}
+
+			if (!Own->TwoWayProperty.IsEmpty())
+			{
+				Diagnostics.AddError(EDreamUIDiagnosticCode::MalformedConditional, Own->Location,
+					FString::Printf(TEXT("'Shown <-> %s' cannot sit in an 'if' block: the branch decides Shown, and a mirror would write that back into '%s'"),
+						*Own->TwoWayProperty, *Own->TwoWayProperty));
+				return;
+			}
+
+			// The two combined into the one binding, rather than a second Shown beside the first: two bindings on one
+			// property is a race the last one wins, and neither half is what the file says. An assignment (`Shown =
+			// false`) joins as the literal it is. The line stays where the author wrote it, but is marked made -- it no
+			// longer spells what it holds, so the write-back must not edit it as if it did.
+			FDreamUIExpression Written;
+			if (Own->BindingExpression.IsSet())
+			{
+				Written = Own->BindingExpression.GetValue();
+			}
+			else if (!Own->BindingFunction.IsEmpty())
+			{
+				Written.Kind = FDreamUIExpression::EKind::Call;
+				Written.Symbol = Own->BindingFunction;
+				Written.Location = Own->Location;
+			}
+			else
+			{
+				Written.Kind = FDreamUIExpression::EKind::Literal;
+				Written.LiteralKind = Own->Value.Kind;
+				Written.LiteralRaw = Own->Value.Raw;
+				Written.Location = Own->Value.Location;
+			}
+			Own->BindingExpression = MakeAnd(InCondition, MoveTemp(Written), InHeaderLocation);
+			Own->BindingFunction.Reset();
+			Own->Value = FDreamUIValue();
+			Own->bSynthesized = true;
+		}
+
+		/** `+ VerticalBox { Spacing = 15 }`, into a node's components or a style's. The cursor is on the '+'. */
+		void ParseComponent(TArray<FDreamUIComponent>& OutComponents)
 		{
 			FDreamUIComponent Component;
 			Component.Location = Current().Location;
@@ -2331,28 +3617,99 @@ namespace DreamUIText
 				RecoverToStatementBoundary();
 			}
 
-			OutNode.Components.Add(MoveTemp(Component));
+			OutComponents.Add(MoveTemp(Component));
 		}
 
-		void ParseSlotProperty(FDreamUINode& OutNode)
+		/**
+		 * `@slot Padding = (8, 8, 8, 8)`, or the block form `@slot { SizeRule = Fill  Padding = (0, 8, 0, 0) }` with the
+		 * property syntax a `+ Component { … }` block has -- into a node's slot lines or a style's. The cursor is on the
+		 * '@'.
+		 */
+		void ParseSlotLine(TArray<FDreamUIProperty>& OutSlotProperties)
 		{
 			const FDreamUISourceLocation AtLocation = Current().Location;
 			Advance(); // '@'
 
 			if (!CheckKeyword(TEXT("slot")))
 			{
-				RaiseUnexpectedToken(TEXT("'@slot' is the only annotation that leads a line"));
+				RaiseUnexpectedToken(TEXT("'@slot' and '@fill' are the only annotations that lead a line"));
 				RecoverToStatementBoundary();
 				return;
 			}
 			Advance();
+
+			if (Check(ETokenKind::OpenBrace))
+			{
+				// Each line of the block is located at its own name, not at the '@': it is a line of its own, and that
+				// line's beginning is what the patcher replacing it has to find.
+				const FDreamUISourceLocation OpenLocation = Current().Location;
+				Advance();
+				ParsePropertyOnlyBlock(OutSlotProperties, OpenLocation, TEXT("a '@slot' block"));
+				return;
+			}
 
 			FDreamUIProperty Property;
 			// Stamped with the '@', not the name after it: the statement starts at the '@', and the
 			// patcher replacing this line has to know where the line begins.
 			if (ParseProperty(Property, &AtLocation))
 			{
-				OutNode.SlotProperties.Add(MoveTemp(Property));
+				OutSlotProperties.Add(MoveTemp(Property));
+			}
+		}
+
+		/**
+		 * `@fill` alone on its line, or before a number: the shorthand, rather than a resource node that happens to be
+		 * called fill. A node always has an id, a block or a style clause after its type, so the two readings never meet.
+		 * A digit-led word (`@fill 2ndRow`) is left to ParseNode, whose id rule reports it as it always did.
+		 */
+		bool IsFillShorthand() const
+		{
+			if (!Check(ETokenKind::At) || Peek(1).Kind != ETokenKind::Identifier
+				|| !Peek(1).Text.Equals(TEXT("fill"), ESearchCase::CaseSensitive))
+			{
+				return false;
+			}
+			const FToken& After = Peek(2);
+			return After.Kind == ETokenKind::Separator || After.Kind == ETokenKind::CloseBrace || After.Kind == ETokenKind::EndOfFile
+				|| (After.Kind == ETokenKind::Number && !After.bDigitLeadingWord);
+		}
+
+		/**
+		 * `@fill` is `@slot SizeRule = Fill`, and `@fill 2` adds `@slot FillWeight = 2` -- the two slot lines a box layout
+		 * is mostly made of, as one word. The properties are marked as made (bSynthesized) and located at the '@': there is
+		 * no `SizeRule` written anywhere for the patcher to edit, and the write-back says so rather than invent a line.
+		 */
+		void ParseFillShorthand(TArray<FDreamUIProperty>& OutSlotProperties)
+		{
+			const FDreamUISourceLocation AtLocation = Current().Location;
+			Advance(); // '@'
+			const FDreamUISourceLocation WordLocation = Current().Location;
+			Advance(); // 'fill'
+
+			FDreamUIProperty& SizeRule = OutSlotProperties.AddDefaulted_GetRef();
+			SizeRule.Name = TEXT("SizeRule");
+			SizeRule.Value.Kind = EDreamUIValueKind::Identifier;
+			SizeRule.Value.Raw = TEXT("Fill");
+			SizeRule.Value.Location = WordLocation;
+			SizeRule.Location = AtLocation;
+			SizeRule.bSynthesized = true;
+
+			if (Check(ETokenKind::Number))
+			{
+				FDreamUIProperty& FillWeight = OutSlotProperties.AddDefaulted_GetRef();
+				FillWeight.Name = TEXT("FillWeight");
+				FillWeight.Value.Kind = EDreamUIValueKind::Number;
+				FillWeight.Value.Raw = Current().Text;
+				FillWeight.Value.Location = Current().Location;
+				FillWeight.Location = AtLocation;
+				FillWeight.bSynthesized = true;
+				Advance();
+			}
+
+			if (!AtStatementEnd())
+			{
+				RaiseUnexpectedToken(TEXT("'@fill' takes at most a weight, as in '@fill 2'"));
+				RecoverToStatementBoundary();
 			}
 		}
 
@@ -2451,6 +3808,15 @@ namespace DreamUIText
 				// the file is DESCRIBING a call it will make; `->` names a function something else
 				// will call, and dressing it as a call would promise arguments the author cannot pass.
 				Advance();
+				// `OnClicked -> emit Picked(Index)` -- the one place arguments ARE written after `->`,
+				// because here the file is raising an event of its own and does know what it passes.
+				// `emit` is the keyword only with an event name after it; alone it is still the name of
+				// a handler, as it was before the word meant anything.
+				if (CheckKeyword(TEXT("emit")) && Peek(1).Kind == ETokenKind::Identifier)
+				{
+					Advance(); // 'emit'
+					return ParseEmitRoute(OutProperty);
+				}
 				if (!Check(ETokenKind::Identifier))
 				{
 					RaiseUnexpectedToken(FString::Printf(TEXT("expected a handler name after '%s ->'"), *OutProperty.Name));
@@ -2494,6 +3860,49 @@ namespace DreamUIText
 			return false;
 		}
 
+		/**
+		 * The rest of `Event -> emit Name(args)`, the cursor on Name. The arguments are binding expressions over this
+		 * file's widget -- the same grammar as the right of `<-` -- and whether they match the event's parameters is the
+		 * compiler's to say, since the parameter types only become pins there. EventHandler is left empty: the compiler
+		 * generates the handler that broadcasts, and writes its name in.
+		 */
+		bool ParseEmitRoute(FDreamUIProperty& OutProperty)
+		{
+			OutProperty.EmitEvent = Current().Text;
+			Advance();
+			if (!Check(ETokenKind::OpenParen))
+			{
+				return true;
+			}
+			Advance();
+			if (!Check(ETokenKind::CloseParen))
+			{
+				for (;;)
+				{
+					FDreamUIExpression& Argument = OutProperty.EmitArguments.AddDefaulted_GetRef();
+					if (!ParseBindingExpression(Argument, /*InMinPrecedence*/1))
+					{
+						return false;
+					}
+					if (!Check(ETokenKind::Comma))
+					{
+						break;
+					}
+					Advance();
+				}
+			}
+			if (!Check(ETokenKind::CloseParen))
+			{
+				Diagnostics.AddError(EDreamUIDiagnosticCode::MalformedBindingExpression, Current().Location,
+					FString::Printf(TEXT("the arguments of 'emit %s' are separated by ',' and closed by ')', found '%s'"),
+						*OutProperty.EmitEvent, *DescribeCurrent()));
+				RecoverToStatementBoundary();
+				return false;
+			}
+			Advance();
+			return true;
+		}
+
 		bool ParseBindingFunction(FDreamUIProperty& OutProperty)
 		{
 			// The open question closed: the right of `<-` is an EXPRESSION. A bare `Func()` keeps
@@ -2505,7 +3914,12 @@ namespace DreamUIText
 			{
 				return false;
 			}
-			if (!Check(ETokenKind::Separator) && !Check(ETokenKind::CloseBrace) && !Check(ETokenKind::EndOfFile))
+			// The binding ends at the end of the line -- or where another property line plainly begins, which an
+			// assignment always could (`A = 1  B = 2`) and a binding could not, so `Label <- Item.Label  Kind <-
+			// Item.Kind` on one line was refused. An expression is never followed by a name and an operator, so
+			// allowing exactly that takes no spelling away; anything else after it is still the junk it was.
+			if (!Check(ETokenKind::Separator) && !Check(ETokenKind::CloseBrace) && !Check(ETokenKind::EndOfFile)
+				&& !StartsAnotherProperty())
 			{
 				Diagnostics.AddError(EDreamUIDiagnosticCode::MalformedBindingExpression, Current().Location,
 					FString::Printf(TEXT("unexpected '%s' after the binding expression"), *Current().Text));
@@ -2700,6 +4114,7 @@ namespace DreamUIText
 				// Recorded as a LITERAL of kind ResourceRef and resolved where the expression is
 				// lowered, never by rewriting the AST: the patcher owns this tree's byte offsets, and
 				// substituting a longer literal under it would splice later edits into wrong columns.
+				const FDreamUISourceLocation AtLocation = Current().Location;
 				Advance();
 				if (!Check(ETokenKind::Identifier))
 				{
@@ -2710,8 +4125,8 @@ namespace DreamUIText
 				}
 				OutExpression.Kind = FDreamUIExpression::EKind::Literal;
 				OutExpression.LiteralKind = EDreamUIValueKind::ResourceRef;
-				OutExpression.LiteralRaw = Current().Text;
-				Advance();
+				// `@nier.Ink` -- an entry a namespace brought in, under the name it was entered as.
+				OutExpression.LiteralRaw = ParseQualifiedName(&AtLocation);
 				return true;
 			}
 			case ETokenKind::Identifier:
@@ -2845,8 +4260,9 @@ namespace DreamUIText
 					return false;
 				}
 				OutValue.Kind = EDreamUIValueKind::ResourceRef;
-				OutValue.Raw = Current().Text;
-				Advance();
+				// `@nier.Ink` -- an entry a namespace brought in, under the name it was entered as. Raw is the name
+				// with its dots, as FindResource is asked for it.
+				OutValue.Raw = ParseQualifiedName(&ValueToken.Location);
 				break;
 			}
 			default:
@@ -3025,6 +4441,152 @@ namespace DreamUIText
 		// --- whole-file checks --------------------------------------------------------------------
 
 		/**
+		 * The ids of the widgets the author left unnamed (FDreamUINode::bAnonymous): `<parent id>__<type><n>`.
+		 *
+		 * A pass over the finished tree rather than a name made as each node is read, because the rule that keeps a made
+		 * id from colliding with a written one needs every written one, and the file is free to write `Root__Text0` five
+		 * hundred lines below the anonymous Text that would have made it. Made the same way on every parse of the same
+		 * text, which is what makes it as stable as an authored id while the file's shape stays put.
+		 *
+		 * A loop body and a slot being filled have no id to give: a loop has none, and a fill's id is the COMPONENT'S slot
+		 * name, the same under every instance. Their widgets are named as if they sat in the nearest node that has one,
+		 * counting along with its own -- so they never meet a sibling's id, nor the widgets of another instance's fill.
+		 */
+		void NameAnonymousNodes(FDreamUIAst& InOutAst)
+		{
+			if (!InOutAst.bHasRoot)
+			{
+				return;
+			}
+			// Every id the author wrote, case insensitively (TSet<FString>), since the id becomes an FName. A slot's fill
+			// is not one: it names a hole in another class, and two instances filling one are not a collision.
+			TSet<FString> Taken;
+			CollectWrittenIds(InOutAst.Root, Taken, /*InDepth*/0);
+
+			TMap<FString, int32> RootCounts;
+			if (InOutAst.Root.bAnonymous)
+			{
+				AssignAnonymousId(InOutAst.Root, TEXT("Root"), RootCounts, Taken);
+			}
+			TMap<FString, int32> Counts;
+			NameAnonymousChildren(InOutAst.Root, InOutAst.Root.Id, Counts, Taken, /*InDepth*/0);
+		}
+
+		static bool IsTransparentToNaming(const FDreamUINode& InNode)
+		{
+			return InNode.Kind == EDreamUINodeKind::ForLoop || InNode.Kind == EDreamUINodeKind::EachLoop
+				|| (InNode.Kind == EDreamUINodeKind::NamedSlot && InNode.bFillsSlot);
+		}
+
+		void CollectWrittenIds(const FDreamUINode& InNode, TSet<FString>& OutTaken, int32 InDepth) const
+		{
+			// The crash guard every walk carries; the parser keeps a parsed tree far shallower than this.
+			if (InDepth >= DreamUIAst::MaxNestingDepth)
+			{
+				return;
+			}
+			if (!InNode.bAnonymous && !InNode.Id.IsEmpty() && !(InNode.Kind == EDreamUINodeKind::NamedSlot && InNode.bFillsSlot))
+			{
+				OutTaken.Add(InNode.Id);
+			}
+			for (const FDreamUINode& Child : InNode.Children)
+			{
+				CollectWrittenIds(Child, OutTaken, InDepth + 1);
+			}
+		}
+
+		void NameAnonymousChildren(FDreamUINode& InParent, const FString& InScopeId, TMap<FString, int32>& InOutCounts,
+			TSet<FString>& InOutTaken, int32 InDepth)
+		{
+			if (InDepth >= DreamUIAst::MaxNestingDepth)
+			{
+				return;
+			}
+			for (FDreamUINode& Child : InParent.Children)
+			{
+				if (Child.Kind == EDreamUINodeKind::Widget && Child.bAnonymous)
+				{
+					AssignAnonymousId(Child, InScopeId, InOutCounts, InOutTaken);
+				}
+				if (IsTransparentToNaming(Child))
+				{
+					NameAnonymousChildren(Child, InScopeId, InOutCounts, InOutTaken, InDepth + 1);
+				}
+				else
+				{
+					TMap<FString, int32> ChildCounts;
+					NameAnonymousChildren(Child, Child.Id, ChildCounts, InOutTaken, InDepth + 1);
+				}
+			}
+		}
+
+		void AssignAnonymousId(FDreamUINode& InOutNode, const FString& InScopeId, TMap<FString, int32>& InOutCounts,
+			TSet<FString>& InOutTaken)
+		{
+			// The type with every character an id cannot hold made '_' -- `nier.Row` is `nier_Row`, `@Row` is `_Row` --
+			// and counted by that spelling, so two types that spell the same once cleaned share a count instead of a name.
+			FString Type = InOutNode.TypeName;
+			for (int32 CharIndex = 0; CharIndex < Type.Len(); ++CharIndex)
+			{
+				if (!IsIdentifierChar(Type[CharIndex]))
+				{
+					Type[CharIndex] = TEXT('_');
+				}
+			}
+			// A node whose parent failed to get an id (a parse error already reported) still gets a usable one.
+			const FString Scope = InScopeId.IsEmpty() ? FString(TEXT("Root")) : InScopeId;
+			int32& Count = InOutCounts.FindOrAdd(Type);
+			FString Id = FString::Printf(TEXT("%s__%s%d"), *Scope, *Type, Count);
+			++Count;
+
+			// The one length rule the lexer holds every written name to (IdentifierTooLong), held here for a made one:
+			// a chain of anonymous parents, or a long asset path for a type, can make a name an FName cannot hold, and
+			// FName answers that by stopping the editor. Reported, and cut short enough to bump.
+			constexpr int32 BumpRoom = 12;
+			if (Id.Len() >= NAME_SIZE)
+			{
+				Diagnostics.AddError(EDreamUIDiagnosticCode::IdentifierTooLong, InOutNode.Location,
+					FString::Printf(TEXT("the id made for this unnamed '%s' would be %d characters long, and an id holds at most %d; give it, or a node above it, an id"),
+						*Ellipsize(InOutNode.TypeName), Id.Len(), NAME_SIZE - 1));
+				Id.LeftInline(NAME_SIZE - 1 - BumpRoom);
+			}
+
+			// Bumped past an id the author wrote -- the author's is the one their bindings mean -- and past any made
+			// earlier, which only a type spelled like a made id could ever reach.
+			if (InOutTaken.Contains(Id))
+			{
+				int32 Bump = 1;
+				while (InOutTaken.Contains(FString::Printf(TEXT("%s_%d"), *Id, Bump)))
+				{
+					++Bump;
+				}
+				Id = FString::Printf(TEXT("%s_%d"), *Id, Bump);
+			}
+			InOutTaken.Add(Id);
+			InOutNode.Id = MoveTemp(Id);
+		}
+
+		/** Every `ns.` the file wrote, against the namespaces its `use … as` lines (and its plain imports) declared. */
+		void CheckNamespaceReferences(const FDreamUIAst& InAst)
+		{
+			for (const FNamespaceReference& Reference : NamespaceReferences)
+			{
+				if (!IsKnownNamespace(InAst, Reference.Prefix))
+				{
+					Diagnostics.AddError(EDreamUIDiagnosticCode::UnknownNamespace, Reference.Location,
+						FString::Printf(TEXT("'%s' is qualified by '%s', which no 'use \"...\" as %s' declares"),
+							*Reference.Name, *Reference.Prefix, *Reference.Prefix));
+				}
+			}
+		}
+
+		/** FString's comparison, case insensitive, like every name lookup in the language. */
+		static bool IsKnownNamespace(const FDreamUIAst& InAst, const FString& InPrefix)
+		{
+			return InAst.Namespaces.Contains(InPrefix);
+		}
+
+		/**
 		 * The two things that need the finished tree and nothing else.
 		 *
 		 * Run as a pass rather than while parsing because both are order independent: a style may be
@@ -3043,7 +4605,11 @@ namespace DreamUIText
 
 			InAst.ForEachNode([this, &InAst, &FirstSeen](const FDreamUINode& InNode)
 			{
-				if (!InNode.Id.IsEmpty())
+				// A slot being FILLED is not an identity of this class: its id is the component's slot name, and two
+				// instances of one component each filling its Detail is the language working, not a collision. Made
+				// ids are counted like written ones, which NameAnonymousNodes has already kept apart.
+				const bool bFill = InNode.Kind == EDreamUINodeKind::NamedSlot && InNode.bFillsSlot;
+				if (!InNode.Id.IsEmpty() && !bFill)
 				{
 					if (const FDreamUISourceLocation* First = FirstSeen.Find(InNode.Id))
 					{
@@ -3059,7 +4625,12 @@ namespace DreamUIText
 					}
 				}
 
-				if (!InNode.StyleName.IsEmpty() && InAst.FindStyle(InNode.StyleName) == nullptr)
+				// A style qualified by a namespace nothing declared is reported once, as that (CheckNamespaceReferences):
+				// "no such style" on top would send the reader looking for a misspelt style that is not the mistake.
+				int32 Dot = INDEX_NONE;
+				const bool bUnknownNamespace = InNode.StyleName.FindChar(TEXT('.'), Dot)
+					&& !IsKnownNamespace(InAst, InNode.StyleName.Left(Dot));
+				if (!InNode.StyleName.IsEmpty() && !bUnknownNamespace && InAst.FindStyle(InNode.StyleName) == nullptr)
 				{
 					Diagnostics.AddError(EDreamUIDiagnosticCode::UnknownStyle, InNode.Location,
 						FString::Printf(TEXT("'%s' names a style this file does not declare"), *InNode.StyleName));
@@ -3096,6 +4667,33 @@ namespace DreamUIText
 		// (first-wins lookup makes the duplicates inert); only a genuine cycle trips the guard.
 		Parser.ImportAncestors = MoveTemp(InAncestors);
 		Parser.bAllowRootless = bInAllowRootless;
+		Parser.SelfKey = MakeImportKey(InSourceName);
+		Parser.ParseFile(OutAst);
+
+		return OutDiagnostics.NumErrors() == ErrorsBefore;
+	}
+
+	/**
+	 * What a `use … as` needs to know about a file and nothing more: whether it has a root, and its `class` line. See
+	 * FParser::bHeaderOnly for what is skipped and why. A root is optional here, as for any file reached through `use`:
+	 * its absence is the answer (a library), not a mistake.
+	 */
+	bool ParseHeaderOnly(const FString& InText, const FString& InSourceName,
+		FDreamUIAst& OutAst, FDreamUIDiagnosticBag& OutDiagnostics)
+	{
+		OutAst = FDreamUIAst();
+		OutDiagnostics.SourceName = InSourceName;
+		const int32 ErrorsBefore = OutDiagnostics.NumErrors();
+
+		TArray<FToken> Tokens;
+		Tokens.Reserve(InText.Len() / 4 + 8);
+		FLexer Lexer(InText, OutDiagnostics);
+		Lexer.Run(Tokens);
+
+		FParser Parser(InText, Tokens, OutDiagnostics);
+		Parser.bHeaderOnly = true;
+		Parser.bAllowRootless = true;
+		Parser.SelfKey = MakeImportKey(InSourceName);
 		Parser.ParseFile(OutAst);
 
 		return OutDiagnostics.NumErrors() == ErrorsBefore;

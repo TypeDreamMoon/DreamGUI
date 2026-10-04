@@ -9,10 +9,12 @@
 #include "Designer/DreamUITextAuthoringGate.h"
 #include "Text/DreamUIDocument.h"
 #include "Text/DreamUIPaths.h"
+#include "Text/DreamUITextBuilder.h"
 #include "Text/DreamUITextWriteBack.h"
 
 #include "AssetRegistry/ARFilter.h"
 #include "AssetRegistry/AssetRegistryModule.h"
+#include "AssetRegistry/IAssetRegistry.h"
 #include "Containers/Ticker.h"
 #include "DirectoryWatcherModule.h"
 #include "Editor.h"
@@ -24,9 +26,11 @@
 #include "Kismet2/CompilerResultsLog.h"
 #include "Kismet2/KismetEditorUtilities.h"
 #include "Misc/FileHelper.h"
+#include "Misc/PackageName.h"
 #include "Misc/Paths.h"
 #include "Misc/ScopedSlowTask.h"
 #include "Modules/ModuleManager.h"
+#include "UObject/SoftObjectPath.h"
 #include "UObject/UObjectIterator.h"
 #include "Widgets/Notifications/SNotificationList.h"
 
@@ -68,6 +72,22 @@ namespace DreamUISourceWatcherLocal
 		bool HasFirstError() const { return !FirstErrorFile.IsEmpty(); }
 	};
 
+	/**
+	 * The file a Blueprint is built from, as the one spelling every comparison here uses; empty when it names none.
+	 *
+	 * Resolved and normalised. The stored path may be relative, plugin-qualified or absolute, and the watcher only
+	 * ever has the absolute one -- comparing the spellings would make a file rebuild or not depending on how its
+	 * class happened to name it. Shared by the save path and the class resolver, so the two cannot come to disagree
+	 * about which Blueprint a file belongs to.
+	 */
+	FString GetResolvedSourceKey(const UDreamWidgetBlueprint* InBlueprint)
+	{
+		const FString Authored = DreamUITextAuthoring::GetAuthoredSourcePath(InBlueprint);
+		return Authored.IsEmpty()
+			? FString()
+			: FDreamUIDocumentRegistry::NormalizePath(UDreamTextUserWidget::ResolveDuiFilePath(Authored));
+	}
+
 	void FindBlueprints(const FString& InFilePath, TArray<UDreamWidgetBlueprint*>& OutBlueprints)
 	{
 		const FString Normalized = FDreamUIDocumentRegistry::NormalizePath(InFilePath);
@@ -78,21 +98,187 @@ namespace DreamUISourceWatcherLocal
 			{
 				continue;
 			}
-			const FString Authored = DreamUITextAuthoring::GetAuthoredSourcePath(Blueprint);
-			if (Authored.IsEmpty())
-			{
-				continue;
-			}
-			// Resolved and normalised on both sides. The stored path may be relative, plugin-qualified
-			// or absolute, and the watcher only ever has the absolute one -- comparing the spellings
-			// would make a file rebuild or not depending on how its class happened to name it.
-			const FString Resolved = FDreamUIDocumentRegistry::NormalizePath(
-				UDreamTextUserWidget::ResolveDuiFilePath(Authored));
-			if (Resolved.Equals(Normalized, ESearchCase::IgnoreCase))
+			const FString Resolved = GetResolvedSourceKey(Blueprint);
+			if (!Resolved.IsEmpty() && Resolved.Equals(Normalized, ESearchCase::IgnoreCase))
 			{
 				OutBlueprints.Add(Blueprint);
 			}
 		}
+	}
+
+	/**
+	 * What FindClassForSource has learned this process: which Blueprint each file belongs to, and which Blueprint
+	 * packages it has already read the Source File of. Process-wide rather than the editor session's, because the
+	 * resolver serves the compiler, and the compiler runs where no session does.
+	 */
+	struct FSourceClassIndex
+	{
+		/** Resolved, normalised source path (lowercased, the comparison being case-blind) -> the Blueprint built from it. */
+		TMap<FString, FSoftObjectPath> BlueprintBySource;
+		/** Widget Blueprint packages whose Source File has been read, loaded or not since. */
+		TSet<FName> ExaminedPackages;
+		FDelegateHandle AssetRemovedHandle;
+		FDelegateHandle AssetRenamedHandle;
+		/** Set while a lookup runs: a load it causes that asks again is answered null, not with a second scan. */
+		bool bResolving = false;
+	};
+
+	FSourceClassIndex& SourceClassIndex()
+	{
+		static FSourceClassIndex Index;
+		return Index;
+	}
+
+	FString IndexKey(const FString& InNormalizedPath)
+	{
+		return InNormalizedPath.ToLower();
+	}
+
+	/** Remember where InBlueprint is built from, whatever was asked: the next question is likely about another file. */
+	void NoteBlueprintSource(UDreamWidgetBlueprint* InBlueprint)
+	{
+		FSourceClassIndex& Index = SourceClassIndex();
+		Index.ExaminedPackages.Add(InBlueprint->GetOutermost()->GetFName());
+		const FString Resolved = GetResolvedSourceKey(InBlueprint);
+		if (!Resolved.IsEmpty())
+		{
+			Index.BlueprintBySource.Add(IndexKey(Resolved), FSoftObjectPath(InBlueprint));
+		}
+	}
+
+	/** The class a Blueprint compiles into, as a node type wants it: the real one, never a REINST stand-in. */
+	UClass* GetAuthoritativeClass(const UDreamWidgetBlueprint* InBlueprint)
+	{
+		return InBlueprint != nullptr && InBlueprint->GeneratedClass != nullptr
+			? InBlueprint->GeneratedClass->GetAuthoritativeClass() : nullptr;
+	}
+
+	/** An asset leaving or moving takes what was learned about it along. */
+	void ForgetPackage(const FName InPackageName)
+	{
+		FSourceClassIndex& Index = SourceClassIndex();
+		Index.ExaminedPackages.Remove(InPackageName);
+		for (auto It = Index.BlueprintBySource.CreateIterator(); It; ++It)
+		{
+			if (It.Value().GetLongPackageFName() == InPackageName)
+			{
+				It.RemoveCurrent();
+			}
+		}
+	}
+
+	UClass* FindClassForSourceImpl(const FString& InResolvedSourcePath)
+	{
+		FSourceClassIndex& Index = SourceClassIndex();
+		const FString Normalized = FDreamUIDocumentRegistry::NormalizePath(InResolvedSourcePath);
+		if (Normalized.IsEmpty())
+		{
+			return nullptr;
+		}
+		const FString Key = IndexKey(Normalized);
+		auto IsBuiltFrom = [&Normalized](const UDreamWidgetBlueprint* InBlueprint)
+		{
+			return IsValid(InBlueprint) && GetResolvedSourceKey(InBlueprint).Equals(Normalized, ESearchCase::IgnoreCase);
+		};
+
+		// 1. The answer from last time, asked again: the Blueprint may have been given another Source File since, and
+		// a stale answer is a host built from the wrong component.
+		if (const FSoftObjectPath* Known = Index.BlueprintBySource.Find(Key))
+		{
+			UDreamWidgetBlueprint* Blueprint = Cast<UDreamWidgetBlueprint>(Known->ResolveObject());
+			if (Blueprint == nullptr)
+			{
+				// Known, and collected since: brought back, which is what the soft path is kept for.
+				Blueprint = Cast<UDreamWidgetBlueprint>(Known->TryLoad());
+			}
+			if (IsBuiltFrom(Blueprint) && GetAuthoritativeClass(Blueprint) != nullptr)
+			{
+				return GetAuthoritativeClass(Blueprint);
+			}
+			Index.BlueprintBySource.Remove(Key);
+		}
+
+		// 2. Every loaded Blueprint, which costs nothing to ask and is where the answer almost always is: the component
+		// a screen uses is open, or was compiled, or was loaded by the last screen that used it.
+		TArray<UDreamWidgetBlueprint*> Matches;
+		for (TObjectIterator<UDreamWidgetBlueprint> It; It; ++It)
+		{
+			UDreamWidgetBlueprint* Blueprint = *It;
+			if (!IsValid(Blueprint) || Blueprint->HasAnyFlags(RF_ClassDefaultObject))
+			{
+				continue;
+			}
+			NoteBlueprintSource(Blueprint);
+			if (IsBuiltFrom(Blueprint) && GetAuthoritativeClass(Blueprint) != nullptr)
+			{
+				Matches.Add(Blueprint);
+			}
+		}
+		if (Matches.Num() > 0)
+		{
+			// Two classes built from one file is legitimate (a file a native parent shares across subclasses), and
+			// there is no right one for an alias to mean. The same one every time, then, and said: the `class` line
+			// is how the file names the one it means.
+			Matches.Sort([](const UDreamWidgetBlueprint& A, const UDreamWidgetBlueprint& B)
+			{
+				return A.GetPathName() < B.GetPathName();
+			});
+			if (Matches.Num() > 1)
+			{
+				UE_LOG(DreamGUI, Warning, TEXT("[%s].%d %d Blueprints are built from '%s'; a component alias of it means '%s'. Give the file a 'class' line to choose."),
+					ANSI_TO_TCHAR(__FUNCTION__), __LINE__, Matches.Num(), *InResolvedSourcePath, *GetPathNameSafe(Matches[0]));
+			}
+			Index.BlueprintBySource.Add(Key, FSoftObjectPath(Matches[0]));
+			return GetAuthoritativeClass(Matches[0]);
+		}
+
+		// 3. The widget Blueprints not read yet. Only the registry knows they exist and only loading one says what file
+		// it is built from -- the Source File is a class default, which no registry tag carries -- so each is loaded
+		// once, remembered, and never loaded for this question again. Likeliest first, so the usual project (one
+		// component per file, named after it) loads one asset and stops.
+		IAssetRegistry* AssetRegistry = IAssetRegistry::Get();
+		if (AssetRegistry == nullptr)
+		{
+			return nullptr;
+		}
+		FARFilter Filter;
+		Filter.ClassPaths.Add(UDreamWidgetBlueprint::StaticClass()->GetClassPathName());
+		Filter.bRecursiveClasses = true;
+		TArray<FAssetData> Assets;
+		AssetRegistry->GetAssets(Filter, Assets);
+		Assets.RemoveAll([&Index](const FAssetData& InAsset)
+		{
+			return Index.ExaminedPackages.Contains(InAsset.PackageName);
+		});
+		const FString FileStem = FPaths::GetBaseFilename(Normalized);
+		auto Likeness = [&FileStem](const FAssetData& InAsset)
+		{
+			const FString AssetName = InAsset.AssetName.ToString();
+			if (AssetName.Equals(FileStem, ESearchCase::IgnoreCase))
+			{
+				return 0;
+			}
+			return AssetName.EndsWith(TEXT("_") + FileStem, ESearchCase::IgnoreCase) || AssetName.Contains(FileStem) ? 1 : 2;
+		};
+		Assets.StableSort([&Likeness](const FAssetData& A, const FAssetData& B)
+		{
+			return Likeness(A) < Likeness(B);
+		});
+		for (const FAssetData& Asset : Assets)
+		{
+			Index.ExaminedPackages.Add(Asset.PackageName);
+			UDreamWidgetBlueprint* Blueprint = Cast<UDreamWidgetBlueprint>(Asset.GetAsset());
+			if (Blueprint == nullptr)
+			{
+				continue;
+			}
+			NoteBlueprintSource(Blueprint);
+			if (IsBuiltFrom(Blueprint) && GetAuthoritativeClass(Blueprint) != nullptr)
+			{
+				return GetAuthoritativeClass(Blueprint);
+			}
+		}
+		return nullptr;
 	}
 
 	/**
@@ -892,6 +1078,63 @@ int32 FDreamUISourceWatcher::RebuildAll()
 
 	ReportBatch(Batch, /*bAnnounceSuccess*/true);
 	return Found;
+}
+
+UClass* FDreamUISourceWatcher::FindClassForSource(const FString& InResolvedSourcePath)
+{
+	using namespace DreamUISourceWatcherLocal;
+
+	// Asked from inside a compile, and able to load: a Blueprint loaded here may reach the builder again before this
+	// returns -- its own aliases, resolved on load -- and a second scan started from the middle of the first would
+	// examine the same packages twice and load whatever the first had not reached yet. The inner question is
+	// answered null, which the builder reports as an alias it could not resolve, on a line of the file being loaded.
+	FSourceClassIndex& Index = SourceClassIndex();
+	if (Index.bResolving)
+	{
+		return nullptr;
+	}
+	TGuardValue<bool> ResolvingGuard(Index.bResolving, true);
+	return FindClassForSourceImpl(InResolvedSourcePath);
+}
+
+void FDreamUISourceWatcher::InstallSourceClassResolver()
+{
+	using namespace DreamUISourceWatcherLocal;
+
+	FDreamUITextBuilder::SourceClassResolver() = [](const FString& InResolvedSourcePath) -> UClass*
+	{
+		return FDreamUISourceWatcher::FindClassForSource(InResolvedSourcePath);
+	};
+
+	// What was learned about an asset goes when the asset does. A Blueprint that is merely given another Source File
+	// needs nothing here: every remembered answer is checked again before it is given.
+	if (IAssetRegistry* AssetRegistry = IAssetRegistry::Get())
+	{
+		FSourceClassIndex& Index = SourceClassIndex();
+		Index.AssetRemovedHandle = AssetRegistry->OnAssetRemoved().AddLambda([](const FAssetData& InAsset)
+		{
+			ForgetPackage(InAsset.PackageName);
+		});
+		Index.AssetRenamedHandle = AssetRegistry->OnAssetRenamed().AddLambda([](const FAssetData& InAsset, const FString& InOldObjectPath)
+		{
+			ForgetPackage(InAsset.PackageName);
+			ForgetPackage(FName(*FPackageName::ObjectPathToPackageName(InOldObjectPath)));
+		});
+	}
+}
+
+void FDreamUISourceWatcher::UninstallSourceClassResolver()
+{
+	using namespace DreamUISourceWatcherLocal;
+
+	FDreamUITextBuilder::SourceClassResolver() = nullptr;
+	FSourceClassIndex& Index = SourceClassIndex();
+	if (IAssetRegistry* AssetRegistry = IAssetRegistry::Get())
+	{
+		AssetRegistry->OnAssetRemoved().Remove(Index.AssetRemovedHandle);
+		AssetRegistry->OnAssetRenamed().Remove(Index.AssetRenamedHandle);
+	}
+	Index = FSourceClassIndex();
 }
 
 #undef LOCTEXT_NAMESPACE

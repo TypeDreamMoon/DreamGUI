@@ -1585,6 +1585,15 @@ protected:
 	/** Controls layout, painting and hit testing independently from WidgetActive. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "DreamGUI", Getter = "GetVisibility", Setter = "SetVisibility", meta = (AllowPrivateAccess = true))
 	EDreamWidgetVisibility Visibility = EDreamWidgetVisibility::Visible;
+	/**
+	 * Visibility as a yes or no: true is Visible, false is Collapsed. What `Shown <- HasSave()` binds in a .dui, and
+	 * what an `if` block binds on each widget of its branches. Nothing of its own is kept -- reading it reads
+	 * Visibility (anything but Collapsed is shown), writing it writes Visibility -- so the field below is only the
+	 * slot reflection needs for a property with a getter and a setter. DuiHidden: Visibility is what the write-back
+	 * spells, so a sweep must not author the same value twice.
+	 */
+	UPROPERTY(Transient, BlueprintReadOnly, Category = "DreamGUI", Getter = "GetShown", Setter = "SetShown", meta = (AllowPrivateAccess = true, DuiHidden))
+	bool Shown = true;
 #if WITH_EDITORONLY_DATA
 	/** Transient preview state restored from the owning designer data. */
 	bool bHiddenInDesigner = false;
@@ -1791,6 +1800,12 @@ public:
 	EDreamWidgetVisibility GetVisibility()const { return Visibility; }
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
 	void SetVisibility(EDreamWidgetVisibility Value);
+	/** Anything but Collapsed. See Shown. */
+	UFUNCTION(BlueprintPure, Category = "DreamGUI|Visibility")
+	bool GetShown()const { return Visibility != EDreamWidgetVisibility::Collapsed; }
+	/** Visible when true, Collapsed when false; a shown widget that is Hidden or hit-test invisible keeps that. See Shown. */
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI|Visibility")
+	void SetShown(bool Value);
 	/** Temporarily removes this widget from layout, rendering and hit testing without changing Visibility. */
 	void SetLayoutVisibilitySuppressed(bool bSuppressed);
 	/** Hidden still participates in layout; Collapsed does not. */

@@ -85,7 +85,17 @@ struct FDreamUIStructuralEdit
 	/** InsertNode / MoveNode: position among the parent's authored children. INDEX_NONE means last. */
 	int32 ChildIndex = INDEX_NONE;
 
-	/** InsertNode: the tag or asset path, exactly as a .dui writes it -- "Text", "/Game/UI/WBP_X". */
+	/**
+	 * InsertNode only: the named slot of ParentId -- a component instance -- that the new node fills. Empty means the
+	 * instance's own block, which is its DEFAULT slot: nesting is how a .dui fills that one, and how the designer does.
+	 *
+	 * Written into the instance's `slot Name { … }` fill when the file has one, and as a new fill holding the node when
+	 * it has not. Nested as an ordinary child instead, the node would land in the default slot on the next compile --
+	 * a different hole from the one it was dropped into.
+	 */
+	FString FillSlotName;
+
+	/** InsertNode: the type exactly as a .dui writes it -- "Text", "VerticalBox", "Row", "nier.Row", "/Game/UI/WBP_X". */
 	FString TypeName;
 
 	/** InsertNode: the id of the new node. RenameNode: the id it becomes. */
@@ -146,8 +156,16 @@ struct FDreamUIPropertyEdit
  *   - A property currently written as a binding (`Text <- GetTitle()`). Overwriting it with a
  *     literal would delete authored behaviour to store a value the binding was about to overwrite
  *     anyway, and the details panel showing the bound value makes that one drag away.
- *   - A `slot Name` node. The grammar refuses a block on a named slot, so there is nowhere in the
- *     file for a property to go; inserting one would produce a .dui that no longer parses.
+ *   - A `slot Name` written without a block, and a `slot Name { … }` that FILLS a component's slot.
+ *     A bare declaration is a hole and is left the hole its author wrote (a declaration WITH a
+ *     block takes properties like any node); a fill's block holds content and nothing else.
+ *   - A property the front end made rather than read (FDreamUIProperty::bSynthesized): the
+ *     `Shown <- Cond` an `if` gives the nodes of its branches, and the slot properties `@fill`
+ *     stands for. DUI7004, naming the line that made it -- with one exception, the shorthand
+ *     rewritten where that plainly means the same thing: a new weight replaces the number in
+ *     `@fill 2`, and a bare `@fill` given another SizeRule becomes `@slot SizeRule = …`.
+ *   - Visibility on a node whose `Shown` is bound, by an `if` (DUI7004) or by the author: the
+ *     binding decides it, and a literal beside it would be undone on the next tick.
  *   - A value text that cannot be read back as the value it was written as -- trailing junk, an
  *     embedded comment, an unterminated string, or a non-finite float. See the .cpp; that last one
  *     is the write-back half of the trap the implementation plan flagged before P5 started.
@@ -225,7 +243,16 @@ struct DREAMGUIEDITOR_API FDreamUITextPatcher
 	 * member variable, the animation binding path and the localization key, and the clause is how the
 	 * next compile carries all three across. A node that already has one keeps the ORIGINAL old id --
 	 * two renames in a row are one migration from where it started, and rewriting the clause to the
-	 * intermediate name would strand everything that still points at the first.
+	 * intermediate name would strand everything that still points at the first. An ANONYMOUS node
+	 * (`HorizontalBox { … }`) has its new id written after its type and no clause: its made-up id was
+	 * a hidden member nothing references, and the next anonymous sibling of its type inherits it.
+	 *
+	 * The newer syntax shapes where things land. A type may be an alias, a namespaced alias, a layout
+	 * container or `@Resource`, and the anchor check reads each the way the lexer does. A node placed
+	 * "after" a child that stands in an `if` branch goes after the whole `if … else …`, at the level
+	 * of the parent's block, never into the branch. The one template of a `for` or an `each` is not
+	 * removed or moved away (a loop with nothing to repeat does not build); a slot DECLARATION takes
+	 * no children, while a slot FILL takes them like any block.
 	 *
 	 * @return false when anything was refused; the rest still applied, as SetProperties does.
 	 */

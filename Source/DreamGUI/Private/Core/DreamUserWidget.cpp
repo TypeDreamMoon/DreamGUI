@@ -2,6 +2,7 @@
 
 #include "Core/DreamUserWidget.h"
 #include "Core/DreamUIEachBindingHandler.h"
+#include "Core/DreamUIForAdapter.h"
 #include "Core/DreamWidgetTree.h"
 #include "Core/DreamWidgetGeneratedClass.h"
 #include "Core/DreamUIInputServices.h"
@@ -1447,8 +1448,11 @@ void UDreamUserWidget::ResolvePropertyBindings()
 			continue;
 		}
 		UFunction* SourceFunction = FindFunction(Binding.FunctionName);
-		UFunction* Setter = Target->FindFunction(Binding.SetterName);
-		if (SourceFunction == nullptr || Setter == nullptr)
+		UFunction* Setter = Binding.SetterName.IsNone() ? nullptr : Target->FindFunction(Binding.SetterName);
+		// No setter named: a user widget's variable, written directly (see FDreamWidgetPropertyBinding::SetterName).
+		FProperty* DirectProperty = Binding.SetterName.IsNone() && Target->IsA<UDreamUserWidget>()
+			? Target->GetClass()->FindPropertyByName(Binding.PropertyName) : nullptr;
+		if (SourceFunction == nullptr || (Setter == nullptr && DirectProperty == nullptr))
 		{
 			continue;
 		}
@@ -1457,6 +1461,7 @@ void UDreamUserWidget::ResolvePropertyBindings()
 		Resolved.Target = Target;
 		Resolved.SourceFunction = SourceFunction;
 		Resolved.Setter = Setter;
+		Resolved.DirectProperty = DirectProperty;
 
 		// A source function the class marked FieldNotify tells us when it changes; everything else
 		// can change silently and stays on the per-frame poll. The classification is per instance
@@ -1498,7 +1503,7 @@ void UDreamUserWidget::EvaluateBinding(const FResolvedBinding& Binding)
 	TGuardValue<bool> EvaluatingGuard(Binding.bEvaluating, true);
 
 	UObject* Target = Binding.Target.Get();
-	if (!IsValid(Target) || Binding.SourceFunction == nullptr || Binding.Setter == nullptr)
+	if (!IsValid(Target) || Binding.SourceFunction == nullptr || (Binding.Setter == nullptr && Binding.DirectProperty == nullptr))
 	{
 		return;
 	}
@@ -1509,6 +1514,35 @@ void UDreamUserWidget::EvaluateBinding(const FResolvedBinding& Binding)
 	ProcessEvent(Binding.SourceFunction, SourceFrame.GetStructMemory());
 
 	FProperty* ReturnProperty = Binding.SourceFunction->GetReturnProperty();
+	if (Binding.Setter == nullptr)
+	{
+		// A component's variable: written into the instance only when it changed -- a polled binding comes here every
+		// frame -- and then announced, which is what its own bindings on it (FieldNotify, as `props` compile) hear.
+		if (ReturnProperty == nullptr)
+		{
+			return;
+		}
+		const void* SourceValue = ReturnProperty->ContainerPtrToValuePtr<void>(SourceFrame.GetStructMemory());
+		void* TargetValue = Binding.DirectProperty->ContainerPtrToValuePtr<void>(Target);
+		if (Binding.DirectProperty->SameType(ReturnProperty) && Binding.DirectProperty->Identical(TargetValue, SourceValue))
+		{
+			return;
+		}
+		if (!CopyDreamWidgetBoundValue(ReturnProperty, SourceValue, Binding.DirectProperty, TargetValue))
+		{
+			return;
+		}
+		if (UDreamUserWidget* WrittenWidget = Cast<UDreamUserWidget>(Target))
+		{
+			const UE::FieldNotification::FFieldId FieldId =
+				WrittenWidget->GetFieldNotificationDescriptor().GetField(WrittenWidget->GetClass(), Binding.DirectProperty->GetFName());
+			if (FieldId.IsValid())
+			{
+				WrittenWidget->BroadcastFieldValueChanged(FieldId);
+			}
+		}
+		return;
+	}
 	FProperty* SetterParameter = nullptr;
 	for (TFieldIterator<FProperty> It(Binding.Setter); It && (It->PropertyFlags & CPF_Parm); ++It)
 	{
@@ -1567,16 +1601,29 @@ void UDreamUserWidget::HandleSourceFieldValueChanged(UObject* InObject, UE::Fiel
 
 void UDreamUserWidget::ResolveEachBindings()
 {
+	// A `for` adapter's copies are widgets in this tree, so an adapter dropped without a word leaves them standing
+	// with nothing left to refresh or remove them. Only this widget's own: a duplicate arrives with EachAdapters
+	// copied verbatim from its source (InitializeAsDuplicate empties it before calling here for exactly that reason),
+	// and the copies those adapters made are the source's.
+	for (UObject* Adapter : EachAdapters)
+	{
+		UDreamUIForAdapter* ForAdapter = Cast<UDreamUIForAdapter>(Adapter);
+		if (IsValid(ForAdapter) && ForAdapter->GetOwningWidget() == this)
+		{
+			ForAdapter->ReleaseCopies();
+		}
+	}
 	EachAdapters.Reset();
 
 	TArray<FDreamWidgetEachBinding> Bindings;
 	UDreamWidgetGeneratedClass::CollectEachBindings(GetClass(), Bindings);
-	// No handler: the module with the list views is not loaded, and there is nothing to bind them to.
-	const IDreamUIEachBindingHandler* Handler = DreamUI::GetEachBindingHandler();
-	if (Bindings.Num() == 0 || Handler == nullptr)
+	if (Bindings.Num() == 0)
 	{
 		return;
 	}
+	// Null when the module with the list views is not loaded: an `each` then has nothing to bind to. A `for` needs no
+	// handler at all -- it is the core's -- which is why this no longer returns early.
+	const IDreamUIEachBindingHandler* Handler = DreamUI::GetEachBindingHandler();
 
 	TSet<int32> SubscribedFieldIndices;
 	for (const FDreamWidgetEachBinding& Binding : Bindings)
@@ -1588,35 +1635,58 @@ void UDreamUserWidget::ResolveEachBindings()
 		};
 		UDreamWidget* Host = FindWidgetByVariable(Binding.HostWidgetName);
 		UDreamWidget* Template = FindWidgetByVariable(Binding.TemplateWidgetName);
-		if (!Handler->HasListView(Host) || !IsValid(Template))
-		{
-			// The compiler and builder vetted all of this; the class moved underneath us. Skip.
-			continue;
-		}
 
-		// The view's Content pointer was authored against the archetype; the handler re-aims it at
-		// THIS instance's content, the same per-instance re-wiring the template gets. Without it every
-		// cell the view clones lands in the invisible archetype tree. The synthesized content may not
-		// have earned a class variable, so the template's own parent -- which IS that content whenever
-		// the builder synthesized one -- is the fallback.
-		UDreamWidget* Content = nullptr;
-		if (!Binding.ContentWidgetName.IsNone())
+		UObject* Adapter = nullptr;
+		if (Binding.bInPanel)
 		{
-			Content = FindWidgetByVariable(Binding.ContentWidgetName);
-			if (!IsValid(Content) && Template->GetParent() != Host)
+			// A `for`: copies made by this widget itself, beside the template, wherever the template ended up (a
+			// component may have routed it into one of its slots, so the host is not asked to be its parent).
+			//
+			// Not in the designer's preview. The preview is the authored hierarchy, paired widget by widget with
+			// the Blueprint's tree; copies have no authored counterpart to pair with and no designer row, and a
+			// collapsed template would leave the author nothing to see or select while the source is still empty,
+			// which at design time it usually is. The template is left as it was written, one row standing for all
+			// of them -- what a `for` looks like before there is any data.
+			if (!IsValid(Template) || Template->GetParent() == nullptr || IsDesignTime())
 			{
-				Content = Template->GetParent();
+				continue;
 			}
+			UDreamUIForAdapter* ForAdapter = NewObject<UDreamUIForAdapter>(this);
+			ForAdapter->Initialize(this, Binding, Host, Template);
+			Adapter = ForAdapter;
 		}
+		else
+		{
+			if (Handler == nullptr || !Handler->HasListView(Host) || !IsValid(Template))
+			{
+				// The compiler and builder vetted all of this; the class moved underneath us, or the list views'
+				// module is not loaded. Skip.
+				continue;
+			}
 
-		UObject* Adapter = Handler->Bind(this, Binding, Host, Template, Content);
+			// The view's Content pointer was authored against the archetype; the handler re-aims it at
+			// THIS instance's content, the same per-instance re-wiring the template gets. Without it every
+			// cell the view clones lands in the invisible archetype tree. The synthesized content may not
+			// have earned a class variable, so the template's own parent -- which IS that content whenever
+			// the builder synthesized one -- is the fallback.
+			UDreamWidget* Content = nullptr;
+			if (!Binding.ContentWidgetName.IsNone())
+			{
+				Content = FindWidgetByVariable(Binding.ContentWidgetName);
+				if (!IsValid(Content) && Template->GetParent() != Host)
+				{
+					Content = Template->GetParent();
+				}
+			}
+			Adapter = Handler->Bind(this, Binding, Host, Template, Content);
+		}
 		if (Adapter == nullptr)
 		{
 			continue;
 		}
 		EachAdapters.Add(Adapter);
 
-		// A variable source that broadcasts refreshes its list the way a FieldNotify binding
+		// A variable source that broadcasts refreshes its list -- or its copies -- the way a FieldNotify binding
 		// re-evaluates: from the change, not from a poll.
 		if (!Binding.bSourceIsFunction)
 		{
@@ -1638,13 +1708,21 @@ void UDreamUserWidget::ResolveEachBindings()
 void UDreamUserWidget::HandleEachSourceChanged(UObject* InObject, UE::FieldNotification::FFieldId InFieldId)
 {
 	const IDreamUIEachBindingHandler* Handler = DreamUI::GetEachBindingHandler();
-	if (Handler == nullptr)
+	// Walked over a snapshot. A refresh makes and destroys widgets and runs their graphs, and one of those calling
+	// back into this widget's `for` or `each` set-up must not pull the array out from under the loop.
+	const TArray<TObjectPtr<UObject>> Adapters = EachAdapters;
+	for (UObject* Adapter : Adapters)
 	{
-		return;
-	}
-	for (UObject* Adapter : EachAdapters)
-	{
-		const FDreamWidgetEachBinding* Binding = Handler->GetBinding(Adapter);
+		if (UDreamUIForAdapter* ForAdapter = Cast<UDreamUIForAdapter>(Adapter))
+		{
+			const FDreamWidgetEachBinding& ForBinding = ForAdapter->GetBinding();
+			if (!ForBinding.bSourceIsFunction && ForBinding.SourceName == InFieldId.GetName())
+			{
+				ForAdapter->Refresh();
+			}
+			continue;
+		}
+		const FDreamWidgetEachBinding* Binding = Handler != nullptr ? Handler->GetBinding(Adapter) : nullptr;
 		if (Binding != nullptr && !Binding->bSourceIsFunction && Binding->SourceName == InFieldId.GetName())
 		{
 			Handler->Refresh(Adapter);
@@ -1655,13 +1733,18 @@ void UDreamUserWidget::HandleEachSourceChanged(UObject* InObject, UE::FieldNotif
 void UDreamUserWidget::RefreshEachBindings()
 {
 	const IDreamUIEachBindingHandler* Handler = DreamUI::GetEachBindingHandler();
-	if (Handler == nullptr)
+	// A snapshot, for HandleEachSourceChanged's reason.
+	const TArray<TObjectPtr<UObject>> Adapters = EachAdapters;
+	for (UObject* Adapter : Adapters)
 	{
-		return;
-	}
-	for (UObject* Adapter : EachAdapters)
-	{
-		Handler->Refresh(Adapter);
+		if (UDreamUIForAdapter* ForAdapter = Cast<UDreamUIForAdapter>(Adapter))
+		{
+			ForAdapter->Refresh();
+		}
+		else if (Handler != nullptr)
+		{
+			Handler->Refresh(Adapter);
+		}
 	}
 }
 
@@ -1725,7 +1808,21 @@ TArray<FName> UDreamUserWidget::GetNativeSlotNames() const
 
 FName UDreamUserWidget::GetDefaultSlotName() const
 {
-	return NAME_None;
+	// The slot the class's own tree marks as the default (`slot Rows default` in its .dui); a class that overrides this
+	// in C++ answers for itself. The tree of THIS instance, not a nested one's: a component's default slot is its own.
+	FName Default = NAME_None;
+	if (IsValid(WidgetTree))
+	{
+		WidgetTree->ForEachWidget([&Default](UDreamWidget* Widget)
+		{
+			const UDreamNamedSlot* Slot = Default.IsNone() && IsValid(Widget) ? Widget->GetComponent<UDreamNamedSlot>() : nullptr;
+			if (Slot != nullptr && Slot->bIsDefaultSlot)
+			{
+				Default = Slot->GetSlotName();
+			}
+		});
+	}
+	return Default;
 }
 
 UDreamWidget* UDreamUserWidget::FindSlotWidget(FName InSlotName) const

@@ -170,4 +170,31 @@ public:
 	/** Loaded widget Blueprints whose Source File resolves to this path. Exposed for tests. */
 	static void FindBlueprintsForSource(const FString& InAbsoluteFilePath,
 		TArray<UDreamWidgetBlueprint*>& OutBlueprints);
+
+	/**
+	 * The class of the widget Blueprint whose Source File is InResolvedSourcePath, or null -- what `use "Row.dui" as
+	 * Row` means when Row.dui has no `class` line. FDreamUITextBuilder::SourceClassResolver, installed.
+	 *
+	 * The opposite direction from everything else here, and unlike the save path this one may LOAD: an alias names a
+	 * component the host needs now, and the Blueprint behind it is as likely as not one nobody has opened this
+	 * session. So the answer is looked for in what is cheapest first -- the Blueprint that answered last time, checked
+	 * again; then every loaded one, which is what FindBlueprintsForSource compares, by the same normalized resolved
+	 * path; and only then the widget Blueprints the asset registry lists and this session has not read yet, likeliest
+	 * first (an asset named like the file), each loaded once and remembered, so the second question about any file
+	 * costs nothing. An asset removed or renamed is forgotten.
+	 *
+	 * It never compiles anything: it is asked from inside the builder, which runs inside some other Blueprint's
+	 * compile, and a compile started from there would be a compile inside a compile. A class is returned as it
+	 * stands. And it does not answer itself: a load it causes that comes back to ask again gets null rather than a
+	 * second scan.
+	 */
+	static UClass* FindClassForSource(const FString& InResolvedSourcePath);
+
+	/**
+	 * Install FindClassForSource as FDreamUITextBuilder::SourceClassResolver, and take it out again. The editor module
+	 * does both, at startup and shutdown, in every process that compiles -- an uncooked game included, where a host's
+	 * `use … as` must resolve as surely as in the editor.
+	 */
+	static void InstallSourceClassResolver();
+	static void UninstallSourceClassResolver();
 };

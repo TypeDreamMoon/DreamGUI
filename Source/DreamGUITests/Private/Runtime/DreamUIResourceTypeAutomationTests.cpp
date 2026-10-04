@@ -186,7 +186,9 @@ bool FDreamUIResourceTypeErrorsTest::RunTest(const FString& Parameters)
 			TEXT("resources {"), TEXT("    Asset Btn = /Script/DreamGUIControls.DreamButton"), TEXT("}"),
 			TEXT("Widget Root {"), TEXT("    @Btn {"), TEXT("    }"), TEXT("}"),
 		});
-		TestTrue(TEXT("a resource-typed node without an id is a missing id"), Built.Reported(EDreamUIDiagnosticCode::MissingNodeId));
+		// No longer an error: a node nothing refers to by name may leave its id out and is given one.
+		TestFalse(TEXT("a resource-typed node without an id is an anonymous node, not a missing id"), Built.Reported(EDreamUIDiagnosticCode::MissingNodeId));
+		TestTrue(TEXT("and it builds"), Built.Tree.IsValid());
 	}
 	return true;
 }

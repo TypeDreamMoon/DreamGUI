@@ -10,6 +10,7 @@
 #include "Core/DreamUIScriptPackages.h"
 #include "Core/DreamUIWidgetRegistry.h"
 #include "Core/DreamWidgetEachBinding.h"
+#include "Core/DreamWidgetGeneratedClass.h"
 #include "Core/DreamWidgetTree.h"
 // A `->` route may name an FDreamUIEventDelegate as well as a multicast delegate.
 #include "Event/DreamUIEventDelegate.h"
@@ -431,6 +432,12 @@ namespace DreamUITextBuilderLocal
 		TArray<FPendingNodeReference> NodeReferences;
 		/** ClassPath, or the source name when the file declares no class. Fixed for the whole build. */
 		FString LocalizationNamespace;
+		/** The first `slot … default` met, so a second one can say where the first is. */
+		const FDreamUINode* DefaultSlotNode = nullptr;
+		/** Component aliases already resolved to a class, so a family used on fifty rows asks the editor once. */
+		TMap<FString, UClass*> ResolvedAliasClasses;
+		/** What FindContainerClassForType answered per node type, for the same reason: it is a search, not a lookup. */
+		TMap<FString, UClass*> ContainerClassesByType;
 	};
 
 	/** One candidate object a bare property name may resolve against, with the binding target that names it. */
@@ -752,6 +759,32 @@ namespace DreamUITextBuilderLocal
 		FProperty* Leaf = InDestination.LeafProperty;
 		void* ValuePtr = InDestination.LeafValuePtr;
 		const FDreamUIValue& Authored = InProperty.Value;
+
+		// A TRANSIENT property with a native setter is a face over something else -- `Shown` over Visibility, the
+		// Animatable mirrors over AnchorData -- and its own field is exactly what does not survive a save. IsWritableFromText
+		// lets such a property through because of the setter, so the write has to actually go through it, whatever
+		// the type: the short-form branch below always did for its types, and every other branch wrote the field,
+		// which made `Shown = false` compile green and leave the widget visible. Parsed into a scratch value by this
+		// same function (marked nested, so it writes the scratch and does not come back here), then handed over.
+		// Not for an object reference, whose write may be deferred to a pass that holds on to the address.
+		if (!InDestination.bNested && Leaf->HasSetter() && Leaf->HasAnyPropertyFlags(CPF_Transient)
+			&& CastField<FObjectPropertyBase>(Leaf) == nullptr)
+		{
+			void* Scratch = FMemory::Malloc(Leaf->GetSize(), Leaf->GetMinAlignment());
+			Leaf->InitializeValue(Scratch);
+			Leaf->GetValue_InContainer(InDestination.Owner, Scratch);
+			FResolvedDestination IntoScratch = InDestination;
+			IntoScratch.LeafValuePtr = Scratch;
+			IntoScratch.bNested = true;
+			const bool bWritten = WriteValue(IntoScratch, InNode, InProperty, InContext);
+			if (bWritten)
+			{
+				Leaf->SetValue_InContainer(InDestination.Owner, Scratch);
+			}
+			Leaf->DestroyValue(Scratch);
+			FMemory::Free(Scratch);
+			return bWritten;
+		}
 
 		// `@Name` is resolved before any type branch looks at the value, so every branch below --
 		// FText localization included -- sees the same literal it would have seen written inline.
@@ -1120,8 +1153,8 @@ namespace DreamUITextBuilderLocal
 				// file compiled green and the property was simply never driven, which is the exact
 				// silent failure this pipeline exists to remove.
 				InContext.Diagnostics->AddError(EDreamUIDiagnosticCode::LoopBodyBindingUnsupported, InProperty.Location,
-					FString::Printf(TEXT("'%s' cannot be driven from inside an 'each': the body supports '%s.Member' only, so an expression or a '<->' has nowhere to be compiled to. Move the logic into the item's own class, or bind it outside the loop."),
-						*InProperty.Name, *InContext.ActiveLoopVariable));
+					FString::Printf(TEXT("'%s' cannot be driven from inside a '%s': the body supports '%s.Member' only, so an expression or a '<->' has nowhere to be compiled to. Move the logic into the item's own class, or bind it outside the loop."),
+						*InProperty.Name, InContext.ActiveEach->bInPanel ? TEXT("for") : TEXT("each"), *InContext.ActiveLoopVariable));
 				return false;
 			}
 			// An expression binding the compiler has not lowered yet: the real compile rewrites
@@ -1154,7 +1187,19 @@ namespace DreamUITextBuilderLocal
 		}
 
 		UFunction* Setter = FindDreamWidgetSetterFor(InDestination.Owner->GetClass(), InDestination.LeafProperty);
-		if (Setter == nullptr)
+		// The one place a missing setter is not the end of it: a property of a user widget -- a component's `props`
+		// variable above all, which is a Blueprint variable and so never has a SetX. The runtime writes it straight
+		// into the instance and broadcasts its FieldNotify field; the component's own bindings on it are what show the
+		// change, which is everything a setter would have done. Two places may do that: a host's class binding
+		// (UDreamUserWidget::EvaluateBinding) and a `for` body's item write (UDreamUIForAdapter, which also re-runs the
+		// copy's bindings). Not a `<->`, whose silent push needs a setter; not an `each`, whose list views call setters
+		// only. A native widget, visual or behaviour without a setter still cannot be bound: a raw write into one
+		// repaints nothing.
+		const bool bWritesDirectly = Setter == nullptr && InProperty.TwoWayProperty.IsEmpty()
+			&& (EachItemMember.IsEmpty() ? InContext.ActiveEach == nullptr : InContext.ActiveEach->bInPanel)
+			&& InDestination.BindingTarget == EDreamWidgetBindingTarget::Widget
+			&& InDestination.Owner->IsA(UDreamUserWidget::StaticClass());
+		if (Setter == nullptr && !bWritesDirectly)
 		{
 			InContext.Diagnostics->AddError(EDreamUIDiagnosticCode::BindingTargetHasNoSetter, InProperty.Location,
 				FString::Printf(TEXT("'%s' on %s has no %s to drive it, so it cannot be bound"), *InProperty.Name,
@@ -1171,7 +1216,8 @@ namespace DreamUITextBuilderLocal
 			Entry.Target = InDestination.BindingTarget;
 			Entry.BehaviourIndex = InDestination.BehaviourIndex;
 			Entry.PropertyName = InDestination.LeafProperty->GetFName();
-			Entry.SetterName = Setter->GetFName();
+			// None for the direct write above, which is how the `for` adapter tells the two apart.
+			Entry.SetterName = Setter != nullptr ? Setter->GetFName() : NAME_None;
 			Entry.ItemMember = FName(*EachItemMember);
 			return true;
 		}
@@ -1191,8 +1237,9 @@ namespace DreamUITextBuilderLocal
 		Binding.Target = InDestination.BindingTarget;
 		Binding.BehaviourIndex = InDestination.BehaviourIndex;
 		Binding.PropertyName = InDestination.LeafProperty->GetFName();
-		Binding.SetterName = Setter->GetFName();
-		if (!InProperty.TwoWayProperty.IsEmpty())
+		// None for the direct write above.
+		Binding.SetterName = Setter != nullptr ? Setter->GetFName() : NAME_None;
+		if (!InProperty.TwoWayProperty.IsEmpty() && Setter != nullptr)
 		{
 			// The forward half of a `<->`: remember the variable for the runtime's subscription,
 			// and push through the silent setter when the control offers one -- see NotifyField.
@@ -1262,6 +1309,16 @@ namespace DreamUITextBuilderLocal
 			InContext.Diagnostics->AddError(EDreamUIDiagnosticCode::EventNotFound, InProperty.Location,
 				FString::Printf(TEXT("'%s' on %s is not an event (a BlueprintAssignable dynamic multicast delegate, or an editable DreamUIEventDelegate)"),
 					*InProperty.Name, *InDestination.Owner->GetClass()->GetName()));
+			return false;
+		}
+		if (InProperty.EventHandler.TrimStartAndEnd().IsEmpty())
+		{
+			// `OnClicked -> emit Picked(Index)` that the compiler's thunk pass has not lowered yet: the handler it
+			// generates is what this route will call, and until it exists there is no name to record. The same
+			// answer an un-lowered `<-` expression gets in AddBinding, for the same callers -- the write-back's
+			// reference tree, a test -- and for the same reason: a nameless route would bind to nothing at run time
+			// and trip the compiler's not-found check with an empty name. The checks above still ran, so an emit
+			// on something that is not an event is still reported.
 			return false;
 		}
 		if (InContext.EventBindings == nullptr)
@@ -1426,19 +1483,181 @@ UClass* FDreamUITextBuilder::ResolveComponentClass(const FString& InClassName)
 	return AsComponentClass(FindFirstObjectSafe<UClass>(*Name, EFindFirstObjectOptions::NativeFirst));
 }
 
+TFunction<UClass*(const FString& InResolvedSourcePath)>& FDreamUITextBuilder::SourceClassResolver()
+{
+	static TFunction<UClass*(const FString&)> Resolver;
+	return Resolver;
+}
+
+UClass* FDreamUITextBuilder::FindContainerClassForType(const FString& InTypeName)
+{
+	// A bare name only: a dotted type is a registry tag or a namespaced alias, a path is a class, `@` is a resource.
+	// The same prefix search `+` uses, so `VerticalBox` as a type and `+ VerticalBox` as a component are one class.
+	if (InTypeName.IsEmpty() || InTypeName.StartsWith(TEXT("/")) || InTypeName.StartsWith(TEXT("@")) || InTypeName.Contains(TEXT(".")))
+	{
+		return nullptr;
+	}
+	UClass* Found = ResolveComponentClass(InTypeName);
+	return Found != nullptr && Found->IsChildOf(UDreamLayoutContainer::StaticClass()) ? Found : nullptr;
+}
+
 namespace DreamUITextBuilderLocal
 {
 	UDreamWidget* BuildNode(const FDreamUINode& InNode, UDreamWidget* InParent, FBuildContext& InContext);
 
-	/** `+ Xxx { … }` -- create the sub-object and write its properties onto IT, not onto the widget. */
-	void BuildComponents(const FDreamUINode& InNode, UDreamWidget* InWidget, FBuildContext& InContext)
+	/**
+	 * The chain of styles a node wears, BASE first: assignment order is override order, the same rule that lets the
+	 * node's own lines override the style's.
+	 *
+	 * Walked from the named style upward and handed back reversed. A base that comes back around is a cycle, refused at
+	 * the node so every node wearing the broken style says so, and then nothing of it applies. A base declared nowhere
+	 * is reported against the style that names it and the walk stops there, so what was found still applies.
+	 *
+	 * Resolved once per node, because three things read it -- the node's properties, its components and its `@slot`
+	 * lines -- and resolving it in each would report one broken chain three times.
+	 */
+	void ResolveStyleChain(const FDreamUINode& InNode, FBuildContext& InContext, TArray<const FDreamUIStyle*>& OutBaseFirst)
 	{
-		// Everything is created before anything is written, because creating one can change the
-		// indices of the others: a panel layout container pulls in its required behaviours
-		// (SyncRequiredBehavioursForLayoutContainer), and a binding recorded against a stale index
-		// would drive whichever behaviour happened to land there instead.
-		TArray<UObject*> Created;
-		Created.Reserve(InNode.Components.Num());
+		OutBaseFirst.Reset();
+		if (InNode.StyleName.IsEmpty())
+		{
+			return;
+		}
+		const FDreamUIStyle* Style = InContext.Ast->FindStyle(InNode.StyleName);
+		if (Style == nullptr)
+		{
+			// Deliberately the second place this is checked -- FDreamUISourceFile catches it too,
+			// and in the normal pipeline the parse fails first so this never fires. It stays
+			// because the builder's other caller is an AST built by hand (the designer, a test),
+			// and there the alternative is applying no style and saying nothing.
+			//
+			// DuplicateNodeId is NOT mirrored the same way, and the difference is what makes this
+			// defensible rather than a habit: duplicate ids are a property of the whole FILE, so
+			// checking them here would mean the builder keeping its own id set to answer a
+			// question it is not the authority on. "Is this style declared" is one lookup in the
+			// AST the builder was handed.
+			InContext.Diagnostics->AddError(EDreamUIDiagnosticCode::UnknownStyle, InNode.Location,
+				FString::Printf(TEXT("no style named '%s' is declared in this file"), *InNode.StyleName));
+			return;
+		}
+		TArray<const FDreamUIStyle*> Chain;
+		TSet<const FDreamUIStyle*> Visited;
+		for (const FDreamUIStyle* Link = Style; Link != nullptr;)
+		{
+			if (Visited.Contains(Link))
+			{
+				InContext.Diagnostics->AddError(EDreamUIDiagnosticCode::StyleCycle, InNode.Location,
+					FString::Printf(TEXT("style '%s' inherits itself through its bases, so nothing was applied"), *Style->Name));
+				return;
+			}
+			Visited.Add(Link);
+			Chain.Add(Link);
+			if (Link->BaseName.IsEmpty())
+			{
+				break;
+			}
+			// Already the library's own when the style came in under a namespace: the parser renames a library style's
+			// base along with the style (`nier.Danger : nier.Label`), so the plain lookup is the right one here too.
+			const FDreamUIStyle* Base = InContext.Ast->FindStyle(Link->BaseName);
+			if (Base == nullptr)
+			{
+				// Link->Location is a line in the file that DECLARES the style, which an
+				// import chain makes a different file from the one being compiled.
+				AddErrorIn(*InContext.Diagnostics, Link->SourceName, EDreamUIDiagnosticCode::UnknownStyle, Link->Location,
+					FString::Printf(TEXT("style '%s' inherits '%s', which is declared nowhere it can see"),
+						*Link->Name, *Link->BaseName));
+				break;
+			}
+			Link = Base;
+		}
+		for (int32 Index = Chain.Num() - 1; Index >= 0; --Index)
+		{
+			OutBaseFirst.Add(Chain[Index]);
+		}
+	}
+
+	/** An error about a line a style wrote, stamped with the file that declares the style (see AddErrorIn); InStyle null is a line of the node's own. */
+	void AddErrorAtLine(FBuildContext& InContext, const FDreamUIStyle* InStyle, EDreamUIDiagnosticCode InCode,
+		const FDreamUISourceLocation& InLocation, FString InMessage)
+	{
+		if (InStyle != nullptr)
+		{
+			AddErrorIn(*InContext.Diagnostics, InStyle->SourceName, InCode, InLocation, MoveTemp(InMessage));
+		}
+		else
+		{
+			InContext.Diagnostics->AddError(InCode, InLocation, MoveTemp(InMessage));
+		}
+	}
+
+	/**
+	 * One component a node will carry, and every `+` line that writes onto it, in the order they apply.
+	 *
+	 * Several lines can be one component. A style's `+ VerticalBox { Spacing = 15 }` and the node's own `+ VerticalBox
+	 * { Padding = … }` are the SAME container, the style's values first and the node's after -- exactly how a style's
+	 * bare properties and the node's relate. Without that a style could not set a default the node then adjusts, and a
+	 * node wearing the style would carry two containers, the second silently replacing the first.
+	 */
+	struct FPlannedComponent
+	{
+		UClass* Class = nullptr;
+		/** The lines writing onto it: its styles' (base first), then the node's. */
+		TArray<const FDreamUIComponent*> Lines;
+		/** The style each line was written in, parallel to Lines; null for a line of the node's own. */
+		TArray<const FDreamUIStyle*> LineStyles;
+		/**
+		 * A `+` line of the node itself is among Lines. A second node line of the same class is then a second
+		 * component, which is what two `+` lines on one node always meant -- the merge is between a style and the node,
+		 * never a reinterpretation of a node's own list.
+		 */
+		bool bHasNodeLine = false;
+		/** The node's TYPE named this container (`VerticalBox Column { … }`); no `+` line created it. */
+		bool bFromNodeType = false;
+	};
+
+	/**
+	 * `+ Xxx { … }` -- create the sub-objects and write their properties onto THEM, not onto the widget.
+	 *
+	 * What a node carries, in creation order: the container its type names, the components its styles add (base
+	 * first), and its own `+` lines -- a style's line or the node's joining an earlier entry of the same class (see
+	 * FPlannedComponent). The container a type names comes first so that it is in place before anything that might ask
+	 * for one, exactly as an author writing `Widget X { + VerticalBox {} … }` would have put it.
+	 */
+	void BuildComponents(const FDreamUINode& InNode, TConstArrayView<const FDreamUIStyle*> InStyles, UClass* InTypeContainerClass,
+		UDreamWidget* InWidget, FBuildContext& InContext)
+	{
+		TArray<FPlannedComponent> Plan;
+		if (InTypeContainerClass != nullptr)
+		{
+			FPlannedComponent& FromType = Plan.AddDefaulted_GetRef();
+			FromType.Class = InTypeContainerClass;
+			FromType.bFromNodeType = true;
+		}
+		for (const FDreamUIStyle* Style : InStyles)
+		{
+			for (const FDreamUIComponent& Component : Style->Components)
+			{
+				UClass* ComponentClass = FDreamUITextBuilder::ResolveComponentClass(Component.ClassName);
+				if (ComponentClass == nullptr)
+				{
+					AddErrorIn(*InContext.Diagnostics, Style->SourceName, EDreamUIDiagnosticCode::UnknownBehaviourClass, Component.Location,
+						FString::Printf(TEXT("'%s' in style '%s' is not a behaviour or layout a widget can carry"),
+							*Component.ClassName, *Style->Name));
+					continue;
+				}
+				FPlannedComponent* Same = Plan.FindByPredicate([ComponentClass](const FPlannedComponent& Entry)
+				{
+					return Entry.Class == ComponentClass;
+				});
+				if (Same == nullptr)
+				{
+					Same = &Plan.AddDefaulted_GetRef();
+					Same->Class = ComponentClass;
+				}
+				Same->Lines.Add(&Component);
+				Same->LineStyles.Add(Style);
+			}
+		}
 		for (const FDreamUIComponent& Component : InNode.Components)
 		{
 			UClass* ComponentClass = FDreamUITextBuilder::ResolveComponentClass(Component.ClassName);
@@ -1446,34 +1665,95 @@ namespace DreamUITextBuilderLocal
 			{
 				InContext.Diagnostics->AddError(EDreamUIDiagnosticCode::UnknownBehaviourClass, Component.Location,
 					FString::Printf(TEXT("'%s' is not a behaviour or layout this widget can carry"), *Component.ClassName));
-				Created.Add(nullptr);
 				continue;
 			}
-			if (ComponentClass->IsChildOf(UDreamLayoutContainer::StaticClass()))
+			if (InTypeContainerClass != nullptr && ComponentClass->IsChildOf(UDreamLayoutContainer::StaticClass()))
+			{
+				// Refused even when it is the same class: the type already said it, and a second spelling of one
+				// container is two places for its values to disagree.
+				InContext.Diagnostics->AddError(EDreamUIDiagnosticCode::SecondLayoutContainer, Component.Location,
+					FString::Printf(TEXT("'%s' is a %s by its type, so it is laid out already -- write the container's properties on the node itself, or make it a 'Widget' to lay it out with '+ %s'"),
+						*InNode.Id, *InNode.TypeName, *Component.ClassName));
+				continue;
+			}
+			FPlannedComponent* Same = Plan.FindByPredicate([ComponentClass](const FPlannedComponent& Entry)
+			{
+				return Entry.Class == ComponentClass && !Entry.bHasNodeLine && !Entry.bFromNodeType;
+			});
+			if (Same == nullptr)
+			{
+				Same = &Plan.AddDefaulted_GetRef();
+				Same->Class = ComponentClass;
+			}
+			Same->Lines.Add(&Component);
+			Same->LineStyles.Add(nullptr);
+			Same->bHasNodeLine = true;
+		}
+
+		// One container per widget. A widget lays its children out one way, and CreateNewLayoutContainer REPLACES the
+		// container a widget has -- so a second one used to win over the first with nothing anywhere saying so, and the
+		// first one's values went with it. Two reach here only as two different classes (a style's VerticalBox and the
+		// node's HorizontalBox) or as two `+` lines of the node's own.
+		UClass* FirstContainerClass = nullptr;
+		for (int32 Index = 0; Index < Plan.Num();)
+		{
+			const FPlannedComponent& Entry = Plan[Index];
+			if (!Entry.Class->IsChildOf(UDreamLayoutContainer::StaticClass()))
+			{
+				++Index;
+				continue;
+			}
+			if (FirstContainerClass == nullptr)
+			{
+				FirstContainerClass = Entry.Class;
+				++Index;
+				continue;
+			}
+			if (Entry.Lines.Num() > 0)
+			{
+				const FDreamUIStyle* Style = Entry.LineStyles[0];
+				AddErrorAtLine(InContext, Style, EDreamUIDiagnosticCode::SecondLayoutContainer, Entry.Lines[0]->Location,
+					FString::Printf(TEXT("'%s' would be a second layout container on '%s'%s, which %s already lays out -- a widget arranges its children one way; nest another widget for the other"),
+						*Entry.Lines[0]->ClassName, *InNode.Id,
+						Style != nullptr ? *FString::Printf(TEXT(" (from style '%s')"), *Style->Name) : TEXT(""),
+						*FirstContainerClass->GetName()));
+			}
+			Plan.RemoveAt(Index, 1, EAllowShrinking::No);
+		}
+
+		// Everything is created before anything is written, because creating one can change the
+		// indices of the others: a panel layout container pulls in its required behaviours
+		// (SyncRequiredBehavioursForLayoutContainer), and a binding recorded against a stale index
+		// would drive whichever behaviour happened to land there instead.
+		TArray<UObject*> Created;
+		Created.Reserve(Plan.Num());
+		for (const FPlannedComponent& Entry : Plan)
+		{
+			if (Entry.Class->IsChildOf(UDreamLayoutContainer::StaticClass()))
 			{
 				UDreamLayoutContainer* Previous = InWidget->GetLayoutContainer();
-				UDreamLayoutContainer* Container = InWidget->CreateNewLayoutContainer(ComponentClass);
+				UDreamLayoutContainer* Container = InWidget->CreateNewLayoutContainer(Entry.Class);
 				InWidget->SyncRequiredBehavioursForLayoutContainer(Previous, Container);
 				Created.Add(Container);
 			}
-			else if (ComponentClass->IsChildOf(UDreamLayoutSelf::StaticClass()))
+			else if (Entry.Class->IsChildOf(UDreamLayoutSelf::StaticClass()))
 			{
-				Created.Add(InWidget->CreateNewLayoutSelf(ComponentClass));
+				Created.Add(InWidget->CreateNewLayoutSelf(Entry.Class));
 			}
 			else
 			{
-				Created.Add(InWidget->AddComponent(ComponentClass));
+				Created.Add(InWidget->AddComponent(Entry.Class));
 			}
 		}
 
-		for (int32 ComponentIndex = 0; ComponentIndex < InNode.Components.Num(); ComponentIndex++)
+		for (int32 ComponentIndex = 0; ComponentIndex < Plan.Num(); ComponentIndex++)
 		{
 			UObject* Object = Created[ComponentIndex];
 			if (!IsValid(Object))
 			{
 				continue;
 			}
-			const FDreamUIComponent& Component = InNode.Components[ComponentIndex];
+			const FPlannedComponent& Entry = Plan[ComponentIndex];
 			FDestinationCandidate Candidate;
 			Candidate.Object = Object;
 			Candidate.Target = EDreamWidgetBindingTarget::Behaviour;
@@ -1487,22 +1767,36 @@ namespace DreamUITextBuilderLocal
 			Candidate.bBindable = Candidate.BehaviourIndex != INDEX_NONE;
 			// The AUTHORED ordinal, not BehaviourIndex: a layout container is not in Components at all
 			// and would key as -1, and a panel that pulls in its required behaviours would shift every
-			// index after it -- silently re-keying strings that nobody edited. This one counts the `+`
-			// lines in the file, which is also what the author would count.
+			// index after it -- silently re-keying strings that nobody edited. This one counts the
+			// planned components, which for a node with no style components and no container type are
+			// exactly its `+` lines, as the author would count them.
 			Candidate.LocalizationDiscriminator = FString::Printf(TEXT("%s_%d"),
 				*Object->GetClass()->GetName(), ComponentIndex);
-			const FString Description = FString::Printf(TEXT("behaviour '%s'"), *Component.ClassName);
-			for (const FDreamUIProperty& Property : Component.Properties)
+			for (int32 LineIndex = 0; LineIndex < Entry.Lines.Num(); ++LineIndex)
 			{
-				ApplyProperty(InNode, Property, InWidget, { Candidate }, Description, InContext);
+				const FDreamUIComponent& Line = *Entry.Lines[LineIndex];
+				const FString Description = FString::Printf(TEXT("behaviour '%s'"), *Line.ClassName);
+				for (const FDreamUIProperty& Property : Line.Properties)
+				{
+					ApplyProperty(InNode, Property, InWidget, { Candidate }, Description, InContext);
+				}
 			}
 		}
 	}
 
-	/** `@slot Padding = (8, 8, 8, 8)` -- the child's own UDreamPanelSlot, which the PARENT's layout gives it. */
-	void BuildSlotProperties(const FDreamUINode& InNode, UDreamWidget* InWidget, FBuildContext& InContext)
+	/**
+	 * `@slot Padding = (8, 8, 8, 8)` -- the child's own UDreamPanelSlot, which the PARENT's layout gives it.
+	 * The lines of its styles first (base first), then its own, which win.
+	 */
+	void BuildSlotProperties(const FDreamUINode& InNode, TConstArrayView<const FDreamUIStyle*> InStyles, UDreamWidget* InWidget,
+		FBuildContext& InContext)
 	{
-		if (InNode.SlotProperties.Num() == 0)
+		bool bHasLines = InNode.SlotProperties.Num() > 0;
+		for (const FDreamUIStyle* Style : InStyles)
+		{
+			bHasLines |= Style->SlotProperties.Num() > 0;
+		}
+		if (!bHasLines)
 		{
 			return;
 		}
@@ -1513,8 +1807,14 @@ namespace DreamUITextBuilderLocal
 			// so the slot has to be minted here or the author's padding would be written to nothing and
 			// then created empty on the first instance. Same condition it uses: only a panel layout
 			// hands out slots, and the Dream flex box and grid arrange children without any.
+			//
+			// With one more case: a child of a component instance. Everything a host nests on an instance is content
+			// for one of its slots -- the instance's own contents live in its class, never in the host's tree -- and
+			// Initialize moves it there, into whatever panel that slot carries; registration keeps a slot the child
+			// already has (EnsurePanelSlotForChild). Refusing here refused `@slot` on every row a host hands a list
+			// component, which is where a row's fill and padding matter most.
 			UDreamWidget* Parent = InWidget->GetParent();
-			if (IsValid(Parent) && Parent->HasPanelSlots())
+			if (IsValid(Parent) && (Parent->HasPanelSlots() || Parent->IsA<UDreamUserWidget>()))
 			{
 				Slot = InWidget->CreateNewPanelSlot<UDreamPanelSlot>();
 			}
@@ -1522,7 +1822,8 @@ namespace DreamUITextBuilderLocal
 		if (!IsValid(Slot))
 		{
 			InContext.Diagnostics->AddError(EDreamUIDiagnosticCode::NoPanelSlotForProperty, InNode.Location,
-				FString::Printf(TEXT("'%s' has @slot properties, but its parent lays out no panel slots"), *InNode.Id));
+				FString::Printf(TEXT("'%s' has @slot properties%s, but its parent lays out no panel slots"), *InNode.Id,
+					InNode.SlotProperties.Num() == 0 ? TEXT(" from its style") : TEXT("")));
 			return;
 		}
 		FDestinationCandidate Candidate;
@@ -1532,6 +1833,13 @@ namespace DreamUITextBuilderLocal
 		Candidate.bBindable = false;
 		// Unnumbered, unlike a behaviour's: a widget has exactly one panel slot, ever.
 		Candidate.LocalizationDiscriminator = TEXT("Slot");
+		for (const FDreamUIStyle* Style : InStyles)
+		{
+			for (const FDreamUIProperty& Property : Style->SlotProperties)
+			{
+				ApplyProperty(InNode, Property, InWidget, { Candidate }, TEXT("the panel slot"), InContext);
+			}
+		}
 		for (const FDreamUIProperty& Property : InNode.SlotProperties)
 		{
 			ApplyProperty(InNode, Property, InWidget, { Candidate }, TEXT("the panel slot"), InContext);
@@ -1539,7 +1847,8 @@ namespace DreamUITextBuilderLocal
 	}
 
 	/** Style first, node second. The whole point of a style is that the node gets the last word. */
-	void BuildProperties(const FDreamUINode& InNode, UDreamWidget* InWidget, FBuildContext& InContext)
+	void BuildProperties(const FDreamUINode& InNode, TConstArrayView<const FDreamUIStyle*> InStyles, bool bInTypedAsContainer,
+		UDreamWidget* InWidget, FBuildContext& InContext)
 	{
 		TArray<FDestinationCandidate> Candidates;
 		{
@@ -1554,6 +1863,23 @@ namespace DreamUITextBuilderLocal
 			VisualCandidate.Object = Visual;
 			VisualCandidate.Target = EDreamWidgetBindingTarget::Visual;
 			Candidates.Add(VisualCandidate);
+		}
+		// A node whose type is its container (`VerticalBox Column { Spacing = 29 }`) IS that container to its author,
+		// so its bare lines reach it -- which they could not before, a layout container being neither the widget, its
+		// visual nor a behaviour (it is a UDreamWidgetSubObjectBehaviour, a hierarchy of its own). After the widget, so
+		// the widget's own property wins on a name both have, the same rule the visual follows; ahead of the
+		// behaviours, because the type the author wrote is the container. Only for a node TYPED as one: a plain
+		// widget's `+ VerticalBox { … }` keeps its values inside its block, as it always has. Never bindable --
+		// EDreamWidgetBindingTarget cannot name a container -- and keyed like the component entry that created it,
+		// which for a typed node is always the first.
+		UDreamLayoutContainer* TypeContainer = bInTypedAsContainer ? InWidget->GetLayoutContainer() : nullptr;
+		if (IsValid(TypeContainer))
+		{
+			FDestinationCandidate ContainerCandidate;
+			ContainerCandidate.Object = TypeContainer;
+			ContainerCandidate.bBindable = false;
+			ContainerCandidate.LocalizationDiscriminator = FString::Printf(TEXT("%s_0"), *TypeContainer->GetClass()->GetName());
+			Candidates.Add(ContainerCandidate);
 		}
 		// The behaviours, after the widget and its visual so those keep shadowing on a name clash.
 		// EDreamWidgetBindingTarget::Behaviour and its resolver existed all along -- the runtime and
@@ -1580,68 +1906,15 @@ namespace DreamUITextBuilderLocal
 		}
 		const FString Description = InWidget->GetVisual() != nullptr
 			? FString::Printf(TEXT("'%s' or its %s"), *InNode.Id, *InWidget->GetVisual()->GetClass()->GetName())
-			: FString::Printf(TEXT("'%s'"), *InNode.Id);
+			: IsValid(TypeContainer)
+				? FString::Printf(TEXT("'%s' or its %s"), *InNode.Id, *InNode.TypeName)
+				: FString::Printf(TEXT("'%s'"), *InNode.Id);
 
-		if (!InNode.StyleName.IsEmpty())
+		for (const FDreamUIStyle* Style : InStyles)
 		{
-			if (const FDreamUIStyle* Style = InContext.Ast->FindStyle(InNode.StyleName))
+			for (const FDreamUIProperty& Property : Style->Properties)
 			{
-				// Base first, then each derivation on top -- assignment order IS override order, the
-				// same rule that lets the node's own lines override the style's. The chain is walked
-				// from this style upward and applied in reverse; a base that comes back around is a
-				// cycle, refused at the node so every node wearing the broken style says so.
-				TArray<const FDreamUIStyle*> Chain;
-				TSet<const FDreamUIStyle*> Visited;
-				bool bCycle = false;
-				for (const FDreamUIStyle* Link = Style; Link != nullptr;)
-				{
-					if (Visited.Contains(Link))
-					{
-						InContext.Diagnostics->AddError(EDreamUIDiagnosticCode::StyleCycle, InNode.Location,
-							FString::Printf(TEXT("style '%s' inherits itself through its bases, so nothing was applied"), *Style->Name));
-						bCycle = true;
-						break;
-					}
-					Visited.Add(Link);
-					Chain.Add(Link);
-					if (Link->BaseName.IsEmpty())
-					{
-						break;
-					}
-					const FDreamUIStyle* Base = InContext.Ast->FindStyle(Link->BaseName);
-					if (Base == nullptr)
-					{
-						// Link->Location is a line in the file that DECLARES the style, which an
-						// import chain makes a different file from the one being compiled.
-						AddErrorIn(*InContext.Diagnostics, Link->SourceName, EDreamUIDiagnosticCode::UnknownStyle, Link->Location,
-							FString::Printf(TEXT("style '%s' inherits '%s', which is declared nowhere it can see"),
-								*Link->Name, *Link->BaseName));
-						break;
-					}
-					Link = Base;
-				}
-				for (int32 Index = bCycle ? -1 : Chain.Num() - 1; Index >= 0; --Index)
-				{
-					for (const FDreamUIProperty& Property : Chain[Index]->Properties)
-					{
-						ApplyProperty(InNode, Property, InWidget, Candidates, Description, InContext, true);
-					}
-				}
-			}
-			else
-			{
-				// Deliberately the second place this is checked -- FDreamUISourceFile catches it too,
-				// and in the normal pipeline the parse fails first so this never fires. It stays
-				// because the builder's other caller is an AST built by hand (the designer, a test),
-				// and there the alternative is applying no style and saying nothing.
-				//
-				// DuplicateNodeId is NOT mirrored the same way, and the difference is what makes this
-				// defensible rather than a habit: duplicate ids are a property of the whole FILE, so
-				// checking them here would mean the builder keeping its own id set to answer a
-				// question it is not the authority on. "Is this style declared" is one lookup in the
-				// AST the builder was handed.
-				InContext.Diagnostics->AddError(EDreamUIDiagnosticCode::UnknownStyle, InNode.Location,
-					FString::Printf(TEXT("no style named '%s' is declared in this file"), *InNode.StyleName));
+				ApplyProperty(InNode, Property, InWidget, Candidates, Description, InContext, true);
 			}
 		}
 
@@ -1653,21 +1926,143 @@ namespace DreamUITextBuilderLocal
 		}
 	}
 
+	/** The container class a node type names, asked once per spelling per build: see FBuildContext::ContainerClassesByType. */
+	UClass* FindContainerClassForTypeOnce(const FString& InTypeName, FBuildContext& InContext)
+	{
+		if (UClass* const* Known = InContext.ContainerClassesByType.Find(InTypeName))
+		{
+			return *Known;
+		}
+		UClass* Found = FDreamUITextBuilder::FindContainerClassForType(InTypeName);
+		InContext.ContainerClassesByType.Add(InTypeName, Found);
+		return Found;
+	}
+
 	/**
-	 * Which UDreamWidget subclass and which UDreamVisual this node asks for.
+	 * The class a component alias names (`use … as Row`), into OutWidgetClass.
+	 *
+	 * The path when the alias has one -- `use /Game/UI/WBP_Row as Row`, or the imported file's `class` line -- through
+	 * the same resolution a node typed `/Game/...` gets. For a file, failing that, the editor's answer for it
+	 * (SourceClassResolver: the Blueprint whose Source File it is), which only the editor can give. Failures are
+	 * reported at the NODE, the place the build stopped, and name where the alias was declared, which is what the
+	 * author has to change -- in another file, when a library brought it.
+	 */
+	bool ResolveAliasClass(const FDreamUIComponentAlias& InAlias, const FDreamUINode& InNode, FBuildContext& InContext,
+		UClass*& OutWidgetClass)
+	{
+		if (UClass* const* Known = InContext.ResolvedAliasClasses.Find(InAlias.Alias))
+		{
+			OutWidgetClass = *Known;
+			return true;
+		}
+		const FString DeclaredAt = InAlias.SourceName.IsEmpty()
+			? FString::Printf(TEXT("line %d"), InAlias.Location.Line)
+			: FString::Printf(TEXT("%s(%d)"), *InAlias.SourceName, InAlias.Location.Line);
+
+		UClass* Resolved = !InAlias.ClassPath.IsEmpty() ? ResolveWidgetClassFromPath(InAlias.ClassPath) : nullptr;
+		// The editor's answer as well when a file's `class` line names a Blueprint that does not exist yet: the line
+		// says where the class WILL be, and a Blueprint elsewhere that already reads the file is the class it is now.
+		const TFunction<UClass*(const FString&)>& Resolver = FDreamUITextBuilder::SourceClassResolver();
+		if (Resolved == nullptr && !InAlias.SourcePath.IsEmpty() && Resolver)
+		{
+			Resolved = Resolver(InAlias.SourcePath);
+		}
+		if (Resolved == nullptr)
+		{
+			FString Unresolved;
+			if (!InAlias.ClassPath.IsEmpty())
+			{
+				Unresolved = InAlias.SourcePath.IsEmpty()
+					? FString::Printf(TEXT("'%s' (declared at %s) names '%s', which loads no class"),
+						*InAlias.Alias, *DeclaredAt, *InAlias.ClassPath)
+					: FString::Printf(TEXT("'%s' (declared at %s) names '%s', whose class '%s' loads nothing yet -- compile that file into it first"),
+						*InAlias.Alias, *DeclaredAt, *InAlias.SourcePath, *InAlias.ClassPath);
+			}
+			else if (!InAlias.SourcePath.IsEmpty())
+			{
+				Unresolved = Resolver
+					? FString::Printf(TEXT("'%s' (declared at %s) names '%s', which has no 'class' line, and no widget Blueprint uses it as its Source File -- give the file a 'class' line, or compile it into a Blueprint first"),
+						*InAlias.Alias, *DeclaredAt, *InAlias.SourcePath)
+					: FString::Printf(TEXT("'%s' (declared at %s) names '%s', which has no 'class' line, and this build has no editor to ask which Blueprint is made from it -- give the file a 'class' line"),
+						*InAlias.Alias, *DeclaredAt, *InAlias.SourcePath);
+			}
+			else
+			{
+				Unresolved = FString::Printf(TEXT("'%s' (declared at %s) names neither a class nor a file"), *InAlias.Alias, *DeclaredAt);
+			}
+			InContext.Diagnostics->AddError(EDreamUIDiagnosticCode::ComponentAliasUnresolved, InNode.Location, MoveTemp(Unresolved));
+			return false;
+		}
+		if (!Resolved->IsChildOf(UDreamUserWidget::StaticClass()) || Resolved->HasAnyClassFlags(CLASS_Abstract | CLASS_Deprecated))
+		{
+			// The same refusal a path written as the type gets, and for the same reason: a node typed by a class is an
+			// instance whose contents come from that class, which only a user widget has -- and only a concrete one can
+			// be placed at all.
+			InContext.Diagnostics->AddError(EDreamUIDiagnosticCode::NotAUserWidgetClass, InNode.Location,
+				FString::Printf(TEXT("'%s' (declared at %s) names %s, and a node typed by a component must be a concrete DreamUI user widget"),
+					*InAlias.Alias, *DeclaredAt, *Resolved->GetPathName()));
+			return false;
+		}
+		InContext.ResolvedAliasClasses.Add(InAlias.Alias, Resolved);
+		OutWidgetClass = Resolved;
+		return true;
+	}
+
+	/**
+	 * Which UDreamWidget subclass, which UDreamVisual, and which layout container this node asks for.
 	 *
 	 * Returns false only when nothing can be created; a null visual class with a true return is the
 	 * ordinary `Widget` case, not a failure.
+	 *
+	 * The order is the language's precedence, and it is not arbitrary: a built-in tag, then a layout container's name,
+	 * then a component alias -- so an alias can never change what `Text` or `VerticalBox` means, which is why one that
+	 * tries is an error (AliasShadowsBuiltIn) rather than a silent loser -- then `@Name`, a registry tag, an asset path.
+	 * Aliases sit ahead of the registry because a namespaced one is spelt like a tag (`nier.Row`, `Native.Button`).
 	 */
-	bool ResolveNodeClasses(const FDreamUINode& InNode, FBuildContext& InContext, UClass*& OutWidgetClass, UClass*& OutVisualClass)
+	bool ResolveNodeClasses(const FDreamUINode& InNode, FBuildContext& InContext, UClass*& OutWidgetClass, UClass*& OutVisualClass,
+		UClass*& OutContainerClass)
 	{
 		OutWidgetClass = UDreamWidget::StaticClass();
 		OutVisualClass = nullptr;
+		OutContainerClass = nullptr;
 
 		if (InNode.Kind == EDreamUINodeKind::NamedSlot)
 		{
 			return true;
 		}
+		const FString& TypeName = InNode.TypeName;
+
+		// A bare word -- no path, no resource, no scope -- is the only spelling a tag or a container has. Only one an
+		// FName can hold is asked about: the tag lookup makes one, and one past NAME_SIZE stops the editor rather than
+		// fail (see IsNameLengthLegal); the lexer cuts such a word, so this is for an AST built by hand.
+		const bool bBareName = !TypeName.IsEmpty() && !TypeName.StartsWith(TEXT("/")) && !TypeName.StartsWith(TEXT("@"))
+			&& !TypeName.Contains(TEXT("."));
+		if (bBareName && IsNameLengthLegal(TypeName))
+		{
+			bool bIsKnownTag = false;
+			OutVisualClass = FDreamUITextBuilder::FindVisualClassForTag(TypeName, bIsKnownTag);
+			if (bIsKnownTag)
+			{
+				return true;
+			}
+			// `VerticalBox Categories { Spacing = 29 }` -- a plain widget carrying that container. BuildComponents puts it
+			// in place and BuildProperties lets the node's lines reach it.
+			OutContainerClass = FindContainerClassForTypeOnce(TypeName, InContext);
+			if (OutContainerClass != nullptr)
+			{
+				return true;
+			}
+		}
+
+		// `Row Row1 { }` or `nier.Row Row1 { }` -- a class named by `use … as`, this file's or one a library brought.
+		if (!TypeName.StartsWith(TEXT("/")) && !TypeName.StartsWith(TEXT("@")) && InContext.Ast != nullptr)
+		{
+			if (const FDreamUIComponentAlias* Alias = InContext.Ast->FindComponentAlias(TypeName))
+			{
+				return ResolveAliasClass(*Alias, InNode, InContext, OutWidgetClass);
+			}
+		}
+
 		// A user widget class at an asset path, `/Game/UI/WBP_Card` or `/Script/Module.Class`: written as the type, or
 		// named by an Asset resource (`@Card`).
 		auto ResolveWidgetClassAt = [&InNode, &InContext, &OutWidgetClass](const FString& InPath)
@@ -1695,15 +2090,15 @@ namespace DreamUITextBuilderLocal
 		// `@Row` -- the class an Asset entry of a resources block names, this file's or one a `use` brought in: a family of
 		// components is named once, in the library that styles it, and each screen writes `@Row Row1 { }` instead of the
 		// asset path on every line.
-		if (InNode.TypeName.StartsWith(TEXT("@")))
+		if (TypeName.StartsWith(TEXT("@")))
 		{
-			const FString ResourceName = InNode.TypeName.Mid(1);
+			const FString ResourceName = TypeName.Mid(1);
 			const FDreamUIResource* Resource = InContext.Ast != nullptr ? InContext.Ast->FindResource(ResourceName) : nullptr;
 			if (Resource == nullptr)
 			{
 				InContext.Diagnostics->AddError(EDreamUIDiagnosticCode::UnknownResource, InNode.Location,
 					FString::Printf(TEXT("'%s' names no entry in a resources block; a node type written with '@' is an Asset resource, as in 'Asset %s = /Game/UI/WBP_%s'"),
-						*InNode.TypeName, *ResourceName, *ResourceName));
+						*TypeName, *ResourceName, *ResourceName));
 				return false;
 			}
 			const bool bIsAsset = Resource->TypeName.Equals(TEXT("Asset"), ESearchCase::IgnoreCase)
@@ -1712,7 +2107,7 @@ namespace DreamUITextBuilderLocal
 			{
 				InContext.Diagnostics->AddError(EDreamUIDiagnosticCode::ResourceTypeMismatch, InNode.Location,
 					FString::Printf(TEXT("'%s' is a node type, so resource '%s' must be an Asset naming a widget class, not a %s"),
-						*InNode.TypeName, *ResourceName, *Resource->TypeName));
+						*TypeName, *ResourceName, *Resource->TypeName));
 				return false;
 			}
 			return ResolveWidgetClassAt(Resource->Value.Raw);
@@ -1722,14 +2117,39 @@ namespace DreamUITextBuilderLocal
 		// library's controls -- or of anyone else's: a project plugin registering under its own scope
 		// is in the language the moment it links.
 		int32 DotIndex = INDEX_NONE;
-		if (!InNode.TypeName.StartsWith(TEXT("/")) && InNode.TypeName.FindChar(TEXT('.'), DotIndex))
+		if (!TypeName.StartsWith(TEXT("/")) && TypeName.FindChar(TEXT('.'), DotIndex))
 		{
-			const FName Scope(*InNode.TypeName.Left(DotIndex));
-			const FName Name(*InNode.TypeName.Mid(DotIndex + 1));
+			const FString ScopeText = TypeName.Left(DotIndex);
+			const FName Scope(*ScopeText);
+			const FName Name(*TypeName.Mid(DotIndex + 1));
 			UClass* Registered = FDreamUIWidgetRegistry::Resolve(Scope, Name);
 			if (Registered == nullptr || !Registered->IsChildOf(UDreamUserWidget::StaticClass())
 				|| Registered->HasAnyClassFlags(CLASS_Abstract | CLASS_Deprecated))
 			{
+				// A scope that is one of this file's namespaces is a library the author imported, not a registry
+				// scope, and "nothing is registered under 'nier'" would send them to C++ for a typo in a .dui.
+				// The aliases the library does bring are the useful list.
+				if (InContext.Ast != nullptr && FDreamUIWidgetRegistry::NamesInScope(Scope).Num() == 0
+					&& InContext.Ast->Namespaces.Contains(ScopeText))
+				{
+					FString Offered;
+					const FString Prefix = ScopeText + TEXT(".");
+					for (const FDreamUIComponentAlias& Alias : InContext.Ast->ImportedComponentAliases)
+					{
+						if (Alias.Alias.StartsWith(Prefix, ESearchCase::IgnoreCase))
+						{
+							Offered += (Offered.IsEmpty() ? TEXT("") : TEXT(", "));
+							Offered += Alias.Alias;
+						}
+					}
+					InContext.Diagnostics->AddError(EDreamUIDiagnosticCode::UnknownNodeType, InNode.Location,
+						Offered.IsEmpty()
+							? FString::Printf(TEXT("'%s' names no component -- the library imported as '%s' declares none ('use … as Name' in it does)"),
+								*TypeName, *ScopeText)
+							: FString::Printf(TEXT("'%s' names no component -- the library imported as '%s' declares: %s"),
+								*TypeName, *ScopeText, *Offered));
+					return false;
+				}
 				TArray<FName> Known = FDreamUIWidgetRegistry::NamesInScope(Scope);
 				FString KnownList;
 				for (const FName& KnownName : Known)
@@ -1740,32 +2160,228 @@ namespace DreamUITextBuilderLocal
 				InContext.Diagnostics->AddError(EDreamUIDiagnosticCode::UnknownNodeType, InNode.Location,
 					KnownList.IsEmpty()
 						? FString::Printf(TEXT("'%s' names no registered widget -- nothing is declared under scope '%s' (DECLARE_DREAM_GUI_WIDGET registers one)"),
-							*InNode.TypeName, *Scope.ToString())
+							*TypeName, *Scope.ToString())
 						: FString::Printf(TEXT("'%s' names no registered widget -- scope '%s' declares: %s"),
-							*InNode.TypeName, *Scope.ToString(), *KnownList));
+							*TypeName, *Scope.ToString(), *KnownList));
 				return false;
 			}
 			OutWidgetClass = Registered;
 			return true;
 		}
 
-		if (InNode.TypeName.StartsWith(TEXT("/")))
+		if (TypeName.StartsWith(TEXT("/")))
 		{
-			return ResolveWidgetClassAt(InNode.TypeName);
+			return ResolveWidgetClassAt(TypeName);
 		}
 
-		bool bIsKnownTag = false;
-		OutVisualClass = FDreamUITextBuilder::FindVisualClassForTag(InNode.TypeName, bIsKnownTag);
-		if (!bIsKnownTag)
+		InContext.Diagnostics->AddError(EDreamUIDiagnosticCode::UnknownNodeType, InNode.Location,
+			FString::Printf(TEXT("'%s' is not a built-in tag, a layout container, a component named by 'use … as', or an asset path (those start with '/')"),
+				*EllipsizeName(TypeName)));
+		return false;
+	}
+
+	/**
+	 * A `use … as` name that a built-in tag or a layout container already answers to, reported once at its declaration.
+	 *
+	 * Resolution asks the built-ins first (ResolveNodeClasses), so such an alias could never be written as a type --
+	 * `Text Title { }` would go on meaning the visual tag -- and the alias would sit there doing nothing while looking
+	 * like it worked. Checked here rather than in the parser because only reflection knows which words are containers.
+	 * A namespaced alias (`nier.Text`) is spelt apart from every built-in and is never one.
+	 */
+	void CheckAliasesAgainstBuiltIns(FBuildContext& InContext)
+	{
+		TSet<FString> Reported;
+		auto Check = [&InContext, &Reported](const FDreamUIComponentAlias& InAlias)
 		{
-			InContext.Diagnostics->AddError(EDreamUIDiagnosticCode::UnknownNodeType, InNode.Location,
-				FString::Printf(TEXT("'%s' is neither a built-in tag nor an asset path (those start with '/')"), *InNode.TypeName));
-			return false;
+			const FString& Name = InAlias.Alias;
+			if (Name.IsEmpty() || Name.Contains(TEXT(".")) || !IsNameLengthLegal(Name) || Reported.Contains(Name))
+			{
+				return;
+			}
+			bool bIsKnownTag = false;
+			FDreamUITextBuilder::FindVisualClassForTag(Name, bIsKnownTag);
+			UClass* Container = bIsKnownTag ? nullptr : FindContainerClassForTypeOnce(Name, InContext);
+			if (!bIsKnownTag && Container == nullptr)
+			{
+				return;
+			}
+			Reported.Add(Name);
+			AddErrorIn(*InContext.Diagnostics, InAlias.SourceName, EDreamUIDiagnosticCode::AliasShadowsBuiltIn, InAlias.Location,
+				FString::Printf(TEXT("'%s' is already %s, which a node type means before any alias -- choose another name"),
+					*Name, bIsKnownTag ? TEXT("a built-in tag") : *FString::Printf(TEXT("a layout container (%s)"), *Container->GetName())));
+		};
+		for (const FDreamUIComponentAlias& Alias : InContext.Ast->ComponentAliases)
+		{
+			Check(Alias);
 		}
-		return true;
+		for (const FDreamUIComponentAlias& Alias : InContext.Ast->ImportedComponentAliases)
+		{
+			Check(Alias);
+		}
+	}
+
+	/** What a host needs to know about one slot a component class declares, read off the class and never an instance. */
+	struct FDeclaredSlot
+	{
+		/** Content a host nests without naming a slot goes here; so does a fill of it, by nesting alone. */
+		bool bIsDefault = false;
+		/** Whether bAcceptsSeveral below was read, which only an archetype-built class allows. */
+		bool bCapacityKnown = false;
+		bool bAcceptsSeveral = false;
+	};
+
+	/**
+	 * The default slot and the capacity of InSlotName, from the class.
+	 *
+	 * The default from the class default object first -- a native control that overrides GetDefaultSlotName answers
+	 * there -- then from the archetype's `slot … default` flag, which is what the base implementation reads off an
+	 * INSTANCE's tree and a class default object does not have. The capacity only from an archetype: a native control
+	 * makes its slots when an instance initializes, so there is nothing to read it off before one exists, and the run
+	 * time says so (AdoptUnslottedChildren) when one refuses.
+	 */
+	FDeclaredSlot DescribeDeclaredSlot(const UClass* InClass, FName InSlotName)
+	{
+		FDeclaredSlot Described;
+		const UDreamUserWidget* Defaults = InClass != nullptr ? InClass->GetDefaultObject<UDreamUserWidget>() : nullptr;
+		FName DefaultSlot = Defaults != nullptr ? Defaults->GetDefaultSlotName() : NAME_None;
+		if (const UDreamWidgetTree* Archetype = UDreamWidgetGeneratedClass::FindWidgetTreeArchetype(InClass))
+		{
+			Archetype->ForEachWidget([&Described, &DefaultSlot, InSlotName](UDreamWidget* Widget)
+			{
+				const UDreamNamedSlot* Slot = IsValid(Widget) ? Widget->GetComponent<UDreamNamedSlot>() : nullptr;
+				if (Slot == nullptr)
+				{
+					return;
+				}
+				if (DefaultSlot.IsNone() && Slot->bIsDefaultSlot)
+				{
+					DefaultSlot = Slot->GetSlotName();
+				}
+				if (!Described.bCapacityKnown && Slot->GetSlotName() == InSlotName)
+				{
+					Described.bCapacityKnown = true;
+					Described.bAcceptsSeveral = Slot->bAcceptsSeveral;
+				}
+			});
+		}
+		Described.bIsDefault = !InSlotName.IsNone() && DefaultSlot == InSlotName;
+		return Described;
+	}
+
+	/**
+	 * `ListPage Page2 { slot Detail { Text Note { … } } }` -- the host filling one of the component's slots by name.
+	 *
+	 * No widget of its own: the fill is an address, not a node. Its children are built as the host's content for that
+	 * slot, in the shape the designer writes for a drop into a slot row -- children of the instance in the host's tree,
+	 * and for any slot but the default one, the instance's NamedSlotContent naming them -- so Initialize hangs them
+	 * under the slot (AttachNamedSlotContent). A fill of the DEFAULT slot is nesting alone, as the designer has it too:
+	 * AdoptUnslottedChildren takes every unbound child there, and a binding on top would be a second record of one fact.
+	 *
+	 * Several children reach only the default slot, and only one that takes several: NamedSlotContent maps a name to
+	 * ONE widget, so a named slot is filled with one (a container, when the content is several), whatever the hole
+	 * would hold.
+	 */
+	UDreamWidget* BuildSlotFill(const FDreamUINode& InNode, UDreamWidget* InParent, FBuildContext& InContext)
+	{
+		UDreamUserWidget* Instance = Cast<UDreamUserWidget>(InParent);
+		if (Instance == nullptr)
+		{
+			InContext.Diagnostics->AddError(EDreamUIDiagnosticCode::SlotFillOutsideComponent, InNode.Location,
+				InParent == nullptr
+					? FString::Printf(TEXT("'slot %s { … }' fills a slot of a component, and the root sits in none"), *InNode.Id)
+					: FString::Printf(TEXT("'slot %s { … }' fills a slot of a component, and '%s' is a %s, which opens none -- nest the content directly, or declare a slot with 'slot %s' and no children"),
+						*InNode.Id, *InParent->GetDisplayName(), *InParent->GetClass()->GetName(), *InNode.Id));
+			return nullptr;
+		}
+		if (InNode.Properties.Num() > 0 || InNode.SlotProperties.Num() > 0 || InNode.Components.Num() > 0 || !InNode.StyleName.IsEmpty())
+		{
+			// The parser refuses this shape; an AST built by hand reaches here with it, and there is nothing these
+			// lines could be written on -- the slot widget is the component's, in another file.
+			InContext.Diagnostics->AddError(EDreamUIDiagnosticCode::MalformedSlotDeclaration, InNode.Location,
+				FString::Printf(TEXT("'slot %s { … }' fills a slot and holds content only -- the slot itself belongs to %s, which sets it up"),
+					*InNode.Id, *Instance->GetClass()->GetName()));
+			return nullptr;
+		}
+		if (InNode.Id.IsEmpty() || !IsNameLengthLegal(InNode.Id))
+		{
+			InContext.Diagnostics->AddError(EDreamUIDiagnosticCode::UnknownSlotToFill, InNode.Location,
+				TEXT("a slot to fill is named by its id, and this one has none an FName can hold"));
+			return nullptr;
+		}
+
+		const FName SlotName(*InNode.Id);
+		TArray<FName> Declared;
+		UDreamUserWidget::CollectDeclaredSlotNames(Instance->GetClass(), Declared);
+		if (!Declared.Contains(SlotName))
+		{
+			FString DeclaredList;
+			FString Nearest;
+			int32 NearestDistance = MAX_int32;
+			for (const FName& Name : Declared)
+			{
+				const FString Candidate = Name.ToString();
+				DeclaredList += (DeclaredList.IsEmpty() ? TEXT("") : TEXT(", "));
+				DeclaredList += Candidate;
+				const int32 Distance = EditDistance(InNode.Id, Candidate);
+				if (Distance < NearestDistance)
+				{
+					NearestDistance = Distance;
+					Nearest = Candidate;
+				}
+			}
+			InContext.Diagnostics->AddError(EDreamUIDiagnosticCode::UnknownSlotToFill, InNode.Location,
+				DeclaredList.IsEmpty()
+					? FString::Printf(TEXT("%s declares no slots, so '%s' has nothing to fill"), *Instance->GetClass()->GetName(), *InNode.Id)
+					: FString::Printf(TEXT("%s declares no slot named '%s'%s -- its slots are: %s"), *Instance->GetClass()->GetName(), *InNode.Id,
+						*FormatSuggestion(NearestDistance <= FMath::Max(2, InNode.Id.Len() / 3) ? Nearest : FString()), *DeclaredList));
+			return nullptr;
+		}
+
+		const FDeclaredSlot Slot = DescribeDeclaredSlot(Instance->GetClass(), SlotName);
+		const int32 ContentCount = InNode.Children.Num();
+		if (ContentCount > 1 && !Slot.bIsDefault)
+		{
+			InContext.Diagnostics->AddError(EDreamUIDiagnosticCode::ParentRefusedChild, InNode.Children[1].Location,
+				FString::Printf(TEXT("slot '%s' of %s is filled by name, and a named slot holds one widget -- put these %d in one container (for example 'VerticalBox { … }') inside the slot"),
+					*InNode.Id, *Instance->GetClass()->GetName(), ContentCount));
+			return nullptr;
+		}
+		if (ContentCount > 1 && Slot.bCapacityKnown && !Slot.bAcceptsSeveral)
+		{
+			InContext.Diagnostics->AddError(EDreamUIDiagnosticCode::ParentRefusedChild, InNode.Children[1].Location,
+				FString::Printf(TEXT("slot '%s' of %s holds one widget, and this fills it with %d -- put them in one container, or give the slot a layout ('slot %s default { + VerticalBox { } }') so it takes several"),
+					*InNode.Id, *Instance->GetClass()->GetName(), ContentCount, *InNode.Id));
+			return nullptr;
+		}
+		if (!Slot.bIsDefault && Instance->GetContentForNamedSlot(SlotName) != nullptr)
+		{
+			// A second fill would rebind the name and leave the first content an unbound child, which the default
+			// slot would then quietly adopt -- content showing up somewhere the file never put it.
+			InContext.Diagnostics->AddError(EDreamUIDiagnosticCode::ParentRefusedChild, InNode.Location,
+				FString::Printf(TEXT("slot '%s' of '%s' is already filled; a named slot holds one widget"), *InNode.Id, *Instance->GetDisplayName()));
+			return nullptr;
+		}
+
+		for (const FDreamUINode& Child : InNode.Children)
+		{
+			UDreamWidget* Content = BuildNode(Child, Instance, InContext);
+			if (!IsValid(Content) || Slot.bIsDefault || Child.Kind != EDreamUINodeKind::Widget)
+			{
+				continue;
+			}
+			if (!Instance->SetContentForNamedSlot(SlotName, Content))
+			{
+				// Not reachable from a file -- the content is this tree's and under the instance, which is all the
+				// binding asks -- but a refusal otherwise leaves the content an unbound child, adopted by the default slot.
+				InContext.Diagnostics->AddError(EDreamUIDiagnosticCode::ParentRefusedChild, Child.Location,
+					FString::Printf(TEXT("'%s' could not be bound into slot '%s' of '%s'"), *Child.Id, *InNode.Id, *Instance->GetDisplayName()));
+			}
+		}
+		return nullptr;
 	}
 
 	UDreamWidget* BuildEachLoop(const FDreamUINode& InNode, UDreamWidget* InParent, FBuildContext& InContext);
+	UDreamWidget* BuildForLoop(const FDreamUINode& InNode, UDreamWidget* InParent, FBuildContext& InContext);
 
 	UDreamWidget* BuildNode(const FDreamUINode& InNode, UDreamWidget* InParent, FBuildContext& InContext)
 	{
@@ -1775,33 +2391,38 @@ namespace DreamUITextBuilderLocal
 		}
 		if (InNode.Kind == EDreamUINodeKind::ForLoop)
 		{
-			// An ERROR, and the split from `each` just below is the whole reason this branch is two
-			// branches. `for` means compile-time expansion and there is nothing to expand: the
-			// implementation plan's ruling is that its source is written as a no-argument UFUNCTION,
-			// which a compile cannot call, so the semantics -- a range? a literal list? -- were never
-			// decided. That is a decision nobody has taken, not a stage that has not run, and NOTHING
-			// a caller does makes the body appear. The grammar keeps accepting the keyword so a file
-			// written against a future version still parses; this is what stops such a file from
-			// silently producing a class missing a whole subtree, which is what a warning bought --
-			// one line in the Output Log against a preview that looks merely empty.
-			InContext.Diagnostics->AddError(EDreamUIDiagnosticCode::LoopNotExpanded, InNode.Location,
-				TEXT("'for' is parsed but not implemented: compile-time expansion has no decided semantics yet, so everything under this one was skipped. Use 'each' for a run-time list, or write the copies out."));
+			// A `for` is recorded where an `each` is -- one FDreamWidgetEachBinding, bInPanel set -- because it is the
+			// same compiled shape: a template, a source and the item writes. Only the run time differs. So it needs the
+			// same sink, and without one it degrades the same way an `each` does just below: a warning, for a caller
+			// that builds a raw AST (most tests) and wants the rest of the file. A compile always offers the sink.
+			if (InContext.EachBindings != nullptr)
+			{
+				return BuildForLoop(InNode, InParent, InContext);
+			}
+			InContext.Diagnostics->AddWarning(EDreamUIDiagnosticCode::LoopNotExpanded, InNode.Location,
+				TEXT("this caller offered nowhere to record a 'for', so everything under this one was skipped"));
 			return nullptr;
 		}
 		if (InNode.Kind == EDreamUINodeKind::EachLoop)
 		{
-			// Still a warning, and for a reason that has nothing to do with the one above: `each` IS
-			// implemented, and a block only reaches here when the CALLER offered nowhere to record it
-			// -- a hand-built AST, most tests. The rest of the file is a tree worth building, and an
-			// author previewing a screen wants to see the parts that do work.
+			// The same warning as a `for` just above, for the same reason: a block only reaches here when the CALLER
+			// offered nowhere to record it -- a hand-built AST, most tests. The rest of the file is a tree worth
+			// building, and an author previewing a screen wants to see the parts that do work.
 			InContext.Diagnostics->AddWarning(EDreamUIDiagnosticCode::LoopNotExpanded, InNode.Location,
 				TEXT("this caller offered nowhere to record an 'each', so everything under this one was skipped"));
 			return nullptr;
 		}
 
+		if (InNode.Kind == EDreamUINodeKind::NamedSlot && InNode.bFillsSlot)
+		{
+			// The host filling a component's slot: an address, not a node, so none of what follows applies.
+			return BuildSlotFill(InNode, InParent, InContext);
+		}
+
 		UClass* WidgetClass = nullptr;
 		UClass* VisualClass = nullptr;
-		if (!ResolveNodeClasses(InNode, InContext, WidgetClass, VisualClass))
+		UClass* TypeContainerClass = nullptr;
+		if (!ResolveNodeClasses(InNode, InContext, WidgetClass, VisualClass, TypeContainerClass))
 		{
 			return nullptr;
 		}
@@ -1865,11 +2486,29 @@ namespace DreamUITextBuilderLocal
 		{
 			Widget->CreateNewVisual(VisualClass);
 		}
+		UDreamNamedSlot* DeclaredSlot = nullptr;
 		if (InNode.Kind == EDreamUINodeKind::NamedSlot)
 		{
 			// The slot's name IS the widget's display name (UDreamNamedSlot::GetSlotName), so the
-			// SetDisplayName above is what named it; there is nothing further to configure.
-			Widget->AddComponent<UDreamNamedSlot>();
+			// SetDisplayName above is what named it.
+			DeclaredSlot = Widget->AddComponent<UDreamNamedSlot>();
+			if (InNode.bDefaultSlot && IsValid(DeclaredSlot))
+			{
+				// `slot Rows default` -- what GetDefaultSlotName answers for a class that does not override it. One per
+				// tree: content nested without a slot name has one place to go, and a second default would make which
+				// one depend on tree order. The parser says so too; this is the same rule for a tree built by hand.
+				if (InContext.DefaultSlotNode != nullptr)
+				{
+					InContext.Diagnostics->AddError(EDreamUIDiagnosticCode::MultipleDefaultSlots, InNode.Location,
+						FString::Printf(TEXT("'%s' is marked default, and so is '%s' (line %d) -- a class has one default slot"),
+							*InNode.Id, *InContext.DefaultSlotNode->Id, InContext.DefaultSlotNode->Location.Line));
+				}
+				else
+				{
+					InContext.DefaultSlotNode = &InNode;
+					DeclaredSlot->bIsDefaultSlot = true;
+				}
+			}
 		}
 
 		if (InParent != nullptr)
@@ -1892,9 +2531,18 @@ namespace DreamUITextBuilderLocal
 
 		// Components before children, because a `+ VerticalBox` on THIS node is what decides whether
 		// the children get panel slots at all.
-		BuildComponents(InNode, Widget, InContext);
-		BuildProperties(InNode, Widget, InContext);
-		BuildSlotProperties(InNode, Widget, InContext);
+		TArray<const FDreamUIStyle*> Styles;
+		ResolveStyleChain(InNode, InContext, Styles);
+		BuildComponents(InNode, Styles, TypeContainerClass, Widget, InContext);
+		if (IsValid(DeclaredSlot) && IsValid(Widget->GetLayoutContainer()))
+		{
+			// `slot Rows { + VerticalBox { Spacing = 15 } }` -- a hole with a layout is one that arranges what it is
+			// given, so it takes several (the host's rows, each laid out by it). Set before the node's own lines, so an
+			// author who writes `bAcceptsSeveral = false` on it still has the last word.
+			DeclaredSlot->bAcceptsSeveral = true;
+		}
+		BuildProperties(InNode, Styles, TypeContainerClass != nullptr, Widget, InContext);
+		BuildSlotProperties(InNode, Styles, Widget, InContext);
 
 		// Every `AnchorData.X = ...` line above wrote its field in place -- a field inside a struct has no setter
 		// (see AddBinding) -- and TrySetParent had already worked the widget's size, edge offsets and placement out
@@ -1926,7 +2574,8 @@ namespace DreamUITextBuilderLocal
 		if (InContext.ActiveEach != nullptr)
 		{
 			InContext.Diagnostics->AddError(EDreamUIDiagnosticCode::EachMisplaced, InNode.Location,
-				TEXT("an 'each' cannot nest inside another 'each'"));
+				FString::Printf(TEXT("an 'each' cannot nest inside %s"),
+					InContext.ActiveEach->bInPanel ? TEXT("a 'for'") : TEXT("another 'each'")));
 			return nullptr;
 		}
 		if (InParent == nullptr)
@@ -2043,6 +2692,99 @@ namespace DreamUITextBuilderLocal
 			// instances -- ResolveEachBindings re-aims it per instance through this.
 			Each.ContentWidgetName = UDreamWidgetTree::MakeWidgetVariableName(Content);
 		}
+		return Template;
+	}
+
+	/**
+	 * `for Option in GetOptions() { Row { Label <- Option.Label } }` -- one copy of the body per item, made at run
+	 * time inside the enclosing widget itself.
+	 *
+	 * What is built here is exactly one widget: the TEMPLATE, as an ordinary child of the host, at the place the
+	 * `for` was written among the host's children. The run time (UDreamUIForAdapter) collapses it and puts the copies
+	 * right after it, so "where the `for` was written" is where the rows appear, between whatever siblings surround
+	 * it -- a header above, a footer below. Nothing else is synthesized: an `each` needs a content widget because a
+	 * list view scrolls one, and a `for` has no list view; the host's own layout container arranges the copies like
+	 * any other children.
+	 *
+	 * Recorded as an FDreamWidgetEachBinding with bInPanel set, built through the same item-binding path an `each`
+	 * uses (ActiveEach), so `Prop <- Option.Member` lines inside the body become entry bindings and anything richer
+	 * is refused with the same LoopBodyBindingUnsupported. The compiler's source checks (DUI6006, DUI6007) read the
+	 * same array and so cover a `for` without knowing it is one.
+	 */
+	UDreamWidget* BuildForLoop(const FDreamUINode& InNode, UDreamWidget* InParent, FBuildContext& InContext)
+	{
+		if (InContext.ActiveEach != nullptr)
+		{
+			// One level of repetition per template. A `for` in a `for` would need a copy of the inner adapter per
+			// outer copy, and the item writes of the inner one would name a variable the outer copy does not have;
+			// the way to nest is a component whose own file has the inner `for`, fed through a `props` variable.
+			InContext.Diagnostics->AddError(EDreamUIDiagnosticCode::ForMisplaced, InNode.Location,
+				FString::Printf(TEXT("a 'for' cannot sit inside a '%s': repeat a component whose own file has the inner 'for', and hand it the inner list through one of its props"),
+					InContext.ActiveEach->bInPanel ? TEXT("for") : TEXT("each")));
+			return nullptr;
+		}
+		if (InParent == nullptr)
+		{
+			InContext.Diagnostics->AddError(EDreamUIDiagnosticCode::ForMisplaced, InNode.Location,
+				TEXT("a 'for' repeats its body inside the widget it is written in, so it cannot be the root"));
+			return nullptr;
+		}
+		// A host that holds a fixed number of children -- a scroll box's single content, a content widget -- has no
+		// room for a number of copies only the data decides. Said here rather than found at run time, where the
+		// copies past the limit would be refused one by one with nothing in the file to point at.
+		const int32 Capacity = InParent->GetMaxChildrenCapacity();
+		if (Capacity != INDEX_NONE)
+		{
+			InContext.Diagnostics->AddError(EDreamUIDiagnosticCode::ForMisplaced, InNode.Location,
+				FString::Printf(TEXT("'%s' holds at most %d %s, and a 'for' adds one per item -- put a container such as 'VerticalBox' inside it and the 'for' in that"),
+					*InParent->GetDisplayName(), Capacity, Capacity == 1 ? TEXT("child") : TEXT("children")));
+			return nullptr;
+		}
+
+		const FDreamUINode* TemplateNode = nullptr;
+		for (const FDreamUINode& Child : InNode.Children)
+		{
+			if (Child.Kind != EDreamUINodeKind::Widget || TemplateNode != nullptr)
+			{
+				TemplateNode = nullptr;
+				break;
+			}
+			TemplateNode = &Child;
+		}
+		if (TemplateNode == nullptr)
+		{
+			InContext.Diagnostics->AddError(EDreamUIDiagnosticCode::ForMisplaced, InNode.Location,
+				TEXT("a 'for' body holds exactly one widget -- the thing repeated per item; wrap several in one container"));
+			return nullptr;
+		}
+
+		FDreamWidgetEachBinding& ForBinding = InContext.EachBindings->AddDefaulted_GetRef();
+		ForBinding.bInPanel = true;
+		ForBinding.HostWidgetName = UDreamWidgetTree::MakeWidgetVariableName(InParent);
+		ForBinding.SourceName = FName(*InNode.LoopSourceFunction);
+		ForBinding.bSourceIsFunction = InNode.bLoopSourceIsFunction;
+		ForBinding.LoopVariable = FName(*InNode.LoopVariable);
+#if WITH_EDITORONLY_DATA
+		// The header's position, as for an `each`: DUI6006 and DUI6007 are about the source named on that line.
+		ForBinding.SourceLine = InNode.Location.Line;
+		ForBinding.SourceColumn = InNode.Location.Column;
+#endif
+
+		// Set before the body is built, because AddBinding reads it: it is what lets an item write land on a
+		// component's setter-less property (see bWritesDirectly there). The pointer stays valid for the same reason
+		// the `each` one does -- anything that would add to EachBindings under it is refused above.
+		InContext.ActiveEach = &ForBinding;
+		InContext.ActiveLoopVariable = InNode.LoopVariable;
+		UDreamWidget* Template = BuildNode(*TemplateNode, InParent, InContext);
+		InContext.ActiveEach = nullptr;
+		InContext.ActiveLoopVariable.Reset();
+
+		if (!IsValid(Template))
+		{
+			InContext.EachBindings->Pop();
+			return nullptr;
+		}
+		ForBinding.TemplateWidgetName = UDreamWidgetTree::MakeWidgetVariableName(Template);
 		return Template;
 	}
 
@@ -2842,6 +3584,10 @@ UDreamWidgetTree* FDreamUITextBuilder::Build(const FDreamUIAst& InAst, UObject* 
 	// given a class yet, which is every file in an editor preview before it is first compiled.
 	Context.LocalizationNamespace = InAst.ClassPath.IsEmpty() ? OutDiagnostics.SourceName : InAst.ClassPath;
 	Context.Tree = NewObject<UDreamWidgetTree>(InOuter != nullptr ? InOuter : (UObject*)GetTransientPackage());
+
+	// Before the walk, so an alias that can never be written as a type is said once, at its own line, rather than
+	// left to look like it worked: every node spelling it quietly builds the built-in instead.
+	CheckAliasesAgainstBuiltIns(Context);
 
 	Context.Tree->RootWidget = BuildNode(InAst.Root, nullptr, Context);
 	if (!IsValid(Context.Tree->RootWidget))

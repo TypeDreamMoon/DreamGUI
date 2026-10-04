@@ -716,10 +716,11 @@ bool FDreamUITextGrammarDiagnosticsTest::RunTest(const FString& Parameters)
 		TEXT("}")
 	}), EDreamUIDiagnosticCode::UnclosedTuple, 2);
 
-	ExpectOneDiagnostic(*this, TEXT("a node with no id"), MakeSource({
+	// A type alone on a line: `Image { }` is an anonymous node now, but a bare word with neither a block nor a style
+	// is as likely a property whose '=' went missing, so it still asks for an id.
+	ExpectOneDiagnostic(*this, TEXT("a node with no id and no block"), MakeSource({
 		TEXT("Widget Root {"),
-		TEXT("    Image {"),
-		TEXT("    }"),
+		TEXT("    Image"),
 		TEXT("}")
 	}), EDreamUIDiagnosticCode::MissingNodeId, 2);
 

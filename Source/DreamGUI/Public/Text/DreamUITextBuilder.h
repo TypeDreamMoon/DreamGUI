@@ -97,4 +97,19 @@ struct DREAMGUI_API FDreamUITextBuilder
 	 * this exact judge, or it prints the object PATH and poisons the file.
 	 */
 	static bool IsNodeReferenceProperty(const FObjectPropertyBase* InProperty);
+
+	/**
+	 * The class a .dui compiles into when the file itself does not say (`use "Row.dui" as Row` on a file with no
+	 * `class` line): the editor installs the answer -- the Blueprint whose Source File is that file -- since only it
+	 * knows which assets read which sources. Given the RESOLVED path a `use` recorded. Unset (a commandlet with no
+	 * editor module, a test), such an alias reports ComponentAliasUnresolved.
+	 */
+	static TFunction<UClass*(const FString& InResolvedSourcePath)>& SourceClassResolver();
+
+	/**
+	 * The layout container class a node type names (`VerticalBox`, `Overlay`, `SizeBox`, …), or null. Such a node is a
+	 * plain widget carrying that container, and its lines set the container's properties as well as the widget's.
+	 * Exported for completion and the write-back, which must agree with the builder about what is a type.
+	 */
+	static UClass* FindContainerClassForType(const FString& InTypeName);
 };
