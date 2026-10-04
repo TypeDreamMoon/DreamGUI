@@ -5,14 +5,19 @@
 #include "Misc/AutomationTest.h"
 #include "Misc/Paths.h"
 #include "Misc/ScopeExit.h"
+#include "HAL/FileManager.h"
+#include "HAL/IConsoleManager.h"
 #include "HAL/PlatformMisc.h"
 #include "Core/DreamUIFontData_DistanceField.h"
 #include "Core/DreamUIFontData_Bitmap.h"
 #include "Core/DreamUIFontEmojiData.h"
+#include "Core/DreamGUISettings.h"
 #include "Core/DreamUISettings.h"
 #include "Core/Text/DreamGlyphSdf.h"
 #include "Core/Text/DreamGlyphColor.h"
+#include "Core/Text/DreamGlyphCoverage.h"
 #include "Core/Text/DreamTextShaper.h"
+#include "DreamUIRender/DreamUIRenderStats.h"
 #include "Engine/Texture2DArray.h"
 #include "Engine/World.h"
 #include "Serialization/ObjectReader.h"
@@ -21,6 +26,9 @@
 #include "UObject/EnumProperty.h"
 #include "UObject/UnrealType.h"
 #include "DreamScopedWorld.h"
+#if WITH_EDITOR
+#include "Editor.h"
+#endif
 #if WITH_FREETYPE
 THIRD_PARTY_INCLUDES_START
 #include <ft2build.h>
@@ -122,6 +130,24 @@ namespace DreamFontDataTestLocal
 	{
 		return A.MinUV == B.MinUV && A.MaxUV == B.MaxUV && A.SliceIndex == B.SliceIndex
 			&& A.Width == B.Width && A.Height == B.Height && A.XOffset == B.XOffset && A.YOffset == B.YOffset;
+	}
+
+	/**
+	 * A made-up coverage glyph of 200 texels square -- one to a 256-texel cell -- put into a font with a 512 atlas, answered
+	 * from its cache, and the cell it went to. Reports a failure itself.
+	 */
+	bool InjectCellSizedGlyph(FAutomationTestBase& Test, UDreamUIFontData_FreeTypeRender* Font, uint32 GlyphIndex, int32 Size26Dot6, FIntVector& OutCell)
+	{
+		const TArray<uint8> Pixels = MakeCoveragePixels(200, 200);
+		FDreamUICoverageGlyph Glyph;
+		const bool bAnswered = Font->InjectCoverageGlyphForTesting(0, GlyphIndex, Size26Dot6, EDreamUICoverageGlyphFlags::None, 200, 200, 0, 150, Pixels)
+			&& Font->GetCoverageGlyph(0, GlyphIndex, Size26Dot6, EDreamUICoverageGlyphFlags::None, Glyph) && !Glyph.bPending;
+		if (!Test.TestTrue(FString::Printf(TEXT("a %d px coverage glyph goes in and is answered"), Size26Dot6 / 64), bAnswered))
+		{
+			return false;
+		}
+		OutCell = CellOf(Glyph.MinUV, Glyph.SliceIndex, 512, 256);
+		return true;
 	}
 
 #if WITH_FREETYPE
@@ -1461,6 +1487,565 @@ bool FDreamFontColorStrikeAdvanceTest::RunTest(const FString& Parameters)
 	const FDreamUICharData Quad = Emoji->GetGlyphData(Glyph.FaceIndex, Glyph.GlyphIndex, 32.0f, false);
 	TestTrue(TEXT("its quad is a colour glyph"), Quad.bColor && Quad.Width > 0.0f);
 	TestEqual(TEXT("which advances as the shaper says"), Quad.XAdvance, Glyph.XAdvance, 0.1f);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamFontCoverageHeldEpochTest,
+	"DreamGUI.Text.Font.RetiredCoverageCellsStayOutOfThePoolWhileATextHoldsTheirEpoch",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * A coverage flush retired its cells until the next frame packed anything, which is only safe when every text drawing from
+ * them paints again before that frame is drawn. A world that draws without ticking -- a play session paused from the
+ * editor -- does not, and went on sampling cells another world had zeroed or filled. Now the glyphs between two flushes are
+ * an epoch, a text holds the epoch it painted from, and a held epoch's cells stay out of the pool however many frames go
+ * by: a new coverage glyph takes a free cell, or a slice the atlas grows for it, never one of them.
+ */
+bool FDreamFontCoverageHeldEpochTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamFontDataTestLocal;
+	FScopedGameWorld TestWorld;
+	UDreamUISettings* Settings = GetMutableDefault<UDreamUISettings>();
+	const int32 SavedCells = Settings->MaxCoverageCells;
+	Settings->MaxCoverageCells = 1;
+	ON_SCOPE_EXIT { Settings->MaxCoverageCells = SavedCells; };
+	// A 512 atlas of four 256 cells; the field glyph takes the first.
+	UDreamUIFontData_DistanceField* Font = MakeCoverageFont(TestWorld.World, EDreamUIAtlasTextureSizeType::SIZE_512x512, EDreamUIAtlasTextureSizeType::SIZE_256x256);
+	if (!TestTrue(TEXT("Roboto loads"), Font->FaceHasCodepoint(0, 'A')))return false;
+	const uint32 GlyphA = Font->GetCharData('A', 64.0f, false).GlyphIndex;
+	const uint32 Epoch = Font->GetCoverageEpoch();
+	if (!TestTrue(TEXT("a font that draws from coverage has an epoch"), Epoch != 0))return false;
+
+	// Two glyphs of a cell each, the second past the one-cell budget: a flush at the end of the frame. A text drew from them.
+	FIntVector FirstCell, SecondCell;
+	if (!InjectCellSizedGlyph(*this, Font, GlyphA, 100 * 64, FirstCell) || !InjectCellSizedGlyph(*this, Font, GlyphA, 101 * 64, SecondCell))return false;
+	Font->MoveCoverageHold(0, Epoch);
+	NextFrame();
+	TestEqual(TEXT("the flush moved the epoch on"), Font->GetCoverageEpoch(), Epoch + 1);
+	FDreamUIFontMemoryInfo Memory;
+	Font->GetMemoryInfo(Memory);
+	TestEqual(TEXT("and retired both cells"), Memory.RetiredCoverageCells, 2);
+
+	// Frames go by and the text does not paint, as in a world that draws without ticking. New glyphs come -- into the free
+	// cell, then a slice the atlas grows for them, past another flush -- and none lands in a held cell.
+	for (int32 Frame = 1; Frame <= 3; Frame++)
+	{
+		NextFrame();
+		FIntVector Cell;
+		if (!InjectCellSizedGlyph(*this, Font, GlyphA, (101 + Frame) * 64, Cell))return false;
+		TestTrue(FString::Printf(TEXT("%d frames after the flush, a new coverage glyph is not in a held cell"), Frame), Cell != FirstCell && Cell != SecondCell);
+	}
+	Font->GetMemoryInfo(Memory);
+	TestTrue(FString::Printf(TEXT("the held cells are still retired (%d cells retired)"), Memory.RetiredCoverageCells), Memory.RetiredCoverageCells >= 2);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamFontCoverageLastHolderTest,
+	"DreamGUI.Text.Font.RetiredCoverageCellsGoBackOnceTheLastHolderLetsGo",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * Two texts drew from the cells of one flush. Once its frame has passed one of them paints again, from the next epoch; the
+ * other still holds the cells, so a new glyph takes the last free cell instead. When the other goes away -- or paints with
+ * no coverage -- the cells are back in the pool, and the next coverage glyph that needs a cell takes one of them rather than
+ * a new slice.
+ */
+bool FDreamFontCoverageLastHolderTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamFontDataTestLocal;
+	FScopedGameWorld TestWorld;
+	UDreamUISettings* Settings = GetMutableDefault<UDreamUISettings>();
+	const int32 SavedCells = Settings->MaxCoverageCells;
+	Settings->MaxCoverageCells = 1;
+	ON_SCOPE_EXIT { Settings->MaxCoverageCells = SavedCells; };
+	UDreamUIFontData_DistanceField* Font = MakeCoverageFont(TestWorld.World, EDreamUIAtlasTextureSizeType::SIZE_512x512, EDreamUIAtlasTextureSizeType::SIZE_256x256);
+	if (!TestTrue(TEXT("Roboto loads"), Font->FaceHasCodepoint(0, 'A')))return false;
+	const uint32 GlyphA = Font->GetCharData('A', 64.0f, false).GlyphIndex;
+	const uint32 Epoch = Font->GetCoverageEpoch();
+
+	FIntVector FirstCell, SecondCell;
+	if (!InjectCellSizedGlyph(*this, Font, GlyphA, 100 * 64, FirstCell) || !InjectCellSizedGlyph(*this, Font, GlyphA, 101 * 64, SecondCell))return false;
+	Font->MoveCoverageHold(0, Epoch);
+	Font->MoveCoverageHold(0, Epoch);
+	// The flush, then a frame later.
+	NextFrame();
+	NextFrame();
+
+	// The first text paints again, from the glyphs of the next epoch.
+	Font->MoveCoverageHold(Epoch, Font->GetCoverageEpoch());
+	FIntVector ThirdCell;
+	if (!InjectCellSizedGlyph(*this, Font, GlyphA, 102 * 64, ThirdCell))return false;
+	TestTrue(TEXT("one text still holds the cells: a new glyph takes the last free cell"), ThirdCell != FirstCell && ThirdCell != SecondCell);
+
+	// The other text goes away.
+	Font->MoveCoverageHold(Epoch, 0);
+	NextFrame();
+	FIntVector FourthCell;
+	if (!InjectCellSizedGlyph(*this, Font, GlyphA, 103 * 64, FourthCell))return false;
+	TestTrue(TEXT("let go of by the last text, the cells are back in the pool"), FourthCell == FirstCell || FourthCell == SecondCell);
+	TestEqual(TEXT("so the atlas did not grow"), Font->GetFontTexture()->GetArraySize(), 1);
+	FDreamUIFontMemoryInfo Memory;
+	Font->GetMemoryInfo(Memory);
+	TestEqual(TEXT("and nothing is retired any more"), Memory.RetiredCoverageCells, 0);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamFontCoverageCapTest,
+	"DreamGUI.Text.Font.PastTwiceTheCellBudgetNewCoverageGlyphsWaitForCellsToComeBack",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * Cells a text holds are not reused, so texts that never paint again could make a font take cell after cell. Live and
+ * retired cells together are capped at twice the budget: past it a glyph not made yet is not made -- it is answered
+ * pending, its text drawing the field quad meanwhile, and nothing is queued -- and that is said once. A glyph made already
+ * is still answered. While the cells stay held the frames end without a word; once the holder lets go, the frame ends with
+ * the cells back and the texts told, and the glyph asked for again is made.
+ */
+bool FDreamFontCoverageCapTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamFontDataTestLocal;
+	FScopedGameWorld TestWorld;
+	UDreamUISettings* Settings = GetMutableDefault<UDreamUISettings>();
+	const int32 SavedCells = Settings->MaxCoverageCells;
+	Settings->MaxCoverageCells = 1;
+	ON_SCOPE_EXIT { Settings->MaxCoverageCells = SavedCells; };
+	UDreamUIFontData_DistanceField* Font = MakeCoverageFont(TestWorld.World, EDreamUIAtlasTextureSizeType::SIZE_512x512, EDreamUIAtlasTextureSizeType::SIZE_256x256);
+	if (!TestTrue(TEXT("Roboto loads"), Font->FaceHasCodepoint(0, 'H')))return false;
+	const uint32 GlyphH = Font->GetCharData('H', 32.0f, false).GlyphIndex;
+	const uint32 GlyphE = Font->GetCharData('e', 32.0f, false).GlyphIndex;
+	const uint32 GlyphO = Font->GetCharData('o', 32.0f, false).GlyphIndex;
+	const uint32 Epoch = Font->GetCoverageEpoch();
+	int32 CoverageChanges = 0;
+	const FDelegateHandle CoverageHandle = Font->OnCoverageGlyphsChanged.AddLambda([&CoverageChanges]() { CoverageChanges++; });
+	ON_SCOPE_EXIT
+	{
+		Font->OnCoverageGlyphsChanged.Remove(CoverageHandle);
+	};
+
+	// Two cells for a flush to retire, held by a text.
+	FIntVector FirstCell, SecondCell;
+	if (!InjectCellSizedGlyph(*this, Font, GlyphH, 100 * 64, FirstCell) || !InjectCellSizedGlyph(*this, Font, GlyphH, 101 * 64, SecondCell))return false;
+	Font->MoveCoverageHold(0, Epoch);
+	NextFrame();
+	TestEqual(TEXT("the flush told the texts"), CoverageChanges, 1);
+
+	// Two cells retired and none live: at the cap, not past it. A real glyph is made, in the last free cell.
+	FDreamUICoverageGlyph Made;
+	if (!TestTrue(TEXT("at the cap a new glyph is still made"), Font->GetCoverageGlyph(0, GlyphH, 12 * 64, EDreamUICoverageGlyphFlags::None, Made) && !Made.bPending && Made.Width > 0))return false;
+
+	// Three cells now, past twice the one-cell budget.
+	AddExpectedMessagePlain(TEXT("more than twice their"), ELogVerbosity::Warning, EAutomationExpectedMessageFlags::Contains, 1);
+	const int32 Queued = Font->GetPendingAsyncGlyphCount();
+	FDreamUICoverageGlyph Refused;
+	TestTrue(TEXT("past the cap a new glyph is answered"), Font->GetCoverageGlyph(0, GlyphE, 12 * 64, EDreamUICoverageGlyphFlags::None, Refused));
+	TestTrue(TEXT("pending: its text draws the field quad meanwhile"), Refused.bPending);
+	FDreamUICoverageGlyph RefusedToo;
+	Font->GetCoverageGlyph(0, GlyphO, 12 * 64, EDreamUICoverageGlyphFlags::None, RefusedToo);
+	TestTrue(TEXT("so is the next one, and that is said once"), RefusedToo.bPending);
+	TestEqual(TEXT("nothing is queued for them"), Font->GetPendingAsyncGlyphCount(), Queued);
+	FDreamUICoverageGlyph MadeAgain;
+	TestTrue(TEXT("a glyph made already is still answered"), Font->GetCoverageGlyph(0, GlyphH, 12 * 64, EDreamUICoverageGlyphFlags::None, MadeAgain)
+		&& !MadeAgain.bPending && MadeAgain.MinUV == Made.MinUV);
+
+	// The holder does not paint: the frame ends with nothing given back, and nothing is said.
+	NextFrame();
+	TestEqual(TEXT("while the cells are held the texts are not told"), CoverageChanges, 1);
+	FDreamUICoverageGlyph StillRefused;
+	Font->GetCoverageGlyph(0, GlyphE, 12 * 64, EDreamUICoverageGlyphFlags::None, StillRefused);
+	TestTrue(TEXT("and the glyph is still not made"), StillRefused.bPending);
+
+	// It paints again with nothing from coverage, letting go: the frame ends with the cells back, and the texts that waited told.
+	Font->MoveCoverageHold(Epoch, 0);
+	NextFrame();
+	TestEqual(TEXT("the cells are back, and the texts are told to ask again"), CoverageChanges, 2);
+	FDreamUICoverageGlyph Later;
+	TestTrue(TEXT("asked again, the glyph is made"), Font->GetCoverageGlyph(0, GlyphE, 12 * 64, EDreamUICoverageGlyphFlags::None, Later) && !Later.bPending && Later.Width > 0);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamFontUnhintedCoverageGlyphTest,
+	"DreamGUI.Text.Font.AnUnhintedCoverageGlyphIsAGlyphOfItsOwnOnTheSpotAndFromTheWorker",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * EDreamUICoverageGlyphFlags::Unhinted asks for a glyph with the hinter off, whatever the font's own coverage hinting: the
+ * face a thin outline's effects copy is drawn under. It is cached apart from the hinted glyph, its texels are the
+ * rasterizer's with hinting None to the byte, and from the worker it comes back under the key it was asked by -- the key
+ * holds the hinting the raster is made with -- so a glyph that landed is found instead of waited for for ever.
+ */
+bool FDreamFontUnhintedCoverageGlyphTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamFontDataTestLocal;
+	FScopedGameWorld TestWorld;
+	UDreamUISettings* Settings = GetMutableDefault<UDreamUISettings>();
+	const bool bSavedAsync = Settings->bAsyncGlyphRasterization;
+	Settings->bAsyncGlyphRasterization = true;
+	ON_SCOPE_EXIT
+	{
+		Settings->bAsyncGlyphRasterization = bSavedAsync;
+		UDreamUIFontData_FreeTypeRender::SetAsyncGlyphSyncBudgetOverride(-1);
+	};
+	UDreamUIFontData_DistanceField* Font = MakeCoverageFont(TestWorld.World, EDreamUIAtlasTextureSizeType::SIZE_512x512, EDreamUIAtlasTextureSizeType::SIZE_256x256);
+	if (!TestTrue(TEXT("Roboto loads"), Font->FaceHasCodepoint(0, 'x')))return false;
+	const uint32 GlyphX = Font->GetCharData('x', 32.0f, false).GlyphIndex;
+	const int32 Size = 12 * 64;
+	FDreamUICoverageGlyph HintedGlyph, UnhintedGlyph;
+	if (!TestTrue(TEXT("x at 12 px is made hinted"), Font->GetCoverageGlyph(0, GlyphX, Size, EDreamUICoverageGlyphFlags::None, HintedGlyph) && !HintedGlyph.bPending)
+		|| !TestTrue(TEXT("and unhinted"), Font->GetCoverageGlyph(0, GlyphX, Size, EDreamUICoverageGlyphFlags::Unhinted, UnhintedGlyph) && !UnhintedGlyph.bPending))
+	{
+		return false;
+	}
+	TestTrue(TEXT("the unhinted glyph is one of its own in the atlas"), UnhintedGlyph.MinUV != HintedGlyph.MinUV || UnhintedGlyph.SliceIndex != HintedGlyph.SliceIndex);
+	TArray<uint8> HintedTexels, UnhintedTexels;
+	if (!TestTrue(TEXT("both are read back from the atlas"), Font->GetCoverageGlyphTexelsForTesting(HintedGlyph, HintedTexels) && Font->GetCoverageGlyphTexelsForTesting(UnhintedGlyph, UnhintedTexels)))return false;
+	TestTrue(TEXT("and it is another raster"), UnhintedTexels != HintedTexels || UnhintedGlyph.Width != HintedGlyph.Width || UnhintedGlyph.BitmapTop != HintedGlyph.BitmapTop);
+#if WITH_FREETYPE
+	FDreamGlyphCoverageParams Params;
+	Params.Size26Dot6 = Size;
+	Params.Hinting = EDreamGlyphHinting::None;
+	FDreamGlyphCoverageResult Expected;
+	if (TestTrue(TEXT("the rasterizer makes x with hinting None"), FDreamGlyphCoverage::Rasterize(Font->GetFreeTypeFace(0), GlyphX, Params, Expected)))
+	{
+		TestTrue(TEXT("the unhinted glyph has that raster's box"), UnhintedGlyph.Width == Expected.Width && UnhintedGlyph.Height == Expected.Height
+			&& UnhintedGlyph.BitmapLeft == Expected.Left && UnhintedGlyph.BitmapTop == Expected.Top);
+		TestTrue(TEXT("and its texels, to the byte"), UnhintedTexels == Expected.Pixels);
+	}
+#endif
+
+	// From the worker.
+	UDreamUIFontData_FreeTypeRender::SetAsyncGlyphSyncBudgetOverride(0);
+	FDreamUICoverageGlyph Pending;
+	if (!TestTrue(TEXT("x at 13 px unhinted is asked for"), Font->GetCoverageGlyph(0, GlyphX, 13 * 64, EDreamUICoverageGlyphFlags::Unhinted, Pending)))return false;
+	TestTrue(TEXT("and goes to the worker"), Pending.bPending);
+	TestEqual(TEXT("one glyph on the worker"), Font->GetPendingAsyncGlyphCount(), 1);
+	Font->WaitForAsyncGlyphs();
+	TestEqual(TEXT("landed, it is waited for no longer"), Font->GetPendingAsyncGlyphCount(), 0);
+	NextFrame();
+	FDreamUICoverageGlyph Landed;
+	TestTrue(TEXT("and the font answers it"), Font->GetCoverageGlyph(0, GlyphX, 13 * 64, EDreamUICoverageGlyphFlags::Unhinted, Landed) && !Landed.bPending && Landed.Width > 0);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamFontBitmapUndoTest,
+	"DreamGUI.Text.Font.UndoingAFallbackEditOnABitmapFontDrawsFromTheOldFaceAgain",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * An undo puts a font's properties back and names none of them, and the bitmap font only rebuilt its face table then: its
+ * glyph cache, worker, face metrics and code points stayed those of the fallback the undo took away, and its texts were not
+ * laid out again. It now opens again on such an edit, as the distance-field font does on every edit. Checked with a
+ * fallback swapped in a transaction and undone: the ideograph is the old fallback's glyph again, and face 1 measures as
+ * the old fallback does.
+ */
+bool FDreamFontBitmapUndoTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamFontDataTestLocal;
+#if WITH_EDITOR
+	if (GEditor == nullptr || GEditor->Trans == nullptr)
+	{
+		AddInfo(TEXT("No GEditor or no transaction buffer; undo is not testable here."));
+		return true;
+	}
+	FScopedGameWorld TestWorld;
+	UDreamUIFontData_Bitmap* Droid = MakeFileFont<UDreamUIFontData_Bitmap>(TestWorld.World, EngineFont(TEXT("DroidSansFallback.ttf")));
+	UDreamUIFontData_Bitmap* Arabic = MakeFileFont<UDreamUIFontData_Bitmap>(TestWorld.World, EngineFont(TEXT("NotoNaskhArabicUI-Regular.ttf")));
+	// Transactional, as an asset the editor edits is.
+	UDreamUIFontData_Bitmap* Font = NewObject<UDreamUIFontData_Bitmap>(TestWorld.World, NAME_None, RF_Transactional);
+	Font->SetFontFilePath(EngineFont(TEXT("Roboto-Regular.ttf")), false);
+	Font->InitFont();
+	Font->SetFallbackFonts({ Droid });
+	const uint32 Ideograph = 0x4E16;
+	const float Size = 32.0f;
+	const FDreamUICharData Before = Font->GetCharData(Ideograph, Size, false);
+	if (!TestTrue(TEXT("the ideograph comes from the CJK fallback"), Before.FaceIndex == 1 && Before.Width > 0.0f))return false;
+	float DroidAscent = 0.0f, DroidDescent = 0.0f, DroidLineHeight = 0.0f;
+	if (!TestTrue(TEXT("face 1 measures"), Font->GetFaceMetrics(1, Size, DroidAscent, DroidDescent, DroidLineHeight)))return false;
+
+	GEditor->BeginTransaction(FText::FromString(TEXT("Swap the fallback")));
+	Font->Modify();
+	Font->SetFallbackFonts({ Arabic });
+	GEditor->EndTransaction();
+	const FDreamUICharData Swapped = Font->GetCharData(Ideograph, Size, false);
+	TestTrue(TEXT("with the Arabic fallback the ideograph is not the CJK glyph"), Swapped.FaceIndex != 1 || Swapped.GlyphIndex != Before.GlyphIndex);
+	float ArabicAscent = 0.0f, ArabicDescent = 0.0f, ArabicLineHeight = 0.0f;
+	TestTrue(TEXT("face 1 measures as the Arabic face"), Font->GetFaceMetrics(1, Size, ArabicAscent, ArabicDescent, ArabicLineHeight));
+	if (!TestTrue(TEXT("whose line is not the CJK face's"), ArabicAscent != DroidAscent || ArabicDescent != DroidDescent || ArabicLineHeight != DroidLineHeight))return false;
+	const uint32 SwappedLayoutEpoch = Font->GetLayoutEpoch();
+
+	if (!TestTrue(TEXT("the swap undoes"), GEditor->UndoTransaction()))return false;
+	TestTrue(TEXT("the CJK fallback is back"), Font->GetFallbacks().Num() == 1 && Font->GetFallbacks()[0].Font.Get() == Droid);
+	TestNotEqual(TEXT("what was laid out against the Arabic face is not reused"), Font->GetLayoutEpoch(), SwappedLayoutEpoch);
+	const FDreamUICharData After = Font->GetCharData(Ideograph, Size, false);
+	TestEqual(TEXT("the ideograph comes from face 1 again"), After.FaceIndex, 1);
+	TestEqual(TEXT("as the CJK glyph"), After.GlyphIndex, Before.GlyphIndex);
+	TestEqual(TEXT("with its advance"), After.XAdvance, Before.XAdvance, 0.001f);
+	TestEqual(TEXT("and its quad"), After.Width, Before.Width, 0.001f);
+	float Ascent = 0.0f, Descent = 0.0f, LineHeight = 0.0f;
+	TestTrue(TEXT("face 1 measures again"), Font->GetFaceMetrics(1, Size, Ascent, Descent, LineHeight));
+	TestEqual(TEXT("as the CJK face: its ascent"), Ascent, DroidAscent, 0.001f);
+	TestEqual(TEXT("its descent"), Descent, DroidDescent, 0.001f);
+	TestEqual(TEXT("its line height"), LineHeight, DroidLineHeight, 0.001f);
+#endif
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamFontCodepointCacheIdentityTest,
+	"DreamGUI.Text.Font.TheCodepointCacheTellsTwoFontsWithTheSameFaceEpochApart",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * What each face was found to hold is kept per code point for the face as it is now, and that was checked by its font's
+ * face epoch alone. Two fonts opened as often have the same epoch number, so a fallback put back by something that resets
+ * nothing -- an undo restores the property and no more -- passed the check with the answers of the font before it: a CJK
+ * fallback said it had no ideograph because the Arabic one before it had none. The check is the face's identity, its font
+ * and its epoch together.
+ */
+bool FDreamFontCodepointCacheIdentityTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamFontDataTestLocal;
+	FScopedGameWorld TestWorld;
+	UDreamUIFontData_Bitmap* Droid = MakeFileFont<UDreamUIFontData_Bitmap>(TestWorld.World, EngineFont(TEXT("DroidSansFallback.ttf")));
+	UDreamUIFontData_Bitmap* Arabic = MakeFileFont<UDreamUIFontData_Bitmap>(TestWorld.World, EngineFont(TEXT("NotoNaskhArabicUI-Regular.ttf")));
+	const FDreamUIFontFaceIdentity DroidFace = Droid->GetFaceIdentity(0);
+	const FDreamUIFontFaceIdentity ArabicFace = Arabic->GetFaceIdentity(0);
+	if (!TestTrue(TEXT("both faces open"), DroidFace.IsValid() && ArabicFace.IsValid()))return false;
+	if (!TestEqual(TEXT("two fonts opened once have the same face epoch"), DroidFace.Epoch, ArabicFace.Epoch))return false;
+	TestFalse(TEXT("and are not the same face"), DroidFace == ArabicFace);
+
+	UDreamUIFontData_Bitmap* Font = MakeFileFont<UDreamUIFontData_Bitmap>(TestWorld.World, EngineFont(TEXT("Roboto-Regular.ttf")));
+	Font->SetFallbackFonts({ Arabic });
+	const uint32 Ideograph = 0x4E16;
+	TestFalse(TEXT("the Arabic fallback has no ideograph, which is kept"), Font->FaceHasCodepoint(1, Ideograph));
+
+	// The fallback's font is put back the way an undo puts a property back: nothing of the font's is reset.
+	FArrayProperty* FallbacksProperty = FindFProperty<FArrayProperty>(UDreamUIFontData_FreeTypeRender::StaticClass(), TEXT("Fallbacks"));
+	if (!TestNotNull(TEXT("the fallbacks are a property"), FallbacksProperty))return false;
+	TArray<FDreamUIFontFallback>& Entries = *FallbacksProperty->ContainerPtrToValuePtr<TArray<FDreamUIFontFallback>>(Font);
+	if (!TestEqual(TEXT("one fallback"), Entries.Num(), 1))return false;
+	Entries[0].Font = Droid;
+	TestTrue(TEXT("face 1 is the CJK face now, and answers for itself"), Font->FaceHasCodepoint(1, Ideograph));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamFontEmbeddedBytesCookTest,
+	"DreamGUI.Text.Font.CookingAnEmbeddedFontTakesItsBytesFromTheFile",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * A font that embeds its file (a custom font file not read from beside the game) carried whatever bytes the editor last
+ * saved with it -- older than the file, or none for an asset saved before the editor ever opened the font -- and a cooked
+ * game reads nothing else, so it could ship stale or draw no text without a word. The cook takes the bytes from the file
+ * when it is there, keeps what was saved when it is not, and names an asset left with none.
+ */
+bool FDreamFontEmbeddedBytesCookTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamFontDataTestLocal;
+#if WITH_EDITOR
+	FScopedGameWorld TestWorld;
+	const FString RobotoPath = EngineFont(TEXT("Roboto-Regular.ttf"));
+	const int64 FileSize = IFileManager::Get().FileSize(*RobotoPath);
+	if (!TestTrue(TEXT("Roboto is there"), FileSize > 0))return false;
+	FBoolProperty* ExternalProperty = FindFProperty<FBoolProperty>(UDreamUIFontData_FreeTypeRender::StaticClass(), TEXT("bUseExternalFileOrEmbedInToUAsset"));
+	FArrayProperty* BytesProperty = FindFProperty<FArrayProperty>(UDreamUIFontData_FreeTypeRender::StaticClass(), TEXT("FontBinaryArray"));
+	if (!TestTrue(TEXT("the embedding switch and the bytes are properties"), ExternalProperty != nullptr && BytesProperty != nullptr))return false;
+	// A font pointed at a file and set to embed it, and never opened: it carries what the asset was saved with.
+	auto MakeEmbeddedFont = [&TestWorld, ExternalProperty](const FString& InPath)
+	{
+		UDreamUIFontData_DistanceField* EmbeddedFont = NewObject<UDreamUIFontData_DistanceField>(TestWorld.World);
+		EmbeddedFont->SetFontFilePath(InPath, false);
+		ExternalProperty->SetPropertyValue_InContainer(EmbeddedFont, false);
+		return EmbeddedFont;
+	};
+	auto BytesOf = [BytesProperty](UDreamUIFontData_FreeTypeRender* InFont) -> TArray<uint8>&
+	{
+		return *BytesProperty->ContainerPtrToValuePtr<TArray<uint8>>(InFont);
+	};
+
+	UDreamUIFontData_DistanceField* Font = MakeEmbeddedFont(RobotoPath);
+	TestEqual(TEXT("never opened, it carries no bytes"), BytesOf(Font).Num(), 0);
+	Font->BeginCacheForCookedPlatformData(nullptr);
+	TestEqual(TEXT("the cook takes them from the file"), (int64)BytesOf(Font).Num(), FileSize);
+	BytesOf(Font) = { 1, 2, 3 };
+	Font->BeginCacheForCookedPlatformData(nullptr);
+	TestEqual(TEXT("bytes other than the file's are taken from it again"), (int64)BytesOf(Font).Num(), FileSize);
+
+	// No file: the bytes saved with the asset are all there is, and are kept; with none, the asset is named.
+	const FString MissingPath = FPaths::Combine(FPaths::ProjectIntermediateDir(), TEXT("DreamGUITests_NoSuchFont.ttf"));
+	UDreamUIFontData_DistanceField* Saved = MakeEmbeddedFont(MissingPath);
+	BytesOf(Saved) = { 1, 2, 3 };
+	Saved->BeginCacheForCookedPlatformData(nullptr);
+	TestEqual(TEXT("a missing file leaves the bytes saved with the asset"), BytesOf(Saved).Num(), 3);
+	UDreamUIFontData_DistanceField* Bare = MakeEmbeddedFont(MissingPath);
+	AddExpectedErrorPlain(TEXT("embeds its font file"), EAutomationExpectedErrorFlags::Contains, 1);
+	Bare->BeginCacheForCookedPlatformData(nullptr);
+	TestEqual(TEXT("and with none, it is cooked with none"), BytesOf(Bare).Num(), 0);
+#endif
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamFontMemoryInfoTest,
+	"DreamGUI.Text.Font.TheMemoryReportCountsTheAtlasItsCellsAndItsGlyphs",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * What DreamGUI.Memory reports of a font (GetMemoryInfo): its atlas's slices and their bytes on the GPU and in the CPU copy,
+ * its cells by use -- adding up to the slices' cells -- the glyphs cached of each kind, and the font file bytes the asset
+ * holds. Checked on a 512 atlas of four 256 cells with two field glyphs and a coverage glyph in it, and on a bitmap font.
+ */
+bool FDreamFontMemoryInfoTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamFontDataTestLocal;
+	FScopedGameWorld TestWorld;
+	UDreamUIFontData_DistanceField* Font = MakeCoverageFont(TestWorld.World, EDreamUIAtlasTextureSizeType::SIZE_512x512, EDreamUIAtlasTextureSizeType::SIZE_256x256);
+	if (!TestTrue(TEXT("Roboto loads"), Font->FaceHasCodepoint(0, 'H')))return false;
+	const FDreamUICharData FieldA = Font->GetCharData('A', 32.0f, false);
+	const FDreamUICharData FieldH = Font->GetCharData('H', 32.0f, false);
+	FDreamUICoverageGlyph Coverage;
+	if (!TestTrue(TEXT("two field glyphs and a coverage glyph are made"), FieldA.Width > 0.0f && FieldH.Width > 0.0f
+		&& Font->GetCoverageGlyph(0, FieldH.GlyphIndex, 12 * 64, EDreamUICoverageGlyphFlags::None, Coverage) && !Coverage.bPending))return false;
+
+	FDreamUIFontMemoryInfo Info;
+	Font->GetMemoryInfo(Info);
+	TestEqual(TEXT("one slice"), Info.AtlasSlices, 1);
+	TestEqual(TEXT("of 512 texels a side"), Info.AtlasSliceSize, 512);
+	TestEqual(TEXT("four bytes a texel"), Info.AtlasBytesPerTexel, 4);
+	TestEqual(TEXT("so this much on the GPU"), Info.AtlasGPUBytes, (int64)512 * 512 * 4);
+	TestTrue(FString::Printf(TEXT("and at least as much in the CPU copy (%lld bytes)"), Info.AtlasCPUBytes), Info.AtlasCPUBytes >= Info.AtlasGPUBytes);
+	TestEqual(TEXT("four cells"), Info.CellsTotal, 4);
+	TestEqual(TEXT("one the field glyphs fill"), Info.FieldCells, 1);
+	TestEqual(TEXT("one the coverage glyph is in"), Info.CoverageCells, 1);
+	TestEqual(TEXT("none retired"), Info.RetiredCoverageCells, 0);
+	TestEqual(TEXT("two free"), Info.FreeCells, 2);
+	TestEqual(TEXT("two field glyphs cached"), Info.FieldGlyphs, 2);
+	TestEqual(TEXT("one coverage glyph"), Info.CoverageGlyphs, 1);
+	TestEqual(TEXT("no colour glyph"), Info.ColorGlyphs, 0);
+	const int64 FileSize = IFileManager::Get().FileSize(*EngineFont(TEXT("Roboto-Regular.ttf")));
+	TestTrue(FString::Printf(TEXT("the font holds its file's bytes (%lld bytes, the file %lld)"), Info.FaceBytes, FileSize), FileSize > 0 && Info.FaceBytes >= FileSize);
+
+	UDreamUIFontData_Bitmap* Bitmap = MakeFileFont<UDreamUIFontData_Bitmap>(TestWorld.World, EngineFont(TEXT("Roboto-Regular.ttf")));
+	const FDreamUICharData BitmapGlyph = Bitmap->GetCharData('A', 16.0f, false);
+	FDreamUIFontMemoryInfo BitmapInfo;
+	Bitmap->GetMemoryInfo(BitmapInfo);
+	TestTrue(TEXT("a bitmap font reports its atlas too"), BitmapGlyph.Width > 0.0f && BitmapInfo.AtlasSlices >= 1 && BitmapInfo.AtlasGPUBytes > 0 && BitmapInfo.AtlasCPUBytes > 0);
+	TestEqual(TEXT("and its glyph"), BitmapInfo.FieldGlyphs, 1);
+	TestEqual(TEXT("and no coverage cell"), BitmapInfo.CoverageCells, 0);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamFontCoverageCountersTest,
+	"DreamGUI.Text.Font.CoverageWorkIsCounted",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * The render stats count what small-text coverage costs a font, which the benchmark's phases with coverage on and off
+ * compare: every coverage glyph asked for, those rasterized on the spot and those queued for the worker, the coverage
+ * flushes, and the bytes of atlas sent to the GPU.
+ */
+bool FDreamFontCoverageCountersTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamFontDataTestLocal;
+	FScopedGameWorld TestWorld;
+	UDreamUISettings* Settings = GetMutableDefault<UDreamUISettings>();
+	const bool bSavedAsync = Settings->bAsyncGlyphRasterization;
+	const int32 SavedCells = Settings->MaxCoverageCells;
+	Settings->bAsyncGlyphRasterization = true;
+	ON_SCOPE_EXIT
+	{
+		Settings->bAsyncGlyphRasterization = bSavedAsync;
+		Settings->MaxCoverageCells = SavedCells;
+		UDreamUIFontData_FreeTypeRender::SetAsyncGlyphSyncBudgetOverride(-1);
+	};
+	UDreamUIFontData_DistanceField* Font = MakeCoverageFont(TestWorld.World, EDreamUIAtlasTextureSizeType::SIZE_512x512, EDreamUIAtlasTextureSizeType::SIZE_256x256);
+	if (!TestTrue(TEXT("Roboto loads"), Font->FaceHasCodepoint(0, 'H')))return false;
+	const uint32 GlyphH = Font->GetCharData('H', 32.0f, false).GlyphIndex;
+	auto CounterOf = [](const DreamUIRenderStats::FSnapshot& InSnapshot, DreamUIRenderStats::ECounter InCounter)
+	{
+		return InSnapshot.Counters[static_cast<int32>(InCounter)];
+	};
+
+	// The counters are the process's: a frame end first, so that coverage work another test's font left asked for (a
+	// flush, glyphs on the worker) is done and counted before the count starts, not in this test's frame.
+	NextFrame();
+	DreamUIRenderStats::TakeSnapshot(/*bInReset*/ true);
+	FDreamUICoverageGlyph Glyph;
+	Font->GetCoverageGlyph(0, GlyphH, 12 * 64, EDreamUICoverageGlyphFlags::None, Glyph);
+	Font->GetCoverageGlyph(0, GlyphH, 12 * 64, EDreamUICoverageGlyphFlags::None, Glyph);
+	UDreamUIFontData_FreeTypeRender::SetAsyncGlyphSyncBudgetOverride(0);
+	Font->GetCoverageGlyph(0, GlyphH, 13 * 64, EDreamUICoverageGlyphFlags::None, Glyph);
+	Font->WaitForAsyncGlyphs();
+	UDreamUIFontData_FreeTypeRender::SetAsyncGlyphSyncBudgetOverride(MAX_int32);
+	const DreamUIRenderStats::FSnapshot Asked = DreamUIRenderStats::TakeSnapshot(/*bInReset*/ true);
+	TestEqual(TEXT("every coverage glyph asked for is a lookup"), CounterOf(Asked, DreamUIRenderStats::ECounter::CoverageGlyphLookups), (int64)3);
+	TestEqual(TEXT("one was rasterized on the spot"), CounterOf(Asked, DreamUIRenderStats::ECounter::CoverageRastersSync), (int64)1);
+	TestEqual(TEXT("and one queued for the worker"), CounterOf(Asked, DreamUIRenderStats::ECounter::CoverageJobs), (int64)1);
+
+	// A flush -- two glyphs of a cell each, past a one-cell budget -- at the end of the frame, and the uploads that go with it.
+	Settings->MaxCoverageCells = 1;
+	const TArray<uint8> Pixels = MakeCoveragePixels(200, 200);
+	Font->InjectCoverageGlyphForTesting(0, GlyphH, 100 * 64, EDreamUICoverageGlyphFlags::None, 200, 200, 0, 150, Pixels);
+	Font->InjectCoverageGlyphForTesting(0, GlyphH, 101 * 64, EDreamUICoverageGlyphFlags::None, 200, 200, 0, 150, Pixels);
+	NextFrame();
+	const DreamUIRenderStats::FSnapshot Flushed = DreamUIRenderStats::TakeSnapshot(/*bInReset*/ true);
+	TestEqual(TEXT("the flush is counted"), CounterOf(Flushed, DreamUIRenderStats::ECounter::CoverageFlushes), (int64)1);
+	if (Font->GetFontTexture()->GetResource() != nullptr)
+	{
+		TestTrue(TEXT("and the glyphs sent to the GPU with it, in bytes"), CounterOf(Flushed, DreamUIRenderStats::ECounter::FontAtlasUploadBytes) >= (int64)200 * 200 * 4);
+	}
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamFontSmallTextConsoleVariablesTest,
+	"DreamGUI.Text.Font.TheSmallTextConsoleVariablesReachEveryFont",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * The A/B switches for small text are console variables: DreamGUI.Text.SmallTextCoverage (-1 the project's choice, 0 off, 1
+ * on) and DreamGUI.Text.SmallTextMaxPixelSize (above 0, the size limit). A font asks the project through them, so they reach
+ * every font that inherits the project's choice; 0 turns off a font set On as well, and a font's own size limit is still
+ * its own.
+ */
+bool FDreamFontSmallTextConsoleVariablesTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamFontDataTestLocal;
+	IConsoleVariable* CoverageVariable = IConsoleManager::Get().FindConsoleVariable(TEXT("DreamGUI.Text.SmallTextCoverage"));
+	IConsoleVariable* MaxSizeVariable = IConsoleManager::Get().FindConsoleVariable(TEXT("DreamGUI.Text.SmallTextMaxPixelSize"));
+	if (!TestTrue(TEXT("both console variables exist"), CoverageVariable != nullptr && MaxSizeVariable != nullptr))return false;
+	const FString SavedCoverage = CoverageVariable->GetString();
+	const FString SavedMaxSize = MaxSizeVariable->GetString();
+	ON_SCOPE_EXIT
+	{
+		CoverageVariable->Set(*SavedCoverage, ECVF_SetByCode);
+		MaxSizeVariable->Set(*SavedMaxSize, ECVF_SetByCode);
+	};
+	FScopedGameWorld TestWorld;
+	// One font set On, one that inherits the project's choice and has no size limit of its own.
+	UDreamUIFontData_DistanceField* OnFont = MakeCoverageFont(TestWorld.World, EDreamUIAtlasTextureSizeType::SIZE_512x512, EDreamUIAtlasTextureSizeType::SIZE_256x256);
+	UDreamUIFontData_DistanceField* InheritingFont = MakeFieldFont(TestWorld.World, TEXT("Roboto-Regular.ttf"));
+
+	CoverageVariable->Set(TEXT("0"), ECVF_SetByCode);
+	TestFalse(TEXT("0 turns coverage off for a font set On"), OnFont->SupportsCoverageGlyphs());
+	TestFalse(TEXT("and for a font that inherits"), InheritingFont->SupportsCoverageGlyphs());
+	CoverageVariable->Set(TEXT("1"), ECVF_SetByCode);
+	TestTrue(TEXT("1 turns it on for a font set On"), OnFont->SupportsCoverageGlyphs());
+	TestTrue(TEXT("and for a font that inherits"), InheritingFont->SupportsCoverageGlyphs());
+	CoverageVariable->Set(TEXT("-1"), ECVF_SetByCode);
+	TestTrue(TEXT("-1 leaves a font set On on"), OnFont->SupportsCoverageGlyphs());
+	TestEqual(TEXT("and a font that inherits with the project"), InheritingFont->SupportsCoverageGlyphs(), (bool)UDreamGUISettings::Get()->bSmallTextCoverage);
+
+	MaxSizeVariable->Set(TEXT("15"), ECVF_SetByCode);
+	TestEqual(TEXT("a size limit from the console reaches a font with none of its own"), InheritingFont->GetCoverageMaxPixelSize(), 15.0f);
+	MaxSizeVariable->Set(TEXT("0"), ECVF_SetByCode);
+	TestEqual(TEXT("0 leaves it to the project"), InheritingFont->GetCoverageMaxPixelSize(), UDreamGUISettings::Get()->SmallTextMaxPixelSize);
 	return true;
 }
 

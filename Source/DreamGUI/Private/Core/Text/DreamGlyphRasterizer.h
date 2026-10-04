@@ -42,7 +42,10 @@ public:
 		float PixelsPerEm = 0.0f;
 		float SpreadPixels = 0.0f;
 		float BoldPixels = 0.0f;
-		/** Coverage: the raster's parameters, and the flags the font's coverage cache keyed the request by. */
+		/**
+		 * Coverage: the raster's parameters, and the flags the font's coverage cache keyed the request by. The cache's key takes
+		 * its hinting from Coverage.Hinting -- None for an Unhinted glyph, whatever the font's -- so a result finds its request.
+		 */
 		FDreamGlyphCoverageParams Coverage;
 		EDreamUICoverageGlyphFlags CoverageFlags = EDreamUICoverageGlyphFlags::None;
 		/** Color: the size bucket the font's colour cache keyed the request by, and the padding reach. */

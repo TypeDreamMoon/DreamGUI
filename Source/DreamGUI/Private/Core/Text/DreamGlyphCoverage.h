@@ -21,7 +21,10 @@ enum class EDreamGlyphHinting : uint8
 	Auto,
 	/** FT_LOAD_TARGET_LIGHT | FT_LOAD_FORCE_AUTOHINT for every face but a tricky one, which FreeType keeps on its own bytecode. */
 	Autohint,
-	/** FT_LOAD_NO_HINTING: the outline at its exact size. */
+	/**
+	 * FT_LOAD_NO_HINTING: the outline at its exact size, where the field glyph has it. What an Unhinted coverage glyph
+	 * (EDreamUICoverageGlyphFlags::Unhinted) is made with, whatever the font's own setting: the same phases, box and placement.
+	 */
 	None,
 };
 

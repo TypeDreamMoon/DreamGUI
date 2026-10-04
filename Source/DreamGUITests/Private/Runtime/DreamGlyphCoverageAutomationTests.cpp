@@ -331,6 +331,47 @@ namespace DreamGlyphCoverageTestLocal
 
 	/** The 1/64 px FreeType keeps an outline to, and the 8-bit coverage an edge is read back through on each side. */
 	constexpr float EdgeTolerance = 1.0f / 64.0f + 2.0f / 255.0f;
+
+	/**
+	 * Where a glyph's unhinted outline has its ink, in pixels right of the pen's column and above the baseline: FreeType's own
+	 * fill of the outline at eight times the size, its ink-weighted centre scaled back down -- the outline's centre to within a
+	 * small fraction of a pixel, where a fill at the size itself would count each edge pixel's ink at the pixel's centre.
+	 */
+	bool OutlineInkCentre(FT_Face Face, uint32 Codepoint, int32 Size26Dot6, double& OutX, double& OutY)
+	{
+		constexpr int32 Oversample = 8;
+		if (FT_Set_Char_Size(Face, 0, (FT_F26Dot6)Size26Dot6 * Oversample, 72, 72) != 0
+			|| FT_Load_Glyph(Face, FT_Get_Char_Index(Face, Codepoint), UnhintedLoad) != 0
+			|| FT_Render_Glyph(Face->glyph, FT_RENDER_MODE_NORMAL) != 0)
+		{
+			return false;
+		}
+		const FT_Bitmap& Bitmap = Face->glyph->bitmap;
+		const int32 Width = (int32)Bitmap.width;
+		TArray<uint8> Row;
+		Row.SetNumZeroed(FMath::Max(Width, 1));
+		double Ink = 0.0;
+		double MomentX = 0.0;
+		double MomentY = 0.0;
+		for (int32 y = 0; y < (int32)Bitmap.rows; y++)
+		{
+			UDreamUIFontData_FreeTypeRender::ReadGlyphRow(Bitmap, y, Row.GetData(), Width);
+			for (int32 x = 0; x < Width; x++)
+			{
+				const double Coverage = Row[x] / 255.0;
+				Ink += Coverage;
+				MomentX += (Face->glyph->bitmap_left + x + 0.5) * Coverage;
+				MomentY += (Face->glyph->bitmap_top - y - 0.5) * Coverage;
+			}
+		}
+		if (Ink <= 0.0)
+		{
+			return false;
+		}
+		OutX = MomentX / Ink / Oversample;
+		OutY = MomentY / Ink / Oversample;
+		return true;
+	}
 #endif
 }
 
@@ -724,6 +765,65 @@ bool FDreamGlyphCoverageNoOutlineTest::RunTest(const FString& Parameters)
 	const uint32 Grinning = FT_Get_Char_Index(Emoji.Face, 0x1F600);
 	TestTrue(TEXT("NotoColorEmoji has U+1F600"), Grinning != 0);
 	TestFalse(TEXT("a glyph of a strike font is no coverage glyph"), FDreamGlyphCoverage::Rasterize(Emoji.Face, Grinning, MakeParams(12 * 64), Glyph));
+#else
+	AddInfo(TEXT("Built without FreeType: no coverage glyphs."));
+#endif
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamGlyphCoverageUnhintedTest,
+	"DreamGUI.Text.GlyphCoverage.AnUnhintedGlyphHasItsInkWhereTheFieldGlyphHasIt",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * Small text with a thin outline draws its face from an unhinted coverage glyph (EDreamUICoverageGlyphFlags::Unhinted, which
+ * the font rasterizes with hinting None) over the field's effects copy, so the face has to sit where the field glyph does.
+ * The field is made from the unhinted outline (FDreamGlyphSdf), so that is the reference: FreeType's fill of the outline at
+ * eight times the size, its ink centre scaled back. The unhinted glyph's unmoved phase has its ink centre there within
+ * 0.15 px, across and up. The hinted glyph of an x or an H, its x-height or cap height snapped to a row, is another raster:
+ * the flag changes what is drawn. Latin from Roboto and CJK from DroidSansFallback, at sizes small text is drawn at.
+ */
+bool FDreamGlyphCoverageUnhintedTest::RunTest(const FString& Parameters)
+{
+#if WITH_FREETYPE
+	using namespace DreamGlyphCoverageTestLocal;
+	FTestFace Roboto(EngineFont(TEXT("Roboto-Regular.ttf")));
+	FTestFace Droid(EngineFont(TEXT("DroidSansFallback.ttf")));
+	if (!TestTrue(TEXT("Roboto and DroidSansFallback open"), Roboto.Face != nullptr && Droid.Face != nullptr))return false;
+
+	struct FCase
+	{
+		FT_Face Face;
+		uint32 Codepoint;
+		/** Roboto's x-height (0.528 em) and cap height (0.711 em) are no whole pixel at any of the sizes: hinting moves the top. */
+		bool bHintingMovesTop;
+	};
+	const FCase Cases[] = {
+		{ Roboto.Face, 'x', true }, { Roboto.Face, 'H', true }, { Roboto.Face, 'e', false }, { Roboto.Face, 'g', false },
+		{ Droid.Face, 0x4E16, false },
+	};
+	for (const int32 Pixels : { 10, 12, 14, 16 })
+	{
+		for (const FCase& Case : Cases)
+		{
+			const FString What = FString::Printf(TEXT("U+%04X at %d px"), Case.Codepoint, Pixels);
+			FDreamGlyphCoverageResult Hinted, Unhinted;
+			if (!RasterizeCodepoint(*this, What, Case.Face, Case.Codepoint, MakeParams(Pixels * 64), Hinted)
+				|| !RasterizeCodepoint(*this, What + TEXT(" unhinted"), Case.Face, Case.Codepoint, MakeParams(Pixels * 64, EDreamGlyphHinting::None), Unhinted))continue;
+			if (Case.bHintingMovesTop)
+			{
+				TestTrue(FString::Printf(TEXT("%s: the unhinted raster is not the hinted one"), *What),
+					Unhinted.Pixels != Hinted.Pixels || Unhinted.Width != Hinted.Width || Unhinted.Top != Hinted.Top);
+			}
+			double OutlineX = 0.0, OutlineY = 0.0;
+			if (!TestTrue(FString::Printf(TEXT("%s: FreeType fills the outline at eight times the size"), *What), OutlineInkCentre(Case.Face, Case.Codepoint, Pixels * 64, OutlineX, OutlineY)))continue;
+			const double InkX = CentroidX(Unhinted, 0);
+			const double InkY = CentroidY(Unhinted, 0);
+			TestTrue(FString::Printf(TEXT("%s: the unhinted ink's centre is %.3f px across, the outline's %.3f"), *What, InkX, OutlineX), FMath::Abs(InkX - OutlineX) <= 0.15);
+			TestTrue(FString::Printf(TEXT("%s: and %.3f px up, the outline's %.3f"), *What, InkY, OutlineY), FMath::Abs(InkY - OutlineY) <= 0.15);
+		}
+	}
 #else
 	AddInfo(TEXT("Built without FreeType: no coverage glyphs."));
 #endif
