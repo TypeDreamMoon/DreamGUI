@@ -8,6 +8,13 @@ the next -- what loads differently, which defaults moved, what C++ has to change
 
 ### New
 
+- **Components by a short name in `.dui`.** `@Row Row1 { }` is a node whose type the `Asset` entry `Row` of a
+  `resources` block names -- this file's, or one a `use` brought in -- so a family of components is named once in the
+  library that styles it and each screen writes `@Row` instead of the asset path on every line. An entry that is
+  missing, is not an `Asset`, or names no user widget is reported as such.
+- **Render-transform tweens.** `UDreamWidget::RenderTranslationTo`, `RenderOffsetTo` (on the canvas plane, depth
+  kept), `RenderScaleTo` and `RenderAngleTo` move, scale and turn what is drawn and never the layout: the tweens for a
+  widget a panel places, whose anchored position and size the panel writes back on its next pass.
 - **A control can refuse the focus ring.** `UUISelectable::bUseFocusRing` (on by default; `SetUseFocusRing` at run
   time) turns the project's ring off for a control whose own look marks its focus. The focus moving onto such a
   control takes the ring away instead of leaving it on the control it came from, and a screen whose controls all

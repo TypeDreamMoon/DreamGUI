@@ -1881,19 +1881,28 @@ namespace DreamUIText
 
 		bool ParseNode(FDreamUINode& OutNode)
 		{
-			if (!Check(ETokenKind::Identifier) && !Check(ETokenKind::AssetPath))
+			// `@Row` -- a widget class named once, as an Asset entry of a resources block (this file's or one a `use` brought
+			// in), and used by that short name: how a family of components is written without its asset paths. Kept as
+			// written, '@' included, and located at the '@', where the patcher finds the line beginning; the builder
+			// resolves it (ResolveNodeClasses).
+			const bool bResourceType = Check(ETokenKind::At) && Peek(1).Kind == ETokenKind::Identifier;
+			if (!bResourceType && !Check(ETokenKind::Identifier) && !Check(ETokenKind::AssetPath))
 			{
 				RaiseUnexpectedToken(TEXT("expected a node type or a property name"));
 				RecoverToStatementBoundary();
 				return false;
 			}
 
+			const FDreamUISourceLocation TypeLocation = Current().Location;
+			if (bResourceType)
+			{
+				Advance(); // '@'
+			}
 			const FToken& TypeToken = Current();
 			OutNode.Kind = EDreamUINodeKind::Widget;
-			OutNode.TypeName = TypeToken.Text;
-			OutNode.Location = TypeToken.Location;
-			FString TypeName = TypeToken.Text;
-			const FDreamUISourceLocation TypeLocation = TypeToken.Location;
+			OutNode.TypeName = bResourceType ? TEXT("@") + TypeToken.Text : TypeToken.Text;
+			OutNode.Location = TypeLocation;
+			FString TypeName = OutNode.TypeName;
 			Advance();
 
 			// `Native.Toggle` -- a scoped tag, resolved through the widget registry. The lexer hands
@@ -1902,7 +1911,7 @@ namespace DreamUIText
 			// they are joined here rather than taught to the lexer. LooksLikeProperty has already
 			// ruled out the property reading before ParseNode is entered. One dot only: a second
 			// segment has no meaning the registry knows.
-			if (Check(ETokenKind::Dot) && Peek(1).Kind == ETokenKind::Identifier)
+			if (!bResourceType && Check(ETokenKind::Dot) && Peek(1).Kind == ETokenKind::Identifier)
 			{
 				Advance();
 				TypeName = FString::Printf(TEXT("%s.%s"), *TypeName, *Current().Text);
@@ -2078,6 +2087,17 @@ namespace DreamUIText
 			}
 			if (Check(ETokenKind::At))
 			{
+				// `@slot Padding = ...` annotates this node's slot; `@Row Row1 { }` is a child whose type an Asset entry of a
+				// resources block names (ParseNode). `slot` is a keyword, so no resource it could name is ever meant.
+				if (Peek(1).Kind == ETokenKind::Identifier && Peek(1).Text != TEXT("slot"))
+				{
+					FDreamUINode Child;
+					if (ParseNode(Child))
+					{
+						OutNode.Children.Add(MoveTemp(Child));
+					}
+					return;
+				}
 				ParseSlotProperty(OutNode);
 				return;
 			}

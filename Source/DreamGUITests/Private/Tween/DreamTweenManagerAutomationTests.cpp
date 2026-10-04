@@ -162,7 +162,7 @@ bool FDreamTweenManagerRestartFromCompletionTest::RunTest(const FString& Paramet
 		TestEqual(FString::Printf(TEXT("%s: the handler restarted it"), Kind), *Restarts, 1);
 		// The step went on to report "finished" after the handler ran, and the manager retired the tween it had
 		// just restarted -- or, held, paused it again -- leaving the value at the start for good.
-		TestTrue(FString::Printf(TEXT("%s: it is still in the manager"), Kind), Manager->IsTweening(Tween));
+		TestTrue(*FString::Printf(TEXT("%s: it is still in the manager"), Kind), Manager->IsTweening(Tween));
 		TestEqual(FString::Printf(TEXT("%s: back at its start"), Kind), *Value.Value, 0.0f, 0.001f);
 		Manager->ManualTick(0.25f);
 		TestEqual(FString::Printf(TEXT("%s: and running again from there"), Kind), *Value.Value, 0.5f, 0.001f);
@@ -537,6 +537,62 @@ bool FDreamTweenManagerMaxStepTest::RunTest(const FString& Parameters)
 	TestEqual(TEXT("A manual tick is never capped"), *ManualValue.Value, 0.3f, 0.001f);
 	Tween->Kill();
 	Manual->Kill();
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamWidgetRenderTweensTest,
+	"DreamGUI.Tween.Widget.TheRenderTransformTweensMoveScaleAndTurnWhatIsDrawnAndNotTheLayout",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamWidgetRenderTweensTest::RunTest(const FString& Parameters)
+{
+	/*
+	 * A widget a panel places can only be animated through its render transform: the panel writes its layout back on the
+	 * next pass. RenderOffsetTo slides on the canvas plane (x right, y up) and keeps the translation's depth,
+	 * RenderTranslationTo moves in local space, RenderScaleTo and RenderAngleTo scale and turn; none of them touches the
+	 * anchored position.
+	 */
+	DreamTests::FScopedGameInstanceWorld TestWorld;
+	UWorld* World = TestWorld.World;
+	UDreamTweenManager* Manager = UDreamTweenManager::GetDreamTweenInstance(World);
+	if (!TestNotNull(TEXT("The world has a tween manager"), Manager))
+	{
+		return false;
+	}
+	UDreamWidget* Widget = NewObject<UDreamWidget>(World);
+	Widget->SetRenderTranslation(FVector(3.0, 0.0, 0.0));
+	const FVector2D AnchoredBefore = Widget->GetAnchoredPosition();
+	World->DeltaTimeSeconds = 0.5f;
+	World->DeltaRealTimeSeconds = 0.5f;
+
+	UDreamTweener* Offset = Widget->RenderOffsetTo(FVector2D(10.0, -20.0), 1.0f, 0.0f, EDreamTweenEase::Linear);
+	UDreamTweener* Scale = Widget->RenderScaleTo(FVector(1.0, 0.0, 2.0), 1.0f, 0.0f, EDreamTweenEase::Linear);
+	UDreamTweener* Angle = Widget->RenderAngleTo(90.0f, 1.0f, 0.0f, EDreamTweenEase::Linear);
+	if (!TestNotNull(TEXT("an offset tween"), Offset) || !TestNotNull(TEXT("a scale tween"), Scale)
+		|| !TestNotNull(TEXT("an angle tween"), Angle))
+	{
+		return false;
+	}
+	Manager->Tick(EDreamTweenTickType::DuringPhysics, 0.5f);
+	TestTrue(*FString::Printf(TEXT("halfway, the offset is half of (10, -20) on the plane and the depth kept: %s"),
+		*Widget->GetRenderTranslation().ToString()), Widget->GetRenderTranslation().Equals(FVector(3.0, 5.0, -10.0), 0.01));
+	TestTrue(*FString::Printf(TEXT("the scale halfway to (1, 0, 2): %s"), *Widget->GetRenderScale().ToString()),
+		Widget->GetRenderScale().Equals(FVector(1.0, 0.5, 1.5), 0.01));
+	TestEqual(TEXT("the angle halfway to 90"), Widget->GetRenderTransformAngle(), 45.0f, 0.01f);
+	TestTrue(TEXT("and the layout has not moved"), Widget->GetAnchoredPosition().Equals(AnchoredBefore));
+
+	Offset->Kill();
+	UDreamTweener* Translation = Widget->RenderTranslationTo(FVector(1.0, 0.0, 0.0), 1.0f, 0.0f, EDreamTweenEase::Linear);
+	if (!TestNotNull(TEXT("a translation tween"), Translation))
+	{
+		return false;
+	}
+	Manager->Tick(EDreamTweenTickType::DuringPhysics, 0.5f);
+	TestTrue(*FString::Printf(TEXT("the translation halfway from (3, 5, -10) to (1, 0, 0): %s"), *Widget->GetRenderTranslation().ToString()),
+		Widget->GetRenderTranslation().Equals(FVector(2.0, 2.5, -5.0), 0.01));
+	TestEqual(TEXT("and the angle done"), Widget->GetRenderTransformAngle(), 90.0f, 0.01f);
+	Translation->Kill();
 	return true;
 }
 
