@@ -257,7 +257,7 @@ namespace DreamUISymbolExportLocal
 			TEXT("class"), TEXT("use"), TEXT("as"), TEXT("resources"), TEXT("style"), TEXT("timeline"), TEXT("external"),
 			TEXT("props"), TEXT("events"),
 			// inside a node
-			TEXT("slot"), TEXT("default"), TEXT("for"), TEXT("each"), TEXT("in"), TEXT("if"), TEXT("else"), TEXT("was"),
+			TEXT("slot"), TEXT("default"), TEXT("for"), TEXT("each"), TEXT("in"), TEXT("rows"), TEXT("if"), TEXT("else"), TEXT("was"),
 			// after an arrow, and inside a timeline
 			TEXT("emit"), TEXT("ease"), TEXT("duration"), TEXT("loop"),
 		};

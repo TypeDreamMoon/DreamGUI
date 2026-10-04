@@ -1058,6 +1058,24 @@ namespace DreamUIPatchLocal
 		OutDiagnostics.AddError(EDreamUIDiagnosticCode::PatchTargetNotFound, InLocation, MoveTemp(InMessage));
 	}
 
+	/**
+	 * A `rows` line asked for something only a node header could give: a value outside its columns, a slot line, a `+`
+	 * block, or a place in the structure. Said rather than attempted -- the row's "header" is a run of values, and the
+	 * edit would have to invent the line it needs inside a table.
+	 */
+	void RefuseRowLine(FDreamUIDiagnosticBag& OutDiagnostics, const FDreamUINode& InRow, const FString& InWhat)
+	{
+		OutDiagnostics.AddError(EDreamUIDiagnosticCode::PatchSyntaxNotWritable, InRow.Location,
+			FString::Printf(TEXT("%s: '%s' is a line of a 'rows' table, which spells only its columns -- write it in the text (the table's style, or a block at the end of that line)"),
+				*InWhat, *InRow.Id));
+	}
+
+	/** True when InNode holds a `rows` table: a place the designer cannot put a node beside without landing inside it. */
+	bool HoldsRows(const FDreamUINode& InNode)
+	{
+		return InNode.Children.ContainsByPredicate([](const FDreamUINode& InChild) { return !InChild.RowKey.IsEmpty(); });
+	}
+
 	void RefuseStale(FDreamUIDiagnosticBag& OutDiagnostics, const FDreamUISourceLocation& InLocation, FString InMessage)
 	{
 		OutDiagnostics.AddError(EDreamUIDiagnosticCode::SourceFileChangedUnderEdit, InLocation,
@@ -1433,7 +1451,10 @@ namespace DreamUIPatchLocal
 		// A slot property starts at its '@' when it has a line of its own, and at its name when it stands inside a
 		// `@slot { … }` block -- the block's '@' speaks for every line in it. Either is the statement the tree located.
 		const int32 NameOffset = OffsetOf(InText, InProperty.Location);
-		const bool bNameAgrees = TextAtIs(InText, NameOffset, FirstSegmentOf(InProperty.Name))
+		// A `rows` cell has no name in the text -- its column is written once, in the table's header -- and its
+		// location IS its value, which the slice check below holds to the tree as it does any value.
+		const bool bNameAgrees = InProperty.bRowCell
+			|| TextAtIs(InText, NameOffset, FirstSegmentOf(InProperty.Name))
 			|| (bInSlotNotation && TextAtIs(InText, NameOffset, TEXT("@")));
 		if (!bNameAgrees)
 		{
@@ -1914,6 +1935,29 @@ namespace DreamUIPatchLocal
 				OutSplices, InOutOrder, OutDiagnostics);
 		}
 
+		if (InEdit.Target != EDreamUIPatchTarget::Style)
+		{
+			// A `rows` line: what stands where a header would is a run of values, so the header resolution below has
+			// nothing to read. A column is replaced in its cell, and a property the line's own block spells where it
+			// stands; anything else has no line in this file to land on.
+			const FDreamUINode* Row = FindNodeById(InAst, InEdit.NodeId);
+			if (Row != nullptr && !Row->RowKey.IsEmpty())
+			{
+				const FDreamUIProperty* Spelled = InEdit.Target == EDreamUIPatchTarget::Node
+					? FindProperty(Row->Properties, InEdit.PropertyName) : nullptr;
+				if (Spelled == nullptr || Spelled->bSynthesized || Spelled->IsBinding())
+				{
+					RefuseRowLine(OutDiagnostics, *Row, FString::Printf(TEXT("'%s' cannot be written back"), *InEdit.PropertyName));
+					return false;
+				}
+				if (!ValidateValueText(InEdit.NewValueText, Spelled->Location, OutDiagnostics))
+				{
+					return false;
+				}
+				return PlanReplace(InText, InEdit, *Spelled, /*bInSlotNotation*/false, OutSplices, InOutOrder, OutDiagnostics);
+			}
+		}
+
 		FResolvedTarget Target;
 		if (!ResolveTarget(InText, InAst, InEdit, Target, OutDiagnostics))
 		{
@@ -2328,6 +2372,20 @@ namespace DreamUIPatchLocal
 				FString::Printf(TEXT("no node in this file is named %s to insert into"), *Ellipsize(InEdit.ParentId)));
 			return false;
 		}
+		if (!Parent->RowKey.IsEmpty())
+		{
+			RefuseRowLine(OutDiagnostics, *Parent, TEXT("a node cannot be inserted into it"));
+			return false;
+		}
+		if (HoldsRows(*Parent))
+		{
+			// The insert point is found from the children's places, and a row's place is inside its table: a node
+			// "after the last child" would be written in among the rows.
+			RefuseTarget(OutDiagnostics, Parent->Location,
+				FString::Printf(TEXT("%s holds a 'rows' table, and the designer cannot place a node beside its lines -- write it in the text"),
+					*Parent->Id));
+			return false;
+		}
 		if (Parent->Kind == EDreamUINodeKind::NamedSlot && !Parent->bFillsSlot)
 		{
 			// A DECLARATION is a hole: its block may style it, never fill it -- the content comes from the host, and a
@@ -2465,6 +2523,11 @@ namespace DreamUIPatchLocal
 				FString::Printf(TEXT("no node in this file is named %s"), *Ellipsize(InEdit.NodeId)));
 			return false;
 		}
+		if (!Node->RowKey.IsEmpty())
+		{
+			RefuseRowLine(OutDiagnostics, *Node, TEXT("a row is removed by deleting its line"));
+			return false;
+		}
 		if (InAst.bHasRoot && Node == &InAst.Root)
 		{
 			// A .dui holds exactly one root (DUI2006), so removing it produces a file that does not
@@ -2510,6 +2573,11 @@ namespace DreamUIPatchLocal
 		{
 			RefuseTarget(OutDiagnostics, FDreamUISourceLocation(),
 				FString::Printf(TEXT("no node in this file is named %s"), *Ellipsize(InEdit.NodeId)));
+			return false;
+		}
+		if (!Node->RowKey.IsEmpty())
+		{
+			RefuseRowLine(OutDiagnostics, *Node, TEXT("a row is moved by moving its line"));
 			return false;
 		}
 		if (InAst.bHasRoot && Node == &InAst.Root)
@@ -2608,6 +2676,12 @@ namespace DreamUIPatchLocal
 		{
 			RefuseTarget(OutDiagnostics, FDreamUISourceLocation(),
 				FString::Printf(TEXT("no node in this file is named %s"), *Ellipsize(InEdit.NodeId)));
+			return false;
+		}
+		if (!Node->RowKey.IsEmpty())
+		{
+			// Its id is made from its first value; a name of its own means writing it as a node of its own.
+			RefuseRowLine(OutDiagnostics, *Node, TEXT("a row is named by its first value"));
 			return false;
 		}
 		if (FindNodeById(InAst, InEdit.NewId) != nullptr)
@@ -2710,6 +2784,11 @@ namespace DreamUIPatchLocal
 				FString::Printf(TEXT("no node in this file is named %s"), *Ellipsize(InEdit.NodeId)));
 			return false;
 		}
+		if (!Node->RowKey.IsEmpty())
+		{
+			RefuseRowLine(OutDiagnostics, *Node, FString::Printf(TEXT("'+ %s' cannot be added"), *InEdit.ComponentClassName));
+			return false;
+		}
 		if (!ConfirmNodeAnchor(InText, *Node))
 		{
 			RefuseStale(OutDiagnostics, Node->Location,
@@ -2808,6 +2887,11 @@ namespace DreamUIPatchLocal
 		{
 			RefuseTarget(OutDiagnostics, FDreamUISourceLocation(),
 				FString::Printf(TEXT("no node in this file is named %s"), *Ellipsize(InEdit.NodeId)));
+			return false;
+		}
+		if (!Node->RowKey.IsEmpty())
+		{
+			RefuseRowLine(OutDiagnostics, *Node, TEXT("a '+' block cannot be removed"));
 			return false;
 		}
 		if (!Node->Components.IsValidIndex(InEdit.ComponentIndex))

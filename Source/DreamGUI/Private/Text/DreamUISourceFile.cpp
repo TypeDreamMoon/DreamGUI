@@ -3016,6 +3016,15 @@ namespace DreamUIText
 				return;
 			}
 
+			// `rows Row : ListRow (Label, Description) { … }` -- a table of instances. Only before a type, an optional style
+			// clause and the '(' of a column list: a property called rows (`rows = 3`) and a node whose type is called rows
+			// (`rows Grid { }`) read as they always did.
+			if (IsRowsHeader())
+			{
+				ParseRows(OutNode);
+				return;
+			}
+
 			if (LooksLikeProperty())
 			{
 				FDreamUIProperty Property;
@@ -3031,6 +3040,255 @@ namespace DreamUIText
 			{
 				OutNode.Children.Add(MoveTemp(Child));
 			}
+		}
+
+		/** `rows`, then a type (dotted, `@`-led or a path), an optional `: Style`, then the '(' of the column list. */
+		bool IsRowsHeader() const
+		{
+			if (!CheckKeyword(TEXT("rows")))
+			{
+				return false;
+			}
+			int32 Ahead = 1;
+			if (Peek(Ahead).Kind == ETokenKind::At)
+			{
+				++Ahead;
+				if (Peek(Ahead).Kind != ETokenKind::Identifier)
+				{
+					return false;
+				}
+			}
+			else if (Peek(Ahead).Kind != ETokenKind::Identifier && Peek(Ahead).Kind != ETokenKind::AssetPath)
+			{
+				return false;
+			}
+			++Ahead;
+			while (Peek(Ahead).Kind == ETokenKind::Dot && Peek(Ahead + 1).Kind == ETokenKind::Identifier)
+			{
+				Ahead += 2;
+			}
+			if (Peek(Ahead).Kind == ETokenKind::Colon)
+			{
+				++Ahead;
+				if (Peek(Ahead).Kind != ETokenKind::Identifier)
+				{
+					return false;
+				}
+				++Ahead;
+				while (Peek(Ahead).Kind == ETokenKind::Dot && Peek(Ahead + 1).Kind == ETokenKind::Identifier)
+				{
+					Ahead += 2;
+				}
+			}
+			return Peek(Ahead).Kind == ETokenKind::OpenParen;
+		}
+
+		/**
+		 * `rows Row : ListRow (Label, Description) { "City Ruins", "The overgrown…" … }` -- the same component N times,
+		 * differing in a few values: the type, the style and the property names written once, then one line per instance.
+		 *
+		 * Expanded here, into the ordinary anonymous children those lines stand for, so nothing downstream -- builder,
+		 * compiler, write-back's comparison -- learns a new shape: a row IS `Row : ListRow { Label = "City Ruins"
+		 * Description = "…" }` without an id. What is new is only where its id comes from: the line's first value, its
+		 * key (FDreamUINode::RowKey), so a row inserted or moved leaves every other row's id -- and the localization keys
+		 * made from it -- where they were. A line may end in a block, for what that one row needs beyond the columns.
+		 */
+		void ParseRows(FDreamUINode& OutParent)
+		{
+			const FDreamUISourceLocation RowsLocation = Current().Location;
+			Advance(); // 'rows'
+
+			// The type, read as ParseNode reads one: `Row`, `nier.Row`, `@Row`, `/Game/UI/WBP_Row`.
+			const FDreamUISourceLocation TypeLocation = Current().Location;
+			const bool bResourceType = Check(ETokenKind::At);
+			if (bResourceType)
+			{
+				Advance();
+			}
+			FString TypeName = bResourceType ? TEXT("@") + Current().Text : Current().Text;
+			Advance();
+			while (Check(ETokenKind::Dot) && Peek(1).Kind == ETokenKind::Identifier)
+			{
+				Advance();
+				TypeName = FString::Printf(TEXT("%s.%s"), *TypeName, *Current().Text);
+				Advance();
+			}
+			if (bResourceType)
+			{
+				NoteNamespaceReference(TypeName.Mid(1), TypeLocation);
+			}
+			FString StyleName;
+			if (Check(ETokenKind::Colon))
+			{
+				Advance();
+				StyleName = ParseQualifiedName(nullptr);
+			}
+
+			// The columns: property names, dotted or not, each once.
+			TArray<FString> Columns;
+			const FDreamUISourceLocation ColumnsLocation = Current().Location;
+			Advance(); // '('
+			bool bColumnsRead = false;
+			for (;;)
+			{
+				if (!Check(ETokenKind::Identifier))
+				{
+					Diagnostics.AddError(EDreamUIDiagnosticCode::MalformedRows, Current().Location,
+						FString::Printf(TEXT("expected a property name in the column list, found '%s'"), *DescribeCurrent()));
+					break;
+				}
+				const FDreamUISourceLocation ColumnLocation = Current().Location;
+				FString Column = Current().Text;
+				Advance();
+				while (Check(ETokenKind::Dot) && Peek(1).Kind == ETokenKind::Identifier)
+				{
+					Advance();
+					Column += TEXT(".");
+					Column += Current().Text;
+					Advance();
+				}
+				if (Columns.Contains(Column))
+				{
+					// FString's comparison, so case insensitive: two columns that differ only in case name one property.
+					Diagnostics.AddError(EDreamUIDiagnosticCode::MalformedRows, ColumnLocation,
+						FString::Printf(TEXT("'%s' is already a column of this table: every row would write it twice"), *Column));
+				}
+				Columns.Add(MoveTemp(Column));
+				if (Check(ETokenKind::Comma))
+				{
+					Advance();
+					continue;
+				}
+				if (Check(ETokenKind::CloseParen))
+				{
+					Advance();
+					bColumnsRead = true;
+					break;
+				}
+				Diagnostics.AddError(EDreamUIDiagnosticCode::MalformedRows, Current().Location,
+					FString::Printf(TEXT("expected ',' or ')' in the column list, found '%s'"), *DescribeCurrent()));
+				break;
+			}
+			if (!bColumnsRead)
+			{
+				// Whatever the list was meant to be, it ends at its ')' -- and a table without its columns has no row it
+				// could read, so the block goes with it rather than being misread line by line as properties.
+				SkipPastCloseParen();
+			}
+
+			if (!Check(ETokenKind::OpenBrace))
+			{
+				Diagnostics.AddError(EDreamUIDiagnosticCode::MalformedRows, RowsLocation,
+					TEXT("a 'rows' table is written 'rows Type : Style (Column, Column) { values, values }'"));
+				RecoverToStatementBoundary();
+				return;
+			}
+			const FDreamUISourceLocation OpenLocation = Current().Location;
+			Advance(); // '{'
+			if (!bColumnsRead || IsTooDeep(OpenLocation))
+			{
+				SkipBalancedBlockBody();
+				return;
+			}
+			const FNestingScope Scope(NestingDepth);
+			(void)ColumnsLocation;
+
+			for (;;)
+			{
+				SkipSeparators();
+				if (Check(ETokenKind::CloseBrace))
+				{
+					Advance();
+					return;
+				}
+				if (IsAtEnd())
+				{
+					Diagnostics.AddError(EDreamUIDiagnosticCode::UnclosedBlock, OpenLocation,
+						TEXT("this '{' never reaches its '}'"));
+					return;
+				}
+				const int32 IndexBefore = Index;
+				ParseRow(OutParent, TypeName, TypeLocation, StyleName, Columns);
+				if (Index == IndexBefore)
+				{
+					Advance();
+				}
+			}
+		}
+
+		/** One line of a `rows` table: its values, in column order, and the block it may end in. */
+		void ParseRow(FDreamUINode& OutParent, const FString& InTypeName, const FDreamUISourceLocation& InTypeLocation,
+			const FString& InStyleName, const TArray<FString>& InColumns)
+		{
+			FDreamUINode Row;
+			Row.Kind = EDreamUINodeKind::Widget;
+			Row.TypeName = InTypeName;
+			Row.StyleName = InStyleName;
+			Row.Location = Current().Location;
+			Row.bAnonymous = true;
+			(void)InTypeLocation;
+
+			int32 ValueCount = 0;
+			for (;;)
+			{
+				FDreamUIValue Value;
+				const FDreamUISourceLocation CellLocation = Current().Location;
+				if (!ParseValue(Value))
+				{
+					RecoverToStatementBoundary();
+					return;
+				}
+				if (ValueCount < InColumns.Num())
+				{
+					FDreamUIProperty& Cell = Row.Properties.AddDefaulted_GetRef();
+					Cell.Name = InColumns[ValueCount];
+					Cell.Value = MoveTemp(Value);
+					Cell.Location = CellLocation;
+					Cell.bRowCell = true;
+				}
+				++ValueCount;
+				if (Check(ETokenKind::Comma))
+				{
+					Advance();
+					continue;
+				}
+				break;
+			}
+
+			// Said before the count is: `"A" "B"` is a missing comma, and "1 value for 2 columns" would send the reader
+			// looking for a value that is right there.
+			if (!Check(ETokenKind::Separator) && !Check(ETokenKind::CloseBrace) && !Check(ETokenKind::OpenBrace) && !IsAtEnd())
+			{
+				RaiseUnexpectedToken(TEXT("expected ',' between a row's values, a '{' or the end of the row"));
+				RecoverToStatementBoundary();
+				return;
+			}
+			if (ValueCount != InColumns.Num())
+			{
+				// No widget for it: a row missing a value would be built with whatever the style or the class default
+				// says, and one with a value too many has dropped something the author wrote. Either is a guess.
+				Diagnostics.AddError(EDreamUIDiagnosticCode::MalformedRows, Row.Location,
+					FString::Printf(TEXT("this row has %d value%s for %d column%s (%s)"), ValueCount, ValueCount == 1 ? TEXT("") : TEXT("s"),
+						InColumns.Num(), InColumns.Num() == 1 ? TEXT("") : TEXT("s"), *FString::Join(InColumns, TEXT(", "))));
+				RecoverToStatementBoundary();
+				return;
+			}
+
+			// The key: the first value as written. Empty for a value with no spelling of its own (a tuple), which then
+			// takes a count like any unnamed widget.
+			Row.RowKey = Row.Properties[0].Value.Raw;
+			if (Row.RowKey.IsEmpty())
+			{
+				Row.RowKey = TEXT(" ");
+			}
+
+			if (Check(ETokenKind::OpenBrace))
+			{
+				const FDreamUISourceLocation OpenLocation = Current().Location;
+				Advance();
+				ParseNodeBody(Row, OpenLocation);
+			}
+			OutParent.Children.Add(MoveTemp(Row));
 		}
 
 		/**
@@ -4535,9 +4793,20 @@ namespace DreamUIText
 			}
 			// A node whose parent failed to get an id (a parse error already reported) still gets a usable one.
 			const FString Scope = InScopeId.IsEmpty() ? FString(TEXT("Root")) : InScopeId;
-			int32& Count = InOutCounts.FindOrAdd(Type);
-			FString Id = FString::Printf(TEXT("%s__%s%d"), *Scope, *Type, Count);
-			++Count;
+			// A `rows` line is named by its key instead of a count -- `Page_0__Row_City_Ruins` -- so it keeps its id, and
+			// its localization keys, when a row is inserted before it.
+			const FString KeyPart = MakeRowKeyIdPart(InOutNode.RowKey);
+			FString Id;
+			if (!KeyPart.IsEmpty())
+			{
+				Id = FString::Printf(TEXT("%s__%s_%s"), *Scope, *Type, *KeyPart);
+			}
+			else
+			{
+				int32& Count = InOutCounts.FindOrAdd(Type);
+				Id = FString::Printf(TEXT("%s__%s%d"), *Scope, *Type, Count);
+				++Count;
+			}
 
 			// The one length rule the lexer holds every written name to (IdentifierTooLong), held here for a made one:
 			// a chain of anonymous parents, or a long asset path for a type, can make a name an FName cannot hold, and
@@ -4560,10 +4829,48 @@ namespace DreamUIText
 				{
 					++Bump;
 				}
+				if (!KeyPart.IsEmpty())
+				{
+					Diagnostics.AddWarning(EDreamUIDiagnosticCode::DuplicateRowKey, InOutNode.Location,
+						FString::Printf(TEXT("this row's first value makes the id '%s', which another row (or node) already has: it becomes '%s_%d', which moves when the rows are reordered -- give the rows distinct first values"),
+							*Id, *Id, Bump));
+				}
 				Id = FString::Printf(TEXT("%s_%d"), *Id, Bump);
 			}
 			InOutTaken.Add(Id);
 			InOutNode.Id = MoveTemp(Id);
+		}
+
+		/**
+		 * The part of a row's id its key makes: every run of characters an id cannot hold one '_', none at either end, and
+		 * at most 32 characters -- a key column of sentences still makes an id a person can read in a variable list.
+		 * Empty when nothing of the key survives, and the row is then counted like any unnamed widget.
+		 */
+		static FString MakeRowKeyIdPart(const FString& InKey)
+		{
+			FString Part;
+			Part.Reserve(InKey.Len());
+			for (const TCHAR Char : InKey)
+			{
+				if (IsIdentifierChar(Char))
+				{
+					Part.AppendChar(Char);
+				}
+				else if (!Part.IsEmpty() && !Part.EndsWith(TEXT("_")))
+				{
+					Part.AppendChar(TEXT('_'));
+				}
+			}
+			constexpr int32 MaxKeyPart = 32;
+			if (Part.Len() > MaxKeyPart)
+			{
+				Part.LeftInline(MaxKeyPart);
+			}
+			while (Part.EndsWith(TEXT("_")))
+			{
+				Part.LeftChopInline(1);
+			}
+			return Part;
 		}
 
 		/** Every `ns.` the file wrote, against the namespaces its `use … as` lines (and its plain imports) declared. */

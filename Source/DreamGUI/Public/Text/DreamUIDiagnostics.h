@@ -133,6 +133,11 @@ enum class EDreamUIDiagnosticCode : int32
 	MalformedConditional = 2018,
 	/** A `slot` line the grammar does not take: `default` twice, a block holding both declaration lines and children. */
 	MalformedSlotDeclaration = 2019,
+	/**
+	 * A `rows` block that does not read: a column list that is not property names between parentheses, a column named
+	 * twice, a row with more or fewer values than there are columns. A row that does not read makes no widget.
+	 */
+	MalformedRows = 2020,
 
 	// --- 3xxx semantic ---
 	/**
@@ -227,6 +232,12 @@ enum class EDreamUIDiagnosticCode : int32
 	UnknownNamespace = 3021,
 	/** More than one `slot … default` in one file: content nested without a slot name has one place to go. */
 	MultipleDefaultSlots = 3022,
+	/**
+	 * A WARNING. Two rows of a `rows` block whose first values make the same id, or one an id the file already uses: the
+	 * later row gets a `_<n>` after it, and that number -- with its localization keys -- moves when rows are reordered,
+	 * which is the instability a key column exists to avoid. Give the rows distinct first values.
+	 */
+	DuplicateRowKey = 3023,
 
 	// --- 4xxx values ---
 	/** No property of that name on the target object. Message suggests the nearest match. */
