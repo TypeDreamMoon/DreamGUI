@@ -4,6 +4,28 @@ What changed in each version of DreamGUI, grouped by what it changes for a proje
 the next -- what loads differently, which defaults moved, what C++ has to change -- is in
 [Docs/Migration.md](Docs/Migration.md).
 
+## Unreleased
+
+### New
+
+- **A control can refuse the focus ring.** `UUISelectable::bUseFocusRing` (on by default; `SetUseFocusRing` at run
+  time) turns the project's ring off for a control whose own look marks its focus. The focus moving onto such a
+  control takes the ring away instead of leaving it on the control it came from, and a screen whose controls all
+  refuse it never makes one. An unset `NavigationSelectionClass` now means no ring anywhere, without a warning at
+  every focus change.
+
+### Fixed
+
+- **The focus ring fits the control it marks.** The plugin's ring drew its frame on a child authored at a fixed
+  100x100 on the centre of the ring's root, so the frame stayed 100x100 over a full-width row and a small icon alike
+  while only the invisible root took the control's size. A ring class with no Blueprint handler of its own now has
+  each child that covers its root (centre-anchored, at least the root's size) anchored to stretch with the root, its
+  authored margin kept; smaller or corner-anchored children keep their own size.
+- **A ring that has just appeared no longer stays transparent.** Moving the ring killed its running tweens, the
+  fade-in of a ring shown a moment before among them, so a second key press inside a quarter second -- or the same
+  focus arriving as a select and then a navigation enter -- left the ring at the opacity the fade had reached. Moving
+  now finishes the fade.
+
 ## 2.1.0
 
 Five passes of engineering after 2.0: the frame made cheap enough for thousands of animated widgets, every control and

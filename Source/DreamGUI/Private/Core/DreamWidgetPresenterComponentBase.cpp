@@ -216,7 +216,8 @@ UUINavigationInputSelectionHandler* UDreamWidgetPresenterComponentBase::GetNavig
 	{
 		// Null means "not overridden on this component", so fall back to the project setting.
 		TSubclassOf<UDreamUserWidget> SelectionClass = NavigationSelectionClass;
-		if (SelectionClass == nullptr)
+		// The project's class unset is a project with no ring, which needs no warning at every focus change.
+		if (SelectionClass == nullptr && !UDreamGUISettings::Get()->NavigationSelectionClass.IsNull())
 		{
 			SelectionClass = UDreamGUISettings::LoadSettingClass(UDreamGUISettings::Get()->NavigationSelectionClass, TEXT("NavigationSelectionClass"));
 		}
