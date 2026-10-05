@@ -11,6 +11,17 @@ after 3 for 2.1.0 -- so the engine never takes 1.0.0 for the older of the two.
 
 ## Unreleased
 
+### New
+
+- **Add Component lists only the components the selected widget supports** (`FDreamUIComponentSupport`). A mesh
+  modifier needs a visual that builds a mesh, a sprite player a Sprite, a sprite-sheet player a Texture, a hyperlink or
+  the text animation a Text, a UMG interaction a UMG Widget visual; a retainer or invalidation box needs the widget's
+  canvas first; a canvas, navigation, animation component, named slot or content widget is one per widget, a widget is
+  one kind of selectable and one scroll view, and a content widget is not offered on a widget with several children.
+  Each of these used to be addable anywhere and then sat there doing nothing. Paste, duplicate and component assets
+  dropped on the panel follow the same rules; a refused drop says why. A project adds rules for its own components
+  from its editor module.
+
 ### Changed
 
 - **The Content Browser's Add menu offers DreamGUI Widget at its top**, beside the engine's Blueprint Class and

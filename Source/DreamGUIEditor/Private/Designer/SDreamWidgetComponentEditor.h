@@ -19,16 +19,21 @@
 #include "DragAndDrop/DecoratedDragDropOp.h"
 #include "Engine/Blueprint.h"
 #include "Styling/SlateIconFinder.h"
+#include "Widgets/SBoxPanel.h"
 #include "Widgets/SCompoundWidget.h"
 #include "Widgets/Input/SButton.h"
 #include "Widgets/Input/SComboButton.h"
 #include "Widgets/Layout/SBorder.h"
 #include "Widgets/Layout/SBox.h"
+#include "Widgets/Notifications/SNotificationList.h"
+#include "Widgets/Text/STextBlock.h"
+#include "Framework/Notifications/NotificationManager.h"
 #include "Widgets/Views/SListView.h"
 #include "Widgets/Views/STableRow.h"
 #include "UObject/StrongObjectPtr.h"
 #include "Core/DreamUIBehaviour.h"
 #include "Core/Components/DreamWidget.h"
+#include "DreamUIComponentSupport.h"
 #include "DreamUIEditorTools.h"
 #include "DreamWidgetBlueprintEditor.h"
 #include "Utils/DreamUIUtils.h"
@@ -61,15 +66,24 @@ void DreamUIWidgetComponentClipboard_Reset();
 class FDreamWidgetComponentClassFilter : public IClassViewerFilter
 {
 public:
+	FDreamWidgetComponentClassFilter() = default;
+	/** Lists only what InWidget supports (FDreamUIComponentSupport): the Add Component picker for one widget. */
+	explicit FDreamWidgetComponentClassFilter(const UDreamWidget* InWidget)
+		: Widget(InWidget)
+	{
+	}
+
 	virtual bool IsClassAllowed(const FClassViewerInitializationOptions& InInitOptions, const UClass* InClass, TSharedRef<FClassViewerFilterFuncs> InFilterFuncs) override
 	{
-		return IsComponentClassAllowed(InClass);
+		return IsComponentClassAllowed(InClass) && FDreamUIComponentSupport::Get().IsSupported(InClass, Widget.Get());
 	}
 
 	virtual bool IsUnloadedClassAllowed(const FClassViewerInitializationOptions& InInitOptions, const TSharedRef<const IUnloadedBlueprintData> InUnloadedClassData, TSharedRef<FClassViewerFilterFuncs> InFilterFuncs) override
 	{
 		return InUnloadedClassData->IsChildOf(UDreamUIBehaviour::StaticClass())
-			&& !InUnloadedClassData->HasAnyClassFlags(CLASS_Abstract | CLASS_Deprecated | CLASS_NewerVersionExists | CLASS_Hidden);
+			&& !InUnloadedClassData->HasAnyClassFlags(CLASS_Abstract | CLASS_Deprecated | CLASS_NewerVersionExists | CLASS_Hidden)
+			&& FDreamUIComponentSupport::Get().IsSupported(
+				[&InUnloadedClassData](const UClass* InBase) { return InUnloadedClassData->IsChildOf(InBase); }, Widget.Get());
 	}
 
 	static bool IsComponentClassAllowed(const UClass* InClass)
@@ -84,6 +98,10 @@ public:
 		if (!InClass->HasMetaData("BlueprintSpawnableComponent"))return false;
 		return true;
 	}
+
+private:
+	/** Null lists every component class there is, as the clipboard and asset checks ask. */
+	TWeakObjectPtr<const UDreamWidget> Widget;
 };
 
 using FDreamWidgetComponentItem = TWeakObjectPtr<UDreamUIBehaviour>;
@@ -147,7 +165,7 @@ public:
 		CommandList->MapAction(
 			FGenericCommands::Get().Duplicate,
 			FExecuteAction::CreateSP(this, &SDreamWidgetComponentEditor::HandleDuplicateSelectedComponent),
-			FCanExecuteAction::CreateSP(this, &SDreamWidgetComponentEditor::CanCutOrDuplicateSelectedComponent)
+			FCanExecuteAction::CreateSP(this, &SDreamWidgetComponentEditor::CanDuplicateSelectedComponent)
 		);
 
 		GetWidgetContext = InArgs._GetWidgetContext;
@@ -464,7 +482,16 @@ private:
 		{
 			return false;
 		}
-		return DreamUIWidgetComponentClipboard_CanPasteClass(DreamUIWidgetComponentClipboard()->GetClass());
+		return DreamUIWidgetComponentClipboard_CanPasteClass(DreamUIWidgetComponentClipboard()->GetClass())
+			&& FDreamUIComponentSupport::Get().IsSupported(DreamUIWidgetComponentClipboard()->GetClass(), GetCurrentWidget());
+	}
+
+	/** A duplicate is a second copy on the same widget, which a one-per-widget component refuses. */
+	bool CanDuplicateSelectedComponent() const
+	{
+		const UDreamUIBehaviour* Component = GetSelectedComponent();
+		return CanCutOrDuplicateSelectedComponent()
+			&& FDreamUIComponentSupport::Get().IsSupported(Component->GetClass(), GetCurrentWidget());
 	}
 
 	void HandleCopySelectedComponent()
@@ -538,7 +565,7 @@ private:
 	{
 		UDreamWidget* Widget = GetCurrentWidget();
 		UDreamUIBehaviour* Component = GetSelectedComponent();
-		if (!CanCutOrDuplicateSelectedComponent() || !IsValid(Widget) || Component->GetWidget() != Widget)
+		if (!CanDuplicateSelectedComponent() || !IsValid(Widget) || Component->GetWidget() != Widget)
 		{
 			return;
 		}
@@ -657,6 +684,17 @@ private:
 		{
 			if (UClass* ComponentClass = ResolveComponentClassFromAsset(AssetData))
 			{
+				// What the picker would not have offered for this widget is not added by a drop either, and the
+				// author hears why: a drop that silently does nothing reads as a drop that did not land.
+				FText Reason;
+				if (!FDreamUIComponentSupport::Get().IsSupported(ComponentClass, Widget, &Reason))
+				{
+					FNotificationInfo Info(FText::Format(LOCTEXT("ComponentNotSupported", "{0} was not added: {1}"),
+						ComponentClass->GetDisplayNameText(), Reason));
+					Info.ExpireDuration = 5.0f;
+					FSlateNotificationManager::Get().AddNotification(Info);
+					continue;
+				}
 				ComponentClassesToAdd.Add(ComponentClass);
 			}
 		}
@@ -928,14 +966,31 @@ private:
 		Options.bExpandAllNodes = true;
 		Options.bShowUnloadedBlueprints = true;
 
-		Options.ClassFilters.Add(MakeShared<FDreamWidgetComponentClassFilter>());
+		// Only what the selected widget supports (FDreamUIComponentSupport): a sprite player needs a sprite, a mesh
+		// modifier a mesh, a canvas is one per widget. The rest used to be listed too, and was inert once added.
+		Options.ClassFilters.Add(MakeShared<FDreamWidgetComponentClassFilter>(GetCurrentWidget()));
 
 		FClassViewerModule& ClassViewerModule = FModuleManager::LoadModuleChecked<FClassViewerModule>("ClassViewer");
 		return SNew(SBox)
 			.WidthOverride(320.0f)
 			.HeightOverride(400.0f)
 			[
-				ClassViewerModule.CreateClassViewer(Options, FOnClassPicked::CreateSP(this, &SDreamWidgetComponentEditor::HandleComponentClassPicked))
+				SNew(SVerticalBox)
+				+ SVerticalBox::Slot()
+				.AutoHeight()
+				.Padding(6.0f, 4.0f)
+				[
+					SNew(STextBlock)
+					.Font(IDetailLayoutBuilder::GetDetailFont())
+					.ColorAndOpacity(FSlateColor::UseSubduedForeground())
+					.AutoWrapText(true)
+					.Text(LOCTEXT("AddComponentSupportedOnly", "Components this widget supports. Others need a different visual, or are one per widget."))
+				]
+				+ SVerticalBox::Slot()
+				.FillHeight(1.0f)
+				[
+					ClassViewerModule.CreateClassViewer(Options, FOnClassPicked::CreateSP(this, &SDreamWidgetComponentEditor::HandleComponentClassPicked))
+				]
 			];
 	}
 
@@ -944,7 +999,8 @@ private:
 		FSlateApplication::Get().DismissAllMenus();
 
 		UDreamWidget* Widget = GetCurrentWidget();
-		if (!CanAddOrRemoveComponent() || !IsValid(Widget) || InClass == nullptr)
+		if (!CanAddOrRemoveComponent() || !IsValid(Widget) || InClass == nullptr
+			|| !FDreamUIComponentSupport::Get().IsSupported(InClass, Widget))
 		{
 			return;
 		}
