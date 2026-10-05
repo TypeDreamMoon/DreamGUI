@@ -58,6 +58,8 @@ void FDreamSpriteBaseCustomization::CustomizeDetails(IDetailLayoutBuilder& Detai
 	IDetailCategoryBuilder& category = DetailBuilder.EditCategory("DreamGUI");
 
 	category.AddProperty(GET_MEMBER_NAME_CHECKED(UDreamSpriteBase, Sprite));
+	// The tint, declared on UDreamVisual and so otherwise the last row of the visual: next to what it tints.
+	category.AddProperty(DetailBuilder.GetProperty(FName(TEXT("Color")), UDreamVisual::StaticClass()));
 	auto spriteHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UDreamSpriteBase, Sprite));
 	// The refresh this asks for destroys the layout builder, so the delegate keeps the utilities instead.
 	TWeakPtr<IPropertyUtilities> propertyUtilities = DetailBuilder.GetPropertyUtilities();

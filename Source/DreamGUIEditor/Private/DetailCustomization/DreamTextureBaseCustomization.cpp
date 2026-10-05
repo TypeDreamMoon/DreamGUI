@@ -59,6 +59,8 @@ void FDreamTextureBaseCustomization::CustomizeDetails(IDetailLayoutBuilder& Deta
 	auto textureHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UDreamTextureBase, Texture));
 	textureHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FDreamTextureBaseCustomization::ForceRefresh, &DetailBuilder));
 	category.AddProperty(GET_MEMBER_NAME_CHECKED(UDreamTextureBase, Texture));
+	// The tint, declared on UDreamVisual and so otherwise the last row of the visual: next to what it tints.
+	category.AddProperty(DetailBuilder.GetProperty(FName(TEXT("Color")), UDreamVisual::StaticClass()));
 	UTexture* texture = nullptr;
 	textureHandle->GetValue((*(UObject**)&texture));
 	if(IsValid(texture))

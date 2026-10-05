@@ -368,8 +368,13 @@ void FDreamWidgetCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBui
 	DetailBuilder.HideCategory("Accessibility");
 	DetailBuilder.HideCategory("TransformCommon");
 	// Marking a property Interp so Sequencer can animate it also implies Edit, which drops the
-	// transform properties into an auto-named category. The Layout category already presents them.
+	// transform properties into categories of their own: "Transform" (the relative location, rotation
+	// and scale the Layout category already presents) and "DreamGUI-AnchorData" (the anchor offsets
+	// Sequencer keys, greyed out and transient). Each was a second, raw copy of the Layout rows at the
+	// bottom of the panel. "DreamWidget" is the auto-named category the same properties used to land in.
 	DetailBuilder.HideCategory("DreamWidget");
+	DetailBuilder.HideCategory("Transform");
+	DetailBuilder.HideCategory("DreamGUI-AnchorData");
 	IDetailCategoryBuilder& TransformCategory = DetailBuilder.EditCategory(
 		"DreamLayout", LOCTEXT("LayoutCategory", "Layout"), ECategoryPriority::Important);
 	IDetailCategoryBuilder& BehaviorCategory = DetailBuilder.EditCategory(
@@ -378,17 +383,41 @@ void FDreamWidgetCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBui
 		"DreamAppearance", LOCTEXT("AppearanceCategory", "Appearance"), ECategoryPriority::Default);
 	IDetailCategoryBuilder& AccessibilityCategory = DetailBuilder.EditCategory(
 		"DreamAccessibility", LOCTEXT("AccessibilityCategory", "Accessibility"), ECategoryPriority::Default);
+	// THE ORDER OF THE PANEL, top to bottom, in the order a widget is put together:
+	//   where it sits     Slot -100, Canvas -95 (the preview root only), Layout -90
+	//   what it is        Visual -80, Panel -75, Self Layout -70 (the visual, the layout it gives its
+	//                     children, the layout it takes for itself -- the rows an author edits most)
+	//   how it acts       Appearance -60, Behavior -50
+	//   the rest          Render Transform -40, Perspective -38, Navigation -35, Accessibility -30,
+	//                     Localization -25, then Events
+	// The visual used to come after Behavior, Appearance, Panel and Self Layout, so the text of a Text
+	// was half a screen of switches down.
 	TransformCategory.SetSortOrder(-90);
-	BehaviorCategory.SetSortOrder(-80);
-	AppearanceCategory.SetSortOrder(-70);
+	AppearanceCategory.SetSortOrder(-60);
+	BehaviorCategory.SetSortOrder(-50);
 	AccessibilityCategory.SetSortOrder(-30);
 	AccessibilityCategory.InitiallyCollapsed(true);
+	{
+		// Declared by the widget's own UPROPERTYs, so without these they sort after every category above
+		// in whatever order they were first met.
+		IDetailCategoryBuilder& RenderTransformCategory = DetailBuilder.EditCategory("Render Transform");
+		RenderTransformCategory.SetSortOrder(-40);
+		IDetailCategoryBuilder& PerspectiveCategory = DetailBuilder.EditCategory("Perspective");
+		PerspectiveCategory.SetSortOrder(-38);
+		PerspectiveCategory.InitiallyCollapsed(true);
+		IDetailCategoryBuilder& LocalizationCategory = DetailBuilder.EditCategory("Localization");
+		LocalizationCategory.SetSortOrder(-25);
+		LocalizationCategory.InitiallyCollapsed(true);
+	}
 	AddCanvasSizeRowsForDesignerRoot(DetailBuilder);
 
 	DetailBuilder.HideProperty(GET_MEMBER_NAME_CHECKED(UDreamWidget, AnchorData));
 
 	auto DisplayName_PH = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UDreamWidget, DisplayName));
 	auto WidgetActive_PH = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UDreamWidget, bWidgetActive));
+	// UMG's IsEnabled, which declares Category "Behavior" -- a different category from this panel's
+	// "DreamBehavior", so it had a second Behavior header of its own at the bottom, holding just it.
+	auto IsEnabled_PH = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UDreamWidget, bIsEnabled));
 	auto Visibility_PH = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UDreamWidget, Visibility));
 	auto Interactable_PH = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UDreamWidget, Interactable));
 	auto Raycastable_PH = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UDreamWidget, Raycastable));
@@ -411,7 +440,7 @@ void FDreamWidgetCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBui
 	auto AccessibleText_PH = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UDreamWidget, AccessibleText));
 	auto AccessibleSummaryText_PH = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UDreamWidget, AccessibleSummaryText));
 	for (const TSharedPtr<IPropertyHandle>& Property : {
-		DisplayName_PH, WidgetActive_PH, Visibility_PH, Interactable_PH, Raycastable_PH,
+		DisplayName_PH, WidgetActive_PH, IsEnabled_PH, Visibility_PH, Interactable_PH, Raycastable_PH,
 		Focusable_PH, TabStop_PH, TabIndex_PH, TabNavigation_PH, RestrictNavigation_PH, NavigationBoundaryRule_PH, Cursor_PH, ToolTip_PH, RenderOpacity_PH,
 		PixelSnapping_PH, AccessibleBehavior_PH, AccessibleText_PH, AccessibleSummaryText_PH })
 	{
@@ -419,6 +448,7 @@ void FDreamWidgetCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBui
 	}
 
 	BehaviorCategory.AddProperty(WidgetActive_PH).DisplayName(LOCTEXT("WidgetActive", "Active"));
+	BehaviorCategory.AddProperty(IsEnabled_PH);
 	BehaviorCategory.AddProperty(Visibility_PH);
 	BehaviorCategory.AddProperty(Interactable_PH);
 	BehaviorCategory.AddProperty(Raycastable_PH);
@@ -1159,7 +1189,7 @@ void FDreamWidgetCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBui
 		const bool bHasLayout = Layouts.Num() > 0;
 		auto& LayoutCategory = DetailBuilder.EditCategory(
 			"LayoutContainer", LOCTEXT("PanelCategory", "Panel"), ECategoryPriority::Default);
-		LayoutCategory.SetSortOrder(-60);
+		LayoutCategory.SetSortOrder(-75);
 		LayoutCategory.HeaderContent(SNew(SDreamWidgetSubObjectWidget, Layout_PH, true));
 		LayoutCategory.SetIsEmpty(!bHasLayout);
 		LayoutCategory.AddCustomRow(LOCTEXT("LayoutPlaceholder", "Placeholder"))
@@ -1188,7 +1218,7 @@ void FDreamWidgetCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBui
 		const bool bHasLayoutSelf = LayoutSelves.Num() > 0;
 		auto& LayoutSelfCategory = DetailBuilder.EditCategory(
 			"LayoutSelf", LOCTEXT("SelfLayoutCategory", "Self Layout"), ECategoryPriority::Default);
-		LayoutSelfCategory.SetSortOrder(-50);
+		LayoutSelfCategory.SetSortOrder(-70);
 		LayoutSelfCategory.InitiallyCollapsed(!bHasLayoutSelf);
 		LayoutSelfCategory.HeaderContent(SNew(SDreamWidgetSubObjectWidget, LayoutSelf_PH, true));
 		LayoutSelfCategory.SetIsEmpty(!bHasLayoutSelf);
@@ -1269,7 +1299,7 @@ void FDreamWidgetCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBui
 			TargetScriptArray, [](UDreamWidget* InWidget) -> UObject* { return InWidget->GetVisual(); });
 		const bool bHasVisual = Visuals.Num() > 0;
 		IDetailCategoryBuilder& VisualCategory = DetailBuilder.EditCategory("Visual");
-		VisualCategory.SetSortOrder(-40);
+		VisualCategory.SetSortOrder(-80);
 		VisualCategory.HeaderContent(SNew(SDreamWidgetSubObjectWidget, Visual_PH, true));
 		VisualCategory.SetIsEmpty(!bHasVisual);
 		VisualCategory.AddCustomRow(LOCTEXT("VisualPlaceholder", "Placeholder"))

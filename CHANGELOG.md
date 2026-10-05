@@ -27,6 +27,12 @@ after 3 for 2.1.0 -- so the engine never takes 1.0.0 for the older of the two.
   hierarchy's Create menu uses the same groups. Registry keys are unchanged, so favourites keep their stars; a project
   extension that compared `FDreamUIControlDescriptor::Category` with "Controls", "Post Process", "Extensions" or a legacy
   category name reads the names from `DreamUIPaletteCategory` instead.
+- **The details panel puts what a widget is right under where it sits.** Slot, Layout, then Visual, Panel and Self
+  Layout, then Appearance and Behavior, then Render Transform and -- collapsed -- Perspective, Navigation,
+  Accessibility and Localization; the visual used to come after Behavior, Appearance, Panel and Self Layout. A Text's
+  rows lead with Text, Font, Size, Style, Color and alignment, with its wrapping, typography and rendering settings in
+  groups that start closed, and a Sprite's or Texture's colour sits under its sprite or texture. The Transform and
+  anchor-data categories at the bottom, which repeated the Layout rows raw, are gone, and Is Enabled joined Behavior.
 
 ### Fixed
 
