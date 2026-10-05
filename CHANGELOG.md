@@ -9,6 +9,18 @@ builds, then 2.0.0 and 2.1.0 (commits `2416e3f8` and `3049561a` on `main`). Publ
 below is a development build and older than 1.0.0. The descriptor's integer `Version` keeps rising -- 100 for 1.0.0,
 after 3 for 2.1.0 -- so the engine never takes 1.0.0 for the older of the two.
 
+## Unreleased
+
+### Fixed
+
+- **A DreamUI Widget Blueprint's thumbnail is the screen it authors.** The Content Browser tile was a wireframe of the
+  authored anchor rects, which knows nothing of what a layout arranges, so most screens came out as a grey box with a
+  line or two on it. The thumbnail now builds the widget the way the designer's preview does, lays it out on the design
+  canvas and draws it, as UMG draws its widget thumbnails; the wireframe is kept for a Blueprint with no compiled class.
+  It is drawn when an asset has no clean thumbnail and when it is saved, not on every frame the pointer rests on it, so
+  a large screen does not stall the browser. A thumbnail already saved in an asset stays until the asset is next
+  changed and saved.
+
 ## 1.0.0
 
 Everything of the 2.1.0 development build, and the `.dui` language grown into what screens are written in: components

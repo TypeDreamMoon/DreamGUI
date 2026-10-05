@@ -392,79 +392,14 @@ void FDreamWidgetPreviewHost::RebuildPreview()
 		return;
 	}
 
-	{
-		// A class whose last compile failed is marked abstract, and NewObject refuses those. Showing
-		// whatever the class last managed to build beats showing nothing while the author fixes it.
-		FMakeClassSpawnableOnScope TemporarilySpawnable(GeneratedClass);
-		// RF_Transient and, deliberately, NOT RF_Transactional -- and this is not a statement about
-		// this object alone. UDreamWidgetGeneratedClass::InitializeWidgetStatic instances the tree
-		// with the HOST's RF_Transactional, and that flag propagates to sub-objects, so these flags
-		// are what keeps the entire preview hierarchy out of the transaction buffer.
-		//
-		// That is the whole undo model: the authoring tree is the only undoable half, and the preview
-		// is a projection of it that is thrown away and rebuilt. A preview that recorded its own
-		// edits would let an undo restore objects a rebuild had already destroyed -- which is exactly
-		// what produced a preview tree with a cycle in it -- and would pin the outgoing hierarchy in
-		// the buffer for as long as the entry lived. UMG clears the same flag for the same reason,
-		// and rebuilds from the template on PostUndo/PostRedo as this editor now does; see
-		// FDreamWidgetBlueprintEditor::HandlePostTransaction.
-		PreviewWidget = NewObject<UDreamUserWidget>(RootAgent->GetOuter(), GeneratedClass, NAME_None, RF_Transient);
-	}
-
-	// The AUTHORING tree, not the class's archetype. This is what lets an added widget appear without
-	// a recompile -- the class is a compile behind for as long as the author has not pressed the
-	// button, and a preview built from it would show the hierarchy as it was, not as it is. Straight
-	// out of UMG (CreateUserWidgetFromBlueprint: "so the preview can update without a full recompile").
+	// Ids for any authored widget that has none, before the preview is instanced from that tree: the
+	// guid map below pairs each preview widget with its template by them.
 	EnsureAuthoredGuids();
-	PreviewWidget->InitializeFromArchetype(FindArchetypeForPreview());
-	PreviewWidget->SetParentBeforeRegister(RootAgent);
-
-	// Fill the design canvas. A freshly constructed widget is 100x100 centred, and this one is not a
-	// widget the author placed -- it is the instance the class's contents hang inside, so any size of
-	// its own is a second, invisible frame that the authored root then fills instead of the canvas.
-	// The symptom is a screen laid out correctly and clipped to a 100x100 square in the middle.
-	//
-	// After parenting on purpose: anchors are resolved against a parent, and setting them on an
-	// orphan is refused (UDreamWidget::SetHorizontalAndVerticalAnchorMinMax says so out loud).
-	{
-		FDreamUIAnchorData FillParent;
-		FillParent.Pivot = FVector2D(0.5, 0.5);
-		FillParent.AnchorMin = FVector2D(0.0, 0.0);
-		FillParent.AnchorMax = FVector2D(1.0, 1.0);
-		FillParent.AnchoredPosition = FVector2D::ZeroVector;
-		FillParent.SizeDelta = FVector2D::ZeroVector;
-		PreviewWidget->SetAnchorData(FillParent);
-	}
-
-	// And ARRANGE what is inside it, which is the other half of that same paragraph and was missing.
-	//
-	// This is UMG's PreviewSizeConstraint (SDesignerView.cpp: an SBox with WidthOverride /
-	// HeightOverride around UserWidget->TakeWidget()). In UMG the asset's root cannot be the wrong
-	// size because it has no size of its own to author -- a Slate tree root has no slot, so what it
-	// gets is whatever that SBox hands it. Here every widget carries an anchor rect, the ROOT
-	// included, and the wrapper above had no layout container -- so it handed its child nothing and
-	// the authored root fell back on anchors nothing validates. A root authored as point anchors with
-	// a zero SizeDelta then measured 0x0 and arranged every descendant into a 0x0 rect: a hierarchy
-	// that is structurally perfect and entirely invisible, reported as "every control in here has
-	// size zero". (The 100x100 case above is the same defect one level up, found first.)
-	//
-	// An overlay rather than a size box: the box takes one child and this wrapper legitimately holds
-	// exactly one, but a refused second child during a rebuild would be a lost preview rather than a
-	// tidier one -- and Fill on both axes, which is the default slot, is all the constraint that is
-	// wanted here. The AUTHORED anchors are untouched and still what runs at runtime; the designer is
-	// simulating the host that would arrange this widget, and which host it simulates is the
-	// designer's size rule (see FDreamWidgetBlueprintEditor::SetDesignerSizeRule).
-	{
-		UDreamLayoutContainer* Previous = PreviewWidget->GetLayoutContainer();
-		UDreamLayoutContainer* Stage = PreviewWidget->CreateNewLayoutContainer<UDreamLayoutContainerOverlay>();
-		PreviewWidget->SyncRequiredBehavioursForLayoutContainer(Previous, Stage);
-	}
-
-	RegisterDreamWidgetHierarchy(PreviewWidget);
+	PreviewWidget = InstancePreview(Blueprint, RootAgent);
 
 	// After registration, because registration is where the second kind of preview object is born.
 	//
-	// Instancing carries the flags of the tree it built (see the NewObject above), and UDreamWidget's
+	// Instancing carries the flags of the tree it built (see the NewObject in InstancePreview), and UDreamWidget's
 	// own creators -- AddComponent, CreateNewVisual, CreateNewLayoutContainer, CreateNewLayoutSelf,
 	// CreateNewPanelSlot -- now take RF_Transactional from their owner, so the objects registration
 	// mints are non-transactional too. That covers the case this was written for: a panel slot is
@@ -492,14 +427,98 @@ void FDreamWidgetPreviewHost::RebuildPreview()
 	OnPreviewRebuilt.Broadcast();
 }
 
+UDreamUserWidget* FDreamWidgetPreviewHost::InstancePreview(UDreamWidgetBlueprint* InBlueprint, UDreamWidget* InRootAgent)
+{
+	if (!IsValid(InBlueprint) || !IsValid(InRootAgent))
+	{
+		return nullptr;
+	}
+	UClass* GeneratedClass = InBlueprint->GeneratedClass;
+	if (GeneratedClass == nullptr || !GeneratedClass->IsChildOf(UDreamUserWidget::StaticClass()))
+	{
+		return nullptr;
+	}
+
+	UDreamUserWidget* Preview = nullptr;
+	{
+		// A class whose last compile failed is marked abstract, and NewObject refuses those. Showing
+		// whatever the class last managed to build beats showing nothing while the author fixes it.
+		FMakeClassSpawnableOnScope TemporarilySpawnable(GeneratedClass);
+		// RF_Transient and, deliberately, NOT RF_Transactional -- and this is not a statement about
+		// this object alone. UDreamWidgetGeneratedClass::InitializeWidgetStatic instances the tree
+		// with the HOST's RF_Transactional, and that flag propagates to sub-objects, so these flags
+		// are what keeps the entire preview hierarchy out of the transaction buffer.
+		//
+		// That is the whole undo model: the authoring tree is the only undoable half, and the preview
+		// is a projection of it that is thrown away and rebuilt. A preview that recorded its own
+		// edits would let an undo restore objects a rebuild had already destroyed -- which is exactly
+		// what produced a preview tree with a cycle in it -- and would pin the outgoing hierarchy in
+		// the buffer for as long as the entry lived. UMG clears the same flag for the same reason,
+		// and rebuilds from the template on PostUndo/PostRedo as this editor now does; see
+		// FDreamWidgetBlueprintEditor::HandlePostTransaction.
+		Preview = NewObject<UDreamUserWidget>(InRootAgent->GetOuter(), GeneratedClass, NAME_None, RF_Transient);
+	}
+
+	// The AUTHORING tree, not the class's archetype. This is what lets an added widget appear without
+	// a recompile -- the class is a compile behind for as long as the author has not pressed the
+	// button, and a preview built from it would show the hierarchy as it was, not as it is. Straight
+	// out of UMG (CreateUserWidgetFromBlueprint: "so the preview can update without a full recompile").
+	Preview->InitializeFromArchetype(FindArchetypeForPreview(InBlueprint));
+	Preview->SetParentBeforeRegister(InRootAgent);
+
+	// Fill the design canvas. A freshly constructed widget is 100x100 centred, and this one is not a
+	// widget the author placed -- it is the instance the class's contents hang inside, so any size of
+	// its own is a second, invisible frame that the authored root then fills instead of the canvas.
+	// The symptom is a screen laid out correctly and clipped to a 100x100 square in the middle.
+	//
+	// After parenting on purpose: anchors are resolved against a parent, and setting them on an
+	// orphan is refused (UDreamWidget::SetHorizontalAndVerticalAnchorMinMax says so out loud).
+	{
+		FDreamUIAnchorData FillParent;
+		FillParent.Pivot = FVector2D(0.5, 0.5);
+		FillParent.AnchorMin = FVector2D(0.0, 0.0);
+		FillParent.AnchorMax = FVector2D(1.0, 1.0);
+		FillParent.AnchoredPosition = FVector2D::ZeroVector;
+		FillParent.SizeDelta = FVector2D::ZeroVector;
+		Preview->SetAnchorData(FillParent);
+	}
+
+	// And ARRANGE what is inside it, which is the other half of that same paragraph and was missing.
+	//
+	// This is UMG's PreviewSizeConstraint (SDesignerView.cpp: an SBox with WidthOverride /
+	// HeightOverride around UserWidget->TakeWidget()). In UMG the asset's root cannot be the wrong
+	// size because it has no size of its own to author -- a Slate tree root has no slot, so what it
+	// gets is whatever that SBox hands it. Here every widget carries an anchor rect, the ROOT
+	// included, and the wrapper above had no layout container -- so it handed its child nothing and
+	// the authored root fell back on anchors nothing validates. A root authored as point anchors with
+	// a zero SizeDelta then measured 0x0 and arranged every descendant into a 0x0 rect: a hierarchy
+	// that is structurally perfect and entirely invisible, reported as "every control in here has
+	// size zero". (The 100x100 case above is the same defect one level up, found first.)
+	//
+	// An overlay rather than a size box: the box takes one child and this wrapper legitimately holds
+	// exactly one, but a refused second child during a rebuild would be a lost preview rather than a
+	// tidier one -- and Fill on both axes, which is the default slot, is all the constraint that is
+	// wanted here. The AUTHORED anchors are untouched and still what runs at runtime; the designer is
+	// simulating the host that would arrange this widget, and which host it simulates is the
+	// designer's size rule (see FDreamWidgetBlueprintEditor::SetDesignerSizeRule).
+	{
+		UDreamLayoutContainer* Previous = Preview->GetLayoutContainer();
+		UDreamLayoutContainer* Stage = Preview->CreateNewLayoutContainer<UDreamLayoutContainerOverlay>();
+		Preview->SyncRequiredBehavioursForLayoutContainer(Previous, Stage);
+	}
+
+	RegisterDreamWidgetHierarchy(Preview);
+	return Preview;
+}
+
 void FDreamWidgetPreviewHost::ApplyHiddenInDesigner()
 {
-	if (!IsValid(Blueprint))
-	{
-		return;
-	}
-	UDreamWidget* Root = GetPreviewRoot();
-	if (!IsValid(Root))
+	ApplyHiddenInDesigner(Blueprint, GetPreviewRoot());
+}
+
+void FDreamWidgetPreviewHost::ApplyHiddenInDesigner(const UDreamWidgetBlueprint* InBlueprint, UDreamWidget* InPreviewRoot)
+{
+	if (!IsValid(InBlueprint) || !IsValid(InPreviewRoot))
 	{
 		return;
 	}
@@ -515,9 +534,9 @@ void FDreamWidgetPreviewHost::ApplyHiddenInDesigner()
 	//
 	// To the nested boundary, like every other reader of these name-keyed sets: object names repeat
 	// across assets, and a nested hierarchy's insides belong to the asset that authored them.
-	const TSet<FName>& HiddenSet = Blueprint->DesignerData.HiddenWidgets;
+	const TSet<FName>& HiddenSet = InBlueprint->DesignerData.HiddenWidgets;
 	TArray<UDreamWidget*> AllWidgets;
-	CollectDreamWidgetsToNestedBoundary(Root, AllWidgets);
+	CollectDreamWidgetsToNestedBoundary(InPreviewRoot, AllWidgets);
 	for (UDreamWidget* Widget : AllWidgets)
 	{
 		if (IsValid(Widget))
@@ -527,23 +546,23 @@ void FDreamWidgetPreviewHost::ApplyHiddenInDesigner()
 	}
 }
 
-UDreamWidgetTree* FDreamWidgetPreviewHost::FindArchetypeForPreview() const
+UDreamWidgetTree* FDreamWidgetPreviewHost::FindArchetypeForPreview(const UDreamWidgetBlueprint* InBlueprint)
 {
-	if (!IsValid(Blueprint))
+	if (!IsValid(InBlueprint))
 	{
 		return nullptr;
 	}
-	if (IsValid(Blueprint->WidgetTree) && IsValid(Blueprint->WidgetTree->RootWidget))
+	if (IsValid(InBlueprint->WidgetTree) && IsValid(InBlueprint->WidgetTree->RootWidget))
 	{
-		return Blueprint->WidgetTree;
+		return InBlueprint->WidgetTree;
 	}
 	// Nothing authored here. A subclass that only adds logic inherits its parent's hierarchy, so the
 	// preview has to as well -- otherwise subclassing a screen to change one function previews blank.
 	// The walk deliberately starts at the SUPER class: this class's own archetype is a compile behind,
 	// and using it would show whatever was there before the author emptied the tree.
-	if (Blueprint->GeneratedClass != nullptr)
+	if (InBlueprint->GeneratedClass != nullptr)
 	{
-		return UDreamWidgetGeneratedClass::FindWidgetTreeArchetype(Blueprint->GeneratedClass->GetSuperClass());
+		return UDreamWidgetGeneratedClass::FindWidgetTreeArchetype(InBlueprint->GeneratedClass->GetSuperClass());
 	}
 	return nullptr;
 }

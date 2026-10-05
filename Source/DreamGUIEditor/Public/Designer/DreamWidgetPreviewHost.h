@@ -102,6 +102,27 @@ public:
 	 */
 	void ApplyHiddenInDesigner();
 
+	/**
+	 * InBlueprint's class instanced under InRootAgent the way every preview of it is: from the tree
+	 * FindArchetypeForPreview names, filling the agent and arranged inside it, then registered. Null when
+	 * the Blueprint has no class that makes UDreamUserWidgets, or there is no agent.
+	 *
+	 * The half of RebuildPreview that is not this host's own bookkeeping, shared with the Content
+	 * Browser thumbnail so that a tile shows the screen the designer shows. The caller still tells the
+	 * world there is something new to draw (UDreamUIManagerWorldSubsystem::RefreshAllUI) and replays
+	 * the hidden set.
+	 */
+	static UDreamUserWidget* InstancePreview(UDreamWidgetBlueprint* InBlueprint, UDreamWidget* InRootAgent);
+
+	/**
+	 * The tree a preview of InBlueprint is instanced from: the Blueprint's own authoring tree, or -- when
+	 * this asset authors none -- the nearest ancestor class that does.
+	 */
+	static UDreamWidgetTree* FindArchetypeForPreview(const UDreamWidgetBlueprint* InBlueprint);
+
+	/** InBlueprint's DesignerData.HiddenWidgets replayed onto a preview's contents, from InPreviewRoot down. */
+	static void ApplyHiddenInDesigner(const UDreamWidgetBlueprint* InBlueprint, UDreamWidget* InPreviewRoot);
+
 	/** Compile the Blueprint, which is what makes an authoring edit reach the class the preview is built from. */
 	void CompileBlueprint();
 
@@ -233,11 +254,6 @@ private:
 	bool MapPreviewReferenceToTemplate(UObject* InValue, UObject*& OutMapped) const;
 
 	void DestroyPreview();
-	/**
-	 * The tree the preview is instanced from: the Blueprint's own authoring tree, or -- when this asset
-	 * authors none -- the nearest ancestor class that does.
-	 */
-	UDreamWidgetTree* FindArchetypeForPreview() const;
 	/**
 	 * Take RF_Transactional off the whole preview, sub-objects included.
 	 *
