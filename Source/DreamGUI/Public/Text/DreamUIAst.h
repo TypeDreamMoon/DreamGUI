@@ -90,9 +90,20 @@ struct DREAMGUI_API FDreamUIExpression
 {
 	enum class EKind : uint8
 	{
-		/** `Func(a, b)` -- Symbol is the function name, Operands the arguments (often none). */
+		/**
+		 * `Func(a, b)` -- Symbol is the function name, Operands the arguments (often none).
+		 *
+		 * `Player.Format(a)` is a Call too, with a DOTTED Symbol: every segment but the last is the receiver path (a
+		 * member path as VariableRef reads it), the last is the function called on the object that path reaches.
+		 */
 		Call,
-		/** A bare identifier -- a variable on the user widget. Symbol is the name. */
+		/**
+		 * A bare identifier -- a variable on the user widget. Symbol is the name.
+		 *
+		 * Dotted (`Player.Stats.Title`), it is a MEMBER PATH: the first segment names a variable of the user widget (a
+		 * `viewmodels` entry, a prop, any object variable), each later one a member of the object the segment before it
+		 * holds. Inside a loop body, a path that starts with the loop variable is an item read instead (`Item.Name`).
+		 */
 		VariableRef,
 		/** A literal: LiteralKind + LiteralRaw carry it exactly as FDreamUIValue would. */
 		Literal,
@@ -178,11 +189,49 @@ struct DREAMGUI_API FDreamUIProperty
 	 * both ways. The compiler's thunk pass desugars it -- a generated getter lands in
 	 * BindingFunction (this field then rides into the binding's NotifyField), and a synthesized
 	 * `OnValueChangedBP -> generated-setter` event property joins the node.
+	 *
+	 * May be a dotted member path (`Value <-> Settings.Volume`): the getter reads the path, and the generated setter
+	 * writes the last member on the object the rest of the path reaches -- through that object's `Set<Member>` function
+	 * when it has a BlueprintCallable one taking the value, otherwise by writing the property and broadcasting the
+	 * field on THAT object (the Kismet compiler's own FieldNotify broadcast after a Set node is wired to Self).
 	 */
 	FString TwoWayProperty;
 
+	/**
+	 * Set when this is `Event -> Some.Path.Func` or `Event -> Some.Path.Func(args)`: the dotted path of the function the
+	 * event calls, receiver path first (`Settings.Apply`, `Item.Use`). A plain `-> Handler` (no dot) stays in
+	 * EventHandler, as it always was.
+	 *
+	 * Outside a loop body the compiler's thunk pass lowers it like an emit route -- a generated handler on the user
+	 * widget, taking exactly what the source event sends, whose body reads the receiver, checks it is set and calls the
+	 * function -- and writes that handler's name into EventHandler; from there the builder records an ordinary route.
+	 * Inside a loop body the thunk pass does not look (it never does); the builder records a path that starts with the
+	 * loop variable as a per-item route (FDreamWidgetEntryRoute) and refuses any other.
+	 */
+	FString RouteTarget;
+	/** `-> Path.Func(…)`: the arguments, expressions over the user widget with the source event's parameters in scope by name. */
+	TArray<FDreamUIExpression> RouteArguments;
+	/** Parentheses were written after RouteTarget, even empty ones: `-> Settings.Apply()` calls with no arguments, `-> Settings.SetVolume` forwards the event's. */
+	bool bRouteHasArgumentList = false;
+
+	/**
+	 * What the `<-` (or the forward half of the `<->`) on this line reads, as member paths from the user widget:
+	 * `Player.Health > 0 && !Busy` reads {Player}, {Player, Health} and {Busy}. Each inner array is one path, segment by
+	 * segment; a no-argument function may be a path's last segment (`Count()` reads {Count}). Recorded by the compiler's
+	 * thunk pass when it lowers the line, and copied by the builder onto FDreamWidgetPropertyBinding::Dependencies.
+	 */
+	TArray<TArray<FString>> BindingDependencies;
+	/** The thunk pass recorded BindingDependencies for this line. Empty dependencies then mean "reads nothing" (a constant), not "unknown". */
+	bool bBindingDependenciesRecorded = false;
+	/**
+	 * Nothing the expression reads escapes BindingDependencies: every leaf is a member or a no-argument function. A call
+	 * WITH arguments (`Format(Gold)`, `Player.FormatGold(Player.Gold)`) may read state its arguments do not show, so an
+	 * expression holding one is never complete, and its binding keeps the per-frame poll.
+	 */
+	bool bBindingDependenciesComplete = false;
+
 	bool IsBinding() const { return !BindingFunction.IsEmpty() || BindingExpression.IsSet() || !TwoWayProperty.IsEmpty(); }
-	bool IsEventBinding() const { return !EventHandler.IsEmpty() || !EmitEvent.IsEmpty(); }
+	bool IsEventBinding() const { return !EventHandler.IsEmpty() || !EmitEvent.IsEmpty() || !RouteTarget.IsEmpty(); }
 
 	FDreamUISourceLocation Location;
 };
@@ -277,7 +326,15 @@ struct DREAMGUI_API FDreamUINode
 	/** `: StyleName` -- properties from that style are applied first, then these override. */
 	FString StyleName;
 
-	/** Loops only: the loop variable, and the no-argument UFUNCTION supplying the sequence. */
+	/**
+	 * Loops only: the loop variable, and the source of the sequence -- a no-argument UFUNCTION (`in GetItems()`) or a
+	 * variable (`in Items`), per bLoopSourceIsFunction.
+	 *
+	 * The source may be a dotted member path (`in Inventory.Items`, `in Inventory.Filtered()`): every segment but the
+	 * last is read as an object member from the user widget on, and the last is the array or function on the object
+	 * reached, bLoopSourceIsFunction describing that last segment. The builder splits it into
+	 * FDreamWidgetEachBinding::SourcePath.
+	 */
 	FString LoopVariable;
 	FString LoopSourceFunction;
 
@@ -409,6 +466,41 @@ struct DREAMGUI_API FDreamUIEventDecl
 	FDreamUISourceLocation Location;
 };
 
+/** Where a `viewmodels` entry's object comes from -- the spelling after `=`. Mirrors EDreamViewModelSource. */
+enum class EDreamUIViewModelSource : uint8
+{
+	/** Nothing after the name: the host gives it. */
+	Host,
+	/** `= new` */
+	New,
+	/** `= global`, `= global "Name"` */
+	Global,
+	/** `= parent`, `= parent "Name"` */
+	Parent,
+};
+
+/**
+ * One line of a `viewmodels { … }` block: a view model this file's class holds, by type and name, and where it comes
+ * from (`SettingsVM Settings = new`, `InventoryVM Stash = global "Stash"`). Compiled into an object variable of that
+ * class -- FieldNotify, Expose on Spawn -- plus an FDreamWidgetViewModelSlot on the generated class, which the run time
+ * fills at Initialize.
+ *
+ * TypeName is resolved by the compiler, the same way a `use … as` alias, a /Script/ path or a reflected class name is
+ * anywhere else; the parser records the spelling.
+ */
+struct DREAMGUI_API FDreamUIViewModelDecl
+{
+	/** As written: an alias from `use … as`, a reflected class name (`PlayerVM`), or a full path. */
+	FString TypeName;
+	FString Name;
+	EDreamUIViewModelSource Source = EDreamUIViewModelSource::Host;
+	/** Global and Parent: the quoted name after the keyword; empty when none was written. */
+	FString SourceName;
+	FDreamUISourceLocation Location;
+	/** Where TypeName was written, for a class that does not resolve. */
+	FDreamUISourceLocation TypeLocation;
+};
+
 /**
  * One key on a `timeline` track line: `0.3 = (1.25, 1.25) ease InOutQuad`.
  *
@@ -519,6 +611,11 @@ struct DREAMGUI_API FDreamUIAst
 	/** `events { … }` -- the event dispatchers this file's class declares. */
 	TArray<FDreamUIEventDecl> Events;
 	const FDreamUIEventDecl* FindEvent(const FString& InName) const;
+
+	/** `viewmodels { … }` -- the view models this file's class holds. This file's own only: never merged across a `use`. */
+	TArray<FDreamUIViewModelDecl> ViewModels;
+	/** The entry of that name, or null. First declaration wins (a second is DuplicateViewModel). */
+	const FDreamUIViewModelDecl* FindViewModel(const FString& InName) const;
 
 	/**
 	 * `timeline` blocks, in declaration order.

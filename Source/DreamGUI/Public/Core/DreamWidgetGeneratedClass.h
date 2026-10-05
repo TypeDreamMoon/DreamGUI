@@ -6,6 +6,7 @@
 #include "Engine/BlueprintGeneratedClass.h"
 #include "Core/DreamWidgetEachBinding.h"
 #include "Core/DreamWidgetPropertyBinding.h"
+#include "Core/DreamWidgetViewModelSlot.h"
 #include "DreamWidgetGeneratedClass.generated.h"
 
 class UDreamUserWidget;
@@ -95,6 +96,12 @@ public:
 	/** Base first, like the others. */
 	static void CollectEachBindings(const UClass* InClass, TArray<FDreamWidgetEachBinding>& OutBindings);
 
+	/** The `viewmodels` entries this class declares. Not inherited: see CollectViewModelSlots. */
+	const TArray<FDreamWidgetViewModelSlot>& GetViewModelSlots() const { return ViewModelSlots; }
+
+	/** Every `viewmodels` entry an instance of InClass holds, its ancestors' included, base first; one per variable name, the nearest declaration winning. */
+	static void CollectViewModelSlots(const UClass* InClass, TArray<FDreamWidgetViewModelSlot>& OutSlots);
+
 #if WITH_EDITOR
 	/** Compiler-only: hand the class the tree it will instance. */
 	void SetWidgetTreeArchetype(UDreamWidgetTree* InWidgetTree);
@@ -102,6 +109,7 @@ public:
 	void SetPropertyBindings(TArray<FDreamWidgetPropertyBinding> InBindings);
 	void SetEventBindings(TArray<FDreamWidgetEventBinding> InBindings);
 	void SetEachBindings(TArray<FDreamWidgetEachBinding> InBindings);
+	void SetViewModelSlots(TArray<FDreamWidgetViewModelSlot> InSlots);
 #endif
 
 	/**
@@ -151,6 +159,9 @@ private:
 
 	UPROPERTY()
 	TArray<FDreamWidgetEachBinding> EachBindings;
+
+	UPROPERTY()
+	TArray<FDreamWidgetViewModelSlot> ViewModelSlots;
 
 	/**
 	 * Persistent, and deliberately NOT DuplicateTransient where the tree above is. The tree is dropped

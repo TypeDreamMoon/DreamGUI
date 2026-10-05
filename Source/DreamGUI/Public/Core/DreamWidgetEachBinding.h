@@ -39,6 +39,53 @@ struct DREAMGUI_API FDreamWidgetEntryBinding
 };
 
 /**
+ * One `Event -> Item.Func` line inside a loop body: the event, on which widget of the copy (or cell), routed to a
+ * function of THAT copy's item. Bound per copy by the adapter -- a `for` when it makes or re-aims a copy, an `each` at
+ * SetCell, unbinding the previous item first when a cell is recycled -- never on the class, which has no item.
+ *
+ * The function takes nothing, or exactly what the event sends (bCallWithoutArguments says which the author wrote:
+ * `-> Item.Use()` or `-> Item.Use`). Checked by the compiler when the source's element class is known
+ * (LoopItemRouteMismatch); against an array of UObject only at run time, where a function that fits neither way is
+ * skipped.
+ */
+USTRUCT()
+struct DREAMGUI_API FDreamWidgetEntryRoute
+{
+	GENERATED_BODY()
+
+	/** The template-subtree widget whose event it is, by display name -- clones keep it. */
+	UPROPERTY()
+	FName TargetWidgetDisplayName;
+
+	UPROPERTY()
+	EDreamWidgetBindingTarget Target = EDreamWidgetBindingTarget::Widget;
+
+	UPROPERTY()
+	int32 BehaviourIndex = INDEX_NONE;
+
+	/** A BlueprintAssignable multicast delegate, or an FDreamUIEventDelegate property -- the two kinds `->` routes. */
+	UPROPERTY()
+	FName EventName;
+
+	/** The function called on the item. */
+	UPROPERTY()
+	FName ItemFunction;
+
+	/** `-> Item.Func()`: call with no arguments. Without the parentheses the event's own arguments are forwarded. */
+	UPROPERTY()
+	bool bCallWithoutArguments = false;
+
+#if WITH_EDITORONLY_DATA
+	/** Where the route was written, for LoopItemRouteMismatch. See FDreamWidgetEachBinding::SourceLine. */
+	UPROPERTY()
+	int32 SourceLine = 0;
+
+	UPROPERTY()
+	int32 SourceColumn = 0;
+#endif // WITH_EDITORONLY_DATA
+};
+
+/**
  * One `each Item in Source { Template }` block, compiled: which widget hosts the list view, which
  * widget is the cell template, where the items come from, and what each cell writes from its item.
  *
@@ -69,12 +116,22 @@ struct DREAMGUI_API FDreamWidgetEachBinding
 	UPROPERTY()
 	FName ContentWidgetName;
 
-	/** Function or variable on the user widget supplying TArray<UObject*>. */
+	/** Function or variable on the user widget supplying TArray<UObject*>. With SourcePath, its LAST segment. */
 	UPROPERTY()
 	FName SourceName;
 
+	/** Describes SourceName -- the last segment when there is a SourcePath. */
 	UPROPERTY()
 	bool bSourceIsFunction = true;
+
+	/**
+	 * Set when the source is a member path (`in Inventory.Items`, `in Inventory.Filtered()`): every segment, the last
+	 * equal to SourceName. Empty for the one-segment source every loop had before, which reads SourceName on the user
+	 * widget exactly as it always did. Items are read through DreamUIBindingPath (ResolveOwner, then ReadObjectArray), and
+	 * the owning widget refreshes the adapter when anything along the path changes (an FDreamUIBindingObserver client).
+	 */
+	UPROPERTY()
+	TArray<FName> SourcePath;
 
 	/** The loop variable's spelling, kept for messages. */
 	UPROPERTY()
@@ -108,4 +165,8 @@ struct DREAMGUI_API FDreamWidgetEachBinding
 
 	UPROPERTY()
 	TArray<FDreamWidgetEntryBinding> EntryBindings;
+
+	/** The body's `-> Item.Func` lines. */
+	UPROPERTY()
+	TArray<FDreamWidgetEntryRoute> EntryRoutes;
 };

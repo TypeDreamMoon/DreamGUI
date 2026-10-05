@@ -120,6 +120,28 @@ public:
 	 */
 	UFUNCTION(BlueprintCallable, Category = "FieldNotify", meta = (DisplayName = "Broadcast Field Value Changed", ScriptName = "BroadcastFieldValueChanged", BlueprintInternalUseOnly = "true"))
 	void K2_BroadcastFieldValueChanged(FFieldNotificationId FieldId);
+
+	/**
+	 * Hand this widget the object its `viewmodels` entry Name holds -- what a host does from code that cannot see the
+	 * Blueprint class's variables (C++, UnrealSharp). The object must be of the entry's class; it is written into the
+	 * entry's variable and the field is broadcast, so every binding reading through it re-reads. Null clears the entry.
+	 * False, with a warning in the log, when this class has no such entry or the object is of another class.
+	 *
+	 * Called before the widget initializes, the object is what On Initialized and every binding's first value see, and
+	 * a `= new` / `= global` / `= parent` entry is then left as it was given.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI|ViewModel")
+	bool SetViewModel(FName Name, UObject* ViewModel);
+
+	/** What the `viewmodels` entry Name holds right now; null when it is empty or there is no such entry. */
+	UFUNCTION(BlueprintPure, Category = "DreamGUI|ViewModel")
+	UObject* GetViewModel(FName Name) const;
+
+	/**
+	 * Run this widget's `= parent` entries' lookup again -- after the widget has been moved under another host in code.
+	 * Initialize and NativeOnConstruct already do it; nothing else needs to.
+	 */
+	void RefreshParentViewModels();
 	/**
 	 * This instance's own hierarchy, instanced from the class template. Transient and
 	 * DuplicateTransient: it is regenerated from the class, never persisted and never copied.

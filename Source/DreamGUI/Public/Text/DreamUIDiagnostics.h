@@ -138,6 +138,11 @@ enum class EDreamUIDiagnosticCode : int32
 	 * twice, a row with more or fewer values than there are columns. A row that does not read makes no widget.
 	 */
 	MalformedRows = 2020,
+	/**
+	 * A `viewmodels` line that is not `Type Name`, `Type Name = new`, `Type Name = global ["Name"]` or
+	 * `Type Name = parent ["Name"]`, or a `viewmodels` block written inside a node.
+	 */
+	MalformedViewModelsBlock = 2021,
 
 	// --- 3xxx semantic ---
 	/**
@@ -238,6 +243,8 @@ enum class EDreamUIDiagnosticCode : int32
 	 * which is the instability a key column exists to avoid. Give the rows distinct first values.
 	 */
 	DuplicateRowKey = 3023,
+	/** Two `viewmodels` entries of one name. The first is kept. */
+	DuplicateViewModel = 3024,
 
 	// --- 4xxx values ---
 	/** No property of that name on the target object. Message suggests the nearest match. */
@@ -368,6 +375,15 @@ enum class EDreamUIDiagnosticCode : int32
 	 * one way, and the second container used to replace the first without a word, taking its values with it.
 	 */
 	SecondLayoutContainer = 5022,
+	/**
+	 * A member path (`Player.Helth`, `Settings.Apply()`) one of whose segments is not a member of the class the segment
+	 * before it holds -- or is one a graph cannot reach: a property that is not BlueprintVisible, a function that is not
+	 * BlueprintCallable or BlueprintPure. The message names the segment and the class. An UnrealSharp property is
+	 * BlueprintVisible only when its [UProperty] says BlueprintReadOnly or BlueprintReadWrite.
+	 */
+	MemberPathNotFound = 5023,
+	/** A member path that goes on past a value that is not an object (`Player.Health.Max`, Health a float). */
+	MemberPathThroughNonObject = 5024,
 
 	// --- 6xxx compile ---
 	/** The class's Source File names a file that does not exist or cannot be read. */
@@ -433,6 +449,29 @@ enum class EDreamUIDiagnosticCode : int32
 	 * variable or function, or a parent's member that is not a dispatcher of the same parameters.
 	 */
 	EventNameTaken = 6014,
+	/** A `viewmodels` type that names no class, or names more than one (two classes of that short name: write the path). */
+	ViewModelClassUnknown = 6015,
+	/** A `viewmodels` name another member of the class already answers to: a widget, a prop, a resource, an event, a parent's member of another type. */
+	ViewModelNameTaken = 6016,
+	/** A `viewmodels` source that cannot be honoured: `= new` of an abstract class, `= global` / `= parent` with an empty name. */
+	ViewModelSourceInvalid = 6017,
+	/** `-> Path.Func` whose function is not on the class the receiver path reaches, or is not BlueprintCallable. */
+	RouteMemberFunctionNotFound = 6018,
+	/**
+	 * `-> Path.Func` whose arguments do not fit: without parentheses, Func takes neither nothing nor exactly what the
+	 * event sends; with them, the count or a type differs from Func's parameters.
+	 */
+	RouteArgumentMismatch = 6019,
+	/** `<-> Path.Member` whose last member cannot be written back: not BlueprintReadWrite, and its object has no BlueprintCallable `Set<Member>` taking the value. */
+	TwoWayTargetReadOnly = 6020,
+	/**
+	 * `Prop <- Item.Member` in a `for` or `each` whose source's element class is known (an array of a concrete UObject
+	 * class), and Member is not a member of it. With a TArray<UObject*> source the class is not known until run time,
+	 * and the line is checked then, silently, as it always was.
+	 */
+	LoopItemMemberNotFound = 6021,
+	/** `-> Item.Func` in a loop body whose element class is known, and Func is not on it, or takes neither nothing nor exactly what the event sends. */
+	LoopItemRouteMismatch = 6022,
 
 	// --- 7xxx write-back ---
 	/** The patcher was asked to write a property it cannot locate a home for. */

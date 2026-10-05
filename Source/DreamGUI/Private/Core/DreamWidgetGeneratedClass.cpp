@@ -406,6 +406,36 @@ void UDreamWidgetGeneratedClass::CollectEachBindings(const UClass* InClass, TArr
 	}
 }
 
+void UDreamWidgetGeneratedClass::CollectViewModelSlots(const UClass* InClass, TArray<FDreamWidgetViewModelSlot>& OutSlots)
+{
+	OutSlots.Reset();
+	TArray<const UDreamWidgetGeneratedClass*> Chain;
+	for (const UClass* Current = InClass; Current != nullptr; Current = Current->GetSuperClass())
+	{
+		if (const UDreamWidgetGeneratedClass* Generated = Cast<UDreamWidgetGeneratedClass>(Current))
+		{
+			Chain.Add(Generated);
+		}
+	}
+	for (int32 Index = Chain.Num() - 1; Index >= 0; --Index)
+	{
+		for (const FDreamWidgetViewModelSlot& Slot : Chain[Index]->ViewModelSlots)
+		{
+			// A subclass's file declaring an entry its parent's file already declared is the compiler's ViewModelNameTaken;
+			// should one get through anyway, the nearer declaration wins, as a member of the nearer class would.
+			if (FDreamWidgetViewModelSlot* Existing = OutSlots.FindByPredicate(
+				[&Slot](const FDreamWidgetViewModelSlot& Candidate) { return Candidate.VariableName == Slot.VariableName; }))
+			{
+				*Existing = Slot;
+			}
+			else
+			{
+				OutSlots.Add(Slot);
+			}
+		}
+	}
+}
+
 #if WITH_EDITOR
 void UDreamWidgetGeneratedClass::SetPropertyBindings(TArray<FDreamWidgetPropertyBinding> InBindings)
 {
@@ -420,6 +450,11 @@ void UDreamWidgetGeneratedClass::SetEventBindings(TArray<FDreamWidgetEventBindin
 void UDreamWidgetGeneratedClass::SetEachBindings(TArray<FDreamWidgetEachBinding> InBindings)
 {
 	EachBindings = MoveTemp(InBindings);
+}
+
+void UDreamWidgetGeneratedClass::SetViewModelSlots(TArray<FDreamWidgetViewModelSlot> InSlots)
+{
+	ViewModelSlots = MoveTemp(InSlots);
 }
 #endif
 

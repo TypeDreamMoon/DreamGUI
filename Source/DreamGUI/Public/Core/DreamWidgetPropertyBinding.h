@@ -26,6 +26,21 @@ enum class EDreamWidgetBindingTarget : uint8
 };
 
 /**
+ * One member path a binding reads, from the user widget on: {Player, Health} for `Player.Health`. Every segment but the
+ * last is an object member; the last is any member, or a no-argument function. See DreamUIBindingPath.
+ */
+USTRUCT()
+struct DREAMGUI_API FDreamWidgetBindingPath
+{
+	GENERATED_BODY()
+
+	UPROPERTY()
+	TArray<FName> Segments;
+
+	bool operator==(const FDreamWidgetBindingPath& Other) const { return Segments == Other.Segments; }
+};
+
+/**
  * "Drive this property from this function", resolved at compile time.
  *
  * The counterpart of UMG's FDelegateRuntimeBinding, with one deliberate difference. UMG binds a
@@ -93,6 +108,29 @@ struct DREAMGUI_API FDreamWidgetPropertyBinding
 	UPROPERTY()
 	FName NotifyField;
 
+	/**
+	 * Every member path the source reads (FDreamUIProperty::BindingDependencies, recorded when the compiler lowered the
+	 * expression). With bDependenciesRecorded the run time watches these instead of looking FunctionName or NotifyField
+	 * up as a field of the widget:
+	 *  - complete, and every hop announceable (DreamUIBindingPath::CanNotifyAlong from the widget's class): subscribed
+	 *    through an FDreamUIBindingObserver, never polled;
+	 *  - otherwise: polled every frame, as every expression binding was before.
+	 * Either way the binding is not evaluated while an object along any path is unset -- the target keeps the value it
+	 * had (the authored one, or the last one) rather than being reset by a chain that broke.
+	 *
+	 * Not recorded (an older compile, the designer's Bind button, a bare `F()`): the run time does what it always did.
+	 */
+	UPROPERTY()
+	TArray<FDreamWidgetBindingPath> Dependencies;
+
+	/** The compiler recorded Dependencies. Empty Dependencies then mean a constant: evaluated once, never polled. */
+	UPROPERTY()
+	bool bDependenciesRecorded = false;
+
+	/** Nothing the source reads escapes Dependencies -- see FDreamUIProperty::bBindingDependenciesComplete. */
+	UPROPERTY()
+	bool bDependenciesComplete = false;
+
 #if WITH_EDITORONLY_DATA
 	/**
 	 * Where the `<-` that produced this was written: 1-based line and column, both 0 when it came
@@ -129,7 +167,10 @@ struct DREAMGUI_API FDreamWidgetPropertyBinding
 			&& PropertyName == Other.PropertyName
 			&& SetterName == Other.SetterName
 			&& FunctionName == Other.FunctionName
-			&& NotifyField == Other.NotifyField;
+			&& NotifyField == Other.NotifyField
+			&& Dependencies == Other.Dependencies
+			&& bDependenciesRecorded == Other.bDependenciesRecorded
+			&& bDependenciesComplete == Other.bDependenciesComplete;
 	}
 };
 

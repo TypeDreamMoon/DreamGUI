@@ -110,6 +110,18 @@ const FDreamUIEventDecl* FDreamUIAst::FindEvent(const FString& InName) const
 	return nullptr;
 }
 
+const FDreamUIViewModelDecl* FDreamUIAst::FindViewModel(const FString& InName) const
+{
+	for (const FDreamUIViewModelDecl& ViewModel : ViewModels)
+	{
+		if (ViewModel.Name == InName)
+		{
+			return &ViewModel;
+		}
+	}
+	return nullptr;
+}
+
 const FDreamUITimeline* FDreamUIAst::FindTimeline(const FString& InName) const
 {
 	// No import chain to fall through to, on purpose -- see the field's own note: a timeline is an
