@@ -31,6 +31,9 @@ after 3 for 2.1.0 -- so the engine never takes 1.0.0 for the older of the two.
   without refreshing the list, and `Event -> Item.Func()` routes each copy's event to its own item -- moved along when a
   list view recycles a cell. With a typed source (`TArray<UItemVM*>`) the compiler checks `Item.Member` (DUI6021) and
   `Item.Func` (DUI6022).
+- **A C++ `UDreamUserWidget` subclass can declare FieldNotify members.** `DreamUserWidget.h` now includes
+  `FieldNotificationDeclaration.h`, which what UHT generates for them needs, as UMG's `Widget.h` does; such a class used to
+  fail to compile. A `.dui` binding to the member subscribes through its descriptor, and `DREAM_VM_SET` is its setter.
 - **`+=` and `=` on events**, beside `->`: `+=` adds a listener and takes only a multicast event, `=` is the one listener
   of a single-cast delegate -- which routes can now name at all -- and takes only that; the wrong one is DUI5025. `->`
   takes either.

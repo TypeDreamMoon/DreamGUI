@@ -218,6 +218,23 @@ public:
 	}
 };
 
+/**
+ * A C++ parent with a FieldNotify member of its own, as a project's code-behind widget would have: UHT generates its
+ * field descriptor on top of UDreamUserWidget's, which only compiles with FieldNotificationDeclaration.h reachable from
+ * DreamUserWidget.h, and a `.dui` binding to the member subscribes through that descriptor.
+ */
+UCLASS(NotBlueprintType, HideDropdown)
+class UDreamTestNativeNotifyWidget : public UDreamTestViewModelWidgetBase
+{
+	GENERATED_BODY()
+
+public:
+	UPROPERTY(BlueprintReadOnly, FieldNotify, Category = "Test")
+	FText Headline;
+
+	void SetHeadline(const FText& InHeadline) { DREAM_VM_SET(Headline, InHeadline); }
+};
+
 /** A single-cast dynamic delegate: what an `Event = Handler` route binds, replacing its one listener. */
 DECLARE_DYNAMIC_DELEGATE(FDreamTestSingleCastEvent);
 

@@ -746,6 +746,45 @@ bool FDreamUIViewModelRuntimeConstantTest::RunTest(const FString& Parameters)
 }
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamUIViewModelRuntimeNativeFieldTest,
+	"DreamGUI.ViewModel.Runtime.ANativeFieldNotifyMemberOfACppParentIsSubscribed",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * A C++ parent's own FieldNotify member: its class compiles (UHT's descriptor needs FieldNotificationDeclaration.h through
+ * DreamUserWidget.h), and `Text <- Headline` finds the field through that descriptor -- subscribed, updated by the C++
+ * setter, never polled.
+ */
+bool FDreamUIViewModelRuntimeNativeFieldTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamUIViewModelRuntimeTestLocal;
+
+	FCompiledDui Dui(TEXT("BP_VMRuntimeNativeField"));
+	UClass* Class = Dui.Compile(*this, {
+		TEXT("Widget Root {"),
+		TEXT("    Text Title {"),
+		TEXT("        Text <- Headline"),
+		TEXT("    }"),
+		TEXT("}"),
+	}, UDreamTestNativeNotifyWidget::StaticClass());
+	if (Class == nullptr)
+	{
+		return false;
+	}
+	FScopedGameWorld TestWorld;
+	UDreamTestNativeNotifyWidget* Instance = Cast<UDreamTestNativeNotifyWidget>(CreateDreamWidget(TestWorld.World, Class));
+	if (!TestNotNull(TEXT("the class instantiates"), Instance))
+	{
+		return false;
+	}
+	TestEqual(TEXT("a binding to the parent's FieldNotify member is subscribed"), Instance->GetBindingCounts().Subscribed, 1);
+	TestFalse(TEXT("and not polled"), Instance->HasPolledPropertyBindings());
+	Instance->SetHeadline(FText::FromString(TEXT("Native")));
+	TestEqual(TEXT("the C++ setter's broadcast updates the text"), TextOf(Instance, TEXT("Title")), FString(TEXT("Native")));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamUIViewModelRuntimeWidgetVariableTest,
 	"DreamGUI.ViewModel.Runtime.ABindingToAFieldNotifyVariableOfTheWidgetIsSubscribedNow",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)

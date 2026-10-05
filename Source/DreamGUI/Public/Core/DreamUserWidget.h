@@ -5,6 +5,8 @@
 #include "CoreMinimal.h"
 #include "Core/Components/DreamWidget.h"
 #include "Core/DreamFieldNotification.h"
+// What UHT generates for a C++ subclass's own FieldNotify members expands to it, as for UMG's UWidget.
+#include "FieldNotificationDeclaration.h" // IWYU pragma: keep
 #include "Core/DreamUIWorldContext.h"
 #include "Core/IDreamUICultureChangedInterface.h"
 #include "INotifyFieldValueChanged.h"
