@@ -128,6 +128,26 @@ struct DREAMGUI_API FDreamUIExpression
 };
 
 /**
+ * How an event line attaches its handler -- the operator between the event and the handler.
+ *
+ * The spelling says what happens to the event's OTHER listeners, and the builder holds the author to it: `+=` only
+ * where more than one listener can exist, `=` only where exactly one can.
+ */
+enum class EDreamUIRouteOperator : uint8
+{
+	/** `Event -> Handler` -- the original spelling, kept: appends on a multicast event, takes a single-cast delegate's one slot. */
+	Arrow,
+	/** `Event += Handler` -- appends. A multicast event or an FDreamUIEventDelegate; on a single-cast delegate it is RouteOperatorMismatch. */
+	Append,
+	/**
+	 * `Event = Handler` -- the one listener of a single-cast delegate (FDelegateProperty), replacing whatever it held. On a
+	 * multicast event it is RouteOperatorMismatch: it would have to throw away listeners the control itself and the
+	 * Blueprint graph added, so it is refused rather than done.
+	 */
+	Assign,
+};
+
+/**
  * One `Name = Value` or `Name <- Func()` line.
  *
  * A binding and an assignment share this struct because they share a destination: the difference is
@@ -213,6 +233,17 @@ struct DREAMGUI_API FDreamUIProperty
 	TArray<FDreamUIExpression> RouteArguments;
 	/** Parentheses were written after RouteTarget, even empty ones: `-> Settings.Apply()` calls with no arguments, `-> Settings.SetVolume` forwards the event's. */
 	bool bRouteHasArgumentList = false;
+
+	/**
+	 * Which operator attached the route (EventHandler, RouteTarget or EmitEvent): `->`, `+=` or `=`.
+	 *
+	 * `+=` is its own token and always a route. `=` is also how every value is assigned, so the parser can only tell a
+	 * route by its shape: `= Path.Func(…)` / `= Path.Func` (a dotted name, or a call) is a route and is recorded here as
+	 * Assign with RouteTarget set; `= Handler` (one bare identifier) is indistinguishable from an enum value
+	 * (`HorizontalAlignment = Fill`) and arrives as an Identifier value -- the BUILDER, which knows the destination is a
+	 * delegate, turns it into an Assign route with EventHandler = the identifier.
+	 */
+	EDreamUIRouteOperator RouteOperator = EDreamUIRouteOperator::Arrow;
 
 	/**
 	 * What the `<-` (or the forward half of the `<->`) on this line reads, as member paths from the user widget:

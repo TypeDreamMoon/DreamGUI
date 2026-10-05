@@ -384,6 +384,12 @@ enum class EDreamUIDiagnosticCode : int32
 	MemberPathNotFound = 5023,
 	/** A member path that goes on past a value that is not an object (`Player.Health.Max`, Health a float). */
 	MemberPathThroughNonObject = 5024,
+	/**
+	 * A route operator the event cannot honour: `+=` on a single-cast delegate, which holds one listener and cannot take
+	 * a second; `=` on a multicast event (or an FDreamUIEventDelegate), which would have to drop the listeners others
+	 * added. `->` takes either kind and is never this.
+	 */
+	RouteOperatorMismatch = 5025,
 
 	// --- 6xxx compile ---
 	/** The class's Source File names a file that does not exist or cannot be read. */
