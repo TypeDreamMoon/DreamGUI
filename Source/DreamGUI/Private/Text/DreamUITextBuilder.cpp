@@ -1264,12 +1264,175 @@ namespace DreamUITextBuilderLocal
 			return false;
 		}
 		Binding.FunctionName = FName(*FunctionName);
+
+		// What the source reads, as the compiler's thunk pass recorded it when it lowered the line: the paths the run time
+		// watches instead of looking FunctionName or NotifyField up as a field of the widget. Copied as they are -- the
+		// flags included, since "recorded and empty" (a constant) and "never recorded" (an older compile, a bare `F()`
+		// nobody lowered) are different instructions to the run time, and only the pass that read the expression knows
+		// which one this is.
+		Binding.bDependenciesRecorded = InProperty.bBindingDependenciesRecorded;
+		Binding.bDependenciesComplete = InProperty.bBindingDependenciesComplete;
+		for (const TArray<FString>& Path : InProperty.BindingDependencies)
+		{
+			FDreamWidgetBindingPath Dependency;
+			for (const FString& Segment : Path)
+			{
+				// Gated like every authored name that becomes an FName (IsNameLengthLegal). A parsed file cannot reach
+				// this -- the lexer cuts every word short of the limit -- but a hand-built line can.
+				if (Segment.IsEmpty() || !IsNameLengthLegal(Segment))
+				{
+					Dependency.Segments.Reset();
+					break;
+				}
+				Dependency.Segments.Add(FName(*Segment));
+			}
+			if (Dependency.Segments.Num() == 0)
+			{
+				// A path nothing can watch: the binding polls instead, which is never wrong, only slower.
+				Binding.bDependenciesComplete = false;
+				continue;
+			}
+			Binding.Dependencies.Add(MoveTemp(Dependency));
+		}
+
 		InContext.Bindings->Add(Binding);
 		return true;
 	}
 
-	/** One `Event -> Handler` line: checked here for the half the AST can answer, recorded for the
-	 * compiler to check the other half (the handler lives on a class this build cannot see). */
+	/**
+	 * Whether a property is something an event line could mean -- any delegate, or an FDreamUIEventDelegate -- before the
+	 * stricter question of whether a route can name it (AddEventBinding). Decides only that a single word after `=` is a
+	 * handler rather than a value; AddEventBinding then says, with the line, when it is not an event a route can bind.
+	 */
+	bool IsEventProperty(const FProperty* InProperty)
+	{
+		if (InProperty == nullptr)
+		{
+			return false;
+		}
+		if (InProperty->IsA<FDelegateProperty>() || InProperty->IsA<FMulticastDelegateProperty>())
+		{
+			return true;
+		}
+		const FStructProperty* AsStruct = CastField<FStructProperty>(InProperty);
+		return AsStruct != nullptr && AsStruct->Struct == FDreamUIEventDelegate::StaticStruct();
+	}
+
+	/** `->`, `+=` or `=`, as the line wrote it, for a message to quote. */
+	const TCHAR* RouteOperatorSpelling(EDreamUIRouteOperator InOperator)
+	{
+		switch (InOperator)
+		{
+		case EDreamUIRouteOperator::Append: return TEXT("+=");
+		case EDreamUIRouteOperator::Assign: return TEXT("=");
+		default:                            return TEXT("->");
+		}
+	}
+
+	/** What a route line routes to, as written after its operator: `Handler`, `emit Picked(…)`, `Item.Use()`. For messages. */
+	FString DescribeRouteTarget(const FDreamUIProperty& InProperty)
+	{
+		if (!InProperty.RouteTarget.IsEmpty())
+		{
+			return InProperty.bRouteHasArgumentList
+				? FString::Printf(TEXT("%s(%s)"), *InProperty.RouteTarget, InProperty.RouteArguments.Num() > 0 ? TEXT("…") : TEXT(""))
+				: InProperty.RouteTarget;
+		}
+		if (!InProperty.EmitEvent.IsEmpty())
+		{
+			return FString::Printf(TEXT("emit %s"), *InProperty.EmitEvent);
+		}
+		return InProperty.EventHandler;
+	}
+
+	/**
+	 * Whether an event line's operator suits the event it names -- the author's word for what happens to the event's
+	 * OTHER listeners, held to it (EDreamUIRouteOperator). `+=` adds one more, so it needs an event that can hold more
+	 * than one; `=` takes the one slot, so it needs an event that has exactly one -- on a multicast event it would have to
+	 * throw away whatever the control itself and the Blueprint graph bound. `->` takes either, as it always has.
+	 * False, reported as RouteOperatorMismatch, and the route is then not recorded: binding it the other way would do
+	 * something the line does not say.
+	 */
+	bool CheckRouteOperator(const FResolvedDestination& InDestination, const FDreamUIProperty& InProperty, bool bInSingleCast,
+		FBuildContext& InContext)
+	{
+		const FString OwnerName = InDestination.Owner->GetClass()->GetName();
+		if (InProperty.RouteOperator == EDreamUIRouteOperator::Append && bInSingleCast)
+		{
+			InContext.Diagnostics->AddError(EDreamUIDiagnosticCode::RouteOperatorMismatch, InProperty.Location,
+				FString::Printf(TEXT("'%s += %s' adds a listener, and '%s' on %s is a single-cast delegate, which holds one -- write '%s = %s' (or '->')"),
+					*InProperty.Name, *DescribeRouteTarget(InProperty), *InProperty.Name, *OwnerName,
+					*InProperty.Name, *DescribeRouteTarget(InProperty)));
+			return false;
+		}
+		if (InProperty.RouteOperator == EDreamUIRouteOperator::Assign && !bInSingleCast)
+		{
+			InContext.Diagnostics->AddError(EDreamUIDiagnosticCode::RouteOperatorMismatch, InProperty.Location,
+				FString::Printf(TEXT("'%s = %s' would be the only listener, and '%s' on %s is a multicast event others listen to as well -- write '%s += %s' (or '->')"),
+					*InProperty.Name, *DescribeRouteTarget(InProperty), *InProperty.Name, *OwnerName,
+					*InProperty.Name, *DescribeRouteTarget(InProperty)));
+			return false;
+		}
+		return true;
+	}
+
+	/**
+	 * `OnClicked -> Item.Use()` inside a loop body: the event of THIS copy's widget, routed to a function of THIS copy's
+	 * item. Nothing on the class can be bound for it -- the class has no item -- so it is recorded on the loop
+	 * (FDreamWidgetEntryRoute) for its adapter to bind per copy, or per cell, as the copy or cell gets its item.
+	 *
+	 * Only that one shape. The loop variable and one function, nothing deeper (`Item.Owner.Use` would need a graph to
+	 * reach, and the body has none -- the thunk pass never looks inside a loop), and no arguments: `-> Item.Use()` calls
+	 * it with nothing, `-> Item.Use` hands it what the event sends, and anything an argument list could say beyond that
+	 * would be an expression with nowhere to be compiled to. Everything else is LoopBodyBindingUnsupported.
+	 */
+	bool AddEntryRoute(const FResolvedDestination& InDestination, UDreamWidget* InWidget, const FDreamUIProperty& InProperty,
+		FBuildContext& InContext)
+	{
+		TArray<FString> Segments;
+		InProperty.RouteTarget.ParseIntoArray(Segments, TEXT("."));
+		const bool bItemRoute = Segments.Num() == 2
+			&& Segments[0].Equals(InContext.ActiveLoopVariable, ESearchCase::CaseSensitive)
+			&& InProperty.RouteArguments.Num() == 0;
+		if (!bItemRoute)
+		{
+			InContext.Diagnostics->AddError(EDreamUIDiagnosticCode::LoopBodyBindingUnsupported, InProperty.Location,
+				FString::Printf(TEXT("'%s %s %s' cannot be routed from inside a '%s': a loop body routes an event only to a function of its item, '%s.Func' (handing it what the event sends) or '%s.Func()' (calling it with nothing)"),
+					*InProperty.Name, RouteOperatorSpelling(InProperty.RouteOperator), *DescribeRouteTarget(InProperty),
+					InContext.ActiveEach->bInPanel ? TEXT("for") : TEXT("each"),
+					*InContext.ActiveLoopVariable, *InContext.ActiveLoopVariable));
+			return false;
+		}
+		if (!IsNameLengthLegal(Segments[1]))
+		{
+			// A parsed file cannot get here (the lexer cuts every word short of the limit); a hand-built line can.
+			InContext.Diagnostics->AddError(EDreamUIDiagnosticCode::LoopBodyBindingUnsupported, InProperty.Location,
+				FString::Printf(TEXT("'%s' is %d characters long, and a function name holds at most %d"),
+					*EllipsizeName(Segments[1]), Segments[1].Len(), NAME_SIZE - 1));
+			return false;
+		}
+
+		FDreamWidgetEntryRoute& Route = InContext.ActiveEach->EntryRoutes.AddDefaulted_GetRef();
+		// By display name, as an entry binding names its widget: copies keep it, and a variable name they do not have.
+		Route.TargetWidgetDisplayName = FName(*InWidget->GetDisplayName());
+		Route.Target = InDestination.BindingTarget;
+		Route.BehaviourIndex = InDestination.BehaviourIndex;
+		Route.EventName = InDestination.LeafProperty->GetFName();
+		Route.ItemFunction = FName(*Segments[1]);
+		Route.bCallWithoutArguments = InProperty.bRouteHasArgumentList;
+#if WITH_EDITORONLY_DATA
+		// LoopItemRouteMismatch is the compiler's, which runs after this AST is gone: the line has to travel with the record.
+		Route.SourceLine = InProperty.Location.Line;
+		Route.SourceColumn = InProperty.Location.Column;
+#endif
+		return true;
+	}
+
+	/**
+	 * One event line -- `Event -> Handler`, `Event += Handler`, `Event = Handler`, and the emit and member-path forms
+	 * of each: checked here for the half the AST can answer, recorded for the compiler to check the other half (the
+	 * handler lives on a class this build cannot see).
+	 */
 	bool AddEventBinding(const FResolvedDestination& InDestination, UDreamWidget* InWidget,
 		const FDreamUIProperty& InProperty, FBuildContext& InContext)
 	{
@@ -1298,18 +1461,33 @@ namespace DreamUITextBuilderLocal
 		// here, which left that whole family with no canonical way to be handled and kept its
 		// per-instance legacy event list alive as a second, competing mechanism.
 		// UDreamUserWidget::BindEventBindings attaches to either.
+		//
+		// And a third, which holds ONE listener: a single-cast dynamic delegate (FDelegateProperty), the shape a
+		// "call this when…" callback takes rather than an event many parties hear. It is the one `=` is for, and `->`
+		// reaches it too; `+=` cannot (CheckRouteOperator).
 		const bool bIsAssignableDelegate = CastField<FMulticastDelegateProperty>(InDestination.LeafProperty) != nullptr
 			&& InDestination.LeafProperty->HasAnyPropertyFlags(CPF_BlueprintAssignable);
 		const FStructProperty* AsDreamEvent = CastField<FStructProperty>(InDestination.LeafProperty);
 		const bool bIsDreamEvent = AsDreamEvent != nullptr
 			&& AsDreamEvent->Struct == FDreamUIEventDelegate::StaticStruct()
 			&& AsDreamEvent->HasAnyPropertyFlags(CPF_Edit);
-		if (!bIsAssignableDelegate && !bIsDreamEvent)
+		const bool bIsSingleCast = CastField<FDelegateProperty>(InDestination.LeafProperty) != nullptr;
+		if (!bIsAssignableDelegate && !bIsDreamEvent && !bIsSingleCast)
 		{
 			InContext.Diagnostics->AddError(EDreamUIDiagnosticCode::EventNotFound, InProperty.Location,
-				FString::Printf(TEXT("'%s' on %s is not an event (a BlueprintAssignable dynamic multicast delegate, or an editable DreamUIEventDelegate)"),
+				FString::Printf(TEXT("'%s' on %s is not an event (a BlueprintAssignable dynamic multicast delegate, a dynamic delegate, or an editable DreamUIEventDelegate)"),
 					*InProperty.Name, *InDestination.Owner->GetClass()->GetName()));
 			return false;
+		}
+		if (!CheckRouteOperator(InDestination, InProperty, bIsSingleCast, InContext))
+		{
+			return false;
+		}
+		if (InContext.ActiveEach != nullptr && !InProperty.RouteTarget.IsEmpty())
+		{
+			// Inside a loop body a member route is never the thunk pass's -- that pass does not look in here -- so it
+			// arrives with no handler, and is either a route to the item or nothing a loop body can hold.
+			return AddEntryRoute(InDestination, InWidget, InProperty, InContext);
 		}
 		if (InProperty.EventHandler.TrimStartAndEnd().IsEmpty())
 		{
@@ -1319,6 +1497,10 @@ namespace DreamUITextBuilderLocal
 			// reference tree, a test -- and for the same reason: a nameless route would bind to nothing at run time
 			// and trip the compiler's not-found check with an empty name. The checks above still ran, so an emit
 			// on something that is not an event is still reported.
+			//
+			// `OnClicked -> Settings.Apply()` outside a loop body arrives here the same way when the pass refused it
+			// (it has said why, at the line) or never ran: a member route is lowered exactly as an emit is, and an
+			// ordinary route, recorded below, once it has been.
 			return false;
 		}
 		if (InContext.EventBindings == nullptr)
@@ -1371,6 +1553,20 @@ namespace DreamUITextBuilderLocal
 		if (InProperty.IsBinding())
 		{
 			AddBinding(Destination, InWidget, InProperty, InContext);
+			return;
+		}
+		if (InProperty.Value.Kind == EDreamUIValueKind::Identifier && IsEventProperty(Destination.LeafProperty))
+		{
+			// `OnPicked = HandlePick` -- the parser cannot tell a handler from an enum value (`HorizontalAlignment =
+			// Fill` is the same three tokens), so a single word after `=` arrives as a value, and only here, where the
+			// destination turns out to be an event, is it read as the route it is: the `=` route, the one listener of a
+			// single-cast delegate (EDreamUIRouteOperator::Assign). Nothing that was a value before changes: an event has
+			// no text form, and every such line used to be refused (PropertyNotWritable, or a mismatch on the struct).
+			FDreamUIProperty AsRoute = InProperty;
+			AsRoute.EventHandler = InProperty.Value.Raw;
+			AsRoute.RouteOperator = EDreamUIRouteOperator::Assign;
+			AsRoute.Value = FDreamUIValue();
+			AddEventBinding(Destination, InWidget, AsRoute, InContext);
 			return;
 		}
 		FString Reason;
@@ -2383,6 +2579,40 @@ namespace DreamUITextBuilderLocal
 	UDreamWidget* BuildEachLoop(const FDreamUINode& InNode, UDreamWidget* InParent, FBuildContext& InContext);
 	UDreamWidget* BuildForLoop(const FDreamUINode& InNode, UDreamWidget* InParent, FBuildContext& InContext);
 
+	/**
+	 * Where a loop's items come from, onto its record. `in Items` / `in GetItems()` is SourceName alone, written exactly
+	 * as every loop before member paths wrote it; `in Inventory.Items` / `in Inventory.Filtered()` is every segment in
+	 * SourcePath and the last one, the array or the function on the object reached, in SourceName as well -- which
+	 * bSourceIsFunction already describes, the parser having read it off the parentheses after that last segment.
+	 * False, reported, for a path with a segment no name can hold; the caller drops the loop.
+	 */
+	bool RecordLoopSource(const FDreamUINode& InNode, FDreamWidgetEachBinding& OutBinding, FBuildContext& InContext)
+	{
+		TArray<FString> Segments;
+		InNode.LoopSourceFunction.ParseIntoArray(Segments, TEXT("."));
+		if (Segments.Num() <= 1)
+		{
+			OutBinding.SourceName = FName(*InNode.LoopSourceFunction);
+			return true;
+		}
+		for (const FString& Segment : Segments)
+		{
+			// Gated like every authored name that becomes an FName. The lexer keeps each word of a parsed path short of
+			// the limit; this is for an AST put together by hand.
+			if (!IsNameLengthLegal(Segment))
+			{
+				InContext.Diagnostics->AddError(InNode.Kind == EDreamUINodeKind::ForLoop ? EDreamUIDiagnosticCode::ForMisplaced
+					: EDreamUIDiagnosticCode::EachMisplaced, InNode.Location,
+					FString::Printf(TEXT("'%s' in this loop's source is %d characters long, and a name holds at most %d"),
+						*EllipsizeName(Segment), Segment.Len(), NAME_SIZE - 1));
+				return false;
+			}
+			OutBinding.SourcePath.Add(FName(*Segment));
+		}
+		OutBinding.SourceName = OutBinding.SourcePath.Last();
+		return true;
+	}
+
 	UDreamWidget* BuildNode(const FDreamUINode& InNode, UDreamWidget* InParent, FBuildContext& InContext)
 	{
 		if (InNode.Kind == EDreamUINodeKind::EachLoop && InContext.EachBindings != nullptr)
@@ -2623,7 +2853,11 @@ namespace DreamUITextBuilderLocal
 
 		FDreamWidgetEachBinding& Each = InContext.EachBindings->AddDefaulted_GetRef();
 		Each.HostWidgetName = UDreamWidgetTree::MakeWidgetVariableName(InParent);
-		Each.SourceName = FName(*InNode.LoopSourceFunction);
+		if (!RecordLoopSource(InNode, Each, InContext))
+		{
+			InContext.EachBindings->Pop();
+			return nullptr;
+		}
 		Each.bSourceIsFunction = InNode.bLoopSourceIsFunction;
 		Each.LoopVariable = FName(*InNode.LoopVariable);
 #if WITH_EDITORONLY_DATA
@@ -2761,7 +2995,11 @@ namespace DreamUITextBuilderLocal
 		FDreamWidgetEachBinding& ForBinding = InContext.EachBindings->AddDefaulted_GetRef();
 		ForBinding.bInPanel = true;
 		ForBinding.HostWidgetName = UDreamWidgetTree::MakeWidgetVariableName(InParent);
-		ForBinding.SourceName = FName(*InNode.LoopSourceFunction);
+		if (!RecordLoopSource(InNode, ForBinding, InContext))
+		{
+			InContext.EachBindings->Pop();
+			return nullptr;
+		}
 		ForBinding.bSourceIsFunction = InNode.bLoopSourceIsFunction;
 		ForBinding.LoopVariable = FName(*InNode.LoopVariable);
 #if WITH_EDITORONLY_DATA

@@ -15,6 +15,7 @@ designer writes its edits back into the file. This page is the reference for wri
 - [Resources](#resources)
 - [`use`](#use)
 - [Writing a component](#writing-a-component)
+- [View models](#view-models)
 - [Bindings and routes](#bindings-and-routes)
 - [`if` and `else`](#if-and-else)
 - [`for` and `each`](#for-and-each)
@@ -50,6 +51,7 @@ At the top level a file holds:
 | `resources { … }` | Named constants. See [Resources](#resources). |
 | `props { … }` | Properties this file's class declares. See [Writing a component](#writing-a-component). |
 | `events { … }` | Events this file's class raises. |
+| `viewmodels { … }` | The view models this file's class holds. See [View models](#view-models). |
 | `style Name { … }` | A named set of lines. See [Styles](#styles). |
 | `timeline Name { … }` | An animation. See [Timelines](#timelines). |
 | one node | The root of the tree. |
@@ -443,6 +445,80 @@ ListPage Page_2 {
 A fill holds widgets and nothing else. A named slot holds one widget -- put several in a container. A fill outside a
 component instance is DUI5019; one naming a slot the component does not declare is DUI5020.
 
+## View models
+
+A view model is an object that holds a screen's state and commands, apart from the widgets that show them. The widgets
+bind to it; it never refers to them. One view model can serve several screens, and its logic can be tested without any
+UI.
+
+```
+viewmodels {
+    PlayerVM    Player                   // the host gives it
+    SettingsVM  Settings = new           // this widget makes one
+    InventoryVM Inventory = global       // from the game's registry, by class
+    InventoryVM Stash = global "Stash"   // by class and name
+    PartyVM     Party = parent           // the nearest enclosing widget's PartyVM
+}
+
+VerticalBox Root {
+    Text Name { Text <- Player.Name }
+    Native.Slider Volume { Value <-> Settings.MasterVolume }
+    Native.Button Apply { OnClicked += Settings.Apply() }
+}
+```
+
+Each entry is a type and a name, and optionally where the object comes from. The type is a class: its reflected name
+(`PlayerVM` for a C++ `UPlayerVM`), a full path (`/Script/MyGame.PlayerVM`, `/Game/UI/BP_PlayerVM`), or a name given
+by `use /Script/MyGame.PlayerVM as PlayerVM`. A type that names no class, or two, is DUI6015; two entries of one name
+are DUI3024; a name the class already uses is DUI6016.
+
+Each entry becomes a variable of the class -- an object reference of that class, FieldNotify, Expose on Spawn, in the
+*ViewModels* category -- so everything that can set a variable can hand the widget its view model.
+
+### Where the object comes from
+
+| Written | Means |
+|---|---|
+| `PlayerVM Player` | The host gives it: a pin of the node that creates the widget, `SetViewModel(Name, Object)` from C++ or Blueprint, a Blueprint Set of the variable, or a host's `.dui` line on this widget used as a component (`Row Audio { Channel <- Settings.Audio }`). |
+| `= new` | The widget makes one, outered to itself, when it was given none. Also in the designer's preview, which then shows the view model's defaults; such an instance answers `IsDesignTimeInstance()` true. `new` of an abstract class is DUI6017. |
+| `= global`, `= global "Name"` | `UDreamViewModelSubsystem` (one per game instance): `Register(Object, Name)` shares an object, and the entry is filled from it by class, and name when one is written. When nothing fits yet, the entry waits and is filled when a fitting object is registered. Empty in the designer. |
+| `= parent`, `= parent "Name"` | The nearest enclosing user widget's entry of a fitting class (and that name, when written), followed as it changes. What a component uses to share its host's view model without being handed it. |
+
+The object is in place before On Initialized runs and before any binding's first value. An entry the host already set
+keeps what it was given.
+
+### Writing a view model
+
+Any UObject class works. A class that implements `INotifyFieldValueChanged` -- `UDreamViewModel` is the convenient
+base, and UE's own `UMVVMViewModelBase` works the same way -- tells bindings when a field changes, and bindings through
+it then update only when it does. A class that does not is read every frame.
+
+```cpp
+UCLASS()
+class UPlayerVM : public UDreamViewModel
+{
+    GENERATED_BODY()
+public:
+    void SetHealth(float InHealth) { DREAM_VM_SET(Health, InHealth); }
+
+    UFUNCTION(BlueprintCallable, Category = "Player")
+    void Heal(float Amount) { SetHealth(Health + Amount); }
+
+protected:
+    UPROPERTY(BlueprintReadOnly, FieldNotify, Category = "Player")
+    float Health = 100.f;
+};
+```
+
+- Members a binding reads must be visible to Blueprint: `BlueprintReadOnly` / `BlueprintReadWrite` properties,
+  `BlueprintCallable` / `BlueprintPure` functions (DUI5023 names the one that is not).
+- `DREAM_VM_SET(Member, Value)` assigns when the value changed and announces the field. A Blueprint view model's Set node
+  of a FieldNotify variable announces on its own.
+- A value computed from others (`GoldText` from `Gold`) is announced with `BroadcastFieldValueChanged` when its sources
+  change. Offering such display-ready members is how a view model converts values; there is no separate converter.
+- A view model that wants to react when the UI writes a value back through `<->` offers `Set<Member>` (BlueprintCallable,
+  one parameter): `<->` calls it instead of writing the property.
+
 ## Bindings and routes
 
 Three arrows connect the tree to the class's code.
@@ -458,7 +534,9 @@ Shown <- Count() > 0 && !IsLocked()
 The right side is an expression, re-evaluated as the class runs:
 
 - a call to a function of the class, `Func()` or `Func(a, b)`;
-- a variable of the class, `Volume` -- including a `props` entry;
+- a variable of the class, `Volume` -- including a `props` entry and a `viewmodels` entry;
+- a member path through an object variable, `Player.Name`, `Player.Stats.Title`, or a call at its end,
+  `Player.FormatGold(Player.Gold)`;
 - a literal: a number, a string, `true`, `false`, or `@Resource`;
 - operators, loosest first: `||`; `&&`; `==` `!=`; `<` `<=` `>` `>=`; `+` `-`; `*` `%`; and the prefixes `!` and `-`.
   Parentheses group. There is no `/` -- it belongs to paths and comments -- and no `? :`; division and choices go in
@@ -467,28 +545,66 @@ The right side is an expression, re-evaluated as the class runs:
 A bare `Func()` binds that function directly. Anything richer is compiled into a generated function. The property
 needs a setter (DUI5005) -- a component's prop excepted, see [`props`](#props) -- and only whole properties of the widget, its visual or a behaviour can be bound (DUI5008):
 not a slot property, not a field inside a struct. A function the class lacks is DUI5004; an expression the compiler
-cannot lower is DUI5011.
+cannot lower is DUI5011. A path segment its class does not have, or cannot show to Blueprint, is DUI5023; a path that
+goes on past a value that is not an object is DUI5024.
 
-### `->` routes an event
+**When a binding updates.** The compiler records every variable and member the expression reads. When each of them is
+FieldNotify -- the variable on this class, and every member along a path on an object that implements
+`INotifyFieldValueChanged` -- the binding updates when one of them announces a change, and costs nothing in between.
+Otherwise it is read every frame. A call with arguments (`Format(Gold)`) may read anything, so a binding holding one is
+always read every frame; a view model offering the formatted value as a member is the way out. While an object along a
+path is not set, the binding is not evaluated and the property keeps the value it had.
+
+`DreamUI.Binding.Dump` lists every live widget's bindings, how many update on a change and how many every frame, and
+why. `DreamUI.Binding.ForcePoll 1` reads them all every frame, which tells a change nobody announced from a wrong
+binding.
+
+### `->`, `+=` and `=` route an event
 
 ```
 OnClicked -> HandleConfirm
 OnClick -> emit Picked(ValueIndex)
+OnClicked += Settings.Apply()
+OnValueChanged += Settings.SetVolume(Value)
+OnValueChanged += Settings.SetVolume
+OnInit = HandleInit
 ```
 
-The left side is an event of the widget, its visual or a behaviour -- a `BlueprintAssignable` delegate, or a
-`DreamUIEventDelegate` property. The right side is a function of the class (no parentheses), or `emit` of an event the
-class declares. DUI5010 is an event that is not one; DUI6004 and DUI6005 a handler the class lacks or whose parameters
-do not match.
+The left side is an event of the widget, its visual or a behaviour: a `BlueprintAssignable` multicast delegate, a
+`DreamUIEventDelegate` property, or a single-cast delegate. The operator says what happens to the event's other
+listeners:
+
+| Operator | Means | Takes |
+|---|---|---|
+| `+=` | Adds this listener beside the others. | A multicast delegate or a `DreamUIEventDelegate`. |
+| `=` | This is the event's one listener. | A single-cast delegate. |
+| `->` | Either, by the event's kind. | Any event. |
+
+`+=` on a single-cast delegate, which cannot hold a second listener, and `=` on a multicast event, which would have to
+drop the listeners the control and the Blueprint graph added, are DUI5025.
+
+The right side is one of:
+
+- a function of the class, no parentheses (`HandleConfirm`): it takes what the event sends;
+- `emit` of an event the class declares, with its arguments;
+- a function of an object the class holds, by a member path (`Settings.Apply`). With parentheses, they are its
+  arguments -- expressions over the class, with the event's own parameters in scope by name (`Settings.SetVolume(Value)`);
+  without them, it takes nothing or exactly what the event sends. Nothing is called while the object is not set. A
+  function the object lacks is DUI6018; arguments that do not fit, DUI6019.
+
+DUI5010 is an event that is not one; DUI6004 and DUI6005 a handler the class lacks or whose parameters do not match.
 
 ### `<->` mirrors both ways
 
 ```
 Value <-> Volume
+Value <-> Settings.MasterVolume
 ```
 
 The property follows the variable, and a change the control makes is written back into it. The variable must be a
-FieldNotify variable of the class.
+FieldNotify variable of the class, or a member of an object it holds. Writing a member back calls the object's
+`Set<Member>` when it has a BlueprintCallable one, and otherwise writes the member and announces it on that object. A
+member that cannot be written either way is DUI6020.
 
 ### `Shown`
 
@@ -530,8 +646,23 @@ visibility: a hidden branch is collapsed, not destroyed, and keeps its state.
 ## `for` and `each`
 
 Both repeat one template widget per item of a source. The source is a function, `GetOptions()`, or a variable,
-`Options` -- a FieldNotify array refreshes the copies when it changes. Inside the body, `Prop <- Item.Member` binds a
-property of each copy to a member of its item.
+`Options` -- a FieldNotify array refreshes the copies when it changes -- or either through a member path,
+`Inventory.Items`, `Inventory.Filtered()`, refreshed when anything along the path changes. Inside the body,
+`Prop <- Item.Member` binds a property of each copy to a member of its item, and `Event -> Item.Func()` routes an event
+of each copy to a function of its item:
+
+```
+for Item in Inventory.Items {
+    HorizontalBox {
+        Text { Text <- Item.Name }
+        Native.Button { OnClicked += Item.Use() }
+    }
+}
+```
+
+When an item announces a change of a member a copy shows (the item implements `INotifyFieldValueChanged` and the member
+is FieldNotify), that copy is updated alone; the rest of the list is not touched. A member nothing announces is read
+again when the list refreshes.
 
 ### `for`: copies in the panel
 
@@ -571,8 +702,12 @@ for long lists.
   file has the inner loop, given its list through a `props` entry.
 - A `for` needs a host that takes any number of children; an `each` needs a `+ UIListView` (or a recyclable scroll
   view) on its host.
-- In the body, the only binding is the single hop `Item.Member`; an expression or a `<->` there is DUI5014.
+- In the body, the only binding is the single hop `Item.Member`, and the only route to an object is `Item.Func` /
+  `Item.Func()`; an expression, a `<->`, or a route to another object there is DUI5014.
 - The source must exist on the class (DUI6006) and be an array of objects (DUI6007).
+- When the array's element class is known (`TArray<UItemVM*>`, not `TArray<UObject*>`), `Item.Member` must be a member
+  of it (DUI6021), and `Item.Func` a function of it that takes nothing or exactly what the event sends (DUI6022). With an
+  array of `UObject` the item's class is only known at run time, where a line that does not fit is skipped.
 
 ## `rows`: a table of instances
 
@@ -691,6 +826,7 @@ refused: 1 lexer, 2 parser, 3 meaning, 4 values, 5 building the tree, 6 compilin
 | DUI2018 | MalformedConditional | An `if` without its condition or block, an `else` with no `if`, or a branch holding something other than widgets. |
 | DUI2019 | MalformedSlotDeclaration | A slot with `default` twice, or a block that both declares and fills. |
 | DUI2020 | MalformedRows | A `rows` table that does not read: a column list that is not names, a column twice, a row with the wrong number of values. |
+| DUI2021 | MalformedViewModelsBlock | A `viewmodels` line that is not `Type Name`, `= new`, `= global ["Name"]` or `= parent ["Name"]` (an empty `""` name included), or a `viewmodels` block inside a node. |
 | DUI3001 | DuplicateNodeId | Two nodes share an id. |
 | DUI3002 | InvalidNodeId | An id that is not an identifier, starts with a digit, or is a keyword. |
 | DUI3003 | UnknownNodeType | A type that is no tag, container, alias, registered widget or path. |
@@ -714,6 +850,7 @@ refused: 1 lexer, 2 parser, 3 meaning, 4 values, 5 building the tree, 6 compilin
 | DUI3021 | UnknownNamespace | `ns.Name` whose `ns` no `use … as ns` declares. |
 | DUI3022 | MultipleDefaultSlots | More than one `slot … default` in one file. |
 | DUI3023 | DuplicateRowKey | Warning. Two rows of a `rows` table whose first values make the same id; the second's id then moves with the order. |
+| DUI3024 | DuplicateViewModel | Two `viewmodels` entries of one name. |
 | DUI4001 | UnknownProperty | No property of that name; the nearest one is suggested. |
 | DUI4002 | UnknownPropertyPathSegment | A dotted path whose head resolves and whose tail does not. |
 | DUI4003 | ValueTypeMismatch | A value whose shape cannot be the property's type. |
@@ -744,6 +881,9 @@ refused: 1 lexer, 2 parser, 3 meaning, 4 values, 5 building the tree, 6 compilin
 | DUI5020 | UnknownSlotToFill | A fill naming a slot the component does not declare. |
 | DUI5021 | ForMisplaced | A `for` at the root, in another loop, in a host with fixed room, or without exactly one template. |
 | DUI5022 | SecondLayoutContainer | A second layout container on one node. |
+| DUI5023 | MemberPathNotFound | A member path segment its class does not have, or does not show to Blueprint (an UnrealSharp property needs `BlueprintReadOnly` or `BlueprintReadWrite`). |
+| DUI5024 | MemberPathThroughNonObject | A member path that goes on past a value that is not an object. |
+| DUI5025 | RouteOperatorMismatch | `+=` on a single-cast delegate, or `=` on a multicast event. |
 | DUI6001 | SourceFileUnreadable | The Blueprint's Source File does not exist or cannot be read. |
 | DUI6002 | EmptyTree | The file parsed and produced no tree. |
 | DUI6003 | ClassPathMismatch | The `class` line names another Blueprint than the one compiling (a warning). |
@@ -758,6 +898,14 @@ refused: 1 lexer, 2 parser, 3 meaning, 4 values, 5 building the tree, 6 compilin
 | DUI6012 | EmitRouteUnsupported | An `emit` where no handler can be generated: in a loop body, or for an event Blueprints cannot carry. |
 | DUI6013 | PropDefaultInvalid | A `props` default its type cannot hold. |
 | DUI6014 | EventNameTaken | An `events` name another member of the class already answers to. |
+| DUI6015 | ViewModelClassUnknown | A `viewmodels` type that names no class, or two. |
+| DUI6016 | ViewModelNameTaken | A `viewmodels` name another member of the class already answers to. |
+| DUI6017 | ViewModelSourceInvalid | `= new` of an abstract class. |
+| DUI6018 | RouteMemberFunctionNotFound | `-> Path.Func` whose function the object's class does not have, or does not let Blueprint call. |
+| DUI6019 | RouteArgumentMismatch | `-> Path.Func` whose arguments do not fit the function, or, without parentheses, whose function takes something other than nothing or what the event sends. |
+| DUI6020 | TwoWayTargetReadOnly | `<-> Path.Member` whose member cannot be written back: read-only, and no `Set<Member>`. |
+| DUI6021 | LoopItemMemberNotFound | `Item.Member` that the loop source's element class does not have. |
+| DUI6022 | LoopItemRouteMismatch | `-> Item.Func` that the element class does not have, or whose parameters fit neither nothing nor the event. |
 | DUI7001 | PatchTargetNotFound | A designer edit with no home in the file: an unknown node, a bound property, a slot with no block. |
 | DUI7002 | SourceFileChangedUnderEdit | The file changed under a pending edit; nothing was written. |
 | DUI7003 | PatchValueNotRepresentable | A value the language cannot spell (a non-finite number); its line is left alone. |

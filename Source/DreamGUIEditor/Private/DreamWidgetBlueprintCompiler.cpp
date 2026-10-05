@@ -9,6 +9,9 @@
 #include "AssetRegistry/IAssetRegistry.h"
 #include "UObject/UObjectIterator.h"
 #include "Core/DreamTextUserWidget.h"
+// FindMemberClass: a loop source's member path, hop by hop, on the class being compiled.
+#include "Core/DreamUIBindingObserver.h"
+#include "Core/DreamUIScriptPackages.h"
 #include "Core/DreamUserWidget.h"
 #include "Core/DreamWidgetGeneratedClass.h"
 #include "Core/DreamWidgetTree.h"
@@ -42,6 +45,7 @@
 #include "Misc/FileHelper.h"
 #include "Misc/PackageName.h"
 #include "Misc/Paths.h"
+#include "UObject/CoreRedirects.h"
 #include "UObject/LinkerLoad.h"
 #include "UObject/Package.h"
 
@@ -389,6 +393,178 @@ namespace DreamWidgetTextMembersLocal
 		OutReason = TEXT("internal: no default spelling for this type");
 		return false;
 	}
+
+	/** A class object no author means: a Blueprint's skeleton, a reinstancing leftover, a placeholder. */
+	bool IsTransientClassName(const FString& InName)
+	{
+		return InName.StartsWith(TEXT("SKEL_")) || InName.StartsWith(TEXT("REINST_")) || InName.StartsWith(TEXT("TRASH_"))
+			|| InName.StartsWith(TEXT("HOTRELOADED_")) || InName.StartsWith(TEXT("PLACEHOLDER-CLASS"));
+	}
+
+	/**
+	 * The class a path names: `/Script/Module.Class` (redirected first, as a reference the engine loads would be), or a
+	 * Blueprint by its asset path -- `/Game/UI/BP_PlayerVM`, `/Game/UI/BP_PlayerVM.BP_PlayerVM` -- whose class is the
+	 * asset's `_C`, or by that class's own path.
+	 */
+	UClass* LoadClassFromPath(const FString& InPath)
+	{
+		// The derived spellings below add a short name and _C; a path already near what a name holds is not looked up.
+		if (InPath.Len() >= NAME_SIZE - 3)
+		{
+			return nullptr;
+		}
+		const FString Redirected = DreamUI::ApplyTypeRedirects(ECoreRedirectFlags::Type_Class, InPath);
+		if (Redirected.StartsWith(TEXT("/Script/")))
+		{
+			return UClass::TryFindTypeSlowSafe<UClass>(Redirected);
+		}
+		FString ObjectPath = Redirected;
+		if (!ObjectPath.Contains(TEXT(".")))
+		{
+			ObjectPath += TEXT(".") + FPackageName::GetShortName(ObjectPath);
+		}
+		if (!ObjectPath.EndsWith(TEXT("_C")))
+		{
+			if (UClass* Generated = LoadObject<UClass>(nullptr, *(ObjectPath + TEXT("_C")), nullptr, LOAD_NoWarn | LOAD_Quiet))
+			{
+				return Generated;
+			}
+		}
+		return LoadObject<UClass>(nullptr, *ObjectPath, nullptr, LOAD_NoWarn | LOAD_Quiet);
+	}
+
+	/**
+	 * The class a `viewmodels` type names, or null with OutReason, a sentence fragment.
+	 *
+	 * The ways a class is named anywhere else in a .dui: a `use … as` alias of a path; a full path; or a reflected short
+	 * name, which is a class's name without its U (`DreamTestPlayerVM`), a Blueprint's name (`BP_PlayerVM`, its class
+	 * being `BP_PlayerVM_C`), or either spelled with the U a C++ or C# author is used to writing. A short name has to
+	 * name exactly one class among those loaded: two classes of one name in two modules are told apart by path, and
+	 * guessing between them would bind every member path to whichever was found first.
+	 */
+	UClass* ResolveViewModelClass(const FDreamUIAst& InAst, const FString& InTypeName, FString& OutReason)
+	{
+		FString Spelling = InTypeName.TrimStartAndEnd();
+		if (Spelling.IsEmpty())
+		{
+			OutReason = TEXT("no type is written");
+			return nullptr;
+		}
+		if (const FDreamUIComponentAlias* Alias = InAst.FindComponentAlias(Spelling))
+		{
+			if (Alias->ClassPath.IsEmpty())
+			{
+				OutReason = FString::Printf(TEXT("'%s' is the alias of a .dui file, which compiles into a widget rather than naming a view model class -- alias the class's path instead, as in 'use /Script/MyGame.PlayerVM as %s'"),
+					*Spelling, *Spelling);
+				return nullptr;
+			}
+			Spelling = Alias->ClassPath;
+		}
+
+		auto Acceptable = [&OutReason, &Spelling](UClass* InClass) -> UClass*
+		{
+			if (InClass == nullptr)
+			{
+				return nullptr;
+			}
+			UClass* Authoritative = InClass->GetAuthoritativeClass();
+			if (Authoritative->HasAnyClassFlags(CLASS_Interface))
+			{
+				OutReason = FString::Printf(TEXT("'%s' is an interface, and a view model is an object of a class"), *Spelling);
+				return nullptr;
+			}
+			return Authoritative;
+		};
+
+		if (Spelling.StartsWith(TEXT("/")))
+		{
+			UClass* Found = Acceptable(LoadClassFromPath(Spelling));
+			if (Found == nullptr && OutReason.IsEmpty())
+			{
+				OutReason = FString::Printf(TEXT("nothing that is a class loads from '%s'"), *Spelling);
+			}
+			return Found;
+		}
+
+		TArray<FString> Candidates;
+		Candidates.Add(Spelling);
+		if (Spelling.Len() > 1 && Spelling[0] == TEXT('U') && FChar::IsUpper(Spelling[1]))
+		{
+			// `UPlayerVM`, as C++ spells it: the reflected name drops the U.
+			Candidates.Add(Spelling.Mid(1));
+		}
+		// And the reverse, for a class whose reflected name keeps a U of its own; and a Blueprint's class, by its asset's name.
+		Candidates.Add(TEXT("U") + Spelling);
+		Candidates.Add(Spelling + TEXT("_C"));
+
+		TArray<UClass*> Matches;
+		for (TObjectIterator<UClass> It; It; ++It)
+		{
+			UClass* Class = *It;
+			if (Class == nullptr || Class->HasAnyClassFlags(CLASS_Deprecated | CLASS_NewerVersionExists | CLASS_Interface))
+			{
+				continue;
+			}
+			const FString ClassName = Class->GetName();
+			if (IsTransientClassName(ClassName) || !Candidates.Contains(ClassName))
+			{
+				continue;
+			}
+			Matches.AddUnique(Class->GetAuthoritativeClass());
+		}
+		if (Matches.Num() == 1)
+		{
+			return Matches[0];
+		}
+		if (Matches.Num() == 0)
+		{
+			OutReason = FString::Printf(TEXT("no class is called '%s' -- write a reflected class name (without its U), a Blueprint's name, or a full path such as /Script/MyGame.PlayerVM"),
+				*Spelling);
+			return nullptr;
+		}
+		TArray<FString> Paths;
+		for (const UClass* Match : Matches)
+		{
+			Paths.Add(Match->GetPathName());
+		}
+		Paths.Sort();
+		OutReason = FString::Printf(TEXT("'%s' names %d classes (%s) -- write the path of the one you mean, or alias it with 'use <path> as %s'"),
+			*Spelling, Matches.Num(), *FString::Join(Paths, TEXT(", ")), *Spelling);
+		return nullptr;
+	}
+
+	/**
+	 * Whether a `= global "…"` / `= parent "…"` name was written and holds nothing but blanks: a name under which nothing
+	 * is ever found, with nothing said. The parser refuses the empty `""` itself (MalformedViewModelsBlock) and hands it
+	 * over as no name at all -- which is "by class alone", and fine -- so what is left to catch here is the blank one.
+	 */
+	bool IsSourceNameBlank(const FDreamUIViewModelDecl& InDecl)
+	{
+		return (InDecl.Source == EDreamUIViewModelSource::Global || InDecl.Source == EDreamUIViewModelSource::Parent)
+			&& !InDecl.SourceName.IsEmpty() && InDecl.SourceName.TrimStartAndEnd().IsEmpty();
+	}
+
+	EDreamViewModelSource ToSlotSource(const EDreamUIViewModelSource InSource)
+	{
+		switch (InSource)
+		{
+		case EDreamUIViewModelSource::New: return EDreamViewModelSource::New;
+		case EDreamUIViewModelSource::Global: return EDreamViewModelSource::Global;
+		case EDreamUIViewModelSource::Parent: return EDreamViewModelSource::Parent;
+		default: return EDreamViewModelSource::Host;
+		}
+	}
+
+	const TCHAR* DescribeViewModelSource(const EDreamUIViewModelSource InSource)
+	{
+		switch (InSource)
+		{
+		case EDreamUIViewModelSource::New: return TEXT("new");
+		case EDreamUIViewModelSource::Global: return TEXT("global");
+		case EDreamUIViewModelSource::Parent: return TEXT("parent");
+		default: return TEXT("host");
+		}
+	}
 }
 
 bool FDreamWidgetBlueprintCompilerContext::IsAuthoredMemberName(const FName InName) const
@@ -684,6 +860,137 @@ void FDreamWidgetBlueprintCompilerContext::DeclareTextMembers(const FDreamUIAst&
 		Declared.Parameters = MoveTemp(Parameters);
 		TextMemberNames.Add(Name);
 	}
+
+	// `viewmodels` -- after the props and events, so a name one of those already holds is said on the view model's line,
+	// and before the thunk pass, which lowers `Text <- Player.Name` into a get of Player and looks Player up here.
+	TArray<FDreamWidgetViewModelSlot> ViewModelSlots;
+	TSet<FName> SeenViewModels;
+	for (const FDreamUIViewModelDecl& ViewModel : InAst.ViewModels)
+	{
+		const FName Name(*ViewModel.Name);
+		bool bAlreadySeen = false;
+		SeenViewModels.Add(Name, &bAlreadySeen);
+		if (Name.IsNone() || bAlreadySeen)
+		{
+			// The parser's DuplicateViewModel, which keeps the first.
+			continue;
+		}
+
+		FString Reason;
+		UClass* Class = ResolveViewModelClass(InAst, ViewModel.TypeName, Reason);
+		if (Class == nullptr)
+		{
+			OutDiagnostics.AddError(EDreamUIDiagnosticCode::ViewModelClassUnknown,
+				ViewModel.TypeLocation.IsValid() ? ViewModel.TypeLocation : ViewModel.Location,
+				FString::Printf(TEXT("view model '%s' cannot be declared: %s"), *ViewModel.Name, *Reason));
+			continue;
+		}
+
+		FString Taken;
+		if (TextMemberNames.Contains(Name))
+		{
+			Taken = InAst.FindEvent(ViewModel.Name) != nullptr
+				? FString(TEXT("an event of this file is called that"))
+				: FString(TEXT("a prop of this file is called that"));
+		}
+		else
+		{
+			Taken = DescribeTaken(Name);
+		}
+		if (!Taken.IsEmpty())
+		{
+			OutDiagnostics.AddError(EDreamUIDiagnosticCode::ViewModelNameTaken, ViewModel.Location,
+				FString::Printf(TEXT("view model '%s' cannot be declared: %s. Rename one of them."), *ViewModel.Name, *Taken));
+			continue;
+		}
+
+		// Where the object comes from, checked against the class: refused, the entry still gets its variable -- the
+		// class is known, every binding reading through it lowers, and the one error is this line's -- but no slot, so
+		// the run time is never asked to honour it.
+		bool bSourceValid = true;
+		if (ViewModel.Source == EDreamUIViewModelSource::New && Class->HasAnyClassFlags(CLASS_Abstract))
+		{
+			OutDiagnostics.AddError(EDreamUIDiagnosticCode::ViewModelSourceInvalid, ViewModel.Location, FString::Printf(
+				TEXT("view model '%s' is '= new', and %s is abstract, so there is nothing to make -- name a concrete class, or leave the source out and have the host hand one over"),
+				*ViewModel.Name, *Class->GetName()));
+			bSourceValid = false;
+		}
+		else if (IsSourceNameBlank(ViewModel))
+		{
+			OutDiagnostics.AddError(EDreamUIDiagnosticCode::ViewModelSourceInvalid, ViewModel.Location, FString::Printf(
+				TEXT("view model '%s' is '= %s' with a blank name, under which nothing is ever found -- write the name, or leave it out to look the object up by its class alone"),
+				*ViewModel.Name, DescribeViewModelSource(ViewModel.Source)));
+			bSourceValid = false;
+		}
+		auto AddSlot = [&ViewModelSlots, &ViewModel, Name, Class, bSourceValid]()
+		{
+			if (!bSourceValid)
+			{
+				return;
+			}
+			FDreamWidgetViewModelSlot& Slot = ViewModelSlots.AddDefaulted_GetRef();
+			Slot.VariableName = Name;
+			Slot.Class = Class;
+			Slot.Source = ToSlotSource(ViewModel.Source);
+			// None when the class alone decides: no name written, or a source that takes none.
+			const FString SourceName = ViewModel.SourceName.TrimStartAndEnd();
+			const bool bNamedSource = ViewModel.Source == EDreamUIViewModelSource::Global || ViewModel.Source == EDreamUIViewModelSource::Parent;
+			Slot.SourceName = bNamedSource && !SourceName.IsEmpty() ? FName(*SourceName) : FName(NAME_None);
+		};
+
+		if (const FProperty* Inherited = ParentClass != nullptr ? ParentClass->FindPropertyByName(Name) : nullptr)
+		{
+			// A parent's own `viewmodels` entry is that file's to say where its object comes from: two declarations of
+			// one entry are two answers, and the class would keep whichever it read last.
+			TArray<FDreamWidgetViewModelSlot> InheritedSlots;
+			UDreamWidgetGeneratedClass::CollectViewModelSlots(ParentClass, InheritedSlots);
+			if (InheritedSlots.ContainsByPredicate([Name](const FDreamWidgetViewModelSlot& InSlot) { return InSlot.VariableName == Name; }))
+			{
+				OutDiagnostics.AddError(EDreamUIDiagnosticCode::ViewModelNameTaken, ViewModel.Location, FString::Printf(
+					TEXT("view model '%s' cannot be declared: %s's own file already declares it, and a subclass reads it as it is. Remove this line, or rename one of them."),
+					*ViewModel.Name, *ParentClass->GetName()));
+				continue;
+			}
+			// The C++ base already holds it: the file describes that property -- where its object comes from -- rather
+			// than declaring a second one the parent's own code would never see. Only a reference of the very class:
+			// member paths are resolved against the variable's type, and a `= new` makes exactly the declared class.
+			const FObjectProperty* InheritedObject = CastField<FObjectProperty>(Inherited);
+			if (InheritedObject != nullptr && InheritedObject->PropertyClass != nullptr
+				&& InheritedObject->PropertyClass->GetAuthoritativeClass() == Class)
+			{
+				TextMemberNames.Add(Name);
+				AddSlot();
+				continue;
+			}
+			OutDiagnostics.AddError(EDreamUIDiagnosticCode::ViewModelNameTaken, ViewModel.Location, FString::Printf(
+				TEXT("view model '%s' cannot be declared: %s already has a '%s', and it is not a reference to %s. Declare it with that property's class to use the parent's, or rename it."),
+				*ViewModel.Name, *ParentClass->GetName(), *ViewModel.Name, *Class->GetName()));
+			continue;
+		}
+
+		FBPVariableDescription Variable;
+		Variable.VarName = Name;
+		Variable.VarGuid = FGuid::NewDeterministicGuid(Name.ToString());
+		Variable.VarType = FEdGraphPinType(UEdGraphSchema_K2::PC_Object, NAME_None, Class, EPinContainerType::None, false, FEdGraphTerminalType());
+		Variable.FriendlyName = ViewModel.Name;
+		// A prop's flags, for a prop's reasons: a host sets it (an instance edit, a spawn pin, SetViewModel), graphs read
+		// and write it, and FieldNotify is what makes every binding reading through it re-read when it is replaced.
+		Variable.PropertyFlags = CPF_Edit | CPF_BlueprintVisible;
+		Variable.Category = FText::FromString(TEXT("ViewModels"));
+		Variable.SetMetaData(FBlueprintMetadata::MD_ExposeOnSpawn, TEXT("true"));
+		Variable.SetMetaData(FBlueprintMetadata::MD_FieldNotify, TEXT(""));
+		DreamBlueprint->GeneratedVariables.Add(Variable);
+		// Kept with the props for a file that stops parsing: the hierarchy it keeps reads through this variable.
+		DeclaredPropVariables.Add(MoveTemp(Variable));
+		TextMemberNames.Add(Name);
+		AddSlot();
+	}
+	// Rewritten by every read of the file, and only by one: a file that does not parse keeps the slots of the last that
+	// did, with the variables (PopulateBlueprintGeneratedVariables declares those again).
+	if (DreamBlueprint->ViewModelSlots != ViewModelSlots)
+	{
+		DreamBlueprint->ViewModelSlots = MoveTemp(ViewModelSlots);
+	}
 }
 
 void FDreamWidgetBlueprintCompilerContext::CreateFunctionList()
@@ -884,10 +1191,11 @@ void FDreamWidgetBlueprintCompilerContext::BuildWidgetTreeFromTextSource(FDreamU
 		}
 	}
 
-	// The members the file declares for the class -- `props` and `events` -- the moment it has parsed: the thunk pass
-	// below lowers `Text <- Label` into a getter of the variable declared here, and checks every `-> emit` against the
-	// dispatchers this accepted. A file that parsed declares them even when its tree then fails to build; they are
-	// what it says, and keeping last time's instead would be the one place the file stopped winning.
+	// The members the file declares for the class -- `props`, `events` and `viewmodels` -- the moment it has parsed: the
+	// thunk pass below lowers `Text <- Label` into a getter of the variable declared here (and `Text <- Player.Name` into
+	// a get of Player and of its Name), and checks every `-> emit` against the dispatchers this accepted. A file that
+	// parsed declares them even when its tree then fails to build; they are what it says, and keeping last time's
+	// instead would be the one place the file stopped winning.
 	DeclareTextMembers(Ast, OutDiagnostics);
 
 	TArray<FDreamWidgetPropertyBinding> Bindings;
@@ -2568,6 +2876,129 @@ namespace DreamWidgetBindingDiagnostics
 		return FDreamUISourceLocation();
 #endif
 	}
+
+	/**
+	 * The widget of a loop body an entry record names by display name: looked for under the loop's template first, where
+	 * the builder recorded it, then anywhere in the hierarchy.
+	 */
+	const UDreamWidget* FindLoopBodyWidget(const UDreamWidgetTree* InArchetype, const FDreamWidgetEachBinding& InLoop, const FName InDisplayName)
+	{
+		if (InArchetype == nullptr || InDisplayName.IsNone())
+		{
+			return nullptr;
+		}
+		const FString DisplayName = InDisplayName.ToString();
+		if (UDreamWidget* Template = InArchetype->FindWidgetByVariableName(InLoop.TemplateWidgetName))
+		{
+			TArray<UDreamWidget*> Body;
+			UDreamWidget::CollectChildrenWidgets(Template, Body, /*IncludeTarget*/true);
+			for (const UDreamWidget* Widget : Body)
+			{
+				if (IsValid(Widget) && Widget->GetDisplayName() == DisplayName)
+				{
+					return Widget;
+				}
+			}
+		}
+		const UDreamWidget* Found = nullptr;
+		InArchetype->ForEachWidget([&Found, &DisplayName](UDreamWidget* InWidget)
+		{
+			if (Found == nullptr && IsValid(InWidget) && InWidget->GetDisplayName() == DisplayName)
+			{
+				Found = InWidget;
+			}
+		});
+		return Found;
+	}
+
+	/**
+	 * Whether `Event -> Item.Func` fits the loop's element class: Func is a BlueprintCallable function of it taking
+	 * nothing -- which fits `Item.Func()` and `Item.Func` alike -- or, written without the parentheses, taking exactly
+	 * what the event sends: a multicast or a single-cast delegate's signature, or the one value an FDreamUIEventDelegate
+	 * fires with. False with OutWhyNot, a sentence fragment. An event the record names and the hierarchy does not have is
+	 * the builder's to have said; nothing is judged against it here.
+	 */
+	bool DoesEntryRouteFit(const UDreamWidgetTree* InArchetype, const FDreamWidgetEachBinding& InLoop, const FDreamWidgetEntryRoute& InRoute,
+		const UClass* InElementClass, FString& OutWhyNot)
+	{
+		const UFunction* Function = InElementClass->FindFunctionByName(InRoute.ItemFunction);
+		if (Function == nullptr)
+		{
+			OutWhyNot = FString::Printf(TEXT("%s has no function '%s'"), *InElementClass->GetName(), *InRoute.ItemFunction.ToString());
+			return false;
+		}
+		if (!Function->HasAnyFunctionFlags(FUNC_BlueprintCallable))
+		{
+			OutWhyNot = FString::Printf(
+				TEXT("'%s' of %s is not BlueprintCallable, so nothing outside its own code may call it (an UnrealSharp [UFunction] needs FunctionFlags.BlueprintCallable)"),
+				*InRoute.ItemFunction.ToString(), *InElementClass->GetName());
+			return false;
+		}
+		int32 InputCount = 0;
+		for (TFieldIterator<FProperty> It(Function); It && It->HasAnyPropertyFlags(CPF_Parm); ++It)
+		{
+			if (!It->HasAnyPropertyFlags(CPF_ReturnParm))
+			{
+				++InputCount;
+			}
+		}
+		if (InputCount == 0 && Function->GetReturnProperty() != nullptr)
+		{
+			// The run time binds the item's function to the event straight (FDreamUIEntryRows::FitsDelegate), and a
+			// delegate hands over exactly its own parameter block: a return value would be written past it.
+			OutWhyNot = FString::Printf(TEXT("'%s' returns a value, and an event has nowhere to put it -- route to a function that returns nothing"),
+				*InRoute.ItemFunction.ToString());
+			return false;
+		}
+		if (InputCount == 0)
+		{
+			return true;
+		}
+		if (InRoute.bCallWithoutArguments)
+		{
+			OutWhyNot = FString::Printf(TEXT("'%s()' calls it with nothing, and it takes %d parameter(s) -- write '%s' without the parentheses to hand it what the event sends"),
+				*InRoute.ItemFunction.ToString(), InputCount, *InRoute.ItemFunction.ToString());
+			return false;
+		}
+
+		const UDreamWidget* Widget = FindLoopBodyWidget(InArchetype, InLoop, InRoute.TargetWidgetDisplayName);
+		const UObject* Target = Widget != nullptr ? ResolveDreamWidgetBindingTarget(Widget, InRoute.Target, InRoute.BehaviourIndex) : nullptr;
+		const FProperty* EventProperty = Target != nullptr ? Target->GetClass()->FindPropertyByName(InRoute.EventName) : nullptr;
+		const UFunction* Signature = nullptr;
+		if (const FMulticastDelegateProperty* Multicast = CastField<FMulticastDelegateProperty>(EventProperty))
+		{
+			Signature = Multicast->SignatureFunction.Get();
+		}
+		else if (const FDelegateProperty* SingleCast = CastField<FDelegateProperty>(EventProperty))
+		{
+			Signature = SingleCast->SignatureFunction.Get();
+		}
+		else
+		{
+			const FStructProperty* StructEvent = CastField<FStructProperty>(EventProperty);
+			if (StructEvent == nullptr || StructEvent->Struct != FDreamUIEventDelegate::StaticStruct())
+			{
+				return true;
+			}
+			const FDreamUIEventDelegate* EventValue = StructEvent->ContainerPtrToValuePtr<FDreamUIEventDelegate>(Target);
+			const EDreamUIEventDelegateParameterType ParameterType = EventValue != nullptr
+				? EventValue->GetNativeParameterType() : EDreamUIEventDelegateParameterType::None;
+			if (!UDreamUIEventDelegateParameterHelper::IsStillSupported(const_cast<UFunction*>(Function), ParameterType))
+			{
+				OutWhyNot = FString::Printf(TEXT("'%s' takes neither nothing nor the one value '%s' fires with"),
+					*InRoute.ItemFunction.ToString(), *InRoute.EventName.ToString());
+				return false;
+			}
+			return true;
+		}
+		if (Signature != nullptr && !Function->IsSignatureCompatibleWith(Signature))
+		{
+			OutWhyNot = FString::Printf(TEXT("'%s' takes neither nothing nor exactly what '%s' sends"),
+				*InRoute.ItemFunction.ToString(), *InRoute.EventName.ToString());
+			return false;
+		}
+		return true;
+	}
 }
 
 void FDreamWidgetBlueprintCompilerContext::CompilePropertyBindings(UClass* InClass)
@@ -2686,6 +3117,11 @@ void FDreamWidgetBlueprintCompilerContext::CompilePropertyBindings(UClass* InCla
 		Entry.FunctionName = Authored.FunctionName;
 		Entry.SetterName = Setter != nullptr ? Setter->GetFName() : NAME_None;
 		Entry.NotifyField = Authored.NotifyField;
+		// What the source reads, as the thunk pass recorded it: the run time watches these paths rather than looking the
+		// function up as a field of the widget.
+		Entry.Dependencies = Authored.Dependencies;
+		Entry.bDependenciesRecorded = Authored.bDependenciesRecorded;
+		Entry.bDependenciesComplete = Authored.bDependenciesComplete;
 		if (!Authored.NotifyField.IsNone() && Setter != nullptr)
 		{
 			// The forward half of a `<->` pushes through the silent setter when there is one: the
@@ -2729,7 +3165,10 @@ void FDreamWidgetBlueprintCompilerContext::CompilePropertyBindings(UClass* InCla
 			StructEvent = nullptr;
 		}
 		const FMulticastDelegateProperty* Event = CastField<FMulticastDelegateProperty>(EventProperty);
-		if (Event == nullptr && StructEvent == nullptr)
+		// And the third kind: a single-cast delegate, whose one listener `Event = Handler` (or `->`) sets. Its handler is
+		// held to the signature exactly as a multicast event's is.
+		const FDelegateProperty* SingleCast = CastField<FDelegateProperty>(EventProperty);
+		if (Event == nullptr && StructEvent == nullptr && SingleCast == nullptr)
 		{
 			MessageLog.Error(*FText::Format(
 				LOCTEXT("EventNotOnTarget", "\"{0}\" has no event named \"{1}\" to route."),
@@ -2769,7 +3208,8 @@ void FDreamWidgetBlueprintCompilerContext::CompilePropertyBindings(UClass* InCla
 			ResolvedEvents.Add(Authored);
 			continue;
 		}
-		if (Event->SignatureFunction != nullptr && !Handler->IsSignatureCompatibleWith(Event->SignatureFunction))
+		const UFunction* Signature = Event != nullptr ? Event->SignatureFunction.Get() : SingleCast->SignatureFunction.Get();
+		if (Signature != nullptr && !Handler->IsSignatureCompatibleWith(Signature))
 		{
 			MessageLog.Error(*FText::Format(
 				LOCTEXT("EventHandlerWrongShape", "\"{0}\" cannot handle \"{1}.{2}\": its parameters do not match the event's."),
@@ -2793,21 +3233,71 @@ void FDreamWidgetBlueprintCompilerContext::CompilePropertyBindings(UClass* InCla
 	// omission: these three were reported to the MessageLog alone, so a .dui whose `each` named a
 	// function nobody had written yet failed its compile while the mailbox -- which is the only
 	// channel VSCode reads -- went on saying the file was clean.
+	// A compile-stage diagnostic in its DUInnnn form, into the bag and the log alike: the log line carries the code and
+	// the file's position, which is what a reader -- and a test -- keys on.
+	auto ReportTextError = [this](const EDreamUIDiagnosticCode InCode, const FDreamUISourceLocation& InLocation, FString InMessage)
+	{
+		TextDiagnostics.AddError(InCode, InLocation, MoveTemp(InMessage));
+		MessageLog.Error(*TextDiagnostics.Diagnostics.Last().ToString());
+	};
+
 	TArray<FDreamWidgetEachBinding> ResolvedEach;
 	for (const FDreamWidgetEachBinding& Authored : DreamBlueprint->EachBindings)
 	{
 		// The keyword the author wrote: a `for` is recorded as the same binding, run in the panel itself, and a
 		// message calling it an `each` sends the reader looking for a block the file does not have.
 		const TCHAR* Keyword = Authored.bInPanel ? TEXT("for") : TEXT("each");
+
+		// A member path (`in Inventory.Items`): every segment but the last an object member, from this class on, each
+		// looked up on the class the one before it declares -- the static half of what the run time walks with
+		// DreamUIBindingPath -- and the last read on the class reached, exactly as a one-segment source is read on this
+		// one. The messages quote the whole path and name the class the source was looked for on.
+		const bool bSourcePath = Authored.SourcePath.Num() > 0;
+		const FName SourceMember = bSourcePath ? Authored.SourcePath.Last() : Authored.SourceName;
+		FString SourceSpelling = SourceMember.ToString();
+		if (bSourcePath)
+		{
+			TArray<FString> Segments;
+			for (const FName Segment : Authored.SourcePath)
+			{
+				Segments.Add(Segment.ToString());
+			}
+			SourceSpelling = FString::Join(Segments, TEXT("."));
+		}
+		const UClass* SourceOwner = InClass;
+		bool bOwnerFound = true;
+		for (int32 Index = 0; Index + 1 < Authored.SourcePath.Num(); ++Index)
+		{
+			const FName Segment = Authored.SourcePath[Index];
+			UClass* Next = DreamUIBindingPath::FindMemberClass(SourceOwner, Segment);
+			if (Next == nullptr)
+			{
+				const bool bExists = FindFProperty<FProperty>(SourceOwner, Segment) != nullptr || SourceOwner->FindFunctionByName(Segment) != nullptr;
+				ReportTextError(EDreamUIDiagnosticCode::EachSourceNotFound, AuthoredLocation(Authored), FString::Printf(
+					TEXT("the '%s %s in %s%s' block reads '%s' on %s, which %s"),
+					Keyword, *Authored.LoopVariable.ToString(), *SourceSpelling, Authored.bSourceIsFunction ? TEXT("()") : TEXT(""),
+					*Segment.ToString(), SourceOwner == InClass ? TEXT("this Blueprint") : *SourceOwner->GetName(),
+					bExists ? TEXT("holds no object, so the path cannot go on past it") : TEXT("has no member of that name")));
+				bOwnerFound = false;
+				break;
+			}
+			SourceOwner = Next;
+		}
+		if (!bOwnerFound)
+		{
+			continue;
+		}
+		const FString OwnerDescription = SourceOwner == InClass ? FString(TEXT("this Blueprint")) : SourceOwner->GetName();
+
 		const FArrayProperty* ItemsProperty = nullptr;
 		if (Authored.bSourceIsFunction)
 		{
-			const UFunction* Source = InClass->FindFunctionByName(Authored.SourceName);
+			const UFunction* Source = SourceOwner->FindFunctionByName(SourceMember);
 			if (Source == nullptr || Source->NumParms != 1)
 			{
 				MessageLog.Error(*FString::Printf(
-					TEXT("The '%s %s in %s()' block needs a no-argument function of that name on this Blueprint."),
-					Keyword, *Authored.LoopVariable.ToString(), *Authored.SourceName.ToString()));
+					TEXT("The '%s %s in %s()' block needs a no-argument function of that name on %s."),
+					Keyword, *Authored.LoopVariable.ToString(), *SourceSpelling, *OwnerDescription));
 				// NumParms == 1 is "the return value and nothing else". A function that is there but
 				// the wrong shape is as unusable as one that is missing, and the fix is the same act
 				// -- so both are 6006, and the message carries which of the two it was. Not spelled
@@ -2815,9 +3305,9 @@ void FDreamWidgetBlueprintCompilerContext::CompilePropertyBindings(UClass* InCla
 				// nothing, which fails here too and takes no arguments at all.
 				TextDiagnostics.AddError(EDreamUIDiagnosticCode::EachSourceNotFound, AuthoredLocation(Authored),
 					FString::Printf(TEXT("the '%s %s in %s()' block needs a no-argument function of that name, %s"),
-						Keyword, *Authored.LoopVariable.ToString(), *Authored.SourceName.ToString(),
+						Keyword, *Authored.LoopVariable.ToString(), *SourceSpelling,
 						Source == nullptr
-							? TEXT("and this Blueprint declares none")
+							? *FString::Printf(TEXT("and %s declares none"), *OwnerDescription)
 							: TEXT("and this one does not take zero arguments and return a value")));
 				continue;
 			}
@@ -2825,35 +3315,77 @@ void FDreamWidgetBlueprintCompilerContext::CompilePropertyBindings(UClass* InCla
 		}
 		else
 		{
-			ItemsProperty = FindFProperty<FArrayProperty>(InClass, Authored.SourceName);
+			ItemsProperty = FindFProperty<FArrayProperty>(SourceOwner, SourceMember);
 			if (ItemsProperty == nullptr)
 			{
 				MessageLog.Error(*FString::Printf(
-					TEXT("The '%s %s in %s' block needs an array variable of that name on this Blueprint."),
-					Keyword, *Authored.LoopVariable.ToString(), *Authored.SourceName.ToString()));
+					TEXT("The '%s %s in %s' block needs an array variable of that name on %s."),
+					Keyword, *Authored.LoopVariable.ToString(), *SourceSpelling, *OwnerDescription));
 				// FindFProperty<FArrayProperty> answers null for "no such variable" AND for "that
 				// variable is not an array", which the reader cannot tell apart from the code alone
 				// -- so the message covers both and 6007 is kept for the case where an array WAS
 				// found and its elements are wrong.
 				TextDiagnostics.AddError(EDreamUIDiagnosticCode::EachSourceNotFound, AuthoredLocation(Authored),
-					FString::Printf(TEXT("the '%s %s in %s' block needs an array variable of that name on this Blueprint"),
-						Keyword, *Authored.LoopVariable.ToString(), *Authored.SourceName.ToString()));
+					FString::Printf(TEXT("the '%s %s in %s' block needs an array variable of that name on %s"),
+						Keyword, *Authored.LoopVariable.ToString(), *SourceSpelling, *OwnerDescription));
 				continue;
 			}
 		}
-		if (ItemsProperty == nullptr || CastField<FObjectPropertyBase>(ItemsProperty->Inner) == nullptr)
+		const FObjectPropertyBase* ItemProperty = ItemsProperty != nullptr ? CastField<FObjectPropertyBase>(ItemsProperty->Inner) : nullptr;
+		if (ItemProperty == nullptr)
 		{
 			MessageLog.Error(*FString::Printf(
 				TEXT("'%s' must supply an array of OBJECTS -- the item bindings read members off each element by reflection."),
-				*Authored.SourceName.ToString()));
+				*SourceSpelling));
 			TextDiagnostics.AddError(EDreamUIDiagnosticCode::EachSourceNotObjectArray, AuthoredLocation(Authored),
 				FString::Printf(TEXT("'%s' must supply an array of OBJECTS -- the item bindings read members off each element by reflection"),
-					*Authored.SourceName.ToString()));
+					*SourceSpelling));
+			continue;
+		}
+
+		// The body, against the element class when the source says what it is (`TArray<UItemVM*>`): an item's member and
+		// an item's function are looked up now instead of being skipped in silence by the copy that does not find them.
+		// An array of UObject says nothing, and its lines stay the run time's to check.
+		const UClass* ElementClass = ItemProperty->PropertyClass;
+		bool bBodyFits = true;
+		if (ElementClass != nullptr && ElementClass != UObject::StaticClass())
+		{
+			for (const FDreamWidgetEntryBinding& Entry : Authored.EntryBindings)
+			{
+				if (!Entry.ItemMember.IsNone() && FindFProperty<FProperty>(ElementClass, Entry.ItemMember) == nullptr)
+				{
+					ReportTextError(EDreamUIDiagnosticCode::LoopItemMemberNotFound, AuthoredLocation(Authored), FString::Printf(
+						TEXT("'%s <- %s.%s' in the '%s %s in %s' block reads a member %s does not have -- every item '%s' supplies is one"),
+						*Entry.PropertyName.ToString(), *Authored.LoopVariable.ToString(), *Entry.ItemMember.ToString(), Keyword,
+						*Authored.LoopVariable.ToString(), *SourceSpelling, *ElementClass->GetName(), *SourceSpelling));
+					bBodyFits = false;
+				}
+			}
+			for (const FDreamWidgetEntryRoute& Route : Authored.EntryRoutes)
+			{
+				FString WhyNot;
+				if (!DreamWidgetBindingDiagnostics::DoesEntryRouteFit(Archetype, Authored, Route, ElementClass, WhyNot))
+				{
+					const FDreamUISourceLocation RouteLocation = AuthoredLocation(Route);
+					ReportTextError(EDreamUIDiagnosticCode::LoopItemRouteMismatch, RouteLocation.IsValid() ? RouteLocation : AuthoredLocation(Authored),
+						FString::Printf(TEXT("'%s -> %s.%s%s' in the '%s %s in %s' block cannot call the item's function: %s"),
+							*Route.EventName.ToString(), *Authored.LoopVariable.ToString(), *Route.ItemFunction.ToString(),
+							Route.bCallWithoutArguments ? TEXT("()") : TEXT(""), Keyword, *Authored.LoopVariable.ToString(),
+							*SourceSpelling, *WhyNot));
+					bBodyFits = false;
+				}
+			}
+		}
+		if (!bBodyFits)
+		{
 			continue;
 		}
 		ResolvedEach.Add(Authored);
 	}
 	GeneratedClass->SetEachBindings(MoveTemp(ResolvedEach));
+
+	// The `viewmodels` entries, as the file's last read wrote them down: the run time fills each at Initialize.
+	GeneratedClass->SetViewModelSlots(DreamBlueprint->ViewModelSlots);
 
 	if (TextDiagnostics.Diagnostics.Num() != TextDiagnosticsBefore)
 	{

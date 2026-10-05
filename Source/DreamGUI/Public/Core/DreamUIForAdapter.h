@@ -5,13 +5,164 @@
 #include "CoreMinimal.h"
 #include "Containers/Ticker.h"
 #include "Core/Components/DreamWidget.h"
+#include "Core/DreamUIBindingObserver.h"
 #include "Core/DreamWidgetEachBinding.h"
+#include "Templates/UniquePtr.h"
 #include "UObject/Object.h"
+#include "UObject/ObjectKey.h"
 #include "UObject/ObjectPtr.h"
 #include "UObject/WeakObjectPtr.h"
 #include "DreamUIForAdapter.generated.h"
 
 class UDreamUserWidget;
+
+/**
+ * The per-row half of a loop, shared by both kinds: for every row -- a `for` copy (UDreamUIForAdapter), a list cell
+ * (the list views' UDreamUIEachAdapter) -- the item it shows, a watcher on that item's bound members, and the routes
+ * its `-> Item.Func` lines placed on the row's events.
+ *
+ *     for Item in Player.Items {
+ *         HorizontalBox Row { Text Label { Text <- Item.Name }  Native.Button Use { OnClicked -> Item.Use() } }
+ *     }
+ *
+ * The watcher is what lets one row follow its own item: Item.Name announced on the third item rewrites the third row's
+ * Label and nothing else, with no list refresh. One FDreamUIBindingObserver per row, rooted at the item, one path per
+ * entry binding with the entry's index as its client; members the item's class does not announce are simply not
+ * subscribed (a row of a class that announces none of them gets no watcher at all), and only a refresh writes those.
+ *
+ * The routes are the other half: a row's button calls ITS item. Aiming a row at another item -- a recycled cell, a
+ * `for` copy re-aimed -- takes the old item's routes off before placing the new one's, so a row never calls two items.
+ * A row seen for the first time is also scrubbed of what a duplicate may have brought along: a widget copied while it
+ * carried a route (the copies of a duplicated owner, the cells of a duplicated list) arrives with the listener and no
+ * record of it, and every listener of the route's function on that event is taken off before the row's own is placed.
+ *
+ * Not a UObject. Held by value inside the adapter, which is the lifetime owner every watcher's delegates are bound to
+ * weakly, and keyed by row widget weakly: a row destroyed by anyone is dropped at the next ReleaseDeadRows.
+ */
+class FDreamUIEntryRows
+{
+public:
+	/** One entry of InRow needs writing again: InRow's item announced the member entry InEntryIndex reads. */
+	DECLARE_DELEGATE_TwoParams(FOnEntryChanged, UDreamWidget* /*InRow*/, int32 /*InEntryIndex*/);
+
+	FDreamUIEntryRows() = default;
+	FDreamUIEntryRows(const FDreamUIEntryRows&) = delete;
+	FDreamUIEntryRows& operator=(const FDreamUIEntryRows&) = delete;
+	DREAMGUI_API ~FDreamUIEntryRows();
+
+	/** Forget every row (watchers stopped, routes left where they are) and start over for a new loop. */
+	DREAMGUI_API void Initialize(UObject* InLifetimeOwner, FOnEntryChanged InOnEntryChanged);
+
+	/**
+	 * Show InItem on InRow: when it is not what InRow showed, the old item's routes come off, the watcher is re-aimed
+	 * (or made, the first time an item of a class that announces something arrives), and InItem's routes go on.
+	 * Nothing when InRow already shows InItem. Null InItem leaves the row showing nothing: no routes, no watcher.
+	 * InWidgetsByDisplayName is the row's widgets as the entry bindings address them (first of each name wins).
+	 * Writes no values; the caller writes the entries, all of them, once.
+	 */
+	DREAMGUI_API void AimRow(UDreamWidget* InRow, UObject* InItem, const FDreamWidgetEachBinding& InBinding,
+		const TMap<FName, UDreamWidget*>& InWidgetsByDisplayName);
+
+	/** Stop InRow's watcher, take its routes off when bInUnbindRoutes, and forget it. */
+	DREAMGUI_API void ReleaseRow(const UDreamWidget* InRow, bool bInUnbindRoutes);
+
+	/** ReleaseRow for every row. */
+	DREAMGUI_API void ReleaseAll(bool bInUnbindRoutes);
+
+	/** Forget the rows whose widget is gone. Their routes went down with their widgets; their watchers are stopped. */
+	DREAMGUI_API void ReleaseDeadRows();
+
+	/** Stop every watcher and place nothing more: what BeginDestroy does, inside a collection, touching no widget. */
+	DREAMGUI_API void StopWatching();
+
+	/** The item InRow shows, or null. */
+	DREAMGUI_API UObject* GetItem(const UDreamWidget* InRow) const;
+
+	/** How many rows have a watcher, and how many (object, field) subscriptions those hold. Diagnostics and tests. */
+	DREAMGUI_API int32 GetWatchedRowCount() const;
+	DREAMGUI_API int32 GetSubscriptionCount() const;
+
+	/** How many routes the rows have placed and not taken back. Diagnostics and tests. */
+	DREAMGUI_API int32 GetRouteCount() const;
+
+	int32 Num() const { return Rows.Num(); }
+
+	/**
+	 * Whether a loop has anything per row at all: an entry binding to watch, or a route to place. A loop with neither
+	 * keeps no rows -- what every loop was before item watching existed.
+	 */
+	static bool HasRowWork(const FDreamWidgetEachBinding& InBinding)
+	{
+		return InBinding.EntryBindings.Num() > 0 || InBinding.EntryRoutes.Num() > 0;
+	}
+
+	/** InWidgets by display name, first of each name kept: the addressing both adapters' entry bindings use. */
+	DREAMGUI_API static void MapByDisplayName(TConstArrayView<UDreamWidget*> InWidgets, TMap<FName, UDreamWidget*>& OutWidgetsByDisplayName);
+
+	/**
+	 * Write one entry binding: InItem's member onto InTarget, through the setter when the builder named one (the shared
+	 * conversion: an exact type copied whole, two numbers of different widths converted, anything else refused), or
+	 * straight into the property when it did not -- which it allows only for a user widget's variable (a component's
+	 * `props`). A direct write broadcasts the variable when it is FieldNotify, skips a value that is already there, and
+	 * adds the user widget to OutWrittenUserWidgets for RerunWrittenUserWidgets. False when nothing was written.
+	 */
+	DREAMGUI_API static bool WriteEntry(const FDreamWidgetEntryBinding& InEntry, UObject* InTarget, UObject* InItem,
+		TSet<UDreamUserWidget*>& OutWrittenUserWidgets);
+
+	/**
+	 * What a setter would have done after a direct write -- show the change: every written user widget runs its own
+	 * `<-` bindings and its `for` and `each` blocks again, once however many of its properties were written. Only an
+	 * initialized one: anything else is a duplicate still waiting for its tree.
+	 */
+	DREAMGUI_API static void RerunWrittenUserWidgets(const TSet<UDreamUserWidget*>& InWrittenUserWidgets);
+
+private:
+	/** One route a row placed: the object whose event it is, the event, and the item's function it calls. */
+	struct FBoundRoute
+	{
+		TWeakObjectPtr<UObject> Target;
+		FName EventName;
+		FName ItemFunction;
+	};
+
+	struct FRow
+	{
+		FRow() = default;
+		FRow(FRow&&) = default;
+		FRow& operator=(FRow&&) = default;
+		FRow(const FRow&) = delete;
+		FRow& operator=(const FRow&) = delete;
+
+		TWeakObjectPtr<UDreamWidget> Widget;
+		TWeakObjectPtr<UObject> Item;
+		/** Null while the row shows nothing a watcher could hear. Behind a pointer so its address survives the map growing. */
+		TUniquePtr<FDreamUIBindingObserver> Observer;
+		TArray<FBoundRoute> Routes;
+	};
+
+	void PlaceRoutes(FRow& InOutRow, UObject* InItem, const FDreamWidgetEachBinding& InBinding,
+		const TMap<FName, UDreamWidget*>& InWidgetsByDisplayName, bool bInScrubFirst);
+	void TakeRoutesOff(FRow& InOutRow);
+	void Retire(TUniquePtr<FDreamUIBindingObserver>&& InObserver);
+	bool ShouldWatch(const UClass* InItemClass, const FDreamWidgetEachBinding& InBinding);
+	void HandleClientChanged(TWeakObjectPtr<UDreamWidget> InRow, int32 InClientId);
+
+	TMap<TObjectKey<UDreamWidget>, FRow> Rows;
+
+	TWeakObjectPtr<UObject> LifetimeOwner;
+	FOnEntryChanged OnEntryChanged;
+
+	/**
+	 * Watchers taken off a row while a report is on the stack -- possibly from the very watcher reporting -- kept, stopped,
+	 * until the outermost report returns: one must never be destroyed under its own callback.
+	 */
+	TArray<TUniquePtr<FDreamUIBindingObserver>> RetiredObservers;
+	int32 ReportDepth = 0;
+
+	/** The last item class ruled on by ShouldWatch, and the ruling: a list is nearly always one class throughout. */
+	TWeakObjectPtr<const UClass> LastRuledClass;
+	bool bLastRuledClassAnnounces = false;
+};
 
 /**
  * What a `for` block becomes at run time: one copy of the template widget per item of the source, made inside the
@@ -36,6 +187,11 @@ class UDreamUserWidget;
  * a `for` is the core's: no list view, no recycling, a copy per item for as long as the item is in the source. That
  * is the right shape for the short lists screens are made of -- a settings page's options, a tab bar, a legend --
  * and the wrong one for ten thousand rows, which is what `each` is for.
+ *
+ * The source may be a member path (`for Item in Player.Items`), read on whatever the path's leading members hold at
+ * each refresh; the owner refreshes the adapter when anything along it changes. Between refreshes each copy follows
+ * its own item (FDreamUIEntryRows): a member the item announces is written onto that copy alone, and the body's
+ * `-> Item.Func` lines call that copy's item.
  *
  * Owned by the user widget that resolved the binding (UDreamUserWidget::ResolveEachBindings keeps it in
  * EachAdapters beside the `each` adapters), outered to it, one per `for`. The copies live in that widget's tree
@@ -75,7 +231,10 @@ public:
 	 */
 	void Refresh();
 
-	/** Destroy every copy this adapter made and forget its items. The template is left as it is. */
+	/**
+	 * Destroy every copy this adapter made and forget its items, taking every watcher off the items and every route off
+	 * the copies first. The template is left as it is.
+	 */
 	void ReleaseCopies();
 
 	const FDreamWidgetEachBinding& GetBinding() const { return Binding; }
@@ -90,12 +249,21 @@ public:
 	/** The items the copies show, in the same order. */
 	const TArray<TObjectPtr<UObject>>& GetItems() const { return Items; }
 
+	/** How many entry bindings have been written onto copies so far, refreshes and item reports together. Tests. */
+	int32 GetEntryWriteCount() const { return EntryWriteCount; }
+
+	/** The copies' per-item watchers and routes. Diagnostics and tests. */
+	const FDreamUIEntryRows& GetRows() const { return Rows; }
+
 	virtual void BeginDestroy() override;
 
 private:
 	void RefreshOnce();
 
-	/** The source's items: the function called or the array variable read, by reflection, as the `each` adapter does. */
+	/**
+	 * The source's items: the function called or the array variable read, by reflection, as the `each` adapter does --
+	 * on the user widget, or with a SourcePath on the object the path's leading members reach (none when it is broken).
+	 */
 	void FetchItems(TArray<UObject*>& OutItems) const;
 
 	/** The source's copies in a duplicated owner, taken as this adapter's own. See Initialize. */
@@ -118,12 +286,21 @@ private:
 	/** Stand InCopies right after InTemplate among InPanel's children, in the order given. */
 	static void PlaceCopies(UDreamWidget* InPanel, UDreamWidget* InTemplate, TConstArrayView<UDreamWidget*> InCopies);
 
+	/** The widgets of InCopy the entry bindings and routes address, by display name. See CollectAuthoredWidgets. */
+	static void MapCopyWidgets(UDreamWidget* InCopy, TMap<FName, UDreamWidget*>& OutWidgetsByDisplayName);
+
 	/**
 	 * The `Prop <- Var.Member` lines, for one copy and its item. A target with a setter goes through it, as an
 	 * `each` cell's does; one the builder recorded without a setter (a component's `props` variable) is written
 	 * straight into the copy, and the user widget written to is collected so its own bindings can be run again.
 	 */
-	void ApplyEntryBindings(UDreamWidget* InCopy, UObject* InItem, TSet<UDreamUserWidget*>& OutWrittenUserWidgets) const;
+	void ApplyEntryBindings(UObject* InItem, const TMap<FName, UDreamWidget*>& InCopyWidgets, TSet<UDreamUserWidget*>& OutWrittenUserWidgets);
+
+	/** One of those lines alone: entry InEntryIndex. See FDreamUIEntryRows::WriteEntry. */
+	void ApplyEntryBinding(int32 InEntryIndex, UObject* InItem, const TMap<FName, UDreamWidget*>& InCopyWidgets, TSet<UDreamUserWidget*>& OutWrittenUserWidgets);
+
+	/** InCopy's item announced the member entry InEntryIndex reads: that entry, on that copy, and nothing else. */
+	void HandleEntryChanged(UDreamWidget* InCopy, int32 InEntryIndex);
 
 	void ScheduleDeferredRefresh();
 	bool HandleDeferredRefresh(float InDeltaTime);
@@ -154,6 +331,11 @@ private:
 	TArray<TObjectPtr<UDreamWidget>> Copies;
 
 	FDreamWidgetEachBinding Binding;
+
+	/** Each copy's item watcher and routes, keyed by copy. Not reflected: weak keys, and nothing in it is a reference. */
+	FDreamUIEntryRows Rows;
+
+	int32 EntryWriteCount = 0;
 
 	/**
 	 * What a copy is shown as: the template's AUTHORED visibility, read off the class's archetype, since the live

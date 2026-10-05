@@ -31,11 +31,15 @@
 // that resolves the action is the input system's, reached through UDreamUIInputServices.
 #include "Core/DreamUIActionTypes.h"
 #include "Engine/DataTable.h"
+// Held through TUniquePtr members below; a complete type here so every translation unit that destroys a widget can.
+#include "Core/DreamUIBindingObserver.h"
 #include "DreamUserWidget.generated.h"
 
 class UDreamWidgetTree;
 class UDreamUserWidget;
 class UDreamUserWidgetEventBridge;
+class UDreamViewModelSubsystem;
+class FObjectPropertyBase;
 class APlayerController;
 class APawn;
 class ULocalPlayer;
@@ -142,6 +146,34 @@ public:
 	 * Initialize and NativeOnConstruct already do it; nothing else needs to.
 	 */
 	void RefreshParentViewModels();
+
+	/** Takes back the subscriptions this widget placed on OTHER objects -- view models, its host, the registry. */
+	virtual void BeginDestroy() override;
+
+	/**
+	 * How this instance's property bindings are driven, by kind. What DreamUI.Binding.Dump prints per widget, and
+	 * what a test asserts "subscribed, not polled" with.
+	 */
+	struct FBindingCounts
+	{
+		/** Recorded dependencies, every hop announceable: re-evaluated from a broadcast along a path, never polled. */
+		int32 Subscribed = 0;
+		/** Recorded dependencies that cannot all be announced, an expression they do not cover, or DreamUI.Binding.ForcePoll. */
+		int32 Polled = 0;
+		/** Recorded as reading nothing: evaluated once, at Initialize. */
+		int32 Constant = 0;
+		/** Compiled without dependencies (an older compile, the designer's Bind button): driven as such bindings always were. */
+		int32 Legacy = 0;
+		/** The Legacy ones among them whose function is no FieldNotify field, and so are polled. */
+		int32 LegacyPolled = 0;
+	};
+	FBindingCounts GetBindingCounts() const;
+
+	/**
+	 * Why each polled binding with recorded dependencies is polled, one line per binding ("Title.Text: 'Untracked' on
+	 * DreamTestPlayerVM is not FieldNotify"). Empty when none is. DreamUI.Binding.Dump's detail lines.
+	 */
+	void DescribePolledBindings(TArray<FString>& OutLines) const;
 	/**
 	 * This instance's own hierarchy, instanced from the class template. Transient and
 	 * DuplicateTransient: it is regenerated from the class, never persisted and never copied.
@@ -1092,6 +1124,22 @@ private:
 	bool bCanNavigateHere = false;
 
 private:
+	/**
+	 * What re-evaluates a resolved binding. Legacy is every binding compiled before dependencies were recorded (and the
+	 * designer's Bind button, and a bare `F()`): its own FieldNotify field when it has one, else the poll -- exactly as
+	 * before. The other three are the recorded ones; see FDreamWidgetPropertyBinding::Dependencies.
+	 */
+	enum class EBindingDrive : uint8
+	{
+		Legacy,
+		/** PropertyBindingObserver reports it. */
+		Subscribed,
+		/** The manager's per-frame visit. */
+		Polled,
+		/** Reads nothing: evaluated once. */
+		Constant,
+	};
+
 	/** A binding with its lookups already done. Resolved once, at Initialize. */
 	struct FResolvedBinding
 	{
@@ -1107,16 +1155,109 @@ private:
 		 */
 		UE::FieldNotification::FFieldId SourceFieldId;
 		/**
+		 * Recorded bindings only (Drive is not Legacy): the member paths the source reads, from this widget on. None may
+		 * pass an unset object when the binding evaluates, or it is skipped and the target keeps its value.
+		 */
+		TArray<TArray<FName>> Dependencies;
+		/** Its position in the class's CollectPropertyBindings, for naming it in DreamUI.Binding.Dump. */
+		int32 SourceIndex = INDEX_NONE;
+		EBindingDrive Drive = EBindingDrive::Legacy;
+		/** Polled because DreamUI.Binding.ForcePoll was on when it resolved, not for any reason of its own. */
+		bool bForcedToPoll = false;
+		/** Recorded with dependencies that do not cover everything the expression reads (a call with arguments). */
+		bool bDependenciesIncomplete = false;
+		/**
 		 * True while EvaluateBinding is pushing this binding's value into its target. A two-way
 		 * control echoes that push back through OnValueChanged -> generated setter -> FieldNotify,
 		 * which lands here again for the same binding; the flag is what stops that echo.
 		 */
 		mutable bool bEvaluating = false;
+
+		/** On the manager's per-frame visit. */
+		bool IsPolled() const
+		{
+			return Drive == EBindingDrive::Legacy ? !SourceFieldId.IsValid() : Drive == EBindingDrive::Polled;
+		}
 	};
 	TArray<FResolvedBinding> ResolvedBindings;
 
-	/** How many of ResolvedBindings carry no FieldNotify id and must be polled. */
+	/** How many of ResolvedBindings are polled (FResolvedBinding::IsPolled). */
 	int32 PolledBindingCount = 0;
+
+	/**
+	 * The recorded, announceable bindings' dependency paths, watched from this widget: client id = index in
+	 * ResolvedBindings. Made by ResolvePropertyBindings when the first such binding resolves, started once the bindings
+	 * have had their first evaluation. Its subscriptions on view models are external, so it is stopped in BeginDestroy
+	 * and whenever the bindings resolve again.
+	 */
+	TUniquePtr<FDreamUIBindingObserver> PropertyBindingObserver;
+
+	/** The `for` / `each` sources that are member paths (FDreamWidgetEachBinding::SourcePath): client id = index in EachAdapters. */
+	TUniquePtr<FDreamUIBindingObserver> EachSourceObserver;
+
+	/** One `= parent` entry this widget fills from an enclosing user widget's entry, and the watch that keeps it filled. */
+	struct FParentViewModelLink
+	{
+		/** This widget's variable. */
+		FName VariableName;
+		/** The entry's declared class: the ancestor's entry must be of it or below it. */
+		TWeakObjectPtr<UClass> DeclaredClass;
+		/** `= parent "Name"`: the ancestor's entry of that name. None: its first entry of a fitting class. */
+		FName SourceName;
+		/** The ancestor found last time, and its entry. Unset while none is found. */
+		TWeakObjectPtr<UDreamUserWidget> Ancestor;
+		FName AncestorVariable;
+		/** Root = Ancestor, one path {AncestorVariable}, lifetime owner = this widget. */
+		TUniquePtr<FDreamUIBindingObserver> Observer;
+	};
+	TArray<FParentViewModelLink> ParentViewModelLinks;
+
+	/** `= global` entries still empty because the registry had nothing that fits: variable names. */
+	TArray<FName> PendingGlobalViewModels;
+	/** The registry whose OnRegisteredNative this widget listens to while PendingGlobalViewModels is not empty. */
+	TWeakObjectPtr<UDreamViewModelSubsystem> GlobalViewModelRegistry;
+	FDelegateHandle GlobalViewModelRegisteredHandle;
+
+	/**
+	 * Fill this widget's `viewmodels` entries that nobody handed an object (UDreamWidgetGeneratedClass::
+	 * CollectViewModelSlots): make the `= new` ones, look the `= global` ones up (or wait for them), and link the `=
+	 * parent` ones to the nearest enclosing widget that has a fitting entry. Runs after the tree is instanced and before
+	 * NativeOnInitialized, on both roads into a widget.
+	 *
+	 * bInDuplicate: the widget is a copy (InitializeAsDuplicate), whose variables came across with the source's values.
+	 * Those stand -- the copy shares what its source was given, as it shares every other reference -- except a `= new`
+	 * object, which belongs to the widget that made it and is made afresh for the copy, and a `= parent` entry, which
+	 * follows the copy's own ancestor once it has one.
+	 */
+	void ResolveViewModels(bool bInDuplicate);
+	/** The class variable of a `viewmodels` entry. */
+	FObjectPropertyBase* FindViewModelProperty(FName InVariableName) const;
+	/**
+	 * Write a `viewmodels` entry's variable and announce it, so every binding reading through it re-reads. False, with
+	 * nothing written or announced, when the variable already holds InValue and bInEvenIfSame is off.
+	 */
+	bool WriteViewModel(FName InVariableName, UObject* InValue, bool bInEvenIfSame);
+	/** Look the ancestor up for ParentViewModelLinks[InLinkIndex] again, re-aim its watch when it moved, and copy its value. */
+	void LinkParentViewModel(int32 InLinkIndex);
+	/** The linked ancestor's entry changed: copy it. Client id = the link's index. */
+	void HandleParentViewModelChanged(int32 InLinkIndex);
+	/** Stop following InVariableName's ancestor and stop waiting for it in the registry -- it was handed an object. */
+	void ForgetViewModelSource(FName InVariableName);
+	/** Start listening to the registry for PendingGlobalViewModels, when there is a registry and not already listening. */
+	void ListenForGlobalViewModels();
+	void HandleGlobalViewModelRegistered(UObject* InViewModel, FName InName);
+	void StopListeningForGlobalViewModels();
+
+	/** Every subscription this widget placed outside itself: the binding observers, the parent links, the registry listener. */
+	void StopExternalSubscriptions();
+	/** After the first evaluation: start watching the recorded bindings' paths and the loop sources' paths. */
+	void StartBindingObservers();
+	/** PropertyBindingObserver's report: ResolvedBindings[InClientId]'s dependencies changed. */
+	void HandlePropertyDependencyChanged(int32 InClientId);
+	/** EachSourceObserver's report: something along EachAdapters[InClientId]'s source path changed. */
+	void HandleEachSourcePathChanged(int32 InClientId);
+	/** Every dependency path of a recorded binding reaches its last member right now (DreamUIBindingPath::IsComplete). */
+	bool AreDependenciesComplete(const FResolvedBinding& InBinding);
 
 	/** Resolve the class's bindings against this instance's widgets. Silent: the compiler reported. */
 	void ResolvePropertyBindings();

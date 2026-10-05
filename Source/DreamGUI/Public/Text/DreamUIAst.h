@@ -123,8 +123,12 @@ struct DREAMGUI_API FDreamUIExpression
 	TArray<FDreamUIExpression> Operands;
 	FDreamUISourceLocation Location;
 
-	/** True for exactly the shape the plain binding path always handled: `Name()` with no arguments. */
-	bool IsBareCall() const { return Kind == EKind::Call && Operands.Num() == 0; }
+	/**
+	 * True for exactly the shape the plain binding path always handled: `Name()` with no arguments, a function of the
+	 * class. A dotted call (`Player.GetName()`) is not one -- it calls a function of another object, which only a
+	 * generated function can reach.
+	 */
+	bool IsBareCall() const { return Kind == EKind::Call && Operands.Num() == 0 && !Symbol.Contains(TEXT(".")); }
 };
 
 /**

@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Core/DreamFieldNotification.h"
+#include "FieldNotificationDeclaration.h" // IWYU pragma: keep -- what UHT generates for a subclass's FieldNotify members expands to it
 #include "FieldNotificationDelegate.h"
 #include "INotifyFieldValueChanged.h"
 #include "UObject/Object.h"
@@ -11,16 +12,21 @@
 
 namespace DreamViewModel
 {
-	/** Equality as a setter means it: FText has no operator==, and "the same text" is IdenticalTo. */
+	/** Equality as a setter means it. */
 	template<typename TValue>
 	bool IsSameValue(const TValue& InA, const TValue& InB)
 	{
 		return InA == InB;
 	}
 
+	/**
+	 * FText has no operator==. IdenticalTo alone is too strict for a setter: a view model that rebuilds its display text
+	 * every tick (`FText::AsNumber(Funds)`) makes a new text each time, and every one of them would be announced and
+	 * re-shown although it reads the same. What a binding shows is the display string, so that is what "changed" asks.
+	 */
 	inline bool IsSameValue(const FText& InA, const FText& InB)
 	{
-		return InA.IdenticalTo(InB);
+		return InA.IdenticalTo(InB) || InA.ToString().Equals(InB.ToString(), ESearchCase::CaseSensitive);
 	}
 
 	/**

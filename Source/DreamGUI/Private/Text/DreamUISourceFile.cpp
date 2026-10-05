@@ -33,7 +33,8 @@
  *   failure mode a syntax checker is never allowed to have.
  *
  * And one rule about the words the language grew later -- `as`, `props`, `events`, `emit`, `if`,
- * `else`, `default`, `fill`: they are keywords only in the one position each leads, decided by a token
+ * `else`, `default`, `fill`, `viewmodels`, and `new`, `global`, `parent` after the `=` of a
+ * `viewmodels` line: they are keywords only in the one position each leads, decided by a token
  * or two of lookahead, and never reserved as names. Files written before they existed used them as
  * property names and ids, and a grammar that grows must not take a working file away from its author.
  * The words that were keywords from the start (IsReservedWord) stay as strict as they always were.
@@ -88,6 +89,12 @@ namespace DreamUIText
 		Arrow,
 		/** `<->`, the two-way binding arrow: property and variable mirror each other. */
 		TwoWayArrow,
+		/**
+		 * `+=` -- routes an event to a handler as one more listener (EDreamUIRouteOperator::Append). One token rather
+		 * than `+` and `=`, because `+` alone leads a component line and the two must never be confused: a `+` with an
+		 * `=` straight after it begins nothing else this grammar has.
+		 */
+		PlusEquals,
 		Plus,
 		At,
 		/**
@@ -406,6 +413,14 @@ namespace DreamUIText
 				if (Char == TEXT(';'))
 				{
 					EmitPunctuation(OutTokens, ETokenKind::Separator, 1);
+					continue;
+				}
+				if (Char == TEXT('+') && PeekChar(1) == TEXT('='))
+				{
+					// Before the single '+' below, the way `->` comes before '-'. No file could write the two characters
+					// together before this meant anything: a component line is `+ Class`, and '+' between operands is
+					// never followed by '='.
+					EmitPunctuation(OutTokens, ETokenKind::PlusEquals, 2);
 					continue;
 				}
 
@@ -1048,6 +1063,10 @@ namespace DreamUIText
 				{
 					PrefixReferences(Argument, 0);
 				}
+				for (FDreamUIExpression& Argument : Property.RouteArguments)
+				{
+					PrefixReferences(Argument, 0);
+				}
 			}
 		}
 
@@ -1144,6 +1163,12 @@ namespace DreamUIText
 				else if (CheckKeyword(TEXT("events")) && Peek(1).Kind == ETokenKind::OpenBrace)
 				{
 					ParseEventsDeclaration(OutAst);
+				}
+				else if (CheckKeyword(TEXT("viewmodels")) && Peek(1).Kind == ETokenKind::OpenBrace)
+				{
+					// With its brace only, as `props`: a file that has a node type or a property called viewmodels
+					// keeps reading as it did before the word meant anything.
+					ParseViewModelsDeclaration(OutAst);
 				}
 				else if (CheckKeyword(TEXT("if")) || CheckKeyword(TEXT("else")))
 				{
@@ -2312,6 +2337,155 @@ namespace DreamUIText
 			OutAst.Events.Add(MoveTemp(Event));
 		}
 
+		/**
+		 * `viewmodels { PlayerVM Player  SettingsVM Settings = new  InventoryVM Stash = global "Stash" }` -- the view
+		 * models this file's class holds, each by type and name, and where its object comes from when nobody hands one
+		 * over. Entries end at a line break or a ';', as `props` lines do; blocks accumulate, and a name declared twice
+		 * is refused with the first one kept, for the reason a duplicate prop is.
+		 */
+		void ParseViewModelsDeclaration(FDreamUIAst& OutAst)
+		{
+			Advance(); // 'viewmodels'
+			const FDreamUISourceLocation OpenLocation = Current().Location;
+			Advance(); // '{', which ParseFile saw before it called here
+
+			for (;;)
+			{
+				SkipSeparators();
+				if (Check(ETokenKind::CloseBrace))
+				{
+					Advance();
+					return;
+				}
+				if (IsAtEnd())
+				{
+					Diagnostics.AddError(EDreamUIDiagnosticCode::UnclosedBlock, OpenLocation,
+						TEXT("this 'viewmodels' block never reaches its '}'"));
+					return;
+				}
+
+				const int32 IndexBefore = Index;
+				ParseViewModelLine(OutAst);
+				if (Index == IndexBefore)
+				{
+					Advance();
+				}
+			}
+		}
+
+		/**
+		 * `Type Name`, then optionally `= new`, `= global`, `= global "Name"`, `= parent` or `= parent "Name"`. The type is
+		 * a class name, an alias a `use … as` gave, or a path (`/Script/MyGame.PlayerVM`, `/Game/UI/BP_PlayerVM`), kept
+		 * as written: which class it names is the compiler's to say, as it is for every other class a file spells.
+		 * Location is the NAME, the word everything after this line refers to; TypeLocation is where a type that does
+		 * not resolve is pointed at.
+		 */
+		void ParseViewModelLine(FDreamUIAst& OutAst)
+		{
+			if (!Check(ETokenKind::Identifier) && !Check(ETokenKind::AssetPath))
+			{
+				Diagnostics.AddError(EDreamUIDiagnosticCode::MalformedViewModelsBlock, Current().Location,
+					FString::Printf(TEXT("a 'viewmodels' line is written 'Type Name', as in 'PlayerVM Player', found '%s'"), *DescribeCurrent()));
+				RecoverToStatementBoundary();
+				return;
+			}
+			FDreamUIViewModelDecl ViewModel;
+			ViewModel.TypeName = Current().Text;
+			ViewModel.TypeLocation = Current().Location;
+			Advance();
+
+			if (!Check(ETokenKind::Identifier))
+			{
+				Diagnostics.AddError(EDreamUIDiagnosticCode::MalformedViewModelsBlock, Current().Location,
+					FString::Printf(TEXT("expected the view model's name after '%s', as in '%s Player', found '%s'"),
+						*ViewModel.TypeName, *ViewModel.TypeName, *DescribeCurrent()));
+				RecoverToStatementBoundary();
+				return;
+			}
+			ViewModel.Name = Current().Text;
+			ViewModel.Location = Current().Location;
+			Advance();
+
+			if (Check(ETokenKind::Equals))
+			{
+				Advance();
+				if (!ParseViewModelSource(ViewModel))
+				{
+					RecoverToStatementBoundary();
+					return;
+				}
+			}
+
+			if (!AtStatementEnd())
+			{
+				Diagnostics.AddError(EDreamUIDiagnosticCode::MalformedViewModelsBlock, Current().Location,
+					FString::Printf(TEXT("a 'viewmodels' line declares one view model, and '%s' cannot follow '%s'"),
+						*DescribeCurrent(), *ViewModel.Name));
+				RecoverToStatementBoundary();
+				return;
+			}
+
+			// FString's comparison, case insensitive: the name becomes a member variable, and FName would make the two one.
+			if (const FDreamUIViewModelDecl* First = OutAst.ViewModels.FindByPredicate(
+				[&ViewModel](const FDreamUIViewModelDecl& InExisting) { return InExisting.Name == ViewModel.Name; }))
+			{
+				Diagnostics.AddError(EDreamUIDiagnosticCode::DuplicateViewModel, ViewModel.Location,
+					FString::Printf(TEXT("view model '%s' is already declared on line %d"), *ViewModel.Name, First->Location.Line));
+				return;
+			}
+			OutAst.ViewModels.Add(MoveTemp(ViewModel));
+		}
+
+		/**
+		 * What follows the `=` of a `viewmodels` line, the cursor just past it. `new`, `global` and `parent` are words only
+		 * here -- never reserved, so a class or a view model may still be called any of them. False, reported, when what
+		 * follows is none of the forms; the caller recovers.
+		 */
+		bool ParseViewModelSource(FDreamUIViewModelDecl& InOutViewModel)
+		{
+			if (CheckKeyword(TEXT("new")))
+			{
+				InOutViewModel.Source = EDreamUIViewModelSource::New;
+				Advance();
+				return true;
+			}
+			const bool bGlobal = CheckKeyword(TEXT("global"));
+			if (bGlobal || CheckKeyword(TEXT("parent")))
+			{
+				InOutViewModel.Source = bGlobal ? EDreamUIViewModelSource::Global : EDreamUIViewModelSource::Parent;
+				const FString Keyword = Current().Text;
+				Advance();
+				if (!Check(ETokenKind::String))
+				{
+					return true;
+				}
+				// Said here because nothing after the parse could: an empty name and no name are the same empty
+				// SourceName in the tree, and the second means "by class alone" while the first means nothing at all.
+				if (Current().Text.TrimStartAndEnd().IsEmpty())
+				{
+					Diagnostics.AddError(EDreamUIDiagnosticCode::MalformedViewModelsBlock, Current().Location,
+						FString::Printf(TEXT("'%s \"\"' names nothing: write '%s' alone to take the view model by its class"), *Keyword, *Keyword));
+					return false;
+				}
+				// The name becomes an FName, and FName stops the editor rather than refuse one this long; a string is the
+				// one spelling the lexer's length rule never sees.
+				if (Current().Text.Len() >= NAME_SIZE)
+				{
+					Diagnostics.AddError(EDreamUIDiagnosticCode::MalformedViewModelsBlock, Current().Location,
+						FString::Printf(TEXT("'%s' is %d characters long, and a name here holds at most %d"),
+							*Ellipsize(Current().Text), Current().Text.Len(), NAME_SIZE - 1));
+					return false;
+				}
+				InOutViewModel.SourceName = Current().Text;
+				Advance();
+				return true;
+			}
+			Diagnostics.AddError(EDreamUIDiagnosticCode::MalformedViewModelsBlock, Current().Location,
+				FString::Printf(TEXT("'%s =' is followed by where the view model comes from -- 'new', 'global', 'global \"Name\"', 'parent' or 'parent \"Name\"' -- or the '=' is left out for one the host gives; found '%s'"),
+					*InOutViewModel.Name, *DescribeCurrent()));
+			return false;
+		}
+
 		// --- timelines ----------------------------------------------------------------------------
 
 		/** A time in seconds: `0.3`, or `-0` nonsense refused. Shared by key lines and `@` lines. */
@@ -2977,13 +3151,16 @@ namespace DreamUIText
 				RecoverToStatementBoundary();
 				return;
 			}
-			if ((CheckKeyword(TEXT("props")) || CheckKeyword(TEXT("events"))) && Peek(1).Kind == ETokenKind::OpenBrace)
+			if ((CheckKeyword(TEXT("props")) || CheckKeyword(TEXT("events")) || CheckKeyword(TEXT("viewmodels")))
+				&& Peek(1).Kind == ETokenKind::OpenBrace)
 			{
 				// What the CLASS declares, so the top of the file, like `class`. Read here as a block rather than as
 				// the anonymous node of type `props` it would otherwise parse as -- no widget is called that, and the
 				// message that names the real mistake is worth the two words.
-				const bool bProps = CheckKeyword(TEXT("props"));
-				Diagnostics.AddError(bProps ? EDreamUIDiagnosticCode::MalformedPropsBlock : EDreamUIDiagnosticCode::MalformedEventsBlock,
+				const EDreamUIDiagnosticCode Code = CheckKeyword(TEXT("props")) ? EDreamUIDiagnosticCode::MalformedPropsBlock
+					: CheckKeyword(TEXT("events")) ? EDreamUIDiagnosticCode::MalformedEventsBlock
+					: EDreamUIDiagnosticCode::MalformedViewModelsBlock;
+				Diagnostics.AddError(Code,
 					Current().Location,
 					FString::Printf(TEXT("'%s' declares what this file's class has, so it belongs at the top of the file, not inside a node"),
 						*Current().Text));
@@ -3322,11 +3499,11 @@ namespace DreamUIText
 				return After != ETokenKind::Identifier && After != ETokenKind::OpenBrace && After != ETokenKind::Colon;
 			}
 			return Next == ETokenKind::Equals || Next == ETokenKind::Arrow
-				|| Next == ETokenKind::EventArrow || Next == ETokenKind::TwoWayArrow;
+				|| Next == ETokenKind::EventArrow || Next == ETokenKind::TwoWayArrow || Next == ETokenKind::PlusEquals;
 		}
 
 		/**
-		 * True when the cursor is on another property line -- a name, dotted or not, and then `=`, `<-`, `->` or `<->`.
+		 * True when the cursor is on another property line -- a name, dotted or not, and then `=`, `<-`, `->`, `+=` or `<->`.
 		 * Narrower than LooksLikeProperty on purpose: it is asked where a statement may END, and only a line that cannot
 		 * be read any other way may start there.
 		 */
@@ -3343,7 +3520,7 @@ namespace DreamUIText
 			}
 			const ETokenKind After = Peek(Ahead).Kind;
 			return After == ETokenKind::Equals || After == ETokenKind::Arrow
-				|| After == ETokenKind::EventArrow || After == ETokenKind::TwoWayArrow;
+				|| After == ETokenKind::EventArrow || After == ETokenKind::TwoWayArrow || After == ETokenKind::PlusEquals;
 		}
 
 		/**
@@ -3497,12 +3674,17 @@ namespace DreamUIText
 			if (!Check(ETokenKind::Identifier))
 			{
 				Diagnostics.AddError(EDreamUIDiagnosticCode::MalformedLoopHeader, Loop.Location,
-					TEXT("a loop draws its items from a no-argument function, written 'SomeFunction()'"));
+					TEXT("a loop draws its items from a no-argument function, written 'SomeFunction()', or a variable, written 'Items' -- either may be reached through a member path, 'Inventory.Items'"));
 				RecoverToStatementBoundary();
 				return;
 			}
-			Loop.LoopSourceFunction = Current().Text;
-			Advance();
+			// `in Inventory.Items`, `in Inventory.Filtered()` -- the source on an object the class holds, kept as one
+			// dotted string. Everything before the last dot is the path to that object; the parentheses below say what
+			// the LAST segment is, which is all a source ever needed them to say.
+			if (!ParseMemberPath(Loop.LoopSourceFunction, EDreamUIDiagnosticCode::MalformedLoopHeader))
+			{
+				return;
+			}
 
 			// The parentheses now DISTINGUISH rather than merely remind: `in GetItems()` calls a
 			// function, `in Items` reads a variable -- the two source shapes the ruling admits. The
@@ -3795,7 +3977,7 @@ namespace DreamUIText
 				Shown.Name = TEXT("Shown");
 				// The shape `Shown <- Cond` would have parsed into, so nothing downstream can tell the two apart: a bare
 				// `HasSave()` rides BindingFunction, as ParseBindingFunction keeps it, and anything richer the expression.
-				if (InCondition.IsBareCall())
+				if (IsBareLocalCall(InCondition))
 				{
 					Shown.BindingFunction = InCondition.Symbol;
 				}
@@ -4053,6 +4235,15 @@ namespace DreamUIText
 			if (Check(ETokenKind::Equals))
 			{
 				Advance();
+				// `OnPicked = Settings.Apply()`, `OnPicked = emit Picked(1)` -- the one listener of a single-cast
+				// delegate, told from a value by its shape alone: no value is a dotted name or `emit` and an event. A
+				// single word (`OnPicked = HandlePick`) is NOT taken here -- it reads exactly like an enum value, and
+				// stays the Identifier value it always was for the builder to read as a route once it sees a delegate.
+				if (StartsAssignedRoute())
+				{
+					OutProperty.RouteOperator = EDreamUIRouteOperator::Assign;
+					return ParseRoute(OutProperty, TEXT("="));
+				}
 				if (!ParseValue(OutProperty.Value))
 				{
 					RecoverToStatementBoundary();
@@ -4060,46 +4251,31 @@ namespace DreamUIText
 				}
 				return true;
 			}
-			if (Check(ETokenKind::EventArrow))
+			if (Check(ETokenKind::EventArrow) || Check(ETokenKind::PlusEquals))
 			{
-				// `OnClicked -> Confirm`. A bare handler name, no parens: `<-` writes `Func()` because
-				// the file is DESCRIBING a call it will make; `->` names a function something else
-				// will call, and dressing it as a call would promise arguments the author cannot pass.
+				// `OnClicked -> Confirm`, and `OnClicked += Confirm`, which says out loud that it is one listener
+				// among others -- the operator is recorded for the builder to hold the event to (EDreamUIRouteOperator).
+				const bool bAppend = Check(ETokenKind::PlusEquals);
+				const FString Operator = Current().Text;
 				Advance();
-				// `OnClicked -> emit Picked(Index)` -- the one place arguments ARE written after `->`,
-				// because here the file is raising an event of its own and does know what it passes.
-				// `emit` is the keyword only with an event name after it; alone it is still the name of
-				// a handler, as it was before the word meant anything.
-				if (CheckKeyword(TEXT("emit")) && Peek(1).Kind == ETokenKind::Identifier)
-				{
-					Advance(); // 'emit'
-					return ParseEmitRoute(OutProperty);
-				}
-				if (!Check(ETokenKind::Identifier))
-				{
-					RaiseUnexpectedToken(FString::Printf(TEXT("expected a handler name after '%s ->'"), *OutProperty.Name));
-					RecoverToStatementBoundary();
-					return false;
-				}
-				OutProperty.EventHandler = Current().Text;
-				Advance();
-				return true;
+				OutProperty.RouteOperator = bAppend ? EDreamUIRouteOperator::Append : EDreamUIRouteOperator::Arrow;
+				return ParseRoute(OutProperty, *Operator);
 			}
 			if (Check(ETokenKind::TwoWayArrow))
 			{
 				// `Value <-> Volume`. A bare VARIABLE name: the two sides mirror each other, and a
-				// call or an expression has no left-hand side to write back into.
+				// call or an expression has no left-hand side to write back into. Or a member path to
+				// one on an object the class holds, `Value <-> Settings.Volume`: still a variable, only
+				// not this class's own.
 				Advance();
 				if (!Check(ETokenKind::Identifier))
 				{
 					Diagnostics.AddError(EDreamUIDiagnosticCode::MalformedBindingExpression, Current().Location,
-						FString::Printf(TEXT("'%s <->' expects the name of a variable on this class"), *OutProperty.Name));
+						FString::Printf(TEXT("'%s <->' expects a variable of this class, or a member path to one ('Settings.Volume')"), *OutProperty.Name));
 					RecoverToStatementBoundary();
 					return false;
 				}
-				OutProperty.TwoWayProperty = Current().Text;
-				Advance();
-				return true;
+				return ParseMemberPath(OutProperty.TwoWayProperty, EDreamUIDiagnosticCode::MalformedBindingExpression);
 			}
 			if (Check(ETokenKind::Arrow))
 			{
@@ -4119,6 +4295,69 @@ namespace DreamUIText
 		}
 
 		/**
+		 * True, the cursor just past a property's `=`, when what follows is a route rather than a value: a dotted name
+		 * (`Settings.Apply`, `Settings.Apply()`) or `emit` and an event (`emit Picked(1)`). Neither was ever a value --
+		 * a value is one token, or a tuple -- so no file that parsed before reads differently now.
+		 *
+		 * `emit Name` only before its '(' or the end of the statement: `X = emit` is a value as it always was, and so is
+		 * `X = emit` with a node on the same line after it (`emit Row { … }`), however unlikely.
+		 */
+		bool StartsAssignedRoute() const
+		{
+			if (!Check(ETokenKind::Identifier))
+			{
+				return false;
+			}
+			if (Peek(1).Kind == ETokenKind::Dot && Peek(2).Kind == ETokenKind::Identifier)
+			{
+				return true;
+			}
+			if (!CheckKeyword(TEXT("emit")) || Peek(1).Kind != ETokenKind::Identifier)
+			{
+				return false;
+			}
+			const ETokenKind After = Peek(2).Kind;
+			return After == ETokenKind::OpenParen || After == ETokenKind::Separator
+				|| After == ETokenKind::CloseBrace || After == ETokenKind::EndOfFile;
+		}
+
+		/**
+		 * What follows a route's operator (`->`, `+=`, or the `=` StartsAssignedRoute recognised), the cursor just past
+		 * it. Three forms, the same after every operator:
+		 *
+		 *   `Handler` -- a function of this class, no parentheses: `<-` writes `Func()` because the file is DESCRIBING a
+		 *   call it will make; a route names a function something else will call, and dressing it as a call would
+		 *   promise arguments the author cannot pass. Into EventHandler.
+		 *
+		 *   `emit Name(args)` -- an event this file declares, raised with arguments the file does know. `emit` is the
+		 *   keyword only with an event name after it; alone it is still the name of a handler, as it was before the word
+		 *   meant anything.
+		 *
+		 *   `Path.Func` or `Path.Func(args)` -- a function of an object the class holds (ParseMemberRoute).
+		 */
+		bool ParseRoute(FDreamUIProperty& OutProperty, const TCHAR* InOperator)
+		{
+			if (CheckKeyword(TEXT("emit")) && Peek(1).Kind == ETokenKind::Identifier)
+			{
+				Advance(); // 'emit'
+				return ParseEmitRoute(OutProperty);
+			}
+			if (!Check(ETokenKind::Identifier))
+			{
+				RaiseUnexpectedToken(FString::Printf(TEXT("expected a handler name after '%s %s'"), *OutProperty.Name, InOperator));
+				RecoverToStatementBoundary();
+				return false;
+			}
+			if (Peek(1).Kind == ETokenKind::Dot)
+			{
+				return ParseMemberRoute(OutProperty);
+			}
+			OutProperty.EventHandler = Current().Text;
+			Advance();
+			return true;
+		}
+
+		/**
 		 * The rest of `Event -> emit Name(args)`, the cursor on Name. The arguments are binding expressions over this
 		 * file's widget -- the same grammar as the right of `<-` -- and whether they match the event's parameters is the
 		 * compiler's to say, since the parameter types only become pins there. EventHandler is left empty: the compiler
@@ -4133,11 +4372,43 @@ namespace DreamUIText
 				return true;
 			}
 			Advance();
+			return ParseArgumentList(OutProperty.EmitArguments, FString::Printf(TEXT("emit %s"), *OutProperty.EmitEvent));
+		}
+
+		/**
+		 * `Event -> Settings.Apply`, `Event -> Settings.SetVolume(Value)` -- a function of an object the class holds,
+		 * the cursor on the path's first word. The path goes to RouteTarget whole, receiver first; the parentheses, even
+		 * empty ones, are remembered (bRouteHasArgumentList), because they are the difference between "call it with
+		 * nothing" and "forward what the event sends". The arguments are binding expressions, as an emit's are, with the
+		 * event's own parameters in scope by name -- which the compiler's thunk pass decides, as it decides an emit's.
+		 * EventHandler is left empty for that pass to fill.
+		 */
+		bool ParseMemberRoute(FDreamUIProperty& OutProperty)
+		{
+			if (!ParseMemberPath(OutProperty.RouteTarget, EDreamUIDiagnosticCode::MalformedBindingExpression))
+			{
+				return false;
+			}
+			if (!Check(ETokenKind::OpenParen))
+			{
+				return true;
+			}
+			Advance();
+			OutProperty.bRouteHasArgumentList = true;
+			return ParseArgumentList(OutProperty.RouteArguments, OutProperty.RouteTarget);
+		}
+
+		/**
+		 * `a, b)` -- the arguments of a route, the cursor just past its '(', through the ')'. InWhat is how the message
+		 * names the call (`emit Picked`, `Settings.Apply`).
+		 */
+		bool ParseArgumentList(TArray<FDreamUIExpression>& OutArguments, const FString& InWhat)
+		{
 			if (!Check(ETokenKind::CloseParen))
 			{
 				for (;;)
 				{
-					FDreamUIExpression& Argument = OutProperty.EmitArguments.AddDefaulted_GetRef();
+					FDreamUIExpression& Argument = OutArguments.AddDefaulted_GetRef();
 					if (!ParseBindingExpression(Argument, /*InMinPrecedence*/1))
 					{
 						return false;
@@ -4152,13 +4423,51 @@ namespace DreamUIText
 			if (!Check(ETokenKind::CloseParen))
 			{
 				Diagnostics.AddError(EDreamUIDiagnosticCode::MalformedBindingExpression, Current().Location,
-					FString::Printf(TEXT("the arguments of 'emit %s' are separated by ',' and closed by ')', found '%s'"),
-						*OutProperty.EmitEvent, *DescribeCurrent()));
+					FString::Printf(TEXT("the arguments of '%s' are separated by ',' and closed by ')', found '%s'"),
+						*InWhat, *DescribeCurrent()));
 				RecoverToStatementBoundary();
 				return false;
 			}
 			Advance();
 			return true;
+		}
+
+		/**
+		 * `Settings.Volume` -- a member path, the cursor on its first word (which the caller has seen is one): the words
+		 * joined with their dots, into OutPath. Kept flat, as a dotted property name is, for the same reason: which
+		 * segment is an object and which the member read is decided downstream, against classes this stage cannot see.
+		 * False, reported under InCode and the statement recovered, when a dot has no word after it.
+		 */
+		bool ParseMemberPath(FString& OutPath, EDreamUIDiagnosticCode InCode)
+		{
+			OutPath = Current().Text;
+			Advance();
+			while (Check(ETokenKind::Dot))
+			{
+				Advance();
+				if (!Check(ETokenKind::Identifier))
+				{
+					Diagnostics.AddError(InCode, Current().Location,
+						FString::Printf(TEXT("expected a member name after '%s.', found '%s'"), *OutPath, *DescribeCurrent()));
+					RecoverToStatementBoundary();
+					return false;
+				}
+				OutPath += TEXT(".");
+				OutPath += Current().Text;
+				Advance();
+			}
+			return true;
+		}
+
+		/**
+		 * The one shape that rides BindingFunction: a bare `Func()` of the class itself. A dotted `Player.GetName()` is a
+		 * call too, but on another object, and only a generated function can reach one -- so it stays the expression the
+		 * compiler's thunk pass lowers, as anything richer than a bare call always has.
+		 */
+		static bool IsBareLocalCall(const FDreamUIExpression& InExpression)
+		{
+			int32 Dot = INDEX_NONE;
+			return InExpression.IsBareCall() && !InExpression.Symbol.FindChar(TEXT('.'), Dot);
 		}
 
 		bool ParseBindingFunction(FDreamUIProperty& OutProperty)
@@ -4184,7 +4493,7 @@ namespace DreamUIText
 				RecoverToStatementBoundary();
 				return false;
 			}
-			if (Expression.IsBareCall())
+			if (IsBareLocalCall(Expression))
 			{
 				OutProperty.BindingFunction = Expression.Symbol;
 			}
@@ -4398,11 +4707,30 @@ namespace DreamUIText
 					OutExpression.LiteralRaw = Name;
 					return true;
 				}
+				// Dots first, for both readings: `Player.Stats.Title` is a member path -- the first word a variable of the
+				// user widget, each later one a member of the object the word before it holds -- and `Player.Format(a)`
+				// a call on the object `Player` holds. One Symbol, dots and all, either way (FDreamUIExpression::EKind).
+				// Inside a loop body a path that starts with the loop variable is how a binding reads the item --
+				// `Entry.Name` -- which the builder tells apart; everything else is the compiler's thunk pass to lower.
+				FString Symbol = Name;
+				while (Check(ETokenKind::Dot))
+				{
+					Advance();
+					if (!Check(ETokenKind::Identifier))
+					{
+						Diagnostics.AddError(EDreamUIDiagnosticCode::MalformedBindingExpression, Current().Location,
+							FString::Printf(TEXT("expected a member name after '%s.'"), *Symbol));
+						RecoverToStatementBoundary();
+						return false;
+					}
+					Symbol += TEXT(".") + Current().Text;
+					Advance();
+				}
 				if (Check(ETokenKind::OpenParen))
 				{
 					Advance();
 					OutExpression.Kind = FDreamUIExpression::EKind::Call;
-					OutExpression.Symbol = Name;
+					OutExpression.Symbol = Symbol;
 					if (!Check(ETokenKind::CloseParen))
 					{
 						while (true)
@@ -4423,7 +4751,7 @@ namespace DreamUIText
 					if (!Check(ETokenKind::CloseParen))
 					{
 						Diagnostics.AddError(EDreamUIDiagnosticCode::MalformedBindingExpression, Current().Location,
-							FString::Printf(TEXT("the call to '%s' was never closed"), *Name));
+							FString::Printf(TEXT("the call to '%s' was never closed"), *Symbol));
 						RecoverToStatementBoundary();
 						return false;
 					}
@@ -4431,25 +4759,10 @@ namespace DreamUIText
 					return true;
 				}
 				// A bare identifier is a variable on the user widget -- the day `<-` learned
-				// expressions is the day a property could be a source too. Dots extend it into a
-				// path: outside a loop body that is an error the thunk generator raises (a graph
-				// cannot get a sub-property by name), but inside an `each` it is how a binding says
-				// something about the item -- `Entry.Name`.
+				// expressions is the day a property could be a source too -- and a dotted one the
+				// member path read above.
 				OutExpression.Kind = FDreamUIExpression::EKind::VariableRef;
-				OutExpression.Symbol = Name;
-				while (Check(ETokenKind::Dot))
-				{
-					Advance();
-					if (!Check(ETokenKind::Identifier))
-					{
-						Diagnostics.AddError(EDreamUIDiagnosticCode::MalformedBindingExpression, Current().Location,
-							FString::Printf(TEXT("expected a member name after '%s.'"), *OutExpression.Symbol));
-						RecoverToStatementBoundary();
-						return false;
-					}
-					OutExpression.Symbol += TEXT(".") + Current().Text;
-					Advance();
-				}
+				OutExpression.Symbol = MoveTemp(Symbol);
 				return true;
 			}
 			default:

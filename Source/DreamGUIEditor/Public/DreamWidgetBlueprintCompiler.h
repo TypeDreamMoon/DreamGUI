@@ -230,14 +230,17 @@ private:
 	void ReportTextDiagnostics(const FDreamUIDiagnosticBag& InDiagnostics);
 
 	/**
-	 * Declare the file's `props` as Blueprint variables and its `events` as event dispatchers.
+	 * Declare the file's `props` as Blueprint variables, its `events` as event dispatchers, and its `viewmodels` as
+	 * object variables of their classes -- the last also written down as the Blueprint's ViewModelSlots, which the
+	 * generated class gets in CompilePropertyBindings.
 	 *
 	 * Called the moment the file has parsed, ahead of the thunk pass and the builder rather than beside the widget
 	 * and resource variables further down, because both read what it declares: `Text <- Label` lowers into a getter
-	 * of Label, which the thunk pass looks up in GeneratedVariables, and an emit route raises a dispatcher this has
-	 * to have refused or accepted first. Every name is checked here against everything else that answers to one in
-	 * the class -- the file's widgets and resources, the author's own members, the parent's -- because two members
-	 * of one name is a class every graph node reads wrongly (PropNameTaken, EventNameTaken).
+	 * of Label, which the thunk pass looks up in GeneratedVariables, `Text <- Player.Name` into a get of Player, and an
+	 * emit route raises a dispatcher this has to have refused or accepted first. Every name is checked here against
+	 * everything else that answers to one in the class -- the file's widgets and resources, the author's own members,
+	 * the parent's -- because two members of one name is a class every graph node reads wrongly (PropNameTaken,
+	 * EventNameTaken, ViewModelNameTaken).
 	 */
 	void DeclareTextMembers(const FDreamUIAst& InAst, FDreamUIDiagnosticBag& OutDiagnostics);
 	/**
@@ -251,13 +254,16 @@ private:
 	bool IsAuthoredMemberName(FName InName) const;
 
 	/**
-	 * The props and dispatchers this compile has declared or adopted from the parent, by name. The widget and
-	 * resource variables declared after them stay off these names.
+	 * The props, dispatchers and view model variables this compile has declared or adopted from the parent, by name.
+	 * The widget and resource variables declared after them stay off these names.
 	 */
 	TSet<FName> TextMemberNames;
 	/** Declared by the file and refused, with the reason already in the bag; emit routes raising them are left alone. */
 	TSet<FString> RefusedEventNames;
-	/** What this compile declared, kept for UDreamWidgetBlueprint's last-good copies when the file builds. */
+	/**
+	 * What this compile declared, kept for UDreamWidgetBlueprint's last-good copies when the file builds. The `viewmodels`
+	 * variables ride with the props: the hierarchy a file that stops parsing keeps reads through them just the same.
+	 */
 	TArray<FBPVariableDescription> DeclaredPropVariables;
 	TArray<FDreamWidgetTextDispatcher> DeclaredDispatchers;
 	/** Props the parent declares, with the default the file gives them; see CopyTermDefaultsToDefaultObject. */

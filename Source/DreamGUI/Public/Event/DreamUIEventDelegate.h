@@ -250,6 +250,18 @@ private:
 	void ExecuteTargetFunction(UObject* Target, UFunction* Func, void* ParamData);
 };
 
+namespace DreamUIEventDelegatePrivate
+{
+	/** A count that a copy of the event does not take along: calls in progress are the event's own, never its copy's. */
+	struct FFiringDepth
+	{
+		int32 Value = 0;
+		FFiringDepth() = default;
+		FFiringDepth(const FFiringDepth&) {}
+		FFiringDepth& operator=(const FFiringDepth&) { return *this; }
+	};
+}
+
 /**
  * event or callback that can edit inside editor
  */
@@ -272,6 +284,15 @@ private:
 	/** Parameter type must be the same as your declaration of FDreamUIEventDelegate(DreamUIEventDelegateParameterType InParameterType) */
 	void FireEvent(void* InParam)const;
 	void LogParameterError(EDreamUIEventDelegateParameterType WrongParamType)const;
+	/** A route left without its target -- see RemoveRuntimeRoute -- which nothing calls and the next removal compacts away. */
+	static bool IsRetiredRuntimeRoute(const FDreamUIEventDelegateData& InData);
+	/**
+	 * How many FireEvent calls are on the stack for this event. A handler is free to take routes off the event that is
+	 * calling it -- a `for` row whose button changed the list, a recycled cell re-aimed from inside its own click -- and
+	 * while this is above zero RemoveRuntimeRoute retires entries in place instead of shrinking the list being walked.
+	 * Not a UPROPERTY: a count of calls in progress means nothing in a saved or copied event.
+	 */
+	mutable DreamUIEventDelegatePrivate::FFiringDepth FiringDepth;
 public:
 	bool IsBound()const;
 	/**
@@ -289,6 +310,27 @@ public:
 	 * mechanism, and `->` is the way it is spelled.
 	 */
 	void AddRuntimeRoute(UObject* InHandlerObject, FName InFunctionName);
+	/**
+	 * The same, with bInCallWithoutArguments saying the handler takes NOTHING whatever this event fires with -- what a
+	 * loop body's `OnValueChanged -> Item.Use()` means, the value dropped. The handler then has to take no parameter at
+	 * all; with false it has to accept exactly GetNativeParameterType(), as above.
+	 */
+	void AddRuntimeRoute(UObject* InHandlerObject, FName InFunctionName, bool bInCallWithoutArguments);
+	/**
+	 * Take back a route AddRuntimeRoute placed: the entry calling InHandlerObject's InFunctionName. What a `for` row or a
+	 * recycled list cell does before it shows another item, so one button never calls two items.
+	 *
+	 * Only runtime routes are touched -- entries naming no HelperWidget, which every authored entry does -- and with them
+	 * any runtime entry for InFunctionName that has lost its target: TargetObject is Transient, so a widget DUPLICATED
+	 * while it carried a route arrives with the entry and without the object, a leftover nothing can call and nothing
+	 * else would ever remove. A null InHandlerObject takes every runtime route to InFunctionName, whoever it calls: what
+	 * a row seen for the first time does, since it cannot know whose routes it arrived with. Called from inside this
+	 * event's own FireEvent, the entries are retired in place (no target, no function) rather than removed, and the next
+	 * call outside one compacts them.
+	 *
+	 * @return how many entries were taken off or retired
+	 */
+	int32 RemoveRuntimeRoute(UObject* InHandlerObject, FName InFunctionName);
 	/** The value this event fires with; the handler of a `->` route has to accept exactly this. */
 	EDreamUIEventDelegateParameterType GetNativeParameterType()const { return SupportParameterType; }
 public:

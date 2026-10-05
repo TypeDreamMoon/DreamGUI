@@ -10,6 +10,7 @@
 #include "Engine/EngineBaseTypes.h"
 #include "Core/DreamWidgetEachBinding.h"
 #include "Core/DreamWidgetPropertyBinding.h"
+#include "Core/DreamWidgetViewModelSlot.h"
 #include "DreamWidgetBlueprint.generated.h"
 
 class UDreamWidgetTree;
@@ -133,6 +134,16 @@ public:
 	/** `Event -> Handler` lines, authored form; CompileEventBindings resolves them onto the class. */
 	UPROPERTY()
 	TArray<FDreamWidgetEventBinding> EventBindings;
+
+	/**
+	 * The `viewmodels` entries of this asset's .dui, as its last read declared them: variable, class and where the object
+	 * comes from. Rewritten by every compile that parses the file -- empty when it has no `viewmodels` block -- and left
+	 * alone by one that does not (the variables of the last good read are declared again with the hierarchy it kept),
+	 * and by an asset that names no .dui at all. The compiler hands it to the generated class
+	 * (UDreamWidgetGeneratedClass::SetViewModelSlots), which the run time fills at Initialize.
+	 */
+	UPROPERTY()
+	TArray<FDreamWidgetViewModelSlot> ViewModelSlots;
 
 	/**
 	 * The `resources` class variables of the last compile that read this asset's .dui into a hierarchy.

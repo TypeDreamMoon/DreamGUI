@@ -28,6 +28,133 @@
 #include "Engine/World.h"
 #include "GameFramework/PlayerController.h"
 #include "GameFramework/Pawn.h"
+#include "Core/DreamUIBindingObserver.h"
+#include "Core/DreamWidgetViewModelSlot.h"
+#include "HAL/IConsoleManager.h"
+#include "UObject/UObjectIterator.h"
+#include "ViewModel/DreamViewModel.h"
+#include "ViewModel/DreamViewModelSubsystem.h"
+
+namespace DreamUserWidgetBindingLocal
+{
+	/**
+	 * Read when a widget's bindings resolve (Initialize), so it decides for the widgets made after it is set. The
+	 * subscribe-or-poll ruling is the one behaviour change recompiling into recorded dependencies brings: a FieldNotify
+	 * member written without a broadcast is no longer picked up by a poll. This puts the poll back to tell the two
+	 * failures apart -- "nothing announces it" from "it never changes".
+	 */
+	static TAutoConsoleVariable<int32> CVarForcePoll(
+		TEXT("DreamUI.Binding.ForcePoll"),
+		0,
+		TEXT("1: every property binding compiled with recorded dependencies is polled every frame instead of subscribed to ")
+		TEXT("the paths it reads. Applies to widgets initialized after it is set. For finding a value that does not update ")
+		TEXT("because nothing announces its change."),
+		ECVF_Default);
+
+	/** DreamUI.Binding.Dump: every live user widget with bindings, how they are driven, and why each polled one is. */
+	static void DumpBindings()
+	{
+		int32 WidgetCount = 0;
+		UDreamUserWidget::FBindingCounts Totals;
+		for (TObjectIterator<UDreamUserWidget> It; It; ++It)
+		{
+			UDreamUserWidget* Widget = *It;
+			// Instances only: a class default object or an archetype resolves nothing and is not on screen.
+			if (!IsValid(Widget) || Widget->IsTemplate() || !Widget->HasPropertyBindings())
+			{
+				continue;
+			}
+			++WidgetCount;
+			const UDreamUserWidget::FBindingCounts Counts = Widget->GetBindingCounts();
+			Totals.Subscribed += Counts.Subscribed;
+			Totals.Polled += Counts.Polled;
+			Totals.Constant += Counts.Constant;
+			Totals.Legacy += Counts.Legacy;
+			Totals.LegacyPolled += Counts.LegacyPolled;
+			UE_LOG(DreamGUI, Display, TEXT("%s (%s): %d subscribed, %d polled, %d constant, %d legacy (%d of them polled)"),
+				*Widget->GetClass()->GetName(), *Widget->GetPathName(),
+				Counts.Subscribed, Counts.Polled, Counts.Constant, Counts.Legacy, Counts.LegacyPolled);
+			TArray<FString> Lines;
+			Widget->DescribePolledBindings(Lines);
+			for (const FString& Line : Lines)
+			{
+				UE_LOG(DreamGUI, Display, TEXT("    polled  %s"), *Line);
+			}
+		}
+		UE_LOG(DreamGUI, Display, TEXT("DreamUI.Binding.Dump: %d widget(s) with bindings; %d subscribed, %d polled, %d constant, %d legacy (%d of them polled)."),
+			WidgetCount, Totals.Subscribed, Totals.Polled, Totals.Constant, Totals.Legacy, Totals.LegacyPolled);
+	}
+
+	static FAutoConsoleCommand DumpCommand(
+		TEXT("DreamUI.Binding.Dump"),
+		TEXT("Log every live DreamGUI user widget with property bindings: how many are subscribed, polled, constant and legacy, ")
+		TEXT("and for each polled one with recorded dependencies, the member that keeps it on the poll."),
+		FConsoleCommandDelegate::CreateStatic(&DumpBindings));
+}
+
+namespace DreamUserWidgetViewModelLocal
+{
+	/**
+	 * The user widget whose contents InWidget belongs to: the nearest UDreamUserWidget up the parent chain -- or, where
+	 * the chain ends at a content root not yet hung under its owner, the user widget whose tree object holds that root.
+	 *
+	 * The second half is what makes a component's `= parent` entry findable while it initializes. A nested user widget
+	 * is initialized inside its host's InitializeWidgetStatic, after the instanced tree's parent links are rebuilt but
+	 * before its root is parented under the host; the tree object, outered to the host and already the host's
+	 * WidgetTree, is the one link up that exists at that moment.
+	 */
+	UDreamUserWidget* FindEnclosingUserWidget(const UDreamWidget* InWidget)
+	{
+		const UDreamWidget* Current = InWidget;
+		// Bounded: a parent chain is only acyclic while nothing has corrupted it.
+		for (int32 Guard = 0; Current != nullptr && Guard < 4096; ++Guard)
+		{
+			if (UDreamWidget* Parent = Current->GetParent())
+			{
+				if (UDreamUserWidget* UserWidget = Cast<UDreamUserWidget>(Parent))
+				{
+					return UserWidget;
+				}
+				Current = Parent;
+				continue;
+			}
+			const UDreamWidgetTree* Tree = Cast<UDreamWidgetTree>(Current->GetOuter());
+			UDreamUserWidget* Owner = Tree != nullptr ? Cast<UDreamUserWidget>(Tree->GetOuter()) : nullptr;
+			return Owner != nullptr && Owner != InWidget && Owner->GetWidgetTree() == Tree ? Owner : nullptr;
+		}
+		return nullptr;
+	}
+
+	/**
+	 * The nearest enclosing user widget with a `viewmodels` entry whose objects fit InClass -- declared as InClass or
+	 * below it -- and, with InSourceName, of that name. OutVariable receives the entry's variable.
+	 */
+	UDreamUserWidget* FindParentViewModelSource(const UDreamUserWidget* InWidget, const UClass* InClass, FName InSourceName, FName& OutVariable)
+	{
+		OutVariable = NAME_None;
+		if (InClass == nullptr)
+		{
+			return nullptr;
+		}
+		TArray<FDreamWidgetViewModelSlot> Slots;
+		int32 Guard = 0;
+		for (UDreamUserWidget* Ancestor = FindEnclosingUserWidget(InWidget); Ancestor != nullptr && Guard < 256;
+			Ancestor = FindEnclosingUserWidget(Ancestor), ++Guard)
+		{
+			UDreamWidgetGeneratedClass::CollectViewModelSlots(Ancestor->GetClass(), Slots);
+			for (const FDreamWidgetViewModelSlot& Slot : Slots)
+			{
+				if (Slot.Class != nullptr && Slot.Class->IsChildOf(InClass)
+					&& (InSourceName.IsNone() || Slot.VariableName == InSourceName))
+				{
+					OutVariable = Slot.VariableName;
+					return Ancestor;
+				}
+			}
+		}
+		return nullptr;
+	}
+}
 
 /**
  * Bring a freshly built hierarchy to life, exactly as the prefab loader does at the end of a load.
@@ -361,6 +488,11 @@ void UDreamUserWidget::InitializeFromArchetype(UDreamWidgetTree* InArchetype)
 
 	UDreamWidgetGeneratedClass::InitializeWidgetStatic(this, GetClass(), InArchetype);
 
+	// The `viewmodels` entries nobody handed an object, filled before anything reads them: On Initialized below, and
+	// every binding's first value after it, already see the view model. The nested widgets the line above initialized
+	// have linked their `= parent` entries to this widget by now, so what is written here reaches them too.
+	ResolveViewModels(/*bInDuplicate*/ false);
+
 	// The Blueprint surface's wiring, before NativeOnInitialized so OnInitialized code can already
 	// SetWantsTick or SetAllowEventBubbleUp and have it hold. The bridge carries lifecycle, pointer,
 	// drag and navigation delivery (see UDreamUserWidgetEventBridge); focus rides this widget's own
@@ -428,6 +560,9 @@ void UDreamUserWidget::InitializeFromArchetype(UDreamWidgetTree* InArchetype)
 			}
 		}
 	}
+	// After the first evaluation, which already showed every current value: from here on a change along a path is
+	// what re-evaluates.
+	StartBindingObservers();
 }
 
 void UDreamUserWidget::InitializeAsDuplicate(UDreamWidget* InContentRoot)
@@ -474,6 +609,12 @@ void UDreamUserWidget::InitializeAsDuplicate(UDreamWidget* InContentRoot)
 		SetWantsTick(true);
 	}
 
+	// The copy's `viewmodels` variables came across with the source's values, and those stand -- it shares what its
+	// source was given, as it shares every other reference -- except the source's own `= new` object, made afresh
+	// here, and a `= parent` entry, which follows the copy's own ancestor (once it has one: a copy is parented after
+	// this, so that is usually at construct). See ResolveViewModels.
+	ResolveViewModels(/*bInDuplicate*/ true);
+
 	NativeOnInitialized();
 
 	// After the tree exists: the bindings name widgets in it. This is the whole point of the
@@ -492,6 +633,7 @@ void UDreamUserWidget::InitializeAsDuplicate(UDreamWidget* InContentRoot)
 			}
 		}
 	}
+	StartBindingObservers();
 }
 
 void UDreamUserWidget::NativeOnSlotContentAttached()
@@ -570,6 +712,11 @@ void UDreamUserWidget::NativeOnConstruct()
 	// pairing it here is what spares every Blueprint the manual register/unregister the interface
 	// used to demand.
 	UDreamUIManagerWorldSubsystem::RegisterDreamUICultureChangedEvent(this);
+	// The widget is where it will be shown now. A `= parent` entry that found no enclosing widget at Initialize -- a
+	// widget created and then parented, a copy -- finds it here, and one that found a farther one re-aims at the
+	// nearest. A `= global` entry that had no registry to wait on at Initialize starts waiting.
+	RefreshParentViewModels();
+	ListenForGlobalViewModels();
 	OnConstruct();
 }
 
@@ -1402,6 +1549,18 @@ void UDreamUserWidget::BindEventBindings()
 			}
 			continue;
 		}
+		// A single-cast dynamic delegate (DECLARE_DYNAMIC_DELEGATE*): `Event = Handler`, or `->`. It holds ONE
+		// listener, so binding this route replaces whatever it held -- a default the control bound, a graph's earlier
+		// bind -- and that is exactly what `=` says. The builder lets only `=` and `->` reach a delegate of this kind
+		// (`+=` is RouteOperatorMismatch), because appending is not something it can do.
+		if (FDelegateProperty* SingleCastEvent = CastField<FDelegateProperty>(EventProperty))
+		{
+			if (FScriptDelegate* Delegate = SingleCastEvent->GetPropertyValuePtr_InContainer(Target))
+			{
+				Delegate->BindUFunction(this, Binding.FunctionName);
+			}
+			continue;
+		}
 		FMulticastDelegateProperty* Event = CastField<FMulticastDelegateProperty>(EventProperty);
 		if (Event == nullptr)
 		{
@@ -1418,6 +1577,9 @@ void UDreamUserWidget::BindEventBindings()
 
 void UDreamUserWidget::ResolvePropertyBindings()
 {
+	// Its subscriptions are on the view models the old bindings read, and its client ids are indices into the array
+	// about to be rebuilt: dropped (which stops it) rather than added to.
+	PropertyBindingObserver.Reset();
 	ResolvedBindings.Reset();
 	PolledBindingCount = 0;
 
@@ -1431,9 +1593,11 @@ void UDreamUserWidget::ResolvePropertyBindings()
 	// One subscription per distinct source field, no matter how many bindings read it; the handler
 	// fans out to every binding carrying that id.
 	TSet<int32> SubscribedFieldIndices;
+	const bool bForcePoll = DreamUserWidgetBindingLocal::CVarForcePoll.GetValueOnAnyThread() != 0;
 
-	for (const FDreamWidgetPropertyBinding& Binding : Bindings)
+	for (int32 BindingIndex = 0; BindingIndex < Bindings.Num(); ++BindingIndex)
 	{
+		const FDreamWidgetPropertyBinding& Binding = Bindings[BindingIndex];
 		// The target widget is reached the same way everything else reaches one: the class property
 		// the compiler named after it, which InitializeWidgetStatic has already filled in.
 		FObjectPropertyBase* WidgetProperty = FindFProperty<FObjectPropertyBase>(GetClass(), Binding.WidgetName);
@@ -1457,11 +1621,67 @@ void UDreamUserWidget::ResolvePropertyBindings()
 			continue;
 		}
 
+		const int32 ResolvedIndex = ResolvedBindings.Num();
 		FResolvedBinding& Resolved = ResolvedBindings.AddDefaulted_GetRef();
 		Resolved.Target = Target;
 		Resolved.SourceFunction = SourceFunction;
 		Resolved.Setter = Setter;
 		Resolved.DirectProperty = DirectProperty;
+		Resolved.SourceIndex = BindingIndex;
+
+		if (Binding.bDependenciesRecorded)
+		{
+			// The compiler listed what the source reads, so FunctionName is not looked up as a field at all: the
+			// paths decide. See FDreamWidgetPropertyBinding::Dependencies for the three outcomes.
+			Resolved.Dependencies.Reserve(Binding.Dependencies.Num());
+			for (const FDreamWidgetBindingPath& Path : Binding.Dependencies)
+			{
+				Resolved.Dependencies.Add(Path.Segments);
+			}
+			Resolved.bDependenciesIncomplete = !Binding.bDependenciesComplete;
+
+			bool bAnnounceable = Binding.bDependenciesComplete;
+			for (int32 PathIndex = 0; bAnnounceable && PathIndex < Binding.Dependencies.Num(); ++PathIndex)
+			{
+				// From this widget's class: the ruling is made once, from declared types, and does not flip with
+				// whichever object a path happens to hold right now.
+				bAnnounceable = DreamUIBindingPath::CanNotifyAlong(GetClass(), Binding.Dependencies[PathIndex].Segments);
+			}
+
+			if (bForcePoll)
+			{
+				Resolved.Drive = EBindingDrive::Polled;
+				Resolved.bForcedToPoll = true;
+				++PolledBindingCount;
+			}
+			else if (Binding.bDependenciesComplete && Binding.Dependencies.Num() == 0)
+			{
+				// Reads nothing that can change: the first evaluation is the only one it needs.
+				Resolved.Drive = EBindingDrive::Constant;
+			}
+			else if (bAnnounceable)
+			{
+				Resolved.Drive = EBindingDrive::Subscribed;
+				if (!PropertyBindingObserver.IsValid())
+				{
+					// Root and lifetime owner both this widget: the paths start on its own variables, and a broadcast
+					// arriving after it died is dropped by the weak binding. Started after the first evaluation.
+					PropertyBindingObserver = MakeUnique<FDreamUIBindingObserver>();
+					PropertyBindingObserver->Initialize(this, this,
+						FDreamUIBindingObserver::FOnClientChanged::CreateUObject(this, &UDreamUserWidget::HandlePropertyDependencyChanged));
+				}
+				for (const FDreamWidgetBindingPath& Path : Binding.Dependencies)
+				{
+					PropertyBindingObserver->AddPath(Path.Segments, ResolvedIndex);
+				}
+			}
+			else
+			{
+				Resolved.Drive = EBindingDrive::Polled;
+				++PolledBindingCount;
+			}
+			continue;
+		}
 
 		// A source function the class marked FieldNotify tells us when it changes; everything else
 		// can change silently and stays on the per-frame poll. The classification is per instance
@@ -1497,6 +1717,13 @@ void UDreamUserWidget::EvaluateBinding(const FResolvedBinding& Binding)
 	// setter only break that loop by early-outing on an equal value, and not all of them do.
 	// Refusing to re-enter a binding that is mid-push ends the echo regardless of the control.
 	if (Binding.bEvaluating)
+	{
+		return;
+	}
+	// A recorded binding is not evaluated through a broken chain: with a view model not given yet, or cleared, its
+	// getter could only answer the type's default, and the target keeps what it shows -- the authored value, or the
+	// last one -- instead of flashing empty. Every evaluation, whoever asks: the first, a report, the poll, by hand.
+	if (Binding.Drive != EBindingDrive::Legacy && !AreDependenciesComplete(Binding))
 	{
 		return;
 	}
@@ -1581,7 +1808,7 @@ void UDreamUserWidget::EvaluatePolledPropertyBindings()
 {
 	for (const FResolvedBinding& Binding : ResolvedBindings)
 	{
-		if (!Binding.SourceFieldId.IsValid())
+		if (Binding.IsPolled())
 		{
 			EvaluateBinding(Binding);
 		}
@@ -1614,6 +1841,9 @@ void UDreamUserWidget::ResolveEachBindings()
 		}
 	}
 	EachAdapters.Reset();
+	// Its clients are indices into the array just emptied, and its subscriptions are on the objects the old sources'
+	// paths passed through.
+	EachSourceObserver.Reset();
 
 	TArray<FDreamWidgetEachBinding> Bindings;
 	UDreamWidgetGeneratedClass::CollectEachBindings(GetClass(), Bindings);
@@ -1686,6 +1916,33 @@ void UDreamUserWidget::ResolveEachBindings()
 		}
 		EachAdapters.Add(Adapter);
 
+		// A member-path source (`in Inventory.Items`): refreshed when anything along the path changes -- Inventory
+		// replaced, or Items announced. Watched as far as it can be announced: the whole path when every hop is
+		// FieldNotify, else its longest announceable beginning, so a source that ends in a function nothing announces
+		// (`in Inventory.Filtered()`) still refreshes when the object it is called on is replaced. Reading the items
+		// through the path is the adapter's (FetchItems); this only says when.
+		if (Binding.SourcePath.Num() > 0)
+		{
+			const TConstArrayView<FName> SourcePath(Binding.SourcePath);
+			int32 Watched = SourcePath.Num();
+			while (Watched > 0 && !DreamUIBindingPath::CanNotifyAlong(GetClass(), SourcePath.Left(Watched)))
+			{
+				--Watched;
+			}
+			if (Watched > 0)
+			{
+				if (!EachSourceObserver.IsValid())
+				{
+					// Started with the property bindings' observer, once the widget has finished initializing.
+					EachSourceObserver = MakeUnique<FDreamUIBindingObserver>();
+					EachSourceObserver->Initialize(this, this,
+						FDreamUIBindingObserver::FOnClientChanged::CreateUObject(this, &UDreamUserWidget::HandleEachSourcePathChanged));
+				}
+				EachSourceObserver->AddPath(SourcePath.Left(Watched), EachAdapters.Num() - 1);
+			}
+			continue;
+		}
+
 		// A variable source that broadcasts refreshes its list -- or its copies -- the way a FieldNotify binding
 		// re-evaluates: from the change, not from a poll.
 		if (!Binding.bSourceIsFunction)
@@ -1713,20 +1970,46 @@ void UDreamUserWidget::HandleEachSourceChanged(UObject* InObject, UE::FieldNotif
 	const TArray<TObjectPtr<UObject>> Adapters = EachAdapters;
 	for (UObject* Adapter : Adapters)
 	{
+		// Only a one-segment source is a field of this widget. A path source's SourceName is its LAST segment, a member
+		// of some other object, and is EachSourceObserver's to watch -- a field of this widget that happens to share
+		// the name is not it.
 		if (UDreamUIForAdapter* ForAdapter = Cast<UDreamUIForAdapter>(Adapter))
 		{
 			const FDreamWidgetEachBinding& ForBinding = ForAdapter->GetBinding();
-			if (!ForBinding.bSourceIsFunction && ForBinding.SourceName == InFieldId.GetName())
+			if (ForBinding.SourcePath.Num() == 0 && !ForBinding.bSourceIsFunction && ForBinding.SourceName == InFieldId.GetName())
 			{
 				ForAdapter->Refresh();
 			}
 			continue;
 		}
 		const FDreamWidgetEachBinding* Binding = Handler != nullptr ? Handler->GetBinding(Adapter) : nullptr;
-		if (Binding != nullptr && !Binding->bSourceIsFunction && Binding->SourceName == InFieldId.GetName())
+		if (Binding != nullptr && Binding->SourcePath.Num() == 0 && !Binding->bSourceIsFunction && Binding->SourceName == InFieldId.GetName())
 		{
 			Handler->Refresh(Adapter);
 		}
+	}
+}
+
+void UDreamUserWidget::HandleEachSourcePathChanged(int32 InClientId)
+{
+	if (!EachAdapters.IsValidIndex(InClientId))
+	{
+		return;
+	}
+	// Read out of the array before the call: a refresh makes and destroys widgets and runs their graphs, and nothing
+	// below touches EachAdapters again.
+	UObject* Adapter = EachAdapters[InClientId].Get();
+	if (!IsValid(Adapter))
+	{
+		return;
+	}
+	if (UDreamUIForAdapter* ForAdapter = Cast<UDreamUIForAdapter>(Adapter))
+	{
+		ForAdapter->Refresh();
+	}
+	else if (const IDreamUIEachBindingHandler* Handler = DreamUI::GetEachBindingHandler())
+	{
+		Handler->Refresh(Adapter);
 	}
 }
 
@@ -1746,6 +2029,488 @@ void UDreamUserWidget::RefreshEachBindings()
 			Handler->Refresh(Adapter);
 		}
 	}
+}
+
+// ---------------------------------------------------------------------------------- bindings: paths and diagnostics
+
+void UDreamUserWidget::StartBindingObservers()
+{
+	if (PropertyBindingObserver.IsValid())
+	{
+		PropertyBindingObserver->Start();
+	}
+	if (EachSourceObserver.IsValid())
+	{
+		EachSourceObserver->Start();
+	}
+}
+
+void UDreamUserWidget::HandlePropertyDependencyChanged(int32 InClientId)
+{
+	// Something along one of this binding's paths changed: a field it reads announced itself, or an object a path
+	// passes through was replaced (the observer has already re-aimed the rest of the path at the new one).
+	if (ResolvedBindings.IsValidIndex(InClientId))
+	{
+		EvaluateBinding(ResolvedBindings[InClientId]);
+	}
+}
+
+bool UDreamUserWidget::AreDependenciesComplete(const FResolvedBinding& InBinding)
+{
+	for (const TArray<FName>& Path : InBinding.Dependencies)
+	{
+		if (!DreamUIBindingPath::IsComplete(this, Path))
+		{
+			return false;
+		}
+	}
+	return true;
+}
+
+UDreamUserWidget::FBindingCounts UDreamUserWidget::GetBindingCounts() const
+{
+	FBindingCounts Counts;
+	for (const FResolvedBinding& Binding : ResolvedBindings)
+	{
+		switch (Binding.Drive)
+		{
+		case EBindingDrive::Legacy:
+			++Counts.Legacy;
+			Counts.LegacyPolled += Binding.IsPolled() ? 1 : 0;
+			break;
+		case EBindingDrive::Subscribed:
+			++Counts.Subscribed;
+			break;
+		case EBindingDrive::Polled:
+			++Counts.Polled;
+			break;
+		case EBindingDrive::Constant:
+			++Counts.Constant;
+			break;
+		}
+	}
+	return Counts;
+}
+
+void UDreamUserWidget::DescribePolledBindings(TArray<FString>& OutLines) const
+{
+	// Named the way the file wrote it -- widget, property -- off the class's own record, which ResolvedBindings keeps
+	// only the position of.
+	TArray<FDreamWidgetPropertyBinding> Bindings;
+	UDreamWidgetGeneratedClass::CollectPropertyBindings(GetClass(), Bindings);
+	for (const FResolvedBinding& Binding : ResolvedBindings)
+	{
+		if (Binding.Drive != EBindingDrive::Polled)
+		{
+			continue;
+		}
+		const FString Name = Bindings.IsValidIndex(Binding.SourceIndex)
+			? FString::Printf(TEXT("%s.%s"), *Bindings[Binding.SourceIndex].WidgetName.ToString(), *Bindings[Binding.SourceIndex].PropertyName.ToString())
+			: FString(TEXT("(binding)"));
+		FString Why;
+		if (Binding.bForcedToPoll)
+		{
+			Why = TEXT("DreamUI.Binding.ForcePoll was on when it resolved");
+		}
+		else if (Binding.bDependenciesIncomplete)
+		{
+			Why = TEXT("the expression reads more than its member paths (a call with arguments)");
+		}
+		else
+		{
+			for (const TArray<FName>& Path : Binding.Dependencies)
+			{
+				if (DreamUIBindingPath::CanNotifyAlong(GetClass(), Path, &Why))
+				{
+					continue;
+				}
+				break;
+			}
+		}
+		if (Why.IsEmpty())
+		{
+			// Every path announces now: the class changed since the binding resolved (a live recompile).
+			Why = TEXT("no hop is unannounced any more; it resolved against an older class");
+		}
+		OutLines.Add(FString::Printf(TEXT("%s: %s"), *Name, *Why));
+	}
+}
+
+// ---------------------------------------------------------------------------------- view models
+
+FObjectPropertyBase* UDreamUserWidget::FindViewModelProperty(FName InVariableName) const
+{
+	return InVariableName.IsNone() ? nullptr : FindFProperty<FObjectPropertyBase>(GetClass(), InVariableName);
+}
+
+bool UDreamUserWidget::WriteViewModel(FName InVariableName, UObject* InValue, bool bInEvenIfSame)
+{
+	FObjectPropertyBase* Property = FindViewModelProperty(InVariableName);
+	if (Property == nullptr || (InValue != nullptr && !InValue->IsA(Property->PropertyClass)))
+	{
+		return false;
+	}
+	if (!bInEvenIfSame && Property->GetObjectPropertyValue_InContainer(this) == InValue)
+	{
+		return false;
+	}
+	Property->SetObjectPropertyValue_InContainer(this, InValue);
+	// The compiler declares the variable FieldNotify, so this is what every binding reading through it hears -- the
+	// same announcement a Blueprint Set node makes.
+	const UE::FieldNotification::FFieldId FieldId = GetFieldNotificationDescriptor().GetField(GetClass(), InVariableName);
+	if (FieldId.IsValid())
+	{
+		BroadcastFieldValueChanged(FieldId);
+	}
+	return true;
+}
+
+void UDreamUserWidget::ResolveViewModels(bool bInDuplicate)
+{
+	// This widget's own set-up from any earlier pass is replaced, not added to.
+	ParentViewModelLinks.Reset();
+	PendingGlobalViewModels.Reset();
+	StopListeningForGlobalViewModels();
+
+	TArray<FDreamWidgetViewModelSlot> Slots;
+	UDreamWidgetGeneratedClass::CollectViewModelSlots(GetClass(), Slots);
+	if (Slots.Num() == 0)
+	{
+		return;
+	}
+
+	const bool bDesignTime = IsDesignTime();
+	for (const FDreamWidgetViewModelSlot& Slot : Slots)
+	{
+		FObjectPropertyBase* Property = FindViewModelProperty(Slot.VariableName);
+		UClass* SlotClass = Slot.Class;
+		if (Property == nullptr || SlotClass == nullptr)
+		{
+			// The class moved underneath the record; the compiler reported it. Skip, never guess.
+			continue;
+		}
+		UObject* Held = Property->GetObjectPropertyValue_InContainer(this);
+		if (!IsValid(Held))
+		{
+			Held = nullptr;
+		}
+
+		switch (Slot.Source)
+		{
+		case EDreamViewModelSource::Host:
+			// Whoever makes the widget supplies it -- or has, already.
+			break;
+
+		case EDreamViewModelSource::New:
+		{
+			// Given one (Expose on Spawn, SetViewModel before Initialize): that one. A duplicate's copied value is
+			// given too, unless it is the source's own `= new` object -- outered to another widget -- which a copy
+			// does not share.
+			const bool bSourcesOwn = bInDuplicate && Held != nullptr && Held->GetOuter() != this && Held->GetOuter() != nullptr
+				&& Held->GetOuter()->IsA<UDreamUserWidget>();
+			if (Held != nullptr && !bSourcesOwn)
+			{
+				break;
+			}
+			if (SlotClass->HasAnyClassFlags(CLASS_Abstract | CLASS_Deprecated | CLASS_NewerVersionExists))
+			{
+				// ViewModelPolicyInvalid, reported by the compiler.
+				break;
+			}
+			// Outered to this widget, so it lives exactly as long and its GetWorld is this widget's. Transient: it is this
+			// run's object, never saved with anything that saves the widget. Made in the designer's preview too, so the
+			// preview shows the view model's defaults -- flagged, for a view model that reaches into the game.
+			UObject* Made = NewObject<UObject>(this, SlotClass, NAME_None, RF_Transient);
+			if (UDreamViewModel* ViewModel = Cast<UDreamViewModel>(Made))
+			{
+				ViewModel->SetDesignTimeInstance(bDesignTime);
+			}
+			WriteViewModel(Slot.VariableName, Made, /*bInEvenIfSame*/ false);
+			break;
+		}
+
+		case EDreamViewModelSource::Global:
+		{
+			// Not in the designer's preview: no game runs there, so no registry exists to be asked.
+			if (Held != nullptr || bDesignTime)
+			{
+				break;
+			}
+			UDreamViewModelSubsystem* Registry = UDreamViewModelSubsystem::Get(this);
+			UObject* Found = Registry != nullptr ? Registry->Find(SlotClass, Slot.SourceName) : nullptr;
+			if (Found != nullptr)
+			{
+				WriteViewModel(Slot.VariableName, Found, /*bInEvenIfSame*/ false);
+			}
+			else
+			{
+				// Left empty -- its bindings keep their authored values -- and filled when the registry gets one.
+				PendingGlobalViewModels.Add(Slot.VariableName);
+			}
+			break;
+		}
+
+		case EDreamViewModelSource::Parent:
+		{
+			if (Held != nullptr && !bInDuplicate)
+			{
+				break;
+			}
+			FParentViewModelLink& Link = ParentViewModelLinks.AddDefaulted_GetRef();
+			Link.VariableName = Slot.VariableName;
+			Link.DeclaredClass = SlotClass;
+			Link.SourceName = Slot.SourceName;
+			break;
+		}
+		}
+	}
+
+	// Linked after the loop, with the array in its final shape: a link's index is its watch's client id.
+	for (int32 LinkIndex = 0; LinkIndex < ParentViewModelLinks.Num(); ++LinkIndex)
+	{
+		LinkParentViewModel(LinkIndex);
+	}
+	ListenForGlobalViewModels();
+}
+
+bool UDreamUserWidget::SetViewModel(FName Name, UObject* ViewModel)
+{
+	TArray<FDreamWidgetViewModelSlot> Slots;
+	UDreamWidgetGeneratedClass::CollectViewModelSlots(GetClass(), Slots);
+	const FDreamWidgetViewModelSlot* Slot = Slots.FindByPredicate([Name](const FDreamWidgetViewModelSlot& Candidate)
+	{
+		return Candidate.VariableName == Name;
+	});
+	FObjectPropertyBase* Property = Slot != nullptr ? FindViewModelProperty(Name) : nullptr;
+	if (Property == nullptr)
+	{
+		UE_LOG(DreamGUI, Warning, TEXT("[%s].%d %s has no viewmodels entry named '%s'; nothing was set."),
+			ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *GetClass()->GetName(), *Name.ToString());
+		return false;
+	}
+	const UClass* Required = Slot->Class != nullptr ? Slot->Class.Get() : Property->PropertyClass.Get();
+	if (ViewModel != nullptr && (!ViewModel->IsA(Required) || !ViewModel->IsA(Property->PropertyClass)))
+	{
+		UE_LOG(DreamGUI, Warning, TEXT("[%s].%d The viewmodels entry '%s' of %s holds a %s; %s is a %s, so it was not set."),
+			ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *Name.ToString(), *GetClass()->GetName(),
+			Required != nullptr ? *Required->GetName() : TEXT("?"), *ViewModel->GetName(), *ViewModel->GetClass()->GetName());
+		return false;
+	}
+	// A hand-over decides the entry from now on: a `= parent` entry stops following its ancestor, a `= global` one stops
+	// waiting for the registry. Before Initialize there is nothing to stop, and Initialize leaves a given entry alone.
+	ForgetViewModelSource(Name);
+	// Announced even when it is the object already held: whoever calls this means "re-read it".
+	WriteViewModel(Name, ViewModel, /*bInEvenIfSame*/ true);
+	return true;
+}
+
+UObject* UDreamUserWidget::GetViewModel(FName Name) const
+{
+	TArray<FDreamWidgetViewModelSlot> Slots;
+	UDreamWidgetGeneratedClass::CollectViewModelSlots(GetClass(), Slots);
+	const bool bIsEntry = Slots.ContainsByPredicate([Name](const FDreamWidgetViewModelSlot& Candidate)
+	{
+		return Candidate.VariableName == Name;
+	});
+	return bIsEntry ? DreamUIBindingPath::ReadObjectMember(this, Name) : nullptr;
+}
+
+void UDreamUserWidget::RefreshParentViewModels()
+{
+	for (int32 LinkIndex = 0; LinkIndex < ParentViewModelLinks.Num(); ++LinkIndex)
+	{
+		LinkParentViewModel(LinkIndex);
+	}
+}
+
+void UDreamUserWidget::LinkParentViewModel(int32 InLinkIndex)
+{
+	if (!ParentViewModelLinks.IsValidIndex(InLinkIndex))
+	{
+		return;
+	}
+	const UClass* DeclaredClass = ParentViewModelLinks[InLinkIndex].DeclaredClass.Get();
+	if (DeclaredClass == nullptr)
+	{
+		// Handed an object since (ForgetViewModelSource), or the class is gone.
+		return;
+	}
+	FName AncestorVariable;
+	UDreamUserWidget* Ancestor = DreamUserWidgetViewModelLocal::FindParentViewModelSource(
+		this, DeclaredClass, ParentViewModelLinks[InLinkIndex].SourceName, AncestorVariable);
+
+	FParentViewModelLink& Link = ParentViewModelLinks[InLinkIndex];
+	if (Ancestor == nullptr)
+	{
+		// No enclosing widget offers one: not yet (a widget is initialized before it is parented, and NativeOnConstruct
+		// asks again), or not any more (moved out from under it). Nothing is followed, and the entry keeps what it holds
+		// -- the rule a broken chain follows everywhere.
+		Link.Observer.Reset();
+		Link.Ancestor.Reset();
+		Link.AncestorVariable = NAME_None;
+		return;
+	}
+	if (Link.Observer.IsValid() && Link.Ancestor.Get() == Ancestor && Link.AncestorVariable == AncestorVariable)
+	{
+		// Already following exactly that.
+		return;
+	}
+
+	Link.Ancestor = Ancestor;
+	Link.AncestorVariable = AncestorVariable;
+	// Watching the ancestor's variable: root = the ancestor, lifetime owner = this widget, so the ancestor's broadcast
+	// after this widget died is dropped. The ancestor is often still being built -- this runs inside its
+	// InitializeWidgetStatic -- and fills its own entry a moment later; that write is a broadcast this hears.
+	Link.Observer = MakeUnique<FDreamUIBindingObserver>();
+	Link.Observer->Initialize(Ancestor, this,
+		FDreamUIBindingObserver::FOnClientChanged::CreateUObject(this, &UDreamUserWidget::HandleParentViewModelChanged));
+	Link.Observer->AddPath(MakeArrayView(&Link.AncestorVariable, 1), InLinkIndex);
+	Link.Observer->Start();
+	// And what it holds already.
+	HandleParentViewModelChanged(InLinkIndex);
+}
+
+void UDreamUserWidget::HandleParentViewModelChanged(int32 InLinkIndex)
+{
+	if (!ParentViewModelLinks.IsValidIndex(InLinkIndex))
+	{
+		return;
+	}
+	// Read out before the write: it announces the entry, and what hears that may refresh or drop this very link.
+	const FParentViewModelLink& Link = ParentViewModelLinks[InLinkIndex];
+	const FName VariableName = Link.VariableName;
+	const UClass* DeclaredClass = Link.DeclaredClass.Get();
+	UDreamUserWidget* Ancestor = Link.Ancestor.Get();
+	if (Ancestor == nullptr || DeclaredClass == nullptr)
+	{
+		return;
+	}
+	UObject* Value = DreamUIBindingPath::ReadObjectMember(Ancestor, Link.AncestorVariable);
+	if (Value != nullptr && !Value->IsA(DeclaredClass))
+	{
+		// The entries fit by declaration; an object that does not is a class that moved underneath them.
+		return;
+	}
+	// Null too: the ancestor's entry was cleared, and so is this one -- its bindings keep their last values.
+	WriteViewModel(VariableName, Value, /*bInEvenIfSame*/ false);
+}
+
+void UDreamUserWidget::ForgetViewModelSource(FName InVariableName)
+{
+	for (FParentViewModelLink& Link : ParentViewModelLinks)
+	{
+		if (Link.VariableName == InVariableName)
+		{
+			// Emptied rather than removed: link indices are the watches' client ids. With no class it is never linked again.
+			Link.Observer.Reset();
+			Link.Ancestor.Reset();
+			Link.AncestorVariable = NAME_None;
+			Link.DeclaredClass.Reset();
+		}
+	}
+	if (PendingGlobalViewModels.Remove(InVariableName) > 0 && PendingGlobalViewModels.Num() == 0)
+	{
+		StopListeningForGlobalViewModels();
+	}
+}
+
+void UDreamUserWidget::ListenForGlobalViewModels()
+{
+	if (PendingGlobalViewModels.Num() == 0 || GlobalViewModelRegistry.IsValid() || IsDesignTime())
+	{
+		return;
+	}
+	UDreamViewModelSubsystem* Registry = UDreamViewModelSubsystem::Get(this);
+	if (Registry == nullptr)
+	{
+		// No game instance to ask yet; NativeOnConstruct asks again.
+		return;
+	}
+	GlobalViewModelRegistry = Registry;
+	GlobalViewModelRegisteredHandle = Registry->OnRegisteredNative.AddUObject(this, &UDreamUserWidget::HandleGlobalViewModelRegistered);
+	// What the registry got between the lookup at Initialize and now -- when there was no registry to look in then.
+	HandleGlobalViewModelRegistered(nullptr, NAME_None);
+}
+
+void UDreamUserWidget::HandleGlobalViewModelRegistered(UObject* InViewModel, FName InName)
+{
+	// The registry is ASKED rather than the arrival matched: Find's rules (a name; unnamed entries first) decide what
+	// fits an entry, here as at Initialize, and the arrival may have replaced something an entry would have preferred.
+	UDreamViewModelSubsystem* Registry = GlobalViewModelRegistry.Get();
+	if (Registry == nullptr)
+	{
+		return;
+	}
+	TArray<FDreamWidgetViewModelSlot> Slots;
+	UDreamWidgetGeneratedClass::CollectViewModelSlots(GetClass(), Slots);
+	// A copy: the write below announces the entry, and what hears it may hand this widget objects of its own.
+	const TArray<FName> Pending = PendingGlobalViewModels;
+	for (const FName& VariableName : Pending)
+	{
+		const FDreamWidgetViewModelSlot* Slot = Slots.FindByPredicate([&VariableName](const FDreamWidgetViewModelSlot& Candidate)
+		{
+			return Candidate.VariableName == VariableName;
+		});
+		const FObjectPropertyBase* Property = FindViewModelProperty(VariableName);
+		if (Slot == nullptr || Slot->Class == nullptr || Property == nullptr || Property->GetObjectPropertyValue_InContainer(this) != nullptr)
+		{
+			// Gone from the class, or filled meanwhile by someone else -- a host, a graph: not waited for any more.
+			PendingGlobalViewModels.Remove(VariableName);
+			continue;
+		}
+		if (UObject* Found = Registry->Find(Slot->Class.Get(), Slot->SourceName))
+		{
+			PendingGlobalViewModels.Remove(VariableName);
+			WriteViewModel(VariableName, Found, /*bInEvenIfSame*/ false);
+		}
+	}
+	if (PendingGlobalViewModels.Num() == 0)
+	{
+		// Filled is filled: a later swap in the registry is the game's to hand over (SetViewModel), as it is for every
+		// entry that found its object at Initialize.
+		StopListeningForGlobalViewModels();
+	}
+}
+
+void UDreamUserWidget::StopListeningForGlobalViewModels()
+{
+	if (UDreamViewModelSubsystem* Registry = GlobalViewModelRegistry.Get())
+	{
+		Registry->OnRegisteredNative.Remove(GlobalViewModelRegisteredHandle);
+	}
+	GlobalViewModelRegistry.Reset();
+	GlobalViewModelRegisteredHandle.Reset();
+}
+
+void UDreamUserWidget::StopExternalSubscriptions()
+{
+	if (PropertyBindingObserver.IsValid())
+	{
+		PropertyBindingObserver->Stop();
+	}
+	if (EachSourceObserver.IsValid())
+	{
+		EachSourceObserver->Stop();
+	}
+	for (FParentViewModelLink& Link : ParentViewModelLinks)
+	{
+		if (Link.Observer.IsValid())
+		{
+			Link.Observer->Stop();
+		}
+	}
+	StopListeningForGlobalViewModels();
+}
+
+void UDreamUserWidget::BeginDestroy()
+{
+	// The delegates this widget placed on objects that outlive it -- the view models its bindings read, the host its
+	// `= parent` entries follow, the registry -- come off here. Every one is bound weakly to this widget and would
+	// never call into it again; taking them off is what leaves a view model with no listeners once its screens are
+	// gone. Inside a collection an object that is itself being collected answers its weak pointer with null and is
+	// skipped, which covers this widget's own fields and anything outered to it.
+	StopExternalSubscriptions();
+	Super::BeginDestroy();
 }
 
 UDreamWidget* UDreamUserWidget::GetContentRoot() const

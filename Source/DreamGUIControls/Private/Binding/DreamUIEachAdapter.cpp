@@ -2,6 +2,7 @@
 
 #include "Binding/DreamUIEachAdapter.h"
 
+#include "Core/DreamUIBindingObserver.h"
 #include "Core/DreamUIEachBindingHandler.h"
 #include "Core/DreamUserWidget.h"
 #include "Core/DreamWidgetPropertyBinding.h"
@@ -15,6 +16,9 @@ void UDreamUIEachAdapter::Initialize(UDreamUserWidget* InOwner, const FDreamWidg
 	Owner = InOwner;
 	Binding = InBinding;
 	View = InView;
+	// A second Initialize is a new `each`: the old cells' watchers stop. Their routes stay -- the cells are about to be
+	// set again, and a cell seen for the first time is scrubbed of what it carries before its own routes go on.
+	Rows.Initialize(this, FDreamUIEntryRows::FOnEntryChanged::CreateUObject(this, &UDreamUIEachAdapter::HandleEntryChanged));
 	FetchItems();
 }
 
@@ -26,41 +30,19 @@ void UDreamUIEachAdapter::FetchItems()
 		return;
 	}
 
-	// The compiler vetted the shape; a miss anywhere below means the class moved underneath us,
-	// which is the property bindings' rule too: skip, never guess.
-	auto CopyOut = [this](const FArrayProperty* InItemsProperty, const void* InItemsMemory)
+	// `in Inventory.Items`: read on the object the path's leading members reach right now, none when the chain is
+	// broken. A one-segment source reads the user widget itself, as it always did. The compiler vetted the shape; a
+	// miss anywhere in there means the class moved underneath us, which is the property bindings' rule too: skip,
+	// never guess.
+	UObject* SourceOwner = Binding.SourcePath.Num() > 0
+		? DreamUIBindingPath::ResolveOwner(Owner.Get(), Binding.SourcePath)
+		: Owner.Get();
+	TArray<UObject*> Fetched;
+	DreamUIBindingPath::ReadObjectArray(SourceOwner, Binding.SourceName, Binding.bSourceIsFunction, Fetched);
+	Items.Reserve(Fetched.Num());
+	for (UObject* Item : Fetched)
 	{
-		const FObjectPropertyBase* Inner = InItemsProperty != nullptr ? CastField<FObjectPropertyBase>(InItemsProperty->Inner) : nullptr;
-		if (Inner == nullptr || InItemsMemory == nullptr)
-		{
-			return;
-		}
-		FScriptArrayHelper Helper(InItemsProperty, InItemsMemory);
-		Items.Reserve(Helper.Num());
-		for (int32 Index = 0; Index < Helper.Num(); ++Index)
-		{
-			Items.Add(Inner->GetObjectPropertyValue(Helper.GetRawPtr(Index)));
-		}
-	};
-
-	if (Binding.bSourceIsFunction)
-	{
-		UFunction* Source = Owner->FindFunction(Binding.SourceName);
-		if (Source == nullptr)
-		{
-			return;
-		}
-		FStructOnScope SourceFrame(Source);
-		Owner->ProcessEvent(Source, SourceFrame.GetStructMemory());
-		const FArrayProperty* ItemsProperty = CastField<FArrayProperty>(Source->GetReturnProperty());
-		CopyOut(ItemsProperty, ItemsProperty != nullptr
-			? ItemsProperty->ContainerPtrToValuePtr<void>(SourceFrame.GetStructMemory()) : nullptr);
-	}
-	else
-	{
-		const FArrayProperty* ItemsProperty = FindFProperty<FArrayProperty>(Owner->GetClass(), Binding.SourceName);
-		CopyOut(ItemsProperty, ItemsProperty != nullptr
-			? ItemsProperty->ContainerPtrToValuePtr<void>(Owner) : nullptr);
+		Items.Add(Item);
 	}
 }
 
@@ -79,6 +61,8 @@ void UDreamUIEachAdapter::Refresh()
 	}
 
 	FetchItems();
+	// Cells the view destroyed since the last pass (a shorter list, a cleared view) leave their rows here.
+	Rows.ReleaseDeadRows();
 	if (!IsValid(View))
 	{
 		return;
@@ -98,9 +82,10 @@ void UDreamUIEachAdapter::Refresh()
 		if (bSameItems)
 		{
 			// Same objects in the same order. A cell's CONTENTS can still have changed underneath the
-			// object, which is what UpdateCellData is for -- but that is a question for whoever changed
-			// them, and re-binding here on a broadcast that moved nothing is the part that was free to
-			// stop doing. Callers that mutate an item in place call UpdateCellData themselves.
+			// object -- and a member the item announces has already been written onto its cell by the
+			// cell's own watcher, so re-binding here on a broadcast that moved nothing is still the part
+			// that was free to stop doing. A member nobody announces is the one case left for whoever
+			// changed it, who calls UpdateCellData.
 			return;
 		}
 		// Same length, different objects: a reorder or a wholesale replacement. The pool is right and
@@ -117,63 +102,107 @@ void UDreamUIEachAdapter::Refresh()
 	View->RecreateList();
 }
 
+void UDreamUIEachAdapter::BeforeSetCell_Implementation()
+{
+	// Once per pass of the view over its cells, before any of them is set: the rows of cells it destroyed go.
+	Rows.ReleaseDeadRows();
+}
+
 void UDreamUIEachAdapter::SetCell_Implementation(UDreamUIBehaviour* Component, int32 Index)
 {
 	UDreamWidget* CellRoot = IsValid(Component) ? Component->GetWidget() : nullptr;
-	UObject* Item = Items.IsValidIndex(Index) ? Items[Index].Get() : nullptr;
-	if (!IsValid(CellRoot) || !IsValid(Item))
+	if (!IsValid(CellRoot))
 	{
 		return;
 	}
-
-	TArray<UDreamWidget*> CellWidgets;
-	UDreamWidget::CollectChildrenWidgets(CellRoot, CellWidgets, /*IncludeTarget*/true);
+	UObject* Item = Items.IsValidIndex(Index) ? Items[Index].Get() : nullptr;
+	const bool bHasRowWork = FDreamUIEntryRows::HasRowWork(Binding);
+	if (!IsValid(Item) && !bHasRowWork)
+	{
+		return;
+	}
 
 	// One pass over the cell instead of one per entry binding. This runs for every visible cell on
 	// every scroll update, and a cell with N widgets and M bindings was paying N*M display-name
 	// comparisons for an answer that does not change within the call. First match wins, exactly as
 	// the linear search that used to break on it did -- display names are not unique in a subtree.
 	TMap<FName, UDreamWidget*> WidgetsByDisplayName;
-	WidgetsByDisplayName.Reserve(CellWidgets.Num());
-	for (UDreamWidget* Candidate : CellWidgets)
+	MapCellWidgets(CellRoot, WidgetsByDisplayName);
+
+	// The cell follows its item before any value is written: a recycled cell's routes come off the item it showed and
+	// go onto this one, and its watcher is re-aimed. A cell given no item keeps its values, as it always did, but
+	// calls nobody and hears nobody.
+	Rows.AimRow(CellRoot, Item, Binding, WidgetsByDisplayName);
+	if (!IsValid(Item))
 	{
-		if (IsValid(Candidate))
-		{
-			WidgetsByDisplayName.FindOrAdd(FName(*Candidate->GetDisplayName()), Candidate);
-		}
+		return;
 	}
 
-	for (const FDreamWidgetEntryBinding& Entry : Binding.EntryBindings)
+	TSet<UDreamUserWidget*> WrittenUserWidgets;
+	for (int32 EntryIndex = 0; EntryIndex < Binding.EntryBindings.Num(); ++EntryIndex)
 	{
-		UDreamWidget* const* FoundWidget = WidgetsByDisplayName.Find(Entry.TargetWidgetDisplayName);
-		UDreamWidget* TargetWidget = FoundWidget != nullptr ? *FoundWidget : nullptr;
-		UObject* Target = ResolveDreamWidgetBindingTarget(TargetWidget, Entry.Target, Entry.BehaviourIndex);
-		if (!IsValid(Target))
-		{
-			continue;
-		}
-		const FProperty* ItemProperty = Item->GetClass()->FindPropertyByName(Entry.ItemMember);
-		UFunction* Setter = Target->FindFunction(Entry.SetterName);
-		if (ItemProperty == nullptr || Setter == nullptr)
-		{
-			continue;
-		}
-		FProperty* SetterParameter = nullptr;
-		for (TFieldIterator<FProperty> It(Setter); It && (It->PropertyFlags & CPF_Parm); ++It)
-		{
-			SetterParameter = *It;
-			break;
-		}
-		if (SetterParameter == nullptr || !SetterParameter->SameType(ItemProperty))
-		{
-			continue;
-		}
-		FStructOnScope SetterFrame(Setter);
-		SetterParameter->CopyCompleteValue(
-			SetterParameter->ContainerPtrToValuePtr<void>(SetterFrame.GetStructMemory()),
-			ItemProperty->ContainerPtrToValuePtr<void>(Item));
-		Target->ProcessEvent(Setter, SetterFrame.GetStructMemory());
+		ApplyEntryBinding(EntryIndex, Item, WidgetsByDisplayName, WrittenUserWidgets);
 	}
+	FDreamUIEntryRows::RerunWrittenUserWidgets(WrittenUserWidgets);
+}
+
+void UDreamUIEachAdapter::BeginDestroy()
+{
+	// Inside a collection: the items' watchers only, whose delegates sit on items that may well live on. The routes are
+	// on the cells' widgets, which go down with the view.
+	Rows.StopWatching();
+	Super::BeginDestroy();
+}
+
+void UDreamUIEachAdapter::MapCellWidgets(UDreamWidget* InCellRoot, TMap<FName, UDreamWidget*>& OutWidgetsByDisplayName)
+{
+	TArray<UDreamWidget*> CellWidgets;
+	UDreamWidget::CollectChildrenWidgets(InCellRoot, CellWidgets, /*IncludeTarget*/true);
+	FDreamUIEntryRows::MapByDisplayName(CellWidgets, OutWidgetsByDisplayName);
+}
+
+void UDreamUIEachAdapter::ApplyEntryBinding(int32 InEntryIndex, UObject* InItem, const TMap<FName, UDreamWidget*>& InCellWidgets, TSet<UDreamUserWidget*>& OutWrittenUserWidgets)
+{
+	const FDreamWidgetEntryBinding& Entry = Binding.EntryBindings[InEntryIndex];
+	UDreamWidget* const* FoundWidget = InCellWidgets.Find(Entry.TargetWidgetDisplayName);
+	UObject* Target = ResolveDreamWidgetBindingTarget(FoundWidget != nullptr ? *FoundWidget : nullptr, Entry.Target, Entry.BehaviourIndex);
+	if (!IsValid(Target))
+	{
+		return;
+	}
+	++EntryWriteCount;
+	// The rule a `for` copy writes by, so the two kinds of loop cannot disagree about a value: an exact type copied
+	// whole, two numbers of different widths converted (this used to refuse anything but the exact type), anything
+	// else refused. An `each` always names a setter -- the builder refuses one without -- so the direct write that
+	// rule also knows is never reached from here.
+	FDreamUIEntryRows::WriteEntry(Entry, Target, InItem, OutWrittenUserWidgets);
+}
+
+void UDreamUIEachAdapter::HandleEntryChanged(UDreamWidget* InCell, int32 InEntryIndex)
+{
+	if (!IsFeedingView())
+	{
+		// The owner re-resolved and another adapter feeds the view now; the cells are its, item and all. This one only
+		// stops listening -- taking routes off would take the new adapter's too, when a cell kept its item.
+		Rows.ReleaseAll(/*bInUnbindRoutes*/false);
+		return;
+	}
+	UObject* Item = Rows.GetItem(InCell);
+	if (!IsValid(InCell) || !IsValid(Item) || !Binding.EntryBindings.IsValidIndex(InEntryIndex))
+	{
+		return;
+	}
+	TMap<FName, UDreamWidget*> CellWidgets;
+	MapCellWidgets(InCell, CellWidgets);
+	TSet<UDreamUserWidget*> WrittenUserWidgets;
+	ApplyEntryBinding(InEntryIndex, Item, CellWidgets, WrittenUserWidgets);
+	FDreamUIEntryRows::RerunWrittenUserWidgets(WrittenUserWidgets);
+}
+
+bool UDreamUIEachAdapter::IsFeedingView() const
+{
+	// No view at all is a test driving SetCell itself, or a view already gone with its cells: nothing to defer to.
+	return !IsValid(View) || View->GetDataSource().GetObject() == this;
 }
 
 namespace DreamUIEachAdapterLocal

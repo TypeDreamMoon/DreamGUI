@@ -103,9 +103,10 @@ public:
 	void Stop();
 
 	/**
-	 * Re-aim at another root -- a `for` copy handed another item, a list cell recycled for another row: Stop, swap,
-	 * and Start again if it was started. Paths and clients are kept. Does not report: the caller re-applies its values
-	 * itself, once, rather than once per path.
+	 * Re-aim at another root -- a `for` copy handed another item, a list cell recycled for another row. Paths and
+	 * clients are kept, and each path is re-aimed in place rather than stopped and started again: the engine also calls
+	 * a delegate added during a broadcast that is still going, so a full restart from inside a report would report the
+	 * same change twice. Does not report: the caller re-applies its values itself, once, rather than once per path.
 	 */
 	void SetRoot(UObject* InRoot);
 

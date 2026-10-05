@@ -3,6 +3,8 @@
 #include "Text/DreamUIExpressionThunks.h"
 
 #include "DreamWidgetBlueprint.h"
+// FindFieldId: whether the object a `<->` writes into can announce the member it wrote.
+#include "Core/DreamUIBindingObserver.h"
 #include "Core/DreamWidgetPropertyBinding.h"
 #include "Core/DreamWidgetTree.h"
 #include "Core/Components/DreamWidget.h"
@@ -14,19 +16,24 @@
 
 #include "EdGraph/EdGraph.h"
 #include "EdGraphSchema_K2.h"
+#include "FieldNotification/FieldNotificationLibrary.h"
 #include "K2Node_CallDelegate.h"
 #include "K2Node_CallFunction.h"
 #include "K2Node_FunctionEntry.h"
 #include "K2Node_FunctionResult.h"
+#include "K2Node_IfThenElse.h"
 #include "K2Node_VariableGet.h"
 #include "K2Node_VariableSet.h"
 #include "Kismet/KismetMathLibrary.h"
+#include "Kismet/KismetSystemLibrary.h"
 #include "Kismet2/BlueprintEditorUtils.h"
+#include "KismetCompilerMisc.h"
 
 namespace DreamUIExpressionThunks
 {
 const TCHAR* GeneratedGraphPrefix = TEXT("__DreamBinding_");
 const TCHAR* GeneratedEmitPrefix = TEXT("__DreamEmit_");
+const TCHAR* GeneratedRoutePrefix = TEXT("__DreamRoute_");
 }
 
 namespace DreamUIExpressionThunksLocal
@@ -126,9 +133,15 @@ namespace DreamUIExpressionThunksLocal
 
 		void Fail(const FDreamUISourceLocation& InLocation, const FString& InMessage)
 		{
+			FailWith(FailCode, InLocation, InMessage);
+		}
+
+		/** Fail under a code of the refusal's own: a member path that does not resolve is that, whatever step was running. */
+		void FailWith(const EDreamUIDiagnosticCode InCode, const FDreamUISourceLocation& InLocation, const FString& InMessage)
+		{
 			if (!bFailed)
 			{
-				Diagnostics->AddError(FailCode, InLocation, FailPrefix + InMessage);
+				Diagnostics->AddError(InCode, InLocation, FailPrefix + InMessage);
 			}
 			bFailed = true;
 		}
@@ -177,6 +190,262 @@ namespace DreamUIExpressionThunksLocal
 	{
 		UClass* SymbolClass = GetSymbolClass(InBlueprint);
 		return SymbolClass != nullptr ? SymbolClass->FindFunctionByName(FName(*InName)) : nullptr;
+	}
+
+	/**
+	 * The segments of a dotted symbol: `Player.Stats.Rank` is {Player, Stats, Rank}, a bare `Title` is {Title}. False for
+	 * a spelling with an empty segment, which the parser does not make and a hand-built property might.
+	 */
+	bool SplitPath(const FString& InSymbol, TArray<FString>& OutSegments)
+	{
+		OutSegments.Reset();
+		InSymbol.ParseIntoArray(OutSegments, TEXT("."), /*InCullEmpty*/false);
+		for (FString& Segment : OutSegments)
+		{
+			Segment.TrimStartAndEndInline();
+			if (Segment.IsEmpty())
+			{
+				return false;
+			}
+		}
+		return OutSegments.Num() > 0;
+	}
+
+	/** `Player.Stats` -- the first InCount segments of a path, as written, for messages. */
+	FString JoinPath(const TArray<FString>& InSegments, const int32 InCount)
+	{
+		FString Path;
+		for (int32 Index = 0; Index < InCount && Index < InSegments.Num(); ++Index)
+		{
+			if (Index > 0)
+			{
+				Path += TEXT(".");
+			}
+			Path += InSegments[Index];
+		}
+		return Path;
+	}
+
+	/**
+	 * The class an object pin holds, or null for every other pin -- a number, a struct, a soft reference, an array: the
+	 * values a member path cannot go on through. The authoritative class, so a member reference made against it is the
+	 * one the compiled class answers to rather than a skeleton's.
+	 */
+	UClass* GetPinObjectClass(const FEdGraphPinType& InType)
+	{
+		if (InType.ContainerType != EPinContainerType::None
+			|| (InType.PinCategory != UEdGraphSchema_K2::PC_Object && InType.PinCategory != UEdGraphSchema_K2::PC_Interface))
+		{
+			return nullptr;
+		}
+		UClass* Class = Cast<UClass>(InType.PinSubCategoryObject.Get());
+		return Class != nullptr ? Class->GetAuthoritativeClass() : nullptr;
+	}
+
+	FString DescribeClass(const UClass* InClass)
+	{
+		return InClass != nullptr ? InClass->GetName() : FString(TEXT("nothing"));
+	}
+
+	/**
+	 * The property InName of InClass a graph can read, or null with OutWhyNot -- a sentence fragment naming the member and
+	 * the class. Readable means BlueprintVisible: the hop is an external variable get, and a graph is refused one of any
+	 * other property, which is the half an UnrealSharp author meets first (a [UProperty] is not BlueprintVisible until its
+	 * flags say BlueprintReadOnly or BlueprintReadWrite).
+	 */
+	const FProperty* FindReadableMember(const UClass* InClass, const FString& InName, FString& OutWhyNot)
+	{
+		const FProperty* Property = FindFProperty<FProperty>(InClass, FName(*InName));
+		if (Property == nullptr)
+		{
+			OutWhyNot = InClass->FindFunctionByName(FName(*InName)) != nullptr
+				? FString::Printf(TEXT("'%s' is a function of %s, and a function is called: write '%s()'"), *InName, *DescribeClass(InClass), *InName)
+				: FString::Printf(TEXT("%s has no member '%s'"), *DescribeClass(InClass), *InName);
+			return nullptr;
+		}
+		if (!Property->HasAnyPropertyFlags(CPF_BlueprintVisible))
+		{
+			OutWhyNot = FString::Printf(
+				TEXT("'%s' of %s is not BlueprintVisible, so no graph can read it -- give its UPROPERTY BlueprintReadOnly or BlueprintReadWrite (an UnrealSharp [UProperty] needs PropertyFlags.BlueprintReadOnly or PropertyFlags.BlueprintReadWrite)"),
+				*InName, *DescribeClass(InClass));
+			return nullptr;
+		}
+		return Property;
+	}
+
+	/** The function InName of InClass a graph can call, or null with OutWhyNot, the same kind of fragment. */
+	UFunction* FindCallableMember(const UClass* InClass, const FString& InName, FString& OutWhyNot)
+	{
+		UFunction* Function = InClass->FindFunctionByName(FName(*InName));
+		if (Function == nullptr)
+		{
+			OutWhyNot = FindFProperty<FProperty>(InClass, FName(*InName)) != nullptr
+				? FString::Printf(TEXT("'%s' is a property of %s, not a function"), *InName, *DescribeClass(InClass))
+				: FString::Printf(TEXT("%s has no function '%s'"), *DescribeClass(InClass), *InName);
+			return nullptr;
+		}
+		if (!Function->HasAnyFunctionFlags(FUNC_BlueprintCallable | FUNC_BlueprintPure))
+		{
+			OutWhyNot = FString::Printf(
+				TEXT("'%s' of %s is neither BlueprintCallable nor BlueprintPure, so no graph can call it -- mark its UFUNCTION one of them (an UnrealSharp [UFunction] needs FunctionFlags.BlueprintCallable)"),
+				*InName, *DescribeClass(InClass));
+			return nullptr;
+		}
+		return Function;
+	}
+
+	/**
+	 * A function's inputs in order -- by value, or by const reference, which UHT flags an out parameter as well -- and its
+	 * return value when OutReturn is given.
+	 */
+	void GetInputParameters(const UFunction* InFunction, TArray<const FProperty*>& OutInputs, const FProperty** OutReturn = nullptr)
+	{
+		OutInputs.Reset();
+		for (TFieldIterator<FProperty> It(InFunction); It && It->HasAnyPropertyFlags(CPF_Parm); ++It)
+		{
+			if (It->HasAnyPropertyFlags(CPF_ReturnParm))
+			{
+				if (OutReturn != nullptr)
+				{
+					*OutReturn = *It;
+				}
+			}
+			else if (!It->HasAnyPropertyFlags(CPF_OutParm) || It->HasAnyPropertyFlags(CPF_ReferenceParm))
+			{
+				OutInputs.Add(*It);
+			}
+		}
+	}
+
+	/** "(float Amount, Text Label)" -- inputs as a message lists them. */
+	FString DescribeInputs(const TArray<const FProperty*>& InInputs)
+	{
+		TArray<FString> Parts;
+		for (const FProperty* Input : InInputs)
+		{
+			FEdGraphPinType Type;
+			const FString TypeText = GetDefault<UEdGraphSchema_K2>()->ConvertPropertyToPinType(Input, Type)
+				? UEdGraphSchema_K2::TypeToText(Type).ToString() : Input->GetCPPType();
+			Parts.Add(FString::Printf(TEXT("%s %s"), *TypeText, *Input->GetName()));
+		}
+		return FString::Printf(TEXT("(%s)"), *FString::Join(Parts, TEXT(", ")));
+	}
+
+	/** The same, for the pins a handler's entry grew from its event. */
+	FString DescribePins(const TArray<UEdGraphPin*>& InPins)
+	{
+		TArray<FString> Parts;
+		for (const UEdGraphPin* Pin : InPins)
+		{
+			Parts.Add(FString::Printf(TEXT("%s %s"), *UEdGraphSchema_K2::TypeToText(Pin->PinType).ToString(), *Pin->PinName.ToString()));
+		}
+		return FString::Printf(TEXT("(%s)"), *FString::Join(Parts, TEXT(", ")));
+	}
+
+	/** `->`, `+=` or `=`, as the line wrote it, for messages. */
+	const TCHAR* DescribeRouteOperator(const EDreamUIRouteOperator InOperator)
+	{
+		switch (InOperator)
+		{
+		case EDreamUIRouteOperator::Append: return TEXT("+=");
+		case EDreamUIRouteOperator::Assign: return TEXT("=");
+		default: return TEXT("->");
+		}
+	}
+
+	/** What a member path comes to by its declared types, with no node made: the lowering's look ahead of the emission. */
+	struct FResolvedPath
+	{
+		/** The pin type the last resolved segment holds. */
+		FEdGraphPinType Type;
+		/** The last resolved segment's property and the class it was looked up on; null while only the root is resolved. */
+		const FProperty* LastProperty = nullptr;
+		UClass* LastOwnerClass = nullptr;
+	};
+
+	/**
+	 * The first InCount segments of InSegments, resolved the way EmitMemberPath will emit them: segment 0 a variable of the
+	 * class (a `viewmodels` entry, a prop, any variable), each later one a readable property of the object class the one
+	 * before holds. False after a refusal into InDiagnostics -- MemberPathNotFound, MemberPathThroughNonObject -- that
+	 * quotes the whole path and names the hop and its class.
+	 */
+	bool ResolvePathType(const UDreamWidgetBlueprint* InBlueprint, const TArray<FString>& InSegments, const int32 InCount,
+		const FDreamUISourceLocation& InLocation, FDreamUIDiagnosticBag& InDiagnostics, FResolvedPath& OutPath)
+	{
+		OutPath = FResolvedPath();
+		const FString FullPath = JoinPath(InSegments, InSegments.Num());
+		if (InSegments.Num() == 0 || !FindVariablePinType(InBlueprint, InSegments[0], OutPath.Type))
+		{
+			InDiagnostics.AddError(EDreamUIDiagnosticCode::MemberPathNotFound, InLocation, FString::Printf(
+				TEXT("'%s' cannot be read: '%s' is not a variable of this class (as of the previous compile) -- a path starts at a viewmodels entry, a prop or a variable of the Blueprint"),
+				*FullPath, InSegments.Num() > 0 ? *InSegments[0] : TEXT("")));
+			return false;
+		}
+		const UEdGraphSchema_K2* Schema = GetDefault<UEdGraphSchema_K2>();
+		for (int32 Index = 1; Index < InCount && Index < InSegments.Num(); ++Index)
+		{
+			UClass* OwnerClass = GetPinObjectClass(OutPath.Type);
+			if (OwnerClass == nullptr)
+			{
+				InDiagnostics.AddError(EDreamUIDiagnosticCode::MemberPathThroughNonObject, InLocation, FString::Printf(
+					TEXT("'%s' cannot be read: '%s' holds a %s, not an object, so there is no '%s' to read from it"),
+					*FullPath, *JoinPath(InSegments, Index), *UEdGraphSchema_K2::TypeToText(OutPath.Type).ToString(), *InSegments[Index]));
+				return false;
+			}
+			FString WhyNot;
+			const FProperty* Property = FindReadableMember(OwnerClass, InSegments[Index], WhyNot);
+			if (Property == nullptr)
+			{
+				InDiagnostics.AddError(EDreamUIDiagnosticCode::MemberPathNotFound, InLocation,
+					FString::Printf(TEXT("'%s' cannot be read: %s"), *FullPath, *WhyNot));
+				return false;
+			}
+			if (!Schema->ConvertPropertyToPinType(Property, OutPath.Type))
+			{
+				InDiagnostics.AddError(EDreamUIDiagnosticCode::MemberPathNotFound, InLocation, FString::Printf(
+					TEXT("'%s' cannot be read: '%s' of %s is of a type no graph pin can hold"), *FullPath, *InSegments[Index], *DescribeClass(OwnerClass)));
+				return false;
+			}
+			OutPath.LastProperty = Property;
+			OutPath.LastOwnerClass = OwnerClass;
+		}
+		return true;
+	}
+
+	/**
+	 * The function `<-> Path.Member` writes back through when the member's class offers one: a BlueprintCallable
+	 * Set<Member> -- or, for a bool, the spelling without its b that every setter in the library uses (SetIsDead for
+	 * bIsDead) -- taking exactly one input a value of the member's type can feed. Preferred to a raw write because it is
+	 * the class's own: a view model that has to do something when the value changes (mark itself dirty, clamp) can only
+	 * do it there. Null when there is none.
+	 */
+	UFunction* FindMemberSetter(const UClass* InOwnerClass, const FProperty* InMember)
+	{
+		const UEdGraphSchema_K2* Schema = GetDefault<UEdGraphSchema_K2>();
+		FEdGraphPinType MemberType;
+		if (InOwnerClass == nullptr || InMember == nullptr || !Schema->ConvertPropertyToPinType(InMember, MemberType))
+		{
+			return nullptr;
+		}
+		const FName Candidates[] = { FName(*(TEXT("Set") + InMember->GetName())), MakeDreamWidgetSetterName(InMember) };
+		for (const FName Candidate : Candidates)
+		{
+			UFunction* Function = InOwnerClass->FindFunctionByName(Candidate);
+			if (Function == nullptr || !Function->HasAnyFunctionFlags(FUNC_BlueprintCallable)
+				|| Function->HasAnyFunctionFlags(FUNC_BlueprintPure | FUNC_Static))
+			{
+				continue;
+			}
+			TArray<const FProperty*> Inputs;
+			GetInputParameters(Function, Inputs);
+			FEdGraphPinType ParameterType;
+			if (Inputs.Num() == 1 && Schema->ConvertPropertyToPinType(Inputs[0], ParameterType)
+				&& Schema->ArePinTypesCompatible(MemberType, ParameterType, nullptr))
+			{
+				return Function;
+			}
+		}
+		return nullptr;
 	}
 
 	/** Feed InSource into InPin: a connection for a live pin, a default value for a literal. */
@@ -383,10 +652,13 @@ namespace DreamUIExpressionThunksLocal
 		return Literal;
 	}
 
-	FEmitted EmitVariableRef(const FDreamUIExpression& InExpression, FThunkContext& InContext)
+	/**
+	 * The start of a member path -- or the whole of a bare name: a parameter of the function being generated (no node to
+	 * make, the entry's own pin IS the value), else a variable of the class, read by a self get.
+	 */
+	FEmitted EmitPathRoot(const FString& InName, const FString& InFullPath, const FDreamUISourceLocation& InLocation, FThunkContext& InContext)
 	{
-		// A parameter of the function being generated: no node to make, the entry's own pin IS the value.
-		if (UEdGraphPin* const* LocalPin = InContext.LocalPins.Find(InExpression.Symbol))
+		if (UEdGraphPin* const* LocalPin = InContext.LocalPins.Find(InName))
 		{
 			FEmitted Local;
 			Local.Pin = *LocalPin;
@@ -395,59 +667,179 @@ namespace DreamUIExpressionThunksLocal
 		}
 
 		FEdGraphPinType VariableType;
-		if (!FindVariablePinType(InContext.Blueprint, InExpression.Symbol, VariableType))
+		if (!FindVariablePinType(InContext.Blueprint, InName, VariableType))
 		{
-			InContext.Fail(InExpression.Location, FString::Printf(
-				TEXT("'%s' is neither a variable nor a function on this class (as of the previous compile)"), *InExpression.Symbol));
+			if (InFullPath == InName)
+			{
+				InContext.Fail(InLocation, FString::Printf(
+					TEXT("'%s' is neither a variable nor a function on this class (as of the previous compile)"), *InName));
+			}
+			else
+			{
+				InContext.FailWith(EDreamUIDiagnosticCode::MemberPathNotFound, InLocation, FString::Printf(
+					TEXT("'%s' cannot be read: '%s' is not a variable of this class (as of the previous compile) -- a path starts at a viewmodels entry, a prop or a variable of the Blueprint"),
+					*InFullPath, *InName));
+			}
 			return FEmitted();
 		}
 		FGraphNodeCreator<UK2Node_VariableGet> Creator(*InContext.Graph);
 		UK2Node_VariableGet* Node = Creator.CreateNode(false);
-		Node->VariableReference.SetSelfMember(FName(*InExpression.Symbol));
+		Node->VariableReference.SetSelfMember(FName(*InName));
 		Creator.Finalize();
 
 		FEmitted Result;
-		Result.Pin = Node->FindPin(FName(*InExpression.Symbol));
+		Result.Pin = Node->FindPin(FName(*InName));
 		if (Result.Pin == nullptr)
 		{
 			// A variable added since the last compile: this pass runs BEFORE the skeleton regen, so
 			// the node's own allocation resolved nothing. The type is known from the Blueprint's
 			// variable description, and a pin with the right name and type is all the compiler
-			// matches on.
-			Result.Pin = Node->CreatePin(EGPD_Output, VariableType, FName(*InExpression.Symbol));
+			// matches on. A `viewmodels` entry on the class's first compile is exactly this.
+			Result.Pin = Node->CreatePin(EGPD_Output, VariableType, FName(*InName));
 		}
 		if (Result.Pin == nullptr)
 		{
-			InContext.Fail(InExpression.Location, FString::Printf(TEXT("internal: getter for '%s' grew no pin"), *InExpression.Symbol));
+			InContext.Fail(InLocation, FString::Printf(TEXT("internal: getter for '%s' grew no pin"), *InName));
 			return FEmitted();
 		}
 		Result.PinType = Result.Pin->PinType;
 		return Result;
 	}
 
+	/**
+	 * One hop of a member path: InSegments[InIndex] read off the object InPrevious holds, by an external variable get
+	 * whose target is that object -- "Get Health (Target = Player)", the node an author would drag off the pin.
+	 *
+	 * No null guard: a getter is not evaluated while an object along its dependency paths is unset (the run time checks
+	 * the chain first), and a handler or a setter puts its own IsValid branch in front of what it does with the object.
+	 */
+	FEmitted EmitMemberHop(const FEmitted& InPrevious, const TArray<FString>& InSegments, const int32 InIndex,
+		const FDreamUISourceLocation& InLocation, FThunkContext& InContext)
+	{
+		const FString FullPath = JoinPath(InSegments, InSegments.Num());
+		UClass* OwnerClass = InPrevious.IsLiteral() ? nullptr : GetPinObjectClass(InPrevious.PinType);
+		if (OwnerClass == nullptr)
+		{
+			InContext.FailWith(EDreamUIDiagnosticCode::MemberPathThroughNonObject, InLocation, FString::Printf(
+				TEXT("'%s' cannot be read: '%s' holds a %s, not an object, so there is no '%s' to read from it"),
+				*FullPath, *JoinPath(InSegments, InIndex), *UEdGraphSchema_K2::TypeToText(InPrevious.PinType).ToString(), *InSegments[InIndex]));
+			return FEmitted();
+		}
+		FString WhyNot;
+		const FProperty* Property = FindReadableMember(OwnerClass, InSegments[InIndex], WhyNot);
+		if (Property == nullptr)
+		{
+			InContext.FailWith(EDreamUIDiagnosticCode::MemberPathNotFound, InLocation,
+				FString::Printf(TEXT("'%s' cannot be read: %s"), *FullPath, *WhyNot));
+			return FEmitted();
+		}
+		// The class that declares the property, as the reference to it is recorded against when an author drags one out:
+		// an inherited member stays the base's, and so resolves on any subclass the object turns out to be.
+		UClass* MemberParent = Property->GetOwnerClass() != nullptr ? Property->GetOwnerClass()->GetAuthoritativeClass() : OwnerClass;
+
+		FGraphNodeCreator<UK2Node_VariableGet> Creator(*InContext.Graph);
+		UK2Node_VariableGet* Node = Creator.CreateNode(false);
+		Node->VariableReference.SetExternalMember(Property->GetFName(), MemberParent);
+		Creator.Finalize();
+
+		UEdGraphPin* ValuePin = Node->FindPin(Property->GetFName(), EGPD_Output);
+		UEdGraphPin* TargetPin = Node->FindPin(UEdGraphSchema_K2::PN_Self, EGPD_Input);
+		if (ValuePin == nullptr || TargetPin == nullptr || !GetDefault<UEdGraphSchema_K2>()->TryCreateConnection(InPrevious.Pin, TargetPin))
+		{
+			InContext.Fail(InLocation, FString::Printf(TEXT("internal: the read of '%s' in '%s' would not wire"), *InSegments[InIndex], *FullPath));
+			return FEmitted();
+		}
+		FEmitted Result;
+		Result.Pin = ValuePin;
+		Result.PinType = ValuePin->PinType;
+		return Result;
+	}
+
+	/** The first InCount segments of a path, emitted: the root, then one external get per hop. */
+	FEmitted EmitMemberPath(const TArray<FString>& InSegments, const int32 InCount, const FDreamUISourceLocation& InLocation, FThunkContext& InContext)
+	{
+		if (InSegments.Num() == 0 || InCount <= 0)
+		{
+			InContext.Fail(InLocation, TEXT("internal: an empty member path"));
+			return FEmitted();
+		}
+		const FString FullPath = JoinPath(InSegments, InSegments.Num());
+		FEmitted Current = EmitPathRoot(InSegments[0], FullPath, InLocation, InContext);
+		for (int32 Index = 1; Index < InCount && Index < InSegments.Num() && !InContext.bFailed; ++Index)
+		{
+			Current = EmitMemberHop(Current, InSegments, Index, InLocation, InContext);
+		}
+		return InContext.bFailed ? FEmitted() : Current;
+	}
+
+	/**
+	 * A variable of the class (`Title`), or a member path through objects (`Player.Stats.Rank`) -- which used to be
+	 * refused here outright, a graph having no node that gets a sub-property by name. It has one per hop: an external
+	 * get whose target is the object the hop before it read.
+	 */
+	FEmitted EmitVariableRef(const FDreamUIExpression& InExpression, FThunkContext& InContext)
+	{
+		TArray<FString> Segments;
+		if (!SplitPath(InExpression.Symbol, Segments))
+		{
+			InContext.Fail(InExpression.Location, FString::Printf(TEXT("'%s' is neither a variable nor a member path"), *InExpression.Symbol));
+			return FEmitted();
+		}
+		return EmitMemberPath(Segments, Segments.Num(), InExpression.Location, InContext);
+	}
+
 	FEmitted EmitCall(const FDreamUIExpression& InExpression, FThunkContext& InContext)
 	{
-		UFunction* Function = FindSelfFunction(InContext.Blueprint, InExpression.Symbol);
-		if (Function == nullptr)
+		TArray<FString> Segments;
+		if (!SplitPath(InExpression.Symbol, Segments))
 		{
-			InContext.Fail(InExpression.Location, FString::Printf(
-				TEXT("'%s' is not a function on this class (as of the previous compile)"), *InExpression.Symbol));
+			InContext.Fail(InExpression.Location, FString::Printf(TEXT("'%s' is not a function or a member function"), *InExpression.Symbol));
 			return FEmitted();
+		}
+
+		// `Player.FormatGold(…)`: the receiver path first, read like any member path, and the function looked up on the
+		// class it reaches -- callable from a graph, or there is no node to call it with.
+		FEmitted Receiver;
+		UFunction* Function = nullptr;
+		if (Segments.Num() > 1)
+		{
+			Receiver = EmitMemberPath(Segments, Segments.Num() - 1, InExpression.Location, InContext);
+			if (InContext.bFailed)
+			{
+				return FEmitted();
+			}
+			UClass* ReceiverClass = GetPinObjectClass(Receiver.PinType);
+			if (ReceiverClass == nullptr)
+			{
+				InContext.FailWith(EDreamUIDiagnosticCode::MemberPathThroughNonObject, InExpression.Location, FString::Printf(
+					TEXT("'%s()' cannot be called: '%s' holds a %s, not an object, so it has no function '%s'"),
+					*InExpression.Symbol, *JoinPath(Segments, Segments.Num() - 1),
+					*UEdGraphSchema_K2::TypeToText(Receiver.PinType).ToString(), *Segments.Last()));
+				return FEmitted();
+			}
+			FString WhyNot;
+			Function = FindCallableMember(ReceiverClass, Segments.Last(), WhyNot);
+			if (Function == nullptr)
+			{
+				InContext.FailWith(EDreamUIDiagnosticCode::MemberPathNotFound, InExpression.Location,
+					FString::Printf(TEXT("'%s()' cannot be called: %s"), *InExpression.Symbol, *WhyNot));
+				return FEmitted();
+			}
+		}
+		else
+		{
+			Function = FindSelfFunction(InContext.Blueprint, InExpression.Symbol);
+			if (Function == nullptr)
+			{
+				InContext.Fail(InExpression.Location, FString::Printf(
+					TEXT("'%s' is not a function on this class (as of the previous compile)"), *InExpression.Symbol));
+				return FEmitted();
+			}
 		}
 
 		TArray<const FProperty*> InputParameters;
 		const FProperty* ReturnParameter = nullptr;
-		for (TFieldIterator<FProperty> It(Function); It && It->HasAnyPropertyFlags(CPF_Parm); ++It)
-		{
-			if (It->HasAnyPropertyFlags(CPF_ReturnParm))
-			{
-				ReturnParameter = *It;
-			}
-			else if (!It->HasAnyPropertyFlags(CPF_OutParm) || It->HasAnyPropertyFlags(CPF_ReferenceParm))
-			{
-				InputParameters.Add(*It);
-			}
-		}
+		GetInputParameters(Function, InputParameters, &ReturnParameter);
 		if (ReturnParameter == nullptr)
 		{
 			InContext.Fail(InExpression.Location, FString::Printf(TEXT("'%s' returns nothing, so it cannot appear in an expression"), *InExpression.Symbol));
@@ -465,6 +857,18 @@ namespace DreamUIExpressionThunksLocal
 		UK2Node_CallFunction* Node = Creator.CreateNode(false);
 		Node->SetFromFunction(Function);
 		Creator.Finalize();
+
+		// A member function is called ON the object the receiver path read: that object is the node's target. A static
+		// one has no target to give -- its hidden self pin is the class default, as it is for any library function.
+		if (Receiver.Pin != nullptr && !Function->HasAnyFunctionFlags(FUNC_Static))
+		{
+			UEdGraphPin* TargetPin = Node->FindPin(UEdGraphSchema_K2::PN_Self, EGPD_Input);
+			if (TargetPin == nullptr || !GetDefault<UEdGraphSchema_K2>()->TryCreateConnection(Receiver.Pin, TargetPin))
+			{
+				InContext.Fail(InExpression.Location, FString::Printf(TEXT("internal: the call to '%s' would not take its target"), *InExpression.Symbol));
+				return FEmitted();
+			}
+		}
 
 		// The ARGUMENTS first, and this order is the whole correctness of a nested call.
 		//
@@ -695,6 +1099,7 @@ namespace DreamUIExpressionThunksLocal
 	{
 		return InName.StartsWith(DreamUIExpressionThunks::GeneratedGraphPrefix)
 			|| InName.StartsWith(DreamUIExpressionThunks::GeneratedEmitPrefix)
+			|| InName.StartsWith(DreamUIExpressionThunks::GeneratedRoutePrefix)
 			|| InName.StartsWith(TEXT("__DreamTwoWayGet_"))
 			|| InName.StartsWith(TEXT("__DreamTwoWaySet_"));
 	}
@@ -775,6 +1180,93 @@ namespace DreamUIExpressionThunksLocal
 		return true;
 	}
 
+	void AddDependency(TArray<TArray<FString>>& OutPaths, TArray<FString>&& InPath)
+	{
+		if (InPath.Num() > 0)
+		{
+			OutPaths.AddUnique(MoveTemp(InPath));
+		}
+	}
+
+	/**
+	 * Every member path InExpression reads, into OutPaths: a variable or a path its segments, a no-argument call its
+	 * receiver's segments and its own name as one path (`Count()` is {Count}, `Player.GetHealthPercent()` is {Player,
+	 * GetHealthPercent}), a literal nothing. A call WITH arguments clears bInOutComplete -- it may read what its arguments
+	 * do not show -- and still records its receiver and whatever its arguments read, so the binding is at least re-read
+	 * when those change.
+	 *
+	 * Read off the expression rather than off the nodes the emission made, which is what keeps the two from disagreeing
+	 * about meaning: a name the emission resolved is a name read, whatever node read it.
+	 */
+	void CollectDependencies(const FDreamUIExpression& InExpression, TArray<TArray<FString>>& OutPaths, bool& bInOutComplete)
+	{
+		switch (InExpression.Kind)
+		{
+		case FDreamUIExpression::EKind::VariableRef:
+		{
+			TArray<FString> Segments;
+			if (SplitPath(InExpression.Symbol, Segments))
+			{
+				AddDependency(OutPaths, MoveTemp(Segments));
+			}
+			break;
+		}
+		case FDreamUIExpression::EKind::Call:
+		{
+			TArray<FString> Segments;
+			const bool bSplit = SplitPath(InExpression.Symbol, Segments);
+			if (InExpression.Operands.Num() == 0)
+			{
+				if (bSplit)
+				{
+					AddDependency(OutPaths, MoveTemp(Segments));
+				}
+				break;
+			}
+			bInOutComplete = false;
+			if (bSplit && Segments.Num() > 1)
+			{
+				Segments.RemoveAt(Segments.Num() - 1);
+				AddDependency(OutPaths, MoveTemp(Segments));
+			}
+			for (const FDreamUIExpression& Operand : InExpression.Operands)
+			{
+				CollectDependencies(Operand, OutPaths, bInOutComplete);
+			}
+			break;
+		}
+		case FDreamUIExpression::EKind::Unary:
+		case FDreamUIExpression::EKind::Binary:
+			for (const FDreamUIExpression& Operand : InExpression.Operands)
+			{
+				CollectDependencies(Operand, OutPaths, bInOutComplete);
+			}
+			break;
+		default:
+			// A literal reads nothing; a resource is a constant of the class's defaults, which no binding re-reads.
+			break;
+		}
+	}
+
+	/** Record what InExpression reads onto the line, as the builder will copy it onto the binding. */
+	void RecordDependencies(FDreamUIProperty& InOutProperty, const FDreamUIExpression& InExpression)
+	{
+		InOutProperty.BindingDependencies.Reset();
+		bool bComplete = true;
+		CollectDependencies(InExpression, InOutProperty.BindingDependencies, bComplete);
+		InOutProperty.bBindingDependenciesRecorded = true;
+		InOutProperty.bBindingDependenciesComplete = bComplete;
+	}
+
+	/** One path, complete: a `<->`'s variable or member path, a bare `F()`'s function. */
+	void RecordPathDependency(FDreamUIProperty& InOutProperty, const TArray<FString>& InSegments)
+	{
+		InOutProperty.BindingDependencies.Reset();
+		InOutProperty.BindingDependencies.Add(InSegments);
+		InOutProperty.bBindingDependenciesRecorded = true;
+		InOutProperty.bBindingDependenciesComplete = true;
+	}
+
 	void LowerProperty(UDreamWidgetBlueprint* InBlueprint, const FString& InNodeId, FDreamUIProperty& InProperty,
 		FDreamUIDiagnosticBag& InDiagnostics, TSet<FString>& InOutClaimedNames)
 	{
@@ -806,25 +1298,276 @@ namespace DreamUIExpressionThunksLocal
 			return;
 		}
 
+		// What the line reads, recorded off the expression before it goes: from here on the line is a function name.
+		RecordDependencies(InProperty, InProperty.BindingExpression.GetValue());
 		InProperty.BindingFunction = ThunkName;
 		InProperty.BindingExpression.Reset();
+	}
+
+	/**
+	 * `Prop <- F()`, which the parser hands over as BindingFunction alone: nothing to lower -- the function is the binding
+	 * -- and its read recorded like any expression's, {F}, complete.
+	 *
+	 * A dotted one (`Prop <- Player.GetHealthPercent()`, should a front end keep that shape here) names no function of the
+	 * class: it is lowered as the call it is, into a thunk like any other member call.
+	 */
+	void LowerBareCall(UDreamWidgetBlueprint* InBlueprint, const FString& InNodeId, FDreamUIProperty& InProperty,
+		FDreamUIDiagnosticBag& InDiagnostics, TSet<FString>& InOutClaimedNames)
+	{
+		FString FunctionName = InProperty.BindingFunction.TrimStartAndEnd();
+		FunctionName.RemoveFromEnd(TEXT("()"));
+		FunctionName.TrimStartAndEndInline();
+		if (FunctionName.Contains(TEXT(".")))
+		{
+			FDreamUIExpression Call;
+			Call.Kind = FDreamUIExpression::EKind::Call;
+			Call.Symbol = FunctionName;
+			Call.Location = InProperty.Location;
+			InProperty.BindingFunction.Reset();
+			InProperty.BindingExpression = MoveTemp(Call);
+			LowerProperty(InBlueprint, InNodeId, InProperty, InDiagnostics, InOutClaimedNames);
+			return;
+		}
+		if (!FunctionName.IsEmpty())
+		{
+			RecordPathDependency(InProperty, { FunctionName });
+		}
+	}
+
+	/**
+	 * `if IsValid(InReceiver)`, threaded onto the exec chain: returns the branch's Then pin, from which the work on the
+	 * receiver runs, with OutElse the pin from which nothing does. LastExecPin moves to Then. Null after a refusal.
+	 *
+	 * What a handler and a setter put in front of an object a member path read, where a getter puts nothing: they run on
+	 * an event, whenever it fires, and a view model nobody has handed over yet is an ordinary state rather than a bug --
+	 * the click does nothing, instead of an Accessed None every time.
+	 */
+	UEdGraphPin* EmitValidityBranch(const FEmitted& InReceiver, FThunkContext& InContext, const FDreamUISourceLocation& InLocation,
+		UEdGraphPin*& OutElse)
+	{
+		OutElse = nullptr;
+		const UEdGraphSchema_K2* Schema = GetDefault<UEdGraphSchema_K2>();
+		UFunction* IsValidFunction = UKismetSystemLibrary::StaticClass()->FindFunctionByName(FName(TEXT("IsValid")));
+		if (IsValidFunction == nullptr || InReceiver.Pin == nullptr || InContext.LastExecPin == nullptr)
+		{
+			InContext.Fail(InLocation, TEXT("internal: the check that the receiver is set could not be made"));
+			return nullptr;
+		}
+
+		FGraphNodeCreator<UK2Node_CallFunction> CheckCreator(*InContext.Graph);
+		UK2Node_CallFunction* Check = CheckCreator.CreateNode(/*bSelectNewNode*/false);
+		Check->SetFromFunction(IsValidFunction);
+		CheckCreator.Finalize();
+
+		FGraphNodeCreator<UK2Node_IfThenElse> BranchCreator(*InContext.Graph);
+		UK2Node_IfThenElse* Branch = BranchCreator.CreateNode(/*bSelectNewNode*/false);
+		BranchCreator.Finalize();
+
+		UEdGraphPin* ObjectPin = Check->FindPin(FName(TEXT("Object")), EGPD_Input);
+		UEdGraphPin* IsSetPin = Check->GetReturnValuePin();
+		UEdGraphPin* ConditionPin = Branch->GetConditionPin();
+		UEdGraphPin* BranchExecute = Branch->GetExecPin();
+		UEdGraphPin* Then = Branch->GetThenPin();
+		OutElse = Branch->GetElsePin();
+		const bool bWired = ObjectPin != nullptr && IsSetPin != nullptr && ConditionPin != nullptr && BranchExecute != nullptr
+			&& Then != nullptr && OutElse != nullptr
+			&& Schema->TryCreateConnection(InReceiver.Pin, ObjectPin)
+			&& Schema->TryCreateConnection(IsSetPin, ConditionPin)
+			&& Schema->TryCreateConnection(InContext.LastExecPin, BranchExecute);
+		if (!bWired)
+		{
+			InContext.Fail(InLocation, TEXT("internal: the check that the receiver is set would not wire"));
+			return nullptr;
+		}
+		InContext.LastExecPin = Then;
+		return Then;
+	}
+
+	/**
+	 * The body of `Prop <-> Path.Member`'s setter, below an entry taking NewValue: read the receiver (`Path`), do nothing
+	 * while it is unset, then write NewValue into Member -- through InSetter when the class has one, otherwise by a set of
+	 * the property followed by an announcement of the field on THAT object.
+	 *
+	 * The announcement is explicit because nothing else makes it. The Kismet compiler gives a set of a FieldNotify
+	 * variable its broadcast only when a Blueprint class declares the variable (FKismetCompilerUtilities::
+	 * IsPropertyUsesFieldNotificationSetValueAndBroadcast), and then aims it at the node's target -- which is the view
+	 * model, and enough. A C++ or UnrealSharp view model's property is written raw, and without this call no binding
+	 * reading it, on this widget or any other, would hear the change. Skipped where the Kismet compiler already makes
+	 * it, so a change is announced once.
+	 */
+	bool BuildMemberWrite(UDreamWidgetBlueprint* InBlueprint, UEdGraph* InGraph, UK2Node_FunctionEntry* InEntry, UEdGraphPin* InNewValuePin,
+		const TArray<FString>& InSegments, const FResolvedPath& InPath, UFunction* InSetter, const FDreamUIProperty& InProperty,
+		FDreamUIDiagnosticBag& InDiagnostics)
+	{
+		const UEdGraphSchema_K2* Schema = GetDefault<UEdGraphSchema_K2>();
+		FThunkContext Context;
+		Context.Blueprint = InBlueprint;
+		Context.Diagnostics = &InDiagnostics;
+		Context.Ast = GLoweringAst;
+		Context.Graph = InGraph;
+		Context.LastExecPin = InEntry->FindPin(UEdGraphSchema_K2::PN_Then);
+
+		const FEmitted Receiver = EmitMemberPath(InSegments, InSegments.Num() - 1, InProperty.Location, Context);
+		UEdGraphPin* Else = nullptr;
+		if (Context.bFailed || EmitValidityBranch(Receiver, Context, InProperty.Location, Else) == nullptr)
+		{
+			return false;
+		}
+
+		const FString Written = FString::Printf(TEXT("'%s <-> %s'"), *InProperty.Name, *InProperty.TwoWayProperty);
+		UEdGraphPin* Tail = nullptr;
+		if (InSetter != nullptr)
+		{
+			FGraphNodeCreator<UK2Node_CallFunction> CallCreator(*InGraph);
+			UK2Node_CallFunction* Call = CallCreator.CreateNode(/*bSelectNewNode*/false);
+			Call->SetFromFunction(InSetter);
+			CallCreator.Finalize();
+
+			TArray<const FProperty*> Inputs;
+			GetInputParameters(InSetter, Inputs);
+			UEdGraphPin* TargetPin = Call->FindPin(UEdGraphSchema_K2::PN_Self, EGPD_Input);
+			UEdGraphPin* ValuePin = Inputs.Num() == 1 ? Call->FindPin(Inputs[0]->GetFName(), EGPD_Input) : nullptr;
+			UEdGraphPin* CallExecute = Call->GetExecPin();
+			const bool bWired = TargetPin != nullptr && ValuePin != nullptr && CallExecute != nullptr
+				&& Schema->TryCreateConnection(Receiver.Pin, TargetPin)
+				&& Schema->TryCreateConnection(InNewValuePin, ValuePin)
+				&& Schema->TryCreateConnection(Context.LastExecPin, CallExecute);
+			if (!bWired)
+			{
+				InDiagnostics.AddError(EDreamUIDiagnosticCode::BindingExpressionUnsupported, InProperty.Location,
+					FString::Printf(TEXT("internal: the write-back of %s through '%s' would not wire"), *Written, *InSetter->GetName()));
+				return false;
+			}
+			Tail = Call->GetThenPin();
+		}
+		else
+		{
+			const FProperty* Member = InPath.LastProperty;
+			UClass* MemberParent = Member->GetOwnerClass() != nullptr ? Member->GetOwnerClass()->GetAuthoritativeClass() : InPath.LastOwnerClass;
+
+			FGraphNodeCreator<UK2Node_VariableSet> SetCreator(*InGraph);
+			UK2Node_VariableSet* Set = SetCreator.CreateNode(/*bSelectNewNode*/false);
+			Set->VariableReference.SetExternalMember(Member->GetFName(), MemberParent);
+			SetCreator.Finalize();
+
+			UEdGraphPin* TargetPin = Set->FindPin(UEdGraphSchema_K2::PN_Self, EGPD_Input);
+			UEdGraphPin* ValuePin = Set->FindPin(Member->GetFName(), EGPD_Input);
+			UEdGraphPin* SetExecute = Set->GetExecPin();
+			const bool bWired = TargetPin != nullptr && ValuePin != nullptr && SetExecute != nullptr
+				&& Schema->TryCreateConnection(Receiver.Pin, TargetPin)
+				&& Schema->TryCreateConnection(InNewValuePin, ValuePin)
+				&& Schema->TryCreateConnection(Context.LastExecPin, SetExecute);
+			if (!bWired)
+			{
+				InDiagnostics.AddError(EDreamUIDiagnosticCode::BindingExpressionUnsupported, InProperty.Location,
+					FString::Printf(TEXT("internal: the write-back of %s would not wire"), *Written));
+				return false;
+			}
+			Tail = Set->GetThenPin();
+
+			const FName MemberName = Member->GetFName();
+			if (DreamUIBindingPath::FindFieldId(InPath.LastOwnerClass, MemberName).IsValid()
+				&& !FKismetCompilerUtilities::IsPropertyUsesFieldNotificationSetValueAndBroadcast(Member))
+			{
+				UFunction* BroadcastFunction = UFieldNotificationLibrary::StaticClass()->FindFunctionByName(FName(TEXT("BroadcastFieldValueChanged")));
+				if (BroadcastFunction == nullptr)
+				{
+					InDiagnostics.AddError(EDreamUIDiagnosticCode::BindingExpressionUnsupported, InProperty.Location,
+						TEXT("internal: the field notification library has no BroadcastFieldValueChanged"));
+					return false;
+				}
+				FGraphNodeCreator<UK2Node_CallFunction> AnnounceCreator(*InGraph);
+				UK2Node_CallFunction* Announce = AnnounceCreator.CreateNode(/*bSelectNewNode*/false);
+				Announce->SetFromFunction(BroadcastFunction);
+				AnnounceCreator.Finalize();
+
+				UEdGraphPin* ObjectPin = Announce->FindPin(FName(TEXT("Object")), EGPD_Input);
+				UEdGraphPin* FieldPin = Announce->FindPin(FName(TEXT("FieldId")), EGPD_Input);
+				UEdGraphPin* AnnounceExecute = Announce->GetExecPin();
+				const bool bAnnounceWired = ObjectPin != nullptr && FieldPin != nullptr && AnnounceExecute != nullptr && Tail != nullptr
+					&& Schema->TryCreateConnection(Receiver.Pin, ObjectPin)
+					&& Schema->TryCreateConnection(Tail, AnnounceExecute);
+				if (!bAnnounceWired)
+				{
+					InDiagnostics.AddError(EDreamUIDiagnosticCode::BindingExpressionUnsupported, InProperty.Location,
+						FString::Printf(TEXT("internal: the announcement after the write-back of %s would not wire"), *Written));
+					return false;
+				}
+				// FFieldNotificationId by its text form, the one a struct pin's default always is: the field's name.
+				Schema->TrySetDefaultValue(*FieldPin, FString::Printf(TEXT("(FieldName=\"%s\")"), *MemberName.ToString()));
+				Tail = Announce->GetThenPin();
+			}
+		}
+
+		FGraphNodeCreator<UK2Node_FunctionResult> ResultCreator(*InGraph);
+		UK2Node_FunctionResult* Result = ResultCreator.CreateNode(/*bSelectNewNode*/false);
+		Result->FunctionReference.SetSelfMember(InGraph->GetFName());
+		ResultCreator.Finalize();
+		UEdGraphPin* ResultExecute = Result->FindPin(UEdGraphSchema_K2::PN_Execute);
+		const bool bClosed = ResultExecute != nullptr && Tail != nullptr
+			&& Schema->TryCreateConnection(Tail, ResultExecute)
+			&& Schema->TryCreateConnection(Else, ResultExecute);
+		if (!bClosed)
+		{
+			InDiagnostics.AddError(EDreamUIDiagnosticCode::BindingExpressionUnsupported, InProperty.Location,
+				FString::Printf(TEXT("internal: the setter of %s would not close"), *Written));
+			return false;
+		}
+		return true;
 	}
 
 	void LowerTwoWay(UDreamWidgetBlueprint* InBlueprint, const FString& InNodeId, FDreamUIProperty& InProperty,
 		TArray<FDreamUIProperty>& OutSynthesized, FDreamUIDiagnosticBag& InDiagnostics, TSet<FString>& InOutClaimedNames)
 	{
-		FEdGraphPinType VariableType;
-		if (!FindVariablePinType(InBlueprint, InProperty.TwoWayProperty, VariableType))
+		TArray<FString> Segments;
+		if (!SplitPath(InProperty.TwoWayProperty, Segments))
 		{
 			InDiagnostics.AddError(EDreamUIDiagnosticCode::BindingExpressionUnsupported, InProperty.Location,
-				FString::Printf(TEXT("'<-> %s' names no variable on this class (as of the previous compile)"), *InProperty.TwoWayProperty));
+				FString::Printf(TEXT("'<-> %s' names neither a variable nor a member path"), *InProperty.TwoWayProperty));
 			return;
+		}
+		// `Value <-> Volume` mirrors a variable of the class, written by a self set whose FieldNotify broadcast the
+		// Kismet compiler supplies. `Value <-> Settings.Volume` mirrors a member of an object the class holds.
+		const bool bMemberPath = Segments.Num() > 1;
+
+		FEdGraphPinType VariableType;
+		FResolvedPath Path;
+		UFunction* MemberSetter = nullptr;
+		if (!bMemberPath)
+		{
+			if (!FindVariablePinType(InBlueprint, InProperty.TwoWayProperty, VariableType))
+			{
+				InDiagnostics.AddError(EDreamUIDiagnosticCode::BindingExpressionUnsupported, InProperty.Location,
+					FString::Printf(TEXT("'<-> %s' names no variable on this class (as of the previous compile)"), *InProperty.TwoWayProperty));
+				return;
+			}
+		}
+		else
+		{
+			if (!ResolvePathType(InBlueprint, Segments, Segments.Num(), InProperty.Location, InDiagnostics, Path))
+			{
+				return;
+			}
+			VariableType = Path.Type;
+			// Writable through the class's own setter, or, failing one, by a set -- which a graph may make of no property
+			// that is BlueprintReadOnly. Said here, before either half is made: a mirror that cannot write back is a
+			// one-way binding the author did not write, and the slider would move and spring back.
+			MemberSetter = FindMemberSetter(Path.LastOwnerClass, Path.LastProperty);
+			if (MemberSetter == nullptr && Path.LastProperty->HasAnyPropertyFlags(CPF_BlueprintReadOnly))
+			{
+				InDiagnostics.AddError(EDreamUIDiagnosticCode::TwoWayTargetReadOnly, InProperty.Location, FString::Printf(
+					TEXT("'%s <-> %s' cannot write the value back: '%s' is read-only to graphs on %s, and %s has no BlueprintCallable %s taking a %s. Make the property BlueprintReadWrite, give the class that setter, or bind it one way with '<-'"),
+					*InProperty.Name, *InProperty.TwoWayProperty, *Segments.Last(), *DescribeClass(Path.LastOwnerClass),
+					*DescribeClass(Path.LastOwnerClass), *(TEXT("Set") + Segments.Last()), *UEdGraphSchema_K2::TypeToText(Path.Type).ToString()));
+				return;
+			}
 		}
 
 		// The forward half: a generated getter reading the variable, standing exactly where any
 		// bound function stands. TwoWayProperty stays set -- the builder reads it to fill the
 		// binding's NotifyField and to prefer the silent setter.
 		const FString GetterName = MakeThunkName(TEXT("__DreamTwoWayGet_"), InNodeId, InProperty.Name, InOutClaimedNames);
+		UEdGraph* GetterGraph = nullptr;
 		{
 			UK2Node_FunctionEntry* Entry = nullptr;
 			UEdGraph* Graph = BeginThunkGraph(InBlueprint, GetterName, Entry);
@@ -845,6 +1588,7 @@ namespace DreamUIExpressionThunksLocal
 				FBlueprintEditorUtils::RemoveGraph(InBlueprint, Graph);
 				return;
 			}
+			GetterGraph = Graph;
 		}
 
 		// The reverse half: a generated setter the control's changed event routes into, writing the
@@ -867,6 +1611,33 @@ namespace DreamUIExpressionThunksLocal
 			else
 			{
 				NewValuePin = Entry->CreateUserDefinedPin(TEXT("NewValue"), VariableType, EGPD_Output);
+			}
+
+			if (bMemberPath)
+			{
+				// The member's own object, not the class: a write into what the receiver path reaches, guarded and
+				// announced -- see BuildMemberWrite.
+				if (NewValuePin == nullptr
+					|| !BuildMemberWrite(InBlueprint, Graph, Entry, NewValuePin, Segments, Path, MemberSetter, InProperty, InDiagnostics))
+				{
+					if (NewValuePin == nullptr)
+					{
+						InDiagnostics.AddError(EDreamUIDiagnosticCode::BindingExpressionUnsupported, InProperty.Location,
+							FString::Printf(TEXT("internal: the reverse route for '<-> %s' grew no NewValue"), *InProperty.TwoWayProperty));
+					}
+					FBlueprintEditorUtils::RemoveGraph(InBlueprint, Graph);
+					FBlueprintEditorUtils::RemoveGraph(InBlueprint, GetterGraph);
+					return;
+				}
+				Entry->AddExtraFlags(FUNC_Private);
+				InProperty.BindingFunction = GetterName;
+				RecordPathDependency(InProperty, Segments);
+
+				FDreamUIProperty& Route = OutSynthesized.AddDefaulted_GetRef();
+				Route.Name = TEXT("OnValueChangedBP");
+				Route.EventHandler = SetterName;
+				Route.Location = InProperty.Location;
+				return;
 			}
 
 			FGraphNodeCreator<UK2Node_VariableSet> SetCreator(*Graph);
@@ -900,6 +1671,7 @@ namespace DreamUIExpressionThunksLocal
 				InDiagnostics.AddError(EDreamUIDiagnosticCode::BindingExpressionUnsupported, InProperty.Location,
 					FString::Printf(TEXT("internal: the reverse route for '<-> %s' would not wire"), *InProperty.TwoWayProperty));
 				FBlueprintEditorUtils::RemoveGraph(InBlueprint, Graph);
+				FBlueprintEditorUtils::RemoveGraph(InBlueprint, GetterGraph);
 				return;
 			}
 			// A setter has a side effect by definition; private, never pure.
@@ -907,6 +1679,7 @@ namespace DreamUIExpressionThunksLocal
 		}
 
 		InProperty.BindingFunction = GetterName;
+		RecordPathDependency(InProperty, Segments);
 
 		// The synthesized route, appended to the SAME property list this binding came from, so a
 		// `<->` inside a component block resolves its changed event on that same behaviour. Every
@@ -990,6 +1763,7 @@ namespace DreamUIExpressionThunksLocal
 		InProperty.EventHandler = HandlerName;
 
 		DreamUIExpressionThunks::FEmitRoute& Route = GEmitRoutes->AddDefaulted_GetRef();
+		Route.Kind = DreamUIExpressionThunks::FEmitRoute::EKind::Emit;
 		Route.HandlerName = HandlerName;
 		Route.EventName = Event->Name;
 		Route.Arguments = InProperty.EmitArguments;
@@ -997,7 +1771,92 @@ namespace DreamUIExpressionThunksLocal
 	}
 
 	/**
-	 * Lower every `<-` expression and every `<->` in one property list, under one owner name.
+	 * The first half of `Event -> Path.Func(args)` (or `+=`, or `=`: the operator says what happens to the event's other
+	 * listeners, which is the builder's to hold the author to, and changes nothing here): check the receiver path and the
+	 * function against the classes they name, name the handler, and hand the rest to GenerateEmitHandlers through
+	 * GEmitRoutes -- the emit route's arrangement, for the emit route's reason: the handler takes what the source event
+	 * sends, and only the builder knows whose event that is.
+	 *
+	 * Checked here as far as the AST allows, so a misspelling is said at its line before anything is built: the path
+	 * (MemberPathNotFound, MemberPathThroughNonObject), the function (RouteMemberFunctionNotFound) and, when parentheses
+	 * were written, the argument count (RouteArgumentMismatch). Whether the event's own parameters fit a function written
+	 * without them waits for the second half. A refusal leaves EventHandler empty, which the builder skips in silence,
+	 * as it does a refused emit.
+	 */
+	void LowerRoute(UDreamWidgetBlueprint* InBlueprint, const FString& InOwnerName, FDreamUIProperty& InProperty,
+		FDreamUIDiagnosticBag& InDiagnostics, TSet<FString>& InOutClaimedNames)
+	{
+		if (GEmitRoutes == nullptr || !InProperty.EventHandler.IsEmpty())
+		{
+			return;
+		}
+		const FString Written = FString::Printf(TEXT("'%s %s %s'"), *InProperty.Name, DescribeRouteOperator(InProperty.RouteOperator), *InProperty.RouteTarget);
+
+		TArray<FString> Segments;
+		if (!SplitPath(InProperty.RouteTarget, Segments) || Segments.Num() < 2)
+		{
+			InDiagnostics.AddError(EDreamUIDiagnosticCode::RouteMemberFunctionNotFound, InProperty.Location, FString::Printf(
+				TEXT("%s names no object to call a function on: a route to a member is 'Path.Func', and one to this class's own function is a bare name"),
+				*Written));
+			return;
+		}
+		FResolvedPath Receiver;
+		if (!ResolvePathType(InBlueprint, Segments, Segments.Num() - 1, InProperty.Location, InDiagnostics, Receiver))
+		{
+			return;
+		}
+		UClass* ReceiverClass = GetPinObjectClass(Receiver.Type);
+		if (ReceiverClass == nullptr)
+		{
+			InDiagnostics.AddError(EDreamUIDiagnosticCode::MemberPathThroughNonObject, InProperty.Location, FString::Printf(
+				TEXT("%s cannot call '%s': '%s' holds a %s, not an object"), *Written, *Segments.Last(),
+				*JoinPath(Segments, Segments.Num() - 1), *UEdGraphSchema_K2::TypeToText(Receiver.Type).ToString()));
+			return;
+		}
+		FString WhyNot;
+		UFunction* Function = FindCallableMember(ReceiverClass, Segments.Last(), WhyNot);
+		if (Function != nullptr && Function->HasAnyFunctionFlags(FUNC_BlueprintPure))
+		{
+			// A pure function has no exec pins to call it on, and returns a value nobody would read: an event routed to
+			// one would do nothing at all, which is worth saying rather than compiling.
+			WhyNot = FString::Printf(TEXT("'%s' of %s is BlueprintPure -- it only returns a value, so an event has nothing to call it for"),
+				*Segments.Last(), *DescribeClass(ReceiverClass));
+			Function = nullptr;
+		}
+		if (Function == nullptr)
+		{
+			InDiagnostics.AddError(EDreamUIDiagnosticCode::RouteMemberFunctionNotFound, InProperty.Location,
+				FString::Printf(TEXT("%s calls nothing: %s"), *Written, *WhyNot));
+			return;
+		}
+		if (InProperty.bRouteHasArgumentList)
+		{
+			TArray<const FProperty*> Inputs;
+			GetInputParameters(Function, Inputs);
+			if (Inputs.Num() != InProperty.RouteArguments.Num())
+			{
+				InDiagnostics.AddError(EDreamUIDiagnosticCode::RouteArgumentMismatch, InProperty.Location, FString::Printf(
+					TEXT("%s passes %d argument(s), and %s takes %d: %s%s"), *Written, InProperty.RouteArguments.Num(),
+					*Segments.Last(), Inputs.Num(), *Segments.Last(), *DescribeInputs(Inputs)));
+				return;
+			}
+		}
+
+		const FString HandlerName = MakeThunkName(DreamUIExpressionThunks::GeneratedRoutePrefix, InOwnerName, InProperty.Name, InOutClaimedNames);
+		InProperty.EventHandler = HandlerName;
+
+		DreamUIExpressionThunks::FEmitRoute& Route = GEmitRoutes->AddDefaulted_GetRef();
+		Route.Kind = DreamUIExpressionThunks::FEmitRoute::EKind::MemberCall;
+		Route.HandlerName = HandlerName;
+		Route.RouteTarget = JoinPath(Segments, Segments.Num());
+		Route.Arguments = InProperty.RouteArguments;
+		Route.bHasArgumentList = InProperty.bRouteHasArgumentList;
+		Route.Location = InProperty.Location;
+	}
+
+	/**
+	 * Lower every `<-` expression and every `<->` in one property list, under one owner name, recording what each reads;
+	 * and name the handlers of its `-> emit` and `-> Path.Func` routes.
 	 *
 	 * The owner name is whatever the thunk names itself after: a node id for a node's own lines, and
 	 * `Style_<name>` for a style block's. It is a parameter rather than the node because a style is
@@ -1015,6 +1874,10 @@ namespace DreamUIExpressionThunksLocal
 			{
 				LowerEmit(InOwnerName, Property, InDiagnostics, InOutClaimedNames);
 			}
+			else if (!Property.RouteTarget.IsEmpty())
+			{
+				LowerRoute(InBlueprint, InOwnerName, Property, InDiagnostics, InOutClaimedNames);
+			}
 			else if (Property.BindingExpression.IsSet())
 			{
 				LowerProperty(InBlueprint, InOwnerName, Property, InDiagnostics, InOutClaimedNames);
@@ -1022,6 +1885,10 @@ namespace DreamUIExpressionThunksLocal
 			else if (!Property.TwoWayProperty.IsEmpty())
 			{
 				LowerTwoWay(InBlueprint, InOwnerName, Property, Synthesized, InDiagnostics, InOutClaimedNames);
+			}
+			else if (!Property.BindingFunction.IsEmpty())
+			{
+				LowerBareCall(InBlueprint, InOwnerName, Property, InDiagnostics, InOutClaimedNames);
 			}
 		}
 		InOutProperties.Append(MoveTemp(Synthesized));
@@ -1265,6 +2132,18 @@ namespace DreamUIExpressionThunksLocal
 			OutSignature.SignatureFunction = Event->SignatureFunction;
 			return true;
 		}
+		// A single-cast delegate (`OnInit = Handler`) is the third kind a route may leave from; its one listener takes
+		// what its signature says, exactly as a multicast event's every listener does.
+		if (const FDelegateProperty* SingleCast = CastField<FDelegateProperty>(EventProperty))
+		{
+			if (SingleCast->SignatureFunction == nullptr)
+			{
+				OutRefusal = FString::Printf(TEXT("'%s' declares no signature for a handler to copy"), *InBinding.EventName.ToString());
+				return false;
+			}
+			OutSignature.SignatureFunction = SingleCast->SignatureFunction;
+			return true;
+		}
 
 		const FStructProperty* StructEvent = CastField<FStructProperty>(EventProperty);
 		if (StructEvent != nullptr && StructEvent->Struct == FDreamUIEventDelegate::StaticStruct())
@@ -1335,23 +2214,14 @@ namespace DreamUIExpressionThunksLocal
 	}
 
 	/**
-	 * The body of one emit handler: a function taking what the source event sends, evaluating the arguments and
-	 * calling the dispatcher -- "Call Picked", exactly the node an author would drag out of My Blueprint.
+	 * A route handler's graph and its entry, taking what InSignature describes, with OutContext aimed at the graph and
+	 * the entry's parameters in scope by name (OutParameterPins lists them in the event's order). Shared by the emit
+	 * handler and the member route's, which differ only in what they call.
 	 */
-	bool BuildEmitHandler(UDreamWidgetBlueprint* InBlueprint, const DreamUIExpressionThunks::FEmitRoute& InRoute,
-		const FSourceSignature& InSignature, FDreamUIDiagnosticBag& InDiagnostics)
+	UEdGraph* BeginHandlerGraph(UDreamWidgetBlueprint* InBlueprint, const FString& InHandlerName, const FSourceSignature& InSignature,
+		FDreamUIDiagnosticBag& InDiagnostics, FThunkContext& OutContext, UK2Node_FunctionEntry*& OutEntry, TArray<UEdGraphPin*>& OutParameterPins)
 	{
-		const FDreamUIEventDecl* Event = GLoweringAst != nullptr ? GLoweringAst->FindEvent(InRoute.EventName) : nullptr;
-		if (Event == nullptr || Event->Params.Num() != InRoute.Arguments.Num())
-		{
-			// Both were checked when the route was named; the AST is the one both halves read, so this is not a state
-			// a file can reach.
-			InDiagnostics.AddError(EDreamUIDiagnosticCode::EmitRouteUnsupported, InRoute.Location, FString::Printf(
-				TEXT("internal: 'emit %s' no longer matches the events block it was checked against"), *InRoute.EventName));
-			return false;
-		}
-
-		UEdGraph* Graph = FBlueprintEditorUtils::CreateNewGraph(InBlueprint, FName(*InRoute.HandlerName), UEdGraph::StaticClass(),
+		UEdGraph* Graph = FBlueprintEditorUtils::CreateNewGraph(InBlueprint, FName(*InHandlerName), UEdGraph::StaticClass(),
 			UEdGraphSchema_K2::StaticClass());
 		InBlueprint->FunctionGraphs.Add(Graph);
 
@@ -1376,19 +2246,45 @@ namespace DreamUIExpressionThunksLocal
 			Entry->CreateUserDefinedPin(Parameter.Key, Parameter.Value, EGPD_Output);
 		}
 
-		FThunkContext Context;
-		Context.Blueprint = InBlueprint;
-		Context.Diagnostics = &InDiagnostics;
-		Context.Ast = GLoweringAst;
-		Context.Graph = Graph;
-		Context.LastExecPin = Entry->FindPin(UEdGraphSchema_K2::PN_Then);
+		OutContext.Blueprint = InBlueprint;
+		OutContext.Diagnostics = &InDiagnostics;
+		OutContext.Ast = GLoweringAst;
+		OutContext.Graph = Graph;
+		OutContext.LastExecPin = Entry->FindPin(UEdGraphSchema_K2::PN_Then);
+		OutParameterPins.Reset();
 		for (UEdGraphPin* Pin : Entry->Pins)
 		{
 			if (Pin != nullptr && Pin->Direction == EGPD_Output && Pin->PinType.PinCategory != UEdGraphSchema_K2::PC_Exec)
 			{
-				Context.LocalPins.Add(Pin->PinName.ToString(), Pin);
+				OutContext.LocalPins.Add(Pin->PinName.ToString(), Pin);
+				OutParameterPins.Add(Pin);
 			}
 		}
+		OutEntry = Entry;
+		return Graph;
+	}
+
+	/**
+	 * The body of one emit handler: a function taking what the source event sends, evaluating the arguments and
+	 * calling the dispatcher -- "Call Picked", exactly the node an author would drag out of My Blueprint.
+	 */
+	bool BuildEmitHandler(UDreamWidgetBlueprint* InBlueprint, const DreamUIExpressionThunks::FEmitRoute& InRoute,
+		const FSourceSignature& InSignature, FDreamUIDiagnosticBag& InDiagnostics)
+	{
+		const FDreamUIEventDecl* Event = GLoweringAst != nullptr ? GLoweringAst->FindEvent(InRoute.EventName) : nullptr;
+		if (Event == nullptr || Event->Params.Num() != InRoute.Arguments.Num())
+		{
+			// Both were checked when the route was named; the AST is the one both halves read, so this is not a state
+			// a file can reach.
+			InDiagnostics.AddError(EDreamUIDiagnosticCode::EmitRouteUnsupported, InRoute.Location, FString::Printf(
+				TEXT("internal: 'emit %s' no longer matches the events block it was checked against"), *InRoute.EventName));
+			return false;
+		}
+
+		FThunkContext Context;
+		UK2Node_FunctionEntry* Entry = nullptr;
+		TArray<UEdGraphPin*> EventPins;
+		UEdGraph* Graph = BeginHandlerGraph(InBlueprint, InRoute.HandlerName, InSignature, InDiagnostics, Context, Entry, EventPins);
 
 		// The dispatcher, by self reference and by name. On the first compile that declares it the skeleton this
 		// resolves against does not have it yet, so the node comes without its parameter pins and they are made here
@@ -1481,6 +2377,150 @@ namespace DreamUIExpressionThunksLocal
 		}
 
 		// Private like every function this pass makes, and never pure: a broadcast is the side effect it exists for.
+		Entry->AddExtraFlags(FUNC_Private);
+		return true;
+	}
+
+	/**
+	 * The body of one `Event -> Path.Func` handler: a function taking what the source event sends, reading the receiver
+	 * (`Path`), doing nothing while it is unset, and calling Func on it -- with the arguments written between the
+	 * parentheses, evaluated like any `<-` expression with the event's parameters in scope by name; or, with none
+	 * written, with nothing (a Func that takes nothing) or with the event's own parameters passed on (a Func that takes
+	 * exactly those). Anything else is RouteArgumentMismatch, said here because only here are both signatures known.
+	 *
+	 * The receiver is read when the event fires, not when the widget is made: a view model handed over or swapped later
+	 * is the one the next click calls.
+	 */
+	bool BuildRouteHandler(UDreamWidgetBlueprint* InBlueprint, const DreamUIExpressionThunks::FEmitRoute& InRoute, const FName InEventName,
+		const FSourceSignature& InSignature, FDreamUIDiagnosticBag& InDiagnostics)
+	{
+		TArray<FString> Segments;
+		if (!SplitPath(InRoute.RouteTarget, Segments) || Segments.Num() < 2)
+		{
+			// Checked when the route was named; not a state a file can reach.
+			InDiagnostics.AddError(EDreamUIDiagnosticCode::RouteMemberFunctionNotFound, InRoute.Location, FString::Printf(
+				TEXT("internal: '-> %s' no longer names a member function"), *InRoute.RouteTarget));
+			return false;
+		}
+		const FString FunctionName = Segments.Last();
+		const UEdGraphSchema_K2* Schema = GetDefault<UEdGraphSchema_K2>();
+
+		FThunkContext Context;
+		UK2Node_FunctionEntry* Entry = nullptr;
+		TArray<UEdGraphPin*> EventPins;
+		UEdGraph* Graph = BeginHandlerGraph(InBlueprint, InRoute.HandlerName, InSignature, InDiagnostics, Context, Entry, EventPins);
+
+		// The receiver path, read like any member path -- with the event's parameters shadowing the class's members, as
+		// they do in the arguments.
+		const FEmitted Receiver = EmitMemberPath(Segments, Segments.Num() - 1, InRoute.Location, Context);
+		UFunction* Function = nullptr;
+		if (!Context.bFailed)
+		{
+			UClass* ReceiverClass = GetPinObjectClass(Receiver.PinType);
+			FString WhyNot = FString::Printf(TEXT("'%s' holds no object"), *JoinPath(Segments, Segments.Num() - 1));
+			Function = ReceiverClass != nullptr ? FindCallableMember(ReceiverClass, FunctionName, WhyNot) : nullptr;
+			if (Function == nullptr || Function->HasAnyFunctionFlags(FUNC_BlueprintPure))
+			{
+				Context.FailWith(EDreamUIDiagnosticCode::RouteMemberFunctionNotFound, InRoute.Location, FString::Printf(
+					TEXT("'%s -> %s' calls nothing: %s"), *InEventName.ToString(), *InRoute.RouteTarget,
+					Function == nullptr ? *WhyNot : TEXT("it is BlueprintPure")));
+			}
+		}
+
+		UK2Node_CallFunction* Call = nullptr;
+		TArray<const FProperty*> Inputs;
+		if (!Context.bFailed)
+		{
+			GetInputParameters(Function, Inputs);
+			FGraphNodeCreator<UK2Node_CallFunction> CallCreator(*Graph);
+			Call = CallCreator.CreateNode(/*bSelectNewNode*/false);
+			Call->SetFromFunction(Function);
+			CallCreator.Finalize();
+			if (!Function->HasAnyFunctionFlags(FUNC_Static))
+			{
+				UEdGraphPin* TargetPin = Call->FindPin(UEdGraphSchema_K2::PN_Self, EGPD_Input);
+				if (TargetPin == nullptr || !Schema->TryCreateConnection(Receiver.Pin, TargetPin))
+				{
+					Context.Fail(InRoute.Location, FString::Printf(TEXT("internal: the call to '%s' would not take its target"), *InRoute.RouteTarget));
+				}
+			}
+		}
+
+		if (!Context.bFailed && InRoute.bHasArgumentList)
+		{
+			if (InRoute.Arguments.Num() != Inputs.Num())
+			{
+				Context.FailWith(EDreamUIDiagnosticCode::RouteArgumentMismatch, InRoute.Location, FString::Printf(
+					TEXT("'-> %s(...)' passes %d argument(s), and %s takes %d: %s%s"), *InRoute.RouteTarget, InRoute.Arguments.Num(),
+					*FunctionName, Inputs.Num(), *FunctionName, *DescribeInputs(Inputs)));
+			}
+			for (int32 Index = 0; Index < InRoute.Arguments.Num() && !Context.bFailed; ++Index)
+			{
+				const FDreamUIExpression& Argument = InRoute.Arguments[Index];
+				UEdGraphPin* ParameterPin = Call->FindPin(Inputs[Index]->GetFName(), EGPD_Input);
+				if (ParameterPin == nullptr)
+				{
+					Context.Fail(Argument.Location, FString::Printf(TEXT("internal: '%s' grew no pin for its parameter '%s'"),
+						*FunctionName, *Inputs[Index]->GetName()));
+					break;
+				}
+				FEmitted Value;
+				if (!TryEmitEnumeratorLiteral(Argument, ParameterPin, Context, Value))
+				{
+					Value = EmitExpression(Argument, Context);
+					if (Context.bFailed)
+					{
+						break;
+					}
+				}
+				// The step that is the ROUTE's mistake rather than the expression's: a value of a type the function's
+				// parameter does not take.
+				Context.FailCode = EDreamUIDiagnosticCode::RouteArgumentMismatch;
+				Context.FailPrefix = FString::Printf(TEXT("argument %d of '%s(...)' is its '%s', a %s, and "), Index + 1, *InRoute.RouteTarget,
+					*Inputs[Index]->GetName(), *UEdGraphSchema_K2::TypeToText(ParameterPin->PinType).ToString());
+				ConnectOrDefault(ParameterPin, Value, Context, Argument.Location);
+				Context.FailCode = EDreamUIDiagnosticCode::BindingExpressionUnsupported;
+				Context.FailPrefix.Reset();
+			}
+		}
+		else if (!Context.bFailed && Inputs.Num() > 0)
+		{
+			// No parentheses, and a function that takes something: what the event sends is what it gets, parameter for
+			// parameter, or the line says how to give it what it takes instead.
+			bool bFits = Inputs.Num() == EventPins.Num();
+			for (int32 Index = 0; Index < Inputs.Num() && bFits; ++Index)
+			{
+				UEdGraphPin* ParameterPin = Call->FindPin(Inputs[Index]->GetFName(), EGPD_Input);
+				bFits = ParameterPin != nullptr && Schema->TryCreateConnection(EventPins[Index], ParameterPin);
+			}
+			if (!bFits)
+			{
+				Context.FailWith(EDreamUIDiagnosticCode::RouteArgumentMismatch, InRoute.Location, FString::Printf(
+					TEXT("'%s -> %s' passes on what '%s' sends, %s, and %s takes %s -- write the arguments it takes, '%s(...)', or route an event that sends them"),
+					*InEventName.ToString(), *InRoute.RouteTarget, *InEventName.ToString(), *DescribePins(EventPins),
+					*FunctionName, *DescribeInputs(Inputs), *InRoute.RouteTarget));
+			}
+		}
+
+		if (!Context.bFailed)
+		{
+			// After the arguments, so a call an argument makes has run before the check and the call that reads it -- the
+			// order EmitCall keeps for the same reason.
+			UEdGraphPin* Else = nullptr;
+			UEdGraphPin* Then = EmitValidityBranch(Receiver, Context, InRoute.Location, Else);
+			UEdGraphPin* CallExecute = Call->GetExecPin();
+			if (Then != nullptr && (CallExecute == nullptr || !Schema->TryCreateConnection(Then, CallExecute)))
+			{
+				Context.Fail(InRoute.Location, FString::Printf(TEXT("internal: the call to '%s' would not wire into its handler"), *InRoute.RouteTarget));
+			}
+		}
+		if (Context.bFailed)
+		{
+			FBlueprintEditorUtils::RemoveGraph(InBlueprint, Graph);
+			return false;
+		}
+
+		// Private like every function this pass makes, and never pure: the call is the side effect it exists for.
 		Entry->AddExtraFlags(FUNC_Private);
 		return true;
 	}
@@ -1622,16 +2662,29 @@ void DreamUIExpressionThunks::GenerateEmitHandlers(UDreamWidgetBlueprint* InBlue
 			continue;
 		}
 
+		const bool bMemberCall = Route.Kind == FEmitRoute::EKind::MemberCall;
+		const FName EventName = Binding->EventName;
 		FSourceSignature Signature;
 		FString Refusal;
 		if (!ResolveSourceSignature(*Binding, InTree, Signature, Refusal))
 		{
-			InDiagnostics.AddError(EDreamUIDiagnosticCode::EmitRouteUnsupported, Route.Location, FString::Printf(
-				TEXT("'emit %s' needs a handler that takes what its event sends, and %s"), *Route.EventName, *Refusal));
+			if (bMemberCall)
+			{
+				InDiagnostics.AddError(EDreamUIDiagnosticCode::RouteArgumentMismatch, Route.Location, FString::Printf(
+					TEXT("'-> %s' needs a handler that takes what its event sends, and %s"), *Route.RouteTarget, *Refusal));
+			}
+			else
+			{
+				InDiagnostics.AddError(EDreamUIDiagnosticCode::EmitRouteUnsupported, Route.Location, FString::Printf(
+					TEXT("'emit %s' needs a handler that takes what its event sends, and %s"), *Route.EventName, *Refusal));
+			}
 			DropRoutes(HandlerName);
 			continue;
 		}
-		if (!BuildEmitHandler(InBlueprint, Route, Signature, InDiagnostics))
+		const bool bBuilt = bMemberCall
+			? BuildRouteHandler(InBlueprint, Route, EventName, Signature, InDiagnostics)
+			: BuildEmitHandler(InBlueprint, Route, Signature, InDiagnostics);
+		if (!bBuilt)
 		{
 			DropRoutes(HandlerName);
 		}

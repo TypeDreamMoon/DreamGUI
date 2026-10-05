@@ -13,6 +13,27 @@ after 3 for 2.1.0 -- so the engine never takes 1.0.0 for the older of the two.
 
 ### New
 
+- **View models.** A `.dui` file declares the view models its class holds in a `viewmodels { … }` block -- by class,
+  with where each comes from: the host (a creation pin, `SetViewModel`, a host's `.dui` line), `= new`, `= global` /
+  `= global "Name"` from the new `UDreamViewModelSubsystem`, or `= parent` from the nearest enclosing widget. Bindings,
+  routes and loops reach into them through member paths: `Text <- Player.Name`, `Value <-> Settings.MasterVolume`,
+  `OnClicked += Settings.Apply()`, `OnValueChanged += Settings.SetVolume(Value)`, `for Item in Inventory.Items`. Any
+  UObject class can be one; `UDreamViewModel` is the convenient base (with `DREAM_VM_SET` for C++ setters), and anything
+  implementing `INotifyFieldValueChanged` -- UE's `UMVVMViewModelBase` included -- is subscribed to, with no dependency
+  on the ModelViewViewModel plugin. A path whose objects are not all set is not evaluated, and the property keeps its
+  value. See [View models](Docs/DuiLanguage.md#view-models).
+- **Bindings update when what they read changes.** The compiler records every variable and member a `<-` expression
+  reads; when all of them announce their changes (FieldNotify), the binding is subscribed and costs nothing between
+  changes. `Text <- Title` and `Shown <- Count > 0` on FieldNotify variables used to be read every frame.
+  `DreamUI.Binding.Dump` lists which bindings are read every frame and why; `DreamUI.Binding.ForcePoll 1` reads them
+  all every frame again.
+- **Rows update alone.** In a `for` or an `each`, a copy whose item announces a change of a member it shows is updated
+  without refreshing the list, and `Event -> Item.Func()` routes each copy's event to its own item -- moved along when a
+  list view recycles a cell. With a typed source (`TArray<UItemVM*>`) the compiler checks `Item.Member` (DUI6021) and
+  `Item.Func` (DUI6022).
+- **`+=` and `=` on events**, beside `->`: `+=` adds a listener and takes only a multicast event, `=` is the one listener
+  of a single-cast delegate -- which routes can now name at all -- and takes only that; the wrong one is DUI5025. `->`
+  takes either.
 - **Add Component lists only the components the selected widget supports** (`FDreamUIComponentSupport`). A mesh
   modifier needs a visual that builds a mesh, a sprite player a Sprite, a sprite-sheet player a Texture, a hyperlink or
   the text animation a Text, a UMG interaction a UMG Widget visual; a retainer or invalidation box needs the widget's
@@ -24,6 +45,9 @@ after 3 for 2.1.0 -- so the engine never takes 1.0.0 for the older of the two.
 
 ### Changed
 
+- **A binding that reads only FieldNotify variables no longer reads them every frame** once its Blueprint is
+  recompiled: it updates when they announce a change. C++ that assigns such a variable without broadcasting it -- which
+  FieldNotify never allowed -- is no longer covered up by the poll; `DreamUI.Binding.ForcePoll 1` finds it.
 - **The Content Browser's Add menu offers DreamGUI Widget at its top**, beside the engine's Blueprint Class and
   Material, rather than only one submenu down. The submenu itself, now labelled DreamGUI, is in sections -- Basic
   (DreamGUI Widget, Widget Animation), Fonts, Graphics, Rich Text -- with short labels and a one-line tooltip each,

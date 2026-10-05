@@ -63,7 +63,10 @@ struct DREAMGUI_API FDreamWidgetEntryRoute
 	UPROPERTY()
 	int32 BehaviourIndex = INDEX_NONE;
 
-	/** A BlueprintAssignable multicast delegate, or an FDreamUIEventDelegate property -- the two kinds `->` routes. */
+	/**
+	 * A BlueprintAssignable multicast delegate, an FDreamUIEventDelegate property, or a single-cast delegate -- the three
+	 * kinds a route names. A single-cast one is SET to the item's function (its one slot), the others are appended to.
+	 */
 	UPROPERTY()
 	FName EventName;
 

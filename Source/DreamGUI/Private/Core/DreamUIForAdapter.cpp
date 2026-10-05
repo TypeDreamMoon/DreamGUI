@@ -3,15 +3,18 @@
 #include "Core/DreamUIForAdapter.h"
 
 #include "Core/Components/DreamWidget.h"
+#include "Core/DreamUIBindingObserver.h"
 #include "Core/DreamUserWidget.h"
 #include "Core/DreamWidgetGeneratedClass.h"
 #include "Core/DreamWidgetPropertyBinding.h"
 #include "Core/DreamWidgetTree.h"
 #include "DreamGUI.h"
 #include "DreamUIBPLibrary.h"
+#include "Event/DreamUIEventDelegate.h"
 #include "INotifyFieldValueChanged.h"
 #include "Templates/UnrealTemplate.h"
 #include "UObject/Class.h"
+#include "UObject/ScriptDelegates.h"
 #include "UObject/StructOnScope.h"
 #include "UObject/UnrealType.h"
 
@@ -90,6 +93,571 @@ namespace DreamUIForAdapterLocal
 	}
 }
 
+// ============================================================================================ FDreamUIEntryRows
+
+namespace DreamUIEntryRowsLocal
+{
+	/** The FDreamUIEventDelegate an event property is, or null when it is some other kind of property. */
+	FDreamUIEventDelegate* AsEventDelegate(FProperty* InEventProperty, UObject* InTarget)
+	{
+		FStructProperty* StructEvent = CastField<FStructProperty>(InEventProperty);
+		if (StructEvent == nullptr || StructEvent->Struct != FDreamUIEventDelegate::StaticStruct())
+		{
+			return nullptr;
+		}
+		return StructEvent->ContainerPtrToValuePtr<FDreamUIEventDelegate>(InTarget);
+	}
+
+	/**
+	 * Whether InFunction may listen to a dynamic delegate of signature InSignature: it takes exactly what the delegate
+	 * sends, or -- the author's `()`, or a handler that wants nothing -- it takes nothing at all.
+	 *
+	 * Nothing at all is safe to call from a delegate that sends parameters: the delegate hands ProcessEvent its own
+	 * parameter frame, and ProcessEvent copies only the CALLEE's ParmsSize bytes out of it (UObject::ProcessEvent,
+	 * ScriptCore.cpp: `FMemory::Memcpy(Frame, Parms, Function->ParmsSize)`), which for a function with no parameters and
+	 * no return value is zero; a native thunk for such a function reads nothing from the frame either. A return value
+	 * would be written back into the caller's frame, which a delegate without one does not have room for, so "nothing"
+	 * means no return value too (NumParms counts it); and a delegate that itself returns something gets no such
+	 * shortcut -- its caller reads the result.
+	 */
+	bool FitsDelegate(const UFunction* InSignature, const UFunction* InFunction, bool bInCallWithoutArguments)
+	{
+		const bool bSignatureReturns = InSignature != nullptr && InSignature->GetReturnProperty() != nullptr;
+		if (InFunction->NumParms == 0 && !bSignatureReturns)
+		{
+			return true;
+		}
+		if (bInCallWithoutArguments || InSignature == nullptr)
+		{
+			return false;
+		}
+		return InSignature->IsSignatureCompatibleWith(InFunction);
+	}
+
+	/**
+	 * Route InTarget's event InEventProperty to InItem's InFunction, if the function fits the event -- false, and nothing
+	 * placed, when it does not: the compiler only checks the shape when the source's element class is known, and a
+	 * mismatch against an array of UObject is skipped here, silently, as every other loop mismatch is.
+	 */
+	bool PlaceRoute(UObject* InTarget, FProperty* InEventProperty, UObject* InItem, UFunction* InFunction, bool bInCallWithoutArguments)
+	{
+		const FName FunctionName = InFunction->GetFName();
+		if (FDreamUIEventDelegate* EventDelegate = AsEventDelegate(InEventProperty, InTarget))
+		{
+			// What UDreamUIEventDelegateParameterHelper::IsStillSupported accepts, which is what the event checks again
+			// every time it fires: exactly the event's own parameter type, or -- through the no-argument route -- none.
+			if (InFunction->NumParms == 0)
+			{
+				EventDelegate->AddRuntimeRoute(InItem, FunctionName, /*bInCallWithoutArguments*/true);
+				return true;
+			}
+			if (bInCallWithoutArguments
+				|| !UDreamUIEventDelegateParameterHelper::IsStillSupported(InFunction, EventDelegate->GetNativeParameterType()))
+			{
+				return false;
+			}
+			EventDelegate->AddRuntimeRoute(InItem, FunctionName);
+			return true;
+		}
+		if (FMulticastDelegateProperty* Multicast = CastField<FMulticastDelegateProperty>(InEventProperty))
+		{
+			if (!FitsDelegate(Multicast->SignatureFunction, InFunction, bInCallWithoutArguments))
+			{
+				return false;
+			}
+			// AddDelegate, which adds uniquely: one more listener beside the control's own and the graph's, as
+			// UDreamUserWidget::BindEventBindings routes a class-level `->`.
+			FScriptDelegate Route;
+			Route.BindUFunction(InItem, FunctionName);
+			Multicast->AddDelegate(MoveTemp(Route), InTarget);
+			return true;
+		}
+		if (FDelegateProperty* SingleCast = CastField<FDelegateProperty>(InEventProperty))
+		{
+			if (!FitsDelegate(SingleCast->SignatureFunction, InFunction, bInCallWithoutArguments))
+			{
+				return false;
+			}
+			// The one slot, replaced: `=` means exactly that, and a single-cast delegate has nowhere for a second.
+			if (FScriptDelegate* Slot = SingleCast->GetPropertyValuePtr_InContainer(InTarget))
+			{
+				Slot->BindUFunction(InItem, FunctionName);
+				return true;
+			}
+		}
+		return false;
+	}
+
+	/** Take back what PlaceRoute placed for InItem's InFunctionName. Only that: whatever else listens stays. */
+	void TakeRouteOff(UObject* InTarget, FProperty* InEventProperty, UObject* InItem, FName InFunctionName)
+	{
+		if (FDreamUIEventDelegate* EventDelegate = AsEventDelegate(InEventProperty, InTarget))
+		{
+			// The struct holds its target strongly, so the item is alive whenever there is an entry to take off.
+			if (IsValid(InItem))
+			{
+				EventDelegate->RemoveRuntimeRoute(InItem, InFunctionName);
+			}
+			return;
+		}
+		if (FMulticastDelegateProperty* Multicast = CastField<FMulticastDelegateProperty>(InEventProperty))
+		{
+			// A listener whose object died is never called and is compacted by the delegate itself.
+			if (IsValid(InItem))
+			{
+				FScriptDelegate Route;
+				Route.BindUFunction(InItem, InFunctionName);
+				Multicast->RemoveDelegate(Route, InTarget);
+			}
+			return;
+		}
+		if (FDelegateProperty* SingleCast = CastField<FDelegateProperty>(InEventProperty))
+		{
+			// Cleared only while it still names this item's function: something set afterwards -- a graph, another
+			// `=` -- is somebody else's, and clearing it would be taking a listener this row never placed.
+			FScriptDelegate* Slot = SingleCast->GetPropertyValuePtr_InContainer(InTarget);
+			if (Slot != nullptr && Slot->GetFunctionName() == InFunctionName
+				&& (IsValid(InItem) ? Slot->GetUObject() == InItem : !Slot->IsBound()))
+			{
+				Slot->Unbind();
+			}
+		}
+	}
+
+	/**
+	 * Take off whatever listens to InTarget's event through InFunctionName and was not placed by this row: what a widget
+	 * duplicated while it carried a route brings along (see FDreamUIEntryRows). A single-cast delegate needs nothing --
+	 * the row's own route replaces it.
+	 */
+	void ScrubCarriedRoutes(UObject* InTarget, FProperty* InEventProperty, FName InFunctionName)
+	{
+		if (FDreamUIEventDelegate* EventDelegate = AsEventDelegate(InEventProperty, InTarget))
+		{
+			// Every runtime route to the function, whoever it calls: a duplicate's (its Transient target did not come
+			// across) or another adapter's that fed these cells before (an owner that re-resolved).
+			EventDelegate->RemoveRuntimeRoute(nullptr, InFunctionName);
+			return;
+		}
+		FMulticastDelegateProperty* Multicast = CastField<FMulticastDelegateProperty>(InEventProperty);
+		if (Multicast == nullptr)
+		{
+			return;
+		}
+		const FMulticastScriptDelegate* Listeners = Multicast->GetMulticastDelegate(Multicast->ContainerPtrToValuePtr<void>(InTarget));
+		if (Listeners == nullptr)
+		{
+			return;
+		}
+		// A copy of the list: removing changes the delegate's own.
+		for (UObject* Listener : Listeners->GetAllObjects())
+		{
+			FScriptDelegate Carried;
+			Carried.BindUFunction(Listener, InFunctionName);
+			Multicast->RemoveDelegate(Carried, InTarget);
+		}
+	}
+
+	UObject* ResolveRouteTarget(const FDreamWidgetEntryRoute& InRoute, const TMap<FName, UDreamWidget*>& InWidgetsByDisplayName)
+	{
+		UDreamWidget* const* FoundWidget = InWidgetsByDisplayName.Find(InRoute.TargetWidgetDisplayName);
+		return ResolveDreamWidgetBindingTarget(FoundWidget != nullptr ? *FoundWidget : nullptr, InRoute.Target, InRoute.BehaviourIndex);
+	}
+}
+
+FDreamUIEntryRows::~FDreamUIEntryRows()
+{
+	// Rows' watchers stop in their own destructors. Routes are left: the rows' widgets are the adapter owner's, and they
+	// go down with it.
+}
+
+void FDreamUIEntryRows::Initialize(UObject* InLifetimeOwner, FOnEntryChanged InOnEntryChanged)
+{
+	StopWatching();
+	for (TPair<TObjectKey<UDreamWidget>, FRow>& Pair : Rows)
+	{
+		Retire(MoveTemp(Pair.Value.Observer));
+	}
+	Rows.Reset();
+	LifetimeOwner = InLifetimeOwner;
+	OnEntryChanged = MoveTemp(InOnEntryChanged);
+	LastRuledClass.Reset();
+	bLastRuledClassAnnounces = false;
+}
+
+void FDreamUIEntryRows::AimRow(UDreamWidget* InRow, UObject* InItem, const FDreamWidgetEachBinding& InBinding,
+	const TMap<FName, UDreamWidget*>& InWidgetsByDisplayName)
+{
+	if (!IsValid(InRow) || !HasRowWork(InBinding))
+	{
+		return;
+	}
+	UObject* NewItem = IsValid(InItem) ? InItem : nullptr;
+
+	const TObjectKey<UDreamWidget> Key(InRow);
+	FRow* Found = Rows.Find(Key);
+	const bool bFirstSight = Found == nullptr;
+	FRow& Row = bFirstSight ? Rows.Add(Key) : *Found;
+	if (!bFirstSight && Row.Item.Get() == NewItem && (NewItem != nullptr || !Row.Item.IsStale()))
+	{
+		// Showing it already: its routes are on and its watcher is on it.
+		return;
+	}
+	Row.Widget = InRow;
+
+	// Off the old item before anything goes on the new one: between the two the row calls nobody, never both.
+	TakeRoutesOff(Row);
+	Row.Item = NewItem;
+
+	if (NewItem == nullptr)
+	{
+		if (Row.Observer.IsValid())
+		{
+			Row.Observer->Stop();
+		}
+	}
+	else if (Row.Observer.IsValid())
+	{
+		// Re-aimed: SetRoot re-subscribes along every path only when it was started, so a watcher a row showing nothing
+		// had stopped is started again.
+		Row.Observer->SetRoot(NewItem);
+		if (!Row.Observer->IsStarted())
+		{
+			Row.Observer->Start();
+		}
+	}
+	else if (ShouldWatch(NewItem->GetClass(), InBinding))
+	{
+		Row.Observer = MakeUnique<FDreamUIBindingObserver>();
+		// Weak on the lifetime owner, as every delegate the watcher places on the item is: an adapter collected before
+		// the item announces anything is simply not called.
+		const TWeakObjectPtr<UDreamWidget> WeakRow(InRow);
+		Row.Observer->Initialize(NewItem, LifetimeOwner.Get(),
+			FDreamUIBindingObserver::FOnClientChanged::CreateWeakLambda(LifetimeOwner.Get(), [this, WeakRow](int32 InClientId)
+			{
+				HandleClientChanged(WeakRow, InClientId);
+			}));
+		for (int32 EntryIndex = 0; EntryIndex < InBinding.EntryBindings.Num(); ++EntryIndex)
+		{
+			// Every entry, announced or not: the watcher subscribes only what the item's class announces, and the
+			// entry's index is what a report names.
+			const FName Member = InBinding.EntryBindings[EntryIndex].ItemMember;
+			Row.Observer->AddPath(MakeArrayView(&Member, 1), EntryIndex);
+		}
+		Row.Observer->Start();
+	}
+
+	PlaceRoutes(Row, NewItem, InBinding, InWidgetsByDisplayName, /*bInScrubFirst*/bFirstSight);
+}
+
+void FDreamUIEntryRows::ReleaseRow(const UDreamWidget* InRow, bool bInUnbindRoutes)
+{
+	FRow Released;
+	if (!Rows.RemoveAndCopyValue(TObjectKey<UDreamWidget>(InRow), Released))
+	{
+		return;
+	}
+	if (bInUnbindRoutes)
+	{
+		TakeRoutesOff(Released);
+	}
+	Retire(MoveTemp(Released.Observer));
+}
+
+void FDreamUIEntryRows::ReleaseAll(bool bInUnbindRoutes)
+{
+	// Taken out first: unbinding can run nothing, but a watcher stopping is not the place to find the map half-emptied.
+	TMap<TObjectKey<UDreamWidget>, FRow> Releasing = MoveTemp(Rows);
+	Rows.Reset();
+	for (TPair<TObjectKey<UDreamWidget>, FRow>& Pair : Releasing)
+	{
+		if (bInUnbindRoutes)
+		{
+			TakeRoutesOff(Pair.Value);
+		}
+		Retire(MoveTemp(Pair.Value.Observer));
+	}
+}
+
+void FDreamUIEntryRows::ReleaseDeadRows()
+{
+	for (auto It = Rows.CreateIterator(); It; ++It)
+	{
+		if (!It.Value().Widget.IsValid())
+		{
+			Retire(MoveTemp(It.Value().Observer));
+			It.RemoveCurrent();
+		}
+	}
+}
+
+void FDreamUIEntryRows::StopWatching()
+{
+	for (TPair<TObjectKey<UDreamWidget>, FRow>& Pair : Rows)
+	{
+		if (Pair.Value.Observer.IsValid())
+		{
+			Pair.Value.Observer->Stop();
+		}
+	}
+	for (const TUniquePtr<FDreamUIBindingObserver>& Retired : RetiredObservers)
+	{
+		Retired->Stop();
+	}
+}
+
+UObject* FDreamUIEntryRows::GetItem(const UDreamWidget* InRow) const
+{
+	const FRow* Found = Rows.Find(TObjectKey<UDreamWidget>(InRow));
+	return Found != nullptr ? Found->Item.Get() : nullptr;
+}
+
+int32 FDreamUIEntryRows::GetWatchedRowCount() const
+{
+	int32 Count = 0;
+	for (const TPair<TObjectKey<UDreamWidget>, FRow>& Pair : Rows)
+	{
+		Count += Pair.Value.Observer.IsValid() && Pair.Value.Observer->IsStarted() ? 1 : 0;
+	}
+	return Count;
+}
+
+int32 FDreamUIEntryRows::GetSubscriptionCount() const
+{
+	int32 Count = 0;
+	for (const TPair<TObjectKey<UDreamWidget>, FRow>& Pair : Rows)
+	{
+		Count += Pair.Value.Observer.IsValid() ? Pair.Value.Observer->GetSubscriptionCount() : 0;
+	}
+	return Count;
+}
+
+int32 FDreamUIEntryRows::GetRouteCount() const
+{
+	int32 Count = 0;
+	for (const TPair<TObjectKey<UDreamWidget>, FRow>& Pair : Rows)
+	{
+		Count += Pair.Value.Routes.Num();
+	}
+	return Count;
+}
+
+void FDreamUIEntryRows::MapByDisplayName(TConstArrayView<UDreamWidget*> InWidgets, TMap<FName, UDreamWidget*>& OutWidgetsByDisplayName)
+{
+	OutWidgetsByDisplayName.Reset();
+	OutWidgetsByDisplayName.Reserve(InWidgets.Num());
+	for (UDreamWidget* Candidate : InWidgets)
+	{
+		if (IsValid(Candidate))
+		{
+			OutWidgetsByDisplayName.FindOrAdd(FName(*Candidate->GetDisplayName()), Candidate);
+		}
+	}
+}
+
+bool FDreamUIEntryRows::WriteEntry(const FDreamWidgetEntryBinding& InEntry, UObject* InTarget, UObject* InItem,
+	TSet<UDreamUserWidget*>& OutWrittenUserWidgets)
+{
+	if (!IsValid(InTarget) || !IsValid(InItem))
+	{
+		return false;
+	}
+	FProperty* ItemProperty = InItem->GetClass()->FindPropertyByName(InEntry.ItemMember);
+	if (ItemProperty == nullptr)
+	{
+		// An item of another class than the one the author had in mind: skip. The compiler cannot check an item's class
+		// when the source is an array of UObject.
+		return false;
+	}
+	const void* ItemValue = ItemProperty->ContainerPtrToValuePtr<void>(InItem);
+
+	if (!InEntry.SetterName.IsNone())
+	{
+		// Through the setter, which is what makes the change take: SetText marks what SetText knows to mark. See
+		// FDreamWidgetPropertyBinding.
+		UFunction* Setter = InTarget->FindFunction(InEntry.SetterName);
+		FProperty* SetterParameter = nullptr;
+		if (Setter != nullptr)
+		{
+			for (TFieldIterator<FProperty> It(Setter); It && (It->PropertyFlags & CPF_Parm); ++It)
+			{
+				SetterParameter = *It;
+				break;
+			}
+		}
+		if (SetterParameter == nullptr)
+		{
+			return false;
+		}
+		FStructOnScope SetterFrame(Setter);
+		// The shared conversion, as every bound value takes: an exact type copied whole, two numbers of different
+		// widths converted, anything else refused rather than copied as bytes.
+		if (!CopyDreamWidgetBoundValue(ItemProperty, ItemValue, SetterParameter,
+			SetterParameter->ContainerPtrToValuePtr<void>(SetterFrame.GetStructMemory())))
+		{
+			return false;
+		}
+		InTarget->ProcessEvent(Setter, SetterFrame.GetStructMemory());
+		return true;
+	}
+
+	// No setter: a property the builder allowed to be written directly, which it does only for a user widget's (a
+	// component's `props` variable is a Blueprint variable, and those have none). What a setter would have done after
+	// the write -- show the change -- is the written widget re-running its own bindings, done once per widget by the
+	// caller (RerunWrittenUserWidgets) rather than once per property here.
+	FProperty* TargetProperty = InTarget->GetClass()->FindPropertyByName(InEntry.PropertyName);
+	if (TargetProperty == nullptr)
+	{
+		return false;
+	}
+	void* TargetValue = TargetProperty->ContainerPtrToValuePtr<void>(InTarget);
+	if (TargetProperty->SameType(ItemProperty) && TargetProperty->Identical(TargetValue, ItemValue))
+	{
+		// Unchanged, which every refresh of an unchanged list is: no write, no broadcast, and no reason to run the
+		// written widget's bindings again.
+		return false;
+	}
+	if (!CopyDreamWidgetBoundValue(ItemProperty, ItemValue, TargetProperty, TargetValue))
+	{
+		return false;
+	}
+	if (UDreamUserWidget* WrittenWidget = Cast<UDreamUserWidget>(InTarget))
+	{
+		// What a Blueprint's own set node does for a FieldNotify variable, and what anything subscribed to the field --
+		// a graph, a two-way binding, the written widget's own `for` over it -- is waiting for.
+		const UE::FieldNotification::FFieldId FieldId =
+			WrittenWidget->GetFieldNotificationDescriptor().GetField(WrittenWidget->GetClass(), InEntry.PropertyName);
+		if (FieldId.IsValid())
+		{
+			WrittenWidget->BroadcastFieldValueChanged(FieldId);
+		}
+		OutWrittenUserWidgets.Add(WrittenWidget);
+	}
+	return true;
+}
+
+void FDreamUIEntryRows::RerunWrittenUserWidgets(const TSet<UDreamUserWidget*>& InWrittenUserWidgets)
+{
+	// A user widget written to directly heard nothing (unless the property is a FieldNotify field, which WriteEntry
+	// broadcast), so its own `<-` bindings would show the old value until their next poll -- and its `for` and `each`
+	// blocks, which may read the very property just written, would not move at all. Only an initialized one: anything
+	// else is a duplicate still waiting for its tree, and what it holds in EachAdapters is its source's.
+	for (UDreamUserWidget* WrittenWidget : InWrittenUserWidgets)
+	{
+		if (IsValid(WrittenWidget) && WrittenWidget->IsInitialized())
+		{
+			WrittenWidget->EvaluatePropertyBindings();
+			WrittenWidget->RefreshEachBindings();
+		}
+	}
+}
+
+void FDreamUIEntryRows::PlaceRoutes(FRow& InOutRow, UObject* InItem, const FDreamWidgetEachBinding& InBinding,
+	const TMap<FName, UDreamWidget*>& InWidgetsByDisplayName, bool bInScrubFirst)
+{
+	for (const FDreamWidgetEntryRoute& Route : InBinding.EntryRoutes)
+	{
+		UObject* Target = DreamUIEntryRowsLocal::ResolveRouteTarget(Route, InWidgetsByDisplayName);
+		FProperty* EventProperty = IsValid(Target) ? Target->GetClass()->FindPropertyByName(Route.EventName) : nullptr;
+		if (EventProperty == nullptr)
+		{
+			// A row missing the widget, or a widget of another class than the template's: skip, as an entry binding does.
+			continue;
+		}
+		if (bInScrubFirst)
+		{
+			DreamUIEntryRowsLocal::ScrubCarriedRoutes(Target, EventProperty, Route.ItemFunction);
+		}
+		UFunction* Function = IsValid(InItem) ? InItem->FindFunction(Route.ItemFunction) : nullptr;
+		if (Function == nullptr || !DreamUIEntryRowsLocal::PlaceRoute(Target, EventProperty, InItem, Function, Route.bCallWithoutArguments))
+		{
+			continue;
+		}
+		FBoundRoute& Bound = InOutRow.Routes.AddDefaulted_GetRef();
+		Bound.Target = Target;
+		Bound.EventName = Route.EventName;
+		Bound.ItemFunction = Route.ItemFunction;
+	}
+}
+
+void FDreamUIEntryRows::TakeRoutesOff(FRow& InOutRow)
+{
+	UObject* Item = InOutRow.Item.Get();
+	for (const FBoundRoute& Bound : InOutRow.Routes)
+	{
+		// A target that is gone took its listeners with it.
+		UObject* Target = Bound.Target.Get();
+		FProperty* EventProperty = Target != nullptr ? Target->GetClass()->FindPropertyByName(Bound.EventName) : nullptr;
+		if (EventProperty != nullptr)
+		{
+			DreamUIEntryRowsLocal::TakeRouteOff(Target, EventProperty, Item, Bound.ItemFunction);
+		}
+	}
+	InOutRow.Routes.Reset();
+}
+
+void FDreamUIEntryRows::Retire(TUniquePtr<FDreamUIBindingObserver>&& InObserver)
+{
+	if (!InObserver.IsValid())
+	{
+		return;
+	}
+	InObserver->Stop();
+	if (ReportDepth > 0)
+	{
+		// Possibly the watcher whose report is on the stack right now. Destroyed once the outermost report returns.
+		RetiredObservers.Add(MoveTemp(InObserver));
+		return;
+	}
+	InObserver.Reset();
+}
+
+bool FDreamUIEntryRows::ShouldWatch(const UClass* InItemClass, const FDreamWidgetEachBinding& InBinding)
+{
+	if (InItemClass == nullptr)
+	{
+		return false;
+	}
+	if (LastRuledClass.Get() == InItemClass)
+	{
+		return bLastRuledClassAnnounces;
+	}
+	// Asked of the class, through FindFieldId, as every subscribe-or-poll ruling is: an item of a class that announces
+	// none of the members the entries read gets no watcher, and costs what a row cost before watching existed.
+	bool bAnnounces = false;
+	for (const FDreamWidgetEntryBinding& Entry : InBinding.EntryBindings)
+	{
+		if (DreamUIBindingPath::FindFieldId(InItemClass, Entry.ItemMember).IsValid())
+		{
+			bAnnounces = true;
+			break;
+		}
+	}
+	LastRuledClass = InItemClass;
+	bLastRuledClassAnnounces = bAnnounces;
+	return bAnnounces;
+}
+
+void FDreamUIEntryRows::HandleClientChanged(TWeakObjectPtr<UDreamWidget> InRow, int32 InClientId)
+{
+	UDreamWidget* RowWidget = InRow.Get();
+	const FRow* Found = RowWidget != nullptr ? Rows.Find(TObjectKey<UDreamWidget>(RowWidget)) : nullptr;
+	if (Found == nullptr || !Found->Item.IsValid())
+	{
+		// A row destroyed, or released, since the watcher was placed: ReleaseDeadRows drops it -- not from here, under
+		// the watcher's own callback.
+		return;
+	}
+	++ReportDepth;
+	OnEntryChanged.ExecuteIfBound(RowWidget, InClientId);
+	--ReportDepth;
+	if (ReportDepth == 0)
+	{
+		RetiredObservers.Reset();
+	}
+}
+
+// ============================================================================================ UDreamUIForAdapter
+
 void UDreamUIForAdapter::Initialize(UDreamUserWidget* InOwner, const FDreamWidgetEachBinding& InBinding, UDreamWidget* InHost, UDreamWidget* InTemplate)
 {
 	// A second Initialize is a new `for`, not an addition to the old one.
@@ -100,6 +668,7 @@ void UDreamUIForAdapter::Initialize(UDreamUserWidget* InOwner, const FDreamWidge
 	Template = InTemplate;
 	bCopiesKnownReady = false;
 	DeferredRefreshCount = 0;
+	Rows.Initialize(this, FDreamUIEntryRows::FOnEntryChanged::CreateUObject(this, &UDreamUIForAdapter::HandleEntryChanged));
 
 	UDreamWidget* Panel = IsValid(InTemplate) ? InTemplate->GetParent() : nullptr;
 	if (!IsValid(InOwner) || !IsValid(Panel))
@@ -218,6 +787,7 @@ void UDreamUIForAdapter::RefreshOnce()
 			{
 				// Moved away by something else. Still this adapter's to remove: it is a copy of the template, and the
 				// next refresh would otherwise make a second one for the same item.
+				Rows.ReleaseRow(Existing, /*bInUnbindRoutes*/true);
 				Existing->DestroyWidget();
 				continue;
 			}
@@ -240,6 +810,8 @@ void UDreamUIForAdapter::RefreshOnce()
 		{
 			for (UDreamWidget* Leaving : Unclaimed.Value)
 			{
+				// Its item's watcher stopped and its routes off first: the item may well outlive the row.
+				Rows.ReleaseRow(Leaving, /*bInUnbindRoutes*/true);
 				Leaving->DestroyWidget();
 			}
 		}
@@ -261,26 +833,35 @@ void UDreamUIForAdapter::RefreshOnce()
 		}
 	}
 
+	// A copy something else destroyed since the last refresh (a graph, the template going) is no longer in Copies; its
+	// row goes now.
+	Rows.ReleaseDeadRows();
+	if (!FDreamUIEntryRows::HasRowWork(Binding))
+	{
+		// Nothing written per copy and nothing routed: no copy needs walking.
+		return;
+	}
+
 	// Every copy, kept ones included: the same object can hold different values than it did at the last refresh, and
-	// the broadcast that brought this refresh about is usually exactly that.
+	// the broadcast that brought this refresh about is usually exactly that. A member the item announces is written
+	// again between refreshes too, by the copy's own watcher (HandleEntryChanged); one it does not announce only here.
 	TSet<UDreamUserWidget*> WrittenUserWidgets;
+	TMap<FName, UDreamWidget*> CopyWidgets;
 	for (int32 Index = 0; Index < Copies.Num(); ++Index)
 	{
-		ApplyEntryBindings(Copies[Index].Get(), Items[Index].Get(), WrittenUserWidgets);
-	}
-	// A user widget written to directly heard nothing (unless the property is a FieldNotify field, which
-	// ApplyEntryBindings broadcast), so its own `<-` bindings would show the old value until their next poll -- and
-	// its `for` and `each` blocks, which may read the very property just written, would not move at all. Both are
-	// run here, once per widget however many of its properties were written. Only an initialized one: anything
-	// else is a duplicate still waiting for its tree, and what it holds in EachAdapters is its source's.
-	for (UDreamUserWidget* WrittenWidget : WrittenUserWidgets)
-	{
-		if (IsValid(WrittenWidget) && WrittenWidget->IsInitialized())
+		UDreamWidget* Copy = Copies[Index].Get();
+		if (!IsValid(Copy))
 		{
-			WrittenWidget->EvaluatePropertyBindings();
-			WrittenWidget->RefreshEachBindings();
+			continue;
 		}
+		UObject* Item = Items[Index].Get();
+		MapCopyWidgets(Copy, CopyWidgets);
+		// The watcher and the routes follow the item before any value is written: nothing once the copy already shows it.
+		Rows.AimRow(Copy, Item, Binding, CopyWidgets);
+		ApplyEntryBindings(Item, CopyWidgets, WrittenUserWidgets);
 	}
+	// Run here, once per widget however many of its properties were written.
+	FDreamUIEntryRows::RerunWrittenUserWidgets(WrittenUserWidgets);
 }
 
 void UDreamUIForAdapter::ReleaseCopies()
@@ -295,6 +876,9 @@ void UDreamUIForAdapter::ReleaseCopies()
 	TArray<TObjectPtr<UDreamWidget>> Releasing = MoveTemp(Copies);
 	Copies.Reset();
 	Items.Reset();
+	// Every item's watcher stopped and every route taken off before the copies go: the items usually outlive them, and
+	// a delegate left on one would be one more for every list that ever showed it.
+	Rows.ReleaseAll(/*bInUnbindRoutes*/true);
 	for (const TObjectPtr<UDreamWidget>& Released : Releasing)
 	{
 		if (IsValid(Released))
@@ -326,12 +910,15 @@ TArray<UDreamWidget*> UDreamUIForAdapter::GetCopies() const
 void UDreamUIForAdapter::BeginDestroy()
 {
 	// The copies are not destroyed here: this runs inside a garbage collection, and they are the owner's widgets,
-	// which go down with the owner. Only the ticker, which would otherwise call into an object being collected.
+	// which go down with the owner. Only the ticker, which would otherwise call into an object being collected, and the
+	// items' watchers, whose delegates sit on items that may well live on. Routes stay where they are: they are on the
+	// copies' widgets, which go down with the owner too.
 	if (DeferredRefreshHandle.IsValid())
 	{
 		FTSTicker::GetCoreTicker().RemoveTicker(DeferredRefreshHandle);
 		DeferredRefreshHandle.Reset();
 	}
+	Rows.StopWatching();
 	Super::BeginDestroy();
 }
 
@@ -343,45 +930,15 @@ void UDreamUIForAdapter::FetchItems(TArray<UObject*>& OutItems) const
 	{
 		return;
 	}
-
-	// The compiler vetted the shape (DUI6006, DUI6007); a miss anywhere below means the class moved underneath us,
+	// `in Player.Items`: the object the path's leading members reach right now, and none when the chain is broken
+	// (Player not set yet) -- no items, as a source that is empty has none. The owning widget refreshes this adapter
+	// when anything along the path changes. A one-segment source reads the widget itself, as it always did.
+	UObject* SourceOwner = Binding.SourcePath.Num() > 0
+		? DreamUIBindingPath::ResolveOwner(OwningWidget, Binding.SourcePath)
+		: OwningWidget;
+	// The compiler vetted the shape (DUI6006, DUI6007); a miss anywhere in there means the class moved underneath us,
 	// which is the property bindings' rule too: no items, never a guess.
-	auto CopyOut = [&OutItems](const FArrayProperty* InItemsProperty, const void* InItemsMemory)
-	{
-		const FObjectPropertyBase* Inner = InItemsProperty != nullptr ? CastField<FObjectPropertyBase>(InItemsProperty->Inner) : nullptr;
-		if (Inner == nullptr || InItemsMemory == nullptr)
-		{
-			return;
-		}
-		FScriptArrayHelper Helper(InItemsProperty, InItemsMemory);
-		OutItems.Reserve(Helper.Num());
-		for (int32 Index = 0; Index < Helper.Num(); ++Index)
-		{
-			OutItems.Add(Inner->GetObjectPropertyValue(Helper.GetRawPtr(Index)));
-		}
-	};
-
-	if (Binding.bSourceIsFunction)
-	{
-		UFunction* Source = OwningWidget->FindFunction(Binding.SourceName);
-		if (Source == nullptr)
-		{
-			return;
-		}
-		// FStructOnScope rather than a raw buffer: the returned array has to be constructed before the call writes it
-		// and destroyed after it has been read.
-		FStructOnScope SourceFrame(Source);
-		OwningWidget->ProcessEvent(Source, SourceFrame.GetStructMemory());
-		const FArrayProperty* ItemsProperty = CastField<FArrayProperty>(Source->GetReturnProperty());
-		CopyOut(ItemsProperty, ItemsProperty != nullptr
-			? ItemsProperty->ContainerPtrToValuePtr<void>(SourceFrame.GetStructMemory()) : nullptr);
-	}
-	else
-	{
-		const FArrayProperty* ItemsProperty = FindFProperty<FArrayProperty>(OwningWidget->GetClass(), Binding.SourceName);
-		CopyOut(ItemsProperty, ItemsProperty != nullptr
-			? ItemsProperty->ContainerPtrToValuePtr<void>(OwningWidget) : nullptr);
-	}
+	DreamUIBindingPath::ReadObjectArray(SourceOwner, Binding.SourceName, Binding.bSourceIsFunction, OutItems);
 }
 
 void UDreamUIForAdapter::AdoptCopiesLeftByDuplication(UDreamWidget* InPanel, UDreamWidget* InTemplate)
@@ -492,101 +1049,55 @@ void UDreamUIForAdapter::PlaceCopies(UDreamWidget* InPanel, UDreamWidget* InTemp
 	}
 }
 
-void UDreamUIForAdapter::ApplyEntryBindings(UDreamWidget* InCopy, UObject* InItem, TSet<UDreamUserWidget*>& OutWrittenUserWidgets) const
+void UDreamUIForAdapter::MapCopyWidgets(UDreamWidget* InCopy, TMap<FName, UDreamWidget*>& OutWidgetsByDisplayName)
 {
-	if (!IsValid(InCopy) || !IsValid(InItem) || Binding.EntryBindings.Num() == 0)
+	TArray<UDreamWidget*> CopyWidgets;
+	DreamUIForAdapterLocal::CollectAuthoredWidgets(InCopy, CopyWidgets);
+	// One pass over the copy rather than one per binding, first match wins -- the `each` adapter's rule, for the same
+	// reason.
+	FDreamUIEntryRows::MapByDisplayName(CopyWidgets, OutWidgetsByDisplayName);
+}
+
+void UDreamUIForAdapter::ApplyEntryBindings(UObject* InItem, const TMap<FName, UDreamWidget*>& InCopyWidgets, TSet<UDreamUserWidget*>& OutWrittenUserWidgets)
+{
+	if (!IsValid(InItem))
 	{
 		return;
 	}
-
-	TArray<UDreamWidget*> CopyWidgets;
-	DreamUIForAdapterLocal::CollectAuthoredWidgets(InCopy, CopyWidgets);
-	// One pass over the copy rather than one per binding, first match wins -- the `each` adapter's rule, for the
-	// same reason.
-	TMap<FName, UDreamWidget*> WidgetsByDisplayName;
-	WidgetsByDisplayName.Reserve(CopyWidgets.Num());
-	for (UDreamWidget* Candidate : CopyWidgets)
+	for (int32 EntryIndex = 0; EntryIndex < Binding.EntryBindings.Num(); ++EntryIndex)
 	{
-		WidgetsByDisplayName.FindOrAdd(FName(*Candidate->GetDisplayName()), Candidate);
+		ApplyEntryBinding(EntryIndex, InItem, InCopyWidgets, OutWrittenUserWidgets);
 	}
+}
 
-	UClass* ItemClass = InItem->GetClass();
-	for (const FDreamWidgetEntryBinding& Entry : Binding.EntryBindings)
+void UDreamUIForAdapter::ApplyEntryBinding(int32 InEntryIndex, UObject* InItem, const TMap<FName, UDreamWidget*>& InCopyWidgets, TSet<UDreamUserWidget*>& OutWrittenUserWidgets)
+{
+	const FDreamWidgetEntryBinding& Entry = Binding.EntryBindings[InEntryIndex];
+	UDreamWidget* const* FoundWidget = InCopyWidgets.Find(Entry.TargetWidgetDisplayName);
+	UObject* Target = ResolveDreamWidgetBindingTarget(FoundWidget != nullptr ? *FoundWidget : nullptr, Entry.Target, Entry.BehaviourIndex);
+	if (!IsValid(Target))
 	{
-		UDreamWidget* const* FoundWidget = WidgetsByDisplayName.Find(Entry.TargetWidgetDisplayName);
-		UObject* Target = ResolveDreamWidgetBindingTarget(FoundWidget != nullptr ? *FoundWidget : nullptr, Entry.Target, Entry.BehaviourIndex);
-		FProperty* ItemProperty = ItemClass->FindPropertyByName(Entry.ItemMember);
-		if (!IsValid(Target) || ItemProperty == nullptr)
-		{
-			// An item of another class than the one the author had in mind, or a copy missing the widget: skip, as an
-			// `each` cell does. The compiler cannot check an item's class -- the source is an array of UObject.
-			continue;
-		}
-		const void* ItemValue = ItemProperty->ContainerPtrToValuePtr<void>(InItem);
-
-		if (!Entry.SetterName.IsNone())
-		{
-			// Through the setter, which is what makes the change take: SetText marks what SetText knows to mark. See
-			// FDreamWidgetPropertyBinding.
-			UFunction* Setter = Target->FindFunction(Entry.SetterName);
-			FProperty* SetterParameter = nullptr;
-			if (Setter != nullptr)
-			{
-				for (TFieldIterator<FProperty> It(Setter); It && (It->PropertyFlags & CPF_Parm); ++It)
-				{
-					SetterParameter = *It;
-					break;
-				}
-			}
-			if (SetterParameter == nullptr)
-			{
-				continue;
-			}
-			FStructOnScope SetterFrame(Setter);
-			// The shared conversion, as every bound value takes: an exact type copied whole, two numbers of different
-			// widths converted, anything else refused rather than copied as bytes.
-			if (!CopyDreamWidgetBoundValue(ItemProperty, ItemValue, SetterParameter,
-				SetterParameter->ContainerPtrToValuePtr<void>(SetterFrame.GetStructMemory())))
-			{
-				continue;
-			}
-			Target->ProcessEvent(Setter, SetterFrame.GetStructMemory());
-			continue;
-		}
-
-		// No setter: a property the builder allowed to be written directly, which it does only for a user widget's
-		// (a component's `props` variable is a Blueprint variable, and those have none). What a setter would have
-		// done after the write -- show the change -- is the copy re-running its own bindings, done once per widget
-		// by RefreshOnce rather than once per property here.
-		FProperty* TargetProperty = Target->GetClass()->FindPropertyByName(Entry.PropertyName);
-		if (TargetProperty == nullptr)
-		{
-			continue;
-		}
-		void* TargetValue = TargetProperty->ContainerPtrToValuePtr<void>(Target);
-		if (TargetProperty->SameType(ItemProperty) && TargetProperty->Identical(TargetValue, ItemValue))
-		{
-			// Unchanged, which every refresh of an unchanged list is: no write, no broadcast, and no reason to run the
-			// copy's bindings again.
-			continue;
-		}
-		if (!CopyDreamWidgetBoundValue(ItemProperty, ItemValue, TargetProperty, TargetValue))
-		{
-			continue;
-		}
-		if (UDreamUserWidget* WrittenWidget = Cast<UDreamUserWidget>(Target))
-		{
-			// What a Blueprint's own set node does for a FieldNotify variable, and what anything subscribed to the
-			// field -- a graph, a two-way binding, the copy's own `for` over it -- is waiting for.
-			const UE::FieldNotification::FFieldId FieldId =
-				WrittenWidget->GetFieldNotificationDescriptor().GetField(WrittenWidget->GetClass(), Entry.PropertyName);
-			if (FieldId.IsValid())
-			{
-				WrittenWidget->BroadcastFieldValueChanged(FieldId);
-			}
-			OutWrittenUserWidgets.Add(WrittenWidget);
-		}
+		// A copy missing the widget: skip, as an `each` cell does.
+		return;
 	}
+	++EntryWriteCount;
+	FDreamUIEntryRows::WriteEntry(Entry, Target, InItem, OutWrittenUserWidgets);
+}
+
+void UDreamUIForAdapter::HandleEntryChanged(UDreamWidget* InCopy, int32 InEntryIndex)
+{
+	UObject* Item = Rows.GetItem(InCopy);
+	if (!IsValid(InCopy) || !IsValid(Item) || !Binding.EntryBindings.IsValidIndex(InEntryIndex))
+	{
+		return;
+	}
+	// The one entry, on the one copy: no refresh, no other copy, no other member of this one. A refresh in progress
+	// needs no special care -- this writes a value onto a copy that exists, which is all the refresh's last step does.
+	TMap<FName, UDreamWidget*> CopyWidgets;
+	MapCopyWidgets(InCopy, CopyWidgets);
+	TSet<UDreamUserWidget*> WrittenUserWidgets;
+	ApplyEntryBinding(InEntryIndex, Item, CopyWidgets, WrittenUserWidgets);
+	FDreamUIEntryRows::RerunWrittenUserWidgets(WrittenUserWidgets);
 }
 
 void UDreamUIForAdapter::ScheduleDeferredRefresh()

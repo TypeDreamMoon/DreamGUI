@@ -32,7 +32,9 @@ struct DREAMGUI_API FDreamViewModelRegistryEntry
  * Lookup (Find): with a Name, the entry of that name whose object is a Class; with None, the first entry registered
  * with no name whose object is a Class, else the first entry of any name whose object is a Class. Registering an object
  * a second time under the same name replaces nothing and is ignored; registering a second object under a name already
- * taken replaces the first (and broadcasts), which is how a game swaps a global view model wholesale.
+ * taken replaces the first (and broadcasts), which is how a game swaps a global view model wholesale. With no name, the
+ * entry is keyed by the object's exact class: objects of two classes sit side by side unnamed, and a second unnamed
+ * object of the same class replaces the first.
  *
  * A widget whose global entry found nothing waits: OnRegisteredNative tells it when an object that fits arrives.
  */

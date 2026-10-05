@@ -4,6 +4,8 @@
 
 #include "CoreMinimal.h"
 
+class FJsonObject;
+
 /**
  * Dumps what the compiler knows into `DUI/.dui-symbols.json`, for editors that are not this one.
  *
@@ -26,4 +28,10 @@ public:
 
 	/** Writes the file now. Returns the path it wrote, empty when there was no DUI/ to write into. */
 	static FString ExportNow();
+
+	/**
+	 * The file's `viewModels` object, on its own: every loaded class a `viewmodels` line can name and what a member path
+	 * can reach on it. Exposed for the tests, which have no DUI/ directory to read the file back from.
+	 */
+	static TSharedRef<FJsonObject> DescribeViewModels();
 };

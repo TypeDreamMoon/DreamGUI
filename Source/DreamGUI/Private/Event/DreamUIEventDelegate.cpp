@@ -1016,6 +1016,10 @@ bool FDreamUIEventDelegate::IsBound()const
 }
 void FDreamUIEventDelegate::AddRuntimeRoute(UObject* InHandlerObject, FName InFunctionName)
 {
+	AddRuntimeRoute(InHandlerObject, InFunctionName, /*bInCallWithoutArguments*/false);
+}
+void FDreamUIEventDelegate::AddRuntimeRoute(UObject* InHandlerObject, FName InFunctionName, bool bInCallWithoutArguments)
+{
 	if (!IsValid(InHandlerObject) || InFunctionName.IsNone())
 	{
 		return;
@@ -1028,24 +1032,77 @@ void FDreamUIEventDelegate::AddRuntimeRoute(UObject* InHandlerObject, FName InFu
 	{
 		return;
 	}
+	// Appended even from inside this event's own FireEvent: the walk in progress stops at the count it started with, so
+	// a route added by one of its handlers is called from the next firing on, never half-way through this one.
 	FDreamUIEventDelegateData& Data = EventList.AddDefaulted_GetRef();
 	// The target directly, with no helper fields: this route names an object, not a place in a widget
 	// hierarchy, and CheckTargetObject takes a valid TargetObject as the answer without resolving.
 	Data.TargetObject = InHandlerObject;
 	Data.FunctionName = InFunctionName;
+	if (bInCallWithoutArguments)
+	{
+		// Empty and not native: Execute(void*, ...) then takes its no-parameter branch whatever the event fires with,
+		// FindAndExecute checks the handler against Empty, and ExecuteTargetFunction hands ProcessEvent the (empty)
+		// stored buffer -- nothing of the event's value is read, which is what the parentheses asked for.
+		Data.ParamType = EDreamUIEventDelegateParameterType::Empty;
+		Data.bUseNativeParameter = false;
+		return;
+	}
 	Data.ParamType = SupportParameterType;
 	// An Empty event fires through Execute() with no parameter at all, and that overload refuses
 	// bUseNativeParameter outright; every other one forwards what the event was fired with.
 	Data.bUseNativeParameter = SupportParameterType != EDreamUIEventDelegateParameterType::Empty;
+}
+bool FDreamUIEventDelegate::IsRetiredRuntimeRoute(const FDreamUIEventDelegateData& InData)
+{
+	return InData.HelperWidget == nullptr && InData.TargetObject == nullptr && InData.FunctionName.IsNone();
+}
+int32 FDreamUIEventDelegate::RemoveRuntimeRoute(UObject* InHandlerObject, FName InFunctionName)
+{
+	if (InFunctionName.IsNone())
+	{
+		return 0;
+	}
+	// A runtime route names no HelperWidget (AddRuntimeRoute sets none, every authored entry has one). One whose
+	// TargetObject is gone is a duplicate's copy of a route: the entry came across, the Transient target did not.
+	auto IsTheRoute = [InHandlerObject, InFunctionName](const FDreamUIEventDelegateData& Candidate)
+	{
+		return Candidate.HelperWidget == nullptr && Candidate.FunctionName == InFunctionName
+			&& (InHandlerObject == nullptr || Candidate.TargetObject == nullptr || Candidate.TargetObject == InHandlerObject);
+	};
+	if (FiringDepth.Value > 0)
+	{
+		// The list is being walked by index further up the stack: retire in place, so every index stays where it was.
+		// A retired entry has nothing to resolve (no target, no helper widget) and so calls nothing.
+		int32 Retired = 0;
+		for (FDreamUIEventDelegateData& Candidate : EventList)
+		{
+			if (IsTheRoute(Candidate))
+			{
+				Candidate.TargetObject = nullptr;
+				Candidate.FunctionName = NAME_None;
+				Candidate.CacheFunction = nullptr;
+				++Retired;
+			}
+		}
+		return Retired;
+	}
+	const int32 Removed = EventList.RemoveAll(IsTheRoute);
+	EventList.RemoveAll([](const FDreamUIEventDelegateData& Candidate) { return IsRetiredRuntimeRoute(Candidate); });
+	return Removed;
 }
 void FDreamUIEventDelegate::FireEvent()const
 {
 	if (EventList.Num() == 0)return;
 	if (SupportParameterType == EDreamUIEventDelegateParameterType::Empty)
 	{
-		for (auto& item : EventList)
+		// By index over the entries there were when the event fired, not a ranged for: a handler may route or unroute
+		// on this very event (see FiringDepth), and a ranged for over a list that changed underneath it asserts.
+		TGuardValue<int32> FiringGuard(FiringDepth.Value, FiringDepth.Value + 1);
+		const int32 Count = EventList.Num();
+		for (int32 Index = 0; Index < Count && Index < EventList.Num(); ++Index)
 		{
-			item.Execute();
+			EventList[Index].Execute();
 		}
 	}
 	else
@@ -1066,9 +1123,12 @@ void FDreamUIEventDelegate::LogParameterError(EDreamUIEventDelegateParameterType
 }
 void FDreamUIEventDelegate::FireEvent(void* InParam)const
 {
-	for (auto& item : EventList)
+	// See FireEvent(): by index, over the entries there were when the event fired.
+	TGuardValue<int32> FiringGuard(FiringDepth.Value, FiringDepth.Value + 1);
+	const int32 Count = EventList.Num();
+	for (int32 Index = 0; Index < Count && Index < EventList.Num(); ++Index)
 	{
-		item.Execute(InParam, SupportParameterType);
+		EventList[Index].Execute(InParam, SupportParameterType);
 	}
 }
 

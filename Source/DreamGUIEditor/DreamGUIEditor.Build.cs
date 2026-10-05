@@ -53,6 +53,7 @@ public class DreamGUIEditor : ModuleRules
                 "Projects",
                 "DirectoryWatcher",//FDreamUISourceWatcher
                 "Json",//FDreamUISymbolExport
+                "FieldNotification",//FDreamUISymbolExport lists the INotifyFieldValueChanged classes (view models)
                 "EditorWidgets",
                 "DesktopPlatform",//file system
                 "ImageWrapper",//texture load
