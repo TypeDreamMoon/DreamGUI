@@ -3,7 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Factories/Factory.h"
+#include "DataFactory/DreamUIAssetFactory.h"
 #include "DreamWidgetBlueprintFactory.generated.h"
 
 /**
@@ -14,7 +14,7 @@
  * starts with. The root widget itself is always plain -- what varies is the panel on it.
  */
 UCLASS()
-class DREAMGUIEDITOR_API UDreamWidgetBlueprintFactory : public UFactory
+class DREAMGUIEDITOR_API UDreamWidgetBlueprintFactory : public UDreamUIAssetFactory
 {
 	GENERATED_BODY()
 

@@ -9,6 +9,9 @@
 UDreamUIStaticSpriteAtlasDataFactory::UDreamUIStaticSpriteAtlasDataFactory()
 {
 	SupportedClass = UDreamUIStaticSpriteAtlasData::StaticClass();
+	MenuSection = GraphicsSection();
+	MenuLabel = NSLOCTEXT("DreamUIAssetMenu", "SpriteAtlas", "Sprite Atlas");
+	MenuToolTip = NSLOCTEXT("DreamUIAssetMenu", "SpriteAtlasToolTip", "The atlas that sprites set to static packing are packed into in the editor, mipmaps included.");
 	bCreateNew = true;
 	bEditAfterNew = true;
 }

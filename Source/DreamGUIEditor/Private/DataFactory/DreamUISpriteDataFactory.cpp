@@ -16,6 +16,9 @@
 UDreamUISpriteDataFactory::UDreamUISpriteDataFactory()
 {
 	SupportedClass = UDreamUISpriteData::StaticClass();
+	MenuSection = GraphicsSection();
+	MenuLabel = NSLOCTEXT("DreamUIAssetMenu", "Sprite", "Sprite");
+	MenuToolTip = NSLOCTEXT("DreamUIAssetMenu", "SpriteToolTip", "A texture a widget draws, packed into an atlas -- in the editor or at runtime -- so the widgets sharing it batch.");
 	bCreateNew = true;
 	bEditAfterNew = true;
 }

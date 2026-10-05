@@ -9,6 +9,9 @@
 UDreamUIFontEmojiDataFactory::UDreamUIFontEmojiDataFactory()
 {
 	SupportedClass = UDreamUIFontEmojiData::StaticClass();
+	MenuSection = FontsSection();
+	MenuLabel = NSLOCTEXT("DreamUIAssetMenu", "EmojiFont", "Emoji Font");
+	MenuToolTip = NSLOCTEXT("DreamUIAssetMenu", "EmojiFontToolTip", "Emoji for a font: each one a sprite, or a run of sprites to animate, drawn in place of its characters.");
 	bCreateNew = true;
 	bEditAfterNew = true;
 }

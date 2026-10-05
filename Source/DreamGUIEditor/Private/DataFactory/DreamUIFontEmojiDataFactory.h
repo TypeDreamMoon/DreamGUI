@@ -2,11 +2,11 @@
 
 #pragma once
 
-#include "Factories/Factory.h"
+#include "DataFactory/DreamUIAssetFactory.h"
 #include "DreamUIFontEmojiDataFactory.generated.h"
 
 UCLASS()
-class UDreamUIFontEmojiDataFactory : public UFactory
+class UDreamUIFontEmojiDataFactory : public UDreamUIAssetFactory
 {
 	GENERATED_BODY()
 public:

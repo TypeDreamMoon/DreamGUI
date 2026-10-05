@@ -113,7 +113,7 @@ or dragged into a level, an `ADreamWorldWidgetActor` — the same class as a sur
    That is the whole install for a fresh project, on a launcher install too: the plugin compiles against the
    engine's public headers only and carries its own generated msdfgen copy under `ThirdParty/`.
 2. Open [`Content/Samples/HelloDreamGUI.dui`](Content/Samples/HelloDreamGUI.dui) — the smallest file that is still
-   a real screen. Make a widget Blueprint for it (*Content Browser ▸ DreamUI ▸ DreamUI Widget Blueprint*) with
+   a real screen. Make a widget Blueprint for it (*Content Browser ▸ Add ▸ DreamGUI Widget*) with
    **DreamUI Text User Widget** (`UDreamTextUserWidget`) as its parent class — only such a class shows
    *Set Source File…* in the designer toolbar — point it at the file, and compile.
 3. Show it with `UDreamUIBPLibrary::AddWidgetOfClassToViewport`, or drag the Blueprint into a level. The screen

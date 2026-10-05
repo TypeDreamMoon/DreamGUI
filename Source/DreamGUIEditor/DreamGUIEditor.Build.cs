@@ -58,6 +58,7 @@ public class DreamGUIEditor : ModuleRules
                 "ImageWrapper",//texture load
                 "InputCore",//STableRow
                 "AssetTools",//Asset editor
+                "AssetDefinition",//FAssetCategoryPath: the sections of the DreamGUI Add menu (UDreamUIAssetFactory)
                 "ContentBrowser",//DreamGUI editor
                 "SceneOutliner",//DreamGUIPrefab editor, extend SceneOutliner
                 "ApplicationCore",//ClipboardCopy

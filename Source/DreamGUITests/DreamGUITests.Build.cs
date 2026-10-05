@@ -63,6 +63,7 @@ public class DreamGUITests : ModuleRules
 			{
 				"AppFramework",
 				"ApplicationCore",
+				"AssetDefinition",
 				"AssetRegistry",
 				"AssetTools",
 				"AutomationController",

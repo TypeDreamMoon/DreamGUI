@@ -51,6 +51,8 @@ namespace DreamWidgetBlueprintFactoryLocal
 UDreamWidgetBlueprintFactory::UDreamWidgetBlueprintFactory()
 {
 	SupportedClass = UDreamWidgetBlueprint::StaticClass();
+	MenuLabel = NSLOCTEXT("DreamUIAssetMenu", "WidgetBlueprint", "DreamGUI Widget");
+	MenuToolTip = NSLOCTEXT("DreamUIAssetMenu", "WidgetBlueprintToolTip", "A DreamGUI widget Blueprint: a screen or a reusable control, laid out in the designer, with a graph of its own.");
 	bCreateNew = true;
 	bEditAfterNew = true;
 	ParentClass = UDreamUserWidget::StaticClass();
@@ -58,10 +60,12 @@ UDreamWidgetBlueprintFactory::UDreamWidgetBlueprintFactory()
 
 uint32 UDreamWidgetBlueprintFactory::GetMenuCategories() const
 {
-	// The base resolves this through the asset type actions registered for SupportedClass, and there
-	// are none for this type yet -- which would file it under Blueprint rather than under DreamUI.
+	// The DreamUI category by name rather than through the asset type actions, so the entry does not
+	// depend on the order the module registers them in; and Basic as well. The widget Blueprint is the
+	// asset a DreamGUI author makes most, so it is offered at the top of the Add menu beside the
+	// engine's Blueprint Class and Material, not only one submenu down.
 	IAssetTools& AssetTools = FModuleManager::LoadModuleChecked<FAssetToolsModule>("AssetTools").Get();
-	return AssetTools.FindAdvancedAssetCategory(FName(TEXT("DreamUI")));
+	return EAssetTypeCategories::Basic | AssetTools.FindAdvancedAssetCategory(FName(TEXT("DreamUI")));
 }
 
 bool UDreamWidgetBlueprintFactory::ConfigureProperties()

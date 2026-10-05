@@ -6,6 +6,9 @@
 UDreamGradientAssetFactory::UDreamGradientAssetFactory()
 {
 	SupportedClass = UDreamGradientAsset::StaticClass();
+	MenuSection = GraphicsSection();
+	MenuLabel = NSLOCTEXT("DreamUIAssetMenu", "Gradient", "Gradient");
+	MenuToolTip = NSLOCTEXT("DreamUIAssetMenu", "GradientToolTip", "A gradient kept as an asset and shared across the project: the texts and rich-text tags that name it paint with it.");
 	bCreateNew = true;
 	bEditAfterNew = true;
 }

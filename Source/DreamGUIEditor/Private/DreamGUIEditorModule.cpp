@@ -329,10 +329,12 @@ void FDreamGUIEditorModule::StartupModule()
 	{
 		IAssetTools& AssetTools = FModuleManager::LoadModuleChecked<FAssetToolsModule>("AssetTools").Get();
 		//register AssetCategory
+		// Keyed DreamUI, which is what the factories look it up by; shown as the plugin's name. What each entry
+		// in it is called, and which of the submenu's sections it sits in, is the factory's (UDreamUIAssetFactory).
 		EAssetTypeCategories::Type DreamUIAssetCategoryBit = AssetTools.FindAdvancedAssetCategory(FName(TEXT("DreamUI")));
 		if (DreamUIAssetCategoryBit == EAssetTypeCategories::Misc)
 		{
-			DreamUIAssetCategoryBit = AssetTools.RegisterAdvancedAssetCategory(FName(TEXT("DreamUI")), LOCTEXT("DreamUIAssetCategory", "DreamUI"));
+			DreamUIAssetCategoryBit = AssetTools.RegisterAdvancedAssetCategory(FName(TEXT("DreamUI")), LOCTEXT("DreamUIAssetCategory", "DreamGUI"));
 		}
 
 		TSharedPtr<FAssetTypeActions_Base> SpriteDataAction = MakeShareable(new FAssetTypeActions_DreamUISpriteData(DreamUIAssetCategoryBit));

@@ -4,12 +4,12 @@
 
 #include "CoreMinimal.h"
 #include "Core/Text/DreamTextPaint.h"
-#include "Factories/Factory.h"
+#include "DataFactory/DreamUIAssetFactory.h"
 #include "DreamGradientAssetFactory.generated.h"
 
 /** Makes Dream Gradient assets (UDreamGradientAsset): from the Add menu, and from a gradient row's "Save as Gradient Asset". */
 UCLASS()
-class UDreamGradientAssetFactory : public UFactory
+class UDreamGradientAssetFactory : public UDreamUIAssetFactory
 {
 	GENERATED_BODY()
 public:

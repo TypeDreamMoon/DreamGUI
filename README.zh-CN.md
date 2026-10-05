@@ -109,7 +109,7 @@ UDreamUIBPLibrary::AddWidgetOfClassToViewport(this, WBP_Settings);   // 屏幕�
    对一个新项目，这就是全部安装步骤，Launcher 安装版引擎也一样：插件只编译引擎的公开头文件，并在 `ThirdParty/`
    下自带一份生成好的 msdfgen。
 2. 打开 [`Content/Samples/HelloDreamGUI.dui`](Content/Samples/HelloDreamGUI.dui)——仍然算一个真界面的最小文件。给它新建一个
-   Widget Blueprint（*内容浏览器 ▸ DreamUI ▸ DreamUI Widget Blueprint*），父类选 **DreamUI Text User Widget**
+   Widget Blueprint（*内容浏览器 ▸ 添加 ▸ DreamGUI Widget*），父类选 **DreamUI Text User Widget**
    （`UDreamTextUserWidget`）——只有这种类的设计器工具栏里才有 *Set Source File…*——用它指向这个文件，编译。
 3. 用 `UDreamUIBPLibrary::AddWidgetOfClassToViewport` 显示它，或者把 Blueprint 拖进关卡。屏幕根、射线检测器和
    事件系统都会按需创建，不需要别的配置。

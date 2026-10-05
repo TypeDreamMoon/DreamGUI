@@ -11,6 +11,15 @@ after 3 for 2.1.0 -- so the engine never takes 1.0.0 for the older of the two.
 
 ## Unreleased
 
+### Changed
+
+- **The Content Browser's Add menu offers DreamGUI Widget at its top**, beside the engine's Blueprint Class and
+  Material, rather than only one submenu down. The submenu itself, now labelled DreamGUI, is in sections -- Basic
+  (DreamGUI Widget, Widget Animation), Fonts, Graphics, Rich Text -- with short labels and a one-line tooltip each,
+  instead of one alphabetical list of type names with the widget last and the classes' code comments as tooltips. The
+  bitmap font, which is no longer developed, reads Legacy Bitmap Font and points to the distance-field font. Asset type
+  names, on tiles and in filters, are unchanged.
+
 ### Fixed
 
 - **A DreamUI Widget Blueprint's thumbnail is the screen it authors.** The Content Browser tile was a wireframe of the

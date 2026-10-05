@@ -2,11 +2,11 @@
 
 #pragma once
 
-#include "Factories/Factory.h"
+#include "DataFactory/DreamUIAssetFactory.h"
 #include "DreamUIStaticMeshCacheFactory.generated.h"
 
 UCLASS()
-class UDreamUIStaticMeshCacheFactory : public UFactory
+class UDreamUIStaticMeshCacheFactory : public UDreamUIAssetFactory
 {
 	GENERATED_BODY()
 public:

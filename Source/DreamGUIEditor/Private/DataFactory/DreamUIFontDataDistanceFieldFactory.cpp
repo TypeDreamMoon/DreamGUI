@@ -8,6 +8,9 @@
 UDreamUIFontDataDistanceFieldFactory::UDreamUIFontDataDistanceFieldFactory()
 {
 	SupportedClass = UDreamUIFontData_DistanceField::StaticClass();
+	MenuSection = FontsSection();
+	MenuLabel = NSLOCTEXT("DreamUIAssetMenu", "DistanceFieldFont", "Distance Field Font");
+	MenuToolTip = NSLOCTEXT("DreamUIAssetMenu", "DistanceFieldFontToolTip", "A font drawn from distance fields of a font face: sharp at any size, with outlines and shadows. The font to make.");
 	bCreateNew = true;
 	bEditAfterNew = true;
 }

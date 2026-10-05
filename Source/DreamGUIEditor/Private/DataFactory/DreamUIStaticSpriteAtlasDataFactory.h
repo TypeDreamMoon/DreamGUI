@@ -2,11 +2,11 @@
 
 #pragma once
 
-#include "Factories/Factory.h"
+#include "DataFactory/DreamUIAssetFactory.h"
 #include "DreamUIStaticSpriteAtlasDataFactory.generated.h"
 
 UCLASS()
-class UDreamUIStaticSpriteAtlasDataFactory : public UFactory
+class UDreamUIStaticSpriteAtlasDataFactory : public UDreamUIAssetFactory
 {
 	GENERATED_BODY()
 public:

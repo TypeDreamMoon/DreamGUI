@@ -9,6 +9,9 @@
 UDreamUIFontDataBitmapFactory::UDreamUIFontDataBitmapFactory()
 {
 	SupportedClass = UDreamUIFontData_Bitmap::StaticClass();
+	MenuSection = FontsSection();
+	MenuLabel = NSLOCTEXT("DreamUIAssetMenu", "LegacyBitmapFont", "Legacy Bitmap Font");
+	MenuToolTip = NSLOCTEXT("DreamUIAssetMenu", "LegacyBitmapFontToolTip", "A font rasterised from a face at each size it is drawn at. No longer developed: make a Distance Field Font instead.");
 	bCreateNew = true;
 	bEditAfterNew = true;
 }

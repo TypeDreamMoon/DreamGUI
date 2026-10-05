@@ -11,6 +11,8 @@ UDreamUISequenceFactory::UDreamUISequenceFactory()
 	bCreateNew = true;
 	bEditAfterNew = false;
 	SupportedClass = UDreamUISequence::StaticClass();
+	MenuLabel = NSLOCTEXT("DreamUIAssetMenu", "WidgetAnimation", "Widget Animation");
+	MenuToolTip = NSLOCTEXT("DreamUIAssetMenu", "WidgetAnimationToolTip", "A widget animation as an asset of its own: reusable across widget Blueprints, and playable from a Level Sequence.");
 }
 
 UObject* UDreamUISequenceFactory::FactoryCreateNew(UClass* Class, UObject* InParent, FName Name, EObjectFlags Flags, UObject* Context, FFeedbackContext* Warn)

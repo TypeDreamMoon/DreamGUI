@@ -9,6 +9,9 @@
 UDreamUIRichTextCustomStyleDataFactory::UDreamUIRichTextCustomStyleDataFactory()
 {
 	SupportedClass = UDreamUIRichTextCustomStyleData::StaticClass();
+	MenuSection = RichTextSection();
+	MenuLabel = NSLOCTEXT("DreamUIAssetMenu", "RichTextStyles", "Rich Text Styles");
+	MenuToolTip = NSLOCTEXT("DreamUIAssetMenu", "RichTextStylesToolTip", "Tags for rich text: each names a style -- colour, size, font, effects -- for the text the tag wraps.");
 	bCreateNew = true;
 	bEditAfterNew = true;
 }

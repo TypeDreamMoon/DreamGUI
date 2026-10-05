@@ -2,11 +2,11 @@
 
 #pragma once
 
-#include "Factories/Factory.h"
+#include "DataFactory/DreamUIAssetFactory.h"
 #include "DreamUIFontDataDistanceFieldFactory.generated.h"
 
 UCLASS()
-class UDreamUIFontDataDistanceFieldFactory : public UFactory
+class UDreamUIFontDataDistanceFieldFactory : public UDreamUIAssetFactory
 {
 	GENERATED_BODY()
 public:

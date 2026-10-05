@@ -9,6 +9,9 @@
 UDreamUIStaticMeshCacheFactory::UDreamUIStaticMeshCacheFactory()
 {
 	SupportedClass = UDreamUIStaticMeshCacheData::StaticClass();
+	MenuSection = GraphicsSection();
+	MenuLabel = NSLOCTEXT("DreamUIAssetMenu", "StaticMeshCache", "Static Mesh Cache");
+	MenuToolTip = NSLOCTEXT("DreamUIAssetMenu", "StaticMeshCacheToolTip", "A static mesh's geometry kept for a Dream Static Mesh widget, which cannot read the mesh at runtime.");
 	bCreateNew = true;
 	bEditAfterNew = true;
 }

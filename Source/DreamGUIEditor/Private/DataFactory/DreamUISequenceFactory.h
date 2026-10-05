@@ -3,12 +3,12 @@
 
 #pragma once
 
-#include "Factories/Factory.h"
+#include "DataFactory/DreamUIAssetFactory.h"
 #include "AssetTypeActions_Base.h"
 #include "DreamUISequenceFactory.generated.h"
 
 UCLASS()
-class UDreamUISequenceFactory : public UFactory
+class UDreamUISequenceFactory : public UDreamUIAssetFactory
 {
 	GENERATED_BODY()
 public:
