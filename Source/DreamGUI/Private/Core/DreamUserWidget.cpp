@@ -638,6 +638,42 @@ void UDreamUserWidget::PlaySound(USoundBase* InSound, float InVolumeMultiplier, 
 #pragma endregion
 
 #pragma region ViewportPlacementAndGeometry
+void UDreamUserWidget::AddToViewport(int32 ZOrder)
+{
+	UDreamScreenUISubsystem* Screen = UDreamScreenUISubsystem::Get(GetWorld());
+	if (Screen == nullptr)
+	{
+		UE_LOG(DreamGUI, Warning, TEXT("[%s].%d '%s' is in a world with no DreamUI screen, so it cannot be added to the viewport."),
+			ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *GetPathDisplayName());
+		return;
+	}
+	// A page already on screen has a screen root for its parent; that is a re-add, which the subsystem
+	// turns into "move to this sort order and show it". Any other parent is a hierarchy the widget
+	// would be pulled out of without being told -- UMG's "already has a parent widget".
+	if (GetParent() != nullptr && !Screen->IsInViewport(this))
+	{
+		UE_LOG(DreamGUI, Error, TEXT("[%s].%d '%s' already has a parent ('%s'), so it cannot also be added to the viewport. RemoveFromParent first."),
+			ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *GetPathDisplayName(), *GetParent()->GetPathDisplayName());
+		return;
+	}
+	Screen->AddToViewport(this, ZOrder);
+}
+
+bool UDreamUserWidget::AddToPlayerScreen(int32 ZOrder)
+{
+	// GetOwningPlayer already falls back to the first local player, so this only refuses when there is
+	// no local player at all -- the case UMG refuses as "no owning player".
+	if (GetOwningPlayer() == nullptr)
+	{
+		UE_LOG(DreamGUI, Error, TEXT("[%s].%d '%s' has no owning player, so it has no player screen to go on."),
+			ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *GetPathDisplayName());
+		return false;
+	}
+	AddToViewport(ZOrder);
+	UDreamScreenUISubsystem* Screen = UDreamScreenUISubsystem::Get(GetWorld());
+	return Screen != nullptr && Screen->IsInViewport(this);
+}
+
 FVector2D UDreamUserWidget::GetLocalSize() const
 {
 	return FVector2D(GetWidth(), GetHeight());
@@ -2000,30 +2036,70 @@ bool UDreamUserWidget::SetContentForNamedSlot(FName InSlotName, UDreamWidget* In
 namespace DreamUserWidgetCreateLocal
 {
 	/**
-	 * What both creation verbs share. InTreeOuter is where a minted tree lives -- a host, the manager's
-	 * pool, or the world when there is no manager -- and OutTree receives it; neither is used when the
-	 * widget joins InParent's tree instead.
+	 * What both creation verbs share, in the two halves BeginCreateDreamWidget and FinishCreateDreamWidget
+	 * expose. InTreeOuter is where a minted tree lives -- a host, the manager's pool, or the world when
+	 * there is no manager -- and OutTree receives it; neither is used when the widget joins InParent's
+	 * tree instead.
 	 */
-	UDreamUserWidget* CreateUnder(UWorld* InWorld, TSubclassOf<UDreamUserWidget> InClass, UDreamWidget* InParent, UObject* InTreeOuter,
-		UDreamWidgetTree** OutTree, const TFunction<void(UDreamUserWidget*)>& InCallbackBeforeAlive);
+	UDreamUserWidget* MakeUnder(TSubclassOf<UDreamUserWidget> InClass, UDreamWidget* InParent, UObject* InTreeOuter,
+		UDreamWidgetTree** OutTree);
+	void BringToLife(UDreamUserWidget* InWidget, UDreamWidget* InParent, const TFunction<void(UDreamUserWidget*)>& InCallbackBeforeAlive);
+
+	UDreamUserWidget* CreateUnder(TSubclassOf<UDreamUserWidget> InClass, UDreamWidget* InParent, UObject* InTreeOuter,
+		UDreamWidgetTree** OutTree, const TFunction<void(UDreamUserWidget*)>& InCallbackBeforeAlive)
+	{
+		UDreamUserWidget* UserWidget = MakeUnder(InClass, InParent, InTreeOuter, OutTree);
+		if (UserWidget != nullptr)
+		{
+			BringToLife(UserWidget, InParent, InCallbackBeforeAlive);
+		}
+		return UserWidget;
+	}
+
+	/**
+	 * Where a tree with no host lives: the manager's, held in its pool of free roots until something
+	 * takes it; the world only where there is no manager to hold it, which is a world no widget lives in
+	 * for long. Null, said, for no world.
+	 */
+	UObject* FreeTreeOuter(UWorld* InWorld, const TCHAR* InCaller)
+	{
+		if (!IsValid(InWorld))
+		{
+			UE_LOG(DreamGUI, Error, TEXT("%s needs a valid world."), InCaller);
+			return nullptr;
+		}
+		UObject* TreeOuter = UDreamUIManagerWorldSubsystem::GetInstance(InWorld);
+		return TreeOuter != nullptr ? TreeOuter : InWorld;
+	}
 }
 
 UDreamUserWidget* CreateDreamWidget(UWorld* InWorld, TSubclassOf<UDreamUserWidget> InClass, UDreamWidget* InParent,
 	const TFunction<void(UDreamUserWidget*)>& InCallbackBeforeAlive)
 {
-	if (!IsValid(InWorld))
+	UObject* TreeOuter = DreamUserWidgetCreateLocal::FreeTreeOuter(InWorld, TEXT("CreateDreamWidget"));
+	return TreeOuter != nullptr
+		? DreamUserWidgetCreateLocal::CreateUnder(InClass, InParent, TreeOuter, nullptr, InCallbackBeforeAlive)
+		: nullptr;
+}
+
+UDreamUserWidget* BeginCreateDreamWidget(UWorld* InWorld, TSubclassOf<UDreamUserWidget> InClass)
+{
+	UObject* TreeOuter = DreamUserWidgetCreateLocal::FreeTreeOuter(InWorld, TEXT("BeginCreateDreamWidget"));
+	return TreeOuter != nullptr ? DreamUserWidgetCreateLocal::MakeUnder(InClass, nullptr, TreeOuter, nullptr) : nullptr;
+}
+
+UDreamUserWidget* FinishCreateDreamWidget(UDreamUserWidget* InWidget)
+{
+	// Only what BeginCreateDreamWidget hands out: a second Finish, or one on a widget made any other way,
+	// would initialize or register it twice.
+	if (!IsValid(InWidget) || InWidget->IsInitialized() || InWidget->HasRegistered() || InWidget->GetParent() != nullptr)
 	{
-		UE_LOG(DreamGUI, Error, TEXT("[%s].%d CreateDreamWidget needs a valid world."), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
+		UE_LOG(DreamGUI, Error, TEXT("[%s].%d '%s' is not a widget BeginCreateDreamWidget made and nothing has finished yet."),
+			ANSI_TO_TCHAR(__FUNCTION__), __LINE__, InWidget != nullptr ? *InWidget->GetPathName() : TEXT("None"));
 		return nullptr;
 	}
-	// No host: the tree is the manager's, held in its pool of free roots until something takes it; the
-	// world only where there is no manager to hold it, which is a world no widget lives in for long.
-	UObject* TreeOuter = UDreamUIManagerWorldSubsystem::GetInstance(InWorld);
-	if (TreeOuter == nullptr)
-	{
-		TreeOuter = InWorld;
-	}
-	return DreamUserWidgetCreateLocal::CreateUnder(InWorld, InClass, InParent, TreeOuter, nullptr, InCallbackBeforeAlive);
+	DreamUserWidgetCreateLocal::BringToLife(InWidget, nullptr, nullptr);
+	return InWidget;
 }
 
 UDreamUserWidget* CreateDreamWidgetForHost(UObject& InHost, TSubclassOf<UDreamUserWidget> InClass, UDreamWidgetTree*& OutTree,
@@ -2036,15 +2112,22 @@ UDreamUserWidget* CreateDreamWidgetForHost(UObject& InHost, TSubclassOf<UDreamUs
 		UE_LOG(DreamGUI, Error, TEXT("[%s].%d %s is in no world to create a widget in."), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *InHost.GetPathName());
 		return nullptr;
 	}
-	return DreamUserWidgetCreateLocal::CreateUnder(World, InClass, nullptr, &InHost, &OutTree, InCallbackBeforeAlive);
+	return DreamUserWidgetCreateLocal::CreateUnder(InClass, nullptr, &InHost, &OutTree, InCallbackBeforeAlive);
 }
 
-UDreamUserWidget* DreamUserWidgetCreateLocal::CreateUnder(UWorld* InWorld, TSubclassOf<UDreamUserWidget> InClass, UDreamWidget* InParent,
-	UObject* InTreeOuter, UDreamWidgetTree** OutTree, const TFunction<void(UDreamUserWidget*)>& InCallbackBeforeAlive)
+UDreamUserWidget* DreamUserWidgetCreateLocal::MakeUnder(TSubclassOf<UDreamUserWidget> InClass, UDreamWidget* InParent,
+	UObject* InTreeOuter, UDreamWidgetTree** OutTree)
 {
 	if (!IsValid(InClass))
 	{
 		UE_LOG(DreamGUI, Error, TEXT("[%s].%d CreateDreamWidget needs a valid class."), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
+		return nullptr;
+	}
+	// NewObject asserts on an abstract class. A class picked from a list cannot be one, but a class pin
+	// fed from a variable can, and that has to be an error in the log, not a crash.
+	if (InClass->HasAnyClassFlags(CLASS_Abstract))
+	{
+		UE_LOG(DreamGUI, Error, TEXT("[%s].%d %s is abstract, so it cannot be created."), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *InClass->GetName());
 		return nullptr;
 	}
 
@@ -2075,20 +2158,25 @@ UDreamUserWidget* DreamUserWidgetCreateLocal::CreateUnder(UWorld* InWorld, TSubc
 	{
 		OwnedTree->RootWidget = UserWidget;
 	}
-	UserWidget->Initialize();
+	return UserWidget;
+}
+
+void DreamUserWidgetCreateLocal::BringToLife(UDreamUserWidget* InWidget, UDreamWidget* InParent,
+	const TFunction<void(UDreamUserWidget*)>& InCallbackBeforeAlive)
+{
+	InWidget->Initialize();
 	// Parent first, then registration: OnRegister reconciles the panel slot against the parent, so
 	// registering an orphan and attaching it afterwards produces a widget the parent never laid out.
 	if (IsValid(InParent))
 	{
-		UserWidget->SetParentBeforeRegister(InParent);
+		InWidget->SetParentBeforeRegister(InParent);
 	}
 	// Last chance to reshape what was built before anything observes it. See the header.
 	if (InCallbackBeforeAlive)
 	{
-		InCallbackBeforeAlive(UserWidget);
+		InCallbackBeforeAlive(InWidget);
 	}
-	RegisterDreamWidgetHierarchy(UserWidget);
-	return UserWidget;
+	RegisterDreamWidgetHierarchy(InWidget);
 }
 
 // ---------------------------------------------------------------------------------- animation

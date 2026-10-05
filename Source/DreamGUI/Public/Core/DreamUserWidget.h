@@ -277,6 +277,32 @@ public:
 	// every widget can name its owning player now, and their bodies never referred to anything a user
 	// widget has. They are still reachable here by inheritance, so no graph or call site changed.
 
+	// ---------------------------------------------------------------------------- viewport
+
+	/**
+	 * UMG's AddToViewport: put this widget on screen at ZOrder and switch it on. The other half is
+	 * UDreamWidget::RemoveFromParent, which takes it off again and keeps it.
+	 *
+	 * There is one screen per local player and no shared layer behind them, so the screen is the
+	 * owning player's -- the first local player's when nothing named one, which is the whole answer in
+	 * a single-player game. Calling it on a widget already on screen moves it to ZOrder and shows it
+	 * again. ZOrder is the page canvas's sort order, and 1000 and up belong to the page stack (see
+	 * UDreamScreenUISubsystem::AddToViewport).
+	 *
+	 * Refused, as UMG refuses it, for a widget that already has a parent other than the screen: it
+	 * would be taken out of that hierarchy without the hierarchy being told. RemoveFromParent first.
+	 */
+	UFUNCTION(BlueprintCallable, BlueprintCosmetic, Category = "DreamGUI|UserWidget|Viewport", meta = (AdvancedDisplay = "ZOrder"))
+	void AddToViewport(int32 ZOrder = 0);
+
+	/**
+	 * UMG's AddToPlayerScreen: AddToViewport on the owning player's screen, refused when there is no
+	 * owning player rather than falling back to screen 0. That is the whole difference here, since
+	 * every screen already is one player's. True when the widget is on that screen afterwards.
+	 */
+	UFUNCTION(BlueprintCallable, BlueprintCosmetic, Category = "DreamGUI|UserWidget|Viewport", meta = (AdvancedDisplay = "ZOrder"))
+	bool AddToPlayerScreen(int32 ZOrder = 0);
+
 	// ---------------------------------------------------------------------------- viewport placement
 
 	/**
@@ -1361,6 +1387,25 @@ DREAMGUI_API UDreamUserWidget* CreateDreamWidget(UWorld* InWorld, TSubclassOf<UD
  */
 DREAMGUI_API UDreamUserWidget* CreateDreamWidgetForHost(UObject& InHost, TSubclassOf<UDreamUserWidget> InClass, UDreamWidgetTree*& OutTree,
 	const TFunction<void(UDreamUserWidget*)>& InCallbackBeforeAlive = nullptr);
+
+/**
+ * CreateDreamWidget with no parent, in two halves, for a caller that writes the new widget's own
+ * properties before anything reads them: the Create Dream Widget node, whose Expose on Spawn pins are
+ * assigned between the two.
+ *
+ * Between rather than after, which is where UMG's Create Widget assigns them, because Initialize is
+ * where this widget first reads its own data -- PreConstruct, On Initialized and the first evaluation
+ * of every binding and `each` list all run inside it. A value written after Initialize reaches the
+ * widget a frame late, if a binding is subscribed to it, and never otherwise.
+ *
+ * BeginCreateDreamWidget makes the widget and the tree it is the root of, and nothing more: it is not
+ * initialized, not registered, and nothing holds it, so finish it in the same stretch of code, before
+ * anything can collect garbage. FinishCreateDreamWidget is the rest of CreateDreamWidget -- Initialize,
+ * register, and begin play when the world's UI manager already has. Both return null for what they
+ * cannot use.
+ */
+DREAMGUI_API UDreamUserWidget* BeginCreateDreamWidget(UWorld* InWorld, TSubclassOf<UDreamUserWidget> InClass);
+DREAMGUI_API UDreamUserWidget* FinishCreateDreamWidget(UDreamUserWidget* InWidget);
 
 template<typename WidgetT>
 WidgetT* CreateDreamWidget(UWorld* InWorld, TSubclassOf<UDreamUserWidget> InClass = WidgetT::StaticClass(), UDreamWidget* InParent = nullptr,

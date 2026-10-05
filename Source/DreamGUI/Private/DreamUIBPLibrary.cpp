@@ -4,6 +4,7 @@
 #include "DreamUIBPLibrary.h"
 #include "Components/SceneComponent.h"
 #include "Engine/Engine.h"
+#include "GameFramework/PlayerController.h"
 
 #include "DreamUIDelegateHandleWrapper.h"
 #include "Framework/Application/SlateApplication.h"
@@ -109,6 +110,44 @@ UDreamWidget* UDreamUIBPLibrary::CreateDreamWidgetOfClass(UObject* WorldContextO
 		return nullptr;
 	}
 	return DreamUICreateLocal::RegisterAndPark(World, Root);
+}
+
+UDreamUserWidget* UDreamUIBPLibrary::BeginDeferredCreateDreamWidget(UObject* WorldContextObject, TSubclassOf<UDreamUserWidget> WidgetType, APlayerController* OwningPlayer)
+{
+	if (!IsValid(WidgetType))
+	{
+		UE_LOG(DreamGUI, Error, TEXT("[%s].%d WidgetType is not valid."), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
+		return nullptr;
+	}
+	// A remote player's controller names no screen, focus or input on this machine.
+	if (IsValid(OwningPlayer) && !OwningPlayer->IsLocalController())
+	{
+		UE_LOG(DreamGUI, Error, TEXT("[%s].%d %s is not a local player controller, so it cannot own a widget."),
+			ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *OwningPlayer->GetName());
+		return nullptr;
+	}
+	UWorld* World = GEngine ? GEngine->GetWorldFromContextObject(WorldContextObject, EGetWorldErrorMode::LogAndReturnNull) : nullptr;
+	if (World == nullptr)
+	{
+		return nullptr;
+	}
+	UDreamUserWidget* Widget = ::BeginCreateDreamWidget(World, WidgetType);
+	if (Widget != nullptr && IsValid(OwningPlayer))
+	{
+		// Before Initialize, so On Initialized and the first bindings already answer to this player.
+		Widget->SetOwningPlayer(OwningPlayer);
+	}
+	return Widget;
+}
+
+UDreamUserWidget* UDreamUIBPLibrary::FinishDeferredCreateDreamWidget(UDreamUserWidget* Widget)
+{
+	if (!IsValid(Widget))
+	{
+		return nullptr;
+	}
+	UWorld* World = Widget->GetWorld();
+	return DreamUICreateLocal::RegisterAndPark(World, ::FinishCreateDreamWidget(Widget)) != nullptr ? Widget : nullptr;
 }
 
 UDreamWidget* UDreamUIBPLibrary::GetOrCreateScreenSpaceUIRoot(UObject* WorldContextObject)

@@ -35,6 +35,8 @@ Initialize, from the class, every time.
 
 | Function | Kind | Description |
 |---|---|---|
+| `bool AddToPlayerScreen(int32 ZOrder)` | callable | UMG's AddToPlayerScreen: AddToViewport on the owning player's screen, refused when there is no owning player rather than falling back to screen 0. That is the whole difference here, since every screen already is one player's. True when the widget is on that screen afterwards. |
+| `void AddToViewport(int32 ZOrder)` | callable | UMG's AddToViewport: put this widget on screen at ZOrder and switch it on. The other half is UDreamWidget::RemoveFromParent, which takes it off again and keeps it. |
 | `void BindToAnimationEvent(UMovieSceneSequence* Animation, FDreamUIAnimationDynamicEvent Delegate, EDreamUIAnimationEvent AnimationEvent)` | callable | The general form of the two above. |
 | `void BindToAnimationFinished(UMovieSceneSequence* Animation, FDreamUIAnimationDynamicEvent Delegate)` | callable | Called when an instance of the animation ends, naturally or by Stop. Unbind with the same delegate. |
 | `void BindToAnimationStarted(UMovieSceneSequence* Animation, FDreamUIAnimationDynamicEvent Delegate)` | callable | Called when an instance of the animation starts. Unbind with the same delegate. |
