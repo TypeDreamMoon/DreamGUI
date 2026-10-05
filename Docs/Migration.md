@@ -1,16 +1,54 @@
-# Moving a project to DreamGUI 2.1
+# Moving a project to DreamGUI 1.0
+
+1.0.0 is the first public release. The fork's development builds before it were numbered 1.x, 2.0 and 2.1 -- see the
+[CHANGELOG](../CHANGELOG.md) -- and this guide names them that way: a 2.1 here is the development build, older than 1.0.0.
 
 For four kinds of project:
 
-- one on **2.0** -- [From 2.0 to 2.1](#from-20-to-21), right below, is all that changed since;
+- one on a **development build, 2.1 or 2.0** -- [From 2.1 to 1.0.0](#from-21-to-100), right below, and from 2.0
+  [From 2.0 to 2.1](#from-20-to-21) before it;
 - one with **assets saved against LGUI or LexUI** — the upstream this fork started from;
-- one on an **earlier build of this fork** (1.x) — the single-module plugin, before the module split, the
+- one on an **early build of this fork** (the single-module 1.x builds, not 1.0.0) — before the module split, the
   input rework and the renderer rework;
 - one with **C++ of its own against the plugin** — subclasses, custom visuals, a viewport client of its own.
 
-The numbered sections are the move to 2.0 from LGUI, LexUI or 1.x; a project making it reads [From 2.0 to
-2.1](#from-20-to-21) afterwards. Everything here is about keeping what you have. What the plugin is and how to start from
+The numbered sections are the move to the 2.0 line from LGUI, LexUI or the 1.x builds; a project making it reads
+[From 2.0 to 2.1](#from-20-to-21) and [From 2.1 to 1.0.0](#from-21-to-100) afterwards. Everything here is about keeping what you have. What the plugin is and how to start from
 nothing is in the [README](../README.md); what each version added is in the [CHANGELOG](../CHANGELOG.md).
+
+## From 2.1 to 1.0.0
+
+For a project on the 2.1.0 development build. Nothing was renamed between the two, so an asset 2.1 saved naming the
+current types loads as it is, and nothing has to be done before opening the project -- with one exception, below.
+What 1.0.0 adds to `.dui` -- components written in `.dui`, `use … as`, `if`, `for`, `rows`,
+`@slot { … }` and `@fill` -- is new syntax beside the old, and a 2.1 file compiles as it did. Three things can look
+different afterwards, each the end of a bug a project may have worked around:
+
+- **A brush material whose only parameter of the canvas's is `DreamUI_IsRenderByDreamUIRenderer` is told the renderer.**
+  Such a material was premultiplied twice by DreamGUI's renderer, and so drew darker at its edges. A material that
+  compensated for that now draws too light: take the compensation out.
+- **A material instance given to an image shows the parameters set on it after its first draw.** An instance that was
+  re-created every frame to get round that can be kept and set instead.
+- **Text and blocks after a material-drawn image draw again** on screen and render-target canvases; a layout that kept
+  text out of the batch after such an image no longer needs to.
+
+The focus ring now fits the control it marks and can be refused per control (`UUISelectable::bUseFocusRing`); a ring
+class of your own with a Blueprint handler keeps its own layout. `DreamTween.MaxStepSeconds` is new and off by default.
+
+**The plugin no longer carries CoreRedirects.** 2.1 shipped 763 of them in `Config/DefaultDreamGUI.ini`; 1.0.0 ships
+none, and that file is gone. An asset that loaded only through one -- saved against LGUI or LexUI, by an early 1.x
+build, before the module split, or before a control or event rename -- has to be resaved before it is opened with
+1.0.0, or it loses whatever named an old type. The redirects work with 1.0.0 unchanged, since nothing was renamed
+since 2.1, so the project borrows them for as long as the resave takes:
+
+1. Copy the `[CoreRedirects]` section of [2.1.0's `Config/DefaultDreamGUI.ini`](https://github.com/TypeDreamMoon/DreamGUI/blob/3049561a1742ab59d83a404ee267d2f580e53589/Config/DefaultDreamGUI.ini) (commit `3049561a`) into the project's
+   `Config/DefaultEngine.ini`.
+2. Open the project with 1.0.0 and resave every asset that uses DreamGUI -- *File > Save All* after opening them, or
+   the `ResavePackages` commandlet over the content.
+3. Delete the section from `Config/DefaultEngine.ini` again.
+
+A project that never had such an asset -- one started on 2.1, or resaved since -- skips all three. Sections 1 to 3
+below say what the redirects cover.
 
 ## From 2.0 to 2.1
 
@@ -342,12 +380,12 @@ holds a packaged game's text to the same build run on uncooked content (`Tools/T
    redirects rewrite names in memory, not on disk — but the first save of an asset writes the new names into
    it, and there is no way back from that save to the old plugin.
 3. **Take the old plugin out.** An LGUI or LexUI folder under `Plugins/` has to go before DreamGUI goes in: its
-   classes would be live under the names DreamGUI redirects *from*, and a redirect never applies to a name that
+   classes would be live under the names the redirects map *from*, and a redirect never applies to a name that
    still resolves.
-4. **Delete any copy of the redirect block from your `Config/DefaultEngine.ini`.** Earlier versions shipped the
-   redirects as a template to copy there. The plugin carries them in its own config now (see 3), and two
-   redirects for one old name with different new names are an error: the first one registered wins, and the
-   copy is the older of the two.
+4. **Put the redirect block into your `Config/DefaultEngine.ini`.** 1.0.0 ships no redirects (see
+   [From 2.1 to 1.0.0](#from-21-to-100)): copy the `[CoreRedirects]` section of [2.1.0's `Config/DefaultDreamGUI.ini`](https://github.com/TypeDreamMoon/DreamGUI/blob/3049561a1742ab59d83a404ee267d2f580e53589/Config/DefaultDreamGUI.ini)
+   (commit `3049561a`) there, once. A copy of an older block that is already there goes first — two redirects for one
+   old name with different new names are an error, and the first one registered wins.
 
 ## 2. Install
 
@@ -360,10 +398,10 @@ git clone https://github.com/TypeDreamMoon/DreamGUI.git Plugins/DreamGUI
 The plugin needs `EnhancedInput`, which it enables itself. Nothing else is required of the project: no engine
 source build, no private engine headers, no settings to copy.
 
-## 3. What loads by itself
+## 3. What the redirects carry
 
-`Config/DefaultDreamGUI.ini` is mounted as the plugin's own config branch, and the engine applies its
-`[CoreRedirects]` before the first package loads. It holds 763 redirects:
+The block from 2.1.0, once it is in the project's `Config/DefaultEngine.ini`, is applied by the engine before the
+first package loads. It holds 763 redirects:
 
 | Kind | Entries | What they cover |
 | --- | --- | --- |
@@ -373,10 +411,10 @@ source build, no private engine headers, no settings to copy.
 | Function | 74 | Functions a Blueprint calls or overrides that were renamed or moved — `UDreamUIBehaviour`'s `Update` → `Tick`, `UDreamUINavigationScope`'s events that lost their `On` |
 | Object | 70 | The delegate signatures the module split moved with their classes |
 
-**Then resave.** A redirect is applied every time an asset that needs it loads. Once the project opens and the
-UI looks right, resave the assets that use DreamGUI (*File > Save All* after opening them, or the
-`ResavePackages` commandlet over your content), so they name the current types themselves. The redirects stay in
-the plugin either way.
+**Then resave, and take the block out.** A redirect is applied every time an asset that needs it loads. Once the
+project opens and the UI looks right, resave the assets that use DreamGUI (*File > Save All* after opening them, or
+the `ResavePackages` commandlet over your content), so they name the current types themselves, and delete the block
+from `Config/DefaultEngine.ini`: nothing needs it after that, and 1.0.0 does not keep a copy of its own.
 
 ## 4. What no longer exists
 
@@ -420,7 +458,7 @@ an earlier version:
   `UUITextInput::GetActiveTextInputForPlayer` answers per player; `GetActiveTextInput` answers across worlds.
 - **Characters reach a text field through the game viewport client.** Use `UDreamGameViewportClient`, or call
   `DreamUITextInputRouter::RouteViewportCharacter` from your own viewport client's `InputChar`, after the console
-  and before the base class (the README's [keyboard section](../README.md#keyboard-layouts-give-dreamgui-the-game-viewport-client)).
+  and before the base class ([Installation](https://gui.toolchain.64hz.cn/en/docs/start/installation) on the docs site has both ways).
 - **The Slate input source is optional and off.** *Project Settings > Plugins > Dream GUI > Input >
   Use Slate Input Source* hears every pointer, key and stick before the viewport, so the UI keeps working in the
   engine's own UI-only input mode; the preset actors stand down while it is on, and
@@ -455,7 +493,7 @@ report.
 [module table](../README.md#modules) says what is where.
 
 **Includes.** Every header kept its path except those in the README's
-[include table](../README.md#c-written-against-the-single-module).
+[include table](https://gui.toolchain.64hz.cn/en/docs/guides/migration).
 
 **Calls.** The README's call table lists what moved with the module split. Since then:
 
@@ -475,8 +513,8 @@ from the next frame.
 
 ## 7. When something does not come across
 
-The automation suite that ships with the plugin checks the redirects themselves: that every one reaches the
-engine, that no old name is still a live type, that none hops into another redirect, and that every new name in
-the plugin's modules exists (`DreamGUI.Packaging.*`), and it loads assets saved by older versions of the plugin
-(`DreamGUI.Compatibility.*`, `DreamGUI.Assets.*`). An asset of yours that fails to load is worth a report with
-the warning the engine logged for it: a name DreamGUI renamed and did not redirect is a bug.
+The automation suite that ships with the plugin loads assets saved by the plugin and holds them to what was saved
+(`DreamGUI.Compatibility.*`, `DreamGUI.Assets.*`); the redirect block itself was checked by 2.1.0's suite — that every
+entry reached the engine, that no old name was still a live type, that none hopped into another redirect, and that
+every new name existed. An asset of yours that fails to load with the block in place is worth a report with the
+warning the engine logged for it: a name DreamGUI renamed and did not redirect is a bug.

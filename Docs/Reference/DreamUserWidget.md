@@ -121,7 +121,7 @@ Initialize, from the class, every time.
 | `bool ReceiveKeyChar(UDreamKeyEventData* EventData)` | event | On Key Char |
 | `bool ReceiveKeyDown(UDreamKeyEventData* EventData)` | event | On Key Down |
 | `bool ReceiveKeyUp(UDreamKeyEventData* EventData)` | event | On Key Up |
-| `void RefreshEachBindings()` | callable | Re-read every `each` source and refresh its list. A source that is a FieldNotify variable calls this for you when it broadcasts; a function source has nothing to broadcast, so code that changed what it returns calls this by hand. |
+| `void RefreshEachBindings()` | callable | Re-read every `each` and `for` source and refresh its list or its copies. A source that is a FieldNotify variable calls this for you when it broadcasts; a function source has nothing to broadcast, so code that changed what it returns calls this by hand. |
 | `void ResumeAnimation(FDreamUIAnimationHandle Handle)` | callable | Continues a paused instance in the direction it was going. |
 | `void ReverseAnimation(FDreamUIAnimationHandle Handle)` | callable | Reverse Animation |
 | `void SetAlignmentInViewport(FVector2D InAlignment)` | callable | Pivot, in 0..1 of this widget's own box. UMG calls it alignment. |

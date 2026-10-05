@@ -2,7 +2,7 @@
 # every saved object, and every property it holds at a value its archetype would not give it.
 # The DreamGUI.Compatibility tests compare the fixtures with this, its script paths carried through
 # the CoreRedirects. Written by the console command DreamGUI.OldAssetFixtures.Snapshot; never edited by hand.
-# 2026-09-27T17:01:06.947Z, engine 5.8.3-58210709+++UE5+Release-5.8
+# 2026-10-05T05:07:29.208Z, engine 5.8.3-58210709+++UE5+Release-5.8
 
 package /Game/DreamGUIFixtures/WBP_FixturePalette
 blueprint WBP_FixturePalette /Script/DreamGUIEditor.DreamWidgetBlueprint
@@ -95,112 +95,112 @@ object WBP_FixturePalette:DreamWidgetTree_0.BP_VerticalSlider_C_0 /DreamGUI/Cont
 object WBP_FixturePalette:DreamWidgetTree_0.BP_VerticalSlider_C_0.DreamPanelSlot_0 /Script/DreamGUI.DreamPanelSlot
   AuthoredDesiredSizeFallback=(X=100.000000,Y=100.000000)
   bHasAuthoredGeometry=True
-object WBP_FixturePalette:DreamWidgetTree_0.DreamBorder_0 /Script/DreamGUI.DreamBorder
+object WBP_FixturePalette:DreamWidgetTree_0.DreamBorder_0 /Script/DreamGUIControls.DreamBorder
   PanelSlot=/Script/DreamGUI.DreamPanelSlot'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamBorder_0.DreamPanelSlot_0'
   SiblingIndex=42
   DisplayName=Border_1
 object WBP_FixturePalette:DreamWidgetTree_0.DreamBorder_0.DreamPanelSlot_0 /Script/DreamGUI.DreamPanelSlot
   AuthoredDesiredSizeFallback=(X=100.000000,Y=100.000000)
   bHasAuthoredGeometry=True
-object WBP_FixturePalette:DreamWidgetTree_0.DreamButton_0 /Script/DreamGUI.DreamButton
+object WBP_FixturePalette:DreamWidgetTree_0.DreamButton_0 /Script/DreamGUIControls.DreamButton
   PanelSlot=/Script/DreamGUI.DreamPanelSlot'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamButton_0.DreamPanelSlot_0'
   SiblingIndex=
   DisplayName=Button
 object WBP_FixturePalette:DreamWidgetTree_0.DreamButton_0.DreamPanelSlot_0 /Script/DreamGUI.DreamPanelSlot
   AuthoredDesiredSizeFallback=(X=100.000000,Y=100.000000)
   bHasAuthoredGeometry=True
-object WBP_FixturePalette:DreamWidgetTree_0.DreamDialog_0 /Script/DreamGUI.DreamDialog
+object WBP_FixturePalette:DreamWidgetTree_0.DreamDialog_0 /Script/DreamGUIControls.DreamDialog
   PanelSlot=/Script/DreamGUI.DreamPanelSlot'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamDialog_0.DreamPanelSlot_0'
   SiblingIndex=15
   DisplayName=Dialog
 object WBP_FixturePalette:DreamWidgetTree_0.DreamDialog_0.DreamPanelSlot_0 /Script/DreamGUI.DreamPanelSlot
   AuthoredDesiredSizeFallback=(X=100.000000,Y=100.000000)
   bHasAuthoredGeometry=True
-object WBP_FixturePalette:DreamWidgetTree_0.DreamDropdown_0 /Script/DreamGUI.DreamDropdown
+object WBP_FixturePalette:DreamWidgetTree_0.DreamDropdown_0 /Script/DreamGUIControls.DreamDropdown
   PanelSlot=/Script/DreamGUI.DreamPanelSlot'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamDropdown_0.DreamPanelSlot_0'
   SiblingIndex=3
   DisplayName=Dropdown
 object WBP_FixturePalette:DreamWidgetTree_0.DreamDropdown_0.DreamPanelSlot_0 /Script/DreamGUI.DreamPanelSlot
   AuthoredDesiredSizeFallback=(X=100.000000,Y=100.000000)
   bHasAuthoredGeometry=True
-object WBP_FixturePalette:DreamWidgetTree_0.DreamEditableText_0 /Script/DreamGUI.DreamEditableText
+object WBP_FixturePalette:DreamWidgetTree_0.DreamEditableText_0 /Script/DreamGUIControls.DreamEditableText
   PanelSlot=/Script/DreamGUI.DreamPanelSlot'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamEditableText_0.DreamPanelSlot_0'
   SiblingIndex=46
   DisplayName=EditableText
 object WBP_FixturePalette:DreamWidgetTree_0.DreamEditableText_0.DreamPanelSlot_0 /Script/DreamGUI.DreamPanelSlot
   AuthoredDesiredSizeFallback=(X=100.000000,Y=100.000000)
   bHasAuthoredGeometry=True
-object WBP_FixturePalette:DreamWidgetTree_0.DreamExpandableArea_0 /Script/DreamGUI.DreamExpandableArea
+object WBP_FixturePalette:DreamWidgetTree_0.DreamExpandableArea_0 /Script/DreamGUIControls.DreamExpandableArea
   PanelSlot=/Script/DreamGUI.DreamPanelSlot'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamExpandableArea_0.DreamPanelSlot_0'
   SiblingIndex=14
   DisplayName=ExpandableArea
 object WBP_FixturePalette:DreamWidgetTree_0.DreamExpandableArea_0.DreamPanelSlot_0 /Script/DreamGUI.DreamPanelSlot
   AuthoredDesiredSizeFallback=(X=100.000000,Y=100.000000)
   bHasAuthoredGeometry=True
-object WBP_FixturePalette:DreamWidgetTree_0.DreamInputKeySelector_0 /Script/DreamGUI.DreamInputKeySelector
+object WBP_FixturePalette:DreamWidgetTree_0.DreamInputKeySelector_0 /Script/DreamGUIControls.DreamInputKeySelector
   PanelSlot=/Script/DreamGUI.DreamPanelSlot'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamInputKeySelector_0.DreamPanelSlot_0'
   SiblingIndex=16
   DisplayName=InputKeySelector
 object WBP_FixturePalette:DreamWidgetTree_0.DreamInputKeySelector_0.DreamPanelSlot_0 /Script/DreamGUI.DreamPanelSlot
   AuthoredDesiredSizeFallback=(X=100.000000,Y=100.000000)
   bHasAuthoredGeometry=True
-object WBP_FixturePalette:DreamWidgetTree_0.DreamListView_0 /Script/DreamGUI.DreamListView
+object WBP_FixturePalette:DreamWidgetTree_0.DreamListView_0 /Script/DreamGUIControls.DreamListView
   PanelSlot=/Script/DreamGUI.DreamPanelSlot'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamListView_0.DreamPanelSlot_0'
   SiblingIndex=37
   DisplayName=ListView
 object WBP_FixturePalette:DreamWidgetTree_0.DreamListView_0.DreamPanelSlot_0 /Script/DreamGUI.DreamPanelSlot
   AuthoredDesiredSizeFallback=(X=100.000000,Y=100.000000)
   bHasAuthoredGeometry=True
-object WBP_FixturePalette:DreamWidgetTree_0.DreamMenuAnchor_0 /Script/DreamGUI.DreamMenuAnchor
+object WBP_FixturePalette:DreamWidgetTree_0.DreamMenuAnchor_0 /Script/DreamGUIControls.DreamMenuAnchor
   PanelSlot=/Script/DreamGUI.DreamPanelSlot'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamMenuAnchor_0.DreamPanelSlot_0'
   SiblingIndex=43
   DisplayName=MenuAnchor_1
 object WBP_FixturePalette:DreamWidgetTree_0.DreamMenuAnchor_0.DreamPanelSlot_0 /Script/DreamGUI.DreamPanelSlot
   AuthoredDesiredSizeFallback=(X=100.000000,Y=100.000000)
   bHasAuthoredGeometry=True
-object WBP_FixturePalette:DreamWidgetTree_0.DreamMultiLineEditableText_0 /Script/DreamGUI.DreamMultiLineEditableText
+object WBP_FixturePalette:DreamWidgetTree_0.DreamMultiLineEditableText_0 /Script/DreamGUIControls.DreamMultiLineEditableText
   PanelSlot=/Script/DreamGUI.DreamPanelSlot'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamMultiLineEditableText_0.DreamPanelSlot_0'
   SiblingIndex=47
   DisplayName=MultiLineEditableText
 object WBP_FixturePalette:DreamWidgetTree_0.DreamMultiLineEditableText_0.DreamPanelSlot_0 /Script/DreamGUI.DreamPanelSlot
   AuthoredDesiredSizeFallback=(X=100.000000,Y=100.000000)
   bHasAuthoredGeometry=True
-object WBP_FixturePalette:DreamWidgetTree_0.DreamNativeWidgetHost_0 /Script/DreamGUI.DreamNativeWidgetHost
+object WBP_FixturePalette:DreamWidgetTree_0.DreamNativeWidgetHost_0 /Script/DreamGUIControls.DreamNativeWidgetHost
   PanelSlot=/Script/DreamGUI.DreamPanelSlot'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamNativeWidgetHost_0.DreamPanelSlot_0'
   SiblingIndex=45
   DisplayName=NativeWidgetHost
 object WBP_FixturePalette:DreamWidgetTree_0.DreamNativeWidgetHost_0.DreamPanelSlot_0 /Script/DreamGUI.DreamPanelSlot
   AuthoredDesiredSizeFallback=(X=100.000000,Y=100.000000)
   bHasAuthoredGeometry=True
-object WBP_FixturePalette:DreamWidgetTree_0.DreamProgressBar_0 /Script/DreamGUI.DreamProgressBar
+object WBP_FixturePalette:DreamWidgetTree_0.DreamProgressBar_0 /Script/DreamGUIControls.DreamProgressBar
   PanelSlot=/Script/DreamGUI.DreamPanelSlot'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamProgressBar_0.DreamPanelSlot_0'
   SiblingIndex=36
   DisplayName=ProgressBar
 object WBP_FixturePalette:DreamWidgetTree_0.DreamProgressBar_0.DreamPanelSlot_0 /Script/DreamGUI.DreamPanelSlot
   AuthoredDesiredSizeFallback=(X=100.000000,Y=100.000000)
   bHasAuthoredGeometry=True
-object WBP_FixturePalette:DreamWidgetTree_0.DreamRadioButton_0 /Script/DreamGUI.DreamRadioButton
+object WBP_FixturePalette:DreamWidgetTree_0.DreamRadioButton_0 /Script/DreamGUIControls.DreamRadioButton
   PanelSlot=/Script/DreamGUI.DreamPanelSlot'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamRadioButton_0.DreamPanelSlot_0'
   SiblingIndex=2
   DisplayName=RadioButton
 object WBP_FixturePalette:DreamWidgetTree_0.DreamRadioButton_0.DreamPanelSlot_0 /Script/DreamGUI.DreamPanelSlot
   AuthoredDesiredSizeFallback=(X=100.000000,Y=100.000000)
   bHasAuthoredGeometry=True
-object WBP_FixturePalette:DreamWidgetTree_0.DreamRichTextBlock_0 /Script/DreamGUI.DreamRichTextBlock
+object WBP_FixturePalette:DreamWidgetTree_0.DreamRichTextBlock_0 /Script/DreamGUIControls.DreamRichTextBlock
   PanelSlot=/Script/DreamGUI.DreamPanelSlot'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamRichTextBlock_0.DreamPanelSlot_0'
   SiblingIndex=44
   DisplayName=RichTextBlock
 object WBP_FixturePalette:DreamWidgetTree_0.DreamRichTextBlock_0.DreamPanelSlot_0 /Script/DreamGUI.DreamPanelSlot
   AuthoredDesiredSizeFallback=(X=100.000000,Y=100.000000)
   bHasAuthoredGeometry=True
-object WBP_FixturePalette:DreamWidgetTree_0.DreamRingMenu_0 /Script/DreamGUI.DreamRingMenu
+object WBP_FixturePalette:DreamWidgetTree_0.DreamRingMenu_0 /Script/DreamGUIControls.DreamRingMenu
   PanelSlot=/Script/DreamGUI.DreamPanelSlot'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamRingMenu_0.DreamPanelSlot_0'
   SiblingIndex=17
   DisplayName=RingMenu
 object WBP_FixturePalette:DreamWidgetTree_0.DreamRingMenu_0.DreamPanelSlot_0 /Script/DreamGUI.DreamPanelSlot
   AuthoredDesiredSizeFallback=(X=100.000000,Y=100.000000)
   bHasAuthoredGeometry=True
-object WBP_FixturePalette:DreamWidgetTree_0.DreamScrollBar_0 /Script/DreamGUI.DreamScrollBar
+object WBP_FixturePalette:DreamWidgetTree_0.DreamScrollBar_0 /Script/DreamGUIControls.DreamScrollBar
   Direction=
   PanelSlot=/Script/DreamGUI.DreamPanelSlot'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamScrollBar_0.DreamPanelSlot_0'
   SiblingIndex=7
@@ -208,14 +208,14 @@ object WBP_FixturePalette:DreamWidgetTree_0.DreamScrollBar_0 /Script/DreamGUI.Dr
 object WBP_FixturePalette:DreamWidgetTree_0.DreamScrollBar_0.DreamPanelSlot_0 /Script/DreamGUI.DreamPanelSlot
   AuthoredDesiredSizeFallback=(X=100.000000,Y=100.000000)
   bHasAuthoredGeometry=True
-object WBP_FixturePalette:DreamWidgetTree_0.DreamScrollBar_1 /Script/DreamGUI.DreamScrollBar
+object WBP_FixturePalette:DreamWidgetTree_0.DreamScrollBar_1 /Script/DreamGUIControls.DreamScrollBar
   PanelSlot=/Script/DreamGUI.DreamPanelSlot'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamScrollBar_1.DreamPanelSlot_0'
   SiblingIndex=8
   DisplayName=ScrollBar_1
 object WBP_FixturePalette:DreamWidgetTree_0.DreamScrollBar_1.DreamPanelSlot_0 /Script/DreamGUI.DreamPanelSlot
   AuthoredDesiredSizeFallback=(X=100.000000,Y=100.000000)
   bHasAuthoredGeometry=True
-object WBP_FixturePalette:DreamWidgetTree_0.DreamScrollBox_0 /Script/DreamGUI.DreamScrollBox
+object WBP_FixturePalette:DreamWidgetTree_0.DreamScrollBox_0 /Script/DreamGUIControls.DreamScrollBox
   Orientation=
   PanelSlot=/Script/DreamGUI.DreamPanelSlot'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamScrollBox_0.DreamPanelSlot_0'
   SiblingIndex=9
@@ -223,21 +223,21 @@ object WBP_FixturePalette:DreamWidgetTree_0.DreamScrollBox_0 /Script/DreamGUI.Dr
 object WBP_FixturePalette:DreamWidgetTree_0.DreamScrollBox_0.DreamPanelSlot_0 /Script/DreamGUI.DreamPanelSlot
   AuthoredDesiredSizeFallback=(X=100.000000,Y=100.000000)
   bHasAuthoredGeometry=True
-object WBP_FixturePalette:DreamWidgetTree_0.DreamScrollBox_1 /Script/DreamGUI.DreamScrollBox
+object WBP_FixturePalette:DreamWidgetTree_0.DreamScrollBox_1 /Script/DreamGUIControls.DreamScrollBox
   PanelSlot=/Script/DreamGUI.DreamPanelSlot'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamScrollBox_1.DreamPanelSlot_0'
   SiblingIndex=10
   DisplayName=ScrollBox_1
 object WBP_FixturePalette:DreamWidgetTree_0.DreamScrollBox_1.DreamPanelSlot_0 /Script/DreamGUI.DreamPanelSlot
   AuthoredDesiredSizeFallback=(X=100.000000,Y=100.000000)
   bHasAuthoredGeometry=True
-object WBP_FixturePalette:DreamWidgetTree_0.DreamSlider_0 /Script/DreamGUI.DreamSlider
+object WBP_FixturePalette:DreamWidgetTree_0.DreamSlider_0 /Script/DreamGUIControls.DreamSlider
   PanelSlot=/Script/DreamGUI.DreamPanelSlot'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamSlider_0.DreamPanelSlot_0'
   SiblingIndex=5
   DisplayName=Slider
 object WBP_FixturePalette:DreamWidgetTree_0.DreamSlider_0.DreamPanelSlot_0 /Script/DreamGUI.DreamPanelSlot
   AuthoredDesiredSizeFallback=(X=100.000000,Y=100.000000)
   bHasAuthoredGeometry=True
-object WBP_FixturePalette:DreamWidgetTree_0.DreamSlider_1 /Script/DreamGUI.DreamSlider
+object WBP_FixturePalette:DreamWidgetTree_0.DreamSlider_1 /Script/DreamGUIControls.DreamSlider
   Direction=BottomToTop
   PanelSlot=/Script/DreamGUI.DreamPanelSlot'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamSlider_1.DreamPanelSlot_0'
   SiblingIndex=6
@@ -245,28 +245,28 @@ object WBP_FixturePalette:DreamWidgetTree_0.DreamSlider_1 /Script/DreamGUI.Dream
 object WBP_FixturePalette:DreamWidgetTree_0.DreamSlider_1.DreamPanelSlot_0 /Script/DreamGUI.DreamPanelSlot
   AuthoredDesiredSizeFallback=(X=100.000000,Y=100.000000)
   bHasAuthoredGeometry=True
-object WBP_FixturePalette:DreamWidgetTree_0.DreamSpinBox_0 /Script/DreamGUI.DreamSpinBox
+object WBP_FixturePalette:DreamWidgetTree_0.DreamSpinBox_0 /Script/DreamGUIControls.DreamSpinBox
   PanelSlot=/Script/DreamGUI.DreamPanelSlot'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamSpinBox_0.DreamPanelSlot_0'
   SiblingIndex=4
   DisplayName=SpinBox
 object WBP_FixturePalette:DreamWidgetTree_0.DreamSpinBox_0.DreamPanelSlot_0 /Script/DreamGUI.DreamPanelSlot
   AuthoredDesiredSizeFallback=(X=100.000000,Y=100.000000)
   bHasAuthoredGeometry=True
-object WBP_FixturePalette:DreamWidgetTree_0.DreamTabView_0 /Script/DreamGUI.DreamTabView
+object WBP_FixturePalette:DreamWidgetTree_0.DreamTabView_0 /Script/DreamGUIControls.DreamTabView
   PanelSlot=/Script/DreamGUI.DreamPanelSlot'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamTabView_0.DreamPanelSlot_0'
   SiblingIndex=13
   DisplayName=TabView
 object WBP_FixturePalette:DreamWidgetTree_0.DreamTabView_0.DreamPanelSlot_0 /Script/DreamGUI.DreamPanelSlot
   AuthoredDesiredSizeFallback=(X=100.000000,Y=100.000000)
   bHasAuthoredGeometry=True
-object WBP_FixturePalette:DreamWidgetTree_0.DreamTextInput_0 /Script/DreamGUI.DreamTextInput
+object WBP_FixturePalette:DreamWidgetTree_0.DreamTextInput_0 /Script/DreamGUIControls.DreamTextInput
   PanelSlot=/Script/DreamGUI.DreamPanelSlot'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamTextInput_0.DreamPanelSlot_0'
   SiblingIndex=11
   DisplayName=TextInput
 object WBP_FixturePalette:DreamWidgetTree_0.DreamTextInput_0.DreamPanelSlot_0 /Script/DreamGUI.DreamPanelSlot
   AuthoredDesiredSizeFallback=(X=100.000000,Y=100.000000)
   bHasAuthoredGeometry=True
-object WBP_FixturePalette:DreamWidgetTree_0.DreamTextInput_1 /Script/DreamGUI.DreamTextInput
+object WBP_FixturePalette:DreamWidgetTree_0.DreamTextInput_1 /Script/DreamGUIControls.DreamTextInput
   bMultiLine=True
   PanelSlot=/Script/DreamGUI.DreamPanelSlot'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamTextInput_1.DreamPanelSlot_0'
   SiblingIndex=12
@@ -274,14 +274,14 @@ object WBP_FixturePalette:DreamWidgetTree_0.DreamTextInput_1 /Script/DreamGUI.Dr
 object WBP_FixturePalette:DreamWidgetTree_0.DreamTextInput_1.DreamPanelSlot_0 /Script/DreamGUI.DreamPanelSlot
   AuthoredDesiredSizeFallback=(X=100.000000,Y=100.000000)
   bHasAuthoredGeometry=True
-object WBP_FixturePalette:DreamWidgetTree_0.DreamThrobber_0 /Script/DreamGUI.DreamThrobber
+object WBP_FixturePalette:DreamWidgetTree_0.DreamThrobber_0 /Script/DreamGUIControls.DreamThrobber
   PanelSlot=/Script/DreamGUI.DreamPanelSlot'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamThrobber_0.DreamPanelSlot_0'
   SiblingIndex=40
   DisplayName=Throbber
 object WBP_FixturePalette:DreamWidgetTree_0.DreamThrobber_0.DreamPanelSlot_0 /Script/DreamGUI.DreamPanelSlot
   AuthoredDesiredSizeFallback=(X=100.000000,Y=100.000000)
   bHasAuthoredGeometry=True
-object WBP_FixturePalette:DreamWidgetTree_0.DreamThrobber_1 /Script/DreamGUI.DreamThrobber
+object WBP_FixturePalette:DreamWidgetTree_0.DreamThrobber_1 /Script/DreamGUIControls.DreamThrobber
   Shape=Circular
   PanelSlot=/Script/DreamGUI.DreamPanelSlot'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamThrobber_1.DreamPanelSlot_0'
   SiblingIndex=41
@@ -289,21 +289,21 @@ object WBP_FixturePalette:DreamWidgetTree_0.DreamThrobber_1 /Script/DreamGUI.Dre
 object WBP_FixturePalette:DreamWidgetTree_0.DreamThrobber_1.DreamPanelSlot_0 /Script/DreamGUI.DreamPanelSlot
   AuthoredDesiredSizeFallback=(X=100.000000,Y=100.000000)
   bHasAuthoredGeometry=True
-object WBP_FixturePalette:DreamWidgetTree_0.DreamTileView_0 /Script/DreamGUI.DreamTileView
+object WBP_FixturePalette:DreamWidgetTree_0.DreamTileView_0 /Script/DreamGUIControls.DreamTileView
   PanelSlot=/Script/DreamGUI.DreamPanelSlot'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamTileView_0.DreamPanelSlot_0'
   SiblingIndex=39
   DisplayName=TileView
 object WBP_FixturePalette:DreamWidgetTree_0.DreamTileView_0.DreamPanelSlot_0 /Script/DreamGUI.DreamPanelSlot
   AuthoredDesiredSizeFallback=(X=100.000000,Y=100.000000)
   bHasAuthoredGeometry=True
-object WBP_FixturePalette:DreamWidgetTree_0.DreamToggle_0 /Script/DreamGUI.DreamToggle
+object WBP_FixturePalette:DreamWidgetTree_0.DreamToggle_0 /Script/DreamGUIControls.DreamToggle
   PanelSlot=/Script/DreamGUI.DreamPanelSlot'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamToggle_0.DreamPanelSlot_0'
   SiblingIndex=1
   DisplayName=Toggle
 object WBP_FixturePalette:DreamWidgetTree_0.DreamToggle_0.DreamPanelSlot_0 /Script/DreamGUI.DreamPanelSlot
   AuthoredDesiredSizeFallback=(X=100.000000,Y=100.000000)
   bHasAuthoredGeometry=True
-object WBP_FixturePalette:DreamWidgetTree_0.DreamTreeView_0 /Script/DreamGUI.DreamTreeView
+object WBP_FixturePalette:DreamWidgetTree_0.DreamTreeView_0 /Script/DreamGUIControls.DreamTreeView
   PanelSlot=/Script/DreamGUI.DreamPanelSlot'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamTreeView_0.DreamPanelSlot_0'
   SiblingIndex=38
   DisplayName=TreeView
@@ -311,20 +311,20 @@ object WBP_FixturePalette:DreamWidgetTree_0.DreamTreeView_0.DreamPanelSlot_0 /Sc
   AuthoredDesiredSizeFallback=(X=100.000000,Y=100.000000)
   bHasAuthoredGeometry=True
 object WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_0 /Script/DreamGUI.DreamWidget
-  Children=("/Script/DreamGUI.DreamButton'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamButton_0'","/Script/DreamGUI.DreamToggle'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamToggle_0'","/Script/DreamGUI.DreamRadioButton'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamRadioButton_0'","/Script/DreamGUI.DreamDropdown'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamDropdown_0'","/Script/DreamGUI.DreamSpinBox'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamSpinBox_0'","/Script/DreamGUI.DreamSlider'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamSlider_0'","/Script/DreamGUI.DreamSlider'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamSlider_1'","/Script/DreamGUI.DreamScrollBar'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamScrollBar_0'","/Script/DreamGUI.DreamScrollBar'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamScrollBar_1'","/Script/DreamGUI.DreamScrollBox'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamScrollBox_0'","/Script/DreamGUI.DreamScrollBox'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamScrollBox_1'","/Script/DreamGUI.DreamTextInput'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamTextInput_0'","/Script/DreamGUI.DreamTextInput'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamTextInput_1'","/Script/DreamGUI.DreamTabView'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamTabView_0'","/Script/DreamGUI.DreamExpandableArea'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamExpandableArea_0'","/Script/DreamGUI.DreamDialog'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamDialog_0'","/Script/DreamGUI.DreamInputKeySelector'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamInputKeySelector_0'","/Script/DreamGUI.DreamRingMenu'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamRingMenu_0'","/Script/DreamGUI.DreamWidget'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_1'","/Script/DreamGUI.DreamWidget'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_2'","/Script/DreamGUI.DreamWidget'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_3'","/Script/DreamGUI.DreamWidget'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_4'","/Script/DreamGUI.DreamWidget'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_5'","/Script/DreamGUI.DreamWidget'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_6'","/Script/DreamGUI.DreamWidget'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_7'","/Script/DreamGUI.DreamWidget'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_8'","/Script/DreamGUI.DreamWidget'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_9'","/Script/DreamGUI.DreamWidget'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_10'","/Script/DreamGUI.DreamWidget'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_11'","/Script/DreamGUI.DreamWidget'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_12'","/Script/DreamGUI.DreamWidget'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_13'","/Script/DreamGUI.DreamWidget'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_14'","/Script/DreamGUI.DreamWidget'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_15'","/Script/DreamGUI.DreamWidget'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_16'","/Script/DreamGUI.DreamWidget'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_17'","/Script/DreamGUI.DreamWidget'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_19'","/Script/DreamGUI.DreamProgressBar'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamProgressBar_0'","/Script/DreamGUI.DreamListView'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamListView_0'","/Script/DreamGUI.DreamTreeView'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamTreeView_0'","/Script/DreamGUI.DreamTileView'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamTileView_0'","/Script/DreamGUI.DreamThrobber'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamThrobber_0'","/Script/DreamGUI.DreamThrobber'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamThrobber_1'","/Script/DreamGUI.DreamBorder'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamBorder_0'","/Script/DreamGUI.DreamMenuAnchor'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamMenuAnchor_0'","/Script/DreamGUI.DreamRichTextBlock'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamRichTextBlock_0'","/Script/DreamGUI.DreamNativeWidgetHost'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamNativeWidgetHost_0'","/Script/DreamGUI.DreamEditableText'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamEditableText_0'","/Script/DreamGUI.DreamMultiLineEditableText'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamMultiLineEditableText_0'","/Script/DreamGUI.DreamWidget'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_20'","/Script/DreamGUI.DreamWidget'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_22'","/Script/DreamGUI.DreamWidget'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_23'","/Script/DreamGUI.DreamWidget'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_24'","/Script/DreamGUI.DreamWidget'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_25'","/Script/DreamGUI.DreamWidget'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_29'","/Script/DreamGUI.DreamWidget'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_33'","/Script/DreamGUI.DreamWidget'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_37'","/Script/DreamGUI.DreamWidget'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_38'","/Script/DreamGUI.DreamWidget'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_39'","/Script/DreamGUI.DreamWidget'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_40'","/Script/DreamGUI.DreamWidget'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_41'","/Script/DreamGUI.DreamWidget'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_42'","/Script/DreamGUI.DreamWidget'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_43'","/Script/DreamGUI.DreamWidget'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_44'","/Script/DreamGUI.DreamWidget'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_45'","/Script/DreamGUI.DreamWidget'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_46'","/Script/DreamGUI.DreamWidget'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_47'","/Script/DreamGUI.DreamWidget'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_48'","/Script/DreamGUI.DreamWidget'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_49'","/Script/DreamGUI.DreamWidget'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_50'","/Script/DreamGUI.DreamWidget'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_51'","/Script/DreamGUI.DreamWidget'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_52'","/Script/DreamGUI.DreamWidget'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_53'","/Script/DreamGUI.DreamWidget'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_54'","/Script/DreamGUI.DreamWidget'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_55'","/Script/DreamGUI.DreamWidget'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_56'","/Script/DreamGUI.DreamWidget'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_57'","/Script/DreamGUI.DreamWidget'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_58'","/Script/DreamGUI.DreamWidget'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_59'","/Script/DreamGUI.DreamWidget'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_60'","/Script/DreamGUI.DreamWidget'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_61'","/Script/DreamGUI.DreamWidget'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_62'","/Script/DreamGUI.DreamWidget'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_63'","/Script/DreamGUI.DreamWidget'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_64'","/Script/DreamGUI.DreamWidget'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_65'","/Script/DreamGUI.DreamWidget'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_66'","/Script/DreamGUI.DreamWidget'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_67'","/Script/DreamGUI.DreamWidget'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_68'","/DreamGUI/Controls/BP_Button.BP_Button_C'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.BP_Button_C_0'","/DreamGUI/Controls/BP_Toggle.BP_Toggle_C'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.BP_Toggle_C_0'","/DreamGUI/Controls/BP_ToggleGroup.BP_ToggleGroup_C'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.BP_ToggleGroup_C_0'","/DreamGUI/Controls/BP_HorizontalSlider.BP_HorizontalSlider_C'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.BP_HorizontalSlider_C_0'","/DreamGUI/Controls/BP_VerticalSlider.BP_VerticalSlider_C'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.BP_VerticalSlider_C_0'","/DreamGUI/Controls/BP_HorizontalScrollbar.BP_HorizontalScrollbar_C'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.BP_HorizontalScrollbar_C_0'","/DreamGUI/Controls/BP_VerticalScrollbar.BP_VerticalScrollbar_C'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.BP_VerticalScrollbar_C_0'","/DreamGUI/Controls/BP_Dropdown.BP_Dropdown_C'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.BP_Dropdown_C_0'","/DreamGUI/Controls/BP_TextInput.BP_TextInput_C'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.BP_TextInput_C_0'","/DreamGUI/Controls/BP_TextInput_Multiline.BP_TextInput_Multiline_C'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.BP_TextInput_Multiline_C_0'","/DreamGUI/Controls/BP_HorizontalScrollView.BP_HorizontalScrollView_C'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.BP_HorizontalScrollView_C_0'","/DreamGUI/Controls/BP_VerticalScrollView.BP_VerticalScrollView_C'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.BP_VerticalScrollView_C_0'")
+  Children=("/Script/DreamGUIControls.DreamButton'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamButton_0'","/Script/DreamGUIControls.DreamToggle'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamToggle_0'","/Script/DreamGUIControls.DreamRadioButton'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamRadioButton_0'","/Script/DreamGUIControls.DreamDropdown'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamDropdown_0'","/Script/DreamGUIControls.DreamSpinBox'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamSpinBox_0'","/Script/DreamGUIControls.DreamSlider'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamSlider_0'","/Script/DreamGUIControls.DreamSlider'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamSlider_1'","/Script/DreamGUIControls.DreamScrollBar'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamScrollBar_0'","/Script/DreamGUIControls.DreamScrollBar'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamScrollBar_1'","/Script/DreamGUIControls.DreamScrollBox'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamScrollBox_0'","/Script/DreamGUIControls.DreamScrollBox'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamScrollBox_1'","/Script/DreamGUIControls.DreamTextInput'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamTextInput_0'","/Script/DreamGUIControls.DreamTextInput'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamTextInput_1'","/Script/DreamGUIControls.DreamTabView'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamTabView_0'","/Script/DreamGUIControls.DreamExpandableArea'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamExpandableArea_0'","/Script/DreamGUIControls.DreamDialog'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamDialog_0'","/Script/DreamGUIControls.DreamInputKeySelector'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamInputKeySelector_0'","/Script/DreamGUIControls.DreamRingMenu'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamRingMenu_0'","/Script/DreamGUI.DreamWidget'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_1'","/Script/DreamGUI.DreamWidget'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_2'","/Script/DreamGUI.DreamWidget'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_3'","/Script/DreamGUI.DreamWidget'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_4'","/Script/DreamGUI.DreamWidget'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_5'","/Script/DreamGUI.DreamWidget'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_6'","/Script/DreamGUI.DreamWidget'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_7'","/Script/DreamGUI.DreamWidget'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_8'","/Script/DreamGUI.DreamWidget'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_9'","/Script/DreamGUI.DreamWidget'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_10'","/Script/DreamGUI.DreamWidget'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_11'","/Script/DreamGUI.DreamWidget'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_12'","/Script/DreamGUI.DreamWidget'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_13'","/Script/DreamGUI.DreamWidget'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_14'","/Script/DreamGUI.DreamWidget'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_15'","/Script/DreamGUI.DreamWidget'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_16'","/Script/DreamGUI.DreamWidget'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_17'","/Script/DreamGUI.DreamWidget'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_19'","/Script/DreamGUIControls.DreamProgressBar'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamProgressBar_0'","/Script/DreamGUIControls.DreamListView'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamListView_0'","/Script/DreamGUIControls.DreamTreeView'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamTreeView_0'","/Script/DreamGUIControls.DreamTileView'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamTileView_0'","/Script/DreamGUIControls.DreamThrobber'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamThrobber_0'","/Script/DreamGUIControls.DreamThrobber'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamThrobber_1'","/Script/DreamGUIControls.DreamBorder'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamBorder_0'","/Script/DreamGUIControls.DreamMenuAnchor'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamMenuAnchor_0'","/Script/DreamGUIControls.DreamRichTextBlock'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamRichTextBlock_0'","/Script/DreamGUIControls.DreamNativeWidgetHost'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamNativeWidgetHost_0'","/Script/DreamGUIControls.DreamEditableText'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamEditableText_0'","/Script/DreamGUIControls.DreamMultiLineEditableText'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamMultiLineEditableText_0'","/Script/DreamGUI.DreamWidget'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_20'","/Script/DreamGUI.DreamWidget'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_22'","/Script/DreamGUI.DreamWidget'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_23'","/Script/DreamGUI.DreamWidget'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_24'","/Script/DreamGUI.DreamWidget'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_25'","/Script/DreamGUI.DreamWidget'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_29'","/Script/DreamGUI.DreamWidget'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_33'","/Script/DreamGUI.DreamWidget'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_37'","/Script/DreamGUI.DreamWidget'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_38'","/Script/DreamGUI.DreamWidget'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_39'","/Script/DreamGUI.DreamWidget'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_40'","/Script/DreamGUI.DreamWidget'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_41'","/Script/DreamGUI.DreamWidget'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_42'","/Script/DreamGUI.DreamWidget'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_43'","/Script/DreamGUI.DreamWidget'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_44'","/Script/DreamGUI.DreamWidget'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_45'","/Script/DreamGUI.DreamWidget'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_46'","/Script/DreamGUI.DreamWidget'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_47'","/Script/DreamGUI.DreamWidget'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_48'","/Script/DreamGUI.DreamWidget'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_49'","/Script/DreamGUI.DreamWidget'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_50'","/Script/DreamGUI.DreamWidget'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_51'","/Script/DreamGUI.DreamWidget'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_52'","/Script/DreamGUI.DreamWidget'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_53'","/Script/DreamGUI.DreamWidget'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_54'","/Script/DreamGUI.DreamWidget'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_55'","/Script/DreamGUI.DreamWidget'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_56'","/Script/DreamGUI.DreamWidget'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_57'","/Script/DreamGUI.DreamWidget'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_58'","/Script/DreamGUI.DreamWidget'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_59'","/Script/DreamGUI.DreamWidget'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_60'","/Script/DreamGUI.DreamWidget'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_61'","/Script/DreamGUI.DreamWidget'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_62'","/Script/DreamGUI.DreamWidget'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_63'","/Script/DreamGUI.DreamWidget'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_64'","/Script/DreamGUI.DreamWidget'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_65'","/Script/DreamGUI.DreamWidget'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_66'","/Script/DreamGUI.DreamWidget'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_67'","/Script/DreamGUI.DreamWidget'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_68'","/DreamGUI/Controls/BP_Button.BP_Button_C'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.BP_Button_C_0'","/DreamGUI/Controls/BP_Toggle.BP_Toggle_C'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.BP_Toggle_C_0'","/DreamGUI/Controls/BP_ToggleGroup.BP_ToggleGroup_C'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.BP_ToggleGroup_C_0'","/DreamGUI/Controls/BP_HorizontalSlider.BP_HorizontalSlider_C'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.BP_HorizontalSlider_C_0'","/DreamGUI/Controls/BP_VerticalSlider.BP_VerticalSlider_C'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.BP_VerticalSlider_C_0'","/DreamGUI/Controls/BP_HorizontalScrollbar.BP_HorizontalScrollbar_C'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.BP_HorizontalScrollbar_C_0'","/DreamGUI/Controls/BP_VerticalScrollbar.BP_VerticalScrollbar_C'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.BP_VerticalScrollbar_C_0'","/DreamGUI/Controls/BP_Dropdown.BP_Dropdown_C'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.BP_Dropdown_C_0'","/DreamGUI/Controls/BP_TextInput.BP_TextInput_C'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.BP_TextInput_C_0'","/DreamGUI/Controls/BP_TextInput_Multiline.BP_TextInput_Multiline_C'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.BP_TextInput_Multiline_C_0'","/DreamGUI/Controls/BP_HorizontalScrollView.BP_HorizontalScrollView_C'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.BP_HorizontalScrollView_C_0'","/DreamGUI/Controls/BP_VerticalScrollView.BP_VerticalScrollView_C'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.BP_VerticalScrollView_C_0'")
   AnchorData=(Pivot=(X=0.500000,Y=0.500000),AnchorMin=(X=0.000000,Y=0.000000),AnchorMax=(X=1.000000,Y=1.000000),AnchoredPosition=(X=0.000000,Y=0.000000),SizeDelta=(X=0.000000,Y=0.000000))
   LayoutContainer=/Script/DreamGUI.DreamLayoutContainerCanvasPanel'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_0.DreamLayoutContainerCanvasPanel_0'
   DisplayName=WBP_FixturePalette
 object WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_0.DreamLayoutContainerCanvasPanel_0 /Script/DreamGUI.DreamLayoutContainerCanvasPanel
 object WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_1 /Script/DreamGUI.DreamWidget
-  Components=("/Script/DreamGUI.UIToggleGroup'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_1.UIToggleGroup_0'")
+  Components=("/Script/DreamGUIControls.UIToggleGroup'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_1.UIToggleGroup_0'")
   PanelSlot=/Script/DreamGUI.DreamPanelSlot'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_1.DreamPanelSlot_0'
   SiblingIndex=18
   DisplayName=ToggleGroup
 object WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_1.DreamPanelSlot_0 /Script/DreamGUI.DreamPanelSlot
   AuthoredDesiredSizeFallback=(X=100.000000,Y=100.000000)
   bHasAuthoredGeometry=True
-object WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_1.UIToggleGroup_0 /Script/DreamGUI.UIToggleGroup
+object WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_1.UIToggleGroup_0 /Script/DreamGUIControls.UIToggleGroup
 object WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_10 /Script/DreamGUI.DreamWidget
   Components=("/Script/DreamGUI.DreamContentWidget'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_10.DreamContentWidget_0'")
   LayoutContainer=/Script/DreamGUI.DreamLayoutContainerSafeZone'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_10.DreamLayoutContainerSafeZone_0'
@@ -400,7 +400,7 @@ object WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_16.DreamPanelSlot_0 /Scr
   AuthoredDesiredSizeFallback=(X=100.000000,Y=100.000000)
   bHasAuthoredGeometry=True
 object WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_17 /Script/DreamGUI.DreamWidget
-  Components=("/Script/DreamGUI.UIScrollView'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_17.UIScrollView_0'",None)
+  Components=("/Script/DreamGUIControls.UIScrollView'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_17.UIScrollView_0'",None)
   Children=("/Script/DreamGUI.DreamWidget'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_18'")
   Clipping=ClipToBounds
   Visual=/Script/DreamGUI.DreamImage'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_17.DreamImage_0'
@@ -412,7 +412,7 @@ object WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_17.DreamImage_0 /Script/
 object WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_17.DreamPanelSlot_0 /Script/DreamGUI.DreamPanelSlot
   AuthoredDesiredSizeFallback=(X=100.000000,Y=100.000000)
   bHasAuthoredGeometry=True
-object WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_17.UIScrollView_0 /Script/DreamGUI.UIScrollView
+object WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_17.UIScrollView_0 /Script/DreamGUIControls.UIScrollView
   Content=/Script/DreamGUI.DreamWidget'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_18'
   Horizontal=
   Progress=(X=0.000000,Y=0.625000)
@@ -442,7 +442,7 @@ object WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_2.DreamPanelSlot_0 /Scri
   AuthoredDesiredSizeFallback=(X=100.000000,Y=100.000000)
   bHasAuthoredGeometry=True
 object WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_20 /Script/DreamGUI.DreamWidget
-  Components=("/Script/DreamGUI.UIProgressBar'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_20.UIProgressBar_0'")
+  Components=("/Script/DreamGUIControls.UIProgressBar'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_20.UIProgressBar_0'")
   Children=("/Script/DreamGUI.DreamWidget'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_21'")
   Visual=/Script/DreamGUI.DreamImage'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_20.DreamImage_0'
   PanelSlot=/Script/DreamGUI.DreamPanelSlot'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_20.DreamPanelSlot_0'
@@ -453,7 +453,7 @@ object WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_20.DreamImage_0 /Script/
 object WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_20.DreamPanelSlot_0 /Script/DreamGUI.DreamPanelSlot
   AuthoredDesiredSizeFallback=(X=100.000000,Y=100.000000)
   bHasAuthoredGeometry=True
-object WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_20.UIProgressBar_0 /Script/DreamGUI.UIProgressBar
+object WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_20.UIProgressBar_0 /Script/DreamGUIControls.UIProgressBar
   Percent=0.500000
   FillWidget=/Script/DreamGUI.DreamWidget'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_21'
 object WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_21 /Script/DreamGUI.DreamWidget
@@ -492,7 +492,7 @@ object WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_24.DreamPanelSlot_0 /Scr
   AuthoredDesiredSizeFallback=(X=100.000000,Y=100.000000)
   bHasAuthoredGeometry=True
 object WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_25 /Script/DreamGUI.DreamWidget
-  Components=("/Script/DreamGUI.UIListView'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_25.UIListView_0'")
+  Components=("/Script/DreamGUIControls.UIListView'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_25.UIListView_0'")
   Children=("/Script/DreamGUI.DreamWidget'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_26'")
   Clipping=ClipToBounds
   Visual=/Script/DreamGUI.DreamImage'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_25.DreamImage_0'
@@ -504,7 +504,7 @@ object WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_25.DreamImage_0 /Script/
 object WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_25.DreamPanelSlot_0 /Script/DreamGUI.DreamPanelSlot
   AuthoredDesiredSizeFallback=(X=100.000000,Y=100.000000)
   bHasAuthoredGeometry=True
-object WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_25.UIListView_0 /Script/DreamGUI.UIListView
+object WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_25.UIListView_0 /Script/DreamGUIControls.UIListView
   CellTemplate=/Script/DreamGUI.DreamWidget'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_28'
   Content=/Script/DreamGUI.DreamWidget'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_27'
   Horizontal=
@@ -524,16 +524,16 @@ object WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_27 /Script/DreamGUI.Drea
   DisplayName=Viewport_Content
 object WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_28 /Script/DreamGUI.DreamWidget
   RelativeLocation=(X=0.000000,Y=0.000000,Z=250.000000)
-  Components=("/Script/DreamGUI.UIListEntry'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_28.UIListEntry_0'")
+  Components=("/Script/DreamGUIControls.UIListEntry'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_28.UIListEntry_0'")
   AnchorData=(Pivot=(X=0.500000,Y=0.500000),AnchorMin=(X=0.000000,Y=1.000000),AnchorMax=(X=1.000000,Y=1.000000),AnchoredPosition=(X=0.000000,Y=0.000000),SizeDelta=(X=0.000000,Y=32.000000))
   bWidgetActive=
   Visual=/Script/DreamGUI.DreamImage'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_28.DreamImage_0'
   SiblingIndex=
   DisplayName=EntryTemplate
 object WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_28.DreamImage_0 /Script/DreamGUI.DreamImage
-object WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_28.UIListEntry_0 /Script/DreamGUI.UIListEntry
+object WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_28.UIListEntry_0 /Script/DreamGUIControls.UIListEntry
 object WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_29 /Script/DreamGUI.DreamWidget
-  Components=("/Script/DreamGUI.UITileView'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_29.UITileView_0'")
+  Components=("/Script/DreamGUIControls.UITileView'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_29.UITileView_0'")
   Children=("/Script/DreamGUI.DreamWidget'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_30'")
   Clipping=ClipToBounds
   Visual=/Script/DreamGUI.DreamImage'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_29.DreamImage_0'
@@ -545,7 +545,7 @@ object WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_29.DreamImage_0 /Script/
 object WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_29.DreamPanelSlot_0 /Script/DreamGUI.DreamPanelSlot
   AuthoredDesiredSizeFallback=(X=100.000000,Y=100.000000)
   bHasAuthoredGeometry=True
-object WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_29.UITileView_0 /Script/DreamGUI.UITileView
+object WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_29.UITileView_0 /Script/DreamGUIControls.UITileView
   CellTemplate=/Script/DreamGUI.DreamWidget'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_32'
   Content=/Script/DreamGUI.DreamWidget'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_31'
   Horizontal=
@@ -574,16 +574,16 @@ object WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_31 /Script/DreamGUI.Drea
   DisplayName=TileView_1_Viewport_Content
 object WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_32 /Script/DreamGUI.DreamWidget
   RelativeLocation=(X=0.000000,Y=0.000000,Z=250.000000)
-  Components=("/Script/DreamGUI.UIListEntry'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_32.UIListEntry_0'")
+  Components=("/Script/DreamGUIControls.UIListEntry'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_32.UIListEntry_0'")
   AnchorData=(Pivot=(X=0.500000,Y=0.500000),AnchorMin=(X=0.000000,Y=1.000000),AnchorMax=(X=1.000000,Y=1.000000),AnchoredPosition=(X=0.000000,Y=0.000000),SizeDelta=(X=0.000000,Y=32.000000))
   bWidgetActive=
   Visual=/Script/DreamGUI.DreamImage'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_32.DreamImage_0'
   SiblingIndex=
   DisplayName=TileView_1_Viewport_Content_EntryTemplate
 object WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_32.DreamImage_0 /Script/DreamGUI.DreamImage
-object WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_32.UIListEntry_0 /Script/DreamGUI.UIListEntry
+object WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_32.UIListEntry_0 /Script/DreamGUIControls.UIListEntry
 object WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_33 /Script/DreamGUI.DreamWidget
-  Components=("/Script/DreamGUI.UITreeView'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_33.UITreeView_0'")
+  Components=("/Script/DreamGUIControls.UITreeView'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_33.UITreeView_0'")
   Children=("/Script/DreamGUI.DreamWidget'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_34'")
   Clipping=ClipToBounds
   Visual=/Script/DreamGUI.DreamImage'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_33.DreamImage_0'
@@ -595,7 +595,7 @@ object WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_33.DreamImage_0 /Script/
 object WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_33.DreamPanelSlot_0 /Script/DreamGUI.DreamPanelSlot
   AuthoredDesiredSizeFallback=(X=100.000000,Y=100.000000)
   bHasAuthoredGeometry=True
-object WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_33.UITreeView_0 /Script/DreamGUI.UITreeView
+object WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_33.UITreeView_0 /Script/DreamGUIControls.UITreeView
   CellTemplate=/Script/DreamGUI.DreamWidget'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_36'
   Content=/Script/DreamGUI.DreamWidget'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_35'
   Horizontal=
@@ -615,41 +615,41 @@ object WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_35 /Script/DreamGUI.Drea
   DisplayName=TreeView_1_Viewport_Content
 object WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_36 /Script/DreamGUI.DreamWidget
   RelativeLocation=(X=0.000000,Y=0.000000,Z=250.000000)
-  Components=("/Script/DreamGUI.UIListEntry'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_36.UIListEntry_0'")
+  Components=("/Script/DreamGUIControls.UIListEntry'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_36.UIListEntry_0'")
   AnchorData=(Pivot=(X=0.500000,Y=0.500000),AnchorMin=(X=0.000000,Y=1.000000),AnchorMax=(X=1.000000,Y=1.000000),AnchoredPosition=(X=0.000000,Y=0.000000),SizeDelta=(X=0.000000,Y=32.000000))
   bWidgetActive=
   Visual=/Script/DreamGUI.DreamImage'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_36.DreamImage_0'
   SiblingIndex=
   DisplayName=TreeView_1_Viewport_Content_EntryTemplate
 object WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_36.DreamImage_0 /Script/DreamGUI.DreamImage
-object WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_36.UIListEntry_0 /Script/DreamGUI.UIListEntry
+object WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_36.UIListEntry_0 /Script/DreamGUIControls.UIListEntry
 object WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_37 /Script/DreamGUI.DreamWidget
-  Visual=/Script/DreamGUI.DreamPolygon'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_37.DreamPolygon_0'
+  Visual=/Script/DreamGUIExtensions.DreamPolygon'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_37.DreamPolygon_0'
   PanelSlot=/Script/DreamGUI.DreamPanelSlot'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_37.DreamPanelSlot_0'
   SiblingIndex=55
   DisplayName=Polygon
 object WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_37.DreamPanelSlot_0 /Script/DreamGUI.DreamPanelSlot
   AuthoredDesiredSizeFallback=(X=100.000000,Y=100.000000)
   bHasAuthoredGeometry=True
-object WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_37.DreamPolygon_0 /Script/DreamGUI.DreamPolygon
+object WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_37.DreamPolygon_0 /Script/DreamGUIExtensions.DreamPolygon
 object WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_38 /Script/DreamGUI.DreamWidget
-  Visual=/Script/DreamGUI.DreamPolygonLine'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_38.DreamPolygonLine_0'
+  Visual=/Script/DreamGUIExtensions.DreamPolygonLine'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_38.DreamPolygonLine_0'
   PanelSlot=/Script/DreamGUI.DreamPanelSlot'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_38.DreamPanelSlot_0'
   SiblingIndex=56
   DisplayName=PolygonLine
 object WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_38.DreamPanelSlot_0 /Script/DreamGUI.DreamPanelSlot
   AuthoredDesiredSizeFallback=(X=100.000000,Y=100.000000)
   bHasAuthoredGeometry=True
-object WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_38.DreamPolygonLine_0 /Script/DreamGUI.DreamPolygonLine
+object WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_38.DreamPolygonLine_0 /Script/DreamGUIExtensions.DreamPolygonLine
 object WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_39 /Script/DreamGUI.DreamWidget
-  Visual=/Script/DreamGUI.DreamRing'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_39.DreamRing_0'
+  Visual=/Script/DreamGUIExtensions.DreamRing'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_39.DreamRing_0'
   PanelSlot=/Script/DreamGUI.DreamPanelSlot'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_39.DreamPanelSlot_0'
   SiblingIndex=57
   DisplayName=Ring
 object WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_39.DreamPanelSlot_0 /Script/DreamGUI.DreamPanelSlot
   AuthoredDesiredSizeFallback=(X=100.000000,Y=100.000000)
   bHasAuthoredGeometry=True
-object WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_39.DreamRing_0 /Script/DreamGUI.DreamRing
+object WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_39.DreamRing_0 /Script/DreamGUIExtensions.DreamRing
 object WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_4 /Script/DreamGUI.DreamWidget
   LayoutContainer=/Script/DreamGUI.DreamLayoutContainerHorizontalBox'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_4.DreamLayoutContainerHorizontalBox_0'
   PanelSlot=/Script/DreamGUI.DreamPanelSlot'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_4.DreamPanelSlot_0'
@@ -660,50 +660,50 @@ object WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_4.DreamPanelSlot_0 /Scri
   AuthoredDesiredSizeFallback=(X=100.000000,Y=100.000000)
   bHasAuthoredGeometry=True
 object WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_40 /Script/DreamGUI.DreamWidget
-  Visual=/Script/DreamGUI.Dream2DLineRaw'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_40.Dream2DLineRaw_0'
+  Visual=/Script/DreamGUIExtensions.Dream2DLineRaw'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_40.Dream2DLineRaw_0'
   PanelSlot=/Script/DreamGUI.DreamPanelSlot'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_40.DreamPanelSlot_0'
   SiblingIndex=58
   DisplayName=Line2DRaw
-object WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_40.Dream2DLineRaw_0 /Script/DreamGUI.Dream2DLineRaw
+object WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_40.Dream2DLineRaw_0 /Script/DreamGUIExtensions.Dream2DLineRaw
 object WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_40.DreamPanelSlot_0 /Script/DreamGUI.DreamPanelSlot
   AuthoredDesiredSizeFallback=(X=100.000000,Y=100.000000)
   bHasAuthoredGeometry=True
 object WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_41 /Script/DreamGUI.DreamWidget
-  Visual=/Script/DreamGUI.Dream2DLineChildrenAsPoints'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_41.Dream2DLineChildrenAsPoints_0'
+  Visual=/Script/DreamGUIExtensions.Dream2DLineChildrenAsPoints'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_41.Dream2DLineChildrenAsPoints_0'
   PanelSlot=/Script/DreamGUI.DreamPanelSlot'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_41.DreamPanelSlot_0'
   SiblingIndex=59
   DisplayName=Line2DChildren
-object WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_41.Dream2DLineChildrenAsPoints_0 /Script/DreamGUI.Dream2DLineChildrenAsPoints
+object WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_41.Dream2DLineChildrenAsPoints_0 /Script/DreamGUIExtensions.Dream2DLineChildrenAsPoints
 object WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_41.DreamPanelSlot_0 /Script/DreamGUI.DreamPanelSlot
   AuthoredDesiredSizeFallback=(X=100.000000,Y=100.000000)
   bHasAuthoredGeometry=True
 object WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_42 /Script/DreamGUI.DreamWidget
-  Visual=/Script/DreamGUI.DreamBackgroundBlur'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_42.DreamBackgroundBlur_0'
+  Visual=/Script/DreamGUIExtensions.DreamBackgroundBlur'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_42.DreamBackgroundBlur_0'
   PanelSlot=/Script/DreamGUI.DreamPanelSlot'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_42.DreamPanelSlot_0'
   SiblingIndex=60
   DisplayName=BackgroundBlur
-object WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_42.DreamBackgroundBlur_0 /Script/DreamGUI.DreamBackgroundBlur
+object WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_42.DreamBackgroundBlur_0 /Script/DreamGUIExtensions.DreamBackgroundBlur
 object WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_42.DreamPanelSlot_0 /Script/DreamGUI.DreamPanelSlot
   AuthoredDesiredSizeFallback=(X=100.000000,Y=100.000000)
   bHasAuthoredGeometry=True
 object WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_43 /Script/DreamGUI.DreamWidget
-  Visual=/Script/DreamGUI.DreamBackgroundPixelate'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_43.DreamBackgroundPixelate_0'
+  Visual=/Script/DreamGUIExtensions.DreamBackgroundPixelate'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_43.DreamBackgroundPixelate_0'
   PanelSlot=/Script/DreamGUI.DreamPanelSlot'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_43.DreamPanelSlot_0'
   SiblingIndex=61
   DisplayName=BackgroundPixelate
-object WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_43.DreamBackgroundPixelate_0 /Script/DreamGUI.DreamBackgroundPixelate
+object WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_43.DreamBackgroundPixelate_0 /Script/DreamGUIExtensions.DreamBackgroundPixelate
 object WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_43.DreamPanelSlot_0 /Script/DreamGUI.DreamPanelSlot
   AuthoredDesiredSizeFallback=(X=100.000000,Y=100.000000)
   bHasAuthoredGeometry=True
 object WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_44 /Script/DreamGUI.DreamWidget
-  Visual=/Script/DreamGUI.DreamPixelSort'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_44.DreamPixelSort_0'
+  Visual=/Script/DreamGUIExtensions.DreamPixelSort'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_44.DreamPixelSort_0'
   PanelSlot=/Script/DreamGUI.DreamPanelSlot'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_44.DreamPanelSlot_0'
   SiblingIndex=62
   DisplayName=PixelSort
 object WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_44.DreamPanelSlot_0 /Script/DreamGUI.DreamPanelSlot
   AuthoredDesiredSizeFallback=(X=100.000000,Y=100.000000)
   bHasAuthoredGeometry=True
-object WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_44.DreamPixelSort_0 /Script/DreamGUI.DreamPixelSort
+object WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_44.DreamPixelSort_0 /Script/DreamGUIExtensions.DreamPixelSort
 object WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_45 /Script/DreamGUI.DreamWidget
   Visual=/Script/DreamGUI.DreamVisualEmpty'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_45.DreamVisualEmpty_0'
   PanelSlot=/Script/DreamGUI.DreamPanelSlot'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_45.DreamPanelSlot_0'
@@ -741,14 +741,14 @@ object WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_48.DreamPanelSlot_0 /Scr
   AuthoredDesiredSizeFallback=(X=100.000000,Y=100.000000)
   bHasAuthoredGeometry=True
 object WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_49 /Script/DreamGUI.DreamWidget
-  Visual=/Script/DreamGUI.DreamUMGWidget'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_49.DreamUMGWidget_0'
+  Visual=/Script/DreamGUIControls.DreamUMGWidget'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_49.DreamUMGWidget_0'
   PanelSlot=/Script/DreamGUI.DreamPanelSlot'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_49.DreamPanelSlot_0'
   SiblingIndex=67
   DisplayName=UMGWidget
 object WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_49.DreamPanelSlot_0 /Script/DreamGUI.DreamPanelSlot
   AuthoredDesiredSizeFallback=(X=100.000000,Y=100.000000)
   bHasAuthoredGeometry=True
-object WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_49.DreamUMGWidget_0 /Script/DreamGUI.DreamUMGWidget
+object WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_49.DreamUMGWidget_0 /Script/DreamGUIControls.DreamUMGWidget
 object WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_5 /Script/DreamGUI.DreamWidget
   LayoutContainer=/Script/DreamGUI.DreamLayoutContainerVerticalBox'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_5.DreamLayoutContainerVerticalBox_0'
   PanelSlot=/Script/DreamGUI.DreamPanelSlot'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_5.DreamPanelSlot_0'
@@ -759,41 +759,41 @@ object WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_5.DreamPanelSlot_0 /Scri
   AuthoredDesiredSizeFallback=(X=100.000000,Y=100.000000)
   bHasAuthoredGeometry=True
 object WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_50 /Script/DreamGUI.DreamWidget
-  Visual=/Script/DreamGUI.DreamCanvasRenderTargetPreviewer'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_50.DreamCanvasRenderTargetPreviewer_0'
+  Visual=/Script/DreamGUIExtensions.DreamCanvasRenderTargetPreviewer'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_50.DreamCanvasRenderTargetPreviewer_0'
   PanelSlot=/Script/DreamGUI.DreamPanelSlot'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_50.DreamPanelSlot_0'
   SiblingIndex=68
   DisplayName=CanvasRenderTargetPreviewer
-object WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_50.DreamCanvasRenderTargetPreviewer_0 /Script/DreamGUI.DreamCanvasRenderTargetPreviewer
+object WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_50.DreamCanvasRenderTargetPreviewer_0 /Script/DreamGUIExtensions.DreamCanvasRenderTargetPreviewer
 object WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_50.DreamPanelSlot_0 /Script/DreamGUI.DreamPanelSlot
   AuthoredDesiredSizeFallback=(X=100.000000,Y=100.000000)
   bHasAuthoredGeometry=True
 object WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_51 /Script/DreamGUI.DreamWidget
-  Visual=/Script/DreamGUI.DreamPostProcessRenderElement'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_51.DreamPostProcessRenderElement_0'
+  Visual=/Script/DreamGUIExtensions.DreamPostProcessRenderElement'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_51.DreamPostProcessRenderElement_0'
   PanelSlot=/Script/DreamGUI.DreamPanelSlot'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_51.DreamPanelSlot_0'
   SiblingIndex=69
   DisplayName=PostProcessRenderElement
 object WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_51.DreamPanelSlot_0 /Script/DreamGUI.DreamPanelSlot
   AuthoredDesiredSizeFallback=(X=100.000000,Y=100.000000)
   bHasAuthoredGeometry=True
-object WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_51.DreamPostProcessRenderElement_0 /Script/DreamGUI.DreamPostProcessRenderElement
+object WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_51.DreamPostProcessRenderElement_0 /Script/DreamGUIExtensions.DreamPostProcessRenderElement
 object WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_52 /Script/DreamGUI.DreamWidget
-  Visual=/Script/DreamGUI.DreamPostProcessRenderElement_Text'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_52.DreamPostProcessRenderElement_Text_0'
+  Visual=/Script/DreamGUIExtensions.DreamPostProcessRenderElement_Text'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_52.DreamPostProcessRenderElement_Text_0'
   PanelSlot=/Script/DreamGUI.DreamPanelSlot'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_52.DreamPanelSlot_0'
   SiblingIndex=70
   DisplayName=PostProcessRenderElementText
 object WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_52.DreamPanelSlot_0 /Script/DreamGUI.DreamPanelSlot
   AuthoredDesiredSizeFallback=(X=100.000000,Y=100.000000)
   bHasAuthoredGeometry=True
-object WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_52.DreamPostProcessRenderElement_Text_0 /Script/DreamGUI.DreamPostProcessRenderElement_Text
+object WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_52.DreamPostProcessRenderElement_Text_0 /Script/DreamGUIExtensions.DreamPostProcessRenderElement_Text
 object WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_53 /Script/DreamGUI.DreamWidget
-  Visual=/Script/DreamGUI.DreamStaticMesh'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_53.DreamStaticMesh_0'
+  Visual=/Script/DreamGUIExtensions.DreamStaticMesh'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_53.DreamStaticMesh_0'
   PanelSlot=/Script/DreamGUI.DreamPanelSlot'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_53.DreamPanelSlot_0'
   SiblingIndex=71
   DisplayName=StaticMeshExperimental
 object WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_53.DreamPanelSlot_0 /Script/DreamGUI.DreamPanelSlot
   AuthoredDesiredSizeFallback=(X=100.000000,Y=100.000000)
   bHasAuthoredGeometry=True
-object WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_53.DreamStaticMesh_0 /Script/DreamGUI.DreamStaticMesh
+object WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_53.DreamStaticMesh_0 /Script/DreamGUIExtensions.DreamStaticMesh
 object WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_54 /Script/DreamGUI.DreamWidget
   Components=("/Script/DreamGUI.DreamDataBinding'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_54.DreamDataBinding_0'")
   PanelSlot=/Script/DreamGUI.DreamPanelSlot'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_54.DreamPanelSlot_0'
@@ -813,23 +813,23 @@ object WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_55.DreamPanelSlot_0 /Scr
   bHasAuthoredGeometry=True
 object WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_55.DreamResponsiveBehaviour_0 /Script/DreamGUI.DreamResponsiveBehaviour
 object WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_56 /Script/DreamGUI.DreamWidget
-  Components=("/Script/DreamGUI.UIEventBlocker'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_56.UIEventBlocker_0'")
+  Components=("/Script/DreamGUIInput.UIEventBlocker'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_56.UIEventBlocker_0'")
   PanelSlot=/Script/DreamGUI.DreamPanelSlot'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_56.DreamPanelSlot_0'
   SiblingIndex=74
   DisplayName=EventBlocker
 object WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_56.DreamPanelSlot_0 /Script/DreamGUI.DreamPanelSlot
   AuthoredDesiredSizeFallback=(X=100.000000,Y=100.000000)
   bHasAuthoredGeometry=True
-object WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_56.UIEventBlocker_0 /Script/DreamGUI.UIEventBlocker
+object WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_56.UIEventBlocker_0 /Script/DreamGUIInput.UIEventBlocker
 object WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_57 /Script/DreamGUI.DreamWidget
-  Components=("/Script/DreamGUI.UIEventTrigger'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_57.UIEventTrigger_0'")
+  Components=("/Script/DreamGUIInput.UIEventTrigger'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_57.UIEventTrigger_0'")
   PanelSlot=/Script/DreamGUI.DreamPanelSlot'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_57.DreamPanelSlot_0'
   SiblingIndex=75
   DisplayName=EventTrigger
 object WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_57.DreamPanelSlot_0 /Script/DreamGUI.DreamPanelSlot
   AuthoredDesiredSizeFallback=(X=100.000000,Y=100.000000)
   bHasAuthoredGeometry=True
-object WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_57.UIEventTrigger_0 /Script/DreamGUI.UIEventTrigger
+object WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_57.UIEventTrigger_0 /Script/DreamGUIInput.UIEventTrigger
 object WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_58 /Script/DreamGUI.DreamWidget
   Components=("/Script/DreamGUI.UINavigationInputSelectionHandler'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_58.UINavigationInputSelectionHandler_0'")
   PanelSlot=/Script/DreamGUI.DreamPanelSlot'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_58.DreamPanelSlot_0'
@@ -860,7 +860,7 @@ object WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_6.DreamPanelSlot_0 /Scri
   AuthoredDesiredSizeFallback=(X=100.000000,Y=100.000000)
   bHasAuthoredGeometry=True
 object WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_60 /Script/DreamGUI.DreamWidget
-  Components=("/Script/DreamGUI.UISpriteSheetTexturePlayer'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_60.UISpriteSheetTexturePlayer_0'")
+  Components=("/Script/DreamGUIExtensions.UISpriteSheetTexturePlayer'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_60.UISpriteSheetTexturePlayer_0'")
   Visual=/Script/DreamGUI.DreamTexture'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_60.DreamTexture_0'
   PanelSlot=/Script/DreamGUI.DreamPanelSlot'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_60.DreamPanelSlot_0'
   SiblingIndex=78
@@ -869,18 +869,18 @@ object WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_60.DreamPanelSlot_0 /Scr
   AuthoredDesiredSizeFallback=(X=100.000000,Y=100.000000)
   bHasAuthoredGeometry=True
 object WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_60.DreamTexture_0 /Script/DreamGUI.DreamTexture
-object WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_60.UISpriteSheetTexturePlayer_0 /Script/DreamGUI.UISpriteSheetTexturePlayer
+object WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_60.UISpriteSheetTexturePlayer_0 /Script/DreamGUIExtensions.UISpriteSheetTexturePlayer
 object WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_61 /Script/DreamGUI.DreamWidget
-  Components=("/Script/DreamGUI.DreamUMGWidgetInteraction'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_61.DreamUMGWidgetInteraction_0'")
-  Visual=/Script/DreamGUI.DreamUMGWidget'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_61.DreamUMGWidget_0'
+  Components=("/Script/DreamGUIControls.DreamUMGWidgetInteraction'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_61.DreamUMGWidgetInteraction_0'")
+  Visual=/Script/DreamGUIControls.DreamUMGWidget'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_61.DreamUMGWidget_0'
   PanelSlot=/Script/DreamGUI.DreamPanelSlot'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_61.DreamPanelSlot_0'
   SiblingIndex=79
   DisplayName=UMGWidgetInteraction
 object WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_61.DreamPanelSlot_0 /Script/DreamGUI.DreamPanelSlot
   AuthoredDesiredSizeFallback=(X=100.000000,Y=100.000000)
   bHasAuthoredGeometry=True
-object WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_61.DreamUMGWidget_0 /Script/DreamGUI.DreamUMGWidget
-object WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_61.DreamUMGWidgetInteraction_0 /Script/DreamGUI.DreamUMGWidgetInteraction
+object WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_61.DreamUMGWidget_0 /Script/DreamGUIControls.DreamUMGWidget
+object WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_61.DreamUMGWidgetInteraction_0 /Script/DreamGUIControls.DreamUMGWidgetInteraction
 object WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_62 /Script/DreamGUI.DreamWidget
   LayoutSelf=/Script/DreamGUI.DreamLayoutSelfAspectRatio'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_62.DreamLayoutSelfAspectRatio_0'
   PanelSlot=/Script/DreamGUI.DreamPanelSlot'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_62.DreamPanelSlot_0'
@@ -891,72 +891,72 @@ object WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_62.DreamPanelSlot_0 /Scr
   AuthoredDesiredSizeFallback=(X=100.000000,Y=100.000000)
   bHasAuthoredGeometry=True
 object WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_63 /Script/DreamGUI.DreamWidget
-  Components=("/Script/DreamGUI.DreamMeshModifierGradientColor'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_63.DreamMeshModifierGradientColor_0'")
+  Components=("/Script/DreamGUIExtensions.DreamMeshModifierGradientColor'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_63.DreamMeshModifierGradientColor_0'")
   Visual=/Script/DreamGUI.DreamImage'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_63.DreamImage_0'
   PanelSlot=/Script/DreamGUI.DreamPanelSlot'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_63.DreamPanelSlot_0'
   SiblingIndex=81
   DisplayName=GradientColorModifier
 object WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_63.DreamImage_0 /Script/DreamGUI.DreamImage
   Brush=(ResourceObject="/Script/DreamGUI.DreamUISpriteData'/DreamGUI/DreamUIPreset_Rect_Sprite.DreamUIPreset_Rect_Sprite'",TintColor=(B=255,G=255,R=255,A=255),DrawAs=Image,ImageSize=(X=32.000000,Y=32.000000),Margin=(),UVRegion=(X=0.000000,Y=0.000000,Z=1.000000,W=1.000000),PixelsPerUnitMultiplier=1.000000,FillAmount=1.000000,CornerRadius=(X=8.000000,Y=8.000000,Z=8.000000,W=8.000000),CornerSegments=6)
-object WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_63.DreamMeshModifierGradientColor_0 /Script/DreamGUI.DreamMeshModifierGradientColor
+object WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_63.DreamMeshModifierGradientColor_0 /Script/DreamGUIExtensions.DreamMeshModifierGradientColor
 object WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_63.DreamPanelSlot_0 /Script/DreamGUI.DreamPanelSlot
   AuthoredDesiredSizeFallback=(X=100.000000,Y=100.000000)
   bHasAuthoredGeometry=True
 object WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_64 /Script/DreamGUI.DreamWidget
-  Components=("/Script/DreamGUI.DreamMeshModifierLongShadow'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_64.DreamMeshModifierLongShadow_0'")
+  Components=("/Script/DreamGUIExtensions.DreamMeshModifierLongShadow'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_64.DreamMeshModifierLongShadow_0'")
   Visual=/Script/DreamGUI.DreamImage'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_64.DreamImage_0'
   PanelSlot=/Script/DreamGUI.DreamPanelSlot'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_64.DreamPanelSlot_0'
   SiblingIndex=82
   DisplayName=LongShadowModifier
 object WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_64.DreamImage_0 /Script/DreamGUI.DreamImage
   Brush=(ResourceObject="/Script/DreamGUI.DreamUISpriteData'/DreamGUI/DreamUIPreset_Rect_Sprite.DreamUIPreset_Rect_Sprite'",TintColor=(B=255,G=255,R=255,A=255),DrawAs=Image,ImageSize=(X=32.000000,Y=32.000000),Margin=(),UVRegion=(X=0.000000,Y=0.000000,Z=1.000000,W=1.000000),PixelsPerUnitMultiplier=1.000000,FillAmount=1.000000,CornerRadius=(X=8.000000,Y=8.000000,Z=8.000000,W=8.000000),CornerSegments=6)
-object WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_64.DreamMeshModifierLongShadow_0 /Script/DreamGUI.DreamMeshModifierLongShadow
+object WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_64.DreamMeshModifierLongShadow_0 /Script/DreamGUIExtensions.DreamMeshModifierLongShadow
 object WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_64.DreamPanelSlot_0 /Script/DreamGUI.DreamPanelSlot
   AuthoredDesiredSizeFallback=(X=100.000000,Y=100.000000)
   bHasAuthoredGeometry=True
 object WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_65 /Script/DreamGUI.DreamWidget
-  Components=("/Script/DreamGUI.DreamMeshModifierOutline'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_65.DreamMeshModifierOutline_0'")
+  Components=("/Script/DreamGUIExtensions.DreamMeshModifierOutline'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_65.DreamMeshModifierOutline_0'")
   Visual=/Script/DreamGUI.DreamImage'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_65.DreamImage_0'
   PanelSlot=/Script/DreamGUI.DreamPanelSlot'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_65.DreamPanelSlot_0'
   SiblingIndex=83
   DisplayName=OutlineModifier
 object WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_65.DreamImage_0 /Script/DreamGUI.DreamImage
   Brush=(ResourceObject="/Script/DreamGUI.DreamUISpriteData'/DreamGUI/DreamUIPreset_Rect_Sprite.DreamUIPreset_Rect_Sprite'",TintColor=(B=255,G=255,R=255,A=255),DrawAs=Image,ImageSize=(X=32.000000,Y=32.000000),Margin=(),UVRegion=(X=0.000000,Y=0.000000,Z=1.000000,W=1.000000),PixelsPerUnitMultiplier=1.000000,FillAmount=1.000000,CornerRadius=(X=8.000000,Y=8.000000,Z=8.000000,W=8.000000),CornerSegments=6)
-object WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_65.DreamMeshModifierOutline_0 /Script/DreamGUI.DreamMeshModifierOutline
+object WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_65.DreamMeshModifierOutline_0 /Script/DreamGUIExtensions.DreamMeshModifierOutline
 object WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_65.DreamPanelSlot_0 /Script/DreamGUI.DreamPanelSlot
   AuthoredDesiredSizeFallback=(X=100.000000,Y=100.000000)
   bHasAuthoredGeometry=True
 object WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_66 /Script/DreamGUI.DreamWidget
-  Components=("/Script/DreamGUI.DreamMeshModifierPositionAsUV'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_66.DreamMeshModifierPositionAsUV_0'")
+  Components=("/Script/DreamGUIExtensions.DreamMeshModifierPositionAsUV'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_66.DreamMeshModifierPositionAsUV_0'")
   Visual=/Script/DreamGUI.DreamImage'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_66.DreamImage_0'
   PanelSlot=/Script/DreamGUI.DreamPanelSlot'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_66.DreamPanelSlot_0'
   SiblingIndex=84
   DisplayName=PositionAsUVModifier
 object WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_66.DreamImage_0 /Script/DreamGUI.DreamImage
   Brush=(ResourceObject="/Script/DreamGUI.DreamUISpriteData'/DreamGUI/DreamUIPreset_Rect_Sprite.DreamUIPreset_Rect_Sprite'",TintColor=(B=255,G=255,R=255,A=255),DrawAs=Image,ImageSize=(X=32.000000,Y=32.000000),Margin=(),UVRegion=(X=0.000000,Y=0.000000,Z=1.000000,W=1.000000),PixelsPerUnitMultiplier=1.000000,FillAmount=1.000000,CornerRadius=(X=8.000000,Y=8.000000,Z=8.000000,W=8.000000),CornerSegments=6)
-object WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_66.DreamMeshModifierPositionAsUV_0 /Script/DreamGUI.DreamMeshModifierPositionAsUV
+object WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_66.DreamMeshModifierPositionAsUV_0 /Script/DreamGUIExtensions.DreamMeshModifierPositionAsUV
 object WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_66.DreamPanelSlot_0 /Script/DreamGUI.DreamPanelSlot
   AuthoredDesiredSizeFallback=(X=100.000000,Y=100.000000)
   bHasAuthoredGeometry=True
 object WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_67 /Script/DreamGUI.DreamWidget
-  Components=("/Script/DreamGUI.DreamMeshModifierShadow'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_67.DreamMeshModifierShadow_0'")
+  Components=("/Script/DreamGUIExtensions.DreamMeshModifierShadow'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_67.DreamMeshModifierShadow_0'")
   Visual=/Script/DreamGUI.DreamImage'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_67.DreamImage_0'
   PanelSlot=/Script/DreamGUI.DreamPanelSlot'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_67.DreamPanelSlot_0'
   SiblingIndex=85
   DisplayName=ShadowModifier
 object WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_67.DreamImage_0 /Script/DreamGUI.DreamImage
   Brush=(ResourceObject="/Script/DreamGUI.DreamUISpriteData'/DreamGUI/DreamUIPreset_Rect_Sprite.DreamUIPreset_Rect_Sprite'",TintColor=(B=255,G=255,R=255,A=255),DrawAs=Image,ImageSize=(X=32.000000,Y=32.000000),Margin=(),UVRegion=(X=0.000000,Y=0.000000,Z=1.000000,W=1.000000),PixelsPerUnitMultiplier=1.000000,FillAmount=1.000000,CornerRadius=(X=8.000000,Y=8.000000,Z=8.000000,W=8.000000),CornerSegments=6)
-object WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_67.DreamMeshModifierShadow_0 /Script/DreamGUI.DreamMeshModifierShadow
+object WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_67.DreamMeshModifierShadow_0 /Script/DreamGUIExtensions.DreamMeshModifierShadow
 object WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_67.DreamPanelSlot_0 /Script/DreamGUI.DreamPanelSlot
   AuthoredDesiredSizeFallback=(X=100.000000,Y=100.000000)
   bHasAuthoredGeometry=True
 object WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_68 /Script/DreamGUI.DreamWidget
-  Components=("/Script/DreamGUI.DreamMeshModifierTextAnimation'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_68.DreamMeshModifierTextAnimation_0'")
+  Components=("/Script/DreamGUIExtensions.DreamMeshModifierTextAnimation'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_68.DreamMeshModifierTextAnimation_0'")
   Visual=/Script/DreamGUI.DreamText'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_68.DreamText_0'
   PanelSlot=/Script/DreamGUI.DreamPanelSlot'/Game/DreamGUIFixtures/WBP_FixturePalette.WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_68.DreamPanelSlot_0'
   SiblingIndex=86
   DisplayName=TextAnimationModifier
-object WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_68.DreamMeshModifierTextAnimation_0 /Script/DreamGUI.DreamMeshModifierTextAnimation
+object WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_68.DreamMeshModifierTextAnimation_0 /Script/DreamGUIExtensions.DreamMeshModifierTextAnimation
 object WBP_FixturePalette:DreamWidgetTree_0.DreamWidget_68.DreamPanelSlot_0 /Script/DreamGUI.DreamPanelSlot
   AuthoredDesiredSizeFallback=(X=100.000000,Y=100.000000)
   bHasAuthoredGeometry=True
@@ -1011,7 +1011,7 @@ object WBP_FixtureBindings:DreamWidgetTree_0.DreamWidget_1.DreamPanelSlot_0 /Scr
   AuthoredDesiredSizeFallback=(X=100.000000,Y=100.000000)
   bHasAuthoredGeometry=True
 object WBP_FixtureBindings:DreamWidgetTree_0.DreamWidget_1.DreamText_0 /Script/DreamGUI.DreamText
-  Text=NSLOCTEXT("", "BC8173474D43ED91338C84898F4BB597", "Saved before the split")
+  Text=NSLOCTEXT("", "264F425C4D577467872C69B84290A3FF", "Saved before the split")
 object WBP_FixtureBindings:DreamWidgetTree_0.DreamWidget_2 /Script/DreamGUI.DreamWidget
   Visual=/Script/DreamGUI.DreamImage'/Game/DreamGUIFixtures/WBP_FixtureBindings.WBP_FixtureBindings:DreamWidgetTree_0.DreamWidget_2.DreamImage_0'
   PanelSlot=/Script/DreamGUI.DreamPanelSlot'/Game/DreamGUIFixtures/WBP_FixtureBindings.WBP_FixtureBindings:DreamWidgetTree_0.DreamWidget_2.DreamPanelSlot_0'
@@ -1022,7 +1022,7 @@ object WBP_FixtureBindings:DreamWidgetTree_0.DreamWidget_2.DreamPanelSlot_0 /Scr
   AuthoredDesiredSizeFallback=(X=100.000000,Y=100.000000)
   bHasAuthoredGeometry=True
 object WBP_FixtureBindings:DreamWidgetTree_0.DreamWidget_3 /Script/DreamGUI.DreamWidget
-  Components=("/Script/DreamGUI.UIButton'/Game/DreamGUIFixtures/WBP_FixtureBindings.WBP_FixtureBindings:DreamWidgetTree_0.DreamWidget_3.UIButton_0'")
+  Components=("/Script/DreamGUIControls.UIButton'/Game/DreamGUIFixtures/WBP_FixtureBindings.WBP_FixtureBindings:DreamWidgetTree_0.DreamWidget_3.UIButton_0'")
   Visual=/Script/DreamGUI.DreamImage'/Game/DreamGUIFixtures/WBP_FixtureBindings.WBP_FixtureBindings:DreamWidgetTree_0.DreamWidget_3.DreamImage_0'
   PanelSlot=/Script/DreamGUI.DreamPanelSlot'/Game/DreamGUIFixtures/WBP_FixtureBindings.WBP_FixtureBindings:DreamWidgetTree_0.DreamWidget_3.DreamPanelSlot_0'
   SiblingIndex=2
@@ -1031,10 +1031,10 @@ object WBP_FixtureBindings:DreamWidgetTree_0.DreamWidget_3.DreamImage_0 /Script/
 object WBP_FixtureBindings:DreamWidgetTree_0.DreamWidget_3.DreamPanelSlot_0 /Script/DreamGUI.DreamPanelSlot
   AuthoredDesiredSizeFallback=(X=100.000000,Y=100.000000)
   bHasAuthoredGeometry=True
-object WBP_FixtureBindings:DreamWidgetTree_0.DreamWidget_3.UIButton_0 /Script/DreamGUI.UIButton
+object WBP_FixtureBindings:DreamWidgetTree_0.DreamWidget_3.UIButton_0 /Script/DreamGUIControls.UIButton
   OnClick=(EventList=((HelperWidget="/Script/DreamGUI.DreamWidget'/Game/DreamGUIFixtures/WBP_FixtureBindings.WBP_FixtureBindings:DreamWidgetTree_0.DreamWidget_2'",HelperClass="/Script/CoreUObject.Class'/Script/DreamGUI.DreamWidget'",FunctionName="SetWidgetActive",ParamType=Bool,ParamBuffer=(0))))
 object WBP_FixtureBindings:DreamWidgetTree_0.DreamWidget_4 /Script/DreamGUI.DreamWidget
-  Components=("/Script/DreamGUI.UIToggle'/Game/DreamGUIFixtures/WBP_FixtureBindings.WBP_FixtureBindings:DreamWidgetTree_0.DreamWidget_4.UIToggle_0'")
+  Components=("/Script/DreamGUIControls.UIToggle'/Game/DreamGUIFixtures/WBP_FixtureBindings.WBP_FixtureBindings:DreamWidgetTree_0.DreamWidget_4.UIToggle_0'")
   Visual=/Script/DreamGUI.DreamImage'/Game/DreamGUIFixtures/WBP_FixtureBindings.WBP_FixtureBindings:DreamWidgetTree_0.DreamWidget_4.DreamImage_0'
   PanelSlot=/Script/DreamGUI.DreamPanelSlot'/Game/DreamGUIFixtures/WBP_FixtureBindings.WBP_FixtureBindings:DreamWidgetTree_0.DreamWidget_4.DreamPanelSlot_0'
   SiblingIndex=3
@@ -1043,10 +1043,10 @@ object WBP_FixtureBindings:DreamWidgetTree_0.DreamWidget_4.DreamImage_0 /Script/
 object WBP_FixtureBindings:DreamWidgetTree_0.DreamWidget_4.DreamPanelSlot_0 /Script/DreamGUI.DreamPanelSlot
   AuthoredDesiredSizeFallback=(X=100.000000,Y=100.000000)
   bHasAuthoredGeometry=True
-object WBP_FixtureBindings:DreamWidgetTree_0.DreamWidget_4.UIToggle_0 /Script/DreamGUI.UIToggle
+object WBP_FixtureBindings:DreamWidgetTree_0.DreamWidget_4.UIToggle_0 /Script/DreamGUIControls.UIToggle
   OnValueChanged=(EventList=((HelperWidget="/Script/DreamGUI.DreamWidget'/Game/DreamGUIFixtures/WBP_FixtureBindings.WBP_FixtureBindings:DreamWidgetTree_0.DreamWidget_1'",HelperClass="/Script/CoreUObject.Class'/Script/DreamGUI.DreamText'",FunctionName="SetColor",ParamType=Color,ParamBuffer=(0,128,255,255))))
 object WBP_FixtureBindings:DreamWidgetTree_0.DreamWidget_5 /Script/DreamGUI.DreamWidget
-  Components=("/Script/DreamGUI.UIEventTrigger'/Game/DreamGUIFixtures/WBP_FixtureBindings.WBP_FixtureBindings:DreamWidgetTree_0.DreamWidget_5.UIEventTrigger_0'")
+  Components=("/Script/DreamGUIInput.UIEventTrigger'/Game/DreamGUIFixtures/WBP_FixtureBindings.WBP_FixtureBindings:DreamWidgetTree_0.DreamWidget_5.UIEventTrigger_0'")
   Visual=/Script/DreamGUI.DreamImage'/Game/DreamGUIFixtures/WBP_FixtureBindings.WBP_FixtureBindings:DreamWidgetTree_0.DreamWidget_5.DreamImage_0'
   PanelSlot=/Script/DreamGUI.DreamPanelSlot'/Game/DreamGUIFixtures/WBP_FixtureBindings.WBP_FixtureBindings:DreamWidgetTree_0.DreamWidget_5.DreamPanelSlot_0'
   SiblingIndex=4
@@ -1055,8 +1055,8 @@ object WBP_FixtureBindings:DreamWidgetTree_0.DreamWidget_5.DreamImage_0 /Script/
 object WBP_FixtureBindings:DreamWidgetTree_0.DreamWidget_5.DreamPanelSlot_0 /Script/DreamGUI.DreamPanelSlot
   AuthoredDesiredSizeFallback=(X=100.000000,Y=100.000000)
   bHasAuthoredGeometry=True
-object WBP_FixtureBindings:DreamWidgetTree_0.DreamWidget_5.UIEventTrigger_0 /Script/DreamGUI.UIEventTrigger
-  OnPointerClick=(EventList=((HelperWidget="/Script/DreamGUI.DreamWidget'/Game/DreamGUIFixtures/WBP_FixtureBindings.WBP_FixtureBindings:DreamWidgetTree_0.DreamWidget_4'",HelperClass="/Script/CoreUObject.Class'/Script/DreamGUI.UIToggle'",HelperComponentIndex=0,FunctionName="SetOnColor",ParamType=Color,ParamBuffer=(100,200,0,255)),(HelperWidget="/Script/DreamGUI.DreamWidget'/Game/DreamGUIFixtures/WBP_FixtureBindings.WBP_FixtureBindings:DreamWidgetTree_0.DreamWidget_1'",HelperClass="/Script/CoreUObject.Class'/Script/DreamGUI.DreamWidget'",FunctionName="SetAsLastSibling",ParamType=Empty)))
+object WBP_FixtureBindings:DreamWidgetTree_0.DreamWidget_5.UIEventTrigger_0 /Script/DreamGUIInput.UIEventTrigger
+  OnPointerClick=(EventList=((HelperWidget="/Script/DreamGUI.DreamWidget'/Game/DreamGUIFixtures/WBP_FixtureBindings.WBP_FixtureBindings:DreamWidgetTree_0.DreamWidget_4'",HelperClass="/Script/CoreUObject.Class'/Script/DreamGUIControls.UIToggle'",HelperComponentIndex=0,FunctionName="SetOnColor",ParamType=Color,ParamBuffer=(100,200,0,255)),(HelperWidget="/Script/DreamGUI.DreamWidget'/Game/DreamGUIFixtures/WBP_FixtureBindings.WBP_FixtureBindings:DreamWidgetTree_0.DreamWidget_1'",HelperClass="/Script/CoreUObject.Class'/Script/DreamGUI.DreamWidget'",FunctionName="SetAsLastSibling",ParamType=Empty)))
 
 package /Game/DreamGUIFixtures/WBP_FixtureAnimated
 blueprint WBP_FixtureAnimated /Script/DreamGUIEditor.DreamWidgetBlueprint
@@ -1077,24 +1077,24 @@ object WBP_FixtureAnimated:DreamWidgetTree_0.DreamWidget_0.DreamWidgetAnimationC
   SequenceArray=("/Script/DreamGUI.DreamWidgetAnimation'/Game/DreamGUIFixtures/WBP_FixtureAnimated.WBP_FixtureAnimated:DreamWidgetTree_0.DreamWidget_0.DreamWidgetAnimationComponent_0.DreamWidgetAnimation_0'")
 object WBP_FixtureAnimated:DreamWidgetTree_0.DreamWidget_0.DreamWidgetAnimationComponent_0.DreamWidgetAnimation_0 /Script/DreamGUI.DreamWidgetAnimation
   MovieScene=MovieScene
-  ObjectReferences=(BindingIds=(3D3A9C98436B56C2C5A7EC9785075DB3),References=((Array=((HelperWidget="/Script/DreamGUI.DreamWidget'/Game/DreamGUIFixtures/WBP_FixtureAnimated.WBP_FixtureAnimated:DreamWidgetTree_0.DreamWidget_1'",HelperWidgetPath="Mover")))))
+  ObjectReferences=(BindingIds=(FF0FEC7C46FE6F4B9B06CD88B983DEAA),References=((Array=((HelperWidget="/Script/DreamGUI.DreamWidget'/Game/DreamGUIFixtures/WBP_FixtureAnimated.WBP_FixtureAnimated:DreamWidgetTree_0.DreamWidget_1'",HelperWidgetPath="Mover")))))
   DisplayNameString=Slide
   bHasBeenInitialized=True
-  Signature=D9EBC2A7431A930C2C435FAC5D65171C
+  Signature=227773A342B015AE52DCAF9A2D9D32C6
 object WBP_FixtureAnimated:DreamWidgetTree_0.DreamWidget_0.DreamWidgetAnimationComponent_0.DreamWidgetAnimation_0.MovieScene /Script/MovieScene.MovieScene
-  Possessables=((Guid=3D3A9C98436B56C2C5A7EC9785075DB3,Name="Mover",PossessedObjectClass="/Script/DreamGUI.DreamWidget"))
-  ObjectBindings=((ObjectGuid=3D3A9C98436B56C2C5A7EC9785075DB3,Tracks=("/Script/MovieSceneTracks.MovieSceneFloatTrack'/Game/DreamGUIFixtures/WBP_FixtureAnimated.WBP_FixtureAnimated:DreamWidgetTree_0.DreamWidget_0.DreamWidgetAnimationComponent_0.DreamWidgetAnimation_0.MovieScene.MovieSceneFloatTrack_0'","/Script/MovieSceneTracks.MovieSceneDoubleVectorTrack'/Game/DreamGUIFixtures/WBP_FixtureAnimated.WBP_FixtureAnimated:DreamWidgetTree_0.DreamWidget_0.DreamWidgetAnimationComponent_0.DreamWidgetAnimation_0.MovieScene.MovieSceneDoubleVectorTrack_0'")))
+  Possessables=((Guid=FF0FEC7C46FE6F4B9B06CD88B983DEAA,Name="Mover",PossessedObjectClass="/Script/DreamGUI.DreamWidget"))
+  ObjectBindings=((ObjectGuid=FF0FEC7C46FE6F4B9B06CD88B983DEAA,Tracks=("/Script/MovieSceneTracks.MovieSceneFloatTrack'/Game/DreamGUIFixtures/WBP_FixtureAnimated.WBP_FixtureAnimated:DreamWidgetTree_0.DreamWidget_0.DreamWidgetAnimationComponent_0.DreamWidgetAnimation_0.MovieScene.MovieSceneFloatTrack_0'","/Script/MovieSceneTracks.MovieSceneDoubleVectorTrack'/Game/DreamGUIFixtures/WBP_FixtureAnimated.WBP_FixtureAnimated:DreamWidgetTree_0.DreamWidget_0.DreamWidgetAnimationComponent_0.DreamWidgetAnimation_0.MovieScene.MovieSceneDoubleVectorTrack_0'")))
   PlaybackRange=Inclusive:0:Exclusive:24000
   TickResolution=(Numerator=24000,Denominator=1)
   DisplayRate=(Numerator=30,Denominator=1)
   EditorData=(NavigationToolState=())
   NodeGroupCollection=NodeGroupCollection
-  Signature=2B50E78A4CDD4A484A22DE998B1EBF1C
+  Signature=4A0D40784C42E462CA2B4CB0720EC221
 object WBP_FixtureAnimated:DreamWidgetTree_0.DreamWidget_0.DreamWidgetAnimationComponent_0.DreamWidgetAnimation_0.MovieScene.MovieSceneDoubleVectorTrack_0 /Script/MovieSceneTracks.MovieSceneDoubleVectorTrack
   NumChannelsUsed=3
   PropertyBinding=(PropertyName="RenderTranslation",PropertyPath="RenderTranslation",bCanUseClassLookup=True)
   Sections=("/Script/MovieSceneTracks.MovieSceneDoubleVectorSection'/Game/DreamGUIFixtures/WBP_FixtureAnimated.WBP_FixtureAnimated:DreamWidgetTree_0.DreamWidget_0.DreamWidgetAnimationComponent_0.DreamWidgetAnimation_0.MovieScene.MovieSceneDoubleVectorTrack_0.MovieSceneDoubleVectorSection_0'")
-  Signature=1CB55762410D660E20BE32A42B11B0E1
+  Signature=2FF7061F4CA6EB895A85E88E8451DBCB
 object WBP_FixtureAnimated:DreamWidgetTree_0.DreamWidget_0.DreamWidgetAnimationComponent_0.DreamWidgetAnimation_0.MovieScene.MovieSceneDoubleVectorTrack_0.MovieSceneDoubleVectorSection_0 /Script/MovieSceneTracks.MovieSceneDoubleVectorSection
   Curves[0]=(PreInfinityExtrap=RCCE_Constant,PostInfinityExtrap=RCCE_Constant,Times=((),(Value=24000)),Values=((Value=-120.000000),()),TickResolution=(Numerator=60000,Denominator=1))
   Curves[1]=(PreInfinityExtrap=RCCE_Constant,PostInfinityExtrap=RCCE_Constant,Times=(()),Values=(()),TickResolution=(Numerator=60000,Denominator=1))
@@ -1102,18 +1102,18 @@ object WBP_FixtureAnimated:DreamWidgetTree_0.DreamWidget_0.DreamWidgetAnimationC
   ChannelsUsed=3
   Easing=(EaseIn=MovieSceneBuiltInEasingFunction'/Game/DreamGUIFixtures/WBP_FixtureAnimated.WBP_FixtureAnimated:DreamWidgetTree_0.DreamWidget_0.DreamWidgetAnimationComponent_0.DreamWidgetAnimation_0.MovieScene.MovieSceneDoubleVectorTrack_0.MovieSceneDoubleVectorSection_0.EaseInFunction',EaseOut=MovieSceneBuiltInEasingFunction'/Game/DreamGUIFixtures/WBP_FixtureAnimated.WBP_FixtureAnimated:DreamWidgetTree_0.DreamWidget_0.DreamWidgetAnimationComponent_0.DreamWidgetAnimation_0.MovieScene.MovieSceneDoubleVectorTrack_0.MovieSceneDoubleVectorSection_0.EaseOutFunction')
   SectionRange=Inclusive:0:Exclusive:24000
-  Signature=6D010F024B34043C1230A1B7661E1BC6
+  Signature=CE30142E40F636E89F84A7993F9A7113
 object WBP_FixtureAnimated:DreamWidgetTree_0.DreamWidget_0.DreamWidgetAnimationComponent_0.DreamWidgetAnimation_0.MovieScene.MovieSceneDoubleVectorTrack_0.MovieSceneDoubleVectorSection_0.EaseInFunction /Script/MovieScene.MovieSceneBuiltInEasingFunction
 object WBP_FixtureAnimated:DreamWidgetTree_0.DreamWidget_0.DreamWidgetAnimationComponent_0.DreamWidgetAnimation_0.MovieScene.MovieSceneDoubleVectorTrack_0.MovieSceneDoubleVectorSection_0.EaseOutFunction /Script/MovieScene.MovieSceneBuiltInEasingFunction
 object WBP_FixtureAnimated:DreamWidgetTree_0.DreamWidget_0.DreamWidgetAnimationComponent_0.DreamWidgetAnimation_0.MovieScene.MovieSceneFloatTrack_0 /Script/MovieSceneTracks.MovieSceneFloatTrack
   PropertyBinding=(PropertyName="RenderOpacity",PropertyPath="RenderOpacity",bCanUseClassLookup=True)
   Sections=("/Script/MovieSceneTracks.MovieSceneFloatSection'/Game/DreamGUIFixtures/WBP_FixtureAnimated.WBP_FixtureAnimated:DreamWidgetTree_0.DreamWidget_0.DreamWidgetAnimationComponent_0.DreamWidgetAnimation_0.MovieScene.MovieSceneFloatTrack_0.MovieSceneFloatSection_0'")
-  Signature=AF9AB4C94DAC662AA492C5B39946751A
+  Signature=5FCEC6EB42F4AE8674AB0690749E7F89
 object WBP_FixtureAnimated:DreamWidgetTree_0.DreamWidget_0.DreamWidgetAnimationComponent_0.DreamWidgetAnimation_0.MovieScene.MovieSceneFloatTrack_0.MovieSceneFloatSection_0 /Script/MovieSceneTracks.MovieSceneFloatSection
   FloatCurve=(PreInfinityExtrap=RCCE_Constant,PostInfinityExtrap=RCCE_Constant,Times=((),(Value=24000)),Values=((Tangent=(LeaveTangent=0.000042),InterpMode=RCIM_Linear),(Value=1.000000,Tangent=(ArriveTangent=0.000042),InterpMode=RCIM_Linear)),TickResolution=(Numerator=60000,Denominator=1))
   Easing=(EaseIn=MovieSceneBuiltInEasingFunction'/Game/DreamGUIFixtures/WBP_FixtureAnimated.WBP_FixtureAnimated:DreamWidgetTree_0.DreamWidget_0.DreamWidgetAnimationComponent_0.DreamWidgetAnimation_0.MovieScene.MovieSceneFloatTrack_0.MovieSceneFloatSection_0.EaseInFunction',EaseOut=MovieSceneBuiltInEasingFunction'/Game/DreamGUIFixtures/WBP_FixtureAnimated.WBP_FixtureAnimated:DreamWidgetTree_0.DreamWidget_0.DreamWidgetAnimationComponent_0.DreamWidgetAnimation_0.MovieScene.MovieSceneFloatTrack_0.MovieSceneFloatSection_0.EaseOutFunction')
   SectionRange=Inclusive:0:Exclusive:24000
-  Signature=9D92E0B5486D432ADB17D6ADF2AFF7DF
+  Signature=E8E7FFF3465956750CC213956E6FC361
 object WBP_FixtureAnimated:DreamWidgetTree_0.DreamWidget_0.DreamWidgetAnimationComponent_0.DreamWidgetAnimation_0.MovieScene.MovieSceneFloatTrack_0.MovieSceneFloatSection_0.EaseInFunction /Script/MovieScene.MovieSceneBuiltInEasingFunction
 object WBP_FixtureAnimated:DreamWidgetTree_0.DreamWidget_0.DreamWidgetAnimationComponent_0.DreamWidgetAnimation_0.MovieScene.MovieSceneFloatTrack_0.MovieSceneFloatSection_0.EaseOutFunction /Script/MovieScene.MovieSceneBuiltInEasingFunction
 object WBP_FixtureAnimated:DreamWidgetTree_0.DreamWidget_0.DreamWidgetAnimationComponent_0.DreamWidgetAnimation_0.MovieScene.NodeGroupCollection /Script/MovieScene.MovieSceneNodeGroupCollection
@@ -1134,7 +1134,7 @@ blueprint WBP_FixtureNested /Script/DreamGUIEditor.DreamWidgetBlueprint
   PropertyBindings=
 object WBP_FixtureNested:DreamWidgetTree_0 /Script/DreamGUI.DreamWidgetTree
   RootWidget=/Script/DreamGUI.DreamWidget'/Game/DreamGUIFixtures/WBP_FixtureNested.WBP_FixtureNested:DreamWidgetTree_0.DreamWidget_0'
-object WBP_FixtureNested:DreamWidgetTree_0.DreamButton_0 /Script/DreamGUI.DreamButton
+object WBP_FixtureNested:DreamWidgetTree_0.DreamButton_0 /Script/DreamGUIControls.DreamButton
   Children=("/Script/DreamGUI.DreamWidget'/Game/DreamGUIFixtures/WBP_FixtureNested.WBP_FixtureNested:DreamWidgetTree_0.DreamWidget_1'")
   PanelSlot=/Script/DreamGUI.DreamPanelSlot'/Game/DreamGUIFixtures/WBP_FixtureNested.WBP_FixtureNested:DreamWidgetTree_0.DreamButton_0.DreamPanelSlot_0'
   SiblingIndex=2
@@ -1143,7 +1143,7 @@ object WBP_FixtureNested:DreamWidgetTree_0.DreamButton_0.DreamPanelSlot_0 /Scrip
   AuthoredDesiredSizeFallback=(X=100.000000,Y=100.000000)
   bHasAuthoredGeometry=True
 object WBP_FixtureNested:DreamWidgetTree_0.DreamWidget_0 /Script/DreamGUI.DreamWidget
-  Children=("/Game/DreamGUIFixtures/WBP_FixtureBindings.WBP_FixtureBindings_C'/Game/DreamGUIFixtures/WBP_FixtureNested.WBP_FixtureNested:DreamWidgetTree_0.WBP_FixtureBindings_C_0'","/Game/DreamGUIFixtures/WBP_FixtureAnimated.WBP_FixtureAnimated_C'/Game/DreamGUIFixtures/WBP_FixtureNested.WBP_FixtureNested:DreamWidgetTree_0.WBP_FixtureAnimated_C_0'","/Script/DreamGUI.DreamButton'/Game/DreamGUIFixtures/WBP_FixtureNested.WBP_FixtureNested:DreamWidgetTree_0.DreamButton_0'")
+  Children=("/Game/DreamGUIFixtures/WBP_FixtureBindings.WBP_FixtureBindings_C'/Game/DreamGUIFixtures/WBP_FixtureNested.WBP_FixtureNested:DreamWidgetTree_0.WBP_FixtureBindings_C_0'","/Game/DreamGUIFixtures/WBP_FixtureAnimated.WBP_FixtureAnimated_C'/Game/DreamGUIFixtures/WBP_FixtureNested.WBP_FixtureNested:DreamWidgetTree_0.WBP_FixtureAnimated_C_0'","/Script/DreamGUIControls.DreamButton'/Game/DreamGUIFixtures/WBP_FixtureNested.WBP_FixtureNested:DreamWidgetTree_0.DreamButton_0'")
   AnchorData=(Pivot=(X=0.500000,Y=0.500000),AnchorMin=(X=0.000000,Y=0.000000),AnchorMax=(X=1.000000,Y=1.000000),AnchoredPosition=(X=0.000000,Y=0.000000),SizeDelta=(X=0.000000,Y=0.000000))
   LayoutContainer=/Script/DreamGUI.DreamLayoutContainerCanvasPanel'/Game/DreamGUIFixtures/WBP_FixtureNested.WBP_FixtureNested:DreamWidgetTree_0.DreamWidget_0.DreamLayoutContainerCanvasPanel_0'
   DisplayName=WBP_FixtureNested
@@ -1153,7 +1153,7 @@ object WBP_FixtureNested:DreamWidgetTree_0.DreamWidget_1 /Script/DreamGUI.DreamW
   SiblingIndex=
   DisplayName=Caption
 object WBP_FixtureNested:DreamWidgetTree_0.DreamWidget_1.DreamText_0 /Script/DreamGUI.DreamText
-  Text=NSLOCTEXT("", "CC837DD941822966FA6FAAA1F362FEF0", "Confirm")
+  Text=NSLOCTEXT("", "9A3DBDD542AAEBFF1A03A289A64F8231", "Confirm")
 object WBP_FixtureNested:DreamWidgetTree_0.WBP_FixtureAnimated_C_0 /Game/DreamGUIFixtures/WBP_FixtureAnimated.WBP_FixtureAnimated_C
   PanelSlot=/Script/DreamGUI.DreamPanelSlot'/Game/DreamGUIFixtures/WBP_FixtureNested.WBP_FixtureNested:DreamWidgetTree_0.WBP_FixtureAnimated_C_0.DreamPanelSlot_0'
   SiblingIndex=1
@@ -1175,22 +1175,22 @@ object L_FixtureWorld:PersistentLevel.FixtureEventSystem /DreamGUI/Blueprints/Dr
   InputModule=DreamStandaloneInputModule
   EventSystem=EventSystem
   RootComponent=DefaultSceneRoot
-  ActorGuid=0D603B484F05B97396EE2EAB80CE1EAF
+  ActorGuid=FA998E8541190A85610AB0867C49C78F
   ActorLabel=FixtureEventSystem
 object L_FixtureWorld:PersistentLevel.FixtureEventSystem.DefaultSceneRoot /Script/Engine.SceneComponent
-object L_FixtureWorld:PersistentLevel.FixtureEventSystem.DreamStandaloneInputModule /Script/DreamGUI.DreamStandaloneInputModule
-object L_FixtureWorld:PersistentLevel.FixtureEventSystem.EventSystem /Script/DreamGUI.DreamEventSystem
+object L_FixtureWorld:PersistentLevel.FixtureEventSystem.DreamStandaloneInputModule /Script/DreamGUIInput.DreamStandaloneInputModule
+object L_FixtureWorld:PersistentLevel.FixtureEventSystem.EventSystem /Script/DreamGUIInput.DreamEventSystem
 object L_FixtureWorld:PersistentLevel.FixturePointer /Script/Engine.Actor
-  ActorGuid=7D40776742426D47079CA88FCE6E79C7
+  ActorGuid=E535838049691B4BE2F753A253F6F3AA
   ActorLabel=FixturePointer
-  InstanceComponents=("/Script/DreamGUI.DreamWorldSpaceRaycaster'/Game/DreamGUIFixtures/L_FixtureWorld.L_FixtureWorld:PersistentLevel.FixturePointer.FixtureRaycaster'")
-object L_FixtureWorld:PersistentLevel.FixturePointer.FixtureRaycaster /Script/DreamGUI.DreamWorldSpaceRaycaster
+  InstanceComponents=("/Script/DreamGUIInput.DreamWorldSpaceRaycaster'/Game/DreamGUIFixtures/L_FixtureWorld.L_FixtureWorld:PersistentLevel.FixturePointer.FixtureRaycaster'")
+object L_FixtureWorld:PersistentLevel.FixturePointer.FixtureRaycaster /Script/DreamGUIInput.DreamWorldSpaceRaycaster
   PointerSource=ScreenCenter
   CreationMethod=Instance
 object L_FixtureWorld:PersistentLevel.FixtureWorldWidget /Script/DreamGUI.DreamWorldWidgetActor
   WidgetComponent=WidgetComponent
   RootComponent=WidgetComponent
-  ActorGuid=5D0E02F24256F8EF02BF77A11C7FB9F5
+  ActorGuid=6302CE194654A2A24F7DFDAD10F207A5
   ActorLabel=FixtureWorldWidget
 object L_FixtureWorld:PersistentLevel.FixtureWorldWidget.WidgetComponent /Script/DreamGUI.DreamWorldWidgetComponent
   WidgetClass=/Script/DreamGUI.DreamWidgetGeneratedClass'/Game/DreamGUIFixtures/WBP_FixtureNested.WBP_FixtureNested_C'

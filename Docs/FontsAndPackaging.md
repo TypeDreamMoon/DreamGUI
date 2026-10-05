@@ -3,7 +3,7 @@
 What a DreamGUI text needs to look in a packaged game the way it looks in the editor: which fonts ship by themselves and
 which you add, how to add a colour emoji font, which ICU data the game has to be packaged with, and how to check a
 package. Everything here is what the plugin does on Win64; no other platform has been built (see the README's
-[Platforms](../README.md#platforms)).
+[Platforms](https://gui.toolchain.64hz.cn/en/docs/guides/platforms)).
 
 ## 1. What ships by itself
 
@@ -108,7 +108,7 @@ A packaged game links the same libraries as the editor:
 
 Only the Win64 libraries have been used. The other platforms' builds of these libraries have never been linked into
 DreamGUI. What a cooked game does with them is what the packaged text smoke test (section 5) checks; until the release
-gate has run it for a version (see the README's [Platforms](../README.md#platforms)), what this section says of a
+gate has run it for a version (see [Platforms](https://gui.toolchain.64hz.cn/en/docs/guides/platforms)), what this section says of a
 cooked game is what the editor does with the same libraries.
 
 ## 4. ICU data: package EFIGSCJK, or All

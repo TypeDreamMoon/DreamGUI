@@ -7,8 +7,9 @@
 class UPackage;
 
 /**
- * Assets saved by the plugin as it was before its classes began moving between modules: the old assets
- * every later step has to keep loading.
+ * Assets saved by the plugin at 1.0.0, its first public release: the old assets every later version has to
+ * keep loading. (The first set was saved before any class moved between modules and loaded through the
+ * plugin's CoreRedirects; 1.0.0 ships none, and replaced it.)
  *
  * They live in the test host's content, /Game/DreamGUIFixtures, which every host copies from
  * Tools/TestHost/Template/Content; the shipped plugin carries none of them. What they hold:
@@ -23,7 +24,7 @@ class UPackage;
  * The snapshot beside them records every saved object and every property it holds at a value other than
  * its default, as the code that saved the files read them back. After a class has moved, the same
  * description of the same files has to come out the same once the snapshot's script paths have been
- * carried through the redirects -- which is what a move that loses nothing means.
+ * carried through whatever redirects the move came with -- which is what a move that loses nothing means.
  *
  * The console commands DreamGUI.OldAssetFixtures.Write and .Snapshot make them and the snapshot
  * (DreamOldAssetFixturesCommands.cpp); the snapshot and the tests read a fixture back through

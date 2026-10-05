@@ -34,7 +34,6 @@
 #include "ModuleDescriptor.h"
 #include "ShaderCore.h"
 #include "DreamCrosscuttingTestTypes.h"
-#include "UObject/CoreRedirects.h"
 #include "UObject/Package.h"
 #include "UObject/UObjectHash.h"
 #include "UObject/UObjectIterator.h"
@@ -44,10 +43,9 @@
  * The parts of DreamGUI that only a package, a cook or an undo ever exercises.
  *
  * Everything asserted here shares one shape: the editor never sees it. The suite runs in an editor
- * process with every asset on disk, all of its tests carrying EditorContext, so a redirect that never
- * reaches the engine, a redirect that names a type nobody kept, a descriptor that does not list the
- * platforms its modules compile for, and a check() that only exists in a Development package are all
- * invisible from inside. They are also all decidable without building anything --
+ * process with every asset on disk, all of its tests carrying EditorContext, so a file the packaged
+ * plugin leaves behind, a descriptor that does not list the platforms its modules compile for, and a
+ * check() that only exists in a Development package are all invisible from inside. They are also all decidable without building anything --
  * the descriptor is parsed, the class table is in memory, and the ini files are text -- which is
  * what this file is for.
  *
@@ -68,484 +66,17 @@ namespace DreamPackagingTestLocal
 		return Plugin.IsValid() ? Plugin->GetBaseDir() : FString();
 	}
 
-	/** The file every CoreRedirect the plugin ships lives in. */
-	FString RedirectIniPath(const FString& InPluginDir)
-	{
-		return FPaths::Combine(InPluginDir, TEXT("Config"), TEXT("DefaultDreamGUI.ini"));
-	}
-
 	/**
 	 * Whether a line is a comment.
 	 *
 	 * Load-bearing for everything below: an ini comment may quote the very text being searched for --
-	 * the redirect file explains itself in comments that name sections and entries. A whole-file
-	 * Contains() cannot tell a rule from the text that describes it.
+	 * FilterPlugin.ini explains itself in comments that name folders and files. A whole-file Contains()
+	 * cannot tell a rule from the text that describes it.
 	 */
 	bool IsComment(const FString& TrimmedLine)
 	{
 		return TrimmedLine.IsEmpty() || TrimmedLine.StartsWith(TEXT(";"));
 	}
-
-	/**
-	 * One ini line's `(OldName="A",NewName="B")` pair under the given `+Something=` prefix, or false
-	 * when the line is not one of those. Every kind of entry has the identical shape, and the prefix is
-	 * the only thing that tells them apart.
-	 */
-	bool ParseRedirect(const FString& Line, const TCHAR* EntryPrefix, FString& OutOld, FString& OutNew)
-	{
-		const FString Trimmed = Line.TrimStartAndEnd();
-		if (IsComment(Trimmed) || !Trimmed.StartsWith(EntryPrefix))
-		{
-			return false;
-		}
-		const int32 OldStart = Trimmed.Find(TEXT("OldName=\""));
-		const int32 NewStart = Trimmed.Find(TEXT("NewName=\""));
-		if (OldStart == INDEX_NONE || NewStart == INDEX_NONE)
-		{
-			return false;
-		}
-		const int32 OldValue = OldStart + 9;
-		const int32 NewValue = NewStart + 9;
-		const int32 OldEnd = Trimmed.Find(TEXT("\""), ESearchCase::CaseSensitive, ESearchDir::FromStart, OldValue);
-		const int32 NewEnd = Trimmed.Find(TEXT("\""), ESearchCase::CaseSensitive, ESearchDir::FromStart, NewValue);
-		if (OldEnd == INDEX_NONE || NewEnd == INDEX_NONE)
-		{
-			return false;
-		}
-		OutOld = Trimmed.Mid(OldValue, OldEnd - OldValue);
-		OutNew = Trimmed.Mid(NewValue, NewEnd - NewValue);
-		return !OutOld.IsEmpty() && !OutNew.IsEmpty();
-	}
-
-	/** One redirect of the file: its kind ("Class", "Struct", "Enum", "Function", "Object", "Package") and both names. */
-	struct FRedirectEntry
-	{
-		FString Kind;
-		FString OldName;
-		FString NewName;
-	};
-
-	/** Every redirect entry of the plugin's redirect file, in file order; false when the file cannot be read. */
-	bool ReadRedirects(const FString& InPluginDir, TArray<FRedirectEntry>& OutEntries)
-	{
-		TArray<FString> Lines;
-		if (!FFileHelper::LoadFileToStringArray(Lines, *RedirectIniPath(InPluginDir)))
-		{
-			return false;
-		}
-		static const TCHAR* const Kinds[] = { TEXT("Class"), TEXT("Struct"), TEXT("Enum"), TEXT("Function"), TEXT("Object"), TEXT("Package") };
-		for (const FString& Line : Lines)
-		{
-			for (const TCHAR* Kind : Kinds)
-			{
-				FString OldName;
-				FString NewName;
-				if (ParseRedirect(Line, *FString::Printf(TEXT("+%sRedirects="), Kind), OldName, NewName))
-				{
-					OutEntries.Add({ FString(Kind), MoveTemp(OldName), MoveTemp(NewName) });
-					break;
-				}
-			}
-		}
-		return true;
-	}
-
-	/**
-	 * Whether a redirect target names a type in one of this plugin's own modules: every runtime module
-	 * that registered its script package, and the editor module. A target in any other module is a claim
-	 * about that module's contents, and whether it is loaded in this process is not something this file
-	 * decides -- DreamGUIK2Nodes is uncooked-only, and a false red there would say nothing true.
-	 */
-	bool TargetsThisPlugin(const FString& NewName)
-	{
-		return DreamUI::IsInRuntimeScriptPackage(NewName)
-			|| NewName.StartsWith(TEXT("/Script/DreamGUIEditor."));
-	}
-
-	/** The live object of a type redirect's kind at InPath, or null. FindObject applies no redirect, which is the point. */
-	const UObject* FindTypeOfKind(const FString& InKind, const FString& InPath)
-	{
-		if (InKind == TEXT("Class"))
-		{
-			return FindObject<UClass>(nullptr, *InPath);
-		}
-		if (InKind == TEXT("Struct"))
-		{
-			return FindObject<UScriptStruct>(nullptr, *InPath);
-		}
-		if (InKind == TEXT("Enum"))
-		{
-			return FindObject<UEnum>(nullptr, *InPath);
-		}
-		if (InKind == TEXT("Object"))
-		{
-			return FindObject<UObject>(nullptr, *InPath);
-		}
-		return nullptr;
-	}
-
-	/**
-	 * The function a FunctionRedirects name names, or null.
-	 *
-	 * Written two ways in the file: "/Script/DreamGUI.Class.Function", and a short "Class.Function" the
-	 * engine matches in any package -- which, in this plugin's file, means one of this plugin's runtime
-	 * packages. A function's own path separates it from its class with ':', not the '.' a redirect
-	 * writes, so it is found through the class.
-	 */
-	const UFunction* FindRedirectedFunction(const FString& InName)
-	{
-		// A global delegate's signature is a function of the package itself, and its name says so directly:
-		// "/Script/DreamGUIExtensions.DreamLyricsLineChangedEvent__DelegateSignature".
-		if (InName.StartsWith(TEXT("/")))
-		{
-			if (const UFunction* OfThePackage = FindObject<UFunction>(nullptr, *InName))
-			{
-				return OfThePackage;
-			}
-		}
-		FString Owner;
-		FString Function;
-		if (!InName.Split(TEXT("."), &Owner, &Function, ESearchCase::CaseSensitive, ESearchDir::FromEnd))
-		{
-			return nullptr;
-		}
-		const UClass* Class = nullptr;
-		if (Owner.StartsWith(TEXT("/")))
-		{
-			Class = FindObject<UClass>(nullptr, *Owner);
-		}
-		else
-		{
-			for (const FName Package : DreamUI::GetRuntimeScriptPackages())
-			{
-				Class = FindObject<UClass>(nullptr, *FString::Printf(TEXT("%s.%s"), *Package.ToString(), *Owner));
-				if (Class != nullptr)
-				{
-					break;
-				}
-			}
-		}
-		return Class != nullptr ? Class->FindFunctionByName(FName(*Function)) : nullptr;
-	}
-
-	/** The CoreRedirects type flag of a type redirect's kind, or Type_None for the kinds that are not a type. */
-	ECoreRedirectFlags TypeFlagOfKind(const FString& InKind)
-	{
-		if (InKind == TEXT("Class"))
-		{
-			return ECoreRedirectFlags::Type_Class;
-		}
-		if (InKind == TEXT("Struct"))
-		{
-			return ECoreRedirectFlags::Type_Struct;
-		}
-		if (InKind == TEXT("Enum"))
-		{
-			return ECoreRedirectFlags::Type_Enum;
-		}
-		return ECoreRedirectFlags::None;
-	}
-}
-
-IMPLEMENT_SIMPLE_AUTOMATION_TEST(
-	FDreamPluginConfigCarriesItsRedirectsTest,
-	"DreamGUI.Packaging.ThePluginsOwnConfigCarriesItsCoreRedirectsAndTheEngineAppliesThem",
-	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
-
-bool FDreamPluginConfigCarriesItsRedirectsTest::RunTest(const FString& Parameters)
-{
-	using namespace DreamPackagingTestLocal;
-
-	// The premise is the whole test, so it is written down here, as verified against the engine:
-	//
-	//   Config/DefaultDreamGUI.ini is mounted as the "DreamGUI" config branch while plugins mount during
-	//   AppInit, and InitUObject -- bound to FCoreDelegates::OnInit, which AppInit broadcasts at its very
-	//   end -- reads the [CoreRedirects] section of every config branch, this one included, before the
-	//   first package loads. Started with -LogCmds="LogCoreRedirects Verbose", the editor logs
-	//   "AddRedirect(.../DreamGUI.ini) adding N redirects" among the engine's own branches.
-	//
-	// It used to be believed that the file was mounted too late to count, so every redirect lived in a
-	// template each project had to copy into its own config, and a test here asserted the opposite of
-	// this one. A project that copied that block should delete its copy.
-	const FString Dir = PluginDir();
-	if (!TestFalse(TEXT("the plugin manager knows where DreamGUI lives"), Dir.IsEmpty()))
-	{
-		return false;
-	}
-
-	TArray<FRedirectEntry> Entries;
-	if (!TestTrue(TEXT("the plugin's redirect file is readable"), ReadRedirects(Dir, Entries)))
-	{
-		return false;
-	}
-	TMap<FString, int32> CountByKind;
-	for (const FRedirectEntry& Entry : Entries)
-	{
-		++CountByKind.FindOrAdd(Entry.Kind);
-	}
-	for (const TCHAR* Kind : { TEXT("Class"), TEXT("Struct"), TEXT("Enum"), TEXT("Function"), TEXT("Package") })
-	{
-		TestTrue(*FString::Printf(TEXT("the file carries %s redirects"), Kind), CountByKind.FindRef(Kind) > 0);
-	}
-
-	// The DreamGUI branch is one of the files InitUObject reads [CoreRedirects] from: GConfig's filenames,
-	// each read by that very name. (GetConfigFilename spells a plugin branch's path differently.) The
-	// section itself is not looked for in memory -- ReadRedirectsFromIni removes each [CoreRedirects]
-	// section from its branch once it has read it, so by the time a test runs there is nothing to find.
-	bool bBranchIsRead = false;
-	for (const FString& Filename : GConfig->GetFilenames())
-	{
-		bBranchIsRead |= FPaths::GetCleanFilename(Filename).Equals(TEXT("DreamGUI.ini"), ESearchCase::IgnoreCase);
-	}
-	TestTrue(TEXT("the DreamGUI config branch is among the files InitUObject reads redirects from"), bBranchIsRead);
-
-	// What shows the file was read is that its entries are in force, with nothing else there to answer
-	// for it: the project's own config carries no copy of them (a project that copied the old template's
-	// block should delete it, as the README says), and the engine answers every type redirect the way the
-	// file says.
-	TArray<FString> ProjectIniFiles;
-	IFileManager::Get().FindFiles(ProjectIniFiles, *(FPaths::ProjectConfigDir() / TEXT("*.ini")), true, false);
-	for (const FString& IniFile : ProjectIniFiles)
-	{
-		TArray<FString> Lines;
-		FFileHelper::LoadFileToStringArray(Lines, *(FPaths::ProjectConfigDir() / IniFile));
-		int32 NumCopied = 0;
-		for (const FString& Line : Lines)
-		{
-			NumCopied += Line.Contains(TEXT("Redirects=")) && Line.Contains(TEXT("/Script/DreamGUI")) ? 1 : 0;
-		}
-		TestEqual(*FString::Printf(TEXT("the project's %s carries no copy of DreamGUI's redirects"), *IniFile), NumCopied, 0);
-	}
-
-	int32 NumChecked = 0;
-	for (const FRedirectEntry& Entry : Entries)
-	{
-		const ECoreRedirectFlags Flag = TypeFlagOfKind(Entry.Kind);
-		if (Flag == ECoreRedirectFlags::None)
-		{
-			continue;
-		}
-		++NumChecked;
-		const FCoreRedirectObjectName Redirected = FCoreRedirects::GetRedirectedName(Flag, FCoreRedirectObjectName(Entry.OldName));
-		TestEqual(*FString::Printf(TEXT("the engine redirects %s '%s'"), *Entry.Kind, *Entry.OldName),
-			Redirected.ToString(), FCoreRedirectObjectName(Entry.NewName).ToString());
-	}
-	TestTrue(TEXT("and there were type redirects to check"), NumChecked > 0);
-	return true;
-}
-
-IMPLEMENT_SIMPLE_AUTOMATION_TEST(
-	FDreamRedirectsNeverStealALiveTypeTest,
-	"DreamGUI.Packaging.NoRedirectTakesANameThatStillExistsOrHopsIntoAnotherRedirect",
-	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
-
-bool FDreamRedirectsNeverStealALiveTypeTest::RunTest(const FString& Parameters)
-{
-	using namespace DreamPackagingTestLocal;
-
-	// Two invariants, and the same single entry broke both of them for a month.
-	//
-	//   A redirect whose OldName is a type that still exists does not rescue an old asset, it hijacks a
-	//   current one: the loader rewrites every reference to the live type and then fails to find whatever
-	//   it was pointed at. The entry pointed the presenter component class, which was live at the time, at
-	//   a prefab-era name that had never existed. Both of those classes have since been deleted and the
-	//   entries naming them are gone with them -- the shape is what the checks below are for, not the
-	//   particular pair.
-	//
-	//   CoreRedirects are applied ONCE. A redirect whose NewName is another redirect's OldName does not
-	//   chain -- the loader takes one hop and stops -- so a pair like that is at best a no-op and at worst,
-	//   as above, a cycle.
-	//
-	// Classes, structs and enums alike: an enum redirect that takes a live enum's name rewrites every
-	// property of that enum on load.
-	const FString Dir = PluginDir();
-	if (!TestFalse(TEXT("the plugin manager knows where DreamGUI lives"), Dir.IsEmpty()))
-	{
-		return false;
-	}
-
-	TArray<FRedirectEntry> Entries;
-	if (!TestTrue(TEXT("the plugin's redirect file is readable"), ReadRedirects(Dir, Entries)))
-	{
-		return false;
-	}
-
-	TMap<FString, TMap<FString, FString>> ByKind;
-	for (const FRedirectEntry& Entry : Entries)
-	{
-		if (TypeFlagOfKind(Entry.Kind) != ECoreRedirectFlags::None)
-		{
-			ByKind.FindOrAdd(Entry.Kind).Add(Entry.OldName, Entry.NewName);
-		}
-	}
-	TestTrue(TEXT("the file still has type redirects to check"), ByKind.Num() > 0);
-
-	for (const TPair<FString, TMap<FString, FString>>& Kind : ByKind)
-	{
-		for (const TPair<FString, FString>& Redirect : Kind.Value)
-		{
-			// Only a name in a module that is loaded can be looked up, which is the whole population that
-			// matters: a redirect away from a type the running process does not have cannot hijack it.
-			TestNull(*FString::Printf(TEXT("%s '%s' is redirected away, so no such %s may still exist"), *Kind.Key, *Redirect.Key, *Kind.Key.ToLower()),
-				FindTypeOfKind(Kind.Key, Redirect.Key));
-
-			const FString* SecondHop = Kind.Value.Find(Redirect.Value);
-			TestNull(*FString::Printf(TEXT("%s '%s' redirects to '%s', which must not itself be redirected"),
-				*Kind.Key, *Redirect.Key, *Redirect.Value), SecondHop);
-		}
-	}
-	return true;
-}
-
-IMPLEMENT_SIMPLE_AUTOMATION_TEST(
-	FDreamRedirectTargetsExistTest,
-	"DreamGUI.Packaging.EveryRedirectTargetExists",
-	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
-
-bool FDreamRedirectTargetsExistTest::RunTest(const FString& Parameters)
-{
-	using namespace DreamPackagingTestLocal;
-
-	// The other half of the invariant above, and the half nothing watched: that test asks whether a
-	// redirect steals a name that is still live, this one asks whether it hands out a name that is not.
-	// Both are the same failure to the person hitting it -- "because its class does not exist" on an
-	// asset that names neither type -- because the loader rewrites the reference first and only then
-	// looks it up, so a dead target turns a recoverable load into an unrecoverable one and hides which
-	// name was actually written down.
-	//
-	// Deleting a type is where this goes wrong: the type goes, its own entries stay, and nothing in a
-	// build or a cook reads this file. Nine entries naming prefab types were left pointing into nothing
-	// for exactly that reason, and an enum entry into a deleted enum outlived it the same way.
-	//
-	// Every kind whose target is a named thing: classes, structs, enums, objects (a global delegate's
-	// signature, when one moves) and functions. Package redirects name packages and are left alone.
-	const FString Dir = PluginDir();
-	if (!TestFalse(TEXT("the plugin manager knows where DreamGUI lives"), Dir.IsEmpty()))
-	{
-		return false;
-	}
-
-	TArray<FRedirectEntry> Entries;
-	if (!TestTrue(TEXT("the plugin's redirect file is readable"), ReadRedirects(Dir, Entries)))
-	{
-		return false;
-	}
-
-	int32 NumChecked = 0;
-	for (const FRedirectEntry& Entry : Entries)
-	{
-		if (Entry.Kind == TEXT("Function"))
-		{
-			if (Entry.NewName.StartsWith(TEXT("/")) && !TargetsThisPlugin(Entry.NewName))
-			{
-				continue;
-			}
-			++NumChecked;
-			TestNotNull(*FString::Printf(TEXT("'%s' redirects to '%s', which has to be a function that exists"),
-				*Entry.OldName, *Entry.NewName), FindRedirectedFunction(Entry.NewName));
-			continue;
-		}
-		if (Entry.Kind == TEXT("Package") || !TargetsThisPlugin(Entry.NewName))
-		{
-			continue;
-		}
-		++NumChecked;
-		TestNotNull(*FString::Printf(TEXT("'%s' redirects to '%s', which has to be a %s that exists"),
-			*Entry.OldName, *Entry.NewName, *Entry.Kind.ToLower()), FindTypeOfKind(Entry.Kind, Entry.NewName));
-	}
-	// A parser that quietly stopped matching would otherwise pass this test by checking nothing.
-	TestTrue(TEXT("and the file still has targets in this plugin to check"), NumChecked > 0);
-	return true;
-}
-
-IMPLEMENT_SIMPLE_AUTOMATION_TEST(
-	FDreamSplitOffTypesAnswerToTheirOldPathTest,
-	"DreamGUI.Packaging.EveryTypeInASplitOffModuleAnswersToItsOldCorePath",
-	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
-
-bool FDreamSplitOffTypesAnswerToTheirOldPathTest::RunTest(const FString& Parameters)
-{
-	// A runtime module split off the core takes with it types that assets, configs and .dui files have been
-	// naming as /Script/DreamGUI.<Name> -- and every one of them needs a redirect from that path, or whatever
-	// named it stops loading, "because its class does not exist", on the day of the split. The tests above
-	// check the entries the file has; this one checks the entries it ought to have, by walking the types each
-	// split-off module actually holds and asking the engine where the old path leads.
-	//
-	// A type born in one of those modules, which never lived in the core, has no old path to answer to; it is
-	// listed here instead, by its full path.
-	static const TSet<FString> BornOutsideTheCore = {
-		TEXT("/Script/DreamGUIInput.DreamUIInputUser"),
-		TEXT("/Script/DreamGUIInput.DreamUINestedSurface"),
-		TEXT("/Script/DreamGUIInput.DreamUIInputTickFunction"),
-		TEXT("/Script/DreamGUIInput.DreamUITooltipUserState"),
-		TEXT("/Script/DreamGUIInput.DreamUIVirtualCursorUserState"),
-		TEXT("/Script/DreamGUIInput.DreamUITabSwitchTarget"),
-	};
-	const FName Core(TEXT("/Script/DreamGUI"));
-	int32 NumModules = 0;
-	int32 NumChecked = 0;
-	for (const FName PackageName : DreamUI::GetRuntimeScriptPackages())
-	{
-		if (PackageName == Core)
-		{
-			continue;
-		}
-		++NumModules;
-		UPackage* Package = FindObject<UPackage>(nullptr, *PackageName.ToString());
-		if (!TestNotNull(*FString::Printf(TEXT("%s is loaded"), *PackageName.ToString()), Package))
-		{
-			continue;
-		}
-		// The package's own objects only: a delegate declared inside a class moves with its class and has no
-		// entry of its own, and a default object is not a type.
-		ForEachObjectWithPackage(Package, [this, &NumChecked](UObject* Object)
-		{
-			ECoreRedirectFlags Flag = ECoreRedirectFlags::None;
-			if (Object->HasAnyFlags(RF_ClassDefaultObject))
-			{
-				return true;
-			}
-			if (Object->IsA<UClass>())
-			{
-				Flag = ECoreRedirectFlags::Type_Class;
-			}
-			else if (Object->IsA<UScriptStruct>())
-			{
-				Flag = ECoreRedirectFlags::Type_Struct;
-			}
-			else if (Object->IsA<UEnum>())
-			{
-				Flag = ECoreRedirectFlags::Type_Enum;
-			}
-			else if (Object->IsA<UFunction>())
-			{
-				Flag = ECoreRedirectFlags::Type_Function;
-			}
-			if (Flag == ECoreRedirectFlags::None || BornOutsideTheCore.Contains(Object->GetPathName()))
-			{
-				return true;
-			}
-			++NumChecked;
-			const FString OldPath = FString::Printf(TEXT("/Script/DreamGUI.%s"), *Object->GetName());
-			TestEqual(*FString::Printf(TEXT("'%s' leads to where the type lives now"), *OldPath),
-				FCoreRedirects::GetRedirectedName(Flag, FCoreRedirectObjectName(OldPath)).ToString(), Object->GetPathName());
-			// A global delegate's signature is looked up as an object as well as a function: a delegate property
-			// names it as the former, a Blueprint pin as the latter.
-			if (Flag == ECoreRedirectFlags::Type_Function)
-			{
-				TestEqual(*FString::Printf(TEXT("'%s' leads there as an object too"), *OldPath),
-					FCoreRedirects::GetRedirectedName(ECoreRedirectFlags::Type_Object, FCoreRedirectObjectName(OldPath)).ToString(),
-					Object->GetPathName());
-			}
-			return true;
-		}, EGetObjectsFlags::None);
-	}
-	AddInfo(FString::Printf(TEXT("%d split-off modules, %d types checked"), NumModules, NumChecked));
-	if (NumModules > 0)
-	{
-		TestTrue(TEXT("the split-off modules hold types to check"), NumChecked > 0);
-	}
-	return true;
 }
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
@@ -559,8 +90,8 @@ bool FDreamPackagedPluginCarriesItsDocumentedFilesTest::RunTest(const FString& P
 
 	// BuildPlugin's default filter takes /Source, /Content, /Resources, /Shaders and
 	// /Binaries/ThirdParty and nothing else, so a file not named in FilterPlugin.ini is simply absent
-	// from the packaged plugin. The redirects travel in DefaultDreamGUI.ini, Game.ini is layered into the
-	// engine's Game branch, and the MIT notice has to travel with any copy.
+	// from the packaged plugin. Game.ini is layered into the engine's Game branch, and the MIT notice has
+	// to travel with any copy.
 	const FString Dir = PluginDir();
 	if (!TestFalse(TEXT("the plugin manager knows where DreamGUI lives"), Dir.IsEmpty()))
 	{
@@ -588,7 +119,6 @@ bool FDreamPackagedPluginCarriesItsDocumentedFilesTest::RunTest(const FString& P
 
 	const TCHAR* const MustBePackaged[] =
 	{
-		TEXT("/Config/DefaultDreamGUI.ini"),
 		TEXT("/Config/Game.ini"),
 		TEXT("/README.md"),
 		TEXT("/Docs/Migration.md"),
@@ -604,12 +134,52 @@ bool FDreamPackagedPluginCarriesItsDocumentedFilesTest::RunTest(const FString& P
 			IFileManager::Get().FileExists(*OnDisk));
 	}
 
-	// The copy-me template the redirects used to live in is retired. The engine never read it -- a plugin
+	// The copy-me template the redirects once lived in stays retired. The engine never read it -- a plugin
 	// layers into a config branch only through a file named for the branch, and "DefaultEngine" names
-	// none -- and a stale copy of it in a project conflicts with the file that is read.
+	// none -- and a stale copy of it in a project would carry redirects 1.0.0 no longer ships.
 	TestFalse(TEXT("the plugin ships no Config/DefaultEngine.ini any more"),
 		IFileManager::Get().FileExists(*FPaths::Combine(Dir, TEXT("Config"), TEXT("DefaultEngine.ini"))));
 	TestFalse(TEXT("and FilterPlugin.ini does not ask for one"), Rules.Contains(TEXT("/Config/DefaultEngine.ini")));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamPluginShipsNoCoreRedirectsTest,
+	"DreamGUI.Packaging.ThePluginShipsNoCoreRedirects",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamPluginShipsNoCoreRedirectsTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamPackagingTestLocal;
+
+	// 1.0.0 carries no CoreRedirects: assets saved against LGUI, LexUI or a build before 1.0.0 are moved by
+	// opening them once with 2.1.0, which carries them, and saving (Docs/Migration.md). A [CoreRedirects]
+	// section back in any of the plugin's ini files would be applied by the engine to every project that
+	// mounts the plugin, so it comes back only on purpose, and with this test changed to say why.
+	const FString Dir = PluginDir();
+	if (!TestFalse(TEXT("the plugin manager knows where DreamGUI lives"), Dir.IsEmpty()))
+	{
+		return false;
+	}
+	TArray<FString> IniFiles;
+	IFileManager::Get().FindFiles(IniFiles, *FPaths::Combine(Dir, TEXT("Config"), TEXT("*.ini")), true, false);
+	TestTrue(TEXT("the plugin has config files to look at"), IniFiles.Num() > 0);
+	for (const FString& IniFile : IniFiles)
+	{
+		TArray<FString> Lines;
+		FFileHelper::LoadFileToStringArray(Lines, *FPaths::Combine(Dir, TEXT("Config"), IniFile));
+		for (const FString& Line : Lines)
+		{
+			const FString Trimmed = Line.TrimStartAndEnd();
+			if (!IsComment(Trimmed))
+			{
+				TestFalse(*FString::Printf(TEXT("Config/%s has no [CoreRedirects] section"), *IniFile),
+					Trimmed.Equals(TEXT("[CoreRedirects]"), ESearchCase::IgnoreCase));
+			}
+		}
+	}
+	TestFalse(TEXT("and Config/DefaultDreamGUI.ini, where they lived, is gone"),
+		IFileManager::Get().FileExists(*FPaths::Combine(Dir, TEXT("Config"), TEXT("DefaultDreamGUI.ini"))));
 	return true;
 }
 

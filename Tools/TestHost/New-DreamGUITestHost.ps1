@@ -21,8 +21,8 @@
       3. Copies Template\ into the root. A file that is missing is written; a file whose content already
          matches is left alone; a file that differs is listed and kept, unless -Force is given, in which
          case it is backed up next to itself (<name>.bak-<timestamp>) and replaced.
-         Every file is copied as it is. No [CoreRedirects] are copied into the host: the plugin's own
-         Config\DefaultDreamGUI.ini carries them, and the engine applies them from there.
+         Every file is copied as it is. No [CoreRedirects] are copied into the host: the plugin ships
+         none since 1.0.0, and every asset the host loads names the current types.
       4. Writes <Root>\.dreamgui-testhost.json (template version, repository, branch, creation time),
          only when something in it changed.
       5. Prints the command that builds the host and runs the suite in it.

@@ -1,21 +1,20 @@
-"""CoreRedirects for the reflected types a module split moved out of the core.
+"""The reflected types a module split moved out of the core, and the CoreRedirects old assets would need.
 
-    python generate_split_redirects.py <Module>                         # print the block and the retargets
-    python generate_split_redirects.py <Module> --apply [--note "..."]  # append them to Config/DefaultDreamGUI.ini
+    python moved_types.py <Module>               # list them, old path -> new path
+    python moved_types.py <Module> --redirects   # print a [CoreRedirects] block for them instead
 
 Run after move_module_files.py. Reads every header module-owners.csv lists for <Module> -- now under
 Source/<Module> -- and finds each UCLASS, UINTERFACE, USTRUCT and UENUM and every file-scope dynamic delegate
-(a delegate declared inside a class moves with its class and needs nothing). Then:
+(a delegate declared inside a class moves with its class and needs nothing). Code under `#if 0` is skipped.
 
-- one entry per type from /Script/DreamGUI.<Name> to /Script/<Module>.<Name>, grouped by header: classes and
-  interfaces without their U/A prefix, structs without F, enums with their E, and a global delegate's
-  signature twice, as an object and as a function;
-- every existing entry whose NewName is /Script/DreamGUI.<one of those names> is pointed at the new package,
-  because a redirect does not chain: an LGUI entry that led to the old core path would lead nowhere.
-
-It refuses when an OldName it would add is already an OldName in the file. Code under `#if 0` is skipped.
-DreamGUI.Packaging.EveryTypeInASplitOffModuleAnswersToItsOldCorePath checks the result against the types
-the running process holds.
+The plugin ships no CoreRedirects (DreamGUI.Packaging.ThePluginShipsNoCoreRedirects), so nothing here writes
+into its config. The block --redirects prints has one entry per type from /Script/DreamGUI.<Name> to
+/Script/<Module>.<Name>, grouped by header: classes and interfaces without their U/A prefix, structs without F,
+enums with their E, and a global delegate's signature twice, as an object and as a function. It is for a
+project's own Config/DefaultEngine.ini, for as long as it takes to resave the assets that name those types --
+the plugin's own included -- and for the CHANGELOG to hand on. retarget_script_paths.py reads the names from
+here. DreamGUI.Packaging.EveryTypeInASplitOffModuleAnswersToItsOldCorePath checks, against the types the
+running process holds, that each one still answers to its old path where the plugin itself resolves one.
 """
 import argparse
 import csv
@@ -25,8 +24,8 @@ import re
 import sys
 
 REPO = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..'))
-INI = os.path.join(REPO, 'Config', 'DefaultDreamGUI.ini')
 OWNERS = os.path.join(REPO, 'Tools', 'Tests', 'module-owners.csv')
+ORDER = ['Class', 'Struct', 'Enum', 'Delegate']
 
 
 def strip_comments(text):
@@ -133,73 +132,51 @@ def scan(path):
     return found
 
 
-def main():
-    ap = argparse.ArgumentParser()
-    ap.add_argument('module')
-    ap.add_argument('--apply', action='store_true')
-    ap.add_argument('--note', default=None, help='the comment block above the new entries, lines starting with ;')
-    ns = ap.parse_args()
-
+def moved(module):
+    """{kind: set of names} for the types the headers module-owners.csv gives <module> declare, and the blocks
+    of redirect lines for them, one per header."""
     rows = list(csv.DictReader(io.StringIO(open(OWNERS, 'rb').read().decode('utf-8-sig'))))
-    headers = sorted(r['path'] for r in rows if r['module'] == ns.module and r['path'].endswith('.h'))
-    if not all(h.startswith('Source/%s/' % ns.module) for h in headers):
+    headers = sorted(r['path'] for r in rows if r['module'] == module and r['path'].endswith('.h'))
+    if not headers:
+        sys.exit('module-owners.csv gives %s no headers' % module)
+    if not all(h.startswith('Source/%s/' % module) for h in headers):
         sys.exit('move the files first (move_module_files.py)')
 
-    order = ['Class', 'Struct', 'Enum', 'Delegate']
-    moved = {k: set() for k in order}
+    found = {k: set() for k in ORDER}
     blocks = []
     for h in headers:
         types = scan(os.path.join(REPO, h))
         if not types:
             continue
-        lines = ['; ' + h[len('Source/%s/' % ns.module):]]
-        for kind, name in sorted(types, key=lambda t: (order.index(t[0]), t[1])):
-            moved[kind].add(name)
-            old, new = '/Script/DreamGUI.' + name, '/Script/%s.%s' % (ns.module, name)
+        lines = ['; ' + h[len('Source/%s/' % module):]]
+        for kind, name in sorted(types, key=lambda t: (ORDER.index(t[0]), t[1])):
+            found[kind].add(name)
+            old, new = '/Script/DreamGUI.' + name, '/Script/%s.%s' % (module, name)
             if kind == 'Delegate':
                 lines.append('+ObjectRedirects=(OldName="%s",NewName="%s")' % (old, new))
                 lines.append('+FunctionRedirects=(OldName="%s",NewName="%s")' % (old, new))
             else:
                 lines.append('+%sRedirects=(OldName="%s",NewName="%s")' % (kind, old, new))
         blocks.append('\n'.join(lines))
-    print('types: ' + ', '.join('%s %d' % (k, len(moved[k])) for k in order))
+    return found, blocks
 
-    raw = open(INI, 'rb').read()
-    crlf = b'\r\n' in raw
-    text = raw.decode('utf-8-sig').replace('\r\n', '\n')
-    entry = re.compile(r'^\+(\w+)Redirects=\(OldName="([^"]+)",NewName="([^"]+)"(.*)\)\s*$', re.M)
-    existing_old = set(m.group(2) for m in entry.finditer(text))
-    clash = [n for b in blocks for n in re.findall(r'OldName="([^"]+)"', b) if n in existing_old]
-    if clash:
-        sys.exit('already an OldName in the file: %s' % clash)
 
-    kind_of_entry = {'Class': 'Class', 'Struct': 'Struct', 'Enum': 'Enum', 'Object': 'Delegate', 'Function': 'Delegate'}
-    retargets = []
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument('module')
+    ap.add_argument('--redirects', action='store_true', help='print a [CoreRedirects] block instead of the list')
+    ns = ap.parse_args()
 
-    def retarget(m):
-        kind, old, new, rest = m.group(1), m.group(2), m.group(3), m.group(4)
-        k = kind_of_entry.get(kind)
-        if k and new.startswith('/Script/DreamGUI.') and new[len('/Script/DreamGUI.'):] in moved[k]:
-            nn = '/Script/%s.%s' % (ns.module, new[len('/Script/DreamGUI.'):])
-            retargets.append((kind, old, nn))
-            return '+%sRedirects=(OldName="%s",NewName="%s"%s)' % (kind, old, nn, rest)
-        return m.group(0)
-
-    text = entry.sub(retarget, text)
-    print('existing entries pointed at the new package: %d' % len(retargets))
-    for r in retargets:
-        print('  %s %s -> %s' % r)
-    block = '\n\n'.join(blocks)
-    print(block)
-    if not ns.apply:
+    found, blocks = moved(ns.module)
+    if ns.redirects:
+        print('[CoreRedirects]')
+        print('; %s: the reflected types that moved into this module, each from its old /Script/DreamGUI path.' % ns.module)
+        print('\n\n'.join(blocks))
         return
-    note = ns.note or ('; %s: the reflected types declared in the files that moved into this module, each from its old\n'
-                       '; /Script/DreamGUI path. Generated from the moved headers.' % ns.module)
-    text = text.rstrip('\n') + '\n\n' + note.rstrip('\n') + '\n' + block + '\n'
-    if crlf:
-        text = text.replace('\n', '\r\n')
-    open(INI, 'wb').write((b'\xef\xbb\xbf' if raw.startswith(b'\xef\xbb\xbf') else b'') + text.encode('utf-8'))
-    print('written to Config/DefaultDreamGUI.ini')
+    for kind in ORDER:
+        for name in sorted(found[kind]):
+            print('%-8s /Script/DreamGUI.%s -> /Script/%s.%s' % (kind, name, ns.module, name))
+    print('types: ' + ', '.join('%s %d' % (k, len(found[k])) for k in ORDER))
 
 
 if __name__ == '__main__':

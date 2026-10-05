@@ -192,14 +192,14 @@ bool FDreamDuiTypePathRedirectTest::RunTest(const FString& Parameters)
 {
 	using namespace DreamScriptPackagesTestLocal;
 
-	// A behaviour by the path an older file wrote, through a redirect the plugin ships.
-	TestEqual(TEXT("an old behaviour path the plugin's redirects rename resolves to the renamed class"),
-		FDreamUITextBuilder::ResolveComponentClass(TEXT("/Script/DreamGUI.UIButtonComponent")), UUIButton::StaticClass());
-	TestEqual(TEXT("and the short name resolves through the package list"),
+	// The short name resolves through the package list.
+	TestEqual(TEXT("a behaviour's short name resolves through the package list"),
 		FDreamUITextBuilder::ResolveComponentClass(TEXT("UIButton")), UUIButton::StaticClass());
 
-	// And a class that has moved to another module, by the path it had before the move. The redirects lead
-	// to wherever the two classes live today, read off the classes, so the next move does not strand them.
+	// And a class by a path a redirect renames. The plugin ships no redirects since 1.0.0, but a project's
+	// own -- or a later version's, when a class moves -- reach a .dui the way they reach an asset, so the
+	// test makes its own. They lead to wherever the two classes live today, read off the classes, so the
+	// next move does not strand them.
 	const FScopedRedirects Moved({
 		FCoreRedirect(ECoreRedirectFlags::Type_Class, TEXT("/Script/DreamGUITestsOnlyModule.MovedButtonBehaviour"), UUIButton::StaticClass()->GetPathName()),
 		FCoreRedirect(ECoreRedirectFlags::Type_Class, TEXT("/Script/DreamGUITestsOnlyModule.MovedButton"), UDreamButton::StaticClass()->GetPathName()),

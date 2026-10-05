@@ -4,7 +4,32 @@ What changed in each version of DreamGUI, grouped by what it changes for a proje
 the next -- what loads differently, which defaults moved, what C++ has to change -- is in
 [Docs/Migration.md](Docs/Migration.md).
 
-## Unreleased
+**1.0.0 is the first public release.** The builds before it were the fork's development line: the single-module 1.x
+builds, then 2.0.0 and 2.1.0 (commits `2416e3f8` and `3049561a` on `main`). Public numbering starts again at 1.0.0, so a 2.0 or a 2.1
+below is a development build and older than 1.0.0. The descriptor's integer `Version` keeps rising -- 100 for 1.0.0,
+after 3 for 2.1.0 -- so the engine never takes 1.0.0 for the older of the two.
+
+## 1.0.0
+
+Everything of the 2.1.0 development build, and the `.dui` language grown into what screens are written in: components
+written in `.dui` alone, `use … as`, `if`, `for`, `rows`, shorter layout; the reference for all of it; and the fixes the
+first two showcase screens found. Projects on 2.1.0 open unchanged ([Docs/Migration.md](Docs/Migration.md#from-21-to-100)),
+except for assets that still loaded through a redirect: the plugin ships none any more.
+
+### Removed
+
+- **The CoreRedirects.** `Config/DefaultDreamGUI.ini` and its 763 redirects -- from LGUI and LexUI, from the prefab
+  vocabulary, from the control and event renames and from the module split -- are gone, and the engine no longer
+  applies any of them to a project that mounts the plugin. The plugin's own assets and the test fixtures name the
+  current types. An asset saved against an old name is resaved once with 2.1.0's block borrowed into the project's
+  `Config/DefaultEngine.ini` ([Docs/Migration.md](Docs/Migration.md#from-21-to-100)). The four
+  `DreamGUI.Packaging` tests that held the redirect file went with it, and
+  `DreamGUI.Packaging.ThePluginShipsNoCoreRedirects` keeps a `[CoreRedirects]` section from coming back unnoticed.
+- **The old-asset fixtures saved before the module split.** They loaded only through the redirects; the test host's
+  `DreamGUIFixtures` are saved by 1.0.0 now, the baseline later versions keep loading.
+- **`Tools/ModuleSplit/generate_split_redirects.py`**, which appended a split's redirects to that file. It is
+  `moved_types.py` now: it lists the types a split moved and, with `--redirects`, prints a block for a project's
+  own config, and writes nothing into the plugin's. `retarget_script_paths.py` takes the names from it.
 
 ### New
 
@@ -90,7 +115,7 @@ the next -- what loads differently, which defaults moved, what C++ has to change
   screen, so an animated material stood still. The proxy now makes its cache again whenever the instance's own render
   proxy has, as the draw is gathered.
 
-## 2.1.0
+## 2.1.0 (development build)
 
 Five passes of engineering after 2.0: the frame made cheap enough for thousands of animated widgets, every control and
 editor path audited, text measured against Chrome and Slate and rebuilt where it differed, gradient text, keyboard and
@@ -272,7 +297,7 @@ stops, the effect alpha of faded outlined text, how field text composites its la
 vertex with its new `UV4` channel for anyone with custom shaders or mesh modifiers. They are listed in
 [Docs/Migration.md, "From 2.0 to 2.1"](Docs/Migration.md#from-20-to-21).
 
-## 2.0.0
+## 2.0.0 (development build)
 
 The modular release (2026-09-29).
 

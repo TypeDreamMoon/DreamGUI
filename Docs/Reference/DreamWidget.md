@@ -39,6 +39,7 @@ Base class for almost all UI related things.
 | `bUniformSetClippingCornerRadius` | `bool` | DreamGUI | yes | - |  |
 | `bWidgetActive` | `bool` | DreamGUI | yes | read only | If not WidgetActive, then not visible, not take layout space, not interactable, not hit-testable |
 | `Visibility` | `EDreamWidgetVisibility` | DreamGUI | yes | read only | Controls layout, painting and hit testing independently from WidgetActive. |
+| `Shown` | `bool` | DreamGUI | - | read only | Visibility as a yes or no: true is Visible, false is Collapsed. What `Shown <- HasSave()` binds in a .dui, and what an `if` block binds on each widget of its branches. Nothing of its own is kept -- reading it reads Visibility (anything but Collapsed is shown), writing it writes Visibility -- so the field below is only the slot reflection needs for a property with a getter and a setter. DuiHidden: Visibility is what the write-back spells, so a sweep must not author the same value twice. |
 | `PixelSnapping` | `EWidgetPixelSnapping` | DreamGUI | yes | read only | If the widget will draw snapped to the nearest pixel.  Improves clarity but might cause visible stepping in animation. |
 | `Raycastable` | `EDreamWidgetRaycastableType` | DreamGUI | yes | read only |  |
 | `Interactable` | `EDreamWidgetInteractableType` | DreamGUI | yes | read only | If the widget enable for interaction? |
@@ -182,6 +183,7 @@ Base class for almost all UI related things.
 | `FVector GetRightVector()` | pure | Get Right Vector |
 | `UDreamCanvas* GetRootCanvas()` | pure | Get root canvas of hierarchy |
 | `UDreamWidget* GetRootWidgetInHierarchy()` | pure | return root Widget in hierarchy, could be null if not initialized yet. |
+| `bool GetShown()` | pure | Anything but Collapsed. See Shown. |
 | `int32 GetSiblingIndex()` | pure | Get Sibling Index |
 | `FVector2D GetSize()` | pure | Get Size |
 | `FVector2D GetSizeDelta()` | pure | Get Size Delta |
@@ -248,7 +250,11 @@ Base class for almost all UI related things.
 | `void RemoveLayoutSelf()` | callable | Remove Layout Self |
 | `void RemovePanelSlot()` | callable | Remove Panel Slot |
 | `void RemoveVisual()` | callable | Remove Visual |
+| `UDreamTweener* RenderAngleTo(float endValue, float duration, float delay, EDreamTweenEase ease)` | callable | Render Angle To |
+| `UDreamTweener* RenderOffsetTo(FVector2D endValue, float duration, float delay, EDreamTweenEase ease)` | callable | Render Offset To |
 | `UDreamTweener* RenderOpacityTo(float endValue, float duration, float delay, EDreamTweenEase ease)` | callable | Render Opacity To |
+| `UDreamTweener* RenderScaleTo(FVector endValue, float duration, float delay, EDreamTweenEase ease)` | callable | Render Scale To |
+| `UDreamTweener* RenderTranslationTo(FVector endValue, float duration, float delay, EDreamTweenEase ease)` | callable | The render transform's tweens: they move, scale and turn what is drawn and hit and never the layout, so they are the ones for a widget a panel places -- a row of a vertical box sliding in, a tab nudged aside, a line growing from its left. The anchored-position and size tweens above write the widget's layout instead, which its panel overrides on its next pass. RenderTranslationTo is in local space (X depth, Y right, Z up); RenderOffsetTo is the same move on the canvas plane (x right, y up), depth kept; RenderAngleTo is the in-plane angle (SetRenderTransformAngle). |
 | `void ResetCursor()` | callable | Back to having no opinion, so an ancestor's cursor shows through again. UMG's ResetCursor. |
 | `void SetAccessibleBehavior(EDreamAccessibleBehavior Value)` | callable | Set Accessible Behavior |
 | `void SetAccessibleSummaryText(FText Value)` | callable | Set Accessible Summary Text |
@@ -307,6 +313,7 @@ Base class for almost all UI related things.
 | `void SetRenderTransformPivot(FVector2D Value)` | callable | Set Render Transform Pivot |
 | `void SetRenderTranslation(FVector Value)` | callable | Set Render Translation |
 | `void SetRestrictNavigationArea(bool Value)` | callable | Set Restrict Navigation Area |
+| `void SetShown(bool Value)` | callable | Visible when true, Collapsed when false; a shown widget that is Hidden or hit-test invisible keeps that. See Shown. |
 | `void SetSiblingIndex(int32 Value)` | callable | Set the sibling index of this widget in its parent's children list. |
 | `void SetSizeDelta(FVector2D Value)` | callable | Set Size Delta |
 | `void SetSizeForLayoutAnimation(FVector2D Position)` | callable | Set Size for Layout Animation |

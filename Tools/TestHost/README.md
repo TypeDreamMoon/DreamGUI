@@ -45,11 +45,14 @@ plugin, so no project that has DreamGUI in its `Plugins/` ever picks the templat
 
 ## The old-asset fixtures
 
-`Template/Content/DreamGUIFixtures` holds widget Blueprints and a level saved by the plugin as it was
-before any of its classes moved between modules, and `Snapshot.txt`: what they held when the code that
-saved them read them back. Every run loads them. The `DreamGUI.Compatibility` tests compare them with the
-snapshot, `DreamGUI.Assets` loads them with the plugin's own content, and a `DreamGUI.Pie` test plays the
-level. A class that moved without a redirect, or a property a move lost, shows up in those tests.
+`Template/Content/DreamGUIFixtures` holds widget Blueprints and a level saved by the plugin at 1.0.0, the first
+public release, and `Snapshot.txt`: what they held when the code that saved them read them back. Every run loads
+them. The `DreamGUI.Compatibility` tests compare them with the snapshot, `DreamGUI.Assets` loads them with the
+plugin's own content, and a `DreamGUI.Pie` test plays the level. A class that moves or is renamed without a
+redirect, or a property a change loses, shows up in those tests.
+
+The first set was saved on 2026-09-28, before any class moved between modules, and loaded through the plugin's
+CoreRedirects; 1.0.0 ships none, so it was replaced by this one, made by 1.0.0.
 
 They were made once, in the host, by two console commands of the test module, each in an editor of its
 own, and copied here from the host's `Content/DreamGUIFixtures`:
@@ -60,7 +63,8 @@ UnrealEditor-Cmd.exe <host>\DreamGUITestHost.uproject -ExecCmds="DreamGUI.OldAss
 ```
 
 They are inputs, never outputs. Remade after a class has moved, they would be new assets posing as old
-ones, and the tests would prove nothing; the Write command refuses to replace a fixture that exists. See
+ones, and the tests would prove nothing; the Write command refuses to replace a fixture that exists. A version
+that has to change them -- as 1.0.0 did, dropping the redirects the old set needed -- says so in the CHANGELOG. See
 `Source/DreamGUITests/Private/Compatibility/DreamOldAssetFixtures.h` for what each one holds.
 
 ## The packaged text smoke test
@@ -241,9 +245,8 @@ git -C I:\UnrealProject_Moon\DEV_58\DreamGUITestHost\Plugins\DreamGUI switch --d
   -- the working copy in `DevTest/Plugins/DreamGUI` included. To test a branch that is checked out
   there, detach at it (`switch --detach main`) or make a branch of your own from it.
 - Then run `New-DreamGUITestHost.ps1` again with `-Branch <branch>` (or `-KeepCurrentHead` for a
-  detached commit). The CoreRedirects come with the worktree -- they live in the plugin's own
-  `Config/DefaultDreamGUI.ini` -- so a branch brings its own. A template file that differs from what
-  the host has is listed, and `-Force` brings it up to date.
+  detached commit). A template file that differs from what the host has is listed, and `-Force` brings
+  it up to date.
 - Undoing a fix to see its test go red, then putting it back -- on a detached HEAD, so the branch never
   carries the revert and nothing has to be reset afterwards:
 
@@ -287,7 +290,7 @@ put them elsewhere, which matters on a cold cache. And the trace server keeps it
 | Plugins | DreamGUI plus about thirty others | DreamGUI and Enhanced Input |
 | Content | the project's own, including `/Game/UI/WBP_ControlsGallery` | the old-asset fixtures, and the smoke test's assets once `make_text_smoke_assets.py` made them |
 | Startup map | a full showcase level | `/Engine/Maps/Entry` (one PlayerStart) |
-| `[CoreRedirects]` | the project's own copy, older than the plugin's | none of its own: the plugin's `Config/DefaultDreamGUI.ini` applies |
+| `[CoreRedirects]` | none | none: the plugin ships none since 1.0.0, so every asset loads under the names it was saved with |
 | MoonToon ramp atlases | loaded from the MoonToon project plugin | `None` (the plugin is not there) |
 | Editor layouts, per-user settings | whatever you last left them as | engine and plugin defaults |
 
@@ -301,9 +304,10 @@ Things that follow from this:
   tested anything.
 - **Class sweeps** (tests that walk every loaded class deriving from a DreamGUI base) see only the
   plugin's own classes in the host, and also other plugins' subclasses in DevTest.
-- **`[CoreRedirects]` is not optional even here.** The plugin still ships assets saved under their LGUI
-  class names (`NavigationSelection_Sprite`, referenced by the default navigation-selection widget, and
-  `DefaultFont_Bitmap`), and the engine reads redirects only from the project's config.
+- **No redirect hides an old name.** With no `[CoreRedirects]` anywhere, an asset -- the plugin's own, a
+  fixture -- that still names a moved or renamed type fails to load in a run, instead of loading through a
+  redirect. (`NavigationSelection_Sprite` and `DefaultFont_Bitmap` keep LGUI's asset names; the classes they
+  name are current.)
 
 ## Known limitations
 
