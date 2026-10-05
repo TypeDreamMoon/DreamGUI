@@ -12,9 +12,18 @@ enum class EDreamUIGizmoMeshPrimitiveType
 
 class DREAMGUIRENDERER_API FDreamUIGizmoMesh : public TSharedFromThis<FDreamUIGizmoMesh>
 {
+	/** Only Create makes a mesh. */
+	struct FPrivateToken { explicit FPrivateToken() = default; };
 public:
-	FDreamUIGizmoMesh(){}
-	FDreamUIGizmoMesh(const TArray<FDreamUIMeshVertex>& InVertexArray, const TArray<FDreamUIMeshIndex>& InIndexArray, EDreamUIGizmoMeshPrimitiveType InPrimitiveType);
+	/**
+	 * Game thread: a mesh, its buffers' initialization sent to the render thread by a command that holds the mesh until it
+	 * has run. The mesh can be let go of last on the render thread, ahead of that command: a world's renderer deleted
+	 * there by a command it sent earlier takes the gizmos added to it since along. The initialization used to hold only a
+	 * pointer into the mesh, and then ran on freed memory and left the engine's list of render resources naming it, which
+	 * the RHI walks as the editor closes ("Resource->GetListIndex() == Index").
+	 */
+	static TSharedRef<FDreamUIGizmoMesh> Create(const TArray<FDreamUIMeshVertex>& InVertexArray, const TArray<FDreamUIMeshIndex>& InIndexArray, EDreamUIGizmoMeshPrimitiveType InPrimitiveType);
+	FDreamUIGizmoMesh(FPrivateToken, const TArray<FDreamUIMeshVertex>& InVertexArray, const TArray<FDreamUIMeshIndex>& InIndexArray, EDreamUIGizmoMeshPrimitiveType InPrimitiveType);
 	~FDreamUIGizmoMesh();
 
 	void UpdateVertices(TArray<FDreamUIMeshVertex> InVertexArray);

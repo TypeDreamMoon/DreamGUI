@@ -172,7 +172,7 @@ void UDreamUIManagerWorldSubsystem::DrawNavigationArrow(UWorld* InWorld, const T
 		IndexArray.Add(InControlPoints.Num());
 		new(VertexArray) FDreamUIMeshVertex(FVector3f(InArrowPointB), InColor);
 
-		auto LineMesh = MakeShared<FDreamUIGizmoMesh>(VertexArray, IndexArray, EDreamUIGizmoMeshPrimitiveType::Line);
+		auto LineMesh = FDreamUIGizmoMesh::Create(VertexArray, IndexArray, EDreamUIGizmoMeshPrimitiveType::Line);
 		LineMesh->LocalToWorldMatrix = FMatrix::Identity;
 		LineMesh->UpdateLocalBounds();
 		LineMesh->Render(ViewExtension, ScreenOrWorld);
@@ -258,7 +258,7 @@ void UDreamUIManagerWorldSubsystem::DrawDebugRect(UWorld* InWorld, const FVector
 		End = FVector(0, -Rect.X, -Rect.Y);
 		PushNewLine(Start, End);
 
-		auto LineMesh = MakeShared<FDreamUIGizmoMesh>(VertexArray, IndexArray, EDreamUIGizmoMeshPrimitiveType::Line);
+		auto LineMesh = FDreamUIGizmoMesh::Create(VertexArray, IndexArray, EDreamUIGizmoMeshPrimitiveType::Line);
 		LineMesh->LocalToWorldMatrix = LocalToWorld;
 		LineMesh->UpdateLocalBounds();
 		LineMesh->Render(ViewExtension, ScreenOrWorld);
@@ -330,7 +330,7 @@ void UDreamUIManagerWorldSubsystem::DrawDebugBox(UWorld* InWorld, const FVector&
 		End = FVector(-Box.X, -Box.Y, -Box.Z);
 		PushNewLine(Start, End);
 
-		auto LineMesh = MakeShared<FDreamUIGizmoMesh>(VertexArray, IndexArray, EDreamUIGizmoMeshPrimitiveType::Line);
+		auto LineMesh = FDreamUIGizmoMesh::Create(VertexArray, IndexArray, EDreamUIGizmoMeshPrimitiveType::Line);
 		LineMesh->LocalToWorldMatrix = LocalToWorld;
 		LineMesh->UpdateLocalBounds();
 		LineMesh->Render(ViewExtension, ScreenOrWorld);
@@ -354,7 +354,7 @@ void UDreamUIManagerWorldSubsystem::DrawDebugLine(UWorld* InWorld, const FMatrix
 			IndexArray.Add(VertexArray.Num());
 			new(VertexArray) FDreamUIMeshVertex(LinePoints[i + 1], Color);
 		}
-		auto LineMesh = MakeShared<FDreamUIGizmoMesh>(VertexArray, IndexArray, EDreamUIGizmoMeshPrimitiveType::Line);
+		auto LineMesh = FDreamUIGizmoMesh::Create(VertexArray, IndexArray, EDreamUIGizmoMeshPrimitiveType::Line);
 		LineMesh->LocalToWorldMatrix = LocalToWorld;
 		LineMesh->UpdateLocalBounds();
 		LineMesh->Render(ViewExtension, ScreenOrWorld);
