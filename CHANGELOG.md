@@ -19,6 +19,14 @@ after 3 for 2.1.0 -- so the engine never takes 1.0.0 for the older of the two.
   instead of one alphabetical list of type names with the widget last and the classes' code comments as tooltips. The
   bitmap font, which is no longer developed, reads Legacy Bitmap Font and points to the distance-field font. Asset type
   names, on tiles and in filters, are unchanged.
+- **The designer's Palette is grouped the way UMG's is.** Basic, Panels, Common, Input, Lists, Scrolling, Containers,
+  Primitive, Shapes, Effects, Components, Modifiers, Advanced, User Created, and last Legacy, which starts closed --
+  where there was one Controls category of thirty-odd rows of every kind beside a dozen small ones that differed by a
+  word. Rows are listed by name, the panels lose their "UMG " prefix, and the Tile View and Scroll Box behaviours moved
+  to Legacy beside the controls that replaced them. User Created no longer lists the plugin's own preset folder. The
+  hierarchy's Create menu uses the same groups. Registry keys are unchanged, so favourites keep their stars; a project
+  extension that compared `FDreamUIControlDescriptor::Category` with "Controls", "Post Process", "Extensions" or a legacy
+  category name reads the names from `DreamUIPaletteCategory` instead.
 
 ### Fixed
 

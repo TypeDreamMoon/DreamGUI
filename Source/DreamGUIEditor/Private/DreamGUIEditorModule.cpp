@@ -784,23 +784,14 @@ void FDreamGUIEditorModule::CreateUIElementSubMenu(FMenuBuilder& MenuBuilder, TF
 	}
 	MenuBuilder.EndSection();
 
-	TArray<FName> AddedCategories;
-	for (const FDreamUIControlDescriptor& Descriptor : FDreamUIControlRegistry::Get().GetDescriptors())
-	{
-		if (!AddedCategories.Contains(Descriptor.Category))
-		{
-			AddedCategories.Add(Descriptor.Category);
-		}
-	}
-	for (FName Category : AddedCategories)
+	// The Palette's categories in the Palette's order, each sorted the same way.
+	const FDreamUIControlRegistry& Registry = FDreamUIControlRegistry::Get();
+	for (const FName Category : Registry.GetCategoriesInDisplayOrder())
 	{
 		MenuBuilder.BeginSection(Category, FText::FromName(Category));
-		for (const FDreamUIControlDescriptor& Descriptor : FDreamUIControlRegistry::Get().GetDescriptors())
+		for (const FDreamUIControlDescriptor* Descriptor : Registry.GetDescriptorsInCategory(Category))
 		{
-			if (Descriptor.Category == Category)
-			{
-				FunctionContainer::CreateUIControlMenuEntry(MenuBuilder, GetSelectedWidgetFunction, Descriptor);
-			}
+			FunctionContainer::CreateUIControlMenuEntry(MenuBuilder, GetSelectedWidgetFunction, *Descriptor);
 		}
 		MenuBuilder.EndSection();
 	}
@@ -872,7 +863,7 @@ void FDreamGUIEditorModule::CreateUIPostProcessSubMenu(FMenuBuilder& MenuBuilder
 	{
 		for (const FDreamUIControlDescriptor& Descriptor : FDreamUIControlRegistry::Get().GetDescriptors())
 		{
-			if (Descriptor.Category != TEXT("Post Process"))
+			if (Descriptor.Category != DreamUIPaletteCategory::Effects)
 			{
 				continue;
 			}
@@ -900,7 +891,7 @@ void FDreamGUIEditorModule::CreateUIExtensionSubMenu(FMenuBuilder& MenuBuilder, 
 	{
 		for (const FDreamUIControlDescriptor& Descriptor : FDreamUIControlRegistry::Get().GetDescriptors())
 		{
-			if (Descriptor.Category != TEXT("Extensions"))
+			if (Descriptor.Category != DreamUIPaletteCategory::Shapes)
 			{
 				continue;
 			}

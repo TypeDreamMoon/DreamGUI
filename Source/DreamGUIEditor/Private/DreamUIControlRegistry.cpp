@@ -281,9 +281,10 @@ namespace DreamUIControlRegistryLocal
 	 * Kept in the palette rather than deleted: existing assets reference these behaviours, and an
 	 * entry that vanishes takes with it the only way to understand what an old widget is made of.
 	 * A category is the honest amount of discouragement -- findable on purpose, not by accident.
-	 * Sibling of "Legacy DreamGUI Panels", which the Dream scroll view already sits in.
+	 * One category for all of it, the replaced scroll view included, and the Palette keeps it last and
+	 * collapsed.
 	 */
-	static const TCHAR* LegacyControlsCategory = TEXT("Legacy DreamGUI Controls");
+	static const TCHAR* LegacyControlsCategory = DreamUIPaletteCategory::Legacy;
 
 	static FSlateIcon MakeUMGIcon(const TCHAR* StyleName)
 	{
@@ -300,7 +301,7 @@ namespace DreamUIControlRegistryLocal
 		FDreamUIControlDescriptor Result;
 		Result.Name = Name;
 		Result.DisplayName = FText::FromString(DisplayName);
-		Result.Category = TEXT("Controls");
+		Result.Category = DreamUIPaletteCategory::Common;
 		Result.CreationKind = EDreamUIControlCreationKind::WidgetClass;
 		Result.WidgetClassPath = UDreamGUISettings::Get()->PresetControlFolder + TEXT("BP_") + AssetName;
 		Result.Icon = MakeUMGIcon(IconStyleName);
@@ -315,13 +316,13 @@ namespace DreamUIControlRegistryLocal
 	 * UDreamListView and the tag is Native.List -- the language's name for a control is the one an
 	 * author knows it by, and the palette should agree with the language.
 	 */
-	static FDreamUIControlDescriptor MakeControlClass(const TCHAR* Name, const TCHAR* DisplayName,
+	static FDreamUIControlDescriptor MakeControlClass(const TCHAR* Name, const TCHAR* DisplayName, const TCHAR* Category,
 		UClass* ControlClass, const TCHAR* IconStyleName, TFunction<void(UDreamWidget*)> Configure = nullptr)
 	{
 		FDreamUIControlDescriptor Result;
 		Result.Name = Name;
 		Result.DisplayName = FText::FromString(DisplayName);
-		Result.Category = TEXT("Controls");
+		Result.Category = Category;
 		Result.CreationKind = EDreamUIControlCreationKind::ControlClass;
 		Result.ControlClass = ControlClass;
 		Result.Icon = MakeUMGIcon(IconStyleName);
@@ -351,19 +352,19 @@ namespace DreamUIControlRegistryLocal
 		FDreamUIControlDescriptor Result;
 		Result.Name = Name;
 		Result.DisplayName = FText::FromString(DisplayName ? DisplayName : Name);
-		Result.Category = TEXT("Panels");
+		Result.Category = DreamUIPaletteCategory::Panels;
 		Result.LayoutContainerClass = LayoutClass;
 		Result.Icon = MakeUMGIcon(IconStyleName);
 		return Result;
 	}
 
-	static FDreamUIControlDescriptor MakeBehaviour(const TCHAR* Name, UClass* BehaviourClass, const TCHAR* IconStyleName,
-		TFunction<void(UDreamWidget*)> Configure = nullptr)
+	static FDreamUIControlDescriptor MakeBehaviour(const TCHAR* Name, const TCHAR* DisplayName, const TCHAR* Category,
+		UClass* BehaviourClass, const TCHAR* IconStyleName, TFunction<void(UDreamWidget*)> Configure = nullptr)
 	{
 		FDreamUIControlDescriptor Result;
 		Result.Name = Name;
-		Result.DisplayName = FText::FromString(Name);
-		Result.Category = TEXT("Controls");
+		Result.DisplayName = FText::FromString(DisplayName);
+		Result.Category = Category;
 		Result.BehaviourClass = BehaviourClass;
 		Result.Icon = MakeUMGIcon(IconStyleName);
 		Result.NativeConfigure = MoveTemp(Configure);
@@ -387,7 +388,7 @@ namespace DreamUIControlRegistryLocal
 		FDreamUIControlDescriptor Result;
 		Result.Name = Name;
 		Result.DisplayName = FText::FromString(DisplayName);
-		Result.Category = TEXT("Components");
+		Result.Category = DreamUIPaletteCategory::Components;
 		Result.VisualClass = VisualClass;
 		Result.BehaviourClass = BehaviourClass;
 		Result.Icon = MakeClassIcon(BehaviourClass);
@@ -399,7 +400,7 @@ namespace DreamUIControlRegistryLocal
 		FDreamUIControlDescriptor Result;
 		Result.Name = Name;
 		Result.DisplayName = FText::FromString(DisplayName);
-		Result.Category = TEXT("Layout Modifiers");
+		Result.Category = DreamUIPaletteCategory::Modifiers;
 		Result.LayoutSelfClass = LayoutClass;
 		Result.Icon = MakeClassIcon(LayoutClass);
 		return Result;
@@ -411,7 +412,7 @@ namespace DreamUIControlRegistryLocal
 		FDreamUIControlDescriptor Result;
 		Result.Name = Name;
 		Result.DisplayName = FText::FromString(DisplayName);
-		Result.Category = TEXT("Mesh Modifiers");
+		Result.Category = DreamUIPaletteCategory::Modifiers;
 		Result.VisualClass = VisualClass;
 		Result.MeshModifierClass = ModifierClass;
 		Result.Icon = MakeClassIcon(ModifierClass);
@@ -554,7 +555,7 @@ void FDreamUIControlRegistry::RefreshDynamicClasses()
 		if (UClass* Class = Pair.Value.Get())
 		{
 			FDreamUIControlDescriptor Descriptor = DreamUIControlRegistryLocal::MakeVisual(
-				*Pair.Key.ToString(), *Class->GetDisplayNameText().ToString(), TEXT("Post Process"), Class);
+				*Pair.Key.ToString(), *Class->GetDisplayNameText().ToString(), DreamUIPaletteCategory::Effects, Class);
 			Descriptors.Add(MoveTemp(Descriptor));
 		}
 	}
@@ -609,6 +610,65 @@ bool FDreamUIControlRegistry::Unregister(FName Name)
 		RegistryChanged.Broadcast();
 	}
 	return bRemoved;
+}
+
+TArray<FName> FDreamUIControlRegistry::GetCategoriesInDisplayOrder() const
+{
+	// DreamGUI's own first, in the order a screen is built: the layout, then what goes in it, then what
+	// changes how it looks or behaves, then the specialist rows. An extension's category goes after them
+	// and before Legacy, which is always last.
+	static const TCHAR* const OwnOrder[] =
+	{
+		DreamUIPaletteCategory::Panels, DreamUIPaletteCategory::Common, DreamUIPaletteCategory::Input,
+		DreamUIPaletteCategory::Lists, DreamUIPaletteCategory::Scrolling, DreamUIPaletteCategory::Containers,
+		DreamUIPaletteCategory::Primitive, DreamUIPaletteCategory::Shapes, DreamUIPaletteCategory::Effects,
+		DreamUIPaletteCategory::Components, DreamUIPaletteCategory::Modifiers, DreamUIPaletteCategory::Advanced,
+	};
+	TArray<FName> Present;
+	for (const FDreamUIControlDescriptor& Descriptor : Descriptors)
+	{
+		Present.AddUnique(Descriptor.Category);
+	}
+	TArray<FName> Ordered;
+	for (const TCHAR* Category : OwnOrder)
+	{
+		if (Present.Contains(FName(Category)))
+		{
+			Ordered.Add(FName(Category));
+		}
+	}
+	const FName Legacy(DreamUIPaletteCategory::Legacy);
+	for (const FName Category : Present)
+	{
+		if (Category != Legacy && !Ordered.Contains(Category))
+		{
+			Ordered.Add(Category);
+		}
+	}
+	if (Present.Contains(Legacy))
+	{
+		Ordered.Add(Legacy);
+	}
+	return Ordered;
+}
+
+TArray<const FDreamUIControlDescriptor*> FDreamUIControlRegistry::GetDescriptorsInCategory(FName InCategory) const
+{
+	TArray<const FDreamUIControlDescriptor*> Result;
+	for (const FDreamUIControlDescriptor& Descriptor : Descriptors)
+	{
+		if (Descriptor.Category == InCategory)
+		{
+			Result.Add(&Descriptor);
+		}
+	}
+	// By name, as UMG lists a category: a reader scans for a word, and registration order is the order
+	// this file happens to be written in.
+	Result.StableSort([](const FDreamUIControlDescriptor& A, const FDreamUIControlDescriptor& B)
+	{
+		return A.DisplayName.CompareToCaseIgnored(B.DisplayName) < 0;
+	});
+	return Result;
 }
 
 bool FDreamUIControlRegistry::Validate(const FDreamUIControlDescriptor& Descriptor, FText& OutError) const
@@ -713,13 +773,19 @@ void FDreamUIControlRegistry::RegisterDefaults()
 		FDreamUIControlDescriptor Descriptor = MakePanel(Name, LayoutClass, IconStyleName, DisplayName);
 		if (!DisplayName)
 		{
-			// The class DisplayName carries the family prefix, so the palette label follows it
-			// instead of the spaceless registry name.
-			Descriptor.DisplayName = LayoutClass->GetDisplayNameText();
+			// The class display name, which reads better than the spaceless registry key, without the
+			// "UMG " every one of them carries: the hierarchy says which family a layout is, and in a
+			// category of nothing but these the prefix was the same four letters fifteen times over.
+			FString Label = LayoutClass->GetDisplayNameText().ToString();
+			Label.RemoveFromStart(TEXT("UMG "));
+			Descriptor.DisplayName = FText::FromString(Label);
 		}
 		return Descriptor;
 	};
-	// THE CONTROL LIBRARY IS THE CONTROLS CATEGORY.
+	// THE CONTROL LIBRARY IS WHAT THE PALETTE OFFERS.
+	//
+	// Each row names its category (DreamUIPaletteCategory): the Palette orders the categories and sorts
+	// a category's rows by name, so the order of the calls below is not what an author sees.
 	//
 	// Every row here was a Blueprint preset under /DreamGUI/Controls until now, and the presets are
 	// still registered -- in the legacy category, at the bottom of this function. What changed is
@@ -737,57 +803,57 @@ void FDreamUIControlRegistry::RegisterDefaults()
 	// Names keep their registry keys ("Button", "CheckBox") because those are what a favourite, a
 	// layout preference and any project extension already refer to. The legacy rows below take
 	// suffixed keys instead, since the pair has to coexist.
-	Register(MakeControlClass(TEXT("Button"), TEXT("Button"),
+	Register(MakeControlClass(TEXT("Button"), TEXT("Button"), DreamUIPaletteCategory::Common,
 		UDreamButton::StaticClass(), TEXT("ClassIcon.Button")));
-	Register(MakeControlClass(TEXT("CheckBox"), TEXT("Check Box"),
+	Register(MakeControlClass(TEXT("CheckBox"), TEXT("Check Box"), DreamUIPaletteCategory::Common,
 		UDreamToggle::StaticClass(), TEXT("ClassIcon.CheckBox")));
-	Register(MakeControlClass(TEXT("RadioButton"), TEXT("Radio Button"),
+	Register(MakeControlClass(TEXT("RadioButton"), TEXT("Radio Button"), DreamUIPaletteCategory::Common,
 		UDreamRadioButton::StaticClass(), TEXT("ClassIcon.CheckBox")));
-	Register(MakeControlClass(TEXT("ComboBox"), TEXT("Combo Box"),
+	Register(MakeControlClass(TEXT("ComboBox"), TEXT("Combo Box"), DreamUIPaletteCategory::Input,
 		UDreamDropdown::StaticClass(), TEXT("ClassIcon.ComboBox")));
-	Register(MakeControlClass(TEXT("SpinBox"), TEXT("Spin Box"),
+	Register(MakeControlClass(TEXT("SpinBox"), TEXT("Spin Box"), DreamUIPaletteCategory::Input,
 		UDreamSpinBox::StaticClass(), TEXT("ClassIcon.SpinBox")));
 
-	Register(MakeControlClass(TEXT("HorizontalSlider"), TEXT("Horizontal Slider"),
+	Register(MakeControlClass(TEXT("HorizontalSlider"), TEXT("Horizontal Slider"), DreamUIPaletteCategory::Common,
 		UDreamSlider::StaticClass(), TEXT("ClassIcon.Slider"), ConfigureSliderHorizontal));
-	Register(MakeControlClass(TEXT("VerticalSlider"), TEXT("Vertical Slider"),
+	Register(MakeControlClass(TEXT("VerticalSlider"), TEXT("Vertical Slider"), DreamUIPaletteCategory::Common,
 		UDreamSlider::StaticClass(), TEXT("ClassIcon.Slider"), ConfigureSliderVertical));
-	Register(MakeControlClass(TEXT("HorizontalScrollbar"), TEXT("Horizontal Scrollbar"),
+	Register(MakeControlClass(TEXT("HorizontalScrollbar"), TEXT("Horizontal Scrollbar"), DreamUIPaletteCategory::Scrolling,
 		UDreamScrollBar::StaticClass(), TEXT("ClassIcon.ScrollBar"), ConfigureScrollBarHorizontal));
-	Register(MakeControlClass(TEXT("VerticalScrollbar"), TEXT("Vertical Scrollbar"),
+	Register(MakeControlClass(TEXT("VerticalScrollbar"), TEXT("Vertical Scrollbar"), DreamUIPaletteCategory::Scrolling,
 		UDreamScrollBar::StaticClass(), TEXT("ClassIcon.ScrollBar"), ConfigureScrollBarVertical));
-	Register(MakeControlClass(TEXT("HorizontalScrollView"), TEXT("Horizontal Scroll Box"),
+	Register(MakeControlClass(TEXT("HorizontalScrollView"), TEXT("Horizontal Scroll Box"), DreamUIPaletteCategory::Scrolling,
 		UDreamScrollBox::StaticClass(), TEXT("ClassIcon.Scrollbox"), ConfigureScrollBoxHorizontal));
-	Register(MakeControlClass(TEXT("VerticalScrollView"), TEXT("Vertical Scroll Box"),
+	Register(MakeControlClass(TEXT("VerticalScrollView"), TEXT("Vertical Scroll Box"), DreamUIPaletteCategory::Scrolling,
 		UDreamScrollBox::StaticClass(), TEXT("ClassIcon.Scrollbox"), ConfigureScrollBoxVertical));
-	Register(MakeControlClass(TEXT("TextInput"), TEXT("Text Input"),
+	Register(MakeControlClass(TEXT("TextInput"), TEXT("Text Input"), DreamUIPaletteCategory::Input,
 		UDreamTextInput::StaticClass(), TEXT("ClassIcon.EditableTextBox")));
-	Register(MakeControlClass(TEXT("TextInputMultiline"), TEXT("Text Input (Multiline)"),
+	Register(MakeControlClass(TEXT("TextInputMultiline"), TEXT("Text Input (Multiline)"), DreamUIPaletteCategory::Input,
 		UDreamTextInput::StaticClass(), TEXT("ClassIcon.MultilineEditableTextBox"), ConfigureTextInputMultiline));
 
-	Register(MakeControlClass(TEXT("TabView"), TEXT("Tab View"),
+	Register(MakeControlClass(TEXT("TabView"), TEXT("Tab View"), DreamUIPaletteCategory::Containers,
 		UDreamTabView::StaticClass(), TEXT("ClassIcon.WidgetSwitcher")));
-	Register(MakeControlClass(TEXT("ExpandableArea"), TEXT("Expandable Area"),
+	Register(MakeControlClass(TEXT("ExpandableArea"), TEXT("Expandable Area"), DreamUIPaletteCategory::Containers,
 		UDreamExpandableArea::StaticClass(), TEXT("ClassIcon.ExpandableArea")));
-	Register(MakeControlClass(TEXT("Dialog"), TEXT("Dialog"),
+	Register(MakeControlClass(TEXT("Dialog"), TEXT("Dialog"), DreamUIPaletteCategory::Containers,
 		UDreamDialog::StaticClass(), TEXT("ClassIcon.NamedSlot")));
 	// No ClassIcon.InputKeySelector in the UMG style set -- the icon sweep found that, which is what
 	// it is for. FindIconForClass always resolves, falling back to the generic class icon.
-	FDreamUIControlDescriptor InputKeySelector = MakeControlClass(TEXT("InputKeySelector"), TEXT("Input Key Selector"),
+	FDreamUIControlDescriptor InputKeySelector = MakeControlClass(TEXT("InputKeySelector"), TEXT("Input Key Selector"), DreamUIPaletteCategory::Input,
 		UDreamInputKeySelector::StaticClass(), TEXT("ClassIcon.Button"));
 	InputKeySelector.Icon = MakeClassIcon(UDreamInputKeySelector::StaticClass());
 	Register(InputKeySelector);
-	Register(MakeControlClass(TEXT("RingMenu"), TEXT("Ring Menu"),
+	Register(MakeControlClass(TEXT("RingMenu"), TEXT("Ring Menu"), DreamUIPaletteCategory::Containers,
 		UDreamRingMenu::StaticClass(), TEXT("ClassIcon.Border")));
 
 	// The toggle group is the one entry with no control of its own, because it needs none: it is a
 	// behaviour that a set of toggles points at, with nothing to draw and no parts to build. The
 	// preset existed only because a palette had no way to offer a bare component. This one does.
 	FDreamUIControlDescriptor ToggleGroup = MakeComponent(TEXT("ToggleGroup"), TEXT("Toggle Group"), UUIToggleGroup::StaticClass());
-	// In Controls rather than the Components category MakeComponent defaults to: this row REPLACES a
-	// preset that lived in Controls, and an author who goes looking for a toggle group where they
-	// have always found one should not have to know it stopped being a prefab.
-	ToggleGroup.Category = TEXT("Controls");
+	// In Common, beside the check box and the radio button it groups, rather than the Components
+	// category MakeComponent defaults to: this row REPLACES a preset that lived with the controls, and
+	// an author looking for a toggle group should not have to know it stopped being a prefab.
+	ToggleGroup.Category = DreamUIPaletteCategory::Common;
 	Register(ToggleGroup);
 
 	Register(MakeFrameworkPanel(TEXT("CanvasPanel"), UDreamLayoutContainerCanvasPanel::StaticClass(), TEXT("ClassIcon.CanvasPanel"), true));
@@ -820,11 +886,10 @@ void FDreamUIControlRegistry::RegisterDefaults()
 	// lifetime built on top of it.
 	Register(MakeFrameworkPanel(TEXT("MenuAnchor"), UDreamLayoutContainerMenuAnchor::StaticClass(), TEXT("ClassIcon.MenuAnchor"), true));
 
-	FDreamUIControlDescriptor ScrollBox = MakeBehaviour(TEXT("ScrollBox"), UUIScrollView::StaticClass(), TEXT("ClassIcon.Scrollbox"), ConfigureScrollBox);
-	ScrollBox.DisplayName = FText::FromString(TEXT("Dream Scroll Box"));
-	// The Dream scroll view is a behaviour, not a panel layout; keep it out of the panel list.
-	ScrollBox.Category = TEXT("Legacy DreamGUI Panels");
-	Register(ScrollBox);
+	// The Dream scroll view is a behaviour, not a panel layout, and the two Scroll Box controls replaced
+	// it: legacy, named like the other replaced behaviours.
+	Register(MakeBehaviour(TEXT("ScrollBox"), TEXT("Scroll Box (Behaviour)"), LegacyControlsCategory,
+		UUIScrollView::StaticClass(), TEXT("ClassIcon.Scrollbox"), ConfigureScrollBox));
 	// The Overlay-plus-image emulation of a Border used to be registered here, under the same "Border"
 	// key the real container now holds. Two registrations for one key is a palette collision, and the
 	// emulation was only ever standing in for the class that exists above.
@@ -832,7 +897,7 @@ void FDreamUIControlRegistry::RegisterDefaults()
 	FDreamUIControlDescriptor Spacer;
 	Spacer.Name = TEXT("Spacer");
 	Spacer.DisplayName = FText::FromString(TEXT("Spacer"));
-	Spacer.Category = TEXT("Primitive");
+	Spacer.Category = DreamUIPaletteCategory::Primitive;
 	Spacer.LayoutSelfClass = UDreamLayoutSelfSpacer::StaticClass();
 	Spacer.Icon = MakeUMGIcon(TEXT("ClassIcon.Spacer"));
 	Register(Spacer);
@@ -848,15 +913,15 @@ void FDreamUIControlRegistry::RegisterDefaults()
 	//
 	// Only three, deliberately. The other fourteen controls have a BP preset in this category that
 	// they also replace, and retiring THOSE is a separate change with its own decisions to make.
-	Register(MakeControlClass(TEXT("NativeProgressBar"), TEXT("Progress Bar"),
+	Register(MakeControlClass(TEXT("NativeProgressBar"), TEXT("Progress Bar"), DreamUIPaletteCategory::Common,
 		UDreamProgressBar::StaticClass(), TEXT("ClassIcon.ProgressBar")));
-	Register(MakeControlClass(TEXT("NativeList"), TEXT("List"),
+	Register(MakeControlClass(TEXT("NativeList"), TEXT("List"), DreamUIPaletteCategory::Lists,
 		UDreamListView::StaticClass(), TEXT("ClassIcon.ListView")));
-	Register(MakeControlClass(TEXT("NativeTreeView"), TEXT("Tree View"),
+	Register(MakeControlClass(TEXT("NativeTreeView"), TEXT("Tree View"), DreamUIPaletteCategory::Lists,
 		UDreamTreeView::StaticClass(), TEXT("ClassIcon.TreeView")));
 	// And the fourth: a tile view is the list with more than one column, so the control it registers
 	// is UDreamListViewBase's other subclass rather than the legacy recycling behaviour below.
-	Register(MakeControlClass(TEXT("NativeTileView"), TEXT("Tile View"),
+	Register(MakeControlClass(TEXT("NativeTileView"), TEXT("Tile View"), DreamUIPaletteCategory::Lists,
 		UDreamTileView::StaticClass(), TEXT("ClassIcon.TileView")));
 
 	// THE SEVEN UMG CONTROLS THIS LIBRARY DID NOT HAVE.
@@ -871,55 +936,53 @@ void FDreamUIControlRegistry::RegisterDefaults()
 	// Two rows for the throbber and one class, the call this palette already makes for the two
 	// sliders, the two scrollbars and the two scroll boxes: an asset cannot branch on a property, and
 	// an entry can.
-	Register(MakeControlClass(TEXT("Throbber"), TEXT("Throbber"),
+	Register(MakeControlClass(TEXT("Throbber"), TEXT("Throbber"), DreamUIPaletteCategory::Primitive,
 		UDreamThrobber::StaticClass(), TEXT("ClassIcon.Throbber"), ConfigureThrobberLinear));
-	Register(MakeControlClass(TEXT("CircularThrobber"), TEXT("Circular Throbber"),
+	Register(MakeControlClass(TEXT("CircularThrobber"), TEXT("Circular Throbber"), DreamUIPaletteCategory::Primitive,
 		UDreamThrobber::StaticClass(), TEXT("ClassIcon.CircularThrobber"), ConfigureThrobberCircular));
 	// NativeBorder rather than Border: the panel entry below took the plain key first, and a favourite
 	// or a layout preference pointing at it should keep meaning what it meant.
-	Register(MakeControlClass(TEXT("NativeBorder"), TEXT("Border (Control)"),
+	Register(MakeControlClass(TEXT("NativeBorder"), TEXT("Border (Control)"), DreamUIPaletteCategory::Common,
 		UDreamBorder::StaticClass(), TEXT("ClassIcon.Border")));
 	// NativeMenuAnchor rather than MenuAnchor, for the reason NativeBorder is not Border: the layout
 	// panel above took the plain key first, and a favourite or a layout preference pointing at it
 	// should keep meaning what it meant. The two are not rivals -- the panel is the placement
 	// arithmetic (and this control uses it), the control is the popup's lifetime on top of it.
-	Register(MakeControlClass(TEXT("NativeMenuAnchor"), TEXT("Menu Anchor (Control)"),
+	Register(MakeControlClass(TEXT("NativeMenuAnchor"), TEXT("Menu Anchor (Control)"), DreamUIPaletteCategory::Containers,
 		UDreamMenuAnchor::StaticClass(), TEXT("ClassIcon.MenuAnchor")));
-	Register(MakeControlClass(TEXT("RichTextBlock"), TEXT("Rich Text Block"),
+	Register(MakeControlClass(TEXT("RichTextBlock"), TEXT("Rich Text Block"), DreamUIPaletteCategory::Common,
 		UDreamRichTextBlock::StaticClass(), TEXT("ClassIcon.RichTextBlock")));
-	Register(MakeControlClass(TEXT("NativeWidgetHost"), TEXT("Native Widget Host"),
+	Register(MakeControlClass(TEXT("NativeWidgetHost"), TEXT("Native Widget Host"), DreamUIPaletteCategory::Containers,
 		UDreamNativeWidgetHost::StaticClass(), TEXT("ClassIcon.NativeWidgetHost")));
 	// The borderless pair. The BOXED pair is Native.TextInput and its multiline palette row above --
 	// UMG's four classes are two classes and one property here, and the axis that needed a class is
 	// the one this library could not express as a property.
-	Register(MakeControlClass(TEXT("EditableText"), TEXT("Editable Text"),
+	Register(MakeControlClass(TEXT("EditableText"), TEXT("Editable Text"), DreamUIPaletteCategory::Input,
 		UDreamEditableText::StaticClass(), TEXT("ClassIcon.EditableText")));
-	Register(MakeControlClass(TEXT("MultiLineEditableText"), TEXT("Multi Line Editable Text"),
+	Register(MakeControlClass(TEXT("MultiLineEditableText"), TEXT("Multi Line Editable Text"), DreamUIPaletteCategory::Input,
 		UDreamMultiLineEditableText::StaticClass(), TEXT("ClassIcon.MultiLineEditableText")));
 
-	FDreamUIControlDescriptor Progress = MakeBehaviour(TEXT("ProgressBar"), UUIProgressBar::StaticClass(), TEXT("ClassIcon.ProgressBar"), ConfigureProgressBar);
+	FDreamUIControlDescriptor Progress = MakeBehaviour(TEXT("ProgressBar"), TEXT("Progress Bar (Behaviour)"), LegacyControlsCategory,
+		UUIProgressBar::StaticClass(), TEXT("ClassIcon.ProgressBar"), ConfigureProgressBar);
 	Progress.VisualClass = UDreamImage::StaticClass();
-	Progress.DisplayName = FText::FromString(TEXT("Progress Bar (Behaviour)"));
-	Progress.Category = LegacyControlsCategory;
 	Register(Progress);
-	Register(MakeBehaviour(TEXT("ContentWidget"), UDreamContentWidget::StaticClass(), TEXT("ClassIcon.NativeWidgetHost")));
+	Register(MakeBehaviour(TEXT("ContentWidget"), TEXT("Content Widget"), DreamUIPaletteCategory::Primitive,
+		UDreamContentWidget::StaticClass(), TEXT("ClassIcon.NativeWidgetHost")));
 	// The hole a widget blueprint opens for whoever places it. The one below is the older, unrelated
 	// thing with a confusingly similar name: a runtime name->child map inside one hierarchy.
-	Register(MakeBehaviour(TEXT("NamedSlot"), UDreamNamedSlot::StaticClass(), TEXT("ClassIcon.NamedSlot")));
-	Register(MakeBehaviour(TEXT("NamedSlotHost"), UDreamNamedSlotHost::StaticClass(), TEXT("ClassIcon.NamedSlot")));
-	FDreamUIControlDescriptor ListView = MakeBehaviour(TEXT("ListView"), UUIListView::StaticClass(), TEXT("ClassIcon.ListView"), ConfigureListView);
-	ListView.DisplayName = FText::FromString(TEXT("List View (Behaviour)"));
-	ListView.Category = LegacyControlsCategory;
-	Register(ListView);
-	// NOT moved, because nothing replaces it: the control library has List and TreeView and no tile
-	// view, so this is the only way to get one. It is the same recycling stack as the other two and
-	// carries the same caveats; it is here rather than in the legacy category because retiring an
-	// entry with no successor is just deleting a feature.
-	Register(MakeBehaviour(TEXT("TileView"), UUITileView::StaticClass(), TEXT("ClassIcon.TileView"), ConfigureListView));
-	FDreamUIControlDescriptor TreeView = MakeBehaviour(TEXT("TreeView"), UUITreeView::StaticClass(), TEXT("ClassIcon.TreeView"), ConfigureListView);
-	TreeView.DisplayName = FText::FromString(TEXT("Tree View (Behaviour)"));
-	TreeView.Category = LegacyControlsCategory;
-	Register(TreeView);
+	Register(MakeBehaviour(TEXT("NamedSlot"), TEXT("Named Slot"), DreamUIPaletteCategory::Primitive,
+		UDreamNamedSlot::StaticClass(), TEXT("ClassIcon.NamedSlot")));
+	Register(MakeBehaviour(TEXT("NamedSlotHost"), TEXT("Named Slot Host"), DreamUIPaletteCategory::Primitive,
+		UDreamNamedSlotHost::StaticClass(), TEXT("ClassIcon.NamedSlot")));
+	Register(MakeBehaviour(TEXT("ListView"), TEXT("List View (Behaviour)"), LegacyControlsCategory,
+		UUIListView::StaticClass(), TEXT("ClassIcon.ListView"), ConfigureListView));
+	// Legacy too now. It stayed among the controls while it was the only tile view there was; the
+	// control library has one since (NativeTileView, above), and two rows called Tile View in one
+	// category, one a control and one a behaviour, was a coin toss for whoever reached for it.
+	Register(MakeBehaviour(TEXT("TileView"), TEXT("Tile View (Behaviour)"), LegacyControlsCategory,
+		UUITileView::StaticClass(), TEXT("ClassIcon.TileView"), ConfigureListView));
+	Register(MakeBehaviour(TEXT("TreeView"), TEXT("Tree View (Behaviour)"), LegacyControlsCategory,
+		UUITreeView::StaticClass(), TEXT("ClassIcon.TreeView"), ConfigureListView));
 
 	/*
 	 * WHAT UMG HAS THAT THIS PALETTE STILL DOES NOT, now that the seven above landed.
@@ -937,25 +1000,25 @@ void FDreamUIControlRegistry::RegisterDefaults()
 	 *    for a two-by-two grid is UMG's shape, not a feature.
 	 */
 
-	Register(MakeVisual(TEXT("Polygon"), TEXT("Polygon"), TEXT("Extensions"), UDreamPolygon::StaticClass()));
-	Register(MakeVisual(TEXT("PolygonLine"), TEXT("Polygon Line"), TEXT("Extensions"), UDreamPolygonLine::StaticClass()));
-	Register(MakeVisual(TEXT("Ring"), TEXT("Ring"), TEXT("Extensions"), UDreamRing::StaticClass()));
-	Register(MakeVisual(TEXT("Line2DRaw"), TEXT("2D Line"), TEXT("Extensions"), UDream2DLineRaw::StaticClass()));
-	Register(MakeVisual(TEXT("Line2DChildren"), TEXT("2D Line (Children as Points)"), TEXT("Extensions"), UDream2DLineChildrenAsPoints::StaticClass()));
+	Register(MakeVisual(TEXT("Polygon"), TEXT("Polygon"), DreamUIPaletteCategory::Shapes, UDreamPolygon::StaticClass()));
+	Register(MakeVisual(TEXT("PolygonLine"), TEXT("Polygon Line"), DreamUIPaletteCategory::Shapes, UDreamPolygonLine::StaticClass()));
+	Register(MakeVisual(TEXT("Ring"), TEXT("Ring"), DreamUIPaletteCategory::Shapes, UDreamRing::StaticClass()));
+	Register(MakeVisual(TEXT("Line2DRaw"), TEXT("2D Line"), DreamUIPaletteCategory::Shapes, UDream2DLineRaw::StaticClass()));
+	Register(MakeVisual(TEXT("Line2DChildren"), TEXT("2D Line (Children as Points)"), DreamUIPaletteCategory::Shapes, UDream2DLineChildrenAsPoints::StaticClass()));
 
-	Register(MakeVisual(TEXT("BackgroundBlur"), TEXT("Background Blur"), TEXT("Post Process"), UDreamBackgroundBlur::StaticClass()));
-	Register(MakeVisual(TEXT("BackgroundPixelate"), TEXT("Background Pixelate"), TEXT("Post Process"), UDreamBackgroundPixelate::StaticClass()));
-	Register(MakeVisual(TEXT("PixelSort"), TEXT("Pixel Sort"), TEXT("Post Process"), UDreamPixelSort::StaticClass()));
+	Register(MakeVisual(TEXT("BackgroundBlur"), TEXT("Background Blur"), DreamUIPaletteCategory::Effects, UDreamBackgroundBlur::StaticClass()));
+	Register(MakeVisual(TEXT("BackgroundPixelate"), TEXT("Background Pixelate"), DreamUIPaletteCategory::Effects, UDreamBackgroundPixelate::StaticClass()));
+	Register(MakeVisual(TEXT("PixelSort"), TEXT("Pixel Sort"), DreamUIPaletteCategory::Effects, UDreamPixelSort::StaticClass()));
 
-	Register(MakeVisual(TEXT("VisualEmpty"), TEXT("Empty Visual"), TEXT("Advanced Visuals"), UDreamVisualEmpty::StaticClass()));
-	Register(MakeVisual(TEXT("Texture"), TEXT("Texture"), TEXT("Advanced Visuals"), UDreamTexture::StaticClass()));
-	Register(MakeVisual(TEXT("Sprite"), TEXT("Sprite"), TEXT("Advanced Visuals"), UDreamSprite::StaticClass()));
-	Register(MakeVisual(TEXT("CustomMesh"), TEXT("Custom Mesh"), TEXT("Advanced Visuals"), UDreamCustomMesh::StaticClass()));
-	Register(MakeVisual(TEXT("UMGWidget"), TEXT("UMG Widget"), TEXT("Advanced Visuals"), UDreamUMGWidget::StaticClass()));
-	Register(MakeVisual(TEXT("CanvasRenderTargetPreviewer"), TEXT("Canvas Render Target Previewer"), TEXT("Advanced Rendering"), UDreamCanvasRenderTargetPreviewer::StaticClass()));
-	Register(MakeVisual(TEXT("PostProcessRenderElement"), TEXT("Post Process Render Element"), TEXT("Advanced Rendering"), UDreamPostProcessRenderElement::StaticClass()));
-	Register(MakeVisual(TEXT("PostProcessRenderElementText"), TEXT("Post Process Render Element (Text)"), TEXT("Advanced Rendering"), UDreamPostProcessRenderElement_Text::StaticClass()));
-	Register(MakeVisual(TEXT("StaticMeshExperimental"), TEXT("Static Mesh (Experimental)"), TEXT("Experimental"), UDreamStaticMesh::StaticClass()));
+	Register(MakeVisual(TEXT("VisualEmpty"), TEXT("Empty Visual"), DreamUIPaletteCategory::Advanced, UDreamVisualEmpty::StaticClass()));
+	Register(MakeVisual(TEXT("Texture"), TEXT("Texture"), DreamUIPaletteCategory::Advanced, UDreamTexture::StaticClass()));
+	Register(MakeVisual(TEXT("Sprite"), TEXT("Sprite"), DreamUIPaletteCategory::Advanced, UDreamSprite::StaticClass()));
+	Register(MakeVisual(TEXT("CustomMesh"), TEXT("Custom Mesh"), DreamUIPaletteCategory::Advanced, UDreamCustomMesh::StaticClass()));
+	Register(MakeVisual(TEXT("UMGWidget"), TEXT("UMG Widget"), DreamUIPaletteCategory::Advanced, UDreamUMGWidget::StaticClass()));
+	Register(MakeVisual(TEXT("CanvasRenderTargetPreviewer"), TEXT("Canvas Render Target Previewer"), DreamUIPaletteCategory::Advanced, UDreamCanvasRenderTargetPreviewer::StaticClass()));
+	Register(MakeVisual(TEXT("PostProcessRenderElement"), TEXT("Post Process Render Element"), DreamUIPaletteCategory::Advanced, UDreamPostProcessRenderElement::StaticClass()));
+	Register(MakeVisual(TEXT("PostProcessRenderElementText"), TEXT("Post Process Render Element (Text)"), DreamUIPaletteCategory::Advanced, UDreamPostProcessRenderElement_Text::StaticClass()));
+	Register(MakeVisual(TEXT("StaticMeshExperimental"), TEXT("Static Mesh (Experimental)"), DreamUIPaletteCategory::Advanced, UDreamStaticMesh::StaticClass()));
 
 	Register(MakeComponent(TEXT("DataBinding"), TEXT("Data Binding"), UDreamDataBinding::StaticClass()));
 	Register(MakeComponent(TEXT("ResponsiveBehaviour"), TEXT("Responsive Behaviour"), UDreamResponsiveBehaviour::StaticClass()));

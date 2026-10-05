@@ -28,6 +28,37 @@ enum class EDreamUIControlCreationKind : uint8
 	ControlClass,
 };
 
+/**
+ * The Palette's categories, the values FDreamUIControlDescriptor::Category takes for what DreamGUI registers.
+ *
+ * Grouped the way UMG's palette groups the same widgets, so an author coming from UMG finds a slider under Common and a
+ * box under Panels. There used to be one "Controls" category holding thirty-odd rows of every kind -- inputs, lists,
+ * scroll boxes, slots, behaviours -- in registration order, beside a dozen small categories that differed by a word.
+ *
+ * An extension may register under any category of its own; the Palette shows those after these, in the order they were
+ * first registered (FDreamUIControlRegistry::GetCategoriesInDisplayOrder).
+ */
+namespace DreamUIPaletteCategory
+{
+	inline const TCHAR* const Panels = TEXT("Panels");
+	inline const TCHAR* const Common = TEXT("Common");
+	inline const TCHAR* const Input = TEXT("Input");
+	inline const TCHAR* const Lists = TEXT("Lists");
+	inline const TCHAR* const Scrolling = TEXT("Scrolling");
+	inline const TCHAR* const Containers = TEXT("Containers");
+	inline const TCHAR* const Primitive = TEXT("Primitive");
+	inline const TCHAR* const Shapes = TEXT("Shapes");
+	inline const TCHAR* const Effects = TEXT("Effects");
+	inline const TCHAR* const Components = TEXT("Components");
+	inline const TCHAR* const Modifiers = TEXT("Modifiers");
+	inline const TCHAR* const Advanced = TEXT("Advanced");
+	/**
+	 * What the control library replaced -- the LGUI-era behaviours and the Blueprint presets -- kept so that a widget
+	 * built on one stays explicable. Always last, and collapsed until an author opens it.
+	 */
+	inline const TCHAR* const Legacy = TEXT("Legacy");
+}
+
 /** A Palette entry with an explicit creation recipe and validation contract. */
 struct DREAMGUIEDITOR_API FDreamUIControlDescriptor
 {
@@ -63,6 +94,13 @@ public:
 	bool Register(const FDreamUIControlDescriptor& Descriptor);
 	bool Unregister(FName Name);
 	const TArray<FDreamUIControlDescriptor>& GetDescriptors()const { return Descriptors; }
+	/**
+	 * The categories that hold at least one descriptor, in the order the Palette and the Create menus show them: DreamGUI's
+	 * own (DreamUIPaletteCategory) in its order, then any other in the order it was first registered, then Legacy.
+	 */
+	TArray<FName> GetCategoriesInDisplayOrder()const;
+	/** InCategory's descriptors, by display name: what a category lists, wherever it is listed. */
+	TArray<const FDreamUIControlDescriptor*> GetDescriptorsInCategory(FName InCategory)const;
 	bool Validate(const FDreamUIControlDescriptor& Descriptor, FText& OutError)const;
 	void InitializeDynamicDiscovery();
 	void ShutdownDynamicDiscovery();

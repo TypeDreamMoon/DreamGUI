@@ -69,6 +69,12 @@ namespace DreamUIPalette
 	DREAMGUIEDITOR_API bool ShouldExpandGroup(bool bFilterActive, bool bWasCollapsed);
 
 	/**
+	 * Whether a group starts closed until the user opens it: Legacy, which only an author looking for what an old widget
+	 * is made of has a reason to read, and which is otherwise the longest group in the panel.
+	 */
+	DREAMGUIEDITOR_API bool StartsCollapsed(const FString& InGroupName);
+
+	/**
 	 * Derive the tree from the collected groups: the favourites first, then each group with only the
 	 * entries the filter admits, and no empty groups. The favourites are copies rather than the same
 	 * items again, because a tree view keys its rows by item and would otherwise see one entry twice.
@@ -207,6 +213,8 @@ private:
 	TSet<FString> Favorites;
 	/** Groups the user closed. Collapsed rather than expanded, so a group added later starts open. */
 	TSet<FString> CollapsedGroups;
+	/** Groups that start closed (DreamUIPalette::StartsCollapsed) and the user opened. */
+	TSet<FString> OpenedGroups;
 	/** Set while the rebuild pushes expansion, so the tree's callback does not read it back as intent. */
 	bool bApplyingGroupExpansion = false;
 	FTextFilterExpressionEvaluator SearchFilter{ ETextFilterExpressionEvaluatorMode::BasicString };

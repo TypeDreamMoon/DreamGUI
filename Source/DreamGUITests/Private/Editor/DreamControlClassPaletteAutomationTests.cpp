@@ -17,10 +17,11 @@
 #include "Core/Components/DreamWidget.h"
 #include "DreamUIControlRegistry.h"
 #include "DreamUIEditorTools.h"
+#include "Designer/SDreamWidgetPalette.h"
 #include "Textures/SlateIcon.h"
 
 /*
- * The Controls category, after the Blueprint presets stopped being what it offers.
+ * The Palette's control rows, after the Blueprint presets stopped being what it offers.
  *
  * The registry could describe two kinds of thing and the control library was neither. WidgetClass
  * names a Blueprint by asset path; Native is a recipe -- a visual plus a behaviour plus a layout --
@@ -41,8 +42,7 @@ namespace DreamControlClassPaletteTestsLocal
 			[InName](const FDreamUIControlDescriptor& Item) { return Item.Name == InName; });
 	}
 
-	const FName ControlsCategory(TEXT("Controls"));
-	const FName LegacyCategory(TEXT("Legacy DreamGUI Controls"));
+	const FName LegacyCategory(DreamUIPaletteCategory::Legacy);
 
 	/** Place one, the way a double-click does, and hand back the widget under a scoped root. */
 	UDreamWidget* MakeRoot(UDreamWidgetTree*& OutTree)
@@ -54,29 +54,32 @@ namespace DreamControlClassPaletteTestsLocal
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamPaletteControlsAreAllControlClassesTest,
-	"DreamGUI.Palette.NothingInTheControlsCategoryIsABlueprintPresetAnyMore",
+	"DreamGUI.Palette.NothingOutsideTheLegacyCategoryIsABlueprintPreset",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
 
 bool FDreamPaletteControlsAreAllControlClassesTest::RunTest(const FString& Parameters)
 {
 	using namespace DreamControlClassPaletteTestsLocal;
 
-	// The structural half of the retirement. Twelve rows in this category used to resolve to
+	// The structural half of the retirement. Twelve control rows used to resolve to
 	// /DreamGUI/Controls/BP_*, and an asset cannot be fixed for the copies already placed -- which
 	// is how two of them shipped inert for months. Asserting the KIND rather than listing the twelve
-	// names is what makes a thirteenth preset impossible to add here by accident.
+	// names is what makes a thirteenth preset impossible to add outside Legacy by accident.
 	int32 Controls = 0;
 	for (const FDreamUIControlDescriptor& Descriptor : FDreamUIControlRegistry::Get().GetDescriptors())
 	{
-		if (Descriptor.Category != ControlsCategory)
+		if (Descriptor.Category == LegacyCategory)
 		{
 			continue;
 		}
-		++Controls;
 		TestNotEqual(*FString::Printf(TEXT("'%s' is not a Blueprint preset"), *Descriptor.Name.ToString()),
 			Descriptor.CreationKind, EDreamUIControlCreationKind::WidgetClass);
+		if (Descriptor.CreationKind == EDreamUIControlCreationKind::ControlClass)
+		{
+			++Controls;
+		}
 	}
-	TestTrue(TEXT("the category is not empty"), Controls >= 15);
+	TestTrue(TEXT("the control library is offered"), Controls >= 15);
 
 	// And the other half: the presets are still registered, because a project has them placed and a
 	// row that vanished would take with it the only way to recognise one.
@@ -269,7 +272,7 @@ bool FDreamLegacyControlCategoryTest::RunTest(const FString& Parameters)
 
 	// The LGUI-era behaviours the control library replaced. Still registered for the same reason the
 	// presets are: an asset built on one of these has to stay explicable.
-	const TCHAR* Replaced[] = { TEXT("ProgressBar"), TEXT("ListView"), TEXT("TreeView") };
+	const TCHAR* Replaced[] = { TEXT("ProgressBar"), TEXT("ListView"), TEXT("TreeView"), TEXT("TileView"), TEXT("ScrollBox") };
 	for (const TCHAR* Name : Replaced)
 	{
 		const FDreamUIControlDescriptor* Descriptor = Find(Name);
@@ -281,14 +284,13 @@ bool FDreamLegacyControlCategoryTest::RunTest(const FString& Parameters)
 			Descriptor->Category, LegacyCategory);
 	}
 
-	// The one that did NOT move, and the reason it is worth asserting: the control library has no
-	// tile view, so retiring this entry would be deleting a feature rather than replacing one. If a
-	// Native.TileView ever lands, this assertion is the reminder to move it.
-	const FDreamUIControlDescriptor* TileView = Find(TEXT("TileView"));
-	if (TestNotNull(TEXT("the tile view is registered"), TileView))
+	// The tile view behaviour stayed among the controls for as long as it was the only tile view there
+	// was. Native.TileView has replaced it, so it is legacy like the other two (in the list above) --
+	// and the control is what an author reaching for a tile view finds.
+	const FDreamUIControlDescriptor* TileView = Find(TEXT("NativeTileView"));
+	if (TestNotNull(TEXT("the tile view control is registered"), TileView))
 	{
-		TestEqual(TEXT("and stays in Controls, having no replacement"),
-			TileView->Category, ControlsCategory);
+		TestEqual(TEXT("among the lists"), TileView->Category, FName(DreamUIPaletteCategory::Lists));
 	}
 
 	// The toggle group is the odd one out in the other direction: its replacement is not a control
@@ -299,7 +301,69 @@ bool FDreamLegacyControlCategoryTest::RunTest(const FString& Parameters)
 	{
 		TestEqual(TEXT("as a behaviour rather than a preset"),
 			ToggleGroup->CreationKind, EDreamUIControlCreationKind::Native);
-		TestEqual(TEXT("in the controls category"), ToggleGroup->Category, ControlsCategory);
+		TestEqual(TEXT("beside the check box and the radio button it groups"), ToggleGroup->Category, FName(DreamUIPaletteCategory::Common));
+	}
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamPaletteCategoryOrderTest,
+	"DreamGUI.Palette.TheCategoriesComeInTheirOrderAndListTheirRowsByName",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamPaletteCategoryOrderTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamControlClassPaletteTestsLocal;
+
+	// The layout first and Legacy last, whatever order the registrations happen to be written in.
+	const FDreamUIControlRegistry& Registry = FDreamUIControlRegistry::Get();
+	const TArray<FName> Categories = Registry.GetCategoriesInDisplayOrder();
+	if (!TestTrue(TEXT("there are categories"), Categories.Num() >= 10))
+	{
+		return false;
+	}
+	TestEqual(TEXT("Panels come first"), Categories[0], FName(DreamUIPaletteCategory::Panels));
+	TestEqual(TEXT("then Common"), Categories[1], FName(DreamUIPaletteCategory::Common));
+	TestEqual(TEXT("and Legacy last"), Categories.Last(), LegacyCategory);
+	TestTrue(TEXT("Legacy starts closed"), DreamUIPalette::StartsCollapsed(DreamUIPaletteCategory::Legacy));
+	TestFalse(TEXT("and Panels open"), DreamUIPalette::StartsCollapsed(DreamUIPaletteCategory::Panels));
+
+	// DreamGUI's own registrations use its own categories, so none of them lands in an order of its own
+	// at the end -- the fate of the dozen near-duplicate categories this replaced.
+	const TSet<FName> Own =
+	{
+		FName(DreamUIPaletteCategory::Panels), FName(DreamUIPaletteCategory::Common), FName(DreamUIPaletteCategory::Input),
+		FName(DreamUIPaletteCategory::Lists), FName(DreamUIPaletteCategory::Scrolling), FName(DreamUIPaletteCategory::Containers),
+		FName(DreamUIPaletteCategory::Primitive), FName(DreamUIPaletteCategory::Shapes), FName(DreamUIPaletteCategory::Effects),
+		FName(DreamUIPaletteCategory::Components), FName(DreamUIPaletteCategory::Modifiers), FName(DreamUIPaletteCategory::Advanced),
+		LegacyCategory,
+	};
+	for (const FName Category : Categories)
+	{
+		TestTrue(*FString::Printf(TEXT("'%s' is one of DreamGUI's categories"), *Category.ToString()), Own.Contains(Category));
+
+		// By name inside a category, and no two rows of one category reading the same.
+		const TArray<const FDreamUIControlDescriptor*> Rows = Registry.GetDescriptorsInCategory(Category);
+		TSet<FString> Labels;
+		for (int32 Index = 0; Index < Rows.Num(); ++Index)
+		{
+			const FString Label = Rows[Index]->DisplayName.ToString();
+			bool bRepeated = false;
+			Labels.Add(Label, &bRepeated);
+			TestFalse(*FString::Printf(TEXT("'%s' appears once in %s"), *Label, *Category.ToString()), bRepeated);
+			if (Index > 0)
+			{
+				TestTrue(*FString::Printf(TEXT("'%s' comes after '%s' in %s"), *Label, *Rows[Index - 1]->DisplayName.ToString(), *Category.ToString()),
+					Rows[Index - 1]->DisplayName.CompareToCaseIgnored(Rows[Index]->DisplayName) <= 0);
+			}
+		}
+	}
+
+	// The panels read as the panels, without the family prefix fifteen times over.
+	for (const FDreamUIControlDescriptor* Panel : Registry.GetDescriptorsInCategory(DreamUIPaletteCategory::Panels))
+	{
+		TestFalse(*FString::Printf(TEXT("'%s' carries no UMG prefix"), *Panel->DisplayName.ToString()),
+			Panel->DisplayName.ToString().StartsWith(TEXT("UMG ")));
 	}
 	return true;
 }

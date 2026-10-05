@@ -59,6 +59,11 @@ namespace DreamUIPalette
 		return bFilterActive || !bWasCollapsed;
 	}
 
+	bool StartsCollapsed(const FString& InGroupName)
+	{
+		return InGroupName == DreamUIPaletteCategory::Legacy;
+	}
+
 	bool ShouldListUserWidget(FName InPackageName, FName InEditedPackage, const TSet<FString>& InAlreadyOffered)
 	{
 		if (InPackageName.IsNone())
@@ -234,30 +239,26 @@ void SDreamWidgetPalette::CollectBasics(TArray<FItemPtr>& Out)
 
 void SDreamWidgetPalette::CollectControls(TArray<FItemPtr>& Out)
 {
-	TMap<FName, FItemPtr> CategoryMap;
-	TArray<FName> CategoryOrder;
-	for (const FDreamUIControlDescriptor& Descriptor : FDreamUIControlRegistry::Get().GetDescriptors())
+	// In the registry's order of categories and, inside each, by name -- the order the Create menus
+	// use too, so the two lists of the same things read alike.
+	const FDreamUIControlRegistry& Registry = FDreamUIControlRegistry::Get();
+	for (const FName Category : Registry.GetCategoriesInDisplayOrder())
 	{
-		FItemPtr& Header = CategoryMap.FindOrAdd(Descriptor.Category);
-		if (!Header.IsValid())
+		FItemPtr Header = MakeShared<FPaletteItem>();
+		Header->Kind = EItemKind::Category;
+		Header->DisplayName = Category.ToString();
+		for (const FDreamUIControlDescriptor* Descriptor : Registry.GetDescriptorsInCategory(Category))
 		{
-			Header = MakeShared<FPaletteItem>();
-			Header->Kind = EItemKind::Category;
-			Header->DisplayName = Descriptor.Category.ToString();
-			CategoryOrder.Add(Descriptor.Category);
+			auto Item = MakeShared<FPaletteItem>();
+			Item->Kind = Descriptor->CreationKind == EDreamUIControlCreationKind::WidgetClass ? EItemKind::WidgetClass : EItemKind::Native;
+			Item->DisplayName = Descriptor->DisplayName.ToString();
+			Item->WidgetClassPath = Descriptor->WidgetClassPath;
+			Item->NativeDescriptor = MakeShared<FDreamUIControlDescriptor>(*Descriptor);
+			Item->bValid = Registry.Validate(*Descriptor, Item->ValidationError);
+			Item->FavoriteKey = DreamUIPalette::MakeFavoriteKey(*Item);
+			Header->Children.Add(Item);
 		}
-		auto Item = MakeShared<FPaletteItem>();
-		Item->Kind = Descriptor.CreationKind == EDreamUIControlCreationKind::WidgetClass ? EItemKind::WidgetClass : EItemKind::Native;
-		Item->DisplayName = Descriptor.DisplayName.ToString();
-		Item->WidgetClassPath = Descriptor.WidgetClassPath;
-		Item->NativeDescriptor = MakeShared<FDreamUIControlDescriptor>(Descriptor);
-		Item->bValid = FDreamUIControlRegistry::Get().Validate(Descriptor, Item->ValidationError);
-		Item->FavoriteKey = DreamUIPalette::MakeFavoriteKey(*Item);
-		Header->Children.Add(Item);
-	}
-	for (FName Category : CategoryOrder)
-	{
-		Out.Add(CategoryMap.FindChecked(Category));
+		Out.Add(Header);
 	}
 }
 
@@ -298,6 +299,11 @@ void SDreamWidgetPalette::CollectUserWidgets(TArray<FItemPtr>& Out)
 		return A.AssetName.LexicalLess(B.AssetName);
 	});
 
+	// The plugin's own preset folder is not the project's work. The presets are registered (Legacy) and
+	// already skipped above; what is left in it are helpers that were never meant to be placed, like
+	// BP_NavigationSelectionInputHandler, which turned up here as if the author had made it.
+	const FString PresetFolder = UDreamGUISettings::Get()->PresetControlFolder;
+
 	FItemPtr Header;
 	for (const FAssetData& Asset : Assets)
 	{
@@ -306,6 +312,10 @@ void SDreamWidgetPalette::CollectUserWidgets(TArray<FItemPtr>& Out)
 			continue;
 		}
 		const FString PackagePath = Asset.PackageName.ToString();
+		if (!PresetFolder.IsEmpty() && PackagePath.StartsWith(PresetFolder))
+		{
+			continue;
+		}
 		if (!Header.IsValid())
 		{
 			Header = MakeShared<FPaletteItem>();
@@ -332,6 +342,18 @@ void SDreamWidgetPalette::RebuildList()
 	CollectBasics(AllGroups);
 	CollectControls(AllGroups);
 	CollectUserWidgets(AllGroups);
+	// Legacy after the project's own widgets: the registry puts it last among its categories, and the
+	// palette keeps it last of all.
+	const int32 LegacyIndex = AllGroups.IndexOfByPredicate([](const FItemPtr& Group)
+	{
+		return Group.IsValid() && Group->DisplayName == DreamUIPaletteCategory::Legacy;
+	});
+	if (LegacyIndex != INDEX_NONE && LegacyIndex != AllGroups.Num() - 1)
+	{
+		const FItemPtr Legacy = AllGroups[LegacyIndex];
+		AllGroups.RemoveAt(LegacyIndex);
+		AllGroups.Add(Legacy);
+	}
 	RefreshRootItems();
 }
 
@@ -359,7 +381,10 @@ void SDreamWidgetPalette::ApplyGroupExpansion()
 	bApplyingGroupExpansion = true;
 	for (auto& Group : RootItems)
 	{
-		TreeView->SetItemExpansion(Group, DreamUIPalette::ShouldExpandGroup(bFilterActive, CollapsedGroups.Contains(Group->DisplayName)));
+		const bool bCollapsed = DreamUIPalette::StartsCollapsed(Group->DisplayName)
+			? !OpenedGroups.Contains(Group->DisplayName)
+			: CollapsedGroups.Contains(Group->DisplayName);
+		TreeView->SetItemExpansion(Group, DreamUIPalette::ShouldExpandGroup(bFilterActive, bCollapsed));
 	}
 	bApplyingGroupExpansion = false;
 }
@@ -370,7 +395,21 @@ void SDreamWidgetPalette::OnGroupExpansionChanged(FItemPtr InItem, bool bExpande
 	// While a filter is active every group is forced open, so what the tree reports then says nothing
 	// about which groups this user wants closed.
 	if (!SearchFilter.GetFilterText().IsEmpty())return;
-	if (bExpanded)
+	if (DreamUIPalette::StartsCollapsed(InItem->DisplayName))
+	{
+		// The other way round: what is kept for these is that the user opened one.
+		bool bAlreadyOpened = false;
+		if (bExpanded)
+		{
+			OpenedGroups.Add(InItem->DisplayName, &bAlreadyOpened);
+			if (bAlreadyOpened)return;
+		}
+		else if (OpenedGroups.Remove(InItem->DisplayName) == 0)
+		{
+			return;
+		}
+	}
+	else if (bExpanded)
 	{
 		if (CollapsedGroups.Remove(InItem->DisplayName) == 0)return;
 	}
@@ -488,6 +527,7 @@ namespace SDreamWidgetPaletteLocal
 	static const TCHAR* PreferencesSection = TEXT("DreamWidgetPalette.Preferences");
 	static const TCHAR* FavoritesKey = TEXT("Favorites");
 	static const TCHAR* CollapsedGroupsKey = TEXT("CollapsedGroups");
+	static const TCHAR* OpenedGroupsKey = TEXT("OpenedGroups");
 
 	// shared create path: the create primitives take a "get parent" function, so double-click
 	// (parent = selection) and drop (parent = drop-target widget) reuse the same logic
@@ -687,6 +727,9 @@ void SDreamWidgetPalette::LoadPreferences()
 	Values.Reset();
 	GConfig->GetArray(SDreamWidgetPaletteLocal::PreferencesSection, SDreamWidgetPaletteLocal::CollapsedGroupsKey, Values, GEditorPerProjectIni);
 	CollapsedGroups.Append(Values);
+	Values.Reset();
+	GConfig->GetArray(SDreamWidgetPaletteLocal::PreferencesSection, SDreamWidgetPaletteLocal::OpenedGroupsKey, Values, GEditorPerProjectIni);
+	OpenedGroups.Append(Values);
 }
 
 void SDreamWidgetPalette::SavePreferences()const
@@ -694,6 +737,7 @@ void SDreamWidgetPalette::SavePreferences()const
 	if (GConfig == nullptr)return;
 	GConfig->SetArray(SDreamWidgetPaletteLocal::PreferencesSection, SDreamWidgetPaletteLocal::FavoritesKey, Favorites.Array(), GEditorPerProjectIni);
 	GConfig->SetArray(SDreamWidgetPaletteLocal::PreferencesSection, SDreamWidgetPaletteLocal::CollapsedGroupsKey, CollapsedGroups.Array(), GEditorPerProjectIni);
+	GConfig->SetArray(SDreamWidgetPaletteLocal::PreferencesSection, SDreamWidgetPaletteLocal::OpenedGroupsKey, OpenedGroups.Array(), GEditorPerProjectIni);
 	GConfig->Flush(false, GEditorPerProjectIni);
 }
 
