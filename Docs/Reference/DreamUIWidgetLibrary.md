@@ -48,7 +48,7 @@ Every Blueprint-facing member of the UMG class, and where it went. *adopt*: same
 
 | UMG | Member | Status | Here | Note |
 |---|---|---|---|---|
-| `UWidgetBlueprintLibrary` | `Create` | map | `UDreamUIBPLibrary::CreateDreamWidgetOfClass` | Pre-existing. AddWidgetOfClassToViewport is the create-and-show pair. |
+| `UWidgetBlueprintLibrary` | `Create` | map | `UDreamUIBPLibrary::CreateDreamWidgetOfClass` | BlueprintInternalUseOnly, as UMG marks Create: the Create Dream Widget node stands for it in a graph, as UMG's Create Widget node does for Create -- a pin per Expose on Spawn property, assigned before the widget initializes rather than after Create. AddWidgetOfClassToViewport is the create-and-show pair. |
 | `UWidgetBlueprintLibrary` | `CreateDragDropOperation` | adopt | `CreateDragDropOperation` | Outered to the transient package, as UMG does: an operation outlives the widget that made it, and a recycled list row mid-drag is the ordinary case. |
 | `UWidgetBlueprintLibrary` | `SetInputMode_UIOnlyEx` | map | `UDreamUIInputModeLibrary::SetInputModeUIOnly` | Addressed by DreamGUI user index rather than by a raw controller, so split screen does not have to rediscover which player a menu belongs to. Needs UDreamGameViewportClient as the game viewport client: the engine's UI-only mode ignores input at the client, which DreamGUI's input comes through, and that client lets it through while this mode holds. |
 | `UWidgetBlueprintLibrary` | `SetInputMode_GameAndUIEx` | map | `UDreamUIInputModeLibrary::SetInputModeGameAndUI` |  |

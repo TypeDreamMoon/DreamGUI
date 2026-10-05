@@ -64,9 +64,29 @@ public:
 	 *
 	 * The return pin takes the shape of InWidgetClass, so a Blueprint subclass's own variables and
 	 * functions are reachable without a Cast, as with UMG's Create Widget node.
+	 *
+	 * Not in the Blueprint menu, as UWidgetBlueprintLibrary::Create is not: the Create Dream Widget node
+	 * stands for it there and offers the class's Expose on Spawn properties as well. A graph that already
+	 * calls it keeps compiling.
 	 */
-	UFUNCTION(BlueprintCallable, meta = (WorldContext = "WorldContextObject", UnsafeDuringActorConstruction = "true", DeterminesOutputType = "InWidgetClass"), Category = "DreamGUI|Create")
+	UFUNCTION(BlueprintCallable, meta = (WorldContext = "WorldContextObject", UnsafeDuringActorConstruction = "true", DeterminesOutputType = "InWidgetClass", BlueprintInternalUseOnly = "true"), Category = "DreamGUI|Create")
 	static UDreamWidget* CreateDreamWidgetOfClass(UObject* WorldContextObject, TSubclassOf<class UDreamUserWidget> InWidgetClass);
+
+	/**
+	 * The two calls the Create Dream Widget node compiles to, with its Expose on Spawn assignments in
+	 * between -- the node is their face, as UMG's Create Widget is UWidgetBlueprintLibrary::Create's.
+	 * See BeginCreateDreamWidget for why the assignments go in the middle.
+	 *
+	 * Begin makes the widget and points it at OwningPlayer, refusing a controller that is not local as
+	 * UMG does. Finish initializes and registers it and leaves it in CreateDreamWidgetOfClass's state:
+	 * held by the manager, off screen until it is added somewhere.
+	 */
+	UFUNCTION(BlueprintCallable, meta = (WorldContext = "WorldContextObject", UnsafeDuringActorConstruction = "true", BlueprintInternalUseOnly = "true"), Category = "DreamGUI|Create")
+	static UDreamUserWidget* BeginDeferredCreateDreamWidget(UObject* WorldContextObject, TSubclassOf<class UDreamUserWidget> WidgetType, APlayerController* OwningPlayer);
+
+	/** The other half of BeginDeferredCreateDreamWidget, run after the Expose on Spawn assignments. */
+	UFUNCTION(BlueprintCallable, meta = (UnsafeDuringActorConstruction = "true", BlueprintInternalUseOnly = "true"), Category = "DreamGUI|Create")
+	static UDreamUserWidget* FinishDeferredCreateDreamWidget(UDreamUserWidget* Widget);
 
 	/** Return the world's shared ScreenSpaceOverlay root, creating it on demand. */
 	UFUNCTION(BlueprintCallable, meta = (WorldContext = "WorldContextObject"), Category = "DreamGUI|Screen")

@@ -111,7 +111,8 @@ UDreamUIBPLibrary::AddWidgetOfClassToViewport(this, WBP_Settings);   // 屏幕�
 2. 打开 [`Content/Samples/HelloDreamGUI.dui`](Content/Samples/HelloDreamGUI.dui)——仍然算一个真界面的最小文件。给它新建一个
    Widget Blueprint（*内容浏览器 ▸ 添加 ▸ DreamGUI Widget*），父类选 **DreamUI Text User Widget**
    （`UDreamTextUserWidget`）——只有这种类的设计器工具栏里才有 *Set Source File…*——用它指向这个文件，编译。
-3. 用 `UDreamUIBPLibrary::AddWidgetOfClassToViewport` 显示它，或者把 Blueprint 拖进关卡。屏幕根、射线检测器和
+3. 显示它：在蓝图图表里用 **Create Dream Widget** 接 **Add to Viewport**，和 UMG 一样——文件的 `props` 就是创建节点上的
+   引脚；在 C++ 里用 `UDreamUIBPLibrary::AddWidgetOfClassToViewport`。或者把 Blueprint 拖进关卡。屏幕根、射线检测器和
    事件系统都会按需创建，不需要别的配置。
 
 有两项设置值得早点做：为非美式键盘布局接管游戏视口客户端，以及为引擎的纯 UI 输入模式打开 Slate 输入源。两者都在

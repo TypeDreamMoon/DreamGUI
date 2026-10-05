@@ -34,6 +34,14 @@ after 3 for 2.1.0 -- so the engine never takes 1.0.0 for the older of the two.
 - **`+=` and `=` on events**, beside `->`: `+=` adds a listener and takes only a multicast event, `=` is the one listener
   of a single-cast delegate -- which routes can now name at all -- and takes only that; the wrong one is DUI5025. `->`
   takes either.
+- **Create Dream Widget, Add to Viewport and Add to Player Screen**, UMG's Create Widget node and the two user
+  widget calls that go with it. Picking a class on the node gives it a pin for each Expose on Spawn property -- every
+  `props` entry of a .dui file is one -- and an Owning Player pin, and types its result as that class. The pins are
+  assigned before the widget initializes, so Pre Construct, On Initialized, On Construct and the first value of every
+  binding already see them; UMG assigns after Create, which is too late for On Initialized. Add to Viewport puts the
+  widget on its owning player's screen and, as in UMG, refuses one that already has a parent; Add to Player Screen also
+  refuses a widget with no owning player. Remove from Parent was already there. C++ gets the two halves of the node as
+  `BeginCreateDreamWidget` and `FinishCreateDreamWidget`.
 - **Add Component lists only the components the selected widget supports** (`FDreamUIComponentSupport`). A mesh
   modifier needs a visual that builds a mesh, a sprite player a Sprite, a sprite-sheet player a Texture, a hyperlink or
   the text animation a Text, a UMG interaction a UMG Widget visual; a retainer or invalidation box needs the widget's
@@ -48,6 +56,9 @@ after 3 for 2.1.0 -- so the engine never takes 1.0.0 for the older of the two.
 - **A binding that reads only FieldNotify variables no longer reads them every frame** once its Blueprint is
   recompiled: it updates when they announce a change. C++ that assigns such a variable without broadcasting it -- which
   FieldNotify never allowed -- is no longer covered up by the poll; `DreamUI.Binding.ForcePoll 1` finds it.
+- **Create Dream Widget Of Class is no longer in the Blueprint menu**: the Create Dream Widget node stands for it, as
+  UMG's Create Widget node stands for `UWidgetBlueprintLibrary::Create`. Graphs that already call it keep compiling.
+  Being BlueprintInternalUseOnly, it is also gone from Python.
 - **The Content Browser's Add menu offers DreamGUI Widget at its top**, beside the engine's Blueprint Class and
   Material, rather than only one submenu down. The submenu itself, now labelled DreamGUI, is in sections -- Basic
   (DreamGUI Widget, Widget Animation), Fonts, Graphics, Rich Text -- with short labels and a one-line tooltip each,
@@ -71,6 +82,8 @@ after 3 for 2.1.0 -- so the engine never takes 1.0.0 for the older of the two.
 
 ### Fixed
 
+- **Creating a widget of an abstract class logs an error** instead of stopping on NewObject's assert. A class picked
+  from a list cannot be abstract, but a class pin or a Create Dream Widget Of Class call fed from a variable can be.
 - **A DreamUI Widget Blueprint's thumbnail is the screen it authors.** The Content Browser tile was a wireframe of the
   authored anchor rects, which knows nothing of what a layout arranges, so most screens came out as a grey box with a
   line or two on it. The thumbnail now builds the widget the way the designer's preview does, lays it out on the design

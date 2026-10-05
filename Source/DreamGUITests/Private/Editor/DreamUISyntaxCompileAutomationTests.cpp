@@ -8,6 +8,8 @@
 #include "DreamEventBindingTestTypes.h"
 #include "DreamWidgetBehaviourTestTypes.h"
 #include "DreamWidgetBlueprintTestTypes.h"
+#include "DreamScopedWorld.h"
+#include "K2Node_CreateDreamWidget.h"
 #include "Core/DreamTextUserWidget.h"
 #include "Core/DreamUserWidget.h"
 #include "Core/DreamWidgetGeneratedClass.h"
@@ -23,6 +25,12 @@
 #include "Text/DreamUITextBuilder.h"
 
 #include "Engine/World.h"
+#include "EdGraphSchema_K2.h"
+#include "Engine/BlueprintGeneratedClass.h"
+#include "GameFramework/Actor.h"
+#include "K2Node_CustomEvent.h"
+#include "K2Node_VariableSet.h"
+#include "Misc/ScopeExit.h"
 #include "HAL/FileManager.h"
 #include "Kismet2/BlueprintEditorUtils.h"
 #include "Kismet2/CompilerResultsLog.h"
@@ -30,6 +38,7 @@
 #include "Misc/FileHelper.h"
 #include "Misc/Paths.h"
 #include "UObject/Package.h"
+#include "UObject/Script.h"
 #include "UObject/StrongObjectPtr.h"
 
 /*
@@ -860,6 +869,136 @@ bool FDreamUISyntaxHostBindsAPropTest::RunTest(const FString& Parameters)
 		}
 	}
 	World->DestroyWorld(false);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamUISyntaxPropOnSpawnTest,
+	"DreamGUI.Text.Syntax.APropSetOnTheCreateNodeIsWhatTheFirstFrameShows",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * A prop is offered on spawn, and Create Dream Widget is what offers it: a pin per prop, assigned before the widget
+ * initializes. A prop is a field-notify variable, which the compiler assigns through a broadcasting setter aimed at
+ * the prop's own class rather than by name -- a different road from a plain Expose on Spawn property, and the one
+ * every pure-.dui component is made on. What it has to show for it is the binding's FIRST value: `Text <- Caption`
+ * reads the spawned caption, not the file's default.
+ */
+bool FDreamUISyntaxPropOnSpawnTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamUISyntaxCompileTestLocal;
+
+	FScopedDuiFile File(TEXT("SyntaxPropOnSpawn.dui"));
+	FScopedBlueprint Fixture(TEXT("BP_SyntaxPropOnSpawn"));
+	FCompilerResultsLog Results;
+	if (!WriteAndCompile(*this, File, {
+		TEXT("class /Temp/DreamGUITests/BP_SyntaxPropOnSpawn"),
+		TEXT("props {"),
+		TEXT("    Text Caption = \"Default\""),
+		TEXT("}"),
+		TEXT("Widget Root {"),
+		TEXT("    Text Title {"),
+		TEXT("        Text <- Caption"),
+		TEXT("    }"),
+		TEXT("}")}, Fixture, Results))
+	{
+		return false;
+	}
+	UClass* WidgetClass = Fixture.Blueprint->GeneratedClass;
+	if (!TestEqual(*FString::Printf(TEXT("the widget compiles, saw [%s]"), *JoinMessages(Results)), Results.NumErrors, 0)
+		|| !TestNotNull(TEXT("a class came out"), WidgetClass))
+	{
+		return false;
+	}
+
+	// The graph that makes one: an actor's event, Made = Create Dream Widget(the class, Caption "Spawned").
+	UPackage* SpawnerPackage = CreatePackage(TEXT("/Temp/DreamGUITests/BP_SyntaxPropSpawner"));
+	SpawnerPackage->AddToRoot();
+	ON_SCOPE_EXIT { SpawnerPackage->RemoveFromRoot(); };
+	UBlueprint* Spawner = FKismetEditorUtilities::CreateBlueprint(AActor::StaticClass(), SpawnerPackage, FName(TEXT("BP_SyntaxPropSpawner")),
+		BPTYPE_Normal, UBlueprint::StaticClass(), UBlueprintGeneratedClass::StaticClass());
+	UEdGraph* Graph = Spawner != nullptr && Spawner->UbergraphPages.Num() > 0 ? Spawner->UbergraphPages[0].Get() : nullptr;
+	if (!TestNotNull(TEXT("the spawner has a graph"), Graph))
+	{
+		return false;
+	}
+	static const FName MadeName(TEXT("Made"));
+	FEdGraphPinType WidgetPinType;
+	WidgetPinType.PinCategory = UEdGraphSchema_K2::PC_Object;
+	WidgetPinType.PinSubCategoryObject = UDreamUserWidget::StaticClass();
+	if (!TestTrue(TEXT("the spawner declares a widget to keep"), FBlueprintEditorUtils::AddMemberVariable(Spawner, MadeName, WidgetPinType)))
+	{
+		return false;
+	}
+
+	UK2Node_CreateDreamWidget* Node = NewObject<UK2Node_CreateDreamWidget>(Graph);
+	Graph->AddNode(Node, false, false);
+	Node->AllocateDefaultPins();
+	Node->GetClassPin()->DefaultObject = WidgetClass;
+	Node->PinDefaultValueChanged(Node->GetClassPin());
+	UEdGraphPin* CaptionPin = Node->FindPin(TEXT("Caption"));
+	if (!TestNotNull(TEXT("the prop is a pin on the node"), CaptionPin))
+	{
+		return false;
+	}
+	CaptionPin->DefaultTextValue = FText::FromString(TEXT("Spawned"));
+
+	FGraphNodeCreator<UK2Node_CustomEvent> EventCreator(*Graph);
+	UK2Node_CustomEvent* Event = EventCreator.CreateNode(false);
+	EventCreator.Finalize();
+	Event->CustomFunctionName = TEXT("MakeWidget");
+	UK2Node_VariableSet* Setter = NewObject<UK2Node_VariableSet>(Graph);
+	Graph->AddNode(Setter, false, false);
+	Setter->VariableReference.SetSelfMember(MadeName);
+	Setter->AllocateDefaultPins();
+	UEdGraphPin* MadeInput = Setter->FindPin(MadeName, EGPD_Input);
+	if (!TestNotNull(TEXT("the setter takes the widget"), MadeInput))
+	{
+		return false;
+	}
+	Event->FindPin(UEdGraphSchema_K2::PN_Then)->MakeLinkTo(Node->GetExecPin());
+	Node->GetThenPin()->MakeLinkTo(Setter->GetExecPin());
+	Node->GetResultPin()->MakeLinkTo(MadeInput);
+
+	FCompilerResultsLog SpawnerResults;
+	FKismetEditorUtilities::CompileBlueprint(Spawner, EBlueprintCompileOptions::SkipGarbageCollection, &SpawnerResults);
+	if (!TestEqual(*FString::Printf(TEXT("a graph creating it with the prop set compiles, saw [%s]"), *JoinMessages(SpawnerResults)),
+		SpawnerResults.NumErrors, 0))
+	{
+		return false;
+	}
+
+	DreamTests::FScopedGameWorld TestWorld;
+	AActor* Actor = TestWorld.World->SpawnActor<AActor>(Spawner->GeneratedClass);
+	const FObjectProperty* MadeProperty = FindFProperty<FObjectProperty>(Spawner->GeneratedClass, MadeName);
+	UFunction* MakeWidget = Actor != nullptr ? Actor->FindFunction(FName(TEXT("MakeWidget"))) : nullptr;
+	if (!TestTrue(TEXT("the spawner runs"), MadeProperty != nullptr && MakeWidget != nullptr))
+	{
+		return false;
+	}
+	// The test world never initialized its actors for play, and AActor::ProcessEvent drops a call into
+	// such a world without a word unless the editor allows script execution for the call.
+	{
+		FEditorScriptExecutionGuard ScriptGuard;
+		Actor->ProcessEvent(MakeWidget, nullptr);
+	}
+
+	UDreamUserWidget* Made = Cast<UDreamUserWidget>(MadeProperty->GetObjectPropertyValue_InContainer(Actor));
+	if (!TestTrue(TEXT("it made an instance of the .dui class"), Made != nullptr && Made->IsA(WidgetClass)))
+	{
+		return false;
+	}
+	const FTextProperty* Caption = FindFProperty<FTextProperty>(WidgetClass, TEXT("Caption"));
+	TestTrue(TEXT("the prop holds the spawned value"),
+		Caption != nullptr && Caption->GetPropertyValue_InContainer(Made).ToString() == TEXT("Spawned"));
+	UDreamWidget* Title = Made->GetWidgetTree() != nullptr ? Made->GetWidgetTree()->FindWidgetByVariableName(FName(TEXT("Title"))) : nullptr;
+	UDreamText* TitleText = Title != nullptr ? Cast<UDreamText>(Title->GetVisual()) : nullptr;
+	if (TestNotNull(TEXT("the instance has the title's text"), TitleText))
+	{
+		TestEqual(TEXT("and its first value is the spawned caption, not the file's default"),
+			TitleText->GetText().ToString(), FString(TEXT("Spawned")));
+	}
+	Made->DestroyWidget();
 	return true;
 }
 

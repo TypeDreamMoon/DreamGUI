@@ -3,6 +3,7 @@
 #pragma once
 
 #include "Core/DreamUserWidget.h"
+#include "GameFramework/PlayerController.h"
 #include "DreamUserWidgetTestTypes.generated.h"
 
 class UDreamWidget;
@@ -46,4 +47,42 @@ UCLASS(NotBlueprintable, NotBlueprintType, Transient, HideDropdown)
 class UDreamUserWidgetBindFixtureSubclass : public UDreamUserWidgetBindFixture
 {
 	GENERATED_BODY()
+};
+
+/**
+ * A user widget with Expose on Spawn properties that writes down what it saw of them, for the Create
+ * Dream Widget node. The node's promise is that its pins are assigned BEFORE the widget initializes,
+ * so what On Initialized and On Construct read is the spawned value, not the class default.
+ */
+UCLASS(NotBlueprintable, HideDropdown)
+class UDreamCreateWidgetNodeFixture : public UDreamUserWidget
+{
+	GENERATED_BODY()
+public:
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Test", meta = (ExposeOnSpawn = true))
+	FString Caption;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Test", meta = (ExposeOnSpawn = true))
+	int32 Count = 3;
+
+	FString CaptionAtInitialized;
+	int32 CountAtInitialized = INDEX_NONE;
+	TWeakObjectPtr<APlayerController> OwnerAtInitialized;
+	bool bConstructed = false;
+	FString CaptionAtConstruct;
+
+	virtual void NativeOnInitialized() override
+	{
+		Super::NativeOnInitialized();
+		CaptionAtInitialized = Caption;
+		CountAtInitialized = Count;
+		OwnerAtInitialized = GetOwningPlayer();
+	}
+
+	virtual void NativeOnConstruct() override
+	{
+		Super::NativeOnConstruct();
+		bConstructed = true;
+		CaptionAtConstruct = Caption;
+	}
 };

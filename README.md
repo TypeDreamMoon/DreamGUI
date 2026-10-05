@@ -116,8 +116,9 @@ or dragged into a level, an `ADreamWorldWidgetActor` — the same class as a sur
    a real screen. Make a widget Blueprint for it (*Content Browser ▸ Add ▸ DreamGUI Widget*) with
    **DreamUI Text User Widget** (`UDreamTextUserWidget`) as its parent class — only such a class shows
    *Set Source File…* in the designer toolbar — point it at the file, and compile.
-3. Show it with `UDreamUIBPLibrary::AddWidgetOfClassToViewport`, or drag the Blueprint into a level. The screen
-   root, the raycaster and the event system are created on demand; nothing else needs configuring.
+3. Show it: in a graph, **Create Dream Widget** then **Add to Viewport**, as with UMG -- the file's `props` are pins
+   on the create node; in C++, `UDreamUIBPLibrary::AddWidgetOfClassToViewport`. Or drag the Blueprint into a level.
+   The screen root, the raycaster and the event system are created on demand; nothing else needs configuring.
 
 Two settings are worth making early — the game viewport client for non-US keyboard layouts, and the Slate input
 source for the engine's UI-only input mode. Both are on
