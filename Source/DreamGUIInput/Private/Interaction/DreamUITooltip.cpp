@@ -14,6 +14,7 @@
 #include "Event/DreamBaseEventData.h"
 #include "Event/DreamEventSystem.h"
 #include "Event/DreamUIInputSubsystem.h"
+#include "Event/DreamUIInputTypes.h"
 #include "Event/DreamPointerEventData.h"
 #include "DreamGUI.h"
 #include "Engine/World.h"
@@ -189,14 +190,28 @@ void UDreamUITooltipSubsystem::HandleInputEvent(UDreamBaseEventData* InEventData
 	// The player whose pointer it is: one player's hover never moves or hides another's bubble.
 	FDreamUITooltipUserState& State = UserStates.FindOrAdd(PointerEvent->UserIndex);
 
+	// A finger is not a cursor. Slate asks for tooltips at each user's cursor alone (FSlateUser::UpdateTooltip,
+	// at GetCursorPosition, the cursor's pointer index), and a touch is a pointer of its own: it never arms a
+	// bubble, never takes one over and never carries one. Its press is still a press of the player's -- Slate
+	// holds the cursor's tooltip shut while one is down -- so a bubble already up goes, and its dwell starts
+	// again under whatever pointer it follows.
+	if (PointerEvent->InputType == EDreamUIPointerInputType::Pointer && DreamUIPointerIds::IsTouch(PointerEvent->PointerID))
+	{
+		if (PointerEvent->EventType == EDreamUIPointerEventType::Down || PointerEvent->EventType == EDreamUIPointerEventType::BeginDrag)
+		{
+			HideUserTooltip(State);
+		}
+		return;
+	}
+
 	switch (PointerEvent->EventType)
 	{
 	case EDreamUIPointerEventType::Enter:
 	case EDreamUIPointerEventType::Exit:
 	{
 		// One tooltip per player, following one of the player's pointers: the one that last arrived at something with a
-		// tooltip. Another pointer -- a finger, a second laser, a script's -- takes it over only by arriving at a tooltip
-		// of its own; its moves over nothing leave the bubble under the first one alone.
+		// tooltip. Another pointer -- a second laser, a script's -- takes it over only by arriving at a tooltip of its
+		// own; its moves over nothing leave the bubble under the first one alone. (A finger is none of them: above.)
 		const bool bFollowed = !State.LastPointerEvent.IsValid() || State.LastPointerEvent.Get() == PointerEvent;
 		const bool bTakesOver = !bFollowed && PointerEvent->EventType == EDreamUIPointerEventType::Enter
 			&& DreamUITooltipPolicy::ResolveTooltipSource(PointerEvent->EnterWidget) != nullptr;

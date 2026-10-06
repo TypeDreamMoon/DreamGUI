@@ -98,6 +98,10 @@ after 3 for 2.1.0 -- so the engine never takes 1.0.0 for the older of the two.
   or less -- times ten with Shift, a hundred with Shift and Alt, a tenth with Ctrl, a hundredth with Ctrl and Alt. The
   arrows used to take the focus on to the next control; they no longer do, as in UMG. The D-pad still navigates, and
   in a field being edited the arrows still move the caret.
+- **A finger never brings up a tooltip**, as Slate shows tooltips at the cursor alone: not for a tap, a finger held past
+  the delay, or a finger dragged onto a widget. A finger's press still takes down a bubble that is up, and the bubble
+  comes back after its delay under the mouse that brought it up -- which a finger's tap used to stop, by taking the
+  tooltip over and keeping it after it lifted.
 
 ### Fixed
 

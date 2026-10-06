@@ -20,7 +20,7 @@ nothing is in the [README](../README.md); what each version added is in the [CHA
 
 ## From 1.0.0 to the next release
 
-For a project on 1.0.0. Nothing was renamed, and nothing has to be done before opening the project. Two controls take
+For a project on 1.0.0. Nothing was renamed, and nothing has to be done before opening the project. Three controls take
 input the way UMG's do now, and a screen built around the old way will feel different:
 
 - **A list, tile or tree view in Multi mode chooses rows as SListView does.** A plain click selected the row and kept
@@ -36,6 +36,9 @@ input the way UMG's do now, and a screen built around the old way will feel diff
   the D-pad or the stick, as in UMG. The spin box hears an arrow before any action binding does, so a binding on an arrow
   key no longer fires while a spin box has the focus. With StepSize at zero the arrows still step (by SSpinBox's
   default step); the step faces do not, as before.
+- **A finger never brings up a tooltip.** A finger landing on, held on or dragged onto a widget with a tooltip used to
+  be able to show its bubble; a touch-only game that wants a tooltip on a long press shows it from that handler with
+  `UDreamUITooltipSubsystem::ShowTooltipFor`.
 
 A C++ subclass of `UDreamSpinBox` or of the list family that overrides `NativeOnKeyDown` calls `Super` to keep these
 keys, as for any key the base answers.
