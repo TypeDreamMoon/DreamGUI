@@ -21,6 +21,12 @@
   "rows": [
     { "id": "Border", "classes": ["UDreamBorder"], "areas": ["Border", "Controls.Border"] },
     { "id": "Button", "classes": ["UDreamButton", "UUIButton"], "areas": ["Button", "Controls.Button",
+        "Navigation.Tab.TabIndexPutsAButtonAheadOfItsSiblingsWhenTheTabKeyWalksTheScreen",
+        "Navigation.Tab.AnExplicitNextLinkSendsTheTabKeyStraightToItsTarget",
+        "Navigation.Tab.ACyclingGroupKeepsTheTabKeyGoingRoundInsideItOnceItIsIn",
+        "Navigation.Tab.WithTheScreenSetNotToWrapTheTabKeyHoldsAtTheLastStop",
+        "Navigation.Focus.TheRingGoesWhereTheDPadTakesTheFocus",
+        "Navigation.Focus.TheRingStaysOnAFocusedButtonWhileItsScrollBoxScrollsItAlong",
         "Driver.WorldSpace.ClickingAButtonOnAPanelFacingTheCameraClicksItOnce",
         "Driver.WorldSpace.MovingOnAndOffAWorldButtonHoversAndUnhoversItOnceEach",
         "Driver.WorldSpace.WhereTwoPanelsOverlapTheNearerOneTakesTheClick",
