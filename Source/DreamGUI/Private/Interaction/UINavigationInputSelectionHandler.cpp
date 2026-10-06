@@ -237,6 +237,40 @@ void UUINavigationInputSelectionHandler::MoveCursorTo(UDreamWidget* InWidget, co
 	}
 }
 
+UDreamWidget* UUINavigationInputSelectionHandler::AttachRingTo(UDreamWidget* InRingWidget, UDreamWidget* InSelected)
+{
+	// The control itself when it takes one more child, else the nearest widget above it that does. A face whose layout
+	// takes a single child -- a button's size box over its content -- refused the ring, which stayed where it was made,
+	// hanging off nothing and drawn by no canvas: no button ever showed one. Forced past the capacity, the size box would
+	// collapse it as a surplus child. Hung higher up, the ring is placed over the control from there (RingLocationOver),
+	// and moves with it whenever the two move together -- a scroll box scrolling the control, its button and all.
+	UDreamWidget* RingParent = InSelected;
+	while (IsValid(RingParent) && !RingParent->CanAcceptChild(InRingWidget))
+	{
+		RingParent = RingParent->GetParent();
+	}
+	if (!IsValid(RingParent))
+	{
+		return nullptr;
+	}
+	InRingWidget->SetParent(RingParent, true);
+	return InRingWidget->GetParent() == RingParent ? RingParent : nullptr;
+}
+
+FVector UUINavigationInputSelectionHandler::RingLocationOver(const UDreamWidget* InRingParent, const UDreamWidget* InSelected)
+{
+	const FVector2D Centre2D = InSelected->GetLocalSpaceCenter();
+	const FVector CentreOnSelected(0, Centre2D.X, Centre2D.Y);
+	if (InRingParent == nullptr || InRingParent == InSelected)
+	{
+		return CentreOnSelected;
+	}
+	// The control's centre carried into the parent's frame: the frame a child's relative location is in (SetParent keeps a
+	// child's place through the same layout transforms).
+	const FVector CentreInWorld = InSelected->GetLayoutWorldTransform().TransformPosition(CentreOnSelected);
+	return InRingParent->GetLayoutWorldTransform().InverseTransformPosition(CentreInWorld);
+}
+
 void UUINavigationInputSelectionHandler::SelectWidget(UDreamWidget* InSelected)
 {
 	// UDreamUIBehaviour settled this in its constructor and the answer cannot change afterwards --
@@ -268,10 +302,8 @@ void UUINavigationInputSelectionHandler::SelectWidget(UDreamWidget* InSelected)
 		{
 			FadeCursorTo(Widget, 1.0f);
 		}
-		Widget->SetParent(InSelected, true);
-		const FVector2D Pos2D = InSelected->GetLocalSpaceCenter();
-		const FVector Pos3D(0, Pos2D.X, Pos2D.Y);
-		MoveCursorTo(Widget, Pos3D, InSelected->GetSize());
+		const UDreamWidget* RingParent = AttachRingTo(Widget, InSelected);
+		MoveCursorTo(Widget, RingLocationOver(RingParent, InSelected), InSelected->GetSize());
 
 		if (ThisCanvas.IsValid())
 		{
@@ -281,10 +313,8 @@ void UUINavigationInputSelectionHandler::SelectWidget(UDreamWidget* InSelected)
 	else if (InSelected != nullptr)
 	{
 		FadeCursorTo(Widget, 1.0f);
-		Widget->SetParent(InSelected, true);
-		auto Pos2D = InSelected->GetLocalSpaceCenter();
-		auto Pos3D = FVector(0, Pos2D.X, Pos2D.Y);
-		Widget->SetRelativeLocation(Pos3D);
+		const UDreamWidget* RingParent = AttachRingTo(Widget, InSelected);
+		Widget->SetRelativeLocation(RingLocationOver(RingParent, InSelected));
 		Widget->SetSizeDelta(InSelected->GetSize());
 		Widget->SetRelativeRotation(FQuat::Identity);
 

@@ -115,6 +115,10 @@ after 3 for 2.1.0 -- so the engine never takes 1.0.0 for the older of the two.
 
 ### Fixed
 
+- **The focus ring shows on a button.** The ring the keys and the pad bring is hung under the control it marks, and a
+  control whose face takes one child -- every Dream Button, whose face is a size box over its content -- refused it: the
+  ring stayed where it was made, under nothing, and was drawn nowhere. It now hangs under the nearest widget that takes
+  it, placed and sized over the control, and moves with the control when the two move together, as in a scroll box.
 - **Creating a widget of an abstract class logs an error** instead of stopping on NewObject's assert. A class picked
   from a list cannot be abstract, but a class pin or a Create Dream Widget Of Class call fed from a variable can be.
 - **A DreamUI Widget Blueprint's thumbnail is the screen it authors.** The Content Browser tile was a wireframe of the
