@@ -182,6 +182,11 @@ after 3 for 2.1.0 -- so the engine never takes 1.0.0 for the older of the two.
 - **Undo puts a widget's size back where no layout runs.** Undoing a resize restored the widget's anchors and size
   delta, but the width and height worked out from them stayed as they were: the asset's widget went on answering
   `GetWidth` and `GetHeight` with the size from before the undo.
+- **F and Zoom to Fit fill the designer's view.** Both framed the box's bounding sphere with the editor's ortho zoom,
+  which comes out five hundred pixels across whatever the view's size (`r.Editor.AlignedOrthoZoom`, on by default), so
+  a fitted canvas took a third of a 1280-pixel view and less of a larger one. The flat view now zooms so the box, with a
+  hundred pixels to spare each way, is as large as the view holds it, as UMG's Zoom to Fit does; the 3D view frames as
+  before.
 - **On a split screen, a widget's popups open on the screen it is on.** A dropdown's list, a tooltip's bubble and the
   rest of what the popup layer lifts went to the first player's screen for a widget on any other player's: the screen
   UI took the nearest user widget's owning player as the answer before the screen the widget was on, and a user widget
@@ -203,6 +208,11 @@ after 3 for 2.1.0 -- so the engine never takes 1.0.0 for the older of the two.
   copied a search result and left the designer's clipboard as it was, so the next Ctrl+V pasted nothing or something
   older. The five are now on a list of the designer's own as well, which the viewport and the hierarchy answer keys
   from first and their menus run, as UMG's designer keeps them.
+- **A drag in the designer follows the pointer while a notification fades in.** The designer applies a held press, a
+  drag and a marquee in its tick, and while Slate holds back expensive work -- a toast fading in at a low frame rate
+  does, the editor's Undo toast among them -- the editor ticks only the viewports that asked to be redrawn. A drag begun
+  just after an undo stood still, and one let go before the toast was in had never begun, as though it had been a
+  click. The viewport now asks for its redraw while a gesture is live, as the engine's own viewport drags never wait.
 
 ## 1.0.0
 

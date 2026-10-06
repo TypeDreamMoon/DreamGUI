@@ -1632,6 +1632,7 @@ bool FDreamWidgetDesignerViewportClient::HandleDesignerInputKey(const FInputKeyE
 		bDesignerMarqueeActive = false;
 		DesignerMarqueePressPixel = MousePixel;
 		DesignerMarqueeCurrentPixel = MousePixel;
+		KeepTickingThroughGesture();
 		return false;
 	}
 	if (!CanBeginDesignerDrag(HitHandle))return false;
@@ -1641,6 +1642,7 @@ bool FDreamWidgetDesignerViewportClient::HandleDesignerInputKey(const FInputKeyE
 	PendingDesignerHandle = HitHandle;
 	bDesignerDragPending = true;
 	DesignerPressPixel = MousePixel;
+	KeepTickingThroughGesture();
 	return true;
 }
 
@@ -3131,11 +3133,37 @@ bool FDreamWidgetDesignerViewportClient::FocusViewportToTargets()
 	{
 		Bounds = DesignerPtr.Pin()->GetAllObjectsBounds();
 	}
-	FocusViewportOnBox(Bounds.GetBox());
+	FrameBox(Bounds.GetBox());
 
 	// Handled. The camera has moved, so reporting otherwise sent F on down the chain to whatever
 	// else was listening -- and the caller in InputKey feeds this straight into bHandled.
 	return true;
+}
+
+void FDreamWidgetDesignerViewportClient::FrameBox(const FBox& InBox)
+{
+	// Where the camera goes, and in the 3D view how far back it stands: the editor's own framing.
+	FocusViewportOnBox(InBox);
+	// Ctrl held frames without zooming, as FocusViewportOnBox itself does.
+	if (!IsOrtho() || Viewport == nullptr || !DesignerPtr.IsValid()
+		|| Viewport->KeyState(EKeys::LeftControl) || Viewport->KeyState(EKeys::RightControl))
+	{
+		return;
+	}
+	// How far the flat view zooms in is UMG's fit (SDesignSurface::ZoomToFit): the box, inside the view less a hundred
+	// pixels each way (its ZoomToFitPadding), as large as the view holds it -- continuously here, where UMG picks the
+	// nearest of its zoom levels below. FocusViewportOnBox works its ortho zoom out without the factor
+	// GetOrthoUnitsPerPixel applies under r.Editor.AlignedOrthoZoom, the default, so the box's sphere came out five
+	// hundred pixels across whatever the view's size: a fitted canvas in a 1280-wide view took a third of it.
+	const FIntPoint ViewSize = Viewport->GetSizeXY();
+	const FVector Extent = InBox.GetExtent();
+	// The UI's plane is YZ, seen along X: the view's width is world Y, its height world Z.
+	const double BoxWidth = FMath::Max(2.0 * Extent.Y, 1.0);
+	const double BoxHeight = FMath::Max(2.0 * Extent.Z, 1.0);
+	constexpr double FitPaddingPixels = 100.0;
+	const double RoomX = FMath::Max(ViewSize.X - FitPaddingPixels, 1.0);
+	const double RoomY = FMath::Max(ViewSize.Y - FitPaddingPixels, 1.0);
+	DesignerPtr.Pin()->SetDesignerPixelsPerUnit(static_cast<float>(FMath::Min(RoomX / BoxWidth, RoomY / BoxHeight)));
 }
 
 FDreamLayoutControlAnchorData FDreamWidgetDesignerViewportClient::GetEffectiveLayoutControl(const UDreamWidget* InWidget)
@@ -3929,6 +3957,7 @@ void FDreamWidgetDesignerViewportClient::CapturedMouseMove(FViewport* InViewport
 	// the whole of every designer drag -- exactly when the coordinate readout is worth reading. The
 	// dirty flag is deliberately left alone: hover is not resolved while something is being dragged.
 	HoverPixel = FIntPoint(InMouseX, InMouseY);
+	KeepTickingThroughGesture();
 }
 
 void FDreamWidgetDesignerViewportClient::MouseEnter(FViewport* InViewport, int32 x, int32 y)
@@ -3955,6 +3984,21 @@ void FDreamWidgetDesignerViewportClient::MouseMove(FViewport* InViewport, int32 
 	bHoverPixelDirty = true;
 	bCursorInViewport = true;
 	FEditorViewportClient::MouseMove(InViewport, x, y);
+	KeepTickingThroughGesture();
+}
+
+void FDreamWidgetDesignerViewportClient::KeepTickingThroughGesture()
+{
+	// A held press, a drag and a marquee are all applied in Tick, from wherever the pointer is by then. While Slate holds
+	// back expensive work -- a notification fading in at a low frame rate does, the editor's Undo toast among them
+	// (SNotificationList) -- the editor ticks only the viewports that asked to be redrawn (UEditorEngine::Tick), so a
+	// drag begun then stood still under the pointer until the toast was in, and one let go meanwhile had never begun.
+	// The engine's own viewport drags are applied on the input event and never wait for that. Asking for the redraw a
+	// moving gesture needs anyway keeps this one's tick coming.
+	if (bDesignerDragPending || bDesignerDragging || bDesignerMarqueePending)
+	{
+		Invalidate(false, false);
+	}
 }
 
 void FDreamWidgetDesignerViewportClient::UpdateHoveredWidget()

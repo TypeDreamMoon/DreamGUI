@@ -129,6 +129,12 @@ public:
 	void TickWorld(float DeltaSeconds);
 
 	bool FocusViewportToTargets();
+	/**
+	 * Frame InBox: the camera brought round to it as FocusViewportOnBox brings it, and in the flat view the zoom at which
+	 * the box, with a margin round it, fills as much of the view as it can -- UMG's zoom to fit (SDesignSurface::ZoomToFit).
+	 * F and the toolbar's Zoom to Fit both come here.
+	 */
+	void FrameBox(const FBox& InBox);
 	TSharedPtr<FDreamWidgetBlueprintEditor> GetDesigner() const { return DesignerPtr.Pin(); }
 	/**
 	 * Which of a widget's own axes something else is deciding: its parent's container, plus its own
@@ -466,6 +472,8 @@ private:
 	uint8 BlueprintStatusBeforeDrag = 0;
 	TOptional<float> DesignerGuideX;
 	TOptional<float> DesignerGuideY;
+	/** Ask for the next frame's redraw while a press, a drag or a marquee is live, so its tick comes while Slate throttles. */
+	void KeepTickingThroughGesture();
 
 	/**
 	 * Whether the arrow-key nudge has a transaction of its own open. The editor's transaction stack
