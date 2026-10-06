@@ -174,6 +174,16 @@ after 3 for 2.1.0 -- so the engine never takes 1.0.0 for the older of the two.
   end of its drag go out then (a slider's capture end among them), the button's own release later clicks nothing, and
   the rest of the drag moves nothing. A drag and drop under way is left to run, as Slate's is once begun. A widget
   destroyed while held is no longer left behind as the pointer's press after the release.
+- **On a split screen, a widget knows which player it is for in a world with no game viewport.**
+  `UDreamWidget::GetLocalPlayerIndexOf` asked the local player for its game instance, which a local player only answers
+  through its viewport client; one added where there is no game viewport answered nothing, so every player was player
+  0, and Add to Player Screen put a second player's widget on the first player's screen. It now asks the controller's
+  world, where the event system looks the players up.
+- **On a split screen, a widget's popups open on the screen it is on.** A dropdown's list, a tooltip's bubble and the
+  rest of what the popup layer lifts went to the first player's screen for a widget on any other player's: the screen
+  UI took the nearest user widget's owning player as the answer before the screen the widget was on, and a user widget
+  with no owner named answers with the first local player. It now counts only an owner named with `SetOwningPlayer`,
+  and otherwise goes on up to the screen.
 
 ## 1.0.0
 

@@ -93,6 +93,17 @@ struct FDreamRigOptions
 	int32 PlayerCount = 1;
 	/** How several players share the viewport. Ignored with one. */
 	EDreamRigPlayerScreens PlayerScreens = EDreamRigPlayerScreens::Shared;
+	/**
+	 * Under a split screen, whether every player's screen is the one UDreamScreenUISubsystem keeps for that player, as
+	 * in a game whose screens come from AddToPlayerScreen and CreateWidgetOnScreen: player 0's is the rig's own root,
+	 * which the screen UI adopts for its first player, and every other player's is the root the screen UI makes for it
+	 * (given that player as the screen UI gives it; the rig adds only the substituted viewport and the scaler). So a
+	 * widget put on a player's screen, and a tooltip or a popup the screen UI puts up for a widget there, land on the
+	 * screen that player's raycaster projects through, and the screen UI never makes a second screen-space screen for a
+	 * player who has one. Off, the rig makes those roots itself and the screen UI knows of none of them but player 0's,
+	 * and only once asked. Ignored unless the rig is a split screen.
+	 */
+	bool bScreensFromScreenUI = false;
 };
 
 /** The most players a rig builds: UGameViewportClient::MaxSplitscreenPlayers' default, and the end of the engine's split-screen tables. */

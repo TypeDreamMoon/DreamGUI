@@ -5,6 +5,7 @@
 #include "Core/Components/DreamCanvas.h"
 #include "Core/Components/DreamVisualEmpty.h"
 #include "Core/Components/DreamWidget.h"
+#include "Core/DreamScreenUISubsystem.h"
 #include "Core/DreamUIManager.h"
 #include "DreamGUIEditorSubsystem.h"
 #include "Editor.h"
@@ -187,6 +188,20 @@ FDreamDriverRig::FDreamDriverRig(const FDreamRigOptions& InOptions)
 		BuiltCanvas->SetViewportPlayerIndex(0);
 	}
 	DriverContext->Raycaster = MakeScreenRaycaster(Host, BuiltCanvas, 0);
+	// With every screen the screen UI's, player 0's is the first one it is asked for, while the rig's own root is the only
+	// screen-space root there is for it to adopt (UDreamScreenUISubsystem::GetOrCreateScreenRootForIndex adopts one for its
+	// first player only).
+	if (UsesScreenUIScreens())
+	{
+		UDreamScreenUISubsystem* Screens = UDreamScreenUISubsystem::Get(BuildWorld);
+		UDreamWidget* Adopted = Screens != nullptr ? Screens->GetOrCreateScreenRootForUserIndex(0) : nullptr;
+		if (Adopted != BuiltRoot)
+		{
+			BuildFailure = FString::Printf(TEXT("the screen UI was asked for player 0's screen and answered %s rather than the rig's own root"),
+				*GetPathNameSafe(Adopted));
+			return;
+		}
+	}
 
 	// 4b. The other players' screens and raycasters, and every context told of every player.
 	if (!BuildOtherPlayersScreens())
@@ -345,12 +360,18 @@ UDreamCanvas* FDreamDriverRig::MakeScreenRoot(const FString& InDisplayName, UDre
 		return nullptr;
 	}
 	BuiltCanvas->SetRenderMode(EDreamRenderMode::ScreenSpaceOverlay);
+	GiveScreenTheRigsViewport(BuiltCanvas);
+	return BuiltCanvas;
+}
+
+void FDreamDriverRig::GiveScreenTheRigsViewport(UDreamCanvas* InCanvas) const
+{
 	// AFTER the render mode. Setting the mode applies the viewport parameters, and at that moment the
 	// only viewport there is is the 2x2 fallback; handing the canvas a real size is what un-does that,
 	// and doing it in the other order would leave the fallback applied on top. The whole viewport for
 	// every player's screen, a split screen's included: the override stands in for the whole viewport,
 	// and a canvas given its player takes that player's part of it, as it would of the real one.
-	BuiltCanvas->SetViewportSizeOverride(Options.ViewportSize);
+	InCanvas->SetViewportSizeOverride(Options.ViewportSize);
 	// The scaler AFTER the viewport, through the canvas's own setters: each of them re-runs
 	// OnViewportParameterChanged, which recomputes the root's size and CanvasScale from the viewport
 	// size the canvas has cached -- so that has to be the substituted one already. The mode goes
@@ -359,11 +380,10 @@ UDreamCanvas* FDreamDriverRig::MakeScreenRoot(const FString& InDisplayName, UDre
 	// today's rig exactly.
 	if (Options.CanvasScaleMode.IsSet())
 	{
-		BuiltCanvas->SetReferenceResolution(Options.ReferenceResolution);
-		BuiltCanvas->SetMatchFromWidthToHeight(Options.MatchFromWidthToHeight);
-		BuiltCanvas->SetScaleMode(Options.CanvasScaleMode.GetValue());
+		InCanvas->SetReferenceResolution(Options.ReferenceResolution);
+		InCanvas->SetMatchFromWidthToHeight(Options.MatchFromWidthToHeight);
+		InCanvas->SetScaleMode(Options.CanvasScaleMode.GetValue());
 	}
-	return BuiltCanvas;
 }
 
 UDreamScreenSpaceRaycaster* FDreamDriverRig::MakeScreenRaycaster(AActor* InHost, UDreamCanvas* InCanvas, int32 InUserIndex)
@@ -397,6 +417,30 @@ bool FDreamDriverRig::BuildOtherPlayersScreens()
 	for (FOtherPlayer& Player : OtherPlayers)
 	{
 		FDreamDriverContext& PlayerContext = *Player.Context;
+		if (bSplit && UsesScreenUIScreens())
+		{
+			// The raycaster first, enrolled and projecting through nothing yet: the screen UI, asked for the player's screen,
+			// finds it as that player's own raycaster and points it at the screen it makes (UDreamUIInputSubsystem::
+			// PrepareScreenInteraction) instead of making one of its own on a host of its own beside it.
+			PlayerContext.Raycaster = MakeScreenRaycaster(Player.Host, nullptr, PlayerContext.PlayerIndex);
+			UDreamScreenUISubsystem* Screens = UDreamScreenUISubsystem::Get(PlayerContext.World);
+			UDreamWidget* PlayerRoot = Screens != nullptr ? Screens->GetOrCreateScreenRootForUserIndex(PlayerContext.PlayerIndex) : nullptr;
+			UDreamCanvas* PlayerCanvas = PlayerRoot != nullptr ? PlayerRoot->GetComponent<UDreamCanvas>() : nullptr;
+			if (PlayerCanvas == nullptr)
+			{
+				BuildFailure = FString::Printf(TEXT("the screen UI made no screen-space screen for player %d"), PlayerContext.PlayerIndex);
+				return false;
+			}
+			// Given its player by the screen UI as it made it; the viewport is the rig's to substitute, as for every screen.
+			GiveScreenTheRigsViewport(PlayerCanvas);
+			PlayerContext.Root = PlayerRoot;
+			PlayerContext.RootCanvas = PlayerCanvas;
+			PlayerContext.Raycaster->SetRootCanvas(PlayerCanvas);
+			// Taken down by the rig with its other screens, so whatever a test left on it goes before the world does; the
+			// screen UI's own tear-down passes over a root that is gone (IsUsablePage).
+			Player.bOwnsScreen = true;
+			continue;
+		}
 		if (bSplit)
 		{
 			// A screen of the player's own, as the screen UI gives every local player a root of its own -- and given its
@@ -437,6 +481,11 @@ bool FDreamDriverRig::BuildOtherPlayersScreens()
 bool FDreamDriverRig::IsSplitScreen() const
 {
 	return Options.PlayerScreens == EDreamRigPlayerScreens::Split && Options.PlayerCount > 1;
+}
+
+bool FDreamDriverRig::UsesScreenUIScreens() const
+{
+	return IsSplitScreen() && Options.bScreensFromScreenUI;
 }
 
 void FDreamDriverRig::ReleaseScreensFromPlayers()

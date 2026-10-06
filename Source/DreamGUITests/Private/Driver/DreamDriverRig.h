@@ -76,7 +76,10 @@ namespace DreamTests
  *    UDreamWorldSpaceRaycaster::GenerateRay deprojects through the pointer's local player. Pixels are
  *    always the one viewport's: a widget on player 1's screen projects to a pixel in player 1's part
  *    (FDreamDriverProjection::WorldPointToPixel adds the part's corner). The screens let go of their
- *    players before the local players are taken off at tear-down.
+ *    players before the local players are taken off at tear-down. With bScreensFromScreenUI the
+ *    screens are the screen UI's own for each player -- player 0's the rig's root, adopted -- so what
+ *    the screen UI puts on a player's screen (AddToPlayerScreen, a tooltip, a popup) is on the one that
+ *    player's raycaster projects through.
  * Refused, with the reason, rather than quietly built as player 0: more than four players or fewer
  * than one, several players under SlateSource (the source's test mappers make Slate user 0 the only
  * player, and a mapping of the rig's own for more would be testing the rig), and a split screen with
@@ -311,6 +314,10 @@ private:
 	bool LayOutSplitScreen();
 	/** Whether the options ask for a split screen the rig builds: several players, each with a screen of its own. */
 	bool IsSplitScreen() const;
+	/** Whether that split screen's screens are the screen UI's (FDreamRigOptions::bScreensFromScreenUI). */
+	bool UsesScreenUIScreens() const;
+	/** The rig's substituted viewport and the scaler the options ask for, onto a screen-space root canvas whose render mode is set. */
+	void GiveScreenTheRigsViewport(UDreamCanvas* InCanvas) const;
 	/**
 	 * The first step of tearing down: every screen the rig made given no player again, before the input hosts take the
 	 * local players its index names off the game instance.

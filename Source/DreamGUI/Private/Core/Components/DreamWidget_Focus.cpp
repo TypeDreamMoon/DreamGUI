@@ -148,7 +148,15 @@ int32 UDreamWidget::GetLocalPlayerIndexOf(const APlayerController* InPlayerContr
 	{
 		return 0;
 	}
-	const UGameInstance* GameInstance = LocalPlayer->GetGameInstance();
+	// The controller's world's game instance first, the one UDreamEventSystem::GetLocalPlayerForUser looks the index up in.
+	// The local player's own answer comes through its viewport client (ULocalPlayer::GetGameInstance), and a local player
+	// with none -- added to a world that has no game viewport -- answered nothing, so every player of it was player 0.
+	const UWorld* PlayerWorld = InPlayerController->GetWorld();
+	const UGameInstance* GameInstance = PlayerWorld != nullptr ? PlayerWorld->GetGameInstance() : nullptr;
+	if (GameInstance == nullptr)
+	{
+		GameInstance = LocalPlayer->GetGameInstance();
+	}
 	if (GameInstance == nullptr)
 	{
 		return 0;
