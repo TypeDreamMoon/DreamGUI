@@ -187,6 +187,12 @@ after 3 for 2.1.0 -- so the engine never takes 1.0.0 for the older of the two.
   UI took the nearest user widget's owning player as the answer before the screen the widget was on, and a user widget
   with no owner named answers with the first local player. It now counts only an owner named with `SetOwningPlayer`,
   and otherwise goes on up to the screen.
+- **A widget moved out of a tree while the tree is destroyed works where it lands.** A focus ring the focus took back
+  from a closing dialog -- and any widget a behaviour moves out while its tree comes down -- was ended and unregistered
+  with the tree and then left so under its new, live parent: drawn by that canvas with no place in its data, logging
+  `WidgetPropertyDataStartPosition is invalid`. It is registered again where it went, and begins play there if the
+  world has, as a UMG widget moved into a panel on screen is constructed there. One moved under a parent that is not
+  registered yet stays as it was, for that parent's registration to take with it.
 
 ## 1.0.0
 

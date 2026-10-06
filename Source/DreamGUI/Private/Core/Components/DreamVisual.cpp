@@ -528,6 +528,27 @@ uint32 UDreamVisual::PackTextWidgetMarks(uint8 InFontMark, uint32 InRecordRowLin
 		| (InRecordRowLink & DreamPaintRows::RecordRowLinkMask)
 		;
 }
+namespace DreamVisualPropertyDataLocal
+{
+	/** For the report of a visual with no place in its canvas's property data: whose it is, and where it stands. */
+	FString DescribeUnplaced(const UDreamVisual& InVisual)
+	{
+		const UDreamWidget* Widget = InVisual.GetWidget();
+		if (Widget == nullptr)
+		{
+			return TEXT("a visual with no widget");
+		}
+		static const TCHAR* const Lifecycles[] = { TEXT("constructed"), TEXT("registered"), TEXT("playing"), TEXT("destroyed") };
+		const int32 Lifecycle = static_cast<int32>(Widget->GetLifecycle());
+		const UDreamCanvas* Canvas = Widget->GetRenderCanvas();
+		const UDreamWidget* CanvasWidget = Canvas != nullptr ? Canvas->GetWidget() : nullptr;
+		return FString::Printf(TEXT("the visual of %s, a widget %s; drawn by the canvas of %s, which %s this visual"),
+			*Widget->GetPathDisplayName(), Lifecycle >= 0 && Lifecycle < UE_ARRAY_COUNT(Lifecycles) ? Lifecycles[Lifecycle] : TEXT("in no known state"),
+			CanvasWidget != nullptr ? *CanvasWidget->GetPathDisplayName() : TEXT("nothing"),
+			Canvas == nullptr ? TEXT("cannot hold") : Canvas->GetVisualArray().Contains(&InVisual) ? TEXT("lists") : TEXT("does not list"));
+	}
+}
+
 void UDreamVisual::FillWidgetPropertyDataForMaterial(bool bNeedSize, bool bNeedCenterPosition)const
 {
 	SCOPE_CYCLE_COUNTER(STAT_FillWidgetPropertyData);
@@ -537,7 +558,8 @@ void UDreamVisual::FillWidgetPropertyDataForMaterial(bool bNeedSize, bool bNeedC
 		// A visual whose block has not been allocated yet simply has nothing to write. The two
 		// sibling fillers below log and return; this one used to check(0) as well, which turned a
 		// recoverable ordering hiccup into a shipping-configuration crash.
-		UE_LOG(DreamGUI, Error, TEXT("[%s].%d WidgetPropertyDataStartPosition is invalid!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
+		UE_LOG(DreamGUI, Error, TEXT("[%s].%d WidgetPropertyDataStartPosition is invalid! (%s)"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__,
+			*DreamVisualPropertyDataLocal::DescribeUnplaced(*this));
 		return;
 	}
 	auto Widget = this->GetWidget();
@@ -577,7 +599,8 @@ void UDreamVisual::FillWidgetPropertyDataForMaterial_ClipDataCoordinate(UDreamUI
 	auto StartPosition = this->WidgetPropertyDataStartPosition;
 	if (StartPosition == INDEX_NONE)
 	{
-		UE_LOG(DreamGUI, Error, TEXT("[%s].%d WidgetPropertyDataStartPosition is invalid!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
+		UE_LOG(DreamGUI, Error, TEXT("[%s].%d WidgetPropertyDataStartPosition is invalid! (%s)"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__,
+			*DreamVisualPropertyDataLocal::DescribeUnplaced(*this));
 		return;
 	}
 	TArray<uint8> BlockBuffer;
@@ -615,7 +638,8 @@ void UDreamVisual::FillWidgetPropertyDataForMaterial_InitialMark(UDreamUIDataAsT
 	auto StartPosition = this->WidgetPropertyDataStartPosition;
 	if (StartPosition == INDEX_NONE)
 	{
-		UE_LOG(DreamGUI, Error, TEXT("[%s].%d WidgetPropertyDataStartPosition is invalid!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
+		UE_LOG(DreamGUI, Error, TEXT("[%s].%d WidgetPropertyDataStartPosition is invalid! (%s)"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__,
+			*DreamVisualPropertyDataLocal::DescribeUnplaced(*this));
 		return;
 	}
 	

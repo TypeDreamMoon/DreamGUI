@@ -168,4 +168,52 @@ bool FDreamWidgetHierarchyMutationDuringTeardownTest::RunTest(const FString& Par
 	return true;
 }
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamWidgetMovedOutIntoARegisteredParentTest,
+	"DreamGUI.Lifecycle.AWidgetMovedOutOfATreeComingDownIntoARegisteredParentIsRegisteredThere",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * A behaviour of a tree being destroyed moves one of its children, with the child's own child, under a widget that is
+ * registered -- as the focus taking a ring back from a closing dialog does. The two are ended and unregistered with the
+ * tree they left, then registered again under the parent they went to: a registered tree holds no unregistered widget,
+ * which its canvas would draw with nothing of it registered. Moved under a parent not registered yet, a widget is left
+ * for that parent's own registration (HierarchyMutationDuringTeardown).
+ */
+bool FDreamWidgetMovedOutIntoARegisteredParentTest::RunTest(const FString& Parameters)
+{
+	UWorld* World = UWorld::CreateWorld(EWorldType::None, false);
+	if (!TestNotNull(TEXT("A world of no type is made"), World))
+	{
+		return false;
+	}
+	UDreamWidget* Root = NewObject<UDreamWidget>(World);
+	UDreamWidget* LiveParent = NewObject<UDreamWidget>(World);
+	UDreamWidget* Child = NewObject<UDreamWidget>(Root);
+	UDreamWidget* Grandchild = NewObject<UDreamWidget>(Root);
+	TestTrue(TEXT("The child joins the tree that comes down"), Child->TrySetParent(Root, false));
+	TestTrue(TEXT("...with a child of its own"), Grandchild->TrySetParent(Child, false));
+	UDreamWidgetHierarchyMutationBehaviour* Mover = Root->AddComponent<UDreamWidgetHierarchyMutationBehaviour>();
+	if (!TestNotNull(TEXT("The behaviour that moves the child out is created"), Mover))
+	{
+		World->DestroyWorld(false);
+		return false;
+	}
+	Mover->Configure(Child, nullptr, LiveParent);
+	LiveParent->OnRegister();
+	Root->OnRegister();
+	Child->OnRegister();
+	Grandchild->OnRegister();
+
+	Root->DestroyWidget();
+	TestEqual(TEXT("The behaviour moved the child under the registered parent"), Child->GetParent(), LiveParent);
+	TestTrue(TEXT("...where it is a live widget"), IsValid(Child));
+	TestTrue(TEXT("...registered again"), Child->HasRegistered());
+	TestTrue(TEXT("...its own child with it"), IsValid(Grandchild) && Grandchild->HasRegistered());
+	TestFalse(TEXT("The tree it left is destroyed"), IsValid(Root));
+	LiveParent->DestroyWidget();
+	World->DestroyWorld(false);
+	return true;
+}
+
 #endif

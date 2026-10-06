@@ -473,6 +473,26 @@ void UDreamWidget::DestroyWidget()
 		}
 		// None of them is one to write without a look-up any more (DreamUIGone).
 		DreamUIGone::Note();
+
+		// A widget moved out while the tree came down into a tree that is live -- a focus ring the focus took back from a
+		// closing dialog -- was ended and unregistered with the rest, and is registered again where it went. Left as it
+		// was, it hung in a live tree unregistered: drawn by its canvas with no place in the canvas's data for its visual
+		// (UDreamCanvas::RegisterVisual), and taking no part in what registered widgets do. As a UMG widget moved into a
+		// panel that is on screen is constructed there. One that went under a parent not registered yet waits for that
+		// parent's registration, as every child does.
+		for (const TObjectPtr<UDreamWidget>& TornDown : TeardownWidgets)
+		{
+			UDreamWidget* Widget = TornDown.Get();
+			if (!IsValid(Widget) || Widget->HasRegistered() || Widget->Lifecycle == EDreamWidgetLifecycle::Destroyed)
+			{
+				continue;
+			}
+			const UDreamWidget* NewParent = Widget->GetParent();
+			if (NewParent != nullptr && NewParent->HasRegistered())
+			{
+				RegisterDreamWidgetHierarchy(Widget);
+			}
+		}
 	}
 }
 
