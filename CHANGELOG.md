@@ -53,6 +53,9 @@ after 3 for 2.1.0 -- so the engine never takes 1.0.0 for the older of the two.
   Each of these used to be addable anywhere and then sat there doing nothing. Paste, duplicate and component assets
   dropped on the panel follow the same rules; a refused drop says why. A project adds rules for its own components
   from its editor module.
+- **`UUIButton::GetClickEventData`**: while a button's click listeners run, the pointer event the click came from --
+  whose it is, which pointer, a finger or the mouse, navigation or not. The click delegates carry no arguments, and a
+  C++ listener that has to tell a tap from a click asks this; null for a click raised by broadcasting the delegate.
 
 ### Changed
 

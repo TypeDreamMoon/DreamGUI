@@ -80,6 +80,9 @@ protected:
 	 */
 	void FireClick(const UDreamPointerEventData* InEventData);
 
+	/** The event FireClick is announcing, while its delegates run; see GetClickEventData. */
+	TWeakObjectPtr<const UDreamPointerEventData> ClickEventData;
+
 	/**
 	 * Whether a press this button took is under way -- it said OnPressed for it, and the last pointer of it has not let
 	 * go. What OnReleased is gated on, which is SButton's Release: a press that was never taken (a button this control
@@ -102,4 +105,12 @@ public:
 	FSimpleMulticastDelegate& GetOnUnhoveredEvent(){return OnUnhoveredCPP;}
 	FSimpleMulticastDelegate& GetOnPressedEvent(){return OnPressedCPP;}
 	FSimpleMulticastDelegate& GetOnReleasedEvent(){return OnReleasedCPP;}
+	/**
+	 * The pointer event the click being announced came from -- whose it is, which pointer, a finger or
+	 * the mouse, navigation or not -- while the click's listeners run, and null at any other moment or
+	 * for a click raised by broadcasting the delegate directly. The click delegates carry no arguments,
+	 * and this is how a listener that has to tell a finger's tap from a mouse click asks: a list row
+	 * selects by SListView's rules, which differ between the two.
+	 */
+	const UDreamPointerEventData* GetClickEventData() const { return ClickEventData.Get(); }
 };
