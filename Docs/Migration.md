@@ -3,9 +3,11 @@
 1.0.0 is the first public release. The fork's development builds before it were numbered 1.x, 2.0 and 2.1 -- see the
 [CHANGELOG](../CHANGELOG.md) -- and this guide names them that way: a 2.1 here is the development build, older than 1.0.0.
 
-For four kinds of project:
+For five kinds of project:
 
-- one on a **development build, 2.1 or 2.0** -- [From 2.1 to 1.0.0](#from-21-to-100), right below, and from 2.0
+- one on **1.0.0**, moving to what comes after it -- [From 1.0.0 to the next release](#from-100-to-the-next-release),
+  right below;
+- one on a **development build, 2.1 or 2.0** -- [From 2.1 to 1.0.0](#from-21-to-100), and from 2.0
   [From 2.0 to 2.1](#from-20-to-21) before it;
 - one with **assets saved against LGUI or LexUI** — the upstream this fork started from;
 - one on an **early build of this fork** (the single-module 1.x builds, not 1.0.0) — before the module split, the
@@ -15,6 +17,23 @@ For four kinds of project:
 The numbered sections are the move to the 2.0 line from LGUI, LexUI or the 1.x builds; a project making it reads
 [From 2.0 to 2.1](#from-20-to-21) and [From 2.1 to 1.0.0](#from-21-to-100) afterwards. Everything here is about keeping what you have. What the plugin is and how to start from
 nothing is in the [README](../README.md); what each version added is in the [CHANGELOG](../CHANGELOG.md).
+
+## From 1.0.0 to the next release
+
+For a project on 1.0.0. Nothing was renamed, and nothing has to be done before opening the project. A control takes
+input the way UMG's does now, and a screen built around the old way will feel different:
+
+- **A list, tile or tree view in Multi mode chooses rows as SListView does.** A plain click selected the row and kept
+  every row already chosen, and a second click took it away; now a plain click chooses that row alone. Ctrl+click (Cmd on
+  a Mac) is what adds a row or takes one away, Shift+click adds the rows from the anchor to the one clicked, Shift or Ctrl
+  with an arrow extends the selection from a focused row, and Ctrl+A chooses every row. A finger's tap adds its row as
+  before, but a second tap on a chosen row no longer takes it away. A pad's confirm on a row is a plain click, so a
+  pad-driven screen that let players pick several rows by confirming each one picks one now; such a screen keeps its own
+  set -- toggled in `OnItemClicked`, put back with `SetSelectedIndices` -- or offers Ctrl's meaning on a pad button of its
+  own. `SetItemSelection` and the other selection calls are unchanged, so code that builds a selection is not affected.
+
+A C++ subclass of the list family that overrides `NativeOnKeyDown` calls `Super` to keep these keys, as for any key
+the base answers.
 
 ## From 2.1 to 1.0.0
 

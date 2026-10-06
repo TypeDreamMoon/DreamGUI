@@ -16,10 +16,16 @@
 #include "Core/Components/DreamWidget.h"
 #include "DreamUIWidgetLibrary.h"
 #include "Engine/World.h"
+#include "Core/DreamUIInputServices.h"
 #include "Event/DreamEventSystem.h"
+#include "Event/DreamKeyEventData.h"
 #include "Event/DreamPointerEventData.h"
 #include "Event/DreamUIInputSubsystem.h"
+#include "Event/DreamUIInputTypes.h"
 #include "Event/DreamUIInputUser.h"
+#include "Event/DreamUIKeyRouting.h"
+#include "GameFramework/PlayerController.h"
+#include "InputCoreTypes.h"
 #include "Interaction/UIButton.h"
 #include "Interaction/UIScrollView.h"
 
@@ -2097,14 +2103,309 @@ void UDreamListViewBase::HandleRowClicked(int32 InPoolIndex)
 		SetItemSelection(ItemIndex, !IsItemSelected(ItemIndex), true);
 		break;
 	case EUIListSelectionMode::Multi:
-		SetItemSelection(ItemIndex, !IsItemSelected(ItemIndex), false);
+	{
+		// The click's own event, which the row's button holds while it announces the click: whose
+		// pointer it was, and whether a finger's.
+		const UDreamWidget* Row = RowNodes.IsValidIndex(InPoolIndex) ? RowNodes[InPoolIndex].Get() : nullptr;
+		const UUIButton* RowButton = IsValid(Row) ? Row->GetComponent<UUIButton>() : nullptr;
+		SelectFromMultiClick(ItemIndex, RowButton != nullptr ? RowButton->GetClickEventData() : nullptr);
 		break;
+	}
 	default:
 		break;
 	}
 
 	// After the selection, so a handler asking GetSelectedIndex sees the answer the user just gave.
 	OnItemClicked.Broadcast(ItemIndex, GetItemObject(ItemIndex));
+}
+
+void UDreamListViewBase::SelectFromMultiClick(int32 InItemIndex, const UDreamPointerEventData* InClick)
+{
+	// A refused row is no place for a click to land, so it is not where a later range starts either.
+	// Taking a row away is never refused (SetItemSelection), and a Ctrl click on one still does that.
+	const bool bMayLandHere = IsItemSelectableOrNavigable(InItemIndex);
+	const bool bFinger = InClick != nullptr && InClick->InputType == EDreamUIPointerInputType::Pointer
+		&& DreamUIPointerIds::IsTouch(InClick->PointerID);
+	if (bFinger)
+	{
+		// STableRow::OnTouchEnded: in Multi mode a tap adds the row it lifts on, and a tap on a chosen row
+		// leaves it chosen -- a finger has no Ctrl to take one away with, nor a Shift to range with.
+		SetItemSelection(InItemIndex, true, /*bInClearOthers*/ false);
+		if (bMayLandHere)
+		{
+			RangeAnchorIndex = InItemIndex;
+		}
+		return;
+	}
+	bool bShiftDown = false;
+	bool bCtrlDown = false;
+	ReadSelectionModifiers(InClick, bShiftDown, bCtrlDown);
+	if (bShiftDown)
+	{
+		// STableRow::OnMouseButtonDown asks Shift first, so Ctrl with it ranges too: the rows from the
+		// anchor to this one join whatever is chosen, and the anchor stays.
+		if (bMayLandHere)
+		{
+			SelectRangeToItem(InItemIndex, /*bInClearFirst*/ false);
+		}
+		return;
+	}
+	if (bCtrlDown)
+	{
+		// The row in or out, the rest kept; the anchor moves here either way, as Private_SetItemSelection's
+		// user-directed change moves RangeSelectionStart whether it selected or deselected.
+		const bool bWasSelected = IsItemSelected(InItemIndex);
+		SetItemSelection(InItemIndex, !bWasSelected, /*bInClearOthers*/ false);
+		if (bMayLandHere || bWasSelected)
+		{
+			RangeAnchorIndex = InItemIndex;
+		}
+		return;
+	}
+	// A plain click: this row and nothing else. STableRow selects an unchosen row on the press and narrows
+	// a chosen one on the release; a click that completes ends in the same place either way.
+	SetItemSelection(InItemIndex, true, /*bInClearOthers*/ true);
+	if (bMayLandHere)
+	{
+		RangeAnchorIndex = InItemIndex;
+	}
+}
+
+void UDreamListViewBase::SelectRangeToItem(int32 InItemIndex, bool bInClearFirst)
+{
+	if (SelectionMode == EUIListSelectionMode::None || InItemIndex < 0 || InItemIndex >= GetItemCount())
+	{
+		return;
+	}
+	// In DISPLAY order, between the two ends' rows: a tree's folded children are not between two rows
+	// that show, and a tile view's display order is its source order. An anchor that does not show starts
+	// the range at the first row, as SListView's does with an anchor it cannot find.
+	const int32 EndDisplay = VisibleItemIndices.IndexOfByKey(InItemIndex);
+	if (EndDisplay == INDEX_NONE)
+	{
+		return;
+	}
+	// Pinned where this range starts, so the next one starts there too: a range moves SelectedIndex to the
+	// row it ends on, and an anchor still read from SelectedIndex would follow it.
+	RangeAnchorIndex = GetRangeAnchorItemIndex();
+	const int32 AnchorDisplay = FMath::Max(0, VisibleItemIndices.IndexOfByKey(RangeAnchorIndex));
+	PendingSelectedIndex = INDEX_NONE;
+	if (bClearScrollVelocityOnSelection)
+	{
+		EndInertialScrolling();
+	}
+	const int32 PreviousAnchor = SelectedIndex;
+	const TArray<int32> PreviousSelection = SelectedIndices;
+	if (bInClearFirst)
+	{
+		SelectedIndices.Reset();
+	}
+	// From the anchor towards the end, so the order chosen in is the order walked -- Slate's "if selecting
+	// upwards then make sure the top element is last-selected".
+	const int32 Direction = EndDisplay >= AnchorDisplay ? 1 : -1;
+	for (int32 Display = AnchorDisplay; ; Display += Direction)
+	{
+		const int32 Item = VisibleItemIndices[Display];
+		if (IsItemSelectableOrNavigable(Item))
+		{
+			SelectedIndices.AddUnique(Item);
+		}
+		if (Display == EndDisplay)
+		{
+			break;
+		}
+	}
+	SelectedIndex = SelectedIndices.Contains(InItemIndex)
+		? InItemIndex
+		: (SelectedIndices.Num() > 0 ? SelectedIndices.Last() : INDEX_NONE);
+	if (SelectedIndices != PreviousSelection || SelectedIndex != PreviousAnchor)
+	{
+		RefreshRowColors();
+		OnSelectionChanged.Broadcast(SelectedIndex);
+		OnValueChangedBP.Broadcast(SelectedIndex);
+	}
+}
+
+void UDreamListViewBase::SelectAllItems()
+{
+	if (SelectionMode != EUIListSelectionMode::Multi)
+	{
+		return;
+	}
+	PendingSelectedIndex = INDEX_NONE;
+	const int32 PreviousAnchor = SelectedIndex;
+	const TArray<int32> PreviousSelection = SelectedIndices;
+	// What was chosen keeps its place at the front, and the rest join in source order: the order chosen in.
+	for (int32 Item = 0; Item < GetItemCount(); ++Item)
+	{
+		if (IsItemSelectableOrNavigable(Item))
+		{
+			SelectedIndices.AddUnique(Item);
+		}
+	}
+	if (!SelectedIndices.Contains(SelectedIndex))
+	{
+		SelectedIndex = SelectedIndices.Num() > 0 ? SelectedIndices[0] : INDEX_NONE;
+	}
+	if (SelectedIndices != PreviousSelection || SelectedIndex != PreviousAnchor)
+	{
+		RefreshRowColors();
+		OnSelectionChanged.Broadcast(SelectedIndex);
+		OnValueChangedBP.Broadcast(SelectedIndex);
+	}
+}
+
+int32 UDreamListViewBase::GetRangeAnchorItemIndex() const
+{
+	const int32 Count = GetItemCount();
+	if (RangeAnchorIndex >= 0 && RangeAnchorIndex < Count)
+	{
+		return RangeAnchorIndex;
+	}
+	if (SelectedIndex >= 0 && SelectedIndex < Count)
+	{
+		return SelectedIndex;
+	}
+	return Count > 0 ? 0 : INDEX_NONE;
+}
+
+void UDreamListViewBase::ReadSelectionModifiers(const UDreamPointerEventData* InClick, bool& bOutShiftDown, bool& bOutCtrlDown) const
+{
+	bOutShiftDown = false;
+	bOutCtrlDown = false;
+	if (InClick == nullptr)
+	{
+		return;
+	}
+	// The clicking player's controller, which is where the router reads a key's chord when the input source
+	// does not state one: on a split screen the other player's Shift is not this click's. A pointer event
+	// carries no chord of its own.
+	const APlayerController* Controller = UDreamEventSystem::GetPlayerControllerForUser(this, InClick->UserIndex);
+	if (Controller == nullptr)
+	{
+		return;
+	}
+	bOutShiftDown = Controller->IsInputKeyDown(EKeys::LeftShift) || Controller->IsInputKeyDown(EKeys::RightShift);
+	// Cmd beside Ctrl, as the router's chords and a Mac's Slate read it.
+	bOutCtrlDown = Controller->IsInputKeyDown(EKeys::LeftControl) || Controller->IsInputKeyDown(EKeys::RightControl)
+		|| Controller->IsInputKeyDown(EKeys::LeftCommand) || Controller->IsInputKeyDown(EKeys::RightCommand);
+}
+
+int32 UDreamListViewBase::FindRowPoolIndexAround(const UDreamWidget* InWidget) const
+{
+	// The same depth guard as the key dispatch's walk, for a malformed parent chain.
+	int32 DepthGuard = 0;
+	for (const UDreamWidget* Walker = InWidget; IsValid(Walker) && Walker != this && DepthGuard < 256; Walker = Walker->GetParent(), ++DepthGuard)
+	{
+		for (int32 PoolIndex = 0; PoolIndex < RowNodes.Num(); ++PoolIndex)
+		{
+			if (RowNodes[PoolIndex].Get() == Walker)
+			{
+				return PoolIndex;
+			}
+		}
+		if (Walker->IsA<UDreamListViewBase>())
+		{
+			return INDEX_NONE;
+		}
+	}
+	return INDEX_NONE;
+}
+
+bool UDreamListViewBase::NativeOnKeyDown(UDreamKeyEventData* EventData)
+{
+	if (Super::NativeOnKeyDown(EventData))
+	{
+		return true;
+	}
+	// SListView::OnKeyDown_Internal ignores a press with Alt in it, and its keys belong to a Multi selection.
+	if (EventData == nullptr || SelectionMode != EUIListSelectionMode::Multi || EventData->bAltDown
+		|| !GetInteractableInHierarchy())
+	{
+		return false;
+	}
+	const int32 PoolIndex = FindRowPoolIndexAround(EventData->FocusedWidget);
+	if (PoolIndex == INDEX_NONE)
+	{
+		return false;
+	}
+	if (EventData->Key == EKeys::A && EventData->bCtrlDown && !EventData->bShiftDown)
+	{
+		SelectAllItems();
+		return true;
+	}
+	// A plain arrow is navigation's, which already selects the way NavigationSelect does without modifiers
+	// (MoveNavigationToItem), and so is everything while navigation selects nothing.
+	if (!bSelectItemOnNavigation || (!EventData->bShiftDown && !EventData->bCtrlDown))
+	{
+		return false;
+	}
+	const EDreamUINavigationDirection Direction = DreamUIKeyRouting::GetDirectionForKey(EventData->Key, /*bInShiftDown*/ false);
+	if (Direction != EDreamUINavigationDirection::Up && Direction != EDreamUINavigationDirection::Down
+		&& Direction != EDreamUINavigationDirection::Left && Direction != EDreamUINavigationDirection::Right)
+	{
+		return false;
+	}
+	const int32 TargetItem = FindNavigationTargetItem(PoolIndex, Direction);
+	if (TargetItem == INDEX_NONE)
+	{
+		// Off the list: the press is the scan's, and the scan leaves, as it does without the modifier.
+		return false;
+	}
+	// SListView::NavigationSelect in Multi mode with a modifier: Shift selects from the anchor to the row
+	// it lands on, clearing the rest unless Ctrl is held too; Ctrl alone adds that row and moves the anchor.
+	if (EventData->bShiftDown)
+	{
+		SelectRangeToItem(TargetItem, /*bInClearFirst*/ !EventData->bCtrlDown);
+	}
+	else
+	{
+		SetItemSelection(TargetItem, true, /*bInClearOthers*/ false);
+		RangeAnchorIndex = TargetItem;
+	}
+	// The focus goes where the arrow points, as the plain step's does: revealed first, because a recycling
+	// list re-binds its window while it scrolls and the row that shows the item afterwards is the one.
+	ScrollItemIntoView(TargetItem, /*bInAnimate*/ false);
+	TScriptInterface<IDreamNavigationInterface> Landing;
+	UDreamUIInputServices* Services = UDreamUIInputServices::Get(this);
+	if (KeepNavigationOnItem(TargetItem, Landing) && Services != nullptr)
+	{
+		if (const UDreamUIBehaviour* LandingBehaviour = Cast<UDreamUIBehaviour>(Landing.GetObject()))
+		{
+			Services->FocusForNavigation(LandingBehaviour->GetWidget(), EventData->UserIndex);
+		}
+	}
+	return true;
+}
+
+int32 UDreamListViewBase::FindNavigationTargetItem(int32 InPoolIndex, EDreamUINavigationDirection InDirection) const
+{
+	// Which item the press steps FROM, asked NOW: a recycled row stands for a different item every few
+	// scrolls, and a row that was handed another one while focus stayed on it steps from the item focus
+	// was on (GetNavigationItemIndex) -- not from the stranger it shows.
+	const int32 ItemIndex = GetNavigationItemIndex(InPoolIndex);
+	const int32 DisplayIndex = ItemIndex != INDEX_NONE ? VisibleItemIndices.IndexOfByKey(ItemIndex) : INDEX_NONE;
+	if (DisplayIndex == INDEX_NONE)
+	{
+		return INDEX_NONE;
+	}
+	// The veto governs this road as it does the click: an item that may not be navigated to is stepped
+	// OVER, in the same direction, the way SListView's Private_FindNextSelectableOrNavigable walk does.
+	// Bounded by the row count, so a list that vetoes everything ends the walk rather than looping.
+	int32 TargetDisplay = ResolveNavigationTarget(DisplayIndex, InDirection);
+	for (int32 Remaining = VisibleItemIndices.Num(); Remaining > 0 && VisibleItemIndices.IsValidIndex(TargetDisplay); --Remaining)
+	{
+		if (IsItemSelectableOrNavigable(VisibleItemIndices[TargetDisplay]))
+		{
+			break;
+		}
+		TargetDisplay = ResolveNavigationTarget(TargetDisplay, InDirection);
+	}
+	if (!VisibleItemIndices.IsValidIndex(TargetDisplay) || !IsItemSelectableOrNavigable(VisibleItemIndices[TargetDisplay]))
+	{
+		return INDEX_NONE;
+	}
+	return VisibleItemIndices[TargetDisplay];
 }
 
 void UDreamListViewBase::HandleRowDoubleClicked(int32 InPoolIndex)
@@ -2392,8 +2693,10 @@ void UDreamListViewBase::SetRowTemplateClass(TSubclassOf<UDreamUserWidget> InCla
 
 void UDreamListViewBase::SetSelectedIndices(const TArray<int32>& InIndices)
 {
-	// A selection stated outright replaces one still waiting for its items.
+	// A selection stated outright replaces one still waiting for its items, and the range anchor a gesture
+	// left: a range now starts at the anchor re-derived below.
 	PendingSelectedIndex = INDEX_NONE;
+	RangeAnchorIndex = INDEX_NONE;
 	SelectedIndices = InIndices;
 	// The anchor is re-derived from the set rather than left pointing at whatever it was, and the
 	// rows are repainted: a raw write here used to be picked up only on the next rebuild, which is
@@ -2457,33 +2760,14 @@ bool UDreamListViewBase::HandleRowNavigation(int32 InPoolIndex, EDreamUINavigati
 		// from row to row -- whatever a subclass's arithmetic would answer for them.
 		return false;
 	}
-	// Which item the press steps FROM, asked NOW: a recycled row stands for a different item every few
-	// scrolls, and a row that was handed another one while focus stayed on it steps from the item focus
-	// was on (GetNavigationItemIndex) -- not from the stranger it shows.
-	const int32 ItemIndex = GetNavigationItemIndex(InPoolIndex);
-	const int32 DisplayIndex = ItemIndex != INDEX_NONE ? VisibleItemIndices.IndexOfByKey(ItemIndex) : INDEX_NONE;
-	if (DisplayIndex == INDEX_NONE)
-	{
-		return false;
-	}
-	// The veto governs this road as it does the click: an item that may not be navigated to is stepped
-	// OVER, in the same direction, the way SListView's Private_FindNextSelectableOrNavigable walk does.
-	// Bounded by the row count, so a list that vetoes everything ends the walk rather than looping.
-	int32 TargetDisplay = ResolveNavigationTarget(DisplayIndex, InDirection);
-	for (int32 Remaining = VisibleItemIndices.Num(); Remaining > 0 && VisibleItemIndices.IsValidIndex(TargetDisplay); --Remaining)
-	{
-		if (IsItemSelectableOrNavigable(VisibleItemIndices[TargetDisplay]))
-		{
-			break;
-		}
-		TargetDisplay = ResolveNavigationTarget(TargetDisplay, InDirection);
-	}
-	if (!VisibleItemIndices.IsValidIndex(TargetDisplay) || !IsItemSelectableOrNavigable(VisibleItemIndices[TargetDisplay]))
+	// The step the arrow takes by item, the veto stepped over (FindNavigationTargetItem).
+	const int32 TargetItem = FindNavigationTargetItem(InPoolIndex, InDirection);
+	if (TargetItem == INDEX_NONE)
 	{
 		// Nowhere to go inside the list: the press is the scan's, and the scan leaves.
 		return false;
 	}
-	return MoveNavigationToItem(VisibleItemIndices[TargetDisplay], OutResult);
+	return MoveNavigationToItem(TargetItem, OutResult);
 }
 
 int32 UDreamListViewBase::ResolveNavigationTarget(int32 InDisplayIndex, EDreamUINavigationDirection InDirection) const
@@ -2522,6 +2806,12 @@ bool UDreamListViewBase::MoveNavigationToItem(int32 InItemIndex, TScriptInterfac
 	if (bSelectItemOnNavigation)
 	{
 		SetItemSelection(InItemIndex, true, /*bInClearOthers*/true);
+		// And the range anchor with it, as Private_SetSelection's user-directed change moves
+		// RangeSelectionStart: the next Shift step ranges from the row this one landed on.
+		if (IsItemSelected(InItemIndex))
+		{
+			RangeAnchorIndex = InItemIndex;
+		}
 	}
 	else if (bClearScrollVelocityOnSelection)
 	{
@@ -2848,6 +3138,8 @@ void UDreamListViewBase::SetSelectedIndexWithoutNotify(int32 InIndex)
 	// other call replaces it, a clear included.
 	const bool bKeepForLater = InIndex >= Count && (Count == 0 || bAllowKeepPreselectedItems);
 	PendingSelectedIndex = bKeepForLater ? InIndex : INDEX_NONE;
+	// The one row this names is where the next range starts (GetRangeAnchorItemIndex falls back to it).
+	RangeAnchorIndex = INDEX_NONE;
 	// Clamped where it becomes a selection, not where it is stored by an author: an index nothing
 	// answers to is no selection at all -- not even while it waits.
 	SelectedIndex = (InIndex >= 0 && InIndex < Count) ? InIndex : INDEX_NONE;
@@ -2988,6 +3280,9 @@ void UDreamListViewBase::SetItemSelection(int32 InItemIndex, bool bInSelected, b
 	}
 	// A selection made now replaces one still waiting for its items: the later arrival must not undo it.
 	PendingSelectedIndex = INDEX_NONE;
+	// And a range from here on starts at SelectedIndex, until a gesture names its own anchor: the clicks
+	// and navigation steps that do set it after calling this.
+	RangeAnchorIndex = INDEX_NONE;
 	if (bClearScrollVelocityOnSelection)
 	{
 		// Before the selection, not after: the row the player picked must not slide out from under
@@ -3046,8 +3341,9 @@ void UDreamListViewBase::SetItemSelection(int32 InItemIndex, bool bInSelected, b
 void UDreamListViewBase::ClearSelection()
 {
 	// A selection still waiting for its items goes too, silently: nothing was selected yet to say
-	// goodbye to, but clearing means it never lands.
+	// goodbye to, but clearing means it never lands. So does the range anchor.
 	PendingSelectedIndex = INDEX_NONE;
+	RangeAnchorIndex = INDEX_NONE;
 	if (SelectedIndices.Num() == 0 && SelectedIndex == INDEX_NONE)
 	{
 		return;

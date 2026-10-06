@@ -64,6 +64,21 @@ either end, or across a one-column list) is left to the ordinary geometric scan,
 to whatever is beside the list -- STableViewBase::OnNavigation's answer. Arriving at a list from
 outside is that same scan, which lands on the nearest row and does not select it.
 
+MULTI SELECTION IS SListView's
+------------------------------
+In Multi mode a click chooses the way STableRow::OnMouseButtonDown and OnMouseButtonUp do: a plain
+click selects the row it lands on and nothing else; Ctrl adds the row or takes it away; Shift adds
+every row from the range anchor to this one to what is already chosen, and Ctrl with Shift does the
+same. The anchor is the row the last plain click, Ctrl click, finger tap or plain navigation step landed
+on -- SListView's RangeSelectionStart -- and a Shift range leaves it where it was. A finger has no
+modifier keys, and STableRow::OnTouchEnded gives a tap in Multi mode the one meaning it can have: it
+adds the row it lifts on and never takes one away. The keys are SListView::NavigationSelect's and
+OnKeyDown's: an arrow with Shift selects from the anchor to the row it moves to and nothing else, with
+Ctrl and Shift adds that range, with Ctrl alone adds the row it moves to, and Ctrl+A selects every row.
+The modifiers a click is read with are the clicking player's, held under their hands as the player
+controller has them; the Ctrl spot is shared with Cmd. Every selection is still asked of the veto
+(OnIsItemSelectableOrNavigable), and a click still selects on the release that completes it.
+
 TAB SEES ONE STOP
 -----------------
 A list is one Tab stop, as a browser's list box is: TabNavigation is Once, Tab enters at
@@ -111,7 +126,7 @@ Reach for `each` when the ROW is the interesting part. Reach for Native.List whe
 | `ItemObjects` | `TArray<TObjectPtr<UObject> >` | List | yes | read / write | The rows, as objects. Non-empty, this decides the row count and each row's item; the label then comes from the matching entry of Items, or from the object's name when there is none. This is the seat UUIListView's own Items array occupies, kept so a consumer that already models its rows as UObjects does not have to unpack them into text first. |
 | `RowTemplateClass` | `TSubclassOf<UDreamUserWidget>` | List | yes | `GetRowTemplateClass` / `SetRowTemplateClass` | A row's CONTENT, authored elsewhere: one instance of this class is created inside every row widget, filling it, and the built-in label steps aside. The row's face, height, hover and selection stay the control's, so a template only has to draw an item. |
 | `SelectedIndex` | `int32` | List | yes | `GetSelectedIndex` / `SetSelectedIndex` | The selected row, as an index into the SOURCE -- not into the rows on screen. For a list the two are the same; for a tree they are not, and an index that survives a collapse is the one worth handing to a binding. -1 is none. |
-| `SelectionMode` | `EUIListSelectionMode` | List | yes | `GetSelectionMode` / `SetSelectionMode` | How many rows can be selected at once, in UUIListView's four modes -- the same enum, because they are the same four answers and a second one spelling them again is a second thing to keep true. None ignores clicks; Single always leaves exactly one chosen; SingleToggle lets a second click on the chosen row clear it; Multi accumulates. |
+| `SelectionMode` | `EUIListSelectionMode` | List | yes | `GetSelectionMode` / `SetSelectionMode` | How many rows can be selected at once, in UUIListView's four modes -- the same enum, because they are the same four answers and a second one spelling them again is a second thing to keep true. None ignores clicks; Single always leaves exactly one chosen; SingleToggle lets a second click on the chosen row clear it; Multi chooses as SListView does -- a plain click one row, Ctrl a row more or less, Shift a range, a finger tap a row more (see MULTI SELECTION above). |
 | `SelectedIndices` | `TArray<int32>` | List | yes | `GetSelectedIndices` / `SetSelectedIndices` | Every selected row, as source indices, in the order they were chosen. Authorable, but the ordinary road is SetItemSelection / SetSelectedIndex -- those keep SelectedIndex in step and repaint. |
 | `bAlternatingRowColors` | `bool` | List | yes | `GetAlternatingRowColors` / `SetAlternatingRowColors` | Every other row wears FDreamListStyle::RowAlternate. Off is the dense list UMG draws. |
 | `bShowScrollBar` | `bool` | List | yes | `GetShowScrollBar` / `SetShowScrollBar` | Off means no bar at all, and the viewport keeps the gutter it would have cost. |

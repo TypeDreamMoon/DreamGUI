@@ -177,12 +177,17 @@ bool FDreamListsListViewSingleModeMovesSelectionTest::RunTest(const FString& Par
 }
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
-	FDreamListsListViewMultiModeAccumulatesTest,
-	"DreamGUI.ListView.ClickingTwoRowsInMultiModeKeepsBothSelected",
+	FDreamListsListViewMultiModePlainClickTest,
+	"DreamGUI.ListView.APlainClickInMultiModeSelectsTheRowItLandsOnAndNothingElse",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
-REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamListsListViewMultiModeAccumulatesTest, "DreamGUI.ListView.ClickingTwoRowsInMultiModeKeepsBothSelected", "[Pointer][Animated]")
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamListsListViewMultiModePlainClickTest, "DreamGUI.ListView.APlainClickInMultiModeSelectsTheRowItLandsOnAndNothingElse", "[Pointer][Animated]")
 
-bool FDreamListsListViewMultiModeAccumulatesTest::RunTest(const FString& Parameters)
+/*
+ * STableRow in Multi mode: a press with no modifier key selects the row it lands on and clears the rest, and the release
+ * of a click on a row that was already chosen among others narrows the selection to it. Either way a plain click ends with
+ * that one row chosen. Ctrl and Shift are what add to a selection (DreamListMultiSelectInteractionAutomationTests.cpp).
+ */
+bool FDreamListsListViewMultiModePlainClickTest::RunTest(const FString& Parameters)
 {
 	using namespace DreamListViewInteractionTestLocal;
 	FDreamDriverRig Rig = FDreamDriverRig::Headless(DreamListsInteraction::ViewportSize());
@@ -197,18 +202,27 @@ bool FDreamListsListViewMultiModeAccumulatesTest::RunTest(const FString& Paramet
 	{
 		return false;
 	}
-	// The reference page's design, not UMG's: "Multi accumulates". A plain click in UMG's Multi mode
-	// replaces the selection and only Ctrl adds to it -- but this library's pointer events carry no
-	// modifier state for a click to read, and DreamListViewBase.md states the accumulating rule.
 	List->SetSelectionMode(EUIListSelectionMode::Multi);
 	Rig.PumpFrames(1);
 
 	TestTrue(TEXT("Clicking the third row completes"), RowElement(Rig, *List, 2)->Click());
+	TestTrue(TEXT("The third item is selected"), List->IsItemSelected(2));
 	TestTrue(TEXT("Clicking the fifth row completes"), RowElement(Rig, *List, 4)->Click());
+	TestTrue(TEXT("The fifth item is selected"), List->IsItemSelected(4));
+	TestFalse(TEXT("and the third no longer is"), List->IsItemSelected(2));
+	TestEqual(TEXT("One item is selected"), List->GetNumItemsSelected(), 1);
 
-	TestTrue(TEXT("The third item is still selected"), List->IsItemSelected(2));
-	TestTrue(TEXT("and the fifth has joined it"), List->IsItemSelected(4));
-	TestEqual(TEXT("Two items are selected"), List->GetNumItemsSelected(), 2);
+	// Two chosen, then a plain click on one of them: the release narrows the selection to it.
+	List->SetItemSelection(6, true, /*bInClearOthers*/ false);
+	if (!TestEqual(TEXT("Code added a second row"), List->GetNumItemsSelected(), 2))
+	{
+		return false;
+	}
+	TestTrue(TEXT("Clicking the fifth row again completes"), RowElement(Rig, *List, 4)->Click());
+	TestTrue(TEXT("The fifth item is still selected"), List->IsItemSelected(4));
+	TestFalse(TEXT("and the one code added is not"), List->IsItemSelected(6));
+	TestEqual(TEXT("A plain click on a chosen row leaves it alone chosen"), List->GetNumItemsSelected(), 1);
+	TestEqual(TEXT("and it is the one SelectedIndex names"), List->GetSelectedIndex(), 4);
 	return true;
 }
 
@@ -1091,9 +1105,10 @@ bool FDreamListsListViewSelectionOffTest::RunTest(const FString& Parameters)
 	List->SetSelectionMode(EUIListSelectionMode::Multi);
 	TestEqual(TEXT("Switching it back on changes nothing and says nothing"), Probe->SelectionChanges.Num(), 0);
 
-	// Multi down to Single keeps the anchor -- the row the last selection landed on -- and says that, once.
+	// Multi down to Single keeps the anchor -- the row the last selection landed on -- and says that, once. The
+	// second row joins the way code adds one, a plain click in Multi mode choosing only the row it lands on.
 	TestTrue(TEXT("Clicking the third row completes"), RowElement(Rig, *List, 2)->Click());
-	TestTrue(TEXT("Clicking the fifth row completes"), RowElement(Rig, *List, 4)->Click());
+	List->SetItemSelection(4, true, /*bInClearOthers*/ false);
 	if (!TestEqual(TEXT("Both rows are selected in Multi"), List->GetNumItemsSelected(), 2))
 	{
 		return false;

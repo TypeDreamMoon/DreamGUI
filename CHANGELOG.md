@@ -85,6 +85,13 @@ after 3 for 2.1.0 -- so the engine never takes 1.0.0 for the older of the two.
   rows lead with Text, Font, Size, Style, Color and alignment, with its wrapping, typography and rendering settings in
   groups that start closed, and a Sprite's or Texture's colour sits under its sprite or texture. The Transform and
   anchor-data categories at the bottom, which repeated the Layout rows raw, are gone, and Is Enabled joined Behavior.
+- **A list, tile or tree view in Multi mode chooses rows as SListView does.** A plain click selects the row it lands on
+  and nothing else, where it used to add the row to the selection and a second click took it away; Ctrl adds a row or
+  takes it away; Shift adds every row from the range anchor to the one clicked, Ctrl with Shift too. A finger's tap adds
+  the row and never takes one away (`STableRow::OnTouchEnded`). With a row focused, an arrow with Shift selects from the
+  anchor to the row the focus moves to, with Ctrl and Shift adds that range, with Ctrl alone adds the row, and Ctrl+A
+  selects every row. The anchor is the row the last plain click, Ctrl click, tap or plain arrow landed on. A click reads
+  its modifiers from the clicking player's controller. See [Migration](Docs/Migration.md#from-100-to-the-next-release).
 
 ### Fixed
 
