@@ -54,6 +54,24 @@ enum class EDreamDriverTouchPhase : uint8
 	Ended,
 };
 
+/** How the rig's players share its viewport, when it has more than one (FDreamRigOptions::PlayerCount). */
+enum class EDreamRigPlayerScreens : uint8
+{
+	/**
+	 * One screen for all of them: every player points at the rig's own root canvas, each through a screen raycaster of its
+	 * own carrying its UserIndex -- two mice on one desk, or a pad's virtual cursor beside the mouse.
+	 */
+	Shared,
+	/**
+	 * A split screen as the engine lays one out: every local player is given the part of the viewport UGameViewportClient::
+	 * LayoutPlayers would give it (ULocalPlayer::Origin and Size, from the viewport client's SplitscreenInfo table), and its
+	 * own screen-space root canvas with its own screen raycaster, as UDreamScreenUISubsystem gives every local player a root
+	 * of its own. A world-space pointer of a player looks through that player's part of the viewport. Needs real local
+	 * players, so only the actor hosts build it; see FDreamDriverRig for what it does and does not represent.
+	 */
+	Split,
+};
+
 /** How a rig is built. Every default reproduces today's rig except bWithGameInstance. */
 struct FDreamRigOptions
 {
@@ -65,4 +83,16 @@ struct FDreamRigOptions
 	FVector2D ReferenceResolution = FVector2D(1280.0, 720.0);
 	float MatchFromWidthToHeight = 1.0f;
 	EDreamRigInputHost InputHost = EDreamRigInputHost::ModuleOnly;
+	/**
+	 * How many players the rig has, one to four. Player 0 is the rig's own and the one every step speaks for unless a
+	 * sequence says otherwise (FDreamDriverSequence::AsPlayer); each further player has its own event system, input entry
+	 * and screen raycaster, UserIndex 1, 2, 3. Under ModuleOnly they are script players the driver feeds by hand; under an
+	 * actor host each is a real ULocalPlayer with its own APlayerController and input actor. SlateSource takes one player.
+	 */
+	int32 PlayerCount = 1;
+	/** How several players share the viewport. Ignored with one. */
+	EDreamRigPlayerScreens PlayerScreens = EDreamRigPlayerScreens::Shared;
 };
+
+/** The most players a rig builds: UGameViewportClient::MaxSplitscreenPlayers' default, and the end of the engine's split-screen tables. */
+constexpr int32 DreamRigMaxPlayers = 4;

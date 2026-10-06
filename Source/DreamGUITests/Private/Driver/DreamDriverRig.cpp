@@ -9,7 +9,11 @@
 #include "DreamGUIEditorSubsystem.h"
 #include "Editor.h"
 #include "Engine/Blueprint.h"
+#include "Engine/Engine.h"
 #include "Engine/GameInstance.h"
+#include "Engine/GameViewportClient.h"
+#include "Engine/LocalPlayer.h"
+#include "Engine/ViewportSplitScreen.h"
 #include "Engine/World.h"
 #include "Event/DreamEventSystem.h"
 #include "Event/DreamUIInputSubsystem.h"
@@ -50,11 +54,21 @@ FDreamDriverRig::FDreamDriverRig(const FDreamRigOptions& InOptions)
 	// and a test that forgot to check IsUsable fails on an assertion rather than on a null driver.
 	DriverInstance = MakeShared<FDreamDriver>(*DriverContext);
 	DriverContext->InputHost = Options.InputHost;
+	DriverContext->PlayerIndex = 0;
 
 	// Before anything is built, because building is what disturbs them: the process-wide switches a
 	// text field flips the first time it is typed into outlive every world, and a rig that left them
 	// flipped would decide which road the NEXT test's characters take.
 	CaptureProcessState();
+
+	// A combination of players, screens and host the rig cannot build is refused before there is a
+	// world, with the reason, rather than built as something else -- one player where two were asked
+	// for is a test that passes about nothing.
+	BuildFailure = DescribeRefusedPlayerOptions(Options);
+	if (!BuildFailure.IsEmpty())
+	{
+		return;
+	}
 
 	// 1. The world. With a game instance by default, because the tween manager is a game instance
 	// subsystem: without one every UDreamTweenManager::To answers null, every Selectable transition
@@ -143,47 +157,35 @@ FDreamDriverRig::FDreamDriverRig(const FDreamRigOptions& InOptions)
 		}
 	}
 
-	// 4. The root, its canvas and the screen-space raycaster.
-	UDreamWidget* BuiltRoot = NewObject<UDreamWidget>(BuildWorld, NAME_None, RF_Public | RF_Transactional);
-	BuiltRoot->SetDisplayName(TEXT("Root"));
-	BuiltRoot->OnRegister();
-	DriverContext->Root = BuiltRoot;
+	// 3b. The other players' input, by the same host, in player order -- after player 0's, because an actor host's
+	// players are the game instance's local players in order and the world's controllers in order, and the first of
+	// each is player 0's. Then, for a split screen, the engine's layout of them.
+	if (!BuildOtherPlayersInput())
+	{
+		return;
+	}
+	if (Options.PlayerScreens == EDreamRigPlayerScreens::Split && Options.PlayerCount > 1 && !LayOutSplitScreen())
+	{
+		return;
+	}
 
-	UDreamCanvas* BuiltCanvas = BuiltRoot->AddComponent<UDreamCanvas>();
+	// 4. The root, its canvas and the screen-space raycaster.
+	UDreamWidget* BuiltRoot = nullptr;
+	UDreamCanvas* BuiltCanvas = MakeScreenRoot(TEXT("Root"), BuiltRoot);
+	DriverContext->Root = BuiltRoot;
 	if (BuiltCanvas == nullptr)
 	{
 		BuildFailure = TEXT("the root widget would not take a canvas");
 		return;
 	}
-	BuiltCanvas->SetRenderMode(EDreamRenderMode::ScreenSpaceOverlay);
-	// AFTER the render mode. Setting the mode applies the viewport parameters, and at that moment the
-	// only viewport there is is the 2x2 fallback; handing the canvas a real size is what un-does that,
-	// and doing it in the other order would leave the fallback applied on top.
-	BuiltCanvas->SetViewportSizeOverride(InViewportSize);
-	// The scaler AFTER the viewport, through the canvas's own setters: each of them re-runs
-	// OnViewportParameterChanged, which recomputes the root's size and CanvasScale from the viewport
-	// size the canvas has cached -- so that has to be the substituted one already. The mode goes
-	// last, once the reference and the match it will read are in place; nothing is written when the
-	// options leave the mode unset, which keeps the canvas's own default (ConstantPixelSize) and
-	// today's rig exactly.
-	if (Options.CanvasScaleMode.IsSet())
-	{
-		BuiltCanvas->SetReferenceResolution(Options.ReferenceResolution);
-		BuiltCanvas->SetMatchFromWidthToHeight(Options.MatchFromWidthToHeight);
-		BuiltCanvas->SetScaleMode(Options.CanvasScaleMode.GetValue());
-	}
 	DriverContext->RootCanvas = BuiltCanvas;
+	DriverContext->Raycaster = MakeScreenRaycaster(Host, BuiltCanvas, 0);
 
-	UDreamScreenSpaceRaycaster* BuiltRaycaster = NewObject<UDreamScreenSpaceRaycaster>(Host);
-	BuiltRaycaster->SetRootCanvas(BuiltCanvas);
-	Host->AddInstanceComponent(BuiltRaycaster);
-	BuiltRaycaster->RegisterComponent();
-	// Explicit, although registering an auto-activating component normally gets here by itself: the
-	// list this puts it on is the one UDreamPointerInputModule::LineTrace walks, so a rig that was
-	// not on it would trace nothing and every test would fail identically and unhelpfully. Enrolling
-	// twice is a no-op -- AddRaycaster refuses duplicates.
-	BuiltRaycaster->ActivateRaycaster();
-	DriverContext->Raycaster = BuiltRaycaster;
+	// 4b. The other players' screens and raycasters, and every context told of every player.
+	if (!BuildOtherPlayersScreens())
+	{
+		return;
+	}
 
 	// 5. Everything the world starts with exists; now it begins play, before any control is made on it.
 	OpenBeginPlayGate();
@@ -199,6 +201,293 @@ FDreamDriverRig::FDreamDriverRig(const FDreamRigOptions& InOptions)
 		// Every early return above says why; this is the net under a piece that came back null or
 		// invalid without anything having refused outright.
 		BuildFailure = TEXT("the rig was built but a piece it needs is missing or invalid (world, event system, input module, UI manager, root, canvas or raycaster)");
+	}
+}
+
+FString FDreamDriverRig::DescribeRefusedPlayerOptions(const FDreamRigOptions& InOptions)
+{
+	const int32 Count = InOptions.PlayerCount;
+	if (Count < 1 || Count > DreamRigMaxPlayers)
+	{
+		return FString::Printf(TEXT("a rig is built for one to %d players, and %d were asked for: the engine's split-screen tables and UGameViewportClient::MaxSplitscreenPlayers stop at %d"),
+			DreamRigMaxPlayers, Count, DreamRigMaxPlayers);
+	}
+	if (Count > 1 && InOptions.InputHost == EDreamRigInputHost::SlateSource)
+	{
+		return FString::Printf(TEXT("%d players were asked for under the Slate input source, which the rig can give only one: the source finds a Slate user's player through the local players' Slate users (UDreamUIInputSubsystem::FindUserIndexForSlateUser), a headless rig has no Slate users of its own, and its test mappers make Slate user 0 player 0 -- a mapping the rig wrote for more would be testing the rig. Use ModuleOnly or an actor host for several players"),
+			Count);
+	}
+	if (Count > 1 && InOptions.PlayerScreens == EDreamRigPlayerScreens::Split && !IsActorInputHost(InOptions.InputHost))
+	{
+		return TEXT("a split screen was asked for without an actor host: a split screen is the engine laying out its local players (UGameViewportClient::LayoutPlayers sets ULocalPlayer::Origin and Size), and under ModuleOnly the rig's further players are script players with no local player to lay out -- and with none, the UI manager allows one screen-space overlay canvas, so a screen of their own would compete for it. Use StandaloneActor or EnhancedActor, or Shared");
+	}
+	return FString();
+}
+
+bool FDreamDriverRig::BuildOtherPlayersInput()
+{
+	UWorld* BuildWorld = DriverContext->World;
+	for (int32 PlayerIndex = 1; PlayerIndex < Options.PlayerCount; ++PlayerIndex)
+	{
+		FOtherPlayer& Player = OtherPlayers.AddDefaulted_GetRef();
+		Player.Context = MakeUnique<FDreamDriverContext>();
+		FDreamDriverContext& PlayerContext = *Player.Context;
+		Player.Driver = MakeShared<FDreamDriver>(PlayerContext);
+		// The world's, the same on every player's context: what a step reads that belongs to nobody in particular.
+		PlayerContext.World = BuildWorld;
+		PlayerContext.Manager = DriverContext->Manager;
+		PlayerContext.GameInstance = DriverContext->GameInstance;
+		PlayerContext.InputHost = Options.InputHost;
+		PlayerContext.CurrentTest = DriverContext->CurrentTest;
+		PlayerContext.FrameSeconds = DriverContext->FrameSeconds;
+		PlayerContext.PlayerIndex = PlayerIndex;
+
+		// An actor of the player's own for its raycaster to ride on -- and, under ModuleOnly, its event system and
+		// module, as player 0's ride on the rig's host.
+		Player.Host = BuildWorld->SpawnActor<AActor>();
+		if (Player.Host == nullptr)
+		{
+			BuildFailure = FString::Printf(TEXT("the world would not spawn player %d's host actor"), PlayerIndex);
+			return false;
+		}
+
+		if (IsActorInputHost(Options.InputHost))
+		{
+			// The next local player, its controller and an input actor listening as it, built exactly as player 0's.
+			FString WhyNot;
+			if (!DreamDriverGameHost::Build(PlayerContext, Options.InputHost, WhyNot))
+			{
+				BuildFailure = FString::Printf(TEXT("player %d's input host could not be built: %s"), PlayerIndex,
+					WhyNot.IsEmpty() ? TEXT("the game host gave no reason") : *WhyNot);
+				return false;
+			}
+			if (!IsValid(PlayerContext.EventSystem) || !IsValid(PlayerContext.InputModule))
+			{
+				BuildFailure = FString::Printf(TEXT("player %d's input host was built but did not provide an event system and an input module"), PlayerIndex);
+				return false;
+			}
+			continue;
+		}
+
+		// ModuleOnly (SlateSource takes one player): a script player, fed straight into its own module. The UserIndex
+		// before the event system registers, so that it registers -- at the begin-play gate -- as the player it is.
+		UDreamEventSystem* BuiltEventSystem = NewObject<UDreamEventSystem>(Player.Host);
+		BuiltEventSystem->SetUserIndex(PlayerIndex);
+		Player.Host->AddInstanceComponent(BuiltEventSystem);
+		BuiltEventSystem->RegisterComponent();
+		PlayerContext.EventSystem = BuiltEventSystem;
+
+		UDreamDriverInputModule* BuiltInputModule = NewObject<UDreamDriverInputModule>(Player.Host);
+		Player.Host->AddInstanceComponent(BuiltInputModule);
+		BuiltInputModule->RegisterComponent();
+		BuiltInputModule->RegisterInputModuleToEventSystem(BuiltEventSystem);
+		PlayerContext.InputModule = BuiltInputModule;
+	}
+	return true;
+}
+
+bool FDreamDriverRig::LayOutSplitScreen()
+{
+	// The layout UGameViewportClient::UpdateActiveSplitscreenType picks for this many players under UGameMapsSettings'
+	// defaults (EngineSettingsModule.cpp: two players Horizontal, three FavorTop; four Grid), read from the table the
+	// engine fills in the viewport client's constructor -- the class the engine is configured to make, whose default
+	// object carries it -- and written where LayoutPlayers writes it.
+	const int32 Count = Options.PlayerCount;
+	const ESplitScreenType::Type SplitType = Count == 2 ? ESplitScreenType::TwoPlayer_Horizontal
+		: Count == 3 ? ESplitScreenType::ThreePlayer_FavorTop
+		: ESplitScreenType::FourPlayer_Grid;
+	const UGameViewportClient* Layouts = GEngine != nullptr && GEngine->GameViewportClientClass != nullptr
+		? GEngine->GameViewportClientClass->GetDefaultObject<UGameViewportClient>()
+		: GetDefault<UGameViewportClient>();
+	if (Layouts == nullptr || !Layouts->SplitscreenInfo.IsValidIndex(SplitType)
+		|| Layouts->SplitscreenInfo[SplitType].PlayerData.Num() < Count)
+	{
+		BuildFailure = FString::Printf(TEXT("the game viewport client's split-screen table has no layout of %d players to lay the local players out with"), Count);
+		return false;
+	}
+	for (int32 PlayerIndex = 0; PlayerIndex < Count; ++PlayerIndex)
+	{
+		FDreamDriverContext* PlayerContext = FindPlayerContext(PlayerIndex);
+		ULocalPlayer* LocalPlayer = PlayerContext != nullptr ? PlayerContext->LocalPlayer : nullptr;
+		if (LocalPlayer == nullptr)
+		{
+			BuildFailure = FString::Printf(TEXT("player %d has no local player to give a part of the viewport to"), PlayerIndex);
+			return false;
+		}
+		const FPerPlayerSplitscreenData& Part = Layouts->SplitscreenInfo[SplitType].PlayerData[PlayerIndex];
+		LocalPlayer->Size.X = Part.SizeX;
+		LocalPlayer->Size.Y = Part.SizeY;
+		LocalPlayer->Origin.X = Part.OriginX;
+		LocalPlayer->Origin.Y = Part.OriginY;
+		PlayerContext->ViewOrigin01 = LocalPlayer->Origin;
+		PlayerContext->ViewSize01 = LocalPlayer->Size;
+	}
+	return true;
+}
+
+UDreamCanvas* FDreamDriverRig::MakeScreenRoot(const FString& InDisplayName, UDreamWidget*& OutRoot)
+{
+	UDreamWidget* BuiltRoot = NewObject<UDreamWidget>(DriverContext->World, NAME_None, RF_Public | RF_Transactional);
+	BuiltRoot->SetDisplayName(InDisplayName);
+	BuiltRoot->OnRegister();
+	OutRoot = BuiltRoot;
+
+	UDreamCanvas* BuiltCanvas = BuiltRoot->AddComponent<UDreamCanvas>();
+	if (BuiltCanvas == nullptr)
+	{
+		return nullptr;
+	}
+	BuiltCanvas->SetRenderMode(EDreamRenderMode::ScreenSpaceOverlay);
+	// AFTER the render mode. Setting the mode applies the viewport parameters, and at that moment the
+	// only viewport there is is the 2x2 fallback; handing the canvas a real size is what un-does that,
+	// and doing it in the other order would leave the fallback applied on top. The whole viewport for
+	// every player's screen, a split screen's included: see the class comment.
+	BuiltCanvas->SetViewportSizeOverride(Options.ViewportSize);
+	// The scaler AFTER the viewport, through the canvas's own setters: each of them re-runs
+	// OnViewportParameterChanged, which recomputes the root's size and CanvasScale from the viewport
+	// size the canvas has cached -- so that has to be the substituted one already. The mode goes
+	// last, once the reference and the match it will read are in place; nothing is written when the
+	// options leave the mode unset, which keeps the canvas's own default (ConstantPixelSize) and
+	// today's rig exactly.
+	if (Options.CanvasScaleMode.IsSet())
+	{
+		BuiltCanvas->SetReferenceResolution(Options.ReferenceResolution);
+		BuiltCanvas->SetMatchFromWidthToHeight(Options.MatchFromWidthToHeight);
+		BuiltCanvas->SetScaleMode(Options.CanvasScaleMode.GetValue());
+	}
+	return BuiltCanvas;
+}
+
+UDreamScreenSpaceRaycaster* FDreamDriverRig::MakeScreenRaycaster(AActor* InHost, UDreamCanvas* InCanvas, int32 InUserIndex)
+{
+	UDreamScreenSpaceRaycaster* BuiltRaycaster = NewObject<UDreamScreenSpaceRaycaster>(InHost);
+	// A raycaster answers one player's pointers (UDreamUIInputUser::LineTrace skips the others'); player 0's is left at
+	// the class's own UserIndex, as it always was.
+	if (InUserIndex != 0)
+	{
+		BuiltRaycaster->SetUserIndex(InUserIndex);
+	}
+	BuiltRaycaster->SetRootCanvas(InCanvas);
+	InHost->AddInstanceComponent(BuiltRaycaster);
+	BuiltRaycaster->RegisterComponent();
+	// Explicit, although registering an auto-activating component normally gets here by itself: the
+	// list this puts it on is the one UDreamPointerInputModule::LineTrace walks, so a rig that was
+	// not on it would trace nothing and every test would fail identically and unhelpfully. Enrolling
+	// twice is a no-op -- AddRaycaster refuses duplicates.
+	BuiltRaycaster->ActivateRaycaster();
+	return BuiltRaycaster;
+}
+
+bool FDreamDriverRig::BuildOtherPlayersScreens()
+{
+	if (OtherPlayers.Num() == 0)
+	{
+		// A rig of one keeps the context it always had: no list of players, and the pump's own path for them.
+		return true;
+	}
+	const bool bSplit = Options.PlayerScreens == EDreamRigPlayerScreens::Split;
+	for (FOtherPlayer& Player : OtherPlayers)
+	{
+		FDreamDriverContext& PlayerContext = *Player.Context;
+		if (bSplit)
+		{
+			// A screen of the player's own, as the screen UI gives every local player a root of its own.
+			UDreamWidget* PlayerRoot = nullptr;
+			UDreamCanvas* PlayerCanvas = MakeScreenRoot(FString::Printf(TEXT("Player%dRoot"), PlayerContext.PlayerIndex), PlayerRoot);
+			PlayerContext.Root = PlayerRoot;
+			Player.bOwnsScreen = PlayerRoot != nullptr;
+			if (PlayerCanvas == nullptr)
+			{
+				BuildFailure = FString::Printf(TEXT("player %d's screen root would not take a canvas"), PlayerContext.PlayerIndex);
+				return false;
+			}
+			PlayerContext.RootCanvas = PlayerCanvas;
+		}
+		else
+		{
+			PlayerContext.Root = DriverContext->Root;
+			PlayerContext.RootCanvas = DriverContext->RootCanvas;
+		}
+		PlayerContext.Raycaster = MakeScreenRaycaster(Player.Host, PlayerContext.RootCanvas, PlayerContext.PlayerIndex);
+	}
+
+	TArray<FDreamDriverContext*> AllPlayers;
+	AllPlayers.Add(DriverContext.Get());
+	for (const FOtherPlayer& Player : OtherPlayers)
+	{
+		AllPlayers.Add(Player.Context.Get());
+	}
+	for (FDreamDriverContext* PlayerContext : AllPlayers)
+	{
+		PlayerContext->Players = AllPlayers;
+	}
+	return true;
+}
+
+void FDreamDriverRig::TearDownOtherPlayersInput(FAutomationTestBase* InTest)
+{
+	for (int32 Index = OtherPlayers.Num() - 1; Index >= 0; --Index)
+	{
+		FDreamDriverContext* PlayerContext = OtherPlayers[Index].Context.Get();
+		if (PlayerContext == nullptr)
+		{
+			continue;
+		}
+		if (IsActorInputHost(PlayerContext->InputHost))
+		{
+			DreamDriverGameHost::Teardown(*PlayerContext);
+			// Each player's host is checked gone, which the game host's own tear-down promises: a local player left on
+			// the game instance, or a controller or input actor left in the world, is the next player's index taken.
+			TArray<FString> LeftBehind;
+			if (PlayerContext->InputActor != nullptr)
+			{
+				LeftBehind.Add(TEXT("its input actor"));
+			}
+			if (PlayerContext->PlayerController != nullptr)
+			{
+				LeftBehind.Add(TEXT("its player controller"));
+			}
+			if (PlayerContext->LocalPlayer != nullptr)
+			{
+				LeftBehind.Add(TEXT("its local player"));
+			}
+			if (LeftBehind.Num() > 0)
+			{
+				ReportRigProblem(InTest, FString::Printf(TEXT("Player %d's input host was torn down and left %s behind"),
+					PlayerContext->PlayerIndex, *FString::Join(LeftBehind, TEXT(" and "))));
+			}
+		}
+	}
+}
+
+void FDreamDriverRig::TearDownOtherPlayersScreens()
+{
+	for (int32 Index = OtherPlayers.Num() - 1; Index >= 0; --Index)
+	{
+		FOtherPlayer& Player = OtherPlayers[Index];
+		FDreamDriverContext* PlayerContext = Player.Context.Get();
+		if (PlayerContext == nullptr)
+		{
+			continue;
+		}
+		if (Player.bOwnsScreen)
+		{
+			if (UDreamWidget* PlayerRoot = PlayerContext->Root; IsValid(PlayerRoot))
+			{
+				PlayerRoot->DestroyWidget();
+			}
+		}
+		if (UDreamScreenSpaceRaycaster* PlayerRaycaster = PlayerContext->Raycaster; IsValid(PlayerRaycaster))
+		{
+			PlayerRaycaster->DeactivateRaycaster();
+		}
+		if (!IsActorInputHost(PlayerContext->InputHost))
+		{
+			if (UDreamDriverInputModule* PlayerModule = PlayerContext->InputModule; IsValid(PlayerModule))
+			{
+				PlayerModule->UnregisterInputModuleFromEventSystem();
+			}
+		}
 	}
 }
 
@@ -387,6 +676,69 @@ UUITextInput* FDreamDriverRig::FindEditInRigTree() const
 	return nullptr;
 }
 
+bool FDreamDriverRig::IsUnderRigScreens(const UDreamWidget* InWidget) const
+{
+	TArray<const UDreamWidget*, TInlineAllocator<DreamRigMaxPlayers>> Screens;
+	if (DriverContext.IsValid() && IsValid(DriverContext->Root))
+	{
+		Screens.Add(DriverContext->Root);
+	}
+	for (const FOtherPlayer& Player : OtherPlayers)
+	{
+		if (Player.bOwnsScreen && Player.Context.IsValid() && IsValid(Player.Context->Root))
+		{
+			Screens.Add(Player.Context->Root);
+		}
+	}
+	for (const UDreamWidget* Walk = InWidget; Walk != nullptr; Walk = Walk->GetParent())
+	{
+		if (Screens.Contains(Walk))
+		{
+			return true;
+		}
+	}
+	return false;
+}
+
+TMap<int32, TWeakObjectPtr<UUITextInput>> FDreamDriverRig::FindPlayerEditsInRigTree() const
+{
+	// Each player's own field, from that player's input in the rig's world (UUITextInput::GetActiveTextInputForPlayer):
+	// with several players the process-wide answer is whichever player's field is found first, which would let one
+	// player's leaked edit hide another's. A field on a world-space panel goes with the world, as it does for one player.
+	TMap<int32, TWeakObjectPtr<UUITextInput>> Edits;
+	UWorld* RigWorld = DriverContext.IsValid() ? DriverContext->World : nullptr;
+	if (RigWorld == nullptr)
+	{
+		return Edits;
+	}
+	for (int32 PlayerIndex = 0; PlayerIndex < GetPlayerCount(); ++PlayerIndex)
+	{
+		UUITextInput* Field = UUITextInput::GetActiveTextInputForPlayer(RigWorld, PlayerIndex);
+		if (Field != nullptr && IsUnderRigScreens(Field->GetWidget()))
+		{
+			Edits.Add(PlayerIndex, Field);
+		}
+	}
+	return Edits;
+}
+
+void FDreamDriverRig::EndLeakedPlayerTextEdits(const TMap<int32, TWeakObjectPtr<UUITextInput>>& InEditsInRigTree, FAutomationTestBase* InTest)
+{
+	// EndLeakedTextEdit, player by player: the trees are gone, so a field still being edited by the player who was
+	// editing it is one tear-down missed, ended through its own DeactivateInput while the world still stands.
+	UWorld* RigWorld = DriverContext.IsValid() ? DriverContext->World : nullptr;
+	for (const TPair<int32, TWeakObjectPtr<UUITextInput>>& Edit : InEditsInRigTree)
+	{
+		UUITextInput* Field = Edit.Value.Get();
+		if (Field != nullptr && RigWorld != nullptr && UUITextInput::GetActiveTextInputForPlayer(RigWorld, Edit.Key) == Field)
+		{
+			ReportRigProblem(InTest, FString::Printf(TEXT("Player %d's text field was still the field it was editing after the rig's trees were destroyed; its edit has been ended here so it does not leak into the next test"),
+				Edit.Key));
+			Field->DeactivateInput(false);
+		}
+	}
+}
+
 void FDreamDriverRig::EndLeakedTextEdit(UUITextInput* InEditInRigTree, FAutomationTestBase* InTest)
 {
 	// The field being edited is not put back to what it was before the rig: its only writer is
@@ -486,6 +838,17 @@ void FDreamDriverRig::OpenBeginPlayGate()
 	{
 		HostInput->AddEventSystem(HostEventSystem);
 	}
+	// Every other player's, in player order, the same way: an input actor's event system has enrolled already, in its
+	// own BeginPlay, and a script player's is enrolled here, as the player its UserIndex names.
+	for (const FOtherPlayer& Player : OtherPlayers)
+	{
+		UDreamEventSystem* PlayerEventSystem = Player.Context.IsValid() ? Player.Context->EventSystem : nullptr;
+		if (IsValid(PlayerEventSystem) && HostInput != nullptr
+			&& HostInput->GetEventSystemByUserIndex(PlayerEventSystem->GetUserIndex()) != PlayerEventSystem)
+		{
+			HostInput->AddEventSystem(PlayerEventSystem);
+		}
+	}
 
 	// The UI manager's half: OnWorldBeginPlay begins every registered widget that has not begun,
 	// which at this point is the root and its canvas and nothing else. Once, because the engine base
@@ -514,17 +877,39 @@ FDreamDriverRig::~FDreamDriverRig()
 		// The input host first, as it was built last of the input pieces: its local player would
 		// otherwise outlive the world (local players belong to the game instance, not the world), and
 		// its actor would still be delivering input into a tree that is being taken apart. The Slate
-		// source the same way: off before the tree it feeds goes.
+		// source the same way: off before the tree it feeds goes. The other players' hosts before
+		// player 0's, last player first, so that every local player comes off the game instance from
+		// the end and no player's index moves under it.
+		TearDownOtherPlayersInput(TeardownTest);
 		if (IsActorInputHost(DriverContext->InputHost))
 		{
 			DreamDriverGameHost::Teardown(*DriverContext);
+			// On a rig of several, player 0 is held to what the others are (TearDownOtherPlayersInput), and the game
+			// instance is to have none of the rig's local players left.
+			if (OtherPlayers.Num() > 0)
+			{
+				if (DriverContext->InputActor != nullptr || DriverContext->PlayerController != nullptr || DriverContext->LocalPlayer != nullptr)
+				{
+					ReportRigProblem(TeardownTest, TEXT("Player 0's input host was torn down and left its input actor, controller or local player behind"));
+				}
+				if (const UGameInstance* RigGameInstance = DriverContext->GameInstance; IsValid(RigGameInstance) && RigGameInstance->GetNumLocalPlayers() > 0)
+				{
+					ReportRigProblem(TeardownTest, FString::Printf(TEXT("The rig's game instance still has %d local player(s) after every player's input host was torn down"),
+						RigGameInstance->GetNumLocalPlayers()));
+				}
+			}
 		}
 		else if (DriverContext->InputHost == EDreamRigInputHost::SlateSource)
 		{
 			DreamDriverSlateHost::Teardown(*DriverContext);
 		}
-		// Asked before the tree goes, while "is it under the rig's root" still has an answer.
-		UUITextInput* EditInRigTree = FindEditInRigTree();
+		// Asked before the tree goes, while "is it under the rig's root" still has an answer. A rig of one asks the
+		// process-wide question it always asked; a rig of several asks each player.
+		const bool bSeveralPlayers = OtherPlayers.Num() > 0;
+		UUITextInput* EditInRigTree = bSeveralPlayers ? nullptr : FindEditInRigTree();
+		const TMap<int32, TWeakObjectPtr<UUITextInput>> PlayerEditsInRigTree = bSeveralPlayers
+			? FindPlayerEditsInRigTree() : TMap<int32, TWeakObjectPtr<UUITextInput>>();
+		TearDownOtherPlayersScreens();
 		if (UDreamWidget* RootWidget = DriverContext->Root; IsValid(RootWidget))
 		{
 			RootWidget->DestroyWidget();
@@ -545,6 +930,7 @@ FDreamDriverRig::~FDreamDriverRig()
 		// After the tree, before the world: the tree's destruction is what should have ended an edit
 		// in it, and the world still being whole is what lets a missed one be ended properly.
 		EndLeakedTextEdit(EditInRigTree, TeardownTest);
+		EndLeakedPlayerTextEdits(PlayerEditsInRigTree, TeardownTest);
 		// The world's layout context goes with its manager, so what it says about passes left open
 		// is read now, with the tree gone and the world still whole.
 		if (const UDreamUIManagerWorldSubsystem* RigManager = DriverContext->Manager; IsValid(RigManager))
@@ -553,6 +939,8 @@ FDreamDriverRig::~FDreamDriverRig()
 			MemoDepthAtTeardown = RigManager->GetLayoutPassContext().GetMemoDepth();
 		}
 	}
+	// The other players' drivers and contexts before player 0's: their contexts list player 0's.
+	OtherPlayers.Reset();
 	DriverInstance.Reset();
 	DriverContext.Reset();
 	// Exactly one of these holds the world; the game instance one also shuts its game instance down
@@ -568,11 +956,24 @@ bool FDreamDriverRig::IsUsable() const
 {
 	// A recorded failure wins even if every pointer happens to be set: a half-built input host can
 	// leave an event system behind it and still not be a host anything should be driven through.
-	return BuildFailure.IsEmpty()
-		&& DriverContext.IsValid()
-		&& DriverContext->IsUsable()
-		&& IsValid(DriverContext->RootCanvas)
-		&& IsValid(DriverContext->Raycaster);
+	if (!BuildFailure.IsEmpty()
+		|| !DriverContext.IsValid()
+		|| !DriverContext->IsUsable()
+		|| !IsValid(DriverContext->RootCanvas)
+		|| !IsValid(DriverContext->Raycaster))
+	{
+		return false;
+	}
+	// Every player whole, or the rig is not: a test of two players on half a second player is a test of one.
+	for (const FOtherPlayer& Player : OtherPlayers)
+	{
+		if (!Player.Context.IsValid() || !Player.Context->IsUsable()
+			|| !IsValid(Player.Context->RootCanvas) || !IsValid(Player.Context->Raycaster))
+		{
+			return false;
+		}
+	}
+	return OtherPlayers.Num() == Options.PlayerCount - 1;
 }
 
 UWorld* FDreamDriverRig::GetWorld() const
@@ -646,6 +1047,125 @@ void FDreamDriverRig::BindTest(FAutomationTestBase* InTest)
 	{
 		DriverContext->CurrentTest = InTest;
 	}
+	for (FOtherPlayer& Player : OtherPlayers)
+	{
+		if (Player.Context.IsValid())
+		{
+			Player.Context->CurrentTest = InTest;
+		}
+	}
+}
+
+int32 FDreamDriverRig::GetPlayerCount() const
+{
+	return 1 + OtherPlayers.Num();
+}
+
+FDreamDriverContext* FDreamDriverRig::FindPlayerContext(int32 InPlayerIndex) const
+{
+	if (InPlayerIndex == 0)
+	{
+		return DriverContext.Get();
+	}
+	const int32 OtherIndex = InPlayerIndex - 1;
+	return OtherPlayers.IsValidIndex(OtherIndex) ? OtherPlayers[OtherIndex].Context.Get() : nullptr;
+}
+
+FDreamDriverContext& FDreamDriverRig::Context(int32 InPlayerIndex) const
+{
+	if (FDreamDriverContext* Found = FindPlayerContext(InPlayerIndex))
+	{
+		return *Found;
+	}
+	ReportRigProblem(DriverContext.IsValid() ? DriverContext->CurrentTest : nullptr,
+		FString::Printf(TEXT("The rig was asked for player %d and was built for %d player(s); player 0's context is answered so the test fails here rather than crashing"),
+			InPlayerIndex, GetPlayerCount()));
+	return *DriverContext;
+}
+
+FDreamDriverRef FDreamDriverRig::Driver(int32 InPlayerIndex) const
+{
+	if (InPlayerIndex == 0)
+	{
+		return DriverInstance.ToSharedRef();
+	}
+	const int32 OtherIndex = InPlayerIndex - 1;
+	if (OtherPlayers.IsValidIndex(OtherIndex) && OtherPlayers[OtherIndex].Driver.IsValid())
+	{
+		return OtherPlayers[OtherIndex].Driver.ToSharedRef();
+	}
+	ReportRigProblem(DriverContext.IsValid() ? DriverContext->CurrentTest : nullptr,
+		FString::Printf(TEXT("The rig was asked for player %d's driver and was built for %d player(s); player 0's is answered so the test fails here rather than crashing"),
+			InPlayerIndex, GetPlayerCount()));
+	return DriverInstance.ToSharedRef();
+}
+
+UDreamWidget* FDreamDriverRig::Root(int32 InPlayerIndex) const
+{
+	const FDreamDriverContext* Found = FindPlayerContext(InPlayerIndex);
+	return Found != nullptr ? Found->Root : nullptr;
+}
+
+UDreamCanvas* FDreamDriverRig::RootCanvas(int32 InPlayerIndex) const
+{
+	const FDreamDriverContext* Found = FindPlayerContext(InPlayerIndex);
+	return Found != nullptr ? Found->RootCanvas : nullptr;
+}
+
+UDreamEventSystem* FDreamDriverRig::EventSystem(int32 InPlayerIndex) const
+{
+	const FDreamDriverContext* Found = FindPlayerContext(InPlayerIndex);
+	return Found != nullptr ? Found->EventSystem : nullptr;
+}
+
+UDreamDriverInputModule* FDreamDriverRig::InputModule(int32 InPlayerIndex) const
+{
+	const FDreamDriverContext* Found = FindPlayerContext(InPlayerIndex);
+	return Found != nullptr ? Found->InputModule : nullptr;
+}
+
+UDreamScreenSpaceRaycaster* FDreamDriverRig::Raycaster(int32 InPlayerIndex) const
+{
+	const FDreamDriverContext* Found = FindPlayerContext(InPlayerIndex);
+	return Found != nullptr ? Found->Raycaster : nullptr;
+}
+
+APlayerController* FDreamDriverRig::GetPlayerController(int32 InPlayerIndex) const
+{
+	const FDreamDriverContext* Found = FindPlayerContext(InPlayerIndex);
+	return Found != nullptr ? Found->PlayerController : nullptr;
+}
+
+ULocalPlayer* FDreamDriverRig::GetLocalPlayer(int32 InPlayerIndex) const
+{
+	const FDreamDriverContext* Found = FindPlayerContext(InPlayerIndex);
+	return Found != nullptr ? Found->LocalPlayer : nullptr;
+}
+
+AActor* FDreamDriverRig::GetHostActor(int32 InPlayerIndex) const
+{
+	if (InPlayerIndex == 0)
+	{
+		return Host;
+	}
+	const int32 OtherIndex = InPlayerIndex - 1;
+	return OtherPlayers.IsValidIndex(OtherIndex) ? OtherPlayers[OtherIndex].Host : nullptr;
+}
+
+FBox2D FDreamDriverRig::GetPlayerViewRect(int32 InPlayerIndex) const
+{
+	const FDreamDriverContext* Found = FindPlayerContext(InPlayerIndex);
+	if (Found == nullptr)
+	{
+		return FBox2D(ForceInit);
+	}
+	// ULocalPlayer::GetProjectionData's truncations, so the rect is the one a world pointer of the player deprojects in.
+	const FIntPoint Size = Options.ViewportSize;
+	const int32 X = FMath::TruncToInt(Found->ViewOrigin01.X * Size.X);
+	const int32 Y = FMath::TruncToInt(Found->ViewOrigin01.Y * Size.Y);
+	const int32 SizeX = FMath::TruncToInt(Found->ViewSize01.X * Size.X);
+	const int32 SizeY = FMath::TruncToInt(Found->ViewSize01.Y * Size.Y);
+	return FBox2D(FVector2D(X, Y), FVector2D(X + SizeX, Y + SizeY));
 }
 
 UDreamWidget* FDreamDriverRig::MakeWidget(const FString& InDisplayName, UDreamWidget* InParent,
@@ -735,6 +1255,15 @@ void FDreamDriverRig::EnsureGameInputHost()
 		// the component as having begun play in a world that never did, and nothing here needs the
 		// rest of what that means.
 		HostInput->AddEventSystem(HostEventSystem);
+	}
+	for (const FOtherPlayer& Player : OtherPlayers)
+	{
+		UDreamEventSystem* PlayerEventSystem = Player.Context.IsValid() ? Player.Context->EventSystem : nullptr;
+		if (HostInput != nullptr && IsValid(PlayerEventSystem)
+			&& HostInput->GetEventSystemByUserIndex(PlayerEventSystem->GetUserIndex()) != PlayerEventSystem)
+		{
+			HostInput->AddEventSystem(PlayerEventSystem);
+		}
 	}
 
 	// The context's controller first: an input host (or a PIE rig) has already given the world its

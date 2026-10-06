@@ -80,9 +80,13 @@ bool UDreamDriverWorldSpaceRaycaster::GenerateRay(UDreamPointerEventData* InPoin
 	switch (GetPointerSource())
 	{
 	case EDreamWorldPointerSource::ScreenCenter:
-		// The middle of the WHOLE viewport, as the production branch takes it from the viewport client's
-		// size -- not the middle of the constrained rect.
-		ScreenPosition = FVector2D(VirtualCamera->ViewportSize) * 0.5;
+		// A player that sees only part of the viewport -- a split screen's -- aims at the middle of ITS view, the
+		// production branch's UDreamWorldSpaceRaycaster::GetViewCentrePixel over the constrained rect. A camera that
+		// sees the whole viewport keeps the middle of the viewport, which is where that rect's middle is too, give or
+		// take the half pixel a letterbox's rounding can move it.
+		ScreenPosition = VirtualCamera->IsPartOfTheViewport()
+			? UDreamWorldSpaceRaycaster::GetViewCentrePixel(VirtualCamera->GetConstrainedViewRect())
+			: FVector2D(VirtualCamera->ViewportSize) * 0.5;
 		break;
 	case EDreamWorldPointerSource::Mouse:
 	default:
@@ -197,11 +201,24 @@ bool DreamDriverWorld::MirrorPlayerView(const APlayerController* InController, F
 UDreamDriverWorldSpaceRaycaster* DreamDriverWorld::AttachWorldPointer(FDreamDriverRig& InRig, const FMinimalViewInfo& InView,
 	EDreamWorldPointerSource InSource)
 {
+	return AttachWorldPointer(InRig, 0, InView, InSource);
+}
+
+UDreamDriverWorldSpaceRaycaster* DreamDriverWorld::AttachWorldPointer(FDreamDriverRig& InRig, int32 InPlayerIndex,
+	const FMinimalViewInfo& InView, EDreamWorldPointerSource InSource)
+{
+	FDreamDriverContext* PlayerContext = InRig.FindPlayerContext(InPlayerIndex);
+	if (PlayerContext == nullptr)
+	{
+		DreamDriverWorldLocal::ReportFailure(&InRig.Context(), FString::Printf(
+			TEXT("A world pointer was asked for player %d, and the rig was built for %d player(s)."), InPlayerIndex, InRig.GetPlayerCount()));
+		return nullptr;
+	}
 	// The viewport the rig's pointer pixels are measured on is its root canvas's substituted one; the
-	// overlay and the world are seen on one screen.
+	// overlay and the world are seen on one screen -- a split screen's too, whose players each see a part of it.
 	const UDreamCanvas* ScreenCanvas = InRig.RootCanvas();
 	const FIntPoint ViewportSize = IsValid(ScreenCanvas) ? ScreenCanvas->GetViewportSize() : InRig.GetOptions().ViewportSize;
-	return AttachWorldPointer(InRig.Context(), InRig.GetHostActor(), InView, ViewportSize, InSource);
+	return AttachWorldPointer(*PlayerContext, InRig.GetHostActor(InPlayerIndex), InView, ViewportSize, InSource);
 }
 
 UDreamDriverWorldSpaceRaycaster* DreamDriverWorld::AttachWorldPointer(FDreamDriverContext& InContext, AActor* InHost,
@@ -236,6 +253,10 @@ UDreamDriverWorldSpaceRaycaster* DreamDriverWorld::AttachWorldPointer(FDreamDriv
 	const TSharedRef<FDreamDriverVirtualCamera> Camera = MakeShared<FDreamDriverVirtualCamera>();
 	Camera->View = InView;
 	Camera->ViewportSize = InViewportSize;
+	// The context's player's part of the viewport: the whole of it unless the rig is a split screen, where it is the
+	// part the engine's layout gave the player's local player (FDreamDriverRig, EDreamRigPlayerScreens::Split).
+	Camera->ViewOrigin01 = InContext.ViewOrigin01;
+	Camera->ViewSize01 = InContext.ViewSize01;
 
 	// EnsureInteractionForPlayer's registration, step for step.
 	UDreamDriverWorldSpaceRaycaster* Raycaster = NewObject<UDreamDriverWorldSpaceRaycaster>(InHost, NAME_None, RF_Transient);

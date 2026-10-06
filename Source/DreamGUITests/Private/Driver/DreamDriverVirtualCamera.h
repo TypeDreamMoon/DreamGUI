@@ -21,10 +21,11 @@
  * by construction -- the same trick the screen-space projection plays with the canvas's own matrix.
  *
  * THE SAME ARITHMETIC AS THE LOCAL PLAYER, STEP BY STEP. Deproject builds its FSceneViewProjectionData
- * the way ULocalPlayer::GetProjectionData does for a single, full-viewport player, then finishes the
- * way GenerateRay does:
- *   1. the unconstrained view rect is (0, 0, ViewportSize) -- a single player's Origin (0,0) and Size
- *      (1,1), on a viewport whose initial position is the origin;
+ * the way ULocalPlayer::GetProjectionData does, then finishes the way GenerateRay does:
+ *   1. the unconstrained view rect is the player's part of the viewport, GetProjectionData's own
+ *      truncations of ViewOrigin01 and ViewSize01 times ViewportSize, on a viewport whose initial
+ *      position is the origin -- (0, 0, ViewportSize) for a single player's Origin (0,0) and Size (1,1),
+ *      a half of it for a player of a split screen;
  *   2. ViewOrigin = View.Location, ViewRotationMatrix = FInverseRotationMatrix(View.Rotation) times the
  *      engine's axis swap (forward, right, up) -> (right, up, forward);
  *   3. the constrained rect is FViewport::CalculateViewExtents for the view's aspect ratio (times its
@@ -37,9 +38,8 @@
  *   5. the ray is FSceneView::DeprojectScreenToWorld through the constrained rect and the inverse of
  *      ViewRotationMatrix * ProjectionMatrix, with ViewOrigin added afterwards -- GenerateRay's own
  *      precision trick, reproduced rather than improved on.
- * What is NOT reproduced: stereo, split screen (a LocalPlayer whose Origin/Size is not the whole
- * viewport), r.ViewportTest, the editor's preview-platform aspect constraint, and scene view
- * extensions that rewrite the projection. None of those exist in a headless rig; a PIE test that
+ * What is NOT reproduced: stereo, r.ViewportTest, the editor's preview-platform aspect constraint,
+ * and scene view extensions that rewrite the projection. None of those exist in a headless rig; a PIE test that
  * needs them should aim through the production raycaster instead.
  *
  * PIXELS. Y grows DOWNWARD from the top of the viewport, the convention the input module speaks and
@@ -61,6 +61,24 @@ struct FDreamDriverVirtualCamera
 {
 	FMinimalViewInfo View;
 	FIntPoint ViewportSize = FIntPoint(1280, 720);
+	/**
+	 * The player's part of the viewport, as ULocalPlayer::Origin and Size hold it: fractions of ViewportSize. The whole
+	 * of it by default, which is every single-player camera; a split-screen rig gives each player's camera its own.
+	 * Pixels stay the whole viewport's either way -- a split screen's mouse is over the one viewport there is -- and a
+	 * pixel outside the player's part deprojects outside its view, as the engine's does.
+	 */
+	FVector2D ViewOrigin01 = FVector2D::ZeroVector;
+	FVector2D ViewSize01 = FVector2D(1.0, 1.0);
+
+	/** Whether this camera sees less than the whole viewport. */
+	bool IsPartOfTheViewport() const;
+
+	/**
+	 * The rect the projection is fitted into, in viewport pixels: the player's part of the viewport, constrained to the
+	 * view's aspect ratio as FMinimalViewInfo::CalculateProjectionMatrixGivenView constrains it. Empty when there is no
+	 * projection to make (a viewport or a part of it with no area).
+	 */
+	FIntRect GetConstrainedViewRect() const;
 
 	/**
 	 * The ray under a viewport pixel (Y down from the top), built exactly as

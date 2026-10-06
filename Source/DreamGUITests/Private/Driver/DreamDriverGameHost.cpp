@@ -313,6 +313,43 @@ namespace DreamDriverGameHostLocal
 		return false;
 	}
 
+	/**
+	 * The world's InIndex-th player controller, counted the way UGameplayStatics::GetPlayerController counts: down the
+	 * world's controller list. That count is what AutoReceiveInput's PlayerN means, so it is what a player's input actor
+	 * will be given.
+	 */
+	APlayerController* PlayerControllerAt(UWorld& InWorld, int32 InIndex)
+	{
+		int32 Index = 0;
+		for (FConstPlayerControllerIterator It = InWorld.GetPlayerControllerIterator(); It; ++It)
+		{
+			if (Index == InIndex)
+			{
+				return It->Get();
+			}
+			++Index;
+		}
+		return nullptr;
+	}
+
+	/**
+	 * The platform user a local player for InPlayerIndex is added for. The first is the primary platform user, the one
+	 * UGameInstance::CreateInitialPlayer picks; a later one is the platform user UGameInstance::CreateLocalPlayer(int32
+	 * ControllerId) starts from for that controller id, FGenericPlatformMisc::GetPlatformUserForUserIndex. CreateLocalPlayer
+	 * then also asks the input device mapper to map a device to it (RemapControllerIdToPlatformUserAndDevice); that is
+	 * left out, because the mapper is the process's and a device it was told about would outlive the rig. The driver's
+	 * input to that player then carries no device (DeviceOf finds none mapped), which every binding takes unless the
+	 * project filters input by platform user (UInputSettings::bFilterInputByPlatformUser), off by default.
+	 */
+	FPlatformUserId PlatformUserForPlayer(int32 InPlayerIndex)
+	{
+		if (InPlayerIndex == 0)
+		{
+			return IPlatformInputDeviceMapper::Get().GetPrimaryPlatformUser();
+		}
+		return FGenericPlatformMisc::GetPlatformUserForUserIndex(InPlayerIndex);
+	}
+
 	ETouchType::Type TouchTypeOf(EDreamDriverTouchPhase InPhase)
 	{
 		switch (InPhase)
@@ -344,11 +381,13 @@ bool DreamDriverGameHost::Build(FDreamDriverContext& InContext, EDreamRigInputHo
 		return false;
 	}
 	UGameInstance* GameInstance = InContext.GameInstance;
+	const int32 PlayerIndex = InContext.PlayerIndex;
 	if (GameInstance == nullptr)
 	{
-		// The whole chain hangs off this: the input actor claims player 0 through AutoReceiveInput, player
-		// 0 is a local player's controller, and local players exist only on a game instance.
-		OutWhyNot = TEXT("an input actor listens to player 0's controller, a controller for a player needs a local player, and a local player lives on a UGameInstance -- this world has none; build the rig with bWithGameInstance");
+		// The whole chain hangs off this: the input actor claims its player through AutoReceiveInput, a player is a
+		// local player's controller, and local players exist only on a game instance.
+		OutWhyNot = FString::Printf(TEXT("an input actor listens to player %d's controller, a controller for a player needs a local player, and a local player lives on a UGameInstance -- this world has none; build the rig with bWithGameInstance"),
+			PlayerIndex);
 		return false;
 	}
 	if (GEngine == nullptr)
@@ -360,19 +399,22 @@ bool DreamDriverGameHost::Build(FDreamDriverContext& InContext, EDreamRigInputHo
 	{
 		return false;
 	}
-	if (GameInstance->GetNumLocalPlayers() > 0)
+	// Players are built in order, each the next local player: the local player's index on the game instance is the
+	// player's index everywhere DreamGUI asks (UDreamUIInputUser::GetLocalPlayer), and its controller's place on the
+	// world's list is the one AutoReceiveInput counts.
+	if (GameInstance->GetNumLocalPlayers() != PlayerIndex)
 	{
-		OutWhyNot = FString::Printf(TEXT("the game instance already has %d local player(s); the input host builds player 0 itself and will not guess which existing one to drive"),
-			GameInstance->GetNumLocalPlayers());
+		OutWhyNot = FString::Printf(TEXT("the game instance has %d local player(s), and player %d is built as local player %d; the input host builds its players itself, in order, and will not guess which existing one to drive"),
+			GameInstance->GetNumLocalPlayers(), PlayerIndex, PlayerIndex);
 		return false;
 	}
 
 	// 1. The local player. Not UGameInstance::CreateLocalPlayer: with no game viewport it takes the
 	// dedicated-server branch and ensure(IsDedicatedServerInstance()) fires before anything is made.
 	// What it does after that check is these two calls -- a local player of the engine's class,
-	// outered to the engine like every local player, then AddLocalPlayer for the primary platform user
-	// (the user CreateInitialPlayer picks). AddLocalPlayer runs ULocalPlayer::PlayerAdded, which is
-	// where the local player's subsystems, Enhanced Input's among them, are created.
+	// outered to the engine like every local player, then AddLocalPlayer for the player's platform user
+	// (PlatformUserForPlayer). AddLocalPlayer runs ULocalPlayer::PlayerAdded, which is where the local
+	// player's subsystems, Enhanced Input's among them, are created.
 	UClass* LocalPlayerClass = GEngine->LocalPlayerClass != nullptr ? GEngine->LocalPlayerClass.Get() : ULocalPlayer::StaticClass();
 	ULocalPlayer* LocalPlayer = NewObject<ULocalPlayer>(GEngine, LocalPlayerClass);
 	if (LocalPlayer == nullptr)
@@ -382,7 +424,7 @@ bool DreamDriverGameHost::Build(FDreamDriverContext& InContext, EDreamRigInputHo
 	}
 	BuiltLocalPlayers().Add(LocalPlayer);
 	InContext.LocalPlayer = LocalPlayer;
-	if (GameInstance->AddLocalPlayer(LocalPlayer, IPlatformInputDeviceMapper::Get().GetPrimaryPlatformUser()) == INDEX_NONE)
+	if (GameInstance->AddLocalPlayer(LocalPlayer, PlatformUserForPlayer(PlayerIndex)) == INDEX_NONE)
 	{
 		OutWhyNot = TEXT("the game instance would not take the local player");
 		return false;
@@ -424,9 +466,10 @@ bool DreamDriverGameHost::Build(FDreamDriverContext& InContext, EDreamRigInputHo
 		OutWhyNot = TEXT("the player controller does not answer with the local player it was given");
 		return false;
 	}
-	if (World->GetFirstPlayerController() != Controller)
+	if (PlayerControllerAt(*World, PlayerIndex) != Controller)
 	{
-		OutWhyNot = TEXT("the world's first player controller is not the one just made, so anything that asks the world for player 0 would find another");
+		OutWhyNot = FString::Printf(TEXT("the world's player controller number %d is not the one just made, so anything that asks the world for player %d would find another"),
+			PlayerIndex, PlayerIndex);
 		return false;
 	}
 	UEnhancedInputLocalPlayerSubsystem* EnhancedInput = LocalPlayer->GetSubsystem<UEnhancedInputLocalPlayerSubsystem>();
@@ -489,7 +532,15 @@ bool DreamDriverGameHost::AttachInputActor(FDreamDriverContext& InContext, APlay
 	}
 	if (InController->GetLocalPlayer() == nullptr)
 	{
-		OutWhyNot = TEXT("the player controller has no local player, and the input actor claims a local player's input (AutoReceiveInput = Player0)");
+		OutWhyNot = TEXT("the player controller has no local player, and the input actor claims a local player's input (AutoReceiveInput)");
+		return false;
+	}
+	// The player the context speaks for, which is the one the actor listens as: AutoReceiveInput's PlayerN counts the
+	// world's controllers, and the preset makes its event system's UserIndex agree (SyncEventSystemUserIndexWithAutoReceiveInput).
+	const int32 PlayerIndex = InContext.PlayerIndex;
+	if (PlayerIndex < 0 || PlayerIndex >= DreamRigMaxPlayers)
+	{
+		OutWhyNot = FString::Printf(TEXT("player %d is not one the rig builds an input actor for"), PlayerIndex);
 		return false;
 	}
 	UWorld* World = InController->GetWorld();
@@ -510,10 +561,10 @@ bool DreamDriverGameHost::AttachInputActor(FDreamDriverContext& InContext, APlay
 		OutWhyNot = TEXT("the world has no DreamUI input subsystem for the input actor's event system to enrol with");
 		return false;
 	}
-	if (UDreamEventSystem* Existing = InputSubsystem->GetEventSystemByUserIndex(0))
+	if (UDreamEventSystem* Existing = InputSubsystem->GetEventSystemByUserIndex(PlayerIndex))
 	{
-		OutWhyNot = FString::Printf(TEXT("the world already has an event system for player 0 (%s), and the input subsystem refuses a second one for the same player"),
-			*Existing->GetPathName());
+		OutWhyNot = FString::Printf(TEXT("the world already has an event system for player %d (%s), and the input subsystem refuses a second one for the same player"),
+			PlayerIndex, *Existing->GetPathName());
 		return false;
 	}
 
@@ -533,6 +584,13 @@ bool DreamDriverGameHost::AttachInputActor(FDreamDriverContext& InContext, APlay
 		return false;
 	}
 	InContext.InputActor = InputActor;
+	// The preset listens as player 0 (its constructor sets AutoReceiveInput); a later player's actor is told whose it
+	// is before it finishes spawning, which is when PreInitializeComponents reads it -- the way a level places a second
+	// preset set to Player1. Player 0's is left exactly as the class made it.
+	if (PlayerIndex != 0)
+	{
+		InputActor->AutoReceiveInput = static_cast<EAutoReceiveInput::Type>(EAutoReceiveInput::Player0 + PlayerIndex);
+	}
 	if (ADreamDriverEnhancedInputActor* EnhancedActor = Cast<ADreamDriverEnhancedInputActor>(InputActor))
 	{
 		EnhancedActor->InstallTransientMappings();
@@ -559,7 +617,14 @@ bool DreamDriverGameHost::AttachInputActor(FDreamDriverContext& InContext, APlay
 	}
 	if (!IsValid(InputActor->InputComponent) || !InController->IsInputComponentInStack(InputActor->InputComponent))
 	{
-		OutWhyNot = TEXT("the input actor's input component is not on player 0's input stack: AutoReceiveInput found no player controller for player 0 (UGameplayStatics::GetPlayerController), so nothing it binds would ever fire");
+		OutWhyNot = FString::Printf(TEXT("the input actor's input component is not on player %d's input stack: AutoReceiveInput found no player controller for player %d (UGameplayStatics::GetPlayerController), so nothing it binds would ever fire"),
+			PlayerIndex, PlayerIndex);
+		return false;
+	}
+	if (EventSystem->GetUserIndex() != PlayerIndex)
+	{
+		OutWhyNot = FString::Printf(TEXT("the input actor's event system speaks for player %d, not for player %d whose keys it listens to"),
+			EventSystem->GetUserIndex(), PlayerIndex);
 		return false;
 	}
 	if (EventSystem->GetCurrentInputModule() != Module)
@@ -826,11 +891,12 @@ bool DreamDriverGameHost::NavigationTrigger(FDreamDriverContext& InContext, bool
 
 bool DreamDriverGameHost::TypeCharacter(FDreamDriverContext& InContext, TCHAR InCharacter, FString& OutWhyNot)
 {
-	// The keyboard is the rig's player's: player 0 of the rig's world.
-	constexpr int32 KeyboardPlayer = 0;
+	// The keyboard is the context's player's: player 0 of the rig's world unless the step is another player's.
+	const int32 KeyboardPlayer = IsValid(InContext.EventSystem) ? InContext.EventSystem->GetUserIndex() : InContext.PlayerIndex;
 	if (DreamUITextInputRouter::GetActiveTarget(InContext.World, KeyboardPlayer) == nullptr)
 	{
-		OutWhyNot = TEXT("no text field is being edited, so a character has nowhere to go: the game's road hands it to the field the typing player is editing (DreamUITextInputRouter::RouteCharacter) and there is none");
+		OutWhyNot = FString::Printf(TEXT("no text field is being edited by player %d, so a character has nowhere to go: the game's road hands it to the field the typing player is editing (DreamUITextInputRouter::RouteCharacter) and there is none"),
+			KeyboardPlayer);
 		return false;
 	}
 	// The answer is dropped, as the module's road drops it: a refused character -- read-only, full, a

@@ -80,6 +80,30 @@ struct FDreamDriverContext
 	/** Set by a rig whose frames are the ENGINE's (PIE). Perform and PumpOneFrame refuse to run then: the engine is already the pump. */
 	bool bEnginePumped = false;
 
+	/*
+	 * Which player this context speaks for, on a rig with several (FDreamRigOptions::PlayerCount). A context is one
+	 * player's: its event system, input module, raycaster, controller, local player and input actor above are that
+	 * player's, and Root and RootCanvas are the screen it points at -- the rig's own, or under a split screen its own.
+	 * Everything else -- the world, the manager, the game instance, the test -- is the world's and the same on all of them.
+	 */
+	/** The player's index, which is the UserIndex its event system and raycaster carry. 0 for the rig's own. */
+	int32 PlayerIndex = 0;
+	/**
+	 * Every player's context in player order, this one among them, the same list on each; owned by the rig. Empty on a
+	 * context nobody gave players -- a PIE rig, a designer adapter -- which is then the only player there is.
+	 */
+	TArray<FDreamDriverContext*> Players;
+	/**
+	 * The part of the viewport this player sees, as ULocalPlayer::Origin and Size put it: fractions of the viewport, the
+	 * whole of it unless the rig is a split screen. A world-space pointer attached for this player looks through it.
+	 */
+	FVector2D ViewOrigin01 = FVector2D::ZeroVector;
+	FVector2D ViewSize01 = FVector2D(1.0, 1.0);
+
+	/** The context speaking for InPlayerIndex: this one for its own index, another of Players, or null when there is none. */
+	FDreamDriverContext* FindPlayer(int32 InPlayerIndex);
+	const FDreamDriverContext* FindPlayer(int32 InPlayerIndex) const;
+
 	/** The test currently running, so a step that fails can say so where a report will show it. Optional. */
 	FAutomationTestBase* CurrentTest = nullptr;
 
@@ -97,12 +121,16 @@ struct FDreamDriverContext
 	 * One frame of the headless pump.
 	 *
 	 * See the implementation for what it calls and why; in short, in UWorld::Tick's order: advance
-	 * the world clock (pause and time dilation included), let the player controller process its
-	 * input when input comes through one, tick the event system (which is what reaches the input
-	 * module), step the tweens at the tick groups the tween helper actor uses, tick the tickable
-	 * world subsystems, then tick the UI manager (layout, transforms and clip rectangles) last. Not
-	 * called under the engine pump -- there the engine's own frame is the pump, and calling this as
-	 * well would run everything twice; with bEnginePumped set it reports an error and does nothing.
+	 * the world clock (pause and time dilation included), tick the world's Sequencer animations,
+	 * let every player's controller process its input when input comes through one, tick the event
+	 * system (which is what reaches the input module), step the tweens at the tick groups the tween
+	 * helper actor uses, tick the tickable world subsystems, then tick the UI manager (layout,
+	 * transforms and clip rectangles) last. Not called under the engine pump -- there the engine's
+	 * own frame is the pump, and calling this as well would run everything twice; with
+	 * bEnginePumped set it reports an error and does nothing.
+	 *
+	 * A frame is the world's, not a player's: asked of another player's context, it is player 0's
+	 * context that pumps, once, for all of them.
 	 */
 	void PumpOneFrame(float InDeltaSeconds);
 
@@ -259,10 +287,11 @@ public:
 	 *
 	 * ActivateVirtualCursor turns it on from wherever the pointer is (what a screen that needs one
 	 * does). VirtualCursorStick holds the left stick at InStick -- X right, Y up, each in [-1, 1] --
-	 * for InSeconds, then lets it go: the stick reaches player 0's controller as analog samples,
+	 * for InSeconds, then lets it go: the stick reaches the player's controller as analog samples,
 	 * which is where the cursor reads it, and the cursor moves the module's pointer. The press and
-	 * release are its confirm button (SetConfirmPressed), which it delivers as the left mouse button
-	 * at the cursor. Each fails, saying why, while the cursor is not active.
+	 * release are its confirm button (SetConfirmPressedForUser), which it delivers as the left mouse
+	 * button at the cursor. Each is the sequence's player's cursor (AsPlayer), and each fails,
+	 * saying why, while that cursor is not active.
 	 */
 	FDreamDriverSequence& ActivateVirtualCursor();
 	FDreamDriverSequence& VirtualCursorStick(const FVector2D& InStick, float InSeconds);
@@ -327,6 +356,17 @@ public:
 	FDreamDriverSequence& WaitFrames(int32 InFrameCount);
 
 	/**
+	 * The steps added after this are player InPlayerIndex's, until the next AsPlayer: its mouse, its fingers, its keys and
+	 * characters, its pad and its Back, through that player's own input entry, aimed through the screen it points at and
+	 * read from its own pointers. A sequence starts as the player of the context it was made over -- player 0 for
+	 * Rig.Driver(), player N for Rig.Driver(N) -- so a sequence that never says this is exactly what it was.
+	 *
+	 * Costs no step and no frame; frames are the world's whichever player asked for them. A step for a player the rig has
+	 * not got fails, naming the player, rather than being sent as somebody else.
+	 */
+	FDreamDriverSequence& AsPlayer(int32 InPlayerIndex);
+
+	/**
 	 * Give frames to a wait delegate until it passes, fails, or the timeout elapses. See FDreamUntil.
 	 *
 	 * InDescription is what the step calls itself when it gives up. A wait delegate carries no
@@ -374,4 +414,6 @@ public:
 private:
 	FDreamDriverContext* Context = nullptr;
 	TArray<FDreamDriverStepRef> Steps;
+	/** Whose the steps added now are (AsPlayer); INDEX_NONE for the context's own player. */
+	int32 StepPlayerIndex = INDEX_NONE;
 };

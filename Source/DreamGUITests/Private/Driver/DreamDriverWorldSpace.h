@@ -122,6 +122,15 @@ namespace DreamDriverWorld
 	UDreamDriverWorldSpaceRaycaster* AttachWorldPointer(FDreamDriverRig& InRig, const FMinimalViewInfo& InView, EDreamWorldPointerSource InSource);
 
 	/**
+	 * The same for player InPlayerIndex of a rig with several: the raycaster rides on that player's host actor, carries
+	 * its UserIndex, and its camera sees the player's part of the viewport -- half of it on a two-player split screen --
+	 * so a pixel the player's pointer is at deprojects through that player's view, as UDreamWorldSpaceRaycaster::GenerateRay
+	 * deprojects through the pointer's own local player. One per player, as the input subsystem would make. Reported to
+	 * the bound test, and null, for a player the rig has not got.
+	 */
+	UDreamDriverWorldSpaceRaycaster* AttachWorldPointer(FDreamDriverRig& InRig, int32 InPlayerIndex, const FMinimalViewInfo& InView, EDreamWorldPointerSource InSource);
+
+	/**
 	 * The same for any context and host -- a rig that is not an FDreamDriverRig. InViewportSize is the
 	 * viewport the pointer's pixels are measured on, which for a headless rig is its root canvas's.
 	 */

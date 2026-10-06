@@ -11,8 +11,9 @@ namespace DreamDriverVirtualCameraLocal
 {
 	/**
 	 * The projection data ULocalPlayer::GetProjectionData would hand UDreamWorldSpaceRaycaster::GenerateRay
-	 * for this view on this viewport, for a single player who owns the whole of it. The header lists the
-	 * steps and what is left out; each one below is the engine's line, not a rewrite of it.
+	 * for this view on this viewport, for a player who owns the part of it the camera's ViewOrigin01 and
+	 * ViewSize01 say -- the whole of it for a single player. The header lists the steps and what is left
+	 * out; each one below is the engine's line, not a rewrite of it.
 	 */
 	bool BuildProjectionData(const FDreamDriverVirtualCamera& InCamera, FSceneViewProjectionData& OutProjectionData)
 	{
@@ -23,9 +24,18 @@ namespace DreamDriverVirtualCameraLocal
 			return false;
 		}
 
-		// The unconstrained rect: Origin (0,0) and Size (1,1) of a viewport that starts at its own
-		// top-left corner, which is every single-player game viewport.
-		OutProjectionData.SetViewRectangle(FIntRect(0, 0, Size.X, Size.Y));
+		// The unconstrained rect: the player's Origin and Size of a viewport that starts at its own top-left
+		// corner, truncated as ULocalPlayer::GetProjectionData truncates them -- Origin (0,0) and Size (1,1),
+		// the whole viewport, for every single-player game. GetProjectionData refuses a player with no area.
+		const int32 RectX = FMath::TruncToInt(InCamera.ViewOrigin01.X * Size.X);
+		const int32 RectY = FMath::TruncToInt(InCamera.ViewOrigin01.Y * Size.Y);
+		const int32 RectSizeX = FMath::TruncToInt(InCamera.ViewSize01.X * Size.X);
+		const int32 RectSizeY = FMath::TruncToInt(InCamera.ViewSize01.Y * Size.Y);
+		if (RectSizeX <= 0 || RectSizeY <= 0)
+		{
+			return false;
+		}
+		OutProjectionData.SetViewRectangle(FIntRect(RectX, RectY, RectX + RectSizeX, RectY + RectSizeY));
 
 		// The view matrix, kept apart from the view origin exactly as GetProjectionData keeps it: the
 		// origin is added back after deprojection (see Deproject), which is what keeps a camera far
@@ -59,6 +69,22 @@ namespace DreamDriverVirtualCameraLocal
 		FMinimalViewInfo::CalculateProjectionMatrixGivenViewRectangle(ViewInfo, AxisConstraint, ViewExtents, OutProjectionData);
 		return true;
 	}
+}
+
+bool FDreamDriverVirtualCamera::IsPartOfTheViewport() const
+{
+	return !ViewOrigin01.IsNearlyZero() || !ViewSize01.Equals(FVector2D(1.0, 1.0));
+}
+
+FIntRect FDreamDriverVirtualCamera::GetConstrainedViewRect() const
+{
+	using namespace DreamDriverVirtualCameraLocal;
+	FSceneViewProjectionData ProjectionData;
+	if (!BuildProjectionData(*this, ProjectionData))
+	{
+		return FIntRect();
+	}
+	return ProjectionData.GetConstrainedViewRect();
 }
 
 bool FDreamDriverVirtualCamera::Deproject(const FVector2D& InPixel, FVector& OutOrigin, FVector& OutDirection) const
