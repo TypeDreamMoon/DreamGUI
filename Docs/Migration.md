@@ -50,6 +50,10 @@ input the way UMG's do now, and a screen built around the old way will feel diff
   `UDreamCanvas::SetViewportPlayerIndex` to make it one. A custom canvas scaler (`UDreamCanvasCustomScale`) is handed
   positions measured from the corner of its canvas's part, which for a canvas without a player is the viewport's
   corner, as before.
+- **A finger tapping a slider's track no longer moves it.** The value moves once the finger has travelled the drag
+  distance, and `OnMouseCaptureBegin` comes then rather than as the finger lands; a finger that lifts without travelling
+  changes nothing and says nothing. A touch screen that set a slider by tapping where the value should go now has the
+  player drag the handle, as in UMG. The mouse is unchanged.
 - **A press outside an open menu reaches what it lands on.** A Dream Menu Anchor's menu and a menu anchor panel's close
   on the press as before, and the press then goes on: a button under it is pressed and clicked, a field under it starts
   its edit. A screen that relied on the first click outside a menu doing nothing -- a menu over buttons that must not be

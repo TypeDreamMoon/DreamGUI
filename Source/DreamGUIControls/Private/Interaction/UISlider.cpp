@@ -2,6 +2,17 @@
 
 #include "Interaction/UISlider.h"
 #include "Core/Components/DreamWidget.h"
+#include "Event/DreamUIInputTypes.h"
+
+namespace UISliderLocal
+{
+    /** A finger's press, as the list asks it: a pointer event on one of the touch pointer ids (DreamUIPointerIds). */
+    bool IsFinger(const UDreamPointerEventData* InEventData)
+    {
+        return InEventData != nullptr && InEventData->InputType == EDreamUIPointerInputType::Pointer
+            && DreamUIPointerIds::IsTouch(InEventData->PointerID);
+    }
+}
 
 UUISlider::UUISlider()
 {
@@ -338,7 +349,13 @@ bool UUISlider::OnPointerDown_Implementation(UDreamPointerEventData *EventData)
         // ends at the release. The value was never the problem (CalculateInputValue has its own lock
         // check); the capture events were, because a consumer holds off acting on the value between
         // them and a locked slider announced a drag that could not move anything.
-        if (!bLocked)
+        //
+        // A finger's press only lands: SSlider::OnTouchStarted notes where and takes nothing, and the slider
+        // takes the finger -- the capture, then the value under it -- once it has travelled the drag distance
+        // (OnTouchMoved; here OnPointerBeginDrag). A finger that lifts without travelling changes nothing
+        // (OnTouchEnded acts only on a finger it captured): a touch screen's slider must not jump under a
+        // finger that was on its way to scroll the page.
+        if (!bLocked && !UISliderLocal::IsFinger(EventData))
         {
             // The press IS the mouse capture -- UMG fires OnMouseCaptureBegin from SSlider's mouse-down
             // for the same reason, so a consumer can stop reacting to a value the player is still moving.
@@ -375,6 +392,13 @@ bool UUISlider::OnPointerBeginDrag_Implementation(UDreamPointerEventData *EventD
     // answer, or a slider that is switched off, moves nothing however far the pointer travels.
     if (AcceptsPointerInput(EventData))
     {
+        // A finger that has travelled the drag distance is the slider's now (SSlider::OnTouchMoved): its capture begins
+        // here, where the mouse's began at the press, and is ended at the lift by OnPointerUp, as the mouse's is.
+        if (UISliderLocal::IsFinger(EventData) && !bMouseCaptured && !bLocked)
+        {
+            bMouseCaptured = true;
+            OnMouseCaptureBeginCPP.Broadcast();
+        }
         CalculateInputValue(EventData);
     }
     return AllowEventBubbleUp;

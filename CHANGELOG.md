@@ -115,6 +115,11 @@ after 3 for 2.1.0 -- so the engine never takes 1.0.0 for the older of the two.
   that is not split is unchanged -- its one player's part is the whole viewport -- and so is a canvas nobody gives a
   player, such as one placed in a level, which stays the shared full-viewport layer. See
   [Migration](Docs/Migration.md#from-100-to-the-next-release).
+- **A finger on a slider's track moves the value only once it travels**, as `SSlider`'s touch handlers do: a finger
+  that lands only notes where; past the drag distance the slider takes it -- `OnMouseCaptureBegin`, then the value under
+  it -- and follows it until it lifts. A tap that never travelled changes nothing and begins no capture; it used to jump
+  the value to the tap and capture at once, as the mouse does. The mouse is unchanged. See
+  [Migration](Docs/Migration.md#from-100-to-the-next-release).
 - **A press outside an open menu goes on to what it landed on**, as the Slate menu stack lets it: a Dream Menu Anchor's
   menu, or a menu anchor panel's, closes on the press and the button under it is pressed and clicked as well. It used to
   close the menu and go no further. A press on the menu's own trigger still closes it without opening it again:
