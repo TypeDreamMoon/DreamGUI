@@ -237,6 +237,11 @@ UDreamWidget* UDreamScreenUISubsystem::GetOrCreateScreenRootForIndex(int32 InPla
 		return nullptr;
 	}
 	Canvas->SetRenderMode(EDreamRenderMode::ScreenSpaceOverlay);
+	// The player's own layer, as UMG's AddToPlayerScreen gives one (SGameLayerManager::FindOrCreatePlayerLayer): on a
+	// split screen it fills that player's part of the viewport and is drawn in that player's view; otherwise the part
+	// is the whole viewport and the root is the one it always was. An adopted canvas above is left as its author made
+	// it, the shared layer -- nothing about it says which player it belongs to.
+	Canvas->SetViewportPlayerIndex(InPlayerIndex);
 	ScreenRoots.Add(InPlayerIndex, NewRoot);
 	OwnedScreenRoots.Add(InPlayerIndex);
 

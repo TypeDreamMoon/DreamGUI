@@ -66,8 +66,9 @@ enum class EDreamRigPlayerScreens : uint8
 	 * A split screen as the engine lays one out: every local player is given the part of the viewport UGameViewportClient::
 	 * LayoutPlayers would give it (ULocalPlayer::Origin and Size, from the viewport client's SplitscreenInfo table), and its
 	 * own screen-space root canvas with its own screen raycaster, as UDreamScreenUISubsystem gives every local player a root
-	 * of its own. A world-space pointer of a player looks through that player's part of the viewport. Needs real local
-	 * players, so only the actor hosts build it; see FDreamDriverRig for what it does and does not represent.
+	 * of its own -- given that player, so the screen is laid out over, hit in and drawn in the player's part alone. A
+	 * world-space pointer of a player looks through that player's part of the viewport. Needs real local players, so only
+	 * the actor hosts build it; see FDreamDriverRig.
 	 */
 	Split,
 };

@@ -102,6 +102,16 @@ after 3 for 2.1.0 -- so the engine never takes 1.0.0 for the older of the two.
   the delay, or a finger dragged onto a widget. A finger's press still takes down a bubble that is up, and the bubble
   comes back after its delay under the mouse that brought it up -- which a finger's tap used to stop, by taking the
   tooltip over and keeping it after it lifted.
+- **On a split screen each player's screen is that player's part of the viewport**, as UMG's AddToPlayerScreen lays a
+  player's layer out over the part the split-screen layout gives the player. The screen root the screen UI makes for a
+  local player -- the one Add to Player Screen, Add to Viewport, the page stack, tooltips, drag visuals and modal dims
+  land on -- is sized to that part; a pointer is measured from the part's top-left corner, and one in another player's
+  part reaches nothing on it; it is drawn in that player's view alone, under the shared layer. Every player's screen
+  used to be a canvas the size of the whole viewport, drawn into every player's view. `UDreamCanvas::SetViewportPlayerIndex`
+  gives any ScreenSpaceOverlay root canvas a player this way, and `GetViewportRect` says which part it fills. A game
+  that is not split is unchanged -- its one player's part is the whole viewport -- and so is a canvas nobody gives a
+  player, such as one placed in a level, which stays the shared full-viewport layer. See
+  [Migration](Docs/Migration.md#from-100-to-the-next-release).
 
 ### Fixed
 

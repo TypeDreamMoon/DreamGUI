@@ -25,7 +25,10 @@ TOptional<FVector2D> FDreamDriverProjection::WorldPointToPixel(const UDreamCanva
 	{
 		return TOptional<FVector2D>();
 	}
-	const FIntPoint ViewportSize = InRootCanvas->GetViewportSize();
+	// The part of the viewport the canvas fills -- its player's part of a split screen, the whole viewport otherwise -- which
+	// is the rect UDreamScreenSpaceRaycaster::GenerateRay measures a pointer across, from the part's corner.
+	const FIntRect ViewportRect = InRootCanvas->GetViewportRect();
+	const FIntPoint ViewportSize = ViewportRect.Size();
 	if (ViewportSize.X <= 0 || ViewportSize.Y <= 0)
 	{
 		return TOptional<FVector2D>();
@@ -40,8 +43,9 @@ TOptional<FVector2D> FDreamDriverProjection::WorldPointToPixel(const UDreamCanva
 	}
 	const FVector2D NDC(Clip.X / Clip.W, Clip.Y / Clip.W);
 	const FVector2D ViewPoint01(NDC.X * 0.5 + 0.5, NDC.Y * 0.5 + 0.5);
-	// The Y flip that GenerateRay applies on the way in, applied here on the way out. See the header.
-	return FVector2D(ViewPoint01.X * ViewportSize.X, (1.0 - ViewPoint01.Y) * ViewportSize.Y);
+	// The Y flip that GenerateRay applies on the way in, applied here on the way out, and the part's corner it takes off
+	// added back on. See the header.
+	return FVector2D(ViewportRect.Min) + FVector2D(ViewPoint01.X * ViewportSize.X, (1.0 - ViewPoint01.Y) * ViewportSize.Y);
 }
 
 TOptional<FVector2D> FDreamDriverProjection::WidgetLocalPointToPixel(const UDreamWidget* InWidget, const FVector2D& InLocalPoint)

@@ -179,6 +179,13 @@ FDreamDriverRig::FDreamDriverRig(const FDreamRigOptions& InOptions)
 		return;
 	}
 	DriverContext->RootCanvas = BuiltCanvas;
+	// On a split screen player 0's screen is player 0's, as every screen UDreamScreenUISubsystem makes for a local player
+	// is: laid out over that player's part of the viewport, hit there and drawn there alone (UDreamCanvas::
+	// SetViewportPlayerIndex, UMG's AddToPlayerScreen). Its local player is built by now, in step 3.
+	if (IsSplitScreen())
+	{
+		BuiltCanvas->SetViewportPlayerIndex(0);
+	}
 	DriverContext->Raycaster = MakeScreenRaycaster(Host, BuiltCanvas, 0);
 
 	// 4b. The other players' screens and raycasters, and every context told of every player.
@@ -341,7 +348,8 @@ UDreamCanvas* FDreamDriverRig::MakeScreenRoot(const FString& InDisplayName, UDre
 	// AFTER the render mode. Setting the mode applies the viewport parameters, and at that moment the
 	// only viewport there is is the 2x2 fallback; handing the canvas a real size is what un-does that,
 	// and doing it in the other order would leave the fallback applied on top. The whole viewport for
-	// every player's screen, a split screen's included: see the class comment.
+	// every player's screen, a split screen's included: the override stands in for the whole viewport,
+	// and a canvas given its player takes that player's part of it, as it would of the real one.
 	BuiltCanvas->SetViewportSizeOverride(Options.ViewportSize);
 	// The scaler AFTER the viewport, through the canvas's own setters: each of them re-runs
 	// OnViewportParameterChanged, which recomputes the root's size and CanvasScale from the viewport
@@ -391,7 +399,8 @@ bool FDreamDriverRig::BuildOtherPlayersScreens()
 		FDreamDriverContext& PlayerContext = *Player.Context;
 		if (bSplit)
 		{
-			// A screen of the player's own, as the screen UI gives every local player a root of its own.
+			// A screen of the player's own, as the screen UI gives every local player a root of its own -- and given its
+			// player as the screen UI gives it, so it is that player's part of the viewport (see step 4 for player 0's).
 			UDreamWidget* PlayerRoot = nullptr;
 			UDreamCanvas* PlayerCanvas = MakeScreenRoot(FString::Printf(TEXT("Player%dRoot"), PlayerContext.PlayerIndex), PlayerRoot);
 			PlayerContext.Root = PlayerRoot;
@@ -401,6 +410,7 @@ bool FDreamDriverRig::BuildOtherPlayersScreens()
 				BuildFailure = FString::Printf(TEXT("player %d's screen root would not take a canvas"), PlayerContext.PlayerIndex);
 				return false;
 			}
+			PlayerCanvas->SetViewportPlayerIndex(PlayerContext.PlayerIndex);
 			PlayerContext.RootCanvas = PlayerCanvas;
 		}
 		else
@@ -422,6 +432,34 @@ bool FDreamDriverRig::BuildOtherPlayersScreens()
 		PlayerContext->Players = AllPlayers;
 	}
 	return true;
+}
+
+bool FDreamDriverRig::IsSplitScreen() const
+{
+	return Options.PlayerScreens == EDreamRigPlayerScreens::Split && Options.PlayerCount > 1;
+}
+
+void FDreamDriverRig::ReleaseScreensFromPlayers()
+{
+	// A canvas keeps its player as an index into the game instance's local players and looks the player up whenever it
+	// measures its part; once the local players come off, an index left behind names nobody -- or, after another player
+	// joins, somebody else. Every screen the rig made, whoever gave it a player: the rig, or a test.
+	TArray<UDreamCanvas*, TInlineAllocator<DreamRigMaxPlayers>> Screens;
+	Screens.Add(DriverContext->RootCanvas);
+	for (const FOtherPlayer& Player : OtherPlayers)
+	{
+		if (Player.bOwnsScreen && Player.Context.IsValid())
+		{
+			Screens.Add(Player.Context->RootCanvas);
+		}
+	}
+	for (UDreamCanvas* Screen : Screens)
+	{
+		if (IsValid(Screen))
+		{
+			Screen->SetViewportPlayerIndex(INDEX_NONE);
+		}
+	}
 }
 
 void FDreamDriverRig::TearDownOtherPlayersInput(FAutomationTestBase* InTest)
@@ -879,7 +917,9 @@ FDreamDriverRig::~FDreamDriverRig()
 		// its actor would still be delivering input into a tree that is being taken apart. The Slate
 		// source the same way: off before the tree it feeds goes. The other players' hosts before
 		// player 0's, last player first, so that every local player comes off the game instance from
-		// the end and no player's index moves under it.
+		// the end and no player's index moves under it. Before any of that, the screens let go of their
+		// players, which the input hosts' tear-down takes off the game instance (ReleaseScreensFromPlayers).
+		ReleaseScreensFromPlayers();
 		TearDownOtherPlayersInput(TeardownTest);
 		if (IsActorInputHost(DriverContext->InputHost))
 		{

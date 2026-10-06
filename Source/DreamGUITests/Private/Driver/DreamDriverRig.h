@@ -67,15 +67,16 @@ namespace DreamTests
  *    split-screen layout gives it (UGameViewportClient::LayoutPlayers over the viewport client's
  *    SplitscreenInfo, for UGameMapsSettings' default layouts: two players top and bottom, three
  *    favouring the top, four in a grid), and every player has a screen-space root canvas of its own
- *    with its raycaster bound to it, as UDreamScreenUISubsystem gives every local player one. A world
- *    pointer attached for a player (DreamDriverWorld::AttachWorldPointer with a player index) looks
- *    through that player's part, as UDreamWorldSpaceRaycaster::GenerateRay deprojects through the
- *    pointer's local player. What a split rig does NOT do is shrink a screen canvas to its player's
- *    part: DreamGUI sizes every screen-space overlay canvas to the whole viewport
- *    (UDreamCanvas::GetViewportSize asks the first player controller's viewport) and its screen
- *    raycaster measures a pointer from the viewport's top-left (UDreamScreenSpaceRaycaster::GenerateRay),
- *    so each player's canvas here is the whole viewport too, hit in whole-viewport pixels, as it is in
- *    a game. Pixels are always the one viewport's.
+ *    with its raycaster bound to it, given its player (UDreamCanvas::SetViewportPlayerIndex) as
+ *    UDreamScreenUISubsystem gives every local player's screen -- so each screen is laid out over its
+ *    player's part of the viewport, a pointer outside the part reaches nothing on it, and the canvas
+ *    measures a pointer from the part's corner, as UMG lays a player's layer out
+ *    (SGameLayerManager::AddOrUpdatePlayerLayers). A world pointer attached for a player
+ *    (DreamDriverWorld::AttachWorldPointer with a player index) looks through that player's part, as
+ *    UDreamWorldSpaceRaycaster::GenerateRay deprojects through the pointer's local player. Pixels are
+ *    always the one viewport's: a widget on player 1's screen projects to a pixel in player 1's part
+ *    (FDreamDriverProjection::WorldPointToPixel adds the part's corner). The screens let go of their
+ *    players before the local players are taken off at tear-down.
  * Refused, with the reason, rather than quietly built as player 0: more than four players or fewer
  * than one, several players under SlateSource (the source's test mappers make Slate user 0 the only
  * player, and a mapping of the rig's own for more would be testing the rig), and a split screen with
@@ -308,6 +309,13 @@ private:
 	bool BuildOtherPlayersInput();
 	/** The engine's split-screen layout onto the local players and the contexts. False having set BuildFailure. */
 	bool LayOutSplitScreen();
+	/** Whether the options ask for a split screen the rig builds: several players, each with a screen of its own. */
+	bool IsSplitScreen() const;
+	/**
+	 * The first step of tearing down: every screen the rig made given no player again, before the input hosts take the
+	 * local players its index names off the game instance.
+	 */
+	void ReleaseScreensFromPlayers();
 	/**
 	 * A ScreenSpaceOverlay root canvas the rig's way -- the render mode, then the substituted viewport, then the scaler
 	 * the options ask for -- on a new registered root named InDisplayName. Null when the root would not take a canvas.

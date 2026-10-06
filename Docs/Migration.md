@@ -39,6 +39,17 @@ input the way UMG's do now, and a screen built around the old way will feel diff
 - **A finger never brings up a tooltip.** A finger landing on, held on or dragged onto a widget with a tooltip used to
   be able to show its bubble; a touch-only game that wants a tooltip on a long press shows it from that handler with
   `UDreamUITooltipSubsystem::ShowTooltipFor`.
+- **On a split screen a player's screen is that player's part of the viewport**, as with UMG's Add to Player Screen.
+  The screens `UDreamScreenUISubsystem` makes for local players used to be the whole viewport each, laid out and hit in
+  whole-viewport pixels and drawn into every player's view, squeezed into its rect; now each is the size of its
+  player's part, anchors and a ScaleWithScreenSize scaler work from that size, and it is drawn in its player's view
+  only. A split-screen layout made for the whole viewport -- anchored to its edges, or placed in pixels -- lands in the
+  player's part instead; a layout anchored and sized relative to its screen needs nothing. A single-player game, and
+  every player of a game with split screen switched off, keeps the whole viewport. A screen-space canvas placed in a
+  level, or made by hand, is not any player's and stays as it was; give it a player with
+  `UDreamCanvas::SetViewportPlayerIndex` to make it one. A custom canvas scaler (`UDreamCanvasCustomScale`) is handed
+  positions measured from the corner of its canvas's part, which for a canvas without a player is the viewport's
+  corner, as before.
 
 A C++ subclass of `UDreamSpinBox` or of the list family that overrides `NativeOnKeyDown` calls `Super` to keep these
 keys, as for any key the base answers.

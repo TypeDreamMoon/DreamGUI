@@ -40,7 +40,8 @@ DECLARE_DYNAMIC_DELEGATE_ThreeParams(FDreamUIScreenPageAsyncCallback, FName, Pag
  * Every verb here takes an optional owning player and answers about that player's screen; passing
  * nothing means the first local player, which is the whole of a single-player game and is why none of
  * the existing call sites had to change. Split screen is then the ordinary case rather than a mode:
- * player 1 and player 2 each get their own root canvas, their own screen-space raycaster carrying
+ * player 1 and player 2 each get their own root canvas, laid out over and drawn in that player's part
+ * of the viewport (UDreamCanvas::SetViewportPlayerIndex), their own screen-space raycaster carrying
  * their own UserIndex, and their own page stack, so a full-screen page pushed by one never covers the
  * other. UMG draws the same line with AddToViewport (shared) versus AddToPlayerScreen (one player's
  * layer); the difference is that here there is no shared layer to fall back to, so AddToViewport is

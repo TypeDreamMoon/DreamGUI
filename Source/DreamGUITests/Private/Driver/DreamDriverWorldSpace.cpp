@@ -216,8 +216,11 @@ UDreamDriverWorldSpaceRaycaster* DreamDriverWorld::AttachWorldPointer(FDreamDriv
 	}
 	// The viewport the rig's pointer pixels are measured on is its root canvas's substituted one; the
 	// overlay and the world are seen on one screen -- a split screen's too, whose players each see a part of it.
+	// The WHOLE viewport: the camera takes the player's part of it itself (ViewOrigin01, ViewSize01), and a split
+	// screen's root canvas is its player's part, so there the whole is the one the rig substituted.
 	const UDreamCanvas* ScreenCanvas = InRig.RootCanvas();
-	const FIntPoint ViewportSize = IsValid(ScreenCanvas) ? ScreenCanvas->GetViewportSize() : InRig.GetOptions().ViewportSize;
+	const FIntPoint ViewportSize = IsValid(ScreenCanvas) && !ScreenCanvas->FillsPartOfViewport()
+		? ScreenCanvas->GetViewportSize() : InRig.GetOptions().ViewportSize;
 	return AttachWorldPointer(*PlayerContext, InRig.GetHostActor(InPlayerIndex), InView, ViewportSize, InSource);
 }
 

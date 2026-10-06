@@ -289,10 +289,9 @@ bool FDreamDriverPlayersKeysTest::RunTest(const FString& Parameters)
  * The halves are where a world-space pointer deprojects (UDreamWorldSpaceRaycaster::GenerateRay goes through the
  * pointer's own local player's view): each player looks at a panel of its own through its own camera, and a click in
  * the player's part of the viewport lands on what that player sees -- while a click the same player makes in the other
- * player's part is outside its view and lands on nothing. The screens are where each player's screen raycaster
- * projects: the same pixel on both players' screens is each player's own widget. DreamGUI's screen-space canvas spans
- * the whole viewport for every player (see FDreamDriverRig), so the screen half of this is about whose screen, not
- * about halves.
+ * player's part is outside its view and lands on nothing. The screens are each player's part too (the rig
+ * gives each screen its player, see FDreamDriverRig): the same place on both players' screens is a pixel in each
+ * player's own part, and each player's click there is on its own screen's widget.
  */
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamDriverPlayersSplitScreenTest,
@@ -326,10 +325,11 @@ bool FDreamDriverPlayersSplitScreenTest::RunTest(const FString& Parameters)
 			SecondLocalPlayer != nullptr && !SecondLocalPlayer->Size.Equals(FVector2D(1.0, 1.0)));
 		TestTrue(Under(Case, TEXT("Each player has a screen of its own")), Rig.Root(1) != nullptr && Rig.Root(1) != Rig.Root());
 
-		// The screens: the same place on each player's screen, a widget of each player's own.
+		// The screens: the same place on each player's screen, a widget of each player's own -- inside the part, which is
+		// half the viewport's height (360 of 720), so 100 up from the screen's middle and not 200.
 		UDreamWidget* FirstScreenWidget = nullptr;
 		UDreamWidget* SecondScreenWidget = nullptr;
-		const FVector2D ScreenPosition(-400.0, 200.0);
+		const FVector2D ScreenPosition(-400.0, 100.0);
 		UDreamPointerLedger* FirstScreenLedger = MakeLedger(Rig, TEXT("FirstScreenWidget"), Rig.Root(0), TargetSize, ScreenPosition, FirstScreenWidget);
 		UDreamPointerLedger* SecondScreenLedger = MakeLedger(Rig, TEXT("SecondScreenWidget"), Rig.Root(1), TargetSize, ScreenPosition, SecondScreenWidget);
 		if (!TestTrue(Under(Case, TEXT("A widget on each player's screen")), FirstScreenLedger != nullptr && SecondScreenLedger != nullptr))
