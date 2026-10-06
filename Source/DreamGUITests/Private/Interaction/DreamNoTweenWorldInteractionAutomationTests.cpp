@@ -399,8 +399,8 @@ bool FDreamNoTweenWorldMenuAnchorTest::RunTest(const FString& Parameters)
 	TestTrue(TEXT("The open popup is awake"), Popup->GetWidgetActive());
 	TestTrue(TEXT("Open, the popup is fully opaque"),
 		SettlesOn(Rig, [Popup]() { return FMath::IsNearlyEqual(Popup->GetRenderOpacity(), 1.0f, 0.001f); }, TEXT("the open popup becoming fully opaque")));
-	// The open lifted the popup to the screen on the popup layer, which put its outside-click sheet behind
-	// it; two frames for both to be arranged before a click aims past them.
+	// The open lifted the popup to the screen on the popup layer; two frames for it to be arranged before a click aims
+	// past it.
 	Rig.PumpFrames(2);
 
 	// The bottom-right corner of the viewport, which neither the trigger nor any placement reaches.

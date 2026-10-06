@@ -3,6 +3,7 @@
 
 #include "Core/Components/DreamPanelLayouts.h"
 #include "DreamGUI.h"
+#include "Core/DreamGUISettings.h"
 #include "Core/DreamUIManager.h"
 #include "Core/DreamUserWidget.h"
 #include "Core/Components/DreamCanvas.h"
@@ -4893,9 +4894,13 @@ bool UDreamLayoutContainerMenuAnchor::PushMenu(UDreamWidget* InMenu)
 	Params.Popup = InMenu;
 	Params.Opener = Panel;
 	Params.UserIndex = Panel->GetOwningPlayerIndex();
-	// What every menu here has always done with a press elsewhere, and what SMenuAnchor's menus do for the layer's
-	// purposes: the press closes the menu.
-	Params.OutsideClick = EDreamPopupOutsideClick::Consume;
+	// A press elsewhere closes the menu, as SMenuAnchor's do, and then reaches what it landed on, as the Slate menu stack
+	// lets it -- unless the project has its menus keep that press (UDreamGUISettings::bMenusConsumeOutsideClick). A press
+	// on the trigger is inside this panel, the opener, which the layer never lets through: it closes the menu and opens
+	// nothing.
+	const UDreamGUISettings* Settings = UDreamGUISettings::Get();
+	Params.OutsideClick = Settings != nullptr && Settings->bMenusConsumeOutsideClick
+		? EDreamPopupOutsideClick::Consume : EDreamPopupOutsideClick::PassThrough;
 	// SMenuAnchor::SetIsOpen focuses the menu by default.
 	Params.bFocusOnOpen = true;
 	// Tab leaves the menu as it leaves a dropdown's list: closed, the focus back where it was, the walk going on from here.

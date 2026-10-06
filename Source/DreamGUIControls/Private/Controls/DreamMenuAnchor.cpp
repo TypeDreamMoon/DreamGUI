@@ -4,6 +4,7 @@
 
 #include "Core/DreamUIWidgetRegistry.h"
 
+#include "Core/DreamGUISettings.h"
 #include "Core/DreamUIBuilder.h"
 #include "Core/DreamUIInputServices.h"
 #include "Core/DreamUserWidget.h"
@@ -15,11 +16,64 @@
 #include "Core/Components/DreamWidget.h"
 #include "DreamTweenManager.h"
 #include "DreamTweener.h"
+#include "Event/DreamPointerEventData.h"
+#include "Event/DreamUIInputSubsystem.h"
+#include "Event/DreamUIInputUser.h"
 #include "Interaction/DreamContentWidget.h"
 #include "Interaction/DreamUIPopupLayer.h"
 #include "Interaction/UISelectable.h"
 
 const FName UDreamMenuAnchor::MenuSlotName(TEXT("Menu"));
+
+namespace DreamMenuAnchorLocal
+{
+	/**
+	 * Player InUserIndex's pointer whose press is going down right now -- the press being dispatched, which the popup layer
+	 * hears before anything else does (UDreamUIPopupLayer::NotifyPointerDown) -- or null.
+	 */
+	UDreamPointerEventData* FindPressGoingDown(const UObject* InContext, int32 InUserIndex)
+	{
+		const UDreamUIInputSubsystem* Input = UDreamUIInputSubsystem::Get(InContext);
+		const UDreamUIInputUser* User = Input != nullptr ? Input->GetUser(InUserIndex) : nullptr;
+		if (User == nullptr)
+		{
+			return nullptr;
+		}
+		for (const TPair<int32, TObjectPtr<UDreamPointerEventData>>& Pointer : User->GetPointerEventDataMap())
+		{
+			UDreamPointerEventData* EventData = Pointer.Value;
+			if (IsValid(EventData) && EventData->bNowIsTriggerPressed && !EventData->bPrevIsTriggerPressed)
+			{
+				return EventData;
+			}
+		}
+		return nullptr;
+	}
+}
+
+bool UDreamMenuAnchor::ShouldOpenDueToClick() const
+{
+	if (bIsOpen)
+	{
+		return false;
+	}
+	// The press that closed the menu from outside went on to what it landed on (EDreamPopupOutsideClick::PassThrough), and
+	// a trigger it landed on clicks as it is let go: its click is the close's, not a new open. It is that press for as long
+	// as the pointer still holds it -- the same press time, and a press widget the release has not yet let go of.
+	const UDreamPointerEventData* Press = DismissingPress.Get();
+	const bool bClickOfTheClosingPress = Press != nullptr && Press->PressTime == DismissingPressTime && IsValid(Press->PressWidget);
+	return !bClickOfTheClosingPress;
+}
+
+EDreamPopupOutsideClick UDreamMenuAnchor::ResolveOutsideClick() const
+{
+	if (!bCloseOnClickOutside)
+	{
+		return EDreamPopupOutsideClick::Ignore;
+	}
+	const UDreamGUISettings* Settings = UDreamGUISettings::Get();
+	return Settings != nullptr && Settings->bMenusConsumeOutsideClick ? EDreamPopupOutsideClick::Consume : EDreamPopupOutsideClick::PassThrough;
+}
 
 void UDreamMenuAnchor::StopOpenFade()
 {
@@ -298,6 +352,8 @@ void UDreamMenuAnchor::Open(bool bFocusMenu)
 		return;
 	}
 	bIsOpen = true;
+	// A new open: the press that closed the last one, if one did, is nothing to this one.
+	DismissingPress = nullptr;
 	EnsureMenuInstance();
 
 	const FDreamMenuAnchorStyle& Active = ResolveStyle(Style, &UDreamUIStyleSheet::MenuAnchorStyle);
@@ -318,7 +374,7 @@ void UDreamMenuAnchor::Open(bool bFocusMenu)
 		// focus sits on: that is whatever had focus when the menu opened.
 		Params.Opener = this;
 		Params.UserIndex = GetOwningPlayerIndex();
-		Params.OutsideClick = bCloseOnClickOutside ? EDreamPopupOutsideClick::Consume : EDreamPopupOutsideClick::Ignore;
+		Params.OutsideClick = ResolveOutsideClick();
 		Params.bFocusOnOpen = bFocusMenu;
 		Params.InitialFocus = bFocusMenu ? FindFirstMenuControl() : nullptr;
 		// Tab leaves a menu as it leaves a dropdown's list: the whole chain closes, submenus and all, the focus comes back
@@ -485,6 +541,13 @@ void UDreamMenuAnchor::HandleMenuDismissed(UDreamWidget* InPopup, EDreamPopupDis
 	// Closed from outside -- a press elsewhere, Back, the menu this one was opened from closing, a menu opened in
 	// its place, this anchor hidden or put to sleep. The layer has given focus back and the popup home already.
 	bIsOpen = false;
+	if (InReason == EDreamPopupDismissReason::OutsideClick)
+	{
+		// The press that did it, whose click must not open the menu again (ShouldOpenDueToClick).
+		UDreamPointerEventData* Press = DreamMenuAnchorLocal::FindPressGoingDown(this, GetOwningPlayerIndex());
+		DismissingPress = Press;
+		DismissingPressTime = Press != nullptr ? Press->PressTime : 0.0;
+	}
 	if (InReason == EDreamPopupDismissReason::WorldTeardown)
 	{
 		// The world comes down with the popup in it: nothing was put back, and there is nobody to tell.
@@ -593,7 +656,7 @@ void UDreamMenuAnchor::SetCloseOnClickOutside(bool bInCloseOnClickOutside)
 	// While open, the switch is about the press that comes next.
 	if (UDreamUIPopupLayer* Layer = UDreamUIPopupLayer::Get(this))
 	{
-		Layer->SetOutsideClick(PopupNode, bCloseOnClickOutside ? EDreamPopupOutsideClick::Consume : EDreamPopupOutsideClick::Ignore);
+		Layer->SetOutsideClick(PopupNode, ResolveOutsideClick());
 	}
 }
 

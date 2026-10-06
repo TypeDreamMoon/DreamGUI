@@ -378,8 +378,8 @@ REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamPopupFocusDropdownClickOutsideTest, "
 /*
  * The click that closed an open list used to land on a full-screen catcher that was a button: the press
  * gave the catcher the focus, the click destroyed it, and the focus went with it -- nowhere, and the face
- * never got it back. The list opens with focus on its selected row; a click far from it closes it, goes
- * no further, and leaves the focus and the pad's cursor on the face.
+ * never got it back. The list opens with focus on its selected row; a click far from it, on nothing, closes it and
+ * leaves the focus and the pad's cursor on the face.
  */
 bool FDreamPopupFocusDropdownClickOutsideTest::RunTest(const FString& Parameters)
 {
@@ -714,6 +714,10 @@ REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamPopupFocusTwoPlayersListsTest, "Dream
  * player's click on their own row landed on it, read as a click outside, and closed their list with nothing chosen;
  * and the first player's sheet kept the second player from opening a list at all. A sheet now stops its own player's
  * pointer only. Here both players open a list, and the first then chooses from theirs.
+ *
+ * Both dropdowns keep the presses outside their lists (bUseInteractionBlock), which is what puts the sheets up: a list
+ * that lets those presses through, as every list does by default now, as SComboBox's does, has no sheet to get in anyone's
+ * way.
  */
 bool FDreamPopupFocusTwoPlayersListsTest::RunTest(const FString& Parameters)
 {
@@ -734,10 +738,19 @@ bool FDreamPopupFocusTwoPlayersListsTest::RunTest(const FString& Parameters)
 	// Side by side, so neither list hangs over the other dropdown or the other list.
 	UDreamDropdown* FirstDropdown = PlaceDropdown(*this, Rig, FirstListener.Get(), nullptr, FVector2D(-300.0, 200.0));
 	UDreamDropdown* SecondDropdown = PlaceDropdown(*this, Rig, SecondListener.Get(), nullptr, FVector2D(300.0, 200.0));
-	if (FirstDropdown == nullptr || SecondDropdown == nullptr || !OpenByClicking(*this, Rig, FirstDropdown))
+	if (FirstDropdown == nullptr || SecondDropdown == nullptr
+		|| !TestTrue(TEXT("Both dropdowns have their behaviours"), FirstDropdown->DropdownBehaviour != nullptr && SecondDropdown->DropdownBehaviour != nullptr))
 	{
 		return false;
 	}
+	FirstDropdown->DropdownBehaviour->SetUseInteractionBlock(true);
+	SecondDropdown->DropdownBehaviour->SetUseInteractionBlock(true);
+	if (!OpenByClicking(*this, Rig, FirstDropdown))
+	{
+		return false;
+	}
+	const UDreamUIPopupLayer* SheetLayer = UDreamUIPopupLayer::Get(Rig.GetWorld());
+	TestTrue(TEXT("The first player's open list put its sheet up"), SheetLayer != nullptr && SheetLayer->HasSheets());
 
 	// The second player clicks their dropdown open, under the first player's sheet.
 	const TOptional<FVector2D> SecondFace = FDreamDriverProjection::WidgetCentrePixel(SecondDropdown->FaceNode.Get());

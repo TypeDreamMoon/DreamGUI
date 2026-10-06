@@ -12,7 +12,9 @@ UMG's MenuAnchor in the DreamGUI idiom. The menu is a popup on UDreamUIPopupLaye
 stack, as the dropdown's list is: lifted to the screen root so no ancestor clips it or counts it in
 its layout, closed by a press anywhere else (bCloseOnClickOutside), by Back, and by this anchor
 going away or out of sight; and a menu opened from inside an open menu is its child, closed with
-it. Focus that went into the menu comes back to whatever had it when it opened.
+it. Focus that went into the menu comes back to whatever had it when it opened. A press elsewhere
+that closes the menu then goes on to what it landed on, as Slate's menu stack lets it, unless the
+project's UDreamGUISettings::bMenusConsumeOutsideClick keeps it.
 
 TWO WAYS TO SAY WHAT THE MENU IS, and they are alternatives:
 
@@ -40,7 +42,7 @@ leaving MenuSize at zero on that axis, which hands the axis back to the content.
 | `Style` | `FDreamMenuAnchorStyle` | Menu Anchor | yes | `GetStyle` / `SetStyle` | This instance's own look. The project sheet wins while StyleSource says so AND a sheet actually exists; with no sheet in the project this IS the look in effect. |
 | `MenuClass` | `TSubclassOf<UDreamUserWidget>` | Menu Anchor | yes | `GetMenuClass` / `SetMenuClass` | The menu's class, for an anchor whose menu is not authored in place. |
 | `MenuSize` | `FVector2D` | Menu Anchor | yes | `GetMenuSize` / `SetMenuSize` | How big the menu opens. Zero on an axis leaves that axis to whatever is inside it. |
-| `bCloseOnClickOutside` | `bool` | Menu Anchor | yes | `GetCloseOnClickOutside` / `SetCloseOnClickOutside` | Whether a click anywhere else closes the menu. Off makes it the caller's job. |
+| `bCloseOnClickOutside` | `bool` | Menu Anchor | yes | `GetCloseOnClickOutside` / `SetCloseOnClickOutside` | Whether a press anywhere else closes the menu. Off makes it the caller's job. The press then goes on to whatever it landed on, as Slate's menu stack lets it, unless the project's UDreamGUISettings::bMenusConsumeOutsideClick keeps it. |
 | `bFitInWindow` | `bool` | Menu Anchor | yes | `GetFitInWindow` / `FitInWindow` | Keep the open menu inside the screen -- UMG's bFitInWindow, and the same arithmetic the panel spelling of this anchor uses (UDreamLayoutContainerMenuAnchor::FitMenuInWindow, called here rather than copied, so a menu lands in the same place whichever road opened it). |
 | `OnGetUserMenuContentEvent` | `FDreamMenuAnchorGetContent` | Menu Anchor | - | read / write | Builds the menu's content the first time it is needed, instead of MenuClass. |
 | `PopupNode` | `TObjectPtr<UDreamWidget>` | Menu Anchor | - | read only | The popup root: what gets lifted to the screen, positioned and faded. |

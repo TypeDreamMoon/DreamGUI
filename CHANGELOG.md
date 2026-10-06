@@ -53,6 +53,9 @@ after 3 for 2.1.0 -- so the engine never takes 1.0.0 for the older of the two.
   Each of these used to be addable anywhere and then sat there doing nothing. Paste, duplicate and component assets
   dropped on the panel follow the same rules; a refused drop says why. A project adds rules for its own components
   from its editor module.
+- **`bMenusConsumeOutsideClick`** in the project settings (Dream GUI, Input): on, a press outside an open menu or
+  dropdown list only closes it, as DreamGUI's menus and lists did before; off, the default, it closes it and goes on to
+  what it landed on (see Changed).
 - **`UUIButton::GetClickEventData`**: while a button's click listeners run, the pointer event the click came from --
   whose it is, which pointer, a finger or the mouse, navigation or not. The click delegates carry no arguments, and a
   C++ listener that has to tell a tap from a click asks this; null for a click raised by broadcasting the delegate.
@@ -111,6 +114,18 @@ after 3 for 2.1.0 -- so the engine never takes 1.0.0 for the older of the two.
   gives any ScreenSpaceOverlay root canvas a player this way, and `GetViewportRect` says which part it fills. A game
   that is not split is unchanged -- its one player's part is the whole viewport -- and so is a canvas nobody gives a
   player, such as one placed in a level, which stays the shared full-viewport layer. See
+  [Migration](Docs/Migration.md#from-100-to-the-next-release).
+- **A press outside an open menu goes on to what it landed on**, as the Slate menu stack lets it: a Dream Menu Anchor's
+  menu, or a menu anchor panel's, closes on the press and the button under it is pressed and clicked as well. It used to
+  close the menu and go no further. A press on the menu's own trigger still closes it without opening it again:
+  `UDreamMenuAnchor::ShouldOpenDueToClick` says no for the click of the press that closed the menu. With a menu open,
+  what is behind it is hovered as the pointer crosses it. `bMenusConsumeOutsideClick` in the project settings puts the
+  old behaviour back. See [Migration](Docs/Migration.md#from-100-to-the-next-release).
+- **A press outside a dropdown's open list goes on to what it landed on too**, as SComboBox's list is a menu on the same
+  stack: the list closes, choosing nothing, and the button under the press is pressed and clicked. A click on the
+  dropdown's own face closes the list without opening it again. The list follows `bMenusConsumeOutsideClick` with the
+  menus. `UUIDropdown::bUseInteractionBlock` now means "keep the press for this dropdown whatever the project says" and
+  is off by default; it was on by default, and on was the only way a list had ever behaved. See
   [Migration](Docs/Migration.md#from-100-to-the-next-release).
 
 ### Fixed

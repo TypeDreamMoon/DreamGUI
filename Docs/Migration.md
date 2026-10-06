@@ -50,6 +50,19 @@ input the way UMG's do now, and a screen built around the old way will feel diff
   `UDreamCanvas::SetViewportPlayerIndex` to make it one. A custom canvas scaler (`UDreamCanvasCustomScale`) is handed
   positions measured from the corner of its canvas's part, which for a canvas without a player is the viewport's
   corner, as before.
+- **A press outside an open menu reaches what it lands on.** A Dream Menu Anchor's menu and a menu anchor panel's close
+  on the press as before, and the press then goes on: a button under it is pressed and clicked, a field under it starts
+  its edit. A screen that relied on the first click outside a menu doing nothing -- a menu over buttons that must not be
+  hit while it is up -- turns on `bMenusConsumeOutsideClick` in the project settings (Dream GUI, Input), which puts the
+  old behaviour back for every menu. A button that opens a menu anchor from its click asks
+  `UDreamMenuAnchor::ShouldOpenDueToClick` before calling `Open`, as with UMG's; a handler that called `Open` or
+  `ToggleOpen` unconditionally now reopens the menu its own click just closed, and changes to ask first.
+- **A press outside a dropdown's open list reaches what it lands on, as for a menu.** The list closes on the press,
+  choosing nothing, as before; the press then goes on. `bMenusConsumeOutsideClick` puts the old behaviour back for every
+  list along with every menu. `UUIDropdown::bUseInteractionBlock` changed default and meaning: it was on by default and
+  decided alone; it is off by default now, which leaves the list to the project setting, and on keeps the press for that
+  dropdown whatever the project says. A dropdown saved with the switch at its old default loads with the new one; one
+  that must keep the press -- a list over controls that must not be hit while it is open -- turns it on again.
 
 A C++ subclass of `UDreamSpinBox` or of the list family that overrides `NativeOnKeyDown` calls `Super` to keep these
 keys, as for any key the base answers.
