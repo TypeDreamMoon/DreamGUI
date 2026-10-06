@@ -76,6 +76,12 @@ namespace DreamCoverageTransferTestLocal
 	static constexpr double PaperWidth = 600.0;
 	static constexpr double PaperHeight = 70.0;
 	static constexpr double PaperOffset = 45.0;
+	/**
+	 * The ramp text's box, centred on the paper: the ramp and a margin, no wider. The play session draws into the level
+	 * editor's viewport at whatever size the editor's layout gave it, which can be narrower than the paper; a box as wide
+	 * as the paper would start the ramp off the left edge of such a viewport.
+	 */
+	static constexpr double TextWidth = RampWidth + 40.0;
 
 	struct FRampPaper
 	{
@@ -374,7 +380,7 @@ bool FDreamCoverageTransferRenderTargetTest::RunTest(const FString& Parameters)
 	for (const FRampPaper& Paper : RampPapers)
 	{
 		Stage->AddBlock(Paper.Name, FVector2D(PaperWidth, PaperHeight), FVector2D(0.0, Paper.Y), Paper.Paper);
-		UDreamWidget* Widget = Stage->AddWidget(Paper.Name, FVector2D(PaperWidth - 40.0, PaperHeight), FVector2D(0.0, Paper.Y));
+		UDreamWidget* Widget = Stage->AddWidget(Paper.Name, FVector2D(TextWidth, PaperHeight), FVector2D(0.0, Paper.Y));
 		if (UDreamText* Text = Widget->CreateNewVisual<UDreamText>())
 		{
 			ConfigureRampText(Text, Font, Paper.Ink);
@@ -464,7 +470,7 @@ bool FDreamCoverageTransferScreenTest::RunTest(const FString& Parameters)
 				Visual->SetColor(Paper.Paper);
 			}
 			UDreamWidget* Label = InRig.MakeWidgetWithVisual(UDreamText::StaticClass(), Paper.Name, nullptr,
-				FVector2D(PaperWidth - 40.0, PaperHeight), FVector2D(0.0, Paper.Y));
+				FVector2D(TextWidth, PaperHeight), FVector2D(0.0, Paper.Y));
 			if (UDreamText* Text = Label != nullptr ? Cast<UDreamText>(Label->GetVisual()) : nullptr)
 			{
 				ConfigureRampText(Text, State->Font.Get(), Paper.Ink);
