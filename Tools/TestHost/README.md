@@ -17,8 +17,8 @@ The suite used to be built and run inside the working project (DevTest). That ha
 The host fixes all three. Its `Plugins/DreamGUI` is a separate **git worktree** of the DreamGUI
 repository, with its own `Binaries/` and `Intermediate/`, so it builds and runs while the working
 project's editor stays open; it enables nothing but DreamGUI and Enhanced Input; and it has no code of its
-own but the packaged text smoke probe (below), off unless a game asks for it, and no content but the old-asset fixtures
-and the smoke test's assets (below).
+own but the two smoke probes (below), each off unless a game asks for it, and no content but the old-asset fixtures
+and the text smoke test's assets (below).
 
 ## Layout
 
@@ -29,7 +29,7 @@ DreamGUITestHost/                       (default I:\UnrealProject_Moon\DEV_58\Dr
   Config/DefaultInput.ini               from Template/
   Config/DefaultGame.ini                from Template/
   Source/DreamGUITestHost*.Target.cs    from Template/
-  Source/DreamGUITestHost/              from Template/ -- the primary game module, with the packaged text smoke probe
+  Source/DreamGUITestHost/              from Template/ -- the primary game module, with the two smoke probes
   Content/DreamGUIFixtures/             from Template/ -- the old-asset fixtures (below)
   DUI/TextSmoke.dui                     from Template/ -- the smoke test's screen (below)
   Content/DreamGUISmoke/                made by make_text_smoke_assets.py -- the smoke test's assets (below)
@@ -143,7 +143,8 @@ Things to know:
 
 - **A host made before the smoke test** gets the template's new files (the probe, `DUI/TextSmoke.dui`) from
   `New-DreamGUITestHost.ps1` as it is, and the changed ones -- the game module, its `Build.cs` and `Target.cs`,
-  `Config/DefaultGame.ini` -- with `-Force`, which keeps a copy of each file it replaces.
+  `Config/DefaultGame.ini` -- with `-Force`, which keeps a copy of each file it replaces. The click smoke probe came with
+  template version 5 the same way: its two files as they are, the game module and its `Build.cs` with `-Force`.
 - **The safe zone is not compared between the runs, by design.** An editor build fits the platform's safe zone to the
   viewport it is given; a cooked one answers in pixels of the primary display, as UMG's `SSafeZone` does
   (`FSlateApplicationBase::GetSafeZoneSize`). Each run is checked against what the platform asked for in that run.
@@ -154,6 +155,62 @@ Things to know:
 - **What the probe needs from the host:** the screen's assets in `/Game/DreamGUISmoke` (the script),
   `DirectoriesToAlwaysCook` (the template's `DefaultGame.ini`, since nothing references the screen: the probe loads it
   by name), and the template's game module with `DreamGUI`, `Json`, `Slate` and `SlateCore` as its private dependencies.
+
+## The click smoke test
+
+The suite's clicks are the test driver's: in the editor, put in at the viewport or at the input system. This one is a
+game's, end to end -- a mouse move, a button down and a button up handed to `FSlateApplication`'s own entry points
+(`ProcessMouseMoveEvent`, `ProcessMouseButtonDownEvent`, `ProcessMouseButtonUpEvent`), the ones the platform's mouse
+messages go into, so Slate hit-tests the window, the game viewport takes them, the player controller hears the button and
+the viewport keeps the position, and DreamGUI's input takes the press from there to the button.
+
+| Piece | Where |
+| --- | --- |
+| The probe | `Template/Source/DreamGUITestHost/DreamGUIClickSmoke.cpp`: switched on by `-DreamGUIClickSmoke=<dir>`, Shipping included |
+| The check | `Tools/Tests/check_click_smoke.py` |
+
+The probe waits for the game's player, puts it in a menu's input mode, the engine's Game and UI (the cursor shown; the
+mouse captured while a button is held, as the mode has it, but not hidden then or locked to the window), makes a `UDreamButton` with the Create Dream Widget node's calls for the player, adds it to the
+viewport off the middle of the screen, and waits until it has been drawn inside the viewport for ten frames. Then six
+steps, three frames apart: a move onto the button's middle, a left button down and up there, a move to a corner, a down
+and up there. After each it writes down where the viewport has its cursor, where the player sees the mouse, and what the
+button announced (hovered, unhovered, pressed, released, clicked), into `<dir>/ClickSmoke.json`, and asks the game to exit.
+The check passes a run whose button was hovered, pressed, released and clicked once, in that order, by the click on it,
+and pressed and clicked by nothing more after the click away.
+
+For the run, the probe turns `Slate.EnableSyntheticCursorMoves` off (and back on as it ends): Slate sends a move of its own
+every frame from where the desk's cursor really is, which would carry the game's cursor off the button between the
+probe's move and its press. It never moves the desk's cursor. Leave the mouse alone while the window is up: a real move
+over the game's window is a move of the game's cursor too.
+
+### Running it
+
+The reference half of the text smoke test's commands, with the click probe's switch: the editor target, then the game on
+uncooked content. A few seconds once the editor target is built.
+
+```powershell
+$Engine = 'F:\UnrealEngine\UE_Moon'
+$Host_  = 'I:\UnrealProject_Moon\DEV_58\DreamGUITestHost'
+$Proj   = "$Host_\DreamGUITestHost.uproject"
+$Out    = "$Host_\Saved\ClickSmoke"
+
+& "$Engine\Engine\Build\BatchFiles\Build.bat" DreamGUITestHostEditor Win64 Development -Project="$Proj" -WaitMutex -NoHotReloadFromIDE -NoEngineChanges -DisableAdaptiveUnity
+& "$Engine\Engine\Binaries\Win64\UnrealEditor.exe" "$Proj" -game -windowed -ResX=1280 -ResY=720 `
+    -DreamGUIClickSmoke="$Out\uncooked" -unattended -nosound -abslog="$Out\uncooked.log"
+python "$Host_\Plugins\DreamGUI\Tools\Tests\check_click_smoke.py" "$Out\uncooked"
+```
+
+In the packaged text smoke test, the packaged game takes the switch as well -- the probe makes everything it clicks, so
+there is nothing more to cook -- and the check takes both runs:
+
+```powershell
+& "$Host_\Saved\StagedBuilds\Windows\DreamGUITestHost\Binaries\Win64\DreamGUITestHost.exe" `
+    -windowed -ResX=1280 -ResY=720 -DreamGUIClickSmoke="$Out\cooked" -unattended -nosound -abslog="$Out\cooked.log"
+python "$Host_\Plugins\DreamGUI\Tools\Tests\check_click_smoke.py" "$Out\uncooked" "$Out\cooked"
+```
+
+The packaged run needs the game target built, which against a source engine compiles the whole engine into the host (see
+"Building and running"): build it on purpose, as the text smoke test does.
 
 ## Creating it
 
