@@ -275,6 +275,20 @@ public:
 	FDreamDriverSequence& TouchMoveTo(int32 InFingerId, const FVector2D& InPixel);
 	FDreamDriverSequence& TouchUp(int32 InFingerId);
 
+	/** Where a step aims, worked out by the step itself when it runs: see MoveToResolvedPixel. */
+	using FPixelResolver = TFunction<TOptional<FVector2D>(FDreamDriverContext&)>;
+
+	/**
+	 * MoveToPixel, TouchDown and TouchMoveTo with the pixel worked out when the step runs rather than when the
+	 * sequence is built -- for an aim nobody can know any earlier: a widget a play session builds in WhenReady, a
+	 * point inside one wedge of a ring, a row a list opened a frame before. The resolver is handed the step's
+	 * context, its camera included; an unset answer fails the step, naming InDescription, as a locator that finds
+	 * nothing does. One step and one frame each, exactly as the fixed-pixel forms.
+	 */
+	FDreamDriverSequence& MoveToResolvedPixel(FPixelResolver InResolver, const FString& InDescription);
+	FDreamDriverSequence& TouchDownAtResolvedPixel(int32 InFingerId, FPixelResolver InResolver, const FString& InDescription);
+	FDreamDriverSequence& TouchMoveToResolvedPixel(int32 InFingerId, FPixelResolver InResolver, const FString& InDescription);
+
 	/**
 	 * Let a span of time pass. Under the headless pump that is ceil(InSeconds / FrameSeconds) frames
 	 * -- a long press is "hold for N seconds", and the pipeline times it on the world clock the pump

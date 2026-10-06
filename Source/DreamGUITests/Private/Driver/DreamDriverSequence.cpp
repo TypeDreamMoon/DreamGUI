@@ -2133,6 +2133,24 @@ FDreamDriverSequence& FDreamDriverSequence::TouchUp(int32 InFingerId)
 	return Add(MakeShared<FDreamTouchStep>(EDreamDriverTouchPhase::Ended, InFingerId, FDreamPixelResolver(), FString()));
 }
 
+FDreamDriverSequence& FDreamDriverSequence::MoveToResolvedPixel(FPixelResolver InResolver, const FString& InDescription)
+{
+	using namespace DreamDriverSequenceLocal;
+	return Add(MakeShared<FDreamMoveStep>(MoveTemp(InResolver), InDescription));
+}
+
+FDreamDriverSequence& FDreamDriverSequence::TouchDownAtResolvedPixel(int32 InFingerId, FPixelResolver InResolver, const FString& InDescription)
+{
+	using namespace DreamDriverSequenceLocal;
+	return Add(MakeShared<FDreamTouchStep>(EDreamDriverTouchPhase::Began, InFingerId, MoveTemp(InResolver), InDescription));
+}
+
+FDreamDriverSequence& FDreamDriverSequence::TouchMoveToResolvedPixel(int32 InFingerId, FPixelResolver InResolver, const FString& InDescription)
+{
+	using namespace DreamDriverSequenceLocal;
+	return Add(MakeShared<FDreamTouchStep>(EDreamDriverTouchPhase::Moved, InFingerId, MoveTemp(InResolver), InDescription));
+}
+
 FDreamDriverSequence& FDreamDriverSequence::WaitSeconds(float InSeconds)
 {
 	using namespace DreamDriverSequenceLocal;
