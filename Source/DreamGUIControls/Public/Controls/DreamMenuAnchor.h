@@ -8,6 +8,7 @@
 #include "Interaction/DreamUIPopupLayer.h"
 #include "DreamMenuAnchor.generated.h"
 
+class UDreamTweener;
 class UDreamWidget;
 class UDreamUserWidget;
 
@@ -310,6 +311,12 @@ private:
 
 	/** Asleep, home in its resting place, and the close announced: the end of every close. */
 	void FinishClose();
+
+	/** The fade the last open started, stopped where it is: a closed menu has no fade in, and a new open starts its own. */
+	void StopOpenFade();
+
+	/** The fade in the last open started, while it may still be running. */
+	TWeakObjectPtr<UDreamTweener> OpenFadeTweener;
 
 	UPROPERTY(Transient)
 	bool bIsOpen = false;

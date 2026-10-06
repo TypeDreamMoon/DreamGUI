@@ -13,12 +13,23 @@
 #include "Core/Components/DreamRectBlock.h"
 #include "Core/Components/DreamVisual.h"
 #include "Core/Components/DreamWidget.h"
+#include "DreamTweenManager.h"
 #include "DreamTweener.h"
 #include "Interaction/DreamContentWidget.h"
 #include "Interaction/DreamUIPopupLayer.h"
 #include "Interaction/UISelectable.h"
 
 const FName UDreamMenuAnchor::MenuSlotName(TEXT("Menu"));
+
+void UDreamMenuAnchor::StopOpenFade()
+{
+	// Without its completion: nothing hangs on it, and the opacity it leaves is the next writer's to set.
+	if (UDreamTweener* Fade = OpenFadeTweener.Get())
+	{
+		UDreamTweenManager::KillIfIsTweening(this, Fade, false);
+	}
+	OpenFadeTweener = nullptr;
+}
 
 void UDreamMenuAnchor::CollectParts(TArray<FDreamControlPart>& OutParts)
 {
@@ -350,10 +361,17 @@ void UDreamMenuAnchor::Open(bool bFocusMenu)
 
 	// Asked again rather than held across the push: a handler it ran may have restyled this anchor.
 	const float TransitionDuration = ResolveStyle(Style, &UDreamUIStyleSheet::MenuAnchorStyle).TransitionDuration;
+	// Every open fades in from clear, as every push of a Slate menu is a new window that starts transparent
+	// (MenuStack.cpp:490-503): a fade an earlier open started is stopped first. Left running, it went on writing the
+	// opacity it had reached, and the new fade -- which reads where it starts from on its first step -- took that up and
+	// came in from nearly opaque.
+	StopOpenFade();
 	if (TransitionDuration > 0.0f)
 	{
 		PopupNode->SetRenderOpacity(0.0f);
-		if (PopupNode->RenderOpacityTo(1.0f, TransitionDuration, 0.0f, EDreamTweenEase::OutCubic) == nullptr)
+		UDreamTweener* Fade = PopupNode->RenderOpacityTo(1.0f, TransitionDuration, 0.0f, EDreamTweenEase::OutCubic);
+		OpenFadeTweener = Fade;
+		if (Fade == nullptr)
 		{
 			// The tween manager is a world subsystem and hands back null without one, which is every
 			// headless test and every designer preview. Snapping to the END state is the only correct
@@ -480,6 +498,8 @@ void UDreamMenuAnchor::HandleMenuDismissed(UDreamWidget* InPopup, EDreamPopupDis
 void UDreamMenuAnchor::FinishClose()
 {
 	bPopupElevated = false;
+	// A closed menu is not fading in: the fade stops with the close, where it had got.
+	StopOpenFade();
 	if (IsValid(PopupNode))
 	{
 		// Home already -- the layer puts a closing popup back before it says so -- and now asleep. A popup put to

@@ -126,6 +126,9 @@ after 3 for 2.1.0 -- so the engine never takes 1.0.0 for the older of the two.
   control whose face takes one child -- every Dream Button, whose face is a size box over its content -- refused it: the
   ring stayed where it was made, under nothing, and was drawn nowhere. It now hangs under the nearest widget that takes
   it, placed and sized over the control, and moves with the control when the two move together, as in a scroll box.
+- **A menu opened again partway through its fade-in fades in from clear.** A Dream Menu Anchor closed during its fade
+  and opened again went on with the old fade, so the second open came in from nearly opaque. Every open now starts its
+  fade from transparent, as every push of a Slate menu is a new window that starts transparent.
 - **Creating a widget of an abstract class logs an error** instead of stopping on NewObject's assert. A class picked
   from a list cannot be abstract, but a class pin or a Create Dream Widget Of Class call fed from a variable can be.
 - **A DreamUI Widget Blueprint's thumbnail is the screen it authors.** The Content Browser tile was a wireframe of the
