@@ -93,11 +93,11 @@ Each input column holds one mark per configuration, in this order: Default (`[An
 | Dropdown | `##..` | `#...` | `#...` | `----` | 8 |
 | EditableText | `#...` | `....` | `#...` | `#...` | 13 |
 | MultiLineEditableText | `#...` | `....` | `....` | `#...` | 14 |
-| TextInput | `##.#` | `#...` | `#...` | `##.#` | 8 |
+| TextInput | `####` | `#...` | `#...` | `####` | 6 |
 | SpinBox | `##..` | `#...` | `##..` | `#...` | 10 |
 | InputKeySelector | `#...` | `....` | `....` | `#...` | 14 |
 | ExpandableArea | `##..` | `#...` | `#...` | `----` | 8 |
-| ListView | `#...` | `#...` | `#...` | `----` | 9 |
+| ListView | `#..#` | `#...` | `#...` | `----` | 8 |
 | ListRowDragDrop | `#...` | `#...` | `....` | `----` | 10 |
 | TileView | `#...` | `#...` | `#...` | `----` | 9 |
 | TreeView | `#...` | `#...` | `#...` | `----` | 9 |
@@ -108,8 +108,8 @@ Each input column holds one mark per configuration, in this order: Default (`[An
 | RichText | `#...` | `#...` | `....` | `----` | 10 |
 | RingMenu | `#...` | `#...` | `#...` | `----` | 9 |
 | ScrollBar | `#...` | `#...` | `----` | `----` | 6 |
-| ScrollBox | `#...` | `#...` | `#...` | `----` | 9 |
-| Slider | `##.#` | `#...` | `#...` | `----` | 7 |
+| ScrollBox | `#.##` | `#...` | `#...` | `----` | 7 |
+| Slider | `####` | `#...` | `#...` | `----` | 6 |
 | TabView | `##..` | `#...` | `##..` | `----` | 7 |
 | Toggle | `##..` | `#...` | `#...` | `----` | 8 |
 | ToggleGroup | `#...` | `....` | `....` | `----` | 11 |
@@ -125,7 +125,7 @@ Each input column holds one mark per configuration, in this order: Default (`[An
 | Tooltip | `#...` | `#...` | `....` | `----` | 10 |
 | VirtualCursor | `....` | `....` | `#...` | `----` | 11 |
 
-**Holes: 347** of 452 applicable cells.
+**Holes: 341** of 452 applicable cells.
 
 Notes:
 
