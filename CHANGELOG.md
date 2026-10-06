@@ -167,6 +167,13 @@ after 3 for 2.1.0 -- so the engine never takes 1.0.0 for the older of the two.
   It is drawn when an asset has no clean thumbnail and when it is saved, not on every frame the pointer rests on it, so
   a large screen does not stall the browser. A thumbnail already saved in an asset stays until the asset is next
   changed and saved.
+- **A press is let go of when its widget moves.** A button held down and then moved under another parent, taken off
+  its parent or destroyed kept the press: the release clicked it, the pointer never having left it, and a slider moved
+  to another parent partway through a drag went on following the pointer. The press now ends on the next frame, as a
+  Slate mouse capture ends once the path it was taken along no longer leads to its widget: the widget's release and the
+  end of its drag go out then (a slider's capture end among them), the button's own release later clicks nothing, and
+  the rest of the drag moves nothing. A drag and drop under way is left to run, as Slate's is once begun. A widget
+  destroyed while held is no longer left behind as the pointer's press after the release.
 
 ## 1.0.0
 

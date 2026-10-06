@@ -588,8 +588,10 @@ void UDreamPointerInputModule::ProcessPointerEvent(UDreamUIInputUser* InUser, UD
 						EventData->bIsUpFiredAtCurrentFrame = true;
 						InUser->CallOnPointerUp(EventData->PressWidget, EventData);
 					}
-					EventData->PressWidget = nullptr;
 				}
+				// Let go of whether or not it is still there: a widget destroyed while held is told nothing, and is not
+				// left behind as the press.
+				EventData->PressWidget = nullptr;
 				if (bLineTraceHitSomething)//hit something when stop drag
 				{
 					//if enter an object when drag, and after one frame trigger release and hit new object, then old object need to call DragExit
@@ -639,8 +641,9 @@ void UDreamPointerInputModule::ProcessPointerEvent(UDreamUIInputUser* InUser, UD
 						UDreamWidget* ClickedWidget = EventData->PressWidget;
 						InUser->CallOnPointerClick(ClickedWidget, EventData);
 					}
-					EventData->PressWidget = nullptr;
 				}
+				// As above: let go of a press on a widget destroyed while held too.
+				EventData->PressWidget = nullptr;
 			}
 			// A press that landed on an actor is let go as a widget's is: its up wherever the pointer is now, and its click
 			// only when the pointer is over that actor still (IsPointerOverPressTarget's rule). Read before the release

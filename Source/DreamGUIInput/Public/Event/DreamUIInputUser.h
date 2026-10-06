@@ -384,6 +384,10 @@ private:
 	void NotePressRaycaster(const UDreamPointerEventData* InEventData);
 	/** Let go of every press whose raycaster has gone since: its up, and no click. */
 	void ReleasePressesWhoseRaycasterWent();
+	/** Remember where InEventData's pointer press was taken (PressPaths) while it is held, and forget it once it is not. */
+	void NotePressPath(const UDreamPointerEventData* InEventData);
+	/** Let go of every press whose widget is no longer where it was pressed: its up, its drag ended, and no click. */
+	void ReleasePressesWhosePathBroke();
 	/** Every pointer's record of the focus follows the player's. */
 	void MirrorFocusOntoPointers();
 	/** One of the text target's keys, pressed or repeating on this player's keyboard. */
@@ -498,6 +502,19 @@ private:
 	 * known to have nothing left to be released over.
 	 */
 	TMap<int32, TWeakObjectPtr<UDreamBaseRaycaster>> PressRaycasters;
+
+	/**
+	 * Where a held pointer press was taken: the pressed widget and every parent above it, as they were when it went
+	 * down. Slate keeps a mouse capture the same way, as a weak path from the window down to the captor, and lets the
+	 * capture go once that path no longer leads to it (FSlateUser::GetCaptorPath): the widget moved under another
+	 * parent, taken off its parent, or destroyed.
+	 */
+	struct FPressPath
+	{
+		TWeakObjectPtr<UDreamWidget> Widget;
+		TArray<TWeakObjectPtr<UDreamWidget>> Parents;
+	};
+	TMap<int32, FPressPath> PressPaths;
 
 	/** The player's focus. Weak: a focused widget destroyed is simply no longer focused. */
 	TWeakObjectPtr<UDreamWidget> FocusedWidget;

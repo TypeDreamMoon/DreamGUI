@@ -1176,6 +1176,9 @@ void UDreamUIInputUser::RunPipelineBody()
 	ON_SCOPE_EXIT{ ProcessPinchGesture(); };
 
 	ReleasePressesWhoseRaycasterWent();
+	// Before anything is traced, so a press lost to a move under another parent ends where its drag last was: the ray
+	// a slider reads its value from is still last frame's.
+	ReleasePressesWhosePathBroke();
 
 	TSet<int32, DefaultKeyFuncs<int32>, TInlineSetAllocator<8>> TracedByQueue;
 
@@ -1232,6 +1235,7 @@ void UDreamUIInputUser::RunPipelineBody()
 			UDreamPointerInputModule::ProcessPointerEvent(this, EventData, bLineTraceHitSomething, HitContainer, bResultHitSomething, HitResult);
 			PointersMovedSinceTrace.Remove(Queued.PointerID);
 			NotePressRaycaster(EventData);
+			NotePressPath(EventData);
 			RaiseHitEvent(bResultHitSomething, HitResult, HitResult.Widget.Get());
 			TracedByQueue.Add(Queued.PointerID);
 
@@ -1284,6 +1288,7 @@ void UDreamUIInputUser::RunPipelineBody()
 			FDreamUIHitResult HitResult;
 			UDreamPointerInputModule::ProcessPointerEvent(this, EventData, bLineTraceHitSomething, HitContainer, bResultHitSomething, HitResult);
 			NotePressRaycaster(EventData);
+			NotePressPath(EventData);
 			RaiseHitEvent(bResultHitSomething, HitResult, HitResult.Widget.Get());
 			break;
 		}
@@ -2032,6 +2037,94 @@ void UDreamUIInputUser::ReleasePressesWhoseRaycasterWent()
 	}
 }
 
+void UDreamUIInputUser::NotePressPath(const UDreamPointerEventData* InEventData)
+{
+	if (InEventData == nullptr)
+	{
+		return;
+	}
+	UDreamWidget* Pressed = InEventData->PressWidget.Get();
+	if (!InEventData->bNowIsTriggerPressed || !IsValid(Pressed))
+	{
+		PressPaths.Remove(InEventData->PointerID);
+		return;
+	}
+	FPressPath* Known = PressPaths.Find(InEventData->PointerID);
+	if (Known != nullptr && Known->Widget.Get(/*bEvenIfGarbage*/ true) == Pressed)
+	{
+		return;//the path is the one the press was taken along, not wherever the widget is now
+	}
+	FPressPath& Path = PressPaths.Add(InEventData->PointerID);
+	Path.Widget = Pressed;
+	Path.Parents.Reset();
+	for (UDreamWidget* Walker = Pressed->GetParent(); Walker != nullptr; Walker = Walker->GetParent())
+	{
+		Path.Parents.Add(Walker);
+	}
+}
+
+void UDreamUIInputUser::ReleasePressesWhosePathBroke()
+{
+	// A held press is lost the way Slate loses a mouse capture: once the path it was taken along no longer leads to the
+	// widget (FSlateUser::GetCaptorPath lets go of a captor path that resolves Truncated) -- the widget moved under another
+	// parent, taken off its parent, or destroyed. SButton answers the lost capture by releasing itself
+	// (SButton::OnMouseCaptureLost), and its release then clicks nothing, the press being gone (OnMouseButtonUp); an
+	// SSlider's drag is that capture and ends with it (SSlider::OnMouseCaptureLost), and the moves after it are not the
+	// slider's. Here the same: the up, the drag ended, no click, and the button's own release later lets go of nothing.
+	// A drag and drop under way is left to run, as Slate's is: once begun it is the operation's, not the source's capture.
+	TArray<int32, TInlineAllocator<4>> Broken;
+	TArray<int32, TInlineAllocator<4>> Stale;
+	for (const TPair<int32, FPressPath>& Pair : PressPaths)
+	{
+		const UDreamPointerEventData* EventData = FindPointerEventData(Pair.Key);
+		const FPressPath& Path = Pair.Value;
+		const UDreamWidget* Pressed = EventData != nullptr ? EventData->PressWidget.Get() : nullptr;
+		const UDreamWidget* Recorded = Path.Widget.Get(/*bEvenIfGarbage*/ true);
+		if (EventData == nullptr || !EventData->bPrevIsTriggerPressed || EventData->DragOperation.Get() != nullptr
+			|| (Pressed != Recorded && !(Pressed == nullptr && Recorded == nullptr)))
+		{
+			Stale.Add(Pair.Key);//no press held any more, another press, or a drag and drop's to end
+			continue;
+		}
+		bool bStillLeads = Path.Widget.IsValid();
+		if (bStillLeads)
+		{
+			int32 Index = 0;
+			for (const UDreamWidget* Walker = Path.Widget->GetParent(); bStillLeads && Walker != nullptr; Walker = Walker->GetParent(), ++Index)
+			{
+				bStillLeads = Path.Parents.IsValidIndex(Index) && Path.Parents[Index].Get() == Walker;
+			}
+			bStillLeads = bStillLeads && Index == Path.Parents.Num();
+		}
+		if (!bStillLeads)
+		{
+			Broken.Add(Pair.Key);
+		}
+	}
+	for (const int32 PointerID : Stale)
+	{
+		PressPaths.Remove(PointerID);
+	}
+	for (const int32 PointerID : Broken)
+	{
+		PressPaths.Remove(PointerID);
+		UDreamPointerEventData* EventData = FindPointerEventData(PointerID);
+		if (EventData == nullptr)
+		{
+			continue;
+		}
+		FDreamUIInputDispatchScope Record(this);
+		// This frame's first event: what the last frame dispatched says nothing about it.
+		EventData->bIsUpFiredAtCurrentFrame = false;
+		EventData->bIsEndDragFiredAtCurrentFrame = false;
+		EndPressNow(EventData);
+		// A destroyed widget is told nothing, and is not left behind as the press either.
+		EventData->PressWidget = nullptr;
+		EventData->DragWidget = nullptr;
+		PressRaycasters.Remove(PointerID);
+	}
+}
+
 void UDreamUIInputUser::ReleaseAllPointers()
 {
 	RunOrDefer([WeakThis = TWeakObjectPtr<UDreamUIInputUser>(this)]()
@@ -2130,6 +2223,7 @@ void UDreamUIInputUser::Shutdown()
 		This->PointerWorldTargetMap.Reset();
 		This->TraceCache.Reset();
 		This->PressRaycasters.Reset();
+		This->PressPaths.Reset();
 		This->KeyPresses.Reset();
 		This->LiftedFingerClickRuns.Reset();
 		This->PointersMovedSinceTrace.Reset();

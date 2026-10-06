@@ -71,6 +71,12 @@ outside them through, and a screen built around the old way will feel different:
   decided alone; it is off by default now, which leaves the list to the project setting, and on keeps the press for that
   dropdown whatever the project says. A dropdown saved with the switch at its old default loads with the new one; one
   that must keep the press -- a list over controls that must not be hit while it is open -- turns it on again.
+- **A widget moved while it is held loses the press.** Moved under another parent, taken off its parent or destroyed
+  with a pointer's button down on it, it hears its release (and the end of its drag) on the next frame, and the button's
+  own release later clicks nothing, as a Slate widget loses its mouse capture. Game code that moves a held widget
+  somewhere else -- onto a layer drawn above the rest while it is dragged, say -- without a drag and drop loses the press
+  it moved; such code moves a copy, or starts a drag and drop (`UDreamDragDropOperation`), which moving its source does
+  not end.
 
 A C++ subclass of `UDreamSpinBox` or of the list family that overrides `NativeOnKeyDown` calls `Super` to keep these
 keys, as for any key the base answers.
