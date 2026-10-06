@@ -156,6 +156,7 @@ Reach for `each` when the ROW is the interesting part. Reach for Native.List whe
 | `ShadowBrushThickness` | `float` | List | yes | `GetShadowBrushThickness` / `SetShadowBrushThickness` | How deep the fade reaches into the window, in local units. |
 | `bAllowDragging` | `bool` | List|Drag | yes | `GetAllowDragging` / `SetAllowDragging` | Whether a row can be picked UP -- UMG's bAllowDragging. |
 | `bAllowDragDrop` | `bool` | List|Drag | yes | `GetAllowDragDrop` / `SetAllowDragDrop` | Whether a row can be dropped ON -- UMG's bAllowDragDrop. |
+| `FingerDrag` | `EDreamListFingerDrag` | List|Drag | yes | `GetFingerDrag` / `SetFingerDrag` | What a finger dragged along rows that can be picked up does: scroll the list (the default, UMG's) or pick the row up. |
 | `DragDropVisualPivot` | `FVector2D` | List|Drag | yes | `SetDragDropVisualPivot` | Where the drag visual sits relative to the pointer, as a fraction of its own size -- UMG's DragDropVisualPivot. (0,0) hangs it below-right of the cursor, (0.5,0.5) centres it on it. |
 | `DragDropVisualOffset` | `FVector2D` | List|Drag | yes | `SetDragDropVisualOffset` | A further nudge in local units, after the pivot -- UMG's DragDropVisualOffset. |
 | `DragDropVisualEntryClass` | `TSubclassOf<UDreamUserWidget>` | List|Drag | yes | `SetDragDropVisualEntryClass` | What to show under the cursor while dragging -- UMG's DragDropVisualEntryClass. |
@@ -206,6 +207,7 @@ Reach for `each` when the ROW is the interesting part. Reach for Native.List whe
 | `bool GetEnableShadowBrush()` | pure | Get Enable Shadow Brush |
 | `bool GetEnableTouchAnimatedScrolling()` | pure | Get Enable Touch Animated Scrolling |
 | `bool GetEnableTouchScrolling()` | pure | Get Enable Touch Scrolling |
+| `EDreamListFingerDrag GetFingerDrag()` | pure | Get Finger Drag |
 | `float GetFixedLineScrollOffset()` | pure | Get Fixed Line Scroll Offset |
 | `int32 GetIndexForItem(UObject* InItem)` | pure | Where an object sits in the source, or -1 when it is not in it -- UMG's GetIndexForItem. |
 | `bool GetIsDraggingListItem()` | pure | True while a row of THIS list is being dragged -- UMG's bIsDragging / GetIsDraggingListItem. |
@@ -275,6 +277,7 @@ Reach for `each` when the ROW is the interesting part. Reach for Native.List whe
 | `void SetEnableShadowBrush(bool bInEnable)` | callable | Set Enable Shadow Brush |
 | `void SetEnableTouchAnimatedScrolling(bool bInEnable)` | callable | Set Enable Touch Animated Scrolling |
 | `void SetEnableTouchScrolling(bool bInEnable)` | callable | Set Enable Touch Scrolling |
+| `void SetFingerDrag(EDreamListFingerDrag InFingerDrag)` | callable | Read when a finger's drag starts: a drag already under way goes on as it began. |
 | `void SetFixedLineScrollOffset(float InOffset)` | callable | Set Fixed Line Scroll Offset |
 | `void SetIsGamepadScrollingEnabled(bool bInEnable)` | callable | Set Is Gamepad Scrolling Enabled |
 | `void SetIsPointerScrollingEnabled(bool bInEnable)` | callable | Set Is Pointer Scrolling Enabled |

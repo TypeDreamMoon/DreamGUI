@@ -59,6 +59,19 @@ enum class EDreamItemDropZone : uint8
 	BelowItem,
 };
 
+/** What a finger dragged along a list whose rows can be picked up (bAllowDragging) does. */
+UENUM(BlueprintType, Category = DreamGUI)
+enum class EDreamListFingerDrag : uint8
+{
+	/**
+	 * The list scrolls under the finger and no row is picked up, as in UMG: a touch drag on a row of an SListView is the
+	 * list's (STableRow hands it to its table before the row's own drag is asked). The mouse still picks rows up.
+	 */
+	ScrollList,
+	/** The row under the finger is picked up, as the mouse picks it up; the list does not scroll under that finger. */
+	PickUpRow,
+};
+
 class UDreamListViewBase;
 
 /**
@@ -625,6 +638,18 @@ public:
 	bool bAllowDragDrop = false;
 
 	/**
+	 * What a finger dragged along rows that can be picked up does: scroll the list (the default, UMG's) or pick the row up.
+	 *
+	 * UMG has no switch for it: STableRow hands a touch drag to its list (STableRow::OnDragDetected captures the touch
+	 * for the table and returns before the row's own drag is asked), so on a touch screen a list of draggable rows still
+	 * scrolls, and the mouse picks the rows up. PickUpRow is for a touch-first screen whose rows are dragged by finger --
+	 * an inventory, a reorderable deck -- and whose list does not need scrolling by that drag. The mouse is the same
+	 * either way.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetFingerDrag", BlueprintSetter = "SetFingerDrag", Category = "List|Drag", meta = (EditCondition = "bAllowDragging"))
+	EDreamListFingerDrag FingerDrag = EDreamListFingerDrag::ScrollList;
+
+	/**
 	 * Where the drag visual sits relative to the pointer, as a fraction of its own size -- UMG's
 	 * DragDropVisualPivot. (0,0) hangs it below-right of the cursor, (0.5,0.5) centres it on it.
 	 */
@@ -1185,6 +1210,13 @@ public:
 
 	UFUNCTION(BlueprintPure, Category = "List|Drag")
 	bool GetAllowDragDrop() const { return bAllowDragDrop; }
+
+	UFUNCTION(BlueprintPure, Category = "List|Drag")
+	EDreamListFingerDrag GetFingerDrag() const { return FingerDrag; }
+
+	/** Read when a finger's drag starts: a drag already under way goes on as it began. */
+	UFUNCTION(BlueprintCallable, Category = "List|Drag")
+	void SetFingerDrag(EDreamListFingerDrag InFingerDrag);
 
 	UFUNCTION(BlueprintCallable, Category = "List|Drag")
 	void SetAllowDragDrop(bool bInAllow);

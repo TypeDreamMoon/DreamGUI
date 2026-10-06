@@ -20,8 +20,9 @@ nothing is in the [README](../README.md); what each version added is in the [CHA
 
 ## From 1.0.0 to the next release
 
-For a project on 1.0.0. Nothing was renamed, and nothing has to be done before opening the project. Three controls take
-input the way UMG's do now, and a screen built around the old way will feel different:
+For a project on 1.0.0. Nothing was renamed, and nothing has to be done before opening the project. Several controls take
+input the way UMG's do now, a split screen lays its players' screens out as UMG does, menus and dropdown lists let a press
+outside them through, and a screen built around the old way will feel different:
 
 - **A list, tile or tree view in Multi mode chooses rows as SListView does.** A plain click selected the row and kept
   every row already chosen, and a second click took it away; now a plain click chooses that row alone. Ctrl+click (Cmd on
@@ -54,6 +55,9 @@ input the way UMG's do now, and a screen built around the old way will feel diff
   distance, and `OnMouseCaptureBegin` comes then rather than as the finger lands; a finger that lifts without travelling
   changes nothing and says nothing. A touch screen that set a slider by tapping where the value should go now has the
   player drag the handle, as in UMG. The mouse is unchanged.
+- **A finger dragged along a list of draggable rows scrolls the list** (`bAllowDragging` on a List, Tile or Tree view).
+  It used to pick the row up; the mouse still does. A touch screen whose rows are dragged by finger sets the list's
+  `FingerDrag` to `PickUpRow`, which is the old behaviour for fingers.
 - **A press outside an open menu reaches what it lands on.** A Dream Menu Anchor's menu and a menu anchor panel's close
   on the press as before, and the press then goes on: a button under it is pressed and clicked, a field under it starts
   its edit. A screen that relied on the first click outside a menu doing nothing -- a menu over buttons that must not be

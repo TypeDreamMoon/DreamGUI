@@ -791,6 +791,15 @@ bool UDreamListRowDragSource::OnPointerBeginDrag_Implementation(UDreamPointerEve
 	{
 		return true;
 	}
+	// A finger's drag is the list's unless the list says its rows are picked up by finger: STableRow::OnDragDetected
+	// captures a touch for its table and returns before the row's own drag (OnDragDetected_Handler) is asked, so a finger
+	// scrolls a list of draggable rows as it scrolls any other. Refused the same way, so the scroll view gets it.
+	const bool bFinger = EventData != nullptr && EventData->InputType == EDreamUIPointerInputType::Pointer
+		&& DreamUIPointerIds::IsTouch(EventData->PointerID);
+	if (bFinger && OwningList->GetFingerDrag() == EDreamListFingerDrag::ScrollList)
+	{
+		return true;
+	}
 	return Super::OnPointerBeginDrag_Implementation(EventData);
 }
 
@@ -820,9 +829,16 @@ bool UDreamListRowDropTarget::CanAcceptDrop_Implementation(UDreamDragDropOperati
 
 bool UDreamListRowDropTarget::OnPointerDragDrop_Implementation(UDreamPointerEventData* EventData)
 {
+	// Only a drag and drop drops. A drag that carries no operation -- a finger that scrolled the list and lifted over a
+	// row -- reaches here too, as the pipeline tells whatever a drag ends over, and it is no drop: Slate calls OnDrop only
+	// for a drag-drop event, which only an operation makes. The base refuses it the same way.
+	if (EventData == nullptr || !IsValid(EventData->DragOperation))
+	{
+		return true;
+	}
 	// The zone is a question about this row's rect and the pointer, which is why it is answered here
 	// rather than in the base: a drop target in general has no rows and no order to insert into.
-	if (OwningList != nullptr && EventData != nullptr)
+	if (OwningList != nullptr)
 	{
 		LastDropZone = OwningList->GetDropZoneForPoint(PoolIndex, EventData->GetWorldPointInPlane());
 		if (!OwningList->HandleRowDrop(PoolIndex, EventData->DragOperation, LastDropZone))
@@ -957,6 +973,11 @@ void UDreamListViewBase::RefreshRowDragBehaviours()
 			RefreshRowDragBehaviour(*Row, PoolIndex);
 		}
 	}
+}
+
+void UDreamListViewBase::SetFingerDrag(EDreamListFingerDrag InFingerDrag)
+{
+	FingerDrag = InFingerDrag;
 }
 
 void UDreamListViewBase::SetAllowDragging(bool bInAllow)

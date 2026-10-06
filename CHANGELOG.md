@@ -53,6 +53,9 @@ after 3 for 2.1.0 -- so the engine never takes 1.0.0 for the older of the two.
   Each of these used to be addable anywhere and then sat there doing nothing. Paste, duplicate and component assets
   dropped on the panel follow the same rules; a refused drop says why. A project adds rules for its own components
   from its editor module.
+- **`UDreamListViewBase::FingerDrag`** (List, Tile and Tree views): what a finger dragged along rows that can be picked up
+  does. `ScrollList`, the default, scrolls the list, as UMG's does; `PickUpRow` picks the row up, as the mouse does, for a
+  touch-first screen whose rows are dragged by finger. The mouse is the same either way.
 - **`bMenusConsumeOutsideClick`** in the project settings (Dream GUI, Input): on, a press outside an open menu or
   dropdown list only closes it, as DreamGUI's menus and lists did before; off, the default, it closes it and goes on to
   what it landed on (see Changed).
@@ -120,6 +123,9 @@ after 3 for 2.1.0 -- so the engine never takes 1.0.0 for the older of the two.
   it -- and follows it until it lifts. A tap that never travelled changes nothing and begins no capture; it used to jump
   the value to the tap and capture at once, as the mouse does. The mouse is unchanged. See
   [Migration](Docs/Migration.md#from-100-to-the-next-release).
+- **A finger dragged along a list of rows that can be dragged scrolls the list**, as `STableRow` gives a touch drag to
+  its list; it used to pick up the row it landed on. The mouse still picks rows up, and `FingerDrag = PickUpRow` gives
+  the finger the old behaviour. See [Migration](Docs/Migration.md#from-100-to-the-next-release).
 - **A press outside an open menu goes on to what it landed on**, as the Slate menu stack lets it: a Dream Menu Anchor's
   menu, or a menu anchor panel's, closes on the press and the button under it is pressed and clicked as well. It used to
   close the menu and go no further. A press on the menu's own trigger still closes it without opening it again:
@@ -146,6 +152,9 @@ after 3 for 2.1.0 -- so the engine never takes 1.0.0 for the older of the two.
   control whose face takes one child -- every Dream Button, whose face is a size box over its content -- refused it: the
   ring stayed where it was made, under nothing, and was drawn nowhere. It now hangs under the nearest widget that takes
   it, placed and sized over the control, and moves with the control when the two move together, as in a scroll box.
+- **A drag that is not a drag and drop no longer drops on a list row.** A finger that scrolled a list of droppable rows
+  and lifted over one of them reported `OnItemAcceptDrop` for that row, with no operation; only a drag that carries an
+  operation drops now, as only a drag-drop event reaches Slate's `OnDrop`.
 - **A menu opened again partway through its fade-in fades in from clear.** A Dream Menu Anchor closed during its fade
   and opened again went on with the old fade, so the second open came in from nearly opaque. Every open now starts its
   fade from transparent, as every push of a Slate menu is a new window that starts transparent.
