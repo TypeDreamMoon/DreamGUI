@@ -20,15 +20,16 @@
 #include "UnrealWidget.h"
 
 /*
- * The rotation handle, grabbed and turned with a pointer.
+ * The 3D view's rotation gizmo, grabbed and turned with a pointer.
  *
- * The 2D designer has no rotation handle, as UMG's designer has none: a widget is turned there through its details. The
- * designer's 3D view has one, the engine's transform gizmo (FDreamWidgetDesignerViewportClient::GetWidgetMode hands the
- * perspective view the engine's own W/E/R gizmo, and InputWidgetDelta turns the selection by what it reports). So this
- * is the level editor's rotate gesture, made in the designer: the ring found where it is drawn, by the viewport's own hit
- * proxies, hovered -- Slate asks the viewport for a cursor every frame, and that query is where an editor viewport learns
- * which axis is under the pointer -- pressed, dragged along the ring and let go. The widget turns in its own plane, the
- * asset takes the turn, and one undo takes it back.
+ * UMG's designer has no rotation handle: a widget is turned there through its details. This designer's 2D view has a
+ * rotate handle of its own (DreamDesignerRotateHandleAutomationTests.cpp), and its 3D view the engine's transform gizmo
+ * (FDreamWidgetDesignerViewportClient::GetWidgetMode hands the perspective view the engine's own W/E/R gizmo, and
+ * InputWidgetDelta turns the selection by what it reports). So this is the level editor's rotate gesture, made in the
+ * designer: the ring found where it is drawn, by the viewport's own hit proxies, hovered -- Slate asks the viewport for a
+ * cursor every frame, and that query is where an editor viewport learns which axis is under the pointer -- pressed,
+ * dragged along the ring and let go. The widget turns in its own plane, the asset takes the turn, and one undo takes it
+ * back.
  *
  * The view, the gizmo's mode and the rotation grid are set directly: they are how the scene is arranged, and not what is
  * being tested. NonNullRHI, because the hit proxies are drawn: under -nullrhi the map reads back as zeros.

@@ -665,6 +665,33 @@ namespace
 	 * well under half the 0.25 gap, so two gridlines can never both claim the cursor.
 	 */
 	constexpr double DreamAnchorSnapTolerance = 0.02;
+
+	/**
+	 * How far the rotate handle stands off the middle of the selection's top edge, in viewport pixels, along the widget's
+	 * own up. More than twice the nine-pixel pick radius every handle has, so its pick never reaches the top edge's resize
+	 * handle or the corners beside it, however small the widget is drawn.
+	 */
+	constexpr float DreamRotateHandleStandOff = 24.0f;
+	/** The step a turn lands on while Shift is held, in degrees: the step design tools commonly use. */
+	constexpr double DreamRotateSnapStep = 15.0;
+
+	/**
+	 * The frame a turn of InWidget's roll is a plain rotation in: its own place and rotation in its parent, without its own
+	 * scale. A roll is applied to the widget after its scale and before its parent, so in this frame -- and only in it --
+	 * turning the roll by an angle turns everything the widget draws by that angle about the origin, which is the pivot.
+	 * The parent's scale, a mirror included, stays in, so a pointer measured here turns the widget the way it went round on
+	 * screen. A widget with no parent widget falls back to its own world rotation and place.
+	 */
+	FTransform DreamRollFrame(const UDreamWidget* InWidget)
+	{
+		const FTransform PlacedInParent(InWidget->GetRelativeRotation(), InWidget->GetRelativeLocation());
+		if (const UDreamWidget* ParentWidget = InWidget->GetParent())
+		{
+			return PlacedInParent * ParentWidget->GetWorldTransform();
+		}
+		const FTransform& World = InWidget->GetWorldTransform();
+		return FTransform(World.GetRotation(), World.GetLocation());
+	}
 }
 
 bool FDreamWidgetDesignerViewportClient::UpdateDesignerScreenGeometry(FSceneView& View)
@@ -752,6 +779,19 @@ bool FDreamWidgetDesignerViewportClient::UpdateDesignerScreenGeometry(FSceneView
 		{
 			FVector2D PivotPixel;
 			if (DreamWorldToPixelInFront(View, SelectedWidget->GetWorldTransform().GetLocation(), PivotPixel))DesignerHandlePositions.Add(EDesignerHandle::Pivot, PivotPixel);
+			// Above the top edge as the WIDGET has it, not as the screen does: the up is read off the projected rect, so a
+			// turned widget's handle turns with it and a quarter turn clockwise puts it on the right. Offered whatever the
+			// parent arranges, because no layout writes a rotation -- the same reason the commit mirrors a laid-out
+			// widget's rotation (CommitWidgetGeometryToTemplate). Not in the 3D view: the gizmo turns the selection there.
+			const FVector2D TopMiddle = (SingleCorners[2] + SingleCorners[3]) * 0.5f;
+			FVector2D Up = (TopMiddle - (SingleCorners[0] + SingleCorners[1]) * 0.5f).GetSafeNormal();
+			if (Up.IsNearlyZero())
+			{
+				// A rect with no height has no up of its own; a quarter turn back from its right is the one it would have.
+				const FVector2D Right = (SingleCorners[1] - SingleCorners[0]).GetSafeNormal();
+				Up = Right.IsNearlyZero() ? FVector2D(0.0, -1.0) : FVector2D(Right.Y, -Right.X);
+			}
+			DesignerHandlePositions.Add(EDesignerHandle::Rotate, TopMiddle + Up * DreamRotateHandleStandOff);
 			UpdateAnchorScreenGeometry(View, SelectedWidget);
 		}
 	}
@@ -824,8 +864,9 @@ FDreamWidgetDesignerViewportClient::EDesignerHandle FDreamWidgetDesignerViewport
 	{
 		if (Pair.Key != EDesignerHandle::Pivot && FVector2D::Distance(Pair.Value, PixelPosition) <= HandleRadius)return Pair.Key;
 	}
-	// After the selection's own handles: an anchor marker sitting on top of a resize handle would be
-	// stealing the more common gesture, and it is the one that can be reached from the details panel.
+	// After the selection's own handles -- the rotate handle is one of them: an anchor marker sitting on top of a resize
+	// or rotate handle would be stealing the more common gesture, and it is the one that can be reached from the details
+	// panel.
 	for (const auto& Pair : DesignerAnchorHandlePositions)
 	{
 		if (FVector2D::Distance(Pair.Value, PixelPosition) <= HandleRadius)return Pair.Key;
@@ -1335,8 +1376,11 @@ void FDreamWidgetDesignerViewportClient::DrawDesignerOverlay(FViewport& InViewpo
 		Line.LineThickness = 1.5f;
 		Canvas.DrawItem(Line);
 	}
+	// Before the square handles, so the top edge's handle sits over the foot of the rotate handle's stem.
+	DrawRotateHandle(Canvas);
 	for (const auto& Pair : DesignerHandlePositions)
 	{
+		if (Pair.Key == EDesignerHandle::Rotate)continue;
 		const bool bPivot = Pair.Key == EDesignerHandle::Pivot;
 		const float Size = bPivot ? 7.0f : 8.0f;
 		FCanvasTileItem Tile(Pair.Value / DpiScale - FVector2D(Size * 0.5f), FVector2D(Size),
@@ -1374,6 +1418,36 @@ void FDreamWidgetDesignerViewportClient::DrawDesignerOverlay(FViewport& InViewpo
 			Canvas.DrawItem(Guide);
 		}
 	}
+}
+
+void FDreamWidgetDesignerViewportClient::DrawRotateHandle(FCanvas& Canvas) const
+{
+	const FVector2D* Handle = DesignerHandlePositions.Find(EDesignerHandle::Rotate);
+	if (Handle == nullptr || DesignerScreenCorners.Num() != 4)return;
+	const float DpiScale = Canvas.GetDPIScale();
+	const FLinearColor OutlineColor(0.1f, 0.65f, 1.0f);
+	// A disc on a short stem from the middle of the top edge, the shape design tools give the handle that turns a shape,
+	// so it reads as something other than one more resize square.
+	FCanvasLineItem Stem((DesignerScreenCorners[2] + DesignerScreenCorners[3]) * 0.5f / DpiScale, *Handle / DpiScale);
+	Stem.SetColor(OutlineColor);
+	Stem.LineThickness = 1.5f;
+	Canvas.DrawItem(Stem);
+	FCanvasNGonItem Rim(*Handle / DpiScale, FVector2D(5.0f), 16, OutlineColor);
+	Rim.BlendMode = SE_BLEND_Translucent;
+	Canvas.DrawItem(Rim);
+	FCanvasNGonItem Face(*Handle / DpiScale, FVector2D(3.0f), 16, FLinearColor(0.9f, 0.95f, 1.0f));
+	Face.BlendMode = SE_BLEND_Translucent;
+	Canvas.DrawItem(Face);
+	// While it is held, the angle it has reached: with Shift taking it in fifteen-degree steps, the number is how an
+	// author knows which step it is on.
+	if (!bDesignerDragging || ActiveDesignerHandle != EDesignerHandle::Rotate || DesignerSnapshots.IsEmpty())return;
+	const UDreamWidget* Turned = DesignerSnapshots[0].Widget.Get();
+	UFont* Font = GEngine != nullptr ? GEngine->GetSmallFont() : nullptr;
+	if (Turned == nullptr || Font == nullptr)return;
+	FCanvasTextItem AngleText(*Handle / DpiScale + FVector2D(10.0f, -6.0f),
+		FText::FromString(FString::Printf(TEXT("%.1f\u00B0"), Turned->GetRelativeRotationEuler().Roll)), Font, FLinearColor::White);
+	AngleText.EnableShadow(FLinearColor::Black);
+	Canvas.DrawItem(AngleText);
 }
 
 void FDreamWidgetDesignerViewportClient::DrawAnchorMedallion(FCanvas& Canvas) const
@@ -1783,7 +1857,9 @@ void FDreamWidgetDesignerViewportClient::BeginDesignerDrag(EDesignerHandle InHan
 		bBlueprintPackageWasDirtyBeforeDrag = DraggedBlueprint->GetOutermost()->IsDirty();
 		BlueprintStatusBeforeDrag = (uint8)DraggedBlueprint->Status;
 	}
-	DesignerTransaction = MakeUnique<FScopedTransaction>(LOCTEXT("DesignerTransformWidgets", "Transform Widgets"));
+	DesignerTransaction = MakeUnique<FScopedTransaction>(HitHandle == EDesignerHandle::Rotate
+		? LOCTEXT("DesignerRotateWidget", "Rotate Widget")
+		: LOCTEXT("DesignerTransformWidgets", "Transform Widgets"));
 	// Inside the transaction and BEFORE the first mouse move, which is what makes the drag undoable:
 	// CopyPreviewValuesToTemplate Modify()s each template before writing, so what the entry carries
 	// is the geometry as it stood when the handle was grabbed. The widgets below are the PREVIEW's
@@ -1801,11 +1877,21 @@ void FDreamWidgetDesignerViewportClient::BeginDesignerDrag(EDesignerHandle InHan
 		Snapshot.Pivot = SelectedWidget->GetPivot();
 		Snapshot.Width = SelectedWidget->GetWidth();
 		Snapshot.Height = SelectedWidget->GetHeight();
+		Snapshot.RelativeRotation = SelectedWidget->GetRelativeRotation();
+		Snapshot.RelativeRotationEuler = SelectedWidget->GetRelativeRotationEuler();
 		Snapshot.WorldTransform = SelectedWidget->GetWorldTransform();
 		// An anchor lives in the parent's rect, so an anchor drag reads the parent's plane just as a
-		// move does; everything else is measured in the widget's own.
-		Snapshot.PlaneTransform = (HitHandle == EDesignerHandle::Move || IsAnchorHandle(HitHandle)) && SelectedWidget->GetParent()
-			? SelectedWidget->GetParent()->GetWorldTransform() : SelectedWidget->GetWorldTransform();
+		// move does; a turn is read in the frame its roll turns in (DreamRollFrame); everything else is
+		// measured in the widget's own.
+		if (HitHandle == EDesignerHandle::Rotate)
+		{
+			Snapshot.PlaneTransform = DreamRollFrame(SelectedWidget);
+		}
+		else
+		{
+			Snapshot.PlaneTransform = (HitHandle == EDesignerHandle::Move || IsAnchorHandle(HitHandle)) && SelectedWidget->GetParent()
+				? SelectedWidget->GetParent()->GetWorldTransform() : SelectedWidget->GetWorldTransform();
+		}
 		const FDreamLayoutControlAnchorData Control = GetEffectiveLayoutControl(SelectedWidget);
 		Snapshot.bHorizontalPositionFree = !Control.bCanControlHorizontalPosition;
 		Snapshot.bVerticalPositionFree = !Control.bCanControlVerticalPosition;
@@ -1815,6 +1901,7 @@ void FDreamWidgetDesignerViewportClient::BeginDesignerDrag(EDesignerHandle InHan
 	DesignerDragStartPixel = MousePixel;
 	bDesignerDragging = true;
 	bDesignerChanged = false;
+	DesignerRotateTurn = 0.0;
 	DesignerGuideX.Reset();
 	DesignerGuideY.Reset();
 }
@@ -1922,6 +2009,28 @@ void FDreamWidgetDesignerViewportClient::UpdateDesignerDrag()
 			((bMovesMinX ? NewMin.X : NewMax.X) - ParentPivot.X) * ParentWidth,
 			((bMovesMinY ? NewMin.Y : NewMax.Y) - ParentPivot.Y) * ParentHeight));
 	}
+	else if (ActiveDesignerHandle == EDesignerHandle::Rotate)
+	{
+		FDesignerWidgetSnapshot& Snapshot = DesignerSnapshots[0];
+		UDreamWidget* SelectedWidget = Snapshot.Widget.Get();
+		if (!SelectedWidget)return;
+		FVector CurrentPoint;
+		if (!IntersectDesignerPlane(MousePixel, Snapshot.PlaneTransform, CurrentPoint))return;
+		// The angle the pointer has gone round the pivot since the press, rather than the pointer's own direction: the
+		// handle is grabbed a few pixels off its centre, and reading the direction absolutely would turn the widget by
+		// that much the instant it was grabbed.
+		const FVector GrabbedLocal = Snapshot.PlaneTransform.InverseTransformPosition(Snapshot.StartPlanePoint);
+		const FVector CurrentLocal = Snapshot.PlaneTransform.InverseTransformPosition(CurrentPoint);
+		DesignerRotateTurn = ResolveRotateTurn(FVector2D(GrabbedLocal.Y, GrabbedLocal.Z), FVector2D(CurrentLocal.Y, CurrentLocal.Z), DesignerRotateTurn);
+		// The roll and nothing else, through the euler, which is the face of the rotation the .dui spells and the
+		// details panel shows: a widget at 350 dragged on to 370 reads 370, not 10. Turning about the pivot moves
+		// nothing, because the pivot is where the widget's place in its parent is measured to. Shift takes the angle --
+		// not the turn -- to the nearest step; the grid is about places and leaves angles alone.
+		const FRotator& Start = Snapshot.RelativeRotationEuler;
+		double Roll = Start.Roll + DesignerRotateTurn;
+		if (IsShiftPressed())Roll = SnapRotationDegrees(Roll, DreamRotateSnapStep);
+		SelectedWidget->SetRelativeRotationEuler(FRotator(Start.Pitch, Start.Yaw, Roll));
+	}
 	else
 	{
 		FDesignerWidgetSnapshot& Snapshot = DesignerSnapshots[0];
@@ -1984,7 +2093,13 @@ void FDreamWidgetDesignerViewportClient::UpdateDesignerDrag()
 				|| !SelectedWidget->GetPivot().Equals(Snapshot.Pivot)
 				|| !FMath::IsNearlyEqual(SelectedWidget->GetWidth(), Snapshot.Width)
 				|| !FMath::IsNearlyEqual(SelectedWidget->GetHeight(), Snapshot.Height)
-				|| !SelectedWidget->GetWorldTransform().Equals(Snapshot.WorldTransform);
+				|| !SelectedWidget->GetWorldTransform().Equals(Snapshot.WorldTransform)
+				// A turn's angle compared as written rather than as a rotation: a whole turn ends where it began on screen
+				// and is still an edit, because 360 is not what the file said. Only for the rotate handle: the other
+				// handles place the widget through its world transform, which re-derives the euler from the quaternion,
+				// and a resize that came back to where it started is not an edit for having tidied 370 into 10.
+				|| (ActiveDesignerHandle == EDesignerHandle::Rotate
+					&& !SelectedWidget->GetRelativeRotationEuler().Euler().Equals(Snapshot.RelativeRotationEuler.Euler()));
 			if (bDesignerChanged)break;
 		}
 	}
@@ -2141,6 +2256,17 @@ void FDreamWidgetDesignerViewportClient::FinishDesignerDrag(bool bCancel)
 		{
 			if (UDreamWidget* SelectedWidget = Snapshot.Widget.Get())
 			{
+				if (ActiveDesignerHandle == EDesignerHandle::Rotate)
+				{
+					// A turn wrote the rotation and nothing else, so the rotation is all that goes back, both faces of it
+					// exactly. The euler first: that restores the euler and derives a quaternion from it. Then the
+					// quaternion: nothing when the derived one already is it, and otherwise it restores the quaternion and
+					// derives the euler again -- the one that was there, since that is where it had come from. Restoring
+					// through the world transform, as below, would derive the euler regardless and could tidy 370 into 10.
+					SelectedWidget->SetRelativeRotationEuler(Snapshot.RelativeRotationEuler);
+					SelectedWidget->SetRelativeRotation(Snapshot.RelativeRotation);
+					continue;
+				}
 				// One write, because the anchors and the offsets only mean anything together: putting
 				// the size back before the anchors it was measured against would restore a different
 				// rect than the one that was snapshotted.
@@ -2164,10 +2290,12 @@ void FDreamWidgetDesignerViewportClient::FinishDesignerDrag(bool bCancel)
 		{
 			DesignerPtr.Pin()->CommitSelectedWidgetGeometryToTemplate();
 			// Dragging in the designer moves the widget by its anchored position, which the widget
-			// resolves into RelativeLocation; that is the property the animation keys.
+			// resolves into RelativeLocation; that is the property the animation keys. A turn moves
+			// nothing and keys the rotation instead.
 			TArray<UDreamWidget*> DraggedWidgets;
 			GetDraggedWidgets(DraggedWidgets);
-			AutoKeyAnimatedTransform(DraggedWidgets, true, false, false);
+			const bool bTurned = ActiveDesignerHandle == EDesignerHandle::Rotate;
+			AutoKeyAnimatedTransform(DraggedWidgets, !bTurned, bTurned, false);
 		}
 	}
 	const bool bRolledBack = DesignerTransaction.IsValid() && (bCancel || !bDesignerChanged);
@@ -2206,6 +2334,7 @@ void FDreamWidgetDesignerViewportClient::FinishDesignerDrag(bool bCancel)
 	ActiveDesignerHandle = EDesignerHandle::None;
 	bDesignerDragging = false;
 	bDesignerChanged = false;
+	DesignerRotateTurn = 0.0;
 	DesignerGuideX.Reset();
 	DesignerGuideY.Reset();
 	Invalidate();
@@ -3426,6 +3555,22 @@ double FDreamWidgetDesignerViewportClient::SnapAnchorFraction(double InFraction,
 	return InFraction;
 }
 
+double FDreamWidgetDesignerViewportClient::ResolveRotateTurn(const FVector2D& InGrabbed, const FVector2D& InCurrent, double InPreviousTurn)
+{
+	if (InGrabbed.IsNearlyZero() || InCurrent.IsNearlyZero())return InPreviousTurn;
+	// Atan2 counts anticlockwise with right and up as the axes; a positive roll turns a widget clockwise as it faces the
+	// viewer (FRotationMatrix carries its right edge down), so the sense flips.
+	const double Raw = -FMath::RadiansToDegrees(FMath::Atan2(InCurrent.Y, InCurrent.X) - FMath::Atan2(InGrabbed.Y, InGrabbed.X));
+	// Raw is only known up to a whole turn; the answer is the version of it nearest the last one, which a pointer that
+	// moves less than half a turn between two updates always leaves unambiguous.
+	return Raw + 360.0 * FMath::RoundToDouble((InPreviousTurn - Raw) / 360.0);
+}
+
+double FDreamWidgetDesignerViewportClient::SnapRotationDegrees(double InDegrees, double InStep)
+{
+	return InStep > 0.0 ? FMath::GridSnap(InDegrees, InStep) : InDegrees;
+}
+
 void FDreamWidgetDesignerViewportClient::SetAnchorsPreservingRect(UDreamWidget* InWidget, const FVector2D& InAnchorMin, const FVector2D& InAnchorMax)
 {
 	if (!IsValid(InWidget))return;
@@ -3958,6 +4103,26 @@ void FDreamWidgetDesignerViewportClient::CapturedMouseMove(FViewport* InViewport
 	// dirty flag is deliberately left alone: hover is not resolved while something is being dragged.
 	HoverPixel = FIntPoint(InMouseX, InMouseY);
 	KeepTickingThroughGesture();
+}
+
+EMouseCursor::Type FDreamWidgetDesignerViewportClient::GetCursor(FViewport* InViewport, int32 X, int32 Y)
+{
+	// The engine is asked first, always: asking is also how an editor viewport learns which gizmo axis is under the
+	// pointer (it looks at the hit proxy there and checks again on its next tick), and the 3D view's gizmo needs that.
+	const EMouseCursor::Type EngineCursor = FEditorViewportClient::GetCursor(InViewport, X, Y);
+	// The engine has no cursor that says "turn", so the hand stands in for it: open over the handle, closed while it is
+	// held, the way a grabbed thing reads everywhere else in the editor.
+	if ((bDesignerDragging && ActiveDesignerHandle == EDesignerHandle::Rotate)
+		|| (bDesignerDragPending && PendingDesignerHandle == EDesignerHandle::Rotate))
+	{
+		return EMouseCursor::GrabHandClosed;
+	}
+	if (bDesignerDragging || bDesignerDragPending || bDesignerMarqueeActive || !IsOrtho())return EngineCursor;
+	// Read against the handles as they were last drawn, which in a realtime viewport is this frame's: the cursor talks
+	// about what is on screen, so with the chrome switched off -- the handle still grabbable but not drawn, and its
+	// place not refreshed -- it says nothing.
+	if (DesignerPtr.IsValid() && !DesignerPtr.Pin()->GetShowDesignerChrome())return EngineCursor;
+	return HitTestDesignerHandle(FVector2D(X, Y)) == EDesignerHandle::Rotate ? EMouseCursor::GrabHand : EngineCursor;
 }
 
 void FDreamWidgetDesignerViewportClient::MouseEnter(FViewport* InViewport, int32 x, int32 y)

@@ -842,6 +842,63 @@ namespace DreamTests
 		return Box;
 	}
 
+	bool FDreamDesignerDriver::WorldToPixels(TConstArrayView<FVector> InWorldPoints, TArray<FVector2D>& OutPixels) const
+	{
+		OutPixels.Reset();
+		TSharedPtr<FSceneViewport> Viewport = WeakSceneViewport.Pin();
+		FEditorViewportClient* Client = ViewportClient();
+		if (!Viewport.IsValid() || Client == nullptr || Viewport->GetSizeXY().X <= 0 || Viewport->GetSizeXY().Y <= 0)
+		{
+			return false;
+		}
+		// The family WidgetPixel builds, for the reason given there.
+		FSceneViewFamilyContext ViewFamily(FSceneViewFamily::ConstructionValues(
+			Viewport.Get(), Client->GetScene(), Client->EngineShowFlags)
+			.SetRealtimeUpdate(Client->IsRealtime())
+			.SetTime(FGameTime::GetTimeSinceAppStart()));
+		FSceneView* View = Client->CalcSceneView(&ViewFamily);
+		if (View == nullptr)
+		{
+			return false;
+		}
+		for (const FVector& WorldPoint : InWorldPoints)
+		{
+			const FVector4 ScreenPoint = View->WorldToScreen(WorldPoint);
+			FVector2D Pixel = FVector2D::ZeroVector;
+			if (ScreenPoint.W <= 0.0f || !View->ScreenToPixel(ScreenPoint, Pixel))
+			{
+				OutPixels.Reset();
+				return false;
+			}
+			OutPixels.Add(Pixel);
+		}
+		return true;
+	}
+
+	bool FDreamDesignerDriver::WidgetPixelCorners(const UDreamWidget* InPreviewWidget, TArray<FVector2D>& OutCorners) const
+	{
+		OutCorners.Reset();
+		if (!::IsValid(InPreviewWidget))
+		{
+			return false;
+		}
+		// Measured out from the pivot in the widget's local X=0 plane, as WidgetPixelRect measures them.
+		const float Width = InPreviewWidget->GetWidth();
+		const float Height = InPreviewWidget->GetHeight();
+		const FVector2D Pivot = InPreviewWidget->GetPivot();
+		const float Left = -Pivot.X * Width;
+		const float Right = (1.0f - Pivot.X) * Width;
+		const float Bottom = -Pivot.Y * Height;
+		const float Top = (1.0f - Pivot.Y) * Height;
+		const FTransform& Transform = InPreviewWidget->GetWorldTransform();
+		const FVector WorldCorners[] = {
+			Transform.TransformPosition(FVector(0, Left, Bottom)),
+			Transform.TransformPosition(FVector(0, Right, Bottom)),
+			Transform.TransformPosition(FVector(0, Right, Top)),
+			Transform.TransformPosition(FVector(0, Left, Top)) };
+		return WorldToPixels(WorldCorners, OutCorners);
+	}
+
 	TArray<UDreamWidget*> FDreamDesignerDriver::SelectedWidgets() const
 	{
 		TArray<UDreamWidget*> Result;

@@ -24,8 +24,9 @@
  * SetAnchorsPreservingRect -- which say what the rules are. These say the rules are what a hand meets: every press, move
  * and release goes in through FSceneViewport's ISlateViewport entry points (FDreamDesignerDriver), the designer's
  * viewport client hit-tests its own handles against the pixel, and the client's tick turns the held press into the drag.
- * The handles are the designer's answer to UMG's (STransformHandle, the anchor medallion); a rotation handle the 2D
- * designer has none of, as UMG has none -- the 3D view's transform gizmo is in DreamDesignerGizmoAutomationTests.cpp.
+ * The handles are the designer's answer to UMG's (STransformHandle, the anchor medallion); the rotate handle, which UMG
+ * has no counterpart of, is in DreamDesignerRotateHandleAutomationTests.cpp, and the 3D view's transform gizmo in
+ * DreamDesignerGizmoAutomationTests.cpp.
  *
  * Synchronous, like the rest of the headless designer suite: the driver pumps the designer's frames itself, and the
  * preferences every gesture reads -- grid snapping and its size, the guides that switch sibling snapping on -- are pinned

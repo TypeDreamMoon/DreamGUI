@@ -62,6 +62,13 @@ after 3 for 2.1.0 -- so the engine never takes 1.0.0 for the older of the two.
 - **`UUIButton::GetClickEventData`**: while a button's click listeners run, the pointer event the click came from --
   whose it is, which pointer, a finger or the mouse, navigation or not. The click delegates carry no arguments, and a
   C++ listener that has to tell a tap from a click asks this; null for a click raised by broadcasting the delegate.
+- **The designer has a rotate handle**, which UMG's designer does not. A single widget selected in the 2D view gets a
+  disc on a short stem above the middle of its top edge, standing off it along the widget's own up, so it turns with the
+  widget. Dragged round, it turns the widget in its own plane about its pivot by the angle the pointer goes round,
+  clockwise on screen being a positive roll, and shows the angle as it goes; with Shift held the angle lands on a whole
+  number of 15 degrees, and grid snapping leaves angles alone. The angle is written to `RelativeRotationEuler`, in the
+  asset and in the `.dui` the class names, as one undo step; Esc during the drag puts the angle back. The pointer is a
+  hand over the handle. Two widgets selected have no handle, and the 3D view keeps the engine's transform gizmo.
 
 ### Changed
 

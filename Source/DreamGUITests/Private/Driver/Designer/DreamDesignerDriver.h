@@ -231,6 +231,18 @@ namespace DreamTests
 
 		/** The widget's four projected corners as an axis-aligned box of inner pixels, or unset. */
 		TOptional<FBox2D> WidgetPixelRect(const UDreamWidget* InPreviewWidget) const;
+		/**
+		 * The widget's four rect corners on the inner pixel grid, unrounded, in the order the designer's overlay walks them:
+		 * bottom-left, bottom-right, top-right, top-left of the widget's OWN rect. Unlike the box above this still says which
+		 * edge is the widget's top once it is turned. False, with OutCorners empty, when any corner cannot be projected.
+		 */
+		bool WidgetPixelCorners(const UDreamWidget* InPreviewWidget, TArray<FVector2D>& OutCorners) const;
+		/**
+		 * World-space points on the inner pixel grid, unrounded, through the same view the designer draws with -- a widget's
+		 * pivot is its GetWorldTransform().GetLocation(). False, with OutPixels empty, when any of them is at or behind the
+		 * eye or there is no sized viewport to project onto.
+		 */
+		bool WorldToPixels(TConstArrayView<FVector> InWorldPoints, TArray<FVector2D>& OutPixels) const;
 		/** What the toolkit has selected: the live entries of its selection, preview widgets all. */
 		TArray<UDreamWidget*> SelectedWidgets() const;
 
