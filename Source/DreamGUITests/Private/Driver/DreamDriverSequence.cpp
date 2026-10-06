@@ -33,6 +33,7 @@
 #include "Interaction/UITextInput.h"
 #include "Misc/App.h"
 #include "Misc/AutomationTest.h"
+#include "Misc/DefinePrivateMemberPtr.h"
 #include "Subsystems/WorldSubsystem.h"
 #include "Tickable.h"
 
@@ -43,6 +44,16 @@
 #include "Driver/DreamDriverSlateHost.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogDreamDriver, Log, All);
+
+/*
+ * The world's Sequencer tick, as UWorld::Tick broadcasts it (LevelTick.cpp, "Tick level sequence actors first"). The
+ * delegate is a private member of UWorld with no public broadcast: UMovieSceneSequenceTickManager::Get binds the
+ * world's tick manager to it through the public AddMovieSceneSequenceTickHandler, and only UWorld::Tick ever calls it.
+ * The headless pump stands in for UWorld::Tick, so it needs the one call; the engine's own way to name a private
+ * member without friendship (Misc/DefinePrivateMemberPtr.h) is how it gets it, and nothing about the delegate, the
+ * world or the tick manager is changed by doing so. At global scope, as the macro requires.
+ */
+UE_DEFINE_PRIVATE_MEMBER_PTR(FOnMovieSceneSequenceTick, GDreamDriverWorldMovieSceneSequenceTick, UWorld, MovieSceneSequenceTick);
 
 namespace DreamDriverPumpLocal
 {
@@ -163,6 +174,31 @@ namespace DreamDriverPumpLocal
 		InTweenManager->Tick(InTickType, InWorld->DeltaTimeSeconds);
 	}
 
+	/**
+	 * The world's Sequencer tick: UWorld::MovieSceneSequenceTick broadcast with the frame's game delta, which is the call
+	 * UWorld::Tick makes right after its "Update time" block and OnWorldPreActorTick, before any tick group.
+	 *
+	 * What is bound there is the world's UMovieSceneSequenceTickManager, made the first time anything asks for it
+	 * (UMovieSceneSequenceTickManager::Get) -- in a rig, the first widget animation that plays, through DreamGUI's
+	 * animation ticker (UDreamUIAnimationTicker::FindOrCreate), or a player registering with the world's manager directly
+	 * under DreamUI.Animation.Ticker 0. Its TickSequenceActors keeps every rule of its own: each tick-interval group ticks
+	 * once its interval has passed, measured on the world's unpaused and game clocks, a client that does not tick when
+	 * paused is skipped in a paused world, and the runners are flushed and the latent actions run after the clients. The
+	 * ticker ticks only its playing players, and they evaluate their animations in that flush. So the delta is the
+	 * world's own DeltaTimeSeconds, dilated and fixed up exactly as UWorld::Tick hands it on (AdvanceWorldClock wrote it).
+	 *
+	 * A world nothing has asked has nothing bound and the broadcast is no call at all, which is every rig that never
+	 * plays a Sequencer animation.
+	 */
+	void TickSequencer(UWorld& InWorld)
+	{
+		FOnMovieSceneSequenceTick& SequenceTick = InWorld.*GDreamDriverWorldMovieSceneSequenceTick;
+		if (SequenceTick.IsBound())
+		{
+			SequenceTick.Broadcast(InWorld.DeltaTimeSeconds);
+		}
+	}
+
 	/** Say something went wrong with the context itself, where a report will show it. */
 	void ReportContextError(const FDreamDriverContext& InContext, const FString& InMessage)
 	{
@@ -222,6 +258,7 @@ void FDreamDriverContext::PumpOneFrame(float InDeltaSeconds)
 	 * engine runs it:
 	 *
 	 *   clock                     "Update time", before any tick group
+	 *   Sequencer animations      MovieSceneSequenceTick, after OnWorldPreActorTick and before the tick groups
 	 *   player input              the player controller ticks in TG_PrePhysics (PlayerTick -> TickPlayerInput)
 	 *   PrePhysics tweens         ADreamTweenTickHelperActor's TG_PrePhysics component
 	 *   DuringPhysics tweens      the helper actor's own tick, TG_DuringPhysics
@@ -238,6 +275,9 @@ void FDreamDriverContext::PumpOneFrame(float InDeltaSeconds)
 	if (World != nullptr)
 	{
 		AdvanceWorldClock(*World, InDeltaSeconds);
+		// Before every tick group, as UWorld::Tick runs it: an animation that moves a widget this frame has moved it
+		// before input traces and before the UI manager lays out. See TickSequencer.
+		TickSequencer(*World);
 	}
 
 	if (IsActorInputHost(InputHost) && PlayerController != nullptr)
@@ -344,11 +384,11 @@ void FDreamDriverContext::PumpOneFrame(float InDeltaSeconds)
 	 *    and rebuild, a designer preview animating -- none of which exists in a game, so a rig that
 	 *    drove them would be driving the editor, not a game. The rebuild after a recompile runs on the
 	 *    core ticker, below.
-	 *  - UWorld::MovieSceneSequenceTick, which drives UMovieSceneSequenceTickManager and therefore
-	 *    Sequencer-based widget animations (UDreamWidgetAnimationComponent). The delegate is private to
-	 *    UWorld and only UWorld::Tick broadcasts it, so under this pump those animations stand still;
-	 *    tweens -- which is what every control transition uses -- are driven above.
 	 *  - The core ticker (FTSTicker), which only an engine frame advances.
+	 *
+	 * Sequencer-based widget animations (UDreamWidgetAnimationComponent, its players and DreamGUI's
+	 * animation ticker) ARE driven, by the world's own UMovieSceneSequenceTickManager at the top of the
+	 * frame: see TickSequencer. Tweens, which every control transition uses, are driven above.
 	 */
 }
 
