@@ -20,8 +20,8 @@ nothing is in the [README](../README.md); what each version added is in the [CHA
 
 ## From 1.0.0 to the next release
 
-For a project on 1.0.0. Nothing was renamed, and nothing has to be done before opening the project. A control takes
-input the way UMG's does now, and a screen built around the old way will feel different:
+For a project on 1.0.0. Nothing was renamed, and nothing has to be done before opening the project. Two controls take
+input the way UMG's do now, and a screen built around the old way will feel different:
 
 - **A list, tile or tree view in Multi mode chooses rows as SListView does.** A plain click selected the row and kept
   every row already chosen, and a second click took it away; now a plain click chooses that row alone. Ctrl+click (Cmd on
@@ -31,9 +31,14 @@ input the way UMG's does now, and a screen built around the old way will feel di
   pad-driven screen that let players pick several rows by confirming each one picks one now; such a screen keeps its own
   set -- toggled in `OnItemClicked`, put back with `SetSelectedIndices` -- or offers Ctrl's meaning on a pad button of its
   own. `SetItemSelection` and the other selection calls are unchanged, so code that builds a selection is not affected.
+- **A focused spin box keeps the arrow keys.** Up and Right step it up, Down and Left down, each press a commit
+  (`OnValueCommitted`). They used to move the focus to the control beside it; a player now leaves a spin box with Tab,
+  the D-pad or the stick, as in UMG. The spin box hears an arrow before any action binding does, so a binding on an arrow
+  key no longer fires while a spin box has the focus. With StepSize at zero the arrows still step (by SSpinBox's
+  default step); the step faces do not, as before.
 
-A C++ subclass of the list family that overrides `NativeOnKeyDown` calls `Super` to keep these keys, as for any key
-the base answers.
+A C++ subclass of `UDreamSpinBox` or of the list family that overrides `NativeOnKeyDown` calls `Super` to keep these
+keys, as for any key the base answers.
 
 ## From 2.1 to 1.0.0
 

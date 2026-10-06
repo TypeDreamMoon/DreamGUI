@@ -31,6 +31,15 @@ counts from where the drag was recognised, not from the press: the travel that t
 into a drag moves nothing, as in SSpinBox, so the value does not leap by the drag threshold the
 moment a scrub starts.
 
+THE ARROW KEYS step it, as SSpinBox::OnKeyDown does: with the focus anywhere in the control and the
+field not being edited, Up and Right add one step and Down and Left take one away, committed at once.
+The step is StepSize, whatever modifier is held; with StepSize at zero it is SSpinBox's default step
+-- a tenth across a drag range of ten or less, one across a wider one -- times Shift's ten, Shift+Alt's
+hundred, Ctrl's tenth or Ctrl+Alt's hundredth. A stepped value stays inside the range a drag sweeps and
+lands on the StepSize grid. The four keys are the control's while it has the focus: they never take the
+focus on to a neighbour, as they do not in UMG. The pad's D-pad is not among them and still navigates,
+and in a field being edited the arrows are the field's and move its caret.
+
     /Script/DreamGUIControls.DreamSpinBox Count {
         Value = 5
         MaxValue = 10
@@ -44,12 +53,12 @@ moment a scrub starts.
 | `Value` | `float` | Spin Box | yes | `GetValue` / `SetValue` | Authored value in; the control's own thereafter. A property so .dui and bindings can see it. |
 | `MinValue` | `float` | Spin Box | yes | `GetMinValue` / `SetMinValue` |  |
 | `MaxValue` | `float` | Spin Box | yes | `GetMaxValue` / `SetMaxValue` |  |
-| `StepSize` | `float` | Spin Box | yes | `GetStepSize` / `SetStepSize` | What one click of a step face adds or removes, before clamping. UMG calls it Delta. |
+| `StepSize` | `float` | Spin Box | yes | `GetStepSize` / `SetStepSize` | What one click of a step face, or one arrow key, adds or removes, before clamping. UMG calls it Delta, and as with Delta a zero hands the arrow keys SSpinBox's default step, which the modifier keys scale (see the class comment). |
 | `MinSliderValue` | `float` | Spin Box | yes | `GetMinSliderValue` / `SetMinSliderValue` |  |
 | `MaxSliderValue` | `float` | Spin Box | yes | `GetMaxSliderValue` / `SetMaxSliderValue` |  |
 | `SliderExponent` | `float` | Spin Box | yes | `GetSliderExponent` / `SetSliderExponent` | How the drag's distance bends into the value -- UMG's SliderExponent. One is linear; larger numbers give the low end of the range more of the travel, which is what a range spanning several orders of magnitude needs to be usable at its bottom. |
 | `bEnableSlider` | `bool` | Spin Box | yes | `GetEnableSlider` / `SetEnableSlider` | Whether dragging the field scrubs the value at all -- UMG's EnableSlider. |
-| `bAlwaysUsesDeltaSnap` | `bool` | Spin Box | yes | `GetAlwaysUsesDeltaSnap` / `SetAlwaysUsesDeltaSnap` | Every value, however it arrived, snapped to a multiple of StepSize -- UMG's AlwaysUsesDeltaSnap. Off (the default), only the step faces move in whole steps and a drag or a typed value is free. |
+| `bAlwaysUsesDeltaSnap` | `bool` | Spin Box | yes | `GetAlwaysUsesDeltaSnap` / `SetAlwaysUsesDeltaSnap` | Every value, however it arrived, snapped to a multiple of StepSize -- UMG's AlwaysUsesDeltaSnap. Off (the default), only the step faces and the arrow keys move in whole steps -- an arrow key onto the StepSize grid, as SSpinBox snaps an arrow-key commit to Delta -- and a drag or a typed value is free. |
 | `MinFractionalDigits` | `int32` | Spin Box | yes | `GetMinFractionalDigits` / `SetMinFractionalDigits` | How the number is SPELLED -- UMG's MinFractionalDigits / MaxFractionalDigits. |
 | `MaxFractionalDigits` | `int32` | Spin Box | yes | `GetMaxFractionalDigits` / `SetMaxFractionalDigits` |  |
 | `bClearKeyboardFocusOnCommit` | `bool` | Spin Box | yes | `GetClearKeyboardFocusOnCommit` / `SetClearKeyboardFocusOnCommit` | Stop editing the field when the value is committed -- UMG's ClearKeyboardFocusOnCommit. |

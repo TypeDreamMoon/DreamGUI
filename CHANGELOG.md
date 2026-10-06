@@ -92,6 +92,12 @@ after 3 for 2.1.0 -- so the engine never takes 1.0.0 for the older of the two.
   anchor to the row the focus moves to, with Ctrl and Shift adds that range, with Ctrl alone adds the row, and Ctrl+A
   selects every row. The anchor is the row the last plain click, Ctrl click, tap or plain arrow landed on. A click reads
   its modifiers from the clicking player's controller. See [Migration](Docs/Migration.md#from-100-to-the-next-release).
+- **A focused spin box steps its value with the arrow keys**, as USpinBox's `SSpinBox::OnKeyDown` does: Up and Right
+  add a step, Down and Left take one away, each press committed, the value kept inside the range a drag sweeps and on
+  the StepSize grid. With StepSize at zero the step is SSpinBox's default -- one, or a tenth across a drag range of ten
+  or less -- times ten with Shift, a hundred with Shift and Alt, a tenth with Ctrl, a hundredth with Ctrl and Alt. The
+  arrows used to take the focus on to the next control; they no longer do, as in UMG. The D-pad still navigates, and
+  in a field being edited the arrows still move the caret.
 
 ### Fixed
 

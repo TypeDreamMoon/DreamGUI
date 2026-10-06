@@ -12,11 +12,44 @@
 #include "Core/Components/DreamText.h"
 #include "Core/Components/DreamVisual.h"
 #include "Core/Components/DreamWidget.h"
+#include "Event/DreamKeyEventData.h"
 #include "Event/DreamPointerEventData.h"
+#include "InputCoreTypes.h"
 #include "Interaction/UIButton.h"
 #include "Core/DreamUIFontData_BaseObject.h"
 #include "Interaction/UITextInput.h"
 #include "Text/DreamUIValueFormat.h"
+
+namespace DreamSpinBoxLocal
+{
+	/*
+	 * SSpinBox's arrow-key step when there is no Delta (SSpinBox::GetDefaultStepSize): one, or a tenth
+	 * across a drag range no wider than ten, times the multiplier the held modifiers ask for
+	 * (GetInputEventMultiplier). The multipliers are FArguments defaults USpinBox never overrides, so
+	 * they are UMG's values as well as Slate's.
+	 */
+	constexpr float DefaultArrowStep = 1.0f;
+	constexpr float SmallArrowStep = 0.1f;
+	constexpr float SmallArrowStepRange = 10.0f;
+	constexpr float ShiftMultiplier = 10.0f;
+	constexpr float ShiftAltMultiplier = 100.0f;
+	constexpr float CtrlMultiplier = 0.1f;
+	constexpr float CtrlAltMultiplier = 0.01f;
+
+	/** Shift outranks Ctrl, and Alt with either is the stronger of the two, as in GetInputEventMultiplier. */
+	float ArrowStepMultiplier(bool bInShiftDown, bool bInCtrlDown, bool bInAltDown)
+	{
+		if (bInShiftDown)
+		{
+			return bInAltDown ? ShiftAltMultiplier : ShiftMultiplier;
+		}
+		if (bInCtrlDown)
+		{
+			return bInAltDown ? CtrlAltMultiplier : CtrlMultiplier;
+		}
+		return 1.0f;
+	}
+}
 
 void UDreamSpinBox::CollectParts(TArray<FDreamControlPart>& OutParts)
 {
@@ -521,7 +554,12 @@ float UDreamSpinBox::GetSliderMaxValue() const
 
 float UDreamSpinBox::SnapToStep(float InValue) const
 {
-	if (!bAlwaysUsesDeltaSnap || StepSize <= KINDA_SMALL_NUMBER)
+	return bAlwaysUsesDeltaSnap ? SnapToStepGrid(InValue) : InValue;
+}
+
+float UDreamSpinBox::SnapToStepGrid(float InValue) const
+{
+	if (StepSize <= KINDA_SMALL_NUMBER)
 	{
 		return InValue;
 	}
@@ -628,6 +666,69 @@ bool UDreamSpinBox::NativeOnEndDrag(UDreamPointerEventData* EventData)
 	// one moment a consumer writing to a setting or a server should act on.
 	CommitValue(Value);
 	return bBubble;
+}
+
+bool UDreamSpinBox::NativeOnKeyDown(UDreamKeyEventData* EventData)
+{
+	if (Super::NativeOnKeyDown(EventData))
+	{
+		return true;
+	}
+	// The router offers keys only to a focus that is drawn and interactable; asked again here because a
+	// disabled spin box must not step whoever hands it a key.
+	if (EventData == nullptr || !GetInteractableInHierarchy())
+	{
+		return false;
+	}
+	// SSpinBox::OnKeyDown names the keyboard's four arrows and nothing else: the pad's D-pad, which it
+	// leaves unhandled, goes on to navigation there, and so it does here. The field being edited took its
+	// arrows before any of this (DreamUIKeyRouting::RouteTextKey), which is what keeps them moving its caret.
+	const FKey& Key = EventData->Key;
+	float Direction = 0.0f;
+	if (Key == EKeys::Up || Key == EKeys::Right)
+	{
+		Direction = 1.0f;
+	}
+	else if (Key == EKeys::Down || Key == EKeys::Left)
+	{
+		Direction = -1.0f;
+	}
+	else
+	{
+		return false;
+	}
+	StepFromArrowKey(Direction, EventData->bShiftDown, EventData->bCtrlDown, EventData->bAltDown);
+	// Kept whether or not the value could move: an arrow against the stop is still the spin box's key,
+	// and a key it let go would take the focus to a neighbour, which SSpinBox's Handled never does.
+	return true;
+}
+
+void UDreamSpinBox::StepFromArrowKey(float InDirection, bool bInShiftDown, bool bInCtrlDown, bool bInAltDown)
+{
+	using namespace DreamSpinBoxLocal;
+	// Delta when there is one, and then exactly Delta whatever is held; SSpinBox scales only its default
+	// step, because a stated step is the one the author wants every press to take.
+	const bool bHasStep = StepSize != 0.0f;
+	float Step = StepSize;
+	if (!bHasStep)
+	{
+		// An open end makes the span infinite or enormous, which is the wide case, as SSpinBox's
+		// lowest-to-max fallback makes it there.
+		const float SliderSpan = GetSliderMaxValue() - GetSliderMinValue();
+		Step = (SliderSpan <= SmallArrowStepRange ? SmallArrowStep : DefaultArrowStep)
+			* ArrowStepMultiplier(bInShiftDown, bInCtrlDown, bInAltDown);
+	}
+	// Into the range a drag sweeps first, as SSpinBox::CommitValue clamps an arrow-key commit: the arrows
+	// travel the slider's range, and typing is the road past it. CommitValue clamps to the hard range after.
+	float Stepped = FMath::Clamp(Value + InDirection * Step, GetSliderMinValue(), GetSliderMaxValue());
+	if (bHasStep)
+	{
+		// SSpinBox snaps an arrow-key commit to Delta. On this control's own grid, measured from MinValue,
+		// and before the hard range rather than after it, so a stated end the grid misses is still reached.
+		Stepped = SnapToStepGrid(Stepped);
+	}
+	// A commit, once per press -- CommittedViaArrowKey fires OnValueCommitted in SSpinBox.
+	CommitValue(Stepped);
 }
 
 void UDreamSpinBox::ApplyValueChange(float InValue)
