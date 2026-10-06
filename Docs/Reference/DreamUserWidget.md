@@ -57,6 +57,7 @@ Initialize, from the class, every time.
 | `TArray<FName> GetNativeSlotNames()` | pure | The holes this CLASS opens, for a class whose contents are code rather than an archetype. |
 | `APawn* GetOwningPlayerPawn()` | pure | Get Owning Player Pawn |
 | `FBox2D GetScreenSpaceRect()` | pure | Where this widget lands on the screen, in the root canvas's space -- the absolute half of UMG's GetCachedGeometry / GetPaintSpaceGeometry. Zero-sized when the widget is not under a canvas. |
+| `UObject* GetViewModel(FName Name)` | pure | What the `viewmodels` entry Name holds right now; null when it is empty or there is no such entry. |
 | `bool GetWantsTick()` | pure | Get Wants Tick |
 | `UDreamWidget* GetWidgetFromName(FName InVariableName)` | pure | The widget of that variable name inside this instance -- UMG's GetWidgetFromName. |
 | `UDreamWidgetTree* GetWidgetTree()` | pure | Get Widget Tree |
@@ -137,6 +138,7 @@ Initialize, from the class, every time.
 | `void SetOwningPlayer(APlayerController* InPlayerController)` | callable | Point this widget (and everything it goes on to create) at a different local player. |
 | `void SetPlaybackSpeed(FDreamUIAnimationHandle Handle, float PlaybackSpeed)` | callable | Set Playback Speed |
 | `void SetPositionInViewport(FVector2D InPosition)` | callable | UMG's SetPositionInViewport, and the three that go with it. |
+| `bool SetViewModel(FName Name, UObject* ViewModel)` | callable | Hand this widget the object its `viewmodels` entry Name holds -- what a host does from code that cannot see the Blueprint class's variables (C++, UnrealSharp). The object must be of the entry's class; it is written into the entry's variable and the field is broadcast, so every binding reading through it re-reads. Null clears the entry. False, with a warning in the log, when this class has no such entry or the object is of another class. |
 | `void SetWantsTick(bool Value)` | callable | Opt this widget in or out of per-frame OnTick. Safe at any time, including from OnInitialized. |
 | `void StopAllAnimations()` | callable | Every animation on every component of this widget's own contents, nested instances excluded. |
 | `void StopAnimation(FDreamUIAnimationHandle Handle)` | callable | Ends the instance where it is. Its Finished delegates fire, the same as a natural end. |
