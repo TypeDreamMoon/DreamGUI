@@ -22,6 +22,13 @@ void SDreamWidgetDesignerViewport::Construct(const FArguments& InArgs, TSharedPt
 void SDreamWidgetDesignerViewport::BindCommands()
 {
 	SEditorViewport::BindCommands();
+	// The designer's Copy, Cut, Paste, Duplicate and Delete, answered here as the key comes up from the viewport, before
+	// the toolkit's list is asked -- where Copy is not the designer's (FDreamWidgetBlueprintEditor::GetDesignerCommandList).
+	// UMG's design surface answers them from its own key handler the same way (SDesignerView::OnKeyDown).
+	if (const TSharedPtr<FDreamWidgetBlueprintEditor> Designer = DesignerPtr.Pin(); Designer.IsValid() && Designer->GetDesignerCommandList().IsValid())
+	{
+		CommandList->Append(Designer->GetDesignerCommandList().ToSharedRef());
+	}
 }
 TSharedRef<FEditorViewportClient> SDreamWidgetDesignerViewport::MakeEditorViewportClient()
 {

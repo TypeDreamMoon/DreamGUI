@@ -193,6 +193,12 @@ after 3 for 2.1.0 -- so the engine never takes 1.0.0 for the older of the two.
   `WidgetPropertyDataStartPosition is invalid`. It is registered again where it went, and begins play there if the
   world has, as a UMG widget moved into a panel on screen is constructed there. One moved under a parent that is not
   registered yet stays as it was, for that parent's registration to take with it.
+- **Ctrl+C copies the designer's selection.** The designer's Copy, Cut, Paste, Duplicate and Delete were mapped on the
+  asset editor's own command list, and the Blueprint editor's Find Results panel maps Copy and Select All onto that list
+  as it is made, after the designer has: Ctrl+C in the viewport or the hierarchy, and Copy in their right-click menu,
+  copied a search result and left the designer's clipboard as it was, so the next Ctrl+V pasted nothing or something
+  older. The five are now on a list of the designer's own as well, which the viewport and the hierarchy answer keys
+  from first and their menus run, as UMG's designer keeps them.
 
 ## 1.0.0
 

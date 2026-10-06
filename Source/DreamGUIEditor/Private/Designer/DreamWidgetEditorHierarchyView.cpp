@@ -160,6 +160,13 @@ void SDreamWidgetEditorHierarchyView::OnMouseLeave(const FPointerEvent& MouseEve
 }
 FReply SDreamWidgetEditorHierarchyView::OnKeyDown(const FGeometry& MyGeometry, const FKeyEvent& InKeyEvent)
 {
+	// The designer's own list first: on the toolkit's, Copy is the Find Results panel's (GetDesignerCommandList), as UMG's
+	// hierarchy asks its designer's list (SHierarchyView::OnKeyDown).
+	const TSharedPtr<FUICommandList> DesignerCommands = Manager.IsValid() ? Manager.Pin()->GetDesignerCommandList() : nullptr;
+	if (DesignerCommands.IsValid() && DesignerCommands->ProcessCommandBindings(InKeyEvent))
+	{
+		return FReply::Handled();
+	}
 	if (Manager.IsValid() && Manager.Pin()->GetToolkitCommands()->ProcessCommandBindings(InKeyEvent))
 	{
 		return FReply::Handled();
@@ -710,7 +717,9 @@ TSharedPtr<SWidget> SDreamWidgetEditorHierarchyView::OnContextMenuOpening()
 	{
 		MenuBuilder.BeginSection("Edit", LOCTEXT("Edit", "Edit"));
 		{
-			MenuBuilder.PushCommandList(Manager.Pin()->GetToolkitCommands());
+			// The designer's list, where Copy is the designer's own (GetDesignerCommandList).
+			const TSharedPtr<FUICommandList> DesignerCommands = Manager.Pin()->GetDesignerCommandList();
+			MenuBuilder.PushCommandList(DesignerCommands.IsValid() ? DesignerCommands.ToSharedRef() : Manager.Pin()->GetToolkitCommands());
 			{
 				MenuBuilder.AddMenuEntry(FGenericCommands::Get().Copy);
 				MenuBuilder.AddMenuEntry(FGenericCommands::Get().Paste);
