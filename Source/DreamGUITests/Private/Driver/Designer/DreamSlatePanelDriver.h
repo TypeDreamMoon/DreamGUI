@@ -8,7 +8,10 @@
 #include "Templates/Function.h"
 #include "Templates/SharedPointer.h"
 
+#include "Driver/DreamDriverTypes.h"   // EDreamDriverModifierKeys
+
 class SWidget;
+class SWindow;
 
 namespace DreamTests
 {
@@ -32,8 +35,10 @@ namespace DreamTests
 		HitTest,
 		/**
 		 * FSlateApplication::RoutePointerMoveEvent, RoutePointerDownEvent and RoutePointerUpEvent along the path to the
-		 * widget (FindPathToWidget): the same routing and replies, the hit test left out. What the probe falls back to
-		 * when the hit test does not find the widget -- an editor rendering off screen keeps its windows out of it.
+		 * widget (FindPathToWidget), carried on down to the leafmost widget under the point that takes hits, which is
+		 * where Slate's hit test would have ended: the same routing and replies, the hit test's window search left out.
+		 * What the probe falls back to when the hit test does not find the widget -- an editor rendering off screen
+		 * keeps its windows out of it.
 		 */
 		WidgetPath,
 	};
@@ -82,6 +87,15 @@ namespace DreamTests
 		 * that detect the drag are routed along InFrom's path, and the rest -- the drag over its target -- along InTo's.
 		 */
 		bool DragOnto(const TSharedRef<SWidget>& InFrom, const TSharedRef<SWidget>& InTo, EDreamSlateRoute InRoute, int32 InSteps, FString& OutWhyNot);
+		/**
+		 * DragOnto, letting go InToLocalPoint into InTo -- Slate units from its top-left corner, as it was painted -- rather
+		 * than on its middle. A tree row decides where a drop goes by where the pointer is in it
+		 * (STableRow::ZoneFromPointerPosition): its top few units are above it, its bottom few below, the rest onto it.
+		 */
+		bool DragOntoAt(const TSharedRef<SWidget>& InFrom, const TSharedRef<SWidget>& InTo, const FVector2D& InToLocalPoint,
+			EDreamSlateRoute InRoute, int32 InSteps, FString& OutWhyNot);
+		/** InLocalPoint into InWidget -- Slate units from its top-left, as it was painted -- in absolute units; unset for a widget never arranged. */
+		TOptional<FVector2D> PointIn(const TSharedRef<SWidget>& InWidget, const FVector2D& InLocalPoint);
 
 		/**
 		 * Give InWidget the keyboard focus the way a keyboard user's Tab does (EFocusCause::Navigation) -- what a spin box
@@ -92,6 +106,21 @@ namespace DreamTests
 		bool TypeCharacters(const FString& InText, FString& OutWhyNot);
 		/** InKey down and up as FSlateApplication::ProcessKeyDownEvent and ProcessKeyUpEvent, with InModifiers held. */
 		bool PressKey(const FKey& InKey, const FModifierKeysState& InModifiers, FString& OutWhyNot);
+		/**
+		 * A chord the way a keyboard sends one: InModifiers' keys down one after another (Shift, Ctrl, Alt, Cmd), each a
+		 * key-down of its own carrying the keys held so far; then InKey down and up with all of them held; then the
+		 * modifiers up in reverse. Everything through FSlateApplication::ProcessKeyDownEvent and ProcessKeyUpEvent, to the
+		 * cursor user's keyboard focus, with the platform's key and character codes.
+		 */
+		bool PressChord(const FKey& InKey, EDreamDriverModifierKeys InModifiers, FString& OutWhyNot);
+
+		/**
+		 * Every window Slate has, the top-level ones and every window under them -- a menu opened as a window of its own
+		 * among them (FMenuStack's CreateNewWindow), which no search from the editor's own window reaches.
+		 */
+		void CollectWindows(TArray<TSharedRef<SWindow>>& OutWindows);
+		/** The first widget InPredicate accepts in any of those windows, searched one window at a time, depth first. */
+		TSharedPtr<SWidget> FindInAnyWindow(TFunctionRef<bool(const TSharedRef<SWidget>&)> InPredicate);
 		/** The cursor user's keyboard focus, or null. */
 		TSharedPtr<SWidget> GetKeyboardFocus();
 		/** "SSpinBox<NumericType> at (x, y)", for a report. */

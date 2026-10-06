@@ -38,6 +38,43 @@ namespace DreamTests
 			return Held;
 		}
 
+		/**
+		 * The widget a hit test at InPoint would end on, InWidget or inside it: at every level the last-arranged child --
+		 * the one drawn on top -- whose rect holds the point, and in it the same again, down to the leafmost one that takes
+		 * hits; null when nothing there does. Slate's hit test answers the leafmost widget under the pointer and routes the
+		 * event up from it (FHittestGrid::GetBubblePath), so a press aimed at a menu entry is the button's inside it, as a
+		 * hand's is; routed from the entry's outer block instead, it went up from there and never reached the button.
+		 */
+		TSharedPtr<SWidget> DeepestHitUnder(const TSharedRef<SWidget>& InWidget, const FGeometry& InGeometry, const FVector2D& InPoint)
+		{
+			const EVisibility Visibility = InWidget->GetVisibility();
+			const FVector2D LocalSize = InGeometry.GetLocalSize();
+			if (!Visibility.IsVisible() || LocalSize.X <= 0.0 || LocalSize.Y <= 0.0 || !InGeometry.IsUnderLocation(InPoint))
+			{
+				return nullptr;
+			}
+			if (Visibility.AreChildrenHitTestVisible())
+			{
+				FArrangedChildren Arranged(EVisibility::Visible);
+				InWidget->ArrangeChildren(InGeometry, Arranged);
+				for (int32 Index = Arranged.Num() - 1; Index >= 0; --Index)
+				{
+					if (const TSharedPtr<SWidget> Hit = DeepestHitUnder(Arranged[Index].Widget, Arranged[Index].Geometry, InPoint))
+					{
+						return Hit;
+					}
+				}
+			}
+			return Visibility.IsHitTestVisible() ? TSharedPtr<SWidget>(InWidget) : nullptr;
+		}
+
+		/** InWidget's deepest hit-testable widget at InPoint, or InWidget itself when nothing in it takes hits there. */
+		TSharedRef<SWidget> HitTargetAt(const TSharedRef<SWidget>& InWidget, const FVector2D& InPoint)
+		{
+			const TSharedPtr<SWidget> Hit = DeepestHitUnder(InWidget, InWidget->GetPaintSpaceGeometry(), InPoint);
+			return Hit.IsValid() ? Hit.ToSharedRef() : InWidget;
+		}
+
 		/** The path Slate would route along to InWidget, or false with the reason. */
 		bool PathTo(const TSharedRef<SWidget>& InWidget, FWidgetPath& OutPath, FString& OutWhyNot)
 		{
@@ -50,6 +87,20 @@ namespace DreamTests
 			return true;
 		}
 
+		/**
+		 * InPath as Slate routes a pointer event along one: with the pointer's position at every widget on it, which
+		 * FEventRouter's policies read for each widget they visit (FWidgetPath::GetVirtualPointerPosition). A path from
+		 * FindPathToWidget has none of those positions -- its array is empty -- and routing a pointer event along it reads
+		 * past the end of it, which asserts. Built the way Slate builds the paths it keeps between events
+		 * (FWeakWidgetPath::ToWidgetPath with the event, as for the widgets last under the cursor), and again for each
+		 * event, from the widgets as they are by then: the event before may have changed them -- a click that opened a
+		 * menu, a press that closed one. A path cut short since keeps what is left of it, as Slate's do.
+		 */
+		FWidgetPath RoutablePath(const FWidgetPath& InPath, const FPointerEvent& InEvent)
+		{
+			return FWeakWidgetPath(InPath).ToWidgetPath(FWeakWidgetPath::EInterruptedPathHandling::Truncate, &InEvent);
+		}
+
 		/** A move, by InRoute: to whatever is under the pointer, or along InPath. */
 		void Move(EDreamSlateRoute InRoute, const FWidgetPath& InPath, const FPointerEvent& InEvent)
 		{
@@ -60,7 +111,7 @@ namespace DreamTests
 			}
 			else
 			{
-				Slate.RoutePointerMoveEvent(InPath, InEvent, /*bIsSynthetic*/ false);
+				Slate.RoutePointerMoveEvent(RoutablePath(InPath, InEvent), InEvent, /*bIsSynthetic*/ false);
 			}
 		}
 
@@ -74,7 +125,7 @@ namespace DreamTests
 			}
 			else
 			{
-				Slate.RoutePointerDownEvent(InPath, InEvent);
+				Slate.RoutePointerDownEvent(RoutablePath(InPath, InEvent), InEvent);
 			}
 		}
 
@@ -89,8 +140,67 @@ namespace DreamTests
 			{
 				// A captured pointer is let go of to its captor whatever path is handed in (RoutePointerUpEvent asks the user's
 				// capture first), and a drag and drop ends on the path's widgets.
-				Slate.RoutePointerUpEvent(InPath, InEvent);
+				Slate.RoutePointerUpEvent(RoutablePath(InPath, InEvent), InEvent);
 			}
+		}
+
+		/** DragOnto and DragOntoAt: the drag, ending at InToPoint, which is InTo's middle or a point inside it. */
+		bool DragToPoint(const TSharedRef<SWidget>& InFrom, const TSharedRef<SWidget>& InTo, const TOptional<FVector2D>& InToPoint,
+			EDreamSlateRoute InRoute, int32 InSteps, FString& OutWhyNot)
+		{
+			FSlateApplication& Slate = FSlateApplication::Get();
+			const TOptional<FVector2D> From = DreamSlatePanel::CentreOf(InFrom);
+			const TOptional<FVector2D>& To = InToPoint;
+			if (!From.IsSet() || !To.IsSet())
+			{
+				OutWhyNot = FString::Printf(TEXT("the drag needs both ends painted: from %s, to %s"), *DreamSlatePanel::Describe(InFrom), *DreamSlatePanel::Describe(InTo));
+				return false;
+			}
+			FWidgetPath FromPath;
+			FWidgetPath ToPath;
+			// Each end's path down to what a hit test there would end on, as the events of a hand go.
+			if (InRoute == EDreamSlateRoute::WidgetPath
+				&& (!PathTo(HitTargetAt(InFrom, From.GetValue()), FromPath, OutWhyNot) || !PathTo(HitTargetAt(InTo, To.GetValue()), ToPath, OutWhyNot)))
+			{
+				return false;
+			}
+
+			Move(InRoute, FromPath, MakePointerEvent(From.GetValue(), From.GetValue(), TSet<FKey>(), EKeys::Invalid));
+			Down(InRoute, FromPath, MakePointerEvent(From.GetValue(), From.GetValue(), LeftButtonHeld(), EKeys::LeftMouseButton));
+
+			// Past the trigger distance on the first move, with room to spare: Slate measures it in its own units, and a move
+			// that only reaches it is still a press.
+			FVector2D Direction = To.GetValue() - From.GetValue();
+			Direction = Direction.IsNearlyZero() ? FVector2D(0.0, 1.0) : Direction.GetSafeNormal();
+			const FVector2D Detected = From.GetValue() + Direction * (Slate.GetDragTriggerDistance() * 2.0 + 4.0);
+			Move(InRoute, FromPath, MakePointerEvent(Detected, From.GetValue(), LeftButtonHeld(), EKeys::Invalid));
+			if (!Slate.IsDragDropping())
+			{
+				Up(InRoute, FromPath, MakePointerEvent(Detected, Detected, TSet<FKey>(), EKeys::LeftMouseButton));
+				OutWhyNot = FString::Printf(TEXT("Slate detected no drag from %s after a move of %.1f units"), *DreamSlatePanel::Describe(InFrom),
+					(Detected - From.GetValue()).Size());
+				return false;
+			}
+
+			// Over to the target, a step at a time, the last step on the point asked for -- its middle, where a tree row takes a
+			// drop onto itself, unless the caller named another.
+			FVector2D Last = Detected;
+			const int32 Steps = FMath::Max(InSteps, 1);
+			for (int32 Step = 1; Step <= Steps; ++Step)
+			{
+				const FVector2D Next = FMath::Lerp(Detected, To.GetValue(), static_cast<double>(Step) / Steps);
+				Move(InRoute, ToPath, MakePointerEvent(Next, Last, LeftButtonHeld(), EKeys::Invalid));
+				Last = Next;
+			}
+			Up(InRoute, ToPath, MakePointerEvent(To.GetValue(), To.GetValue(), TSet<FKey>(), EKeys::LeftMouseButton));
+			if (Slate.IsDragDropping())
+			{
+				// Not left hanging for the next test: a drag and drop Slate still holds swallows every press after it.
+				Slate.CancelDragDrop();
+				OutWhyNot = TEXT("the release did not end the drag and drop; it was cancelled");
+				return false;
+			}
+			return true;
 		}
 
 		void CollectInto(const TSharedRef<SWidget>& InWidget, TArray<TSharedRef<SWidget>>& OutWidgets)
@@ -227,7 +337,8 @@ namespace DreamTests
 			return false;
 		}
 		FWidgetPath Path;
-		if (InRoute == EDreamSlateRoute::WidgetPath && !PathTo(InWidget, Path, OutWhyNot))
+		// Down to what a hit test at the point would end on: the button inside a menu entry, not the entry's outer block.
+		if (InRoute == EDreamSlateRoute::WidgetPath && !PathTo(DreamSlatePanelLocal::HitTargetAt(InWidget, At.GetValue()), Path, OutWhyNot))
 		{
 			return false;
 		}
@@ -240,57 +351,24 @@ namespace DreamTests
 
 	bool DreamSlatePanel::DragOnto(const TSharedRef<SWidget>& InFrom, const TSharedRef<SWidget>& InTo, EDreamSlateRoute InRoute, int32 InSteps, FString& OutWhyNot)
 	{
-		using namespace DreamSlatePanelLocal;
-		FSlateApplication& Slate = FSlateApplication::Get();
-		const TOptional<FVector2D> From = CentreOf(InFrom);
-		const TOptional<FVector2D> To = CentreOf(InTo);
-		if (!From.IsSet() || !To.IsSet())
-		{
-			OutWhyNot = FString::Printf(TEXT("the drag needs both ends painted: from %s, to %s"), *Describe(InFrom), *Describe(InTo));
-			return false;
-		}
-		FWidgetPath FromPath;
-		FWidgetPath ToPath;
-		if (InRoute == EDreamSlateRoute::WidgetPath && (!PathTo(InFrom, FromPath, OutWhyNot) || !PathTo(InTo, ToPath, OutWhyNot)))
-		{
-			return false;
-		}
+		return DreamSlatePanelLocal::DragToPoint(InFrom, InTo, CentreOf(InTo), InRoute, InSteps, OutWhyNot);
+	}
 
-		Move(InRoute, FromPath, MakePointerEvent(From.GetValue(), From.GetValue(), TSet<FKey>(), EKeys::Invalid));
-		Down(InRoute, FromPath, MakePointerEvent(From.GetValue(), From.GetValue(), LeftButtonHeld(), EKeys::LeftMouseButton));
+	bool DreamSlatePanel::DragOntoAt(const TSharedRef<SWidget>& InFrom, const TSharedRef<SWidget>& InTo, const FVector2D& InToLocalPoint,
+		EDreamSlateRoute InRoute, int32 InSteps, FString& OutWhyNot)
+	{
+		return DreamSlatePanelLocal::DragToPoint(InFrom, InTo, PointIn(InTo, InToLocalPoint), InRoute, InSteps, OutWhyNot);
+	}
 
-		// Past the trigger distance on the first move, with room to spare: Slate measures it in its own units, and a move
-		// that only reaches it is still a press.
-		FVector2D Direction = To.GetValue() - From.GetValue();
-		Direction = Direction.IsNearlyZero() ? FVector2D(0.0, 1.0) : Direction.GetSafeNormal();
-		const FVector2D Detected = From.GetValue() + Direction * (Slate.GetDragTriggerDistance() * 2.0 + 4.0);
-		Move(InRoute, FromPath, MakePointerEvent(Detected, From.GetValue(), LeftButtonHeld(), EKeys::Invalid));
-		if (!Slate.IsDragDropping())
+	TOptional<FVector2D> DreamSlatePanel::PointIn(const TSharedRef<SWidget>& InWidget, const FVector2D& InLocalPoint)
+	{
+		const FGeometry& Geometry = InWidget->GetPaintSpaceGeometry();
+		const FVector2D LocalSize = Geometry.GetLocalSize();
+		if (LocalSize.X <= 0.0 || LocalSize.Y <= 0.0)
 		{
-			Up(InRoute, FromPath, MakePointerEvent(Detected, Detected, TSet<FKey>(), EKeys::LeftMouseButton));
-			OutWhyNot = FString::Printf(TEXT("Slate detected no drag from %s after a move of %.1f units"), *Describe(InFrom),
-				(Detected - From.GetValue()).Size());
-			return false;
+			return TOptional<FVector2D>();
 		}
-
-		// Over to the target, a step at a time, the last step on its middle -- where a tree row takes a drop onto itself.
-		FVector2D Last = Detected;
-		const int32 Steps = FMath::Max(InSteps, 1);
-		for (int32 Step = 1; Step <= Steps; ++Step)
-		{
-			const FVector2D Next = FMath::Lerp(Detected, To.GetValue(), static_cast<double>(Step) / Steps);
-			Move(InRoute, ToPath, MakePointerEvent(Next, Last, LeftButtonHeld(), EKeys::Invalid));
-			Last = Next;
-		}
-		Up(InRoute, ToPath, MakePointerEvent(To.GetValue(), To.GetValue(), TSet<FKey>(), EKeys::LeftMouseButton));
-		if (Slate.IsDragDropping())
-		{
-			// Not left hanging for the next test: a drag and drop Slate still holds swallows every press after it.
-			Slate.CancelDragDrop();
-			OutWhyNot = TEXT("the release did not end the drag and drop; it was cancelled");
-			return false;
-		}
-		return true;
+		return FVector2D(Geometry.LocalToAbsolute(InLocalPoint));
 	}
 
 	bool DreamSlatePanel::FocusAsKeyboardUser(const TSharedRef<SWidget>& InWidget, FString& OutWhyNot)
@@ -332,6 +410,79 @@ namespace DreamTests
 		FSlateApplication::Get().ProcessKeyDownEvent(Event);
 		FSlateApplication::Get().ProcessKeyUpEvent(Event);
 		return true;
+	}
+
+	bool DreamSlatePanel::PressChord(const FKey& InKey, EDreamDriverModifierKeys InModifiers, FString& OutWhyNot)
+	{
+		if (!InKey.IsValid())
+		{
+			OutWhyNot = TEXT("the key is not a valid key");
+			return false;
+		}
+		FSlateApplication& Slate = FSlateApplication::Get();
+		TArray<FKey> Modifiers;
+		DreamDriverKeys::GetModifierKeys(InModifiers, Modifiers);
+		TArray<FKey> Held;
+		const auto Send = [&Slate](const FKey& InSent, const TArray<FKey>& InHeld, bool bInDown)
+		{
+			uint32 KeyCode = 0;
+			uint32 CharacterCode = 0;
+			DreamDriverKeys::GetKeyCodes(InSent, KeyCode, CharacterCode);
+			const FKeyEvent Event(InSent, DreamDriverKeys::MakeModifierKeysState(InHeld), FSlateApplicationBase::CursorUserIndex,
+				/*bInIsRepeat*/ false, CharacterCode, KeyCode);
+			if (bInDown)
+			{
+				Slate.ProcessKeyDownEvent(Event);
+			}
+			else
+			{
+				Slate.ProcessKeyUpEvent(Event);
+			}
+		};
+		for (const FKey& Modifier : Modifiers)
+		{
+			// Held before its own event, as the platform reports a modifier's key-down with the modifier already down.
+			Held.Add(Modifier);
+			Send(Modifier, Held, true);
+		}
+		Send(InKey, Held, true);
+		Send(InKey, Held, false);
+		while (Held.Num() > 0)
+		{
+			const FKey Modifier = Held.Pop();
+			Send(Modifier, Held, false);
+		}
+		return true;
+	}
+
+	void DreamSlatePanel::CollectWindows(TArray<TSharedRef<SWindow>>& OutWindows)
+	{
+		OutWindows.Reset();
+		if (!FSlateApplication::IsInitialized())
+		{
+			return;
+		}
+		TArray<TSharedRef<SWindow>> Pending = FSlateApplication::Get().GetTopLevelWindows();
+		while (Pending.Num() > 0)
+		{
+			const TSharedRef<SWindow> Window = Pending.Pop();
+			OutWindows.Add(Window);
+			Pending.Append(Window->GetChildWindows());
+		}
+	}
+
+	TSharedPtr<SWidget> DreamSlatePanel::FindInAnyWindow(TFunctionRef<bool(const TSharedRef<SWidget>&)> InPredicate)
+	{
+		TArray<TSharedRef<SWindow>> Windows;
+		CollectWindows(Windows);
+		for (const TSharedRef<SWindow>& Window : Windows)
+		{
+			if (const TSharedPtr<SWidget> Found = FindDescendant(Window, InPredicate))
+			{
+				return Found;
+			}
+		}
+		return nullptr;
 	}
 
 	TSharedPtr<SWidget> DreamSlatePanel::GetKeyboardFocus()

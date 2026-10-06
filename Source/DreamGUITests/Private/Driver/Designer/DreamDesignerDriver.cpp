@@ -32,6 +32,9 @@
 #include "UnrealEngine.h"//FScopedConditionalWorldSwitcher
 #include "Widgets/SViewport.h"
 
+#include "Driver/Designer/DreamSlatePanelDriver.h"
+#include "Driver/DreamDriverKeys.h"
+
 DEFINE_LOG_CATEGORY_STATIC(LogDreamDesignerDriver, Log, All);
 
 namespace DreamTests
@@ -228,6 +231,7 @@ namespace DreamTests
 		WeakViewportShell.Reset();
 		WeakSceneViewport.Reset();
 		PressedButtons.Reset();
+		HeldModifierKeys.Reset();
 		WeakBlueprint.Reset();
 	}
 
@@ -343,7 +347,7 @@ namespace DreamTests
 	FVector2D FDreamDesignerDriver::PixelToScreen(FIntPoint InPixel) const
 	{
 		FGeometry Geometry;
-		if (!GetShellGeometry(Geometry))
+		if (!GetViewportGeometry(Geometry))
 		{
 			return FVector2D::ZeroVector;
 		}
@@ -353,7 +357,7 @@ namespace DreamTests
 	FIntPoint FDreamDesignerDriver::ScreenToPixel(const FVector2D& InScreenPosition) const
 	{
 		FGeometry Geometry;
-		if (!GetShellGeometry(Geometry))
+		if (!GetViewportGeometry(Geometry))
 		{
 			return FIntPoint::ZeroValue;
 		}
@@ -417,7 +421,13 @@ namespace DreamTests
 			PressedButtons,
 			InEffectingButton,
 			/*WheelDelta*/0.0f,
-			FModifierKeysState());
+			HeldModifierState());
+	}
+
+	FModifierKeysState FDreamDesignerDriver::HeldModifierState() const
+	{
+		// Nothing held is the all-false state, exactly what every event carried before modifiers could be held.
+		return DreamDriverKeys::MakeModifierKeysState(HeldModifierKeys);
 	}
 
 	bool FDreamDesignerDriver::DeliverDragDrop(const TSharedPtr<FDragDropOperation>& InOperation, const FPointerEvent& InEvent)
@@ -427,10 +437,11 @@ namespace DreamTests
 		{
 			return false;
 		}
-		// The resolved frame, not Shell->GetCachedGeometry() directly: the screen position in InEvent
-		// was built in whatever GetShellGeometry answered, and handing OnDrop a different frame to
-		// measure it in would put the drop somewhere nobody asked for -- or, with an empty cached
-		// geometry, at the origin.
+		// The resolved frame, not Shell->GetCachedGeometry() directly: the shell measures a drop in the
+		// scene viewport's own geometry when there is one and in the frame it is handed otherwise, which
+		// is the order GetViewportGeometry answers in, so the screen position in InEvent -- built in
+		// that -- comes back as the pixel it was made from. Handed an empty cached geometry, the shell
+		// would put the drop at the origin.
 		FGeometry Geometry;
 		if (!GetShellGeometry(Geometry))
 		{
@@ -448,7 +459,7 @@ namespace DreamTests
 		if (InWidgetClass == nullptr)
 		{
 			FGeometry Geometry;
-			if (!GetShellGeometry(Geometry))
+			if (!GetViewportGeometry(Geometry))
 			{
 				return false;
 			}
@@ -474,7 +485,7 @@ namespace DreamTests
 			return false;
 		}
 		FGeometry Geometry;
-		if (!GetShellGeometry(Geometry))
+		if (!GetViewportGeometry(Geometry))
 		{
 			UE_LOG(LogDreamDesignerDriver, Warning, TEXT("The designer viewport has no geometry to drop into."));
 			return false;
@@ -489,7 +500,7 @@ namespace DreamTests
 			return false;
 		}
 		FGeometry Geometry;
-		if (!GetShellGeometry(Geometry))
+		if (!GetViewportGeometry(Geometry))
 		{
 			UE_LOG(LogDreamDesignerDriver, Warning, TEXT("The designer viewport has no geometry to drop into."));
 			return false;
@@ -545,16 +556,21 @@ namespace DreamTests
 		{
 			return;
 		}
-		// Not captured, which a held press in a focused editor never is. The same two calls, with the
-		// same signs, FSceneViewport::ProcessAccumulatedPointerInput makes: X as it is, and Y negated,
-		// because Slate's Y grows downwards and the axis's grows upwards.
+		// Not captured, which a held press in a focused editor never is. What the client hears under capture, then: the
+		// move as a captured one (FSceneViewport::OnMouseMove calls CapturedMouseMove rather than MouseMove while the
+		// viewport holds the mouse) -- which is where a gizmo drag's pending transaction becomes a real one
+		// (FTrackingTransaction::PromotePendingToActive), so without it the drag was never undoable -- and then the same
+		// calls, with the same signs, FSceneViewport::ProcessAccumulatedPointerInput makes: X as it is, Y negated,
+		// because Slate's Y grows downwards and the axis's grows upwards, and the accumulated moves handed on.
 		FScopedConditionalWorldSwitcher WorldSwitcher(Client);
+		Client->CapturedMouseMove(&InViewport, InViewport.GetMouseX(), InViewport.GetMouseY());
 		const FInputDeviceId Device = IPlatformInputDeviceMapper::Get().GetDefaultInputDevice();
 		const float DeltaTime = static_cast<float>(FApp::GetDeltaTime());
 		Client->InputAxis(FInputKeyEventArgs(&InViewport, Device, EKeys::MouseX,
 			static_cast<float>(InTravel.X), DeltaTime, /*NumSamples*/1, /*Timestamp*/0));
 		Client->InputAxis(FInputKeyEventArgs(&InViewport, Device, EKeys::MouseY,
 			static_cast<float>(-InTravel.Y), DeltaTime, /*NumSamples*/1, /*Timestamp*/0));
+		Client->ProcessAccumulatedPointerInput(&InViewport);
 	}
 
 	bool FDreamDesignerDriver::CanTakePointerInput() const
@@ -615,6 +631,173 @@ namespace DreamTests
 		Release(EKeys::LeftMouseButton);
 		PumpFrame();
 		return true;
+	}
+
+	bool FDreamDesignerDriver::DragWithButton(const FKey& InButton, FIntPoint InFrom, FIntPoint InTo, int32 InSteps)
+	{
+		if (!CanTakePointerInput() || !InButton.IsMouseButton())
+		{
+			return false;
+		}
+		const int32 StepCount = FMath::Max(InSteps, 1);
+		MoveTo(InFrom);
+		PumpFrame();
+		Press(InButton);
+		PumpFrame();
+		for (int32 Step = 1; Step <= StepCount; ++Step)
+		{
+			const double Alpha = static_cast<double>(Step) / StepCount;
+			const FIntPoint Pixel(
+				InFrom.X + FMath::RoundToInt32((InTo.X - InFrom.X) * Alpha),
+				InFrom.Y + FMath::RoundToInt32((InTo.Y - InFrom.Y) * Alpha));
+			MoveTo(Pixel);
+			PumpFrame();
+		}
+		Release(InButton);
+		PumpFrame();
+		return true;
+	}
+
+	bool FDreamDesignerDriver::HoldModifiers(EDreamDriverModifierKeys InModifiers)
+	{
+		TSharedPtr<FSceneViewport> Viewport = WeakSceneViewport.Pin();
+		FGeometry Geometry;
+		if (!Viewport.IsValid() || !GetViewportGeometry(Geometry))
+		{
+			return false;
+		}
+		TArray<FKey> Keys;
+		DreamDriverKeys::GetModifierKeys(InModifiers, Keys);
+		for (const FKey& Key : Keys)
+		{
+			if (HeldModifierKeys.Contains(Key))
+			{
+				continue;
+			}
+			// Held before the event is made: the platform reports a modifier's own key-down with that modifier already
+			// in the state it carries.
+			HeldModifierKeys.Add(Key);
+			const FKeyEvent KeyEvent(Key, HeldModifierState(), /*InUserIndex*/0, /*bInIsRepeat*/false, /*InCharacterCode*/0, /*InKeyCode*/0);
+			Viewport->OnKeyDown(Geometry, KeyEvent);
+		}
+		return true;
+	}
+
+	bool FDreamDesignerDriver::ReleaseModifiers()
+	{
+		TSharedPtr<FSceneViewport> Viewport = WeakSceneViewport.Pin();
+		FGeometry Geometry;
+		if (!Viewport.IsValid() || !GetViewportGeometry(Geometry))
+		{
+			HeldModifierKeys.Reset();
+			return false;
+		}
+		while (HeldModifierKeys.Num() > 0)
+		{
+			const FKey Key = HeldModifierKeys.Pop();
+			const FKeyEvent KeyEvent(Key, HeldModifierState(), /*InUserIndex*/0, /*bInIsRepeat*/false, /*InCharacterCode*/0, /*InKeyCode*/0);
+			Viewport->OnKeyUp(Geometry, KeyEvent);
+		}
+		return true;
+	}
+
+	bool FDreamDesignerDriver::Wheel(FIntPoint InPixel, float InWheelDelta)
+	{
+		if (!CanTakePointerInput())
+		{
+			return false;
+		}
+		MoveTo(InPixel);
+		TSharedPtr<FSceneViewport> Viewport = WeakSceneViewport.Pin();
+		FGeometry Geometry;
+		if (!Viewport.IsValid() || !GetViewportGeometry(Geometry))
+		{
+			return false;
+		}
+		// The event FSlateApplication::OnMouseWheel builds: the cursor's place twice, the buttons held, no effecting
+		// button, and the notches.
+		const FPointerEvent WheelEvent(
+			FSlateApplicationBase::CursorPointerIndex,
+			LastScreenPosition,
+			LastScreenPosition,
+			PressedButtons,
+			EKeys::Invalid,
+			InWheelDelta,
+			HeldModifierState());
+		return Viewport->OnMouseWheel(Geometry, WheelEvent).IsEventHandled();
+	}
+
+	bool FDreamDesignerDriver::QueryCursor()
+	{
+		TSharedPtr<FSceneViewport> Viewport = WeakSceneViewport.Pin();
+		FGeometry Geometry;
+		if (!Viewport.IsValid() || !GetViewportGeometry(Geometry) || !CanTakePointerInput())
+		{
+			return false;
+		}
+		// The answer -- which cursor to show -- is Slate's business; asking is what makes the viewport look.
+		Viewport->OnCursorQuery(Geometry, MakePointerEvent(LastScreenPosition, FKey()));
+		return true;
+	}
+
+	bool FDreamDesignerDriver::DropBasicFromPalette(UClass* InVisualClass, FIntPoint InPixel)
+	{
+		FGeometry Geometry;
+		if (!GetViewportGeometry(Geometry))
+		{
+			UE_LOG(LogDreamDesignerDriver, Warning, TEXT("The designer viewport has no geometry to drop into."));
+			return false;
+		}
+		return DeliverDragDrop(DreamDesignerDriverLocal::MakeBasicOp(InVisualClass),
+			MakePointerEvent(PixelToScreenIn(Geometry, InPixel), FKey()));
+	}
+
+	TSharedPtr<SWidget> FDreamDesignerDriver::ViewportWidget() const
+	{
+		TSharedPtr<FSceneViewport> Viewport = WeakSceneViewport.Pin();
+		if (!Viewport.IsValid())
+		{
+			return nullptr;
+		}
+		const TSharedPtr<SViewport> Widget = Viewport->GetViewportWidget().Pin();
+		return Widget;
+	}
+
+	bool FDreamDesignerDriver::HasKeyboardFocus() const
+	{
+		const TSharedPtr<SWidget> Widget = ViewportWidget();
+		return Widget.IsValid() && FSlateApplication::IsInitialized()
+			&& FSlateApplication::Get().GetKeyboardFocusedWidget() == Widget;
+	}
+
+	bool FDreamDesignerDriver::FocusForKeyboard(FString& OutWhyNot)
+	{
+		const TSharedPtr<SWidget> Widget = ViewportWidget();
+		if (!Widget.IsValid() || !FSlateApplication::IsInitialized())
+		{
+			OutWhyNot = TEXT("there is no viewport widget to give the keyboard to");
+			return false;
+		}
+		FSlateApplication::Get().SetKeyboardFocus(Widget, EFocusCause::Mouse);
+		if (!HasKeyboardFocus())
+		{
+			OutWhyNot = FString::Printf(TEXT("Slate left the keyboard focus on %s rather than give it to the viewport"),
+				*DreamSlatePanel::Describe(FSlateApplication::Get().GetKeyboardFocusedWidget()));
+			return false;
+		}
+		return true;
+	}
+
+	bool FDreamDesignerDriver::PressShortcut(const FKey& InKey, EDreamDriverModifierKeys InModifiers, FString& OutWhyNot)
+	{
+		if (!HasKeyboardFocus())
+		{
+			OutWhyNot = FString::Printf(TEXT("the keyboard focus is on %s, not on the designer viewport, so %s was not sent"),
+				FSlateApplication::IsInitialized() ? *DreamSlatePanel::Describe(FSlateApplication::Get().GetKeyboardFocusedWidget()) : TEXT("nothing"),
+				*DreamDriverKeys::Describe(InKey, InModifiers));
+			return false;
+		}
+		return DreamSlatePanel::PressChord(InKey, InModifiers, OutWhyNot);
 	}
 
 	TOptional<FBox2D> FDreamDesignerDriver::WidgetPixelRect(const UDreamWidget* InPreviewWidget) const
@@ -753,7 +936,7 @@ namespace DreamTests
 		{
 			return false;
 		}
-		const FKeyEvent KeyEvent(InKey, FModifierKeysState(), /*InUserIndex*/0, /*bInIsRepeat*/false, /*InCharacterCode*/0, /*InKeyCode*/0);
+		const FKeyEvent KeyEvent(InKey, HeldModifierState(), /*InUserIndex*/0, /*bInIsRepeat*/false, /*InCharacterCode*/0, /*InKeyCode*/0);
 		return Viewport->OnKeyDown(Geometry, KeyEvent).IsEventHandled();
 	}
 
@@ -765,7 +948,7 @@ namespace DreamTests
 		{
 			return false;
 		}
-		const FKeyEvent KeyEvent(InKey, FModifierKeysState(), /*InUserIndex*/0, /*bInIsRepeat*/false, /*InCharacterCode*/0, /*InKeyCode*/0);
+		const FKeyEvent KeyEvent(InKey, HeldModifierState(), /*InUserIndex*/0, /*bInIsRepeat*/false, /*InCharacterCode*/0, /*InKeyCode*/0);
 		return Viewport->OnKeyUp(Geometry, KeyEvent).IsEventHandled();
 	}
 
