@@ -53,6 +53,9 @@ Rules (the static checks enforce the first three):
 6. The row comes from the name: a test belongs to every row one of whose `areas` its name starts
    with, after `DreamGUI.` (`"Button"` means `DreamGUI.Button.*`). A journey that crosses several
    controls is named after the one it is about; add an area to a row when a new naming scheme needs one.
+   A test named after where or how it drives rather than after a control -- the driver's world-space,
+   scaled-canvas and game-host suites, the Tab walk -- is listed under its row by its whole name, so a
+   neighbour in the same suite that drives another control is not counted for this one.
 7. A cell that cannot apply (say, disabling a subsystem that has no disabled state) is declared in
    the row's `na` in `coverage.json` — key `Input`, `Config` or `Input.Config`, value the reason —
    never left as a hole and never covered by a test that proves nothing. The Text column needs no
@@ -85,53 +88,47 @@ Each input column holds one mark per configuration, in this order: Default (`[An
 | Row | Mouse (`[Pointer]`) | Touch (`[Touch]`) | Gamepad and keyboard navigation (`[Nav]`) | Keyboard text (`[Text]`) | Holes |
 |---|:---:|:---:|:---:|:---:|---:|
 | Border | `#...` | `....` | `....` | `----` | 11 |
-| Button | `##..` | `#...` | `....` | `----` | 9 |
+| Button | `##.#` | `#..#` | `#...` | `----` | 6 |
 | Dialog | `#...` | `....` | `#...` | `----` | 10 |
 | Dropdown | `##..` | `....` | `#...` | `----` | 9 |
 | EditableText | `#...` | `....` | `....` | `#...` | 14 |
 | MultiLineEditableText | `#...` | `....` | `....` | `#...` | 14 |
-| TextInput | `#...` | `....` | `#...` | `#...` | 13 |
-| SpinBox | `#...` | `....` | `....` | `#...` | 14 |
+| TextInput | `#..#` | `....` | `#...` | `#..#` | 11 |
+| SpinBox | `#...` | `....` | `##..` | `#...` | 12 |
 | InputKeySelector | `#...` | `....` | `....` | `#...` | 14 |
 | ExpandableArea | `#...` | `....` | `#...` | `----` | 10 |
-| ListView | `#...` | `....` | `#...` | `----` | 10 |
+| ListView | `#...` | `#...` | `#...` | `----` | 9 |
 | ListRowDragDrop | `#...` | `....` | `....` | `----` | 11 |
 | TileView | `#...` | `....` | `#...` | `----` | 10 |
 | TreeView | `#...` | `....` | `#...` | `----` | 10 |
 | MenuAnchor | `#...` | `....` | `#...` | `----` | 10 |
 | NativeWidgetHost | `#...` | `#...` | `....` | `----` | 10 |
-| ProgressBar | `#...` | `....` | `....` | `----` | 11 |
+| ProgressBar | `#...` | `----` | `----` | `----` | 3 |
 | RadioButton | `#...` | `....` | `....` | `----` | 11 |
 | RichText | `#...` | `....` | `....` | `----` | 11 |
 | RingMenu | `#...` | `....` | `....` | `----` | 11 |
-| ScrollBar | `#...` | `....` | `....` | `----` | 11 |
-| ScrollBox | `#...` | `....` | `#...` | `----` | 10 |
-| Slider | `##..` | `....` | `#...` | `----` | 9 |
+| ScrollBar | `#...` | `....` | `----` | `----` | 7 |
+| ScrollBox | `#...` | `#...` | `#...` | `----` | 9 |
+| Slider | `##.#` | `....` | `#...` | `----` | 8 |
 | TabView | `##..` | `....` | `##..` | `----` | 8 |
 | Toggle | `##..` | `#...` | `....` | `----` | 9 |
 | ToggleGroup | `....` | `....` | `....` | `----` | 12 |
 | EventBlocker | `....` | `....` | `....` | `----` | 12 |
-| EventTrigger | `....` | `....` | `....` | `----` | 12 |
+| EventTrigger | `..##` | `....` | `....` | `----` | 10 |
 | DragDrop | `....` | `....` | `....` | `----` | 12 |
-| NavigationScope | `....` | `....` | `....` | `----` | 12 |
+| NavigationScope | `....` | `....` | `#...` | `----` | 11 |
 | NavigationStack | `....` | `....` | `....` | `----` | 12 |
-| ActionRouter | `....` | `....` | `....` | `----` | 12 |
+| ActionRouter | `....` | `....` | `#...` | `----` | 11 |
 | ActionBar | `....` | `....` | `....` | `----` | 12 |
 | Modal | `#...` | `....` | `#...` | `----` | 10 |
 | PopupLayer | `#...` | `....` | `#...` | `----` | 10 |
-| Tooltip | `#...` | `....` | `....` | `----` | 11 |
+| Tooltip | `#...` | `#...` | `....` | `----` | 10 |
 | VirtualCursor | `....` | `....` | `....` | `----` | 12 |
 
-**Holes: 409** of 464 applicable cells.
+**Holes: 382** of 452 applicable cells.
 
 Notes:
 
 - InputKeySelector: Its Text column is the key it listens for, not characters.
-
-- coverage.json excludes classes that no longer exist: UDreamLayoutSelfSpacer
-
-Tagged tests whose name matches no row (add the area to a row in coverage.json):
-
-- `DreamGUI.Focus.BothPlayersInsideAPopupGetTheOpenerBack`
 
 <!-- coverage-matrix:end -->

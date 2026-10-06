@@ -296,6 +296,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamDriverKeyChordTest,
 	"DreamGUI.Driver.Keys.AChordReachesOnlyTheBindingThatAsksForItUnderEveryHost",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamDriverKeyChordTest, "DreamGUI.Driver.Keys.AChordReachesOnlyTheBindingThatAsksForItUnderEveryHost", "[Nav][Animated]")
 
 bool FDreamDriverKeyChordTest::RunTest(const FString& Parameters)
 {
@@ -337,6 +338,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamDriverKeyBindingBeforeNavigationTest,
 	"DreamGUI.Driver.Keys.ABoundDirectionKeyFiresItsBindingInsteadOfNavigatingUnderEveryHost",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamDriverKeyBindingBeforeNavigationTest, "DreamGUI.Driver.Keys.ABoundDirectionKeyFiresItsBindingInsteadOfNavigatingUnderEveryHost", "[Nav][Animated]")
 
 bool FDreamDriverKeyBindingBeforeNavigationTest::RunTest(const FString& Parameters)
 {
@@ -391,6 +393,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamDriverTabInFieldTest,
 	"DreamGUI.Driver.Keys.TabInAFieldBeingEditedNeverTypesTheTabCharacterUnderEveryHost",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamDriverTabInFieldTest, "DreamGUI.Driver.Keys.TabInAFieldBeingEditedNeverTypesTheTabCharacterUnderEveryHost", "[Pointer][Text][Animated]")
 
 bool FDreamDriverTabInFieldTest::RunTest(const FString& Parameters)
 {
@@ -431,6 +434,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamDriverSlateSourceRigTest,
 	"DreamGUI.Driver.SlateSource.TheRigsInputReachesTheWorldsSlateSourceAsSlateEventsAndNeverFromTheDesk",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamDriverSlateSourceRigTest, "DreamGUI.Driver.SlateSource.TheRigsInputReachesTheWorldsSlateSourceAsSlateEventsAndNeverFromTheDesk", "[Pointer][Touch][Animated]")
 
 bool FDreamDriverSlateSourceRigTest::RunTest(const FString& Parameters)
 {

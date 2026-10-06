@@ -224,6 +224,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamDriverWorldOcclusionDefaultBlocksTest,
 	"DreamGUI.Driver.WorldSpace.Occlusion.ByDefaultASolidObjectBetweenTheEyeAndAPanelTakesTheClick",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamDriverWorldOcclusionDefaultBlocksTest, "DreamGUI.Driver.WorldSpace.Occlusion.ByDefaultASolidObjectBetweenTheEyeAndAPanelTakesTheClick", "[Pointer][World]")
 
 bool FDreamDriverWorldOcclusionDefaultBlocksTest::RunTest(const FString& Parameters)
 {
@@ -268,6 +269,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamDriverWorldOcclusionTurnedOffTest,
 	"DreamGUI.Driver.WorldSpace.Occlusion.WithOcclusionTurnedOffAClickPassesThroughTheObjectToThePanel",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamDriverWorldOcclusionTurnedOffTest, "DreamGUI.Driver.WorldSpace.Occlusion.WithOcclusionTurnedOffAClickPassesThroughTheObjectToThePanel", "[Pointer][World]")
 
 bool FDreamDriverWorldOcclusionTurnedOffTest::RunTest(const FString& Parameters)
 {
@@ -321,6 +323,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamDriverWorldOcclusionRenderTargetDefaultsTest,
 	"DreamGUI.Driver.WorldSpace.Occlusion.AWorldPointerLeftAtItsDefaultsClicksAButtonShownOnARenderTargetSurface",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamDriverWorldOcclusionRenderTargetDefaultsTest, "DreamGUI.Driver.WorldSpace.Occlusion.AWorldPointerLeftAtItsDefaultsClicksAButtonShownOnARenderTargetSurface", "[Pointer][World]")
 
 bool FDreamDriverWorldOcclusionRenderTargetDefaultsTest::RunTest(const FString& Parameters)
 {
@@ -381,6 +384,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamDriverWorldOcclusionChannelTest,
 	"DreamGUI.Driver.WorldSpace.Occlusion.WhatStopsAPointerIsWhatBlocksItsTraceChannelVisibilityByDefault",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamDriverWorldOcclusionChannelTest, "DreamGUI.Driver.WorldSpace.Occlusion.WhatStopsAPointerIsWhatBlocksItsTraceChannelVisibilityByDefault", "[Pointer][World]")
 
 bool FDreamDriverWorldOcclusionChannelTest::RunTest(const FString& Parameters)
 {

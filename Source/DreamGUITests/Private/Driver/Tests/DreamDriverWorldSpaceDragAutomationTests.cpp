@@ -114,6 +114,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamDriverWorldSpaceSliderDragTest,
 	"DreamGUI.Driver.WorldSpace.DraggingASlidersHandleHalfwayAlongAWorldPanelMovesTheValueHalfway",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamDriverWorldSpaceSliderDragTest, "DreamGUI.Driver.WorldSpace.DraggingASlidersHandleHalfwayAlongAWorldPanelMovesTheValueHalfway", "[Pointer][World]")
 
 bool FDreamDriverWorldSpaceSliderDragTest::RunTest(const FString& Parameters)
 {
@@ -181,6 +182,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamDriverWorldSpaceDragThresholdTest,
 	"DreamGUI.Driver.WorldSpace.AWorldDragBeginsOnlyPastTheWorldPointersOwnThreshold",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamDriverWorldSpaceDragThresholdTest, "DreamGUI.Driver.WorldSpace.AWorldDragBeginsOnlyPastTheWorldPointersOwnThreshold", "[Pointer][World]")
 
 bool FDreamDriverWorldSpaceDragThresholdTest::RunTest(const FString& Parameters)
 {
@@ -248,6 +250,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamDriverWorldSpaceHoldToDragOnTest,
 	"DreamGUI.Driver.WorldSpace.WithHoldToDragOnAStillPressHeldLongEnoughBecomesADrag",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamDriverWorldSpaceHoldToDragOnTest, "DreamGUI.Driver.WorldSpace.WithHoldToDragOnAStillPressHeldLongEnoughBecomesADrag", "[Pointer][World]")
 
 bool FDreamDriverWorldSpaceHoldToDragOnTest::RunTest(const FString& Parameters)
 {
@@ -304,6 +307,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamDriverWorldSpaceHoldToDragOffTest,
 	"DreamGUI.Driver.WorldSpace.WithHoldToDragOffAStillPressHeldJustAsLongIsStillAClick",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamDriverWorldSpaceHoldToDragOffTest, "DreamGUI.Driver.WorldSpace.WithHoldToDragOffAStillPressHeldJustAsLongIsStillAClick", "[Pointer][World]")
 
 bool FDreamDriverWorldSpaceHoldToDragOffTest::RunTest(const FString& Parameters)
 {

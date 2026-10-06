@@ -252,6 +252,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamDriverRenderTargetMeshClickTest,
 	"DreamGUI.Driver.RenderTargetMesh.ClickingAButtonShownOnTheSurfaceClicksItOnce",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamDriverRenderTargetMeshClickTest, "DreamGUI.Driver.RenderTargetMesh.ClickingAButtonShownOnTheSurfaceClicksItOnce", "[Pointer][World]")
 
 bool FDreamDriverRenderTargetMeshClickTest::RunTest(const FString& Parameters)
 {
@@ -304,6 +305,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamDriverRenderTargetMeshSliderTest,
 	"DreamGUI.Driver.RenderTargetMesh.DraggingASliderShownOnTheSurfaceHalfwayMovesItsValueHalfway",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamDriverRenderTargetMeshSliderTest, "DreamGUI.Driver.RenderTargetMesh.DraggingASliderShownOnTheSurfaceHalfwayMovesItsValueHalfway", "[Pointer][World]")
 
 bool FDreamDriverRenderTargetMeshSliderTest::RunTest(const FString& Parameters)
 {
@@ -368,6 +370,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamDriverRenderTargetMeshTwoPointersTest,
 	"DreamGUI.Driver.RenderTargetMesh.TwoPointersOnTheSurfaceEachPressTheButtonUnderThemselves",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamDriverRenderTargetMeshTwoPointersTest, "DreamGUI.Driver.RenderTargetMesh.TwoPointersOnTheSurfaceEachPressTheButtonUnderThemselves", "[Pointer][Touch][World]")
 
 bool FDreamDriverRenderTargetMeshTwoPointersTest::RunTest(const FString& Parameters)
 {
@@ -553,6 +556,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamDriverRenderTargetMeshDestroyedTest,
 	"DreamGUI.Driver.RenderTargetMesh.ASurfaceDestroyedWhileItsButtonIsHeldLeavesNothingHeld",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamDriverRenderTargetMeshDestroyedTest, "DreamGUI.Driver.RenderTargetMesh.ASurfaceDestroyedWhileItsButtonIsHeldLeavesNothingHeld", "[Pointer][World]")
 
 bool FDreamDriverRenderTargetMeshDestroyedTest::RunTest(const FString& Parameters)
 {

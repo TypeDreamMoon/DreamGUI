@@ -139,6 +139,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamKeysTabStartsFromTheFocusTest,
 	"DreamGUI.Input.Keys.TabFromTheFirstFieldGoesToTheSecondWhileTheMouseRestsOnTheThird",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamKeysTabStartsFromTheFocusTest, "DreamGUI.Input.Keys.TabFromTheFirstFieldGoesToTheSecondWhileTheMouseRestsOnTheThird", "[Nav][Animated]")
 
 /*
  * Tab started from pointer 0's navigation highlight, and every hover rewrote the highlight: with the first field focused
@@ -186,6 +187,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamKeysEnterPressesTheFocusTest,
 	"DreamGUI.Input.Keys.EnterPressesTheFocusedButtonNotTheOneTheMouseIsOver",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamKeysEnterPressesTheFocusTest, "DreamGUI.Input.Keys.EnterPressesTheFocusedButtonNotTheOneTheMouseIsOver", "[Nav][Animated]")
 
 /*
  * Enter asked the navigation highlight first, which the mouse's hover had written: the button under a resting mouse was
@@ -233,6 +235,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamKeysCtrlTabTest,
 	"DreamGUI.Input.Keys.CtrlTabReachesABindingAndNeverMovesTheFocus",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamKeysCtrlTabTest, "DreamGUI.Input.Keys.CtrlTabReachesABindingAndNeverMovesTheFocus", "[Nav][Animated]")
 
 /*
  * Tab stepped whatever modifiers were held -- a legacy key binding fires for Tab with Ctrl down as well -- so a project's
@@ -284,6 +287,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamKeysSwappedAcceptBackTest,
 	"DreamGUI.Input.Keys.WithAcceptAndBackSwappedInTheSettingsTheRightFaceButtonConfirms",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamKeysSwappedAcceptBackTest, "DreamGUI.Input.Keys.WithAcceptAndBackSwappedInTheSettingsTheRightFaceButtonConfirms", "[Nav][Animated]")
 
 /*
  * The confirm and Back keys were a table written into the code: the pad's bottom face button confirmed and the right one
@@ -359,6 +363,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamKeysInputModeGameTest,
 	"DreamGUI.Input.Keys.InputModeGameTurnsOffNavigationConfirmAndBackForThatPlayerAlone",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamKeysInputModeGameTest, "DreamGUI.Input.Keys.InputModeGameTurnsOffNavigationConfirmAndBackForThatPlayerAlone", "[Nav][Animated]")
 
 /*
  * There was no way to say "this screen is gameplay": a HUD's buttons were walked onto by the D-pad and pressed by the jump
@@ -429,6 +434,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamKeysTabSwitchTest,
 	"DreamGUI.Input.Keys.TheShouldersSwitchTabsUnlessABindingTakesThem",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamKeysTabSwitchTest, "DreamGUI.Input.Keys.TheShouldersSwitchTabsUnlessABindingTakesThem", "[Nav][Animated]")
 
 /*
  * The shoulder buttons reached nothing but the action router. They switch tabs now on the tab view around the player's

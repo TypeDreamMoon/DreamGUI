@@ -156,6 +156,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamDriverWorldSpaceClickTest,
 	"DreamGUI.Driver.WorldSpace.ClickingAButtonOnAPanelFacingTheCameraClicksItOnce",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamDriverWorldSpaceClickTest, "DreamGUI.Driver.WorldSpace.ClickingAButtonOnAPanelFacingTheCameraClicksItOnce", "[Pointer][World]")
 
 bool FDreamDriverWorldSpaceClickTest::RunTest(const FString& Parameters)
 {
@@ -207,6 +208,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamDriverWorldSpaceHoverTest,
 	"DreamGUI.Driver.WorldSpace.MovingOnAndOffAWorldButtonHoversAndUnhoversItOnceEach",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamDriverWorldSpaceHoverTest, "DreamGUI.Driver.WorldSpace.MovingOnAndOffAWorldButtonHoversAndUnhoversItOnceEach", "[Pointer][World]")
 
 bool FDreamDriverWorldSpaceHoverTest::RunTest(const FString& Parameters)
 {
@@ -250,6 +252,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamDriverWorldSpaceNearerPanelTest,
 	"DreamGUI.Driver.WorldSpace.WhereTwoPanelsOverlapTheNearerOneTakesTheClick",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamDriverWorldSpaceNearerPanelTest, "DreamGUI.Driver.WorldSpace.WhereTwoPanelsOverlapTheNearerOneTakesTheClick", "[Pointer][World]")
 
 bool FDreamDriverWorldSpaceNearerPanelTest::RunTest(const FString& Parameters)
 {
@@ -316,6 +319,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamDriverWorldSpaceOverlayWinsTest,
 	"DreamGUI.Driver.WorldSpace.AnOverlayControlInFrontOfAWorldPanelTakesTheClick",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamDriverWorldSpaceOverlayWinsTest, "DreamGUI.Driver.WorldSpace.AnOverlayControlInFrontOfAWorldPanelTakesTheClick", "[Pointer][World]")
 
 bool FDreamDriverWorldSpaceOverlayWinsTest::RunTest(const FString& Parameters)
 {
@@ -371,6 +375,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamDriverWorldSpaceReticleTest,
 	"DreamGUI.Driver.WorldSpace.InReticleModeTheClickLandsUnderTheViewportCentreWhereverThePointerIs",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamDriverWorldSpaceReticleTest, "DreamGUI.Driver.WorldSpace.InReticleModeTheClickLandsUnderTheViewportCentreWhereverThePointerIs", "[Pointer][World]")
 
 bool FDreamDriverWorldSpaceReticleTest::RunTest(const FString& Parameters)
 {
@@ -426,6 +431,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamDriverWorldSpaceYawedPanelTest,
 	"DreamGUI.Driver.WorldSpace.AButtonOnAPanelYawedFortyFiveDegreesIsHitAtItsProjectedCentre",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamDriverWorldSpaceYawedPanelTest, "DreamGUI.Driver.WorldSpace.AButtonOnAPanelYawedFortyFiveDegreesIsHitAtItsProjectedCentre", "[Pointer][World]")
 
 bool FDreamDriverWorldSpaceYawedPanelTest::RunTest(const FString& Parameters)
 {
@@ -487,6 +493,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamDriverWorldSpaceBackgroundTest,
 	"DreamGUI.Driver.WorldSpace.AButtonOnAPanelWithAHitTestableBackgroundTakesTheClickNotTheBackground",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamDriverWorldSpaceBackgroundTest, "DreamGUI.Driver.WorldSpace.AButtonOnAPanelWithAHitTestableBackgroundTakesTheClickNotTheBackground", "[Pointer][World]")
 
 bool FDreamDriverWorldSpaceBackgroundTest::RunTest(const FString& Parameters)
 {
@@ -525,6 +532,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamDriverWorldSpaceScrollTest,
 	"DreamGUI.Driver.WorldSpace.TurningTheWheelOverAWorldWidgetReachesThatWidget",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamDriverWorldSpaceScrollTest, "DreamGUI.Driver.WorldSpace.TurningTheWheelOverAWorldWidgetReachesThatWidget", "[Pointer][World]")
 
 bool FDreamDriverWorldSpaceScrollTest::RunTest(const FString& Parameters)
 {
@@ -562,6 +570,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamDriverWorldSpaceTypingTest,
 	"DreamGUI.Driver.WorldSpace.ClickingAFieldOnAWorldPanelAndTypingEntersTheText",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamDriverWorldSpaceTypingTest, "DreamGUI.Driver.WorldSpace.ClickingAFieldOnAWorldPanelAndTypingEntersTheText", "[Pointer][Text][World]")
 
 bool FDreamDriverWorldSpaceTypingTest::RunTest(const FString& Parameters)
 {

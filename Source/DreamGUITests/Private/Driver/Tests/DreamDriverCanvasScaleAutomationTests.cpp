@@ -76,6 +76,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamDriverCanvasScaleTwoThirdsTest,
 	"DreamGUI.Driver.CanvasScale.ScalingA1080pReferenceOntoA720pViewportScalesTheCanvasByTwoThirds",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamDriverCanvasScaleTwoThirdsTest, "DreamGUI.Driver.CanvasScale.ScalingA1080pReferenceOntoA720pViewportScalesTheCanvasByTwoThirds", "[Pointer][Scaled]")
 
 bool FDreamDriverCanvasScaleTwoThirdsTest::RunTest(const FString& Parameters)
 {
@@ -118,6 +119,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamDriverCanvasScaleClickTest,
 	"DreamGUI.Driver.CanvasScale.AClickOnAWidgetsCentreHitsItAtHalfAndAtDoubleScale",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamDriverCanvasScaleClickTest, "DreamGUI.Driver.CanvasScale.AClickOnAWidgetsCentreHitsItAtHalfAndAtDoubleScale", "[Pointer][Scaled]")
 
 bool FDreamDriverCanvasScaleClickTest::RunTest(const FString& Parameters)
 {
@@ -164,6 +166,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamDriverCanvasScaleDragThresholdTest,
 	"DreamGUI.Driver.CanvasScale.TheDragThresholdIsInCanvasUnitsSoItScalesWithTheCanvas",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamDriverCanvasScaleDragThresholdTest, "DreamGUI.Driver.CanvasScale.TheDragThresholdIsInCanvasUnitsSoItScalesWithTheCanvas", "[Pointer][Scaled]")
 
 bool FDreamDriverCanvasScaleDragThresholdTest::RunTest(const FString& Parameters)
 {

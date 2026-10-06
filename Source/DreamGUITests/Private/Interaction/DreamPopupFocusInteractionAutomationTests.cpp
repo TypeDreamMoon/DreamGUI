@@ -463,7 +463,6 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamPopupFocusMenuMovedElsewhereTest,
 	"DreamGUI.MenuAnchor.FocusMovedElsewhereWhileOpenIsNotTakenBack",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
-REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamPopupFocusMenuMovedElsewhereTest, "DreamGUI.MenuAnchor.FocusMovedElsewhereWhileOpenIsNotTakenBack", "[Nav][Animated]")
 
 /*
  * A popup gives focus back only to a player whose focus is still in it, or went nowhere from it: a
@@ -516,7 +515,6 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamPopupFocusSubmenuFirstTest,
 	"DreamGUI.MenuAnchor.ClosingAMenuClosesItsOpenSubmenuFirst",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
-REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamPopupFocusSubmenuFirstTest, "DreamGUI.MenuAnchor.ClosingAMenuClosesItsOpenSubmenuFirst", "[Nav][Animated]")
 
 /*
  * A submenu's popup lives on the screen root, not inside the menu it was opened from, so a closing menu
@@ -602,7 +600,6 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamPopupFocusModalOverBarePageTest,
 	"DreamGUI.Modal.ClosingAModalOverAPageWithoutAScopeReturnsFocusToItsOpener",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
-REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamPopupFocusModalOverBarePageTest, "DreamGUI.Modal.ClosingAModalOverAPageWithoutAScopeReturnsFocusToItsOpener", "[Nav][Animated]")
 
 /*
  * Popping a modal's navigation scope gave focus only to a scope underneath, and a page without one had
@@ -653,7 +650,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamPopupFocusBothPlayersTest,
 	"DreamGUI.Focus.BothPlayersInsideAPopupGetTheOpenerBack",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
-REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamPopupFocusBothPlayersTest, "DreamGUI.Focus.BothPlayersInsideAPopupGetTheOpenerBack", "[Pointer][Nav][Animated]")
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamPopupFocusBothPlayersTest, "DreamGUI.Focus.BothPlayersInsideAPopupGetTheOpenerBack", "[Pointer][Animated]")
 
 /*
  * Focus is every player's, and so is giving it back: SComboBox returns focus to itself for every user
@@ -785,7 +782,6 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamPopupFocusExpanderCollapseTest,
 	"DreamGUI.ExpandableArea.CollapsingWithFocusInsideMovesItToTheHeader",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
-REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamPopupFocusExpanderCollapseTest, "DreamGUI.ExpandableArea.CollapsingWithFocusInsideMovesItToTheHeader", "[Nav][Animated]")
 
 /*
  * Collapsing put the body to sleep, which cleared any focus inside it and left it nowhere. The focus a
@@ -835,7 +831,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamPopupFocusTabSwitchTest,
 	"DreamGUI.TabView.SwitchingTabsWithFocusPageOnTabChangeFocusesTheNewPage",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
-REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamPopupFocusTabSwitchTest, "DreamGUI.TabView.SwitchingTabsWithFocusPageOnTabChangeFocusesTheNewPage", "[Pointer][Nav][Animated]")
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamPopupFocusTabSwitchTest, "DreamGUI.TabView.SwitchingTabsWithFocusPageOnTabChangeFocusesTheNewPage", "[Pointer][Animated]")
 
 /*
  * bFocusPageOnTabChange moved focus into the page the player opened -- in principle. The switcher
@@ -890,7 +886,6 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamPopupFocusMenuReturnTest,
 	"DreamGUI.MenuAnchor.ClosingTheMenuReturnsFocusToItsOpener",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
-REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamPopupFocusMenuReturnTest, "DreamGUI.MenuAnchor.ClosingTheMenuReturnsFocusToItsOpener", "[Nav][Animated]")
 
 /*
  * Close put the menu away and that was all: focus that Open(true) had moved into the menu was cleared
@@ -1156,7 +1151,6 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamPopupFocusMenuClosedWhileOpeningTest,
 	"DreamGUI.MenuAnchor.AMenuClosedWhileItTakesFocusEndsClosed",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
-REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamPopupFocusMenuClosedWhileOpeningTest, "DreamGUI.MenuAnchor.AMenuClosedWhileItTakesFocusEndsClosed", "[Nav][Animated]")
 
 /*
  * Opening a menu moves the focus into it, and the focus leaving the trigger runs game code -- here, code that closes the
@@ -1217,7 +1211,6 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamPopupFocusPanelMenuClosedWhileOpeningTest,
 	"DreamGUI.MenuAnchor.APanelMenuClosedWhileItTakesFocusEndsClosed",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
-REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamPopupFocusPanelMenuClosedWhileOpeningTest, "DreamGUI.MenuAnchor.APanelMenuClosedWhileItTakesFocusEndsClosed", "[Nav][Animated]")
 
 /*
  * The panel spelling of the anchor, opening on the popup layer, kept the menu as lifted only once the push had returned. A
@@ -1283,7 +1276,6 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamPopupFocusListClosedWhileOpeningTest,
 	"DreamGUI.Dropdown.AListClosedWhileItTakesFocusEndsClosed",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
-REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamPopupFocusListClosedWhileOpeningTest, "DreamGUI.Dropdown.AListClosedWhileItTakesFocusEndsClosed", "[Nav][Animated]")
 
 /*
  * The dropdown's spelling of the same: its list counted as on the popup layer only once the push had returned, so a close
@@ -1339,7 +1331,6 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamPopupFocusLiftedMenuSlotTest,
 	"DreamGUI.MenuAnchor.ALiftedPanelMenuIsPlacedWithItsSlotAndKeepsTheSlotWhenItComesBack",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
-REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamPopupFocusLiftedMenuSlotTest, "DreamGUI.MenuAnchor.ALiftedPanelMenuIsPlacedWithItsSlotAndKeepsTheSlotWhenItComesBack", "[Animated]")
 
 /*
  * A panel menu lifted onto the popup layer leaves its panel, and the move took its panel slot with it: placed lifted, the

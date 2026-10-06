@@ -182,6 +182,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamPausedGameHostFieldTypingTest,
 	"DreamGUI.Driver.GameHost.Paused.AFieldTakesLetterKeysBackspaceAndEnterThroughTheControllerWhileTheGameIsPaused",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamPausedGameHostFieldTypingTest, "DreamGUI.Driver.GameHost.Paused.AFieldTakesLetterKeysBackspaceAndEnterThroughTheControllerWhileTheGameIsPaused", "[Pointer][Text][Animated]")
 
 bool FDreamPausedGameHostFieldTypingTest::RunTest(const FString& Parameters)
 {
@@ -262,6 +263,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamPausedGameHostKeySelectorCaptureTest,
 	"DreamGUI.Driver.GameHost.Paused.AnArmedKeySelectorCapturesTheNextKeyThroughTheControllerWhileTheGameIsPaused",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamPausedGameHostKeySelectorCaptureTest, "DreamGUI.Driver.GameHost.Paused.AnArmedKeySelectorCapturesTheNextKeyThroughTheControllerWhileTheGameIsPaused", "[Pointer][Text][Animated]")
 
 bool FDreamPausedGameHostKeySelectorCaptureTest::RunTest(const FString& Parameters)
 {
@@ -325,6 +327,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamPausedGameHostProjectKeyTest,
 	"DreamGUI.Driver.GameHost.Paused.AKeyAProjectMapsToThePresetsActionClicksInAPausedGameToo",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamPausedGameHostProjectKeyTest, "DreamGUI.Driver.GameHost.Paused.AKeyAProjectMapsToThePresetsActionClicksInAPausedGameToo", "[Pointer][Animated]")
 
 bool FDreamPausedGameHostProjectKeyTest::RunTest(const FString& Parameters)
 {
