@@ -115,6 +115,13 @@ after 3 for 2.1.0 -- so the engine never takes 1.0.0 for the older of the two.
 
 ### Fixed
 
+- **A text field's edit menu answers the pointer.** No entry -- Copy, Paste and the rest -- could be chosen with a mouse
+  or a finger. The menu and the sheet behind it were built but never brought to life, so neither took its place above
+  the screen and the sheet, built last, lay in front of the entries and took every press; and a press that left the
+  field ended the edit and took the menu down under it. The menu is registered as it is built, the field keeps its edit
+  while its menu is up, as a Slate text field counts as focused while its context menu is open, and the focus comes
+  back to the field when the menu closes -- after an entry, or after a press outside the menu, which now leaves the
+  field being edited where it used to end the edit.
 - **The focus ring shows on a button.** The ring the keys and the pad bring is hung under the control it marks, and a
   control whose face takes one child -- every Dream Button, whose face is a size box over its content -- refused it: the
   ring stayed where it was made, under nothing, and was drawn nowhere. It now hangs under the nearest widget that takes
