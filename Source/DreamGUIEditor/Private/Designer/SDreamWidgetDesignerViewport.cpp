@@ -8,6 +8,7 @@
 #include "SDreamWidgetPalette.h"
 #include "Core/DreamUIManager.h"
 #include "Framework/Application/SlateApplication.h"
+#include "Slate/SceneViewport.h"
 #include "DragAndDrop/AssetDragDropOp.h"
 #include "DreamWidgetEditorHierarchyViewItem.h"
 
@@ -88,6 +89,25 @@ bool SDreamWidgetDesignerViewport::SummonContextMenu()
 
 namespace DreamWidgetDesignerViewportLocal
 {
+	/**
+	 * The geometry a pointer is measured in over this viewport: the scene viewport's own, which its mouse events are
+	 * measured in too (FSceneViewport caches it as it paints and as the mouse moves over it) -- not this widget's, which
+	 * also holds the toolbar above the scene. Measured in this widget's, a drop landed below the pointer by the
+	 * toolbar's share of the height. This widget's own only while the scene viewport has none.
+	 */
+	static const FGeometry& PointerGeometry(const FSceneViewport* InSceneViewport, const FGeometry& InFallback)
+	{
+		if (InSceneViewport != nullptr)
+		{
+			const FGeometry& SceneGeometry = InSceneViewport->GetCachedGeometry();
+			if (SceneGeometry.GetLocalSize().X > 0.0f && SceneGeometry.GetLocalSize().Y > 0.0f)
+			{
+				return SceneGeometry;
+			}
+		}
+		return InFallback;
+	}
+
 	static FIntPoint ToViewportPixel(const FGeometry& Geometry, const FVector2D& ScreenPosition, FViewport* Viewport)
 	{
 		if (!Viewport)return FIntPoint::ZeroValue;
@@ -104,7 +124,8 @@ FReply SDreamWidgetDesignerViewport::OnDragOver(const FGeometry& MyGeometry, con
 {
 	if (DragDropEvent.GetOperationAs<FDreamUIPaletteDragDropOp>().IsValid() && EditorViewportClient.IsValid())
 	{
-		const FIntPoint Pixel = DreamWidgetDesignerViewportLocal::ToViewportPixel(MyGeometry, DragDropEvent.GetScreenSpacePosition(), EditorViewportClient->Viewport);
+		const FIntPoint Pixel = DreamWidgetDesignerViewportLocal::ToViewportPixel(DreamWidgetDesignerViewportLocal::PointerGeometry(SceneViewport.Get(), MyGeometry),
+			DragDropEvent.GetScreenSpacePosition(), EditorViewportClient->Viewport);
 		UDreamWidget* Target = EditorViewportClient->GetDropContainerUnderCursor(Pixel.X, Pixel.Y);
 		EditorViewportClient->SetPaletteDropPreview(Target);
 		return Target ? FReply::Handled() : FReply::Unhandled();
@@ -118,7 +139,8 @@ FReply SDreamWidgetDesignerViewport::OnDragOver(const FGeometry& MyGeometry, con
 		&& (DragDropEvent.GetOperationAs<FAssetDragDropOp>().IsValid()
 			|| DragDropEvent.GetOperationAs<FHierarchyDreamWidgetDragDropOp>().IsValid()))
 	{
-		const FIntPoint Pixel = DreamWidgetDesignerViewportLocal::ToViewportPixel(MyGeometry, DragDropEvent.GetScreenSpacePosition(), EditorViewportClient->Viewport);
+		const FIntPoint Pixel = DreamWidgetDesignerViewportLocal::ToViewportPixel(DreamWidgetDesignerViewportLocal::PointerGeometry(SceneViewport.Get(), MyGeometry),
+			DragDropEvent.GetScreenSpacePosition(), EditorViewportClient->Viewport);
 		UDreamWidget* Target = EditorViewportClient->GetDropContainerUnderCursor(Pixel.X, Pixel.Y);
 		// ProcessHierarchyDragDrop is the tree's own validator: it refuses a cycle, a full parent
 		// and a drop onto the dragged widget itself, and writes the reason onto the cursor. Asking
@@ -137,7 +159,8 @@ FReply SDreamWidgetDesignerViewport::OnDrop(const FGeometry& MyGeometry, const F
 	{
 		TSharedPtr<FDreamWidgetBlueprintEditor> Editor = DesignerPtr.Pin();
 		if (!Editor.IsValid() || !EditorViewportClient.IsValid())return FReply::Unhandled();
-		const FIntPoint Pixel = DreamWidgetDesignerViewportLocal::ToViewportPixel(MyGeometry, DragDropEvent.GetScreenSpacePosition(), EditorViewportClient->Viewport);
+		const FIntPoint Pixel = DreamWidgetDesignerViewportLocal::ToViewportPixel(DreamWidgetDesignerViewportLocal::PointerGeometry(SceneViewport.Get(), MyGeometry),
+			DragDropEvent.GetScreenSpacePosition(), EditorViewportClient->Viewport);
 		UDreamWidget* Parent = EditorViewportClient->GetDropContainerUnderCursor(Pixel.X, Pixel.Y);
 		if (!Parent)return FReply::Unhandled();
 		FVector DropWorldPosition = FVector::ZeroVector;
@@ -166,7 +189,8 @@ FReply SDreamWidgetDesignerViewport::OnDrop(const FGeometry& MyGeometry, const F
 	{
 		TSharedPtr<FDreamWidgetBlueprintEditor> Editor = DesignerPtr.Pin();
 		if (!Editor.IsValid() || !EditorViewportClient.IsValid())return FReply::Unhandled();
-		const FIntPoint Pixel = DreamWidgetDesignerViewportLocal::ToViewportPixel(MyGeometry, DragDropEvent.GetScreenSpacePosition(), EditorViewportClient->Viewport);
+		const FIntPoint Pixel = DreamWidgetDesignerViewportLocal::ToViewportPixel(DreamWidgetDesignerViewportLocal::PointerGeometry(SceneViewport.Get(), MyGeometry),
+			DragDropEvent.GetScreenSpacePosition(), EditorViewportClient->Viewport);
 		UDreamWidget* Parent = EditorViewportClient->GetDropContainerUnderCursor(Pixel.X, Pixel.Y);
 		EditorViewportClient->ClearPaletteDropPreview();
 		if (!Parent)return FReply::Unhandled();
