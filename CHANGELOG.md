@@ -179,6 +179,9 @@ after 3 for 2.1.0 -- so the engine never takes 1.0.0 for the older of the two.
   through its viewport client; one added where there is no game viewport answered nothing, so every player was player
   0, and Add to Player Screen put a second player's widget on the first player's screen. It now asks the controller's
   world, where the event system looks the players up.
+- **Undo puts a widget's size back where no layout runs.** Undoing a resize restored the widget's anchors and size
+  delta, but the width and height worked out from them stayed as they were: the asset's widget went on answering
+  `GetWidth` and `GetHeight` with the size from before the undo.
 - **On a split screen, a widget's popups open on the screen it is on.** A dropdown's list, a tooltip's bubble and the
   rest of what the popup layer lifts went to the first player's screen for a widget on any other player's: the screen
   UI took the nearest user widget's owning player as the answer before the screen the widget was on, and a user widget

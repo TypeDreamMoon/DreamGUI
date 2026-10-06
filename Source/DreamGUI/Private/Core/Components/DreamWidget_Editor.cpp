@@ -568,6 +568,11 @@ void UDreamWidget::PostEditUndo()
 		}
 	}
 	CalculateVisibility_Recursive();
+	// Undo writes AnchorData straight into the property, and the sizes resolved from it are caches its setters dirty
+	// (SetSizeDelta, SetAnchorData): left as they were, GetWidth and GetHeight went on answering the size from before
+	// the undo -- on a template no layout pass ever visits, for good. A stretched child's size is resolved from this
+	// widget's, so the caches below it go too.
+	MarkAllDirtyRecursive();
 	MarkLayoutForRebuild(this);
 }
 
