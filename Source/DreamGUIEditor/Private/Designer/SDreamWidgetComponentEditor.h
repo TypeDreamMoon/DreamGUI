@@ -36,6 +36,7 @@
 #include "DreamUIComponentSupport.h"
 #include "DreamUIEditorTools.h"
 #include "DreamWidgetBlueprintEditor.h"
+#include "Designer/DreamWidgetPreviewHost.h"
 #include "Utils/DreamUIUtils.h"
 
 /**
@@ -577,19 +578,17 @@ private:
 			return;
 		}
 
+		UDreamUIBehaviour* Source = Component;
+		if (FDreamWidgetBlueprintEditor* Designer = FindTemplateOwningDesigner(Widget))
+		{
+			Source = Designer->GetPreviewHost()->FindTemplateComponentForPreview(Component);
+			if (!IsValid(Source))return;
+		}
 		FScopedTransaction Transaction(LOCTEXT("DuplicateDreamWidgetComponent_Transaction", "Duplicate DreamUI Component"));
 		ModifyWidgetForComponentEdit(Widget);
 
-		const int32 SourceIndex = Widget->GetAllComponents().Find(Component);
 		UDreamUIBehaviour* NewComponent = AddComponentToWidget(Widget,
-			[Component, SourceIndex](UDreamWidget* Target) -> UDreamUIBehaviour*
-			{
-				// Duplicate what was AUTHORED, not the preview's copy of it: the preview is live and
-				// its values can have moved since. Positional, like removal, for the same reason.
-				UDreamUIBehaviour* Source = Target->GetAllComponents().IsValidIndex(SourceIndex)
-					? Target->GetAllComponents()[SourceIndex] : Component;
-				return DreamUIWidgetComponentClipboard_PasteOnto(Target, Source);
-			});
+			[Source](UDreamWidget* Target) { return DreamUIWidgetComponentClipboard_PasteOnto(Target, Source); });
 		if (!IsValid(NewComponent))
 		{
 			Transaction.Cancel();
@@ -792,8 +791,10 @@ private:
 			return false;
 		}
 
-		const int32 ClampedIndex = FMath::Clamp(NewIndex, 0, ComponentItems.Num());
-		if (CurrentIndex == ClampedIndex || (CurrentIndex == ComponentItems.Num() - 1 && ClampedIndex == ComponentItems.Num()))
+		// The drop names a gap in the displayed list. Removing the source shifts later gaps left.
+		const int32 DropIndex = FMath::Clamp(NewIndex, 0, ComponentItems.Num());
+		const int32 ClampedIndex = DropIndex - (CurrentIndex < DropIndex ? 1 : 0);
+		if (CurrentIndex == ClampedIndex)
 		{
 			return false;
 		}
@@ -806,21 +807,15 @@ private:
 		// straight back over it, so the drag looked like it worked until anything republished.
 		if (FDreamWidgetBlueprintEditor* Designer = FindTemplateOwningDesigner(Widget))
 		{
+			UDreamUIBehaviour* Authored = Designer->GetPreviewHost()->FindTemplateComponentForPreview(Component);
 			if (!Designer->DesignerMoveComponent(Widget, Component, ClampedIndex))
 			{
 				Transaction.Cancel();
 				return false;
 			}
-			// The republish inside it destroyed Widget and Component, so the row to select again is
-			// found on the rebuilt preview by the position it was moved to -- clamped the way
-			// UDreamWidget::MoveComponentToIndex clamps it, because ClampedIndex above is a DROP
-			// position and may be one past the end.
+			// Initialization may reorder the rebuilt preview again; keep the same authored selection.
 			RefreshComponents();
-			const int32 SettledIndex = FMath::Clamp(ClampedIndex, 0, ComponentItems.Num() - 1);
-			if (ComponentItems.IsValidIndex(SettledIndex))
-			{
-				SelectComponent(ComponentItems[SettledIndex].Get());
-			}
+			SelectComponent(Designer->GetPreviewHost()->FindPreviewComponentForTemplate(Authored));
 			return true;
 		}
 

@@ -3809,16 +3809,7 @@ UDreamUIBehaviour* FDreamWidgetBlueprintEditor::DesignerAddComponentBy(UDreamWid
 
 	TArray<UDreamWidget*> Previews;
 	RepublishPreviewAndSelect({ Template }, Previews);
-	if (Previews.Num() > 0)
-	{
-		// By position, because an instanced sub-object has no name the two halves share.
-		const TArray<UDreamUIBehaviour*>& Components = Previews[0]->GetAllComponents();
-		if (Components.IsValidIndex(Index))
-		{
-			return Components[Index];
-		}
-	}
-	return nullptr;
+	return PreviewHost->FindPreviewComponentForTemplate(AddedOnTemplate);
 }
 
 bool FDreamWidgetBlueprintEditor::DesignerRemoveComponent(UDreamWidget* InPreviewWidget, UDreamUIBehaviour* InPreviewComponent)
@@ -3834,15 +3825,13 @@ bool FDreamWidgetBlueprintEditor::DesignerRemoveComponent(UDreamWidget* InPrevie
 	{
 		return false;
 	}
-	const int32 Index = InPreviewWidget->GetAllComponents().Find(InPreviewComponent);
-	if (!Template->GetAllComponents().IsValidIndex(Index))
-	{
-		return false;
-	}
+	UDreamUIBehaviour* Authored = PreviewHost->FindTemplateComponentForPreview(InPreviewComponent);
+	if (Authored == nullptr || Authored->GetOuter() != Template)return false;
+	const int32 Index = Template->GetAllComponents().Find(Authored);
 	BlueprintBeingEdited->Modify();
 	Template->SetFlags(RF_Transactional);
 	Template->Modify();
-	Template->RemoveComponent(Template->GetAllComponents()[Index]);
+	Template->RemoveComponent(Authored);
 	// Bindings name a behaviour by its position, so removing one renumbers every binding after it.
 	DreamWidgetTreeEditing::RemapBehaviourBindings(BlueprintBeingEdited, Template, Index, INDEX_NONE);
 	DreamWidgetTreeEditing::NotifyStructureChanged(BlueprintBeingEdited);
@@ -3866,22 +3855,28 @@ bool FDreamWidgetBlueprintEditor::DesignerMoveComponent(UDreamWidget* InPreviewW
 	{
 		return false;
 	}
-	// By POSITION, exactly as the removal above: an instanced sub-object has no name the preview and
-	// the template share, and the two lists are built in the same order.
-	const int32 Index = InPreviewWidget->GetAllComponents().Find(InPreviewComponent);
-	if (!Template->GetAllComponents().IsValidIndex(Index))
-	{
-		return false;
-	}
+	UDreamUIBehaviour* Authored = PreviewHost->FindTemplateComponentForPreview(InPreviewComponent);
+	if (Authored == nullptr || Authored->GetOuter() != Template)return false;
+	const TArray<UDreamUIBehaviour*>& PreviewComponents = InPreviewWidget->GetAllComponents();
+	const int32 PreviewIndex = PreviewComponents.Find(InPreviewComponent);
+	if (PreviewIndex == INDEX_NONE)return false;
+	// InNewIndex is a final position in the preview, not in the differently ordered authored list.
+	// Preserve its before/after relation to that preview component when moving the authored object.
+	const int32 PreviewTargetIndex = FMath::Clamp(InNewIndex, 0, PreviewComponents.Num() - 1);
+	if (PreviewIndex == PreviewTargetIndex)return false;
+	UDreamUIBehaviour* AuthoredTarget = PreviewHost->FindTemplateComponentForPreview(PreviewComponents[PreviewTargetIndex]);
+	if (AuthoredTarget == nullptr || AuthoredTarget->GetOuter() != Template)return false;
+	const int32 Index = Template->GetAllComponents().Find(Authored);
+	const int32 TargetIndex = Template->GetAllComponents().Find(AuthoredTarget);
+	const int32 NewIndex = TargetIndex + (PreviewIndex < PreviewTargetIndex ? 1 : 0) - (Index < TargetIndex ? 1 : 0);
 	BlueprintBeingEdited->Modify();
 	Template->SetFlags(RF_Transactional);
 	Template->Modify();
-	Template->MoveComponentToIndex(Template->GetAllComponents()[Index], InNewIndex);
+	Template->MoveComponentToIndex(Authored, NewIndex);
 	// The whole point of the reorder, as far as a binding is concerned: it names a behaviour by its
 	// position, so without this the binding stays on the slot and starts driving whatever moved into
 	// it -- silently when that is another behaviour of the same class.
-	DreamWidgetTreeEditing::RemapBehaviourBindings(BlueprintBeingEdited, Template, Index,
-		FMath::Clamp(InNewIndex, 0, FMath::Max(0, Template->GetAllComponents().Num() - 1)));
+	DreamWidgetTreeEditing::RemapBehaviourBindings(BlueprintBeingEdited, Template, Index, NewIndex);
 	// Modified, not structurally: a reorder adds and removes nothing, so no member of the class
 	// changes. What changes is the archetype, which is what the next compile picks up.
 	MarkDesignChanged();

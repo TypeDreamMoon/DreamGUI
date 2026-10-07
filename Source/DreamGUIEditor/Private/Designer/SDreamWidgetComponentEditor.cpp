@@ -82,14 +82,8 @@ UDreamUIBehaviour* DreamUIWidgetComponentClipboard_Snapshot(UDreamUIBehaviour* I
 	{
 		if (TSharedPtr<FDreamWidgetBlueprintEditor> Designer = FDreamWidgetBlueprintEditor::GetEditorByWorld(SourceWidget->GetWorld()).Pin())
 		{
-			if (UDreamWidget* Template = Designer->GetTemplateWidget(SourceWidget))
-			{
-				const int32 Index = SourceWidget->GetAllComponents().Find(InSource);
-				if (!Template->GetAllComponents().IsValidIndex(Index))return nullptr;
-				UDreamUIBehaviour* Authored = Template->GetAllComponents()[Index];
-				if (!IsValid(Authored) || Authored->GetClass() != InSource->GetClass())return nullptr;
-				InSource = Authored;
-			}
+			InSource = Designer->GetPreviewHost()->FindTemplateComponentForPreview(InSource);
+			if (!IsValid(InSource))return nullptr;
 		}
 	}
 	auto Snapshot = NewObject<UDreamUIBehaviour>(GetTransientPackage(), InSource->GetClass(), NAME_None, RF_Transient);

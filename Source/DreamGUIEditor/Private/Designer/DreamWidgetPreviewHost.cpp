@@ -4,6 +4,7 @@
 
 #include "DreamWidgetBlueprint.h"
 #include "Core/DreamUIManager.h"
+#include "Core/DreamUIBehaviour.h"
 #include "Core/DreamUserWidget.h"
 #include "Core/DreamWidgetGeneratedClass.h"
 #include "Core/DreamWidgetTree.h"
@@ -458,6 +459,7 @@ UDreamWidget* FDreamWidgetPreviewHost::GetPreviewRoot() const
 void FDreamWidgetPreviewHost::DestroyPreview()
 {
 	PreviewWidgetsByGuid.Reset();
+	TemplateComponentsByPreview.Reset();
 	// Deliberately not IsValid(): an object marked for collection is still live memory whose widgets
 	// are still registered, and skipping teardown on it is precisely how one gets orphaned.
 	// DestroyWidget is written for that case -- it walks on RF_FinishDestroyed, not on IsValid.
@@ -707,6 +709,7 @@ void FDreamWidgetPreviewHost::ClearTransactionalFlagsOnPreview()
 void FDreamWidgetPreviewHost::RebuildPreviewGuidMap()
 {
 	PreviewWidgetsByGuid.Reset();
+	TemplateComponentsByPreview.Reset();
 	ForgetTemplateMisses();
 	if (!IsValid(PreviewWidget) || !IsValid(PreviewWidget->GetWidgetTree()))
 	{
@@ -735,6 +738,25 @@ void FDreamWidgetPreviewHost::RebuildPreviewGuidMap()
 			continue;
 		}
 		PreviewWidgetsByGuid.Add(Guid, Widget);
+		if (UDreamWidget* Template = FindTemplateForPreview(Widget))
+		{
+			// Instancing preserves object names even when initialization reordered the live array.
+			// Capture the identity now: a component created or renamed later must not acquire the
+			// right to edit an unrelated authored object by occupying its old array position/name.
+			for (UDreamUIBehaviour* Component : Widget->GetAllComponents())
+			{
+				if (!IsValid(Component) || Component->GetOuter() != Widget)continue;
+				for (UDreamUIBehaviour* Authored : Template->GetAllComponents())
+				{
+					if (IsValid(Authored) && Authored->GetOuter() == Template
+						&& Authored->GetFName() == Component->GetFName() && Authored->GetClass() == Component->GetClass())
+					{
+						TemplateComponentsByPreview.Add(Component, Authored);
+						break;
+					}
+				}
+			}
+		}
 	}
 }
 
@@ -868,6 +890,37 @@ UDreamWidget* FDreamWidgetPreviewHost::FindTemplateForPreview(const UDreamWidget
 	return Found;
 }
 
+UDreamUIBehaviour* FDreamWidgetPreviewHost::FindTemplateComponentForPreview(const UDreamUIBehaviour* InPreviewComponent) const
+{
+	if (!IsValid(InPreviewComponent))return nullptr;
+	const TWeakObjectPtr<UDreamUIBehaviour>* Found = TemplateComponentsByPreview.Find(InPreviewComponent);
+	UDreamUIBehaviour* Authored = Found != nullptr ? Found->Get() : nullptr;
+	const UDreamWidget* PreviewOwner = Cast<UDreamWidget>(InPreviewComponent->GetOuter());
+	UDreamWidget* TemplateOwner = FindTemplateForPreview(PreviewOwner);
+	if (!IsValid(Authored) || !IsValid(PreviewOwner) || !IsValid(TemplateOwner)
+		|| FindPreviewForTemplate(TemplateOwner) != PreviewOwner
+		|| !PreviewOwner->GetAllComponents().Contains(InPreviewComponent)
+		|| Authored->GetOuter() != TemplateOwner || !TemplateOwner->GetAllComponents().Contains(Authored)
+		|| Authored->GetFName() != InPreviewComponent->GetFName() || Authored->GetClass() != InPreviewComponent->GetClass())
+	{
+		return nullptr;
+	}
+	return Authored;
+}
+
+UDreamUIBehaviour* FDreamWidgetPreviewHost::FindPreviewComponentForTemplate(const UDreamUIBehaviour* InTemplateComponent) const
+{
+	if (!IsValid(InTemplateComponent))return nullptr;
+	const UDreamWidget* TemplateOwner = Cast<UDreamWidget>(InTemplateComponent->GetOuter());
+	UDreamWidget* PreviewOwner = FindPreviewForTemplate(TemplateOwner);
+	if (!IsValid(PreviewOwner))return nullptr;
+	for (UDreamUIBehaviour* Component : PreviewOwner->GetAllComponents())
+	{
+		if (FindTemplateComponentForPreview(Component) == InTemplateComponent)return Component;
+	}
+	return nullptr;
+}
+
 bool FDreamWidgetPreviewHost::MapPreviewReferenceToTemplate(UObject* InValue, UObject*& OutMapped) const
 {
 	OutMapped = InValue;
@@ -886,7 +939,9 @@ bool FDreamWidgetPreviewHost::MapPreviewReferenceToTemplate(UObject* InValue, UO
 	{
 		if (UDreamWidget* Template = FindTemplateForPreview(Site.Widget))
 		{
-			UObject* Counterpart = ResolveDreamWidgetBindingTarget(Template, Site.Target, Site.BehaviourIndex);
+			UObject* Counterpart = Site.Target == EDreamWidgetBindingTarget::Behaviour
+				? FindTemplateComponentForPreview(Cast<UDreamUIBehaviour>(InValue))
+				: ResolveDreamWidgetBindingTarget(Template, Site.Target, Site.BehaviourIndex);
 			if (Counterpart != nullptr && Counterpart->GetClass() == InValue->GetClass())
 			{
 				OutMapped = Counterpart;
@@ -930,7 +985,9 @@ bool FDreamWidgetPreviewHost::MigratePropertyToTemplate(UObject* InPreviewObject
 		{
 			return false;
 		}
-		TemplateObject = ResolveDreamWidgetBindingTarget(Template, Site.Target, Site.BehaviourIndex);
+		TemplateObject = Site.Target == EDreamWidgetBindingTarget::Behaviour
+			? FindTemplateComponentForPreview(Cast<UDreamUIBehaviour>(InPreviewObject))
+			: ResolveDreamWidgetBindingTarget(Template, Site.Target, Site.BehaviourIndex);
 	}
 	if (!IsValid(TemplateObject) || TemplateObject->GetClass() != InPreviewObject->GetClass())
 	{

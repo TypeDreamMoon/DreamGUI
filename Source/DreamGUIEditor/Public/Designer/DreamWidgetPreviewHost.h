@@ -10,6 +10,7 @@
 class FDreamWidgetDesignerScene;
 class UDreamUserWidget;
 class UDreamWidget;
+class UDreamUIBehaviour;
 class UDreamWidgetBlueprint;
 class UDreamWidgetTree;
 class UWorld;
@@ -134,6 +135,10 @@ public:
 	UDreamWidget* FindPreviewForTemplate(const UDreamWidget* InTemplateWidget) const;
 	/** The template counterpart of a preview widget, or null when it is not part of the authored tree. */
 	UDreamWidget* FindTemplateForPreview(const UDreamWidget* InPreviewWidget) const;
+	/** The authored behaviour captured when this preview was built; null for added, renamed or removed components. */
+	UDreamUIBehaviour* FindTemplateComponentForPreview(const UDreamUIBehaviour* InPreviewComponent) const;
+	/** The current preview instance captured for an authored behaviour, independent of array order. */
+	UDreamUIBehaviour* FindPreviewComponentForTemplate(const UDreamUIBehaviour* InTemplateComponent) const;
 
 	/**
 	 * Copy one edited value from a preview object onto its template counterpart.
@@ -238,6 +243,8 @@ private:
 	 * selected.
 	 */
 	mutable TMap<FGuid, TWeakObjectPtr<UDreamWidget>> TemplatesByGuid;
+	/** Capture by instanced name once, then keep identity across live component reordering. */
+	TMap<TWeakObjectPtr<const UDreamUIBehaviour>, TWeakObjectPtr<UDreamUIBehaviour>> TemplateComponentsByPreview;
 	/**
 	 * Guids looked up and not found this frame (TemplatesMissedFrame): asked again, answered without another walk -- the
 	 * canvas agent and the preview's wrapper are asked about for every pick. Forgotten whenever the tree may have gained a

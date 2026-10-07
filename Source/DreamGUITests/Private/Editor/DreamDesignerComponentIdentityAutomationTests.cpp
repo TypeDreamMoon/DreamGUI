@@ -14,6 +14,7 @@
 #include "Designer/DreamWidgetTreeEditing.h"
 #include "Designer/SDreamWidgetComponentEditor.h"
 #include "DreamWidgetBlueprint.h"
+#include "DreamDesignerCompositeReferenceTestTypes.h"
 #include "Editor.h"
 #include "Editor/TransBuffer.h"
 #include "Framework/Application/SlateApplication.h"
@@ -65,6 +66,11 @@ namespace DreamDesignerComponentIdentityTestLocal
 				Subject->AddComponent<UUIButton>();
 				Subject->AddComponent<UDreamUIPlayTweenComponent>();
 			}
+			if (bSameClass)
+			{
+				UDreamWidget* ReferenceHost = DreamWidgetTreeEditing::CreateWidget(Blueprint, UDreamWidget::StaticClass(), Tree->RootWidget, -1, TEXT("ReferenceHost"));
+				if (ReferenceHost != nullptr)ReferenceHost->AddComponent<UDreamDesignerCompositeReferenceTestBehaviour>();
+			}
 			FKismetEditorUtilities::CompileBlueprint(Blueprint, EBlueprintCompileOptions::SkipGarbageCollection);
 			UAssetEditorSubsystem* Editors = GEditor->GetEditorSubsystem<UAssetEditorSubsystem>();
 			Editors->OpenEditorForAsset(Blueprint);
@@ -74,6 +80,7 @@ namespace DreamDesignerComponentIdentityTestLocal
 
 		~FScopedDesigner()
 		{
+			DreamUIWidgetComponentClipboard().Reset();
 			if (Designer != nullptr)
 			{
 				GEditor->GetEditorSubsystem<UAssetEditorSubsystem>()->CloseAllEditorsForAsset(Blueprint);
@@ -218,6 +225,16 @@ void FDreamDesignerReorderedSameClassComponentIdentityTest::GetTests(TArray<FStr
 	OutTestCommands.Add(TEXT("Delete"));
 	OutBeautifiedNames.Add(TEXT("Duplicate follows the selected tween or refuses"));
 	OutTestCommands.Add(TEXT("Duplicate"));
+	OutBeautifiedNames.Add(TEXT("Copy keeps the selected tween settings"));
+	OutTestCommands.Add(TEXT("Copy"));
+	OutBeautifiedNames.Add(TEXT("Cut keeps and removes the selected tween"));
+	OutTestCommands.Add(TEXT("Cut"));
+	OutBeautifiedNames.Add(TEXT("Details edits the selected tween"));
+	OutTestCommands.Add(TEXT("Details"));
+	OutBeautifiedNames.Add(TEXT("A reference names the selected authored tween"));
+	OutTestCommands.Add(TEXT("Reference"));
+	OutBeautifiedNames.Add(TEXT("Renaming cannot acquire another authored identity"));
+	OutTestCommands.Add(TEXT("Rename"));
 }
 
 bool FDreamDesignerReorderedSameClassComponentIdentityTest::RunTest(const FString& Parameters)
@@ -236,28 +253,81 @@ bool FDreamDesignerReorderedSameClassComponentIdentityTest::RunTest(const FStrin
 	if (!TestNotNull(TEXT("the selected second component is a tween"), Selected)
 		|| !TestNotNull(TEXT("the selected tween has its own inline settings"), Selected->GetPlayTween()))return false;
 	TestEqual(TEXT("the selected tween has the second authored duration"), Selected->GetPlayTween()->GetDuration(), 2.0f);
-	AddInfo(FString::Printf(TEXT("Selected preview %s; archetype %s; authored counterpart %s"),
-		*Selected->GetPathName(), *GetPathNameSafe(Selected->GetArchetype()), *AuthoredBefore[1]->GetPathName()));
 	Context->MoveComponentToIndex(Selected, 0);
 	TestEqual(TEXT("the same component is now the preview's first row"), Context->GetAllComponents()[0], static_cast<UDreamUIBehaviour*>(Selected));
+	if (Parameters == TEXT("Details"))
+	{
+		FBoolProperty* Property = FindFProperty<FBoolProperty>(Selected->GetClass(), TEXT("bPlayOnStart"));
+		if (!TestNotNull(TEXT("the tween has an editable start policy"), Property))return false;
+		Property->SetPropertyValue_InContainer(Selected, false);
+		FEditPropertyChain Chain;
+		Chain.AddHead(Property);
+		Scoped.Designer->MigrateDetailsChangeToTemplate({ Selected }, Chain, false);
+		TestTrue(TEXT("the unselected authored tween keeps its start policy"), Property->GetPropertyValue_InContainer(AuthoredBefore[0]));
+		TestFalse(TEXT("the selected authored tween receives the edited start policy"), Property->GetPropertyValue_InContainer(AuthoredBefore[1]));
+		return true;
+	}
+	if (Parameters == TEXT("Reference"))
+	{
+		UDreamWidget* AuthoredHost = Scoped.Blueprint->WidgetTree->FindWidgetByVariableName(TEXT("ReferenceHost"));
+		UDreamWidget* PreviewHost = Scoped.Designer->GetPreviewHost()->FindPreviewForTemplate(AuthoredHost);
+		if (!TestNotNull(TEXT("the reference owner has a preview"), PreviewHost))return false;
+		UDreamDesignerCompositeReferenceTestBehaviour* Preview = PreviewHost->GetComponent<UDreamDesignerCompositeReferenceTestBehaviour>();
+		UDreamDesignerCompositeReferenceTestBehaviour* Authored = AuthoredHost->GetComponent<UDreamDesignerCompositeReferenceTestBehaviour>();
+		if (!TestNotNull(TEXT("the preview reference behaviour exists"), Preview)
+			|| !TestNotNull(TEXT("the authored reference behaviour exists"), Authored))return false;
+		Preview->Value.Asset = Selected;
+		FProperty* Property = FindFProperty<FProperty>(Preview->GetClass(), TEXT("Value"));
+		if (!TestNotNull(TEXT("the composite reference is editable"), Property))return false;
+		FEditPropertyChain Chain;
+		Chain.AddHead(Property);
+		Scoped.Designer->MigrateDetailsChangeToTemplate({ Preview }, Chain, false);
+		TestEqual(TEXT("the asset references the selected authored tween"), Authored->Value.Asset.Get(), static_cast<UObject*>(AuthoredBefore[1]));
+		return true;
+	}
+	if (Parameters == TEXT("Rename"))
+	{
+		UDreamUIBehaviour* Unselected = Context->GetAllComponents()[1];
+		const FString FirstName = Unselected->GetName();
+		TestTrue(TEXT("the public rename moves the first preview name aside"), Unselected->Rename(TEXT("MovedAsidePreviewComponent"), nullptr, REN_DontCreateRedirectors | REN_NonTransactional));
+		TestTrue(TEXT("the selected preview can acquire that now-free name"), Selected->Rename(*FirstName, nullptr, REN_DontCreateRedirectors | REN_NonTransactional));
+	}
 	{
 		TSharedRef<SDreamWidgetComponentEditor> Panel = SNew(SDreamWidgetComponentEditor)
 			.GetWidgetContext_Lambda([&Context] { return Context; })
 			.CanEdit_Lambda([] { return true; });
 		Panel->SelectComponent(Selected);
-		TestTrue(TEXT("the real panel handles the selected tween command"), PressCommand(*Panel,
-			Parameters == TEXT("Delete") ? EKeys::Delete : EKeys::D, Parameters == TEXT("Duplicate")));
+		const bool bDelete = Parameters == TEXT("Delete") || Parameters == TEXT("Rename");
+		const FKey Key = bDelete ? EKeys::Delete : Parameters == TEXT("Copy") ? EKeys::C : Parameters == TEXT("Cut") ? EKeys::X : EKeys::D;
+		TestTrue(TEXT("the real panel handles the selected tween command"), PressCommand(*Panel, Key, !bDelete));
 		Context = Scoped.Preview();
 		Panel->RefreshComponents();
 	}
 	const TArray<UDreamUIBehaviour*>& After = Scoped.Template()->GetAllComponents();
 	TestTrue(TEXT("the unselected first authored tween is always preserved"), After.Contains(AuthoredBefore[0]));
+	if (Parameters == TEXT("Copy") || Parameters == TEXT("Cut"))
+	{
+		UDreamUIPlayTweenComponent* Snapshot = Cast<UDreamUIPlayTweenComponent>(DreamUIWidgetComponentClipboard().Get());
+		if (!TestNotNull(TEXT("the clipboard holds the selected component"), Snapshot)
+			|| !TestNotNull(TEXT("the clipboard carries its inline settings"), Snapshot->GetPlayTween()))return false;
+		TestEqual(TEXT("the clipboard uses the selected tween's settings"), Snapshot->GetPlayTween()->GetDuration(), 2.0f);
+		if (Parameters == TEXT("Copy"))
+		{
+			TestTrue(TEXT("copy preserves both authored instances"), After == AuthoredBefore);
+			return true;
+		}
+	}
+	if (Parameters == TEXT("Rename"))
+	{
+		TestTrue(TEXT("changing an object's name cannot remove either authored instance"), After == AuthoredBefore);
+		return true;
+	}
 	if (After == AuthoredBefore)
 	{
 		// Refusing an unresolvable selection is safe too; never substitute another instance.
 		return true;
 	}
-	if (Parameters == TEXT("Delete"))
+	if (Parameters == TEXT("Delete") || Parameters == TEXT("Cut"))
 	{
 		TestEqual(TEXT("only the selected authored tween was removed"), After.Num(), 1);
 		TestFalse(TEXT("the selected second authored tween is the one removed"), After.Contains(AuthoredBefore[1]));
