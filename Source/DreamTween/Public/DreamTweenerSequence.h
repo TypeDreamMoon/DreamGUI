@@ -30,6 +30,8 @@ private:
 	 * while the sequence lives on; every loop over the children dereferenced them unchecked.
 	 */
 	void RemoveInvalidChildren();
+	/** Reject an ancestor (including this sequence) before adopting a child's clock or changing any lists. */
+	bool WouldCreateCycle(const UDreamTweener* InTweener) const;
 	/** Whether a Goto or Restart may run, refusing (with an error) one nested too deep; see seekDepth. */
 	bool CanSeekFromHere()const;
 	/** Every child back on the list, sorted, its value put back at its start and its clock at zero: what Restart and Goto both begin with. */

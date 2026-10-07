@@ -1,4 +1,4 @@
-﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
+// Copyright 2019-Present LexLiu. All Rights Reserved.
 
 #include "DreamTweenerSequence.h"
 #include "DreamTween.h"
@@ -49,6 +49,36 @@ UDreamTweenerSequence* UDreamTweenerSequence::Append(UObject* WorldContextObject
 {
 	return this->Insert(WorldContextObject, duration, tweener);
 }
+
+bool UDreamTweenerSequence::WouldCreateCycle(const UDreamTweener* InTweener) const
+{
+	TArray<const UDreamTweenerSequence*> Pending;
+	TSet<const UDreamTweenerSequence*> Visited;
+	if (const UDreamTweenerSequence* Sequence = Cast<UDreamTweenerSequence>(InTweener))
+	{
+		Pending.Add(Sequence);
+	}
+	while (!Pending.IsEmpty())
+	{
+		const UDreamTweenerSequence* Sequence = Pending.Pop(EAllowShrinking::No);
+		if (Sequence == this) return true;
+		if (!IsValid(Sequence) || Visited.Contains(Sequence)) continue;
+		Visited.Add(Sequence);
+		const auto VisitChildren = [&Pending](const TArray<TObjectPtr<UDreamTweener>>& Children)
+		{
+			for (UDreamTweener* Child : Children)
+			{
+				if (IsValid(Child))
+				{
+					if (const UDreamTweenerSequence* Nested = Cast<UDreamTweenerSequence>(Child)) Pending.Add(Nested);
+				}
+			}
+		};
+		VisitChildren(Sequence->tweenerList);
+		VisitChildren(Sequence->finishedTweenerList);
+	}
+	return false;
+}
 UDreamTweenerSequence* UDreamTweenerSequence::AppendInterval(UObject* WorldContextObject, float interval)
 {
 	if (elapseTime > 0 || startToTween)
@@ -69,6 +99,11 @@ UDreamTweenerSequence* UDreamTweenerSequence::Insert(UObject* WorldContextObject
 	if (!IsValid(tweener))
 	{
 		UE_LOG(DreamTween, Error, TEXT("[%s].%d tweener is null"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
+		return this;
+	}
+	if (WouldCreateCycle(tweener))
+	{
+		UE_LOG(DreamTween, Error, TEXT("[%s].%d cannot add a tweener that creates a cyclic sequence"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
 		return this;
 	}
 	if (tweener->IsA<UDreamTweenerFrame>() || tweener->IsA<UDreamTweenerVirtual>())
@@ -121,6 +156,11 @@ UDreamTweenerSequence* UDreamTweenerSequence::Prepend(UObject* WorldContextObjec
 	if (!IsValid(tweener))
 	{
 		UE_LOG(DreamTween, Error, TEXT("[%s].%d tweener is null"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
+		return this;
+	}
+	if (WouldCreateCycle(tweener))
+	{
+		UE_LOG(DreamTween, Error, TEXT("[%s].%d cannot add a tweener that creates a cyclic sequence"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
 		return this;
 	}
 	if (tweener->IsA<UDreamTweenerFrame>() || tweener->IsA<UDreamTweenerVirtual>())
