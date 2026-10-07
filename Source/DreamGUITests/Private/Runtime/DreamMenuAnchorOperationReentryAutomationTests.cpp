@@ -273,7 +273,8 @@ bool FDreamMenuAnchorInitialFocusReopenTest::RunTest(const FString& Parameters)
 	UDreamButton* MenuItem = Rig.MakeControl<UDreamButton>(TEXT("InitialMenuFocus"), Anchor->MenuNode, FVector2D(150.0, 50.0));
 	if (!TestNotNull(TEXT("the menu has a real navigable button"), MenuItem))return false;
 	ReturnFocus->SetIsFocusable(true);
-	UDreamWidget* CallbackWidget = bReopenFromDeselect ? ReturnFocus : static_cast<UDreamWidget*>(MenuItem);
+	if (!TestNotNull(TEXT("the button owns its actual selectable face"), MenuItem->FaceNode.Get()))return false;
+	UDreamWidget* CallbackWidget = bReopenFromDeselect ? ReturnFocus : MenuItem->FaceNode.Get();
 	UDreamFocusReentryProbe* FocusProbe = CallbackWidget->AddComponent<UDreamFocusReentryProbe>();
 	if (!TestNotNull(TEXT("the initial focus move has a real dispatched callback"), FocusProbe))return false;
 	UDreamUIPopupLayer* Layer = UDreamUIPopupLayer::Get(Anchor);
