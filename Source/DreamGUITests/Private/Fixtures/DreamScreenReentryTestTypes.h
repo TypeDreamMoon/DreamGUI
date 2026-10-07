@@ -3,7 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Core/Components/DreamWidget.h"
+#include "Core/DreamUserWidget.h"
 #include "DreamScreenReentryTestTypes.generated.h"
 
 class UDreamScreenUISubsystem;
@@ -25,4 +25,16 @@ public:
 	UFUNCTION() void ReplaceOnCreated(FName Name, UDreamWidget* Page);
 	UFUNCTION() void CountShown(FName Name, UDreamWidget* Page);
 	UFUNCTION() void CountHidden(FName Name, UDreamWidget* Page);
+};
+
+/** Gives the fixture the same visibility binding access as a widget's Blueprint. */
+UCLASS()
+class UDreamScreenReentryWidget : public UDreamUserWidget
+{
+	GENERATED_BODY()
+public:
+	void BindVisibilityProbe(UDreamScreenReentryProbe* Probe)
+	{
+		OnVisibilityChanged.AddDynamic(Probe, &UDreamScreenReentryProbe::RemoveOnCollapsed);
+	}
 };

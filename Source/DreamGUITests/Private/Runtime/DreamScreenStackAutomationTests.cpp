@@ -210,13 +210,14 @@ bool FDreamScreenVisibilityReentryTest::RunTest(const FString& Parameters)
 	FScopedGameWorld TestWorld;
 	UDreamScreenUISubsystem* Screen = GetScreenSubsystem(TestWorld.World);
 	if (!TestNotNull(TEXT("Screen subsystem"), Screen)) { return false; }
-	UDreamWidget* Page = Screen->ShowWidgetOfClass(TEXT("Visibility"), UDreamUserWidget::StaticClass());
+	UDreamScreenReentryWidget* Page = Cast<UDreamScreenReentryWidget>(
+		Screen->ShowWidgetOfClass(TEXT("Visibility"), UDreamScreenReentryWidget::StaticClass()));
 	if (!TestNotNull(TEXT("Page"), Page)) { return false; }
 	UDreamScreenReentryProbe* Probe = NewObject<UDreamScreenReentryProbe>(Screen);
 	Probe->Screen = Screen;
 	Probe->PageName = TEXT("Visibility");
 	Probe->bArmed = true;
-	Page->OnVisibilityChanged.AddDynamic(Probe, &UDreamScreenReentryProbe::RemoveOnCollapsed);
+	Page->BindVisibilityProbe(Probe);
 	Screen->OnPageHidden.AddDynamic(Probe, &UDreamScreenReentryProbe::CountHidden);
 	Screen->SetUIVisible(Probe->PageName, false);
 	TestNull(TEXT("Visibility callback removed its registration"), Screen->GetUI(Probe->PageName));
