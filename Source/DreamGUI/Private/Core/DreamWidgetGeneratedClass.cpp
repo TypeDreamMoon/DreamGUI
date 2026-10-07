@@ -345,6 +345,9 @@ void UDreamWidgetGeneratedClass::InitializeWidgetStatic(UDreamUserWidget* InUser
 	// Initializing a nested user widget adds its private children. Bind only the authored
 	// snapshot, including this tree's named-slot content, before any such expansion.
 	const TArray<UDreamWidget*> WidgetsToBind = InstancedTree->GetAllWidgets();
+	// A nested widget's initialization can reorder its own components too, so capture every
+	// authored target before initializing even the first nested widget.
+	InUserWidget->CaptureBindingComponentIdentities(InstancedTree, WidgetsToBind);
 	for (UDreamWidget* Widget : WidgetsToBind)
 	{
 		if (!IsValid(Widget) || Widget->GetTypedOuter<UDreamWidgetTree>() != InstancedTree)

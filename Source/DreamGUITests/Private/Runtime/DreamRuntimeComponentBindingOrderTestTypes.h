@@ -41,6 +41,9 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Test")
 	bool bReorderOnInitialized = true;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Test")
+	bool bRemoveFirstOnInitialized = false;
+
 	int32 TriggerCount = 0;
 
 	UFUNCTION(BlueprintPure, Category = "Test")
@@ -52,14 +55,41 @@ public:
 	virtual void NativeOnInitialized() override
 	{
 		Super::NativeOnInitialized();
-		if (bReorderOnInitialized && GetWidgetTree() != nullptr)
+		if (GetWidgetTree() != nullptr)
 		{
 			if (UDreamWidget* Subject = GetWidgetTree()->FindWidgetByVariableName(TEXT("Subject")))
 			{
-				if (Subject->GetAllComponents().Num() == 2)
+				if (bRemoveFirstOnInitialized && Subject->GetAllComponents().Num() == 2)
+				{
+					Subject->RemoveComponent(Subject->GetAllComponents()[0]);
+				}
+				else if (bReorderOnInitialized && Subject->GetAllComponents().Num() == 2)
 				{
 					Subject->MoveComponentToIndex(Subject->GetAllComponents()[1], 0);
 				}
+			}
+		}
+	}
+};
+
+/** The outer blueprint binds components on this nested widget, before its own hook runs. */
+UCLASS()
+class UDreamRuntimeComponentBindingOrderNestedWidget : public UDreamUserWidget
+{
+	GENERATED_BODY()
+
+public:
+	virtual void NativeOnInitialized() override
+	{
+		Super::NativeOnInitialized();
+		for (UDreamUIBehaviour* Component : GetAllComponents())
+		{
+			const UDreamRuntimeComponentBindingOrderTestBehaviour* TestComponent =
+				Cast<UDreamRuntimeComponentBindingOrderTestBehaviour>(Component);
+			if (TestComponent != nullptr && TestComponent->Identity == TEXT("Second"))
+			{
+				MoveComponentToIndex(Component, 0);
+				break;
 			}
 		}
 	}

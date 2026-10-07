@@ -45,6 +45,12 @@ class FObjectPropertyBase;
 class APlayerController;
 class APawn;
 class ULocalPlayer;
+enum class EDreamWidgetBindingTarget : uint8;
+
+namespace DreamUserWidgetDuplicateLocal
+{
+	void AdoptDuplicatedUserWidgets(UDreamWidget* InSource, UDreamWidget* InCopy);
+}
 
 /** Blueprint-facing counterpart of CreateDreamWidget's before-alive hook. */
 DECLARE_DYNAMIC_DELEGATE_OneParam(FDreamUIWidgetCreatedCallback, UDreamUserWidget*, CreatedWidget);
@@ -1152,6 +1158,23 @@ private:
 	bool bCanNavigateHere = false;
 
 private:
+	friend class UDreamWidgetGeneratedClass;
+	friend void DreamUserWidgetDuplicateLocal::AdoptDuplicatedUserWidgets(UDreamWidget*, UDreamWidget*);
+
+	/** Authored indices become identities before initialization can reorder or remove components. */
+	struct FBindingComponentIdentities
+	{
+		TWeakObjectPtr<UDreamWidget> Widget;
+		TArray<TWeakObjectPtr<UDreamUIBehaviour>> Components;
+	};
+	TMap<FName, FBindingComponentIdentities> BindingComponentIdentities;
+
+	void CaptureBindingComponentIdentities(UDreamWidgetTree* InTree, const TArray<UDreamWidget*>& InWidgets);
+	void CopyBindingComponentIdentities(const UDreamUserWidget* InSource,
+		const TMap<const UDreamWidget*, UDreamWidget*>& InSourceToCopy);
+	UObject* ResolveBindingTarget(FName InWidgetName, UDreamWidget* InWidget,
+		EDreamWidgetBindingTarget InTarget, int32 InBehaviourIndex) const;
+
 	/**
 	 * What re-evaluates a resolved binding. Legacy is every binding compiled before dependencies were recorded (and the
 	 * designer's Bind button, and a bare `F()`): its own FieldNotify field when it has one, else the poll -- exactly as
