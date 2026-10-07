@@ -72,8 +72,6 @@ UDreamUISpriteData::UDreamUISpriteData()
 
 bool UDreamUISpriteData::PackSprite()
 {
-	CheckAndApplySpriteTextureSetting(SpriteTexture);
-
 	auto AtlasData = UDreamUIDynamicSpriteAtlasManager::FindOrAdd(PackingTag);
 	if (AtlasData == nullptr)
 	{
@@ -275,7 +273,12 @@ bool UDreamUISpriteData::NeedsSpriteTextureSetting(const UTexture2D* InSpriteTex
 
 void UDreamUISpriteData::CheckAndApplySpriteTextureSetting(UTexture2D* InSpriteTexture)
 {
-	if (NeedsSpriteTextureSetting(InSpriteTexture))
+#if WITH_EDITOR
+	// Only an editor asset with source data can be re-encoded. Cooked textures retain their platform
+	// format when UpdateResource runs, and changing their compression setting cannot make a BGRA8 copy valid.
+	// A transient BGRA8 texture already has the right format; a transient compressed one must keep its resource.
+	if (NeedsSpriteTextureSetting(InSpriteTexture)
+		&& (InSpriteTexture->Source.IsValid() || InSpriteTexture->GetPixelFormat() == PF_B8G8R8A8))
 	{
 		InSpriteTexture->CompressionSettings = TextureCompressionSettings::TC_EditorIcon;
 		InSpriteTexture->LODGroup = TextureGroup::TEXTUREGROUP_UI;
@@ -283,6 +286,7 @@ void UDreamUISpriteData::CheckAndApplySpriteTextureSetting(UTexture2D* InSpriteT
 		InSpriteTexture->UpdateResource();
 		InSpriteTexture->MarkPackageDirty();
 	}
+#endif
 }
 
 void UDreamUISpriteData::ReloadTexture()
@@ -354,11 +358,24 @@ void UDreamUISpriteData::InitSpriteData()
 				UE_LOG(DreamGUI, Error, TEXT("[%s].%d SpriteData:%s SpriteTexture is null!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *(this->GetPathName()));
 				return;
 			}
-			if (!PackingTag.IsNone())//need to pack to atlas
+			if (!PackingTag.IsNone())
 			{
+				CheckAndApplySpriteTextureSetting(SpriteTexture);
 #if WITH_EDITOR
 				FTextureCompilingManager::Get().FinishCompilation({ SpriteTexture });
 #endif
+				// The atlas is BGRA8. RHICopyTexture cannot convert a cooked BC/DXT or other pixel format,
+				// regardless of CompressionSettings. Use the source itself on this first query, with full UVs.
+				if (SpriteTexture->GetPixelFormat() != PF_B8G8R8A8)
+				{
+					UE_LOG(DreamGUI, Warning, TEXT("Sprite texture %s has format %s and cannot be packed into the BGRA8 sprite atlas; using it individually."),
+						*SpriteTexture->GetPathName(), GetPixelFormatString(SpriteTexture->GetPixelFormat()));
+					PackingTag = NAME_None;
+					ReloadTexture();
+				}
+			}
+			if (!PackingTag.IsNone())//need to pack to atlas
+			{
 				if (PackSprite())
 				{
 					bIsInitialized = true;

@@ -266,6 +266,8 @@ void FDreamUIDynamicSpriteAtlasData::NotifyRenderSpritesAtlasChanged()
 
 bool FDreamUIDynamicSpriteAtlasData::PackSprite(UDreamUISpriteData* Sprite)
 {
+	// Reject incompatible platform data before allocating a page or evicting any existing sprites.
+	if (!IsValid(Sprite) || !IsValid(Sprite->GetSpriteTexture()) || Sprite->GetSpriteTexture()->GetPixelFormat() != PF_B8G8R8A8)return false;
 	if (TryPackSpriteIntoExistingPages(Sprite))
 	{
 		return true;
@@ -287,7 +289,7 @@ bool FDreamUIDynamicSpriteAtlasData::PackSprite(UDreamUISpriteData* Sprite)
 
 bool FDreamUIDynamicSpriteAtlasData::TryPackSpriteIntoExistingPages(UDreamUISpriteData* Sprite)
 {
-	if (!IsValid(Sprite) || !IsValid(Sprite->GetSpriteTexture()))return false;
+	if (!IsValid(Sprite) || !IsValid(Sprite->GetSpriteTexture()) || Sprite->GetSpriteTexture()->GetPixelFormat() != PF_B8G8R8A8)return false;
 	if (AtlasBinPackArray.Num() == 0 || AtlasTextureArray.Num() == 0)return false;
 	int32 SpaceBetweenSprites = UDreamUISettings::GetAtlasTexturePadding(PackingTag);
 
