@@ -121,6 +121,70 @@ bool FDreamTweenManagerRetiredHandleTest::RunTest(const FString& Parameters)
 	return true;
 }
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDreamFrameTweenRestartFromCompletionTest,
+	"DreamGUI.Tween.Manager.FrameCompletionCanRestartWithEitherAutoKillPolicy",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamFrameTweenRestartFromCompletionTest::RunTest(const FString& Parameters)
+{
+	DreamTests::FScopedGameInstanceWorld TestWorld;
+	UDreamTweenManager* Manager = UDreamTweenManager::GetDreamTweenInstance(TestWorld.World);
+	if (!TestNotNull(TEXT("Tween manager"), Manager)) { return false; }
+	for (const bool bAutoKill : { true, false })
+	{
+		// A zero-frame delay runs through the actual frame override without advancing the engine's global clock.
+		UDreamTweener* Tween = UDreamTweenManager::DelayFrameCall(TestWorld.World, 0);
+		if (!TestNotNull(TEXT("Frame tween"), Tween)) { return false; }
+		Tween->SetTickType(EDreamTweenTickType::Manual)->SetAutoKill(bAutoKill);
+		const TSharedRef<int32> Completes = MakeShared<int32>(0);
+		const TSharedRef<int32> Starts = MakeShared<int32>(0);
+		Tween->OnStart(DreamTweenManagerTestLocal::CountInto(Starts));
+		Tween->OnComplete(TFunction<void()>([Completes, Tween]
+		{
+			if (++*Completes == 1) { Tween->Restart(); }
+		}));
+		Manager->ManualTick(0.01f);
+		TestEqual(TEXT("First completion ran once"), *Completes, 1);
+		TestTrue(TEXT("Restarted frame tween remains in the manager"), Manager->IsTweening(Tween));
+		TestTrue(TEXT("Restarted frame tween remains a valid handle"), IsValid(Tween));
+		Manager->ManualTick(0.01f);
+		TestEqual(TEXT("Restarted frame tween starts again"), *Starts, 2);
+		TestEqual(TEXT("Restarted frame tween completes again"), *Completes, 2);
+		if (!bAutoKill)
+		{
+			TestTrue(TEXT("Held completed tween stays valid"), IsValid(Tween));
+			Tween->Resume();
+			Manager->ManualTick(0.01f);
+			TestEqual(TEXT("Resuming a completed frame tween does not complete it twice"), *Completes, 2);
+			Tween->Kill();
+			Manager->ManualTick(0.01f);
+		}
+		TestFalse(TEXT("Final completion or explicit kill retires the tween"), Manager->IsTweening(Tween));
+	}
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDreamFrameTweenKilledOnUpdateTest,
+	"DreamGUI.Tween.Manager.FrameUpdateCanKillBeforeItsCompletionCallback",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamFrameTweenKilledOnUpdateTest::RunTest(const FString& Parameters)
+{
+	DreamTests::FScopedGameInstanceWorld TestWorld;
+	UDreamTweenManager* Manager = UDreamTweenManager::GetDreamTweenInstance(TestWorld.World);
+	if (!TestNotNull(TEXT("Tween manager"), Manager)) { return false; }
+	UDreamTweener* Tween = UDreamTweenManager::DelayFrameCall(TestWorld.World, 0);
+	if (!TestNotNull(TEXT("Frame tween"), Tween)) { return false; }
+	Tween->SetTickType(EDreamTweenTickType::Manual)->SetAutoKill(false);
+	const TSharedRef<int32> Completes = MakeShared<int32>(0);
+	Tween->OnComplete(DreamTweenManagerTestLocal::CountInto(Completes));
+	Tween->OnUpdate(TFunction<void(float)>([Tween](float Progress) { Tween->Kill(); }));
+	Manager->ManualTick(0.01f);
+	TestEqual(TEXT("Update killed without invoking completion"), *Completes, 0);
+	TestFalse(TEXT("Killed tween was retired despite auto-kill being off"), Manager->IsTweening(Tween));
+	return true;
+}
+
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamTweenManagerRestartFromCompletionTest,
 	"DreamGUI.Tween.Manager.RestartFromATweensOwnCompletionKeepsItRunning",
