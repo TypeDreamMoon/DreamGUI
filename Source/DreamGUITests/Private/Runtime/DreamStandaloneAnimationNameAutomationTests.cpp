@@ -6,6 +6,8 @@
 
 #include "Animation/DreamUISequence.h"
 #include "Animation/DreamWidgetAnimationComponent.h"
+#include "Animation/DreamWidgetAnimationPlayer.h"
+#include "Bindings/MovieSceneCustomBinding.h"
 #include "Channels/MovieSceneChannelProxy.h"
 #include "Channels/MovieSceneFloatChannel.h"
 #include "Core/DreamUserWidget.h"
@@ -15,11 +17,13 @@
 #include "Engine/World.h"
 #include "Misc/ScopeExit.h"
 #include "MovieScene.h"
+#include "MovieSceneSequenceID.h"
 #include "Sections/MovieSceneFloatSection.h"
 #include "Tracks/MovieSceneFloatTrack.h"
 #include "UObject/Package.h"
 #include "UObject/StrongObjectPtr.h"
 #include "UObject/UnrealType.h"
+#include "UniversalObjectLocatorResolveParams.h"
 
 namespace DreamStandaloneAnimationNameTestLocal
 {
@@ -118,7 +122,21 @@ bool FDreamStandaloneAnimationNameTest::RunTest(const FString& Parameters)
 	const FDreamUIAnimationHandle Direct = Instance->PlayAnimation(Asset.Get());
 	if (!TestTrue(TEXT("playing the same asset directly starts a real instance"), Direct.IsValid())) return false;
 	TestTrue(TEXT("direct playback belongs to the asset's component"), Owner->IsAnimationPlaying(Direct));
+	TestEqual(TEXT("the live player's playback context is the intended root"), Direct.Player->GetPlaybackContext(), static_cast<UObject*>(LiveRoot));
+	// The same authored custom binding resolves with the engine's current API. This read-only
+	// control does not alter the player's object cache or replace its production playback path.
+	FMovieSceneBindingResolveParams BindingParams{ Asset.Get(), RootBinding, MovieSceneSequenceID::Root, LiveRoot };
+	UE::UniversalObjectLocator::FResolveParams LocatorParams(LiveRoot);
+	TArray<UObject*, TInlineAllocator<1>> ReferenceObjects;
+	Asset->BindingReferences.ResolveBinding(BindingParams, LocatorParams, Direct.Player->FindSharedPlaybackState(), ReferenceObjects);
+	if (TestEqual(TEXT("the authored custom binding independently resolves one target"), ReferenceObjects.Num(), 1))
+	{
+		TestEqual(TEXT("the custom binding resolves the intended live root"), ReferenceObjects[0], static_cast<UObject*>(LiveRoot));
+	}
+	const TArrayView<TWeakObjectPtr<UObject>> PlayerObjects = Direct.Player->FindBoundObjects(RootBinding, MovieSceneSequenceID::Root);
+	TestEqual(TEXT("actual playback resolves that same custom binding"), PlayerObjects.Num(), 1);
 	Scope.TickFrames(8);
+	TestTrue(TEXT("the direct player's clock advances during world ticks"), Instance->GetAnimationCurrentTime(Direct) > 0.1f);
 	TestTrue(TEXT("direct playback writes the target width after real world ticks"), LiveRoot->GetWidth() > 40.0f && LiveRoot->GetWidth() < 220.0f);
 	Instance->StopAnimation(Direct);
 	LiveRoot->SetWidth(20.0f);
