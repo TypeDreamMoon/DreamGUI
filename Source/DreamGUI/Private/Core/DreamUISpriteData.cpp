@@ -366,10 +366,16 @@ void UDreamUISpriteData::InitSpriteData()
 #endif
 				// The atlas is BGRA8. RHICopyTexture cannot convert a cooked BC/DXT or other pixel format,
 				// regardless of CompressionSettings. Use the source itself on this first query, with full UVs.
-				if (SpriteTexture->GetPixelFormat() != PF_B8G8R8A8)
+				const EPixelFormat PixelFormat = SpriteTexture->GetPixelFormat();
+				if (PixelFormat == PF_Unknown)
+				{
+					// Platform data is not ready (including a null-RHI run). Keep the tag and retry later.
+					return;
+				}
+				if (PixelFormat != PF_B8G8R8A8)
 				{
 					UE_LOG(DreamGUI, Warning, TEXT("Sprite texture %s has format %s and cannot be packed into the BGRA8 sprite atlas; using it individually."),
-						*SpriteTexture->GetPathName(), GetPixelFormatString(SpriteTexture->GetPixelFormat()));
+						*SpriteTexture->GetPathName(), GetPixelFormatString(PixelFormat));
 					PackingTag = NAME_None;
 					ReloadTexture();
 				}
