@@ -733,6 +733,33 @@ namespace DreamUIRendererLocal
 		return false;
 	}
 
+	/** Blends whose destination colour or alpha cannot be recovered by compositing a transparent UI target. */
+	bool UsesOriginalDestination(const FCollectedMeshBatches& InCollected, ERHIFeatureLevel::Type InFeatureLevel)
+	{
+		for (const FDreamUIMeshBatchContainer& Batch : InCollected.Batches)
+		{
+			if (Batch.bBuiltIn)
+			{
+				if (Batch.GetBuiltIn().BlendMode == EDreamUIBlendMode::Multiply)
+				{
+					return true;
+				}
+			}
+			else if (const FMaterialRenderProxy* Proxy = Batch.Mesh.MaterialRenderProxy)
+			{
+				if (const FMaterial* Material = Proxy->GetMaterialNoFallback(InFeatureLevel))
+				{
+					const EBlendMode Blend = Material->GetBlendMode();
+					if (Blend == BLEND_Modulate || Blend == BLEND_AlphaHoldout || Blend == BLEND_Additive)
+					{
+						return true;
+					}
+				}
+			}
+		}
+		return false;
+	}
+
 	/**
 	 * The view's resolved scene depth, through the renderer's public scene-texture uniform buffers -- the deferred one
 	 * or the mobile one, whichever path drew the view -- and the dummy depth where there is none to read: a view the
@@ -1895,7 +1922,7 @@ void FDreamUIRenderer::RecordScreenSpaceLayer_RenderThread(FRDGBuilder& GraphBui
 	 * up over the real one. The point is fill rate -- on a phone or a low-end console profile a
 	 * full-screen UI pass is expensive out of proportion to how much detail it needs.
 	 *
-	 * Three things switch it off, and all three are refusals rather than approximations:
+	 * These cases switch it off:
 	 *
 	 * - MSAA. The multisampled path already redirects the whole UI through its own target and
 	 *   resolves at the end; two redirections would need the resolve and the upscale ordered
@@ -1906,12 +1933,15 @@ void FDreamUIRenderer::RecordScreenSpaceLayer_RenderThread(FRDGBuilder& GraphBui
 	 * - Any screen-space post process. A post process READS the scene colour behind it. Scaled, the
 	 *   UI it should be reading is in the small target while the scene is in the big one, so it
 	 *   would sample the wrong image and land in the wrong place in the z-order.
+	 * - A blend that needs the original destination. Multiply/Modulate and AlphaHoldout cannot affect
+	 *   the scene through a transparent target; a material's Additive also attenuates destination alpha.
 	 *
 	 * Scale 1 (the default) skips all of this and leaves the path exactly as it was.
 	 */
 	TRefCountPtr<IPooledRenderTarget> RenderScaleTarget;
 	FRDGTextureRef ScreenSpaceRenderTargetTexture = RenderTargetTexture;
 	const FIntRect UnscaledScreenSpaceViewRect = ViewRect;
+	TArray<DreamUIRendererLocal::FCollectedMeshBatches*, TInlineAllocator<1>> CollectedForScale;
 	if (bInAllowRenderScale
 		&& InLayer.ScreenSpaceRenderScale < 1.0f
 		&& NumSamples <= 1
@@ -1927,7 +1957,30 @@ void FDreamUIRenderer::RecordScreenSpaceLayer_RenderThread(FRDGBuilder& GraphBui
 				break;
 			}
 		}
+		bool bNeedsOriginalDestination = false;
 		if (!bAnyPostProcess)
+		{
+			// Inspect the batches that will actually draw, including a material's current blend override. Keep
+			// the collected state for the pass below: a scale decision must not collect the same mesh twice.
+			CollectedForScale.SetNumZeroed(RenderSequenceArray.Num());
+			for (int32 Index = 0; Index < RenderSequenceArray.Num(); ++Index)
+			{
+				const FDreamUIPrimitiveDataContainer& Item = RenderSequenceArray[Index];
+				auto* Collected = GraphBuilder.AllocObject<DreamUIRendererLocal::FCollectedMeshBatches>();
+				CollectedForScale[Index] = Collected;
+				{
+					TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_CollectMeshBatches);
+					FDreamUIMeshElementCollector MeshCollector(RenderView->GetFeatureLevel(), Collected->Allocator, GraphBuilder.RHICmdList);
+					Item.Primitive->DreamUI_GetMeshElements(*RenderView->Family, MeshCollector, Item, Collected->Batches);
+				}
+				if (bRenderLit && DreamUIRendererLocal::UsesOriginalDestination(*Collected, RenderView->GetFeatureLevel()))
+				{
+					bNeedsOriginalDestination = true;
+					break;
+				}
+			}
+		}
+		if (!bAnyPostProcess && !bNeedsOriginalDestination)
 		{
 			float AppliedScale = 1.0f;
 			const FIntPoint ScaledSize = CalculateRenderScaledSize(ViewRect.Size(), InLayer.ScreenSpaceRenderScale, AppliedScale);
@@ -1976,8 +2029,9 @@ void FDreamUIRenderer::RecordScreenSpaceLayer_RenderThread(FRDGBuilder& GraphBui
 
 	bool bIsDepthStencilCleared = false;
 	bool bIsRenderTarget = RendererType == EDreamUIRendererType::RenderTarget;
-	for (auto& RenderSequenceItem : RenderSequenceArray)
+	for (int32 SequenceIndex = 0; SequenceIndex < RenderSequenceArray.Num(); ++SequenceIndex)
 	{
+		auto& RenderSequenceItem = RenderSequenceArray[SequenceIndex];
 		switch (RenderSequenceItem.Type)
 		{
 		case EDreamUIRendererPrimitiveType::PostProcess://render post process
@@ -2027,8 +2081,10 @@ void FDreamUIRenderer::RecordScreenSpaceLayer_RenderThread(FRDGBuilder& GraphBui
 				}
 			}
 			// Collected while the pass is recorded, not when it runs: see the world-space mesh pass above.
-			auto* Collected = GraphBuilder.AllocObject<DreamUIRendererLocal::FCollectedMeshBatches>();
+			auto* Collected = CollectedForScale.IsValidIndex(SequenceIndex) ? CollectedForScale[SequenceIndex] : nullptr;
+			if (Collected == nullptr)
 			{
+				Collected = GraphBuilder.AllocObject<DreamUIRendererLocal::FCollectedMeshBatches>();
 				TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_CollectMeshBatches);
 				FDreamUIMeshElementCollector MeshCollector(RenderView->GetFeatureLevel(), Collected->Allocator, GraphBuilder.RHICmdList);
 				RenderSequenceItem.Primitive->DreamUI_GetMeshElements(*RenderView->Family, MeshCollector, RenderSequenceItem, Collected->Batches);
