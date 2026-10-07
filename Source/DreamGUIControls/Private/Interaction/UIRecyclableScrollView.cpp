@@ -19,9 +19,21 @@ void UUIRecyclableScrollView::Start()
     InitializeOnDataSource();
 }
 
+void UUIRecyclableScrollView::Tick(float DeltaTime)
+{
+    // Refill a pool invalidated by a row callback even when the user never scrolls again. One
+    // attempt per tick also bounds a source whose callbacks keep destroying every new row.
+    if (bCellPoolNeedsRebuild || (!CacheCellList.IsEmpty() && !IsCellPassCurrent(CellPoolGeneration)))
+    {
+        if (bCellPoolNeedsRebuild)InitializeOnDataSource();
+    }
+    if (IsValid(this))Super::Tick(DeltaTime);
+}
+
 void UUIRecyclableScrollView::OnDestroy()
 {
     ++CellPoolGeneration;
+    bCellPoolNeedsRebuild = false;
     if (OnScrollEventDelegateHandle.IsValid())
     {
         this->GetOnValueChangedEvent().Remove(OnScrollEventDelegateHandle);
@@ -145,6 +157,7 @@ void UUIRecyclableScrollView::GetUserFriendlyCacheCellList(TArray<FUIRecyclableS
 void UUIRecyclableScrollView::ClearAllCells()
 {
     ++CellPoolGeneration;
+    bCellPoolNeedsRebuild = false;
     // Forget the old pool before destroying it: OnDisable/OnDestroy can clear or rebuild this
     // view, and those callbacks must only ever operate on the new pool, not this snapshot.
     TArray<FUIRecyclableScrollViewCellContainer> RemovedCells = MoveTemp(CacheCellList);
@@ -163,10 +176,22 @@ void UUIRecyclableScrollView::ClearAllCells()
     }
 }
 
-bool UUIRecyclableScrollView::IsCellPassCurrent(uint64 InGeneration) const
+bool UUIRecyclableScrollView::IsCellPassCurrent(uint64 InGeneration)
 {
-    return InGeneration == CellPoolGeneration && IsValid(this) && IsValid(DataSource)
-        && Content.IsValid() && ContentParent.IsValid();
+    if (InGeneration != CellPoolGeneration || !IsValid(this) || !IsValid(DataSource)
+        || !Content.IsValid() || !ContentParent.IsValid())return false;
+    if (CacheCellList.ContainsByPredicate([](const FUIRecyclableScrollViewCellContainer& Cell)
+        { return !IsValid(Cell.Widget) || !IsValid(Cell.CellComponent); }))
+    {
+        // A callback can destroy any row without calling a list API. A shorter ring cannot keep
+        // its old data and line cursors: discard that layout and refill it through initialization.
+        const uint64 ClearedGeneration = CellPoolGeneration + 1;
+        ClearAllCells();
+        // Destruction callbacks may already have rebuilt or explicitly cleared the list themselves.
+        if (IsValid(this) && CellPoolGeneration == ClearedGeneration)bCellPoolNeedsRebuild = true;
+        return false;
+    }
+    return true;
 }
 
 void UUIRecyclableScrollView::SetDataSource(TScriptInterface<IUIRecyclableScrollViewDataSource> InDataSource)
@@ -273,7 +298,7 @@ bool UUIRecyclableScrollView::GetCellItemByDataIndex(int Index, FUIRecyclableScr
         if (CacheCellList.IsValidIndex(CellIndex))
         {
             OutResult = CacheCellList[CellIndex];
-            return true;
+            return IsValid(OutResult.Widget) && IsValid(OutResult.CellComponent);
         }
         else
         {
@@ -400,6 +425,7 @@ void UUIRecyclableScrollView::SetCellTemplateClass(TSubclassOf<UDreamUserWidget>
 
 void UUIRecyclableScrollView::InitializeOnDataSource()
 {
+    bCellPoolNeedsRebuild = false;
     const uint64 Generation = ++CellPoolGeneration;
     if (!IsValid(DataSource))return;
     if (!CheckParameters())return;
@@ -714,11 +740,21 @@ void UUIRecyclableScrollView::OnScrollCallback(FVector2D value)
 {
     if (!IsValid(DataSource))return;
     if (bResettingCells)return;
+    if (bCellPoolNeedsRebuild)
+    {
+        InitializeOnDataSource();
+        return;
+    }
     if (Horizontal == Vertical)return;
     if (CacheCellList.Num() == 0)return;
     if (DataItemCount == 0)return;
 
     const uint64 Generation = ++CellPoolGeneration;
+    if (!IsCellPassCurrent(Generation))
+    {
+        if (bCellPoolNeedsRebuild)InitializeOnDataSource();
+        return;
+    }
     IUIRecyclableScrollViewDataSource::Execute_BeforeSetCell(DataSource);
     if (!IsCellPassCurrent(Generation))return;
     const auto ContentPosition = FVector2D(Content->GetRelativeLocation().Y, Content->GetRelativeLocation().Z);
@@ -939,8 +975,18 @@ void UUIRecyclableScrollView::ApplyContentPositionWithProgress()
 void UUIRecyclableScrollView::UpdateCellData()
 {
     if (!IsValid(DataSource))return;
+    if (bCellPoolNeedsRebuild)
+    {
+        InitializeOnDataSource();
+        return;
+    }
 
     const uint64 Generation = ++CellPoolGeneration;
+    if (!IsCellPassCurrent(Generation))
+    {
+        if (bCellPoolNeedsRebuild)InitializeOnDataSource();
+        return;
+    }
     IUIRecyclableScrollViewDataSource::Execute_BeforeSetCell(DataSource);
     if (!IsCellPassCurrent(Generation))return;
     auto CellDataIndex = GetValidCellDataIndex(MinCellDataIndex);
@@ -958,6 +1004,7 @@ void UUIRecyclableScrollView::UpdateCellData()
         }
     }
     IUIRecyclableScrollViewDataSource::Execute_AfterSetCell(DataSource);
+    if (!IsCellPassCurrent(Generation))return;
 }
 
 bool UUIRecyclableScrollView::IsLooping()const

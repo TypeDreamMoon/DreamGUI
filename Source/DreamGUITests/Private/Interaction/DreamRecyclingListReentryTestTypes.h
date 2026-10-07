@@ -15,6 +15,7 @@ enum class EDreamRecyclingCallback : uint8
 	After,
 	Activated,
 	Created,
+	Set,
 };
 
 /** A single mutation run from a real reflected row callback or data-source callback. */
@@ -27,6 +28,7 @@ public:
 	EDreamRecyclingCallback Trigger = EDreamRecyclingCallback::Assigned;
 	TFunction<void()> Action;
 	int32 MutationCount = 0;
+	TWeakObjectPtr<UDreamWidget> CallbackWidget;
 
 	void Run(EDreamRecyclingCallback InCallback)
 	{
@@ -71,6 +73,7 @@ public:
 		if (!IsValid(this) || !IsValid(Probe) || GetItemIndex() == INDEX_NONE)return;
 		if (Function->GetFName() == GET_FUNCTION_NAME_CHECKED(UUIListEntry, ReceiveOnListItemAssigned))
 		{
+			Probe->CallbackWidget = GetWidget();
 			Probe->Run(EDreamRecyclingCallback::Assigned);
 		}
 
@@ -101,7 +104,21 @@ public:
 			Entry->Probe = Probe;
 		}
 		Super::InitOnCreate_Implementation(Component);
-		if (IsValid(this) && IsValid(Probe))Probe->Run(EDreamRecyclingCallback::Created);
+		if (IsValid(this) && IsValid(Probe) && IsValid(Component))
+		{
+			Probe->CallbackWidget = Component->GetWidget();
+			Probe->Run(EDreamRecyclingCallback::Created);
+		}
+	}
+
+	virtual void SetCell_Implementation(UDreamUIBehaviour* Component, int Index) override
+	{
+		Super::SetCell_Implementation(Component, Index);
+		if (IsValid(this) && IsValid(Probe) && IsValid(Component))
+		{
+			Probe->CallbackWidget = Component->GetWidget();
+			Probe->Run(EDreamRecyclingCallback::Set);
+		}
 	}
 
 	virtual void BeforeSetCell_Implementation() override
@@ -127,6 +144,7 @@ public:
 
 	virtual int GetItemCount_Implementation() override { return Items.Num(); }
 	virtual void InitOnCreate_Implementation(UDreamUIBehaviour* Component) override {}
+
 	virtual void BeforeSetCell_Implementation() override {}
 	virtual void AfterSetCell_Implementation() override {}
 	virtual void SetCell_Implementation(UDreamUIBehaviour* Component, int Index) override
