@@ -8,14 +8,23 @@
 #include "Driver/Designer/Tests/DreamDesignerTestFixture.h"
 
 #include "Controls/DreamButton.h"
+#include "Core/Components/DreamImage.h"
 #include "Core/Components/DreamWidget.h"
 #include "Designer/DreamWidgetBlueprintEditor.h"
 #include "Designer/DreamWidgetDesignerModes.h"
 #include "DreamWidgetBlueprint.h"
 
+#include "Async/Fundamental/Scheduler.h"
 #include "Editor.h"
 #include "HAL/IConsoleManager.h"
+#include "HAL/PlatformProcess.h"
+#include "Materials/MaterialInterface.h"
 #include "Math/RandomStream.h"
+#include "SceneViewExtension.h"
+#include "Tasks/Task.h"
+#include "UObject/StrongObjectPtr.h"
+
+#include <atomic>
 
 /*
  * The designer, rendering, while an author does the things authors do to it.
@@ -36,7 +45,9 @@
  *
  * The render-graph switches are logged, never changed. Whether a crash reproduces depends on them, and
  * a scenario that ran with settings the author's editor does not use would be hunting somebody else's
- * crash; both come from the same ini.
+ * crash; both come from the same ini. The last test of the file is the exception: it turns them through
+ * their combinations on purpose, holding the task workers so the race is not left to timing, and puts them
+ * back as it found them.
  */
 namespace DreamDesignerRhiScenarioLocal
 {
@@ -819,6 +830,200 @@ bool FDreamDesignerRhiBackdropClickTest::RunTest(const FString&)
 			TestEqual(TEXT("A click on the backdrop leaves nothing selected"), Scenario->Driver->SelectedWidgets().Num(), 0);
 			CheckFramesDrawn(*this, Scenario);
 		}
+	});
+	EnqueueTeardown({ Scenario });
+	return true;
+}
+
+/*
+ * The render graph's parallel switches turned through their combinations, with the task workers held.
+ *
+ * The scenarios above leave the race they hunt to the machine's timing. The one that reached a user was a closing
+ * pass, run inline on the render thread, that freed the renderer's copy of the view while draw passes recorded on
+ * task threads still had to read it; with the ordinary settings and idle workers the tasks nearly always get there
+ * first, and a scenario passes over the bug. Here the combinations of r.RDG.ParallelExecute, r.RDG.ParallelSetup
+ * and r.RDG.ParallelExecuteStress listed below are set in turn, and in the frames that follow every task worker is
+ * held for a moment from the end of the view family's setup -- once every pass is in the graph and just before it
+ * executes -- so the passes the render thread runs inline go first and the ones recorded on tasks come after them.
+ * Whatever a draw reads then has to belong to the graph, which is the lifetime it needs. The cursor is moved and
+ * asked about in those frames too: a cursor query renders the viewport's hit proxies and flushes straight away,
+ * which is where the crash showed.
+ *
+ * The switches are put back as they were found, and the hold is a scene view extension of this test's own, so
+ * nothing of either outlives it.
+ */
+namespace DreamDesignerRhiScenarioLocal
+{
+	/** How long each held worker sleeps: long against a render thread walking its inline passes, short against a test. */
+	constexpr float WorkerHoldSeconds = 0.05f;
+
+	/** Holds every task worker once a view family has been set up, for as long as it is armed. */
+	class FWorkerHoldExtension final : public FSceneViewExtensionBase
+	{
+	public:
+		explicit FWorkerHoldExtension(const FAutoRegister& InAutoRegister)
+			: FSceneViewExtensionBase(InAutoRegister)
+		{
+		}
+
+		/** Last of all the extensions, so DreamGUI's passes are already in the graph when the workers are held. */
+		virtual int32 GetPriority() const override { return MIN_int32; }
+
+		virtual void PostRenderViewFamily_RenderThread(FRDGBuilder& GraphBuilder, FSceneViewFamily& InViewFamily) override
+		{
+			if (!bArmed.load())
+			{
+				return;
+			}
+			// Normal priority, launched from the render thread: behind whatever the family's setup already launched,
+			// and ahead of the task the graph launches as it begins to execute.
+			const int32 Workers = FMath::Max(1, static_cast<int32>(LowLevelTasks::FScheduler::Get().GetNumWorkers()));
+			for (int32 Worker = 0; Worker < Workers; ++Worker)
+			{
+				UE::Tasks::Launch(UE_SOURCE_LOCATION, []()
+				{
+					FPlatformProcess::SleepNoStats(WorkerHoldSeconds);
+				});
+			}
+			Holds.fetch_add(1);
+		}
+
+		std::atomic<bool> bArmed = false;
+		std::atomic<int32> Holds = 0;
+	};
+
+	struct FRenderGraphSwitches
+	{
+		int32 ParallelExecute = 0;
+		int32 ParallelSetup = 0;
+		int32 ParallelExecuteStress = 0;
+	};
+
+	int32 GetConsoleInt(const TCHAR* InName, int32 InFallback)
+	{
+		const IConsoleVariable* Variable = IConsoleManager::Get().FindConsoleVariable(InName);
+		return Variable != nullptr ? Variable->GetInt() : InFallback;
+	}
+
+	void SetConsoleInt(const TCHAR* InName, int32 InValue)
+	{
+		if (IConsoleVariable* Variable = IConsoleManager::Get().FindConsoleVariable(InName))
+		{
+			Variable->Set(InValue, ECVF_SetByCode);
+		}
+	}
+
+	/** Every image under InRoot drawn through InMaterial, so the frame has draws that go through a material. */
+	void DrawImagesThroughMaterial(UDreamWidget* InRoot, UMaterialInterface* InMaterial)
+	{
+		if (!IsValid(InRoot))
+		{
+			return;
+		}
+		if (UDreamImage* Image = Cast<UDreamImage>(InRoot->GetVisual()); Image != nullptr && Image->GetBrush().GetResourceObject() != InMaterial)
+		{
+			Image->SetBrushFromMaterial(InMaterial);
+		}
+		for (UDreamWidget* Child : InRoot->GetChildren())
+		{
+			DrawImagesThroughMaterial(Child, InMaterial);
+		}
+	}
+
+	void SetRenderGraphSwitches(const FRenderGraphSwitches& InSwitches)
+	{
+		SetConsoleInt(TEXT("r.RDG.ParallelExecute"), InSwitches.ParallelExecute);
+		SetConsoleInt(TEXT("r.RDG.ParallelSetup"), InSwitches.ParallelSetup);
+		SetConsoleInt(TEXT("r.RDG.ParallelExecuteStress"), InSwitches.ParallelExecuteStress);
+	}
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamDesignerRhiRenderGraphSwitchesTest,
+	"DreamGUI.Designer.RHI.UnderEachParallelRenderGraphSettingTheDesignerKeepsDrawingWhileTheTaskWorkersAreHeld",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter | EAutomationTestFlags::NonNullRHI)
+
+bool FDreamDesignerRhiRenderGraphSwitchesTest::RunTest(const FString&)
+{
+	using namespace DreamDesignerRhiScenarioLocal;
+
+	LogRenderGraphSettings(*this);
+	const FRenderGraphSwitches Found{ GetConsoleInt(TEXT("r.RDG.ParallelExecute"), 2), GetConsoleInt(TEXT("r.RDG.ParallelSetup"), 1),
+		GetConsoleInt(TEXT("r.RDG.ParallelExecuteStress"), 0) };
+	const TSharedRef<FWorkerHoldExtension, ESPMode::ThreadSafe> Hold = FSceneViewExtensions::NewExtension<FWorkerHoldExtension>();
+	// Images drawn through a material, beside buttons drawn by the built-in shader: a material draw is the one that binds
+	// the view's uniform buffer -- what the closing pass used to release -- so it is the draw that fails when the view
+	// has gone before it, in the RHI's BindUniformBuffer as it did for the user.
+	const TSharedRef<TStrongObjectPtr<UMaterialInterface>> Material = MakeShared<TStrongObjectPtr<UMaterialInterface>>(
+		LoadObject<UMaterialInterface>(nullptr, TEXT("/DreamGUI/Materials/DreamUI_ImageAndFont.DreamUI_ImageAndFont")));
+	if (!TestTrue(TEXT("The UI material loaded"), Material->IsValid()))
+	{
+		return false;
+	}
+	const FScenarioRef Scenario = BeginScenario(*this, TEXT("DesignerRhiRenderGraphSwitches"));
+	EnqueueDrawnFrames({ Scenario }, 2);
+
+	// Parallel execution with async tasks (2, the engine's default) and with every task awaited (1); the graph's setup
+	// launched on tasks and inline; passes batched into tasks as the engine batches them and one task per pass (the
+	// stress switch). Not with parallel execution off (0): then the render graph checks every resource a pass touches
+	// against what the pass declares, and this engine's ray-traced shadow pass reads a uniform buffer it does not
+	// declare -- the editor stops there, in a pass that is not DreamGUI's, before a frame of this test is drawn. Off,
+	// there is no task to race with anyway.
+	const TArray<FRenderGraphSwitches> Combinations = { { 2, 1, 0 }, { 2, 0, 0 }, { 2, 1, 1 }, { 2, 0, 1 }, { 1, 1, 0 }, { 1, 0, 0 } };
+	constexpr int32 HeldFramesPerCombination = 3;
+	for (const FRenderGraphSwitches& Switches : Combinations)
+	{
+		EnqueueAction(Scenario, [this, Scenario, Switches]()
+		{
+			SetRenderGraphSwitches(Switches);
+			AddInfo(FString::Printf(TEXT("r.RDG.ParallelExecute = %d, r.RDG.ParallelSetup = %d, r.RDG.ParallelExecuteStress = %d"),
+				Switches.ParallelExecute, Switches.ParallelSetup, Switches.ParallelExecuteStress));
+			// Something new to draw under every combination: a drop rebuilds the whole preview.
+			DropButton(Scenario, RandomCanvasPixel(Scenario));
+			if (!Scenario->Driver->DropBasicFromPalette(UDreamImage::StaticClass(), RandomCanvasPixel(Scenario)))
+			{
+				++Scenario->DropsRefused;
+			}
+		});
+		// The switches are render-thread variables: they reach the render thread with the next frame.
+		EnqueueDrawnFrames({ Scenario }, 1);
+		EnqueueAction(Scenario, [Hold]()
+		{
+			Hold->bArmed = true;
+		});
+		for (int32 Frame = 0; Frame < HeldFramesPerCombination; ++Frame)
+		{
+			EnqueueAction(Scenario, [Scenario, Material]()
+			{
+				DreamTests::FDreamDesignerDriver& Driver = *Scenario->Driver;
+				// On the preview, which every drop rebuilds: set again in each frame it has to be drawn in.
+				DrawImagesThroughMaterial(Driver.BlueprintRoot(), Material->Get());
+				Driver.MoveTo(RandomCanvasPixel(Scenario));
+				Driver.QueryCursor();
+				if (Driver.DrawFrame())
+				{
+					++Scenario->FramesDrawn;
+				}
+			});
+		}
+		EnqueueAction(Scenario, [Hold]()
+		{
+			Hold->bArmed = false;
+		});
+		EnqueueDrawnFrames({ Scenario }, 1);
+	}
+	// Whatever happened above: the switches as they were found, and no workers held after this test.
+	EnqueueCheck([this, Hold, Found, Scenario, Combinations]()
+	{
+		Hold->bArmed = false;
+		SetRenderGraphSwitches(Found);
+		CheckStillStanding(*this, Scenario, Combinations.Num(), TEXT("After every combination of the render graph's switches"));
+		CheckFramesDrawn(*this, Scenario);
+		AddInfo(FString::Printf(TEXT("The task workers were held in %d view families."), Hold->Holds.load()));
+		// Not one per frame: a frame the driver asks for is not always one the viewport draws. At least once, or nothing
+		// above was held at all and the test proved nothing.
+		TestTrue(FString::Printf(TEXT("The task workers were held while the designer drew; they were held %d times"),
+			Hold->Holds.load()), Hold->Holds.load() > 0);
 	});
 	EnqueueTeardown({ Scenario });
 	return true;
