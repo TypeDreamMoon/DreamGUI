@@ -28,6 +28,22 @@ struct FDreamEventBindingTestPayload
 	FVector2D Offset = FVector2D::ZeroVector;
 };
 
+/** A key whose nested event must not be edited through a hash container. */
+USTRUCT()
+struct FDreamEventBindingTestKey
+{
+	GENERATED_BODY()
+
+	UPROPERTY()
+	int32 Key = 0;
+
+	UPROPERTY()
+	FDreamUIEventDelegate AuthoredEvent;
+
+	bool operator==(const FDreamEventBindingTestKey& InOther) const { return Key == InOther.Key; }
+	friend uint32 GetTypeHash(const FDreamEventBindingTestKey& InKey) { return GetTypeHash(InKey.Key); }
+};
+
 /**
  * Somewhere a route can land.
  *
@@ -68,6 +84,15 @@ public:
 
 	UPROPERTY()
 	FDreamUIEventDelegate AuthoredEvent;
+
+	UPROPERTY()
+	TArray<FDreamUIEventDelegate> NestedAuthoredEvents;
+
+	UPROPERTY()
+	TMap<FDreamEventBindingTestKey, int32> AuthoredEventKeys;
+
+	UPROPERTY()
+	TSet<FDreamEventBindingTestKey> AuthoredEventSet;
 
 	UPROPERTY(Transient)
 	TObjectPtr<UDreamWidget> LastWidget = nullptr;

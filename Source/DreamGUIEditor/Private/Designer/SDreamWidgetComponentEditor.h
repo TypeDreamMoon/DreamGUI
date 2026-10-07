@@ -57,7 +57,7 @@ DREAMGUIEDITOR_API UDreamUIBehaviour* DreamUIWidgetComponentClipboard_Snapshot(U
 /** A new component on InTargetWidget with InSource's properties; null when the class is refused. */
 DREAMGUIEDITOR_API UDreamUIBehaviour* DreamUIWidgetComponentClipboard_PasteOnto(UDreamWidget* InTargetWidget, UDreamUIBehaviour* InSource);
 /** The one clipboard every panel shares. */
-TStrongObjectPtr<UDreamUIBehaviour>& DreamUIWidgetComponentClipboard();
+DREAMGUIEDITOR_API TStrongObjectPtr<UDreamUIBehaviour>& DreamUIWidgetComponentClipboard();
 /** Drop the clipboard while the editor is still up. Called from module shutdown. */
 void DreamUIWidgetComponentClipboard_Reset();
 
