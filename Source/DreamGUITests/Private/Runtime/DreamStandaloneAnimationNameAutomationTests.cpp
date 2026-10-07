@@ -122,7 +122,7 @@ bool FDreamStandaloneAnimationNameTest::RunTest(const FString& Parameters)
 	const FDreamUIAnimationHandle Direct = Instance->PlayAnimation(Asset.Get());
 	if (!TestTrue(TEXT("playing the same asset directly starts a real instance"), Direct.IsValid())) return false;
 	TestTrue(TEXT("direct playback belongs to the asset's component"), Owner->IsAnimationPlaying(Direct));
-	TestEqual(TEXT("the live player's playback context is the intended root"), Direct.Player->GetPlaybackContext(), static_cast<UObject*>(LiveRoot));
+	TestEqual(TEXT("the live player's playback context is the intended root"), static_cast<const IMovieScenePlayer*>(Direct.Player.Get())->GetPlaybackContext(), static_cast<UObject*>(LiveRoot));
 	// The same authored custom binding resolves with the engine's current API. This read-only
 	// control does not alter the player's object cache or replace its production playback path.
 	FMovieSceneBindingResolveParams BindingParams{ Asset.Get(), RootBinding, MovieSceneSequenceID::Root, LiveRoot };
