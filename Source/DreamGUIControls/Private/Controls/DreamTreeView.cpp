@@ -422,6 +422,7 @@ void UDreamTreeView::CollapseAll()
 
 void UDreamTreeView::OnSourceChanged(const TArray<TObjectPtr<UObject>>& InPreviousItemObjects)
 {
+	++TreeRefreshSerial;
 	// Identity for whatever the INDEX set still names in the outgoing source. The index set is what a
 	// details panel writes and what the first source arrives against, so without this an authored
 	// fold -- or one taken before any object source was bound -- would be dropped the first time the
@@ -502,12 +503,12 @@ void UDreamTreeView::GetChildrenOf(UObject* InItem, TArray<UObject*>& OutChildre
 	}
 }
 
-void UDreamTreeView::AppendItemAndChildren(UObject* InItem, int32 InDepth, TArray<UObject*>& OutItems,
-	TArray<int32>& OutDepths, TSet<UObject*>& InOutVisited) const
+bool UDreamTreeView::AppendItemAndChildren(UObject* InItem, int32 InDepth, TArray<UObject*>& OutItems,
+	TArray<int32>& OutDepths, TSet<UObject*>& InOutVisited, uint64 InRefreshSerial) const
 {
 	if (!IsValid(InItem) || InOutVisited.Contains(InItem))
 	{
-		return;
+		return true;
 	}
 	InOutVisited.Add(InItem);
 	OutItems.Add(InItem);
@@ -518,21 +519,39 @@ void UDreamTreeView::AppendItemAndChildren(UObject* InItem, int32 InDepth, TArra
 	// across a fold, and what lets ItemHasChildren still see a twisty's worth of children under a
 	// node that is currently shut. See the class header for the cost of that decision.
 	TArray<UObject*> ChildItems;
+	const TWeakObjectPtr<const UDreamTreeView> WeakThis(this);
 	GetChildrenOf(InItem, ChildItems);
+	const UDreamTreeView* Current = WeakThis.Get();
+	if (Current == nullptr || Current->TreeRefreshSerial != InRefreshSerial)
+	{
+		return false;
+	}
 	for (UObject* Child : ChildItems)
 	{
-		AppendItemAndChildren(Child, InDepth + 1, OutItems, OutDepths, InOutVisited);
+		if (!AppendItemAndChildren(Child, InDepth + 1, OutItems, OutDepths, InOutVisited, InRefreshSerial))
+		{
+			return false;
+		}
 	}
+	return true;
 }
 
 void UDreamTreeView::RefreshTree()
 {
+	if (!IsValid(this))return;
+	const uint64 Serial = ++TreeRefreshSerial;
+	// Providers are game code. They can replace RootItems while this walk is inside one of its
+	// descendants; neither an iterator into the live roots nor the old flattened result survives it.
+	const TArray<TObjectPtr<UObject>> Roots = RootItems;
 	TArray<UObject*> Flat;
 	TArray<int32> Depths;
 	TSet<UObject*> Visited;
-	for (const TObjectPtr<UObject>& Root : RootItems)
+	for (const TObjectPtr<UObject>& Root : Roots)
 	{
-		AppendItemAndChildren(Root.Get(), 0, Flat, Depths, Visited);
+		if (!AppendItemAndChildren(Root.Get(), 0, Flat, Depths, Visited, Serial))
+		{
+			return;
+		}
 	}
 	// Depths first: SetItemObjects rebuilds, and a rebuild that ran against the old depths would draw
 	// the new items at the old indents for exactly one frame -- and forever, in a headless caller.

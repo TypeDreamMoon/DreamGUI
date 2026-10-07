@@ -18,6 +18,13 @@ public:
 
 	TFunction<void()> Action;
 	int32 MutationCount = 0;
+	TArray<int32> GeneratedRowCounts;
+
+	UPROPERTY(Transient)
+	TArray<TObjectPtr<UObject>> OwnedNodes;
+
+	UFUNCTION()
+	void RecordRows(int32 InCount) { GeneratedRowCounts.Add(InCount); }
 
 	UFUNCTION()
 	void ProvideChildren(UObject* InItem, TArray<UObject*>& OutChildren);

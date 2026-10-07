@@ -95,6 +95,64 @@ namespace DreamTreeProviderReentryTestLocal
 		}
 		return TestSource(InTest, *Tree, ExpectedItems, ExpectedDepths) && bNestedSourceValid;
 	}
+	bool RunSourceLifetimeCase(FAutomationTestBase& InTest, bool bInInterfaceProvider, bool bInDeepCallback, int32 InRootCount)
+	{
+		TDreamTestControl<UDreamTreeView> Tree(NewObject<UDreamTreeView>(GetTransientPackage()));
+		Tree->StyleSource = EDreamUIStyleSource::Inline;
+		Tree->SetWidth(320.0f);
+		Tree->SetHeight(200.0f);
+		Tree->SetVirtualizationThreshold(1000);
+		Tree->Initialize();
+		TStrongObjectPtr<UDreamTreeProviderReentryProbe> Probe(NewObject<UDreamTreeProviderReentryProbe>());
+		auto MakeNode = [&Probe]()
+		{
+			UDreamTreeProviderReentryNode* Node = NewObject<UDreamTreeProviderReentryNode>();
+			Node->Probe = Probe.Get();
+			Probe->OwnedNodes.Add(Node);
+			return Node;
+		};
+		UDreamTreeProviderReentryNode* Root = MakeNode();
+		UDreamTreeProviderReentryNode* Child = MakeNode();
+		UDreamTreeProviderReentryNode* GrandChild = MakeNode();
+		Root->Children.Add(Child);
+		Child->Children.Add(GrandChild);
+		TArray<UObject*> ExpectedItems;
+		TArray<int32> ExpectedDepths;
+		for (int32 Index = 0; Index < InRootCount; ++Index)
+		{
+			ExpectedItems.Add(MakeNode());
+			ExpectedDepths.Add(0);
+		}
+		if (!bInInterfaceProvider)
+		{
+			Tree->OnGetItemChildren.BindDynamic(Probe.Get(), &UDreamTreeProviderReentryProbe::ProvideChildren);
+		}
+		Tree->OnRowsGenerated.AddDynamic(Probe.Get(), &UDreamTreeProviderReentryProbe::RecordRows);
+		Probe->TriggerItem = bInDeepCallback ? Child : Root;
+		Probe->Action = [&Tree, &ExpectedItems, InRootCount]()
+		{
+			if (InRootCount < 0)Tree->DestroyWidget();
+			else Tree->SetRootItems(ExpectedItems);
+		};
+		Tree->SetRootItems({Root});
+		InTest.TestEqual(FString::Printf(TEXT("one lifetime mutation: interface=%d, deep=%d, roots=%d"),
+			bInInterfaceProvider, bInDeepCallback, InRootCount), Probe->MutationCount, 1);
+		if (InRootCount < 0)
+		{
+			bool bValid = InTest.TestFalse(TEXT("the provider destroyed the tree"), IsValid(Tree.Get()));
+			bValid = InTest.TestEqual(TEXT("the destroyed tree published no rows"), Probe->GeneratedRowCounts.Num(), 0) && bValid;
+			bValid = InTest.TestEqual(TEXT("the destroyed tree published no old items"), Tree->GetItemCount(), 0) && bValid;
+			bValid = InTest.TestEqual(TEXT("the destroyed tree published no old depths"), Tree->ItemDepths.Num(), 0) && bValid;
+			return bValid;
+		}
+		bool bValid = InTest.TestEqual(TEXT("only the nested replacement published rows"), Probe->GeneratedRowCounts.Num(), 1);
+		bValid = InTest.TestEqual(TEXT("the latest roots keep their count"), Tree->RootItems.Num(), InRootCount) && bValid;
+		bValid = TestSource(InTest, *Tree, ExpectedItems, ExpectedDepths) && bValid;
+		// Cancellation does not latch the walker off: the latest roots remain refreshable.
+		Tree->RefreshTree();
+		bValid = InTest.TestEqual(TEXT("a later refresh still publishes once"), Probe->GeneratedRowCounts.Num(), 2) && bValid;
+		return TestSource(InTest, *Tree, ExpectedItems, ExpectedDepths) && bValid;
+	}
 }
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDreamTreeProviderRootReplacementReentryTest,
@@ -126,6 +184,26 @@ bool FDreamTreeProviderNestedRefreshReentryTest::RunTest(const FString& Paramete
 		for (bool bDeep : {false, true})
 		{
 			bValid = DreamTreeProviderReentryTestLocal::RunCase(*this, bInterface, bDeep, false) && bValid;
+		}
+	}
+	return bValid;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDreamTreeProviderSourceLifetimeReentryTest,
+	"DreamGUI.Controls.TreeView.AChildrenProviderMayClearGrowOrDestroyItsTreeWithoutResumingTheOldWalk",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamTreeProviderSourceLifetimeReentryTest::RunTest(const FString& Parameters)
+{
+	bool bValid = true;
+	for (bool bInterface : {false, true})
+	{
+		for (bool bDeep : {false, true})
+		{
+			for (int32 RootCount : {0, 64, -1})
+			{
+				bValid = DreamTreeProviderReentryTestLocal::RunSourceLifetimeCase(*this, bInterface, bDeep, RootCount) && bValid;
+			}
 		}
 	}
 	return bValid;

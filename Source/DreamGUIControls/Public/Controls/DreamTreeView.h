@@ -296,6 +296,9 @@ private:
 	 * a tree instead of hanging. UUITreeView::AppendItemRecursive makes the same guard for the same
 	 * reason -- this is that walk, writing into the flat pair rather than into a recycler's source.
 	 */
-	void AppendItemAndChildren(UObject* InItem, int32 InDepth, TArray<UObject*>& OutItems,
-		TArray<int32>& OutDepths, TSet<UObject*>& InOutVisited) const;
+	bool AppendItemAndChildren(UObject* InItem, int32 InDepth, TArray<UObject*>& OutItems,
+		TArray<int32>& OutDepths, TSet<UObject*>& InOutVisited, uint64 InRefreshSerial) const;
+
+	/** A nested refresh or source edit supersedes every unfinished ancestor walk. */
+	uint64 TreeRefreshSerial = 0;
 };
