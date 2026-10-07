@@ -8,9 +8,11 @@
 #include "Core/Components/DreamTexture.h"
 #include "Core/Components/DreamWidget.h"
 #include "Core/DreamUISpriteData.h"
+#include "Core/DreamUserWidget.h"
 #include "Driver/DreamDriverRig.h"
 #include "Driver/DreamDriverSequence.h"
 #include "Engine/Texture2D.h"
+#include "Engine/World.h"
 #include "Extensions/UISpriteSequencePlayer.h"
 #include "Extensions/UISpriteSheetTexturePlayer.h"
 #include "UObject/StrongObjectPtr.h"
@@ -32,8 +34,12 @@ bool FDreamSequenceVisualReplacementTest::RunTest(const FString& Parameters)
 	FDreamDriverRig Rig = FDreamDriverRig::Headless(FIntPoint(640, 480));
 	Rig.BindTest(this);
 	if (!TestTrue(TEXT("the runtime rig is available"), Rig.IsUsable()))return false;
-	UDreamWidget* Widget = Rig.MakeWidget(TEXT("Animated"), nullptr, FVector2D(64.0, 64.0));
+	UDreamWidget* Widget = NewObject<UDreamWidget>(Rig.GetWorld());
 	if (!TestNotNull(TEXT("the animation widget exists"), Widget))return false;
+	Widget->SetDisplayName(TEXT("Animated"));
+	Widget->SetWidth(64.0f);
+	Widget->SetHeight(64.0f);
+	Widget->SetParentBeforeRegister(Rig.Root());
 	UTexture2D* Texture = UTexture2D::CreateTransient(8, 8);
 	if (!TestNotNull(TEXT("the animation has a texture"), Texture))return false;
 
@@ -41,14 +47,14 @@ bool FDreamSequenceVisualReplacementTest::RunTest(const FString& Parameters)
 	{
 		TStrongObjectPtr<UDreamTexture> Original(Cast<UDreamTexture>(Widget->CreateNewVisual(UDreamTexture::StaticClass())));
 		Original->SetTexture(Texture);
-		// Add a configured behaviour as runtime callers can: BeginPlay's autoplay sees valid inputs.
-		UUISpriteSheetTexturePlayer* Settings = NewObject<UUISpriteSheetTexturePlayer>();
-		Settings->SetWidthCount(4);
-		Settings->SetHeightCount(1);
-		Settings->SetFps(4.0f);
-		UUISpriteSheetTexturePlayer* Player = Cast<UUISpriteSheetTexturePlayer>(Widget->AddComponent(Settings->GetClass(), Settings));
+		// Configure before registration, then let the public hierarchy registration begin autoplay.
+		UUISpriteSheetTexturePlayer* Player = Widget->AddComponent<UUISpriteSheetTexturePlayer>();
 		if (!TestNotNull(TEXT("the sheet player exists"), Player))return false;
-		Player->Play();
+		Player->SetWidthCount(4);
+		Player->SetHeightCount(1);
+		Player->SetFps(4.0f);
+		RegisterDreamWidgetHierarchy(Widget);
+		TestTrue(TEXT("registration starts the configured sheet animation"), Player->GetIsPlaying());
 		Player->SeekFrame(1);
 		TestEqual(TEXT("the initial visual displays the requested frame"), Original->GetUVRect().X, 0.25f);
 
@@ -78,13 +84,13 @@ bool FDreamSequenceVisualReplacementTest::RunTest(const FString& Parameters)
 			if (!TestNotNull(TEXT("the sequence frame exists"), Frames.Last()))return false;
 		}
 		TStrongObjectPtr<UDreamSprite> Original(Cast<UDreamSprite>(Widget->CreateNewVisual(UDreamSprite::StaticClass())));
-		UUISpriteSequencePlayer* Settings = NewObject<UUISpriteSequencePlayer>();
-		Settings->SetSpriteSequence(Frames);
-		Settings->SetSnapSpriteSize(false);
-		Settings->SetFps(4.0f);
-		UUISpriteSequencePlayer* Player = Cast<UUISpriteSequencePlayer>(Widget->AddComponent(Settings->GetClass(), Settings));
+		UUISpriteSequencePlayer* Player = Widget->AddComponent<UUISpriteSequencePlayer>();
 		if (!TestNotNull(TEXT("the sprite player exists"), Player))return false;
-		Player->Play();
+		Player->SetSpriteSequence(Frames);
+		Player->SetSnapSpriteSize(false);
+		Player->SetFps(4.0f);
+		RegisterDreamWidgetHierarchy(Widget);
+		TestTrue(TEXT("registration starts the configured sprite animation"), Player->GetIsPlaying());
 		Player->SeekFrame(1);
 		TestEqual(TEXT("the initial visual displays the requested frame"), Original->GetSprite(), Frames[1]);
 
