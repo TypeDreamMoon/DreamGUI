@@ -423,11 +423,12 @@ namespace DreamUIRendererLocal
 {
 	/**
 	 * The pass of the three CopyRenderTarget functions: Src over the whole of Dst, the colour linearized or the alpha
-	 * scaled by BlendAlpha and blended over what Dst holds. PassName names the pass and Dst in the graph, SourceName Src.
+	 * scaled by BlendAlpha and blended over what Dst holds. Render scale supplies premultiplied RGB; other callers
+	 * supply straight RGB. PassName names the pass in the graph.
 	 */
 	static void AddCopyTargetPass(FRDGBuilder& GraphBuilder, FGlobalShaderMap* GlobalShaderMap
 		, FRDGTextureRef SourceTexture, FRDGTextureRef DestinationTexture, FRHISamplerState* SrcTextureSamplerState
-		, bool bColorCorrect, bool bBlendAlpha, float BlendAlpha, const TCHAR* PassName)
+		, bool bColorCorrect, bool bBlendAlpha, float BlendAlpha, const TCHAR* PassName, bool bPremultipliedAlpha = false)
 	{
 		auto* PassParameters = GraphBuilder.AllocParameters<FDreamUITextureReadRenderTargetParameters>();
 		PassParameters->SourceTexture = SourceTexture;
@@ -437,7 +438,7 @@ namespace DreamUIRendererLocal
 			RDG_EVENT_NAME("%s", PassName),
 			PassParameters,
 			ERDGPassFlags::Raster,
-			[GlobalShaderMap, SourceTexture, DestinationTexture, SrcTextureSamplerState, bColorCorrect, bBlendAlpha, BlendAlpha](FRHICommandListImmediate& RHICmdList)
+			[GlobalShaderMap, SourceTexture, DestinationTexture, SrcTextureSamplerState, bColorCorrect, bBlendAlpha, BlendAlpha, bPremultipliedAlpha](FRHICommandListImmediate& RHICmdList)
 			{
 				SourceTexture->MarkResourceAsUsed();
 				const FIntPoint DestinationExtent = DestinationTexture->Desc.Extent;
@@ -453,7 +454,9 @@ namespace DreamUIRendererLocal
 				GraphicsPSOInit.DepthStencilState = TStaticDepthStencilState<false, ECompareFunction::CF_Always>::GetRHI();
 				GraphicsPSOInit.RasterizerState = TStaticRasterizerState<FM_Solid, CM_None>::GetRHI();
 				GraphicsPSOInit.BlendState = bBlendAlpha
-					? TStaticBlendState<CW_RGBA, BO_Add, BF_SourceAlpha, BF_InverseSourceAlpha, BO_Add, BF_InverseDestAlpha, BF_One>::GetRHI()
+					? (bPremultipliedAlpha
+						? TStaticBlendState<CW_RGBA, BO_Add, BF_One, BF_InverseSourceAlpha, BO_Add, BF_One, BF_InverseSourceAlpha>::GetRHI()
+						: TStaticBlendState<CW_RGBA, BO_Add, BF_SourceAlpha, BF_InverseSourceAlpha, BO_Add, BF_InverseDestAlpha, BF_One>::GetRHI())
 					: TStaticBlendState<>::GetRHI();
 				GraphicsPSOInit.PrimitiveType = EPrimitiveType::PT_TriangleList;
 				GraphicsPSOInit.NumSamples = DestinationTexture->Desc.NumSamples;
@@ -2220,7 +2223,9 @@ void FDreamUIRenderer::RecordScreenSpaceLayer_RenderThread(FRDGBuilder& GraphBui
 		//composite the scaled UI up over the real target. Bilinear, and premultiplied-over with a
 		//blend alpha of 1, which is the same composite the UI would have done straight onto the
 		//target -- only once, at the end, from a smaller image.
-		CopyRenderTarget_BlendAlpha(GraphBuilder, GlobalShaderMap, RenderScaleTarget->GetRHI(), ScreenColorRenderTargetTexture, 1.0f);
+		// The small target already contains premultiplied RGB (including additive RGB with zero alpha).
+		DreamUIRendererLocal::AddCopyTargetPass(GraphBuilder, GlobalShaderMap, ScreenSpaceRenderTargetTexture, RenderTargetTexture
+			, nullptr, false, true, 1.0f, TEXT("DreamUIRenderScaleComposite"), /*bPremultipliedAlpha*/true);
 		//restore for anything after this block (the MSAA resolve reads it, and it must be the full rect)
 		ViewRect = UnscaledScreenSpaceViewRect;
 	}

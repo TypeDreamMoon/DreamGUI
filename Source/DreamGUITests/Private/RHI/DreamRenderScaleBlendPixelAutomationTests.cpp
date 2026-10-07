@@ -38,7 +38,7 @@ namespace DreamRenderScaleBlendTestLocal
 		ADD_LATENT_AUTOMATION_COMMAND(FFunctionLatentCommand(InStep));
 	}
 
-	/** A non-white destination with alpha, a destination-dependent tint, and an ordinary Alpha block. */
+	/** A non-white destination with alpha, a tint drawn with the blend under test, and an ordinary Alpha block. */
 	struct FStage
 	{
 		DreamTests::Lifecycle::FScopedWorld World{EWorldType::Game};
@@ -101,7 +101,7 @@ namespace DreamRenderScaleBlendTestLocal
 			return Visual;
 		}
 
-		bool Build(FAutomationTestBase& InTest, bool bInMaterialModulate)
+		bool Build(FAutomationTestBase& InTest, bool bInMaterialModulate, EDreamUIBlendMode InBuiltInBlend)
 		{
 			if (!InTest.TestNotNull(TEXT("a world whose render-target canvas draws through a real RHI"), World.World))
 			{
@@ -159,7 +159,7 @@ namespace DreamRenderScaleBlendTestLocal
 			}
 			else
 			{
-				Tint->SetBlendMode(EDreamUIBlendMode::Multiply);
+				Tint->SetBlendMode(InBuiltInBlend);
 			}
 			return true;
 		}
@@ -196,17 +196,19 @@ namespace DreamRenderScaleBlendTestLocal
 		});
 	}
 
-	bool RunComparison(FAutomationTestBase& InTest, bool bInMaterialModulate)
+	bool RunComparison(FAutomationTestBase& InTest, bool bInMaterialModulate, EDreamUIBlendMode InBuiltInBlend = EDreamUIBlendMode::Multiply)
 	{
 		const TSharedRef<FStage> Stage = MakeShared<FStage>();
-		if (!Stage->Build(InTest, bInMaterialModulate))
+		if (!Stage->Build(InTest, bInMaterialModulate, InBuiltInBlend))
 		{
 			return false;
 		}
-		const FString Name = bInMaterialModulate ? TEXT("RenderScale_MaterialModulate") : TEXT("RenderScale_BuiltInMultiply");
+		const bool bAdditive = !bInMaterialModulate && InBuiltInBlend == EDreamUIBlendMode::Additive;
+		const FString Name = bInMaterialModulate ? TEXT("RenderScale_MaterialModulate")
+			: bAdditive ? TEXT("RenderScale_BuiltInAdditive") : TEXT("RenderScale_BuiltInMultiply");
 		const TSharedRef<int32> Frames = MakeShared<int32>(0);
 		const TSharedRef<double> Deadline = MakeShared<double>(0.0);
-		EnqueueStep([&InTest, Stage, Name, Frames, Deadline]()
+		EnqueueStep([&InTest, Stage, Name, Frames, Deadline, bAdditive]()
 		{
 			if (*Deadline == 0.0)
 			{
@@ -236,9 +238,9 @@ namespace DreamRenderScaleBlendTestLocal
 			}
 			const FColor Tint = Stage->Pixel(Pixels, TintPixel);
 			const FColor Clear = Stage->Pixel(Pixels, BackdropPixel);
-			InTest.TestTrue(TEXT("the destination-dependent tint darkens every non-white backdrop channel"),
-				Tint.R < Clear.R && Tint.G < Clear.G && Tint.B < Clear.B);
-			InTest.TestEqual(TEXT("Multiply/Modulate preserves destination alpha at scale 1"), Tint.A, Clear.A);
+			InTest.TestTrue(bAdditive ? TEXT("Additive increases every non-white backdrop channel") : TEXT("Multiply/Modulate darkens every non-white backdrop channel"),
+				bAdditive ? Tint.R > Clear.R && Tint.G > Clear.G && Tint.B > Clear.B : Tint.R < Clear.R && Tint.G < Clear.G && Tint.B < Clear.B);
+			InTest.TestEqual(TEXT("the tint preserves destination alpha at scale 1"), Tint.A, Clear.A);
 			InTest.TestTrue(TEXT("the destination has partial alpha"), Clear.A > 0 && Clear.A < 255);
 			InTest.TestTrue(TEXT("ordinary Alpha increases destination alpha"), Stage->Pixel(Pixels, AlphaPixel).A > Clear.A);
 			Stage->Baseline = MoveTemp(Pixels);
@@ -249,19 +251,22 @@ namespace DreamRenderScaleBlendTestLocal
 			return true;
 		});
 		EnqueueFrames(Stage);
-		EnqueueStep([&InTest, Stage, Name]()
+		EnqueueStep([&InTest, Stage, Name, bAdditive]()
 		{
 			TArray<FColor> Pixels;
 			FIntPoint Size = FIntPoint::ZeroValue;
 			if (Stage->bHasBaseline && Stage->Read(InTest, Pixels, Size))
 			{
+				// Additive can scale, so bilinear filtering changes boundary pixels; its interiors must still match.
 				FDreamPixelProbe::ExpectPicturesMatch(InTest, Pixels, Size, Stage->Baseline, Stage->BaselineSize,
-					Name + TEXT("_ScaleHalf"), 2, 0.0);
+					Name + TEXT("_ScaleHalf"), 2, bAdditive ? 0.025 : 0.0);
 				FDreamPixelProbe::ExpectColorAt(InTest, Pixels, Size, TintPixel, Stage->Pixel(Stage->Baseline, TintPixel), 2,
 					TEXT("scale 0.5 keeps the tint over the original destination, including alpha"));
+				FDreamPixelProbe::ExpectColorAt(InTest, Pixels, Size, BackdropPixel, Stage->Pixel(Stage->Baseline, BackdropPixel), 2,
+					TEXT("scale 0.5 preserves uncovered destination colour and alpha"));
 				FDreamPixelProbe::ExpectColorAt(InTest, Pixels, Size, AlphaPixel, Stage->Pixel(Stage->Baseline, AlphaPixel), 2,
 					TEXT("Alpha in the same layer keeps its baseline composite"));
-				InTest.TestEqual(TEXT("bypassing scale retains the caller's configured scale"), Stage->Canvas->GetScreenSpaceRenderScale(), 0.5f);
+				InTest.TestEqual(TEXT("rendering retains the caller's configured scale"), Stage->Canvas->GetScreenSpaceRenderScale(), 0.5f);
 			}
 			// With the tint gone, this layer can use the smaller transparent target again.
 			if (UDreamWidget* Tint = Stage->TintWidget.Get()) { Tint->DestroyWidget(); }
@@ -319,6 +324,15 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDreamRenderScaleMaterialModulatePixelTest,
 bool FDreamRenderScaleMaterialModulatePixelTest::RunTest(const FString& Parameters)
 {
 	return DreamRenderScaleBlendTestLocal::RunComparison(*this, true);
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDreamRenderScaleAdditivePixelTest,
+	"DreamGUI.RHI.AScaledBuiltInAdditiveKeepsItsColourAndDestinationAlpha",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter | EAutomationTestFlags::NonNullRHI)
+
+bool FDreamRenderScaleAdditivePixelTest::RunTest(const FString& Parameters)
+{
+	return DreamRenderScaleBlendTestLocal::RunComparison(*this, false, EDreamUIBlendMode::Additive);
 }
 
 #endif
