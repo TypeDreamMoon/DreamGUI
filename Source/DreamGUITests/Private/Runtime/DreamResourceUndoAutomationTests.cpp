@@ -137,6 +137,31 @@ bool FDreamFontEmojiResourceUndoTest::RunTest(const FString& Parameters)
 	CheckCurrentAsset(EmojiA.Get(), EmojiB.Get(), TEXT("After undo"));
 	if (!TestTrue(TEXT("the real editor transaction redoes the emoji asset swap"), GEditor->RedoTransaction()))return false;
 	CheckCurrentAsset(EmojiB.Get(), EmojiA.Get(), TEXT("After redo"));
+	if (!TestTrue(TEXT("the emoji asset swap can undo a second time"), GEditor->UndoTransaction()))return false;
+	CheckCurrentAsset(EmojiA.Get(), EmojiB.Get(), TEXT("After the second undo"));
+	if (!TestTrue(TEXT("the emoji asset swap can redo a second time"), GEditor->RedoTransaction()))return false;
+	CheckCurrentAsset(EmojiB.Get(), EmojiA.Get(), TEXT("After the second redo"));
+
+	const auto CheckNoAsset = [&](const TCHAR* When)
+	{
+		TestNull(FString::Printf(TEXT("%s the font's emoji reference is cleared"), When), Font->GetEmojiData());
+		TestFalse(FString::Printf(TEXT("%s neither the first asset has a font listener"), When), EmojiA->OnDataChange.IsBoundToObject(Font.Get()));
+		TestFalse(FString::Printf(TEXT("%s nor the second asset has a font listener"), When), EmojiB->OnDataChange.IsBoundToObject(Font.Get()));
+		const int32 Before = Refreshes;
+		EmojiA->BroadcastOnDataChange();
+		EmojiB->BroadcastOnDataChange();
+		TestEqual(FString::Printf(TEXT("%s neither emoji asset can refresh the cleared font"), When), Refreshes - Before, 0);
+	};
+	{
+		const FScopedTransaction Transaction(FText::FromString(TEXT("Clear a font's emoji asset")));
+		Font->Modify();
+		EditObjectProperty(Font.Get(), EmojiProperty, nullptr);
+	}
+	CheckNoAsset(TEXT("After the normal clear"));
+	if (!TestTrue(TEXT("the real editor transaction undoes clearing the emoji asset"), GEditor->UndoTransaction()))return false;
+	CheckCurrentAsset(EmojiB.Get(), EmojiA.Get(), TEXT("After undoing the clear"));
+	if (!TestTrue(TEXT("the real editor transaction redoes clearing the emoji asset"), GEditor->RedoTransaction()))return false;
+	CheckNoAsset(TEXT("After redoing the clear"));
 	return true;
 }
 
@@ -199,6 +224,32 @@ bool FDreamPreviewCanvasResourceUndoTest::RunTest(const FString& Parameters)
 	CheckCurrentCanvas(CanvasA, CanvasB, TEXT("After undo"));
 	if (!TestTrue(TEXT("the real editor transaction redoes the preview canvas swap"), GEditor->RedoTransaction()))return false;
 	CheckCurrentCanvas(CanvasB, CanvasA, TEXT("After redo"));
+	if (!TestTrue(TEXT("the preview canvas swap can undo a second time"), GEditor->UndoTransaction()))return false;
+	CheckCurrentCanvas(CanvasA, CanvasB, TEXT("After the second undo"));
+	if (!TestTrue(TEXT("the preview canvas swap can redo a second time"), GEditor->RedoTransaction()))return false;
+	CheckCurrentCanvas(CanvasB, CanvasA, TEXT("After the second redo"));
+
+	const auto CheckNoCanvas = [&](const TCHAR* When)
+	{
+		Previewer->CheckResourceBindingBeforeGeometry();
+		TestNull(FString::Printf(TEXT("%s the preview canvas reference is cleared"), When), Previewer->GetPreviewCanvas());
+		TestFalse(FString::Printf(TEXT("%s neither the first canvas has a previewer listener"), When), CanvasA->GetRenderTargetChangedEvent().IsBoundToObject(Previewer));
+		TestFalse(FString::Printf(TEXT("%s nor the second canvas has a previewer listener"), When), CanvasB->GetRenderTargetChangedEvent().IsBoundToObject(Previewer));
+		const int32 Before = Previewer->TextureDirtyCalls;
+		CanvasA->SetRenderTarget(NewObject<UTextureRenderTarget2D>(CanvasA));
+		CanvasB->SetRenderTarget(NewObject<UTextureRenderTarget2D>(CanvasB));
+		TestEqual(FString::Printf(TEXT("%s neither canvas can repaint the cleared previewer"), When), Previewer->TextureDirtyCalls - Before, 0);
+	};
+	{
+		const FScopedTransaction Transaction(FText::FromString(TEXT("Clear a render-target previewer's canvas")));
+		Previewer->Modify();
+		EditObjectProperty(Previewer, CanvasProperty, nullptr);
+	}
+	CheckNoCanvas(TEXT("After the normal clear"));
+	if (!TestTrue(TEXT("the real editor transaction undoes clearing the preview canvas"), GEditor->UndoTransaction()))return false;
+	CheckCurrentCanvas(CanvasB, CanvasA, TEXT("After undoing the clear"));
+	if (!TestTrue(TEXT("the real editor transaction redoes clearing the preview canvas"), GEditor->RedoTransaction()))return false;
+	CheckNoCanvas(TEXT("After redoing the clear"));
 	return true;
 }
 

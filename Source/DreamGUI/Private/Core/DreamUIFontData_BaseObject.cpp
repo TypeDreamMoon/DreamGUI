@@ -100,6 +100,27 @@ void UDreamUIFontData_BaseObject::PreEditChange(FProperty* PropertyAboutToChange
 		}
 	}
 }
+
+void UDreamUIFontData_BaseObject::PreEditUndo()
+{
+	// The transaction restores EmojiData without naming that property. Let go while it still names
+	// the asset whose event this font subscribed to, before serialization replaces the pointer.
+	if (IsValid(EmojiData))
+	{
+		EmojiData->OnDataChange.RemoveAll(this);
+	}
+	Super::PreEditUndo();
+}
+
+void UDreamUIFontData_BaseObject::PostEditUndo()
+{
+	Super::PostEditUndo();
+	if (IsValid(this))
+	{
+		BindEmojiData();
+		OnEmojiDataChanged.Broadcast();
+	}
+}
 #endif
 
 #undef LOCTEXT_NAMESPACE

@@ -76,6 +76,23 @@ void UDreamCanvasRenderTargetPreviewer::PostEditChangeProperty(struct FPropertyC
 		}
 	}
 }
+
+void UDreamCanvasRenderTargetPreviewer::PreEditUndo()
+{
+	// Undo replaces Canvas without the per-property edit notifications. Unsubscribe before the
+	// pointer changes so both event ownership and the lazy registration flag start over together.
+	UnregisterRenderTargetChangedEvent();
+	Super::PreEditUndo();
+}
+
+void UDreamCanvasRenderTargetPreviewer::PostEditUndo()
+{
+	Super::PostEditUndo();
+	if (IsValid(this))
+	{
+		RegisterRenderTargetChangedEvent();
+	}
+}
 #endif
 
 
