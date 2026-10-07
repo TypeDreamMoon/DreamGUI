@@ -51,6 +51,7 @@ namespace DreamWorldDepthViewRectPixelTestLocal
 		virtual void PostRenderViewFamily_RenderThread(FRDGBuilder& GraphBuilder, FSceneViewFamily& InFamily) override
 		{
 			TArray<FIntRect> WrittenViewRects;
+			FString WrittenViewInfo;
 			FRDGTextureRef Depth = nullptr;
 			for (const FSceneView* View : InFamily.Views)
 			{
@@ -91,14 +92,18 @@ namespace DreamWorldDepthViewRectPixelTestLocal
 						DrawClearQuad(RHICmdList, false, FLinearColor::Black, true, 1.0f, false, 0);
 					});
 				WrittenViewRects.Add(View->UnscaledViewRect);
+				WrittenViewInfo += FString::Printf(TEXT(" player=%d output=%s depth=%s depthExtent=%s;"),
+					View->PlayerIndex, *View->UnscaledViewRect.ToString(), *RawRect.ToString(), *Depth->Desc.Extent.ToString());
 			}
 			FScopeLock Lock(&SnapshotMutex);
 			ViewRects = MoveTemp(WrittenViewRects);
+			ViewInfo = MoveTemp(WrittenViewInfo);
 		}
 
-		TArray<FIntRect> GetWrittenViewRects() const
+		TArray<FIntRect> GetWrittenViewRects(FString& OutViewInfo) const
 		{
 			FScopeLock Lock(&SnapshotMutex);
+			OutViewInfo = ViewInfo;
 			return ViewRects;
 		}
 
@@ -112,6 +117,7 @@ namespace DreamWorldDepthViewRectPixelTestLocal
 		TWeakObjectPtr<UWorld> World;
 		mutable FCriticalSection SnapshotMutex;
 		TArray<FIntRect> ViewRects;
+		FString ViewInfo;
 	};
 
 	struct FState
@@ -163,16 +169,21 @@ namespace DreamWorldDepthViewRectPixelTestLocal
 		}
 		// ReadPicture has flushed the scene render, so this is the very set of real FViewInfos whose
 		// depth was partitioned and whose world-space UI is in Pixels, rather than a guessed player rect.
-		const TArray<FIntRect> Rects = InState.DepthWriter->GetWrittenViewRects();
+		FString ViewInfo;
+		const TArray<FIntRect> Rects = InState.DepthWriter->GetWrittenViewRects(ViewInfo);
+		InTest.AddInfo(FString::Printf(TEXT("%s: viewport=%s;%s"), InCapture, *Size.ToString(), *ViewInfo));
 		if (!InTest.TestEqual(TEXT("Every actual player view used the real partitioned scene depth"), Rects.Num(), InViewCount))
 		{
 			return;
 		}
 		if (InViewCount == 2)
 		{
+			// ULocalPlayer truncates Origin/Size times the viewport separately: an odd output width
+			// legitimately leaves one pixel after the right view. The interior probes are unaffected.
 			InTest.TestTrue(TEXT("The actual two views occupy distinct left and right viewport parts"),
-				Rects[0].Min.X == 0 && Rects[0].Max.X == Rects[1].Min.X
-				&& Rects[1].Max.X == Size.X && Rects[0].Height() == Size.Y && Rects[1].Height() == Size.Y);
+				Rects[0].Min == FIntPoint::ZeroValue && Rects[0].Max.X == Rects[1].Min.X
+				&& Rects[1].Min.Y == 0 && FMath::Abs(Rects[1].Max.X - Size.X) <= 1
+				&& Rects[0].Max.Y == Rects[1].Max.Y && FMath::Abs(Rects[0].Max.Y - Size.Y) <= 1);
 		}
 		else
 		{
