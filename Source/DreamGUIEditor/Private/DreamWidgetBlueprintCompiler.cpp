@@ -26,6 +26,7 @@
 #include "Text/DreamUIValueFormat.h"
 #include "Text/DreamUISourceFile.h"
 #include "Text/DreamUITextBuilder.h"
+#include "Text/DreamUITextWriteBack.h"
 #include "Designer/DreamWidgetBlueprintEditor.h"
 #include "Designer/DreamWidgetPreviewHost.h"
 #include "DreamGUIEditorSubsystem.h"
@@ -1119,6 +1120,23 @@ void FDreamWidgetBlueprintCompilerContext::BuildWidgetTreeFromTextSource(FDreamU
 	// editor turns into a jump -- "C:/Proj/DUI/Login.dui(12,5): error DUI2001: ..." -- and a bare
 	// "Login.dui" is a string a message log cannot do anything with.
 	OutDiagnostics.SourceName = ResolvedPath;
+
+	// A template flush can keep its edit in the document while the file refuses the write. The
+	// host's dirty flag is already consumed then, so consult the document even on a clean host or
+	// a compile without an open toolkit. Never rebuild the current edits from that older file.
+	if (UDreamUIDocument* Document = FDreamUIDocumentRegistry::Find(ResolvedPath))
+	{
+		if (Document->HasUnflushedWrite())
+		{
+			FString FlushError;
+			if (!Document->FlushToDisk(FlushError))
+			{
+				OutDiagnostics.AddError(EDreamUIDiagnosticCode::SourceFileWritePending, FDreamUISourceLocation(),
+					FString::Printf(TEXT("Cannot compile the .dui while its latest edits have not reached disk. %s The current hierarchy and edits were kept; retry Compile after resolving the write failure."), *FlushError));
+				return;
+			}
+		}
+	}
 
 	FString SourceText;
 	if (!FFileHelper::LoadFileToString(SourceText, *ResolvedPath))

@@ -1,4 +1,4 @@
-﻿// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
+// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
 
 #if WITH_DEV_AUTOMATION_TESTS && WITH_EDITOR
 
@@ -6,6 +6,7 @@
 
 #include "DreamWidgetBlueprint.h"
 #include "DreamWidgetBlueprintTestTypes.h"
+#include "Designer/DreamWidgetPreviewHost.h"
 #include "Core/DreamTextUserWidget.h"
 #include "Core/DreamUserWidget.h"
 #include "Core/DreamWidgetGeneratedClass.h"
@@ -18,12 +19,16 @@
 #include "Text/DreamUIValueFormat.h"
 
 #include "EdGraphSchema_K2.h"
+#include "Editor.h"
+#include "GenericPlatform/GenericPlatformFile.h"
 #include "HAL/FileManager.h"
+#include "HAL/PlatformFileManager.h"
 #include "Kismet2/BlueprintEditorUtils.h"
 #include "Kismet2/CompilerResultsLog.h"
 #include "Kismet2/KismetEditorUtilities.h"
 #include "Misc/FileHelper.h"
 #include "Misc/Paths.h"
+#include "ScopedTransaction.h"
 #include "UObject/Package.h"
 
 /*
@@ -71,6 +76,11 @@ namespace DreamUITextCompileTestLocal
 		bool Write(const TArray<FString>& InLines) const
 		{
 			return FFileHelper::SaveStringToFile(FString::Join(InLines, TEXT("\n")), *FilePath);
+		}
+
+		bool SetReadOnly(bool bInReadOnly) const
+		{
+			return FPlatformFileManager::Get().GetPlatformFile().SetReadOnly(*FilePath, bInReadOnly);
 		}
 
 		FString FilePath;
@@ -338,6 +348,121 @@ bool FDreamUITextCompilesTreeFromTextTest::RunTest(const FString& Parameters)
 		TestNull(TEXT("a node the file dropped stops being a variable"), SecondClass->FindPropertyByName(FName(TEXT("OkBtn"))));
 	}
 
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamUITextFailedWriteRetryTest,
+	"DreamGUI.WidgetBlueprint.AFailedDuiWriteIsRetriedBeforeCompilingTheCurrentEdits",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamUITextFailedWriteRetryTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamUITextCompileTestLocal;
+	if (!TestTrue(TEXT("the designer has a transaction buffer"), GEditor != nullptr && GEditor->Trans != nullptr)) return false;
+
+	FScopedDuiFile Source(TEXT("FailedWriteRetry.dui"));
+	if (!TestTrue(TEXT("the source was written"), Source.Write({
+		TEXT("Widget Root {"),
+		TEXT("    RenderOpacity = 0.5"),
+		TEXT("}")
+	}))) return false;
+	FScopedBlueprint Fixture(TEXT("BP_FailedWriteRetry"));
+	if (!TestNotNull(TEXT("the Blueprint was created"), Fixture.Blueprint)
+		|| !TestTrue(TEXT("the class points at the source"), Fixture.SetDuiFilePath(Source.FilePath))) return false;
+	FCompilerResultsLog InitialResults;
+	Compile(Fixture.Blueprint, InitialResults);
+	if (!TestEqual(TEXT("the initial source compiles"), InitialResults.NumErrors, 0)) return false;
+
+	TSharedRef<FDreamWidgetPreviewHost> Host = MakeShared<FDreamWidgetPreviewHost>();
+	Host->Initialize(Fixture.Blueprint);
+	FString Error;
+	const TSharedPtr<FDreamUITextWriteBack> WriteBack = FDreamUITextWriteBack::Create(Source.FilePath, Host, Error);
+	if (!TestTrue(TEXT("the designer write-back opened the source"), WriteBack.IsValid())) return false;
+	UDreamUIDocument* Document = WriteBack->GetDocument();
+	if (!TestNotNull(TEXT("the source has a shared document"), Document)
+		|| !TestNotNull(TEXT("the designer has a preview root"), Host->GetPreviewRoot())) return false;
+	const FString OriginalText = Document->GetContent();
+	if (!TestTrue(TEXT("the source was made read-only"), Source.SetReadOnly(true))
+		|| !TestTrue(TEXT("the document sees that permission"), Document->IsFileReadOnly())) return false;
+
+	const FName Properties[] = { TEXT("RenderOpacity") };
+	{
+		FScopedTransaction Transaction(NSLOCTEXT("DreamGUITests", "FailedWriteEdit", "Edit a read-only source"));
+		Host->GetPreviewRoot()->SetRenderOpacity(0.25f);
+		TestEqual(TEXT("the gesture mirrors its property into the authoring tree"),
+			Host->CopyPreviewValuesToTemplate(Host->GetPreviewRoot(), Properties), 1);
+	}
+	AddExpectedMessagePlain(TEXT("is read-only"), ELogVerbosity::Warning, EAutomationExpectedMessageFlags::Contains, -1);
+	Host->FlushTemplateChanges();
+	const FString EditedText = Document->GetContent();
+	if (!TestTrue(TEXT("the failed write kept the new text"), EditedText.Contains(TEXT("RenderOpacity = 0.25")))
+		|| !TestTrue(TEXT("and remembers its pending write"), Document->HasUnflushedWrite())) return false;
+	TestFalse(TEXT("the gesture has already consumed the host's dirty flag"), Host->IsTemplateDirty());
+	TestEqual(TEXT("only one text edit was recorded"), WriteBack->GetWriteCount(), 1);
+
+	// An unchanged flush must still report the owed write's failure. No direct document flush is
+	// involved: this is the write-back the designer calls, after it has already consumed the gesture.
+	TestFalse(TEXT("flushing the unchanged tree still reports the write refusal"), WriteBack->Flush(Error));
+	TestTrue(TEXT("the refusal names the permission problem"), Error.Contains(TEXT("read-only")));
+	UDreamWidgetTree* EditedTree = Fixture.Blueprint->WidgetTree;
+	AddExpectedError(Code(EDreamUIDiagnosticCode::SourceFileWritePending), EAutomationExpectedErrorFlags::Contains, 0);
+	FCompilerResultsLog BlockedResults;
+	Compile(Fixture.Blueprint, BlockedResults);
+	TestTrue(TEXT("Compile refuses to build from the older file"), BlockedResults.NumErrors > 0);
+	TestMessagesContain(*this, TEXT("with a diagnostic for the pending write"), BlockedResults,
+		Code(EDreamUIDiagnosticCode::SourceFileWritePending));
+	TestMessagesContain(*this, TEXT("naming the source"), BlockedResults, Source.FilePath);
+	TestEqual(TEXT("the failed compile preserves the authoring tree object"), Fixture.Blueprint->WidgetTree.Get(), EditedTree);
+	TestEqual(TEXT("and the current edit"), Fixture.Blueprint->WidgetTree->RootWidget->GetRenderOpacity(), 0.25f);
+	TestTrue(TEXT("the current document text was also retained"), Document->GetContent().Equals(EditedText, ESearchCase::CaseSensitive));
+	TestTrue(TEXT("the write is still pending"), Document->HasUnflushedWrite());
+	FString OnDisk;
+	if (!TestTrue(TEXT("the original file remains readable"), FFileHelper::LoadFileToString(OnDisk, *Source.FilePath))) return false;
+	TestTrue(TEXT("and still carries the original bytes"), OnDisk.Equals(OriginalText, ESearchCase::CaseSensitive));
+
+	// Checking the file out, then Compile alone, has to recover. The host is clean and no further
+	// designer edit or direct FlushToDisk call gives the compiler a second chance by accident.
+	if (!TestTrue(TEXT("the source was made writable"), Source.SetReadOnly(false))) return false;
+	FCompilerResultsLog RetryResults;
+	Compile(Fixture.Blueprint, RetryResults);
+	if (!TestEqual(TEXT("Compile succeeds after it retries the pending write"), RetryResults.NumErrors, 0)) return false;
+	TestFalse(TEXT("the retry cleared the pending write"), Document->HasUnflushedWrite());
+	if (!TestTrue(TEXT("the retried file is readable"), FFileHelper::LoadFileToString(OnDisk, *Source.FilePath))) return false;
+	TestTrue(TEXT("Compile put the retained text on disk before reading it"), OnDisk.Equals(EditedText, ESearchCase::CaseSensitive));
+	TestEqual(TEXT("the rebuilt authoring tree has the retained edit"), Fixture.Blueprint->WidgetTree->RootWidget->GetRenderOpacity(), 0.25f);
+	UDreamWidgetGeneratedClass* Class = Cast<UDreamWidgetGeneratedClass>(Fixture.Blueprint->GeneratedClass);
+	if (!TestNotNull(TEXT("Compile produced a DreamUI class"), Class)
+		|| !TestNotNull(TEXT("with its hierarchy"), Class->GetWidgetTreeArchetype())) return false;
+	TestEqual(TEXT("the class instances also receive the retained value"),
+		Class->GetWidgetTreeArchetype()->RootWidget->GetRenderOpacity(), 0.25f);
+	TestEqual(TEXT("a compiler retry did not invent a second text edit"), WriteBack->GetWriteCount(), 1);
+
+	// The next designer flush has the same retry contract without a compile. Exercise the unchanged
+	// branch with a second edit so a compiler-only repair cannot hide a dropped write-back retry.
+	Host->RebuildPreviewIfInvalidated();
+	if (!TestNotNull(TEXT("the designer rebuilt after Compile"), Host->GetPreviewRoot())
+		|| !TestTrue(TEXT("the source can be made read-only again"), Source.SetReadOnly(true))) return false;
+	{
+		FScopedTransaction Transaction(NSLOCTEXT("DreamGUITests", "FailedWriteSecondEdit", "Edit the source again"));
+		Host->GetPreviewRoot()->SetRenderOpacity(0.125f);
+		TestEqual(TEXT("the next gesture mirrors its property"),
+			Host->CopyPreviewValuesToTemplate(Host->GetPreviewRoot(), Properties), 1);
+	}
+	Host->FlushTemplateChanges();
+	if (!TestTrue(TEXT("the next write was also retained"), Document->HasUnflushedWrite())
+		|| !TestTrue(TEXT("the source can be made writable again"), Source.SetReadOnly(false))) return false;
+	const FString SecondEditedText = Document->GetContent();
+	TestTrue(TEXT("an unchanged write-back retries the pending file"), WriteBack->Flush(Error));
+	TestEqual(TEXT("with no new property edit"), WriteBack->GetLastEditCount(), 0);
+	TestEqual(TEXT("and no extra document edit"), WriteBack->GetWriteCount(), 2);
+	TestFalse(TEXT("the write-back paid the pending write"), Document->HasUnflushedWrite());
+	if (!TestTrue(TEXT("the second written file is readable"), FFileHelper::LoadFileToString(OnDisk, *Source.FilePath))) return false;
+	TestTrue(TEXT("the file matches the second edit"), OnDisk.Equals(SecondEditedText, ESearchCase::CaseSensitive));
+	FCompilerResultsLog SecondResults;
+	Compile(Fixture.Blueprint, SecondResults);
+	TestEqual(TEXT("the designer retry also compiles clean"), SecondResults.NumErrors, 0);
+	TestEqual(TEXT("with the second edited value"), Fixture.Blueprint->WidgetTree->RootWidget->GetRenderOpacity(), 0.125f);
 	return true;
 }
 

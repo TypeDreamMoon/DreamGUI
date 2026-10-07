@@ -478,6 +478,8 @@ enum class EDreamUIDiagnosticCode : int32
 	LoopItemMemberNotFound = 6021,
 	/** `-> Item.Func` in a loop body whose element class is known, and Func is not on it, or takes neither nothing nor exactly what the event sends. */
 	LoopItemRouteMismatch = 6022,
+	/** A document still has edits that could not be written, so compiling the older file was refused. */
+	SourceFileWritePending = 6023,
 
 	// --- 7xxx write-back ---
 	/** The patcher was asked to write a property it cannot locate a home for. */
