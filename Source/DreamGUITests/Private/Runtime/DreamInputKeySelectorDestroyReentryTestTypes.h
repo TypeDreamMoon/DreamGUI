@@ -16,6 +16,9 @@ public:
 	UPROPERTY()
 	TObjectPtr<UDreamInputKeySelector> Selector = nullptr;
 
+	bool bDestroyFromNotification = true;
+	int32 ReentryPhase = -1;
+	int32 MutationCount = 0;
 	int32 DestroyPhase = 0;
 	int32 DestroyCount = 0;
 	int32 ListeningCount = 0;
@@ -38,14 +41,25 @@ public:
 	void HandleListeningChanged(bool bInListening)
 	{
 		++ListeningCount;
-		if (!bInListening && DestroyPhase == 0)DestroyOwner();
+		if (!bInListening && MutationCount == 0 && (ReentryPhase == 0 || ReentryPhase == 2))
+		{
+			++MutationCount;
+			if (ReentryPhase == 0)Selector->SetSelectedKey(EKeys::H);
+			else Selector->BeginListening();
+		}
+		if (!bInListening && bDestroyFromNotification && DestroyPhase == 0)DestroyOwner();
 	}
 
 	UFUNCTION()
 	void HandleChordSelected(FInputChord InChord)
 	{
 		++ChordCount;
-		if (DestroyPhase == 1)DestroyOwner();
+		if (ReentryPhase == 1 && MutationCount == 0)
+		{
+			++MutationCount;
+			Selector->SetSelectedKey(EKeys::H);
+		}
+		if (bDestroyFromNotification && DestroyPhase == 1)DestroyOwner();
 	}
 
 	UFUNCTION()
@@ -53,7 +67,7 @@ public:
 	{
 		++KeyCount;
 		LastPublishedKey = InKey;
-		if (DestroyPhase == 2)DestroyOwner();
+		if (bDestroyFromNotification && DestroyPhase == 2)DestroyOwner();
 	}
 
 	UFUNCTION()
