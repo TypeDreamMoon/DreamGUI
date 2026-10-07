@@ -103,7 +103,7 @@ bool FDreamNestedWidgetVariableBindingTest::RunTest(const FString& Parameters)
 	if (!Outer.Compile(*this)) return false;
 
 	DreamTests::FScopedGameWorld TestWorld;
-	UDreamUserWidget* Instance = CreateDreamWidget(TestWorld.World, Outer.Blueprint->GeneratedClass);
+	UDreamUserWidget* Instance = CreateDreamWidget(TestWorld.World, Outer.Blueprint->GeneratedClass.Get());
 	if (!TestNotNull(TEXT("the parent Blueprint creates a live instance"), Instance)) return false;
 	ON_SCOPE_EXIT { if (IsValid(Instance)) Instance->DestroyWidget(); };
 	UDreamWidget* OwnHeader = DirectChild(Instance->GetContentRoot(), TEXT("SharedHeader"));
@@ -137,7 +137,7 @@ bool FDreamNestedAnimationVariableBindingTest::RunTest(const FString& Parameters
 	if (!Outer.Compile(*this)) return false;
 
 	DreamTests::FScopedGameWorld TestWorld;
-	UDreamUserWidget* Instance = CreateDreamWidget(TestWorld.World, Outer.Blueprint->GeneratedClass);
+	UDreamUserWidget* Instance = CreateDreamWidget(TestWorld.World, Outer.Blueprint->GeneratedClass.Get());
 	if (!TestNotNull(TEXT("the host Blueprint creates a live instance"), Instance)) return false;
 	ON_SCOPE_EXIT { if (IsValid(Instance)) Instance->DestroyWidget(); };
 	UDreamUserWidget* Nested = Cast<UDreamUserWidget>(DirectChild(Instance->GetContentRoot(), TEXT("Nested")));
