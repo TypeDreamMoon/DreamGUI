@@ -479,7 +479,9 @@ namespace DreamRecyclingListReentryTestLocal
 			List->SetListItems(OriginalItems);
 		}
 		Rig.PumpFrames(1);
-		InTest.TestEqual(TEXT("The callback made its mutation once"), Probe->MutationCount, 1);
+		InTest.TestEqual(FString::Printf(TEXT("The callback made its mutation once (callback=%d, mutation=%d, %s, %s)"),
+			static_cast<int32>(InCallback), static_cast<int32>(InMutation),
+			bInHorizontal ? TEXT("horizontal") : TEXT("vertical"), bInScroll ? TEXT("scroll") : TEXT("initialize")), Probe->MutationCount, 1);
 		InTest.TestFalse(TEXT("The measuring template is asleep after a callback stops its pass"), List->GetCellTemplate()->GetWidgetActive());
 		const TArray<UObject*> ExpectedItems = InMutation == EMutation::Clear ? TArray<UObject*>()
 			: (InMutation == EMutation::Replace ? ReplacementItems

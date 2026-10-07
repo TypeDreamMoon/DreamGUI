@@ -94,6 +94,12 @@ public:
 
 	virtual void InitOnCreate_Implementation(UDreamUIBehaviour* Component) override
 	{
+		// Runtime-only probe references do not follow the template through component instancing.
+		// Wire each new row before Assign, rather than relying on copying a transient property.
+		if (UDreamRecyclingReentryEntry* Entry = Cast<UDreamRecyclingReentryEntry>(Component))
+		{
+			Entry->Probe = Probe;
+		}
 		Super::InitOnCreate_Implementation(Component);
 		if (IsValid(this) && IsValid(Probe))Probe->Run(EDreamRecyclingCallback::Created);
 	}
