@@ -327,7 +327,16 @@ void UDreamUIModalSubsystem::CloseAllModals(FName InResult, int32 InUserIndex)
 	Stack->Reset();
 	for (int32 Index = Closing.Num() - 1; Index >= 0; --Index)
 	{
-		FinishClosingModal(MoveTemp(Closing[Index]), InResult);
+		if (bTornDownForWorld)
+		{
+			// Teardown could not see entries claimed by this batch. Reclaim their widgets
+			// without restoring focus or delivering results into the departing world.
+			DestroyModal(Closing[Index]);
+		}
+		else
+		{
+			FinishClosingModal(MoveTemp(Closing[Index]), InResult);
+		}
 	}
 }
 
