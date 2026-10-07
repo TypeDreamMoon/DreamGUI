@@ -188,14 +188,14 @@ bool FDreamScreenActiveReentryTest::RunTest(const FString& Parameters)
 	TestEqual(TEXT("All registrations survived"), Screen->GetPageEntryCount(), 129);
 	Page = Screen->ShowWidgetOfClass(TEXT("Reverse"), UDreamUserWidget::StaticClass());
 	if (!TestNotNull(TEXT("Reversal page"), Page)) { return false; }
-	Page->GetWidgetActiveChangedEvent().AddLambda([Screen](bool bActive)
+	const FDelegateHandle ReverseHandle = Page->GetWidgetActiveChangedEvent().AddLambda([Screen](bool bActive)
 	{
 		if (!bActive) { Screen->SetUIVisible(TEXT("Reverse"), true); }
 	});
 	Screen->SetUIVisible(TEXT("Reverse"), false);
 	TestTrue(TEXT("A nested show supersedes the outer hide"), Screen->IsUIShowing(TEXT("Reverse")));
 	TestEqual(TEXT("Nested activation state remains active"), Screen->GetPageState(TEXT("Reverse")), EDreamUIScreenPageState::Active);
-	Page->GetWidgetActiveChangedEvent().Clear();
+	Page->GetWidgetActiveChangedEvent().Remove(ReverseHandle);
 	Screen->RemoveAllUI();
 	return true;
 }
