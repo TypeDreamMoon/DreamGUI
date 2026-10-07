@@ -90,6 +90,8 @@ namespace
 			// its map or set hashed by the old reference.
 			// A key may itself be a struct or array, so checking only the immediate owner misses
 			// object references nested inside it. The iterator's chain runs from leaf to root.
+			// GetPropertyChain appends to its output; only this value's ancestry decides whether it is a key.
+			PropertyChain.Reset();
 			It.GetPropertyChain(PropertyChain);
 			bool bHashedKey = false;
 			for (int32 Index = 0; Index < PropertyChain.Num(); ++Index)
