@@ -3098,8 +3098,19 @@ FDreamUIAnimationHandle UDreamUserWidget::PlayAnimationByName(
 			return Component->PlayAnimationByDisplayName(Name, StartAtTime, NumLoopsToPlay, PlayMode, PlaybackSpeed, bRestoreState);
 		}
 	}
-	// Not embedded anywhere: the component's own fallback covers the standalone assets, and the
-	// first component is as good an owner as any for a name none of them claimed.
+	// Embedded animations keep priority across the whole widget. Standalone assets must then be
+	// searched on every component as well, so playback uses the component that references the asset.
+	for (UDreamWidgetAnimationComponent* Component : Animators)
+	{
+		for (UDreamUISequence* Asset : Component->GetSequenceAssets())
+		{
+			if (IsValid(Asset) && Asset->GetName() == Name)
+			{
+				return Component->PlayAnimation(Asset, StartAtTime, NumLoopsToPlay, PlayMode, PlaybackSpeed, bRestoreState);
+			}
+		}
+	}
+	// Preserve a single component-level warning when none of the components owns this name.
 	if (Animators.Num() > 0)
 	{
 		return Animators[0]->PlayAnimationByDisplayName(Name, StartAtTime, NumLoopsToPlay, PlayMode, PlaybackSpeed, bRestoreState);
