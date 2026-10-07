@@ -421,7 +421,15 @@ void UDreamMenuAnchor::Open(bool bFocusMenu)
 		// to what had it when the menu opened, and the Tab goes on from this anchor.
 		Params.TabBehavior = EDreamPopupTabBehavior::CloseAndContinue;
 		Params.Place = FDreamPopupPlaceDelegate::CreateUObject(this, &UDreamMenuAnchor::PlaceLiftedPopup);
-		Params.OnDismissed = FDreamPopupDismissedDelegate::CreateUObject(this, &UDreamMenuAnchor::HandleMenuDismissed);
+		Params.OnDismissed = FDreamPopupDismissedDelegate::CreateWeakLambda(this, [WeakThis, OpenSerial](UDreamWidget* InPopup, EDreamPopupDismissReason InReason)
+		{
+			// Returning focus may have reopened this very popup before the old dismissal is
+			// announced. That notification belongs to the old open, never to its replacement.
+			if (UDreamMenuAnchor* Anchor = WeakThis.Get(); Anchor != nullptr && Anchor->MenuTransitionSerial == OpenSerial && Anchor->bIsOpen)
+			{
+				Anchor->HandleMenuDismissed(InPopup, InReason);
+			}
+		});
 		bPushed = Layer->Push(Params);
 	}
 	if (!IsCurrentTransition(WeakThis, OpenSerial, true))

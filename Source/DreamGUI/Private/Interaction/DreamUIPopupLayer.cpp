@@ -570,11 +570,14 @@ void UDreamUIPopupLayer::DismissEntry(FObjectKey InPopupKey, EDreamPopupDismissR
 	UDreamWidget* Popup = Closing.Popup.Get();
 	// Focus first, while everything is still where the player saw it: hiding is what clears a focus that cannot stay.
 	Closing.FocusReturn.Return(Popup);
+	// Focus handlers may destroy the popup or push this same widget again. The new entry
+	// owns its elevated home; an old dismissal must not restore it out of the new stack.
+	Popup = Closing.Popup.Get();
 	if (Popup == nullptr)
 	{
 		ElevatedHomes.Remove(InPopupKey);
 	}
-	else if (Closing.bRestoreOnDismiss)
+	else if (Closing.bRestoreOnDismiss && !IsOpen(Popup))
 	{
 		RestoreHome(Popup);
 	}
