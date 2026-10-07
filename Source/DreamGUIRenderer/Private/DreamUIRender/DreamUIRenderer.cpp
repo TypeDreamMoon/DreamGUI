@@ -1738,18 +1738,37 @@ void FDreamUIRenderer::RecordScreenSpace_RenderThread(FRDGBuilder& GraphBuilder,
 	SharedView.ScreenSpaceRenderScale = RenderThreadViewParameter.ScreenSpaceRenderScale;
 
 	const TArray<FScreenSpacePlayerPartView>& PlayerParts = RenderThreadViewParameter.PlayerParts;
+	// PostRenderView is called in family order after the scene has finished every view. Draw the shared layer
+	// after the last player's layer, once across the full viewport, as its layout and hit testing already do.
+	// Stereo retains its per-eye projection and rect; render-target canvases have their own single view.
+	const bool bSharedAcrossSplitScreen = RendererType != EDreamUIRendererType::RenderTarget
+		&& InView.Family->Views.Num() > 1
+		&& !InView.Family->Views.ContainsByPredicate([](const FSceneView* View)
+		{
+			return View->StereoPass != EStereoscopicPass::eSSP_FULL;
+		});
+	const bool bDrawSharedLayer = !bSharedAcrossSplitScreen || InView.Family->Views.Last() == &InView;
+	FRecordTargets SharedTargets = Targets;
+	if (bSharedAcrossSplitScreen)
+	{
+		// eSSP_FULL colour/depth sampling already maps the whole family target. Keep that target for MSAA
+		// and render scale as well; only the shared drawing's viewport changes.
+		SharedTargets.ViewRect = FIntRect(FIntPoint::ZeroValue, Targets.ScreenColorRenderTargetTexture->GetSizeXY());
+	}
 	if (PlayerParts.Num() == 0)
 	{
-		// No root fills a player's part of a split screen -- every game that is not split: one layer of every primitive,
-		// through the shared view, in every view, as it always was.
-		RecordScreenSpaceLayer_RenderThread(GraphBuilder, InView, Targets, SharedView
-			, [](IDreamUIRendererPrimitive*) { return true; }, /*bInDrawGizmos*/true, /*bInAllowRenderScale*/true);
+		if (bDrawSharedLayer)
+		{
+			RecordScreenSpaceLayer_RenderThread(GraphBuilder, InView, SharedTargets, SharedView
+				, [](IDreamUIRendererPrimitive*) { return true; }, /*bInDrawGizmos*/true, /*bInAllowRenderScale*/true);
+		}
 		return;
 	}
 
 	/**
-	 * A split screen, as UMG draws one: each player's own layer in that player's view only, then the shared layer over it
-	 * in every view (SGameLayerManager keeps a layer per local player, laid out over the player's part of the viewport and
+	 * A split screen, as UMG draws one: each player's own layer in that player's view only, then the shared layer over
+	 * the whole viewport once all players have been drawn (SGameLayerManager keeps a layer per local player, laid out
+	 * over the player's part of the viewport and
 	 * clipped to it, in EGameLayerOrder::Player, under the shared EGameLayerOrder::Viewport). A view here is one player's
 	 * -- ULocalPlayer::CalcSceneView names it by the player's controller id in FSceneView::PlayerIndex, which is what a
 	 * part says it is drawn in -- and its rect is that player's part, so a part's own view, made from a canvas the size of
@@ -1776,13 +1795,16 @@ void FDreamUIRenderer::RecordScreenSpace_RenderThread(FRDGBuilder& GraphBuilder,
 			}
 			, /*bInDrawGizmos*/false, /*bInAllowRenderScale*/false);
 	}
-	RecordScreenSpaceLayer_RenderThread(GraphBuilder, InView, Targets, SharedView
-		, [&RootKeys, &PartRoots](IDreamUIRendererPrimitive* InPrimitive)
-		{
-			const FObjectKey* RootKey = RootKeys.Find(InPrimitive);
-			return RootKey == nullptr || !PartRoots.Contains(*RootKey);
-		}
-		, /*bInDrawGizmos*/true, /*bInAllowRenderScale*/true);
+	if (bDrawSharedLayer)
+	{
+		RecordScreenSpaceLayer_RenderThread(GraphBuilder, InView, SharedTargets, SharedView
+			, [&RootKeys, &PartRoots](IDreamUIRendererPrimitive* InPrimitive)
+			{
+				const FObjectKey* RootKey = RootKeys.Find(InPrimitive);
+				return RootKey == nullptr || !PartRoots.Contains(*RootKey);
+			}
+			, /*bInDrawGizmos*/true, /*bInAllowRenderScale*/true);
+	}
 }
 
 void FDreamUIRenderer::RecordScreenSpaceLayer_RenderThread(FRDGBuilder& GraphBuilder, FSceneView& InView, FRecordTargets& Targets
