@@ -11,6 +11,7 @@
 #include "Core/Components/DreamWidget.h"
 #include "Designer/DreamWidgetBlueprintEditor.h"
 
+#include "Application/ThrottleManager.h"
 #include "Editor.h"
 #include "Editor/Transactor.h"
 
@@ -265,6 +266,121 @@ bool FDreamDesignerUndoRedoKeysTest::RunTest(const FString&)
 		}
 		const FVector2D Now = Target->GetAnchoredPosition();
 		TestTrue(FString::Printf(TEXT("Ctrl+Y did the drag again: %s, the drag left it at %s"), *Now.ToString(), *Dragged->ToString()), Now.Equals(*Dragged, 0.01));
+	});
+	EnqueueDesignerTeardown(State);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamDesignerDragAfterUndoWhileThrottledTest,
+	"DreamGUI.Designer.Keys.ADragStraightAfterCtrlZFollowsThePointerWhileSlateHoldsBackExpensiveWork",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::NonNullRHI | EAutomationTestFlags::EngineFilter)
+
+/*
+ * A widget dragged, Ctrl+Z, and the same drag made again while Slate holds back expensive work: the second drag leaves the
+ * widget where the first one did. Slate holds it back while a notification fades in at a low frame rate -- the Undo toast
+ * Ctrl+Z brings up among them (SNotificationList) -- and then the editor ticks only the viewports that asked to be redrawn
+ * (UEditorEngine::Tick). The designer turns a held press into a drag, and moves the drag, in its tick, so a drag that does
+ * not ask for its frames stands still under the pointer, and one let go before the toast is in was never more than a
+ * click. The toast throttles only below a frame rate a test cannot count on, so the test holds Slate back itself
+ * (FSlateThrottleManager::EnterResponsiveMode), for the second drag alone.
+ */
+bool FDreamDesignerDragAfterUndoWhileThrottledTest::RunTest(const FString&)
+{
+	using namespace DreamDesignerShortcutTestLocal;
+	const FDesignerLatentRef State = OpenLatentDesigner(*this, TEXT("DesignerDragAfterUndoThrottled"));
+	State->Preferences = MakeShared<FScopedDesignerPreferences>();
+	State->Preferences->SetGridSnap(false);
+	State->Preferences->SetGuides(false);
+	TSharedRef<FVector2D> Before = MakeShared<FVector2D>(FVector2D::ZeroVector);
+	TSharedRef<FVector2D> Dragged = MakeShared<FVector2D>(FVector2D::ZeroVector);
+	TSharedRef<FIntPoint> From = MakeShared<FIntPoint>(FIntPoint::ZeroValue);
+	TSharedRef<FThrottleRequest> Throttle = MakeShared<FThrottleRequest>();
+	// Whatever became of the steps, the editor is not left held back for the tests after this one.
+	State->OnTeardown.Add([Throttle]()
+	{
+		if (Throttle->IsValid())
+		{
+			FSlateThrottleManager::Get().LeaveResponsiveMode(*Throttle);
+		}
+	});
+	const FIntPoint Travel(70, 40);
+	// Where on the widget both drags take hold of it, read from where it is on screen at the time.
+	const auto AimAtTarget = [this, State, From]() -> bool
+	{
+		FDreamDesignerDriver& Driver = *State->Driver;
+		const TOptional<FBox2D> Rect = Driver.WidgetPixelRect(Driver.PreviewFor(State->Get(TEXT("Target"))));
+		if (!TestTrue(TEXT("The selected widget is on screen"), Rect.IsSet()))
+		{
+			State->bAlive = false;
+			return false;
+		}
+		*From = PointInBox(Rect.GetValue(), 0.25, 0.25);
+		return true;
+	};
+	EnqueueDesignerFrames(State, 2);
+	EnqueueDropAndSelect(this, State);
+	EnqueueDesignerAction(State, [State, Before, AimAtTarget]()
+	{
+		if (AimAtTarget())
+		{
+			*Before = State->Get(TEXT("Target"))->GetAnchoredPosition();
+		}
+	});
+	EnqueueDesignerPointerDrag(State, [From]() { return *From; }, [From, Travel]() { return *From + Travel; }, /*Steps*/ 4);
+	EnqueueDesignerFrames(State, 2);
+	EnqueueDesignerAction(State, [this, State, Before, Dragged]()
+	{
+		const UDreamWidget* Target = State->Get(TEXT("Target"));
+		if (!TestNotNull(TEXT("The dragged widget is still there"), Target))
+		{
+			State->bAlive = false;
+			return;
+		}
+		*Dragged = Target->GetAnchoredPosition();
+		if (!TestFalse(FString::Printf(TEXT("The first drag moved the widget: %s -> %s"), *Before->ToString(), *Dragged->ToString()),
+			Dragged->Equals(*Before, 1.0)))
+		{
+			State->bAlive = false;
+		}
+	});
+	EnqueueDesignerKeyboardFocus(State, this);
+	EnqueueDesignerShortcut(State, this, EKeys::Z, EDreamDriverModifierKeys::Ctrl);
+	EnqueueDesignerFrames(State, 2);
+	EnqueueDesignerAction(State, [this, State, Before, Throttle, AimAtTarget]()
+	{
+		const UDreamWidget* Target = State->Get(TEXT("Target"));
+		if (!TestNotNull(TEXT("Ctrl+Z left the widget there, taking back only the drag"), Target))
+		{
+			State->bAlive = false;
+			return;
+		}
+		const FVector2D Now = Target->GetAnchoredPosition();
+		if (!TestTrue(FString::Printf(TEXT("Ctrl+Z put it back: %s, was %s"), *Now.ToString(), *Before->ToString()), Now.Equals(*Before, 0.01))
+			|| !AimAtTarget())
+		{
+			State->bAlive = false;
+			return;
+		}
+		*Throttle = FSlateThrottleManager::Get().EnterResponsiveMode();
+		TestFalse(TEXT("Slate holds back expensive work for the second drag"), FSlateThrottleManager::Get().IsAllowingExpensiveTasks());
+	});
+	EnqueueDesignerPointerDrag(State, [From]() { return *From; }, [From, Travel]() { return *From + Travel; }, /*Steps*/ 4);
+	EnqueueDesignerFrames(State, 2);
+	EnqueueDesignerAction(State, [this, State, Before, Dragged, Throttle]()
+	{
+		if (Throttle->IsValid())
+		{
+			FSlateThrottleManager::Get().LeaveResponsiveMode(*Throttle);
+		}
+		const UDreamWidget* Target = State->Get(TEXT("Target"));
+		if (!TestNotNull(TEXT("The widget dragged again is still there"), Target))
+		{
+			return;
+		}
+		const FVector2D Now = Target->GetAnchoredPosition();
+		TestTrue(FString::Printf(TEXT("The drag made while Slate held back left the widget where the first drag did: %s, the first left it at %s, it began at %s"),
+			*Now.ToString(), *Dragged->ToString(), *Before->ToString()), Now.Equals(*Dragged, 0.5));
 	});
 	EnqueueDesignerTeardown(State);
 	return true;

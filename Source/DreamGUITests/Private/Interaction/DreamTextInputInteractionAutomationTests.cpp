@@ -8,12 +8,17 @@
 #include "Core/Components/DreamCanvas.h"
 #include "Core/Components/DreamText.h"
 #include "Core/Components/DreamWidget.h"
+#include "Core/DreamUserWidget.h"
+#include "Engine/World.h"
 #include "Event/DreamEventSystem.h"
 #include "Event/DreamPointerEventData.h"
 #include "Event/DreamScreenSpaceRaycaster.h"
 #include "InputCoreTypes.h"
 #include "Interaction/DreamUITextInputTarget.h"
+#include "Framework/Application/SlateApplication.h"
+#include "GenericPlatform/ITextInputMethodSystem.h"
 #include "Interaction/UITextInput.h"
+#include "Misc/ScopeExit.h"
 #include "UObject/StrongObjectPtr.h"
 
 #include "Driver/DreamDriver.h"
@@ -520,6 +525,63 @@ bool FDreamTextInputTeardownEndsTheEditTest::RunTest(const FString& Parameters)
 	// "being edited" that is not.
 	TestNull(TEXT("Once the field is gone, no field is being edited"), UUITextInput::GetActiveTextInput());
 
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamTextInputTeardownWithoutPlayEndsTheEditTest,
+	"DreamGUI.TextInput.AFieldBeingEditedInATreeThatNeverBeganPlayIsNoLongerEditedOnceItIsTornDown",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * The same tear-down, in a tree that never began play: the level editor's world, a designer's preview. A field there
+ * never wakes, so it never reaches OnDestroy, which only a behaviour that woke is given on the way out -- and that
+ * was the one place an edit was ended. The field went, still in its edit: still holding its player's keys, its
+ * platform text-input context (where the platform has one) still registered and active, everything the edit had set
+ * up pointing at a widget no hierarchy holds. Unregistering is what every tear-down passes through, so that is where the edit has to end.
+ */
+bool FDreamTextInputTeardownWithoutPlayEndsTheEditTest::RunTest(const FString& Parameters)
+{
+	UWorld* World = UWorld::CreateWorld(EWorldType::Editor, false);
+	if (!TestNotNull(TEXT("An editor world"), World))
+	{
+		return false;
+	}
+	ON_SCOPE_EXIT
+	{
+		World->DestroyWorld(false);
+	};
+	UDreamTextInput* Field = Cast<UDreamTextInput>(CreateDreamWidget(World, UDreamTextInput::StaticClass()));
+	UUITextInput* Behaviour = Field != nullptr ? Field->InputBehaviour.Get() : nullptr;
+	if (!TestTrue(TEXT("A text field was built and registered in it"), Field != nullptr && Field->HasRegistered() && Behaviour != nullptr))
+	{
+		return false;
+	}
+	TestFalse(TEXT("It has not begun play: nothing in an editor world does"), Field->HasBegunPlay());
+
+	Behaviour->ActivateInput();
+	if (!TestTrue(TEXT("An edit begins on it all the same"), Behaviour->IsInputActive()))
+	{
+		Field->DestroyWidget();
+		return false;
+	}
+	const TSharedPtr<ITextInputMethodContext> Context = Behaviour->GetTextInputMethodContextForTesting();
+	ITextInputMethodSystem* TextInputMethodSystem = FSlateApplication::IsInitialized() ? FSlateApplication::Get().GetTextInputMethodSystem() : nullptr;
+	const bool bContextWasActive = TextInputMethodSystem != nullptr && Context.IsValid()
+		&& TextInputMethodSystem->IsActiveContext(Context.ToSharedRef());
+	AddInfo(FString::Printf(TEXT("The edit %s the platform's text input."), bContextWasActive ? TEXT("holds an active context with") : TEXT("holds no context with")));
+
+	// The way a level, a preview or a released host takes a tree down; the field goes with it.
+	Field->DestroyWidget();
+
+	// Asked straight away: the tree is marked for collection, and no collection has run, so the field's behaviour is
+	// still there to answer.
+	TestFalse(TEXT("Once the field is torn down it is no longer in an edit"), Behaviour->IsInputActive());
+	if (bContextWasActive)
+	{
+		TestFalse(TEXT("and the platform's text input no longer has its context"), TextInputMethodSystem->IsActiveContext(Context.ToSharedRef()));
+	}
+	TestNull(TEXT("and no player in that world is typing into anything"), UUITextInput::GetActiveTextInputForPlayer(World, 0));
 	return true;
 }
 
