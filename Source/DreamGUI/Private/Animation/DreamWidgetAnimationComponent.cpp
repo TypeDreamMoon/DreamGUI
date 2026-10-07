@@ -666,18 +666,25 @@ bool UDreamWidgetAnimationComponent::HasPlayingAnimation(UMovieSceneSequence* An
 
 void UDreamWidgetAnimationComponent::StopAnimationsOf(UMovieSceneSequence* Animation)
 {
-	// Collected first: releasing edits the array this walks.
-	TArray<UDreamWidgetAnimationPlayer*> Matching;
+	// Finished callbacks may end another matched instance or play it again. Keep the
+	// instance identity, and resolve weak references after each callback before stopping it.
+	TArray<TPair<TWeakObjectPtr<UDreamWidgetAnimationPlayer>, uint32>> Matching;
 	for (UDreamWidgetAnimationPlayer* Player : ActiveSequencePlayers)
 	{
 		if (IsValid(Player) && Player->GetSequence() == Animation)
 		{
-			Matching.Add(Player);
+			Matching.Emplace(Player, Player->GetInstance());
 		}
 	}
-	for (UDreamWidgetAnimationPlayer* Player : Matching)
+	const TWeakObjectPtr<UDreamWidgetAnimationComponent> WeakThis(this);
+	for (const auto& Match : Matching)
 	{
-		ReleaseActiveSequencePlayer(Player);
+		UDreamWidgetAnimationComponent* Component = WeakThis.Get();
+		if (Component == nullptr) break;
+		FDreamUIAnimationHandle Handle;
+		Handle.Player = Match.Key.Get();
+		Handle.Instance = Match.Value;
+		Component->StopAnimation(Handle);
 	}
 }
 
@@ -772,20 +779,20 @@ bool UDreamWidgetAnimationComponent::IsActiveSequencePlayer(const UDreamWidgetAn
 
 void UDreamWidgetAnimationComponent::ReleaseActiveSequencePlayer(UDreamWidgetAnimationPlayer* Player, bool bStopPlayer)
 {
-	if (!IsValid(Player))
+	if (!IsActiveSequencePlayer(Player))
 	{
 		return;
 	}
 	DREAMUI_DETAIL_SCOPE(DreamUI_ReleaseAnimationPlayer);
 
+	// Retire it before Stop restores properties or Finished calls game code. A callback
+	// stopping this instance again must not emit another event or duplicate its spare entry.
+	ActiveSequencePlayers.RemoveSingleSwap(Player);
 	Player->OnNativeFinished.Unbind();
 	if (bStopPlayer)
 	{
 		Player->Stop();
 	}
-	// Out of the list before anyone hears about it, so a Finished listener asking whether the
-	// instance still plays gets the answer it expects.
-	ActiveSequencePlayers.RemoveSingleSwap(Player);
 	if (!KeepSparePlayer(Player))
 	{
 		Player->TearDown();
