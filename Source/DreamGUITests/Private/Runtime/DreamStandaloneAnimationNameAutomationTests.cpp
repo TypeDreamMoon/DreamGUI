@@ -5,6 +5,7 @@
 #include "Misc/AutomationTest.h"
 
 #include "Animation/DreamUISequence.h"
+#include "Animation/DreamWidgetAnimation.h"
 #include "Animation/DreamWidgetAnimationComponent.h"
 #include "Animation/DreamWidgetAnimationPlayer.h"
 #include "Bindings/MovieSceneCustomBinding.h"
@@ -15,6 +16,7 @@
 #include "Core/Components/DreamWidget.h"
 #include "Engine/Engine.h"
 #include "Engine/World.h"
+#include "HAL/IConsoleManager.h"
 #include "Misc/ScopeExit.h"
 #include "MovieScene.h"
 #include "MovieSceneSequenceID.h"
@@ -59,11 +61,22 @@ void FDreamStandaloneAnimationNameTest::GetTests(TArray<FString>& OutBeautifiedN
 	OutTestCommands.Add(TEXT("First"));
 	OutBeautifiedNames.Add(TEXT("Asset on second component"));
 	OutTestCommands.Add(TEXT("Second"));
+	OutBeautifiedNames.Add(TEXT("Asset on first component through Sequencer"));
+	OutTestCommands.Add(TEXT("First_Sequencer"));
+	OutBeautifiedNames.Add(TEXT("Asset on second component through Sequencer"));
+	OutTestCommands.Add(TEXT("Second_Sequencer"));
 }
 
 bool FDreamStandaloneAnimationNameTest::RunTest(const FString& Parameters)
 {
 	using namespace DreamStandaloneAnimationNameTestLocal;
+	IConsoleVariable* DirectEvaluation = IConsoleManager::Get().FindConsoleVariable(TEXT("DreamUI.Animation.DirectEvaluation"));
+	if (!TestNotNull(TEXT("the direct-evaluation setting exists"), DirectEvaluation)) return false;
+	const int32 SavedDirectEvaluation = DirectEvaluation->GetInt();
+	const bool bSequencer = Parameters.EndsWith(TEXT("_Sequencer"));
+	DirectEvaluation->Set(bSequencer ? 0 : 1, ECVF_SetByCode);
+	ON_SCOPE_EXIT { DirectEvaluation->Set(SavedDirectEvaluation, ECVF_SetByCode); };
+	const bool bFirstOwner = Parameters.StartsWith(TEXT("First"));
 	FScopedTickWorld Scope;
 	TStrongObjectPtr<UDreamUISequence> Asset(NewObject<UDreamUISequence>(GetTransientPackage(),
 		MakeUniqueObjectName(GetTransientPackage(), UDreamUISequence::StaticClass(), TEXT("StandaloneIntro"))));
@@ -90,7 +103,7 @@ bool FDreamStandaloneAnimationNameTest::RunTest(const FString& Parameters)
 	UDreamWidgetAnimationComponent* Second = Root->AddComponent<UDreamWidgetAnimationComponent>();
 	if (!TestNotNull(TEXT("the first animation component exists"), First)
 		|| !TestNotNull(TEXT("the second animation component exists"), Second)) return false;
-	UDreamWidgetAnimationComponent* AuthoredOwner = Parameters == TEXT("First") ? First : Second;
+	UDreamWidgetAnimationComponent* AuthoredOwner = bFirstOwner ? First : Second;
 	const FArrayProperty* AssetsProperty = FindFProperty<FArrayProperty>(UDreamWidgetAnimationComponent::StaticClass(), TEXT("SequenceAssets"));
 	if (!TestNotNull(TEXT("the component exposes its editable standalone asset list"), AssetsProperty)) return false;
 	const FObjectPropertyBase* ElementProperty = CastField<FObjectPropertyBase>(AssetsProperty->Inner);
@@ -112,7 +125,7 @@ bool FDreamStandaloneAnimationNameTest::RunTest(const FString& Parameters)
 	TArray<UDreamWidgetAnimationComponent*> Animators;
 	Instance->CollectAnimationComponents(Animators);
 	if (!TestEqual(TEXT("both authored animation components are instanced"), Animators.Num(), 2)) return false;
-	const int32 OwnerIndex = Parameters == TEXT("First") ? 0 : 1;
+	const int32 OwnerIndex = bFirstOwner ? 0 : 1;
 	UDreamWidgetAnimationComponent* Owner = Animators[OwnerIndex];
 	UDreamWidget* LiveRoot = Instance->GetContentRoot();
 	if (!TestNotNull(TEXT("the real instance has an animation target"), LiveRoot)) return false;
@@ -122,6 +135,7 @@ bool FDreamStandaloneAnimationNameTest::RunTest(const FString& Parameters)
 	const FDreamUIAnimationHandle Direct = Instance->PlayAnimation(Asset.Get());
 	if (!TestTrue(TEXT("playing the same asset directly starts a real instance"), Direct.IsValid())) return false;
 	TestTrue(TEXT("direct playback belongs to the asset's component"), Owner->IsAnimationPlaying(Direct));
+	TestEqual(TEXT("the requested evaluation path is active"), Direct.Player->IsEvaluatingDirectly(), !bSequencer);
 	TestEqual(TEXT("the live player's playback context is the intended root"), static_cast<const IMovieScenePlayer*>(Direct.Player.Get())->GetPlaybackContext(), static_cast<UObject*>(LiveRoot));
 	// The same authored custom binding resolves with the engine's current API. This read-only
 	// control does not alter the player's object cache or replace its production playback path.
@@ -149,6 +163,18 @@ bool FDreamStandaloneAnimationNameTest::RunTest(const FString& Parameters)
 	Scope.TickFrames(30);
 	TestFalse(TEXT("the name-based run finishes normally"), Owner->IsAnimationPlaying(ByName));
 	TestEqual(TEXT("the completed name-based run retained its last key"), LiveRoot->GetWidth(), 220.0f, 0.01f);
+
+	// Name playback has always preferred an embedded animation, even when an earlier component
+	// carries a standalone asset with that name. Searching every asset owner must keep that rule.
+	UDreamWidgetAnimationComponent* EmbeddedOwner = Animators[1 - OwnerIndex];
+	UDreamWidgetAnimation* Embedded = EmbeddedOwner->AddNewAnimation();
+	if (!TestNotNull(TEXT("another component can author a same-named embedded animation"), Embedded)) return false;
+	Embedded->SetDisplayNameString(Asset->GetName());
+	Embedded->GetMovieScene()->SetPlaybackRange(FFrameNumber(0), 24000);
+	const FDreamUIAnimationHandle Preferred = Instance->PlayAnimationByName(Asset->GetName());
+	TestTrue(TEXT("the same-name embedded animation starts"), Preferred.IsValid());
+	TestEqual(TEXT("embedded animations keep priority over standalone assets on all components"), Preferred.GetAnimation(), static_cast<UMovieSceneSequence*>(Embedded));
+	TestTrue(TEXT("the preferred animation plays on its own component"), EmbeddedOwner->IsAnimationPlaying(Preferred));
 	return true;
 }
 
