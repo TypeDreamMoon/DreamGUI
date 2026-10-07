@@ -1048,6 +1048,7 @@ namespace DreamWidgetDuplicateLocal
 		{
 			return;
 		}
+		TArray<const FProperty*> PropertyChain;
 		for (TPropertyValueIterator<FObjectPropertyBase> It(InContainer->GetClass(), InContainer); It; ++It)
 		{
 			const FObjectPropertyBase* Property = It.Key();
@@ -1055,8 +1056,22 @@ namespace DreamWidgetDuplicateLocal
 			{
 				continue;
 			}
-			const FMapProperty* OwningMap = Property->GetOwner<FMapProperty>();
-			if (Property->GetOwner<FSetProperty>() != nullptr || (OwningMap != nullptr && OwningMap->KeyProp == Property))
+			// A reference can be nested inside a struct key. Its immediate owner is then the
+			// struct, so only the full value chain tells us whether changing it would break a hash.
+			PropertyChain.Reset();
+			It.GetPropertyChain(PropertyChain);
+			bool bHashedKey = false;
+			for (int32 Index = 0; Index < PropertyChain.Num(); ++Index)
+			{
+				const FMapProperty* Map = CastField<FMapProperty>(PropertyChain[Index]);
+				if (PropertyChain[Index]->IsA<FSetProperty>()
+					|| (Map != nullptr && Index > 0 && Map->KeyProp == PropertyChain[Index - 1]))
+				{
+					bHashedKey = true;
+					break;
+				}
+			}
+			if (bHashedKey)
 			{
 				continue;
 			}
