@@ -19,6 +19,8 @@ public:
 	bool bCloseAgain = false;
 	int32 MutationCount = 0;
 	int32 GeneratedCount = 0;
+	int32 ValueNotificationCount = 0;
+	int32 PublishedIndex = 0;
 
 	UFUNCTION()
 	void HandleTabClosed(int32 InIndex)
@@ -36,5 +38,20 @@ public:
 		if (MutationCount != 0)return;
 		++MutationCount;
 		View->SetTabLabels({FText::AsCultureInvariant(TEXT("New A")), FText::AsCultureInvariant(TEXT("New B")), FText::AsCultureInvariant(TEXT("New C"))});
+	}
+	UFUNCTION()
+	void HandleTabChanged(int32 InIndex)
+	{
+		if (MutationCount != 0)return;
+		++MutationCount;
+		PublishedIndex = 2;
+		View->SetActiveTabIndexWithoutNotify(2);
+	}
+
+	UFUNCTION()
+	void HandleValueChanged(int32 InIndex)
+	{
+		++ValueNotificationCount;
+		PublishedIndex = InIndex;
 	}
 };

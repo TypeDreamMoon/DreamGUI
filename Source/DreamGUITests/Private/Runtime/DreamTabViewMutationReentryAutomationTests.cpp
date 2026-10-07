@@ -115,4 +115,31 @@ bool FDreamTabViewGeneratedHookRebuildTest::RunTest(const FString& Parameters)
 	return true;
 }
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDreamTabViewChangedHookRedirectTest,
+	"DreamGUI.TabView.AChangedHookRedirectKeepsItsPageAndSettingWithoutAnOldValueEcho",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamTabViewChangedHookRedirectTest::RunTest(const FString& Parameters)
+{
+	FDreamDriverRig Rig = FDreamDriverRig::Headless(FIntPoint(1280, 720));
+	UDreamTabView* View = DreamTabViewMutationReentryTestLocal::MakeView(*this, Rig);
+	if (View == nullptr)return false;
+	const TWeakObjectPtr<UDreamTabView> WeakView(View);
+	const TWeakObjectPtr<UDreamWidget> PageC(View->GetPage(2));
+	TStrongObjectPtr<UDreamTabViewMutationReentryProbe> Probe(NewObject<UDreamTabViewMutationReentryProbe>());
+	Probe->View = View;
+	View->OnTabChanged.AddDynamic(Probe.Get(), &UDreamTabViewMutationReentryProbe::HandleTabChanged);
+	View->OnValueChangedBP.AddDynamic(Probe.Get(), &UDreamTabViewMutationReentryProbe::HandleValueChanged);
+	// The consumer corrects its setting and silently redirects the control from B to C.
+	// The old B setter must not follow that with a stale reverse-binding write of 1.
+	View->SetActiveTabIndex(1);
+	Rig.PumpFrames(2);
+	TestEqual(TEXT("the changed callback redirected the selection exactly once"), Probe->MutationCount, 1);
+	if (!TestTrue(TEXT("the owner and destination page remain alive"), WeakView.IsValid() && PageC.IsValid()))return false;
+	TestEqual(TEXT("the callback's corrected index remains authoritative"), View->GetActiveTabIndex(), 2);
+	TestTrue(TEXT("the corresponding destination page is shown"), View->GetActivePage() == PageC.Get());
+	TestEqual(TEXT("the old operation emits no stale two-way value echo"), Probe->ValueNotificationCount, 0);
+	TestEqual(TEXT("the setting still agrees with the control's visible page"), Probe->PublishedIndex, 2);
+	return true;
+}
 #endif
