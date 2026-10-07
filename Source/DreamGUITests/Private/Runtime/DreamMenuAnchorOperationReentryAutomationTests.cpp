@@ -5,9 +5,12 @@
 #include "Misc/AutomationTest.h"
 
 #include "DreamControlTestScope.h"
+#include "DreamFocusReentryTestTypes.h"
 #include "DreamMenuAnchorOperationReentryTestTypes.h"
 #include "DreamScopedWorld.h"
 #include "Engine/World.h"
+#include "Driver/DreamDriverRig.h"
+#include "Interaction/DreamUIPopupLayer.h"
 #include "UObject/StrongObjectPtr.h"
 
 namespace DreamMenuAnchorOperationReentryTestLocal
@@ -173,4 +176,74 @@ bool FDreamMenuAnchorSleepNestedOpenTest::RunTest(const FString& Parameters)
 	return true;
 }
 
+IMPLEMENT_COMPLEX_AUTOMATION_TEST(FDreamMenuAnchorFocusReturnReopenTest,
+	"DreamGUI.MenuAnchor.ReturningFocusCanReopenTheSamePopupWithoutTheOldDismissalTakingItHome",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+void FDreamMenuAnchorFocusReturnReopenTest::GetTests(TArray<FString>& OutBeautifiedNames, TArray<FString>& OutTestCommands)const
+{
+	OutBeautifiedNames.Add(TEXT("Anchor Close"));
+	OutTestCommands.Add(TEXT("anchor"));
+	OutBeautifiedNames.Add(TEXT("Popup layer dismissal"));
+	OutTestCommands.Add(TEXT("layer"));
+}
+
+bool FDreamMenuAnchorFocusReturnReopenTest::RunTest(const FString& Parameters)
+{
+	const bool bDismissThroughLayer = Parameters == TEXT("layer");
+	FDreamDriverRig Rig = FDreamDriverRig::Headless(FIntPoint(1280, 720));
+	Rig.BindTest(this);
+	if (!TestTrue(TEXT("the popup reentry rig came up"), Rig.IsUsable()))return false;
+	UDreamMenuAnchor* Anchor = Rig.MakeControl<UDreamMenuAnchor>(TEXT("ReopeningAnchor"), nullptr,
+		FVector2D(160.0, 40.0), FVector2D(-300.0, 150.0));
+	UDreamWidget* ReturnFocus = Rig.MakeWidget(TEXT("ReturnFocus"), nullptr, FVector2D(150.0, 50.0), FVector2D(250.0, 150.0));
+	if (!TestNotNull(TEXT("the anchor was created"), Anchor) || !TestNotNull(TEXT("the return-focus target was created"), ReturnFocus))return false;
+	UDreamWidget* MenuItem = Rig.MakeWidget(TEXT("MenuFocus"), Anchor->MenuNode, FVector2D(150.0, 50.0));
+	if (!TestNotNull(TEXT("the menu's focus target was created"), MenuItem))return false;
+	ReturnFocus->SetIsFocusable(true);
+	MenuItem->SetIsFocusable(true);
+	UDreamFocusReentryProbe* ReturnProbe = ReturnFocus->AddComponent<UDreamFocusReentryProbe>();
+	if (!TestNotNull(TEXT("the returning focus has a real select callback"), ReturnProbe))return false;
+	UDreamUIPopupLayer* Layer = UDreamUIPopupLayer::Get(Anchor);
+	if (!TestNotNull(TEXT("the world has its real popup layer"), Layer))return false;
+	TStrongObjectPtr<UDreamMenuAnchorOperationReentryProbe> Probe(NewObject<UDreamMenuAnchorOperationReentryProbe>(Rig.GetWorld()));
+	Anchor->OnMenuOpenChanged.AddDynamic(Probe.Get(), &UDreamMenuAnchorOperationReentryProbe::RecordOpenChanged);
+	Rig.PumpFrames(2);
+	if (!TestTrue(TEXT("the eventual return target initially has focus"), ReturnFocus->SetFocus()))return false;
+	Anchor->Open(false);
+	UDreamWidget* Popup = Anchor->PopupNode;
+	UDreamWidget* LiftedParent = Popup->GetParent();
+	if (!TestTrue(TEXT("the opening really pushed the popup and lifted it off the anchor"),
+		Layer->IsOpen(Popup) && IsValid(LiftedParent) && LiftedParent != Anchor))return false;
+	if (!TestTrue(TEXT("focus moved into the open menu"), MenuItem->SetFocus()))return false;
+	ReturnProbe->Trigger = EDreamFocusReentryCallback::Select;
+	ReturnProbe->Action = [Anchor]()
+	{
+		Anchor->Close();
+		Anchor->Open(false);
+	};
+	if (bDismissThroughLayer)Layer->Dismiss(Popup, EDreamPopupDismissReason::Explicit);
+	else Anchor->Close();
+	TestEqual(TEXT("returning focus actually reopened the anchor once"), ReturnProbe->MutationCount, 1);
+	TestTrue(TEXT("the new menu owns the final open state"), Anchor->IsOpen());
+	TestTrue(TEXT("the new menu keeps its popup awake"), Popup->GetWidgetActive());
+	TestTrue(TEXT("the old dismissal did not restore the new popup home"), Popup->GetParent() == LiftedParent);
+	TestTrue(TEXT("the new menu is still registered on the popup layer"), Layer->IsOpen(Popup));
+	TestTrue(TEXT("it is the player's top popup"), Layer->GetTopPopup(0) == Popup);
+	TArray<UDreamWidget*> OpenPopups;
+	Layer->GetOpenPopups(0, OpenPopups);
+	TestEqual(TEXT("the popup stack has exactly the surviving new entry"), OpenPopups.Num(), 1);
+	if (OpenPopups.Num() == 1)TestTrue(TEXT("that entry belongs to this same popup"), OpenPopups[0] == Popup);
+	TestTrue(TEXT("the completed focus return keeps focus on its target"), ReturnFocus->HasFocus());
+	TestEqual(TEXT("no stale dismissal announced a close after the new open"), Probe->OpenChanges.Num(), bDismissThroughLayer ? 3 : 1);
+	Anchor->Close();
+	TestFalse(TEXT("a fresh close completes normally"), Anchor->IsOpen());
+	TestFalse(TEXT("the fresh close puts its popup asleep"), Popup->GetWidgetActive());
+	TestTrue(TEXT("the fresh close finally restores the popup under its anchor"), Popup->GetParent() == Anchor);
+	TestFalse(TEXT("the popup layer has no stale entry after the fresh close"), Layer->IsOpen(Popup));
+	Layer->GetOpenPopups(0, OpenPopups);
+	TestEqual(TEXT("the player's popup stack is empty again"), OpenPopups.Num(), 0);
+	TestEqual(TEXT("the fresh close announces exactly one close"), Probe->OpenChanges.Num(), bDismissThroughLayer ? 4 : 2);
+	return true;
+}
 #endif
