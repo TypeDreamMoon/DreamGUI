@@ -1121,7 +1121,7 @@ void UDreamTabView::CloseTab(int32 InIndex)
 	// The hook may move this tab, rebuild the strip, keep the page elsewhere, or close it
 	// itself. Remember identities, then resolve their current index instead of closing a
 	// different page that has since moved into InIndex.
-	const auto FindClosingIndex = [WeakThis, ClosingTab, ClosingPage]()
+	const auto FindClosingIndex = [WeakThis, ClosingTab, ClosingPage]() -> int32
 	{
 		UDreamTabView* View = WeakThis.Get();
 		if (View == nullptr)return INDEX_NONE;
