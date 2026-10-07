@@ -17,6 +17,7 @@
 #include "Internationalization/Internationalization.h"
 #include "Internationalization/Culture.h"
 #include "UObject/DreamGUIObjectVersion.h"
+#include "UObject/UObjectGlobals.h"
 #include "DreamUIRender/DreamUIRenderStats.h"
 #if WITH_FREETYPE
 #include <ft2build.h>
@@ -38,6 +39,8 @@ namespace
 	TSet<TWeakObjectPtr<UDreamUIFontData_FreeTypeRender>> PendingFontTextureUploads;
 	/** Fonts with glyphs on a worker, drained every frame with the texture uploads. */
 	TSet<TWeakObjectPtr<UDreamUIFontData_FreeTypeRender>> FontsWithAsyncGlyphs;
+	/** Fonts that cached another asset's face; reloads notify even texts whose unchanged geometry is not queried again. */
+	TSet<TWeakObjectPtr<UDreamUIFontData_FreeTypeRender>> FontsWithFaceDependencies;
 	/** Fonts whose atlas was flushed and is filling up again; see bAtlasRefilling. */
 	TSet<TWeakObjectPtr<UDreamUIFontData_FreeTypeRender>> FontsRefillingAtlas;
 	int32 AsyncGlyphSyncBudgetOverride = -1;
@@ -708,6 +711,8 @@ void UDreamUIFontData_FreeTypeRender::DeinitFreeType()
 	// makes the next rasterizer take the reloaded file rather than the one that was just replaced.
 	Rasterizer.Reset();
 	SharedFaceBytes.Reset();
+	CachedFaceDependencies.Reset();
+	FontsWithFaceDependencies.Remove(this);
 	FaceMetricsCache.Reset();
 	FaceDecorationCache.Reset();
 	ColorGlyphInfos.Reset();
@@ -748,6 +753,23 @@ void UDreamUIFontData_FreeTypeRender::DeinitFreeType()
 	bHasKerning = false;
 	bCoverageGlyphsChanged = false;
 	ClearAtlasCaches();
+	// Notify after teardown, before a caller loads the replacement face. Texts take their primary font's new atlas and
+	// mark layout dirty; no dependent fallback is opened by this notification. Destruction must never allocate an atlas.
+	if (!IsGarbageCollecting() && !HasAnyFlags(RF_BeginDestroyed | RF_FinishDestroyed))
+	{
+		const TArray<TWeakObjectPtr<UDreamUIFontData_FreeTypeRender>> Dependents = FontsWithFaceDependencies.Array();
+		for (const auto& Dependent : Dependents)
+		{
+			if (UDreamUIFontData_FreeTypeRender* Font = Dependent.Get(); Font != nullptr && !Font->HasAnyFlags(RF_BeginDestroyed | RF_FinishDestroyed))
+			{
+				Font->SynchronizeFaceDependencies();
+			}
+			else
+			{
+				FontsWithFaceDependencies.Remove(Dependent);
+			}
+		}
+	}
 }
 #endif
 
@@ -847,6 +869,7 @@ void UDreamUIFontData_FreeTypeRender::ReadGlyphRow(const FT_Bitmap_& InBitmap, i
 
 FT_FaceRec_* UDreamUIFontData_FreeTypeRender::GetFreeTypeFace(int32 FaceIndex)
 {
+	SynchronizeFaceDependencies();
 	if (FaceIndex == 0)
 	{
 		InitFreeType();
@@ -855,7 +878,17 @@ FT_FaceRec_* UDreamUIFontData_FreeTypeRender::GetFreeTypeFace(int32 FaceIndex)
 	// A fallback or a style face is another font's own face 0, never that font's fallbacks or style faces in turn, so
 	// fonts that name each other in a cycle cannot recurse here.
 	UDreamUIFontData_FreeTypeRender* Owner = GetFaceOwner(FaceIndex);
-	return Owner != nullptr ? Owner->GetFreeTypeFace(0) : nullptr;
+	FT_FaceRec_* TargetFace = Owner != nullptr ? Owner->GetFreeTypeFace(0) : nullptr;
+	// Remember even a face that failed to open: failed coverage/cmap answers must go when that asset reloads too.
+	FDreamUIFontFaceIdentity Identity;
+	if (Owner != nullptr)
+	{
+		Identity.Owner = FObjectKey(Owner);
+		Identity.Epoch = Owner->FaceEpoch;
+	}
+	CachedFaceDependencies.Add(FaceIndex, Identity);
+	FontsWithFaceDependencies.Add(this);
+	return TargetFace;
 }
 #endif
 
@@ -1290,10 +1323,11 @@ FDreamUIFontFaceIdentity UDreamUIFontData_FreeTypeRender::GetFaceIdentity(int32 
 {
 	FDreamUIFontFaceIdentity Identity;
 #if WITH_FREETYPE
-	UDreamUIFontData_FreeTypeRender* Owner = GetFaceOwner(FaceIndex);
 	// Opened first, so the epoch named is the one of the face being shaped with, not the one before its first load. A face
 	// that does not open is nobody's: nothing is cached for it.
-	if (Owner == nullptr || Owner->GetFreeTypeFace(0) == nullptr)
+	FT_FaceRec_* TargetFace = GetFreeTypeFace(FaceIndex);
+	UDreamUIFontData_FreeTypeRender* Owner = GetFaceOwner(FaceIndex);
+	if (Owner == nullptr || TargetFace == nullptr)
 	{
 		return Identity;
 	}
@@ -1330,6 +1364,7 @@ uint32 UDreamUIFontData_FreeTypeRender::GetLayoutEpoch() const
 uint8 UDreamUIFontData_FreeTypeRender::GetGlyphColorKind(int32 FaceIndex, uint32 GlyphIndex)
 {
 #if WITH_FREETYPE
+	SynchronizeFaceDependencies();
 	const FDreamUIGlyphKey Key(FaceIndex, GlyphIndex);
 	if (const FColorGlyphInfo* Known = ColorGlyphInfos.Find(Key); Known != nullptr && Known->bKindKnown)
 	{
@@ -1348,6 +1383,7 @@ uint8 UDreamUIFontData_FreeTypeRender::GetGlyphColorKind(int32 FaceIndex, uint32
 
 UTexture2DArray* UDreamUIFontData_FreeTypeRender::GetFontTexture()
 {
+	SynchronizeFaceDependencies();
 	return Texture;
 }
 
@@ -1404,6 +1440,7 @@ void UDreamUIFontData_FreeTypeRender::BeginDestroy()
 void UDreamUIFontData_FreeTypeRender::InitFont()
 {
 #if WITH_FREETYPE
+	SynchronizeFaceDependencies();
 	InitFreeType();
 	// Called by what draws with the font, which wants its atlas (GetFontTexture) from the start.
 	if (bAlreadyInitialized && Texture == nullptr)
@@ -1453,8 +1490,8 @@ bool UDreamUIFontData_FreeTypeRender::GetFaceMetrics(int32 FaceIndex, float Font
 bool UDreamUIFontData_FreeTypeRender::ComputeFaceMetrics(int32 FaceIndex, float FontSize, float& OutAscent, float& OutDescent, float& OutLineHeight)
 {
 #if WITH_FREETYPE
-	// Every line asks for every face on it, every layout. The answer only changes when the font is
-	// reloaded, and DeinitFreeType drops the cache then.
+	SynchronizeFaceDependencies();
+	// Every line asks for every face on it, every layout. This font and its dependent faces' reloads drop the cache.
 	const FFaceMetricsKey CacheKey{ FaceIndex, FontSize };
 	if (const FFaceMetricsValue* Cached = FaceMetricsCache.Find(CacheKey))
 	{
@@ -1493,6 +1530,7 @@ bool UDreamUIFontData_FreeTypeRender::ComputeFaceMetrics(int32 FaceIndex, float 
 bool UDreamUIFontData_FreeTypeRender::GetDecorationMetrics(int32 FaceIndex, float FontSize, float& OutUnderlinePosition, float& OutUnderlineThickness, float& OutStrikethroughPosition, float& OutStrikethroughThickness)
 {
 #if WITH_FREETYPE
+	SynchronizeFaceDependencies();
 	const FFaceDecorationMetrics* Metrics = FaceDecorationCache.Find(FaceIndex);
 	if (Metrics == nullptr)
 	{
@@ -1691,8 +1729,41 @@ void UDreamUIFontData_FreeTypeRender::SetVerticalMetrics(EDreamUIFontVerticalMet
 	RecreateTexts();
 }
 
+void UDreamUIFontData_FreeTypeRender::SynchronizeFaceDependencies()
+{
+	if (bSynchronizingFaceDependencies)
+	{
+		return;
+	}
+	bool bChanged = false;
+	for (const auto& Dependency : CachedFaceDependencies)
+	{
+		FDreamUIFontFaceIdentity Current;
+		if (UDreamUIFontData_FreeTypeRender* Owner = GetFaceOwner(Dependency.Key))
+		{
+			Current.Owner = FObjectKey(Owner);
+			Current.Epoch = Owner->FaceEpoch;
+		}
+		if (!(Current == Dependency.Value))
+		{
+			bChanged = true;
+			break;
+		}
+	}
+	if (bChanged)
+	{
+		// Reset forgets the old identities before notifying texts; asking for their new atlas can reenter InitFont.
+		TGuardValue<bool> Guard(bSynchronizingFaceDependencies, true);
+		LayoutEpoch++;
+		ResetFaceState();
+		RecreateTexts();
+	}
+}
+
 void UDreamUIFontData_FreeTypeRender::ResetFaceState()
 {
+	CachedFaceDependencies.Reset();
+	FontsWithFaceDependencies.Remove(this);
 	Rasterizer.Reset();
 	PendingAsyncGlyphs.Reset();
 	PendingColorGlyphs.Reset();
@@ -1750,6 +1821,7 @@ FDreamUICharData UDreamUIFontData_FreeTypeRender::GetCharData(uint32 CharCode, f
 FDreamUICharData UDreamUIFontData_FreeTypeRender::GetGlyphData(int32 FaceIndex, uint32 GlyphIndex, float CharSize, bool IsBold)
 {
 	checkf(IsInGameThread(), TEXT("DreamGUI dynamic font glyphs must be generated on the game thread."));
+	SynchronizeFaceDependencies();
 	// A flush asked for while an earlier frame was laid out happens here, before this frame hands out its first glyph,
 	// so that no layout of this frame holds a glyph of the atlas that is about to go.
 	if (bAtlasFlushRequested && AtlasFlushRequestFrame != GFrameCounter)
@@ -2190,6 +2262,7 @@ TSharedPtr<const TArray<uint8>, ESPMode::ThreadSafe> UDreamUIFontData_FreeTypeRe
 FDreamGlyphRasterizer* UDreamUIFontData_FreeTypeRender::GetOrCreateRasterizer()
 {
 #if WITH_FREETYPE
+	SynchronizeFaceDependencies();
 	if (!Rasterizer.IsValid())
 	{
 		TSharedRef<FDreamGlyphRasterizer, ESPMode::ThreadSafe> NewRasterizer = MakeShared<FDreamGlyphRasterizer, ESPMode::ThreadSafe>();
@@ -2203,8 +2276,7 @@ FDreamGlyphRasterizer* UDreamUIFontData_FreeTypeRender::GetOrCreateRasterizer()
 		{
 			UDreamUIFontData_FreeTypeRender* Owner = GetFaceOwner(FaceIndex);
 			if (Owner == nullptr)continue;
-			Owner->InitFreeType();
-			if (!Owner->bAlreadyInitialized || Owner->Face == nullptr)continue;
+			if (GetFreeTypeFace(FaceIndex) == nullptr)continue;
 			// One buffer per font asset, shared: this used to deep-copy the whole font file per face per
 			// rasterizer, and a CJK face is tens of megabytes.
 			const TSharedPtr<const TArray<uint8>, ESPMode::ThreadSafe> Bytes = Owner->GetOrCreateSharedFaceBytes();
@@ -2230,6 +2302,7 @@ FDreamGlyphRasterizer* UDreamUIFontData_FreeTypeRender::GetOrCreateRasterizer()
 void UDreamUIFontData_FreeTypeRender::DrainAsyncGlyphs()
 {
 	check(IsInGameThread());
+	SynchronizeFaceDependencies();
 	if (!Rasterizer.IsValid())
 	{
 		PendingAsyncGlyphs.Reset();
@@ -2342,6 +2415,7 @@ void UDreamUIFontData_FreeTypeRender::DrainAsyncGlyphs()
 void UDreamUIFontData_FreeTypeRender::WaitForAsyncGlyphs()
 {
 	check(IsInGameThread());
+	SynchronizeFaceDependencies();
 	if (Rasterizer.IsValid())
 	{
 		Rasterizer->WaitForAll();
@@ -2365,6 +2439,7 @@ UDreamUIFontData_FreeTypeRender::FCoverageGlyphKey UDreamUIFontData_FreeTypeRend
 bool UDreamUIFontData_FreeTypeRender::GetCoverageGlyph(int32 FaceIndex, uint32 GlyphIndex, int32 Size26Dot6, EDreamUICoverageGlyphFlags Flags, FDreamUICoverageGlyph& OutGlyph)
 {
 	check(IsInGameThread());
+	SynchronizeFaceDependencies();
 	DreamUIRenderStats::AddCount(DreamUIRenderStats::ECounter::CoverageGlyphLookups, 1);
 	OutGlyph = FDreamUICoverageGlyph();
 #if WITH_FREETYPE

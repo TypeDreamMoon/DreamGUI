@@ -324,6 +324,11 @@ protected:
 	 * font is told, so it lays out again against the new faces.
 	 */
 	void ResetFaceState();
+	/** Faces already read into any cache or registered with the worker; checking them never opens an unused font. */
+	TMap<int32, FDreamUIFontFaceIdentity> CachedFaceDependencies;
+	/** Drops all dependent caches together when a fallback/style asset reloads in place, before any cached answer is used. */
+	void SynchronizeFaceDependencies();
+	bool bSynchronizingFaceDependencies = false;
 	/** What follows a new fallback list (SetFallbacks, an edit): the faces reset, the table rebuilt, the layout epoch moved on, the texts laid out again. */
 	void ApplyFallbacksChanged();
 	/** Lay out every text using the font again, and its widget's layout with it: a line box of the font may have changed. */
