@@ -88,6 +88,8 @@ protected:
 	virtual void Start() override;
 	virtual void OnDestroy() override;
 	virtual void OnDimensionsChanged(bool PivotChanged, bool WidthChanged, bool HeightChanged) override;
+	/** A callback that cleared or rebuilt the cells invalidates the pass that called it. */
+	uint64 GetCellPoolGeneration() const { return CellPoolGeneration; }
 
 #if WITH_EDITOR
 	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
@@ -220,6 +222,8 @@ private:
 		TArray<FUIRecyclableScrollViewCellContainer> CacheCellList;
 
 	void InitializeOnDataSource();
+	uint64 CellPoolGeneration = 0;
+	bool IsCellPassCurrent(uint64 InGeneration) const;
 	EUIRecyclableScrollViewCellTemplateType WorkingCellTemplateType = EUIRecyclableScrollViewCellTemplateType::Actor;
 	TWeakObjectPtr<UDreamWidget> WorkingCellTemplate = nullptr;//current using cell template, could be CellTemplate or CellTemplatePrefab's instance, tell by 'WorkingCellTemplateType'
 	FVector2D WorkingCellTemplateSize = FVector2D::ZeroVector;

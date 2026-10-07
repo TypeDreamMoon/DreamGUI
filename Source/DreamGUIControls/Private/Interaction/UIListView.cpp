@@ -21,7 +21,8 @@ void UUIListEntry::Assign(UUIListView* InOwner, UObject* InItem, int32 InIndex, 
 	TreeDepth = InTreeDepth;
 	bSelected = bInSelected;
 	ReceiveOnListItemAssigned(Item, ItemIndex, bSelected);
-	if (bSelectionChanged)
+	if (IsValid(this) && OwnerList.Get() == InOwner && Item == InItem && ItemIndex == InIndex
+		&& bSelected == bInSelected && bSelectionChanged)
 	{
 		ReceiveOnSelectionChanged(bSelected);
 	}
@@ -69,13 +70,16 @@ void UUIListView::SetCell_Implementation(UDreamUIBehaviour* Component, int Index
 	{
 		return;
 	}
+	const uint64 Generation = GetCellPoolGeneration();
 	UObject* NewItem = Items[Index];
 	UObject* PreviousItem = Entry->GetItem();
 	if (IsValid(PreviousItem) && PreviousItem != NewItem)
 	{
 		OnEntryReleased.Broadcast(PreviousItem, Entry);
+		if (!IsValid(this) || !IsValid(Entry) || Generation != GetCellPoolGeneration())return;
 	}
 	Entry->Assign(this, NewItem, Index, GetEntryDepth(Index), SelectedItems.Contains(NewItem));
+	if (!IsValid(this) || !IsValid(Entry) || Generation != GetCellPoolGeneration())return;
 	if (PreviousItem != NewItem)
 	{
 		OnEntryGenerated.Broadcast(NewItem, Entry);
@@ -250,11 +254,14 @@ void UUIListView::HandleEntryClicked(UUIListEntry* Entry)
 
 void UUIListView::RefreshVisibleSelection()
 {
-	for (const FUIRecyclableScrollViewCellContainer& Cell : GetCacheCellList())
+	const uint64 Generation = GetCellPoolGeneration();
+	for (int32 Index = 0; Index < GetCacheCellList().Num(); ++Index)
 	{
+		const auto Cell = GetCacheCellList()[Index];
 		if (UUIListEntry* Entry = ResolveEntry(Cell.CellComponent))
 		{
 			Entry->Assign(this, Entry->GetItem(), Entry->GetItemIndex(), Entry->GetTreeDepth(), SelectedItems.Contains(Entry->GetItem()));
+			if (!IsValid(this) || Generation != GetCellPoolGeneration())return;
 		}
 	}
 }
