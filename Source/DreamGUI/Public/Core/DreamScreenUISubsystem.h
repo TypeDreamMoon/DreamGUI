@@ -306,6 +306,8 @@ private:
 		 * stack's -- a floating window is still a page.
 		 */
 		bool bCustomPlacement = false;
+		/** Identifies the latest activation or registration across reentrant callbacks. */
+		uint64 MutationSerial = 0;
 	};
 
 	struct FPageDefinition
@@ -331,6 +333,7 @@ private:
 	bool bTornDownForWorld = false;
 
 	TMap<FName, FEntry> Entries;
+	uint64 NextPageMutationSerial = 0;
 	/** Pages a recompile took down, by name, with the class each is built again from; see ReleasePagesUsing. */
 	TMap<FName, TPair<TWeakObjectPtr<UClass>, bool>> ReleasedPages;
 	TMap<FName, FPageDefinition> PageDefinitions;

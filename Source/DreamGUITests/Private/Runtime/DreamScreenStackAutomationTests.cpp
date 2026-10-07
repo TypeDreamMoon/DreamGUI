@@ -10,6 +10,7 @@
 #include "Core/Components/DreamWidget.h"
 #include "Engine/World.h"
 #include "DreamScopedWorld.h"
+#include "Fixtures/DreamScreenReentryTestTypes.h"
 
 /*
  * What "this page is not on screen" means.
@@ -144,6 +145,112 @@ bool FDreamScreenDeadEntryIsReclaimedTest::RunTest(const FString& Parameters)
 	TestEqual(TEXT("the dead entry was reclaimed, leaving only the live one"), Screen->GetPageEntryCount(), 1);
 	TestFalse(TEXT("and the dead name is out of the stack"), Screen->IsUIInStack(TEXT("Doomed")));
 	TestTrue(TEXT("while the live one is on it"), Screen->IsUIInStack(TEXT("Next")));
+	Screen->RemoveAllUI();
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDreamScreenActiveReentryTest,
+	"DreamGUI.Screen.ActivationCallbacksCanRemoveOrGrowPageRegistrations",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamScreenActiveReentryTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamScreenStackTestLocal;
+	FScopedGameWorld TestWorld;
+	UDreamScreenUISubsystem* Screen = GetScreenSubsystem(TestWorld.World);
+	if (!TestNotNull(TEXT("Screen subsystem"), Screen)) { return false; }
+	UDreamWidget* Page = Screen->ShowWidgetOfClass(TEXT("Remove"), UDreamUserWidget::StaticClass());
+	if (!TestNotNull(TEXT("Page"), Page)) { return false; }
+	Page->GetWidgetActiveChangedEvent().AddLambda([Screen](bool bActive)
+	{
+		if (!bActive) { Screen->RemoveUI(TEXT("Remove")); }
+	});
+	Screen->SetUIVisible(TEXT("Remove"), false);
+	TestNull(TEXT("Disable callback removed the page"), Screen->GetUI(TEXT("Remove")));
+	TestEqual(TEXT("Removed entry stays unloaded"), Screen->GetPageState(TEXT("Remove")), EDreamUIScreenPageState::Unloaded);
+
+	Page = Screen->ShowWidgetOfClass(TEXT("Grow"), UDreamUserWidget::StaticClass());
+	if (!TestNotNull(TEXT("Growth page"), Page)) { return false; }
+	Page->GetWidgetActiveChangedEvent().AddLambda([Screen](bool bActive)
+	{
+		if (!bActive)
+		{
+			for (int32 Index = 0; Index < 128; ++Index)
+			{
+				Screen->ShowWidgetOfClass(FName(*FString::Printf(TEXT("Added%d"), Index)), UDreamUserWidget::StaticClass());
+			}
+		}
+	});
+	Screen->SetUIVisible(TEXT("Grow"), false);
+	TestEqual(TEXT("Map growth retains the original page"), Screen->GetUI(TEXT("Grow")), Page);
+	TestEqual(TEXT("Original entry becomes inactive after growth"), Screen->GetPageState(TEXT("Grow")), EDreamUIScreenPageState::Inactive);
+	TestEqual(TEXT("Original page is collapsed"), Page->GetVisibility(), EDreamWidgetVisibility::Collapsed);
+	TestEqual(TEXT("All registrations survived"), Screen->GetPageEntryCount(), 129);
+	Page = Screen->ShowWidgetOfClass(TEXT("Reverse"), UDreamUserWidget::StaticClass());
+	if (!TestNotNull(TEXT("Reversal page"), Page)) { return false; }
+	Page->GetWidgetActiveChangedEvent().AddLambda([Screen](bool bActive)
+	{
+		if (!bActive) { Screen->SetUIVisible(TEXT("Reverse"), true); }
+	});
+	Screen->SetUIVisible(TEXT("Reverse"), false);
+	TestTrue(TEXT("A nested show supersedes the outer hide"), Screen->IsUIShowing(TEXT("Reverse")));
+	TestEqual(TEXT("Nested activation state remains active"), Screen->GetPageState(TEXT("Reverse")), EDreamUIScreenPageState::Active);
+	Page->GetWidgetActiveChangedEvent().Clear();
+	Screen->RemoveAllUI();
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDreamScreenVisibilityReentryTest,
+	"DreamGUI.Screen.VisibilityCallbacksCanRemoveTheirPageWithoutStaleEvents",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamScreenVisibilityReentryTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamScreenStackTestLocal;
+	FScopedGameWorld TestWorld;
+	UDreamScreenUISubsystem* Screen = GetScreenSubsystem(TestWorld.World);
+	if (!TestNotNull(TEXT("Screen subsystem"), Screen)) { return false; }
+	UDreamWidget* Page = Screen->ShowWidgetOfClass(TEXT("Visibility"), UDreamUserWidget::StaticClass());
+	if (!TestNotNull(TEXT("Page"), Page)) { return false; }
+	UDreamScreenReentryProbe* Probe = NewObject<UDreamScreenReentryProbe>(Screen);
+	Probe->Screen = Screen;
+	Probe->PageName = TEXT("Visibility");
+	Probe->bArmed = true;
+	Page->OnVisibilityChanged.AddDynamic(Probe, &UDreamScreenReentryProbe::RemoveOnCollapsed);
+	Screen->OnPageHidden.AddDynamic(Probe, &UDreamScreenReentryProbe::CountHidden);
+	Screen->SetUIVisible(Probe->PageName, false);
+	TestNull(TEXT("Visibility callback removed its registration"), Screen->GetUI(Probe->PageName));
+	TestEqual(TEXT("Removal sends exactly one hidden event"), Probe->HiddenCount, 1);
+	TestEqual(TEXT("No entry was revived"), Screen->GetPageEntryCount(), 0);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDreamScreenRebuildReentryTest,
+	"DreamGUI.Screen.RebuildCallbacksCanReplaceTheirPageWithoutChangingTheReplacement",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamScreenRebuildReentryTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamScreenStackTestLocal;
+	FScopedGameWorld TestWorld;
+	UDreamScreenUISubsystem* Screen = GetScreenSubsystem(TestWorld.World);
+	if (!TestNotNull(TEXT("Screen subsystem"), Screen)) { return false; }
+	const FName Name(TEXT("Rebuild"));
+	UDreamWidget* Page = Screen->ShowWidgetOfClass(Name, UDreamUserWidget::StaticClass());
+	if (!TestNotNull(TEXT("Page"), Page)) { return false; }
+	Screen->SetUIVisible(Name, false);
+	TestEqual(TEXT("One page released"), Screen->ReleasePagesUsing(UDreamUserWidget::StaticClass()), 1);
+	UDreamScreenReentryProbe* Probe = NewObject<UDreamScreenReentryProbe>(Screen);
+	Probe->Screen = Screen;
+	Probe->PageName = Name;
+	Probe->bArmed = true;
+	Screen->OnPageCreated.AddDynamic(Probe, &UDreamScreenReentryProbe::ReplaceOnCreated);
+	Screen->OnPageShown.AddDynamic(Probe, &UDreamScreenReentryProbe::CountShown);
+	Screen->RebuildReleasedPages();
+	TestNotNull(TEXT("Callback created a replacement"), Probe->Replacement.Get());
+	TestEqual(TEXT("Name still identifies the replacement"), Screen->GetUI(Name), Probe->Replacement.Get());
+	TestTrue(TEXT("Old inactive state was not applied to the shown replacement"), Screen->IsUIShowing(Name));
+	TestEqual(TEXT("Replacement was shown once"), Probe->ShownCount, 1);
 	Screen->RemoveAllUI();
 	return true;
 }

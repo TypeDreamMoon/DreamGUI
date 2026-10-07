@@ -488,6 +488,7 @@ void UDreamScreenUISubsystem::RegisterUIInternal(
 	Entry.CachePolicy = InCachePolicy;
 	Entry.State = EDreamUIScreenPageState::Inactive;
 	Entry.PlayerIndex = InPlayerIndex;
+	Entry.MutationSerial = ++NextPageMutationSerial;
 	Entries.Add(InName, MoveTemp(Entry));
 	InRoot->SetVisibility(EDreamWidgetVisibility::Collapsed);
 	OnPageCreated.Broadcast(InName, InRoot);
@@ -581,19 +582,46 @@ void UDreamScreenUISubsystem::RebuildReleasedPages()
 		{
 			continue;
 		}
-		UDreamWidget* Root = GetOrCreateScreenRootForIndex(Entry->PlayerIndex);
+		const FEntry Snapshot = *Entry;
+		UDreamWidget* Root = GetOrCreateScreenRootForIndex(Snapshot.PlayerIndex);
 		UDreamWidget* Page = Root != nullptr ? CreateDreamWidget(GetWorld(), PageClass, Root) : nullptr;
 		if (Page == nullptr)
 		{
 			continue;
 		}
+		// Constructing or attaching a page can call user code. Only fill the entry that requested it.
+		Entry = Entries.Find(Released.Key);
+		if (Entry == nullptr || Entry->Root.IsValid() || Entry->MutationSerial != Snapshot.MutationSerial)
+		{
+			DestroyPage(Page);
+			continue;
+		}
 		Entry->Root = Page;
-		ConfigurePage(Page, Entry->SortOrder, Entry->PlayerIndex, Entry->bCustomPlacement);
+		const uint64 Serial = Entry->MutationSerial = ++NextPageMutationSerial;
+		const auto StillCurrent = [this, &Released, Page, Serial]()
+		{
+			const FEntry* Current = Entries.Find(Released.Key);
+			return Current != nullptr && Current->Root.Get() == Page
+				&& Current->MutationSerial == Serial && IsUsablePage(Page);
+		};
+		ConfigurePage(Page, Snapshot.SortOrder, Snapshot.PlayerIndex, Snapshot.bCustomPlacement);
+		if (!StillCurrent())
+		{
+			continue;
+		}
 		Page->SetVisibility(EDreamWidgetVisibility::Collapsed);
+		if (!StillCurrent())
+		{
+			continue;
+		}
 		OnPageCreated.Broadcast(Released.Key, Page);
+		if (!StillCurrent())
+		{
+			continue;
+		}
 		// Back in the state it was taken down in: showing, or there and switched off.
 		SetPageActive(Released.Key, Released.Value.Value);
-		Players.Add(Entry->PlayerIndex);
+		Players.Add(Snapshot.PlayerIndex);
 	}
 	// The stack decides again what shows, now that its pages are back.
 	for (const int32 PlayerIndex : Players)
@@ -644,6 +672,14 @@ void UDreamScreenUISubsystem::SetPageActive(FName InName, bool bActive)
 
 	const bool bWasShowing = IsUIShowing(InName);
 	const EDreamUIScreenPageState NewState = bActive ? EDreamUIScreenPageState::Active : EDreamUIScreenPageState::Inactive;
+	const bool bStateChanged = Entry->State != NewState || bWasShowing != bActive;
+	const uint64 Serial = Entry->MutationSerial = ++NextPageMutationSerial;
+	const auto StillCurrent = [this, InName, Root, Serial]()
+	{
+		const FEntry* Current = Entries.Find(InName);
+		return Current != nullptr && Current->Root.Get() == Root
+			&& Current->MutationSerial == Serial && IsUsablePage(Root);
+	};
 	// Both axes, because they carry different halves of "this page is not on screen".
 	// bWidgetActive drives behaviour lifecycle -- OnEnable/OnDisable, the manager's tick list, and
 	// with it OnTick and the polled property bindings. Visibility drives rendering, layout and hit
@@ -651,8 +687,16 @@ void UDreamScreenUISubsystem::SetPageActive(FName InName, bool bActive)
 	// for as long as it stayed covered, which is not what anyone pushing a full-screen page over
 	// another means, and not what UMG does with the page it removed from the viewport.
 	Root->SetWidgetActive(bActive);
+	if (!StillCurrent())
+	{
+		return;
+	}
 	Root->SetVisibility(bActive ? EDreamWidgetVisibility::Visible : EDreamWidgetVisibility::Collapsed);
-	const bool bStateChanged = Entry->State != NewState || bWasShowing != bActive;
+	if (!StillCurrent())
+	{
+		return;
+	}
+	Entry = Entries.Find(InName);
 	Entry->State = NewState;
 	if (bStateChanged)
 	{
