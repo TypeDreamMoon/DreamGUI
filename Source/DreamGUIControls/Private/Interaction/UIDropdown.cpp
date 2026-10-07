@@ -724,7 +724,29 @@ void UUIDropdown::CreateListItems()
 	{
 		const FUIDropdownOptionData Option = Options[Index];
 		UDreamWidget* CopiedItemWidget = UDreamUIBPLibrary::DuplicateWidget(GetWorld(), WeakTemplate.Get(), WeakContent.Get());
-		if (!IsCurrentBuild())return;
+		if (!IsCurrentBuild())
+		{
+			// Registering the copy can run Awake and start a newer Show before this row
+			// enters the pool. Its raw return value may already have been collected: find
+			// it through the still-live parent's children before taking a weak reference.
+			if (UDreamWidget* Content = WeakContent.Get())
+			{
+				for (UDreamWidget* Child : Content->GetChildren())
+				{
+					if (Child != CopiedItemWidget)continue;
+					const TWeakObjectPtr<UDreamWidget> WeakUnpublishedRow(Child);
+					if (!WeakUnpublishedRow.IsValid())break;
+					UUIDropdown* Dropdown = WeakThis.Get();
+					const bool bAdoptedByNewBuild = Dropdown != nullptr && Dropdown->CreatedItemArray.ContainsByPredicate([Child](const TWeakObjectPtr<UUIDropdownItemComponent>& Item)
+					{
+						return Item.IsValid() && Item->GetWidget() == Child;
+					});
+					if (!bAdoptedByNewBuild)WeakUnpublishedRow->DestroyWidget();
+					break;
+				}
+			}
+			return;
+		}
 		const TWeakObjectPtr<UDreamWidget> WeakRow(CopiedItemWidget);
 		if (!WeakRow.IsValid())return;
 		CopiedItemWidget->SetDisplayName(FString::Printf(TEXT("Item_%d"), Index));
