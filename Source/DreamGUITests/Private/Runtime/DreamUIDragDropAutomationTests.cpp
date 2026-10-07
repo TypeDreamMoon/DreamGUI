@@ -1,4 +1,4 @@
-﻿// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
+// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
 
 #if WITH_DEV_AUTOMATION_TESTS && WITH_EDITOR
 
@@ -316,6 +316,13 @@ bool FDreamUIDragPerPointerTest::RunTest(const FString& Parameters)
 		return EventData;
 	};
 
+	UDreamDragDropCallProbe* EnteredA = NewObject<UDreamDragDropCallProbe>(TestWorld.World);
+	UDreamDragDropCallProbe* OverA = NewObject<UDreamDragDropCallProbe>(TestWorld.World);
+	UDreamDragDropCallProbe* LeftA = NewObject<UDreamDragDropCallProbe>(TestWorld.World);
+	TargetA->OnDragEnter.AddDynamic(EnteredA, &UDreamDragDropCallProbe::OnOperation);
+	TargetA->OnDragOver.AddDynamic(OverA, &UDreamDragDropCallProbe::OnOperation);
+	TargetA->OnDragLeave.AddDynamic(LeftA, &UDreamDragDropCallProbe::OnOperation);
+
 	UDreamPointerEventData* FirstFinger = MakeDrag(0, SlotA);
 	UDreamPointerEventData* SecondFinger = MakeDrag(1, SlotB);
 
@@ -350,7 +357,30 @@ bool FDreamUIDragPerPointerTest::RunTest(const FString& Parameters)
 		DragDrop->GetHoveredTargetForPointer(0), TargetA);
 	TestEqual(TEXT("...with both drags still being followed"), DragDrop->GetDragCount(), 2);
 
-	// One finger lifting ends one drag, not both.
+	UDreamDragDropOperation* FirstOperation = FirstFinger->DragOperation.Get();
+	UDreamDragDropOperation* SecondOperation = SecondFinger->DragOperation.Get();
+	TestEqual(TEXT("the first operation entered A once"), EnteredA->CountFor(FirstOperation), 1);
+	TestEqual(TEXT("the second operation gets its own enter on the shared target"), EnteredA->CountFor(SecondOperation), 1);
+	TestTrue(TEXT("both operations receive over on the shared target"),
+		OverA->CountFor(FirstOperation) > 0 && OverA->CountFor(SecondOperation) > 0);
+
+	// Moving either finger away leaves only its membership, even while both drags keep running.
+	FirstFinger->EventType = EDreamUIPointerEventType::Drag;
+	FirstFinger->EnterWidget = SlotB;
+	EventSystem->CallOnPointerDrag(SlotB, FirstFinger);
+	TestEqual(TEXT("only the moving operation leaves A"), LeftA->CountFor(FirstOperation), 1);
+	TestEqual(TEXT("the stationary operation has never left A"), LeftA->CountFor(SecondOperation), 0);
+	TestTrue(TEXT("A stays hovered for the stationary operation"), TargetA->IsDragHovered());
+	int32 SecondOverCount = OverA->CountFor(SecondOperation);
+	DragDrop->Tick(0.0f);
+	TestTrue(TEXT("the stationary operation still gets over after the other leaves"), OverA->CountFor(SecondOperation) > SecondOverCount);
+	TestEqual(TEXT("its unchanged target does not need another enter"), EnteredA->CountFor(SecondOperation), 1);
+	FirstFinger->EnterWidget = SlotA;
+	EventSystem->CallOnPointerDrag(SlotA, FirstFinger);
+	TestEqual(TEXT("the returning operation enters A again"), EnteredA->CountFor(FirstOperation), 2);
+
+	// The cancellation path tells the operation, then dispatches EndDrag without a drop.
+	FirstOperation->NotifyDragCancelled();
 	FirstFinger->EventType = EDreamUIPointerEventType::EndDrag;
 	FirstFinger->bIsDragging = false;
 	EventSystem->CallOnPointerEndDrag(SlotA, FirstFinger);
@@ -358,9 +388,108 @@ bool FDreamUIDragPerPointerTest::RunTest(const FString& Parameters)
 	TestNull(TEXT("...and the lifted finger carries nothing"), DragDrop->GetDragOperationForPointer(0));
 	TestEqual(TEXT("...while the other still does"),
 		DragDrop->GetDragOperationForPointer(1), SecondFinger->DragOperation.Get());
+	TestEqual(TEXT("cancel ends only that operation's second hover"), LeftA->CountFor(FirstOperation), 2);
+	TestTrue(TEXT("cancel leaves A hovered for the remaining finger"), TargetA->IsDragHovered());
+	SecondOverCount = OverA->CountFor(SecondOperation);
+	DragDrop->Tick(0.0f);
+	TestTrue(TEXT("the remaining finger still receives over after cancellation"), OverA->CountFor(SecondOperation) > SecondOverCount);
 
-	SlotA->DestroyWidget();
-	SlotB->DestroyWidget();
+	// A new operation on the first pointer can land without ending the second pointer's hover.
+	UDreamPointerEventData* LandingFinger = MakeDrag(0, SlotA);
+	UDreamDragDropOperation* LandingOperation = LandingFinger->DragOperation.Get();
+	EventSystem->CallOnPointerBeginDrag(SlotA, LandingFinger);
+	LandingFinger->bIsDragging = false;
+	EventSystem->CallOnPointerDragDrop(SlotA, LandingFinger);
+	LandingFinger->EventType = EDreamUIPointerEventType::EndDrag;
+	EventSystem->CallOnPointerEndDrag(SlotA, LandingFinger);
+	TestTrue(TEXT("the new operation lands"), LandingOperation->bDropWasHandled);
+	TestEqual(TEXT("drop and EndDrag together leave it once"), LeftA->CountFor(LandingOperation), 1);
+	TestTrue(TEXT("the other operation keeps A hovered after the drop"), TargetA->IsDragHovered());
+	SecondOverCount = OverA->CountFor(SecondOperation);
+	DragDrop->Tick(0.0f);
+	TestTrue(TEXT("the other operation receives over after the drop"), OverA->CountFor(SecondOperation) > SecondOverCount);
+	TestEqual(TEXT("it still has not received any leave"), LeftA->CountFor(SecondOperation), 0);
+
+	SecondFinger->bIsDragging = false;
+	EventSystem->CallOnPointerDragDrop(SlotA, SecondFinger);
+	SecondFinger->EventType = EDreamUIPointerEventType::EndDrag;
+	EventSystem->CallOnPointerEndDrag(SlotA, SecondFinger);
+	TestTrue(TEXT("the last operation lands too"), SecondOperation->bDropWasHandled);
+	TestEqual(TEXT("the last operation receives one leave"), LeftA->CountFor(SecondOperation), 1);
+	TestFalse(TEXT("the final drop clears the aggregate hover"), TargetA->IsDragHovered());
+	TestEqual(TEXT("neither drag is still followed"), DragDrop->GetDragCount(), 0);
+
+	// Escape's cancellation also removes every membership, once per operation.
+	UDreamPointerEventData* CancelledFirst = MakeDrag(0, SlotA);
+	UDreamPointerEventData* CancelledSecond = MakeDrag(1, SlotA);
+	EventSystem->CallOnPointerBeginDrag(SlotA, CancelledFirst);
+	EventSystem->CallOnPointerBeginDrag(SlotA, CancelledSecond);
+	TestTrue(TEXT("both operations light A before cancellation"), TargetA->IsDragHovered());
+	TestTrue(TEXT("the subsystem cancels the shared-target drags"), DragDrop->CancelActiveDrag());
+	TestFalse(TEXT("cancelling the last drags clears the aggregate hover"), TargetA->IsDragHovered());
+	TestEqual(TEXT("cancel leaves the first operation once"), LeftA->CountFor(CancelledFirst->DragOperation.Get()), 1);
+	TestEqual(TEXT("cancel leaves the second operation once"), LeftA->CountFor(CancelledSecond->DragOperation.Get()), 1);
+	TestEqual(TEXT("no drags remain after cancellation"), DragDrop->GetDragCount(), 0);
+
+	// Enter can synchronously cancel the entering finger, with another finger already on the target.
+	UDreamPointerEventData* ResidentFinger = MakeDrag(0, SlotA);
+	EventSystem->CallOnPointerBeginDrag(SlotA, ResidentFinger);
+	UDreamPointerEventData* IncomingFinger = MakeDrag(1, SlotA);
+	UDreamDragDropOperation* IncomingOperation = IncomingFinger->DragOperation.Get();
+	UDreamDragDropReentryProbe* CancelsIncoming = NewObject<UDreamDragDropReentryProbe>(TestWorld.World);
+	CancelsIncoming->Action = [EventSystem, IncomingFinger, SlotA]()
+	{
+		IncomingFinger->DragOperation->NotifyDragCancelled();
+		IncomingFinger->bIsDragging = false;
+		IncomingFinger->EventType = EDreamUIPointerEventType::EndDrag;
+		EventSystem->CallOnPointerEndDrag(SlotA, IncomingFinger);
+	};
+	TargetA->OnDragEnter.AddDynamic(CancelsIncoming, &UDreamDragDropReentryProbe::OnOperation);
+	EventSystem->CallOnPointerBeginDrag(SlotA, IncomingFinger);
+	TestEqual(TEXT("the entering operation receives enter before its callback cancels it"), EnteredA->CountFor(IncomingOperation), 1);
+	TestEqual(TEXT("the cancelled entering operation receives leave exactly once"), LeftA->CountFor(IncomingOperation), 1);
+	TestEqual(TEXT("it receives no over after the enter callback cancels it"), OverA->CountFor(IncomingOperation), 0);
+	TestTrue(TEXT("the resident operation keeps the target hovered"), TargetA->IsDragHovered());
+	TestEqual(TEXT("only the resident drag is still followed"), DragDrop->GetDragCount(), 1);
+
+	// Leave can destroy a target. The next target still receives this live drag, and a drop whose
+	// leave destroys its own target must not continue through acceptance on that dead component.
+	UDreamDragDropReentryProbe* DestroysA = NewObject<UDreamDragDropReentryProbe>(TestWorld.World);
+	DestroysA->Action = [SlotA]() { SlotA->DestroyWidget(); };
+	TargetA->OnDragLeave.AddDynamic(DestroysA, &UDreamDragDropReentryProbe::OnOperation);
+	ResidentFinger->EventType = EDreamUIPointerEventType::Drag;
+	ResidentFinger->EnterWidget = SlotB;
+	EventSystem->CallOnPointerDrag(SlotB, ResidentFinger);
+	TestFalse(TEXT("A was destroyed by its leave callback"), IsValid(TargetA));
+	TestFalse(TEXT("a destroyed target has no aggregate hover"), TargetA->IsDragHovered());
+	TestEqual(TEXT("the live operation continues to B"), DragDrop->GetHoveredTargetForPointer(0), TargetB);
+	UDreamDragDropReentryProbe* DestroysB = NewObject<UDreamDragDropReentryProbe>(TestWorld.World);
+	DestroysB->Action = [SlotB]() { SlotB->DestroyWidget(); };
+	TargetB->OnDragLeave.AddDynamic(DestroysB, &UDreamDragDropReentryProbe::OnOperation);
+	ResidentFinger->bIsDragging = false;
+	EventSystem->CallOnPointerDragDrop(SlotB, ResidentFinger);
+	TestFalse(TEXT("B was destroyed by the drop's leave callback"), IsValid(TargetB));
+	TestFalse(TEXT("the destroyed target does not accept the operation afterward"), ResidentFinger->DragOperation->bDropWasHandled);
+	ResidentFinger->EventType = EDreamUIPointerEventType::EndDrag;
+	EventSystem->CallOnPointerEndDrag(SlotB, ResidentFinger);
+	TestEqual(TEXT("the last EndDrag clears the bookkeeping after target destruction"), DragDrop->GetDragCount(), 0);
+
+	UDreamWidget* SlotC = NewObject<UDreamWidget>(TestWorld.World, NAME_None, RF_Transient);
+	UDreamUIDropTarget* TargetC = SlotC->AddComponent<UDreamUIDropTarget>();
+	if (!TestNotNull(TEXT("a new target can be destroyed from enter"), TargetC))return false;
+	UDreamDragDropCallProbe* OverC = NewObject<UDreamDragDropCallProbe>(TestWorld.World);
+	UDreamDragDropReentryProbe* DestroysC = NewObject<UDreamDragDropReentryProbe>(TestWorld.World);
+	DestroysC->Action = [SlotC]() { SlotC->DestroyWidget(); };
+	TargetC->OnDragEnter.AddDynamic(DestroysC, &UDreamDragDropReentryProbe::OnOperation);
+	TargetC->OnDragOver.AddDynamic(OverC, &UDreamDragDropCallProbe::OnOperation);
+	UDreamPointerEventData* LastFinger = MakeDrag(0, SlotC);
+	EventSystem->CallOnPointerBeginDrag(SlotC, LastFinger);
+	TestFalse(TEXT("enter can destroy its target"), IsValid(TargetC));
+	TestNull(TEXT("the subsystem does not retain a destroyed hover target"), DragDrop->GetHoveredTargetForPointer(0));
+	TestEqual(TEXT("the destroyed target receives no over after enter"), OverC->CallCount, 0);
+	LastFinger->bIsDragging = false;
+	EventSystem->CallOnPointerEndDrag(SlotC, LastFinger);
+	TestEqual(TEXT("ending that operation also clears its bookkeeping"), DragDrop->GetDragCount(), 0);
 	return true;
 }
 
@@ -460,6 +589,34 @@ bool FDreamUIDragHoverHandlerEndsADragTest::RunTest(const FString& Parameters)
 	SlotA->DestroyWidget();
 	SlotB->DestroyWidget();
 	SlotC->DestroyWidget();
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamUIDropExpiredHoverTest,
+	"DreamGUI.DragDrop.ExpiredOperationsDoNotKeepADropTargetHovered",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamUIDropExpiredHoverTest::RunTest(const FString& Parameters)
+{
+	UDreamUIDropTarget* Target = NewObject<UDreamUIDropTarget>(GetTransientPackage());
+	UDreamDragDropOperation* Expired = NewObject<UDreamDragDropOperation>(GetTransientPackage());
+	Target->NotifyDragEnter(Expired);
+	TestTrue(TEXT("A live operation hovers the target"), Target->IsDragHovered());
+	Expired->MarkAsGarbage();
+	TestFalse(TEXT("An expired weak member cannot keep it hovered"), Target->IsDragHovered());
+	UDreamDragDropOperation* Current = NewObject<UDreamDragDropOperation>(GetTransientPackage());
+	UDreamDragDropCallProbe* Over = NewObject<UDreamDragDropCallProbe>(GetTransientPackage());
+	Target->OnDragOver.AddDynamic(Over, &UDreamDragDropCallProbe::OnOperation);
+	Target->NotifyDragEnter(Current);
+	Target->NotifyDragOver(Expired);
+	Target->NotifyDragLeave(nullptr);
+	TestTrue(TEXT("Cleanup of an expired member preserves the new operation"), Target->IsDragHovered());
+	Target->NotifyDragOver(Current);
+	TestEqual(TEXT("Only the current member receives over"), Over->CallCount, 1);
+	TestEqual(TEXT("Over carries the current operation"), Over->LastOperation.Get(), Current);
+	Target->NotifyDragLeave(Current);
+	TestFalse(TEXT("The final live member leaving clears the aggregate hover"), Target->IsDragHovered());
 	return true;
 }
 

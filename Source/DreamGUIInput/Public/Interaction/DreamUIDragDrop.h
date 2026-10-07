@@ -100,7 +100,7 @@ public:
 
 	/**
 	 * Drop-hover feedback, driven by UDreamUIDragDropSubsystem while a drag is in flight. Enter and
-	 * Leave fire once each at the edges, Over fires every frame in between -- so a slot can light up
+	 * Leave fire once each per operation at the edges, Over fires every frame in between -- so a slot can light up
 	 * the moment a payload it can take arrives over it, instead of the acceptance decision being
 	 * invisible until the player lets go.
 	 *
@@ -115,9 +115,9 @@ public:
 	UPROPERTY(BlueprintAssignable, Category = DreamGUI)
 	FDreamUIDragDropOperationEvent OnDragLeave;
 
-	/** True while an acceptable drag is hovering this target. Cleared on leave, drop, and cancel. */
+	/** True while any live acceptable operation is hovering this target. */
 	UFUNCTION(BlueprintPure, Category = DreamGUI)
-	bool IsDragHovered() const { return bIsDragHovered; }
+	bool IsDragHovered() const;
 
 	/** Fire the hover edges. Called by the drag-drop subsystem; public so a test can drive them. */
 	void NotifyDragEnter(UDreamDragDropOperation* InOperation);
@@ -126,9 +126,13 @@ public:
 
 	virtual bool OnPointerDragDrop_Implementation(UDreamPointerEventData* EventData) override;
 
+protected:
+	virtual void OnDestroy() override;
+
 private:
-	/** Not a UPROPERTY: it is derived state the subsystem owns, and saving it would be meaningless. */
-	bool bIsDragHovered = false;
+	/** Derived membership: hovering must not keep a completed or abandoned operation alive. */
+	TSet<TWeakObjectPtr<UDreamDragDropOperation>> HoveredOperations;
+	void RemoveExpiredHoverOperations();
 };
 
 /**

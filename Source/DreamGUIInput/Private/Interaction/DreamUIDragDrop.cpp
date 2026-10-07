@@ -90,33 +90,58 @@ bool UDreamUIDropTarget::CanAcceptDrop_Implementation(UDreamDragDropOperation* O
 	return true;
 }
 
+bool UDreamUIDropTarget::IsDragHovered() const
+{
+	if (!IsValid(this))return false;
+	for (const TWeakObjectPtr<UDreamDragDropOperation>& Operation : HoveredOperations)
+	{
+		if (Operation.IsValid())return true;
+	}
+	return false;
+}
+
+void UDreamUIDropTarget::RemoveExpiredHoverOperations()
+{
+	for (auto It = HoveredOperations.CreateIterator(); It; ++It)
+	{
+		if (!It->IsValid())It.RemoveCurrent();
+	}
+}
+
+void UDreamUIDropTarget::OnDestroy()
+{
+	HoveredOperations.Reset();
+	Super::OnDestroy();
+}
+
 void UDreamUIDropTarget::NotifyDragEnter(UDreamDragDropOperation* InOperation)
 {
-	if (bIsDragHovered)
-	{
-		return;
-	}
-	bIsDragHovered = true;
+	if (!IsValid(this) || !IsValid(InOperation))return;
+	RemoveExpiredHoverOperations();
+	const TWeakObjectPtr<UDreamDragDropOperation> Operation(InOperation);
+	if (HoveredOperations.Contains(Operation))return;
+	// Membership is visible to callbacks that cancel this drag or begin another over the same slot.
+	HoveredOperations.Add(Operation);
 	OnDragEnter.Broadcast(InOperation);
 }
 
 void UDreamUIDropTarget::NotifyDragOver(UDreamDragDropOperation* InOperation)
 {
-	if (!bIsDragHovered)
+	if (!IsValid(this) || !IsValid(InOperation)
+		|| !HoveredOperations.Contains(TWeakObjectPtr<UDreamDragDropOperation>(InOperation)))
 	{
-		return;//Over is the middle of a hover, never the start of one
+		return;//Over belongs to this operation's hover, never to another drag over the same slot.
 	}
 	OnDragOver.Broadcast(InOperation);
 }
 
 void UDreamUIDropTarget::NotifyDragLeave(UDreamDragDropOperation* InOperation)
 {
-	if (!bIsDragHovered)
-	{
-		return;
-	}
-	bIsDragHovered = false;
-	OnDragLeave.Broadcast(InOperation);
+	if (!IsValid(this))return;
+	// Forget this operation before a handler can cancel it again; another finger stays a member.
+	const bool bWasHovered = HoveredOperations.Remove(TWeakObjectPtr<UDreamDragDropOperation>(InOperation)) != 0;
+	RemoveExpiredHoverOperations();
+	if (bWasHovered && IsValid(InOperation))OnDragLeave.Broadcast(InOperation);
 }
 
 bool UDreamUIDropTarget::OnPointerDragDrop_Implementation(UDreamPointerEventData* EventData)
@@ -131,6 +156,7 @@ bool UDreamUIDropTarget::OnPointerDragDrop_Implementation(UDreamPointerEventData
 	// The hover ends when the drop lands, whoever tells us about it first: the subsystem's leave and
 	// this one race, and a target left believing it is still hovered stays lit for good.
 	NotifyDragLeave(Operation);
+	if (!IsValid(this) || !IsValid(Operation) || !IsValid(EventData) || EventData->DragOperation.Get() != Operation)return true;
 	Operation->bDropWasHandled = true;
 	HandleAcceptedDrop(Operation);
 	OnDropAccepted.Broadcast(Operation);

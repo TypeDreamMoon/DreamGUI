@@ -26,11 +26,25 @@ public:
 	void OnOperation(UDreamDragDropOperation* Operation)
 	{
 		LastOperation = Operation;
+		Operations.Add(Operation);
 		++CallCount;
 	}
 
 	UPROPERTY(Transient)
 	TObjectPtr<UDreamDragDropOperation> LastOperation = nullptr;
+
+	UPROPERTY(Transient)
+	TArray<TObjectPtr<UDreamDragDropOperation>> Operations;
+
+	int32 CountFor(UDreamDragDropOperation* InOperation) const
+	{
+		int32 Count = 0;
+		for (const auto& Operation : Operations)
+		{
+			if (Operation == InOperation)++Count;
+		}
+		return Count;
+	}
 
 	int32 CallCount = 0;
 };
