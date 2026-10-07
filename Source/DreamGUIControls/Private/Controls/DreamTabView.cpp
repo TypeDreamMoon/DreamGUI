@@ -4,6 +4,7 @@
 #include "DreamGUI.h"
 
 #include "Core/DreamUIWidgetRegistry.h"
+#include "Core/DreamUIManager.h"
 
 #include "Core/DreamUIBuilder.h"
 #include "Core/DreamUIInputServices.h"
@@ -172,24 +173,37 @@ void UDreamTabView::RebuildTabs(const TArray<FTabFocusCarry>* InCarriedFocus)
 	}
 
 	using namespace DreamUI;
+	const TWeakObjectPtr<UDreamTabView> WeakThis(this);
+	const TWeakObjectPtr<UDreamWidget> WeakStrip(StripNode);
+	const uint64 RebuildSerial = ++TabRebuildSerial;
+	const auto IsCurrentBuild = [WeakThis, WeakStrip, RebuildSerial]()
+	{
+		return WeakThis.IsValid() && WeakStrip.IsValid() && WeakThis->TabRebuildSerial == RebuildSerial
+			&& WeakThis->StripNode == WeakStrip.Get();
+	};
 
 	// Every tab is about to be destroyed, the one under the pad's cursor included -- and a player who
 	// closed a tab with the pad was standing on its close button. Taken now, by what outlives the
 	// widgets, and put back once the new strip stands.
 	const TArray<FTabFocusCarry> CarriedFocus = InCarriedFocus != nullptr ? *InCarriedFocus : CaptureTabFocus();
 
-	for (FDreamTabViewTab& Tab : Tabs)
+	// Destroy callbacks may rebuild Tabs. A snapshot keeps the older iterator out of that array.
+	const TArray<FDreamTabViewTab> TabsToDestroy = Tabs;
+	for (const FDreamTabViewTab& Tab : TabsToDestroy)
 	{
+		const TWeakObjectPtr<UDreamWidget> WeakOldTab(Tab.TabNode.Get());
 		// Out of the group before out of the tree. A toggle only unregisters itself in OnDestroy,
 		// which is a behaviour lifecycle callback and never runs for an unregistered strip -- the
 		// group would keep the stale entry and index every later tab one place too far along.
 		if (Tab.Toggle != nullptr)
 		{
 			Tab.Toggle->SetToggleGroup(nullptr);
+			if (!IsCurrentBuild())return;
 		}
-		if (IsValid(Tab.TabNode))
+		if (WeakOldTab.IsValid())
 		{
-			StripNode->DestroyChild(Tab.TabNode);
+			WeakStrip->DestroyChild(WeakOldTab.Get());
+			if (!IsCurrentBuild())return;
 		}
 	}
 	Tabs.Reset();
@@ -198,6 +212,7 @@ void UDreamTabView::RebuildTabs(const TArray<FTabFocusCarry>* InCarriedFocus)
 		// LastSelect still points at a tab that is going away; clearing it here means the first new
 		// tab to be switched on is a fresh selection rather than a switch from a corpse.
 		TabGroup->ClearSelection();
+		if (!IsCurrentBuild())return;
 	}
 
 	const int32 TabCount = GetTabCount();
@@ -280,6 +295,10 @@ void UDreamTabView::RebuildTabs(const TArray<FTabFocusCarry>* InCarriedFocus)
 									InSlot.SetVerticalAlignment(EDreamPanelVerticalAlignment::Fill);
 								}))),
 			StripNode);
+		if (!IsCurrentBuild())return;
+		const TWeakObjectPtr<UDreamWidget> WeakTab(TabRoot);
+		const TWeakObjectPtr<UDreamWidget> WeakLabel(Label);
+		if (!WeakTab.IsValid())return;
 
 		FDreamTabViewTab& Entry = Tabs.AddDefaulted_GetRef();
 		Entry.TabNode = TabRoot;
@@ -315,7 +334,9 @@ void UDreamTabView::RebuildTabs(const TArray<FTabFocusCarry>* InCarriedFocus)
 			// Explicit, rather than SetAutoFindToggleGroupInParent: that flag is read in Awake, and
 			// this control creates both ends here, in NativeOnInitialized. Searching for something we
 			// are holding would only mean the wiring is invisible until begin play.
+			const TWeakObjectPtr<UUIToggle> WeakToggle(Toggle);
 			Toggle->SetToggleGroup(TabGroup);
+			if (!IsCurrentBuild() || !WeakTab.IsValid() || !WeakToggle.IsValid())return;
 			Toggle->GetOnValueChangedEvent().AddUObject(this, &UDreamTabView::HandleTabValueChanged);
 		}
 
@@ -325,7 +346,37 @@ void UDreamTabView::RebuildTabs(const TArray<FTabFocusCarry>* InCarriedFocus)
 		if (TabTemplateClass != nullptr && GetWorld() != nullptr && IsValid(TabRoot))
 		{
 			bool bHasAuthoredContent = false;
-			if (UDreamUserWidget* Content = CreateDreamWidget(GetWorld(), TabTemplateClass, TabRoot))
+			const TWeakObjectPtr<UDreamUIManagerWorldSubsystem> WeakManager(UDreamUIManagerWorldSubsystem::GetInstance(GetWorld()));
+			UDreamUserWidget* CreatedContent = CreateDreamWidget(GetWorld(), TabTemplateClass, TabRoot);
+			if (!IsCurrentBuild() || !WeakTab.IsValid())
+			{
+				// Initialize runs before parenting. If it rebuilds the strip, the intended parent
+				// is gone and the factory registers the interrupted content as a standalone root.
+				// The return address may already be collected: find it through live registry entries.
+				if (UDreamUIManagerWorldSubsystem* Manager = WeakManager.Get())
+				{
+					for (UDreamWidget* Registered : Manager->GetRegisteredWidgets())
+					{
+						if (Registered != CreatedContent)continue;
+						// A callback that gave the content another parent or host owns it now.
+						if (Registered->GetParent() == nullptr && !Manager->IsHeldByHost(Registered))Registered->DestroyWidget();
+						break;
+					}
+				}
+				return;
+			}
+			// Initialize/Awake may destroy and collect their own content. Match the returned
+			// address against the live tree before asking anything of that object.
+			UDreamUserWidget* Content = nullptr;
+			for (UDreamWidget* Child : WeakTab->GetChildren())
+			{
+				if (Child == CreatedContent && IsValid(Child))
+				{
+					Content = Cast<UDreamUserWidget>(Child);
+					break;
+				}
+			}
+			if (Content != nullptr)
 			{
 				bHasAuthoredContent = true;
 				Content->SetDisplayName(TEXT("TabContent"));
@@ -341,18 +392,21 @@ void UDreamTabView::RebuildTabs(const TArray<FTabFocusCarry>* InCarriedFocus)
 			// abstract class, a class that would be its own template), and a tab that answered "a
 			// template drew this one" while holding nothing is a blank page tab. UDreamListViewBase's
 			// BindRow and UDreamDropdown's item hook decide the same question the same way.
-			if (bHasAuthoredContent && Label != nullptr)
+			if (bHasAuthoredContent && WeakLabel.IsValid())
 			{
-				Label->SetWidgetActive(false);
+				WeakLabel->SetWidgetActive(false);
+				if (!IsCurrentBuild() || !WeakTab.IsValid())return;
 			}
 		}
 
 		if (StripNode->HasRegistered() && IsValid(TabRoot) && !TabRoot->HasRegistered())
 		{
 			RegisterDreamWidgetHierarchy(TabRoot);
+			if (!IsCurrentBuild() || !WeakTab.IsValid())return;
 		}
 
-		OnTabGenerated.Broadcast(Index, TabRoot);
+		OnTabGenerated.Broadcast(Index, WeakTab.Get());
+		if (!IsCurrentBuild() || !WeakTab.IsValid())return;
 	}
 
 	// A strip that just changed length is an upper bound that just changed, so a request that is now
@@ -361,7 +415,9 @@ void UDreamTabView::RebuildTabs(const TArray<FTabFocusCarry>* InCarriedFocus)
 	// would have made, and pushing the same index twice is work nobody asked for.
 	ActiveTabIndex = SanitizeTabIndex(ActiveTabIndex);
 
+	const uint64 SelectionSerial = TabSelectionSerial;
 	ApplyStyle();
+	if (!IsCurrentBuild() || TabSelectionSerial != SelectionSerial)return;
 	// After the style push, which is what makes a disabled tab refuse focus: the carry must not land
 	// on a tab the push is about to switch off.
 	RestoreTabFocus(CarriedFocus);
@@ -523,6 +579,13 @@ void UDreamTabView::RestoreTabFocus(const TArray<FTabFocusCarry>& InCarried)
 
 void UDreamTabView::ApplyStyle()
 {
+	const TWeakObjectPtr<UDreamTabView> WeakThis(this);
+	const uint64 SelectionSerial = TabSelectionSerial;
+	const uint64 RebuildSerial = TabRebuildSerial;
+	const auto IsCurrentStyle = [WeakThis, SelectionSerial, RebuildSerial]()
+	{
+		return WeakThis.IsValid() && WeakThis->TabSelectionSerial == SelectionSerial && WeakThis->TabRebuildSerial == RebuildSerial;
+	};
 	const FDreamTabViewStyle& Active = ResolveStyle(Style, &UDreamUIStyleSheet::TabViewStyle);
 
 	// The page area.
@@ -546,10 +609,12 @@ void UDreamTabView::ApplyStyle()
 	// state the toggle is actually in, so pushing them at a stale value lands the selected colour on
 	// whichever tab happened to be lit -- the radio button's rule, and the reason it is written down.
 	ApplyActiveTab();
+	if (!IsCurrentStyle())return;
 
 	for (int32 Index = 0; Index < Tabs.Num(); ++Index)
 	{
-		FDreamTabViewTab& Tab = Tabs[Index];
+		const FDreamTabViewTab Tab = Tabs[Index];
+		const TWeakObjectPtr<UDreamWidget> WeakTab(Tab.TabNode.Get());
 		ShapeFace(Tab.TabNode, Active.CornerRadius);
 		SkinFace(Tab.TabNode, Active.TabBrush);
 		ShapeFace(Tab.SelectedNode, Active.CornerRadius);
@@ -558,6 +623,7 @@ void UDreamTabView::ApplyStyle()
 		// the one vocabulary this layout has -- while a zero width keeps the plate from ever widening
 		// a tab past its own label. Neither number is what the plate DRAWS at: its slot fills.
 		SizeFace(Tab.SelectedNode, FVector2D(0.0, Active.TabHeight));
+		if (!IsCurrentStyle() || !WeakTab.IsValid())return;
 
 		if (UDreamText* LabelVisual = Tab.LabelNode != nullptr ? Cast<UDreamText>(Tab.LabelNode->GetVisual()) : nullptr)
 		{
@@ -574,6 +640,7 @@ void UDreamTabView::ApplyStyle()
 		if (Tab.CloseNode != nullptr)
 		{
 			Tab.CloseNode->SetWidgetActive(bTabsClosable);
+			if (!IsCurrentStyle() || !WeakTab.IsValid())return;
 			if (bTabsClosable)
 			{
 				SizeFace(Tab.CloseNode, FVector2D(Active.TabHeight * 0.5, Active.TabHeight * 0.5));
@@ -594,6 +661,7 @@ void UDreamTabView::ApplyStyle()
 			// re-derives its own state from this flag. Code may still open it -- an interactable flag
 			// stops the player, not the program, which is this library's rule everywhere.
 			Tab.Toggle->SetInteractable(IsTabEnabled(Index));
+			if (!IsCurrentStyle() || !WeakTab.IsValid())return;
 			// The plate: opaque in the selected colour while this tab is open, and the same colour at
 			// zero alpha otherwise, so an unselected tab shows the face's own pointer tint through it.
 			Tab.Toggle->SetOnColor(Active.TabSelected);
@@ -779,7 +847,9 @@ void UDreamTabView::AddPage(UDreamWidget* InPage)
 	{
 		return;
 	}
+	const TWeakObjectPtr<UDreamTabView> WeakThis(this);
 	AttachPage(InPage);
+	if (!WeakThis.IsValid())return;
 	// The strip is a function of the page count, so a page that arrives past the end of TabLabels
 	// brings its own tab with it.
 	RebuildTabs();
@@ -815,12 +885,23 @@ int32 UDreamTabView::SanitizeTabIndex(int32 InIndex) const
 
 void UDreamTabView::SetActiveTabIndex(int32 InIndex)
 {
+	const TWeakObjectPtr<UDreamTabView> WeakThis(this);
+	const uint64 SelectionSerial = TabSelectionSerial + 1;
+	const uint64 RebuildSerial = TabRebuildSerial;
+	const auto IsCurrentSelection = [WeakThis, SelectionSerial, RebuildSerial]()
+	{
+		return WeakThis.IsValid() && WeakThis->TabSelectionSerial == SelectionSerial && WeakThis->TabRebuildSerial == RebuildSerial;
+	};
 	const int32 Sanitized = SanitizeTabIndex(InIndex);
 	const bool bChanged = ActiveTabIndex != Sanitized;
 	SwitchActiveTab(Sanitized);
+	if (!IsCurrentSelection())return;
 	if (bChanged)
 	{
-		OnTabChanged.Broadcast(Sanitized), OnValueChangedBP.Broadcast(Sanitized);
+		OnTabChanged.Broadcast(Sanitized);
+		if (!IsCurrentSelection())return;
+		OnValueChangedBP.Broadcast(Sanitized);
+		if (!IsCurrentSelection())return;
 		if (bFocusPageOnTabChange && bTabChangeFromUser)
 		{
 			// AFTER the broadcast, so a consumer that rearranges the page from its handler has already
@@ -832,6 +913,7 @@ void UDreamTabView::SetActiveTabIndex(int32 InIndex)
 			// that, the page was still collapsed, nothing in it counted as navigable, and focus stayed
 			// on the tab.
 			UDreamWidget::RebuildLayoutImmediately(PageHostNode);
+			if (!IsCurrentSelection())return;
 			FocusActivePage();
 		}
 	}
@@ -844,6 +926,9 @@ void UDreamTabView::SetActiveTabIndexWithoutNotify(int32 InIndex)
 
 void UDreamTabView::SwitchActiveTab(int32 InSanitizedIndex)
 {
+	const TWeakObjectPtr<UDreamTabView> WeakThis(this);
+	const uint64 SelectionSerial = ++TabSelectionSerial;
+	const uint64 RebuildSerial = TabRebuildSerial;
 	if (ActiveTabIndex != InSanitizedIndex)
 	{
 		// The page being left is hidden at the switcher's next arrange, and hiding it clears any focus
@@ -856,6 +941,7 @@ void UDreamTabView::SwitchActiveTab(int32 InSanitizedIndex)
 		if (IsValid(LeavingPage))
 		{
 			FDreamFocusReturn::MoveFocusOutOf(LeavingPage, OpenedTab);
+			if (!WeakThis.IsValid() || TabSelectionSerial != SelectionSerial || TabRebuildSerial != RebuildSerial)return;
 		}
 	}
 	ActiveTabIndex = InSanitizedIndex;
@@ -864,6 +950,9 @@ void UDreamTabView::SwitchActiveTab(int32 InSanitizedIndex)
 
 void UDreamTabView::ApplyActiveTab()
 {
+	const TWeakObjectPtr<UDreamTabView> WeakThis(this);
+	const uint64 SelectionSerial = TabSelectionSerial;
+	const uint64 RebuildSerial = TabRebuildSerial;
 	const FDreamTabViewStyle& Active = ResolveStyle(Style, &UDreamUIStyleSheet::TabViewStyle);
 
 	if (PageSwitcher != nullptr)
@@ -884,6 +973,7 @@ void UDreamTabView::ApplyActiveTab()
 	{
 		// Without notify: pushing the authored index in is not the user picking a tab.
 		Tabs[Resolved].Toggle->SetIsOnWithoutNotify(true);
+		if (!WeakThis.IsValid() || TabSelectionSerial != SelectionSerial || TabRebuildSerial != RebuildSerial)return;
 	}
 
 	for (int32 Index = 0; Index < Tabs.Num(); ++Index)
@@ -1023,63 +1113,67 @@ void UDreamTabView::SetTabEnabled(int32 InIndex, bool bInEnabled)
 
 void UDreamTabView::CloseTab(int32 InIndex)
 {
-	if (!Tabs.IsValidIndex(InIndex))
+	if (!Tabs.IsValidIndex(InIndex))return;
+	++TabSelectionSerial;
+	const TWeakObjectPtr<UDreamTabView> WeakThis(this);
+	const TWeakObjectPtr<UDreamWidget> ClosingTab(Tabs[InIndex].TabNode.Get());
+	const TWeakObjectPtr<UDreamWidget> ClosingPage(GetPage(InIndex));
+	// The hook may move this tab, rebuild the strip, keep the page elsewhere, or close it
+	// itself. Remember identities, then resolve their current index instead of closing a
+	// different page that has since moved into InIndex.
+	const auto FindClosingIndex = [WeakThis, ClosingTab, ClosingPage]()
 	{
-		return;
-	}
-	// What was open before the close, so the close can say so when it opens something else. The tab
-	// the strip actually lit, which is the index resolved the way ApplyActiveTab resolves it.
-	const int32 ActiveBefore = ActiveTabIndex;
-	const bool bClosingOpenTab = (InIndex == FMath::Clamp(ActiveTabIndex, 0, Tabs.Num() - 1));
-	// BEFORE anything is destroyed, so a consumer that wants to keep the page can take it out of the
-	// switcher from the handler -- the order UDreamDialog::Close broadcasts in, and its reason.
+		UDreamTabView* View = WeakThis.Get();
+		if (View == nullptr)return INDEX_NONE;
+		if (UDreamWidget* Page = ClosingPage.Get(); Page != nullptr && Page->GetParent() == View->PageHostNode)
+		{
+			for (int32 Index = 0; Index < View->GetPageCount(); ++Index)
+			{
+				if (View->GetPage(Index) == Page)return Index;
+			}
+		}
+		if (ClosingTab.IsValid())
+		{
+			return View->Tabs.IndexOfByPredicate([ClosingTab](const FDreamTabViewTab& Tab) { return Tab.TabNode == ClosingTab.Get(); });
+		}
+		return INDEX_NONE;
+	};
 	OnTabClosed.Broadcast(InIndex);
+	int32 ClosingIndex = FindClosingIndex();
+	if (ClosingIndex == INDEX_NONE)return;
 
-	// The pad's focus, taken before the page and the tabs go. A close from the pad is a press on the
-	// tab's own close button, which the rebuild destroys with the tab; focus in the page being closed
-	// goes the same way. Both are carried as focus on this tab, which is gone afterwards -- so its
-	// identity is dropped and it lands on whichever tab takes its place -- while focus on any other
-	// tab follows that tab to its new place.
-	TArray<FTabFocusCarry> CarriedFocus = CaptureTabFocus(INDEX_NONE, GetPage(InIndex));
+	TArray<FTabFocusCarry> CarriedFocus = CaptureTabFocus(INDEX_NONE, ClosingPage.Get());
+	if (UDreamWidget* Page = ClosingPage.Get(); Page != nullptr && PageHostNode != nullptr && Page->GetParent() == PageHostNode)
+	{
+		Page->DestroyWidget();
+		ClosingIndex = FindClosingIndex();
+		if (ClosingIndex == INDEX_NONE)return;
+	}
+	// The destroy callbacks can move the target too. Carry every surviving focus by the
+	// tab it belongs to; only the original target loses its identity across the rebuild.
 	for (FTabFocusCarry& Carried : CarriedFocus)
 	{
-		if (Carried.TabIndex == InIndex)
+		if (Carried.TabNode == ClosingTab || (ClosingPage.IsValid() && Carried.Page == ClosingPage))
 		{
+			Carried.TabIndex = ClosingIndex;
 			Carried.TabNode.Reset();
 			Carried.Page.Reset();
 			Carried.Caption = FText::GetEmpty();
 		}
-		else if (Carried.TabIndex > InIndex)
+		else
 		{
-			--Carried.TabIndex;
+			const int32 CurrentIndex = FindCarriedTab(Carried);
+			if (CurrentIndex != INDEX_NONE)Carried.TabIndex = CurrentIndex > ClosingIndex ? CurrentIndex - 1 : CurrentIndex;
 		}
 	}
-
-	if (UDreamWidget* Page = GetPage(InIndex))
-	{
-		// Still ours after the broadcast? A handler that re-parented it away is honoured by asking
-		// again rather than by remembering the answer from before the broadcast.
-		if (PageHostNode != nullptr && Page->GetParent() == PageHostNode)
-		{
-			Page->DestroyWidget();
-		}
-	}
-	if (TabLabels.IsValidIndex(InIndex))
-	{
-		TabLabels.RemoveAt(InIndex);
-	}
-	if (TabEnabled.IsValidIndex(InIndex))
-	{
-		TabEnabled.RemoveAt(InIndex);
-	}
-	// The browser's rule: closing a tab BEFORE the open one shifts the index down so the same page
-	// stays open; closing the open one itself leaves the index where it is, which is now its right
-	// neighbour -- and SanitizeTabIndex pulls it back when the closed tab was the last.
-	if (InIndex < ActiveTabIndex)
-	{
-		--ActiveTabIndex;
-	}
+	const int32 ActiveBefore = ActiveTabIndex;
+	const bool bClosingOpenTab = ClosingIndex == FMath::Clamp(ActiveTabIndex, 0, Tabs.Num() - 1);
+	if (TabLabels.IsValidIndex(ClosingIndex))TabLabels.RemoveAt(ClosingIndex);
+	if (TabEnabled.IsValidIndex(ClosingIndex))TabEnabled.RemoveAt(ClosingIndex);
+	if (ClosingIndex < ActiveTabIndex)--ActiveTabIndex;
+	const uint64 ExpectedRebuildSerial = TabRebuildSerial + 1;
 	RebuildTabs(&CarriedFocus);
+	if (!WeakThis.IsValid() || TabRebuildSerial != ExpectedRebuildSerial)return;
 	BroadcastActiveTabMoved(ActiveBefore, bClosingOpenTab);
 }
 
@@ -1089,6 +1183,13 @@ void UDreamTabView::MoveTab(int32 InFromIndex, int32 InToIndex)
 	{
 		return;
 	}
+	const TWeakObjectPtr<UDreamTabView> WeakThis(this);
+	const uint64 SelectionSerial = ++TabSelectionSerial;
+	const uint64 RebuildSerial = TabRebuildSerial;
+	const auto IsCurrentMove = [WeakThis, SelectionSerial, RebuildSerial]()
+	{
+		return WeakThis.IsValid() && WeakThis->TabSelectionSerial == SelectionSerial && WeakThis->TabRebuildSerial == RebuildSerial;
+	};
 	// The PAGE moves with its tab, because a tab IS its page's handle: the switcher resolves by
 	// index, so a strip reordered without its pages would put every caption over the wrong content.
 	//
@@ -1144,6 +1245,7 @@ void UDreamTabView::MoveTab(int32 InFromIndex, int32 InToIndex)
 	if (IsValid(MovedTabNode) && FirstTabSibling != MAX_int32)
 	{
 		MovedTabNode->SetSiblingIndex(FirstTabSibling + InToIndex);
+		if (!IsCurrentMove())return;
 	}
 
 	// The open PAGE stays open wherever it went, which is the only reading of a reorder that does not
@@ -1165,7 +1267,9 @@ void UDreamTabView::MoveTab(int32 InFromIndex, int32 InToIndex)
 	// carries its own caption, so nothing it shows changes; the push is what keeps the strip and the
 	// arrays it is read from saying the same thing.
 	ApplyStyle();
+	if (!IsCurrentMove())return;
 	OnTabReordered.Broadcast(InFromIndex, InToIndex);
+	if (!IsCurrentMove())return;
 	BroadcastActiveTabMoved(ActiveBefore, /*bInOpenTabReplaced*/false);
 }
 
@@ -1182,8 +1286,13 @@ void UDreamTabView::BroadcastActiveTabMoved(int32 InIndexBefore, bool bInOpenTab
 	// it went on holding a number that now names a different tab, or none.
 	if (ActiveTabIndex != InIndexBefore || bInOpenTabReplaced)
 	{
-		OnTabChanged.Broadcast(ActiveTabIndex);
-		OnValueChangedBP.Broadcast(ActiveTabIndex);
+		const TWeakObjectPtr<UDreamTabView> WeakThis(this);
+		const uint64 SelectionSerial = TabSelectionSerial;
+		const uint64 RebuildSerial = TabRebuildSerial;
+		const int32 MovedIndex = ActiveTabIndex;
+		OnTabChanged.Broadcast(MovedIndex);
+		if (!WeakThis.IsValid() || TabSelectionSerial != SelectionSerial || TabRebuildSerial != RebuildSerial)return;
+		OnValueChangedBP.Broadcast(MovedIndex);
 	}
 }
 
