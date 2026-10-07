@@ -256,4 +256,44 @@ bool FDreamScreenRebuildReentryTest::RunTest(const FString& Parameters)
 	return true;
 }
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDreamScreenMultiPageRebuildReentryTest,
+	"DreamGUI.Screen.RebuildCallbacksKeepOtherPendingPagesAndTheirStackOrder",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamScreenMultiPageRebuildReentryTest::RunTest(const FString& Parameters)
+{
+	for (const bool bRefreshDuringInitialize : {false, true})
+	{
+		DreamTests::FScopedGameWorld TestWorld;
+		UDreamScreenUISubsystem* Screen = DreamScreenStackTestLocal::GetScreenSubsystem(TestWorld.World);
+		if (!TestNotNull(TEXT("Screen subsystem"), Screen)) { return false; }
+		const TArray<FName> Names = {TEXT("First"), TEXT("Second"), TEXT("Third")};
+		for (const FName Name : Names)
+		{
+			UDreamWidget* Page = Screen->PushWidgetOfClass(Name, UDreamScreenReentryWidget::StaticClass(),
+				EDreamUIScreenPageCachePolicy::KeepAlive, false);
+			if (!TestNotNull(TEXT("Initial stack page"), Page)) { return false; }
+		}
+		TestEqual(TEXT("All three pages released"), Screen->ReleasePagesUsing(UDreamScreenReentryWidget::StaticClass()), 3);
+		UDreamScreenReentryProbe* Probe = NewObject<UDreamScreenReentryProbe>(Screen);
+		Probe->Screen = Screen;
+		Probe->bArmed = !bRefreshDuringInitialize;
+		Screen->OnPageCreated.AddDynamic(Probe, &UDreamScreenReentryProbe::RefreshOnCreated);
+		{
+			TGuardValue<bool> RefreshDuringInitialize(UDreamScreenReentryWidget::bRefreshStackOnInitialize, bRefreshDuringInitialize);
+			Screen->RebuildReleasedPages();
+		}
+		TestEqual(TEXT("All pending registrations survive nested refresh"), Screen->GetPageEntryCount(), 3);
+		TestTrue(TEXT("Rebuilt pages retain the original stack order"), Screen->GetUIStack() == Names);
+		for (const FName Name : Names)
+		{
+			TestNotNull(TEXT("Pending page was rebuilt"), Screen->GetUI(Name));
+			TestTrue(TEXT("Uncovered page is showing again"), Screen->IsUIShowing(Name));
+		}
+		TestEqual(TEXT("Every created callback ran when enabled"), Probe->RebuildRefreshCount, bRefreshDuringInitialize ? 0 : 3);
+		Screen->RemoveAllUI();
+	}
+	return true;
+}
+
 #endif

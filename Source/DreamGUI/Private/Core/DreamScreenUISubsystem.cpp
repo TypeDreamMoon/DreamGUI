@@ -13,6 +13,7 @@
 #include "Engine/World.h"
 #include "GameFramework/Actor.h"
 #include "GameFramework/PlayerController.h"
+#include "Misc/ScopeExit.h"
 #include "DreamGUI.h"
 
 UDreamScreenUISubsystem* UDreamScreenUISubsystem::Get(UWorld* InWorld)
@@ -570,11 +571,20 @@ int32 UDreamScreenUISubsystem::ReleasePagesUsing(const UClass* InClass)
 
 void UDreamScreenUISubsystem::RebuildReleasedPages()
 {
+	if (!RebuildingPages.IsEmpty())
+	{
+		return;
+	}
 	TMap<FName, TPair<TWeakObjectPtr<UClass>, bool>> ToRebuild = MoveTemp(ReleasedPages);
 	ReleasedPages.Reset();
+	for (const auto& Released : ToRebuild)
+	{
+		RebuildingPages.Add(Released.Key);
+	}
 	TSet<int32> Players;
 	for (const TPair<FName, TPair<TWeakObjectPtr<UClass>, bool>>& Released : ToRebuild)
 	{
+		ON_SCOPE_EXIT { RebuildingPages.Remove(Released.Key); };
 		FEntry* Entry = Entries.Find(Released.Key);
 		UClass* PageClass = Released.Value.Key.Get();
 		// Removed while it was down, or its class gone with the compile: nothing to build.
@@ -798,7 +808,7 @@ int32 UDreamScreenUISubsystem::PruneDeadEntries()
 	for (const TPair<FName, FEntry>& Pair : Entries)
 	{
 		// A page a recompile took down is not dead: it is built again from its class a tick later.
-		if (!IsUsablePage(Pair.Value.Root.Get()) && !ReleasedPages.Contains(Pair.Key))
+		if (!IsUsablePage(Pair.Value.Root.Get()) && !ReleasedPages.Contains(Pair.Key) && !RebuildingPages.Contains(Pair.Key))
 		{
 			DeadNames.Add(Pair.Key);
 		}
@@ -1212,7 +1222,7 @@ void UDreamScreenUISubsystem::RefreshStack(int32 InPlayerIndex, FName InPrevious
 		PruneDeadEntries();
 		for (int32 Index = Stack.Num() - 1; Index >= 0; --Index)
 		{
-			if (!GetUI(Stack[Index]) && !ReleasedPages.Contains(Stack[Index]))
+			if (!GetUI(Stack[Index]) && !ReleasedPages.Contains(Stack[Index]) && !RebuildingPages.Contains(Stack[Index]))
 			{
 				Stack.RemoveAt(Index);
 			}

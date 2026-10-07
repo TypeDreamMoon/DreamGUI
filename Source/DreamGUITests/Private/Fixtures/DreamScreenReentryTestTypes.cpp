@@ -4,6 +4,31 @@
 #include "Core/DreamScreenUISubsystem.h"
 #include "Core/DreamUserWidget.h"
 
+bool UDreamScreenReentryWidget::bRefreshStackOnInitialize = false;
+
+void UDreamScreenReentryWidget::NativeOnInitialized()
+{
+	Super::NativeOnInitialized();
+	if (bRefreshStackOnInitialize)
+	{
+		if (UDreamScreenUISubsystem* Screen = UDreamScreenUISubsystem::Get(GetWorld()))
+		{
+			Screen->RemoveUI(TEXT("UnregisteredDuringRebuild"));
+			Screen->RebuildReleasedPages();
+		}
+	}
+}
+
+void UDreamScreenReentryProbe::RefreshOnCreated(FName Name, UDreamWidget* Page)
+{
+	if (bArmed)
+	{
+		++RebuildRefreshCount;
+		Screen->RemoveUI(TEXT("UnregisteredDuringRebuild"));
+		Screen->RebuildReleasedPages();
+	}
+}
+
 void UDreamScreenReentryProbe::RemoveOnCollapsed(EDreamWidgetVisibility Visibility)
 {
 	if (bArmed && Visibility == EDreamWidgetVisibility::Collapsed)

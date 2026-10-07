@@ -20,11 +20,13 @@ public:
 	bool bArmed = false;
 	int32 ShownCount = 0;
 	int32 HiddenCount = 0;
+	int32 RebuildRefreshCount = 0;
 
 	UFUNCTION() void RemoveOnCollapsed(EDreamWidgetVisibility Visibility);
 	UFUNCTION() void ReplaceOnCreated(FName Name, UDreamWidget* Page);
 	UFUNCTION() void CountShown(FName Name, UDreamWidget* Page);
 	UFUNCTION() void CountHidden(FName Name, UDreamWidget* Page);
+	UFUNCTION() void RefreshOnCreated(FName Name, UDreamWidget* Page);
 };
 
 /** Gives the fixture the same visibility binding access as a widget's Blueprint. */
@@ -33,6 +35,8 @@ class UDreamScreenReentryWidget : public UDreamUserWidget
 {
 	GENERATED_BODY()
 public:
+	static bool bRefreshStackOnInitialize;
+	virtual void NativeOnInitialized() override;
 	void BindVisibilityProbe(UDreamScreenReentryProbe* Probe)
 	{
 		OnVisibilityChanged.AddDynamic(Probe, &UDreamScreenReentryProbe::RemoveOnCollapsed);
