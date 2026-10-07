@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Controls/DreamDropdown.h"
+#include "Core/DreamUIBehaviour.h"
 #include "Interaction/UIDropdown.h"
 #include "DreamDropdownGenerationReentryTestTypes.generated.h"
 
@@ -17,10 +18,13 @@ public:
 	UPROPERTY()
 	TObjectPtr<UDreamDropdown> Dropdown = nullptr;
 
+	bool bReenterFromRowAwake = false;
 	bool bDestroyOwner = false;
 	bool bReopenWithNewOptions = false;
 	bool bReopenWithSameOptions = false;
 	bool bOwnerWasDestroyedInsideCallback = false;
+	TWeakObjectPtr<UDreamWidget> CanceledAwakeRow;
+	int32 AwakeRowCount = 0;
 	int32 GeneratedCount = 0;
 	int32 MutationCount = 0;
 	int32 OpeningCount = 0;
@@ -29,7 +33,7 @@ public:
 	void OnGenerated(int32 InIndex, UDreamWidget* InItem)
 	{
 		++GeneratedCount;
-		if (MutationCount == 0)
+		if (MutationCount == 0 && !bReenterFromRowAwake)
 		{
 			++MutationCount;
 			if (bDestroyOwner)
@@ -49,6 +53,39 @@ public:
 		}
 	}
 
+	void OnRowAwake(UDreamWidget* InRow)
+	{
+		if (!bReenterFromRowAwake || !IsValid(Dropdown) || InRow == Dropdown->ItemTemplateNode)return;
+		++AwakeRowCount;
+		if (MutationCount != 0)return;
+		++MutationCount;
+		CanceledAwakeRow = InRow;
+		Dropdown->DropdownBehaviour->Hide();
+		if (bReopenWithNewOptions)
+		{
+			Dropdown->SetOptions({FText::AsCultureInvariant(TEXT("New first")), FText::AsCultureInvariant(TEXT("New second")), FText::AsCultureInvariant(TEXT("New third"))});
+		}
+		Dropdown->DropdownBehaviour->Show();
+	}
+
 	UFUNCTION()
 	void OnOpening() { ++OpeningCount; }
+};
+
+/** The real copied row's BeginPlay invokes this before DuplicateWidget returns to the dropdown. */
+UCLASS()
+class UDreamDropdownRowAwakeReentryBehaviour : public UDreamUIBehaviour
+{
+	GENERATED_BODY()
+
+public:
+	UPROPERTY()
+	TObjectPtr<UDreamDropdownGenerationReentryProbe> Probe = nullptr;
+
+protected:
+	virtual void Awake() override
+	{
+		Super::Awake();
+		if (IsValid(Probe))Probe->OnRowAwake(GetWidget());
+	}
 };
