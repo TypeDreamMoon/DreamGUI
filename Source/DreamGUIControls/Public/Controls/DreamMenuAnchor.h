@@ -271,6 +271,7 @@ protected:
 	virtual void CollectParts(TArray<FDreamControlPart>& OutParts) override;
 	virtual void RealizeBuiltIn() override;
 	virtual void WireParts() override;
+	virtual void NativeOnConstruct() override;
 	/** Closing on the way to sleep, as a hidden SMenuAnchor closes its menu: a lifted popup does not go to sleep with its anchor. */
 	virtual void NativeOnDisable() override;
 	/** Closing on the way out, so an anchor destroyed while open does not strand a lifted popup. */
@@ -332,6 +333,8 @@ private:
 	static bool IsCurrentTransition(const TWeakObjectPtr<UDreamMenuAnchor>& InAnchor, uint64 InSerial, bool bInOpen);
 
 	uint64 MenuTransitionSerial = 0;
+	/** EndPlay closes callbacks too, while the widget's hierarchy-active flag can still be true. */
+	bool bEndingLifetime = false;
 
 	/** The fade the last open started, stopped where it is: a closed menu has no fade in, and a new open starts its own. */
 	void StopOpenFade();

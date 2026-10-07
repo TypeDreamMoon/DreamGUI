@@ -22,6 +22,8 @@ void FDreamMenuAnchorDestroyReentryTest::GetTests(TArray<FString>& OutBeautified
 	OutTestCommands.Add(TEXT("parent"));
 	OutBeautifiedNames.Add(TEXT("Destroying without a reopening listener still removes the popup"));
 	OutTestCommands.Add(TEXT("normal"));
+	OutBeautifiedNames.Add(TEXT("An ended lifetime stays closed and a later begin play can open again"));
+	OutTestCommands.Add(TEXT("endplay"));
 }
 
 bool FDreamMenuAnchorDestroyReentryTest::RunTest(const FString& Parameters)
@@ -56,6 +58,26 @@ bool FDreamMenuAnchorDestroyReentryTest::RunTest(const FString& Parameters)
 	Anchor->Open(false);
 	if (!TestTrue(TEXT("the opening really lifted the active popup onto the screen layer"),
 		Anchor->IsOpen() && Layer->IsOpen(Popup) && Popup->GetParent() != Anchor && Popup->GetWidgetActiveInHierarchy()))return false;
+
+	if (Parameters == TEXT("endplay"))
+	{
+		Anchor->EndPlay();
+		TestTrue(TEXT("EndPlay leaves the registered anchor alive"), IsValid(Anchor) && Anchor->HasRegistered());
+		TestFalse(TEXT("the ended lifetime is no longer playing"), Anchor->HasBegunPlay());
+		TestTrue(TEXT("EndPlay does not disguise the bug by changing hierarchy visibility"), Anchor->GetWidgetActiveInHierarchy());
+		TestEqual(TEXT("EndPlay announces one close to the reopening listener"), Probe->ReopenAttempts, 1);
+		TestFalse(TEXT("the ending lifetime cannot reopen the lifted popup"), Anchor->IsOpen() || Layer->IsOpen(Popup));
+		TestTrue(TEXT("the still-live popup returns home"), WeakPopup.IsValid() && Popup->GetParent() == Anchor);
+		Anchor->Open(false);
+		TestFalse(TEXT("an ended lifetime also rejects an explicit late open"), Anchor->IsOpen());
+		Probe->bReopenWhenClosed = false;
+		Anchor->BeginPlay();
+		Anchor->Open(false);
+		TestTrue(TEXT("the new lifetime may open that same popup normally"), Anchor->IsOpen() && Layer->IsOpen(Popup));
+		Anchor->Close();
+		TestFalse(TEXT("the new lifetime may close normally too"), Anchor->IsOpen() || Layer->IsOpen(Popup));
+		return true;
+	}
 
 	UDreamWidget* Destroyed = Parameters == TEXT("parent") ? Screen : Anchor;
 	Destroyed->DestroyWidget();

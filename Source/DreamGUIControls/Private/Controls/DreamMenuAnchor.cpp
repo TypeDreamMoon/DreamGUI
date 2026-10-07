@@ -381,7 +381,7 @@ void UDreamMenuAnchor::Open(bool bFocusMenu)
 {
 	// Disable closes the menu, whose closed callback may immediately try to reopen it. Refuse
 	// that request while inactive so the popup cannot outlive the screen that opened it.
-	if (!IsValid(this) || !GetWidgetActiveInHierarchy() || bIsOpen || !IsValid(PopupNode))
+	if (!IsValid(this) || bEndingLifetime || !GetWidgetActiveInHierarchy() || bIsOpen || !IsValid(PopupNode))
 	{
 		return;
 	}
@@ -737,8 +737,18 @@ void UDreamMenuAnchor::ToggleOpen(bool bFocusOnOpen)
 	}
 }
 
+void UDreamMenuAnchor::NativeOnConstruct()
+{
+	// A registered widget may legitimately begin play again after EndPlay without being destroyed.
+	bEndingLifetime = false;
+	Super::NativeOnConstruct();
+}
+
 void UDreamMenuAnchor::NativeOnDisable()
 {
+	// EndPlay leaves the hierarchy-active flag alone, but changes the lifecycle before this hook.
+	// Seal the old lifetime before Close can ask user code to open another lifted popup.
+	if (!HasBegunPlay())bEndingLifetime = true;
 	// A menu lifted to the screen root is not under this anchor, and does not go to sleep with it: an anchor put to
 	// sleep -- or an ancestor of it -- would otherwise leave its menu up, answering for an anchor nobody can see.
 	Close();
@@ -747,6 +757,7 @@ void UDreamMenuAnchor::NativeOnDisable()
 
 void UDreamMenuAnchor::NativeOnDestruct()
 {
+	bEndingLifetime = true;
 	// An anchor torn down while its menu is open would otherwise leave a lifted popup on the screen root
 	// with nothing left that could close it -- which is the stranded-popup failure UUIDropdown was
 	// fixed for.
