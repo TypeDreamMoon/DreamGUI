@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "UObject/Object.h"
 #include "Interaction/DreamDragDropOperation.h"
+#include "Interaction/DreamUIDragDrop.h"
 #include "DreamUIDragDropReentryTestTypes.generated.h"
 
 /**
@@ -34,5 +35,28 @@ public:
 			Action = nullptr;
 			RunOnce();
 		}
+	}
+};
+
+/** Runs a one-shot action from the acceptance query, before any hover event. */
+UCLASS()
+class UDreamDropAcceptanceReentryTarget : public UDreamUIDropTarget
+{
+	GENERATED_BODY()
+
+public:
+	TFunction<void()> Action;
+	int32 QueryCount = 0;
+
+	virtual bool CanAcceptDrop_Implementation(UDreamDragDropOperation* Operation) override
+	{
+		++QueryCount;
+		if (Action)
+		{
+			TFunction<void()> RunOnce = MoveTemp(Action);
+			Action = nullptr;
+			RunOnce();
+		}
+		return true;
 	}
 };

@@ -172,15 +172,25 @@ UDreamUIDropTarget* DreamUIDragDropPolicy::ResolveDropTarget(UDreamWidget* InEnt
 	{
 		return nullptr;
 	}
+	const TWeakObjectPtr<UDreamDragDropOperation> Operation(InOperation);
 	for (UDreamWidget* Widget = InEnterWidget; IsValid(Widget); Widget = Widget->GetParent())
 	{
+		const TWeakObjectPtr<UDreamWidget> CurrentWidget(Widget);
+		// Acceptance is game code too: it can remove a component or destroy the widget. Do not
+		// walk the component array through a callback that may resize it.
+		TArray<TWeakObjectPtr<UDreamUIDropTarget>> Targets;
 		for (UDreamUIBehaviour* Component : Widget->GetAllComponents())
 		{
-			UDreamUIDropTarget* Target = Cast<UDreamUIDropTarget>(Component);
-			if (IsValid(Target) && Target->CanAcceptDrop(InOperation))
-			{
-				return Target;
-			}
+			if (UDreamUIDropTarget* Target = Cast<UDreamUIDropTarget>(Component))Targets.Add(Target);
+		}
+		for (const TWeakObjectPtr<UDreamUIDropTarget>& Candidate : Targets)
+		{
+			UDreamUIDropTarget* Target = Candidate.Get();
+			if (Target == nullptr)continue;
+			const bool bAccepts = Target->CanAcceptDrop(InOperation);
+			if (!Operation.IsValid() || !CurrentWidget.IsValid())return nullptr;
+			Target = Candidate.Get();
+			if (bAccepts && Target != nullptr && Widget->GetAllComponents().Contains(Target))return Target;
 		}
 	}
 	return nullptr;
@@ -450,12 +460,21 @@ void UDreamUIDragDropSubsystem::UpdateDropHover(const FIntPoint& InKey)
 	// Whether the drag is still followed once a target's handler has run: one that ended it -- or ended it and began
 	// another on the same pointer -- has had the leave of whatever it lit delivered by StopFollowingDrag, and a target
 	// entered now would never hear it was left.
-	auto IsStillFollowed = [this, &InKey, Operation]()
+	const TWeakObjectPtr<UDreamPointerEventData> Pointer(PointerEvent);
+	const TWeakObjectPtr<UDreamDragDropOperation> ExpectedOperation(Operation);
+	auto IsStillFollowed = [this, &InKey, Pointer, ExpectedOperation]()
 	{
+		if (!IsValid(this) || !Pointer.IsValid() || !ExpectedOperation.IsValid())return false;
 		const FFollowedDrag* Now = FollowedDrags.Find(InKey);
-		return Now != nullptr && Now->Operation.Get() == Operation;
+		return Now != nullptr && Now->PointerEvent == Pointer && Now->Operation == ExpectedOperation
+			&& Pointer->bIsDragging && Pointer->DragOperation.Get() == ExpectedOperation.Get();
 	};
 	UDreamUIDropTarget* Target = DreamUIDragDropPolicy::ResolveDropTarget(PointerEvent->EnterWidget, Operation);
+	// CanAcceptDrop is a BlueprintNativeEvent. It may end this drag, replace it on this pointer,
+	// or start other drags and move the map's storage. Only the freshly found entry may be used.
+	if (!IsStillFollowed())return;
+	Drag = FollowedDrags.Find(InKey);
+	if (!IsValid(Target))Target = nullptr;
 	UDreamUIDropTarget* Previous = Drag->HoveredTarget.Get();
 	if (Target != Previous)
 	{

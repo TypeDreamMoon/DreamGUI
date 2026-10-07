@@ -625,4 +625,140 @@ bool FDreamUIDropExpiredHoverTest::RunTest(const FString& Parameters)
 	return true;
 }
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamUIDragAcceptanceReentryTest,
+	"DreamGUI.DragDrop.AcceptanceQueriesCanCancelReplaceAndGrowFollowedDrags",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamUIDragAcceptanceReentryTest::RunTest(const FString& Parameters)
+{
+	DreamTests::FScopedGameWorld TestWorld;
+	UDreamUIDragDropSubsystem* DragDrop = TestWorld.World->GetSubsystem<UDreamUIDragDropSubsystem>();
+	ADreamStandaloneInputEventSystemActor* EventActor = TestWorld.World->SpawnActor<ADreamStandaloneInputEventSystemActor>();
+	UDreamEventSystem* EventSystem = EventActor != nullptr ? EventActor->GetEventSystem() : nullptr;
+	UDreamUIInputSubsystem* Input = UDreamUIInputSubsystem::Get(TestWorld.World);
+	if (!TestTrue(TEXT("the drag-drop service and its real input event system exist"),
+		DragDrop != nullptr && EventSystem != nullptr && Input != nullptr))return false;
+	Input->AddEventSystem(EventSystem);
+
+	UDreamWidget* QuerySlot = NewObject<UDreamWidget>(TestWorld.World, NAME_None, RF_Transient);
+	UDreamWidget* OtherSlot = NewObject<UDreamWidget>(TestWorld.World, NAME_None, RF_Transient);
+	UDreamDropAcceptanceReentryTarget* QueryTarget = QuerySlot->AddComponent<UDreamDropAcceptanceReentryTarget>();
+	UDreamUIDropTarget* OtherTarget = OtherSlot->AddComponent<UDreamUIDropTarget>();
+	if (!TestNotNull(TEXT("the acceptance query target was created"), QueryTarget)
+		|| !TestNotNull(TEXT("the other target was created"), OtherTarget))return false;
+	UDreamDragDropCallProbe* Entered = NewObject<UDreamDragDropCallProbe>(TestWorld.World);
+	UDreamDragDropCallProbe* Over = NewObject<UDreamDragDropCallProbe>(TestWorld.World);
+	QueryTarget->OnDragEnter.AddDynamic(Entered, &UDreamDragDropCallProbe::OnOperation);
+	QueryTarget->OnDragOver.AddDynamic(Over, &UDreamDragDropCallProbe::OnOperation);
+	auto MakeDrag = [&TestWorld](int32 InPointerID, UDreamWidget* InEnterWidget)
+	{
+		UDreamPointerEventData* EventData = NewObject<UDreamPointerEventData>(TestWorld.World);
+		EventData->UserIndex = 0;
+		EventData->PointerID = InPointerID;
+		EventData->bIsDragging = true;
+		EventData->EnterWidget = InEnterWidget;
+		EventData->EventType = EDreamUIPointerEventType::BeginDrag;
+		EventData->DragOperation = NewObject<UDreamDragDropOperation>(TestWorld.World);
+		return EventData;
+	};
+
+	bool bCancelledInsideQuery = false;
+	QueryTarget->Action = [DragDrop, &bCancelledInsideQuery]()
+	{
+		bCancelledInsideQuery = DragDrop->CancelActiveDragForUser(0);
+	};
+	UDreamPointerEventData* Cancelled = MakeDrag(0, QuerySlot);
+	EventSystem->CallOnPointerBeginDrag(QuerySlot, Cancelled);
+	TestEqual(TEXT("CanAcceptDrop actually ran its callback"), QueryTarget->QueryCount, 1);
+	TestTrue(TEXT("that callback cancelled the entering drag"), bCancelledInsideQuery);
+	TestEqual(TEXT("cancelled drag bookkeeping was removed"), DragDrop->GetDragCount(), 0);
+	TestEqual(TEXT("the cancelled query never enters its target"), Entered->CallCount, 0);
+	TestEqual(TEXT("and never sends over"), Over->CallCount, 0);
+	TestFalse(TEXT("no cancelled operation leaves the target lit"), QueryTarget->IsDragHovered());
+
+	int32 DragsStartedInsideQuery = 0;
+	QueryTarget->Action = [EventSystem, OtherSlot, &MakeDrag, &DragsStartedInsideQuery]()
+	{
+		// Enough distinct pointers to grow the map while the original query is on the stack.
+		for (int32 PointerID = 1; PointerID <= 64; ++PointerID)
+		{
+			UDreamPointerEventData* Finger = MakeDrag(PointerID, OtherSlot);
+			EventSystem->CallOnPointerBeginDrag(OtherSlot, Finger);
+			++DragsStartedInsideQuery;
+		}
+	};
+	UDreamPointerEventData* Surviving = MakeDrag(0, QuerySlot);
+	EventSystem->CallOnPointerBeginDrag(QuerySlot, Surviving);
+	TestEqual(TEXT("the second acceptance callback actually ran"), QueryTarget->QueryCount, 2);
+	TestEqual(TEXT("it started every additional drag"), DragsStartedInsideQuery, 64);
+	TestEqual(TEXT("all new entries and the original drag survive map growth"), DragDrop->GetDragCount(), 65);
+	TestEqual(TEXT("the reacquired entry stores the original drag's hover"), DragDrop->GetHoveredTargetForUserPointer(0, 0),
+		static_cast<UDreamUIDropTarget*>(QueryTarget));
+	TestEqual(TEXT("the original operation entered once after the query"), Entered->CountFor(Surviving->DragOperation.Get()), 1);
+	TestEqual(TEXT("and received its own over"), Over->CountFor(Surviving->DragOperation.Get()), 1);
+	TestTrue(TEXT("the additional pointer's hover was kept"), OtherTarget->IsDragHovered());
+	DragDrop->CancelActiveDragForUser(0);
+	TestEqual(TEXT("all grew entries can subsequently be cancelled"), DragDrop->GetDragCount(), 0);
+
+	UDreamPointerEventData* Replacement = MakeDrag(0, OtherSlot);
+	QueryTarget->Action = [EventSystem, OtherSlot, Replacement]()
+	{
+		EventSystem->CallOnPointerBeginDrag(OtherSlot, Replacement);
+	};
+	UDreamPointerEventData* Replaced = MakeDrag(0, QuerySlot);
+	EventSystem->CallOnPointerBeginDrag(QuerySlot, Replaced);
+	TestEqual(TEXT("the replacing acceptance callback actually ran"), QueryTarget->QueryCount, 3);
+	TestEqual(TEXT("only the new operation is still followed on this pointer"), DragDrop->GetDragOperationForUserPointer(0, 0),
+		Replacement->DragOperation.Get());
+	TestEqual(TEXT("the old query never overwrites its replacement's hover"), DragDrop->GetHoveredTargetForUserPointer(0, 0), OtherTarget);
+	TestEqual(TEXT("the replaced operation never receives enter"), Entered->CountFor(Replaced->DragOperation.Get()), 0);
+	TestEqual(TEXT("or over"), Over->CountFor(Replaced->DragOperation.Get()), 0);
+	TestFalse(TEXT("the replaced query target stays unlit"), QueryTarget->IsDragHovered());
+	DragDrop->CancelActiveDragForUser(0);
+
+	bool bDestroyedInsideQuery = false;
+	QueryTarget->Action = [QuerySlot, &bDestroyedInsideQuery]()
+	{
+		bDestroyedInsideQuery = true;
+		QuerySlot->DestroyWidget();
+	};
+	UDreamPointerEventData* DestroyedTargetDrag = MakeDrag(0, QuerySlot);
+	EventSystem->CallOnPointerBeginDrag(QuerySlot, DestroyedTargetDrag);
+	TestTrue(TEXT("the final acceptance callback actually destroyed its widget"), bDestroyedInsideQuery);
+	TestFalse(TEXT("its target is no longer valid"), IsValid(QueryTarget));
+	TestNull(TEXT("the query returns no destroyed hover target"), DragDrop->GetHoveredTargetForUserPointer(0, 0));
+	TestEqual(TEXT("the destroyed target receives no new enter"), Entered->CountFor(DestroyedTargetDrag->DragOperation.Get()), 0);
+	TestEqual(TEXT("or over"), Over->CountFor(DestroyedTargetDrag->DragOperation.Get()), 0);
+	DragDrop->CancelActiveDragForUser(0);
+	TestEqual(TEXT("the final drag can also be released"), DragDrop->GetDragCount(), 0);
+
+	// Removal does not garbage-mark a behaviour. Acceptance must also check it still belongs to
+	// the component array, rather than returning a valid but detached candidate from the snapshot.
+	UDreamWidget* RemovingSlot = NewObject<UDreamWidget>(TestWorld.World, NAME_None, RF_Transient);
+	UDreamDropAcceptanceReentryTarget* RemovingTarget = RemovingSlot->AddComponent<UDreamDropAcceptanceReentryTarget>();
+	if (!TestNotNull(TEXT("the self-removing target was created"), RemovingTarget))return false;
+	RemovingTarget->OnDragEnter.AddDynamic(Entered, &UDreamDragDropCallProbe::OnOperation);
+	RemovingTarget->OnDragOver.AddDynamic(Over, &UDreamDragDropCallProbe::OnOperation);
+	bool bRemovedInsideQuery = false;
+	RemovingTarget->Action = [RemovingSlot, RemovingTarget, &bRemovedInsideQuery]()
+	{
+		bRemovedInsideQuery = true;
+		RemovingSlot->RemoveComponent(RemovingTarget);
+	};
+	UDreamPointerEventData* RemovedTargetDrag = MakeDrag(0, RemovingSlot);
+	EventSystem->CallOnPointerBeginDrag(RemovingSlot, RemovedTargetDrag);
+	TestEqual(TEXT("the self-removing candidate was queried once"), RemovingTarget->QueryCount, 1);
+	TestTrue(TEXT("its acceptance callback removed the component"), bRemovedInsideQuery);
+	TestTrue(TEXT("the removed object is still live, so validity alone would not reject it"), IsValid(RemovingTarget));
+	TestFalse(TEXT("the component no longer belongs to that slot"), RemovingSlot->GetAllComponents().Contains(RemovingTarget));
+	TestNull(TEXT("the detached candidate is not returned as a hover target"), DragDrop->GetHoveredTargetForUserPointer(0, 0));
+	TestEqual(TEXT("the detached target receives no enter"), Entered->CountFor(RemovedTargetDrag->DragOperation.Get()), 0);
+	TestEqual(TEXT("or over"), Over->CountFor(RemovedTargetDrag->DragOperation.Get()), 0);
+	DragDrop->CancelActiveDragForUser(0);
+	RemovingSlot->DestroyWidget();
+	OtherSlot->DestroyWidget();
+	return true;
+}
+
 #endif
