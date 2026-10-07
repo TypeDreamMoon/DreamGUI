@@ -89,4 +89,51 @@ bool FDreamDropdownGeneratedRowDestroyOwnerReentryTest::RunTest(const FString& P
 	return bValid;
 }
 
+IMPLEMENT_COMPLEX_AUTOMATION_TEST(FDreamDropdownGeneratedRowReopenReentryTest,
+	"DreamGUI.Dropdown.AGeneratedRowCanCloseAndReopenWithoutTheOldShowResuming",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+void FDreamDropdownGeneratedRowReopenReentryTest::GetTests(TArray<FString>& OutBeautifiedNames, TArray<FString>& OutTestCommands)const
+{
+	OutBeautifiedNames.Add(TEXT("Keeping the same options"));
+	OutTestCommands.Add(TEXT("same"));
+	OutBeautifiedNames.Add(TEXT("Replacing the options"));
+	OutTestCommands.Add(TEXT("new"));
+}
+
+bool FDreamDropdownGeneratedRowReopenReentryTest::RunTest(const FString& Parameters)
+{
+	const bool bReplaceOptions = Parameters == TEXT("new");
+	const int32 ExpectedRows = bReplaceOptions ? 3 : 2;
+	FDreamDriverRig Rig = FDreamDriverRig::Headless(FIntPoint(1280, 720));
+	TStrongObjectPtr<UDreamDropdownGenerationReentryProbe> Probe(NewObject<UDreamDropdownGenerationReentryProbe>());
+	Probe->bReopenWithNewOptions = bReplaceOptions;
+	Probe->bReopenWithSameOptions = !bReplaceOptions;
+	UDreamDropdown* Dropdown = DreamDropdownGenerationReentryTestLocal::MakeDropdown(*this, Rig, *Probe.Get());
+	if (Dropdown == nullptr)return false;
+	Dropdown->DropdownBehaviour->Show();
+	Rig.PumpFrames(30);
+	TestEqual(TEXT("the generated-row callback actually closed and reopened once"), Probe->MutationCount, 1);
+	TestTrue(TEXT("the nested Show owns the public open state"), Dropdown->IsOpen());
+	TestTrue(TEXT("the nested Show keeps the list awake after the old hide's duration"), Dropdown->ListNode->GetWidgetActive());
+	TestEqual(TEXT("only the surviving Show announces its opening"), Probe->OpeningCount, 1);
+	TestEqual(TEXT("the old pass generated only one row, then the new pass generated all its rows"), Probe->GeneratedCount, ExpectedRows + 1);
+	TArray<UDreamWidget*> Descendants;
+	UDreamWidget::CollectChildrenWidgets(Dropdown->ListNode, Descendants, false);
+	int32 RowCount = 0;
+	for (UDreamWidget* Widget : Descendants)
+	{
+		if (IsValid(Widget) && Widget != Dropdown->ItemTemplateNode && Widget->GetComponent<UUIDropdownItemComponent>() != nullptr)
+		{
+			++RowCount;
+		}
+	}
+	TestEqual(TEXT("the new list has exactly its options and no stale row"), RowCount, ExpectedRows);
+	TestEqual(TEXT("the new options survive the outer generation pass"), Dropdown->GetOptions().Num(), ExpectedRows);
+	Dropdown->DropdownBehaviour->Hide();
+	Rig.PumpFrames(30);
+	TestFalse(TEXT("the new list closes normally"), Dropdown->IsOpen());
+	TestFalse(TEXT("the new list goes to sleep"), Dropdown->ListNode->GetWidgetActive());
+	return true;
+}
 #endif

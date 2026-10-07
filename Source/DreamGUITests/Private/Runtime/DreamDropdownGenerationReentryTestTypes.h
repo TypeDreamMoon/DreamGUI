@@ -18,6 +18,8 @@ public:
 	TObjectPtr<UDreamDropdown> Dropdown = nullptr;
 
 	bool bDestroyOwner = false;
+	bool bReopenWithNewOptions = false;
+	bool bReopenWithSameOptions = false;
 	bool bOwnerWasDestroyedInsideCallback = false;
 	int32 GeneratedCount = 0;
 	int32 MutationCount = 0;
@@ -38,6 +40,11 @@ public:
 			else
 			{
 				Dropdown->DropdownBehaviour->Hide();
+				if (bReopenWithNewOptions || bReopenWithSameOptions)
+				{
+					if (bReopenWithNewOptions)Dropdown->SetOptions({FText::AsCultureInvariant(TEXT("New first")), FText::AsCultureInvariant(TEXT("New second")), FText::AsCultureInvariant(TEXT("New third"))});
+					Dropdown->DropdownBehaviour->Show();
+				}
 			}
 		}
 	}
