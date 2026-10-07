@@ -75,6 +75,23 @@ bool DreamUIWidgetComponentClipboard_CanTakeComponent(const UDreamUIBehaviour* I
 UDreamUIBehaviour* DreamUIWidgetComponentClipboard_Snapshot(UDreamUIBehaviour* InSource)
 {
 	if (!IsValid(InSource))return nullptr;
+	// Copy and Cut select a live preview component, while Paste writes onto the asset. Snapshot
+	// its authored counterpart before a Cut rebuild destroys the preview and its navigation targets.
+	// The ordinary in-place inspector keeps copying the selected component as before.
+	if (UDreamWidget* SourceWidget = InSource->GetWidget(); IsValid(SourceWidget) && SourceWidget->GetWorld() != nullptr)
+	{
+		if (TSharedPtr<FDreamWidgetBlueprintEditor> Designer = FDreamWidgetBlueprintEditor::GetEditorByWorld(SourceWidget->GetWorld()).Pin())
+		{
+			if (UDreamWidget* Template = Designer->GetTemplateWidget(SourceWidget))
+			{
+				const int32 Index = SourceWidget->GetAllComponents().Find(InSource);
+				if (!Template->GetAllComponents().IsValidIndex(Index))return nullptr;
+				UDreamUIBehaviour* Authored = Template->GetAllComponents()[Index];
+				if (!IsValid(Authored) || Authored->GetClass() != InSource->GetClass())return nullptr;
+				InSource = Authored;
+			}
+		}
+	}
 	auto Snapshot = NewObject<UDreamUIBehaviour>(GetTransientPackage(), InSource->GetClass(), NAME_None, RF_Transient);
 	UEngine::FCopyPropertiesForUnrelatedObjectsParams Options;
 	UEditorEngine::CopyPropertiesForUnrelatedObjects(InSource, Snapshot, Options);

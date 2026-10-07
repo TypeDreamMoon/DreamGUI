@@ -500,7 +500,10 @@ private:
 		{
 			return;
 		}
-		DreamUIWidgetComponentClipboard().Reset(DreamUIWidgetComponentClipboard_Snapshot(GetSelectedComponent()));
+		if (UDreamUIBehaviour* Snapshot = DreamUIWidgetComponentClipboard_Snapshot(GetSelectedComponent()))
+		{
+			DreamUIWidgetComponentClipboard().Reset(Snapshot);
+		}
 	}
 
 	void HandleCutSelectedComponent()
@@ -512,10 +515,14 @@ private:
 			return;
 		}
 
+		// A preview may have runtime-only components or a different ordering from its template.
+		// If none can be copied safely, keep both the current clipboard and the component intact.
+		TStrongObjectPtr<UDreamUIBehaviour> Snapshot(DreamUIWidgetComponentClipboard_Snapshot(Component));
+		if (!Snapshot.IsValid())return;
 		const FScopedTransaction Transaction(LOCTEXT("CutDreamWidgetComponent_Transaction", "Cut DreamUI Component"));
 		ModifyWidgetForComponentEdit(Widget);
 
-		DreamUIWidgetComponentClipboard().Reset(DreamUIWidgetComponentClipboard_Snapshot(Component));
+		DreamUIWidgetComponentClipboard().Reset(Snapshot.Get());
 		// On the template when a designer owns this widget; the preview's copy goes with the rebuild.
 		if (FDreamWidgetBlueprintEditor* Designer = FindTemplateOwningDesigner(Widget))
 		{
