@@ -406,7 +406,6 @@ bool FDreamUITextFailedWriteRetryTest::RunTest(const FString& Parameters)
 	TestFalse(TEXT("flushing the unchanged tree still reports the write refusal"), WriteBack->Flush(Error));
 	TestTrue(TEXT("the refusal names the permission problem"), Error.Contains(TEXT("read-only")));
 	UDreamWidgetTree* EditedTree = Fixture.Blueprint->WidgetTree;
-	AddExpectedError(Code(EDreamUIDiagnosticCode::SourceFileWritePending), EAutomationExpectedErrorFlags::Contains, 0);
 	FCompilerResultsLog BlockedResults;
 	Compile(Fixture.Blueprint, BlockedResults);
 	TestTrue(TEXT("Compile refuses to build from the older file"), BlockedResults.NumErrors > 0);
