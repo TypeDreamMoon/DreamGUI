@@ -21,6 +21,7 @@
 #include "MovieSceneTimeController.h"
 #include "GameFramework/WorldSettings.h"
 #include "HAL/IConsoleManager.h"
+#include "UObject/StrongObjectPtr.h"
 
 static TAutoConsoleVariable<int32> CVarDreamUIReuseAnimationPlayers(
 	TEXT("DreamUI.Animation.ReusePlayers"),
@@ -785,6 +786,11 @@ void UDreamWidgetAnimationComponent::ReleaseActiveSequencePlayer(UDreamWidgetAni
 	}
 	DREAMUI_DETAIL_SCOPE(DreamUI_ReleaseAnimationPlayer);
 
+	// The active list's strong reference is about to go. Restoring a property can collect
+	// garbage while Stop is still on the stack, including the player/ticker reference cycle.
+	const TStrongObjectPtr<UDreamWidgetAnimationPlayer> KeepPlayer(Player);
+	const TWeakObjectPtr<UDreamWidgetAnimationPlayer> WeakPlayer(Player);
+	const TWeakObjectPtr<UDreamWidgetAnimationComponent> WeakThis(this);
 	// Retire it before Stop restores properties or Finished calls game code. A callback
 	// stopping this instance again must not emit another event or duplicate its spare entry.
 	ActiveSequencePlayers.RemoveSingleSwap(Player);
@@ -793,6 +799,9 @@ void UDreamWidgetAnimationComponent::ReleaseActiveSequencePlayer(UDreamWidgetAni
 	{
 		Player->Stop();
 	}
+	// The restore callback may explicitly destroy the owner or the player too. That
+	// retired instance has no live component left to pool it or announce its finish.
+	if (!WeakThis.IsValid() || !WeakPlayer.IsValid())return;
 	if (!KeepSparePlayer(Player))
 	{
 		Player->TearDown();
