@@ -342,8 +342,15 @@ void UDreamWidgetGeneratedClass::InitializeWidgetStatic(UDreamUserWidget* InUser
 		}
 	};
 	BindAnimationVariables(InUserWidget);
-	InstancedTree->ForEachWidget([&](UDreamWidget* Widget)
+	// Initializing a nested user widget adds its private children. Bind only the authored
+	// snapshot, including this tree's named-slot content, before any such expansion.
+	const TArray<UDreamWidget*> WidgetsToBind = InstancedTree->GetAllWidgets();
+	for (UDreamWidget* Widget : WidgetsToBind)
 	{
+		if (!IsValid(Widget) || Widget->GetTypedOuter<UDreamWidgetTree>() != InstancedTree)
+		{
+			continue;
+		}
 		const FName VariableName = UDreamWidgetTree::MakeWidgetVariableName(Widget);
 		if (FObjectPropertyBase** PropertyPtr = ObjectPropertiesByName.Find(VariableName))
 		{
@@ -368,7 +375,7 @@ void UDreamWidgetGeneratedClass::InitializeWidgetStatic(UDreamUserWidget* InUser
 		// graph that plays the archetype's copy animates a tree nobody is looking at.
 		BindAnimationVariables(Widget);
 
-				// A nested user widget builds its own contents from its own class, the way UMG initializes
+		// A nested user widget builds its own contents from its own class, the way UMG initializes
 		// instanced sub-widgets during DuplicateAndInitializeFromWidgetTree.
 		if (UDreamUserWidget* NestedUserWidget = Cast<UDreamUserWidget>(Widget))
 		{
@@ -377,7 +384,7 @@ void UDreamWidgetGeneratedClass::InitializeWidgetStatic(UDreamUserWidget* InUser
 				NestedUserWidget->Initialize();
 			}
 		}
-	});
+	}
 
 	// Filling the host's slots used to be step 3b, here. It is now UDreamUserWidget::
 	// AttachNamedSlotContent, called at the end of Initialize -- late enough that a NATIVE control

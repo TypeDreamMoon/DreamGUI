@@ -13,6 +13,7 @@
 #include "DreamScopedWorld.h"
 #include "DreamWidgetBlueprint.h"
 #include "Engine/World.h"
+#include "Interaction/DreamContentWidget.h"
 #include "Kismet2/CompilerResultsLog.h"
 #include "Kismet2/KismetEditorUtilities.h"
 #include "Misc/ScopeExit.h"
@@ -95,11 +96,16 @@ bool FDreamNestedWidgetVariableBindingTest::RunTest(const FString& Parameters)
 	FScopedBlueprint Inner(TEXT("BP_PrivateWidget"));
 	Inner.Blueprint->GetOrCreateWidgetTree()->RootWidget->SetDisplayName(TEXT("InnerRoot"));
 	Inner.AddWidget(TEXT("SharedHeader"));
+	Inner.AddWidget(TEXT("Body"))->AddComponent<UDreamNamedSlot>();
 	if (!Inner.Compile(*this)) return false;
 	FScopedBlueprint Outer(TEXT("BP_WidgetBindingHost"));
 	Outer.Blueprint->GetOrCreateWidgetTree()->RootWidget->SetDisplayName(TEXT("OuterRoot"));
 	Outer.AddWidget(TEXT("SharedHeader"));
-	Outer.AddWidget(TEXT("Nested"), Inner.Blueprint->GeneratedClass);
+	UDreamUserWidget* AuthoredNested = CastChecked<UDreamUserWidget>(Outer.AddWidget(TEXT("Nested"), Inner.Blueprint->GeneratedClass));
+	UDreamWidget* SlotContent = Outer.Blueprint->GetOrCreateWidgetTree()->ConstructWidget<UDreamWidget>();
+	SlotContent->SetDisplayName(TEXT("HostSlotContent"));
+	if (!TestTrue(TEXT("the host authors content in its nested widget's slot"),
+		AuthoredNested->SetContentForNamedSlot(TEXT("Body"), SlotContent))) return false;
 	if (!Outer.Compile(*this)) return false;
 
 	DreamTests::FScopedGameWorld TestWorld;
@@ -112,6 +118,11 @@ bool FDreamNestedWidgetVariableBindingTest::RunTest(const FString& Parameters)
 		|| !TestNotNull(TEXT("the host has its nested Blueprint instance"), Nested)) return false;
 	UDreamWidget* PrivateHeader = DirectChild(Nested->GetContentRoot(), TEXT("SharedHeader"));
 	if (!TestNotNull(TEXT("the nested Blueprint initialized its private header"), PrivateHeader)) return false;
+	UDreamWidget* LiveSlotContent = Nested->GetContentForNamedSlot(TEXT("Body"));
+	if (!TestNotNull(TEXT("the live nested widget received the host's slot content"), LiveSlotContent)) return false;
+	TestEqual(TEXT("slot content remains authored by the host's tree"), LiveSlotContent->GetTypedOuter<UDreamWidgetTree>(), Instance->GetWidgetTree());
+	TestEqual(TEXT("the host also binds its variable for content inside the nested slot"), BoundVariable(Instance, TEXT("HostSlotContent")), static_cast<UObject*>(LiveSlotContent));
+	TestEqual(TEXT("the supplied content is attached to the nested slot"), LiveSlotContent->GetParent(), Nested->FindSlotWidget(TEXT("Body")));
 	TestNotEqual(TEXT("the two equal names denote independent widgets"), OwnHeader, PrivateHeader);
 	TestEqual(TEXT("the nested widget variable binds to its private header"), BoundVariable(Nested, TEXT("SharedHeader")), static_cast<UObject*>(PrivateHeader));
 	TestEqual(TEXT("the host widget variable stays bound to its own header"), BoundVariable(Instance, TEXT("SharedHeader")), static_cast<UObject*>(OwnHeader));
