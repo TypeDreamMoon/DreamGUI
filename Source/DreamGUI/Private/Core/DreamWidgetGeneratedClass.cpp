@@ -9,6 +9,7 @@
 #include "DreamGUI.h"
 #include "UObject/LinkerLoad.h"
 #include "UObject/Package.h"
+#include "UObject/UObjectHash.h"
 #include "UObject/UnrealType.h"
 #include "Animation/DreamWidgetAnimationComponent.h"
 #include "Animation/DreamWidgetAnimation.h"
@@ -151,10 +152,19 @@ namespace
 		InInstancedTree->ForEachWidget([&](UDreamWidget* Widget)
 		{
 			RetargetReferencesOn(Widget, InInstancedTree, InArchetypeTree);
-			RetargetReferencesOn(Widget->GetVisual(), InInstancedTree, InArchetypeTree);
-			for (UDreamUIBehaviour* Behaviour : Widget->GetAllComponents())
+			// Instanced inline objects, such as a component's play tweens, own reflected event
+			// structs that the widget/component property iterator cannot enter.
+			TArray<UObject*> OwnedObjects;
+			GetObjectsWithOuter(Widget, OwnedObjects, EGetObjectsFlags::IncludeNestedObjects);
+			for (UObject* Owned : OwnedObjects)
 			{
-				RetargetReferencesOn(Behaviour, InInstancedTree, InArchetypeTree);
+				// Keep nested user-widget trees in their own namespace; external assets are never
+				// enumerated because only the widget's Outer descendants are visited.
+				if (IsValid(Owned) && !Owned->IsA<UDreamWidget>() && !Owned->IsA<UDreamWidgetTree>()
+					&& Owned->GetTypedOuter<UDreamWidget>() == Widget)
+				{
+					RetargetReferencesOn(Owned, InInstancedTree, InArchetypeTree);
+				}
 			}
 		});
 	}
