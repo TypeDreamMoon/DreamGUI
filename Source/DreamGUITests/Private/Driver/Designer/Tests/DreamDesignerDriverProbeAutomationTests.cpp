@@ -492,6 +492,149 @@ bool FDreamDesignerDriverDropIntoOverlayTest::RunTest(const FString&)
 	return true;
 }
 
+/*
+ * A palette drop onto a placed Button in the viewport lands in the Button's default slot.
+ *
+ * The designer editing tests drive the same rule straight through DesignerCreateWidget on the hole;
+ * this one drives the ROUTE: a drag from the palette, let go over the Button's pixels, and
+ * the walk that turns the widget under the cursor into the container that receives the drop. That walk
+ * used to ask the Button's own container, which arranges only the Button's furniture -- its size box
+ * already holds the face and refuses -- so the drop climbed past the Button to the page and the widget
+ * landed beside it instead of in it. A UMG Button takes what is dropped on it as its content, and so
+ * does this one: the asset records the widget as the Button's child, the preview shows it in the
+ * Button's Content hole, and a compile keeps it there.
+ */
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamDesignerDriverDropOntoPlacedButtonTest,
+	"DreamGUI.Designer.Driver.DroppingOntoAPlacedButtonPutsTheWidgetInItsDefaultSlot",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamDesignerDriverDropOntoPlacedButtonTest::RunTest(const FString&)
+{
+	using namespace DreamDesignerDriverProbeLocal;
+
+	// A Canvas Panel on the root, so the Button keeps its own size where it is dropped and the page
+	// around it is a container that would take the second drop if the Button did not.
+	TSharedRef<FProbeState> State = OpenProbe(TEXT("DesignerDriverDropOntoButton"), /*bGiveRootAPanel*/true);
+	TestTrue(TEXT("The designer opened"), State->Driver.IsValid());
+	ArrangeViewportSize(State);
+
+	EnqueueFrames(2);
+
+	TFunction<bool()> DropButton = [this, State]()
+	{
+		if (!State->bAlive || !State->Driver.IsValid())
+		{
+			return true;
+		}
+		const FIntPoint Size = State->Driver->ViewportPixelSize();
+		if (Size.X <= 0 || Size.Y <= 0)
+		{
+			AddError(TEXT("The designer viewport is still zero-sized after a size was asked for, so ")
+				TEXT("there is no pixel to drop onto and nothing below can be read."));
+			State->bAlive = false;
+			return true;
+		}
+		TestTrue(TEXT("A Button is dropped on the page"),
+			State->Driver->DropFromPalette(UDreamButton::StaticClass(), State->Driver->ViewportCentrePixel()));
+		return true;
+	};
+	EnqueueStep(DropButton);
+
+	EnqueueFrames(1);
+
+	TFunction<bool()> DropOntoButton = [this, State]()
+	{
+		if (!State->bAlive || !State->Driver.IsValid())
+		{
+			return true;
+		}
+		UDreamWidget* PreviewButton = FirstLiveChild(State->Driver->BlueprintRoot());
+		if (!TestTrue(TEXT("The Button is in the preview, where it can be pointed at"),
+			PreviewButton != nullptr && PreviewButton->IsA(UDreamButton::StaticClass())))
+		{
+			State->bAlive = false;
+			return true;
+		}
+		// A pixel the Button occupies, from the projection the designer draws its own outlines with.
+		const TOptional<FIntPoint> Pixel = State->Driver->WidgetPixel(PreviewButton);
+		if (!TestTrue(TEXT("The Button projects to a pixel"), Pixel.IsSet()))
+		{
+			State->bAlive = false;
+			return true;
+		}
+		// The Basic group's plain Widget row: nothing about it decides where it goes but the drop.
+		TestTrue(TEXT("A plain widget is dropped on the Button"),
+			State->Driver->DropFromPalette(nullptr, Pixel.GetValue()));
+		return true;
+	};
+	EnqueueStep(DropOntoButton);
+
+	EnqueueFrames(1);
+
+	// Where the dropped widget is, in the asset and in the preview: asked once after the drop and once
+	// after a compile, which rebuilds the preview from the asset and so shows what the asset holds.
+	auto CheckItIsInTheButton = [this, State](const TCHAR* InWhen)
+	{
+		UDreamWidget* AuthoredRoot = TemplateRoot(State);
+		if (!TestNotNull(*FString::Printf(TEXT("%s: the authoring tree still has a root"), InWhen), AuthoredRoot))
+		{
+			return;
+		}
+		TestEqual(*FString::Printf(TEXT("%s: the page holds the Button and nothing beside it"), InWhen),
+			State->Driver->ChildCountUnder(AuthoredRoot), 1);
+		UDreamWidget* AuthoredButton = FirstLiveChild(AuthoredRoot);
+		if (!TestTrue(*FString::Printf(TEXT("%s: and that is the Button"), InWhen),
+			AuthoredButton != nullptr && AuthoredButton->IsA(UDreamButton::StaticClass())))
+		{
+			return;
+		}
+		UDreamWidget* AuthoredDropped = FirstLiveChild(AuthoredButton);
+		if (!TestNotNull(*FString::Printf(TEXT("%s: the dropped widget is the Button's child in the asset"), InWhen), AuthoredDropped))
+		{
+			return;
+		}
+		TestFalse(*FString::Printf(TEXT("%s: and it is the plain widget, not another Button"), InWhen),
+			AuthoredDropped->IsA(UDreamButton::StaticClass()));
+		TestNull(*FString::Printf(TEXT("%s: with no named binding, the Content slot being the Button's default one"), InWhen),
+			Cast<UDreamUserWidget>(AuthoredButton)->GetContentForNamedSlot(UDreamButton::ContentSlotName));
+
+		const UDreamUserWidget* PreviewButton = Cast<UDreamUserWidget>(State->Driver->PreviewFor(AuthoredButton));
+		const UDreamWidget* Hole = PreviewButton != nullptr ? PreviewButton->FindSlotWidget(UDreamButton::ContentSlotName) : nullptr;
+		const UDreamWidget* PreviewDropped = State->Driver->PreviewFor(AuthoredDropped);
+		TestTrue(*FString::Printf(TEXT("%s: the preview shows it in the Button's Content hole"), InWhen),
+			::IsValid(Hole) && ::IsValid(PreviewDropped) && PreviewDropped->GetParent() == Hole);
+	};
+
+	TFunction<bool()> CheckThenCompile = [State, CheckItIsInTheButton]()
+	{
+		if (!State->bAlive || !State->Driver.IsValid())
+		{
+			return true;
+		}
+		CheckItIsInTheButton(TEXT("After the drop"));
+		State->Driver->Compile();
+		return true;
+	};
+	EnqueueStep(CheckThenCompile);
+
+	EnqueueFrames(2);
+
+	TFunction<bool()> CheckAfterCompile = [State, CheckItIsInTheButton]()
+	{
+		if (!State->bAlive || !State->Driver.IsValid())
+		{
+			return true;
+		}
+		CheckItIsInTheButton(TEXT("After a compile"));
+		return true;
+	};
+	EnqueueStep(CheckAfterCompile);
+
+	EnqueueTeardown(State);
+	return true;
+}
+
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamDesignerDriverCompileSurvivesTest,
 	"DreamGUI.Designer.Driver.CompilingWithTheDesignerOpenSurvivesTheNextFrames",
