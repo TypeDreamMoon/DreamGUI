@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "Core/DreamUIBehaviour.h"
 #include "UObject/Object.h"
+#include "Event/DreamUIEventDelegate.h"
 #include "DreamEventBindingTestTypes.generated.h"
 
 /**
@@ -63,6 +64,16 @@ public:
 	int32 TouchCount = 0;
 	int32 PayloadCallCount = 0;
 	FDreamEventBindingTestPayload LastPayload;
+	int32 WidgetCallCount = 0;
+
+	UPROPERTY()
+	FDreamUIEventDelegate AuthoredEvent;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UDreamWidget> LastWidget = nullptr;
+
+	UFUNCTION()
+	void TakeWidget(UDreamWidget* InWidget) { LastWidget = InWidget; ++WidgetCallCount; }
 
 	UFUNCTION()
 	void Touch() { ++TouchCount; }

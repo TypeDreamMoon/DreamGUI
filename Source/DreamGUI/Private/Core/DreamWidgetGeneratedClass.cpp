@@ -9,6 +9,7 @@
 #include "DreamGUI.h"
 #include "UObject/LinkerLoad.h"
 #include "UObject/Package.h"
+#include "UObject/UnrealType.h"
 #include "Animation/DreamWidgetAnimationComponent.h"
 #include "Animation/DreamWidgetAnimation.h"
 #include "Animation/DreamUISequence.h"
@@ -65,22 +66,34 @@ namespace
 		return nullptr;
 	}
 
-	/** Rewrite one container's object properties that still name the archetype tree. */
+	/** Rewrite references in properties, structs and containers that still name the archetype tree. */
 	void RetargetReferencesOn(UObject* InContainer, UDreamWidgetTree* InInstancedTree, const UDreamWidgetTree* InArchetypeTree)
 	{
 		if (!IsValid(InContainer))
 		{
 			return;
 		}
-		for (TFieldIterator<FObjectPropertyBase> It(InContainer->GetClass(), EFieldIterationFlags::Default); It; ++It)
+		// An authored event's HelperWidget and ReferenceObject live in EventList's struct entries.
+		// A field iterator sees only the top-level event property, leaving every instance's route
+		// aimed at the archetype. The value iterator reaches those entries, as DuplicateSubtree does.
+		for (TPropertyValueIterator<FObjectPropertyBase> It(InContainer->GetClass(), InContainer); It; ++It)
 		{
+			const FObjectPropertyBase* Property = It.Key();
 			// Soft and class references cannot name a node of a tree, and walking them would resolve
 			// paths for nothing.
-			if (It->IsA<FSoftObjectProperty>() || It->IsA<FClassProperty>())
+			if (Property->IsA<FSoftObjectProperty>() || Property->IsA<FClassProperty>())
 			{
 				continue;
 			}
-			UObject* Value = It->GetObjectPropertyValue_InContainer(InContainer);
+			// Preserve hashed keys, matching the subtree-copy pass: changing one in place would leave
+			// its map or set hashed by the old reference.
+			const FMapProperty* OwningMap = Property->GetOwner<FMapProperty>();
+			if (Property->GetOwner<FSetProperty>() != nullptr || (OwningMap != nullptr && OwningMap->KeyProp == Property))
+			{
+				continue;
+			}
+			void* ValueAddress = const_cast<void*>(It.Value());
+			UObject* Value = Property->GetObjectPropertyValue(ValueAddress);
 			// The criterion is where the value lives, not how it is typed: anything still inside the
 			// archetype tree is by construction the wrong object for this instance to be holding.
 			if (Value == nullptr || !Value->IsIn(InArchetypeTree))
@@ -89,7 +102,7 @@ namespace
 			}
 			if (UObject* Counterpart = FindIntraTreeCounterpart(Value, InInstancedTree))
 			{
-				It->SetObjectPropertyValue_InContainer(InContainer, Counterpart);
+				Property->SetObjectPropertyValue(ValueAddress, Counterpart);
 			}
 			else
 			{
@@ -97,7 +110,7 @@ namespace
 				// old behaviour, and the log names the property so the cause is not a mystery.
 				UE_LOG(DreamGUI, Warning,
 					TEXT("[%s].%d '%s.%s' points at '%s' in the class template and has no counterpart in this instance; left as authored."),
-					ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *InContainer->GetName(), *It->GetName(), *Value->GetName());
+					ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *InContainer->GetName(), *Property->GetName(), *Value->GetName());
 			}
 		}
 	}
