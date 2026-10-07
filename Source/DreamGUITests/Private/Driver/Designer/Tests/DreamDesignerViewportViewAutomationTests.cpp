@@ -353,7 +353,11 @@ bool FDreamDesignerFrameKeyTest::RunTest(const FString&)
 	const auto CameraLanded = [State]()
 	{
 		FEditorViewportClient* Client = State->Driver.IsValid() ? State->Driver->ViewportClient() : nullptr;
-		return Client != nullptr && !Client->GetViewTransform().IsPlaying();
+		if (Client == nullptr || Client->GetViewTransform().IsPlaying())return false;
+		// The Slate curve can expire before the viewport applies DesiredLocation.
+		// DrawFrame does not tick the client (and is a no-op under NullRHI).
+		State->Driver->PumpFrame(0.0f);
+		return true;
 	};
 	EnqueueDesignerUntil(State, this, CameraLanded, 3.0, TEXT("the camera's flight to the selection to land"));
 	EnqueueDesignerAction(State, [this, State]()
