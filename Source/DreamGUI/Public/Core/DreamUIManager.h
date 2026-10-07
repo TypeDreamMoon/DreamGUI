@@ -522,9 +522,9 @@ public:
 	bool IsCanvasStillRegistered(const TWeakObjectPtr<UDreamCanvas>& InCanvas)const;
 	TArray<UDreamCanvas*> GetCanvasArrayByRenderMode(EDreamRenderMode RenderMode)const;
 	/**
-	 * Root canvases in ScreenSpaceOverlay mode that are actually competing for the screen. Inactive
-	 * ones are excluded: a parked widget draws nothing (DreamCanvas gates UpdateVisual on
-	 * GetRenderVisibleInHierarchy), so counting it would report a conflict that does not exist.
+	 * The largest number of active ScreenSpaceOverlay root canvases in any one UI layer: INDEX_NONE
+	 * is shared, each viewport player index is its own layer. More than one in a layer competes for
+	 * its projection. Inactive roots are excluded: a parked widget draws nothing, so it cannot compete.
 	 * Extracted from the per-frame check so the rule can be asserted directly.
 	 *
 	 * Available outside the editor because the rule it checks is a runtime one -- two overlay

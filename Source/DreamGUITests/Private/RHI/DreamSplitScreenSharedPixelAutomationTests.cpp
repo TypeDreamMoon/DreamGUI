@@ -7,6 +7,7 @@
 #include "Core/Components/DreamCanvas.h"
 #include "Core/Components/DreamTexture.h"
 #include "Core/Components/DreamWidget.h"
+#include "Core/DreamUISettings.h"
 #include "DreamUICaptureLibrary.h"
 #include "Engine/GameInstance.h"
 #include "Engine/GameViewportClient.h"
@@ -23,6 +24,21 @@ namespace DreamSplitScreenSharedPixelTestLocal
 {
 	struct FState
 	{
+		const EDreamUIRendererAntiAliasingMethod SavedAA = GetDefault<UDreamUISettings>()->AntiAliasingMethod;
+		const EDreamUIRendererMSAASampleCount SavedSamples = GetDefault<UDreamUISettings>()->MSAASampleCount;
+
+		FState()
+		{
+			// Explicitly exercise the final resolve, rather than depending on the host project's AA setting.
+			GetMutableDefault<UDreamUISettings>()->AntiAliasingMethod = EDreamUIRendererAntiAliasingMethod::MSAA;
+			GetMutableDefault<UDreamUISettings>()->MSAASampleCount = EDreamUIRendererMSAASampleCount::Two;
+		}
+
+		~FState()
+		{
+			GetMutableDefault<UDreamUISettings>()->AntiAliasingMethod = SavedAA;
+			GetMutableDefault<UDreamUISettings>()->MSAASampleCount = SavedSamples;
+		}
 		TWeakObjectPtr<ULocalPlayer> SecondPlayer;
 		TWeakObjectPtr<UDreamWidget> PlayerRoots[2];
 		TWeakObjectPtr<UDreamWidget> Backgrounds[2];

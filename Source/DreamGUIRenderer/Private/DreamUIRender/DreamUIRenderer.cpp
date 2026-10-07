@@ -1761,6 +1761,8 @@ void FDreamUIRenderer::RecordScreenSpace_RenderThread(FRDGBuilder& GraphBuilder,
 		{
 			RecordScreenSpaceLayer_RenderThread(GraphBuilder, InView, SharedTargets, SharedView
 				, [](IDreamUIRendererPrimitive*) { return true; }, /*bInDrawGizmos*/true, /*bInAllowRenderScale*/true);
+			// The final MSAA resolve must include every pixel the shared layer just drew.
+			Targets.ViewRect = SharedTargets.ViewRect;
 		}
 		return;
 	}
@@ -1804,6 +1806,8 @@ void FDreamUIRenderer::RecordScreenSpace_RenderThread(FRDGBuilder& GraphBuilder,
 				return RootKey == nullptr || !PartRoots.Contains(*RootKey);
 			}
 			, /*bInDrawGizmos*/true, /*bInAllowRenderScale*/true);
+		// Player layers used their own rects; the final MSAA resolve also includes the shared full-viewport draw.
+		Targets.ViewRect = SharedTargets.ViewRect;
 	}
 }
 
