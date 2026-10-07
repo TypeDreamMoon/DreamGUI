@@ -3,8 +3,10 @@
 #if WITH_DEV_AUTOMATION_TESTS && WITH_EDITOR
 
 #include "Misc/AutomationTest.h"
+#include "Misc/ScopeExit.h"
 
 #include "DreamTabViewMutationReentryTestTypes.h"
+#include "Core/DreamUIManager.h"
 #include "Driver/DreamDriverRig.h"
 #include "Engine/World.h"
 #include "Interaction/UIToggle.h"
@@ -140,6 +142,68 @@ bool FDreamTabViewChangedHookRedirectTest::RunTest(const FString& Parameters)
 	TestTrue(TEXT("the corresponding destination page is shown"), View->GetActivePage() == PageC.Get());
 	TestEqual(TEXT("the old operation emits no stale two-way value echo"), Probe->ValueNotificationCount, 0);
 	TestEqual(TEXT("the setting still agrees with the control's visible page"), Probe->PublishedIndex, 2);
+	return true;
+}
+
+IMPLEMENT_COMPLEX_AUTOMATION_TEST(FDreamTabViewInitializedHookRebuildTest,
+	"DreamGUI.TabView.AnInitializedTemplateRebuildReclaimsOnlyItsAbandonedContent",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+void FDreamTabViewInitializedHookRebuildTest::GetTests(TArray<FString>& OutBeautifiedNames, TArray<FString>& OutTestCommands)const
+{
+	OutBeautifiedNames.Add(TEXT("Abandoned template content is destroyed"));
+	OutTestCommands.Add(TEXT("orphan"));
+	OutBeautifiedNames.Add(TEXT("Content adopted by another parent survives"));
+	OutTestCommands.Add(TEXT("adopted"));
+}
+
+bool FDreamTabViewInitializedHookRebuildTest::RunTest(const FString& Parameters)
+{
+	FDreamDriverRig Rig = FDreamDriverRig::Headless(FIntPoint(1280, 720));
+	UDreamTabView* View = DreamTabViewMutationReentryTestLocal::MakeView(*this, Rig);
+	if (View == nullptr)return false;
+	const TWeakObjectPtr<UDreamTabView> WeakView(View);
+	const TWeakObjectPtr<UDreamWidget> PageA(View->GetPage(0));
+	const TWeakObjectPtr<UDreamWidget> PageB(View->GetPage(1));
+	const TWeakObjectPtr<UDreamWidget> PageC(View->GetPage(2));
+	UDreamUIManagerWorldSubsystem* Manager = UDreamUIManagerWorldSubsystem::GetInstance(Rig.GetWorld());
+	if (!TestNotNull(TEXT("the real world registry is available"), Manager))return false;
+	TStrongObjectPtr<UDreamTabViewMutationReentryProbe> Probe(NewObject<UDreamTabViewMutationReentryProbe>());
+	Probe->View = View;
+	const bool bAdopted = Parameters == TEXT("adopted");
+	if (bAdopted)
+	{
+		Probe->AdoptionParent = Rig.MakeWidget(TEXT("IndependentContentOwner"), nullptr, FVector2D(60.0, 30.0));
+		if (!TestTrue(TEXT("the independent parent is alive"), Probe->AdoptionParent.IsValid()))return false;
+	}
+	UDreamTabViewInitializedReentryTemplate::ActiveProbe = Probe.Get();
+	ON_SCOPE_EXIT { UDreamTabViewInitializedReentryTemplate::ActiveProbe.Reset(); };
+	// NativeOnInitialized runs before CreateDreamWidget attaches its new content to the old tab.
+	// Rebuilding there destroys that intended parent before the factory resumes registration.
+	View->SetTabTemplateClass(UDreamTabViewInitializedReentryTemplate::StaticClass());
+	Rig.PumpFrames(2);
+	TestEqual(TEXT("the template initialization performs its one nested rebuild"), Probe->MutationCount, 1);
+	if (!TestTrue(TEXT("the owner and all original pages remain alive"), WeakView.IsValid() && PageA.IsValid() && PageB.IsValid() && PageC.IsValid()))return false;
+	TestEqual(TEXT("the replacement keeps three actual pages"), View->GetPageCount(), 3);
+	TestEqual(TEXT("the replacement contains exactly three tabs"), View->Tabs.Num(), 3);
+	TestEqual(TEXT("the live strip contains exactly three tab widgets"), DreamTabViewMutationReentryTestLocal::CountLiveStripTabs(*View), 3);
+	TestEqual(TEXT("the interrupted pass creates one content and the replacement creates three"), Probe->InitializedContentCount, 4);
+	TestEqual(TEXT("the initial content remains alive only when explicitly adopted elsewhere"), Probe->InitialContent.IsValid(), bAdopted);
+	int32 RegisteredContentCount = 0;
+	int32 OrphanContentCount = 0;
+	for (UDreamWidget* Registered : Manager->GetRegisteredWidgets())
+	{
+		if (!Registered->IsA<UDreamTabViewInitializedReentryTemplate>())continue;
+		++RegisteredContentCount;
+		if (Registered->GetParent() == nullptr)++OrphanContentCount;
+	}
+	TestEqual(TEXT("the registry holds only replacement content and explicitly adopted content"), RegisteredContentCount, bAdopted ? 4 : 3);
+	TestEqual(TEXT("no abandoned standalone content remains registered"), OrphanContentCount, 0);
+	if (bAdopted && Probe->InitialContent.IsValid())
+	{
+		TestTrue(TEXT("the adopted content retains its independent parent"), Probe->InitialContent->GetParent() == Probe->AdoptionParent.Get());
+		TestTrue(TEXT("the adopted content remains registered and usable"), Probe->InitialContent->HasRegistered());
+	}
 	return true;
 }
 #endif
