@@ -164,7 +164,15 @@ void UUIRecyclableScrollView::SetDataSource(TScriptInterface<IUIRecyclableScroll
     if (!IsValid(InDataSourceObject))
     {
         DataSource = nullptr;
-        InitializeOnDataSource();
+        // Detaching the source also detaches its cells and scroll listener. InitializeOnDataSource
+        // cannot do that without a source, and leaving the old pool alive let the next scroll call
+        // the data-source interface on nullptr.
+        if (OnScrollEventDelegateHandle.IsValid())
+        {
+            this->GetOnValueChangedEvent().Remove(OnScrollEventDelegateHandle);
+            OnScrollEventDelegateHandle.Reset();
+        }
+        ClearAllCells();
         return;
     }
     if (DataSource != InDataSourceObject)
@@ -652,6 +660,7 @@ void UUIRecyclableScrollView::InitializeOnDataSource()
 }
 void UUIRecyclableScrollView::OnScrollCallback(FVector2D value)
 {
+    if (!IsValid(DataSource))return;
     if (bResettingCells)return;
     if (Horizontal == Vertical)return;
     if (CacheCellList.Num() == 0)return;

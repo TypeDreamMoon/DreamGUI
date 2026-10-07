@@ -325,4 +325,90 @@ bool FDreamRecyclingTileLastLineTest::RunTest(const FString& Parameters)
 	return true;
 }
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamRecyclingListDetachedSourceTest,
+	"DreamGUI.ListView.ARecyclingListWithItsSourceDetachedCanScrollAndReconnectItsSource",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamRecyclingListDetachedSourceTest, "DreamGUI.ListView.ARecyclingListWithItsSourceDetachedCanScrollAndReconnectItsSource", "[Pointer][Animated]")
+
+/*
+ * Detaching a populated, scrolled list's source takes its cells away too. A wheel or programmatic
+ * scroll with no source must not call the data-source interface on nullptr, and reattaching a valid
+ * source must build and recycle the replacement rows as usual.
+ */
+bool FDreamRecyclingListDetachedSourceTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamRecyclingListInteractionTestLocal;
+	FDreamDriverRig Rig = FDreamDriverRig::Headless(DreamListsInteraction::ViewportSize());
+	Rig.BindTest(this);
+	if (!TestTrue(TEXT("The headless rig came up"), Rig.IsUsable())
+		|| !TestTrue(TEXT("Its UI has begun play"), DreamDragInteraction::BeginPlayForUI(Rig.GetWorld())))
+	{
+		return false;
+	}
+	UDreamWidget* Host = nullptr;
+	UUIListView* List = MakeRecyclingList<UUIListView>(Rig, /*bInHorizontal*/false, Host);
+	if (!TestNotNull(TEXT("The recycling list was made"), List))
+	{
+		return false;
+	}
+	List->SetListItems(DreamListsInteraction::MakeItems(100));
+	Rig.PumpFrames(1);
+	if (!TestEqual(TEXT("The populated list has five cells"), List->GetCacheCellList().Num(), 5))
+	{
+		return false;
+	}
+	List->SetScrollProgress(FVector2D(0.0, 0.5));
+	Rig.PumpFrames(1);
+
+	const TScriptInterface<IUIRecyclableScrollViewDataSource> Source = List->GetDataSource();
+	TArray<TWeakObjectPtr<UDreamWidget>> PreviousCells;
+	for (const FUIRecyclableScrollViewCellContainer& Cell : List->GetCacheCellList())
+	{
+		PreviousCells.Add(Cell.Widget.Get());
+	}
+	List->SetDataSource(TScriptInterface<IUIRecyclableScrollViewDataSource>());
+	TestNull(TEXT("The source is detached"), List->GetDataSource().GetObject());
+	TestEqual(TEXT("Its old cells are gone"), List->GetCacheCellList().Num(), 0);
+	for (const TWeakObjectPtr<UDreamWidget>& Cell : PreviousCells)
+	{
+		TestFalse(TEXT("Each old row was destroyed"), Cell.IsValid());
+	}
+	FUIRecyclableScrollViewCellContainer DetachedCell;
+	TestFalse(TEXT("No stale data index resolves to a cell"), List->GetCellItemByDataIndex(50, DetachedCell));
+
+	// The virtual ApplyContentPositionWithProgress path still calls OnScrollCallback directly.
+	List->SetScrollProgress(FVector2D(0.0, 0.75));
+	TestTrue(TEXT("Turning the wheel with no source completes"),
+		Rig.Driver()->Find(FDreamBy::Widget(Host))->ScrollBy(FVector2D(-2.0, -2.0)));
+	Rig.PumpFrames(2);
+	TestEqual(TEXT("Scrolling with no source leaves the list empty"), List->GetCacheCellList().Num(), 0);
+
+	const TArray<UObject*> ReplacementItems = DreamListsInteraction::MakeItems(20);
+	List->SetListItems(ReplacementItems);
+	List->SetDataSource(Source);
+	Rig.PumpFrames(1);
+	if (!TestEqual(TEXT("Reattaching a source rebuilds five cells"), List->GetCacheCellList().Num(), 5))
+	{
+		return false;
+	}
+	TestNearlyEqual(TEXT("The replacement source starts at its first row"),
+		static_cast<float>(List->GetScrollOffset().Y), 0.0f, 0.5f);
+	TestTrue(TEXT("The replacement source can be wheeled through"),
+		Rig.Driver()->Find(FDreamBy::Widget(Host))->ScrollBy(FVector2D(-8.0, -8.0)));
+	Rig.PumpFrames(1);
+	TestTrue(TEXT("The replacement source scrolled past its third row"), List->GetScrollOffset().Y > 3.0f * CellExtent);
+	TestEveryAwakeCellSitsOnItsItemsLine(*this, *List, 1);
+	for (const FUIRecyclableScrollViewCellContainer& Cell : List->GetCacheCellList())
+	{
+		const UUIListEntry* Entry = EntryOf(Cell);
+		if (TestNotNull(TEXT("Each restored cell has an entry"), Entry)
+			&& TestTrue(TEXT("Each restored entry has a valid replacement index"), ReplacementItems.IsValidIndex(Entry->GetItemIndex())))
+		{
+			TestEqual(TEXT("Each restored entry shows its replacement item"), Entry->GetItem(), ReplacementItems[Entry->GetItemIndex()]);
+		}
+	}
+	return true;
+}
+
 #endif
