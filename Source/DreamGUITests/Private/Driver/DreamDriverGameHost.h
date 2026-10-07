@@ -55,20 +55,24 @@ enum class EDreamUINavigationDirection : uint8;
 namespace DreamDriverGameHost
 {
 	/**
-	 * Step 3 of building a rig whose input host is an actor. Needs InContext.World and
-	 * InContext.GameInstance. Makes a local player (on the game instance), a player controller for it
-	 * (on the world's controller list, SetPlayer run, so its PlayerInput and input component exist),
-	 * and the test input actor for InHost, begun and bound; fills EventSystem, InputModule,
-	 * PlayerController, LocalPlayer, InputActor and InputHost. False with OutWhyNot saying which link
-	 * failed; whatever was made before the failure stays in the context for Teardown to undo.
+	 * Step 3 of building a rig whose input host is an actor, for the player InContext.PlayerIndex speaks
+	 * for. Needs InContext.World and InContext.GameInstance, and the players before this one built: a
+	 * player is the next local player on the game instance, so player N is built on a game instance that
+	 * has exactly N. Makes a local player (on the game instance, for that player's platform user), a
+	 * player controller for it (on the world's controller list, SetPlayer run, so its PlayerInput and
+	 * input component exist), and the test input actor for InHost listening as that player
+	 * (AutoReceiveInput), begun and bound; fills EventSystem, InputModule, PlayerController, LocalPlayer,
+	 * InputActor and InputHost. False with OutWhyNot saying which link failed; whatever was made before
+	 * the failure stays in the context for Teardown to undo.
 	 */
 	bool Build(FDreamDriverContext& InContext, EDreamRigInputHost InHost, FString& OutWhyNot);
 
 	/**
 	 * For a world that already has a player controller with a local player (PIE): only spawn the input
-	 * actor for InHost, begin it and fill EventSystem, InputModule, InputActor and InputHost.
-	 * PlayerController and LocalPlayer are the caller's to fill. Refuses a world that already has an
-	 * event system for player 0, because the UI manager would refuse the second one.
+	 * actor for InHost, listening as InContext.PlayerIndex's player, begin it and fill EventSystem,
+	 * InputModule, InputActor and InputHost. PlayerController and LocalPlayer are the caller's to fill.
+	 * Refuses a world that already has an event system for that player, because the UI manager would
+	 * refuse the second one.
 	 */
 	bool AttachInputActor(FDreamDriverContext& InContext, APlayerController* InController, EDreamRigInputHost InHost, FString& OutWhyNot);
 
@@ -94,9 +98,9 @@ namespace DreamDriverGameHost
 	bool NavigationTrigger(FDreamDriverContext& InContext, bool bInPressed, FString& OutWhyNot);
 	/**
 	 * A character by the game's own road: the call UDreamGameViewportClient::InputChar makes,
-	 * DreamUITextInputRouter::RouteCharacter, which hands it to whichever field owns the
-	 * keyboard. Fails when no field does, or when the one that does belongs to another world. A
-	 * character the field refuses is not a failure -- refusing it is the field's decision.
+	 * DreamUITextInputRouter::RouteCharacter, which hands it to the field the context's player is
+	 * editing. Fails when that player edits none. A character the field refuses is not a failure --
+	 * refusing it is the field's decision.
 	 */
 	bool TypeCharacter(FDreamDriverContext& InContext, TCHAR InCharacter, FString& OutWhyNot);
 

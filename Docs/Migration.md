@@ -3,9 +3,11 @@
 1.0.0 is the first public release. The fork's development builds before it were numbered 1.x, 2.0 and 2.1 -- see the
 [CHANGELOG](../CHANGELOG.md) -- and this guide names them that way: a 2.1 here is the development build, older than 1.0.0.
 
-For four kinds of project:
+For five kinds of project:
 
-- one on a **development build, 2.1 or 2.0** -- [From 2.1 to 1.0.0](#from-21-to-100), right below, and from 2.0
+- one on **1.0.0**, moving to what comes after it -- [From 1.0.0 to the next release](#from-100-to-the-next-release),
+  right below;
+- one on a **development build, 2.1 or 2.0** -- [From 2.1 to 1.0.0](#from-21-to-100), and from 2.0
   [From 2.0 to 2.1](#from-20-to-21) before it;
 - one with **assets saved against LGUI or LexUI** — the upstream this fork started from;
 - one on an **early build of this fork** (the single-module 1.x builds, not 1.0.0) — before the module split, the
@@ -15,6 +17,69 @@ For four kinds of project:
 The numbered sections are the move to the 2.0 line from LGUI, LexUI or the 1.x builds; a project making it reads
 [From 2.0 to 2.1](#from-20-to-21) and [From 2.1 to 1.0.0](#from-21-to-100) afterwards. Everything here is about keeping what you have. What the plugin is and how to start from
 nothing is in the [README](../README.md); what each version added is in the [CHANGELOG](../CHANGELOG.md).
+
+## From 1.0.0 to the next release
+
+For a project on 1.0.0. Nothing was renamed, and nothing has to be done before opening the project. Several controls take
+input the way UMG's do now, a split screen lays its players' screens out as UMG does, menus and dropdown lists let a press
+outside them through, and a screen built around the old way will feel different:
+
+- **A list, tile or tree view in Multi mode chooses rows as SListView does.** A plain click selected the row and kept
+  every row already chosen, and a second click took it away; now a plain click chooses that row alone. Ctrl+click (Cmd on
+  a Mac) is what adds a row or takes one away, Shift+click adds the rows from the anchor to the one clicked, Shift or Ctrl
+  with an arrow extends the selection from a focused row, and Ctrl+A chooses every row. A finger's tap adds its row as
+  before, but a second tap on a chosen row no longer takes it away. A pad's confirm on a row is a plain click, so a
+  pad-driven screen that let players pick several rows by confirming each one picks one now; such a screen keeps its own
+  set -- toggled in `OnItemClicked`, put back with `SetSelectedIndices` -- or offers Ctrl's meaning on a pad button of its
+  own. `SetItemSelection` and the other selection calls are unchanged, so code that builds a selection is not affected.
+- **A focused spin box keeps the arrow keys.** Up and Right step it up, Down and Left down, each press a commit
+  (`OnValueCommitted`). They used to move the focus to the control beside it; a player now leaves a spin box with Tab,
+  the D-pad or the stick, as in UMG. The spin box hears an arrow before any action binding does, so a binding on an arrow
+  key no longer fires while a spin box has the focus. With StepSize at zero the arrows still step (by SSpinBox's
+  default step); the step faces do not, as before.
+- **A finger never brings up a tooltip.** A finger landing on, held on or dragged onto a widget with a tooltip used to
+  be able to show its bubble; a touch-only game that wants a tooltip on a long press shows it from that handler with
+  `UDreamUITooltipSubsystem::ShowTooltipFor`.
+- **On a split screen a player's screen is that player's part of the viewport**, as with UMG's Add to Player Screen.
+  The screens `UDreamScreenUISubsystem` makes for local players used to be the whole viewport each, laid out and hit in
+  whole-viewport pixels and drawn into every player's view, squeezed into its rect; now each is the size of its
+  player's part, anchors and a ScaleWithScreenSize scaler work from that size, and it is drawn in its player's view
+  only. A split-screen layout made for the whole viewport -- anchored to its edges, or placed in pixels -- lands in the
+  player's part instead; a layout anchored and sized relative to its screen needs nothing. A single-player game, and
+  every player of a game with split screen switched off, keeps the whole viewport. A screen-space canvas placed in a
+  level, or made by hand, is not any player's and stays as it was; give it a player with
+  `UDreamCanvas::SetViewportPlayerIndex` to make it one. A custom canvas scaler (`UDreamCanvasCustomScale`) is handed
+  positions measured from the corner of its canvas's part, which for a canvas without a player is the viewport's
+  corner, as before.
+- **A finger tapping a slider's track no longer moves it.** The value moves once the finger has travelled the drag
+  distance, and `OnMouseCaptureBegin` comes then rather than as the finger lands; a finger that lifts without travelling
+  changes nothing and says nothing. A touch screen that set a slider by tapping where the value should go now has the
+  player drag the handle, as in UMG. The mouse is unchanged.
+- **A finger dragged along a list of draggable rows scrolls the list** (`bAllowDragging` on a List, Tile or Tree view).
+  It used to pick the row up; the mouse still does. A touch screen whose rows are dragged by finger sets the list's
+  `FingerDrag` to `PickUpRow`, which is the old behaviour for fingers.
+- **A press outside an open menu reaches what it lands on.** A Dream Menu Anchor's menu and a menu anchor panel's close
+  on the press as before, and the press then goes on: a button under it is pressed and clicked, a field under it starts
+  its edit. A screen that relied on the first click outside a menu doing nothing -- a menu over buttons that must not be
+  hit while it is up -- turns on `bMenusConsumeOutsideClick` in the project settings (Dream GUI, Input), which puts the
+  old behaviour back for every menu. A button that opens a menu anchor from its click asks
+  `UDreamMenuAnchor::ShouldOpenDueToClick` before calling `Open`, as with UMG's; a handler that called `Open` or
+  `ToggleOpen` unconditionally now reopens the menu its own click just closed, and changes to ask first.
+- **A press outside a dropdown's open list reaches what it lands on, as for a menu.** The list closes on the press,
+  choosing nothing, as before; the press then goes on. `bMenusConsumeOutsideClick` puts the old behaviour back for every
+  list along with every menu. `UUIDropdown::bUseInteractionBlock` changed default and meaning: it was on by default and
+  decided alone; it is off by default now, which leaves the list to the project setting, and on keeps the press for that
+  dropdown whatever the project says. A dropdown saved with the switch at its old default loads with the new one; one
+  that must keep the press -- a list over controls that must not be hit while it is open -- turns it on again.
+- **A widget moved while it is held loses the press.** Moved under another parent, taken off its parent or destroyed
+  with a pointer's button down on it, it hears its release (and the end of its drag) on the next frame, and the button's
+  own release later clicks nothing, as a Slate widget loses its mouse capture. Game code that moves a held widget
+  somewhere else -- onto a layer drawn above the rest while it is dragged, say -- without a drag and drop loses the press
+  it moved; such code moves a copy, or starts a drag and drop (`UDreamDragDropOperation`), which moving its source does
+  not end.
+
+A C++ subclass of `UDreamSpinBox` or of the list family that overrides `NativeOnKeyDown` calls `Super` to keep these
+keys, as for any key the base answers.
 
 ## From 2.1 to 1.0.0
 

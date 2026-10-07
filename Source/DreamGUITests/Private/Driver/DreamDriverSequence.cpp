@@ -33,6 +33,7 @@
 #include "Interaction/UITextInput.h"
 #include "Misc/App.h"
 #include "Misc/AutomationTest.h"
+#include "Misc/DefinePrivateMemberPtr.h"
 #include "Subsystems/WorldSubsystem.h"
 #include "Tickable.h"
 
@@ -43,6 +44,16 @@
 #include "Driver/DreamDriverSlateHost.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogDreamDriver, Log, All);
+
+/*
+ * The world's Sequencer tick, as UWorld::Tick broadcasts it (LevelTick.cpp, "Tick level sequence actors first"). The
+ * delegate is a private member of UWorld with no public broadcast: UMovieSceneSequenceTickManager::Get binds the
+ * world's tick manager to it through the public AddMovieSceneSequenceTickHandler, and only UWorld::Tick ever calls it.
+ * The headless pump stands in for UWorld::Tick, so it needs the one call; the engine's own way to name a private
+ * member without friendship (Misc/DefinePrivateMemberPtr.h) is how it gets it, and nothing about the delegate, the
+ * world or the tick manager is changed by doing so. At global scope, as the macro requires.
+ */
+UE_DEFINE_PRIVATE_MEMBER_PTR(FOnMovieSceneSequenceTick, GDreamDriverWorldMovieSceneSequenceTick, UWorld, MovieSceneSequenceTick);
 
 namespace DreamDriverPumpLocal
 {
@@ -163,6 +174,31 @@ namespace DreamDriverPumpLocal
 		InTweenManager->Tick(InTickType, InWorld->DeltaTimeSeconds);
 	}
 
+	/**
+	 * The world's Sequencer tick: UWorld::MovieSceneSequenceTick broadcast with the frame's game delta, which is the call
+	 * UWorld::Tick makes right after its "Update time" block and OnWorldPreActorTick, before any tick group.
+	 *
+	 * What is bound there is the world's UMovieSceneSequenceTickManager, made the first time anything asks for it
+	 * (UMovieSceneSequenceTickManager::Get) -- in a rig, the first widget animation that plays, through DreamGUI's
+	 * animation ticker (UDreamUIAnimationTicker::FindOrCreate), or a player registering with the world's manager directly
+	 * under DreamUI.Animation.Ticker 0. Its TickSequenceActors keeps every rule of its own: each tick-interval group ticks
+	 * once its interval has passed, measured on the world's unpaused and game clocks, a client that does not tick when
+	 * paused is skipped in a paused world, and the runners are flushed and the latent actions run after the clients. The
+	 * ticker ticks only its playing players, and they evaluate their animations in that flush. So the delta is the
+	 * world's own DeltaTimeSeconds, dilated and fixed up exactly as UWorld::Tick hands it on (AdvanceWorldClock wrote it).
+	 *
+	 * A world nothing has asked has nothing bound and the broadcast is no call at all, which is every rig that never
+	 * plays a Sequencer animation.
+	 */
+	void TickSequencer(UWorld& InWorld)
+	{
+		FOnMovieSceneSequenceTick& SequenceTick = InWorld.*GDreamDriverWorldMovieSceneSequenceTick;
+		if (SequenceTick.IsBound())
+		{
+			SequenceTick.Broadcast(InWorld.DeltaTimeSeconds);
+		}
+	}
+
 	/** Say something went wrong with the context itself, where a report will show it. */
 	void ReportContextError(const FDreamDriverContext& InContext, const FString& InMessage)
 	{
@@ -204,6 +240,27 @@ bool FDreamDriverContext::IsUsable() const
 		&& IsValid(Root);
 }
 
+FDreamDriverContext* FDreamDriverContext::FindPlayer(int32 InPlayerIndex)
+{
+	if (InPlayerIndex == PlayerIndex)
+	{
+		return this;
+	}
+	for (FDreamDriverContext* Player : Players)
+	{
+		if (Player != nullptr && Player->PlayerIndex == InPlayerIndex)
+		{
+			return Player;
+		}
+	}
+	return nullptr;
+}
+
+const FDreamDriverContext* FDreamDriverContext::FindPlayer(int32 InPlayerIndex) const
+{
+	return const_cast<FDreamDriverContext*>(this)->FindPlayer(InPlayerIndex);
+}
+
 void FDreamDriverContext::PumpOneFrame(float InDeltaSeconds)
 {
 	using namespace DreamDriverPumpLocal;
@@ -217,12 +274,24 @@ void FDreamDriverContext::PumpOneFrame(float InDeltaSeconds)
 		return;
 	}
 
+	// A frame is the world's. Another player's context hands it to player 0's, which ticks every player's controller
+	// in it; pumping from here as well would be a second frame for everything but this player's input.
+	if (PlayerIndex != 0)
+	{
+		if (FDreamDriverContext* PumpContext = FindPlayer(0); PumpContext != nullptr && PumpContext != this)
+		{
+			PumpContext->PumpOneFrame(InDeltaSeconds);
+			return;
+		}
+	}
+
 	/*
 	 * The order below is UWorld::Tick's (LevelTick.cpp), with each piece at the point where the
 	 * engine runs it:
 	 *
 	 *   clock                     "Update time", before any tick group
-	 *   player input              the player controller ticks in TG_PrePhysics (PlayerTick -> TickPlayerInput)
+	 *   Sequencer animations      MovieSceneSequenceTick, after OnWorldPreActorTick and before the tick groups
+	 *   player input              every player controller ticks in TG_PrePhysics (PlayerTick -> TickPlayerInput)
 	 *   PrePhysics tweens         ADreamTweenTickHelperActor's TG_PrePhysics component
 	 *   DuringPhysics tweens      the helper actor's own tick, TG_DuringPhysics
 	 *   input                     the input subsystem's tick function, TG_PostPhysics
@@ -238,18 +307,39 @@ void FDreamDriverContext::PumpOneFrame(float InDeltaSeconds)
 	if (World != nullptr)
 	{
 		AdvanceWorldClock(*World, InDeltaSeconds);
+		// Before every tick group, as UWorld::Tick runs it: an animation that moves a widget this frame has moved it
+		// before input traces and before the UI manager lays out. See TickSequencer.
+		TickSequencer(*World);
 	}
 
-	if (IsActorInputHost(InputHost) && PlayerController != nullptr)
+	if (IsActorInputHost(InputHost))
 	{
 		/*
-		 * The player controller's own input frame, when input comes through one: the keys and
+		 * Each player controller's own input frame, when input comes through one: the keys and
 		 * buttons queued on it since the last frame go through its input stack now, the input
 		 * actor's bindings hand them to its module, and the module queues them for the event system
 		 * below -- the same frame, in the same order, as TG_PrePhysics then TG_DuringPhysics in a game.
-		 * Under ModuleOnly and SlateSource nothing is queued on a controller, so there is nothing to tick.
+		 * In player order: the engine fixes none between controllers, which tick in one group, and
+		 * the order they were spawned in is the one a game's level list walks. Under ModuleOnly and
+		 * SlateSource nothing is queued on a controller, so there is nothing to tick.
 		 */
-		DreamDriverGameHost::TickPlayerInput(*this, InDeltaSeconds);
+		if (Players.Num() == 0)
+		{
+			if (PlayerController != nullptr)
+			{
+				DreamDriverGameHost::TickPlayerInput(*this, InDeltaSeconds);
+			}
+		}
+		else
+		{
+			for (FDreamDriverContext* Player : Players)
+			{
+				if (Player != nullptr && Player->PlayerController != nullptr)
+				{
+					DreamDriverGameHost::TickPlayerInput(*Player, InDeltaSeconds);
+				}
+			}
+		}
 	}
 
 	UDreamTweenManager* TweenManager = GameInstance != nullptr ? GameInstance->GetSubsystem<UDreamTweenManager>() : nullptr;
@@ -344,11 +434,13 @@ void FDreamDriverContext::PumpOneFrame(float InDeltaSeconds)
 	 *    and rebuild, a designer preview animating -- none of which exists in a game, so a rig that
 	 *    drove them would be driving the editor, not a game. The rebuild after a recompile runs on the
 	 *    core ticker, below.
-	 *  - UWorld::MovieSceneSequenceTick, which drives UMovieSceneSequenceTickManager and therefore
-	 *    Sequencer-based widget animations (UDreamWidgetAnimationComponent). The delegate is private to
-	 *    UWorld and only UWorld::Tick broadcasts it, so under this pump those animations stand still;
-	 *    tweens -- which is what every control transition uses -- are driven above.
-	 *  - The core ticker (FTSTicker), which only an engine frame advances.
+	 *  - The core ticker (FTSTicker), which only an engine frame advances -- and with it anything that
+	 *    waits on one: FEnhancedInputModule's mapping rebuild (the game host applies it immediately
+	 *    instead), and the automation driver's steps.
+	 *
+	 * Sequencer-based widget animations (UDreamWidgetAnimationComponent, its players and DreamGUI's
+	 * animation ticker) ARE driven, by the world's own UMovieSceneSequenceTickManager at the top of the
+	 * frame: see TickSequencer. Tweens, which every control transition uses, are driven above.
 	 */
 }
 
@@ -500,10 +592,10 @@ namespace DreamDriverSequenceLocal
 		return true;
 	}
 
-	/** The player whose keyboard the context's keys and characters are typed on: its event system's. */
+	/** The player whose keyboard the context's keys and characters are typed on: its event system's, else the context's own. */
 	int32 KeyboardPlayerOf(const FDreamDriverContext& InContext)
 	{
-		return IsValid(InContext.EventSystem) ? InContext.EventSystem->GetUserIndex() : 0;
+		return IsValid(InContext.EventSystem) ? InContext.EventSystem->GetUserIndex() : InContext.PlayerIndex;
 	}
 
 	/**
@@ -1322,6 +1414,53 @@ namespace DreamDriverSequenceLocal
 	};
 
 	/**
+	 * Another player's step: the same step, given that player's context instead of the one the sequence runs over.
+	 *
+	 * Only the context a step is handed changes. Its frames are still the executor's -- the world's -- and the step
+	 * itself reads everything it reads from the context it is given, which is what makes the press player 1's press:
+	 * player 1's module or controller, player 1's pointer, player 1's screen for a locator to search and a projection to
+	 * aim through. A player the rig has not got is a failure that says so; it is never sent as anybody else.
+	 */
+	class FDreamAsPlayerStep : public IDreamDriverStep
+	{
+	public:
+		FDreamAsPlayerStep(int32 InPlayerIndex, const FDreamDriverStepRef& InStep)
+			: PlayerIndex(InPlayerIndex)
+			, Step(InStep)
+		{
+		}
+
+		virtual EDreamDriverStepResult Execute(FDreamDriverContext& InContext, float InDeltaSeconds) override
+		{
+			FDreamDriverContext* Player = InContext.FindPlayer(PlayerIndex);
+			if (Player == nullptr)
+			{
+				const int32 PlayerCount = FMath::Max(InContext.Players.Num(), 1);
+				FailureReason = FString::Printf(TEXT("the rig has %d player(s) and so no player %d to send it as; build it with FDreamRigOptions::PlayerCount of at least %d"),
+					PlayerCount, PlayerIndex, PlayerIndex + 1);
+				return EDreamDriverStepResult::Failed;
+			}
+			FailureReason.Reset();
+			return Step->Execute(*Player, InDeltaSeconds);
+		}
+
+		virtual FString Describe() const override
+		{
+			return FString::Printf(TEXT("as player %d: %s"), PlayerIndex, *Step->Describe());
+		}
+
+		virtual FString GetFailureReason() const override
+		{
+			return FailureReason.IsEmpty() ? Step->GetFailureReason() : FailureReason;
+		}
+
+	private:
+		int32 PlayerIndex;
+		FDreamDriverStepRef Step;
+		FString FailureReason;
+	};
+
+	/**
 	 * A finger landing, moving or lifting -- one step, one frame, like every other input.
 	 *
 	 * A finger is its own pointer: the standalone module keys touches by the finger's index, so
@@ -1542,12 +1681,20 @@ namespace DreamDriverSequenceLocal
 		return Cursor;
 	}
 
-	/** Player 0's controller as the virtual cursor finds it: the context's, else the world's first. */
+	/**
+	 * The context's player's controller as the virtual cursor finds it (UDreamUIInputUser::GetPlayerController): the
+	 * context's, else -- for player 0 only, as UDreamEventSystem::GetPlayerControllerForUser answers -- the world's first.
+	 * Another player without one of its own has no stick to read.
+	 */
 	APlayerController* FindStickController(const FDreamDriverContext& InContext)
 	{
 		if (IsValid(InContext.PlayerController))
 		{
 			return InContext.PlayerController;
+		}
+		if (KeyboardPlayerOf(InContext) != 0)
+		{
+			return nullptr;
 		}
 		return InContext.World != nullptr ? InContext.World->GetFirstPlayerController() : nullptr;
 	}
@@ -1588,12 +1735,15 @@ namespace DreamDriverSequenceLocal
 				FailureReason = WhyNot;
 				return false;
 			}
-			Cursor->ActivateVirtualCursor();
-			if (!Cursor->IsVirtualCursorActive())
+			// The context's player's cursor: the first player's is ActivateVirtualCursorForUser(0), which is all
+			// ActivateVirtualCursor does.
+			const int32 CursorPlayer = KeyboardPlayerOf(InContext);
+			Cursor->ActivateVirtualCursorForUser(CursorPlayer);
+			if (!Cursor->IsVirtualCursorActiveForUser(CursorPlayer))
 			{
-				// ActivateVirtualCursor refuses quietly (a Warning) when it cannot find a standalone
-				// input module through player 0's registered event system.
-				FailureReason = TEXT("the virtual cursor would not activate: it needs player 0's event system registered with the UI manager and a standalone input module on it");
+				// ActivateVirtualCursorForUser refuses quietly (a Warning) when it cannot find a standalone
+				// input module through the player's registered event system.
+				FailureReason = FString::Printf(TEXT("the virtual cursor would not activate: it needs player %d's event system registered with the UI manager and a standalone input module on it"), CursorPlayer);
 				return false;
 			}
 			return true;
@@ -1622,17 +1772,18 @@ namespace DreamDriverSequenceLocal
 			}
 			FString WhyNot;
 			UDreamUIVirtualCursorSubsystem* Cursor = FindVirtualCursor(InContext, WhyNot);
-			if (Cursor == nullptr || !Cursor->IsVirtualCursorActive())
+			const int32 CursorPlayer = KeyboardPlayerOf(InContext);
+			if (Cursor == nullptr || !Cursor->IsVirtualCursorActiveForUser(CursorPlayer))
 			{
 				FailureReason = Cursor == nullptr
 					? WhyNot
-					: FString(TEXT("the virtual cursor is not active; activate it first, as a screen that needs it would"));
+					: FString::Printf(TEXT("player %d's virtual cursor is not active; activate it first, as a screen that needs it would"), CursorPlayer);
 				return EDreamDriverStepResult::Failed;
 			}
 			APlayerController* Controller = FindStickController(InContext);
 			if (Controller == nullptr || Controller->PlayerInput == nullptr)
 			{
-				FailureReason = TEXT("there is no player controller with its input up to carry the stick; the virtual cursor reads the stick from player 0");
+				FailureReason = FString::Printf(TEXT("there is no player controller with its input up to carry the stick; the virtual cursor reads player %d's stick from that player's controller"), CursorPlayer);
 				return EDreamDriverStepResult::Failed;
 			}
 			const float FrameDelta = InDeltaSeconds > 0.0f ? InDeltaSeconds : InContext.FrameSeconds;
@@ -1691,12 +1842,13 @@ namespace DreamDriverSequenceLocal
 				FailureReason = WhyNot;
 				return false;
 			}
-			if (!Cursor->IsVirtualCursorActive())
+			const int32 CursorPlayer = KeyboardPlayerOf(InContext);
+			if (!Cursor->IsVirtualCursorActiveForUser(CursorPlayer))
 			{
-				FailureReason = TEXT("the virtual cursor is not active, so it has no confirm button to press");
+				FailureReason = FString::Printf(TEXT("player %d's virtual cursor is not active, so it has no confirm button to press"), CursorPlayer);
 				return false;
 			}
-			Cursor->SetConfirmPressed(bPressed);
+			Cursor->SetConfirmPressedForUser(CursorPlayer, bPressed);
 			return true;
 		}
 
@@ -1782,7 +1934,21 @@ FDreamDriverSequence::FDreamDriverSequence(FDreamDriverContext& InContext)
 
 FDreamDriverSequence& FDreamDriverSequence::Add(const FDreamDriverStepRef& InStep)
 {
+	using namespace DreamDriverSequenceLocal;
+	// Every step, the custom ones included: a step added after AsPlayer is that player's, whoever wrote it. The
+	// context's own player needs no wrapping -- the executor hands it that context anyway.
+	if (StepPlayerIndex != INDEX_NONE && (Context == nullptr || StepPlayerIndex != Context->PlayerIndex))
+	{
+		Steps.Add(MakeShared<FDreamAsPlayerStep>(StepPlayerIndex, InStep));
+		return *this;
+	}
 	Steps.Add(InStep);
+	return *this;
+}
+
+FDreamDriverSequence& FDreamDriverSequence::AsPlayer(int32 InPlayerIndex)
+{
+	StepPlayerIndex = InPlayerIndex;
 	return *this;
 }
 
@@ -1965,6 +2131,24 @@ FDreamDriverSequence& FDreamDriverSequence::TouchUp(int32 InFingerId)
 {
 	using namespace DreamDriverSequenceLocal;
 	return Add(MakeShared<FDreamTouchStep>(EDreamDriverTouchPhase::Ended, InFingerId, FDreamPixelResolver(), FString()));
+}
+
+FDreamDriverSequence& FDreamDriverSequence::MoveToResolvedPixel(FPixelResolver InResolver, const FString& InDescription)
+{
+	using namespace DreamDriverSequenceLocal;
+	return Add(MakeShared<FDreamMoveStep>(MoveTemp(InResolver), InDescription));
+}
+
+FDreamDriverSequence& FDreamDriverSequence::TouchDownAtResolvedPixel(int32 InFingerId, FPixelResolver InResolver, const FString& InDescription)
+{
+	using namespace DreamDriverSequenceLocal;
+	return Add(MakeShared<FDreamTouchStep>(EDreamDriverTouchPhase::Began, InFingerId, MoveTemp(InResolver), InDescription));
+}
+
+FDreamDriverSequence& FDreamDriverSequence::TouchMoveToResolvedPixel(int32 InFingerId, FPixelResolver InResolver, const FString& InDescription)
+{
+	using namespace DreamDriverSequenceLocal;
+	return Add(MakeShared<FDreamTouchStep>(EDreamDriverTouchPhase::Moved, InFingerId, MoveTemp(InResolver), InDescription));
 }
 
 FDreamDriverSequence& FDreamDriverSequence::WaitSeconds(float InSeconds)

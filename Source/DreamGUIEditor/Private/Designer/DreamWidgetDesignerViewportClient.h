@@ -38,6 +38,8 @@ public:
 	virtual void AbortTracking() override;
 
 	virtual void CapturedMouseMove(FViewport* InViewport, int32 InMouseX, int32 InMouseY) override;
+	/** The engine's cursor, except over the rotate handle and while it is held. */
+	virtual EMouseCursor::Type GetCursor(FViewport* InViewport, int32 X, int32 Y) override;
 	virtual void MouseEnter(FViewport* Viewport, int32 x, int32 y) override;
 	virtual void MouseMove(FViewport* InViewport, int32 x, int32 y) override;
 	virtual void MouseLeave(FViewport* Viewport) override;
@@ -129,6 +131,12 @@ public:
 	void TickWorld(float DeltaSeconds);
 
 	bool FocusViewportToTargets();
+	/**
+	 * Frame InBox: the camera brought round to it as FocusViewportOnBox brings it, and in the flat view the zoom at which
+	 * the box, with a margin round it, fills as much of the view as it can -- UMG's zoom to fit (SDesignSurface::ZoomToFit).
+	 * F and the toolbar's Zoom to Fit both come here.
+	 */
+	void FrameBox(const FBox& InBox);
 	TSharedPtr<FDreamWidgetBlueprintEditor> GetDesigner() const { return DesignerPtr.Pin(); }
 	/**
 	 * Which of a widget's own axes something else is deciding: its parent's container, plus its own
@@ -256,6 +264,17 @@ public:
 	/** An anchor fraction pulled onto the quarter gridline it is within InTolerance of. */
 	static double SnapAnchorFraction(double InFraction, double InTolerance);
 	/**
+	 * How far the pointer has turned about a pivot, in degrees, from where a rotate drag was grabbed to where it is now.
+	 *
+	 * Both points are in the plane the turn happens in, as (right, up) offsets from the pivot. Positive is clockwise as
+	 * that plane is seen from in front -- the sense a positive roll turns a widget in -- and the answer is the one of its
+	 * whole-turn equivalents nearest InPreviousTurn, so a drag carried past half a turn goes on counting rather than
+	 * jumping back by 360. A pointer standing on the pivot points nowhere and answers InPreviousTurn.
+	 */
+	static double ResolveRotateTurn(const FVector2D& InGrabbed, const FVector2D& InCurrent, double InPreviousTurn);
+	/** An angle in degrees pulled onto the nearest whole multiple of InStep; InStep <= 0 leaves it alone. */
+	static double SnapRotationDegrees(double InDegrees, double InStep);
+	/**
 	 * Write new anchors while the widget's rect stays exactly where it is. Anchors and the offsets
 	 * describe that one rect between them, so moving an anchor line without re-measuring the offsets
 	 * against it drags the rect along by however far the line travelled.
@@ -333,6 +352,8 @@ private:
 		BottomLeft,
 		BottomRight,
 		Pivot,
+		/** The disc above a single selection's top edge, which turns it in its own plane about its pivot. */
+		Rotate,
 		AnchorBottomLeft,
 		AnchorBottomRight,
 		AnchorTopRight,
@@ -348,6 +369,9 @@ private:
 		FVector2D Pivot = FVector2D(0.5f);
 		float Width = 0.0f;
 		float Height = 0.0f;
+		/** Both faces of the rotation, so a cancelled turn puts back exactly the pair it found. */
+		FQuat RelativeRotation = FQuat::Identity;
+		FRotator RelativeRotationEuler = FRotator::ZeroRotator;
 		FTransform WorldTransform = FTransform::Identity;
 		FTransform PlaneTransform = FTransform::Identity;
 		FVector StartPlanePoint = FVector::ZeroVector;
@@ -466,6 +490,15 @@ private:
 	uint8 BlueprintStatusBeforeDrag = 0;
 	TOptional<float> DesignerGuideX;
 	TOptional<float> DesignerGuideY;
+	/**
+	 * How far a rotate drag has turned the pointer so far, in degrees, counted past a whole turn. Kept from one update to
+	 * the next because an angle read off the pointer alone cannot tell 190 degrees from -170.
+	 */
+	double DesignerRotateTurn = 0.0;
+	/** The rotate handle, its stem and, while it is held, the angle it has reached. */
+	void DrawRotateHandle(FCanvas& Canvas) const;
+	/** Ask for the next frame's redraw while a press, a drag or a marquee is live, so its tick comes while Slate throttles. */
+	void KeepTickingThroughGesture();
 
 	/**
 	 * Whether the arrow-key nudge has a transaction of its own open. The editor's transaction stack

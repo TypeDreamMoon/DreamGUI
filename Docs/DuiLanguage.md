@@ -792,6 +792,10 @@ slot of a component instance is written into that slot's fill, `slot Detail { â€
 instance has none. An unnamed node renamed in the designer gets its first id, written after its type. The template of a
 `for` or an `each` is not removed or moved out of its loop: a loop with nothing to repeat does not build.
 
+A turn -- made with the 2D view's rotate handle, the 3D view's gizmo or the details panel -- is written as the euler,
+`RelativeRotationEuler = (0, 0, 30)`: pitch, yaw and roll in degrees, a turn in the canvas plane being the roll,
+clockwise for a positive one. The quaternion the asset keeps has no spelling and is never written.
+
 ## Diagnostics
 
 Every message has a code, `DUInnnn`, printed as `File.dui(line,col): error DUI3001: â€¦`. The first digit says which stage

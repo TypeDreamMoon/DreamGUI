@@ -68,6 +68,13 @@ public:
 	void RemoveWorldSpacePrimitive_RenderThread(IDreamUIRendererPrimitive* InPrimitive);
 
 	void AddScreenSpacePrimitive_RenderThread(IDreamUIRendererPrimitive* InPrimitive);
+	/**
+	 * InRootCanvasKey is the root canvas the primitive draws for, as an identity only: a root that fills one local player's
+	 * part of a split screen (IDreamUIRendererViewSource::GetRendererViewPlayerIndex) has its primitives drawn in that
+	 * player's view alone, through its own view. A primitive with no root, as the one-argument version adds it, is drawn
+	 * in every view through the shared one.
+	 */
+	void AddScreenSpacePrimitive_RenderThread(IDreamUIRendererPrimitive* InPrimitive, FObjectKey InRootCanvasKey);
 	void RemoveScreenSpacePrimitive_RenderThread(IDreamUIRendererPrimitive* InPrimitive);
 
 	void MarkNeedToSortScreenSpacePrimitiveRenderPriority();
@@ -205,6 +212,29 @@ private:
 
 		IDreamUIRendererPrimitive* Primitive = nullptr;
 	};
+	/** The view one layer of the screen-space UI is drawn through: a root canvas's, as IDreamUIRendererViewSource answers it. */
+	struct FScreenSpaceLayerView
+	{
+		FVector ViewOrigin = FVector::ZeroVector;
+		FMatrix ViewRotationMatrix = FMatrix::Identity;
+		FMatrix ProjectionMatrix = FMatrix::Identity;
+		FMatrix44f ViewProjectionMatrix = FMatrix44f::Identity;
+		bool bEnableDepthTest = false;
+		/** Fraction of the viewport the layer is drawn at; 1 is full resolution. */
+		float ScreenSpaceRenderScale = 1.0f;
+	};
+	/**
+	 * A root canvas that fills one local player's part of a split screen, as UMG's player layers do: its primitives are
+	 * drawn in that player's view only, through the root's own view, into the view's rect -- which is that player's part.
+	 */
+	struct FScreenSpacePlayerPartView
+	{
+		/** The root, as primitives name it (AddScreenSpacePrimitive_RenderThread). */
+		FObjectKey RootKey;
+		/** The view it is drawn in, as FSceneView::PlayerIndex names a view: the local player's controller id. */
+		int32 ViewPlayerIndex = INDEX_NONE;
+		FScreenSpaceLayerView View;
+	};
 	/**
 	 * What the game thread works out about the view in SetupView and the render thread draws with.
 	 *
@@ -223,6 +253,11 @@ private:
 		uint8 NumSamples_MSAA = 1;
 		/** Fraction of the viewport the screen-space UI is drawn at; 1 is full resolution. */
 		float ScreenSpaceRenderScale = 1.0f;
+		/**
+		 * The roots that fill a player's part of a split screen, each with its own view. Empty in every game that is not split,
+		 * which then draws every screen-space primitive through the view above, in every view, as it always did.
+		 */
+		TArray<FScreenSpacePlayerPartView> PlayerParts;
 #if WITH_EDITORONLY_DATA
 		/** Whether screen-space UI draws in this frame's views at all, and whether the world is playing: see IsActiveThisFrame_Internal. */
 		bool bCanRenderScreenSpace = true;
@@ -250,9 +285,17 @@ private:
 		 */
 		TArray<FScreenSpaceRoot> RootCanvasArray;
 		TArray<IDreamUIRendererPrimitive*> PrimitiveArray;
+		/** Render thread: the root canvas each screen-space primitive draws for, when it was added with one. */
+		TMap<IDreamUIRendererPrimitive*, FObjectKey> PrimitiveRootKeys;
 	};
-	/** The registered root the screen-space view parameters are taken from, or null. */
+	/**
+	 * The registered root the shared screen-space view is taken from, or null: the first still-alive one that fills the
+	 * whole viewport -- every root, in a game that is not split -- and the first still-alive one when every root fills a
+	 * player's part.
+	 */
 	const FScreenSpaceRoot* GetScreenSpaceViewRoot()const;
+	/** InSource's view, as a layer is drawn through it. */
+	static void MakeLayerView(const IDreamUIRendererViewSource& InSource, FScreenSpaceLayerView& OutView);
 	/** The view parameters, from the registered root and the project's settings, worked out and sent to the render thread. */
 	void UpdateViewParameter_GameThread();
 	/** The drawer's command: a view of the target alone, and a graph that draws the canvas into it. */
@@ -312,6 +355,13 @@ private:
 	void RecordWorldSpace_RenderThread(FRDGBuilder& GraphBuilder, FSceneView& InView, FRecordTargets& Targets);
 	/** The screen-space canvases, through the canvas's own view, scaled down first when asked. */
 	void RecordScreenSpace_RenderThread(FRDGBuilder& GraphBuilder, FSceneView& InView, FRecordTargets& Targets);
+	/**
+	 * One layer of them: the primitives InIsInLayer takes, through InLayer, into the view's rect. RecordScreenSpace_RenderThread
+	 * draws a single layer of every primitive unless a root fills a player's part of a split screen.
+	 */
+	void RecordScreenSpaceLayer_RenderThread(FRDGBuilder& GraphBuilder, FSceneView& InView, FRecordTargets& Targets
+		, const FScreenSpaceLayerView& InLayer, TFunctionRef<bool(IDreamUIRendererPrimitive*)> InIsInLayer
+		, bool bInDrawGizmos, bool bInAllowRenderScale);
 	/** The multisampled target resolved into the one the UI ends up in. */
 	void Resolve_RenderThread(FRDGBuilder& GraphBuilder, FSceneView& InView, const FRecordTargets& Targets);
 #if WITH_EDITORONLY_DATA

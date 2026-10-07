@@ -292,6 +292,14 @@ public:
 
 	void SelectWidgets(const TSet<UDreamWidget*>& Widgets, bool bAppendOrToggle, bool bNotifyGEditor = true);
 	const TArray<TWeakObjectPtr<UDreamWidget>>& GetSelectedWidgets(){return SelectedWidgets;}
+	/**
+	 * Copy, Cut, Paste, Duplicate and Delete of the designer's widgets, for its viewport, its hierarchy and their menus: a
+	 * list of the designer's own, as UMG keeps them (FWidgetBlueprintEditor::DesignerCommandList). The toolkit's list maps
+	 * them too, but is not the designer's alone: the Blueprint editor's Find Results panel maps Copy and Select All onto it
+	 * as the panel is made (SFindInBlueprints::RegisterCommands), after this editor has, so on the toolkit's list Ctrl+C
+	 * copied a search result.
+	 */
+	TSharedPtr<FUICommandList> GetDesignerCommandList() const { return DesignerCommandList; }
 	bool IsWidgetHiddenInDesigner(const UDreamWidget* Widget) const;
 	void SetWidgetHiddenInDesigner(UDreamWidget* Widget, bool bHidden);
 	/** Whether the asset records this widget as locked, which is what the padlock column reports. */
@@ -540,6 +548,8 @@ private:
 	TSharedPtr<SDreamWidgetAnimationEditor> SequencerPtr;
 
 	TArray<TWeakObjectPtr<UDreamWidget>> SelectedWidgets;
+	/** See GetDesignerCommandList. */
+	TSharedPtr<FUICommandList> DesignerCommandList;
 	/** Session state: the rule decided a canvas size, the size itself is what got stored. */
 	EDreamUIDesignerSizeRule DesignerSizeRule = EDreamUIDesignerSizeRule::Custom;
 	/**

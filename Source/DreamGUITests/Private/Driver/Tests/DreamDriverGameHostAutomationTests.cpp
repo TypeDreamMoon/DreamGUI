@@ -229,6 +229,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamGameHostClickTest,
 	"DreamGUI.Driver.GameHost.AClickThroughThePlayerControllerPressesReleasesAndClicksTheButtonOnceEachInOrder",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamGameHostClickTest, "DreamGUI.Driver.GameHost.AClickThroughThePlayerControllerPressesReleasesAndClicksTheButtonOnceEachInOrder", "[Pointer][Animated]")
 
 bool FDreamGameHostClickTest::RunTest(const FString& Parameters)
 {
@@ -273,6 +274,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamGameHostWheelTest,
 	"DreamGUI.Driver.GameHost.AWheelNotchThroughThePlayerControllerScrollsTheBoxUnderThePointer",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamGameHostWheelTest, "DreamGUI.Driver.GameHost.AWheelNotchThroughThePlayerControllerScrollsTheBoxUnderThePointer", "[Pointer][Animated]")
 
 bool FDreamGameHostWheelTest::RunTest(const FString& Parameters)
 {
@@ -321,6 +323,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamGameHostStickNavigationTest,
 	"DreamGUI.Driver.GameHost.TheStickMovesTheSelectionBetweenTwoButtonsAndTheAcceptButtonClicksTheSelectedOne",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamGameHostStickNavigationTest, "DreamGUI.Driver.GameHost.TheStickMovesTheSelectionBetweenTwoButtonsAndTheAcceptButtonClicksTheSelectedOne", "[Nav][Animated]")
 
 bool FDreamGameHostStickNavigationTest::RunTest(const FString& Parameters)
 {
@@ -378,6 +381,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamGameHostArrowNavigationTest,
 	"DreamGUI.Driver.GameHost.TheArrowKeysMoveTheSelectionBetweenTwoButtonsAndEnterClicksTheSelectedOne",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamGameHostArrowNavigationTest, "DreamGUI.Driver.GameHost.TheArrowKeysMoveTheSelectionBetweenTwoButtonsAndEnterClicksTheSelectedOne", "[Nav][Animated]")
 
 bool FDreamGameHostArrowNavigationTest::RunTest(const FString& Parameters)
 {
@@ -428,6 +432,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamGameHostDPadNavigationTest,
 	"DreamGUI.Driver.GameHost.TheDPadMovesTheSelectionBetweenTwoButtonsAsItDoesInSlate",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamGameHostDPadNavigationTest, "DreamGUI.Driver.GameHost.TheDPadMovesTheSelectionBetweenTwoButtonsAsItDoesInSlate", "[Nav][Animated]")
 
 bool FDreamGameHostDPadNavigationTest::RunTest(const FString& Parameters)
 {
@@ -471,6 +476,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamGameHostSpaceBarAcceptTest,
 	"DreamGUI.Driver.GameHost.TheSpaceBarClicksTheSelectedButtonAsSlatesAcceptKeyDoes",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamGameHostSpaceBarAcceptTest, "DreamGUI.Driver.GameHost.TheSpaceBarClicksTheSelectedButtonAsSlatesAcceptKeyDoes", "[Nav][Animated]")
 
 bool FDreamGameHostSpaceBarAcceptTest::RunTest(const FString& Parameters)
 {
@@ -513,6 +519,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamGameHostTabNavigationTest,
 	"DreamGUI.Driver.GameHost.TabAndShiftTabThroughTheControllerStepForwardAndBackBetweenTwoButtons",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamGameHostTabNavigationTest, "DreamGUI.Driver.GameHost.TabAndShiftTabThroughTheControllerStepForwardAndBackBetweenTwoButtons", "[Nav][Animated]")
 
 bool FDreamGameHostTabNavigationTest::RunTest(const FString& Parameters)
 {
@@ -564,6 +571,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamGameHostCharacterRoadTest,
 	"DreamGUI.Driver.GameHost.CharactersByTheGameRoadLandInTheFieldBeingEdited",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamGameHostCharacterRoadTest, "DreamGUI.Driver.GameHost.CharactersByTheGameRoadLandInTheFieldBeingEdited", "[Pointer][Text][Animated]")
 
 bool FDreamGameHostCharacterRoadTest::RunTest(const FString& Parameters)
 {
@@ -623,6 +631,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamGameHostKeyFallbackTest,
 	"DreamGUI.Driver.GameHost.WithNoHostDeliveringCharactersAKeyThroughTheControllerTypesItsUSLayoutCharacter",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamGameHostKeyFallbackTest, "DreamGUI.Driver.GameHost.WithNoHostDeliveringCharactersAKeyThroughTheControllerTypesItsUSLayoutCharacter", "[Pointer][Text][Animated]")
 
 bool FDreamGameHostKeyFallbackTest::RunTest(const FString& Parameters)
 {
@@ -683,6 +692,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamGameHostBackEndsEditTest,
 	"DreamGUI.Driver.GameHost.EscapeAndThePadsBackButtonThroughTheControllerEndTheEditKeepingTheText",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamGameHostBackEndsEditTest, "DreamGUI.Driver.GameHost.EscapeAndThePadsBackButtonThroughTheControllerEndTheEditKeepingTheText", "[Nav][Text][Animated]")
 
 bool FDreamGameHostBackEndsEditTest::RunTest(const FString& Parameters)
 {
@@ -736,6 +746,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamGameHostTapTest,
 	"DreamGUI.Driver.GameHost.AFingerTappedThroughTheControllerClicksTheButtonAndEachFingerIsItsOwnPointer",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamGameHostTapTest, "DreamGUI.Driver.GameHost.AFingerTappedThroughTheControllerClicksTheButtonAndEachFingerIsItsOwnPointer", "[Touch][Animated]")
 
 bool FDreamGameHostTapTest::RunTest(const FString& Parameters)
 {
@@ -782,6 +793,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamGameHostTouchDragTest,
 	"DreamGUI.Driver.GameHost.AFingerDraggedThroughTheControllerScrollsTheBoxItLandedOnWhereverTheMouseWas",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamGameHostTouchDragTest, "DreamGUI.Driver.GameHost.AFingerDraggedThroughTheControllerScrollsTheBoxItLandedOnWhereverTheMouseWas", "[Touch][Animated]")
 
 bool FDreamGameHostTouchDragTest::RunTest(const FString& Parameters)
 {
@@ -870,6 +882,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamGameHostPausedClickTest,
 	"DreamGUI.Driver.GameHost.WhileTheGameIsPausedAClickThroughThePlayerControllerStillReachesTheButton",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamGameHostPausedClickTest, "DreamGUI.Driver.GameHost.WhileTheGameIsPausedAClickThroughThePlayerControllerStillReachesTheButton", "[Pointer][Animated]")
 
 bool FDreamGameHostPausedClickTest::RunTest(const FString& Parameters)
 {

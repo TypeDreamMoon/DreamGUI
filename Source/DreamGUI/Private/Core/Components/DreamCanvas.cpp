@@ -34,6 +34,7 @@
 #include "Core/Text/DreamTextPaint.h"
 #include "Materials/MaterialInstanceDynamic.h"
 #include "GameFramework/PlayerController.h"
+#include "Engine/GameInstance.h"
 #include "Engine/LocalPlayer.h"
 #include "SceneViewExtension.h"
 #include "Engine/TextureRenderTarget2D.h"
@@ -289,6 +290,20 @@ void UDreamCanvas::UpdateRootCanvas(const UWorld* InWorld)
 					{
 						ViewExtension->SetScreenSpaceRootCanvas(this, this);
 						bHasAddToDreamScreenSpaceRenderer = true;
+					}
+				}
+				// A player's part of the viewport changes when the split-screen layout does -- a player joins or leaves --
+				// and nothing announces that the way a viewport resize is announced; UMG's game layer manager lays its
+				// player layers out again every frame (SGameLayerManager::UpdateLayout) for the same reason. Only a canvas
+				// with a player asks: the rest fill the whole viewport, which the resize event already follows.
+				if (ViewportPlayerIndex != INDEX_NONE)
+				{
+					const FIntRect Rect = GetViewportRect();
+					if (Rect.Size() != ViewportSize || Rect.Min != ViewportOrigin)
+					{
+						bIsViewProjectionMatrixDirty = true;
+						CheckAndApplyViewportParameter();
+						BumpHitTestGeneration();
 					}
 				}
 			}
@@ -4357,7 +4372,116 @@ FRotator UDreamCanvas::GetViewRotator()const
 
 	return GetWidget()->GetWorldRotation().Rotator();
 }
+namespace DreamCanvasViewportLocal
+{
+	/**
+	 * InPlayer's part of a viewport of InWhole pixels, with ULocalPlayer::GetProjectionData's truncations of its Origin
+	 * and Size (LocalPlayer.cpp), which UGameViewportClient::LayoutPlayers writes from the split-screen table -- the
+	 * rect SGameLayerManager::AddOrUpdatePlayerLayers gives the player's layer. False when that part is the whole
+	 * viewport, which is every player of a game that is not split, and for a player the layout gives no area at all
+	 * (split screen switched off for a player past the first): its widgets then keep the whole viewport, as UMG's
+	 * player layers do when UGameMapsSettings::bShowAllPlayerWidgetsWhenSplitscreenDisabled overlays them.
+	 */
+	bool PlayerPartOf(const ULocalPlayer& InPlayer, const FIntPoint& InWhole, FIntRect& OutPart)
+	{
+		if (InWhole.X <= 0 || InWhole.Y <= 0 || InPlayer.Size.X <= 0.0 || InPlayer.Size.Y <= 0.0)
+		{
+			return false;
+		}
+		const FIntPoint Min(FMath::TruncToInt32(InPlayer.Origin.X * InWhole.X), FMath::TruncToInt32(InPlayer.Origin.Y * InWhole.Y));
+		const FIntPoint Size(FMath::TruncToInt32(InPlayer.Size.X * InWhole.X), FMath::TruncToInt32(InPlayer.Size.Y * InWhole.Y));
+		if (Size.X <= 0 || Size.Y <= 0)
+		{
+			return false;
+		}
+		OutPart = FIntRect(Min, Min + Size);
+		return OutPart != FIntRect(FIntPoint::ZeroValue, InWhole);
+	}
+}
+
+bool UDreamCanvas::CanFillPartOfViewport()const
+{
+	const UWorld* World = GetWorld();
+	return RenderMode == EDreamRenderMode::ScreenSpaceOverlay && !bForceRenderToTarget && World != nullptr && World->IsGameWorld();
+}
+
+const ULocalPlayer* UDreamCanvas::FindViewportLocalPlayer()const
+{
+	if (ViewportPlayerIndex == INDEX_NONE || !CanFillPartOfViewport())
+	{
+		return nullptr;
+	}
+	// By its place in the game instance's list, which is what UserIndex means throughout DreamGUI
+	// (UDreamWidget::GetLocalPlayerIndexOf). A player that is not there -- a script player, a player who left -- has no part.
+	const UGameInstance* GameInstance = GetWorld()->GetGameInstance();
+	return GameInstance != nullptr ? GameInstance->GetLocalPlayerByIndex(ViewportPlayerIndex) : nullptr;
+}
+
+FIntRect UDreamCanvas::GetViewportRect()const
+{
+	const FIntPoint Whole = GetWholeViewportSize();
+	if (const ULocalPlayer* Player = FindViewportLocalPlayer())
+	{
+		FIntRect Part;
+		if (DreamCanvasViewportLocal::PlayerPartOf(*Player, Whole, Part))
+		{
+			return Part;
+		}
+	}
+	return FIntRect(FIntPoint::ZeroValue, Whole);
+}
+
+bool UDreamCanvas::FillsPartOfViewport()const
+{
+	const ULocalPlayer* Player = FindViewportLocalPlayer();
+	FIntRect Part;
+	return Player != nullptr && DreamCanvasViewportLocal::PlayerPartOf(*Player, GetWholeViewportSize(), Part);
+}
+
+bool UDreamCanvas::ContainsViewportPoint(const FVector2D& InViewportPixel)const
+{
+	const ULocalPlayer* Player = FindViewportLocalPlayer();
+	FIntRect Part;
+	if (Player == nullptr || !DreamCanvasViewportLocal::PlayerPartOf(*Player, GetWholeViewportSize(), Part))
+	{
+		// The whole viewport, where a pointer is wherever it is -- as before canvases had players.
+		return true;
+	}
+	// Half-open, as pixel rows are: the part below begins on the row this one ends before.
+	return InViewportPixel.X >= Part.Min.X && InViewportPixel.X < Part.Max.X
+		&& InViewportPixel.Y >= Part.Min.Y && InViewportPixel.Y < Part.Max.Y;
+}
+
+int32 UDreamCanvas::GetRendererViewPlayerIndex()const
+{
+	const ULocalPlayer* Player = FindViewportLocalPlayer();
+	FIntRect Part;
+	return Player != nullptr && DreamCanvasViewportLocal::PlayerPartOf(*Player, GetWholeViewportSize(), Part)
+		? Player->GetControllerId()
+		: INDEX_NONE;
+}
+
+void UDreamCanvas::SetViewportPlayerIndex(int32 InLocalPlayerIndex)
+{
+	const int32 NewIndex = InLocalPlayerIndex >= 0 ? InLocalPlayerIndex : INDEX_NONE;
+	if (ViewportPlayerIndex == NewIndex)
+	{
+		return;
+	}
+	ViewportPlayerIndex = NewIndex;
+	// The part takes effect at once, as a viewport resize does: the size and origin the canvas applies, its root
+	// widget's size and its projection all follow it, and what a pointer at rest hit before is asked again.
+	bIsViewProjectionMatrixDirty = true;
+	CheckAndApplyViewportParameter();
+	BumpHitTestGeneration();
+}
+
 FIntPoint UDreamCanvas::GetViewportSize()const
+{
+	return GetViewportRect().Size();
+}
+
+FIntPoint UDreamCanvas::GetWholeViewportSize()const
 {
 	// Answered before the world, the render mode or the player controller are consulted, because
 	// standing in for sources that are not there is the whole of what a substituted viewport is for.
@@ -4727,7 +4851,11 @@ void UDreamCanvas::CheckAndApplyViewportParameter()
 	// directly, and would walk straight past the substitution.
 	if (ViewportSizeOverride.IsSet())
 	{
-		ViewportSize = ViewportSizeOverride.GetValue();
+		// The substitute is the whole viewport's size; a canvas with a player takes its part of it, as it would of the
+		// real one. Without a player the rect is the substitute itself, from the top-left corner.
+		const FIntRect Rect = GetViewportRect();
+		ViewportSize = Rect.Size();
+		ViewportOrigin = Rect.Min;
 		OnViewportParameterChanged();
 		return;
 	}
@@ -4736,6 +4864,7 @@ void UDreamCanvas::CheckAndApplyViewportParameter()
 	// its own tail.
 	const auto ApplyRenderTargetSize = [this]()
 	{
+		ViewportOrigin = FIntPoint::ZeroValue;
 		switch (RenderTargetSizeMode)
 		{
 		case EDreamCanvasRenderTargetSizeMode::None:
@@ -4765,7 +4894,9 @@ void UDreamCanvas::CheckAndApplyViewportParameter()
 	{
 	case EDreamRenderMode::ScreenSpaceOverlay:
 	{
-		ViewportSize = this->GetViewportSize();
+		const FIntRect Rect = GetViewportRect();
+		ViewportSize = Rect.Size();
+		ViewportOrigin = Rect.Min;
 		OnViewportParameterChanged();
 	}
 	break;
@@ -5328,18 +5459,21 @@ void UDreamCanvas::SetCustomScale(UDreamCanvasCustomScale* Value)
 bool UDreamCanvas::ConvertPositionFromViewportToCanvas(const FVector2D& InPosition, FVector2D& Result)const
 {
 	if (RootCanvas != this)return false;
+	// Measured from the top-left corner of the part of the viewport this canvas fills -- a player's part of a split
+	// screen begins where the layout puts it, as a UMG player layer's geometry does; the whole viewport's corner otherwise.
+	const FVector2D InPart = InPosition - FVector2D(ViewportOrigin);
 	switch (ScaleMode)
 	{
 	case EDreamCanvasScaleMode::ConstantPixelSize:
-		Result = FVector2D(InPosition.X, ViewportSize.Y - InPosition.Y);
+		Result = FVector2D(InPart.X, ViewportSize.Y - InPart.Y);
 		return true;
 	case EDreamCanvasScaleMode::ScaleWithScreenSize:
-		Result = FVector2D(InPosition.X, ViewportSize.Y - InPosition.Y) / this->CanvasScale;
+		Result = FVector2D(InPart.X, ViewportSize.Y - InPart.Y) / this->CanvasScale;
 		return true;
 	case EDreamCanvasScaleMode::Custom:
 		if (IsValid(CustomScale))
 		{
-			return CustomScale->ConvertPositionFromViewportToCanvas(InPosition, Result);
+			return CustomScale->ConvertPositionFromViewportToCanvas(InPart, Result);
 		}
 	}
 	return false;
@@ -5347,18 +5481,25 @@ bool UDreamCanvas::ConvertPositionFromViewportToCanvas(const FVector2D& InPositi
 bool UDreamCanvas::ConvertPositionFromCanvasToViewport(const FVector2D& InPosition, FVector2D& Result)const
 {
 	if (RootCanvas != this)return false;
+	// Into the canvas's part of the viewport, then onto the viewport: see ConvertPositionFromViewportToCanvas.
+	const FVector2D PartOrigin(ViewportOrigin);
 	switch (ScaleMode)
 	{
 	case EDreamCanvasScaleMode::ConstantPixelSize:
-		Result = FVector2D(InPosition.X, ViewportSize.Y - InPosition.Y);
+		Result = PartOrigin + FVector2D(InPosition.X, ViewportSize.Y - InPosition.Y);
 		return true;
 	case EDreamCanvasScaleMode::ScaleWithScreenSize:
-		Result = FVector2D(InPosition.X * this->CanvasScale, ViewportSize.Y - InPosition.Y * this->CanvasScale);
+		Result = PartOrigin + FVector2D(InPosition.X * this->CanvasScale, ViewportSize.Y - InPosition.Y * this->CanvasScale);
 		return true;
 	case EDreamCanvasScaleMode::Custom:
 		if (IsValid(CustomScale))
 		{
-			return CustomScale->ConvertPositionFromCanvasToViewport(InPosition, Result);
+			if (CustomScale->ConvertPositionFromCanvasToViewport(InPosition, Result))
+			{
+				Result += PartOrigin;
+				return true;
+			}
+			return false;
 		}
 	}
 	return false;

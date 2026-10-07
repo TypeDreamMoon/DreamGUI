@@ -13,8 +13,9 @@ struct FDreamDriverVirtualCamera;
  * Where a widget is, in the pixels the pointer is measured in.
  *
  * This is the inverse of UDreamScreenSpaceRaycaster::GenerateRay, and it is written as the inverse on
- * purpose: it reads the SAME matrix (UDreamCanvas::GetViewProjectionMatrix) and the SAME viewport size
- * (UDreamCanvas::GetViewportSize) that the raycaster deprojects with, so a pixel this hands back is by
+ * purpose: it reads the SAME matrix (UDreamCanvas::GetViewProjectionMatrix) and the SAME part of the
+ * viewport (UDreamCanvas::GetViewportRect -- a split-screen player's part, else the whole viewport) that
+ * the raycaster deprojects with, so a pixel this hands back is by
  * construction a pixel whose ray comes back to the point it came from. Anything that recomputed the
  * projection from the canvas's parts instead would be a second implementation of the same arithmetic,
  * and the two would drift.

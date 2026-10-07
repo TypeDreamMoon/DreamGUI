@@ -1,6 +1,7 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
 #include "Interaction/UITextInput.h"
+#include "Core/DreamUserWidget.h"
 #include "DreamGUI.h"
 #include "Core/Components/DreamText.h"
 #include "InputCoreTypes.h"
@@ -1614,9 +1615,21 @@ void UUITextInput::ShowContextMenu()
 		}
 		if (auto BlockerButton = Blocker->AddComponent<UUIButton>())
 		{
-			BlockerButton->GetOnClickEvent().AddWeakLambda(this, [this] { this->HideContextMenu(); });
+			BlockerButton->GetOnClickEvent().AddWeakLambda(this, [this] { this->CloseContextMenuIntoField(); });
 		}
 		ContextMenuBlocker = Blocker;
+	}
+	// Brought to life once built, as a widget made in a live screen has to be (RegisterDreamWidgetHierarchy): unregistered,
+	// the menu's and the sheet's canvases never took their sort orders -- every piece of the menu stayed on the screen's
+	// canvas, where the sheet, added last, lay in front of the entries and took every press meant for them -- and the
+	// entries' buttons never woke. A field in a tree that is itself not live leaves them as they are, with it.
+	if (OwnWidget->HasRegistered())
+	{
+		RegisterDreamWidgetHierarchy(MenuRoot);
+		if (UDreamWidget* Blocker = ContextMenuBlocker.Get())
+		{
+			RegisterDreamWidgetHierarchy(Blocker);
+		}
 	}
 	ContextMenuRoot = MenuRoot;
 }
@@ -1709,7 +1722,7 @@ const TCHAR* UUITextInput::GetContextMenuActionName(EContextMenuAction InAction)
 void UUITextInput::ExecuteContextMenuAction(EContextMenuAction InAction)
 {
 	//the menu closes first: every one of these changes the selection or the text the menu described
-	HideContextMenu();
+	CloseContextMenuIntoField();
 	switch (InAction)
 	{
 	case EContextMenuAction::Undo: Undo(); break;
@@ -1718,6 +1731,22 @@ void UUITextInput::ExecuteContextMenuAction(EContextMenuAction InAction)
 	case EContextMenuAction::Copy: Copy(); break;
 	case EContextMenuAction::Paste: Paste(); break;
 	case EContextMenuAction::SelectAll: SelectAll(); break;
+	}
+}
+void UUITextInput::CloseContextMenuIntoField()
+{
+	HideContextMenu();
+	// The press that reached the menu took the player's focus onto it -- the entry, or the sheet behind it -- while the field
+	// kept its edit (OnPointerDeselect). A Slate menu gives the focus back to what had it when the menu opened, which is this
+	// field: the next key is the field's again, and a press elsewhere ends the edit as it would have before the menu.
+	UDreamWidget* OwnWidget = GetWidget();
+	if (!bInputActive || OwnWidget == nullptr)
+	{
+		return;
+	}
+	if (UDreamEventSystem* EventSystem = UDreamEventSystem::GetDreamEventSystemInstance(this, EditingUserIndex))
+	{
+		EventSystem->SetSelectComponentWithDefault(OwnWidget);
 	}
 }
 void UUITextInput::HideContextMenu()
@@ -2567,8 +2596,47 @@ bool UUITextInput::OnPointerSelect_Implementation(UDreamBaseEventData* EventData
 bool UUITextInput::OnPointerDeselect_Implementation(UDreamBaseEventData* EventData)
 {
 	Super::OnPointerDeselect_Implementation(EventData);
+	// The focus going to the field's own edit menu -- an entry, or the sheet behind it that takes a press anywhere else --
+	// is not the field losing it: a Slate text field counts as focused while its context menu is up
+	// (FSlateEditableTextLayout::Tick's bShouldAppearFocused) and ignores the focus it loses to it (HandleFocusLost returns
+	// at once while ActiveContextMenu is valid). Ending the edit here took the menu down under the press on its entry, so
+	// no entry could ever be chosen with a pointer. The menu gives the focus back as it closes (CloseContextMenuIntoField).
+	if (IsFocusGoingToContextMenu(EventData))
+	{
+		return AllowEventBubbleUp;
+	}
 	DeactivateInput();
 	return AllowEventBubbleUp;
+}
+bool UUITextInput::IsFocusGoingToContextMenu(const UDreamBaseEventData* EventData) const
+{
+	if (!IsContextMenuOpen() || !IsValid(EventData))
+	{
+		return false;
+	}
+	// Where the focus is going: the deselect's event names it (UDreamUIInputUser::SetSelectWidget sets it first) -- but a
+	// press takes the focus off first, to nothing (UDreamPointerInputModule::DeselectIfSelectionChanged), before what it
+	// landed on takes it, so for a press it is the widget the press went down on.
+	const UDreamPointerEventData* PointerEventData = Cast<UDreamPointerEventData>(EventData);
+	const UDreamWidget* Candidates[] = {
+		EventData->SelectedComponent.Get(),
+		PointerEventData != nullptr && PointerEventData->bNowIsTriggerPressed ? PointerEventData->PressWidget.Get() : nullptr,
+	};
+	for (const UDreamWidget* NewFocus : Candidates)
+	{
+		if (!IsValid(NewFocus))
+		{
+			continue;
+		}
+		for (const UDreamWidget* MenuPart : { ContextMenuRoot.Get(), ContextMenuBlocker.Get() })
+		{
+			if (MenuPart != nullptr && (NewFocus == MenuPart || NewFocus->IsChildOf(MenuPart)))
+			{
+				return true;
+			}
+		}
+	}
+	return false;
 }
 bool UUITextInput::OnPointerClick_Implementation(UDreamPointerEventData* EventData)
 {

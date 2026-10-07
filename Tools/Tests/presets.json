@@ -17,7 +17,7 @@
       "include": ["DreamGUI.", "DreamTween."],
       "exclude": ["DreamGUI.Pie.", "DreamGUI.Lifecycle.Smoke."],
       "args": ["-nullrhi"],
-      "minTests": 1386,
+      "minTests": 2430,
       "timeoutMinutes": 20
     },
     "Interaction": {
@@ -25,7 +25,7 @@
       "sources": ["Private/Interaction/", "Private/Driver/Tests/"],
       "exclude": ["DreamGUI.Pie."],
       "args": ["-nullrhi"],
-      "minTests": 233,
+      "minTests": 508,
       "timeoutMinutes": 15
     },
     "Exit": {
@@ -41,14 +41,14 @@
       "include": ["DreamGUI.Pie."],
       "flags": ["NonNullRHI"],
       "args": ["-RenderOffScreen"],
-      "minTests": 5,
+      "minTests": 13,
       "timeoutMinutes": 20
     },
     "Designer": {
       "about": "The widget blueprint designer, headless. Its pixel scenarios (DreamGUI.Designer.RHI) are NonNullRHI and run in Rhi instead.",
       "include": ["DreamGUI.Designer."],
       "args": ["-nullrhi"],
-      "minTests": 88,
+      "minTests": 121,
       "timeoutMinutes": 20
     },
     "Rhi": {
@@ -56,7 +56,7 @@
       "flags": ["NonNullRHI"],
       "exclude": ["DreamGUI.Pie.", "DreamGUI.Performance."],
       "args": ["-RenderOffScreen"],
-      "minTests": 32,
+      "minTests": 246,
       "timeoutMinutes": 45
     },
     "Validate": {
@@ -64,7 +64,7 @@
       "flags": ["NonNullRHI"],
       "exclude": ["DreamGUI.Pie.", "DreamGUI.Performance."],
       "args": ["-RenderOffScreen", "-rhivalidation"],
-      "minTests": 32,
+      "minTests": 246,
       "timeoutMinutes": 60
     },
     "Perf": {
@@ -72,21 +72,21 @@
       "include": ["DreamGUI.Performance."],
       "flags": ["NonNullRHI"],
       "args": ["-RenderOffScreen"],
-      "minTests": 1,
+      "minTests": 2,
       "timeoutMinutes": 30
     },
     "Pie": {
       "about": "The play-in-editor layer (DreamGUI.Pie.*): a real game mode, local player, viewport and viewport client, one PIE session per test. In its own editor, out of Quick. Its NonNullRHI tests are dropped under -nullrhi and run in PieRhi.",
       "include": ["DreamGUI.Pie."],
       "args": ["-nullrhi"],
-      "minTests": 9,
+      "minTests": 34,
       "timeoutMinutes": 30
     },
     "All": {
       "about": "Everything in one editor: the headless suite, the PIE layer and the NonNullRHI tests, on a real RHI that renders off screen. GPU Scene's reserved buffers are off here (-dpcvars): every test world's scene reserves 8 GiB of GPU address space for them (GPUScene.cpp, four 2 GiB buffers), a destroyed world keeps its scene until the next garbage collection (a minute apart in the editor), and a hundred test worlds in five seconds ran the process out of address space -- D3D12 removed the device (DXGI_ERROR_DRIVER_INTERNAL_ERROR) on the next 2 GiB reservation. Without reserved resources the same buffers are ordinary ones sized to what each scene holds.",
       "include": ["DreamGUI.", "DreamTween."],
       "args": ["-RenderOffScreen", "-dpcvars=r.GPUScene.UseReservedResources=0,r.GPUScene.InstanceDataTileSizeLog2=-1"],
-      "minTests": 1404,
+      "minTests": 2726,
       "timeoutMinutes": 90
     }
   }

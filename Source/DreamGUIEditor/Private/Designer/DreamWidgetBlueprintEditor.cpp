@@ -2340,7 +2340,7 @@ FBox FDreamWidgetBlueprintEditor::GetDesignerFramingBox()
 void FDreamWidgetBlueprintEditor::ZoomDesignerToFit()
 {
 	if (!ViewportPtr.IsValid() || !ViewportPtr->GetViewportClient().IsValid())return;
-	ViewportPtr->GetViewportClient()->FocusViewportOnBox(GetDesignerFramingBox());
+	StaticCastSharedPtr<FDreamWidgetDesignerViewportClient>(ViewportPtr->GetViewportClient())->FrameBox(GetDesignerFramingBox());
 }
 
 void FDreamWidgetBlueprintEditor::ZoomDesignerToActualSize()
@@ -2589,6 +2589,22 @@ void FDreamWidgetBlueprintEditor::BindCommands()
 		FGetActionCheckState(),
 		FIsActionButtonVisible()
 	);
+	// The same five on the designer's own list, which its viewport and its hierarchy answer keys from first and its menus
+	// run them from: on the toolkit's, Copy is the Find Results panel's once that panel is made (GetDesignerCommandList).
+	DesignerCommandList = MakeShared<FUICommandList>();
+	const FGenericCommands& Generic = FGenericCommands::Get();
+	for (const TSharedPtr<FUICommandInfo>& Command : { Generic.Copy, Generic.Cut, Generic.Paste, Generic.Duplicate, Generic.Delete })
+	{
+		if (const FUIAction* Action = ToolkitCommands->GetActionForCommand(Command))
+		{
+			DesignerCommandList->MapAction(Command, *Action);
+		}
+	}
+	// The viewport is made before this runs, so it is handed the list here; one made later takes it as it binds its own.
+	if (ViewportPtr.IsValid() && ViewportPtr->GetCommandList().IsValid())
+	{
+		ViewportPtr->GetCommandList()->Append(DesignerCommandList.ToSharedRef());
+	}
 }
 void FDreamWidgetBlueprintEditor::ExtendDesignerToolbar(UToolMenu* ToolBar)
 {

@@ -165,6 +165,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamTabNavigationFormTest,
 	"DreamGUI.Navigation.Tab.TheTabKeyWalksTheScreenInTreeOrderAndShiftTabWalksItBack",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamTabNavigationFormTest, "DreamGUI.Navigation.Tab.TheTabKeyWalksTheScreenInTreeOrderAndShiftTabWalksItBack", "[Nav][Animated]")
 
 bool FDreamTabNavigationFormTest::RunTest(const FString& Parameters)
 {
@@ -200,6 +201,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamTabNavigationShiftStartTest,
 	"DreamGUI.Navigation.Tab.ShiftTabWithNothingFocusedStartsAtTheLastStop",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamTabNavigationShiftStartTest, "DreamGUI.Navigation.Tab.ShiftTabWithNothingFocusedStartsAtTheLastStop", "[Nav][Animated]")
 
 bool FDreamTabNavigationShiftStartTest::RunTest(const FString& Parameters)
 {
@@ -227,6 +229,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamTabNavigationOnlyDropdownTest,
 	"DreamGUI.Navigation.Tab.TabInTheOpenListOfTheOnlyControlLeavesTheFocusOnTheDropdown",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamTabNavigationOnlyDropdownTest, "DreamGUI.Navigation.Tab.TabInTheOpenListOfTheOnlyControlLeavesTheFocusOnTheDropdown", "[Pointer][Nav][Animated]")
 
 /*
  * Tab in an open dropdown list closes the list and steps on from the dropdown (CloseAndContinue). With the dropdown the only
@@ -277,6 +280,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamTabNavigationOtherPlayersPopupTest,
 	"DreamGUI.Navigation.Tab.AnotherPlayersPopupOnASharedScreenHoldsNoStopsForThisPlayer",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamTabNavigationOtherPlayersPopupTest, "DreamGUI.Navigation.Tab.AnotherPlayersPopupOnASharedScreenHoldsNoStopsForThisPlayer", "[Nav][Animated]")
 
 /*
  * A popup is lifted onto its screen root, and players can share one: another player's open menu then hangs under this
@@ -335,6 +339,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamTabNavigationLayerInFrontOfListTest,
 	"DreamGUI.Navigation.Tab.TabOnALayerInFrontOfAnOpenListStaysOnThatLayer",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamTabNavigationLayerInFrontOfListTest, "DreamGUI.Navigation.Tab.TabOnALayerInFrontOfAnOpenListStaysOnThatLayer", "[Pointer][Nav][Animated]")
 
 /*
  * A layer put up in front of an open list -- a dialog, a page, sorted above the list -- with the player's focus on it gets
@@ -400,6 +405,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamTabNavigationRevealTest,
 	"DreamGUI.Navigation.Tab.AStopScrolledOutOfSightIsScrolledIntoViewWhenTabReachesIt",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamTabNavigationRevealTest, "DreamGUI.Navigation.Tab.AStopScrolledOutOfSightIsScrolledIntoViewWhenTabReachesIt", "[Nav][Animated]")
 
 bool FDreamTabNavigationRevealTest::RunTest(const FString& Parameters)
 {
@@ -454,6 +460,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamTabNavigationLegacyTest,
 	"DreamGUI.Navigation.Tab.LegacyGeometricKeepsTheOldOrder",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamTabNavigationLegacyTest, "DreamGUI.Navigation.Tab.LegacyGeometricKeepsTheOldOrder", "[Nav][Animated]")
 
 bool FDreamTabNavigationLegacyTest::RunTest(const FString& Parameters)
 {
@@ -489,6 +496,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamTabNavigationInputModeTest,
 	"DreamGUI.Navigation.InputMode.GameTurnsTheKeysOffForThatPlayerOnly",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamTabNavigationInputModeTest, "DreamGUI.Navigation.InputMode.GameTurnsTheKeysOffForThatPlayerOnly", "[Nav][Animated]")
 
 bool FDreamTabNavigationInputModeTest::RunTest(const FString& Parameters)
 {
@@ -561,6 +569,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamTabNavigationFocusVisibleTest,
 	"DreamGUI.Navigation.Focus.FocusIsDrawnAfterAKeyStepButNotAfterAClick",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamTabNavigationFocusVisibleTest, "DreamGUI.Navigation.Focus.FocusIsDrawnAfterAKeyStepButNotAfterAClick", "[Pointer][Nav][Animated]")
 
 bool FDreamTabNavigationFocusVisibleTest::RunTest(const FString& Parameters)
 {
@@ -611,6 +620,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamTabNavigationRingTest,
 	"DreamGUI.Navigation.Focus.APageWithNoPresenterGetsAFocusRingOnKeysAndOnInitialFocus",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamTabNavigationRingTest, "DreamGUI.Navigation.Focus.APageWithNoPresenterGetsAFocusRingOnKeysAndOnInitialFocus", "[Nav][Animated]")
 
 bool FDreamTabNavigationRingTest::RunTest(const FString& Parameters)
 {
@@ -712,6 +722,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamTabNavigationRingFitsAndStaysOffTest,
 	"DreamGUI.Navigation.Focus.TheRingCoversTheControlItMarksAndKeepsOffOneThatMarksItsOwn",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamTabNavigationRingFitsAndStaysOffTest, "DreamGUI.Navigation.Focus.TheRingCoversTheControlItMarksAndKeepsOffOneThatMarksItsOwn", "[Nav][Animated]")
 
 bool FDreamTabNavigationRingFitsAndStaysOffTest::RunTest(const FString& Parameters)
 {
@@ -794,6 +805,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamTabNavigationScriptFocusLeavesTest,
 	"DreamGUI.Navigation.Focus.FocusMovedByCodeLeavesTheControlItCameFromUnfocused",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamTabNavigationScriptFocusLeavesTest, "DreamGUI.Navigation.Focus.FocusMovedByCodeLeavesTheControlItCameFromUnfocused", "[Nav][Animated]")
 
 bool FDreamTabNavigationScriptFocusLeavesTest::RunTest(const FString& Parameters)
 {
@@ -848,6 +860,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamTabNavigationScrollBoxTest,
 	"DreamGUI.Navigation.Scroll.AFocusedScrollBoxScrollsItselfByPageDownAndTheStick",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamTabNavigationScrollBoxTest, "DreamGUI.Navigation.Scroll.AFocusedScrollBoxScrollsItselfByPageDownAndTheStick", "[Nav][Animated]")
 
 bool FDreamTabNavigationScrollBoxTest::RunTest(const FString& Parameters)
 {

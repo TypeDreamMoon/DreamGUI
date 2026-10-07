@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "GenericPlatform/GenericApplication.h"   // FModifierKeysState
 #include "InputCoreTypes.h"
 // By value rather than forward-declared: a TOptional member needs the whole type.
 #include "Layout/Geometry.h"
@@ -11,12 +12,15 @@
 #include "Templates/SharedPointer.h"
 #include "UObject/WeakObjectPtr.h"
 
+#include "Driver/DreamDriverTypes.h"   // EDreamDriverModifierKeys
+
 class FDragDropOperation;
 class FDreamWidgetBlueprintEditor;
 class FDreamWidgetDesignerViewportClient;
 class FEditorViewportClient;
 class FSceneViewport;
 class SDreamWidgetDesignerViewport;
+class SWidget;
 class UBlueprint;
 class UClass;
 class UDreamWidget;
@@ -94,7 +98,8 @@ namespace DreamTests
 		/**
 		 * An inner viewport pixel as an absolute Slate (screen) position, in the shell's own frame.
 		 *
-		 * The exact inverse of the shell's ToViewportPixel, which reads
+		 * In the viewport's own geometry, where the shell measures a drop too (falling back to the shell's while
+		 * the viewport has none, as the shell does), and the exact inverse of the shell's ToViewportPixel, which reads
 		 *   Pixel = round(Geometry.AbsoluteToLocal(Screen) * ViewportSize / Geometry.GetLocalSize())
 		 * so this reads
 		 *   Screen = Geometry.LocalToAbsolute(Pixel * Geometry.GetLocalSize() / ViewportSize).
@@ -103,7 +108,7 @@ namespace DreamTests
 		 * AbsoluteToLocal removes it, so a scale factor written in here would be counted twice.
 		 */
 		FVector2D PixelToScreen(FIntPoint InPixel) const;
-		/** The shell's own ToViewportPixel, restated, so a test can assert the round trip. */
+		/** The shell's own ToViewportPixel, restated in the same geometry, so a test can assert the round trip. */
 		FIntPoint ScreenToPixel(const FVector2D& InScreenPosition) const;
 
 		/**
@@ -162,9 +167,82 @@ namespace DreamTests
 		 * drag applies the pointer on its tick and finishing it reads nothing new.
 		 */
 		bool DragFromTo(FIntPoint InFrom, FIntPoint InTo, int32 InSteps = 4);
+		/**
+		 * DragFromTo with any button: the right or the middle button is how an author pans the view. The same shape --
+		 * move, press, a frame, InSteps even moves with a frame after each, the release, a frame -- and the same travel
+		 * handed on as axis input while the button is held.
+		 */
+		bool DragWithButton(const FKey& InButton, FIntPoint InFrom, FIntPoint InTo, int32 InSteps = 4);
+
+		/**
+		 * Modifier keys held from now on, the way a keyboard holds them: each goes down as a key event of its own on the
+		 * viewport (FSceneViewport::OnKeyDown), which is where the viewport keeps the key state the client reads Shift and
+		 * Ctrl from (FEditorViewportClient::IsShiftPressed, FInputEventState), and every key and pointer event sent after
+		 * carries them in its modifier state, as a platform event does. Already-held keys are not pressed twice.
+		 */
+		bool HoldModifiers(EDreamDriverModifierKeys InModifiers);
+		/** Let every held modifier key go, last held first, each as a key event of its own. */
+		bool ReleaseModifiers();
+
+		/**
+		 * A wheel turn at InPixel, as FSlateApplication::OnMouseWheel delivers one: a move there, then
+		 * FSceneViewport::OnMouseWheel with InWheelDelta notches, positive away from the user (MouseScrollUp, which zooms
+		 * an orthographic editor view in). The held modifiers ride along. No frame is pumped.
+		 */
+		bool Wheel(FIntPoint InPixel, float InWheelDelta);
+
+		/**
+		 * What Slate asks the widget under the cursor once every frame (FSlateApplication::QueryCursor): the viewport's
+		 * OnCursorQuery at the pointer's place. An editor viewport answers it from the hit proxy under the pointer and
+		 * remembers to look again on its next tick (FEditorViewportClient::GetCursor, ConditionalCheckHoveredHitProxy),
+		 * which is how a transform gizmo's axis comes to be hovered before it is grabbed. A pointer moved by this driver
+		 * gets no such query unless it is asked for here.
+		 */
+		bool QueryCursor();
+
+		/**
+		 * A row of the palette's Basic group dropped at InPixel: a plain widget carrying InVisualClass -- UDreamText,
+		 * UDreamImage (which the palette also asks for the default sprite), UDreamRectBlock -- or no visual at all for
+		 * null, built the way SDreamWidgetPalette::CollectBasics builds those rows.
+		 */
+		bool DropBasicFromPalette(UClass* InVisualClass, FIntPoint InPixel);
+
+		/** The SViewport inside the shell: the widget Slate gives the keyboard to when an author clicks the viewport. */
+		TSharedPtr<SWidget> ViewportWidget() const;
+		/**
+		 * Give the viewport widget Slate's keyboard focus for the cursor user, with the cause a click gives it
+		 * (EFocusCause::Mouse). A hand's press on the viewport does this through the reply FSceneViewport answers it with
+		 * (AcquireFocusAndCapture); this driver delivers its pointer events past Slate, so the reply is never acted on and
+		 * the focus has to be handed over here instead. False, saying where the focus went, when Slate did not take it --
+		 * a designer whose tab was never laid out into a window has no path for it.
+		 */
+		bool FocusForKeyboard(FString& OutWhyNot);
+		/** Whether the cursor user's keyboard focus is on the viewport widget now. */
+		bool HasKeyboardFocus() const;
+		/**
+		 * A shortcut, the way a keyboard sends one: InModifiers' keys down, the key down and up, the modifiers up, each
+		 * through FSlateApplication::ProcessKeyDownEvent and ProcessKeyUpEvent, to the keyboard focus -- the viewport, and
+		 * from it up the focus path to the asset editor that holds it (SStandaloneAssetEditorToolkitHost::OnKeyDown,
+		 * whose toolkit command list maps Delete, Copy, Paste, Duplicate, Undo and Redo). Refused, sending nothing, while
+		 * the keyboard focus is anywhere but the viewport: a key goes where the focus is, and in an editor somebody is
+		 * using that could be anything.
+		 */
+		bool PressShortcut(const FKey& InKey, EDreamDriverModifierKeys InModifiers, FString& OutWhyNot);
 
 		/** The widget's four projected corners as an axis-aligned box of inner pixels, or unset. */
 		TOptional<FBox2D> WidgetPixelRect(const UDreamWidget* InPreviewWidget) const;
+		/**
+		 * The widget's four rect corners on the inner pixel grid, unrounded, in the order the designer's overlay walks them:
+		 * bottom-left, bottom-right, top-right, top-left of the widget's OWN rect. Unlike the box above this still says which
+		 * edge is the widget's top once it is turned. False, with OutCorners empty, when any corner cannot be projected.
+		 */
+		bool WidgetPixelCorners(const UDreamWidget* InPreviewWidget, TArray<FVector2D>& OutCorners) const;
+		/**
+		 * World-space points on the inner pixel grid, unrounded, through the same view the designer draws with -- a widget's
+		 * pivot is its GetWorldTransform().GetLocation(). False, with OutPixels empty, when any of them is at or behind the
+		 * eye or there is no sized viewport to project onto.
+		 */
+		bool WorldToPixels(TConstArrayView<FVector> InWorldPoints, TArray<FVector2D>& OutPixels) const;
 		/** What the toolkit has selected: the live entries of its selection, preview widgets all. */
 		TArray<UDreamWidget*> SelectedWidgets() const;
 
@@ -230,6 +308,8 @@ namespace DreamTests
 		bool GetViewportGeometry(FGeometry& OutGeometry) const;
 		FVector2D PixelToScreenIn(const FGeometry& InGeometry, FIntPoint InPixel) const;
 		FPointerEvent MakePointerEvent(const FVector2D& InScreenPosition, const FKey& InEffectingButton) const;
+		/** The modifier state every event this driver builds carries: the keys HoldModifiers holds down. */
+		FModifierKeysState HeldModifierState() const;
 		/** Over, then drop -- the order Slate delivers them in, and the order the designer expects. */
 		bool DeliverDragDrop(const TSharedPtr<FDragDropOperation>& InOperation, const FPointerEvent& InEvent);
 		/** Whether a pointer event sent now would reach the viewport client at all. */
@@ -261,6 +341,8 @@ namespace DreamTests
 
 		/** The pointer state a synthesised event carries, kept the way Slate keeps its own. */
 		TSet<FKey> PressedButtons;
+		/** The modifier keys HoldModifiers pressed, in the order they went down. Empty by default, which is no modifiers. */
+		TArray<FKey> HeldModifierKeys;
 		/** Where the pointer is, in absolute Slate space. Zero until the first MoveTo. */
 		FVector2D LastScreenPosition = FVector2D::ZeroVector;
 	};

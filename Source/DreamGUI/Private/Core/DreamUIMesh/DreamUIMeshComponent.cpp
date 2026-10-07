@@ -291,6 +291,11 @@ public:
 		int32 RenderPriority = 0;
 		/** The canvas, as the renderer tells world-space canvases apart: compared, never dereferenced. */
 		FObjectKey CanvasKey;
+		/**
+		 * The canvas's root, as the renderer tells screen-space roots apart -- which root's view a screen-space primitive is
+		 * drawn through, and in which player's view on a split screen. Compared, never dereferenced.
+		 */
+		FObjectKey ScreenRootKey;
 		float BlendDepth = 0.0f;
 		int32 DepthFade = 0;
 		FPrimitiveComponentId PrimitiveComponentId;
@@ -335,7 +340,7 @@ public:
 		//the renderer only ever compares the canvas key, never dereferences it, and an FObjectKey stays
 		//distinct from a later object that happens to reuse the same address
 		ENQUEUE_RENDER_COMMAND(FDreamUIRenderRoot_AddPrimitive)(
-			[WeakRenderer = DreamUIRenderer, Self = AsShared(), Key = CanvasKey, Blend = BlendDepth, Fade = DepthFade, bToWorld = bIsDreamUIRenderToWorld](FRHICommandListImmediate& RHICmdList)
+			[WeakRenderer = DreamUIRenderer, Self = AsShared(), Key = CanvasKey, RootKey = ScreenRootKey, Blend = BlendDepth, Fade = DepthFade, bToWorld = bIsDreamUIRenderToWorld](FRHICommandListImmediate& RHICmdList)
 			{
 				// A root released before this ran is out of the renderer's lists for good: putting it back would leave the
 				// renderer a primitive that nothing takes out again.
@@ -348,7 +353,7 @@ public:
 					}
 					else
 					{
-						WeakRenderer.Pin()->AddScreenSpacePrimitive_RenderThread(Primitive);
+						WeakRenderer.Pin()->AddScreenSpacePrimitive_RenderThread(Primitive, RootKey);
 					}
 				}
 			}
@@ -1088,6 +1093,7 @@ private:
 		, bDeterminantNegative(InSettings.Transform.LocalToWorld.Determinant() < 0.0f)
 		, PrimitiveComponentId(InSettings.PrimitiveComponentId)
 		, CanvasKey(InSettings.CanvasKey)
+		, ScreenRootKey(InSettings.ScreenRootKey)
 		, BlendDepth(InSettings.BlendDepth)
 		, DepthFade(InSettings.DepthFade)
 		, FeatureLevel(InSettings.FeatureLevel)
@@ -1111,6 +1117,7 @@ private:
 	bool bDeterminantNegative = false;
 	FPrimitiveComponentId PrimitiveComponentId;
 	FObjectKey CanvasKey;
+	FObjectKey ScreenRootKey;
 	float BlendDepth = 0.0f;
 	int32 DepthFade = 0;
 	bool bReleased = false;
@@ -1672,6 +1679,7 @@ FDreamUIRenderRoot* UDreamUIMeshComponent::EnsureRenderRoot()
 	Settings.bNeedsUERendererSectionData = NeedsUERendererSectionData();
 	Settings.RenderPriority = TranslucencySortPriority;
 	Settings.CanvasKey = FObjectKey(RenderCanvas.Get());
+	Settings.ScreenRootKey = FObjectKey(RenderCanvas->GetRootCanvas());
 	Settings.BlendDepth = RenderCanvas->GetActualBlendDepth();
 	Settings.DepthFade = RenderCanvas->GetActualDepthFade();
 	Settings.PrimitiveComponentId = GetPrimitiveSceneId();

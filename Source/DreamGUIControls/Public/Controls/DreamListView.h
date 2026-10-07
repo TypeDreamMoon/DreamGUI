@@ -14,6 +14,8 @@
 #include "DreamListView.generated.h"
 
 class UDreamWidget;
+class UDreamKeyEventData;
+class UDreamPointerEventData;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FDreamListSelectionChangedEvent, int32, SelectedIndex);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FDreamListRowEvent, int32, ItemIndex, UDreamWidget*, Row, UObject*, Item);
@@ -55,6 +57,19 @@ enum class EDreamItemDropZone : uint8
 	OntoItem,
 	/** The seam after the row. */
 	BelowItem,
+};
+
+/** What a finger dragged along a list whose rows can be picked up (bAllowDragging) does. */
+UENUM(BlueprintType, Category = DreamGUI)
+enum class EDreamListFingerDrag : uint8
+{
+	/**
+	 * The list scrolls under the finger and no row is picked up, as in UMG: a touch drag on a row of an SListView is the
+	 * list's (STableRow hands it to its table before the row's own drag is asked). The mouse still picks rows up.
+	 */
+	ScrollList,
+	/** The row under the finger is picked up, as the mouse picks it up; the list does not scroll under that finger. */
+	PickUpRow,
 };
 
 class UDreamListViewBase;
@@ -238,6 +253,21 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FDreamListDraggingStateEvent, bool, 
  * to whatever is beside the list -- STableViewBase::OnNavigation's answer. Arriving at a list from
  * outside is that same scan, which lands on the nearest row and does not select it.
  *
+ * MULTI SELECTION IS SListView's
+ * ------------------------------
+ * In Multi mode a click chooses the way STableRow::OnMouseButtonDown and OnMouseButtonUp do: a plain
+ * click selects the row it lands on and nothing else; Ctrl adds the row or takes it away; Shift adds
+ * every row from the range anchor to this one to what is already chosen, and Ctrl with Shift does the
+ * same. The anchor is the row the last plain click, Ctrl click, finger tap or plain navigation step landed
+ * on -- SListView's RangeSelectionStart -- and a Shift range leaves it where it was. A finger has no
+ * modifier keys, and STableRow::OnTouchEnded gives a tap in Multi mode the one meaning it can have: it
+ * adds the row it lifts on and never takes one away. The keys are SListView::NavigationSelect's and
+ * OnKeyDown's: an arrow with Shift selects from the anchor to the row it moves to and nothing else, with
+ * Ctrl and Shift adds that range, with Ctrl alone adds the row it moves to, and Ctrl+A selects every row.
+ * The modifiers a click is read with are the clicking player's, held under their hands as the player
+ * controller has them; the Ctrl spot is shared with Cmd. Every selection is still asked of the veto
+ * (OnIsItemSelectableOrNavigable), and a click still selects on the release that completes it.
+ *
  * TAB SEES ONE STOP
  * -----------------
  * A list is one Tab stop, as a browser's list box is: TabNavigation is Once, Tab enters at
@@ -296,6 +326,15 @@ public:
 	virtual UDreamWidget* ResolveTabEntry(bool bInBackward) override;
 
 	/**
+	 * The keys of a Multi selection (see MULTI SELECTION above): an arrow with Shift or Ctrl held, and
+	 * Ctrl+A, while the focus is on one of this list's rows. Answered whole -- the selection, the reveal
+	 * and the focus moved to the row the arrow lands on -- and kept, so the press is not also a plain
+	 * navigation step. Any other key, a key in another mode and a plain arrow go on as before; a Blueprint
+	 * subclass's On Key Down is asked first.
+	 */
+	virtual bool NativeOnKeyDown(UDreamKeyEventData* EventData) override;
+
+	/**
 	 * The rows, as text. The common case, and the control's job is to be the common case -- the same
 	 * call UDreamDropdown's Options make. Parallel to ItemObjects when both are given: the object
 	 * carries the data, this carries what the built-in row says.
@@ -332,9 +371,10 @@ public:
 	 * worth handing to a binding. -1 is none.
 	 *
 	 * With SelectionMode at Multi this is the ANCHOR -- the row the last selection landed on -- and
-	 * SelectedIndices is the whole answer. The two are kept in step: writing this one (a .dui line, a
-	 * details-panel edit, a `<->` binding) is read as "that row is selected", and a set that empties
-	 * puts this back to -1.
+	 * SelectedIndices is the whole answer. (A Shift range is measured from a range anchor of its own,
+	 * SListView's, which a range leaves where it was: see MULTI SELECTION above.) The two are kept in
+	 * step: writing this one (a .dui line, a details-panel edit, a `<->` binding) is read as "that row
+	 * is selected", and a set that empties puts this back to -1.
 	 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetSelectedIndex", BlueprintSetter = "SetSelectedIndex", Category = "List")
 	int32 SelectedIndex = INDEX_NONE;
@@ -343,7 +383,8 @@ public:
 	 * How many rows can be selected at once, in UUIListView's four modes -- the same enum, because
 	 * they are the same four answers and a second one spelling them again is a second thing to keep
 	 * true. None ignores clicks; Single always leaves exactly one chosen; SingleToggle lets a second
-	 * click on the chosen row clear it; Multi accumulates.
+	 * click on the chosen row clear it; Multi chooses as SListView does -- a plain click one row, Ctrl
+	 * a row more or less, Shift a range, a finger tap a row more (see MULTI SELECTION above).
 	 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetSelectionMode", BlueprintSetter = "SetSelectionMode", Category = "List")
 	EUIListSelectionMode SelectionMode = EUIListSelectionMode::Single;
@@ -469,7 +510,8 @@ public:
 	 * only move focus and reveal, and the selection stays wherever the player last put it -- a
 	 * shopping list you scroll through without losing the line you were on. SelectionMode None never
 	 * selects either way, and a press in Multi mode replaces the selection with the row it lands on,
-	 * which is what SListView does for a press without modifier keys.
+	 * which is what SListView does for a press without modifier keys; with Shift or Ctrl held it extends
+	 * the selection instead (see MULTI SELECTION above).
 	 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetSelectItemOnNavigation", BlueprintSetter = "SetSelectItemOnNavigation", Category = "List")
 	bool bSelectItemOnNavigation = true;
@@ -594,6 +636,18 @@ public:
 	 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetAllowDragDrop", BlueprintSetter = "SetAllowDragDrop", Category = "List|Drag")
 	bool bAllowDragDrop = false;
+
+	/**
+	 * What a finger dragged along rows that can be picked up does: scroll the list (the default, UMG's) or pick the row up.
+	 *
+	 * UMG has no switch for it: STableRow hands a touch drag to its list (STableRow::OnDragDetected captures the touch
+	 * for the table and returns before the row's own drag is asked), so on a touch screen a list of draggable rows still
+	 * scrolls, and the mouse picks the rows up. PickUpRow is for a touch-first screen whose rows are dragged by finger --
+	 * an inventory, a reorderable deck -- and whose list does not need scrolling by that drag. The mouse is the same
+	 * either way.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetFingerDrag", BlueprintSetter = "SetFingerDrag", Category = "List|Drag", meta = (EditCondition = "bAllowDragging"))
+	EDreamListFingerDrag FingerDrag = EDreamListFingerDrag::ScrollList;
 
 	/**
 	 * Where the drag visual sits relative to the pointer, as a fraction of its own size -- UMG's
@@ -1157,6 +1211,13 @@ public:
 	UFUNCTION(BlueprintPure, Category = "List|Drag")
 	bool GetAllowDragDrop() const { return bAllowDragDrop; }
 
+	UFUNCTION(BlueprintPure, Category = "List|Drag")
+	EDreamListFingerDrag GetFingerDrag() const { return FingerDrag; }
+
+	/** Read when a finger's drag starts: a drag already under way goes on as it began. */
+	UFUNCTION(BlueprintCallable, Category = "List|Drag")
+	void SetFingerDrag(EDreamListFingerDrag InFingerDrag);
+
 	UFUNCTION(BlueprintCallable, Category = "List|Drag")
 	void SetAllowDragDrop(bool bInAllow);
 
@@ -1593,6 +1654,51 @@ protected:
 private:
 	void HandleRowClicked(int32 InPoolIndex);
 	void HandleRowDoubleClicked(int32 InPoolIndex);
+
+	/**
+	 * What a click in Multi mode chooses, by SListView's rules: InClick is the event the row's button is
+	 * announcing (UUIButton::GetClickEventData), null for a click nobody's pointer made, which counts as
+	 * a plain one.
+	 */
+	void SelectFromMultiClick(int32 InItemIndex, const UDreamPointerEventData* InClick);
+
+	/**
+	 * Every row from the range anchor to InItemIndex, in display order, into the selection -- after
+	 * clearing it when bInClearFirst. SListView's Private_SelectRangeFromCurrentTo: the anchor stays where
+	 * it was, and the row the range ends on becomes the one SelectedIndex names. Vetoed rows are skipped.
+	 */
+	void SelectRangeToItem(int32 InItemIndex, bool bInClearFirst);
+
+	/** Every row the veto lets be chosen, for Ctrl+A in Multi mode -- SListView's select-all. */
+	void SelectAllItems();
+
+	/**
+	 * Where a Shift range starts: the range anchor while it names an item, else SelectedIndex, else the
+	 * first item -- SListView's RangeStartIndex of zero for a range with no start.
+	 */
+	int32 GetRangeAnchorItemIndex() const;
+
+	/** Whether InClick's player holds Shift, and Ctrl (or Cmd), on their player controller right now. */
+	void ReadSelectionModifiers(const UDreamPointerEventData* InClick, bool& bOutShiftDown, bool& bOutCtrlDown) const;
+
+	/**
+	 * The pool slot of this list's row that holds InWidget or is it, or INDEX_NONE -- also for a widget in a
+	 * row of a list nested inside one of these rows, whose keys are that list's.
+	 */
+	int32 FindRowPoolIndexAround(const UDreamWidget* InWidget) const;
+
+	/**
+	 * The item one navigation step in InDirection from the item pool row InPoolIndex stands for, stepping
+	 * over vetoed items, or INDEX_NONE when the step leaves the list. HandleRowNavigation's arithmetic.
+	 */
+	int32 FindNavigationTargetItem(int32 InPoolIndex, EDreamUINavigationDirection InDirection) const;
+
+	/**
+	 * SListView's RangeSelectionStart: the item the last plain click, Ctrl click, finger tap or plain
+	 * navigation step landed on, which a Shift range is measured from and does not move. INDEX_NONE after
+	 * any selection made through the API, which leaves ranges to start from SelectedIndex.
+	 */
+	int32 RangeAnchorIndex = INDEX_NONE;
 	void HandleScrollViewMoved(FVector2D InProgress);
 	/** A pool row's pointer state moved. Turns "this WIDGET is hovered" into "this ITEM is hovered". */
 	void HandleRowSelectionStateChanged(int32 InPoolIndex, EUISelectableSelectionState InState);

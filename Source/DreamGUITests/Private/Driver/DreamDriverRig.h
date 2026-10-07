@@ -21,6 +21,7 @@ class UDreamDriverInputModule;
 class UDreamScreenSpaceRaycaster;
 class UDreamWidget;
 class UGameInstance;
+class ULocalPlayer;
 class UUITextInput;
 class UWorld;
 
@@ -50,6 +51,40 @@ namespace DreamTests
  * module, as it always did, through a real input actor behind a real player controller, built by
  * DreamDriverGameHost, or as Slate's own events to the world's Slate input source, set up by
  * DreamDriverSlateHost. Whichever it is, the steps are the same; see FDreamDriverSequence.
+ *
+ * PLAYERS (FDreamRigOptions::PlayerCount, PlayerScreens). Player 0 is the rig's own and everything
+ * that takes no player index answers for it, so a rig of one is exactly the rig there always was.
+ * Every further player is built the way the same host builds player 0, with its own context: an
+ * actor of its own carrying its screen raycaster (UserIndex N); under ModuleOnly an event system
+ * for UserIndex N and a driver module feeding it -- a script player, as UDreamUIInputSubsystem calls
+ * a player with no local player behind it; under an actor host a real ULocalPlayer on the game
+ * instance, its APlayerController on the world's list, and an input actor listening as PlayerN, so
+ * that player's buttons, keys, touches and pad go through its own controller's input stack. Driver(N)
+ * and FDreamDriverSequence::AsPlayer send steps as player N; the pump ticks every player's controller.
+ *  - Shared: every player's raycaster projects through the rig's root canvas -- one screen, several
+ *    pointers.
+ *  - Split (actor hosts only): each local player is given the part of the viewport the engine's
+ *    split-screen layout gives it (UGameViewportClient::LayoutPlayers over the viewport client's
+ *    SplitscreenInfo, for UGameMapsSettings' default layouts: two players top and bottom, three
+ *    favouring the top, four in a grid), and every player has a screen-space root canvas of its own
+ *    with its raycaster bound to it, given its player (UDreamCanvas::SetViewportPlayerIndex) as
+ *    UDreamScreenUISubsystem gives every local player's screen -- so each screen is laid out over its
+ *    player's part of the viewport, a pointer outside the part reaches nothing on it, and the canvas
+ *    measures a pointer from the part's corner, as UMG lays a player's layer out
+ *    (SGameLayerManager::AddOrUpdatePlayerLayers). A world pointer attached for a player
+ *    (DreamDriverWorld::AttachWorldPointer with a player index) looks through that player's part, as
+ *    UDreamWorldSpaceRaycaster::GenerateRay deprojects through the pointer's local player. Pixels are
+ *    always the one viewport's: a widget on player 1's screen projects to a pixel in player 1's part
+ *    (FDreamDriverProjection::WorldPointToPixel adds the part's corner). The screens let go of their
+ *    players before the local players are taken off at tear-down. With bScreensFromScreenUI the
+ *    screens are the screen UI's own for each player -- player 0's the rig's root, adopted -- so what
+ *    the screen UI puts on a player's screen (AddToPlayerScreen, a tooltip, a popup) is on the one that
+ *    player's raycaster projects through.
+ * Refused, with the reason, rather than quietly built as player 0: more than four players or fewer
+ * than one, several players under SlateSource (the source's test mappers make Slate user 0 the only
+ * player, and a mapping of the rig's own for more would be testing the rig), and a split screen with
+ * no local players to lay out (ModuleOnly, and every host without a game instance). Asking for a
+ * player the rig has not got -- Context(5), Driver(5) -- is an error on the bound test.
  *
  * PROCESS-WIDE STATE the rig disturbs is put back when it goes -- UUITextInput's "a host delivers
  * characters" switch -- and the counters are checked settled: the rig world's layout pass and
@@ -119,7 +154,37 @@ public:
 	/** Why IsUsable() is false, in words; empty while it is true. */
 	const FString& GetBuildFailure() const;
 
-	/** Tell the rig which test is running, so a failing step reports against it. */
+	/*
+	 * Each player's pieces, by player index; index 0 answers what the accessors without one answer. A player the rig has
+	 * not got answers null from the pointer accessors, and is an error on the bound test from the two that hand back a
+	 * reference (Context, Driver), which then answer player 0's so the test fails where it stands rather than crashing.
+	 */
+	/** How many players the rig was built with. */
+	int32 GetPlayerCount() const;
+	/** Player InPlayerIndex's context, or null when the rig has no such player. */
+	FDreamDriverContext* FindPlayerContext(int32 InPlayerIndex) const;
+	FDreamDriverContext& Context(int32 InPlayerIndex) const;
+	/** A driver whose elements and sequences act as player InPlayerIndex: its pointer, its keys, its screen to find things on. */
+	FDreamDriverRef Driver(int32 InPlayerIndex) const;
+	/** The root of the screen player InPlayerIndex points at: the rig's root, or under a split screen that player's own. */
+	UDreamWidget* Root(int32 InPlayerIndex) const;
+	UDreamCanvas* RootCanvas(int32 InPlayerIndex) const;
+	UDreamEventSystem* EventSystem(int32 InPlayerIndex) const;
+	UDreamDriverInputModule* InputModule(int32 InPlayerIndex) const;
+	UDreamScreenSpaceRaycaster* Raycaster(int32 InPlayerIndex) const;
+	/** Null for a script player (ModuleOnly), which has no controller; under ModuleOnly player 0's once EnsureGameInputHost made it. */
+	APlayerController* GetPlayerController(int32 InPlayerIndex) const;
+	/** Null for a script player. */
+	ULocalPlayer* GetLocalPlayer(int32 InPlayerIndex) const;
+	/** The actor that player's raycaster rides on -- under ModuleOnly its event system and module too. */
+	AActor* GetHostActor(int32 InPlayerIndex) const;
+	/**
+	 * The part of the viewport player InPlayerIndex sees, in viewport pixels, truncated as ULocalPlayer::GetProjectionData
+	 * truncates it: the whole viewport except on a split screen. Empty for a player the rig has not got.
+	 */
+	FBox2D GetPlayerViewRect(int32 InPlayerIndex) const;
+
+	/** Tell the rig which test is running, so a failing step reports against it -- every player's step. */
 	void BindTest(FAutomationTestBase* InTest);
 
 	/**
@@ -173,17 +238,18 @@ public:
 	 * Give the rig the two things a game world has, a bare fixture lacks, and a CONTROL's input path
 	 * assumes. MakeControl calls it; a test building a control by hand calls it before the first click.
 	 *
-	 * 1. The event system registered with the UI manager, which is what UDreamEventSystem::BeginPlay
+	 * 1. Every player's event system registered with the UI manager, which is what UDreamEventSystem::BeginPlay
 	 *    does and what a world that never began play never gets. Everything that asks "which event
 	 *    system is this player's" goes through that registration -- UUISelectable taking the selection
 	 *    on a press, UUITextInput selecting itself when an edit begins, UDreamUINavigationStack::HandleBack
 	 *    finding the field Escape should cancel -- so without it a click focuses nothing.
-	 * 2. A player controller, on the world's controller list and with its input system up.
+	 * 2. Player 0's controller, on the world's controller list and with its input system up.
 	 *    UUITextInput::ActivateInput binds the field's keys on an actor whose InputComponent only
 	 *    exists once the world's player 0 has enabled its input, and binds them through that
 	 *    component without asking whether it exists. With no findable player controller, clicking a
 	 *    text field dereferences null -- in every control that carries one, a spin box included.
-	 *    Spawning is not enough in a world nobody initialized for play; see the definition.
+	 *    Spawning is not enough in a world nobody initialized for play; see the definition. A script
+	 *    player has no controller and needs none: its keyboard is bound on nothing (UDreamUIInputUser::RefreshTextKeys).
 	 *
 	 * Both are idempotent. Neither is done by the rig's constructor, so a test that never asks keeps
 	 * exactly the rig it had before this existed. A controller the context already has -- an input
@@ -231,6 +297,49 @@ private:
 	void CaptureProcessState();
 	UUITextInput* FindEditInRigTree() const;
 	void EndLeakedTextEdit(UUITextInput* InEditInRigTree, FAutomationTestBase* InTest);
+	/** Whether InWidget is under any of the rig's screens: player 0's root, or a split screen's player root. */
+	bool IsUnderRigScreens(const UDreamWidget* InWidget) const;
+	/** For a rig of several players: each player's field being edited, by player index, if it is under the rig's screens. */
+	TMap<int32, TWeakObjectPtr<UUITextInput>> FindPlayerEditsInRigTree() const;
+	void EndLeakedPlayerTextEdits(const TMap<int32, TWeakObjectPtr<UUITextInput>>& InEditsInRigTree, FAutomationTestBase* InTest);
+
+	/**
+	 * Why these options cannot be built, or empty when they can: the player count, and the combinations of players,
+	 * screens and hosts the rig refuses (see the class comment).
+	 */
+	static FString DescribeRefusedPlayerOptions(const FDreamRigOptions& InOptions);
+	/** Step 3 for the players after player 0, under the rig's host. False having set BuildFailure. */
+	bool BuildOtherPlayersInput();
+	/** The engine's split-screen layout onto the local players and the contexts. False having set BuildFailure. */
+	bool LayOutSplitScreen();
+	/** Whether the options ask for a split screen the rig builds: several players, each with a screen of its own. */
+	bool IsSplitScreen() const;
+	/** Whether that split screen's screens are the screen UI's (FDreamRigOptions::bScreensFromScreenUI). */
+	bool UsesScreenUIScreens() const;
+	/** The rig's substituted viewport and the scaler the options ask for, onto a screen-space root canvas whose render mode is set. */
+	void GiveScreenTheRigsViewport(UDreamCanvas* InCanvas) const;
+	/**
+	 * The first step of tearing down: every screen the rig made given no player again, before the input hosts take the
+	 * local players its index names off the game instance.
+	 */
+	void ReleaseScreensFromPlayers();
+	/**
+	 * A ScreenSpaceOverlay root canvas the rig's way -- the render mode, then the substituted viewport, then the scaler
+	 * the options ask for -- on a new registered root named InDisplayName. Null when the root would not take a canvas.
+	 */
+	UDreamCanvas* MakeScreenRoot(const FString& InDisplayName, UDreamWidget*& OutRoot);
+	/** A screen raycaster for InUserIndex on InHost, projecting through InCanvas, enrolled. */
+	UDreamScreenSpaceRaycaster* MakeScreenRaycaster(AActor* InHost, UDreamCanvas* InCanvas, int32 InUserIndex);
+	/** Step 4 for the players after player 0: their screens and raycasters, and every context told of every player. False having set BuildFailure. */
+	bool BuildOtherPlayersScreens();
+	/**
+	 * The first step of tearing down the players after player 0: their input hosts, last player first -- the local
+	 * players come off the game instance from the end, so no player's index moves under it -- and, on a rig of several,
+	 * a complaint for each piece of a player's host left behind.
+	 */
+	void TearDownOtherPlayersInput(FAutomationTestBase* InTest);
+	/** With player 0's tree: their own screens destroyed (a split screen's), their raycasters off, their modules unregistered. */
+	void TearDownOtherPlayersScreens();
 	static void ReportTextEditOutlivingWorld(const UWorld* InRigWorld, FAutomationTestBase* InTest);
 	void RestoreAndVerifyProcessState(FAutomationTestBase* InTest, int32 InLayoutPassDepth, int32 InDesiredSizeMemoDepth);
 	static void ReportRigProblem(FAutomationTestBase* InTest, const FString& InMessage);
@@ -259,6 +368,18 @@ private:
 	TUniquePtr<FDreamDriverContext> DriverContext;
 	TSharedPtr<FDreamDriver> DriverInstance;
 	AActor* Host = nullptr;
+
+	/** A player after player 0: its context and the driver over it, by pointer for the same reason as player 0's. */
+	struct FOtherPlayer
+	{
+		TUniquePtr<FDreamDriverContext> Context;
+		TSharedPtr<FDreamDriver> Driver;
+		AActor* Host = nullptr;
+		/** Whether the root in its context is its own (a split screen's), which the rig then destroys. */
+		bool bOwnsScreen = false;
+	};
+	/** Players 1, 2, 3, in order. Empty on a rig of one. */
+	TArray<FOtherPlayer> OtherPlayers;
 
 	FDreamRigOptions Options;
 	FString BuildFailure;

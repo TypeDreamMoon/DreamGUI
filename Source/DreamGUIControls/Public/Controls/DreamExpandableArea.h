@@ -130,6 +130,12 @@ public:
 	 * Instant by DEFAULT and not by preference: every expander already authored against this plugin
 	 * opens instantly, the suite asserts the control's height in the same breath as the flag, and a
 	 * silently animated open would make both of those wrong. Opting in is one number.
+	 *
+	 * A click while a travel is under way turns it round from where it has got: the section goes back
+	 * the way it came, from the height it shows, and takes as long as it has travelled. This departs
+	 * from UMG on purpose. SExpandableArea::SetExpanded_Animated starts a new curve from one of its
+	 * ends -- an open from collapsed, a close from fully open -- so a section caught halfway jumps to
+	 * that end before it moves; turning round from the height it shows never jumps.
 	 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetExpansionDuration", BlueprintSetter = "SetExpansionDuration", Category = "Expandable Area", meta = (ClampMin = "0.0"))
 	float ExpansionDuration = 0.0f;

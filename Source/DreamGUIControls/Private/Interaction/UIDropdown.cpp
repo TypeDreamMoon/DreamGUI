@@ -3,6 +3,7 @@
 #include "Interaction/UIDropdown.h"
 #include "DreamGUI.h"
 #include "Core/Components/DreamCanvas.h"
+#include "Core/DreamGUISettings.h"
 #include "DreamUIBPLibrary.h"
 #include "Core/DreamUIClipData.h"
 #include "Core/DreamUIInputServices.h"
@@ -501,6 +502,16 @@ void UUIDropdown::SetListInert(bool bInInert)
 	}
 	RowsMadeUnnavigable.Reset();
 }
+EDreamPopupOutsideClick UUIDropdown::ResolveOutsideClick() const
+{
+	if (bUseInteractionBlock)
+	{
+		return EDreamPopupOutsideClick::Consume;
+	}
+	// A dropdown's list is a menu, as SComboBox's is a menu on the Slate menu stack, and follows the project's menus.
+	const UDreamGUISettings* Settings = UDreamGUISettings::Get();
+	return Settings != nullptr && Settings->bMenusConsumeOutsideClick ? EDreamPopupOutsideClick::Consume : EDreamPopupOutsideClick::PassThrough;
+}
 bool UUIDropdown::PushListToPopupLayer()
 {
 	UDreamUIPopupLayer* Layer = UDreamUIPopupLayer::Get(this);
@@ -515,7 +526,7 @@ bool UUIDropdown::PushListToPopupLayer()
 	Params.UserIndex = ResolveListUserIndex();
 	ListUserIndex = Params.UserIndex;
 	PendingTabCommit = INDEX_NONE;
-	Params.OutsideClick = bUseInteractionBlock ? EDreamPopupOutsideClick::Consume : EDreamPopupOutsideClick::PassThrough;
+	Params.OutsideClick = ResolveOutsideClick();
 	// Tab leaves an open list rather than walking its rows, as it leaves an HTML select: the list closes -- choosing the row
 	// the player is on, while bTabCommitsHighlightedRow -- the focus comes back to the face, and the Tab goes on from there.
 	Params.TabBehavior = EDreamPopupTabBehavior::CloseAndContinue;
@@ -870,8 +881,7 @@ void UUIDropdown::SetUseInteractionBlock(bool InValue)
 		{
 			if (UDreamUIPopupLayer* Layer = UDreamUIPopupLayer::Get(this))
 			{
-				Layer->SetOutsideClick(ListRoot.Get(),
-					bUseInteractionBlock ? EDreamPopupOutsideClick::Consume : EDreamPopupOutsideClick::PassThrough);
+				Layer->SetOutsideClick(ListRoot.Get(), ResolveOutsideClick());
 			}
 		}
 	}

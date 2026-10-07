@@ -130,12 +130,16 @@ protected:
 	 */
 	bool bMaxHeightAuthored = false;
 	/**
-	 * What a press outside the open list does besides closing it: on, it goes no further, as a click
-	 * on the full-screen blocker this used to build went nowhere else; off, it then reaches whatever
-	 * is under the pointer, as Slate's menus let it (EDreamPopupOutsideClick Consume / PassThrough).
+	 * Keep the press outside the open list from what is under it, for this dropdown whatever the project says.
+	 *
+	 * A press outside the open list closes it. Off, the default, what it does next is the project's choice for all its
+	 * menus (UDreamGUISettings::bMenusConsumeOutsideClick): by default it then reaches whatever is under the pointer, as
+	 * SComboBox's list -- a menu on the Slate menu stack -- lets it. On, it goes no further for this dropdown, as a click
+	 * on the full-screen blocker this used to build went nowhere else (EDreamPopupOutsideClick Consume / PassThrough). A
+	 * press on the dropdown's own face closes the list either way and never opens it again.
 	 */
 	UPROPERTY(EditAnywhere, Category = "DreamGUI-Dropdown")
-		bool bUseInteractionBlock = true;
+		bool bUseInteractionBlock = false;
 	/**
 	 * What Tab and Shift+Tab do in the open list besides closing it: on, the row the player is on is chosen first, as an
 	 * HTML select does, and the Tab then moves on past the dropdown; off, the list only closes. Tab never stays in an open
@@ -196,6 +200,8 @@ private:
 	int32 FindHighlightedRow() const;
 	/** Open the list on the popup layer, for the player who opened it. False when the layer cannot take it. */
 	bool PushListToPopupLayer();
+	/** What the popup layer does with a press outside the open list: bUseInteractionBlock, then the project's choice. */
+	EDreamPopupOutsideClick ResolveOutsideClick() const;
 	/** The player whose list this is: the one whose click opened it, else the one focused on the face, else the owner. */
 	int32 ResolveListUserIndex() const;
 	/**

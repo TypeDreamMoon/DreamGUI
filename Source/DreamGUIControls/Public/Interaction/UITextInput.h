@@ -899,6 +899,10 @@ private:
 	/** @return the entry's widget, or null when InbApplicable said this entry cannot act now. */
 	UDreamWidget* AddContextMenuEntry(UDreamWidget* InMenuRoot, bool InbApplicable, const FText& InLabel, EContextMenuAction InAction, int32& InOutEntryCount);
 	void ExecuteContextMenuAction(EContextMenuAction InAction);
+	/** The menu closed from inside it -- an entry chosen, a press on the sheet behind it -- and the focus given back to the field, whose edit went on while it was up. */
+	void CloseContextMenuIntoField();
+	/** Whether the focus a deselect takes from the field goes to the field's own open edit menu or the sheet behind it. */
+	bool IsFocusGoingToContextMenu(const UDreamBaseEventData* EventData) const;
 	/** The entry's stable name, so a test can ask which entries a field offered rather than count them. */
 	static const TCHAR* GetContextMenuActionName(EContextMenuAction InAction);
 	/** One line of the field's own text plus breathing room, so the menu scales with the font. */

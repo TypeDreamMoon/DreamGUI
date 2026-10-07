@@ -77,8 +77,8 @@ struct FDreamUITooltipUserState
 	GENERATED_BODY()
 
 	/**
-	 * The pointer this tooltip follows -- the player's pointer that last arrived at something with a tooltip -- whose
-	 * event data object is mutated in place by the pipeline, so it IS the live position.
+	 * The pointer this tooltip follows -- the player's pointer that last arrived at something with a tooltip, never a
+	 * finger -- whose event data object is mutated in place by the pipeline, so it IS the live position.
 	 */
 	TWeakObjectPtr<UDreamPointerEventData> LastPointerEvent;
 	/** What the dwell timer is armed for. */
@@ -119,7 +119,9 @@ struct FDreamUITooltipUserState
  * own canvas above the screen stack's sort band and is raycast-disabled throughout -- a tooltip that can steal the
  * pointer hides itself forever. Each player's tooltip is theirs: a second player's hover neither moves nor hides
  * the first player's bubble. Within a player it follows one pointer, the one that last arrived at something with a
- * tooltip; another of the player's pointers passing over nothing leaves it alone.
+ * tooltip; another of the player's pointers passing over nothing leaves it alone. A finger is never that pointer, as a
+ * touch is never Slate's cursor: a tap or a held finger brings no bubble up, a finger dragged onto a widget arms none,
+ * and a finger's press only takes down a bubble that is up and restarts its dwell.
  */
 UCLASS()
 class DREAMGUIINPUT_API UDreamUITooltipSubsystem : public UTickableWorldSubsystem, public IDreamUIWorldService

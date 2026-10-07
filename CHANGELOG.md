@@ -53,6 +53,22 @@ after 3 for 2.1.0 -- so the engine never takes 1.0.0 for the older of the two.
   Each of these used to be addable anywhere and then sat there doing nothing. Paste, duplicate and component assets
   dropped on the panel follow the same rules; a refused drop says why. A project adds rules for its own components
   from its editor module.
+- **`UDreamListViewBase::FingerDrag`** (List, Tile and Tree views): what a finger dragged along rows that can be picked up
+  does. `ScrollList`, the default, scrolls the list, as UMG's does; `PickUpRow` picks the row up, as the mouse does, for a
+  touch-first screen whose rows are dragged by finger. The mouse is the same either way.
+- **`bMenusConsumeOutsideClick`** in the project settings (Dream GUI, Input): on, a press outside an open menu or
+  dropdown list only closes it, as DreamGUI's menus and lists did before; off, the default, it closes it and goes on to
+  what it landed on (see Changed).
+- **`UUIButton::GetClickEventData`**: while a button's click listeners run, the pointer event the click came from --
+  whose it is, which pointer, a finger or the mouse, navigation or not. The click delegates carry no arguments, and a
+  C++ listener that has to tell a tap from a click asks this; null for a click raised by broadcasting the delegate.
+- **The designer has a rotate handle**, which UMG's designer does not. A single widget selected in the 2D view gets a
+  disc on a short stem above the middle of its top edge, standing off it along the widget's own up, so it turns with the
+  widget. Dragged round, it turns the widget in its own plane about its pivot by the angle the pointer goes round,
+  clockwise on screen being a positive roll, and shows the angle as it goes; with Shift held the angle lands on a whole
+  number of 15 degrees, and grid snapping leaves angles alone. The angle is written to `RelativeRotationEuler`, in the
+  asset and in the `.dui` the class names, as one undo step; Esc during the drag puts the angle back. The pointer is a
+  hand over the handle. Two widgets selected have no handle, and the 3D view keeps the engine's transform gizmo.
 
 ### Changed
 
@@ -82,9 +98,73 @@ after 3 for 2.1.0 -- so the engine never takes 1.0.0 for the older of the two.
   rows lead with Text, Font, Size, Style, Color and alignment, with its wrapping, typography and rendering settings in
   groups that start closed, and a Sprite's or Texture's colour sits under its sprite or texture. The Transform and
   anchor-data categories at the bottom, which repeated the Layout rows raw, are gone, and Is Enabled joined Behavior.
+- **A list, tile or tree view in Multi mode chooses rows as SListView does.** A plain click selects the row it lands on
+  and nothing else, where it used to add the row to the selection and a second click took it away; Ctrl adds a row or
+  takes it away; Shift adds every row from the range anchor to the one clicked, Ctrl with Shift too. A finger's tap adds
+  the row and never takes one away (`STableRow::OnTouchEnded`). With a row focused, an arrow with Shift selects from the
+  anchor to the row the focus moves to, with Ctrl and Shift adds that range, with Ctrl alone adds the row, and Ctrl+A
+  selects every row. The anchor is the row the last plain click, Ctrl click, tap or plain arrow landed on. A click reads
+  its modifiers from the clicking player's controller. See [Migration](Docs/Migration.md#from-100-to-the-next-release).
+- **A focused spin box steps its value with the arrow keys**, as USpinBox's `SSpinBox::OnKeyDown` does: Up and Right
+  add a step, Down and Left take one away, each press committed, the value kept inside the range a drag sweeps and on
+  the StepSize grid. With StepSize at zero the step is SSpinBox's default -- one, or a tenth across a drag range of ten
+  or less -- times ten with Shift, a hundred with Shift and Alt, a tenth with Ctrl, a hundredth with Ctrl and Alt. The
+  arrows used to take the focus on to the next control; they no longer do, as in UMG. The D-pad still navigates, and
+  in a field being edited the arrows still move the caret.
+- **A finger never brings up a tooltip**, as Slate shows tooltips at the cursor alone: not for a tap, a finger held past
+  the delay, or a finger dragged onto a widget. A finger's press still takes down a bubble that is up, and the bubble
+  comes back after its delay under the mouse that brought it up -- which a finger's tap used to stop, by taking the
+  tooltip over and keeping it after it lifted.
+- **On a split screen each player's screen is that player's part of the viewport**, as UMG's AddToPlayerScreen lays a
+  player's layer out over the part the split-screen layout gives the player. The screen root the screen UI makes for a
+  local player -- the one Add to Player Screen, Add to Viewport, the page stack, tooltips, drag visuals and modal dims
+  land on -- is sized to that part; a pointer is measured from the part's top-left corner, and one in another player's
+  part reaches nothing on it; it is drawn in that player's view alone, under the shared layer. Every player's screen
+  used to be a canvas the size of the whole viewport, drawn into every player's view. `UDreamCanvas::SetViewportPlayerIndex`
+  gives any ScreenSpaceOverlay root canvas a player this way, and `GetViewportRect` says which part it fills. A game
+  that is not split is unchanged -- its one player's part is the whole viewport -- and so is a canvas nobody gives a
+  player, such as one placed in a level, which stays the shared full-viewport layer. See
+  [Migration](Docs/Migration.md#from-100-to-the-next-release).
+- **A finger on a slider's track moves the value only once it travels**, as `SSlider`'s touch handlers do: a finger
+  that lands only notes where; past the drag distance the slider takes it -- `OnMouseCaptureBegin`, then the value under
+  it -- and follows it until it lifts. A tap that never travelled changes nothing and begins no capture; it used to jump
+  the value to the tap and capture at once, as the mouse does. The mouse is unchanged. See
+  [Migration](Docs/Migration.md#from-100-to-the-next-release).
+- **A finger dragged along a list of rows that can be dragged scrolls the list**, as `STableRow` gives a touch drag to
+  its list; it used to pick up the row it landed on. The mouse still picks rows up, and `FingerDrag = PickUpRow` gives
+  the finger the old behaviour. See [Migration](Docs/Migration.md#from-100-to-the-next-release).
+- **A press outside an open menu goes on to what it landed on**, as the Slate menu stack lets it: a Dream Menu Anchor's
+  menu, or a menu anchor panel's, closes on the press and the button under it is pressed and clicked as well. It used to
+  close the menu and go no further. A press on the menu's own trigger still closes it without opening it again:
+  `UDreamMenuAnchor::ShouldOpenDueToClick` says no for the click of the press that closed the menu. With a menu open,
+  what is behind it is hovered as the pointer crosses it. `bMenusConsumeOutsideClick` in the project settings puts the
+  old behaviour back. See [Migration](Docs/Migration.md#from-100-to-the-next-release).
+- **A press outside a dropdown's open list goes on to what it landed on too**, as SComboBox's list is a menu on the same
+  stack: the list closes, choosing nothing, and the button under the press is pressed and clicked. A click on the
+  dropdown's own face closes the list without opening it again. The list follows `bMenusConsumeOutsideClick` with the
+  menus. `UUIDropdown::bUseInteractionBlock` now means "keep the press for this dropdown whatever the project says" and
+  is off by default; it was on by default, and on was the only way a list had ever behaved. See
+  [Migration](Docs/Migration.md#from-100-to-the-next-release).
 
 ### Fixed
 
+- **A text field's edit menu answers the pointer.** No entry -- Copy, Paste and the rest -- could be chosen with a mouse
+  or a finger. The menu and the sheet behind it were built but never brought to life, so neither took its place above
+  the screen and the sheet, built last, lay in front of the entries and took every press; and a press that left the
+  field ended the edit and took the menu down under it. The menu is registered as it is built, the field keeps its edit
+  while its menu is up, as a Slate text field counts as focused while its context menu is open, and the focus comes
+  back to the field when the menu closes -- after an entry, or after a press outside the menu, which now leaves the
+  field being edited where it used to end the edit.
+- **The focus ring shows on a button.** The ring the keys and the pad bring is hung under the control it marks, and a
+  control whose face takes one child -- every Dream Button, whose face is a size box over its content -- refused it: the
+  ring stayed where it was made, under nothing, and was drawn nowhere. It now hangs under the nearest widget that takes
+  it, placed and sized over the control, and moves with the control when the two move together, as in a scroll box.
+- **A drag that is not a drag and drop no longer drops on a list row.** A finger that scrolled a list of droppable rows
+  and lifted over one of them reported `OnItemAcceptDrop` for that row, with no operation; only a drag that carries an
+  operation drops now, as only a drag-drop event reaches Slate's `OnDrop`.
+- **A menu opened again partway through its fade-in fades in from clear.** A Dream Menu Anchor closed during its fade
+  and opened again went on with the old fade, so the second open came in from nearly opaque. Every open now starts its
+  fade from transparent, as every push of a Slate menu is a new window that starts transparent.
 - **Creating a widget of an abstract class logs an error** instead of stopping on NewObject's assert. A class picked
   from a list cannot be abstract, but a class pin or a Create Dream Widget Of Class call fed from a variable can be.
 - **A DreamUI Widget Blueprint's thumbnail is the screen it authors.** The Content Browser tile was a wireframe of the
@@ -94,6 +174,52 @@ after 3 for 2.1.0 -- so the engine never takes 1.0.0 for the older of the two.
   It is drawn when an asset has no clean thumbnail and when it is saved, not on every frame the pointer rests on it, so
   a large screen does not stall the browser. A thumbnail already saved in an asset stays until the asset is next
   changed and saved.
+- **A press is let go of when its widget moves.** A button held down and then moved under another parent, taken off
+  its parent or destroyed kept the press: the release clicked it, the pointer never having left it, and a slider moved
+  to another parent partway through a drag went on following the pointer. The press now ends on the next frame, as a
+  Slate mouse capture ends once the path it was taken along no longer leads to its widget: the widget's release and the
+  end of its drag go out then (a slider's capture end among them), the button's own release later clicks nothing, and
+  the rest of the drag moves nothing. A drag and drop under way is left to run, as Slate's is once begun. A widget
+  destroyed while held is no longer left behind as the pointer's press after the release.
+- **On a split screen, a widget knows which player it is for in a world with no game viewport.**
+  `UDreamWidget::GetLocalPlayerIndexOf` asked the local player for its game instance, which a local player only answers
+  through its viewport client; one added where there is no game viewport answered nothing, so every player was player
+  0, and Add to Player Screen put a second player's widget on the first player's screen. It now asks the controller's
+  world, where the event system looks the players up.
+- **Undo puts a widget's size back where no layout runs.** Undoing a resize restored the widget's anchors and size
+  delta, but the width and height worked out from them stayed as they were: the asset's widget went on answering
+  `GetWidth` and `GetHeight` with the size from before the undo.
+- **F and Zoom to Fit fill the designer's view.** Both framed the box's bounding sphere with the editor's ortho zoom,
+  which comes out five hundred pixels across whatever the view's size (`r.Editor.AlignedOrthoZoom`, on by default), so
+  a fitted canvas took a third of a 1280-pixel view and less of a larger one. The flat view now zooms so the box, with a
+  hundred pixels to spare each way, is as large as the view holds it, as UMG's Zoom to Fit does; the 3D view frames as
+  before.
+- **On a split screen, a widget's popups open on the screen it is on.** A dropdown's list, a tooltip's bubble and the
+  rest of what the popup layer lifts went to the first player's screen for a widget on any other player's: the screen
+  UI took the nearest user widget's owning player as the answer before the screen the widget was on, and a user widget
+  with no owner named answers with the first local player. It now counts only an owner named with `SetOwningPlayer`,
+  and otherwise goes on up to the screen.
+- **A palette row dropped on the designer's viewport by hand lands under the pointer.** The drop was measured in the
+  frame of the whole viewport widget, toolbar included, rather than of the scene under it, so it landed below the pointer
+  by the toolbar's share of the height -- thirty pixels in a 720-pixel view. The drag preview and a hierarchy row or an
+  asset dragged onto the viewport were off the same way.
+- **A widget moved out of a tree while the tree is destroyed works where it lands.** A focus ring the focus took back
+  from a closing dialog -- and any widget a behaviour moves out while its tree comes down -- was ended and unregistered
+  with the tree and then left so under its new, live parent: drawn by that canvas with no place in its data, logging
+  `WidgetPropertyDataStartPosition is invalid`. It is registered again where it went, and begins play there if the
+  world has, as a UMG widget moved into a panel on screen is constructed there. One moved under a parent that is not
+  registered yet stays as it was, for that parent's registration to take with it.
+- **Ctrl+C copies the designer's selection.** The designer's Copy, Cut, Paste, Duplicate and Delete were mapped on the
+  asset editor's own command list, and the Blueprint editor's Find Results panel maps Copy and Select All onto that list
+  as it is made, after the designer has: Ctrl+C in the viewport or the hierarchy, and Copy in their right-click menu,
+  copied a search result and left the designer's clipboard as it was, so the next Ctrl+V pasted nothing or something
+  older. The five are now on a list of the designer's own as well, which the viewport and the hierarchy answer keys
+  from first and their menus run, as UMG's designer keeps them.
+- **A drag in the designer follows the pointer while a notification fades in.** The designer applies a held press, a
+  drag and a marquee in its tick, and while Slate holds back expensive work -- a toast fading in at a low frame rate
+  does, the editor's Undo toast among them -- the editor ticks only the viewports that asked to be redrawn. A drag begun
+  just after an undo stood still, and one let go before the toast was in had never begun, as though it had been a
+  click. The viewport now asks for its redraw while a gesture is live, as the engine's own viewport drags never wait.
 
 ## 1.0.0
 

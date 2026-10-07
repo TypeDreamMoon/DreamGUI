@@ -346,6 +346,17 @@ public:
 	UPROPERTY(config, EditAnywhere, Category = "Input")
 	bool bUsePlatformAcceptBack = true;
 
+	/**
+	 * What a press outside an open menu -- a Dream Menu Anchor's, a menu anchor panel's, or a dropdown's list -- does besides
+	 * closing it. Off, the default, the press then reaches whatever is under the pointer, as Slate's menu stack lets it: the
+	 * menus close on the press and it goes on to the widget it landed on, so a menu left open never costs the player the
+	 * click they made elsewhere. A press on the menu's own trigger -- a dropdown's face -- closes the menu without opening it
+	 * again (UDreamMenuAnchor::ShouldOpenDueToClick). On: the press only closes the menu and goes no further, as DreamGUI's
+	 * menus did before. A single dropdown keeps the press whatever this says with UUIDropdown::bUseInteractionBlock.
+	 */
+	UPROPERTY(config, EditAnywhere, Category = "Input")
+	bool bMenusConsumeOutsideClick = false;
+
 	// ---------------------------------------------------------------- Navigation
 
 	/** Tab and Shift+Tab move the focus from control to control. Off: Tab is a key like any other, the game's. */

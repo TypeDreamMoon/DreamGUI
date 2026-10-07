@@ -85,6 +85,14 @@ public:
 	 */
 	static void MakeRingInert(UDreamWidget* InRingWidget);
 	/**
+	 * Hang InRingWidget, keeping where it is in the world, under the control it marks -- or, when the control takes no more
+	 * children (a face whose size box holds its content), under the nearest widget above it that does. The parent it
+	 * found, or null when none would take it.
+	 */
+	static UDreamWidget* AttachRingTo(UDreamWidget* InRingWidget, UDreamWidget* InSelected);
+	/** Where a ring hung under InRingParent sits to be over InSelected's centre: InSelected's own centre when it is the parent. */
+	static FVector RingLocationOver(const UDreamWidget* InRingParent, const UDreamWidget* InSelected);
+	/**
 	 * Make InRingWidget, freshly made from a ring class, a ring: the handler its class put on its root, else one added there
 	 * -- the class then only draws, and this handler moves, sizes and fades it -- and the widget made inert (MakeRingInert).
 	 * The plugin's own NavigationSelectionInputHandler class is drawing only. Unless the class's handler is a Blueprint's,

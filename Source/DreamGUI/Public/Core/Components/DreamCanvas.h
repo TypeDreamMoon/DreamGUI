@@ -121,7 +121,9 @@ public:
 	virtual void CalculateSizeAndScale(UDreamCanvas* InCanvas, const FIntPoint& InViewportSize, FIntPoint& OutDreamCanvasSize, float& OutScale);
 	/**
 	 * Convert position from viewport to DreamCanvas space.
-	 * @param InPosition The point's pixel position on viewport.
+	 * @param InPosition The point's pixel position on the part of the viewport the canvas fills, left top is zero point:
+	 *		the whole viewport, or a player's part of a split screen (UDreamCanvas::GetViewportRect), whose corner the
+	 *		canvas has already taken off.
 	 * @param Result DreamCanvas space position, left bottom is zero point.
 	 * @return convert will fail if this DreamCanvas is not root canvas
 	 */
@@ -129,7 +131,8 @@ public:
 	/**
 	 * Convert position from DreamCanvas space to viewport.
 	 * @param InPosition The point's position in DreamCanvas space.
-	 * @param Result in viewport, pixel unit, left top is zero point.
+	 * @param Result on the part of the viewport the canvas fills, pixel unit, left top is zero point; the canvas adds
+	 *		that part's corner.
 	 * @return convert will fail if this DreamCanvas is not root canvas
 	 */
 	virtual bool ConvertPositionFromCanvasToViewport(const FVector2D& InPosition, FVector2D& Result)const;
@@ -188,6 +191,7 @@ private:
 	virtual FMatrix GetRendererProjectionMatrix() const override { return GetProjectionMatrix(); }
 	virtual bool GetRendererEnableDepthTest() const override { return GetEnableDepthTest(); }
 	virtual float GetRendererScreenSpaceRenderScale() const override { return GetScreenSpaceRenderScale(); }
+	virtual int32 GetRendererViewPlayerIndex() const override;
 	//~ End IDreamUIRendererViewSource
 protected:
 	virtual void Awake() override;
@@ -259,6 +263,37 @@ public:
 	/** Drop the substituted size and go back to whatever the real viewport says. */
 	void ClearViewportSizeOverride();
 	bool HasViewportSizeOverride()const { return ViewportSizeOverride.IsSet(); }
+
+	/**
+	 * Give this ScreenSpaceOverlay root canvas to one local player, by its index in the game instance's local players
+	 * (the UserIndex an event system and a raycaster carry), or to none with INDEX_NONE.
+	 *
+	 * UMG's AddToPlayerScreen puts a widget on its owning player's layer, and the game layer manager lays that layer out
+	 * over the part of the viewport the split-screen layout gives the player (SGameLayerManager::AddOrUpdatePlayerLayers,
+	 * from the player's ULocalPlayer::Origin and Size). A canvas given a player does the same: it is sized to that
+	 * player's part, a pointer is measured from the part's top-left corner and one outside the part reaches nothing on
+	 * it, and the renderer draws it only in that player's view. Without a split screen the part is the whole viewport,
+	 * so a player's canvas is exactly the canvas it always was. UDreamScreenUISubsystem gives every screen root it makes
+	 * its player.
+	 *
+	 * INDEX_NONE, the default, is the shared layer: the whole viewport whoever is looking, as every canvas nobody gives
+	 * a player has always been.
+	 */
+	UFUNCTION(BlueprintCallable, Category = DreamGUI)
+	void SetViewportPlayerIndex(int32 InLocalPlayerIndex);
+	/** The local player this canvas fills the part of the viewport of, or INDEX_NONE for the whole viewport. */
+	UFUNCTION(BlueprintPure, Category = DreamGUI)
+	int32 GetViewportPlayerIndex()const { return ViewportPlayerIndex; }
+	/**
+	 * The part of the viewport this canvas fills, in viewport pixels with the viewport's top-left corner at zero: its
+	 * player's part on a split screen -- the truncations ULocalPlayer::GetProjectionData makes of Origin and Size --
+	 * and the whole viewport otherwise. Its size is GetViewportSize.
+	 */
+	FIntRect GetViewportRect()const;
+	/** Whether this canvas fills only a part of the viewport: it has a player, and the split-screen layout gives that player less than all of it. */
+	bool FillsPartOfViewport()const;
+	/** Whether a pointer at InViewportPixel is on this canvas's part of the viewport. Always, for a canvas that fills the whole of it. */
+	bool ContainsViewportPoint(const FVector2D& InViewportPixel)const;
 	/** get scale value of canvas. only valid for root canvas. */
 	FORCEINLINE float GetCanvasScale()const { return CanvasScale; }
 private:
@@ -486,10 +521,24 @@ private:
 	/** Current viewport size*/
 	FIntPoint ViewportSize = FIntPoint(2, 2);
 	/**
+	 * Where the part of the viewport this canvas last applied begins, beside ViewportSize: zero but for a player's part
+	 * of a split screen. See GetViewportRect.
+	 */
+	FIntPoint ViewportOrigin = FIntPoint::ZeroValue;
+	/**
 	 * A viewport size standing in for the real one. Unset means "read the real viewport", which is
-	 * every canvas that has not been handed one. See SetViewportSizeOverride.
+	 * every canvas that has not been handed one. See SetViewportSizeOverride. It stands in for the WHOLE
+	 * viewport: a canvas given a player takes that player's part of it, as it would of the real one.
 	 */
 	TOptional<FIntPoint> ViewportSizeOverride;
+	/** See SetViewportPlayerIndex. Not saved: which local player a screen belongs to is a fact about the run. */
+	int32 ViewportPlayerIndex = INDEX_NONE;
+	/** The whole viewport's size, before any player's part is taken of it: what GetViewportSize answered before canvases had players. */
+	FIntPoint GetWholeViewportSize()const;
+	/** The local player this canvas's part is that of, when it has one in this world; null otherwise. */
+	const class ULocalPlayer* FindViewportLocalPlayer()const;
+	/** Whether this canvas is the kind a player's part applies to: a ScreenSpaceOverlay root in a game world. */
+	bool CanFillPartOfViewport()const;
 #pragma endregion
 	FRenderModeChangedEvent OnRenderModeChanged;
 	FRenderTargetChangedEvent OnRenderTargetChanged;

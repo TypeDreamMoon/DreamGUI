@@ -109,12 +109,15 @@ int32 UDreamScreenUISubsystem::PlayerIndexForWidget(const UDreamWidget* InRoot) 
 		{
 			return *RootIndex;
 		}
-		// 2. The nearest user widget that has an owner.
+		// 2. The nearest user widget that has an owner of its own -- one SetOwningPlayer named. Not GetOwningPlayer, which
+		//    never answers nothing: with no owner named it falls back to the first local player, so every widget under
+		//    a user widget was the first player's, and a dropdown on the second player's screen opened its list on the
+		//    first player's. Without one the walk goes on up, to a host that has one or to the screen it is on.
 		if (const UDreamUserWidget* UserWidget = Cast<const UDreamUserWidget>(Walker))
 		{
-			if (IsValid(UserWidget->GetOwningPlayer()))
+			if (const APlayerController* Named = UserWidget->OwningPlayer.Get(); IsValid(Named))
 			{
-				return UserWidget->GetOwningPlayerIndex();
+				return UDreamWidget::GetLocalPlayerIndexOf(Named);
 			}
 		}
 	}
@@ -237,6 +240,11 @@ UDreamWidget* UDreamScreenUISubsystem::GetOrCreateScreenRootForIndex(int32 InPla
 		return nullptr;
 	}
 	Canvas->SetRenderMode(EDreamRenderMode::ScreenSpaceOverlay);
+	// The player's own layer, as UMG's AddToPlayerScreen gives one (SGameLayerManager::FindOrCreatePlayerLayer): on a
+	// split screen it fills that player's part of the viewport and is drawn in that player's view; otherwise the part
+	// is the whole viewport and the root is the one it always was. An adopted canvas above is left as its author made
+	// it, the shared layer -- nothing about it says which player it belongs to.
+	Canvas->SetViewportPlayerIndex(InPlayerIndex);
 	ScreenRoots.Add(InPlayerIndex, NewRoot);
 	OwnedScreenRoots.Add(InPlayerIndex);
 

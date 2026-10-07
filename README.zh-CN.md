@@ -166,7 +166,7 @@ UDreamUIBPLibrary::AddWidgetOfClassToViewport(this, WBP_Settings);   // 屏幕�
 
 | | |
 | :-- | :-- |
-| **设计器** | 按矩形拾取、悬停反馈、分轴缩放手柄、锚点徽章、框选、拖拽改父节点、从内容浏览器拖入、面板收藏与搜索、撤销；*Events* 区一键生成处理函数和它的路由。对以 `.dui` 为源文件的类，属性改动写回文件里对应的那一行，结构性改动会说明原因后拒绝——层级归文件管 |
+| **设计器** | 按矩形拾取、悬停反馈、分轴缩放手柄、旋转手柄（按住 Shift 以 15° 为步）、锚点徽章、框选、拖拽改父节点、从内容浏览器拖入、面板收藏与搜索、撤销；*Events* 区一键生成处理函数和它的路由。对以 `.dui` 为源文件的类，属性改动写回文件里对应的那一行，结构性改动会说明原因后拒绝——层级归文件管 |
 | **[VS Code 扩展](https://github.com/TypeDreamMoon/dreamui-language-support)** | `.dui` 的高亮、补全、悬停、跳转、诊断与格式化，诊断码和插件编译器一致 |
 | **`DreamUI.Capture`** | 把视口和每个 RenderTarget 画布存成 PNG（蓝图里是 `UDreamUICaptureLibrary`） |
 | **`DreamUI.Stats`** | 自上次调用以来每帧逐阶段的开销，以及合批数、顶点数和字节数；每个阶段在 Unreal Insights 里都是一个 `DreamUI_*` 作用域 |

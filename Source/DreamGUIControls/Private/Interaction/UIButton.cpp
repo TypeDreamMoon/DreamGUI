@@ -125,6 +125,9 @@ void UUIButton::FireClick(const UDreamPointerEventData* InEventData)
 	// The one body every click method ends in. Pulled out of OnPointerClick when the methods arrived:
 	// three entry points writing the same four lines is three places for the feedback, the native
 	// listeners, the Blueprint listeners and the authored event delegate to fall out of step.
+	// The event is on hand for exactly as long as the listeners run (GetClickEventData), and a click
+	// raised inside one of them puts back the one it interrupted.
+	TGuardValue<TWeakObjectPtr<const UDreamPointerEventData>> ClickEventGuard(ClickEventData, InEventData);
 	PlayClickFeedback(InEventData);
 	OnClickCPP.Broadcast();
 	OnClickBP.Broadcast();

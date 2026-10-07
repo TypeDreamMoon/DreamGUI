@@ -13,6 +13,7 @@
 #include "DreamSpinBox.generated.h"
 
 class UDreamWidget;
+class UDreamKeyEventData;
 class UDreamUIFontData_BaseObject;
 class UUIButton;
 class UUITextInput;
@@ -44,6 +45,15 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FDreamSpinBoxValueChangedEvent, floa
  * counts from where the drag was recognised, not from the press: the travel that turned the press
  * into a drag moves nothing, as in SSpinBox, so the value does not leap by the drag threshold the
  * moment a scrub starts.
+ *
+ * THE ARROW KEYS step it, as SSpinBox::OnKeyDown does: with the focus anywhere in the control and the
+ * field not being edited, Up and Right add one step and Down and Left take one away, committed at once.
+ * The step is StepSize, whatever modifier is held; with StepSize at zero it is SSpinBox's default step
+ * -- a tenth across a drag range of ten or less, one across a wider one -- times Shift's ten, Shift+Alt's
+ * hundred, Ctrl's tenth or Ctrl+Alt's hundredth. A stepped value stays inside the range a drag sweeps and
+ * lands on the StepSize grid. The four keys are the control's while it has the focus: they never take the
+ * focus on to a neighbour, as they do not in UMG. The pad's D-pad is not among them and still navigates,
+ * and in a field being edited the arrows are the field's and move its caret.
  *
  *     /Script/DreamGUIControls.DreamSpinBox Count {
  *         Value = 5
@@ -91,7 +101,11 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetMaxValue", BlueprintSetter = "SetMaxValue", Category = "Spin Box", meta = (EditCondition = "bOverride_MaxValue"))
 	float MaxValue = 100.0f;
 
-	/** What one click of a step face adds or removes, before clamping. UMG calls it Delta. */
+	/**
+	 * What one click of a step face, or one arrow key, adds or removes, before clamping. UMG calls it
+	 * Delta, and as with Delta a zero hands the arrow keys SSpinBox's default step, which the modifier
+	 * keys scale (see the class comment).
+	 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetStepSize", BlueprintSetter = "SetStepSize", Category = "Spin Box")
 	float StepSize = 1.0f;
 
@@ -130,7 +144,8 @@ public:
 
 	/**
 	 * Every value, however it arrived, snapped to a multiple of StepSize -- UMG's AlwaysUsesDeltaSnap.
-	 * Off (the default), only the step faces move in whole steps and a drag or a typed value is free.
+	 * Off (the default), only the step faces and the arrow keys move in whole steps -- an arrow key onto
+	 * the StepSize grid, as SSpinBox snaps an arrow-key commit to Delta -- and a drag or a typed value is free.
 	 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetAlwaysUsesDeltaSnap", BlueprintSetter = "SetAlwaysUsesDeltaSnap", Category = "Spin Box")
 	bool bAlwaysUsesDeltaSnap = false;
@@ -397,6 +412,14 @@ public:
 	virtual bool NativeOnDrag(UDreamPointerEventData* EventData) override;
 	virtual bool NativeOnEndDrag(UDreamPointerEventData* EventData) override;
 
+	/**
+	 * The arrow keys -- see the class comment. A key reaches this from wherever the focus is inside the
+	 * control (the field, or a step face a click left it on), after the field being edited has had the
+	 * keys it types with and before any binding or navigation; a Blueprint subclass's On Key Down is asked
+	 * first. Kept, so the arrows are not read as navigation.
+	 */
+	virtual bool NativeOnKeyDown(UDreamKeyEventData* EventData) override;
+
 	UPROPERTY(BlueprintReadOnly, Transient, Category = "Spin Box")
 	TObjectPtr<UDreamWidget> DecrementNode = nullptr;
 
@@ -449,6 +472,15 @@ private:
 
 	/** InValue snapped to a multiple of StepSize, measured from MinValue. Identity when off. */
 	float SnapToStep(float InValue) const;
+
+	/** InValue on the StepSize grid SnapToStep uses, whatever bAlwaysUsesDeltaSnap says. Identity with no step. */
+	float SnapToStepGrid(float InValue) const;
+
+	/**
+	 * One arrow key's step, committed: up for a positive InDirection, down for a negative one, sized by
+	 * the modifiers held as SSpinBox sizes it, clamped into the drag's range and the hard range.
+	 */
+	void StepFromArrowKey(float InDirection, bool bInShiftDown, bool bInCtrlDown, bool bInAltDown);
 
 	/** The value as 0..1 across the SLIDER range, with SliderExponent undone. */
 	float ValueToSliderFraction(float InValue) const;

@@ -54,6 +54,25 @@ enum class EDreamDriverTouchPhase : uint8
 	Ended,
 };
 
+/** How the rig's players share its viewport, when it has more than one (FDreamRigOptions::PlayerCount). */
+enum class EDreamRigPlayerScreens : uint8
+{
+	/**
+	 * One screen for all of them: every player points at the rig's own root canvas, each through a screen raycaster of its
+	 * own carrying its UserIndex -- two mice on one desk, or a pad's virtual cursor beside the mouse.
+	 */
+	Shared,
+	/**
+	 * A split screen as the engine lays one out: every local player is given the part of the viewport UGameViewportClient::
+	 * LayoutPlayers would give it (ULocalPlayer::Origin and Size, from the viewport client's SplitscreenInfo table), and its
+	 * own screen-space root canvas with its own screen raycaster, as UDreamScreenUISubsystem gives every local player a root
+	 * of its own -- given that player, so the screen is laid out over, hit in and drawn in the player's part alone. A
+	 * world-space pointer of a player looks through that player's part of the viewport. Needs real local players, so only
+	 * the actor hosts build it; see FDreamDriverRig.
+	 */
+	Split,
+};
+
 /** How a rig is built. Every default reproduces today's rig except bWithGameInstance. */
 struct FDreamRigOptions
 {
@@ -65,4 +84,27 @@ struct FDreamRigOptions
 	FVector2D ReferenceResolution = FVector2D(1280.0, 720.0);
 	float MatchFromWidthToHeight = 1.0f;
 	EDreamRigInputHost InputHost = EDreamRigInputHost::ModuleOnly;
+	/**
+	 * How many players the rig has, one to four. Player 0 is the rig's own and the one every step speaks for unless a
+	 * sequence says otherwise (FDreamDriverSequence::AsPlayer); each further player has its own event system, input entry
+	 * and screen raycaster, UserIndex 1, 2, 3. Under ModuleOnly they are script players the driver feeds by hand; under an
+	 * actor host each is a real ULocalPlayer with its own APlayerController and input actor. SlateSource takes one player.
+	 */
+	int32 PlayerCount = 1;
+	/** How several players share the viewport. Ignored with one. */
+	EDreamRigPlayerScreens PlayerScreens = EDreamRigPlayerScreens::Shared;
+	/**
+	 * Under a split screen, whether every player's screen is the one UDreamScreenUISubsystem keeps for that player, as
+	 * in a game whose screens come from AddToPlayerScreen and CreateWidgetOnScreen: player 0's is the rig's own root,
+	 * which the screen UI adopts for its first player, and every other player's is the root the screen UI makes for it
+	 * (given that player as the screen UI gives it; the rig adds only the substituted viewport and the scaler). So a
+	 * widget put on a player's screen, and a tooltip or a popup the screen UI puts up for a widget there, land on the
+	 * screen that player's raycaster projects through, and the screen UI never makes a second screen-space screen for a
+	 * player who has one. Off, the rig makes those roots itself and the screen UI knows of none of them but player 0's,
+	 * and only once asked. Ignored unless the rig is a split screen.
+	 */
+	bool bScreensFromScreenUI = false;
 };
+
+/** The most players a rig builds: UGameViewportClient::MaxSplitscreenPlayers' default, and the end of the engine's split-screen tables. */
+constexpr int32 DreamRigMaxPlayers = 4;

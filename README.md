@@ -173,7 +173,7 @@ The manual is published at **<https://gui.toolchain.64hz.cn>** in Chinese and En
 
 | | |
 | :-- | :-- |
-| **Designer** | Picking by rect, hover feedback, per-axis resize handles, an anchor medallion, marquee selection, drag to reparent, Content Browser drops, palette favourites and search, undo; the *Events* section creates a handler and its route in one click. On a class a `.dui` is the source of, a property edit is written back onto its line in the file, and a structural edit is refused with the reason — the hierarchy is the file's |
+| **Designer** | Picking by rect, hover feedback, per-axis resize handles, a rotate handle (Shift for 15° steps), an anchor medallion, marquee selection, drag to reparent, Content Browser drops, palette favourites and search, undo; the *Events* section creates a handler and its route in one click. On a class a `.dui` is the source of, a property edit is written back onto its line in the file, and a structural edit is refused with the reason — the hierarchy is the file's |
 | **[VS Code extension](https://github.com/TypeDreamMoon/dreamui-language-support)** | Highlighting, completion, hover, navigation, diagnostics and formatting for `.dui`, with the compiler's own codes |
 | **`DreamUI.Capture`** | a PNG of the viewport and of every render-target canvas (`UDreamUICaptureLibrary` from Blueprint) |
 | **`DreamUI.Stats`** | what the frames since the last call cost, stage by stage, with batches, vertices and bytes; every stage is a `DreamUI_*` scope in Unreal Insights |

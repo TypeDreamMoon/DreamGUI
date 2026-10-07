@@ -8,6 +8,8 @@
 #include "Interaction/DreamUIPopupLayer.h"
 #include "DreamMenuAnchor.generated.h"
 
+class UDreamPointerEventData;
+class UDreamTweener;
 class UDreamWidget;
 class UDreamUserWidget;
 
@@ -28,7 +30,9 @@ DECLARE_DYNAMIC_DELEGATE_RetVal(UDreamWidget*, FDreamMenuAnchorGetContent);
  * stack, as the dropdown's list is: lifted to the screen root so no ancestor clips it or counts it in
  * its layout, closed by a press anywhere else (bCloseOnClickOutside), by Back, and by this anchor
  * going away or out of sight; and a menu opened from inside an open menu is its child, closed with
- * it. Focus that went into the menu comes back to whatever had it when it opened.
+ * it. Focus that went into the menu comes back to whatever had it when it opened. A press elsewhere
+ * that closes the menu then goes on to what it landed on, as Slate's menu stack lets it, unless the
+ * project's UDreamGUISettings::bMenusConsumeOutsideClick keeps it.
  *
  * TWO WAYS TO SAY WHAT THE MENU IS, and they are alternatives:
  *
@@ -96,9 +100,15 @@ public:
 	 * question a button wrapping an anchor has to ask before it calls Open: a click that lands while
 	 * the menu is already up is the click that DISMISSED it, and opening again would make a menu
 	 * impossible to close by clicking the thing that opened it.
+	 *
+	 * No, too, for the click of the press that has just closed the menu from outside it: that press
+	 * goes on to what it landed on (bCloseOnClickOutside), and when that is the trigger, its click
+	 * comes as the press is let go -- after the close. SMenuAnchor answers it with bDismissedThisTick,
+	 * which holds because SComboButton clicks on the press; a trigger here clicks on the release, so
+	 * the answer holds until the press that closed the menu has been let go.
 	 */
 	UFUNCTION(BlueprintPure, Category = "Menu Anchor")
-	bool ShouldOpenDueToClick() const { return !bIsOpen; }
+	bool ShouldOpenDueToClick() const;
 
 	/** The menu's class, for an anchor whose menu is not authored in place. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetMenuClass", BlueprintSetter = "SetMenuClass", Category = "Menu Anchor")
@@ -108,7 +118,11 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetMenuSize", BlueprintSetter = "SetMenuSize", Category = "Menu Anchor")
 	FVector2D MenuSize = FVector2D(200.0, 150.0);
 
-	/** Whether a click anywhere else closes the menu. Off makes it the caller's job. */
+	/**
+	 * Whether a press anywhere else closes the menu. Off makes it the caller's job. The press then goes on to whatever
+	 * it landed on, as Slate's menu stack lets it, unless the project's UDreamGUISettings::bMenusConsumeOutsideClick
+	 * keeps it.
+	 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintGetter = "GetCloseOnClickOutside", BlueprintSetter = "SetCloseOnClickOutside", Category = "Menu Anchor")
 	bool bCloseOnClickOutside = true;
 
@@ -310,6 +324,22 @@ private:
 
 	/** Asleep, home in its resting place, and the close announced: the end of every close. */
 	void FinishClose();
+
+	/** What the popup layer does with a press outside the open menu: bCloseOnClickOutside, then the project's choice. */
+	EDreamPopupOutsideClick ResolveOutsideClick() const;
+
+	/** The fade the last open started, stopped where it is: a closed menu has no fade in, and a new open starts its own. */
+	void StopOpenFade();
+
+	/** The fade in the last open started, while it may still be running. */
+	TWeakObjectPtr<UDreamTweener> OpenFadeTweener;
+
+	/**
+	 * The press that last closed the menu from outside it, and when it went down: its click is not one to open the menu
+	 * with (ShouldOpenDueToClick) for as long as that press is still the pointer's.
+	 */
+	TWeakObjectPtr<UDreamPointerEventData> DismissingPress;
+	double DismissingPressTime = 0.0;
 
 	UPROPERTY(Transient)
 	bool bIsOpen = false;

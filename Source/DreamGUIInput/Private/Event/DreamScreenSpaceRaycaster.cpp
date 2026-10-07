@@ -125,9 +125,11 @@ bool UDreamScreenSpaceRaycaster::GenerateRay(UDreamPointerEventData* InPointerEv
 		return false;
 
 	auto ViewProjectionMatrix = RootCanvas->GetViewProjectionMatrix();
-	//Get mouse position, convert to range 0-1
-	FVector2D mousePos = FVector2D(InPointerEventData->PointerPosition);
-	FVector2D viewportSize = RootCanvas->GetViewportSize();
+	//Get mouse position, convert to range 0-1 across the part of the viewport the canvas fills: a player's part of a
+	//split screen, measured from where the layout puts it, as a UMG player layer's geometry is; the whole viewport otherwise
+	const FIntRect ViewportRect = RootCanvas->GetViewportRect();
+	FVector2D mousePos = FVector2D(InPointerEventData->PointerPosition) - FVector2D(ViewportRect.Min);
+	FVector2D viewportSize = FVector2D(ViewportRect.Size());
 	FVector2D mousePos01 = mousePos / viewportSize;
 	mousePos01.Y = 1.0f - mousePos01.Y;
 
@@ -140,6 +142,20 @@ bool UDreamScreenSpaceRaycaster::GenerateRay(UDreamPointerEventData* InPointerEv
 void UDreamScreenSpaceRaycaster::Raycast(UDreamPointerEventData* InPointerEventData, FVector& OutRayOrigin, FVector& OutRayDirection, FVector& OutRayEnd, TArray<FDreamUIHitResult>& OutHitResult)
 {
 	if (!RootCanvas.IsValid())return;
+	// A pointer outside the canvas's part of a split screen is over another player's screen, where nothing of this
+	// canvas is: a UMG player layer clips to its part and hit-tests nothing past it (SGameLayerManager::
+	// FindOrCreatePlayerLayer gives the layer ClipToBoundsAlways). The ray is still made and kept, so a drag that began
+	// on the part follows the pointer off it, as a captured mouse does; it only hits nothing. A canvas that fills the
+	// whole viewport contains every pointer, as before.
+	if (InPointerEventData != nullptr && !RootCanvas->ContainsViewportPoint(FVector2D(InPointerEventData->PointerPosition)))
+	{
+		if (GenerateRay(InPointerEventData, OutRayOrigin, OutRayDirection, OutRayEnd, CurrentRayLength))
+		{
+			CurrentRayOrigin = OutRayOrigin;
+			CurrentRayDirection = OutRayDirection;
+		}
+		return;
+	}
 	Super::RaycastUI(InPointerEventData, RootCanvas.Get(), OutRayOrigin, OutRayDirection, OutRayEnd, OutHitResult);
 }
 
