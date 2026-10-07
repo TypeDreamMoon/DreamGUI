@@ -76,6 +76,7 @@ namespace
 		// An authored event's HelperWidget and ReferenceObject live in EventList's struct entries.
 		// A field iterator sees only the top-level event property, leaving every instance's route
 		// aimed at the archetype. The value iterator reaches those entries, as DuplicateSubtree does.
+		TArray<const FProperty*> PropertyChain;
 		for (TPropertyValueIterator<FObjectPropertyBase> It(InContainer->GetClass(), InContainer); It; ++It)
 		{
 			const FObjectPropertyBase* Property = It.Key();
@@ -87,8 +88,21 @@ namespace
 			}
 			// Preserve hashed keys, matching the subtree-copy pass: changing one in place would leave
 			// its map or set hashed by the old reference.
-			const FMapProperty* OwningMap = Property->GetOwner<FMapProperty>();
-			if (Property->GetOwner<FSetProperty>() != nullptr || (OwningMap != nullptr && OwningMap->KeyProp == Property))
+			// A key may itself be a struct or array, so checking only the immediate owner misses
+			// object references nested inside it. The iterator's chain runs from leaf to root.
+			It.GetPropertyChain(PropertyChain);
+			bool bHashedKey = false;
+			for (int32 Index = 0; Index < PropertyChain.Num(); ++Index)
+			{
+				const FMapProperty* Map = CastField<FMapProperty>(PropertyChain[Index]);
+				if (PropertyChain[Index]->IsA<FSetProperty>()
+					|| (Map != nullptr && Index > 0 && Map->KeyProp == PropertyChain[Index - 1]))
+				{
+					bHashedKey = true;
+					break;
+				}
+			}
+			if (bHashedKey)
 			{
 				continue;
 			}
