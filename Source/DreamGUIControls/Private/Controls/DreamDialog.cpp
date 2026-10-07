@@ -186,6 +186,9 @@ void UDreamDialog::NativeOnConstruct()
 
 void UDreamDialog::NativeOnEnable()
 {
+	// Each appearance starts a new question, including one shown by an earlier close's callback.
+	++DialogTransitionSerial;
+	bCloseInProgress = false;
 	Super::NativeOnEnable();
 	// A navigation scope pushed in front of the screen puts focus in the dialog, and notes as it is pushed what had
 	// focus before the dialog appeared, to give it back when the dialog closes: this dialog's own (BackScope, on a
@@ -202,6 +205,15 @@ void UDreamDialog::NativeOnEnable()
 		// right after construct for a dialog that starts awake, and again every time one is woken.
 		FocusDefaultButton();
 	}
+}
+
+void UDreamDialog::NativeOnDestruct()
+{
+	// EndPlay can leave the widget valid and hierarchy-active. Cancel any older click/close and
+	// keep closing sealed until a later BeginPlay enables a new lifetime.
+	++DialogTransitionSerial;
+	bCloseInProgress = true;
+	Super::NativeOnDestruct();
 }
 
 void UDreamDialog::RefreshHostArrangement()
@@ -568,29 +580,33 @@ void UDreamDialog::SetButtons(const TArray<FDreamDialogButton>& InButtons)
 
 void UDreamDialog::Close(FName InResult)
 {
-	// BEFORE anything that can destroy this widget. CloseTopModal tears the modal layer -- and this
-	// dialog with it -- down inside the call, so a broadcast placed after it would be a broadcast
-	// from an object that no longer exists.
+	if (!IsValid(this) || bCloseInProgress || !GetWidgetActive())return;
+	const TWeakObjectPtr<UDreamDialog> WeakThis(this);
+	const uint64 CloseSerial = ++DialogTransitionSerial;
+	bCloseInProgress = true;
+
+	// Announce before the modal host tears the widget down, but only once. A listener can also
+	// destroy it, or show a new question on the same instance, while this notification runs.
 	OnDialogClosed.Broadcast(InResult);
+	if (!WeakThis.IsValid() || DialogTransitionSerial != CloseSerial)return;
 
 	UDreamUIModalSubsystem* Modal = UDreamUIModalSubsystem::Get(this);
 	if (Modal != nullptr && Modal->GetActiveModalWidget() == this)
 	{
-		// The contract UDreamUIModalSubsystem documents: a dialog's buttons end the modal by naming
-		// the result they mean. Everything after that is the subsystem's -- popping the focus scope,
-		// delivering the result to whoever called ShowModal, destroying the layer, and showing the
-		// next queued dialog.
+		// The subsystem owns the focus return, result callback, layer destruction and queued dialog.
 		Modal->CloseTopModal(InResult);
+		if (WeakThis.IsValid() && DialogTransitionSerial == CloseSerial)bCloseInProgress = false;
 		return;
 	}
-	// Standalone: focus back first, while the dialog is still up -- its scope gives back what had focus
-	// before it appeared, to every player whose focus is in it -- then back to the state a .dui-placed
-	// dialog waits in between questions. Going to sleep pops the scope too, which then finds it popped.
+	// Keep the close guard through focus return too: a focus callback must not publish a second
+	// result or let this old close put a newly activated question back to sleep.
 	if (BackScope != nullptr)
 	{
 		BackScope->DeactivateScope();
+		if (!WeakThis.IsValid() || DialogTransitionSerial != CloseSerial)return;
 	}
 	SetWidgetActive(false);
+	if (WeakThis.IsValid() && DialogTransitionSerial == CloseSerial)bCloseInProgress = false;
 }
 
 void UDreamDialog::RebuildButtons()
@@ -718,9 +734,12 @@ void UDreamDialog::PushButtonStyles(const FDreamDialogStyle& InActive)
 
 void UDreamDialog::HandleButtonClicked(FName InResult)
 {
-	// Re-broadcast at the control before acting on it, so a consumer that only wants to hear the
-	// click still hears it even for a dialog whose close is being handled elsewhere.
+	if (!IsValid(this) || bCloseInProgress || !GetWidgetActive())return;
+	const TWeakObjectPtr<UDreamDialog> WeakThis(this);
+	const uint64 ClickSerial = ++DialogTransitionSerial;
+	// A consumer may handle the result itself, including closing and reopening this same instance.
 	OnButtonClicked.Broadcast(InResult);
+	if (!WeakThis.IsValid() || DialogTransitionSerial != ClickSerial)return;
 	Close(InResult);
 }
 

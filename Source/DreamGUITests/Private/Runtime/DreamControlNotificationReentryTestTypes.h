@@ -48,18 +48,27 @@ public:
 	int32 ClickCount = 0;
 	TArray<FName> ClosedResults;
 	int32 ClosedAfterDestruction = 0;
+	bool bCloseAgainFromClosed = false;
+	bool bDestroyFromClosed = false;
+	bool bEndPlayFromClosed = false;
+	int32 NestedCloseAttempts = 0;
 
 	UFUNCTION()
 	void HandleButtonClicked(FName InResult)
 	{
 		++ClickCount;
-		if (ButtonAction == 1)
+		if (ButtonAction == 1 || ButtonAction == 3)
 		{
 			Dialog->Close(TEXT("Cancel"));
+			if (ButtonAction == 3)Dialog->SetWidgetActive(true);
 		}
 		else if (ButtonAction == 2)
 		{
 			Dialog->DestroyWidget();
+		}
+		else if (ButtonAction == 4)
+		{
+			Dialog->EndPlay();
 		}
 	}
 
@@ -70,6 +79,13 @@ public:
 		if (!IsValid(Dialog))
 		{
 			++ClosedAfterDestruction;
+		}
+		if (bDestroyFromClosed)Dialog->DestroyWidget();
+		if (bEndPlayFromClosed)Dialog->EndPlay();
+		if (bCloseAgainFromClosed && NestedCloseAttempts == 0)
+		{
+			++NestedCloseAttempts;
+			Dialog->Close(TEXT("Cancel"));
 		}
 	}
 };
