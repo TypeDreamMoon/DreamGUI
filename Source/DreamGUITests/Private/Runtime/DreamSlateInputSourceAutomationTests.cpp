@@ -6,6 +6,7 @@
 #include "UObject/StrongObjectPtr.h"
 
 #include "Controls/DreamButton.h"
+#include "Controls/DreamScrollBox.h"
 #include "Controls/DreamTextInput.h"
 #include "Core/Components/DreamWidget.h"
 #include "Core/DreamUIInputServices.h"
@@ -33,6 +34,7 @@
 #include "DreamInputPipelineTestTypes.h"
 #include "DreamPlayerScreenTestTypes.h"
 #include "Interaction/DreamPressInteractionTestTypes.h"
+#include "Interaction/DreamDragInteractionTestTypes.h"
 
 /*
  * INPUT HEARD FROM SLATE.
@@ -121,6 +123,62 @@ namespace DreamSlateInputSourceTestLocal
 		}
 		return Button;
 	}
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDreamSlateWheelAfterNavigationTest,
+	"DreamGUI.Input.SlateSource.AWheelAfterNavigationTracesItsPositionAndPreservesTheVirtualCursor",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamSlateWheelAfterNavigationTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamSlateInputSourceTestLocal;
+	for (const bool bVirtualCursor : { false, true })
+	{
+		FDreamDriverRig Rig = FDreamDriverRig::Headless(ViewportSize);
+		Rig.BindTest(this);
+		if (!TestTrue(TEXT("Rig came up"), Rig.IsUsable())
+			|| !TestTrue(TEXT("UI began play"), DreamDragInteraction::BeginPlayForUI(Rig.GetWorld()))) { return false; }
+		UDreamScrollBox* Box = Rig.MakeControl<UDreamScrollBox>(TEXT("WheelBox"), nullptr, FVector2D(300.0, 400.0));
+		UDreamButton* Button = MakeListenedButton(Rig, TEXT("NavigationTarget"), FVector2D(-350.0, 250.0), nullptr);
+		if (!TestNotNull(TEXT("Scroll box"), Box) || !TestNotNull(TEXT("Box content"), Box->GetContentNode())
+			|| !TestNotNull(TEXT("Navigation button"), Button)) { return false; }
+		for (int32 Row = 0; Row < 20; ++Row)
+		{
+			Rig.MakeWidget(FString::Printf(TEXT("WheelRow%d"), Row), Box->GetContentNode(), FVector2D(300.0, 100.0));
+		}
+		Box->RefreshContentExtent();
+		Rig.PumpFrames(2);
+		const FVector2D BoxPixel = CentreOf(Box->ViewportNode.Get());
+		const TSharedRef<FDreamUISlateInputSource> Source = MakeSource(Rig, bVirtualCursor);
+		FSlateApplication& Slate = FSlateApplication::Get();
+		if (bVirtualCursor) { Rig.InputModule()->MoveTo(BoxPixel); }
+		else { Source->HandleMouseMoveEvent(Slate, MouseAt(CentreOf(Button))); }
+		Rig.PumpFrames(1);
+		UDreamUIInputSubsystem* Input = UDreamUIInputSubsystem::Get(Rig.GetWorld());
+		if (!TestTrue(TEXT("Button focused for navigation"), Input->FocusForNavigation(FaceOf(Button), 0))) { return false; }
+		Source->HandleKeyDownEvent(Slate, Key(EKeys::Right));
+		Rig.PumpFrames(1);
+		Source->HandleKeyUpEvent(Slate, Key(EKeys::Right));
+		Rig.PumpFrames(1);
+		UDreamPointerEventData* Mouse = Input->GetUser(0)->FindPointerEventData(DreamUIPointerIds::Mouse);
+		if (!TestNotNull(TEXT("Mouse pointer"), Mouse)) { return false; }
+		TestEqual(TEXT("Keyboard left mouse in navigation mode"), Mouse->InputType, EDreamUIPointerInputType::Navigation);
+		const FVector2D EventPixel = bVirtualCursor ? FVector2D(20.0, 20.0) : BoxPixel;
+		auto Wheel = [EventPixel](float Delta)
+		{
+			return FPointerEvent(0, FSlateApplication::CursorPointerIndex, EventPixel, EventPixel,
+				TSet<FKey>(), EKeys::Invalid, Delta, FModifierKeysState());
+		};
+		Source->HandleMouseWheelOrGestureEvent(Slate, Wheel(0.0f), nullptr);
+		TestEqual(TEXT("Zero wheel delta leaves navigation alone"), Mouse->InputType, EDreamUIPointerInputType::Navigation);
+		Source->HandleMouseWheelOrGestureEvent(Slate, Wheel(-1.0f), nullptr);
+		Rig.PumpFrames(1);
+		TestEqual(TEXT("Wheel restores pointer tracing"), Mouse->InputType, EDreamUIPointerInputType::Pointer);
+		TestTrue(TEXT("Wheel traces at physical or virtual pointer position"), Mouse->PointerPosition.Equals(FVector(BoxPixel, 0.0)));
+		TestNearlyEqual(TEXT("Wheel reaches the box rather than the navigation target"), Box->GetScrollOffset(),
+			Box->GetScrollSensitivity() * Box->GetWheelScrollMultiplier(), 0.5f);
+	}
+	return true;
 }
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(

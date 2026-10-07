@@ -488,6 +488,15 @@ bool FDreamUISlateInputSource::HandleMouseWheelOrGestureEvent(FSlateApplication&
 		return false;
 	}
 	User->ReportInputKey(EKeys::MouseWheelAxis);
+	// A wheel is pointer input even without a preceding move. Trace at the event's position, or
+	// at the virtual cursor that currently stands in for the mouse, instead of the navigation target.
+	FVector2D VirtualCursor;
+	if (DreamUISlateInputSourceLocal::FindVirtualCursor(User, VirtualCursor))
+	{
+		Pixel = VirtualCursor;
+	}
+	User->MovePointer(DreamUIPointerIds::Mouse, FVector(Pixel, 0.0));
+	User->SetPointerInputType(User->GetPointerEventData(DreamUIPointerIds::Mouse, true), EDreamUIPointerInputType::Pointer);
 	// Both components carry the wheel: a mouse wheel has no horizontal axis to tell apart.
 	User->QueuePointerScroll(DreamUIPointerIds::Mouse, FVector2D(Delta, Delta));
 	return WouldConsumePress(User, DreamUIPointerIds::Mouse);
