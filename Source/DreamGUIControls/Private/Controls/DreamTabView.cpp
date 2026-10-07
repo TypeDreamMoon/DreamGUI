@@ -1091,8 +1091,9 @@ void UDreamTabView::SetTabEnabled(int32 InIndex, bool bInEnabled)
 		}
 		// Grown with the default that a missing entry already meant, so the tabs in between keep
 		// answering exactly as they did.
+		const int32 PreviousCount = TabEnabled.Num();
 		TabEnabled.SetNum(InIndex + 1);
-		for (int32 Fill = 0; Fill < TabEnabled.Num(); ++Fill)
+		for (int32 Fill = PreviousCount; Fill < TabEnabled.Num(); ++Fill)
 		{
 			TabEnabled[Fill] = true;
 		}
