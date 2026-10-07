@@ -379,7 +379,9 @@ void UDreamMenuAnchor::EnsureMenuInstance(uint64 InOpenSerial)
 
 void UDreamMenuAnchor::Open(bool bFocusMenu)
 {
-	if (!IsValid(this) || bIsOpen || !IsValid(PopupNode))
+	// Disable closes the menu, whose closed callback may immediately try to reopen it. Refuse
+	// that request while inactive so the popup cannot outlive the screen that opened it.
+	if (!IsValid(this) || !GetWidgetActiveInHierarchy() || bIsOpen || !IsValid(PopupNode))
 	{
 		return;
 	}
