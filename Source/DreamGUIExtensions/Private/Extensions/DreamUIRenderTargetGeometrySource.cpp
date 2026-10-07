@@ -1528,7 +1528,7 @@ bool UDreamUIRenderTargetGeometrySource::LineTraceHitUV(const int32& InHitFaceIn
 						FHitResultContainer HitResult;
 						HitResult.UV.X = Segment * UVInterval + UVInterval * HitPoint.Y / Right;
 						HitResult.UV.Y = HitPoint.Z / Top;
-						HitResult.DistSquare = FVector::DistSquared(LocalSpaceRayOrigin, HitPoint);
+						HitResult.DistSquare = FVector::DistSquared(RectSpaceRayOrigin, HitPoint);
 						HitResult.HitPoint = HitPoint;
 						HitResult.RectMatrix = LocalRectMatrix;
 
