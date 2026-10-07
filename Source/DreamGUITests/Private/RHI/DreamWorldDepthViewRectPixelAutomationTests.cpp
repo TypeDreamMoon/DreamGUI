@@ -119,12 +119,15 @@ namespace DreamWorldDepthViewRectPixelTestLocal
 		FState()
 		{
 			GetMutableDefault<UDreamUISettings>()->AntiAliasingMethod = EDreamUIRendererAntiAliasingMethod::None;
+			GetMutableDefault<UDreamUISettings>()->bUseBuiltInUIShader = true;
 		}
 		~FState()
 		{
 			GetMutableDefault<UDreamUISettings>()->AntiAliasingMethod = SavedAA;
+			GetMutableDefault<UDreamUISettings>()->bUseBuiltInUIShader = bSavedBuiltIn;
 		}
 		const EDreamUIRendererAntiAliasingMethod SavedAA = GetDefault<UDreamUISettings>()->AntiAliasingMethod;
+		const bool bSavedBuiltIn = GetDefault<UDreamUISettings>()->bUseBuiltInUIShader;
 		TSharedPtr<FPartitionedSceneDepth, ESPMode::ThreadSafe> DepthWriter;
 		TWeakObjectPtr<ACameraActor> Camera;
 		TWeakObjectPtr<ULocalPlayer> SecondPlayer;
@@ -225,6 +228,10 @@ bool FDreamWorldDepthUsesEachViewRectPictureTest::RunTest(const FString& Paramet
 		}
 		State->Panel = Panel;
 		State->Canvas = Panel->GetComponent<UDreamCanvas>();
+		if (!TestNotNull(TEXT("The panel has a world-space canvas"), State->Canvas.Get()))return;
+		// MakeWorldPanel's default is the engine's primitive path. BlendDepth and the view/depth UV
+		// mapping under test belong to DreamGUI's own world-space renderer.
+		State->Canvas->SetRenderMode(EDreamRenderMode::WorldSpace_DreamUI);
 		UDreamTexture* Visual = Panel->CreateNewVisual<UDreamTexture>();
 		if (!TestNotNull(TEXT("The panel uses the production built-in texture shader"), Visual)
 			|| !TestNotNull(TEXT("The panel has a world-space canvas"), State->Canvas.Get()))
