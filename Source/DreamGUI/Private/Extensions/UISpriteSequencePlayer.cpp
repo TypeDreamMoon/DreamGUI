@@ -10,14 +10,8 @@
 
 bool UUISpriteSequencePlayer::CanPlay()
 {
-	if (!Sprite.IsValid())
-	{
-		//No owning widget on the class default object.
-		if (auto Widget = GetWidget())
-		{
-			Sprite = Cast<UDreamSprite>(Widget->GetVisual());
-		}
-	}
+	const UDreamWidget* Widget = GetWidget();
+	Sprite = Widget != nullptr ? Cast<UDreamSprite>(Widget->GetVisual()) : nullptr;
 	if (!Sprite.IsValid())
 	{
 		UE_LOG(DreamGUI, Error, TEXT("[%s].%d Need UISprite component!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
@@ -47,12 +41,13 @@ void UUISpriteSequencePlayer::PrepareForPlay()
  * empty sequence at the door, but the door is only Play and Seek: the array can be emptied while
  * the tween is already ticking, and this function is what the tween calls.
  *
- * Sprite is a weak pointer to a visual that CanPlay resolved once. A visual can be replaced or
- * destroyed under a running animation -- CreateNewVisual swaps it outright -- so the pointer that
- * was valid at Play is not the pointer this frame necessarily has.
+ * Re-resolve the widget's visual on each draw. CreateNewVisual can leave the old visual alive,
+ * so weak-pointer validity does not establish that it is still the visual being displayed.
  */
 void UUISpriteSequencePlayer::OnUpdateAnimation(int FrameNumber)
 {
+	const UDreamWidget* Widget = GetWidget();
+	Sprite = Widget != nullptr ? Cast<UDreamSprite>(Widget->GetVisual()) : nullptr;
 	if (SpriteSequence.Num() <= 0 || !Sprite.IsValid())
 	{
 		return;

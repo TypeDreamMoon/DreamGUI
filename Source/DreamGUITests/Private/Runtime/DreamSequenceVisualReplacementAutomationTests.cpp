@@ -73,6 +73,10 @@ bool FDreamSequenceVisualReplacementTest::RunTest(const FString& Parameters)
 		Rig.Context().PumpOneFrame(0.3f);
 		TestEqual(TEXT("the next runtime tick displays frame three on the current visual"), PlayingReplacement->GetUVRect().X, 0.75f);
 		TestTrue(TEXT("runtime playback leaves the detached replacement untouched"), Replacement->GetUVRect() == DetachedUV);
+		UDreamVisual* Unrelated = Widget->CreateNewVisual(UDreamSprite::StaticClass());
+		Rig.Context().PumpOneFrame(0.3f);
+		TestTrue(TEXT("playback preserves an incompatible current visual"), Widget->GetVisual() == Unrelated);
+		TestEqual(TEXT("an incompatible visual does not resume writes to the detached texture"), PlayingReplacement->GetUVRect().X, 0.75f);
 		Player->Stop();
 	}
 	else
@@ -107,6 +111,10 @@ bool FDreamSequenceVisualReplacementTest::RunTest(const FString& Parameters)
 		Rig.Context().PumpOneFrame(0.3f);
 		TestEqual(TEXT("the next runtime tick displays frame three on the current visual"), PlayingReplacement->GetSprite(), Frames[3]);
 		TestEqual(TEXT("runtime playback leaves the detached replacement untouched"), Replacement->GetSprite(), DetachedFrame);
+		UDreamVisual* Unrelated = Widget->CreateNewVisual(UDreamTexture::StaticClass());
+		Rig.Context().PumpOneFrame(0.3f);
+		TestTrue(TEXT("playback preserves an incompatible current visual"), Widget->GetVisual() == Unrelated);
+		TestEqual(TEXT("an incompatible visual does not resume writes to the detached sprite"), PlayingReplacement->GetSprite(), Frames[3]);
 		Player->Stop();
 	}
 	return true;

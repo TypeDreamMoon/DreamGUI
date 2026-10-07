@@ -12,14 +12,8 @@ void UUISpriteSheetTexturePlayer::PostEditChangeProperty(FPropertyChangedEvent& 
 	Super::PostEditChangeProperty(PropertyChangedEvent);
 	if (auto Property = PropertyChangedEvent.Property)
 	{
-		if (!Texture.IsValid())
-		{
-			//No owning widget on the class default object, which is where the details panel edits a default.
-			if (auto Widget = GetWidget())
-			{
-				Texture = Cast<UDreamTexture>(Widget->GetVisual());
-			}
-		}
+		const UDreamWidget* Widget = GetWidget();
+		Texture = Widget != nullptr ? Cast<UDreamTexture>(Widget->GetVisual()) : nullptr;
 		if (Texture.IsValid())
 		{
 			if (!bPreviewInEditor)
@@ -32,13 +26,8 @@ void UUISpriteSheetTexturePlayer::PostEditChangeProperty(FPropertyChangedEvent& 
 #endif
 bool UUISpriteSheetTexturePlayer::CanPlay()
 {
-	if (!Texture.IsValid())
-	{
-		if (auto Widget = GetWidget())
-		{
-			Texture = Cast<UDreamTexture>(Widget->GetVisual());
-		}
-	}
+	const UDreamWidget* Widget = GetWidget();
+	Texture = Widget != nullptr ? Cast<UDreamTexture>(Widget->GetVisual()) : nullptr;
 	if (!Texture.IsValid())
 	{
 		UE_LOG(DreamGUI, Error, TEXT("[%s].%d Need DreamTexture!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
@@ -78,11 +67,13 @@ void UUISpriteSheetTexturePlayer::PrepareForPlay()
  * changes no behaviour today: the two lines are one idea, and leaving the wrong half in place is
  * how the next reader concludes the count was intentional.
  *
- * Texture is a weak pointer resolved once by CanPlay, and the visual it points at can be replaced
- * under a running animation, so it is re-checked here rather than trusted.
+ * Re-resolve the widget's visual on each draw. A replaced visual can remain alive, so weak-pointer
+ * validity alone would keep updating an object the widget no longer displays.
  */
 void UUISpriteSheetTexturePlayer::OnUpdateAnimation(int FrameNumber)
 {
+	const UDreamWidget* Widget = GetWidget();
+	Texture = Widget != nullptr ? Cast<UDreamTexture>(Widget->GetVisual()) : nullptr;
 	if (!Texture.IsValid() || WidthCount <= 0 || HeightCount <= 0)
 	{
 		return;
