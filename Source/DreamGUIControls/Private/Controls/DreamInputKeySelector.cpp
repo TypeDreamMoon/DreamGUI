@@ -372,7 +372,9 @@ void UDreamInputKeySelector::HandleClicked()
 void UDreamInputKeySelector::SetIsListening(bool bInIsListening)
 {
 	const TWeakObjectPtr<UDreamInputKeySelector> WeakThis(this);
-	if (!WeakThis.IsValid() || (bInIsListening && bEndingLifetime))return;
+	// Disable's listening-ended callback can request the next capture. It must wait until this
+	// selector is active again, or its new input agent consumes keys for an inactive screen.
+	if (!WeakThis.IsValid() || (bInIsListening && (bEndingLifetime || !GetWidgetActiveInHierarchy())))return;
 	if (bIsListening == bInIsListening)
 	{
 		return;
