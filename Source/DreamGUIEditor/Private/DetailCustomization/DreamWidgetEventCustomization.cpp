@@ -7,6 +7,7 @@
 #include "DetailWidgetRow.h"
 
 #include "Designer/DreamWidgetBlueprintEditor.h"
+#include "Designer/DreamWidgetPreviewHost.h"
 #include "Designer/DreamWidgetDesignerModes.h"
 #include "Designer/DreamUITextAuthoringGate.h"
 #include "DreamWidgetBlueprint.h"
@@ -260,9 +261,7 @@ void FDreamWidgetEventCustomization::CustomizeDetails(IDetailLayoutBuilder& Deta
 			return;
 		}
 		Context.Target = EDreamWidgetBindingTarget::Behaviour;
-		// By position, because behaviours have no stable name of their own -- the same correspondence
-		// the runtime binder and the designer's component editing already run on. The instanced array
-		// is the archetype's, in order, so a preview index addresses the template too.
+		// Check live membership here; the authored index is resolved after finding the designer.
 		Context.BehaviourIndex = OwnerWidget->GetAllComponents().IndexOfByKey(AsBehaviour);
 		if (Context.BehaviourIndex == INDEX_NONE)
 		{
@@ -284,6 +283,12 @@ void FDreamWidgetEventCustomization::CustomizeDetails(IDetailLayoutBuilder& Deta
 	if (Editor == nullptr || Blueprint == nullptr)
 	{
 		return;
+	}
+
+	if (Context.Target == EDreamWidgetBindingTarget::Behaviour)
+	{
+		UDreamUIBehaviour* Authored = Editor->GetPreviewHost()->FindTemplateComponentForPreview(Cast<UDreamUIBehaviour>(Objects[0].Get()));
+		Context.BehaviourIndex = Authored != nullptr ? Authored->GetWidget()->GetAllComponents().Find(Authored) : INDEX_NONE;
 	}
 
 	TArray<const FProperty*> Events;
