@@ -106,6 +106,14 @@ namespace DreamUIImportedStyleWatcherTestLocal
 			return false;
 		}
 
+		// Saved is outside the watched DUI roots, so deliver the intermediate library's creation
+		// ourselves. This seeds its real direct import edge as a root scan or directory event would.
+		if (bInTransitive)
+		{
+			FDreamUISourceWatcher::QueueFile(Sources.BridgePath);
+			FDreamUISourceWatcher::FlushPending();
+		}
+
 		FScopedBlueprint Fixture(Sources.Suffix);
 		if (!InTest.TestNotNull(TEXT("the text Blueprint was created"), Fixture.Blueprint)
 			|| !InTest.TestTrue(TEXT("it compiled the real source and its imports"),
