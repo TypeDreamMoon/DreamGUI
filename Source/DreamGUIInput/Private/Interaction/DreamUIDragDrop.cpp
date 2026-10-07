@@ -14,6 +14,8 @@
 #include "Interaction/DreamDragDropOperation.h"
 #include "DreamGUI.h"
 #include "Engine/World.h"
+#include "Misc/ScopeExit.h"
+#include "UObject/StrongObjectPtr.h"
 
 namespace
 {
@@ -436,11 +438,17 @@ void UDreamUIDragDropSubsystem::BeginFollowingDrag(UDreamPointerEventData* InPoi
 	{
 		return;//a drag with no meaning is pure geometry: a scroll, not a drop
 	}
-	FFollowedDrag& Drag = FollowedDrags.Add(Key);
+	FFollowedDrag Drag;
 	Drag.PointerEvent = InPointerEvent;
 	Drag.Operation = Operation;
-	ShowDragVisual(Drag, InPointerEvent);
-	UpdateDropHover(Key);
+	const TWeakObjectPtr<UDreamPointerEventData> Pointer(InPointerEvent);
+	const TWeakObjectPtr<UDreamDragDropOperation> ExpectedOperation(Operation);
+	FollowedDrags.Add(Key, MoveTemp(Drag));
+	ShowDragVisual(Key);
+	// Visual initialization may have cancelled this pointer or begun a replacement drag.
+	const FFollowedDrag* Current = FollowedDrags.Find(Key);
+	if (Current != nullptr && Current->PointerEvent == Pointer && Current->Operation == ExpectedOperation
+		&& IsStillLive(*Current) && Pointer->DragOperation.Get() == ExpectedOperation.Get())UpdateDropHover(Key);
 }
 
 void UDreamUIDragDropSubsystem::UpdateDropHover(const FIntPoint& InKey)
@@ -531,59 +539,91 @@ void UDreamUIDragDropSubsystem::StopFollowingDrag(const FIntPoint& InKey)
 	DestroyDragVisual(Closing);
 }
 
-void UDreamUIDragDropSubsystem::ShowDragVisual(FFollowedDrag& InDrag, UDreamPointerEventData* InPointerEvent)
+void UDreamUIDragDropSubsystem::ShowDragVisual(const FIntPoint& InKey)
 {
-	DestroyDragVisual(InDrag);
-
-	UDreamDragDropOperation* Operation = InPointerEvent->DragOperation.Get();
-	if (!IsValid(Operation) || Operation->DragVisualClass == nullptr)
+	FFollowedDrag Showing;
 	{
-		return;
+		const FFollowedDrag* Current = FollowedDrags.Find(InKey);
+		if (Current == nullptr)return;
+		Showing = *Current;
 	}
+	const TWeakObjectPtr<UDreamPointerEventData> Pointer = Showing.PointerEvent;
+	const TWeakObjectPtr<UDreamDragDropOperation> Operation = Showing.Operation;
+	auto FindCurrent = [this, &InKey, Pointer, Operation]() -> FFollowedDrag*
+	{
+		if (!IsValid(this) || bTornDownForWorld || !Pointer.IsValid() || !Operation.IsValid())return nullptr;
+		FFollowedDrag* Current = FollowedDrags.Find(InKey);
+		return Current != nullptr && Current->PointerEvent == Pointer && Current->Operation == Operation
+			&& Pointer->bIsDragging && Pointer->DragOperation.Get() == Operation.Get() ? Current : nullptr;
+	};
+	if (FindCurrent() == nullptr || Operation->DragVisualClass == nullptr)return;
+	const TSubclassOf<UDreamUserWidget> VisualClass = Operation->DragVisualClass;
+	const int32 UserIndex = Pointer->UserIndex;
+	const int32 PointerID = Pointer->PointerID;
 	UDreamScreenUISubsystem* ScreenUI = UDreamScreenUISubsystem::Get(GetWorld());
 	// The screen of the player who is dragging, which the pointer already knows.
 	const UDreamUIInputSubsystem* Input = UDreamUIInputSubsystem::Get(GetWorld());
-	const int32 ScreenIndex = Input != nullptr ? Input->GetScreenIndexForUser(InPointerEvent->UserIndex) : InPointerEvent->UserIndex;
+	const int32 ScreenIndex = Input != nullptr ? Input->GetScreenIndexForUser(UserIndex) : UserIndex;
 	UDreamWidget* ScreenRoot = IsValid(ScreenUI)
 		? ScreenUI->GetOrCreateScreenRootForUserIndex(ScreenIndex) : nullptr;
-	if (!IsValid(ScreenRoot))
-	{
-		return;
-	}
+	if (FindCurrent() == nullptr || !IsValid(ScreenRoot))return;
 
+	// The holder stays local until all initialization callbacks return. Cancel must not destroy
+	// a visual while CreateDreamWidget is still constructing it, and no map entry is held here.
+	TStrongObjectPtr<UDreamWidget> Holder(NewObject<UDreamWidget>(this, NAME_None, RF_Transient));
+	TStrongObjectPtr<UDreamUserWidget> Visual;
+	bool bPublished = false;
+	ON_SCOPE_EXIT
+	{
+		if (!bPublished)
+		{
+			if (IsValid(Holder.Get()))Holder->DestroyWidget();
+			// An initialization callback may have reparented the visual away from its holder.
+			if (IsValid(Visual.Get()))Visual->DestroyWidget();
+		}
+	};
 	// Raycast-disabled through the whole subtree: the visual rides UNDER the pointer, and one that
 	// could be hit would become EnterWidget and stand between the drag and every drop target.
-	UDreamWidget* VisualHolder = NewObject<UDreamWidget>(this, NAME_None, RF_Transient);
-	VisualHolder->SetRaycastable(EDreamWidgetRaycastableType::Disabled);
-	VisualHolder->SetDisplayName(TEXT("DreamUIDragVisual"));
-	VisualHolder->SetParentBeforeRegister(ScreenRoot);
-	RegisterDreamWidgetHierarchy(VisualHolder);
-	InDrag.VisualHolder = VisualHolder;
+	Holder->SetRaycastable(EDreamWidgetRaycastableType::Disabled);
+	Holder->SetDisplayName(TEXT("DreamUIDragVisual"));
+	Holder->SetParentBeforeRegister(ScreenRoot);
+	if (FindCurrent() == nullptr || !IsValid(Holder.Get()))return;
+	RegisterDreamWidgetHierarchy(Holder.Get());
+	if (FindCurrent() == nullptr || !IsValid(Holder.Get()))return;
 
-	UDreamUserWidget* Visual = CreateDreamWidget(GetWorld(), Operation->DragVisualClass, VisualHolder);
-	InDrag.Visual = Visual;
-	if (IsValid(Visual))
-	{
-		VisualHolder->SetSizeDelta(FVector2D(Visual->GetWidth(), Visual->GetHeight()));
-		Visual->SetAnchoredPosition(FVector2D::ZeroVector);
-	}
+	Visual.Reset(CreateDreamWidget(GetWorld(), VisualClass, Holder.Get()));
+	if (FindCurrent() == nullptr || !IsValid(Holder.Get()) || !IsValid(Visual.Get()))return;
+	Holder->SetSizeDelta(FVector2D(Visual->GetWidth(), Visual->GetHeight()));
+	if (FindCurrent() == nullptr || !IsValid(Holder.Get()) || !IsValid(Visual.Get()))return;
+	Visual->SetAnchoredPosition(FVector2D::ZeroVector);
+	if (FindCurrent() == nullptr || !IsValid(Holder.Get()) || !IsValid(Visual.Get()))return;
 
-	UDreamCanvas* Canvas = VisualHolder->GetComponent<UDreamCanvas>();
+	UDreamCanvas* Canvas = Holder->GetComponent<UDreamCanvas>();
 	if (!IsValid(Canvas))
 	{
-		Canvas = Cast<UDreamCanvas>(VisualHolder->AddComponent(UDreamCanvas::StaticClass()));
+		Canvas = Cast<UDreamCanvas>(Holder->AddComponent(UDreamCanvas::StaticClass()));
 	}
+	if (FindCurrent() == nullptr || !IsValid(Holder.Get()) || !IsValid(Visual.Get()))return;
 	if (IsValid(Canvas))
 	{
 		Canvas->SetOverrideSorting(true);
+		if (FindCurrent() == nullptr || !IsValid(Holder.Get()) || !IsValid(Visual.Get()) || !IsValid(Canvas))return;
 		// One step per pointer so two visuals under two fingers have a defined order instead of
 		// z-fighting, and clamped so a large touch id cannot climb into the tooltip's band.
-		const int32 SortOrder = FMath::Clamp(DragVisualSortOrder + InPointerEvent->PointerID,
+		const int32 SortOrder = FMath::Clamp(DragVisualSortOrder + PointerID,
 			DragVisualSortOrder, MaxDragVisualSortOrder);
 		Canvas->SetSortOrder(SortOrder, /*PropagateToChildrenCanvas*/true);
 	}
-
-	UpdateDragVisualPosition(InDrag);
+	{
+		FFollowedDrag* Current = FindCurrent();
+		if (Current == nullptr || !IsValid(Holder.Get()) || !IsValid(Visual.Get()))return;
+		Current->VisualHolder = Holder.Get();
+		Current->Visual = Visual.Get();
+		bPublished = true;
+	}
+	Showing.VisualHolder = Holder.Get();
+	Showing.Visual = Visual.Get();
+	UpdateDragVisualPosition(Showing);
 }
 
 void UDreamUIDragDropSubsystem::UpdateDragVisualPosition(FFollowedDrag& InDrag)

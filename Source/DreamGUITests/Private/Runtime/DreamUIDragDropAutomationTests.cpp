@@ -6,6 +6,7 @@
 
 #include "Core/Components/DreamWidget.h"
 #include "Core/DreamUIManager.h"
+#include "Core/DreamScreenUISubsystem.h"
 #include "Event/DreamUIInputSubsystem.h"
 #include "Engine/World.h"
 #include "Event/DreamEventSystem.h"
@@ -16,6 +17,8 @@
 #include "DreamDragDropTestTypes.h"
 #include "DreamScopedWorld.h"
 #include "DreamUIDragDropReentryTestTypes.h"
+#include "Misc/ScopeExit.h"
+#include "UObject/StrongObjectPtr.h"
 
 /*
  * The drag-drop framework's decisions: what a source writes onto the drag, what a target accepts,
@@ -758,6 +761,118 @@ bool FDreamUIDragAcceptanceReentryTest::RunTest(const FString& Parameters)
 	DragDrop->CancelActiveDragForUser(0);
 	RemovingSlot->DestroyWidget();
 	OtherSlot->DestroyWidget();
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamUIDragVisualInitializationReentryTest,
+	"DreamGUI.DragDrop.VisualInitializationCanCancelReplaceAndGrowFollowedDrags",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamUIDragVisualInitializationReentryTest::RunTest(const FString& Parameters)
+{
+	DreamTests::FScopedGameWorld TestWorld;
+	UDreamUIDragDropSubsystem* DragDrop = TestWorld.World->GetSubsystem<UDreamUIDragDropSubsystem>();
+	UDreamScreenUISubsystem* Screen = TestWorld.World->GetSubsystem<UDreamScreenUISubsystem>();
+	ADreamStandaloneInputEventSystemActor* EventActor = TestWorld.World->SpawnActor<ADreamStandaloneInputEventSystemActor>();
+	UDreamEventSystem* EventSystem = EventActor != nullptr ? EventActor->GetEventSystem() : nullptr;
+	UDreamUIInputSubsystem* Input = UDreamUIInputSubsystem::Get(TestWorld.World);
+	if (!TestTrue(TEXT("the real drag, screen and input services exist"), DragDrop != nullptr
+		&& Screen != nullptr && EventSystem != nullptr && Input != nullptr))return false;
+	Input->AddEventSystem(EventSystem);
+	UDreamWidget* ScreenRoot = Screen->GetOrCreateScreenRootForUserIndex(0);
+	if (!TestNotNull(TEXT("a screen root can own the visual"), ScreenRoot))return false;
+	TStrongObjectPtr<UDreamDragVisualReentryProbe> Probe(NewObject<UDreamDragVisualReentryProbe>(TestWorld.World));
+	Probe->ScreenRoot = ScreenRoot;
+	UDreamDragVisualReentryWidget::ActiveProbe = Probe.Get();
+	ON_SCOPE_EXIT { UDreamDragVisualReentryWidget::ActiveProbe.Reset(); };
+	UDreamWidget* Source = NewObject<UDreamWidget>(TestWorld.World, NAME_None, RF_Transient);
+	auto MakeDrag = [&TestWorld, Source](int32 InPointerID, bool bInHasVisual)
+	{
+		UDreamPointerEventData* EventData = NewObject<UDreamPointerEventData>(TestWorld.World);
+		EventData->UserIndex = 0;
+		EventData->PointerID = InPointerID;
+		EventData->bIsDragging = true;
+		EventData->EnterWidget = Source;
+		EventData->EventType = EDreamUIPointerEventType::BeginDrag;
+		EventData->DragOperation = NewObject<UDreamDragDropOperation>(TestWorld.World);
+		if (bInHasVisual)EventData->DragOperation->DragVisualClass = UDreamDragVisualReentryWidget::StaticClass();
+		return EventData;
+	};
+	auto CountLiveHolders = [ScreenRoot]()
+	{
+		int32 Count = 0;
+		for (UDreamWidget* Child : ScreenRoot->GetChildren())
+		{
+			if (IsValid(Child) && Child->GetDisplayName() == TEXT("DreamUIDragVisual"))++Count;
+		}
+		return Count;
+	};
+
+	bool bCancelledInsideInitialization = false;
+	bool bVisualSurvivedTheCallback = false;
+	Probe->Action = [DragDrop, Observer = Probe.Get(), &bCancelledInsideInitialization, &bVisualSurvivedTheCallback](UDreamUserWidget* InVisual)
+	{
+		bCancelledInsideInitialization = DragDrop->CancelActiveDragForUser(0);
+		bVisualSurvivedTheCallback = IsValid(InVisual) && Observer->InitialHolders.Last().IsValid();
+	};
+	UDreamPointerEventData* Cancelled = MakeDrag(0, true);
+	EventSystem->CallOnPointerBeginDrag(Source, Cancelled);
+	if (!TestEqual(TEXT("the visual's actual initialization hook ran"), Probe->InitializedVisuals.Num(), 1)
+		|| !TestEqual(TEXT("and ran the cancellation action once"), Probe->MutationCount, 1))return false;
+	TestTrue(TEXT("the initialization action cancelled its own drag"), bCancelledInsideInitialization);
+	TestTrue(TEXT("construction was allowed to finish before destroying the cancelled visual"), bVisualSurvivedTheCallback);
+	TestEqual(TEXT("no cancelled drag remains"), DragDrop->GetDragCount(), 0);
+	TestFalse(TEXT("its orphan visual was destroyed after initialization returned"), Probe->InitializedVisuals[0].IsValid());
+	TestFalse(TEXT("the local holder was also destroyed"), Probe->InitialHolders[0].IsValid());
+	TestEqual(TEXT("the screen contains no cancelled visual holder"), CountLiveHolders(), 0);
+
+	int32 DragsStartedInsideInitialization = 0;
+	Probe->Action = [EventSystem, Source, &MakeDrag, &DragsStartedInsideInitialization](UDreamUserWidget* InVisual)
+	{
+		for (int32 PointerID = 1; PointerID <= 64; ++PointerID)
+		{
+			EventSystem->CallOnPointerBeginDrag(Source, MakeDrag(PointerID, false));
+			++DragsStartedInsideInitialization;
+		}
+	};
+	UDreamPointerEventData* Surviving = MakeDrag(0, true);
+	EventSystem->CallOnPointerBeginDrag(Source, Surviving);
+	if (!TestEqual(TEXT("the next visual initialized once"), Probe->InitializedVisuals.Num(), 2))return false;
+	TestEqual(TEXT("its initialization action really started 64 other drags"), DragsStartedInsideInitialization, 64);
+	TestEqual(TEXT("both initialization actions ran"), Probe->MutationCount, 2);
+	TestEqual(TEXT("the map grew while retaining the original drag"), DragDrop->GetDragCount(), 65);
+	TestTrue(TEXT("the original visual is still alive after map growth"), Probe->InitializedVisuals[1].IsValid());
+	TestTrue(TEXT("and so is its holder"), Probe->InitialHolders[1].IsValid());
+	TestEqual(TEXT("the screen contains only the one visual that was requested"), CountLiveHolders(), 1);
+	DragDrop->CancelActiveDragForUser(0);
+	TestEqual(TEXT("cancelling all pointers removes the grown entries"), DragDrop->GetDragCount(), 0);
+	TestFalse(TEXT("the original drag owns and destroys its visual after map growth"), Probe->InitializedVisuals[1].IsValid());
+	TestFalse(TEXT("and its holder"), Probe->InitialHolders[1].IsValid());
+	TestEqual(TEXT("no visual holder leaked from an obsolete map entry"), CountLiveHolders(), 0);
+
+	UDreamPointerEventData* Replacement = MakeDrag(0, true);
+	Probe->Action = [EventSystem, Source, Replacement](UDreamUserWidget* InVisual)
+	{
+		EventSystem->CallOnPointerBeginDrag(Source, Replacement);
+	};
+	UDreamPointerEventData* Replaced = MakeDrag(0, true);
+	EventSystem->CallOnPointerBeginDrag(Source, Replaced);
+	if (!TestEqual(TEXT("both the replaced and replacement visual initialized"), Probe->InitializedVisuals.Num(), 4))return false;
+	TestEqual(TEXT("the replace action ran only from the old visual"), Probe->MutationCount, 3);
+	TestEqual(TEXT("the replacement is the only followed drag"), DragDrop->GetDragCount(), 1);
+	TestEqual(TEXT("the pointer follows the replacement operation"), DragDrop->GetDragOperationForUserPointer(0, 0),
+		Replacement->DragOperation.Get());
+	TestFalse(TEXT("the superseded visual was destroyed"), Probe->InitializedVisuals[2].IsValid());
+	TestFalse(TEXT("and its unpublished holder"), Probe->InitialHolders[2].IsValid());
+	TestTrue(TEXT("the replacement's visual remains alive"), Probe->InitializedVisuals[3].IsValid());
+	TestTrue(TEXT("and has its own live holder"), Probe->InitialHolders[3].IsValid());
+	TestEqual(TEXT("only the replacement's holder remains on screen"), CountLiveHolders(), 1);
+	DragDrop->CancelActiveDragForUser(0);
+	TestFalse(TEXT("cancelling the replacement destroys its own visual"), Probe->InitializedVisuals[3].IsValid());
+	TestFalse(TEXT("and its holder"), Probe->InitialHolders[3].IsValid());
+	TestEqual(TEXT("all visual holders were released"), CountLiveHolders(), 0);
+	Source->DestroyWidget();
 	return true;
 }
 

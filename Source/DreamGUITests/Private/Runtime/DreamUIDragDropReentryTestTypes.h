@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "UObject/Object.h"
+#include "Core/DreamUserWidget.h"
 #include "Interaction/DreamDragDropOperation.h"
 #include "Interaction/DreamUIDragDrop.h"
 #include "DreamUIDragDropReentryTestTypes.generated.h"
@@ -58,5 +59,62 @@ public:
 			RunOnce();
 		}
 		return true;
+	}
+};
+
+/** Records visual instances and runs a mutation from their real initialization hook. */
+UCLASS()
+class UDreamDragVisualReentryProbe : public UObject
+{
+	GENERATED_BODY()
+
+public:
+	TFunction<void(UDreamUserWidget*)> Action;
+	int32 MutationCount = 0;
+	TArray<TWeakObjectPtr<UDreamUserWidget>> InitializedVisuals;
+	TArray<TWeakObjectPtr<UDreamWidget>> InitialHolders;
+	TWeakObjectPtr<UDreamWidget> ScreenRoot;
+
+	void OnVisualInitialized(UDreamUserWidget* InVisual)
+	{
+		InitializedVisuals.Add(InVisual);
+		// Initialize precedes parent attachment. The holder was already added to the screen,
+		// and the innermost creation has the last one, including nested replacement creation.
+		UDreamWidget* Holder = nullptr;
+		if (ScreenRoot.IsValid())
+		{
+			const auto& Children = ScreenRoot->GetChildren();
+			for (int32 Index = Children.Num() - 1; Index >= 0; --Index)
+			{
+				if (IsValid(Children[Index]) && Children[Index]->GetDisplayName() == TEXT("DreamUIDragVisual"))
+				{
+					Holder = Children[Index];
+					break;
+				}
+			}
+		}
+		InitialHolders.Add(Holder);
+		if (Action)
+		{
+			TFunction<void(UDreamUserWidget*)> RunOnce = MoveTemp(Action);
+			Action = nullptr;
+			++MutationCount;
+			RunOnce(InVisual);
+		}
+	}
+};
+
+UCLASS()
+class UDreamDragVisualReentryWidget : public UDreamUserWidget
+{
+	GENERATED_BODY()
+
+public:
+	inline static TWeakObjectPtr<UDreamDragVisualReentryProbe> ActiveProbe;
+
+	virtual void NativeOnInitialized() override
+	{
+		Super::NativeOnInitialized();
+		if (UDreamDragVisualReentryProbe* Probe = ActiveProbe.Get())Probe->OnVisualInitialized(this);
 	}
 };

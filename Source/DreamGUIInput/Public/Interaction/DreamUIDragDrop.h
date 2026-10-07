@@ -248,7 +248,7 @@ private:
 
 	void HandleInputEvent(UDreamBaseEventData* InEventData);
 	void BeginFollowingDrag(UDreamPointerEventData* InPointerEvent);
-	void ShowDragVisual(FFollowedDrag& InDrag, UDreamPointerEventData* InPointerEvent);
+	void ShowDragVisual(const FIntPoint& InKey);
 	void UpdateDragVisualPosition(FFollowedDrag& InDrag);
 	/**
 	 * Light up the target the drag at InKey is over, and leave the one it was over. By key, not by entry: the targets'
