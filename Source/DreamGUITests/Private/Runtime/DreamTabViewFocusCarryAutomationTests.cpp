@@ -120,4 +120,69 @@ bool FDreamTabViewEnabledArrayGrowthTest::RunTest(const FString& Parameters)
 	return true;
 }
 
+
+IMPLEMENT_COMPLEX_AUTOMATION_TEST(FDreamTabViewFocusCarryClearAndReturnTest,
+	"DreamGUI.TabView.AFocusRestoreCallbackKeepsAnExplicitClearOrReturn",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+void FDreamTabViewFocusCarryClearAndReturnTest::GetTests(TArray<FString>& OutBeautifiedNames, TArray<FString>& OutTestCommands)const
+{
+	OutBeautifiedNames.Add(TEXT("The restoring player clears focus"));
+	OutTestCommands.Add(TEXT("same"));
+	OutBeautifiedNames.Add(TEXT("The other player clears focus"));
+	OutTestCommands.Add(TEXT("other"));
+	OutBeautifiedNames.Add(TEXT("The other player leaves and explicitly returns"));
+	OutTestCommands.Add(TEXT("aba"));
+}
+
+bool FDreamTabViewFocusCarryClearAndReturnTest::RunTest(const FString& Parameters)
+{
+	FDreamRigOptions Options;
+	Options.PlayerCount = 2;
+	FDreamDriverRig Rig = FDreamDriverRig::Headless(Options);
+	UDreamTabView* View = DreamTabViewFocusCarryTestLocal::MakeView(*this, Rig);
+	if (View == nullptr)return false;
+	UDreamUIInputServices* Services = UDreamUIInputServices::Get(Rig.GetWorld());
+	UDreamWidget* Outside = Rig.MakeWidget(TEXT("IntermediateFocus"), nullptr, FVector2D(140.0, 50.0), FVector2D(450.0, 0.0));
+	if (!TestTrue(TEXT("the services and intermediate focus exist"), Services != nullptr && Outside != nullptr))return false;
+	Outside->SetIsFocusable(true);
+	UDreamWidget* FirstTab = View->Tabs[0].TabNode.Get();
+	UDreamWidget* NextTab = View->Tabs[1].TabNode.Get();
+	FirstTab->SetIsFocusable(true);
+	Rig.PumpFrames(1);
+	if (!TestTrue(TEXT("both actual players start on A"), Services->FocusForNavigation(FirstTab, 0) && Services->FocusForNavigation(FirstTab, 1)))return false;
+	UDreamFocusReentryProbe* Probe = NextTab->AddComponent<UDreamFocusReentryProbe>();
+	if (!TestNotNull(TEXT("the restored tab has a focus listener"), Probe))return false;
+	NextTab->OnFocusReceived.AddDynamic(Probe, &UDreamFocusReentryProbe::OnReceived);
+	Probe->Trigger = EDreamFocusReentryCallback::Received;
+	const int32 ChangedPlayer = Parameters == TEXT("same") ? 0 : 1;
+	const bool bReturn = Parameters == TEXT("aba");
+	UDreamWidget* Expected = bReturn ? FirstTab : nullptr;
+	int32 CallbackCount = 0;
+	bool bNestedChoiceSucceeded = false;
+	Probe->Action = [Services, Outside, FirstTab, ChangedPlayer, bReturn, Expected, &CallbackCount, &bNestedChoiceSucceeded]()
+	{
+		++CallbackCount;
+		if (bReturn)
+		{
+			// SetFocus is an explicit widget choice, unlike navigation's enabled-tab filtering.
+			// Leaving and returning keeps the same pointer while replacing the focus tenure.
+			bNestedChoiceSucceeded = Services->FocusForNavigation(Outside, ChangedPlayer) && FirstTab->SetFocus(ChangedPlayer, 0);
+		}
+		else
+		{
+			Services->ClearFocus(Services->GetFocusedWidget(ChangedPlayer), ChangedPlayer, 0);
+			bNestedChoiceSucceeded = Services->GetFocusedWidget(ChangedPlayer) == nullptr;
+		}
+		bNestedChoiceSucceeded = bNestedChoiceSucceeded && Services->GetFocusedWidget(ChangedPlayer) == Expected;
+	};
+	View->SetTabEnabled(0, false);
+	TestEqual(TEXT("the focus callback actually acted once"), CallbackCount, 1);
+	TestTrue(TEXT("the explicit clear or return took effect inside the callback"), bNestedChoiceSucceeded);
+	TestTrue(TEXT("the old carry preserves the newest focus tenure"), Services->GetFocusedWidget(ChangedPlayer) == Expected);
+	Rig.PumpFrames(1);
+	TestTrue(TEXT("the newest focus tenure persists through the next frame"), Services->GetFocusedWidget(ChangedPlayer) == Expected);
+	return true;
+}
+
 #endif

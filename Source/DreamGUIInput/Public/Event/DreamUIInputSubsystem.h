@@ -208,6 +208,7 @@ public:
 	/** The Users map's keys, players that have been taken down left out. */
 	virtual void GetUserIndices(TArray<int32>& OutUserIndices) const override;
 	virtual UDreamWidget* GetFocusedWidget(int32 InUserIndex) const override;
+	virtual FDreamUIFocusRevision GetFocusRevision(int32 InUserIndex) const override;
 	/**
 	 * On the navigation pointer, whose highlight follows the focus every move starts from, and recorded as code's
 	 * (EDreamUIFocusCause::Script) unless a navigation step is landing. Makes the player when it has none yet -- a scope

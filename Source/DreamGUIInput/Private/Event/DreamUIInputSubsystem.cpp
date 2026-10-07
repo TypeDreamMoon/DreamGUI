@@ -686,6 +686,17 @@ UDreamWidget* UDreamUIInputSubsystem::GetFocusedWidget(int32 InUserIndex) const
 	return User != nullptr ? User->GetFocusedWidget() : nullptr;
 }
 
+FDreamUIFocusRevision UDreamUIInputSubsystem::GetFocusRevision(int32 InUserIndex) const
+{
+	FDreamUIFocusRevision Revision;
+	if (const UDreamUIInputUser* User = GetUser(InUserIndex); IsValid(User) && !User->IsShutDown())
+	{
+		Revision.User = User;
+		Revision.Serial = User->GetFocusTransitionSerial();
+	}
+	return Revision;
+}
+
 bool UDreamUIInputSubsystem::FocusForNavigation(UDreamWidget* InWidget, int32 InUserIndex)
 {
 	using namespace DreamUIInputSubsystemFocusLocal;

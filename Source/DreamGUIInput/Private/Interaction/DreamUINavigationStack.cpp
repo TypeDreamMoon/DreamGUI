@@ -138,11 +138,17 @@ void UDreamUINavigationStack::PushScope(UDreamUINavigationScope* InScope)
 	// scope is pushed from inside the walk that wakes it (bActivateWhenEnabled, the screen shown by an ancestor). Its own
 	// picks are offered once more, in its order, to FocusForNavigation, which reads what that walk is settling on; on a
 	// settled screen it refuses them for the reasons ResolveFocusTarget passed them over, and nothing changes.
+	const TWeakObjectPtr<UDreamUINavigationStack> WeakThis(this);
+	const TWeakObjectPtr<UDreamUINavigationScope> WeakScope(InScope);
+	const TWeakObjectPtr<UDreamUIInputServices> Services(UDreamUIInputServices::Get(this));
+	const FDreamUIFocusRevision Before = Services.IsValid() ? Services->GetFocusRevision(UserIndex) : FDreamUIFocusRevision{};
 	if (InScope->GetRestoreLastFocus() && FocusSelectable(this, UserIndex, InScope->GetRememberedFocus()))
 	{
 		return;
 	}
-	FocusSelectable(this, UserIndex, InScope->GetDesiredFocusTarget());
+	if (!WeakThis.IsValid() || !WeakScope.IsValid()
+		|| !Services.IsValid() || Services->GetFocusRevision(UserIndex) != Before)return;
+	FocusSelectable(this, UserIndex, WeakScope->GetDesiredFocusTarget());
 }
 
 void UDreamUINavigationStack::PopScope(UDreamUINavigationScope* InScope)
@@ -186,10 +192,11 @@ void UDreamUINavigationStack::RestoreFocusAfterPop(UDreamUINavigationScope* InPo
 		return;
 	}
 	const int32 UserIndex = InPopped->GetUserIndex();
-	const UDreamWidget* PoppedWidget = InPopped->GetWidget();
+	const TWeakObjectPtr<const UDreamWidget> PoppedWidget(InPopped->GetWidget());
 	auto IsInPopped = [PoppedWidget](const UDreamWidget* InWidget)
 	{
-		return IsValid(InWidget) && IsValid(PoppedWidget) && (InWidget == PoppedWidget || InWidget->IsChildOf(PoppedWidget));
+		const UDreamWidget* Root = PoppedWidget.Get();
+		return IsValid(InWidget) && Root != nullptr && (InWidget == Root || InWidget->IsChildOf(Root));
 	};
 	UDreamWidget* Now = Services->GetFocusedWidget(UserIndex);
 	const bool bInside = IsInPopped(Now);
@@ -205,8 +212,11 @@ void UDreamUINavigationStack::RestoreFocusAfterPop(UDreamUINavigationScope* InPo
 	// is no place to give focus back to. FocusForNavigation alone takes a widget that is only registered.
 	auto TryFocus = [Services, UserIndex, &IsInPopped](UDreamWidget* InCandidate)
 	{
-		return IsValid(InCandidate) && !IsInPopped(InCandidate) && DreamUINavigationStackLocal::IsInPlay(InCandidate)
-			&& Services->FocusForNavigation(InCandidate, UserIndex);
+		if (!IsValid(InCandidate) || IsInPopped(InCandidate) || !DreamUINavigationStackLocal::IsInPlay(InCandidate))return false;
+		const TWeakObjectPtr<UDreamUIInputServices> WeakServices(Services);
+		const FDreamUIFocusRevision Before = Services->GetFocusRevision(UserIndex);
+		const bool bFocused = Services->FocusForNavigation(InCandidate, UserIndex);
+		return bFocused || !WeakServices.IsValid() || Services->GetFocusRevision(UserIndex) != Before;
 	};
 	// The screen underneath decides first -- its memory, its authored target, its first control -- and what had focus
 	// at the push answers when there is no screen underneath to ask: a modal over a page with no scope.

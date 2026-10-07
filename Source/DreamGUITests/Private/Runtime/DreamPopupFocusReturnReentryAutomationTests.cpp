@@ -9,9 +9,19 @@
 #include "Driver/DreamDriverRig.h"
 #include "Interaction/DreamUIPopupLayer.h"
 
-IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDreamPopupFocusReturnRedirectTest,
+IMPLEMENT_COMPLEX_AUTOMATION_TEST(FDreamPopupFocusReturnRedirectTest,
 	"DreamGUI.Focus.APopupDismissKeepsTheFocusChosenByItsReturnCallback",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+void FDreamPopupFocusReturnRedirectTest::GetTests(TArray<FString>& OutBeautifiedNames, TArray<FString>& OutTestCommands)const
+{
+	OutBeautifiedNames.Add(TEXT("The callback redirects focus"));
+	OutTestCommands.Add(TEXT("redirect"));
+	OutBeautifiedNames.Add(TEXT("The callback clears focus"));
+	OutTestCommands.Add(TEXT("clear"));
+	OutBeautifiedNames.Add(TEXT("The callback leaves and returns to the opener"));
+	OutTestCommands.Add(TEXT("aba"));
+}
 
 bool FDreamPopupFocusReturnRedirectTest::RunTest(const FString& Parameters)
 {
@@ -54,13 +64,25 @@ bool FDreamPopupFocusReturnRedirectTest::RunTest(const FString& Parameters)
 	bool bOpenerHeldFocusInsideCallback = false;
 	bool bRedirectSucceeded = false;
 	bool bOutsideHeldFocusInsideCallback = false;
-	Probe->Action = [Services, Opener, Outside, &CallbackCount, &bOpenerHeldFocusInsideCallback,
+	const bool bClear = Parameters == TEXT("clear");
+	const bool bReturn = Parameters == TEXT("aba");
+	UDreamWidget* Expected = bClear ? nullptr : bReturn ? Opener : Outside;
+	Probe->Action = [Services, Opener, Outside, Expected, bClear, bReturn, &CallbackCount, &bOpenerHeldFocusInsideCallback,
 		&bRedirectSucceeded, &bOutsideHeldFocusInsideCallback]()
 	{
 		++CallbackCount;
 		bOpenerHeldFocusInsideCallback = Services->GetFocusedWidget(0) == Opener;
-		bRedirectSucceeded = Services->FocusForNavigation(Outside, 0);
-		bOutsideHeldFocusInsideCallback = Services->GetFocusedWidget(0) == Outside;
+		if (bClear)
+		{
+			Services->ClearFocus(Opener, 0, 0);
+			bRedirectSucceeded = Services->GetFocusedWidget(0) == nullptr;
+		}
+		else
+		{
+			bRedirectSucceeded = Services->FocusForNavigation(Outside, 0);
+			if (bReturn)bRedirectSucceeded = Services->FocusForNavigation(Opener, 0) && bRedirectSucceeded;
+		}
+		bOutsideHeldFocusInsideCallback = Services->GetFocusedWidget(0) == Expected;
 	};
 	if (!TestTrue(TEXT("the second popup is pushed through the real layer"), Layer->Push(Params))
 		|| !TestTrue(TEXT("the second popup actually holds the player's focus"), Services->GetFocusedWidget(0) == Popup))return false;
@@ -70,9 +92,9 @@ bool FDreamPopupFocusReturnRedirectTest::RunTest(const FString& Parameters)
 	TestTrue(TEXT("the opener really received the returned focus"), bOpenerHeldFocusInsideCallback);
 	TestTrue(TEXT("the callback's public focus request succeeded"), bRedirectSucceeded);
 	TestTrue(TEXT("the explicit destination held focus before the callback returned"), bOutsideHeldFocusInsideCallback);
-	TestTrue(TEXT("the captured fallback does not overwrite the callback's destination"), Services->GetFocusedWidget(0) == Outside);
+	TestTrue(TEXT("the captured fallback does not overwrite the callback's destination"), Services->GetFocusedWidget(0) == Expected);
 	Rig.PumpFrames(1);
-	TestTrue(TEXT("the callback's destination also survives the next real frame"), Services->GetFocusedWidget(0) == Outside);
+	TestTrue(TEXT("the callback's destination also survives the next real frame"), Services->GetFocusedWidget(0) == Expected);
 	return true;
 }
 

@@ -520,6 +520,17 @@ void UDreamTabView::RestoreTabFocus(const TArray<FTabFocusCarry>& InCarried)
 	{
 		return;
 	}
+	const TWeakObjectPtr<UDreamTabView> WeakThis(this);
+	const TWeakObjectPtr<UDreamUIInputServices> WeakServices(Services);
+	const uint64 RebuildSerial = TabRebuildSerial;
+	const uint64 SelectionSerial = TabSelectionSerial;
+	const auto IsCurrentRestore = [WeakThis, WeakServices, RebuildSerial, SelectionSerial]()
+	{
+		return WeakThis.IsValid() && WeakServices.IsValid()
+			&& WeakThis->TabRebuildSerial == RebuildSerial && WeakThis->TabSelectionSerial == SelectionSerial;
+	};
+	TMap<int32, FDreamUIFocusRevision> Revisions;
+	for (const FTabFocusCarry& Carried : InCarried)Revisions.Add(Carried.UserIndex, Services->GetFocusRevision(Carried.UserIndex));
 	// A tab that can take focus now: one the player could press. Asked here rather than left to
 	// FocusForNavigation's refusal, because the tab being refused may be the very one focus is still on.
 	const auto UsableTab = [this](int32 InIndex) -> UDreamWidget*
@@ -533,7 +544,14 @@ void UDreamTabView::RestoreTabFocus(const TArray<FTabFocusCarry>& InCarried)
 	};
 	for (const FTabFocusCarry& Carried : InCarried)
 	{
-		TArray<UDreamWidget*, TInlineAllocator<4>> Candidates;
+		if (!IsCurrentRestore())return;
+		if (Services->GetFocusRevision(Carried.UserIndex) != Revisions.FindChecked(Carried.UserIndex))continue;
+		if (const UDreamWidget* Focused = Services->GetFocusedWidget(Carried.UserIndex);
+			IsValid(Focused) && Focused != this && !Focused->IsChildOf(this))
+		{
+			continue; // A rebuild callback already moved this player outside the view.
+		}
+		TArray<TWeakObjectPtr<UDreamWidget>, TInlineAllocator<4>> Candidates;
 		const int32 Found = FindCarriedTab(Carried);
 		Candidates.Add(UsableTab(Found));
 		// Its right neighbour: the one after it when it is still here and cannot take focus (disabled),
@@ -554,14 +572,20 @@ void UDreamTabView::RestoreTabFocus(const TArray<FTabFocusCarry>& InCarried)
 		}
 
 		bool bPlaced = false;
-		for (UDreamWidget* Candidate : Candidates)
+		for (const TWeakObjectPtr<UDreamWidget>& WeakCandidate : Candidates)
 		{
-			// FocusForNavigation still has the last word -- it refuses anything not drawn or not in play --
-			// and changes nothing when it refuses, so the walk simply goes on to the next.
-			if (IsValid(Candidate) && Services->FocusForNavigation(Candidate, Carried.UserIndex))
+			if (UDreamWidget* Candidate = WeakCandidate.Get())
 			{
-				bPlaced = true;
-				break;
+				const FDreamUIFocusRevision Before = Services->GetFocusRevision(Carried.UserIndex);
+				const bool bFocused = Services->FocusForNavigation(Candidate, Carried.UserIndex);
+				if (!IsCurrentRestore())return;
+				// False can mean a received callback chose elsewhere or cleared focus. Only a refusal
+				// that made no transition permits the next fallback to take the player's focus.
+				if (bFocused || Services->GetFocusRevision(Carried.UserIndex) != Before)
+				{
+					bPlaced = true;
+					break;
+				}
 			}
 		}
 		if (!bPlaced)
