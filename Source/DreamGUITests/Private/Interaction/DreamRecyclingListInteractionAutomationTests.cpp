@@ -699,7 +699,10 @@ namespace DreamRecyclingListCellDestructionTestLocal
 		{
 			InTest.TestTrue(TEXT("the callback leaves no dead cell in the pool"), IsValid(Cell.Widget) && IsValid(Cell.CellComponent));
 		}
-		CollectGarbage(RF_NoFlags);
+		InTest.TestNotNull(TEXT("the callback's destroyed cell still exists before GC"), DestroyedCell.GetEvenIfUnreachable());
+		// Preserve standalone editor fixture assets while fully collecting the destroyed row.
+		CollectGarbage(GARBAGE_COLLECTION_KEEPFLAGS, true);
+		InTest.TestNull(TEXT("the callback's destroyed cell is collected by GC"), DestroyedCell.GetEvenIfUnreachable());
 		// Scroll can recover before the pending rebuild's next tick; an Update callback also
 		// exercises recovery with no further input at all.
 		if (InPass != EPass::Update)List->SetScrollProgress(bInHorizontal ? FVector2D(0.25, 0.0) : FVector2D(0.0, 0.25));
@@ -716,8 +719,11 @@ namespace DreamRecyclingListCellDestructionTestLocal
 			if (!InTest.TestTrue(TEXT("a live row is available for external destruction"), !List->GetCacheCellList().IsEmpty()))return;
 			UDreamWidget* Widget = List->GetCacheCellList()[0].Widget.Get();
 			if (!InTest.TestTrue(TEXT("the externally destroyed row is live"), IsValid(Widget)))return;
+			TWeakObjectPtr<UDreamWidget> CellToCollect(Widget);
 			Widget->DestroyWidget();
-			CollectGarbage(RF_NoFlags);
+			InTest.TestNotNull(TEXT("the externally destroyed row still exists before GC"), CellToCollect.GetEvenIfUnreachable());
+			CollectGarbage(GARBAGE_COLLECTION_KEEPFLAGS, true);
+			InTest.TestNull(TEXT("the externally destroyed row is collected by GC"), CellToCollect.GetEvenIfUnreachable());
 		};
 		DestroyAndCollect();
 		List->SetScrollProgress(bInHorizontal ? FVector2D(0.4, 0.0) : FVector2D(0.0, 0.4));
