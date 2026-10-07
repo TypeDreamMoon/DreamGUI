@@ -91,13 +91,15 @@ bool FDreamRuntimeComponentBindingOrderTest::RunTest(const FString& Parameters)
 		|| !TestEqual(TEXT("the compiled class carries the property binding"), Generated->GetPropertyBindings().Num(), 1)
 		|| !TestEqual(TEXT("the compiled class carries the event binding"), Generated->GetEventBindings().Num(), 1))return false;
 	const bool bReorder = Parameters != TEXT("Control");
-	CastChecked<UDreamRuntimeComponentBindingOrderTestWidget>(Generated->GetDefaultObject())->bReorderOnInitialized = bReorder;
 
 	DreamTests::FScopedGameWorld TestWorld;
 	UDreamRuntimeComponentBindingOrderTestWidget* Instance = Cast<UDreamRuntimeComponentBindingOrderTestWidget>(
-		CreateDreamWidget(TestWorld.World, Generated));
-	if (!TestNotNull(TEXT("the public CreateDreamWidget path initializes the compiled widget"), Instance))return false;
+		BeginCreateDreamWidget(TestWorld.World, Generated));
+	if (!TestNotNull(TEXT("the public deferred-create path creates the compiled widget"), Instance))return false;
 	ON_SCOPE_EXIT { if (IsValid(Instance))Instance->DestroyWidget(); };
+	// Assign the real instance before its initialization hook, like an Expose on Spawn input.
+	Instance->bReorderOnInitialized = bReorder;
+	if (!TestNotNull(TEXT("public FinishCreateDreamWidget initializes the configured instance"), FinishCreateDreamWidget(Instance)))return false;
 	UDreamWidget* LiveSubject = Instance->GetWidgetTree()->FindWidgetByVariableName(TEXT("Subject"));
 	if (!TestNotNull(TEXT("the live subject exists"), LiveSubject)
 		|| !TestEqual(TEXT("initialization preserves both components"), LiveSubject->GetAllComponents().Num(), 2))return false;
