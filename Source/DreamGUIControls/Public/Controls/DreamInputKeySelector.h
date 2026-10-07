@@ -329,6 +329,7 @@ public:
 	bool bCaptureKeysWhileListening = true;
 
 protected:
+	virtual void NativeOnConstruct() override;
 	virtual void CollectParts(TArray<FDreamControlPart>& OutParts) override;
 	virtual void RealizeBuiltIn() override;
 	virtual void WireParts() override;
@@ -355,6 +356,11 @@ protected:
 #endif
 
 private:
+	/** A newer chord write takes over notifications from the write it interrupted. */
+	uint64 SelectedChordSerial = 0;
+	/** Destruct callbacks cannot start a capture on the lifetime that is ending. */
+	bool bEndingLifetime = false;
+
 	void HandleClicked();
 
 	/**

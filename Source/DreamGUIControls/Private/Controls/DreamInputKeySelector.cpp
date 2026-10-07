@@ -149,21 +149,31 @@ FInputChord UDreamInputKeySelector::GetSelectedChord() const
 
 void UDreamInputKeySelector::SetSelectedChord(const FInputChord& InChord)
 {
+	const TWeakObjectPtr<UDreamInputKeySelector> WeakThis(this);
+	if (!WeakThis.IsValid() || bEndingLifetime)return;
 	if (SelectedChord == InChord)
 	{
-		// Still re-label: this is also the path ApplyStyle-adjacent code takes after an authored
-		// value, and a silent equal write must not leave the face saying something else. Both
-		// spellings are re-mirrored, because an equal chord says nothing about a raw key write.
+		// Still mirror an equal write, including a raw authored key spelling.
 		SelectedKey = SelectedChord.Key;
 		PushLabel();
 		return;
 	}
-	SelectedChord = InChord;
-	SelectedKey = SelectedChord.Key;
+	const FInputChord Chord = InChord;
+	const uint64 ChordSerial = ++SelectedChordSerial;
+	const auto IsCurrentValue = [WeakThis, ChordSerial, Chord]()
+	{
+		return WeakThis.IsValid() && !WeakThis->bEndingLifetime && WeakThis->SelectedChordSerial == ChordSerial
+			&& WeakThis->SelectedChord == Chord && WeakThis->SelectedKey == Chord.Key;
+	};
+	SelectedChord = Chord;
+	SelectedKey = Chord.Key;
 	PushLabel();
-	OnChordSelected.Broadcast(SelectedChord);
-	OnKeySelected.Broadcast(SelectedKey);
-	OnValueChangedBP.Broadcast(SelectedKey);
+	if (!IsCurrentValue())return;
+	OnChordSelected.Broadcast(Chord);
+	if (!IsCurrentValue())return;
+	OnKeySelected.Broadcast(Chord.Key);
+	if (!IsCurrentValue())return;
+	OnValueChangedBP.Broadcast(Chord.Key);
 }
 
 void UDreamInputKeySelector::ReconcileKeySpellings()
@@ -208,6 +218,8 @@ bool UDreamInputKeySelector::NotifyKeyPressed(FKey InKey)
 
 bool UDreamInputKeySelector::NotifyChordPressed(const FInputChord& InChord)
 {
+	const TWeakObjectPtr<UDreamInputKeySelector> WeakThis(this);
+	if (!WeakThis.IsValid() || bEndingLifetime)return false;
 	if (!bIsListening)
 	{
 		// Not armed, so this key is none of this control's business -- and saying so is what lets a
@@ -248,7 +260,11 @@ bool UDreamInputKeySelector::NotifyChordPressed(const FInputChord& InChord)
 	// Disarm BEFORE the value moves, so a handler on OnKeySelected sees a settled control -- one that
 	// re-opened a dialog from that handler would otherwise arm the next selector and immediately have
 	// this same key still in flight.
+	const uint64 ChordSerial = SelectedChordSerial;
 	SetIsListening(false);
+	// A handler may remove the selector or explicitly correct its binding. Re-arming
+	// alone is allowed: it starts the next listen without canceling this key's value.
+	if (!WeakThis.IsValid() || bEndingLifetime || SelectedChordSerial != ChordSerial)return true;
 	SetSelectedChord(InChord);
 	return true;
 }
@@ -355,6 +371,8 @@ void UDreamInputKeySelector::HandleClicked()
 
 void UDreamInputKeySelector::SetIsListening(bool bInIsListening)
 {
+	const TWeakObjectPtr<UDreamInputKeySelector> WeakThis(this);
+	if (!WeakThis.IsValid() || (bInIsListening && bEndingLifetime))return;
 	if (bIsListening == bInIsListening)
 	{
 		return;
@@ -377,8 +395,11 @@ void UDreamInputKeySelector::SetIsListening(bool bInIsListening)
 		// began is already a no-op.
 		EndKeyCapture();
 	}
+	if (!WeakThis.IsValid())return;
 	PushLabel();
+	if (!WeakThis.IsValid())return;
 	PushFaceColours();
+	if (!WeakThis.IsValid())return;
 	OnIsListeningChanged.Broadcast(bIsListening);
 }
 
@@ -509,22 +530,33 @@ void UDreamInputKeySelector::HandleCapturedKey(FKey InKey)
 		: FInputChord(InKey));
 }
 
+void UDreamInputKeySelector::NativeOnConstruct()
+{
+	bEndingLifetime = false;
+	Super::NativeOnConstruct();
+}
+
 void UDreamInputKeySelector::NativeOnDestruct()
 {
+	const TWeakObjectPtr<UDreamInputKeySelector> WeakThis(this);
+	bEndingLifetime = true;
 	// Before Super, which clears the constructed flag: the capture agent is a live world actor and
 	// releasing it is this control's last act, not something to leave to whatever collects it.
 	// SetIsListening is the one writer of the armed state, so this is also the path that puts the
 	// face back and tells anybody listening that the control stood down.
 	CancelListening();
+	if (!WeakThis.IsValid())return;
 	Super::NativeOnDestruct();
 }
 
 void UDreamInputKeySelector::NativeOnDisable()
 {
+	const TWeakObjectPtr<UDreamInputKeySelector> WeakThis(this);
 	// A selector nobody can see is a selector nobody can click, and clicking it is the documented way
 	// out of the armed state. Standing it down here is what keeps "the agent's lifetime is exactly
 	// the armed state" true for a screen that was merely put away rather than destroyed.
 	CancelListening();
+	if (!WeakThis.IsValid())return;
 	Super::NativeOnDisable();
 }
 
