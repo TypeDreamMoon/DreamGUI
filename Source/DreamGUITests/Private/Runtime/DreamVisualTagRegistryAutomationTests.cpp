@@ -10,6 +10,7 @@
 #include "Core/Components/DreamVisual.h"
 #include "Core/Components/DreamWidget.h"
 #include "DreamCrosscuttingTestTypes.h"
+#include "DreamResourceUndoTestTypes.h"
 #include "Text/DreamUITextBuilder.h"
 #include "UObject/UObjectIterator.h"
 #include "DreamWidgetLifecycleTestTypes.h"
@@ -36,7 +37,7 @@ bool FDreamVisualTagCoverageTest::RunTest(const FString& Parameters)
 {
 	// The exceptions, each of which is a decision rather than an oversight.
 	//
-	// Two entries, and the shortness is the finding: every other visual that has no tag turned out to
+	// The short list is the finding: every other visual that has no tag turned out to
 	// be Abstract already -- UDreamSpriteBase, UDreamTextureBase, UDream2DLineRendererBase all carry
 	// it as a later specifier (`UCLASS(ClassGroup = (DreamGUI), Abstract, ...)`), which is easy to
 	// miss when grepping for `UCLASS(Abstract`. They never reach this sweep, so listing them here
@@ -58,6 +59,11 @@ bool FDreamVisualTagCoverageTest::RunTest(const FString& Parameters)
 		// Another fixture: a visual that records the canvas changes it is told about, for the lifecycle
 		// tests. Concrete because they create it; no .dui should be able to.
 		UDreamWidgetCanvasProbeVisual::StaticClass(),
+
+		// Undo fixtures count resource-triggered repaint requests. They are concrete so the tests can
+		// instantiate them, but their counters and protected hooks are not visuals a .dui should author.
+		UDreamRenderTargetPreviewerUndoProbe::StaticClass(),
+		UDreamRichTextResourceUndoProbe::StaticClass(),
 	};
 
 	int32 Tagged = 0;
