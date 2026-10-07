@@ -672,11 +672,21 @@ namespace DreamUISourceWatcherLocal
 		// saving every screen that wears it, as far as the classes are concerned. The worklist
 		// carries a visited set so a diamond expands once and a (rejected, but defensive) cycle
 		// terminates.
+		// An own write suppresses its file's compile, but still changes what its importers read.
+		// Track why a file was reached: an importer's unchanged content can match its document hash
+		// even when a dependency changed, including when its own event arrived in the same batch.
 		TArray<FString> Worklist = Files;
 		TSet<FString> Visited;
+		TSet<FString> OwnWrites;
+		TSet<FString> DependencyAffected;
 		for (const FString& File : Files)
 		{
-			Visited.Add(NormalizeImportKey(File));
+			const FString Key = NormalizeImportKey(File);
+			Visited.Add(Key);
+			if (IsOwnWriteComingBack(File))
+			{
+				OwnWrites.Add(Key);
+			}
 		}
 		for (int32 Index = 0; Index < Worklist.Num(); ++Index)
 		{
@@ -684,8 +694,10 @@ namespace DreamUISourceWatcherLocal
 			State.ImportEdges.MultiFind(NormalizeImportKey(Worklist[Index]), Importers);
 			for (const FString& Importer : Importers)
 			{
+				const FString Key = NormalizeImportKey(Importer);
+				DependencyAffected.Add(Key);
 				bool bAlreadyVisited = false;
-				Visited.Add(NormalizeImportKey(Importer), &bAlreadyVisited);
+				Visited.Add(Key, &bAlreadyVisited);
 				if (!bAlreadyVisited)
 				{
 					Worklist.Add(Importer);
@@ -700,7 +712,8 @@ namespace DreamUISourceWatcherLocal
 			{
 				continue; // deleted or renamed between the event and now
 			}
-			if (IsOwnWriteComingBack(File))
+			const FString Key = NormalizeImportKey(File);
+			if (OwnWrites.Contains(Key) && !DependencyAffected.Contains(Key))
 			{
 				continue;
 			}

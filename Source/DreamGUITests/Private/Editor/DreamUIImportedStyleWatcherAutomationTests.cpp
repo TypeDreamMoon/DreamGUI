@@ -20,6 +20,7 @@
 #include "Misc/FileHelper.h"
 #include "Misc/Guid.h"
 #include "Misc/Paths.h"
+#include "ScopedTransaction.h"
 #include "UObject/Package.h"
 
 namespace DreamUIImportedStyleWatcherTestLocal
@@ -86,7 +87,7 @@ namespace DreamUIImportedStyleWatcherTestLocal
 		UDreamWidgetBlueprint* Blueprint = nullptr;
 	};
 
-	bool CheckImportedStyleChange(FAutomationTestBase& InTest, bool bInTransitive)
+	bool CheckImportedStyleChange(FAutomationTestBase& InTest, bool bInTransitive, bool bInMainEvent = false)
 	{
 		if (!InTest.TestNotNull(TEXT("the real editor watcher is running"), UDreamGUIEditorSubsystem::Get()))
 		{
@@ -144,6 +145,12 @@ namespace DreamUIImportedStyleWatcherTestLocal
 		{
 			return false;
 		}
+		if (bInMainEvent)
+		{
+			// The unchanged main file also delivered its own notification in this batch. It must
+			// still rebuild when the external library event reaches it as a dependency.
+			FDreamUISourceWatcher::QueueFile(Sources.MainPath);
+		}
 		FDreamUISourceWatcher::QueueFile(Sources.StylesPath);
 		FDreamUISourceWatcher::FlushPending();
 
@@ -178,6 +185,77 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 bool FDreamUIOpenDocumentTransitiveStyleRebuildsTest::RunTest(const FString&)
 {
 	return DreamUIImportedStyleWatcherTestLocal::CheckImportedStyleChange(*this, /*bInTransitive*/true);
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamUIOpenDocumentMixedStyleEventsRebuildTest,
+	"DreamGUI.Text.AnOwnWriteEventDoesNotHideAChangedImportedStyleInTheSameBatch",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamUIOpenDocumentMixedStyleEventsRebuildTest::RunTest(const FString&)
+{
+	return DreamUIImportedStyleWatcherTestLocal::CheckImportedStyleChange(
+		*this, /*bInTransitive*/true, /*bInMainEvent*/true);
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamUIOwnWriteRebuildsStyleImportersTest,
+	"DreamGUI.Text.ADocumentsOwnWriteRebuildsItsStyleImporters",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamUIOwnWriteRebuildsStyleImportersTest::RunTest(const FString&)
+{
+	using namespace DreamUIImportedStyleWatcherTestLocal;
+
+	if (!TestNotNull(TEXT("the real editor watcher is running"), UDreamGUIEditorSubsystem::Get()))
+	{
+		return false;
+	}
+	FScopedSources Sources;
+	const FString MainText = FString::Printf(
+		TEXT("use \"%s\"\nWidget Root : Card { }\n"), *Sources.StylesPath);
+	if (!TestTrue(TEXT("the style library was written"), Sources.WriteStyle(0.5f))
+		|| !TestTrue(TEXT("the importer was written"), FScopedSources::Write(Sources.MainPath, MainText)))
+	{
+		return false;
+	}
+	FScopedBlueprint Fixture(Sources.Suffix);
+	if (!TestNotNull(TEXT("the text Blueprint was created"), Fixture.Blueprint)
+		|| !TestTrue(TEXT("the importer compiled"), DreamUITextAuthoring::SetAuthoredSourcePath(Fixture.Blueprint, Sources.MainPath))
+		|| !TestNotNull(TEXT("the importer has its tree"), Fixture.Blueprint->WidgetTree.Get())
+		|| !TestNotNull(TEXT("the importer has its root"), Fixture.Blueprint->WidgetTree->RootWidget.Get()))
+	{
+		return false;
+	}
+	TestEqual(TEXT("the initial style was applied"), Fixture.Blueprint->WidgetTree->RootWidget->GetRenderOpacity(), 0.5f);
+	TestNull(TEXT("the importer has no open document that could suppress a rebuild"), FDreamUIDocumentRegistry::Find(Sources.MainPath));
+
+	FString OpenError;
+	FDreamUIDocumentHandle LibraryDocument = FDreamUIDocumentHandle::Open(Sources.StylesPath, OpenError);
+	if (!TestTrue(TEXT("the library document opened"), LibraryDocument.IsValid()))
+	{
+		return false;
+	}
+	const FString NewStyleText(TEXT("style Card {\n  RenderOpacity = 0.25\n}\n"));
+	{
+		const FScopedTransaction Transaction(FText::FromString(TEXT("Edit the style document")));
+		FString WriteError;
+		if (!TestTrue(TEXT("the document performed a real new write"), LibraryDocument.Get()->SetContent(NewStyleText, WriteError)))
+		{
+			return false;
+		}
+	}
+	TestFalse(TEXT("the new document text reached disk"), LibraryDocument.Get()->HasUnflushedWrite());
+	TestTrue(TEXT("the new file is the document's own write"), LibraryDocument.Get()->IsOwnWrite(NewStyleText));
+
+	UDreamWidgetTree* const InitialTree = Fixture.Blueprint->WidgetTree.Get();
+	FDreamUISourceWatcher::QueueFile(Sources.StylesPath);
+	FDreamUISourceWatcher::FlushPending();
+	TestTrue(TEXT("the library's own write rebuilt its importer"), Fixture.Blueprint->WidgetTree.Get() != InitialTree);
+	TestEqual(TEXT("the importer applied the library's newly written style"),
+		Fixture.Blueprint->WidgetTree->RootWidget->GetRenderOpacity(), 0.25f);
+	TestTrue(TEXT("the library document still identifies its own write"), LibraryDocument.Get()->IsOwnWrite(NewStyleText));
+	return true;
 }
 
 #endif
