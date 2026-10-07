@@ -94,4 +94,27 @@ bool FDreamTweenSequenceIndirectContainmentTest::RunTest(const FString& Paramete
 	return true;
 }
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDreamTweenSequenceFinishedAncestorTest,
+	"DreamGUI.Tween.Sequence.Cycles.AnAncestorInTheFinishedListCannotBeAddedAsAChild",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamTweenSequenceFinishedAncestorTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamTweenSequenceCycleTestLocal;
+	float Value = 0;
+	UDreamTweenerSequence* Child = NewObject<UDreamTweenerSequence>(GetTransientPackage());
+	UDreamTweenerSequence* Parent = NewObject<UDreamTweenerSequence>(GetTransientPackage());
+	Child->Append(nullptr, MakeChild(Value));
+	Parent->Append(nullptr, Child);
+	Parent->ToNextWithElapsedTime(1.0f);
+	TestEqual(TEXT("The parent's child moved off its active list"), ChildCount(Parent), 0);
+	static_cast<UDreamTweener*>(Child)->Restart();
+	AddExpectedErrorPlain(TEXT("cyclic sequence"), EAutomationExpectedErrorFlags::Contains, 1);
+	Child->Insert(nullptr, 0.0f, Parent);
+	TestEqual(TEXT("A parent still owning the child in its finished list is rejected"), ChildCount(Child), 1);
+	Child->ToNextWithElapsedTime(0.5f);
+	TestEqual(TEXT("The rejected edit leaves the restarted child playable"), Value, 5.0f, 0.001f);
+	return true;
+}
+
 #endif
