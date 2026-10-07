@@ -5,9 +5,11 @@
 #include "Misc/AutomationTest.h"
 
 #include "Core/DreamUserWidget.h"
+#include "Core/Components/DreamWidget.h"
 #include "DreamScopedWorld.h"
 #include "Engine/World.h"
 #include "Interaction/DreamUIModal.h"
+#include "Interaction/DreamUINavigationStack.h"
 #include "Misc/ScopeExit.h"
 
 IMPLEMENT_COMPLEX_AUTOMATION_TEST(FDreamModalCloseAllReentryTest,
@@ -20,6 +22,8 @@ void FDreamModalCloseAllReentryTest::GetTests(TArray<FString>& OutBeautifiedName
 	OutTestCommands.Add(TEXT("reopen"));
 	OutBeautifiedNames.Add(TEXT("Ordinary close all still answers both callers"));
 	OutTestCommands.Add(TEXT("normal"));
+	OutBeautifiedNames.Add(TEXT("World teardown during the top result abandons later callbacks"));
+	OutTestCommands.Add(TEXT("teardown"));
 }
 
 bool FDreamModalCloseAllReentryTest::RunTest(const FString& Parameters)
@@ -31,6 +35,9 @@ bool FDreamModalCloseAllReentryTest::RunTest(const FString& Parameters)
 	int32 TopAnswers = 0;
 	int32 ReplacementAnswers = 0;
 	bool bOpenReplacement = Parameters == TEXT("reopen");
+	const bool bTeardown = Parameters == TEXT("teardown");
+	UDreamUINavigationStack* Navigation = UDreamUINavigationStack::Get(TestWorld.World);
+	if (bTeardown && !TestNotNull(TEXT("the navigation service exists"), Navigation))return false;
 	TArray<FName> AnswerOrder;
 	TWeakObjectPtr<UDreamUserWidget> Replacement;
 	ON_SCOPE_EXIT
@@ -45,10 +52,18 @@ bool FDreamModalCloseAllReentryTest::RunTest(const FString& Parameters)
 		AnswerOrder.Add(TEXT("Bottom"));
 	});
 	const TWeakObjectPtr<UDreamUserWidget> Bottom(Modals->GetActiveModalWidget());
+	const TWeakObjectPtr<UDreamWidget> BottomLayer(Bottom.IsValid() ? Bottom->GetParent() : nullptr);
 	Modals->ShowModalNative(UDreamUserWidget::StaticClass(), [&](FName Result)
 	{
 		++TopAnswers;
 		AnswerOrder.Add(TEXT("Top"));
+		if (bTeardown)
+		{
+			// Navigation forgets its scopes during world teardown; closing the claimed modal batch
+			// afterwards must neither deliver more results nor leave its remaining widgets orphaned.
+			Navigation->TeardownForWorld(*TestWorld.World);
+			Modals->TeardownForWorld(*TestWorld.World);
+		}
 		if (bOpenReplacement)
 		{
 			bOpenReplacement = false;
@@ -65,13 +80,21 @@ bool FDreamModalCloseAllReentryTest::RunTest(const FString& Parameters)
 
 	Modals->CloseAllModals(TEXT("Dismissed"));
 	TestEqual(TEXT("the original top caller is answered once"), TopAnswers, 1);
-	TestEqual(TEXT("the original bottom caller is answered once"), BottomAnswers, 1);
+	TestEqual(TEXT("the bottom result is abandoned only when the world tears down"), BottomAnswers, bTeardown ? 0 : 1);
 	TestFalse(TEXT("the original top dialog was destroyed"), Top.IsValid());
 	TestFalse(TEXT("the original bottom dialog was destroyed"), Bottom.IsValid());
-	if (TestEqual(TEXT("the original callers were both answered"), AnswerOrder.Num(), 2))
+	TestFalse(TEXT("the original bottom layer is not orphaned"), BottomLayer.IsValid());
+	if (TestEqual(TEXT("only results from the live world are delivered"), AnswerOrder.Num(), bTeardown ? 1 : 2))
 	{
 		TestEqual(TEXT("the original top answers first"), AnswerOrder[0], FName(TEXT("Top")));
-		TestEqual(TEXT("the original bottom answers second"), AnswerOrder[1], FName(TEXT("Bottom")));
+		if (!bTeardown)TestEqual(TEXT("the original bottom answers second"), AnswerOrder[1], FName(TEXT("Bottom")));
+	}
+	if (bTeardown)
+	{
+		TArray<UDreamUINavigationScope*> RemainingScopes;
+		Navigation->GetScopeStack(0, RemainingScopes);
+		TestEqual(TEXT("finishing the obsolete batch does not recreate navigation scopes"), RemainingScopes.Num(), 0);
+		TestNull(TEXT("world teardown leaves no active navigation scope"), Navigation->GetActiveScope());
 	}
 	if (Parameters == TEXT("reopen"))
 	{
