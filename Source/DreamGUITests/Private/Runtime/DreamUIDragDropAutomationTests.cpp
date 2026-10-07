@@ -470,9 +470,12 @@ bool FDreamUIDragPerPointerTest::RunTest(const FString& Parameters)
 	EventSystem->CallOnPointerDragDrop(SlotB, ResidentFinger);
 	TestFalse(TEXT("B was destroyed by the drop's leave callback"), IsValid(TargetB));
 	TestFalse(TEXT("the destroyed target does not accept the operation afterward"), ResidentFinger->DragOperation->bDropWasHandled);
-	ResidentFinger->EventType = EDreamUIPointerEventType::EndDrag;
-	EventSystem->CallOnPointerEndDrag(SlotB, ResidentFinger);
-	TestEqual(TEXT("the last EndDrag clears the bookkeeping after target destruction"), DragDrop->GetDragCount(), 0);
+	// A destroyed drag source cannot receive EndDrag. Match the pointer input module's release
+	// fallback: cancel the operation, clear it from the pointer, and let the next tick prune the drag.
+	ResidentFinger->DragOperation->NotifyDragCancelled();
+	ResidentFinger->DragOperation = nullptr;
+	DragDrop->Tick(0.0f);
+	TestEqual(TEXT("release clears the bookkeeping when the source and target were destroyed"), DragDrop->GetDragCount(), 0);
 
 	UDreamWidget* SlotC = NewObject<UDreamWidget>(TestWorld.World, NAME_None, RF_Transient);
 	UDreamUIDropTarget* TargetC = SlotC->AddComponent<UDreamUIDropTarget>();
@@ -488,8 +491,10 @@ bool FDreamUIDragPerPointerTest::RunTest(const FString& Parameters)
 	TestNull(TEXT("the subsystem does not retain a destroyed hover target"), DragDrop->GetHoveredTargetForPointer(0));
 	TestEqual(TEXT("the destroyed target receives no over after enter"), OverC->CallCount, 0);
 	LastFinger->bIsDragging = false;
-	EventSystem->CallOnPointerEndDrag(SlotC, LastFinger);
-	TestEqual(TEXT("ending that operation also clears its bookkeeping"), DragDrop->GetDragCount(), 0);
+	LastFinger->DragOperation->NotifyDragCancelled();
+	LastFinger->DragOperation = nullptr;
+	DragDrop->Tick(0.0f);
+	TestEqual(TEXT("release also clears an operation whose source was destroyed on enter"), DragDrop->GetDragCount(), 0);
 	return true;
 }
 
