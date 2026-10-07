@@ -30,7 +30,9 @@
 #include "Misc/Paths.h"
 #include "Misc/ScopedSlowTask.h"
 #include "Modules/ModuleManager.h"
+#include "UObject/ObjectSaveContext.h"
 #include "UObject/SoftObjectPath.h"
+#include "UObject/UObjectGlobals.h"
 #include "UObject/UObjectIterator.h"
 #include "Widgets/Notifications/SNotificationList.h"
 
@@ -115,10 +117,12 @@ namespace DreamUISourceWatcherLocal
 	{
 		/** Resolved, normalised source path (lowercased, the comparison being case-blind) -> the Blueprint built from it. */
 		TMap<FString, FSoftObjectPath> BlueprintBySource;
-		/** Widget Blueprint packages whose Source File has been read, loaded or not since. */
-		TSet<FName> ExaminedPackages;
+		/** Examined package -> its normalized source key; empty for no source or a failed load. */
+		TMap<FName, FString> ExaminedPackages;
 		FDelegateHandle AssetRemovedHandle;
 		FDelegateHandle AssetRenamedHandle;
+		FDelegateHandle AssetUpdatedOnDiskHandle;
+		FDelegateHandle ObjectPreSaveHandle;
 		/** Set while a lookup runs: a load it causes that asks again is answered null, not with a second scan. */
 		bool bResolving = false;
 	};
@@ -134,15 +138,47 @@ namespace DreamUISourceWatcherLocal
 		return InNormalizedPath.ToLower();
 	}
 
+	/** Forget a changed asset and reopen discovery for any source whose selected owner it was. */
+	void ForgetPackage(const FName InPackageName)
+	{
+		FSourceClassIndex& Index = SourceClassIndex();
+		Index.ExaminedPackages.Remove(InPackageName);
+		TArray<FString> UnclaimedSources;
+		for (auto It = Index.BlueprintBySource.CreateIterator(); It; ++It)
+		{
+			if (It.Value().GetLongPackageFName() == InPackageName)
+			{
+				UnclaimedSources.Add(It.Key());
+				It.RemoveCurrent();
+			}
+		}
+		// The selected class may have shared its file. Its other owners must be discoverable after collection too.
+		for (auto It = Index.ExaminedPackages.CreateIterator(); It; ++It)
+		{
+			if (UnclaimedSources.Contains(It.Value())) It.RemoveCurrent();
+		}
+	}
+
 	/** Remember where InBlueprint is built from, whatever was asked: the next question is likely about another file. */
 	void NoteBlueprintSource(UDreamWidgetBlueprint* InBlueprint)
 	{
 		FSourceClassIndex& Index = SourceClassIndex();
-		Index.ExaminedPackages.Add(InBlueprint->GetOutermost()->GetFName());
-		const FString Resolved = GetResolvedSourceKey(InBlueprint);
-		if (!Resolved.IsEmpty())
+		const FName PackageName = InBlueprint->GetOutermost()->GetFName();
+		const FString Key = IndexKey(GetResolvedSourceKey(InBlueprint));
+		if (const FString* Previous = Index.ExaminedPackages.Find(PackageName); Previous != nullptr && *Previous != Key)
 		{
-			Index.BlueprintBySource.Add(IndexKey(Resolved), FSoftObjectPath(InBlueprint));
+			ForgetPackage(PackageName);
+		}
+		Index.ExaminedPackages.Add(PackageName, Key);
+		if (!Key.IsEmpty())
+		{
+			const FSoftObjectPath Candidate(InBlueprint);
+			const FSoftObjectPath* Known = Index.BlueprintBySource.Find(Key);
+			// Incidental observations use the same choice as the requested file's sorted loaded matches.
+			if (Known == nullptr || Candidate.ToString() < Known->ToString())
+			{
+				Index.BlueprintBySource.Add(Key, Candidate);
+			}
 		}
 	}
 
@@ -151,20 +187,6 @@ namespace DreamUISourceWatcherLocal
 	{
 		return InBlueprint != nullptr && InBlueprint->GeneratedClass != nullptr
 			? InBlueprint->GeneratedClass->GetAuthoritativeClass() : nullptr;
-	}
-
-	/** An asset leaving or moving takes what was learned about it along. */
-	void ForgetPackage(const FName InPackageName)
-	{
-		FSourceClassIndex& Index = SourceClassIndex();
-		Index.ExaminedPackages.Remove(InPackageName);
-		for (auto It = Index.BlueprintBySource.CreateIterator(); It; ++It)
-		{
-			if (It.Value().GetLongPackageFName() == InPackageName)
-			{
-				It.RemoveCurrent();
-			}
-		}
 	}
 
 	UClass* FindClassForSourceImpl(const FString& InResolvedSourcePath)
@@ -185,17 +207,19 @@ namespace DreamUISourceWatcherLocal
 		// a stale answer is a host built from the wrong component.
 		if (const FSoftObjectPath* Known = Index.BlueprintBySource.Find(Key))
 		{
-			UDreamWidgetBlueprint* Blueprint = Cast<UDreamWidgetBlueprint>(Known->ResolveObject());
+			// Loading can deliver asset notifications that mutate the index.
+			const FSoftObjectPath KnownPath = *Known;
+			UDreamWidgetBlueprint* Blueprint = Cast<UDreamWidgetBlueprint>(KnownPath.ResolveObject());
 			if (Blueprint == nullptr)
 			{
 				// Known, and collected since: brought back, which is what the soft path is kept for.
-				Blueprint = Cast<UDreamWidgetBlueprint>(Known->TryLoad());
+				Blueprint = Cast<UDreamWidgetBlueprint>(KnownPath.TryLoad());
 			}
 			if (IsBuiltFrom(Blueprint) && GetAuthoritativeClass(Blueprint) != nullptr)
 			{
 				return GetAuthoritativeClass(Blueprint);
 			}
-			Index.BlueprintBySource.Remove(Key);
+			ForgetPackage(KnownPath.GetLongPackageFName());
 		}
 
 		// 2. Every loaded Blueprint, which costs nothing to ask and is where the answer almost always is: the component
@@ -266,7 +290,7 @@ namespace DreamUISourceWatcherLocal
 		});
 		for (const FAssetData& Asset : Assets)
 		{
-			Index.ExaminedPackages.Add(Asset.PackageName);
+			Index.ExaminedPackages.Add(Asset.PackageName, FString());
 			UDreamWidgetBlueprint* Blueprint = Cast<UDreamWidgetBlueprint>(Asset.GetAsset());
 			if (Blueprint == nullptr)
 			{
@@ -1119,11 +1143,21 @@ void FDreamUISourceWatcher::InstallSourceClassResolver()
 		return FDreamUISourceWatcher::FindClassForSource(InResolvedSourcePath);
 	};
 
-	// What was learned about an asset goes when the asset does. A Blueprint that is merely given another Source File
-	// needs nothing here: every remembered answer is checked again before it is given.
+	// A loaded change is observed on lookup; a saved change must also invalidate what remains after collection.
+	FSourceClassIndex& Index = SourceClassIndex();
+	Index.ObjectPreSaveHandle = FCoreUObjectDelegates::OnObjectPreSave.AddLambda([](UObject* InObject, FObjectPreSaveContext)
+	{
+		if (UDreamWidgetBlueprint* Blueprint = Cast<UDreamWidgetBlueprint>(InObject))
+		{
+			ForgetPackage(Blueprint->GetOutermost()->GetFName());
+		}
+	});
 	if (IAssetRegistry* AssetRegistry = IAssetRegistry::Get())
 	{
-		FSourceClassIndex& Index = SourceClassIndex();
+		Index.AssetUpdatedOnDiskHandle = AssetRegistry->OnAssetUpdatedOnDisk().AddLambda([](const FAssetData& InAsset)
+		{
+			ForgetPackage(InAsset.PackageName);
+		});
 		Index.AssetRemovedHandle = AssetRegistry->OnAssetRemoved().AddLambda([](const FAssetData& InAsset)
 		{
 			ForgetPackage(InAsset.PackageName);
@@ -1142,8 +1176,10 @@ void FDreamUISourceWatcher::UninstallSourceClassResolver()
 
 	FDreamUITextBuilder::SourceClassResolver() = nullptr;
 	FSourceClassIndex& Index = SourceClassIndex();
+	FCoreUObjectDelegates::OnObjectPreSave.Remove(Index.ObjectPreSaveHandle);
 	if (IAssetRegistry* AssetRegistry = IAssetRegistry::Get())
 	{
+		AssetRegistry->OnAssetUpdatedOnDisk().Remove(Index.AssetUpdatedOnDiskHandle);
 		AssetRegistry->OnAssetRemoved().Remove(Index.AssetRemovedHandle);
 		AssetRegistry->OnAssetRenamed().Remove(Index.AssetRenamedHandle);
 	}
