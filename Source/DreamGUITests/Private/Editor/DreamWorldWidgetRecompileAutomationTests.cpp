@@ -173,4 +173,70 @@ bool FDreamWorldWidgetRecompileTest::RunTest(const FString& Parameters)
 	return true;
 }
 
+/*
+ * The same compile, for a panel in a world that has no UI manager.
+ *
+ * The release before a compile walks the worlds that have a manager -- the level editor's, a preview's, a play
+ * session's -- and asks each host there for its tree. A world without one (a game preview world, which the manager
+ * leaves out: UDreamUIManagerWorldSubsystem::DoesSupportWorldType) builds its panels all the same, and nothing walks
+ * it before the compile. What stands between such a tree and the reinstancer is the editor subsystem's handler for
+ * the replacement itself: the original instance is taken out of its world -- every widget of it unregistered, its
+ * canvas's mesh with it -- while its memory is still live, before any collection can free what it was drawing with.
+ * Left registered, it is the orphan the level viewport crashed on.
+ */
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamWorldWidgetRecompileWithoutManagerTest,
+	"DreamGUI.WorldWidget.RecompilingAClassPlacedInAWorldWithNoUIManagerTakesTheReplacedTreeOutOfThatWorld",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamWorldWidgetRecompileWithoutManagerTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamWorldWidgetRecompileTestLocal;
+
+	FScopedBlueprint Class(TEXT("WorldWidgetRecompileNoManager"));
+	if (!TestNotNull(TEXT("the widget Blueprint was created"), Class.Blueprint))return false;
+	Class.Blueprint->GetOrCreateWidgetTree()->RootWidget->SetDisplayName(TEXT("Root"));
+	Class.Compile();
+	UClass* GeneratedClass = Class.Blueprint->GeneratedClass;
+	if (!TestNotNull(TEXT("and compiled"), GeneratedClass))return false;
+
+	FScopedWorld TestWorld(EWorldType::GamePreview);
+	if (!TestNull(TEXT("a game preview world has no UI manager"), UDreamUIManagerWorldSubsystem::GetInstance(TestWorld.World)))
+	{
+		return false;
+	}
+	ADreamWorldWidgetActor* Actor = TestWorld.World->SpawnActor<ADreamWorldWidgetActor>();
+	if (!TestNotNull(TEXT("host actor"), Actor))return false;
+	UDreamWorldWidgetComponent* Component = Actor->GetWidgetComponent();
+	Component->SetWidgetClass(GeneratedClass);
+
+	UDreamWidget* FirstTree = Component->GetLoadedWidget();
+	if (!TestNotNull(TEXT("the placed class loaded there all the same"), FirstTree))return false;
+	if (!TestTrue(TEXT("and its tree is registered in that world"), FirstTree->HasRegistered()))return false;
+	// Raw pointers, read again after the compile: the reinstancer only marks the original, and no collection runs
+	// before the checks below, so they stay readable for exactly as long as this test needs them.
+	TArray<UDreamWidget*> FirstWidgets;
+	UDreamWidget::CollectChildrenWidgets(FirstTree, FirstWidgets, /*IncludeTarget*/true);
+	const UDreamCanvas* FirstCanvas = Component->GetLoadedCanvas();
+	const TWeakObjectPtr<UDreamUIMeshComponent> FirstMeshWatch = FirstCanvas != nullptr ? FirstCanvas->GetUIMesh() : nullptr;
+	AddInfo(FString::Printf(TEXT("The placed tree has %d widgets and %s mesh."), FirstWidgets.Num(), FirstMeshWatch.IsValid() ? TEXT("a") : TEXT("no")));
+
+	Class.Compile();
+
+	TArray<FString> StillRegistered;
+	for (const UDreamWidget* Widget : FirstWidgets)
+	{
+		if (Widget->HasRegistered())
+		{
+			StillRegistered.Add(Widget->GetName());
+		}
+	}
+	TestEqual(TEXT("after the compile no widget of the replaced tree is still registered in that world"),
+		FString::Join(StillRegistered, TEXT(", ")), FString());
+	TestFalse(TEXT("and the replaced tree is on its way out"), IsValid(FirstTree));
+	TestFalse(TEXT("its mesh went with it, before any collection"), FirstMeshWatch.IsValid());
+	TestEqual(TEXT("so nothing in that world is left drawing the old tree"), RegisteredMeshesIn(TestWorld.World).Num(), 0);
+	return true;
+}
+
 #endif
