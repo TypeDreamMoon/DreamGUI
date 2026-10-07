@@ -197,10 +197,18 @@ namespace DreamWidgetPreviewHostLocal
 			}
 			if (Prepared.IsValid())
 			{
-				InDestination->PreEditChange(InMemberProperty);
+				if (!InDestination->HasAnyFlags(RF_ClassDefaultObject))
+				{
+					FEditPropertyChain PropertyChain;
+					PropertyChain.AddHead(InMemberProperty);
+					InDestination->PreEditChange(PropertyChain);
+				}
 				InMemberProperty->CopyCompleteValue(InMemberProperty->ContainerPtrToValuePtr<void>(InDestination), Prepared->Get());
-				FPropertyChangedEvent Changed(InMemberProperty, EPropertyChangeType::ValueSet);
-				InDestination->PostEditChangeProperty(Changed);
+				if (!InDestination->HasAnyFlags(RF_ClassDefaultObject))
+				{
+					FPropertyChangedEvent Changed(InMemberProperty);
+					InDestination->PostEditChangeProperty(Changed);
+				}
 				return true;
 			}
 			// Preserve the engine's duplication/correspondence rules for instanced sub-objects. A chain
