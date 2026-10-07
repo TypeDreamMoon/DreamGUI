@@ -2142,4 +2142,73 @@ bool FDreamWidgetAnimationKeptBoundObjectTest::RunTest(const FString& Parameters
 	return true;
 }
 
+IMPLEMENT_COMPLEX_AUTOMATION_TEST(
+	FDreamWidgetAnimationBatchStopReentryTest,
+	"DreamGUI.Animation.Playback.StoppingAnAnimationFromItsFinishedCallbackDoesNotFinishOrPoolItTwice",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+void FDreamWidgetAnimationBatchStopReentryTest::GetTests(TArray<FString>& OutBeautifiedNames, TArray<FString>& OutTestCommands) const
+{
+	OutBeautifiedNames.Add(TEXT("Stopping the other instance"));
+	OutTestCommands.Add(TEXT("single"));
+	OutBeautifiedNames.Add(TEXT("Stopping all remaining instances"));
+	OutTestCommands.Add(TEXT("all"));
+}
+
+bool FDreamWidgetAnimationBatchStopReentryTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamWidgetAnimationPlaybackTestLocal;
+	const DreamTests::Lifecycle::FScopedConsoleVariable Reuse(TEXT("DreamUI.Animation.ReusePlayers"), 1);
+	FScopedGameWorld Scope;
+	FScopedTree Tree(Scope.World);
+	Tree.AddFloatTrack(TEXT("AnimatableWidth"), 20.0f, 220.0f);
+	const FDreamUIAnimationHandle First = Tree.Animator->PlayAnimation(Tree.Animation);
+	const FDreamUIAnimationHandle Second = Tree.Animator->PlayAnimation(Tree.Animation);
+	if (!TestTrue(TEXT("two independent animation instances are playing"),
+		First.IsValid() && Second.IsValid() && First.Player != Second.Player))
+	{
+		return false;
+	}
+
+	int32 FirstFinished = 0;
+	int32 SecondFinished = 0;
+	const bool bStopAll = Parameters == TEXT("all");
+	const FDelegateHandle Listening = Tree.Animator->OnInstanceFinished.AddLambda(
+		[&Tree, First, Second, bStopAll, &FirstFinished, &SecondFinished](const FDreamUIAnimationHandle& Finished)
+		{
+			if (Finished.Player == First.Player && Finished.Instance == First.Instance)
+			{
+				++FirstFinished;
+				if (bStopAll)
+				{
+					Tree.Animator->StopAllAnimations();
+				}
+				else
+				{
+					Tree.Animator->StopAnimation(Second);
+				}
+			}
+			else if (Finished.Player == Second.Player && Finished.Instance == Second.Instance)
+			{
+				++SecondFinished;
+			}
+		});
+	Tree.Animator->StopAnimationsOf(Tree.Animation);
+	Tree.Animator->OnInstanceFinished.Remove(Listening);
+	TestEqual(TEXT("the first instance finished once"), FirstFinished, 1);
+	TestEqual(TEXT("the instance stopped inside the callback also finished once"), SecondFinished, 1);
+	TestFalse(TEXT("the batch left no playing instance"), Tree.Animator->IsAnyAnimationPlaying());
+
+	// In the next real frame both ended players are eligible for reuse. A duplicate spare entry
+	// must not hand out an active player again or tear down the first replay while starting the second.
+	++GFrameCounter;
+	Scope.World->Tick(LEVELTICK_TimeOnly, FrameSeconds);
+	const FDreamUIAnimationHandle ReplayFirst = Tree.Animator->PlayAnimation(Tree.Animation);
+	const FDreamUIAnimationHandle ReplaySecond = Tree.Animator->PlayAnimation(Tree.Animation);
+	TestTrue(TEXT("both replay handles stay live"), ReplayFirst.IsValid() && ReplaySecond.IsValid());
+	TestTrue(TEXT("two replays own different players"), ReplayFirst.Player != ReplaySecond.Player);
+	TestTrue(TEXT("starting the second replay leaves the first playing"), Tree.Animator->IsAnimationPlaying(ReplayFirst));
+	return true;
+}
+
 #endif
