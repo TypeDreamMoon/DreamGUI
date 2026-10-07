@@ -227,7 +227,9 @@ public:
 	 */
 	virtual void PreEditChange(class FEditPropertyChain& PropertyAboutToChange) override;
 	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)override;
-	/** An undo that put another font in Font lets go of the one the text was added to, and of the coverage it held with it. */
+	/** Release rich-text subscriptions while their old resource pointers are still available. */
+	virtual void PreEditUndo() override;
+	/** Restore rich-text subscriptions and release any replaced font and its retained coverage. */
 	virtual void PostEditUndo() override;
 protected:
 	/** No, for an edit of the paints alone or of their animation: PostEditChangeProperty gave it what a setter would. */

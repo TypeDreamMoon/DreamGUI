@@ -2101,6 +2101,14 @@ bool UDreamText::MarksAllDirtyOnPropertyEdit(const FPropertyChangedEvent& /*InEv
 	return !bPaintEditHandled;
 }
 
+void UDreamText::PreEditUndo()
+{
+	// Release the old subscriptions before transaction serialization restores their asset pointers.
+	UnregisterOnRichTextImageDataChange();
+	UnregisterOnRichTextCustomStyleDataChange();
+	Super::PreEditUndo();
+}
+
 void UDreamText::PostEditUndo()
 {
 	// An undo puts the properties back with nothing told first (PreEditChange is asked with no property): a font it put in
@@ -2112,6 +2120,16 @@ void UDreamText::PostEditUndo()
 		UnregisterFont();
 	}
 	Super::PostEditUndo();
+	if (!IsValid(this) || !bRichText)return;
+	// Super may already repaint and register them. Hidden text still needs the restored listeners now.
+	if (IsValid(RichTextImageData) && !RichTextImageDataChangedDelegateHandle.IsValid())
+	{
+		RegisterOnRichTextImageDataChange();
+	}
+	if (IsValid(RichTextCustomStyleData) && !RichTextCustomStyleDataChangedDelegateHandle.IsValid())
+	{
+		RegisterOnRichTextCustomStyleDataChange();
+	}
 }
 
 #endif
