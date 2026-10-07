@@ -21,6 +21,7 @@
 #include "HAL/FileManager.h"
 #include "Kismet2/KismetEditorUtilities.h"
 #include "Misc/FileHelper.h"
+#include "Misc/PackageName.h"
 #include "Misc/Paths.h"
 #include "Misc/ScopeExit.h"
 #include "PackageTools.h"
@@ -29,6 +30,41 @@
 
 namespace DreamUISourceClassResolverTestLocal
 {
+	/** The registry deliberately refuses /Temp; give this saved asset its own real, short-lived mount. */
+	struct FScopedSourceAssetMount
+	{
+		FScopedSourceAssetMount()
+		{
+			const FString Suffix = FGuid::NewGuid().ToString(EGuidFormats::Digits);
+			RootPath = TEXT("/DreamGUIResolver_") + Suffix + TEXT("/");
+			Directory = FPaths::ConvertRelativePathToFull(FPaths::Combine(
+				FPaths::ProjectSavedDir(), TEXT("DreamGUITests"), TEXT("ResolverAssets_") + Suffix)) + TEXT("/");
+			FPaths::NormalizeDirectoryName(Directory);
+			bCreatedDirectory = IFileManager::Get().MakeDirectory(*Directory, true);
+			if (bCreatedDirectory) FPackageName::RegisterMountPoint(RootPath, Directory + TEXT("/"));
+		}
+		~FScopedSourceAssetMount()
+		{
+			if (bCreatedDirectory)
+			{
+				FPackageName::UnRegisterMountPoint(RootPath, Directory + TEXT("/"));
+				IFileManager::Get().DeleteDirectory(*Directory, false, false);
+			}
+		}
+		bool Place(DreamOnDiskFixture::FScopedOnDiskPackage& Disk) const
+		{
+			if (!bCreatedDirectory) return false;
+			const FString NewPackageName = RootPath + Disk.AssetName;
+			if (!Disk.Package->Rename(*NewPackageName, nullptr, REN_DontCreateRedirectors | REN_NonTransactional)) return false;
+			Disk.PackageName = NewPackageName;
+			Disk.FileName = FPackageName::LongPackageNameToFilename(NewPackageName, FPackageName::GetAssetPackageExtension());
+			return true;
+		}
+		FString RootPath;
+		FString Directory;
+		bool bCreatedDirectory = false;
+	};
+
 	struct FScopedSourceFiles
 	{
 		FScopedSourceFiles()
@@ -76,7 +112,9 @@ bool FDreamUISourceClassResolverChangedSourceAfterUnloadTest::RunTest(const FStr
 		|| !TestTrue(TEXT("the replacement source was written"), FScopedSourceFiles::Write(Sources.NewPath, NewText))) return false;
 
 	const FString AssetName = TEXT("SourceResolverChanged_") + FGuid::NewGuid().ToString(EGuidFormats::Digits);
+	FScopedSourceAssetMount Mount;
 	DreamOnDiskFixture::FScopedOnDiskPackage Disk(*AssetName);
+	if (!TestTrue(TEXT("the disk fixture is under a registry-scannable mount"), Mount.Place(Disk))) return false;
 	UDreamWidgetBlueprint* Blueprint = Cast<UDreamWidgetBlueprint>(FKismetEditorUtilities::CreateBlueprint(
 		UDreamTextUserWidget::StaticClass(), Disk.Package, FName(*AssetName), BPTYPE_Normal,
 		UDreamWidgetBlueprint::StaticClass(), UDreamWidgetGeneratedClass::StaticClass()));
@@ -108,6 +146,8 @@ bool FDreamUISourceClassResolverChangedSourceAfterUnloadTest::RunTest(const FStr
 	TestTrue(TEXT("the resolver must supply the missing class line"), Ast.ClassPath.IsEmpty());
 	IAssetRegistry& Registry = FAssetRegistryModule::GetRegistry();
 	Registry.ScanFilesSynchronous({ Disk.FileName }, true);
+	if (!TestTrue(TEXT("the saved asset was actually scanned from disk before unload"),
+		Registry.GetAssetByObjectPath(AssetPath, true).IsValid())) return false;
 
 	TWeakObjectPtr<UDreamWidgetBlueprint> BeforeUnload = Blueprint;
 	UPackage* PackageToUnload = Disk.Package;
