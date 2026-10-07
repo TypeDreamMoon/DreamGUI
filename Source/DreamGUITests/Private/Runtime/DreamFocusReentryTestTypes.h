@@ -6,6 +6,7 @@
 #include "Core/DreamUIBehaviour.h"
 #include "Core/Components/DreamWidget.h"
 #include "Event/Interface/DreamPointerSelectDeselectInterface.h"
+#include "Event/DreamPointerEventData.h"
 #include "DreamFocusReentryTestTypes.generated.h"
 
 enum class EDreamFocusReentryCallback : uint8
@@ -30,10 +31,12 @@ public:
 	int32 ReceivedCount = 0;
 	int32 LostCount = 0;
 	bool bEveryReceivedHadFocus = true;
+	TWeakObjectPtr<UDreamBaseEventData> LastSelectEventData;
 
 	virtual bool OnPointerSelect_Implementation(UDreamBaseEventData* EventData) override
 	{
 		++SelectCount;
+		LastSelectEventData = EventData;
 		RunAction(EDreamFocusReentryCallback::Select);
 		return false;
 	}

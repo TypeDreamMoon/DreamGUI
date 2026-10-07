@@ -150,6 +150,8 @@ public:
 	/** What this player has focused: the widget their keys, characters and sticks go to. */
 	UFUNCTION(BlueprintPure, Category = DreamGUI)
 	UDreamWidget* GetFocusedWidget() const { return FocusedWidget.Get(); }
+	/** For dispatching callers to recognize a focus transition superseded by game code. */
+	uint64 GetFocusTransitionSerial() const { return FocusTransitionSerial; }
 	/**
 	 * What last moved this player's focus: a pointer's press, a directional step, Tab, or code. Recorded by the input
 	 * system as it moves the focus -- the pointer module's selection, the navigation step, FocusForNavigation -- and read
@@ -518,6 +520,16 @@ private:
 
 	/** The player's focus. Weak: a focused widget destroyed is simply no longer focused. */
 	TWeakObjectPtr<UDreamWidget> FocusedWidget;
+	/** Every actual focus transition supersedes unfinished notifications from an earlier one. */
+	uint64 FocusTransitionSerial = 0;
+	/** A widget reselected during Deselect has a newer focus tenure: its old Lost is no longer owed. */
+	struct FPendingFocusLost
+	{
+		TWeakObjectPtr<UDreamWidget> Widget;
+		uint64 Serial = 0;
+		bool bReselected = false;
+	};
+	TArray<FPendingFocusLost> PendingFocusLost;
 	TWeakObjectPtr<UObject> TextTarget;
 	/** The text target's keys, bound for this player and pushed on their controller while there is a target. */
 	UPROPERTY(Transient)

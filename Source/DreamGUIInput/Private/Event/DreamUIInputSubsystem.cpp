@@ -744,12 +744,25 @@ bool UDreamUIInputSubsystem::SetFocus(UDreamWidget* InWidget, int32 InUserIndex,
 	{
 		return false;
 	}
+	const TWeakObjectPtr<UDreamUIInputUser> WeakUser(User);
+	const uint64 ExpectedSerial = User->GetFocusTransitionSerial() + (User->GetFocusedWidget() != InWidget ? 1 : 0);
 	UDreamPointerEventData* EventData = User->GetPointerEventData(InPointerId, true);
-	User->SetSelectWidgetForCause(InWidget, EventData, EDreamUIFocusCause::Script);
-	// The navigation cursor moves with the focus, as a step moves both: what reads the highlight finds it on the focus.
+	// Written before dispatch, as FocusForNavigation does: a nested focus or clear owns the
+	// cursor it leaves behind. The callback can also retire and replace this pointer.
 	if (EventData != nullptr)
 	{
 		EventData->SetHighlightedWidgetForNavigation(InWidget);
+	}
+	User->SetSelectWidgetForCause(InWidget, EventData, EDreamUIFocusCause::Script);
+	// A handler can replace the pointer while this transition keeps the focus. Re-query the map
+	// and only finish our own transition; a nested B -> C -> B is already somebody else's.
+	if (UDreamUIInputUser* Current = GetUser(InUserIndex); Current != nullptr && Current == WeakUser.Get()
+		&& !Current->IsShutDown() && Current->GetFocusTransitionSerial() == ExpectedSerial && Current->GetFocusedWidget() == InWidget)
+	{
+		if (UDreamPointerEventData* CurrentEventData = Current->FindPointerEventData(InPointerId))
+		{
+			CurrentEventData->SetHighlightedWidgetForNavigation(InWidget);
+		}
 	}
 	return true;
 }
@@ -768,16 +781,21 @@ void UDreamUIInputSubsystem::ClearFocus(UDreamWidget* InWidget, int32 InUserInde
 	{
 		return;
 	}
-	User->SetSelectWidget(nullptr, User->GetPointerEventData(InPointerId, true));
 	// The cursor goes with the focus it marked: left behind on a widget that was just hidden, it went on marking it for
 	// everything that reads the highlight.
-	if (UDreamPointerEventData* Navigation = User->FindPointerEventData(DreamUIInputSubsystemFocusLocal::NavigationPointerID))
+	auto ClearOldHighlight = [User, InWidget](int32 InId)
 	{
-		if (Navigation->HighlightWidgetForNavigation.Get() == InWidget)
+		if (UDreamPointerEventData* Pointer = User->FindPointerEventData(InId))
 		{
-			Navigation->HighlightWidgetForNavigation = nullptr;
+			if (Pointer->HighlightWidgetForNavigation.Get() == InWidget)
+			{
+				Pointer->HighlightWidgetForNavigation = nullptr;
+			}
 		}
-	}
+	};
+	ClearOldHighlight(DreamUIInputSubsystemFocusLocal::NavigationPointerID);
+	if (InPointerId != DreamUIInputSubsystemFocusLocal::NavigationPointerID)ClearOldHighlight(InPointerId);
+	User->SetSelectWidget(nullptr, User->GetPointerEventData(InPointerId, true));
 }
 
 bool UDreamUIInputSubsystem::HasFocusedDescendant(const UDreamWidget* InWidget, int32 InUserIndex) const
