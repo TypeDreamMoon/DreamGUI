@@ -260,4 +260,81 @@ bool FDreamUISourceClassResolverStableSharedSourceTest::RunTest(const FString&)
 	return true;
 }
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDreamUISourceClassResolverSharedSourceAfterChangeTest,
+	"DreamGUI.Text.SourceClassResolver.AChangedSharedSourceWinnerStillFindsTheOtherSavedClassAfterUnload",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamUISourceClassResolverSharedSourceAfterChangeTest::RunTest(const FString&)
+{
+	using namespace DreamUISourceClassResolverTestLocal;
+	const FString Suffix = FGuid::NewGuid().ToString(EGuidFormats::Digits);
+	const FString FirstName = TEXT("ResolverShared_A_") + Suffix;
+	const FString LastName = TEXT("ResolverShared_Z_") + Suffix;
+	const TSharedRef<FScopedResolverDiskFixture> Fixture = MakeShared<FScopedResolverDiskFixture>(*LastName);
+	FScopedSourceFiles& Sources = Fixture->Sources;
+	DreamOnDiskFixture::FScopedOnDiskPackage& Disk = Fixture->Disk;
+	DreamOnDiskFixture::FScopedOnDiskPackage FirstDisk(*FirstName);
+	if (!TestTrue(TEXT("the shared file was written"), FScopedSourceFiles::Write(Sources.OldPath, TEXT("Widget SharedRoot { }\n")))
+		|| !TestTrue(TEXT("the winner's new file was written"), FScopedSourceFiles::Write(Sources.NewPath, TEXT("Widget OtherRoot { }\n")))
+		|| !TestTrue(TEXT("the saved candidate has a scannable mount"), Fixture->Mount.Place(Disk))
+		|| !TestTrue(TEXT("the first candidate has the same mount"), Fixture->Mount.Place(FirstDisk))) return false;
+	auto CreateBlueprint = [](UPackage* Package, const FString& Name)
+	{
+		return Cast<UDreamWidgetBlueprint>(FKismetEditorUtilities::CreateBlueprint(
+			UDreamTextUserWidget::StaticClass(), Package, FName(*Name), BPTYPE_Normal,
+			UDreamWidgetBlueprint::StaticClass(), UDreamWidgetGeneratedClass::StaticClass()));
+	};
+	UDreamWidgetBlueprint* First = CreateBlueprint(FirstDisk.Package, FirstName);
+	UDreamWidgetBlueprint* Last = CreateBlueprint(Disk.Package, LastName);
+	if (!TestNotNull(TEXT("the first class was created"), First)
+		|| !TestNotNull(TEXT("the other class was created"), Last)) return false;
+	const FSoftObjectPath LastAssetPath(Last);
+	FAssetRegistryModule::AssetCreated(First);
+	FAssetRegistryModule::AssetCreated(Last);
+	Fixture->RegisteredAsset = LastAssetPath;
+	ON_SCOPE_EXIT
+	{
+		FAssetRegistryModule::AssetDeleted(First);
+		ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([Fixture]() {}, 0.1f));
+	};
+	if (!TestTrue(TEXT("the first class compiles from the shared file"), DreamUITextAuthoring::SetAuthoredSourcePath(First, Sources.OldPath))
+		|| !TestTrue(TEXT("the other class compiles from the shared file"), DreamUITextAuthoring::SetAuthoredSourcePath(Last, Sources.OldPath))) return false;
+	FString Error;
+	if (!TestTrue(TEXT("the other class was saved"), Disk.Save(Last, Error))) { AddInfo(Error); return false; }
+	IAssetRegistry& Registry = FAssetRegistryModule::GetRegistry();
+	Registry.ScanFilesSynchronous({ Disk.FileName }, true);
+	if (!TestTrue(TEXT("the other class really has an on-disk registry entry"), Registry.GetAssetByObjectPath(LastAssetPath, true).IsValid())) return false;
+	TFunction<UClass*(const FString&)>& Resolver = FDreamUITextBuilder::SourceClassResolver();
+	if (!TestTrue(TEXT("the production resolver is installed"), static_cast<bool>(Resolver))) return false;
+	AddExpectedMessagePlain(TEXT("2 Blueprints are built from"), ELogVerbosity::Warning, EAutomationExpectedMessageFlags::Contains, -1);
+	TestEqual(TEXT("both loaded classes initially select the first path"), Resolver(Sources.OldPath), static_cast<UClass*>(First->GeneratedClass));
+
+	TWeakObjectPtr<UDreamWidgetBlueprint> BeforeUnload = Last;
+	UPackage* PackageToUnload = Disk.Package;
+	PackageToUnload->RemoveFromRoot();
+	Disk.Package = nullptr;
+	Last = nullptr;
+	FText UnloadError;
+	if (!TestTrue(TEXT("the saved other class unloaded normally"), UPackageTools::UnloadPackages({ PackageToUnload }, UnloadError)))
+	{
+		AddInfo(UnloadError.ToString()); return false;
+	}
+	if (!TestFalse(TEXT("the other class really left memory"), BeforeUnload.IsValid())
+		|| !TestTrue(TEXT("its registry entry survived unloading"), Registry.GetAssetByObjectPath(LastAssetPath, true).IsValid())) return false;
+
+	// The selected class now belongs to another file; the still-saved class is the shared file's only owner.
+	if (!TestTrue(TEXT("the selected class changes its Source File normally"), DreamUITextAuthoring::SetAuthoredSourcePath(First, Sources.NewPath))) return false;
+	TestTrue(TEXT("the selected class's new source compiles"), First->Status == BS_UpToDate);
+	UClass* Resolved = Resolver(Sources.OldPath);
+	TestNotNull(TEXT("changing the selected owner still discovers the other saved source owner"), Resolved);
+	UDreamWidgetBlueprint* Loaded = Cast<UDreamWidgetBlueprint>(LastAssetPath.TryLoad());
+	if (!TestNotNull(TEXT("the other source owner can be reopened from disk"), Loaded)) return false;
+	Disk.Package = Loaded->GetOutermost();
+	Disk.Package->AddToRoot();
+	const FString SavedSource = UDreamTextUserWidget::ResolveDuiFilePath(DreamUITextAuthoring::GetAuthoredSourcePath(Loaded));
+	TestTrue(TEXT("the other owner still names the shared source on disk"), SavedSource.Equals(Sources.OldPath, ESearchCase::IgnoreCase));
+	if (Resolved != nullptr) TestEqual(TEXT("the fallback returns that remaining source owner's class"), Resolved, static_cast<UClass*>(Loaded->GeneratedClass));
+	return true;
+}
+
 #endif
