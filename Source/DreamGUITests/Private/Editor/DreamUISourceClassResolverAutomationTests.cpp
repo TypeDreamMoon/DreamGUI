@@ -96,6 +96,19 @@ namespace DreamUISourceClassResolverTestLocal
 		FString OldPath;
 		FString NewPath;
 	};
+	/** Save validation runs on the next editor tick; keep its file and mount alive until that tick. */
+	struct FScopedResolverDiskFixture
+	{
+		explicit FScopedResolverDiskFixture(const TCHAR* AssetName) : Disk(AssetName) {}
+		~FScopedResolverDiskFixture()
+		{
+			if (UObject* Asset = RegisteredAsset.ResolveObject()) FAssetRegistryModule::AssetDeleted(Asset);
+		}
+		FScopedSourceFiles Sources;
+		FScopedSourceAssetMount Mount;
+		DreamOnDiskFixture::FScopedOnDiskPackage Disk;
+		FSoftObjectPath RegisteredAsset;
+	};
 }
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDreamUISourceClassResolverChangedSourceAfterUnloadTest,
@@ -105,25 +118,27 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDreamUISourceClassResolverChangedSourceAfterUn
 bool FDreamUISourceClassResolverChangedSourceAfterUnloadTest::RunTest(const FString&)
 {
 	using namespace DreamUISourceClassResolverTestLocal;
-	FScopedSourceFiles Sources;
+	const FString AssetName = TEXT("SourceResolverChanged_") + FGuid::NewGuid().ToString(EGuidFormats::Digits);
+	const TSharedRef<FScopedResolverDiskFixture> Fixture = MakeShared<FScopedResolverDiskFixture>(*AssetName);
+	FScopedSourceFiles& Sources = Fixture->Sources;
 	// No class line: this is the supported use "...dui" as Row fallback, not a path to a class.
 	const FString NewText = TEXT("Widget Root {\n    Widget NewChild { }\n}\n");
 	if (!TestTrue(TEXT("the original source was written"), FScopedSourceFiles::Write(Sources.OldPath, TEXT("Widget Root { }\n")))
 		|| !TestTrue(TEXT("the replacement source was written"), FScopedSourceFiles::Write(Sources.NewPath, NewText))) return false;
 
-	const FString AssetName = TEXT("SourceResolverChanged_") + FGuid::NewGuid().ToString(EGuidFormats::Digits);
-	FScopedSourceAssetMount Mount;
-	DreamOnDiskFixture::FScopedOnDiskPackage Disk(*AssetName);
-	if (!TestTrue(TEXT("the disk fixture is under a registry-scannable mount"), Mount.Place(Disk))) return false;
+	DreamOnDiskFixture::FScopedOnDiskPackage& Disk = Fixture->Disk;
+	if (!TestTrue(TEXT("the disk fixture is under a registry-scannable mount"), Fixture->Mount.Place(Disk))) return false;
 	UDreamWidgetBlueprint* Blueprint = Cast<UDreamWidgetBlueprint>(FKismetEditorUtilities::CreateBlueprint(
 		UDreamTextUserWidget::StaticClass(), Disk.Package, FName(*AssetName), BPTYPE_Normal,
 		UDreamWidgetBlueprint::StaticClass(), UDreamWidgetGeneratedClass::StaticClass()));
 	if (!TestNotNull(TEXT("a real text widget Blueprint was created"), Blueprint)) return false;
 	const FSoftObjectPath AssetPath(Blueprint);
 	FAssetRegistryModule::AssetCreated(Blueprint);
+	Fixture->RegisteredAsset = AssetPath;
 	ON_SCOPE_EXIT
 	{
-		if (UObject* RegisteredAsset = AssetPath.ResolveObject()) FAssetRegistryModule::AssetDeleted(RegisteredAsset);
+		// Its queued validation must run while the saved asset's filename is still mounted.
+		ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([Fixture]() {}, 0.1f));
 	};
 
 	FString Error;
