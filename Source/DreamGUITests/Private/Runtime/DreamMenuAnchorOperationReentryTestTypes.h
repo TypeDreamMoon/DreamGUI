@@ -22,6 +22,8 @@ public:
 	TObjectPtr<UDreamWidget> NestedContent = nullptr;
 	bool bDestroyInProvider = false;
 	bool bCollectedDestroyedAnchor = false;
+	bool bReopenWhenClosed = false;
+	int32 ReopenAttempts = 0;
 	int32 ProviderCalls = 0;
 	TArray<bool> OpenChanges;
 
@@ -47,5 +49,13 @@ public:
 	}
 
 	UFUNCTION()
-	void RecordOpenChanged(bool bInOpen) { OpenChanges.Add(bInOpen); }
+	void RecordOpenChanged(bool bInOpen)
+	{
+		OpenChanges.Add(bInOpen);
+		if (!bInOpen && bReopenWhenClosed)
+		{
+			++ReopenAttempts;
+			Anchor->Open(false);
+		}
+	}
 };
