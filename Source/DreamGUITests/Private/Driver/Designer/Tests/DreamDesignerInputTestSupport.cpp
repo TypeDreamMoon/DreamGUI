@@ -6,6 +6,7 @@
 
 #include "Core/Components/DreamWidget.h"
 #include "Designer/DreamWidgetBlueprintEditor.h"
+#include "DreamWidgetBlueprint.h"
 
 #include "HAL/PlatformTime.h"
 #include "Misc/AutomationTest.h"
