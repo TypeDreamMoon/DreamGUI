@@ -1228,11 +1228,10 @@ bool FDreamUIRenderer::PrepareTargets_RenderThread(FRDGBuilder& GraphBuilder, FS
 		switch (InView.StereoPass)
 		{
 		case EStereoscopicPass::eSSP_FULL:
-		if (InTargetOverride.IsValid())
 		{
-			// The override is the whole view at whatever resolution the post-process chain has reached, which
-			// is not always the output's; the depth is the primary view's. The shaders take a position across
-			// the view, so it maps straight onto the depth texture's view rect.
+			// Clip-space positions span this view, even when its output is part of the family target.
+			// The raw depth rect includes split-screen or constrained-view offsets and the scene's
+			// screen percentage; the output or post-process target's extent does not describe it.
 			const FIntRect DepthRect = InView.bIsViewInfo ? UE::FXRenderingUtils::GetRawViewRectUnsafe(InView) : ViewRect;
 			DepthTextureScaleOffset = FVector4f(
 				(float)DepthRect.Width() / SceneDepthSize.X,
@@ -1240,16 +1239,6 @@ bool FDreamUIRenderer::PrepareTargets_RenderThread(FRDGBuilder& GraphBuilder, FS
 				(float)DepthRect.Min.X / SceneDepthSize.X,
 				(float)DepthRect.Min.Y / SceneDepthSize.Y
 			);
-			ColorTextureScaleOffset = FVector4f(1, 1, 0, 0);
-		}
-		else
-		{
-			DepthTextureScaleOffset = FVector4f(
-				(float)ScreenColorRenderTargetTexture->GetSizeXYZ().X / SceneDepthSize.X,
-				(float)ScreenColorRenderTargetTexture->GetSizeXYZ().Y / SceneDepthSize.Y,
-				0, 0
-			);
-			DepthTextureScaleOffset = DepthTextureScaleOffset * ScreenPercentage;
 			ColorTextureScaleOffset = FVector4f(1, 1, 0, 0);
 		}
 		break;
