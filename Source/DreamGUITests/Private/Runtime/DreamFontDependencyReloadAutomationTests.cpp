@@ -85,9 +85,12 @@ bool FDreamFontFallbackReloadWarmCachesTest::RunTest(const FString& Parameters)
 	UDreamUIFontData_Bitmap* NewFaceReference = MakeFont(TestWorld.World, TEXT("NotoNaskhArabicUI-Regular.ttf"));
 	Primary->SetFallbackFonts({ Fallback });
 	// Atlas reset notifies registered texts, which reenter InitFont/GetFontTexture while they take the new texture.
-	UDreamText* RegisteredText = NewObject<UDreamText>(TestWorld.World);
+	UDreamWidget* RegisteredRoot = NewObject<UDreamWidget>(TestWorld.World);
+	RegisteredRoot->OnRegister();
+	ON_SCOPE_EXIT { RegisteredRoot->DestroyWidget(); };
+	UDreamText* RegisteredText = RegisteredRoot->CreateNewVisual<UDreamText>();
+	if (!TestNotNull(TEXT("the cache test has a text on a registered widget"), RegisteredText))return false;
 	RegisteredText->SetFont(Primary);
-	ON_SCOPE_EXIT { RegisteredText->SetFont(nullptr); };
 	const FDreamUIFontFaceIdentity BeforeIdentity = Primary->GetFaceIdentity(1);
 	if (!TestTrue(TEXT("the initial fallback loads"), BeforeIdentity.IsValid())
 		|| !TestTrue(TEXT("the replacement reference loads"), NewFaceReference->GetFaceIdentity(0).IsValid()))
