@@ -289,9 +289,18 @@ FVector2D UDreamMenuAnchor::ResolveOffsetDirection(EDreamMenuPlacement InPlaceme
 	}
 }
 
-void UDreamMenuAnchor::EnsureMenuInstance()
+bool UDreamMenuAnchor::IsCurrentTransition(const TWeakObjectPtr<UDreamMenuAnchor>& InAnchor, uint64 InSerial, bool bInOpen)
 {
-	if (MenuInstance != nullptr || ProvidedMenuContent != nullptr || MenuNode == nullptr)
+	const UDreamMenuAnchor* Anchor = InAnchor.Get();
+	return Anchor != nullptr && Anchor->MenuTransitionSerial == InSerial && Anchor->bIsOpen == bInOpen
+		&& (!bInOpen || IsValid(Anchor->PopupNode));
+}
+
+void UDreamMenuAnchor::EnsureMenuInstance(uint64 InOpenSerial)
+{
+	const TWeakObjectPtr<UDreamMenuAnchor> WeakThis(this);
+	if (!IsCurrentTransition(WeakThis, InOpenSerial, true) || !IsValid(MenuNode)
+		|| IsValid(MenuInstance) || IsValid(ProvidedMenuContent))
 	{
 		return;
 	}
@@ -303,16 +312,23 @@ void UDreamMenuAnchor::EnsureMenuInstance()
 	}
 	if (OnGetUserMenuContentEvent.IsBound())
 	{
-		// Above MenuClass and below authored content: a delegate is a more specific answer than a
-		// class, and both are answers to "there is nothing in the hole". Asked ONCE and kept, the
-		// way an instance built from the class is kept -- a menu rebuilt on every open would throw
-		// away whatever state the player left in it, and leak the previous one.
-		if (UDreamWidget* Provided = OnGetUserMenuContentEvent.Execute(); IsValid(Provided))
+		// A provider can close, reopen or destroy the anchor. Its answer belongs only to the open
+		// that asked: a nested open may already have supplied different content to this same slot.
+		UDreamWidget* Provided = OnGetUserMenuContentEvent.Execute();
+		if (!IsCurrentTransition(WeakThis, InOpenSerial, true) || !IsValid(MenuNode))
 		{
+			return;
+		}
+		if (IsValid(Provided))
+		{
+			const TWeakObjectPtr<UDreamWidget> WeakProvided(Provided);
 			ProvidedMenuContent = Provided;
-			// Not keeping the world position: the menu is being adopted INTO the anchor's popup, and
-			// wherever the handler happened to build it is not where it goes.
+			// Publish before adoption, whose activation handlers may open this anchor again.
 			Provided->TrySetParent(MenuNode, /*InKeepWorldPosition*/false);
+			if (!IsCurrentTransition(WeakThis, InOpenSerial, true) || !WeakProvided.IsValid())
+			{
+				return;
+			}
 			if (UDreamPanelSlot* ProvidedSlot = Provided->GetPanelSlot())
 			{
 				ProvidedSlot->SetHorizontalAlignment(EDreamPanelHorizontalAlignment::Fill);
@@ -320,24 +336,40 @@ void UDreamMenuAnchor::EnsureMenuInstance()
 			}
 			return;
 		}
-		// A handler that answered with nothing is a handler that has nothing to show yet, so the
-		// class below is still allowed its turn rather than the anchor opening empty on purpose.
+		// A handler with nothing to show yet leaves the class below its turn.
 	}
-	if (MenuClass == nullptr)
+	if (MenuClass == nullptr || GetWorld() == nullptr)
 	{
 		return;
 	}
-	if (GetWorld() == nullptr)
+	TWeakObjectPtr<UDreamUserWidget> CreatedInstance;
+	CreateDreamWidget(GetWorld(), MenuClass, MenuNode,
+		[WeakThis, InOpenSerial, &CreatedInstance](UDreamUserWidget* InInstance)
+		{
+			CreatedInstance = InInstance;
+			// Construct/enable handlers may reopen the menu. Publish before they run so that
+			// the nested open can reuse the instance instead of building another over it.
+			if (IsCurrentTransition(WeakThis, InOpenSerial, true))
+			{
+				WeakThis->MenuInstance = InInstance;
+			}
+		});
+	UDreamUserWidget* Created = CreatedInstance.Get();
+	if (!IsCurrentTransition(WeakThis, InOpenSerial, true))
 	{
-		// Instancing a user widget needs a world, and with none this stays an empty menu rather than
-		// half of one -- the same answer UDreamListViewBase gives for a row template class.
+		// A superseded creation that nobody adopted is still ours to dispose of. An instance
+		// already published may now be the nested open's content, and must be left alone.
+		if (IsValid(Created) && (!WeakThis.IsValid() || WeakThis->MenuInstance != Created))
+		{
+			Created->DestroyWidget();
+		}
 		return;
 	}
-	MenuInstance = CreateDreamWidget(GetWorld(), MenuClass, MenuNode);
-	if (MenuInstance != nullptr)
+	if (IsValid(Created))
 	{
-		MenuInstance->SetDisplayName(TEXT("MenuContent"));
-		if (UDreamPanelSlot* MenuSlot = MenuInstance->GetPanelSlot())
+		MenuInstance = Created;
+		Created->SetDisplayName(TEXT("MenuContent"));
+		if (UDreamPanelSlot* MenuSlot = Created->GetPanelSlot())
 		{
 			MenuSlot->SetHorizontalAlignment(EDreamPanelHorizontalAlignment::Fill);
 			MenuSlot->SetVerticalAlignment(EDreamPanelVerticalAlignment::Fill);
@@ -347,21 +379,31 @@ void UDreamMenuAnchor::EnsureMenuInstance()
 
 void UDreamMenuAnchor::Open(bool bFocusMenu)
 {
-	if (bIsOpen || !IsValid(PopupNode))
+	// Disable closes the menu, whose closed callback may immediately try to reopen it. Refuse
+	// that request while inactive so the popup cannot outlive the screen that opened it.
+	if (!IsValid(this) || bEndingLifetime || !GetWidgetActiveInHierarchy() || bIsOpen || !IsValid(PopupNode))
 	{
 		return;
 	}
+	const TWeakObjectPtr<UDreamMenuAnchor> WeakThis(this);
+	const uint64 OpenSerial = ++MenuTransitionSerial;
 	bIsOpen = true;
 	// A new open: the press that closed the last one, if one did, is nothing to this one.
 	DismissingPress = nullptr;
-	EnsureMenuInstance();
+	EnsureMenuInstance(OpenSerial);
+	if (!IsCurrentTransition(WeakThis, OpenSerial, true))
+	{
+		return;
+	}
 
 	const FDreamMenuAnchorStyle& Active = ResolveStyle(Style, &UDreamUIStyleSheet::MenuAnchorStyle);
 	// The placement first, while the popup is still a child of the anchor: the lift keeps the world
 	// position it finds, so positioning against the anchor and THEN lifting is what puts a menu in
 	// the right place without the layer knowing anything about anchors.
 	PlacePopup(Active);
+	if (!IsCurrentTransition(WeakThis, OpenSerial, true))return;
 	PopupNode->SetWidgetActive(true);
+	if (!IsCurrentTransition(WeakThis, OpenSerial, true))return;
 
 	bPopupElevated = false;
 	bool bPushed = false;
@@ -381,21 +423,29 @@ void UDreamMenuAnchor::Open(bool bFocusMenu)
 		// to what had it when the menu opened, and the Tab goes on from this anchor.
 		Params.TabBehavior = EDreamPopupTabBehavior::CloseAndContinue;
 		Params.Place = FDreamPopupPlaceDelegate::CreateUObject(this, &UDreamMenuAnchor::PlaceLiftedPopup);
-		Params.OnDismissed = FDreamPopupDismissedDelegate::CreateUObject(this, &UDreamMenuAnchor::HandleMenuDismissed);
+		Params.OnDismissed = FDreamPopupDismissedDelegate::CreateWeakLambda(this, [WeakThis, OpenSerial](UDreamWidget* InPopup, EDreamPopupDismissReason InReason)
+		{
+			// Returning focus may have reopened this very popup before the old dismissal is
+			// announced. That notification belongs to the old open, never to its replacement.
+			if (UDreamMenuAnchor* Anchor = WeakThis.Get(); Anchor != nullptr && Anchor->MenuTransitionSerial == OpenSerial && Anchor->bIsOpen)
+			{
+				Anchor->HandleMenuDismissed(InPopup, InReason);
+			}
+		});
 		bPushed = Layer->Push(Params);
 	}
-	if (!bIsOpen)
+	if (!IsCurrentTransition(WeakThis, OpenSerial, true))
 	{
-		// Closed again before the push returned: the focus moving into the menu ran a handler that closed it, and the
-		// close has been made -- asleep, home, at rest. An open that never stood is announced neither way. A close made
-		// before the layer had the menu -- an owner of a popup the push replaced closing this anchor -- found nothing on
-		// the layer to take off, and the layer opened the menu after it: taken off now, and home.
-		UDreamUIPopupLayer* Layer = bPushed ? UDreamUIPopupLayer::Get(this) : nullptr;
-		if (Layer != nullptr && Layer->IsOpen(PopupNode))
+		// A close made while Push replaced another popup can precede the stack entry itself.
+		// Take that late entry down only if no newer open owns it; never dismiss a reopened menu.
+		if (WeakThis.IsValid() && !bIsOpen)
 		{
-			Layer->Dismiss(PopupNode, EDreamPopupDismissReason::Explicit);
+			UDreamUIPopupLayer* Layer = bPushed ? UDreamUIPopupLayer::Get(this) : nullptr;
+			if (Layer != nullptr && Layer->IsOpen(PopupNode))
+			{
+				Layer->Dismiss(PopupNode, EDreamPopupDismissReason::Explicit);
+			}
 		}
-		bPopupElevated = false;
 		return;
 	}
 	bPopupElevated = bPushed;
@@ -408,7 +458,7 @@ void UDreamMenuAnchor::Open(bool bFocusMenu)
 		{
 			FocusMenuContent();
 		}
-		if (!bIsOpen)
+		if (!IsCurrentTransition(WeakThis, OpenSerial, true))
 		{
 			// The same, for the focus moved here.
 			return;
@@ -439,8 +489,13 @@ void UDreamMenuAnchor::Open(bool bFocusMenu)
 	{
 		PopupNode->SetRenderOpacity(1.0f);
 	}
-	bOpenAnnounced = true;
-	OnMenuOpenChanged.Broadcast(true);
+	if (!bOpenAnnounced)
+	{
+		// A close interrupted by reopening never completed its closed announcement.
+		// The menu stayed announced as open; there is no second change to publish.
+		bOpenAnnounced = true;
+		OnMenuOpenChanged.Broadcast(true);
+	}
 }
 
 UDreamWidget* UDreamMenuAnchor::FindFirstMenuControl()
@@ -508,10 +563,12 @@ void UDreamMenuAnchor::FitInWindow(bool bInFitInWindow)
 
 void UDreamMenuAnchor::Close()
 {
-	if (!bIsOpen)
+	if (!IsValid(this) || !bIsOpen)
 	{
 		return;
 	}
+	const TWeakObjectPtr<UDreamMenuAnchor> WeakThis(this);
+	const uint64 CloseSerial = ++MenuTransitionSerial;
 	bIsOpen = false;
 	if (IsValid(PopupNode))
 	{
@@ -528,7 +585,10 @@ void UDreamMenuAnchor::Close()
 			FallbackFocusReturn.Return(PopupNode);
 		}
 	}
-	FinishClose();
+	if (IsCurrentTransition(WeakThis, CloseSerial, false))
+	{
+		FinishClose(CloseSerial);
+	}
 }
 
 void UDreamMenuAnchor::HandleMenuDismissed(UDreamWidget* InPopup, EDreamPopupDismissReason InReason)
@@ -540,6 +600,7 @@ void UDreamMenuAnchor::HandleMenuDismissed(UDreamWidget* InPopup, EDreamPopupDis
 	}
 	// Closed from outside -- a press elsewhere, Back, the menu this one was opened from closing, a menu opened in
 	// its place, this anchor hidden or put to sleep. The layer has given focus back and the popup home already.
+	const uint64 CloseSerial = ++MenuTransitionSerial;
 	bIsOpen = false;
 	if (InReason == EDreamPopupDismissReason::OutsideClick)
 	{
@@ -555,11 +616,13 @@ void UDreamMenuAnchor::HandleMenuDismissed(UDreamWidget* InPopup, EDreamPopupDis
 		bOpenAnnounced = false;
 		return;
 	}
-	FinishClose();
+	FinishClose(CloseSerial);
 }
 
-void UDreamMenuAnchor::FinishClose()
+void UDreamMenuAnchor::FinishClose(uint64 InCloseSerial)
 {
+	const TWeakObjectPtr<UDreamMenuAnchor> WeakThis(this);
+	if (!IsCurrentTransition(WeakThis, InCloseSerial, false))return;
 	bPopupElevated = false;
 	// A closed menu is not fading in: the fade stops with the close, where it had got.
 	StopOpenFade();
@@ -569,11 +632,13 @@ void UDreamMenuAnchor::FinishClose()
 		// sleep while still lifted would be an inactive widget hanging off the screen root that nothing would ever
 		// come back for.
 		PopupNode->SetWidgetActive(false);
+		if (!IsCurrentTransition(WeakThis, InCloseSerial, false))return;
 		// The whole resting scheme, not just the numbers: the lift re-anchored the popup to a POINT on
 		// the screen root and the trip home reparents plainly, so without this the next open works against
 		// the wrong anchors. UDreamDropdown measured that one as a zero-width list on the second open.
 		PlacePopup(ResolveStyle(Style, &UDreamUIStyleSheet::MenuAnchorStyle));
 	}
+	if (!IsCurrentTransition(WeakThis, InCloseSerial, false))return;
 	// Only after an open that was announced: one that closed again before Open finished announced nothing, and its close
 	// announces nothing either -- a listener never hears closed without having heard open.
 	if (bOpenAnnounced)
@@ -672,8 +737,18 @@ void UDreamMenuAnchor::ToggleOpen(bool bFocusOnOpen)
 	}
 }
 
+void UDreamMenuAnchor::NativeOnConstruct()
+{
+	// A registered widget may legitimately begin play again after EndPlay without being destroyed.
+	bEndingLifetime = false;
+	Super::NativeOnConstruct();
+}
+
 void UDreamMenuAnchor::NativeOnDisable()
 {
+	// EndPlay leaves the hierarchy-active flag alone, but changes the lifecycle before this hook.
+	// Seal the old lifetime before Close can ask user code to open another lifted popup.
+	if (!HasBegunPlay())bEndingLifetime = true;
 	// A menu lifted to the screen root is not under this anchor, and does not go to sleep with it: an anchor put to
 	// sleep -- or an ancestor of it -- would otherwise leave its menu up, answering for an anchor nobody can see.
 	Close();
@@ -682,6 +757,7 @@ void UDreamMenuAnchor::NativeOnDisable()
 
 void UDreamMenuAnchor::NativeOnDestruct()
 {
+	bEndingLifetime = true;
 	// An anchor torn down while its menu is open would otherwise leave a lifted popup on the screen root
 	// with nothing left that could close it -- which is the stranded-popup failure UUIDropdown was
 	// fixed for.

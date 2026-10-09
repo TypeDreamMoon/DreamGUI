@@ -353,7 +353,11 @@ bool FDreamDesignerFrameKeyTest::RunTest(const FString&)
 	const auto CameraLanded = [State]()
 	{
 		FEditorViewportClient* Client = State->Driver.IsValid() ? State->Driver->ViewportClient() : nullptr;
-		return Client != nullptr && !Client->GetViewTransform().IsPlaying();
+		if (Client == nullptr || Client->GetViewTransform().IsPlaying())return false;
+		// The Slate curve can expire before the viewport applies DesiredLocation.
+		// DrawFrame does not tick the client (and is a no-op under NullRHI).
+		State->Driver->PumpFrame(0.0f);
+		return true;
 	};
 	EnqueueDesignerUntil(State, this, CameraLanded, 3.0, TEXT("the camera's flight to the selection to land"));
 	EnqueueDesignerAction(State, [this, State]()
@@ -366,6 +370,30 @@ bool FDreamDesignerFrameKeyTest::RunTest(const FString&)
 			TestTrue(FString::Printf(TEXT("...in the middle of the view: its middle at %s, the view's at %s"), *Rect->GetCenter().ToString(), *(Size * 0.5).ToString()),
 				Rect->GetCenter().Equals(Size * 0.5, FMath::Max(Size.X, Size.Y) * 0.02));
 			TestTrue(TEXT("...and whole"), Rect->Min.X >= 0.0 && Rect->Min.Y >= 0.0 && Rect->Max.X <= Size.X && Rect->Max.Y <= Size.Y);
+			if (!Rect->GetCenter().Equals(Size * 0.5, FMath::Max(Size.X, Size.Y) * 0.02))
+			{
+				// Diagnose the readiness check without changing the assertions above: the curve's
+				// clock may have ended before the viewport applied its final camera position.
+				FEditorViewportClient* Client = Driver.ViewportClient();
+				FBoxSphereBounds Bounds(EForceInit::ForceInitToZero);
+				const bool bHasBounds = Driver.Toolkit()->GetSelectedObjectsBounds(Bounds);
+				const auto DescribeCamera = [&Driver, Client, State, Bounds, bHasBounds]()
+				{
+					const TOptional<FBox2D> CurrentRect = Driver.WidgetPixelRect(Driver.PreviewFor(State->Get(TEXT("Target"))));
+					return FString::Printf(TEXT("camera=%s selectedBoundsCenter=%s curvePlaying=%d pixelsPerUnit=%.6f widgetCenter=%s"),
+						Client != nullptr ? *Client->GetViewTransform().GetLocation().ToString() : TEXT("unavailable"),
+						bHasBounds ? *Bounds.Origin.ToString() : TEXT("unavailable"),
+						Client != nullptr && Client->GetViewTransform().IsPlaying() ? 1 : 0,
+						Driver.Toolkit()->GetDesignerPixelsPerUnit(),
+						CurrentRect.IsSet() ? *CurrentRect->GetCenter().ToString() : TEXT("unavailable"));
+				};
+				AddInfo(TEXT("After the curve ended, before a driver viewport tick: ") + DescribeCamera());
+				Driver.PumpFrame(0.0f);
+				AddInfo(TEXT("After one driver viewport tick: ") + DescribeCamera());
+				Driver.PumpFrame(0.0f);
+				AddInfo(TEXT("After two driver viewport ticks: ") + DescribeCamera());
+			}
+
 		}
 		SelectNothingInDesigner(Driver);
 		Driver.Toolkit()->SetDesignerPixelsPerUnit(Driver.Toolkit()->GetDesignerPixelsPerUnit() * 4.0f);

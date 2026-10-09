@@ -271,6 +271,7 @@ protected:
 	virtual void CollectParts(TArray<FDreamControlPart>& OutParts) override;
 	virtual void RealizeBuiltIn() override;
 	virtual void WireParts() override;
+	virtual void NativeOnConstruct() override;
 	/** Closing on the way to sleep, as a hidden SMenuAnchor closes its menu: a lifted popup does not go to sleep with its anchor. */
 	virtual void NativeOnDisable() override;
 	/** Closing on the way out, so an anchor destroyed while open does not strand a lifted popup. */
@@ -308,7 +309,7 @@ private:
 	static FVector2D ResolveOffsetDirection(EDreamMenuPlacement InPlacement);
 
 	/** Make the MenuClass instance, once, when the slot is empty and there is a world to make it in. */
-	void EnsureMenuInstance();
+	void EnsureMenuInstance(uint64 InOpenSerial);
 
 	/** Give focus to the first navigable thing in a menu opened in place, if there is one. */
 	void FocusMenuContent();
@@ -323,10 +324,17 @@ private:
 	void HandleMenuDismissed(UDreamWidget* InPopup, EDreamPopupDismissReason InReason);
 
 	/** Asleep, home in its resting place, and the close announced: the end of every close. */
-	void FinishClose();
+	void FinishClose(uint64 InCloseSerial);
 
 	/** What the popup layer does with a press outside the open menu: bCloseOnClickOutside, then the project's choice. */
 	EDreamPopupOutsideClick ResolveOutsideClick() const;
+
+	/** Only the newest open/close may resume after a callback, and only while its anchor still lives. */
+	static bool IsCurrentTransition(const TWeakObjectPtr<UDreamMenuAnchor>& InAnchor, uint64 InSerial, bool bInOpen);
+
+	uint64 MenuTransitionSerial = 0;
+	/** EndPlay closes callbacks too, while the widget's hierarchy-active flag can still be true. */
+	bool bEndingLifetime = false;
 
 	/** The fade the last open started, stopped where it is: a closed menu has no fade in, and a new open starts its own. */
 	void StopOpenFade();

@@ -104,6 +104,8 @@ protected:
 	//~ IMovieScenePlayer interface
 	virtual UObject* GetPlaybackContext() const override;
 	virtual TArray<UObject*> GetEventContexts() const override;
+	virtual void ResolveBoundObjects(UE::UniversalObjectLocator::FResolveParams& ResolveParams, const FGuid& InBindingId,
+		FMovieSceneSequenceID SequenceID, UMovieSceneSequence& InSequence, TArray<UObject*, TInlineAllocator<1>>& OutObjects) const override;
 
 	//~ IMovieSceneSequenceTickManagerClient interface
 	/**

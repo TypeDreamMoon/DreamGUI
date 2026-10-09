@@ -46,7 +46,9 @@
 #include "Misc/FrameTime.h"
 #include "Misc/Guid.h"
 #include "Misc/Paths.h"
+#include "UObject/GarbageCollection.h"
 #include "UObject/Package.h"
+#include "UObject/StrongObjectPtr.h"
 #include "UObject/UnrealType.h"
 
 /*
@@ -2139,6 +2141,147 @@ bool FDreamWidgetAnimationKeptBoundObjectTest::RunTest(const FString& Parameters
 	TickFrames(Scope.World, AnimationFrames + 5);
 	TestEqual(TEXT("No kept pointer disagreed with its look-up"),
 		static_cast<int64>(DreamUIGone::GetKeptDisagreements() - Before), static_cast<int64>(0));
+	return true;
+}
+
+IMPLEMENT_COMPLEX_AUTOMATION_TEST(
+	FDreamWidgetAnimationBatchStopReentryTest,
+	"DreamGUI.Animation.Playback.StoppingAnAnimationFromItsFinishedCallbackDoesNotFinishOrPoolItTwice",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+void FDreamWidgetAnimationBatchStopReentryTest::GetTests(TArray<FString>& OutBeautifiedNames, TArray<FString>& OutTestCommands) const
+{
+	OutBeautifiedNames.Add(TEXT("Stopping the other instance"));
+	OutTestCommands.Add(TEXT("single"));
+	OutBeautifiedNames.Add(TEXT("Stopping all remaining instances"));
+	OutTestCommands.Add(TEXT("all"));
+}
+
+bool FDreamWidgetAnimationBatchStopReentryTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamWidgetAnimationPlaybackTestLocal;
+	const DreamTests::Lifecycle::FScopedConsoleVariable Reuse(TEXT("DreamUI.Animation.ReusePlayers"), 1);
+	FScopedGameWorld Scope;
+	FScopedTree Tree(Scope.World);
+	Tree.AddFloatTrack(TEXT("AnimatableWidth"), 20.0f, 220.0f);
+	const FDreamUIAnimationHandle First = Tree.Animator->PlayAnimation(Tree.Animation);
+	const FDreamUIAnimationHandle Second = Tree.Animator->PlayAnimation(Tree.Animation);
+	if (!TestTrue(TEXT("two independent animation instances are playing"),
+		First.IsValid() && Second.IsValid() && First.Player != Second.Player))
+	{
+		return false;
+	}
+
+	int32 FirstFinished = 0;
+	int32 SecondFinished = 0;
+	const bool bStopAll = Parameters == TEXT("all");
+	const FDelegateHandle Listening = Tree.Animator->OnInstanceFinished.AddLambda(
+		[&Tree, First, Second, bStopAll, &FirstFinished, &SecondFinished](const FDreamUIAnimationHandle& Finished)
+		{
+			if (Finished.Player == First.Player && Finished.Instance == First.Instance)
+			{
+				++FirstFinished;
+				if (bStopAll)
+				{
+					Tree.Animator->StopAllAnimations();
+				}
+				else
+				{
+					Tree.Animator->StopAnimation(Second);
+				}
+			}
+			else if (Finished.Player == Second.Player && Finished.Instance == Second.Instance)
+			{
+				++SecondFinished;
+			}
+		});
+	Tree.Animator->StopAnimationsOf(Tree.Animation);
+	Tree.Animator->OnInstanceFinished.Remove(Listening);
+	TestEqual(TEXT("the first instance finished once"), FirstFinished, 1);
+	TestEqual(TEXT("the instance stopped inside the callback also finished once"), SecondFinished, 1);
+	TestFalse(TEXT("the batch left no playing instance"), Tree.Animator->IsAnyAnimationPlaying());
+
+	// In the next real frame both ended players are eligible for reuse. A duplicate spare entry
+	// must not hand out an active player again or tear down the first replay while starting the second.
+	++GFrameCounter;
+	Scope.World->Tick(LEVELTICK_TimeOnly, FrameSeconds);
+	const FDreamUIAnimationHandle ReplayFirst = Tree.Animator->PlayAnimation(Tree.Animation);
+	const FDreamUIAnimationHandle ReplaySecond = Tree.Animator->PlayAnimation(Tree.Animation);
+	TestTrue(TEXT("both replay handles stay live"), ReplayFirst.IsValid() && ReplaySecond.IsValid());
+	TestTrue(TEXT("two replays own different players"), ReplayFirst.Player != ReplaySecond.Player);
+	TestTrue(TEXT("starting the second replay leaves the first playing"), Tree.Animator->IsAnimationPlaying(ReplayFirst));
+	return true;
+}
+
+/*
+ * Stop retires the instance before restoring its properties. A listener of a restored property can collect garbage;
+ * the retired player still has to finish Stop and report its Finished event. The ticker's references form a cycle
+ * with its last active player, so it does not substitute for keeping that player alive during this call.
+ */
+IMPLEMENT_COMPLEX_AUTOMATION_TEST(
+	FDreamWidgetAnimationStopRestoreGarbageCollectionTest,
+	"DreamGUI.Animation.Playback.APlayerStaysAliveWhenCollectingGarbageWhileStopRestoresItsProperty",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+void FDreamWidgetAnimationStopRestoreGarbageCollectionTest::GetTests(TArray<FString>& OutBeautifiedNames, TArray<FString>& OutTestCommands) const
+{
+	OutBeautifiedNames.Add(TEXT("DreamGUI ticker"));
+	OutTestCommands.Add(TEXT("ticker"));
+	OutBeautifiedNames.Add(TEXT("Engine sequence tick manager"));
+	OutTestCommands.Add(TEXT("engine"));
+}
+
+bool FDreamWidgetAnimationStopRestoreGarbageCollectionTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamWidgetAnimationPlaybackTestLocal;
+	const DreamTests::Lifecycle::FScopedConsoleVariable Ticker(TEXT("DreamUI.Animation.Ticker"), Parameters == TEXT("ticker") ? 1 : 0);
+	const DreamTests::Lifecycle::FScopedConsoleVariable Direct(TEXT("DreamUI.Animation.DirectEvaluation"), 1);
+	const DreamTests::Lifecycle::FScopedConsoleVariable Reuse(TEXT("DreamUI.Animation.ReusePlayers"), 1);
+	// The callback completes real reachability analysis but defers BeginDestroy and final purging until Stop has
+	// returned. An unrooted player then fails the lifetime assertion without freeing memory under its native stack.
+	const DreamTests::Lifecycle::FScopedConsoleVariable Reachability(TEXT("gc.AllowIncrementalReachability"), 0);
+	const DreamTests::Lifecycle::FScopedConsoleVariable BeginDestroy(TEXT("gc.IncrementalBeginDestroyEnabled"), 1);
+	FScopedGameWorld Scope;
+	const TStrongObjectPtr<UWorld> KeepWorld(Scope.World);
+	FScopedTree Tree(Scope.World);
+	const TStrongObjectPtr<UDreamWidget> KeepRoot(Tree.Root);
+	Tree.AddFloatTrack(TEXT("AnimatableWidth"), 20.0f, 220.0f);
+	Tree.Button->SetWidth(60.0f);
+	// Finish any previous collection before entering the callback whose current pass must not purge.
+	CollectGarbage(GARBAGE_COLLECTION_KEEPFLAGS, /*bPerformFullPurge*/ true);
+	const FDreamUIAnimationHandle Handle = Tree.Animator->PlayAnimation(Tree.Animation, 0.0f, 1, EDreamUIAnimationPlayMode::Forward, 1.0f, true);
+	if (!TestTrue(TEXT("the restore-state animation owns a live instance"), Handle.IsValid()))return false;
+	TickFrames(Scope.World, 3);
+	if (!TestFalse(TEXT("the animation changed the width before Stop"), FMath::IsNearlyEqual(Tree.Button->GetWidth(), 60.0f)))return false;
+
+	const TWeakObjectPtr<UDreamWidgetAnimationPlayer> WeakPlayer(Handle.Player.Get());
+	bool bCollectedDuringRestore = false;
+	bool bPlayerSurvivedRestoreCollection = false;
+	int32 FinishedCount = 0;
+	const FDelegateHandle FinishedListening = Tree.Animator->OnInstanceFinished.AddLambda(
+		[Handle, &FinishedCount](const FDreamUIAnimationHandle& Finished)
+		{
+			if (Finished.Player == Handle.Player && Finished.Instance == Handle.Instance)++FinishedCount;
+		});
+	const FDelegateHandle WidthListening = Tree.Button->GetDimensionChangedEvent().AddLambda(
+		[&bCollectedDuringRestore, &bPlayerSurvivedRestoreCollection, WeakPlayer](bool, bool bWidthChanged, bool)
+		{
+			if (!bWidthChanged || bCollectedDuringRestore)return;
+			bCollectedDuringRestore = true;
+			CollectGarbage(GARBAGE_COLLECTION_KEEPFLAGS, /*bPerformFullPurge*/ false);
+			bPlayerSurvivedRestoreCollection = WeakPlayer.IsValid();
+		});
+	Tree.Animator->StopAnimation(Handle);
+	Tree.Button->GetDimensionChangedEvent().Remove(WidthListening);
+	Tree.Animator->OnInstanceFinished.Remove(FinishedListening);
+
+	TestTrue(TEXT("restoring the property reached the collection callback"), bCollectedDuringRestore);
+	TestTrue(TEXT("the player stayed reachable while its Stop call was on the stack"), bPlayerSurvivedRestoreCollection);
+	TestEqual(TEXT("Stop restored the original width"), Tree.Button->GetWidth(), 60.0f, 0.01f);
+	TestEqual(TEXT("the stopped instance reported Finished once"), FinishedCount, 1);
+	TestFalse(TEXT("the stopped instance is no longer active"), Tree.Animator->IsAnyAnimationPlaying());
+	// No native player call remains on the stack now; both success and failure may finish the pending purge safely.
+	CollectGarbage(GARBAGE_COLLECTION_KEEPFLAGS, /*bPerformFullPurge*/ true);
 	return true;
 }
 

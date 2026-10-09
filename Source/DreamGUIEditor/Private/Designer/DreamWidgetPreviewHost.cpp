@@ -4,6 +4,7 @@
 
 #include "DreamWidgetBlueprint.h"
 #include "Core/DreamUIManager.h"
+#include "Core/DreamUIBehaviour.h"
 #include "Core/DreamUserWidget.h"
 #include "Core/DreamWidgetGeneratedClass.h"
 #include "Core/DreamWidgetTree.h"
@@ -34,6 +35,88 @@
 
 namespace DreamWidgetPreviewHostLocal
 {
+	/** A property copy with its own strings/containers; the live preview is never temporarily rewritten. */
+	class FScopedPropertyValue
+	{
+	public:
+		FScopedPropertyValue(const FProperty* InProperty, const void* InValue) : Property(InProperty)
+		{
+			Value = FMemory::Malloc(Property->GetSize(), Property->GetMinAlignment());
+			Property->InitializeValue(Value);
+			Property->CopyCompleteValue(Value, InValue);
+		}
+		~FScopedPropertyValue()
+		{
+			Property->DestroyValue(Value);
+			FMemory::Free(Value);
+		}
+		void* Get() const { return Value; }
+	private:
+		const FProperty* Property;
+		void* Value;
+	};
+
+	bool RemapCopiedReferences(const FProperty* InProperty, void* InValue,
+		TFunctionRef<bool(UObject*, UObject*&)> InMapReference, bool& bOutChanged)
+	{
+		for (int32 Dimension = 0; Dimension < InProperty->ArrayDim; ++Dimension)
+		{
+			void* Value = static_cast<uint8*>(InValue) + Dimension * InProperty->ElementSize;
+			if (const FObjectPropertyBase* Reference = CastField<FObjectPropertyBase>(InProperty))
+			{
+				// These name assets/classes by path or type, never an instanced preview node.
+				if (Reference->IsA<FSoftObjectProperty>() || Reference->IsA<FClassProperty>()) continue;
+				UObject* Before = Reference->GetObjectPropertyValue(Value);
+				UObject* Mapped = nullptr;
+				if (!InMapReference(Before, Mapped)) return false;
+				if (Mapped != Before)
+				{
+					Reference->SetObjectPropertyValue(Value, Mapped);
+					bOutChanged = true;
+				}
+			}
+			else if (const FStructProperty* Struct = CastField<FStructProperty>(InProperty))
+			{
+				for (TFieldIterator<FProperty> Member(Struct->Struct); Member; ++Member)
+				{
+					if (!RemapCopiedReferences(*Member, Member->ContainerPtrToValuePtr<void>(Value), InMapReference, bOutChanged)) return false;
+				}
+			}
+			else if (const FArrayProperty* Array = CastField<FArrayProperty>(InProperty))
+			{
+				FScriptArrayHelper Elements(Array, Value);
+				for (int32 Index = 0; Index < Elements.Num(); ++Index)
+				{
+					if (!RemapCopiedReferences(Array->Inner, Elements.GetRawPtr(Index), InMapReference, bOutChanged)) return false;
+				}
+			}
+			else if (const FMapProperty* Map = CastField<FMapProperty>(InProperty))
+			{
+				FScriptMapHelper Elements(Map, Value);
+				bool bKeysChanged = false;
+				for (int32 Index = 0; Index < Elements.GetMaxIndex(); ++Index)
+				{
+					if (!Elements.IsValidIndex(Index)) continue;
+					if (!RemapCopiedReferences(Map->KeyProp, Elements.GetKeyPtr(Index), InMapReference, bKeysChanged)
+						|| !RemapCopiedReferences(Map->ValueProp, Elements.GetValuePtr(Index), InMapReference, bOutChanged)) return false;
+				}
+				if (bKeysChanged) { Elements.Rehash(); bOutChanged = true; }
+			}
+			else if (const FSetProperty* Set = CastField<FSetProperty>(InProperty))
+			{
+				FScriptSetHelper Elements(Set, Value);
+				bool bElementsChanged = false;
+				for (int32 Index = 0; Index < Elements.GetMaxIndex(); ++Index)
+				{
+					if (Elements.IsValidIndex(Index)
+						&& !RemapCopiedReferences(Set->ElementProp, Elements.GetElementPtr(Index), InMapReference, bElementsChanged)) return false;
+				}
+				if (bElementsChanged) { Elements.Rehash(); bOutChanged = true; }
+			}
+		}
+		return true;
+	}
+
 	/**
 	 * Copy one value along a property chain from the preview onto the template.
 	 *
@@ -45,7 +128,8 @@ namespace DreamWidgetPreviewHostLocal
 	 * bIsModify is the PreEditChange pass: it snapshots the destination for undo and writes nothing.
 	 */
 	bool MigrateAlongChain(UObject* InSource, UObject* InDestination,
-		FEditPropertyChain::TDoubleLinkedListNode* InChainNode, FProperty* InMemberProperty, bool bIsModify)
+		FEditPropertyChain::TDoubleLinkedListNode* InChainNode, FProperty* InMemberProperty, bool bIsModify,
+		TFunctionRef<bool(UObject*, UObject*&)> InMapReference)
 	{
 		if (InSource == nullptr || InDestination == nullptr || InChainNode == nullptr)
 		{
@@ -90,12 +174,46 @@ namespace DreamWidgetPreviewHostLocal
 				InDestination->Modify();
 				return true;
 			}
+			// With no instanced sub-object, the engine's recursive migration is a complete value copy.
+			// Prepare and remap that copy BEFORE Pre/PostEditChange: a listener may rebuild the preview,
+			// and neither a listener nor the asset may observe a temporary reference into it.
+			TUniquePtr<FScopedPropertyValue> Prepared;
+			if (!InMemberProperty->HasAnyPropertyFlags(CPF_InstancedReference | CPF_ContainsInstancedReference))
+			{
+				Prepared = MakeUnique<FScopedPropertyValue>(InMemberProperty,
+					InMemberProperty->ContainerPtrToValuePtr<void>(InSource));
+				bool bReferencesChanged = false;
+				if (!RemapCopiedReferences(InMemberProperty, Prepared->Get(), InMapReference, bReferencesChanged))
+				{
+					UE_LOG(DreamGUI, Warning, TEXT("[%s].%d '%s' contains a preview reference with no counterpart in the asset; the asset keeps what it had."),
+						ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *InMemberProperty->GetName());
+					return false;
+				}
+			}
 			// A property gated by an edit condition is only half-copied without the condition itself.
 			bool bDummyNegate = false;
 			if (FBoolProperty* EditConditionProperty = PropertyCustomizationHelpers::GetEditConditionProperty(InMemberProperty, bDummyNegate))
 			{
 				FObjectEditorUtils::MigratePropertyValue(InSource, EditConditionProperty, InDestination, EditConditionProperty);
 			}
+			if (Prepared.IsValid())
+			{
+				if (!InDestination->HasAnyFlags(RF_ClassDefaultObject))
+				{
+					FEditPropertyChain PropertyChain;
+					PropertyChain.AddHead(InMemberProperty);
+					InDestination->PreEditChange(PropertyChain);
+				}
+				InMemberProperty->CopyCompleteValue(InMemberProperty->ContainerPtrToValuePtr<void>(InDestination), Prepared->Get());
+				if (!InDestination->HasAnyFlags(RF_ClassDefaultObject))
+				{
+					FPropertyChangedEvent Changed(InMemberProperty);
+					InDestination->PostEditChangeProperty(Changed);
+				}
+				return true;
+			}
+			// Preserve the engine's duplication/correspondence rules for instanced sub-objects. A chain
+			// descending into one still prepares its actual edited member through the branch above.
 			return FObjectEditorUtils::MigratePropertyValue(InSource, InMemberProperty, InDestination, InMemberProperty);
 		}
 
@@ -104,9 +222,9 @@ namespace DreamWidgetPreviewHostLocal
 			return MigrateAlongChain(
 				CurrentObjectProperty->GetObjectPropertyValue_InContainer(InSource),
 				CurrentObjectProperty->GetObjectPropertyValue_InContainer(InDestination),
-				NextNode, NextNode->GetValue(), bIsModify);
+				NextNode, NextNode->GetValue(), bIsModify, InMapReference);
 		}
-		return MigrateAlongChain(InSource, InDestination, NextNode, InMemberProperty, bIsModify);
+		return MigrateAlongChain(InSource, InDestination, NextNode, InMemberProperty, bIsModify, InMapReference);
 	}
 
 	/**
@@ -341,6 +459,7 @@ UDreamWidget* FDreamWidgetPreviewHost::GetPreviewRoot() const
 void FDreamWidgetPreviewHost::DestroyPreview()
 {
 	PreviewWidgetsByGuid.Reset();
+	TemplateComponentsByPreview.Reset();
 	// Deliberately not IsValid(): an object marked for collection is still live memory whose widgets
 	// are still registered, and skipping teardown on it is precisely how one gets orphaned.
 	// DestroyWidget is written for that case -- it walks on RF_FinishDestroyed, not on IsValid.
@@ -590,6 +709,7 @@ void FDreamWidgetPreviewHost::ClearTransactionalFlagsOnPreview()
 void FDreamWidgetPreviewHost::RebuildPreviewGuidMap()
 {
 	PreviewWidgetsByGuid.Reset();
+	TemplateComponentsByPreview.Reset();
 	ForgetTemplateMisses();
 	if (!IsValid(PreviewWidget) || !IsValid(PreviewWidget->GetWidgetTree()))
 	{
@@ -618,6 +738,25 @@ void FDreamWidgetPreviewHost::RebuildPreviewGuidMap()
 			continue;
 		}
 		PreviewWidgetsByGuid.Add(Guid, Widget);
+		if (UDreamWidget* Template = FindTemplateForPreview(Widget))
+		{
+			// Instancing preserves object names even when initialization reordered the live array.
+			// Capture the identity now: a component created or renamed later must not acquire the
+			// right to edit an unrelated authored object by occupying its old array position/name.
+			for (UDreamUIBehaviour* Component : Widget->GetAllComponents())
+			{
+				if (!IsValid(Component) || Component->GetOuter() != Widget)continue;
+				for (UDreamUIBehaviour* Authored : Template->GetAllComponents())
+				{
+					if (IsValid(Authored) && Authored->GetOuter() == Template
+						&& Authored->GetFName() == Component->GetFName() && Authored->GetClass() == Component->GetClass())
+					{
+						TemplateComponentsByPreview.Add(Component, Authored);
+						break;
+					}
+				}
+			}
+		}
 	}
 }
 
@@ -751,6 +890,37 @@ UDreamWidget* FDreamWidgetPreviewHost::FindTemplateForPreview(const UDreamWidget
 	return Found;
 }
 
+UDreamUIBehaviour* FDreamWidgetPreviewHost::FindTemplateComponentForPreview(const UDreamUIBehaviour* InPreviewComponent) const
+{
+	if (!IsValid(InPreviewComponent))return nullptr;
+	const TWeakObjectPtr<UDreamUIBehaviour>* Found = TemplateComponentsByPreview.Find(InPreviewComponent);
+	UDreamUIBehaviour* Authored = Found != nullptr ? Found->Get() : nullptr;
+	const UDreamWidget* PreviewOwner = Cast<UDreamWidget>(InPreviewComponent->GetOuter());
+	UDreamWidget* TemplateOwner = FindTemplateForPreview(PreviewOwner);
+	if (!IsValid(Authored) || !IsValid(PreviewOwner) || !IsValid(TemplateOwner)
+		|| FindPreviewForTemplate(TemplateOwner) != PreviewOwner
+		|| !PreviewOwner->GetAllComponents().Contains(InPreviewComponent)
+		|| Authored->GetOuter() != TemplateOwner || !TemplateOwner->GetAllComponents().Contains(Authored)
+		|| Authored->GetFName() != InPreviewComponent->GetFName() || Authored->GetClass() != InPreviewComponent->GetClass())
+	{
+		return nullptr;
+	}
+	return Authored;
+}
+
+UDreamUIBehaviour* FDreamWidgetPreviewHost::FindPreviewComponentForTemplate(const UDreamUIBehaviour* InTemplateComponent) const
+{
+	if (!IsValid(InTemplateComponent))return nullptr;
+	const UDreamWidget* TemplateOwner = Cast<UDreamWidget>(InTemplateComponent->GetOuter());
+	UDreamWidget* PreviewOwner = FindPreviewForTemplate(TemplateOwner);
+	if (!IsValid(PreviewOwner))return nullptr;
+	for (UDreamUIBehaviour* Component : PreviewOwner->GetAllComponents())
+	{
+		if (FindTemplateComponentForPreview(Component) == InTemplateComponent)return Component;
+	}
+	return nullptr;
+}
+
 bool FDreamWidgetPreviewHost::MapPreviewReferenceToTemplate(UObject* InValue, UObject*& OutMapped) const
 {
 	OutMapped = InValue;
@@ -769,7 +939,9 @@ bool FDreamWidgetPreviewHost::MapPreviewReferenceToTemplate(UObject* InValue, UO
 	{
 		if (UDreamWidget* Template = FindTemplateForPreview(Site.Widget))
 		{
-			UObject* Counterpart = ResolveDreamWidgetBindingTarget(Template, Site.Target, Site.BehaviourIndex);
+			UObject* Counterpart = Site.Target == EDreamWidgetBindingTarget::Behaviour
+				? FindTemplateComponentForPreview(Cast<UDreamUIBehaviour>(InValue))
+				: ResolveDreamWidgetBindingTarget(Template, Site.Target, Site.BehaviourIndex);
 			if (Counterpart != nullptr && Counterpart->GetClass() == InValue->GetClass())
 			{
 				OutMapped = Counterpart;
@@ -813,7 +985,9 @@ bool FDreamWidgetPreviewHost::MigratePropertyToTemplate(UObject* InPreviewObject
 		{
 			return false;
 		}
-		TemplateObject = ResolveDreamWidgetBindingTarget(Template, Site.Target, Site.BehaviourIndex);
+		TemplateObject = Site.Target == EDreamWidgetBindingTarget::Behaviour
+			? FindTemplateComponentForPreview(Cast<UDreamUIBehaviour>(InPreviewObject))
+			: ResolveDreamWidgetBindingTarget(Template, Site.Target, Site.BehaviourIndex);
 	}
 	if (!IsValid(TemplateObject) || TemplateObject->GetClass() != InPreviewObject->GetClass())
 	{
@@ -837,7 +1011,8 @@ bool FDreamWidgetPreviewHost::MigratePropertyToTemplate(UObject* InPreviewObject
 	// (MapPreviewReferenceToTemplate), and with none the template keeps what it had.
 	const FObjectPropertyBase* HeadReference = Head->GetNextNode() == nullptr ? CastField<FObjectPropertyBase>(HeadProperty) : nullptr;
 	UObject* const ReferenceBefore = HeadReference != nullptr && !bIsModify ? HeadReference->GetObjectPropertyValue_InContainer(TemplateObject) : nullptr;
-	bool bMigrated = DreamWidgetPreviewHostLocal::MigrateAlongChain(InPreviewObject, TemplateObject, Head, Head->GetValue(), bIsModify);
+	bool bMigrated = DreamWidgetPreviewHostLocal::MigrateAlongChain(InPreviewObject, TemplateObject, Head, Head->GetValue(), bIsModify,
+		[this](UObject* InReference, UObject*& OutMapped) { return MapPreviewReferenceToTemplate(InReference, OutMapped); });
 	if (bMigrated && !bIsModify && HeadReference != nullptr)
 	{
 		UObject* const Copied = HeadReference->GetObjectPropertyValue_InContainer(TemplateObject);

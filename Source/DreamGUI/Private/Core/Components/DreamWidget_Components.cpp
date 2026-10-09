@@ -34,8 +34,55 @@
 // dependency; this is the one header of it that answers "which way does the running culture read".
 #include "Layout/FlowDirection.h"
 #if WITH_EDITOR
+#include "Event/DreamUIEventDelegate.h"
 #include "UObject/GarbageCollection.h"
+#include "UObject/UObjectHash.h"
 #include "UObject/UnrealType.h"
+#endif
+
+#if WITH_EDITOR
+namespace DreamWidgetComponentBindingsLocal
+{
+	void RemapAuthoredEvents(UDreamWidget* InWidget, int32 InOldIndex, int32 InNewIndex)
+	{
+		UDreamWidget* Root = InWidget;
+		while (IsValid(Root->GetParent()))
+		{
+			Root = Root->GetParent();
+		}
+		TArray<UDreamWidget*> Widgets;
+		UDreamWidget::CollectChildrenWidgets(Root, Widgets, /*IncludeTarget*/true);
+		TSet<UObject*> Owners;
+		for (UDreamWidget* Widget : Widgets)
+		{
+			Owners.Add(Widget);
+			ForEachObjectWithOuter(Widget, [&Owners](UObject* Object) { Owners.Add(Object); });
+		}
+		for (UObject* Owner : Owners)
+		{
+			if (!IsValid(Owner)) continue;
+			// Visit all properties so a hashed container can be skipped before descending into its
+			// structs. Checking only the final event property misses events nested in a struct key.
+			for (TPropertyValueIterator<FProperty> It(Owner->GetClass(), Owner); It; ++It)
+			{
+				const FProperty* Property = It.Key();
+				const FMapProperty* OwningMap = Property->GetOwner<FMapProperty>();
+				if (Property->IsA<FSetProperty>() || (OwningMap != nullptr && OwningMap->KeyProp == Property))
+				{
+					It.SkipRecursiveProperty();
+					continue;
+				}
+				const FStructProperty* Struct = CastField<FStructProperty>(Property);
+				if (Struct != nullptr && Struct->Struct == FDreamUIEventDelegate::StaticStruct())
+				{
+					auto* Event = static_cast<FDreamUIEventDelegate*>(const_cast<void*>(It.Value()));
+					Event->RemapBehaviourBindings(Owner, InWidget, InOldIndex, InNewIndex);
+					It.SkipRecursiveProperty();
+				}
+			}
+		}
+	}
+}
 #endif
 
 UDreamUIBehaviour* UDreamWidget::AddComponent(TSubclassOf<UDreamUIBehaviour> ComponentClass, UDreamUIBehaviour* ComponentTemplate)
@@ -95,6 +142,9 @@ void UDreamWidget::RemoveComponent(UDreamUIBehaviour* Component)
 {
 	auto Index = Components.Find(Component);
 	if (Index < 0)return;
+#if WITH_EDITOR
+	DreamWidgetComponentBindingsLocal::RemapAuthoredEvents(this, Index, INDEX_NONE);
+#endif
 	Components.RemoveAt(Index);
 	// Asked whether or not this widget is in play: a behaviour woken before its widget began play is awake
 	// all the same, and the behaviour's own EndPlay only undoes what it has done.
@@ -117,6 +167,9 @@ void UDreamWidget::MoveComponentToIndex(UDreamUIBehaviour* Component, int32 NewI
 		return;
 	}
 
+#if WITH_EDITOR
+	DreamWidgetComponentBindingsLocal::RemapAuthoredEvents(this, SourceIndex, TargetIndex);
+#endif
 	UDreamUIBehaviour* MovingComponent = Components[SourceIndex];
 	Components.RemoveAt(SourceIndex);
 	Components.Insert(MovingComponent, FMath::Clamp(TargetIndex, 0, Components.Num()));

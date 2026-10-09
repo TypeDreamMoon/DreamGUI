@@ -423,11 +423,12 @@ namespace DreamUIRendererLocal
 {
 	/**
 	 * The pass of the three CopyRenderTarget functions: Src over the whole of Dst, the colour linearized or the alpha
-	 * scaled by BlendAlpha and blended over what Dst holds. PassName names the pass and Dst in the graph, SourceName Src.
+	 * scaled by BlendAlpha and blended over what Dst holds. Render scale supplies premultiplied RGB; other callers
+	 * supply straight RGB. PassName names the pass in the graph.
 	 */
 	static void AddCopyTargetPass(FRDGBuilder& GraphBuilder, FGlobalShaderMap* GlobalShaderMap
 		, FRDGTextureRef SourceTexture, FRDGTextureRef DestinationTexture, FRHISamplerState* SrcTextureSamplerState
-		, bool bColorCorrect, bool bBlendAlpha, float BlendAlpha, const TCHAR* PassName)
+		, bool bColorCorrect, bool bBlendAlpha, float BlendAlpha, const TCHAR* PassName, bool bPremultipliedAlpha = false)
 	{
 		auto* PassParameters = GraphBuilder.AllocParameters<FDreamUITextureReadRenderTargetParameters>();
 		PassParameters->SourceTexture = SourceTexture;
@@ -437,7 +438,7 @@ namespace DreamUIRendererLocal
 			RDG_EVENT_NAME("%s", PassName),
 			PassParameters,
 			ERDGPassFlags::Raster,
-			[GlobalShaderMap, SourceTexture, DestinationTexture, SrcTextureSamplerState, bColorCorrect, bBlendAlpha, BlendAlpha](FRHICommandListImmediate& RHICmdList)
+			[GlobalShaderMap, SourceTexture, DestinationTexture, SrcTextureSamplerState, bColorCorrect, bBlendAlpha, BlendAlpha, bPremultipliedAlpha](FRHICommandListImmediate& RHICmdList)
 			{
 				SourceTexture->MarkResourceAsUsed();
 				const FIntPoint DestinationExtent = DestinationTexture->Desc.Extent;
@@ -453,7 +454,9 @@ namespace DreamUIRendererLocal
 				GraphicsPSOInit.DepthStencilState = TStaticDepthStencilState<false, ECompareFunction::CF_Always>::GetRHI();
 				GraphicsPSOInit.RasterizerState = TStaticRasterizerState<FM_Solid, CM_None>::GetRHI();
 				GraphicsPSOInit.BlendState = bBlendAlpha
-					? TStaticBlendState<CW_RGBA, BO_Add, BF_SourceAlpha, BF_InverseSourceAlpha, BO_Add, BF_InverseDestAlpha, BF_One>::GetRHI()
+					? (bPremultipliedAlpha
+						? TStaticBlendState<CW_RGBA, BO_Add, BF_One, BF_InverseSourceAlpha, BO_Add, BF_One, BF_InverseSourceAlpha>::GetRHI()
+						: TStaticBlendState<CW_RGBA, BO_Add, BF_SourceAlpha, BF_InverseSourceAlpha, BO_Add, BF_InverseDestAlpha, BF_One>::GetRHI())
 					: TStaticBlendState<>::GetRHI();
 				GraphicsPSOInit.PrimitiveType = EPrimitiveType::PT_TriangleList;
 				GraphicsPSOInit.NumSamples = DestinationTexture->Desc.NumSamples;
@@ -728,6 +731,33 @@ namespace DreamUIRendererLocal
 			if (!InCollected.Batches[Index].bBuiltIn)
 			{
 				return true;
+			}
+		}
+		return false;
+	}
+
+	/** Blends whose destination colour or alpha cannot be recovered by compositing a transparent UI target. */
+	bool UsesOriginalDestination(const FCollectedMeshBatches& InCollected, ERHIFeatureLevel::Type InFeatureLevel)
+	{
+		for (const FDreamUIMeshBatchContainer& Batch : InCollected.Batches)
+		{
+			if (Batch.bBuiltIn)
+			{
+				if (Batch.GetBuiltIn().BlendMode == EDreamUIBlendMode::Multiply)
+				{
+					return true;
+				}
+			}
+			else if (const FMaterialRenderProxy* Proxy = Batch.Mesh.MaterialRenderProxy)
+			{
+				if (const FMaterial* Material = Proxy->GetMaterialNoFallback(InFeatureLevel))
+				{
+					const EBlendMode Blend = Material->GetBlendMode();
+					if (Blend == BLEND_Modulate || Blend == BLEND_AlphaHoldout || Blend == BLEND_Additive)
+					{
+						return true;
+					}
+				}
 			}
 		}
 		return false;
@@ -1198,11 +1228,10 @@ bool FDreamUIRenderer::PrepareTargets_RenderThread(FRDGBuilder& GraphBuilder, FS
 		switch (InView.StereoPass)
 		{
 		case EStereoscopicPass::eSSP_FULL:
-		if (InTargetOverride.IsValid())
 		{
-			// The override is the whole view at whatever resolution the post-process chain has reached, which
-			// is not always the output's; the depth is the primary view's. The shaders take a position across
-			// the view, so it maps straight onto the depth texture's view rect.
+			// Clip-space positions span this view, even when its output is part of the family target.
+			// The raw depth rect includes split-screen or constrained-view offsets and the scene's
+			// screen percentage; the output or post-process target's extent does not describe it.
 			const FIntRect DepthRect = InView.bIsViewInfo ? UE::FXRenderingUtils::GetRawViewRectUnsafe(InView) : ViewRect;
 			DepthTextureScaleOffset = FVector4f(
 				(float)DepthRect.Width() / SceneDepthSize.X,
@@ -1210,16 +1239,6 @@ bool FDreamUIRenderer::PrepareTargets_RenderThread(FRDGBuilder& GraphBuilder, FS
 				(float)DepthRect.Min.X / SceneDepthSize.X,
 				(float)DepthRect.Min.Y / SceneDepthSize.Y
 			);
-			ColorTextureScaleOffset = FVector4f(1, 1, 0, 0);
-		}
-		else
-		{
-			DepthTextureScaleOffset = FVector4f(
-				(float)ScreenColorRenderTargetTexture->GetSizeXYZ().X / SceneDepthSize.X,
-				(float)ScreenColorRenderTargetTexture->GetSizeXYZ().Y / SceneDepthSize.Y,
-				0, 0
-			);
-			DepthTextureScaleOffset = DepthTextureScaleOffset * ScreenPercentage;
 			ColorTextureScaleOffset = FVector4f(1, 1, 0, 0);
 		}
 		break;
@@ -1738,18 +1757,39 @@ void FDreamUIRenderer::RecordScreenSpace_RenderThread(FRDGBuilder& GraphBuilder,
 	SharedView.ScreenSpaceRenderScale = RenderThreadViewParameter.ScreenSpaceRenderScale;
 
 	const TArray<FScreenSpacePlayerPartView>& PlayerParts = RenderThreadViewParameter.PlayerParts;
+	// PostRenderView is called in family order after the scene has finished every view. Draw the shared layer
+	// after the last player's layer, once across the full viewport, as its layout and hit testing already do.
+	// Stereo retains its per-eye projection and rect; render-target canvases have their own single view.
+	const bool bSharedAcrossSplitScreen = RendererType != EDreamUIRendererType::RenderTarget
+		&& InView.Family->Views.Num() > 1
+		&& !InView.Family->Views.ContainsByPredicate([](const FSceneView* View)
+		{
+			return View->StereoPass != EStereoscopicPass::eSSP_FULL;
+		});
+	const bool bDrawSharedLayer = !bSharedAcrossSplitScreen || InView.Family->Views.Last() == &InView;
+	FRecordTargets SharedTargets = Targets;
+	if (bSharedAcrossSplitScreen)
+	{
+		// eSSP_FULL colour/depth sampling already maps the whole family target. Keep that target for MSAA
+		// and render scale as well; only the shared drawing's viewport changes.
+		SharedTargets.ViewRect = FIntRect(FIntPoint::ZeroValue, Targets.ScreenColorRenderTargetTexture->GetSizeXY());
+	}
 	if (PlayerParts.Num() == 0)
 	{
-		// No root fills a player's part of a split screen -- every game that is not split: one layer of every primitive,
-		// through the shared view, in every view, as it always was.
-		RecordScreenSpaceLayer_RenderThread(GraphBuilder, InView, Targets, SharedView
-			, [](IDreamUIRendererPrimitive*) { return true; }, /*bInDrawGizmos*/true, /*bInAllowRenderScale*/true);
+		if (bDrawSharedLayer)
+		{
+			RecordScreenSpaceLayer_RenderThread(GraphBuilder, InView, SharedTargets, SharedView
+				, [](IDreamUIRendererPrimitive*) { return true; }, /*bInDrawGizmos*/true, /*bInAllowRenderScale*/true);
+			// The final MSAA resolve must include every pixel the shared layer just drew.
+			Targets.ViewRect = SharedTargets.ViewRect;
+		}
 		return;
 	}
 
 	/**
-	 * A split screen, as UMG draws one: each player's own layer in that player's view only, then the shared layer over it
-	 * in every view (SGameLayerManager keeps a layer per local player, laid out over the player's part of the viewport and
+	 * A split screen, as UMG draws one: each player's own layer in that player's view only, then the shared layer over
+	 * the whole viewport once all players have been drawn (SGameLayerManager keeps a layer per local player, laid out
+	 * over the player's part of the viewport and
 	 * clipped to it, in EGameLayerOrder::Player, under the shared EGameLayerOrder::Viewport). A view here is one player's
 	 * -- ULocalPlayer::CalcSceneView names it by the player's controller id in FSceneView::PlayerIndex, which is what a
 	 * part says it is drawn in -- and its rect is that player's part, so a part's own view, made from a canvas the size of
@@ -1776,13 +1816,18 @@ void FDreamUIRenderer::RecordScreenSpace_RenderThread(FRDGBuilder& GraphBuilder,
 			}
 			, /*bInDrawGizmos*/false, /*bInAllowRenderScale*/false);
 	}
-	RecordScreenSpaceLayer_RenderThread(GraphBuilder, InView, Targets, SharedView
-		, [&RootKeys, &PartRoots](IDreamUIRendererPrimitive* InPrimitive)
-		{
-			const FObjectKey* RootKey = RootKeys.Find(InPrimitive);
-			return RootKey == nullptr || !PartRoots.Contains(*RootKey);
-		}
-		, /*bInDrawGizmos*/true, /*bInAllowRenderScale*/true);
+	if (bDrawSharedLayer)
+	{
+		RecordScreenSpaceLayer_RenderThread(GraphBuilder, InView, SharedTargets, SharedView
+			, [&RootKeys, &PartRoots](IDreamUIRendererPrimitive* InPrimitive)
+			{
+				const FObjectKey* RootKey = RootKeys.Find(InPrimitive);
+				return RootKey == nullptr || !PartRoots.Contains(*RootKey);
+			}
+			, /*bInDrawGizmos*/true, /*bInAllowRenderScale*/true);
+		// Player layers used their own rects; the final MSAA resolve also includes the shared full-viewport draw.
+		Targets.ViewRect = SharedTargets.ViewRect;
+	}
 }
 
 void FDreamUIRenderer::RecordScreenSpaceLayer_RenderThread(FRDGBuilder& GraphBuilder, FSceneView& InView, FRecordTargets& Targets
@@ -1869,7 +1914,7 @@ void FDreamUIRenderer::RecordScreenSpaceLayer_RenderThread(FRDGBuilder& GraphBui
 	 * up over the real one. The point is fill rate -- on a phone or a low-end console profile a
 	 * full-screen UI pass is expensive out of proportion to how much detail it needs.
 	 *
-	 * Three things switch it off, and all three are refusals rather than approximations:
+	 * These cases switch it off:
 	 *
 	 * - MSAA. The multisampled path already redirects the whole UI through its own target and
 	 *   resolves at the end; two redirections would need the resolve and the upscale ordered
@@ -1880,12 +1925,15 @@ void FDreamUIRenderer::RecordScreenSpaceLayer_RenderThread(FRDGBuilder& GraphBui
 	 * - Any screen-space post process. A post process READS the scene colour behind it. Scaled, the
 	 *   UI it should be reading is in the small target while the scene is in the big one, so it
 	 *   would sample the wrong image and land in the wrong place in the z-order.
+	 * - A blend that needs the original destination. Multiply/Modulate and AlphaHoldout cannot affect
+	 *   the scene through a transparent target; a material's Additive also attenuates destination alpha.
 	 *
 	 * Scale 1 (the default) skips all of this and leaves the path exactly as it was.
 	 */
 	TRefCountPtr<IPooledRenderTarget> RenderScaleTarget;
 	FRDGTextureRef ScreenSpaceRenderTargetTexture = RenderTargetTexture;
 	const FIntRect UnscaledScreenSpaceViewRect = ViewRect;
+	TArray<DreamUIRendererLocal::FCollectedMeshBatches*, TInlineAllocator<1>> CollectedForScale;
 	if (bInAllowRenderScale
 		&& InLayer.ScreenSpaceRenderScale < 1.0f
 		&& NumSamples <= 1
@@ -1901,7 +1949,30 @@ void FDreamUIRenderer::RecordScreenSpaceLayer_RenderThread(FRDGBuilder& GraphBui
 				break;
 			}
 		}
+		bool bNeedsOriginalDestination = false;
 		if (!bAnyPostProcess)
+		{
+			// Inspect the batches that will actually draw, including a material's current blend override. Keep
+			// the collected state for the pass below: a scale decision must not collect the same mesh twice.
+			CollectedForScale.SetNumZeroed(RenderSequenceArray.Num());
+			for (int32 Index = 0; Index < RenderSequenceArray.Num(); ++Index)
+			{
+				const FDreamUIPrimitiveDataContainer& Item = RenderSequenceArray[Index];
+				auto* Collected = GraphBuilder.AllocObject<DreamUIRendererLocal::FCollectedMeshBatches>();
+				CollectedForScale[Index] = Collected;
+				{
+					TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_CollectMeshBatches);
+					FDreamUIMeshElementCollector MeshCollector(RenderView->GetFeatureLevel(), Collected->Allocator, GraphBuilder.RHICmdList);
+					Item.Primitive->DreamUI_GetMeshElements(*RenderView->Family, MeshCollector, Item, Collected->Batches);
+				}
+				if (bRenderLit && DreamUIRendererLocal::UsesOriginalDestination(*Collected, RenderView->GetFeatureLevel()))
+				{
+					bNeedsOriginalDestination = true;
+					break;
+				}
+			}
+		}
+		if (!bAnyPostProcess && !bNeedsOriginalDestination)
 		{
 			float AppliedScale = 1.0f;
 			const FIntPoint ScaledSize = CalculateRenderScaledSize(ViewRect.Size(), InLayer.ScreenSpaceRenderScale, AppliedScale);
@@ -1950,8 +2021,9 @@ void FDreamUIRenderer::RecordScreenSpaceLayer_RenderThread(FRDGBuilder& GraphBui
 
 	bool bIsDepthStencilCleared = false;
 	bool bIsRenderTarget = RendererType == EDreamUIRendererType::RenderTarget;
-	for (auto& RenderSequenceItem : RenderSequenceArray)
+	for (int32 SequenceIndex = 0; SequenceIndex < RenderSequenceArray.Num(); ++SequenceIndex)
 	{
+		auto& RenderSequenceItem = RenderSequenceArray[SequenceIndex];
 		switch (RenderSequenceItem.Type)
 		{
 		case EDreamUIRendererPrimitiveType::PostProcess://render post process
@@ -2001,8 +2073,10 @@ void FDreamUIRenderer::RecordScreenSpaceLayer_RenderThread(FRDGBuilder& GraphBui
 				}
 			}
 			// Collected while the pass is recorded, not when it runs: see the world-space mesh pass above.
-			auto* Collected = GraphBuilder.AllocObject<DreamUIRendererLocal::FCollectedMeshBatches>();
+			auto* Collected = CollectedForScale.IsValidIndex(SequenceIndex) ? CollectedForScale[SequenceIndex] : nullptr;
+			if (Collected == nullptr)
 			{
+				Collected = GraphBuilder.AllocObject<DreamUIRendererLocal::FCollectedMeshBatches>();
 				TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_CollectMeshBatches);
 				FDreamUIMeshElementCollector MeshCollector(RenderView->GetFeatureLevel(), Collected->Allocator, GraphBuilder.RHICmdList);
 				RenderSequenceItem.Primitive->DreamUI_GetMeshElements(*RenderView->Family, MeshCollector, RenderSequenceItem, Collected->Batches);
@@ -2138,7 +2212,9 @@ void FDreamUIRenderer::RecordScreenSpaceLayer_RenderThread(FRDGBuilder& GraphBui
 		//composite the scaled UI up over the real target. Bilinear, and premultiplied-over with a
 		//blend alpha of 1, which is the same composite the UI would have done straight onto the
 		//target -- only once, at the end, from a smaller image.
-		CopyRenderTarget_BlendAlpha(GraphBuilder, GlobalShaderMap, RenderScaleTarget->GetRHI(), ScreenColorRenderTargetTexture, 1.0f);
+		// The small target already contains premultiplied RGB (including additive RGB with zero alpha).
+		DreamUIRendererLocal::AddCopyTargetPass(GraphBuilder, GlobalShaderMap, ScreenSpaceRenderTargetTexture, RenderTargetTexture
+			, nullptr, false, true, 1.0f, TEXT("DreamUIRenderScaleComposite"), /*bPremultipliedAlpha*/true);
 		//restore for anything after this block (the MSAA resolve reads it, and it must be the full rect)
 		ViewRect = UnscaledScreenSpaceViewRect;
 	}

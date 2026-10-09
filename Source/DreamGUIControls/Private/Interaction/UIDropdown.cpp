@@ -11,6 +11,7 @@
 #include "Core/Components/DreamWidget.h"
 #include "Core/Components/DreamText.h"
 #include "Event/DreamPointerEventData.h"
+#include "Misc/ScopeExit.h"
 
 
 
@@ -109,8 +110,16 @@ void UUIDropdown::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedE
 }
 #endif
 
+bool UUIDropdown::IsCurrentListOperation(const TWeakObjectPtr<UUIDropdown>& InDropdown, uint64 InSerial, bool bInShow)
+{
+	const UUIDropdown* Dropdown = InDropdown.Get();
+	return Dropdown != nullptr && IsValid(Dropdown->GetWidget()) && Dropdown->ListOperationSerial == InSerial
+		&& Dropdown->bIsShow == bInShow && Dropdown->ListRoot.IsValid();
+}
+
 void UUIDropdown::Show()
 {
+	if (!IsValid(this))return;
 	if (!ListRoot.IsValid())
 	{
 		UE_LOG(DreamGUI, Error, TEXT("[%s].%d ListRoot is not valid!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
@@ -128,6 +137,9 @@ void UUIDropdown::Show()
 	if (!IsValid(this->GetWidget()))return;
 	if (!IsValid(this->GetWidget()->GetRootCanvas()))return;
 	if (bIsShow)return;
+	const TWeakObjectPtr<UUIDropdown> WeakThis(this);
+	const uint64 ShowSerial = ++ListOperationSerial;
+	if (bRecreatingListItems)bNeedRecreate = true;
 	bIsShow = true;
 	if (ShowOrHideTweener.IsValid())
 	{
@@ -135,11 +147,15 @@ void UUIDropdown::Show()
 	}
 	// A list still fading out from the last close is taken over where it is: home under the face again
 	// to be placed from scratch below, and answering the pointer and the pad again.
+	if (!IsCurrentListOperation(WeakThis, ShowSerial, true))return;
 	ReturnListHome();
+	if (!IsCurrentListOperation(WeakThis, ShowSerial, true))return;
 	SetListInert(false);
+	if (!IsCurrentListOperation(WeakThis, ShowSerial, true))return;
 
 	//show list
 	ListRoot->SetWidgetActive(true);
+	if (!IsCurrentListOperation(WeakThis, ShowSerial, true))return;
 	ShowOrHideTweener = ListRoot->RenderOpacityTo(1, 0.3f, 0, EDreamTweenEase::OutCubic);
 	if (!ShowOrHideTweener.IsValid())
 	{
@@ -164,6 +180,7 @@ void UUIDropdown::Show()
 	{
 		RecreateListItems();
 	}
+	if (!IsCurrentListOperation(WeakThis, ShowSerial, true))return;
 
 	//set position
 	auto TempVerticalPosition = VerticalPosition;
@@ -321,7 +338,7 @@ void UUIDropdown::Show()
 	// After the list is awake and POSITIONED, and before it goes up: a listener sizing it -- a control
 	// that owns its rows' heights -- does it against the face, where the list still hangs.
 	OnListVisibilityChangedCPP.Broadcast(true);
-	if (!bIsShow)
+	if (!IsCurrentListOperation(WeakThis, ShowSerial, true))
 	{
 		// A handler of the opening closed it again.
 		return;
@@ -334,16 +351,18 @@ void UUIDropdown::Show()
 	ListFocusReturn.Reset();
 	bListOnPopupLayer = true;
 	const bool bPushed = PushListToPopupLayer();
-	if (!bIsShow)
+	if (!IsCurrentListOperation(WeakThis, ShowSerial, true))
 	{
-		// Closed again while the push ran, and taken off the layer by that close: it stays closed. A close made before the
-		// layer had the list -- an owner of a popup the push replaced closing this dropdown -- found nothing to take off,
-		// and the layer opened the list after it: taken off now.
-		bListOnPopupLayer = false;
-		UDreamUIPopupLayer* Layer = bPushed ? UDreamUIPopupLayer::Get(this) : nullptr;
-		if (Layer != nullptr && Layer->IsOpen(ListRoot.Get()))
+		// A late push after a close is taken down only while still closed. A newer Show owns
+		// the same list and its popup bookkeeping, and must not be dismissed by this old pass.
+		if (WeakThis.IsValid() && !bIsShow)
 		{
-			Layer->Dismiss(ListRoot.Get(), EDreamPopupDismissReason::Explicit);
+			bListOnPopupLayer = false;
+			UDreamUIPopupLayer* Layer = bPushed ? UDreamUIPopupLayer::Get(this) : nullptr;
+			if (Layer != nullptr && Layer->IsOpen(ListRoot.Get()))
+			{
+				Layer->Dismiss(ListRoot.Get(), EDreamPopupDismissReason::Explicit);
+			}
 		}
 		return;
 	}
@@ -361,14 +380,18 @@ void UUIDropdown::Hide()
 }
 void UUIDropdown::CloseList(bool bInAnimate)
 {
+	if (!IsValid(this))return;
 	if (!ListRoot.IsValid())
 	{
 		UE_LOG(DreamGUI, Error, TEXT("[%s].%d ListRoot is not valid!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
 		return;
 	}
 	if (!bIsShow)return;
+	const TWeakObjectPtr<UUIDropdown> WeakThis(this);
+	const uint64 CloseSerial = ++ListOperationSerial;
+	const TWeakObjectPtr<UDreamWidget> WeakList(ListRoot);
 	bIsShow = false;
-	UDreamWidget* List = ListRoot.Get();
+	UDreamWidget* List = WeakList.Get();
 	// Focus first, before the fade and before anything moves: every player whose focus is in the list -- or
 	// went nowhere from it -- is back on the face, in one step, so a row no longer takes the confirm or the
 	// stick for the length of the fade, and a face deselected into nothing never gets it back. The popup
@@ -385,13 +408,15 @@ void UUIDropdown::CloseList(bool bInAnimate)
 	{
 		ListFocusReturn.Return(List);
 	}
+	if (!IsCurrentListOperation(WeakThis, CloseSerial, false) || !WeakList.IsValid())return;
 	OnListVisibilityChangedCPP.Broadcast(false);
+	if (!IsCurrentListOperation(WeakThis, CloseSerial, false) || !WeakList.IsValid())return;
 	if (ShowOrHideTweener.IsValid())
 	{
 		ShowOrHideTweener->Kill();
 	}
 	ShowOrHideTweener = nullptr;
-	if (!IsValid(List) || bIsShow)
+	if (!IsCurrentListOperation(WeakThis, CloseSerial, false) || !WeakList.IsValid())
 	{
 		// A handler of the close destroyed the list, or opened it again.
 		return;
@@ -399,6 +424,8 @@ void UUIDropdown::CloseList(bool bInAnimate)
 	// The fade plays where the player saw the list -- still lifted, when it went up -- and nothing in it answers
 	// meanwhile.
 	SetListInert(true);
+	if (!IsCurrentListOperation(WeakThis, CloseSerial, false) || !WeakList.IsValid())return;
+	List = WeakList.Get();
 
 	// Asked before anything is chained onto it. RenderOpacityTo answers null wherever there is no tween
 	// manager -- any world without a game instance, the designer's preview and a headless test among
@@ -411,12 +438,11 @@ void UUIDropdown::CloseList(bool bInAnimate)
 		// Bound to the list, so it runs only while the list is alive; this component is reached weakly, since
 		// the list can outlive it. One going away puts its list away at once (OnDisable), which kills this tween.
 		UDreamWidget* FadingList = List;
-		TWeakObjectPtr<UUIDropdown> WeakThis(this);
-		HideTweener->OnComplete(FSimpleDelegate::CreateWeakLambda(FadingList, [FadingList, WeakThis]
+		HideTweener->OnComplete(FSimpleDelegate::CreateWeakLambda(FadingList, [FadingList, WeakThis, CloseSerial]
 		{
 			if (UUIDropdown* Dropdown = WeakThis.Get())
 			{
-				if (!Dropdown->bIsShow)
+				if (IsCurrentListOperation(WeakThis, CloseSerial, false))
 				{
 					Dropdown->PutListAway();
 				}
@@ -434,15 +460,21 @@ void UUIDropdown::CloseList(bool bInAnimate)
 }
 void UUIDropdown::PutListAway()
 {
+	const TWeakObjectPtr<UUIDropdown> WeakThis(this);
+	const uint64 CloseSerial = ListOperationSerial;
+	if (!IsCurrentListOperation(WeakThis, CloseSerial, false))return;
 	ShowOrHideTweener = nullptr;
 	if (UDreamWidget* List = ListRoot.Get(); IsValid(List))
 	{
 		// Home first, then asleep: a list put to sleep while still lifted would be an inactive widget hanging off
 		// the screen root that nothing would ever come back for.
 		ReturnListHome();
+		if (!IsCurrentListOperation(WeakThis, CloseSerial, false))return;
 		List->SetWidgetActive(false);
 	}
+	if (!IsCurrentListOperation(WeakThis, CloseSerial, false))return;
 	SetListInert(false);
+	if (!IsCurrentListOperation(WeakThis, CloseSerial, false))return;
 	OnListPutAwayCPP.Broadcast();
 }
 void UUIDropdown::ReturnListHome()
@@ -539,8 +571,22 @@ bool UUIDropdown::PushListToPopupLayer()
 	// Kept up when it closes, to fade out where the player saw it; PutListAway brings it home.
 	Params.bRestoreOnDismiss = false;
 	Params.Place = ListPlacement;
-	Params.OnDismissed = FDreamPopupDismissedDelegate::CreateUObject(this, &UUIDropdown::HandleListDismissed);
-	Params.OnClosing = FDreamPopupDismissedDelegate::CreateUObject(this, &UUIDropdown::HandleListClosing);
+	const TWeakObjectPtr<UUIDropdown> WeakThis(this);
+	const uint64 ShowSerial = ListOperationSerial;
+	Params.OnDismissed = FDreamPopupDismissedDelegate::CreateWeakLambda(this, [WeakThis, ShowSerial](UDreamWidget* InList, EDreamPopupDismissReason InReason)
+	{
+		if (UUIDropdown* Dropdown = WeakThis.Get(); Dropdown != nullptr && Dropdown->ListOperationSerial == ShowSerial && Dropdown->bIsShow)
+		{
+			Dropdown->HandleListDismissed(InList, InReason);
+		}
+	});
+	Params.OnClosing = FDreamPopupDismissedDelegate::CreateWeakLambda(this, [WeakThis, ShowSerial](UDreamWidget* InList, EDreamPopupDismissReason InReason)
+	{
+		if (UUIDropdown* Dropdown = WeakThis.Get(); Dropdown != nullptr && Dropdown->ListOperationSerial == ShowSerial && Dropdown->bIsShow)
+		{
+			Dropdown->HandleListClosing(InList, InReason);
+		}
+	});
 	return Layer->Push(Params);
 }
 void UUIDropdown::HandleListClosing(UDreamWidget* InList, EDreamPopupDismissReason InReason)
@@ -571,6 +617,8 @@ int32 UUIDropdown::FindHighlightedRow() const
 }
 void UUIDropdown::HandleListDismissed(UDreamWidget* InList, EDreamPopupDismissReason InReason)
 {
+	const TWeakObjectPtr<UUIDropdown> WeakThis(this);
+	const uint64 ShowSerial = ListOperationSerial;
 	bListOnPopupLayer = false;
 	const int32 TabCommit = PendingTabCommit;
 	PendingTabCommit = INDEX_NONE;
@@ -582,6 +630,7 @@ void UUIDropdown::HandleListDismissed(UDreamWidget* InList, EDreamPopupDismissRe
 	if (InReason == EDreamPopupDismissReason::WorldTeardown)
 	{
 		// The world comes down with the list in it: nothing to fade, nothing to put back, nobody left to tell.
+		++ListOperationSerial;
 		bIsShow = false;
 		return;
 	}
@@ -589,6 +638,7 @@ void UUIDropdown::HandleListDismissed(UDreamWidget* InList, EDreamPopupDismissRe
 	{
 		// The list was destroyed while it was open: nothing is left to fade, bring home or put to sleep, and the close
 		// is all there is to announce.
+		++ListOperationSerial;
 		bIsShow = false;
 		OnListVisibilityChangedCPP.Broadcast(false);
 		return;
@@ -598,7 +648,7 @@ void UUIDropdown::HandleListDismissed(UDreamWidget* InList, EDreamPopupDismissRe
 		// Tab chose the row the player was on (HandleListClosing noted it), in a click's order: the choice, then the close.
 		// The focus is on the face already, and the Tab goes on from there once this returns.
 		SetValue(TabCommit, true);
-		if (!bIsShow)
+		if (!WeakThis.IsValid() || ListOperationSerial != ShowSerial || !bIsShow)
 		{
 			// A handler of the choice closed the list itself.
 			return;
@@ -639,84 +689,142 @@ int32 UUIDropdown::ResolveListUserIndex() const
 }
 void UUIDropdown::CreateListItems()
 {
-	auto ItemTemplateWidget = ItemTemplate->GetWidget();
-	if (!IsValid(ItemTemplateWidget))
+	const TWeakObjectPtr<UUIDropdown> WeakThis(this);
+	const uint64 ShowSerial = ListOperationSerial;
+	const uint64 RebuildSerial = ListRebuildSerial;
+	if (!IsCurrentListOperation(WeakThis, ShowSerial, true) || !ItemTemplate.IsValid())return;
+	const TWeakObjectPtr<UDreamWidget> WeakTemplate(ItemTemplate->GetWidget());
+	if (!WeakTemplate.IsValid())
 	{
 		UE_LOG(DreamGUI, Error, TEXT("[%s].%d ItemTemplate must be a DreamWidget!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
 		return;
 	}
-	ItemTemplateWidget->SetWidgetActive(true);
-	auto ScrollViewContentWidget = ItemTemplateWidget->GetParent();
-	// Against the options as they are at each step: a row's handler below can change them.
-	for (int i = 0; i < Options.Num(); i++)
+	const TWeakObjectPtr<UDreamWidget> WeakContent(WeakTemplate->GetParent());
+	const auto IsCurrentBuild = [WeakThis, ShowSerial, RebuildSerial, WeakTemplate, WeakContent]()
 	{
-		auto CopiedItemWidget = UDreamUIBPLibrary::DuplicateWidget(this->GetOuter()->GetWorld(), ItemTemplateWidget, ScrollViewContentWidget);
-		CopiedItemWidget->SetDisplayName(FString::Printf(TEXT("Item_%d"), i));
-		auto script = CopiedItemWidget->GetComponent<UUIDropdownItemComponent>();
-		// Weakly: a row lives as long as its list, and the list can outlive this component -- lifted to
-		// a popup layer, or kept outside this widget by a hand-wired dropdown -- so a row clicked after
-		// the dropdown went away must find nobody to call rather than a destroyed object.
-		TWeakObjectPtr<UUIDropdown> WeakThis(this);
-		script->Init(i, Options[i], [WeakThis, i]() {
-			if (UUIDropdown* Dropdown = WeakThis.Get())
+		return IsCurrentListOperation(WeakThis, ShowSerial, true) && WeakThis->ListRebuildSerial == RebuildSerial
+			&& WeakTemplate.IsValid() && WeakContent.IsValid() && WeakThis->ItemTemplate.IsValid()
+			&& WeakThis->ItemTemplate->GetWidget() == WeakTemplate.Get();
+	};
+	bool bCompleted = false;
+	// A canceled build still hides its own template. A nested rebuild has already taken over
+	// the template and must not have its state changed by this older scope on the way out.
+	ON_SCOPE_EXIT
+	{
+		if (UUIDropdown* Dropdown = WeakThis.Get(); Dropdown != nullptr && Dropdown->ListRebuildSerial == RebuildSerial)
+		{
+			if (!bCompleted)Dropdown->bNeedRecreate = true;
+			if (UDreamWidget* Template = WeakTemplate.Get())Template->SetWidgetActive(false);
+		}
+	};
+	if (!IsCurrentBuild())return;
+	WeakTemplate->SetWidgetActive(true);
+	if (!IsCurrentBuild())return;
+	for (int32 Index = 0; Index < Options.Num(); ++Index)
+	{
+		const FUIDropdownOptionData Option = Options[Index];
+		UDreamWidget* CopiedItemWidget = UDreamUIBPLibrary::DuplicateWidget(GetWorld(), WeakTemplate.Get(), WeakContent.Get());
+		if (!IsCurrentBuild())
+		{
+			// Registering the copy can run Awake and start a newer Show before this row
+			// enters the pool. Its raw return value may already have been collected: find
+			// it through the still-live parent's children before taking a weak reference.
+			if (UDreamWidget* Content = WeakContent.Get())
 			{
-				Dropdown->OnSelectItem(i);
+				for (UDreamWidget* Child : Content->GetChildren())
+				{
+					if (Child != CopiedItemWidget)continue;
+					const TWeakObjectPtr<UDreamWidget> WeakUnpublishedRow(Child);
+					if (!WeakUnpublishedRow.IsValid())break;
+					UUIDropdown* Dropdown = WeakThis.Get();
+					const bool bAdoptedByNewBuild = Dropdown != nullptr && Dropdown->CreatedItemArray.ContainsByPredicate([Child](const TWeakObjectPtr<UUIDropdownItemComponent>& Item)
+					{
+						return Item.IsValid() && Item->GetWidget() == Child;
+					});
+					if (!bAdoptedByNewBuild)WeakUnpublishedRow->DestroyWidget();
+					break;
+				}
 			}
-			});
-		script->SetSelectionState(i == Value);
-		OnSetItemCustomDataFunction.ExecuteIfBound(i, script, CopiedItemWidget);
-		CreatedItemArray.Add(script);
+			return;
+		}
+		const TWeakObjectPtr<UDreamWidget> WeakRow(CopiedItemWidget);
+		if (!WeakRow.IsValid())return;
+		CopiedItemWidget->SetDisplayName(FString::Printf(TEXT("Item_%d"), Index));
+		UUIDropdownItemComponent* Item = CopiedItemWidget->GetComponent<UUIDropdownItemComponent>();
+		const TWeakObjectPtr<UUIDropdownItemComponent> WeakItem(Item);
+		if (!WeakItem.IsValid())return;
+		// Publish before any per-row callback: a nested Show must be able to destroy every
+		// row of the old build, including the one whose generation handler it is inside.
+		CreatedItemArray.Add(Item);
+		Item->Init(Index, Option, [WeakThis, Index]()
+		{
+			if (UUIDropdown* Dropdown = WeakThis.Get())Dropdown->OnSelectItem(Index);
+		});
+		if (!IsCurrentBuild() || !WeakRow.IsValid() || !WeakItem.IsValid())return;
+		Item->SetSelectionState(Index == Value);
+		if (!IsCurrentBuild() || !WeakRow.IsValid() || !WeakItem.IsValid())return;
+		OnSetItemCustomDataFunction.ExecuteIfBound(Index, Item, CopiedItemWidget);
+		if (!IsCurrentBuild() || !WeakRow.IsValid() || !WeakItem.IsValid())return;
+		if (bNeedRecreate)break;
 	}
-	ItemTemplateWidget->SetWidgetActive(false);
-
-	UDreamWidget::RebuildLayoutImmediately(ScrollViewContentWidget);
+	WeakTemplate->SetWidgetActive(false);
+	if (!IsCurrentBuild())return;
+	UDreamWidget::RebuildLayoutImmediately(WeakContent.Get());
+	if (!IsCurrentBuild())return;
 	float HeightOffset = 0;
-	if (auto ViewportWidget = ScrollViewContentWidget->GetParent())
+	if (UDreamWidget* ViewportWidget = WeakContent->GetParent())
 	{
 		HeightOffset = ListRoot->GetHeight() - ViewportWidget->GetHeight();
 	}
-	//if content is larger smaller than MaxHeight, then make the ListRoot smaller too
-	if (ScrollViewContentWidget->GetHeight() + HeightOffset < MaxHeight)
+	if (WeakContent->GetHeight() + HeightOffset < MaxHeight)
 	{
-		ListRoot->SetHeight(ScrollViewContentWidget->GetHeight() + HeightOffset);
+		ListRoot->SetHeight(WeakContent->GetHeight() + HeightOffset);
 	}
-	//if content is bigger than MaxHeight, then make the ListRoot as MaxHeight, so the scroll-view will work
-	else if (ScrollViewContentWidget->GetHeight() + HeightOffset > MaxHeight)
+	else if (WeakContent->GetHeight() + HeightOffset > MaxHeight)
 	{
 		ListRoot->SetHeight(MaxHeight + HeightOffset);
 	}
+	bCompleted = true;
 }
 void UUIDropdown::RecreateListItems()
 {
-	// A row's custom-data handler (UDreamDropdown's OnItemGenerated) can change the options, which asks for a rebuild
-	// while this one is still building rows. Rebuilding inside it read past the end of options that had shrunk, and a
-	// handler that always pushes rebuilt for ever; asked from inside, the rebuild waits and runs once this one is done
-	// -- once: a handler that changes the options every time leaves them for the next open.
-	if (bRecreatingListItems)
+	const TWeakObjectPtr<UUIDropdown> WeakThis(this);
+	const uint64 ShowSerial = ListOperationSerial;
+	if (!IsCurrentListOperation(WeakThis, ShowSerial, true))return;
+	// Options changed during this Show wait for a second pass. Hide followed by a new Show
+	// belongs to another operation and may rebuild immediately; the old pass then stops.
+	if (bRecreatingListItems && RecreatingOperationSerial == ShowSerial)
 	{
 		bNeedRecreate = true;
 		return;
 	}
-	TGuardValue<bool> Recreating(bRecreatingListItems, true);
+	const uint64 RebuildSerial = ++ListRebuildSerial;
+	bRecreatingListItems = true;
+	RecreatingOperationSerial = ShowSerial;
+	ON_SCOPE_EXIT
+	{
+		// A raw TGuardValue would write through a collected component, or clear a newer
+		// nested rebuild's flag. Only the build that owns this scope may finish it.
+		if (UUIDropdown* Dropdown = WeakThis.Get(); Dropdown != nullptr && Dropdown->ListRebuildSerial == RebuildSerial)
+		{
+			Dropdown->bRecreatingListItems = false;
+			if (!IsCurrentListOperation(WeakThis, ShowSerial, true))Dropdown->bNeedRecreate = true;
+		}
+	};
 	for (int32 Pass = 0; Pass < 2; ++Pass)
 	{
 		bNeedRecreate = false;
-		for (const TWeakObjectPtr<UUIDropdownItemComponent>& Item : CreatedItemArray)
-		{
-			// The entries are weak, and a row can be gone before the list is rebuilt -- destroyed by whoever
-			// owned the list, or with the list itself. A row that is gone has nothing left to destroy.
-			UDreamWidget* ItemWidget = Item.IsValid() ? Item->GetWidget() : nullptr;
-			if (IsValid(ItemWidget))
-			{
-				ItemWidget->DestroyWidget();
-			}
-		}
+		const TArray<TWeakObjectPtr<UUIDropdownItemComponent>> OldItems = MoveTemp(CreatedItemArray);
 		CreatedItemArray.Reset();
-		CreateListItems();
-		if (!bNeedRecreate)
+		for (const TWeakObjectPtr<UUIDropdownItemComponent>& Item : OldItems)
 		{
-			break;
+			UDreamWidget* ItemWidget = Item.IsValid() ? Item->GetWidget() : nullptr;
+			if (IsValid(ItemWidget))ItemWidget->DestroyWidget();
 		}
+		if (!IsCurrentListOperation(WeakThis, ShowSerial, true) || ListRebuildSerial != RebuildSerial)return;
+		CreateListItems();
+		if (!IsCurrentListOperation(WeakThis, ShowSerial, true) || ListRebuildSerial != RebuildSerial)return;
+		if (!bNeedRecreate)break;
 	}
 }
 bool UUIDropdown::IsPartOfDropdown(const UDreamWidget* InWidget)const
@@ -838,6 +946,7 @@ void UUIDropdown::SetVerticalOverlap(bool newValue)
 }
 void UUIDropdown::SetOptions(const TArray<FUIDropdownOptionData>& InOptions)
 {
+	const TWeakObjectPtr<UUIDropdown> WeakThis(this);
 	bNeedRecreate = true;
 	Options = InOptions;
 	// At once while the list is up. Marking the rows for the next open left an open list showing the
@@ -848,10 +957,12 @@ void UUIDropdown::SetOptions(const TArray<FUIDropdownOptionData>& InOptions)
 	{
 		RecreateListItems();
 	}
+	if (!WeakThis.IsValid() || !IsValid(WeakThis->GetWidget()))return;
 	ApplyValueToVisual();
 }
 void UUIDropdown::AddOptions(const TArray<FUIDropdownOptionData>& InOptions)
 {
+	const TWeakObjectPtr<UUIDropdown> WeakThis(this);
 	bNeedRecreate = true;
 	// Reserve, not SetNumUninitialized. FUIDropdownOptionData holds an FText and an
 	// FDreamUIImageBrush, so growing the array without constructing anything left N raw-garbage
@@ -868,6 +979,7 @@ void UUIDropdown::AddOptions(const TArray<FUIDropdownOptionData>& InOptions)
 	{
 		RecreateListItems();
 	}
+	if (!WeakThis.IsValid() || !IsValid(WeakThis->GetWidget()))return;
 	ApplyValueToVisual();
 }
 void UUIDropdown::SetUseInteractionBlock(bool InValue)

@@ -54,10 +54,14 @@ namespace DreamUIFocusReturnLocal
 			|| DreamUINavigationScan::CanNavigateTo(DreamUINavigationScan::FindNavigationBehaviour(InCandidate));
 	}
 
-	/** Focus InCandidate for player InUserIndex, when it is a candidate and the input system accepts it. */
+	/** Stop after acceptance or a callback's newer choice; only an unchanged refusal may try another candidate. */
 	bool TryFocus(UDreamUIInputServices& InServices, int32 InUserIndex, UDreamWidget* InCandidate, const UDreamWidget* InRoot)
 	{
-		return IsCandidate(InCandidate, InRoot) && InServices.FocusForNavigation(InCandidate, InUserIndex);
+		if (!IsCandidate(InCandidate, InRoot))return false;
+		const TWeakObjectPtr<UDreamUIInputServices> WeakServices(&InServices);
+		const FDreamUIFocusRevision Before = InServices.GetFocusRevision(InUserIndex);
+		const bool bFocused = InServices.FocusForNavigation(InCandidate, InUserIndex);
+		return bFocused || !WeakServices.IsValid() || WeakServices->GetFocusRevision(InUserIndex) != Before;
 	}
 }
 
@@ -96,7 +100,8 @@ int32 FDreamFocusReturn::Return(const UDreamWidget* InPopupRoot)
 	// Taken out and forgotten before anything moves: moving focus runs the deselect and select handlers, and one of
 	// them may open the popup again, capturing anew into this same struct.
 	const TArray<FUserFocus> Captured = MoveTemp(Users);
-	UDreamWidget* CapturedOpener = Opener.Get();
+	const TWeakObjectPtr<UDreamWidget> CapturedOpener = Opener;
+	const TWeakObjectPtr<const UDreamWidget> PopupRoot(InPopupRoot);
 	UWorld* CapturedWorld = World.Get();
 	Reset();
 
@@ -107,15 +112,21 @@ int32 FDreamFocusReturn::Return(const UDreamWidget* InPopupRoot)
 	}
 	TArray<int32> UserIndices;
 	Services->GetUserIndices(UserIndices);
+	const TWeakObjectPtr<UDreamUIInputServices> WeakServices(Services);
+	TMap<int32, FDreamUIFocusRevision> Revisions;
+	for (const int32 UserIndex : UserIndices)Revisions.Add(UserIndex, Services->GetFocusRevision(UserIndex));
 	int32 Changed = 0;
 	for (const int32 UserIndex : UserIndices)
 	{
+		if (!WeakServices.IsValid())break;
+		// An earlier player's callback may have chosen for this player too, including choosing no focus.
+		if (Services->GetFocusRevision(UserIndex) != Revisions.FindChecked(UserIndex))continue;
 		UDreamWidget* Now = Services->GetFocusedWidget(UserIndex);
 		const FUserFocus* Before = Captured.FindByPredicate([UserIndex](const FUserFocus& InEntry)
 		{
 			return InEntry.UserIndex == UserIndex;
 		});
-		const bool bInside = IsInside(Now, InPopupRoot);
+		const bool bInside = IsInside(Now, PopupRoot.Get());
 		// Focus gone with nobody having moved it on: a click catcher that took it and was destroyed, a row hidden under
 		// the player. Only for a player who had focus to lose -- one who never had any is not owed any.
 		const bool bNowhere = !IsValid(Now) && Before != nullptr && Before->bHadFocus;
@@ -124,9 +135,9 @@ int32 FDreamFocusReturn::Return(const UDreamWidget* InPopupRoot)
 			// Elsewhere: the player moved it on while the popup was up, and it is theirs to keep.
 			continue;
 		}
-		if (TryFocus(*Services, UserIndex, CapturedOpener, InPopupRoot)
-			|| (Before != nullptr && TryFocus(*Services, UserIndex, Before->Focused.Get(), InPopupRoot))
-			|| TryFocus(*Services, UserIndex, Services->ResolveScopeFocusTarget(UserIndex), InPopupRoot))
+		if (TryFocus(*Services, UserIndex, CapturedOpener.Get(), PopupRoot.Get())
+			|| (Before != nullptr && TryFocus(*Services, UserIndex, Before->Focused.Get(), PopupRoot.Get()))
+			|| TryFocus(*Services, UserIndex, Services->ResolveScopeFocusTarget(UserIndex), PopupRoot.Get()))
 		{
 			++Changed;
 			continue;
@@ -152,6 +163,8 @@ void FDreamFocusReturn::Reset()
 int32 FDreamFocusReturn::MoveFocusOutOf(const UDreamWidget* InRoot, UDreamWidget* InFallback)
 {
 	using namespace DreamUIFocusReturnLocal;
+	const TWeakObjectPtr<const UDreamWidget> Root(InRoot);
+	const TWeakObjectPtr<UDreamWidget> Fallback(InFallback);
 	UWorld* RootWorld = IsValid(InRoot) ? InRoot->GetWorld() : nullptr;
 	UDreamUIInputServices* Services = RootWorld != nullptr ? UDreamUIInputServices::Get(RootWorld) : nullptr;
 	if (Services == nullptr)
@@ -160,17 +173,23 @@ int32 FDreamFocusReturn::MoveFocusOutOf(const UDreamWidget* InRoot, UDreamWidget
 	}
 	TArray<int32> UserIndices;
 	Services->GetUserIndices(UserIndices);
+	const TWeakObjectPtr<UDreamUIInputServices> WeakServices(Services);
+	TMap<int32, FDreamUIFocusRevision> Revisions;
+	for (const int32 UserIndex : UserIndices)Revisions.Add(UserIndex, Services->GetFocusRevision(UserIndex));
 	int32 Changed = 0;
 	for (const int32 UserIndex : UserIndices)
 	{
+		if (!WeakServices.IsValid())break;
+		// An earlier player's callback may have chosen for this player too, including choosing no focus.
+		if (Services->GetFocusRevision(UserIndex) != Revisions.FindChecked(UserIndex))continue;
 		UDreamWidget* Now = Services->GetFocusedWidget(UserIndex);
-		if (!IsInside(Now, InRoot))
+		if (!IsInside(Now, Root.Get()))
 		{
 			// Elsewhere, or nowhere: nothing says this part of the widget ever had it.
 			continue;
 		}
-		if (TryFocus(*Services, UserIndex, InFallback, InRoot)
-			|| TryFocus(*Services, UserIndex, Services->ResolveScopeFocusTarget(UserIndex), InRoot))
+		if (TryFocus(*Services, UserIndex, Fallback.Get(), Root.Get())
+			|| TryFocus(*Services, UserIndex, Services->ResolveScopeFocusTarget(UserIndex), Root.Get()))
 		{
 			++Changed;
 			continue;

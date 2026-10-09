@@ -1510,13 +1510,10 @@ bool UDreamUIRenderTargetGeometrySource::LineTraceHitUV(const int32& InHitFaceIn
 
 				auto RectSpaceRayOrigin = (FVector)ToLocalRectMatrix.TransformPosition(LocalSpaceRayOrigin);
 				auto RectSpaceRayEnd = (FVector)ToLocalRectMatrix.TransformPosition(LocalSpaceRayEnd);
-				//start and end point must be different side of X plane
-				if (FMath::Sign(RectSpaceRayOrigin.X) != FMath::Sign(RectSpaceRayEnd.X))
+				// A culled back face must still advance Position0/Position1 for the next mesh segment.
+				if (FMath::Sign(RectSpaceRayOrigin.X) != FMath::Sign(RectSpaceRayEnd.X)
+					&& (bEnableInteractOnBackside || RectSpaceRayOrigin.X <= 0.0))
 				{
-					if (RectSpaceRayOrigin.X > 0 && !bEnableInteractOnBackside)//ray origin is on backside but backside can't interact
-					{
-						continue;
-					}
 					auto HitPoint = FMath::LinePlaneIntersection(RectSpaceRayOrigin, RectSpaceRayEnd, FVector::ZeroVector, FVector(1, 0, 0));
 					//hit point inside rect area
 					float Left = 0;
@@ -1528,7 +1525,7 @@ bool UDreamUIRenderTargetGeometrySource::LineTraceHitUV(const int32& InHitFaceIn
 						FHitResultContainer HitResult;
 						HitResult.UV.X = Segment * UVInterval + UVInterval * HitPoint.Y / Right;
 						HitResult.UV.Y = HitPoint.Z / Top;
-						HitResult.DistSquare = FVector::DistSquared(LocalSpaceRayOrigin, HitPoint);
+						HitResult.DistSquare = FVector::DistSquared(RectSpaceRayOrigin, HitPoint);
 						HitResult.HitPoint = HitPoint;
 						HitResult.RectMatrix = LocalRectMatrix;
 

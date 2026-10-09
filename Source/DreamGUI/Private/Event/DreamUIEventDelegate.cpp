@@ -1452,6 +1452,74 @@ void FDreamUIEventDelegate::ReplaceBindingTarget(UDreamUIBehaviour* InOldTarget,
 		}
 	}
 }
+void FDreamUIEventDelegate::RemapBehaviourBindings(UObject* InOwner, const UDreamWidget* InWidget,
+	int32 InOldIndex, int32 InNewIndex)
+{
+	if (!IsValid(InOwner) || !IsValid(InWidget) || InOldIndex == INDEX_NONE || InOldIndex == InNewIndex)
+	{
+		return;
+	}
+	bool bRecorded = false;
+	auto RecordOwner = [InOwner, &bRecorded]()
+	{
+		if (!bRecorded)
+		{
+			InOwner->Modify();
+			bRecorded = true;
+		}
+	};
+	for (int32 Index = EventList.Num() - 1; Index >= 0; --Index)
+	{
+		FDreamUIEventDelegateData& Item = EventList[Index];
+		if (Item.HelperWidget != InWidget)
+		{
+			continue;
+		}
+		// The old array is still intact. A transient TargetObject can be stale or name a runtime
+		// route, so only the serialized helpers decide which behaviour the author picked.
+		int32 OldTargetIndex = INDEX_NONE;
+		UObject* Target = UDreamUIEventDelegateParameterHelper::ResolveBindingTarget(
+			Item.HelperWidget, Item.HelperClass, Item.HelperComponentIndex, Item.HelperComponentName, &OldTargetIndex);
+		if (!IsValid(Target) || OldTargetIndex == INDEX_NONE)
+		{
+			// Widget, visual and layout targets have no position in Components.
+			continue;
+		}
+		if (InNewIndex == INDEX_NONE && OldTargetIndex == InOldIndex)
+		{
+			RecordOwner();
+			EventList.RemoveAt(Index);
+			continue;
+		}
+		int32 NewTargetIndex = OldTargetIndex;
+		if (InNewIndex == INDEX_NONE)
+		{
+			if (OldTargetIndex > InOldIndex) --NewTargetIndex;
+		}
+		else if (OldTargetIndex == InOldIndex)
+		{
+			NewTargetIndex = InNewIndex;
+		}
+		else if (InOldIndex < InNewIndex && OldTargetIndex > InOldIndex && OldTargetIndex <= InNewIndex)
+		{
+			--NewTargetIndex;
+		}
+		else if (InNewIndex < InOldIndex && OldTargetIndex >= InNewIndex && OldTargetIndex < InOldIndex)
+		{
+			++NewTargetIndex;
+		}
+		if (Item.HelperComponentIndex != NewTargetIndex || Item.HelperComponentName != Target->GetFName()
+			|| Item.TargetObject != nullptr || Item.CacheFunction != nullptr)
+		{
+			RecordOwner();
+			Item.HelperComponentIndex = NewTargetIndex;
+			Item.HelperComponentName = Target->GetFName();
+			Item.TargetObject = nullptr;
+			Item.CacheFunction = nullptr;
+		}
+	}
+}
+
 bool FDreamUIEventDelegate::HasFunctionBinding(UDreamUIBehaviour* InTargetComponent, FName InFunctionName)const
 {
 	for (auto& item : EventList)

@@ -1910,8 +1910,9 @@ bool FDreamUITextWriteBack::FlushTree(const UDreamWidgetTree* InLiveTree, FStrin
 		//
 		// Reached on every flush of a hand-written file whose values the designer has not changed --
 		// which is what opening one is -- and reaching it is why the author's first `.dui` diff is
-		// empty instead of a page of renormalised lines.
-		return true;
+		// empty instead of a page of renormalised lines. A refused disk write is still owed even
+		// though the document already has the latest text; retry it without another transaction.
+		return !Document->HasUnflushedWrite() || Document->FlushToDisk(OutError);
 	}
 
 	// Opened only now, after the text is known to differ. A nested Begin folds into an outer

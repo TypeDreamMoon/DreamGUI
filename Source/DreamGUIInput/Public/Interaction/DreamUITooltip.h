@@ -93,6 +93,8 @@ struct FDreamUITooltipUserState
 	 * where the bubble is placed -- against the focused widget for a gamepad, against the pointer for a mouse.
 	 */
 	bool bArmedByNavigation = false;
+	/** A show or hide supersedes any older operation still returning from a user callback. */
+	uint64 OperationSerial = 0;
 	/** What the visible tooltip belongs to. */
 	TWeakObjectPtr<UDreamWidget> ShownFor;
 	/** The canvas widget the bubble is parented to: a screen root, or a world-space canvas. */
@@ -176,9 +178,9 @@ private:
 	 * candidate restarts the dwell and hides a bubble shown for another.
 	 */
 	void RefreshCandidate(FDreamUITooltipUserState& InState);
-	void TickUser(FDreamUITooltipUserState& InState, float InDeltaSeconds);
+	void TickUser(int32 InUserIndex, FDreamUITooltipUserState& InState, float InDeltaSeconds);
 	void HideUserTooltip(FDreamUITooltipUserState& InState);
-	void ShowFor(FDreamUITooltipUserState& InState, UDreamWidget* InSource);
+	void ShowFor(int32 InUserIndex, UDreamWidget* InSource);
 	/** Size the built-in bubble to its text's preferred size; safe to call before the text can answer. */
 	void SizeBubbleToText(FDreamUITooltipUserState& InState);
 	void UpdateTooltipPosition(FDreamUITooltipUserState& InState);

@@ -4,6 +4,7 @@
 
 #include "DreamWidgetBlueprint.h"
 #include "DreamWidgetBlueprintEditor.h"
+#include "Designer/DreamWidgetPreviewHost.h"
 #include "Designer/DreamUITextAuthoringGate.h"
 #include "DreamGUIEditorModule.h"
 #include "Core/DreamUIBehaviour.h"
@@ -58,7 +59,16 @@ namespace DreamWidgetPropertyBindingExtension
 		else if (UDreamUIBehaviour* Behaviour = Cast<UDreamUIBehaviour>(InObject))
 		{
 			UDreamWidget* Owner = Behaviour->GetWidget();
-			const int32 Index = IsValid(Owner) ? Owner->GetAllComponents().Find(Behaviour) : INDEX_NONE;
+			int32 Index = IsValid(Owner) ? Owner->GetAllComponents().Find(Behaviour) : INDEX_NONE;
+			if (Index != INDEX_NONE)
+			{
+				if (FDreamWidgetBlueprintEditor* Designer = FDreamWidgetBlueprintEditor::FindDesignerForWidget(Owner))
+				{
+					UDreamUIBehaviour* Authored = Designer->GetPreviewHost()->FindTemplateComponentForPreview(Behaviour);
+					if (Authored == nullptr)return Site;
+					Index = Authored->GetWidget()->GetAllComponents().Find(Authored);
+				}
+			}
 			if (Index != INDEX_NONE)
 			{
 				Site.Widget = Owner;

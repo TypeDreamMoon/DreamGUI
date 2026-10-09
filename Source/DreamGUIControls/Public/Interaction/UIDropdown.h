@@ -152,6 +152,9 @@ protected:
 	bool bNeedRecreate = true;
 	/** True while RecreateListItems runs: a rebuild asked for from inside it (a row's handler changing the options) waits. */
 	bool bRecreatingListItems = false;
+	uint64 ListOperationSerial = 0;
+	uint64 ListRebuildSerial = 0;
+	uint64 RecreatingOperationSerial = 0;
 	TWeakObjectPtr<UDreamTweener> ShowOrHideTweener;
 	UPROPERTY(Transient) TArray<TWeakObjectPtr<class UUIDropdownItemComponent>> CreatedItemArray;
 	virtual bool OnPointerClick_Implementation(UDreamPointerEventData* EventData)override;
@@ -182,6 +185,9 @@ protected:
 	FSimpleMulticastDelegate OnListPutAwayCPP;
 
 private:
+	/** Validate the latest Show/Hide operation without touching a destroyed or collected component. */
+	static bool IsCurrentListOperation(const TWeakObjectPtr<UUIDropdown>& InDropdown, uint64 InSerial, bool bInShow);
+
 	/**
 	 * Close the open list: focus back on the face for every player whose focus was in the list (the popup
 	 * layer's dismissal, or the capture below when the list never went up on it), the close announced,

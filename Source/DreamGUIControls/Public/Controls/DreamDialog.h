@@ -380,6 +380,7 @@ protected:
 
 	/** The dialog appearing -- at begin play when it starts awake, and on every wake after -- takes focus. */
 	virtual void NativeOnEnable() override;
+	virtual void NativeOnDestruct() override;
 
 #if WITH_EDITOR
 	/** The base re-applies style; the button SPECS live outside ApplyStyle and rebuild here. */
@@ -387,6 +388,10 @@ protected:
 #endif
 
 private:
+	/** A callback may close, reactivate or destroy the dialog before an older operation resumes. */
+	uint64 DialogTransitionSerial = 0;
+	bool bCloseInProgress = false;
+
 	/** Destroy the current button widgets and build one Native.Button per spec. */
 	void RebuildButtons();
 

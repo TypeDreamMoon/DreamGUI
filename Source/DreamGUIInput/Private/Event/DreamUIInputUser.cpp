@@ -48,6 +48,7 @@
 #include "Interaction/UISelectable.h"
 #include "Misc/ScopeExit.h"
 #include "ProfilingDebugging/CpuProfilerTrace.h"
+#include "UObject/StrongObjectPtr.h"
 
 DECLARE_CYCLE_STAT(TEXT("InputUserFrame"), STAT_DreamUIInputUserFrame, STATGROUP_DreamGUI);
 
@@ -335,42 +336,82 @@ void UDreamUIInputUser::SetSelectWidgetForCause(UDreamWidget* InSelectWidget, UD
 	{
 		return;
 	}
+	// A callback may retire this pointer and collect its old event data. Focus belongs to the
+	// player, so the transition can still finish, using the pointer's replacement when it has one.
+	TStrongObjectPtr<UDreamBaseEventData> HeldEventData(InEventData);
+	const TWeakObjectPtr<UDreamUIInputUser> WeakThis(this);
+	const UDreamPointerEventData* PointerEventData = Cast<UDreamPointerEventData>(InEventData);
+	const int32 PointerId = PointerEventData != nullptr ? PointerEventData->PointerID : 0;
 	// Recorded before anything hears of the change: a widget's Select handler -- a field deciding whether to begin its
 	// edit, a control drawing its Focused look -- reads the cause of its own selection. Inside a navigation step it is
 	// the step's, whoever asked: a handler that moves the focus on from inside the step moves it as part of it.
 	FocusCause = !IsValid(InSelectWidget) ? EDreamUIFocusCause::None
 		: StepFocusCause != EDreamUIFocusCause::None ? StepFocusCause : InCause;
-	ON_SCOPE_EXIT{ UpdateFocusVisible(); };
+	ON_SCOPE_EXIT
+	{
+		if (UDreamUIInputUser* Current = WeakThis.Get())
+		{
+			// Callbacks can add or replace pointers after the first mirror. They all follow the
+			// latest focus, including when a nested transition superseded this one.
+			Current->MirrorFocusOntoPointers();
+			Current->UpdateFocusVisible();
+		}
+	};
 	// The player's focus is what changes, whichever pointer asks. A pointer used to keep a focus of its own, and a
 	// finger's went with the finger: tap a field, lift, and nothing was focused -- while the field went on editing
 	// with nothing able to end it.
-	UDreamWidget* OldSelected = FocusedWidget.Get();
+	const TWeakObjectPtr<UDreamWidget> OldSelected(FocusedWidget);
 	InEventData->SelectedComponent = InSelectWidget;
-	if (OldSelected == InSelectWidget)
+	if (OldSelected.Get() == InSelectWidget)
 	{
-		MirrorFocusOntoPointers();
 		return;
+	}
+	const uint64 Serial = ++FocusTransitionSerial;
+	for (FPendingFocusLost& Pending : PendingFocusLost)
+	{
+		if (Pending.Widget.Get() == InSelectWidget)Pending.bReselected = true;
 	}
 	FocusedWidget = InSelectWidget;
 	MirrorFocusOntoPointers();
-	const UDreamPointerEventData* PointerEventData = Cast<UDreamPointerEventData>(InEventData);
-	const int32 PointerId = PointerEventData != nullptr ? PointerEventData->PointerID : 0;
-	if (IsValid(OldSelected))
+	if (UDreamWidget* OldWidget = OldSelected.Get())
 	{
-		CallOnPointerDeselect(OldSelected, InEventData);
-		if (IsValid(OldSelected))
+		PendingFocusLost.Add({OldSelected, Serial, false});
+		CallOnPointerDeselect(OldWidget, InEventData);
+		if (UDreamUIInputUser* Current = WeakThis.Get(); Current != nullptr)
 		{
-			OldSelected->NotifyFocusLost(UserIndex, PointerId);
+			// Reselecting this widget cancels its old Lost even if the callback leaves it again:
+			// that newer tenure's transition has already sent the notification it owes.
+			const int32 PendingIndex = Current->PendingFocusLost.IndexOfByPredicate([Serial](const FPendingFocusLost& Pending) { return Pending.Serial == Serial; });
+			const bool bReselected = PendingIndex != INDEX_NONE && Current->PendingFocusLost[PendingIndex].bReselected;
+			if (PendingIndex != INDEX_NONE)Current->PendingFocusLost.RemoveAt(PendingIndex);
+			if (UDreamWidget* LostWidget = OldSelected.Get(); !bReselected && LostWidget != nullptr && Current->FocusedWidget.Get() != LostWidget)
+			{
+				LostWidget->NotifyFocusLost(Current->UserIndex, PointerId);
+			}
 		}
 	}
-	// Only while the focus is still what this call gave it: a Deselect handler is game code, and may already have
-	// moved it on -- and that move sent its own Select.
-	if (UDreamWidget* NewSelected = FocusedWidget.Get(); IsValid(NewSelected) && NewSelected == InSelectWidget)
+	UDreamUIInputUser* Current = WeakThis.Get();
+	if (Current == nullptr || Current->bShutDown || Current->FocusTransitionSerial != Serial)
 	{
-		CallOnPointerSelect(NewSelected, InEventData);
-		if (IsValid(NewSelected))
+		return;
+	}
+	const TWeakObjectPtr<UDreamWidget> NewSelected(Current->FocusedWidget);
+	if (UDreamWidget* NewWidget = NewSelected.Get(); NewWidget != nullptr && NewWidget == InSelectWidget)
+	{
+		UDreamBaseEventData* SelectEventData = PointerEventData != nullptr ? Current->FindPointerEventData(PointerId) : nullptr;
+		if (SelectEventData == nullptr)SelectEventData = HeldEventData.Get();
+		TStrongObjectPtr<UDreamBaseEventData> HeldSelectEventData(SelectEventData);
+		Current->MirrorFocusOntoPointers();
+		Current->CallOnPointerSelect(NewWidget, HeldSelectEventData.Get());
+		Current = WeakThis.Get();
+		// Identity alone cannot detect B -> C -> B: the nested transition already sent B its
+		// Received. Only the transition still current after Select owns that notification.
+		if (Current != nullptr && !Current->bShutDown && Current->FocusTransitionSerial == Serial)
 		{
-			NewSelected->NotifyFocusReceived(UserIndex, PointerId);
+			if (UDreamWidget* ReceivedWidget = NewSelected.Get(); ReceivedWidget != nullptr && Current->FocusedWidget.Get() == ReceivedWidget)
+			{
+				ReceivedWidget->NotifyFocusReceived(Current->UserIndex, PointerId);
+			}
 		}
 	}
 }

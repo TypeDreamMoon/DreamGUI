@@ -181,7 +181,8 @@ public:
 	 * again; then every loaded one, which is what FindBlueprintsForSource compares, by the same normalized resolved
 	 * path; and only then the widget Blueprints the asset registry lists and this session has not read yet, likeliest
 	 * first (an asset named like the file), each loaded once and remembered, so the second question about any file
-	 * costs nothing. An asset removed or renamed is forgotten.
+	 * costs nothing. Removed, renamed, saved or updated assets are forgotten; if a selected class shared its file,
+	 * its other examined owners can be discovered again. Loaded observations keep the same smallest asset path.
 	 *
 	 * It never compiles anything: it is asked from inside the builder, which runs inside some other Blueprint's
 	 * compile, and a compile started from there would be a compile inside a compile. A class is returned as it

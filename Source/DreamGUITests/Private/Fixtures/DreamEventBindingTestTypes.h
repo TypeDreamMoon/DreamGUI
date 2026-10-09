@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "Core/DreamUIBehaviour.h"
 #include "UObject/Object.h"
+#include "Event/DreamUIEventDelegate.h"
 #include "DreamEventBindingTestTypes.generated.h"
 
 /**
@@ -25,6 +26,22 @@ struct FDreamEventBindingTestPayload
 
 	UPROPERTY()
 	FVector2D Offset = FVector2D::ZeroVector;
+};
+
+/** A key whose nested event must not be edited through a hash container. */
+USTRUCT()
+struct FDreamEventBindingTestKey
+{
+	GENERATED_BODY()
+
+	UPROPERTY()
+	int32 Key = 0;
+
+	UPROPERTY()
+	FDreamUIEventDelegate AuthoredEvent;
+
+	bool operator==(const FDreamEventBindingTestKey& InOther) const { return Key == InOther.Key; }
+	friend uint32 GetTypeHash(const FDreamEventBindingTestKey& InKey) { return GetTypeHash(InKey.Key); }
 };
 
 /**
@@ -63,6 +80,25 @@ public:
 	int32 TouchCount = 0;
 	int32 PayloadCallCount = 0;
 	FDreamEventBindingTestPayload LastPayload;
+	int32 WidgetCallCount = 0;
+
+	UPROPERTY()
+	FDreamUIEventDelegate AuthoredEvent;
+
+	UPROPERTY()
+	TArray<FDreamUIEventDelegate> NestedAuthoredEvents;
+
+	UPROPERTY()
+	TMap<FDreamEventBindingTestKey, int32> AuthoredEventKeys;
+
+	UPROPERTY()
+	TSet<FDreamEventBindingTestKey> AuthoredEventSet;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UDreamWidget> LastWidget = nullptr;
+
+	UFUNCTION()
+	void TakeWidget(UDreamWidget* InWidget) { LastWidget = InWidget; ++WidgetCallCount; }
 
 	UFUNCTION()
 	void Touch() { ++TouchCount; }

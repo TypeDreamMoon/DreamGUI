@@ -371,6 +371,12 @@ public:
 	void GetValidationIssues(TArray<FDreamUIEventBindingValidationIssue>& OutIssues, const UDreamWidget* RootWidget = nullptr) const;
 	/** Redirect bindings that target a behaviour instance after the prefab replaces its primary behaviour. */
 	void ReplaceBindingTarget(UDreamUIBehaviour* InOldTarget, UDreamUIBehaviour* InNewTarget);
+	/**
+	 * Before a widget's component array changes, carry authored routes with the behaviour they name.
+	 * InNewIndex == INDEX_NONE removes routes to the deleted behaviour. Resolves serialized helper
+	 * fields against the old array, including legacy names, and records InOwner before writing.
+	 */
+	void RemapBehaviourBindings(UObject* InOwner, const UDreamWidget* InWidget, int32 InOldIndex, int32 InNewIndex);
 
 	/** This event's native parameter type (the value it fires with). */
 	EDreamUIEventDelegateParameterType GetSupportParameterType()const { return SupportParameterType; }

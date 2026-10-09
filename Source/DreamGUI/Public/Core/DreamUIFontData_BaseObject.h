@@ -380,6 +380,8 @@ public:
 #if WITH_EDITOR
 	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
 	virtual void PreEditChange(FProperty* PropertyAboutToChange) override;
+	virtual void PreEditUndo() override;
+	virtual void PostEditUndo() override;
 #endif
 
 	DECLARE_EVENT(UDreamUIFontData_BaseObject, FDreamUIFontEmojiDataRefreshEvent);

@@ -9,6 +9,8 @@
 #include "DreamGUI.h"
 #include "UObject/LinkerLoad.h"
 #include "UObject/Package.h"
+#include "UObject/UObjectHash.h"
+#include "UObject/UnrealType.h"
 #include "Animation/DreamWidgetAnimationComponent.h"
 #include "Animation/DreamWidgetAnimation.h"
 #include "Animation/DreamUISequence.h"
@@ -65,22 +67,50 @@ namespace
 		return nullptr;
 	}
 
-	/** Rewrite one container's object properties that still name the archetype tree. */
+	/** Rewrite references in properties, structs and containers that still name the archetype tree. */
 	void RetargetReferencesOn(UObject* InContainer, UDreamWidgetTree* InInstancedTree, const UDreamWidgetTree* InArchetypeTree)
 	{
 		if (!IsValid(InContainer))
 		{
 			return;
 		}
-		for (TFieldIterator<FObjectPropertyBase> It(InContainer->GetClass(), EFieldIterationFlags::Default); It; ++It)
+		// An authored event's HelperWidget and ReferenceObject live in EventList's struct entries.
+		// A field iterator sees only the top-level event property, leaving every instance's route
+		// aimed at the archetype. The value iterator reaches those entries, as DuplicateSubtree does.
+		TArray<const FProperty*> PropertyChain;
+		for (TPropertyValueIterator<FObjectPropertyBase> It(InContainer->GetClass(), InContainer); It; ++It)
 		{
+			const FObjectPropertyBase* Property = It.Key();
 			// Soft and class references cannot name a node of a tree, and walking them would resolve
 			// paths for nothing.
-			if (It->IsA<FSoftObjectProperty>() || It->IsA<FClassProperty>())
+			if (Property->IsA<FSoftObjectProperty>() || Property->IsA<FClassProperty>())
 			{
 				continue;
 			}
-			UObject* Value = It->GetObjectPropertyValue_InContainer(InContainer);
+			// Preserve hashed keys, matching the subtree-copy pass: changing one in place would leave
+			// its map or set hashed by the old reference.
+			// A key may itself be a struct or array, so checking only the immediate owner misses
+			// object references nested inside it. The iterator's chain runs from leaf to root.
+			// GetPropertyChain appends to its output; only this value's ancestry decides whether it is a key.
+			PropertyChain.Reset();
+			It.GetPropertyChain(PropertyChain);
+			bool bHashedKey = false;
+			for (int32 Index = 0; Index < PropertyChain.Num(); ++Index)
+			{
+				const FMapProperty* Map = CastField<FMapProperty>(PropertyChain[Index]);
+				if (PropertyChain[Index]->IsA<FSetProperty>()
+					|| (Map != nullptr && Index > 0 && Map->KeyProp == PropertyChain[Index - 1]))
+				{
+					bHashedKey = true;
+					break;
+				}
+			}
+			if (bHashedKey)
+			{
+				continue;
+			}
+			void* ValueAddress = const_cast<void*>(It.Value());
+			UObject* Value = Property->GetObjectPropertyValue(ValueAddress);
 			// The criterion is where the value lives, not how it is typed: anything still inside the
 			// archetype tree is by construction the wrong object for this instance to be holding.
 			if (Value == nullptr || !Value->IsIn(InArchetypeTree))
@@ -89,7 +119,7 @@ namespace
 			}
 			if (UObject* Counterpart = FindIntraTreeCounterpart(Value, InInstancedTree))
 			{
-				It->SetObjectPropertyValue_InContainer(InContainer, Counterpart);
+				Property->SetObjectPropertyValue(ValueAddress, Counterpart);
 			}
 			else
 			{
@@ -97,7 +127,7 @@ namespace
 				// old behaviour, and the log names the property so the cause is not a mystery.
 				UE_LOG(DreamGUI, Warning,
 					TEXT("[%s].%d '%s.%s' points at '%s' in the class template and has no counterpart in this instance; left as authored."),
-					ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *InContainer->GetName(), *It->GetName(), *Value->GetName());
+					ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *InContainer->GetName(), *Property->GetName(), *Value->GetName());
 			}
 		}
 	}
@@ -122,10 +152,19 @@ namespace
 		InInstancedTree->ForEachWidget([&](UDreamWidget* Widget)
 		{
 			RetargetReferencesOn(Widget, InInstancedTree, InArchetypeTree);
-			RetargetReferencesOn(Widget->GetVisual(), InInstancedTree, InArchetypeTree);
-			for (UDreamUIBehaviour* Behaviour : Widget->GetAllComponents())
+			// Instanced inline objects, such as a component's play tweens, own reflected event
+			// structs that the widget/component property iterator cannot enter.
+			TArray<UObject*> OwnedObjects;
+			GetObjectsWithOuter(Widget, OwnedObjects, EGetObjectsFlags::IncludeNestedObjects);
+			for (UObject* Owned : OwnedObjects)
 			{
-				RetargetReferencesOn(Behaviour, InInstancedTree, InArchetypeTree);
+				// Keep nested user-widget trees in their own namespace; external assets are never
+				// enumerated because only the widget's Outer descendants are visited.
+				if (IsValid(Owned) && !Owned->IsA<UDreamWidget>() && !Owned->IsA<UDreamWidgetTree>()
+					&& Owned->GetTypedOuter<UDreamWidget>() == Widget)
+				{
+					RetargetReferencesOn(Owned, InInstancedTree, InArchetypeTree);
+				}
 			}
 		});
 	}
@@ -303,8 +342,18 @@ void UDreamWidgetGeneratedClass::InitializeWidgetStatic(UDreamUserWidget* InUser
 		}
 	};
 	BindAnimationVariables(InUserWidget);
-	InstancedTree->ForEachWidget([&](UDreamWidget* Widget)
+	// Initializing a nested user widget adds its private children. Bind only the authored
+	// snapshot, including this tree's named-slot content, before any such expansion.
+	const TArray<UDreamWidget*> WidgetsToBind = InstancedTree->GetAllWidgets();
+	// A nested widget's initialization can reorder its own components too, so capture every
+	// authored target before initializing even the first nested widget.
+	InUserWidget->CaptureBindingComponentIdentities(InstancedTree, WidgetsToBind);
+	for (UDreamWidget* Widget : WidgetsToBind)
 	{
+		if (!IsValid(Widget) || Widget->GetTypedOuter<UDreamWidgetTree>() != InstancedTree)
+		{
+			continue;
+		}
 		const FName VariableName = UDreamWidgetTree::MakeWidgetVariableName(Widget);
 		if (FObjectPropertyBase** PropertyPtr = ObjectPropertiesByName.Find(VariableName))
 		{
@@ -329,7 +378,7 @@ void UDreamWidgetGeneratedClass::InitializeWidgetStatic(UDreamUserWidget* InUser
 		// graph that plays the archetype's copy animates a tree nobody is looking at.
 		BindAnimationVariables(Widget);
 
-				// A nested user widget builds its own contents from its own class, the way UMG initializes
+		// A nested user widget builds its own contents from its own class, the way UMG initializes
 		// instanced sub-widgets during DuplicateAndInitializeFromWidgetTree.
 		if (UDreamUserWidget* NestedUserWidget = Cast<UDreamUserWidget>(Widget))
 		{
@@ -338,7 +387,7 @@ void UDreamWidgetGeneratedClass::InitializeWidgetStatic(UDreamUserWidget* InUser
 				NestedUserWidget->Initialize();
 			}
 		}
-	});
+	}
 
 	// Filling the host's slots used to be step 3b, here. It is now UDreamUserWidget::
 	// AttachNamedSlotContent, called at the end of Initialize -- late enough that a NATIVE control

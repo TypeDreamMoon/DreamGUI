@@ -21,7 +21,8 @@ void UUIListEntry::Assign(UUIListView* InOwner, UObject* InItem, int32 InIndex, 
 	TreeDepth = InTreeDepth;
 	bSelected = bInSelected;
 	ReceiveOnListItemAssigned(Item, ItemIndex, bSelected);
-	if (bSelectionChanged)
+	if (IsValid(this) && OwnerList.Get() == InOwner && Item == InItem && ItemIndex == InIndex
+		&& bSelected == bInSelected && bSelectionChanged)
 	{
 		ReceiveOnSelectionChanged(bSelected);
 	}
@@ -69,13 +70,16 @@ void UUIListView::SetCell_Implementation(UDreamUIBehaviour* Component, int Index
 	{
 		return;
 	}
+	const uint64 Generation = GetCellPoolGeneration();
 	UObject* NewItem = Items[Index];
 	UObject* PreviousItem = Entry->GetItem();
 	if (IsValid(PreviousItem) && PreviousItem != NewItem)
 	{
 		OnEntryReleased.Broadcast(PreviousItem, Entry);
+		if (!IsValid(this) || !IsValid(Entry) || Generation != GetCellPoolGeneration())return;
 	}
 	Entry->Assign(this, NewItem, Index, GetEntryDepth(Index), SelectedItems.Contains(NewItem));
+	if (!IsValid(this) || !IsValid(Entry) || Generation != GetCellPoolGeneration())return;
 	if (PreviousItem != NewItem)
 	{
 		OnEntryGenerated.Broadcast(NewItem, Entry);
@@ -156,19 +160,15 @@ TArray<UObject*> UUIListView::GetListItems() const
 
 void UUIListView::SetItemSelection(UObject* Item, bool bSelected, bool bClearOthers)
 {
-	if (SelectionMode == EUIListSelectionMode::None || !Items.Contains(Item))
+	if (SelectionMode == EUIListSelectionMode::None || !IsValid(Item) || !Items.Contains(Item))
 	{
 		return;
 	}
+	const uint64 Generation = ++SelectionGeneration;
+	const uint64 PoolGeneration = GetCellPoolGeneration();
 	const bool bMustClearOthers = bSelected && (bClearOthers || SelectionMode == EUIListSelectionMode::Single || SelectionMode == EUIListSelectionMode::SingleToggle);
-	// Whether the SET moved, which is not the same question as whether THIS item's state moved --
-	// and the distinction is the whole of this function's history. Clicking the already-selected row
-	// in Single mode drops every other selection while leaving this one exactly as it was, so a
-	// repaint gated on "this item changed" left those rows still drawn as selected. It is reachable
-	// from ordinary use: HandleEntryClicked re-selects a selected row on every click, and any
-	// second selection (a mode change from Multi, a caller passing bClearOthers=false, code seeding
-	// the set directly) is the one that stays lit.
-	bool bSelectionMoved = false;
+	// Other rows can change even when this item was already selected. Refresh only rows whose
+	// visible selection differs, including a nested request that leaves the selection empty.
 	if (bMustClearOthers)
 	{
 		TArray<TObjectPtr<UObject>> PreviousSelection = SelectedItems.Array();
@@ -177,8 +177,10 @@ void UUIListView::SetItemSelection(UObject* Item, bool bSelected, bool bClearOth
 			if (Previous != Item)
 			{
 				SelectedItems.Remove(Previous);
-				bSelectionMoved = true;
 				OnSelectionChanged.Broadcast(Previous, false);
+				// The listener can replace items, clear the list, or make another selection.
+				if (!IsValid(this) || Generation != SelectionGeneration || PoolGeneration != GetCellPoolGeneration()
+					|| !IsValid(Item) || !Items.Contains(Item) || SelectionMode == EUIListSelectionMode::None)return;
 			}
 		}
 	}
@@ -193,22 +195,22 @@ void UUIListView::SetItemSelection(UObject* Item, bool bSelected, bool bClearOth
 	}
 	if (bWasSelected != bSelected)
 	{
-		bSelectionMoved = true;
 		OnSelectionChanged.Broadcast(Item, bSelected);
+		if (!IsValid(this) || Generation != SelectionGeneration || PoolGeneration != GetCellPoolGeneration())return;
 	}
-	if (bSelectionMoved)
-	{
-		RefreshVisibleSelection();
-	}
+	RefreshVisibleSelection();
 }
 
 void UUIListView::ClearSelection()
 {
+	const uint64 Generation = ++SelectionGeneration;
+	const uint64 PoolGeneration = GetCellPoolGeneration();
 	TArray<TObjectPtr<UObject>> PreviousSelection = SelectedItems.Array();
 	SelectedItems.Reset();
 	for (UObject* Item : PreviousSelection)
 	{
 		OnSelectionChanged.Broadcast(Item, false);
+		if (!IsValid(this) || Generation != SelectionGeneration || PoolGeneration != GetCellPoolGeneration())return;
 	}
 	RefreshVisibleSelection();
 }
@@ -250,11 +252,16 @@ void UUIListView::HandleEntryClicked(UUIListEntry* Entry)
 
 void UUIListView::RefreshVisibleSelection()
 {
-	for (const FUIRecyclableScrollViewCellContainer& Cell : GetCacheCellList())
+	const uint64 Generation = GetCellPoolGeneration();
+	const uint64 SelectionPass = SelectionGeneration;
+	for (int32 Index = 0; Index < GetCacheCellList().Num(); ++Index)
 	{
-		if (UUIListEntry* Entry = ResolveEntry(Cell.CellComponent))
+		const auto Cell = GetCacheCellList()[Index];
+		if (UUIListEntry* Entry = ResolveEntry(Cell.CellComponent); IsValid(Entry)
+			&& Entry->IsSelected() != SelectedItems.Contains(Entry->GetItem()))
 		{
 			Entry->Assign(this, Entry->GetItem(), Entry->GetItemIndex(), Entry->GetTreeDepth(), SelectedItems.Contains(Entry->GetItem()));
+			if (!IsValid(this) || Generation != GetCellPoolGeneration() || SelectionPass != SelectionGeneration)return;
 		}
 	}
 }

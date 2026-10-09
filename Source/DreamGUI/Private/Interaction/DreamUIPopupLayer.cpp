@@ -469,6 +469,8 @@ bool UDreamUIPopupLayer::Push(const FDreamPopupParams& Params)
 		Params.Place.Execute(Popup);
 	}
 
+	const TWeakObjectPtr<UDreamUIPopupLayer> WeakThis(this);
+	const TWeakObjectPtr<UDreamWidget> WeakPopup(Popup);
 	if (Params.bFocusOnOpen)
 	{
 		if (UDreamUIInputServices* Services = UDreamUIInputServices::Get(Popup))
@@ -478,7 +480,11 @@ bool UDreamUIPopupLayer::Push(const FDreamPopupParams& Params)
 			// dropdown's face losing focus to its own row must not read that as focus leaving the dropdown.
 			// The first navigable control only while the popup is still open: a handler of that move may have closed it, and
 			// the focus its dismissal gave back is not taken into a popup that is no longer up.
-			if ((Target == nullptr || !Services->FocusForNavigation(Target, UserIndex)) && IsValid(Popup) && IsOpen(Popup))
+			const TWeakObjectPtr<UDreamUIInputServices> WeakServices(Services);
+			const FDreamUIFocusRevision Before = Services->GetFocusRevision(UserIndex);
+			const bool bNeedsFallback = Target == nullptr || !Services->FocusForNavigation(Target, UserIndex);
+			if (!WeakThis.IsValid() || !WeakPopup.IsValid())return false;
+			if (bNeedsFallback && WeakServices.IsValid() && Services->GetFocusRevision(UserIndex) == Before && IsOpen(WeakPopup.Get()))
 			{
 				// A popup with nothing navigable in it keeps focus where it was rather than dropping it somewhere.
 				if (UDreamWidget* First = FindFirstNavigable(Popup))
@@ -488,6 +494,8 @@ bool UDreamUIPopupLayer::Push(const FDreamPopupParams& Params)
 			}
 		}
 	}
+	if (!WeakThis.IsValid() || !WeakPopup.IsValid())return false;
+	Popup = WeakPopup.Get();
 	// Open as it returns, which the focus move above may have undone: its deselect and select handlers are game code, and
 	// one of them closing the popup (or destroying it) has had it dismissed, its owner told. True here would have the
 	// owner record as open a popup that is already closed -- a menu announcing it opened after it announced it closed.
@@ -570,11 +578,14 @@ void UDreamUIPopupLayer::DismissEntry(FObjectKey InPopupKey, EDreamPopupDismissR
 	UDreamWidget* Popup = Closing.Popup.Get();
 	// Focus first, while everything is still where the player saw it: hiding is what clears a focus that cannot stay.
 	Closing.FocusReturn.Return(Popup);
+	// Focus handlers may destroy the popup or push this same widget again. The new entry
+	// owns its elevated home; an old dismissal must not restore it out of the new stack.
+	Popup = Closing.Popup.Get();
 	if (Popup == nullptr)
 	{
 		ElevatedHomes.Remove(InPopupKey);
 	}
-	else if (Closing.bRestoreOnDismiss)
+	else if (Closing.bRestoreOnDismiss && !IsOpen(Popup))
 	{
 		RestoreHome(Popup);
 	}
