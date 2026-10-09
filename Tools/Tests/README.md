@@ -14,6 +14,7 @@ judge the result lives here, next to the tests it runs.
 | `coverage_matrix.py`, `coverage.json`, `COVERAGE.md` | The control-by-input-by-configuration coverage table and its tag convention |
 | `sourcescan.py` | What the source declares as tests, shared by all of the above |
 | `hooks/pre-push`, `Install-DreamGUIHooks.ps1` | The optional pre-push hook and its installer |
+| `EditorHolders.ps1`, `Test-EditorHolders.ps1` | Which editors have a project open, for the runner, the nightly and the bench; and its checks |
 
 Requirements: PowerShell 7.2 or later (`pwsh`), Python 3.8 or later on `PATH` as `python`, git.
 
@@ -32,7 +33,12 @@ The steps, in order:
    the report directory is not on drive C (it is nearly full); Python 3 answers; and no Unreal
    editor has this `.uproject` on its command line. An open editor would hold the DLLs the build
    has to replace (LNK1104) and share the project's `Saved` directory with the test run, so the
-   runner refuses (exit 2) unless `-AllowEditorOpen`.
+   runner refuses (exit 2) unless `-AllowEditorOpen`. The command line comes from CIM, and names
+   the project by its full path, so a second host with a `.uproject` of the same name is not this
+   one. Where CIM cannot be loaded -- a shell without access to WMI's native client makes
+   `Get-CimInstance` throw -- an editor that has loaded a DLL from inside the project directory
+   counts instead, and one whose modules cannot be read is reported. `Test-EditorHolders.ps1`
+   checks both ways and needs no engine.
 2. **Static checks** (`static_checks.py`); skip with `-SkipStaticChecks`.
 3. **Build**: `Build.bat <Project>Editor Win64 Development -Project=... -WaitMutex -NoHotReloadFromIDE
    -NoEngineChanges`, the whole editor target. Never `-Module=`: a restricted build does not rewrite

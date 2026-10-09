@@ -68,8 +68,9 @@ function Finish([int]$Code) {
 Note "# DreamGUI nightly $Stamp"
 Note ''
 
-# 1. Nobody else's editor on the host.
-if (Get-CimInstance Win32_Process -Filter "Name like 'UnrealEditor%'" | Where-Object { $_.CommandLine -like "*$HostName.uproject*" }) {
+# 1. Nobody else's editor on the host: this host's .uproject, not another of the same name.
+. (Join-Path $PSScriptRoot 'EditorHolders.ps1')
+if ((Get-DreamGUIEditorHolders -UProject $Project).Holders.Count -gt 0) {
     Note "- An editor of $HostName is open; nothing was run."
     Finish 2
 }
