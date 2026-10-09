@@ -170,7 +170,8 @@ int32 UDreamUIManagerWorldSubsystem::CountCompetingScreenSpaceOverlayCanvases()c
 	// Asked every frame: the root canvases set to ScreenSpaceOverlay are one of the lists sorted for the passes over them,
 	// rather than a walk of every registered canvas -- a thousand world panels among them.
 	const_cast<UDreamUIManagerWorldSubsystem*>(this)->SortRootCanvasesIfStale();
-	int32 Count = 0;
+	TMap<int32, int32, TInlineSetAllocator<4>> CountsByLayer;
+	int32 MaxCount = 0;
 	for (auto& Canvas : RootCanvasesByPass[0])
 	{
 		if (!IsCanvasStillRegistered(Canvas))continue;
@@ -181,9 +182,12 @@ int32 UDreamUIManagerWorldSubsystem::CountCompetingScreenSpaceOverlayCanvases()c
 		// would fire the "only one ScreenSpace UI" error on a page prefab merely being prepared.
 		const UDreamWidget* CanvasWidget = Canvas->GetWidget();
 		if (CanvasWidget != nullptr && !CanvasWidget->GetWidgetActiveInHierarchy())continue;
-		Count++;
+		// A shared root and one root for each player are different layers. Only roots with the same
+		// authored player (INDEX_NONE for shared) compete for a projection.
+		int32& LayerCount = CountsByLayer.FindOrAdd(Canvas->GetViewportPlayerIndex());
+		MaxCount = FMath::Max(MaxCount, ++LayerCount);
 	}
-	return Count;
+	return MaxCount;
 }
 
 void UDreamUIManagerWorldSubsystem::ParkWidget(UDreamWidget* InWidget)

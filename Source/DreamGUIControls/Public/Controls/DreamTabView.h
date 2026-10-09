@@ -470,6 +470,11 @@ private:
 	 */
 	void RebuildTabs(const TArray<FTabFocusCarry>* InCarriedFocus = nullptr);
 
+	/** A nested regeneration owns the replacement strip from that point on. */
+	uint64 TabRebuildSerial = 0;
+	/** Selection callbacks may hand ownership of the active index to a newer operation. */
+	uint64 TabSelectionSerial = 0;
+
 	/**
 	 * Open the tab at InSanitizedIndex without announcing it: what both index setters share. Focus inside
 	 * the page being left goes to the tab now open before the switcher hides that page.

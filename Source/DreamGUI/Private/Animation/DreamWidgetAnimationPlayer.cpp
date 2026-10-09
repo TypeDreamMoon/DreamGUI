@@ -64,6 +64,15 @@ TArray<UObject*> UDreamWidgetAnimationPlayer::GetEventContexts() const
 	return Contexts;
 }
 
+void UDreamWidgetAnimationPlayer::ResolveBoundObjects(UE::UniversalObjectLocator::FResolveParams& ResolveParams, const FGuid& InBindingId,
+	FMovieSceneSequenceID SequenceID, UMovieSceneSequence& InSequence, TArray<UObject*, TInlineAllocator<1>>& OutObjects) const
+{
+	// UMovieSceneSequencePlayer's legacy route only resolves object locators. Standalone assets
+	// use custom widget bindings, which need the shared playback state passed by IMovieScenePlayer.
+	// That implementation also honors playback-client overrides and embedded sequence bindings.
+	IMovieScenePlayer::ResolveBoundObjects(ResolveParams, InBindingId, SequenceID, InSequence, OutObjects);
+}
+
 void UDreamWidgetAnimationPlayer::SetLoopCount(int32 InLoopCount)
 {
 	PlaybackSettings.LoopCount.Value = InLoopCount;

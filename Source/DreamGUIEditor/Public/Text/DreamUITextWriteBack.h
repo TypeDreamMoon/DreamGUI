@@ -177,8 +177,8 @@ public:
 	 * Mirror the host's authoring tree into the file. What OnTemplateChanged is wired to.
 	 *
 	 * Returns false only when something went wrong that the caller could act on -- the text does not
-	 * parse, the tree does not build, the file could not be written. "Nothing had changed" returns
-	 * true and writes nothing; so does having no host.
+	 * parse, the tree does not build, the file could not be written. "Nothing had changed" writes
+	 * nothing unless a previous disk write is still owed, which is retried. Having no host is a no-op.
 	 */
 	bool Flush(FString& OutError);
 

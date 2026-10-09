@@ -13,6 +13,9 @@
 #include "Driver/DreamDriverRig.h"
 #include "Interaction/DreamDragInteractionTestTypes.h"
 #include "Interaction/DreamListsInteractionTestTypes.h"
+#include "Interaction/DreamRecyclingListReentryTestTypes.h"
+#include "UObject/GarbageCollection.h"
+#include "UObject/StrongObjectPtr.h"
 
 /*
  * THE RECYCLING LIST, UNDER A WHEEL.
@@ -43,7 +46,8 @@ namespace DreamRecyclingListInteractionTestLocal
 	 * to its own Tick and value events, none of which a world that never began play gives a behaviour.
 	 */
 	template<class TListView>
-	TListView* MakeRecyclingList(FDreamDriverRig& InRig, bool bInHorizontal, UDreamWidget*& OutHost, float InCellExtent = CellExtent)
+	TListView* MakeRecyclingList(FDreamDriverRig& InRig, bool bInHorizontal, UDreamWidget*& OutHost, float InCellExtent = CellExtent,
+		TSubclassOf<UUIListEntry> InEntryClass = UUIListEntry::StaticClass())
 	{
 		OutHost = InRig.MakeWidget(TEXT("ListHost"), nullptr, ViewSize);
 		UDreamWidget* Content = OutHost != nullptr ? InRig.MakeWidget(TEXT("Content"), OutHost, ViewSize) : nullptr;
@@ -54,7 +58,7 @@ namespace DreamRecyclingListInteractionTestLocal
 		{
 			return nullptr;
 		}
-		Cell->AddComponent<UUIListEntry>();
+		Cell->AddComponent(InEntryClass);
 		TListView* List = OutHost->AddComponent<TListView>();
 		if (List == nullptr)
 		{
@@ -325,4 +329,466 @@ bool FDreamRecyclingTileLastLineTest::RunTest(const FString& Parameters)
 	return true;
 }
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamRecyclingListDetachedSourceTest,
+	"DreamGUI.ListView.ARecyclingListWithItsSourceDetachedCanScrollAndReconnectItsSource",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamRecyclingListDetachedSourceTest, "DreamGUI.ListView.ARecyclingListWithItsSourceDetachedCanScrollAndReconnectItsSource", "[Pointer][Animated]")
+
+/*
+ * Detaching a populated, scrolled list's source takes its cells away too. A wheel or programmatic
+ * scroll with no source must not call the data-source interface on nullptr, and reattaching a valid
+ * source must build and recycle the replacement rows as usual.
+ */
+bool FDreamRecyclingListDetachedSourceTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamRecyclingListInteractionTestLocal;
+	FDreamDriverRig Rig = FDreamDriverRig::Headless(DreamListsInteraction::ViewportSize());
+	Rig.BindTest(this);
+	if (!TestTrue(TEXT("The headless rig came up"), Rig.IsUsable())
+		|| !TestTrue(TEXT("Its UI has begun play"), DreamDragInteraction::BeginPlayForUI(Rig.GetWorld())))
+	{
+		return false;
+	}
+	UDreamWidget* Host = nullptr;
+	UUIListView* List = MakeRecyclingList<UUIListView>(Rig, /*bInHorizontal*/false, Host);
+	if (!TestNotNull(TEXT("The recycling list was made"), List))
+	{
+		return false;
+	}
+	List->SetListItems(DreamListsInteraction::MakeItems(100));
+	Rig.PumpFrames(1);
+	if (!TestEqual(TEXT("The populated list has five cells"), List->GetCacheCellList().Num(), 5))
+	{
+		return false;
+	}
+	List->SetScrollProgress(FVector2D(0.0, 0.5));
+	Rig.PumpFrames(1);
+
+	const TScriptInterface<IUIRecyclableScrollViewDataSource> Source = List->GetDataSource();
+	TArray<TWeakObjectPtr<UDreamWidget>> PreviousCells;
+	for (const FUIRecyclableScrollViewCellContainer& Cell : List->GetCacheCellList())
+	{
+		PreviousCells.Add(Cell.Widget.Get());
+	}
+	List->SetDataSource(TScriptInterface<IUIRecyclableScrollViewDataSource>());
+	TestNull(TEXT("The source is detached"), List->GetDataSource().GetObject());
+	TestEqual(TEXT("Its old cells are gone"), List->GetCacheCellList().Num(), 0);
+	for (const TWeakObjectPtr<UDreamWidget>& Cell : PreviousCells)
+	{
+		TestFalse(TEXT("Each old row was destroyed"), Cell.IsValid());
+	}
+	FUIRecyclableScrollViewCellContainer DetachedCell;
+	TestFalse(TEXT("No stale data index resolves to a cell"), List->GetCellItemByDataIndex(50, DetachedCell));
+
+	// The virtual ApplyContentPositionWithProgress path still calls OnScrollCallback directly.
+	List->SetScrollProgress(FVector2D(0.0, 0.75));
+	TestTrue(TEXT("Turning the wheel with no source completes"),
+		Rig.Driver()->Find(FDreamBy::Widget(Host))->ScrollBy(FVector2D(-2.0, -2.0)));
+	Rig.PumpFrames(2);
+	TestEqual(TEXT("Scrolling with no source leaves the list empty"), List->GetCacheCellList().Num(), 0);
+
+	const TArray<UObject*> ReplacementItems = DreamListsInteraction::MakeItems(20);
+	List->SetListItems(ReplacementItems);
+	List->SetDataSource(Source);
+	Rig.PumpFrames(1);
+	if (!TestEqual(TEXT("Reattaching a source rebuilds five cells"), List->GetCacheCellList().Num(), 5))
+	{
+		return false;
+	}
+	TestNearlyEqual(TEXT("The replacement source starts at its first row"),
+		static_cast<float>(List->GetScrollOffset().Y), 0.0f, 0.5f);
+	TestTrue(TEXT("The replacement source can be wheeled through"),
+		Rig.Driver()->Find(FDreamBy::Widget(Host))->ScrollBy(FVector2D(-8.0, -8.0)));
+	Rig.PumpFrames(1);
+	TestTrue(TEXT("The replacement source scrolled past its third row"), List->GetScrollOffset().Y > 3.0f * CellExtent);
+	TestEveryAwakeCellSitsOnItsItemsLine(*this, *List, 1);
+	for (const FUIRecyclableScrollViewCellContainer& Cell : List->GetCacheCellList())
+	{
+		const UUIListEntry* Entry = EntryOf(Cell);
+		if (TestNotNull(TEXT("Each restored cell has an entry"), Entry)
+			&& TestTrue(TEXT("Each restored entry has a valid replacement index"), ReplacementItems.IsValidIndex(Entry->GetItemIndex())))
+		{
+			TestEqual(TEXT("Each restored entry shows its replacement item"), Entry->GetItem(), ReplacementItems[Entry->GetItemIndex()]);
+		}
+	}
+	return true;
+}
+
+namespace DreamRecyclingListReentryTestLocal
+{
+	enum class EMutation : uint8 { Clear, Replace, Recreate, ChangeSource };
+
+	bool RunCase(FAutomationTestBase& InTest, EDreamRecyclingCallback InCallback, EMutation InMutation, bool bInScroll, bool bInHorizontal)
+	{
+		using namespace DreamRecyclingListInteractionTestLocal;
+		FDreamDriverRig Rig = FDreamDriverRig::Headless(DreamListsInteraction::ViewportSize());
+		Rig.BindTest(&InTest);
+		if (!InTest.TestTrue(TEXT("The rig came up"), Rig.IsUsable())
+			|| !InTest.TestTrue(TEXT("Its UI has begun play"), DreamDragInteraction::BeginPlayForUI(Rig.GetWorld())))
+		{
+			return false;
+		}
+		UDreamWidget* Host = nullptr;
+		UDreamRecyclingReentryList* List = MakeRecyclingList<UDreamRecyclingReentryList>(Rig, bInHorizontal, Host,
+			CellExtent, UDreamRecyclingReentryEntry::StaticClass());
+		if (!InTest.TestNotNull(TEXT("The recycling list was made"), List))return false;
+		TStrongObjectPtr<UDreamRecyclingReentryProbe> Probe(NewObject<UDreamRecyclingReentryProbe>());
+		List->BindProbe(Probe.Get());
+		UDreamRecyclingReentryEntry* Template = List->GetCellTemplate()->GetComponent<UDreamRecyclingReentryEntry>();
+		if (!InTest.TestNotNull(TEXT("Its template carries the callback entry"), Template))return false;
+		Template->Probe = Probe.Get();
+		const TArray<UObject*> OriginalItems = DreamListsInteraction::MakeItems(100);
+		const TArray<UObject*> ReplacementItems = DreamListsInteraction::MakeItems(3);
+		TStrongObjectPtr<UDreamRecyclingReplacementSource> ReplacementSource(NewObject<UDreamRecyclingReplacementSource>());
+		const TArray<UObject*> SourceItems = DreamListsInteraction::MakeItems(12);
+		for (UObject* Item : SourceItems)ReplacementSource->Items.Add(Item);
+		if (bInScroll || InCallback == EDreamRecyclingCallback::Activated)
+		{
+			List->SetListItems(OriginalItems);
+			Rig.PumpFrames(1);
+			if (InCallback == EDreamRecyclingCallback::Activated)
+			{
+				if (!InTest.TestTrue(TEXT("An existing row can be reactivated"), List->GetCacheCellList().Num() > 0))return false;
+				List->GetCacheCellList()[0].Widget->SetWidgetActive(false);
+			}
+		}
+		Probe->Trigger = InCallback;
+		Probe->Action = [List, InMutation, ReplacementItems, Source = ReplacementSource.Get()]()
+		{
+			switch (InMutation)
+			{
+			case EMutation::Clear: List->ClearListItems(); break;
+			case EMutation::Replace: List->SetListItems(ReplacementItems); break;
+			case EMutation::Recreate: List->RecreateList(); break;
+			case EMutation::ChangeSource:
+			{
+				TScriptInterface<IUIRecyclableScrollViewDataSource> NewSource;
+				NewSource.SetObject(Source);
+				NewSource.SetInterface(Cast<IUIRecyclableScrollViewDataSource>(Source));
+				List->SetDataSource(NewSource);
+				break;
+			}
+			}
+		};
+		if (bInScroll)
+		{
+			List->SetScrollProgress(bInHorizontal ? FVector2D(0.5, 0.0) : FVector2D(0.0, 0.5));
+		}
+		else
+		{
+			List->SetListItems(OriginalItems);
+		}
+		Rig.PumpFrames(1);
+		InTest.TestEqual(FString::Printf(TEXT("The callback made its mutation once (callback=%d, mutation=%d, %s, %s)"),
+			static_cast<int32>(InCallback), static_cast<int32>(InMutation),
+			bInHorizontal ? TEXT("horizontal") : TEXT("vertical"), bInScroll ? TEXT("scroll") : TEXT("initialize")), Probe->MutationCount, 1);
+		InTest.TestFalse(TEXT("The measuring template is asleep after a callback stops its pass"), List->GetCellTemplate()->GetWidgetActive());
+		const TArray<UObject*> ExpectedItems = InMutation == EMutation::Clear ? TArray<UObject*>()
+			: (InMutation == EMutation::Replace ? ReplacementItems
+				: (InMutation == EMutation::ChangeSource ? SourceItems : OriginalItems));
+		// A vertical view keeps five lines; the horizontal one keeps four with this exact-size viewport.
+		const int32 ExpectedPoolSize = FMath::Min(ExpectedItems.Num(), bInHorizontal ? 4 : 5);
+		InTest.TestEqual(TEXT("The final pool belongs to the callback's result"), List->GetCacheCellList().Num(), ExpectedPoolSize);
+		if (InMutation == EMutation::ChangeSource)
+		{
+			InTest.TestEqual(TEXT("The replacement data-source object stays installed"), List->GetDataSource().GetObject(), static_cast<UObject*>(ReplacementSource.Get()));
+		}
+		if (ExpectedItems.IsEmpty())return true;
+		InTest.TestNearlyEqual(TEXT("A callback rebuild starts at the new source's first item"),
+			static_cast<float>(bInHorizontal ? List->GetScrollOffset().X : List->GetScrollOffset().Y), 0.0f, 0.5f);
+		for (const FUIRecyclableScrollViewCellContainer& Cell : List->GetCacheCellList())
+		{
+			const UUIListEntry* Entry = EntryOf(Cell);
+			if (InTest.TestNotNull(TEXT("Each final cell has an entry"), Entry)
+				&& InTest.TestTrue(TEXT("Each final entry indexes the final source"), ExpectedItems.IsValidIndex(Entry->GetItemIndex()))
+				&& InTest.TestNotNull(TEXT("Each final cell has a widget"), Cell.Widget.Get()))
+			{
+				InTest.TestEqual(TEXT("The old pass never overwrites the callback's item"), Entry->GetItem(), ExpectedItems[Entry->GetItemIndex()]);
+				InTest.TestTrue(TEXT("Every final row is awake"), Cell.Widget->GetWidgetActive());
+				const double ExpectedPosition = bInHorizontal
+					? (Entry->GetItemIndex() + Cell.Widget->GetPivot().X) * CellExtent
+					: -(Entry->GetItemIndex() + 1.0 - Cell.Widget->GetPivot().Y) * CellExtent;
+				InTest.TestNearlyEqual(TEXT("The old pass never overwrites the callback's row position"),
+					static_cast<float>(bInHorizontal ? Cell.Widget->GetAnchoredPosition().X : Cell.Widget->GetAnchoredPosition().Y),
+					static_cast<float>(ExpectedPosition), 0.5f);
+			}
+		}
+		return true;
+	}
+
+	bool RunMutations(FAutomationTestBase& InTest, EDreamRecyclingCallback InCallback, EMutation InMutation)
+	{
+		bool bSucceeded = true;
+		for (bool bScroll : { false, true })
+		{
+			for (bool bHorizontal : { false, true })
+			{
+				bSucceeded = RunCase(InTest, InCallback, InMutation, bScroll, bHorizontal) && bSucceeded;
+			}
+		}
+		return bSucceeded;
+	}
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamRecyclingListAssignedReentryTest,
+	"DreamGUI.ListView.AnEntryAssignedCallbackCanClearOrReplaceItemsDuringInitializationAndRecycling",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamRecyclingListAssignedReentryTest, "DreamGUI.ListView.AnEntryAssignedCallbackCanClearOrReplaceItemsDuringInitializationAndRecycling", "[Pointer][Animated]")
+
+bool FDreamRecyclingListAssignedReentryTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamRecyclingListReentryTestLocal;
+	const bool bCleared = RunMutations(*this, EDreamRecyclingCallback::Assigned, EMutation::Clear);
+	return RunMutations(*this, EDreamRecyclingCallback::Assigned, EMutation::Replace) && bCleared;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamRecyclingListGeneratedReentryTest,
+	"DreamGUI.ListView.AnEntryGeneratedCallbackCanClearOrReplaceItemsDuringInitializationAndRecycling",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamRecyclingListGeneratedReentryTest, "DreamGUI.ListView.AnEntryGeneratedCallbackCanClearOrReplaceItemsDuringInitializationAndRecycling", "[Pointer][Animated]")
+
+bool FDreamRecyclingListGeneratedReentryTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamRecyclingListReentryTestLocal;
+	const bool bCleared = RunMutations(*this, EDreamRecyclingCallback::Generated, EMutation::Clear);
+	return RunMutations(*this, EDreamRecyclingCallback::Generated, EMutation::Replace) && bCleared;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamRecyclingListSourceReentryTest,
+	"DreamGUI.ListView.ABindingCallbackCanReplaceTheRecyclingListsDataSource",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamRecyclingListSourceReentryTest, "DreamGUI.ListView.ABindingCallbackCanReplaceTheRecyclingListsDataSource", "[Pointer][Animated]")
+
+bool FDreamRecyclingListSourceReentryTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamRecyclingListReentryTestLocal;
+	const bool bAssigned = RunMutations(*this, EDreamRecyclingCallback::Assigned, EMutation::ChangeSource);
+	return RunMutations(*this, EDreamRecyclingCallback::Generated, EMutation::ChangeSource) && bAssigned;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamRecyclingListBracketReentryTest,
+	"DreamGUI.ListView.ABeforeOrAfterCellCallbackCanRecreateTheRecyclingList",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamRecyclingListBracketReentryTest, "DreamGUI.ListView.ABeforeOrAfterCellCallbackCanRecreateTheRecyclingList", "[Pointer][Animated]")
+
+bool FDreamRecyclingListBracketReentryTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamRecyclingListReentryTestLocal;
+	const bool bBefore = RunMutations(*this, EDreamRecyclingCallback::Before, EMutation::Recreate);
+	return RunMutations(*this, EDreamRecyclingCallback::After, EMutation::Recreate) && bBefore;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamRecyclingListActiveReentryTest,
+	"DreamGUI.ListView.AReactivatedCellCanClearOrReplaceItemsDuringInitializationAndRecycling",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamRecyclingListActiveReentryTest, "DreamGUI.ListView.AReactivatedCellCanClearOrReplaceItemsDuringInitializationAndRecycling", "[Pointer][Animated]")
+
+bool FDreamRecyclingListActiveReentryTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamRecyclingListReentryTestLocal;
+	const bool bCleared = RunMutations(*this, EDreamRecyclingCallback::Activated, EMutation::Clear);
+	return RunMutations(*this, EDreamRecyclingCallback::Activated, EMutation::Replace) && bCleared;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamRecyclingListCreateReentryTest,
+	"DreamGUI.ListView.ANewCellsCreationCallbackCanClearOrReplaceTheListsItems",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamRecyclingListCreateReentryTest, "DreamGUI.ListView.ANewCellsCreationCallbackCanClearOrReplaceTheListsItems", "[Pointer][Animated]")
+
+bool FDreamRecyclingListCreateReentryTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamRecyclingListReentryTestLocal;
+	bool bSucceeded = true;
+	for (bool bHorizontal : { false, true })
+	{
+		bSucceeded = RunCase(*this, EDreamRecyclingCallback::Created, EMutation::Clear, false, bHorizontal) && bSucceeded;
+		bSucceeded = RunCase(*this, EDreamRecyclingCallback::Created, EMutation::Replace, false, bHorizontal) && bSucceeded;
+	}
+	return bSucceeded;
+}
+
+namespace DreamRecyclingListCellDestructionTestLocal
+{
+	enum class EPass : uint8 { Initialize, Scroll, Update };
+
+	bool TestPool(FAutomationTestBase& InTest, UUIRecyclableScrollView& InList, const TArray<UObject*>& InItems, bool bInHorizontal)
+	{
+		using namespace DreamRecyclingListInteractionTestLocal;
+		bool bValid = InTest.TestEqual(TEXT("the recovered pool has every visible row"), InList.GetCacheCellList().Num(),
+			FMath::Min(InItems.Num(), bInHorizontal ? 4 : 5));
+		TSet<int32> SeenIndices;
+		for (const FUIRecyclableScrollViewCellContainer& Cell : InList.GetCacheCellList())
+		{
+			if (!InTest.TestTrue(TEXT("each recovered row has a live widget and component"),
+				IsValid(Cell.Widget) && IsValid(Cell.CellComponent)))
+			{
+				bValid = false;
+				continue;
+			}
+			const UUIListEntry* Entry = EntryOf(Cell);
+			if (!InTest.TestNotNull(TEXT("each recovered row has an entry"), Entry)
+				|| !InTest.TestTrue(TEXT("each recovered entry belongs to the current source"), InItems.IsValidIndex(Entry->GetItemIndex())))
+			{
+				bValid = false;
+				continue;
+			}
+			bValid = InTest.TestEqual(TEXT("each recovered row shows the current item"), Entry->GetItem(), InItems[Entry->GetItemIndex()]) && bValid;
+			bValid = InTest.TestFalse(TEXT("no item occupies two recovered rows"), SeenIndices.Contains(Entry->GetItemIndex())) && bValid;
+			SeenIndices.Add(Entry->GetItemIndex());
+			bValid = InTest.TestTrue(TEXT("each recovered row is awake"), Cell.Widget->GetWidgetActive()) && bValid;
+			const double ExpectedPosition = bInHorizontal
+				? (Entry->GetItemIndex() + Cell.Widget->GetPivot().X) * CellExtent
+				: -(Entry->GetItemIndex() + 1.0 - Cell.Widget->GetPivot().Y) * CellExtent;
+			bValid = InTest.TestNearlyEqual(TEXT("each recovered row sits on its own item line"),
+				static_cast<float>(bInHorizontal ? Cell.Widget->GetAnchoredPosition().X : Cell.Widget->GetAnchoredPosition().Y),
+				static_cast<float>(ExpectedPosition), 0.5f) && bValid;
+		}
+		return bValid;
+	}
+
+	bool RunCase(FAutomationTestBase& InTest, EDreamRecyclingCallback InCallback, EPass InPass, bool bInHorizontal)
+	{
+		using namespace DreamRecyclingListInteractionTestLocal;
+		FDreamDriverRig Rig = FDreamDriverRig::Headless(DreamListsInteraction::ViewportSize());
+		Rig.BindTest(&InTest);
+		if (!InTest.TestTrue(TEXT("the cell-destruction rig came up"), Rig.IsUsable())
+			|| !InTest.TestTrue(TEXT("the cell-destruction UI began play"), DreamDragInteraction::BeginPlayForUI(Rig.GetWorld())))return false;
+		UDreamWidget* Host = nullptr;
+		UDreamRecyclingReentryList* List = MakeRecyclingList<UDreamRecyclingReentryList>(Rig, bInHorizontal, Host,
+			CellExtent, UDreamRecyclingReentryEntry::StaticClass());
+		if (!InTest.TestNotNull(TEXT("the cell-destruction list was made"), List))return false;
+		TStrongObjectPtr<UDreamRecyclingReentryProbe> Probe(NewObject<UDreamRecyclingReentryProbe>());
+		List->BindProbe(Probe.Get());
+		const TArray<UObject*> OriginalItems = DreamListsInteraction::MakeItems(100);
+		TStrongObjectPtr<UDreamRecyclingReplacementSource> ReplacementSource(NewObject<UDreamRecyclingReplacementSource>());
+		const TArray<UObject*> SourceItems = DreamListsInteraction::MakeItems(12);
+		for (UObject* Item : SourceItems)ReplacementSource->Items.Add(Item);
+		if (InPass != EPass::Initialize)
+		{
+			List->SetListItems(OriginalItems);
+			Rig.PumpFrames(1);
+		}
+		TWeakObjectPtr<UDreamWidget> DestroyedCell;
+		Probe->Trigger = InCallback;
+		Probe->Action = [&InTest, List, Probe = Probe.Get(), InCallback, &DestroyedCell]()
+		{
+			UDreamWidget* Widget = InCallback == EDreamRecyclingCallback::Before
+				? (List->GetCacheCellList().IsEmpty() ? nullptr : List->GetCacheCellList().Last().Widget.Get())
+				: Probe->CallbackWidget.Get();
+			if (InTest.TestTrue(TEXT("the callback destroys a real live cell"), IsValid(Widget)))
+			{
+				DestroyedCell = Widget;
+				Widget->DestroyWidget();
+			}
+		};
+		if (InPass == EPass::Initialize)List->SetListItems(OriginalItems);
+		else if (InPass == EPass::Scroll)List->SetScrollProgress(bInHorizontal ? FVector2D(0.5, 0.0) : FVector2D(0.0, 0.5));
+		else List->UpdateCellData();
+		InTest.TestEqual(FString::Printf(TEXT("one cell was destroyed by callback=%d, pass=%d, horizontal=%d"),
+			static_cast<int32>(InCallback), static_cast<int32>(InPass), bInHorizontal), Probe->MutationCount, 1);
+		InTest.TestFalse(TEXT("the callback's cell is destroyed"), DestroyedCell.IsValid());
+		InTest.TestFalse(TEXT("an aborted layout leaves the measuring template inactive"), List->GetCellTemplate()->GetWidgetActive());
+		for (const FUIRecyclableScrollViewCellContainer& Cell : List->GetCacheCellList())
+		{
+			InTest.TestTrue(TEXT("the callback leaves no dead cell in the pool"), IsValid(Cell.Widget) && IsValid(Cell.CellComponent));
+		}
+		InTest.TestNotNull(TEXT("the callback's destroyed cell still exists before GC"), DestroyedCell.GetEvenIfUnreachable());
+		// Preserve standalone editor fixture assets while fully collecting the destroyed row.
+		CollectGarbage(GARBAGE_COLLECTION_KEEPFLAGS, true);
+		InTest.TestNull(TEXT("the callback's destroyed cell is collected by GC"), DestroyedCell.GetEvenIfUnreachable());
+		// Scroll can recover before the pending rebuild's next tick; an Update callback also
+		// exercises recovery with no further input at all.
+		if (InPass != EPass::Update)List->SetScrollProgress(bInHorizontal ? FVector2D(0.25, 0.0) : FVector2D(0.0, 0.25));
+		Rig.PumpFrames(2);
+		bool bValid = TestPool(InTest, *List, OriginalItems, bInHorizontal);
+		List->SetScrollProgress(bInHorizontal ? FVector2D(0.6, 0.0) : FVector2D(0.0, 0.6));
+		Rig.PumpFrames(1);
+		bValid = TestPool(InTest, *List, OriginalItems, bInHorizontal) && bValid;
+
+		// Also destroy a row outside a list callback. GC clears its reflected pool pointers before
+		// RecreateList and source replacement must detect it and restore a complete, correctly indexed pool.
+		auto DestroyAndCollect = [&InTest, List]()
+		{
+			if (!InTest.TestTrue(TEXT("a live row is available for external destruction"), !List->GetCacheCellList().IsEmpty()))return;
+			UDreamWidget* Widget = List->GetCacheCellList()[0].Widget.Get();
+			if (!InTest.TestTrue(TEXT("the externally destroyed row is live"), IsValid(Widget)))return;
+			TWeakObjectPtr<UDreamWidget> CellToCollect(Widget);
+			Widget->DestroyWidget();
+			InTest.TestNotNull(TEXT("the externally destroyed row still exists before GC"), CellToCollect.GetEvenIfUnreachable());
+			CollectGarbage(GARBAGE_COLLECTION_KEEPFLAGS, true);
+			InTest.TestNull(TEXT("the externally destroyed row is collected by GC"), CellToCollect.GetEvenIfUnreachable());
+		};
+		DestroyAndCollect();
+		List->SetScrollProgress(bInHorizontal ? FVector2D(0.4, 0.0) : FVector2D(0.0, 0.4));
+		Rig.PumpFrames(2);
+		bValid = TestPool(InTest, *List, OriginalItems, bInHorizontal) && bValid;
+		DestroyAndCollect();
+		List->RecreateList();
+		Rig.PumpFrames(2);
+		bValid = TestPool(InTest, *List, OriginalItems, bInHorizontal) && bValid;
+		DestroyAndCollect();
+		TScriptInterface<IUIRecyclableScrollViewDataSource> NewSource;
+		NewSource.SetObject(ReplacementSource.Get());
+		NewSource.SetInterface(Cast<IUIRecyclableScrollViewDataSource>(ReplacementSource.Get()));
+		List->SetDataSource(NewSource);
+		Rig.PumpFrames(2);
+		InTest.TestEqual(TEXT("the replacement source stays installed after recovery"), List->GetDataSource().GetObject(),
+			static_cast<UObject*>(ReplacementSource.Get()));
+		return TestPool(InTest, *List, SourceItems, bInHorizontal) && bValid;
+	}
+
+	bool RunPasses(FAutomationTestBase& InTest, EDreamRecyclingCallback InCallback)
+	{
+		bool bValid = true;
+		for (bool bHorizontal : {false, true})
+		{
+			for (EPass Pass : {EPass::Initialize, EPass::Scroll, EPass::Update})
+			{
+				if (InCallback == EDreamRecyclingCallback::Created && Pass != EPass::Initialize)continue;
+				bValid = RunCase(InTest, InCallback, Pass, bHorizontal) && bValid;
+			}
+		}
+		return bValid;
+	}
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamRecyclingListCellDestroyedInInitTest,
+	"DreamGUI.ListView.ACellDestroyedInInitOnCreateCanBeCollectedAndThePoolRecovers",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamRecyclingListCellDestroyedInInitTest, "DreamGUI.ListView.ACellDestroyedInInitOnCreateCanBeCollectedAndThePoolRecovers", "[Pointer][Animated]")
+
+bool FDreamRecyclingListCellDestroyedInInitTest::RunTest(const FString& Parameters)
+{
+	return DreamRecyclingListCellDestructionTestLocal::RunPasses(*this, EDreamRecyclingCallback::Created);
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamRecyclingListCellDestroyedBeforeSetTest,
+	"DreamGUI.ListView.ACellDestroyedInBeforeSetCellCanBeCollectedAndThePoolRecovers",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamRecyclingListCellDestroyedBeforeSetTest, "DreamGUI.ListView.ACellDestroyedInBeforeSetCellCanBeCollectedAndThePoolRecovers", "[Pointer][Animated]")
+
+bool FDreamRecyclingListCellDestroyedBeforeSetTest::RunTest(const FString& Parameters)
+{
+	return DreamRecyclingListCellDestructionTestLocal::RunPasses(*this, EDreamRecyclingCallback::Before);
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamRecyclingListCellDestroyedInSetTest,
+	"DreamGUI.ListView.ACellDestroyedInSetCellCanBeCollectedAndThePoolRecovers",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamRecyclingListCellDestroyedInSetTest, "DreamGUI.ListView.ACellDestroyedInSetCellCanBeCollectedAndThePoolRecovers", "[Pointer][Animated]")
+
+bool FDreamRecyclingListCellDestroyedInSetTest::RunTest(const FString& Parameters)
+{
+	return DreamRecyclingListCellDestructionTestLocal::RunPasses(*this, EDreamRecyclingCallback::Set);
+}
 #endif

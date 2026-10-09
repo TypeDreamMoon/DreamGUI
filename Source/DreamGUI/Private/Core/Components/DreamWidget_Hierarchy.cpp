@@ -33,6 +33,7 @@
 // FLayoutLocalization, for the Culture flow-direction preference. SlateCore is already a public
 // dependency; this is the one header of it that answers "which way does the running culture read".
 #include "Layout/FlowDirection.h"
+#include "UObject/UObjectHash.h"
 #if WITH_EDITOR
 #include "UObject/GarbageCollection.h"
 #include "UObject/UnrealType.h"
@@ -1048,6 +1049,7 @@ namespace DreamWidgetDuplicateLocal
 		{
 			return;
 		}
+		TArray<const FProperty*> PropertyChain;
 		for (TPropertyValueIterator<FObjectPropertyBase> It(InContainer->GetClass(), InContainer); It; ++It)
 		{
 			const FObjectPropertyBase* Property = It.Key();
@@ -1055,8 +1057,22 @@ namespace DreamWidgetDuplicateLocal
 			{
 				continue;
 			}
-			const FMapProperty* OwningMap = Property->GetOwner<FMapProperty>();
-			if (Property->GetOwner<FSetProperty>() != nullptr || (OwningMap != nullptr && OwningMap->KeyProp == Property))
+			// A reference can be nested inside a struct key. Its immediate owner is then the
+			// struct, so only the full value chain tells us whether changing it would break a hash.
+			PropertyChain.Reset();
+			It.GetPropertyChain(PropertyChain);
+			bool bHashedKey = false;
+			for (int32 Index = 0; Index < PropertyChain.Num(); ++Index)
+			{
+				const FMapProperty* Map = CastField<FMapProperty>(PropertyChain[Index]);
+				if (PropertyChain[Index]->IsA<FSetProperty>()
+					|| (Map != nullptr && Index > 0 && Map->KeyProp == PropertyChain[Index - 1]))
+				{
+					bHashedKey = true;
+					break;
+				}
+			}
+			if (bHashedKey)
 			{
 				continue;
 			}
@@ -1188,7 +1204,22 @@ UDreamWidget* UDreamWidget::DuplicateSubtree(UObject* InOuter, UDreamWidget* InS
 		FPairWalk::Walk(InSource, Copy, SourceToCopy);
 		for (const TPair<UObject*, UObject*>& Pair : SourceToCopy)
 		{
-			DreamWidgetDuplicateLocal::RemapReferencesOn(Pair.Value, SourceToCopy);
+			UDreamWidget* CopiedWidget = Cast<UDreamWidget>(Pair.Value);
+			if (CopiedWidget == nullptr)continue;
+			DreamWidgetDuplicateLocal::RemapReferencesOn(CopiedWidget, SourceToCopy);
+			// Property iteration stops at UObject references. A component's inline play tween owns
+			// its own event structs, so it needs a pass too. Follow ownership, never external assets.
+			TArray<UObject*> OwnedObjects;
+			GetObjectsWithOuter(CopiedWidget, OwnedObjects, EGetObjectsFlags::IncludeNestedObjects);
+			for (UObject* Owned : OwnedObjects)
+			{
+				// A nested user widget's private tree has its own correspondence and namespace.
+				if (IsValid(Owned) && !Owned->IsA<UDreamWidget>() && !Owned->IsA<UDreamWidgetTree>()
+					&& Owned->GetTypedOuter<UDreamWidget>() == CopiedWidget)
+				{
+					DreamWidgetDuplicateLocal::RemapReferencesOn(Owned, SourceToCopy);
+				}
+			}
 		}
 	}
 	return Copy;

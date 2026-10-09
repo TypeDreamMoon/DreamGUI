@@ -91,6 +91,8 @@ protected:
 	virtual int32 GetEntryDepth(int32 Index) const { return 0; }
 	UUIListEntry* ResolveEntry(UDreamUIBehaviour* Component) const;
 	void RefreshVisibleSelection();
+	/** Nested selection callbacks supersede the pass that notified them. */
+	uint64 SelectionGeneration = 0;
 
 public:
 	UFUNCTION(BlueprintCallable, Category = "ListView")

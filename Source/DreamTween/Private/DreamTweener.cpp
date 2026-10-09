@@ -412,6 +412,10 @@ bool UDreamTweener::ToNextWithElapsedTime(float InElapseTime)
 		}
 		break;
 		}
+		if (clockGeneration != generation)
+		{
+			return IsRunningAfterTakeover();
+		}
 		return !bLastCycle;
 	}
 
@@ -434,6 +438,10 @@ bool UDreamTweener::BeginTween()
 	startToTween = true;
 	//set initialize value
 	OnStartGetValue();
+	if (clockGeneration != generation)
+	{
+		return false;
+	}
 	// From() and SetSpeedBased both need the start value first: one turns the tween around
 	// between where the value is and where it was told to go, the other measures the distance
 	// between exactly those two. Neither is knowable before the getter has been asked.
@@ -554,14 +562,27 @@ void UDreamTweener::ForceComplete()
 		return;
 	}
 	isMarkedToKill = true;
-	clockGeneration++;
+	const int32 generation = ++clockGeneration;
 	elapseTime = delay + duration;
 	// The end of a cycle that is running backwards is time 0, not duration -- the same choice the
 	// natural completion in ToNextWithElapsedTime makes. Completing a yoyo on its way back used to
 	// throw the value to the end it had already left, the opposite of where it was heading.
 	TweenAndApplyValue(reverseTween ? 0 : duration);
+	if (clockGeneration != generation)
+	{
+		return;
+	}
 	onUpdateCpp.Broadcast(reverseTween ? 0.0f : 1.0f);
+	if (clockGeneration != generation)
+	{
+		return;
+	}
 	onCompleteCpp.Broadcast();
+	if (clockGeneration != generation)
+	{
+		return;
+	}
+
 	// This ends the tween as well as completing it, so the kill listeners hear it too -- unless a
 	// completion handler brought it back, exactly as in Kill.
 	if (isMarkedToKill)
@@ -589,7 +610,7 @@ void UDreamTweener::Restart()
 	}
 	// A step of this tween in progress -- Restart called from a callback of its own -- stops where it is, and
 	// reports the tween running: see clockGeneration.
-	clockGeneration++;
+	const int32 generation = ++clockGeneration;
 	isMarkedPause = false;//incase it is paused.
 	// A tween that was killed is restartable again. The flag is the only thing that tells the manager
 	// to drop this tween, and nothing ever cleared it, so Restart on a killed tween did all its work
@@ -602,11 +623,19 @@ void UDreamTweener::Restart()
 	if (startToTween)
 	{
 		SetOriginValueForRestart();
+		if (clockGeneration != generation)
+		{
+			return;
+		}
 		// And put the value back at the beginning NOW, the way a sequence does for its children
 		// (UDreamTweenerSequence::SetOriginValueForRestart). Restoring only the bookkeeping leaves the
 		// animated object sitting at the end value, and the fresh OnStartGetValue below would read
 		// THAT back as the new origin -- a restart that interpolates from the end to the end.
 		TweenAndApplyValue(0);
+		if (clockGeneration != generation)
+		{
+			return;
+		}
 	}
 	// Starting again is starting: OnStart and OnCycleStart belong to a restarted tween as much as to
 	// a new one, and OnStartGetValue is how a tween that was told to run "from wherever the value is"
@@ -626,7 +655,7 @@ void UDreamTweener::Goto(float timePoint)
 	}
 	timePoint = FMath::Clamp(timePoint, 0.0f, duration);
 	// A step of this tween in progress -- Goto called from a callback of its own -- stops where it is.
-	clockGeneration++;
+	const int32 generation = ++clockGeneration;
 	//reset parameter to initial
 	loopCycleCount = 0;
 	foldedCycleCount = 0;
@@ -644,6 +673,10 @@ void UDreamTweener::Goto(float timePoint)
 			return;
 		}
 		TweenAndApplyValue(0.0f);
+		if (clockGeneration != generation)
+		{
+			return;
+		}
 		onUpdateCpp.Broadcast(0.0f);
 		return;
 	}

@@ -394,6 +394,16 @@ namespace DreamUserWidgetDuplicateLocal
 		};
 		FPairWalk::Walk(InSource, InCopy, SourceToCopy, Pairs);
 
+		// Copy every identity table before any initialization hook can mutate another copied
+		// widget. The source's current component order may already differ from its authored order.
+		for (const TPair<TWeakObjectPtr<UDreamUserWidget>, TWeakObjectPtr<UDreamUserWidget>>& Pair : Pairs)
+		{
+			if (Pair.Key.IsValid() && Pair.Value.IsValid())
+			{
+				Pair.Value->CopyBindingComponentIdentities(Pair.Key.Get(), SourceToCopy);
+			}
+		}
+
 		for (const TPair<TWeakObjectPtr<UDreamUserWidget>, TWeakObjectPtr<UDreamUserWidget>>& Pair : Pairs)
 		{
 			UDreamUserWidget* SourceUserWidget = Pair.Key.Get();
@@ -1551,6 +1561,110 @@ void UDreamUserWidget::K2_BroadcastFieldValueChanged(FFieldNotificationId InFiel
 	}
 }
 
+void UDreamUserWidget::CaptureBindingComponentIdentities(UDreamWidgetTree* InTree, const TArray<UDreamWidget*>& InWidgets)
+{
+	BindingComponentIdentities.Reset();
+	// Only a binding to a component reads the table, by its widget's name; every other binding resolves without it.
+	// Every instance is captured -- each cell of a list, too -- so a tree with no such binding records nothing.
+	TSet<FName, DefaultKeyFuncs<FName>, TInlineSetAllocator<8>> ComponentBindingWidgets;
+	for (const UClass* Class = GetClass(); Class != nullptr; Class = Class->GetSuperClass())
+	{
+		if (const UDreamWidgetGeneratedClass* Generated = Cast<UDreamWidgetGeneratedClass>(Class))
+		{
+			for (const FDreamWidgetPropertyBinding& Binding : Generated->GetPropertyBindings())
+			{
+				if (Binding.Target == EDreamWidgetBindingTarget::Behaviour)ComponentBindingWidgets.Add(Binding.WidgetName);
+			}
+			for (const FDreamWidgetEventBinding& Binding : Generated->GetEventBindings())
+			{
+				if (Binding.Target == EDreamWidgetBindingTarget::Behaviour)ComponentBindingWidgets.Add(Binding.WidgetName);
+			}
+		}
+	}
+	if (ComponentBindingWidgets.IsEmpty())
+	{
+		return;
+	}
+	for (UDreamWidget* Widget : InWidgets)
+	{
+		if (!IsValid(Widget) || Widget->GetTypedOuter<UDreamWidgetTree>() != InTree)
+		{
+			continue;
+		}
+		const FName WidgetName = UDreamWidgetTree::MakeWidgetVariableName(Widget);
+		if (!ComponentBindingWidgets.Contains(WidgetName))
+		{
+			continue;
+		}
+		FBindingComponentIdentities& Identities = BindingComponentIdentities.Add(WidgetName);
+		Identities.Widget = Widget;
+		for (UDreamUIBehaviour* Component : Widget->GetAllComponents())
+		{
+			Identities.Components.Add(Component);
+		}
+	}
+}
+
+void UDreamUserWidget::CopyBindingComponentIdentities(const UDreamUserWidget* InSource,
+	const TMap<const UDreamWidget*, UDreamWidget*>& InSourceToCopy)
+{
+	BindingComponentIdentities.Reset();
+	for (const TPair<FName, FBindingComponentIdentities>& Pair : InSource->BindingComponentIdentities)
+	{
+		// Retain missing entries: a removed target must not fall back to the next component.
+		FBindingComponentIdentities& CopyIdentities = BindingComponentIdentities.Add(Pair.Key);
+		CopyIdentities.Components.SetNum(Pair.Value.Components.Num());
+		const UDreamWidget* SourceWidget = Pair.Value.Widget.Get();
+		UDreamWidget* const* CopyWidget = InSourceToCopy.Find(SourceWidget);
+		if (!IsValid(SourceWidget) || CopyWidget == nullptr || !IsValid(*CopyWidget))
+		{
+			continue;
+		}
+		CopyIdentities.Widget = *CopyWidget;
+		const TArray<UDreamUIBehaviour*>& SourceComponents = SourceWidget->GetAllComponents();
+		const TArray<UDreamUIBehaviour*>& CopyComponents = (*CopyWidget)->GetAllComponents();
+		for (int32 AuthoredIndex = 0; AuthoredIndex < Pair.Value.Components.Num(); ++AuthoredIndex)
+		{
+			UDreamUIBehaviour* SourceComponent = Pair.Value.Components[AuthoredIndex].Get();
+			if (!IsValid(SourceComponent) || SourceComponent->GetOuter() != SourceWidget)
+			{
+				continue;
+			}
+			const int32 CurrentIndex = SourceComponents.IndexOfByKey(SourceComponent);
+			if (CopyComponents.IsValidIndex(CurrentIndex))
+			{
+				UDreamUIBehaviour* CopyComponent = CopyComponents[CurrentIndex];
+				if (IsValid(CopyComponent) && CopyComponent->GetOuter() == *CopyWidget
+					&& CopyComponent->GetClass() == SourceComponent->GetClass())
+				{
+					CopyIdentities.Components[AuthoredIndex] = CopyComponent;
+				}
+			}
+		}
+	}
+}
+
+UObject* UDreamUserWidget::ResolveBindingTarget(FName InWidgetName, UDreamWidget* InWidget,
+	EDreamWidgetBindingTarget InTarget, int32 InBehaviourIndex) const
+{
+	if (InTarget == EDreamWidgetBindingTarget::Behaviour)
+	{
+		if (const FBindingComponentIdentities* Identities = BindingComponentIdentities.Find(InWidgetName))
+		{
+			if (!IsValid(InWidget) || Identities->Widget.Get() != InWidget
+				|| !Identities->Components.IsValidIndex(InBehaviourIndex))
+			{
+				return nullptr;
+			}
+			UDreamUIBehaviour* Component = Identities->Components[InBehaviourIndex].Get();
+			return IsValid(Component) && Component->GetOuter() == InWidget
+				&& InWidget->GetAllComponents().Contains(Component) ? Component : nullptr;
+		}
+	}
+	// Native controls realize their parts in OnInitialized, after the authored tree snapshot.
+	return ResolveDreamWidgetBindingTarget(InWidget, InTarget, InBehaviourIndex);
+}
+
 void UDreamUserWidget::BindEventBindings()
 {
 	TArray<FDreamWidgetEventBinding> Bindings;
@@ -1563,7 +1677,7 @@ void UDreamUserWidget::BindEventBindings()
 			continue;
 		}
 		UDreamWidget* TargetWidget = Cast<UDreamWidget>(WidgetProperty->GetObjectPropertyValue_InContainer(this));
-		UObject* Target = ResolveDreamWidgetBindingTarget(TargetWidget, Binding.Target, Binding.BehaviourIndex);
+		UObject* Target = ResolveBindingTarget(Binding.WidgetName, TargetWidget, Binding.Target, Binding.BehaviourIndex);
 		if (!IsValid(Target) || FindFunction(Binding.FunctionName) == nullptr)
 		{
 			// The compiler checked all of this; reaching here means the class moved underneath us,
@@ -1642,7 +1756,7 @@ void UDreamUserWidget::ResolvePropertyBindings()
 			continue;
 		}
 		UDreamWidget* TargetWidget = Cast<UDreamWidget>(WidgetProperty->GetObjectPropertyValue_InContainer(this));
-		UObject* Target = ResolveDreamWidgetBindingTarget(TargetWidget, Binding.Target, Binding.BehaviourIndex);
+		UObject* Target = ResolveBindingTarget(Binding.WidgetName, TargetWidget, Binding.Target, Binding.BehaviourIndex);
 		if (!IsValid(Target))
 		{
 			continue;
@@ -3098,8 +3212,19 @@ FDreamUIAnimationHandle UDreamUserWidget::PlayAnimationByName(
 			return Component->PlayAnimationByDisplayName(Name, StartAtTime, NumLoopsToPlay, PlayMode, PlaybackSpeed, bRestoreState);
 		}
 	}
-	// Not embedded anywhere: the component's own fallback covers the standalone assets, and the
-	// first component is as good an owner as any for a name none of them claimed.
+	// Embedded animations keep priority across the whole widget. Standalone assets must then be
+	// searched on every component as well, so playback uses the component that references the asset.
+	for (UDreamWidgetAnimationComponent* Component : Animators)
+	{
+		for (UDreamUISequence* Asset : Component->GetSequenceAssets())
+		{
+			if (IsValid(Asset) && Asset->GetName() == Name)
+			{
+				return Component->PlayAnimation(Asset, StartAtTime, NumLoopsToPlay, PlayMode, PlaybackSpeed, bRestoreState);
+			}
+		}
+	}
+	// Preserve a single component-level warning when none of the components owns this name.
 	if (Animators.Num() > 0)
 	{
 		return Animators[0]->PlayAnimationByDisplayName(Name, StartAtTime, NumLoopsToPlay, PlayMode, PlaybackSpeed, bRestoreState);

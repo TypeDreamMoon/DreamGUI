@@ -51,6 +51,16 @@ enum class EDreamUIFocusCause : uint8
 	Script,
 };
 
+/** Identifies a player's current focus transition, including replacement of the player at the same index. */
+struct FDreamUIFocusRevision
+{
+	TWeakObjectPtr<const UObject> User;
+	uint64 Serial = 0;
+
+	bool operator==(const FDreamUIFocusRevision& Other) const { return User.HasSameIndexAndSerialNumber(Other.User) && Serial == Other.Serial; }
+	bool operator!=(const FDreamUIFocusRevision& Other) const { return !(*this == Other); }
+};
+
 /**
  * Everything the core asks of the input system, and the only way it asks.
  *
@@ -95,6 +105,8 @@ public:
 	virtual void GetUserIndices(TArray<int32>& OutUserIndices) const {}
 	/** Player InUserIndex's focus now -- whichever of their pointers set it, since focus is the player's -- or null. */
 	virtual UDreamWidget* GetFocusedWidget(int32 InUserIndex) const { return nullptr; }
+	/** Read without creating a player. Changes even when a callback moves away and back, or explicitly clears focus. */
+	virtual FDreamUIFocusRevision GetFocusRevision(int32 InUserIndex) const { return {}; }
 	/**
 	 * Focus InWidget for player InUserIndex the way a directional move does: select it AND move the player's navigation
 	 * cursor onto it, so the next move starts there. Unlike UDreamWidget::SetFocus it does not ask bIsFocusable. It refuses

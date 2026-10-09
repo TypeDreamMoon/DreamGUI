@@ -1772,9 +1772,12 @@ float UUITextInput::GetContextMenuEntryHeight()const
 void UUITextInput::Submit()
 {
 	bSubmittedThisActivation = true;
-	OnSubmitCPP.Broadcast(Text);
-	OnSubmitBP.Broadcast(Text);
-	OnSubmit.FireEvent(Text);
+	// A submit listener may prepare the next value. Every route still describes this commit,
+	// including native listeners later in the same multicast and the control's two aliases.
+	const FString SubmittedText = Text;
+	OnSubmitCPP.Broadcast(SubmittedText);
+	OnSubmitBP.Broadcast(SubmittedText);
+	OnSubmit.FireEvent(SubmittedText);
 }
 
 void UUITextInput::FinishCommitFromEnter()

@@ -262,33 +262,23 @@ void UDreamUIManagerWorldSubsystem::TickDreamUI(float DeltaTime)
 	// above -- announced once, before the clips and the canvases below read what it tells them.
 	FlushTransformChanges();
 
-	// One ScreenSpaceOverlay root canvas PER LOCAL PLAYER, not one per world.
-	//
-	// It used to be one per world, full stop, and that is what made split screen impossible: the
-	// second player's screen is a second overlay canvas by definition. What is still wrong -- and
-	// still shows up in a packaged build as one of the two UIs randomly not being there -- is having
-	// MORE overlay canvases than there are local players to own them, because past that point two of
-	// them are competing for the same screen with an undefined order between them.
-	//
-	// Not editor-only, for the same reason it was made not-editor-only before: the rule is a runtime
-	// one. Shipping is the only build that stays silent.
+	// One root for each player's screen and one for the shared layer. Roots compete only with another root
+	// in the same layer, irrespective of how many other players' roots are active.
+	// This runtime rule stays silent only in Shipping.
 #if !UE_BUILD_SHIPPING
 	const int32 ScreenSpaceOverlayCanvasCount = [this]()
 	{
 		TRACE_CPUPROFILER_EVENT_SCOPE(DreamUI_OverlayCanvasCheck);
 		return CountCompetingScreenSpaceOverlayCanvases();
 	}();
-	const UGameInstance* GameInstanceForScreens = GetWorld() != nullptr ? GetWorld()->GetGameInstance() : nullptr;
-	const int32 AllowedOverlayCanvasCount = FMath::Max(1,
-		GameInstanceForScreens != nullptr ? GameInstanceForScreens->GetNumLocalPlayers() : 1);
-	if (ScreenSpaceOverlayCanvasCount > AllowedOverlayCanvasCount)
+	if (ScreenSpaceOverlayCanvasCount > 1)
 	{
 		if (PrevScreenSpaceOverlayCanvasCount != ScreenSpaceOverlayCanvasCount)//only show message when change
 		{
 			PrevScreenSpaceOverlayCanvasCount = ScreenSpaceOverlayCanvasCount;
-			auto errMsg = FText::Format(LOCTEXT("MultipleDreamUICanvasRenderScreenSpaceOverlay", "[{0}].{1} Detect {2} DreamCanvas rendered with ScreenSpaceOverlay mode for {3} local player(s). There may be at most one ScreenSpace UI per local player; the extra ones compete for the same screen.\
-\n	World: {4}, type: {5}")
-			, FText::FromString(ANSI_TO_TCHAR(__FUNCTION__)), __LINE__, ScreenSpaceOverlayCanvasCount, AllowedOverlayCanvasCount
+			auto errMsg = FText::Format(LOCTEXT("MultipleDreamUICanvasRenderScreenSpaceOverlay", "[{0}].{1} Detect {2} DreamCanvas rendered with ScreenSpaceOverlay mode for the same UI layer. There may be at most one shared root and one root per local player; roots in the same layer compete for its projection.\
+\n	World: {3}, type: {4}")
+			, FText::FromString(ANSI_TO_TCHAR(__FUNCTION__)), __LINE__, ScreenSpaceOverlayCanvasCount
 			, FText::FromString(this->GetWorld()->GetPathName()), (int)(this->GetWorld()->WorldType));
 			UE_LOG(DreamGUI, Error, TEXT("%s"), *errMsg.ToString());
 #if WITH_EDITOR

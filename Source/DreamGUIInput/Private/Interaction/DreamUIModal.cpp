@@ -286,7 +286,11 @@ void UDreamUIModalSubsystem::CloseTopModal(FName InResult, int32 InUserIndex)
 	// callbacks either, for the same reason -- ShowNow can rehash it.
 	FActiveModal Closing = MoveTemp(Stack->Last());
 	Stack->RemoveAt(Stack->Num() - 1);
+	FinishClosingModal(MoveTemp(Closing), InResult);
+}
 
+void UDreamUIModalSubsystem::FinishClosingModal(FActiveModal&& Closing, FName InResult)
+{
 	if (UDreamUIModalScope* Scope = Closing.Scope.Get())
 	{
 		if (UDreamUINavigationStack* NavStack = UDreamUINavigationStack::Get(this))
@@ -312,11 +316,27 @@ void UDreamUIModalSubsystem::CloseTopModal(FName InResult, int32 InUserIndex)
 
 void UDreamUIModalSubsystem::CloseAllModals(FName InResult, int32 InUserIndex)
 {
-	// Bounded by the depth taken before the first callback runs: a result handler that opens another
-	// modal must not turn "close everything" into a loop that never reaches the bottom.
-	for (int32 Remaining = GetModalDepth(InUserIndex); Remaining > 0 && GetModalDepth(InUserIndex) > 0; --Remaining)
+	TArray<FActiveModal>* Stack = ModalStacks.Find(InUserIndex);
+	if (Stack == nullptr)
 	{
-		CloseTopModal(InResult, InUserIndex);
+		return;
+	}
+	// Claim this batch before any focus, destruction or result callback runs. New dialogs belong
+	// to later requests, and a nested close cannot answer an original caller a second time.
+	TArray<FActiveModal> Closing = MoveTemp(*Stack);
+	Stack->Reset();
+	for (int32 Index = Closing.Num() - 1; Index >= 0; --Index)
+	{
+		if (bTornDownForWorld)
+		{
+			// Teardown could not see entries claimed by this batch. Reclaim their widgets
+			// without restoring focus or delivering results into the departing world.
+			DestroyModal(Closing[Index]);
+		}
+		else
+		{
+			FinishClosingModal(MoveTemp(Closing[Index]), InResult);
+		}
 	}
 }
 

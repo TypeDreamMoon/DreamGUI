@@ -717,7 +717,8 @@ public:
 		TFunctionRef<class UDreamUIBehaviour*(UDreamWidget*)> InAddToTemplate);
 	bool DesignerRemoveComponent(UDreamWidget* InPreviewWidget, class UDreamUIBehaviour* InPreviewComponent);
 	/**
-	 * Reorder a behaviour on the TEMPLATE, matched to the preview's by position.
+	 * Reorder a behaviour on the TEMPLATE using the source and destination's captured identities.
+	 * InNewIndex is the source's final index in the current preview list, before it is rebuilt.
 	 *
 	 * The component list's drag-to-reorder moved the preview's array and nothing else, so the new
 	 * order lasted exactly until the next rebuild and never reached the asset. Same shape as the

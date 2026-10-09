@@ -220,21 +220,19 @@ function Invoke-Native {
 # facts about the machine and the project
 # ------------------------------------------------------------------------------------------------
 
+. (Join-Path $PSScriptRoot 'EditorHolders.ps1')
+
 function Get-EditorsOnProject([string]$UProject) {
     # Every UnrealEditor*.exe (the editor, -Cmd, other configurations) whose command line names
     # this .uproject. An editor started from the project browser without it on its command line
-    # is not seen; that is the one case this cannot catch.
-    $needle = $UProject.Replace('/', '\').ToLowerInvariant()
-    try {
-        $procs = @(Get-CimInstance -ClassName Win32_Process -Filter "Name LIKE 'UnrealEditor%'" -ErrorAction Stop)
-    } catch {
-        Write-Problem "Could not list running editors ($($_.Exception.Message)); assuming none."
-        return
+    # is not seen; that is the one case this cannot catch. Without CIM, an editor holding a DLL
+    # from inside the project is one (EditorHolders.ps1).
+    $found = Get-DreamGUIEditorHolders -UProject $UProject
+    if ($found.CimError) {
+        Write-Problem "Could not list running editors through CIM ($($found.CimError)); looked for editors holding this project's DLLs instead."
     }
-    foreach ($p in $procs) {
-        $line = [string]$p.CommandLine
-        if ($line -and $line.Replace('/', '\').ToLowerInvariant().Contains($needle)) { $p }
-    }
+    foreach ($id in $found.Unchecked) { Write-Problem "Could not read the modules of editor process $id; it is not counted." }
+    foreach ($id in $found.Holders) { [pscustomobject]@{ ProcessId = $id } }
 }
 
 function Get-GitState([string]$Dir) {

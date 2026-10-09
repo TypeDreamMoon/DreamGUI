@@ -71,7 +71,8 @@ $Log = Join-Path $ProjectDir "Saved\Logs\$ProjectName.log"
 if (-not $Out) { $Out = Join-Path $ProjectDir 'Saved\DreamGUIBench' }
 New-Item -ItemType Directory -Force -Path $Out | Out-Null
 
-if (Get-CimInstance Win32_Process -Filter "Name like 'UnrealEditor%'" | Where-Object { $_.CommandLine -like "*$ProjectName.uproject*" }) {
+. (Join-Path $PSScriptRoot '..\Tests\EditorHolders.ps1')
+if ((Get-DreamGUIEditorHolders -UProject $Project).Holders.Count -gt 0) {
     'An editor of this project is running; not starting.'
     exit 1
 }

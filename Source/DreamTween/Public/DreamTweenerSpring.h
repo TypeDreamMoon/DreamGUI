@@ -1,4 +1,4 @@
-﻿// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
+// Copyright 2026-Present TypeDreamMoon. All Rights Reserved.
 
 #pragma once
 
@@ -110,20 +110,28 @@ protected:
 		{
 			return true;
 		}
+		const int32 Generation = clockGeneration;
 		if (!startToTween)
 		{
 			startToTween = true;
 			OnStartGetValue();
+			if (clockGeneration != Generation) return IsRunningAfterTakeover();
 			onCycleStartCpp.Broadcast();
+			if (clockGeneration != Generation) return IsRunningAfterTakeover();
 			onStartCpp.Broadcast();
+			if (clockGeneration != Generation) return IsRunningAfterTakeover();
 		}
 		const bool bMoving = FDreamSpring::Step(Params, State, Dt);
 		Setter.ExecuteIfBound(State.Value);
+		if (clockGeneration != Generation) return IsRunningAfterTakeover();
 		onUpdateCpp.Broadcast(bMoving ? 0.0f : 1.0f);
+		if (clockGeneration != Generation) return IsRunningAfterTakeover();
 		if (!bMoving)
 		{
 			onCycleCompleteCpp.Broadcast();
+			if (clockGeneration != Generation) return IsRunningAfterTakeover();
 			onCompleteCpp.Broadcast();
+			if (clockGeneration != Generation) return IsRunningAfterTakeover();
 			if (isMarkedToKill)
 			{
 				return false;

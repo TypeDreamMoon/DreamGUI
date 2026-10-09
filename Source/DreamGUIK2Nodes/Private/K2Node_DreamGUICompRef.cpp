@@ -135,16 +135,18 @@ UClass* UK2Node_DreamGUICompRef_GetComponent::ResolveComponentClass(const UEdGra
 	{
 		return nullptr;
 	}
-	UBlueprint* Blueprint = VariableNode->GetBlueprint();
-	if (Blueprint == nullptr)
+	// The getter can target another Blueprint. Its member scope owns the default;
+	// an unrelated same-named variable in this graph must never choose the cast.
+	if (VariableNode->VariableReference.IsLocalScope())
 	{
 		return nullptr;
 	}
-	UClass* GeneratedClass = Blueprint->GeneratedClass;
+	UClass* GeneratedClass = VariableNode->GetVariableSourceClass();
 	if (GeneratedClass == nullptr)
 	{
 		return nullptr;
 	}
+	GeneratedClass = GeneratedClass->GetAuthoritativeClass();
 	// The component class is authored as a default value, so it is read off the class default object.
 	UObject* ObjectInstance = GeneratedClass->GetDefaultObject();
 	if (ObjectInstance == nullptr)

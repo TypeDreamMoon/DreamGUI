@@ -796,6 +796,10 @@ A turn -- made with the 2D view's rotate handle, the 3D view's gizmo or the deta
 `RelativeRotationEuler = (0, 0, 30)`: pitch, yaw and roll in degrees, a turn in the canvas plane being the roll,
 clockwise for a positive one. The quaternion the asset keeps has no spelling and is never written.
 
+If a source file is read-only or a write fails, the document keeps the edited text in memory. A later flush retries
+that write even when no value changed. Compile retries it too, and reports DUI6023 while it still cannot write; the
+current hierarchy and edits are retained. Check the file out or resolve the write failure, then compile again.
+
 ## Diagnostics
 
 Every message has a code, `DUInnnn`, printed as `File.dui(line,col): error DUI3001: …`. The first digit says which stage
@@ -910,6 +914,7 @@ refused: 1 lexer, 2 parser, 3 meaning, 4 values, 5 building the tree, 6 compilin
 | DUI6020 | TwoWayTargetReadOnly | `<-> Path.Member` whose member cannot be written back: read-only, and no `Set<Member>`. |
 | DUI6021 | LoopItemMemberNotFound | `Item.Member` that the loop source's element class does not have. |
 | DUI6022 | LoopItemRouteMismatch | `-> Item.Func` that the element class does not have, or whose parameters fit neither nothing nor the event. |
+| DUI6023 | SourceFileWritePending | The document has edits that could not be written, so compiling the older file was refused. |
 | DUI7001 | PatchTargetNotFound | A designer edit with no home in the file: an unknown node, a bound property, a slot with no block. |
 | DUI7002 | SourceFileChangedUnderEdit | The file changed under a pending edit; nothing was written. |
 | DUI7003 | PatchValueNotRepresentable | A value the language cannot spell (a non-finite number); its line is left alone. |

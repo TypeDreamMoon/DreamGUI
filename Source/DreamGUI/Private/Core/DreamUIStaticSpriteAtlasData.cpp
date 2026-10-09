@@ -186,6 +186,10 @@ bool UDreamUIStaticSpriteAtlasData::ContainsSpriteData(UDreamUISpriteData* InSpr
 
 void UDreamUIStaticSpriteAtlasData::AddSpriteData(UDreamUISpriteData* InSpriteData)
 {
+	if (SpriteDataArray.Contains(InSpriteData))return;
+	// A sprite's PackingAtlas edit also changes this asset's membership. Record both sides
+	// in the caller's transaction so undo and redo restore the same relationship.
+	Modify();
 	SpriteDataArray.Add(InSpriteData);
 	CheckSprite();
 	MarkPackageDirty();
@@ -193,6 +197,8 @@ void UDreamUIStaticSpriteAtlasData::AddSpriteData(UDreamUISpriteData* InSpriteDa
 }
 void UDreamUIStaticSpriteAtlasData::RemoveSpriteData(UDreamUISpriteData* InSpriteData)
 {
+	if (!SpriteDataArray.Contains(InSpriteData))return;
+	Modify();
 	SpriteDataArray.Remove(InSpriteData);
 	CheckSprite();
 	MarkPackageDirty();

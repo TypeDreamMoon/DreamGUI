@@ -92,7 +92,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI|Modal")
 	void CloseTopModal(FName InResult, int32 InUserIndex = 0);
 
-	/** Close every modal of InUserIndex, top down, each with InResult. For "back to the main menu". */
+	/** Close the current modals of InUserIndex, top down. Dialogs opened by callbacks belong to a later request. */
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI|Modal")
 	void CloseAllModals(FName InResult, int32 InUserIndex = 0);
 
@@ -149,6 +149,8 @@ private:
 	 * silently left an awaited OnResult unfired forever.
 	 */
 	void FailPendingModal(FPendingModal& InModal, FName InResult);
+	/** Finish an entry already removed from the live stack, then deliver its result once. */
+	void FinishClosingModal(FActiveModal&& Closing, FName InResult);
 	/** Tear down one entry's widgets. Safe on an entry whose widgets are already gone. */
 	void DestroyModal(FActiveModal& InModal);
 

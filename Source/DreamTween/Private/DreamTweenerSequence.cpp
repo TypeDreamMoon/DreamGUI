@@ -1,4 +1,4 @@
-﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
+// Copyright 2019-Present LexLiu. All Rights Reserved.
 
 #include "DreamTweenerSequence.h"
 #include "DreamTween.h"
@@ -49,6 +49,36 @@ UDreamTweenerSequence* UDreamTweenerSequence::Append(UObject* WorldContextObject
 {
 	return this->Insert(WorldContextObject, duration, tweener);
 }
+
+bool UDreamTweenerSequence::WouldCreateCycle(const UDreamTweener* InTweener) const
+{
+	TArray<const UDreamTweenerSequence*> Pending;
+	TSet<const UDreamTweenerSequence*> Visited;
+	if (const UDreamTweenerSequence* Sequence = Cast<UDreamTweenerSequence>(InTweener))
+	{
+		Pending.Add(Sequence);
+	}
+	while (!Pending.IsEmpty())
+	{
+		const UDreamTweenerSequence* Sequence = Pending.Pop(EAllowShrinking::No);
+		if (Sequence == this) return true;
+		if (!IsValid(Sequence) || Visited.Contains(Sequence)) continue;
+		Visited.Add(Sequence);
+		const auto VisitChildren = [&Pending](const TArray<TObjectPtr<UDreamTweener>>& Children)
+		{
+			for (UDreamTweener* Child : Children)
+			{
+				if (IsValid(Child))
+				{
+					if (const UDreamTweenerSequence* Nested = Cast<UDreamTweenerSequence>(Child)) Pending.Add(Nested);
+				}
+			}
+		};
+		VisitChildren(Sequence->tweenerList);
+		VisitChildren(Sequence->finishedTweenerList);
+	}
+	return false;
+}
 UDreamTweenerSequence* UDreamTweenerSequence::AppendInterval(UObject* WorldContextObject, float interval)
 {
 	if (elapseTime > 0 || startToTween)
@@ -69,6 +99,11 @@ UDreamTweenerSequence* UDreamTweenerSequence::Insert(UObject* WorldContextObject
 	if (!IsValid(tweener))
 	{
 		UE_LOG(DreamTween, Error, TEXT("[%s].%d tweener is null"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
+		return this;
+	}
+	if (WouldCreateCycle(tweener))
+	{
+		UE_LOG(DreamTween, Error, TEXT("[%s].%d cannot add a tweener that creates a cyclic sequence"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
 		return this;
 	}
 	if (tweener->IsA<UDreamTweenerFrame>() || tweener->IsA<UDreamTweenerVirtual>())
@@ -121,6 +156,11 @@ UDreamTweenerSequence* UDreamTweenerSequence::Prepend(UObject* WorldContextObjec
 	if (!IsValid(tweener))
 	{
 		UE_LOG(DreamTween, Error, TEXT("[%s].%d tweener is null"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
+		return this;
+	}
+	if (WouldCreateCycle(tweener))
+	{
+		UE_LOG(DreamTween, Error, TEXT("[%s].%d cannot add a tweener that creates a cyclic sequence"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
 		return this;
 	}
 	if (tweener->IsA<UDreamTweenerFrame>() || tweener->IsA<UDreamTweenerVirtual>())
@@ -323,48 +363,58 @@ void UDreamTweenerSequence::TweenAndApplyValue(float currentTime)
 void UDreamTweenerSequence::SetOriginValueForRestart()
 {
 	RemoveInvalidChildren();
-	for (auto& item : finishedTweenerList)
-	{
-		//add tweener to tweenerList
-		tweenerList.Add(item);
-	}
+	const int32 generation = clockGeneration;
+	tweenerList.Append(finishedTweenerList);
 	finishedTweenerList.Reset();
-
-	for (auto& item : tweenerList)
+	const TArray<TObjectPtr<UDreamTweener>> childrenToRewind = tweenerList;
+	for (UDreamTweener* item : childrenToRewind)
 	{
+		if (!IsValid(item))continue;
+		const int32 childGeneration = item->clockGeneration;
 		if (item->elapseTime > 0 || item->startToTween)
 		{
-			item->SetOriginValueForRestart();//if tween already start, then we can call "SetOriginValueForRestart"
+			item->SetOriginValueForRestart();
+			if (clockGeneration != generation)return;
+			if (!IsValid(item) || item->clockGeneration != childGeneration)continue;
 			item->TweenAndApplyValue(0);
+			if (clockGeneration != generation)return;
+			if (!IsValid(item) || item->clockGeneration != childGeneration)continue;
 		}
-		//set parameter to initial
 		item->elapseTime = 0;
 		item->loopCycleCount = 0;
 		item->foldedCycleCount = 0;
 		item->reverseTween = false;
-		// Starting again is starting: with this left raised the child's OnStart and OnCycleStart never
-		// fired a second time, and OnStartGetValue never re-read the value the line above just restored.
 		item->startToTween = false;
+		// A nested rewind must cancel a leaf's step too, just as RewindChildrenToStart cancels a
+		// direct child's. Otherwise the leaf resumes its old completion after its parent sought.
+		item->clockGeneration++;
 	}
 }
 
 void UDreamTweenerSequence::SetValueForIncremental()
 {
 	RemoveInvalidChildren();
-	for (auto& item : finishedTweenerList)
+	const int32 generation = clockGeneration;
+	const TArray<TObjectPtr<UDreamTweener>> childrenToReset = finishedTweenerList;
+	// Publish the new cycle's lists before a setter can seek it. Nothing is moved or cleared
+	// after caller code returns, because that code may already have published a newer pass.
+	tweenerList.Append(finishedTweenerList);
+	finishedTweenerList.Reset();
+	for (UDreamTweener* item : childrenToReset)
 	{
+		if (!IsValid(item))continue;
+		const int32 childGeneration = item->clockGeneration;
 		item->SetValueForIncremental();
-		//set parameter to initial
+		if (clockGeneration != generation)return;
+		if (!IsValid(item) || item->clockGeneration != childGeneration)continue;
 		item->elapseTime = 0;
 		item->loopCycleCount = 0;
 		item->foldedCycleCount = 0;
 		item->reverseTween = false;
 		item->TweenAndApplyValue(0);
-
-		//add tweener to tweenerList
-		tweenerList.Add(item);
+		if (clockGeneration != generation)return;
+		if (!IsValid(item) || item->clockGeneration != childGeneration)continue;
 	}
-	finishedTweenerList.Reset();
 }
 void UDreamTweenerSequence::SetValueForYoyo()
 {
@@ -394,23 +444,31 @@ void UDreamTweenerSequence::SetValueForYoyo()
 void UDreamTweenerSequence::SetValueForRestart()
 {
 	RemoveInvalidChildren();
-	for (auto& item : finishedTweenerList)
+	const int32 generation = clockGeneration;
+	const TArray<TObjectPtr<UDreamTweener>> childrenToReset = finishedTweenerList;
+	tweenerList.Append(finishedTweenerList);
+	finishedTweenerList.Reset();
+	for (UDreamTweener* item : childrenToReset)
 	{
-		//set parameter to initial
+		if (!IsValid(item))continue;
+		const int32 childGeneration = item->clockGeneration;
+		// A nested sequence's finished leaves must join its next cycle before it is stepped at zero.
+		item->SetValueForRestart();
+		if (clockGeneration != generation)return;
+		if (!IsValid(item) || item->clockGeneration != childGeneration)continue;
 		item->elapseTime = 0;
 		item->loopCycleCount = 0;
 		item->foldedCycleCount = 0;
 		item->reverseTween = false;
 		item->TweenAndApplyValue(0);
-
-		//add tweener to tweenerList
-		tweenerList.Add(item);
+		if (clockGeneration != generation)return;
+		if (!IsValid(item) || item->clockGeneration != childGeneration)continue;
 	}
-	finishedTweenerList.Reset();
 }
 void UDreamTweenerSequence::RewindChildrenToStart()
 {
 	RemoveInvalidChildren();
+	const int32 generation = clockGeneration;
 	//reset parameter to initial
 	if (this->loopType == EDreamTweenLoop::Yoyo)
 	{
@@ -440,10 +498,15 @@ void UDreamTweenerSequence::RewindChildrenToStart()
 		{
 			continue;
 		}
+		const int32 childGeneration = item->clockGeneration;
 		if (item->startToTween)
 		{
 			item->SetOriginValueForRestart();
+			if (clockGeneration != generation) return;
+			if (!IsValid(item) || item->clockGeneration != childGeneration) continue;
 			item->TweenAndApplyValue(0);
+			if (clockGeneration != generation) return;
+			if (!IsValid(item) || item->clockGeneration != childGeneration) continue;
 		}
 		//set parameter to initial
 		item->elapseTime = 0;
@@ -479,7 +542,7 @@ void UDreamTweenerSequence::Restart()
 	}
 	TGuardValue<int32> SeekDepthGuard(seekDepth, seekDepth + 1);
 	// A pass of this sequence in progress -- Restart called from a child's callback -- stops where it is.
-	clockGeneration++;
+	const int32 generation = ++clockGeneration;
 	this->isMarkedPause = false;//incase it is paused.
 	// Same two omissions the inherited Restart had, and this override has to repeat their repair
 	// because it replaces that implementation rather than extending it: a killed sequence stayed
@@ -489,6 +552,10 @@ void UDreamTweenerSequence::Restart()
 
 	//reset parameter and value to start
 	RewindChildrenToStart();
+	if (clockGeneration != generation)
+	{
+		return;
+	}
 
 	this->ToNextWithElapsedTime(0);
 }
@@ -506,10 +573,14 @@ void UDreamTweenerSequence::Goto(float timePoint)
 	TGuardValue<int32> SeekDepthGuard(seekDepth, seekDepth + 1);
 	timePoint = FMath::Clamp(timePoint, 0.0f, duration);
 	// A pass of this sequence in progress -- Goto called from a child's callback -- stops where it is.
-	clockGeneration++;
+	const int32 generation = ++clockGeneration;
 
 	//reset parameter to start, then goto timepoint: the same rewind Restart makes
 	RewindChildrenToStart();
+	if (clockGeneration != generation)
+	{
+		return;
+	}
 
 	// delay + timePoint, as in UDreamTweener::Goto: timePoint is a position in the sequence, while
 	// elapseTime counts this sequence's own delay before it.
