@@ -1,5 +1,5 @@
 <p align="center">
-  <img alt="DreamGUI banner" src="./Images/banner.svg" />
+  <img alt="DreamGUI banner" src="./Images/banner.png" />
 </p>
 
 <table>
@@ -43,7 +43,7 @@
       </p>
     </td>
     <td width="36%" align="center" valign="middle">
-      <img src="./Images/stage.svg" width="260" alt="几块界面面板以不同深度立在场景里" />
+      <img src="./Images/character.png" width="260" alt="DreamGUI character" />
     </td>
   </tr>
 </table>
