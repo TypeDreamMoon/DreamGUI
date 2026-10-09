@@ -146,6 +146,11 @@ after 3 for 2.1.0 -- so the engine never takes 1.0.0 for the older of the two.
   is off by default; it was on by default, and on was the only way a list had ever behaved. See
   [Migration](Docs/Migration.md#from-100-to-the-next-release).
 
+- **A reduced screen-space render scale is not used for a layer that blends with what is behind it.** Multiply and
+  a material's Modulate, AlphaHoldout or Additive need the scene they draw over, which a transparent smaller target does
+  not hold, so such a layer lost its effect when scaled ([#9]). It now draws at full resolution, as one with a post
+  process already did.
+
 ### Fixed
 
 - **A text field's edit menu answers the pointer.** No entry -- Copy, Paste and the rest -- could be chosen with a mouse
@@ -220,6 +225,107 @@ after 3 for 2.1.0 -- so the engine never takes 1.0.0 for the older of the two.
   does, the editor's Undo toast among them -- the editor ticks only the viewports that asked to be redrawn. A drag begun
   just after an undo stood still, and one let go before the toast was in had never begun, as though it had been a
   click. The viewport now asks for its redraw while a gesture is live, as the engine's own viewport drags never wait.
+- **Fifty-four findings of a review: callbacks that reenter or tear down a control no longer overwrite what replaced
+  them.** PR [#16], each with a test that fails without its fix.
+  - *Lists and tabs*: clearing a recyclable scroll view's source no longer leaves a scroll callback to crash ([#2]);
+    a list callback that rebuilds the list no longer breaks the cell pool ([#3]) or brings back removed selections
+    ([#15]); a tree provider cannot overwrite the refresh that replaced its own ([#19]); a dropdown stops making
+    rows once it is closed or destroyed ([#25]); a tab callback destroys the page it closed and no other, and no
+    obsolete tab is appended ([#29]); disabling a later tab leaves earlier ones disabled ([#36]).
+  - *Menus, dialogs and tooltips*: a menu whose content provider cancels the opening does not stay open ([#24]), and
+    a disabled or destroyed anchor cannot reopen or orphan its popup ([#35], [#41]); an old dialog click cannot
+    close a newer question ([#43]); `CloseAllModals` closes the dialogs it found and keeps those opened meanwhile
+    ([#51]); a tooltip's destruction callback cannot orphan the bubble that replaced it ([#52]).
+  - *Input and focus*: the wheel leaves navigation mode and scrolls what is under the pointer ([#10]); hover on a
+    shared drop target is per drag ([#11]), and a drag visual's initialization cannot lose the drag it follows
+    ([#14]); focus callbacks get current focus events and keep the destination they chose ([#22], [#37]); a key
+    selector destroyed or disabled in a callback stops capturing ([#30], [#34]); one text commit has one payload
+    ([#42]).
+  - *Screens, tweens and animations*: screen page callbacks cannot invalidate the pages being shown ([#5]); a frame
+    delay tween can restart from its completion ([#13]); a sequence refuses to contain itself instead of recursing
+    until the stack overflows ([#17]); superseded spring and explicit tween steps stop ([#18], [#23]); an
+    animation stopped twice in one batch is retired once ([#28]); standalone animations resolve their bindings and
+    are found on every component ([#47], [#48]); sprite players follow a replaced visual ([#53]).
+  - *Bindings, instancing and copies*: authored event entries ([#4]), event targets after a component move or
+    removal ([#12]), references inside hashed map keys and set elements ([#38]), inline tween events ([#39]) and
+    bindings after initialization reorders components ([#50]) all keep their targets; a nested widget's private
+    children no longer overwrite its host's variables ([#44]); an external component reference takes its type from
+    the referenced class ([#49]).
+  - *Designer and editor*: a DUI write-back that failed is retried before compiling ([#6]), and an imported style
+    change recompiles open documents ([#20]); composite property edits, Copy/Cut/Paste and component commands write
+    the authored widgets, not the preview ([#26], [#40], [#46]); source-file class aliases survive saving and
+    unrelated lookups ([#31]); Undo restores resource subscriptions ([#32]) and both atlas membership lists
+    ([#45]); the designer test helper compiles outside its unity group ([#33]), and the F-key framing test waits
+    for the camera's last tick ([#56]).
+  - *Rendering*: shared viewport UI is drawn once across a split screen instead of scaled into each view ([#7]); a
+    runtime atlas no longer copies incompatible compressed texture formats ([#8]); a reloaded fallback font drops the
+    primary's stale face caches ([#21]); world-space UI samples depth from its own view rect ([#27]); cylinder ray
+    casts compare hits in one coordinate frame and still find hits behind a culled back face ([#54], [#55]).
+- **A user widget no longer records every widget of its tree to keep its component bindings on target.** The fix for
+  [#50] captured each widget and all its components whenever an instance was created -- each cell of a list too --
+  though only a binding to a component reads them. Only the widgets such a binding names are captured now; a tree with
+  none records nothing.
+- **The test runner sees an open editor where CIM is unavailable.** It asked Win32_Process for editors with the project
+  on their command line, and where `Get-CimInstance` cannot be loaded it assumed there were none and built over an open
+  editor (LNK1104); the nightly and the bench launcher stopped on the error, and matched any project of the same file
+  name. All three now fall back to editors holding a DLL from inside the project. See
+  [Running the DreamGUI tests](Tools/Tests/README.md).
+
+[#16]: https://github.com/TypeDreamMoon/DreamGUI/pull/16
+[#2]: https://github.com/TypeDreamMoon/DreamGUI/issues/2
+[#3]: https://github.com/TypeDreamMoon/DreamGUI/issues/3
+[#4]: https://github.com/TypeDreamMoon/DreamGUI/issues/4
+[#5]: https://github.com/TypeDreamMoon/DreamGUI/issues/5
+[#6]: https://github.com/TypeDreamMoon/DreamGUI/issues/6
+[#7]: https://github.com/TypeDreamMoon/DreamGUI/issues/7
+[#8]: https://github.com/TypeDreamMoon/DreamGUI/issues/8
+[#9]: https://github.com/TypeDreamMoon/DreamGUI/issues/9
+[#10]: https://github.com/TypeDreamMoon/DreamGUI/issues/10
+[#11]: https://github.com/TypeDreamMoon/DreamGUI/issues/11
+[#12]: https://github.com/TypeDreamMoon/DreamGUI/issues/12
+[#13]: https://github.com/TypeDreamMoon/DreamGUI/issues/13
+[#14]: https://github.com/TypeDreamMoon/DreamGUI/issues/14
+[#15]: https://github.com/TypeDreamMoon/DreamGUI/issues/15
+[#17]: https://github.com/TypeDreamMoon/DreamGUI/issues/17
+[#18]: https://github.com/TypeDreamMoon/DreamGUI/issues/18
+[#19]: https://github.com/TypeDreamMoon/DreamGUI/issues/19
+[#20]: https://github.com/TypeDreamMoon/DreamGUI/issues/20
+[#21]: https://github.com/TypeDreamMoon/DreamGUI/issues/21
+[#22]: https://github.com/TypeDreamMoon/DreamGUI/issues/22
+[#23]: https://github.com/TypeDreamMoon/DreamGUI/issues/23
+[#24]: https://github.com/TypeDreamMoon/DreamGUI/issues/24
+[#25]: https://github.com/TypeDreamMoon/DreamGUI/issues/25
+[#26]: https://github.com/TypeDreamMoon/DreamGUI/issues/26
+[#27]: https://github.com/TypeDreamMoon/DreamGUI/issues/27
+[#28]: https://github.com/TypeDreamMoon/DreamGUI/issues/28
+[#29]: https://github.com/TypeDreamMoon/DreamGUI/issues/29
+[#30]: https://github.com/TypeDreamMoon/DreamGUI/issues/30
+[#31]: https://github.com/TypeDreamMoon/DreamGUI/issues/31
+[#32]: https://github.com/TypeDreamMoon/DreamGUI/issues/32
+[#33]: https://github.com/TypeDreamMoon/DreamGUI/issues/33
+[#34]: https://github.com/TypeDreamMoon/DreamGUI/issues/34
+[#35]: https://github.com/TypeDreamMoon/DreamGUI/issues/35
+[#36]: https://github.com/TypeDreamMoon/DreamGUI/issues/36
+[#37]: https://github.com/TypeDreamMoon/DreamGUI/issues/37
+[#38]: https://github.com/TypeDreamMoon/DreamGUI/issues/38
+[#39]: https://github.com/TypeDreamMoon/DreamGUI/issues/39
+[#40]: https://github.com/TypeDreamMoon/DreamGUI/issues/40
+[#41]: https://github.com/TypeDreamMoon/DreamGUI/issues/41
+[#42]: https://github.com/TypeDreamMoon/DreamGUI/issues/42
+[#43]: https://github.com/TypeDreamMoon/DreamGUI/issues/43
+[#44]: https://github.com/TypeDreamMoon/DreamGUI/issues/44
+[#45]: https://github.com/TypeDreamMoon/DreamGUI/issues/45
+[#46]: https://github.com/TypeDreamMoon/DreamGUI/issues/46
+[#47]: https://github.com/TypeDreamMoon/DreamGUI/issues/47
+[#48]: https://github.com/TypeDreamMoon/DreamGUI/issues/48
+[#49]: https://github.com/TypeDreamMoon/DreamGUI/issues/49
+[#50]: https://github.com/TypeDreamMoon/DreamGUI/issues/50
+[#51]: https://github.com/TypeDreamMoon/DreamGUI/issues/51
+[#52]: https://github.com/TypeDreamMoon/DreamGUI/issues/52
+[#53]: https://github.com/TypeDreamMoon/DreamGUI/issues/53
+[#54]: https://github.com/TypeDreamMoon/DreamGUI/issues/54
+[#55]: https://github.com/TypeDreamMoon/DreamGUI/issues/55
+[#56]: https://github.com/TypeDreamMoon/DreamGUI/issues/56
 
 ## 1.0.0
 
