@@ -1564,13 +1564,39 @@ void UDreamUserWidget::K2_BroadcastFieldValueChanged(FFieldNotificationId InFiel
 void UDreamUserWidget::CaptureBindingComponentIdentities(UDreamWidgetTree* InTree, const TArray<UDreamWidget*>& InWidgets)
 {
 	BindingComponentIdentities.Reset();
+	// Only a binding to a component reads the table, by its widget's name; every other binding resolves without it.
+	// Every instance is captured -- each cell of a list, too -- so a tree with no such binding records nothing.
+	TSet<FName, DefaultKeyFuncs<FName>, TInlineSetAllocator<8>> ComponentBindingWidgets;
+	for (const UClass* Class = GetClass(); Class != nullptr; Class = Class->GetSuperClass())
+	{
+		if (const UDreamWidgetGeneratedClass* Generated = Cast<UDreamWidgetGeneratedClass>(Class))
+		{
+			for (const FDreamWidgetPropertyBinding& Binding : Generated->GetPropertyBindings())
+			{
+				if (Binding.Target == EDreamWidgetBindingTarget::Behaviour)ComponentBindingWidgets.Add(Binding.WidgetName);
+			}
+			for (const FDreamWidgetEventBinding& Binding : Generated->GetEventBindings())
+			{
+				if (Binding.Target == EDreamWidgetBindingTarget::Behaviour)ComponentBindingWidgets.Add(Binding.WidgetName);
+			}
+		}
+	}
+	if (ComponentBindingWidgets.IsEmpty())
+	{
+		return;
+	}
 	for (UDreamWidget* Widget : InWidgets)
 	{
 		if (!IsValid(Widget) || Widget->GetTypedOuter<UDreamWidgetTree>() != InTree)
 		{
 			continue;
 		}
-		FBindingComponentIdentities& Identities = BindingComponentIdentities.Add(UDreamWidgetTree::MakeWidgetVariableName(Widget));
+		const FName WidgetName = UDreamWidgetTree::MakeWidgetVariableName(Widget);
+		if (!ComponentBindingWidgets.Contains(WidgetName))
+		{
+			continue;
+		}
+		FBindingComponentIdentities& Identities = BindingComponentIdentities.Add(WidgetName);
 		Identities.Widget = Widget;
 		for (UDreamUIBehaviour* Component : Widget->GetAllComponents())
 		{

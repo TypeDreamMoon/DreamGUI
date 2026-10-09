@@ -171,4 +171,90 @@ bool FDreamRuntimeComponentBindingOrderTest::RunTest(const FString& Parameters)
 	return true;
 }
 
+IMPLEMENT_COMPLEX_AUTOMATION_TEST(FDreamComponentBindingIdentityScopeTest,
+	"DreamGUI.Binding.ComponentIdentitiesAreCapturedOnlyForComponentBindings",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+void FDreamComponentBindingIdentityScopeTest::GetTests(TArray<FString>& OutBeautifiedNames, TArray<FString>& OutTestCommands) const
+{
+	OutBeautifiedNames.Add(TEXT("Only the widget a component binding names is captured"));
+	OutTestCommands.Add(TEXT("Bound"));
+	OutBeautifiedNames.Add(TEXT("A tree with no component binding captures nothing"));
+	OutTestCommands.Add(TEXT("Unbound"));
+}
+
+bool FDreamComponentBindingIdentityScopeTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamRuntimeComponentBindingOrderTestLocal;
+	FScopedBlueprint Scoped;
+	if (!TestNotNull(TEXT("the public factory creates a DreamGUI blueprint"), Scoped.Blueprint))return false;
+	UDreamWidgetTree* Tree = Scoped.Blueprint->GetOrCreateWidgetTree();
+	const bool bBound = Parameters == TEXT("Bound");
+	// Every instance used to record each widget and its components, bound or not: a list cell paid for all of them.
+	UDreamWidget* Subject = Tree->ConstructWidget<UDreamWidget>();
+	Subject->SetDisplayName(TEXT("Subject"));
+	Subject->SetParentBeforeRegister(Tree->RootWidget);
+	UDreamRuntimeComponentBindingOrderTestBehaviour* First = Subject->AddComponent<UDreamRuntimeComponentBindingOrderTestBehaviour>();
+	UDreamRuntimeComponentBindingOrderTestBehaviour* Second = Subject->AddComponent<UDreamRuntimeComponentBindingOrderTestBehaviour>();
+	UDreamWidget* Bystander = Tree->ConstructWidget<UDreamWidget>();
+	Bystander->SetDisplayName(TEXT("Bystander"));
+	Bystander->SetParentBeforeRegister(Tree->RootWidget);
+	UDreamRuntimeComponentBindingOrderTestBehaviour* Unbound = Bystander->AddComponent<UDreamRuntimeComponentBindingOrderTestBehaviour>();
+	if (!TestNotNull(TEXT("the first component is authored"), First) || !TestNotNull(TEXT("the second component is authored"), Second)
+		|| !TestNotNull(TEXT("the bystander's component is authored"), Unbound))return false;
+	First->Identity = TEXT("First");
+	Second->Identity = TEXT("Second");
+	Unbound->BoundValue = 33.0f;
+	if (bBound)
+	{
+		FDreamWidgetPropertyBinding PropertyBinding;
+		PropertyBinding.WidgetName = TEXT("Subject");
+		PropertyBinding.Target = EDreamWidgetBindingTarget::Behaviour;
+		PropertyBinding.BehaviourIndex = 0;
+		PropertyBinding.PropertyName = TEXT("BoundValue");
+		PropertyBinding.FunctionName = TEXT("ReadBoundValue");
+		Scoped.Blueprint->PropertyBindings.Add(PropertyBinding);
+	}
+
+	FCompilerResultsLog Results;
+	FKismetEditorUtilities::CompileBlueprint(Scoped.Blueprint, EBlueprintCompileOptions::SkipGarbageCollection, &Results);
+	if (!TestEqual(TEXT("the blueprint compiles"), Results.NumErrors, 0))return false;
+	UDreamWidgetGeneratedClass* Generated = Cast<UDreamWidgetGeneratedClass>(Scoped.Blueprint->GeneratedClass);
+	if (!TestNotNull(TEXT("the compiler generated the runtime class"), Generated))return false;
+
+	DreamTests::FScopedGameWorld TestWorld;
+	UDreamRuntimeComponentBindingOrderTestWidget* Instance = Cast<UDreamRuntimeComponentBindingOrderTestWidget>(
+		BeginCreateDreamWidget(TestWorld.World, Generated));
+	if (!TestNotNull(TEXT("the deferred-create path creates the compiled widget"), Instance))return false;
+	ON_SCOPE_EXIT { if (IsValid(Instance))Instance->DestroyWidget(); };
+	if (!TestNotNull(TEXT("FinishCreateDreamWidget initializes the instance"), FinishCreateDreamWidget(Instance)))return false;
+
+	const TArray<FName> Captured = Instance->GetBindingComponentIdentityNamesForTesting();
+	if (!bBound)
+	{
+		TestEqual(TEXT("no component binding, no captured widget"), Captured.Num(), 0);
+		return true;
+	}
+	TestTrue(TEXT("exactly the bound widget is captured"), Captured.Num() == 1 && Captured[0] == FName(TEXT("Subject")));
+	// The binding still follows its authored component through the hook's reorder.
+	UDreamWidget* LiveSubject = Instance->GetWidgetTree()->FindWidgetByVariableName(TEXT("Subject"));
+	if (!TestNotNull(TEXT("the live subject exists"), LiveSubject))return false;
+	for (UDreamUIBehaviour* Component : LiveSubject->GetAllComponents())
+	{
+		const UDreamRuntimeComponentBindingOrderTestBehaviour* Candidate = Cast<UDreamRuntimeComponentBindingOrderTestBehaviour>(Component);
+		if (Candidate != nullptr && Candidate->Identity == TEXT("First"))
+		{
+			TestEqual(TEXT("the property binding drives the authored first component"), Candidate->BoundValue, 77.0f);
+		}
+	}
+	UDreamWidget* LiveBystander = Instance->GetWidgetTree()->FindWidgetByVariableName(TEXT("Bystander"));
+	const UDreamRuntimeComponentBindingOrderTestBehaviour* LiveUnbound = LiveBystander != nullptr && LiveBystander->GetAllComponents().Num() == 1
+		? Cast<UDreamRuntimeComponentBindingOrderTestBehaviour>(LiveBystander->GetAllComponents()[0]) : nullptr;
+	if (TestNotNull(TEXT("the bystander keeps its component"), LiveUnbound))
+	{
+		TestEqual(TEXT("the unbound component keeps its own value"), LiveUnbound->BoundValue, 33.0f);
+	}
+	return true;
+}
+
 #endif

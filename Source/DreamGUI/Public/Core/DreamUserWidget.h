@@ -1157,6 +1157,17 @@ private:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "DreamGUI|UserWidget", Getter = "GetCanNavigateHere", Setter = "SetCanNavigateHere", meta = (AllowPrivateAccess = true, DisplayName = "Can Navigate Here"))
 	bool bCanNavigateHere = false;
 
+#if WITH_DEV_AUTOMATION_TESTS
+public:
+	/** The widget names whose authored components this instance captured for its component bindings. */
+	TArray<FName> GetBindingComponentIdentityNamesForTesting() const
+	{
+		TArray<FName> Names;
+		BindingComponentIdentities.GetKeys(Names);
+		return Names;
+	}
+#endif
+
 private:
 	friend class UDreamWidgetGeneratedClass;
 	friend void DreamUserWidgetDuplicateLocal::AdoptDuplicatedUserWidgets(UDreamWidget*, UDreamWidget*);
@@ -1169,6 +1180,7 @@ private:
 	};
 	TMap<FName, FBindingComponentIdentities> BindingComponentIdentities;
 
+	/** Captures the widgets a property or event binding to a component names, nothing else. */
 	void CaptureBindingComponentIdentities(UDreamWidgetTree* InTree, const TArray<UDreamWidget*>& InWidgets);
 	void CopyBindingComponentIdentities(const UDreamUserWidget* InSource,
 		const TMap<const UDreamWidget*, UDreamWidget*>& InSourceToCopy);
