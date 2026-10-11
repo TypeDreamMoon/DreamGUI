@@ -396,6 +396,10 @@ void UDreamPointerInputModule::ProcessPointerEvent(UDreamUIInputUser* InUser, UD
 
 	EventData->FaceIndex = DreamHitResult.HitResult.FaceIndex;
 	EventData->Raycaster = DreamHitResult.Raycaster;
+	// What is drawn on top under the pointer, disabled or not, before anything hears of this frame: a tooltip reads it
+	// from the exits and enters below.
+	EventData->HitWidgetIgnoringEnabled = !bLineTraceHitSomething ? nullptr
+		: DreamHitResult.WidgetIgnoringEnabled != nullptr ? DreamHitResult.WidgetIgnoringEnabled : DreamHitResult.HitResult.Widget.Get();
 
 	// The actor behind a hit that is not a widget's is hovered, pressed and released alongside the widgets, by their
 	// rules (see FDreamUIPointerWorldTarget). Exits go out before enters across both kinds of target, as they do

@@ -1406,7 +1406,8 @@ bool UDreamUIInputUser::LineTrace(UDreamPointerEventData* InPointerEventData, FD
 			Cache != nullptr && Cache->Generation == Generation && Cache->bPaused == bIsGamePaused
 			&& Cache->Position == InPointerEventData->PointerPosition)
 		{
-			bool bStillStands = !Cache->bHit || Cache->Raycaster.IsValid();
+			bool bStillStands = (!Cache->bHit || Cache->Raycaster.IsValid())
+				&& (Cache->WidgetIgnoringEnabled.IsExplicitlyNull() || Cache->WidgetIgnoringEnabled.IsValid());
 			TArray<UDreamWidget*> Hovered;
 			Hovered.Reserve(Cache->Hovered.Num());
 			for (const TWeakObjectPtr<UDreamWidget>& Widget : Cache->Hovered)
@@ -1433,6 +1434,7 @@ bool UDreamUIInputUser::LineTrace(UDreamPointerEventData* InPointerEventData, FD
 					OutDreamHitResult.RayEnd = Cache->RayEnd;
 					OutDreamHitResult.Raycaster = Cache->Raycaster.Get();
 					OutDreamHitResult.HoverArray = MoveTemp(Hovered);
+					OutDreamHitResult.WidgetIgnoringEnabled = Cache->WidgetIgnoringEnabled.Get();
 				}
 				return Cache->bHit;
 			}
@@ -1511,6 +1513,7 @@ bool UDreamUIInputUser::LineTrace(UDreamPointerEventData* InPointerEventData, FD
 			FDreamUIHitResultContainer DreamHitResult;
 			DreamHitResult.HitResult = HitResultArray[0];
 			DreamHitResult.HitResult.Widget = TargetWidget;
+			DreamHitResult.WidgetIgnoringEnabled = TopHitWidget;
 			DreamHitResult.Raycaster = Raycaster;
 			DreamHitResult.RayOrigin = RayOrigin;
 			DreamHitResult.RayDirection = RayDir;
@@ -1628,6 +1631,7 @@ bool UDreamUIInputUser::LineTrace(UDreamPointerEventData* InPointerEventData, FD
 		Cache.RayDirection = OutDreamHitResult.RayDirection;
 		Cache.RayEnd = OutDreamHitResult.RayEnd;
 		Cache.Raycaster = bHit ? OutDreamHitResult.Raycaster : nullptr;
+		Cache.WidgetIgnoringEnabled = bHit ? OutDreamHitResult.WidgetIgnoringEnabled : nullptr;
 		Cache.Hovered.Reset();
 		for (const TObjectPtr<UDreamWidget>& Widget : InPointerEventData->HoverComponentArray)
 		{

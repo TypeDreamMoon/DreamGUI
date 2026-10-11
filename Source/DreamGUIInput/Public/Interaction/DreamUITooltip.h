@@ -85,6 +85,12 @@ struct FDreamUITooltipUserState
 	TWeakObjectPtr<UDreamWidget> Candidate;
 	/** Set by the followed pointer's enters and exits: the candidate is read from what it is over at the end of the frame. */
 	bool bCandidateStale = false;
+	/**
+	 * The widget the candidate was looked for from: what the followed pointer was over, disabled or not. A pointer moving
+	 * onto a disabled widget inside the one it was over sends no enter (the disabled widget is cut out of its path), so
+	 * the tick compares this with what the pointer is over now.
+	 */
+	TWeakObjectPtr<UDreamWidget> CandidateFrom;
 	float HoverSeconds = 0.0f;
 	/** Set from press/drag; a new hover-enter re-arms. */
 	bool bSuppressed = false;

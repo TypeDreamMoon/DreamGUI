@@ -105,6 +105,7 @@ bool UDreamUIRenderTargetInteraction::ResolveNestedHit(const FDreamUIHitResultCo
 		const bool bCut = TargetWidget != TopHitWidget;
 		OutInnerHit.HitResult = HitResultArray[0];
 		OutInnerHit.HitResult.Widget = TargetWidget;
+		OutInnerHit.WidgetIgnoringEnabled = TopHitWidget;
 		for (const FDreamUIHitResult& HitItem : HitResultArray)
 		{
 			if (UDreamWidget* HoveredWidget = HitItem.Widget.Get(); HoveredWidget != nullptr

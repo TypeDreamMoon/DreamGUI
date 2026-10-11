@@ -85,7 +85,7 @@ outside them through, and a screen built around the old way will feel different:
   to keep a press from what holds it -- a click handler on a panel that must not fire through a greyed-out button --
   gives that panel's handler the check it needs, or puts a `UUIEventBlocker` on an enabled widget around the control.
   What is drawn behind a disabled widget is still not reached, and a widget whose whole tree is disabled still hides
-  its canvas's answer, as before.
+  its canvas's answer, as before. The mouse resting on a disabled widget now brings its tooltip up.
 
 A C++ subclass of `UDreamSpinBox` or of the list family that overrides `NativeOnKeyDown` calls `Super` to keep these
 keys, as for any key the base answers.

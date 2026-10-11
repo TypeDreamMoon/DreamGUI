@@ -154,6 +154,10 @@ after 3 for 2.1.0 -- so the engine never takes 1.0.0 for the older of the two.
   in it still hear nothing, are not hovered, and still lie in front of whatever is drawn behind them. Screen space,
   world space, render-target surfaces, fingers and the virtual cursor follow the one rule. See
   [Migration](Docs/Migration.md#from-100-to-the-next-release).
+- **A disabled widget's tooltip comes up under the mouse**, as Slate looks for a tooltip under the cursor including
+  disabled widgets (`FSlateUser::UpdateTooltip`) -- which is why CommonUI's buttons carry a disabled tooltip. It never
+  did. `UDreamPointerEventData::HitWidgetIgnoringEnabled` names the widget drawn on top under a pointer, disabled or
+  not.
 
 - **A reduced screen-space render scale is not used for a layer that blends with what is behind it.** Multiply and
   a material's Modulate, AlphaHoldout or Additive need the scene they draw over, which a transparent smaller target does
