@@ -53,6 +53,11 @@ after 3 for 2.1.0 -- so the engine never takes 1.0.0 for the older of the two.
   Each of these used to be addable anywhere and then sat there doing nothing. Paste, duplicate and component assets
   dropped on the panel follow the same rules; a refused drop says why. A project adds rules for its own components
   from its editor module.
+- **A prompt on the action bar runs the action it shows** when it is clicked, tapped or confirmed with the pad, as
+  CommonUI's bound action button does (`UCommonBoundActionButton::NativeOnClicked`): an entry class that is a button --
+  `UDreamButton`, or a prefab built around a `UUIButton` -- is wired to `UDreamUIActionRouter::ExecuteAction`, new, which
+  runs a binding by its handle while its key would. A disabled bar's prompts click nothing and the pad passes over
+  them. An entry with no button still only shows its prompt.
 - **`UDreamListViewBase::FingerDrag`** (List, Tile and Tree views): what a finger dragged along rows that can be picked up
   does. `ScrollList`, the default, scrolls the list, as UMG's does; `PickUpRow` picks the row up, as the mouse does, for a
   touch-first screen whose rows are dragged by finger. The mouse is the same either way.
@@ -144,6 +149,24 @@ after 3 for 2.1.0 -- so the engine never takes 1.0.0 for the older of the two.
   dropdown's own face closes the list without opening it again. The list follows `bMenusConsumeOutsideClick` with the
   menus. `UUIDropdown::bUseInteractionBlock` now means "keep the press for this dropdown whatever the project says" and
   is off by default; it was on by default, and on was the only way a list had ever behaved. See
+  [Migration](Docs/Migration.md#from-100-to-the-next-release).
+- **A click, a tap or the virtual cursor's confirm on a disabled widget reaches the widget around it**, as Slate cuts
+  the path under the pointer at the first disabled widget and lets what is left take the event
+  (`FHittestGrid::GetBubblePath`): the nearest widget above it that takes input is hovered, pressed and clicked as if
+  the pointer were on it, and the events bubble on up from there. A disabled widget used to swallow the whole press,
+  so the card around a disabled button heard nothing, and a press on a disabled entry of an open menu or popup counted
+  as a press outside it and closed it; now the card hears it, and the menu stays up. The disabled widget and everything
+  in it still hear nothing, are not hovered, and still lie in front of whatever is drawn behind them. Screen space,
+  world space, render-target surfaces, fingers and the virtual cursor follow the one rule. See
+  [Migration](Docs/Migration.md#from-100-to-the-next-release).
+- **A disabled widget's tooltip comes up under the mouse**, as Slate looks for a tooltip under the cursor including
+  disabled widgets (`FSlateUser::UpdateTooltip`) -- which is why CommonUI's buttons carry a disabled tooltip. It never
+  did. `UDreamPointerEventData::HitWidgetIgnoringEnabled` names the widget drawn on top under a pointer, disabled or
+  not.
+- **A link in rich text is a stop for Tab, the D-pad and the stick**, as UMG's hyperlink is an `SButton`: in a game,
+  `UUITextHyperlink` puts a focusable stop over each link it draws, which the focus ring is drawn around and whose
+  confirm announces the link (`UDreamText::OnHyperlinkClicked`). The keys and the pad used to pass every link by. A
+  link in a disabled text is passed over. `bLinksAreFocusStops` turns it off. See
   [Migration](Docs/Migration.md#from-100-to-the-next-release).
 
 - **A reduced screen-space render scale is not used for a layer that blends with what is behind it.** Multiply and

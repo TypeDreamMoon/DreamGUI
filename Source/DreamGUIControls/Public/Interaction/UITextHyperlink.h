@@ -26,6 +26,13 @@ class UDreamText;
  * Put it on the same widget as the UDreamText (it finds the visual itself), and give the widget
  * something that raises clicks at all -- the event system needs a raycast target, the same way a
  * UUIButton does.
+ *
+ * Each link is also a stop for the keys and the pad, as UMG's is: the hyperlink decorator draws a link
+ * as an SHyperlink, which is an SButton (Slate/Public/Widgets/Input/SHyperlink.h), focusable like any
+ * button (SButton's IsFocusable). In a game, while bLinksAreFocusStops is on, every link drawn gets a
+ * stop of its own over its glyphs -- a child widget with a button on it, which the D-pad and Tab reach
+ * where the link is drawn, the focus ring is drawn around, and whose confirm announces the link. A link
+ * in a disabled text is a disabled button: passed over, and the confirm announces nothing.
  */
 UCLASS(ClassGroup = (DreamGUI), Blueprintable, meta = (BlueprintSpawnableComponent))
 class DREAMGUICONTROLS_API UUITextHyperlink : public UDreamUIBehaviour, public IDreamPointerClickInterface,
@@ -56,6 +63,16 @@ public:
 	FColor GetPressedColor()const { return PressedColor; }
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Hyperlink")
 	void SetPressedColor(FColor Value);
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Hyperlink")
+	bool GetLinksAreFocusStops()const { return bLinksAreFocusStops; }
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Hyperlink")
+	void SetLinksAreFocusStops(bool Value);
+	/**
+	 * The stop over the link at InTagIndex of the text's GetRichTextCustomTagArray -- the widget the keys and the pad focus
+	 * for it -- or null while it has none (outside a game, with bLinksAreFocusStops off, or a link not drawn).
+	 */
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Hyperlink")
+	UDreamWidget* GetLinkStop(int32 InTagIndex)const;
 protected:
 	UPROPERTY(EditAnywhere, Category = "DreamGUI-Hyperlink")
 	TObjectPtr<UDreamText> TextVisual = nullptr;
@@ -80,9 +97,17 @@ protected:
 	/** What the pressed link is drawn in, in place of the colour its markup gives it. */
 	UPROPERTY(EditAnywhere, Category = "DreamGUI-Hyperlink", meta = (EditCondition = "bUsePressedColor"))
 	FColor PressedColor = FColor(48, 112, 208, 255);
+	/**
+	 * Each link drawn is a stop for Tab, the D-pad and the stick, its confirm announcing the link -- UMG's hyperlink is an
+	 * SButton, focusable as any button is. Off: the keys and the pad pass the links by, and only a pointer follows them.
+	 */
+	UPROPERTY(EditAnywhere, Category = "DreamGUI-Hyperlink")
+	bool bLinksAreFocusStops = true;
 
 	virtual void Tick(float DeltaTime)override;
+	virtual void OnEnable()override;
 	virtual void OnDisable()override;
+	virtual void OnUnregister()override;
 	virtual bool OnPointerClick_Implementation(UDreamPointerEventData* EventData)override;
 	virtual bool OnPointerEnter_Implementation(UDreamPointerEventData* EventData)override;
 	virtual bool OnPointerExit_Implementation(UDreamPointerEventData* EventData)override;
@@ -112,6 +137,24 @@ private:
 	int32 GetTextLayoutRunCount()const;
 	/** Put the colour the hover and the press call for on the link they are on, taking it off the one it was on. */
 	void RefreshLinkColor();
-	/** Tick only while a pointer is over the text with a hover colour to show. */
+	/** Tick while a pointer is over the text with a hover colour to show, and while the links are stops in a game. */
 	void UpdateTickEnabled();
+
+	/** Whether the links get stops here: a game's world, the switch on, this behaviour enabled. */
+	bool WantsLinkStops()const;
+	/**
+	 * One stop per link, each sized and placed over its glyphs as they are drawn now -- put away while its link is not
+	 * drawn; stops for links gone are taken down. Every frame in a game, and when the switch is turned on.
+	 */
+	void RefreshLinkStops();
+	/** Take every stop down. */
+	void DestroyLinkStops();
+	/**
+	 * The stops, each a child of the text's widget with a button on it, ignored by layout and never hit by a pointer: the
+	 * pointer reaches the links through the text itself. Paired by position with LinkStopTagIndices.
+	 */
+	UPROPERTY(Transient)
+	TArray<TObjectPtr<UDreamWidget>> LinkStops;
+	/** The tag each stop in LinkStops is over, an index into the text's GetRichTextCustomTagArray. */
+	TArray<int32> LinkStopTagIndices;
 };

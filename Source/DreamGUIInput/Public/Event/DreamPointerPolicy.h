@@ -39,6 +39,18 @@ namespace DreamPointerPolicy
 	DREAMGUIINPUT_API bool ShouldIgnoreHitWhileDragging(const UDreamWidget* InHitWidget, const UDreamWidget* InDragWidget, bool bInIsDragging);
 
 	/**
+	 * The widget a pointer that struck InTopHit -- the widget drawn on top under it -- is over: InTopHit itself when it
+	 * is interactable, else the nearest widget above it that is. Null when nothing on the way up is.
+	 *
+	 * Slate's rule for a disabled widget: FHittestGrid::GetBubblePath cuts the path under the pointer at the first
+	 * disabled widget, taking everything under it too (SlateCore/Private/Input/HittestGrid.cpp:236-247), and what is
+	 * left still ends at that widget's parent. So the parent is hovered, pressed and clicked as if the pointer were on
+	 * it, and the events bubble on up from there. The disabled widget still lies in front of whatever is drawn behind
+	 * it: that is not reached.
+	 */
+	DREAMGUIINPUT_API UDreamWidget* ResolveEnabledHitTarget(UDreamWidget* InTopHit);
+
+	/**
 	 * The cursor to show for a hover stack, innermost widget first.
 	 *
 	 * UDreamWidget::Cursor has existed, been editable in the details panel, and done absolutely

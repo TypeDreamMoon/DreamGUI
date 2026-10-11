@@ -27,6 +27,29 @@ namespace
 	constexpr float TooltipPadding = 10.0f;
 	const FColor TooltipBackgroundColor(15, 15, 18, 235);
 	const FColor TooltipTextColor(240, 240, 240, 255);
+
+	/**
+	 * Where a tooltip is looked for under InPointer: the widget drawn on top there, disabled or not, as Slate looks for one
+	 * in the path under the cursor with bIgnoreEnabledStatus (FSlateUser::UpdateTooltip, Slate/Private/Framework/
+	 * Application/SlateUser.cpp:1350-1351) -- so a disabled button's bubble comes up under the mouse. That widget is the
+	 * one the pointer entered, or one inside it the pointer is over though it is disabled; anything else is an answer
+	 * from an older trace, and the widget entered is used. Navigation enters the widget it lands on, which is the answer.
+	 */
+	UDreamWidget* TooltipLookupStart(const UDreamPointerEventData* InPointer)
+	{
+		if (InPointer == nullptr)
+		{
+			return nullptr;
+		}
+		UDreamWidget* Entered = InPointer->EnterWidget.Get();
+		UDreamWidget* OnTop = InPointer->HitWidgetIgnoringEnabled.Get();
+		if (InPointer->InputType == EDreamUIPointerInputType::Pointer && IsValid(Entered) && IsValid(OnTop)
+			&& (OnTop == Entered || OnTop->IsChildOf(Entered)))
+		{
+			return OnTop;
+		}
+		return Entered;
+	}
 }
 
 UDreamWidget* DreamUITooltipPolicy::ResolveTooltipSource(UDreamWidget* InEnterWidget)
@@ -215,7 +238,7 @@ void UDreamUITooltipSubsystem::HandleInputEvent(UDreamBaseEventData* InEventData
 		// own; its moves over nothing leave the bubble under the first one alone. (A finger is none of them: above.)
 		const bool bFollowed = !State.LastPointerEvent.IsValid() || State.LastPointerEvent.Get() == PointerEvent;
 		const bool bTakesOver = !bFollowed && PointerEvent->EventType == EDreamUIPointerEventType::Enter
-			&& DreamUITooltipPolicy::ResolveTooltipSource(PointerEvent->EnterWidget) != nullptr;
+			&& DreamUITooltipPolicy::ResolveTooltipSource(TooltipLookupStart(PointerEvent)) != nullptr;
 		if (bFollowed || bTakesOver)
 		{
 			State.LastPointerEvent = PointerEvent;
@@ -252,7 +275,9 @@ void UDreamUITooltipSubsystem::RefreshCandidate(FDreamUITooltipUserState& State)
 	}
 	State.bCandidateStale = false;
 	const UDreamPointerEventData* PointerEvent = State.LastPointerEvent.Get();
-	UDreamWidget* NewCandidate = PointerEvent != nullptr ? DreamUITooltipPolicy::ResolveTooltipSource(PointerEvent->EnterWidget) : nullptr;
+	UDreamWidget* LookupStart = TooltipLookupStart(PointerEvent);
+	State.CandidateFrom = LookupStart;
+	UDreamWidget* NewCandidate = LookupStart != nullptr ? DreamUITooltipPolicy::ResolveTooltipSource(LookupStart) : nullptr;
 	// Navigation arms a tooltip too. The two arrive through the same enter/exit path, so the only difference worth
 	// keeping is WHERE the bubble goes: a pointer position is meaningless in navigation mode, and the bubble is placed
 	// against the focused widget.
@@ -282,6 +307,13 @@ void UDreamUITooltipSubsystem::Tick(float DeltaTime)
 	{
 		if (FDreamUITooltipUserState* State = UserStates.Find(UserIndex))
 		{
+			// The pointer moved onto a disabled widget inside the one it was over, or off one: no enter or exit said so
+			// (the disabled widget is not in its path), but what it is over has changed all the same.
+			if (const UDreamPointerEventData* Followed = State->LastPointerEvent.Get();
+				Followed != nullptr && TooltipLookupStart(Followed) != State->CandidateFrom.Get())
+			{
+				State->bCandidateStale = true;
+			}
 			RefreshCandidate(*State);
 		}
 		if (FDreamUITooltipUserState* State = UserStates.Find(UserIndex))
@@ -365,8 +397,10 @@ void UDreamUITooltipSubsystem::ShowTooltipFor(UDreamWidget* InSource)
 	State.bArmedByNavigation = true;
 	State.HoverSeconds = 0.0f;
 	State.bSuppressed = false;
-	// Asked for by name, over whatever the pointer's enters and exits this frame said: the next of those re-arms.
+	// Asked for by name, over whatever the pointer's enters and exits this frame said: the next of those re-arms -- as does
+	// the pointer moving on to something else, which is measured from where it is now.
 	State.bCandidateStale = false;
+	State.CandidateFrom = TooltipLookupStart(State.LastPointerEvent.Get());
 	ShowFor(UserIndex, InSource);
 }
 

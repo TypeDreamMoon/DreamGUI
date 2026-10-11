@@ -19,7 +19,8 @@
   ],
   "extraTags": [],
   "rows": [
-    { "id": "Border", "classes": ["UDreamBorder"], "areas": ["Border", "Controls.Border"] },
+    { "id": "Border", "classes": ["UDreamBorder"], "areas": ["Border", "Controls.Border"], "na": {
+        "Nav": "SBorder takes no keyboard focus (SWidget::SupportsKeyboardFocus is false and SBorder does not override it), so navigation never lands on a border." } },
     { "id": "Button", "classes": ["UDreamButton", "UUIButton"], "areas": ["Binding.For.EachButtonAForMakesIsClickedWhereItIsDrawnAndCallsItsOwnItem", "Binding.For.TheDPadWalksTheButtonsAForMadeInItemOrderAndConfirmCallsTheFocusedOnesItem", "Binding.If.OnlyTheBranchTakenIsClickedOrReachedByTheDPadAndSwitchingTheBranchSwapsWhichOne", "Binding.Rows.EachButtonARowsTableWritesIsClickedAndTheDPadWalksThemInTableOrder", "ViewModel.Interaction.AClickOnAButtonRoutedToTheViewModelCallsItOnceAndTheBarBoundToWhatItChangedFollows", "Pie.Button", "Button", "Controls.Button",
         "Navigation.Tab.TabIndexPutsAButtonAheadOfItsSiblingsWhenTheTabKeyWalksTheScreen",
         "Navigation.Tab.AnExplicitNextLinkSendsTheTabKeyStraightToItsTarget",
@@ -77,14 +78,18 @@
         "Driver.GameHost.Paused.AnArmedKeySelectorCapturesTheNextKeyThroughTheControllerWhileTheGameIsPaused"], "text": true, "note": "Its Text column is the key it listens for, not characters." },
     { "id": "ExpandableArea", "classes": ["UDreamExpandableArea"], "areas": ["Pie.ExpandableArea", "ExpandableArea", "Controls.ExpandableArea"] },
     { "id": "ListView", "classes": ["UDreamListView", "UUIListView", "UUIListEntry", "UDreamListRowButton"], "areas": ["Pie.ListView", "ListView", "Controls.List"] },
-    { "id": "ListRowDragDrop", "classes": ["UDreamListRowDragSource", "UDreamListRowDropTarget"], "areas": ["ListRowDragDrop"] },
+    { "id": "ListRowDragDrop", "classes": ["UDreamListRowDragSource", "UDreamListRowDropTarget"], "areas": ["ListRowDragDrop"], "na": {
+        "Nav": "Slate detects a drag only from pointer moves (FSlateApplication::RoutePointerMoveEvent, DetectDrag) and drops along the pointer's path; keys pick no row up and drop none, and UMG's lists have no keyboard reordering." } },
     { "id": "TileView", "classes": ["UDreamTileView", "UUITileView"], "areas": ["TileView", "Controls.TileView"] },
     { "id": "TreeView", "classes": ["UDreamTreeView", "UUITreeView"], "areas": ["TreeView", "Controls.TreeView"] },
     { "id": "MenuAnchor", "classes": ["UDreamMenuAnchor"], "areas": ["Pie.MenuAnchor", "MenuAnchor", "Controls.MenuAnchor"] },
-    { "id": "NativeWidgetHost", "classes": ["UDreamNativeWidgetHost"], "areas": ["Pie.RHI.AFingerOnAUMGButtonHostedInTheUIPressesItAndLiftingItClicksIt", "Pie.RHI.AUMGButtonHostedInTheUIIsHoveredPressedAndClickedByTheMouseThroughTheBridge", "NativeWidgetHost", "Controls.NativeWidgetHost", "Interaction.UMG"] },
+    { "id": "NativeWidgetHost", "classes": ["UDreamNativeWidgetHost"], "areas": ["Pie.RHI.AFingerOnAUMGButtonHostedInTheUIPressesItAndLiftingItClicksIt", "Pie.RHI.AUMGButtonHostedInTheUIIsHoveredPressedAndClickedByTheMouseThroughTheBridge", "NativeWidgetHost", "Controls.NativeWidgetHost", "Interaction.UMG"], "na": {
+        "Nav": "The hosted UMG widget takes pointers through a virtual Slate user, as UWidgetComponent's window does; the game's navigation does not cross into it." } },
     { "id": "ProgressBar", "classes": ["UDreamProgressBar", "UUIProgressBar"], "areas": ["ProgressBar", "Controls.ProgressBar", "Controls.ProgressBarBehaviour"], "na": {
         "Touch": "A progress bar takes no input: a finger has nothing on it to reach, as the mouse has nothing (DreamGUI.ProgressBar.ClickingDraggingAndScrollingOverABarLeaveItsPercentAlone).",
-        "Nav": "A progress bar is no navigation stop and takes no key: there is nothing to move to or to press." } },
+        "Nav": "A progress bar is no navigation stop and takes no key: there is nothing to move to or to press.",
+        "Pointer.Disabled": "A progress bar takes no input (SProgressBar handles no pointer event): disabled, it only greys.",
+        "Pointer.Scaled": "A progress bar takes no input: scaled, it only changes size." } },
     { "id": "RadioButton", "classes": ["UDreamRadioButton"], "areas": ["RadioButton", "Controls.RadioButton"] },
     { "id": "RichText", "classes": ["UDreamRichTextBlock", "UUITextHyperlink"], "areas": ["Pie.RichText", "RichText", "Controls.RichText"] },
     { "id": "RingMenu", "classes": ["UDreamRingMenu"], "areas": ["Pie.RingMenu", "RingMenu", "Controls.RingMenu"] },
@@ -101,7 +106,8 @@
     { "id": "TabView", "classes": ["UDreamTabView"], "areas": ["Pie.TabView", "TabView", "Controls.TabView"] },
     { "id": "Toggle", "classes": ["UDreamToggle", "UUIToggle"], "areas": ["Pie.Toggle", "Toggle", "Controls.Toggle", "Interaction.Toggle"] },
     { "id": "ToggleGroup", "classes": ["UUIToggleGroup"], "areas": ["ToggleGroup"] },
-    { "id": "EventBlocker", "classes": ["UUIEventBlocker"], "areas": ["EventBlocker"] },
+    { "id": "EventBlocker", "classes": ["UUIEventBlocker"], "areas": ["EventBlocker"], "na": {
+        "Nav": "A blocker is a widget that answers OnMouseButtonDown Handled; the pad's direction and confirm go along the focus path to OnKeyDown and never pass a pointer handler." } },
     { "id": "EventTrigger", "classes": ["UUIEventTrigger"], "areas": ["EventTrigger",
         "Driver.WorldSpace.TurningTheWheelOverAWorldWidgetReachesThatWidget",
         "Driver.WorldSpace.AWorldDragBeginsOnlyPastTheWorldPointersOwnThreshold",
@@ -115,20 +121,29 @@
         "Navigation.InputMode.GameTurnsTheKeysOffForThatPlayerOnly",
         "Navigation.Focus.APageWithNoPresenterGetsAFocusRingOnKeysAndOnInitialFocus",
         "Navigation.Focus.TheRingCoversTheControlItMarksAndKeepsOffOneThatMarksItsOwn",
-        "Input.Keys.InputModeGameTurnsOffNavigationConfirmAndBackForThatPlayerAlone"] },
-    { "id": "NavigationStack", "classes": ["UDreamUINavigationStack"], "areas": ["NavigationStack", "Navigation.Back"] },
+        "Input.Keys.InputModeGameTurnsOffNavigationConfirmAndBackForThatPlayerAlone"], "na": {
+        "Pointer": "A scope is CommonUI's activatable widget: it confines navigation and bindings, and a pointer reaches what is under it by Slate's hit test. A click on a widget inside it is that widget's row.",
+        "Touch": "As for the mouse: a scope has nothing for a finger." } },
+    { "id": "NavigationStack", "classes": ["UDreamUINavigationStack"], "areas": ["NavigationStack", "Navigation.Back"], "na": {
+        "Pointer": "Back is a binding an activatable widget registers on itself (UCommonActivatableWidget); no pointer ever sends it.",
+        "Touch": "As for the mouse: no finger sends Back.",
+        "Nav.Scaled": "Back goes to the top screen in stack order, with no geometry." } },
     { "id": "ActionRouter", "classes": ["UDreamUIActionRouter", "UDreamUIActionTrigger"], "areas": ["ActionRouter", "Navigation.Actions",
         "Driver.Keys.AChordReachesOnlyTheBindingThatAsksForItUnderEveryHost",
         "Driver.Keys.ABoundDirectionKeyFiresItsBindingInsteadOfNavigatingUnderEveryHost",
         "Input.Keys.CtrlTabReachesABindingAndNeverMovesTheFocus",
-        "Input.Keys.TheShouldersSwitchTabsUnlessABindingTakesThem"] },
+        "Input.Keys.TheShouldersSwitchTabsUnlessABindingTakesThem"], "na": {
+        "Pointer": "The router takes keys alone (UCommonUIActionRouterBase::ProcessInput); a press goes to the widget under it by Slate's hit test. A click on a widget that carries an action trigger is that widget's row.",
+        "Touch": "As for the mouse: a finger reaches the widget under it, never the router's bindings.",
+        "Nav.Scaled": "A key finds its binding with no position (FActionRouterBindingCollection::ProcessNormalInput): the canvas's scale does not reach the router." } },
     { "id": "ActionBar", "classes": ["UDreamUIActionBar", "UDreamUIActionBarEntry"], "areas": ["ActionBar", "Navigation.ActionBar"] },
     { "id": "Modal", "classes": ["UDreamUIModalScope", "UDreamUIModalSubsystem"], "areas": ["Modal"] },
     { "id": "PopupLayer", "classes": ["UDreamUIPopupLayer"], "areas": ["PopupLayer", "Popup",
         "Navigation.Tab.AnotherPlayersPopupOnASharedScreenHoldsNoStopsForThisPlayer",
         "Navigation.Tab.TabOnALayerInFrontOfAnOpenListStaysOnThatLayer"] },
     { "id": "Tooltip", "classes": ["UDreamUITooltipSubsystem"], "areas": ["Tooltip"] },
-    { "id": "VirtualCursor", "classes": ["UDreamUIVirtualCursorSubsystem"], "areas": ["VirtualCursor"] }
+    { "id": "VirtualCursor", "classes": ["UDreamUIVirtualCursorSubsystem"], "areas": ["VirtualCursor"], "na": {
+        "Touch": "Slate's analog cursor reads its user's stick and confirm alone (FAnalogCursor); a finger is a pointer of its own that neither moves nor presses it." } }
   ],
   "excluded": [
     { "class": "UDreamUIControl", "reason": "Abstract base of every control; covered through the concrete controls." },

@@ -55,6 +55,17 @@ public:
 	/** entered component */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "DreamGUI")
 		TObjectPtr<UDreamWidget> EnterWidget = nullptr;
+	/**
+	 * The widget drawn on top under the pointer, enabled or not, as of the pointer's latest trace; null over nothing.
+	 *
+	 * It is EnterWidget, or a widget inside EnterWidget when the pointer is over a disabled one: a disabled widget and
+	 * everything in it are cut out of the path under the pointer, which then ends at the nearest widget above them
+	 * that takes input (FHittestGrid::GetBubblePath) -- EnterWidget, which is hovered, pressed and clicked. Slate still
+	 * looks for a tooltip under the cursor including disabled widgets (FSlateUser::UpdateTooltip), and so does
+	 * UDreamUITooltipSubsystem, from here.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "DreamGUI")
+		TObjectPtr<UDreamWidget> HitWidgetIgnoringEnabled = nullptr;
 	/** a stack list for store entered component. the latest enter one stay at num-1, first stay at 0. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "DreamGUI")
 		TArray<TObjectPtr<UDreamWidget>> EnterWidgetStack;
@@ -293,4 +304,12 @@ struct FDreamUIHitResultContainer
 	UDreamBaseRaycaster* Raycaster = nullptr;
 
 	TArray<UDreamWidget*> HoverArray;
+
+	/**
+	 * The widget drawn on top where the ray struck, enabled or not. HitResult.Widget is where the hit goes -- this
+	 * widget, or the nearest one above it that takes input when it is disabled (DreamPointerPolicy::
+	 * ResolveEnabledHitTarget) -- and this is where a tooltip is looked for, as Slate looks for one under the cursor
+	 * including disabled widgets. Null means HitResult.Widget.
+	 */
+	UDreamWidget* WidgetIgnoringEnabled = nullptr;
 };

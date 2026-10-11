@@ -7,6 +7,7 @@
 #include "DreamGUI.h"
 #include "Extensions/DreamUIRenderTargetGeometrySource.h"
 #include "Event/DreamScreenSpaceRaycaster.h"
+#include "Event/DreamPointerPolicy.h"
 #include "Engine/World.h"
 
 #define LOCTEXT_NAMESPACE "DreamGUIRenderTargetInteraction"
@@ -93,14 +94,22 @@ bool UDreamUIRenderTargetInteraction::ResolveNestedHit(const FDreamUIHitResultCo
 	OutInnerHit.RayOrigin = CanvasRayOrigin;
 	OutInnerHit.RayDirection = CanvasRayDirection;
 	OutInnerHit.RayEnd = CanvasRayEnd;
-	// The occlusion rule a raycaster's own hits keep: an uninteractable widget in front hides what is behind it on
-	// this canvas, and the surface itself is then what the pointer is over.
-	if (HitResultArray.Num() > 0 && HitResultArray[0].Widget.IsValid() && HitResultArray[0].Widget->GetInteractableInHierarchy())
+	// The rule a raycaster's own hits keep (UDreamUIInputUser::LineTrace): an uninteractable widget in front is cut out
+	// of the path, and the hit is the nearest widget above it that takes input -- Slate's FHittestGrid::GetBubblePath.
+	// It still hides what is behind it on this canvas. With nothing above it that takes input, the surface itself is
+	// what the pointer is over.
+	UDreamWidget* TopHitWidget = HitResultArray.Num() > 0 ? HitResultArray[0].Widget.Get() : nullptr;
+	UDreamWidget* TargetWidget = DreamPointerPolicy::ResolveEnabledHitTarget(TopHitWidget);
+	if (TargetWidget != nullptr)
 	{
+		const bool bCut = TargetWidget != TopHitWidget;
 		OutInnerHit.HitResult = HitResultArray[0];
+		OutInnerHit.HitResult.Widget = TargetWidget;
+		OutInnerHit.WidgetIgnoringEnabled = TopHitWidget;
 		for (const FDreamUIHitResult& HitItem : HitResultArray)
 		{
-			if (UDreamWidget* HoveredWidget = HitItem.Widget.Get())
+			if (UDreamWidget* HoveredWidget = HitItem.Widget.Get(); HoveredWidget != nullptr
+				&& (!bCut || HoveredWidget->GetInteractableInHierarchy()))
 			{
 				OutInnerHit.HoverArray.Add(HoveredWidget);
 			}

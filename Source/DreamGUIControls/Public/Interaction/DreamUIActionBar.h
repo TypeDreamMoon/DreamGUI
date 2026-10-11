@@ -102,6 +102,11 @@ private:
  * while the player has a tab view those keys would switch (DreamUIKeyRouting::FindTabSwitchTarget,
  * asked at the rebuild): the project's PreviousTabKeys and NextTabKeys, the first of each for the device
  * in use -- none on a device the tables have no key for.
+ *
+ * A prompt is also a button, as CommonUI's bound action button is: an entry with a button in it -- a
+ * UDreamButton as the entry class, or a prefab built around a UUIButton -- runs the action it shows when
+ * it is clicked, tapped or confirmed with the pad (UDreamUIActionRouter::ExecuteAction). A disabled bar's
+ * prompts are disabled buttons: they click nothing and the pad passes over them.
  */
 UCLASS(ClassGroup = (DreamGUI), Blueprintable, meta = (BlueprintSpawnableComponent))
 class DREAMGUICONTROLS_API UDreamUIActionBar : public UDreamUIBehaviour
@@ -158,6 +163,12 @@ private:
 	void HandleInputDeviceChanged(EDreamUIInputDevice InDevice);
 	void HandleGamepadModelChanged(EDreamUIGamepadModel InModel);
 	void ClearEntries();
+	/**
+	 * Make InEntry's button run the action InHandle names when it is clicked, tapped or confirmed with the pad, as
+	 * CommonUI's bound action button runs its binding (UCommonBoundActionButton::NativeOnClicked). An entry with no
+	 * button, or a prompt with no action behind it, is left as it is: a prompt it only shows.
+	 */
+	void WirePromptButton(UDreamWidget* InEntry, const FDreamUIActionHandle& InHandle);
 	/** The two tab-switch prompts, after InOutPrompts, while player InUserIndex has a tab view to switch. */
 	void AppendTabSwitchPrompts(int32 InUserIndex, TArray<FDreamUIActionBinding>& InOutPrompts) const;
 

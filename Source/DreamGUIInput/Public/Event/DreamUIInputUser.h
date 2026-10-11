@@ -571,6 +571,8 @@ private:
 		FVector RayEnd = FVector(1, 0, 0);
 		TWeakObjectPtr<UDreamBaseRaycaster> Raycaster;
 		TArray<TWeakObjectPtr<UDreamWidget>> Hovered;
+		/** FDreamUIHitResultContainer::WidgetIgnoringEnabled of the trace's answer, when it was not the hit widget itself. */
+		TWeakObjectPtr<UDreamWidget> WidgetIgnoringEnabled;
 	};
 	TMap<int32, FTraceCache> TraceCache;
 	int32 LineTraceCount = 0;
