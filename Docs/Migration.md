@@ -86,6 +86,11 @@ outside them through, and a screen built around the old way will feel different:
   gives that panel's handler the check it needs, or puts a `UUIEventBlocker` on an enabled widget around the control.
   What is drawn behind a disabled widget is still not reached, and a widget whose whole tree is disabled still hides
   its canvas's answer, as before. The mouse resting on a disabled widget now brings its tooltip up.
+- **The keys and the pad stop on links.** In a game, each link of a text with a `UUITextHyperlink` is a stop for Tab,
+  the D-pad and the stick, as UMG's hyperlinks are, and the confirm announces it. A screen whose Tab or D-pad order
+  ran past a paragraph of links now stops on each one; `bLinksAreFocusStops` off puts the old order back for that text.
+  The stops are child widgets of the text's widget, made at run time and never saved: code that counts the text
+  widget's children in a game sees them.
 - **A prompt on the action bar is a button when its entry has one.** An entry class that is a `UDreamButton`, or a
   prefab with a `UUIButton` in it, now runs its action when clicked, tapped or confirmed. A project that wired its own
   click handler to run the action does so twice; it removes its handler.

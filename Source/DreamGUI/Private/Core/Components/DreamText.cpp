@@ -4183,14 +4183,48 @@ int32 UDreamText::FindHyperlinkIndexByWorldPosition(FVector InWorldPosition)cons
 
 bool UDreamText::TryClickHyperlinkAtWorldPosition(FVector InWorldPosition)
 {
-	FName Id = NAME_None;
-	if (!FindHyperlinkByWorldPosition(InWorldPosition, Id))
+	return ClickHyperlink(FindHyperlinkIndexByWorldPosition(InWorldPosition));
+}
+
+bool UDreamText::ClickHyperlink(int32 InTagIndex)
+{
+	const TArray<FDreamUIText_RichTextCustomTag>& Tags = GetRichTextCustomTagArray();
+	if (!Tags.IsValidIndex(InTagIndex) || !Tags[InTagIndex].bHyperlink)
 	{
 		return false;
 	}
+	// A copy: a listener may set another text, which lays the tags out again.
+	const FName Id = Tags[InTagIndex].TagName;
 	OnHyperlinkClickedCPP.Broadcast(Id);
 	OnHyperlinkClickedBP.Broadcast(Id);
 	return true;
+}
+
+bool UDreamText::GetHyperlinkLocalBounds(int32 InTagIndex, FBox2D& OutBounds)const
+{
+	OutBounds = FBox2D(ForceInit);
+	const TArray<FDreamUIText_RichTextCustomTag>& Tags = GetRichTextCustomTagArray();
+	if (!Tags.IsValidIndex(InTagIndex) || !Tags[InTagIndex].bHyperlink || !UIGeometry.IsValid())
+	{
+		return false;
+	}
+	const TArray<FDreamUITextCharProperty>& Chars = GetCharPropertyArray();
+	const TArray<FDreamUIOriginVertexData>& Vertices = UIGeometry->OriginVertices;
+	const FDreamUIText_RichTextCustomTag& Tag = Tags[InTagIndex];
+	// The glyph quads, as FindHyperlinkIndexByWorldPosition reads them: local Y across, local Z up.
+	for (int32 CharIndex = FMath::Max(0, Tag.CharIndexStart); CharIndex <= Tag.CharIndexEnd && CharIndex < Chars.Num(); CharIndex++)
+	{
+		const FDreamUITextCharProperty& Property = Chars[CharIndex];
+		for (int32 Vertex = Property.StartVertIndex; Vertex < Property.StartVertIndex + Property.VertCount; Vertex++)
+		{
+			if (Vertices.IsValidIndex(Vertex))
+			{
+				const FVector3f& Position = Vertices[Vertex].Position;
+				OutBounds += FVector2D(Position.Y, Position.Z);
+			}
+		}
+	}
+	return OutBounds.bIsValid != 0;
 }
 
 void UDreamText::GetSelectionProperty(int32 InSelectionStartCaretIndex, int32 InSelectionEndCaretIndex, TArray<FDreamUITextSelectionProperty>& OutSelectionProeprtyArray)

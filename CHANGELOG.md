@@ -163,6 +163,11 @@ after 3 for 2.1.0 -- so the engine never takes 1.0.0 for the older of the two.
   disabled widgets (`FSlateUser::UpdateTooltip`) -- which is why CommonUI's buttons carry a disabled tooltip. It never
   did. `UDreamPointerEventData::HitWidgetIgnoringEnabled` names the widget drawn on top under a pointer, disabled or
   not.
+- **A link in rich text is a stop for Tab, the D-pad and the stick**, as UMG's hyperlink is an `SButton`: in a game,
+  `UUITextHyperlink` puts a focusable stop over each link it draws, which the focus ring is drawn around and whose
+  confirm announces the link (`UDreamText::OnHyperlinkClicked`). The keys and the pad used to pass every link by. A
+  link in a disabled text is passed over. `bLinksAreFocusStops` turns it off. See
+  [Migration](Docs/Migration.md#from-100-to-the-next-release).
 
 - **A reduced screen-space render scale is not used for a layer that blends with what is behind it.** Multiply and
   a material's Modulate, AlphaHoldout or Additive need the scene they draw over, which a transparent smaller target does

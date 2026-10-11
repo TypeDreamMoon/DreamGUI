@@ -3,13 +3,17 @@
 #include "Interaction/UITextHyperlink.h"
 #include "Core/Components/DreamText.h"
 #include "Core/Components/DreamWidget.h"
+#include "Core/DreamUserWidget.h"
 #include "Event/DreamPointerEventData.h"
+#include "Interaction/UIButton.h"
+#include "Engine/World.h"
 
 UUITextHyperlink::UUITextHyperlink()
 {
-	// It ticks only to follow a pointer across the text, so it starts out of the tick list -- BeginPlay hands
-	// bStartWithTickEnabled to the tick switch once Awake has run, so turning it off in Awake left one tick at Start --
-	// and comes in when a pointer does (UpdateTickEnabled). A move of the widget means nothing to it.
+	// It ticks only to follow a pointer across the text and, in a game, to keep its links' stops on the links, so it
+	// starts out of the tick list -- BeginPlay hands bStartWithTickEnabled to the tick switch once Awake has run, so
+	// turning it off in Awake left one tick at Start -- and comes in when either has something to do (UpdateTickEnabled).
+	// A move of the widget means nothing to it.
 	bStartWithTickEnabled = false;
 	bCanExecuteTick = false;
 	DeclareTransformChangedUnused(StaticClass());
@@ -82,9 +86,215 @@ void UUITextHyperlink::SetPressedColor(FColor Value)
 	}
 }
 
+void UUITextHyperlink::SetLinksAreFocusStops(bool Value)
+{
+	if (bLinksAreFocusStops != Value)
+	{
+		bLinksAreFocusStops = Value;
+		if (WantsLinkStops())
+		{
+			RefreshLinkStops();
+		}
+		else
+		{
+			DestroyLinkStops();
+		}
+		UpdateTickEnabled();
+	}
+}
+
+UDreamWidget* UUITextHyperlink::GetLinkStop(int32 InTagIndex)const
+{
+	const int32 Slot = LinkStopTagIndices.IndexOfByKey(InTagIndex);
+	return LinkStops.IsValidIndex(Slot) && IsValid(LinkStops[Slot]) ? LinkStops[Slot].Get() : nullptr;
+}
+
+bool UUITextHyperlink::WantsLinkStops()const
+{
+	// A game's world only: a designer's preview or an editor world is the authored tree, which stops added at run time must
+	// never become part of.
+	const UWorld* World = GetWorld();
+	return bLinksAreFocusStops && World != nullptr && World->IsGameWorld() && IsValid(GetWidget());
+}
+
+void UUITextHyperlink::RefreshLinkStops()
+{
+	UDreamText* Text = GetTextVisual();
+	UDreamWidget* TextWidget = Text != nullptr ? Text->GetWidget() : nullptr;
+	if (!WantsLinkStops() || !IsValid(TextWidget))
+	{
+		DestroyLinkStops();
+		return;
+	}
+	// One stop per link of the text, in the order the links come, so a stop keeps standing for the same link while the text
+	// is laid out again around it -- and the focus on it stays where the player left it. The ids are copied out: making a
+	// stop registers a widget, which may lay the text out again under a reference into its tags.
+	TArray<int32> TagIndices;
+	TArray<FName> TagIds;
+	{
+		const TArray<FDreamUIText_RichTextCustomTag>& Tags = Text->GetRichTextCustomTagArray();
+		for (int32 TagIndex = 0; TagIndex < Tags.Num(); ++TagIndex)
+		{
+			if (Tags[TagIndex].bHyperlink)
+			{
+				TagIndices.Add(TagIndex);
+				TagIds.Add(Tags[TagIndex].TagName);
+			}
+		}
+	}
+	// Stops made for another text's widget -- a TextVisual set since -- or gone with it are let go of first.
+	bool bStopsChanged = false;
+	for (int32 Slot = LinkStops.Num() - 1; Slot >= 0; --Slot)
+	{
+		UDreamWidget* Stop = LinkStops[Slot].Get();
+		if (!IsValid(Stop) || Stop->GetParent() != TextWidget)
+		{
+			if (IsValid(Stop))
+			{
+				Stop->DestroyWidget();
+			}
+			LinkStops.RemoveAt(Slot);
+			bStopsChanged = true;
+		}
+	}
+	while (LinkStops.Num() > TagIndices.Num())
+	{
+		if (UDreamWidget* Extra = LinkStops.Pop(EAllowShrinking::No).Get(); IsValid(Extra))
+		{
+			Extra->DestroyWidget();
+		}
+		bStopsChanged = true;
+	}
+	while (LinkStops.Num() < TagIndices.Num())
+	{
+		// A plain widget with a button on it: focusable, a Tab and D-pad stop, its confirm a click -- SHyperlink's SButton.
+		// Nothing to draw and never hit by a pointer, which reaches the link through the text; never placed by a layout
+		// the text's widget may have, nor saved.
+		UDreamWidget* Stop = NewObject<UDreamWidget>(this, NAME_None, RF_Transient);
+		Stop->SetRaycastable(EDreamWidgetRaycastableType::Disabled);
+		Stop->SetIgnoreLayout(true);
+		UUIButton* Button = Stop->AddComponent<UUIButton>();
+		const TWeakObjectPtr<UDreamWidget> WeakStop(Stop);
+		if (Button != nullptr)
+		{
+			Button->GetOnClickEvent().AddWeakLambda(this, [this, WeakStop]()
+			{
+				// The link this stop stands for now, which a text laid out again may have moved to another tag.
+				const int32 Slot = LinkStops.IndexOfByKey(WeakStop.Get());
+				UDreamText* ClickedText = GetTextVisual();
+				if (ClickedText != nullptr && LinkStopTagIndices.IsValidIndex(Slot))
+				{
+					ClickedText->ClickHyperlink(LinkStopTagIndices[Slot]);
+				}
+			});
+		}
+		Stop->SetParentBeforeRegister(TextWidget);
+		// Centred on the text's own centre, which is what the placement below measures from; anchors need the parent.
+		Stop->SetHorizontalAndVerticalAnchorMinMax(FVector2D(0.5, 0.5), FVector2D(0.5, 0.5), false, false);
+		Stop->SetPivot(FVector2D(0.5, 0.5));
+		RegisterDreamWidgetHierarchy(Stop);
+		LinkStops.Add(Stop);
+		bStopsChanged = true;
+	}
+	if (bStopsChanged || LinkStopTagIndices != TagIndices)
+	{
+		for (int32 Slot = 0; Slot < LinkStops.Num() && Slot < TagIds.Num(); ++Slot)
+		{
+			if (UDreamWidget* Stop = LinkStops[Slot].Get())
+			{
+				Stop->SetDisplayName(FString::Printf(TEXT("Link_%s"), *TagIds[Slot].ToString()));
+			}
+		}
+	}
+	LinkStopTagIndices = MoveTemp(TagIndices);
+
+	// Each over its link's glyphs as they are drawn now. A link with nothing drawn -- not painted yet, or wholly cut off --
+	// has its stop put away until it is, rather than left where it was or standing at the text's middle.
+	const FVector2D TextCentre = TextWidget->GetLocalSpaceCenter();
+	for (int32 Slot = 0; Slot < LinkStops.Num() && Slot < LinkStopTagIndices.Num(); ++Slot)
+	{
+		UDreamWidget* Stop = LinkStops[Slot].Get();
+		if (!IsValid(Stop))
+		{
+			continue;
+		}
+		FBox2D Bounds;
+		const bool bDrawn = Text->GetHyperlinkLocalBounds(LinkStopTagIndices[Slot], Bounds);
+		if (bDrawn)
+		{
+			const FVector2D Position = Bounds.GetCenter() - TextCentre;
+			const FVector2D Size = Bounds.GetSize();
+			if (!Stop->GetAnchoredPosition().Equals(Position, 0.01)
+				|| !FVector2D(Stop->GetWidth(), Stop->GetHeight()).Equals(Size, 0.01))
+			{
+				Stop->SetAnchoredPositionAndSizeDelta(Position, Size);
+			}
+		}
+		if (Stop->GetWidgetActive() != bDrawn)
+		{
+			Stop->SetWidgetActive(bDrawn);
+		}
+	}
+}
+
+void UUITextHyperlink::DestroyLinkStops()
+{
+	TArray<TObjectPtr<UDreamWidget>> Stops = MoveTemp(LinkStops);
+	LinkStops.Reset();
+	LinkStopTagIndices.Reset();
+	for (const TObjectPtr<UDreamWidget>& Stop : Stops)
+	{
+		if (IsValid(Stop))
+		{
+			Stop->DestroyWidget();
+		}
+	}
+}
+
+void UUITextHyperlink::OnEnable()
+{
+	Super::OnEnable();
+	UpdateTickEnabled();
+}
+
+void UUITextHyperlink::OnUnregister()
+{
+	// Taken off a widget that stays, the stops go with this behaviour. A widget torn down takes its children with it, the
+	// stops among them, and is left to do so.
+	const UDreamWidget* Widget = GetWidget();
+	bool bStillOnWidget = false;
+	if (IsValid(Widget))
+	{
+		for (const UDreamUIBehaviour* Component : Widget->GetAllComponents())
+		{
+			if (Component == this)
+			{
+				bStillOnWidget = true;
+			}
+		}
+	}
+	if (IsValid(Widget) && !bStillOnWidget)
+	{
+		DestroyLinkStops();
+	}
+	else
+	{
+		LinkStops.Reset();
+		LinkStopTagIndices.Reset();
+	}
+	Super::OnUnregister();
+}
+
 void UUITextHyperlink::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
+	// The stops follow the links as they are drawn: placed every frame, which costs a look at a few glyph quads and moves
+	// nothing that has not moved -- the glyphs are painted after the layout that counts a change, so the count alone would
+	// place them a frame early, over the old text.
+	if (WantsLinkStops())
+	{
+		RefreshLinkStops();
+	}
 	const UDreamPointerEventData* Pointer = HoverPointer.Get();
 	if (Pointer == nullptr)
 	{
@@ -245,5 +455,5 @@ void UUITextHyperlink::RefreshLinkColor()
 
 void UUITextHyperlink::UpdateTickEnabled()
 {
-	SetCanExecuteTick(bUseHoverColor && HoverPointer.IsValid());
+	SetCanExecuteTick((bUseHoverColor && HoverPointer.IsValid()) || (bIsEnableCalled && WantsLinkStops()));
 }

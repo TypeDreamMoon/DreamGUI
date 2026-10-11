@@ -1077,6 +1077,17 @@ public:
 	/** Hit-tests the point and, on a hit, broadcasts OnHyperlinkClicked. True when a link was hit. */
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
 	bool TryClickHyperlinkAtWorldPosition(FVector InWorldPosition);
+	/**
+	 * Broadcasts OnHyperlinkClicked for the link at InTagIndex of GetRichTextCustomTagArray, as a click on it would: what
+	 * the pad's confirm on a link the focus is on does. False, broadcasting nothing, when no link is at that index.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
+	bool ClickHyperlink(int32 InTagIndex);
+	/**
+	 * The rectangle the glyphs of the link at InTagIndex of GetRichTextCustomTagArray are drawn in, in this text's widget's
+	 * local space (X across, Y up), as laid out now. False when no link is at that index or none of it is drawn.
+	 */
+	bool GetHyperlinkLocalBounds(int32 InTagIndex, FBox2D& OutBounds)const;
 	/** Broadcast by TryClickHyperlinkAtWorldPosition; UUITextHyperlink is what routes pointer clicks into it. */
 	UPROPERTY(BlueprintAssignable, Category = "DreamGUI", DisplayName = "OnHyperlinkClicked")
 	FDreamTextHyperlinkEvent OnHyperlinkClickedBP;
