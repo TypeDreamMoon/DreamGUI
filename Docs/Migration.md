@@ -86,6 +86,9 @@ outside them through, and a screen built around the old way will feel different:
   gives that panel's handler the check it needs, or puts a `UUIEventBlocker` on an enabled widget around the control.
   What is drawn behind a disabled widget is still not reached, and a widget whose whole tree is disabled still hides
   its canvas's answer, as before. The mouse resting on a disabled widget now brings its tooltip up.
+- **A prompt on the action bar is a button when its entry has one.** An entry class that is a `UDreamButton`, or a
+  prefab with a `UUIButton` in it, now runs its action when clicked, tapped or confirmed. A project that wired its own
+  click handler to run the action does so twice; it removes its handler.
 
 A C++ subclass of `UDreamSpinBox` or of the list family that overrides `NativeOnKeyDown` calls `Super` to keep these
 keys, as for any key the base answers.

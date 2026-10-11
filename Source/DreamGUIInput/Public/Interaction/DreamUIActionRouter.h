@@ -110,6 +110,17 @@ public:
 	 */
 	bool HandleAnalog(int32 InUserIndex, const FKey& InKey, float InValue);
 
+	/**
+	 * Run the action InHandle names, as its key would, without a key: what a prompt the player clicks, taps or confirms
+	 * on the prompt bar does (UDreamUIActionBar), as UCommonBoundActionButton::NativeOnClicked runs its binding's
+	 * OnExecuteAction (CommonUI/Private/Input/CommonBoundActionButton.cpp:37-45). Only while its key would run it -- its
+	 * screen in front, or global -- and at once, whatever its HoldTime: the hold is the key's, as CommonUI's bound
+	 * button needs no hold unless told to (bLinkRequiresHoldToBindingHold, off by default).
+	 * @return true when the action ran.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Navigation")
+	bool ExecuteAction(const FDreamUIActionHandle& InHandle);
+
 	/** Live bindings for a prompt bar, most recently registered first, resolved for the device in use. */
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Navigation")
 	void GetDisplayBindings(int32 InUserIndex, TArray<FDreamUIActionBinding>& OutBindings)const;

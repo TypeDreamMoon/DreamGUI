@@ -163,6 +163,24 @@ void UDreamUIActionRouter::Execute(FBindingEntry& InEntry)
 	InEntry.Callback.ExecuteIfBound();
 }
 
+bool UDreamUIActionRouter::ExecuteAction(const FDreamUIActionHandle& InHandle)
+{
+	if (!InHandle.IsValidHandle())
+	{
+		return false;
+	}
+	RemoveStaleBindings();
+	FBindingEntry* Entry = FindBinding(InHandle);
+	// What the key would run: a binding whose screen is not the one in front does not answer its key, and its prompt is
+	// no way round that.
+	if (Entry == nullptr || !IsEligible(*Entry))
+	{
+		return false;
+	}
+	Execute(*Entry);
+	return true;
+}
+
 void UDreamUIActionRouter::GetModifierKeyState(int32 InUserIndex, bool& bOutShift, bool& bOutCtrl, bool& bOutAlt, bool& bOutCmd)const
 {
 	bOutShift = bOutCtrl = bOutAlt = bOutCmd = false;

@@ -10,9 +10,42 @@
 #include "Event/DreamUIInputSubsystem.h"
 #include "Event/DreamUIInputUser.h"
 #include "Event/DreamUIKeyRouting.h"
+#include "Interaction/UIButton.h"
 #include "Engine/Texture2D.h"
 
 #define LOCTEXT_NAMESPACE "DreamUIActionBar"
+
+namespace DreamUIActionBarLocal
+{
+	/**
+	 * The button a prompt is pressed through: the first UUIButton in InEntry, InEntry's own first, depth first -- a
+	 * UDreamButton entry's face, or the button an entry prefab is built around. Null for an entry that only shows its
+	 * prompt.
+	 */
+	UUIButton* FindPromptButton(UDreamWidget* InEntry)
+	{
+		TArray<UDreamWidget*, TInlineAllocator<16>> Pending;
+		Pending.Add(InEntry);
+		while (Pending.Num() > 0)
+		{
+			UDreamWidget* Widget = Pending.Pop(EAllowShrinking::No);
+			if (!IsValid(Widget))
+			{
+				continue;
+			}
+			if (UUIButton* Button = Widget->GetComponent<UUIButton>())
+			{
+				return Button;
+			}
+			const TArray<UDreamWidget*>& Children = Widget->GetChildren();
+			for (int32 Index = Children.Num() - 1; Index >= 0; --Index)
+			{
+				Pending.Add(Children[Index]);
+			}
+		}
+		return nullptr;
+	}
+}
 
 // Defined out of line on purpose: the header only forward-declares the visual classes, and assigning a
 // forward-declared pointer into a TWeakObjectPtr needs the complete type (the generated .cpp includes
@@ -343,8 +376,39 @@ void UDreamUIActionBar::Rebuild()
 		{
 			SpawnedEntries.Add(Entry);
 			EntryWidgets.Add(Entry);
+			WirePromptButton(Entry, Prompt.Handle);
 		}
 	}
+}
+
+void UDreamUIActionBar::WirePromptButton(UDreamWidget* InEntry, const FDreamUIActionHandle& InHandle)
+{
+	// A prompt with nothing behind it in the router -- the tab view's two -- has nothing to run.
+	if (!InHandle.IsValidHandle())
+	{
+		return;
+	}
+	UUIButton* Button = DreamUIActionBarLocal::FindPromptButton(InEntry);
+	if (Button == nullptr)
+	{
+		return;
+	}
+	// The prompt is a button that runs what it shows, as CommonUI's bound action button is: a click, a tap or the pad's
+	// confirm on it runs the action through the router, as its key would (UCommonBoundActionButton::NativeOnClicked).
+	// Bound to the entry's own button, which goes with the entry on the next rebuild; a disabled bar's buttons click
+	// nothing, as every disabled button does.
+	const TWeakObjectPtr<UDreamUIActionBar> WeakBar(this);
+	const FDreamUIActionHandle Handle = InHandle;
+	Button->GetOnClickEvent().AddWeakLambda(Button, [WeakBar, Handle]()
+	{
+		if (UDreamUIActionBar* Bar = WeakBar.Get())
+		{
+			if (UDreamUIActionRouter* Router = UDreamUIActionRouter::Get(Bar))
+			{
+				Router->ExecuteAction(Handle);
+			}
+		}
+	});
 }
 
 #undef LOCTEXT_NAMESPACE

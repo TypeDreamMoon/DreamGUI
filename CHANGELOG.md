@@ -53,6 +53,11 @@ after 3 for 2.1.0 -- so the engine never takes 1.0.0 for the older of the two.
   Each of these used to be addable anywhere and then sat there doing nothing. Paste, duplicate and component assets
   dropped on the panel follow the same rules; a refused drop says why. A project adds rules for its own components
   from its editor module.
+- **A prompt on the action bar runs the action it shows** when it is clicked, tapped or confirmed with the pad, as
+  CommonUI's bound action button does (`UCommonBoundActionButton::NativeOnClicked`): an entry class that is a button --
+  `UDreamButton`, or a prefab built around a `UUIButton` -- is wired to `UDreamUIActionRouter::ExecuteAction`, new, which
+  runs a binding by its handle while its key would. A disabled bar's prompts click nothing and the pad passes over
+  them. An entry with no button still only shows its prompt.
 - **`UDreamListViewBase::FingerDrag`** (List, Tile and Tree views): what a finger dragged along rows that can be picked up
   does. `ScrollList`, the default, scrolls the list, as UMG's does; `PickUpRow` picks the row up, as the mouse does, for a
   touch-first screen whose rows are dragged by finger. The mouse is the same either way.
