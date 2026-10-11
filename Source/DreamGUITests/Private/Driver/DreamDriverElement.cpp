@@ -5,7 +5,7 @@
 #include "Controls/DreamInputKeySelector.h"
 #include "Core/Components/DreamWidget.h"
 #include "Event/DreamEventSystem.h"
-#include "Event/DreamScreenSpaceRaycaster.h"
+#include "Event/InputModule/DreamStandaloneInputModule.h"
 #include "Interaction/UITextInput.h"
 #include "Misc/AutomationTest.h"
 
@@ -313,21 +313,27 @@ bool FDreamDriverElement::TouchDragBy(const FVector2D& InPixelDelta, int32 InFin
 	}
 
 	// The same shape as the mouse drag, for the same reasons: the first move clears the threshold
-	// the raycaster measures with (authored in canvas units, compared in pixels, so read rather than
-	// assumed), then a midpoint and the destination arrive on frames of their own, so the drag is a
-	// motion rather than one jump.
+	// the raycaster measures with (read rather than assumed), then a midpoint and the destination
+	// arrive on frames of their own, so the drag is a motion rather than one jump.
+	//
+	// The finger goes down first, on its frame as before, so that the threshold can be read from the
+	// raycaster that took the press -- the one whose ShouldStartDrag decides, as the mouse's
+	// DragCrossThreshold step reads it: a screen raycaster's scaled threshold for a press on the
+	// screen, a world pointer's own unscaled one for a press on a world panel. Two Performs make the
+	// same frames as one: a sequence pumps only for its steps.
 	const FVector2D Start = Centre.GetValue();
 	const FVector2D End = Start + InPixelDelta;
-	double ThresholdPixels = 0.0;
-	if (const UDreamScreenSpaceRaycaster* Raycaster = PinnedDriver->GetContext().Raycaster; IsValid(Raycaster))
+	if (!PinnedDriver->Sequence().TouchDown(InFingerId, Start).Perform())
 	{
-		ThresholdPixels = FMath::Sqrt((double)Raycaster->GetScaledDragThresholdSquare());
+		return false;
 	}
+	const FDreamDriverContext& Context = PinnedDriver->GetContext();
+	const double ThresholdPixels = Context.GetDragThresholdPixels(
+		Context.GetPointerEventData(UDreamStandaloneInputModule::GetTouchPointerID(InFingerId)));
 	const FVector2D Direction = InPixelDelta.IsNearlyZero() ? FVector2D(1.0, 0.0) : InPixelDelta.GetSafeNormal();
 	const double CrossingDistance = ThresholdPixels + 2.0;
 
 	FDreamDriverSequence Dragging = PinnedDriver->Sequence();
-	Dragging.TouchDown(InFingerId, Start);
 	if (InPixelDelta.Size() > CrossingDistance)
 	{
 		const FVector2D Crossing = Start + Direction * CrossingDistance;
