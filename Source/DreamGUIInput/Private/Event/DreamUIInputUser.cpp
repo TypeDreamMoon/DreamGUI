@@ -1491,24 +1491,37 @@ bool UDreamUIInputUser::LineTrace(UDreamPointerEventData* InPointerEventData, FD
 		}
 		if (HitResultArray.Num() > 0)
 		{
-			// An uninteractable widget in front occludes -- along the ray that struck it only, which is this
-			// raycaster's own. Its results stay hidden; every other raycaster still runs. A hit with no widget is
-			// a world occluder, which wins by distance and is dispatched to as a world target.
+			// An uninteractable widget in front is cut out of the path with everything in it, and the hit is the
+			// nearest widget above it that takes input -- hovered, pressed and clicked as if the pointer were on it,
+			// the events bubbling on up from there -- as Slate's FHittestGrid::GetBubblePath cuts the path at the first
+			// disabled widget (SlateCore/Private/Input/HittestGrid.cpp:236-247). It still lies in front: what is drawn
+			// behind it on this raycaster's canvases is not reached. Only when nothing above it takes input are this
+			// raycaster's results hidden, and every other raycaster still runs. A hit with no widget is a world
+			// occluder, which wins by distance and is dispatched to as a world target.
 			UDreamWidget* TopHitWidget = HitResultArray[0].Widget.Get();
+			UDreamWidget* TargetWidget = TopHitWidget;
 			if (TopHitWidget != nullptr && !TopHitWidget->GetInteractableInHierarchy())
 			{
-				continue;
+				TargetWidget = DreamPointerPolicy::ResolveEnabledHitTarget(TopHitWidget);
+				if (TargetWidget == nullptr)
+				{
+					continue;
+				}
 			}
 			FDreamUIHitResultContainer DreamHitResult;
 			DreamHitResult.HitResult = HitResultArray[0];
+			DreamHitResult.HitResult.Widget = TargetWidget;
 			DreamHitResult.Raycaster = Raycaster;
 			DreamHitResult.RayOrigin = RayOrigin;
 			DreamHitResult.RayDirection = RayDir;
 			DreamHitResult.RayEnd = RayEnd;
+			const bool bCut = TargetWidget != TopHitWidget;
 			for (const FDreamUIHitResult& HitItem : HitResultArray)
 			{
-				//a world occluder has no widget to hover; only real widgets belong in this list
-				if (UDreamWidget* HoveredWidget = HitItem.Widget.Get())
+				//a world occluder has no widget to hover; only real widgets belong in this list -- and, past a cut, none
+				//of the disabled ones it took out
+				if (UDreamWidget* HoveredWidget = HitItem.Widget.Get(); HoveredWidget != nullptr
+					&& (!bCut || HoveredWidget->GetInteractableInHierarchy()))
 				{
 					DreamHitResult.HoverArray.Add(HoveredWidget);
 				}

@@ -145,6 +145,15 @@ after 3 for 2.1.0 -- so the engine never takes 1.0.0 for the older of the two.
   menus. `UUIDropdown::bUseInteractionBlock` now means "keep the press for this dropdown whatever the project says" and
   is off by default; it was on by default, and on was the only way a list had ever behaved. See
   [Migration](Docs/Migration.md#from-100-to-the-next-release).
+- **A click, a tap or the virtual cursor's confirm on a disabled widget reaches the widget around it**, as Slate cuts
+  the path under the pointer at the first disabled widget and lets what is left take the event
+  (`FHittestGrid::GetBubblePath`): the nearest widget above it that takes input is hovered, pressed and clicked as if
+  the pointer were on it, and the events bubble on up from there. A disabled widget used to swallow the whole press,
+  so the card around a disabled button heard nothing, and a press on a disabled entry of an open menu or popup counted
+  as a press outside it and closed it; now the card hears it, and the menu stays up. The disabled widget and everything
+  in it still hear nothing, are not hovered, and still lie in front of whatever is drawn behind them. Screen space,
+  world space, render-target surfaces, fingers and the virtual cursor follow the one rule. See
+  [Migration](Docs/Migration.md#from-100-to-the-next-release).
 
 - **A reduced screen-space render scale is not used for a layer that blends with what is behind it.** Multiply and
   a material's Modulate, AlphaHoldout or Additive need the scene they draw over, which a transparent smaller target does

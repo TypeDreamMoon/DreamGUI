@@ -15,6 +15,21 @@ namespace DreamPointerPolicy
 		return InHitWidget == InDragWidget || InHitWidget->IsChildOf(InDragWidget);
 	}
 
+	UDreamWidget* ResolveEnabledHitTarget(UDreamWidget* InTopHit)
+	{
+		// Up from the hit to the first widget that takes input. The interactable answer cascades down from a disabled
+		// widget (UDreamWidget::CalculateInteractable_Recursive), so this is the parent of the outermost disabled one --
+		// Slate's cut -- unless a widget in between was pinned Interactable, which this framework honours.
+		for (UDreamWidget* Walker = InTopHit; Walker != nullptr; Walker = Walker->GetParent())
+		{
+			if (IsValid(Walker) && Walker->GetInteractableInHierarchy())
+			{
+				return Walker;
+			}
+		}
+		return nullptr;
+	}
+
 	bool ResolveCursor(TArrayView<UDreamWidget* const> InHoverStackInnermostFirst, EMouseCursor::Type& OutCursor)
 	{
 		for (UDreamWidget* Widget : InHoverStackInnermostFirst)
