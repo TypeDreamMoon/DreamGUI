@@ -149,6 +149,15 @@ struct FDreamDriverContext
 	/** The pointer's own state, which is where hover, press and drag are readable from. */
 	UDreamPointerEventData* GetPointerEventData(int32 InPointerID = 0) const;
 
+	/**
+	 * How far, in viewport pixels, InEventData's pointer has to travel from its press before the press is a drag: the
+	 * threshold of the raycaster that took the press, because that raycaster's ShouldStartDrag is the one that decides
+	 * -- a screen raycaster scales its authored threshold by the canvas, a world raycaster following the mouse or a
+	 * finger compares its own, unscaled, in pixels. The context's screen raycaster answers when there is no press, or
+	 * the press came through neither; zero when there is none of them.
+	 */
+	double GetDragThresholdPixels(const UDreamPointerEventData* InEventData) const;
+
 	/** The one widget this locator finds under the root, or null when it finds none or several. */
 	UDreamWidget* FindOne(const FDreamLocatorRef& InLocator) const;
 

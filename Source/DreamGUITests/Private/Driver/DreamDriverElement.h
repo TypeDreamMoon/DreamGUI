@@ -95,9 +95,10 @@ public:
 	 */
 	bool Tap(int32 InFingerId = 0);
 	/**
-	 * A finger lands on the centre, crosses the raycaster's drag threshold on its first move, travels
-	 * to InPixelDelta from where it landed over separate frames, rests a frame, and lifts -- DragBy's
-	 * shape, with a finger.
+	 * A finger lands on the centre, crosses the drag threshold of the raycaster that took its press on
+	 * its first move -- a world pointer's own for an element on a world panel, the screen raycaster's
+	 * for one on the screen -- travels to InPixelDelta from where it landed over separate frames, rests
+	 * a frame, and lifts: DragBy's shape, with a finger.
 	 */
 	bool TouchDragBy(const FVector2D& InPixelDelta, int32 InFingerId = 0);
 	/** Move to the centre and hold the trigger down; the release is a separate act. */

@@ -469,6 +469,24 @@ UDreamPointerEventData* FDreamDriverContext::GetPointerEventData(int32 InPointer
 	return EventSystem->GetPointerEventData(InPointerID, false);
 }
 
+double FDreamDriverContext::GetDragThresholdPixels(const UDreamPointerEventData* InEventData) const
+{
+	const UDreamBaseRaycaster* PressRaycaster = InEventData != nullptr ? InEventData->PressRaycaster.Get() : nullptr;
+	if (const UDreamScreenSpaceRaycaster* ScreenRaycaster = Cast<UDreamScreenSpaceRaycaster>(PressRaycaster))
+	{
+		return FMath::Sqrt((double)ScreenRaycaster->GetScaledDragThresholdSquare());
+	}
+	if (const UDreamWorldSpaceRaycaster* WorldRaycaster = Cast<UDreamWorldSpaceRaycaster>(PressRaycaster))
+	{
+		return FMath::Sqrt((double)WorldRaycaster->GetDragThresholdSquare());
+	}
+	if (IsValid(Raycaster))
+	{
+		return FMath::Sqrt((double)Raycaster->GetScaledDragThresholdSquare());
+	}
+	return 0.0;
+}
+
 UDreamWidget* FDreamDriverContext::FindOne(const FDreamLocatorRef& InLocator) const
 {
 	if (!IsValid(Root))
@@ -1248,20 +1266,7 @@ namespace DreamDriverSequenceLocal
 			// ShouldStartDrag decides: a screen raycaster scales its authored threshold by the canvas,
 			// a world raycaster following the mouse compares its own unscaled one in pixels. The rig's
 			// screen raycaster is the answer only when the press came through nothing else.
-			double ThresholdPixels = 0.0;
-			const UDreamBaseRaycaster* PressRaycaster = EventData->PressRaycaster;
-			if (const UDreamScreenSpaceRaycaster* ScreenRaycaster = Cast<UDreamScreenSpaceRaycaster>(PressRaycaster))
-			{
-				ThresholdPixels = FMath::Sqrt((double)ScreenRaycaster->GetScaledDragThresholdSquare());
-			}
-			else if (const UDreamWorldSpaceRaycaster* WorldRaycaster = Cast<UDreamWorldSpaceRaycaster>(PressRaycaster))
-			{
-				ThresholdPixels = FMath::Sqrt((double)WorldRaycaster->GetDragThresholdSquare());
-			}
-			else if (IsValid(InContext.Raycaster))
-			{
-				ThresholdPixels = FMath::Sqrt((double)InContext.Raycaster->GetScaledDragThresholdSquare());
-			}
+			const double ThresholdPixels = InContext.GetDragThresholdPixels(EventData);
 
 			FVector2D Direction = Target.GetValue() - PressPixel;
 			if (Direction.IsNearlyZero())
