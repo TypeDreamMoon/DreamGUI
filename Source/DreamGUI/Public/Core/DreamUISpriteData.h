@@ -1,4 +1,4 @@
-﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
+// Copyright 2019-Present LexLiu. All Rights Reserved.
 
 #pragma once
 
@@ -12,6 +12,12 @@
 
 class UDreamUISpriteData;
 class UDreamSpriteBase;
+// A friend declaration is not ordinary lookup (the friend at PackingAtlas's friend list below only
+// introduces the name for the class itself, not for everything after it in this header), so
+// `TObjectPtr<UDreamUIStaticSpriteAtlasData>` and `GetPackingAtlas()` compiled on MSVC -- which is
+// lenient -- and not on clang: the Android build reported "use of undeclared identifier".
+// TObjectPtr accepts an incomplete type on purpose (ObjectPtr.h:522-529), so declaring it is enough.
+class UDreamUIStaticSpriteAtlasData;
 
 #define WARNING_ATLAS_SIZE 4096
 
