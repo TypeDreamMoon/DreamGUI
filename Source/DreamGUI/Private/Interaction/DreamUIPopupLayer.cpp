@@ -54,6 +54,59 @@ namespace DreamUIPopupLayerLocal
 		return InOpener->GetWidgetActiveInHierarchy() && InOpener->GetRenderVisibleInHierarchy() && InOpener->GetInteractableInHierarchy();
 	}
 
+	/**
+	 * The root canvas InWidget's whole tree is drawn by: its own root canvas, or -- for a widget inside a retainer, whose
+	 * canvas draws its subtree into a target as a root of its own -- the root canvas of the tree the retainer stands in.
+	 * Null for a widget no canvas draws yet.
+	 */
+	const UDreamCanvas* FindTreeRootCanvas(const UDreamWidget* InWidget)
+	{
+		const UDreamCanvas* Root = IsValid(InWidget) ? InWidget->GetRootCanvas() : nullptr;
+		while (IsValid(Root) && Root->GetForceRenderToTarget())
+		{
+			const UDreamWidget* RootWidget = Root->GetWidget();
+			const UDreamWidget* Above = IsValid(RootWidget) ? RootWidget->GetParent() : nullptr;
+			const UDreamCanvas* Outer = IsValid(Above) ? Above->GetRootCanvas() : nullptr;
+			if (!IsValid(Outer) || Outer == Root)
+			{
+				break;
+			}
+			Root = Outer;
+		}
+		return Root;
+	}
+
+	/** Whether InCanvas, a tree's root canvas, draws into the level -- a panel in world space, a target a mesh shows -- rather than onto a player's screen. */
+	bool IsDrawnIntoTheLevel(const UDreamCanvas& InCanvas)
+	{
+		const EDreamRenderMode Mode = InCanvas.GetActualRenderMode();
+		return Mode == EDreamRenderMode::WorldSpace || Mode == EDreamRenderMode::WorldSpace_DreamUI || Mode == EDreamRenderMode::RenderTarget;
+	}
+
+	/**
+	 * Where a popup goes up: the top of the root canvas InDecider's tree is drawn by, when that tree is drawn into the level,
+	 * else InWidget's player's screen root -- the screen its owner is already on, not always the first player's.
+	 *
+	 * A tree in the level keeps its popups on itself, as UMG's widget component keeps its menus in its own window: the
+	 * component's virtual window asks for popups to go up in the current window (SVirtualWindow::OnQueryPopupMethod,
+	 * UseCurrentWindow, Slate/Private/Widgets/SVirtualWindow.cpp:35-38), and the menu stack hosts them in that window's own
+	 * popup layer (FMenuStack::SetHostPath, Slate/Private/Framework/Application/MenuStack.cpp:680-712). So a menu opened on a
+	 * panel is drawn on the panel, seen through the camera and hit by the ray that hits the panel, and goes wherever the
+	 * panel goes. A retainer on a screen is no such tree: UMG's retainer keeps its content in the window it is in.
+	 */
+	UDreamWidget* ResolveLiftRoot(UDreamWidget* InWidget, const UDreamWidget* InDecider)
+	{
+		if (const UDreamCanvas* TreeRoot = FindTreeRootCanvas(InDecider); IsValid(TreeRoot) && IsDrawnIntoTheLevel(*TreeRoot))
+		{
+			if (UDreamWidget* TreeRootWidget = TreeRoot->GetWidget(); IsValid(TreeRootWidget))
+			{
+				return TreeRootWidget;
+			}
+		}
+		UDreamScreenUISubsystem* ScreenUI = UDreamScreenUISubsystem::Get(InWidget->GetWorld());
+		return IsValid(ScreenUI) ? ScreenUI->GetOrCreateScreenRootForWidget(InWidget) : nullptr;
+	}
+
 	/** Where InWidget is in InPlane's plane -- Y across, Z up -- which is how Elevate anchors a lifted widget. */
 	FVector2D PositionInPlane(const UDreamWidget* InWidget, const UDreamWidget* InPlane)
 	{
@@ -62,16 +115,16 @@ namespace DreamUIPopupLayerLocal
 	}
 
 	/**
-	 * Above everything InScreenRoot's canvases draw below the drag band -- the opener's own canvas, the player's top
-	 * modal, a parent popup -- InPopup's own canvases left out, since they are what is being sorted. Two above, leaving
-	 * the order between free for the player's sheet (UDreamUIPopupLayer::RefreshSheet).
+	 * Above everything InLiftRoot's canvases draw below the drag band -- the opener's own canvas, the player's top modal, a
+	 * parent popup, a panel's own content -- InPopup's own canvases left out, since they are what is being sorted. Two
+	 * above, leaving the order between free for the player's sheet (UDreamUIPopupLayer::RefreshSheet).
 	 */
-	int32 ComputeSortOrder(UDreamWidget* InScreenRoot, const UDreamWidget* InPopup)
+	int32 ComputeSortOrder(UDreamWidget* InLiftRoot, const UDreamWidget* InPopup)
 	{
-		UDreamCanvas* RootCanvas = InScreenRoot->GetRootCanvas();
+		UDreamCanvas* RootCanvas = InLiftRoot->GetRootCanvas();
 		if (RootCanvas == nullptr)
 		{
-			RootCanvas = InScreenRoot->GetComponent<UDreamCanvas>();
+			RootCanvas = InLiftRoot->GetComponent<UDreamCanvas>();
 		}
 		int32 Highest = 0;
 		TArray<UDreamCanvas*> Canvases;
@@ -190,29 +243,42 @@ bool UDreamUIPopupLayer::Elevate(UDreamWidget* InWidget)
 	}
 	if (ElevatedHomes.Contains(FObjectKey(InWidget)))
 	{
-		// Already up. The owner opening twice without closing is a state question the owner settled;
-		// re-recording a home here would overwrite the real one with the screen root.
+		// Already up: there is no root to look for.
 		return true;
 	}
-	UDreamScreenUISubsystem* ScreenUI = UDreamScreenUISubsystem::Get(InWidget->GetWorld());
-	// The popup goes up on the screen its owner is already on, not always the first player's.
-	UDreamWidget* ScreenRoot = IsValid(ScreenUI) ? ScreenUI->GetOrCreateScreenRootForWidget(InWidget) : nullptr;
-	if (!IsValid(ScreenRoot))
+	return ElevateOnto(InWidget, DreamUIPopupLayerLocal::ResolveLiftRoot(InWidget, InWidget));
+}
+
+bool UDreamUIPopupLayer::ElevateOnto(UDreamWidget* InWidget, UDreamWidget* InLiftRoot)
+{
+	if (!IsValid(InWidget))
+	{
+		return false;
+	}
+	if (ElevatedHomes.Contains(FObjectKey(InWidget)))
+	{
+		// Already up. The owner opening twice without closing is a state question the owner settled;
+		// re-recording a home here would overwrite the real one with the root it was lifted to.
+		return true;
+	}
+	// No root to go up to -- or one the widget itself holds: a tree's own root pushed as a popup has nowhere to go.
+	if (!IsValid(InLiftRoot) || InLiftRoot == InWidget || InLiftRoot->IsChildOf(InWidget))
 	{
 		return false;
 	}
 	UDreamWidget* Home = InWidget->GetParent();
-	if (!IsValid(Home) || Home == ScreenRoot)
+	if (!IsValid(Home) || Home == InLiftRoot)
 	{
-		return Home == ScreenRoot;
+		return Home == InLiftRoot;
 	}
-	// The move keeps the ON-SCREEN placement, and TrySetParent's keep-world flag cannot do that for
+	// The move keeps the SEEN placement, and TrySetParent's keep-world flag cannot do that for
 	// a laid-out widget: it preserves RelativeLocation, which the next layout pass re-derives from
 	// the anchors -- and the anchors the owner authored (UUIDropdown::Show anchors the list against
-	// its FACE) mean something entirely different measured against the screen root. So the anchors
+	// its FACE) mean something entirely different measured against the root. So the anchors
 	// are collapsed to a point, the size the layout had computed is pinned as authored size, and the
 	// anchored position is the old world position expressed in the root's plane -- Y across, Z up,
-	// the same axes UUISlider reads pointer positions in.
+	// the same axes UUISlider reads pointer positions in. The root is a player's screen root, or the
+	// top of the tree a panel in the level is: one plane either way, which the widget was already in.
 	const FTransform OldWorld = InWidget->GetLayoutWorldTransform();
 	const float Width = InWidget->GetWidth();
 	const float Height = InWidget->GetHeight();
@@ -220,7 +286,7 @@ bool UDreamUIPopupLayer::Elevate(UDreamWidget* InWidget)
 	// Read before the move takes it out of its siblings: the trip home puts it back in the same place, so an owner that
 	// draws its children in order -- or a layout that counts them -- finds it where it left it.
 	const int32 HomeSiblingIndex = InWidget->GetSiblingIndex();
-	// And its slot, before the move takes that too -- the screen root hands out none, and a slot made again on the way
+	// And its slot, before the move takes that too -- the root hands out none of its home's, and a slot made again on the way
 	// home would start from defaults. A copy of it goes with the home: the trip back refills the new slot from it, and a
 	// lifted widget placed by its home panel's rules (the panel menu anchor's menu) reads its padding and nudge there.
 	UDreamPanelSlot* HomeSlotCopy = nullptr;
@@ -229,7 +295,7 @@ bool UDreamUIPopupLayer::Elevate(UDreamWidget* InWidget)
 		HomeSlotCopy = NewObject<UDreamPanelSlot>(GetTransientPackage(), HomeSlot->GetClass(), NAME_None, RF_Transient);
 		DreamUIPopupLayerLocal::CopySlotValues(*HomeSlot, *HomeSlotCopy);
 	}
-	if (!InWidget->TrySetParent(ScreenRoot, /*InKeepWorldPosition*/false))
+	if (!InWidget->TrySetParent(InLiftRoot, /*InKeepWorldPosition*/false))
 	{
 		return false;
 	}
@@ -237,7 +303,7 @@ bool UDreamUIPopupLayer::Elevate(UDreamWidget* InWidget)
 	InWidget->SetWidth(Width);
 	InWidget->SetHeight(Height);
 	InWidget->SetPivot(Pivot);
-	const FVector LocalInRoot = ScreenRoot->GetLayoutWorldTransform().InverseTransformPosition(OldWorld.GetLocation());
+	const FVector LocalInRoot = InLiftRoot->GetLayoutWorldTransform().InverseTransformPosition(OldWorld.GetLocation());
 	InWidget->SetAnchoredPosition(FVector2D(LocalInRoot.Y, LocalInRoot.Z));
 	FElevatedHome& Entry = ElevatedHomes.Add(FObjectKey(InWidget));
 	Entry.Parent = Home;
@@ -298,7 +364,7 @@ const UDreamPanelSlot* UDreamUIPopupLayer::GetHomeSlot(const UDreamWidget* InWid
 	return Home != nullptr ? Home->HomeSlot.Get() : nullptr;
 }
 
-void UDreamUIPopupLayer::SortPopupCanvas(UDreamWidget* InPopup, UDreamWidget* InScreenRoot)
+void UDreamUIPopupLayer::SortPopupCanvas(UDreamWidget* InPopup, UDreamWidget* InLiftRoot)
 {
 	using namespace DreamUIPopupLayerLocal;
 	UDreamCanvas* Canvas = InPopup->GetComponent<UDreamCanvas>();
@@ -323,8 +389,8 @@ void UDreamUIPopupLayer::SortPopupCanvas(UDreamWidget* InPopup, UDreamWidget* In
 		Home->CanvasTraceChannelBefore = static_cast<int32>(Canvas->GetTraceChannel().GetValue());
 	}
 	Canvas->SetOverrideSorting(true);
-	Canvas->SetSortOrder(ComputeSortOrder(InScreenRoot, InPopup), /*PropagateToChildrenCanvas*/true);
-	if (const UDreamCanvas* RootCanvas = InScreenRoot->GetRootCanvas())
+	Canvas->SetSortOrder(ComputeSortOrder(InLiftRoot, InPopup), /*PropagateToChildrenCanvas*/true);
+	if (const UDreamCanvas* RootCanvas = InLiftRoot->GetRootCanvas())
 	{
 		Canvas->SetTraceChannel(RootCanvas->GetTraceChannel());
 	}
@@ -394,14 +460,14 @@ bool UDreamUIPopupLayer::Push(const FDreamPopupParams& Params)
 	UDreamWidget* ParentPopup = Opener != nullptr ? FindPopupContaining(Opener, UserIndex) : nullptr;
 
 	// The lift first, so a popup that cannot go up changes nothing: no sibling is replaced for a popup that never opens.
-	if (!Elevate(Popup))
+	// Where to is the opener's to say: the top of its own tree when that tree is drawn into the level -- a panel in world
+	// space, a target a mesh shows -- else the player's screen root (ResolveLiftRoot). Asked before the lift moves anything.
+	if (!ElevateOnto(Popup, ResolveLiftRoot(Popup, Opener != nullptr ? Opener : Popup)))
 	{
 		return false;
 	}
 	UDreamWidget* Plane = Popup->GetParent();
-	UDreamScreenUISubsystem* ScreenUI = UDreamScreenUISubsystem::Get(Popup->GetWorld());
-	UDreamWidget* ScreenRoot = IsValid(ScreenUI) ? ScreenUI->GetOrCreateScreenRootForWidget(Popup) : nullptr;
-	if (!IsValid(Plane) || !IsValid(ScreenRoot))
+	if (!IsValid(Plane))
 	{
 		RestoreHome(Popup);
 		return false;
@@ -439,9 +505,9 @@ bool UDreamUIPopupLayer::Push(const FDreamPopupParams& Params)
 		ParentPopup = nullptr;
 	}
 
-	// A canvas of its own, sorted above everything the player's screen shows under the drag and tooltip bands -- undone on
-	// the way home (PutBackPopupCanvas).
-	SortPopupCanvas(Popup, ScreenRoot);
+	// A canvas of its own, sorted above everything the root it went up to shows -- the player's screen, or the panel the
+	// opener is on -- under the drag and tooltip bands, and undone on the way home (PutBackPopupCanvas).
+	SortPopupCanvas(Popup, Plane);
 
 	FOpenPopup& Entry = OpenPopups.AddDefaulted_GetRef();
 	Entry.Popup = Popup;
@@ -788,7 +854,8 @@ bool UDreamUIPopupLayer::IsInFrontOfPopup(const UDreamWidget* InWidget, const UD
 	const UDreamCanvas* PopupCanvas = InPopup->GetRenderCanvas();
 	if (!IsValid(WidgetCanvas) || !IsValid(PopupCanvas) || WidgetCanvas->GetRootCanvas() != PopupCanvas->GetRootCanvas())
 	{
-		// Another root canvas -- the world, a render target, another player's screen -- is no layer over this popup.
+		// Another root canvas is no layer over this popup: the screen for a popup up on a panel, a panel or a render target
+		// for one up on the screen, another panel, another player's screen.
 		return false;
 	}
 	return WidgetCanvas->GetActualSortOrder() > PopupCanvas->GetActualSortOrder();
