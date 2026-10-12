@@ -94,6 +94,19 @@ outside them through, and a screen built around the old way will feel different:
 - **A prompt on the action bar is a button when its entry has one.** An entry class that is a `UDreamButton`, or a
   prefab with a `UUIButton` in it, now runs its action when clicked, tapped or confirmed. A project that wired its own
   click handler to run the action does so twice; it removes its handler.
+- **Menus and dropdown lists opened on a panel in the level stay on the panel.** A popup opened from a world-space
+  panel, or from a canvas drawn into a render target that a mesh shows, goes up on top of that panel's own root canvas
+  instead of onto the player's screen, as a UMG widget component's menus stay in its window. It is clipped by the
+  panel and drawn with its perspective, and it closes on any press outside it, the screen included. A game that
+  counted on such a list being drawn flat on the HUD shows it from a screen-space widget of its own. Code that looked
+  for an open popup under the screen root (`UDreamScreenUISubsystem`) finds one opened on a panel under the panel's
+  root widget; `UDreamUIPopupLayer::IsOpen` and `GetOpenPopups` answer for both. A panel whose root widget lays its
+  children out (a box, a grid) would lay out a popup put up on it too; such a panel keeps its layout on a child of the
+  root.
+- **`UDreamUIActionTrigger::SetAction` binds at once on a live widget.** A screen that named a trigger's action after
+  the widget was up, and hid and showed the widget to make the key work, can drop that step; nothing else changes. A
+  screen that named an action on a live button ahead of time, meaning the key to work only later, sets the action
+  when the key should start working.
 
 A C++ subclass of `UDreamSpinBox` or of the list family that overrides `NativeOnKeyDown` calls `Super` to keep these
 keys, as for any key the base answers.

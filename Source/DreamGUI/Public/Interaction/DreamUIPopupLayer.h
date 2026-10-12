@@ -66,7 +66,7 @@ enum class EDreamPopupTabBehavior : uint8
 	CloseAndContinue,
 };
 
-/** Places an open popup, already lifted onto its player's screen root. */
+/** Places an open popup, already lifted onto the root it goes up to: its player's screen root, or the top of a panel's tree (UDreamUIPopupLayer::Push). */
 DECLARE_DELEGATE_OneParam(FDreamPopupPlaceDelegate, UDreamWidget* /*Popup*/);
 /** Told once a popup has closed: its focus returned, and -- unless it asked to stay lifted -- put back where it came from. */
 DECLARE_DELEGATE_TwoParams(FDreamPopupDismissedDelegate, UDreamWidget* /*Popup*/, EDreamPopupDismissReason /*Reason*/);
@@ -74,7 +74,10 @@ DECLARE_DELEGATE_TwoParams(FDreamPopupDismissedDelegate, UDreamWidget* /*Popup*/
 /** What UDreamUIPopupLayer::Push is told about a popup. Its pointers need only live through the call. */
 struct FDreamPopupParams
 {
-	/** The popup: a widget its owner built and positioned under itself; the layer lifts it onto the player's screen root. */
+	/**
+	 * The popup: a widget its owner built and positioned under itself; the layer lifts it onto the player's screen root, or
+	 * -- opened from a tree drawn into the level -- onto the top of that tree (UDreamUIPopupLayer::Push).
+	 */
 	UDreamWidget* Popup = nullptr;
 	/**
 	 * What opened it: where focus goes back to, what it follows while open, and what decides its parent -- the player's
@@ -98,7 +101,7 @@ struct FDreamPopupParams
 	EDreamPopupTabBehavior TabBehavior = EDreamPopupTabBehavior::Cycle;
 	/**
 	 * Called right after the lift and again after every frame's layout passes while the popup is open, to place it in
-	 * the screen root's plane (Y across, Z up), as Elevate's anchors leave it. It may move and size the popup; it must not
+	 * the plane of the root it went up to (Y across, Z up), as Elevate's anchors leave it. It may move and size the popup; it must not
 	 * reparent, push or dismiss anything. Unbound: the popup keeps the offset from its opener it had at Push, and so
 	 * follows it.
 	 */
@@ -114,7 +117,7 @@ struct FDreamPopupParams
 };
 
 /**
- * The screen-top layer transient UI is lifted to: dropdown lists and menus, as a per-player menu stack (Push, Dismiss).
+ * The top layer transient UI is lifted to: dropdown lists and menus, as a per-player menu stack (Push, Dismiss).
  * Elevate and Restore are the lift alone, kept for owners that manage the rest themselves; the paragraphs below describe
  * them, and Push's comment describes what the stack adds: focus return, outside clicks, Back, nesting, and following the
  * opener after every frame's layout passes (UDreamUIManagerWorldSubsystem::GetOnLayoutPassesFinished).
@@ -124,10 +127,15 @@ struct FDreamPopupParams
  * ancestor's layout. This is that idea for a mesh UI, kept deliberately small: the popup STAYS the
  * widget it already was, and the layer only moves it.
  *
- * Elevate reparents the widget under the screen root with its world position kept, so whatever
+ * Elevate reparents the widget under the root it goes up to with its world position kept, so whatever
  * positioning its owner ran while it was still a child -- UUIDropdown::Show anchors its list
  * against the face -- survives the move pixel for pixel. Restore hands it back to the parent it
  * came from; owners that re-position on every open (Show does) need nothing else.
+ *
+ * The root is the player's screen root for UI on a screen. For a tree drawn into the level -- a panel in world space, a
+ * canvas drawn into a target a mesh shows -- it is the top of that tree: its popups stay on it, drawn above its content
+ * in its own plane, as UMG's widget component keeps its menus in its own window (SVirtualWindow::OnQueryPopupMethod
+ * answers UseCurrentWindow). Outside presses, Back, the focus and following the opener work there as on a screen.
  *
  * What Elevate alone does not do: outside clicks, focus, nesting of menus, or following a moving
  * anchor while open. Push does all four.
@@ -147,10 +155,11 @@ public:
 	virtual void TeardownForWorld(UWorld& InWorld) override;
 
 	/**
-	 * Lift InWidget to the screen root, keeping its on-screen position. Safe to call on a widget
+	 * Lift InWidget to the top of the root it goes up to, keeping where it is seen: its player's screen root, or -- when
+	 * InWidget's tree is drawn into the level -- the top of that tree. Safe to call on a widget
 	 * already lifted (a re-open re-anchored it under its owner first only if it was restored, so a
-	 * second Elevate with no Restore in between is a no-op). Returns false when there is no screen
-	 * root to lift to.
+	 * second Elevate with no Restore in between is a no-op). Returns false when there is no root
+	 * to lift to.
 	 */
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI|Popup")
 	bool Elevate(UDreamWidget* InWidget);
@@ -168,7 +177,7 @@ public:
 
 	/**
 	 * The panel slot a lifted widget had under the parent Elevate took it from -- a copy of its class and values, made as
-	 * it left, since the screen root hands out no slots: what places a lifted widget by its home panel's rules reads its
+	 * it left, since the root it went up to hands out no slot of its home's: what places a lifted widget by its home panel's rules reads its
 	 * padding, nudge and size bounds here (UDreamLayoutContainerMenuAnchor's lifted menu). Null for a widget that is not
 	 * lifted, or that had no slot at home. Read-only: nothing written to it reaches the widget, and Restore refills the
 	 * widget's own slot from it.
@@ -178,11 +187,13 @@ public:
 	/**
 	 * Open a popup on its player's menu stack. Its parent is the player's deepest open popup that is or contains the
 	 * opener; a top-level popup dismisses the player's other popups, a child its siblings (Replaced). The popup is lifted
-	 * onto the player's screen root with its child index remembered and a canvas of its own that sorts above its opener
-	 * and the player's top modal, below the drag (29000) and tooltip (30000) bands; placed (Params.Place); every player's
+	 * with its child index remembered and a canvas of its own that sorts above its opener and the player's top modal, below
+	 * the drag (29000) and tooltip (30000) bands: onto the player's screen root, or -- when the opener's tree is drawn into
+	 * the level, a panel in world space or a target a mesh shows -- onto the top of that tree, as UMG keeps a widget
+	 * component's menus in its own window. Placed (Params.Place); every player's
 	 * focus is captured (FDreamFocusReturn) before, when asked, the popup takes this player's. While open it follows its
 	 * opener, is dismissed when its opener stops being usable (OpenerLost) -- both checked after every frame's layout
-	 * passes -- and by presses and Back as below. False, with nothing changed, when it cannot be lifted (no screen root).
+	 * passes -- and by presses and Back as below. False, with nothing changed, when it cannot be lifted (no root to go up to).
 	 * Pushing a popup that is open already changes nothing and answers true.
 	 *
 	 * True means open when Push returns: false too when the popup closed again before that -- the focus moving into it ran
@@ -328,7 +339,8 @@ private:
 	TWeakObjectPtr<UDreamUIManagerWorldSubsystem> HookedManager;
 
 	/**
-	 * Each player's sheet: an invisible, unfocusable widget over the whole screen root, sorted just under the player's
+	 * Each player's sheet: an invisible, unfocusable widget over the whole root the player's popups went up to -- the
+	 * screen root, or a panel's -- sorted just under the player's
 	 * popups, up while any of them consumes outside presses. It keeps the hover and the wheel off what is behind an open
 	 * menu, as the click catchers it replaces did -- without being a selectable that takes the focus of the press that
 	 * lands on it. The press itself is the layer's (NotifyPointerDown), and goes no further.
@@ -355,10 +367,12 @@ private:
 	 * is closed all the same: no focus inside it to return, no trip home, its owner told with a null popup.
 	 */
 	void DismissEntry(FObjectKey InPopupKey, EDreamPopupDismissReason InReason);
+	/** Elevate's lift, onto InLiftRoot: the root Elevate or Push chose. False when there is none, or InWidget holds it. */
+	bool ElevateOnto(UDreamWidget* InWidget, UDreamWidget* InLiftRoot);
 	/** Restore's trip home, without the dismissal of an open popup Restore makes first. */
 	void RestoreHome(UDreamWidget* InWidget);
-	/** Push's canvas: the popup's own, or one added, sorted into the popup band of InScreenRoot -- noted on its home for the trip back. */
-	void SortPopupCanvas(UDreamWidget* InPopup, UDreamWidget* InScreenRoot);
+	/** Push's canvas: the popup's own, or one added, sorted into the popup band of InLiftRoot -- noted on its home for the trip back. */
+	void SortPopupCanvas(UDreamWidget* InPopup, UDreamWidget* InLiftRoot);
 	/** The trip home's half of SortPopupCanvas, for a widget back under its home: the canvas removed or its sorting given back. */
 	void PutBackPopupCanvas(UDreamWidget* InWidget, const FElevatedHome& InHome);
 	/** The trip home's slot, for a widget back under its home: made again with the class and values InHome kept. */

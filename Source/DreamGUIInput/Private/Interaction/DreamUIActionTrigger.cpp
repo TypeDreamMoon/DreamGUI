@@ -52,12 +52,16 @@ void UDreamUIActionTrigger::OnInteractableChanged(bool Interactable)
 void UDreamUIActionTrigger::SetAction(const FDataTableRowHandle& InAction)
 {
 	if (Action.DataTable == InAction.DataTable && Action.RowName == InAction.RowName)return;
-	const bool bWasBound = IsActionBound();
 	UnregisterAction();
 	Action = InAction;
-	if (bWasBound)
+	// Bound on the spot while the widget is live -- active, and interactable, which RegisterAction checks -- as CommonUI's
+	// SetTriggeringInputAction binds the action it is handed at once (UCommonButtonBase::SetTriggeringInputAction,
+	// CommonUI/Private/CommonButtonBase.cpp:1394-1407): a trigger named an action after its widget went live used to wait
+	// for the widget to go live again, and its key did nothing meanwhile. An empty action leaves nothing bound. A widget
+	// asleep or greyed out binds nothing now; OnEnable and OnInteractableChanged bind the action when it comes back.
+	if (bIsEnableCalled)
 	{
-		RegisterAction();//it was live a moment ago; the new action should be live too
+		RegisterAction();
 	}
 }
 

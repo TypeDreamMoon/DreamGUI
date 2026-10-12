@@ -6,6 +6,7 @@
 #include "UObject/StrongObjectPtr.h"
 
 #include "Controls/DreamButton.h"
+#include "Core/Components/DreamCanvas.h"
 #include "Core/Components/DreamWidget.h"
 #include "Event/DreamEventSystem.h"
 #include "InputCoreTypes.h"
@@ -37,8 +38,10 @@
  * D-pad and confirm reach it as on the screen. A finger is the mouse's press (FSlateApplication hands an unanswered touch on
  * as one), inside the card and outside it alike.
  *
- * Every card here is on the screen. Where a popup opened by a control on a panel should be drawn -- on the panel, as UMG
- * draws a widget component's menus inside its own window, or on the screen -- is left open, and nothing here depends on it.
+ * A popup goes up where its opener is: a card with no opener, or opened from the screen, on the player's screen; one opened
+ * from a control on a panel, on that panel, as UMG keeps a widget component's menus in its own window (SVirtualWindow::
+ * OnQueryPopupMethod answers UseCurrentWindow, Slate/Private/Widgets/SVirtualWindow.cpp:35-38; FMenuStack::SetHostPath,
+ * Slate/Private/Framework/Application/MenuStack.cpp:680-712).
  */
 namespace DreamPopupLayerWorldTestLocal
 {
@@ -211,9 +214,14 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamWorldPopupFocusTest, "DreamGUI.Popup.ACardOpenedFromAButtonOnAWorldPanelTakesThePadsFocusAndBackGivesItBackToTheButton", "[Nav][World]")
 
 /*
- * The pad's focus on a button on a panel, and a card opened from it on the popup layer, its left button taking the focus. The
- * D-pad right moves the focus to the card's right-hand button and the confirm clicks it, leaving the card open; Back closes
- * the card and the focus is back on the panel's button, whose click the next confirm makes.
+ * The pad's focus on a button on a panel, and a card its owner built on the same panel, opened from the button on the popup
+ * layer, its left button taking the focus. The card stays on the panel, drawn above the button, rather than going up on the
+ * screen. The D-pad right moves the focus to the card's right-hand button and the confirm clicks it, leaving the card open;
+ * Back closes the card and the focus is back on the panel's button, whose click the next confirm makes.
+ *
+ * The card used to be built on the screen and was lifted onto the screen from a panel button's push: a popup opened from a
+ * panel went up on the screen then. It is built on the panel now, where the panel's owner builds what opens from the panel,
+ * and goes up on the panel's own root canvas, as a widget component's menu stays in its window.
  */
 bool FDreamWorldPopupFocusTest::RunTest(const FString& Parameters)
 {
@@ -228,7 +236,7 @@ bool FDreamWorldPopupFocusTest::RunTest(const FString& Parameters)
 	}
 	const FWorldStage Stage = SetUpPanel(*this, Rig);
 	UDreamButton* Opener = Stage.IsReady() ? PlaceButton(*this, Rig, TEXT("Opener"), Stage.Panel, FVector2D(160.0, 60.0), FVector2D(-150.0, -80.0), OpenerListener.Get()) : nullptr;
-	UDreamWidget* Card = Opener != nullptr ? Rig.MakeWidget(TEXT("Card"), nullptr, FVector2D(360.0, 120.0), FVector2D(0.0, 200.0)) : nullptr;
+	UDreamWidget* Card = Opener != nullptr ? Rig.MakeWidget(TEXT("Card"), Stage.Panel, FVector2D(360.0, 120.0), FVector2D(60.0, 60.0)) : nullptr;
 	UDreamButton* Left = Card != nullptr ? PlaceButton(*this, Rig, TEXT("Left"), Card, ButtonSize, FVector2D(-90.0, 0.0), nullptr) : nullptr;
 	UDreamButton* Right = Left != nullptr ? PlaceButton(*this, Rig, TEXT("Right"), Card, ButtonSize, FVector2D(90.0, 0.0), RightListener.Get()) : nullptr;
 	UDreamUIPopupLayer* Popups = UDreamUIPopupLayer::Get(Rig.GetWorld());
@@ -252,6 +260,13 @@ bool FDreamWorldPopupFocusTest::RunTest(const FString& Parameters)
 		Popups->Dismiss(Card);
 		return false;
 	}
+	const UDreamCanvas* CardCanvas = Card->GetRenderCanvas();
+	const UDreamCanvas* OpenerCanvas = Opener->FaceNode->GetRenderCanvas();
+	TestTrue(TEXT("The card stayed on the panel, drawn by the panel's canvas, not on the screen"),
+		Card->GetParent() == Stage.Panel && Card->GetRootCanvas() == Stage.Panel->GetRootCanvas() && !Card->IsScreenSpaceOverlayUI());
+	TestTrue(TEXT("...above the panel's button"), CardCanvas != nullptr && OpenerCanvas != nullptr
+		&& CardCanvas->GetActualSortOrder() > OpenerCanvas->GetActualSortOrder());
+	TestTrue(TEXT("...where the camera sees it"), RectOf(Rig, Left).IsSet() && RectOf(Rig, Right).IsSet());
 
 	TestTrue(TEXT("The D-pad right completes"), PressKey(Rig, EKeys::Gamepad_DPad_Right));
 	TestTrue(TEXT("The D-pad moved the focus to the card's right-hand button"), FocusIsIn(Rig, Right));

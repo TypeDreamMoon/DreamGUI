@@ -112,11 +112,8 @@ bool FDreamActionUIFollowsOwnerTest::RunTest(const FString& Parameters)
 	TestEqual(TEXT("...and so does the bar"), Bar->GetUserIndex(), BarWidget->GetOwningPlayerIndex());
 
 	UDataTable* Table = MakeConfirmTable();
+	// Named on a live widget, bound at once, as CommonUI's SetTriggeringInputAction binds.
 	Trigger->SetAction(MakeHandle(Table, ConfirmName));
-	// A trigger binds as its widget comes alive, and this one was alive before it had an action.
-	ButtonWidget->SetWidgetActive(false);
-	ButtonWidget->SetWidgetActive(true);
-	Rig.PumpFrames(1);
 	if (!TestTrue(TEXT("The trigger bound its action"), Trigger->IsActionBound()))
 	{
 		return false;

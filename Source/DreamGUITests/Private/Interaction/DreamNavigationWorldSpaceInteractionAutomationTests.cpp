@@ -222,8 +222,10 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 REGISTER_SIMPLE_AUTOMATION_TEST_TAGS(FDreamWorldActionKeyTest, "DreamGUI.Navigation.Actions.TheKeyOfAnActionOnAButtonOnAWorldPanelClicksIt", "[Nav][World]")
 
 /*
- * A button on a panel that is also what the Confirm action does, its Confirm keys X and the pad's left face button. Each key
- * clicks it once, though nothing about the key says where the button is drawn; a key the action does not name clicks nothing.
+ * A button on a panel that is also what the Confirm action does, its Confirm keys X and the pad's left face button, the
+ * action named on the button's trigger once the button is up, as CommonUI's SetTriggeringInputAction names one -- and bound
+ * there and then. Each key clicks it once, though nothing about the key says where the button is drawn; a key the action does
+ * not name clicks nothing.
  */
 bool FDreamWorldActionKeyTest::RunTest(const FString& Parameters)
 {
@@ -262,14 +264,7 @@ bool FDreamWorldActionKeyTest::RunTest(const FString& Parameters)
 		return false;
 	}
 	Trigger->SetAction(Row);
-	// A trigger binds as its widget comes alive, and this face was alive before it had an action -- so it is woken again,
-	// as DreamGUI.Navigation.ActionBar.TheTriggerAndTheBarAnswerToThePlayerWhoOwnsThemUnlessToldOtherwise binds its own.
-	// Whether naming an action on a live trigger should bind it at once, as CommonUI's SetTriggeringInputAction does, is
-	// not this test's question.
-	Button->FaceNode->SetWidgetActive(false);
-	Button->FaceNode->SetWidgetActive(true);
-	Rig.PumpFrames(2);
-	if (!TestTrue(TEXT("The trigger bound its action"), Trigger->IsActionBound()))
+	if (!TestTrue(TEXT("Named on the live button, the action is bound at once"), Trigger->IsActionBound()))
 	{
 		return false;
 	}

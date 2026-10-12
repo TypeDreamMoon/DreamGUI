@@ -168,6 +168,22 @@ after 3 for 2.1.0 -- so the engine never takes 1.0.0 for the older of the two.
   confirm announces the link (`UDreamText::OnHyperlinkClicked`). The keys and the pad used to pass every link by. A
   link in a disabled text is passed over. `bLinksAreFocusStops` turns it off. See
   [Migration](Docs/Migration.md#from-100-to-the-next-release).
+- **A menu or a dropdown list opened on a panel in the level stays on the panel**, as UMG keeps a widget component's
+  menus in its own window (`SVirtualWindow::OnQueryPopupMethod` asks for `UseCurrentWindow`, and `FMenuStack` hosts
+  them in that window's popup layer). When what opens a popup -- a dropdown, a menu anchor, anything that calls
+  `UDreamUIPopupLayer::Push` -- is in a tree drawn into the level, a world-space panel or a canvas drawn into a target
+  a mesh shows, the popup goes up on top of that tree's own root canvas, in its plane and sorted above its content,
+  where it used to be lifted onto the player's screen at a place unrelated to where the panel is seen, and no ray
+  through the panel could reach it. It is drawn and hit where the camera sees it hang from its opener; a press
+  anywhere outside it -- elsewhere on the panel, on another panel, on the screen -- closes it as on a screen, with
+  Consume and PassThrough as before; Back, the focus, following the opener and the fades are the screen's. A popup
+  opened on a screen, a retainer on a screen included, goes up on the player's screen root as before. `Elevate` alone
+  follows the widget's own tree the same way. See [Migration](Docs/Migration.md#from-100-to-the-next-release).
+- **An action named on a live action trigger is its key at once.** `UDreamUIActionTrigger::SetAction` on a trigger
+  whose widget is active and interactable binds the new action there and then, letting go of the old one, as CommonUI's
+  `SetTriggeringInputAction` does; clearing it lets go. It used to rebind only an action that was already bound, so
+  an action given to a trigger whose widget was already up stayed unbound until the widget was hidden and shown again.
+  Set on a hidden or disabled widget, the action is bound when the widget comes back, as before.
 
 - **A reduced screen-space render scale is not used for a layer that blends with what is behind it.** Multiply and
   a material's Modulate, AlphaHoldout or Additive need the scene they draw over, which a transparent smaller target does
