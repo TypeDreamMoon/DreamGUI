@@ -90,7 +90,7 @@ Each input column holds one mark per configuration, in this order: Default (`[An
 | Border | `####` | `####` | `----` | `----` | 0 |
 | Button | `####` | `####` | `####` | `----` | 0 |
 | Dialog | `####` | `####` | `####` | `----` | 0 |
-| Dropdown | `###.` | `###.` | `###.` | `----` | 3 |
+| Dropdown | `####` | `####` | `####` | `----` | 0 |
 | EditableText | `####` | `####` | `####` | `####` | 0 |
 | MultiLineEditableText | `####` | `####` | `####` | `####` | 0 |
 | TextInput | `####` | `####` | `####` | `####` | 0 |
@@ -101,7 +101,7 @@ Each input column holds one mark per configuration, in this order: Default (`[An
 | ListRowDragDrop | `####` | `####` | `----` | `----` | 0 |
 | TileView | `####` | `####` | `####` | `----` | 0 |
 | TreeView | `####` | `####` | `####` | `----` | 0 |
-| MenuAnchor | `###.` | `###.` | `###.` | `----` | 3 |
+| MenuAnchor | `####` | `####` | `####` | `----` | 0 |
 | NativeWidgetHost | `####` | `####` | `----` | `----` | 0 |
 | ProgressBar | `#---` | `----` | `----` | `----` | 0 |
 | RadioButton | `####` | `####` | `####` | `----` | 0 |
@@ -125,7 +125,7 @@ Each input column holds one mark per configuration, in this order: Default (`[An
 | Tooltip | `####` | `####` | `####` | `----` | 0 |
 | VirtualCursor | `####` | `----` | `####` | `----` | 0 |
 
-**Holes: 6** of 403 applicable cells.
+**Holes: 0** of 403 applicable cells.
 
 Notes:
 
