@@ -34,7 +34,11 @@ class DREAMGUIINPUT_API UDreamUIActionTrigger : public UDreamUIBehaviour
 public:
 	UDreamUIActionTrigger();
 
-	/** The action row this widget answers to. Empty means nothing is bound. */
+	/**
+	 * The action row this widget answers to. Empty means nothing is bound. Set while the widget is live -- active and
+	 * interactable -- it is bound at once, the old one let go, as CommonUI's SetTriggeringInputAction binds; set while it
+	 * is not, it is bound when the widget goes live.
+	 */
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI-Navigation")
 	void SetAction(const FDataTableRowHandle& InAction);
 	UFUNCTION(BlueprintPure, Category = "DreamGUI-Navigation")

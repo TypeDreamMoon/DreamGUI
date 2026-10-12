@@ -103,6 +103,10 @@ outside them through, and a screen built around the old way will feel different:
   root widget; `UDreamUIPopupLayer::IsOpen` and `GetOpenPopups` answer for both. A panel whose root widget lays its
   children out (a box, a grid) would lay out a popup put up on it too; such a panel keeps its layout on a child of the
   root.
+- **`UDreamUIActionTrigger::SetAction` binds at once on a live widget.** A screen that named a trigger's action after
+  the widget was up, and hid and showed the widget to make the key work, can drop that step; nothing else changes. A
+  screen that named an action on a live button ahead of time, meaning the key to work only later, sets the action
+  when the key should start working.
 
 A C++ subclass of `UDreamSpinBox` or of the list family that overrides `NativeOnKeyDown` calls `Super` to keep these
 keys, as for any key the base answers.

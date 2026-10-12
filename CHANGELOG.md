@@ -179,6 +179,11 @@ after 3 for 2.1.0 -- so the engine never takes 1.0.0 for the older of the two.
   Consume and PassThrough as before; Back, the focus, following the opener and the fades are the screen's. A popup
   opened on a screen, a retainer on a screen included, goes up on the player's screen root as before. `Elevate` alone
   follows the widget's own tree the same way. See [Migration](Docs/Migration.md#from-100-to-the-next-release).
+- **An action named on a live action trigger is its key at once.** `UDreamUIActionTrigger::SetAction` on a trigger
+  whose widget is active and interactable binds the new action there and then, letting go of the old one, as CommonUI's
+  `SetTriggeringInputAction` does; clearing it lets go. It used to rebind only an action that was already bound, so
+  an action given to a trigger whose widget was already up stayed unbound until the widget was hidden and shown again.
+  Set on a hidden or disabled widget, the action is bound when the widget comes back, as before.
 
 - **A reduced screen-space render scale is not used for a layer that blends with what is behind it.** Multiply and
   a material's Modulate, AlphaHoldout or Additive need the scene they draw over, which a transparent smaller target does
