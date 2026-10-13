@@ -28,7 +28,7 @@ will see. `move_module_files.py` and `retarget_script_paths.py` print what they 
    CoreRedirects (`DreamGUI.Packaging.ThePluginShipsNoCoreRedirects`), so an asset saved before the split that
    names one of them no longer finds it -- the plugin's own and every project's. `--redirects` prints the block
    that bridges them: put it in the working project's `Config/DefaultEngine.ini` until step 9 is done, and hand it
-   on in the CHANGELOG and `Docs/Migration.md`, the way 1.0.0 hands on 2.1.0's. Entries in 2.1.0's block that
+   on in the CHANGELOG and `Docs/guides/migration.md`, the way 1.0.0 hands on 2.1.0's. Entries in 2.1.0's block that
    lead to a moved type's old path lead nowhere after the split (a redirect does not chain); the migration notes
    have to say so.
 5. Add the module to `DreamGUIEditor.Build.cs` and `DreamGUITests.Build.cs` (the tests also get its

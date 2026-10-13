@@ -133,7 +133,7 @@ python "$Host_\Plugins\DreamGUI\Tools\Tests\compare_text_smoke.py" "$Out\ref" "$
 
 Variants, each a cook and a run of its own into another directory, compared with the same reference:
 
-- **`-I18NPreset=English`**, the engine's default preset: only what `Docs/FontsAndPackaging.md` says degrades may differ
+- **`-I18NPreset=English`**, the engine's default preset: only what `Docs/guides/fonts-and-packaging.md` says degrades may differ
   -- what `zh-CN` falls back to (compare with `--allow-icu-differences`), and with it possibly the Chinese text's face,
   and the Japanese paragraph's line breaks.
 - **`-clientconfig=Shipping`**: the executable is `DreamGUITestHost-Win64-Shipping.exe`. Shipping writes no log and keeps

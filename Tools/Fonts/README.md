@@ -41,7 +41,7 @@ and the text parity corpus load the engine's file directly, so they need nothing
 
 How a game adds one -- which fonts DreamGUI draws colour from and their licences, the three ways to make the font asset
 (embedded, engine font face, external file), the emoji ranges of its fallback entry, why the text font has to be on the
-outline field, and what it costs -- is in [`Docs/FontsAndPackaging.md`](../../Docs/FontsAndPackaging.md), which ships with
+outline field, and what it costs -- is in [`Docs/guides/fonts-and-packaging.md`](../../Docs/guides/fonts-and-packaging.md), which ships with
 the plugin. So is what the packaging preset's ICU data changes for CJK fallbacks and line breaking.
 
 ## How to run it
