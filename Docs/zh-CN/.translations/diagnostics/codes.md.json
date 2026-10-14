@@ -1,0 +1,52 @@
+{
+  "version": 1,
+  "sourceFile": "Docs/diagnostics/codes.md",
+  "translationFile": "Docs/zh-CN/diagnostics/codes.md",
+  "sourceHash": null,
+  "importedSourceHash": "e92d9afab39ba64e75a20e50f7ca24b117970285fe164363fe98aa5e941dfe97",
+  "sourceRevision": "5d4e5ce0ebb734a3f2d46d5a371674cfa1b69176",
+  "translationHash": "82fcb3abdeb163967e13d4c201df289b2f82a7420ad096c71a1d5cd3578e5d34",
+  "origin": "website-import",
+  "importedFrom": [
+    "diagnostics/dui1xxx",
+    "diagnostics/dui2xxx",
+    "diagnostics/dui3xxx",
+    "diagnostics/dui4xxx",
+    "diagnostics/dui5xxx",
+    "diagnostics/dui6xxx",
+    "diagnostics/dui7xxx"
+  ],
+  "pageMetadata": {
+    "diagnostics/dui1xxx": {
+      "title": "DUI1xxx · 词法",
+      "description": "一串字符构不成任何记号。"
+    },
+    "diagnostics/dui2xxx": {
+      "title": "DUI2xxx · 语法",
+      "description": "记号拼不成语法。"
+    },
+    "diagnostics/dui3xxx": {
+      "title": "DUI3xxx · 语义",
+      "description": "语法没错，但这棵树对不上：重复的 id、未知的类型。"
+    },
+    "diagnostics/dui4xxx": {
+      "title": "DUI4xxx · 取值",
+      "description": "值和它写在的属性对不上。"
+    },
+    "diagnostics/dui5xxx": {
+      "title": "DUI5xxx · 构建",
+      "description": "反射拒绝了写入，或者目标对象不存在。"
+    },
+    "diagnostics/dui6xxx": {
+      "title": "DUI6xxx · 编译",
+      "description": ".dui 挂不到它的 Blueprint 上。"
+    },
+    "diagnostics/dui7xxx": {
+      "title": "DUI7xxx · 写回",
+      "description": "设计器的改动没法写回文本。"
+    }
+  },
+  "missingSections": [
+    "DUI6023"
+  ]
+}

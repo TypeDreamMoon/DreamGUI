@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "sourceFile": "Docs/concepts/layout.md",
+  "translationFile": "Docs/zh-CN/concepts/layout.md",
+  "sourceHash": null,
+  "importedSourceHash": "265a82139d27725c91c92f9ce972e76cb94118d27c321d65b9322a49bd18a2e8",
+  "sourceRevision": "5d4e5ce0ebb734a3f2d46d5a371674cfa1b69176",
+  "translationHash": "1dcd43d857ab36dbbcccedfea17caaa7873f1a4280e0012c8d4bd914b01ae994",
+  "origin": "website-import",
+  "importedFrom": [
+    "concepts/layout"
+  ],
+  "pageMetadata": {
+    "concepts/layout": {
+      "title": "布局",
+      "description": "布局引擎怎么工作：测量是 const 的、与布置分开，布置结果是一次写入的不可变片段，期望尺寸在一轮里记忆，失效带着原因；UMG 形状的面板、面板槽，被删除的 Lex 布局族，以及填充槽里的文本需要 WrapTextAt 的那个坑。"
+    }
+  }
+}

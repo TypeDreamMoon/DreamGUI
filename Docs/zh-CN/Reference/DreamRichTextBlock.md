@@ -1,0 +1,141 @@
+---
+title: "UDreamRichTextBlock"
+description: "A rich text block whose hierarchy is code, not an asset: one paragraph that reads markup."
+---
+
+**提示：**
+
+本页由 `DreamGUIReferenceDocs` commandlet 从反射生成，正文是头文件注释的原文（英文），所以不翻译——这样它永远和代码一致。概念讲解见[核心概念](../concepts/widgets.md)。
+
+
+
+Inherits from [UDreamUIControl](DreamUIControl.md).
+
+Declared in `Public/Controls/DreamRichTextBlock.h`.
+
+A rich text block whose hierarchy is code, not an asset: one paragraph that reads markup.
+
+UMG's RichTextBlock resolves `<Tag>text</Tag>` against a decorator set; this library's text stack
+has had the same idea since it was written -- UDreamText::bRichText plus two data assets, one
+mapping tags to styles and one mapping tags to images -- and what was missing was a CONTROL that
+turns it on. That is all this class is: a text node with the flag set, the two assets exposed, and
+the colour and size coming from the project sheet like every other control's.
+
+<a id="why-it-is-a-control-and-not-a-flag-on-a-text-node"></a>
+
+WHY IT IS A CONTROL AND NOT A FLAG ON A TEXT NODE
+-------------------------------------------------
+The flag already exists on the node, and an author who wants it there can still set it. What a
+control adds is the thing a flag cannot: a `Native.RichText` tag that reads the project's text
+colour and size, so a project restyles its prose in one place, and a place for the two data assets
+to be authored per instance without anyone reaching into a visual.
+
+WHAT THE MARKUP MEANS is not this control's business and is not restated here -- the tag
+vocabulary, the filter flags and the two asset formats belong to UDreamText and its parser, and a
+second description of them in a control header is a second thing to keep true.
+
+<a id="properties"></a>
+
+## Properties
+
+| Name | Type | Category | In the details panel | From Blueprint | Description |
+|---|---|---|---|---|---|
+| `Style` | `FDreamRichTextStyle` | Rich Text | yes | `GetStyle` / `SetStyle` | This instance's own look. The project sheet wins while StyleSource says so AND a sheet actually exists; with no sheet in the project this IS the look in effect. |
+| `Text` | `FText` | Rich Text | yes | `GetText` / `SetText` | The prose, markup and all. |
+| `TagFilterFlags` | `int32` | Rich Text | yes | `GetTagFilterFlags` / `SetTagFilterFlags` | Which tags the parser is allowed to act on. The default is all of them. |
+| `CustomStyleData` | `TObjectPtr<UDreamUIRichTextCustomStyleData>` | Rich Text | yes | `GetCustomStyleData` / `SetCustomStyleData` | What `<MyTag>` means, as a style. Null leaves custom tags to the char-selection consumers. |
+| `ImageData` | `TObjectPtr<UDreamUIRichTextImageData_BaseObject>` | Rich Text | yes | `GetImageData` / `SetImageData` | What `<img=key/>` means. Null draws nothing for an image tag. The tag may also give a size and where the image sits on its line: `<img=key,24/>`, `<img=key,24,32/>`, `<img=key,24,baseline/>` -- middle (the default, centred), baseline, top or bottom. An image taller than its line makes the line taller. |
+| `HorizontalAlignment` | `EDreamUITextParagraphHorizontalAlign` | Rich Text | yes | `GetHorizontalAlignment` / `SetHorizontalAlignment` | How the paragraph sits in the control's rect. |
+| `VerticalAlignment` | `EDreamUITextParagraphVerticalAlign` | Rich Text | yes | `GetVerticalAlignment` / `SetVerticalAlignment` |  |
+| `OverflowType` | `EDreamUITextOverflowType` | Rich Text | yes | `GetOverflowType` / `SetOverflowType` | What a line too long for the control does. VerticalOverflow is the one that WRAPS, which is what prose usually wants and what a rich text block almost always is. |
+| `bAutoWrapText` | `bool` | Rich Text | yes | `GetAutoWrapText` / `SetAutoWrapText` | Break a line that does not fit rather than letting it run on -- UMG's AutoWrapText. |
+| `TextTransformPolicy` | `EDreamUITextTransformPolicy` | Rich Text | yes | `GetTextTransformPolicy` / `SetTextTransformPolicy` | Case the prose is DRAWN in -- UMG's TextTransformPolicy. The authored string is untouched. |
+| `MinDesiredWidth` | `float` | Rich Text | yes | `GetMinDesiredWidth` / `SetMinDesiredWidth` | A floor under the width the paragraph asks a content-sized parent for -- UMG's MinDesiredWidth. Zero means no opinion, which is every block that exists today. |
+| `Language` | `FString` | Rich Text | yes | `GetLanguage` / `SetLanguage` | The language the prose is written in, as a culture name ("ja", "zh-Hans"); empty is the game's. Picks the font's fallbacks meant for it and the forms a script draws per language -- see UDreamText::Language. `<lang=xx>` still overrides it for what the tag encloses. |
+| `TabSize` | `float` | Rich Text | yes | `GetTabSize` / `SetTabSize` | Tab stops in spaces, from the line's start edge -- CSS tab-size, 8 as browsers have it. |
+| `TextJustify` | `EDreamTextJustify` | Rich Text | yes | `GetTextJustify` / `SetTextJustify` | Where a justified line gets its extra room. Read only with HorizontalAlignment Justify. |
+| `LastLineAlign` | `EDreamTextLastLineAlign` | Rich Text | yes | `GetLastLineAlign` / `SetLastLineAlign` | How a justified paragraph's last line, and a line a newline ends, align. Read only with HorizontalAlignment Justify. |
+| `SmallTextRaster` | `EDreamTextSmallTextRaster` | Rich Text | yes | `GetSmallTextRaster` / `SetSmallTextRaster` | Off keeps the prose on its font's distance field at every size; see UDreamText::SmallTextRaster. |
+| `TextNode` | `TObjectPtr<UDreamWidget>` | Rich Text | - | read only | The paragraph itself. Public because everything under a control is reachable by name. |
+
+<a id="functions"></a>
+
+## Functions
+
+| Function | Kind | Description |
+|---|---|---|
+| `bool GetAutoWrapText()` | pure | Get Auto Wrap Text |
+| `UDreamUIRichTextCustomStyleData* GetCustomStyleData()` | pure | Get Custom Style Data |
+| `UMaterialInstanceDynamic* GetDefaultDynamicMaterial()` | callable | A material instance of this block's own, created over the style's material the first time it is asked for -- UMG's GetDefaultDynamicMaterial. |
+| `UDreamUIFontData_BaseObject* GetDefaultFont()` | pure | The DEFAULT typeface for undecorated prose -- UMG's SetDefaultFont, minus what FSlateFontInfo packs in beside it: the size is Style.FontSize and the outline is Style.TextStyle. Markup may still switch the face per run; this is what a run that says nothing gets. |
+| `EDreamUITextParagraphHorizontalAlign GetHorizontalAlignment()` | pure | Get Horizontal Alignment |
+| `UDreamUIRichTextImageData_BaseObject* GetImageData()` | pure | Get Image Data |
+| `FString GetLanguage()` | pure | Get Language |
+| `EDreamTextLastLineAlign GetLastLineAlign()` | pure | Get Last Line Align |
+| `float GetMinDesiredWidth()` | pure | Get Min Desired Width |
+| `EDreamUITextOverflowType GetOverflowType()` | pure | Get Overflow Type |
+| `EDreamTextSmallTextRaster GetSmallTextRaster()` | pure | Get Small Text Raster |
+| `FDreamRichTextStyle GetStyle()` | pure | Get Style |
+| `float GetTabSize()` | pure | Get Tab Size |
+| `int32 GetTagFilterFlags()` | pure | Get Tag Filter Flags |
+| `FText GetText()` | pure | Get Text |
+| `EDreamTextJustify GetTextJustify()` | pure | Get Text Justify |
+| `EDreamUITextTransformPolicy GetTextTransformPolicy()` | pure | Get Text Transform Policy |
+| `EDreamUITextParagraphVerticalAlign GetVerticalAlignment()` | pure | Get Vertical Alignment |
+| `void RefreshTextLayout()` | callable | Re-parse the markup and lay the paragraph out again -- UMG's RefreshTextLayout. |
+| `void SetAutoWrapText(bool bInAutoWrapText)` | callable | Set Auto Wrap Text |
+| `void SetCustomStyleData(UDreamUIRichTextCustomStyleData* InCustomStyleData)` | callable | What the custom tags mean. UMG's TextStyleSet under the name this library gives it: a data asset mapping tag to style, which is the same job its RichTextStyleRow table does. |
+| `void SetDefaultFont(UDreamUIFontData_BaseObject* InFont)` | callable | Set Default Font |
+| `void SetHorizontalAlignment(EDreamUITextParagraphHorizontalAlign InHorizontalAlignment)` | callable | Set Horizontal Alignment |
+| `void SetImageData(UDreamUIRichTextImageData_BaseObject* InImageData)` | callable | Set Image Data |
+| `void SetJustification(EDreamUITextParagraphHorizontalAlign InJustification)` | callable | UMG's Justification, which on a paragraph is the horizontal alignment. One implementation. |
+| `void SetLanguage(FString InLanguage)` | callable | Set Language |
+| `void SetLastLineAlign(EDreamTextLastLineAlign InLastLineAlign)` | callable | Set Last Line Align |
+| `void SetMinDesiredWidth(float InMinDesiredWidth)` | callable | Set Min Desired Width |
+| `void SetOverflowType(EDreamUITextOverflowType InOverflowType)` | callable | Set Overflow Type |
+| `void SetSmallTextRaster(EDreamTextSmallTextRaster InSmallTextRaster)` | callable | Set Small Text Raster |
+| `void SetStyle(FDreamRichTextStyle InStyle)` | callable | The whole look at once, re-pushed. |
+| `void SetTabSize(float InTabSize)` | callable | Set Tab Size |
+| `void SetTagFilterFlags(int32 InTagFilterFlags)` | callable | Set Tag Filter Flags |
+| `void SetText(FText InText)` | callable | Replace the prose. Re-parsed on the way in, which is what the markup costs. |
+| `void SetTextJustify(EDreamTextJustify InTextJustify)` | callable | Set Text Justify |
+| `void SetTextOverflowPolicy(EDreamUITextOverflowType InOverflowPolicy)` | callable | UMG's name for the same decision. Forwards, so there is one writer and one truth. |
+| `void SetTextTransformPolicy(EDreamUITextTransformPolicy InTransformPolicy)` | callable | Set Text Transform Policy |
+| `void SetVerticalAlignment(EDreamUITextParagraphVerticalAlign InVerticalAlignment)` | callable | Set Vertical Alignment |
+
+<a id="compared-with-umg"></a>
+
+## Compared with UMG
+
+Every Blueprint-facing member of the UMG class, and where it went. *adopt*: same name, same meaning. *map*: here under another name or on another type. *reject*: deliberately absent, with the reason.
+
+| UMG | Member | Status | Here | Note |
+|---|---|---|---|---|
+| `URichTextBlock` | `Text` | adopt | `Text` | FText here, like UMG's -- a rich text block is prose, not a field's value. |
+| `URichTextBlock` | `TextStyleSet` | map | `CustomStyleData` | A data ASSET mapping tag to style rather than a UDataTable of RichTextStyleRow, which is the same job in this library's own shape. Its sibling ImageData answers &lt;img=key/>, which UMG spells as a decorator. |
+| `URichTextBlock` | `DecoratorClasses` | map | `ImageData` | The extension point for markup here is a pair of DATA ASSETS, not a list of subclasses: ImageData answers &lt;img=key/> exactly as UMG's built-in image decorator answers one from its brush table, and CustomStyleData answers &lt;MyTag>. Both are authored properties with setters that re-parse, which is the whole of what a decorator list buys in UMG. |
+| `URichTextBlock` | `DefaultTextStyleOverride` | map | `Style` | FDreamRichTextStyle IS the inline default style: colour, size, and now the outline/shadow/glow struct. Which of it is in effect is EDreamUIStyleSource plus the per-field bOverride_ bits, rather than one bOverrideDefaultStyle flag. |
+| `URichTextBlock` | `MinDesiredWidth` | adopt | `MinDesiredWidth` | Pushed onto the paragraph, which is what a content-sized parent measures: a rich text block IS its paragraph, stretched to the control's rect. |
+| `URichTextBlock` | `bOverrideDefaultStyle` | map | `UDreamUIControl::StyleSource` | The same question with three answers instead of two: the project sheet, this instance, or the sheet with this instance's ticked fields written over it. Lives on UDreamUIControl, shared by every control in the family. |
+| `URichTextBlock` | `TextTransformPolicy` | adopt | `TextTransformPolicy` | EDreamUITextTransformPolicy -- the library's own None/ToLower/ToUpper. The authored string is untouched; only the drawing changes. |
+| `URichTextBlock` | `TextOverflowPolicy` | map | `OverflowType` | EDreamUITextOverflowType, which has UMG's two answers (Truncate is Clip, Ellipsis is Ellipsis) plus the two that decide whether a long line wraps. SetTextOverflowPolicy carries the UMG name. |
+| `URichTextBlock` | `SetDefaultColorAndOpacity` | map | `FDreamRichTextStyle::TextColor` | Appearance lives in the style struct, so the colour moves through SetStyle or the project sheet. A second setter writing the inline struct would be silently inert whenever StyleSource is the sheet. |
+| `URichTextBlock` | `SetDefaultShadowColorAndOpacity` | map | `FDreamTextStyle::UnderlayColor` | A drop shadow here is the UNDERLAY, carried by FDreamRichTextStyle::TextStyle. Alpha zero means no shadow, which is the shipped default and therefore what every existing block draws. |
+| `URichTextBlock` | `SetDefaultShadowOffset` | map | `FDreamTextStyle::UnderlayOffset` | In em rather than pixels, so the shadow reads the same at every font size. |
+| `URichTextBlock` | `SetDefaultFont` | map | `FDreamRichTextStyle::Font` | A font DATA ASSET rather than an FSlateFontInfo: the size is Style.FontSize and the outline is Style.TextStyle. SetDefaultFont/GetDefaultFont read and write Style.Font, and markup may still switch the face per run -- this is what a run that says nothing gets. Null leaves the paragraph on the font it has. |
+| `URichTextBlock` | `SetDefaultStrikeBrush` | reject |  | A strike-through here is drawn by the text renderer from UDreamText::bStrikethrough, not composited from a replaceable Slate brush. There is no image in that path for a brush to be. |
+| `URichTextBlock` | `SetMinDesiredWidth` | adopt | `SetMinDesiredWidth` |  |
+| `URichTextBlock` | `SetAutoWrapText` | adopt | `SetAutoWrapText` | Off by default, the paragraph's own default. It only bites under the overflow types that do not already wrap -- VerticalOverflow always does. |
+| `URichTextBlock` | `SetTextTransformPolicy` | adopt | `SetTextTransformPolicy` |  |
+| `URichTextBlock` | `SetTextOverflowPolicy` | adopt | `SetTextOverflowPolicy` | Forwards to SetOverflowType; one writer, two spellings. |
+| `URichTextBlock` | `SetDefaultTextStyle` | map | `SetStyle` | The whole default look at once, which is what a style struct is. |
+| `URichTextBlock` | `SetDefaultMaterial` | map | `FDreamRichTextStyle::OverrideMaterial` | Null keeps the library's own text material, which is what every existing block uses. |
+| `URichTextBlock` | `ClearAllDefaultStyleOverrides` | map | `UDreamUIControl::SetStyleSource` | Going back to the sheet is what clearing the overrides means here: SetStyleSource(ProjectStyleSheet). Per-field clearing is the bOverride_ bits on the struct. |
+| `URichTextBlock` | `GetDefaultDynamicMaterial` | adopt | `GetDefaultDynamicMaterial` | Instances over the style's material and pushes it onto the paragraph; asked twice, the same instance comes back. Null when the style names no material -- an instance of the library's shared text material would let one caller edit every paragraph in the project. |
+| `URichTextBlock` | `SetDecorators` | map | `SetImageData` | Replacing what the markup resolves against, which is what SetDecorators does in UMG. SetCustomStyleData is the same road for tag styles. Both re-parse, because which tag means what is read while parsing and not afterwards. |
+| `URichTextBlock` | `GetText` | adopt | `GetText` |  |
+| `URichTextBlock` | `SetText` | adopt | `SetText` | Re-parses on the way in, which is what the markup costs. |
+| `URichTextBlock` | `GetTextStyleSet` | map | `GetCustomStyleData` |  |
+| `URichTextBlock` | `SetTextStyleSet` | map | `SetCustomStyleData` | Re-parses, because which tag means what is read while parsing and not afterwards. |
+| `URichTextBlock` | `GetDecoratorByClass` | reject |  | There is no decorator object to return. FRichTextParser evaluates every tag directly against the two data assets and hands the result to the text renderer; nothing in that path is an object a caller could be given, hold on to, or reconfigure. Extension here is done by authoring a data asset, not by subclassing a decorator. |
+| `URichTextBlock` | `RefreshTextLayout` | adopt | `RefreshTextLayout` | Pushes the same prose through the parser again, which is what picks up a style or image asset edited in place since the last parse. |

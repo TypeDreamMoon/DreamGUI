@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "sourceFile": "Docs/language/example.md",
+  "translationFile": "Docs/zh-CN/language/example.md",
+  "sourceHash": null,
+  "importedSourceHash": "e62682e2e8af05ae2b47815e614ebc833a6c6b4132a06360b0e841f561ef4809",
+  "sourceRevision": "5d4e5ce0ebb734a3f2d46d5a371674cfa1b69176",
+  "translationHash": "55f163dd4c2efb87323d2f4bac31aa8a01ea34c3cdc8df46ce501f30805fb3d5",
+  "origin": "website-import",
+  "importedFrom": [
+    "dui/example"
+  ],
+  "pageMetadata": {
+    "dui/example": {
+      "title": "完整示例",
+      "description": "一个由一个行组件、一个库和一个界面三个文件组成的设置界面，逐段讲解每一部分依赖语言的哪条规则。"
+    }
+  }
+}

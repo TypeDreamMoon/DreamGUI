@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "sourceFile": "Docs/Reference/DreamUIControl.md",
+  "translationFile": "Docs/zh-CN/Reference/DreamUIControl.md",
+  "sourceHash": null,
+  "importedSourceHash": "97eeff036041af00cf55375d7ae5a7da2d5cf8f649caf42554b555200008981f",
+  "sourceRevision": "5d4e5ce0ebb734a3f2d46d5a371674cfa1b69176",
+  "translationHash": "2a0cee99232e5c3baa208167fd6f7cef3464a8cf6689b276b826ce52517f1db0",
+  "origin": "website-import",
+  "importedFrom": [
+    "reference/dreamuicontrol"
+  ],
+  "pageMetadata": {
+    "reference/dreamuicontrol": {
+      "title": "UDreamUIControl",
+      "description": "A control whose hierarchy is code, not an asset."
+    }
+  }
+}

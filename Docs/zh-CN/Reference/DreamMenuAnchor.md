@@ -1,0 +1,120 @@
+---
+title: "UDreamMenuAnchor"
+description: "A place a menu opens from, and the thing that puts it away again."
+---
+
+**提示：**
+
+本页由 `DreamGUIReferenceDocs` commandlet 从反射生成，正文是头文件注释的原文（英文），所以不翻译——这样它永远和代码一致。概念讲解见[核心概念](../concepts/widgets.md)。
+
+
+
+Inherits from [UDreamUIControl](DreamUIControl.md).
+
+Declared in `Public/Controls/DreamMenuAnchor.h`.
+
+A place a menu opens from, and the thing that puts it away again.
+
+UMG's MenuAnchor in the DreamGUI idiom. The menu is a popup on UDreamUIPopupLayer's per-player
+stack, as the dropdown's list is: lifted to the screen root so no ancestor clips it or counts it in
+its layout, closed by a press anywhere else (bCloseOnClickOutside), by Back, and by this anchor
+going away or out of sight; and a menu opened from inside an open menu is its child, closed with
+it. Focus that went into the menu comes back to whatever had it when it opened.
+
+TWO WAYS TO SAY WHAT THE MENU IS, and they are alternatives:
+
+  - fill the `Menu` slot -- `Native.MenuAnchor { ... }` in .dui, or a designer drop -- and the
+    content is authored in place, which is what a small menu wants;
+  - or set MenuClass, and an instance of it is made the first time the menu opens and kept, which
+    is what a menu shared between several anchors wants. Instancing a user widget needs a world,
+    so with none this quietly stays an empty menu rather than half of one.
+
+With both, the SLOT wins: content somebody put there is content they meant to see.
+
+WHERE IT OPENS is FDreamMenuAnchorStyle::Placement, which is a style rather than a widget property
+on purpose -- a project wants every menu in it to open the same way, and the override bits still
+let one instance disagree.
+
+THE SIZE IS STATED, NOT MEASURED. MenuSize is an authored number for the reason the dropdown's
+list height is: a popup is arranged by nobody until it is on screen, so measuring it would mean
+opening it invisibly for a frame first. A menu whose content states its own size can say so by
+leaving MenuSize at zero on that axis, which hands the axis back to the content.
+
+<a id="properties"></a>
+
+## Properties
+
+| Name | Type | Category | In the details panel | From Blueprint | Description |
+|---|---|---|---|---|---|
+| `Style` | `FDreamMenuAnchorStyle` | Menu Anchor | yes | `GetStyle` / `SetStyle` | This instance's own look. The project sheet wins while StyleSource says so AND a sheet actually exists; with no sheet in the project this IS the look in effect. |
+| `MenuClass` | `TSubclassOf<UDreamUserWidget>` | Menu Anchor | yes | `GetMenuClass` / `SetMenuClass` | The menu's class, for an anchor whose menu is not authored in place. |
+| `MenuSize` | `FVector2D` | Menu Anchor | yes | `GetMenuSize` / `SetMenuSize` | How big the menu opens. Zero on an axis leaves that axis to whatever is inside it. |
+| `bCloseOnClickOutside` | `bool` | Menu Anchor | yes | `GetCloseOnClickOutside` / `SetCloseOnClickOutside` | Whether a click anywhere else closes the menu. Off makes it the caller's job. |
+| `bFitInWindow` | `bool` | Menu Anchor | yes | `GetFitInWindow` / `FitInWindow` | Keep the open menu inside the screen -- UMG's bFitInWindow, and the same arithmetic the panel spelling of this anchor uses (UDreamLayoutContainerMenuAnchor::FitMenuInWindow, called here rather than copied, so a menu lands in the same place whichever road opened it). |
+| `OnGetUserMenuContentEvent` | `FDreamMenuAnchorGetContent` | Menu Anchor | - | read / write | Builds the menu's content the first time it is needed, instead of MenuClass. |
+| `PopupNode` | `TObjectPtr<UDreamWidget>` | Menu Anchor | - | read only | The popup root: what gets lifted to the screen, positioned and faded. |
+| `MenuNode` | `TObjectPtr<UDreamWidget>` | Menu Anchor | - | read only | The hole inside it. Whatever a host nests on this control ends up here. |
+| `MenuInstance` | `TObjectPtr<UDreamUserWidget>` | Menu Anchor | - | read only | The instance MenuClass produced, or null while the slot is filled or there is no world. |
+| `ProvidedMenuContent` | `TObjectPtr<UDreamWidget>` | Menu Anchor | - | read only | What OnGetUserMenuContentEvent handed over, kept so the handler is asked ONCE. |
+
+<a id="functions"></a>
+
+## Functions
+
+| Function | Kind | Description |
+|---|---|---|
+| `void Close()` | callable | Take it off screen and hand it home: any menu opened from inside it first, then every player's focus that was in it back where it was when the menu opened -- unless the player has moved it elsewhere meanwhile. A no-op while it is already closed. |
+| `void FitInWindow(bool bInFitInWindow)` | callable | Named as UMG names the call. Re-places an open menu at once. |
+| `bool GetCloseOnClickOutside()` | pure | Get Close on Click Outside |
+| `bool GetFitInWindow()` | pure | Get Fit in Window |
+| `TSubclassOf<UDreamUserWidget> GetMenuClass()` | pure | Get Menu Class |
+| `FVector2D GetMenuPosition()` | pure | Where the menu sits, in this anchor's own local space -- UMG's GetMenuPosition. |
+| `FVector2D GetMenuSize()` | pure | Get Menu Size |
+| `EDreamMenuPlacement GetPlacement()` | pure | Where the menu opens relative to this anchor -- UMG's Placement, read from the style in EFFECT rather than from the field beside it, so an anchor driven by the project sheet answers the placement it actually uses. |
+| `FDreamMenuAnchorStyle GetStyle()` | pure | Get Style |
+| `bool HasOpenSubMenus()` | pure | Whether anything inside this menu has a menu of ITS own open -- UMG's HasOpenSubMenus. |
+| `bool IsOpen()` | pure | Is Open |
+| `void Open(bool bFocusMenu)` | callable | Put the menu on screen, positioned by the style. A no-op while it is already open. |
+| `void SetCloseOnClickOutside(bool bInCloseOnClickOutside)` | callable | Decides what a click elsewhere does WHILE the menu is open, rather than only what the next open does -- a menu that started closing on outside clicks only on its second showing would be a switch that appears not to work. |
+| `void SetMenuClass(TSubclassOf<UDreamUserWidget> InMenuClass)` | callable | Which menu this anchor opens. The instance is built on first open and kept, so a class changed afterwards throws the old instance away rather than leaving the anchor opening the previous menu forever. A change while the menu is OPEN closes it first: swapping the contents of a menu the player is reading is not a thing this can do quietly. |
+| `void SetMenuSize(FVector2D InMenuSize)` | callable | Re-places an open menu at once, so the new size is not something only the next open shows. |
+| `void SetPlacement(EDreamMenuPlacement InPlacement)` | callable | Edits this instance's style and re-places an open menu at once. See UDreamBorder::SetPadding. |
+| `void SetStyle(FDreamMenuAnchorStyle InStyle)` | callable | This instance's whole look, replaced and pushed. See UDreamButton::SetStyle for the caveat. |
+| `bool ShouldOpenDueToClick()` | pure | Whether a click on the anchor should open the menu -- UMG's ShouldOpenDueToClick, and the question a button wrapping an anchor has to ask before it calls Open: a click that lands while the menu is already up is the click that DISMISSED it, and opening again would make a menu impossible to close by clicking the thing that opened it. |
+| `void ToggleOpen(bool bFocusOnOpen)` | callable | Toggle Open |
+
+<a id="events"></a>
+
+## Events
+
+| Event | Signature | Description |
+|---|---|---|
+| `OnMenuOpenChanged` | `void DreamMenuAnchorOpenChangedEvent__DelegateSignature(bool bIsOpen)` | Open and closed, as the anchor announces them. Fires after the move, never during. An open that closed again before Open returned -- the focus moving into the menu ran a handler that closed it -- announces neither. |
+
+<a id="compared-with-umg"></a>
+
+## Compared with UMG
+
+Every Blueprint-facing member of the UMG class, and where it went. *adopt*: same name, same meaning. *map*: here under another name or on another type. *reject*: deliberately absent, with the reason.
+
+| UMG | Member | Status | Here | Note |
+|---|---|---|---|---|
+| `UMenuAnchor` | `MenuClass` | adopt | `MenuClass` | TSubclassOf&lt;UDreamUserWidget>. Changing it drops the kept instance, and closes an open menu first. |
+| `UMenuAnchor` | `OnGetMenuContentEvent` | reject |  | Deprecated in UMG 4.26 in favour of OnGetUserMenuContentEvent, which is the one below. |
+| `UMenuAnchor` | `OnGetUserMenuContentEvent` | adopt | `OnGetUserMenuContentEvent` | Single-cast, returning UDreamWidget*. Asked ONCE, when there is no menu yet and nothing authored in the hole, and what it hands back is kept -- rebuilding on every open would throw away whatever state the player left in the menu and leak the previous one. Ranks below authored content and above MenuClass; a handler that answers with nothing lets the class have its turn. |
+| `UMenuAnchor` | `Placement` | map | `FDreamMenuAnchorStyle::Placement` | In the style, because a project wants every menu to open the same way; the enum is EDreamMenuPlacement, shared with UDreamLayoutContainerMenuAnchor so both roads place a menu identically. GetPlacement answers the RESOLVED value. |
+| `UMenuAnchor` | `bFitInWindow` | adopt | `bFitInWindow` | Clamped against the ROOT widget, which is the rect the whole hierarchy is laid out inside and the nearest thing here to a Slate window. UDreamLayoutContainerMenuAnchor::FitMenuInWindow is CALLED rather than copied, so a menu lands in the same place whichever of the two anchors opened it. Off by default where UMG's and the panel's are on: turning a clamp on for every existing anchor would move menus somebody positioned on purpose. |
+| `UMenuAnchor` | `ShouldDeferPaintingAfterWindowContent` | reject |  | Slate paints a menu into the window's deferred layer so it draws over everything. There are no Slate windows here: a menu is lifted to the popup layer (UDreamUIPopupLayer), which IS the answer to the same question. |
+| `UMenuAnchor` | `UseApplicationMenuStack` | map | `UDreamLayoutContainerMenuAnchor::bUseApplicationMenuStack` | The application's menu stack here is each player's stack on the popup layer (UDreamUIPopupLayer::Push): the menu is lifted onto the player's screen root while it is open, above everything and clipped by nothing, closed by a press outside it, Back or its anchor going away, and it follows the anchor. This control always opens its menu there. The panel spelling has UMG's switch, off by default where UMG's is on, so an anchor saved before it existed keeps drawing its menu in place. |
+| `UMenuAnchor` | `ShowMenuBackground` | reject |  | Whether the application menu stack draws its own background behind the menu. No stack, no background of its own -- the menu's face is FDreamMenuAnchorStyle::Background. |
+| `UMenuAnchor` | `OnMenuOpenChanged` | adopt | `OnMenuOpenChanged` | Fires after the move, never during. |
+| `UMenuAnchor` | `SetPlacement` | adopt | `SetPlacement` | Edits this instance's style and re-places an open menu at once. |
+| `UMenuAnchor` | `FitInWindow` | adopt | `FitInWindow` | Named as UMG names the call; re-places an open menu at once. |
+| `UMenuAnchor` | `ToggleOpen` | adopt | `ToggleOpen` | Carries UMG's bFocusOnOpen through to Open. |
+| `UMenuAnchor` | `Open` | adopt | `Open` | bFocusMenu gives focus to the first navigable thing inside the menu (UUISelectable::FindDefaultSelectableIn, then the event system's default select) -- the same call and the same rule as UDreamTabView::FocusActivePage, including leaving focus alone when the menu holds nothing navigable. The argument is defaulted and last, so every existing Open() still means what it did. |
+| `UMenuAnchor` | `Close` | adopt | `Close` |  |
+| `UMenuAnchor` | `IsOpen` | adopt | `IsOpen` |  |
+| `UMenuAnchor` | `ShouldOpenDueToClick` | adopt | `ShouldOpenDueToClick` | The question a button wrapping an anchor asks before calling Open, so the click that dismissed a menu does not reopen it. |
+| `UMenuAnchor` | `GetMenuPosition` | adopt | `GetMenuPosition` | The popup's anchored position in this anchor's local space; the popup is placed against the anchor before being lifted, so the number holds either way. |
+| `UMenuAnchor` | `HasOpenSubMenus` | adopt | `HasOpenSubMenus` | A walk of the popup's subtree (UDreamWidget::CollectChildrenWidgets) for another open anchor of this class, because that is what a submenu IS here -- there is no application-wide menu stack to ask instead. |
+| `UMenuAnchor` | `SetStyle` | adopt | `SetStyle` | UMenuAnchor has no style struct; this is the family's spelling of replacing a look at runtime. |

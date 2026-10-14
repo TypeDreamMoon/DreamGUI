@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "sourceFile": "Docs/diagnostics/index.md",
+  "translationFile": "Docs/zh-CN/diagnostics/index.md",
+  "sourceHash": null,
+  "importedSourceHash": "976391367937792d4288721a5a5a09283d124ae1237d8e4f823a92bf179bbed8",
+  "sourceRevision": "5d4e5ce0ebb734a3f2d46d5a371674cfa1b69176",
+  "translationHash": "e307fb362bba1b02f203c45376c5a7e8db0a7182f132f0a9843807a62c07d452",
+  "origin": "website-import",
+  "importedFrom": [
+    "diagnostics/index"
+  ],
+  "pageMetadata": {
+    "diagnostics/index": {
+      "title": "诊断码",
+      "description": "每一条 DUInnnn 诊断：它说的是什么、怎么会出现、怎么改。"
+    }
+  }
+}

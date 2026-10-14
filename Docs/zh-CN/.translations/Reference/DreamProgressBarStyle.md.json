@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "sourceFile": "Docs/Reference/DreamProgressBarStyle.md",
+  "translationFile": "Docs/zh-CN/Reference/DreamProgressBarStyle.md",
+  "sourceHash": null,
+  "importedSourceHash": "53ebf32b8a7c3cd709a2c4e3a51c1357ac3ff26e8748615ac6dfd6b8015d3bc2",
+  "sourceRevision": "5d4e5ce0ebb734a3f2d46d5a371674cfa1b69176",
+  "translationHash": "d256fbb54df8ac2c924f3a45fb9924780e0edf955bda6c8e8edea366d1d59f44",
+  "origin": "website-import",
+  "importedFrom": [
+    "reference/dreamprogressbarstyle"
+  ],
+  "pageMetadata": {
+    "reference/dreamprogressbarstyle": {
+      "title": "FDreamProgressBarStyle",
+      "description": "A progress bar: a track and the filled part of it."
+    }
+  }
+}

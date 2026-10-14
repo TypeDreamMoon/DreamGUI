@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "sourceFile": "Docs/Reference/index.md",
+  "translationFile": "Docs/zh-CN/Reference/index.md",
+  "sourceHash": null,
+  "importedSourceHash": "bf390c95b4a36824eb07c0b64f7630a960b21582510f1401b6b98763c4be3d3d",
+  "sourceRevision": "5d4e5ce0ebb734a3f2d46d5a371674cfa1b69176",
+  "translationHash": "79ede39b50b128c659c68fe11bbe1147bc62e27c29e655aa9ff246b5d051e693",
+  "origin": "website-import",
+  "importedFrom": [
+    "reference/index"
+  ],
+  "pageMetadata": {
+    "reference/index": {
+      "title": "类参考",
+      "description": "DreamGUI 每个公开类的属性、函数与事件，由反射生成，并附与 UMG 的对照。"
+    }
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "sourceFile": "Docs/Reference/DreamMenuAnchorStyle.md",
+  "translationFile": "Docs/zh-CN/Reference/DreamMenuAnchorStyle.md",
+  "sourceHash": null,
+  "importedSourceHash": "eeab9238acfc0c1b830abe709ebd05c788674c83b7575d603599e3300528759d",
+  "sourceRevision": "5d4e5ce0ebb734a3f2d46d5a371674cfa1b69176",
+  "translationHash": "d16c848c76fc71dbe7284345652e43bbdb26bc90665ef7a2fc7fdd1b8eb9d5ec",
+  "origin": "website-import",
+  "importedFrom": [
+    "reference/dreammenuanchorstyle"
+  ],
+  "pageMetadata": {
+    "reference/dreammenuanchorstyle": {
+      "title": "FDreamMenuAnchorStyle",
+      "description": "A menu anchor: the popup's look, and how it is placed against whatever opened it."
+    }
+  }
+}

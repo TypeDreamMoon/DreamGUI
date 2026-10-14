@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "sourceFile": "Docs/changelog/index.md",
+  "translationFile": "Docs/zh-CN/changelog/index.md",
+  "sourceHash": null,
+  "importedSourceHash": "ac03d8b5ef9fd25954782732f4abe88bc8bb368e3aab97950330c8f93e4d2c88",
+  "sourceRevision": "5d4e5ce0ebb734a3f2d46d5a371674cfa1b69176",
+  "translationHash": "b2e84f49f9c9fd048c362bce1f88b011c65f4a8486efdbcb53fcd714651958c0",
+  "origin": "website-import",
+  "importedFrom": [
+    "changelog/index"
+  ],
+  "pageMetadata": {
+    "changelog/index": {
+      "title": "更新日志",
+      "description": "DreamGUI 每个版本改了什么：main 上还没发布的改动，首个公开版本 1.0.0，一直往前到 2.1.0 和 2.0.0 两个开发版。"
+    }
+  }
+}

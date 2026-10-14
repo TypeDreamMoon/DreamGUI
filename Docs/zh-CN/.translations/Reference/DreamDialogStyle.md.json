@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "sourceFile": "Docs/Reference/DreamDialogStyle.md",
+  "translationFile": "Docs/zh-CN/Reference/DreamDialogStyle.md",
+  "sourceHash": null,
+  "importedSourceHash": "6eccab4fdcef77784aa294d835781fe2a3803ab5d4731a4c6b1473925c958635",
+  "sourceRevision": "5d4e5ce0ebb734a3f2d46d5a371674cfa1b69176",
+  "translationHash": "3ef54bbaa42be293d3a35dccffdb258d6bf3e84cc92604b14cd112d7ab918acb",
+  "origin": "website-import",
+  "importedFrom": [
+    "reference/dreamdialogstyle"
+  ],
+  "pageMetadata": {
+    "reference/dreamdialogstyle": {
+      "title": "FDreamDialogStyle",
+      "description": "A dialog: a dimmer over the screen, a panel on it, a title, content and buttons."
+    }
+  }
+}

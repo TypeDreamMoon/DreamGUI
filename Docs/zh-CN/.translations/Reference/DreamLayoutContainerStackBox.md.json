@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "sourceFile": "Docs/Reference/DreamLayoutContainerStackBox.md",
+  "translationFile": "Docs/zh-CN/Reference/DreamLayoutContainerStackBox.md",
+  "sourceHash": null,
+  "importedSourceHash": "511683f6a032cd71150ea9a4cf4375a53c31cffffccfeefda7c5206fb9cd9e29",
+  "sourceRevision": "5d4e5ce0ebb734a3f2d46d5a371674cfa1b69176",
+  "translationHash": "51f598796ba257405e26fc6ddd728679ff4cabd6e779e040af4c3eb02fabb91a",
+  "origin": "website-import",
+  "importedFrom": [
+    "reference/dreamlayoutcontainerstackbox"
+  ],
+  "pageMetadata": {
+    "reference/dreamlayoutcontainerstackbox": {
+      "title": "UDreamLayoutContainerStackBox",
+      "description": "UMG Stack Box"
+    }
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "sourceFile": "Docs/Reference/DreamRingMenu.md",
+  "translationFile": "Docs/zh-CN/Reference/DreamRingMenu.md",
+  "sourceHash": null,
+  "importedSourceHash": "72557bdcdbd7e66331613e11f4762ab6240fccbdcaa86e8bfa3a1a67cfabf3eb",
+  "sourceRevision": "5d4e5ce0ebb734a3f2d46d5a371674cfa1b69176",
+  "translationHash": "dfcc43f69f2c9f62030ad1fd5788ca4e79b19a485afd483691086d1d99c7df14",
+  "origin": "website-import",
+  "importedFrom": [
+    "reference/dreamringmenu"
+  ],
+  "pageMetadata": {
+    "reference/dreamringmenu": {
+      "title": "UDreamRingMenu",
+      "description": "A ring menu whose hierarchy is code, not an asset: wedges around a hub, picked by direction."
+    }
+  }
+}

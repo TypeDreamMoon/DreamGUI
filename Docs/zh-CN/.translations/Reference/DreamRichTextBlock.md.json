@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "sourceFile": "Docs/Reference/DreamRichTextBlock.md",
+  "translationFile": "Docs/zh-CN/Reference/DreamRichTextBlock.md",
+  "sourceHash": null,
+  "importedSourceHash": "b221290fbb0590c367624726fde8358e4c5dc8264aff3c16e17a345481828473",
+  "sourceRevision": "5d4e5ce0ebb734a3f2d46d5a371674cfa1b69176",
+  "translationHash": "3b001d82258cd0e0816b53435c6d0ac203b13504dee299994219aaaff4378aee",
+  "origin": "website-import",
+  "importedFrom": [
+    "reference/dreamrichtextblock"
+  ],
+  "pageMetadata": {
+    "reference/dreamrichtextblock": {
+      "title": "UDreamRichTextBlock",
+      "description": "A rich text block whose hierarchy is code, not an asset: one paragraph that reads markup."
+    }
+  }
+}

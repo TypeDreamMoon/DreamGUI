@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "sourceFile": "Docs/Reference/DreamUIWidgetGeometryLibrary.md",
+  "translationFile": "Docs/zh-CN/Reference/DreamUIWidgetGeometryLibrary.md",
+  "sourceHash": null,
+  "importedSourceHash": "495ad16cd6da7695e3cfd5d8eff411774b6bff5155df41dca558ec04ccb9d298",
+  "sourceRevision": "5d4e5ce0ebb734a3f2d46d5a371674cfa1b69176",
+  "translationHash": "a46c66fbe8332cbd29d9385635ede5c5b089396e66725e3d0fd75f509a354b31",
+  "origin": "website-import",
+  "importedFrom": [
+    "reference/dreamuiwidgetgeometrylibrary"
+  ],
+  "pageMetadata": {
+    "reference/dreamuiwidgetgeometrylibrary": {
+      "title": "UDreamUIWidgetGeometryLibrary",
+      "description": "Coordinate conversions between a widget's own space, the viewport and the screen -- this"
+    }
+  }
+}

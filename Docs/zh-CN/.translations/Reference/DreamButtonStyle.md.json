@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "sourceFile": "Docs/Reference/DreamButtonStyle.md",
+  "translationFile": "Docs/zh-CN/Reference/DreamButtonStyle.md",
+  "sourceHash": null,
+  "importedSourceHash": "a14faab7cbc02688e74d75d7153d76f57442841ab679e5647f0e9b0a876a3ca8",
+  "sourceRevision": "5d4e5ce0ebb734a3f2d46d5a371674cfa1b69176",
+  "translationHash": "462e805579a8b80d06267c91cc14ccc86f52b606e0c3e63f665c0b53bbea1ca8",
+  "origin": "website-import",
+  "importedFrom": [
+    "reference/dreambuttonstyle"
+  ],
+  "pageMetadata": {
+    "reference/dreambuttonstyle": {
+      "title": "FDreamButtonStyle",
+      "description": "A button: one face, three pointer states, a label."
+    }
+  }
+}

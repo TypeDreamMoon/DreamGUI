@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "sourceFile": "Docs/Reference/DreamTextStyle.md",
+  "translationFile": "Docs/zh-CN/Reference/DreamTextStyle.md",
+  "sourceHash": null,
+  "importedSourceHash": "3af4492aee10eaa12e0a2cebac56f8396172f1cf2b539950bd0eca26e56e3762",
+  "sourceRevision": "5d4e5ce0ebb734a3f2d46d5a371674cfa1b69176",
+  "translationHash": "832ae033091850988a642a3c5a81b25c57d171c24dd13d24c3c7b1b11f0d03a5",
+  "origin": "website-import",
+  "importedFrom": [
+    "reference/dreamtextstyle"
+  ],
+  "pageMetadata": {
+    "reference/dreamtextstyle": {
+      "title": "FDreamTextStyle",
+      "description": "How the built-in shader draws a text's glyphs beyond the plain face: outline, underlay (drop"
+    }
+  }
+}

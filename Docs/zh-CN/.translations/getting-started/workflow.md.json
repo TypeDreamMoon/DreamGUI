@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "sourceFile": "Docs/getting-started/workflow.md",
+  "translationFile": "Docs/zh-CN/getting-started/workflow.md",
+  "sourceHash": null,
+  "importedSourceHash": "2301f4d7a1ec9c71166c5de5c7eb1b2797b0e9f7eb426c350157ecdb2cab4e96",
+  "sourceRevision": "5d4e5ce0ebb734a3f2d46d5a371674cfa1b69176",
+  "translationHash": "6b9e59ce15cd6dc1bb52945b682bf04b75870a0707332609c6f147377ed67f9b",
+  "origin": "website-import",
+  "importedFrom": [
+    "start/workflow"
+  ],
+  "pageMetadata": {
+    "start/workflow": {
+      "title": "日常循环",
+      "description": "创作一个界面的完整循环：文本与设计器双向写回、保存即重编译、放到屏幕或世界里、接上交互、加动画、出问题时怎么看。"
+    }
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "sourceFile": "Docs/controls/styles.md",
+  "translationFile": "Docs/zh-CN/controls/styles.md",
+  "sourceHash": null,
+  "importedSourceHash": "3a33d7b43171307129e1912f218201346dd8fe0d08d7815bc6a562e359717ecd",
+  "sourceRevision": "5d4e5ce0ebb734a3f2d46d5a371674cfa1b69176",
+  "translationHash": "d8df0f6f04b141fe1b7eda0b949e0b9e580080a480c908c8df84cdf1627d6095",
+  "origin": "website-import",
+  "importedFrom": [
+    "controls/styles"
+  ],
+  "pageMetadata": {
+    "controls/styles": {
+      "title": "样式与样式表",
+      "description": "每个控件的 F…Style 样式结构体、StyleSource 决定外观从哪来、项目样式表 UDreamUIStyleSheet 和它的命名变体，以及控件的面刷子、状态面和图片刷子。"
+    }
+  }
+}

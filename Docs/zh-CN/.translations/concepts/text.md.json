@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "sourceFile": "Docs/concepts/text.md",
+  "translationFile": "Docs/zh-CN/concepts/text.md",
+  "sourceHash": null,
+  "importedSourceHash": "bed4220149fa6eae84b4faf1ee5c0a3f5209930b594a3493f27faec11f5dd8a9",
+  "sourceRevision": "5d4e5ce0ebb734a3f2d46d5a371674cfa1b69176",
+  "translationHash": "4132ba0e7b2cb4720e0fbbd9d9cd0ec762fb49f87ac0c2db6455c81ce7abbd46",
+  "origin": "website-import",
+  "importedFrom": [
+    "concepts/text"
+  ],
+  "pageMetadata": {
+    "concepts/text": {
+      "title": "文本",
+      "description": "文本系统：距离场（MTSDF）默认字体、小字号的提示覆盖字形、回退字体与彩色 emoji，盒子优先的溢出规则与 Margin、LineHeightPercentage、WrapTextAt、Best Fit，富文本，渐变文字，按文化断行，增量布局，以及 DreamGUI.Text.* 控制台变量。"
+    }
+  }
+}

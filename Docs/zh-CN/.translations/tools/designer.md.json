@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "sourceFile": "Docs/tools/designer.md",
+  "translationFile": "Docs/zh-CN/tools/designer.md",
+  "sourceHash": null,
+  "importedSourceHash": "3117ec5ee15e495cb4103bad877dc511a67c7944dd24d3504c033c1317d2f298",
+  "sourceRevision": "5d4e5ce0ebb734a3f2d46d5a371674cfa1b69176",
+  "translationHash": "cb97dbb939a9934809e9933fa349698e4633c2d302ea8afd1b84dbce894a8e26",
+  "origin": "website-import",
+  "importedFrom": [
+    "tools/designer"
+  ],
+  "pageMetadata": {
+    "tools/designer": {
+      "title": "Widget 设计器",
+      "description": "对照 UMG 设计器重建的 DreamUI Designer：按矩形拾取、缩放手柄与锚点徽章、框选与拖放重挂、调色板、细节面板、组件、撤销、源文件菜单、事件路由、内容浏览器里的菜单和缩略图，以及对 .dui 支撑的类它能改什么、不能改什么。"
+    }
+  }
+}

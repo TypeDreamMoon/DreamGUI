@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "sourceFile": "Docs/Reference/DreamUIStateFaces.md",
+  "translationFile": "Docs/zh-CN/Reference/DreamUIStateFaces.md",
+  "sourceHash": null,
+  "importedSourceHash": "dbbe8f1f4c4bedcfb81226258bacfe85b5b71f96245943c9a37182645e9f30de",
+  "sourceRevision": "5d4e5ce0ebb734a3f2d46d5a371674cfa1b69176",
+  "translationHash": "86e3cc2f803a2c25c486072da7818b0eb00eb8b7715f2ddb27f1625be735dc8f",
+  "origin": "website-import",
+  "importedFrom": [
+    "reference/dreamuistatefaces"
+  ],
+  "pageMetadata": {
+    "reference/dreamuistatefaces": {
+      "title": "FDreamUIStateFaces",
+      "description": "One face drawn five ways -- Slate's FButtonStyle shape, which is the thing a control style here"
+    }
+  }
+}

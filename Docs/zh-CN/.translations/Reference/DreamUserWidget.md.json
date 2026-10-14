@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "sourceFile": "Docs/Reference/DreamUserWidget.md",
+  "translationFile": "Docs/zh-CN/Reference/DreamUserWidget.md",
+  "sourceHash": null,
+  "importedSourceHash": "3dbeb744cc9aa2c7f9d33f4ed2f6face2c465b4e71da66481984e7802bd3ea5f",
+  "sourceRevision": "5d4e5ce0ebb734a3f2d46d5a371674cfa1b69176",
+  "translationHash": "5abd2b6f73e974f30c818676c09598341049e8b1dea3af8e6525b103fcb447de",
+  "origin": "website-import",
+  "importedFrom": [
+    "reference/dreamuserwidget"
+  ],
+  "pageMetadata": {
+    "reference/dreamuserwidget": {
+      "title": "UDreamUserWidget",
+      "description": "A widget hierarchy that is a CLASS rather than an asset instance -- the counterpart to UMG's"
+    }
+  }
+}

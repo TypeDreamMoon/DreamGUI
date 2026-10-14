@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "sourceFile": "Docs/Reference/DreamPanelLayoutBase.md",
+  "translationFile": "Docs/zh-CN/Reference/DreamPanelLayoutBase.md",
+  "sourceHash": null,
+  "importedSourceHash": "3edef95a8d97170c8cd61ccbc141b2d4e34ccce134a1550da71da16b477980e2",
+  "sourceRevision": "5d4e5ce0ebb734a3f2d46d5a371674cfa1b69176",
+  "translationHash": "6e22ab1f3c7682f1dd45cd3f3373559c66b0011d319589e55592a8036e5ea4bd",
+  "origin": "website-import",
+  "importedFrom": [
+    "reference/dreampanellayoutbase"
+  ],
+  "pageMetadata": {
+    "reference/dreampanellayoutbase": {
+      "title": "UDreamPanelLayoutBase",
+      "description": "Dream Panel Layout Base"
+    }
+  }
+}

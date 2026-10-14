@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "sourceFile": "Docs/guides/fonts-and-packaging.md",
+  "translationFile": "Docs/zh-CN/guides/fonts-and-packaging.md",
+  "sourceHash": null,
+  "importedSourceHash": "dbb61899820ea9f3a497143b924fefa562b69192965a951a85818c840c9edcd0",
+  "sourceRevision": "5d4e5ce0ebb734a3f2d46d5a371674cfa1b69176",
+  "translationHash": "1ed0edc3dc7fd23efc826103d53eed17617ad5f96335b736256a01e7ce9ff14d",
+  "origin": "website-import",
+  "importedFrom": [
+    "guides/fonts-and-packaging"
+  ],
+  "pageMetadata": {
+    "guides/fonts-and-packaging": {
+      "title": "字体与打包",
+      "description": "让 DreamGUI 的文本在打包后的游戏里和在编辑器里看起来一样：哪些字体自己会跟着走、怎么加彩色 emoji、游戏要带哪套 ICU 数据，以及怎么检查一个包。"
+    }
+  }
+}

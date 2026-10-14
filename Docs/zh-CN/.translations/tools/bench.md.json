@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "sourceFile": "Docs/tools/bench.md",
+  "translationFile": "Docs/zh-CN/tools/bench.md",
+  "sourceHash": null,
+  "importedSourceHash": "9063b7b2bc48829d4377ce00a4cac1d7c0b74400f2e6d6ae45701a49d71d80f9",
+  "sourceRevision": "5d4e5ce0ebb734a3f2d46d5a371674cfa1b69176",
+  "translationHash": "12ac0144f2355347cb5cf27f79438f684d67acd8e7c7881961031ee07f3ef13d",
+  "origin": "website-import",
+  "importedFrom": [
+    "tools/bench"
+  ],
+  "pageMetadata": {
+    "tools/bench": {
+      "title": "基准测试",
+      "description": "Tools/Bench 里的两面\"按钮墙\"——5000 个按钮的屏幕和 2688 个世界空间面板——怎么在 PIE 或 -game 里跑，怎么读它们留下的 CSV 和 trace，以及读数时要守的规矩。"
+    }
+  }
+}

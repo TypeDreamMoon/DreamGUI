@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "sourceFile": "Docs/Reference/DreamListViewBase.md",
+  "translationFile": "Docs/zh-CN/Reference/DreamListViewBase.md",
+  "sourceHash": null,
+  "importedSourceHash": "00bfc59eda062d51b907ae7381e570b5316f1e0b89185c2fca90d35bffc0b43f",
+  "sourceRevision": "5d4e5ce0ebb734a3f2d46d5a371674cfa1b69176",
+  "translationHash": "06f8680fbdc35a640525b893f6f5375b34609366ba995a1f8c7dee646a0756de",
+  "origin": "website-import",
+  "importedFrom": [
+    "reference/dreamlistviewbase"
+  ],
+  "pageMetadata": {
+    "reference/dreamlistviewbase": {
+      "title": "UDreamListViewBase",
+      "description": "Everything a list and a tree have in common, which is nearly all of it."
+    }
+  }
+}

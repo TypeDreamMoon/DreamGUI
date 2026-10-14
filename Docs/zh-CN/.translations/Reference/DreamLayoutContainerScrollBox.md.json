@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "sourceFile": "Docs/Reference/DreamLayoutContainerScrollBox.md",
+  "translationFile": "Docs/zh-CN/Reference/DreamLayoutContainerScrollBox.md",
+  "sourceHash": null,
+  "importedSourceHash": "4493c3a9aaafb40c8963ffa210cc6ab76878dc9cd4eb9f19c1cd1500512db8a5",
+  "sourceRevision": "5d4e5ce0ebb734a3f2d46d5a371674cfa1b69176",
+  "translationHash": "8c6acee5230c597364108961ebb35fb4de4f960688f98457945444c32ee192b8",
+  "origin": "website-import",
+  "importedFrom": [
+    "reference/dreamlayoutcontainerscrollbox"
+  ],
+  "pageMetadata": {
+    "reference/dreamlayoutcontainerscrollbox": {
+      "title": "UDreamLayoutContainerScrollBox",
+      "description": "UMG Scroll Box"
+    }
+  }
+}

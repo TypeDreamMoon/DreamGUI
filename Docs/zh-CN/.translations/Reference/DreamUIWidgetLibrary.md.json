@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "sourceFile": "Docs/Reference/DreamUIWidgetLibrary.md",
+  "translationFile": "Docs/zh-CN/Reference/DreamUIWidgetLibrary.md",
+  "sourceHash": null,
+  "importedSourceHash": "9aaad25bb6462e6789e3e6ec17cd77d19bd46fd4752204113bd52ef332f1f1e0",
+  "sourceRevision": "5d4e5ce0ebb734a3f2d46d5a371674cfa1b69176",
+  "translationHash": "4fb838c137d1eb1cc884b3be900ce4513584765a5cf74791905caff35d16e77b",
+  "origin": "website-import",
+  "importedFrom": [
+    "reference/dreamuiwidgetlibrary"
+  ],
+  "pageMetadata": {
+    "reference/dreamuiwidgetlibrary": {
+      "title": "UDreamUIWidgetLibrary",
+      "description": "Finding widgets, driving a drag, and building an image brush from Blueprint -- the parts of"
+    }
+  }
+}

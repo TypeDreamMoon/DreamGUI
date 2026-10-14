@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "sourceFile": "Docs/guides/platforms.md",
+  "translationFile": "Docs/zh-CN/guides/platforms.md",
+  "sourceHash": null,
+  "importedSourceHash": "80afd05d8e7bc689f33423b40986826c00d67e28b8693a30a6d35a745f6dfa84",
+  "sourceRevision": "5d4e5ce0ebb734a3f2d46d5a371674cfa1b69176",
+  "translationHash": "c826637e68de683cf6ec6f0d3ef043e9e119f0b1eeed578a052b8b8c41bd09f6",
+  "origin": "website-import",
+  "importedFrom": [
+    "guides/platforms"
+  ],
+  "pageMetadata": {
+    "guides/platforms": {
+      "title": "平台与现状",
+      "description": "声称支持的平台和真正跑过的平台分开列：Win64 是唯一构建并运行过的平台；发布闸门、移动端与专用服务器的实际情况，以及测试覆盖和已知缺口。"
+    }
+  }
+}

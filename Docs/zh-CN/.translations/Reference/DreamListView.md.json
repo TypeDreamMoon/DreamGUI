@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "sourceFile": "Docs/Reference/DreamListView.md",
+  "translationFile": "Docs/zh-CN/Reference/DreamListView.md",
+  "sourceHash": null,
+  "importedSourceHash": "0561aa45349844891ff8a4ecce87cb9be94cbcaa792012a4fb5646e47a674e0a",
+  "sourceRevision": "5d4e5ce0ebb734a3f2d46d5a371674cfa1b69176",
+  "translationHash": "8c75f76fb2d124bc0934411e0b269d1c698e89729c8da0623196201644408d01",
+  "origin": "website-import",
+  "importedFrom": [
+    "reference/dreamlistview"
+  ],
+  "pageMetadata": {
+    "reference/dreamlistview": {
+      "title": "UDreamListView",
+      "description": "A list whose hierarchy is code, not an asset: rows built from a source, in a scrolling viewport."
+    }
+  }
+}

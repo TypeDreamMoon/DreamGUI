@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "sourceFile": "Docs/Reference/DreamTileViewStyle.md",
+  "translationFile": "Docs/zh-CN/Reference/DreamTileViewStyle.md",
+  "sourceHash": null,
+  "importedSourceHash": "4c0cd4b6863bdfefe1a02331ca3a5722256ee7cee8fa214a11b12f8ffaba3d12",
+  "sourceRevision": "5d4e5ce0ebb734a3f2d46d5a371674cfa1b69176",
+  "translationHash": "552f169f2fe7d7277699ebb299807de3b2db478e07a69ac8246a4df312f1dcdc",
+  "origin": "website-import",
+  "importedFrom": [
+    "reference/dreamtileviewstyle"
+  ],
+  "pageMetadata": {
+    "reference/dreamtileviewstyle": {
+      "title": "FDreamTileViewStyle",
+      "description": "A tile view: a list whose rows are a grid of tiles."
+    }
+  }
+}

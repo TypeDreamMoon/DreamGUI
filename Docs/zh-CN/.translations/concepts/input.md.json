@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "sourceFile": "Docs/concepts/input.md",
+  "translationFile": "Docs/zh-CN/concepts/input.md",
+  "sourceHash": null,
+  "importedSourceHash": "501422b6a72ec4e4053b54c1c3a06413a3f6cc4c838c706bffe22c32694a7618",
+  "sourceRevision": "5d4e5ce0ebb734a3f2d46d5a371674cfa1b69176",
+  "translationHash": "0047aac07d93a993b2f73de4db1345cebf1f85e1f71a508282781190db1c742c",
+  "origin": "website-import",
+  "importedFrom": [
+    "concepts/input"
+  ],
+  "pageMetadata": {
+    "concepts/input": {
+      "title": "输入",
+      "description": "输入系统：事件系统与预设 Actor、射线检测器与输入模块、每个玩家各自的指针 / 焦点 / 文本目标、动作路由、导航（Tab、导航作用域、焦点外观、平台的确认与返回、肩键切换标签），弹出层、模态、提示和拖放，文本输入与键盘布局，以及 Slate 输入源。"
+    }
+  }
+}

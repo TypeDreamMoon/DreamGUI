@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "sourceFile": "Docs/Reference/DreamScrollBarStyle.md",
+  "translationFile": "Docs/zh-CN/Reference/DreamScrollBarStyle.md",
+  "sourceHash": null,
+  "importedSourceHash": "31428d1796b028a347d028c7ba344b3e8a13804d93bdf4d3b165ba16b0d0cb79",
+  "sourceRevision": "5d4e5ce0ebb734a3f2d46d5a371674cfa1b69176",
+  "translationHash": "e18f707bfc70b01ef8b4f9d714e7a84666e99fd26d44cf7d07af6a85064f5a6d",
+  "origin": "website-import",
+  "importedFrom": [
+    "reference/dreamscrollbarstyle"
+  ],
+  "pageMetadata": {
+    "reference/dreamscrollbarstyle": {
+      "title": "FDreamScrollBarStyle",
+      "description": "A scroll box: a clipped viewport, the content that slides inside it, and the bars beside it."
+    }
+  }
+}

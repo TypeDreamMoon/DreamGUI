@@ -2,7 +2,7 @@
 
 What changed in each version of DreamGUI, grouped by what it changes for a project. Moving a project from one version to
 the next -- what loads differently, which defaults moved, what C++ has to change -- is in
-[Docs/Migration.md](Docs/Migration.md).
+[Docs/guides/migration.md](Docs/guides/migration.md).
 
 **1.0.0 is the first public release.** The builds before it were the fork's development line: the single-module 1.x
 builds, then 2.0.0 and 2.1.0 (commits `2416e3f8` and `3049561a` on `main`). Public numbering starts again at 1.0.0, so a 2.0 or a 2.1
@@ -21,7 +21,7 @@ after 3 for 2.1.0 -- so the engine never takes 1.0.0 for the older of the two.
   UObject class can be one; `UDreamViewModel` is the convenient base (with `DREAM_VM_SET` for C++ setters), and anything
   implementing `INotifyFieldValueChanged` -- UE's `UMVVMViewModelBase` included -- is subscribed to, with no dependency
   on the ModelViewViewModel plugin. A path whose objects are not all set is not evaluated, and the property keeps its
-  value. See [View models](Docs/DuiLanguage.md#view-models).
+  value. See [View models](Docs/language/viewmodels.md#view-models).
 - **Bindings update when what they read changes.** The compiler records every variable and member a `<-` expression
   reads; when all of them announce their changes (FieldNotify), the binding is subscribed and costs nothing between
   changes. `Text <- Title` and `Shown <- Count > 0` on FieldNotify variables used to be read every frame.
@@ -109,7 +109,7 @@ after 3 for 2.1.0 -- so the engine never takes 1.0.0 for the older of the two.
   the row and never takes one away (`STableRow::OnTouchEnded`). With a row focused, an arrow with Shift selects from the
   anchor to the row the focus moves to, with Ctrl and Shift adds that range, with Ctrl alone adds the row, and Ctrl+A
   selects every row. The anchor is the row the last plain click, Ctrl click, tap or plain arrow landed on. A click reads
-  its modifiers from the clicking player's controller. See [Migration](Docs/Migration.md#from-100-to-the-next-release).
+  its modifiers from the clicking player's controller. See [Migration](Docs/guides/migration.md#from-100-to-the-next-release).
 - **A focused spin box steps its value with the arrow keys**, as USpinBox's `SSpinBox::OnKeyDown` does: Up and Right
   add a step, Down and Left take one away, each press committed, the value kept inside the range a drag sweeps and on
   the StepSize grid. With StepSize at zero the step is SSpinBox's default -- one, or a tenth across a drag range of ten
@@ -129,27 +129,27 @@ after 3 for 2.1.0 -- so the engine never takes 1.0.0 for the older of the two.
   gives any ScreenSpaceOverlay root canvas a player this way, and `GetViewportRect` says which part it fills. A game
   that is not split is unchanged -- its one player's part is the whole viewport -- and so is a canvas nobody gives a
   player, such as one placed in a level, which stays the shared full-viewport layer. See
-  [Migration](Docs/Migration.md#from-100-to-the-next-release).
+  [Migration](Docs/guides/migration.md#from-100-to-the-next-release).
 - **A finger on a slider's track moves the value only once it travels**, as `SSlider`'s touch handlers do: a finger
   that lands only notes where; past the drag distance the slider takes it -- `OnMouseCaptureBegin`, then the value under
   it -- and follows it until it lifts. A tap that never travelled changes nothing and begins no capture; it used to jump
   the value to the tap and capture at once, as the mouse does. The mouse is unchanged. See
-  [Migration](Docs/Migration.md#from-100-to-the-next-release).
+  [Migration](Docs/guides/migration.md#from-100-to-the-next-release).
 - **A finger dragged along a list of rows that can be dragged scrolls the list**, as `STableRow` gives a touch drag to
   its list; it used to pick up the row it landed on. The mouse still picks rows up, and `FingerDrag = PickUpRow` gives
-  the finger the old behaviour. See [Migration](Docs/Migration.md#from-100-to-the-next-release).
+  the finger the old behaviour. See [Migration](Docs/guides/migration.md#from-100-to-the-next-release).
 - **A press outside an open menu goes on to what it landed on**, as the Slate menu stack lets it: a Dream Menu Anchor's
   menu, or a menu anchor panel's, closes on the press and the button under it is pressed and clicked as well. It used to
   close the menu and go no further. A press on the menu's own trigger still closes it without opening it again:
   `UDreamMenuAnchor::ShouldOpenDueToClick` says no for the click of the press that closed the menu. With a menu open,
   what is behind it is hovered as the pointer crosses it. `bMenusConsumeOutsideClick` in the project settings puts the
-  old behaviour back. See [Migration](Docs/Migration.md#from-100-to-the-next-release).
+  old behaviour back. See [Migration](Docs/guides/migration.md#from-100-to-the-next-release).
 - **A press outside a dropdown's open list goes on to what it landed on too**, as SComboBox's list is a menu on the same
   stack: the list closes, choosing nothing, and the button under the press is pressed and clicked. A click on the
   dropdown's own face closes the list without opening it again. The list follows `bMenusConsumeOutsideClick` with the
   menus. `UUIDropdown::bUseInteractionBlock` now means "keep the press for this dropdown whatever the project says" and
   is off by default; it was on by default, and on was the only way a list had ever behaved. See
-  [Migration](Docs/Migration.md#from-100-to-the-next-release).
+  [Migration](Docs/guides/migration.md#from-100-to-the-next-release).
 - **A click, a tap or the virtual cursor's confirm on a disabled widget reaches the widget around it**, as Slate cuts
   the path under the pointer at the first disabled widget and lets what is left take the event
   (`FHittestGrid::GetBubblePath`): the nearest widget above it that takes input is hovered, pressed and clicked as if
@@ -158,7 +158,7 @@ after 3 for 2.1.0 -- so the engine never takes 1.0.0 for the older of the two.
   as a press outside it and closed it; now the card hears it, and the menu stays up. The disabled widget and everything
   in it still hear nothing, are not hovered, and still lie in front of whatever is drawn behind them. Screen space,
   world space, render-target surfaces, fingers and the virtual cursor follow the one rule. See
-  [Migration](Docs/Migration.md#from-100-to-the-next-release).
+  [Migration](Docs/guides/migration.md#from-100-to-the-next-release).
 - **A disabled widget's tooltip comes up under the mouse**, as Slate looks for a tooltip under the cursor including
   disabled widgets (`FSlateUser::UpdateTooltip`) -- which is why CommonUI's buttons carry a disabled tooltip. It never
   did. `UDreamPointerEventData::HitWidgetIgnoringEnabled` names the widget drawn on top under a pointer, disabled or
@@ -167,7 +167,7 @@ after 3 for 2.1.0 -- so the engine never takes 1.0.0 for the older of the two.
   `UUITextHyperlink` puts a focusable stop over each link it draws, which the focus ring is drawn around and whose
   confirm announces the link (`UDreamText::OnHyperlinkClicked`). The keys and the pad used to pass every link by. A
   link in a disabled text is passed over. `bLinksAreFocusStops` turns it off. See
-  [Migration](Docs/Migration.md#from-100-to-the-next-release).
+  [Migration](Docs/guides/migration.md#from-100-to-the-next-release).
 - **A menu or a dropdown list opened on a panel in the level stays on the panel**, as UMG keeps a widget component's
   menus in its own window (`SVirtualWindow::OnQueryPopupMethod` asks for `UseCurrentWindow`, and `FMenuStack` hosts
   them in that window's popup layer). When what opens a popup -- a dropdown, a menu anchor, anything that calls
@@ -178,7 +178,7 @@ after 3 for 2.1.0 -- so the engine never takes 1.0.0 for the older of the two.
   anywhere outside it -- elsewhere on the panel, on another panel, on the screen -- closes it as on a screen, with
   Consume and PassThrough as before; Back, the focus, following the opener and the fades are the screen's. A popup
   opened on a screen, a retainer on a screen included, goes up on the player's screen root as before. `Elevate` alone
-  follows the widget's own tree the same way. See [Migration](Docs/Migration.md#from-100-to-the-next-release).
+  follows the widget's own tree the same way. See [Migration](Docs/guides/migration.md#from-100-to-the-next-release).
 - **An action named on a live action trigger is its key at once.** `UDreamUIActionTrigger::SetAction` on a trigger
   whose widget is active and interactable binds the new action there and then, letting go of the old one, as CommonUI's
   `SetTriggeringInputAction` does; clearing it lets go. It used to rebind only an action that was already bound, so
@@ -370,7 +370,7 @@ after 3 for 2.1.0 -- so the engine never takes 1.0.0 for the older of the two.
 
 Everything of the 2.1.0 development build, and the `.dui` language grown into what screens are written in: components
 written in `.dui` alone, `use … as`, `if`, `for`, `rows`, shorter layout; the reference for all of it; and the fixes the
-first two showcase screens found. Projects on 2.1.0 open unchanged ([Docs/Migration.md](Docs/Migration.md#from-21-to-100)),
+first two showcase screens found. Projects on 2.1.0 open unchanged ([Docs/guides/migration.md](Docs/guides/migration.md#from-21-to-100)),
 except for assets that still loaded through a redirect: the plugin ships none any more.
 
 ### Removed
@@ -379,7 +379,7 @@ except for assets that still loaded through a redirect: the plugin ships none an
   vocabulary, from the control and event renames and from the module split -- are gone, and the engine no longer
   applies any of them to a project that mounts the plugin. The plugin's own assets and the test fixtures name the
   current types. An asset saved against an old name is resaved once with 2.1.0's block borrowed into the project's
-  `Config/DefaultEngine.ini` ([Docs/Migration.md](Docs/Migration.md#from-21-to-100)). The four
+  `Config/DefaultEngine.ini` ([Docs/guides/migration.md](Docs/guides/migration.md#from-21-to-100)). The four
   `DreamGUI.Packaging` tests that held the redirect file went with it, and
   `DreamGUI.Packaging.ThePluginShipsNoCoreRedirects` keeps a `[CoreRedirects]` section from coming back unnoticed.
 - **The old-asset fixtures saved before the module split.** They loaded only through the redirects; the test host's
@@ -420,7 +420,7 @@ except for assets that still loaded through a redirect: the plugin ships none an
   `Shown` bound to its branch; a hidden branch keeps its state), `Shown <- Expr` is visibility as a yes or no on every
   widget (`UDreamWidget::Shown`), and `for Item in Items { … }` makes one copy of its template per item inside any panel,
   where `each` keeps filling a virtualized list view.
-- **The language reference.** [Docs/DuiLanguage.md](Docs/DuiLanguage.md) describes the whole of `.dui` -- file structure,
+- **The language reference.** [Docs/language/index.md](Docs/language/index.md) describes the whole of `.dui` -- file structure,
   types, values, styles, `use`, components, bindings, the control statements, timelines -- with a table of every
   diagnostic, and the editor's symbol dump (`DUI/.dui-symbols.json`) lists the keywords, the container types and their
   properties for an editor's completion.
@@ -632,9 +632,9 @@ gamepad navigation, and what it takes to ship. `DreamGUI.uplugin` is version 3. 
 
 ### Documentation and tools
 
-- [Docs/FontsAndPackaging.md](Docs/FontsAndPackaging.md): colour emoji fonts, three ways to package a font file, the ICU
+- [Docs/guides/fonts-and-packaging.md](Docs/guides/fonts-and-packaging.md): colour emoji fonts, three ways to package a font file, the ICU
   packaging preset and what degrades without it.
-- [Docs/Migration.md](Docs/Migration.md) has a section for moving from 2.0 to 2.1.
+- [Docs/guides/migration.md](Docs/guides/migration.md) has a section for moving from 2.0 to 2.1.
 - msdfgen's MIT licence ships with the plugin, beside its source.
 - The test host has a packaged text smoke test, part of the release gate: a probe in its game module writes what a
   packaged game draws, and `Tools/Tests/compare_text_smoke.py` holds it to the same build run on uncooked content.
@@ -652,7 +652,7 @@ Upgrading from 2.0 changes some defaults and behaviour -- the default font (text
 keys and the pad acting on the focus rather than the hover, the focus look, player indices, scroll bars and lists as Tab
 stops, the effect alpha of faded outlined text, how field text composites its layers, MSAA blending, line breaking by the game's culture, and the 64-byte
 vertex with its new `UV4` channel for anyone with custom shaders or mesh modifiers. They are listed in
-[Docs/Migration.md, "From 2.0 to 2.1"](Docs/Migration.md#from-20-to-21).
+[Docs/Migration.md, "From 2.0 to 2.1"](Docs/guides/migration.md#from-20-to-21).
 
 ## 2.0.0 (development build)
 
@@ -676,4 +676,4 @@ The modular release (2026-09-29).
 - **Layout** along the lines of Blink and Yoga, with the UMG-shaped panels; the Lex layout family is gone.
 - **Removed**: the root Blueprints, `UDreamWidgetPresenterComponent`, the world-space raycaster source family, the
   settings and console variables that put old renderer behaviour back. See
-  [Docs/Migration.md](Docs/Migration.md#4-what-no-longer-exists).
+  [Docs/guides/migration.md](Docs/guides/migration.md#4-what-no-longer-exists).

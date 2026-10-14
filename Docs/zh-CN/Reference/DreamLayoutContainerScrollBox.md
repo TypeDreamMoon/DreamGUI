@@ -1,0 +1,129 @@
+---
+title: "UDreamLayoutContainerScrollBox"
+description: "UMG Scroll Box"
+---
+
+**提示：**
+
+本页由 `DreamGUIReferenceDocs` commandlet 从反射生成，正文是头文件注释的原文（英文），所以不翻译——这样它永远和代码一致。概念讲解见[核心概念](../concepts/widgets.md)。
+
+
+
+Inherits from [UDreamLayoutContainerStackBox](DreamLayoutContainerStackBox.md).
+
+Declared in `Public/Core/Components/DreamPanelLayouts.h`.
+
+UMG Scroll Box
+
+<a id="properties"></a>
+
+## Properties
+
+| Name | Type | Category | In the details panel | From Blueprint | Description |
+|---|---|---|---|---|---|
+| `ScrollSensitivity` | `float` | ScrollBox | yes | `GetScrollSensitivity` / `SetScrollSensitivity` | Local units scrolled per wheel notch. |
+| `ConsumeMouseWheel` | `EDreamScrollBoxConsumeMouseWheel` | ScrollBox | yes | `GetConsumeMouseWheel` / `SetConsumeMouseWheel` | Whether the wheel is swallowed here or handed to an outer scroll box once this one is at a limit. |
+| `WheelScrollMultiplier` | `float` | ScrollBox | yes | `GetWheelScrollMultiplier` / `SetWheelScrollMultiplier` | A plain multiplier on whatever one wheel notch already travels -- UMG's WheelScrollMultiplier. ScrollSensitivity is the distance; this scales it, so "the same feel, twice as fast" is one number and not a re-tuned one. |
+| `NavigationDestination` | `EDreamUIScrollDestination` | ScrollBox | yes | `GetNavigationDestination` / `SetNavigationDestination` | Where a widget revealed by ScrollWidgetIntoView ends up -- UMG's NavigationDestination. |
+| `NavigationScrollPadding` | `float` | ScrollBox | yes | `GetNavigationScrollPadding` / `SetNavigationScrollPadding` | How much of the window to keep clear around a revealed widget, in local units -- UMG's NavigationScrollPadding. Stops a row landing flush against the edge with its neighbour cut in half beside it, which is the only cue a player has that the list continues. |
+| `ScrollWhenFocusChanges` | `EDreamUIScrollWhenFocusChanges` | ScrollBox | yes | `GetScrollWhenFocusChanges` / `SetScrollWhenFocusChanges` | What this box does when user focus lands inside it -- UMG's ScrollWhenFocusChanges. Read by FDreamUINavigationScroll, which is the only thing that reveals a widget because focus moved. |
+| `AnalogMouseWheelKey` | `FKey` | ScrollBox | yes | `GetAnalogMouseWheelKey` / `SetAnalogMouseWheelKey` | The analog key that acts as this box's mouse wheel -- UMG's AnalogMouseWheelKey. Invalid (the default) means "whatever the input preset already routes here", which is the right stick and therefore exactly today's behaviour. |
+| `Scrollbar` | `TWeakObjectPtr<UDreamUIBehaviour>` | ScrollBox | yes | read / write | A scrollbar behaviour to keep in step with this box, both ways -- a UUIScrollbar, or anything else that implements IDreamUIScrollbarInterface. Assign the component from a scrollbar prefab (/DreamGUI/Prefabs/VerticalScrollbar or HorizontalScrollbar) placed anywhere in the hierarchy -- it does not have to be a child of this box. Which end of the bar means zero is the BAR's business: this box always feeds the raw 0..1 fraction and the bar's own DirectionType decides the mapping. |
+| `ScrollbarVisibility` | `EDreamScrollBoxScrollbarVisibility` | ScrollBox | yes | `GetScrollbarVisibility` / `SetScrollbarVisibility` | Whether that bar hides itself when the content already fits. |
+| `bAnimateWheelScrolling` | `bool` | ScrollBox | yes | `GetAnimateWheelScrolling` / `SetAnimateWheelScrolling` | Ease to the wheel's new position over a few frames instead of jumping there. |
+| `ScrollAnimationMode` | `EDreamScrollAnimationMode` | ScrollBox | yes | `GetScrollAnimationMode` / `SetScrollAnimationMode` | Which curve an eased scroll follows. |
+| `ScrollAnimationInterpolationSpeed` | `float` | ScrollBox | yes | `GetScrollAnimationInterpolationSpeed` / `SetScrollAnimationInterpolationSpeed` | FInterpTo speed, used by InterpToSpeed only. Larger arrives sooner; UMG's default is 15. |
+| `ScrollAnimationEase` | `EDreamTweenEase` | ScrollBox | yes | `GetScrollAnimationEase` / `SetScrollAnimationEase` | Curve shape, used by EaseCurve only. Any of DreamTween's easings, overshooting ones included. |
+| `ScrollAnimationDuration` | `float` | ScrollBox | yes | `GetScrollAnimationDuration` / `SetScrollAnimationDuration` | Seconds an eased scroll takes, used by EaseCurve only. |
+| `bEnableInertia` | `bool` | ScrollBox | yes | `GetEnableInertia` / `SetEnableInertia` | Keep moving under momentum after the finger or mouse lets go. |
+| `DecelerationRate` | `float` | ScrollBox | yes | `GetDecelerationRate` / `SetDecelerationRate` | How quickly momentum dies. 0 never slows down; larger values stop sooner. Same units and default as the legacy scroll view, so a value tuned there carries over. |
+| `bAllowOverscroll` | `bool` | ScrollBox | yes | `GetAllowOverscroll` / `SetAllowOverscroll` | Let the content rubber-band past an end while dragging, then spring back on release. |
+| `OverscrollLimit` | `float` | ScrollBox | yes | `GetOverscrollLimit` / `SetOverscrollLimit` | How far past an end the content can be pulled, in local units. The pull saturates towards this rather than stopping at it, so the resistance grows the further out you drag and the content can never be dragged away indefinitely -- which the legacy view's flat damping allowed. |
+| `bBackPadScrolling` | `bool` | ScrollBox | yes | `GetBackPadScrolling` / `SetBackPadScrolling` | A whole viewport of empty space BEFORE the content -- UMG's BackPadScrolling: at offset zero the first child sits one viewport in, so the first item can be scrolled all the way to the far edge. A viewport rather than half of one, which is Slate's arithmetic (SScrollPanel's ScrollPadding is the panel's own length). It adds to the scroll range and takes nothing from what a Fill slot is given. |
+| `bFrontPadScrolling` | `bool` | ScrollBox | yes | `GetFrontPadScrolling` / `SetFrontPadScrolling` | A whole viewport of empty space AFTER the content -- UMG's FrontPadScrolling, so the last item can reach the near edge. |
+| `bAllowRightClickDragScrolling` | `bool` | ScrollBox | yes | `GetAllowRightClickDragScrolling` / `SetAllowRightClickDragScrolling` | Whether a drag with the RIGHT button scrolls this box -- UMG's bAllowRightClickDragScrolling, on by default as there. Off leaves the right button to whatever wants it for a context menu. On, a right drag is still refused while there is nothing to scroll, as SScrollBox refuses it unless its bar IsNeeded. A left-button drag scrolls whatever this says: it is this library's own gesture, and existing screens rely on it. |
+| `bEnableTouchScrolling` | `bool` | ScrollBox | yes | `GetEnableTouchScrolling` / `SetEnableTouchScrolling` | Whether a finger dragging over the box scrolls it -- UMG's bEnableTouchScrolling, on by default as there. |
+| `ScrollOffset` | `float` | ScrollBox | yes | - | Distance scrolled from the start. Editable so the designer can scroll the content in the prefab editor (where no pointer input exists) to reach and edit off-screen children; the authored value is also the initial scroll position at runtime. Clamped to [0, GetMaxScrollOffset()] by layout. |
+
+<a id="functions"></a>
+
+## Functions
+
+| Function | Kind | Description |
+|---|---|---|
+| `bool CanScrollWidgetIntoView(UDreamWidget* InWidget)` | callable | True when InWidget lives in this box and a scroll would bring more of it into sight. The question directional navigation has to answer before it commits to a candidate it cannot currently see. |
+| `void EndInertialScrolling()` | callable | Drop the fling, keeping the position and whatever rubber band is open -- UMG's name for it. |
+| `bool GetAllowOverscroll()` | pure | Get Allow Overscroll |
+| `bool GetAllowRightClickDragScrolling()` | pure | Get Allow Right Click Drag Scrolling |
+| `FKey GetAnalogMouseWheelKey()` | pure | Get Analog Mouse Wheel Key |
+| `float GetAnimatedScrollTarget()` | pure | Where an eased scroll is heading; the current offset when nothing is animating. |
+| `bool GetAnimateWheelScrolling()` | pure | Get Animate Wheel Scrolling |
+| `bool GetBackPadScrolling()` | pure | Get Back Pad Scrolling |
+| `EDreamScrollBoxConsumeMouseWheel GetConsumeMouseWheel()` | pure | Get Consume Mouse Wheel |
+| `float GetDecelerationRate()` | pure | Get Deceleration Rate |
+| `bool GetEnableInertia()` | pure | Get Enable Inertia |
+| `bool GetEnableTouchScrolling()` | pure | Get Enable Touch Scrolling |
+| `bool GetFrontPadScrolling()` | pure | Get Front Pad Scrolling |
+| `float GetMaxScrollOffset()` | pure | How far this box can scroll: content extent minus viewport extent, or 0 when everything fits. |
+| `EDreamUIScrollDestination GetNavigationDestination()` | pure | Get Navigation Destination |
+| `float GetNavigationScrollPadding()` | pure | Get Navigation Scroll Padding |
+| `float GetOverscroll()` | pure | Signed displacement past an end, damped; zero while in range. Layout adds it to the offset. |
+| `float GetOverscrollLimit()` | pure | Get Overscroll Limit |
+| `float GetOverscrollPercentage()` | pure | The same displacement as a PERCENTAGE of the window -- UMG's GetOverscrollPercentage. |
+| `float GetScrollAnimationDuration()` | pure | Get Scroll Animation Duration |
+| `EDreamTweenEase GetScrollAnimationEase()` | pure | Get Scroll Animation Ease |
+| `float GetScrollAnimationInterpolationSpeed()` | pure | Get Scroll Animation Interpolation Speed |
+| `EDreamScrollAnimationMode GetScrollAnimationMode()` | pure | Get Scroll Animation Mode |
+| `UDreamUIBehaviour* GetScrollbar()` | pure | The bar this box drives. Takes the raw pointer, because the stored form is a weak one. |
+| `EDreamScrollBoxScrollbarVisibility GetScrollbarVisibility()` | pure | Get Scrollbar Visibility |
+| `float GetScrollOffset()` | pure | Distance scrolled from the start, in local units. Always within [0, GetMaxScrollOffset()]. |
+| `float GetScrollOffsetOfEnd()` | pure | The offset at which the end of the content is in view -- UMG's name for GetMaxScrollOffset. |
+| `float GetScrollSensitivity()` | pure | The plain readers and writers for every knob above. |
+| `float GetScrollVelocity()` | pure | Get Scroll Velocity |
+| `EDreamUIScrollWhenFocusChanges GetScrollWhenFocusChanges()` | pure | Get Scroll when Focus Changes |
+| `float GetViewFraction()` | pure | Fraction of the content currently visible, 0..1. 1 when everything fits. |
+| `float GetViewOffsetFraction()` | pure | How far through the scrollable range the view sits, 0..1. 0 when nothing can scroll. |
+| `float GetWheelScrollMultiplier()` | pure | Get Wheel Scroll Multiplier |
+| `bool IsAnimatingScroll()` | pure | True while an eased scroll is still running. |
+| `bool IsScrollGestureMirrored()` | pure | True when a GESTURE on this box has to be read backwards -- a horizontal box in a right-to-left layout, and nothing else. |
+| `bool IsScrolling()` | pure | True while momentum or a spring-back is still moving the content. |
+| `bool IsScrollNeeded()` | pure | Whether there is anything to scroll: content longer than the viewport, as the last layout pass measured it -- SScrollBar's IsNeeded. False before the first pass, which has measured nothing yet. |
+| `bool ScrollBy(float Delta)` | callable | Scroll by a signed delta. Returns true when the offset actually changed, false when already at a limit. |
+| `void ScrollToEnd()` | callable | Jump to the end of the content. |
+| `void ScrollToStart()` | callable | Jump to the start of the content. |
+| `bool ScrollWidgetIntoView(UDreamWidget* InWidget, bool bAnimateScroll, EDreamUIScrollDestination InDestination, float InPadding)` | callable | Scroll the minimum distance that brings InWidget into view. Accepts any descendant, not just a direct child. Returns false when the widget is not inside this box or nothing needed to move. Eased by default, as UMG's is -- a jump loses the reader's place on a long list. |
+| `void SetAllowOverscroll(bool Value)` | callable | Set Allow Overscroll |
+| `void SetAllowRightClickDragScrolling(bool Value)` | callable | Read when a drag begins, so a gesture already under way keeps the answer it started with. |
+| `void SetAnalogMouseWheelKey(FKey Value)` | callable | Set Analog Mouse Wheel Key |
+| `void SetAnimateWheelScrolling(bool Value)` | callable | Set Animate Wheel Scrolling |
+| `void SetBackPadScrolling(bool Value)` | callable | Moves where offset zero puts the content and lengthens the range, so the box is re-arranged. |
+| `void SetConsumeMouseWheel(EDreamScrollBoxConsumeMouseWheel Value)` | callable | Set Consume Mouse Wheel |
+| `void SetDecelerationRate(float Value)` | callable | Set Deceleration Rate |
+| `void SetEnableInertia(bool Value)` | callable | Set Enable Inertia |
+| `void SetEnableTouchScrolling(bool Value)` | callable | Set Enable Touch Scrolling |
+| `void SetFrontPadScrolling(bool Value)` | callable | Set Front Pad Scrolling |
+| `void SetNavigationDestination(EDreamUIScrollDestination Value)` | callable | Set Navigation Destination |
+| `void SetNavigationScrollPadding(float Value)` | callable | Set Navigation Scroll Padding |
+| `void SetOverscrollLimit(float Value)` | callable | Set Overscroll Limit |
+| `void SetScrollAnimationDuration(float Value)` | callable | Set Scroll Animation Duration |
+| `void SetScrollAnimationEase(EDreamTweenEase Value)` | callable | Set Scroll Animation Ease |
+| `void SetScrollAnimationInterpolationSpeed(float Value)` | callable | Set Scroll Animation Interpolation Speed |
+| `void SetScrollAnimationMode(EDreamScrollAnimationMode Value)` | callable | Set Scroll Animation Mode |
+| `void SetScrollbar(UDreamUIBehaviour* Value)` | callable | Link a scrollbar behaviour; one that does not implement IDreamUIScrollbarInterface is refused. |
+| `void SetScrollbarVisibility(EDreamScrollBoxScrollbarVisibility Value)` | callable | Set Scrollbar Visibility |
+| `void SetScrollOffset(float Value)` | callable | Set Scroll Offset |
+| `void SetScrollOffsetAnimated(float Value)` | callable | Ease towards Value over the coming frames instead of moving now. Cancels any momentum. |
+| `void SetScrollSensitivity(float Value)` | callable | Set Scroll Sensitivity |
+| `void SetScrollVelocity(float Value)` | callable | Set Scroll Velocity |
+| `void SetScrollWhenFocusChanges(EDreamUIScrollWhenFocusChanges Value)` | callable | Set Scroll when Focus Changes |
+| `void SetWheelScrollMultiplier(float Value)` | callable | Set Wheel Scroll Multiplier |
+| `void StopScrolling()` | callable | Drop momentum and any rubber-band displacement immediately. |
+| `void TickScrollPhysics(float DeltaTime)` | callable | Advance momentum and spring-back by DeltaTime. Deliberately free of input plumbing: the physics can then be stepped directly by a test, which is the only way any of this gets verified without a real pointer. |
+
+<a id="events"></a>
+
+## Events
+
+| Event | Signature | Description |
+|---|---|---|
+| `OnUserScrolled` | `void DreamScrollBoxUserScrolledEvent__DelegateSignature(float CurrentOffset)` |  |

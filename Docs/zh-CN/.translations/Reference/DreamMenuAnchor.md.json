@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "sourceFile": "Docs/Reference/DreamMenuAnchor.md",
+  "translationFile": "Docs/zh-CN/Reference/DreamMenuAnchor.md",
+  "sourceHash": null,
+  "importedSourceHash": "50b669bb7312d2e91a5c8c2562c398857539980c82a32a680593c7c7078712b2",
+  "sourceRevision": "5d4e5ce0ebb734a3f2d46d5a371674cfa1b69176",
+  "translationHash": "d0d4ae2cbbb01a767657e05104a5345ae53d19f75cc7fcf523c274320918ee56",
+  "origin": "website-import",
+  "importedFrom": [
+    "reference/dreammenuanchor"
+  ],
+  "pageMetadata": {
+    "reference/dreammenuanchor": {
+      "title": "UDreamMenuAnchor",
+      "description": "A place a menu opens from, and the thing that puts it away again."
+    }
+  }
+}

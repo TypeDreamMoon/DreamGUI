@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "sourceFile": "Docs/Reference/DreamDialog.md",
+  "translationFile": "Docs/zh-CN/Reference/DreamDialog.md",
+  "sourceHash": null,
+  "importedSourceHash": "2e1eef5c9a0bd9ff84326dc0b76fb3c1a8490535188f5345a56f5ccc1e1fe42d",
+  "sourceRevision": "5d4e5ce0ebb734a3f2d46d5a371674cfa1b69176",
+  "translationHash": "a4b095f539dfc21eb31c47cee010ab530237d9a0be4fa87c0b7e4f69238146a9",
+  "origin": "website-import",
+  "importedFrom": [
+    "reference/dreamdialog"
+  ],
+  "pageMetadata": {
+    "reference/dreamdialog": {
+      "title": "UDreamDialog",
+      "description": "A dialog whose hierarchy is code, not an asset: a dimmer, a centred panel, a title, a content"
+    }
+  }
+}

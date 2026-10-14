@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "sourceFile": "Docs/Reference/DreamExpandableAreaStyle.md",
+  "translationFile": "Docs/zh-CN/Reference/DreamExpandableAreaStyle.md",
+  "sourceHash": null,
+  "importedSourceHash": "b39c789623ed9d2877e31a2fc95a2d2bf94722c6b60f8d5ccd74b3ba92e83688",
+  "sourceRevision": "5d4e5ce0ebb734a3f2d46d5a371674cfa1b69176",
+  "translationHash": "71831ef5259a7b8d1376051dce30b9f82ba691565559e6a5a83231d2964817d6",
+  "origin": "website-import",
+  "importedFrom": [
+    "reference/dreamexpandableareastyle"
+  ],
+  "pageMetadata": {
+    "reference/dreamexpandableareastyle": {
+      "title": "FDreamExpandableAreaStyle",
+      "description": "An expandable area: a header that toggles, and the content it hides."
+    }
+  }
+}

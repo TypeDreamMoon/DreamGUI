@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "sourceFile": "Docs/Reference/DreamTextInputStyle.md",
+  "translationFile": "Docs/zh-CN/Reference/DreamTextInputStyle.md",
+  "sourceHash": null,
+  "importedSourceHash": "3c5626a9164c6dcac06ce936f3c3cdcf3454abb810f1fb62f2893f53d82fa5ed",
+  "sourceRevision": "5d4e5ce0ebb734a3f2d46d5a371674cfa1b69176",
+  "translationHash": "83f9d4039fea28bc25204377d43e48d89149439f462164c821f93a6126e0d87b",
+  "origin": "website-import",
+  "importedFrom": [
+    "reference/dreamtextinputstyle"
+  ],
+  "pageMetadata": {
+    "reference/dreamtextinputstyle": {
+      "title": "FDreamTextInputStyle",
+      "description": "A text field: the box, the text in it, and the placeholder shown while there is none."
+    }
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "sourceFile": "Docs/language/components.md",
+  "translationFile": "Docs/zh-CN/language/components.md",
+  "sourceHash": null,
+  "importedSourceHash": "bff945e8187b879142fe4b825e893506c7ac2841e98981f08412b55905a34607",
+  "sourceRevision": "5d4e5ce0ebb734a3f2d46d5a371674cfa1b69176",
+  "translationHash": "b8a68717289316e4d1b9850cb1bde2a122ae9f9e43f13c32dc4a8e2dd9979cbc",
+  "origin": "website-import",
+  "importedFrom": [
+    "dui/components"
+  ],
+  "pageMetadata": {
+    "dui/components": {
+      "title": "编写组件",
+      "description": "用 .dui 写一个在别的树里使用的 widget Blueprint——props、events 与 emit、默认槽位和具名槽位，以及宿主怎样设置、监听和填充它。"
+    }
+  }
+}

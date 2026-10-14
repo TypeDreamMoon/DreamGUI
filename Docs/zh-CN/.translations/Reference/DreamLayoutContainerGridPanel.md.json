@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "sourceFile": "Docs/Reference/DreamLayoutContainerGridPanel.md",
+  "translationFile": "Docs/zh-CN/Reference/DreamLayoutContainerGridPanel.md",
+  "sourceHash": null,
+  "importedSourceHash": "29218b3e91f26b0985644ca881c037c688db5b9d0bd93db7c74c793f63723ba9",
+  "sourceRevision": "5d4e5ce0ebb734a3f2d46d5a371674cfa1b69176",
+  "translationHash": "b1b516c6043e1ab1ef636098b699b59b37c01b2e2988b60f2b2dfeb1a0e36558",
+  "origin": "website-import",
+  "importedFrom": [
+    "reference/dreamlayoutcontainergridpanel"
+  ],
+  "pageMetadata": {
+    "reference/dreamlayoutcontainergridpanel": {
+      "title": "UDreamLayoutContainerGridPanel",
+      "description": "UMG Grid Panel"
+    }
+  }
+}

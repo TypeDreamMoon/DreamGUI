@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "sourceFile": "Docs/Reference/DreamLayoutContainerVerticalBox.md",
+  "translationFile": "Docs/zh-CN/Reference/DreamLayoutContainerVerticalBox.md",
+  "sourceHash": null,
+  "importedSourceHash": "ac07bd7d09c8f11564d84ef862fd19e42d110702ed715475f5d2093f7d1f1702",
+  "sourceRevision": "5d4e5ce0ebb734a3f2d46d5a371674cfa1b69176",
+  "translationHash": "76cfa463c3401aa0f18c86826eacd33081ba544c4354b463827c10e66850c251",
+  "origin": "website-import",
+  "importedFrom": [
+    "reference/dreamlayoutcontainerverticalbox"
+  ],
+  "pageMetadata": {
+    "reference/dreamlayoutcontainerverticalbox": {
+      "title": "UDreamLayoutContainerVerticalBox",
+      "description": "UMG Vertical Box"
+    }
+  }
+}

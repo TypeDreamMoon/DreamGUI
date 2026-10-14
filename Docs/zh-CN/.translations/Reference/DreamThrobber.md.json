@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "sourceFile": "Docs/Reference/DreamThrobber.md",
+  "translationFile": "Docs/zh-CN/Reference/DreamThrobber.md",
+  "sourceHash": null,
+  "importedSourceHash": "7a9a1baf2e84b57ad9350730bfebf6d5042b8725bddbc00b0dde97cb192de5ad",
+  "sourceRevision": "5d4e5ce0ebb734a3f2d46d5a371674cfa1b69176",
+  "translationHash": "a133db54917de64428c1fd851a9de6d3370382260bdf0b952a2bb9db80fde5d0",
+  "origin": "website-import",
+  "importedFrom": [
+    "reference/dreamthrobber"
+  ],
+  "pageMetadata": {
+    "reference/dreamthrobber": {
+      "title": "UDreamThrobber",
+      "description": "A throbber whose hierarchy is code, not an asset: N pieces that pulse, saying only \"something is"
+    }
+  }
+}

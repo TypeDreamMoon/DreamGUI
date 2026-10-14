@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "sourceFile": "Docs/index.md",
+  "translationFile": "Docs/zh-CN/index.md",
+  "sourceHash": null,
+  "importedSourceHash": "904d73a152e12e8dd0d508e0685a346bfc5fe65a90dfcc51a61883a6cd260a42",
+  "sourceRevision": "5d4e5ce0ebb734a3f2d46d5a371674cfa1b69176",
+  "translationHash": "e545c1091b9930b097e0619ce4ea992ed53ae170b4236ed95a9a5fbdf7f15aa3",
+  "origin": "website-import",
+  "importedFrom": [
+    "index"
+  ],
+  "pageMetadata": {
+    "index": {
+      "title": "概览",
+      "description": "DreamGUI 是 Unreal Engine 5.8 的 3D UI 插件：控件是挂在树上、带矩形、轴心和锚点的 UObject，由画布合批绘制，可以铺在屏幕上，也可以立在关卡里。"
+    }
+  }
+}

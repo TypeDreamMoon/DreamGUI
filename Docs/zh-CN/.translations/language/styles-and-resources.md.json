@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "sourceFile": "Docs/language/styles-and-resources.md",
+  "translationFile": "Docs/zh-CN/language/styles-and-resources.md",
+  "sourceHash": null,
+  "importedSourceHash": "e4508239957aee4d7023a819a3f8688f245c9bd54a4b56c62234eb16a526ca1e",
+  "sourceRevision": "5d4e5ce0ebb734a3f2d46d5a371674cfa1b69176",
+  "translationHash": "93007f20ce968e1c4336ce2b47484db7971ae02eae7f1fbde250f9eeb53c5a6d",
+  "origin": "website-import",
+  "importedFrom": [
+    "dui/styles-and-resources"
+  ],
+  "pageMetadata": {
+    "dui/styles-and-resources": {
+      "title": "样式与资源",
+      "description": "样式是一组具名的行，可以继承、可以带组件和槽位行；资源是带类型的具名常量。"
+    }
+  }
+}

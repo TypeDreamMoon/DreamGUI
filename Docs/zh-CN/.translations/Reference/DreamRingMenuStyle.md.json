@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "sourceFile": "Docs/Reference/DreamRingMenuStyle.md",
+  "translationFile": "Docs/zh-CN/Reference/DreamRingMenuStyle.md",
+  "sourceHash": null,
+  "importedSourceHash": "8aa276670d832731c4b371e425a7180df18fc51de62f3349d262dcd3371fee9e",
+  "sourceRevision": "5d4e5ce0ebb734a3f2d46d5a371674cfa1b69176",
+  "translationHash": "af9c36328c55099f85c1edb3b2e6eb97e2992fe67eec9759f9517ddf54ee9802",
+  "origin": "website-import",
+  "importedFrom": [
+    "reference/dreamringmenustyle"
+  ],
+  "pageMetadata": {
+    "reference/dreamringmenustyle": {
+      "title": "FDreamRingMenuStyle",
+      "description": "A ring menu: wedges around a hub, and the geometry that decides where they sit."
+    }
+  }
+}

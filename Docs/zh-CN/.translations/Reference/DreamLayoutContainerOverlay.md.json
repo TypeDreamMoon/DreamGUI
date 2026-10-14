@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "sourceFile": "Docs/Reference/DreamLayoutContainerOverlay.md",
+  "translationFile": "Docs/zh-CN/Reference/DreamLayoutContainerOverlay.md",
+  "sourceHash": null,
+  "importedSourceHash": "60ecf3381be87b149217c1549a4b29d0549ad0307b3ee2c413d630d1e9bdf2e5",
+  "sourceRevision": "5d4e5ce0ebb734a3f2d46d5a371674cfa1b69176",
+  "translationHash": "6ef131e1ab583d2be50e9330a441d6b382264f27224d99ffd6132a87f5108979",
+  "origin": "website-import",
+  "importedFrom": [
+    "reference/dreamlayoutcontaineroverlay"
+  ],
+  "pageMetadata": {
+    "reference/dreamlayoutcontaineroverlay": {
+      "title": "UDreamLayoutContainerOverlay",
+      "description": "UMG Overlay"
+    }
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "sourceFile": "Docs/Reference/DreamInputKeySelector.md",
+  "translationFile": "Docs/zh-CN/Reference/DreamInputKeySelector.md",
+  "sourceHash": null,
+  "importedSourceHash": "81ebb5a76f5f2c5efa160d3b5c57ac5dc4dd864e03d60f8f08348dd5567aa856",
+  "sourceRevision": "5d4e5ce0ebb734a3f2d46d5a371674cfa1b69176",
+  "translationHash": "1251d1102e0d8b4a9a1cd4b9a8b722b39d6b065f65b45ad75de4735e3d783b38",
+  "origin": "website-import",
+  "importedFrom": [
+    "reference/dreaminputkeyselector"
+  ],
+  "pageMetadata": {
+    "reference/dreaminputkeyselector": {
+      "title": "UDreamInputKeySelector",
+      "description": "A button whose label is a bound key, and which listens for the next one when clicked."
+    }
+  }
+}

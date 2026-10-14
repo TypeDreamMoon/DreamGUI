@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "sourceFile": "Docs/concepts/animation.md",
+  "translationFile": "Docs/zh-CN/concepts/animation.md",
+  "sourceHash": null,
+  "importedSourceHash": "fdf02a9a5cbe966650dc93124a2e393130d7ebb8a0d6bc8c222d33f354ee714b",
+  "sourceRevision": "5d4e5ce0ebb734a3f2d46d5a371674cfa1b69176",
+  "translationHash": "8168bd8a13641532d543f6f9cfbeeca146167108afae82d378778a2b5853e1fd",
+  "origin": "website-import",
+  "importedFrom": [
+    "concepts/animation"
+  ],
+  "pageMetadata": {
+    "concepts/animation": {
+      "title": "动画",
+      "description": "三种动画方式：DreamTween 模块的补间（面板里的控件用 RenderOffsetTo、RenderScaleTo、RenderAngleTo、RenderTranslationTo，EDreamTweenEase，DreamTween.MaxStepSeconds），控件动画（UDreamWidgetAnimation 与 Sequencer），以及 .dui 里的 timeline。"
+    }
+  }
+}

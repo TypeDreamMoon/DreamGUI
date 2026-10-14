@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "sourceFile": "Docs/Reference/DreamLayoutContainerSafeZone.md",
+  "translationFile": "Docs/zh-CN/Reference/DreamLayoutContainerSafeZone.md",
+  "sourceHash": null,
+  "importedSourceHash": "6974f29c45f4be015cb0856a3aa866f805875a03491fe0717146ff276979159a",
+  "sourceRevision": "5d4e5ce0ebb734a3f2d46d5a371674cfa1b69176",
+  "translationHash": "cdbda5b6c81befa2ff08a0175784bc411b5d2e1b60d21b416f113877af3c174e",
+  "origin": "website-import",
+  "importedFrom": [
+    "reference/dreamlayoutcontainersafezone"
+  ],
+  "pageMetadata": {
+    "reference/dreamlayoutcontainersafezone": {
+      "title": "UDreamLayoutContainerSafeZone",
+      "description": "UMG Safe Zone"
+    }
+  }
+}

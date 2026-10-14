@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "sourceFile": "Docs/Reference/DreamTextPaintLibrary.md",
+  "translationFile": "Docs/zh-CN/Reference/DreamTextPaintLibrary.md",
+  "sourceHash": null,
+  "importedSourceHash": "a114e40fd4932572522b162ad5e2a8614c28bb2d21a93f31f11ad12b658e3dc0",
+  "sourceRevision": "5d4e5ce0ebb734a3f2d46d5a371674cfa1b69176",
+  "translationHash": "90cd20fc8297e96451295381836605ead8c677a4d74b5af21032da58f388f049",
+  "origin": "website-import",
+  "importedFrom": [
+    "reference/dreamtextpaintlibrary"
+  ],
+  "pageMetadata": {
+    "reference/dreamtextpaintlibrary": {
+      "title": "UDreamTextPaintLibrary",
+      "description": "Tweens that move a text's paints (FDreamTextPaint) without repainting it: each drives one of UDreamText's paint"
+    }
+  }
+}

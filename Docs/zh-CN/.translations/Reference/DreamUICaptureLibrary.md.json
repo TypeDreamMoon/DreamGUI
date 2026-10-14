@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "sourceFile": "Docs/Reference/DreamUICaptureLibrary.md",
+  "translationFile": "Docs/zh-CN/Reference/DreamUICaptureLibrary.md",
+  "sourceHash": null,
+  "importedSourceHash": "ab95363be445981afbf1487a46a4213ab90db04ea5dc677109fe2efe0715e685",
+  "sourceRevision": "5d4e5ce0ebb734a3f2d46d5a371674cfa1b69176",
+  "translationHash": "1275cdd7febf9e8b7bfc909b3a2a8358cd4f7ae2db7a13632ba7cbd3e0dba325",
+  "origin": "website-import",
+  "importedFrom": [
+    "reference/dreamuicapturelibrary"
+  ],
+  "pageMetadata": {
+    "reference/dreamuicapturelibrary": {
+      "title": "UDreamUICaptureLibrary",
+      "description": "Pictures of what DreamGUI draws, written out as PNG files -- a render target, a canvas that renders into one, or a"
+    }
+  }
+}

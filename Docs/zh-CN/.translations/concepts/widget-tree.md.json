@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "sourceFile": "Docs/concepts/widget-tree.md",
+  "translationFile": "Docs/zh-CN/concepts/widget-tree.md",
+  "sourceHash": null,
+  "importedSourceHash": "bd5acd01dd8e3802821c14c391c501346eec600f599b949bffe334dc0a769af2",
+  "sourceRevision": "5d4e5ce0ebb734a3f2d46d5a371674cfa1b69176",
+  "translationHash": "9c80cd5afe2c7b72d7f13a1e2038c592baeb539dc132a356b5136e3863ccf364",
+  "origin": "website-import",
+  "importedFrom": [
+    "concepts/widget-tree"
+  ],
+  "pageMetadata": {
+    "concepts/widget-tree": {
+      "title": "控件树、挂起与停车",
+      "description": "控件活在一条树上，树决定它们归谁管 —— 以及它上面最容易被误读的那个状态：\"停放\"。还有宿主的契约与呈现器基类。"
+    }
+  }
+}

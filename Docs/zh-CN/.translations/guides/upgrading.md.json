@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "sourceFile": "Docs/guides/upgrading.md",
+  "translationFile": "Docs/zh-CN/guides/upgrading.md",
+  "sourceHash": null,
+  "importedSourceHash": "9fb678105bd2c4e87b248546a1b282bce80db3b29ad03299149291720f0b5880",
+  "sourceRevision": "5d4e5ce0ebb734a3f2d46d5a371674cfa1b69176",
+  "translationHash": "9ca7af881f37ca5dcbd7f529db0d247d114db92a0cb6fe0a52ac6448a524c614",
+  "origin": "website-import",
+  "importedFrom": [
+    "guides/upgrading"
+  ],
+  "pageMetadata": {
+    "guides/upgrading": {
+      "title": "从开发版升级",
+      "description": "项目在 2.1 或 2.0 开发版上时，升到 1.0.0 要知道什么：哪些东西看起来会不一样、哪些默认值变了、哪些开关能找回旧行为，以及自己的 C++ 要改什么；还有从 1.0.0 跟到 main 时要留意的几处。"
+    }
+  }
+}

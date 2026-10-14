@@ -1,5 +1,5 @@
 <p align="center">
-  <img alt="DreamGUI banner" src="./Images/banner.png" />
+  <img alt="DreamGUI banner" src="Images/banner.png" />
 </p>
 
 <table>
@@ -43,7 +43,7 @@
       </p>
     </td>
     <td width="36%" align="center" valign="middle">
-      <img src="./Images/character.png" width="260" alt="DreamGUI character" />
+      <img src="Images/character.png" width="260" alt="DreamGUI character" />
     </td>
   </tr>
 </table>
@@ -54,7 +54,7 @@
 
 > [!NOTE]
 > **1.0.0 是第一个公开版本。** 在它之前，这个 fork 的开发版依次编号为 1.x、2.0.0、2.1.0（`main` 上的提交 `2416e3f8`、`3049561a`）；
-> 用着其中某个版本的项目请看 [Docs/Migration.md](Docs/Migration.md#from-21-to-100)——1.0.0 不再带 CoreRedirects，
+> 用着其中某个版本的项目请看 [Docs/guides/migration.md](Docs/guides/migration.md#from-21-to-100)——1.0.0 不再带 CoreRedirects，
 > 这些版本（以及 LGUI、LexUI）保存的资产，要在用它打开之前重存一次。DreamGUI fork 自 Lex Liu 的
 > [LGUI / LexUI](https://github.com/liufei2008/LGUI)，MIT 许可——但不是它的直接替代品。
 
@@ -155,11 +155,11 @@ UDreamUIBPLibrary::AddWidgetOfClassToViewport(this, WBP_Settings);   // 屏幕�
 | :-- | :-- |
 | **[快速上手](https://gui.toolchain.64hz.cn/docs/start/installation)** | 安装、第一个界面、项目结构、编写流程 |
 | **[核心概念](https://gui.toolchain.64hz.cn/docs/concepts/widgets)** | 控件、画布、世界空间、Widget Blueprint、布局、文字、渲染、输入、动画 |
-| **[.dui 语言](https://gui.toolchain.64hz.cn/docs/dui/overview)** | 语言的每一个构造，一页一个主题——仓库里也有一份 [Docs/DuiLanguage.md](Docs/DuiLanguage.md) |
+| **[.dui 语言](https://gui.toolchain.64hz.cn/docs/dui/overview)** | 语言的每一个构造，一页一个主题——仓库里也有一份 [Docs/language/index.md](Docs/language/index.md) |
 | **[控件库](https://gui.toolchain.64hz.cn/docs/controls)** | 控件库、样式与样式表、与 UMG 的命名对照 |
 | **[类参考](https://gui.toolchain.64hz.cn/docs/reference)** | 每个公开类，从反射生成——仓库里是 [Docs/Reference](Docs/Reference/index.md) |
 | **[诊断码](https://gui.toolchain.64hz.cn/docs/diagnostics)** | 每一个 `DUInnnn`：它说的是什么、怎么会出现、怎么改 |
-| **[指南](https://gui.toolchain.64hz.cn/docs/guides/fonts-and-packaging)** | 字体与打包、从 LGUI / LexUI 迁移、升级、平台——[Docs/Migration.md](Docs/Migration.md)、[Docs/FontsAndPackaging.md](Docs/FontsAndPackaging.md) |
+| **[指南](https://gui.toolchain.64hz.cn/docs/guides/fonts-and-packaging)** | 字体与打包、从 LGUI / LexUI 迁移、升级、平台——[Docs/guides/migration.md](Docs/guides/migration.md)、[Docs/guides/fonts-and-packaging.md](Docs/guides/fonts-and-packaging.md) |
 | **[更新日志](CHANGELOG.md)** | 每个版本改了什么 |
 
 ## 编辑器与工具
@@ -190,7 +190,7 @@ L0   DreamGUIRenderer      DreamTween
 `Build.cs`。
 
 插件不再自带 CoreRedirects。对着 LGUI、LexUI 或 1.0.0 之前的版本保存的资产，要借 2.1.0 的重定向表（临时放进项目配置）重存一次
-——三个步骤见 [Docs/Migration.md](Docs/Migration.md#from-21-to-100)。
+——三个步骤见 [Docs/guides/migration.md](Docs/guides/migration.md#from-21-to-100)。
 
 ## 平台
 
@@ -222,7 +222,7 @@ Unreal Engine **5.8**，源码引擎和 Launcher 安装版都行。"声称支持
 
 ## 许可证
 
-MIT——见 [LICENSE](./LICENSE)。
+MIT——见 [LICENSE](LICENSE)。
 
 Copyright (c) 2026-present TypeDreamMoon
 Copyright (c) 2019-present Lex Liu
@@ -241,3 +241,5 @@ Copyright (c) 2019-present Lex Liu
    <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=typedreammoon/dreamgui&type=date&legend=bottom-right" />
  </picture>
 </a>
+
+文档：[English](Docs/README.md) · [简体中文](Docs/zh-CN/README.md)（迁入译文待核对）。

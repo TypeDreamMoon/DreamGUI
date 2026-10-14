@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "sourceFile": "Docs/Reference/DreamEditableText.md",
+  "translationFile": "Docs/zh-CN/Reference/DreamEditableText.md",
+  "sourceHash": null,
+  "importedSourceHash": "e094b44d6503d692089249e2b6568dff0fc867a3f62b2ca4fa20dd0f7feb73d8",
+  "sourceRevision": "5d4e5ce0ebb734a3f2d46d5a371674cfa1b69176",
+  "translationHash": "f6789dfdf5da0d1723f885dac6d08ae1af60db7ec9ef0f158db96049710a2f9a",
+  "origin": "website-import",
+  "importedFrom": [
+    "reference/dreameditabletext"
+  ],
+  "pageMetadata": {
+    "reference/dreameditabletext": {
+      "title": "UDreamEditableText",
+      "description": "A text field with no box: UMG's EditableText, where Native.TextInput is its EditableTextBox."
+    }
+  }
+}

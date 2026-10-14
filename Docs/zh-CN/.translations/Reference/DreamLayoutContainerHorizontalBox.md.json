@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "sourceFile": "Docs/Reference/DreamLayoutContainerHorizontalBox.md",
+  "translationFile": "Docs/zh-CN/Reference/DreamLayoutContainerHorizontalBox.md",
+  "sourceHash": null,
+  "importedSourceHash": "8f695c8032bb8545dc2e87f3e86b981afe92aaa5c1f2c7f44c772a8dc96b9142",
+  "sourceRevision": "5d4e5ce0ebb734a3f2d46d5a371674cfa1b69176",
+  "translationHash": "14136cdb00ea3b6565eb752c4f21ea0d021bc6bd9a7b5603ee10aac7cd50eb40",
+  "origin": "website-import",
+  "importedFrom": [
+    "reference/dreamlayoutcontainerhorizontalbox"
+  ],
+  "pageMetadata": {
+    "reference/dreamlayoutcontainerhorizontalbox": {
+      "title": "UDreamLayoutContainerHorizontalBox",
+      "description": "UMG Horizontal Box"
+    }
+  }
+}

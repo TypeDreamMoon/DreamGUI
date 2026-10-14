@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "sourceFile": "Docs/Reference/DreamLayoutContainerSizeBox.md",
+  "translationFile": "Docs/zh-CN/Reference/DreamLayoutContainerSizeBox.md",
+  "sourceHash": null,
+  "importedSourceHash": "61e6ac18b1e21875fbe90de56190249f9f5937634f40e3f7faef056bdb757577",
+  "sourceRevision": "5d4e5ce0ebb734a3f2d46d5a371674cfa1b69176",
+  "translationHash": "b1be0175f125a1db50ffeadefac44c08d43ec006950f3197e7d287b698ecf5db",
+  "origin": "website-import",
+  "importedFrom": [
+    "reference/dreamlayoutcontainersizebox"
+  ],
+  "pageMetadata": {
+    "reference/dreamlayoutcontainersizebox": {
+      "title": "UDreamLayoutContainerSizeBox",
+      "description": "UMG Size Box"
+    }
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "sourceFile": "Docs/Reference/DreamListStyle.md",
+  "translationFile": "Docs/zh-CN/Reference/DreamListStyle.md",
+  "sourceHash": null,
+  "importedSourceHash": "f8b613aa552345631fe6536136f5cd49ee811b4a271b1bb28bf0a247ec5db34c",
+  "sourceRevision": "5d4e5ce0ebb734a3f2d46d5a371674cfa1b69176",
+  "translationHash": "b0f60a537b2b82a655d71f44aa88052e7fd66193f2fd99cd1fa91bc48e87ee25",
+  "origin": "website-import",
+  "importedFrom": [
+    "reference/dreamliststyle"
+  ],
+  "pageMetadata": {
+    "reference/dreamliststyle": {
+      "title": "FDreamListStyle",
+      "description": "A list: rows built from a source, in a scrolling viewport."
+    }
+  }
+}

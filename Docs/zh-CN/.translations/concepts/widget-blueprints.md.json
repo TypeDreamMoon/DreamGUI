@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "sourceFile": "Docs/concepts/widget-blueprints.md",
+  "translationFile": "Docs/zh-CN/concepts/widget-blueprints.md",
+  "sourceHash": null,
+  "importedSourceHash": "b765acfc0a4d4d94ed7a9b8db7794e3bccfd4f625dfe9e538ffff924fb2b59b5",
+  "sourceRevision": "5d4e5ce0ebb734a3f2d46d5a371674cfa1b69176",
+  "translationHash": "2849e9a001cbe935de10bce7dcad9f0ef620aeb20ef2390aae646c780cf6b7a7",
+  "origin": "website-import",
+  "importedFrom": [
+    "concepts/widget-blueprints"
+  ],
+  "pageMetadata": {
+    "concepts/widget-blueprints": {
+      "title": "Widget Blueprint",
+      "description": "一棵 UI 树是一个类：UDreamWidgetBlueprint 编译成 UDreamUserWidget；子类化与嵌套、命名槽、按名字绑定孩子、设计器直接改类而没有 Apply，被取代的 prefab 模型，以及 .dui 作为 Blueprint 的源文件。"
+    }
+  }
+}

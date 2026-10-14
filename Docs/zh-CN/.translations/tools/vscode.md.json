@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "sourceFile": "Docs/tools/vscode.md",
+  "translationFile": "Docs/zh-CN/tools/vscode.md",
+  "sourceHash": null,
+  "importedSourceHash": "cc0fc74a1e194c1136a9ded5ef67881c1bc38773c6db4eb27fb3478e536097e7",
+  "sourceRevision": "5d4e5ce0ebb734a3f2d46d5a371674cfa1b69176",
+  "translationHash": "ab9a1f54b2b69804d58984ee00ec7295bd112febc5149b8b7a0a445c99ddf423",
+  "origin": "website-import",
+  "importedFrom": [
+    "tools/vscode"
+  ],
+  "pageMetadata": {
+    "tools/vscode": {
+      "title": "VS Code 扩展",
+      "description": "DreamGUI Language Support 的安装、它能做什么、补全数据 DUI/.dui-symbols.json 从哪来、和正在运行的编辑器之间的桥，以及命令和设置。"
+    }
+  }
+}

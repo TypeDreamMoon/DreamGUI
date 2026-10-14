@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "sourceFile": "Docs/Reference/DreamTextInput.md",
+  "translationFile": "Docs/zh-CN/Reference/DreamTextInput.md",
+  "sourceHash": null,
+  "importedSourceHash": "6fc7c8ef67bafa44926a6ffd328e021006a75b4fd92a4f2f7ee40b206e07810d",
+  "sourceRevision": "5d4e5ce0ebb734a3f2d46d5a371674cfa1b69176",
+  "translationHash": "9fdc86090a17554d28c0d252bd6aa309d4afa9a10a57626e4befcf2f14bbb7b5",
+  "origin": "website-import",
+  "importedFrom": [
+    "reference/dreamtextinput"
+  ],
+  "pageMetadata": {
+    "reference/dreamtextinput": {
+      "title": "UDreamTextInput",
+      "description": "A text field whose hierarchy is code, not an asset."
+    }
+  }
+}

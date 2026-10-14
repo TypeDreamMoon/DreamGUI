@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "sourceFile": "Docs/Reference/DreamLayoutContainerCanvasPanel.md",
+  "translationFile": "Docs/zh-CN/Reference/DreamLayoutContainerCanvasPanel.md",
+  "sourceHash": null,
+  "importedSourceHash": "282c823a1f2889a2c3c724ae6e90f956de21d4805035937a80012cf64c656d51",
+  "sourceRevision": "5d4e5ce0ebb734a3f2d46d5a371674cfa1b69176",
+  "translationHash": "076803bdc80e3c65a73bd73828010ea0962d02c2e820dc41c34de3cfd006d388",
+  "origin": "website-import",
+  "importedFrom": [
+    "reference/dreamlayoutcontainercanvaspanel"
+  ],
+  "pageMetadata": {
+    "reference/dreamlayoutcontainercanvaspanel": {
+      "title": "UDreamLayoutContainerCanvasPanel",
+      "description": "UMG Canvas Panel"
+    }
+  }
+}

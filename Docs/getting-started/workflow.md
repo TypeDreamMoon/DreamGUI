@@ -1,0 +1,121 @@
+---
+title: Workflow
+description: The whole loop of authoring a screen — text and designer writing back to each other, save-to-recompile, placing it on the screen or in the world, wiring interaction, animating, and looking when something is off.
+---
+
+## One file, two ways in
+
+A text-authored widget Blueprint has one truth: its `.dui`. There are two ways to change it, and both always see the
+same thing.
+
+- **In the text.** Open it in VS Code (*Tools ▸ Open DreamUI Workspace (VSCode)* rewrites `DUI/DreamUI.code-workspace`
+  from the current source roots and opens it, falling back to Notepad when VS Code is unavailable). The extension's
+  completion comes from the `DUI/.dui-symbols.json` the editor writes; see [VS Code extension](../tools/vscode.md).
+- **In the designer.** The designer is a front end for the file: a change made there is a change to the text, written
+  into the line that holds the value — or a new line after the node's others — with everything else byte for byte as
+  it was. A few changes have no line to write into — the visibility of a widget an `if` shows or hides, for one — and the
+  designer says so ([DUI7004](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui7xxx#dui7004)) instead of inventing one. See
+  [Write-back](../language/write-back.md).
+
+### Save to recompile
+
+Save a `.dui` in an outside editor and the **loaded** classes built from it recompile. An editor writes a file more than
+once per save, so changes are collected for a moment (0.75 seconds) before anything happens.
+
+- A failed compile shows a notification with an **Open the file** link to the file that failed.
+- More than 8 files changing at once (a branch switch, a bulk rewrite) is **not** compiled unasked; a notification
+  offers **Rebuild them now**. The files are kept, not dropped — dropping them would leave those classes stale with
+  nothing to say so.
+- A source file deleted or renamed gets a notification naming the classes now built from nothing.
+- *Tools ▸ Rebuild DUI* recompiles every text-backed widget Blueprint in the project, loading the ones that are not, and
+  asks first.
+
+A diagnostic reads `File.dui(line,col): error DUI3001: …`, and its first digit says which stage refused: 1 lexer,
+2 parser, 3 meaning, 4 values, 5 building the tree, 6 compiling into the Blueprint, 7 writing back. Every one is in
+[Diagnostics](../diagnostics/index.md) with its cause and fix.
+
+## The shape of a day
+
+### Write
+
+Write the tree in VS Code or in the designer: nodes, properties, styles, components. A new file can start from the
+designer's **Create Source File...**, which writes a `.dui` with a starter hierarchy. Reuse is by component: after
+`use "Components/Row.dui" as Row`, `Row Audio { … }` is an instance of that class (see
+[Components](../language/components.md)).
+
+### Compile
+
+Save. The designer's preview follows. On an error, read the notification and the line and column in the diagnostic.
+
+### Place
+
+On the screen: **Create Dream Widget** then **Add to Viewport** in a graph, `UDreamUIBPLibrary::AddWidgetOfClassToViewport`
+in C++. In the world: drag the widget Blueprint into a level
+and get an `ADreamWorldWidgetActor`. One class, both uses, nothing changed in it (see
+[Your first screen](first-screen.md) and [World space](../concepts/world-space.md)).
+
+### Wire up interaction
+
+Events have one mechanism, spelled the same way everywhere: a **route**. `EventName -> Handler` names a function on the
+**user widget** — the class the tree compiles into, which is where UMG puts event handling too. The compiler resolves
+every route into `UDreamWidgetBlueprint::EventBindings`, and `UDreamUserWidget::BindEventBindings` attaches them at
+Initialize. In the designer the same thing is the *Events* section of the details panel: the `+` creates a custom event
+with the right signature and the route that names it. A handler the class lacks is
+[DUI6004](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui6xxx#dui6004); one whose parameters do not match is
+[DUI6005](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui6xxx#dui6005).
+
+Properties are driven by bindings: `Text <- GetTitle()` makes a property follow an expression, `Value <-> Volume`
+mirrors it both ways. See [Bindings](../language/bindings.md).
+
+### Animate
+
+A `timeline` block is an animation the file owns: one line per track, with a node path, the property it drives and the
+keys. It compiles into a `UDreamWidgetAnimation` in the root's animation component, gets its class member variable like
+any other animation, and plays through `UDreamUserWidget::PlayAnimation`. Because the file owns it, every compile
+rebuilds it and **the animation editor opens it read-only**; to hand an animation to Sequencer for good, write
+`timeline Name external`. Inside a panel, animate a component through its render-transform tweens (`RenderOffsetTo`,
+`RenderScaleTo`, `RenderAngleTo`, `RenderTranslationTo`), which move what is drawn and never the layout. See
+[Timelines](../language/timelines.md) and [Animation](../concepts/animation.md).
+
+### See what it drew, and what it cost
+
+`DreamUI.Capture` writes a PNG of the viewport and of every render-target canvas; `DreamUI.Stats` prints what each stage
+cost since the last time it was asked; `DreamGUI.Memory` prints what the fonts, atlases and canvases hold. For something
+drawn wrong or not drawn, reproduce it with `r.DreamUI.VerifyPartialPrepare 1`. See [Debugging](../tools/debugging.md).
+
+Interaction and animation together, a small pause menu looks like this:
+
+```dui
+class /Game/UI/WBP_Pause
+
+Widget Root {
+    AnchorData.AnchorMin = (0, 0)
+    AnchorData.AnchorMax = (1, 1)
+    AnchorData.SizeDelta = (0, 0)
+    + Overlay {}
+
+    Native.Button Resume {
+        AnchorData.SizeDelta = (240, 56)
+        @slot HorizontalAlignment = Center
+        @slot VerticalAlignment   = Center
+        OnClicked -> HandleResume
+
+        Text Label { Text = "Resume" }
+    }
+}
+
+timeline Appear {
+    duration = 0.3
+    Resume.RenderScale : 0.0 = (0.9, 0.9, 1), 0.3 = (1, 1, 1) ease OutCubic
+}
+```
+
+`Native.Button` is the registry tag of the plugin's button control; `OnClicked -> HandleResume` needs a function or
+custom event called `HandleResume` on `WBP_Pause`; `Appear` compiles into an animation with a class member variable of
+its own — drag that variable into `PlayAnimation` to play it.
+
+**Note:**
+
+  The designer and the text are two views of one class: there is no apply step, and no per-instance override list to
+  reconcile. Content a parent supplies to a child goes through named slots; see
+  [Widget Blueprints](../concepts/widget-blueprints.md).

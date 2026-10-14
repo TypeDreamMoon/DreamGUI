@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "sourceFile": "Docs/Reference/DreamUIWidgetGeometry.md",
+  "translationFile": "Docs/zh-CN/Reference/DreamUIWidgetGeometry.md",
+  "sourceHash": null,
+  "importedSourceHash": "4327cb46d87fc9b9c37c74cf28c08cbb2195ecad8581979becc3c82a4f23a537",
+  "sourceRevision": "5d4e5ce0ebb734a3f2d46d5a371674cfa1b69176",
+  "translationHash": "aad94095833280b3c370e550ddd60209b0e33e51955a487296e2427c0529aecf",
+  "origin": "website-import",
+  "importedFrom": [
+    "reference/dreamuiwidgetgeometry"
+  ],
+  "pageMetadata": {
+    "reference/dreamuiwidgetgeometry": {
+      "title": "FDreamUIWidgetGeometry",
+      "description": "A widget's measured rect, and the handle every coordinate conversion below is asked through --"
+    }
+  }
+}

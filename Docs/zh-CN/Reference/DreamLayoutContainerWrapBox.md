@@ -1,0 +1,61 @@
+---
+title: "UDreamLayoutContainerWrapBox"
+description: "UMG Wrap Box"
+---
+
+**提示：**
+
+本页由 `DreamGUIReferenceDocs` commandlet 从反射生成，正文是头文件注释的原文（英文），所以不翻译——这样它永远和代码一致。概念讲解见[核心概念](../concepts/widgets.md)。
+
+
+
+Inherits from [UDreamPanelLayoutBase](DreamPanelLayoutBase.md).
+
+Declared in `Public/Core/Components/DreamPanelLayouts.h`.
+
+UMG Wrap Box
+
+<a id="properties"></a>
+
+## Properties
+
+| Name | Type | Category | In the details panel | From Blueprint | Description |
+|---|---|---|---|---|---|
+| `Padding` | `FMargin` | WrapBox | yes | `SetPadding` |  |
+| `Spacing` | `FVector2D` | WrapBox | yes | `SetSpacing` |  |
+| `WrapSize` | `float` | WrapBox | yes | `SetWrapSize` |  |
+| `bExplicitWrapSize` | `bool` | WrapBox | yes | `SetExplicitWrapSize` |  |
+| `Orientation` | `EDreamPanelOrientation` | WrapBox | yes | `SetOrientation` | Which way the lines run. Horizontal fills a row and wraps downwards -- the classic wrap box, and what this panel has always done; Vertical fills a column and wraps to the right. |
+| `HorizontalAlignment` | `EDreamPanelHorizontalAlignment` | WrapBox | yes | `SetHorizontalAlignment` | Where a line that did not fill the wrap width sits inside it. UMG enables this for a horizontal box only, and so does this: in a vertical box the lines are columns and there is no horizontal line length for the value to describe. |
+
+<a id="functions"></a>
+
+## Functions
+
+| Function | Kind | Description |
+|---|---|---|
+| `FVector2D GetInnerSlotPadding()` | pure | UMG's UWrapBox::InnerSlotPadding, which is this panel's Spacing: the gap it leaves between slots. |
+| `void SetExplicitWrapSize(bool Value)` | callable | Set Explicit Wrap Size |
+| `void SetHorizontalAlignment(EDreamPanelHorizontalAlignment Value)` | callable | Set Horizontal Alignment |
+| `void SetInnerSlotPadding(FVector2D InPadding)` | callable | Set Inner Slot Padding |
+| `void SetOrientation(EDreamPanelOrientation Value)` | callable | Set Orientation |
+| `void SetPadding(FMargin Value)` | callable | Set Padding |
+| `void SetSpacing(FVector2D Value)` | callable | Set Spacing |
+| `void SetWrapSize(float Value)` | callable | Set Wrap Size |
+
+<a id="compared-with-umg"></a>
+
+## Compared with UMG
+
+Every Blueprint-facing member of the UMG class, and where it went. *adopt*: same name, same meaning. *map*: here under another name or on another type. *reject*: deliberately absent, with the reason.
+
+| UMG | Member | Status | Here | Note |
+|---|---|---|---|---|
+| `UWrapBox` | `InnerSlotPadding` | map | `Spacing` | The same two gaps under the name the rest of this plugin's panels already use: x along a line, y between lines. GetInnerSlotPadding/SetInnerSlotPadding exist under UMG's name and forward. |
+| `UWrapBox` | `WrapSize` | adopt | `WrapSize` | The length of a line whichever way the lines run, so it keeps its meaning in a vertical box. |
+| `UWrapBox` | `bExplicitWrapSize` | adopt | `bExplicitWrapSize` |  |
+| `UWrapBox` | `HorizontalAlignment` | adopt | `HorizontalAlignment` | Where a line that did not fill the wrap length sits inside it, for a horizontal box only -- UMG's own EditCondition. Fill stretches every slot of a line by one factor, SWrapBox's HAlign_Fill: (allotted width - gaps) / (line length - gaps), so the line spans the box and the gaps stay as they are. The target is the box's own width less its padding, not WrapSize, because Slate's is the allotted geometry; what the box measures does not change. |
+| `UWrapBox` | `Orientation` | adopt | `Orientation` | EDreamPanelOrientation rather than Slate's EOrientation. Measure and arrange are both written along the line and across it, so the two orientations are one algorithm. |
+| `UWrapBox` | `SetInnerSlotPadding` | adopt | `SetInnerSlotPadding` | Forwards to SetSpacing. |
+| `UWrapBox` | `SetHorizontalAlignment` | adopt | `SetHorizontalAlignment` |  |
+| `UWrapBox` | `AddChildToWrapBox` | map | `AddChild` | One slot class here means one verb; AddChild returns the slot. |

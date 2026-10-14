@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "sourceFile": "Docs/Reference/DreamScrollBoxStyle.md",
+  "translationFile": "Docs/zh-CN/Reference/DreamScrollBoxStyle.md",
+  "sourceHash": null,
+  "importedSourceHash": "fc980c61051b30b5bd746049bdd6aa0f95bf2cb2db45913509d5c7f386e9d617",
+  "sourceRevision": "5d4e5ce0ebb734a3f2d46d5a371674cfa1b69176",
+  "translationHash": "31cdb414259a652e09bcbce65819b8a99306af5c18b4bbd9141f0fc0d5bf5bbc",
+  "origin": "website-import",
+  "importedFrom": [
+    "reference/dreamscrollboxstyle"
+  ],
+  "pageMetadata": {
+    "reference/dreamscrollboxstyle": {
+      "title": "FDreamScrollBoxStyle",
+      "description": "Dream Scroll Box Style"
+    }
+  }
+}

@@ -1,0 +1,59 @@
+---
+title: "UDreamLayoutContainerMenuAnchor"
+description: "UMG's UMenuAnchor, layout side."
+---
+
+**提示：**
+
+本页由 `DreamGUIReferenceDocs` commandlet 从反射生成，正文是头文件注释的原文（英文），所以不翻译——这样它永远和代码一致。概念讲解见[核心概念](../concepts/widgets.md)。
+
+
+
+Inherits from [UDreamPanelLayoutBase](DreamPanelLayoutBase.md).
+
+Declared in `Public/Core/Components/DreamPanelLayouts.h`.
+
+UMG's UMenuAnchor, layout side.
+
+The first child is the anchor -- the button, the combo box face -- and is filled like a Border's
+content. An optional second child is the menu: it does NOT contribute to this panel's measured size
+(a menu that grew its own button would be unusable) and is placed against the anchor's rect by
+Placement, then clamped into the root widget when bFitInWindow is set.
+
+With no menu authored as the second child, one is built each time the menu opens -- by OnGetMenuContent,
+else from MenuClass -- and destroyed when it closes, as UMG builds and releases its menu content.
+
+Where the menu is drawn is bUseApplicationMenuStack's question. Off, it is drawn in place: clipped by
+the anchor's ancestors and sorted with its siblings, as every saved anchor has always drawn it. On, the
+menu goes onto its player's popup layer (UDreamUIPopupLayer::Push) for as long as it is open -- above
+everything, dismissed by a press outside it, Back or Tab, following the anchor -- and is placed there by this
+panel's own Placement and bFitInWindow, with the slot it has here (padding, nudge), so it lands where it would in place.
+
+<a id="properties"></a>
+
+## Properties
+
+| Name | Type | Category | In the details panel | From Blueprint | Description |
+|---|---|---|---|---|---|
+| `Placement` | `EDreamMenuPlacement` | MenuAnchor | yes | `SetPlacement` |  |
+| `bFitInWindow` | `bool` | MenuAnchor | yes | `SetFitInWindow` | Keep the placed menu inside the root widget's rect, shifting it rather than letting it overhang. |
+| `bIsOpen` | `bool` | MenuAnchor | yes | `SetIsOpen` |  |
+| `bUseApplicationMenuStack` | `bool` | MenuAnchor | yes | `SetUseApplicationMenuStack` | Open the menu on its player's popup layer rather than in place -- UMG's UseApplicationMenuStack. The menu is lifted onto the player's screen root while it is open, so no ancestor clips it; a press outside it, Back, or its anchor going away closes it (and bIsOpen with it); and it follows the anchor, placed by Placement and bFitInWindow. Off by default, where UMG's is on, so an anchor saved before this existed keeps drawing in place. |
+| `MenuClass` | `TSubclassOf<UDreamUserWidget>` | MenuAnchor | yes | `SetMenuClass` | A user widget made each time the menu opens and destroyed when it closes -- UMG's MenuClass. Used when no menu is authored as the second child and OnGetMenuContent answers nothing. |
+| `OnGetMenuContent` | `FDreamPanelMenuAnchorGetContent` | MenuAnchor | - | read / write | Asked for the menu each time it opens, ahead of MenuClass -- UMG's OnGetUserMenuContentEvent. What it hands back is put under this anchor as its menu and is the anchor's from then on: destroyed when the menu closes, as UMG releases the content it was given. Hand a fresh widget each time. Ignored while a menu is authored as the second child. |
+
+<a id="functions"></a>
+
+## Functions
+
+| Function | Kind | Description |
+|---|---|---|
+| `UDreamWidget* GetAnchorContent()` | pure | The first child: the thing the menu is anchored to. Null when the panel is empty. |
+| `UDreamWidget* GetMenuContent()` | pure | The menu: the second child, authored or built -- or, while it is lifted onto the popup layer, the lifted widget, which is then nobody's child here. Null when this anchor has no menu. |
+| `bool IsOpen()` | pure | Is Open |
+| `void SetFitInWindow(bool Value)` | callable | Set Fit in Window |
+| `void SetIsOpen(bool Value)` | callable | Show or hide the menu. Closed, it is collapsed, so it costs no layout and no hit test. Opening builds the menu when none is authored, and pushes it onto the popup layer under bUseApplicationMenuStack. |
+| `void SetMenuClass(TSubclassOf<UDreamUserWidget> Value)` | callable | Closes a menu that was built from the old class first. |
+| `void SetPlacement(EDreamMenuPlacement Value)` | callable | Set Placement |
+| `void SetUseApplicationMenuStack(bool Value)` | callable | Takes effect at once: an open menu is closed and opened again the other way. |
+| `void ToggleOpen()` | callable | Toggle Open |

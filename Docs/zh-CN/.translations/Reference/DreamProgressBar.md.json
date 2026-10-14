@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "sourceFile": "Docs/Reference/DreamProgressBar.md",
+  "translationFile": "Docs/zh-CN/Reference/DreamProgressBar.md",
+  "sourceHash": null,
+  "importedSourceHash": "f02f32584cdbea7f423459aca469422d246cf5586aeb6a16087649c55aeacc32",
+  "sourceRevision": "5d4e5ce0ebb734a3f2d46d5a371674cfa1b69176",
+  "translationHash": "ebaf7edffdcd0dabd0d96ac870a79a362693dd699c4b1825d6c520f1cc5eb2db",
+  "origin": "website-import",
+  "importedFrom": [
+    "reference/dreamprogressbar"
+  ],
+  "pageMetadata": {
+    "reference/dreamprogressbar": {
+      "title": "UDreamProgressBar",
+      "description": "A progress bar whose hierarchy is code, not an asset."
+    }
+  }
+}

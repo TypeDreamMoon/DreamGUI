@@ -1,5 +1,5 @@
 <p align="center">
-  <img alt="DreamGUI banner" src="./Images/banner.png" />
+  <img alt="DreamGUI banner" src="Images/banner.png" />
 </p>
 
 <table>
@@ -24,7 +24,7 @@
         <a href="README.zh-CN.md">中文文档</a> &nbsp;·&nbsp;
         <a href="https://gui.toolchain.64hz.cn/en/docs">Documentation</a> &nbsp;·&nbsp;
         <a href="https://gui.toolchain.64hz.cn/en/docs/start/installation">Getting started</a> &nbsp;·&nbsp;
-        <a href="Docs/DuiLanguage.md">.dui language</a> &nbsp;·&nbsp;
+        <a href="Docs/language/index.md">.dui language</a> &nbsp;·&nbsp;
         <a href="Docs/Reference/index.md">Class reference</a> &nbsp;·&nbsp;
         <a href="CHANGELOG.md">Changelog</a>
       </p>
@@ -44,7 +44,7 @@
       </p>
     </td>
     <td width="36%" align="center" valign="middle">
-      <img src="./Images/character.png" width="260" alt="DreamGUI character" />
+      <img src="Images/character.png" width="260" alt="DreamGUI character" />
     </td>
   </tr>
 </table>
@@ -57,7 +57,7 @@
 > [!NOTE]
 > **1.0.0 is the first public release.** The fork's development builds before it were numbered 1.x, 2.0.0 and
 > 2.1.0 (commits `2416e3f8`, `3049561a` on `main`); a project on one of them reads
-> [Docs/Migration.md](Docs/Migration.md#from-21-to-100) — 1.0.0 carries no CoreRedirects, so assets saved by those
+> [Docs/guides/migration.md](Docs/guides/migration.md#from-21-to-100) — 1.0.0 carries no CoreRedirects, so assets saved by those
 > builds, or against LGUI and LexUI, are resaved once before they are opened with it. DreamGUI is a fork of
 > [LGUI / LexUI](https://github.com/liufei2008/LGUI) by Lex Liu, MIT licensed — not a drop-in replacement for it.
 
@@ -156,17 +156,19 @@ and why — held against UMG's own reflection by the automation suite.
 
 ## Documentation
 
+The canonical English manual starts at [Docs/README.md](Docs/README.md).
+
 The manual is published at **<https://gui.toolchain.64hz.cn>** in Chinese and English.
 
 | | |
 | :-- | :-- |
 | **[Getting started](https://gui.toolchain.64hz.cn/en/docs/start/installation)** | install, a first screen, the project layout and the authoring loop |
 | **[Concepts](https://gui.toolchain.64hz.cn/en/docs/concepts/widgets)** | widgets, canvases, world space, widget Blueprints, layout, text, rendering, input, animation |
-| **[The .dui language](https://gui.toolchain.64hz.cn/en/docs/dui/overview)** | every construct of the language, page by page — also in the repository as [Docs/DuiLanguage.md](Docs/DuiLanguage.md) |
+| **[The .dui language](https://gui.toolchain.64hz.cn/en/docs/dui/overview)** | every construct of the language, page by page — also in the repository as [Docs/language/index.md](Docs/language/index.md) |
 | **[Controls](https://gui.toolchain.64hz.cn/en/docs/controls)** | the control library, styles and style sheets, UMG parity |
 | **[Class reference](https://gui.toolchain.64hz.cn/en/docs/reference)** | every public class, printed from reflection — also as [Docs/Reference](Docs/Reference/index.md) |
 | **[Diagnostics](https://gui.toolchain.64hz.cn/en/docs/diagnostics)** | every `DUInnnn` code: what it means, how it happens, how to fix it |
-| **[Guides](https://gui.toolchain.64hz.cn/en/docs/guides/fonts-and-packaging)** | fonts and packaging, moving from LGUI / LexUI, upgrading, platforms — [Docs/Migration.md](Docs/Migration.md), [Docs/FontsAndPackaging.md](Docs/FontsAndPackaging.md) |
+| **[Guides](https://gui.toolchain.64hz.cn/en/docs/guides/fonts-and-packaging)** | fonts and packaging, moving from LGUI / LexUI, upgrading, platforms — [Docs/guides/migration.md](Docs/guides/migration.md), [Docs/guides/fonts-and-packaging.md](Docs/guides/fonts-and-packaging.md) |
 | **[Changelog](CHANGELOG.md)** | what each version changed |
 
 ## Editor and tooling
@@ -198,7 +200,7 @@ other way. C++ that uses a type from a module other than the core adds that modu
 
 The plugin ships no CoreRedirects. Assets saved against LGUI, LexUI or a build before 1.0.0 are resaved once with
 2.1.0's redirect block borrowed into the project's config —
-[Docs/Migration.md](Docs/Migration.md#from-21-to-100) has the three steps.
+[Docs/guides/migration.md](Docs/guides/migration.md#from-21-to-100) has the three steps.
 
 ## Platforms
 
@@ -233,7 +235,7 @@ and what was checked for a dedicated server are on
 
 ## License
 
-MIT — see [LICENSE](./LICENSE).
+MIT — see [LICENSE](LICENSE).
 
 Copyright (c) 2026-present TypeDreamMoon
 Copyright (c) 2019-present Lex Liu
@@ -253,3 +255,5 @@ For bug reports and feature requests, open an [issue](https://github.com/TypeDre
    <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=typedreammoon/dreamgui&type=date&legend=bottom-right" />
  </picture>
 </a>
+
+Documentation: [English](Docs/README.md) · [简体中文](Docs/zh-CN/README.md) (imported translations awaiting review).

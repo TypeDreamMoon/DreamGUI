@@ -1,0 +1,124 @@
+---
+title: "UDreamBorder"
+description: "A border whose hierarchy is code, not an asset: a face, a padding, and a hole to put things in."
+---
+
+**提示：**
+
+本页由 `DreamGUIReferenceDocs` commandlet 从反射生成，正文是头文件注释的原文（英文），所以不翻译——这样它永远和代码一致。概念讲解见[核心概念](../concepts/widgets.md)。
+
+
+
+Inherits from [UDreamUIControl](DreamUIControl.md).
+
+Declared in `Public/Controls/DreamBorder.h`.
+
+A border whose hierarchy is code, not an asset: a face, a padding, and a hole to put things in.
+
+UMG's Border is a single-child panel that draws a brush behind whatever it holds, and this library
+already offers that SHAPE as a palette panel -- an overlay carrying an image visual. This is the
+CONTROL spelling, and the difference is the one that runs through this whole family: a panel's
+brush, colour and padding are authored per instance, and a control's come from the project style
+sheet, so restyling a project's boxes is one edit rather than one per box.
+
+SEVERAL CHILDREN, deliberately, where UMG's border takes one. The face carries an overlay, so a
+`Native.Border { A B }` stacks A under B with both filling the padded area -- which is what an
+overlay means and what a reader of those two lines expects. UDreamScrollBox's content slot makes
+the same call for the same reason; a hole that took exactly one child would send every second
+child somewhere invisible.
+
+The outline is part of the face rather than a second widget: UDreamRectBlock draws a border of its
+own, so BorderThickness and BorderColor are pushed into the rect and cost no node. Zero thickness
+is UMG's plain border, which is what the style ships.
+
+<a id="properties"></a>
+
+## Properties
+
+| Name | Type | Category | In the details panel | From Blueprint | Description |
+|---|---|---|---|---|---|
+| `Style` | `FDreamBorderStyle` | Border | yes | `GetStyle` / `SetStyle` | This instance's own look. The project sheet wins while StyleSource says so AND a sheet actually exists; with no sheet in the project this IS the look in effect. |
+| `HorizontalAlignment` | `EDreamPanelHorizontalAlignment` | Border | yes | `GetHorizontalAlignment` / `SetHorizontalAlignment` | Where the content sits inside the padded area -- UMG's HorizontalAlignment / VerticalAlignment. |
+| `VerticalAlignment` | `EDreamPanelVerticalAlignment` | Border | yes | `GetVerticalAlignment` / `SetVerticalAlignment` |  |
+| `BrushColor` | `FColor` | Border | yes | `GetBrushColor` / `SetBrushColor` | A tint over the style's background colour -- UMG's BrushColor, which is a tint over SBorder's brush for the same reason: the style says what a border looks like, and this says what is happening to this one right now. White is no opinion. |
+| `ContentColorAndOpacity` | `FLinearColor` | Border | yes | `GetContentColorAndOpacity` / `SetContentColorAndOpacity` | A tint over the CONTENT -- UMG's ContentColorAndOpacity, colour and alpha both, and never over the border's own face. |
+| `bReportMouseEvents` | `bool` | Border | yes | `GetReportMouseEvents` / `SetReportMouseEvents` | Whether this border reports the pointer -- UMG's four mouse events, off by default. |
+| `bConsumeMouseEvents` | `bool` | Border | yes | `GetConsumeMouseEvents` / `SetConsumeMouseEvents` | Whether a reported pointer event stops here -- this framework's spelling of UMG's Handled. |
+| `FaceNode` | `TObjectPtr<UDreamWidget>` | Border | - | read only | The face: what draws the brush, the tint and the outline, and what clips to the rounding. |
+| `ContentNode` | `TObjectPtr<UDreamWidget>` | Border | - | read only | The hole. Whatever a host nests on this control ends up here. |
+| `EventTrigger` | `TObjectPtr<UUIEventTrigger>` | Border | - | read only | The listener, while there is one. Transient: a component is remade with the tree, not loaded. |
+
+<a id="functions"></a>
+
+## Functions
+
+| Function | Kind | Description |
+|---|---|---|
+| `FDreamUIFaceBrush GetBrush()` | pure | The face's skin, read from the style in effect. |
+| `FColor GetBrushColor()` | pure | Get Brush Color |
+| `bool GetConsumeMouseEvents()` | pure | Get Consume Mouse Events |
+| `FLinearColor GetContentColorAndOpacity()` | pure | Get Content Color and Opacity |
+| `UDreamWidget* GetContentNode()` | pure | Where things go. Parent into this, or nest in `.dui`, and the padding holds them off the edge. |
+| `UUIEventTrigger* GetEventTrigger()` | pure | The listener on the face, or null while bReportMouseEvents is off. |
+| `EDreamPanelHorizontalAlignment GetHorizontalAlignment()` | pure | Get Horizontal Alignment |
+| `FMargin GetPadding()` | pure | What holds the content off the edge, read from the style in EFFECT rather than from the field beside it -- so a border driven by the project sheet answers the number it is actually drawn with rather than the one this instance happens to be carrying. |
+| `bool GetReportMouseEvents()` | pure | Get Report Mouse Events |
+| `FDreamBorderStyle GetStyle()` | pure | Get Style |
+| `EDreamPanelVerticalAlignment GetVerticalAlignment()` | pure | Get Vertical Alignment |
+| `void SetBrush(FDreamUIFaceBrush InBrush)` | callable | Set Brush |
+| `void SetBrushColor(FColor InBrushColor)` | callable | Set Brush Color |
+| `void SetBrushFromSprite(UDreamUISpriteData_BaseObject* InSprite)` | callable | The other thing a face brush takes: an atlas sprite. UMG has no call for it because Slate has no atlas; here it is the cheaper of the two, so leaving it unreachable would make the expensive road the only one a caller could find. |
+| `void SetBrushFromTexture(UTexture2D* InTexture)` | callable | The common case of the above, and the one UMG spells: put this texture on the face and leave every other thing about the brush where it was. |
+| `void SetConsumeMouseEvents(bool bInConsumeMouseEvents)` | callable | Set Consume Mouse Events |
+| `void SetContentColorAndOpacity(FLinearColor InContentColorAndOpacity)` | callable | See the property: colour and alpha both tint everything inside, and nothing of the face. |
+| `void SetHorizontalAlignment(EDreamPanelHorizontalAlignment InHorizontalAlignment)` | callable | Set Horizontal Alignment |
+| `void SetPadding(FMargin InPadding)` | callable | Every appearance setter below edits THIS INSTANCE'S style and re-pushes, because the padding, the brush and the rest are one quantity and the style is where it lives -- a second copy on the control is how a control and its style learn to disagree. |
+| `void SetReportMouseEvents(bool bInReportMouseEvents)` | callable | Makes or unmakes the listener on the face. Off destroys it, so an off border costs nothing. |
+| `void SetStyle(FDreamBorderStyle InStyle)` | callable | This instance's whole look, replaced and pushed. See UDreamButton::SetStyle for the caveat. |
+| `void SetVerticalAlignment(EDreamPanelVerticalAlignment InVerticalAlignment)` | callable | Set Vertical Alignment |
+
+<a id="events"></a>
+
+## Events
+
+| Event | Signature | Description |
+|---|---|---|
+| `OnMouseButtonDownEvent` | `void DreamBorderPointerEvent__DelegateSignature(UDreamPointerEventData* PointerEvent)` | The four moments UMG's border speaks, re-broadcast from the pointer system. |
+| `OnMouseButtonUpEvent` | `void DreamBorderPointerEvent__DelegateSignature(UDreamPointerEventData* PointerEvent)` |  |
+| `OnMouseMoveEvent` | `void DreamBorderPointerEvent__DelegateSignature(UDreamPointerEventData* PointerEvent)` | Pointer MOTION over the border, which this system reports as the drag it is part of. |
+| `OnMouseDoubleClickEvent` | `void DreamBorderPointerEvent__DelegateSignature(UDreamPointerEventData* PointerEvent)` | The second press of a double click, and the fourth, and the sixth -- said at that PRESS, and in place of OnMouseButtonDownEvent for it, which is how UBorder reports one: Slate routes the second press to OnMouseButtonDoubleClick and never to OnMouseButtonDown, so a double click here is one button down, one double click and two button ups. |
+
+<a id="compared-with-umg"></a>
+
+## Compared with UMG
+
+Every Blueprint-facing member of the UMG class, and where it went. *adopt*: same name, same meaning. *map*: here under another name or on another type. *reject*: deliberately absent, with the reason.
+
+| UMG | Member | Status | Here | Note |
+|---|---|---|---|---|
+| `UBorder` | `HorizontalAlignment` | adopt | `HorizontalAlignment` | EDreamPanelHorizontalAlignment. On the control rather than in the style: where a thing sits is that thing's business, and two borders sharing a sheet hold different things. |
+| `UBorder` | `VerticalAlignment` | adopt | `VerticalAlignment` |  |
+| `UBorder` | `bShowEffectWhenDisabled` | map | `UDreamLayoutContainerBorder::bShowEffectWhenDisabled` | On the PANEL spelling of a border, on by default as UMG's is: while the border's widget is disabled (its own switch or an ancestor's, UDreamWidget::GetIsEnabledInHierarchy) the background -- the owning widget's visual -- draws at 45% of its alpha, which is what SBorder's disabled draw effect comes to in the default Slate shader. Only the background: what the border holds shows its own disabled look. |
+| `UBorder` | `ContentColorAndOpacity` | adopt | `ContentColorAndOpacity` | Colour and alpha both, as the content hole's content tint (UDreamWidget::SetContentTint): every visual below the hole is multiplied by it in linear space on its way to the screen, as SCompoundWidget blends its ColorAndOpacity into what its children paint with, and the border's own face is never tinted. Nothing inside is written to, and the content's RenderOpacity is left free for whatever fades it. UDreamLayoutContainerBorder::ContentColorAndOpacity is the same on the panel spelling. |
+| `UBorder` | `Padding` | map | `FDreamBorderStyle::Padding` | In the style, because it is one quantity and a second copy on the control is how the two learn to disagree. GetPadding answers the RESOLVED number; SetPadding edits this instance's style. |
+| `UBorder` | `Background` | map | `FDreamBorderStyle::BackgroundBrush` | FDreamUIFaceBrush rather than FSlateBrush -- a control face is a procedural rect, and the brush is its body texture. See the struct's own note. |
+| `UBorder` | `BrushColor` | adopt | `BrushColor` | FColor, and a TINT over the style's background colour -- which is what it is in Slate too. |
+| `UBorder` | `DesiredSizeScale` | map | `UDreamLayoutContainerBorder::DesiredSizeScale` | On the PANEL spelling of a border, where it already scales what the panel reports (MeasureLayout multiplies the result and arranges the content in the rect it actually got -- UBorder's rule exactly). The control lays its face and its content out with an overlay of its own rather than through that panel; a project that needs the report scaled uses the panel, or wraps the control in one. |
+| `UBorder` | `bFlipForRightToLeftFlowDirection` | map | `UDreamLayoutContainerBorder::bFlipForRightToLeftFlowDirection` | On the PANEL spelling of a border, off by default as UMG's is: while it is on and the border lays out right to left, the background -- the owning widget's visual -- is mirrored about its own centre by a run-time UDreamMeshModifierMirror, as SBorder draws its brush through a (-1, 1) render transform. The content is not mirrored by it: where the content sits is the panel's to mirror, and every panel that arranges through CommitChildRect already reflects its children across its width under a right-to-left flow (UDreamWidget::FlowDirectionPreference). |
+| `UBorder` | `OnMouseButtonDownEvent` | adopt | `OnMouseButtonDownEvent` | A multicast carrying UDreamPointerEventData, not UMG's FEventReply-returning single binding: nothing in this event system asks a handler per call whether the event carries on. That answer is one property for all four -- bConsumeMouseEvents, which is UUIEventTrigger::AllowEventBubbleUp inverted. Gated on bReportMouseEvents, off by default, because a listening border is a consuming border. |
+| `UBorder` | `OnMouseButtonUpEvent` | adopt | `OnMouseButtonUpEvent` |  |
+| `UBorder` | `OnMouseMoveEvent` | adopt | `OnMouseMoveEvent` | Fed by the DRAG seam: this event system reports a moving pointer to the element it pressed on, which is the only motion a border can honestly claim. A hover that never pressed is OnPointerEnter/Exit, which UMG spells elsewhere. |
+| `UBorder` | `OnMouseDoubleClickEvent` | adopt | `OnMouseDoubleClickEvent` | Said at the SECOND PRESS and in place of OnMouseButtonDownEvent for it, as UBorder's is: the event system routes the second press of a double click to the double click and not to the down, which is Slate's FSlateApplication::ProcessMouseButtonDoubleClickEvent. So a double click is one down, one double click and two ups. What counts as a double is the event system's own rule (its DoubleClickTime, the same widget and button, and a second press within the pointer's drag threshold of the first -- the desktop's double-click rectangle and drag threshold are the same few pixels), not a second rule here that could disagree with it. |
+| `UBorder` | `SetContentColorAndOpacity` | map | `SetContentColorAndOpacity` | Colour and alpha both, straight onto the content hole's content tint, as the property above. |
+| `UBorder` | `SetPadding` | adopt | `SetPadding` |  |
+| `UBorder` | `SetHorizontalAlignment` | adopt | `SetHorizontalAlignment` | Pushed straight onto the content slot. |
+| `UBorder` | `SetVerticalAlignment` | adopt | `SetVerticalAlignment` |  |
+| `UBorder` | `SetBrushColor` | adopt | `SetBrushColor` |  |
+| `UBorder` | `SetBrush` | adopt | `SetBrush` | Takes FDreamUIFaceBrush; see Background above for why that is not FSlateBrush. |
+| `UBorder` | `SetBrushFromAsset` | reject |  | USlateBrushAsset wraps an FSlateBrush, which a procedural rect face cannot draw. The two things this framework's face brush takes -- a texture and an atlas sprite -- are what SetBrush and SetBrushFromTexture take. |
+| `UBorder` | `SetBrushFromTexture` | adopt | `SetBrushFromTexture` | Replaces the image and leaves the nine-slice, the scale mode and the tint where they were. |
+| `UBorder` | `SetBrushFromMaterial` | reject |  | A procedural rect has no material of its own to set. Its material is GetMaterialToCreateGeometry -- the shared one the canvas batches every rect with -- and there is no per-instance override anywhere on UDreamVisual (the CustomUIMaterial the comments mention is a leftover name from the upstream library; nothing in this plugin declares it). The two visuals that do carry a material, UDreamText and UDreamImage, are what a material-drawn face is: put one inside the border. SetBrushFromSprite is here instead, which is the thing this face CAN take and Slate cannot. |
+| `UBorder` | `SetShowEffectWhenDisabled` | map | `UDreamLayoutContainerBorder::SetShowEffectWhenDisabled` | See bShowEffectWhenDisabled: the background's alpha follows at once. |
+| `UBorder` | `GetDynamicMaterial` | reject |  | A rect has no material instance of its own: it draws through its draw call's material, whose parameters the canvas answers through a render-thread proxy shared with every other widget batched into the same call. There is nothing to hand out that setting a parameter on would recolour this border alone. |
+| `UBorder` | `SetDesiredSizeScale` | map | `UDreamLayoutContainerBorder::SetDesiredSizeScale` | See DesiredSizeScale above. |
+| `UBorder` | `SetStyle` | adopt | `SetStyle` | UBorder has no style struct at all; this is the family's spelling of replacing a look at runtime. |

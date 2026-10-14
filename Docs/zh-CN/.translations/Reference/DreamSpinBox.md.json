@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "sourceFile": "Docs/Reference/DreamSpinBox.md",
+  "translationFile": "Docs/zh-CN/Reference/DreamSpinBox.md",
+  "sourceHash": null,
+  "importedSourceHash": "28db7bffc9a69e8c6ce287b3b92afa8f4f670bfc1185fd8701f5fd746b9a5cb8",
+  "sourceRevision": "5d4e5ce0ebb734a3f2d46d5a371674cfa1b69176",
+  "translationHash": "3b563a750a01be7d4adbf9cbbd1a9d6c8b287d6fb6e8f8df0e4600bef01275b4",
+  "origin": "website-import",
+  "importedFrom": [
+    "reference/dreamspinbox"
+  ],
+  "pageMetadata": {
+    "reference/dreamspinbox": {
+      "title": "UDreamSpinBox",
+      "description": "A spin box whose hierarchy is code, not an asset."
+    }
+  }
+}

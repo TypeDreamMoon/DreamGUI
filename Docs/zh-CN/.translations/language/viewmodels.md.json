@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "sourceFile": "Docs/language/viewmodels.md",
+  "translationFile": "Docs/zh-CN/language/viewmodels.md",
+  "sourceHash": null,
+  "importedSourceHash": "0871c31b0c045e0cbb1377fff91ba48be6329fd7da63095fb456b89e5641b3a3",
+  "sourceRevision": "5d4e5ce0ebb734a3f2d46d5a371674cfa1b69176",
+  "translationHash": "8c65cc638c7dd48916d8f817ffa3a80ba70ad2644114ee1653a16275e0553ae2",
+  "origin": "website-import",
+  "importedFrom": [
+    "dui/viewmodels"
+  ],
+  "pageMetadata": {
+    "dui/viewmodels": {
+      "title": "视图模型",
+      "description": "viewmodels 块声明类持有的视图模型和它们从哪来；绑定、路由和循环用成员路径读写它们；怎样写一个视图模型，以及经过它的绑定什么时候更新。"
+    }
+  }
+}

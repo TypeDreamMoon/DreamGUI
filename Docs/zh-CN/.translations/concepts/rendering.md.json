@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "sourceFile": "Docs/concepts/rendering.md",
+  "translationFile": "Docs/zh-CN/concepts/rendering.md",
+  "sourceHash": null,
+  "importedSourceHash": "d123b2bea8e2cee0d607fe193ab5a16fe3b4cef26164290cd57f9b18fc80dd86",
+  "sourceRevision": "5d4e5ce0ebb734a3f2d46d5a371674cfa1b69176",
+  "translationHash": "a8994dc336d9a64b18f5ece64f30bdf8ddd0f24419b87f796cdefce3a04fff02",
+  "origin": "website-import",
+  "importedFrom": [
+    "concepts/rendering"
+  ],
+  "pageMetadata": {
+    "concepts/rendering": {
+      "title": "渲染",
+      "description": "渲染器怎么工作：DreamGUIRenderer 视图扩展、世界画布的两种渲染器、draw call 合批、渲染层、视觉上的材质（渲染线程代理、DreamUI_IsRenderByDreamUIRenderer、sRGB 编码值上的混合与渲染器自己做的预乘）、渲染目标画布、屏幕效果，以及 r.DreamUI.Verify* 检查。"
+    }
+  }
+}

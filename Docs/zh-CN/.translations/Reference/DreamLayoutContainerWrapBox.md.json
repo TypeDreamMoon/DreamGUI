@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "sourceFile": "Docs/Reference/DreamLayoutContainerWrapBox.md",
+  "translationFile": "Docs/zh-CN/Reference/DreamLayoutContainerWrapBox.md",
+  "sourceHash": null,
+  "importedSourceHash": "e8c043966cf4da71ae712878b65171d739f1f55f2f84469e02e6c65bf00d8cb6",
+  "sourceRevision": "5d4e5ce0ebb734a3f2d46d5a371674cfa1b69176",
+  "translationHash": "2c555194c6012a00a597c93dd098ca538152a9c9b8f5fffa99cc528a8dea2266",
+  "origin": "website-import",
+  "importedFrom": [
+    "reference/dreamlayoutcontainerwrapbox"
+  ],
+  "pageMetadata": {
+    "reference/dreamlayoutcontainerwrapbox": {
+      "title": "UDreamLayoutContainerWrapBox",
+      "description": "UMG Wrap Box"
+    }
+  }
+}

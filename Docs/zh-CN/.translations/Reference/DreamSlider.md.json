@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "sourceFile": "Docs/Reference/DreamSlider.md",
+  "translationFile": "Docs/zh-CN/Reference/DreamSlider.md",
+  "sourceHash": null,
+  "importedSourceHash": "ca7fc6f77626b01ce8823a40fa9aa20b6a15dae18dfdcf4b04bbea22854c0050",
+  "sourceRevision": "5d4e5ce0ebb734a3f2d46d5a371674cfa1b69176",
+  "translationHash": "29f817ba7f8071c0c8b30b5f0a3ab5929ed50dad48bd8f55bf6b54591e1f5208",
+  "origin": "website-import",
+  "importedFrom": [
+    "reference/dreamslider"
+  ],
+  "pageMetadata": {
+    "reference/dreamslider": {
+      "title": "UDreamSlider",
+      "description": "A slider whose hierarchy is code, not an asset."
+    }
+  }
+}

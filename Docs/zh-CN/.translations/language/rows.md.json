@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "sourceFile": "Docs/language/rows.md",
+  "translationFile": "Docs/zh-CN/language/rows.md",
+  "sourceHash": null,
+  "importedSourceHash": "f1e39d582c43cae7929cbd32476a7e63bbcc4da65bb4a891b546b540849ce293",
+  "sourceRevision": "5d4e5ce0ebb734a3f2d46d5a371674cfa1b69176",
+  "translationHash": "0ba4711f509bb389263979d1bb1b800c86099bc556e3341b8653b46b6892a33a",
+  "origin": "website-import",
+  "importedFrom": [
+    "dui/rows"
+  ],
+  "pageMetadata": {
+    "dui/rows": {
+      "title": "rows 表格",
+      "description": "同一个组件的多个实例写成一张表——类型、样式和属性名只写一次，每行一个实例，按第一个值命名。"
+    }
+  }
+}
