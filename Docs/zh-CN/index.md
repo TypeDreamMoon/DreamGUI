@@ -1,6 +1,6 @@
 ---
-title: 概览
-description: DreamGUI 是 Unreal Engine 5.8 的 3D UI 插件：控件是挂在树上、带矩形、轴心和锚点的 UObject，由画布合批绘制，可以铺在屏幕上，也可以立在关卡里。
+title: "概览"
+description: "DreamGUI 是 Unreal Engine 5.8 的 3D UI 插件：控件是挂在树上、带矩形、轴心和锚点的 UObject，由画布合批绘制，可以铺在屏幕上，也可以立在关卡里。"
 ---
 
 DreamGUI 是 Unreal Engine 5.8 的一套 UI 系统。它的一个控件是一个 `UObject`：有一个矩形、一个轴心（pivot）
@@ -14,10 +14,12 @@ DreamGUI 是 Unreal Engine 5.8 的一套 UI 系统。它的一个控件是一个
 - **一棵树就是一个类。** UI 树写在控件蓝图（`UDreamWidgetBlueprint`）里，靠子类化、以及把一个控件类
   嵌进另一棵树来复用 —— 和 UMG 的控件蓝图是同一种做法。树也可以写成文本：一个 `.dui` 文件就是
   一个控件蓝图的源码，设计器的改动写回这个文件。
-- **逐控件的透视。** 一个控件可以建立一个透视，它的子树按这个透视缩短，就像 CSS 的 `perspective`。
+- **逐控件的透视。** 一个控件可以建立一个透视，它的子树按这个透视缩短，就像 CSS 的
+  `perspective`。
 
 代价是 Slate 的生态用不上：UMG 的控件、样式和绑定在这里都不适用。DreamGUI 有自己的一整套控件，
-名字刻意沿用 UMG 的叫法，叫不了同名的地方都写明了原因（见[它和 UMG、和上游有什么不同](getting-started/about.md)）。
+名字刻意沿用 UMG 的叫法，叫不了同名的地方都写明了原因（见
+[它和 UMG、和上游有什么不同](getting-started/about.md)）。
 
 | | |
 | --- | --- |
@@ -25,14 +27,14 @@ DreamGUI 是 Unreal Engine 5.8 的一套 UI 系统。它的一个控件是一个
 | 引擎 | Unreal Engine `5.8`，源码引擎与 Epic 启动器安装版都可以 |
 | 平台 | Win64 是唯一构建并运行过的平台（见[平台](guides/platforms.md)） |
 | 运行时模块 | `DreamGUIRenderer`、`DreamGUI`、`DreamGUIInput`、`DreamGUIControls`、`DreamGUIExtensions`、`DreamGUISamples`、`DreamTween` |
-| 编辑器侧模块 | `DreamGUIEditor`、`DreamGUIK2Nodes`（`UncookedOnly`），`DreamGUITests`（`Editor`） |
+| 编辑器侧模块 | `DreamGUIEditor`、`DreamGUIK2Nodes`（`UncookedOnly`）、`DreamGUITests`（`Editor`） |
 | 依赖插件 | `EnhancedInput`（插件自己启用） |
 | 源文件 | `.dui`，放在项目或插件的 `DUI/` 目录下 |
 | 项目设置 | *Project Settings ▸ Plugins ▸ Dream GUI* 与 *Project Settings ▸ Plugins ▸ DreamUI* |
 | 许可证 | MIT |
 | 来历 | Lex Liu 的 [LGUI / LexUI](https://github.com/liufei2008/LGUI) 的分叉，不是它的直接替代品 |
 
-<a id="一眼看上去"></a>
+<a id="at-a-glance"></a>
 
 ## 一眼看上去
 
@@ -56,16 +58,16 @@ Widget Root {
 }
 ```
 
-`Root` 锚定在四个角上、不留边，所以它铺满它被加进去的东西；`+ Overlay` 让它把子节点叠在一起排布；
-`Greeting` 是一段 600 × 60 的文本，`@slot` 两行是它对上层 Overlay 提的要求：水平、垂直都居中。
-把一个控件蓝图的 *Source File* 指向这个文件、编译，它就是一个能加到视口、也能拖进关卡的类 ——
-完整的一步一步在[第一个界面](getting-started/first-screen.md)。
+`Root` 锚定在四个角上、不留边，所以它铺满它被加进去的东西；`+ Overlay` 让它把子节点
+叠在一起排布；`Greeting` 是一段 600 × 60 的文本，`@slot` 两行是它对上层 Overlay 提的要求：
+水平、垂直都居中。把一个控件蓝图的 *Source File* 指向这个文件、编译，它就是一个能加到视口、也能拖进关卡
+的类 —— 完整的一步一步在[第一个界面](getting-started/first-screen.md)。
 
-<a id="从哪里开始"></a>
+<a id="where-to-start"></a>
 
 ## 从哪里开始
 
-- [快速上手](getting-started/installation.md) — 安装、第一个界面、项目里的目录结构、日常的创作循环。
+  - [快速上手](getting-started/installation.md) — 安装、第一个界面、项目里的目录结构、日常的创作循环。
   - [核心概念](concepts/widgets.md) — 控件、画布、世界空间、控件蓝图、布局、文本、渲染、输入、动画。
   - [.dui 语言](language/overview.md) — 节点与值、插槽与组件、样式、use、组件、视图模型、绑定、if 与 for、rows、时间轴、写回。
   - [控件库](controls/index.md) — 按钮、开关、滑条、列表、对话框、标签页……以及样式表和与 UMG 的逐项对照。

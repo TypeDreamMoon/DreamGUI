@@ -1,93 +1,88 @@
 ---
-title: 日常循环
-description: 创作一个界面的完整循环：文本与设计器双向写回、保存即重编译、放到屏幕或世界里、接上交互、加动画、出问题时怎么看。
+title: "工作流"
+description: "创作一个界面的完整循环——文本与设计器互相写回、保存即重新编译、把它放到屏幕上或世界里、接上交互、添加动画，以及出问题时如何查看。"
 ---
 
-<a id="一份文件两个入口"></a>
+<a id="one-file-two-ways-in"></a>
 
-## 一份文件，两个入口
+## 一份文件，两种进入方式
 
-一个文本创作的控件蓝图只有一份真相：它的 `.dui`。改它有两个入口，两边看到的永远是同一个东西。
+以文本方式创作的控件蓝图只有一个真相：它的 `.dui`。有两种方式可以修改它，而两者看到的始终是同一个东西。
 
-- **在文本里改。** 用 VS Code 打开（*Tools ▸ Open DreamUI Workspace (VSCode)* 会按当前的源码根重写
-  `DUI/DreamUI.code-workspace` 并打开它；VS Code 不可用时退回记事本）。扩展的补全来自编辑器写出的
-  `DUI/.dui-symbols.json`，见 [VS Code 扩展](../tools/vscode.md)。
-- **在设计器里改。** 设计器是这个文件的前端：在那里做的改动就是对文本的改动，写进存着那个值的那一行，
-  或者在节点已有的行之后新起一行，文件其余部分逐字节不变。少数改动没有一行可写 —— 比如一个由 `if` 决定显隐的控件的可见性 ——
-  设计器会明说（[DUI7004](../diagnostics/codes.md#dui7004)），而不是替你发明一行。见[写回](../language/write-back.md)。
+- **在文本中。** 在 VS Code 中打开它（*Tools ▸ Open DreamUI Workspace (VSCode)* 会根据当前源根重写 `DUI/DreamUI.code-workspace`
+  并打开它，当 VS Code 不可用时回退到记事本）。扩展的补全来自编辑器写出的 `DUI/.dui-symbols.json`；见 [VS Code extension](../tools/vscode.md)。
+- **在设计器中。** 设计器是该文件的前端：在那里所做的修改就是对文本的修改，写入保存该值的那一行——或该节点其他行之后的新行——其余部分逐字节保持不变。少数修改没有可写入的行——例如由 `if` 显示或隐藏的控件的可见性——此时设计器会明确告知（[DUI7004](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui7xxx#dui7004)），而不是凭空发明一行。见
+  [Write-back](../language/write-back.md)。
 
-<a id="保存即重编译"></a>
+<a id="save-to-recompile"></a>
 
-### 保存即重编译
+### 保存即重新编译
 
-在外部编辑器里保存一个 `.dui`，**已加载**的、以它为源的类会自动重新编译。编辑器一次保存往往要写好几次文件，
-所以改动会先攒一小会儿（0.75 秒）再动手。
+在外部编辑器中保存一个 `.dui`，由它构建的**已加载**类就会重新编译。编辑器每次保存会多次写入文件，因此改动会先收集片刻（0.75 秒）再执行任何操作。
 
-- 编译失败时弹一个提示，带 **Open the file** 链接，直接打开出错的文件。
-- 一次改动超过 8 个文件（切分支、批量改写）时**不会**自动编译，而是弹提示问你：**Rebuild them now**。
-  文件是留着的，不是丢掉的 —— 丢掉会让那些类悄悄过期。
-- 源文件被删掉或改名时，提示会列出"现在从无构建"的那些类。
-- *Tools ▸ Rebuild DUI* 重新编译项目里所有文本创作的控件蓝图，没加载的也会加载，动手之前会先问。
+- 编译失败会显示一条通知，其中带有指向失败文件的 **Open the file** 链接。
+- 同时有超过 8 个文件发生变化（切换分支、批量重写）时**不会**在未经询问的情况下编译；通知会提供 **Rebuild them now**。这些文件会被保留，而不是丢弃——丢弃会让那些类变成过期的却毫无提示。
+- 源文件被删除或重命名时，通知会列出如今已无从构建的类。
+- *Tools ▸ Rebuild DUI* 会重新编译项目中所有以文本为后端的控件蓝图，并加载尚未加载的那些，且会先询问。
 
-诊断的格式是 `File.dui(line,col): error DUI3001: …`，首位数字说明是哪个阶段拒绝的：1 词法、2 语法、3 语义、4 取值、
-5 建树、6 编进蓝图、7 写回。每一条都在[诊断码](../diagnostics/index.md)里有成因和修法。
+诊断信息读取 `File.dui(line,col): error DUI3001: …`，其首位数字表明是哪个阶段拒绝了它：1 词法分析器、2 解析器、3 语义、4 值、5 构建树、6 编译进蓝图、7 写回。每一条都在
+[Diagnostics](../diagnostics/index.md) 中附有原因和修复方法。
 
-<a id="一天里的形状"></a>
+<a id="the-shape-of-a-day"></a>
 
-## 一天里的形状
+## 一天的形态
 
-<a id="写"></a>
+<a id="write"></a>
 
-### 写
+### 编写
 
-在 VS Code 或设计器里写树：节点、属性、样式、组件。新文件可以从设计器的 **Create Source File...** 开始，
-它会写一个带起始层级的 `.dui`。复用靠组件：`use "Components/Row.dui" as Row` 之后，`Row Audio { … }`
-就是那个类的一个实例（见[组件](../language/components.md)）。
+在 VS Code 或设计器中编写这棵树：节点、属性、样式、组件。新文件可以从设计器的 **Create Source File...** 开始，它会写入一个带有起始层级的 `.dui`。复用通过组件实现：在
+`use "Components/Row.dui" as Row` 之后，`Row Audio { … }` 就是那个类的实例（见
+[Components](../language/components.md)）。
 
-<a id="编译"></a>
+<a id="compile"></a>
 
 ### 编译
 
-保存。设计器里的预览跟着刷新。出错就看提示和诊断里的行列号。
+保存。设计器的预览会随之更新。出错时，阅读通知以及诊断中的行号和列号。
 
-<a id="放"></a>
+<a id="place"></a>
 
-### 放
+### 放置
 
-屏幕上：蓝图里用 **Create Dream Widget** 接 **Add to Viewport**，C++ 里用 `UDreamUIBPLibrary::AddWidgetOfClassToViewport`。世界里：把控件蓝图拖进关卡，得到一个
-`ADreamWorldWidgetActor`。同一个类，两种用法都不用改它（见[第一个界面](first-screen.md)和[世界空间](../concepts/world-space.md)）。
+在屏幕上：在图表中使用 **Create Dream Widget** 然后 **Add to Viewport**，在 C++ 中使用 `UDreamUIBPLibrary::AddWidgetOfClassToViewport`。在世界上：将控件蓝图拖入关卡，
+得到一个 `ADreamWorldWidgetActor`。同一个类，两种用途，其中没有任何改变（见
+[Your first screen](first-screen.md) 和 [World space](../concepts/world-space.md)）。
 
-<a id="接上交互"></a>
+<a id="wire-up-interaction"></a>
 
 ### 接上交互
 
-事件只有一种接法，到处写法相同：**路由**。`事件名 -> 处理函数` 指向**用户控件**上的一个函数 —— 也就是这棵树
-编译成的那个类，UMG 也把事件处理放在这里。编译器把每条路由解析进 `UDreamWidgetBlueprint::EventBindings`，
-`UDreamUserWidget::BindEventBindings` 在 Initialize 时挂上。在设计器里，同一件事是详情面板的 *Events* 一节：
-点 `+` 会建一个签名正确的自定义事件，并写好指向它的路由。处理函数不存在是 [DUI6004](../diagnostics/codes.md#dui6004)，
-参数对不上是 [DUI6005](../diagnostics/codes.md#dui6005)。
+事件只有一种机制，并且处处拼写相同：**路由**。`EventName -> Handler` 在**用户控件**上命名一个函数——这棵树所编译成的类，也是 UMG 放置事件处理的地方。编译器将每条路由解析为 `UDreamWidgetBlueprint::EventBindings`，并由 `UDreamUserWidget::BindEventBindings` 在
+Initialize 时挂接它们。在设计器中，同样的事情是详情面板的 *Events* 部分：`+` 会创建一个具有正确签名以及命名它的路由的自定义事件。类中缺少的处理函数是
+[DUI6004](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui6xxx#dui6004)；参数不匹配的处理函数是
+[DUI6005](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui6xxx#dui6005)。
 
-属性则用绑定驱动：`Text <- GetTitle()` 让属性跟着一个表达式走，`Value <-> Volume` 双向同步。见[绑定](../language/bindings.md)。
+属性由绑定驱动：`Text <- GetTitle()` 让某个属性跟随一个表达式，`Value <-> Volume`
+双向镜像它。见 [Bindings](../language/bindings.md)。
 
-<a id="加动画"></a>
+<a id="animate"></a>
 
-### 加动画
+### 添加动画
 
-`timeline` 块是文件自己拥有的动画：每条轨道一行，写节点路径、它驱动的属性和关键帧。它编译成根上动画组件里的一个
-`UDreamWidgetAnimation`，像别的动画一样有自己的类成员变量，用 `UDreamUserWidget::PlayAnimation` 播放。
-因为归文件所有，每次编译都会重建它，**动画编辑器以只读方式打开它**；想交给 Sequencer 长期编辑，写
-`timeline Name external`。在面板里动一个组件，用渲染变换的补间（`RenderOffsetTo`、`RenderScaleTo`、`RenderAngleTo`、
-`RenderTranslationTo`），它们只动画出来的东西，不动布局。见[时间轴](../language/timelines.md)和[动画](../concepts/animation.md)。
+一个 `timeline` 块是文件所拥有的动画：每条轨道一行，包含节点路径、它所驱动的属性以及关键帧。它编译为根节点动画组件中的一个 `UDreamWidgetAnimation`，像任何其他动画一样获得其类成员变量，并通过 `UDreamUserWidget::PlayAnimation` 播放。由于文件拥有它，每次编译都会重建它，并且**动画编辑器以只读方式打开它**；要一劳永逸地把动画交给 Sequencer，请编写
+`timeline Name external`。在面板内部，通过其渲染变换补间（`RenderOffsetTo`、
+`RenderScaleTo`、`RenderAngleTo`、`RenderTranslationTo`）来为一个组件添加动画，这些只移动绘制的内容，而从不改变布局。见
+[Timelines](../language/timelines.md) 和 [Animation](../concepts/animation.md)。
 
-<a id="看它画了什么花了多少"></a>
+<a id="see-what-it-drew-and-what-it-cost"></a>
 
-### 看它画了什么、花了多少
+### 查看它绘制了什么，以及花费了多少
 
-`DreamUI.Capture` 把视口和每块渲染目标画布写成 PNG；`DreamUI.Stats` 打印自上次以来每个阶段的开销；
-`DreamGUI.Memory` 打印字体、图集和画布占了多少。画错或没画出来时，开 `r.DreamUI.VerifyPartialPrepare 1` 再复现。
-见[调试](../tools/debugging.md)。
+`DreamUI.Capture` 会将视口以及每个渲染目标画布写成 PNG；`DreamUI.Stats` 会打印自上次被请求以来每个阶段的
+开销；`DreamGUI.Memory` 会打印字体、图集和画布所持有的内容。对于绘制错误或未绘制的内容，用 `r.DreamUI.VerifyPartialPrepare 1` 复现它。见 [Debugging](../tools/debugging.md)。
 
-把交互和动画放在一起，一个小暂停菜单大概是这样：
+交互和动画放在一起，一个小暂停菜单看起来就像这样：
 
 ```dui
 class /Game/UI/WBP_Pause
@@ -114,10 +109,10 @@ timeline Appear {
 }
 ```
 
-`Native.Button` 是插件按钮控件的注册标签；`OnClicked -> HandleResume` 要求 `WBP_Pause` 上有一个叫 `HandleResume`
-的函数或自定义事件；`Appear` 编译成一个动画，带着自己的类成员变量，把这个变量拖出来交给 `PlayAnimation` 就能播放。
+`Native.Button` 是插件按钮控件的注册标签；`OnClicked -> HandleResume` 需要在 `WBP_Pause` 上有一个名为 `HandleResume` 的函数或
+自定义事件；`Appear` 会编译成一个动画，并带有自己的类成员变量——将该变量拖入 `PlayAnimation` 即可播放它。
 
-**提示：**
+**注意：**
 
-设计器和文本是同一个类的两个视图，不存在"应用"这一步，也没有要合并的逐实例覆盖列表。父级给子级的内容走命名插槽，
-  见[控件蓝图](../concepts/widget-blueprints.md)。
+  设计器和文本是同一个类的两种视图：没有应用步骤，也没有需要协调的逐实例覆盖列表。父级提供给子级的内容通过命名插槽传递；见
+  [Widget Blueprints](../concepts/widget-blueprints.md)。

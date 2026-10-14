@@ -1,90 +1,94 @@
 ---
-title: 布局
-description: 布局引擎怎么工作：测量是 const 的、与布置分开，布置结果是一次写入的不可变片段，期望尺寸在一轮里记忆，失效带着原因；UMG 形状的面板、面板槽，被删除的 Lex 布局族，以及填充槽里的文本需要 WrapTextAt 的那个坑。
+title: "布局"
+description: "布局引擎如何工作——测量是 const 的并与布置分离，布置产生一块不可变片段并一次写入提交，期望尺寸在一轮遍历中会被记忆，失效带有原因——以及 UMG 形状的面板、面板槽、已删除的 Lex 布局族，以及为什么填充槽中的换行文本需要 WrapTextAt。"
 ---
 
-一个控件自己的 `AnchorData` 决定它的矩形 —— 直到它的父级带着一个布局容器。带着布局容器的控件就是**面板**：
-面板测量孩子、决定它们的矩形，再把结果写回孩子的 `AnchoredPosition` 和 `SizeDelta`。面板在这里不是一个单独的类，
-而是挂在控件上的子对象（`LayoutContainer`），所以一个控件可以按一种方式排、按另一种方式画。孩子上的 `bIgnoreLayout`
-让它不受父级布局容器管辖。
+一个控件自身的 `AnchorData` 决定它的矩形——直到它的父级带有布局容器。带有布局容器的控件就是一个
+**面板**：它测量子级、决定它们的矩形，并把结果写回它们的 `AnchoredPosition` 和
+`SizeDelta`。这里的面板不是单独的类，而是控件的子对象（`LayoutContainer`），因此一个控件可以按一种方式
+布局、按另一种方式绘制。子级上的 `bIgnoreLayout` 会使其脱离父级的布局。
 
-<a id="沿着-blink-和-yoga-的思路重写"></a>
+<a id="rebuilt-along-the-lines-of-blink-and-yoga"></a>
 
-## 沿着 Blink 和 Yoga 的思路重写
+## 按 Blink 和 Yoga 的思路重建
 
-布局按 Blink 和 Yoga 的路子重写过，四条原则：
+布局按照 Blink 和 Yoga 的方式重建，基于四条原则：
 
-1. **测量是 `const` 的，和布置分开。** 面板的 `MeasureLayout(WidthSpec, HeightSpec)` 是 `const` 方法，只回答"在这个约束下想要多大"，
-   不写任何东西。约束是 `FDreamMeasureSpec`，借自 Android 的 MeasureSpec 和 Yoga 的 measure mode：`Undefined`（没有约束，报自然尺寸）、
-   `AtMost`（报自然尺寸，但不超过给定值）、`Exactly`（不管内容，就是这个值）。约束从唯一有真实数字的地方 —— 面板的布置，
-   它知道父级给了它多大的矩形 —— 向下流；每个面板用 `ForChild` 减掉自己要花掉的空间（内边距、间距、兄弟占的固定长度）再往下传。
-2. **布置产出一个不可变的片段，一次提交。** 面板的 `ArrangeChildren` 只往 `FDreamFragment`（自己的尺寸 + 每个孩子一个矩形）里记录，
-   不写任何孩子的几何；基类随后用 `CommitFragment` 一次写到控件上。以前布局结果除了控件本身没有地方放，所以"布置"就是"写"，
-   每一次写都在引起它的那一轮还没跑完时重新触发失效。Blink 撞过同一堵墙，也是这样解决的 —— 布局算法返回不可变的片段，
-   而不是原地改布局树。
-3. **期望尺寸在一轮里记忆。** 测量一个面板要问它的容器，容器要测量每个孩子，孩子又可能是面板，一个问题的代价是 O(孩子数^深度)。
-   一轮布置或测量里，期望尺寸被记住（`FDesiredSizeMemoScope`），最外层作用域关闭时整体忘掉。这只因为布置不再写入才是可靠的。
-4. **失效带着原因。** `EDreamLayoutInvalidation` 有两个值：`Measure`（这个控件的期望尺寸可能变了，所有测量它的祖先都要重跑）和
-   `Arrange`（只是它在父级里的位置变了 —— 面板按期望尺寸而不是位置测量孩子，所以父级以上的答案不会变，父级重排一下就停）。
-   于是移动一个控件不再重新测量整条祖先链。
+1. **测量是 `const`，并与布置分离。** 面板的 `MeasureLayout(WidthSpec, HeightSpec)` 是一个 `const`
+   方法：它回答“在这个约束内有多大”，不写入任何内容。约束是一个 `FDreamMeasureSpec`，其含义与 Android 的 MeasureSpec 和 Yoga 的 measure mode 一致：`Undefined`（无约束，报告自然尺寸）、
+   `AtMost`（自然尺寸，但不大于给定值）和 `Exactly`（给定值，无论内容如何）。约束
+   从真实数值唯一存在的地方——面板的布置，它知道父级给它的矩形——向下流动，每个面板
+   都会按自己即将花费的空间（`ForChild`：内边距、间距、兄弟项的固定范围）缩小收到的约束，
+   然后再传递下去。
+2. **布置产生一块不可变片段，一次提交。** 面板的 `ArrangeChildren` 记录到一个
+   `FDreamFragment` 中——它自己的尺寸和每个子级一个矩形——不写入任何子级几何信息；基类随后
+   在一次遍历中把它提交到控件上（`CommitFragment`）。过去布局结果除了控件本身无处存放，
+   所以布置*就是*写入，而每次写入都会在引发它的那一轮遍历仍在运行时重新进入失效。
+   Blink 撞上了同一堵墙，并以同样的方式解决：它的布局算法返回不可变片段，而不是
+   原地修改布局树。
+3. **期望尺寸会在一轮遍历中被记忆。** 测量一个面板要询问其容器，容器测量每个子级，每个子级
+   又可能是面板——一个问题耗费 O(子级^深度)。在一次布置或测量内，期望尺寸会被记住
+   （`FDesiredSizeMemoScope`），并在最外层作用域关闭时全部遗忘。这之所以可靠，只是因为布置
+   不再写入。
+4. **失效带有原因。** `EDreamLayoutInvalidation` 有两个值：`Measure`（这个控件的期望尺寸可能
+   变了，因此测量它的每个祖先都会重新运行）和 `Arrange`（只有它在父级中的位置变了——
+   面板按期望尺寸测量子级，从不按位置测量，因此父级以上的任何内容都不会产生不同的
+   结果；父级重新布置，遍历到此为止）。移动一个控件不再重新测量整条祖先链。
 
-还有一条贯穿始终的规则：**布局的输出永远不回流到测量。** 面板问孩子想要多大时（`UDreamPanelLayoutBase::GetDesiredSize`），
-依次看尺寸适配（fitter）、容器的首选尺寸、视觉的固有尺寸、内容孩子、写出来的矩形，绝不读一个面板写进去的矩形。
+有一条规则贯穿始终：**布局输出永远不会回馈到测量中。** 当面板询问一个子级
+想要多大时（`UDreamPanelLayoutBase::GetDesiredSize`），它依次查看适配器、容器的首选尺寸、
+视觉固有尺寸、内容子级和编写的矩形——从不查看面板遍历写入的矩形。
 
-<a id="在代码里触发布局"></a>
+<a id="driving-layout-from-code"></a>
 
-### 在代码里触发布局
+### 从代码驱动布局
 
-| 调用 | 做什么 |
+| 调用 | 作用 |
 | --- | --- |
-| `GetDesiredSize` | 这个控件**想要**多大，由父级面板来回答；没有测量它的父级时报它现有的尺寸 |
-| `ForceLayoutPrepass` | 立即布局这棵树，而不是等下一轮 —— 刚改了内容、同一帧就要拿到结果时用 |
-| `InvalidateLayoutAndVolatility` / `UDreamUIBPLibrary::InvalidateLayout` | 请下一帧对它做一轮布局（"volatility"那一半在这里没有对应物） |
-| `UDreamPanelSlot::NotifySlotChanged(Reason)` | 槽改了；对齐、尺寸规则、填充权重、z 序传 `Arrange`，内边距、网格坐标、`bAutoSize` 保持默认的 `Measure` |
+| `GetDesiredSize` | 这个控件**想要**多大，由其父级面板回答；没有测量父级的控件报告它现有的尺寸 |
+| `ForceLayoutPrepass` | 立即布局该树，而不是等到下一次遍历——当你刚改了内容并需要在同一帧获得尺寸时 |
+| `InvalidateLayoutAndVolatility` / `UDreamUIBPLibrary::InvalidateLayout` | 请求下一帧进行布局遍历（“volatility”那一半在这里没有对应物） |
+| `UDreamPanelSlot::NotifySlotChanged(Reason)` | 槽发生了变化；对齐、尺寸规则、填充权重和 z 序传递 `Arrange`，而内边距、网格坐标和 `bAutoSize` 保持默认的 `Measure` |
 
-<a id="自身布局四个变体"></a>
+<a id="self-layout-four-variants"></a>
 
-## 自身布局：四个变体
+## 自身布局：四种变体
 
-面板管**孩子**；控件自己「想要多大」由**自身布局**（`LayoutSelf`）回答 —— 它是个子对象，和面板互不相干：
+面板负责它的**子级**；一个控件自己希望多大由其**自身布局**
+（`LayoutSelf`）回答——这是一个与面板无关的子对象：
 
 | 类 | 说明 |
 | --- | --- |
 | `UDreamLayoutSelf` | 默认的自身布局 |
-| `UDreamLayoutSelfAspectRatio` | 按宽高比约束自己 |
-| `UDreamLayoutSelfAuthoredSurface` | 用自绘表面 |
-| `UDreamLayoutSelfSpacer` | 占位、把剩余空间吃掉 |
+| `UDreamLayoutSelfAspectRatio` | 将自身约束为某个宽高比 |
+| `UDreamLayoutSelfAuthoredSurface` | 使用编写的表面 |
+| `UDreamLayoutSelfSpacer` | 占用剩余空间的占位符 |
 
-<a id="面板"></a>
+<a id="the-panels"></a>
 
 ## 面板
 
-面板都是 `UDreamPanelLayoutBase` 的子类，名字和行为对照 UMG。`.dui` 里容器名本身就是节点类型
-（`VerticalBox Column { Spacing = 29 }` 等于 `Widget Column { + VerticalBox { Spacing = 29 } }`）。
+每个面板都是 `UDreamPanelLayoutBase` 的子类，命名和行为都仿照其 UMG 对应物。在 `.dui` 中，
+容器名称本身就是一个节点类型（`VerticalBox Column { Spacing = 29 }` 就是 `Widget Column { + VerticalBox { Spacing = 29 } }`）。
 
 | `.dui` 类型 | 类 | 主要属性 | 说明 |
 | --- | --- | --- | --- |
-| `HorizontalBox` / `VerticalBox` / `StackBox` | [`UDreamLayoutContainerHorizontalBox`](../Reference/DreamLayoutContainerHorizontalBox.md) / [`…VerticalBox`](../Reference/DreamLayoutContainerVerticalBox.md) / [`…StackBox`](../Reference/DreamLayoutContainerStackBox.md) | `Padding`、`Spacing`、`Orientation`（StackBox） | 横竖两个盒子都是 StackBox 的子类 |
-| `Overlay` | [`UDreamLayoutContainerOverlay`](../Reference/DreamLayoutContainerOverlay.md) | `Padding` | 按声明顺序叠放，先声明的在后面 |
-| `CanvasPanel` | [`UDreamLayoutContainerCanvasPanel`](../Reference/DreamLayoutContainerCanvasPanel.md) | `bSortChildrenByZOrder` | 孩子用自己的锚点定位；不做从右到左镜像（Slate 的 `SConstraintCanvas` 也不做） |
-| `GridPanel` | [`UDreamLayoutContainerGridPanel`](../Reference/DreamLayoutContainerGridPanel.md) | `Padding`、`Spacing`、`ColumnFill`、`RowFill` | 孩子由槽的 `Row`、`Column`、`RowSpan`、`ColumnSpan` 定位 |
+| `HorizontalBox` / `VerticalBox` / `StackBox` | [`UDreamLayoutContainerHorizontalBox`](../Reference/DreamLayoutContainerHorizontalBox.md) / [`…VerticalBox`](../Reference/DreamLayoutContainerVerticalBox.md) / [`…StackBox`](../Reference/DreamLayoutContainerStackBox.md) | `Padding`、`Spacing`、`Orientation`（StackBox） | 两个盒子都是 StackBox 的子类 |
+| `Overlay` | [`UDreamLayoutContainerOverlay`](../Reference/DreamLayoutContainerOverlay.md) | `Padding` | 按声明顺序堆叠子级；第一个在最下面 |
+| `CanvasPanel` | [`UDreamLayoutContainerCanvasPanel`](../Reference/DreamLayoutContainerCanvasPanel.md) | `bSortChildrenByZOrder` | 子级按自身锚点定位；不为从右到左做镜像（Slate 的 `SConstraintCanvas` 也不做） |
+| `GridPanel` | [`UDreamLayoutContainerGridPanel`](../Reference/DreamLayoutContainerGridPanel.md) | `Padding`、`Spacing`、`ColumnFill`、`RowFill` | 子级由槽的 `Row`、`Column`、`RowSpan`、`ColumnSpan` 放置 |
 | `UniformGridPanel` | [`UDreamLayoutContainerUniformGridPanel`](../Reference/DreamLayoutContainerUniformGridPanel.md) | `SlotPadding`、`MinDesiredSlotWidth`、`MinDesiredSlotHeight` | 等大格子 |
-| `WrapBox` | [`UDreamLayoutContainerWrapBox`](../Reference/DreamLayoutContainerWrapBox.md) | `WrapSize`、`bExplicitWrapSize`、`Orientation`、`HorizontalAlignment` | 槽上有 WrapBox 专用的三项，见下 |
-| `ScrollBox` | [`UDreamLayoutContainerScrollBox`](../Reference/DreamLayoutContainerScrollBox.md) | `ScrollOffset`、`WheelScrollMultiplier`、`bFrontPadScrolling`、`bBackPadScrolling`、`ScrollWhenFocusChanges` | 滚动轴上不向父级报尺寸 —— 内容的长度绝不能传到父级 |
-| `SizeBox` | [`UDreamLayoutContainerSizeBox`](../Reference/DreamLayoutContainerSizeBox.md) | `WidthOverride` / `HeightOverride`（配 `bOverride*`）、`MinDesiredSize`、`MaxDesiredSize`、`MinAspectRatio`、`MaxAspectRatio` | |
-| `ScaleBox` | [`UDreamLayoutContainerScaleBox`](../Reference/DreamLayoutContainerScaleBox.md) | `Stretch`、`UserSpecifiedScale`、`StretchDirection`（`Both`、`DownOnly`、`UpOnly`） | 唯一会缩放它所排内容的面板 |
-| `SafeZone` | [`UDreamLayoutContainerSafeZone`](../Reference/DreamLayoutContainerSafeZone.md) | `bUsePlatformSafeZone`、`bPadLeft` 等四项、`SafePadding` | |
+| `WrapBox` | [`UDreamLayoutContainerWrapBox`](../Reference/DreamLayoutContainerWrapBox.md) | `WrapSize`、`bExplicitWrapSize`、`Orientation`、`HorizontalAlignment` | 它自己有三个槽属性，见下 |
+| `ScrollBox` | [`UDreamLayoutContainerScrollBox`](../Reference/DreamLayoutContainerScrollBox.md) | `ScrollOffset`、`WheelScrollMultiplier`、`bFrontPadScrolling`、`bBackPadScrolling`、`ScrollWhenFocusChanges` | 沿其滚动轴不参与测量——内容的范围绝不能到达父级 |
+| `SizeBox` | [`UDreamLayoutContainerSizeBox`](../Reference/DreamLayoutContainerSizeBox.md) | `WidthOverride` / `HeightOverride`（带有 `bOverride*`）、`MinDesiredSize`、`MaxDesiredSize`、`MinAspectRatio`、`MaxAspectRatio` | |
+| `ScaleBox` | [`UDreamLayoutContainerScaleBox`](../Reference/DreamLayoutContainerScaleBox.md) | `Stretch`、`UserSpecifiedScale`、`StretchDirection`（`Both`、`DownOnly`、`UpOnly`） | 唯一会缩放其所布置内容的面板 |
+| `SafeZone` | [`UDreamLayoutContainerSafeZone`](../Reference/DreamLayoutContainerSafeZone.md) | `bUsePlatformSafeZone`、四个 `bPad*`、`SafePadding` | |
 | `WidgetSwitcher` | [`UDreamLayoutContainerWidgetSwitcher`](../Reference/DreamLayoutContainerWidgetSwitcher.md) | `ActiveWidgetIndex` | |
-| `Border` | [`UDreamLayoutContainerBorder`](../Reference/DreamLayoutContainerBorder.md) | `Padding`、`HorizontalAlignment`、`VerticalAlignment`、`BrushColor`、`ContentColorAndOpacity` | 和 UMG 一样，对齐属于 Border 而不是槽 |
-| `MenuAnchor` | [`UDreamLayoutContainerMenuAnchor`](../Reference/DreamLayoutContainerMenuAnchor.md) | `Placement`、`MenuClass`、`bIsOpen`、`bFitInWindow` | 打开的菜单走弹出层，见[输入](input.md) |
+| `Border` | [`UDreamLayoutContainerBorder`](../Reference/DreamLayoutContainerBorder.md) | `Padding`、`HorizontalAlignment`、`VerticalAlignment`、`BrushColor`、`ContentColorAndOpacity` | 与 UMG 一样，对齐属于边框，而不是槽 |
+| `MenuAnchor` | [`UDreamLayoutContainerMenuAnchor`](../Reference/DreamLayoutContainerMenuAnchor.md) | `Placement`、`MenuClass`、`bIsOpen`、`bFitInWindow` | 打开的菜单会经过弹出层；见[输入](input.md) |
 
-一个面板只有一个布局容器：容器类型的节点上再写 `+ HorizontalBox` 是 DUI5022。有些容器需要控件上带着特定的行为才能和它镜像的
-UMG 面板一致（比如 SizeBox 需要 ContentWidget），给控件指定容器时缺的会自动加上。容器还可以带布局动画：`bUseAnimation` 加上
-`AnimationHandler`，让孩子换位置时**补间**过去而不是跳过去。三个类同住 `Core/Components/DreamLayout.h`：
-`UDreamLayoutAnimation`（`UObject` 基类，`GetLayoutContainer()` 加蓝图事件 `OnApplyLayoutResults`）、
-`UDreamLayoutAnimation_CommonTween`（通用补间，`Duration` 默认 **0.3**、可换成曲线）、
-`UDreamLayoutAnimation_SlideIn`（滑入）。
-⚠️ 它们是 **`UObject` 不是 `UComponent`** —— 在「加到控件上的组件」里找不到。
+一个控件只有一个布局容器：容器类型节点上的 `+ HorizontalBox` 就是 DUI5022。有些容器需要控件上带有某种行为，才能与它们所镜像的 UMG 面板匹配（例如 SizeBox 需要 ContentWidget），缺少的那些会在分配容器时被添加。容器还可以为其布局添加动画：`bUseAnimation` 配合 `AnimationHandler` 会让子项**补间**到新位置，而不是跳变。这三个类一起位于 `Core/Components/DreamLayout.h` 中：`UDreamLayoutAnimation`（`UObject` 基类，带有 `GetLayoutContainer()` 和蓝图事件 `OnApplyLayoutResults`）、`UDreamLayoutAnimation_CommonTween`（通用补间；`Duration` 默认为 **0.3**，可以换成曲线）以及 `UDreamLayoutAnimation_SlideIn`（滑入）。
+⚠️ 它们是 **`UObject` 而非组件**——你不会在添加到控件的组件中找到它们。
 
 ```dui
 VerticalBox Settings {
@@ -92,7 +96,7 @@ VerticalBox Settings {
     Padding = (24, 24, 24, 24)
 
     Text Title {
-        Text = "设置"
+        Text = "Settings"
         FontSize = 28
         @slot HorizontalAlignment = Center
     }
@@ -101,10 +105,10 @@ VerticalBox Settings {
         Spacing = 16
 
         Text VolumeLabel {
-            Text = "音量"
+            Text = "Volume"
             @slot VerticalAlignment = Center
         }
-        // 横向填满这一行剩下的宽度
+        // Takes whatever width the row has left
         Native.Slider Volume {
             @fill
             @slot VerticalAlignment = Center
@@ -112,77 +116,76 @@ VerticalBox Settings {
     }
 
     Text Hint {
-        Text = "改动立即生效。"
+        Text = "Changes apply at once."
         @slot { SizeRule = Auto  Padding = (0, 8, 0, 0) }
     }
 }
 ```
 
-<a id="槽"></a>
+<a id="slots"></a>
 
 ## 槽
 
-UMG 每种面板有自己的槽类；这里只有一个 `UDreamPanelSlot`，归**孩子**所有，所以没有什么要转型的 ——
-`AddChild` 直接返回它，`UDreamUILayoutLibrary::SlotAsPanelSlot` 一个节点顶替 UMG 整个 `SlotAs*` 家族。
+UMG 为每种面板有一个槽类；这里只有一个 `UDreamPanelSlot`，由**子项**拥有，所以没有什么需要转型：
+`AddChild` 返回它，而 `UDreamUILayoutLibrary::SlotAsPanelSlot` 就是 UMG 整个 `SlotAs*` 家族在一个节点中的对应物。
 
 | 属性 | 说明 |
 | --- | --- |
-| `Padding` | 孩子四周的外边距 |
-| `HorizontalAlignment` / `VerticalAlignment` | `Fill`、`Left` / `Top`、`Center`、`Right` / `Bottom`；槽自己的默认值是 `Fill`。Border 的对齐在 Border 自己身上 |
-| `SizeRule` / `FillWeight` | 盒子里：`Auto` 按期望尺寸，`Fill` 按权重分剩下的空间；`.dui` 里 `@fill` 和 `@fill 2` 是简写 |
-| `Row` / `Column` / `RowSpan` / `ColumnSpan` | 网格里的坐标与跨度 |
-| `ZOrder` | 兄弟间的绘制顺序，稳定重排。Overlay 和 GridPanel 总是读它，CanvasPanel 在 `bSortChildrenByZOrder` 打开时读，别的面板严格按兄弟顺序。UMG 网格槽的 `Layer` 就是它 |
-| `bAutoSize` | 按内容定尺寸，UMG 画布槽的同名项 |
-| `MinDesiredSize` / `MaxDesiredSize` | 给孩子测出来的尺寸按轴加上下限，`0` 表示没意见 |
-| `bFillEmptySpace` / `FillSpanWhenLessThan` / `bForceNewLine` | 只有 WrapBox 读：行末的孩子吃掉剩余空间；换行宽度小于此值时独占一行；从这里强制换行 |
-| `Nudge` | 在面板决定的位置上再加一个固定偏移，单位是面板内容空间（x 向右、y 向下，和 `Padding` 同向） |
+| `Padding` | 子项四周的外边距 |
+| `HorizontalAlignment` / `VerticalAlignment` | `Fill`、`Left` / `Top`、`Center`、`Right` / `Bottom`；槽自身的默认值是 `Fill`。Border 的对齐在 Border 上 |
+| `SizeRule` / `FillWeight` | 在盒子中：`Auto` 取期望尺寸，`Fill` 按权重分配剩余空间；`@fill` 和 `@fill 2` 是 `.dui` 的简写 |
+| `Row` / `Column` / `RowSpan` / `ColumnSpan` | 网格中的坐标和跨度 |
+| `ZOrder` | 兄弟之间的绘制顺序，作为稳定重排。Overlay 和 GridPanel 总是读取它，CanvasPanel 在 `bSortChildrenByZOrder` 开启时读取；其他所有面板严格按兄弟顺序排列。UMG 网格槽的 `Layer` 就是它 |
+| `bAutoSize` | 按内容确定尺寸，UMG 画布槽同名属性 |
+| `MinDesiredSize` / `MaxDesiredSize` | 对子项测量结果按每个轴设置的下限和上限；零表示没有意见 |
+| `bFillEmptySpace` / `FillSpanWhenLessThan` / `bForceNewLine` | 仅 WrapBox：行上的最后一个子项占据剩余空间；当换行宽度低于此值时独占一行；从此处开始新的一行 |
+| `Nudge` | 在面板放置子项的位置上添加的固定偏移，位于面板的内容空间（x 向右，y 向下，与 `Padding` 方向相同） |
 
-槽的默认对齐是 `Fill`，每个 `.dui` 文件和每个自己搭树的控件都按这个写；只有在设计器里**手动**往面板里放孩子时，
-才会按面板类型写入 UMG 那样的默认值（Overlay 把东西按自身尺寸叠在角上，盒子给每个孩子一条，ScaleBox 居中）。
-UMG 画布槽那一族 —— `SetPosition`、`SetSize`、`SetOffsets`、`SetAnchors`、`SetAlignment`、`SetLayout` —— 读写的就是孩子自己的
-`AnchorData`；`GetAlignment` 就是这里的 `Pivot`。
+槽默认是 `Fill`，每个 `.dui` 文件和每个自行构建树的控件都是针对它编写的。只有当子项是在设计器中**手动添加**时，才会把面板特定的默认值写入槽中，就像 UMG 的每种槽类所做的那样（overlay 将内容按自身尺寸堆叠在它的角上，box 给每个子项一条带，scale box 居中）。UMG 的画布槽家族——`SetPosition`、`SetSize`、`SetOffsets`、`SetAnchors`、`SetAlignment`、`SetLayout`——读写子项自身的 `AnchorData`；`GetAlignment` 就是本插件的 `Pivot`。
 
-<a id="从右到左"></a>
+<a id="right-to-left"></a>
 
 ## 从右到左
 
-`FlowDirectionPreference`（`Inherit`、`Culture`、`LeftToRight`、`RightToLeft`）决定一个控件的布局往哪边流。默认 `Inherit`
-从最近一个有主张的祖先取答案，所以在根上设一次 `Culture` 就能镜像整个界面。镜像只在一个地方做：面板把排好的矩形绕自己的宽度反射一次。
-这一次反射就是镜像横向布局的全部含义 —— 横向排列的顺序反过来，`Left` 和 `Right` 对调，面板和槽的内边距左右对调；纵向什么都不动，
-测量也不受影响。CanvasPanel 的孩子用自己的锚点定位，不经过这一步，所以不镜像。
+`FlowDirectionPreference`（`Inherit`、`Culture`、`LeftToRight`、`RightToLeft`）表示控件的布局朝哪个方向流动。
+`Inherit` 是默认值，它从最近一个声明了方向的祖先处取得答案，所以在根节点上设置一次 `Culture` 就会镜像整个屏幕。镜像只在一个地方完成：面板围绕自身的宽度反射已完成的矩形。这单次反射就是镜像水平布局的全部含义——它反转任何沿 x 方向排列的顺序，交换 `Left` 和 `Right` 对齐，并交换面板和槽的内边距的左右两半；垂直方向没有任何移动，测量也不受影响。画布面板的子项通过其锚点自行放置，从不经过这一步，所以画布不会被镜像。
 
-<a id="被删除的-lex-布局族"></a>
+<a id="the-lex-layout-family-is-gone"></a>
 
-## 被删除的 Lex 布局族
+## Lex 布局家族已被删除
 
-上游的 FlexBox + Grid 布局族 —— `ULexLayoutContainerFlexBox`、`ULexLayoutContainerGrid`、`ULexLayoutSelfFlexBox`、
-`ULexLayoutSelfGrid`，以及 `ELexUILayoutMode` 这个开关 —— 在这里已经删除，只剩 UMG 形状的面板。它们没有重定向，
-因为没有可以指向的东西：用它们排的树要手工重新排一遍。上游 2026-08-08 对 `ULexLayoutContainerFlexBox` 无限循环的修复在这里没有意义，
-那个类已经不存在了。见[迁移](../guides/migration.md)。
+上游的 FlexBox + Grid 家族——`ULexLayoutContainerFlexBox`、`ULexLayoutContainerGrid`、`ULexLayoutSelfFlexBox`、
+`ULexLayoutSelfGrid` 以及 `ELexUILayoutMode` 开关——已在此处删除，只留下 UMG 形状的面板。没有
+重定向，因为没有什么可供它指向：由它们之一布局的树需要手动重新布局。
+上游 2026-08-08 对 `ULexLayoutContainerFlexBox` 中无限循环的修复在这里没有意义，因为该类
+已不存在。参见[迁移](../guides/migration.md)。
 
-<a id="填充槽里会换行的文本"></a>
+<a id="a-wrapping-text-in-a-fill-slot"></a>
 
-## 填充槽里会换行的文本
+## 填充槽中的换行文本
 
-一个按盒子换行的文本（`OverflowType` 为 `VerticalOverflow`，或开了 `bAutoWrapText`），高度取决于它拿到的宽度。
-面板总是先问孩子想要多大，**再**给它宽度，所以结果取决于面板问的时候给没给宽度：
+一个在其盒子处换行的文本（`OverflowType` 为 `VerticalOverflow`，或 `bAutoWrapText` 开启）的高度取决于它
+获得的宽度。面板总是在给子项宽度**之前**先询问它想要多大，所以返回的结果取决于面板在询问时是否
+提供了宽度：
 
-- 给了 —— 竖直盒子测量孩子时给出自己的宽度 —— 文本回答它在那个宽度下的高度。一段放在竖直盒子 Fill 槽里的文字，
-  得到的是槽宽下的高度，而不是控件碰巧有的宽度。
-- 没给 —— 横向盒子沿自己的轴测量时 —— 文本回答它排成一行时的宽度；等真正被排得比这窄时它才换行。
+- 提供了宽度——垂直盒子测量其子项时提供自己的宽度——文本回答它在该宽度下的高度。垂直盒子的 Fill 槽中的段落
+  按槽的宽度测量，而不是按控件恰好具有的宽度。
+- 未提供——水平盒子沿自身轴测量时——文本回答该段落单行的宽度，
+  并在被排列得比这更窄时换行。
 
-所以一个放在横向排列里、需要换行的文本，给它一个 `WrapTextAt`：有了它，文本就按这个宽度断行、按这个宽度测量，不管面板问的时候给了什么。
-插件自带的示例 `HelloDreamGUI.dui` 也给它的每段文字写了 `WrapTextAt`，让它们按设计好的宽度断行。
+因此，给水平排列中的换行文本一个 `WrapTextAt`：它便会在该宽度处断行，并按该宽度测量，
+无论面板提供了什么。随附示例 `HelloDreamGUI.dui` 也为其每个文本提供了 `WrapTextAt`，因此它们
+按设计宽度断行。
 
 ```dui
 VerticalBox Column {
     Padding = (24, 28, 24, 28)
 
-    // 横向盒子沿自己的轴测量时不给宽度：给文本一个断行宽度
+    // A horizontal box offers no width along its own axis: give the text a width to break at
     HorizontalBox Row {
         Image Icon { Brush.ImageSize = (32, 32) }
         Text Description {
-            Text = "一段会换行的说明文字。"
+            Text = "A description long enough to wrap."
             WrapTextAt = 320
             @fill
         }
@@ -190,5 +193,6 @@ VerticalBox Column {
 }
 ```
 
-`WrapTextAt` 还有一个独立的用处：盒子同时也是文本**对齐**的地方，一个比盒子窄的断行宽度能得到一栏窄窄的文字、仍然在整个控件上居中。
-文本的其余规则见[文本](text.md)。
+`WrapTextAt` 也有其自身的用途：盒子也是文本**对齐**的地方，所以比盒子更窄的换行宽度
+会得到一列狭窄的文本，却仍然在整个控件上居中。其余文本规则见
+[文本](text.md)。

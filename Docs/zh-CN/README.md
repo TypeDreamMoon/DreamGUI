@@ -1,159 +1,39 @@
-# DreamGUI 简体中文文档
+---
+title: "DreamGUI 文档"
+description: "DreamGUI 文档"
+---
+
+<a id="dreamgui-documentation"></a>
+
+# DreamGUI 文档
 
 [English](../README.md) · 简体中文
 
-本页当前是首次迁移的初始导航，后续会由 [Docs/README.md 英文原文](../README.md) 的中文译文替换。原有迁入、缺译和待核对清单已完整保存在 [首次迁移快照](TRANSLATIONS.md)，最新状态以 `python -B Docs/translation-status.py` 或文档站仓库的翻译状态 Issue 为准。
+本目录中的英文文档是插件的规范源文件。网站根据这些文件生成英文页面；中文译文保存在本插件的 `zh-CN/` 下，并在插件翻译 PR 经审阅合并后发布。
 
-这些文档从原文档站迁入，目前均为**待核对的旧译文**，尚未确认与当前英文一致。英文仍是技术内容的原文；中文修订由插件仓库中的翻译 PR 审阅，合并后再同步到网站。
+| 章节 | 从这里开始 |
+| --- | --- |
+| 概览 | [DreamGUI](index.md) |
+| 入门 | [安装](getting-started/installation.md)、[第一个界面](getting-started/first-screen.md)、[工作流程](getting-started/workflow.md) |
+| 概念 | [控件](concepts/widgets.md)、[控件树](concepts/widget-tree.md)、[渲染](concepts/rendering.md)、[输入](concepts/input.md) |
+| 语言 | [.dui 参考](language/index.md)、[绑定](language/bindings.md)、[设计器写回](language/write-back.md) |
+| 控件 | [控件目录](controls/index.md)、[样式](controls/styles.md)、[与 UMG 对照](controls/umg-parity.md) |
+| 指南 | [字体与打包](guides/fonts-and-packaging.md)、[迁移](guides/migration.md)、[升级](guides/upgrading.md)、[平台](guides/platforms.md) |
+| 工具 | [设计器](tools/designer.md)、[调试](tools/debugging.md)、[测试](tools/tests.md)、[脚本](tools/scripting.md) |
+| 参考 | [生成的类参考](Reference/index.md) |
+| 诊断 | [概览](diagnostics/index.md)、[诊断目录](diagnostics/codes.md) |
+| 变更 | [版本历史](changelog/index.md) |
 
-网站独有页面和 `docs-sync:notes` 补充保留在网站，不属于这里的翻译。
+<a id="maintaining-these-documents"></a>
 
-## 已迁入，待核对
+## 维护这些文档
 
-- [更新日志](changelog/index.md)
-- [动画](concepts/animation.md)
-- [画布](concepts/canvas.md)
-- [输入](concepts/input.md)
-- [布局](concepts/layout.md)
-- [歌词](concepts/lyrics.md)
-- [网格修改器与文字动画](concepts/mesh-modifiers.md)
-- [渲染](concepts/rendering.md)
-- [自定义网格、精灵与图集](concepts/sprites-and-meshes.md)
-- [文本](concepts/text.md)
-- [Widget Blueprint](concepts/widget-blueprints.md)
-- [控件树、挂起与停车](concepts/widget-tree.md)
-- [控件模型](concepts/widgets.md)
-- [世界空间 UI](concepts/world-space.md)
-- [控件库](controls/index.md)
-- [样式与样式表](controls/styles.md)
-- [从 UMG 过来：名字是一样的](controls/umg-parity.md)
-- [.dui 诊断码](diagnostics/codes.md) — 有 1 个编号尚未翻译
-- [诊断码](diagnostics/index.md)
-- [与 UMG 和上游的区别](getting-started/about.md)
-- [第一个界面](getting-started/first-screen.md)
-- [安装](getting-started/installation.md)
-- [项目里的布局](getting-started/project-layout.md)
-- [日常循环](getting-started/workflow.md)
-- [字体与打包](guides/fonts-and-packaging.md)
-- [从 LGUI、LexUI 或早期构建迁移](guides/migration.md)
-- [平台与现状](guides/platforms.md)
-- [从开发版升级](guides/upgrading.md)
-- [概览](index.md)
-- [绑定与路由](language/bindings.md)
-- [编写组件](language/components.md)
-- [if 与 for](language/control-flow.md)
-- [完整示例](language/example.md)
-- [节点与值](language/nodes-and-values.md)
-- [概览](language/overview.md)
-- [rows 表格](language/rows.md)
-- [槽位行与组件](language/slots-and-components.md)
-- [样式与资源](language/styles-and-resources.md)
-- [时间线](language/timelines.md)
-- [use](language/use.md)
-- [视图模型](language/viewmodels.md)
-- [设计器写回](language/write-back.md)
-- [UDreamBorder](Reference/DreamBorder.md)
-- [FDreamBorderStyle](Reference/DreamBorderStyle.md)
-- [UDreamButton](Reference/DreamButton.md)
-- [FDreamButtonStyle](Reference/DreamButtonStyle.md)
-- [UDreamDialog](Reference/DreamDialog.md)
-- [FDreamDialogStyle](Reference/DreamDialogStyle.md)
-- [UDreamDropdown](Reference/DreamDropdown.md)
-- [FDreamDropdownStyle](Reference/DreamDropdownStyle.md)
-- [UDreamEditableText](Reference/DreamEditableText.md)
-- [UDreamExpandableArea](Reference/DreamExpandableArea.md)
-- [FDreamExpandableAreaStyle](Reference/DreamExpandableAreaStyle.md)
-- [UDreamInputKeySelector](Reference/DreamInputKeySelector.md)
-- [FDreamInputKeySelectorStyle](Reference/DreamInputKeySelectorStyle.md)
-- [UDreamLayoutContainerBorder](Reference/DreamLayoutContainerBorder.md)
-- [UDreamLayoutContainerCanvasPanel](Reference/DreamLayoutContainerCanvasPanel.md)
-- [UDreamLayoutContainerGridPanel](Reference/DreamLayoutContainerGridPanel.md)
-- [UDreamLayoutContainerHorizontalBox](Reference/DreamLayoutContainerHorizontalBox.md)
-- [UDreamLayoutContainerMenuAnchor](Reference/DreamLayoutContainerMenuAnchor.md)
-- [UDreamLayoutContainerOverlay](Reference/DreamLayoutContainerOverlay.md)
-- [UDreamLayoutContainerSafeZone](Reference/DreamLayoutContainerSafeZone.md)
-- [UDreamLayoutContainerScaleBox](Reference/DreamLayoutContainerScaleBox.md)
-- [UDreamLayoutContainerScrollBox](Reference/DreamLayoutContainerScrollBox.md)
-- [UDreamLayoutContainerSizeBox](Reference/DreamLayoutContainerSizeBox.md)
-- [UDreamLayoutContainerStackBox](Reference/DreamLayoutContainerStackBox.md)
-- [UDreamLayoutContainerUniformGridPanel](Reference/DreamLayoutContainerUniformGridPanel.md)
-- [UDreamLayoutContainerVerticalBox](Reference/DreamLayoutContainerVerticalBox.md)
-- [UDreamLayoutContainerWidgetSwitcher](Reference/DreamLayoutContainerWidgetSwitcher.md)
-- [UDreamLayoutContainerWrapBox](Reference/DreamLayoutContainerWrapBox.md)
-- [FDreamListStyle](Reference/DreamListStyle.md)
-- [UDreamListView](Reference/DreamListView.md)
-- [UDreamListViewBase](Reference/DreamListViewBase.md)
-- [UDreamLyricsLibrary](Reference/DreamLyricsLibrary.md)
-- [UDreamMenuAnchor](Reference/DreamMenuAnchor.md)
-- [FDreamMenuAnchorStyle](Reference/DreamMenuAnchorStyle.md)
-- [UDreamMultiLineEditableText](Reference/DreamMultiLineEditableText.md)
-- [UDreamNativeWidgetHost](Reference/DreamNativeWidgetHost.md)
-- [UDreamPanelLayoutBase](Reference/DreamPanelLayoutBase.md)
-- [UDreamPanelSlot](Reference/DreamPanelSlot.md)
-- [UDreamProgressBar](Reference/DreamProgressBar.md)
-- [FDreamProgressBarStyle](Reference/DreamProgressBarStyle.md)
-- [UDreamRadioButton](Reference/DreamRadioButton.md)
-- [FDreamRadioButtonStyle](Reference/DreamRadioButtonStyle.md)
-- [UDreamRichTextBlock](Reference/DreamRichTextBlock.md)
-- [FDreamRichTextStyle](Reference/DreamRichTextStyle.md)
-- [UDreamRingMenu](Reference/DreamRingMenu.md)
-- [FDreamRingMenuStyle](Reference/DreamRingMenuStyle.md)
-- [UDreamScrollBar](Reference/DreamScrollBar.md)
-- [FDreamScrollBarStyle](Reference/DreamScrollBarStyle.md)
-- [UDreamScrollBox](Reference/DreamScrollBox.md)
-- [FDreamScrollBoxStyle](Reference/DreamScrollBoxStyle.md)
-- [UDreamSlider](Reference/DreamSlider.md)
-- [FDreamSliderStyle](Reference/DreamSliderStyle.md)
-- [UDreamSpinBox](Reference/DreamSpinBox.md)
-- [FDreamSpinBoxStyle](Reference/DreamSpinBoxStyle.md)
-- [UDreamTabView](Reference/DreamTabView.md)
-- [FDreamTabViewStyle](Reference/DreamTabViewStyle.md)
-- [UDreamTextInput](Reference/DreamTextInput.md)
-- [FDreamTextInputStyle](Reference/DreamTextInputStyle.md)
-- [UDreamTextPaintLibrary](Reference/DreamTextPaintLibrary.md)
-- [FDreamTextStyle](Reference/DreamTextStyle.md)
-- [UDreamThrobber](Reference/DreamThrobber.md)
-- [FDreamThrobberStyle](Reference/DreamThrobberStyle.md)
-- [UDreamTileView](Reference/DreamTileView.md)
-- [FDreamTileViewStyle](Reference/DreamTileViewStyle.md)
-- [UDreamToggle](Reference/DreamToggle.md)
-- [FDreamToggleStyle](Reference/DreamToggleStyle.md)
-- [UDreamTreeView](Reference/DreamTreeView.md)
-- [FDreamTreeViewStyle](Reference/DreamTreeViewStyle.md)
-- [UDreamUIAnimationLibrary](Reference/DreamUIAnimationLibrary.md)
-- [UDreamUIBPLibrary](Reference/DreamUIBPLibrary.md)
-- [UDreamUICaptureLibrary](Reference/DreamUICaptureLibrary.md)
-- [UDreamUIControl](Reference/DreamUIControl.md)
-- [FDreamUIFaceBrush](Reference/DreamUIFaceBrush.md)
-- [FDreamUIImageBrush](Reference/DreamUIImageBrush.md)
-- [UDreamUIInputModeLibrary](Reference/DreamUIInputModeLibrary.md)
-- [UDreamUILayoutLibrary](Reference/DreamUILayoutLibrary.md)
-- [FDreamUIStateFaces](Reference/DreamUIStateFaces.md)
-- [FDreamUIWidgetGeometry](Reference/DreamUIWidgetGeometry.md)
-- [UDreamUIWidgetGeometryLibrary](Reference/DreamUIWidgetGeometryLibrary.md)
-- [UDreamUIWidgetLibrary](Reference/DreamUIWidgetLibrary.md)
-- [UDreamUserWidget](Reference/DreamUserWidget.md)
-- [UDreamWidget](Reference/DreamWidget.md)
-- [类参考](Reference/index.md)
-- [基准测试](tools/bench.md)
-- [调试与测量](tools/debugging.md)
-- [Widget 设计器](tools/designer.md)
-- [脚本与代码入口](tools/scripting.md)
-- [自动化测试](tools/tests.md)
-- [VS Code 扩展](tools/vscode.md)
+- 使用普通 Markdown 和相对链接编辑主题文件。代码示例和 API 标识符保持其确切拼写。
+- `Reference/` 由 `DreamGUIReferenceDocs` 命令从反射生成。请更新源声明或生成器并重新生成它；不要手动编辑生成的页面。
+- 旧的 `DuiLanguage.md`、`FontsAndPackaging.md` 和 `Migration.md` 路径是面向现有仓库链接和打包使用者的导航页面。完整文本保存在主题文件中。
+- 网站页面 ID 是稳定的。源文件移动会更新网站仓库中的 `docs-sync/config.json`，而不是公开 URL。
+- 来自网站 PR [#2](https://github.com/TypeDreamMoon/gui.toolchain.64hz.cn/pull/2) 和 [#3](https://github.com/TypeDreamMoon/gui.toolchain.64hz.cn/pull/3) 的文档新增内容在此维护，包括控件标签、控件树、网格修改器、精灵、歌词、反射绑定和事务性文本写回。
 
-## 尚未翻译
+`zh-CN/` 树镜像英文源路径。导入的译文未经审阅；[首次迁移快照](TRANSLATIONS.md) 保留了原始导入和缺失译文列表。要查看当前状态，请运行 `python -B Docs/translation-status.py` 或查看网站仓库中的翻译状态 issue。`.translations/` 记录源版本，但不将导入视为批准。仅网站特有的说明仍保留在网站仓库中。
 
-以下链接指向英文原文；不会把英文副本标为中文译文。
-
-- [language/index.md](../language/index.md)
-
-## 现有译文中的缺译段落
-
-- [diagnostics/codes.md](../diagnostics/codes.md)：`DUI6023`
-
-## 翻译记录
-
-`.translations/` 按英文源文件保存迁入记录。`sourceHash: null` 表示尚未核对；`importedSourceHash` 只记录迁入时看到的英文版本，不表示译文已经匹配该版本。这个导航页不是原文翻译，不建立伪造的审阅记录。
-
-在插件根目录运行 `python -B Docs/translation-status.py` 可只读查看翻译状态；`--all` 列出全部原文，`--json` 输出结构化结果。无需文档站仓库，打包后没有 Git 的插件目录也可以运行。
+使用 `python -B Docs/translation-status.py` 在本地检查翻译状态；添加 `--all` 以包含所有源文件，或添加 `--json` 以获取结构化输出。这个只读工具不需要网站仓库或 Git 检出。

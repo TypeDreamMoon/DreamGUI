@@ -1,19 +1,11 @@
 {
   "version": 1,
+  "origin": "ai",
   "sourceFile": "Docs/language/components.md",
+  "sourceHash": "bff945e8187b879142fe4b825e893506c7ac2841e98981f08412b55905a34607",
+  "sourceRevision": "c4c440d0058d09df7ea097d0245d018307631407",
+  "source": "---\ntitle: \"Writing a component\"\ndescription: \"A widget Blueprint used inside other trees, written in .dui — props, events and emit, default and named slots, and how a host sets, hears and fills them.\"\n---\n\n## Writing a component\n\nA component is a widget Blueprint used inside other trees. Written in `.dui` it declares, beside its tree, what its\nhosts may set and hear.\n\n### `props`\n\n```\nprops {\n    Text   Label\n    Text   Value\n    Number ValueIndex = 0\n    Enum   /Script/MyGame.ERowKind Kind = Cycle\n}\n```\n\nOne property per line: a type, a name, and optionally `= default`. The types are `Text`, `String`, `Number`, `Integer`,\n`Bool`, `Color`, `Vector2`, `Asset`, `Class`, and `Enum` followed by the enum's path. Each becomes a Blueprint variable\nof the class, editable on instances; a C++ parent's property of the same name and type is used instead of declaring one.\n\nA host sets them like any property, and the component binds them:\n\n```\n// in the component\nText LabelText { Text <- Label }\n\n// in a host\nRow Audio { Label = \"Audio\" }\nRow Track { Label <- GetTrackName() }\n```\n\nA host may bind a prop as well as set it. A prop has no setter -- it is a Blueprint variable -- so the binding writes it\nstraight into the instance when the value changes and announces it (props are FieldNotify), and the component's own\nbindings on it show the change. This is the one setter-less property a binding accepts: a user widget's own variable,\none way (`<-`, not `<->`).\n\nA line that is not `Type Name` or `Type Name = value` is DUI2016; one name twice is DUI3019; at compile, a type with no\nBlueprint pin is DUI6008, a name the class already uses DUI6009, a default its type cannot hold DUI6013.\n\n### `events` and `emit`\n\n```\nevents {\n    Picked(Number Index)\n    Closed\n}\n```\n\nEntries end at a line break or a `;`, so a short list fits on one line: `events { Picked(Number Index); Closed }`. Each\nbecomes an event dispatcher of the class. The component raises one from any route with `emit`, its arguments written as\nbinding expressions:\n\n```\n+ UIButton { OnClick -> emit Picked(ValueIndex) }\n```\n\nand a host routes it like any event:\n\n```\nRow Audio { Picked -> HandleAudioPicked }\n```\n\nDUI2017 is a malformed entry and DUI3020 a duplicate. At compile, `emit` of an event not declared here is DUI6010,\narguments that do not match its parameters DUI6011, an `emit` that cannot be compiled where it stands (inside a loop body,\nor on an event whose parameters Blueprints cannot take) DUI6012, and an event named like another member of the class\nDUI6014.\n\n### Slots\n\nA component opens a hole its host fills with `slot`:\n\n```\nslot Footer\nslot Rows default\nslot Detail : DetailPanel {\n    + VerticalBox { Spacing = 15 }\n    @slot SizeRule = Fill\n}\n```\n\n- `default` marks the slot that content goes to when the host names none. One per file (DUI3022).\n- A block, or a style, lays the hole out: components, properties and slot lines -- never children, since what goes in\n  it is the host's (DUI2019). A slot with a layout container takes several widgets; one without takes one.\n- `(was: OldName)` renames a slot, as it does a node.\n\nA host fills the **default** slot by nesting, and a **named** one with a `slot` block of its own inside the instance:\n\n```\nListPage Page_2 {\n    Row Item_0 { Label = \"Warped Wire\" }        // into the default slot\n    slot Detail {                               // into the slot named Detail\n        Text Note { Text = \"A length of wire bent out of shape.\" }\n    }\n}\n```\n\nA fill holds widgets and nothing else. A named slot holds one widget -- put several in a container. A fill outside a\ncomponent instance is DUI5019; one naming a slot the component does not declare is DUI5020.\n",
   "translationFile": "Docs/zh-CN/language/components.md",
-  "sourceHash": null,
-  "importedSourceHash": "bff945e8187b879142fe4b825e893506c7ac2841e98981f08412b55905a34607",
-  "sourceRevision": "5d4e5ce0ebb734a3f2d46d5a371674cfa1b69176",
-  "translationHash": "b8a68717289316e4d1b9850cb1bde2a122ae9f9e43f13c32dc4a8e2dd9979cbc",
-  "origin": "website-import",
-  "importedFrom": [
-    "dui/components"
-  ],
-  "pageMetadata": {
-    "dui/components": {
-      "title": "编写组件",
-      "description": "用 .dui 写一个在别的树里使用的 widget Blueprint——props、events 与 emit、默认槽位和具名槽位，以及宿主怎样设置、监听和填充它。"
-    }
-  }
+  "translationHash": "35b2485d89cdef8801afa6b5a41727368c2e7fe80dff9cef7e2eea8ca952aa73",
+  "model": "deepseek-flash"
 }
