@@ -26,6 +26,6 @@ these files; Chinese translations are maintained under `zh-CN/` in this plugin a
 - Website page IDs are stable. A source-file move updates `docs-sync/config.json` in the website repository, not the public URL.
 - Documentation additions from website PRs [#2](https://github.com/TypeDreamMoon/gui.toolchain.64hz.cn/pull/2) and [#3](https://github.com/TypeDreamMoon/gui.toolchain.64hz.cn/pull/3) are maintained here, including widget tags, the widget tree, mesh modifiers, sprites, lyrics, reflected binding and transactional text write-back.
 
-The `zh-CN/` tree mirrors English source paths. Imported translations are unreviewed; its README lists missing translations, and `.translations/` records source versions without treating an import as approval. Website-only notes remain in the website repository.
+The `zh-CN/` tree mirrors English source paths. Imported translations are unreviewed; the [initial migration snapshot](zh-CN/TRANSLATIONS.md) preserves the original imported and missing translation lists. For current status, run `python -B Docs/translation-status.py` or check the translation status issue in the website repository. `.translations/` records source versions without treating an import as approval. Website-only notes remain in the website repository.
 
 Check translation status locally with `python -B Docs/translation-status.py`; add `--all` to include every source or `--json` for structured output. This read-only tool does not need the website repository or a Git checkout.
