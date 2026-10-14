@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "sourceFile": "Docs/Reference/DreamUIAnimationLibrary.md",
+  "translationFile": "Docs/zh-CN/Reference/DreamUIAnimationLibrary.md",
+  "sourceHash": null,
+  "importedSourceHash": "9fb8b7bf4db05277a61b5b8f76a3e3a547ecf5a9132820a0e3633fdfabdd6188",
+  "sourceRevision": "5d4e5ce0ebb734a3f2d46d5a371674cfa1b69176",
+  "translationHash": "df918afaace446aa9122ecc330a9c566e7cdfa5fcdcdc97372e76c3da073e7a4",
+  "origin": "website-import",
+  "importedFrom": [
+    "reference/dreamuianimationlibrary"
+  ],
+  "pageMetadata": {
+    "reference/dreamuianimationlibrary": {
+      "title": "UDreamUIAnimationLibrary",
+      "description": "The Blueprint-side helpers for FDreamUIAnimationHandle, which a struct cannot carry itself."
+    }
+  }
+}

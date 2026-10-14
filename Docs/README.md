@@ -1,7 +1,9 @@
 # DreamGUI documentation
 
+[English](README.md) · [简体中文](zh-CN/README.md)
+
 English documents in this directory are the canonical plugin sources. The website generates its English pages from
-these files; Chinese translations are maintained in the website repository and published after a translation PR is reviewed.
+these files; Chinese translations are maintained under `zh-CN/` in this plugin and published after a plugin translation PR is reviewed and merged.
 
 | Section | Start here |
 | --- | --- |
@@ -23,3 +25,7 @@ these files; Chinese translations are maintained in the website repository and p
 - The old `DuiLanguage.md`, `FontsAndPackaging.md` and `Migration.md` paths are navigation pages for existing repository links and packaging consumers. The topic files hold the full text.
 - Website page IDs are stable. A source-file move updates `docs-sync/config.json` in the website repository, not the public URL.
 - Documentation additions from website PRs [#2](https://github.com/TypeDreamMoon/gui.toolchain.64hz.cn/pull/2) and [#3](https://github.com/TypeDreamMoon/gui.toolchain.64hz.cn/pull/3) are maintained here, including widget tags, the widget tree, mesh modifiers, sprites, lyrics, reflected binding and transactional text write-back.
+
+The `zh-CN/` tree mirrors English source paths. Imported translations are unreviewed; its README lists missing translations, and `.translations/` records source versions without treating an import as approval. Website-only notes remain in the website repository.
+
+Check translation status locally with `python -B Docs/translation-status.py`; add `--all` to include every source or `--json` for structured output. This read-only tool does not need the website repository or a Git checkout.

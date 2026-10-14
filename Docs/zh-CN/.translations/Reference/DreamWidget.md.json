@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "sourceFile": "Docs/Reference/DreamWidget.md",
+  "translationFile": "Docs/zh-CN/Reference/DreamWidget.md",
+  "sourceHash": null,
+  "importedSourceHash": "a4f38b0101904c419a5657564d263417b6d50eac63ec294416a41478d83b63a3",
+  "sourceRevision": "5d4e5ce0ebb734a3f2d46d5a371674cfa1b69176",
+  "translationHash": "05fb8266918c8a0570644c3cc2e8db973f1623b4a79b71f4fc8df9fab4655c26",
+  "origin": "website-import",
+  "importedFrom": [
+    "reference/dreamwidget"
+  ],
+  "pageMetadata": {
+    "reference/dreamwidget": {
+      "title": "UDreamWidget",
+      "description": "Base class for almost all UI related things."
+    }
+  }
+}

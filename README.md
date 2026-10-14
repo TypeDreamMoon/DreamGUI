@@ -255,3 +255,5 @@ For bug reports and feature requests, open an [issue](https://github.com/TypeDre
    <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=typedreammoon/dreamgui&type=date&legend=bottom-right" />
  </picture>
 </a>
+
+Documentation: [English](Docs/README.md) · [简体中文](Docs/zh-CN/README.md) (imported translations awaiting review).

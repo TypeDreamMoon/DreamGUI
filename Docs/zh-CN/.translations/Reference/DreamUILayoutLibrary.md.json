@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "sourceFile": "Docs/Reference/DreamUILayoutLibrary.md",
+  "translationFile": "Docs/zh-CN/Reference/DreamUILayoutLibrary.md",
+  "sourceHash": null,
+  "importedSourceHash": "f6101dea76d9c35d11e66fdbe5c593aefcb60d34450ccf8a88e8eaf38bac0ec6",
+  "sourceRevision": "5d4e5ce0ebb734a3f2d46d5a371674cfa1b69176",
+  "translationHash": "ca86346ddc2ca2c03334a1ec959036438140fbcdb5628ae3c9ce599641a24e34",
+  "origin": "website-import",
+  "importedFrom": [
+    "reference/dreamuilayoutlibrary"
+  ],
+  "pageMetadata": {
+    "reference/dreamuilayoutlibrary": {
+      "title": "UDreamUILayoutLibrary",
+      "description": "The viewport, the mouse and the screen -- this framework's UWidgetLayoutLibrary."
+    }
+  }
+}

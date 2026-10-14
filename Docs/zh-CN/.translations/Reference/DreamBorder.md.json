@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "sourceFile": "Docs/Reference/DreamBorder.md",
+  "translationFile": "Docs/zh-CN/Reference/DreamBorder.md",
+  "sourceHash": null,
+  "importedSourceHash": "439c63689e67d5124409b6b5f4675ccdaa19fc2efb1d17e060e28ad932c20a5c",
+  "sourceRevision": "5d4e5ce0ebb734a3f2d46d5a371674cfa1b69176",
+  "translationHash": "fd43893996cf0cfd8a0cf445fb31999d66b045f739a808bc885fb97bd9201848",
+  "origin": "website-import",
+  "importedFrom": [
+    "reference/dreamborder"
+  ],
+  "pageMetadata": {
+    "reference/dreamborder": {
+      "title": "UDreamBorder",
+      "description": "A border whose hierarchy is code, not an asset: a face, a padding, and a hole to put things in."
+    }
+  }
+}

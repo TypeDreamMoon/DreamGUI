@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "sourceFile": "Docs/language/nodes-and-values.md",
+  "translationFile": "Docs/zh-CN/language/nodes-and-values.md",
+  "sourceHash": null,
+  "importedSourceHash": "aee19be42ea47b55f4bfbdb8763e860023c9d69aebeb2d6a1dc3b047c805d3d9",
+  "sourceRevision": "5d4e5ce0ebb734a3f2d46d5a371674cfa1b69176",
+  "translationHash": "b1c3bcbf8e315b70c79e904c51ac63600b79872252fc5f7aeb5ec67cb38aafb0",
+  "origin": "website-import",
+  "importedFrom": [
+    "dui/nodes-and-values"
+  ],
+  "pageMetadata": {
+    "dui/nodes-and-values": {
+      "title": "节点与值",
+      "description": "节点怎么写、id 的规则、不写 id 的节点、类型名按什么顺序解析，以及属性能取的每一种值。"
+    }
+  }
+}

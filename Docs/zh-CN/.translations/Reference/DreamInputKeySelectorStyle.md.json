@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "sourceFile": "Docs/Reference/DreamInputKeySelectorStyle.md",
+  "translationFile": "Docs/zh-CN/Reference/DreamInputKeySelectorStyle.md",
+  "sourceHash": null,
+  "importedSourceHash": "a5d66fd34d8024a88d900242b2b3de3c76e38464043749041298bf5f534be182",
+  "sourceRevision": "5d4e5ce0ebb734a3f2d46d5a371674cfa1b69176",
+  "translationHash": "a6eeaeddc800d7d6b643821d55941d5b87ad04fb67abd0f61734dc4f79dde001",
+  "origin": "website-import",
+  "importedFrom": [
+    "reference/dreaminputkeyselectorstyle"
+  ],
+  "pageMetadata": {
+    "reference/dreaminputkeyselectorstyle": {
+      "title": "FDreamInputKeySelectorStyle",
+      "description": "A key binder: a button whose label is the bound key, and which listens when pressed."
+    }
+  }
+}

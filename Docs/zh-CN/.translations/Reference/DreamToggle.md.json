@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "sourceFile": "Docs/Reference/DreamToggle.md",
+  "translationFile": "Docs/zh-CN/Reference/DreamToggle.md",
+  "sourceHash": null,
+  "importedSourceHash": "9b4c67e7e229f3587c8591b786b399f2369144d7fcc6aa29ce39dfc936476e6f",
+  "sourceRevision": "5d4e5ce0ebb734a3f2d46d5a371674cfa1b69176",
+  "translationHash": "ff13a8c58fe75cd3721f046c73bdb00344c740e4403d837586661708cd6d630e",
+  "origin": "website-import",
+  "importedFrom": [
+    "reference/dreamtoggle"
+  ],
+  "pageMetadata": {
+    "reference/dreamtoggle": {
+      "title": "UDreamToggle",
+      "description": "A toggle whose hierarchy is code, not an asset."
+    }
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "sourceFile": "Docs/Reference/DreamSliderStyle.md",
+  "translationFile": "Docs/zh-CN/Reference/DreamSliderStyle.md",
+  "sourceHash": null,
+  "importedSourceHash": "d1678a73bf174769903a5701487be8f34bce3a668472ce6434a25ce46ac65a38",
+  "sourceRevision": "5d4e5ce0ebb734a3f2d46d5a371674cfa1b69176",
+  "translationHash": "09fce282928811c64a12ae05633d4130a8a0b4c37d8663478e8bae7901bf485e",
+  "origin": "website-import",
+  "importedFrom": [
+    "reference/dreamsliderstyle"
+  ],
+  "pageMetadata": {
+    "reference/dreamsliderstyle": {
+      "title": "FDreamSliderStyle",
+      "description": "A slider: a track, the filled part of it, and the handle riding it."
+    }
+  }
+}

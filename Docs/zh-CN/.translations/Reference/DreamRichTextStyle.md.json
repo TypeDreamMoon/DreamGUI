@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "sourceFile": "Docs/Reference/DreamRichTextStyle.md",
+  "translationFile": "Docs/zh-CN/Reference/DreamRichTextStyle.md",
+  "sourceHash": null,
+  "importedSourceHash": "e7f127687c5f58543b638186e284c9021deaabdb2beaf33c192ef450a785e436",
+  "sourceRevision": "5d4e5ce0ebb734a3f2d46d5a371674cfa1b69176",
+  "translationHash": "83ea7cdc9816b06056736b86453a93d4e4bc257b3492840cb98f675efad669f7",
+  "origin": "website-import",
+  "importedFrom": [
+    "reference/dreamrichtextstyle"
+  ],
+  "pageMetadata": {
+    "reference/dreamrichtextstyle": {
+      "title": "FDreamRichTextStyle",
+      "description": "A rich text block: one paragraph that reads markup."
+    }
+  }
+}

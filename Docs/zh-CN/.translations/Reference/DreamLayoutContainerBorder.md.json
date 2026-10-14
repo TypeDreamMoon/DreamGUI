@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "sourceFile": "Docs/Reference/DreamLayoutContainerBorder.md",
+  "translationFile": "Docs/zh-CN/Reference/DreamLayoutContainerBorder.md",
+  "sourceHash": null,
+  "importedSourceHash": "5b82662bdef51028dcef2717bfaae31681e094e177239b08003974d6736a643c",
+  "sourceRevision": "5d4e5ce0ebb734a3f2d46d5a371674cfa1b69176",
+  "translationHash": "2b6ea16189aed4de33888e1ca409bd0ba6af893c0cdb2986a38e59c0c859d587",
+  "origin": "website-import",
+  "importedFrom": [
+    "reference/dreamlayoutcontainerborder"
+  ],
+  "pageMetadata": {
+    "reference/dreamlayoutcontainerborder": {
+      "title": "UDreamLayoutContainerBorder",
+      "description": "UMG's UBorder: one child, padded, aligned by the BORDER rather than by the child's slot."
+    }
+  }
+}

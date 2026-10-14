@@ -1,0 +1,62 @@
+---
+title: "UDreamLayoutContainerBorder"
+description: "UMG's UBorder: one child, padded, aligned by the BORDER rather than by the child's slot."
+---
+
+**提示：**
+
+本页由 `DreamGUIReferenceDocs` commandlet 从反射生成，正文是头文件注释的原文（英文），所以不翻译——这样它永远和代码一致。概念讲解见[核心概念](../concepts/widgets.md)。
+
+
+
+Inherits from [UDreamPanelLayoutBase](DreamPanelLayoutBase.md).
+
+Declared in `Public/Core/Components/DreamPanelLayouts.h`.
+
+UMG's UBorder: one child, padded, aligned by the BORDER rather than by the child's slot.
+
+That last part is the only thing here that is not already expressible as an Overlay with a rect-block
+visual, and it is the reason this is a class. Everywhere else in this plugin alignment belongs to the
+slot -- "where do I sit in what I was given" -- and a Border inverts it: the alignment is the
+container's statement about where it puts its content. Authors coming from UMG set HorizontalAlignment
+on the Border, and before this that property had nowhere to live.
+
+The background is the owning widget's own visual, which is how every other drawn thing works here.
+BrushColor tints it, as SBorder multiplies its brush by BorderBackgroundColor, without touching the
+visual's own colour (UDreamVisual::SetColorMultiplier). There is no Background FSlateBrush: a DreamGUI
+widget's art comes from its visual (sprite, rect block, image), and adding a second source of it would
+be a fork of the render path rather than a port of a panel.
+
+What SBorder adds on top of its brush is here too: ContentColorAndOpacity tints what the border holds
+and never the background, a disabled border draws its background at the disabled effect's 45% alpha,
+and the background can be mirrored for a right-to-left culture.
+
+<a id="properties"></a>
+
+## Properties
+
+| Name | Type | Category | In the details panel | From Blueprint | Description |
+|---|---|---|---|---|---|
+| `Padding` | `FMargin` | Border | yes | `SetPadding` |  |
+| `HorizontalAlignment` | `EDreamPanelHorizontalAlignment` | Border | yes | `SetHorizontalAlignment` | Where the border puts its content. Overrides the content slot's own alignment, as UMG's does. |
+| `VerticalAlignment` | `EDreamPanelVerticalAlignment` | Border | yes | `SetVerticalAlignment` |  |
+| `DesiredSizeScale` | `FVector2D` | Border | yes | `SetDesiredSizeScale` | UMG's UBorder::DesiredSizeScale: scales what this border REPORTS, not what it arranges. |
+| `BrushColor` | `FLinearColor` | Border | yes | `SetBrushColor` | A tint over the background -- the owning widget's visual -- multiplied with the visual's own colour in linear space, as SBorder multiplies its brush by BorderBackgroundColor. White leaves the visual as authored. |
+| `ContentColorAndOpacity` | `FLinearColor` | Border | yes | `SetContentColorAndOpacity` | A tint over everything the border holds and never over its own background -- UMG's ContentColorAndOpacity, which SCompoundWidget blends into what its children inherit. It is the owning widget's content tint (UDreamWidget::SetContentTint), so it reaches every visual below the border, alpha included. |
+| `bShowEffectWhenDisabled` | `bool` | Border | yes | `SetShowEffectWhenDisabled` | While the border is disabled (UDreamWidget::GetIsEnabledInHierarchy), draw the background at 45% of its alpha: SBorder's disabled draw effect, which the default Slate shader spends as alpha x 0.45. Only the background -- what the border holds shows its own disabled look. |
+| `bFlipForRightToLeftFlowDirection` | `bool` | Border | yes | `SetFlipForRightToLeftFlowDirection` | Mirror the background left to right while this border lays out right to left -- UMG's bFlipForRightToLeftFlowDirection, SBorder's render transform of (-1, 1) about the brush's centre. The content is not mirrored by it: where the content sits is the layout's to mirror, and it does. |
+
+<a id="functions"></a>
+
+## Functions
+
+| Function | Kind | Description |
+|---|---|---|
+| `void SetBrushColor(FLinearColor Value)` | callable | Set Brush Color |
+| `void SetContentColorAndOpacity(FLinearColor Value)` | callable | Set Content Color and Opacity |
+| `void SetDesiredSizeScale(FVector2D Value)` | callable | Set Desired Size Scale |
+| `void SetFlipForRightToLeftFlowDirection(bool Value)` | callable | Set Flip for Right to Left Flow Direction |
+| `void SetHorizontalAlignment(EDreamPanelHorizontalAlignment Value)` | callable | Set Horizontal Alignment |
+| `void SetPadding(FMargin Value)` | callable | Set Padding |
+| `void SetShowEffectWhenDisabled(bool Value)` | callable | Set Show Effect when Disabled |
+| `void SetVerticalAlignment(EDreamPanelVerticalAlignment Value)` | callable | Set Vertical Alignment |

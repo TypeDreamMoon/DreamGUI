@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "sourceFile": "Docs/Reference/DreamUIBPLibrary.md",
+  "translationFile": "Docs/zh-CN/Reference/DreamUIBPLibrary.md",
+  "sourceHash": null,
+  "importedSourceHash": "e7ac03f1661cb230f34631db7bbd371b956876b5d0316185fa100f2c35a3de08",
+  "sourceRevision": "5d4e5ce0ebb734a3f2d46d5a371674cfa1b69176",
+  "translationHash": "c8ed6a0e8b56c374a0cfed5130dd4d3d6d8d0b4015a1fa84c68ab176f786e9cc",
+  "origin": "website-import",
+  "importedFrom": [
+    "reference/dreamuibplibrary"
+  ],
+  "pageMetadata": {
+    "reference/dreamuibplibrary": {
+      "title": "UDreamUIBPLibrary",
+      "description": "Dream UIBPLibrary"
+    }
+  }
+}

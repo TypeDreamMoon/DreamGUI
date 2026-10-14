@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "sourceFile": "Docs/Reference/DreamBorderStyle.md",
+  "translationFile": "Docs/zh-CN/Reference/DreamBorderStyle.md",
+  "sourceHash": null,
+  "importedSourceHash": "a4927d1119d0c84dc9bd587d7fb9d191437708001b986c634990ef723d4e7932",
+  "sourceRevision": "5d4e5ce0ebb734a3f2d46d5a371674cfa1b69176",
+  "translationHash": "ea1c271706ba4090b9d31fc4cd8319d9f4e53d2ecf77440970ec9fb1f262b352",
+  "origin": "website-import",
+  "importedFrom": [
+    "reference/dreamborderstyle"
+  ],
+  "pageMetadata": {
+    "reference/dreamborderstyle": {
+      "title": "FDreamBorderStyle",
+      "description": "A border: a brush, a padding and one child."
+    }
+  }
+}

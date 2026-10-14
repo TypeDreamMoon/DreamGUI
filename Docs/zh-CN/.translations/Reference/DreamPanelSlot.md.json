@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "sourceFile": "Docs/Reference/DreamPanelSlot.md",
+  "translationFile": "Docs/zh-CN/Reference/DreamPanelSlot.md",
+  "sourceHash": null,
+  "importedSourceHash": "9fb2eee0d434cd49e002b88783cd09f9782a8a3dea1d9e0a4edbeaf1c894b836",
+  "sourceRevision": "5d4e5ce0ebb734a3f2d46d5a371674cfa1b69176",
+  "translationHash": "81fd978aedeabbb4e532b156fd2f2f732808fc5da4727fee478eb8da68efd86b",
+  "origin": "website-import",
+  "importedFrom": [
+    "reference/dreampanelslot"
+  ],
+  "pageMetadata": {
+    "reference/dreampanelslot": {
+      "title": "UDreamPanelSlot",
+      "description": "UMG-style per-child layout data owned by the child widget."
+    }
+  }
+}

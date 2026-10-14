@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "sourceFile": "Docs/tools/scripting.md",
+  "translationFile": "Docs/zh-CN/tools/scripting.md",
+  "sourceHash": null,
+  "importedSourceHash": "22b5e3eef445d1f0b937c789e753fa7e653c1ff261a76e8d06f2299814d9ea7d",
+  "sourceRevision": "5d4e5ce0ebb734a3f2d46d5a371674cfa1b69176",
+  "translationHash": "c8b9569b6993d0166578782383031ec93f591b3e2151985855e1cbe0205fe3f9",
+  "origin": "website-import",
+  "importedFrom": [
+    "tools/scripting"
+  ],
+  "pageMetadata": {
+    "tools/scripting": {
+      "title": "脚本与代码入口",
+      "description": "从 Blueprint 和 C++ 创建、显示、放进世界的入口（UDreamUIBPLibrary）、K2 节点模块，以及用编辑器 Python 创建 Dream Widget Blueprint、把它指向一个 .dui 并编译。"
+    }
+  }
+}

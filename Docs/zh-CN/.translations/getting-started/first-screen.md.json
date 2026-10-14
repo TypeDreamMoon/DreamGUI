@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "sourceFile": "Docs/getting-started/first-screen.md",
+  "translationFile": "Docs/zh-CN/getting-started/first-screen.md",
+  "sourceHash": null,
+  "importedSourceHash": "c44b49179168db726f3164c742fac3c568747d58ce99b0beab62d44054ecfe2c",
+  "sourceRevision": "5d4e5ce0ebb734a3f2d46d5a371674cfa1b69176",
+  "translationHash": "6b622eb7e31a3dfb9bffc9879ab0d8167d1f6310379c3274d867e7bc44dcaa76",
+  "origin": "website-import",
+  "importedFrom": [
+    "start/first-screen"
+  ],
+  "pageMetadata": {
+    "start/first-screen": {
+      "title": "第一个界面",
+      "description": "用插件自带的 HelloDreamGUI.dui 走一遍从文本到屏幕的全过程，逐行读懂这个文件，再把同一个类立进关卡里。"
+    }
+  }
+}

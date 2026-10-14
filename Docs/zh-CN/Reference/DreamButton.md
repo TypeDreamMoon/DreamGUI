@@ -1,0 +1,119 @@
+---
+title: "UDreamButton"
+description: "A button whose hierarchy is code, not an asset."
+---
+
+**提示：**
+
+本页由 `DreamGUIReferenceDocs` commandlet 从反射生成，正文是头文件注释的原文（英文），所以不翻译——这样它永远和代码一致。概念讲解见[核心概念](../concepts/widgets.md)。
+
+
+
+Inherits from [UDreamUIControl](DreamUIControl.md).
+
+Declared in `Public/Controls/DreamButton.h`.
+
+A button whose hierarchy is code, not an asset.
+
+Two nodes -- a face, and the hole on it -- and the behaviour BP_Button shipped without for months.
+That omission is the whole argument for this class existing: a control that always adds its own
+UIButton has no state in which clicking it does nothing.
+
+The face's brush stays white and the selectable writes the style's colours onto it as absolutes,
+rather than the gallery's habit of a coloured brush multiplied by near-white tints -- a product
+of two sources is a look no style sheet can name.
+
+IT DRAWS NO TEXT OF ITS OWN. What is on a button is whatever the host puts in the hole, which is
+the default one, so nesting fills it:
+
+```text
+Native.Button Confirm {
+    Text { Text = "确定" }
+    OnClicked -> HandleConfirm
+```
+
+<a id="properties"></a>
+
+## Properties
+
+| Name | Type | Category | In the details panel | From Blueprint | Description |
+|---|---|---|---|---|---|
+| `Style` | `FDreamButtonStyle` | Button | yes | `GetStyle` / `SetStyle` | This instance's own look. The project sheet wins while StyleSource says so AND a sheet actually exists; with no sheet in the project this IS the look in effect -- which is why it stays editable instead of being gated on the enum: the old edit condition greyed the exact values that were driving the control. |
+| `BackgroundColor` | `FColor` | Button | yes | `GetBackgroundColor` / `SetBackgroundColor` | A tint multiplied over whatever the face is showing -- UMG's BackgroundColor, and the runtime half of the face brush's authored Tint. |
+| `ColorAndOpacity` | `FLinearColor` | Button | yes | `GetColorAndOpacity` / `SetColorAndOpacity` | A tint over the WHOLE button, face and content alike -- UMG's ColorAndOpacity, of which this property honours the alpha. |
+| `bAllowDragDrop` | `bool` | Button | yes | `GetAllowDragDrop` / `SetAllowDragDrop` | Whether a drag may START on this button -- UMG's bAllowDragDrop, and off as UMG has it. |
+| `ClickMethod` | `EDreamUIClickMethod` | Button | yes | `GetClickMethod` / `SetClickMethod` | WHEN this button's click fires, per input kind -- UMG's three enums, surfaced at the control. |
+| `TouchMethod` | `EDreamUITouchMethod` | Button | yes | `GetTouchMethod` / `SetTouchMethod` |  |
+| `PressMethod` | `EDreamUIPressMethod` | Button | yes | `GetPressMethod` / `SetPressMethod` |  |
+| `AcceptedMouseButtons` | `int32` | Button | yes | `GetAcceptedMouseButtons` / `SetAcceptedMouseButtons` | WHICH mouse buttons press and click this button -- a bitmask over EDreamUIMouseButtonType, the left button alone by default, which is UMG's rule: SButton answers the left button and nothing else, so a right click on a button is not a use of it (no OnPressed, OnReleased or OnClicked) and goes on to whatever is behind it. |
+| `FaceNode` | `TObjectPtr<UDreamWidget>` | Button | - | read only |  |
+| `ContentNode` | `TObjectPtr<UDreamWidget>` | Button | - | read only | The hole. Empty is the normal state, and an empty one claims no size -- see RealizeBuiltIn. |
+| `ButtonBehaviour` | `TObjectPtr<UUIButton>` | Button | - | read only |  |
+| `DragSource` | `TObjectPtr<UDreamUIDragSource>` | Button | - | read only | Only while bAllowDragDrop is on; see there for why it is added and destroyed rather than muted. |
+
+<a id="functions"></a>
+
+## Functions
+
+| Function | Kind | Description |
+|---|---|---|
+| `int32 GetAcceptedMouseButtons()` | pure | Get Accepted Mouse Buttons |
+| `bool GetAllowDragDrop()` | pure | Get Allow Drag Drop |
+| `FColor GetBackgroundColor()` | pure | Get Background Color |
+| `EDreamUIClickMethod GetClickMethod()` | pure | Get Click Method |
+| `FLinearColor GetColorAndOpacity()` | pure | Get Color and Opacity |
+| `UDreamUIDragSource* GetDragSource()` | pure | The drag source this button's switch put on the face, or null while the switch is off. |
+| `EDreamUIPressMethod GetPressMethod()` | pure | Get Press Method |
+| `FDreamButtonStyle GetStyle()` | pure | Get Style |
+| `EDreamUITouchMethod GetTouchMethod()` | pure | Get Touch Method |
+| `bool IsPressed()` | pure | Whether a pointer is holding this button down right now. |
+| `void SetAcceptedMouseButtons(int32 InAcceptedMouseButtons)` | callable | Writes the bitmask and pushes it onto the behaviour at once, as the three method setters do. |
+| `void SetAllowDragDrop(bool bInAllowDragDrop)` | callable | Set Allow Drag Drop |
+| `void SetBackgroundColor(FColor InBackgroundColor)` | callable | Set Background Color |
+| `void SetClickMethod(EDreamUIClickMethod InMethod)` | callable | Each of the four setters below writes the field and re-pushes it onto the behaviour. |
+| `void SetColorAndOpacity(FLinearColor InColorAndOpacity)` | callable | See the property: the alpha cascades over the whole button, the colour has nowhere to go. |
+| `void SetPressMethod(EDreamUIPressMethod InMethod)` | callable | Set Press Method |
+| `void SetStyle(FDreamButtonStyle InStyle)` | callable | This instance's whole look, replaced and pushed. Whether it is the look in EFFECT is still StyleSource's answer -- writing an inline style while the sheet is driving changes nothing you can see, which is why the push runs either way rather than pretending otherwise. |
+| `void SetTouchMethod(EDreamUITouchMethod InMethod)` | callable | Set Touch Method |
+
+<a id="events"></a>
+
+## Events
+
+| Event | Signature | Description |
+|---|---|---|
+| `OnClicked` | `void DreamButtonClickedEvent__DelegateSignature()` | Re-broadcast from the behaviour, so a consumer binds to the control, not to a part of it. |
+| `OnPressed` | `void DreamButtonClickedEvent__DelegateSignature()` | The other four moments UMG's button speaks, re-broadcast from the same behaviour and for the same reason OnClicked is: the signals existed on UUIButton the whole time and stopped at the face, so anything wanting them -- a sound on press, a tooltip on hover -- had to reach past the control into a part the control owns. |
+| `OnReleased` | `void DreamButtonClickedEvent__DelegateSignature()` |  |
+| `OnHovered` | `void DreamButtonClickedEvent__DelegateSignature()` |  |
+| `OnUnhovered` | `void DreamButtonClickedEvent__DelegateSignature()` |  |
+
+<a id="compared-with-umg"></a>
+
+## Compared with UMG
+
+Every Blueprint-facing member of the UMG class, and where it went. *adopt*: same name, same meaning. *map*: here under another name or on another type. *reject*: deliberately absent, with the reason.
+
+| UMG | Member | Status | Here | Note |
+|---|---|---|---|---|
+| `UButton` | `WidgetStyle` | map | `Style` | FDreamButtonStyle, resolved through StyleSource: the project sheet by default, this instance when told to. |
+| `UButton` | `ColorAndOpacity` | adopt | `ColorAndOpacity` | The control takes UMG's FLinearColor and spends its ALPHA on its own RenderOpacity, which cascades to the face, the label and whatever else was put inside. Applied once at setup, never from the style pass: render opacity is a channel the host may also be driving, and a restyle that wrote 1 back over a fade would be a style pass undoing an animation. The colour half is deliberately not faked -- see UDreamBorder::ContentColorAndOpacity; BackgroundColor is the face's tint, which is the part a caller usually means. |
+| `UButton` | `BackgroundColor` | adopt | `BackgroundColor` | FColor rather than FLinearColor, as every colour in this style family is. Multiplied over the face brush's own tint. |
+| `UButton` | `ClickMethod` | adopt | `ClickMethod` | EDreamUIClickMethod; pushed onto the selectable underneath. |
+| `UButton` | `TouchMethod` | adopt | `TouchMethod` | EDreamUITouchMethod. |
+| `UButton` | `PressMethod` | adopt | `PressMethod` | EDreamUIPressMethod. |
+| `UButton` | `IsFocusable` | map | `UDreamWidget::bIsFocusable` | Every widget here carries it, so a control-level copy would shadow the base member and be a second answer to one question. |
+| `UButton` | `OnClicked` | adopt | `OnClicked` | Only the mouse buttons in AcceptedMouseButtons press and click a button -- the left one alone by default, which is SButton's rule (its OnMouseButtonDown/Up test for EKeys::LeftMouseButton or a touch). UMG has no knob for it; AcceptedMouseButtons is this control's own, for a button that should answer another button too. A touch and a gamepad or keyboard press always count. A double click is two full clicks, as on SButton: the event system delivers the second press as a double click, and the button takes a double click as a press (SButton::OnMouseButtonDoubleClick hands it to OnMouseButtonDown). |
+| `UButton` | `OnPressed` | adopt | `OnPressed` | Not for a mouse button the button does not answer (see OnClicked), nor while disabled. |
+| `UButton` | `OnReleased` | adopt | `OnReleased` | Only after an OnPressed, as SButton's Release is gated on bIsPressed: the press pair always comes as a pair. |
+| `UButton` | `OnHovered` | adopt | `OnHovered` |  |
+| `UButton` | `OnUnhovered` | adopt | `OnUnhovered` |  |
+| `UButton` | `SetStyle` | adopt | `SetStyle` |  |
+| `UButton` | `SetColorAndOpacity` | map | `SetColorAndOpacity` | Same half-and-half as the property above. |
+| `UButton` | `SetBackgroundColor` | adopt | `SetBackgroundColor` |  |
+| `UButton` | `IsPressed` | adopt | `IsPressed` | Asked of the behaviour's selection state rather than remembered on the control. |
+| `UButton` | `SetClickMethod` | adopt | `SetClickMethod` |  |
+| `UButton` | `SetTouchMethod` | adopt | `SetTouchMethod` |  |
+| `UButton` | `SetPressMethod` | adopt | `SetPressMethod` |  |
+| `UButton` | `SetAllowDragDrop` | adopt | `SetAllowDragDrop` | Adds or destroys the face's UDreamUIDragSource, which is what gives a drag meaning here. |
+| `UButton` | `bAllowDragDrop` | adopt | `bAllowDragDrop` | Off, as UMG has it. |

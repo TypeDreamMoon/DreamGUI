@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "sourceFile": "Docs/Reference/DreamMultiLineEditableText.md",
+  "translationFile": "Docs/zh-CN/Reference/DreamMultiLineEditableText.md",
+  "sourceHash": null,
+  "importedSourceHash": "cb8caa1718b8defee0fe7c776154a99a0b3ace01a3120c20d5e9e4d1a047273a",
+  "sourceRevision": "5d4e5ce0ebb734a3f2d46d5a371674cfa1b69176",
+  "translationHash": "0d31ab72a500625e1de8847d4cb9dbe0ebfa94c713bb631e5e3b2e349b562aad",
+  "origin": "website-import",
+  "importedFrom": [
+    "reference/dreammultilineeditabletext"
+  ],
+  "pageMetadata": {
+    "reference/dreammultilineeditabletext": {
+      "title": "UDreamMultiLineEditableText",
+      "description": "The same field over several lines: UMG's MultiLineEditableText."
+    }
+  }
+}

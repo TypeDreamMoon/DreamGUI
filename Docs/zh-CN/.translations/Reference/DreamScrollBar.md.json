@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "sourceFile": "Docs/Reference/DreamScrollBar.md",
+  "translationFile": "Docs/zh-CN/Reference/DreamScrollBar.md",
+  "sourceHash": null,
+  "importedSourceHash": "9139b2aef29d9035ead4384082c248feeaffa8dc25582c3388ed15e412fe148a",
+  "sourceRevision": "5d4e5ce0ebb734a3f2d46d5a371674cfa1b69176",
+  "translationHash": "f15ade874692ae452dec78d5a724aad89e07570832c0936171f52f2f4a9f8bbc",
+  "origin": "website-import",
+  "importedFrom": [
+    "reference/dreamscrollbar"
+  ],
+  "pageMetadata": {
+    "reference/dreamscrollbar": {
+      "title": "UDreamScrollBar",
+      "description": "A scroll bar whose hierarchy is code, not an asset."
+    }
+  }
+}

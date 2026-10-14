@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "sourceFile": "Docs/language/overview.md",
+  "translationFile": "Docs/zh-CN/language/overview.md",
+  "sourceHash": null,
+  "importedSourceHash": "ebddaa622d673d9f071f6ddec7622f2ad68431587675ff672d6111fe3d5abcec",
+  "sourceRevision": "5d4e5ce0ebb734a3f2d46d5a371674cfa1b69176",
+  "translationHash": "ab7a02f436cc69d118fed0b732357e6743e830487048c3aa44d3bb48a17bbe80",
+  "origin": "website-import",
+  "importedFrom": [
+    "dui/overview"
+  ],
+  "pageMetadata": {
+    "dui/overview": {
+      "title": "概览",
+      "description": ".dui 文件是什么、放在哪、由哪些语句组成，以及它怎样成为一个 widget Blueprint 的层级。"
+    }
+  }
+}

@@ -1,0 +1,47 @@
+---
+title: "FDreamTextStyle"
+description: "How the built-in shader draws a text's glyphs beyond the plain face: outline, underlay (drop"
+---
+
+**提示：**
+
+本页由 `DreamGUIReferenceDocs` commandlet 从反射生成，正文是头文件注释的原文（英文），所以不翻译——这样它永远和代码一致。概念讲解见[核心概念](../concepts/widgets.md)。
+
+
+
+Declared in `Public/Core/DreamUITextData.h`.
+
+How the built-in shader draws a text's glyphs beyond the plain face: outline, underlay (drop
+shadow), glow, and how the unfilled part of a lyric line looks. Lengths are in em, so a style
+reads the same at every font size. Only distance-field fonts (MTSDF) render these; bitmap fonts
+draw the face alone.
+
+The style is stored per widget in the canvas's widget property texture, so texts with different
+styles still batch into one draw.
+
+<a id="properties"></a>
+
+## Properties
+
+| Name | Type | Category | In the details panel | From Blueprint | Description |
+|---|---|---|---|---|---|
+| `FaceSoftness` | `float` | Face | yes | read / write | Extra edge softness (blur) in em. 0 draws a crisp edge. Each glyph softens on its own, so past about 0.05 em the halos of neighbouring glyphs visibly merge; a real blur of a whole line is a post-process job, not a style. |
+| `FaceDilate` | `float` | Face | yes | read / write | Grow (positive) or shrink (negative) the face, in em. |
+| `OutlineColor` | `FColor` | Outline | yes | read / write | Outline colour; alpha 0 means no outline. |
+| `OutlineWidth` | `float` | Outline | yes | read / write | Outline width outside the face, in em. |
+| `OutlineSoftness` | `float` | Outline | yes | read / write | Outline edge softness, in em. |
+| `UnderlayColor` | `FColor` | Underlay | yes | read / write | Underlay (drop shadow) colour; alpha 0 means no underlay. |
+| `UnderlayOffset` | `FVector2f` | Underlay | yes | read / write | Underlay offset in em; +Y is down. |
+| `UnderlaySoftness` | `float` | Underlay | yes | read / write | Underlay edge softness, in em. |
+| `UnderlayDilate` | `float` | Underlay | yes | read / write | Grow the underlay beyond the face, in em. |
+| `GlowColor` | `FColor` | Glow | yes | read / write | Glow colour; alpha scales the glow's strength, 0 means no glow. |
+| `GlowWidth` | `float` | Glow | yes | read / write | How far the glow reaches outside the face, in em. Every reach is clamped to what the font's field holds (SDFRadius / SampleFontSize em), so a wider glow needs a font with a wider spread. |
+| `GlowPower` | `float` | Glow | yes | read / write | Glow falloff exponent; higher keeps the glow tight to the face. |
+| `FillDimAlpha` | `float` | Fill | yes | read / write | Alpha of the part of a glyph run that the fill progress has not reached yet (lyrics). |
+| `FillFadeWidth` | `float` | Fill | yes | read / write | Width of the lit/unlit transition as a fraction of the run, 0..1. |
+| `FacePaint` | `FDreamTextPaint` | Paint | yes | read / write | Fill the face with a gradient instead of the text's colour, as CSS's `background-clip: text` with `color: transparent` does: the face is the gradient times the content tint, a custom style's Multiply and TextAnimation's colour, and the text's own Color is not used for it. A &lt;color> run inside stays solid, and so does a hovered link. Emoji keep their colours. Works on every kind of glyph -- distance field, small-text coverage, bitmap -- and on underlines and strikethroughs; drawn by the built-in shader and by materials built on MF_DreamUI_Shade, approximated in the vertex colours for any other material. |
+| `OutlinePaint` | `FDreamTextPaint` | Paint | yes | read / write | Fill the outline with a gradient, times OutlineColor (white shows the gradient as it is). Needs an outline: OutlineColor's alpha and OutlineWidth. |
+| `OverlayPaint` | `FDreamTextPaint` | Paint | yes | read / write | A gradient mixed onto the face, solid or painted, as OverlayBlend says: a highlight band, which UDreamText::SetOverlayPaintPhase moves across the text. |
+| `OverlayBlend` | `EDreamTextOverlayBlend` | Paint | yes | read / write |  |
+| `PaintBoxHorizontal` | `EDreamTextPaintBox` | Paint | yes | read / write | What the text's paints are measured across, across and down; the text as a block on both, CSS's background box, by default. |
+| `PaintBoxVertical` | `EDreamTextPaintBox` | Paint | yes | read / write |  |

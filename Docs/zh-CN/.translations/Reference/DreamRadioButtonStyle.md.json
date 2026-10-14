@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "sourceFile": "Docs/Reference/DreamRadioButtonStyle.md",
+  "translationFile": "Docs/zh-CN/Reference/DreamRadioButtonStyle.md",
+  "sourceHash": null,
+  "importedSourceHash": "22aed1123b87c9462a2d507ecfe95179c7ea66d6a3630b1320cc96c0d032e938",
+  "sourceRevision": "5d4e5ce0ebb734a3f2d46d5a371674cfa1b69176",
+  "translationHash": "d6b7aee201b0bc286638e515ddcaf06e680deb68a1d77ff64361af7b397c266d",
+  "origin": "website-import",
+  "importedFrom": [
+    "reference/dreamradiobuttonstyle"
+  ],
+  "pageMetadata": {
+    "reference/dreamradiobuttonstyle": {
+      "title": "FDreamRadioButtonStyle",
+      "description": "A radio button: the toggle's anatomy -- a box, a mark inside it, a label beside it -- with the"
+    }
+  }
+}

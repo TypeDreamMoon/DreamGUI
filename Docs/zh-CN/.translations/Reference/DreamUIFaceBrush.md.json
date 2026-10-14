@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "sourceFile": "Docs/Reference/DreamUIFaceBrush.md",
+  "translationFile": "Docs/zh-CN/Reference/DreamUIFaceBrush.md",
+  "sourceHash": null,
+  "importedSourceHash": "e911a092616bbae891bd3d249c0c8ae70a1133c6d18f110b4541d388fae49af5",
+  "sourceRevision": "5d4e5ce0ebb734a3f2d46d5a371674cfa1b69176",
+  "translationHash": "83aed74ea1f6752d8a804a28aad19031fb853f1687a566a34518a9c1e106a0be",
+  "origin": "website-import",
+  "importedFrom": [
+    "reference/dreamuifacebrush"
+  ],
+  "pageMetadata": {
+    "reference/dreamuifacebrush": {
+      "title": "FDreamUIFaceBrush",
+      "description": "An optional skin for a control part's procedural-rect face."
+    }
+  }
+}

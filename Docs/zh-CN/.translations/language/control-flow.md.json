@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "sourceFile": "Docs/language/control-flow.md",
+  "translationFile": "Docs/zh-CN/language/control-flow.md",
+  "sourceHash": null,
+  "importedSourceHash": "d672da54308e7ec38ea6776e811c966d860e05b83b2aaa2629cdbc8819d03cdc",
+  "sourceRevision": "5d4e5ce0ebb734a3f2d46d5a371674cfa1b69176",
+  "translationHash": "4c26608c89ad649b2fa15d1697526a122d5b2157d59f03376429adf2ca97cba5",
+  "origin": "website-import",
+  "importedFrom": [
+    "dui/control-flow"
+  ],
+  "pageMetadata": {
+    "dui/control-flow": {
+      "title": "if 与 for",
+      "description": "if / else if / else 按条件切换显示哪一支，for 和 each 按类的数据重复一个模板，以及两者都要守的规则。"
+    }
+  }
+}

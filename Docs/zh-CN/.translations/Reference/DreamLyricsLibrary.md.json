@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "sourceFile": "Docs/Reference/DreamLyricsLibrary.md",
+  "translationFile": "Docs/zh-CN/Reference/DreamLyricsLibrary.md",
+  "sourceHash": null,
+  "importedSourceHash": "577d10ad00a7b60b4f3be07834b7be254df4c7e3e5ce3fd4ad4420e3261fa73d",
+  "sourceRevision": "5d4e5ce0ebb734a3f2d46d5a371674cfa1b69176",
+  "translationHash": "6108b8bd7b6b897d43f90818478f1951de6712e7ec6a83753f67ed860bf79257",
+  "origin": "website-import",
+  "importedFrom": [
+    "reference/dreamlyricslibrary"
+  ],
+  "pageMetadata": {
+    "reference/dreamlyricslibrary": {
+      "title": "UDreamLyricsLibrary",
+      "description": "Dream Lyrics Library"
+    }
+  }
+}

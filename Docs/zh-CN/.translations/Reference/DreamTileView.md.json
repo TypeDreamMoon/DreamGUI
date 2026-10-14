@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "sourceFile": "Docs/Reference/DreamTileView.md",
+  "translationFile": "Docs/zh-CN/Reference/DreamTileView.md",
+  "sourceHash": null,
+  "importedSourceHash": "abd6d8002be8279b13f934037067d7fd53adea85bd85069b6feb8f4711089149",
+  "sourceRevision": "5d4e5ce0ebb734a3f2d46d5a371674cfa1b69176",
+  "translationHash": "d3d6b0b81ec4b0701aba6c882f5e7e89e4234ccf094fd5f02d50ac32ee845bed",
+  "origin": "website-import",
+  "importedFrom": [
+    "reference/dreamtileview"
+  ],
+  "pageMetadata": {
+    "reference/dreamtileview": {
+      "title": "UDreamTileView",
+      "description": "A tile view whose hierarchy is code, not an asset: a list whose rows are laid out across as well"
+    }
+  }
+}

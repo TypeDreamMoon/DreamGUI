@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "sourceFile": "Docs/concepts/mesh-modifiers.md",
+  "translationFile": "Docs/zh-CN/concepts/mesh-modifiers.md",
+  "sourceHash": null,
+  "importedSourceHash": "f90a28d37d2467423a03437bff08d75641232e16f18b44bd25ee761e074562e5",
+  "sourceRevision": "5d4e5ce0ebb734a3f2d46d5a371674cfa1b69176",
+  "translationHash": "1654d67b99ae04d565d82af050c640937f24b7e3b9a0d0e228bfafe810f11dba",
+  "origin": "website-import",
+  "importedFrom": [
+    "concepts/mesh-modifiers"
+  ],
+  "pageMetadata": {
+    "concepts/mesh-modifiers": {
+      "title": "网格修改器与文字动画",
+      "description": "在视觉交出的几何上做加法：七个修改器、文字动画那一族的三个维度、二十个类，以及它们的顶点预算与 UV 通道约束。"
+    }
+  }
+}

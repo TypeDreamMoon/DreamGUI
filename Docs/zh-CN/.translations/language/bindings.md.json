@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "sourceFile": "Docs/language/bindings.md",
+  "translationFile": "Docs/zh-CN/language/bindings.md",
+  "sourceHash": null,
+  "importedSourceHash": "c8aa37e0f057336862dec0d922764fc3e4cfcdd78f186ce05c88e39da4d0464f",
+  "sourceRevision": "5d4e5ce0ebb734a3f2d46d5a371674cfa1b69176",
+  "translationHash": "2f17a091cdf715d76391287e94277fa1628cee875e75ea98c9df22051dd5230a",
+  "origin": "website-import",
+  "importedFrom": [
+    "dui/bindings"
+  ],
+  "pageMetadata": {
+    "dui/bindings": {
+      "title": "绑定与路由",
+      "description": "三种箭头把树接到类的代码上——绑定驱动属性、路由调用处理函数、双向绑定镜像变量——成员路径、绑定什么时候更新，以及每个 widget 都有的 Shown。"
+    }
+  }
+}

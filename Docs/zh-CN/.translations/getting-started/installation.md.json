@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "sourceFile": "Docs/getting-started/installation.md",
+  "translationFile": "Docs/zh-CN/getting-started/installation.md",
+  "sourceHash": null,
+  "importedSourceHash": "188719f273fa4a341eb20164bca70f7dcb16c9ab3322990cddd60e66863fdcf8",
+  "sourceRevision": "5d4e5ce0ebb734a3f2d46d5a371674cfa1b69176",
+  "translationHash": "a29d18abc3112c33fda39e69e65018ca2f013013886f0bd5a4e4092e5f15f852",
+  "origin": "website-import",
+  "importedFrom": [
+    "start/installation"
+  ],
+  "pageMetadata": {
+    "start/installation": {
+      "title": "安装",
+      "description": "环境要求、把插件克隆进 Plugins/、装完后值得马上决定的两项设置（键盘布局用的游戏视口客户端、Slate 输入源），以及各项设置存在哪里。"
+    }
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "sourceFile": "Docs/language/slots-and-components.md",
+  "translationFile": "Docs/zh-CN/language/slots-and-components.md",
+  "sourceHash": null,
+  "importedSourceHash": "f345a1afa281c9154f424a09f7d579e1f543d1325c32be35793d36b818ef9f07",
+  "sourceRevision": "5d4e5ce0ebb734a3f2d46d5a371674cfa1b69176",
+  "translationHash": "32f935177990aeaa3818f00170a0cb227c58bdb94dc1581484a7ad0525b7957a",
+  "origin": "website-import",
+  "importedFrom": [
+    "dui/slots-and-components"
+  ],
+  "pageMetadata": {
+    "dui/slots-and-components": {
+      "title": "槽位行与组件",
+      "description": "用 @slot 和 @fill 告诉父面板怎样摆这个节点，用 + Class 给节点挂行为、布局容器和自身布局对象。"
+    }
+  }
+}

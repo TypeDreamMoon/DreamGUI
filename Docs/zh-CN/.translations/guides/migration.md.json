@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "sourceFile": "Docs/guides/migration.md",
+  "translationFile": "Docs/zh-CN/guides/migration.md",
+  "sourceHash": null,
+  "importedSourceHash": "802b6cde2e7c195bdde4170ecb6b73f7720a2fcc0174e578898dcb85eb58e761",
+  "sourceRevision": "5d4e5ce0ebb734a3f2d46d5a371674cfa1b69176",
+  "translationHash": "786b46c18a71bee4cf7d1decb2f3dd89508462ab5ab61ed087fae5737f1f4c10",
+  "origin": "website-import",
+  "importedFrom": [
+    "guides/migration"
+  ],
+  "pageMetadata": {
+    "guides/migration": {
+      "title": "从 LGUI、LexUI 或早期构建迁移",
+      "description": "把按 LGUI / LexUI 保存的资产、早期单模块 1.x 构建上的项目、以及针对插件写的 C++ 迁到 DreamGUI：动手之前、安装、从 2.1.0 借来的 redirect 带着什么、已不存在的东西、要检查的行为、C++ 的改动，以及迁不过来时怎么办。"
+    }
+  }
+}

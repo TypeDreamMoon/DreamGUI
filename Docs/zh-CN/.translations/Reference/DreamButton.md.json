@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "sourceFile": "Docs/Reference/DreamButton.md",
+  "translationFile": "Docs/zh-CN/Reference/DreamButton.md",
+  "sourceHash": null,
+  "importedSourceHash": "d505b4dd7ae01f806e80153b6699b09540d920d1075a6cadc25ae6337fca8b9c",
+  "sourceRevision": "5d4e5ce0ebb734a3f2d46d5a371674cfa1b69176",
+  "translationHash": "4f320b619cb9bdc122b23ba83fff8cf7ec725eab6aa72a2871c0e0d6231d0a45",
+  "origin": "website-import",
+  "importedFrom": [
+    "reference/dreambutton"
+  ],
+  "pageMetadata": {
+    "reference/dreambutton": {
+      "title": "UDreamButton",
+      "description": "A button whose hierarchy is code, not an asset."
+    }
+  }
+}

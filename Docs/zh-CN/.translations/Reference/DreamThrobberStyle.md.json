@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "sourceFile": "Docs/Reference/DreamThrobberStyle.md",
+  "translationFile": "Docs/zh-CN/Reference/DreamThrobberStyle.md",
+  "sourceHash": null,
+  "importedSourceHash": "ab1449a80f3b41d4aab5396340e1017c8e2131d4a3874270a211a0c23d2be25c",
+  "sourceRevision": "5d4e5ce0ebb734a3f2d46d5a371674cfa1b69176",
+  "translationHash": "f44dc3bf9d89551fe63b8f127954ec4a7f435e1416975220177f68f59027405a",
+  "origin": "website-import",
+  "importedFrom": [
+    "reference/dreamthrobberstyle"
+  ],
+  "pageMetadata": {
+    "reference/dreamthrobberstyle": {
+      "title": "FDreamThrobberStyle",
+      "description": "A throbber: N identical pieces, animating, saying only \"something is happening\"."
+    }
+  }
+}

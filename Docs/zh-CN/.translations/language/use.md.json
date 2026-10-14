@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "sourceFile": "Docs/language/use.md",
+  "translationFile": "Docs/zh-CN/language/use.md",
+  "sourceHash": null,
+  "importedSourceHash": "fbb225c9769b785e4ecff9482d2dbf2c4722c8cd529902937f54d8b7b28fe0e5",
+  "sourceRevision": "5d4e5ce0ebb734a3f2d46d5a371674cfa1b69176",
+  "translationHash": "843ec2770fcee816be8f0e58c8462d5473fe237cf824b6540a03752376050a88",
+  "origin": "website-import",
+  "importedFrom": [
+    "dui/use"
+  ],
+  "pageMetadata": {
+    "dui/use": {
+      "title": "use",
+      "description": "合并一个库、给组件或类起短名、把库放进命名空间、库里的别名随库转发，以及旧的 @Name 写法。"
+    }
+  }
+}

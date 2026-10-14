@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "sourceFile": "Docs/controls/umg-parity.md",
+  "translationFile": "Docs/zh-CN/controls/umg-parity.md",
+  "sourceHash": null,
+  "importedSourceHash": "cffde785f554a76018799c0f48f40bcdd25038c03af0d5c40adad6c9faa1332b",
+  "sourceRevision": "5d4e5ce0ebb734a3f2d46d5a371674cfa1b69176",
+  "translationHash": "fb78c8c2e1b5e515d53e84ee0dd0b1e305441726606d3a12fc3a6a80d4311ae4",
+  "origin": "website-import",
+  "importedFrom": [
+    "controls/umg-parity"
+  ],
+  "pageMetadata": {
+    "controls/umg-parity": {
+      "title": "从 UMG 过来：名字是一样的",
+      "description": "结构不同，词汇刻意相同——Resources/UMGParity 里每个 UMG 类一张对照表，adopt / map / reject 三种结论，自动化测试从两个方向拿它对照 UMG 的反射，以及由反射打印出来的 Docs/Reference。"
+    }
+  }
+}

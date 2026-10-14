@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "sourceFile": "Docs/getting-started/about.md",
+  "translationFile": "Docs/zh-CN/getting-started/about.md",
+  "sourceHash": null,
+  "importedSourceHash": "b2a7d056ebce9b5591e602824c1288e6d8935a13cba26a56dc98f40a5aad7915",
+  "sourceRevision": "5d4e5ce0ebb734a3f2d46d5a371674cfa1b69176",
+  "translationHash": "862d7153fced3440309aaa11234086ee20e07608efd4bdcf54cae754492547a9",
+  "origin": "website-import",
+  "importedFrom": [
+    "start/about"
+  ],
+  "pageMetadata": {
+    "start/about": {
+      "title": "与 UMG 和上游的区别",
+      "description": "DreamGUI 与 UMG 的结构性区别（尤其是文本溢出）、为什么名字和 UMG 一样以及对照表、它从哪个上游提交分出来又重做了什么，以及致谢与许可证。"
+    }
+  }
+}

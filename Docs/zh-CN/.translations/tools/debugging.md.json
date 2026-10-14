@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "sourceFile": "Docs/tools/debugging.md",
+  "translationFile": "Docs/zh-CN/tools/debugging.md",
+  "sourceHash": null,
+  "importedSourceHash": "f9293a0cbe888e86c67bb7a0f6163104b5dc47f8901305fbe231f6970394d182",
+  "sourceRevision": "5d4e5ce0ebb734a3f2d46d5a371674cfa1b69176",
+  "translationHash": "b6ab29c5c022696c0ae524960ec2870d876e5b022a3d45e795feb71aeaba0a90",
+  "origin": "website-import",
+  "importedFrom": [
+    "tools/debugging"
+  ],
+  "pageMetadata": {
+    "tools/debugging": {
+      "title": "调试与测量",
+      "description": "不开调试器看 DreamGUI 画了什么、花了多少：DreamUI.Capture、DreamUI.Stats 与 Insights 作用域、stat DreamGUI、DreamGUI.Memory、两个校验开关、诊断命令、可供 A/B 的控制台变量和日志分类。"
+    }
+  }
+}

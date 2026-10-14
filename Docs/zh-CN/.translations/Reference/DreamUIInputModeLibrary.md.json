@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "sourceFile": "Docs/Reference/DreamUIInputModeLibrary.md",
+  "translationFile": "Docs/zh-CN/Reference/DreamUIInputModeLibrary.md",
+  "sourceHash": null,
+  "importedSourceHash": "a3438591940b5ada4e93e6c0dbbdbd7bed3a61130e6f90e9eab34bf606243e0c",
+  "sourceRevision": "5d4e5ce0ebb734a3f2d46d5a371674cfa1b69176",
+  "translationHash": "46f25f32a199ff4042436f5cb0d81b778190f3d3cc79bc5fe8065c27440e1017",
+  "origin": "website-import",
+  "importedFrom": [
+    "reference/dreamuiinputmodelibrary"
+  ],
+  "pageMetadata": {
+    "reference/dreamuiinputmodelibrary": {
+      "title": "UDreamUIInputModeLibrary",
+      "description": "Input mode and cursor control, addressed by DreamGUI's user index rather than by a raw controller."
+    }
+  }
+}

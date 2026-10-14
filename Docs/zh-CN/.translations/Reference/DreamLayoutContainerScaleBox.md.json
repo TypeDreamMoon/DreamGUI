@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "sourceFile": "Docs/Reference/DreamLayoutContainerScaleBox.md",
+  "translationFile": "Docs/zh-CN/Reference/DreamLayoutContainerScaleBox.md",
+  "sourceHash": null,
+  "importedSourceHash": "a64297d7402697159641a20384b9796d8513770022a587f4e5a33c2f0d459f76",
+  "sourceRevision": "5d4e5ce0ebb734a3f2d46d5a371674cfa1b69176",
+  "translationHash": "7c03a05d10e4a422cb87a816ff223be04a723361da4b77832d534b6349fd9b45",
+  "origin": "website-import",
+  "importedFrom": [
+    "reference/dreamlayoutcontainerscalebox"
+  ],
+  "pageMetadata": {
+    "reference/dreamlayoutcontainerscalebox": {
+      "title": "UDreamLayoutContainerScaleBox",
+      "description": "UMG Scale Box"
+    }
+  }
+}

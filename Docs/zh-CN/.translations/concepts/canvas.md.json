@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "sourceFile": "Docs/concepts/canvas.md",
+  "translationFile": "Docs/zh-CN/concepts/canvas.md",
+  "sourceHash": null,
+  "importedSourceHash": "907e480a941288427b81135559d22ebed1c3113ec343f6ec0cc09f2da284c6f2",
+  "sourceRevision": "5d4e5ce0ebb734a3f2d46d5a371674cfa1b69176",
+  "translationHash": "952b0fc0ab5ad1ce3faaf3a77cccf015bf11b18150017c1d99386f3bb2fbc3ff",
+  "origin": "website-import",
+  "importedFrom": [
+    "concepts/canvas"
+  ],
+  "pageMetadata": {
+    "concepts/canvas": {
+      "title": "画布",
+      "description": "UDreamCanvas 做什么：把一棵子树合批成 draw call；根画布与嵌套画布、四种渲染模式、缩放与投影、排序、每控件透视的前提、按需创建的屏幕根，以及 DreamUI.Stats 量的是什么。"
+    }
+  }
+}

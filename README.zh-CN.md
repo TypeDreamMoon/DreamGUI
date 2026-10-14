@@ -241,3 +241,5 @@ Copyright (c) 2019-present Lex Liu
    <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=typedreammoon/dreamgui&type=date&legend=bottom-right" />
  </picture>
 </a>
+
+文档：[English](Docs/README.md) · [简体中文](Docs/zh-CN/README.md)（迁入译文待核对）。

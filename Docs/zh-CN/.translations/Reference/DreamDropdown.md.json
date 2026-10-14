@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "sourceFile": "Docs/Reference/DreamDropdown.md",
+  "translationFile": "Docs/zh-CN/Reference/DreamDropdown.md",
+  "sourceHash": null,
+  "importedSourceHash": "905c125a191a28781f74bd94badb7cbc85f522aadfa2a6bed5f005a25bf81e4b",
+  "sourceRevision": "5d4e5ce0ebb734a3f2d46d5a371674cfa1b69176",
+  "translationHash": "2a2f0440ffd7c15c1ddda3dbf2e492b8447aa45be35b9b1368dcc2111da4944e",
+  "origin": "website-import",
+  "importedFrom": [
+    "reference/dreamdropdown"
+  ],
+  "pageMetadata": {
+    "reference/dreamdropdown": {
+      "title": "UDreamDropdown",
+      "description": "A dropdown whose hierarchy is code, not an asset."
+    }
+  }
+}

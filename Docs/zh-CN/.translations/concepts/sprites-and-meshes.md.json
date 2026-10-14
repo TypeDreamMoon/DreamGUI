@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "sourceFile": "Docs/concepts/sprites-and-meshes.md",
+  "translationFile": "Docs/zh-CN/concepts/sprites-and-meshes.md",
+  "sourceHash": null,
+  "importedSourceHash": "f8d219e3fb6169c910ee3967b8af33f3915a49e614f80adda74f740c8265ff77",
+  "sourceRevision": "5d4e5ce0ebb734a3f2d46d5a371674cfa1b69176",
+  "translationHash": "0f990ff96d5fd31487c271eb379c3f324ad055f243407b8283abe80a61d5b248",
+  "origin": "website-import",
+  "importedFrom": [
+    "concepts/sprites-and-meshes"
+  ],
+  "pageMetadata": {
+    "concepts/sprites-and-meshes": {
+      "title": "自定义网格、精灵与图集",
+      "description": "视觉表说\"画成什么\"，这一页说\"那些几何与图像数据从哪来\"：自定义网格、精灵与两级图集、数据化纹理、静态网格缓存。"
+    }
+  }
+}

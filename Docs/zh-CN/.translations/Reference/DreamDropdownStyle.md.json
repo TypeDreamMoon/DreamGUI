@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "sourceFile": "Docs/Reference/DreamDropdownStyle.md",
+  "translationFile": "Docs/zh-CN/Reference/DreamDropdownStyle.md",
+  "sourceHash": null,
+  "importedSourceHash": "7b90bf547d24787283b39cf4de08c42a4b7b3a07e37ee52aec20c98f0fdad097",
+  "sourceRevision": "5d4e5ce0ebb734a3f2d46d5a371674cfa1b69176",
+  "translationHash": "c7eced280b8ff5fe8eb589aecb54b7c0b5d68806dcbb54700e5279316ebfbff5",
+  "origin": "website-import",
+  "importedFrom": [
+    "reference/dreamdropdownstyle"
+  ],
+  "pageMetadata": {
+    "reference/dreamdropdownstyle": {
+      "title": "FDreamDropdownStyle",
+      "description": "A dropdown: a button-shaped face, and the list it opens."
+    }
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "sourceFile": "Docs/Reference/DreamNativeWidgetHost.md",
+  "translationFile": "Docs/zh-CN/Reference/DreamNativeWidgetHost.md",
+  "sourceHash": null,
+  "importedSourceHash": "ee437c8a4e8f98153aba56e8a91db9dc7c424d7639ffb3712bb276f07e754405",
+  "sourceRevision": "5d4e5ce0ebb734a3f2d46d5a371674cfa1b69176",
+  "translationHash": "c258c07f3a1c6757e304f4ab0ee50dc8f5668a4d47dd183a9a35b5c78cc93d42",
+  "origin": "website-import",
+  "importedFrom": [
+    "reference/dreamnativewidgethost"
+  ],
+  "pageMetadata": {
+    "reference/dreamnativewidgethost": {
+      "title": "UDreamNativeWidgetHost",
+      "description": "A hole in a DreamGUI hierarchy that a UMG widget fills."
+    }
+  }
+}

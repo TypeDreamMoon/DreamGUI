@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "sourceFile": "Docs/concepts/lyrics.md",
+  "translationFile": "Docs/zh-CN/concepts/lyrics.md",
+  "sourceHash": null,
+  "importedSourceHash": "056ca43342ab9a944c5b7b6d7af0fb3193f776aae60b0ad888435e27d6d6c988",
+  "sourceRevision": "5d4e5ce0ebb734a3f2d46d5a371674cfa1b69176",
+  "translationHash": "76302bf0fac4104847ca8660e6f9daa51c70be5d178f18044d7d67d3aa8dbe74",
+  "origin": "website-import",
+  "importedFrom": [
+    "concepts/lyrics"
+  ],
+  "pageMetadata": {
+    "concepts/lyrics": {
+      "title": "歌词",
+      "description": "UDreamLyricsView —— 逐词点亮、弹簧驱动的歌词视图，LRC 与 TTML 两种输入，以及它的分档参数。"
+    }
+  }
+}

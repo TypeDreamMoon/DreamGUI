@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "sourceFile": "Docs/getting-started/project-layout.md",
+  "translationFile": "Docs/zh-CN/getting-started/project-layout.md",
+  "sourceHash": null,
+  "importedSourceHash": "a246599f62984473f4b29078684fd137f45f60ebedbdeea65cecfbe7d823e541",
+  "sourceRevision": "5d4e5ce0ebb734a3f2d46d5a371674cfa1b69176",
+  "translationHash": "92c468f578d38e0a3753b35181179920e64dccafd6f23e827a28f441f821e6d7",
+  "origin": "website-import",
+  "importedFrom": [
+    "start/project-layout"
+  ],
+  "pageMetadata": {
+    "start/project-layout": {
+      "title": "项目里的布局",
+      "description": "运行时模块的分层与各自装什么、C++ 要在 Build.cs 里加哪个模块、.dui 文件放在哪里、插件目录里每个文件夹是什么，以及日志类别。"
+    }
+  }
+}

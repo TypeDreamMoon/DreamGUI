@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "sourceFile": "Docs/controls/index.md",
+  "translationFile": "Docs/zh-CN/controls/index.md",
+  "sourceHash": null,
+  "importedSourceHash": "0ad1451026c3f6a6f2c1df778eee18cc3a16d947c4d93bf4a07a6534d5bde918",
+  "sourceRevision": "5d4e5ce0ebb734a3f2d46d5a371674cfa1b69176",
+  "translationHash": "a6c332225248e3985d36b363b0d4fd4eeb972eab6e6a527c51691cb8ece63425",
+  "origin": "website-import",
+  "importedFrom": [
+    "controls/index"
+  ],
+  "pageMetadata": {
+    "controls/index": {
+      "title": "控件库",
+      "description": "DreamGUIControls 里有什么：按类别列出的 Dream* 控件、它们由哪些 UI* 行为拼成、操作提示栏、与 UMG 的互操作，以及怎么在 .dui 里放一个控件。"
+    }
+  }
+}

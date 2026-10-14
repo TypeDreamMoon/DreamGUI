@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "sourceFile": "Docs/language/write-back.md",
+  "translationFile": "Docs/zh-CN/language/write-back.md",
+  "sourceHash": null,
+  "importedSourceHash": "bcaf5e37334c679a72850f5f9f086bcb91625fa6d7df3c4e27425e13e21509e3",
+  "sourceRevision": "5d4e5ce0ebb734a3f2d46d5a371674cfa1b69176",
+  "translationHash": "01ae7ad7eae3c6359f13e2e5823ec39285ece20c788dfc8cf6df921233f1e970",
+  "origin": "website-import",
+  "importedFrom": [
+    "dui/write-back"
+  ],
+  "pageMetadata": {
+    "dui/write-back": {
+      "title": "设计器写回",
+      "description": "设计器是 .dui 的图形前端——它的改动写进哪一行、怎样不弄乱手写的文件，以及哪些改动它拒绝写（DUI7xxx）。"
+    }
+  }
+}

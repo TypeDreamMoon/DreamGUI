@@ -1,0 +1,36 @@
+---
+title: "UDreamUICaptureLibrary"
+description: "Pictures of what DreamGUI draws, written out as PNG files -- a render target, a canvas that renders into one, or a"
+---
+
+**提示：**
+
+本页由 `DreamGUIReferenceDocs` commandlet 从反射生成，正文是头文件注释的原文（英文），所以不翻译——这样它永远和代码一致。概念讲解见[核心概念](../concepts/widgets.md)。
+
+
+
+Inherits from `UBlueprintFunctionLibrary`.
+
+Declared in `Public/DreamUICaptureLibrary.h`.
+
+Pictures of what DreamGUI draws, written out as PNG files -- a render target, a canvas that renders into one, or a
+viewport with the scene and every panel on it -- so that a UI can be looked at away from the machine that drew it:
+attached to a bug report, compared between two builds, kept by an automated run that wants to show what it saw.
+
+Every call reads the picture back from the GPU, and so waits for the render thread to finish what it has been
+given: a tool for looking, not something to do every frame. Without a GPU (-nullrhi) there is nothing to read; the
+call says so in the log and returns false.
+
+The console command DreamUI.Capture [Directory] runs CaptureAll for the world it is typed in.
+
+<a id="functions"></a>
+
+## Functions
+
+| Function | Kind | Description |
+|---|---|---|
+| `TArray<FString> CaptureAll(UObject* InWorldContextObject, FString InDirectory)` | callable | Everything there is to look at in InWorldContextObject's world, into InDirectory -- a new time-stamped directory under the capture directory when it is empty: the viewport as Viewport.png, and each root canvas that renders into a target as &lt;its widget's name>.png. Returns the files written, in that order. |
+| `FString GetCaptureDirectory()` | pure | &lt;Project>/Saved/DreamUI/Captures, the directory a relative path given to these functions is taken from. |
+| `bool SaveCanvasToPng(UDreamCanvas* InCanvas, FString InFilePath)` | callable | What InCanvas draws, as a PNG at InFilePath: the target of a canvas that renders into one. A canvas drawn on screen or in the world has no picture of its own -- it is part of the viewport's, which SaveViewportToPng writes. |
+| `bool SaveRenderTargetToPng(UTextureRenderTarget2D* InTarget, FString InFilePath)` | callable | InTarget's pixels, as a PNG at InFilePath (.png is added when the path has no extension). The target's alpha is kept, so what nothing was drawn over stays transparent in the file. |
+| `bool SaveViewportToPng(UObject* InWorldContextObject, FString InFilePath)` | callable | The viewport InWorldContextObject's world is shown in -- the game's, or in the editor a level viewport showing that world -- as a PNG at InFilePath: the scene with every panel on it, as a player sees it. A game's viewport is drawn straight into its window and can be read only while it draws a frame, so in a game this returns false; take the picture with the engine's screenshot request there (HighResShot, FScreenshotRequest). |

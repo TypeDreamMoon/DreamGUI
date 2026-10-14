@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "sourceFile": "Docs/Reference/DreamRadioButton.md",
+  "translationFile": "Docs/zh-CN/Reference/DreamRadioButton.md",
+  "sourceHash": null,
+  "importedSourceHash": "798c4e6eae5802ada96da3228bf88f6904d01f6ab26fc250d3562acd6bfa8cd8",
+  "sourceRevision": "5d4e5ce0ebb734a3f2d46d5a371674cfa1b69176",
+  "translationHash": "33eb842f3a5d77604b81e8180018a9e498c24f26a9bf872052f2d0247e936db1",
+  "origin": "website-import",
+  "importedFrom": [
+    "reference/dreamradiobutton"
+  ],
+  "pageMetadata": {
+    "reference/dreamradiobutton": {
+      "title": "UDreamRadioButton",
+      "description": "A radio button whose hierarchy is code, not an asset."
+    }
+  }
+}

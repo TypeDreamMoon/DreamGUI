@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "sourceFile": "Docs/tools/tests.md",
+  "translationFile": "Docs/zh-CN/tools/tests.md",
+  "sourceHash": null,
+  "importedSourceHash": "1fbdb766627c96cd3eadc243654c46e78d1ca60577f7eebc8a1ed68d53c4d191",
+  "sourceRevision": "5d4e5ce0ebb734a3f2d46d5a371674cfa1b69176",
+  "translationHash": "903ccbf0c18b0fe92a1b1dc76eda0fe8e1403a1eb5209058e6e1b4521067fe1c",
+  "origin": "website-import",
+  "importedFrom": [
+    "tools/tests"
+  ],
+  "pageMetadata": {
+    "tools/tests": {
+      "title": "自动化测试",
+      "description": "插件自带的自动化测试套件（一次全量运行超过 2400 个测试）、按预设运行的 Invoke-DreamGUITests.ps1、静态检查及其规则、测试宿主项目，以及发版前的打包文本冒烟测试。"
+    }
+  }
+}

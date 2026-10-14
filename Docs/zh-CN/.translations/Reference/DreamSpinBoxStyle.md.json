@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "sourceFile": "Docs/Reference/DreamSpinBoxStyle.md",
+  "translationFile": "Docs/zh-CN/Reference/DreamSpinBoxStyle.md",
+  "sourceHash": null,
+  "importedSourceHash": "2eb208338121fbd3473cf058dd21d26d427de6d90bc49602517636afea5349da",
+  "sourceRevision": "5d4e5ce0ebb734a3f2d46d5a371674cfa1b69176",
+  "translationHash": "ee7c32ad44b0c0c74a5efe12d524ce44322b7fa490a09986617c7c27e65d6b7f",
+  "origin": "website-import",
+  "importedFrom": [
+    "reference/dreamspinboxstyle"
+  ],
+  "pageMetadata": {
+    "reference/dreamspinboxstyle": {
+      "title": "FDreamSpinBoxStyle",
+      "description": "A spin box: a numeric field between a decrement face and an increment face."
+    }
+  }
+}

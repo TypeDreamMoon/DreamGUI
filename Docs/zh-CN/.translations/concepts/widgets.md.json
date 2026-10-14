@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "sourceFile": "Docs/concepts/widgets.md",
+  "translationFile": "Docs/zh-CN/concepts/widgets.md",
+  "sourceHash": null,
+  "importedSourceHash": "47b9ffc07d3f8f5e4f8aa0361721ff2302e730858d9288ebaf292ee484733ef6",
+  "sourceRevision": "5d4e5ce0ebb734a3f2d46d5a371674cfa1b69176",
+  "translationHash": "6e5526a8f42b11dab72e4ab440db105b74a70df448d18339ee4a888514897544",
+  "origin": "website-import",
+  "importedFrom": [
+    "concepts/widgets"
+  ],
+  "pageMetadata": {
+    "concepts/widgets": {
+      "title": "控件模型",
+      "description": "UDreamWidget 是什么：一个带矩形、锚点和轴心的 UObject，挂着视觉、布局、槽和行为，组成一棵树；渲染变换、透明度与可见性，以及它和 UMG 在尺寸上的根本差别。"
+    }
+  }
+}

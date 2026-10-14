@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "sourceFile": "Docs/Reference/DreamExpandableArea.md",
+  "translationFile": "Docs/zh-CN/Reference/DreamExpandableArea.md",
+  "sourceHash": null,
+  "importedSourceHash": "b3e658ca0e4150aad1607a0fd7914ee01e8b59f2a5bba0bb9b07617a99f671f1",
+  "sourceRevision": "5d4e5ce0ebb734a3f2d46d5a371674cfa1b69176",
+  "translationHash": "7e7d1fe9a8a2677359697a5df64fdc3ae51f3ae20eeaee62d1c614e37a507f39",
+  "origin": "website-import",
+  "importedFrom": [
+    "reference/dreamexpandablearea"
+  ],
+  "pageMetadata": {
+    "reference/dreamexpandablearea": {
+      "title": "UDreamExpandableArea",
+      "description": "A header that toggles, and the content it hides."
+    }
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "sourceFile": "Docs/Reference/DreamTabView.md",
+  "translationFile": "Docs/zh-CN/Reference/DreamTabView.md",
+  "sourceHash": null,
+  "importedSourceHash": "3729cae7e17b2b571e6a20acc9b0dfc2272608c3144871ee0d7af2c06a3a268f",
+  "sourceRevision": "5d4e5ce0ebb734a3f2d46d5a371674cfa1b69176",
+  "translationHash": "a56aea6e1eed8e27eb906ada0b9acc55aca0e867cf296d0d8389c5e8a4a9c220",
+  "origin": "website-import",
+  "importedFrom": [
+    "reference/dreamtabview"
+  ],
+  "pageMetadata": {
+    "reference/dreamtabview": {
+      "title": "UDreamTabView",
+      "description": "A tab view whose hierarchy is code, not an asset: a strip of tabs over a switcher of pages."
+    }
+  }
+}

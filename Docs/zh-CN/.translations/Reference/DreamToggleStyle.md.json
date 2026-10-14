@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "sourceFile": "Docs/Reference/DreamToggleStyle.md",
+  "translationFile": "Docs/zh-CN/Reference/DreamToggleStyle.md",
+  "sourceHash": null,
+  "importedSourceHash": "f2480f7b646985b398f23463ea5a440d71395056d10c277085237e0958b5fbb8",
+  "sourceRevision": "5d4e5ce0ebb734a3f2d46d5a371674cfa1b69176",
+  "translationHash": "53687aee24fff042b8b29ec9a6d8e6ec850d411c077425ddcb4ff9967d4b5cf9",
+  "origin": "website-import",
+  "importedFrom": [
+    "reference/dreamtogglestyle"
+  ],
+  "pageMetadata": {
+    "reference/dreamtogglestyle": {
+      "title": "FDreamToggleStyle",
+      "description": "What a toggle looks like, separated from what it is."
+    }
+  }
+}

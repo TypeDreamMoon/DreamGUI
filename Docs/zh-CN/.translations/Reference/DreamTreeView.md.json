@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "sourceFile": "Docs/Reference/DreamTreeView.md",
+  "translationFile": "Docs/zh-CN/Reference/DreamTreeView.md",
+  "sourceHash": null,
+  "importedSourceHash": "a2e1ce32bcf07d6441e560a139526b9ff8523dadc22a8f1c08c84a3643667dad",
+  "sourceRevision": "5d4e5ce0ebb734a3f2d46d5a371674cfa1b69176",
+  "translationHash": "68d3f00089623989ea314c39299b8e754daa89be2dd68bdd0e7ecbc36558d236",
+  "origin": "website-import",
+  "importedFrom": [
+    "reference/dreamtreeview"
+  ],
+  "pageMetadata": {
+    "reference/dreamtreeview": {
+      "title": "UDreamTreeView",
+      "description": "A tree whose hierarchy is code, not an asset: a list whose rows carry an indent and a twisty."
+    }
+  }
+}

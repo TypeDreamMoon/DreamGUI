@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "sourceFile": "Docs/Reference/DreamUIImageBrush.md",
+  "translationFile": "Docs/zh-CN/Reference/DreamUIImageBrush.md",
+  "sourceHash": null,
+  "importedSourceHash": "8a4c8e1dcdb4ba83d713f7639b339235748da45af5a6176de9ca171cee633dfa",
+  "sourceRevision": "5d4e5ce0ebb734a3f2d46d5a371674cfa1b69176",
+  "translationHash": "aa0160a27121cd152901c5e8ccec41f5fef76310308450138718c2c7428b3819",
+  "origin": "website-import",
+  "importedFrom": [
+    "reference/dreamuiimagebrush"
+  ],
+  "pageMetadata": {
+    "reference/dreamuiimagebrush": {
+      "title": "FDreamUIImageBrush",
+      "description": "Dream UIImage Brush"
+    }
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "sourceFile": "Docs/Reference/DreamLayoutContainerWidgetSwitcher.md",
+  "translationFile": "Docs/zh-CN/Reference/DreamLayoutContainerWidgetSwitcher.md",
+  "sourceHash": null,
+  "importedSourceHash": "c8c42de8155fcd8a9579916ee85076358ceba6b2b6be89947451dc4d84cb3a9e",
+  "sourceRevision": "5d4e5ce0ebb734a3f2d46d5a371674cfa1b69176",
+  "translationHash": "9a2588a6d68885f324de31733b339c26c3a55b0a6efdbf2171f3beafa8ee21a3",
+  "origin": "website-import",
+  "importedFrom": [
+    "reference/dreamlayoutcontainerwidgetswitcher"
+  ],
+  "pageMetadata": {
+    "reference/dreamlayoutcontainerwidgetswitcher": {
+      "title": "UDreamLayoutContainerWidgetSwitcher",
+      "description": "UMG Widget Switcher"
+    }
+  }
+}

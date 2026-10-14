@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "sourceFile": "Docs/concepts/world-space.md",
+  "translationFile": "Docs/zh-CN/concepts/world-space.md",
+  "sourceHash": null,
+  "importedSourceHash": "def976a368ace7b84d758d7b18e174f6803c13c03ff722cc9b38c4e5cc4f7094",
+  "sourceRevision": "5d4e5ce0ebb734a3f2d46d5a371674cfa1b69176",
+  "translationHash": "197cd34d810f04e7a1b163a816f36f1763b3cf445300909affeff8e1ab914c0d",
+  "origin": "website-import",
+  "importedFrom": [
+    "concepts/world-space"
+  ],
+  "pageMetadata": {
+    "concepts/world-space": {
+      "title": "世界空间 UI",
+      "description": "把同一个 Widget Blueprint 放进关卡：ADreamWorldWidgetActor 与 UDreamWorldWidgetComponent 的各项属性、两种渲染后端、不用任何设置就能点击的交互、从代码里挂到场景组件上，以及 Level Sequence 能打关键帧的属性。"
+    }
+  }
+}

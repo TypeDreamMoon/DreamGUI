@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "sourceFile": "Docs/Reference/DreamScrollBox.md",
+  "translationFile": "Docs/zh-CN/Reference/DreamScrollBox.md",
+  "sourceHash": null,
+  "importedSourceHash": "473b21ac44a5a3a022498e0cb9ce6028e2671146a9fbbb343ea88eca365520e6",
+  "sourceRevision": "5d4e5ce0ebb734a3f2d46d5a371674cfa1b69176",
+  "translationHash": "4b6eae231e2b6588c26fba771abb4b4f65e9c74771de95efb95bc00a3fc664eb",
+  "origin": "website-import",
+  "importedFrom": [
+    "reference/dreamscrollbox"
+  ],
+  "pageMetadata": {
+    "reference/dreamscrollbox": {
+      "title": "UDreamScrollBox",
+      "description": "A scroll box whose hierarchy is code, not an asset."
+    }
+  }
+}
