@@ -1,19 +1,11 @@
 {
   "version": 1,
+  "origin": "ai",
   "sourceFile": "Docs/language/slots-and-components.md",
+  "sourceHash": "f345a1afa281c9154f424a09f7d579e1f543d1325c32be35793d36b818ef9f07",
+  "sourceRevision": "c4c440d0058d09df7ea097d0245d018307631407",
+  "source": "---\ntitle: \"Slot lines and components\"\ndescription: \"Telling the parent panel where a node goes with @slot and @fill, and attaching behaviours, layout containers and layout-self objects with + Class.\"\n---\n\n## Slot lines: `@slot` and `@fill`\n\nA widget inside a panel -- a parent whose container lays children out (a box, a grid, an overlay) -- has a **panel\nslot**: how the parent places it. `@slot` lines set it:\n\n```\nText Label {\n    @slot HorizontalAlignment = Fill\n    @slot Padding = (0, 4, 0, 4)\n}\n```\n\nSeveral at once go in a block, with the property syntax of a `+` block:\n\n```\n@slot { SizeRule = Fill  Padding = (0, 8, 0, 0) }\n```\n\nAnd the two lines a box layout is mostly made of have a shorthand:\n\n| Shorthand | Stands for |\n|---|---|\n| `@fill` | `@slot SizeRule = Fill` |\n| `@fill 2` | `@slot SizeRule = Fill` and `@slot FillWeight = 2` |\n\n`@fill` stands alone on its line, or with its weight and nothing else. A slot line on a node whose parent lays out no\npanel is DUI5003.\n\n\n## Components: `+ Class`\n\n`+ Class { … }` attaches a behaviour, a layout container or a layout-self object to the node, and its block sets that\nobject's properties:\n\n```\nWidget Confirm {\n    + UIButton { TransitionType = None }\n    + VerticalBox { Spacing = 10  Padding = (24, 28, 24, 28) }\n}\n```\n\nThe class is found by its name with the plugin's prefixes tried: `VerticalBox` finds the vertical box container,\n`UIButton` the button behaviour, `Button` too. A full `/Script/Module.Class` path works as well. A name that resolves to\nnothing a widget can carry is DUI3006.\n\nA node has one layout container. `+ VerticalBox` on a plain `Widget` and a container type are two ways to write the\nsame thing; the type is shorter.\n",
   "translationFile": "Docs/zh-CN/language/slots-and-components.md",
-  "sourceHash": null,
-  "importedSourceHash": "f345a1afa281c9154f424a09f7d579e1f543d1325c32be35793d36b818ef9f07",
-  "sourceRevision": "5d4e5ce0ebb734a3f2d46d5a371674cfa1b69176",
-  "translationHash": "32f935177990aeaa3818f00170a0cb227c58bdb94dc1581484a7ad0525b7957a",
-  "origin": "website-import",
-  "importedFrom": [
-    "dui/slots-and-components"
-  ],
-  "pageMetadata": {
-    "dui/slots-and-components": {
-      "title": "槽位行与组件",
-      "description": "用 @slot 和 @fill 告诉父面板怎样摆这个节点，用 + Class 给节点挂行为、布局容器和自身布局对象。"
-    }
-  }
+  "translationHash": "f7edda355c043c36381e4a9f17bd9a65455197c411e813ff8e41da02edb6fa34",
+  "model": "deepseek-flash"
 }

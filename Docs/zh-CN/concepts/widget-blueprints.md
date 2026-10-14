@@ -1,79 +1,93 @@
 ---
-title: Widget Blueprint
-description: 一棵 UI 树是一个类：UDreamWidgetBlueprint 编译成 UDreamUserWidget；子类化与嵌套、命名槽、按名字绑定孩子、设计器直接改类而没有 Apply，被取代的 prefab 模型，以及 .dui 作为 Blueprint 的源文件。
+title: "控件蓝图"
+description: "一棵 UI 树是一个类——UDreamWidgetBlueprint 编译为 UDreamUserWidget——支持子类化和嵌套、命名槽、按名称绑定到子项、无需应用步骤即可编辑类的设计器、它所取代的预制体模型，以及作为蓝图源文件的 .dui。"
 ---
 
-在 DreamGUI 里，一棵 UI 树是一个**类**，不是一个拿来实例化的资产。编写一棵树得到的是一个 `UDreamWidgetBlueprint`，
-它生成的类是 `UDreamUserWidget` 的子类；你可以子类化它、把它放进另一棵树、按名字绑定它的孩子 —— 和 UMG 的
-Widget Blueprint 是同一个形状，只是由 DreamGUI 自己的 `FDreamWidgetBlueprintCompilerContext` 编译。
+DreamGUI 中的 UI 树是一个**类**，而不是你实例化的资产。编写一棵树会给你一个 `UDreamWidgetBlueprint`，它
+生成的类是 `UDreamUserWidget`；你可以子类化它、将它放入另一棵树中，并按名称绑定到它命名
+的子项——与 UMG 的控件蓝图形状相同，由 DreamGUI 自己的 `FDreamWidgetBlueprintCompilerContext` 编译。
 
-<a id="资产类实例"></a>
+<a id="asset-class-instance"></a>
 
 ## 资产、类、实例
 
-| | 是什么 |
+| | 它是什么 |
 | --- | --- |
-| `UDreamWidgetBlueprint` | 编写用的资产（内容浏览器里的类型名是 **DreamUI Widget Blueprint**，*添加* 菜单里叫 **DreamGUI Widget**），持有设计器编辑的那棵树（`WidgetTree`）和图表 |
-| `UDreamWidgetGeneratedClass` | 编译产物。编译把树复制到类上作为模板（archetype），实例由它构建 |
-| `UDreamUserWidget` | 实例。它本身就是一个 `UDreamWidget`，正如 `UUserWidget` 是一个 `UWidget` |
+| `UDreamWidgetBlueprint` | 编写用资产（其类型在内容浏览器中显示为 **DreamUI Widget Blueprint**，*添加*菜单将其列为 **DreamGUI Widget**），持有设计器编辑的树（`WidgetTree`）和图表 |
+| `UDreamWidgetGeneratedClass` | 它编译成的产物。编译会将树复制到类上作为模板（原型），实例由它构建 |
+| `UDreamUserWidget` | 一个实例。它本身就是一个 `UDreamWidget`，正如 `UUserWidget` 是一个 `UWidget` |
 
-两份拷贝是有意的，和 UMG 一样：直接改模板会在会话中途改掉每个活实例的模板。
+这两份副本是有意为之，并且与 UMG 一致：原地编辑模板会在会话中途改变每个活动实例的模板。
 
-`UDreamUserWidget` 本身是控件，所以嵌套是白来的：一个类的实例放进另一棵树，就只是那棵树里的一个控件，而它自己的内容来自它自己的类。
-它的内容放在 `WidgetTree`（`UDreamWidgetTree`）后面而不是直接放在孩子里，这层间接不是装饰：没有它，"一个控件的类"和
-"一棵树的类"就是同一回事。`WidgetTree` 是 Transient 的 —— 类模板绝不能带着展开的子树，否则嵌套进来的类会被烤进父级的模板、
-再也不跟随它自己的类 —— 每次都在 Initialize 时从类重新构建。
+因为 `UDreamUserWidget` 是一个控件，嵌套自然就有了：一个类的实例放入另一棵树中
+就只是那棵树中的一个控件，而它自己的内容来自它自己的类。这些内容位于 `WidgetTree`
+（`UDreamWidgetTree`）之后，而不是直接在其子项之中，这种间接并非装饰：没有它，
+“一个控件的类”和“一棵树的类”就会是同一回事。`WidgetTree` 是瞬态的——类模板绝不能
+携带展开的子树，否则嵌套类会被烘焙进其父级的模板中，并停止跟踪它自己的类——
+并且在 Initialize 时、每次根据类构建。
 
-资产本身和 `UWidgetBlueprint` 一样从不烹饪：烹饪后的版本有生成的类和字节码，别的都不需要。未烹饪的内容则不同：编辑器构建会在加载时
-丢掉 Blueprint 保存的字节码、从 Blueprint 重建，所以任何运行未烹饪内容的进程 —— 包括 `-game` 和 Standalone Game —— 都需要这个类和它的编译器。
-这就是 `DreamGUIEditor` 模块是 `UncookedOnly` 而不是 `Editor` 的原因：否则在 `-game` 里控件 Blueprint 的图表什么也不做。
+和 `UWidgetBlueprint` 一样，该资产永远不会被烘焙：烘焙后的构建拥有生成的类（包含字节码），不需要
+其他任何东西。未烘焙内容则是另一回事：编辑器构建在加载时会丢弃蓝图保存的字节码，并从
+蓝图重新构建它，因此任何运行未烘焙内容的进程——包括使用 `-game` 启动的游戏或以独立游戏方式启动的游戏
+——都需要这个类及其编译器。这就是为什么 `DreamGUIEditor` 是一个 `UncookedOnly` 模块，而不是 `Editor` 模块；
+否则控件蓝图的图表在 `-game` 中将不起作用。
 
-<a id="实例的生命周期"></a>
+<a id="an-instances-life-cycle"></a>
 
 ## 实例的生命周期
 
-`UDreamUserWidget` 上能覆写的时机，和 UMG 的对应：
+`UDreamUserWidget` 可以重写的时刻，与 UMG 中一样：
 
 | 事件 | 时机 |
 | --- | --- |
-| `PreConstruct(bIsDesignTime)` | Initialize 最开始，设计器预览和运行时都会调用 |
-| `OnInitialized` | 内容构建完成之后（C++ 是 `NativeOnInitialized`），预览里也会调用 |
-| `OnConstruct` | 开始游戏：树已注册、在屏幕上；只在游戏世界里 |
-| `OnDestruct` | 拆除时 |
-| `OnTick` | 只有 `bWantsTick` 打开时才每帧调用，默认关 —— 一个从不用的 tick 也要付管理器列表、虚调用和 ProcessEvent 的钱 |
+| `PreConstruct(bIsDesignTime)` | 在 Initialize 的开头，设计器预览和运行时都是如此 |
+| `OnInitialized` | 内容构建完成后（C++ 中为 `NativeOnInitialized`）；在预览中也是如此 |
+| `OnConstruct` | 开始播放：树已注册并显示在屏幕上；仅限游戏世界 |
+| `OnDestruct` | 在拆除时 |
+| `OnTick` | 仅在开启 `bWantsTick` 时每帧执行，而默认情况下并未开启——从未使用的 tick 仍需付出管理器列表条目、虚函数调用和 ProcessEvent 的代价 |
 
-指针、拖拽、按键、焦点和导航事件（`OnPointerClick`、`OnDrop`、`OnKeyDown`、`OnFocusReceived`、`OnNavigate`……）也都在这里。
-`bAllowEventBubbleUp` 默认开：用户控件是一个容器，一个悄悄吞掉内部所有点击的容器会搞坏它所在的每个界面；设成关，事件就在这一层被消费。
-`bCanNavigateHere` 默认关，导航搜索照常越过它，只在你需要 `OnNavigate` 时打开。
+指针、拖拽、按键、焦点和导航事件（`OnPointerClick`、`OnDrop`、`OnKeyDown`、`OnFocusReceived`、
+`OnNavigate`……）也在这里。`bAllowEventBubbleUp` 默认开启：用户控件是一个容器，而一个
+静默吞掉内部每次点击的容器会破坏它所放置的每个屏幕；将其关闭以在此边界处消费事件。
+`bCanNavigateHere` 默认关闭，因此导航搜索会像以往一样越过该控件；
+当你想要 `OnNavigate` 时将其开启。
 
-<a id="子类化与嵌套"></a>
+<a id="subclassing-and-nesting"></a>
 
 ## 子类化与嵌套
 
-- **子类化**：一个只加逻辑的子类不声明自己的树，实例化的是父类的树（`FindWidgetTreeArchetype` 找最近一个有树的类）——
-  否则为了改一个函数而子类化一个界面，会悄无声息地得到一个空界面。属性绑定和事件路由沿继承链**累加**：
-  子类没加任何绑定也要遵守父类的，加了的也不会顶替父类的。
-- **嵌套**：把一个类拖进另一棵树（或在 `.dui` 里写成节点类型），设计器把这个实例折叠成一行 —— 对按钮、滑条这种成品来说是对的。
-  要让宿主往里放东西，类必须明确开一个洞，也就是命名槽。
+- **子类化。** 只添加逻辑的子类不声明自己的树，而是实例化其父级的树
+  （`FindWidgetTreeArchetype` 查找最近的拥有树的类）——否则为了更改一个函数而对屏幕进行子类化
+  会静默地产生一个空屏幕。属性绑定和事件路由沿链**累积**：未添加任何绑定的子类
+  仍然遵循其父级的绑定，而添加了一些绑定的子类也不会替换它们。
+- **嵌套。** 将一个类拖入另一棵树（或在 `.dui` 中将其写为节点类型），设计器会将那个
+  实例折叠为一行——这适用于按钮或滑块这类成品控件。要让宿主能在其中放入内容，
+  该类必须有意识地开一个洞：命名槽。
 
-<a id="命名槽"></a>
+<a id="named-slots"></a>
 
 ## 命名槽
 
-`UDreamNamedSlot` 是一个行为，它把所在的控件标成一个**洞**，由放置这个类的宿主来填：类说"在哪"，宿主说"放什么"。
+`UDreamNamedSlot` 是一种行为，它将其控件标记为一个**洞**，由放置该类的宿主来填充：类
+说明位置，宿主说明内容。
 
-- 槽名就是这个控件的显示名，也就是作者已经在层级里看到、敲过的那个名字 —— 和 UMG 的 `UNamedSlot` 同样的选择。
-- 默认只收一个控件（和 `UDreamContentWidget` 一样，收多个的洞就是面板了）。洞本身已经是面板时，打开 `bAcceptsSeveral`。
-- `bIsDefaultSlot` 标出默认槽：宿主不指名时，嵌套进来的内容就去那里。每个类只能有一个（DUI3022）。
+- 槽的名称就是控件的显示名称——作者已经输入并在层级中看到的内容，与 UMG 为
+  `UNamedSlot` 所做的选择相同。
+- 默认情况下接收一个控件（类似 `UDreamContentWidget`：接收多个的洞会变成面板）。当该洞
+  本身已经是面板时，开启 `bAcceptsSeveral`。
+- `bIsDefaultSlot` 标记默认槽，未指定槽名称的嵌套内容会去那里。每个类一个（DUI3022）。
 
-宿主填好的内容是**宿主自己树里的控件**，不是对另一个资产记录的差异；运行时在 Initialize 末尾把它们挂到对应的槽下。
-相关的调用在 `UDreamUserWidget` 上：`GetContentForNamedSlot`、`SetContentForNamedSlot`、`FindSlotWidget`、
-`GetDefaultSlotName`（C++ 类可以覆写它）、`GetNativeSlotNames`（内容由代码而不是模板构建的类用它声明自己的洞）。
+宿主放入槽中的是**宿主自己树中的控件**，而不是针对另一个资产记录的差异；在
+Initialize 结束时，它们会被挂到匹配的槽下。相关调用位于 `UDreamUserWidget` 上：`GetContentForNamedSlot`、
+`SetContentForNamedSlot`、`FindSlotWidget`、`GetDefaultSlotName`（C++ 类可以重写它）和 `GetNativeSlotNames`
+（内容由代码而非模板构建的类如何声明其洞）。
 
-另有一个名字很像的 `UDreamNamedSlotHost`，它是 UMG `INamedSlotInterface` 的对应物：**一棵树内部**的运行时"名字 → 孩子"映射
-（`SetContentForSlot`、`GetContentForSlot`、`ClearSlot`、`GetSlotNames`），不涉及别的资产。不要和类之间的命名槽混为一谈。
+还有 `UDreamNamedSlotHost`，名称相似但作用不同：它是 UMG 的
+`INamedSlotInterface` 的对应物，是**一棵树内部**的运行时名称到子项映射（`SetContentForSlot`、`GetContentForSlot`、
+`ClearSlot`、`GetSlotNames`），不涉及其他资产。不要将其与类之间的命名槽混淆。
 
-在 `.dui` 里，组件用 `slot` 开洞、用 `props` 声明宿主能设的属性；宿主直接在实例里嵌套内容，就进了默认槽：
+在 `.dui` 中，组件用 `slot` 开一个洞，并声明宿主可以设置什么，用 `props`；宿主在实例中嵌套内容
+以填充默认槽：
 
 ```dui
 class /Game/UI/Components/WBP_Card
@@ -107,15 +121,16 @@ Widget Root {
 }
 ```
 
-完整写法见 [`.dui` 组件](../language/components.md)。
+完整语法见 [`.dui` 组件](../language/components.md)。
 
-<a id="按名字绑定孩子"></a>
+<a id="binding-to-children-by-name"></a>
 
-## 按名字绑定孩子
+## 按名称绑定到子项
 
-树里每个有 id 的控件都会成为类的一个成员变量，图表直接读它。C++ 父类里声明的、类型是控件的属性，也按**同名**绑定到树里的控件：
-`InitializeWidgetStatic` 绑定 `UDreamUserWidget` 之下声明的每一个控件类型的属性，不管有没有标记。标记决定的是另一件事 ——
-`meta = (BindDreamWidget)` 让"树里没有这个控件"成为编译错误：
+树中每个带 id 的控件都会成为该类的一个成员变量，图表可以直接读取它。在 C++ 父类中声明的控件类型
+属性会绑定到树中**同名**的控件：`InitializeWidgetStatic` 绑定
+在 `UDreamUserWidget` 之下声明的每个控件类型属性，无论是否标记。该标记决定的是另一件事——
+`meta = (BindDreamWidget)` 使缺失的控件成为编译错误：
 
 ```cpp
 UCLASS()
@@ -124,61 +139,69 @@ class UMySettingsScreen : public UDreamUserWidget
     GENERATED_BODY()
 
 protected:
-    // 树里必须有一个叫 Confirm 的控件，否则编译失败
+    // The tree must contain a widget named Confirm, or the compile fails
     UPROPERTY(meta = (BindDreamWidget))
     TObjectPtr<UDreamWidget> Confirm;
 };
 ```
 
-这个名字故意不叫 UMG 的 `BindWidget`：两者在运行时不会冲突，但头文件是给人读的，在 Dream 控件上写一个裸的 `meta=(BindWidget)`
-等于说它属于一个它并不属于的框架。动画的对应物是 `BindDreamWidgetAnim`，以及不报错的 `BindDreamWidgetAnimOptional`。
-运行时也可以用 `GetWidgetFromName` 按变量名找。
+它有意不采用 UMG 的 `BindWidget`。两者在运行时从不冲突，但头文件是给人读的，一个裸的
+`meta=(BindWidget)` 加在 Dream 控件上会表明它属于一个它并不属于的框架。动画方面的对应物是
+`BindDreamWidgetAnim`，以及不带错误的 `BindDreamWidgetAnimOptional`。在运行时，`GetWidgetFromName` 按其变量名查找
+控件。
 
-事件处理用**路由**：`OnClick -> HandleConfirm` 把一个事件接到用户控件上的一个函数（UMG 也把事件处理放在那里）。编译器把每条路由解析进
-`UDreamWidgetBlueprint::EventBindings`，`UDreamUserWidget::BindEventBindings` 在 Initialize 时接上。设计器里同一件事是细节面板的
-*Events* 分区：`+` 建一个签名正确的自定义事件和指向它的路由。
+事件通过**路由**处理：`OnClick -> HandleConfirm` 将一个事件连接到用户控件上的一个函数，这也正是 UMG 放置事件处理的地方。编译器将每条路由解析为 `UDreamWidgetBlueprint::EventBindings`，而
+`UDreamUserWidget::BindEventBindings` 在 Initialize 时附加它们。在设计器中，同样的事情是细节面板的 *Events* 部分：
+`+` 会创建一个具有正确签名的自定义事件以及命名它的路由。
 
-<a id="设计器直接改类"></a>
+<a id="the-designer-edits-the-class"></a>
 
-## 设计器直接改类
+## 设计器编辑类
 
-设计器编辑的是这个类的一个预览实例，改动写回**类**。所以没有 Apply 这一步，也没有要对账的每实例覆盖列表。
-预览宿主是 Transient、不可事务的，编写用的那棵树才是唯一可撤销的一半。设计器本身见[设计器](../tools/designer.md)。
+设计器编辑类的预览实例并将更改写回**类**，因此没有应用步骤，也没有
+需要协调的每实例覆盖列表。预览宿主是瞬态且非事务性的；编写树是
+唯一可撤销的部分。设计器本身在[设计器](../tools/designer.md)中描述。
 
-**提示：**
+**注意：**
 
-这个插件 fork 自的 prefab 资产模型已经没有了，连同 `SavePrefab`、`Apply`、`ClearLoadedPrefab` 和 *Save on Apply*。
-  插件不带重定向：旧类名保存的资产，要借来 2.1.0 的重定向段、用 1.0.0 重存一次，见[迁移](../guides/migration.md)。
+此插件所衍生的预制体资产模型已经消失，连同 `SavePrefab`、`Apply`、`ClearLoadedPrefab` 和
+  *Save on Apply* 一起。插件不附带重定向：针对旧类名保存的资产需用 1.0.0 重新保存一次，
+  借用 2.1.0 的重定向块；请参阅[迁移](../guides/migration.md)。
 
-<a id="duiblueprint-的源文件"></a>
+<a id="dui-a-blueprints-source-file"></a>
 
-## `.dui`：Blueprint 的源文件
+## `.dui`：蓝图的源文件
 
-一棵树也可以写成文本。`UDreamTextUserWidget` 是一个层级来自 `.dui` 文件的用户控件：它的 `SourceFile` 指向文件，
-编译时 `FDreamWidgetBlueprintCompilerContext` 读文件、建树、把它装成 Blueprint 的编写层级 —— 在类声明变量之前。
-从那一刻起它在每个方面都是一个普通的 `UDreamUserWidget`：同样的生成类、每个控件一个成员变量、同样的属性绑定、同样的设计器。
+一棵树也可以写成文本。`UDreamTextUserWidget` 是一个用户控件，其层级来自 `.dui` 文件：它的
+`SourceFile` 指定文件名，编译时 `FDreamWidgetBlueprintCompilerContext` 读取该文件、构建树，
+并将其安装为蓝图的编写层级 —— 在类声明其变量之前。从那时起，它在每个方面都是一个
+普通的 `UDreamUserWidget`：相同的生成类、每个控件相同的成员变量、相同的
+属性绑定、相同的设计器。
 
-- 文本替代的是**编写**这一步，不是运行时。
-- `SourceFile` 只能在类默认值里改（`EditDefaultsOnly`）：一个类，一棵树。文件只在编译时读，这是唯一能为每个控件声明成员变量、
-  解析绑定、做检查、把层级交给设计器的时刻。
-- 它是仅编辑器数据，烹饪时去掉；相对路径以 `DUI/` 源目录为根。
-- 设计器工具栏里的 *Set Source File...* 把一个类指向一个文件；设计器里的改动写回文件里对应的那一行。
+- 文本替代的是**编写**步骤，而非运行时间。
+- `SourceFile` 只能在类默认值上编辑（`EditDefaultsOnly`）：一个类，一棵树。文件在
+  编译时读取，这是唯一能为每个控件声明成员变量、解析绑定、检查绑定并将
+  层级交给设计器绘制的时刻。
+- 它是仅编辑器数据，在烘焙时剥离；相对路径以 `DUI/` 源目录为根。
+- 设计器工具栏中的 *Set Source File...* 可将类指向某个文件，在设计器中所做的编辑会写回
+  文件中保存该值的那一行。
 
-怎么写见 [`.dui` 概览](../language/overview.md)。
+如何编写：[`.dui` 概览](../language/overview.md)。
 
-<a id="显示出来"></a>
+<a id="showing-it"></a>
 
-## 显示出来
+## 显示它
 
-| 调用 | 做什么 |
+| 调用 | 作用 |
 | --- | --- |
-| **Create Dream Widget** 节点 | UMG 的 Create Widget 节点：选了类之后为它的每个 Expose on Spawn 属性开一个引脚（`.dui` 的每个 `props` 和 `viewmodels` 条目都是一个），另有 Owning Player 引脚，返回值的类型就是这个类。引脚在 widget 初始化**之前**赋值，所以 Pre Construct、On Initialized、On Construct 和每个绑定的第一次取值都已经看得到它们；UMG 在 Create 之后才赋值，对 On Initialized 来说太晚了 |
-| `UDreamUserWidget::AddToViewport` | UMG 的 Add to Viewport：放上拥有者玩家的屏幕并打开它（没指定玩家时是第一个本地玩家的）。和 UMG 一样，已经有父节点的 widget 会被拒绝。拿下来用 `RemoveFromParent` |
-| `UDreamUserWidget::AddToPlayerScreen` | 同上，但没有拥有者玩家时拒绝，而不是退回到 0 号屏幕 |
-| `UDreamUIBPLibrary::AddWidgetOfClassToViewport` | 创建并放上视口，一个调用；返回值的类型跟着类走 |
-| `UDreamUIBPLibrary::CreateDreamWidgetOfClass` | 只实例化，不放到任何地方（不在屏幕上的状态，和 `ConstructWidget` 一样）。和 UMG 的 `Create` 一样不出现在蓝图菜单里——Create Dream Widget 节点代表它；已经调用它的图照常编译 |
-| `BeginCreateDreamWidget` / `FinishCreateDreamWidget` | C++：节点的两半。中间写新 widget 自己的属性（比如 `SetViewModel`），赶在它初始化之前 |
+| **Create Dream Widget** 节点 | UMG 的 Create Widget 节点：选择一个类会为每个 Expose on Spawn 属性生成一个引脚（`.dui` 的每个 `props` 和 `viewmodels` 条目各一个），以及一个 Owning Player 引脚，并将结果类型设为此类。这些引脚在控件初始化**之前**赋值，因此 Pre Construct、On Initialized、On Construct 以及每个绑定的初始值都能看到它们；UMG 在 Create 之后赋值，对 On Initialized 来说太晚了 |
+| `UDreamUserWidget::AddToViewport` | UMG 的 Add to Viewport：显示在拥有者玩家的屏幕上（未指定时为第一个本地玩家），并开启显示。与 UMG 一样，已有父级的控件会被拒绝。`RemoveFromParent` 会将其再次移除 |
+| `UDreamUserWidget::AddToPlayerScreen` | 同上，但没有拥有者玩家时拒绝，而不是回退到屏幕 0 |
+| `UDreamUIBPLibrary::AddWidgetOfClassToViewport` | 一次调用即可创建并放入视口；返回引脚采用该类的形状 |
+| `UDreamUIBPLibrary::CreateDreamWidgetOfClass` | 实例化它但不放置在任何地方（与 `ConstructWidget` 相同的未上屏状态）。与 UMG 的 `Create` 一样，不在蓝图菜单中 —— Create Dream Widget 节点代表它；已经调用它的图表仍可编译 |
+| `BeginCreateDreamWidget` / `FinishCreateDreamWidget` | C++：该节点的两部分。在初始化之前，于两者之间写入新控件自身的属性（例如 `SetViewModel`） |
 | `UDreamScreenUISubsystem::CreateWidgetOnScreen` / `AddToPlayerScreen` | 指定玩家的屏幕 |
-| `UDreamWorldWidgetComponent::SetWidgetClass` | 放进关卡，见[世界空间 UI](world-space.md) |
+| `UDreamWorldWidgetComponent::SetWidgetClass` | 放入关卡；请参阅[世界空间 UI](world-space.md) |
 
-类的成员与 UMG `UUserWidget` 的逐项对照见 [`UDreamUserWidget` 参考](../Reference/DreamUserWidget.md)。
+该类的成员与 UMG 的 `UUserWidget` 逐项对比，见
+[`UDreamUserWidget` 参考](../Reference/DreamUserWidget.md)。

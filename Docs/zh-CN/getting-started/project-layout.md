@@ -1,14 +1,15 @@
 ---
-title: 项目里的布局
-description: 运行时模块的分层与各自装什么、C++ 要在 Build.cs 里加哪个模块、.dui 文件放在哪里、插件目录里每个文件夹是什么，以及日志类别。
+title: "项目里的布局"
+description: "运行时模块的分层与各自装什么、C++ 要在 Build.cs 里加哪个模块、.dui 文件放在哪里、插件目录里每个文件夹是什么，以及日志类别。"
 ---
 
-<a id="模块分层"></a>
+<a id="module-layers"></a>
 
 ## 模块分层
 
 运行时按层拆成几个模块。一个模块只依赖它下面各层的模块，从不依赖同层的兄弟；反方向的 include 会让
-`Tools/Tests/static_checks.py` 失败（规则 `layering`）。UI 的六个运行时模块都在 `PostConfigInit` 加载，
+`Tools/Tests/static_checks.py` 失败（规则 `layering`）。
+UI 的六个运行时模块都在 `PostConfigInit` 加载，
 所以它们的类型和 `.dui` 标签在任何东西编译之前就已就位。
 
 ```text
@@ -33,7 +34,7 @@ L0   DreamGUIRenderer      DreamTween
 | `DreamGUIEditor`、`DreamGUIK2Nodes` | 只在未烹饪环境 | 设计器和资产工具；蓝图节点。凡是运行未烹饪内容的进程都会加载它们，从编辑器启动的游戏（`-game`、Standalone Game）也算 —— 编辑器构建加载时会丢掉蓝图保存的字节码、从蓝图重建，而控件蓝图类和它的编译器就在这里。编辑器之外只启动编译器 |
 | `DreamGUITests` | 编辑器 | 自动化测试套件 |
 
-<a id="c-要加哪个模块"></a>
+<a id="which-module-your-c-adds"></a>
 
 ### C++ 要加哪个模块
 
@@ -54,7 +55,7 @@ PublicDependencyModuleNames.AddRange(new string[] { "DreamGUI", "DreamGUIInput",
 
 资产不需要做任何事：每个挪了模块的类型都仍然能用旧名字加载（见[迁移](../guides/migration.md)）。
 
-<a id="dui-文件放在哪"></a>
+<a id="where-dui-files-live"></a>
 
 ## .dui 文件放在哪
 
@@ -87,7 +88,8 @@ VerticalBox Root {
 ```
 
 编辑器还会往项目的 `DUI/` 里写两个文件：`.dui-symbols.json`（启动时和执行 `DreamUI.ExportSymbols` 时重写，
-是 VS Code 扩展做补全用的符号表），以及 `DreamUI.code-workspace`（*Tools ▸ Open DreamUI Workspace (VSCode)* 按当前的源码根重写并打开）。
+是 VS Code 扩展做补全用的符号表），以及 `DreamUI.code-workspace`
+（*Tools ▸ Open DreamUI Workspace (VSCode)* 按当前的源码根重写并打开）。
 
 一个用了 DreamGUI 的项目大概是这样：
 
@@ -109,7 +111,7 @@ MyProject/
 
 项目的 `Config/DefaultDreamGUI.ini` 存的是 *Project Settings ▸ Plugins ▸ Dream GUI* 的值（见[安装](installation.md)）。
 
-<a id="插件目录里有什么"></a>
+<a id="what-is-in-the-plugin-folder"></a>
 
 ## 插件目录里有什么
 
@@ -136,36 +138,37 @@ DreamGUI/
 
 ### Config
 
-从 1.0.0 起插件不再带 CoreRedirects，按旧名字保存的资产怎么重存一次，见[从开发版升级](../guides/upgrading.md#从-21-到-100)。
+从 1.0.0 起插件不再带 CoreRedirects，按旧名字保存的资产怎么重存一次，见[升级](../guides/upgrading.md#from-21-to-100)。
 
 - **`Game.ini`** —— 把 `/DreamGUI` 加进 `DirectoriesToAlwaysCook`。插件自己伸手去拿的资产（默认材质、字体、精灵预设……）
   是赋给原生 CDO 的软指针，不产生资产依赖；没有这一行，按显式包列表烹饪时它们一个也不会进包，整个 UI 画成空白。
   文件必须叫 `Game.ini` 才会被并入 Game 分支。
 - **`FilterPlugin.ini`** —— BuildPlugin 默认只打包 `/Source`、`/Content`、`/Resources`、`/Shaders` 和
-  `/Binaries/ThirdParty`；这里列出其余必须随插件走的文件：上面的 `Game.ini`、README、CHANGELOG、`Docs/` 下的文档和参考、msdfgen 的源码与许可证。
+  `/Binaries/ThirdParty`；这里列出其余必须随插件走的文件：上面的 `Game.ini`、README、CHANGELOG、`Docs/` 下的文档和参考，以及 msdfgen 的源码与许可证。
 
 <a id="content"></a>
 
 ### Content
 
-默认字体（`DefaultFont_DistanceField` 及其 `_Bold`、`_Italic`、`_BoldItalic`、`_CJK` 四个字面，还有 `DefaultFont_Bitmap`）、
-`Materials/` 下的材质与材质函数、精灵与纹理预设、`Blueprints/` 下的事件系统 Actor、`Controls/` 下的控件蓝图
-（`BP_Button`、`BP_Toggle`、`BP_Dropdown`……）、`EnhancedInput/` 下的输入动作和映射上下文（`IA_*`、`IMC_DreamUIInputContext`），
-以及 `Samples/HelloDreamGUI.dui`。
+默认字体（`DefaultFont_DistanceField` 及其 `_Bold`、`_Italic`、`_BoldItalic` 和 `_CJK` 四个字面，还有
+`DefaultFont_Bitmap`）、`Materials/` 下的材质与材质函数、精灵与纹理预设、`Blueprints/` 下的事件系统 Actor、
+`Controls/` 下的控件蓝图（`BP_Button`、`BP_Toggle`、`BP_Dropdown`……）、`EnhancedInput/` 下的输入动作和映射上下文
+（`IA_*`、`IMC_DreamUIInputContext`），以及 `Samples/HelloDreamGUI.dui`。
 
 <a id="dshader"></a>
 
 ### DShader
 
-`Content/Materials` 的源码（`.dsm` / `.dsf`）。`.uasset` 是构建产物，和源码一起提交，所以 **DreamGUI 不依赖 DreamShader**：
-没装 DreamShader 时，那些材质就是普通的 `UMaterial` 和 `UMaterialFunction`。只有想从文本重建它们时才需要 DreamShader。
+`Content/Materials` 的源码（`.dsm` / `.dsf`）。`.uasset` 是构建产物，和源码一起提交，
+所以 **DreamGUI 不依赖 DreamShader**：没装 DreamShader 时，那些材质就是普通的 `UMaterial` 和
+`UMaterialFunction`。只有想从文本重建它们时才需要 DreamShader。
 
 <a id="docs"></a>
 
 ### Docs
 
-`DuiLanguage.md`（整个 `.dui` 语言）、`Migration.md`、`FontsAndPackaging.md`，以及 `Reference/` —— 逐类的属性与函数参考，
-从反射打印出来、不是手写的，所以不会落后于头文件：
+`DuiLanguage.md`（整个 `.dui` 语言）、`Migration.md`、`FontsAndPackaging.md`，以及 `Reference/` —— 逐类的属性
+与函数参考，从反射打印出来、不是手写的，所以不会落后于头文件：
 
 ```powershell
 UnrealEditor-Cmd.exe <project>.uproject -run=DreamGUIReferenceDocs
@@ -177,40 +180,41 @@ UnrealEditor-Cmd.exe <project>.uproject -run=DreamGUIReferenceDocs
 
 ### Resources
 
-插件图标、编辑器图标，以及 `UMGParity/`：每个 UMG 类一张对照表（58 张），逐个成员说明它在这里是同名同义、换了名字或位置，
-还是有意不提供以及为什么。自动化测试拿这些表和 UMG 自己的反射双向核对。见[与 UMG 的区别](about.md)和[UMG 对照](../controls/umg-parity.md)。
+插件图标、编辑器图标，以及 `UMGParity/`：每个 UMG 类一张表（共 58 张），每个成员都标注为：在此处名称和含义相同、在此处以其他名称或位于其他类型上，或是被有意省略并说明原因。自动化测试套件将这些表与 UMG 自身的反射进行双向核对。参见
+[它与 UMG 有何不同](about.md) 和 [UMG 对等](../controls/umg-parity.md)。
 
-<a id="shaderssourcethirdparty"></a>
+<a id="shaders-source-thirdparty"></a>
 
 ### Shaders、Source、ThirdParty
 
-`Shaders/Private` 是渲染器的 `.usf` / `.ush`；`Source/` 是上面那十个模块；`ThirdParty/` 是 msdfgen 的子模块和提交进来的单文件拷贝（见[安装](installation.md)）。
+`Shaders/Private` 存放渲染器的 `.usf` / `.ush`；`Source/` 存放上述十个模块；`ThirdParty/` 存放 msdfgen
+子模块和提交的单文件副本（参见 [安装](installation.md)）。
 
 <a id="tools"></a>
 
 ### Tools
 
-| 目录 | 是什么 |
+| 文件夹 | 说明 |
 | --- | --- |
-| `Tools/Tests` | 测试运行器 `Invoke-DreamGUITests.ps1`、预设、静态检查、结果判读（见[测试](../tools/tests.md)） |
-| `Tools/TestHost` | 只为构建插件和跑测试而存在的最小宿主项目，以及打包文本冒烟测试 |
-| `Tools/Bench` | 性能工作用的两个基准：5000 个按钮的屏幕和 2688 个世界空间面板的关卡（见[基准测试](../tools/bench.md)） |
-| `Tools/Fonts` | 构建默认字体的脚本 `make_default_fonts.py` |
-| `Tools/TextParity` | DreamGUI、Slate、Chrome 在同一个语料上的文本对照 |
-| `Tools/ModuleSplit` | 把一个运行时模块从核心拆出去时用的脚本 |
-| `Tools/UpdateMsdfgen.ps1` | 从子模块重新生成 msdfgen 单文件拷贝 |
+| `Tools/Tests` | 测试运行器 `Invoke-DreamGUITests.ps1`、其预设、静态检查、结果摘要（参见 [测试](../tools/tests.md)） |
+| `Tools/TestHost` | 一个仅用于构建插件并运行其测试的最小宿主项目，以及打包文本冒烟测试 |
+| `Tools/Bench` | 性能工作所依据的两个基准：一屏 5000 个按钮和一个关卡中 2688 个世界空间面板（参见 [基准测试](../tools/bench.md)） |
+| `Tools/Fonts` | `make_default_fonts.py`，用于构建默认字体 |
+| `Tools/TextParity` | DreamGUI、Slate 和 Chrome 在同一文本语料上的对比 |
+| `Tools/ModuleSplit` | 将运行时模块从核心中拆分出来的脚本 |
+| `Tools/UpdateMsdfgen.ps1` | 从子模块重新生成单文件 msdfgen 副本 |
 
-<a id="日志类别"></a>
+<a id="log-categories"></a>
 
 ## 日志类别
 
-| 类别 | 谁在用 |
+| 类别 | 使用方 |
 | --- | --- |
-| `DreamGUI` | 核心，以及它之上的运行时模块（Input、Controls、Extensions、Samples），编辑器的一部分也用它 |
-| `LogDreamGUIRenderer` | `DreamGUIRenderer`。它在核心之下，用不了核心声明的类别，所以有自己的 |
+| `DreamGUI` | 核心及其之上的运行时模块（Input、Controls、Extensions、Samples）；编辑器的一部分也使用它 |
+| `LogDreamGUIRenderer` | `DreamGUIRenderer`。它位于核心之下，无法使用核心的类别，因此拥有自己的类别 |
 | `DreamTween` | `DreamTween` |
-| `DreamGUIEditor` | 设计器与资产工具 |
+| `DreamGUIEditor` | 设计器和资产工具 |
 | `DreamGUIK2Nodes` | 蓝图节点 |
-| `LogDreamGUIReferenceDocs` | 生成参考文档的 commandlet |
+| `LogDreamGUIReferenceDocs` | 打印参考的 commandlet |
 
-统计组是 `stat DreamGUI`（声明在渲染器里，渲染器和它之上的每个模块都往同一个组里计数）和 `stat DreamTween`。
+统计组是 `stat DreamGUI`（声明在渲染器中，因此渲染器及其之上的每个模块都计入同一组）和 `stat DreamTween`。

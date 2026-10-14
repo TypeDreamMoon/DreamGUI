@@ -1,19 +1,11 @@
 {
   "version": 1,
+  "origin": "ai",
   "sourceFile": "Docs/language/styles-and-resources.md",
+  "sourceHash": "e4508239957aee4d7023a819a3f8688f245c9bd54a4b56c62234eb16a526ca1e",
+  "sourceRevision": "c4c440d0058d09df7ea097d0245d018307631407",
+  "source": "---\ntitle: \"Styles and resources\"\ndescription: \"A style is a named set of lines that can inherit and carry components and slot lines; a resource is a typed, named constant.\"\n---\n\n## Styles\n\nA style is a named set of lines, applied to a node by `: Name`:\n\n```\nstyle Caption {\n    FontSize = 14\n    Color    = #8C93A6\n}\n\nstyle Warning : Caption {\n    Color = #E05A47\n}\n\nText Note : Warning { Text = \"Unsaved changes\" }\n```\n\n- A style may inherit another (`style Warning : Caption`): the base's lines apply first, then the derived style's,\n  then the node's own. A base that comes back around is DUI3015.\n- A style may carry `+ Component` blocks and slot lines, so that a kind of column is one name:\n\n  ```\n  style RowColumn {\n      + VerticalBox { Spacing = 15 }\n      @fill\n  }\n\n  Widget Left : RowColumn { … }\n  ```\n\n  The style's components come first. A component of the same class the node also writes is one object, the style's\n  values first and the node's after; the node's own `@slot` lines win over the style's.\n- A local style shadows an imported one of the same name. Two local styles of one name are DUI3005.\n\n\n## Resources\n\n```\nresources {\n    Color   Accent = #FF6600\n    Number  Gap    = 8\n    Vector2 Icon   = (24, 24)\n    String  Brand  = \"Dream\"\n    Asset   Row    = /Game/UI/WBP_Row\n}\n```\n\n`@Accent` then stands for `#FF6600` wherever a value goes, and in a binding expression. The type is checked against the\nentry's own value (DUI4008); a missing entry is DUI4007. Each entry also becomes a variable of the compiled class, so a\ngraph can read it.\n\nAn `Asset` entry naming a widget class can be a node type: `@Row Audio { … }`. `use … as` does the same with less.\n\nEntries accumulate over several `resources` blocks; one name declared twice is DUI3014.\n",
   "translationFile": "Docs/zh-CN/language/styles-and-resources.md",
-  "sourceHash": null,
-  "importedSourceHash": "e4508239957aee4d7023a819a3f8688f245c9bd54a4b56c62234eb16a526ca1e",
-  "sourceRevision": "5d4e5ce0ebb734a3f2d46d5a371674cfa1b69176",
-  "translationHash": "93007f20ce968e1c4336ce2b47484db7971ae02eae7f1fbde250f9eeb53c5a6d",
-  "origin": "website-import",
-  "importedFrom": [
-    "dui/styles-and-resources"
-  ],
-  "pageMetadata": {
-    "dui/styles-and-resources": {
-      "title": "样式与资源",
-      "description": "样式是一组具名的行，可以继承、可以带组件和槽位行；资源是带类型的具名常量。"
-    }
-  }
+  "translationHash": "c8187c01bf0d751948f168a88e4724f1e121625ea54122ff76fd7286a558f85a",
+  "model": "deepseek-flash"
 }

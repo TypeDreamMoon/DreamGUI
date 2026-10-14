@@ -1,19 +1,11 @@
 {
   "version": 1,
+  "origin": "ai",
   "sourceFile": "Docs/language/timelines.md",
+  "sourceHash": "9cbeeedb3e2db7771555b5127cc55a041df50683e938f87a3d5667d4315e106a",
+  "sourceRevision": "c4c440d0058d09df7ea097d0245d018307631407",
+  "source": "---\ntitle: \"Timelines\"\ndescription: \"Animations the file owns — tracks, keys, ease names, the event track, loop modes, and external for an animation edited in Sequencer.\"\n---\n\n## Timelines\n\nA `timeline` block is an animation the file owns:\n\n```\ntimeline Pulse {\n    duration = 0.6\n    loop     = PingPong\n\n    Icon.RenderScale            : 0.0 = (1, 1, 1), 0.3 = (1.25, 1.25, 1) ease InOutQuad, 0.6 = (1, 1, 1)\n    Row/Title.RenderTranslation : 0.0 = (-40, 0, 0), 0.2 = (0, 0, 0) ease OutCubic\n    @0.3 -> Landed\n}\n\ntimeline Celebrate external\n```\n\nOne line per track: a path of node ids (`Row/Title`), the property it drives, and keys `time = value`, each with an\noptional `ease` from the tween library's names. A line with no path drives the widget the animation lives on. `@time\n-> Name` is a key on the event track. `loop` is `Once`, `Loop` or `PingPong`; `duration` defaults to the last key. A\ntrack may drive what the animation editor offers -- a property marked `Interp`. `external` names an animation that\nlives in the asset and is edited in Sequencer. See also [Timelines](https://gui.toolchain.64hz.cn/en/docs/dui/timelines) on the docs site.\n",
   "translationFile": "Docs/zh-CN/language/timelines.md",
-  "sourceHash": null,
-  "importedSourceHash": "9cbeeedb3e2db7771555b5127cc55a041df50683e938f87a3d5667d4315e106a",
-  "sourceRevision": "5d4e5ce0ebb734a3f2d46d5a371674cfa1b69176",
-  "translationHash": "cb901b9999be338fd147a6fea287291edecc6c7805a508d01ae4162a4dd88473",
-  "origin": "website-import",
-  "importedFrom": [
-    "dui/timelines"
-  ],
-  "pageMetadata": {
-    "dui/timelines": {
-      "title": "时间线",
-      "description": "文件拥有的动画——轨道、关键帧、缓动名、事件轨道、循环方式，以及交给 Sequencer 编辑的 external。"
-    }
-  }
+  "translationHash": "1b72d80135c80fa8aa41bc59283c6c1f0167c8b3823f4bbdf55c010487c4a920",
+  "model": "deepseek-flash"
 }

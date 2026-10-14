@@ -1,19 +1,11 @@
 {
   "version": 1,
+  "origin": "ai",
   "sourceFile": "Docs/language/overview.md",
+  "sourceHash": "ebddaa622d673d9f071f6ddec7622f2ad68431587675ff672d6111fe3d5abcec",
+  "sourceRevision": "c4c440d0058d09df7ea097d0245d018307631407",
+  "source": "---\ntitle: \"Overview\"\ndescription: \"What a .dui file is, where it lives, the statements it is made of, and how it becomes a widget Blueprint's hierarchy.\"\n---\n\nA `.dui` file is the source of a DreamGUI widget Blueprint: a tree of widgets, their properties, their bindings and their\nanimations, as text. The Blueprint names the file as its *Source File*, compiling the Blueprint reads the file, and the\ndesigner writes its edits back into the file. This page is the reference for writing one by hand.\n\n## Where a file lives\n\nUnder a `DUI/` directory: the project's (`<Project>/DUI/`) or an enabled plugin's (`<Plugin>/DUI/`). Not under\n`Content/` -- a `.dui` is source, not an asset.\n\nA path to another file -- in a Blueprint's Source File, or after `use` -- is written one of three ways:\n\n| Spelling | Means |\n|---|---|\n| `Panels/Settings.dui` | Relative to a `DUI/` root: the project's first, then each plugin's, the first that has the file. |\n| `Plugin.MyPlugin:Panels/Settings.dui` | That plugin's `DUI/` directory. |\n| `D:/Work/Proj/DUI/Panels/Settings.dui` | Absolute, used as written. |\n\n\n## File structure\n\nA file is a list of statements. A statement ends at the end of its line or at a `;`. Comments are `// …` to the end of\nthe line and `/* … */`.\n\nAt the top level a file holds:\n\n| Statement | Purpose |\n|---|---|\n| `class /Game/UI/WBP_Settings` | The Blueprint this file is the source of. At most one. |\n| `use …` | Another file or class made available to this one. See [`use`](use.md#use). |\n| `resources { … }` | Named constants. See [Resources](styles-and-resources.md#resources). |\n| `props { … }` | Properties this file's class declares. See [Writing a component](components.md#writing-a-component). |\n| `events { … }` | Events this file's class raises. |\n| `viewmodels { … }` | The view models this file's class holds. See [View models](viewmodels.md#view-models). |\n| `style Name { … }` | A named set of lines. See [Styles](styles-and-resources.md#styles). |\n| `timeline Name { … }` | An animation. See [Timelines](timelines.md#timelines). |\n| one node | The root of the tree. |\n\nThe order of these is free: a style may be declared below the node that wears it. A file compiled into a class has\nexactly one root node (DUI2006). A file with no root is a *library*: it can be `use`d, and it cannot be compiled.\n\nThe `class` line does two jobs. It says which Blueprint the file is for (a compile into a different one warns,\nDUI6003), and its path is the namespace of every localized string in the file, which keeps the keys stable when the\nfile is renamed. Without one the file's own name is the namespace.\n",
   "translationFile": "Docs/zh-CN/language/overview.md",
-  "sourceHash": null,
-  "importedSourceHash": "ebddaa622d673d9f071f6ddec7622f2ad68431587675ff672d6111fe3d5abcec",
-  "sourceRevision": "5d4e5ce0ebb734a3f2d46d5a371674cfa1b69176",
-  "translationHash": "ab7a02f436cc69d118fed0b732357e6743e830487048c3aa44d3bb48a17bbe80",
-  "origin": "website-import",
-  "importedFrom": [
-    "dui/overview"
-  ],
-  "pageMetadata": {
-    "dui/overview": {
-      "title": "概览",
-      "description": ".dui 文件是什么、放在哪、由哪些语句组成，以及它怎样成为一个 widget Blueprint 的层级。"
-    }
-  }
+  "translationHash": "84f203fbc32e6d0c64c267030db25e90c43998f3d9f54a3a387f571906c21e0c",
+  "model": "deepseek-flash"
 }

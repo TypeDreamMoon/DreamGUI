@@ -1,11 +1,12 @@
 ---
-title: 歌词
-description: UDreamLyricsView —— 逐词点亮、弹簧驱动的歌词视图，LRC 与 TTML 两种输入，以及它的分档参数。
+title: "歌词"
+description: "UDreamLyricsView —— 逐词点亮、弹簧驱动的歌词视图，LRC 与 TTML 两种输入，以及它的分档参数。"
 ---
 
-`UDreamLyricsView`（`DreamGUIExtensions`）是一个**逐词点亮**的歌词控件，插件自己的自述是 **Apple Music 式**。
+`UDreamLyricsView`（`DreamGUIExtensions`）是一个**逐词点亮**的歌词控件，插件自己的说法是
+**Apple Music 式**。
 
-<a id="它长什么样"></a>
+<a id="what-it-looks-like"></a>
 
 ## 它长什么样
 
@@ -16,11 +17,11 @@ description: UDreamLyricsView —— 逐词点亮、弹簧驱动的歌词视图�
 
 它挂在**当作歌词框的那个控件**上 —— 宽度收拢歌词行、高度就是可见区域。
 
-<a id="怎么驱动"></a>
+<a id="driving-it"></a>
 
 ## 怎么驱动
 
-正规用法是用 `SetTime` 让**音频时钟**驱动它；预览时用 `Play()` 让它自己跑。
+正规用法是让**音频时钟**通过 `SetTime` 驱动它；预览时用 `Play()` 让它自己跑。
 
 | 入口 | 作用 |
 | --- | --- |
@@ -31,7 +32,7 @@ description: UDreamLyricsView —— 逐词点亮、弹簧驱动的歌词视图�
 | `OnActiveLineChanged` | 当前行变化的事件，带行号 |
 | `GetActiveLineIndex` / `GetLineCount` / `GetLineText` | 查询 |
 
-<a id="分档参数"></a>
+<a id="parameters-by-group"></a>
 
 ## 分档参数
 
@@ -44,10 +45,13 @@ description: UDreamLyricsView —— 逐词点亮、弹簧驱动的歌词视图�
 | 运动 | 位置与缩放**各一套弹簧参数**；行间按 `StaggerSeconds` **0.04 秒**错开、最多累到 **8 行** |
 | 非当前行 | 缩放 **0.92**、透明度 **0.55**，**唱过的行 0.35**；每远一行加 **0.04 em** 的柔化（最多 4 行） |
 
-它建在**弹簧**上（见[动画](animation.md)的弹簧一节）—— 这正是「重定目标保留速度」那条性质的用武之地：一行歌词滑向新位置时**接着用原来的速度**，而不是从头再来一遍。
+它建在**弹簧**上（见[动画](animation.md)的弹簧一节）—— 这正是
+「重定目标保留速度」那条性质的用武之地：一行歌词滑向新位置时**接着用原来的速度**，
+而不是从头再来一遍。
 
-<a id="它是-2026-年新写的"></a>
+<a id="it-was-written-in-2026"></a>
 
 ## 它是 2026 年新写的
 
-文件头版权是 `Copyright 2026-Present TypeDreamMoon`，**没有 `Lex Liu` 那一行** —— 在插件里这是少数几个代码注释与版权都出自新作者的模块。
+文件头版权是 `Copyright 2026-Present TypeDreamMoon`，**没有 `Lex Liu` 那一行** —— 在插件里这是
+少数几个代码注释与版权都出自新作者的模块。
