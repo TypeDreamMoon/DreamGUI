@@ -238,7 +238,17 @@ void FDreamCanvasCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBui
 	NeedToHidePropertyNames.Add(GET_MEMBER_NAME_CHECKED(UDreamCanvas, SizeInEditMode));
 
 	auto CreateSlider = [this, &CanvasScalerCategory](const FText& FilterString, TSharedPtr<IPropertyHandle> Property) {
-	CanvasScalerCategory.AddCustomRow(FilterString)
+	// One undo entry per drag, not per mouse move.
+	//
+	// SSlider fires OnValueChanged on every mouse move, and a plain SetValue there is a whole edit each
+	// time: its own transaction, so Ctrl+Z afterwards undid one mouse move. While the slider is held the
+	// value is written as InteractiveChange instead, which keeps a single transaction open (see
+	// FPropertyValueImpl::ImportText, bInteractiveChangeInProgress); letting go writes the final value
+	// with the default flags, which closes it.
+	const TSharedRef<bool> bIsDragging = MakeShared<bool>(false);
+	const TSharedRef<TOptional<float>> PendingValue = MakeShared<TOptional<float>>();
+	FDetailWidgetRow& MatchRow = CanvasScalerCategory.AddCustomRow(FilterString);
+	MatchRow
 	.PropertyHandleList({ Property })
 	.NameContent()
 	[
@@ -268,8 +278,28 @@ void FDreamCanvasCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBui
 						Property->GetValue(value);
 						return value;
 						})
+					.OnMouseCaptureBegin_Lambda([bIsDragging]{
+						*bIsDragging = true;
+						})
+					.OnMouseCaptureEnd_Lambda([=]{
+						*bIsDragging = false;
+						if (PendingValue->IsSet())
+						{
+							const float FinalValue = PendingValue->GetValue();
+							PendingValue->Reset();
+							Property->SetValue(FinalValue);
+						}
+						})
 					.OnValueChanged_Lambda([=](float value){
-						Property->SetValue(value);
+						if (*bIsDragging)
+						{
+							*PendingValue = value;
+							Property->SetValue(value, EPropertyValueSetFlags::InteractiveChange);
+						}
+						else
+						{
+							Property->SetValue(value);
+						}
 						})
 				]
 				+SVerticalBox::Slot()
