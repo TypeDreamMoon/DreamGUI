@@ -17,10 +17,10 @@
 #include "UObject/StrongObjectPtr.h"
 
 /*
- * The shape pass of the write-back, straight at ProduceText with no designer: the shapes a
+ * The shape pass of the write-back, straight at ProduceText with no designer: the three shapes a
  * structural edit in the designer depends on, and that were wrong underneath it -- a removal with
- * children (one removal, not one per node) and a subtree inserted at once (in rounds, parents first,
- * with the `+` lines its nodes need).
+ * children (one removal, not one per node), a subtree inserted at once (in rounds, parents first,
+ * with the `+` lines its nodes need), and a change of shape beside a value nobody edited (not written).
  */
 
 namespace DreamUITextShapeWriteBackTestLocal
@@ -188,6 +188,63 @@ bool FDreamUIWriteBackSubtreeRoundsTest::RunTest(const FString&)
 		{
 			return InComponent.ClassName == TEXT("UIButton");
 		}));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamUIWriteBackShapeKeepsUntouchedValuesTest,
+	"DreamGUI.Text.WriteBack.AChangeOfShapeWritesNoValuesIntoNodesNobodyTouched",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamUIWriteBackShapeKeepsUntouchedValuesTest::RunTest(const FString&)
+{
+	using namespace DreamUITextShapeWriteBackTestLocal;
+
+	const FString Source = Lines({
+		TEXT("Widget Root {"),
+		TEXT("    Widget Old {"),
+		TEXT("        AnchorData.SizeDelta = (10, 10)"),
+		TEXT("    }"),
+		TEXT("}")
+	});
+
+	// The trap: a value that differs without anybody having edited it -- a panel's arithmetic, in the
+	// designer -- standing beside a change of shape.
+	auto DriftOld = [](const FLiveTree& InLive)
+	{
+		if (UDreamWidget* Old = InLive.Find(TEXT("Old")))
+		{
+			FDreamUIAnchorData Anchors = Old->GetAnchorData();
+			Anchors.SizeDelta = FVector2D(99.0, 99.0);
+			Old->SetAnchorData(Anchors);
+		}
+	};
+
+	{
+		const FLiveTree Live(Source);
+		if (!TestTrue(TEXT("the fixture builds"), Live.Tree.IsValid())) return false;
+		DriftOld(Live);
+		Live.Add(TEXT("Fresh"), Live.Find(TEXT("Root")));
+
+		FString Updated;
+		FDreamUIDiagnosticBag Diagnostics;
+		TestTrue(TEXT("the write-back ran"), FDreamUITextWriteBack::ProduceText(Source, Live.Tree.Get(), Updated, Diagnostics));
+		TestTrue(TEXT("the new node is written"), Updated.Contains(TEXT("Widget Fresh")));
+		TestTrue(TEXT("the untouched node keeps its line"), Updated.Contains(TEXT("AnchorData.SizeDelta = (10, 10)")));
+		TestFalse(TEXT("and the drift is not written into it"), Updated.Contains(TEXT("(99, 99)")));
+	}
+
+	// The control: the same drift as an ordinary flush with nobody reporting is the sweep's, as before.
+	{
+		const FLiveTree Live(Source);
+		if (!TestTrue(TEXT("the fixture builds again"), Live.Tree.IsValid())) return false;
+		DriftOld(Live);
+
+		FString Updated;
+		FDreamUIDiagnosticBag Diagnostics;
+		TestTrue(TEXT("the write-back ran"), FDreamUITextWriteBack::ProduceText(Source, Live.Tree.Get(), Updated, Diagnostics));
+		TestTrue(TEXT("a value flush with no report still sweeps"), Updated.Contains(TEXT("(99, 99)")));
+	}
 	return true;
 }
 

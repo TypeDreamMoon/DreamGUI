@@ -1219,7 +1219,7 @@ UDreamWidgetTree* FDreamUITextWriteBack::BuildReferenceTree(const FString& InTex
 
 void FDreamUITextWriteBack::CollectEdits(const FDreamUIAst& InAst, const UDreamWidgetTree* InLiveTree,
 	const UDreamWidgetTree* InTextTree, TArray<FDreamUIPropertyEdit>& OutEdits,
-	FDreamUIDiagnosticBag& OutDiagnostics, bool bInUseDirtySet)
+	FDreamUIDiagnosticBag& OutDiagnostics, bool bInUseDirtySet, const TSet<FString>* InSweepNodeIds)
 {
 	using namespace DreamUIWriteBackLocal;
 
@@ -1237,9 +1237,17 @@ void FDreamUITextWriteBack::CollectEdits(const FDreamUIAst& InAst, const UDreamW
 	{
 		Dirty = nullptr;
 	}
-	auto KeepName = [Dirty](const FString& InNodeId, EDreamUIPatchTarget InTarget, int32 InComponentIndex,
+	auto KeepName = [Dirty, InSweepNodeIds](const FString& InNodeId, EDreamUIPatchTarget InTarget, int32 InComponentIndex,
 		const FString& InName)
 	{
+		// After a change of shape: the nodes just written are swept whole, the rest say only what was
+		// reported. See the header for why there is no sweep to fall back on here.
+		if (InSweepNodeIds != nullptr)
+		{
+			return InSweepNodeIds->Contains(InNodeId)
+				|| (Dirty != nullptr
+					&& Dirty->Contains(DreamUIWriteBackDirtyLocal::MakeKey(InNodeId, InTarget, InComponentIndex, InName)));
+		}
 		return Dirty == nullptr
 			|| Dirty->Contains(DreamUIWriteBackDirtyLocal::MakeKey(InNodeId, InTarget, InComponentIndex, InName));
 	};
@@ -1841,6 +1849,7 @@ bool FDreamUITextWriteBack::ProduceText(const FString& InText, const UDreamWidge
 	// edits were all refused (the patcher has said why). Bounded by the nesting the parser accepts,
 	// one level per round, plus one round for the `+` lines of the deepest nodes.
 	FString Working = InText;
+	TSet<FString> WrittenIds;
 	TSet<FString> RefusedInserts;
 	TSet<FString> ComponentCheckIds;
 	bool bShapeChanged = false;
@@ -1881,8 +1890,8 @@ bool FDreamUITextWriteBack::ProduceText(const FString& InText, const UDreamWidge
 			return false;
 		}
 
-		// Which inserts landed: those get their `+` lines next round. One that did not land is not
-		// asked again -- it would be refused for the same reason.
+		// Which inserts landed: those are swept whole by the value pass and get their `+` lines next
+		// round. One that did not land is not asked again -- it would be refused for the same reason.
 		TSet<FString> NowDeclared;
 		Rebuilt.ForEachNode([&NowDeclared](const FDreamUINode& InNode)
 		{
@@ -1899,6 +1908,7 @@ bool FDreamUITextWriteBack::ProduceText(const FString& InText, const UDreamWidge
 			}
 			if (NowDeclared.Contains(Edit.NewId))
 			{
+				WrittenIds.Add(Edit.NewId);
 				ComponentCheckIds.Add(Edit.NewId);
 			}
 			else
@@ -1914,11 +1924,11 @@ bool FDreamUITextWriteBack::ProduceText(const FString& InText, const UDreamWidge
 
 	// ---- phase two: VALUES ----------------------------------------------------------------------
 	TArray<FDreamUIPropertyEdit> Edits;
-	// The dirty set is skipped for a flush that changed the shape: a node that has just been written
-	// into the file has no dirty entries, and its authored values would go unwritten. Sweeping is the
-	// fallback the set is layered over, and this is one of the cases it exists for.
+	// After a change of shape, the nodes just written are swept whole -- they have no dirty entries,
+	// and every value they hold is one the author made -- while every other node writes only what was
+	// reported. A plain value flush is the dirty set over the sweep, exactly as before.
 	CollectEdits(Ast, InLiveTree, TextTree.Get(), Edits, OutDiagnostics,
-		/*bInUseDirtySet*/!bShapeChanged);
+		/*bInUseDirtySet*/true, bShapeChanged ? &WrittenIds : nullptr);
 	DreamUIWriteBackLocal::CollectResourceEdits(Ast, InLiveDefaults, Edits, OutDiagnostics);
 	if (OutEdits != nullptr)
 	{

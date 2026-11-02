@@ -256,13 +256,18 @@ public:
 	 */
 	/*
 	 * bInUseDirtySet: honour what NoteDirtyProperty was told about InLiveTree, when anything was.
-	 * False sweeps everything regardless, which is what a flush that has just changed the file's
-	 * SHAPE needs -- a node written into the file a moment ago has no dirty entries and its authored
-	 * values would go unwritten.
+	 * False sweeps everything regardless.
+	 *
+	 * InSweepNodeIds: the nodes a shape pass has just written into the file. When given, those nodes
+	 * are swept whole -- they have no dirty entries, and every value they hold is one the author made --
+	 * and every OTHER node writes only what the dirty set names, with no sweep to fall back on. A flush
+	 * that changed the shape is a designer gesture, and the sweep over untouched nodes is exactly what
+	 * would put a panel's layout arithmetic into lines nobody edited.
 	 */
 	static void CollectEdits(const FDreamUIAst& InAst, const UDreamWidgetTree* InLiveTree,
 		const UDreamWidgetTree* InTextTree, TArray<FDreamUIPropertyEdit>& OutEdits,
-		FDreamUIDiagnosticBag& OutDiagnostics, bool bInUseDirtySet = true);
+		FDreamUIDiagnosticBag& OutDiagnostics, bool bInUseDirtySet = true,
+		const TSet<FString>* InSweepNodeIds = nullptr);
 
 	/**
 	 * InText with the live tree's values in it. OutText equals InText when nothing had changed.
