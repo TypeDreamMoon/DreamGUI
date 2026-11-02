@@ -249,6 +249,7 @@ void FDreamTextCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuild
 		}
 	}
 	RenderingGroup.AddWidgetRow()
+	.FilterString(LOCTEXT("PresetMaterials_PropertyName", "PresetMaterials"))
 	.Visibility(PresetMaterials.Num() > 0 ? EVisibility::Visible : EVisibility::Collapsed)
 	.ValueContent()
 	[
@@ -300,6 +301,7 @@ void FDreamTextCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuild
 	]
 	;
 	RenderingGroup.AddWidgetRow()
+	.FilterString(LOCTEXT("MaterialDomainErrorTip", "OverrideMaterial should use Surface domain!"))
 	.Visibility(TAttribute<EVisibility>::CreateSPLambda(this, [=]()
 	{
 		UMaterialInterface* OverrideMaterial = nullptr;

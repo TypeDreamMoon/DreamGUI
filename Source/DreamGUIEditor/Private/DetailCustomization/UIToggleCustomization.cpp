@@ -75,6 +75,7 @@ void FUIToggleCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuilde
 		if (ToggleTransitionTarget_Visual && !ToggleTransitionTarget_Visual->IsA<UDreamImage>())
 		{
 			TransitionGroup.AddWidgetRow()
+				.FilterString(LOCTEXT("TransitionTarget_ImageBrush_Tip", "If use ImageBrush, Target must be DreamImage"))
 				.ValueContent()
 				.MinDesiredWidth(500)
 				[

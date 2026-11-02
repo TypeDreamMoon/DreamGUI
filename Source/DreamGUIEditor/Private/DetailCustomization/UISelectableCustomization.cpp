@@ -122,6 +122,7 @@ void FUISelectableCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBu
 		if (TransitionTarget_Visual && !TransitionTarget_Visual->IsA<UDreamImage>())
 		{
 			TransitionGroup.AddWidgetRow()
+				.FilterString(LOCTEXT("TransitionTarget_ImageBrush_Tip", "If use ImageBrush, Target must be a DreamImage"))
 				.ValueContent()
 				.MinDesiredWidth(500)
 				[

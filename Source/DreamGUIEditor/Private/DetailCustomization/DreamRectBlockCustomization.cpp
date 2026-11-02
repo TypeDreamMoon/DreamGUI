@@ -2,6 +2,7 @@
 
 #include "DetailCustomization/DreamRectBlockCustomization.h"
 #include "Core/DreamUIWorldContext.h"
+#include "DreamDetailsCopyPaste.h"
 #include "DreamDetailsMultiSelect.h"
 #include "DreamDetailsTemplateMirror.h"
 #include "DreamUIEditorUtils.h"
@@ -197,7 +198,10 @@ void FDreamRectBlockCustomization::CustomizeDetails(IDetailLayoutBuilder& Detail
 				];
 			}
 		}
-		Group.AddWidgetRow()
+		FDetailWidgetRow& VectorRow = Group.AddWidgetRow();
+		// A hand-built row has no property node, so the search box matches only its FilterString.
+		VectorRow
+		.FilterString(PropertyDisplayName)
 		.PropertyHandleList({ PropertyHandle })
 		.IsEnabled(IsEnabledAttribute)
 		.NameContent()
@@ -222,6 +226,7 @@ void FDreamRectBlockCustomization::CustomizeDetails(IDetailLayoutBuilder& Detail
 			ValueHorizontalBox
 		]
 	;
+		DreamDetailsCopyPaste::BindToRow(VectorRow, PropertyHandle);
 	};
 
 #define TO_TEXT(x) #x
@@ -415,6 +420,7 @@ CreateVectorPropertyWithUnitMode(GET_MEMBER_NAME_CHECKED(UDreamRectBlock, Proper
 			;
 		auto TempBodyTextureHandle = BodyTextureMode == EDreamRectBlockTextureMode::Texture ? BodyTextureHandle : BodySpriteTextureHandle;
 		TextureGroup.HeaderRow()
+			.FilterString(TempBodyTextureHandle->GetPropertyDisplayName())
 			.PropertyHandleList({ BodyTextureModeHandle, BodyTextureHandle, BodySpriteTextureHandle })
 			.OverrideResetToDefault(FResetToDefaultOverride::Create(TAttribute<bool>::CreateLambda([=]()
 			{
@@ -492,6 +498,7 @@ CreateVectorPropertyWithUnitMode(GET_MEMBER_NAME_CHECKED(UDreamRectBlock, Proper
 			.IsEnabled(EnableBodyAttribute)
 		;
 		TextureGroup.AddWidgetRow()
+			.FilterString(LOCTEXT("SnapSize_Button", "Snap Size"))
 			.ValueContent()
 			[
 				SNew(SButton)

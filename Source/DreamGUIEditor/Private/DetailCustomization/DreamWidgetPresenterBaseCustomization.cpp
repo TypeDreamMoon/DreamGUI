@@ -125,7 +125,7 @@ void FDreamWidgetPresenterBaseCustomization::CustomizeDetails(IDetailLayoutBuild
 	{
 		bIsExternalTabAlreadyOpened = TargetWorld.IsValid() && WidgetInspector->GetWorld() == TargetWorld.Get();
 	}
-	Category.AddCustomRow(FText())
+	Category.AddCustomRow(LOCTEXT("WidgetInspector", "WidgetInspector"))
 		.NameContent()
 		[
 			SNew(STextBlock)

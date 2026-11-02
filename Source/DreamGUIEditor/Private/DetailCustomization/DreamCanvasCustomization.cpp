@@ -1,6 +1,7 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
 #include "DetailCustomization/DreamCanvasCustomization.h"
+#include "DreamDetailsCopyPaste.h"
 #include "DreamUIEditorUtils.h"
 #include "Core/Components/DreamCanvas.h"
 #include "Core/DreamUIManager.h"
@@ -332,6 +333,7 @@ void FDreamCanvasCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBui
 		]
 	]
 	;
+	DreamDetailsCopyPaste::BindToRow(MatchRow, Property);
 	};
 
 	EDreamRenderMode ActualRenderMode;
