@@ -30,6 +30,7 @@
 #include "Designer/DreamWidgetBlueprintEditor.h"
 #include "Designer/DreamWidgetPreviewHost.h"
 #include "DreamGUIEditorSubsystem.h"
+#include "Text/DreamUIBridgeService.h"
 #include "Text/DreamUIExpressionThunks.h"
 #include "Text/DreamUILocalizationManifest.h"
 #include "Text/DreamUISourceWatcher.h"
@@ -1535,8 +1536,45 @@ void FDreamWidgetBlueprintCompilerContext::BuildWidgetTreeFromTextSource(FDreamU
 	MigrateRenamedWidgets(Ast, ResolvedPath, OutDiagnostics);
 }
 
+namespace DreamWidgetDiagnosticLinkLocal
+{
+	/**
+	 * Make a diagnostic's message log line go to the place it names when it is clicked.
+	 *
+	 * The line is a plain text token, which the log draws as text; a token with an activation delegate is drawn
+	 * as a link. It is the message's own text token that is armed, not an extra token appended: a message's text is
+	 * the concatenation of its tokens, and a trailing "Open in editor" would end up in every copy of the message
+	 * -- the toast, the log, the tests that read it -- as part of the sentence.
+	 *
+	 * Through the bridge when VS Code is listening, so the cursor lands on the line; otherwise the file is opened.
+	 * Only for a diagnostic whose source is a file that exists: a display name, or the path of a file that could
+	 * not be read, has nowhere to go.
+	 */
+	void MakeJumpable(const FTokenizedMessage& InMessage, const FDreamUIDiagnostic& InDiagnostic)
+	{
+		const FString File = InDiagnostic.SourceName;
+		const int32 Line = FMath::Max(1, InDiagnostic.Location.Line);
+		const int32 Column = FMath::Max(1, InDiagnostic.Location.Column);
+		for (const TSharedRef<IMessageToken>& Token : InMessage.GetMessageTokens())
+		{
+			if (Token->GetType() == EMessageToken::Text)
+			{
+				Token->OnMessageTokenActivated(FOnMessageTokenActivated::CreateLambda(
+					[File, Line, Column](const TSharedRef<IMessageToken>&)
+					{
+						FDreamUIBridgeService::OpenAtLocation(File, Line, Column);
+					}));
+				return;
+			}
+		}
+	}
+}
+
 void FDreamWidgetBlueprintCompilerContext::ReportTextDiagnostics(const FDreamUIDiagnosticBag& InDiagnostics)
 {
+	// Whether a diagnostic's source is a file there is to open, asked once per file rather than once per diagnostic.
+	TMap<FString, bool> SourceExists;
+
 	for (const FDreamUIDiagnostic& Diagnostic : InDiagnostics.Diagnostics)
 	{
 		// ToString() verbatim, never a reworded copy. "File(Line,Col): severity DUInnnn: text" is
@@ -1546,13 +1584,23 @@ void FDreamWidgetBlueprintCompilerContext::ReportTextDiagnostics(const FDreamUID
 		// Passed as the format string with no varargs, which is safe on purpose: FCompilerResultsLog
 		// only looks for @@ when arguments follow it, so a diagnostic quoting a .dui that happens to
 		// contain one is printed rather than eaten.
-		if (Diagnostic.IsError())
+		const TSharedRef<FTokenizedMessage> Message = Diagnostic.IsError()
+			? MessageLog.Error(*Diagnostic.ToString())
+			: MessageLog.Warning(*Diagnostic.ToString());
+
+		// And a link on it, for the line it names -- which is what the text above only said.
+		const FString& Source = Diagnostic.SourceName;
+		if (!Source.IsEmpty() && !FPaths::IsRelative(Source))
 		{
-			MessageLog.Error(*Diagnostic.ToString());
-		}
-		else
-		{
-			MessageLog.Warning(*Diagnostic.ToString());
+			bool* bKnown = SourceExists.Find(Source);
+			if (bKnown == nullptr)
+			{
+				bKnown = &SourceExists.Add(Source, FPaths::FileExists(Source));
+			}
+			if (*bKnown)
+			{
+				DreamWidgetDiagnosticLinkLocal::MakeJumpable(*Message, Diagnostic);
+			}
 		}
 	}
 }
