@@ -344,11 +344,12 @@ public:
 	bool GetPreviewDPIScale() const;
 	void TogglePreviewDPIScale();
 	/**
-	 * The application scale UUserInterfaceSettings would apply at this device resolution, or 1 when
-	 * the preview is switched off. Static and taking the answer as an argument so the arithmetic it
-	 * feeds can be tested without a project's settings.
+	 * The application scale UUserInterfaceSettings would apply at InDeviceSize, or 1 when the preview
+	 * is switched off. The device is an argument because most canvases worked out are for a size not
+	 * on screen: the one being picked, the screen-size menu's other entries, the other devices'
+	 * guides. Asked of the size on screen instead, each of them got that size's scale.
 	 */
-	float GetDesignerDPIScale() const;
+	float GetDesignerDPIScale(FIntPoint InDeviceSize) const;
 	/** The canvas a device resolution leaves once the DPI scale has taken its share. Never zero. */
 	static FIntPoint ApplyDPIScaleToViewportSize(FIntPoint InViewportSize, float InDPIScale);
 	/**

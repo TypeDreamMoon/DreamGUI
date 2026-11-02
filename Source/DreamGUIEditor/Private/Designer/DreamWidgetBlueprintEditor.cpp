@@ -2150,20 +2150,15 @@ void FDreamWidgetBlueprintEditor::TogglePreviewDPIScale()
 	ApplyDesignerViewportSize(GetDesignerViewportSize(), /*bRecordOnAsset*/false);
 }
 
-float FDreamWidgetBlueprintEditor::GetDesignerDPIScale() const
+float FDreamWidgetBlueprintEditor::GetDesignerDPIScale(FIntPoint InDeviceSize) const
 {
-	if (!GetPreviewDPIScale())
-	{
-		return 1.0f;
-	}
-	const FIntPoint DeviceSize = const_cast<FDreamWidgetBlueprintEditor*>(this)->GetDesignerViewportSize();
-	if (DeviceSize.X <= 0 || DeviceSize.Y <= 0)
+	if (!GetPreviewDPIScale() || InDeviceSize.X <= 0 || InDeviceSize.Y <= 0)
 	{
 		return 1.0f;
 	}
 	// The project's curve, which is the one Slate applies at runtime -- not a number of this
 	// designer's own. UMG's designer reads exactly this.
-	const float Scale = GetDefault<UUserInterfaceSettings>()->GetDPIScaleBasedOnSize(DeviceSize);
+	const float Scale = GetDefault<UUserInterfaceSettings>()->GetDPIScaleBasedOnSize(InDeviceSize);
 	return Scale > UE_SMALL_NUMBER ? Scale : 1.0f;
 }
 
@@ -2255,7 +2250,7 @@ bool FDreamWidgetBlueprintEditor::CalculateDesignerCanvasFor(FIntPoint InViewpor
 	// the order Slate applies them at runtime: the application scale shrinks the surface a widget is
 	// laid out on, and the canvas scaler reads that surface. Off by default, so this is the identity
 	// for everyone who has not asked for it.
-	InViewportSize = ApplyDPIScaleToViewportSize(InViewportSize, GetDesignerDPIScale());
+	InViewportSize = ApplyDPIScaleToViewportSize(InViewportSize, GetDesignerDPIScale(InViewportSize));
 	OutCanvasSize = InViewportSize;
 	OutScale = 1.0f;
 	if (InViewportSize.X <= 0 || InViewportSize.Y <= 0)
