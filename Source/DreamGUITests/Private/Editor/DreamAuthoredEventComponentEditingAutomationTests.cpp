@@ -11,6 +11,7 @@
 #include "Core/DreamUserWidget.h"
 #include "Core/DreamWidgetGeneratedClass.h"
 #include "Core/DreamWidgetTree.h"
+#include "Core/Components/DreamPanelLayouts.h"
 #include "Core/Components/DreamWidget.h"
 #include "Designer/DreamWidgetBlueprintEditor.h"
 #include "Designer/DreamWidgetPreviewHost.h"
