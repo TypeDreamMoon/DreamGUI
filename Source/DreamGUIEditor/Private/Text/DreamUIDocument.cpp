@@ -3,6 +3,7 @@
 #include "Text/DreamUIDocument.h"
 
 #include "DreamGUIEditorModule.h"
+#include "Text/DreamUISourceWatcher.h"
 
 #include "Containers/StringConv.h"
 #include "Containers/UnrealString.h"
@@ -52,7 +53,7 @@ void UDreamUIDocument::SetFilePath(const FString& InAbsoluteFilePath)
 	bHasUnflushedWrite = !Content.IsEmpty();
 }
 
-bool UDreamUIDocument::LoadFromFile(FString& OutError)
+bool UDreamUIDocument::LoadFromFile(FString& OutError, FString* OutDiscardedUnflushedContent)
 {
 	OutError.Reset();
 	if (FilePath.IsEmpty())
@@ -66,6 +67,14 @@ bool UDreamUIDocument::LoadFromFile(FString& OutError)
 	{
 		OutError = FString::Printf(TEXT("could not read '%s'"), *FilePath);
 		return false;
+	}
+
+	// What is about to be replaced, if the file never received it. Read before the assignment below, which is
+	// where it is lost.
+	if (OutDiscardedUnflushedContent != nullptr && bHasUnflushedWrite && !Content.IsEmpty()
+		&& !Content.Equals(Loaded, ESearchCase::CaseSensitive))
+	{
+		*OutDiscardedUnflushedContent = Content;
 	}
 
 	// No Modify() here, and no transaction: see the header. A reload is how a change made outside
@@ -171,6 +180,9 @@ bool UDreamUIDocument::FlushToDisk(FString& OutError, EDreamUIDocumentFlush InMo
 					TEXT("'%s' changed on disk since the editor last read it, and was not overwritten. It is reloaded when the editor next looks; make the edit again then."),
 					*FilePath);
 				bHasUnflushedWrite = true;
+				// Said where the author is looking: the caller logs a line, and the reload that follows replaces the
+				// edit this refusal is about, so by the time anyone reads the log it is already gone.
+				FDreamUISourceWatcher::NotifyDesignerWriteRefused(FilePath);
 				return false;
 			}
 		}

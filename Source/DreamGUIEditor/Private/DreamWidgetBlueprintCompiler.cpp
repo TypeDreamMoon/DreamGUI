@@ -1069,7 +1069,10 @@ void FDreamWidgetBlueprintCompilerContext::BuildWidgetTreeFromTextSource(FDreamU
 				{
 					Host->FlushTemplateChanges();
 				}
-				else if (Host->IsTemplateDirty())
+				// Dirty template values are one way the designer's edits were not in the file; the other is a
+				// document whose write had been refused, which the reload that started this compile already
+				// replaced -- by which time the host's flag had long been consumed, so this line never appeared.
+				else if (Host->IsTemplateDirty() || FDreamUISourceWatcher::IsDiscardingDesignerEdits())
 				{
 					MessageLog.Warning(*FString::Printf(
 						TEXT("The .dui behind \"%s\" changed outside the editor, so the file wins: designer edits that had not been written back to it are gone. Make them again on top of the new text."),

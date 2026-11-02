@@ -7,6 +7,7 @@
 #include "DreamWidgetBlueprint.h"
 #include "Core/DreamTextUserWidget.h"
 #include "Designer/DreamUITextAuthoringGate.h"
+#include "Text/DreamUIBridgeService.h"
 #include "Text/DreamUIDocument.h"
 #include "Text/DreamUIPaths.h"
 #include "Text/DreamUITextBuilder.h"
@@ -25,6 +26,8 @@
 #include "IDirectoryWatcher.h"
 #include "Kismet2/CompilerResultsLog.h"
 #include "Kismet2/KismetEditorUtilities.h"
+#include "Logging/TokenizedMessage.h"
+#include "Misc/CoreDelegates.h"
 #include "Misc/FileHelper.h"
 #include "Misc/PackageName.h"
 #include "Misc/Paths.h"
@@ -44,8 +47,27 @@ namespace DreamUISourceWatcherLocal
 	 * Editors write a file more than once per save -- a temp file, a rename, a metadata touch -- and
 	 * a compile per event would mean three Blueprint compiles for one Ctrl-S. Collecting and acting
 	 * after a quiet interval is what makes save-to-recompile usable rather than merely present.
+	 *
+	 * Short, because the interval no longer has to cover the designer's own writes: those are told
+	 * apart by content (UDreamUIDocument::IsOwnWrite), not by waiting, so all it has to span is the
+	 * burst of events one save produces.
 	 */
-	constexpr float DebounceSeconds = 0.75f;
+	constexpr float DebounceSeconds = 0.4f;
+
+	/**
+	 * How long after a .dui event or a bridge request the editor is kept out of background throttling.
+	 * An editor behind the author's text editor runs at 3 FPS otherwise, and the save the author just made
+	 * would wait for the next of those frames at every step between the file system and the designer.
+	 */
+	constexpr double FullRateHoldSeconds = 3.0;
+
+	/** The compile verdict toast of a plain save: long enough to read a file name, short enough not to be furniture. */
+	constexpr float AppliedToastSeconds = 1.5f;
+	constexpr float AppliedToastFadeInSeconds = 0.15f;
+	constexpr float AppliedToastFadeOutSeconds = 0.4f;
+
+	/** How long a source nobody was found for stays remembered as such, whatever else happens. */
+	constexpr double UnresolvedSourceLifetimeSeconds = 5.0;
 
 	/**
 	 * More files than this in one batch is not a save; it is a branch switch, a bulk rewrite or a
@@ -61,15 +83,31 @@ namespace DreamUISourceWatcherLocal
 		return EditorSubsystem != nullptr ? &EditorSubsystem->GetSourceWatcher() : nullptr;
 	}
 
+	/**
+	 * The state ShouldRunAtFullRate reads. Held directly because the editor asks it every frame, and Session() is a
+	 * subsystem lookup; set when the session registers the watcher and cleared when it unregisters.
+	 */
+	const FDreamUISourceWatcherState* GThrottleState = nullptr;
+
 	/** What one drained queue did, and where to send the author when it did not work. */
 	struct FBatchResult
 	{
 		int32 Compiled = 0;
 		int32 Unclaimed = 0;
 		int32 Failed = 0;
+		/** Files whose text was what the last rebuild already read, so nothing was rebuilt. */
+		int32 Unchanged = 0;
+
+		/** Files (clean names) every class of which rebuilt, for the toast of a plain save. */
+		TArray<FString> AppliedFiles;
 
 		FString FirstErrorFile;
 		FString FirstErrorText;
+		/**
+		 * The first error's own message token, when the compiler gave it a way to jump to its line. The toast
+		 * runs that rather than guessing a position from the text: the compiler knows which file the error is in.
+		 */
+		TSharedPtr<IMessageToken> FirstErrorToken;
 
 		bool HasFirstError() const { return !FirstErrorFile.IsEmpty(); }
 	};
@@ -119,10 +157,23 @@ namespace DreamUISourceWatcherLocal
 		TMap<FString, FSoftObjectPath> BlueprintBySource;
 		/** Examined package -> its normalized source key; empty for no source or a failed load. */
 		TMap<FName, FString> ExaminedPackages;
+		/**
+		 * Sources (lowercased keys) a complete lookup found no Blueprint for. Asked again, they are answered null at
+		 * once instead of walking every loaded Blueprint and the registry's widget Blueprints again; the answer can
+		 * only change when an asset appears, goes, moves or compiles, and each of those empties this.
+		 */
+		TSet<FString> UnresolvedSources;
+		/** A Source File spelling -> the lookup key it resolves to, so a Blueprint is resolved once per spelling, not once per question. */
+		TMap<FString, FString> ResolvedKeyBySpelling;
+		/** When the oldest entry of either cache above was filed; the caches are dropped whole after UnresolvedSourceLifetimeSeconds. */
+		double CachesFiledAt = 0.0;
+		FDelegateHandle AssetAddedHandle;
 		FDelegateHandle AssetRemovedHandle;
 		FDelegateHandle AssetRenamedHandle;
 		FDelegateHandle AssetUpdatedOnDiskHandle;
 		FDelegateHandle ObjectPreSaveHandle;
+		FDelegateHandle BlueprintCompiledHandle;
+		FDelegateHandle PostEngineInitHandle;
 		/** Set while a lookup runs: a load it causes that asks again is answered null, not with a second scan. */
 		bool bResolving = false;
 	};
@@ -138,10 +189,70 @@ namespace DreamUISourceWatcherLocal
 		return InNormalizedPath.ToLower();
 	}
 
+	/** Empty both lookup caches: something that can change which Blueprint a file belongs to has happened. */
+	void ClearLookupCaches()
+	{
+		FSourceClassIndex& Index = SourceClassIndex();
+		Index.UnresolvedSources.Reset();
+		Index.ResolvedKeyBySpelling.Reset();
+	}
+
+	/**
+	 * Drop the lookup caches once they are old. Nothing here can see every way the answer changes -- a plugin's
+	 * DUI directory appearing, a file created behind a relative spelling -- so no entry is believed for long.
+	 */
+	void ExpireLookupCaches()
+	{
+		FSourceClassIndex& Index = SourceClassIndex();
+		if ((!Index.UnresolvedSources.IsEmpty() || !Index.ResolvedKeyBySpelling.IsEmpty())
+			&& FPlatformTime::Seconds() - Index.CachesFiledAt > UnresolvedSourceLifetimeSeconds)
+		{
+			ClearLookupCaches();
+		}
+	}
+
+	/** Stamp the caches as holding something, if they held nothing until now. */
+	void NoteLookupCacheFiled()
+	{
+		FSourceClassIndex& Index = SourceClassIndex();
+		if (Index.UnresolvedSources.IsEmpty() && Index.ResolvedKeyBySpelling.IsEmpty())
+		{
+			Index.CachesFiledAt = FPlatformTime::Seconds();
+		}
+	}
+
+	/**
+	 * The lookup key of the file a Blueprint is built from: GetResolvedSourceKey, lowercased, and remembered by
+	 * the Source File spelling it came from.
+	 *
+	 * A lookup that misses asks this of every loaded widget Blueprint, and resolving a spelling is not free -- a
+	 * relative one is searched across the roots with a stat each, and the lookup compared each Blueprint twice. The
+	 * spelling is what the answer is a function of, so a Blueprint given another Source File is a different entry,
+	 * never a stale one; what can still go stale is the file system under a spelling, which ExpireLookupCaches bounds.
+	 */
+	FString ResolvedLookupKey(const UDreamWidgetBlueprint* InBlueprint)
+	{
+		const FString Authored = DreamUITextAuthoring::GetAuthoredSourcePath(InBlueprint);
+		if (Authored.IsEmpty())
+		{
+			return FString();
+		}
+		FSourceClassIndex& Index = SourceClassIndex();
+		if (const FString* Known = Index.ResolvedKeyBySpelling.Find(Authored))
+		{
+			return *Known;
+		}
+		const FString Key = IndexKey(GetResolvedSourceKey(InBlueprint));
+		NoteLookupCacheFiled();
+		Index.ResolvedKeyBySpelling.Add(Authored, Key);
+		return Key;
+	}
+
 	/** Forget a changed asset and reopen discovery for any source whose selected owner it was. */
 	void ForgetPackage(const FName InPackageName)
 	{
 		FSourceClassIndex& Index = SourceClassIndex();
+		ClearLookupCaches();
 		Index.ExaminedPackages.Remove(InPackageName);
 		TArray<FString> UnclaimedSources;
 		for (auto It = Index.BlueprintBySource.CreateIterator(); It; ++It)
@@ -164,7 +275,7 @@ namespace DreamUISourceWatcherLocal
 	{
 		FSourceClassIndex& Index = SourceClassIndex();
 		const FName PackageName = InBlueprint->GetOutermost()->GetFName();
-		const FString Key = IndexKey(GetResolvedSourceKey(InBlueprint));
+		const FString Key = ResolvedLookupKey(InBlueprint);
 		if (const FString* Previous = Index.ExaminedPackages.Find(PackageName); Previous != nullptr && *Previous != Key)
 		{
 			ForgetPackage(PackageName);
@@ -198,10 +309,18 @@ namespace DreamUISourceWatcherLocal
 			return nullptr;
 		}
 		const FString Key = IndexKey(Normalized);
-		auto IsBuiltFrom = [&Normalized](const UDreamWidgetBlueprint* InBlueprint)
+		auto IsBuiltFrom = [&Key](const UDreamWidgetBlueprint* InBlueprint)
 		{
-			return IsValid(InBlueprint) && GetResolvedSourceKey(InBlueprint).Equals(Normalized, ESearchCase::IgnoreCase);
+			return IsValid(InBlueprint) && ResolvedLookupKey(InBlueprint).Equals(Key, ESearchCase::IgnoreCase);
 		};
+
+		// 0. A source a complete lookup already found nobody for. Asked again before anything that could have given it
+		// an owner has happened, so the answer is the same and the walk below is not repeated.
+		ExpireLookupCaches();
+		if (Index.UnresolvedSources.Contains(Key))
+		{
+			return nullptr;
+		}
 
 		// 1. The answer from last time, asked again: the Blueprint may have been given another Source File since, and
 		// a stale answer is a host built from the wrong component.
@@ -302,7 +421,32 @@ namespace DreamUISourceWatcherLocal
 				return GetAuthoritativeClass(Blueprint);
 			}
 		}
+
+		// Every widget Blueprint the registry knows has been read and none is built from this file. Remembered, unless
+		// the registry has not finished listing: its answer is then incomplete, and a miss remembered from it would
+		// outlive the scan that completes it.
+		if (!AssetRegistry->IsLoadingAssets())
+		{
+			NoteLookupCacheFiled();
+			Index.UnresolvedSources.Add(Key);
+		}
 		return nullptr;
+	}
+
+	/**
+	 * The hash of a file's text as the document hashes it, or empty when it cannot be read.
+	 *
+	 * One definition (UDreamUIDocument::ComputeContentHash) for every question the watcher asks of a file's
+	 * content -- is it our own write, is it what we already built -- so they cannot disagree about equal text.
+	 */
+	FString ReadContentHash(const FString& InFilePath)
+	{
+		FString DiskContent;
+		if (!FFileHelper::LoadFileToString(DiskContent, *InFilePath))
+		{
+			return FString();
+		}
+		return UDreamUIDocument::ComputeContentHash(DiskContent);
 	}
 
 	/**
@@ -310,29 +454,283 @@ namespace DreamUISourceWatcherLocal
 	 *
 	 * Only askable when a document is open for the file, which is exactly when the designer could
 	 * have written it. With no document there is nothing of ours to mistake a foreign edit for.
+	 *
+	 * Takes the file's hash rather than reading it: the drain has already read each changed file once, and
+	 * an unreadable file (empty hash) is not "ours" -- letting it through means the compile reports the
+	 * real problem instead of this function silently deciding there is none.
 	 */
-	bool IsOwnWriteComingBack(const FString& InFilePath)
+	bool IsOwnWriteComingBack(const FString& InFilePath, const FString& InDiskHash)
 	{
-		UDreamUIDocument* Document = FDreamUIDocumentRegistry::Find(InFilePath);
-		if (Document == nullptr)
-		{
-			return false;
-		}
-		FString DiskContent;
-		if (!FFileHelper::LoadFileToString(DiskContent, *InFilePath))
-		{
-			// Unreadable is not "ours". Letting it through means the compile reports the real problem
-			// instead of this function silently deciding there is none.
-			return false;
-		}
-		return Document->IsOwnWrite(DiskContent);
+		const UDreamUIDocument* Document = FDreamUIDocumentRegistry::Find(InFilePath);
+		return Document != nullptr && !InDiskHash.IsEmpty() && Document->GetLastWrittenHash() == InDiskHash;
 	}
 
-	/** One notification for the whole batch, carrying a way to open the file that failed. */
+	FString NormalizeImportKey(const FString& InPath)
+	{
+		FString Key = InPath;
+		FPaths::NormalizeFilename(Key);
+		return Key.ToLower();
+	}
+
+	/** Notifications are Slate; a commandlet or an automation run without a UI must not try to draw one. */
+	bool CanShowNotifications()
+	{
+		return FSlateApplication::IsInitialized() && !IsRunningCommandlet();
+	}
+
+	/**
+	 * The notices about a file whose designer text and disk text disagreed share one toast while it is on screen.
+	 *
+	 * "Your change was refused" arrives first, on every gesture until the outside edit is brought in, and "the outside
+	 * edit replaced it" arrives last; as two stacks of toasts the author reads the same event several times, and as one
+	 * that is rewritten in place they read it once, with the final word.
+	 */
+	struct FConflictToast
+	{
+		TWeakPtr<SNotificationItem> Item;
+		double CreatedAt = 0.0;
+	};
+
+	TMap<FString, FConflictToast>& ConflictToasts()
+	{
+		static TMap<FString, FConflictToast> Toasts;
+		return Toasts;
+	}
+
+	constexpr float ConflictToastSeconds = 12.0f;
+
+	void ShowConflictToast(const FString& InFilePath, const FText& InText,
+		const FSimpleDelegate& InLink = FSimpleDelegate(), const FText& InLinkText = FText())
+	{
+		if (!CanShowNotifications())
+		{
+			return;
+		}
+		FConflictToast& Toast = ConflictToasts().FindOrAdd(NormalizeImportKey(InFilePath));
+		const double Now = FPlatformTime::Seconds();
+		// Reused while it can still be read: a toast past its expiry is already fading, and rewriting that one would
+		// put the new text on something about to disappear.
+		if (const TSharedPtr<SNotificationItem> Existing = Toast.Item.Pin();
+			Existing.IsValid() && Now - Toast.CreatedAt < ConflictToastSeconds * 0.8)
+		{
+			Existing->SetText(InText);
+			if (InLink.IsBound())
+			{
+				Existing->SetHyperlink(InLink, InLinkText);
+			}
+			return;
+		}
+
+		FNotificationInfo Info(InText);
+		Info.ExpireDuration = ConflictToastSeconds;
+		Info.bFireAndForget = true;
+		if (InLink.IsBound())
+		{
+			Info.Hyperlink = InLink;
+			Info.HyperlinkText = InLinkText;
+		}
+		const TSharedPtr<SNotificationItem> Item = FSlateNotificationManager::Get().AddNotification(Info);
+		if (Item.IsValid())
+		{
+			Item->SetCompletionState(SNotificationItem::CS_Fail);
+		}
+		Toast.Item = Item;
+		Toast.CreatedAt = Now;
+	}
+
+	/**
+	 * Say what an outside change did to the editor's state: it replaced designer text that never reached the file,
+	 * and/or it cut the undo history. One toast for both, since both are the same event.
+	 */
+	void NotifyExternalReload(const FString& InFilePath, bool bInDiscardedDesignerText,
+		const FString& InSavedCopyPath, bool bInUndoCut)
+	{
+		if (!bInDiscardedDesignerText && !bInUndoCut)
+		{
+			return;
+		}
+		const FText FileName = FText::FromString(FPaths::GetCleanFilename(InFilePath));
+
+		FText Text;
+		if (bInDiscardedDesignerText)
+		{
+			Text = InSavedCopyPath.IsEmpty()
+				? FText::Format(LOCTEXT("DreamUIDesignerEditsReplaced",
+					"DreamUI: {0} changed outside the editor, and the designer's edits that had not been written to it were replaced by the external version."),
+					FileName)
+				: FText::Format(LOCTEXT("DreamUIDesignerEditsReplacedSaved",
+					"DreamUI: {0} changed outside the editor, and the designer's edits that had not been written to it were replaced by the external version. The replaced text was saved to {1}"),
+					FileName, FText::FromString(InSavedCopyPath));
+		}
+		if (bInUndoCut)
+		{
+			const FText UndoText = FText::Format(LOCTEXT("DreamUIUndoHistoryCut",
+				"{0} changed outside the editor; the undo history was cut at this point."), FileName);
+			Text = Text.IsEmpty() ? FText::Format(LOCTEXT("DreamUIUndoHistoryCutPrefixed", "DreamUI: {0}"), UndoText)
+				: FText::Format(LOCTEXT("DreamUIConflictTwoLines", "{0}\n{1}"), Text, UndoText);
+		}
+
+		FSimpleDelegate Link;
+		FText LinkText;
+		if (!InSavedCopyPath.IsEmpty())
+		{
+			const FString Copy = InSavedCopyPath;
+			Link = FSimpleDelegate::CreateLambda([Copy]
+			{
+				FPlatformProcess::LaunchFileInDefaultExternalApplication(*Copy, nullptr, ELaunchVerb::Open);
+			});
+			LinkText = LOCTEXT("DreamUIOpenSavedCopy", "Open the saved copy");
+		}
+		ShowConflictToast(InFilePath, Text, Link, LinkText);
+	}
+
+	/**
+	 * Whether anything an undo could still reach touches the document or an asset built from its file.
+	 *
+	 * A reload is not transacted, so every such entry describes text from before it and undoing it would write that
+	 * text back over somebody else's edit -- which is what the undo barrier prevents. But the barrier is global: it
+	 * stops undo for the whole editor, level edits included. So it is set only when there is something to protect,
+	 * which is a transaction (from the barrier already standing, if any, up to the newest undoable entry) that
+	 * holds the document or any object in the Blueprint's package.
+	 */
+	bool UndoHistoryTouches(const UObject* InDocument, const TArray<UDreamWidgetBlueprint*>& InBlueprints)
+	{
+		if (GEditor == nullptr || GEditor->Trans == nullptr)
+		{
+			return false;
+		}
+		const UTransactor* Trans = GEditor->Trans;
+		const int32 Newest = Trans->GetQueueLength() - Trans->GetUndoCount() - 1;
+		const int32 Oldest = FMath::Max(0, Trans->GetCurrentUndoBarrier());
+		if (Newest < Oldest)
+		{
+			return false;
+		}
+
+		TSet<const UPackage*> Packages;
+		for (const UDreamWidgetBlueprint* Blueprint : InBlueprints)
+		{
+			if (IsValid(Blueprint))
+			{
+				Packages.Add(Blueprint->GetOutermost());
+			}
+		}
+
+		TArray<UObject*> Objects;
+		for (int32 Index = Newest; Index >= Oldest; --Index)
+		{
+			const FTransaction* Transaction = Trans->GetTransaction(Index);
+			if (Transaction == nullptr)
+			{
+				continue;
+			}
+			if (InDocument != nullptr && Transaction->ContainsObject(InDocument))
+			{
+				return true;
+			}
+			if (Packages.IsEmpty())
+			{
+				continue;
+			}
+			Transaction->GetTransactionObjects(Objects);
+			for (const UObject* Object : Objects)
+			{
+				if (Object != nullptr && Packages.Contains(Object->GetOutermost()))
+				{
+					return true;
+				}
+			}
+		}
+		return false;
+	}
+
+	/**
+	 * One small toast for a save that worked, rewritten in place when another lands while it is still up.
+	 *
+	 * Stacked, a run of saves would draw a column of them; folded, the author sees one line that says the
+	 * newest file was applied and goes away on its own. Not for explicit commands, which have their own summary.
+	 */
+	void ShowAppliedToast(const TArray<FString>& InFiles)
+	{
+		if (InFiles.IsEmpty() || !CanShowNotifications())
+		{
+			return;
+		}
+		const FText Text = InFiles.Num() == 1
+			? FText::Format(LOCTEXT("DreamUIApplied", "DreamUI: applied {0}"), FText::FromString(InFiles[0]))
+			: FText::Format(LOCTEXT("DreamUIAppliedMany", "DreamUI: applied {0} and {1} more"),
+				FText::FromString(InFiles[0]), FText::AsNumber(InFiles.Num() - 1));
+
+		static TWeakPtr<SNotificationItem> GToast;
+		static double GToastCreatedAt = 0.0;
+		const double Now = FPlatformTime::Seconds();
+		if (const TSharedPtr<SNotificationItem> Existing = GToast.Pin();
+			Existing.IsValid() && Now - GToastCreatedAt < AppliedToastFadeInSeconds + AppliedToastSeconds)
+		{
+			Existing->SetText(Text);
+			return;
+		}
+
+		FNotificationInfo Info(Text);
+		Info.FadeInDuration = AppliedToastFadeInSeconds;
+		Info.ExpireDuration = AppliedToastSeconds;
+		Info.FadeOutDuration = AppliedToastFadeOutSeconds;
+		Info.bUseThrobber = false;
+		Info.bFireAndForget = true;
+		const TSharedPtr<SNotificationItem> Item = FSlateNotificationManager::Get().AddNotification(Info);
+		if (Item.IsValid())
+		{
+			Item->SetCompletionState(SNotificationItem::CS_Success);
+		}
+		GToast = Item;
+		GToastCreatedAt = Now;
+	}
+
+	/**
+	 * Remember a failed compile's first ERROR -- its text and, when the compiler gave the message a way to jump to its
+	 * line, that -- unless the batch already has one. The first error, not the first message: a warning that happens to
+	 * come first says nothing about why the compile failed.
+	 */
+	void RecordFirstError(FBatchResult& OutBatch, const FString& InFile, const UDreamWidgetBlueprint* InBlueprint,
+		const FCompilerResultsLog& InResults)
+	{
+		if (OutBatch.HasFirstError())
+		{
+			return;
+		}
+		OutBatch.FirstErrorFile = InFile;
+		// The compiler's own first error, which already carries the DUInnnn code and the line and column.
+		// Rewording it here would give the author two different sentences for one problem depending on
+		// where they read it.
+		const TSharedRef<FTokenizedMessage>* FirstError = InResults.Messages.FindByPredicate(
+			[](const TSharedRef<FTokenizedMessage>& Message)
+			{
+				return Message->GetSeverity() == EMessageSeverity::Error;
+			});
+		OutBatch.FirstErrorText = FirstError != nullptr
+			? (*FirstError)->ToText().ToString()
+			: FString::Printf(TEXT("%s failed to compile"), *GetNameSafe(InBlueprint));
+		if (FirstError != nullptr)
+		{
+			for (const TSharedRef<IMessageToken>& Token : (*FirstError)->GetMessageTokens())
+			{
+				if (Token->GetOnMessageTokenActivated().IsBound())
+				{
+					OutBatch.FirstErrorToken = Token;
+					break;
+				}
+			}
+		}
+	}
+
+	/** One notification for the whole batch, carrying a way to go to the error that failed it. */
 	void ReportBatch(const FBatchResult& InBatch, bool bAnnounceSuccess)
 	{
 		if (InBatch.Failed == 0 && !bAnnounceSuccess)
 		{
+			// A save that worked stays out of the way: the designer redrawing is the feedback, and this line only
+			// says which file it was.
+			ShowAppliedToast(InBatch.AppliedFiles);
 			return;
 		}
 
@@ -347,12 +745,27 @@ namespace DreamUISourceWatcherLocal
 			if (InBatch.HasFirstError())
 			{
 				const FString File = InBatch.FirstErrorFile;
-				Info.Hyperlink = FSimpleDelegate::CreateLambda([File]
+				const TSharedPtr<IMessageToken> Token = InBatch.FirstErrorToken;
+				// The error's own token knows its file, line and column -- the compiler put them there -- so the
+				// toast runs it instead of guessing a position out of the text. An error with none (one that is
+				// not about a place in a .dui) still takes the author to the file.
+				Info.Hyperlink = FSimpleDelegate::CreateLambda([File, Token]
 				{
-					FPlatformProcess::LaunchFileInDefaultExternalApplication(*File, nullptr, ELaunchVerb::Open);
+					if (Token.IsValid() && Token->GetOnMessageTokenActivated().IsBound())
+					{
+						Token->GetOnMessageTokenActivated().ExecuteIfBound(Token.ToSharedRef());
+						return;
+					}
+					FDreamUIBridgeService::OpenAtLocation(File, 1, 1);
 				});
-				Info.HyperlinkText = LOCTEXT("DreamUIOpenFailedSource", "Open the file");
+				Info.HyperlinkText = Token.IsValid() && Token->GetOnMessageTokenActivated().IsBound()
+					? LOCTEXT("DreamUIGoToError", "Go to the error")
+					: LOCTEXT("DreamUIOpenFailedSource", "Open the file");
 			}
+		}
+		else if (InBatch.Compiled == 0 && InBatch.Unclaimed == 0)
+		{
+			Info.Text = LOCTEXT("DreamUINothingToRebuild", "DreamUI: no text-backed widget Blueprint to rebuild.");
 		}
 		else
 		{
@@ -369,7 +782,15 @@ namespace DreamUISourceWatcherLocal
 		}
 	}
 
-	void RecompileFor(FDreamUISourceWatcherState& State, const FString& InFilePath, FBatchResult& OutBatch)
+	/**
+	 * Rebuild every loaded class built from InFilePath, from the text on disk.
+	 *
+	 * InContentHash is that text's hash (empty when the file could not be read). bInAllowSkip lets a file whose text
+	 * is what the last successful rebuild already read, for the same classes, be left alone; an explicit command
+	 * passes false, because asking for a rebuild is asking for one.
+	 */
+	void RecompileFor(FDreamUISourceWatcherState& State, const FString& InFilePath, const FString& InContentHash,
+		bool bInAllowSkip, FBatchResult& OutBatch)
 	{
 		TArray<UDreamWidgetBlueprint*> Blueprints;
 		FindBlueprints(InFilePath, Blueprints);
@@ -385,6 +806,22 @@ namespace DreamUISourceWatcherLocal
 			return;
 		}
 
+		UDreamUIDocument* Document = FDreamUIDocumentRegistry::Find(InFilePath);
+		const FString FileKey = NormalizeImportKey(InFilePath);
+
+		// An event for text this watcher already built from -- a touch, a save with no edit, a tool rewriting a file
+		// with the bytes it had -- would otherwise run a full Blueprint compile per class to arrive where it is.
+		// Never when a document is open and disagrees with the disk: that document still has to be brought in.
+		if (bInAllowSkip
+			&& (Document == nullptr || Document->GetLastWrittenHash() == InContentHash)
+			&& FDreamUISourceWatcher::IsUpToDateWithLastCompile(State, InFilePath, InContentHash, Blueprints))
+		{
+			++OutBatch.Unchanged;
+			UE_LOG(DreamGUI, Verbose, TEXT("[%s].%d '%s' was written, but with the text its classes were last built from."),
+				ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *InFilePath);
+			return;
+		}
+
 		// Everything from here on is "the file on disk won". The compiler asks, and skips the flush that
 		// would otherwise push the designer's unsaved preview values back over the text that just
 		// arrived -- see FDreamUISourceWatcher::IsCompilingFromExternalChange.
@@ -393,25 +830,54 @@ namespace DreamUISourceWatcherLocal
 		// The document first, and only when one is open. The designer's write-back compares the tree
 		// against the text it believes is on disk; leaving it believing the old text would make the
 		// next flush plan its edits against lines that have moved.
-		if (UDreamUIDocument* Document = FDreamUIDocumentRegistry::Find(InFilePath))
+		bool bDiscardedEdits = false;
+		if (Document != nullptr)
 		{
+			// Asked for BEFORE the reload because the reload is what loses it: text the designer holds that the
+			// file never received (the write was refused or the file is read-only) is replaced here, and used to
+			// be replaced without a word. It is kept aside and the author is told where.
+			FString DiscardedDesignerText;
 			FString LoadError;
-			if (!Document->LoadFromFile(LoadError))
+			if (!Document->LoadFromFile(LoadError, &DiscardedDesignerText))
 			{
 				UE_LOG(DreamGUI, Warning, TEXT("[%s].%d Could not reload '%s': %s"),
 					ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *InFilePath, *LoadError);
 			}
-			else if (GEditor != nullptr && GEditor->Trans != nullptr)
+			else
 			{
+				FString SavedCopy;
+				const bool bDiscarded = !DiscardedDesignerText.IsEmpty();
+				bDiscardedEdits = bDiscarded;
+				if (bDiscarded)
+				{
+					SavedCopy = FDreamUISourceWatcher::SaveDiscardedDesignerText(InFilePath, DiscardedDesignerText);
+					UE_LOG(DreamGUI, Warning,
+						TEXT("[%s].%d '%s' changed outside the editor while the designer held edits that had not reached it; they were replaced. A copy is at '%s'."),
+						ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *InFilePath, *SavedCopy);
+				}
+
 				// The contract UDreamUIDocument::LoadFromFile writes down, and which nothing in the
 				// codebase was honouring. A reload is deliberately NOT transacted, so every entry still
 				// on the undo stack describes text from BEFORE it -- and undoing past the reload writes
 				// that older text back over the file, which is a Ctrl+Z silently discarding somebody
 				// else's edit. The header says the host's move is a barrier; this is the host.
-				GEditor->Trans->SetUndoBarrier();
+				//
+				// Only when there is such an entry. The barrier is for the whole editor, so an author with a level
+				// open would lose their undo history for a .dui they were not looking at.
+				bool bUndoCut = false;
+				if (GEditor != nullptr && GEditor->Trans != nullptr && UndoHistoryTouches(Document, Blueprints))
+				{
+					GEditor->Trans->SetUndoBarrier();
+					bUndoCut = true;
+				}
+				NotifyExternalReload(InFilePath, bDiscarded, SavedCopy, bUndoCut);
 			}
 		}
 
+		// For the compiler, which has a line of its own to say it: the toast goes away, the message log stays.
+		TGuardValue<bool> DiscardGuard(State.bDesignerEditsDiscarded, bDiscardedEdits);
+
+		bool bAllCompiled = true;
 		for (UDreamWidgetBlueprint* Blueprint : Blueprints)
 		{
 			UE_LOG(DreamGUI, Display, TEXT("[%s].%d Rebuilding '%s' after '%s' changed."),
@@ -426,35 +892,33 @@ namespace DreamUISourceWatcherLocal
 
 			if (Results.NumErrors > 0)
 			{
+				bAllCompiled = false;
 				++OutBatch.Failed;
-				if (!OutBatch.HasFirstError())
-				{
-					OutBatch.FirstErrorFile = InFilePath;
-					// The compiler's own first error, which already carries the DUInnnn code and the
-					// line and column. Rewording it here would give the author two different sentences
-					// for one problem depending on where they read it.
-					const TSharedRef<FTokenizedMessage>* FirstError = Results.Messages.FindByPredicate(
-						[](const TSharedRef<FTokenizedMessage>& Message)
-						{
-							return Message->GetSeverity() == EMessageSeverity::Error;
-						});
-					OutBatch.FirstErrorText = FirstError != nullptr
-						? (*FirstError)->ToText().ToString()
-						: FString::Printf(TEXT("%s failed to compile"), *GetNameSafe(Blueprint));
-				}
+				RecordFirstError(OutBatch, InFilePath, Blueprint, Results);
 			}
 			else
 			{
 				++OutBatch.Compiled;
 			}
 		}
-	}
 
-	FString NormalizeImportKey(const FString& InPath)
-	{
-		FString Key = InPath;
-		FPaths::NormalizeFilename(Key);
-		return Key.ToLower();
+		// Remembered only when every class built, and only for text that could be read: a failure must be
+		// attempted again by the next save of the same text, since what it failed on may have changed elsewhere.
+		if (bAllCompiled && !InContentHash.IsEmpty())
+		{
+			FDreamUISourceWatcherState::FCompiledSource& Record = State.CompiledSources.FindOrAdd(FileKey);
+			Record.ContentHash = InContentHash;
+			Record.Blueprints.Reset();
+			for (const UDreamWidgetBlueprint* Blueprint : Blueprints)
+			{
+				Record.Blueprints.Add(FObjectKey(Blueprint));
+			}
+			OutBatch.AppliedFiles.Add(FPaths::GetCleanFilename(InFilePath));
+		}
+		else
+		{
+			State.CompiledSources.Remove(FileKey);
+		}
 	}
 
 	/**
@@ -541,16 +1005,42 @@ namespace DreamUISourceWatcherLocal
 		}
 	}
 
-	/** Republish one file's `use` edges from what is on disk right now. */
-	void NoteImportsFromDisk(const FString& InFilePath)
+	/**
+	 * Replace what the table holds for InImporter with InImports.
+	 *
+	 * Replace, not append: a file that dropped a `use` line must stop recompiling on that library's saves, and
+	 * both publishers hand over the WHOLE current list. The importer's previous edges are found through
+	 * ImportRecords rather than by walking every edge in the table, so republishing one file is the size of that
+	 * file's own list -- the first sweep over a project used to be the number of files times the number of edges.
+	 */
+	void StoreImportEdges(FDreamUISourceWatcherState& State, const FString& InImporter, const TArray<FString>& InImports)
 	{
-		FString Text;
-		if (!FFileHelper::LoadFileToString(Text, *InFilePath))
+		FDreamUISourceWatcherState::FImportRecord& Record = State.ImportRecords.FindOrAdd(NormalizeImportKey(InImporter));
+		for (const FString& PreviousKey : Record.ImportKeys)
 		{
-			return;
+			State.ImportEdges.Remove(PreviousKey, Record.Importer);
 		}
+		Record.Importer = InImporter;
+		Record.ImportKeys.Reset();
+		for (const FString& Import : InImports)
+		{
+			const FString Key = NormalizeImportKey(Import);
+			State.ImportEdges.Add(Key, InImporter);
+			Record.ImportKeys.Add(Key);
+		}
+	}
+
+	/**
+	 * Republish one file's `use` edges from its text, which the caller has already read.
+	 *
+	 * Bookkeeping only: it says nothing about the file having been compiled, so it leaves what is remembered about the
+	 * file's last rebuild alone. The compiler's own publication, FDreamUISourceWatcher::NoteImports, is the one that
+	 * means "somebody just compiled this".
+	 */
+	void NoteImportsFromText(FDreamUISourceWatcherState& State, const FString& InFilePath, const FString& InText)
+	{
 		TArray<FString> Spellings;
-		ScanImportSpellings(Text, Spellings);
+		ScanImportSpellings(InText, Spellings);
 
 		TArray<FString> Resolved;
 		Resolved.Reserve(Spellings.Num());
@@ -562,7 +1052,18 @@ namespace DreamUISourceWatcherLocal
 				Resolved.AddUnique(Path);
 			}
 		}
-		FDreamUISourceWatcher::NoteImports(InFilePath, Resolved);
+		StoreImportEdges(State, InFilePath, Resolved);
+	}
+
+	/** Republish one file's `use` edges from what is on disk right now. */
+	void NoteImportsFromDisk(FDreamUISourceWatcherState& State, const FString& InFilePath)
+	{
+		FString Text;
+		if (!FFileHelper::LoadFileToString(Text, *InFilePath))
+		{
+			return;
+		}
+		NoteImportsFromText(State, InFilePath, Text);
 	}
 
 	/**
@@ -596,19 +1097,12 @@ namespace DreamUISourceWatcherLocal
 		{
 			// Left alone when the compiler already published this file's edges: its list is the
 			// authoritative one (it comes from a real parse, with `use` failures resolved the way the
-			// build resolved them), and replacing it with a text scan would be a downgrade.
-			bool bAlreadyKnown = false;
-			for (auto It = State.ImportEdges.CreateConstIterator(); It; ++It)
+			// build resolved them), and replacing it with a text scan would be a downgrade. Asked of the
+			// per-importer records, which have an entry for every published file -- one with no imports
+			// included, which the edge table alone could not tell from one never published.
+			if (!State.ImportRecords.Contains(NormalizeImportKey(Source)))
 			{
-				if (It.Value().Equals(Source, ESearchCase::IgnoreCase))
-				{
-					bAlreadyKnown = true;
-					break;
-				}
-			}
-			if (!bAlreadyKnown)
-			{
-				NoteImportsFromDisk(Source);
+				NoteImportsFromDisk(State, Source);
 			}
 		}
 	}
@@ -681,11 +1175,17 @@ namespace DreamUISourceWatcherLocal
 		// And re-read the edges of the files that just changed, because a `use` line added to a file
 		// with no class of its own is published by nobody -- the compiler only republishes for files
 		// it compiles, and that file is never compiled.
+		//
+		// Each changed file is read once, here: its edges, the hash that tells the designer's own write from
+		// somebody else's, and the hash the rebuild compares with what it last built from all come from that read.
+		TMap<FString, FString> ContentHashes;
 		for (const FString& File : Files)
 		{
-			if (FPaths::FileExists(File))
+			FString Text;
+			if (FPaths::FileExists(File) && FFileHelper::LoadFileToString(Text, *File))
 			{
-				NoteImportsFromDisk(File);
+				NoteImportsFromText(State, File, Text);
+				ContentHashes.Add(NormalizeImportKey(File), UDreamUIDocument::ComputeContentHash(Text));
 			}
 		}
 
@@ -707,7 +1207,8 @@ namespace DreamUISourceWatcherLocal
 		{
 			const FString Key = NormalizeImportKey(File);
 			Visited.Add(Key);
-			if (IsOwnWriteComingBack(File))
+			const FString* Hash = ContentHashes.Find(Key);
+			if (Hash != nullptr && IsOwnWriteComingBack(File, *Hash))
 			{
 				OwnWrites.Add(Key);
 			}
@@ -741,7 +1242,13 @@ namespace DreamUISourceWatcherLocal
 			{
 				continue;
 			}
-			RecompileFor(State, File, Batch);
+			// A file reached only through what it imports was not read above; its hash is what the rebuild records.
+			const FString* KnownHash = ContentHashes.Find(Key);
+			const FString Hash = KnownHash != nullptr ? *KnownHash : ReadContentHash(File);
+			// The text-unchanged skip applies to a file that was written, not to one pulled in by a dependency
+			// (its inputs changed whatever its own text did) and not to an explicit command (asking is asking).
+			const bool bAllowSkip = !bAnnounceSuccess && !DependencyAffected.Contains(Key);
+			RecompileFor(State, File, Hash, bAllowSkip, Batch);
 		}
 		ReportBatch(Batch, bAnnounceSuccess);
 		// After the rebuilds, so a rename whose two halves landed in one batch reports the new file's
@@ -775,7 +1282,7 @@ namespace DreamUISourceWatcherLocal
 			Clicked->PendingFiles.Append(Clicked->DeferredBulkFiles);
 			Clicked->DeferredBulkFiles.Reset();
 			// Say so when it finishes, and skip the debounce: the author just asked for this, and
-			// another three quarters of a second only makes the click feel broken.
+			// waiting out another interval only makes the click feel broken.
 			Clicked->bAnnounceSuccess = true;
 			Clicked->LastChangeTime = 0.0;
 		});
@@ -788,6 +1295,62 @@ namespace DreamUISourceWatcherLocal
 		}
 	}
 
+	/**
+	 * Whether a Blueprint compile may start now.
+	 *
+	 * Not during play: compiling a widget Blueprint reinstances every live instance of it, and doing that to a
+	 * running game because a file was saved in another window is not a rebuild, it is a crash report. Not while a
+	 * package saves or the collector runs. Nor in the middle of something the compile would pull out from under the
+	 * author: a drag in flight holds widgets of the very preview a compile rebuilds, and an open transaction would
+	 * take the compile's changes into the edit it is recording. All of these end on their own, so a caller that is
+	 * refused waits (the queue) or says to try again (a command).
+	 */
+	bool CanCompileNow()
+	{
+		if (GEditor != nullptr && GEditor->PlayWorld != nullptr)
+		{
+			return false;
+		}
+		if (UE::IsSavingPackage() || IsGarbageCollecting())
+		{
+			return false;
+		}
+		if ((FSlateApplication::IsInitialized() && FSlateApplication::Get().IsDragDropping())
+			|| (GEditor != nullptr && GEditor->IsTransactionActive()))
+		{
+			return false;
+		}
+		return true;
+	}
+
+	/**
+	 * The entry in GEditor->ShouldDisableCPUThrottlingDelegates.
+	 *
+	 * An editor that is not the foreground window is held to 3 FPS (UEditorEngine::ShouldThrottleCPUUsage), and the
+	 * author is, by definition, in another window when they save a .dui. The directory watcher's callback, the
+	 * queue's ticker and the debounce all advance one frame at a time, so a save took a second or two to show up. This
+	 * keeps the editor at full rate while something is pending that it could act on, and for a few seconds after
+	 * the last .dui event -- the author's next save is likely to follow it.
+	 *
+	 * Asked once per editor frame, so it reads a few numbers and nothing else. Pending work that is blocked (play, a
+	 * drag) does not count: running fast would not unblock it, and a backgrounded editor with PIE open is not
+	 * to be kept hot indefinitely.
+	 */
+	bool ShouldRunAtFullRate()
+	{
+		const FDreamUISourceWatcherState* State = GThrottleState;
+		if (State == nullptr)
+		{
+			return false;
+		}
+		if (FPlatformTime::Seconds() - State->LastActivityTime < FullRateHoldSeconds)
+		{
+			return true;
+		}
+		const bool bPending = State->PendingFiles.Num() > 0 || State->PendingRemovals.Num() > 0;
+		return bPending && CanCompileNow();
+	}
+
 	bool Tick(float /*DeltaTime*/)
 	{
 		FDreamUISourceWatcherState* State = Session();
@@ -795,22 +1358,8 @@ namespace DreamUISourceWatcherLocal
 		{
 			return true;
 		}
-		// Not during play. Compiling a widget Blueprint reinstances every live instance of it, and
-		// doing that to a running game because a file was saved in another window is not a rebuild,
-		// it is a crash report. The queue waits; PIE ending is a tick like any other.
-		if (GEditor != nullptr && GEditor->PlayWorld != nullptr)
-		{
-			return true;
-		}
-		if (UE::IsSavingPackage())
-		{
-			return true;
-		}
-		// Nor in the middle of something the compile would pull out from under the author: a drag in
-		// flight holds widgets of the very preview a compile rebuilds, and an open transaction would take
-		// the compile's changes into the edit it is recording. Both end on their own; the queue waits.
-		if ((FSlateApplication::IsInitialized() && FSlateApplication::Get().IsDragDropping())
-			|| (GEditor != nullptr && GEditor->IsTransactionActive()))
+		// The queue waits when a compile would be unsafe; the next tick asks again.
+		if (!CanCompileNow())
 		{
 			return true;
 		}
@@ -860,9 +1409,19 @@ namespace DreamUISourceWatcherLocal
 			}
 			// The extension test comes FIRST now, which is what makes keeping removals affordable: an
 			// editor's save-through-temp-file produces a removal for something that is not a .dui, and
-			// those are the events that would make this noisy. A removal of a real .dui is queued for
-			// the report pass -- both a delete and a rename arrive this way, and after either one a
-			// class still naming that path is a class whose next compile cannot work.
+			// those are the events that would make this noisy.
+			//
+			// Any .dui event, the designer's own writes included, is the author at work in these files: the editor
+			// should not drop to background frame rates between one save and the next.
+			State->LastActivityTime = FPlatformTime::Seconds();
+			// A file appearing or going changes what a relative Source File spelling resolves to.
+			if (Change.Action != FFileChangeData::FCA_Modified)
+			{
+				ClearLookupCaches();
+			}
+			// A removal of a real .dui is queued for the report pass -- both a delete and a rename arrive
+			// this way, and after either one a class still naming that path is a class whose next compile
+			// cannot work.
 			if (Change.Action == FFileChangeData::FCA_Removed)
 			{
 				State->PendingRemovals.Add(FDreamUIDocumentRegistry::NormalizePath(Change.Filename));
@@ -911,23 +1470,25 @@ namespace DreamUISourceWatcherLocal
 void FDreamUISourceWatcher::NoteImports(const FString& InImporter, const TArray<FString>& InImports)
 {
 	using namespace DreamUISourceWatcherLocal;
+
+	// The compiler publishes this after every parse of a text-backed class, in any process, so it is also how the
+	// resolver hears that a widget Blueprint was compiled -- possibly with another Source File than it had. What it
+	// remembered about files nobody was found for may no longer hold.
+	ClearLookupCaches();
+
 	FDreamUISourceWatcherState* State = Session();
 	if (State == nullptr)
 	{
 		return;
 	}
-	// Replace, not append: a file that dropped a `use` line must stop recompiling on that library's
-	// saves, and the compiler republished the WHOLE current list.
-	for (auto It = State->ImportEdges.CreateIterator(); It; ++It)
+	StoreImportEdges(*State, InImporter, InImports);
+
+	// And it means somebody compiled this file just now. If that was the watcher's own rebuild it records the result
+	// when it returns; anyone else's (the designer, the Compile button, the bridge) built from text the watcher cannot
+	// vouch for, so the next save of the same text has to rebuild.
+	if (!State->bCompilingFromExternalChange)
 	{
-		if (It.Value() == InImporter)
-		{
-			It.RemoveCurrent();
-		}
-	}
-	for (const FString& Import : InImports)
-	{
-		State->ImportEdges.Add(NormalizeImportKey(Import), InImporter);
+		State->CompiledSources.Remove(NormalizeImportKey(InImporter));
 	}
 }
 
@@ -945,11 +1506,37 @@ void FDreamUISourceWatcher::Register(FDreamUISourceWatcherState& InState)
 	// drain is a command that silently does nothing.
 	InState.TickerHandle = FTSTicker::GetCoreTicker().AddTicker(
 		FTickerDelegate::CreateStatic(&Tick), /*InDelay=*/0.25f);
+
+	// Paired with the removal in Unregister. The delegate list is the editor's, not this session's, so an entry left
+	// behind would keep answering for a state that no longer exists.
+	GThrottleState = &InState;
+	if (GEditor != nullptr && !InState.CpuThrottleHandle.IsValid())
+	{
+		UEditorEngine::FShouldDisableCPUThrottling Exemption =
+			UEditorEngine::FShouldDisableCPUThrottling::CreateStatic(&ShouldRunAtFullRate);
+		InState.CpuThrottleHandle = Exemption.GetHandle();
+		GEditor->ShouldDisableCPUThrottlingDelegates.Add(MoveTemp(Exemption));
+	}
 }
 
 void FDreamUISourceWatcher::Unregister(FDreamUISourceWatcherState& InState)
 {
 	using namespace DreamUISourceWatcherLocal;
+
+	if (GThrottleState == &InState)
+	{
+		GThrottleState = nullptr;
+	}
+	if (GEditor != nullptr && InState.CpuThrottleHandle.IsValid())
+	{
+		const FDelegateHandle Handle = InState.CpuThrottleHandle;
+		GEditor->ShouldDisableCPUThrottlingDelegates.RemoveAll(
+			[Handle](const UEditorEngine::FShouldDisableCPUThrottling& Exemption)
+			{
+				return Exemption.GetHandle() == Handle;
+			});
+	}
+	InState.CpuThrottleHandle.Reset();
 
 	if (InState.TickerHandle.IsValid())
 	{
@@ -1011,6 +1598,12 @@ bool FDreamUISourceWatcher::IsCompilingFromExternalChange()
 	return State != nullptr && State->bCompilingFromExternalChange;
 }
 
+bool FDreamUISourceWatcher::IsDiscardingDesignerEdits()
+{
+	const FDreamUISourceWatcherState* State = DreamUISourceWatcherLocal::Session();
+	return State != nullptr && State->bDesignerEditsDiscarded;
+}
+
 void FDreamUISourceWatcher::QueueFile(const FString& InFilePath, const bool bAnnounceSuccess)
 {
 	using namespace DreamUISourceWatcherLocal;
@@ -1021,6 +1614,7 @@ void FDreamUISourceWatcher::QueueFile(const FString& InFilePath, const bool bAnn
 	}
 	State->PendingFiles.Add(FDreamUIDocumentRegistry::NormalizePath(InFilePath));
 	State->LastChangeTime = FPlatformTime::Seconds();
+	State->LastActivityTime = State->LastChangeTime;
 	State->bAnnounceSuccess |= bAnnounceSuccess;
 }
 
@@ -1034,6 +1628,7 @@ void FDreamUISourceWatcher::QueueRemoval(const FString& InFilePath)
 	}
 	State->PendingRemovals.Add(FDreamUIDocumentRegistry::NormalizePath(InFilePath));
 	State->LastChangeTime = FPlatformTime::Seconds();
+	State->LastActivityTime = State->LastChangeTime;
 }
 
 void FDreamUISourceWatcher::FlushPending()
@@ -1046,6 +1641,104 @@ void FDreamUISourceWatcher::FlushPending()
 	Tick(0.0f);
 }
 
+bool FDreamUISourceWatcher::CanCompileNow()
+{
+	// Qualified: the unqualified name is this function.
+	return DreamUISourceWatcherLocal::CanCompileNow();
+}
+
+void FDreamUISourceWatcher::NotifyBusy()
+{
+	using namespace DreamUISourceWatcherLocal;
+	if (!CanShowNotifications())
+	{
+		return;
+	}
+	FNotificationInfo Info(LOCTEXT("DreamUIBusy",
+		"DreamUI: not rebuilding right now -- play, a save, a drag or an open edit is in progress. Try again in a moment."));
+	Info.ExpireDuration = 5.0f;
+	Info.bFireAndForget = true;
+	if (const TSharedPtr<SNotificationItem> Item = FSlateNotificationManager::Get().AddNotification(Info))
+	{
+		Item->SetCompletionState(SNotificationItem::CS_Fail);
+	}
+}
+
+bool FDreamUISourceWatcher::IsQueued(const FString& InFilePath)
+{
+	const FDreamUISourceWatcherState* State = DreamUISourceWatcherLocal::Session();
+	if (State == nullptr)
+	{
+		return false;
+	}
+	// Not DeferredBulkFiles: those wait for the author to release them and will not compile on their own.
+	return State->PendingFiles.Contains(FDreamUIDocumentRegistry::NormalizePath(InFilePath));
+}
+
+void FDreamUISourceWatcher::NotifyDesignerWriteRefused(const FString& InFilePath)
+{
+	using namespace DreamUISourceWatcherLocal;
+	ShowConflictToast(InFilePath, FText::Format(LOCTEXT("DreamUIDesignerWriteRefused",
+		"DreamUI: the designer's change was not written to {0}, because the file was changed outside the editor first. The editor brings the new text in next, and this change does not survive that: make it again afterwards."),
+		FText::FromString(FPaths::GetCleanFilename(InFilePath))));
+}
+
+FString FDreamUISourceWatcher::SaveDiscardedDesignerText(const FString& InFilePath, const FString& InContent)
+{
+	// Under Saved/, which no source root covers: a .dui left among the sources would be picked up by the watcher and
+	// the workspace as one of the author's own files. Stamped to the millisecond, so two losses in a row do not
+	// write over each other's only copy.
+	const FString Directory = FPaths::ConvertRelativePathToFull(
+		FPaths::Combine(FPaths::ProjectSavedDir(), TEXT("DreamGUI"), TEXT("Discarded")));
+	FString Path = FPaths::Combine(Directory, FString::Printf(TEXT("%s.%s.dui"),
+		*FPaths::GetBaseFilename(InFilePath), *FDateTime::Now().ToString(TEXT("%Y%m%d-%H%M%S-%s"))));
+	FPaths::NormalizeFilename(Path);
+
+	// UTF-8 without a BOM, as the document writes the file itself.
+	if (!FFileHelper::SaveStringToFile(InContent, *Path, FFileHelper::EEncodingOptions::ForceUTF8WithoutBOM))
+	{
+		UE_LOG(DreamGUI, Warning, TEXT("[%s].%d Could not save the designer's replaced text of '%s' to '%s'."),
+			ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *InFilePath, *Path);
+		return FString();
+	}
+	return Path;
+}
+
+bool FDreamUISourceWatcher::IsUpToDateWithLastCompile(const FDreamUISourceWatcherState& InState,
+	const FString& InFilePath, const FString& InContentHash, const TArray<UDreamWidgetBlueprint*>& InBlueprints)
+{
+	if (InContentHash.IsEmpty() || InBlueprints.IsEmpty())
+	{
+		return false;
+	}
+	const FDreamUISourceWatcherState::FCompiledSource* Record =
+		InState.CompiledSources.Find(DreamUISourceWatcherLocal::NormalizeImportKey(InFilePath));
+	if (Record == nullptr || Record->ContentHash != InContentHash)
+	{
+		return false;
+	}
+	// Every class built from the file now must be one that was built from this text: a Blueprint loaded since holds
+	// whatever it was last saved with, and an equal hash says nothing about it.
+	for (const UDreamWidgetBlueprint* Blueprint : InBlueprints)
+	{
+		if (!Record->Blueprints.Contains(FObjectKey(Blueprint)))
+		{
+			return false;
+		}
+	}
+	return true;
+}
+
+void FDreamUISourceWatcher::ForgetUnresolvedSources()
+{
+	DreamUISourceWatcherLocal::ClearLookupCaches();
+}
+
+int32 FDreamUISourceWatcher::NumUnresolvedSources()
+{
+	return DreamUISourceWatcherLocal::SourceClassIndex().UnresolvedSources.Num();
+}
+
 void FDreamUISourceWatcher::FindBlueprintsForSource(const FString& InAbsoluteFilePath,
 	TArray<UDreamWidgetBlueprint*>& OutBlueprints)
 {
@@ -1055,6 +1748,14 @@ void FDreamUISourceWatcher::FindBlueprintsForSource(const FString& InAbsoluteFil
 int32 FDreamUISourceWatcher::RebuildAll()
 {
 	using namespace DreamUISourceWatcherLocal;
+
+	// Asked for, so it is not subject to the debounce or to the content check -- but it compiles every text-backed
+	// widget Blueprint, which is exactly what must not happen under a running game, a save or an open edit.
+	if (!CanCompileNow())
+	{
+		NotifyBusy();
+		return 0;
+	}
 
 	// Through the asset registry rather than through the files, which is the opposite direction from
 	// everything else here and is the only direction that works: a .dui does not name its class, so
@@ -1098,14 +1799,10 @@ int32 FDreamUISourceWatcher::RebuildAll()
 		if (Results.NumErrors > 0)
 		{
 			++Batch.Failed;
-			if (!Batch.HasFirstError())
-			{
-				Batch.FirstErrorFile = UDreamTextUserWidget::ResolveDuiFilePath(
-					DreamUITextAuthoring::GetAuthoredSourcePath(Blueprint));
-				Batch.FirstErrorText = Results.Messages.Num() > 0
-					? Results.Messages[0]->ToText().ToString()
-					: FString::Printf(TEXT("%s failed to compile"), *GetNameSafe(Blueprint));
-			}
+			// The first ERROR, as the watcher's own rebuilds report it -- not whatever message happened to be
+			// first, which for a compile that begins with a warning names the warning as the reason it failed.
+			RecordFirstError(Batch, UDreamTextUserWidget::ResolveDuiFilePath(
+				DreamUITextAuthoring::GetAuthoredSourcePath(Blueprint)), Blueprint, Results);
 		}
 		else
 		{
@@ -1113,6 +1810,7 @@ int32 FDreamUISourceWatcher::RebuildAll()
 		}
 	}
 
+	// The one summary of the whole sweep. A caller must not add a second.
 	ReportBatch(Batch, /*bAnnounceSuccess*/true);
 	return Found;
 }
@@ -1152,8 +1850,36 @@ void FDreamUISourceWatcher::InstallSourceClassResolver()
 			ForgetPackage(Blueprint->GetOutermost()->GetFName());
 		}
 	});
+	// Any Blueprint compile can give a Blueprint another Source File, so any compile reopens the question for the
+	// sources nobody was found for. The editor engine is not there yet when this module starts, so the hook waits for
+	// it; a module loaded later finds it already running.
+	auto HookBlueprintCompiled = []
+	{
+		FSourceClassIndex& HookIndex = SourceClassIndex();
+		if (GEditor != nullptr && !HookIndex.BlueprintCompiledHandle.IsValid())
+		{
+			HookIndex.BlueprintCompiledHandle = GEditor->OnBlueprintCompiled().AddLambda([]
+			{
+				ClearLookupCaches();
+			});
+		}
+	};
+	if (GEditor != nullptr)
+	{
+		HookBlueprintCompiled();
+	}
+	else
+	{
+		Index.PostEngineInitHandle = FCoreDelegates::GetOnPostEngineInit().AddLambda(HookBlueprintCompiled);
+	}
+
 	if (IAssetRegistry* AssetRegistry = IAssetRegistry::Get())
 	{
+		Index.AssetAddedHandle = AssetRegistry->OnAssetAdded().AddLambda([](const FAssetData&)
+		{
+			// A new widget Blueprint may be the owner of a source that had none.
+			ClearLookupCaches();
+		});
 		Index.AssetUpdatedOnDiskHandle = AssetRegistry->OnAssetUpdatedOnDisk().AddLambda([](const FAssetData& InAsset)
 		{
 			ForgetPackage(InAsset.PackageName);
@@ -1177,8 +1903,18 @@ void FDreamUISourceWatcher::UninstallSourceClassResolver()
 	FDreamUITextBuilder::SourceClassResolver() = nullptr;
 	FSourceClassIndex& Index = SourceClassIndex();
 	FCoreUObjectDelegates::OnObjectPreSave.Remove(Index.ObjectPreSaveHandle);
+	if (Index.PostEngineInitHandle.IsValid())
+	{
+		FCoreDelegates::GetOnPostEngineInit().Remove(Index.PostEngineInitHandle);
+	}
+	// The editor engine is gone by the time its modules shut down on exit, and its delegates with it.
+	if (GEditor != nullptr && Index.BlueprintCompiledHandle.IsValid())
+	{
+		GEditor->OnBlueprintCompiled().Remove(Index.BlueprintCompiledHandle);
+	}
 	if (IAssetRegistry* AssetRegistry = IAssetRegistry::Get())
 	{
+		AssetRegistry->OnAssetAdded().Remove(Index.AssetAddedHandle);
 		AssetRegistry->OnAssetUpdatedOnDisk().Remove(Index.AssetUpdatedOnDiskHandle);
 		AssetRegistry->OnAssetRemoved().Remove(Index.AssetRemovedHandle);
 		AssetRegistry->OnAssetRenamed().Remove(Index.AssetRenamedHandle);

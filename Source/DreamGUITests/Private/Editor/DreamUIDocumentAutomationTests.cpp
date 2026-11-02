@@ -463,4 +463,58 @@ bool FDreamUIDocumentChangedOnDiskTest::RunTest(const FString& Parameters)
 	return true;
 }
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamUIDocumentReloadReportsWhatItReplacesTest,
+	"DreamGUI.Designer.AReloadHandsBackTheEditsItReplacedThatNeverReachedTheFile",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * A refused write leaves the edit in the document, owed. The reload that brings the outside text in is where it is lost; the
+ * document hands the replaced text back so the host can keep it and say so. A reload that replaces nothing owed -- or that
+ * replaces it with the same text -- reports nothing, since there is nothing to keep.
+ */
+bool FDreamUIDocumentReloadReportsWhatItReplacesTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamUIDocumentTestLocal;
+	if (!HasTransactionBuffer(*this)) return false;
+
+	FScopedDuiFile File(TEXT("ReloadReports.dui"), TextA);
+	FString Error;
+	TStrongObjectPtr<UDreamUIDocument> Document(UDreamUIDocument::CreateFromFile(nullptr, File.Path, Error));
+	if (!TestNotNull(TEXT("the document loaded"), (UObject*)Document.Get())) return false;
+
+	// A reload with nothing owed hands back nothing, and leaves the out-parameter as the caller set it.
+	FString Replaced(TEXT("untouched"));
+	TestTrue(TEXT("a plain reload succeeds"), Document->LoadFromFile(Error, &Replaced));
+	TestEqual(TEXT("and reports nothing replaced"), Replaced, FString(TEXT("untouched")));
+
+	// An edit refused because the file changed under it.
+	const FString Outside = FString(TextA) + TEXT("\n// changed outside the editor\n");
+	File.WriteBehindTheDocument(Outside);
+	GEditor->BeginTransaction(FText::FromString(TEXT("Test Edit")));
+	Document->SetContent(TextB, Error);
+	GEditor->EndTransaction();
+	if (!TestTrue(TEXT("the edit is owed"), Document->HasUnflushedWrite())) return false;
+
+	Replaced = TEXT("untouched");
+	TestTrue(TEXT("the reload succeeds"), Document->LoadFromFile(Error, &Replaced));
+	TestEqualSensitive(TEXT("and hands back the edit it replaced"), Replaced, FString(TextB));
+	TestEqualSensitive(TEXT("the document holds the outside text"), Document->GetContent(), Outside);
+	TestFalse(TEXT("and owes nothing"), Document->HasUnflushedWrite());
+
+	// An owed edit that the file has since come to agree with is not a loss.
+	File.WriteBehindTheDocument(TextA);
+	Document->LoadFromFile(Error);
+	File.WriteBehindTheDocument(Outside);
+	GEditor->BeginTransaction(FText::FromString(TEXT("Test Edit")));
+	Document->SetContent(TextB, Error);
+	GEditor->EndTransaction();
+	if (!TestTrue(TEXT("a second edit is owed"), Document->HasUnflushedWrite())) return false;
+	File.WriteBehindTheDocument(TextB);
+	Replaced = TEXT("untouched");
+	TestTrue(TEXT("the reload succeeds"), Document->LoadFromFile(Error, &Replaced));
+	TestEqual(TEXT("and an edit the file now holds is not reported"), Replaced, FString(TEXT("untouched")));
+	return true;
+}
+
 #endif
