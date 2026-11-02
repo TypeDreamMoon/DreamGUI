@@ -279,12 +279,13 @@ bool FDreamUIDuiBackedTreeRefusesStructuralEditsTest::RunTest(const FString&)
 	// character in front of it is an apostrophe. The first version of these patterns asked for a
 	// space, matched nothing, and every refusal counted as an unexpected error -- the gates all fired
 	// correctly and the test failed anyway.
-	AddExpectedError(TEXT("Refusing to create a .*GateStructural\\.dui"), EAutomationExpectedErrorFlags::Contains, 0);
-	AddExpectedError(TEXT("Refusing to delete .*GateStructural\\.dui"), EAutomationExpectedErrorFlags::Contains, 0);
+	//
+	// Creating, deleting, duplicating and pasting are no longer among them: the write-back writes those
+	// into the file, and DreamUITextStructureAutomationTests holds them to it. What is left is what it
+	// cannot write yet -- moving, renaming, the behaviours a `+` line owns -- refused whole, out loud.
 	AddExpectedError(TEXT("Refusing to move .*GateStructural\\.dui"), EAutomationExpectedErrorFlags::Contains, 0);
 	AddExpectedError(TEXT("Refusing to rename .*GateStructural\\.dui"), EAutomationExpectedErrorFlags::Contains, 0);
-	AddExpectedError(TEXT("Refusing to duplicate .*GateStructural\\.dui"), EAutomationExpectedErrorFlags::Contains, 0);
-	AddExpectedError(TEXT("Refusing to paste widgets .*GateStructural\\.dui"), EAutomationExpectedErrorFlags::Contains, 0);
+	AddExpectedError(TEXT("Refusing to add a behaviour .*GateStructural\\.dui"), EAutomationExpectedErrorFlags::Contains, 0);
 
 	FScopedGatedDesigner Scoped(TEXT("BP_GateStructural"), UDreamTextUserWidget::StaticClass(), Source.FilePath);
 	if (!TestNotNull(TEXT("the Blueprint was created"), Scoped.Blueprint)) return false;
@@ -297,38 +298,30 @@ bool FDreamUIDuiBackedTreeRefusesStructuralEditsTest::RunTest(const FString&)
 	if (!TestNotNull(TEXT("and so is its child"), Child)) return false;
 	const int32 CountBefore = Scoped.TemplateCount();
 
-	// ---- the five in DreamWidgetTreeEditing
-	TestNull(TEXT("Creating a widget is refused"),
-		DreamWidgetTreeEditing::CreateWidget(Scoped.Blueprint, UDreamWidget::StaticClass(), Root, -1, TEXT("Added")));
-	TestFalse(TEXT("Deleting one is refused"), DreamWidgetTreeEditing::DeleteWidget(Scoped.Blueprint, Child));
+	// ---- the two in DreamWidgetTreeEditing the file cannot take yet
 	TestFalse(TEXT("Moving one is refused"), DreamWidgetTreeEditing::ReparentWidget(Scoped.Blueprint, Child, Root, 0));
 	TestEqual(TEXT("Renaming one is refused"),
 		DreamWidgetTreeEditing::RenameWidget(Scoped.Blueprint, Child, TEXT("Renamed")), FString());
-	TestNull(TEXT("Duplicating one is refused"),
-		DreamWidgetTreeEditing::DuplicateWidget(Scoped.Blueprint, Child, Root, -1));
 
-	// ---- the sixth, which is not in that namespace at all
+	// ---- a behaviour, which is a `+` line and not in that namespace at all
 	if (!TestNotNull(TEXT("the designer opened"), Scoped.Designer)) return false;
 	UDreamWidget* PreviewChild = Scoped.FindPreview(TEXT("Child"));
-	if (!TestNotNull(TEXT("the child has a preview to copy"), PreviewChild)) return false;
+	if (!TestNotNull(TEXT("the child has a preview to work on"), PreviewChild)) return false;
+	const TArray<UClass*> Behaviours{ UDreamUIBehaviour::StaticClass() };
+	TestNull(TEXT("Adding a behaviour is refused"), Scoped.Designer->DesignerAddComponents(PreviewChild, Behaviours));
+
 	// Copy is deliberately NOT gated: it writes nothing to the asset, and refusing it would stop an
 	// author lifting a subtree out of a .dui-backed screen to paste into a hand-authored one.
 	const TArray<UDreamWidget*> ToCopy{ PreviewChild };
 	Scoped.Designer->DesignerCopyWidgets(ToCopy);
-	if (!TestTrue(TEXT("copying a widget out of a .dui-backed tree still works"),
-		FDreamWidgetBlueprintEditor::DesignerHasClipboardContent()))
-	{
-		return false;
-	}
-	TestEqual(TEXT("Pasting into it is refused"),
-		Scoped.Designer->DesignerPasteWidgets(Scoped.FindPreview(TEXT("Root"))).Num(), 0);
+	TestTrue(TEXT("copying a widget out of a .dui-backed tree still works"),
+		FDreamWidgetBlueprintEditor::DesignerHasClipboardContent());
 
-	// And nothing moved. Six refusals that each returned the right value while quietly doing the work
+	// And nothing moved. Refusals that each returned the right value while quietly doing the work
 	// anyway is a state every assertion above passes in.
 	TestEqual(TEXT("the hierarchy is exactly what the file says"), Scoped.TemplateCount(), CountBefore);
 	TestNotNull(TEXT("the child is still there"), Scoped.FindTemplate(TEXT("Child")));
 	TestNull(TEXT("under the name the file gives it"), Scoped.FindTemplate(TEXT("Renamed")));
-	TestNull(TEXT("and nothing was added"), Scoped.FindTemplate(TEXT("Added")));
 
 	// The sentence itself, once: every one of the six is built by this function, so this is where the
 	// claim "the message tells the author where to go" is actually checked rather than pattern-matched.

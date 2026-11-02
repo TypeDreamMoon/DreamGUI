@@ -9,6 +9,7 @@
 #include "Core/DreamUserWidget.h"
 #include "Core/Components/DreamWidget.h"
 #include "DreamGUI.h"
+#include "Text/DreamUITextPatcher.h"
 
 #include "Kismet2/BlueprintEditorUtils.h"
 
@@ -337,13 +338,6 @@ namespace DreamWidgetTreeEditing
 	UDreamWidget* DuplicateWidget(UDreamWidgetBlueprint* InBlueprint, UDreamWidget* InSource,
 		UDreamWidget* InNewParent, int32 InSiblingIndex)
 	{
-		// Before the validity checks, not after: an author whose duplicate was going to be refused for
-		// some second reason still needs to be told the one they can act on. See DreamUITextAuthoringGate.
-		if (DreamUITextAuthoring::RefuseStructuralEdit(InBlueprint, ANSI_TO_TCHAR(__FUNCTION__), __LINE__,
-			FString::Printf(TEXT("duplicate '%s'"), *Local::DisplayNameOf(InSource))))
-		{
-			return nullptr;
-		}
 		// Every refusal below says so. A duplicate that returns null without a word is a menu item that
 		// does nothing when clicked, which is what it looked like from the outside.
 		if (!IsTemplateWidgetOf(InBlueprint, InSource) || !IsTemplateWidgetOf(InBlueprint, InNewParent))
@@ -367,6 +361,46 @@ namespace DreamWidgetTreeEditing
 		}
 
 		UDreamWidgetTree* Tree = Local::GetTree(InBlueprint);
+
+		// A hierarchy that comes from a `.dui`: checked against the file before anything is copied, and
+		// the copies named clear of every id the file holds. Only a subtree the file WRITES can be copied
+		// here -- one with widgets an `each` or a component builds in it would be copied as plain nodes,
+		// machinery and all, which is not what the file means; that copy belongs in the text.
+		TSet<FString> FileIds;
+		if (DreamUITextAuthoring::IsTextAuthored(InBlueprint))
+		{
+			const FString Operation = FString::Printf(TEXT("duplicate '%s'"), *Local::DisplayNameOf(InSource));
+			DreamUITextAuthoring::CollectAuthoredNodeIds(InBlueprint, FileIds);
+			FString Synthesised;
+			ForEachWidgetInSubtree(InSource, [&FileIds, &Synthesised](UDreamWidget* Widget)
+			{
+				if (Synthesised.IsEmpty() && IsValid(Widget) && !Widget->HasAnyFlags(RF_Transient)
+					&& !FileIds.Contains(Widget->GetDisplayName()))
+				{
+					Synthesised = Widget->GetDisplayName();
+				}
+			});
+			if (!Synthesised.IsEmpty())
+			{
+				DreamUITextAuthoring::ReportStructuralRefusal(InBlueprint, ANSI_TO_TCHAR(__FUNCTION__), __LINE__, Operation,
+					FText::Format(LOCTEXT("DuplicateSynthesised",
+						"'{0}' inside it is built by the file rather than written in it; copy the block in the text instead"),
+						FText::FromString(Synthesised)));
+				return nullptr;
+			}
+			FDreamUIStructuralEdit Planned;
+			Planned.Kind = EDreamUIStructuralEditKind::InsertNode;
+			Planned.ParentId = InNewParent == Tree->RootWidget ? FString() : InNewParent->GetDisplayName();
+			Planned.ChildIndex = InSiblingIndex < 0 ? INDEX_NONE : InSiblingIndex;
+			Planned.NewId = MakeUniqueDisplayName(Tree, InSource->GetDisplayName(), nullptr, &FileIds);
+			FText Reason;
+			if (!DreamUITextAuthoring::CheckStructuralEdit(InBlueprint, Planned, /*bInVerifyBuild*/true, Reason, InSource))
+			{
+				DreamUITextAuthoring::ReportStructuralRefusal(InBlueprint, ANSI_TO_TCHAR(__FUNCTION__), __LINE__, Operation, Reason);
+				return nullptr;
+			}
+		}
+
 		InBlueprint->Modify();
 		Tree->Modify();
 		InNewParent->Modify();
@@ -390,7 +424,13 @@ namespace DreamWidgetTreeEditing
 		for (UDreamWidget* Widget : Copied)
 		{
 			Widget->Rename(*MakeUniqueObjectName(Tree, Widget->GetClass()).ToString(), Tree, REN_DontCreateRedirectors);
-			Widget->SetDisplayName(MakeUniqueDisplayName(Tree, Widget->GetDisplayName(), Widget));
+			Widget->SetDisplayName(MakeUniqueDisplayName(Tree, Widget->GetDisplayName(), Widget, FileIds.IsEmpty() ? nullptr : &FileIds));
+			// Taken as soon as it is given: the copies are not in the hierarchy yet, so the tree walk above
+			// cannot see the name one of their siblings was handed a moment ago.
+			if (!FileIds.IsEmpty())
+			{
+				FileIds.Add(Widget->GetDisplayName());
+			}
 		}
 
 		if (!Copy->TrySetParent(InNewParent, /*bKeepWorldPosition*/false, InSiblingIndex))
@@ -407,11 +447,6 @@ namespace DreamWidgetTreeEditing
 	UDreamWidget* CreateWidget(UDreamWidgetBlueprint* InBlueprint, TSubclassOf<UDreamWidget> InWidgetClass,
 		UDreamWidget* InParent, int32 InSiblingIndex, const FString& InDesiredDisplayName, FName InSlotName)
 	{
-		if (DreamUITextAuthoring::RefuseStructuralEdit(InBlueprint, ANSI_TO_TCHAR(__FUNCTION__), __LINE__,
-			FString::Printf(TEXT("create a '%s'"), *DreamUITextAuthoring::DescribeClassForAuthor(InWidgetClass))))
-		{
-			return nullptr;
-		}
 		// Same rule as the duplicate path below: every refusal says so. A command that returns null
 		// without a word is a palette drop that does nothing, and the user has no way to tell that
 		// from a bug in the drag.
@@ -460,6 +495,37 @@ namespace DreamWidgetTreeEditing
 			return nullptr;
 		}
 
+		// A hierarchy that comes from a `.dui` takes the widget only if the file can: checked against the
+		// text BEFORE anything is touched, so a refusal leaves nothing to undo. The name avoids the file's
+		// ids as well as the tree's -- see CollectAuthoredNodeIds.
+		const FString Desired = InDesiredDisplayName.IsEmpty() ? InWidgetClass->GetName() : InDesiredDisplayName;
+		TSet<FString> FileIds;
+		if (DreamUITextAuthoring::IsTextAuthored(InBlueprint))
+		{
+			const FString Operation = FString::Printf(TEXT("create a '%s'"), *DreamUITextAuthoring::DescribeClassForAuthor(InWidgetClass));
+			if (bBecomesRoot)
+			{
+				DreamUITextAuthoring::ReportStructuralRefusal(InBlueprint, ANSI_TO_TCHAR(__FUNCTION__), __LINE__, Operation,
+					LOCTEXT("TextRootIsTheFiles", "a .dui holds exactly one root, and a new one would be a different file"));
+				return nullptr;
+			}
+			DreamUITextAuthoring::CollectAuthoredNodeIds(InBlueprint, FileIds);
+			FDreamUIStructuralEdit Planned;
+			Planned.Kind = EDreamUIStructuralEditKind::InsertNode;
+			Planned.ParentId = Parent == Tree->RootWidget ? FString() : Parent->GetDisplayName();
+			Planned.ChildIndex = InSiblingIndex < 0 ? INDEX_NONE : InSiblingIndex;
+			Planned.NewId = MakeUniqueDisplayName(Tree, Desired, nullptr, &FileIds);
+			Planned.FillSlotName = SlotHost != nullptr && !InSlotName.IsNone() && InSlotName != SlotHost->GetDefaultSlotName()
+				? InSlotName.ToString() : FString();
+			FText Reason;
+			if (!DreamUITextAuthoring::CheckStructuralEdit(InBlueprint, Planned, /*bInVerifyBuild*/true, Reason,
+				InWidgetClass->GetDefaultObject<UDreamWidget>()))
+			{
+				DreamUITextAuthoring::ReportStructuralRefusal(InBlueprint, ANSI_TO_TCHAR(__FUNCTION__), __LINE__, Operation, Reason);
+				return nullptr;
+			}
+		}
+
 		// The tree as well as the parent: the widget is about to be outered to it, and undoing the
 		// creation has to be able to put the tree back the way it was.
 		InBlueprint->Modify();
@@ -476,8 +542,7 @@ namespace DreamWidgetTreeEditing
 				ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *GetNameSafe(InWidgetClass));
 			return nullptr;
 		}
-		const FString Desired = InDesiredDisplayName.IsEmpty() ? InWidgetClass->GetName() : InDesiredDisplayName;
-		Widget->SetDisplayName(MakeUniqueDisplayName(Tree, Desired, Widget));
+		Widget->SetDisplayName(MakeUniqueDisplayName(Tree, Desired, Widget, FileIds.IsEmpty() ? nullptr : &FileIds));
 
 		if (bBecomesRoot)
 		{
@@ -518,11 +583,6 @@ namespace DreamWidgetTreeEditing
 
 	bool DeleteWidget(UDreamWidgetBlueprint* InBlueprint, UDreamWidget* InWidget)
 	{
-		if (DreamUITextAuthoring::RefuseStructuralEdit(InBlueprint, ANSI_TO_TCHAR(__FUNCTION__), __LINE__,
-			FString::Printf(TEXT("delete '%s'"), *Local::DisplayNameOf(InWidget))))
-		{
-			return false;
-		}
 		if (!IsTemplateWidgetOf(InBlueprint, InWidget))
 		{
 			// The one branch in this family W5 left silent, and it is the one that fires when a caller
@@ -532,6 +592,23 @@ namespace DreamWidgetTreeEditing
 				ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *GetNameSafe(InWidget), *GetNameSafe(InBlueprint));
 			return false;
 		}
+		// Checked against the `.dui` before anything goes, and with a build of the result: the patcher
+		// refuses the root, a loop's template and a row by itself, and the build catches a reference to the
+		// node elsewhere in the file that its removal would leave pointing at nothing.
+		if (DreamUITextAuthoring::IsTextAuthored(InBlueprint))
+		{
+			FDreamUIStructuralEdit Planned;
+			Planned.Kind = EDreamUIStructuralEditKind::RemoveNode;
+			Planned.NodeId = InWidget->GetDisplayName();
+			FText Reason;
+			if (!DreamUITextAuthoring::CheckStructuralEdit(InBlueprint, Planned, /*bInVerifyBuild*/true, Reason))
+			{
+				DreamUITextAuthoring::ReportStructuralRefusal(InBlueprint, ANSI_TO_TCHAR(__FUNCTION__), __LINE__,
+					FString::Printf(TEXT("delete '%s'"), *Local::DisplayNameOf(InWidget)), Reason);
+				return false;
+			}
+		}
+
 		UDreamWidgetTree* Tree = Local::GetTree(InBlueprint);
 		// The root goes like anything else, and the tree is simply left empty -- UMG's
 		// UWidgetTree::RemoveWidget does exactly this ("If the widget being removed is the root, null

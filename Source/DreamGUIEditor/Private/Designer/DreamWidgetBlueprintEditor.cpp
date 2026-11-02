@@ -1501,6 +1501,14 @@ bool FDreamWidgetBlueprintEditor::WrapTemplatesFrom(UDreamWidget* InPreviewWrapp
 	{
 		return false;
 	}
+	// A wrap is a create AND a move of every child into it, and a `.dui` takes the create but not yet the
+	// move: let through, it would write an empty wrapper beside the widgets it was meant to hold. Refused
+	// whole, before the wrapper is made, until moving reaches the file too.
+	if (DreamUITextAuthoring::RefuseStructuralEdit(BlueprintBeingEdited, ANSI_TO_TCHAR(__FUNCTION__), __LINE__,
+		TEXT("wrap widgets")))
+	{
+		return false;
+	}
 	UDreamWidget* ParentTemplate = GetTemplateWidget(InPreviewWrapper->GetParent());
 	if (ParentTemplate == nullptr)
 	{
@@ -3782,9 +3790,31 @@ void FDreamWidgetBlueprintEditor::RepublishPreviewAndSelect(TConstArrayView<UDre
 		return;
 	}
 	RebuildPreviewPreservingSelection();
+
+	// A hierarchy that comes from a `.dui` was rebuilt from the file by the compile the edit ended with,
+	// so the templates a command made a moment ago belong to the tree that compile replaced. The new
+	// tree holds the same nodes under the same names -- the name is the node's id in the file -- so
+	// each is found again by it. A hand-authored tree is never replaced, and its templates are current.
+	TMap<FString, UDreamWidget*> CurrentByName;
+	if (IsValid(BlueprintBeingEdited) && IsValid(BlueprintBeingEdited->WidgetTree))
+	{
+		BlueprintBeingEdited->WidgetTree->ForEachWidget([&CurrentByName](UDreamWidget* Widget)
+		{
+			if (IsValid(Widget) && !CurrentByName.Contains(Widget->GetDisplayName()))
+			{
+				CurrentByName.Add(Widget->GetDisplayName(), Widget);
+			}
+		});
+	}
 	for (const UDreamWidget* Template : InTemplates)
 	{
-		if (UDreamWidget* Preview = PreviewHost->FindPreviewForTemplate(Template))
+		if (Template == nullptr)
+		{
+			continue;
+		}
+		const UDreamWidget* Current = DreamWidgetTreeEditing::IsTemplateWidgetOf(BlueprintBeingEdited, Template)
+			? Template : CurrentByName.FindRef(Template->GetDisplayName());
+		if (UDreamWidget* Preview = PreviewHost->FindPreviewForTemplate(Current))
 		{
 			OutPreviews.Add(Preview);
 		}
@@ -3823,17 +3853,24 @@ UDreamWidget* FDreamWidgetBlueprintEditor::DesignerCreateWidget(UDreamWidget* In
 		// The design canvas, or the user widget itself: the authored root is the only sensible home.
 		ParentTemplate = IsValid(BlueprintBeingEdited->WidgetTree) ? BlueprintBeingEdited->WidgetTree->RootWidget.Get() : nullptr;
 	}
-	UDreamWidget* Template = DreamWidgetTreeEditing::CreateWidget(BlueprintBeingEdited, InWidgetClass, ParentTemplate, -1, InDesiredName, SlotName);
-	if (Template == nullptr)
+	UDreamWidget* Template = nullptr;
 	{
-		// CreateWidget said why. Nothing was written, so the transaction records nothing either.
-		return nullptr;
-	}
-	// Configuration lands on the TEMPLATE -- the visual, the components, whatever the caller adds.
-	// Done on the preview it would be built and thrown away in the same gesture.
-	if (InConfigureTemplate)
-	{
-		InConfigureTemplate(Template);
+		// The structure notification waits for the configuration: on a `.dui`-backed hierarchy it is
+		// what writes the widget into the file and compiles, and a widget written before its visual and
+		// components were on it would reach the file without them.
+		DreamWidgetTreeEditing::FScopedStructureChangeBatch StructureBatch;
+		Template = DreamWidgetTreeEditing::CreateWidget(BlueprintBeingEdited, InWidgetClass, ParentTemplate, -1, InDesiredName, SlotName);
+		if (Template == nullptr)
+		{
+			// CreateWidget said why. Nothing was written, so the transaction records nothing either.
+			return nullptr;
+		}
+		// Configuration lands on the TEMPLATE -- the visual, the components, whatever the caller adds.
+		// Done on the preview it would be built and thrown away in the same gesture.
+		if (InConfigureTemplate)
+		{
+			InConfigureTemplate(Template);
+		}
 	}
 	TArray<UDreamWidget*> Previews;
 	RepublishPreviewAndSelect({ Template }, Previews);
@@ -4089,15 +4126,6 @@ bool FDreamWidgetBlueprintEditor::DesignerHasClipboardContent()
 TArray<UDreamWidget*> FDreamWidgetBlueprintEditor::DesignerPasteWidgets(UDreamWidget* InPreviewParent)
 {
 	TArray<UDreamWidget*> Result;
-	// THE SIXTH STRUCTURAL ENTRY POINT, and the one that is easy to miss: paste is not in
-	// DreamWidgetTreeEditing with the other five -- it duplicates the clipboard's subtrees straight
-	// onto the tree below -- so a gate installed only there would have left Ctrl+V adding nodes to a
-	// hierarchy that is regenerated from a text file. See DreamUITextAuthoringGate.h.
-	if (DreamUITextAuthoring::RefuseStructuralEdit(BlueprintBeingEdited, ANSI_TO_TCHAR(__FUNCTION__), __LINE__,
-		TEXT("paste widgets")))
-	{
-		return Result;
-	}
 	if (!IsValid(BlueprintBeingEdited) || !IsValid(BlueprintBeingEdited->WidgetTree))
 	{
 		UE_LOG(DreamGUIEditor, Error, TEXT("[%s].%d Cannot paste: this designer has no authoring tree."),
@@ -4113,6 +4141,23 @@ TArray<UDreamWidget*> FDreamWidgetBlueprintEditor::DesignerPasteWidgets(UDreamWi
 	// Still null means the tree is empty, which is now a state one can paste INTO: the first
 	// clipboard root becomes the hierarchy's root and the rest go inside it. UMG pastes into an empty
 	// tree the same way (FWidgetBlueprintEditorUtils::PasteWidgets assigns RootPasteWidgets[0]).
+
+	// Paste is not in DreamWidgetTreeEditing with the other structural edits -- it duplicates the
+	// clipboard's subtrees straight onto the tree below -- so a hierarchy that comes from a `.dui` is
+	// handled here the way CreateWidget handles it: each pasted root checked against the file before it
+	// goes in, every copy named clear of the file's ids, and no new root (the file has its one).
+	const bool bTextAuthored = DreamUITextAuthoring::IsTextAuthored(BlueprintBeingEdited);
+	TSet<FString> FileIds;
+	if (bTextAuthored)
+	{
+		if (ParentTemplate == nullptr)
+		{
+			DreamUITextAuthoring::ReportStructuralRefusal(BlueprintBeingEdited, ANSI_TO_TCHAR(__FUNCTION__), __LINE__,
+				TEXT("paste widgets"), LOCTEXT("PasteTextRoot", "a .dui holds exactly one root, and pasting into an empty hierarchy would make a new one"));
+			return Result;
+		}
+		DreamUITextAuthoring::CollectAuthoredNodeIds(BlueprintBeingEdited, FileIds);
+	}
 
 	UDreamWidgetTree* Tree = BlueprintBeingEdited->WidgetTree;
 	BlueprintBeingEdited->Modify();
@@ -4152,7 +4197,29 @@ TArray<UDreamWidget*> FDreamWidgetBlueprintEditor::DesignerPasteWidgets(UDreamWi
 			// Flat and freshly named, for the same reason DuplicateWidget does it: names are what the
 			// template-to-preview correspondence runs on.
 			Widget->Rename(*MakeUniqueObjectName(Tree, Widget->GetClass()).ToString(), Tree, REN_DontCreateRedirectors);
-			Widget->SetDisplayName(DreamWidgetTreeEditing::MakeUniqueDisplayName(Tree, Widget->GetDisplayName(), Widget));
+			Widget->SetDisplayName(DreamWidgetTreeEditing::MakeUniqueDisplayName(Tree, Widget->GetDisplayName(), Widget,
+				bTextAuthored ? &FileIds : nullptr));
+			if (bTextAuthored)
+			{
+				FileIds.Add(Widget->GetDisplayName());
+			}
+		}
+		if (bTextAuthored)
+		{
+			FDreamUIStructuralEdit Planned;
+			Planned.Kind = EDreamUIStructuralEditKind::InsertNode;
+			Planned.ParentId = ParentTemplate == Tree->RootWidget ? FString() : ParentTemplate->GetDisplayName();
+			Planned.NewId = Copy->GetDisplayName();
+			Planned.FillSlotName = !SlotName.IsNone() && Cast<UDreamUserWidget>(ParentTemplate) != nullptr
+				&& SlotName != Cast<UDreamUserWidget>(ParentTemplate)->GetDefaultSlotName() ? SlotName.ToString() : FString();
+			FText Reason;
+			if (!DreamUITextAuthoring::CheckStructuralEdit(BlueprintBeingEdited, Planned, /*bInVerifyBuild*/true, Reason, Copy))
+			{
+				DreamUITextAuthoring::ReportStructuralRefusal(BlueprintBeingEdited, ANSI_TO_TCHAR(__FUNCTION__), __LINE__,
+					FString::Printf(TEXT("paste '%s'"), *Copy->GetDisplayName()), Reason);
+				Copy->DestroyWidget();
+				continue;
+			}
 		}
 		if (ParentTemplate == nullptr)
 		{
