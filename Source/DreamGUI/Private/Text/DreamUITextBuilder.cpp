@@ -438,6 +438,10 @@ namespace DreamUITextBuilderLocal
 		TMap<FString, UClass*> ResolvedAliasClasses;
 		/** What FindContainerClassForType answered per node type, for the same reason: it is a search, not a lookup. */
 		TMap<FString, UClass*> ContainerClassesByType;
+		/** Null when the caller has no use for the localizable texts -- every build but the compiler's. */
+		FDreamUILocalization* Localization = nullptr;
+		/** Each node's path from below the root, for Localization. Filled before the walk, only when it is wanted. */
+		TMap<const FDreamUINode*, FString> NodePaths;
 	};
 
 	/** One candidate object a bare property name may resolve against, with the binding target that names it. */
@@ -630,6 +634,63 @@ namespace DreamUITextBuilderLocal
 			: InNode.Id + TEXT(".") + InDiscriminator + TEXT(".") + InProperty.Name;
 	}
 
+	/**
+	 * One text for the caller's localization list. A later text with the same key replaces the earlier one in place,
+	 * because on the object the later write is the one that stays: a node's own line over the style it wears.
+	 */
+	void NoteLocalizableText(FBuildContext& InContext, const FDreamUINode& InNode, const FDreamUIProperty& InProperty,
+		const FString& InDiscriminator, const FString& InKey, const FString& InSource)
+	{
+		FDreamUILocalizableText Text;
+		Text.Key = InKey;
+		Text.Source = InSource;
+		const FString* Path = InContext.NodePaths.Find(&InNode);
+		Text.NodePath = Path != nullptr ? *Path : InNode.Id;
+		Text.NodeType = InNode.TypeName;
+		// The key the old id made, spelt the way MakeLocalizationKey spells the new one: what lets a translation
+		// follow a rename without anybody guessing. An `@key` is the author's own and does not move with the id.
+		if (!InNode.WasId.IsEmpty() && InProperty.Value.LocalizationKeyOverride.IsEmpty())
+		{
+			Text.RenamedFrom = InDiscriminator.IsEmpty()
+				? InNode.WasId + TEXT(".") + InProperty.Name
+				: InNode.WasId + TEXT(".") + InDiscriminator + TEXT(".") + InProperty.Name;
+		}
+		TArray<FDreamUILocalizableText>& Texts = InContext.Localization->Texts;
+		if (FDreamUILocalizableText* Existing = Texts.FindByPredicate([&InKey](const FDreamUILocalizableText& InExisting) { return InExisting.Key == InKey; }))
+		{
+			*Existing = MoveTemp(Text);
+		}
+		else
+		{
+			Texts.Add(MoveTemp(Text));
+		}
+	}
+
+	/** The root's own texts are under its id; below it the root is left out, so a path reads `Footer/Apply`. */
+	void CollectNodePaths(const FDreamUINode& InNode, const FString& InParentPath, bool bInIsRoot, TMap<const FDreamUINode*, FString>& OutPaths)
+	{
+		FString Path;
+		if (bInIsRoot)
+		{
+			Path = InNode.Id;
+		}
+		else if (InNode.Id.IsEmpty())
+		{
+			// A loop has no id of its own: what it makes sits where it is.
+			Path = InParentPath;
+		}
+		else
+		{
+			Path = InParentPath.IsEmpty() ? InNode.Id : InParentPath + TEXT("/") + InNode.Id;
+		}
+		OutPaths.Add(&InNode, Path);
+		const FString ChildParent = bInIsRoot ? FString() : Path;
+		for (const FDreamUINode& Child : InNode.Children)
+		{
+			CollectNodePaths(Child, ChildParent, /*bInIsRoot*/ false, OutPaths);
+		}
+	}
+
 	/** "an identifier", "a tuple of 2" -- what the author actually wrote, for a mismatch message. */
 	FString DescribeValueKind(const FDreamUIValue& InValue)
 	{
@@ -813,8 +874,12 @@ namespace DreamUITextBuilderLocal
 				return false;
 			}
 			FString SourceString = Value.Raw;
-			AsText->SetPropertyValue(ValuePtr, FText::AsLocalizable_Advanced(InContext.LocalizationNamespace,
-				MakeLocalizationKey(InNode, InProperty, InDestination.LocalizationDiscriminator), MoveTemp(SourceString)));
+			const FString Key = MakeLocalizationKey(InNode, InProperty, InDestination.LocalizationDiscriminator);
+			if (InContext.Localization != nullptr)
+			{
+				NoteLocalizableText(InContext, InNode, InProperty, InDestination.LocalizationDiscriminator, Key, SourceString);
+			}
+			AsText->SetPropertyValue(ValuePtr, FText::AsLocalizable_Advanced(InContext.LocalizationNamespace, Key, MoveTemp(SourceString)));
 			return true;
 		}
 
@@ -3795,7 +3860,8 @@ namespace DreamUITextBuilderLocal
 
 UDreamWidgetTree* FDreamUITextBuilder::Build(const FDreamUIAst& InAst, UObject* InOuter,
 	FDreamUIDiagnosticBag& OutDiagnostics, TArray<FDreamWidgetPropertyBinding>& OutBindings,
-	TArray<FDreamWidgetEventBinding>* OutEventBindings, TArray<FDreamWidgetEachBinding>* OutEachBindings)
+	TArray<FDreamWidgetEventBinding>* OutEventBindings, TArray<FDreamWidgetEachBinding>* OutEachBindings,
+	FDreamUILocalization* OutLocalization)
 {
 	using namespace DreamUITextBuilderLocal;
 
@@ -3821,6 +3887,13 @@ UDreamWidgetTree* FDreamUITextBuilder::Build(const FDreamUIAst& InAst, UObject* 
 	// which the source name would not; the source name is the fallback for a file that has not been
 	// given a class yet, which is every file in an editor preview before it is first compiled.
 	Context.LocalizationNamespace = InAst.ClassPath.IsEmpty() ? OutDiagnostics.SourceName : InAst.ClassPath;
+	if (OutLocalization != nullptr)
+	{
+		OutLocalization->Namespace = Context.LocalizationNamespace;
+		OutLocalization->Texts.Reset();
+		Context.Localization = OutLocalization;
+		CollectNodePaths(InAst.Root, FString(), /*bInIsRoot*/ true, Context.NodePaths);
+	}
 	Context.Tree = NewObject<UDreamWidgetTree>(InOuter != nullptr ? InOuter : (UObject*)GetTransientPackage());
 
 	// Before the walk, so an alias that can never be written as a type is said once, at its own line, rather than
