@@ -15,6 +15,8 @@
 #include "DetailLayoutBuilder.h"
 #include "DetailCategoryBuilder.h"
 #include "DetailWidgetRow.h"
+#include "IDetailsView.h"
+#include "IPropertyUtilities.h"
 
 #define LOCTEXT_NAMESPACE "DreamGUISpriteDataCustomization"
 
@@ -23,16 +25,26 @@ TSharedRef<IDetailCustomization> FDreamUISpriteDataCustomization::MakeInstance()
 	return MakeShareable(new FDreamUISpriteDataCustomization);
 }
 
+FDreamUISpriteDataCustomization::~FDreamUISpriteDataCustomization()
+{
+	UnsubscribeAtlasMapChanged();
+}
+
 void FDreamUISpriteDataCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuilder)
 {
 	TArray<TWeakObjectPtr<UObject>> targetObjects;
 	DetailBuilder.GetObjectsBeingCustomized(targetObjects);
-	TargetScriptPtr = Cast<UDreamUISpriteData>(targetObjects[0].Get());
+	// An empty list is a real state -- the panel rebuilds while a selection is being cleared -- and
+	// indexing [0] there reads off the end of an empty array.
+	TargetScriptPtr = targetObjects.Num() > 0 ? Cast<UDreamUISpriteData>(targetObjects[0].Get()) : nullptr;
 	if (TargetScriptPtr == nullptr)
 	{
 		UE_LOG(DreamGUIEditor, Log, TEXT("[%s].%d Get TargetScript is null"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
 		return;
 	}
+	// The layout builder is thrown away by the very refresh these delegates and widgets ask for, so none
+	// of them may hold it; the utilities outlive the layout and are how a row asks for a refresh.
+	const TWeakPtr<IPropertyUtilities> WeakUtilities = DetailBuilder.GetPropertyUtilities();
 	DetailBuilder.HideProperty(GET_MEMBER_NAME_CHECKED(UDreamUISpriteData, SpriteInfo));
 	IDetailCategoryBuilder& dreamguiCategory = DetailBuilder.EditCategory("DreamGUI");
 	dreamguiCategory.AddProperty(GET_MEMBER_NAME_CHECKED(UDreamUISpriteData, SpriteTexture));
@@ -60,9 +72,13 @@ void FDreamUISpriteDataCustomization::CustomizeDetails(IDetailLayoutBuilder& Det
 	IDetailCategoryBuilder& AtlasPackingCategory = DetailBuilder.EditCategory("AtlasPacking");
 	auto PackingType_PH = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UDreamUISpriteData, PackingType));
 	const auto PackingType = (EDreamUISpritePackingType)DreamDetailsMultiSelect::ValueOr<uint8>(PackingType_PH, 0);
-	PackingType_PH->SetOnPropertyValueChanged(FSimpleDelegate::CreateLambda([&DetailBuilder]()
+	PackingType_PH->SetOnPropertyValueChanged(FSimpleDelegate::CreateLambda([WeakUtilities]()
 	{
-		DetailBuilder.ForceRefreshDetails();
+		// Requested, not forced: this runs inside the property's own value-changed broadcast.
+		if (const TSharedPtr<IPropertyUtilities> Utilities = WeakUtilities.Pin())
+		{
+			Utilities->RequestForceRefresh();
+		}
 	}));
 	AtlasPackingCategory.AddProperty(PackingType_PH);
 
@@ -76,13 +92,20 @@ void FDreamUISpriteDataCustomization::CustomizeDetails(IDetailLayoutBuilder& Det
 		break;
 	}
 	auto PackingAtlas_PH = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UDreamUISpriteData, PackingAtlas));
-	PackingAtlas_PH->SetOnPropertyValueChanged(FSimpleDelegate::CreateLambda([this, &DetailBuilder] {
-		DetailBuilder.ForceRefreshDetails();
+	PackingAtlas_PH->SetOnPropertyValueChanged(FSimpleDelegate::CreateLambda([WeakUtilities] {
+		if (const TSharedPtr<IPropertyUtilities> Utilities = WeakUtilities.Pin())
+		{
+			Utilities->RequestForceRefresh();
+		}
 		}));
-	RefreshNameList(nullptr);
+	RefreshNameList();
+	// The event belongs to the manager and outlives every panel, so the subscription is kept as a handle
+	// and dropped in the destructor; an AddSP that was never removed left one dead entry per refresh.
+	UnsubscribeAtlasMapChanged();
 	if (UDreamUIDynamicSpriteAtlasManager* AtlasManager = UDreamUIDynamicSpriteAtlasManager::Get())
 	{
-		AtlasManager->OnAtlasMapChanged.AddSP(this, &FDreamUISpriteDataCustomization::RefreshNameList, &DetailBuilder);
+		AtlasMapChangedHandle = AtlasManager->OnAtlasMapChanged.AddSP(this, &FDreamUISpriteDataCustomization::RefreshNameList);
+		SubscribedAtlasManager = AtlasManager;
 	}
 	DetailBuilder.HideProperty(GET_MEMBER_NAME_CHECKED(UDreamUISpriteData, PackingTag));
 	auto PackingTag_PH = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UDreamUISpriteData, PackingTag));
@@ -114,7 +137,7 @@ void FDreamUISpriteDataCustomization::CustomizeDetails(IDetailLayoutBuilder& Det
 							+SHorizontalBox::Slot()
 							[
 								SNew(SEditableText)
-								.OnTextCommitted(this, &FDreamUISpriteDataCustomization::OnPackingTagTextCommited, PackingTag_PH, &DetailBuilder)
+								.OnTextCommitted(this, &FDreamUISpriteDataCustomization::OnPackingTagTextCommited, PackingTag_PH, WeakUtilities)
 								.Text(this, &FDreamUISpriteDataCustomization::GetPackingTagText, PackingTag_PH)
 							]
 						]
@@ -124,10 +147,10 @@ void FDreamUISpriteDataCustomization::CustomizeDetails(IDetailLayoutBuilder& Det
 							+SVerticalBox::Slot()
 							.AutoHeight()
 							[
-								SNew(SListView<TSharedPtr<FName>>)
+								SAssignNew(NameListView, SListView<TSharedPtr<FName>>)
 								.ListItemsSource(&NameList)
 								.OnGenerateRow(this, &FDreamUISpriteDataCustomization::GenerateComboItem)
-								.OnSelectionChanged(this, &FDreamUISpriteDataCustomization::HandleRequiredParamComboChanged, PackingTag_PH, &DetailBuilder)
+								.OnSelectionChanged(this, &FDreamUISpriteDataCustomization::HandleRequiredParamComboChanged, PackingTag_PH, WeakUtilities)
 							]
 						]
 					]
@@ -153,7 +176,13 @@ void FDreamUISpriteDataCustomization::CustomizeDetails(IDetailLayoutBuilder& Det
 	PackingTag_PH->SetOnPropertyValueChanged(FSimpleDelegate::CreateLambda([] {UDreamUISpriteData::MarkAllSpritesNeedToReinitialize(); }));
 	//if change SpriteTexture, clear all sprites and repack
 	auto spriteTextureHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UDreamUISpriteData, SpriteTexture));
-	spriteTextureHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateLambda([&DetailBuilder] {UDreamUISpriteData::MarkAllSpritesNeedToReinitialize(); DetailBuilder.ForceRefreshDetails(); }));
+	spriteTextureHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateLambda([WeakUtilities] {
+		UDreamUISpriteData::MarkAllSpritesNeedToReinitialize();
+		if (const TSharedPtr<IPropertyUtilities> Utilities = WeakUtilities.Pin())
+		{
+			Utilities->RequestForceRefresh();
+		}
+		}));
 	UObject* spriteTextureObject = nullptr;
 	spriteTextureHandle->GetValue(spriteTextureObject);
 	if (spriteTextureObject)
@@ -243,7 +272,7 @@ void FDreamUISpriteDataCustomization::CustomizeDetails(IDetailLayoutBuilder& Det
 			[
 				SAssignNew(ImageBox, SBox)
 				//.MinDesiredHeight(this, &FDreamGUISpriteDataCustomization::GetMinDesiredHeight, &DetailBuilder)
-				.HeightOverride(this, &FDreamUISpriteDataCustomization::GetMinDesiredHeight, &DetailBuilder)
+				.HeightOverride(this, &FDreamUISpriteDataCustomization::GetMinDesiredHeight, TWeakPtr<IDetailsView>(DetailBuilder.GetDetailsViewSharedPtr()))
 				//.MinDesiredHeight(4096)
 				//.MinDesiredWidth(4096)
 				[
@@ -379,7 +408,7 @@ void FDreamUISpriteDataCustomization::CheckSprite()
 	}
 }
 
-void FDreamUISpriteDataCustomization::RefreshNameList(IDetailLayoutBuilder* DetailBuilder)
+void FDreamUISpriteDataCustomization::RefreshNameList()
 {
 	NameList.Reset();
 	NameList.Add(MakeShareable(new FName(NAME_None)));
@@ -391,19 +420,39 @@ void FDreamUISpriteDataCustomization::RefreshNameList(IDetailLayoutBuilder* Deta
 			NameList.Add(TSharedPtr<FName>(new FName(KeyValue.Key)));
 		}
 	}
-	if (DetailBuilder != nullptr)
+	// The dropdown is the only thing in this panel that reads the options, and it lists them straight off
+	// NameList, so redrawing it is enough: the rest of the panel has no reason to be rebuilt for a new tag.
+	if (const TSharedPtr<STableViewBase> ListView = NameListView.Pin())
 	{
-		DetailBuilder->ForceRefreshDetails();
+		ListView->RequestListRefresh();
 	}
 }
 
-void FDreamUISpriteDataCustomization::OnPackingTagTextCommited(const FText& InText, ETextCommit::Type CommitType, TSharedRef<IPropertyHandle> InProperty, IDetailLayoutBuilder* DetailBuilder)
+void FDreamUISpriteDataCustomization::UnsubscribeAtlasMapChanged()
 {
+	if (AtlasMapChangedHandle.IsValid())
+	{
+		if (UDreamUIDynamicSpriteAtlasManager* AtlasManager = SubscribedAtlasManager.Get())
+		{
+			AtlasManager->OnAtlasMapChanged.Remove(AtlasMapChangedHandle);
+		}
+		AtlasMapChangedHandle.Reset();
+	}
+	SubscribedAtlasManager.Reset();
+}
+
+void FDreamUISpriteDataCustomization::OnPackingTagTextCommited(const FText& InText, ETextCommit::Type CommitType, TSharedRef<IPropertyHandle> InProperty, TWeakPtr<IPropertyUtilities> InPropertyUtilities)
+{
+	// The row outlives the asset being deleted out from under the open panel.
+	if (!TargetScriptPtr.IsValid())return;
 	FName packingTag = FName(InText.ToString());
 	InProperty->SetValue(packingTag);
 	TargetScriptPtr->ReloadTexture();
 	TargetScriptPtr->InitSpriteData();
-	DetailBuilder->ForceRefreshDetails();
+	if (const TSharedPtr<IPropertyUtilities> PropertyUtilities = InPropertyUtilities.Pin())
+	{
+		PropertyUtilities->RequestForceRefresh();
+	}
 
 	CheckSprite();
 }
@@ -416,12 +465,17 @@ TSharedRef<ITableRow> FDreamUISpriteDataCustomization::GenerateComboItem(TShared
 		];
 }
 
-void FDreamUISpriteDataCustomization::HandleRequiredParamComboChanged(TSharedPtr<FName> Item, ESelectInfo::Type SelectInfo, TSharedRef<IPropertyHandle> InProperty, IDetailLayoutBuilder* DetailBuilder)
+void FDreamUISpriteDataCustomization::HandleRequiredParamComboChanged(TSharedPtr<FName> Item, ESelectInfo::Type SelectInfo, TSharedRef<IPropertyHandle> InProperty, TWeakPtr<IPropertyUtilities> InPropertyUtilities)
 {
+	// The list also reports a cleared selection, and the row outlives the asset it was built for.
+	if (!Item.IsValid() || !TargetScriptPtr.IsValid())return;
 	InProperty->SetValue(*Item.Get());
 	TargetScriptPtr->ReloadTexture();
 	TargetScriptPtr->InitSpriteData();
-	DetailBuilder->ForceRefreshDetails();
+	if (const TSharedPtr<IPropertyUtilities> PropertyUtilities = InPropertyUtilities.Pin())
+	{
+		PropertyUtilities->RequestForceRefresh();
+	}
 
 	CheckSprite();
 }
@@ -465,9 +519,15 @@ FOptionalSize FDreamUISpriteDataCustomization::GetImageHeight()const
 		return imageBoxSize.Y;
 	}
 }
-FOptionalSize FDreamUISpriteDataCustomization::GetMinDesiredHeight(IDetailLayoutBuilder* DetailBuilder)const
+FOptionalSize FDreamUISpriteDataCustomization::GetMinDesiredHeight(TWeakPtr<IDetailsView> InDetailsView)const
 {
-	return DetailBuilder->GetDetailsViewSharedPtr()->GetCachedGeometry().GetLocalSize().Y - 400;
+	// Polled every frame, and the view it measures can be gone (or never there, in a host that is not an
+	// SDetailsView): an unset size leaves the box at its content's height.
+	if (const TSharedPtr<IDetailsView> DetailsView = InDetailsView.Pin())
+	{
+		return DetailsView->GetCachedGeometry().GetLocalSize().Y - 400;
+	}
+	return FOptionalSize();
 }
 FOptionalSize FDreamUISpriteDataCustomization::GetBorderLeftSize()const
 {
