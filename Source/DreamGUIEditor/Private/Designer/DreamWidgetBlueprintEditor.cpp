@@ -388,6 +388,14 @@ void FDreamWidgetBlueprintEditor::HandlePostTransaction(bool bSuccess)
 		return;
 	}
 
+	// The transaction put the authoring tree back to some earlier state, and the class was compiled from
+	// whatever the tree was before the undo -- so it no longer describes the tree, whatever the status
+	// says. Saving reads the status to decide whether to compile (SaveAsset_Execute).
+	if (BlueprintBeingEdited->Status == BS_UpToDate || BlueprintBeingEdited->Status == BS_UpToDateWithWarnings)
+	{
+		BlueprintBeingEdited->Status = BS_Dirty;
+	}
+
 	// The animation list follows the asset's undo here, and only here: an undo can add or take away an
 	// animation, or the host itself. The panel used to hear FEditorDelegates::PostUndoRedo instead,
 	// which every undo in the editor raises, and threw its Sequencer away for each one.
@@ -802,7 +810,11 @@ void FDreamWidgetBlueprintEditor::SaveAsset_Execute()
 	// at compile time, so saving without compiling writes a hierarchy that no instance has yet --
 	// the exact shape of the designer's "forgot to press Apply", which this is here to end.
 	SaveEditorState();
-	if (IsValid(BlueprintBeingEdited))
+	// Only when there is something to compile: every edit of the hierarchy marks the Blueprint dirty
+	// (MarkBlueprintAsModified, or structurally), and an undo does too (HandlePostTransaction), so an
+	// up-to-date Blueprint already has a class that matches its tree. Compiling it again on every Ctrl+S
+	// only made saving a large widget slow.
+	if (IsValid(BlueprintBeingEdited) && !BlueprintBeingEdited->IsUpToDate())
 	{
 		FKismetEditorUtilities::CompileBlueprint(BlueprintBeingEdited);
 	}
