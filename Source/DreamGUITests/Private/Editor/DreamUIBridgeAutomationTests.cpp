@@ -375,4 +375,108 @@ bool FDreamUIBridgeTellsVSCodeWhereToLookTest::RunTest(const FString& Parameters
 	return true;
 }
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamUIBridgeLeavesAnotherEditorsBridgeAloneTest,
+	"DreamGUI.Text.AProcessStartedBesideAnEditorDoesNotTakeItsBridge",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * The bridge is one per project. A headless test pass or a build step started while the editor is open registers on the same
+ * folder: it empties Requests/ and Responses/, overwrites status.json, and at exit deletes it -- VS Code is told the editor
+ * has closed. Only the editor the author works in takes the bridge over.
+ */
+bool FDreamUIBridgeLeavesAnotherEditorsBridgeAloneTest::RunTest(const FString& Parameters)
+{
+	TestTrue(TEXT("an interactive editor owns the bridge"),
+		FDreamUIBridgeService::ShouldOwnBridge(false, false, false));
+	TestFalse(TEXT("a commandlet does not"), FDreamUIBridgeService::ShouldOwnBridge(true, false, false));
+	TestFalse(TEXT("an automation run does not"), FDreamUIBridgeService::ShouldOwnBridge(false, true, false));
+	TestFalse(TEXT("an unattended process does not"), FDreamUIBridgeService::ShouldOwnBridge(false, false, true));
+	TestFalse(TEXT("nor does one that is all three"), FDreamUIBridgeService::ShouldOwnBridge(true, true, true));
+
+	// And this process, which is running the suite right now.
+	TestFalse(TEXT("so a process running automation would not have taken it"), FDreamUIBridgeService::ShouldOwnBridge());
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamUIBridgeKnowsWhenAClientIsListeningTest,
+	"DreamGUI.Text.TheBridgeTakesAClientForListeningOnlyAfterItHasAskedSomething",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * The protocol has no client heartbeat, so a reveal is only worth writing for a client that has spoken lately; for any other
+ * the diagnostics link opens the file itself. The test pins both ends of "lately", and that a client that never spoke is not
+ * assumed.
+ */
+bool FDreamUIBridgeKnowsWhenAClientIsListeningTest::RunTest(const FString& Parameters)
+{
+	const double Now = 100000.0;
+	TestFalse(TEXT("a client that never asked is not assumed"), FDreamUIBridgeService::IsClientRecent(-1.0e9, Now));
+	TestTrue(TEXT("one that asked a moment ago is listening"), FDreamUIBridgeService::IsClientRecent(Now - 1.0, Now));
+	TestTrue(TEXT("one that asked minutes ago still is"), FDreamUIBridgeService::IsClientRecent(Now - 300.0, Now));
+	TestFalse(TEXT("one that has been quiet for hours is not"), FDreamUIBridgeService::IsClientRecent(Now - 7200.0, Now));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamUIBridgeRepeatsAClassFromItsCacheTest,
+	"DreamGUI.Text.TheBridgeAnswersTheSameClassTwiceWithTheSameReply",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * Completion asks about the same class on every keystroke, and the answer is a walk over its fields and their tooltips. The
+ * second request is served from what the first built; what is held here is that it is the SAME answer, field for field -- a
+ * cache that served a different reply would be worse than none.
+ */
+bool FDreamUIBridgeRepeatsAClassFromItsCacheTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamUIBridgeTestLocal;
+	FScopedBridgeRoot Scoped;
+
+	auto Ask = [&Scoped](const FString& InId, const FString& InAction, const FString& InKey, const FString& InValue)
+	{
+		Scoped.DropRequest(InId, FString::Printf(
+			TEXT("{\"protocol\":1,\"requestId\":\"%s\",\"action\":\"%s\",\"%s\":\"%s\"}"),
+			*InId, *InAction, *InKey, *InValue));
+	};
+	// What a reply says, without the two fields that differ between any two replies.
+	auto Describe = [&Scoped](const FString& InId)
+	{
+		TSharedPtr<FJsonObject> Response = Scoped.ReadResponse(InId);
+		if (!Response.IsValid())
+		{
+			return FString(TEXT("<no response>"));
+		}
+		Response->RemoveField(TEXT("durationMs"));
+		Response->RemoveField(TEXT("requestId"));
+		FString Out;
+		const TSharedRef<TJsonWriter<>> Writer = TJsonWriterFactory<>::Create(&Out);
+		FJsonSerializer::Serialize(Response.ToSharedRef(), Writer);
+		return Out;
+	};
+
+	Ask(TEXT("001-functions"), TEXT("functions"), TEXT("classPath"), KnownClassPath);
+	Ask(TEXT("002-variables"), TEXT("variables"), TEXT("classPath"), KnownClassPath);
+	Ask(TEXT("003-members"), TEXT("members"), TEXT("typePath"), TEXT("TArray<FVector>"));
+	FDreamUIBridgeService::ProcessPendingNow(Scoped.Root);
+
+	Ask(TEXT("101-functions"), TEXT("functions"), TEXT("classPath"), KnownClassPath);
+	Ask(TEXT("102-variables"), TEXT("variables"), TEXT("classPath"), KnownClassPath);
+	Ask(TEXT("103-members"), TEXT("members"), TEXT("typePath"), TEXT("TArray<FVector>"));
+	FDreamUIBridgeService::ProcessPendingNow(Scoped.Root);
+
+	const FString FirstFunctions = Describe(TEXT("001-functions"));
+	const TSharedPtr<FJsonObject> First = Scoped.ReadResponse(TEXT("001-functions"));
+	if (!TestTrue(TEXT("the first functions reply is a real one"), First.IsValid()))
+	{
+		return false;
+	}
+	TestTrue(TEXT("and succeeded"), First->GetBoolField(TEXT("ok")));
+	TestEqual(TEXT("the second functions reply is the first"), Describe(TEXT("101-functions")), FirstFunctions);
+	TestEqual(TEXT("the second variables reply is the first"), Describe(TEXT("102-variables")), Describe(TEXT("002-variables")));
+	TestEqual(TEXT("the second members reply is the first"), Describe(TEXT("103-members")), Describe(TEXT("003-members")));
+	return true;
+}
+
 #endif

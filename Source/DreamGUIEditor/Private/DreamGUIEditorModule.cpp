@@ -200,7 +200,21 @@ void FDreamGUIEditorModule::StartupModule()
 	FDreamUISymbolExport::Register();
 	// The drop-folder RPC those editors talk back through: functions for completion, reveal,
 	// compile-on-demand. Requests land under Saved/DreamGUI/Bridge/.
-	FDreamUIBridgeService::Register();
+	//
+	// Only for the process that IS the editor the author works in. GIsEditor is also true in a commandlet, an
+	// automation run and an unattended process started beside an open editor, and the bridge is one per project:
+	// registering would empty the open editor's Requests/ and Responses/ and overwrite its status.json, and
+	// unregistering at exit would delete it -- VS Code would be told the editor had closed.
+	if (FDreamUIBridgeService::ShouldOwnBridge())
+	{
+		FDreamUIBridgeService::Register();
+	}
+	else
+	{
+		UE_LOG(DreamGUIEditor, Log,
+			TEXT("[%s].%d This process is a commandlet, an automation run or unattended; it leaves the editor bridge to the editor that owns it."),
+			ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
+	}
 	// The Tools entries and this plugin's share of the Dream-family toolbar combo.
 	FDreamUIMenus::Register();
 
