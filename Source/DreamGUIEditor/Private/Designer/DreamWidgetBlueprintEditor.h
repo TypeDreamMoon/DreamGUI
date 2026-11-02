@@ -761,6 +761,21 @@ public:
 	void RepublishPreviewAndSelect(TConstArrayView<UDreamWidget*> InTemplates, TArray<UDreamWidget*>& OutPreviews);
 
 	/**
+	 * The selection, carried across the rebuilds that do not go through RebuildPreviewPreservingSelection:
+	 * a compile (the preview is taken down before it, ReleaseForRecompile, and rebuilt on the next tick)
+	 * and a reload of a text-authored asset from its .dui. Those used to drop the selection every time,
+	 * which for a .dui meant every save in the text editor.
+	 *
+	 * Carried by display name, not by widget id: a .dui reload builds a new authoring tree whose ids are
+	 * minted afresh, while the display name is the node's `id` in the file and survives it.
+	 */
+	void HandlePreviewAboutToRebuild();
+	void HandlePreviewRebuilt();
+	TArray<FString> SelectionNamesAcrossRebuild;
+	/** Set while RebuildPreviewPreservingSelection is rebuilding, which carries the selection itself. */
+	bool bRebuildCarriesSelection = false;
+
+	/**
 	 * Mirror a reparent performed on the surface onto the authoring tree.
 	 *
 	 * The gesture happens on the preview first, deliberately: keeping a widget where it was dropped

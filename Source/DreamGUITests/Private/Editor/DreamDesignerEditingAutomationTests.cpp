@@ -438,6 +438,42 @@ bool FDreamDesignerComponentsAndPropertiesReachTheAssetTest::RunTest(const FStri
 }
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamDesignerCompileKeepsTheSelectionTest,
+	"DreamGUI.Designer.CompilingKeepsTheSelectedWidgetSelected",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamDesignerCompileKeepsTheSelectionTest::RunTest(const FString&)
+{
+	using namespace DreamDesignerEditingTestLocal;
+
+	FScopedDesigner Scoped(TEXT("DesignerCompileKeepsSelection"));
+	if (!TestNotNull(TEXT("The designer opened"), Scoped.Designer) || Scoped.PreviewRoot() == nullptr)
+	{
+		return false;
+	}
+	UDreamWidget* Made = Scoped.Designer->DesignerCreateWidget(Scoped.PreviewRoot(), UDreamWidget::StaticClass(), TEXT("Kept"), nullptr);
+	if (!TestNotNull(TEXT("A widget was made"), Made))
+	{
+		return false;
+	}
+	Scoped.Designer->SelectWidgets(TSet<UDreamWidget*>{ Made }, false);
+
+	// A compile takes the preview down before it runs and builds it again on the designer's next tick.
+	FKismetEditorUtilities::CompileBlueprint(Scoped.Blueprint, EBlueprintCompileOptions::SkipGarbageCollection);
+	Scoped.Designer->GetPreviewHost()->RebuildPreviewIfInvalidated();
+
+	const TArray<TWeakObjectPtr<UDreamWidget>>& Selected = Scoped.Designer->GetSelectedWidgets();
+	const UDreamWidget* Reselected = Selected.Num() == 1 ? Selected[0].Get() : nullptr;
+	if (!TestTrue(TEXT("One widget is selected after the compile"), Reselected != nullptr && Reselected->HasRegistered()))
+	{
+		return false;
+	}
+	TestTrue(TEXT("It is the rebuilt preview, not the one taken down"), Reselected != Made);
+	TestEqual(TEXT("And it is the same widget of the asset"), Reselected->GetDisplayName(), FString(TEXT("Kept")));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamDesignerUndoRebuildsThePreviewTest,
 	"DreamGUI.Designer.UndoRebuildsThePreviewFromTheRestoredTemplate",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)

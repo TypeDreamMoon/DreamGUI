@@ -481,6 +481,9 @@ void FDreamWidgetBlueprintEditor::InitDesigner(const EToolkitMode::Type Mode, co
 	// every one of them asks for the world in its constructor.
 	PreviewHost = MakeShared<FDreamWidgetPreviewHost>();
 	PreviewHost->Initialize(BlueprintBeingEdited);
+	// After the first build: there is no selection to carry into that one.
+	PreviewHost->OnPreviewAboutToRebuild.AddSP(this, &FDreamWidgetBlueprintEditor::HandlePreviewAboutToRebuild);
+	PreviewHost->OnPreviewRebuilt.AddSP(this, &FDreamWidgetBlueprintEditor::HandlePreviewRebuilt);
 
 	// For a text-authored asset, hook the designer's edits up to the file they came from. Without
 	// this the host still marks itself dirty and still broadcasts on every flush -- it just does it
@@ -3664,7 +3667,10 @@ void FDreamWidgetBlueprintEditor::RebuildPreviewPreservingSelection()
 	// earlier call in the same gesture. That is the contract FDreamWidgetReference exists to state:
 	// resolve a preview when you need it, never keep one across a structural edit -- or across an
 	// undo, which now lands here too.
-	PreviewHost->RebuildPreview();
+	{
+		TGuardValue<bool> CarriesSelection(bRebuildCarriesSelection, true);
+		PreviewHost->RebuildPreview();
+	}
 
 	// No ApplyDesignerState here: RebuildPreview replays the hidden set itself, as part of the
 	// rebuild, so that the paths which reach the host WITHOUT coming through this function -- its own
@@ -3686,6 +3692,65 @@ void FDreamWidgetBlueprintEditor::RebuildPreviewPreservingSelection()
 		SelectWidgets(Rebuilt, false);
 	}
 	RefreshOutliner();
+}
+
+void FDreamWidgetBlueprintEditor::HandlePreviewAboutToRebuild()
+{
+	if (bRebuildCarriesSelection)
+	{
+		return;
+	}
+	TArray<FString> Names;
+	for (const TWeakObjectPtr<UDreamWidget>& Selected : SelectedWidgets)
+	{
+		// Registered, not merely alive: a preview widget that has been taken down can outlive its tree
+		// until the next collection, and it names nothing on screen.
+		if (UDreamWidget* Preview = Selected.Get(); Preview != nullptr && Preview->HasRegistered())
+		{
+			const UDreamWidget* Template = GetTemplateWidget(Preview);
+			Names.Add(Template != nullptr ? Template->GetDisplayName() : Preview->GetDisplayName());
+		}
+	}
+	// Only a live selection replaces what is held. A compile takes the preview down first and builds it
+	// again a tick later, and by the second announcement the widgets named the first time are gone.
+	if (Names.Num() > 0)
+	{
+		SelectionNamesAcrossRebuild = MoveTemp(Names);
+	}
+}
+
+void FDreamWidgetBlueprintEditor::HandlePreviewRebuilt()
+{
+	if (bRebuildCarriesSelection || SelectionNamesAcrossRebuild.IsEmpty() || !PreviewHost.IsValid()
+		|| !IsValid(BlueprintBeingEdited) || !IsValid(BlueprintBeingEdited->WidgetTree))
+	{
+		return;
+	}
+	const TArray<FString> Names = MoveTemp(SelectionNamesAcrossRebuild);
+	SelectionNamesAcrossRebuild.Reset();
+	// Someone selected something in between; theirs is the newer answer.
+	for (const TWeakObjectPtr<UDreamWidget>& Selected : SelectedWidgets)
+	{
+		if (Selected.IsValid() && Selected->HasRegistered())
+		{
+			return;
+		}
+	}
+	TSet<UDreamWidget*> Rebuilt;
+	BlueprintBeingEdited->WidgetTree->ForEachWidget([this, &Names, &Rebuilt](UDreamWidget* Template)
+	{
+		if (IsValid(Template) && Names.Contains(Template->GetDisplayName()))
+		{
+			if (UDreamWidget* Preview = PreviewHost->FindPreviewForTemplate(Template))
+			{
+				Rebuilt.Add(Preview);
+			}
+		}
+	});
+	if (Rebuilt.Num() > 0)
+	{
+		SelectWidgets(Rebuilt, false);
+	}
 }
 
 void FDreamWidgetBlueprintEditor::RepublishPreviewAndSelect(TConstArrayView<UDreamWidget*> InTemplates, TArray<UDreamWidget*>& OutPreviews)
