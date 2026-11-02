@@ -97,6 +97,12 @@ private:
 	/** True while RebuildAnimationList replaces the rows; the selection callback waits for its one assignment. */
 	bool bRebuildingAnimationList = false;
 	/**
+	 * The animation being edited while the search box has filtered its row out of the list. Typing in the
+	 * search box is looking for something, not choosing to stop editing: the row going away used to clear
+	 * the selection, which left animation mode and threw the Sequencer away with every keystroke.
+	 */
+	TWeakObjectPtr<UDreamWidgetAnimation> AnimationHiddenByFilter;
+	/**
 	 * Rebuild the rows from the host, selecting InSelected again when it is still there, or else the
 	 * animation now called InSelectedName, and hand the sequencer the result once.
 	 */
