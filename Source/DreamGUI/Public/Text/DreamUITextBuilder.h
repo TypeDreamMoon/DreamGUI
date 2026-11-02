@@ -10,6 +10,30 @@
 
 class UDreamWidgetTree;
 
+/** One localizable text a build produced: what a localization tool lists for translators. */
+struct FDreamUILocalizableText
+{
+	/** The FText key: `<node id>.<property>` (behaviours and slots with their discriminator), or the `@key("...")`. */
+	FString Key;
+	/** The source text, as the FText got it. */
+	FString Source;
+	/** The node's ids from below the root down, joined with '/'; the root's own text has the root's id. */
+	FString NodePath;
+	/** The node's type as written: `Text`, `Button`, an alias. */
+	FString NodeType;
+	/** The key this text had before the node's `(was: OldId)` rename; empty when there is none or `@key` names it. */
+	FString RenamedFrom;
+};
+
+/** Every localizable text of one build, under the namespace they share. */
+struct FDreamUILocalization
+{
+	/** The `class` line's path, or the source name for a file without one. */
+	FString Namespace;
+	/** In the order the build met them; one per key -- a later write of the same key (a node over its style) replaces the earlier. */
+	TArray<FDreamUILocalizableText> Texts;
+};
+
 /**
  * AST in, widget hierarchy out -- the first stage that touches reflection, and the only one that
  * decides what a value MEANS.
@@ -44,10 +68,12 @@ struct DREAMGUI_API FDreamUITextBuilder
 	 * does not have to keep its own accumulator.
 	 */
 	/* OutEachBindings: null skips `each` collection and those blocks degrade to the old warning. */
+	/* OutLocalization: when given, reset and filled with every localizable text the build wrote. */
 	static UDreamWidgetTree* Build(const FDreamUIAst& InAst, UObject* InOuter,
 		FDreamUIDiagnosticBag& OutDiagnostics, TArray<FDreamWidgetPropertyBinding>& OutBindings,
 		TArray<FDreamWidgetEventBinding>* OutEventBindings = nullptr,
-		TArray<FDreamWidgetEachBinding>* OutEachBindings = nullptr);
+		TArray<FDreamWidgetEachBinding>* OutEachBindings = nullptr,
+		FDreamUILocalization* OutLocalization = nullptr);
 
 	/**
 	 * The UDreamVisual class a built-in tag creates, and whether the tag is one at all.
