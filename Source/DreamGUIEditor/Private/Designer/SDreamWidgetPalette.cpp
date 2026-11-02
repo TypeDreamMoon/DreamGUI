@@ -186,8 +186,15 @@ void SDreamWidgetPalette::RequestRebuild()
 
 void SDreamWidgetPalette::HandleWidgetAssetChanged(const FAssetData& InAssetData)
 {
-	// Any asset add/remove/rename can change what the registered controls resolve to, so the list is
-	// rebuilt for all of them. It used to filter for prefab assets, back when it listed those.
+	// Only a widget Blueprint can change this list: the user widgets it lists are those, and every
+	// registered control that names an asset names one of those. Reacting to every asset meant an import
+	// of a folder of textures rebuilt the palette -- and checked every registered control's package on
+	// disk -- four times a second for as long as the import ran, in every open designer.
+	const UClass* AssetClass = InAssetData.GetClass(EResolveClass::No);
+	if (AssetClass == nullptr || !AssetClass->IsChildOf(UDreamWidgetBlueprint::StaticClass()))
+	{
+		return;
+	}
 	RequestRebuild();
 }
 
