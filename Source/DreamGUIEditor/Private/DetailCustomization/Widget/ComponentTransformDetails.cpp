@@ -24,6 +24,7 @@
 #include "Editor/UnrealEdEngine.h"
 #include "Kismet2/ComponentEditorUtils.h"
 #include "Editor.h"
+#include "Engine/World.h"
 #include "UnrealEdGlobals.h"
 #include "DetailLayoutBuilder.h"
 #include "Widgets/Input/SRotatorInputBox.h"
@@ -1057,7 +1058,13 @@ void FComponentTransformDetails::OnSetTransform(ETransformField::Type TransformF
 	// Only on the finished gesture: this is level-editor housekeeping (the gizmo pivot for the ACTOR
 	// selection, then a repaint of every level viewport) and the interactive path fires once per mouse
 	// move, so dragging a transform spinner redrew the whole level editor tens of times a second.
-	if (bCommitted)
+	// And only for a widget in a level: a designer's preview is drawn by no level viewport.
+	const bool bAnyInALevel = SelectedObjects.ContainsByPredicate([](const TWeakObjectPtr<UDreamWidget>& Object)
+	{
+		const UWorld* World = Object.IsValid() ? Object->GetWorld() : nullptr;
+		return World != nullptr && World->WorldType == EWorldType::Editor;
+	});
+	if (bCommitted && bAnyInALevel)
 	{
 		GUnrealEd->UpdatePivotLocationForSelection();
 		GUnrealEd->SetPivotMovedIndependently(false);

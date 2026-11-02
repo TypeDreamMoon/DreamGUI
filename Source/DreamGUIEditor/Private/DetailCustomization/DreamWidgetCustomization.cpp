@@ -9,6 +9,7 @@
 #include "IDetailGroup.h"
 #include "DreamGUIEditorStyle.h"
 #include "Editor.h"
+#include "Engine/World.h"
 #include "Widget/ComponentTransformDetails.h"
 #include "Widget/AnchorPreviewWidget.h"
 #include "PropertyCustomizationHelpers.h"
@@ -2528,7 +2529,14 @@ void FDreamWidgetCustomization::ApplyValueChanged(float Value, TSharedRef<IPrope
 	// pivot for the actor selection, then repaint every level viewport -- and a spin box fires
 	// OnValueChanged once per mouse move, so doing them interactively redrew the whole level editor
 	// tens of times a second for an edit that never leaves the DreamUI panel.
-	if (Commited)
+	// And only for a widget that is in a level: a designer's preview is not drawn by any level viewport,
+	// so repainting all of them after every committed number was work for nothing.
+	const bool bAnyInALevel = TargetScriptArray.ContainsByPredicate([](const TWeakObjectPtr<UDreamWidget>& Item)
+	{
+		const UWorld* World = Item.IsValid() ? Item->GetWorld() : nullptr;
+		return World != nullptr && World->WorldType == EWorldType::Editor;
+	});
+	if (Commited && bAnyInALevel)
 	{
 		GUnrealEd->UpdatePivotLocationForSelection();
 		GUnrealEd->SetPivotMovedIndependently(false);
@@ -2540,11 +2548,27 @@ void FDreamWidgetCustomization::ApplyValueChanged(float Value, TSharedRef<IPrope
 	// UDreamWidget's own RelativeLocation, not USceneComponent's: a widget is a plain UObject, and the
 	// ported lookup named the class the original panel edited.
 	auto RelativeLocationProperty = FindFProperty<FProperty>(UDreamWidget::StaticClass(), UDreamWidget::GetPropertyName_RelativeLocation());
+	// Said as what it is: a tick of a drag is Interactive, the end of it ValueSet. Every tick used to be
+	// announced as a finished edit, so anything listening for finished edits did its work per mouse move.
+	const EPropertyChangeType::Type ChangeType = Commited ? EPropertyChangeType::ValueSet : EPropertyChangeType::Interactive;
+	auto Notify = [ChangeType](UDreamWidget* InWidget, FProperty* InProperty)
+	{
+		if (InProperty == nullptr)
+		{
+			return;
+		}
+		FEditPropertyChain Chain;
+		Chain.AddHead(InProperty);
+		TArray<UObject*> Objects{ InWidget };
+		FPropertyChangedEvent Event(InProperty, ChangeType, MakeArrayView(Objects));
+		FPropertyChangedChainEvent ChainEvent(Chain, Event);
+		InWidget->PostEditChangeChainProperty(ChainEvent);
+	};
 	for (auto& Item : TargetScriptArray)
 	{
 		if (!Item.IsValid())continue;
-		FDreamUIUtils::NotifyPropertyChanged(Item.Get(), AnchorProperty);
-		FDreamUIUtils::NotifyPropertyChanged(Item.Get(), RelativeLocationProperty);
+		Notify(Item.Get(), AnchorProperty);
+		Notify(Item.Get(), RelativeLocationProperty);
 	}
 	if (Commited)
 	{
