@@ -7,6 +7,7 @@
 #include "DetailLayoutBuilder.h"
 #include "DetailCategoryBuilder.h"
 #include "DetailWidgetRow.h"
+#include "IPropertyUtilities.h"
 
 #define LOCTEXT_NAMESPACE "DreamGUIStaticSpriteAtlasDataCustomization"
 
@@ -19,16 +20,25 @@ void FDreamUIStaticSpriteAtlasDataCustomization::CustomizeDetails(IDetailLayoutB
 {
 	TArray<TWeakObjectPtr<UObject>> targetObjects;
 	DetailBuilder.GetObjectsBeingCustomized(targetObjects);
-	TargetScriptPtr = Cast<UDreamUIStaticSpriteAtlasData>(targetObjects[0].Get());
+	// An empty list is a real state -- the panel rebuilds while a selection is being cleared -- and
+	// indexing [0] there reads off the end of an empty array.
+	TargetScriptPtr = targetObjects.Num() > 0 ? Cast<UDreamUIStaticSpriteAtlasData>(targetObjects[0].Get()) : nullptr;
 	if (TargetScriptPtr == nullptr)
 	{
 		UE_LOG(DreamGUIEditor, Log, TEXT("[%s].%d Get TargetScript is null"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
 		return;
 	}
+	// The layout builder is thrown away by the very refresh these delegates and the button ask for, so
+	// none of them may hold it; the utilities outlive the layout and are how a row asks for a refresh.
+	const TWeakPtr<IPropertyUtilities> WeakUtilities = DetailBuilder.GetPropertyUtilities();
 	IDetailCategoryBuilder& DreamGUICategory = DetailBuilder.EditCategory("DreamGUI");
 	auto spriteArrayHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UDreamUIStaticSpriteAtlasData, SpriteDataArray));
-	spriteArrayHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateLambda([&DetailBuilder] {
-		DetailBuilder.ForceRefreshDetails();
+	spriteArrayHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateLambda([WeakUtilities] {
+		// Requested, not forced: this runs inside the property's own value-changed broadcast.
+		if (const TSharedPtr<IPropertyUtilities> Utilities = WeakUtilities.Pin())
+		{
+			Utilities->RequestForceRefresh();
+		}
 		}));
 	DreamGUICategory.AddProperty(spriteArrayHandle);
 
@@ -51,12 +61,17 @@ void FDreamUIStaticSpriteAtlasDataCustomization::CustomizeDetails(IDetailLayoutB
 				SNew(SButton)
 				.Text(LOCTEXT("CleanupButtonText", "Cleanup"))
 				.HAlign(EHorizontalAlignment::HAlign_Center)
-				.OnClicked_Lambda([this, &DetailBuilder] {
+				.OnClicked_Lambda([WeakTarget = TargetScriptPtr, WeakUtilities] {
 					// The button outlives the asset it was built for: the row is still clickable after a
-					// reimport or a GC has taken the atlas out from under the panel.
-					if (!TargetScriptPtr.IsValid())return FReply::Handled();
-					TargetScriptPtr->CleanupInvalidSpriteData();
-					DetailBuilder.ForceRefreshDetails();
+					// reimport or a GC has taken the atlas out from under the panel. It outlives this
+					// customization too, so it holds the target itself and not `this`.
+					UDreamUIStaticSpriteAtlasData* Target = WeakTarget.Get();
+					if (Target == nullptr)return FReply::Handled();
+					Target->CleanupInvalidSpriteData();
+					if (const TSharedPtr<IPropertyUtilities> Utilities = WeakUtilities.Pin())
+					{
+						Utilities->RequestForceRefresh();
+					}
 					return FReply::Handled();
 					})
 			]
@@ -69,11 +84,12 @@ void FDreamUIStaticSpriteAtlasDataCustomization::CustomizeDetails(IDetailLayoutB
 			SNew(SButton)
 			.Text(LOCTEXT("PackAtlasButton", "Pack Atlas"))
 			.HAlign(EHorizontalAlignment::HAlign_Center)
-			.OnClicked_Lambda([this] {
-				if (!TargetScriptPtr.IsValid())return FReply::Handled();
-				TargetScriptPtr->MarkNotInitialized();
-				TargetScriptPtr->MarkAtlasPackDirty();
-				TargetScriptPtr->InitCheck();
+			.OnClicked_Lambda([WeakTarget = TargetScriptPtr] {
+				UDreamUIStaticSpriteAtlasData* Target = WeakTarget.Get();
+				if (Target == nullptr)return FReply::Handled();
+				Target->MarkNotInitialized();
+				Target->MarkAtlasPackDirty();
+				Target->InitCheck();
 				return FReply::Handled();
 			})
 		];

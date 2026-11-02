@@ -8,6 +8,7 @@
 #include "DreamGUIEditorModule.h"
 #include "DetailLayoutBuilder.h"
 #include "DetailCategoryBuilder.h"
+#include "IPropertyUtilities.h"
 #include "Interaction/UIScrollbar.h"
 
 #define LOCTEXT_NAMESPACE "UIScrollViewWithScrollBarComponentDetails"
@@ -37,25 +38,28 @@ void FUIScrollViewWithScrollBarCustomization::CustomizeDetails(IDetailLayoutBuil
 		return;
 	}
 	
+	// The refresh these delegates ask for destroys the layout builder, so they keep the utilities instead.
+	const TWeakPtr<IPropertyUtilities> WeakUtilities = DetailBuilder.GetPropertyUtilities();
+
 	IDetailCategoryBuilder& category = DetailBuilder.EditCategory("DreamGUI-ScrollViewWithScrollbar");
 	category.AddProperty(GET_MEMBER_NAME_CHECKED(UUIScrollViewWithScrollbar, Viewport));
 	TArray<FName> needToHidePropertyName;
 	auto ViewportHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUIScrollViewWithScrollbar, Viewport));
-	ViewportHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FUIScrollViewWithScrollBarCustomization::ForceRefresh, &DetailBuilder));
+	ViewportHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FUIScrollViewWithScrollBarCustomization::ForceRefresh, WeakUtilities));
 	UDreamWidget* Viewport = nullptr;
 	ViewportHandle->GetValue(*(UObject**)&Viewport);
 
 	auto HorizontalScrollbarVisibilityHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUIScrollViewWithScrollbar, HorizontalScrollbarVisibility));
 	auto VerticalScrollbarVisibilityHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUIScrollViewWithScrollbar, VerticalScrollbarVisibility));
-	HorizontalScrollbarVisibilityHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FUIScrollViewWithScrollBarCustomization::ForceRefresh, &DetailBuilder));
-	VerticalScrollbarVisibilityHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FUIScrollViewWithScrollBarCustomization::ForceRefresh, &DetailBuilder));
+	HorizontalScrollbarVisibilityHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FUIScrollViewWithScrollBarCustomization::ForceRefresh, WeakUtilities));
+	VerticalScrollbarVisibilityHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FUIScrollViewWithScrollBarCustomization::ForceRefresh, WeakUtilities));
 	auto HorizontalScrollbarHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUIScrollViewWithScrollbar, HorizontalScrollbar));
-	HorizontalScrollbarHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FUIScrollViewWithScrollBarCustomization::ForceRefresh, &DetailBuilder));
+	HorizontalScrollbarHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FUIScrollViewWithScrollBarCustomization::ForceRefresh, WeakUtilities));
 	UUIScrollbar* HorizontalScrollbar = nullptr;
 	HorizontalScrollbarHandle->GetValue(*(UObject**)&HorizontalScrollbar);
 
 	auto VerticalScrollbarHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUIScrollViewWithScrollbar, VerticalScrollbar));
-	VerticalScrollbarHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FUIScrollViewWithScrollBarCustomization::ForceRefresh, &DetailBuilder));
+	VerticalScrollbarHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FUIScrollViewWithScrollBarCustomization::ForceRefresh, WeakUtilities));
 	UUIScrollbar* VerticalScrollbar = nullptr;
 	VerticalScrollbarHandle->GetValue(*(UObject**)&VerticalScrollbar);
 
@@ -68,7 +72,7 @@ void FUIScrollViewWithScrollBarCustomization::CustomizeDetails(IDetailLayoutBuil
 	VerticalScrollbarVisibilityProperty.IsEnabled(IsValid(VerticalScrollbar));
 
 	auto KeepProgressHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUIScrollViewWithScrollbar, KeepProgress));
-	KeepProgressHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FUIScrollViewWithScrollBarCustomization::ForceRefresh, &DetailBuilder));
+	KeepProgressHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FUIScrollViewWithScrollBarCustomization::ForceRefresh, WeakUtilities));
 	if (DreamDetailsMultiSelect::AllEqual(KeepProgressHandle, false))
 	{
 		needToHidePropertyName.Add(GET_MEMBER_NAME_CHECKED(UUIScrollViewWithScrollbar, Progress));
@@ -79,11 +83,16 @@ void FUIScrollViewWithScrollBarCustomization::CustomizeDetails(IDetailLayoutBuil
 		DetailBuilder.HideProperty(item);
 	}
 }
-void FUIScrollViewWithScrollBarCustomization::ForceRefresh(IDetailLayoutBuilder* DetailBuilder)
+void FUIScrollViewWithScrollBarCustomization::ForceRefresh(TWeakPtr<IPropertyUtilities> InPropertyUtilities)
 {
 	if (TargetScriptPtr.IsValid())
 	{
-		DetailBuilder->ForceRefreshDetails();
+		if (const TSharedPtr<IPropertyUtilities> PropertyUtilities = InPropertyUtilities.Pin())
+		{
+			// Requested, not forced: this runs inside the property's own value-changed broadcast, and
+			// the immediate variant tears the layout down while that broadcast is still on the stack.
+			PropertyUtilities->RequestForceRefresh();
+		}
 	}
 }
 #undef LOCTEXT_NAMESPACE

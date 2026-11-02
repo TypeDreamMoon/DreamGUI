@@ -7,6 +7,7 @@
 #include "DetailLayoutBuilder.h"
 #include "DetailCategoryBuilder.h"
 #include "IDetailGroup.h"
+#include "IPropertyUtilities.h"
 
 #define LOCTEXT_NAMESPACE "UIPostProcessRenderableCustomization"
 FDreamVisualPostProcessCustomization::FDreamVisualPostProcessCustomization()
@@ -43,8 +44,14 @@ void FDreamVisualPostProcessCustomization::CustomizeDetails(IDetailLayoutBuilder
 	IDetailCategoryBuilder& DreamGUICategory = DetailBuilder.EditCategory("DreamGUI");
 	TArray<FName> NeedToHidePropertyNames;
 	auto MaskTextureHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UDreamVisualPostProcess, MaskTexture));
-	MaskTextureHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateLambda([&]() {
-		DetailBuilder.ForceRefreshDetails();
+	// The refresh this asks for destroys the layout builder, and the locals here are gone once this
+	// function returns, so the delegate captures only the utilities, and weakly.
+	MaskTextureHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateLambda([WeakUtilities = TWeakPtr<IPropertyUtilities>(DetailBuilder.GetPropertyUtilities())]() {
+		// Requested, not forced: this runs inside the property's own value-changed broadcast.
+		if (const TSharedPtr<IPropertyUtilities> Utilities = WeakUtilities.Pin())
+		{
+			Utilities->RequestForceRefresh();
+		}
 		}));
 	IDetailGroup& MaskTextureGroup = DreamGUICategory.AddGroup(FName("MaskTexture"), LOCTEXT("MaskTexture", "MaskTexture"));
 	MaskTextureGroup.HeaderProperty(MaskTextureHandle);

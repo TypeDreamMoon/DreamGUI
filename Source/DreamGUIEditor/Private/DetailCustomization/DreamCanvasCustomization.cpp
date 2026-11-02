@@ -48,13 +48,15 @@ void FDreamCanvasCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBui
 
 	FDreamUIEditorUtils::ShowError_MultiComponentNotAllowed(&DetailBuilder, TargetScriptArray[0].Get());
 
-	auto RenderModeHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UDreamCanvas, RenderMode));
-	// Through the property utilities, not the layout builder. This delegate outlives the panel it was
+	// Through the property utilities, not the layout builder. These delegates outlive the panel they were
 	// built for -- changing the render mode is exactly what tears the layout down and rebuilds it --
-	// and the captured IDetailLayoutBuilder& is destroyed by that rebuild, so the NEXT change would
+	// and a captured IDetailLayoutBuilder& is destroyed by that rebuild, so the NEXT change would
 	// call ForceRefreshDetails through a dangling reference. The utilities are shared and outlive it.
+	const TWeakPtr<IPropertyUtilities> WeakUtilities = DetailBuilder.GetPropertyUtilities();
+
+	auto RenderModeHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UDreamCanvas, RenderMode));
 	RenderModeHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(
-		this, &FDreamCanvasCustomization::ForceRefresh, TWeakPtr<IPropertyUtilities>(DetailBuilder.GetPropertyUtilities())));
+		this, &FDreamCanvasCustomization::ForceRefresh, WeakUtilities));
 	
 	if (TargetScriptArray[0]->GetActualRenderMode() == EDreamRenderMode::ScreenSpaceOverlay)
 	{
@@ -109,7 +111,7 @@ void FDreamCanvasCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBui
 	auto OverrideSortingHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UDreamCanvas, bOverrideSorting));
 	bool bOverrideSorting = false;
 	OverrideSortingHandle->GetValue(bOverrideSorting);
-	OverrideSortingHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FDreamCanvasCustomization::ForceRefresh, TWeakPtr<IPropertyUtilities>(DetailBuilder.GetPropertyUtilities())));
+	OverrideSortingHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FDreamCanvasCustomization::ForceRefresh, WeakUtilities));
 
 	if (bOverrideSorting)
 	{
@@ -123,7 +125,7 @@ void FDreamCanvasCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBui
 	}
 	
 	auto ForceRenderToTarget_PH = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UDreamCanvas, bForceRenderToTarget));
-	ForceRenderToTarget_PH->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FDreamCanvasCustomization::ForceRefresh, TWeakPtr<IPropertyUtilities>(DetailBuilder.GetPropertyUtilities())));
+	ForceRenderToTarget_PH->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FDreamCanvasCustomization::ForceRefresh, WeakUtilities));
 
 	if (TargetScriptArray[0]->IsRootCanvas()
 		|| TargetScriptArray[0]->GetWorld() == nullptr//maybe in blueprint editor, then world is null
@@ -182,7 +184,7 @@ void FDreamCanvasCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBui
 		NeedToHidePropertyNames.Add(GET_MEMBER_NAME_CHECKED(UDreamCanvas, TraceChannel));
 
 		auto overrideParametersHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UDreamCanvas, OverrideParameters));
-		overrideParametersHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FDreamCanvasCustomization::ForceRefresh, TWeakPtr<IPropertyUtilities>(DetailBuilder.GetPropertyUtilities())));
+		overrideParametersHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FDreamCanvasCustomization::ForceRefresh, WeakUtilities));
 		if (!TargetScriptArray[0]->GetOverrideDefaultMaterial())
 		{
 			NeedToHidePropertyNames.Add(GET_MEMBER_NAME_CHECKED(UDreamCanvas, DefaultMaterial));
@@ -333,13 +335,13 @@ void FDreamCanvasCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBui
 		CanvasScalerCategory.AddProperty(GET_MEMBER_NAME_CHECKED(UDreamCanvas, ScaleMode));
 
 		DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UDreamCanvas, ScaleMode))
-			->SetOnPropertyValueChanged(FSimpleDelegate::CreateLambda([&] { DetailBuilder.ForceRefreshDetails(); }));
+			->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FDreamCanvasCustomization::ForceRefresh, WeakUtilities));
 		if (TargetScriptArray[0]->ScaleMode == EDreamCanvasScaleMode::ScaleWithScreenSize)
 		{
 			CanvasScalerCategory.AddProperty(GET_MEMBER_NAME_CHECKED(UDreamCanvas, ReferenceResolution));
 			CanvasScalerCategory.AddProperty(GET_MEMBER_NAME_CHECKED(UDreamCanvas, ScreenMatchMode));
 			DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UDreamCanvas, ScreenMatchMode))
-				->SetOnPropertyValueChanged(FSimpleDelegate::CreateLambda([&] { DetailBuilder.ForceRefreshDetails(); }));
+				->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FDreamCanvasCustomization::ForceRefresh, WeakUtilities));
 			switch (TargetScriptArray[0]->ScreenMatchMode)
 			{
 			case EDreamCanvasScreenMatchMode::Expand:
@@ -373,7 +375,7 @@ void FDreamCanvasCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBui
 		}
 
 		auto projectionTypeHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UDreamCanvas, ProjectionType));
-		projectionTypeHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateLambda([&] { DetailBuilder.ForceRefreshDetails(); }));
+		projectionTypeHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FDreamCanvasCustomization::ForceRefresh, WeakUtilities));
 		if (TargetScriptArray[0]->ProjectionType == ECameraProjectionMode::Orthographic)
 		{
 			NeedToHidePropertyNames.Add(GET_MEMBER_NAME_CHECKED(UDreamCanvas, FieldOfView));

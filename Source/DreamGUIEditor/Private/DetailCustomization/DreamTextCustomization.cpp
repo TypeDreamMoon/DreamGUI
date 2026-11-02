@@ -46,8 +46,9 @@ void FDreamTextCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuild
 	}
 	// The layout builder is owned by the details view and is thrown away by the very refresh these
 	// delegates ask for, so a delegate must not hold it -- by reference or as a payload pointer.
-	// IPropertyUtilities is the handle that outlives a refresh, and it is what ForceRefresh takes.
-	const TSharedPtr<IPropertyUtilities> PropertyUtilities = DetailBuilder.GetPropertyUtilities();
+	// IPropertyUtilities is the handle that outlives a refresh, and it is what ForceRefresh takes; held
+	// weakly, since a delegate that is still registered must not keep the details view alive.
+	const TWeakPtr<IPropertyUtilities> PropertyUtilities = DetailBuilder.GetPropertyUtilities();
 	const TSharedPtr<IDetailsView> DetailsView = DetailBuilder.GetDetailsViewSharedPtr();
 
 	// THE ORDER OF A TEXT'S ROWS: what it says and how it looks first, then three groups that start closed --
@@ -336,11 +337,16 @@ void FDreamTextCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuild
 	RenderingGroup.AddPropertyRow(DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UDreamText, SmallTextRaster)));
 	RenderingGroup.AddPropertyRow(DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UDreamText, DynamicPixelsPerUnit)));
 }
-void FDreamTextCustomization::ForceRefresh(TSharedPtr<IPropertyUtilities> PropertyUtilities)
+void FDreamTextCustomization::ForceRefresh(TWeakPtr<IPropertyUtilities> InPropertyUtilities)
 {
-	if (TargetScriptPtr.IsValid() && PropertyUtilities.IsValid())
+	if (TargetScriptPtr.IsValid())
 	{
-		PropertyUtilities->ForceRefresh();
+		if (const TSharedPtr<IPropertyUtilities> PropertyUtilities = InPropertyUtilities.Pin())
+		{
+			// Requested, not forced: this runs inside the property's own value-changed broadcast, and
+			// the immediate variant tears the layout down while that broadcast is still on the stack.
+			PropertyUtilities->RequestForceRefresh();
+		}
 	}
 }
 #undef LOCTEXT_NAMESPACE

@@ -1372,10 +1372,11 @@ void FDreamWidgetCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBui
 							}
 						}
 						// This category is built from whether the component exists, so the panel has to
-						// be rebuilt for the rules to appear where the button was.
+						// be rebuilt for the rules to appear where the button was. Requested rather than
+						// done here: done here, it destroyed the button whose click is still running.
 						if (Utilities.IsValid())
 						{
-							Utilities->ForceRefresh();
+							Utilities->RequestForceRefresh();
 						}
 						return FReply::Handled();
 					})
@@ -1516,7 +1517,9 @@ void FDreamWidgetCustomization::OnPasteAnchor(IDetailLayoutBuilder* DetailBuilde
 		NotifyAnchorGeometryPostChange();
 		GEditor->EndTransaction();
 		ForceUpdateUI();
-		DetailBuilder->ForceRefreshDetails();
+		// Requested, not forced: this runs from the row's own Paste action, which a forced refresh would
+		// destroy mid-call.
+		DetailBuilder->GetPropertyUtilities()->RequestForceRefresh();
 	}
 }
 
