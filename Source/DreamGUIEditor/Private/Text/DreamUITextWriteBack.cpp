@@ -1647,7 +1647,10 @@ void FDreamUITextWriteBack::CollectEdits(const FDreamUIAst& InAst, const UDreamW
 				}
 				for (const FString& Name : Names)
 				{
-					if (!KeepName(InNode.Id, EDreamUIPatchTarget::Component, ComponentIndex, Name))
+					// A `+` line the shape pass has just written is swept whole, as a new node is.
+					if (!KeepName(InNode.Id, EDreamUIPatchTarget::Component, ComponentIndex, Name)
+						&& !(InSweepNodeIds != nullptr
+							&& InSweepNodeIds->Contains(InNode.Id + TEXT("+") + InNode.Components[ComponentIndex].ClassName)))
 					{
 						continue;
 					}
@@ -1807,7 +1810,8 @@ int32 FDreamUITextWriteBack::NumDirtyProperties(const UDreamWidgetTree* InTree)
 
 void FDreamUITextWriteBack::CollectStructuralEdits(const FDreamUIAst& InAst, const UDreamWidgetTree* InLiveTree,
 	const UDreamWidgetTree* InTextTree, TArray<FDreamUIStructuralEdit>& OutEdits,
-	bool bInIncludeRemovals, const TSet<FString>* InSkipInsertIds, const TSet<FString>* InComponentCheckIds)
+	bool bInIncludeRemovals, const TSet<FString>* InSkipInsertIds, const TSet<FString>* InComponentCheckIds,
+	TSet<FString>* OutSweepKeys, TArray<FString>* OutDropped, TArray<FString>* OutUnsettled, const TSet<FString>* InAttempted)
 {
 	using namespace DreamUIWriteBackLocal;
 
@@ -1988,6 +1992,291 @@ void FDreamUITextWriteBack::CollectStructuralEdits(const FDreamUIAst& InAst, con
 			}
 		}
 	}
+
+	// ---- the type and the `+` lines of a node both trees have --------------------------------------
+	//
+	// What the designer changes about a node without adding or removing one: a visual swapped for
+	// another, a panel replaced, a behaviour added, taken off or moved. Read off the two trees like
+	// everything above, paired by class, so whatever both build alike cancels out.
+	auto Emit = [&OutEdits, InAttempted](FDreamUIStructuralEdit&& InEdit) -> bool
+	{
+		if (InAttempted != nullptr && InAttempted->Contains(MakeEditSignature(InEdit)))
+		{
+			return false;
+		}
+		OutEdits.Add(MoveTemp(InEdit));
+		return true;
+	};
+	auto ResolvesOn = [](const FString& InName, TConstArrayView<const UClass*> InClasses)
+	{
+		int32 Dot = INDEX_NONE;
+		const FString Head = InName.FindChar(TEXT('.'), Dot) ? InName.Left(Dot) : InName;
+		for (const UClass* Class : InClasses)
+		{
+			if (Class != nullptr && FindFProperty<FProperty>(Class, FName(*Head)) != nullptr)
+			{
+				return true;
+			}
+		}
+		return false;
+	};
+	InAst.ForEachNode([&](const FDreamUINode& InNode)
+	{
+		if (InNode.Kind != EDreamUINodeKind::Widget || InNode.Id.IsEmpty() || !InNode.RowKey.IsEmpty()
+			|| (InComponentCheckIds != nullptr && InComponentCheckIds->Contains(InNode.Id)))
+		{
+			return;
+		}
+		const UDreamWidget* Live = LiveWidgets.FindRef(InNode.Id);
+		const UDreamWidget* Text = TextWidgets.FindRef(InNode.Id);
+		if (!IsValid(Live) || !IsValid(Text))
+		{
+			return;
+		}
+
+		// The type: what the visual is, which widget blueprint a nested instance is, and -- when the type is a
+		// panel's name (`VerticalBox Column`) -- which panel it is.
+		const UClass* LiveVisual = Live->GetVisual() != nullptr ? Live->GetVisual()->GetClass() : nullptr;
+		const UClass* TextVisual = Text->GetVisual() != nullptr ? Text->GetVisual()->GetClass() : nullptr;
+		const UClass* LiveContainer = Live->GetLayoutContainer() != nullptr ? Live->GetLayoutContainer()->GetClass() : nullptr;
+		const UClass* TextContainer = Text->GetLayoutContainer() != nullptr ? Text->GetLayoutContainer()->GetClass() : nullptr;
+		const bool bTypeIsContainer = FDreamUITextBuilder::FindContainerClassForType(InNode.TypeName) != nullptr;
+
+		// Another panel converts every child's slot to its own slot class, and an `@slot` line the new class has no
+		// property for would stop the file building. Those go with the panel change, and are said.
+		if (LiveContainer != TextContainer)
+		{
+			for (const FDreamUINode& Child : InNode.Children)
+			{
+				const UDreamWidget* LiveChild = Child.Id.IsEmpty() ? nullptr : LiveWidgets.FindRef(Child.Id);
+				const UClass* SlotClass = IsValid(LiveChild) && LiveChild->GetPanelSlot() != nullptr ? LiveChild->GetPanelSlot()->GetClass() : nullptr;
+				if (SlotClass == nullptr || !Child.RowKey.IsEmpty())
+				{
+					continue;
+				}
+				const UClass* SlotCandidates[] = { SlotClass };
+				for (const FDreamUIProperty& Line : Child.SlotProperties)
+				{
+					if (Line.bSynthesized || Line.bRowCell || ResolvesOn(Line.Name, MakeArrayView(SlotCandidates)))
+					{
+						continue;
+					}
+					FDreamUIStructuralEdit Remove;
+					Remove.Kind = EDreamUIStructuralEditKind::RemoveProperty;
+					Remove.NodeId = Child.Id;
+					Remove.PropertyName = Line.Name;
+					Remove.PropertyTarget = EDreamUIPatchTarget::Slot;
+					if (Emit(MoveTemp(Remove)) && OutDropped != nullptr)
+					{
+						OutDropped->Add(FString::Printf(TEXT("%s.@slot %s = %s"), *Child.Id, *Line.Name, *Line.Value.Raw));
+					}
+				}
+			}
+		}
+
+		const bool bRetype = LiveVisual != TextVisual
+			|| (Live->IsA<UDreamUserWidget>() && Live->GetClass() != Text->GetClass())
+			|| (bTypeIsContainer && LiveContainer != TextContainer);
+		if (bRetype)
+		{
+			const FString NewType = DescribeWidgetForText(Live, InAst);
+			if (!NewType.IsEmpty() && !NewType.Equals(InNode.TypeName, ESearchCase::CaseSensitive))
+			{
+				FDreamUIStructuralEdit Retype;
+				Retype.Kind = EDreamUIStructuralEditKind::RetypeNode;
+				Retype.NodeId = InNode.Id;
+				Retype.TypeName = NewType;
+				if (Emit(MoveTemp(Retype)))
+				{
+					if (OutSweepKeys != nullptr)
+					{
+						OutSweepKeys->Add(InNode.Id);
+					}
+					// A line the new type has no property for would stop the file building; it goes, and is said.
+					const UClass* NewTypeContainer = FDreamUITextBuilder::FindContainerClassForType(NewType) != nullptr ? LiveContainer : nullptr;
+					const UClass* Candidates[] = { Live->GetClass(), LiveVisual, NewTypeContainer };
+					for (const FDreamUIProperty& Property : InNode.Properties)
+					{
+						if (Property.bSynthesized || Property.bRowCell || ResolvesOn(Property.Name, MakeArrayView(Candidates)))
+						{
+							continue;
+						}
+						FDreamUIStructuralEdit Remove;
+						Remove.Kind = EDreamUIStructuralEditKind::RemoveProperty;
+						Remove.NodeId = InNode.Id;
+						Remove.PropertyName = Property.Name;
+						if (Emit(MoveTemp(Remove)) && OutDropped != nullptr)
+						{
+							OutDropped->Add(FString::Printf(TEXT("%s.%s = %s"), *InNode.Id, *Property.Name, *Property.Value.Raw));
+						}
+					}
+					return;
+				}
+			}
+		}
+
+		// The `+` lines: paired by class with what the node now holds. A type that names the panel owns the panel.
+		TArray<const UObject*> LineObjects;
+		CollectComponentObjectsInAuthorOrder(InNode, Text, LineObjects);
+		TArray<const UObject*> LiveObjects;
+		CollectAuthorableComponentObjects(Live, LiveObjects);
+		TArray<const UObject*> TextObjects;
+		CollectAuthorableComponentObjects(Text, TextObjects);
+		if (bTypeIsContainer)
+		{
+			auto IsContainer = [](const UObject* InObject) { return InObject != nullptr && InObject->IsA<UDreamLayoutContainer>(); };
+			LiveObjects.RemoveAll(IsContainer);
+			TextObjects.RemoveAll(IsContainer);
+		}
+		TArray<const UObject*> UnpairedLive = LiveObjects;
+		TArray<const UObject*> UnpairedText;
+		for (const UObject* TextObject : TextObjects)
+		{
+			const int32 Pair = UnpairedLive.IndexOfByPredicate([TextObject](const UObject* InLive) { return InLive->GetClass() == TextObject->GetClass(); });
+			if (Pair != INDEX_NONE)
+			{
+				UnpairedLive.RemoveAt(Pair);
+			}
+			else
+			{
+				UnpairedText.Add(TextObject);
+			}
+		}
+
+		bool bLinesChanged = false;
+		TArray<const UClass*> LiveClasses;
+		for (const UObject* Object : LiveObjects)
+		{
+			LiveClasses.Add(Object->GetClass());
+		}
+		LiveClasses.Add(Live->GetClass());
+		LiveClasses.Add(LiveVisual);
+		for (const UObject* Gone : UnpairedText)
+		{
+			const int32 Line = LineObjects.IndexOfByKey(Gone);
+			if (Line == INDEX_NONE)
+			{
+				if (OutUnsettled != nullptr)
+				{
+					OutUnsettled->AddUnique(FString::Printf(TEXT("%s: + %s"), *InNode.Id, *GetNameSafe(Gone->GetClass())));
+				}
+				continue;
+			}
+			FDreamUIStructuralEdit Remove;
+			Remove.Kind = EDreamUIStructuralEditKind::RemoveComponent;
+			Remove.NodeId = InNode.Id;
+			Remove.ComponentIndex = Line;
+			Remove.ComponentClassName = InNode.Components[Line].ClassName;
+			if (Emit(MoveTemp(Remove)))
+			{
+				bLinesChanged = true;
+				// A value of the block the node's objects can no longer take is lost with the block, and said. One
+				// they can take is written again by the value pass, under the line that holds it now.
+				for (const FDreamUIProperty& Property : InNode.Components[Line].Properties)
+				{
+					if (!ResolvesOn(Property.Name, LiveClasses) && OutDropped != nullptr)
+					{
+						OutDropped->Add(FString::Printf(TEXT("%s.%s = %s"), *InNode.Id, *Property.Name, *Property.Value.Raw));
+					}
+				}
+			}
+		}
+		for (const UObject* Added : UnpairedLive)
+		{
+			const FString Spelling = FindComponentSpelling(Added->GetClass());
+			if (Spelling.IsEmpty())
+			{
+				continue;
+			}
+			FDreamUIStructuralEdit Insert;
+			Insert.Kind = EDreamUIStructuralEditKind::InsertComponent;
+			Insert.NodeId = InNode.Id;
+			Insert.ComponentClassName = Spelling;
+			if (Emit(MoveTemp(Insert)))
+			{
+				bLinesChanged = true;
+				if (OutSweepKeys != nullptr)
+				{
+					OutSweepKeys->Add(InNode.Id + TEXT("+") + Spelling);
+				}
+			}
+		}
+		if (bLinesChanged)
+		{
+			return;
+		}
+
+		// The order of the behaviour lines, against the order the live node holds those behaviours in. One move a
+		// round: the first place they disagree gets the behaviour the live node has there.
+		TArray<int32> BehaviourLines;
+		TArray<const UClass*> TextOrder;
+		for (int32 Line = 0; Line < LineObjects.Num(); ++Line)
+		{
+			if (LineObjects[Line] != nullptr && LineObjects[Line]->IsA<UDreamUIBehaviour>())
+			{
+				BehaviourLines.Add(Line);
+				TextOrder.Add(LineObjects[Line]->GetClass());
+			}
+		}
+		TArray<const UClass*> Remaining = TextOrder;
+		TArray<const UClass*> LiveOrder;
+		for (const UDreamUIBehaviour* Behaviour : Live->GetAllComponents())
+		{
+			if (IsValid(Behaviour) && Remaining.RemoveSingle(Behaviour->GetClass()) > 0)
+			{
+				LiveOrder.Add(Behaviour->GetClass());
+			}
+		}
+		if (LiveOrder.Num() != TextOrder.Num())
+		{
+			return;
+		}
+		for (int32 Place = 0; Place < TextOrder.Num(); ++Place)
+		{
+			if (TextOrder[Place] == LiveOrder[Place])
+			{
+				continue;
+			}
+			for (int32 From = Place + 1; From < TextOrder.Num(); ++From)
+			{
+				if (TextOrder[From] == LiveOrder[Place])
+				{
+					FDreamUIStructuralEdit Move;
+					Move.Kind = EDreamUIStructuralEditKind::MoveComponent;
+					Move.NodeId = InNode.Id;
+					Move.ComponentIndex = BehaviourLines[From];
+					Move.ChildIndex = BehaviourLines[Place];
+					Move.ComponentClassName = InNode.Components[BehaviourLines[From]].ClassName;
+					Emit(MoveTemp(Move));
+					break;
+				}
+			}
+			break;
+		}
+	});
+}
+
+FString FDreamUITextWriteBack::MakeEditSignature(const FDreamUIStructuralEdit& InEdit)
+{
+	return FString::Printf(TEXT("%d|%s|%s|%s|%s|%d|%d|%s|%d"), static_cast<int32>(InEdit.Kind), *InEdit.NodeId, *InEdit.NewId,
+		*InEdit.TypeName, *InEdit.ComponentClassName, InEdit.ComponentIndex, InEdit.ChildIndex, *InEdit.PropertyName,
+		static_cast<int32>(InEdit.PropertyTarget));
+}
+
+int32 FDreamUITextWriteBack::FindComponentLine(const FDreamUINode& InNode, const UDreamWidget* InWidget, const UObject* InComponent)
+{
+	if (!IsValid(InWidget) || InComponent == nullptr)
+	{
+		return INDEX_NONE;
+	}
+	TArray<const UObject*> LineObjects;
+	DreamUIWriteBackLocal::CollectComponentObjectsInAuthorOrder(InNode, InWidget, LineObjects);
+	return LineObjects.IndexOfByKey(InComponent);
+}
+
+FString FDreamUITextWriteBack::DescribeComponentForText(const UClass* InClass)
+{
+	return DreamUIWriteBackLocal::FindComponentSpelling(InClass);
 }
 
 FString FDreamUITextWriteBack::DescribeWidgetForText(const UDreamWidget* InWidget, const FDreamUIAst& InAst)
@@ -2041,6 +2330,11 @@ bool FDreamUITextWriteBack::ProduceText(const FString& InText, const UDreamWidge
 	TSet<FString> WrittenIds;
 	TSet<FString> RefusedInserts;
 	TSet<FString> ComponentCheckIds;
+	// Edits on existing nodes a round already tried (never emitted twice), what retypes and removed blocks took
+	// out, and what the latest round could not take out of the file.
+	TSet<FString> Attempted;
+	TArray<FString> Dropped;
+	TArray<FString> Unsettled;
 	bool bShapeChanged = false;
 
 	// The edits a gesture queued (QueueStructuralEdit): renames and moves, which the trees cannot be read for.
@@ -2131,13 +2425,19 @@ bool FDreamUITextWriteBack::ProduceText(const FString& InText, const UDreamWidge
 		}
 
 		TArray<FDreamUIStructuralEdit> StructuralEdits;
+		Unsettled.Reset();
+		// WrittenIds doubles as the sweep set: the shape pass adds a retyped node and `Id+Class` of a new `+` line.
 		CollectStructuralEdits(Ast, InLiveTree, TextTree.Get(), StructuralEdits,
-			/*bInIncludeRemovals*/Round == 0, &RefusedInserts, &ComponentCheckIds);
+			/*bInIncludeRemovals*/Round == 0, &RefusedInserts, &ComponentCheckIds, &WrittenIds, &Dropped, &Unsettled, &Attempted);
 		// Each node's `+` lines are asked for once, in the round right after the node was written.
 		ComponentCheckIds.Reset();
 		if (StructuralEdits.IsEmpty())
 		{
 			break;
+		}
+		for (const FDreamUIStructuralEdit& Edit : StructuralEdits)
+		{
+			Attempted.Add(MakeEditSignature(Edit));
 		}
 
 		const FString BeforeRound = Working;
@@ -2244,6 +2544,8 @@ bool FDreamUITextWriteBack::ProduceText(const FString& InText, const UDreamWidge
 				}
 			}
 		}
+		OutResidue->Unsettled = Unsettled;
+		OutResidue->Dropped = Dropped;
 	}
 
 	// ---- phase two: VALUES ----------------------------------------------------------------------

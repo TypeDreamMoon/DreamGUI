@@ -107,9 +107,19 @@ struct DREAMGUIEDITOR_API FDreamUIStructuralResidue
 	TArray<FString> Unremoved;
 	/** In both, under a different parent in the text than in the live tree. */
 	TArray<FString> Unmoved;
+	/**
+	 * `Node: + Class` -- an object gone from the live node that no `+` line of the node built (its style's, its type's),
+	 * so nothing could be taken out of the file for it.
+	 */
+	TArray<FString> Unsettled;
+	/**
+	 * `Node.Property = value` -- lines a change of type or of panel took out because the new one has no such property.
+	 * Not a failure, and not part of IsEmpty: the change landed, and this is what it cost, for the author to hear.
+	 */
+	TArray<FString> Dropped;
 
-	bool IsEmpty() const { return Unwritten.IsEmpty() && Unremoved.IsEmpty() && Unmoved.IsEmpty(); }
-	void Reset() { Unwritten.Reset(); Unremoved.Reset(); Unmoved.Reset(); }
+	bool IsEmpty() const { return Unwritten.IsEmpty() && Unremoved.IsEmpty() && Unmoved.IsEmpty() && Unsettled.IsEmpty(); }
+	void Reset() { Unwritten.Reset(); Unremoved.Reset(); Unmoved.Reset(); Unsettled.Reset(); Dropped.Reset(); }
 };
 
 /** The tree should be regenerated from the document's text, and this is why it changed. */
@@ -354,11 +364,39 @@ public:
 	 * round already failed to write). InComponentCheckIds: nodes this flush has just written, whose `+`
 	 * lines -- behaviours and a layout container their type does not already spell -- are added now that
 	 * the node is in the file.
+	 *
+	 * A node BOTH trees have is compared too, for what the designer can change about a node without
+	 * adding or removing one: its TYPE (a new visual, a different nested widget blueprint, another panel
+	 * when the type is the panel's name) becomes a RetypeNode, with a RemoveProperty for each line the new
+	 * type has no property for; and its `+` lines follow its objects -- one the live node gained is
+	 * inserted, one it lost is removed (only a line the node itself writes; one from its style or type is
+	 * reported in OutUnsettled), and behaviours the live node holds in another order are moved. Paired by
+	 * class, so whatever both trees build alike cancels out. A node is retyped or has its lines changed in
+	 * one round, and the next round reads the result back.
+	 *
+	 * OutSweepKeys: what the value pass should sweep whole -- a retyped node's id, and `Id+Class` for a `+`
+	 * line just inserted. OutDropped: `Id.Property = value` for each line a retype took out. InAttempted:
+	 * signatures of edits on existing nodes earlier rounds already tried, never emitted twice.
 	 */
 	static void CollectStructuralEdits(const FDreamUIAst& InAst, const UDreamWidgetTree* InLiveTree,
 		const UDreamWidgetTree* InTextTree, TArray<FDreamUIStructuralEdit>& OutEdits,
 		bool bInIncludeRemovals = true, const TSet<FString>* InSkipInsertIds = nullptr,
-		const TSet<FString>* InComponentCheckIds = nullptr);
+		const TSet<FString>* InComponentCheckIds = nullptr, TSet<FString>* OutSweepKeys = nullptr,
+		TArray<FString>* OutDropped = nullptr, TArray<FString>* OutUnsettled = nullptr,
+		const TSet<FString>* InAttempted = nullptr);
+
+	/** The signature by which a round recognises an edit an earlier round already tried. */
+	static FString MakeEditSignature(const FDreamUIStructuralEdit& InEdit);
+
+	/**
+	 * Which of InNode's `+` lines built InComponent on InWidget -- the widget the text was built into, or the
+	 * designer's template before it is edited -- or INDEX_NONE when none did: the object came from the node's style,
+	 * from its type, or with another component. Paired the way the value pass pairs them.
+	 */
+	static int32 FindComponentLine(const FDreamUINode& InNode, const UDreamWidget* InWidget, const UObject* InComponent);
+
+	/** How a `+` line names this class, verified against the builder's reading of it, or empty when nothing does. */
+	static FString DescribeComponentForText(const UClass* InClass);
 
 	// -------------------------------------------------------------------------------------------
 	// The dirty set: what the designer says it touched
