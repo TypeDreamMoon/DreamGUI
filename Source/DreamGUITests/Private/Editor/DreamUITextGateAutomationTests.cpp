@@ -250,7 +250,7 @@ namespace DreamUITextGateTestLocal
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamUIDuiBackedTreeRefusesStructuralEditsTest,
-	"DreamGUI.Designer.ADuiBackedTreeRefusesStructuralEdits",
+	"DreamGUI.Designer.ADuiBackedTreeKeepsItsBindingsInTheFile",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
 
 bool FDreamUIDuiBackedTreeRefusesStructuralEditsTest::RunTest(const FString&)
@@ -269,22 +269,10 @@ bool FDreamUIDuiBackedTreeRefusesStructuralEditsTest::RunTest(const FString&)
 		return false;
 	}
 
-	// Six patterns, one per entry point, each demanding the file name as well as the refusal. This is
-	// the whole assertion that the refusals are AUDIBLE: an expected message that never occurs is
-	// reported as a test error, so a gate that returned false without logging fails right here.
-	// Occurrences 0 -- "at least once" -- rather than an exact count: what is being asserted is that
-	// each refusal was said, and pinning the number would make the test fail the day a call site
-	// gains a second route to the same gate.
-	// No literal space before the file name: the message spells it `in 'GateStructural.dui'`, so the
-	// character in front of it is an apostrophe. The first version of these patterns asked for a
-	// space, matched nothing, and every refusal counted as an unexpected error -- the gates all fired
-	// correctly and the test failed anyway.
-	//
-	// Creating, deleting, duplicating, pasting, moving and renaming are no longer among them: the
-	// write-back writes those into the file, and DreamUITextStructureAutomationTests and
-	// DreamUITextMoveRenameAutomationTests hold them to it. What is left is what it cannot write yet --
-	// the behaviours a `+` line owns -- refused whole, out loud.
-	AddExpectedError(TEXT("Refusing to add a behaviour .*GateStructural\\.dui"), EAutomationExpectedErrorFlags::Contains, 0);
+	// Every structural edit -- creating, deleting, duplicating, pasting, moving, renaming, the behaviours and the panel
+	// -- is written into the file now, and DreamUITextStructureAutomationTests, DreamUITextMoveRenameAutomationTests
+	// and DreamUITextComponentsAutomationTests hold each to it. What the designer still leaves to the text is a
+	// binding: `<-` lines are authored in the .dui, and the Bind control stays off a text-authored widget.
 
 	FScopedGatedDesigner Scoped(TEXT("BP_GateStructural"), UDreamTextUserWidget::StaticClass(), Source.FilePath);
 	if (!TestNotNull(TEXT("the Blueprint was created"), Scoped.Blueprint)) return false;
@@ -297,12 +285,10 @@ bool FDreamUIDuiBackedTreeRefusesStructuralEditsTest::RunTest(const FString&)
 	if (!TestNotNull(TEXT("and so is its child"), Child)) return false;
 	const int32 CountBefore = Scoped.TemplateCount();
 
-	// ---- a behaviour, which is a `+` line and not in DreamWidgetTreeEditing at all
 	if (!TestNotNull(TEXT("the designer opened"), Scoped.Designer)) return false;
 	UDreamWidget* PreviewChild = Scoped.FindPreview(TEXT("Child"));
 	if (!TestNotNull(TEXT("the child has a preview to work on"), PreviewChild)) return false;
-	const TArray<UClass*> Behaviours{ UDreamUIBehaviour::StaticClass() };
-	TestNull(TEXT("Adding a behaviour is refused"), Scoped.Designer->DesignerAddComponents(PreviewChild, Behaviours));
+	TestFalse(TEXT("a binding is not authored from the panel"), DreamUITextAuthoring::CanAuthorBindingsOn(PreviewChild));
 
 	// Copy is deliberately NOT gated: it writes nothing to the asset, and refusing it would stop an
 	// author lifting a subtree out of a .dui-backed screen to paste into a hand-authored one.
@@ -311,14 +297,12 @@ bool FDreamUIDuiBackedTreeRefusesStructuralEditsTest::RunTest(const FString&)
 	TestTrue(TEXT("copying a widget out of a .dui-backed tree still works"),
 		FDreamWidgetBlueprintEditor::DesignerHasClipboardContent());
 
-	// And nothing moved. Refusals that each returned the right value while quietly doing the work
-	// anyway is a state every assertion above passes in.
+	// And nothing moved: copying writes nothing to the asset.
 	TestEqual(TEXT("the hierarchy is exactly what the file says"), Scoped.TemplateCount(), CountBefore);
 	TestNotNull(TEXT("the child is still there"), Scoped.FindTemplate(TEXT("Child")));
-	TestTrue(TEXT("with no behaviour added"), Child->GetAllComponents().IsEmpty());
 
-	// The sentence itself, once: every one of the six is built by this function, so this is where the
-	// claim "the message tells the author where to go" is actually checked rather than pattern-matched.
+	// The refusal sentence the remaining structural refusals are built with, once: this is where the claim "the
+	// message tells the author where to go" is actually checked rather than pattern-matched.
 	const FString Refusal = DreamUITextAuthoring::DescribeStructuralRefusal(Scoped.Blueprint, TEXT("delete 'Child'")).ToString();
 	TestTrue(TEXT("the refusal names the file"), Refusal.Contains(Source.FileName));
 	TestTrue(TEXT("and says where the structure lives"), Refusal.Contains(TEXT("text")));
@@ -571,9 +555,17 @@ bool FDreamUINonWritablePropertyIsShownReadOnlyTest::RunTest(const FString&)
 
 	// ---- and the custom-row half, which is the one a property-only gate misses
 	TestTrue(TEXT("A custom row on the widget is read-only by default"),
-		DreamUITextAuthoring::IsCustomRowReadOnly(Title, NAME_None, FName(TEXT("Visual"))));
+		DreamUITextAuthoring::IsCustomRowReadOnly(Title, NAME_None, FName(TEXT("Behavior"))));
 	TestFalse(TEXT("except in the categories the write-back covers"),
 		DreamUITextAuthoring::IsCustomRowReadOnly(Title, NAME_None, FName(TEXT("DreamLayout"))));
+	// The class pickers of the visual, the panel and the self layout: a new one is written as the node's type or its
+	// `+` line, so they stay live.
+	TestFalse(TEXT("the visual's class picker is live"),
+		DreamUITextAuthoring::IsCustomRowReadOnly(Title, NAME_None, FName(TEXT("Visual"))));
+	TestFalse(TEXT("and the panel's"),
+		DreamUITextAuthoring::IsCustomRowReadOnly(Title, NAME_None, FName(TEXT("LayoutContainer"))));
+	TestFalse(TEXT("and the self layout's"),
+		DreamUITextAuthoring::IsCustomRowReadOnly(Title, NAME_None, FName(TEXT("LayoutSelf"))));
 
 	return true;
 }

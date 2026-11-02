@@ -1571,22 +1571,9 @@ bool FDreamWidgetBlueprintEditor::WrapTemplatesFrom(UDreamWidget* InPreviewWrapp
 
 void FDreamWidgetBlueprintEditor::ReplaceSelectedWidgetLayout(UClass* PanelClass)
 {
-	// A NINTH structural entry, and one that hides behind a viewport toolbar rather than behind any
-	// of the create/delete/move family: swapping a widget's layout container is rewriting its
-	// `+ VerticalBox` line, and it writes straight onto the template without touching
-	// DreamWidgetTreeEditing. A notification as well as the log, because this one is only ever
-	// reached from a toolbar and a toolbar click that silently does nothing is the failure W5 spent
-	// its time removing.
-	if (DreamUITextAuthoring::RefuseStructuralEdit(BlueprintBeingEdited, ANSI_TO_TCHAR(__FUNCTION__), __LINE__,
-		FString::Printf(TEXT("replace the panel with a '%s'"), *GetNameSafe(PanelClass))))
-	{
-		FNotificationInfo Info(DreamUITextAuthoring::DescribeStructuralRefusal(
-			BlueprintBeingEdited, TEXT("replace this widget's panel")));
-		Info.Image = FAppStyle::GetBrush(TEXT("Icons.WarningWithColor"));
-		Info.ExpireDuration = 6.0f;
-		FSlateNotificationManager::Get().AddNotification(Info);
-		return;
-	}
+	// A structural entry that hides behind a viewport toolbar rather than behind any of the create/delete/move
+	// family: swapping a widget's layout container rewrites its `+ VerticalBox` line, or its type when the type is
+	// the panel's name, and it writes straight onto the template without touching DreamWidgetTreeEditing.
 	if (!IsValid(PanelClass) || !PanelClass->IsChildOf(UDreamLayoutContainer::StaticClass()))return;
 	const TArray<TWeakObjectPtr<UDreamWidget>>& Selection = GetSelectedWidgets();
 	if (Selection.Num() != 1)return;
@@ -1600,6 +1587,27 @@ void FDreamWidgetBlueprintEditor::ReplaceSelectedWidgetLayout(UClass* PanelClass
 	// rebuild threw it away, which is the single easiest mistake to make in this editor now.
 	UDreamWidget* TargetTemplate = GetTemplateWidget(Target);
 	if (!IsValid(TargetTemplate))return;
+	// On a text-authored class the panel has to be one the node writes -- its `+` line or its type. One its style gives
+	// it would be built again by the next compile; the write-back drops whatever the new panel cannot take, and says.
+	if (DreamUITextAuthoring::IsTextAuthored(BlueprintBeingEdited))
+	{
+		int32 Line = INDEX_NONE;
+		bool bTypeIsContainer = false;
+		FText Reason;
+		bool bWritable = DreamUITextAuthoring::ResolveComponentSource(BlueprintBeingEdited, TargetTemplate,
+			TargetTemplate->GetLayoutContainer(), Line, bTypeIsContainer, Reason);
+		if (bWritable && Line == INDEX_NONE && !bTypeIsContainer)
+		{
+			bWritable = false;
+			Reason = LOCTEXT("PanelNotOwnLine", "its panel comes from its style, not from its own type or '+' line; change it there in the text");
+		}
+		if (!bWritable)
+		{
+			DreamUITextAuthoring::ReportStructuralRefusal(BlueprintBeingEdited, ANSI_TO_TCHAR(__FUNCTION__), __LINE__,
+				FString::Printf(TEXT("replace the panel with a '%s'"), *GetNameSafe(PanelClass)), Reason);
+			return;
+		}
+	}
 
 	FScopedTransaction Transaction(NSLOCTEXT("DreamWidgetDesigner", "ReplaceWidgetLayout", "Replace Widget Layout"));
 	// The same three lines every other structural entry opens with (DesignerAddComponentBy,
@@ -3942,16 +3950,9 @@ UDreamUIBehaviour* FDreamWidgetBlueprintEditor::DesignerAddComponents(UDreamWidg
 UDreamUIBehaviour* FDreamWidgetBlueprintEditor::DesignerAddComponentBy(UDreamWidget* InPreviewWidget,
 	TFunctionRef<UDreamUIBehaviour*(UDreamWidget*)> InAddToTemplate)
 {
-	// A seventh and eighth entry the design note did not list, and they are structural for the same
-	// reason the six are: a behaviour is a `+ Class { }` line in the .dui, so adding or removing one
-	// here is adding or removing a line the next compile will put back exactly as the file has it.
-	// They do not come through DreamWidgetTreeEditing at all -- they call NotifyStructureChanged
-	// themselves -- which is why gating the five (or the six) does not reach them.
-	if (DreamUITextAuthoring::RefuseStructuralEdit(BlueprintBeingEdited, ANSI_TO_TCHAR(__FUNCTION__), __LINE__,
-		TEXT("add a behaviour")))
-	{
-		return nullptr;
-	}
+	// A behaviour is a `+ Class { }` line in the .dui. On a text-authored class the structural notification at the
+	// end writes it there (the write-back reads the new object off the tree); before that, the line is checked
+	// against the file, and a behaviour the file cannot take is taken off the template again with the reason.
 	UDreamWidget* Template = GetTemplateWidget(InPreviewWidget);
 	if (Template == nullptr || !IsValid(BlueprintBeingEdited))
 	{
@@ -3972,6 +3973,22 @@ UDreamUIBehaviour* FDreamWidgetBlueprintEditor::DesignerAddComponentBy(UDreamWid
 	{
 		return nullptr;
 	}
+	if (DreamUITextAuthoring::IsTextAuthored(BlueprintBeingEdited))
+	{
+		FDreamUIStructuralEdit Planned;
+		Planned.Kind = EDreamUIStructuralEditKind::InsertComponent;
+		Planned.NodeId = Template->GetDisplayName();
+		Planned.ComponentClassName = FDreamUITextWriteBack::DescribeComponentForText(AddedOnTemplate->GetClass());
+		FText Reason = LOCTEXT("BehaviourNoSpelling", "the .dui has no name for this behaviour");
+		if (Planned.ComponentClassName.IsEmpty()
+			|| !DreamUITextAuthoring::CheckStructuralEdit(BlueprintBeingEdited, Planned, /*bInVerifyBuild*/true, Reason))
+		{
+			Template->RemoveComponent(AddedOnTemplate);
+			DreamUITextAuthoring::ReportStructuralRefusal(BlueprintBeingEdited, ANSI_TO_TCHAR(__FUNCTION__), __LINE__,
+				FString::Printf(TEXT("add the behaviour '%s'"), *GetNameSafe(AddedOnTemplate->GetClass())), Reason);
+			return nullptr;
+		}
+	}
 	// Structurally: a behaviour can bring a required panel with it, which changes the hierarchy.
 	DreamWidgetTreeEditing::NotifyStructureChanged(BlueprintBeingEdited);
 
@@ -3982,12 +3999,8 @@ UDreamUIBehaviour* FDreamWidgetBlueprintEditor::DesignerAddComponentBy(UDreamWid
 
 bool FDreamWidgetBlueprintEditor::DesignerRemoveComponent(UDreamWidget* InPreviewWidget, UDreamUIBehaviour* InPreviewComponent)
 {
-	// The other half of the pair above.
-	if (DreamUITextAuthoring::RefuseStructuralEdit(BlueprintBeingEdited, ANSI_TO_TCHAR(__FUNCTION__), __LINE__,
-		FString::Printf(TEXT("remove the behaviour '%s'"), *GetNameSafe(InPreviewComponent ? InPreviewComponent->GetClass() : nullptr))))
-	{
-		return false;
-	}
+	// The other half of the pair above. On a text-authored class only a `+` line the node writes itself can go: one
+	// its style or its type gives it would be built again by the next compile.
 	UDreamWidget* Template = GetTemplateWidget(InPreviewWidget);
 	if (Template == nullptr || !IsValid(InPreviewComponent) || !IsValid(BlueprintBeingEdited))
 	{
@@ -3995,6 +4008,32 @@ bool FDreamWidgetBlueprintEditor::DesignerRemoveComponent(UDreamWidget* InPrevie
 	}
 	UDreamUIBehaviour* Authored = PreviewHost->FindTemplateComponentForPreview(InPreviewComponent);
 	if (Authored == nullptr || Authored->GetOuter() != Template)return false;
+	if (DreamUITextAuthoring::IsTextAuthored(BlueprintBeingEdited))
+	{
+		int32 Line = INDEX_NONE;
+		bool bTypeIsContainer = false;
+		FText Reason;
+		bool bWritable = DreamUITextAuthoring::ResolveComponentSource(BlueprintBeingEdited, Template, Authored, Line, bTypeIsContainer, Reason);
+		if (bWritable && Line == INDEX_NONE)
+		{
+			bWritable = false;
+			Reason = LOCTEXT("BehaviourNotOwnLine", "it comes from the node's style or type, not from a '+' line of its own; change it there in the text");
+		}
+		if (bWritable)
+		{
+			FDreamUIStructuralEdit Planned;
+			Planned.Kind = EDreamUIStructuralEditKind::RemoveComponent;
+			Planned.NodeId = Template->GetDisplayName();
+			Planned.ComponentIndex = Line;
+			bWritable = DreamUITextAuthoring::CheckStructuralEdit(BlueprintBeingEdited, Planned, /*bInVerifyBuild*/true, Reason);
+		}
+		if (!bWritable)
+		{
+			DreamUITextAuthoring::ReportStructuralRefusal(BlueprintBeingEdited, ANSI_TO_TCHAR(__FUNCTION__), __LINE__,
+				FString::Printf(TEXT("remove the behaviour '%s'"), *GetNameSafe(Authored->GetClass())), Reason);
+			return false;
+		}
+	}
 	const int32 Index = Template->GetAllComponents().Find(Authored);
 	BlueprintBeingEdited->Modify();
 	Template->SetFlags(RF_Transactional);
@@ -4011,13 +4050,9 @@ bool FDreamWidgetBlueprintEditor::DesignerRemoveComponent(UDreamWidget* InPrevie
 
 bool FDreamWidgetBlueprintEditor::DesignerMoveComponent(UDreamWidget* InPreviewWidget, UDreamUIBehaviour* InPreviewComponent, int32 InNewIndex)
 {
-	// The third of the family, and refused for the same reason: the order of a widget's behaviours is
-	// the order of its `+ Class { }` lines, so in a text-authored hierarchy the file owns it.
-	if (DreamUITextAuthoring::RefuseStructuralEdit(BlueprintBeingEdited, ANSI_TO_TCHAR(__FUNCTION__), __LINE__,
-		FString::Printf(TEXT("reorder the behaviour '%s'"), *GetNameSafe(InPreviewComponent ? InPreviewComponent->GetClass() : nullptr))))
-	{
-		return false;
-	}
+	// The third of the family: the order of a widget's behaviours is the order of its `+ Class { }` lines, so on a
+	// text-authored class both behaviours have to be lines the node writes (checked below) and the move is written as
+	// a move of the line.
 	UDreamWidget* Template = GetTemplateWidget(InPreviewWidget);
 	if (Template == nullptr || !IsValid(InPreviewComponent) || !IsValid(BlueprintBeingEdited))
 	{
@@ -4034,6 +4069,27 @@ bool FDreamWidgetBlueprintEditor::DesignerMoveComponent(UDreamWidget* InPreviewW
 	if (PreviewIndex == PreviewTargetIndex)return false;
 	UDreamUIBehaviour* AuthoredTarget = PreviewHost->FindTemplateComponentForPreview(PreviewComponents[PreviewTargetIndex]);
 	if (AuthoredTarget == nullptr || AuthoredTarget->GetOuter() != Template)return false;
+	const bool bTextAuthored = DreamUITextAuthoring::IsTextAuthored(BlueprintBeingEdited);
+	if (bTextAuthored)
+	{
+		int32 Line = INDEX_NONE;
+		int32 TargetLine = INDEX_NONE;
+		bool bTypeIsContainer = false;
+		FText Reason;
+		bool bWritable = DreamUITextAuthoring::ResolveComponentSource(BlueprintBeingEdited, Template, Authored, Line, bTypeIsContainer, Reason)
+			&& DreamUITextAuthoring::ResolveComponentSource(BlueprintBeingEdited, Template, AuthoredTarget, TargetLine, bTypeIsContainer, Reason);
+		if (bWritable && (Line == INDEX_NONE || TargetLine == INDEX_NONE))
+		{
+			bWritable = false;
+			Reason = LOCTEXT("BehaviourOrderNotOwnLines", "only the node's own '+' lines have an order in the file, and one of these comes from its style or type");
+		}
+		if (!bWritable)
+		{
+			DreamUITextAuthoring::ReportStructuralRefusal(BlueprintBeingEdited, ANSI_TO_TCHAR(__FUNCTION__), __LINE__,
+				FString::Printf(TEXT("reorder the behaviour '%s'"), *GetNameSafe(Authored->GetClass())), Reason);
+			return false;
+		}
+	}
 	const int32 Index = Template->GetAllComponents().Find(Authored);
 	const int32 TargetIndex = Template->GetAllComponents().Find(AuthoredTarget);
 	const int32 NewIndex = TargetIndex + (PreviewIndex < PreviewTargetIndex ? 1 : 0) - (Index < TargetIndex ? 1 : 0);
@@ -4046,8 +4102,16 @@ bool FDreamWidgetBlueprintEditor::DesignerMoveComponent(UDreamWidget* InPreviewW
 	// it -- silently when that is another behaviour of the same class.
 	DreamWidgetTreeEditing::RemapBehaviourBindings(BlueprintBeingEdited, Template, Index, NewIndex);
 	// Modified, not structurally: a reorder adds and removes nothing, so no member of the class
-	// changes. What changes is the archetype, which is what the next compile picks up.
-	MarkDesignChanged();
+	// changes. What changes is the archetype, which is what the next compile picks up. On a text-authored
+	// class the structural notification is what writes the new order into the file before that compile.
+	if (bTextAuthored)
+	{
+		DreamWidgetTreeEditing::NotifyStructureChanged(BlueprintBeingEdited);
+	}
+	else
+	{
+		MarkDesignChanged();
+	}
 
 	TArray<UDreamWidget*> Previews;
 	RepublishPreviewAndSelect({ Template }, Previews);

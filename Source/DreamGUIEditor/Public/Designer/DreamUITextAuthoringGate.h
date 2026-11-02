@@ -209,6 +209,17 @@ namespace DreamUITextAuthoring
 	 */
 	DREAMGUIEDITOR_API bool WriteStructureToText(UDreamWidgetBlueprint* InBlueprint);
 
+	/**
+	 * Where one of a text-authored widget's objects comes from in its `.dui`: OutLine is the node's own `+` line that
+	 * builds it (INDEX_NONE when none does -- it is its style's, its type's, or came with another component), and
+	 * bOutTypeIsContainer says whether the node's TYPE names its panel (`VerticalBox Column`).
+	 *
+	 * What a behaviour or panel gesture asks before it touches the template: only a line the node writes can be taken
+	 * out, moved, or swapped for another. False, with a reason, when the file cannot be read or does not write the node.
+	 */
+	DREAMGUIEDITOR_API bool ResolveComponentSource(const UDreamWidgetBlueprint* InBlueprint, const UDreamWidget* InWidget,
+		const UObject* InComponent, int32& OutLine, bool& bOutTypeIsContainer, FText& OutReason);
+
 	/** Why one property row is not editable. Ordered so the FIRST reason that applies is the one shown. */
 	enum class EPropertyEditVerdict : uint8
 	{

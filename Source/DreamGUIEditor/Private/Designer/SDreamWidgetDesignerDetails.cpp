@@ -328,14 +328,9 @@ TArray<UObject*> SDreamWidgetDesignerDetails::GetEditedObjects() const
 
 bool SDreamWidgetDesignerDetails::IsEditorAllowEditing()const
 {
-	// The component list's add / remove / cut / paste. A behaviour is a `+ Class { }` line of the .dui,
-	// and those are not written back yet, so on a text-authored hierarchy the list is drawn disabled
-	// rather than left live to fail on click. The primitives underneath refuse anyway; this is the half
-	// the author can see.
-	if (IsTextAuthoredHierarchy())
-	{
-		return false;
-	}
+	// The component list's add / remove / cut / paste. On a text-authored hierarchy a behaviour is a `+ Class { }`
+	// line of the .dui, which the write-back writes; the primitives check each edit against the file and say why when
+	// it cannot take one (a behaviour the node's style gives it, for one).
 	//no sub prefabs: nothing else in the design is owned by another asset
 	return true;
 }
