@@ -574,6 +574,12 @@ private:
 	 * Fill Screen it answers with the fill size, and "restore" restored it to itself.
 	 */
 	FIntPoint DesignerSizeBeforeFillScreen = FIntPoint::ZeroValue;
+	/**
+	 * The device resolution the design canvas was last sized for, recorded on the asset or not; zero
+	 * until one has been. Kept here because the agent canvas no longer holds it: its edit-mode size
+	 * is the design canvas itself (see ApplyDesignerViewportSize).
+	 */
+	FIntPoint AppliedDesignerViewportSize = FIntPoint::ZeroValue;
 	/** Size the canvas to the viewport, once per resize. A no-op when it already is. */
 	void ApplyFillScreenSize();
 private:
