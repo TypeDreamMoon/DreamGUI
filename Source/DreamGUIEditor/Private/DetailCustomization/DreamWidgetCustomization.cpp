@@ -709,6 +709,11 @@ void FDreamWidgetCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBui
 			FCanExecuteAction::CreateSP(this, &FDreamWidgetCustomization::OnCanPasteAnchor)
 		))
 		.PropertyHandleList({AnchorHandle})
+		// The handle list would otherwise give this row a reset arrow for the whole anchor block: lit on
+		// every placed widget, because a placed widget's anchor data always differs from the class
+		// default, and pressing it put pivot, anchors, position and size back at once -- moving the widget
+		// without the rect-keeping a preset does. The Anchor Min/Max and Pivot rows below reset one field each.
+		.OverrideResetToDefault(FResetToDefaultOverride::Hide())
 		.ValueContent()
 		.MinDesiredWidth(220)
 		[
