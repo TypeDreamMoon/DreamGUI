@@ -99,7 +99,13 @@ private:
 	/** Rebuilds the tree structure based on the current filter options */
 	void RefreshTree();
 	void RebuildTreeView();
+	/** The designer's selection changed: show it, and bring it on screen when it is a different selection. */
 	void OnEditorSelectionChanged();
+	/**
+	 * Select in the tree what the designer has selected. With bReveal, also expand the rows above it and
+	 * scroll it into view; without, leave the scroll position and the expansion the user chose alone.
+	 */
+	void ApplyEditorSelection(bool bReveal);
 	void OnWidgetHierarchyChanged();
 	void OnObjectsReplaced(const TMap<UObject*, UObject*>& ReplacementMap);
 protected:
@@ -167,5 +173,16 @@ protected:
 	bool bRebuildTreeRequested = true;
 	/** Flag to ignore selections while the hierarchy view is updating the selection. */
 	bool bIsUpdatingSelection = false;
+	/**
+	 * A new selection arrived and has not been brought on screen by a refresh yet. A selection that comes
+	 * with a rebuild names rows that only exist after the next refresh, so the reveal has to wait for it.
+	 */
+	bool bRevealSelectionPending = false;
+	/**
+	 * The selection last revealed, by object name, so a broadcast that repeats it does not scroll again: a
+	 * lock toggled re-announces the selection, and a rebuild re-selects the same widgets as new objects
+	 * under the same names.
+	 */
+	TArray<FName> LastRevealedSelection;
 };
 

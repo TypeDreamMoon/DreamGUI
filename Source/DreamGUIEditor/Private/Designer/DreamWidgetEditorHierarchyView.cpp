@@ -144,7 +144,12 @@ void SDreamWidgetEditorHierarchyView::Tick(const FGeometry& AllottedGeometry, co
 
 		UpdateItemsExpansionFromModel();
 
-		OnEditorSelectionChanged();
+		// The refresh rebuilt the rows, so the selection is put back on them. It is only brought on screen
+		// when it is new: refreshes also follow edits made elsewhere in the panel -- an eye or a padlock
+		// clicked on another row -- and scrolling back to the selection then, or re-opening the parent
+		// the user had just collapsed, took the panel away from the row they were working on.
+		ApplyEditorSelection(bRevealSelectionPending);
+		bRevealSelectionPending = false;
 
 		bRefreshRequested = false;
 		bRebuildTreeRequested = false;
@@ -448,6 +453,33 @@ void SDreamWidgetEditorHierarchyView::RebuildTreeView()
 
 void SDreamWidgetEditorHierarchyView::OnEditorSelectionChanged()
 {
+	TArray<FName> Names;
+	if (UDreamUISelection* Selection = UDreamUISelection::GetInstance(World.Get()))
+	{
+		for (const TWeakObjectPtr<UDreamWidget>& Item : Selection->GetSelectedWidgets())
+		{
+			if (Item.IsValid())
+			{
+				Names.Add(Item->GetFName());
+			}
+		}
+	}
+	const bool bNewSelection = Names != LastRevealedSelection;
+	LastRevealedSelection = MoveTemp(Names);
+	if (bIsUpdatingSelection)
+	{
+		// The tree is where this selection came from: it is already on screen, and remembered above so
+		// the next broadcast of it does not count as new.
+		return;
+	}
+	// Revealed now for the rows that exist, and again after the next refresh for the ones a rebuild is
+	// about to make.
+	bRevealSelectionPending |= bNewSelection;
+	ApplyEditorSelection(bNewSelection);
+}
+
+void SDreamWidgetEditorHierarchyView::ApplyEditorSelection(bool bReveal)
+{
 	if (!bIsUpdatingSelection)
 	{
 		WidgetTreeView->ClearSelection();
@@ -475,6 +507,10 @@ void SDreamWidgetEditorHierarchyView::OnEditorSelectionChanged()
 			else
 			{
 				SetSelectionsByNodeObjects(SelectedItems);
+				if (!bReveal)
+				{
+					return;
+				}
 
 				//expand
 				if (SelectedItems.Num() == 1)
