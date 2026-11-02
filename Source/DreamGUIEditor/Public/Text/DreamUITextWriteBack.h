@@ -91,6 +91,25 @@ private:
 	TStrongObjectPtr<UDreamUIDocument> Document;
 };
 
+/**
+ * What a flush could not make the file's shape agree about, by node id.
+ *
+ * The compile that follows a structural edit rebuilds the tree from the file, so anything listed here
+ * is about to be undone by it: an Unwritten node disappears, an Unremoved one comes back. Reported so
+ * the author hears it from the designer instead of watching the edit revert. Empty when every shape
+ * change landed, which is the only state a flush of a value edit should ever produce.
+ */
+struct DREAMGUIEDITOR_API FDreamUIStructuralResidue
+{
+	/** On the live tree, and still nowhere in the text after every round. */
+	TArray<FString> Unwritten;
+	/** In the text, and gone from the live tree, but the file still declares it. */
+	TArray<FString> Unremoved;
+
+	bool IsEmpty() const { return Unwritten.IsEmpty() && Unremoved.IsEmpty(); }
+	void Reset() { Unwritten.Reset(); Unremoved.Reset(); }
+};
+
 /** The tree should be regenerated from the document's text, and this is why it changed. */
 DECLARE_MULTICAST_DELEGATE_OneParam(FDreamUIWriteBackRebuildRequested, EDreamUIDocumentChangeReason /*Reason*/);
 
@@ -288,10 +307,13 @@ public:
 	 * the text is read back, and the next round finds the children's parents there. Removals happen in
 	 * the first round only (a removal never waits for another), and an insert the patcher refused is
 	 * not asked again. A node written by a round is then checked once for the `+` lines it needs.
+	 *
+	 * OutResidue, when given, receives what the shape still disagrees about once every round is done:
+	 * see FDreamUIStructuralResidue.
 	 */
 	static bool ProduceText(const FString& InText, const UDreamWidgetTree* InLiveTree,
 		FString& OutText, FDreamUIDiagnosticBag& OutDiagnostics, TArray<FDreamUIPropertyEdit>* OutEdits = nullptr,
-		const UObject* InLiveDefaults = nullptr);
+		const UObject* InLiveDefaults = nullptr, FDreamUIStructuralResidue* OutResidue = nullptr);
 
 	/**
 	 * How a `.dui` would spell this widget's type in this file: its `use … as` alias, an `@Resource`, a
@@ -399,6 +421,8 @@ public:
 	int32 GetLastEditCount() const { return LastEditCount; }
 	/** What the last flush refused, in the patcher's own words. */
 	const FDreamUIDiagnosticBag& GetLastDiagnostics() const { return LastDiagnostics; }
+	/** What the last flush could not make the file's shape agree about. Empty when it all landed. */
+	const FDreamUIStructuralResidue& GetLastStructuralResidue() const { return LastResidue; }
 
 private:
 	FDreamUITextWriteBack() = default;
@@ -429,4 +453,5 @@ private:
 	int32 WriteCount = 0;
 	int32 LastEditCount = 0;
 	FDreamUIDiagnosticBag LastDiagnostics;
+	FDreamUIStructuralResidue LastResidue;
 };

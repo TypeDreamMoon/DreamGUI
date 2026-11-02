@@ -134,10 +134,13 @@ bool FDreamUIWriteBackNestedRemovalTest::RunTest(const FString&)
 
 	FString Updated;
 	FDreamUIDiagnosticBag Diagnostics;
-	TestTrue(TEXT("the write-back ran"), FDreamUITextWriteBack::ProduceText(Source, Live.Tree.Get(), Updated, Diagnostics));
+	FDreamUIStructuralResidue Residue;
+	TestTrue(TEXT("the write-back ran"), FDreamUITextWriteBack::ProduceText(Source, Live.Tree.Get(), Updated, Diagnostics,
+		nullptr, nullptr, &Residue));
 	TestFalse(TEXT("the node is gone from the file"), Updated.Contains(TEXT("Panel")));
 	TestFalse(TEXT("its descendants with it"), Updated.Contains(TEXT("First")) || Updated.Contains(TEXT("Deep")));
 	TestTrue(TEXT("its sibling is not"), Updated.Contains(TEXT("Widget Keep")));
+	TestTrue(TEXT("nothing left over"), Residue.IsEmpty());
 	return true;
 }
 
@@ -174,7 +177,9 @@ bool FDreamUIWriteBackSubtreeRoundsTest::RunTest(const FString&)
 
 	FString Updated;
 	FDreamUIDiagnosticBag Diagnostics;
-	TestTrue(TEXT("the write-back ran"), FDreamUITextWriteBack::ProduceText(Source, Live.Tree.Get(), Updated, Diagnostics));
+	FDreamUIStructuralResidue Residue;
+	TestTrue(TEXT("the write-back ran"), FDreamUITextWriteBack::ProduceText(Source, Live.Tree.Get(), Updated, Diagnostics,
+		nullptr, nullptr, &Residue));
 
 	FDreamUIAst Ast;
 	if (!TestTrue(TEXT("the written file parses"), ParseText(Updated, Ast))) return false;
@@ -188,6 +193,7 @@ bool FDreamUIWriteBackSubtreeRoundsTest::RunTest(const FString&)
 		{
 			return InComponent.ClassName == TEXT("UIButton");
 		}));
+	TestTrue(TEXT("nothing left over"), Residue.IsEmpty());
 	return true;
 }
 

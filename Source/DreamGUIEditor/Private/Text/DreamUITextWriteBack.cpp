@@ -1812,12 +1812,16 @@ FString FDreamUITextWriteBack::DescribeWidgetForText(const UDreamWidget* InWidge
 
 bool FDreamUITextWriteBack::ProduceText(const FString& InText, const UDreamWidgetTree* InLiveTree,
 	FString& OutText, FDreamUIDiagnosticBag& OutDiagnostics, TArray<FDreamUIPropertyEdit>* OutEdits,
-	const UObject* InLiveDefaults)
+	const UObject* InLiveDefaults, FDreamUIStructuralResidue* OutResidue)
 {
 	OutText = InText;
 	if (OutEdits != nullptr)
 	{
 		OutEdits->Reset();
+	}
+	if (OutResidue != nullptr)
+	{
+		OutResidue->Reset();
 	}
 	if (InLiveTree == nullptr)
 	{
@@ -1920,6 +1924,30 @@ bool FDreamUITextWriteBack::ProduceText(const FString& InText, const UDreamWidge
 		Ast = MoveTemp(Rebuilt);
 		TextTree = MoveTemp(RebuiltTree);
 		bShapeChanged = true;
+	}
+
+	if (OutResidue != nullptr)
+	{
+		// Read off the same two maps the shape pass pairs by, so the residue is exactly the disagreement
+		// that pass could not settle -- and empty for every flush whose shape already matched.
+		TMap<FString, UDreamWidget*> LiveWidgets;
+		TMap<FString, UDreamWidget*> TextWidgets;
+		DreamUIWriteBackLocal::MapWidgetsByNodeId(const_cast<UDreamWidgetTree*>(InLiveTree), LiveWidgets);
+		DreamUIWriteBackLocal::MapWidgetsByNodeId(TextTree.Get(), TextWidgets);
+		for (const TPair<FString, UDreamWidget*>& Pair : LiveWidgets)
+		{
+			if (!TextWidgets.Contains(Pair.Key))
+			{
+				OutResidue->Unwritten.Add(Pair.Key);
+			}
+		}
+		for (const TPair<FString, UDreamWidget*>& Pair : TextWidgets)
+		{
+			if (!LiveWidgets.Contains(Pair.Key))
+			{
+				OutResidue->Unremoved.Add(Pair.Key);
+			}
+		}
 	}
 
 	// ---- phase two: VALUES ----------------------------------------------------------------------
@@ -2065,6 +2093,7 @@ bool FDreamUITextWriteBack::FlushTree(const UDreamWidgetTree* InLiveTree, FStrin
 {
 	OutError.Reset();
 	LastDiagnostics.Reset();
+	LastResidue.Reset();
 	LastEditCount = 0;
 
 	UDreamUIDocument* Document = DocumentHandle.Get();
@@ -2085,7 +2114,7 @@ bool FDreamUITextWriteBack::FlushTree(const UDreamWidgetTree* InLiveTree, FStrin
 	const FString Current = Document->GetContent();
 	FString Updated;
 	TArray<FDreamUIPropertyEdit> Edits;
-	if (!ProduceText(Current, InLiveTree, Updated, LastDiagnostics, &Edits, InLiveDefaults))
+	if (!ProduceText(Current, InLiveTree, Updated, LastDiagnostics, &Edits, InLiveDefaults, &LastResidue))
 	{
 		OutError = FString::Printf(
 			TEXT("'%s' does not currently parse and build, so nothing was written back: %s"),
