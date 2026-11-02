@@ -105,9 +105,11 @@ struct DREAMGUIEDITOR_API FDreamUIStructuralResidue
 	TArray<FString> Unwritten;
 	/** In the text, and gone from the live tree, but the file still declares it. */
 	TArray<FString> Unremoved;
+	/** In both, under a different parent in the text than in the live tree. */
+	TArray<FString> Unmoved;
 
-	bool IsEmpty() const { return Unwritten.IsEmpty() && Unremoved.IsEmpty(); }
-	void Reset() { Unwritten.Reset(); Unremoved.Reset(); }
+	bool IsEmpty() const { return Unwritten.IsEmpty() && Unremoved.IsEmpty() && Unmoved.IsEmpty(); }
+	void Reset() { Unwritten.Reset(); Unremoved.Reset(); Unmoved.Reset(); }
 };
 
 /** The tree should be regenerated from the document's text, and this is why it changed. */
@@ -394,6 +396,36 @@ public:
 
 	/** How many properties this tree is carrying as dirty. For tests and for the log. */
 	static int32 NumDirtyProperties(const UDreamWidgetTree* InTree);
+
+	// -------------------------------------------------------------------------------------------
+	// The structural queue: what the designer says it did to the shape
+	// -------------------------------------------------------------------------------------------
+
+	/**
+	 * Note one change to the shape of InTree that the next flush has to write as it was made.
+	 *
+	 * WHY THIS EXISTS. Adding and removing a node can be read off the two trees, and the shape pass
+	 * does exactly that. A RENAME cannot: from the trees it is one node gone and another arrived, and
+	 * writing it that way deletes the node's whole block -- its values, its routes, its children -- and
+	 * writes a bare new one with no `(was:)` to carry its graph references across. A MOVE can be read
+	 * off but not its order against the other edits of one gesture. So the gestures that know they
+	 * renamed or moved something say so here, and the flush applies the queue first, one edit at a time
+	 * against the text as it stands, before the shape pass reads what is left off the trees.
+	 *
+	 * A MoveNode is placed where the node stands in the live tree WHEN THE FLUSH RUNS (its parent, the
+	 * fill of a named slot it is in, the sibling it now stands before), so a caller only has to say
+	 * which node moved. An edit that cannot be planned yet -- a move into a node this same gesture is
+	 * creating -- waits for the shape pass to write that node and is tried again.
+	 *
+	 * Keyed on the tree for the reasons the dirty set is, and consumed by the flush that writes it.
+	 */
+	static void QueueStructuralEdit(const UDreamWidgetTree* InTree, const FDreamUIStructuralEdit& InEdit);
+
+	/** Forget one tree's queue. The flush calls it once it has written. */
+	static void ClearQueuedStructuralEdits(const UDreamWidgetTree* InTree);
+
+	/** How many structural edits this tree is carrying. For tests and for the log. */
+	static int32 NumQueuedStructuralEdits(const UDreamWidgetTree* InTree);
 
 
 
