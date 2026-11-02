@@ -21,6 +21,9 @@ private:
 	void ForceRefresh(TWeakPtr<class IPropertyUtilities> InPropertyUtilities);
 	FText GetDrawcallInfo()const;
 	FText GetDrawcallInfoTooltip()const;
+	/** The text GetDrawcallInfo last worked out, and when; it is polled every frame but recomputed on a timer. */
+	mutable FText CachedDrawcallInfo;
+	mutable double LastDrawcallInfoTime = 0.0;
 	void OnCopySortOrder();
 	void OnPasteSortOrder(TSharedRef<class IPropertyHandle> PropertyHandle);
 	FReply OnClickFixClipTextureSetting(TSharedRef<IPropertyHandle> ClipTextureHandle);

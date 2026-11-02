@@ -495,6 +495,17 @@ FText FDreamCanvasCustomization::GetDrawcallInfo()const
 	{
 		return FText::FromString(FString::Printf(TEXT("0/0")));
 	}
+
+	// Polled every frame, but the answer needs a copy of the manager's canvas array, a walk over it and
+	// a Printf. A counter that moves a few times a second is no worse for being a quarter second old.
+	constexpr double DrawcallInfoRefreshInterval = 0.25;
+	const double Now = FPlatformTime::Seconds();
+	if (!CachedDrawcallInfo.IsEmpty() && Now - LastDrawcallInfoTime < DrawcallInfoRefreshInterval)
+	{
+		return CachedDrawcallInfo;
+	}
+	LastDrawcallInfoTime = Now;
+
 	auto DreamUIManager = UDreamUIManagerWorldSubsystem::GetInstance(TargetScriptArray[0]->GetWorld());
 	if (DreamUIManager)
 	{
@@ -514,9 +525,11 @@ FText FDreamCanvasCustomization::GetDrawcallInfo()const
 				AllDrawcallCount += CanvasItem->GetDrawCallCount();
 			}
 		}
-		return FText::FromString(FString::Printf(TEXT("%d/%d"), TargetScriptArray[0]->GetDrawCallCount(), AllDrawcallCount));
+		CachedDrawcallInfo = FText::FromString(FString::Printf(TEXT("%d/%d"), TargetScriptArray[0]->GetDrawCallCount(), AllDrawcallCount));
+		return CachedDrawcallInfo;
 	}
-	return FText::FromString(FString::Printf(TEXT("0/0")));
+	CachedDrawcallInfo = FText::FromString(FString::Printf(TEXT("0/0")));
+	return CachedDrawcallInfo;
 }
 FText FDreamCanvasCustomization::GetDrawcallInfoTooltip()const
 {
