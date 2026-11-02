@@ -864,8 +864,12 @@ void FDreamWidgetCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBui
 							]
 						]
 					]
-					.MenuContent()
-					[
+					// Built when the menu opens, not with the panel: the previews read the anchors once, when they are
+					// made, so a menu built up front showed the selection the panel was opened on, and every refresh of
+					// the panel paid for some twenty-five previews nobody had asked to see.
+					.OnGetMenuContent_Lambda([=, this]() -> TSharedRef<SWidget>
+					{
+					return
 						SNew(SVerticalBox)
 						+SVerticalBox::Slot()
 						.AutoHeight()
@@ -882,7 +886,7 @@ void FDreamWidgetCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBui
 								+SVerticalBox::Slot()
 								[
 									SNew(STextBlock)
-									.Text(LOCTEXT("AnchorPresetsHelperKeys", "Shift: Also set pivot		Alt: Also set position"))
+									.Text(LOCTEXT("AnchorPresetsHelperKeys", "Shift: Also set pivot		Ctrl or Alt: Also set position"))
 									.Font(IDetailLayoutBuilder::GetDetailFont())
 								]
 							]
@@ -1088,7 +1092,8 @@ void FDreamWidgetCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBui
 								]
 							]
 						]
-					]
+					;
+					})
 				]
 			]
 		]
@@ -1826,7 +1831,9 @@ void FDreamWidgetCustomization::OnSelectAnchor(DreamGUIAnchorPreviewWidget::UIAn
 	if (TargetScriptArray.Num() == 0 || !TargetScriptArray[0].IsValid())return;
 
 	bool ShiftPressed = FSlateApplication::Get().GetModifierKeys().IsShiftDown();
-	bool AltPressed = FSlateApplication::Get().GetModifierKeys().IsAltDown();
+	// Ctrl is UMG's modifier for "also set the position" (CanvasSlotCustomization); Alt is what this menu
+	// always used. Both, so neither habit picks a preset that leaves the widget where it was.
+	bool AltPressed = FSlateApplication::Get().GetModifierKeys().IsAltDown() || FSlateApplication::Get().GetModifierKeys().IsControlDown();
 
 	GEditor->BeginTransaction(LOCTEXT("ChangeAnchor_Transaction", "Change DreamGUI Anchor"));
 	for (auto& UIItem : TargetScriptArray)
@@ -1981,6 +1988,9 @@ void FDreamWidgetCustomization::OnSelectAnchor(DreamGUIAnchorPreviewWidget::UIAn
 	TargetScriptArray[0]->MarkCanvasUpdate(true);
 	DetailBuilder->GetPropertyUtilities()->RequestForceRefresh();
 	GEditor->EndTransaction();
+	// A preset is a one-shot choice, as it is in UMG's menu: left open, the menu sat over the panel until
+	// the deferred refresh above happened to take it down with the row.
+	FSlateApplication::Get().DismissAllMenus();
 }
 
 namespace DreamWidgetCustomizationLocal
