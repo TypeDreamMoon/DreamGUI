@@ -24,6 +24,7 @@
 // GetWidgetClass returns a TSubclassOf<UDreamUserWidget>, and converting that to a UClass* asks the
 // class for its StaticClass: the header's forward declaration is not enough.
 #include "Core/DreamUserWidget.h"
+#include "DreamWidgetBlueprint.h"
 #include "Subsystems/AssetEditorSubsystem.h"
 #include "Editor.h"
 #include "UObject/UObjectIterator.h"
@@ -117,17 +118,14 @@ void FDreamWidgetAnimationComponentCustomization::CustomizeDetails(IDetailLayout
 					const FString CurrentName = Component->GetCurrentSequence() ? Component->GetCurrentSequence()->GetDisplayName().ToString() : FString();
 					UAssetEditorSubsystem* Subsystem = GEditor->GetEditorSubsystem<UAssetEditorSubsystem>();
 					Subsystem->OpenEditorForAsset(SourceAsset);
-					// The animation focus below used to blind-cast the returned editor to
-					// FDreamWidgetBlueprintEditor. That was only ever safe because the asset was always a
-					// prefab; against a Blueprint it is undefined behaviour, so the jump-to-animation
-					// only happens when the editor really is the designer. Restoring it for the
-					// class model is the editor branch's job.
-					if (IAssetEditorInstance* Instance = Subsystem->FindEditorForAsset(SourceAsset, /*bFocusIfOpen*/true))
+					// The animation focus used to blind-cast the returned editor to FDreamWidgetBlueprintEditor,
+					// which is undefined behaviour for any other editor of the asset -- and was switched off
+					// for it, so the button opened the designer and left the author to find the animation.
+					// The designer is asked for by the Blueprint it edits instead, which only ever answers
+					// with a designer.
+					if (FDreamWidgetBlueprintEditor* Designer = FDreamWidgetBlueprintEditor::FindEditorForBlueprint(Cast<UDreamWidgetBlueprint>(SourceAsset)))
 					{
-						if (false)
-						{
-							static_cast<FDreamWidgetBlueprintEditor*>(Instance)->FocusAnimationByDisplayName(CurrentName);
-						}
+						Designer->FocusAnimationByDisplayName(CurrentName);
 					}
 					return FReply::Handled();
 				})
