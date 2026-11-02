@@ -30,6 +30,14 @@ namespace DreamUIMenusLocal
 	 */
 	void ConfirmedRebuildAll()
 	{
+		// Before asking, not after: there is no point in agreeing to a rebuild the editor will refuse. Play, a save,
+		// a drag or an open edit end on their own, and the answer to the author is "in a moment".
+		if (!FDreamUISourceWatcher::CanCompileNow())
+		{
+			FDreamUISourceWatcher::NotifyBusy();
+			return;
+		}
+
 		const EAppReturnType::Type Answer = FMessageDialog::Open(EAppMsgType::YesNo,
 			LOCTEXT("RebuildAllConfirm",
 				"Rebuild every text-backed widget Blueprint in the project?\n\n"
@@ -39,15 +47,11 @@ namespace DreamUIMenusLocal
 			return;
 		}
 
-		const int32 Count = FDreamUISourceWatcher::RebuildAll();
-		// A menu command with no visible reaction reads as a broken menu.
-		FNotificationInfo Info(FText::Format(
-			LOCTEXT("RebuildAllDone", "DreamUI: rebuilt {0} text-backed Blueprint(s)."), Count));
-		Info.ExpireDuration = 4.0f;
-		if (TSharedPtr<SNotificationItem> Item = FSlateNotificationManager::Get().AddNotification(Info))
-		{
-			Item->SetCompletionState(SNotificationItem::CS_Success);
-		}
+		// RebuildAll answers for itself: it reports the sweep once, as a failure naming the first error or as the
+		// count it rebuilt, and refuses with a message of its own if the editor became busy while the dialog was up.
+		// A menu command with no visible reaction reads as a broken menu; a second toast on top of that one is
+		// the same sentence twice.
+		FDreamUISourceWatcher::RebuildAll();
 	}
 
 	/** See FDreamUIMenus for the three-plugin convention this implements. */
