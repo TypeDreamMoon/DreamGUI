@@ -7,6 +7,7 @@
 class FProperty;
 class UDreamWidget;
 class UDreamWidgetBlueprint;
+struct FDreamUIStructuralEdit;
 
 /**
  * What the designer is allowed to do to a hierarchy that came out of a `.dui`.
@@ -149,6 +150,64 @@ namespace DreamUITextAuthoring
 	 */
 	DREAMGUIEDITOR_API FString DescribeClassForAuthor(const UClass* InClass);
 	DREAMGUIEDITOR_API FText DescribeStructuralRefusal(const UDreamWidgetBlueprint* InBlueprint, const FString& InOperation);
+
+	// ---------------------------------------------------------------------------------------------
+	// The structural edits a `.dui` CAN take: creating, deleting, duplicating and pasting widgets.
+	//
+	// Those four are written into the file by the write-back (a node inserted, a node removed), so on
+	// a text-authored hierarchy they are no longer refused outright: each is CHECKED against the file
+	// before anything is touched, refused with the patcher's own reason when it cannot be written, and
+	// written into the text before the compile that rebuilds the tree from it (WriteStructureToText).
+	// Moving, renaming, behaviours and replacing a panel are still RefuseStructuralEdit's.
+	// ---------------------------------------------------------------------------------------------
+
+	/**
+	 * Whether InEdit can be written into this Blueprint's `.dui` as it is now, without writing anything.
+	 *
+	 * True straight away for a hand-authored Blueprint. Otherwise the edit is applied to a COPY of the
+	 * text by the patcher that the write-back uses, so a refusal here is exactly the refusal the flush
+	 * would have met, in its words. On top of the patcher: the file has to parse (with bInVerifyBuild,
+	 * build), an insert's parent has to be a node the file writes, and -- with bInVerifyBuild -- the
+	 * edited text may raise no error the current one does not, which is how a removal that would leave
+	 * a reference to the removed node dangling is caught before the author loses the node to it.
+	 *
+	 * An insert whose TypeName is empty is spelled from InWidgetForType the way the write-back will
+	 * spell it. Cheap enough for a click; a drag's hover should pass bInVerifyBuild = false, which
+	 * parses and patches but builds no tree.
+	 */
+	DREAMGUIEDITOR_API bool CheckStructuralEdit(const UDreamWidgetBlueprint* InBlueprint, const FDreamUIStructuralEdit& InEdit,
+		bool bInVerifyBuild, FText& OutReason, const UDreamWidget* InWidgetForType = nullptr);
+
+	/**
+	 * Every node id the `.dui` declares, previous `(was:)` ids included. Empty for a hand-authored
+	 * Blueprint or a file that does not parse.
+	 *
+	 * What a new widget's name must avoid as well as the tree's: an id the file already holds -- a node
+	 * the tree does not show, an id a rename is still migrating from -- would make the write-back read
+	 * the new widget as that node and not write it at all.
+	 */
+	DREAMGUIEDITOR_API void CollectAuthoredNodeIds(const UDreamWidgetBlueprint* InBlueprint, TSet<FString>& OutIds);
+
+	/** Say no to one structural edit with the reason CheckStructuralEdit gave, out loud, as RefuseStructuralEdit does. */
+	DREAMGUIEDITOR_API void ReportStructuralRefusal(const UDreamWidgetBlueprint* InBlueprint,
+		const TCHAR* InFunction, int32 InLine, const FString& InOperation, const FText& InReason);
+
+	/**
+	 * Write the template tree's shape and new values into the `.dui`, before a compile rebuilds the
+	 * tree from it. What DreamWidgetTreeEditing::NotifyStructureChanged calls first.
+	 *
+	 * The compile reads the FILE, so a widget added to the template and not written there is gone a
+	 * moment later, inside the same gesture. Through the open designer's write-back when there is one
+	 * (its document, its undo), and through a write-back of its own when there is none, so a script or
+	 * a commandlet editing the tree is written exactly as the designer is.
+	 *
+	 * A no-op, returning true, for a hand-authored Blueprint; while a transaction is being applied (the
+	 * document is being restored, not edited); and while the compile is answering a change made to the
+	 * file outside the editor, where the file wins. Whatever the write could not settle -- a node it
+	 * could not write, one it could not remove -- is said, with the file's name, and false returned:
+	 * the compile is about to undo exactly that.
+	 */
+	DREAMGUIEDITOR_API bool WriteStructureToText(UDreamWidgetBlueprint* InBlueprint);
 
 	/** Why one property row is not editable. Ordered so the FIRST reason that applies is the one shown. */
 	enum class EPropertyEditVerdict : uint8

@@ -629,6 +629,8 @@ public:
 	void UnwrapSelectedWidget();
 	/** The .dui the designer writes its edits to; empty when it writes none (SyncTextWriteBackToSource). */
 	FString GetTextWriteBackFilePath() const;
+	/** The write-back bound to that file, for a structural edit that has to reach the text before its compile. */
+	TSharedPtr<FDreamUITextWriteBack> GetTextWriteBack() const { return TextWriteBack; }
 	/**
 	 * Find everything that names the selected widget: the Blueprint's own graphs, and the project.
 	 *

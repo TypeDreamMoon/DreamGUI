@@ -169,6 +169,11 @@ namespace DreamWidgetTreeEditing
 			Local::StructureBatchPending.AddUnique(InBlueprint);
 			return;
 		}
+		// The text first, for a hierarchy that comes from a `.dui`: the compile below rebuilds the tree
+		// from the FILE, so a widget added to the template and not written there would be gone before
+		// this gesture returned. Inside the caller's transaction, so the text and the tree undo together.
+		// A no-op for a hand-authored Blueprint.
+		DreamUITextAuthoring::WriteStructureToText(InBlueprint);
 		// Structurally, not just modified: the compiler declares one variable per widget, so adding or
 		// removing one changes the class's members and every dependent has to be told.
 		FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(InBlueprint);
@@ -199,24 +204,32 @@ namespace DreamWidgetTreeEditing
 		}
 	}
 
-	FString MakeUniqueDisplayName(const UDreamWidgetTree* InTree, const FString& InDesired, const UDreamWidget* InIgnore)
+	FString MakeUniqueDisplayName(const UDreamWidgetTree* InTree, const FString& InDesired, const UDreamWidget* InIgnore,
+		const TSet<FString>* InReserved)
 	{
 		// Sanitised for the reason MakeUniqueName is: the display name becomes the compiler's
 		// variable name, so anything the rename box would refuse must not be mintable here either.
 		const FString Base = InDesired.IsEmpty() ? TEXT("Widget") : UDreamWidgetTree::SanitizeIdentifier(InDesired);
-		if (InTree == nullptr)
+		if (InTree == nullptr && InReserved == nullptr)
 		{
 			return Base;
 		}
 
 		TSet<FString> Taken;
-		InTree->ForEachWidget([&Taken, InIgnore](const UDreamWidget* Widget)
+		if (InReserved != nullptr)
 		{
-			if (Widget != InIgnore)
+			Taken.Append(*InReserved);
+		}
+		if (InTree != nullptr)
+		{
+			InTree->ForEachWidget([&Taken, InIgnore](const UDreamWidget* Widget)
 			{
-				Taken.Add(Widget->GetDisplayName());
-			}
-		});
+				if (Widget != InIgnore)
+				{
+					Taken.Add(Widget->GetDisplayName());
+				}
+			});
+		}
 		if (!Taken.Contains(Base))
 		{
 			return Base;
