@@ -230,6 +230,29 @@ public:
 		const FSiblingSnapLines& InSnapLines = FSiblingSnapLines());
 
 	/**
+	 * The modifiers of a resize handle, applied to the edges the drag produced (InOut*, in the widget's
+	 * own space) given the edges it started from (In*).
+	 *
+	 * bFromCentre (Alt): the edge opposite each dragged one moves by as much the other way, so the
+	 * widget grows about its centre. bKeepAspect (Shift): the proportions it had when the handle was
+	 * grabbed are kept -- a corner follows whichever side the pointer took further, an edge handle grows
+	 * the other axis evenly both ways -- with each axis held at the edge opposite the dragged one, or at
+	 * the centre under bFromCentre. Never narrower or shorter than one unit. Pure, for the same reason
+	 * as ResolveMoveDrag.
+	 */
+	static void ApplyResizeModifiers(bool bFromCentre, bool bKeepAspect,
+		bool bChangeLeft, bool bChangeRight, bool bChangeBottom, bool bChangeTop,
+		float InLeft, float InRight, float InBottom, float InTop,
+		float& InOutLeft, float& InOutRight, float& InOutBottom, float& InOutTop);
+
+	/**
+	 * A Move drag with Shift held keeps to one axis: whichever the pointer has travelled further along,
+	 * measured on the first target's plane, as Figma and Photoshop constrain a shifted drag. Rewrites
+	 * each target's CurrentPlanePoint so its travel lies along that axis of its own plane.
+	 */
+	static void ConstrainMoveDragToDominantAxis(TArrayView<FMoveDragTarget> InOutTargets);
+
+	/**
 	 * Whether dropping this selection into InNewParent is a reparent the hierarchy would accept. The
 	 * refusals are the tree's: a widget onto itself, onto its own descendant, or into a parent with
 	 * no room. A widget already sitting in InNewParent is not a reparent at all, so it refuses that

@@ -427,4 +427,73 @@ bool FDreamDesignerDPIPreviewTest::RunTest(const FString&)
 	return true;
 }
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamDesignerResizeModifiersTest,
+	"DreamGUI.Designer.AltResizesAboutTheCentreAndShiftKeepsTheProportions",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamDesignerResizeModifiersTest::RunTest(const FString&)
+{
+	using FClient = FDreamWidgetDesignerViewportClient;
+	// A 100 x 50 rect about its pivot: left -50, right 50, bottom -25, top 25.
+	const float L0 = -50.0f, R0 = 50.0f, B0 = -25.0f, T0 = 25.0f;
+
+	// The right edge dragged 20 further out.
+	{
+		float L = L0, R = 70.0f, B = B0, T = T0;
+		FClient::ApplyResizeModifiers(false, false, false, true, false, false, L0, R0, B0, T0, L, R, B, T);
+		TestTrue(TEXT("with no modifier the drag is left as it was"), L == L0 && R == 70.0f && B == B0 && T == T0);
+	}
+	{
+		float L = L0, R = 70.0f, B = B0, T = T0;
+		FClient::ApplyResizeModifiers(true, false, false, true, false, false, L0, R0, B0, T0, L, R, B, T);
+		TestTrue(FString::Printf(TEXT("Alt moves the left edge out by as much: %.1f..%.1f"), L, R),
+			FMath::IsNearlyEqual(L, -70.0f) && FMath::IsNearlyEqual(R, 70.0f) && B == B0 && T == T0);
+	}
+	{
+		float L = L0, R = 70.0f, B = B0, T = T0;
+		FClient::ApplyResizeModifiers(false, true, false, true, false, false, L0, R0, B0, T0, L, R, B, T);
+		TestTrue(FString::Printf(TEXT("Shift keeps the left edge and grows the height evenly to 60: %.1f..%.1f x %.1f..%.1f"), L, R, B, T),
+			FMath::IsNearlyEqual(L, L0) && FMath::IsNearlyEqual(R, 70.0f) && FMath::IsNearlyEqual(B, -30.0f) && FMath::IsNearlyEqual(T, 30.0f));
+	}
+	// The top-right corner dragged to (60, 45): the height went further, relative to its length, so it leads.
+	{
+		float L = L0, R = 60.0f, B = B0, T = 45.0f;
+		FClient::ApplyResizeModifiers(false, true, false, true, false, true, L0, R0, B0, T0, L, R, B, T);
+		TestTrue(FString::Printf(TEXT("a shifted corner follows the side taken further and keeps the opposite corner: %.1f..%.1f x %.1f..%.1f"), L, R, B, T),
+			FMath::IsNearlyEqual(L, L0) && FMath::IsNearlyEqual(B, B0) && FMath::IsNearlyEqual(T, 45.0f) && FMath::IsNearlyEqual(R, 90.0f));
+	}
+	// Alt dragged past the centre would turn the rect inside out.
+	{
+		float L = L0, R = -60.0f, B = B0, T = T0;
+		FClient::ApplyResizeModifiers(true, false, false, true, false, false, L0, R0, B0, T0, L, R, B, T);
+		TestTrue(FString::Printf(TEXT("and never comes back narrower than a unit: %.2f"), R - L), R - L >= 1.0f - KINDA_SMALL_NUMBER);
+	}
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamDesignerShiftMoveKeepsToOneAxisTest,
+	"DreamGUI.Designer.AShiftedMoveKeepsToTheAxisThePointerTravelledFurtherAlong",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamDesignerShiftMoveKeepsToOneAxisTest::RunTest(const FString&)
+{
+	using FClient = FDreamWidgetDesignerViewportClient;
+	TArray<FClient::FMoveDragTarget> Targets;
+	FClient::FMoveDragTarget& Target = Targets.AddDefaulted_GetRef();
+	Target.StartPlanePoint = FVector(0, 10, 10);
+	// Thirty across, eight up: across is the axis kept.
+	Target.CurrentPlanePoint = FVector(0, 40, 18);
+	FClient::ConstrainMoveDragToDominantAxis(Targets);
+	TestTrue(FString::Printf(TEXT("the vertical travel is dropped: %s"), *Targets[0].CurrentPlanePoint.ToString()),
+		Targets[0].CurrentPlanePoint.Equals(FVector(0, 40, 10)));
+
+	Targets[0].CurrentPlanePoint = FVector(0, 14, -30);
+	FClient::ConstrainMoveDragToDominantAxis(Targets);
+	TestTrue(FString::Printf(TEXT("and the horizontal one when the pointer went further up or down: %s"), *Targets[0].CurrentPlanePoint.ToString()),
+		Targets[0].CurrentPlanePoint.Equals(FVector(0, 10, -30)));
+	return true;
+}
+
 #endif

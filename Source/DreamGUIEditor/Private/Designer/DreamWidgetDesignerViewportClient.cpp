@@ -1943,6 +1943,10 @@ void FDreamWidgetDesignerViewportClient::UpdateDesignerDrag()
 			Moving.Add(SelectedWidget);
 			Targets.Add(Target);
 		}
+		if (IsShiftPressed())
+		{
+			ConstrainMoveDragToDominantAxis(Targets);
+		}
 		const float GridSize = DesignerPtr.Pin()->IsDesignerGridSnapEnabled() ? DesignerPtr.Pin()->GetDesignerGridSize() : 0.0f;
 		FSiblingSnapLines SnapLines;
 		GatherSiblingSnapLines(Moving, SnapLines);
@@ -2069,6 +2073,11 @@ void FDreamWidgetDesignerViewportClient::UpdateDesignerDrag()
 			if (bChangeRight)Right = FMath::Max(SnappedY, Left + 1.0f);
 			if (bChangeBottom)Bottom = FMath::Min(SnappedZ, Top - 1.0f);
 			if (bChangeTop)Top = FMath::Max(SnappedZ, Bottom + 1.0f);
+			// The two modifiers every layout tool gives a resize handle (Figma's, Unity's rect tool): Alt
+			// resizes about the centre, the opposite edge moving by as much the other way; Shift keeps the
+			// proportions the widget had when the handle was grabbed.
+			ApplyResizeModifiers(IsAltPressed(), IsShiftPressed(), bChangeLeft, bChangeRight, bChangeBottom, bChangeTop,
+				OriginalLeft, OriginalRight, OriginalBottom, OriginalTop, Left, Right, Bottom, Top);
 			const float NewWidth = Right - Left;
 			const float NewHeight = Top - Bottom;
 			const FVector NewOriginLocal(0, Left + Snapshot.Pivot.X * NewWidth, Bottom + Snapshot.Pivot.Y * NewHeight);
@@ -3451,6 +3460,113 @@ FDreamWidgetDesignerViewportClient::FEdgeSnapResult FDreamWidgetDesignerViewport
 		}
 	}
 	return Result;
+}
+
+void FDreamWidgetDesignerViewportClient::ApplyResizeModifiers(bool bFromCentre, bool bKeepAspect,
+	bool bChangeLeft, bool bChangeRight, bool bChangeBottom, bool bChangeTop,
+	float InLeft, float InRight, float InBottom, float InTop,
+	float& InOutLeft, float& InOutRight, float& InOutBottom, float& InOutTop)
+{
+	if (bFromCentre)
+	{
+		if (bChangeLeft)InOutRight = InRight - (InOutLeft - InLeft);
+		if (bChangeRight)InOutLeft = InLeft - (InOutRight - InRight);
+		if (bChangeBottom)InOutTop = InTop - (InOutBottom - InBottom);
+		if (bChangeTop)InOutBottom = InBottom - (InOutTop - InTop);
+	}
+	const float OriginalWidth = InRight - InLeft;
+	const float OriginalHeight = InTop - InBottom;
+	const bool bHorizontal = bChangeLeft || bChangeRight;
+	const bool bVertical = bChangeBottom || bChangeTop;
+	if (bKeepAspect && OriginalWidth > UE_KINDA_SMALL_NUMBER && OriginalHeight > UE_KINDA_SMALL_NUMBER && (bHorizontal || bVertical))
+	{
+		const float Aspect = OriginalWidth / OriginalHeight;
+		float Width = InOutRight - InOutLeft;
+		float Height = InOutTop - InOutBottom;
+		if (bHorizontal && bVertical)
+		{
+			if (Width / OriginalWidth >= Height / OriginalHeight)
+			{
+				Height = Width / Aspect;
+			}
+			else
+			{
+				Width = Height * Aspect;
+			}
+		}
+		else if (bHorizontal)
+		{
+			Height = Width / Aspect;
+		}
+		else
+		{
+			Width = Height * Aspect;
+		}
+		// Each axis is held where it would have been held without the modifier: at the edge opposite the
+		// dragged one, or at the centre when the drag is from the centre or did not touch that axis at all.
+		auto Place = [bFromCentre](bool bMinDragged, bool bMaxDragged, float InMin, float InMax, float InSize, float& OutMin, float& OutMax)
+		{
+			if (bFromCentre || (!bMinDragged && !bMaxDragged))
+			{
+				const float Centre = (InMin + InMax) * 0.5f;
+				OutMin = Centre - InSize * 0.5f;
+				OutMax = Centre + InSize * 0.5f;
+			}
+			else if (bMinDragged)
+			{
+				OutMax = InMax;
+				OutMin = InMax - InSize;
+			}
+			else
+			{
+				OutMin = InMin;
+				OutMax = InMin + InSize;
+			}
+		};
+		Place(bChangeLeft, bChangeRight, InLeft, InRight, Width, InOutLeft, InOutRight);
+		Place(bChangeBottom, bChangeTop, InBottom, InTop, Height, InOutBottom, InOutTop);
+	}
+	// The floor the plain drag has, kept under the modifiers: a rect turned inside out by an Alt drag
+	// past the centre would otherwise come back with a negative size.
+	if (InOutRight - InOutLeft < 1.0f)
+	{
+		const float Centre = (InOutLeft + InOutRight) * 0.5f;
+		InOutLeft = Centre - 0.5f;
+		InOutRight = Centre + 0.5f;
+	}
+	if (InOutTop - InOutBottom < 1.0f)
+	{
+		const float Centre = (InOutBottom + InOutTop) * 0.5f;
+		InOutBottom = Centre - 0.5f;
+		InOutTop = Centre + 0.5f;
+	}
+}
+
+void FDreamWidgetDesignerViewportClient::ConstrainMoveDragToDominantAxis(TArrayView<FMoveDragTarget> InOutTargets)
+{
+	if (InOutTargets.IsEmpty())
+	{
+		return;
+	}
+	const FMoveDragTarget& First = InOutTargets[0];
+	const FVector FirstTravel = First.PlaneTransform.InverseTransformPosition(First.CurrentPlanePoint)
+		- First.PlaneTransform.InverseTransformPosition(First.StartPlanePoint);
+	// The plane's horizontal axis is local Y and its vertical axis local Z, as everywhere in this file.
+	const bool bKeepHorizontal = FMath::Abs(FirstTravel.Y) >= FMath::Abs(FirstTravel.Z);
+	for (FMoveDragTarget& Target : InOutTargets)
+	{
+		const FVector StartLocal = Target.PlaneTransform.InverseTransformPosition(Target.StartPlanePoint);
+		FVector CurrentLocal = Target.PlaneTransform.InverseTransformPosition(Target.CurrentPlanePoint);
+		if (bKeepHorizontal)
+		{
+			CurrentLocal.Z = StartLocal.Z;
+		}
+		else
+		{
+			CurrentLocal.Y = StartLocal.Y;
+		}
+		Target.CurrentPlanePoint = Target.PlaneTransform.TransformPosition(CurrentLocal);
+	}
 }
 
 void FDreamWidgetDesignerViewportClient::ResolveMoveDrag(TConstArrayView<FMoveDragTarget> InTargets, float InGridSize,
