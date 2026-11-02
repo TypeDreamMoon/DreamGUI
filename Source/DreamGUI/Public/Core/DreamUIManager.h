@@ -476,9 +476,11 @@ private:
 #if WITH_EDITORONLY_DATA
 	TMap<FString, int> LayoutCalculationCounterMap;
 #endif
+	/** Culture changes AND text revision changes (new translations in the same culture) both land here. */
 	void OnCultureChanged();
 	bool bShouldUpdateOnCultureChanged = false;
 	FDelegateHandle OnCultureChangedDelegateHandle;
+	FDelegateHandle OnTextRevisionChangedDelegateHandle;
 
 	TSharedPtr<class FDreamUIRenderer, ESPMode::ThreadSafe> MainViewportViewExtension;
 public:

@@ -27,6 +27,7 @@
 #include "GameFramework/Actor.h"
 #include "UObject/UObjectIterator.h"
 #include "HAL/IConsoleManager.h"
+#include "Internationalization/TextLocalizationManager.h"
 #if WITH_EDITOR
 #include "Editor.h"
 #include "EditorViewportClient.h"
@@ -136,6 +137,12 @@ void UDreamUIManagerWorldSubsystem::Initialize(FSubsystemCollectionBase& Collect
 #endif
 	//localization
 	OnCultureChangedDelegateHandle = FInternationalization::Get().OnCultureChanged().AddUObject(this, &UDreamUIManagerWorldSubsystem::OnCultureChanged);
+	// The culture alone is not when the words change. New translations in the SAME culture -- a
+	// hot-reloaded or refreshed table, a chunk's locres arriving, a text source added -- only bump the
+	// text revision, and with Localization.AsyncLoadLocalizationDataOnLanguageChange on, a language
+	// switch's own translations land a frame or more after the culture event. Both go through the same
+	// deferred flag, so the two arriving together still relayout once.
+	OnTextRevisionChangedDelegateHandle = FTextLocalizationManager::Get().OnTextRevisionChangedEvent.AddUObject(this, &UDreamUIManagerWorldSubsystem::OnCultureChanged);
 }
 void UDreamUIManagerWorldSubsystem::PostInitialize()
 {
@@ -199,6 +206,11 @@ void UDreamUIManagerWorldSubsystem::Deinitialize()
 	if (OnCultureChangedDelegateHandle.IsValid())
 	{
 		FInternationalization::Get().OnCultureChanged().Remove(OnCultureChangedDelegateHandle);
+	}
+	if (OnTextRevisionChangedDelegateHandle.IsValid())
+	{
+		FTextLocalizationManager::Get().OnTextRevisionChangedEvent.Remove(OnTextRevisionChangedDelegateHandle);
+		OnTextRevisionChangedDelegateHandle.Reset();
 	}
 	FWorldDelegates::OnWorldPreSendAllEndOfFrameUpdates.RemoveAll(this);
 	FWorldDelegates::OnWorldCleanup.RemoveAll(this);
