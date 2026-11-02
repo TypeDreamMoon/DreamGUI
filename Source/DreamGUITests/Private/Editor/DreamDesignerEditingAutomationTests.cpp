@@ -3104,4 +3104,46 @@ bool FDreamSequenceEditorUndoPreviewClassTest::RunTest(const FString&)
 	return true;
 }
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamDesignerSelectionEditsCompileOnceTest,
+	"DreamGUI.Designer.AnEditOfSeveralWidgetsTellsTheBlueprintOnce",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamDesignerSelectionEditsCompileOnceTest::RunTest(const FString&)
+{
+	using namespace DreamDesignerEditingTestLocal;
+
+	FScopedDesigner Scoped(TEXT("DesignerSelectionCompileOnce"));
+	if (!TestNotNull(TEXT("The designer opened"), Scoped.Designer) || Scoped.PreviewRoot() == nullptr)
+	{
+		return false;
+	}
+	TArray<UDreamWidget*> Previews;
+	for (const TCHAR* Name : { TEXT("A"), TEXT("B"), TEXT("C") })
+	{
+		Previews.Add(Scoped.Designer->DesignerCreateWidget(Scoped.PreviewRoot(), UDreamWidget::StaticClass(), Name, nullptr));
+	}
+	if (!TestFalse(TEXT("Three widgets were made"), Previews.Contains(nullptr)))
+	{
+		return false;
+	}
+	const int32 CountBefore = Scoped.TemplateCount();
+
+	// Each structural notification is a skeleton compile followed by this broadcast, so counting the
+	// broadcasts counts the compiles.
+	int32 Notifications = 0;
+	const FDelegateHandle Handle = Scoped.Blueprint->OnChanged().AddLambda([&Notifications](UBlueprint*) { Notifications++; });
+	ON_SCOPE_EXIT { Scoped.Blueprint->OnChanged().Remove(Handle); };
+
+	const TArray<UDreamWidget*> Copies = Scoped.Designer->DesignerDuplicateWidgets(Previews);
+	TestEqual(TEXT("Duplicating three widgets made three"), Scoped.TemplateCount(), CountBefore + 3);
+	TestEqual(TEXT("and told the Blueprint once"), Notifications, 1);
+
+	Notifications = 0;
+	TestTrue(TEXT("Deleting the copies succeeds"), Scoped.Designer->DesignerDeleteWidgets(Copies));
+	TestEqual(TEXT("The asset is back to three widgets under the root"), Scoped.TemplateCount(), CountBefore);
+	TestEqual(TEXT("and the delete told the Blueprint once"), Notifications, 1);
+	return true;
+}
+
 #endif

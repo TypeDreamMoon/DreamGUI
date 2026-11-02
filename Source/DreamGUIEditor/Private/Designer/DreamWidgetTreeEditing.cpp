@@ -151,15 +151,52 @@ namespace DreamWidgetTreeEditing
 		return bFound;
 	}
 
+	namespace Local
+	{
+		/** How many FScopedStructureChangeBatch are alive, and the Blueprints they are holding a notification for. */
+		int32 StructureBatchDepth = 0;
+		TArray<TWeakObjectPtr<UDreamWidgetBlueprint>> StructureBatchPending;
+	}
+
 	void NotifyStructureChanged(UDreamWidgetBlueprint* InBlueprint)
 	{
 		if (!IsValid(InBlueprint))
 		{
 			return;
 		}
+		if (Local::StructureBatchDepth > 0)
+		{
+			Local::StructureBatchPending.AddUnique(InBlueprint);
+			return;
+		}
 		// Structurally, not just modified: the compiler declares one variable per widget, so adding or
 		// removing one changes the class's members and every dependent has to be told.
 		FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(InBlueprint);
+	}
+
+	FScopedStructureChangeBatch::FScopedStructureChangeBatch()
+	{
+		Local::StructureBatchDepth++;
+	}
+
+	FScopedStructureChangeBatch::~FScopedStructureChangeBatch()
+	{
+		check(Local::StructureBatchDepth > 0);
+		if (--Local::StructureBatchDepth > 0)
+		{
+			return;
+		}
+		// Moved out first: a notification compiles, and a compile can reach code that opens a batch of
+		// its own, which must start from an empty list rather than replay this one.
+		TArray<TWeakObjectPtr<UDreamWidgetBlueprint>> Pending = MoveTemp(Local::StructureBatchPending);
+		Local::StructureBatchPending.Reset();
+		for (const TWeakObjectPtr<UDreamWidgetBlueprint>& Blueprint : Pending)
+		{
+			if (UDreamWidgetBlueprint* Resolved = Blueprint.Get())
+			{
+				NotifyStructureChanged(Resolved);
+			}
+		}
 	}
 
 	FString MakeUniqueDisplayName(const UDreamWidgetTree* InTree, const FString& InDesired, const UDreamWidget* InIgnore)

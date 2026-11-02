@@ -1161,6 +1161,9 @@ void FDreamWidgetBlueprintEditor::UnwrapSelectedWidget()
 	const TArray<UDreamWidget*> Children = Wrapper->GetChildren();
 
 	const FScopedTransaction Transaction(LOCTEXT("UnwrapWidget", "Unwrap Widget"));
+	// One skeleton compile for the whole unwrap, released before the preview is rebuilt.
+	TOptional<DreamWidgetTreeEditing::FScopedStructureChangeBatch> StructureBatch;
+	StructureBatch.Emplace();
 	TArray<UDreamWidget*> Moved;
 	Moved.Reserve(Children.Num());
 	int32 NextIndex = InsertIndex;
@@ -1190,10 +1193,12 @@ void FDreamWidgetBlueprintEditor::UnwrapSelectedWidget()
 		{
 			DreamWidgetTreeEditing::ReparentWidget(BlueprintBeingEdited, Child, Wrapper, Children.IndexOfByKey(Child));
 		}
+		StructureBatch.Reset();
 		RebuildPreviewPreservingSelection();
 		return;
 	}
 	DreamWidgetTreeEditing::DeleteWidget(BlueprintBeingEdited, Wrapper);
+	StructureBatch.Reset();
 
 	TArray<UDreamWidget*> Previews;
 	RepublishPreviewAndSelect(Moved, Previews);
@@ -1487,28 +1492,33 @@ bool FDreamWidgetBlueprintEditor::WrapTemplatesFrom(UDreamWidget* InPreviewWrapp
 		return false;
 	}
 	const int32 SiblingIndex = InPreviewWrapper->GetParent()->GetChildIndex(InPreviewWrapper);
-	UDreamWidget* WrapperTemplate = DreamWidgetTreeEditing::CreateWidget(BlueprintBeingEdited,
-		UDreamWidget::StaticClass(), ParentTemplate, SiblingIndex, InPreviewWrapper->GetDisplayName());
-	if (WrapperTemplate == nullptr)
+	UDreamWidget* WrapperTemplate = nullptr;
 	{
-		return false;
-	}
-	// By value, not by the name lookup the other mirrors use: this wrapper is the one widget in the
-	// gesture that the preview invented, so there is no name to look it up by.
-	WrapperTemplate->SetAnchorData(InPreviewWrapper->GetAnchorData());
-
-	for (UDreamWidget* PreviewChild : InPreviewChildren)
-	{
-		if (UDreamWidget* ChildTemplate = GetTemplateWidget(PreviewChild))
+		// The wrapper and every child it takes in are one skeleton compile, made before the republish.
+		DreamWidgetTreeEditing::FScopedStructureChangeBatch StructureBatch;
+		WrapperTemplate = DreamWidgetTreeEditing::CreateWidget(BlueprintBeingEdited,
+			UDreamWidget::StaticClass(), ParentTemplate, SiblingIndex, InPreviewWrapper->GetDisplayName());
+		if (WrapperTemplate == nullptr)
 		{
-			DreamWidgetTreeEditing::ReparentWidget(BlueprintBeingEdited, ChildTemplate, WrapperTemplate,
-				InPreviewWrapper->GetChildIndex(PreviewChild));
+			return false;
 		}
-	}
-	// After the children, so a single-child panel is asked to accept what it will actually hold.
-	if (InLayoutContainerClass != nullptr)
-	{
-		WrapperTemplate->CreateNewLayoutContainer(InLayoutContainerClass);
+		// By value, not by the name lookup the other mirrors use: this wrapper is the one widget in the
+		// gesture that the preview invented, so there is no name to look it up by.
+		WrapperTemplate->SetAnchorData(InPreviewWrapper->GetAnchorData());
+
+		for (UDreamWidget* PreviewChild : InPreviewChildren)
+		{
+			if (UDreamWidget* ChildTemplate = GetTemplateWidget(PreviewChild))
+			{
+				DreamWidgetTreeEditing::ReparentWidget(BlueprintBeingEdited, ChildTemplate, WrapperTemplate,
+					InPreviewWrapper->GetChildIndex(PreviewChild));
+			}
+		}
+		// After the children, so a single-child panel is asked to accept what it will actually hold.
+		if (InLayoutContainerClass != nullptr)
+		{
+			WrapperTemplate->CreateNewLayoutContainer(InLayoutContainerClass);
+		}
 	}
 	CommitWidgetGeometryToTemplate(InPreviewChildren);
 
@@ -3386,12 +3396,16 @@ FReply FDreamWidgetBlueprintEditor::TryHandleAssetDragDropOperation(const FDragD
 
 	const FScopedTransaction Transaction(LOCTEXT("CreateFromAssetDrop_Transaction", "DreamUI Create from asset drop"));
 	int32 CreatedCount = 0;
-	for (UClass* ClassToPlace : ClassesToPlace)
 	{
-		if (DreamWidgetTreeEditing::CreateWidget(BlueprintBeingEdited, ClassToPlace, ParentTemplate, -1,
-			ClassToPlace->GetName()) != nullptr)
+		// However many assets were dropped, one skeleton compile.
+		DreamWidgetTreeEditing::FScopedStructureChangeBatch StructureBatch;
+		for (UClass* ClassToPlace : ClassesToPlace)
 		{
-			CreatedCount++;
+			if (DreamWidgetTreeEditing::CreateWidget(BlueprintBeingEdited, ClassToPlace, ParentTemplate, -1,
+				ClassToPlace->GetName()) != nullptr)
+			{
+				CreatedCount++;
+			}
 		}
 	}
 	if (CreatedCount == 0)
@@ -3735,11 +3749,15 @@ bool FDreamWidgetBlueprintEditor::DesignerDeleteWidgets(TConstArrayView<UDreamWi
 		return false;
 	}
 	bool bDeleted = false;
-	for (UDreamWidget* PreviewWidget : InPreviewWidgets)
 	{
-		if (UDreamWidget* Template = GetTemplateWidget(PreviewWidget))
+		// One skeleton compile for the whole selection, not one per widget.
+		DreamWidgetTreeEditing::FScopedStructureChangeBatch StructureBatch;
+		for (UDreamWidget* PreviewWidget : InPreviewWidgets)
 		{
-			bDeleted |= DreamWidgetTreeEditing::DeleteWidget(BlueprintBeingEdited, Template);
+			if (UDreamWidget* Template = GetTemplateWidget(PreviewWidget))
+			{
+				bDeleted |= DreamWidgetTreeEditing::DeleteWidget(BlueprintBeingEdited, Template);
+			}
 		}
 	}
 	if (bDeleted)
@@ -3894,21 +3912,25 @@ TArray<UDreamWidget*> FDreamWidgetBlueprintEditor::DesignerDuplicateWidgets(TCon
 		return Result;
 	}
 	TArray<UDreamWidget*> NewTemplates;
-	for (UDreamWidget* PreviewWidget : InPreviewWidgets)
 	{
-		UDreamWidget* Template = GetTemplateWidget(PreviewWidget);
-		if (Template == nullptr || !IsValid(Template->GetParent()))
+		// One skeleton compile for every copy, made before the republish below.
+		DreamWidgetTreeEditing::FScopedStructureChangeBatch StructureBatch;
+		for (UDreamWidget* PreviewWidget : InPreviewWidgets)
 		{
-			// The authored root has no parent to be duplicated alongside. Said out loud, because a
-			// menu item that quietly does nothing is indistinguishable from one that is broken.
-			UE_LOG(DreamGUIEditor, Error, TEXT("[%s].%d Not duplicating '%s': %s."),
-				ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *GetNameSafe(PreviewWidget),
-				Template == nullptr ? TEXT("it has no template counterpart") : TEXT("the authored root has no parent"));
-			continue;
-		}
-		if (UDreamWidget* Copy = DreamWidgetTreeEditing::DuplicateWidget(BlueprintBeingEdited, Template, Template->GetParent()))
-		{
-			NewTemplates.Add(Copy);
+			UDreamWidget* Template = GetTemplateWidget(PreviewWidget);
+			if (Template == nullptr || !IsValid(Template->GetParent()))
+			{
+				// The authored root has no parent to be duplicated alongside. Said out loud, because a
+				// menu item that quietly does nothing is indistinguishable from one that is broken.
+				UE_LOG(DreamGUIEditor, Error, TEXT("[%s].%d Not duplicating '%s': %s."),
+					ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *GetNameSafe(PreviewWidget),
+					Template == nullptr ? TEXT("it has no template counterpart") : TEXT("the authored root has no parent"));
+				continue;
+			}
+			if (UDreamWidget* Copy = DreamWidgetTreeEditing::DuplicateWidget(BlueprintBeingEdited, Template, Template->GetParent()))
+			{
+				NewTemplates.Add(Copy);
+			}
 		}
 	}
 	RepublishPreviewAndSelect(NewTemplates, Result);
@@ -4185,18 +4207,22 @@ TConstArrayView<UDreamWidget*> InPreviewWidgets, UDreamWidget* InPreviewNewParen
 	};
 
 	bool bMoved = false;
-	for (UDreamWidget* PreviewWidget : InPreviewWidgets)
 	{
-		UDreamWidget* ChildTemplate = GetTemplateWidget(PreviewWidget);
-		if (ChildTemplate == nullptr)
+		// A drop of several widgets is one skeleton compile.
+		DreamWidgetTreeEditing::FScopedStructureChangeBatch StructureBatch;
+		for (UDreamWidget* PreviewWidget : InPreviewWidgets)
 		{
-			continue;
+			UDreamWidget* ChildTemplate = GetTemplateWidget(PreviewWidget);
+			if (ChildTemplate == nullptr)
+			{
+				continue;
+			}
+			// The sibling index the preview ended up at, so the two halves agree on order as well as on
+			// parentage -- the drop position is part of what the author expressed.
+			const int32 SiblingIndex = !SlotName.IsNone() ? SlotSiblingIndex(PreviewWidget)
+				: IsValid(PreviewWidget->GetParent()) ? PreviewWidget->GetParent()->GetChildIndex(PreviewWidget) : -1;
+			bMoved |= DreamWidgetTreeEditing::ReparentWidget(BlueprintBeingEdited, ChildTemplate, ParentTemplate, SiblingIndex, SlotName);
 		}
-		// The sibling index the preview ended up at, so the two halves agree on order as well as on
-		// parentage -- the drop position is part of what the author expressed.
-		const int32 SiblingIndex = !SlotName.IsNone() ? SlotSiblingIndex(PreviewWidget)
-			: IsValid(PreviewWidget->GetParent()) ? PreviewWidget->GetParent()->GetChildIndex(PreviewWidget) : -1;
-		bMoved |= DreamWidgetTreeEditing::ReparentWidget(BlueprintBeingEdited, ChildTemplate, ParentTemplate, SiblingIndex, SlotName);
 	}
 	if (bMoved)
 	{

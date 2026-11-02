@@ -153,4 +153,24 @@ namespace DreamWidgetTreeEditing
 	 * possible symptom: an edit that is on disk and absent from every instance.
 	 */
 	DREAMGUIEDITOR_API void NotifyStructureChanged(UDreamWidgetBlueprint* InBlueprint);
+
+	/**
+	 * Holds every NotifyStructureChanged made while it is alive and makes it once per Blueprint when the
+	 * outermost one goes out of scope.
+	 *
+	 * The notification is a synchronous skeleton compile, so an edit that walks a selection -- deleting,
+	 * duplicating, wrapping or moving several widgets -- paid one compile per widget. Nothing between two
+	 * of those edits reads the class (each works on the authoring tree), so one compile at the end gives
+	 * the same class for a fraction of the time.
+	 *
+	 * Close it before anything that rebuilds the preview: the notification broadcasts the Blueprint's
+	 * change, which invalidates the preview, and a rebuild made before it would be made again a tick later.
+	 */
+	class DREAMGUIEDITOR_API FScopedStructureChangeBatch
+	{
+	public:
+		FScopedStructureChangeBatch();
+		~FScopedStructureChangeBatch();
+		UE_NONCOPYABLE(FScopedStructureChangeBatch);
+	};
 }
