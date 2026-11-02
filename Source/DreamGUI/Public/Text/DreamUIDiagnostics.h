@@ -143,6 +143,11 @@ enum class EDreamUIDiagnosticCode : int32
 	 * `Type Name = parent ["Name"]`, or a `viewmodels` block written inside a node.
 	 */
 	MalformedViewModelsBlock = 2021,
+	/**
+	 * `@note(…)`, `@max(…)` or `@noloc` written wrong: not one string / one whole number, after a value that is not a
+	 * string, written twice, or `@noloc` together with what only a translated text has (`@key`, `@note`, `@max`).
+	 */
+	MalformedTextAnnotation = 2022,
 
 	// --- 3xxx semantic ---
 	/**

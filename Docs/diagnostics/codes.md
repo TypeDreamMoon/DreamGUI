@@ -33,6 +33,7 @@ refused: 1 lexer, 2 parser, 3 meaning, 4 values, 5 building the tree, 6 compilin
 | DUI2019 | MalformedSlotDeclaration | A slot with `default` twice, or a block that both declares and fills. |
 | DUI2020 | MalformedRows | A `rows` table that does not read: a column list that is not names, a column twice, a row with the wrong number of values. |
 | DUI2021 | MalformedViewModelsBlock | A `viewmodels` line that is not `Type Name`, `= new`, `= global ["Name"]` or `= parent ["Name"]` (an empty `""` name included), or a `viewmodels` block inside a node. |
+| DUI2022 | MalformedTextAnnotation | `@note(…)` not holding one string, `@max(…)` not one whole number of at least 1, either after a value that is not a string, an annotation written twice, or `@noloc` with `@key`, `@note` or `@max`. |
 | DUI3001 | DuplicateNodeId | Two nodes share an id. |
 | DUI3002 | InvalidNodeId | An id that is not an identifier, starts with a digit, or is a keyword. |
 | DUI3003 | UnknownNodeType | A type that is no tag, container, alias, registered widget or path. |

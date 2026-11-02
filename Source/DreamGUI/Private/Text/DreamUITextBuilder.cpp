@@ -647,6 +647,8 @@ namespace DreamUITextBuilderLocal
 		const FString* Path = InContext.NodePaths.Find(&InNode);
 		Text.NodePath = Path != nullptr ? *Path : InNode.Id;
 		Text.NodeType = InNode.TypeName;
+		Text.Note = InProperty.Value.LocalizationNote;
+		Text.Max = InProperty.Value.LocalizationMax;
 		// The key the old id made, spelt the way MakeLocalizationKey spells the new one: what lets a translation
 		// follow a rename without anybody guessing. An `@key` is the author's own and does not move with the id.
 		if (!InNode.WasId.IsEmpty() && InProperty.Value.LocalizationKeyOverride.IsEmpty())
@@ -874,12 +876,23 @@ namespace DreamUITextBuilderLocal
 				return false;
 			}
 			FString SourceString = Value.Raw;
+			if (Value.bNoLocalize)
+			{
+				// `@noloc`: the same text in every language, with no entry for a translator to see.
+				AsText->SetPropertyValue(ValuePtr, FText::AsCultureInvariant(MoveTemp(SourceString)));
+				return true;
+			}
 			const FString Key = MakeLocalizationKey(InNode, InProperty, InDestination.LocalizationDiscriminator);
 			if (InContext.Localization != nullptr)
 			{
 				NoteLocalizableText(InContext, InNode, InProperty, InDestination.LocalizationDiscriminator, Key, SourceString);
 			}
+#if WITH_EDITORONLY_DATA
+			// The note reaches the engine's own gather too, as the text's developer notes.
+			AsText->SetPropertyValue(ValuePtr, FText::AsLocalizable_Advanced(InContext.LocalizationNamespace, Key, MoveTemp(SourceString), Value.LocalizationNote));
+#else
 			AsText->SetPropertyValue(ValuePtr, FText::AsLocalizable_Advanced(InContext.LocalizationNamespace, Key, MoveTemp(SourceString)));
+#endif
 			return true;
 		}
 

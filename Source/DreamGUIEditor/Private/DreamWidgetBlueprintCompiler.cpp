@@ -265,11 +265,16 @@ namespace DreamWidgetTextMembersLocal
 				OutReason = TEXT("a Text default is a quoted string");
 				return false;
 			}
+			if (Value.bNoLocalize)
+			{
+				FTextStringHelper::WriteToBuffer(OutDefault, FText::AsCultureInvariant(FString(Value.Raw)));
+				return true;
+			}
 			// Localizable, under the namespace the builder keys the file's other strings by and a key of the prop's
 			// own (or the one `@key(...)` pins): a component's default label is text a translator has to see.
 			const FString Key = Value.LocalizationKeyOverride.IsEmpty()
 				? FString::Printf(TEXT("props.%s"), *InProp.Name) : Value.LocalizationKeyOverride;
-			FTextStringHelper::WriteToBuffer(OutDefault, FText::AsLocalizable_Advanced(InLocalizationNamespace, Key, FString(Value.Raw)));
+			FTextStringHelper::WriteToBuffer(OutDefault, FText::AsLocalizable_Advanced(InLocalizationNamespace, Key, FString(Value.Raw), Value.LocalizationNote));
 			return true;
 		}
 		if (Category == UEdGraphSchema_K2::PC_String)
@@ -1641,7 +1646,8 @@ namespace DreamWidgetRenameMigrationLocal
 			{
 				if (!Property.IsBinding()
 					&& Property.Value.Kind == EDreamUIValueKind::String
-					&& Property.Value.LocalizationKeyOverride.IsEmpty())
+					&& Property.Value.LocalizationKeyOverride.IsEmpty()
+					&& !Property.Value.bNoLocalize)
 				{
 					return true;
 				}
