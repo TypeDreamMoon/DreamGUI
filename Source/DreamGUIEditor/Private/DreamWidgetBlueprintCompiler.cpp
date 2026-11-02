@@ -31,6 +31,7 @@
 #include "Designer/DreamWidgetPreviewHost.h"
 #include "DreamGUIEditorSubsystem.h"
 #include "Text/DreamUIExpressionThunks.h"
+#include "Text/DreamUILocalizationManifest.h"
 #include "Text/DreamUISourceWatcher.h"
 
 #include "EdGraph/EdGraph.h"
@@ -1236,7 +1237,9 @@ void FDreamWidgetBlueprintCompilerContext::BuildWidgetTreeFromTextSource(FDreamU
 	TArray<DreamUIExpressionThunks::FEmitRoute> EmitRoutes;
 	DreamUIExpressionThunks::Generate(DreamBlueprint, Ast, OutDiagnostics, &EmitRoutes, &RefusedEventNames);
 
-	UDreamWidgetTree* NewTree = FDreamUITextBuilder::Build(Ast, DreamBlueprint, OutDiagnostics, Bindings, &EventBindings, &EachBindings);
+	FDreamUILocalization Localization;
+	UDreamWidgetTree* NewTree = FDreamUITextBuilder::Build(Ast, DreamBlueprint, OutDiagnostics, Bindings, &EventBindings, &EachBindings,
+		&Localization);
 	if (!IsValid(NewTree) || !IsValid(NewTree->RootWidget))
 	{
 		// Its own code even though the builder has already said why. The builder reports a CAUSE (this
@@ -1247,6 +1250,10 @@ void FDreamWidgetBlueprintCompilerContext::BuildWidgetTreeFromTextSource(FDreamU
 			TEXT("the file parsed but produced no hierarchy, so there is nothing to compile into this class"));
 		return;
 	}
+
+	// The texts this compile made, for localization tools to pick up -- in the editor and in a commandlet alike, since
+	// both compile here. A build that failed keeps the last good manifest, as it keeps the last good tree.
+	DreamUILocalizationManifest::Write(ResolvedPath, Localization);
 
 	// The emit handlers' bodies, now that there is a tree to find each route's source event on: a handler has to take
 	// exactly what that event sends, and which event it is -- a widget's, its visual's, a behaviour's, of whatever
