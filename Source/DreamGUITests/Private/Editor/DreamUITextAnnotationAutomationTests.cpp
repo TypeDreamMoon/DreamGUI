@@ -10,10 +10,13 @@
 #include "Text/DreamUIAst.h"
 #include "Text/DreamUIDiagnostics.h"
 #include "Text/DreamUILocalizationManifest.h"
+#include "Text/DreamUIPaths.h"
 #include "Text/DreamUISourceFile.h"
 #include "Text/DreamUITextBuilder.h"
 #include "Text/DreamUITextWriteBack.h"
 
+#include "Internationalization/TextNamespaceUtil.h"
+#include "Misc/Paths.h"
 #include "UObject/Package.h"
 #include "UObject/StrongObjectPtr.h"
 
@@ -116,6 +119,34 @@ bool FDreamUITextAnnotationBuildTest::RunTest(const FString& Parameters)
 	const UDreamText* Title = FindText(Tree.Get(), TEXT("Title"));
 	TestTrue(TEXT("@noloc: the same text in every language"), Version != nullptr && Version->GetText().IsCultureInvariant() && Version->GetText().ToString() == TEXT("v1.0.3"));
 	TestTrue(TEXT("a translated one stays localizable"), Title != nullptr && !Title->GetText().IsCultureInvariant() && Title->GetText().ShouldGatherForLocalization());
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamUITextPortableNamespaceTest,
+	"DreamGUI.Text.AFileWithoutAClassLineIsKeyedByItsPathUnderItsRoot",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamUITextPortableNamespaceTest::RunTest(const FString& Parameters)
+{
+	// The same file checked out anywhere: its texts' namespace is the path as an asset stores it, not where the disk has it.
+	const FString Path = FPaths::ConvertRelativePathToFull(FPaths::ProjectDir() / DreamUIPaths::SourceDirectoryName / TEXT("UI/NoClass.dui"));
+	FDreamUIAst Ast;
+	FDreamUIDiagnosticBag Diagnostics;
+	if (!TestTrue(TEXT("the file parses"), FDreamUISourceFile::Parse(TEXT("Widget Root {\n    Text Title {\n        Text = \"设置\"\n    }\n}\n"), Path, Ast, Diagnostics)))
+	{
+		return false;
+	}
+	Diagnostics.SourceName = Path;
+	FDreamUILocalization Localization;
+	TArray<FDreamWidgetPropertyBinding> Bindings;
+	TStrongObjectPtr<UDreamWidgetTree> Tree(FDreamUITextBuilder::Build(Ast, GetTransientPackage(), Diagnostics, Bindings, nullptr, nullptr, &Localization));
+	TestTrue(TEXT("builds"), Tree.IsValid());
+	TestEqual(TEXT("the namespace is the path under the DUI root"), Localization.Namespace, FString(TEXT("UI/NoClass.dui")));
+	TestEqual(TEXT("what MakePortablePath makes of it"), Localization.Namespace, DreamUIPaths::MakePortablePath(Path));
+	const UDreamText* Title = Tree.IsValid() ? DreamUITextAnnotationTestLocal::FindText(Tree.Get(), TEXT("Title")) : nullptr;
+	const TOptional<FString> Namespace = Title != nullptr ? FTextInspector::GetNamespace(Title->GetText()) : TOptional<FString>();
+	TestTrue(TEXT("and the FText's"), Namespace.IsSet() && Namespace.GetValue() == TEXT("UI/NoClass.dui"));
 	return true;
 }
 

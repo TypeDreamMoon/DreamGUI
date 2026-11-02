@@ -136,7 +136,8 @@ A flags enum has no `|`; write a combination as the number its flags add up to.
 
 A string can carry the key it is localized under: `Text = "OK" @key("Dialog.Confirm")`. Without one the key is
 `<node id>.<property>` -- with the component's class and position between the two for a line of a `+` block -- in the
-namespace the `class` line gives.
+namespace the `class` line gives. A file without a `class` line uses its path under its `DUI/` folder
+(`Panels/Settings.dui`, `Plugin.X:Panels/Settings.dui`), the same on every machine.
 
 Three more annotations say what a translator needs, after the string and in any order:
 

@@ -110,7 +110,8 @@ AnchorData.SizeDelta = (400, 240)
 
 字符串可以带上它本地化所依据的键：`Text = "OK" @key("Dialog.Confirm")`。不带键时，键为
 `<node id>.<property>`——对于 `+` 块的某一行，两段之间会加上组件的类和位置——位于
-`class` 行所给出的命名空间中。
+`class` 行所给出的命名空间中。没写 `class` 行的文件，命名空间是它在所属 `DUI/` 目录下的路径
+（`Panels/Settings.dui`、`Plugin.X:Panels/Settings.dui`），换机器也不变。
 
 另外三个注解写给译者，跟在字符串后面，顺序随意：
 

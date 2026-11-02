@@ -3,6 +3,7 @@
 #include "Text/DreamUITextBuilder.h"
 
 #include "Text/DreamUIAst.h"
+#include "Text/DreamUIPaths.h"
 #include "Text/DreamUIValueFormat.h"
 
 #include "Core/DreamUIBehaviour.h"
@@ -430,8 +431,10 @@ namespace DreamUITextBuilderLocal
 		FString ActiveLoopVariable;
 		/** Filled during the walk, drained by ResolveNodeReferences once the tree is whole. */
 		TArray<FPendingNodeReference> NodeReferences;
-		/** ClassPath, or the source name when the file declares no class. Fixed for the whole build. */
+		/** ClassPath, or the file's path relative to its DUI root when it declares no class. Fixed for the whole build. */
 		FString LocalizationNamespace;
+		/** What the widgets' GUIDs are made from: ClassPath, or the source name as the diagnostics print it. */
+		FString IdentityNamespace;
 		/** The first `slot … default` met, so a second one can say where the first is. */
 		const FDreamUINode* DefaultSlotNode = nullptr;
 		/** Component aliases already resolved to a class, so a family used on fifty rows asks the editor once. */
@@ -2772,7 +2775,7 @@ namespace DreamUITextBuilderLocal
 			{
 				WidgetName = MakeUniqueObjectName(InContext.Tree, WidgetClass, WidgetName);
 			}
-			WidgetGuid = FGuid::NewDeterministicGuid(InContext.LocalizationNamespace + TEXT("/") + WidgetName.ToString());
+			WidgetGuid = FGuid::NewDeterministicGuid(InContext.IdentityNamespace + TEXT("/") + WidgetName.ToString());
 		}
 		UDreamWidget* Widget = InContext.Tree->ConstructWidget(WidgetClass, WidgetName, WidgetGuid);
 		if (!IsValid(Widget))
@@ -2976,7 +2979,7 @@ namespace DreamUITextBuilderLocal
 			ContentName = FString::Printf(TEXT("%s_%08X_EachContent"), *ContentName.Left(NAME_SIZE - 32), FCrc::StrCrc32(*ContentName));
 		}
 		UDreamWidget* Content = InContext.Tree->ConstructWidget(UDreamWidget::StaticClass(), FName(*ContentName),
-			FGuid::NewDeterministicGuid(InContext.LocalizationNamespace + TEXT("/") + ContentName));
+			FGuid::NewDeterministicGuid(InContext.IdentityNamespace + TEXT("/") + ContentName));
 		if (IsValid(Content))
 		{
 			Content->SetDisplayName(ContentName);
@@ -3897,9 +3900,13 @@ UDreamWidgetTree* FDreamUITextBuilder::Build(const FDreamUIAst& InAst, UObject* 
 	Context.EventBindings = OutEventBindings;
 	Context.EachBindings = OutEachBindings;
 	// The namespace a translator sees. ClassPath makes it stable across a rename of the .dui file,
-	// which the source name would not; the source name is the fallback for a file that has not been
-	// given a class yet, which is every file in an editor preview before it is first compiled.
-	Context.LocalizationNamespace = InAst.ClassPath.IsEmpty() ? OutDiagnostics.SourceName : InAst.ClassPath;
+	// which the source name would not; the file's path is the fallback for a file that has not been
+	// given a class yet, which is every file in an editor preview before it is first compiled. The
+	// path as it is stored, relative to its DUI root ("Panels/Settings.dui", "Plugin.X:Panels/..."),
+	// so a translation does not depend on where the project is checked out. The widgets' GUIDs keep
+	// the name the diagnostics print, as they always had.
+	Context.LocalizationNamespace = InAst.ClassPath.IsEmpty() ? DreamUIPaths::MakePortablePath(OutDiagnostics.SourceName) : InAst.ClassPath;
+	Context.IdentityNamespace = InAst.ClassPath.IsEmpty() ? OutDiagnostics.SourceName : InAst.ClassPath;
 	if (OutLocalization != nullptr)
 	{
 		OutLocalization->Namespace = Context.LocalizationNamespace;

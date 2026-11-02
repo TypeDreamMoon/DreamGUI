@@ -713,7 +713,8 @@ void FDreamWidgetBlueprintCompilerContext::DeclareTextMembers(const FDreamUIAst&
 	};
 
 	// The namespace the builder keys this file's strings by, so a prop's default text sits beside them.
-	const FString LocalizationNamespace = InAst.ClassPath.IsEmpty() ? OutDiagnostics.SourceName : InAst.ClassPath;
+	// The builder's namespace, spelt the same way: the class line, or the file's path relative to its DUI root.
+	const FString LocalizationNamespace = InAst.ClassPath.IsEmpty() ? DreamUIPaths::MakePortablePath(OutDiagnostics.SourceName) : InAst.ClassPath;
 
 	for (const FDreamUIPropDecl& Prop : InAst.Props)
 	{
