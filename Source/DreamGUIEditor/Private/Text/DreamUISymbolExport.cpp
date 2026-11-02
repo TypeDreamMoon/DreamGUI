@@ -855,6 +855,18 @@ FString FDreamUISymbolExport::ExportNow()
 	FJsonSerializer::Serialize(Root.ToSharedRef(), Writer);
 
 	const FString FilePath = FPaths::Combine(Directory, TEXT(".dui-symbols.json"));
+
+	// Not rewritten when it would say the same thing. This runs at every editor start, and a file written with
+	// identical bytes is still a change as far as VS Code is concerned: it reloads the symbols and drops what it
+	// has cached, for a process that taught it nothing new. Compared as text, case-sensitively -- FString's own ==
+	// is case-blind, and a symbol that changed only in case is a changed symbol.
+	FString Existing;
+	if (FFileHelper::LoadFileToString(Existing, *FilePath) && Existing.Equals(Serialized, ESearchCase::CaseSensitive))
+	{
+		UE_LOG(DreamGUIEditor, Display, TEXT("[%s].%d '%s' is already up to date."),
+			ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *FilePath);
+		return FilePath;
+	}
 	if (!FFileHelper::SaveStringToFile(Serialized, *FilePath, FFileHelper::EEncodingOptions::ForceUTF8WithoutBOM))
 	{
 		UE_LOG(DreamGUIEditor, Warning, TEXT("[%s].%d Could not write '%s'."),
