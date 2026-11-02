@@ -1767,7 +1767,45 @@ FText FDreamWidgetCustomization::GetAnchorLabelTooltipText(TSharedRef<IPropertyH
 	}
 }
 
+void FDreamWidgetCustomization::RefreshAnchorMemo() const
+{
+	if (AnchorMemoFrame == GFrameCounter)
+	{
+		return;
+	}
+	AnchorMemoFrame = GFrameCounter;
+	for (int32 Index = 0; Index < 4; ++Index)
+	{
+		AnchorValueMemo[Index].Reset();
+		AnchorValueEnabledMemo[Index].Reset();
+	}
+	LayoutControlMemo.Reset();
+	AnchorHAlignMemo.Reset();
+	AnchorVAlignMemo.Reset();
+}
+
 DreamGUIAnchorPreviewWidget::UIAnchorHorizontalAlign FDreamWidgetCustomization::GetAnchorHAlign(TSharedRef<IPropertyHandle> AnchorMinHandle, TSharedRef<IPropertyHandle> AnchorMaxHandle)const
+{
+	// One pair of handles per customization (CustomizeDetails makes them once), so the frame is the whole key.
+	RefreshAnchorMemo();
+	if (!AnchorHAlignMemo.IsSet())
+	{
+		AnchorHAlignMemo = ComputeAnchorHAlign(AnchorMinHandle, AnchorMaxHandle);
+	}
+	return AnchorHAlignMemo.GetValue();
+}
+
+DreamGUIAnchorPreviewWidget::UIAnchorVerticalAlign FDreamWidgetCustomization::GetAnchorVAlign(TSharedRef<IPropertyHandle> AnchorMinHandle, TSharedRef<IPropertyHandle> AnchorMaxHandle)const
+{
+	RefreshAnchorMemo();
+	if (!AnchorVAlignMemo.IsSet())
+	{
+		AnchorVAlignMemo = ComputeAnchorVAlign(AnchorMinHandle, AnchorMaxHandle);
+	}
+	return AnchorVAlignMemo.GetValue();
+}
+
+DreamGUIAnchorPreviewWidget::UIAnchorHorizontalAlign FDreamWidgetCustomization::ComputeAnchorHAlign(TSharedRef<IPropertyHandle> AnchorMinHandle, TSharedRef<IPropertyHandle> AnchorMaxHandle)const
 {
 	if (TargetScriptArray.Num() == 0 || !TargetScriptArray[0].IsValid())return DreamGUIAnchorPreviewWidget::UIAnchorHorizontalAlign::None;
 
@@ -1796,7 +1834,7 @@ DreamGUIAnchorPreviewWidget::UIAnchorHorizontalAlign FDreamWidgetCustomization::
 	}
 	return AnchorHAlign;
 }
-DreamGUIAnchorPreviewWidget::UIAnchorVerticalAlign FDreamWidgetCustomization::GetAnchorVAlign(TSharedRef<IPropertyHandle> AnchorMinHandle, TSharedRef<IPropertyHandle> AnchorMaxHandle)const
+DreamGUIAnchorPreviewWidget::UIAnchorVerticalAlign FDreamWidgetCustomization::ComputeAnchorVAlign(TSharedRef<IPropertyHandle> AnchorMinHandle, TSharedRef<IPropertyHandle> AnchorMaxHandle)const
 {
 	if (TargetScriptArray.Num() == 0 || !TargetScriptArray[0].IsValid())return DreamGUIAnchorPreviewWidget::UIAnchorVerticalAlign::None;
 
@@ -2134,7 +2172,12 @@ bool FDreamWidgetCustomization::IsAnchorEditableForSelection(const TArray<TWeakO
 
 FDreamLayoutControlAnchorData FDreamWidgetCustomization::GetLayoutControlAnchorValue()const
 {
-	return FoldLayoutControlAcrossSelection(TargetScriptArray);
+	RefreshAnchorMemo();
+	if (!LayoutControlMemo.IsSet())
+	{
+		LayoutControlMemo = FoldLayoutControlAcrossSelection(TargetScriptArray);
+	}
+	return LayoutControlMemo.GetValue();
 }
 
 bool FDreamWidgetCustomization::GetLayoutControlHorizontalAnchoredPosition()const
@@ -2181,6 +2224,20 @@ TOptional<float> FDreamWidgetCustomization::GetMinMaxSliderValue(TSharedRef<IPro
 }
 
 TOptional<float> FDreamWidgetCustomization::GetAnchorValue(TSharedRef<IPropertyHandle> AnchorHandle, int AnchorValueIndex)const
+{
+	if (AnchorValueIndex < 0 || AnchorValueIndex >= 4)
+	{
+		return ComputeAnchorValue(AnchorHandle, AnchorValueIndex);
+	}
+	RefreshAnchorMemo();
+	if (!AnchorValueMemo[AnchorValueIndex].IsSet())
+	{
+		AnchorValueMemo[AnchorValueIndex] = ComputeAnchorValue(AnchorHandle, AnchorValueIndex);
+	}
+	return AnchorValueMemo[AnchorValueIndex].GetValue();
+}
+
+TOptional<float> FDreamWidgetCustomization::ComputeAnchorValue(TSharedRef<IPropertyHandle> AnchorHandle, int AnchorValueIndex)const
 {
 	if (TargetScriptArray.Num() == 0 || !TargetScriptArray[0].IsValid())return TOptional<float>();
 
@@ -2493,6 +2550,8 @@ void FDreamWidgetCustomization::ApplyValueChanged(float Value, TSharedRef<IPrope
 	{
 		NotifyAnchorGeometryPostChange();
 	}
+	// The rows read the values this just wrote, possibly later in this same frame.
+	AnchorMemoFrame = MAX_uint64;
 }
 void FDreamWidgetCustomization::OnAnchorValueChanged(float Value, TSharedRef<IPropertyHandle> AnchorHandle, int AnchorValueIndex)
 {
@@ -2533,6 +2592,20 @@ void FDreamWidgetCustomization::OnAnchorValueSliderMovementEnd(float Value, TSha
 }
 
 bool FDreamWidgetCustomization::IsAnchorValueEnable(TSharedRef<IPropertyHandle> AnchorHandle, int AnchorValueIndex)const
+{
+	if (AnchorValueIndex < 0 || AnchorValueIndex >= 4)
+	{
+		return ComputeIsAnchorValueEnable(AnchorHandle, AnchorValueIndex);
+	}
+	RefreshAnchorMemo();
+	if (!AnchorValueEnabledMemo[AnchorValueIndex].IsSet())
+	{
+		AnchorValueEnabledMemo[AnchorValueIndex] = ComputeIsAnchorValueEnable(AnchorHandle, AnchorValueIndex);
+	}
+	return AnchorValueEnabledMemo[AnchorValueIndex].GetValue();
+}
+
+bool FDreamWidgetCustomization::ComputeIsAnchorValueEnable(TSharedRef<IPropertyHandle> AnchorHandle, int AnchorValueIndex)const
 {
 	if (TargetScriptArray.Num() == 0 || !TargetScriptArray[0].IsValid())return false;
 
