@@ -72,6 +72,38 @@ private:
 	 */
 	bool IsPropertyReadOnly(const FPropertyAndParent& InPropertyAndParent);
 	bool IsCustomRowReadOnly(FName InRowName, FName InCategoryName) const;
+
+	/**
+	 * The answers above, kept for a moment.
+	 *
+	 * The details view asks them from an attribute, so every visible row asks on every frame, and for a
+	 * text-authored hierarchy the answer prints the row's value to see whether the language can spell it.
+	 * Kept until anything that could change an answer happens here -- an edit, a selection, a refresh --
+	 * and never longer than ReadOnlyCacheSeconds, which covers the changes this panel does not hear about
+	 * (an undo, a viewport drag, a recompile).
+	 */
+	struct FReadOnlyKey
+	{
+		TArray<const void*, TInlineAllocator<8>> Parts;
+		bool operator==(const FReadOnlyKey& Other) const { return Parts == Other.Parts; }
+		friend uint32 GetTypeHash(const FReadOnlyKey& Key)
+		{
+			uint32 Hash = 0;
+			for (const void* Part : Key.Parts)
+			{
+				Hash = HashCombineFast(Hash, ::PointerHash(Part));
+			}
+			return Hash;
+		}
+	};
+	static constexpr double ReadOnlyCacheSeconds = 0.5;
+	mutable TMap<FReadOnlyKey, bool> PropertyReadOnlyCache;
+	mutable TMap<TPair<FName, FName>, bool> CustomRowReadOnlyCache;
+	mutable double ReadOnlyCacheBornAt = 0.0;
+	/** Empties both caches when they are older than ReadOnlyCacheSeconds. */
+	void ExpireReadOnlyCache() const;
+	bool ComputeIsPropertyReadOnly(const FPropertyAndParent& InPropertyAndParent) const;
+	void InvalidateReadOnlyCache() const;
 	/**
 	 * Whether this panel may make STRUCTURAL edits: the rename box in the header, and the component
 	 * list's add / remove / cut / paste. False for a text-authored hierarchy -- both of those write

@@ -232,6 +232,8 @@ void SDreamWidgetDesignerDetails::NotifyPreChange(FProperty* PropertyAboutToChan
 
 void SDreamWidgetDesignerDetails::NotifyPostChange(const FPropertyChangedEvent& PropertyChangedEvent, FEditPropertyChain* PropertyThatChanged)
 {
+	// Whether a value can be spelled in a .dui can depend on the value, so an edit can change the answer.
+	InvalidateReadOnlyCache();
 	// Not while a slider is being dragged. Every interactive tick would otherwise copy the value
 	// across and mark the asset modified; the committed change that follows carries the result.
 	if (PropertyChangedEvent.ChangeType == EPropertyChangeType::Interactive || PropertyThatChanged == nullptr)
@@ -376,6 +378,7 @@ UDreamWidget* SDreamWidgetDesignerDetails::GetSelectedWidgetContext() const
 
 void SDreamWidgetDesignerDetails::OnEditorSelectionChanged()
 {
+	InvalidateReadOnlyCache();
 	if (bIsSelectFromComponentList)return;
 	// Null once the world this panel was built on is gone -- the designer drops the preview host
 	// before its panels are taken down, and the selection object lives in that world.
@@ -466,6 +469,7 @@ void SDreamWidgetDesignerDetails::OnEditorSelectionChanged()
 
 void SDreamWidgetDesignerDetails::OnComponentSelectionChanged(const TArray<TWeakObjectPtr<UDreamUIBehaviour>>& SelectedComponents)
 {
+	InvalidateReadOnlyCache();
 	bIsSelectFromComponentList = true;
 
 	TArray<UObject*> SelectedObjects;
@@ -519,13 +523,55 @@ void SDreamWidgetDesignerDetails::OnComponentSelectionChanged(const TArray<TWeak
 
 void SDreamWidgetDesignerDetails::Refresh()
 {
+	InvalidateReadOnlyCache();
 	if (DetailsView.IsValid())
 	{
 		DetailsView->ForceRefresh();
 	}
 }
 
+void SDreamWidgetDesignerDetails::ExpireReadOnlyCache() const
+{
+	const double Now = FPlatformTime::Seconds();
+	if (Now - ReadOnlyCacheBornAt > ReadOnlyCacheSeconds)
+	{
+		InvalidateReadOnlyCache();
+		ReadOnlyCacheBornAt = Now;
+	}
+}
+
+void SDreamWidgetDesignerDetails::InvalidateReadOnlyCache() const
+{
+	PropertyReadOnlyCache.Reset();
+	CustomRowReadOnlyCache.Reset();
+	ReadOnlyCacheBornAt = FPlatformTime::Seconds();
+}
+
 bool SDreamWidgetDesignerDetails::IsPropertyReadOnly(const FPropertyAndParent& InPropertyAndParent)
+{
+	ExpireReadOnlyCache();
+	FReadOnlyKey Key;
+	Key.Parts.Add(&InPropertyAndParent.Property);
+	for (const FProperty* Parent : InPropertyAndParent.ParentProperties)
+	{
+		Key.Parts.Add(Parent);
+	}
+	// A separator, so a parent chain and an object list can never run into each other.
+	Key.Parts.Add(nullptr);
+	for (const TWeakObjectPtr<UObject>& Object : InPropertyAndParent.Objects)
+	{
+		Key.Parts.Add(Object.Get());
+	}
+	if (const bool* Cached = PropertyReadOnlyCache.Find(Key))
+	{
+		return *Cached;
+	}
+	const bool bReadOnly = ComputeIsPropertyReadOnly(InPropertyAndParent);
+	PropertyReadOnlyCache.Add(MoveTemp(Key), bReadOnly);
+	return bReadOnly;
+}
+
+bool SDreamWidgetDesignerDetails::ComputeIsPropertyReadOnly(const FPropertyAndParent& InPropertyAndParent) const
 {
 	// FPropertyAndParent::Objects, never the panel's selection: the widget's visual, its panel slot
 	// and its layouts are shown through AddExternalObjects, so a great many rows in this panel belong
@@ -550,16 +596,25 @@ bool SDreamWidgetDesignerDetails::IsCustomRowReadOnly(FName InRowName, FName InC
 	{
 		return false;
 	}
+	ExpireReadOnlyCache();
+	const TPair<FName, FName> Key(InRowName, InCategoryName);
+	if (const bool* Cached = CustomRowReadOnlyCache.Find(Key))
+	{
+		return *Cached;
+	}
+	bool bReadOnly = false;
 	// The selection, because a custom row hands over no objects at all -- see the header. That is why
 	// this answer is per category rather than per property, and why the gate refuses by default here.
 	for (const TWeakObjectPtr<UObject>& Object : DetailsView->GetSelectedObjects())
 	{
 		if (Object.IsValid() && DreamUITextAuthoring::IsCustomRowReadOnly(Object.Get(), InRowName, InCategoryName))
 		{
-			return true;
+			bReadOnly = true;
+			break;
 		}
 	}
-	return false;
+	CustomRowReadOnlyCache.Add(Key, bReadOnly);
+	return bReadOnly;
 }
 
 #undef LOCTEXT_NAMESPACE
