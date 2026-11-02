@@ -82,6 +82,14 @@ private:
 
 	/** The authored route matching this context and event, or null. */
 	const FDreamWidgetEventBinding* FindRoute(const UDreamWidgetBlueprint* InBlueprint, FName InEventName) const;
+	/**
+	 * Whether FindRoute finds one, answered from a cache that lasts a frame. Every row's switcher and remove button ask on
+	 * every frame, and each ask scans the Blueprint's routes; the first of a frame does the scan. A click re-resolves with
+	 * FindRoute itself, so only the icon can be a frame behind.
+	 */
+	bool HasRoute(FName InEventName) const;
+	mutable TMap<FName, bool> HasRouteCache;
+	mutable uint64 HasRouteCacheFrame = MAX_uint64;
 
 	/** Switch the editor to its Graph mode and put the caret on the handler. */
 	static void FocusHandler(FDreamWidgetBlueprintEditor& InEditor, const UObject* InHandler);

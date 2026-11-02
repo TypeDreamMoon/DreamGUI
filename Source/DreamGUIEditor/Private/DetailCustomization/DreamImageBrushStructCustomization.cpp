@@ -261,13 +261,22 @@ void FDreamImageBrushStructCustomization::CustomizeChildren( TSharedRef<IPropert
 	ResourceObjectProperty = StructPropertyHandle->GetChildHandle( TEXT("ResourceObject") );
 	ImageTypeProperty = StructPropertyHandle->GetChildHandle(TEXT("ImageType"));
 
-	ResourceObjectProperty->SetOnPropertyValueChanged(FSimpleDelegate::CreateSPLambda(this, [&StructCustomizationUtils]
+	// The customization utils are a stack-scoped reference into the row the refresh below tears down, and
+	// may hand back no utilities at all, so the delegates keep the utilities themselves, weakly.
+	const TWeakPtr<IPropertyUtilities> WeakUtilities = StructCustomizationUtils.GetPropertyUtilities();
+	ResourceObjectProperty->SetOnPropertyValueChanged(FSimpleDelegate::CreateSPLambda(this, [WeakUtilities]
 	{
-		StructCustomizationUtils.GetPropertyUtilities()->RequestForceRefresh();
+		if (const TSharedPtr<IPropertyUtilities> Utilities = WeakUtilities.Pin())
+		{
+			Utilities->RequestForceRefresh();
+		}
 	}));
-	DrawAsProperty->SetOnPropertyValueChanged(FSimpleDelegate::CreateSPLambda(this, [&StructCustomizationUtils]
+	DrawAsProperty->SetOnPropertyValueChanged(FSimpleDelegate::CreateSPLambda(this, [WeakUtilities]
 	{
-		StructCustomizationUtils.GetPropertyUtilities()->RequestForceRefresh();
+		if (const TSharedPtr<IPropertyUtilities> Utilities = WeakUtilities.Pin())
+		{
+			Utilities->RequestForceRefresh();
+		}
 	}));
 	
 	FDetailWidgetRow& ResourceObjectRow = StructBuilder.AddProperty(ResourceObjectProperty.ToSharedRef()).CustomWidget();

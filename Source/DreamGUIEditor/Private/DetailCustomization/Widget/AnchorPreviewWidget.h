@@ -43,6 +43,37 @@ namespace DreamGUIAnchorPreviewWidget
 				FVector2D Size
 			)
 		{
+			Args = InArgs;
+			BuiltSize = Size;
+			Rebuild();
+		}
+
+		/**
+		 * Built again when what it shows changes. Everything below is laid out from the anchors' values at
+		 * the moment it is made, so a preview built once went on showing the anchors it was made with: the
+		 * button on the details row kept drawing the old preset after the anchors were edited anywhere else
+		 * -- a viewport drag, a paste, the Anchor Min/Max rows.
+		 */
+		virtual void Tick(const FGeometry& AllottedGeometry, const double InCurrentTime, const float InDeltaTime) override
+		{
+			SCompoundWidget::Tick(AllottedGeometry, InCurrentTime, InDeltaTime);
+			if (Args._PersistentHAlign.Get() != BuiltPersistentHAlign || Args._PersistentVAlign.Get() != BuiltPersistentVAlign
+				|| Args._SelectedHAlign.Get() != BuiltSelectedHAlign || Args._SelectedVAlign.Get() != BuiltSelectedVAlign)
+			{
+				Rebuild();
+			}
+		}
+
+	private:
+		void Rebuild()
+		{
+			const FArguments& InArgs = Args;
+			const FVector2D Size = BuiltSize;
+			BuiltPersistentHAlign = InArgs._PersistentHAlign.Get();
+			BuiltPersistentVAlign = InArgs._PersistentVAlign.Get();
+			BuiltSelectedHAlign = InArgs._SelectedHAlign.Get();
+			BuiltSelectedVAlign = InArgs._SelectedVAlign.Get();
+
 			auto anchorLineHorizontalWidth = Size.X;
 			auto anchorLineHorizontalHeight = 1;
 			auto anchorLineVerticalWidth = 1;
@@ -263,10 +294,30 @@ namespace DreamGUIAnchorPreviewWidget
 												.WidthOverride(this, &SAnchorPreviewWidget::GetInnerRectWidth, float(Size.X), InArgs._PersistentHAlign.Get(), InArgs._ButtonEnable.Get())
 												.HeightOverride(this, &SAnchorPreviewWidget::GetInnerRectHeight, float(Size.Y), InArgs._PersistentVAlign.Get(), InArgs._ButtonEnable.Get())
 												[
-													SNew(SImage)
-													.Image(FDreamGUIEditorStyle::Get().GetBrush("DreamGUIEditor.WhiteFrame"))
-													.ColorAndOpacity(FLinearColor(FColor(122, 122, 122, 255)))
-													.Visibility(EVisibility::HitTestInvisible)
+													SNew(SOverlay)
+													+ SOverlay::Slot()
+													[
+														SNew(SImage)
+														.Image(FDreamGUIEditorStyle::Get().GetBrush("DreamGUIEditor.WhiteFrame"))
+														.ColorAndOpacity(FLinearColor(FColor(122, 122, 122, 255)))
+														.Visibility(EVisibility::HitTestInvisible)
+													]
+													// Where Shift would put the pivot, while Shift is held: the other modifier
+													// already shows what it does (the rect moves), and this one showed nothing.
+													+ SOverlay::Slot()
+													.HAlign(PivotHintHAlign(InArgs._PersistentHAlign.Get()))
+													.VAlign(PivotHintVAlign(InArgs._PersistentVAlign.Get()))
+													[
+														SNew(SBox)
+														.WidthOverride(5)
+														.HeightOverride(5)
+														.Visibility(this, &SAnchorPreviewWidget::GetPivotHintVisibility, InArgs._ButtonEnable.Get())
+														[
+															SNew(SImage)
+															.Image(FDreamGUIEditorStyle::Get().GetBrush("DreamGUIEditor.AnchorData_Dot"))
+															.ColorAndOpacity(FLinearColor(0.25f, 0.65f, 1.0f))
+														]
+													]
 												]
 											]
 										]
@@ -399,11 +450,35 @@ namespace DreamGUIAnchorPreviewWidget
 			];
 		}
 
-	private:
+		FArguments Args;
+		FVector2D BuiltSize = FVector2D::ZeroVector;
+		UIAnchorHorizontalAlign BuiltPersistentHAlign = UIAnchorHorizontalAlign::None;
+		UIAnchorVerticalAlign BuiltPersistentVAlign = UIAnchorVerticalAlign::None;
+		UIAnchorHorizontalAlign BuiltSelectedHAlign = UIAnchorHorizontalAlign::None;
+		UIAnchorVerticalAlign BuiltSelectedVAlign = UIAnchorVerticalAlign::None;
+
+		/** The modifier that also sets the position: Ctrl, as UMG's anchor menu has it, or Alt, as this one always did. */
+		static bool IsSetPositionModifierDown()
+		{
+			const FModifierKeysState Keys = FSlateApplication::Get().GetModifierKeys();
+			return Keys.IsAltDown() || Keys.IsControlDown();
+		}
+		static EHorizontalAlignment PivotHintHAlign(UIAnchorHorizontalAlign InAlign)
+		{
+			return InAlign == UIAnchorHorizontalAlign::Left ? HAlign_Left : InAlign == UIAnchorHorizontalAlign::Right ? HAlign_Right : HAlign_Center;
+		}
+		static EVerticalAlignment PivotHintVAlign(UIAnchorVerticalAlign InAlign)
+		{
+			return InAlign == UIAnchorVerticalAlign::Top ? VAlign_Top : InAlign == UIAnchorVerticalAlign::Bottom ? VAlign_Bottom : VAlign_Center;
+		}
+		EVisibility GetPivotHintVisibility(bool bInteractable) const
+		{
+			return bInteractable && FSlateApplication::Get().GetModifierKeys().IsShiftDown() ? EVisibility::HitTestInvisible : EVisibility::Collapsed;
+		}
 
 		FOptionalSize GetInnerRectWidth(float Size, UIAnchorHorizontalAlign hAlign, bool IsInteractable) const
 		{
-			bool snapAnchor = FSlateApplication::Get().GetModifierKeys().IsAltDown();
+			bool snapAnchor = IsSetPositionModifierDown();
 			if (snapAnchor && IsInteractable)
 			{
 				if (hAlign == UIAnchorHorizontalAlign::Stretch)
@@ -415,7 +490,7 @@ namespace DreamGUIAnchorPreviewWidget
 		}
 		FOptionalSize GetInnerRectHeight(float Size, UIAnchorVerticalAlign vAlign, bool IsInteractable) const
 		{
-			bool snapAnchor = FSlateApplication::Get().GetModifierKeys().IsAltDown();
+			bool snapAnchor = IsSetPositionModifierDown();
 			if (snapAnchor && IsInteractable)
 			{
 				if (vAlign == UIAnchorVerticalAlign::Stretch)
@@ -428,7 +503,7 @@ namespace DreamGUIAnchorPreviewWidget
 		FMargin GetInnerRectMargin(FVector2D Size, UIAnchorHorizontalAlign hAlign, UIAnchorVerticalAlign vAlign, bool IsInteractable)const
 		{
 			FMargin result(0, 0, 0, 0);
-			bool snapAnchor = FSlateApplication::Get().GetModifierKeys().IsAltDown();
+			bool snapAnchor = IsSetPositionModifierDown();
 			if (snapAnchor && IsInteractable)
 			{
 				switch (hAlign)

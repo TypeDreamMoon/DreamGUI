@@ -485,4 +485,53 @@ bool FDreamCustomStylePaintRowsTest::RunTest(const FString& Parameters)
 	return true;
 }
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamGradientStopCurvesLookOncePerFrameTest,
+	"DreamGUI.Editor.GradientDetails.StopCurvesReadTheGradientOncePerFrameAndAgainAfterTheirOwnEdit",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDreamGradientStopCurvesLookOncePerFrameTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamGradientCustomizationTestLocal;
+	FDreamGradient Source = MakeAwkwardGradient(EDreamPaintInterpolation::SRGB);
+	const int32 OriginalStopCount = Source.Stops.Num();
+	int32 Reads = 0;
+	FDreamGradientStopCurves::FBinding Binding;
+	Binding.Read = [&Source, &Reads](FDreamGradient& OutGradient)
+	{
+		++Reads;
+		OutGradient = Source;
+		return true;
+	};
+	Binding.Write = [&Source](const TArray<FDreamGradientStop>& InStops, bool)
+	{
+		Source.Stops = InStops;
+	};
+	FDreamGradientStopCurves Curves(MoveTemp(Binding));
+	Curves.Refresh();
+	const int32 ReadsAfterRefresh = Reads;
+	TestTrue(TEXT("refreshing reads the gradient"), ReadsAfterRefresh >= 1);
+
+	// What the editor asks in one paint: the curves, more than once, and whether any alpha key exists.
+	Curves.GetCurves();
+	Curves.GetCurves();
+	Curves.HasAnyAlphaKeys();
+	TestEqual(TEXT("the questions of one frame read the gradient no more than the refresh did"), Reads, ReadsAfterRefresh);
+
+	// A change from elsewhere (an undo, a paste) waits for the next frame's look.
+	Source.Stops.RemoveAt(Source.Stops.Num() - 1);
+	TestEqual(TEXT("a change made in this frame is not seen in it"), Curves.GetCurves()[0].CurveToEdit->GetNumKeys(), OriginalStopCount);
+	// The frame counter is the engine's own and only ever counts up; the test moves it on to stand for the next frame.
+	++GFrameCounter;
+	TestEqual(TEXT("the next frame looks again"), Curves.GetCurves()[0].CurveToEdit->GetNumKeys(), OriginalStopCount - 1);
+	TestTrue(TEXT("and that look was a read"), Reads > ReadsAfterRefresh);
+
+	// An edit through the curves asks again at once: a write that did not land has to show.
+	Curves.OnCurveChanged(Curves.GetCurves());
+	const int32 ReadsAfterEdit = Reads;
+	Curves.GetCurves();
+	TestEqual(TEXT("the first question after an edit reads the gradient, in the same frame"), Reads, ReadsAfterEdit + 1);
+	return true;
+}
+
 #endif

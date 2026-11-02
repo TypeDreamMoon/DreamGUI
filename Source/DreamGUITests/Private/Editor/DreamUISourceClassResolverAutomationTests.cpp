@@ -337,4 +337,65 @@ bool FDreamUISourceClassResolverSharedSourceAfterChangeTest::RunTest(const FStri
 	return true;
 }
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDreamUISourceClassResolverRemembersAMissTest,
+	"DreamGUI.Text.SourceClassResolver.ASourceNoBlueprintIsBuiltFromIsRememberedUntilSomethingCouldChangeThat",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * A `use "X.dui" as Foo` that finds no class used to walk every loaded widget Blueprint and read every widget Blueprint the
+ * registry lists, every time it was asked -- and a project compiled in one go asks once per host. A complete miss is
+ * remembered now, and forgotten when an asset appears, goes or moves, or a Blueprint compiles: the events that can give
+ * the file an owner.
+ */
+bool FDreamUISourceClassResolverRemembersAMissTest::RunTest(const FString&)
+{
+	using namespace DreamUISourceClassResolverTestLocal;
+
+	IAssetRegistry* Registry = IAssetRegistry::Get();
+	if (!TestNotNull(TEXT("the asset registry exists"), Registry))
+	{
+		return false;
+	}
+	if (Registry->IsLoadingAssets())
+	{
+		// Its listing is incomplete, so a lookup that misses against it proves nothing and is deliberately not remembered.
+		AddInfo(TEXT("The asset registry is still listing assets; a miss is not remembered from an incomplete listing."));
+		return true;
+	}
+
+	FScopedSourceFiles Sources;
+	if (!TestTrue(TEXT("the source was written"), FScopedSourceFiles::Write(Sources.OldPath, TEXT("Widget Root { }\n"))))
+	{
+		return false;
+	}
+
+	FDreamUISourceWatcher::ForgetUnresolvedSources();
+	TestEqual(TEXT("nothing is remembered to start with"), FDreamUISourceWatcher::NumUnresolvedSources(), 0);
+	TestNull(TEXT("no Blueprint is built from a file nobody uses"), FDreamUISourceWatcher::FindClassForSource(Sources.OldPath));
+	TestEqual(TEXT("and the miss is remembered"), FDreamUISourceWatcher::NumUnresolvedSources(), 1);
+	TestNull(TEXT("asked again, it is the same answer"), FDreamUISourceWatcher::FindClassForSource(Sources.OldPath));
+	TestEqual(TEXT("with nothing more remembered"), FDreamUISourceWatcher::NumUnresolvedSources(), 1);
+
+	// A Blueprint built from the file: compiling it is what reopens the question.
+	const FString Name = TEXT("ResolverMiss_") + FGuid::NewGuid().ToString(EGuidFormats::Digits);
+	UPackage* Package = CreatePackage(*FString::Printf(TEXT("/Temp/DreamGUITests/%s"), *Name));
+	Package->AddToRoot();
+	ON_SCOPE_EXIT
+	{
+		Package->RemoveFromRoot();
+	};
+	UDreamWidgetBlueprint* Blueprint = Cast<UDreamWidgetBlueprint>(FKismetEditorUtilities::CreateBlueprint(
+		UDreamTextUserWidget::StaticClass(), Package, FName(*Name), BPTYPE_Normal,
+		UDreamWidgetBlueprint::StaticClass(), UDreamWidgetGeneratedClass::StaticClass()));
+	if (!TestNotNull(TEXT("a text widget Blueprint was created"), Blueprint)
+		|| !TestTrue(TEXT("and compiled from the file"), DreamUITextAuthoring::SetAuthoredSourcePath(Blueprint, Sources.OldPath)))
+	{
+		return false;
+	}
+	TestEqual(TEXT("the compile ended the memory of the miss"), FDreamUISourceWatcher::NumUnresolvedSources(), 0);
+	TestEqual(TEXT("and the file now has an owner"),
+		FDreamUISourceWatcher::FindClassForSource(Sources.OldPath), static_cast<UClass*>(Blueprint->GeneratedClass));
+	return true;
+}
+
 #endif

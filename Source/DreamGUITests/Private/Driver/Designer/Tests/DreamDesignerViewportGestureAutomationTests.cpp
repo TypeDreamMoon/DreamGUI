@@ -12,6 +12,7 @@
 #include "Core/Components/DreamVisual.h"
 #include "Core/Components/DreamWidget.h"
 #include "Designer/DreamWidgetBlueprintEditor.h"
+#include "Designer/DreamWidgetPreviewHost.h"
 #include "DreamUIControlRegistry.h"
 
 #include "Editor.h"
@@ -281,6 +282,165 @@ bool FDreamDesignerSiblingSnapDragTest::RunTest(const FString&)
 	Driver.PumpFrame();
 	TestTrue(FString::Printf(TEXT("...that puts the widget back where it was: %.2f, was %.2f"), Mover->GetAnchoredPosition().X, PivotBefore),
 		FMath::IsNearlyEqual(Mover->GetAnchoredPosition().X, PivotBefore, 0.01));
+	return true;
+}
+
+namespace DreamDesignerViewportGestureTestLocal
+{
+	/** A laid-out widget's horizontal extent in its parent's own space -- not in its anchored frame, which is per widget. */
+	void ParentSpaceHorizontalSpan(const UDreamWidget* InWidget, double& OutMin, double& OutMax)
+	{
+		OutMin = InWidget->GetRelativeLocation().Y + InWidget->GetLocalSpaceLeft();
+		OutMax = InWidget->GetRelativeLocation().Y + InWidget->GetLocalSpaceRight();
+	}
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamDesignerMixedAnchorSnapDragTest,
+	"DreamGUI.Designer.Driver.ASiblingsEdgeCatchesTheDragWhateverTheTwoWidgetsAreAnchoredTo",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * The sibling-edge snap with the two widgets anchored differently: the sibling to its parent's top-left corner, the dragged
+ * one to the centre, where a drop puts it. An anchored position is measured from the widget's own anchors, so lines taken
+ * from the sibling's anchored position were in a different frame from the dragged widget's and caught nothing it could
+ * see; measured in the parent's space, the edge three units away catches it as it does for two widgets anchored alike.
+ */
+bool FDreamDesignerMixedAnchorSnapDragTest::RunTest(const FString&)
+{
+	using namespace DreamDesignerViewportGestureTestLocal;
+	FScopedDesignerPreferences Preferences;
+	Preferences.SetGridSnap(false);
+	Preferences.SetGuides(true);
+	FScopedDesignerSession Session(TEXT("DesignerMixedAnchorSnap"), /*bGiveRootAPanel*/ true);
+	if (!Session.IsReady())
+	{
+		AddError(FString::Printf(TEXT("No designer to drive: %s."), *Session.GetFailure()));
+		return false;
+	}
+	FDreamDesignerDriver& Driver = Session.GetDriver();
+	FBox2D WorkArea(ForceInit);
+	if (!PrepareDesignerOneToOne(*this, Driver, WorkArea))
+	{
+		return false;
+	}
+	UDreamWidget* Sibling = DropPlainWidgetAt(*this, Driver, PointInBox(WorkArea, 0.25, 0.5));
+	UDreamWidget* Mover = DropPlainWidgetAt(*this, Driver, PointInBox(WorkArea, 0.65, 0.5));
+	if (Sibling == nullptr || Mover == nullptr)
+	{
+		return false;
+	}
+	// Re-anchor the sibling to the top-left corner without moving it: the same pivot, at the same place in the parent.
+	{
+		const UDreamWidget* SiblingPreview = Driver.PreviewFor(Sibling);
+		const UDreamWidget* Parent = SiblingPreview != nullptr ? SiblingPreview->GetParent() : nullptr;
+		if (!TestTrue(TEXT("The sibling is laid out under a parent"), Parent != nullptr))
+		{
+			return false;
+		}
+		FDreamUIAnchorData Anchors = SiblingPreview->GetAnchorData();
+		Anchors.AnchorMin = FVector2D(0.0, 1.0);
+		Anchors.AnchorMax = FVector2D(0.0, 1.0);
+		Anchors.AnchoredPosition = FVector2D(
+			SiblingPreview->GetRelativeLocation().Y - Parent->GetLocalSpaceLeft(),
+			SiblingPreview->GetRelativeLocation().Z - Parent->GetLocalSpaceTop());
+		Anchors.SizeDelta = FVector2D(SiblingPreview->GetWidth(), SiblingPreview->GetHeight());
+		Sibling->SetAnchorData(Anchors);
+		Driver.Toolkit()->GetPreviewHost()->RebuildPreview();
+		Driver.PumpFrame();
+	}
+	SelectOnlyInDesigner(Driver, Mover);
+	Driver.PumpFrame();
+	UDreamWidget* SiblingPreview = Driver.PreviewFor(Sibling);
+	UDreamWidget* MoverPreview = Driver.PreviewFor(Mover);
+	const TOptional<FBox2D> MoverRect = Driver.WidgetPixelRect(MoverPreview);
+	const FVector2D PixelsPerUnit = PixelsPerUnitFor(Driver, MoverPreview);
+	if (!TestTrue(TEXT("Both widgets are on screen"), SiblingPreview != nullptr && MoverRect.IsSet() && PixelsPerUnit.X > 0.0))
+	{
+		return false;
+	}
+	TestFalse(TEXT("The two are anchored differently"), SiblingPreview->GetAnchorMin().Equals(MoverPreview->GetAnchorMin()));
+	double SiblingMin = 0.0, SiblingMax = 0.0, MoverMin = 0.0, MoverMax = 0.0;
+	ParentSpaceHorizontalSpan(SiblingPreview, SiblingMin, SiblingMax);
+	ParentSpaceHorizontalSpan(MoverPreview, MoverMin, MoverMax);
+	if (!TestTrue(FString::Printf(TEXT("The two start apart (%.1f..%.1f and %.1f..%.1f)"), SiblingMin, SiblingMax, MoverMin, MoverMax),
+		MoverMin > SiblingMax + 50.0))
+	{
+		return false;
+	}
+	const double TravelUnits = (SiblingMax + 3.0) - MoverMin;
+	const FIntPoint Travel(FMath::RoundToInt32(TravelUnits * PixelsPerUnit.X), 0);
+	const FIntPoint From = PointInBox(MoverRect.GetValue(), 0.25, 0.25);
+
+	TestTrue(TEXT("The drag completes"), Driver.DragFromTo(From, From + Travel, /*Steps*/ 6));
+	Driver.PumpFrame();
+
+	ParentSpaceHorizontalSpan(Driver.PreviewFor(Mover), MoverMin, MoverMax);
+	TestTrue(FString::Printf(TEXT("The dragged widget's left edge is on the sibling's right edge: %.2f, the edge is %.2f"), MoverMin, SiblingMax),
+		FMath::IsNearlyEqual(MoverMin, SiblingMax, 0.05));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamDesignerParentCentreSnapDragTest,
+	"DreamGUI.Designer.Driver.ADragEndingJustShortOfTheParentsCentreCentresTheWidget",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * One widget, the grid off and the guides on, dragged until its centre is three units short of its parent's centre: it
+ * lands centred. The parent's edges and centre are lines a drag snaps to as a sibling's are -- "centre it in its panel"
+ * was the alignment there was no way to make with the mouse.
+ */
+bool FDreamDesignerParentCentreSnapDragTest::RunTest(const FString&)
+{
+	using namespace DreamDesignerViewportGestureTestLocal;
+	FScopedDesignerPreferences Preferences;
+	Preferences.SetGridSnap(false);
+	Preferences.SetGuides(true);
+	FScopedDesignerSession Session(TEXT("DesignerParentCentreSnap"), /*bGiveRootAPanel*/ true);
+	if (!Session.IsReady())
+	{
+		AddError(FString::Printf(TEXT("No designer to drive: %s."), *Session.GetFailure()));
+		return false;
+	}
+	FDreamDesignerDriver& Driver = Session.GetDriver();
+	FBox2D WorkArea(ForceInit);
+	if (!PrepareDesignerOneToOne(*this, Driver, WorkArea))
+	{
+		return false;
+	}
+	UDreamWidget* Mover = DropPlainWidgetAt(*this, Driver, PointInBox(WorkArea, 0.3, 0.5));
+	if (Mover == nullptr)
+	{
+		return false;
+	}
+	SelectOnlyInDesigner(Driver, Mover);
+	Driver.PumpFrame();
+	UDreamWidget* MoverPreview = Driver.PreviewFor(Mover);
+	const UDreamWidget* Parent = MoverPreview != nullptr ? MoverPreview->GetParent() : nullptr;
+	const TOptional<FBox2D> MoverRect = Driver.WidgetPixelRect(MoverPreview);
+	const FVector2D PixelsPerUnit = PixelsPerUnitFor(Driver, MoverPreview);
+	if (!TestTrue(TEXT("The widget and its parent are on screen"), Parent != nullptr && MoverRect.IsSet() && PixelsPerUnit.X > 0.0))
+	{
+		return false;
+	}
+	const double ParentCentre = (Parent->GetLocalSpaceLeft() + Parent->GetLocalSpaceRight()) * 0.5;
+	double MoverMin = 0.0, MoverMax = 0.0;
+	ParentSpaceHorizontalSpan(MoverPreview, MoverMin, MoverMax);
+	const double TravelUnits = (ParentCentre + 3.0) - (MoverMin + MoverMax) * 0.5;
+	if (!TestTrue(FString::Printf(TEXT("The widget starts well off the centre (%.1f units away)"), TravelUnits), FMath::Abs(TravelUnits) > 50.0))
+	{
+		return false;
+	}
+	const FIntPoint Travel(FMath::RoundToInt32(TravelUnits * PixelsPerUnit.X), 0);
+	const FIntPoint From = PointInBox(MoverRect.GetValue(), 0.25, 0.25);
+
+	TestTrue(TEXT("The drag completes"), Driver.DragFromTo(From, From + Travel, /*Steps*/ 6));
+	Driver.PumpFrame();
+
+	ParentSpaceHorizontalSpan(Driver.PreviewFor(Mover), MoverMin, MoverMax);
+	TestTrue(FString::Printf(TEXT("The widget is centred in its parent: centre %.2f, the parent's %.2f"), (MoverMin + MoverMax) * 0.5, ParentCentre),
+		FMath::IsNearlyEqual((MoverMin + MoverMax) * 0.5, ParentCentre, 0.05));
 	return true;
 }
 

@@ -96,11 +96,20 @@ public:
 		// Never while the user is in the box: this would overwrite what they are typing.
 		if (NameBox.IsValid() && !NameBox->HasAnyUserFocusOrFocusedDescendants())
 		{
+			// Compared as the string it is made from: FText::EqualTo is a culture-aware collation, every
+			// frame, for a name that changes about once a session.
 			const FText Current = GetEditedObjectText();
-			if (!NameBox->GetText().EqualTo(Current))
+			const FString& CurrentString = Current.ToString();
+			if (CurrentString != LastShownName)
 			{
+				LastShownName = CurrentString;
 				NameBox->SetText(Current);
 			}
+		}
+		else
+		{
+			// Whatever is typed is not what the box was last given, so the next unfocused frame compares afresh.
+			LastShownName.Reset();
 		}
 	}
 
@@ -203,6 +212,8 @@ private:
 	FOnCanEdit CanEdit;
 	TWeakObjectPtr<UObject> CachedObject;
 	TSharedPtr<SEditableTextBox> NameBox;
+	/** The name last put in NameBox; reset while the user is typing in it. */
+	FString LastShownName;
 	TSharedPtr<SBox> SourceLinkBox;
 };
 

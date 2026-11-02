@@ -37,8 +37,9 @@ void FUITextInputCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBui
 	}
 
 	// The layout builder is owned by the details view and is thrown away by the very refresh these
-	// delegates ask for, so a delegate must not capture it. IPropertyUtilities outlives a refresh.
-	const TSharedPtr<IPropertyUtilities> PropertyUtilities = DetailBuilder.GetPropertyUtilities();
+	// delegates ask for, so a delegate must not capture it. IPropertyUtilities outlives a refresh; held
+	// weakly, since a delegate that is still registered must not keep the details view alive.
+	const TWeakPtr<IPropertyUtilities> PropertyUtilities = DetailBuilder.GetPropertyUtilities();
 
 	IDetailCategoryBuilder& category = DetailBuilder.EditCategory("DreamGUI-Input");
 
@@ -73,11 +74,16 @@ void FUITextInputCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBui
 		DetailBuilder.HideProperty(GET_MEMBER_NAME_CHECKED(UUITextInput, MultiLineSubmitFunctionKeys));
 	}
 }
-void FUITextInputCustomization::ForceRefresh(TSharedPtr<IPropertyUtilities> PropertyUtilities)
+void FUITextInputCustomization::ForceRefresh(TWeakPtr<IPropertyUtilities> InPropertyUtilities)
 {
-	if (TargetScriptPtr.IsValid() && PropertyUtilities.IsValid())
+	if (TargetScriptPtr.IsValid())
 	{
-		PropertyUtilities->ForceRefresh();
+		if (const TSharedPtr<IPropertyUtilities> PropertyUtilities = InPropertyUtilities.Pin())
+		{
+			// Requested, not forced: this runs inside the property's own value-changed broadcast, and
+			// the immediate variant tears the layout down while that broadcast is still on the stack.
+			PropertyUtilities->RequestForceRefresh();
+		}
 	}
 }
 #undef LOCTEXT_NAMESPACE

@@ -1,6 +1,7 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
 #include "DetailCustomization/DreamCanvasCustomization.h"
+#include "DreamDetailsCopyPaste.h"
 #include "DreamUIEditorUtils.h"
 #include "Core/Components/DreamCanvas.h"
 #include "Core/DreamUIManager.h"
@@ -48,13 +49,15 @@ void FDreamCanvasCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBui
 
 	FDreamUIEditorUtils::ShowError_MultiComponentNotAllowed(&DetailBuilder, TargetScriptArray[0].Get());
 
-	auto RenderModeHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UDreamCanvas, RenderMode));
-	// Through the property utilities, not the layout builder. This delegate outlives the panel it was
+	// Through the property utilities, not the layout builder. These delegates outlive the panel they were
 	// built for -- changing the render mode is exactly what tears the layout down and rebuilds it --
-	// and the captured IDetailLayoutBuilder& is destroyed by that rebuild, so the NEXT change would
+	// and a captured IDetailLayoutBuilder& is destroyed by that rebuild, so the NEXT change would
 	// call ForceRefreshDetails through a dangling reference. The utilities are shared and outlive it.
+	const TWeakPtr<IPropertyUtilities> WeakUtilities = DetailBuilder.GetPropertyUtilities();
+
+	auto RenderModeHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UDreamCanvas, RenderMode));
 	RenderModeHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(
-		this, &FDreamCanvasCustomization::ForceRefresh, TWeakPtr<IPropertyUtilities>(DetailBuilder.GetPropertyUtilities())));
+		this, &FDreamCanvasCustomization::ForceRefresh, WeakUtilities));
 	
 	if (TargetScriptArray[0]->GetActualRenderMode() == EDreamRenderMode::ScreenSpaceOverlay)
 	{
@@ -109,7 +112,7 @@ void FDreamCanvasCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBui
 	auto OverrideSortingHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UDreamCanvas, bOverrideSorting));
 	bool bOverrideSorting = false;
 	OverrideSortingHandle->GetValue(bOverrideSorting);
-	OverrideSortingHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FDreamCanvasCustomization::ForceRefresh, TWeakPtr<IPropertyUtilities>(DetailBuilder.GetPropertyUtilities())));
+	OverrideSortingHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FDreamCanvasCustomization::ForceRefresh, WeakUtilities));
 
 	if (bOverrideSorting)
 	{
@@ -123,7 +126,7 @@ void FDreamCanvasCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBui
 	}
 	
 	auto ForceRenderToTarget_PH = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UDreamCanvas, bForceRenderToTarget));
-	ForceRenderToTarget_PH->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FDreamCanvasCustomization::ForceRefresh, TWeakPtr<IPropertyUtilities>(DetailBuilder.GetPropertyUtilities())));
+	ForceRenderToTarget_PH->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FDreamCanvasCustomization::ForceRefresh, WeakUtilities));
 
 	if (TargetScriptArray[0]->IsRootCanvas()
 		|| TargetScriptArray[0]->GetWorld() == nullptr//maybe in blueprint editor, then world is null
@@ -182,7 +185,7 @@ void FDreamCanvasCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBui
 		NeedToHidePropertyNames.Add(GET_MEMBER_NAME_CHECKED(UDreamCanvas, TraceChannel));
 
 		auto overrideParametersHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UDreamCanvas, OverrideParameters));
-		overrideParametersHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FDreamCanvasCustomization::ForceRefresh, TWeakPtr<IPropertyUtilities>(DetailBuilder.GetPropertyUtilities())));
+		overrideParametersHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FDreamCanvasCustomization::ForceRefresh, WeakUtilities));
 		if (!TargetScriptArray[0]->GetOverrideDefaultMaterial())
 		{
 			NeedToHidePropertyNames.Add(GET_MEMBER_NAME_CHECKED(UDreamCanvas, DefaultMaterial));
@@ -236,7 +239,17 @@ void FDreamCanvasCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBui
 	NeedToHidePropertyNames.Add(GET_MEMBER_NAME_CHECKED(UDreamCanvas, SizeInEditMode));
 
 	auto CreateSlider = [this, &CanvasScalerCategory](const FText& FilterString, TSharedPtr<IPropertyHandle> Property) {
-	CanvasScalerCategory.AddCustomRow(FilterString)
+	// One undo entry per drag, not per mouse move.
+	//
+	// SSlider fires OnValueChanged on every mouse move, and a plain SetValue there is a whole edit each
+	// time: its own transaction, so Ctrl+Z afterwards undid one mouse move. While the slider is held the
+	// value is written as InteractiveChange instead, which keeps a single transaction open (see
+	// FPropertyValueImpl::ImportText, bInteractiveChangeInProgress); letting go writes the final value
+	// with the default flags, which closes it.
+	const TSharedRef<bool> bIsDragging = MakeShared<bool>(false);
+	const TSharedRef<TOptional<float>> PendingValue = MakeShared<TOptional<float>>();
+	FDetailWidgetRow& MatchRow = CanvasScalerCategory.AddCustomRow(FilterString);
+	MatchRow
 	.PropertyHandleList({ Property })
 	.NameContent()
 	[
@@ -266,8 +279,28 @@ void FDreamCanvasCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBui
 						Property->GetValue(value);
 						return value;
 						})
+					.OnMouseCaptureBegin_Lambda([bIsDragging]{
+						*bIsDragging = true;
+						})
+					.OnMouseCaptureEnd_Lambda([=]{
+						*bIsDragging = false;
+						if (PendingValue->IsSet())
+						{
+							const float FinalValue = PendingValue->GetValue();
+							PendingValue->Reset();
+							Property->SetValue(FinalValue);
+						}
+						})
 					.OnValueChanged_Lambda([=](float value){
-						Property->SetValue(value);
+						if (*bIsDragging)
+						{
+							*PendingValue = value;
+							Property->SetValue(value, EPropertyValueSetFlags::InteractiveChange);
+						}
+						else
+						{
+							Property->SetValue(value);
+						}
 						})
 				]
 				+SVerticalBox::Slot()
@@ -300,6 +333,7 @@ void FDreamCanvasCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBui
 		]
 	]
 	;
+	DreamDetailsCopyPaste::BindToRow(MatchRow, Property);
 	};
 
 	EDreamRenderMode ActualRenderMode;
@@ -333,13 +367,13 @@ void FDreamCanvasCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBui
 		CanvasScalerCategory.AddProperty(GET_MEMBER_NAME_CHECKED(UDreamCanvas, ScaleMode));
 
 		DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UDreamCanvas, ScaleMode))
-			->SetOnPropertyValueChanged(FSimpleDelegate::CreateLambda([&] { DetailBuilder.ForceRefreshDetails(); }));
+			->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FDreamCanvasCustomization::ForceRefresh, WeakUtilities));
 		if (TargetScriptArray[0]->ScaleMode == EDreamCanvasScaleMode::ScaleWithScreenSize)
 		{
 			CanvasScalerCategory.AddProperty(GET_MEMBER_NAME_CHECKED(UDreamCanvas, ReferenceResolution));
 			CanvasScalerCategory.AddProperty(GET_MEMBER_NAME_CHECKED(UDreamCanvas, ScreenMatchMode));
 			DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UDreamCanvas, ScreenMatchMode))
-				->SetOnPropertyValueChanged(FSimpleDelegate::CreateLambda([&] { DetailBuilder.ForceRefreshDetails(); }));
+				->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FDreamCanvasCustomization::ForceRefresh, WeakUtilities));
 			switch (TargetScriptArray[0]->ScreenMatchMode)
 			{
 			case EDreamCanvasScreenMatchMode::Expand:
@@ -373,7 +407,7 @@ void FDreamCanvasCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBui
 		}
 
 		auto projectionTypeHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UDreamCanvas, ProjectionType));
-		projectionTypeHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateLambda([&] { DetailBuilder.ForceRefreshDetails(); }));
+		projectionTypeHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FDreamCanvasCustomization::ForceRefresh, WeakUtilities));
 		if (TargetScriptArray[0]->ProjectionType == ECameraProjectionMode::Orthographic)
 		{
 			NeedToHidePropertyNames.Add(GET_MEMBER_NAME_CHECKED(UDreamCanvas, FieldOfView));
@@ -461,6 +495,17 @@ FText FDreamCanvasCustomization::GetDrawcallInfo()const
 	{
 		return FText::FromString(FString::Printf(TEXT("0/0")));
 	}
+
+	// Polled every frame, but the answer needs a copy of the manager's canvas array, a walk over it and
+	// a Printf. A counter that moves a few times a second is no worse for being a quarter second old.
+	constexpr double DrawcallInfoRefreshInterval = 0.25;
+	const double Now = FPlatformTime::Seconds();
+	if (!CachedDrawcallInfo.IsEmpty() && Now - LastDrawcallInfoTime < DrawcallInfoRefreshInterval)
+	{
+		return CachedDrawcallInfo;
+	}
+	LastDrawcallInfoTime = Now;
+
 	auto DreamUIManager = UDreamUIManagerWorldSubsystem::GetInstance(TargetScriptArray[0]->GetWorld());
 	if (DreamUIManager)
 	{
@@ -480,9 +525,11 @@ FText FDreamCanvasCustomization::GetDrawcallInfo()const
 				AllDrawcallCount += CanvasItem->GetDrawCallCount();
 			}
 		}
-		return FText::FromString(FString::Printf(TEXT("%d/%d"), TargetScriptArray[0]->GetDrawCallCount(), AllDrawcallCount));
+		CachedDrawcallInfo = FText::FromString(FString::Printf(TEXT("%d/%d"), TargetScriptArray[0]->GetDrawCallCount(), AllDrawcallCount));
+		return CachedDrawcallInfo;
 	}
-	return FText::FromString(FString::Printf(TEXT("0/0")));
+	CachedDrawcallInfo = FText::FromString(FString::Printf(TEXT("0/0")));
+	return CachedDrawcallInfo;
 }
 FText FDreamCanvasCustomization::GetDrawcallInfoTooltip()const
 {

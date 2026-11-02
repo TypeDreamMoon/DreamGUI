@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Containers/Ticker.h"
+#include "UObject/ObjectKey.h"
 
 class UDreamWidgetBlueprint;
 
@@ -46,10 +47,44 @@ struct FDreamUISourceWatcherState
 	 * carry it.
 	 */
 	bool bCompilingFromExternalChange = false;
+	/**
+	 * True for the span of a rebuild whose reload replaced designer text that had never reached the file.
+	 * Read by the compiler through FDreamUISourceWatcher::IsDiscardingDesignerEdits, so the loss is recorded in the
+	 * compile's message log as well as announced in a toast.
+	 */
+	bool bDesignerEditsDiscarded = false;
 	/** import (normalized, lowercased) -> importer (same spelling RecompileFor expects). */
 	TMultiMap<FString, FString> ImportEdges;
 	/** False until the on-disk sweep of `use` lines has run once this session. */
 	bool bImportIndexSeeded = false;
+
+	/**
+	 * What one importer's edges in ImportEdges are, so republishing them removes exactly those and a
+	 * lookup of "is this file's list known" does not walk the whole table.
+	 */
+	struct FImportRecord
+	{
+		/** The spelling the importer was stored under in ImportEdges. */
+		FString Importer;
+		/** The import keys (normalized, lowercased) it holds an edge for. */
+		TArray<FString> ImportKeys;
+	};
+	/** importer (normalized, lowercased) -> its edges. */
+	TMap<FString, FImportRecord> ImportRecords;
+
+	/** What a file's text was when the watcher last rebuilt the classes built from it, and which classes those were. */
+	struct FCompiledSource
+	{
+		FString ContentHash;
+		TSet<FObjectKey> Blueprints;
+	};
+	/** file (normalized, lowercased) -> the last rebuild that succeeded. Dropped when anything else compiles the file. */
+	TMap<FString, FCompiledSource> CompiledSources;
+
+	/** When a .dui event arrived last, for keeping the editor out of background throttling. */
+	double LastActivityTime = -1000.0;
+	/** The entry this session added to GEditor->ShouldDisableCPUThrottlingDelegates. */
+	FDelegateHandle CpuThrottleHandle;
 };
 
 /**
@@ -130,6 +165,12 @@ public:
 	static bool IsCompilingFromExternalChange();
 
 	/**
+	 * True while a compile caused by a change on disk follows a reload that replaced designer edits the file never
+	 * received. The watcher has already told the author and kept a copy; the compiler adds the line to its log.
+	 */
+	static bool IsDiscardingDesignerEdits();
+
+	/**
 	 * Record which files InImporter pulls in through `use`, replacing its previous edges. The
 	 * compiler publishes this after every parse, which is what lets a saved style library recompile
 	 * the classes that wear it: the drain expands a changed file to its transitive importers.
@@ -166,6 +207,50 @@ public:
 
 	/** Rebuilds everything queued so far, ignoring the debounce. */
 	static void FlushPending();
+
+	/**
+	 * Whether a Blueprint compile may start now: not during play, not while a package is saving or the
+	 * collector runs, and not in the middle of a drag or an open transaction. The queue waits on exactly this,
+	 * and every other path that compiles unasked (the bridge's `compile`, the Rebuild menu) asks the same
+	 * question so the answers cannot drift apart.
+	 */
+	static bool CanCompileNow();
+
+	/** Tell the author a command was not carried out because CanCompileNow said no, and that trying again shortly will do. */
+	static void NotifyBusy();
+
+	/** True when InFilePath is waiting in the queue and will be compiled by the next drain. A file parked in a bulk batch is not. */
+	static bool IsQueued(const FString& InFilePath);
+
+	/**
+	 * Tell the author that the designer's edit of InFilePath was not written because the file changed on disk first.
+	 *
+	 * One toast per file while it is on screen: a flush is attempted on every gesture, and every one of them is
+	 * refused for as long as the outside edit has not been brought in.
+	 */
+	static void NotifyDesignerWriteRefused(const FString& InFilePath);
+
+	/**
+	 * The text a designer keeps for a file that has not reached the disk, when an outside change is about to replace it.
+	 * Returns the path of the copy under Saved/, or empty when it could not be written. Exposed for tests.
+	 */
+	static FString SaveDiscardedDesignerText(const FString& InFilePath, const FString& InContent);
+
+	/**
+	 * Whether the file whose text hashes to InContentHash needs no rebuild because the last rebuild the watcher
+	 * did for it read the same text and compiled exactly InBlueprints. A pure lookup in InState. Exposed for tests.
+	 */
+	static bool IsUpToDateWithLastCompile(const FDreamUISourceWatcherState& InState, const FString& InFilePath,
+		const FString& InContentHash, const TArray<UDreamWidgetBlueprint*>& InBlueprints);
+
+	/**
+	 * Drop what is remembered about the classes whose source could not be found, so the next question about any
+	 * file looks again. Called when something that could change the answer happened; exposed for tests.
+	 */
+	static void ForgetUnresolvedSources();
+
+	/** How many sources FindClassForSource currently remembers as having no class. Exposed for tests. */
+	static int32 NumUnresolvedSources();
 
 	/** Loaded widget Blueprints whose Source File resolves to this path. Exposed for tests. */
 	static void FindBlueprintsForSource(const FString& InAbsoluteFilePath,

@@ -2,6 +2,7 @@
 
 #include "DetailCustomization/DreamRectBlockCustomization.h"
 #include "Core/DreamUIWorldContext.h"
+#include "DreamDetailsCopyPaste.h"
 #include "DreamDetailsMultiSelect.h"
 #include "DreamDetailsTemplateMirror.h"
 #include "DreamUIEditorUtils.h"
@@ -197,7 +198,10 @@ void FDreamRectBlockCustomization::CustomizeDetails(IDetailLayoutBuilder& Detail
 				];
 			}
 		}
-		Group.AddWidgetRow()
+		FDetailWidgetRow& VectorRow = Group.AddWidgetRow();
+		// A hand-built row has no property node, so the search box matches only its FilterString.
+		VectorRow
+		.FilterString(PropertyDisplayName)
 		.PropertyHandleList({ PropertyHandle })
 		.IsEnabled(IsEnabledAttribute)
 		.NameContent()
@@ -222,6 +226,7 @@ void FDreamRectBlockCustomization::CustomizeDetails(IDetailLayoutBuilder& Detail
 			ValueHorizontalBox
 		]
 	;
+		DreamDetailsCopyPaste::BindToRow(VectorRow, PropertyHandle);
 	};
 
 #define TO_TEXT(x) #x
@@ -385,9 +390,8 @@ CreateVectorPropertyWithUnitMode(GET_MEMBER_NAME_CHECKED(UDreamRectBlock, Proper
 		// A disagreeing selection gets the first mode, which is the property's own default: the panel
 		// has to build one shape or the other, and picking it off the stack is not a choice.
 		const auto BodyTextureMode = (EDreamRectBlockTextureMode)DreamDetailsMultiSelect::ValueOr<uint8>(BodyTextureModeHandle, 0);
-		BodyTextureModeHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateLambda([&DetailBuilder] {
-			DetailBuilder.ForceRefreshDetails();
-			}));
+		// Through the property utilities, not the layout builder: the refresh this asks for destroys the builder.
+		BodyTextureModeHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FDreamRectBlockCustomization::ForceRefresh, TWeakPtr<IPropertyUtilities>(DetailBuilder.GetPropertyUtilities())));
 		auto BodyTextureHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UDreamRectBlock, BodyTexture));
 		BodyTextureHandle->SetPropertyDisplayName(LOCTEXT("BodyTexture_DisplayName", "Texture"));
 		auto BodySpriteTextureHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UDreamRectBlock, BodySpriteTexture));
@@ -416,6 +420,7 @@ CreateVectorPropertyWithUnitMode(GET_MEMBER_NAME_CHECKED(UDreamRectBlock, Proper
 			;
 		auto TempBodyTextureHandle = BodyTextureMode == EDreamRectBlockTextureMode::Texture ? BodyTextureHandle : BodySpriteTextureHandle;
 		TextureGroup.HeaderRow()
+			.FilterString(TempBodyTextureHandle->GetPropertyDisplayName())
 			.PropertyHandleList({ BodyTextureModeHandle, BodyTextureHandle, BodySpriteTextureHandle })
 			.OverrideResetToDefault(FResetToDefaultOverride::Create(TAttribute<bool>::CreateLambda([=]()
 			{
@@ -493,6 +498,7 @@ CreateVectorPropertyWithUnitMode(GET_MEMBER_NAME_CHECKED(UDreamRectBlock, Proper
 			.IsEnabled(EnableBodyAttribute)
 		;
 		TextureGroup.AddWidgetRow()
+			.FilterString(LOCTEXT("SnapSize_Button", "Snap Size"))
 			.ValueContent()
 			[
 				SNew(SButton)
@@ -660,11 +666,13 @@ CreateVectorPropertyWithUnitMode(GET_MEMBER_NAME_CHECKED(UDreamRectBlock, Proper
 	TintColorHandle->SetToolTipText(LOCTEXT("TintColorTooltip", "Known as \"Color\" property in other UI elements. This can tint all color of this UI element. Usually only set alpha value."));
 	DreamGUICategory.AddProperty(TintColorHandle);
 }
-void FDreamRectBlockCustomization::ForceRefresh(IDetailLayoutBuilder* DetailBuilder)
+void FDreamRectBlockCustomization::ForceRefresh(TWeakPtr<IPropertyUtilities> InPropertyUtilities)
 {
-	if (DetailBuilder)
+	if (const TSharedPtr<IPropertyUtilities> PropertyUtilities = InPropertyUtilities.Pin())
 	{
-		DetailBuilder->ForceRefreshDetails();
+		// Requested, not forced: this runs inside the property's own value-changed broadcast, and the
+		// immediate variant tears the layout down while that broadcast is still on the stack.
+		PropertyUtilities->RequestForceRefresh();
 	}
 }
 #undef LOCTEXT_NAMESPACE

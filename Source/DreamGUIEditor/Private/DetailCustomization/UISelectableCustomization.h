@@ -17,5 +17,6 @@ public:
 	virtual void CustomizeDetails(IDetailLayoutBuilder& DetailBuilder) override;
 private:
 	TWeakObjectPtr<class UUISelectable> TargetScriptPtr;
-	void ForceRefresh(IDetailLayoutBuilder* DetailBuilder);
+	/** Weak, because the delegate that calls this outlives the layout that registered it. */
+	void ForceRefresh(TWeakPtr<class IPropertyUtilities> InPropertyUtilities);
 };

@@ -9,6 +9,7 @@
 #include "IDetailGroup.h"
 #include "DreamGUIEditorStyle.h"
 #include "Editor.h"
+#include "Engine/World.h"
 #include "Widget/ComponentTransformDetails.h"
 #include "Widget/AnchorPreviewWidget.h"
 #include "PropertyCustomizationHelpers.h"
@@ -708,6 +709,11 @@ void FDreamWidgetCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBui
 			FCanExecuteAction::CreateSP(this, &FDreamWidgetCustomization::OnCanPasteAnchor)
 		))
 		.PropertyHandleList({AnchorHandle})
+		// The handle list would otherwise give this row a reset arrow for the whole anchor block: lit on
+		// every placed widget, because a placed widget's anchor data always differs from the class
+		// default, and pressing it put pivot, anchors, position and size back at once -- moving the widget
+		// without the rect-keeping a preset does. The Anchor Min/Max and Pivot rows below reset one field each.
+		.OverrideResetToDefault(FResetToDefaultOverride::Hide())
 		.ValueContent()
 		.MinDesiredWidth(220)
 		[
@@ -864,8 +870,12 @@ void FDreamWidgetCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBui
 							]
 						]
 					]
-					.MenuContent()
-					[
+					// Built when the menu opens, not with the panel: the previews read the anchors once, when they are
+					// made, so a menu built up front showed the selection the panel was opened on, and every refresh of
+					// the panel paid for some twenty-five previews nobody had asked to see.
+					.OnGetMenuContent_Lambda([=, this]() -> TSharedRef<SWidget>
+					{
+					return
 						SNew(SVerticalBox)
 						+SVerticalBox::Slot()
 						.AutoHeight()
@@ -882,7 +892,7 @@ void FDreamWidgetCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBui
 								+SVerticalBox::Slot()
 								[
 									SNew(STextBlock)
-									.Text(LOCTEXT("AnchorPresetsHelperKeys", "Shift: Also set pivot		Alt: Also set position"))
+									.Text(LOCTEXT("AnchorPresetsHelperKeys", "Shift: Also set pivot		Ctrl or Alt: Also set position"))
 									.Font(IDetailLayoutBuilder::GetDetailFont())
 								]
 							]
@@ -1088,7 +1098,8 @@ void FDreamWidgetCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBui
 								]
 							]
 						]
-					]
+					;
+					})
 				]
 			]
 		]
@@ -1361,10 +1372,11 @@ void FDreamWidgetCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBui
 							}
 						}
 						// This category is built from whether the component exists, so the panel has to
-						// be rebuilt for the rules to appear where the button was.
+						// be rebuilt for the rules to appear where the button was. Requested rather than
+						// done here: done here, it destroyed the button whose click is still running.
 						if (Utilities.IsValid())
 						{
-							Utilities->ForceRefresh();
+							Utilities->RequestForceRefresh();
 						}
 						return FReply::Handled();
 					})
@@ -1505,7 +1517,9 @@ void FDreamWidgetCustomization::OnPasteAnchor(IDetailLayoutBuilder* DetailBuilde
 		NotifyAnchorGeometryPostChange();
 		GEditor->EndTransaction();
 		ForceUpdateUI();
-		DetailBuilder->ForceRefreshDetails();
+		// Requested, not forced: this runs from the row's own Paste action, which a forced refresh would
+		// destroy mid-call.
+		DetailBuilder->GetPropertyUtilities()->RequestForceRefresh();
 	}
 }
 
@@ -1762,7 +1776,45 @@ FText FDreamWidgetCustomization::GetAnchorLabelTooltipText(TSharedRef<IPropertyH
 	}
 }
 
+void FDreamWidgetCustomization::RefreshAnchorMemo() const
+{
+	if (AnchorMemoFrame == GFrameCounter)
+	{
+		return;
+	}
+	AnchorMemoFrame = GFrameCounter;
+	for (int32 Index = 0; Index < 4; ++Index)
+	{
+		AnchorValueMemo[Index].Reset();
+		AnchorValueEnabledMemo[Index].Reset();
+	}
+	LayoutControlMemo.Reset();
+	AnchorHAlignMemo.Reset();
+	AnchorVAlignMemo.Reset();
+}
+
 DreamGUIAnchorPreviewWidget::UIAnchorHorizontalAlign FDreamWidgetCustomization::GetAnchorHAlign(TSharedRef<IPropertyHandle> AnchorMinHandle, TSharedRef<IPropertyHandle> AnchorMaxHandle)const
+{
+	// One pair of handles per customization (CustomizeDetails makes them once), so the frame is the whole key.
+	RefreshAnchorMemo();
+	if (!AnchorHAlignMemo.IsSet())
+	{
+		AnchorHAlignMemo = ComputeAnchorHAlign(AnchorMinHandle, AnchorMaxHandle);
+	}
+	return AnchorHAlignMemo.GetValue();
+}
+
+DreamGUIAnchorPreviewWidget::UIAnchorVerticalAlign FDreamWidgetCustomization::GetAnchorVAlign(TSharedRef<IPropertyHandle> AnchorMinHandle, TSharedRef<IPropertyHandle> AnchorMaxHandle)const
+{
+	RefreshAnchorMemo();
+	if (!AnchorVAlignMemo.IsSet())
+	{
+		AnchorVAlignMemo = ComputeAnchorVAlign(AnchorMinHandle, AnchorMaxHandle);
+	}
+	return AnchorVAlignMemo.GetValue();
+}
+
+DreamGUIAnchorPreviewWidget::UIAnchorHorizontalAlign FDreamWidgetCustomization::ComputeAnchorHAlign(TSharedRef<IPropertyHandle> AnchorMinHandle, TSharedRef<IPropertyHandle> AnchorMaxHandle)const
 {
 	if (TargetScriptArray.Num() == 0 || !TargetScriptArray[0].IsValid())return DreamGUIAnchorPreviewWidget::UIAnchorHorizontalAlign::None;
 
@@ -1791,7 +1843,7 @@ DreamGUIAnchorPreviewWidget::UIAnchorHorizontalAlign FDreamWidgetCustomization::
 	}
 	return AnchorHAlign;
 }
-DreamGUIAnchorPreviewWidget::UIAnchorVerticalAlign FDreamWidgetCustomization::GetAnchorVAlign(TSharedRef<IPropertyHandle> AnchorMinHandle, TSharedRef<IPropertyHandle> AnchorMaxHandle)const
+DreamGUIAnchorPreviewWidget::UIAnchorVerticalAlign FDreamWidgetCustomization::ComputeAnchorVAlign(TSharedRef<IPropertyHandle> AnchorMinHandle, TSharedRef<IPropertyHandle> AnchorMaxHandle)const
 {
 	if (TargetScriptArray.Num() == 0 || !TargetScriptArray[0].IsValid())return DreamGUIAnchorPreviewWidget::UIAnchorVerticalAlign::None;
 
@@ -1826,7 +1878,9 @@ void FDreamWidgetCustomization::OnSelectAnchor(DreamGUIAnchorPreviewWidget::UIAn
 	if (TargetScriptArray.Num() == 0 || !TargetScriptArray[0].IsValid())return;
 
 	bool ShiftPressed = FSlateApplication::Get().GetModifierKeys().IsShiftDown();
-	bool AltPressed = FSlateApplication::Get().GetModifierKeys().IsAltDown();
+	// Ctrl is UMG's modifier for "also set the position" (CanvasSlotCustomization); Alt is what this menu
+	// always used. Both, so neither habit picks a preset that leaves the widget where it was.
+	bool AltPressed = FSlateApplication::Get().GetModifierKeys().IsAltDown() || FSlateApplication::Get().GetModifierKeys().IsControlDown();
 
 	GEditor->BeginTransaction(LOCTEXT("ChangeAnchor_Transaction", "Change DreamGUI Anchor"));
 	for (auto& UIItem : TargetScriptArray)
@@ -1981,6 +2035,9 @@ void FDreamWidgetCustomization::OnSelectAnchor(DreamGUIAnchorPreviewWidget::UIAn
 	TargetScriptArray[0]->MarkCanvasUpdate(true);
 	DetailBuilder->GetPropertyUtilities()->RequestForceRefresh();
 	GEditor->EndTransaction();
+	// A preset is a one-shot choice, as it is in UMG's menu: left open, the menu sat over the panel until
+	// the deferred refresh above happened to take it down with the row.
+	FSlateApplication::Get().DismissAllMenus();
 }
 
 namespace DreamWidgetCustomizationLocal
@@ -2124,7 +2181,12 @@ bool FDreamWidgetCustomization::IsAnchorEditableForSelection(const TArray<TWeakO
 
 FDreamLayoutControlAnchorData FDreamWidgetCustomization::GetLayoutControlAnchorValue()const
 {
-	return FoldLayoutControlAcrossSelection(TargetScriptArray);
+	RefreshAnchorMemo();
+	if (!LayoutControlMemo.IsSet())
+	{
+		LayoutControlMemo = FoldLayoutControlAcrossSelection(TargetScriptArray);
+	}
+	return LayoutControlMemo.GetValue();
 }
 
 bool FDreamWidgetCustomization::GetLayoutControlHorizontalAnchoredPosition()const
@@ -2171,6 +2233,20 @@ TOptional<float> FDreamWidgetCustomization::GetMinMaxSliderValue(TSharedRef<IPro
 }
 
 TOptional<float> FDreamWidgetCustomization::GetAnchorValue(TSharedRef<IPropertyHandle> AnchorHandle, int AnchorValueIndex)const
+{
+	if (AnchorValueIndex < 0 || AnchorValueIndex >= 4)
+	{
+		return ComputeAnchorValue(AnchorHandle, AnchorValueIndex);
+	}
+	RefreshAnchorMemo();
+	if (!AnchorValueMemo[AnchorValueIndex].IsSet())
+	{
+		AnchorValueMemo[AnchorValueIndex] = ComputeAnchorValue(AnchorHandle, AnchorValueIndex);
+	}
+	return AnchorValueMemo[AnchorValueIndex].GetValue();
+}
+
+TOptional<float> FDreamWidgetCustomization::ComputeAnchorValue(TSharedRef<IPropertyHandle> AnchorHandle, int AnchorValueIndex)const
 {
 	if (TargetScriptArray.Num() == 0 || !TargetScriptArray[0].IsValid())return TOptional<float>();
 
@@ -2461,7 +2537,14 @@ void FDreamWidgetCustomization::ApplyValueChanged(float Value, TSharedRef<IPrope
 	// pivot for the actor selection, then repaint every level viewport -- and a spin box fires
 	// OnValueChanged once per mouse move, so doing them interactively redrew the whole level editor
 	// tens of times a second for an edit that never leaves the DreamUI panel.
-	if (Commited)
+	// And only for a widget that is in a level: a designer's preview is not drawn by any level viewport,
+	// so repainting all of them after every committed number was work for nothing.
+	const bool bAnyInALevel = TargetScriptArray.ContainsByPredicate([](const TWeakObjectPtr<UDreamWidget>& Item)
+	{
+		const UWorld* World = Item.IsValid() ? Item->GetWorld() : nullptr;
+		return World != nullptr && World->WorldType == EWorldType::Editor;
+	});
+	if (Commited && bAnyInALevel)
 	{
 		GUnrealEd->UpdatePivotLocationForSelection();
 		GUnrealEd->SetPivotMovedIndependently(false);
@@ -2473,16 +2556,34 @@ void FDreamWidgetCustomization::ApplyValueChanged(float Value, TSharedRef<IPrope
 	// UDreamWidget's own RelativeLocation, not USceneComponent's: a widget is a plain UObject, and the
 	// ported lookup named the class the original panel edited.
 	auto RelativeLocationProperty = FindFProperty<FProperty>(UDreamWidget::StaticClass(), UDreamWidget::GetPropertyName_RelativeLocation());
+	// Said as what it is: a tick of a drag is Interactive, the end of it ValueSet. Every tick used to be
+	// announced as a finished edit, so anything listening for finished edits did its work per mouse move.
+	const EPropertyChangeType::Type ChangeType = Commited ? EPropertyChangeType::ValueSet : EPropertyChangeType::Interactive;
+	auto Notify = [ChangeType](UDreamWidget* InWidget, FProperty* InProperty)
+	{
+		if (InProperty == nullptr)
+		{
+			return;
+		}
+		FEditPropertyChain Chain;
+		Chain.AddHead(InProperty);
+		TArray<UObject*> Objects{ InWidget };
+		FPropertyChangedEvent Event(InProperty, ChangeType, MakeArrayView(Objects));
+		FPropertyChangedChainEvent ChainEvent(Chain, Event);
+		InWidget->PostEditChangeChainProperty(ChainEvent);
+	};
 	for (auto& Item : TargetScriptArray)
 	{
 		if (!Item.IsValid())continue;
-		FDreamUIUtils::NotifyPropertyChanged(Item.Get(), AnchorProperty);
-		FDreamUIUtils::NotifyPropertyChanged(Item.Get(), RelativeLocationProperty);
+		Notify(Item.Get(), AnchorProperty);
+		Notify(Item.Get(), RelativeLocationProperty);
 	}
 	if (Commited)
 	{
 		NotifyAnchorGeometryPostChange();
 	}
+	// The rows read the values this just wrote, possibly later in this same frame.
+	AnchorMemoFrame = MAX_uint64;
 }
 void FDreamWidgetCustomization::OnAnchorValueChanged(float Value, TSharedRef<IPropertyHandle> AnchorHandle, int AnchorValueIndex)
 {
@@ -2523,6 +2624,20 @@ void FDreamWidgetCustomization::OnAnchorValueSliderMovementEnd(float Value, TSha
 }
 
 bool FDreamWidgetCustomization::IsAnchorValueEnable(TSharedRef<IPropertyHandle> AnchorHandle, int AnchorValueIndex)const
+{
+	if (AnchorValueIndex < 0 || AnchorValueIndex >= 4)
+	{
+		return ComputeIsAnchorValueEnable(AnchorHandle, AnchorValueIndex);
+	}
+	RefreshAnchorMemo();
+	if (!AnchorValueEnabledMemo[AnchorValueIndex].IsSet())
+	{
+		AnchorValueEnabledMemo[AnchorValueIndex] = ComputeIsAnchorValueEnable(AnchorHandle, AnchorValueIndex);
+	}
+	return AnchorValueEnabledMemo[AnchorValueIndex].GetValue();
+}
+
+bool FDreamWidgetCustomization::ComputeIsAnchorValueEnable(TSharedRef<IPropertyHandle> AnchorHandle, int AnchorValueIndex)const
 {
 	if (TargetScriptArray.Num() == 0 || !TargetScriptArray[0].IsValid())return false;
 

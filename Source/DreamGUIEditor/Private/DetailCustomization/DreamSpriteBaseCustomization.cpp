@@ -73,7 +73,8 @@ void FDreamSpriteBaseCustomization::CustomizeDetails(IDetailLayoutBuilder& Detai
 		}
 		if (auto Utilities = propertyUtilities.Pin())
 		{
-			Utilities->ForceRefresh();
+			// Requested, not forced: this runs inside the property's own value-changed broadcast.
+			Utilities->RequestForceRefresh();
 		}
 	}));
 	spriteHandle->SetOnPropertyValuePreChange(FSimpleDelegate::CreateLambda([=, this] {
@@ -170,11 +171,11 @@ void FDreamSpriteBaseCustomization::CustomizeDetails(IDetailLayoutBuilder& Detai
 		];
 	}
 }
-void FDreamSpriteBaseCustomization::ForceRefresh(IDetailLayoutBuilder* DetailBuilder)
+void FDreamSpriteBaseCustomization::ForceRefresh(TWeakPtr<IPropertyUtilities> InPropertyUtilities)
 {
-	if (DetailBuilder)
+	if (const TSharedPtr<IPropertyUtilities> PropertyUtilities = InPropertyUtilities.Pin())
 	{
-		DetailBuilder->ForceRefreshDetails();
+		PropertyUtilities->RequestForceRefresh();
 	}
 }
 #undef LOCTEXT_NAMESPACE

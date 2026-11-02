@@ -15,6 +15,7 @@
 #include "Core/Components/DreamWidget.h"
 #include "Core/Components/DreamWidgetSubObjectBehaviour.h"
 #include "DetailCustomization/PropertyType/DreamGradientCustomization.h"
+#include "Text/DreamUIBridgeService.h"
 #include "Text/DreamUIPaths.h"
 #include "Text/DreamUIReflectionPolicy.h"
 #include "Text/DreamUIValueFormat.h"
@@ -243,9 +244,12 @@ namespace DreamUITextAuthoring
 			const FString Resolved = UDreamTextUserWidget::ResolveDuiFilePath(GetAuthoredSourcePath(InBlueprint));
 			if (!Resolved.IsEmpty() && FPaths::FileExists(Resolved))
 			{
+				// Through the bridge when VS Code is listening, so the file comes up in the editor the author writes it
+				// in; otherwise opened as before. There is no line to give -- a refusal is about a gesture, not a
+				// place in the text.
 				Info.Hyperlink = FSimpleDelegate::CreateLambda([Resolved]
 				{
-					FPlatformProcess::LaunchFileInDefaultExternalApplication(*Resolved, nullptr, ELaunchVerb::Open);
+					FDreamUIBridgeService::OpenAtLocation(Resolved, 1, 1);
 				});
 				Info.HyperlinkText = LOCTEXT("StructuralRefusalOpen", "Open the file");
 			}

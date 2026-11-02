@@ -7,6 +7,7 @@
 #include "DreamGUIEditorModule.h"
 #include "DetailLayoutBuilder.h"
 #include "DetailCategoryBuilder.h"
+#include "IPropertyUtilities.h"
 #include "Core/DreamUISettings.h"
 #include "Core/Components/DreamImage.h"
 
@@ -49,12 +50,15 @@ void FUISelectableCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBu
 
 	FDreamUIEditorUtils::ShowError_MultiComponentNotAllowed(&DetailBuilder, TargetScriptPtr.Get(), LOCTEXT("MultipleUISelectableComponentError", "Multiple UISelectable component in one actor is not allowed!"));
 
+	// The refresh these delegates ask for destroys the layout builder, so they keep the utilities instead.
+	const TWeakPtr<IPropertyUtilities> WeakUtilities = DetailBuilder.GetPropertyUtilities();
+
 	IDetailCategoryBuilder& category = DetailBuilder.EditCategory("DreamGUI-Selectable");
 	auto Transition_PH = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUISelectable, TransitionType));
-	Transition_PH->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FUISelectableCustomization::ForceRefresh, &DetailBuilder));
+	Transition_PH->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FUISelectableCustomization::ForceRefresh, WeakUtilities));
 
 	auto TransitionTarget_PH = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUISelectable, TransitionTarget));
-	TransitionTarget_PH->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FUISelectableCustomization::ForceRefresh, &DetailBuilder));
+	TransitionTarget_PH->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FUISelectableCustomization::ForceRefresh, WeakUtilities));
 
 	UDreamVisual* TransitionTarget_Visual = nullptr;
 	TransitionTarget_PH->GetValue(*(UObject**)&TransitionTarget_Visual);
@@ -118,6 +122,7 @@ void FUISelectableCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBu
 		if (TransitionTarget_Visual && !TransitionTarget_Visual->IsA<UDreamImage>())
 		{
 			TransitionGroup.AddWidgetRow()
+				.FilterString(LOCTEXT("TransitionTarget_ImageBrush_Tip", "If use ImageBrush, Target must be a DreamImage"))
 				.ValueContent()
 				.MinDesiredWidth(500)
 				[
@@ -179,13 +184,13 @@ void FUISelectableCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBu
 	auto navigationNextHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUISelectable, NavigationNext));
 	
 	auto navigationLeftValue = UISelectableCustomizationLocal::ReadNavigationMode(navigationLeftHandle);
-	navigationLeftHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FUISelectableCustomization::ForceRefresh, &DetailBuilder));
+	navigationLeftHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FUISelectableCustomization::ForceRefresh, WeakUtilities));
 	auto navigationRightValue = UISelectableCustomizationLocal::ReadNavigationMode(navigationRightHandle);
-	navigationRightHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FUISelectableCustomization::ForceRefresh, &DetailBuilder));
+	navigationRightHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FUISelectableCustomization::ForceRefresh, WeakUtilities));
 	auto navigationUpValue = UISelectableCustomizationLocal::ReadNavigationMode(navigationUpHandle);
-	navigationUpHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FUISelectableCustomization::ForceRefresh, &DetailBuilder));
+	navigationUpHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FUISelectableCustomization::ForceRefresh, WeakUtilities));
 	auto navigationDownValue = UISelectableCustomizationLocal::ReadNavigationMode(navigationDownHandle);
-	navigationDownHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FUISelectableCustomization::ForceRefresh, &DetailBuilder));
+	navigationDownHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FUISelectableCustomization::ForceRefresh, WeakUtilities));
 
 	NavigationCategory.AddProperty(navigationLeftHandle);
 	if (navigationLeftValue == EUISelectableNavigationMode::Explicit)
@@ -209,9 +214,9 @@ void FUISelectableCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBu
 	}
 
 	auto navigationNextValue = UISelectableCustomizationLocal::ReadNavigationMode(navigationNextHandle);
-	navigationNextHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FUISelectableCustomization::ForceRefresh, &DetailBuilder));
+	navigationNextHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FUISelectableCustomization::ForceRefresh, WeakUtilities));
 	auto navigationPrevValue = UISelectableCustomizationLocal::ReadNavigationMode(navigationPrevHandle);
-	navigationPrevHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FUISelectableCustomization::ForceRefresh, &DetailBuilder));
+	navigationPrevHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FUISelectableCustomization::ForceRefresh, WeakUtilities));
 	NavigationCategory.AddProperty(navigationPrevHandle);
 	if (navigationPrevValue == EUISelectableNavigationMode::Explicit)
 	{
@@ -276,11 +281,16 @@ void FUISelectableCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBu
 		DetailBuilder.HideProperty(item);
 	}
 }
-void FUISelectableCustomization::ForceRefresh(IDetailLayoutBuilder* DetailBuilder)
+void FUISelectableCustomization::ForceRefresh(TWeakPtr<IPropertyUtilities> InPropertyUtilities)
 {
 	if (TargetScriptPtr.IsValid())
 	{
-		DetailBuilder->ForceRefreshDetails();
+		if (const TSharedPtr<IPropertyUtilities> PropertyUtilities = InPropertyUtilities.Pin())
+		{
+			// Requested, not forced: this runs inside the property's own value-changed broadcast, and
+			// the immediate variant tears the layout down while that broadcast is still on the stack.
+			PropertyUtilities->RequestForceRefresh();
+		}
 	}
 }
 #undef LOCTEXT_NAMESPACE

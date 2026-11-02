@@ -8,6 +8,7 @@
 #include "Animation/DreamWidgetAnimationComponent.h"
 #include "Core/Components/DreamWidget.h"
 #include "Core/DreamWidgetPresenterComponentBase.h"
+#include "Designer/DreamWidgetHierarchyPickerView.h"
 #include "MovieScene.h"
 #include "MovieScenePossessable.h"
 #include "ScopedTransaction.h"
@@ -128,39 +129,30 @@ void FDreamUISequenceTrackEditor::AddWidgetPickerSubMenu(FMenuBuilder& MenuBuild
 		return;
 	}
 
-	// Flat, indented listing; deep trees read fine and the menu stays one level.
-	struct FWalker
-	{
-		FMenuBuilder& Menu;
-		FDreamUISequenceTrackEditor* Self;
-		int32 Count = 0;
-		void Walk(UDreamWidget* Widget, int32 Depth)
-		{
-			if (Widget == nullptr || Count >= 64)
+	// The hierarchy picker the Animations panel's own "add a widget" menu uses: a tree with a search box, as
+	// long and as deep as the hierarchy is. This was a flat list of menu entries that stopped at sixty-four,
+	// so in a screen of any size the widgets after those could not be bound from here at all.
+	MenuBuilder.AddWidget(
+		SNew(SBox)
+		.Padding(4, 0)
+		.MaxDesiredHeight(480.0f)
+		[
+			SNew(SDreamWidgetHierarchyPickerView, Root->GetWorld(), UDreamWidget::StaticClass(), Root)
+			.OnSelectItem_Lambda([this](UObject* InItem)
 			{
-				return;
-			}
-			++Count;
-			FString Label;
-			for (int32 Index = 0; Index < Depth; ++Index)
-			{
-				Label += TEXT("    ");
-			}
-			Label += Widget->GetDisplayName();
-			Menu.AddMenuEntry(FText::FromString(Label), FText::GetEmpty(), FSlateIcon(),
-				FUIAction(FExecuteAction::CreateRaw(Self, &FDreamUISequenceTrackEditor::HandleWidgetPicked, MakeWeakObjectPtr(Widget))));
-			for (UDreamWidget* Child : Widget->GetChildren())
-			{
-				Walk(Child, Depth + 1);
-			}
-		}
-	};
-	FWalker Walker{ MenuBuilder, this };
-	Walker.Walk(Root, 0);
-	if (Walker.Count >= 64)
-	{
-		MenuBuilder.AddMenuEntry(LOCTEXT("WidgetListTruncated", "... (truncated at 64)"), FText::GetEmpty(), FSlateIcon(), FUIAction());
-	}
+				UDreamWidget* Picked = Cast<UDreamWidget>(InItem);
+				if (Picked == nullptr && IsValid(InItem))
+				{
+					Picked = InItem->GetTypedOuter<UDreamWidget>();
+				}
+				if (Picked != nullptr)
+				{
+					FSlateApplication::Get().DismissAllMenus();
+					HandleWidgetPicked(MakeWeakObjectPtr(Picked));
+				}
+			})
+		],
+		FText::GetEmpty(), /*bNoIndent*/ true);
 }
 
 void FDreamUISequenceTrackEditor::HandleWidgetPicked(TWeakObjectPtr<UDreamWidget> InWidget)

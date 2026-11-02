@@ -92,7 +92,28 @@ private:
 	void OnPrePivotChange(TSharedPtr<IPropertyHandle> PivotPH);
 	void OnPivotChanged(TSharedPtr<IPropertyHandle> PivotPH);
 
+	/**
+	 * The anchor rows' getters, kept for the rest of the frame they were first asked in.
+	 *
+	 * Every one of them is bound to an attribute, and the same answer is asked for many times a frame:
+	 * each of the four number boxes reads its value three times (value, slider min, slider max), and the
+	 * labels, the preset button and the enabled states read the anchors and fold the layout's control
+	 * across the selection again. Each read was four child-handle lookups and four property reads, and
+	 * the fold walks every selected widget's siblings -- per row, per frame, while the panel is open.
+	 */
+	void RefreshAnchorMemo() const;
+	mutable uint64 AnchorMemoFrame = MAX_uint64;
+	mutable TOptional<TOptional<float>> AnchorValueMemo[4];
+	mutable TOptional<bool> AnchorValueEnabledMemo[4];
+	mutable TOptional<FDreamLayoutControlAnchorData> LayoutControlMemo;
+	mutable TOptional<DreamGUIAnchorPreviewWidget::UIAnchorHorizontalAlign> AnchorHAlignMemo;
+	mutable TOptional<DreamGUIAnchorPreviewWidget::UIAnchorVerticalAlign> AnchorVAlignMemo;
+
 	TOptional<float> GetAnchorValue(TSharedRef<IPropertyHandle> AnchorHandle, int AnchorValueIndex)const;
+	TOptional<float> ComputeAnchorValue(TSharedRef<IPropertyHandle> AnchorHandle, int AnchorValueIndex)const;
+	bool ComputeIsAnchorValueEnable(TSharedRef<IPropertyHandle> AnchorHandle, int AnchorValueIndex)const;
+	DreamGUIAnchorPreviewWidget::UIAnchorHorizontalAlign ComputeAnchorHAlign(TSharedRef<IPropertyHandle> AnchorMinHandle, TSharedRef<IPropertyHandle> AnchorMaxHandle)const;
+	DreamGUIAnchorPreviewWidget::UIAnchorVerticalAlign ComputeAnchorVAlign(TSharedRef<IPropertyHandle> AnchorMinHandle, TSharedRef<IPropertyHandle> AnchorMaxHandle)const;
 	TOptional<float> GetMinMaxSliderValue(TSharedRef<IPropertyHandle> AnchorHandle, int AnchorValueIndex, bool MinOrMax)const;
 	void ApplyValueChanged(float Value, TSharedRef<IPropertyHandle> AnchorHandle, int AnchorValueIndex, bool Commited);
 	void OnAnchorValueChanged(float Value, TSharedRef<IPropertyHandle> AnchorHandle, int AnchorValueIndex);

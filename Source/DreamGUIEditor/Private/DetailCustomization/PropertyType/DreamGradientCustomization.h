@@ -109,6 +109,8 @@ private:
 	mutable float ViewMinInput = 0.0f;
 	mutable float ViewMaxInput = 1.0f;
 	mutable bool bSynced = false;
+	/** The frame the source was last looked at, so the editor's several questions in one paint make one look. */
+	mutable uint64 LastSyncFrame = MAX_uint64;
 	bool bNextChangeInteractive = false;
 };
 

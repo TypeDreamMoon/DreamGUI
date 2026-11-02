@@ -7,6 +7,7 @@
 #include "DreamGUIEditorModule.h"
 #include "DetailLayoutBuilder.h"
 #include "DetailCategoryBuilder.h"
+#include "IPropertyUtilities.h"
 
 #define LOCTEXT_NAMESPACE "UISpriteCustomization"
 FDreamSpriteCustomization::FDreamSpriteCustomization()
@@ -33,11 +34,14 @@ void FDreamSpriteCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBui
 		return;
 	}
 
+	// The refresh these delegates ask for destroys the layout builder, so they keep the utilities instead.
+	const TWeakPtr<IPropertyUtilities> WeakUtilities = DetailBuilder.GetPropertyUtilities();
+
 	IDetailCategoryBuilder& category = DetailBuilder.EditCategory("DreamGUI");
 
 	auto spriteTypeHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UDreamSprite, DrawType));
 	category.AddProperty(spriteTypeHandle);
-	spriteTypeHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FDreamSpriteCustomization::ForceRefresh, &DetailBuilder));
+	spriteTypeHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FDreamSpriteCustomization::ForceRefresh, WeakUtilities));
 	auto DrawType = TargetScriptPtr->DrawType;
 	if (DrawType == EDreamUISpriteDrawType::Normal)
 	{
@@ -65,7 +69,7 @@ void FDreamSpriteCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBui
 	else if (DrawType == EDreamUISpriteDrawType::Filled)
 	{
 		auto fillMethodProperty = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UDreamSprite, FillMethod));
-		fillMethodProperty->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FDreamSpriteCustomization::ForceRefresh, &DetailBuilder));
+		fillMethodProperty->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FDreamSpriteCustomization::ForceRefresh, WeakUtilities));
 		FDreamUIEditorUtils::CreateSubDetail(&category, &DetailBuilder, fillMethodProperty);
 		EDreamUISpriteFillMethod fillMethod = TargetScriptPtr->FillMethod;
 		DetailBuilder.HideProperty(GET_MEMBER_NAME_CHECKED(UDreamSprite, PixelsPerUnitMultiplier));
@@ -134,11 +138,16 @@ void FDreamSpriteCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBui
 		DetailBuilder.HideProperty(GET_MEMBER_NAME_CHECKED(UDreamSprite, FillOriginType_Radial360));
 	}
 }
-void FDreamSpriteCustomization::ForceRefresh(IDetailLayoutBuilder* DetailBuilder)
+void FDreamSpriteCustomization::ForceRefresh(TWeakPtr<IPropertyUtilities> InPropertyUtilities)
 {
-	if (TargetScriptPtr.IsValid() && DetailBuilder != nullptr)
+	if (TargetScriptPtr.IsValid())
 	{
-		DetailBuilder->ForceRefreshDetails();
+		if (const TSharedPtr<IPropertyUtilities> PropertyUtilities = InPropertyUtilities.Pin())
+		{
+			// Requested, not forced: this runs inside the property's own value-changed broadcast, and
+			// the immediate variant tears the layout down while that broadcast is still on the stack.
+			PropertyUtilities->RequestForceRefresh();
+		}
 	}
 }
 #undef LOCTEXT_NAMESPACE

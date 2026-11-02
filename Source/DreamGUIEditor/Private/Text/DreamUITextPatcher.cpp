@@ -95,6 +95,63 @@ namespace DreamUIPatchLocal
 	// --------------------------------------------------------------------------------------------
 
 	/**
+	 * Where each line of one text starts, for the planning pass that is about to ask for many locations in it.
+	 *
+	 * OffsetOf finds a line by walking the text from the top, which is the right cost for one question and the wrong
+	 * one for the hundreds a batch of edits asks of an unchanged text. Built once at the start of a pass, it
+	 * answers the same question from a table. Keyed on the string OBJECT, not its contents: it applies to the text
+	 * the pass was handed and to nothing else, and the passes below plan against that text without changing it (the
+	 * splices are applied to a copy afterwards), which is what makes the table safe to believe.
+	 */
+	struct FLineIndex
+	{
+		const FString* Text = nullptr;
+		/** [0] is 0; one more for each line break, at the offset just past it. CRLF is one break, a lone CR is one. */
+		TArray<int32> LineStarts;
+	};
+
+	/** The index in force on this thread, or null when no pass is running. */
+	thread_local const FLineIndex* GActiveLineIndex = nullptr;
+
+	/** Installs a line index for InText for as long as it lives; nests, restoring whatever was in force. */
+	struct FScopedLineIndex
+	{
+		explicit FScopedLineIndex(const FString& InText)
+			: Previous(GActiveLineIndex)
+		{
+			Index.Text = &InText;
+			const TCHAR* Chars = *InText;
+			const int32 Length = InText.Len();
+			Index.LineStarts.Add(0);
+			for (int32 Offset = 0; Offset < Length;)
+			{
+				const TCHAR Char = Chars[Offset++];
+				if (IsLineBreak(Char))
+				{
+					// CRLF is one break, exactly as OffsetOf's scan and ConsumeLineBreak treat it.
+					if (Char == TEXT('\r') && Offset < Length && Chars[Offset] == TEXT('\n'))
+					{
+						++Offset;
+					}
+					Index.LineStarts.Add(Offset);
+				}
+			}
+			GActiveLineIndex = &Index;
+		}
+
+		~FScopedLineIndex()
+		{
+			GActiveLineIndex = Previous;
+		}
+
+		FScopedLineIndex(const FScopedLineIndex&) = delete;
+		FScopedLineIndex& operator=(const FScopedLineIndex&) = delete;
+
+		FLineIndex Index;
+		const FLineIndex* Previous = nullptr;
+	};
+
+	/**
 	 * The inverse of the lexer's MakeLocation: a 1-based line and column back into a string index.
 	 *
 	 * Columns count TCHARs, not bytes, because that is what the lexer counted -- it subtracts two
@@ -118,28 +175,42 @@ namespace DreamUIPatchLocal
 		const int32 Length = InText.Len();
 
 		int32 Offset = 0;
-		int32 Line = 1;
-		while (Line < InLocation.Line && Offset < Length)
+		if (const FLineIndex* Index = GActiveLineIndex; Index != nullptr && Index->Text == &InText)
 		{
-			const TCHAR Char = Chars[Offset];
-			if (IsLineBreak(Char))
+			// A planning pass is running on exactly this string, and has already found where each line starts: the
+			// same answer as the scan below, from a table. INDEX_NONE for a line the text does not have, as the scan
+			// reports it.
+			if (InLocation.Line > Index->LineStarts.Num())
 			{
-				++Offset;
-				// CRLF is one break, exactly as ConsumeLineBreak treats it. A lone CR is one too:
-				// old Mac line endings are not worth supporting, but they are worth AGREEING about.
-				if (Char == TEXT('\r') && Offset < Length && Chars[Offset] == TEXT('\n'))
+				return INDEX_NONE;
+			}
+			Offset = Index->LineStarts[InLocation.Line - 1];
+		}
+		else
+		{
+			int32 Line = 1;
+			while (Line < InLocation.Line && Offset < Length)
+			{
+				const TCHAR Char = Chars[Offset];
+				if (IsLineBreak(Char))
 				{
 					++Offset;
+					// CRLF is one break, exactly as ConsumeLineBreak treats it. A lone CR is one too:
+					// old Mac line endings are not worth supporting, but they are worth AGREEING about.
+					if (Char == TEXT('\r') && Offset < Length && Chars[Offset] == TEXT('\n'))
+					{
+						++Offset;
+					}
+					++Line;
+					continue;
 				}
-				++Line;
-				continue;
+				++Offset;
 			}
-			++Offset;
-		}
 
-		if (Line != InLocation.Line)
-		{
-			return INDEX_NONE;
+			if (Line != InLocation.Line)
+			{
+				return INDEX_NONE;
+			}
 		}
 
 		const int32 Result = Offset + InLocation.Column - 1;
@@ -2075,22 +2146,27 @@ bool FDreamUITextPatcher::SetProperties(FString& InOutText, const FDreamUIAst& I
 	bool bAllPlanned = true;
 	int32 Order = 0;
 	TArray<FSplice> Splices;
-	for (int32 Index = 0; Index < InEdits.Num(); ++Index)
 	{
-		if (Duplicated.Contains(Index))
+		// Every edit is planned against InOutText as it is now, so where its lines start is asked of it once.
+		// Scoped to the planning alone: the text changes below, and a table of the old one must not outlive that.
+		const FScopedLineIndex LineIndex(InOutText);
+		for (int32 Index = 0; Index < InEdits.Num(); ++Index)
 		{
-			RefuseTarget(OutDiagnostics, FDreamUISourceLocation(),
-				FString::Printf(TEXT("'%s' on node '%s' was given two values in one write; neither was written"),
-					*InEdits[Index].PropertyName, *InEdits[Index].NodeId));
-			bAllPlanned = false;
-			continue;
-		}
-		if (!PlanEdit(InOutText, InAst, InEdits[Index], Splices, Order, OutDiagnostics))
-		{
-			// The rest of the batch is still planned and still applied. A designer flushing ten
-			// dirty properties is better served by nine writes and one complaint than by losing all
-			// ten to one of them -- and the one that failed is in the bag, named and located.
-			bAllPlanned = false;
+			if (Duplicated.Contains(Index))
+			{
+				RefuseTarget(OutDiagnostics, FDreamUISourceLocation(),
+					FString::Printf(TEXT("'%s' on node '%s' was given two values in one write; neither was written"),
+						*InEdits[Index].PropertyName, *InEdits[Index].NodeId));
+				bAllPlanned = false;
+				continue;
+			}
+			if (!PlanEdit(InOutText, InAst, InEdits[Index], Splices, Order, OutDiagnostics))
+			{
+				// The rest of the batch is still planned and still applied. A designer flushing ten
+				// dirty properties is better served by nine writes and one complaint than by losing all
+				// ten to one of them -- and the one that failed is in the bag, named and located.
+				bAllPlanned = false;
+			}
 		}
 	}
 
@@ -2948,13 +3024,17 @@ bool FDreamUITextPatcher::ApplyStructuralEdits(FString& InOutText, const FDreamU
 	bool bAllPlanned = true;
 	int32 Order = 0;
 	TArray<FSplice> Splices;
-	for (const FDreamUIStructuralEdit& Edit : InEdits)
 	{
-		if (!PlanStructuralEdit(InOutText, InAst, Edit, Splices, Order, OutDiagnostics))
+		// As in SetProperties: every edit is planned against the text as it is now, so its line table is built once.
+		const FScopedLineIndex LineIndex(InOutText);
+		for (const FDreamUIStructuralEdit& Edit : InEdits)
 		{
-			// The rest of the batch still applies, for the reason SetProperties gives: a caller
-			// flushing nine good gestures and one bad one is better off with the nine.
-			bAllPlanned = false;
+			if (!PlanStructuralEdit(InOutText, InAst, Edit, Splices, Order, OutDiagnostics))
+			{
+				// The rest of the batch still applies, for the reason SetProperties gives: a caller
+				// flushing nine good gestures and one bad one is better off with the nine.
+				bAllPlanned = false;
+			}
 		}
 	}
 

@@ -7,6 +7,7 @@
 #include "DreamGUIEditorModule.h"
 #include "DetailLayoutBuilder.h"
 #include "DetailCategoryBuilder.h"
+#include "IPropertyUtilities.h"
 
 #define LOCTEXT_NAMESPACE "UITextureCustomization"
 FDreamTextureCustomization::FDreamTextureCustomization()
@@ -33,16 +34,19 @@ void FDreamTextureCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBu
 		return;
 	}
 
+	// The refresh these delegates ask for destroys the layout builder, so they keep the utilities instead.
+	const TWeakPtr<IPropertyUtilities> WeakUtilities = DetailBuilder.GetPropertyUtilities();
+
 	IDetailCategoryBuilder& category = DetailBuilder.EditCategory("DreamGUI");
 
 	auto spriteTypeHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UDreamTexture, DrawType));
 	category.AddProperty(spriteTypeHandle);
-	spriteTypeHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FDreamTextureCustomization::ForceRefresh, &DetailBuilder));
+	spriteTypeHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FDreamTextureCustomization::ForceRefresh, WeakUtilities));
 	auto DrawType = TargetScriptPtr->DrawType;
 	if (DrawType == EDreamUISpriteDrawType::Filled)
 	{
 		auto fillMethodProperty = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UDreamTexture, FillMethod));
-		fillMethodProperty->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FDreamTextureCustomization::ForceRefresh, &DetailBuilder));
+		fillMethodProperty->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FDreamTextureCustomization::ForceRefresh, WeakUtilities));
 		FDreamUIEditorUtils::CreateSubDetail(&category, &DetailBuilder, fillMethodProperty);
 		EDreamUISpriteFillMethod fillMethod = TargetScriptPtr->FillMethod;
 		DetailBuilder.HideProperty(GET_MEMBER_NAME_CHECKED(UDreamTexture, FillOrigin));
@@ -111,11 +115,16 @@ void FDreamTextureCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBu
 		DetailBuilder.HideProperty(GET_MEMBER_NAME_CHECKED(UDreamTexture, fillOriginType_Radial360));
 	}
 }
-void FDreamTextureCustomization::ForceRefresh(IDetailLayoutBuilder* DetailBuilder)
+void FDreamTextureCustomization::ForceRefresh(TWeakPtr<IPropertyUtilities> InPropertyUtilities)
 {
-	if (TargetScriptPtr.IsValid() && DetailBuilder != nullptr)
+	if (TargetScriptPtr.IsValid())
 	{
-		DetailBuilder->ForceRefreshDetails();
+		if (const TSharedPtr<IPropertyUtilities> PropertyUtilities = InPropertyUtilities.Pin())
+		{
+			// Requested, not forced: this runs inside the property's own value-changed broadcast, and
+			// the immediate variant tears the layout down while that broadcast is still on the stack.
+			PropertyUtilities->RequestForceRefresh();
+		}
 	}
 }
 #undef LOCTEXT_NAMESPACE

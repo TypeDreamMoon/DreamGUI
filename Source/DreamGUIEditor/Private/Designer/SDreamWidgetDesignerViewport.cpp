@@ -35,7 +35,7 @@ TSharedRef<FEditorViewportClient> SDreamWidgetDesignerViewport::MakeEditorViewpo
 {
 	EditorViewportClient = MakeShareable(new FDreamWidgetDesignerViewportClient(this->DesignerPtr, SharedThis(this)));
 	EditorViewportClient->bSetListenerPosition = false;
-	EditorViewportClient->SetRealtime(true);
+	EditorViewportClient->SetRealtime(GetDefault<UDreamUIDesignerSettings>()->bRealtimeViewport);
 	EditorViewportClient->SetShowStats(true);
 	EditorViewportClient->VisibilityDelegate.BindLambda([]() {return true; });
 	EditorViewportClient->SetViewMode(ViewMode);

@@ -569,6 +569,10 @@ namespace DreamUI_Private
 		PreviewSection.AddDynamicEntry("DesignerPreview", FNewToolMenuSectionDelegate::CreateLambda([AppStyle](FToolMenuSection& InSection)
 		{
 			const TWeakPtr<FDreamWidgetBlueprintEditor> WeakEditor = GetDesignerFromSection(InSection);
+			InSection.AddEntry(MakeDesignerToggle("RealtimeViewport", WeakEditor, FText::GetEmpty(),
+				LOCTEXT("RealtimeViewportTooltip", "Redraw the design viewport on every frame. Off, it redraws when the designer has something new to show -- a gesture, the pointer, a selection, a rebuild -- and otherwise four times a second, so an open designer nobody is touching stops rendering at the editor's frame rate. Animations playing in the preview draw at that slower rate while it is off."),
+				FSlateIcon(AppStyle, "EditorViewport.ToggleRealTime"),
+				&FDreamWidgetBlueprintEditor::GetRealtimeViewport, &FDreamWidgetBlueprintEditor::ToggleRealtimeViewport));
 			InSection.AddEntry(MakeDesignerToggle("PreviewDPI", WeakEditor, FText::GetEmpty(),
 				LOCTEXT("PreviewDPITooltip", "Shrink the design canvas by the project's DPI curve, the way UMG's designer does. The curve is the project's own (Project Settings > User Interface), so this previews the application scale Slate will really apply at the chosen device resolution -- and it runs before the DreamCanvas scale rule, which is the order the runtime uses."),
 				FSlateIcon(AppStyle, "Icons.Adjust"),

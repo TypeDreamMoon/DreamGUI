@@ -95,9 +95,13 @@ void FDreamUIFontData_FreeTypeRenderCustomization::CustomizeDetails(IDetailLayou
 		return;
 	}
 
+	// The layout builder is rebuilt by the very refresh these delegates and buttons ask for, so none of
+	// them may hold it; the utilities outlive the layout and are how a row asks for a refresh.
+	const TWeakPtr<IPropertyUtilities> WeakUtilities = DetailBuilder.GetPropertyUtilities();
+
 	auto fontTypeHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UDreamUIFontData_FreeTypeRender, FontType));
 	//SP, not Raw: the handle outlives this customization, and the refresh it asks for is what destroys it
-	fontTypeHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FDreamUIFontData_FreeTypeRenderCustomization::ForceRefresh, &DetailBuilder));
+	fontTypeHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FDreamUIFontData_FreeTypeRenderCustomization::ForceRefresh, WeakUtilities));
 	const auto fontType = (EDreamUIDynamicFontDataType)DreamDetailsMultiSelect::ValueOr<uint8>(fontTypeHandle, 0);
 
 	IDetailCategoryBuilder& dreamguiCategory = DetailBuilder.EditCategory("DreamGUI");
@@ -107,7 +111,7 @@ void FDreamUIFontData_FreeTypeRenderCustomization::CustomizeDetails(IDetailLayou
 		SNew(SButton)
 		.VAlign(VAlign_Center)
 		.HAlign(HAlign_Center)
-		.OnClicked(this, &FDreamUIFontData_FreeTypeRenderCustomization::OnReloadButtonClicked, &DetailBuilder)
+		.OnClicked(this, &FDreamUIFontData_FreeTypeRenderCustomization::OnReloadButtonClicked, WeakUtilities)
 		[
 			SNew(STextBlock)
 			.Text(LOCTEXT("ReloadFont", "ReloadFont"))
@@ -136,9 +140,8 @@ void FDreamUIFontData_FreeTypeRenderCustomization::CustomizeDetails(IDetailLayou
 
 		auto fontFilePathHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UDreamUIFontData_FreeTypeRender, FontFilePath));
 		auto useRelativeFilePathHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UDreamUIFontData_FreeTypeRender, bUseRelativeFilePath));
-		// The layout builder is rebuilt by the refresh the checkbox itself asks for, so the checkbox
-		// must not hold on to it; the utilities outlive the layout and are how a row asks for a refresh.
-		TWeakPtr<IPropertyUtilities> propertyUtilities = DetailBuilder.GetPropertyUtilities();
+		// The checkbox asks for a refresh itself, so it too holds the utilities and not the layout builder.
+		TWeakPtr<IPropertyUtilities> propertyUtilities = WeakUtilities;
 		TWeakObjectPtr<UDreamUIFontData_FreeTypeRender> weakTarget = TargetScriptPtr;
 		dreamguiCategory.AddCustomRow(LOCTEXT("FontSourceFileCategory","FontSourceFile"))
 		.NameContent()
@@ -160,7 +163,7 @@ void FDreamUIFontData_FreeTypeRenderCustomization::CustomizeDetails(IDetailLayou
 				.DefaultFileName("font.ttf")
 				.Filter(TEXT("Font file(*.ttf,*.ttc,*.otf)|*.ttf;*.ttc;*.otf|Any font file|*.*"))
 				.OnFilePathChanged(this, &FDreamUIFontData_FreeTypeRenderCustomization::OnPathTextChanged, fontFilePathHandle)
-				.OnFilePathCommitted(this, &FDreamUIFontData_FreeTypeRenderCustomization::OnPathTextCommitted, fontFilePathHandle, &DetailBuilder)
+				.OnFilePathCommitted(this, &FDreamUIFontData_FreeTypeRenderCustomization::OnPathTextCommitted, fontFilePathHandle, WeakUtilities)
 			]
 			+SHorizontalBox::Slot()
 			.MaxWidth(100)
@@ -177,7 +180,7 @@ void FDreamUIFontData_FreeTypeRenderCustomization::CustomizeDetails(IDetailLayou
 						}
 						if (auto Utilities = propertyUtilities.Pin())
 						{
-							Utilities->ForceRefresh();
+							Utilities->RequestForceRefresh();
 						}
 					})
 				[
@@ -239,8 +242,8 @@ void FDreamUIFontData_FreeTypeRenderCustomization::CustomizeDetails(IDetailLayou
 				[
 					SNew(SListView<TSharedPtr<FString>>)
 					.ListItemsSource(&FontFaceOptions)
-					.OnGenerateRow(this, &FDreamUIFontData_FreeTypeRenderCustomization::FontFaceOptions_GenerateComboItem, &DetailBuilder)
-					.OnSelectionChanged(this, &FDreamUIFontData_FreeTypeRenderCustomization::FontFaceOptions_OnComboChanged, fontFaceHandle, &DetailBuilder)
+					.OnGenerateRow(this, &FDreamUIFontData_FreeTypeRenderCustomization::FontFaceOptions_GenerateComboItem)
+					.OnSelectionChanged(this, &FDreamUIFontData_FreeTypeRenderCustomization::FontFaceOptions_OnComboChanged, fontFaceHandle, WeakUtilities)
 				]
 			]
 		]
@@ -276,7 +279,7 @@ FText FDreamUIFontData_FreeTypeRenderCustomization::FontFaceOptions_GetCurrentFa
 	return FText::FromString(TargetScriptPtr->SubFaces[TargetScriptPtr->FontFace]);
 }
 
-TSharedRef<ITableRow> FDreamUIFontData_FreeTypeRenderCustomization::FontFaceOptions_GenerateComboItem(TSharedPtr<FString> InItem, const TSharedRef<STableViewBase>& OwnerTable, IDetailLayoutBuilder* DetailBuilder)
+TSharedRef<ITableRow> FDreamUIFontData_FreeTypeRenderCustomization::FontFaceOptions_GenerateComboItem(TSharedPtr<FString> InItem, const TSharedRef<STableViewBase>& OwnerTable)
 {
 	return SNew(STableRow<TSharedPtr<FString>>, OwnerTable)
 		[
@@ -284,19 +287,22 @@ TSharedRef<ITableRow> FDreamUIFontData_FreeTypeRenderCustomization::FontFaceOpti
 			.Padding(FMargin(8, 2))
 			[
 				SNew(STextBlock)
-				.Font(DetailBuilder->GetDetailFont())
+				.Font(IDetailLayoutBuilder::GetDetailFont())
 				.Text(FText::FromString(*InItem))
 			]
 		];
 }
 
-void FDreamUIFontData_FreeTypeRenderCustomization::FontFaceOptions_OnComboChanged(TSharedPtr<FString> Item, ESelectInfo::Type SelectInfo, TSharedRef<IPropertyHandle> InProperty, IDetailLayoutBuilder* DetailBuilder)
+void FDreamUIFontData_FreeTypeRenderCustomization::FontFaceOptions_OnComboChanged(TSharedPtr<FString> Item, ESelectInfo::Type SelectInfo, TSharedRef<IPropertyHandle> InProperty, TWeakPtr<IPropertyUtilities> InPropertyUtilities)
 {
 	int FoundIndex = FontFaceOptions.IndexOfByKey(Item);
 	if (FoundIndex != INDEX_NONE)
 	{
 		InProperty->SetValue(FoundIndex);
-		DetailBuilder->ForceRefreshDetails();
+		if (const TSharedPtr<IPropertyUtilities> PropertyUtilities = InPropertyUtilities.Pin())
+		{
+			PropertyUtilities->RequestForceRefresh();
+		}
 	}
 }
 
@@ -330,7 +336,7 @@ void FDreamUIFontData_FreeTypeRenderCustomization::OnPathTextChanged(const FStri
 {
 	InPathProperty->SetValue(InString);
 }
-void FDreamUIFontData_FreeTypeRenderCustomization::OnPathTextCommitted(const FString& InString, TSharedRef<IPropertyHandle> InPathProperty, IDetailLayoutBuilder* DetailBuilderPtr)
+void FDreamUIFontData_FreeTypeRenderCustomization::OnPathTextCommitted(const FString& InString, TSharedRef<IPropertyHandle> InPathProperty, TWeakPtr<IPropertyUtilities> InPropertyUtilities)
 {
 	// The row survives the asset being deleted out from under the open panel.
 	if (!TargetScriptPtr.IsValid())return;
@@ -344,20 +350,22 @@ void FDreamUIFontData_FreeTypeRenderCustomization::OnPathTextCommitted(const FSt
 	}
 	InPathProperty->SetValue(pathString);
 	TargetScriptPtr->ReloadFont();
-	DetailBuilderPtr->ForceRefreshDetails();
+	ForceRefresh(InPropertyUtilities);
 }
-FReply FDreamUIFontData_FreeTypeRenderCustomization::OnReloadButtonClicked(IDetailLayoutBuilder* DetailBuilderPtr)
+FReply FDreamUIFontData_FreeTypeRenderCustomization::OnReloadButtonClicked(TWeakPtr<IPropertyUtilities> InPropertyUtilities)
 {
 	if (!TargetScriptPtr.IsValid())return FReply::Handled();
 	TargetScriptPtr->ReloadFont();
-	DetailBuilderPtr->ForceRefreshDetails();
+	ForceRefresh(InPropertyUtilities);
 	return FReply::Handled();
 }
-void FDreamUIFontData_FreeTypeRenderCustomization::ForceRefresh(IDetailLayoutBuilder* DetailBuilderPtr)
+void FDreamUIFontData_FreeTypeRenderCustomization::ForceRefresh(TWeakPtr<IPropertyUtilities> InPropertyUtilities)
 {
-	if (DetailBuilderPtr)
+	if (const TSharedPtr<IPropertyUtilities> PropertyUtilities = InPropertyUtilities.Pin())
 	{
-		DetailBuilderPtr->ForceRefreshDetails();
+		// Requested, not forced: this can run inside the property's own value-changed broadcast or a
+		// widget callback, and the immediate variant tears the layout down while that is still on the stack.
+		PropertyUtilities->RequestForceRefresh();
 	}
 }
 

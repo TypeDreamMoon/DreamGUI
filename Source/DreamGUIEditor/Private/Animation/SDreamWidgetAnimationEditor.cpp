@@ -349,7 +349,11 @@ void SDreamWidgetAnimationEditor::AssignDreamWidgetAnimationComponent(TWeakObjec
 
 UDreamWidgetAnimation* SDreamWidgetAnimationEditor::GetAnimation() const
 {
-	return GetSelectedAnimation();
+	if (UDreamWidgetAnimation* Selected = GetSelectedAnimation())
+	{
+		return Selected;
+	}
+	return AnimationHiddenByFilter.Get();
 }
 
 FReply SDreamWidgetAnimationEditor::OnKeyDown(const FGeometry& MyGeometry, const FKeyEvent& InKeyEvent)
@@ -428,7 +432,10 @@ void SDreamWidgetAnimationEditor::NotifyAnimationRenamed(const FString& OldName,
 
 void SDreamWidgetAnimationEditor::ClearAnimationSelection()
 {
-	if (AnimationListView.IsValid())
+	// Kept aside by the search, the animation has no row selected for the clear below to announce.
+	const bool bWasHiddenByFilter = AnimationHiddenByFilter.IsValid() && GetSelectedAnimation() == nullptr;
+	AnimationHiddenByFilter.Reset();
+	if (AnimationListView.IsValid() && !bWasHiddenByFilter)
 	{
 		//the selection-changed callback assigns the null sequence, which restores the pre-animated state
 		AnimationListView->ClearSelection();
@@ -583,6 +590,8 @@ void SDreamWidgetAnimationEditor::OnAnimationListViewSelectionChanged(TSharedPtr
 	{
 		return;
 	}
+	// A row picked or let go of by the author: whatever the search had kept aside is not the answer any more.
+	AnimationHiddenByFilter.Reset();
 	AnimationEditorWidget->AssignSequence(GetAnimation());
 }
 
@@ -615,7 +624,8 @@ bool SDreamWidgetAnimationEditor::CanExecuteAnimationListAction() const
 
 void SDreamWidgetAnimationEditor::RefreshAnimationList()
 {
-	const UDreamWidgetAnimation* Selected = GetSelectedAnimation();
+	// The one being edited, listed or not: a refresh while the search hides it must not lose it.
+	const UDreamWidgetAnimation* Selected = GetAnimation();
 	RebuildAnimationList(Selected, Selected != nullptr ? Selected->GetDisplayNameString() : FString());
 }
 
@@ -701,10 +711,21 @@ void SDreamWidgetAnimationEditor::RebuildAnimationList(const UDreamWidgetAnimati
 	}
 
 	// Once, for the whole rebuild. The same animation keeps the Sequencer it has, a copy found by name
-	// takes that Sequencer over, and an animation that is gone leaves animation mode.
+	// takes that Sequencer over, and an animation that is gone leaves animation mode. One that is only
+	// filtered out of the list stays: it is still on the host, and the search did not choose another.
+	UDreamWidgetAnimation* ToAssign = GetSelectedAnimation();
+	AnimationHiddenByFilter.Reset();
+	UDreamWidgetAnimation* Previous = const_cast<UDreamWidgetAnimation*>(InSelected);
+	const bool bFiltering = SearchBoxPtr.IsValid() && !SearchBoxPtr->GetText().IsEmpty();
+	if (ToAssign == nullptr && bFiltering && IsValid(Previous) && WeakSequenceComponent.IsValid()
+		&& WeakSequenceComponent->GetSequenceArray().Contains(Previous))
+	{
+		ToAssign = Previous;
+		AnimationHiddenByFilter = Previous;
+	}
 	if (AnimationEditorWidget.IsValid())
 	{
-		AnimationEditorWidget->AssignSequence(GetSelectedAnimation());
+		AnimationEditorWidget->AssignSequence(ToAssign);
 	}
 }
 

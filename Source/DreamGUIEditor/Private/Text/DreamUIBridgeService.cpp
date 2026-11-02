@@ -4,7 +4,10 @@
 
 #include "DreamGUIEditorModule.h"
 #include "DreamWidgetBlueprint.h"
+#include "Designer/DreamUITextAuthoringGate.h"
 #include "Designer/DreamWidgetBlueprintEditor.h"
+#include "Text/DreamUISourceWatcher.h"
+#include "Core/DreamTextUserWidget.h"
 #include "Core/DreamUIScriptPackages.h"
 #include "Core/DreamUserWidget.h"
 #include "Core/Components/DreamWidget.h"
@@ -19,8 +22,10 @@
 #include "Engine/BlueprintGeneratedClass.h"
 #include "HAL/FileManager.h"
 #include "IContentBrowserSingleton.h"
+#include "HAL/PlatformProcess.h"
 #include "Kismet2/KismetEditorUtilities.h"
 #include "Misc/App.h"
+#include "Misc/CoreDelegates.h"
 #include "Misc/FileHelper.h"
 #include "Misc/Paths.h"
 #include "Serialization/JsonReader.h"
@@ -36,9 +41,168 @@ namespace DreamUIBridgeLocal
 	/** Requests are checked this often; the cost of an empty poll is one directory listing. */
 	constexpr float PollIntervalSeconds = 0.25f;
 	constexpr double HeartbeatIntervalSeconds = 2.0;
+	/**
+	 * How long after a request the editor is kept out of background throttling. An editor behind the author's text
+	 * editor runs at 3 FPS, and a completion that waits on a frame or two of that is a completion that arrives after
+	 * the author has typed past it.
+	 */
+	constexpr double FullRateHoldSeconds = 3.0;
+	/** A client that has asked something this recently is taken to be listening for a reveal. */
+	constexpr double ClientPresenceSeconds = 600.0;
+	/** How long a described class is believed when nothing has said it changed (a user struct edited in place, say). */
+	constexpr double ReplyLifetimeSeconds = 30.0;
+	constexpr int32 ReplyCacheLimit = 64;
 
 	FTSTicker::FDelegateHandle GTicker;
 	double GLastHeartbeat = 0.0;
+	/** When a request last arrived on the live bridge; far in the past until one has. */
+	double GLastRequestSeconds = -1.0e9;
+	/** The entry this bridge added to GEditor->ShouldDisableCPUThrottlingDelegates. */
+	FDelegateHandle GThrottleHandle;
+
+	bool ShouldRunAtFullRate()
+	{
+		return FPlatformTime::Seconds() - GLastRequestSeconds < FullRateHoldSeconds;
+	}
+
+	/**
+	 * What a `functions`, `variables` or `members` request was answered with, kept so the next one for the same class
+	 * is not another walk over every field and another round of tooltip text.
+	 *
+	 * Completion asks on every keystroke of a binding expression and the answer is a property of the class, which
+	 * only changes when the class does. A Blueprint compile keeps the same UClass and rewrites it in place, so the
+	 * class pointer cannot tell a changed class from an unchanged one; the generation does, bumped by every
+	 * Blueprint compile and every native reload. The lifetime is the backstop for the changes that announce nothing.
+	 */
+	struct FCachedReply
+	{
+		/** What the reply describes. A class that has been collected cannot be answered for. */
+		TWeakObjectPtr<const UStruct> Source;
+		uint64 Generation = 0;
+		double BuiltAt = 0.0;
+		/** The response fields the reply adds, shared by every response that serves it and never modified. */
+		TSharedPtr<FJsonObject> Fields;
+	};
+
+	TMap<FString, FCachedReply> GReplies;
+	uint64 GReplyGeneration = 0;
+	FDelegateHandle GBlueprintCompiledHandle;
+	FDelegateHandle GReloadCompleteHandle;
+
+	void InvalidateReplies()
+	{
+		++GReplyGeneration;
+		GReplies.Reset();
+	}
+
+	/**
+	 * Listen for what changes a class under the cache. Idempotent, and tried again on every use: the editor engine
+	 * does not exist yet when this module starts, so the first attempt that can succeed is the first request.
+	 */
+	void HookReplyInvalidation()
+	{
+		if (GEditor != nullptr && !GBlueprintCompiledHandle.IsValid())
+		{
+			GBlueprintCompiledHandle = GEditor->OnBlueprintCompiled().AddLambda([] { InvalidateReplies(); });
+		}
+		if (!GReloadCompleteHandle.IsValid())
+		{
+			GReloadCompleteHandle = FCoreUObjectDelegates::ReloadCompleteDelegate.AddLambda(
+				[](EReloadCompleteReason) { InvalidateReplies(); });
+		}
+	}
+
+	void UnhookReplyInvalidation()
+	{
+		if (GEditor != nullptr && GBlueprintCompiledHandle.IsValid())
+		{
+			GEditor->OnBlueprintCompiled().Remove(GBlueprintCompiledHandle);
+		}
+		GBlueprintCompiledHandle.Reset();
+		if (GReloadCompleteHandle.IsValid())
+		{
+			FCoreUObjectDelegates::ReloadCompleteDelegate.Remove(GReloadCompleteHandle);
+		}
+		GReloadCompleteHandle.Reset();
+		InvalidateReplies();
+	}
+
+	/** Add the editor-throttling exemption, once the editor engine exists. */
+	void EnsureThrottleExemption()
+	{
+		if (GEditor != nullptr && !GThrottleHandle.IsValid())
+		{
+			UEditorEngine::FShouldDisableCPUThrottling Exemption =
+				UEditorEngine::FShouldDisableCPUThrottling::CreateStatic(&ShouldRunAtFullRate);
+			GThrottleHandle = Exemption.GetHandle();
+			GEditor->ShouldDisableCPUThrottlingDelegates.Add(MoveTemp(Exemption));
+		}
+	}
+
+	void RemoveThrottleExemption()
+	{
+		if (GEditor != nullptr && GThrottleHandle.IsValid())
+		{
+			const FDelegateHandle Handle = GThrottleHandle;
+			GEditor->ShouldDisableCPUThrottlingDelegates.RemoveAll(
+				[Handle](const UEditorEngine::FShouldDisableCPUThrottling& Exemption)
+				{
+					return Exemption.GetHandle() == Handle;
+				});
+		}
+		GThrottleHandle.Reset();
+	}
+
+	FString ReplyKey(const TCHAR* InAction, const FString& InPath)
+	{
+		return FString(InAction) + TEXT("|") + InPath;
+	}
+
+	/** Answer from the cache if it holds a reply for this action and path that is still believed. */
+	bool TryReplyFromCache(const TCHAR* InAction, const FString& InPath, const TSharedRef<FJsonObject>& OutResponse)
+	{
+		const FString Key = ReplyKey(InAction, InPath);
+		const FCachedReply* Cached = GReplies.Find(Key);
+		if (Cached == nullptr)
+		{
+			return false;
+		}
+		if (Cached->Generation != GReplyGeneration || !Cached->Source.IsValid() || !Cached->Fields.IsValid()
+			|| FPlatformTime::Seconds() - Cached->BuiltAt > ReplyLifetimeSeconds)
+		{
+			GReplies.Remove(Key);
+			return false;
+		}
+		for (const TPair<FString, TSharedPtr<FJsonValue>>& Field : Cached->Fields->Values)
+		{
+			OutResponse->SetField(Field.Key, Field.Value);
+		}
+		OutResponse->SetBoolField(TEXT("ok"), true);
+		OutResponse->SetStringField(TEXT("message"), FString());
+		return true;
+	}
+
+	/** Write a freshly built reply into the response, and keep it for the next request. */
+	void ReplyAndRemember(const TCHAR* InAction, const FString& InPath, const UStruct* InSource,
+		const TSharedRef<FJsonObject>& InFields, const TSharedRef<FJsonObject>& OutResponse)
+	{
+		for (const TPair<FString, TSharedPtr<FJsonValue>>& Field : InFields->Values)
+		{
+			OutResponse->SetField(Field.Key, Field.Value);
+		}
+		OutResponse->SetBoolField(TEXT("ok"), true);
+		OutResponse->SetStringField(TEXT("message"), FString());
+
+		if (GReplies.Num() >= ReplyCacheLimit)
+		{
+			GReplies.Reset();
+		}
+		FCachedReply& Entry = GReplies.FindOrAdd(ReplyKey(InAction, InPath));
+		Entry.Source = InSource;
+		Entry.Generation = GReplyGeneration;
+		Entry.BuiltAt = FPlatformTime::Seconds();
+		Entry.Fields = InFields;
+	}
 
 	FString Root()
 	{
@@ -449,6 +613,11 @@ namespace DreamUIBridgeLocal
 	 */
 	void HandleFunctions(const FString& InClassPath, const TSharedRef<FJsonObject>& OutResponse)
 	{
+		// Before the class is even resolved: a hit skips the Blueprint lookup as well as the field walk.
+		if (TryReplyFromCache(TEXT("functions"), InClassPath, OutResponse))
+		{
+			return;
+		}
 		FString WhyNot;
 		UClass* Class = ResolveClassByPath(InClassPath, WhyNot);
 		if (Class == nullptr)
@@ -499,9 +668,9 @@ namespace DreamUIBridgeLocal
 		Functions->SetArrayField(TEXT("bindable"), Bindable);
 		Functions->SetArrayField(TEXT("handlers"), Handlers);
 		Functions->SetArrayField(TEXT("callable"), Callable);
-		OutResponse->SetObjectField(TEXT("functions"), Functions);
-		OutResponse->SetBoolField(TEXT("ok"), true);
-		OutResponse->SetStringField(TEXT("message"), FString());
+		const TSharedRef<FJsonObject> Fields = MakeShared<FJsonObject>();
+		Fields->SetObjectField(TEXT("functions"), Functions);
+		ReplyAndRemember(TEXT("functions"), InClassPath, Class, Fields, OutResponse);
 	}
 
 	/**
@@ -522,6 +691,10 @@ namespace DreamUIBridgeLocal
 	 */
 	void HandleVariables(const FString& InClassPath, const TSharedRef<FJsonObject>& OutResponse)
 	{
+		if (TryReplyFromCache(TEXT("variables"), InClassPath, OutResponse))
+		{
+			return;
+		}
 		FString WhyNot;
 		UClass* Class = ResolveClassByPath(InClassPath, WhyNot);
 		if (Class == nullptr)
@@ -556,9 +729,9 @@ namespace DreamUIBridgeLocal
 			Variables.Add(MakeShared<FJsonValueObject>(Info));
 		}
 
-		OutResponse->SetArrayField(TEXT("variables"), Variables);
-		OutResponse->SetBoolField(TEXT("ok"), true);
-		OutResponse->SetStringField(TEXT("message"), FString());
+		const TSharedRef<FJsonObject> Fields = MakeShared<FJsonObject>();
+		Fields->SetArrayField(TEXT("variables"), Variables);
+		ReplyAndRemember(TEXT("variables"), InClassPath, Class, Fields, OutResponse);
 	}
 
 	/**
@@ -573,6 +746,10 @@ namespace DreamUIBridgeLocal
 	 */
 	void HandleMembers(const FString& InTypePath, const TSharedRef<FJsonObject>& OutResponse)
 	{
+		if (TryReplyFromCache(TEXT("members"), InTypePath, OutResponse))
+		{
+			return;
+		}
 		FString ElementType;
 		FString WhyNot;
 		UStruct* Struct = ResolveTypePath(InTypePath, ElementType, WhyNot);
@@ -594,13 +771,13 @@ namespace DreamUIBridgeLocal
 			Members.Add(MakeShared<FJsonValueObject>(MakePropertyInfo(Property)));
 		}
 
-		OutResponse->SetArrayField(TEXT("members"), Members);
+		const TSharedRef<FJsonObject> Fields = MakeShared<FJsonObject>();
+		Fields->SetArrayField(TEXT("members"), Members);
 		if (!ElementType.IsEmpty())
 		{
-			OutResponse->SetStringField(TEXT("elementType"), ElementType);
+			Fields->SetStringField(TEXT("elementType"), ElementType);
 		}
-		OutResponse->SetBoolField(TEXT("ok"), true);
-		OutResponse->SetStringField(TEXT("message"), FString());
+		ReplyAndRemember(TEXT("members"), InTypePath, Struct, Fields, OutResponse);
 	}
 
 	/**
@@ -741,13 +918,14 @@ namespace DreamUIBridgeLocal
 
 	void HandleCompile(const FString& InClassPath, const TSharedRef<FJsonObject>& OutResponse)
 	{
-		// The watcher's own gates: compiling reinstances live widgets, which mid-PIE is a crash
-		// report, and mid-GC/save is worse. Refusing loudly beats queueing quietly.
-		if (GEditor == nullptr || GEditor->PlayWorld != nullptr || UE::IsSavingPackage() || IsGarbageCollecting())
+		// The watcher's own gates, asked of the watcher so the two cannot drift: compiling reinstances live
+		// widgets, which mid-PIE is a crash report, mid-GC/save is worse, and under a drag or an open edit it
+		// pulls the preview out from under the author. Refusing loudly beats queueing quietly.
+		if (GEditor == nullptr || !FDreamUISourceWatcher::CanCompileNow())
 		{
 			OutResponse->SetBoolField(TEXT("ok"), false);
 			OutResponse->SetStringField(TEXT("message"),
-				TEXT("the editor is busy (PIE, saving or collecting); try again in a moment"));
+				TEXT("the editor is busy (PIE, saving, collecting, a drag or an open edit); try again in a moment"));
 			return;
 		}
 
@@ -757,6 +935,20 @@ namespace DreamUIBridgeLocal
 		{
 			OutResponse->SetBoolField(TEXT("ok"), false);
 			OutResponse->SetStringField(TEXT("message"), WhyNot);
+			return;
+		}
+
+		// A save that has just landed is already waiting in the watcher's queue, which compiles it once the burst of
+		// file events settles -- usually before this request could. Compiling it here as well would build the same
+		// text twice, and the verdicts arrive through the mailbox either way.
+		const FString SourcePath = UDreamTextUserWidget::ResolveDuiFilePath(
+			DreamUITextAuthoring::GetAuthoredSourcePath(Blueprint));
+		if (!SourcePath.IsEmpty() && FDreamUISourceWatcher::IsQueued(SourcePath))
+		{
+			OutResponse->SetBoolField(TEXT("ok"), true);
+			OutResponse->SetStringField(TEXT("message"),
+				FString::Printf(TEXT("'%s' is already queued by the source watcher and compiles as soon as its save settles; diagnostics are in the mailbox"),
+					*Blueprint->GetName()));
 			return;
 		}
 
@@ -839,6 +1031,13 @@ int32 FDreamUIBridgeService::ProcessPendingNow(const FString& InOverrideRoot)
 	{
 		return 0;
 	}
+	// Somebody is talking to this bridge. Only the live one counts: a test drives an override root, and is not
+	// a client that would be listening for a reveal.
+	if (InOverrideRoot.IsEmpty())
+	{
+		GLastRequestSeconds = FPlatformTime::Seconds();
+	}
+	HookReplyInvalidation();
 	// Ids sort oldest-first as strings; draining in send order is a sort, not a guess.
 	RequestFiles.Sort();
 
@@ -915,9 +1114,55 @@ bool FDreamUIBridgeService::WriteRevealToEditor(const FString& InAbsoluteFilePat
 	return WriteJsonAtomically(Reveal, FPaths::Combine(BridgeRoot, TEXT("reveal-to-editor.json")));
 }
 
+bool FDreamUIBridgeService::ShouldOwnBridge(bool bInCommandlet, bool bInAutomationTesting, bool bInUnattended)
+{
+	return !(bInCommandlet || bInAutomationTesting || bInUnattended);
+}
+
+bool FDreamUIBridgeService::ShouldOwnBridge()
+{
+	return ShouldOwnBridge(IsRunningCommandlet(), GIsAutomationTesting, FApp::IsUnattended());
+}
+
+bool FDreamUIBridgeService::IsRegistered()
+{
+	return DreamUIBridgeLocal::GTicker.IsValid();
+}
+
+bool FDreamUIBridgeService::IsClientRecent(double InLastRequestSeconds, double InNowSeconds)
+{
+	return InNowSeconds - InLastRequestSeconds <= DreamUIBridgeLocal::ClientPresenceSeconds;
+}
+
+bool FDreamUIBridgeService::HasRecentClient()
+{
+	using namespace DreamUIBridgeLocal;
+	// Registered as well: a process that never took the bridge over has nobody listening on its behalf.
+	return GTicker.IsValid() && IsClientRecent(GLastRequestSeconds, FPlatformTime::Seconds());
+}
+
+void FDreamUIBridgeService::OpenAtLocation(const FString& InAbsoluteFilePath, int32 InLine, int32 InColumn)
+{
+	if (InAbsoluteFilePath.IsEmpty())
+	{
+		return;
+	}
+	if (HasRecentClient() && WriteRevealToEditor(InAbsoluteFilePath, InLine, InColumn, FString()))
+	{
+		return;
+	}
+	FPlatformProcess::LaunchFileInDefaultExternalApplication(*InAbsoluteFilePath, nullptr, ELaunchVerb::Open);
+}
+
 void FDreamUIBridgeService::Register()
 {
 	using namespace DreamUIBridgeLocal;
+
+	if (GTicker.IsValid())
+	{
+		// Already the bridge. A second registration would add a second ticker nothing removes.
+		return;
+	}
 
 	const FString BridgeRoot = Root();
 	IFileManager::Get().MakeDirectory(*(BridgeRoot / TEXT("Requests")), /*Tree*/true);
@@ -955,6 +1200,11 @@ void FDreamUIBridgeService::Register()
 
 	GTicker = FTSTicker::GetCoreTicker().AddTicker(FTickerDelegate::CreateLambda([](float)
 	{
+		// Here rather than in Register: the editor engine does not exist yet when this module starts, and both of
+		// these are the editor's to hold. Cheap once done.
+		EnsureThrottleExemption();
+		HookReplyInvalidation();
+
 		ProcessPendingNow();
 		const double Now = FPlatformTime::Seconds();
 		if (Now - GLastHeartbeat >= HeartbeatIntervalSeconds)
@@ -969,11 +1219,18 @@ void FDreamUIBridgeService::Register()
 void FDreamUIBridgeService::Unregister()
 {
 	using namespace DreamUIBridgeLocal;
-	if (GTicker.IsValid())
+
+	RemoveThrottleExemption();
+	UnhookReplyInvalidation();
+
+	if (!GTicker.IsValid())
 	{
-		FTSTicker::GetCoreTicker().RemoveTicker(GTicker);
-		GTicker.Reset();
+		// This process never became the bridge, so status.json is some other editor's -- the one this process was
+		// started beside -- and deleting it would tell VS Code that editor had closed.
+		return;
 	}
+	FTSTicker::GetCoreTicker().RemoveTicker(GTicker);
+	GTicker.Reset();
 	// Absence is the "closed" signal; leaving a stale heartbeat behind would make the client wait
 	// out the full staleness budget instead.
 	IFileManager::Get().Delete(*(Root() / TEXT("status.json")), /*RequireExists*/false);

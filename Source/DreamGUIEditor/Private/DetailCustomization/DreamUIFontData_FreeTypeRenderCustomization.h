@@ -16,14 +16,16 @@ public:
 	virtual void CustomizeDetails(IDetailLayoutBuilder& DetailBuilder) override;
 private:
 	TWeakObjectPtr<class UDreamUIFontData_FreeTypeRender> TargetScriptPtr;
-	FReply OnReloadButtonClicked(IDetailLayoutBuilder* DetailBuilderPtr);
+	// These take the property utilities, not the layout builder: the builder does not survive the refresh
+	// they ask for, and a widget callback can fire after it is gone.
+	FReply OnReloadButtonClicked(TWeakPtr<class IPropertyUtilities> InPropertyUtilities);
 	FText OnGetFontFilePath()const;
 	void OnPathTextChanged(const FString& InText, TSharedRef<IPropertyHandle> InPathProperty);
-	void OnPathTextCommitted(const FString& InText, TSharedRef<IPropertyHandle> InPathProperty, IDetailLayoutBuilder* DetailBuilderPtr);
-	void ForceRefresh(IDetailLayoutBuilder* DetailBuilderPtr);
+	void OnPathTextCommitted(const FString& InText, TSharedRef<IPropertyHandle> InPathProperty, TWeakPtr<class IPropertyUtilities> InPropertyUtilities);
+	void ForceRefresh(TWeakPtr<class IPropertyUtilities> InPropertyUtilities);
 	TArray<TSharedPtr<FString>> FontFaceOptions;
-	TSharedRef<ITableRow> FontFaceOptions_GenerateComboItem(TSharedPtr<FString> InItem, const TSharedRef<STableViewBase>& OwnerTable, IDetailLayoutBuilder* DetailBuilder);
-	void FontFaceOptions_OnComboChanged(TSharedPtr<FString> Item, ESelectInfo::Type SelectInfo, TSharedRef<IPropertyHandle> InProperty, IDetailLayoutBuilder* DetailBuilder);
+	TSharedRef<ITableRow> FontFaceOptions_GenerateComboItem(TSharedPtr<FString> InItem, const TSharedRef<STableViewBase>& OwnerTable);
+	void FontFaceOptions_OnComboChanged(TSharedPtr<FString> Item, ESelectInfo::Type SelectInfo, TSharedRef<IPropertyHandle> InProperty, TWeakPtr<class IPropertyUtilities> InPropertyUtilities);
 	FText FontFaceOptions_GetCurrentFace()const;
 
 	FText GetCurrentValue() const;

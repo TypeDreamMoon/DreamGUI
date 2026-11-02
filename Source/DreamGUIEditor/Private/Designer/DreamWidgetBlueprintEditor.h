@@ -109,6 +109,16 @@ public:
 	/** Draw the selection outlines, handles, guides and readouts over the design surface. */
 	UPROPERTY(EditAnywhere, config, Category = "Visualization")
 	bool bShowDesignerChrome = true;
+	/**
+	 * Redraw the design viewport on every frame.
+	 *
+	 * Off, it redraws when the designer has something new to show -- a gesture, the pointer moving over
+	 * it, a selection, a rebuild -- and otherwise four times a second, so an open designer nobody is
+	 * touching stops rendering its scene at the editor's frame rate. Animations and tweens playing in the
+	 * preview are drawn at that slower rate while it is off.
+	 */
+	UPROPERTY(EditAnywhere, config, Category = "Performance")
+	bool bRealtimeViewport = true;
 };
 
 /**
@@ -315,6 +325,9 @@ public:
 	void ToggleRespectDesignerLocks();
 	bool GetShowDesignerChrome() const;
 	void ToggleShowDesignerChrome();
+	/** UDreamUIDesignerSettings::bRealtimeViewport, applied to every open designer's viewport. */
+	bool GetRealtimeViewport() const;
+	void ToggleRealtimeViewport();
 	/** Rebuild the hierarchy tree, for operations that change what rows there are. */
 	void RefreshOutliner();
 	bool IsDesignerGridSnapEnabled() const;
@@ -759,6 +772,21 @@ public:
 	void RebuildPreviewPreservingSelection();
 	/** RebuildPreviewPreservingSelection, plus the rebuilt previews of the templates named here. */
 	void RepublishPreviewAndSelect(TConstArrayView<UDreamWidget*> InTemplates, TArray<UDreamWidget*>& OutPreviews);
+
+	/**
+	 * The selection, carried across the rebuilds that do not go through RebuildPreviewPreservingSelection:
+	 * a compile (the preview is taken down before it, ReleaseForRecompile, and rebuilt on the next tick)
+	 * and a reload of a text-authored asset from its .dui. Those used to drop the selection every time,
+	 * which for a .dui meant every save in the text editor.
+	 *
+	 * Carried by display name, not by widget id: a .dui reload builds a new authoring tree whose ids are
+	 * minted afresh, while the display name is the node's `id` in the file and survives it.
+	 */
+	void HandlePreviewAboutToRebuild();
+	void HandlePreviewRebuilt();
+	TArray<FString> SelectionNamesAcrossRebuild;
+	/** Set while RebuildPreviewPreservingSelection is rebuilding, which carries the selection itself. */
+	bool bRebuildCarriesSelection = false;
 
 	/**
 	 * Mirror a reparent performed on the surface onto the authoring tree.

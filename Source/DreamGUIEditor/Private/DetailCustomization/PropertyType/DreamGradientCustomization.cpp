@@ -199,6 +199,73 @@ namespace DreamGradientCustomizationLocal
 	}
 
 	/**
+	 * What a row's attributes read of its gradient, read at most once a frame. The CSS box, its hint, the copy button and the
+	 * preview strip each ask on every frame, and each ask copies the gradient (its stops with it) out of every selected object
+	 * and compares them. The first ask of a frame does that and the rest are answered from it; an edit made later in the same
+	 * frame shows on the next one.
+	 */
+	class FGradientFrameCache
+	{
+	public:
+		struct FReading
+		{
+			/** ReadFirstGradient's answers. */
+			bool bReadable = false;
+			bool bMultipleValues = false;
+			/** The gradient, or a default one when there is none: what a row with nothing to show draws. */
+			FDreamGradient Gradient;
+		};
+
+		explicit FGradientFrameCache(TSharedPtr<IPropertyHandle> InHandle)
+			: Handle(MoveTemp(InHandle))
+		{
+		}
+
+		const FReading& Get()
+		{
+			if (ReadFrame != GFrameCounter)
+			{
+				ReadFrame = GFrameCounter;
+				Reading.bMultipleValues = false;
+				Reading.bReadable = ReadFirstGradient(Handle, Reading.Gradient, &Reading.bMultipleValues);
+				if (!Reading.bReadable)
+				{
+					Reading.Gradient = FDreamGradient();
+				}
+			}
+			return Reading;
+		}
+
+		/**
+		 * The gradient as CSS; nothing when there is none or the selection disagrees. Printing it is the costly part, so it is
+		 * redone only when the gradient is no longer the one the text was made from.
+		 */
+		FText GetCssText()
+		{
+			const FReading& Current = Get();
+			if (!Current.bReadable || Current.bMultipleValues)
+			{
+				return FText::GetEmpty();
+			}
+			if (!bHasCssText || CssSource != Current.Gradient)
+			{
+				CssSource = Current.Gradient;
+				CssText = FText::FromString(CssSource.ToCss());
+				bHasCssText = true;
+			}
+			return CssText;
+		}
+
+	private:
+		TSharedPtr<IPropertyHandle> Handle;
+		uint64 ReadFrame = TNumericLimits<uint64>::Max();
+		FReading Reading;
+		FDreamGradient CssSource;
+		FText CssText;
+		bool bHasCssText = false;
+	};
+
+	/**
 	 * Whether the rows that write the gradient without being its property rows -- the CSS box, the stop editor, the header's
 	 * Paste -- may write it. A custom row is not greyed out with the gradient's own row: a child row inherits its parent's
 	 * edit condition, not the details view's read-only verdict on it, and the view asks FIsCustomRowReadOnly with nothing
@@ -626,20 +693,19 @@ namespace DreamGradientCustomizationLocal
 	{
 		// The box's own commit reports a parse error on the box; it holds itself only weakly, through this.
 		const TSharedRef<TWeakPtr<SEditableTextBox>> BoxHolder = MakeShared<TWeakPtr<SEditableTextBox>>();
+		// The box, its hint and the copy button all poll the gradient every frame; they share one read of it.
+		const TSharedRef<FGradientFrameCache> Cache = MakeShared<FGradientFrameCache>(InHandle);
+		const FText MultipleValuesText = LOCTEXT("MultipleValues", "Multiple Values");
+		const FText CssHintText = LOCTEXT("CssHint", "linear-gradient(180deg, #FFF3B0, #9C6A12)");
 		const TSharedRef<SEditableTextBox> Box = SNew(SEditableTextBox)
 			.Font(IDetailLayoutBuilder::GetDetailFont())
-			.Text_Lambda([InHandle]()
+			.Text_Lambda([Cache]()
 			{
-				bool bMultipleValues = false;
-				FDreamGradient Gradient;
-				return ReadFirstGradient(InHandle, Gradient, &bMultipleValues) && !bMultipleValues ? FText::FromString(Gradient.ToCss()) : FText::GetEmpty();
+				return Cache->GetCssText();
 			})
-			.HintText_Lambda([InHandle]()
+			.HintText_Lambda([Cache, MultipleValuesText, CssHintText]()
 			{
-				bool bMultipleValues = false;
-				FDreamGradient Gradient;
-				ReadFirstGradient(InHandle, Gradient, &bMultipleValues);
-				return bMultipleValues ? LOCTEXT("MultipleValues", "Multiple Values") : LOCTEXT("CssHint", "linear-gradient(180deg, #FFF3B0, #9C6A12)");
+				return Cache->Get().bMultipleValues ? MultipleValuesText : CssHintText;
 			})
 			.ToolTipText(LOCTEXT("Css_ToolTip", "The gradient as CSS: linear-, radial- and conic-gradient and their repeating- forms, with stops, angles, positions and `in oklab` or `in srgb-linear`; diamond-, corners- and reflecting- for what CSS has no word for. Type or paste one and press Enter. The same spelling a .dui file and a project preset use."))
 			.SelectAllTextWhenFocused(true)
@@ -690,11 +756,10 @@ namespace DreamGradientCustomizationLocal
 				.ButtonStyle(FAppStyle::Get(), "SimpleButton")
 				.ContentPadding(FMargin(2.0f, 0.0f))
 				.ToolTipText(LOCTEXT("CopyCss_ToolTip", "Copy the gradient as CSS."))
-				.IsEnabled_Lambda([InHandle]()
+				.IsEnabled_Lambda([Cache]()
 				{
-					bool bMultipleValues = false;
-					FDreamGradient Gradient;
-					return ReadFirstGradient(InHandle, Gradient, &bMultipleValues) && !bMultipleValues;
+					const FGradientFrameCache::FReading& Reading = Cache->Get();
+					return Reading.bReadable && !Reading.bMultipleValues;
 				})
 				.OnClicked_Lambda([InHandle]()
 				{
@@ -792,6 +857,14 @@ void FDreamGradientStopCurves::Refresh()
 
 void FDreamGradientStopCurves::SyncFromSource() const
 {
+	// The editor asks several questions in one paint (GetCurves in three forms, HasAnyAlphaKeys) and each starts here. A look
+	// copies the gradient out of every selected object and compares its stops, so only the first of a frame is made: a change
+	// from elsewhere (an undo, a paste) is caught by the next frame's. An edit made through this object asks again at once.
+	if (bSynced && LastSyncFrame == GFrameCounter)
+	{
+		return;
+	}
+	LastSyncFrame = GFrameCounter;
 	FDreamGradient Source;
 	if (!Binding.Read || !Binding.Read(Source))
 	{
@@ -1127,6 +1200,7 @@ void FDreamGradientStopCurves::OnCurveChanged(const TArray<FRichCurveEditInfo>& 
 	SyncedStops = NewStops;
 	Strip.Stops = NewStops;
 	bSynced = true;
+	LastSyncFrame = MAX_uint64;
 	if (!bNextChangeInteractive)
 	{
 		UpdateViewRange();
@@ -1201,6 +1275,8 @@ void FDreamGradientCustomization::CustomizeHeader(TSharedRef<IPropertyHandle> Pr
 		return;
 	}
 
+	// The preview strip polls the gradient every frame.
+	const TSharedRef<FGradientFrameCache> PreviewCache = MakeShared<FGradientFrameCache>(PropertyHandle);
 	HeaderRow
 	.NameContent()
 	[
@@ -1218,11 +1294,9 @@ void FDreamGradientCustomization::CustomizeHeader(TSharedRef<IPropertyHandle> Pr
 		[
 			SNew(SDreamGradientPreview)
 			.DesiredSize(FVector2D(160.0, 18.0))
-			.Gradient_Lambda([PropertyHandle]()
+			.Gradient_Lambda([PreviewCache]()
 			{
-				FDreamGradient Gradient;
-				ReadFirstGradient(PropertyHandle, Gradient);
-				return Gradient;
+				return PreviewCache->Get().Gradient;
 			})
 			.ToolTipText_Lambda([PropertyHandle]() { return GetSummaryText(PropertyHandle); })
 		]

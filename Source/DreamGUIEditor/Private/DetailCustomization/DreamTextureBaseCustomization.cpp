@@ -55,9 +55,13 @@ void FDreamTextureBaseCustomization::CustomizeDetails(IDetailLayoutBuilder& Deta
 	FNotifyHook* NotifyHook = DetailBuilder.GetPropertyUtilities()->GetNotifyHook();
 	FProperty* AnchorDataProperty = FindFProperty<FProperty>(UDreamWidget::StaticClass(), UDreamWidget::GetPropertyName_AnchorData());
 
+	// The refresh the delegates and the button below ask for destroys the layout builder, so they keep
+	// the utilities instead.
+	const TWeakPtr<IPropertyUtilities> WeakUtilities = DetailBuilder.GetPropertyUtilities();
+
 	IDetailCategoryBuilder& category = DetailBuilder.EditCategory("DreamGUI");
 	auto textureHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UDreamTextureBase, Texture));
-	textureHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FDreamTextureBaseCustomization::ForceRefresh, &DetailBuilder));
+	textureHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FDreamTextureBaseCustomization::ForceRefresh, WeakUtilities));
 	category.AddProperty(GET_MEMBER_NAME_CHECKED(UDreamTextureBase, Texture));
 	// The tint, declared on UDreamVisual and so otherwise the last row of the visual: next to what it tints.
 	category.AddProperty(DetailBuilder.GetProperty(FName(TEXT("Color")), UDreamVisual::StaticClass()));
@@ -91,7 +95,7 @@ void FDreamTextureBaseCustomization::CustomizeDetails(IDetailLayoutBuilder& Deta
 					// The button outlives the layout that built it, so it may hold neither the builder
 					// nor the texture: the refresh it asks for is what destroys the builder.
 					TWeakObjectPtr<UTexture> weakTexture = texture;
-					TWeakPtr<IPropertyUtilities> propertyUtilities = DetailBuilder.GetPropertyUtilities();
+					TWeakPtr<IPropertyUtilities> propertyUtilities = WeakUtilities;
 					category.AddCustomRow(LOCTEXT("FixTextureSettingForHitTest_Row", "FixTextureSettingForHitTest"))
 						.ValueContent()
 						[
@@ -111,7 +115,7 @@ void FDreamTextureBaseCustomization::CustomizeDetails(IDetailLayoutBuilder& Deta
 								GEditor->EndTransaction();
 								if (auto Utilities = propertyUtilities.Pin())
 								{
-									Utilities->ForceRefresh();
+									Utilities->RequestForceRefresh();
 								}
 								return FReply::Handled();
 								})
@@ -175,11 +179,13 @@ void FDreamTextureBaseCustomization::CustomizeDetails(IDetailLayoutBuilder& Deta
 		];
 	}
 }
-void FDreamTextureBaseCustomization::ForceRefresh(IDetailLayoutBuilder* DetailBuilder)
+void FDreamTextureBaseCustomization::ForceRefresh(TWeakPtr<IPropertyUtilities> InPropertyUtilities)
 {
-	if (DetailBuilder)
+	if (const TSharedPtr<IPropertyUtilities> PropertyUtilities = InPropertyUtilities.Pin())
 	{
-		DetailBuilder->ForceRefreshDetails();
+		// Requested, not forced: this runs inside the property's own value-changed broadcast, and the
+		// immediate variant tears the layout down while that broadcast is still on the stack.
+		PropertyUtilities->RequestForceRefresh();
 	}
 }
 #undef LOCTEXT_NAMESPACE

@@ -106,8 +106,14 @@ public:
 	 * text over the foreign edit. Nothing here can see that -- the transaction system hands us a
 	 * restored string with no history attached. The host's move when it accepts a foreign change is
 	 * GEditor->Trans->SetUndoBarrier(), so undo stops at the reload instead of stepping over it.
+	 *
+	 * The reload also replaces text the file never received: an edit whose write was refused (a
+	 * read-only file, or a file that changed on disk under it) is still owed, and this is where it is
+	 * lost. When OutDiscardedUnflushedContent is given it receives that text -- only when the edit was
+	 * owed AND differs from what was loaded, so a reload that changes nothing reports nothing -- and is
+	 * otherwise left as it was. Saving it and telling the author is the host's, like the barrier.
 	 */
-	bool LoadFromFile(FString& OutError);
+	bool LoadFromFile(FString& OutError, FString* OutDiscardedUnflushedContent = nullptr);
 
 	/** Point this document at a file without reading it. For a document that is about to be created. */
 	void SetFilePath(const FString& InAbsoluteFilePath);

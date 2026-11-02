@@ -107,7 +107,9 @@ FDreamWidgetDesignerViewportClient::FDreamWidgetDesignerViewportClient(TWeakPtr<
 	EngineShowFlags.AmbientOcclusion = 1;
 	EngineShowFlags.SetSnap(false);
 
-	SetRealtime(true);
+	// The designer's preference (UDreamUIDesignerSettings::bRealtimeViewport). Off, Tick keeps a slow
+	// redraw going so nothing waits on the next gesture to appear.
+	SetRealtime(GetDefault<UDreamUIDesignerSettings>()->bRealtimeViewport);
 
 	EngineShowFlags.DisableAdvancedFeatures();
 	EngineShowFlags.SetSeparateTranslucency(true);
@@ -1622,6 +1624,21 @@ void FDreamWidgetDesignerViewportClient::Tick(float DeltaSeconds)
 	if (bDesignerDragging)UpdateDesignerDrag();
 	if (bDesignerMarqueePending)TryPromoteDesignerMarquee();
 	UpdateHoveredWidget();
+
+	// With realtime off the world still ticks every frame -- tweens and animations go on advancing -- but
+	// the scene is only drawn when asked. This is the asking for everything nothing else announces: a
+	// value edited in a panel, a tween, a canvas that rebuilt its geometry. Four times a second is often
+	// enough that none of those looks lost, and a small fraction of drawing the scene every frame.
+	if (!IsRealtime())
+	{
+		constexpr double IdleRedrawIntervalSeconds = 0.25;
+		const double Now = FPlatformTime::Seconds();
+		if (Now - LastIdleRedrawSeconds >= IdleRedrawIntervalSeconds)
+		{
+			LastIdleRedrawSeconds = Now;
+			Invalidate(false, false);
+		}
+	}
 }
 
 
@@ -1943,6 +1960,10 @@ void FDreamWidgetDesignerViewportClient::UpdateDesignerDrag()
 			Moving.Add(SelectedWidget);
 			Targets.Add(Target);
 		}
+		if (IsShiftPressed())
+		{
+			ConstrainMoveDragToDominantAxis(Targets);
+		}
 		const float GridSize = DesignerPtr.Pin()->IsDesignerGridSnapEnabled() ? DesignerPtr.Pin()->GetDesignerGridSize() : 0.0f;
 		FSiblingSnapLines SnapLines;
 		GatherSiblingSnapLines(Moving, SnapLines);
@@ -2069,6 +2090,11 @@ void FDreamWidgetDesignerViewportClient::UpdateDesignerDrag()
 			if (bChangeRight)Right = FMath::Max(SnappedY, Left + 1.0f);
 			if (bChangeBottom)Bottom = FMath::Min(SnappedZ, Top - 1.0f);
 			if (bChangeTop)Top = FMath::Max(SnappedZ, Bottom + 1.0f);
+			// The two modifiers every layout tool gives a resize handle (Figma's, Unity's rect tool): Alt
+			// resizes about the centre, the opposite edge moving by as much the other way; Shift keeps the
+			// proportions the widget had when the handle was grabbed.
+			ApplyResizeModifiers(IsAltPressed(), IsShiftPressed(), bChangeLeft, bChangeRight, bChangeBottom, bChangeTop,
+				OriginalLeft, OriginalRight, OriginalBottom, OriginalTop, Left, Right, Bottom, Top);
 			const float NewWidth = Right - Left;
 			const float NewHeight = Top - Bottom;
 			const FVector NewOriginLocal(0, Left + Snapshot.Pivot.X * NewWidth, Bottom + Snapshot.Pivot.Y * NewHeight);
@@ -3366,30 +3392,55 @@ void FDreamWidgetDesignerViewportClient::GatherSiblingSnapLines(TConstArrayView<
 	{
 		Moving.Add(MovingWidget);
 	}
+	// Every line is measured in the parent's own space and then moved into the frame the drag measures
+	// the leader in, its anchored position -- which is relative to the leader's OWN anchors. Lines read
+	// straight off the siblings' anchored positions were each relative to that sibling's anchors, so they
+	// only agreed with the leader when everyone shared its anchors: with a sibling anchored top-left and
+	// the leader centred, the guide caught a place nothing was standing at.
+	//
+	// The anchor reference is where an anchored position of zero puts the pivot, the same sum
+	// UDreamWidget::CalculateTransformFromAnchor makes.
+	const FDreamUIAnchorData& LeaderAnchors = Leader->GetAnchorData();
+	const FVector2D LeaderFrame(
+		Parent->GetLocalSpaceLeft() + Parent->GetWidth() * FMath::Lerp(LeaderAnchors.AnchorMin.X, LeaderAnchors.AnchorMax.X, LeaderAnchors.Pivot.X),
+		Parent->GetLocalSpaceBottom() + Parent->GetHeight() * FMath::Lerp(LeaderAnchors.AnchorMin.Y, LeaderAnchors.AnchorMax.Y, LeaderAnchors.Pivot.Y));
+	auto AddRect = [&OutLines, &LeaderFrame](double InLeft, double InRight, double InBottom, double InTop)
+	{
+		OutLines.Horizontal.Add(InLeft - LeaderFrame.X);
+		OutLines.Horizontal.Add((InLeft + InRight) * 0.5 - LeaderFrame.X);
+		OutLines.Horizontal.Add(InRight - LeaderFrame.X);
+		OutLines.Vertical.Add(InBottom - LeaderFrame.Y);
+		OutLines.Vertical.Add((InBottom + InTop) * 0.5 - LeaderFrame.Y);
+		OutLines.Vertical.Add(InTop - LeaderFrame.Y);
+	};
 	for (UDreamWidget* Sibling : Parent->GetChildren())
 	{
 		if (!IsValid(Sibling) || Moving.Contains(Sibling))
 		{
 			continue;
 		}
-		// The sibling's rect in the parent's frame, expressed the way the drag measures: the anchored
-		// position names the pivot, and the rect runs one share of the size either side of it.
-		const FVector2D Position = Sibling->GetAnchoredPosition();
-		const FVector2D Size(Sibling->GetWidth(), Sibling->GetHeight());
-		const FVector2D Pivot = Sibling->GetPivot();
-		const FVector2D Min = Position - Pivot * Size;
-		const FVector2D Max = Min + Size;
-		OutLines.Horizontal.Add(Min.X);
-		OutLines.Horizontal.Add((Min.X + Max.X) * 0.5);
-		OutLines.Horizontal.Add(Max.X);
-		OutLines.Vertical.Add(Min.Y);
-		OutLines.Vertical.Add((Min.Y + Max.Y) * 0.5);
-		OutLines.Vertical.Add(Max.Y);
+		// The sibling's bounds in the parent's space: its local rect through its own transform, so a scaled
+		// or turned sibling offers the edges it is drawn with.
+		const FTransform LocalTM = Sibling->GetLocalTransform();
+		const FVector Corners[4] =
+		{
+			LocalTM.TransformPosition(FVector(0, Sibling->GetLocalSpaceLeft(), Sibling->GetLocalSpaceBottom())),
+			LocalTM.TransformPosition(FVector(0, Sibling->GetLocalSpaceRight(), Sibling->GetLocalSpaceBottom())),
+			LocalTM.TransformPosition(FVector(0, Sibling->GetLocalSpaceLeft(), Sibling->GetLocalSpaceTop())),
+			LocalTM.TransformPosition(FVector(0, Sibling->GetLocalSpaceRight(), Sibling->GetLocalSpaceTop())),
+		};
+		double Left = Corners[0].Y, Right = Corners[0].Y, Bottom = Corners[0].Z, Top = Corners[0].Z;
+		for (const FVector& Corner : Corners)
+		{
+			Left = FMath::Min(Left, Corner.Y);
+			Right = FMath::Max(Right, Corner.Y);
+			Bottom = FMath::Min(Bottom, Corner.Z);
+			Top = FMath::Max(Top, Corner.Z);
+		}
+		AddRect(Left, Right, Bottom, Top);
 	}
-	if (OutLines.Horizontal.IsEmpty() && OutLines.Vertical.IsEmpty())
-	{
-		return;
-	}
+	// The parent's own edges and centre, which is what "centre it in its panel" is aimed at.
+	AddRect(Parent->GetLocalSpaceLeft(), Parent->GetLocalSpaceRight(), Parent->GetLocalSpaceBottom(), Parent->GetLocalSpaceTop());
 	// In design units, and read off the view rather than fixed: a tolerance that is right at 100%
 	// zoom is a rect-width at 10% and unreachable at 800%. Roughly six screen pixels either way,
 	// which is the distance UMG's designer forgives.
@@ -3426,6 +3477,113 @@ FDreamWidgetDesignerViewportClient::FEdgeSnapResult FDreamWidgetDesignerViewport
 		}
 	}
 	return Result;
+}
+
+void FDreamWidgetDesignerViewportClient::ApplyResizeModifiers(bool bFromCentre, bool bKeepAspect,
+	bool bChangeLeft, bool bChangeRight, bool bChangeBottom, bool bChangeTop,
+	float InLeft, float InRight, float InBottom, float InTop,
+	float& InOutLeft, float& InOutRight, float& InOutBottom, float& InOutTop)
+{
+	if (bFromCentre)
+	{
+		if (bChangeLeft)InOutRight = InRight - (InOutLeft - InLeft);
+		if (bChangeRight)InOutLeft = InLeft - (InOutRight - InRight);
+		if (bChangeBottom)InOutTop = InTop - (InOutBottom - InBottom);
+		if (bChangeTop)InOutBottom = InBottom - (InOutTop - InTop);
+	}
+	const float OriginalWidth = InRight - InLeft;
+	const float OriginalHeight = InTop - InBottom;
+	const bool bHorizontal = bChangeLeft || bChangeRight;
+	const bool bVertical = bChangeBottom || bChangeTop;
+	if (bKeepAspect && OriginalWidth > UE_KINDA_SMALL_NUMBER && OriginalHeight > UE_KINDA_SMALL_NUMBER && (bHorizontal || bVertical))
+	{
+		const float Aspect = OriginalWidth / OriginalHeight;
+		float Width = InOutRight - InOutLeft;
+		float Height = InOutTop - InOutBottom;
+		if (bHorizontal && bVertical)
+		{
+			if (Width / OriginalWidth >= Height / OriginalHeight)
+			{
+				Height = Width / Aspect;
+			}
+			else
+			{
+				Width = Height * Aspect;
+			}
+		}
+		else if (bHorizontal)
+		{
+			Height = Width / Aspect;
+		}
+		else
+		{
+			Width = Height * Aspect;
+		}
+		// Each axis is held where it would have been held without the modifier: at the edge opposite the
+		// dragged one, or at the centre when the drag is from the centre or did not touch that axis at all.
+		auto Place = [bFromCentre](bool bMinDragged, bool bMaxDragged, float InMin, float InMax, float InSize, float& OutMin, float& OutMax)
+		{
+			if (bFromCentre || (!bMinDragged && !bMaxDragged))
+			{
+				const float Centre = (InMin + InMax) * 0.5f;
+				OutMin = Centre - InSize * 0.5f;
+				OutMax = Centre + InSize * 0.5f;
+			}
+			else if (bMinDragged)
+			{
+				OutMax = InMax;
+				OutMin = InMax - InSize;
+			}
+			else
+			{
+				OutMin = InMin;
+				OutMax = InMin + InSize;
+			}
+		};
+		Place(bChangeLeft, bChangeRight, InLeft, InRight, Width, InOutLeft, InOutRight);
+		Place(bChangeBottom, bChangeTop, InBottom, InTop, Height, InOutBottom, InOutTop);
+	}
+	// The floor the plain drag has, kept under the modifiers: a rect turned inside out by an Alt drag
+	// past the centre would otherwise come back with a negative size.
+	if (InOutRight - InOutLeft < 1.0f)
+	{
+		const float Centre = (InOutLeft + InOutRight) * 0.5f;
+		InOutLeft = Centre - 0.5f;
+		InOutRight = Centre + 0.5f;
+	}
+	if (InOutTop - InOutBottom < 1.0f)
+	{
+		const float Centre = (InOutBottom + InOutTop) * 0.5f;
+		InOutBottom = Centre - 0.5f;
+		InOutTop = Centre + 0.5f;
+	}
+}
+
+void FDreamWidgetDesignerViewportClient::ConstrainMoveDragToDominantAxis(TArrayView<FMoveDragTarget> InOutTargets)
+{
+	if (InOutTargets.IsEmpty())
+	{
+		return;
+	}
+	const FMoveDragTarget& First = InOutTargets[0];
+	const FVector FirstTravel = First.PlaneTransform.InverseTransformPosition(First.CurrentPlanePoint)
+		- First.PlaneTransform.InverseTransformPosition(First.StartPlanePoint);
+	// The plane's horizontal axis is local Y and its vertical axis local Z, as everywhere in this file.
+	const bool bKeepHorizontal = FMath::Abs(FirstTravel.Y) >= FMath::Abs(FirstTravel.Z);
+	for (FMoveDragTarget& Target : InOutTargets)
+	{
+		const FVector StartLocal = Target.PlaneTransform.InverseTransformPosition(Target.StartPlanePoint);
+		FVector CurrentLocal = Target.PlaneTransform.InverseTransformPosition(Target.CurrentPlanePoint);
+		if (bKeepHorizontal)
+		{
+			CurrentLocal.Z = StartLocal.Z;
+		}
+		else
+		{
+			CurrentLocal.Y = StartLocal.Y;
+		}
+		Target.CurrentPlanePoint = Target.PlaneTransform.TransformPosition(CurrentLocal);
+	}
 }
 
 void FDreamWidgetDesignerViewportClient::ResolveMoveDrag(TConstArrayView<FMoveDragTarget> InTargets, float InGridSize,
@@ -4176,7 +4334,13 @@ void FDreamWidgetDesignerViewportClient::UpdateHoveredWidget()
 		HoveredWidget.Reset();
 		return;
 	}
+	UDreamWidget* const Previous = HoveredWidget.Get();
 	HoveredWidget = GetWidgetUnderCursor(HoverPixel.X, HoverPixel.Y);
+	// The outline is drawn with the scene, so a viewport that is not drawing every frame has to be told.
+	if (HoveredWidget.Get() != Previous)
+	{
+		Invalidate(false, false);
+	}
 }
 
 void FDreamWidgetDesignerViewportClient::SetExternalHoverWidget(UDreamWidget* InWidget)

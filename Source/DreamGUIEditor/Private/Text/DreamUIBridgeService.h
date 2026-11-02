@@ -38,11 +38,49 @@
  */
 struct DREAMGUIEDITOR_API FDreamUIBridgeService
 {
-	/** Module startup: ensures the folders, starts the poll ticker and the heartbeat. */
+	/**
+	 * Whether THIS process should be the editor external tools talk to.
+	 *
+	 * Not a commandlet, not an automation run, not an unattended process: those are started beside an editor that
+	 * is open (a headless test pass, a build step), and registering would clear the open editor's Requests/ and
+	 * Responses/ and overwrite its status.json -- and unregistering at exit would delete it, so VS Code would
+	 * report the editor closed while it was running. The same guard the diagnostics mailbox has for the same reason.
+	 */
+	static bool ShouldOwnBridge();
+	static bool ShouldOwnBridge(bool bInCommandlet, bool bInAutomationTesting, bool bInUnattended);
+
+	/**
+	 * Module startup: ensures the folders, starts the poll ticker and the heartbeat. Unconditional -- whether this
+	 * process should be the bridge is ShouldOwnBridge's question, asked by the module, so that a test can still
+	 * register one explicitly.
+	 */
 	static void Register();
 
-	/** Module shutdown: stops the ticker and removes status.json -- absence means "closed". */
+	/**
+	 * Module shutdown: stops the ticker and removes status.json -- absence means "closed". Does nothing to
+	 * status.json when this process never registered: it belongs to whichever editor did.
+	 */
 	static void Unregister();
+
+	/** True between Register and Unregister. */
+	static bool IsRegistered();
+
+	/**
+	 * Whether something on the other side has talked to this bridge recently enough to be listening for a reveal.
+	 *
+	 * The protocol has no client heartbeat, so "a request was answered in the last ten minutes" is the closest thing
+	 * to knowing that VS Code is there. Wrong in one direction only, on purpose: a client that has been quiet longer
+	 * is treated as absent, and the caller opens the file itself.
+	 */
+	static bool HasRecentClient();
+	static bool IsClientRecent(double InLastRequestSeconds, double InNowSeconds);
+
+	/**
+	 * Take the author to a place in a file: through the bridge, so VS Code puts its cursor there, when a client is
+	 * listening, and by opening the file in whatever the system uses for it when none is. The position is 1-based;
+	 * the fallback cannot honour it.
+	 */
+	static void OpenAtLocation(const FString& InAbsoluteFilePath, int32 InLine, int32 InColumn);
 
 	/**
 	 * Drains the requests directory once, synchronously. The ticker calls this; tests call it
