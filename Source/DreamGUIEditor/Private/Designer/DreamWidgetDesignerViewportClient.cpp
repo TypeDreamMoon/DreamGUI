@@ -3366,30 +3366,55 @@ void FDreamWidgetDesignerViewportClient::GatherSiblingSnapLines(TConstArrayView<
 	{
 		Moving.Add(MovingWidget);
 	}
+	// Every line is measured in the parent's own space and then moved into the frame the drag measures
+	// the leader in, its anchored position -- which is relative to the leader's OWN anchors. Lines read
+	// straight off the siblings' anchored positions were each relative to that sibling's anchors, so they
+	// only agreed with the leader when everyone shared its anchors: with a sibling anchored top-left and
+	// the leader centred, the guide caught a place nothing was standing at.
+	//
+	// The anchor reference is where an anchored position of zero puts the pivot, the same sum
+	// UDreamWidget::CalculateTransformFromAnchor makes.
+	const FDreamUIAnchorData& LeaderAnchors = Leader->GetAnchorData();
+	const FVector2D LeaderFrame(
+		Parent->GetLocalSpaceLeft() + Parent->GetWidth() * FMath::Lerp(LeaderAnchors.AnchorMin.X, LeaderAnchors.AnchorMax.X, LeaderAnchors.Pivot.X),
+		Parent->GetLocalSpaceBottom() + Parent->GetHeight() * FMath::Lerp(LeaderAnchors.AnchorMin.Y, LeaderAnchors.AnchorMax.Y, LeaderAnchors.Pivot.Y));
+	auto AddRect = [&OutLines, &LeaderFrame](double InLeft, double InRight, double InBottom, double InTop)
+	{
+		OutLines.Horizontal.Add(InLeft - LeaderFrame.X);
+		OutLines.Horizontal.Add((InLeft + InRight) * 0.5 - LeaderFrame.X);
+		OutLines.Horizontal.Add(InRight - LeaderFrame.X);
+		OutLines.Vertical.Add(InBottom - LeaderFrame.Y);
+		OutLines.Vertical.Add((InBottom + InTop) * 0.5 - LeaderFrame.Y);
+		OutLines.Vertical.Add(InTop - LeaderFrame.Y);
+	};
 	for (UDreamWidget* Sibling : Parent->GetChildren())
 	{
 		if (!IsValid(Sibling) || Moving.Contains(Sibling))
 		{
 			continue;
 		}
-		// The sibling's rect in the parent's frame, expressed the way the drag measures: the anchored
-		// position names the pivot, and the rect runs one share of the size either side of it.
-		const FVector2D Position = Sibling->GetAnchoredPosition();
-		const FVector2D Size(Sibling->GetWidth(), Sibling->GetHeight());
-		const FVector2D Pivot = Sibling->GetPivot();
-		const FVector2D Min = Position - Pivot * Size;
-		const FVector2D Max = Min + Size;
-		OutLines.Horizontal.Add(Min.X);
-		OutLines.Horizontal.Add((Min.X + Max.X) * 0.5);
-		OutLines.Horizontal.Add(Max.X);
-		OutLines.Vertical.Add(Min.Y);
-		OutLines.Vertical.Add((Min.Y + Max.Y) * 0.5);
-		OutLines.Vertical.Add(Max.Y);
+		// The sibling's bounds in the parent's space: its local rect through its own transform, so a scaled
+		// or turned sibling offers the edges it is drawn with.
+		const FTransform LocalTM = Sibling->GetLocalTransform();
+		const FVector Corners[4] =
+		{
+			LocalTM.TransformPosition(FVector(0, Sibling->GetLocalSpaceLeft(), Sibling->GetLocalSpaceBottom())),
+			LocalTM.TransformPosition(FVector(0, Sibling->GetLocalSpaceRight(), Sibling->GetLocalSpaceBottom())),
+			LocalTM.TransformPosition(FVector(0, Sibling->GetLocalSpaceLeft(), Sibling->GetLocalSpaceTop())),
+			LocalTM.TransformPosition(FVector(0, Sibling->GetLocalSpaceRight(), Sibling->GetLocalSpaceTop())),
+		};
+		double Left = Corners[0].Y, Right = Corners[0].Y, Bottom = Corners[0].Z, Top = Corners[0].Z;
+		for (const FVector& Corner : Corners)
+		{
+			Left = FMath::Min(Left, Corner.Y);
+			Right = FMath::Max(Right, Corner.Y);
+			Bottom = FMath::Min(Bottom, Corner.Z);
+			Top = FMath::Max(Top, Corner.Z);
+		}
+		AddRect(Left, Right, Bottom, Top);
 	}
-	if (OutLines.Horizontal.IsEmpty() && OutLines.Vertical.IsEmpty())
-	{
-		return;
-	}
+	// The parent's own edges and centre, which is what "centre it in its panel" is aimed at.
+	AddRect(Parent->GetLocalSpaceLeft(), Parent->GetLocalSpaceRight(), Parent->GetLocalSpaceBottom(), Parent->GetLocalSpaceTop());
 	// In design units, and read off the view rather than fixed: a tolerance that is right at 100%
 	// zoom is a rect-width at 10% and unreachable at 800%. Roughly six screen pixels either way,
 	// which is the distance UMG's designer forgives.
