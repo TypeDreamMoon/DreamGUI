@@ -131,6 +131,8 @@ Severity is decided where a diagnostic is raised, not by its range. Most codes a
 | [DUI6020](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui6xxx#dui6020) | `TwoWayTargetReadOnly` | error | `<-> Path.Member` whose member cannot be written back: read-only, and no `Set<Member>`. |
 | [DUI6021](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui6xxx#dui6021) | `LoopItemMemberNotFound` | error | `Item.Member` that the loop source's element class does not have. |
 | [DUI6022](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui6xxx#dui6022) | `LoopItemRouteMismatch` | error | `-> Item.Func` that the element class does not have, or whose parameters fit neither nothing nor the event. |
+| [DUI6024](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui6xxx#dui6024) | `TranslationDoesNotFit` | warning | With DreamLoc in the project: a language's translation of a text, laid out in the text, is cut or runs past its box. |
+| [DUI6025](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui6xxx#dui6025) | `TranslationGlyphsMissing` | warning | With DreamLoc in the project: a language's translation of a text has characters no face of the text's font has. |
 | [DUI7001](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui7xxx#dui7001) | `PatchTargetNotFound` | error | A designer edit with no home in the file: an unknown node, a bound property, a slot with no block. |
 | [DUI7002](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui7xxx#dui7002) | `SourceFileChangedUnderEdit` | error | The file changed under a pending edit; nothing was written. |
 | [DUI7003](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui7xxx#dui7003) | `PatchValueNotRepresentable` | error | A value the language cannot spell (a non-finite number); its line is left alone. |

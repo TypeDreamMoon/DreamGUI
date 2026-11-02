@@ -1,6 +1,11 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 // Modified by TypeDreamMoon.
 
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using EpicGames.Core;
 using UnrealBuildTool;
 
 public class DreamGUIEditor : ModuleRules
@@ -114,5 +119,86 @@ public class DreamGUIEditor : ModuleRules
 			}
 			);
 
+		// DreamLoc, when the project has it (an Optional plugin of DreamGUI.uplugin): the designer lays each language's
+		// translation out in the text it is for as it compiles, and `dloc check` asks DreamGUI to do the same
+		// (IDreamLocContextProvider). Without it everything else builds and runs as before; WITH_DREAMLOC says which.
+		bool bWithDreamLoc = HasDreamLoc(Target);
+		PrivateDefinitions.Add("WITH_DREAMLOC=" + (bWithDreamLoc ? "1" : "0"));
+		if (bWithDreamLoc)
+		{
+			PrivateDependencyModuleNames.AddRange(new string[] { "DreamLoc", "DreamLocEditor" });
+		}
     }
+
+	/**
+	 * Whether DreamLoc is there to depend on: a DreamLoc.uplugin under the project's Plugins/ or the engine's
+	 * Plugins/Marketplace, and the project not turning it off. What UBT then does with the Optional dependency is the
+	 * same answer: the plugin is enabled with DreamGUI exactly when it is found and not disabled.
+	 */
+	bool HasDreamLoc(ReadOnlyTargetRules Target)
+	{
+		List<DirectoryReference> Roots = new List<DirectoryReference>();
+		if (Target.ProjectFile != null)
+		{
+			Roots.Add(DirectoryReference.Combine(Target.ProjectFile.Directory, "Plugins"));
+		}
+		Roots.Add(DirectoryReference.Combine(new DirectoryReference(EngineDirectory), "Plugins", "Marketplace"));
+		bool bFound = Roots.Any(Root => FindPlugin(Root, "DreamLoc.uplugin", 3));
+		if (!bFound || Target.ProjectFile == null)
+		{
+			return bFound;
+		}
+		try
+		{
+			JsonObject Project = JsonObject.Read(Target.ProjectFile);
+			JsonObject[] Plugins;
+			if (Project.TryGetObjectArrayField("Plugins", out Plugins))
+			{
+				foreach (JsonObject Plugin in Plugins)
+				{
+					string Name;
+					bool bEnabled;
+					if (Plugin.TryGetStringField("Name", out Name) && Name == "DreamLoc" && Plugin.TryGetBoolField("Enabled", out bEnabled) && !bEnabled)
+					{
+						return false;
+					}
+				}
+			}
+		}
+		catch (Exception)
+		{
+			// A project file UBT itself has read; if it cannot be read here, the plugin's presence decides.
+		}
+		return true;
+	}
+
+	/** The way the engine finds plugins: a folder with a .uplugin is a plugin and is not looked into further. */
+	static bool FindPlugin(DirectoryReference InDirectory, string InFileName, int InDepth)
+	{
+		if (InDepth < 0 || !DirectoryReference.Exists(InDirectory))
+		{
+			return false;
+		}
+		if (FileReference.Exists(FileReference.Combine(InDirectory, InFileName)))
+		{
+			return true;
+		}
+		if (DirectoryReference.EnumerateFiles(InDirectory, "*.uplugin").Any())
+		{
+			return false;
+		}
+		foreach (DirectoryReference Child in DirectoryReference.EnumerateDirectories(InDirectory))
+		{
+			string Name = Child.GetDirectoryName();
+			if (Name.StartsWith(".") || Name == "Intermediate" || Name == "Binaries" || Name == "Saved")
+			{
+				continue;
+			}
+			if (FindPlugin(Child, InFileName, InDepth - 1))
+			{
+				return true;
+			}
+		}
+		return false;
+	}
 }

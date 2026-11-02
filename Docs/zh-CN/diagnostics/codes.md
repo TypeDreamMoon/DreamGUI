@@ -120,6 +120,8 @@ description: "诊断"
 | DUI6021 | LoopItemMemberNotFound | `Item.Member`，而循环来源的元素类里没有它。 |
 | DUI6022 | LoopItemRouteMismatch | `-> Item.Func`，而元素类里没有它，或者它的参数既不是什么都不收、也不是事件发出的那些。 |
 | DUI6023 | SourceFileWritePending | 文档里的修改无法写入，所以拒绝编译旧文件。 |
+| DUI6024 | TranslationDoesNotFit | 工程里有 DreamLoc 时：某个语言的译文放进文字控件里排版后被截断，或排出了控件的框。警告。 |
+| DUI6025 | TranslationGlyphsMissing | 工程里有 DreamLoc 时：某个语言的译文里有字符，文字控件字体的所有字面都没有。警告。 |
 | DUI7001 | PatchTargetNotFound | 一个在文件里没有归属的设计器修改：未知的节点、一个绑定的属性、一个没有块的槽。 |
 | DUI7002 | SourceFileChangedUnderEdit | 文件在一个待处理的修改之下发生了变化；没有写入任何内容。 |
 | DUI7003 | PatchValueNotRepresentable | 一个这门语言无法拼写的值（一个非有限数字）；它所在的行保持不变。 |

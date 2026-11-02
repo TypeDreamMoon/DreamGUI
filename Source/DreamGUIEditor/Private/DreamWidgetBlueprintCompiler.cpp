@@ -33,6 +33,7 @@
 #include "Text/DreamUIBridgeService.h"
 #include "Text/DreamUIExpressionThunks.h"
 #include "Text/DreamUILocalizationManifest.h"
+#include "Localization/DreamUITranslationFit.h"
 #include "Text/DreamUISourceWatcher.h"
 
 #include "EdGraph/EdGraph.h"
@@ -1264,6 +1265,9 @@ void FDreamWidgetBlueprintCompilerContext::BuildWidgetTreeFromTextSource(FDreamU
 	// The texts this compile made, for localization tools to pick up -- in the editor and in a commandlet alike, since
 	// both compile here. A build that failed keeps the last good manifest, as it keeps the last good tree.
 	DreamUILocalizationManifest::Write(ResolvedPath, Localization);
+	// And, where DreamLoc is, each language's translation laid out in the text it is for: what does not fit or has
+	// characters the font lacks is said with the compile's own messages, so the designer shows it as it recompiles.
+	DreamUITranslationFit::ReportTranslations(NewTree, Localization, OutDiagnostics);
 
 	// The emit handlers' bodies, now that there is a tree to find each route's source event on: a handler has to take
 	// exactly what that event sends, and which event it is -- a widget's, its visual's, a behaviour's, of whatever

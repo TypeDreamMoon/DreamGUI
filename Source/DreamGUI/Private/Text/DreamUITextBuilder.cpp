@@ -652,6 +652,7 @@ namespace DreamUITextBuilderLocal
 		Text.NodeType = InNode.TypeName;
 		Text.Note = InProperty.Value.LocalizationNote;
 		Text.Max = InProperty.Value.LocalizationMax;
+		Text.Location = InProperty.Value.Location;
 		// The key the old id made, spelt the way MakeLocalizationKey spells the new one: what lets a translation
 		// follow a rename without anybody guessing. An `@key` is the author's own and does not move with the id.
 		if (!InNode.WasId.IsEmpty() && InProperty.Value.LocalizationKeyOverride.IsEmpty())

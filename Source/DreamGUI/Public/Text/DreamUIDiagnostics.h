@@ -485,6 +485,13 @@ enum class EDreamUIDiagnosticCode : int32
 	LoopItemRouteMismatch = 6022,
 	/** A document still has edits that could not be written, so compiling the older file was refused. */
 	SourceFileWritePending = 6023,
+	/**
+	 * A language's translation of a text does not fit the text's box: cut by its overflow policy, or laid out past it.
+	 * A warning, from a compile in a project that has DreamLoc, which reads the translations.
+	 */
+	TranslationDoesNotFit = 6024,
+	/** A language's translation of a text has characters no face of the text's font has. A warning, as DUI6024. */
+	TranslationGlyphsMissing = 6025,
 
 	// --- 7xxx write-back ---
 	/** The patcher was asked to write a property it cannot locate a home for. */
