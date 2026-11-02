@@ -1527,4 +1527,67 @@ bool FDreamUIPatcherSharedLineRemovalTest::RunTest(const FString& Parameters)
 	return true;
 }
 
+// ------------------------------------------------------------------------------------------------
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FDreamUIPatcherBatchOnCrLfTest,
+	"DreamGUI.Text.Patcher.ABatchOnACrLfFileLandsWhereItDoesOnAnLfFile",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+/*
+ * A batch measures every edit against one unchanged text, and finds each edit's line from a table of where the lines start
+ * rather than by walking the text from the top for each. The table has to count a CRLF as ONE break, exactly as the walk and
+ * the lexer do -- one off and every edit after the first lands on the wrong line. The same batch on the same file with LF
+ * and with CRLF must therefore produce the same file, up to its line endings; the file has a CJK comment on an edited line,
+ * since the columns are characters and not bytes.
+ */
+bool FDreamUIPatcherBatchOnCrLfTest::RunTest(const FString& Parameters)
+{
+	using namespace DreamUIPatcherTestLocal;
+
+	auto MakeEdit = [](const TCHAR* InNodeId, EDreamUIPatchTarget InTarget, int32 InComponentIndex,
+		const TCHAR* InName, const TCHAR* InValue)
+	{
+		FDreamUIPropertyEdit Edit;
+		Edit.NodeId = InNodeId;
+		Edit.Target = InTarget;
+		Edit.ComponentIndex = InComponentIndex;
+		Edit.PropertyName = InName;
+		Edit.NewValueText = InValue;
+		return Edit;
+	};
+	const TArray<FDreamUIPropertyEdit> Edits = {
+		MakeEdit(TEXT("Root"), EDreamUIPatchTarget::Node, INDEX_NONE, TEXT("AnchorData.SizeDelta"), TEXT("(360, 200)")),
+		MakeEdit(TEXT("Title"), EDreamUIPatchTarget::Node, INDEX_NONE, TEXT("FontSize"), TEXT("26")),
+		MakeEdit(TEXT("OkBtn"), EDreamUIPatchTarget::Component, 0, TEXT("HoveredColor"), TEXT("#808080")),
+		MakeEdit(TEXT("Bg"), EDreamUIPatchTarget::Node, INDEX_NONE, TEXT("Brush.TintColor"), TEXT("#1E1E1E"))
+	};
+
+	auto ApplyBatch = [this, &Edits](FString& InOutText)
+	{
+		FDreamUIAst Ast;
+		FDreamUIDiagnosticBag ParseDiagnostics;
+		if (!TestTrue(TEXT("the file parses"), Parse(InOutText, Ast, ParseDiagnostics)))
+		{
+			return false;
+		}
+		FDreamUIDiagnosticBag Diagnostics;
+		const bool bWritten = FDreamUITextPatcher::SetProperties(InOutText, Ast, Edits, Diagnostics);
+		TestTrue(TEXT("every edit of the batch is written"), bWritten);
+		TestEqual(TEXT("with nothing to report"), Diagnostics.Diagnostics.Num(), 0);
+		return bWritten;
+	};
+
+	FString Lf = SavePanel();
+	FString CrLf = SavePanel().Replace(TEXT("\n"), TEXT("\r\n"));
+	if (!ApplyBatch(Lf) || !ApplyBatch(CrLf))
+	{
+		return false;
+	}
+	TestEqual(TEXT("the CRLF file ends up as the LF file does, with its own line endings"),
+		CrLf, Lf.Replace(TEXT("\n"), TEXT("\r\n")));
+	TestTrue(TEXT("and the batch really inserted its lines"), Lf.Contains(TEXT("HoveredColor = #808080")));
+	return true;
+}
+
 #endif // WITH_DEV_AUTOMATION_TESTS && WITH_EDITOR
