@@ -11,6 +11,7 @@
 #include "DreamGUIEditorModule.h"
 #include "DreamWidgetBlueprint.h"
 
+#include "Animation/DreamWidgetAnimationComponent.h"
 #include "Core/DreamUIBehaviour.h"
 #include "Core/DreamUIWidgetRegistry.h"
 #include "Core/DreamUserWidget.h"
@@ -968,6 +969,77 @@ namespace DreamUIWriteBackLocal
 	}
 
 	/**
+	 * How a `+` line names this class, verified against the builder's own reading of it, or empty.
+	 *
+	 * Same discipline as FindContainerTypeName: the candidates are tried and kept only when
+	 * ResolveComponentClass answers with this very class, so a written line always reads back as what
+	 * was meant.
+	 */
+	FString FindComponentSpelling(const UClass* InClass)
+	{
+		if (InClass == nullptr)
+		{
+			return FString();
+		}
+		const FString Container = FindContainerTypeName(InClass);
+		if (!Container.IsEmpty() && FDreamUITextBuilder::ResolveComponentClass(Container) == InClass)
+		{
+			return Container;
+		}
+		const FString Full = InClass->GetName();
+		TArray<FString> Candidates{ Full };
+		static const TCHAR* Prefixes[] = { TEXT("DreamLayoutContainer"), TEXT("DreamLayoutSelf"), TEXT("DreamLayout"), TEXT("Dream") };
+		for (const TCHAR* Prefix : Prefixes)
+		{
+			FString Candidate = Full;
+			if (Candidate.RemoveFromStart(Prefix, ESearchCase::CaseSensitive) && !Candidate.IsEmpty())
+			{
+				Candidates.Add(MoveTemp(Candidate));
+			}
+		}
+		for (const FString& Candidate : Candidates)
+		{
+			if (FDreamUITextBuilder::ResolveComponentClass(Candidate) == InClass)
+			{
+				return Candidate;
+			}
+		}
+		return FString();
+	}
+
+	/**
+	 * The objects on a widget a `+ Class { }` line builds: its behaviours, its layout container and its
+	 * layout self. Not the visual or the panel slot, which the type and `@slot` lines own, and nothing
+	 * transient -- run time's additions are nobody's line.
+	 */
+	void CollectAuthorableComponentObjects(const UDreamWidget* InWidget, TArray<const UObject*>& OutObjects)
+	{
+		OutObjects.Reset();
+		if (!IsValid(InWidget))
+		{
+			return;
+		}
+		for (const UDreamUIBehaviour* Behaviour : InWidget->GetAllComponents())
+		{
+			// The animation host is the animation editor's, carried across compiles by display name; the
+			// grammar has no way to author what it holds, so a line for it would be an empty shell.
+			if (IsValid(Behaviour) && !Behaviour->HasAnyFlags(RF_Transient)
+				&& !Behaviour->IsA<UDreamWidgetAnimationComponent>())
+			{
+				OutObjects.Add(Behaviour);
+			}
+		}
+		if (const UObject* Container = InWidget->GetLayoutContainer(); IsValid(Container) && !Container->HasAnyFlags(RF_Transient))
+		{
+			OutObjects.Add(Container);
+		}
+		if (const UObject* Self = InWidget->GetLayoutSelf(); IsValid(Self) && !Self->HasAnyFlags(RF_Transient))
+		{
+			OutObjects.Add(Self);
+		}
+	}
+
+	/**
 	 * How a `.dui` would write this widget's TYPE: the file's own short name for the class, a built-in tag, a layout
 	 * container, or the class path it nests.
 	 *
@@ -1545,7 +1617,8 @@ int32 FDreamUITextWriteBack::NumDirtyProperties(const UDreamWidgetTree* InTree)
 }
 
 void FDreamUITextWriteBack::CollectStructuralEdits(const FDreamUIAst& InAst, const UDreamWidgetTree* InLiveTree,
-	const UDreamWidgetTree* InTextTree, TArray<FDreamUIStructuralEdit>& OutEdits)
+	const UDreamWidgetTree* InTextTree, TArray<FDreamUIStructuralEdit>& OutEdits,
+	bool bInIncludeRemovals, const TSet<FString>* InSkipInsertIds, const TSet<FString>* InComponentCheckIds)
 {
 	using namespace DreamUIWriteBackLocal;
 
@@ -1575,34 +1648,46 @@ void FDreamUITextWriteBack::CollectStructuralEdits(const FDreamUIAst& InAst, con
 	});
 
 	// ---- removed: in the file, built into the reference tree, gone from the live one --------------
-	InAst.ForEachNode([&](const FDreamUINode& InNode)
+	//
+	// Outermost only. A node's text holds its children's, so removing a subtree is ONE removal: a second
+	// one for a child would cover characters the first already takes, and the patcher refuses the two
+	// as a pair -- which is how deleting anything with children used to write nothing at all.
+	if (bInIncludeRemovals)
 	{
-		// A slot FILL is not a widget of this file: its id is the name of a slot the component declares,
-		// and the widget the trees hold under that name is the component's. Nothing here removes it.
-		if (InNode.Id.IsEmpty() || InNode.bFillsSlot
-			|| (InNode.Kind != EDreamUINodeKind::Widget && InNode.Kind != EDreamUINodeKind::NamedSlot))
+		TFunction<void(const FDreamUINode&, bool)> VisitForRemovals;
+		VisitForRemovals = [&](const FDreamUINode& InNode, bool bInAncestorRemoved)
 		{
-			return;
-		}
-		if (TextWidgets.Contains(InNode.Id) && !LiveWidgets.Contains(InNode.Id))
-		{
-			FDreamUIStructuralEdit& Edit = OutEdits.AddDefaulted_GetRef();
-			Edit.Kind = EDreamUIStructuralEditKind::RemoveNode;
-			Edit.NodeId = InNode.Id;
-		}
-	});
+			bool bRemoved = bInAncestorRemoved;
+			// A slot FILL is not a widget of this file: its id is the name of a slot the component declares,
+			// and the widget the trees hold under that name is the component's. Nothing here removes it.
+			if (!bInAncestorRemoved && !InNode.Id.IsEmpty() && !InNode.bFillsSlot
+				&& (InNode.Kind == EDreamUINodeKind::Widget || InNode.Kind == EDreamUINodeKind::NamedSlot)
+				&& TextWidgets.Contains(InNode.Id) && !LiveWidgets.Contains(InNode.Id))
+			{
+				FDreamUIStructuralEdit& Edit = OutEdits.AddDefaulted_GetRef();
+				Edit.Kind = EDreamUIStructuralEditKind::RemoveNode;
+				Edit.NodeId = InNode.Id;
+				bRemoved = true;
+			}
+			for (const FDreamUINode& Child : InNode.Children)
+			{
+				VisitForRemovals(Child, bRemoved);
+			}
+		};
+		VisitForRemovals(InAst.Root, /*bInAncestorRemoved*/false);
+	}
 
 	// ---- added: on the live tree and on neither the file nor the reference tree -------------------
 	//
-	// Parents first, so a subtree dropped in at once is written outermost-in and each insert finds a
-	// block its parent's insert has already created. The walk is depth-first from the root, which is
-	// that order by construction.
+	// Only under a parent the file ALREADY declares. A child of a node being inserted in this same
+	// batch has no parent in InAst to be planned against, so it waits for the next round, when the
+	// text has been read back with its parent in it (ProduceText). The walk is depth-first from the
+	// root, so siblings are planned in the order the live tree holds them.
 	TArray<UDreamWidget*> LiveWidgetsInOrder;
 	if (IsValid(InLiveTree->RootWidget))
 	{
 		UDreamWidget::CollectChildrenWidgets(InLiveTree->RootWidget, LiveWidgetsInOrder, /*IncludeTarget*/true);
 	}
-	TSet<FString> Inserted;
 	for (UDreamWidget* LiveWidget : LiveWidgetsInOrder)
 	{
 		// Transient is run time's: the copies a `for` makes of its template stand among the host
@@ -1623,11 +1708,16 @@ void FDreamUITextWriteBack::CollectStructuralEdits(const FDreamUIAst& InAst, con
 			// A new ROOT is not an insert, it is a different file. Nothing sensible to write.
 			continue;
 		}
-		const FString ParentId = Parent->GetDisplayName();
-		if (!AuthoredIds.Contains(ParentId) && !Inserted.Contains(ParentId))
+		if (InSkipInsertIds != nullptr && InSkipInsertIds->Contains(Id))
 		{
-			// The parent is a synthesised widget (an `each` content holder) or a node the file does
-			// not declare. Writing into it would be writing into machinery the author never typed.
+			continue;
+		}
+		const FString ParentId = Parent->GetDisplayName();
+		if (!AuthoredIds.Contains(ParentId))
+		{
+			// The parent is a synthesised widget (an `each` content holder), a node the file does not
+			// declare, or one this flush has not written yet. Writing into the first two would be writing
+			// into machinery the author never typed; the third is the next round's.
 			continue;
 		}
 
@@ -1655,8 +1745,61 @@ void FDreamUITextWriteBack::CollectStructuralEdits(const FDreamUIAst& InAst, con
 				}
 			}
 		}
-		Inserted.Add(Id);
 	}
+
+	// ---- the `+` lines of a node this flush has just written -------------------------------------
+	//
+	// A node is inserted as `Type Id { }`, and the type spells the visual and, for a plain widget, its
+	// layout container -- nothing else. A pasted button's behaviours, or a container on a widget that
+	// also has a visual, have no line until one is written here, and without it the value pass would
+	// have no object to write their settings onto and the next compile would drop them. Matched by
+	// class, as many times as the live node carries one: anything the text node already builds (from
+	// its type, or a behaviour the builder adds with it) is in both and cancels out.
+	if (InComponentCheckIds != nullptr)
+	{
+		for (const FString& Id : *InComponentCheckIds)
+		{
+			const UDreamWidget* LiveWidget = LiveWidgets.FindRef(Id);
+			const UDreamWidget* TextWidget = TextWidgets.FindRef(Id);
+			if (!IsValid(LiveWidget) || !IsValid(TextWidget))
+			{
+				continue;
+			}
+			TArray<const UObject*> TextObjects;
+			CollectAuthorableComponentObjects(TextWidget, TextObjects);
+			TArray<const UObject*> LiveObjects;
+			CollectAuthorableComponentObjects(LiveWidget, LiveObjects);
+			for (const UObject* LiveObject : LiveObjects)
+			{
+				const int32 Match = TextObjects.IndexOfByPredicate([LiveObject](const UObject* InCandidate)
+				{
+					return InCandidate != nullptr && InCandidate->GetClass() == LiveObject->GetClass();
+				});
+				if (Match != INDEX_NONE)
+				{
+					TextObjects[Match] = nullptr;
+					continue;
+				}
+				const FString Spelling = FindComponentSpelling(LiveObject->GetClass());
+				if (Spelling.IsEmpty())
+				{
+					// No name the builder reads back as this class: writing a guess would be a line the
+					// next compile rejects. The value pass then has nothing to write onto, which is the
+					// same loss without a broken file.
+					continue;
+				}
+				FDreamUIStructuralEdit& Edit = OutEdits.AddDefaulted_GetRef();
+				Edit.Kind = EDreamUIStructuralEditKind::InsertComponent;
+				Edit.NodeId = Id;
+				Edit.ComponentClassName = Spelling;
+			}
+		}
+	}
+}
+
+FString FDreamUITextWriteBack::DescribeWidgetForText(const UDreamWidget* InWidget, const FDreamUIAst& InAst)
+{
+	return DreamUIWriteBackLocal::DescribeWidgetForText(InWidget, InAst);
 }
 
 bool FDreamUITextWriteBack::ProduceText(const FString& InText, const UDreamWidgetTree* InLiveTree,
@@ -1691,24 +1834,82 @@ bool FDreamUITextWriteBack::ProduceText(const FString& InText, const UDreamWidge
 	// every location after it -- the property pass has to be planned against the file it will land
 	// in, not the one that came in. This is the "a caller that wants two edits re-parses in between"
 	// rule from FDreamUITextPatcher's own comment, and this is the caller.
+	//
+	// In rounds, because a subtree is written outermost-in and a child's insert can only be planned
+	// against a text that already holds its parent. Each round collects against the text as it now is,
+	// applies, and reads the result back; the loop ends on a round with nothing to do, or one whose
+	// edits were all refused (the patcher has said why). Bounded by the nesting the parser accepts,
+	// one level per round, plus one round for the `+` lines of the deepest nodes.
 	FString Working = InText;
-	TArray<FDreamUIStructuralEdit> StructuralEdits;
-	CollectStructuralEdits(Ast, InLiveTree, TextTree.Get(), StructuralEdits);
-	if (StructuralEdits.Num() > 0)
+	TSet<FString> RefusedInserts;
+	TSet<FString> ComponentCheckIds;
+	bool bShapeChanged = false;
+	for (int32 Round = 0; Round <= DreamUIAst::MaxNestingDepth + 1; ++Round)
 	{
-		FDreamUITextPatcher::ApplyStructuralEdits(Working, Ast, StructuralEdits, OutDiagnostics);
+		TArray<FDreamUIStructuralEdit> StructuralEdits;
+		CollectStructuralEdits(Ast, InLiveTree, TextTree.Get(), StructuralEdits,
+			/*bInIncludeRemovals*/Round == 0, &RefusedInserts, &ComponentCheckIds);
+		// Each node's `+` lines are asked for once, in the round right after the node was written.
+		ComponentCheckIds.Reset();
+		if (StructuralEdits.IsEmpty())
+		{
+			break;
+		}
 
+		const FString BeforeRound = Working;
+		FDreamUITextPatcher::ApplyStructuralEdits(Working, Ast, StructuralEdits, OutDiagnostics);
+		if (Working.Equals(BeforeRound, ESearchCase::CaseSensitive))
+		{
+			break;
+		}
+
+		// Its own bag: the builder repeats every warning the file carries on every read, and one copy of
+		// those per round would bury the one that matters. Kept only when the read fails.
 		FDreamUIAst Rebuilt;
-		TStrongObjectPtr<UDreamWidgetTree> RebuiltTree(BuildReferenceTree(Working, Rebuilt, OutDiagnostics));
+		FDreamUIDiagnosticBag RoundDiagnostics;
+		RoundDiagnostics.SourceName = OutDiagnostics.SourceName;
+		TStrongObjectPtr<UDreamWidgetTree> RebuiltTree(BuildReferenceTree(Working, Rebuilt, RoundDiagnostics));
 		if (!RebuiltTree.IsValid())
 		{
 			// The shape pass produced a file that does not build. Nothing is written at all -- half a
 			// structural change is worse than none, and the diagnostics say which line went wrong.
+			for (FDreamUIDiagnostic& Diagnostic : RoundDiagnostics.Diagnostics)
+			{
+				OutDiagnostics.Add(MoveTemp(Diagnostic));
+			}
 			OutText = InText;
 			return false;
 		}
+
+		// Which inserts landed: those get their `+` lines next round. One that did not land is not
+		// asked again -- it would be refused for the same reason.
+		TSet<FString> NowDeclared;
+		Rebuilt.ForEachNode([&NowDeclared](const FDreamUINode& InNode)
+		{
+			if (!InNode.Id.IsEmpty())
+			{
+				NowDeclared.Add(InNode.Id);
+			}
+		});
+		for (const FDreamUIStructuralEdit& Edit : StructuralEdits)
+		{
+			if (Edit.Kind != EDreamUIStructuralEditKind::InsertNode)
+			{
+				continue;
+			}
+			if (NowDeclared.Contains(Edit.NewId))
+			{
+				ComponentCheckIds.Add(Edit.NewId);
+			}
+			else
+			{
+				RefusedInserts.Add(Edit.NewId);
+			}
+		}
+
 		Ast = MoveTemp(Rebuilt);
 		TextTree = MoveTemp(RebuiltTree);
+		bShapeChanged = true;
 	}
 
 	// ---- phase two: VALUES ----------------------------------------------------------------------
@@ -1717,7 +1918,7 @@ bool FDreamUITextWriteBack::ProduceText(const FString& InText, const UDreamWidge
 	// into the file has no dirty entries, and its authored values would go unwritten. Sweeping is the
 	// fallback the set is layered over, and this is one of the cases it exists for.
 	CollectEdits(Ast, InLiveTree, TextTree.Get(), Edits, OutDiagnostics,
-		/*bInUseDirtySet*/StructuralEdits.IsEmpty());
+		/*bInUseDirtySet*/!bShapeChanged);
 	DreamUIWriteBackLocal::CollectResourceEdits(Ast, InLiveDefaults, Edits, OutDiagnostics);
 	if (OutEdits != nullptr)
 	{

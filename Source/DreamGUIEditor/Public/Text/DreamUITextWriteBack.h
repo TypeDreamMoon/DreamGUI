@@ -276,10 +276,25 @@ public:
 	 * flush can report a count without running the pipeline a second time -- one implementation of
 	 * a write-back is the whole point, and a second one kept for bookkeeping is how the two come to
 	 * disagree about what a flush did.
+	 *
+	 * THE SHAPE IS WRITTEN IN ROUNDS. A subtree added at once is one insert per node, and every insert
+	 * of a batch is planned against the text as it came in -- where the new parent of a new child does
+	 * not exist yet. So each round writes the nodes whose parent the CURRENT text already declares,
+	 * the text is read back, and the next round finds the children's parents there. Removals happen in
+	 * the first round only (a removal never waits for another), and an insert the patcher refused is
+	 * not asked again. A node written by a round is then checked once for the `+` lines it needs.
 	 */
 	static bool ProduceText(const FString& InText, const UDreamWidgetTree* InLiveTree,
 		FString& OutText, FDreamUIDiagnosticBag& OutDiagnostics, TArray<FDreamUIPropertyEdit>* OutEdits = nullptr,
 		const UObject* InLiveDefaults = nullptr);
+
+	/**
+	 * How a `.dui` would spell this widget's type in this file: its `use … as` alias, an `@Resource`, a
+	 * built-in tag, a layout container (`VerticalBox`), a registry tag (`Native.Button`) or the path of
+	 * the widget blueprint it nests. What an inserted node is written with, exported so that a check
+	 * made BEFORE the insert spells the node the way the insert will.
+	 */
+	static FString DescribeWidgetForText(const UDreamWidget* InWidget, const FDreamUIAst& InAst);
 
 	/**
 	 * How the two trees DISAGREE ABOUT SHAPE, as patcher commands: added, removed and reordered nodes.
@@ -301,9 +316,20 @@ public:
 	 * or the path; and a plain widget that lays out its children as the container (`VerticalBox Box`),
 	 * the one spelling that keeps the container through the next compile. Transient widgets -- what a
 	 * `for` makes at run time -- are never added, and a slot fill is never removed.
+	 *
+	 * A node is only inserted under a parent InAst already declares, and a removed node's descendants
+	 * are not removed on their own: they go with it, and a second removal over the same lines would
+	 * make the patcher refuse the pair. ProduceText calls this once per round; see there.
+	 *
+	 * bInIncludeRemovals: false collects inserts only. InSkipInsertIds: nodes not to insert (the ones a
+	 * round already failed to write). InComponentCheckIds: nodes this flush has just written, whose `+`
+	 * lines -- behaviours and a layout container their type does not already spell -- are added now that
+	 * the node is in the file.
 	 */
 	static void CollectStructuralEdits(const FDreamUIAst& InAst, const UDreamWidgetTree* InLiveTree,
-		const UDreamWidgetTree* InTextTree, TArray<FDreamUIStructuralEdit>& OutEdits);
+		const UDreamWidgetTree* InTextTree, TArray<FDreamUIStructuralEdit>& OutEdits,
+		bool bInIncludeRemovals = true, const TSet<FString>* InSkipInsertIds = nullptr,
+		const TSet<FString>* InComponentCheckIds = nullptr);
 
 	// -------------------------------------------------------------------------------------------
 	// The dirty set: what the designer says it touched
