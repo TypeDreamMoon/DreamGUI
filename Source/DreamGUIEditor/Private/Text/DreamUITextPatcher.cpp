@@ -2298,6 +2298,40 @@ namespace DreamUIPatchLocal
 	}
 
 	/**
+	 * The ChildIndex an edit means inside InParent: BeforeId's position among the addressable children when it names
+	 * one, last when it names one that is not there, and ChildIndex itself when it is empty.
+	 */
+	int32 ResolveChildIndex(const FDreamUINode& InParent, const FDreamUIStructuralEdit& InEdit)
+	{
+		if (InEdit.BeforeId.IsEmpty())
+		{
+			return InEdit.ChildIndex;
+		}
+		TArray<const FDreamUINode*> Children;
+		CollectAddressableChildren(InParent, Children);
+		for (int32 Index = 0; Index < Children.Num(); ++Index)
+		{
+			if (Children[Index]->Id.Equals(InEdit.BeforeId, ESearchCase::IgnoreCase))
+			{
+				return Index;
+			}
+		}
+		return INDEX_NONE;
+	}
+
+	/**
+	 * The `Shown <- Cond` an `if` put on this node, when it stands in a branch -- the line of that `if` (or `else`) is
+	 * the property's location. Null for a node the file writes outside any `if`.
+	 */
+	const FDreamUIProperty* FindIfCondition(const FDreamUINode& InNode)
+	{
+		return InNode.Properties.FindByPredicate([](const FDreamUIProperty& InProperty)
+		{
+			return InProperty.bSynthesized && InProperty.Name == TEXT("Shown");
+		});
+	}
+
+	/**
 	 * Where a new child's text goes inside InParent's block, and what indentation it wears.
 	 *
 	 * Returns false when there is no place: bOutParentHasBlock then says which kind of false it is. A parent with no
@@ -2529,7 +2563,7 @@ namespace DreamUIPatchLocal
 		FString Indent;
 		bool bParentHasBlock = false;
 		// A position among the instance's children means nothing inside a fill, and a new fill goes after them all.
-		const int32 ChildIndex = (Destination != Parent || bWriteFill) ? INDEX_NONE : InEdit.ChildIndex;
+		const int32 ChildIndex = (Destination != Parent || bWriteFill) ? INDEX_NONE : ResolveChildIndex(*Destination, InEdit);
 		if (FindChildInsertPoint(InText, *Destination, ChildIndex, InsertAt, Indent, bParentHasBlock))
 		{
 			FSplice& Splice = OutSplices.AddDefaulted_GetRef();
@@ -2671,6 +2705,24 @@ namespace DreamUIPatchLocal
 				FString::Printf(TEXT("no node in this file is named %s to move into"), *Ellipsize(InEdit.ParentId)));
 			return false;
 		}
+		if (!InEdit.FillSlotName.IsEmpty())
+		{
+			// Into a NAMED slot of a component instance: the instance's fill of that slot is the block. Unlike an
+			// insert, a move does not write the fill as well -- the lifted text and a new block around it would be one
+			// splice inside another -- so a missing fill is refused with the way out.
+			const FDreamUINode* Fill = Parent->Children.FindByPredicate([&InEdit](const FDreamUINode& InChild)
+			{
+				return InChild.Kind == EDreamUINodeKind::NamedSlot && InChild.bFillsSlot && InChild.Id == InEdit.FillSlotName;
+			});
+			if (Fill == nullptr)
+			{
+				RefuseTarget(OutDiagnostics, Parent->Location,
+					FString::Printf(TEXT("%s has no 'slot %s { }' to move %s into; write one in the text first"),
+						*Parent->Id, *InEdit.FillSlotName, *Node->Id));
+				return false;
+			}
+			Parent = Fill;
+		}
 		if (const FDreamUINode* Loop = FindEnclosingLoop(InAst, *Node))
 		{
 			RefuseTarget(OutDiagnostics, Node->Location,
@@ -2683,6 +2735,33 @@ namespace DreamUIPatchLocal
 			RefuseTarget(OutDiagnostics, Parent->Location,
 				FString::Printf(TEXT("%s declares a slot, which a host fills: nothing can be moved inside it"), *Parent->Id));
 			return false;
+		}
+		// A node in an `if` branch shows and hides with the condition, and the condition is the `if`'s, not a line of
+		// the node: lifted out of the branch it would show always, which is not a move but a different screen.
+		if (const FDreamUIProperty* Condition = FindIfCondition(*Node))
+		{
+			RefuseNotWritable(OutDiagnostics, Node->Location,
+				FString::Printf(TEXT("%s stands in the 'if' on line %d, and moving it would take it out of the branch; move the whole 'if', or edit the text"),
+					*Node->Id, Condition->Location.Line));
+			return false;
+		}
+		const int32 ChildIndex = ResolveChildIndex(*Parent, InEdit);
+		{
+			// Between two widgets of an `if … else …` is inside the construct, and a place there is carried out past the
+			// whole of it (FindChildInsertPoint): the node would land somewhere other than where it was dropped.
+			TArray<const FDreamUINode*> Siblings;
+			CollectAddressableChildren(*Parent, Siblings);
+			const int32 Index = ChildIndex == INDEX_NONE ? Siblings.Num() : FMath::Clamp(ChildIndex, 0, Siblings.Num());
+			const FDreamUINode* Before = Index > 0 ? Siblings[Index - 1] : nullptr;
+			const FDreamUINode* After = Index < Siblings.Num() ? Siblings[Index] : nullptr;
+			if (Before != nullptr && After != nullptr && Before != Node && After != Node
+				&& FindIfCondition(*Before) != nullptr && FindIfCondition(*After) != nullptr)
+			{
+				RefuseNotWritable(OutDiagnostics, After->Location,
+					FString::Printf(TEXT("the place between %s and %s is inside an 'if', which the designer cannot write a node into; edit the text"),
+						*Before->Id, *After->Id));
+				return false;
+			}
 		}
 		if (!ConfirmNodeAnchor(InText, *Node) || !ConfirmNodeAnchor(InText, *Parent))
 		{
@@ -2703,7 +2782,7 @@ namespace DreamUIPatchLocal
 		int32 InsertAt = INDEX_NONE;
 		FString Indent;
 		bool bParentHasBlock = false;
-		if (!FindChildInsertPoint(InText, *Parent, InEdit.ChildIndex, InsertAt, Indent, bParentHasBlock))
+		if (!FindChildInsertPoint(InText, *Parent, ChildIndex, InsertAt, Indent, bParentHasBlock))
 		{
 			// A blockless destination would mean writing the brace AND lifting the subtree into it in
 			// one planning pass, with the lifted text overlapping its own insertion point when the

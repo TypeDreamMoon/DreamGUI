@@ -86,6 +86,17 @@ struct FDreamUIStructuralEdit
 	int32 ChildIndex = INDEX_NONE;
 
 	/**
+	 * InsertNode / MoveNode: the authored child of the destination the node goes in front of, by id. When set it wins
+	 * over ChildIndex, and an id the destination does not hold means last.
+	 *
+	 * A position by NEIGHBOUR rather than by number, because the number is a fact about the text and the caller usually
+	 * only knows the tree: a widget's index among its live siblings counts what the text does not write (the copies a
+	 * `for` makes, the widget a loop stands for), and for a reorder it depends on whether the node is still counted
+	 * where it came from. The sibling it now stands before is the same fact on both sides.
+	 */
+	FString BeforeId;
+
+	/**
 	 * InsertNode only: the named slot of ParentId -- a component instance -- that the new node fills. Empty means the
 	 * instance's own block, which is its DEFAULT slot: nesting is how a .dui fills that one, and how the designer does.
 	 *
