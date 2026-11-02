@@ -110,6 +110,7 @@ private:
 	 * things only the `.dui` can say, and both are drawn disabled rather than failing on click.
 	 */
 	bool IsEditorAllowEditing()const;
+	bool IsNameEditable()const;
 	/** The hierarchy this panel is showing belongs to a `.dui`. */
 	bool IsTextAuthoredHierarchy() const;
 	/** The banner above the properties: which file owns this, and what is still editable here. */

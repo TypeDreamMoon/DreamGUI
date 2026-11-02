@@ -4,34 +4,13 @@
 
 #include "Misc/AutomationTest.h"
 
-#include "DreamWidgetBlueprint.h"
+#include "DreamUITextStructureTestFixtures.h"
+
 #include "Designer/DreamUITextAuthoringGate.h"
-#include "Designer/DreamWidgetBlueprintEditor.h"
-#include "Designer/DreamWidgetPreviewHost.h"
 #include "Designer/DreamWidgetTreeEditing.h"
-#include "Text/DreamUIAst.h"
-#include "Text/DreamUISourceFile.h"
-#include "Text/DreamUITextWriteBack.h"
-
-#include "Core/DreamTextUserWidget.h"
-#include "Core/DreamUserWidget.h"
-#include "Core/DreamUIBehaviour.h"
-#include "Core/DreamWidgetGeneratedClass.h"
-#include "Core/DreamWidgetTree.h"
-#include "Core/Components/DreamLayout.h"
-#include "Core/Components/DreamWidget.h"
+#include "Text/DreamUITextPatcher.h"
 #include "Core/DreamUIAnchorData.h"
-
-#include "Editor.h"
-#include "Framework/Application/SlateApplication.h"
-#include "HAL/FileManager.h"
-#include "Kismet2/CompilerResultsLog.h"
-#include "Kismet2/KismetEditorUtilities.h"
-#include "Misc/FileHelper.h"
-#include "Misc/Paths.h"
-#include "Subsystems/AssetEditorSubsystem.h"
-#include "UObject/Package.h"
-#include "UObject/StrongObjectPtr.h"
+#include "Core/Components/DreamLayout.h"
 
 /*
  * Structure on a `.dui`-backed hierarchy: what the designer can now create, delete, duplicate and paste,
@@ -42,153 +21,6 @@
  * name in the Blueprint's CURRENT tree: the compile a structural edit ends with replaces the tree
  * object, so a pointer taken before the gesture is to the tree the file used to describe.
  */
-
-namespace DreamUITextStructureTestLocal
-{
-	/** A .dui that has really been to disk, and is gone again when the test returns. */
-	struct FScopedDuiFile
-	{
-		explicit FScopedDuiFile(const TCHAR* InFileName)
-		{
-			FilePath = FPaths::ConvertRelativePathToFull(
-				FPaths::Combine(FPaths::ProjectSavedDir(), TEXT("DreamGUITests"), InFileName));
-			FPaths::NormalizeFilename(FilePath);
-			FileName = FPaths::GetCleanFilename(FilePath);
-		}
-
-		~FScopedDuiFile()
-		{
-			IFileManager::Get().Delete(*FilePath, /*RequireExists*/false, /*EvenReadOnly*/true, /*Quiet*/true);
-		}
-
-		FScopedDuiFile(const FScopedDuiFile&) = delete;
-		FScopedDuiFile& operator=(const FScopedDuiFile&) = delete;
-
-		bool Write(const TArray<FString>& InLines) const
-		{
-			return FFileHelper::SaveStringToFile(FString::Join(InLines, TEXT("\n")), *FilePath);
-		}
-
-		/** What is on the disk now -- the thing the next compile will read. */
-		FString Read() const
-		{
-			FString Text;
-			FFileHelper::LoadFileToString(Text, *FilePath);
-			return Text;
-		}
-
-		FString FilePath;
-		FString FileName;
-	};
-
-	/** A text-authored widget blueprint on a .dui, with a designer open on it unless asked otherwise. */
-	struct FScopedTextBlueprint
-	{
-		UPackage* Package = nullptr;
-		UDreamWidgetBlueprint* Blueprint = nullptr;
-		FDreamWidgetBlueprintEditor* Designer = nullptr;
-		int32 CompileErrors = 0;
-
-		FScopedTextBlueprint(const TCHAR* InName, const FString& InDuiFilePath, bool bInOpenDesigner = true)
-		{
-			Package = CreatePackage(*FString::Printf(TEXT("/Temp/DreamGUITests/%s"), InName));
-			Package->AddToRoot();
-			Blueprint = Cast<UDreamWidgetBlueprint>(FKismetEditorUtilities::CreateBlueprint(
-				UDreamTextUserWidget::StaticClass(), Package, FName(InName), BPTYPE_Normal,
-				UDreamWidgetBlueprint::StaticClass(), UDreamWidgetGeneratedClass::StaticClass()));
-			if (Blueprint == nullptr)
-			{
-				return;
-			}
-			if (UDreamTextUserWidget* Defaults = Blueprint->GeneratedClass != nullptr
-				? Cast<UDreamTextUserWidget>(Blueprint->GeneratedClass->GetDefaultObject()) : nullptr)
-			{
-				Defaults->SourceFile.FilePath = InDuiFilePath;
-			}
-			FCompilerResultsLog Results;
-			FKismetEditorUtilities::CompileBlueprint(Blueprint, EBlueprintCompileOptions::SkipGarbageCollection, &Results);
-			CompileErrors = Results.NumErrors;
-
-			if (bInOpenDesigner)
-			{
-				GEditor->GetEditorSubsystem<UAssetEditorSubsystem>()->OpenEditorForAsset(Blueprint);
-				Designer = static_cast<FDreamWidgetBlueprintEditor*>(
-					GEditor->GetEditorSubsystem<UAssetEditorSubsystem>()->FindEditorForAsset(Blueprint, false));
-			}
-		}
-
-		~FScopedTextBlueprint()
-		{
-			if (GEditor != nullptr && Blueprint != nullptr && Designer != nullptr)
-			{
-				GEditor->GetEditorSubsystem<UAssetEditorSubsystem>()->CloseAllEditorsForAsset(Blueprint);
-				FSlateApplication::Get().Tick();
-			}
-			if (Package != nullptr)
-			{
-				Package->RemoveFromRoot();
-			}
-		}
-
-		FScopedTextBlueprint(const FScopedTextBlueprint&) = delete;
-		FScopedTextBlueprint& operator=(const FScopedTextBlueprint&) = delete;
-
-		UDreamWidget* FindTemplate(const FString& InDisplayName) const
-		{
-			UDreamWidget* Found = nullptr;
-			if (Blueprint != nullptr && IsValid(Blueprint->WidgetTree))
-			{
-				Blueprint->WidgetTree->ForEachWidget([&Found, &InDisplayName](UDreamWidget* Widget)
-				{
-					if (Found == nullptr && Widget->GetDisplayName() == InDisplayName)
-					{
-						Found = Widget;
-					}
-				});
-			}
-			return Found;
-		}
-
-		UDreamWidget* FindPreview(const FString& InDisplayName) const
-		{
-			UDreamWidget* Template = FindTemplate(InDisplayName);
-			return Designer != nullptr && Designer->GetPreviewHost().IsValid() && Template != nullptr
-				? Designer->GetPreviewHost()->FindPreviewForTemplate(Template) : nullptr;
-		}
-
-		int32 TemplateCount() const
-		{
-			return Blueprint != nullptr && IsValid(Blueprint->WidgetTree) ? Blueprint->WidgetTree->CountWidgets() : 0;
-		}
-	};
-
-	/** The node with this id in a parse of InText, or null. */
-	const FDreamUINode* FindNode(const FDreamUIAst& InAst, const FString& InId)
-	{
-		const FDreamUINode* Found = nullptr;
-		InAst.ForEachNode([&Found, &InId](const FDreamUINode& InNode)
-		{
-			if (Found == nullptr && InNode.Id == InId)
-			{
-				Found = &InNode;
-			}
-		});
-		return Found;
-	}
-
-	bool ParseText(const FString& InText, FDreamUIAst& OutAst)
-	{
-		FDreamUIDiagnosticBag Diagnostics;
-		Diagnostics.SourceName = TEXT("Structure.dui");
-		return FDreamUISourceFile::Parse(InText, Diagnostics.SourceName, OutAst, Diagnostics);
-	}
-
-	bool HoldsChild(const FDreamUINode* InParent, const FString& InChildId)
-	{
-		return InParent != nullptr && InParent->Children.ContainsByPredicate(
-			[&InChildId](const FDreamUINode& InChild) { return InChild.Id == InChildId; });
-	}
-}
 
 // =================================================================================================
 // The designer
@@ -201,7 +33,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 
 bool FDreamUITextStructureCreateTest::RunTest(const FString&)
 {
-	using namespace DreamUITextStructureTestLocal;
+	using namespace DreamUITextStructureFixtures;
 
 	FScopedDuiFile Source(TEXT("StructureCreate.dui"));
 	if (!TestTrue(TEXT("the fixture wrote a .dui"), Source.Write({
@@ -250,7 +82,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 
 bool FDreamUITextStructureDeleteTest::RunTest(const FString&)
 {
-	using namespace DreamUITextStructureTestLocal;
+	using namespace DreamUITextStructureFixtures;
 
 	FScopedDuiFile Source(TEXT("StructureDelete.dui"));
 	if (!TestTrue(TEXT("the fixture wrote a .dui"), Source.Write({
@@ -296,7 +128,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 
 bool FDreamUITextStructureRefusalsTest::RunTest(const FString&)
 {
-	using namespace DreamUITextStructureTestLocal;
+	using namespace DreamUITextStructureFixtures;
 
 	FScopedDuiFile Source(TEXT("StructureRefusals.dui"));
 	if (!TestTrue(TEXT("the fixture wrote a .dui"), Source.Write({
@@ -309,10 +141,8 @@ bool FDreamUITextStructureRefusalsTest::RunTest(const FString&)
 	{
 		return false;
 	}
-	// The root: a .dui holds exactly one. Moving and renaming: not written yet, still refused whole.
+	// The root: a .dui holds exactly one.
 	AddExpectedError(TEXT("Refusing to delete 'Root'.*StructureRefusals\\.dui"), EAutomationExpectedErrorFlags::Contains, 0);
-	AddExpectedError(TEXT("Refusing to move .*StructureRefusals\\.dui"), EAutomationExpectedErrorFlags::Contains, 0);
-	AddExpectedError(TEXT("Refusing to rename .*StructureRefusals\\.dui"), EAutomationExpectedErrorFlags::Contains, 0);
 
 	FScopedTextBlueprint Scoped(TEXT("BP_StructureRefusals"), Source.FilePath);
 	if (!TestNotNull(TEXT("the Blueprint was created"), Scoped.Blueprint)) return false;
@@ -321,10 +151,6 @@ bool FDreamUITextStructureRefusalsTest::RunTest(const FString&)
 
 	TestFalse(TEXT("deleting the root is refused"),
 		DreamWidgetTreeEditing::DeleteWidget(Scoped.Blueprint, Scoped.FindTemplate(TEXT("Root"))));
-	TestFalse(TEXT("moving is refused"), DreamWidgetTreeEditing::ReparentWidget(Scoped.Blueprint,
-		Scoped.FindTemplate(TEXT("Child")), Scoped.FindTemplate(TEXT("Root")), 0));
-	TestEqual(TEXT("renaming is refused"), DreamWidgetTreeEditing::RenameWidget(Scoped.Blueprint,
-		Scoped.FindTemplate(TEXT("Child")), TEXT("Renamed")), FString());
 
 	TestEqual(TEXT("the file is untouched"), Source.Read(), Before);
 	TestNotNull(TEXT("and so is the tree"), Scoped.FindTemplate(TEXT("Child")));
@@ -365,7 +191,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 
 bool FDreamUITextStructureDuplicateTest::RunTest(const FString&)
 {
-	using namespace DreamUITextStructureTestLocal;
+	using namespace DreamUITextStructureFixtures;
 
 	FScopedDuiFile Source(TEXT("StructureDuplicate.dui"));
 	if (!TestTrue(TEXT("the fixture wrote a .dui"), Source.Write({
@@ -419,7 +245,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 
 bool FDreamUITextStructurePasteTest::RunTest(const FString&)
 {
-	using namespace DreamUITextStructureTestLocal;
+	using namespace DreamUITextStructureFixtures;
 
 	FScopedDuiFile Source(TEXT("StructurePaste.dui"));
 	if (!TestTrue(TEXT("the fixture wrote a .dui"), Source.Write({
@@ -467,7 +293,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 
 bool FDreamUITextStructureNamesTest::RunTest(const FString&)
 {
-	using namespace DreamUITextStructureTestLocal;
+	using namespace DreamUITextStructureFixtures;
 
 	// `Added` is not in the tree under that name -- the node is called Kept now -- but the file still
 	// holds it as the id a rename is migrating from. A new widget called Added would be read by the
@@ -504,7 +330,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 
 bool FDreamUITextStructureNoDesignerTest::RunTest(const FString&)
 {
-	using namespace DreamUITextStructureTestLocal;
+	using namespace DreamUITextStructureFixtures;
 
 	FScopedDuiFile Source(TEXT("StructureNoDesigner.dui"));
 	if (!TestTrue(TEXT("the fixture wrote a .dui"), Source.Write({

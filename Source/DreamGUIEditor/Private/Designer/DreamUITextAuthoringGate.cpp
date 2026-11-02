@@ -824,23 +824,50 @@ namespace DreamUITextAuthoring
 			{
 				Edit.TypeName = TEXT("Widget");
 			}
-			// The write-back only ever inserts under a node the text declares; anything else -- the content
-			// holder an `each` builds, a nested widget blueprint's own insides -- is the builder's, and a
-			// widget placed there is dropped by the next compile. Said here, where it can still be refused.
-			if (!Edit.ParentId.IsEmpty() && StructureLocal::FindNode(Ast, Edit.ParentId) == nullptr)
+		}
+		// The write-back only ever places a node under one the text declares; anything else -- the content holder
+		// an `each` builds, a nested widget blueprint's own insides -- is the builder's, and a widget placed there is
+		// dropped by the next compile. Said here, where it can still be refused.
+		if ((Edit.Kind == EDreamUIStructuralEditKind::InsertNode || Edit.Kind == EDreamUIStructuralEditKind::MoveNode)
+			&& !Edit.ParentId.IsEmpty() && StructureLocal::FindNode(Ast, Edit.ParentId) == nullptr)
+		{
+			OutReason = FText::Format(LOCTEXT("Structure_ParentNotAuthored",
+				"'{0}' is made by '{1}' rather than written in it (the content an 'each' builds, or another asset's own widgets), so nothing can be placed inside it from here"),
+				FText::FromString(Edit.ParentId), FText::FromString(FileName));
+			return false;
+		}
+		if (Edit.Kind == EDreamUIStructuralEditKind::RenameNode)
+		{
+			// A `timeline` track names its widget by id, and `(was:)` carries graph references, bindings and the
+			// animation editor's own animations across a rename -- not a path written in the file. Renamed from here,
+			// the track would point at a name the file no longer has.
+			for (const FDreamUITimeline& Timeline : Ast.Timelines)
 			{
-				OutReason = FText::Format(LOCTEXT("Structure_ParentNotAuthored",
-					"'{0}' is made by '{1}' rather than written in it (the content an 'each' builds, or another asset's own widgets), so nothing can be placed inside it from here"),
-					FText::FromString(Edit.ParentId), FText::FromString(FileName));
-				return false;
+				for (const FDreamUITimelineTrack& Track : Timeline.Tracks)
+				{
+					TArray<FString> Segments;
+					Track.NodePath.ParseIntoArray(Segments, TEXT("/"));
+					if (Segments.ContainsByPredicate([&Edit](const FString& InSegment) { return InSegment.Equals(Edit.NodeId, ESearchCase::IgnoreCase); }))
+					{
+						OutReason = FText::Format(LOCTEXT("Structure_RenameTimeline",
+							"the timeline '{0}' (line {1}) drives '{2}' by name, and a rename here would leave its track pointing at nothing; rename it in the text, track and all"),
+							FText::FromString(Timeline.Name), FText::AsNumber(Track.Location.Line), FText::FromString(Edit.NodeId));
+						return false;
+					}
+				}
 			}
 		}
 
 		FString Patched = Text;
 		FDreamUIDiagnosticBag PatchDiagnostics;
 		PatchDiagnostics.SourceName = FileName;
-		if (!FDreamUITextPatcher::ApplyStructuralEdits(Patched, Ast, MakeArrayView(&Edit, 1), PatchDiagnostics)
-			|| Patched.Equals(Text, ESearchCase::CaseSensitive))
+		const bool bPlanned = FDreamUITextPatcher::ApplyStructuralEdits(Patched, Ast, MakeArrayView(&Edit, 1), PatchDiagnostics);
+		// A move to where the node already stands plans and changes nothing, and is no refusal: there is nothing to write.
+		if (bPlanned && Edit.Kind == EDreamUIStructuralEditKind::MoveNode && Patched.Equals(Text, ESearchCase::CaseSensitive))
+		{
+			return true;
+		}
+		if (!bPlanned || Patched.Equals(Text, ESearchCase::CaseSensitive))
 		{
 			const FString Error = StructureLocal::FirstError(PatchDiagnostics);
 			OutReason = Error.IsEmpty()
@@ -977,6 +1004,10 @@ namespace DreamUITextAuthoring
 		if (!Residue.Unremoved.IsEmpty())
 		{
 			Parts.Add(FString::Printf(TEXT("not removed: %s"), *FString::Join(Residue.Unremoved, TEXT(", "))));
+		}
+		if (!Residue.Unmoved.IsEmpty())
+		{
+			Parts.Add(FString::Printf(TEXT("not moved: %s"), *FString::Join(Residue.Unmoved, TEXT(", "))));
 		}
 		if (WriteBack.IsValid())
 		{

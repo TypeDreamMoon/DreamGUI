@@ -280,11 +280,10 @@ bool FDreamUIDuiBackedTreeRefusesStructuralEditsTest::RunTest(const FString&)
 	// space, matched nothing, and every refusal counted as an unexpected error -- the gates all fired
 	// correctly and the test failed anyway.
 	//
-	// Creating, deleting, duplicating and pasting are no longer among them: the write-back writes those
-	// into the file, and DreamUITextStructureAutomationTests holds them to it. What is left is what it
-	// cannot write yet -- moving, renaming, the behaviours a `+` line owns -- refused whole, out loud.
-	AddExpectedError(TEXT("Refusing to move .*GateStructural\\.dui"), EAutomationExpectedErrorFlags::Contains, 0);
-	AddExpectedError(TEXT("Refusing to rename .*GateStructural\\.dui"), EAutomationExpectedErrorFlags::Contains, 0);
+	// Creating, deleting, duplicating, pasting, moving and renaming are no longer among them: the
+	// write-back writes those into the file, and DreamUITextStructureAutomationTests and
+	// DreamUITextMoveRenameAutomationTests hold them to it. What is left is what it cannot write yet --
+	// the behaviours a `+` line owns -- refused whole, out loud.
 	AddExpectedError(TEXT("Refusing to add a behaviour .*GateStructural\\.dui"), EAutomationExpectedErrorFlags::Contains, 0);
 
 	FScopedGatedDesigner Scoped(TEXT("BP_GateStructural"), UDreamTextUserWidget::StaticClass(), Source.FilePath);
@@ -298,12 +297,7 @@ bool FDreamUIDuiBackedTreeRefusesStructuralEditsTest::RunTest(const FString&)
 	if (!TestNotNull(TEXT("and so is its child"), Child)) return false;
 	const int32 CountBefore = Scoped.TemplateCount();
 
-	// ---- the two in DreamWidgetTreeEditing the file cannot take yet
-	TestFalse(TEXT("Moving one is refused"), DreamWidgetTreeEditing::ReparentWidget(Scoped.Blueprint, Child, Root, 0));
-	TestEqual(TEXT("Renaming one is refused"),
-		DreamWidgetTreeEditing::RenameWidget(Scoped.Blueprint, Child, TEXT("Renamed")), FString());
-
-	// ---- a behaviour, which is a `+` line and not in that namespace at all
+	// ---- a behaviour, which is a `+` line and not in DreamWidgetTreeEditing at all
 	if (!TestNotNull(TEXT("the designer opened"), Scoped.Designer)) return false;
 	UDreamWidget* PreviewChild = Scoped.FindPreview(TEXT("Child"));
 	if (!TestNotNull(TEXT("the child has a preview to work on"), PreviewChild)) return false;
@@ -321,7 +315,7 @@ bool FDreamUIDuiBackedTreeRefusesStructuralEditsTest::RunTest(const FString&)
 	// anyway is a state every assertion above passes in.
 	TestEqual(TEXT("the hierarchy is exactly what the file says"), Scoped.TemplateCount(), CountBefore);
 	TestNotNull(TEXT("the child is still there"), Scoped.FindTemplate(TEXT("Child")));
-	TestNull(TEXT("under the name the file gives it"), Scoped.FindTemplate(TEXT("Renamed")));
+	TestTrue(TEXT("with no behaviour added"), Child->GetAllComponents().IsEmpty());
 
 	// The sentence itself, once: every one of the six is built by this function, so this is where the
 	// claim "the message tells the author where to go" is actually checked rather than pattern-matched.

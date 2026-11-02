@@ -10,6 +10,7 @@
 #include "Core/Components/DreamWidget.h"
 #include "DreamGUI.h"
 #include "Text/DreamUITextPatcher.h"
+#include "Text/DreamUITextWriteBack.h"
 
 #include "Kismet2/BlueprintEditorUtils.h"
 
@@ -693,14 +694,8 @@ namespace DreamWidgetTreeEditing
 
 	bool ReparentWidget(UDreamWidgetBlueprint* InBlueprint, UDreamWidget* InWidget, UDreamWidget* InNewParent, int32 InSiblingIndex, FName InSlotName)
 	{
-		// Reordering inside one parent comes through here too, and it is refused with the rest: sibling
-		// order in the file IS the order in the hierarchy, so a reorder is a text edit like any other
-		// structural change and there is nothing in the patcher that moves a block of lines.
-		if (DreamUITextAuthoring::RefuseStructuralEdit(InBlueprint, ANSI_TO_TCHAR(__FUNCTION__), __LINE__,
-			FString::Printf(TEXT("move '%s'"), *Local::DisplayNameOf(InWidget))))
-		{
-			return false;
-		}
+		// Reordering inside one parent comes through here too: sibling order in the file IS the order in the
+		// hierarchy, so on a `.dui`-backed class a reorder is a move of the node's block like any other.
 		if (!IsTemplateWidgetOf(InBlueprint, InWidget) || !IsTemplateWidgetOf(InBlueprint, InNewParent))
 		{
 			UE_LOG(DreamGUI, Error, TEXT("[%s].%d Cannot move '%s' under '%s': not part of '%s' authoring tree."),
@@ -737,6 +732,41 @@ namespace DreamWidgetTreeEditing
 			return false;
 		}
 
+		// A hierarchy that comes from a `.dui`: checked against the file before anything moves, at the place it is
+		// going -- the block, the named slot's fill, the sibling it will stand in front of. The move itself is queued
+		// for the write-back, which places it from the tree when it writes (see QueueStructuralEdit).
+		const bool bTextAuthored = DreamUITextAuthoring::IsTextAuthored(InBlueprint);
+		if (bTextAuthored)
+		{
+			FDreamUIStructuralEdit Planned;
+			Planned.Kind = EDreamUIStructuralEditKind::MoveNode;
+			Planned.NodeId = InWidget->GetDisplayName();
+			Planned.ParentId = InNewParent == Tree->RootWidget ? FString() : InNewParent->GetDisplayName();
+			Planned.FillSlotName = SlotHost != nullptr && InSlotName != SlotHost->GetDefaultSlotName() ? InSlotName.ToString() : FString();
+			TArray<UDreamWidget*> Siblings = InNewParent->GetChildren();
+			Siblings.Remove(InWidget);
+			const int32 Landing = InSiblingIndex < 0 ? Siblings.Num() : FMath::Min(InSiblingIndex, Siblings.Num());
+			Planned.BeforeId = Siblings.IsValidIndex(Landing) && IsValid(Siblings[Landing]) ? Siblings[Landing]->GetDisplayName() : FString();
+			// Into a widget this same gesture made and the file does not hold yet -- a wrap's new wrapper: its block
+			// is written before the queued move is applied, so only the moving node's side of the move can be asked
+			// about now, which a move to the root asks.
+			TSet<FString> FileIds;
+			DreamUITextAuthoring::CollectAuthoredNodeIds(InBlueprint, FileIds);
+			if (!Planned.ParentId.IsEmpty() && !FileIds.Contains(Planned.ParentId))
+			{
+				Planned.ParentId.Reset();
+				Planned.FillSlotName.Reset();
+				Planned.BeforeId.Reset();
+			}
+			FText Reason;
+			if (!DreamUITextAuthoring::CheckStructuralEdit(InBlueprint, Planned, /*bInVerifyBuild*/true, Reason))
+			{
+				DreamUITextAuthoring::ReportStructuralRefusal(InBlueprint, ANSI_TO_TCHAR(__FUNCTION__), __LINE__,
+					FString::Printf(TEXT("move '%s'"), *Local::DisplayNameOf(InWidget)), Reason);
+				return false;
+			}
+		}
+
 		InBlueprint->Modify();
 		Tree->Modify();
 		UDreamWidget* OldParent = InWidget->GetParent();
@@ -770,6 +800,13 @@ namespace DreamWidgetTreeEditing
 			BindWidgetIntoSlot(InBlueprint, SlotHost, InSlotName, InWidget);
 		}
 
+		if (bTextAuthored)
+		{
+			FDreamUIStructuralEdit Moved;
+			Moved.Kind = EDreamUIStructuralEditKind::MoveNode;
+			Moved.NodeId = InWidget->GetDisplayName();
+			FDreamUITextWriteBack::QueueStructuralEdit(Tree, Moved);
+		}
 		NotifyStructureChanged(InBlueprint);
 		return true;
 	}
@@ -835,16 +872,11 @@ namespace DreamWidgetTreeEditing
 
 	FString RenameWidget(UDreamWidgetBlueprint* InBlueprint, UDreamWidget* InWidget, const FString& InDesiredDisplayName)
 	{
-		// A rename is structural here for a reason the other four do not have: the display name is the
-		// node's `id`, which is its identity in the file, its compiler variable, its binding key and
-		// its animation path all at once. Changing it from the designer would rename three things the
-		// text still spells the old way -- and the language has `(was: OldId)` precisely so that a
-		// rename is expressed in the file, where the fixup can see it.
-		if (DreamUITextAuthoring::RefuseStructuralEdit(InBlueprint, ANSI_TO_TCHAR(__FUNCTION__), __LINE__,
-			FString::Printf(TEXT("rename '%s'"), *Local::DisplayNameOf(InWidget))))
-		{
-			return FString();
-		}
+		// A rename is structural for a reason the other edits do not have: the display name is the node's `id`,
+		// which is its identity in the file, its compiler variable, its binding key and its animation path all at
+		// once. On a `.dui`-backed class it is written as the language writes one -- the new id, with `(was: OldId)`
+		// so the compile carries what the old name owned -- and queued, because read off the trees it would be a
+		// node deleted and another made.
 		if (!IsTemplateWidgetOf(InBlueprint, InWidget))
 		{
 			UE_LOG(DreamGUI, Error, TEXT("[%s].%d Cannot rename '%s': not part of '%s' authoring tree."),
@@ -852,10 +884,33 @@ namespace DreamWidgetTreeEditing
 			return FString();
 		}
 		UDreamWidgetTree* Tree = Local::GetTree(InBlueprint);
-		const FString Applied = MakeUniqueDisplayName(Tree, InDesiredDisplayName, InWidget);
+		const bool bTextAuthored = DreamUITextAuthoring::IsTextAuthored(InBlueprint);
+		TSet<FString> FileIds;
+		if (bTextAuthored)
+		{
+			// Clear of every id the file holds, not only the tree's -- but not of this node's own names.
+			DreamUITextAuthoring::CollectAuthoredNodeIds(InBlueprint, FileIds);
+			FileIds.Remove(InWidget->GetDisplayName());
+		}
+		const FString Applied = MakeUniqueDisplayName(Tree, InDesiredDisplayName, InWidget, bTextAuthored ? &FileIds : nullptr);
 		if (Applied == InWidget->GetDisplayName())
 		{
 			return Applied;
+		}
+		if (bTextAuthored)
+		{
+			FDreamUIStructuralEdit Planned;
+			Planned.Kind = EDreamUIStructuralEditKind::RenameNode;
+			Planned.NodeId = InWidget->GetDisplayName();
+			Planned.NewId = Applied;
+			FText Reason;
+			if (!DreamUITextAuthoring::CheckStructuralEdit(InBlueprint, Planned, /*bInVerifyBuild*/true, Reason))
+			{
+				DreamUITextAuthoring::ReportStructuralRefusal(InBlueprint, ANSI_TO_TCHAR(__FUNCTION__), __LINE__,
+					FString::Printf(TEXT("rename '%s'"), *Local::DisplayNameOf(InWidget)), Reason);
+				return FString();
+			}
+			FDreamUITextWriteBack::QueueStructuralEdit(Tree, Planned);
 		}
 
 		//the compiler's name for it, taken BEFORE the write, is the key every binding stored

@@ -571,6 +571,35 @@ void FDreamWidgetBlueprintEditor::InitDesigner(const EToolkitMode::Type Mode, co
 			FSlateNotificationManager::Get().AddNotification(Info);
 		}
 	}
+	else if (IsValid(BlueprintBeingEdited->WidgetTree) && DreamUITextAuthoring::IsTextAuthored(BlueprintBeingEdited))
+	{
+		// On a text-authored hierarchy the names are the file's ids, so they are reported and not renamed: a rename
+		// made here would be written into the file under the author's feet on every open. A .dui that parsed cannot
+		// hold two (DUI3001), so this is a tree that came from somewhere else -- worth saying, never worth fixing here.
+		TSet<FString> Seen;
+		TSet<FString> Duplicated;
+		BlueprintBeingEdited->WidgetTree->ForEachWidget([&Seen, &Duplicated](UDreamWidget* Widget)
+		{
+			bool bAlreadySeen = false;
+			Seen.Add(Widget->GetDisplayName(), &bAlreadySeen);
+			if (bAlreadySeen)
+			{
+				Duplicated.Add(Widget->GetDisplayName());
+			}
+		});
+		if (!Duplicated.IsEmpty())
+		{
+			const FText Message = FText::Format(
+				LOCTEXT("DuplicateNamesInText", "{0} widget name(s) appear more than once in '{1}': {2}. Rename them in the .dui."),
+				FText::AsNumber(Duplicated.Num()),
+				FText::FromString(DreamUITextAuthoring::GetAuthoredSourceFileName(BlueprintBeingEdited)),
+				FText::FromString(FString::Join(Duplicated.Array(), TEXT(", "))));
+			UE_LOG(DreamGUIEditor, Warning, TEXT("[%s].%d %s"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *Message.ToString());
+			FNotificationInfo Info(Message);
+			Info.ExpireDuration = 8.0f;
+			FSlateNotificationManager::Get().AddNotification(Info);
+		}
+	}
 	ApplyDesignerState();
 
 	// Handed this designer, whose authoring root it asks for its animation host from now on.
@@ -1140,12 +1169,6 @@ bool FDreamWidgetBlueprintEditor::CanUnwrapSelectedWidget() const
 	{
 		return false;
 	}
-	// A text-authored hierarchy's shape is the file's, and there is nothing in the patcher that moves
-	// a block of lines -- the same refusal every other structural edit makes.
-	if (DreamUITextAuthoring::CanAuthorFromText(BlueprintBeingEdited))
-	{
-		return false;
-	}
 	const UDreamWidget* Template = GetTemplateWidget(SelectedWidgets[0].Get());
 	if (Template == nullptr)
 	{
@@ -1498,14 +1521,6 @@ bool FDreamWidgetBlueprintEditor::WrapTemplatesFrom(UDreamWidget* InPreviewWrapp
 	UClass* InLayoutContainerClass)
 {
 	if (!IsValid(BlueprintBeingEdited) || !IsValid(InPreviewWrapper) || !IsValid(InPreviewWrapper->GetParent()))
-	{
-		return false;
-	}
-	// A wrap is a create AND a move of every child into it, and a `.dui` takes the create but not yet the
-	// move: let through, it would write an empty wrapper beside the widgets it was meant to hold. Refused
-	// whole, before the wrapper is made, until moving reaches the file too.
-	if (DreamUITextAuthoring::RefuseStructuralEdit(BlueprintBeingEdited, ANSI_TO_TCHAR(__FUNCTION__), __LINE__,
-		TEXT("wrap widgets")))
 	{
 		return false;
 	}
