@@ -467,12 +467,28 @@ const FDreamWidgetEventBinding* FDreamWidgetEventCustomization::FindRoute(
 	});
 }
 
-int32 FDreamWidgetEventCustomization::GetAddOrViewIndex(FName InEventName) const
+bool FDreamWidgetEventCustomization::HasRoute(FName InEventName) const
 {
+	if (HasRouteCacheFrame != GFrameCounter)
+	{
+		HasRouteCacheFrame = GFrameCounter;
+		HasRouteCache.Reset();
+	}
+	if (const bool* Cached = HasRouteCache.Find(InEventName))
+	{
+		return *Cached;
+	}
 	const TSharedPtr<FDreamWidgetBlueprintEditor> Editor = Context.Editor.Pin();
 	const UDreamWidgetBlueprint* Blueprint = Editor.IsValid() ? Editor->GetWidgetBlueprint() : nullptr;
+	const bool bHasRoute = FindRoute(Blueprint, InEventName) != nullptr;
+	HasRouteCache.Add(InEventName, bHasRoute);
+	return bHasRoute;
+}
+
+int32 FDreamWidgetEventCustomization::GetAddOrViewIndex(FName InEventName) const
+{
 	// 0 = View, 1 = Add; matches the switcher's slot order, which matches UMG's.
-	return FindRoute(Blueprint, InEventName) != nullptr ? 0 : 1;
+	return HasRoute(InEventName) ? 0 : 1;
 }
 
 EVisibility FDreamWidgetEventCustomization::GetRemoveVisibility(FName InEventName) const
