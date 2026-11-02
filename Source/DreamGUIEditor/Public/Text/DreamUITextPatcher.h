@@ -63,6 +63,18 @@ enum class EDreamUIStructuralEditKind : uint8
 	InsertComponent,
 	/** The ComponentIndex'th `+` block of NodeId, taken out with its line. */
 	RemoveComponent,
+	/**
+	 * The ComponentIndex'th `+` block of NodeId, lifted whole and put back so that it is the ChildIndex'th of the
+	 * node's `+` blocks once the move is done (INDEX_NONE: the last).
+	 */
+	MoveComponent,
+	/** NodeId's type, the word its header starts with, rewritten as TypeName. Its id, style and block are untouched. */
+	RetypeNode,
+	/**
+	 * NodeId's own `PropertyName = …` line (or binding, or route), taken out with its line -- what a retype does to a
+	 * value the new type has no property for, which the next compile would otherwise refuse.
+	 */
+	RemoveProperty,
 };
 
 /**
@@ -106,13 +118,19 @@ struct FDreamUIStructuralEdit
 	 */
 	FString FillSlotName;
 
-	/** InsertNode: the type exactly as a .dui writes it -- "Text", "VerticalBox", "Row", "nier.Row", "/Game/UI/WBP_X". */
+	/** InsertNode, RetypeNode: the type exactly as a .dui writes it -- "Text", "VerticalBox", "Row", "nier.Row", "/Game/UI/WBP_X". */
 	FString TypeName;
+
+	/** RemoveProperty: the property's name as the line writes it, dotted path included (`AnchorData.SizeDelta`). */
+	FString PropertyName;
+
+	/** RemoveProperty: a bare line (Node) or an `@slot` one (Slot) -- the slot lines a new panel's slot class lacks. */
+	EDreamUIPatchTarget PropertyTarget = EDreamUIPatchTarget::Node;
 
 	/** InsertNode: the id of the new node. RenameNode: the id it becomes. */
 	FString NewId;
 
-	/** RemoveComponent: which `+` block, 0-based in author order. */
+	/** RemoveComponent, MoveComponent: which `+` block, 0-based in author order. */
 	int32 ComponentIndex = INDEX_NONE;
 
 	/** InsertComponent: the behaviour's spelling -- "UIButton", "VerticalBox". */
