@@ -575,6 +575,8 @@ private:
 	bool bHoverPixelDirty = false;
 	/** The cursor readout has to go quiet when the cursor is not over this viewport at all. */
 	bool bCursorInViewport = false;
+	/** When Tick last asked a non-realtime viewport to redraw. */
+	double LastIdleRedrawSeconds = 0.0;
 	FDelegateHandle OnSelectionChangedDelegateHandle;
 
 	TWeakPtr<FDreamWidgetBlueprintEditor> DesignerPtr;

@@ -109,6 +109,16 @@ public:
 	/** Draw the selection outlines, handles, guides and readouts over the design surface. */
 	UPROPERTY(EditAnywhere, config, Category = "Visualization")
 	bool bShowDesignerChrome = true;
+	/**
+	 * Redraw the design viewport on every frame.
+	 *
+	 * Off, it redraws when the designer has something new to show -- a gesture, the pointer moving over
+	 * it, a selection, a rebuild -- and otherwise four times a second, so an open designer nobody is
+	 * touching stops rendering its scene at the editor's frame rate. Animations and tweens playing in the
+	 * preview are drawn at that slower rate while it is off.
+	 */
+	UPROPERTY(EditAnywhere, config, Category = "Performance")
+	bool bRealtimeViewport = true;
 };
 
 /**
@@ -315,6 +325,9 @@ public:
 	void ToggleRespectDesignerLocks();
 	bool GetShowDesignerChrome() const;
 	void ToggleShowDesignerChrome();
+	/** UDreamUIDesignerSettings::bRealtimeViewport, applied to every open designer's viewport. */
+	bool GetRealtimeViewport() const;
+	void ToggleRealtimeViewport();
 	/** Rebuild the hierarchy tree, for operations that change what rows there are. */
 	void RefreshOutliner();
 	bool IsDesignerGridSnapEnabled() const;

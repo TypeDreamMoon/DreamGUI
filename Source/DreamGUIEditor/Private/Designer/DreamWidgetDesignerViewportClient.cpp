@@ -107,7 +107,9 @@ FDreamWidgetDesignerViewportClient::FDreamWidgetDesignerViewportClient(TWeakPtr<
 	EngineShowFlags.AmbientOcclusion = 1;
 	EngineShowFlags.SetSnap(false);
 
-	SetRealtime(true);
+	// The designer's preference (UDreamUIDesignerSettings::bRealtimeViewport). Off, Tick keeps a slow
+	// redraw going so nothing waits on the next gesture to appear.
+	SetRealtime(GetDefault<UDreamUIDesignerSettings>()->bRealtimeViewport);
 
 	EngineShowFlags.DisableAdvancedFeatures();
 	EngineShowFlags.SetSeparateTranslucency(true);
@@ -1622,6 +1624,21 @@ void FDreamWidgetDesignerViewportClient::Tick(float DeltaSeconds)
 	if (bDesignerDragging)UpdateDesignerDrag();
 	if (bDesignerMarqueePending)TryPromoteDesignerMarquee();
 	UpdateHoveredWidget();
+
+	// With realtime off the world still ticks every frame -- tweens and animations go on advancing -- but
+	// the scene is only drawn when asked. This is the asking for everything nothing else announces: a
+	// value edited in a panel, a tween, a canvas that rebuilt its geometry. Four times a second is often
+	// enough that none of those looks lost, and a small fraction of drawing the scene every frame.
+	if (!IsRealtime())
+	{
+		constexpr double IdleRedrawIntervalSeconds = 0.25;
+		const double Now = FPlatformTime::Seconds();
+		if (Now - LastIdleRedrawSeconds >= IdleRedrawIntervalSeconds)
+		{
+			LastIdleRedrawSeconds = Now;
+			Invalidate(false, false);
+		}
+	}
 }
 
 
@@ -4317,7 +4334,13 @@ void FDreamWidgetDesignerViewportClient::UpdateHoveredWidget()
 		HoveredWidget.Reset();
 		return;
 	}
+	UDreamWidget* const Previous = HoveredWidget.Get();
 	HoveredWidget = GetWidgetUnderCursor(HoverPixel.X, HoverPixel.Y);
+	// The outline is drawn with the scene, so a viewport that is not drawing every frame has to be told.
+	if (HoveredWidget.Get() != Previous)
+	{
+		Invalidate(false, false);
+	}
 }
 
 void FDreamWidgetDesignerViewportClient::SetExternalHoverWidget(UDreamWidget* InWidget)

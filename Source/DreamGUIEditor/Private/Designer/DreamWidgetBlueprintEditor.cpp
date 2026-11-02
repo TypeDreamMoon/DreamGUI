@@ -2026,6 +2026,27 @@ void FDreamWidgetBlueprintEditor::ToggleShowDesignerChrome()
 	});
 }
 
+bool FDreamWidgetBlueprintEditor::GetRealtimeViewport() const
+{
+	return GetDefault<UDreamUIDesignerSettings>()->bRealtimeViewport;
+}
+
+void FDreamWidgetBlueprintEditor::ToggleRealtimeViewport()
+{
+	UDreamUIDesignerSettings* Settings = GetMutableDefault<UDreamUIDesignerSettings>();
+	Settings->bRealtimeViewport = !Settings->bRealtimeViewport;
+	Settings->SaveConfig();
+	const bool bRealtime = Settings->bRealtimeViewport;
+	IterateAllDesigners([bRealtime](FDreamWidgetBlueprintEditor* Editor)
+	{
+		if (Editor->ViewportPtr.IsValid() && Editor->ViewportPtr->GetViewportClient().IsValid())
+		{
+			Editor->ViewportPtr->GetViewportClient()->SetRealtime(bRealtime);
+			Editor->ViewportPtr->GetViewportClient()->Invalidate();
+		}
+	});
+}
+
 void FDreamWidgetBlueprintEditor::RefreshOutliner()
 {
 	if (OutlinerPtr.IsValid())OutlinerPtr->RequestRefresh();
