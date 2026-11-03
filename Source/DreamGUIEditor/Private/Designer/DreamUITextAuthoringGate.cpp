@@ -718,7 +718,14 @@ namespace DreamUITextAuthoring
 			return true;
 		}
 		const UDreamWidget* Widget = Local::FindOwningWidget(InOwner);
-		return !IsTextAuthored(FindOwningBlueprint(Widget));
+		const UDreamWidgetBlueprint* Blueprint = FindOwningBlueprint(Widget);
+		if (!IsTextAuthored(Blueprint))
+		{
+			return true;
+		}
+		// A widget of a nested instance has no node in this file, so no line of it can be written here.
+		return IsValid(Blueprint->WidgetTree) && IsValid(Widget)
+			&& Blueprint->WidgetTree->FindWidgetByVariableName(UDreamWidgetTree::MakeWidgetVariableName(Widget)) != nullptr;
 	}
 
 	namespace StructureLocal

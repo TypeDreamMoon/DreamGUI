@@ -348,11 +348,11 @@ namespace DreamUITextAuthoring
 	/**
 	 * Whether a binding may be AUTHORED from the details panel on this object.
 	 *
-	 * False for a text-authored class, and this one is not about write-back at all: the compiler
-	 * REPLACES UDreamWidgetBlueprint::PropertyBindings wholesale from the `<-` lines in the file
-	 * (DreamWidgetBlueprintCompiler.cpp, "the bindings alongside it, for the same reason"). A binding
-	 * authored here therefore does not merely fail to reach the file -- it is deleted by the next
-	 * compile, along with the function the Create Binding entry just made and opened.
+	 * True for a text-authored class too, now that a binding there is written as its `<-` line: the compiler REPLACES
+	 * UDreamWidgetBlueprint::PropertyBindings wholesale from those lines, so the panel writes the line
+	 * (WriteStatementToText) instead of the list, and the compile reads it back. Whether a particular line can be
+	 * written is asked when it is chosen (ResolveStatementSite, CheckStructuralEdit), with the reason when it cannot.
+	 * False only for a widget a text-authored class does not write -- one inside a nested instance, with no node here.
 	 */
 	DREAMGUIEDITOR_API bool CanAuthorBindingsOn(const UObject* InOwner);
 

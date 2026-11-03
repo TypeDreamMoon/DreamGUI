@@ -271,8 +271,8 @@ bool FDreamUIDuiBackedTreeRefusesStructuralEditsTest::RunTest(const FString&)
 
 	// Every structural edit -- creating, deleting, duplicating, pasting, moving, renaming, the behaviours and the panel
 	// -- is written into the file now, and DreamUITextStructureAutomationTests, DreamUITextMoveRenameAutomationTests
-	// and DreamUITextComponentsAutomationTests hold each to it. What the designer still leaves to the text is a
-	// binding: `<-` lines are authored in the .dui, and the Bind control stays off a text-authored widget.
+	// and DreamUITextComponentsAutomationTests hold each to it. So is a binding: the Bind control writes its `<-` line
+	// (DreamUITextStatementAutomationTests).
 
 	FScopedGatedDesigner Scoped(TEXT("BP_GateStructural"), UDreamTextUserWidget::StaticClass(), Source.FilePath);
 	if (!TestNotNull(TEXT("the Blueprint was created"), Scoped.Blueprint)) return false;
@@ -288,7 +288,7 @@ bool FDreamUIDuiBackedTreeRefusesStructuralEditsTest::RunTest(const FString&)
 	if (!TestNotNull(TEXT("the designer opened"), Scoped.Designer)) return false;
 	UDreamWidget* PreviewChild = Scoped.FindPreview(TEXT("Child"));
 	if (!TestNotNull(TEXT("the child has a preview to work on"), PreviewChild)) return false;
-	TestFalse(TEXT("a binding is not authored from the panel"), DreamUITextAuthoring::CanAuthorBindingsOn(PreviewChild));
+	TestTrue(TEXT("a binding is authored from the panel, as its line in the file"), DreamUITextAuthoring::CanAuthorBindingsOn(PreviewChild));
 
 	// Copy is deliberately NOT gated: it writes nothing to the asset, and refusing it would stop an
 	// author lifting a subtree out of a .dui-backed screen to paste into a hand-authored one.
@@ -632,12 +632,11 @@ bool FDreamUIBoundPropertyIsShownReadOnlyTest::RunTest(const FString&)
 			DreamUITextAuthoring::IsPropertyReadOnly(Visual, FontSize, {}));
 	}
 
-	// The third block: authoring a NEW binding here. Not a write-back problem at all -- the compiler
-	// replaces the whole binding list from the file, so a binding made in the panel is deleted rather
-	// than merely not saved, and the Create Binding entry would leave an orphan function behind.
-	TestFalse(TEXT("The details panel cannot author bindings on a text-authored class"),
+	// The third block: authoring a NEW binding here. The compiler replaces the whole binding list from the file, so the
+	// panel writes the `<-` line rather than the list, and the compile reads it back.
+	TestTrue(TEXT("The details panel authors bindings on a text-authored class, as lines of its file"),
 		DreamUITextAuthoring::CanAuthorBindingsOn(Visual));
-	TestFalse(TEXT("nor on the widget itself"), DreamUITextAuthoring::CanAuthorBindingsOn(Title));
+	TestTrue(TEXT("on the widget itself too"), DreamUITextAuthoring::CanAuthorBindingsOn(Title));
 
 	return true;
 }
