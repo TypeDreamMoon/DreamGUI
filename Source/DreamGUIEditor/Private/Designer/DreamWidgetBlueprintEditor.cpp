@@ -2150,20 +2150,15 @@ void FDreamWidgetBlueprintEditor::TogglePreviewDPIScale()
 	ApplyDesignerViewportSize(GetDesignerViewportSize(), /*bRecordOnAsset*/false);
 }
 
-float FDreamWidgetBlueprintEditor::GetDesignerDPIScale() const
+float FDreamWidgetBlueprintEditor::GetDesignerDPIScale(FIntPoint InDeviceSize) const
 {
-	if (!GetPreviewDPIScale())
-	{
-		return 1.0f;
-	}
-	const FIntPoint DeviceSize = const_cast<FDreamWidgetBlueprintEditor*>(this)->GetDesignerViewportSize();
-	if (DeviceSize.X <= 0 || DeviceSize.Y <= 0)
+	if (!GetPreviewDPIScale() || InDeviceSize.X <= 0 || InDeviceSize.Y <= 0)
 	{
 		return 1.0f;
 	}
 	// The project's curve, which is the one Slate applies at runtime -- not a number of this
 	// designer's own. UMG's designer reads exactly this.
-	const float Scale = GetDefault<UUserInterfaceSettings>()->GetDPIScaleBasedOnSize(DeviceSize);
+	const float Scale = GetDefault<UUserInterfaceSettings>()->GetDPIScaleBasedOnSize(InDeviceSize);
 	return Scale > UE_SMALL_NUMBER ? Scale : 1.0f;
 }
 
@@ -2224,17 +2219,11 @@ FIntPoint FDreamWidgetBlueprintEditor::GetDesignerViewportSize()
 {
 	// Under Fill Screen the asset still holds the resolution the author picked, which is the right
 	// thing to keep and the wrong thing to report: the picker would name a resolution the canvas is
-	// not. The agent canvas's edit-mode size is what was actually applied.
-	if (DesignerSizeRule == EDreamUIDesignerSizeRule::FillScreen)
+	// not. What was actually applied is.
+	if (DesignerSizeRule == EDreamUIDesignerSizeRule::FillScreen
+		&& AppliedDesignerViewportSize.X > 0 && AppliedDesignerViewportSize.Y > 0)
 	{
-		if (UDreamWidget* RootAgent = GetRootAgentWidget())
-		{
-			if (UDreamCanvas* AgentCanvas = RootAgent->GetComponent<UDreamCanvas>();
-				IsValid(AgentCanvas) && AgentCanvas->SizeInEditMode.X > 0 && AgentCanvas->SizeInEditMode.Y > 0)
-			{
-				return AgentCanvas->SizeInEditMode;
-			}
-		}
+		return AppliedDesignerViewportSize;
 	}
 	if (BlueprintBeingEdited)
 	{
@@ -2255,7 +2244,7 @@ bool FDreamWidgetBlueprintEditor::CalculateDesignerCanvasFor(FIntPoint InViewpor
 	// the order Slate applies them at runtime: the application scale shrinks the surface a widget is
 	// laid out on, and the canvas scaler reads that surface. Off by default, so this is the identity
 	// for everyone who has not asked for it.
-	InViewportSize = ApplyDPIScaleToViewportSize(InViewportSize, GetDesignerDPIScale());
+	InViewportSize = ApplyDPIScaleToViewportSize(InViewportSize, GetDesignerDPIScale(InViewportSize));
 	OutCanvasSize = InViewportSize;
 	OutScale = 1.0f;
 	if (InViewportSize.X <= 0 || InViewportSize.Y <= 0)
@@ -2308,7 +2297,7 @@ void FDreamWidgetBlueprintEditor::ApplyDesignerViewportSize(FIntPoint NewViewpor
 	// "no" every tick and resize the canvas forever.
 	const bool bAlreadyApplied = bRecordOnAsset
 		? (NewViewportSize == GetDesignerViewportSize() && NewCanvasSize == GetDesignerCanvasSize())
-		: (IsValid(AgentCanvas) && AgentCanvas->SizeInEditMode == NewViewportSize && NewCanvasSize == GetDesignerCanvasSize());
+		: (AppliedDesignerViewportSize == NewViewportSize && NewCanvasSize == GetDesignerCanvasSize());
 	if (bAlreadyApplied)
 	{
 		return;
@@ -2327,17 +2316,20 @@ void FDreamWidgetBlueprintEditor::ApplyDesignerViewportSize(FIntPoint NewViewpor
 	}
 	// SetSizeDelta, matching how the instance scene and thumbnail scene size the root canvas.
 	RootAgent->SetSizeDelta(FVector2D(NewCanvasSize.X, NewCanvasSize.Y));
-	// Keep the agent canvas's edit-mode viewport in step: it is forced to a fixed size, and if the
-	// preview ever runs a screen-space render mode its editor tick would otherwise resize the agent
-	// to the stale default and stomp this.
+	// Keep the agent canvas's edit-mode viewport in step, and make it the CANVAS, not the device. The
+	// agent canvas is a screen-space root with a fixed edit-mode size and the constant-pixel rule, so
+	// on its next editor tick after the size changes it sizes the agent to exactly that size. Given
+	// the device, it undid every canvas this works out to be smaller than the device -- the DPI
+	// preview's, and a prefab scaler's -- one frame after it was applied.
 	if (IsValid(AgentCanvas))
 	{
 		if (bRecordOnAsset)
 		{
 			AgentCanvas->Modify();
 		}
-		AgentCanvas->SizeInEditMode = NewViewportSize;
+		AgentCanvas->SizeInEditMode = NewCanvasSize;
 	}
+	AppliedDesignerViewportSize = NewViewportSize;
 	if (bRecordOnAsset)
 	{
 		BlueprintBeingEdited->Modify();

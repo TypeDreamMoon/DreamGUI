@@ -34,12 +34,13 @@ public:
 	 *
 	 * A non-positive axis in InCanvasSize is REPLACED, loudly: this is the one size every preview
 	 * resolves against, so a stored zero is a hierarchy that draws nothing with nothing to say why.
-	 * See the body for which fallback and why it is not silent.
+	 * See the body for which fallback and why it is not silent. InDesignViewportSize, the device
+	 * resolution picked for the canvas, is the first of them and nothing else.
 	 *
 	 * Takes plain values rather than an asset so it serves the widget-blueprint designer as well as
 	 * those values are for a prefab.
 	 */
-	UDreamWidget* EnsureRootAgent(FIntPoint InCanvasSize, EDreamRenderMode InRenderMode, FIntPoint InSizeInEditMode);
+	UDreamWidget* EnsureRootAgent(FIntPoint InCanvasSize, EDreamRenderMode InRenderMode, FIntPoint InDesignViewportSize);
 	void SetSkyCubeVisibility(bool bVisible);
 	UDreamWidget* GetRootAgent()const { return RootAgentWidget.Get(); }
 private:

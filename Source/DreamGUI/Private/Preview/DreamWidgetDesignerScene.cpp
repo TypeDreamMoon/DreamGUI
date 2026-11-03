@@ -96,7 +96,7 @@ FDreamWidgetDesignerScene::~FDreamWidgetDesignerScene()
 	}
 }
 
-UDreamWidget* FDreamWidgetDesignerScene::EnsureRootAgent(FIntPoint InCanvasSize, EDreamRenderMode InRenderMode, FIntPoint InSizeInEditMode)
+UDreamWidget* FDreamWidgetDesignerScene::EnsureRootAgent(FIntPoint InCanvasSize, EDreamRenderMode InRenderMode, FIntPoint InDesignViewportSize)
 {
 	if (RootAgentWidget != nullptr)
 	{
@@ -119,7 +119,7 @@ UDreamWidget* FDreamWidgetDesignerScene::EnsureRootAgent(FIntPoint InCanvasSize,
 		{
 			continue;
 		}
-		const int32 Fallback = InSizeInEditMode[Axis] > 0 ? InSizeInEditMode[Axis] : DefaultCanvasSize[Axis];
+		const int32 Fallback = InDesignViewportSize[Axis] > 0 ? InDesignViewportSize[Axis] : DefaultCanvasSize[Axis];
 		UE_LOG(DreamGUI, Warning,
 			TEXT("[%s].%d The design canvas is %d on %s; using %d instead. A stored canvas size of zero would make every widget in this preview measure zero."),
 			ANSI_TO_TCHAR(__FUNCTION__), __LINE__, CanvasSize[Axis], Axis == 0 ? TEXT("X") : TEXT("Y"), Fallback);
@@ -135,10 +135,11 @@ UDreamWidget* FDreamWidgetDesignerScene::EnsureRootAgent(FIntPoint InCanvasSize,
 
 	Canvas->SetRenderMode(InRenderMode);
 	Canvas->bFixedSizeInEditMode = true;
-	// The design viewport size is what the editor is simulating, so the edit-mode fixed size must
-	// be it and not the 1920x1080 class default -- otherwise a screen-space preview would resize
-	// the agent to the default on its first editor tick.
-	Canvas->SizeInEditMode = (InSizeInEditMode.X > 0 && InSizeInEditMode.Y > 0) ? InSizeInEditMode : CanvasSize;
+	// The edit-mode fixed size is the agent's own size: a screen-space agent sizes itself to it on its
+	// first editor tick, by the constant-pixel rule. Not the 1920x1080 class default, which resized the
+	// agent to the default; and not the device resolution either, which undid a canvas that the
+	// prefab's scaler or the DPI preview makes smaller than the device.
+	Canvas->SizeInEditMode = CanvasSize;
 	return RootWidget;
 }
 
