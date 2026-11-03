@@ -147,7 +147,7 @@ enum class EDreamUIDiagnosticCode : int32
 	 * A list (`[a, b]`) or a map (`{ key: value }`) value that does not read: an opening bracket with no close, two elements
 	 * with no comma between them, or a map entry that is not `key: value`.
 	 */
-	MalformedContainer = 2022,
+	MalformedContainer = 2023,
 
 	// --- 3xxx semantic ---
 	/**

@@ -193,7 +193,7 @@ bool FDreamUIContainerRefusalsTest::RunTest(const FString&)
 		Diagnostics.SourceName = TEXT("Values.dui");
 		FDreamUISourceFile::Parse(Lines({ TEXT("Widget Root {"), TEXT("    Names = [\"A\", \"B\""), TEXT("}") }),
 			Diagnostics.SourceName, Ast, Diagnostics);
-		TestTrue(TEXT("a list never closed is DUI2022"), HasCode(Diagnostics, EDreamUIDiagnosticCode::MalformedContainer));
+		TestTrue(TEXT("a list never closed is DUI2023"), HasCode(Diagnostics, EDreamUIDiagnosticCode::MalformedContainer));
 	}
 	{
 		FDreamUIAst Ast;
@@ -201,7 +201,7 @@ bool FDreamUIContainerRefusalsTest::RunTest(const FString&)
 		Diagnostics.SourceName = TEXT("Values.dui");
 		FDreamUISourceFile::Parse(Lines({ TEXT("Widget Root {"), TEXT("    Colors = { Hover #FFF }"), TEXT("}") }),
 			Diagnostics.SourceName, Ast, Diagnostics);
-		TestTrue(TEXT("a map entry with no ':' is DUI2022"), HasCode(Diagnostics, EDreamUIDiagnosticCode::MalformedContainer));
+		TestTrue(TEXT("a map entry with no ':' is DUI2023"), HasCode(Diagnostics, EDreamUIDiagnosticCode::MalformedContainer));
 	}
 	{
 		const FLiveTree Live(Lines({

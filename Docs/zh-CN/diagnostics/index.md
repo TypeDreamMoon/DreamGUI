@@ -55,7 +55,7 @@ DreamGUI 针对一个 `.dui` 给出的每一条消息都带有一个编码，`DU
 | [DUI2019](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui2xxx#dui2019) | `MalformedSlotDeclaration` | error | 出现两次 `default` 的 slot，或既声明又填充的块。 |
 | [DUI2020](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui2xxx#dui2020) | `MalformedRows` | error | 无法读取的 `rows` 表：列清单不是名称、某一列出现两次、某行的值数量不对。 |
 | [DUI2021](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui2xxx#dui2021) | `MalformedViewModelsBlock` | error | 不是 `Type Name`、`= new`、`= global ["Name"]` 或 `= parent ["Name"]` 的 `viewmodels` 行（包括为空的 `""` 名称），或位于节点内部的 `viewmodels` 块。 |
-| [DUI2022](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui2xxx#dui2022) | `MalformedContainer` | error | 读不通的列表（`[a, b]`）或 Map（`{ 键: 值 }`）：括号没有闭合、两个元素之间缺逗号，或者 Map 的一项不是 `键: 值`。 |
+| [DUI2023](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui2xxx#dui2023) | `MalformedContainer` | 错误 | 读不通的列表（`[a, b]`）或 Map（`{ 键: 值 }`）：括号没有闭合、两个元素之间缺逗号，或者 Map 的一项不是 `键: 值`。 |
 | [DUI3001](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui3xxx#dui3001) | `DuplicateNodeId` | error | 两个节点共享同一个 id。 |
 | [DUI3002](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui3xxx#dui3002) | `InvalidNodeId` | error | 不是标识符、以数字开头或是关键字的 id。 |
 | [DUI3003](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui3xxx#dui3003) | `UnknownNodeType` | error | 不是标签、容器、别名、已注册控件或路径的类型。 |

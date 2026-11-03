@@ -39,7 +39,7 @@ description: "诊断"
 | DUI2019 | MalformedSlotDeclaration | 一个写了两次 `default` 的 slot，或者一个既声明又填充的块。 |
 | DUI2020 | MalformedRows | 一个读不通的 `rows` 表：列清单不是名称、某一列写了两次、某一行的值个数不对。 |
 | DUI2021 | MalformedViewModelsBlock | 一行不是 `Type Name`、`= new`、`= global ["Name"]` 或 `= parent ["Name"]` 的 `viewmodels`（包括空的 `""` 名称），或者写在节点里的 `viewmodels` 块。 |
-| DUI2022 | MalformedContainer | 读不通的列表（`[a, b]`）或 Map（`{ 键: 值 }`）：括号没有闭合、两个元素之间缺逗号，或者 Map 的一项不是 `键: 值`。 |
+| DUI2023 | MalformedContainer | 读不通的列表（`[a, b]`）或 Map（`{ 键: 值 }`）：括号没有闭合、两个元素之间缺逗号，或者 Map 的一项不是 `键: 值`。 |
 | DUI3001 | DuplicateNodeId | 两个节点共用一个 id。 |
 | DUI3002 | InvalidNodeId | 一个不是标识符、以数字开头，或者是关键字的 id。 |
 | DUI3003 | UnknownNodeType | 一个不是标签、容器、别名、已注册控件或路径的类型。 |
