@@ -13,6 +13,7 @@
 
 #include "Animation/DreamWidgetAnimationComponent.h"
 #include "Core/DreamUIBehaviour.h"
+#include "Core/Components/DreamWidgetSubObjectBehaviour.h"
 #include "Core/DreamUIWidgetRegistry.h"
 #include "Core/DreamUserWidget.h"
 #include "Core/DreamWidgetTree.h"
@@ -296,8 +297,170 @@ namespace DreamUIWriteBackLocal
 	 * somebody should chase: the row is grey, the drag does nothing, and before this the only trace
 	 * was one Output Log line. Set only for the second kind; left alone for the first.
 	 */
+	/**
+	 * The node ids of the tree whose value is being printed, for the one literal that needs the tree to be spelled: a
+	 * node reference, written as the bare id of the node it points at. Set for the length of a value pass by CollectEdits
+	 * (one map per side); null everywhere else -- a details-panel probe, a resource -- where no tree is in sight.
+	 */
+	const TMap<FString, UDreamWidget*>* GPrintNodeIds = nullptr;
+	/** The two trees' ids for the value pass under way, which CompareAndAppend hands to GPrintNodeIds side by side. */
+	const TMap<FString, UDreamWidget*>* GComparisonLiveIds = nullptr;
+	const TMap<FString, UDreamWidget*>* GComparisonTextIds = nullptr;
+
+	/** The node an object a node reference can hold belongs to: itself, its visual, a behaviour on it. */
+	const UDreamWidget* NodeOfReferencedObject(const UObject* InObject)
+	{
+		if (const UDreamWidget* AsWidget = Cast<UDreamWidget>(InObject))
+		{
+			return AsWidget;
+		}
+		if (const UDreamWidgetSubObjectBehaviour* AsSubObject = Cast<UDreamWidgetSubObjectBehaviour>(InObject))
+		{
+			return AsSubObject->GetWidget();
+		}
+		if (const UDreamUIBehaviour* AsBehaviour = Cast<UDreamUIBehaviour>(InObject))
+		{
+			return AsBehaviour->GetWidget();
+		}
+		return nullptr;
+	}
+
 	bool PrintLiteral(const FProperty* InLeaf, const void* InValuePtr, FString& OutText,
-		bool* OutValueIsUnrepresentable = nullptr)
+		bool* OutValueIsUnrepresentable = nullptr);
+
+	/**
+	 * A name key as a map is written by hand -- `{ Hover: #FFCC00 }`, not `{ "Hover": #FFCC00 }` -- when it is one word the
+	 * builder reads back as that name. Anything else (a space, a leading digit, a word the language already means) stays
+	 * quoted.
+	 */
+	FString BareNameKey(const FString& InQuoted)
+	{
+		if (InQuoted.Len() < 3 || !InQuoted.StartsWith(TEXT("\"")) || !InQuoted.EndsWith(TEXT("\"")))
+		{
+			return InQuoted;
+		}
+		const FString Word = InQuoted.Mid(1, InQuoted.Len() - 2);
+		auto IsWordChar = [](TCHAR InChar)
+		{
+			return FChar::IsDigit(InChar) || InChar == TEXT('_') || (InChar >= TEXT('a') && InChar <= TEXT('z'))
+				|| (InChar >= TEXT('A') && InChar <= TEXT('Z')) || InChar > 0x7F;
+		};
+		if (FChar::IsDigit(Word[0]) || Word.Equals(TEXT("true"), ESearchCase::IgnoreCase)
+			|| Word.Equals(TEXT("false"), ESearchCase::IgnoreCase) || Word.Equals(TEXT("None"), ESearchCase::IgnoreCase))
+		{
+			return InQuoted;
+		}
+		for (const TCHAR Char : Word)
+		{
+			if (!IsWordChar(Char))
+			{
+				return InQuoted;
+			}
+		}
+		return Word;
+	}
+
+	/**
+	 * A container's entries as they print: a list's elements in order, a set's elements and a map's `key: value`s in
+	 * the order the container holds them, with each entry's identity (the element, the key) in OutKeys. False when an
+	 * entry has no spelling -- then neither has the container.
+	 */
+	bool PrintContainerEntries(const FProperty* InLeaf, const void* InValuePtr, TArray<FString>& OutKeys,
+		TArray<FString>& OutEntries, bool* OutValueIsUnrepresentable)
+	{
+		OutKeys.Reset();
+		OutEntries.Reset();
+		auto IsNodeElement = [](const FProperty* InElement)
+		{
+			const FObjectPropertyBase* AsObject = CastField<FObjectPropertyBase>(InElement);
+			return AsObject != nullptr && FDreamUITextBuilder::IsNodeReferenceProperty(AsObject);
+		};
+		if (const FArrayProperty* AsArray = CastField<FArrayProperty>(InLeaf))
+		{
+			FScriptArrayHelper Helper(AsArray, InValuePtr);
+			for (int32 Index = 0; Index < Helper.Num(); ++Index)
+			{
+				FString Element;
+				if (!PrintLiteral(AsArray->Inner, Helper.GetRawPtr(Index), Element, OutValueIsUnrepresentable))
+				{
+					return false;
+				}
+				OutKeys.Add(Element);
+				OutEntries.Add(MoveTemp(Element));
+			}
+			return true;
+		}
+		if (const FSetProperty* AsSet = CastField<FSetProperty>(InLeaf))
+		{
+			// The builder refuses a set of nodes (a scratch address cannot take a node id), so the printer does too.
+			if (IsNodeElement(AsSet->ElementProp))
+			{
+				return false;
+			}
+			FScriptSetHelper Helper(AsSet, InValuePtr);
+			for (int32 Index = 0, Left = Helper.Num(); Left > 0; ++Index)
+			{
+				if (!Helper.IsValidIndex(Index))
+				{
+					continue;
+				}
+				--Left;
+				FString Element;
+				if (!PrintLiteral(AsSet->ElementProp, Helper.GetElementPtr(Index), Element, OutValueIsUnrepresentable))
+				{
+					return false;
+				}
+				OutKeys.Add(Element);
+				OutEntries.Add(MoveTemp(Element));
+			}
+			return true;
+		}
+		if (const FMapProperty* AsMap = CastField<FMapProperty>(InLeaf))
+		{
+			if (IsNodeElement(AsMap->KeyProp) || IsNodeElement(AsMap->ValueProp))
+			{
+				return false;
+			}
+			FScriptMapHelper Helper(AsMap, InValuePtr);
+			for (int32 Index = 0, Left = Helper.Num(); Left > 0; ++Index)
+			{
+				if (!Helper.IsValidIndex(Index))
+				{
+					continue;
+				}
+				--Left;
+				FString Key;
+				FString Value;
+				if (!PrintLiteral(AsMap->KeyProp, Helper.GetKeyPtr(Index), Key, OutValueIsUnrepresentable)
+					|| !PrintLiteral(AsMap->ValueProp, Helper.GetValuePtr(Index), Value, OutValueIsUnrepresentable))
+				{
+					return false;
+				}
+				if (CastField<FNameProperty>(AsMap->KeyProp) != nullptr)
+				{
+					Key = BareNameKey(Key);
+				}
+				OutEntries.Add(FString::Printf(TEXT("%s: %s"), *Key, *Value));
+				OutKeys.Add(MoveTemp(Key));
+			}
+			return true;
+		}
+		return false;
+	}
+
+	FString JoinContainer(const FProperty* InLeaf, const TArray<FString>& InEntries)
+	{
+		const bool bMap = CastField<FMapProperty>(InLeaf) != nullptr;
+		if (InEntries.IsEmpty())
+		{
+			return bMap ? TEXT("{}") : TEXT("[]");
+		}
+		return bMap ? FString::Printf(TEXT("{ %s }"), *FString::Join(InEntries, TEXT(", ")))
+			: FString::Printf(TEXT("[%s]"), *FString::Join(InEntries, TEXT(", ")));
+	}
+
+	bool PrintLiteral(const FProperty* InLeaf, const void* InValuePtr, FString& OutText,
+		bool* OutValueIsUnrepresentable)
 	{
 		if (InLeaf == nullptr || InValuePtr == nullptr)
 		{
@@ -312,6 +475,19 @@ namespace DreamUIWriteBackLocal
 			const FText& Value = AsText->GetPropertyValue(InValuePtr);
 			const FString* Source = FTextInspector::GetSourceString(Value);
 			OutText = QuoteString(Source != nullptr ? *Source : Value.ToString());
+			return true;
+		}
+
+		if (CastField<FArrayProperty>(InLeaf) != nullptr || CastField<FSetProperty>(InLeaf) != nullptr
+			|| CastField<FMapProperty>(InLeaf) != nullptr)
+		{
+			TArray<FString> Keys;
+			TArray<FString> Entries;
+			if (!PrintContainerEntries(InLeaf, InValuePtr, Keys, Entries, OutValueIsUnrepresentable))
+			{
+				return false;
+			}
+			OutText = JoinContainer(InLeaf, Entries);
 			return true;
 		}
 
@@ -424,7 +600,22 @@ namespace DreamUIWriteBackLocal
 			// the class being rebuilt, taking the whole hierarchy down (DUI5001 -> DUI6002).
 			if (FDreamUITextBuilder::IsNodeReferenceProperty(AsObject))
 			{
-				return false;
+				// Spelled with the tree when there is one: the bare id of the node the reference points at, which the
+				// builder reads back as that node, its visual or its behaviour by the property's own type. A node this
+				// tree does not hold under that id -- one inside another file's component -- has no id to write here.
+				const UObject* Referenced = AsObject->GetObjectPropertyValue(InValuePtr);
+				if (Referenced == nullptr)
+				{
+					OutText = TEXT("None");
+					return true;
+				}
+				const UDreamWidget* Node = NodeOfReferencedObject(Referenced);
+				if (GPrintNodeIds == nullptr || Node == nullptr || GPrintNodeIds->FindRef(Node->GetDisplayName()) != Node)
+				{
+					return false;
+				}
+				OutText = Node->GetDisplayName();
+				return true;
 			}
 			const UObject* Value = AsObject->GetObjectPropertyValue(InValuePtr);
 			// The second fence, for object properties outside the node-reference family: a
@@ -725,8 +916,60 @@ namespace DreamUIWriteBackLocal
 		FString LiveText;
 		FString TextText;
 		bool bLiveIsUnrepresentable = false;
-		if (!PrintLiteral(Live.Leaf, Live.ValuePtr, LiveText, &bLiveIsUnrepresentable)
-			|| !PrintLiteral(Text.Leaf, Text.ValuePtr, TextText))
+		bool bPrinted = false;
+		{
+			TGuardValue<const TMap<FString, UDreamWidget*>*> LiveIds(GPrintNodeIds, GComparisonLiveIds);
+			bPrinted = PrintLiteral(Live.Leaf, Live.ValuePtr, LiveText, &bLiveIsUnrepresentable);
+		}
+		if (bPrinted)
+		{
+			TGuardValue<const TMap<FString, UDreamWidget*>*> TextIds(GPrintNodeIds, GComparisonTextIds);
+			bPrinted = PrintLiteral(Text.Leaf, Text.ValuePtr, TextText);
+		}
+		// A set and a map are the same value in any order, and a TSet rebuilt from the file need not iterate in the
+		// file's order: compared as entries, and when they do differ, written in the order the file already has them
+		// with what the live value adds after -- so an edit is a change to the line, not a reshuffle of it.
+		if (bPrinted && (CastField<FSetProperty>(Live.Leaf) != nullptr || CastField<FMapProperty>(Live.Leaf) != nullptr))
+		{
+			TArray<FString> LiveKeys;
+			TArray<FString> LiveEntries;
+			TArray<FString> TextKeys;
+			TArray<FString> TextEntries;
+			{
+				TGuardValue<const TMap<FString, UDreamWidget*>*> LiveIds(GPrintNodeIds, GComparisonLiveIds);
+				PrintContainerEntries(Live.Leaf, Live.ValuePtr, LiveKeys, LiveEntries, nullptr);
+			}
+			{
+				TGuardValue<const TMap<FString, UDreamWidget*>*> TextIds(GPrintNodeIds, GComparisonTextIds);
+				PrintContainerEntries(Text.Leaf, Text.ValuePtr, TextKeys, TextEntries, nullptr);
+			}
+			TArray<FString> SortedLive = LiveEntries;
+			TArray<FString> SortedText = TextEntries;
+			SortedLive.Sort();
+			SortedText.Sort();
+			if (SortedLive == SortedText)
+			{
+				return;
+			}
+			TArray<FString> Ordered;
+			for (const FString& Key : TextKeys)
+			{
+				const int32 Found = LiveKeys.IndexOfByKey(Key);
+				if (Found != INDEX_NONE)
+				{
+					Ordered.Add(LiveEntries[Found]);
+				}
+			}
+			for (int32 Index = 0; Index < LiveKeys.Num(); ++Index)
+			{
+				if (!TextKeys.Contains(LiveKeys[Index]))
+				{
+					Ordered.Add(LiveEntries[Index]);
+				}
+			}
+			LiveText = JoinContainer(Live.Leaf, Ordered);
+		}
+		if (!bPrinted)
 		{
 			// No spelling for this type. Leaving the line alone is the answer; see PrintLiteral.
 			// The exception is a live value with no spelling of its OWN -- a NaN, an undeclared enum
@@ -1399,6 +1642,9 @@ void FDreamUITextWriteBack::CollectEdits(const FDreamUIAst& InAst, const UDreamW
 	TMap<FString, UDreamWidget*> TextWidgets;
 	MapWidgetsByNodeId(const_cast<UDreamWidgetTree*>(InLiveTree), LiveWidgets);
 	MapWidgetsByNodeId(const_cast<UDreamWidgetTree*>(InTextTree), TextWidgets);
+	// For a node reference to be printed as the id of the node it points at, on each side (see GPrintNodeIds).
+	TGuardValue<const TMap<FString, UDreamWidget*>*> LiveIdsForThisPass(GComparisonLiveIds, &LiveWidgets);
+	TGuardValue<const TMap<FString, UDreamWidget*>*> TextIdsForThisPass(GComparisonTextIds, &TextWidgets);
 
 	// What FindContainerClassForType answered per node type, for this one walk: it is a class search, and a file names
 	// the same handful of types on every row.

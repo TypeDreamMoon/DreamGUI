@@ -448,6 +448,47 @@ namespace DreamUIPatchLocal
 	}
 
 	/** Offset just past a parenthesised tuple starting at its '(', or INDEX_NONE if it never closes. */
+	/**
+	 * Where a bracketed value ends -- a list's `[ … ]`, a map's `{ … }` -- counting only its own bracket, skipping strings
+	 * and comments. INDEX_NONE when it never closes.
+	 */
+	int32 MeasureBracketed(const FString& InText, int32 InOffset, TCHAR InOpen, TCHAR InClose)
+	{
+		const TCHAR* Chars = *InText;
+		const int32 Length = InText.Len();
+		int32 Depth = 0;
+		int32 Offset = InOffset;
+		while (Offset < Length)
+		{
+			const TCHAR Char = Chars[Offset];
+			if (Char == TEXT('"'))
+			{
+				const int32 End = MeasureString(InText, Offset);
+				if (End == INDEX_NONE)
+				{
+					return INDEX_NONE;
+				}
+				Offset = End;
+				continue;
+			}
+			if (StartsComment(Chars, Length, Offset))
+			{
+				Offset = SkipComment(InText, Offset);
+				continue;
+			}
+			if (Char == InOpen)
+			{
+				++Depth;
+			}
+			else if (Char == InClose && --Depth == 0)
+			{
+				return Offset + 1;
+			}
+			++Offset;
+		}
+		return INDEX_NONE;
+	}
+
 	int32 MeasureTuple(const FString& InText, int32 InOffset)
 	{
 		const TCHAR* Chars = *InText;
@@ -524,6 +565,10 @@ namespace DreamUIPatchLocal
 		{
 			return MeasureTuple(InText, InOffset);
 		}
+		if (First == TEXT('[') || First == TEXT('{'))
+		{
+			return MeasureBracketed(InText, InOffset, First, First == TEXT('[') ? TEXT(']') : TEXT('}'));
+		}
 
 		// Identifier, number, asset path and hex colour are all one unbroken run. They are measured
 		// together rather than told apart because the AST already knows which one it is -- the only
@@ -545,7 +590,7 @@ namespace DreamUIPatchLocal
 				break;
 			}
 			if (Char == TEXT(',') || Char == TEXT(')') || Char == TEXT('(')
-				|| Char == TEXT('{') || Char == TEXT('}')
+				|| Char == TEXT('{') || Char == TEXT('}') || Char == TEXT('[') || Char == TEXT(']')
 				|| Char == TEXT(';') || Char == TEXT('@') || Char == TEXT('"'))
 			{
 				break;

@@ -606,6 +606,22 @@ namespace DreamUITextAuthoring
 		// dotted path at a time, AnchorData.SizeDelta and the rest. Asking the printer about the struct
 		// itself always fails, and greyed the anchor block over five fields that are all live; each
 		// field is judged on its own when the panel asks about it.
+		// A node reference -- an explicit navigation target, a toggle's group -- is written as the bare id of the node it
+		// points at, which only a node of this same hierarchy has. The probe has no tree to ask, so it is answered here:
+		// nothing, or a node of this Blueprint, is writable; one inside another asset's component is not.
+		if (const FObjectPropertyBase* AsObject = CastField<FObjectPropertyBase>(InLeafProperty);
+			AsObject != nullptr && FDreamUITextBuilder::IsNodeReferenceProperty(AsObject))
+		{
+			const void* ValuePtr = Local::ResolveValuePtr(InOwner, InLeafProperty, InParentProperties);
+			const UObject* Referenced = ValuePtr != nullptr ? AsObject->GetObjectPropertyValue(ValuePtr) : nullptr;
+			if (Referenced == nullptr)
+			{
+				return EPropertyEditVerdict::Writable;
+			}
+			const UDreamWidget* Node = Local::FindOwningWidget(Referenced);
+			return Node != nullptr && FindOwningBlueprint(Node) == FindOwningBlueprint(Widget)
+				? EPropertyEditVerdict::Writable : EPropertyEditVerdict::HasNoTextSpelling;
+		}
 		const FLiteralSpellingProbe& Probe = Local::GetLiteralSpellingProbe();
 		const bool bIsStructTheSweepRecursesInto = CastField<FStructProperty>(InLeafProperty) != nullptr
 			&& !DreamUIValueFormat::HasShortForm(InLeafProperty);

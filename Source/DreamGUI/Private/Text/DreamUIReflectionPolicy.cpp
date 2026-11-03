@@ -11,18 +11,14 @@ namespace DreamUIReflection
 {
 	namespace Local
 	{
-		bool IsContainer(const FProperty* InProperty)
-		{
-			return InProperty->IsA<FArrayProperty>() || InProperty->IsA<FMapProperty>()
-				|| InProperty->IsA<FSetProperty>();
-		}
-
-		/** A field inside a struct: no Edit-or-setter gate, because plain structs are plain data. */
+		/**
+		 * A field inside a struct: no Edit-or-setter gate, because plain structs are plain data. A container field is
+		 * one leaf -- `[a, b]`, `{ k: v }` -- as writable as what it holds (IsWritableFromText asks of the elements).
+		 */
 		bool IsSweepField(const FProperty* InProperty)
 		{
 			FString Unused;
 			return !IsHidden(InProperty)
-				&& !IsContainer(InProperty)
 				&& !InProperty->HasAnyPropertyFlags(CPF_EditConst)
 				&& FDreamUITextBuilder::IsWritableFromText(InProperty, Unused);
 		}
@@ -81,7 +77,7 @@ namespace DreamUIReflection
 		{
 			return false;
 		}
-		if (InProperty->HasAnyPropertyFlags(CPF_EditConst) || Local::IsContainer(InProperty))
+		if (InProperty->HasAnyPropertyFlags(CPF_EditConst))
 		{
 			return false;
 		}
