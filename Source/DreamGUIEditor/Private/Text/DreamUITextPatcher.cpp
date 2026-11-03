@@ -1987,13 +1987,16 @@ namespace DreamUIPatchLocal
 				}
 				if (Fill.WeightStart != INDEX_NONE)
 				{
-					// `@fill 2` is two properties in one word, and taking the Fill out of it leaves a weight with nothing
-					// to say it -- the rewrite would be two lines where the author wrote one, which is theirs to choose.
-					RefuseNotWritable(OutDiagnostics, InProperty.Location,
-						FString::Printf(TEXT("the '@fill' on line %d also sets the weight, so it cannot simply stop meaning Fill; write '@slot SizeRule = %s' and '@slot FillWeight = %s' in its place"),
-							InProperty.Location.Line, *Ellipsize(NewValue),
-							*Ellipsize(InText.Mid(Fill.WeightStart, Fill.WeightEnd - Fill.WeightStart))));
-					return false;
+					// `@fill 2` is two properties in one word. Taking the Fill out of it leaves the weight, so the word is
+					// written as the two lines it stands for -- the new rule, and the weight it already had.
+					const FString Weight = InText.Mid(Fill.WeightStart, Fill.WeightEnd - Fill.WeightStart);
+					FSplice& Splice = OutSplices.AddDefaulted_GetRef();
+					Splice.Offset = Fill.Start;
+					Splice.Length = Fill.End - Fill.Start;
+					Splice.Text = FString::Printf(TEXT("@slot SizeRule = %s%s%s@slot FillWeight = %s"), *NewValue,
+						*DetectLineEnding(InText), *IndentAt(InText, Fill.Start), *Weight);
+					Splice.Order = InOutOrder++;
+					return true;
 				}
 				// A bare `@fill` is exactly `@slot SizeRule = Fill`, so it is replaced by the long spelling with the new value
 				// -- the one rewrite of a shorthand that leaves nothing else it meant behind.

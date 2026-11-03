@@ -593,8 +593,8 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 /*
  * `@fill` stands for `SizeRule = Fill`, and `@fill 2` adds `FillWeight = 2`. There is no SizeRule written for a splice
  * to land on, so each edit is decided on its own: a new weight replaces the number; a bare `@fill` given another rule
- * becomes the long spelling; and taking the Fill out of `@fill 2` -- which would leave a weight with nothing to say it
- * -- is refused under DUI7004 with the two lines to write instead.
+ * becomes the long spelling; and taking the Fill out of `@fill 2` becomes the two lines it stood for, the new rule and
+ * the weight it kept.
  */
 bool FDreamUISyntaxWriteBackFillShorthandTest::RunTest(const FString& Parameters)
 {
@@ -648,9 +648,11 @@ bool FDreamUISyntaxWriteBackFillShorthandTest::RunTest(const FString& Parameters
 	{
 		FString Text = Source;
 		FDreamUIDiagnosticBag Diagnostics;
-		const bool bWritten = Patch(Text, TEXT("Right"), EDreamUIPatchTarget::Slot, INDEX_NONE, TEXT("SizeRule"), TEXT("Auto"), Diagnostics);
-		ExpectRefusal(*this, TEXT("another rule for a shorthand that also holds a weight"), Source, Text, bWritten, Diagnostics,
-			EDreamUIDiagnosticCode::PatchSyntaxNotWritable);
+		TestTrue(TEXT("a shorthand that also holds a weight is given another rule"),
+			Patch(Text, TEXT("Right"), EDreamUIPatchTarget::Slot, INDEX_NONE, TEXT("SizeRule"), TEXT("Auto"), Diagnostics));
+		TestEqual(TEXT("and becomes its two slot lines"), Text,
+			Replacing(Lines, 7, TEXT("        @slot SizeRule = Auto\n        @slot FillWeight = 2")));
+		ExpectParses(*this, Text, TEXT("rewriting a shorthand with a weight"));
 	}
 	{
 		// A weight on a bare shorthand is not a made-up property -- the shorthand never said one -- so it is an
