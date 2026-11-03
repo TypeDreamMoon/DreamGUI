@@ -1,15 +1,10 @@
----
-title: "DreamGUI 文档"
-description: "DreamGUI 文档"
----
-
 <a id="dreamgui-documentation"></a>
 
 # DreamGUI 文档
 
 [English](../README.md) · 简体中文
 
-本目录中的英文文档是插件的规范源文件。网站根据这些文件生成英文页面；中文译文保存在本插件的 `zh-CN/` 下，并在插件翻译 PR 经审阅合并后发布。
+本目录中的英文文档是插件的规范源文件。网站根据这些文件生成英文页面；中文译文保存在本插件的 `zh-CN/` 下，合并进本插件后即发布。
 
 | 章节 | 从这里开始 |
 | --- | --- |
@@ -34,6 +29,6 @@ description: "DreamGUI 文档"
 - 网站页面 ID 是稳定的。源文件移动会更新网站仓库中的 `docs-sync/config.json`，而不是公开 URL。
 - 来自网站 PR [#2](https://github.com/TypeDreamMoon/gui.toolchain.64hz.cn/pull/2) 和 [#3](https://github.com/TypeDreamMoon/gui.toolchain.64hz.cn/pull/3) 的文档新增内容在此维护，包括控件标签、控件树、网格修改器、精灵、歌词、反射绑定和事务性文本写回。
 
-`zh-CN/` 树镜像英文源路径。导入的译文未经审阅；[首次迁移快照](TRANSLATIONS.md) 保留了原始导入和缺失译文列表。要查看当前状态，请运行 `python -B Docs/translation-status.py` 或查看网站仓库中的翻译状态 issue。`.translations/` 记录源版本，但不将导入视为批准。仅网站特有的说明仍保留在网站仓库中。
+`zh-CN/` 目录树与英文源路径一一对应。旁边的 `zh-CN/.align/` 记录每段中文是从哪一段英文译来的，所以英文改动后只重译改过的段落。要修正译文，直接编辑中文页即可，下次运行会保留你的修改。仅网站使用的说明保留在网站仓库中。
 
-使用 `python -B Docs/translation-status.py` 在本地检查翻译状态；添加 `--all` 以包含所有源文件，或添加 `--json` 以获取结构化输出。这个只读工具不需要网站仓库或 Git 检出。
+译文由 [dreamdocs](https://github.com/TypeDreamMoon/dreamdocs) 生成和检查：`dreamdocs status` 列出过期和缺失的段落，`dreamdocs translate` 翻译这些段落，`dreamdocs check --plugin .` 是 CI 运行的检查。本插件的设置在 `dreamdocs.json` 中。
