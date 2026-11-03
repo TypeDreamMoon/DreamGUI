@@ -51,6 +51,7 @@ Severity is decided where a diagnostic is raised, not by its range. Most codes a
 | [DUI2019](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui2xxx#dui2019) | `MalformedSlotDeclaration` | error | A slot with `default` twice, or a block that both declares and fills. |
 | [DUI2020](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui2xxx#dui2020) | `MalformedRows` | error | A `rows` table that does not read: a column list that is not names, a column twice, a row with the wrong number of values. |
 | [DUI2021](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui2xxx#dui2021) | `MalformedViewModelsBlock` | error | A `viewmodels` line that is not `Type Name`, `= new`, `= global ["Name"]` or `= parent ["Name"]` (an empty `""` name included), or a `viewmodels` block inside a node. |
+| [DUI2022](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui2xxx#dui2022) | `MalformedContainer` | error | A list (`[a, b]`) or a map (`{ key: value }`) that does not read: a bracket never closed, two elements with no comma between them, or a map entry that is not `key: value`. |
 | [DUI3001](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui3xxx#dui3001) | `DuplicateNodeId` | error | Two nodes share an id. |
 | [DUI3002](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui3xxx#dui3002) | `InvalidNodeId` | error | An id that is not an identifier, starts with a digit, or is a keyword. |
 | [DUI3003](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui3xxx#dui3003) | `UnknownNodeType` | error | A type that is no tag, container, alias, registered widget or path. |
@@ -83,6 +84,7 @@ Severity is decided where a diagnostic is raised, not by its range. Most codes a
 | [DUI4006](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui4xxx#dui4006) | `PropertyNotWritable` | error | A property text cannot write: transient, deprecated, part of the object graph, a delegate. |
 | [DUI4007](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui4xxx#dui4007) | `UnknownResource` | error | `@Name` naming no resource entry. |
 | [DUI4008](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui4xxx#dui4008) | `ResourceTypeMismatch` | error | A resource whose value is not its declared type, or a non-`Asset` resource used as a node type. |
+| [DUI4009](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui4xxx#dui4009) | `ContainerTypeMismatch` | error | A list on a property that is not an array or a set, a map on one that is not a map, a single value on a container, or a set or map of nodes (only an array can hold node ids). |
 | [DUI5001](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui5xxx#dui5001) | `AssetNotFound` | error | An asset or class path that does not load. |
 | [DUI5002](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui5xxx#dui5002) | `NoVisualForProperty` | error | A property of a visual the node's type does not create. |
 | [DUI5003](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui5xxx#dui5003) | `NoPanelSlotForProperty` | error | A slot line on a node whose parent lays out no panel. |
