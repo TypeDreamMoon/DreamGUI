@@ -1644,12 +1644,14 @@ namespace DreamUIPatchLocal
 		return true;
 	}
 
+	/** InLineBody, when given, is the whole statement to write (`Text <- GetTitle()`) in place of `Name = Value`. */
 	bool PlanInsert(const FString& InText, const FDreamUIPropertyEdit& InEdit, const FResolvedTarget& InTarget,
-		TArray<FSplice>& OutSplices, int32& InOutOrder, FDreamUIDiagnosticBag& OutDiagnostics)
+		TArray<FSplice>& OutSplices, int32& InOutOrder, FDreamUIDiagnosticBag& OutDiagnostics, const FString* InLineBody = nullptr)
 	{
 		const FString LineEnding = DetectLineEnding(InText);
 		const FString OwnerIndent = IndentAt(InText, InTarget.OwnerOffset);
-		const FString NewLine = InTarget.LinePrefix + InEdit.PropertyName + TEXT(" = ") + InEdit.NewValueText.TrimStartAndEnd();
+		const FString NewLine = InTarget.LinePrefix + (InLineBody != nullptr
+			? *InLineBody : InEdit.PropertyName + TEXT(" = ") + InEdit.NewValueText.TrimStartAndEnd());
 
 		int32 Open = INDEX_NONE;
 		int32 Close = INDEX_NONE;
@@ -3448,6 +3450,207 @@ namespace DreamUIPatchLocal
 		return true;
 	}
 
+	// --------------------------------------------------------------------------------------------
+	// Statements: a property's own line, whatever its operator
+	//
+	// A value line has an end the value measures. A binding or a route does not -- its right side is an expression, a
+	// handler, a path with arguments -- so its end is read off its line: up to a comment, a ';', the brace that closes a
+	// one-line block, or the next statement of the same node, whichever comes first. One that runs on past its line
+	// (an expression broken across lines) is refused rather than cut in the middle.
+	// --------------------------------------------------------------------------------------------
+
+	/** A node's lines an edit addresses: its bare lines, its `@slot` lines, or one `+` block's. Null when the block is not there. */
+	const TArray<FDreamUIProperty>* StatementLinesOf(const FDreamUINode& InNode, EDreamUIPatchTarget InTarget, int32 InComponentIndex)
+	{
+		switch (InTarget)
+		{
+		case EDreamUIPatchTarget::Node:
+			return &InNode.Properties;
+		case EDreamUIPatchTarget::Slot:
+			return &InNode.SlotProperties;
+		case EDreamUIPatchTarget::Component:
+			return InNode.Components.IsValidIndex(InComponentIndex) ? &InNode.Components[InComponentIndex].Properties : nullptr;
+		default:
+			return nullptr;
+		}
+	}
+
+	/** Whether a line names InName on its right: its handler, its route's path, the event it emits, its function or its variable. */
+	bool StatementNames(const FDreamUIProperty& InProperty, const FString& InName)
+	{
+		for (const FString* Named : { &InProperty.EventHandler, &InProperty.RouteTarget, &InProperty.EmitEvent,
+			&InProperty.BindingFunction, &InProperty.TwoWayProperty })
+		{
+			if (!Named->IsEmpty() && Named->Equals(InName, ESearchCase::IgnoreCase))
+			{
+				return true;
+			}
+		}
+		return false;
+	}
+
+	/** The written line of InLines an edit means; see FDreamUIStructuralEdit::StatementMatch. Lines the front end made are not candidates. */
+	const FDreamUIProperty* FindStatementLine(const TArray<FDreamUIProperty>& InLines, const FDreamUIStructuralEdit& InEdit)
+	{
+		TArray<const FDreamUIProperty*> Named;
+		for (const FDreamUIProperty& Line : InLines)
+		{
+			if (!Line.bSynthesized && !Line.bRowCell && Line.Name.Equals(InEdit.PropertyName, ESearchCase::IgnoreCase))
+			{
+				Named.Add(&Line);
+			}
+		}
+		if (InEdit.StatementMatch.IsEmpty())
+		{
+			return Named.IsEmpty() ? nullptr : Named[0];
+		}
+		for (const FDreamUIProperty* Line : Named)
+		{
+			if (StatementNames(*Line, InEdit.StatementMatch))
+			{
+				return Line;
+			}
+		}
+		return Named.Num() == 1 ? Named[0] : nullptr;
+	}
+
+	/** Where every statement of InNode starts -- its lines, its `+` blocks and theirs, its children: the places a statement before them ends. */
+	void CollectStatementStarts(const FString& InText, const FDreamUINode& InNode, TArray<int32>& OutStarts)
+	{
+		auto Add = [&InText, &OutStarts](const FDreamUISourceLocation& InLocation)
+		{
+			const int32 Offset = OffsetOf(InText, InLocation);
+			if (Offset != INDEX_NONE)
+			{
+				OutStarts.Add(Offset);
+			}
+		};
+		for (const FDreamUIProperty& Property : InNode.Properties)
+		{
+			Add(Property.Location);
+		}
+		for (const FDreamUIProperty& Property : InNode.SlotProperties)
+		{
+			Add(Property.Location);
+		}
+		for (const FDreamUIComponent& Component : InNode.Components)
+		{
+			Add(Component.Location);
+			for (const FDreamUIProperty& Property : Component.Properties)
+			{
+				Add(Property.Location);
+			}
+		}
+		for (const FDreamUINode& Child : InNode.Children)
+		{
+			Add(Child.Location);
+		}
+	}
+
+	/** Where the statement whose name stands at InNameOffset ends; see the section comment. INDEX_NONE when it runs on past its line. */
+	int32 MeasureStatementEnd(const FString& InText, const FDreamUIProperty& InProperty, int32 InNameOffset, TConstArrayView<int32> InOtherStarts)
+	{
+		const int32 Measured = StatementSearchOffset(InText, InProperty, InNameOffset);
+		if (Measured != InNameOffset)
+		{
+			return Measured;
+		}
+		const TCHAR* Chars = *InText;
+		const int32 Length = InText.Len();
+		int32 Limit = FindLineEnd(InText, InNameOffset);
+		for (const int32 Other : InOtherStarts)
+		{
+			if (Other > InNameOffset && Other < Limit)
+			{
+				Limit = Other;
+			}
+		}
+		int32 Depth = 0;
+		int32 End = InNameOffset;
+		for (int32 Offset = InNameOffset; Offset < Limit;)
+		{
+			const TCHAR Char = Chars[Offset];
+			if (StartsComment(Chars, Length, Offset))
+			{
+				break;
+			}
+			if (Char == TEXT('"'))
+			{
+				const int32 After = MeasureString(InText, Offset);
+				if (After == INDEX_NONE || After > Limit)
+				{
+					return INDEX_NONE;
+				}
+				Offset = After;
+				End = After;
+				continue;
+			}
+			if (Char == TEXT('(') || Char == TEXT('['))
+			{
+				++Depth;
+			}
+			else if (Char == TEXT(')') || Char == TEXT(']'))
+			{
+				if (Depth == 0)
+				{
+					return INDEX_NONE;
+				}
+				--Depth;
+			}
+			else if (Depth == 0 && (Char == TEXT(';') || Char == TEXT('}') || Char == TEXT('{')))
+			{
+				break;
+			}
+			++Offset;
+			if (!IsInlineWhitespace(Char))
+			{
+				End = Offset;
+			}
+		}
+		return Depth == 0 ? End : INDEX_NONE;
+	}
+
+	/** Whether `Name <Statement>` reads back as one statement of that name -- asked of the parser, as ValidateValueText asks it about values. */
+	bool ValidateStatementText(const FString& InName, const FString& InStatement, const FDreamUISourceLocation& InLocation,
+		FDreamUIDiagnosticBag& OutDiagnostics)
+	{
+		const FString Trimmed = InStatement.TrimStartAndEnd();
+		FString Reason;
+		if (Trimmed.IsEmpty())
+		{
+			Reason = TEXT("it is empty");
+		}
+		else if (Trimmed.Contains(TEXT("\n")) || Trimmed.Contains(TEXT("\r")))
+		{
+			Reason = TEXT("a statement written back has to fit on one line");
+		}
+		else
+		{
+			const FString Probe = FString::Printf(TEXT("Widget DreamUIPatchProbe {\n\t%s %s\n}"), *InName, *Trimmed);
+			FDreamUIAst ProbeAst;
+			FDreamUIDiagnosticBag ProbeDiagnostics;
+			const bool bParsed = FDreamUISourceFile::Parse(Probe, FString(), ProbeAst, ProbeDiagnostics) && !ProbeDiagnostics.HasErrors();
+			if (!bParsed)
+			{
+				const FDreamUIDiagnostic* First = ProbeDiagnostics.Diagnostics.FindByPredicate(
+					[](const FDreamUIDiagnostic& InDiagnostic) { return InDiagnostic.IsError(); });
+				Reason = First != nullptr ? First->Message : TEXT("it does not parse");
+			}
+			else if (ProbeAst.Root.Properties.Num() != 1 || !ProbeAst.Root.Properties[0].Name.Equals(InName, ESearchCase::CaseSensitive)
+				|| !ProbeAst.Root.Children.IsEmpty() || !ProbeAst.Root.Components.IsEmpty())
+			{
+				Reason = TEXT("it reads as more than one statement");
+			}
+		}
+		if (Reason.IsEmpty())
+		{
+			return true;
+		}
+		OutDiagnostics.AddError(EDreamUIDiagnosticCode::UnexpectedToken, InLocation,
+			FString::Printf(TEXT("'%s %s' is not a statement this file can hold: %s"), *InName, *Ellipsize(Trimmed), *Reason));
+		return false;
+	}
+
 	bool PlanRemoveProperty(const FString& InText, const FDreamUIAst& InAst, const FDreamUIStructuralEdit& InEdit,
 		TArray<FSplice>& OutSplices, int32& InOutOrder, FDreamUIDiagnosticBag& OutDiagnostics)
 	{
@@ -3459,38 +3662,165 @@ namespace DreamUIPatchLocal
 			return false;
 		}
 		const bool bSlot = InEdit.PropertyTarget == EDreamUIPatchTarget::Slot;
-		const TArray<FDreamUIProperty>& Lines = bSlot ? Node->SlotProperties : Node->Properties;
-		const FDreamUIProperty* Property = Lines.FindByPredicate([&InEdit](const FDreamUIProperty& InProperty)
-		{
-			return !InProperty.bSynthesized && !InProperty.bRowCell && InProperty.Name.Equals(InEdit.PropertyName, ESearchCase::IgnoreCase);
-		});
-		if (Property == nullptr)
+		const TArray<FDreamUIProperty>* Lines = StatementLinesOf(*Node, InEdit.PropertyTarget, InEdit.ComponentIndex);
+		if (Lines == nullptr)
 		{
 			RefuseTarget(OutDiagnostics, Node->Location,
-				FString::Printf(TEXT("%s has no line of its own for %s"), *Node->Id, *InEdit.PropertyName));
+				FString::Printf(TEXT("node '%s' has %d '+' blocks, so there is no number %d"), *Node->Id, Node->Components.Num(), InEdit.ComponentIndex));
+			return false;
+		}
+		const FDreamUIProperty* Property = FindStatementLine(*Lines, InEdit);
+		if (Property == nullptr)
+		{
+			RefuseTarget(OutDiagnostics, Node->Location, InEdit.StatementMatch.IsEmpty()
+				? FString::Printf(TEXT("%s has no line of its own for %s"), *Node->Id, *InEdit.PropertyName)
+				: FString::Printf(TEXT("%s has no line of its own for %s naming %s"), *Node->Id, *InEdit.PropertyName, *InEdit.StatementMatch));
 			return false;
 		}
 		const int32 NameOffset = OffsetOf(InText, Property->Location);
-		const int32 StatementEnd = NameOffset == INDEX_NONE ? INDEX_NONE : StatementSearchOffset(InText, *Property, NameOffset);
-		// Its own line or lines only: anything else on them is another statement, which a whole-line cut would take. A
-		// binding or a route reports no value end (StatementSearchOffset answers its name), and is one line of its own.
-		const bool bValueMeasured = StatementEnd != NameOffset;
-		// `@slot Padding = …` on a line of its own is the slot line's own line, keyword and all.
-		const bool bOwnLine = NameOffset != INDEX_NONE && (LineBeforeIsBlank(InText, NameOffset)
-			|| (bSlot && InText.Mid(FindLineStart(InText, NameOffset), NameOffset - FindLineStart(InText, NameOffset))
-				.TrimStartAndEnd().Equals(TEXT("@slot"), ESearchCase::CaseSensitive)));
-		if (!bOwnLine || (bValueMeasured && !RestOfLineIsBlank(InText, StatementEnd, /*bInAllowTerminators*/ true)))
+		TArray<int32> OtherStarts;
+		CollectStatementStarts(InText, *Node, OtherStarts);
+		const int32 StatementEnd = NameOffset == INDEX_NONE ? INDEX_NONE : MeasureStatementEnd(InText, *Property, NameOffset, OtherStarts);
+		if (StatementEnd == INDEX_NONE)
 		{
 			RefuseStale(OutDiagnostics, Property->Location,
-				FString::Printf(TEXT("the line of %s is not where the tree says it is, or it shares the line with another statement"), *Property->Name));
+				FString::Printf(TEXT("the line of %s is not where the tree says it is, or it runs on past its line"), *Property->Name));
 			return false;
 		}
-		const int32 LineStart = FindLineStart(InText, NameOffset);
+		// `@slot Padding = …` on a line of its own is the slot line's own line, keyword and all.
+		const bool bSlotKeywordLine = bSlot && InText.Mid(FindLineStart(InText, NameOffset), NameOffset - FindLineStart(InText, NameOffset))
+			.TrimStartAndEnd().Equals(TEXT("@slot"), ESearchCase::CaseSensitive);
+		const bool bOwnLine = LineBeforeIsBlank(InText, NameOffset) || bSlotKeywordLine;
+		if (bOwnLine && RestOfLineIsBlank(InText, StatementEnd, /*bInAllowTerminators*/ true))
+		{
+			// Its own line or lines: taken out whole, line break and all.
+			const int32 LineStart = FindLineStart(InText, NameOffset);
+			FSplice& Splice = OutSplices.AddDefaulted_GetRef();
+			Splice.Offset = ExtendBackOverLineBreak(InText, LineStart);
+			Splice.Length = FindLineEnd(InText, StatementEnd) - Splice.Offset;
+			Splice.Order = InOutOrder++;
+			return true;
+		}
+		if (bSlotKeywordLine || InText[NameOffset] == TEXT('@'))
+		{
+			// An `@slot` line that shares its line: the keyword is the statement's, and cutting the rest would leave it bare.
+			RefuseStale(OutDiagnostics, Property->Location,
+				FString::Printf(TEXT("the line of %s shares the line with another statement"), *Property->Name));
+			return false;
+		}
+		// Sharing its line -- inside a one-line block (`+ UIButton { OnClick -> Play }`), or beside another statement: the
+		// statement alone is cut, with the space in front of it, and what else stands on the line stays.
+		int32 Start = NameOffset;
+		while (Start > 0 && IsInlineWhitespace(InText[Start - 1]))
+		{
+			--Start;
+		}
+		int32 End = StatementEnd;
+		if (Start == FindLineStart(InText, NameOffset))
+		{
+			// First on its line, with something after it: the space after it goes instead, so the next statement keeps the
+			// indentation this one had.
+			Start = NameOffset;
+			while (End < InText.Len() && IsInlineWhitespace(InText[End]))
+			{
+				++End;
+			}
+		}
 		FSplice& Splice = OutSplices.AddDefaulted_GetRef();
-		Splice.Offset = ExtendBackOverLineBreak(InText, LineStart);
-		Splice.Length = FindLineEnd(InText, StatementEnd) - Splice.Offset;
+		Splice.Offset = Start;
+		Splice.Length = End - Start;
 		Splice.Order = InOutOrder++;
 		return true;
+	}
+
+	bool PlanSetStatement(const FString& InText, const FDreamUIAst& InAst, const FDreamUIStructuralEdit& InEdit,
+		TArray<FSplice>& OutSplices, int32& InOutOrder, FDreamUIDiagnosticBag& OutDiagnostics)
+	{
+		const FDreamUINode* Node = FindNodeById(InAst, InEdit.NodeId);
+		if (Node == nullptr)
+		{
+			RefuseTarget(OutDiagnostics, FDreamUISourceLocation(),
+				FString::Printf(TEXT("no node in this file is named %s"), *Ellipsize(InEdit.NodeId)));
+			return false;
+		}
+		if (InEdit.PropertyTarget != EDreamUIPatchTarget::Node && InEdit.PropertyTarget != EDreamUIPatchTarget::Component)
+		{
+			RefuseTarget(OutDiagnostics, Node->Location,
+				FString::Printf(TEXT("'%s %s' is written on a line of %s or of one of its '+' blocks"),
+					*InEdit.PropertyName, *Ellipsize(InEdit.Statement.TrimStartAndEnd()), *Node->Id));
+			return false;
+		}
+		if (!Node->RowKey.IsEmpty())
+		{
+			RefuseRowLine(OutDiagnostics, *Node, FString::Printf(TEXT("'%s %s'"), *InEdit.PropertyName, *Ellipsize(InEdit.Statement.TrimStartAndEnd())));
+			return false;
+		}
+		const TArray<FDreamUIProperty>* Lines = StatementLinesOf(*Node, InEdit.PropertyTarget, InEdit.ComponentIndex);
+		if (Lines == nullptr)
+		{
+			RefuseTarget(OutDiagnostics, Node->Location,
+				FString::Printf(TEXT("node '%s' has %d '+' blocks, so there is no number %d"), *Node->Id, Node->Components.Num(), InEdit.ComponentIndex));
+			return false;
+		}
+		// A line the front end made -- the `Shown` an `if` gives its branches -- has no line of its own to rewrite, and a
+		// second one written beside it would fight the construct that made it.
+		if (const FDreamUIProperty* Made = Lines->FindByPredicate([&InEdit](const FDreamUIProperty& InProperty)
+			{
+				return InProperty.bSynthesized && InProperty.Name.Equals(InEdit.PropertyName, ESearchCase::IgnoreCase);
+			}))
+		{
+			RefuseNotWritable(OutDiagnostics, Made->Location,
+				FString::Printf(TEXT("'%s' on '%s' is made by line %d (an 'if', or a shorthand), not written on a line of its own; change it there"),
+					*InEdit.PropertyName, *Node->Id, Made->Location.Line));
+			return false;
+		}
+		const FString Body = InEdit.PropertyName + TEXT(" ") + InEdit.Statement.TrimStartAndEnd();
+		if (!ValidateStatementText(InEdit.PropertyName, InEdit.Statement, Node->Location, OutDiagnostics))
+		{
+			return false;
+		}
+
+		if (const FDreamUIProperty* Existing = FindStatementLine(*Lines, InEdit))
+		{
+			const int32 NameOffset = OffsetOf(InText, Existing->Location);
+			if (NameOffset == INDEX_NONE || !TextAtIs(InText, NameOffset, FirstSegmentOf(Existing->Name)))
+			{
+				RefuseStale(OutDiagnostics, Existing->Location,
+					FString::Printf(TEXT("line %d does not hold '%s'"), Existing->Location.Line, *Existing->Name));
+				return false;
+			}
+			TArray<int32> OtherStarts;
+			CollectStatementStarts(InText, *Node, OtherStarts);
+			const int32 End = MeasureStatementEnd(InText, *Existing, NameOffset, OtherStarts);
+			if (End == INDEX_NONE)
+			{
+				RefuseStale(OutDiagnostics, Existing->Location,
+					FString::Printf(TEXT("the line of %s runs on past its line, so it is rewritten in the text"), *Existing->Name));
+				return false;
+			}
+			if (InText.Mid(NameOffset, End - NameOffset).Equals(Body, ESearchCase::CaseSensitive))
+			{
+				return true;
+			}
+			FSplice& Splice = OutSplices.AddDefaulted_GetRef();
+			Splice.Offset = NameOffset;
+			Splice.Length = End - NameOffset;
+			Splice.Text = Body;
+			Splice.Order = InOutOrder++;
+			return true;
+		}
+
+		FDreamUIPropertyEdit Insert;
+		Insert.NodeId = InEdit.NodeId;
+		Insert.Target = InEdit.PropertyTarget;
+		Insert.ComponentIndex = InEdit.ComponentIndex;
+		Insert.PropertyName = InEdit.PropertyName;
+		FResolvedTarget Target;
+		if (!ResolveTarget(InText, InAst, Insert, Target, OutDiagnostics))
+		{
+			return false;
+		}
+		return PlanInsert(InText, Insert, Target, OutSplices, InOutOrder, OutDiagnostics, &Body);
 	}
 
 	bool PlanStructuralEdit(const FString& InText, const FDreamUIAst& InAst, const FDreamUIStructuralEdit& InEdit,
@@ -3518,6 +3848,8 @@ namespace DreamUIPatchLocal
 			return PlanRemoveProperty(InText, InAst, InEdit, OutSplices, InOutOrder, OutDiagnostics);
 		case EDreamUIStructuralEditKind::InsertRow:
 			return PlanInsertRow(InText, InAst, InEdit, OutSplices, InOutOrder, OutDiagnostics);
+		case EDreamUIStructuralEditKind::SetStatement:
+			return PlanSetStatement(InText, InAst, InEdit, OutSplices, InOutOrder, OutDiagnostics);
 		}
 		return false;
 	}

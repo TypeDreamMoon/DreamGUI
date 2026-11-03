@@ -72,7 +72,10 @@ enum class EDreamUIStructuralEditKind : uint8
 	RetypeNode,
 	/**
 	 * NodeId's own `PropertyName = …` line (or binding, or route), taken out with its line -- what a retype does to a
-	 * value the new type has no property for, which the next compile would otherwise refuse.
+	 * value the new type has no property for, which the next compile would otherwise refuse. In the PropertyTarget the
+	 * edit names: a bare line, an `@slot` one, or a line of the ComponentIndex'th `+` block. With StatementMatch, the
+	 * line naming that handler or function (an event can be routed more than once). A statement that shares its line
+	 * inside a one-line block (`+ UIButton { OnClick -> Play }`) is taken out of the line, and the rest stays.
 	 */
 	RemoveProperty,
 	/**
@@ -80,6 +83,14 @@ enum class EDreamUIStructuralEditKind : uint8
 	 * has the same key, so the builder names it `<id>_1` (DUI3023, a warning), which is the name a duplicate is given.
 	 */
 	InsertRow,
+	/**
+	 * NodeId's PropertyName written as `PropertyName <Statement>` -- a binding (`<- GetTitle()`), a route
+	 * (`-> HandlePlay`), a two-way binding (`<-> Volume`) or a value (`= 12`). On a bare line or in the ComponentIndex'th
+	 * `+` block (PropertyTarget Node or Component). The property's own line is rewritten whole when it has one -- a value
+	 * becomes a binding, a binding becomes a value, one handler becomes another (the line naming StatementMatch, when
+	 * given) -- and a new line is written where SetProperty would put one when it has none.
+	 */
+	SetStatement,
 };
 
 /**
@@ -126,16 +137,29 @@ struct FDreamUIStructuralEdit
 	/** InsertNode, RetypeNode: the type exactly as a .dui writes it -- "Text", "VerticalBox", "Row", "nier.Row", "/Game/UI/WBP_X". */
 	FString TypeName;
 
-	/** RemoveProperty: the property's name as the line writes it, dotted path included (`AnchorData.SizeDelta`). */
+	/** RemoveProperty, SetStatement: the property's name as the line writes it, dotted path included (`AnchorData.SizeDelta`). */
 	FString PropertyName;
 
-	/** RemoveProperty: a bare line (Node) or an `@slot` one (Slot) -- the slot lines a new panel's slot class lacks. */
+	/**
+	 * RemoveProperty: a bare line (Node), an `@slot` one (Slot) -- the slot lines a new panel's slot class lacks -- or a
+	 * line of the ComponentIndex'th `+` block (Component). SetStatement: Node or Component.
+	 */
 	EDreamUIPatchTarget PropertyTarget = EDreamUIPatchTarget::Node;
+
+	/** SetStatement: the operator and its right side as the line writes them -- `<- GetTitle()`, `-> HandlePlay`, `<-> Volume`, `= 12`. */
+	FString Statement;
+
+	/**
+	 * RemoveProperty, SetStatement: which of the property's lines, by the handler or function it names (`HandlePlay`,
+	 * `GetTitle`, `Volume`, an emitted event's name). Empty: the property's first line. When no line names it -- a route
+	 * the compiler generated a handler for -- the property's line is taken if it has only one.
+	 */
+	FString StatementMatch;
 
 	/** InsertNode: the id of the new node. RenameNode: the id it becomes. */
 	FString NewId;
 
-	/** RemoveComponent, MoveComponent: which `+` block, 0-based in author order. */
+	/** RemoveComponent, MoveComponent, and RemoveProperty / SetStatement on a Component target: which `+` block, 0-based in author order. */
 	int32 ComponentIndex = INDEX_NONE;
 
 	/** InsertComponent: the behaviour's spelling -- "UIButton", "VerticalBox". */
