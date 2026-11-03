@@ -209,6 +209,9 @@ namespace DreamUITextAuthoring
 	 */
 	DREAMGUIEDITOR_API bool WriteStructureToText(UDreamWidgetBlueprint* InBlueprint);
 
+	/** Whether the `.dui` writes InNodeId as a row of a `rows` table. False for a hand-authored Blueprint or a file that does not parse. */
+	DREAMGUIEDITOR_API bool IsTableRow(const UDreamWidgetBlueprint* InBlueprint, const FString& InNodeId);
+
 	/**
 	 * Where one of a text-authored widget's objects comes from in its `.dui`: OutLine is the node's own `+` line that
 	 * builds it (INDEX_NONE when none does -- it is its style's, its type's, or came with another component), and
@@ -217,9 +220,6 @@ namespace DreamUITextAuthoring
 	 * What a behaviour or panel gesture asks before it touches the template: only a line the node writes can be taken
 	 * out, moved, or swapped for another. False, with a reason, when the file cannot be read or does not write the node.
 	 */
-	/** Whether the `.dui` writes InNodeId as a row of a `rows` table. False for a hand-authored Blueprint or a file that does not parse. */
-	DREAMGUIEDITOR_API bool IsTableRow(const UDreamWidgetBlueprint* InBlueprint, const FString& InNodeId);
-
 	DREAMGUIEDITOR_API bool ResolveComponentSource(const UDreamWidgetBlueprint* InBlueprint, const UDreamWidget* InWidget,
 		const UObject* InComponent, int32& OutLine, bool& bOutTypeIsContainer, FText& OutReason);
 
