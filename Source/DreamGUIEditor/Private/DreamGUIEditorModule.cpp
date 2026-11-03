@@ -145,6 +145,7 @@
 #include "Window/DreamUIWidgetInspector.h"
 #include "ToolMenus.h"//ShutdownModule takes the designer viewport toolbar back out of the registry
 #include "Designer/SDreamWidgetDesignerViewportToolbar.h"
+#include "Localization/DreamUITextLocator.h"
 #include "Localization/DreamUITranslationFit.h"
 
 const FName FDreamGUIEditorModule::DreamUIDynamicSpriteAtlasViewerTabName(TEXT("DreamUIDynamicSpriteAtlasViewerName"));
@@ -182,6 +183,8 @@ void FDreamGUIEditorModule::StartupModule()
 	FDreamUISourceWatcher::InstallSourceClassResolver();
 	// Where the project has DreamLoc: `dloc check` asks DreamGUI to lay .dui texts' translations out, in a commandlet too.
 	DreamUITranslationFit::RegisterWithDreamLoc();
+	// And DreamLoc's in-context pick (Alt+click a text): which DreamText is at a point of the designer's viewport or PIE's.
+	DreamUITextLocator::RegisterWithDreamLoc();
 
 	// Everything below serves an editor session, which a game run on uncooked content is not: nothing
 	// there shows a menu, a tab or a details panel, the bridge would take requests meant for an editor
@@ -489,6 +492,7 @@ void FDreamGUIEditorModule::ShutdownModule()
 	// behind, the builder's static would go on calling into a module that is gone.
 	FDreamUISourceWatcher::UninstallSourceClassResolver();
 	DreamUITranslationFit::UnregisterFromDreamLoc();
+	DreamUITextLocator::UnregisterFromDreamLoc();
 
 	// All of it takes down the editor session; the compiler registration, which a game run on uncooked
 	// content starts as well, has no counterpart (see the end of this function).
