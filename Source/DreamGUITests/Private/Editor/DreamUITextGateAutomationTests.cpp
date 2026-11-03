@@ -4,6 +4,8 @@
 
 #include "Misc/AutomationTest.h"
 
+#include "Text/DreamUITimelineWriteBack.h"
+
 #include "DreamWidgetBehaviourTestTypes.h"
 
 #include "DreamWidgetBlueprint.h"
@@ -924,16 +926,13 @@ bool FDreamUITextCompileMovesTheAnimationPanelTest::RunTest(const FString&)
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FDreamUITimelineReadOnlyFollowsTheAnimationTest,
-	"DreamGUI.Designer.SwitchingBetweenATimelineAndAnEditableAnimationSwitchesReadOnly",
+	"DreamGUI.Designer.ATimelineOpensEditableBesideAnAnimationTheEditorMade",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
 
 /*
- * Switching animations kept whatever editability the Animations panel's Sequencer had been opened with.
- *
- * Sequencer reads read-only once, when it is made, and the panel handed it every later animation through
- * ResetToNewRootSequence. Opened on an animation made in the editor and then given a `timeline` one, it let the author
- * edit what the next compile rebuilds from the file; opened the other way round, it left the editor's own animation
- * locked. This alternates the two on one host.
+ * A `timeline` block's animation opens editable when the editor can write its edits back into the block
+ * (FDreamUITimelineWriteBack), like one made in the animation editor -- alternated on one host, because Sequencer reads
+ * read-only once, when it is made, and the panel makes a new one whenever the answer changes.
  */
 bool FDreamUITimelineReadOnlyFollowsTheAnimationTest::RunTest(const FString&)
 {
@@ -957,7 +956,7 @@ bool FDreamUITimelineReadOnlyFollowsTheAnimationTest::RunTest(const FString&)
 	UDreamWidgetAnimation* Editable = Host != nullptr ? Host->AddNewAnimation() : nullptr;
 	if (!TestTrue(TEXT("The designer has an Animations panel"), Panel.IsValid())
 		|| !TestTrue(TEXT("and a host holding a timeline and an editable animation"),
-			Timeline != nullptr && Editable != nullptr && !Timeline->IsEditable() && Editable->IsEditable()))
+			Timeline != nullptr && Editable != nullptr && Timeline->IsLanguageOwned() && Editable->IsEditable()))
 	{
 		return false;
 	}
@@ -969,11 +968,12 @@ bool FDreamUITimelineReadOnlyFollowsTheAnimationTest::RunTest(const FString&)
 
 	Panel->SelectAnimation(Timeline);
 	Sequencer = Panel->GetSequencer();
-	TestTrue(TEXT("a timeline after it is read-only"), Sequencer.IsValid() && Sequencer->IsReadOnly());
+	TestTrue(TEXT("the file can take a timeline's edits"), FDreamUITimelineWriteBack::CanWriteBack(Timeline));
+	TestTrue(TEXT("so a timeline after it opens editable too"), Sequencer.IsValid() && !Sequencer->IsReadOnly());
 
 	Panel->SelectAnimation(Editable);
 	Sequencer = Panel->GetSequencer();
-	TestTrue(TEXT("and the editable one after that is editable again"), Sequencer.IsValid() && !Sequencer->IsReadOnly());
+	TestTrue(TEXT("and the editor's own one after that is editable as well"), Sequencer.IsValid() && !Sequencer->IsReadOnly());
 
 	Panel->ClearAnimationSelection();
 	return true;
