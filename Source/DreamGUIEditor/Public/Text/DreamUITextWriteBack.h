@@ -230,11 +230,30 @@ public:
 	bool ApplyStatementEdit(const FDreamUIStructuralEdit& InEdit, FString& OutError);
 
 	/**
+	 * A new text for the document, made by a caller that edited it as a whole (the timeline write-back): checked to parse,
+	 * then written as one write of this write-back's own, in one transaction. True when written or unchanged.
+	 */
+	bool ApplyTextChange(const FString& InNewText, FString& OutError);
+
+	/** The document's text as it stands; empty when there is no document. */
+	FString GetDocumentText() const;
+
+	/**
 	 * A live value as a `.dui` literal, spelled the way the value pass spells it -- `24`, `(160, 48)`, `#1E1E1E`, `"OK"`,
 	 * `[1, 2]` -- or false when the type or this value has no spelling. A node reference has no tree to be spelled
 	 * against here, so only `None` prints.
 	 */
 	static bool PrintValueLiteral(const FProperty* InLeaf, const void* InValuePtr, FString& OutText);
+
+	/**
+	 * Every value the text tree does not hold as the live one does: OutEdits the ones a line could say (CollectEdits with
+	 * the dirty set off), OutUnwritable the ones no line can -- `Node.Property` for a value that differs and has no
+	 * spelling, or one whose value the language cannot spell. What a conversion asks of the file it made: both empty is
+	 * a file that builds the tree it came from.
+	 */
+	static void CollectUnwritableDifferences(const FDreamUIAst& InAst, const UDreamWidgetTree* InLiveTree,
+		const UDreamWidgetTree* InTextTree, TArray<FDreamUIPropertyEdit>& OutEdits, TArray<FString>& OutUnwritable,
+		FDreamUIDiagnosticBag& OutDiagnostics);
 
 	/**
 	 * The document's text changed and the tree has to be rebuilt from it.

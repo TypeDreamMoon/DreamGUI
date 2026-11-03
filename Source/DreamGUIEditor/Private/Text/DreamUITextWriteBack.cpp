@@ -307,6 +307,36 @@ namespace DreamUIWriteBackLocal
 	const TMap<FString, UDreamWidget*>* GComparisonLiveIds = nullptr;
 	const TMap<FString, UDreamWidget*>* GComparisonTextIds = nullptr;
 
+	/**
+	 * Set for the length of CollectUnwritableDifferences: where a value pass says what it could not print. Null for every
+	 * flush -- a value with no spelling is left alone there, as it always was, and only a conversion has to hear of it.
+	 */
+	TArray<FString>* GUnwritableSink = nullptr;
+
+	/**
+	 * Whether two values of a property with no spelling differ in a way a conversion would lose. An object that is no
+	 * asset -- a widget's own subobject, an object made at run time -- is a different object in every tree by
+	 * construction, so two of them count as the same; anything else is compared as the engine compares it.
+	 */
+	bool DiffersWithoutSpelling(const FProperty* InLeaf, const void* InLive, const void* InText)
+	{
+		if (const FObjectPropertyBase* AsObject = CastField<FObjectPropertyBase>(InLeaf))
+		{
+			const UObject* Live = AsObject->GetObjectPropertyValue(InLive);
+			const UObject* Text = AsObject->GetObjectPropertyValue(InText);
+			if ((Live == nullptr) != (Text == nullptr))
+			{
+				return true;
+			}
+			if (Live == nullptr || (!Live->IsAsset() && !Text->IsAsset()))
+			{
+				return false;
+			}
+			return Live != Text;
+		}
+		return !InLeaf->Identical(InLive, InText, PPF_None);
+	}
+
 	/** The node an object a node reference can hold belongs to: itself, its visual, a behaviour on it. */
 	const UDreamWidget* NodeOfReferencedObject(const UObject* InObject)
 	{
@@ -982,6 +1012,10 @@ namespace DreamUIWriteBackLocal
 				OutDiagnostics.AddError(EDreamUIDiagnosticCode::PatchValueNotRepresentable, InComparison.Location,
 					FString::Printf(TEXT("'%s' on '%s' holds a value this language cannot spell (a non-finite number, or an enum byte the enum does not declare), so its line was left untouched"),
 						*InComparison.PropertyName, *InComparison.NodeId));
+			}
+			if (GUnwritableSink != nullptr && (bLiveIsUnrepresentable || DiffersWithoutSpelling(Live.Leaf, Live.ValuePtr, Text.ValuePtr)))
+			{
+				GUnwritableSink->AddUnique(FString::Printf(TEXT("%s.%s"), *InComparison.NodeId, *InComparison.PropertyName));
 			}
 			return;
 		}
@@ -3035,16 +3069,34 @@ bool FDreamUITextWriteBack::ApplyStatementEdit(const FDreamUIStructuralEdit& InE
 		OutError = First != nullptr ? First->ToString() : TEXT("the patcher refused the line");
 		return false;
 	}
-	if (Updated.Equals(Current, ESearchCase::CaseSensitive))
+	return ApplyTextChange(Updated, OutError);
+}
+
+FString FDreamUITextWriteBack::GetDocumentText() const
+{
+	const UDreamUIDocument* Document = DocumentHandle.Get();
+	return Document != nullptr ? Document->GetContent() : FString();
+}
+
+bool FDreamUITextWriteBack::ApplyTextChange(const FString& InNewText, FString& OutError)
+{
+	OutError.Reset();
+	UDreamUIDocument* Document = DocumentHandle.Get();
+	if (Document == nullptr)
+	{
+		OutError = TEXT("this write-back has no document");
+		return false;
+	}
+	if (InNewText.Equals(Document->GetContent(), ESearchCase::CaseSensitive))
 	{
 		return true;
 	}
-	// Read back before it is written: a statement the patcher placed has to leave a file that still parses.
+	// Read back before it is written: whatever made the new text, it has to leave a file that still parses.
 	{
 		FDreamUIAst ReadBack;
 		FDreamUIDiagnosticBag ReadBackDiagnostics;
-		ReadBackDiagnostics.SourceName = LastDiagnostics.SourceName;
-		if (!FDreamUISourceFile::Parse(Updated, ReadBackDiagnostics.SourceName, ReadBack, ReadBackDiagnostics, FDreamUISourceFile::MakeFileImportReader()))
+		ReadBackDiagnostics.SourceName = FPaths::GetCleanFilename(GetFilePath());
+		if (!FDreamUISourceFile::Parse(InNewText, ReadBackDiagnostics.SourceName, ReadBack, ReadBackDiagnostics, FDreamUISourceFile::MakeFileImportReader()))
 		{
 			const FDreamUIDiagnostic* First = ReadBackDiagnostics.Diagnostics.FindByPredicate(
 				[](const FDreamUIDiagnostic& InDiagnostic) { return InDiagnostic.IsError(); });
@@ -3055,8 +3107,8 @@ bool FDreamUITextWriteBack::ApplyStatementEdit(const FDreamUIStructuralEdit& InE
 
 	FScopedTransaction Transaction(LOCTEXT("DreamUIStatementTransaction", "Edit DreamUI Text"));
 	TGuardValue<bool> WritingBack(bIsWritingBack, true);
-	const bool bSet = Document->SetContent(Updated, OutError);
-	if (Document->GetContent().Equals(Updated, ESearchCase::CaseSensitive))
+	const bool bSet = Document->SetContent(InNewText, OutError);
+	if (Document->GetContent().Equals(InNewText, ESearchCase::CaseSensitive))
 	{
 		++WriteCount;
 	}
@@ -3066,6 +3118,14 @@ bool FDreamUITextWriteBack::ApplyStatementEdit(const FDreamUIStructuralEdit& InE
 bool FDreamUITextWriteBack::PrintValueLiteral(const FProperty* InLeaf, const void* InValuePtr, FString& OutText)
 {
 	return DreamUIWriteBackLocal::PrintLiteral(InLeaf, InValuePtr, OutText, nullptr);
+}
+
+void FDreamUITextWriteBack::CollectUnwritableDifferences(const FDreamUIAst& InAst, const UDreamWidgetTree* InLiveTree,
+	const UDreamWidgetTree* InTextTree, TArray<FDreamUIPropertyEdit>& OutEdits, TArray<FString>& OutUnwritable,
+	FDreamUIDiagnosticBag& OutDiagnostics)
+{
+	TGuardValue<TArray<FString>*> Sink(DreamUIWriteBackLocal::GUnwritableSink, &OutUnwritable);
+	CollectEdits(InAst, InLiveTree, InTextTree, OutEdits, OutDiagnostics, /*bInUseDirtySet*/false);
 }
 
 bool FDreamUITextWriteBack::FlushTree(const UDreamWidgetTree* InLiveTree, FString& OutError,
