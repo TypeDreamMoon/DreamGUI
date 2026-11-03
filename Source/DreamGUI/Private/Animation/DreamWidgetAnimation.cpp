@@ -120,6 +120,10 @@ bool UDreamWidgetAnimation::IsEditable() const
 	//
 	// The way out is written on the refusal: edit the .dui, or change the block to
 	// `timeline <Name> external`, which hands the animation to Sequencer for good.
+	//
+	// The animation editor asks one more thing on top of this: whether it can write an edit back into
+	// the block (FDreamUITimelineWriteBack::CanWriteBack, editor only). When it can, a language-owned
+	// sequence opens editable, and each edit becomes the block's lines.
 	return !bLanguageOwned;
 }
 

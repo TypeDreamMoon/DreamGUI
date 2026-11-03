@@ -63,6 +63,34 @@ enum class EDreamUIStructuralEditKind : uint8
 	InsertComponent,
 	/** The ComponentIndex'th `+` block of NodeId, taken out with its line. */
 	RemoveComponent,
+	/**
+	 * The ComponentIndex'th `+` block of NodeId, lifted whole and put back so that it is the ChildIndex'th of the
+	 * node's `+` blocks once the move is done (INDEX_NONE: the last).
+	 */
+	MoveComponent,
+	/** NodeId's type, the word its header starts with, rewritten as TypeName. Its id, style and block are untouched. */
+	RetypeNode,
+	/**
+	 * NodeId's own `PropertyName = …` line (or binding, or route), taken out with its line -- what a retype does to a
+	 * value the new type has no property for, which the next compile would otherwise refuse. In the PropertyTarget the
+	 * edit names: a bare line, an `@slot` one, or a line of the ComponentIndex'th `+` block. With StatementMatch, the
+	 * line naming that handler or function (an event can be routed more than once). A statement that shares its line
+	 * inside a one-line block (`+ UIButton { OnClick -> Play }`) is taken out of the line, and the rest stays.
+	 */
+	RemoveProperty,
+	/**
+	 * A copy of the `rows` line of NodeId -- a row -- written on the line after it: what duplicating a row is. The copy
+	 * has the same key, so the builder names it `<id>_1` (DUI3023, a warning), which is the name a duplicate is given.
+	 */
+	InsertRow,
+	/**
+	 * NodeId's PropertyName written as `PropertyName <Statement>` -- a binding (`<- GetTitle()`), a route
+	 * (`-> HandlePlay`), a two-way binding (`<-> Volume`) or a value (`= 12`). On a bare line or in the ComponentIndex'th
+	 * `+` block (PropertyTarget Node or Component). The property's own line is rewritten whole when it has one -- a value
+	 * becomes a binding, a binding becomes a value, one handler becomes another (the line naming StatementMatch, when
+	 * given) -- and a new line is written where SetProperty would put one when it has none.
+	 */
+	SetStatement,
 };
 
 /**
@@ -86,6 +114,17 @@ struct FDreamUIStructuralEdit
 	int32 ChildIndex = INDEX_NONE;
 
 	/**
+	 * InsertNode / MoveNode: the authored child of the destination the node goes in front of, by id. When set it wins
+	 * over ChildIndex, and an id the destination does not hold means last.
+	 *
+	 * A position by NEIGHBOUR rather than by number, because the number is a fact about the text and the caller usually
+	 * only knows the tree: a widget's index among its live siblings counts what the text does not write (the copies a
+	 * `for` makes, the widget a loop stands for), and for a reorder it depends on whether the node is still counted
+	 * where it came from. The sibling it now stands before is the same fact on both sides.
+	 */
+	FString BeforeId;
+
+	/**
 	 * InsertNode only: the named slot of ParentId -- a component instance -- that the new node fills. Empty means the
 	 * instance's own block, which is its DEFAULT slot: nesting is how a .dui fills that one, and how the designer does.
 	 *
@@ -95,13 +134,32 @@ struct FDreamUIStructuralEdit
 	 */
 	FString FillSlotName;
 
-	/** InsertNode: the type exactly as a .dui writes it -- "Text", "VerticalBox", "Row", "nier.Row", "/Game/UI/WBP_X". */
+	/** InsertNode, RetypeNode: the type exactly as a .dui writes it -- "Text", "VerticalBox", "Row", "nier.Row", "/Game/UI/WBP_X". */
 	FString TypeName;
+
+	/** RemoveProperty, SetStatement: the property's name as the line writes it, dotted path included (`AnchorData.SizeDelta`). */
+	FString PropertyName;
+
+	/**
+	 * RemoveProperty: a bare line (Node), an `@slot` one (Slot) -- the slot lines a new panel's slot class lacks -- or a
+	 * line of the ComponentIndex'th `+` block (Component). SetStatement: Node or Component.
+	 */
+	EDreamUIPatchTarget PropertyTarget = EDreamUIPatchTarget::Node;
+
+	/** SetStatement: the operator and its right side as the line writes them -- `<- GetTitle()`, `-> HandlePlay`, `<-> Volume`, `= 12`. */
+	FString Statement;
+
+	/**
+	 * RemoveProperty, SetStatement: which of the property's lines, by the handler or function it names (`HandlePlay`,
+	 * `GetTitle`, `Volume`, an emitted event's name). Empty: the property's first line. When no line names it -- a route
+	 * the compiler generated a handler for -- the property's line is taken if it has only one.
+	 */
+	FString StatementMatch;
 
 	/** InsertNode: the id of the new node. RenameNode: the id it becomes. */
 	FString NewId;
 
-	/** RemoveComponent: which `+` block, 0-based in author order. */
+	/** RemoveComponent, MoveComponent, and RemoveProperty / SetStatement on a Component target: which `+` block, 0-based in author order. */
 	int32 ComponentIndex = INDEX_NONE;
 
 	/** InsertComponent: the behaviour's spelling -- "UIButton", "VerticalBox". */
@@ -132,9 +190,9 @@ struct FDreamUIPropertyEdit
  * This is the component of the text pipeline that will be maintained for years, so its job is
  * deliberately the smallest one that makes the designer work: `.dui` is the single source of truth
  * and the designer is a graphical front end for it, which means a designer edit is a TEXT edit.
- * Structure is not editable from the designer at all -- no creating, deleting, reparenting or
- * renaming -- so this patcher never inserts a node, never removes one, and never reformats. It
- * replaces the text of one value, or inserts one line.
+ * Its first job is the smallest one: replace the text of one value, or insert one line. Its second,
+ * ApplyStructuralEdits, changes the shape of the file -- nodes, `+` blocks, rows, statements -- one
+ * whole statement at a time; see that function. Neither ever reformats.
  *
  * WHY IT EDITS TEXT INSTEAD OF PRINTING THE AST. A printer would be a hundred lines shorter and it
  * would rewrite the author's whole file on every save: their alignment, their blank lines, their

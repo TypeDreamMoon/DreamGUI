@@ -130,6 +130,29 @@ Blueprint 子类。项目在自己编辑器模块的 `StartupModule` 里，用 `
 能指定源文件的前提是类派生自 `UDreamTextUserWidget`；源文件就是它的类默认值
 `SourceFile`。从脚本做同样的事见[脚本](scripting.md)。
 
+<a id="converting-a-hand-built-blueprint"></a>
+
+### 把设计器搭的蓝图转成 .dui
+
+工具栏上的 **Convert to Text**（只对没有 `.dui` 的蓝图显示）、内容浏览器右键菜单里的 **Convert to Text (.dui)**（可多选），
+或者 `DreamUIConvertBlueprints` commandlet，会把一个在设计器里搭层级的蓝图变成由 `.dui` 编写的类：
+
+- 文件由设计器用的同一套写回写出：层级、每个和默认值不同的值、行为和面板、绑定（`<-`）和路由（`->`），
+  以及资产保留的每个动画，写成 `timeline 名字 external`。文件放在 `DUI/<去掉 /Game 的路径>/<资产名>.dui`，已存在就不写。
+- 节点 id 就是编译器给控件起的名字，所以事件图、变量和每个绑定照常工作。
+- 文件装不下的东西先列出来——没有写法的值、找不到行的节点或绑定——确认后才继续（commandlet 要加 `-AllowLoss`）。这部分会丢掉。
+- 改动之前会在旁边复制一份备份资产 `<资产名>_PreDui`；确认没问题后自己删。
+- 父类是 `UDreamUserWidget` 的会改成 `UDreamTextUserWidget`（它的子类，事件图不受影响）。父类是其他不继承
+  `UDreamTextUserWidget` 的类时拒绝——先让那个 C++ 基类改继承 `UDreamTextUserWidget`。
+- 编译后会拿重建的树和原来的树比对，有不一致就报出来。
+
+```text
+UnrealEditor-Cmd.exe <project>.uproject -run=DreamUIConvertBlueprints -Path=/Game/UI [-DryRun] [-AllowLoss]
+UnrealEditor-Cmd.exe <project>.uproject -run=DreamUIConvertBlueprints -Assets=/Game/UI/WBP_A,/Game/UI/WBP_B
+```
+
+`-DryRun` 只打印报告，不改任何东西。commandlet 会保存每个转换后的蓝图和它的备份；有蓝图被跳过时返回非零。
+
 <a id="the-text-is-the-only-truth"></a>
 
 ### 文本是唯一的真相
@@ -140,12 +163,20 @@ Blueprint 子类。项目在自己编辑器模块的 `StartupModule` 里，用 `
 
 **值会写回文件。** 改一个属性，写回会落在**持有这个值的那一行**上——不管节点的类型怎么写，在
 `@slot { … }` 块里就写进那个块，没有 id 的节点用它生成的 id 定位。设计器从不覆盖在磁盘上被改过的文件
-（DUI7002）。在画布上移动一个控件也是值的修改：它重算锚点，而 `AnchorData.*` 是会写回的。
+（DUI7002）。在画布上移动一个控件也是值的修改：它重算锚点，而 `AnchorData.*` 是会写回的；旋转写成
+`RelativeRotationEuler`，缩放写成 `RelativeScale`。资产引用（字体、纹理、材质）写成带引号的路径，列表、Set 和 Map
+写成 `[a, b]` 和 `{ 键: 值 }`，指向本层级另一个控件的引用写成那个节点的 id。节点从**样式**的 `+ Component` 行拿到的值，
+写成节点自己的覆盖行（它自己的 `+ Component { … }`），共享的样式不动。
 
-**结构归文件管。** 创建、删除、在树里移动、重命名、复制、粘贴控件，添加、删除或重排行为，替换面板——
-在由 `.dui` 支撑的类上，这些一律被拒绝，并弹出一条消息说出文件名：*结构在文本里；改文件来改它；
-设计器改值。* 旋转和缩放 gizmo 也不提供，因为写回只带 `AnchorData.*`，
-而语言里没有相对旋转或缩放的写法。
+**结构也会写回。** 创建、删除、复制、粘贴控件，移动和调序，重命名（带 `(was: 旧id)`，编译会把旧名字拥有的东西带过去），
+包一层和拆一层，添加、删除和重排行为，替换面板，以及三个类选择器（视觉、面板、自身布局），都会在从文件重建树的那次编译之前
+写进文件，并且和文件一起撤销。文件装不下的编辑在动手之前就拒绝，并说明原因——`for`/`each` 的模板、`if` 显示的控件、
+另一个文件的组件内部、给表格行改名或加 `+` 块。`rows` 表格的行可以按行删除、在本表格内移动和复制。
+
+**绑定和路由就是行。** Bind 控件写 `属性 <- 函数()`（*Create Binding* 会先检查这行能不能写再建函数）；*Remove Binding*
+删掉这行。被绑定属性的值行保持只读，它的 Bind 菜单里有 **Unbind and Set to This Value**，把当前显示的值写在绑定的位置。
+通过 `OnValueChangedBP` 报告值的控件（滑条、数值框、开关）会多一项 **Two-Way Bind to Variable**：候选是类自己的变量和
+viewmodel 成员，类型必须和事件给出的完全一致，写成 `Value <-> 变量`。
 
 **写不回去的属性行是灰的**，并说明原因：
 
@@ -154,13 +185,11 @@ Blueprint 子类。项目在自己编辑器模块的 `StartupModule` 里，用 `
 | 文件用绑定写它 | `Text <- GetTitle()`——写一个字面量会删掉绑定 |
 | 由循环展开而来 | `for` 生成的 N 个副本没有逐个实例的值可写 |
 | 在可写集合之外 | 写回没有地方放这个属性，改了也活不过编译 |
-| 值在 `.dui` 里没有写法 | 实际上就是对象引用：字体、纹理、材质。在面板里换一个新字体，预览变了，文件没变，下次编译改动就没了 |
+| 值在 `.dui` 里没有写法 | 指向另一个文件层级内部对象的引用，或语言写不出的值。预览会变，文件不会变，下次编译改动就没了 |
 
 写回时还会明确拒绝几种情况，"说出来而不是写进去"：一个值没法写成语言读得回来的字面量
-（今天只有非有限浮点数），报 DUI7003；一个由 `if` 决定的可见性，或一个无法承载这个改动的简写，
-报 DUI7004；一个来自节点样式 `+ Component` 行的值，报 DUI7005——
-样式是共享的，写进去会移动所有用这个样式的节点。代码含义见
-[DUI7xxx](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui7xxx)。
+（今天只有非有限浮点数），报 DUI7003；一个由 `if` 决定的可见性，或一行没人写过的语句，报 DUI7004。代码含义见
+[DUI7xxx](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui7xxx)，每种编辑在文本里变成什么见[设计器写回](../language/write-back.md)。
 
 自己在设计器里搭层级、不指向 `.dui` 的类，以上限制都不存在。
 
@@ -170,7 +199,8 @@ Blueprint 子类。项目在自己编辑器模块的 `StartupModule` 里，用 `
 
 细节面板的 **Events** 一节列出选中控件能发出的事件。`+`（*Add Event Handler*）会在事件图里创建一个签名正确的
 自定义事件，**以及**一条指向它的路由——和 `.dui` 里的 `OnClick -> HandleConfirm` 是同一个东西。
-已经有处理函数时，同一个按钮打开它。*Remove Event Route* 去掉路由。
+已经有处理函数时，同一个按钮打开它。*Remove Event Route* 去掉路由。在由 `.dui` 支撑的类上，路由就是那一行：写在节点的行上，
+节点自己用 `+` 行写的行为则写进那个块，和处理函数在同一个事务里；*Remove Event Route* 删掉这行。处理函数都留在事件图里。
 
 路由名的是**用户控件**（层级编译成的那个类）上的函数，UMG 也把事件处理放在那里。编译器把每条路由解析进
 `UDreamWidgetBlueprint::EventBindings`，`UDreamUserWidget::BindEventBindings` 在初始化时接上它们。它能接到本插件的两种事件：
@@ -188,8 +218,10 @@ Blueprint 子类。项目在自己编辑器模块的 `StartupModule` 里，用 `
 ## 动画编辑器
 
 动画编辑器基于 Sequencer。`.dui` 里的 `timeline` 块编译成类里的一个 `UDreamWidgetAnimation`；
-因为**文件拥有它**，每次编译都会重建，所以动画编辑器**只读**打开它，并在日志里说明原因，重命名它也会被拒绝
-（"在 `.dui` 的 timeline 块里改名"）。
+因为**文件拥有它**，每次编译都会重建。在编辑器能写回 `.dui` 的类上，动画编辑器以可编辑方式打开它，并**把每次编辑写回 timeline 块**：
+关键帧的时间和值、两个关键帧之间的 ease（从编译采样出的曲线反认出来）、事件关键帧、duration，加一条轨道就写一行、删一条就删一行。
+关键帧没变的轨道，那一行逐字节不动。Sequencer 用自动切线加的关键帧会变成线性，序列里也一样，所以看到的就是文件会构建出的；
+自定义切线或阶梯插值的关键帧没有写法，会被拒绝并给出出路。重命名仍被拒绝（"在 `.dui` 的 timeline 块里改名"）。
 
 要让 Sequencer 接管一个动画，把它的块改成 `external`——下面 `Pulse` 归文件，`Celebrate` 归资产：
 

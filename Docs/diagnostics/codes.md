@@ -33,6 +33,7 @@ refused: 1 lexer, 2 parser, 3 meaning, 4 values, 5 building the tree, 6 compilin
 | DUI2019 | MalformedSlotDeclaration | A slot with `default` twice, or a block that both declares and fills. |
 | DUI2020 | MalformedRows | A `rows` table that does not read: a column list that is not names, a column twice, a row with the wrong number of values. |
 | DUI2021 | MalformedViewModelsBlock | A `viewmodels` line that is not `Type Name`, `= new`, `= global ["Name"]` or `= parent ["Name"]` (an empty `""` name included), or a `viewmodels` block inside a node. |
+| DUI2023 | MalformedContainer | A list (`[a, b]`) or a map (`{ key: value }`) that does not read: a bracket never closed, two elements with no comma between them, or a map entry that is not `key: value`. |
 | DUI3001 | DuplicateNodeId | Two nodes share an id. |
 | DUI3002 | InvalidNodeId | An id that is not an identifier, starts with a digit, or is a keyword. |
 | DUI3003 | UnknownNodeType | A type that is no tag, container, alias, registered widget or path. |
@@ -65,6 +66,7 @@ refused: 1 lexer, 2 parser, 3 meaning, 4 values, 5 building the tree, 6 compilin
 | DUI4006 | PropertyNotWritable | A property text cannot write: transient, deprecated, part of the object graph, a delegate. |
 | DUI4007 | UnknownResource | `@Name` naming no resource entry. |
 | DUI4008 | ResourceTypeMismatch | A resource whose value is not its declared type, or a non-`Asset` resource used as a node type. |
+| DUI4009 | ContainerTypeMismatch | A list on a property that is not an array or a set, a map on one that is not a map, a single value on a container, or a set or map of nodes (only an array can hold node ids). |
 | DUI5001 | AssetNotFound | An asset or class path that does not load. |
 | DUI5002 | NoVisualForProperty | A property of a visual the node's type does not create. |
 | DUI5003 | NoPanelSlotForProperty | A slot line on a node whose parent lays out no panel. |
@@ -117,4 +119,4 @@ refused: 1 lexer, 2 parser, 3 meaning, 4 values, 5 building the tree, 6 compilin
 | DUI7002 | SourceFileChangedUnderEdit | The file changed under a pending edit; nothing was written. |
 | DUI7003 | PatchValueNotRepresentable | A value the language cannot spell (a non-finite number); its line is left alone. |
 | DUI7004 | PatchSyntaxNotWritable | An edit to something no line spells: a visibility an `if` decides, a shorthand that cannot be rewritten. |
-| DUI7005 | PatchStyleComponentNotWritable | An edit to a value a style's `+` line gives the node; add the line to the node or change the style. |
+| DUI7005 | PatchStyleComponentNotWritable | An edit to a value a style's `+` line gives the node, from a caller that writes no override. The designer writes it as a `+` line on the node instead; a script can add that line, or change the style. |

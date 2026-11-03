@@ -69,6 +69,9 @@ namespace DreamUIText
 		CloseBrace,
 		OpenParen,
 		CloseParen,
+		/** `[` and `]`, around a list value. */
+		OpenBracket,
+		CloseBracket,
 		Comma,
 		Dot,
 		Colon,
@@ -430,6 +433,8 @@ namespace DreamUIText
 				case TEXT('}'): EmitPunctuation(OutTokens, ETokenKind::CloseBrace, 1); continue;
 				case TEXT('('): EmitPunctuation(OutTokens, ETokenKind::OpenParen, 1); continue;
 				case TEXT(')'): EmitPunctuation(OutTokens, ETokenKind::CloseParen, 1); continue;
+				case TEXT('['): EmitPunctuation(OutTokens, ETokenKind::OpenBracket, 1); continue;
+				case TEXT(']'): EmitPunctuation(OutTokens, ETokenKind::CloseBracket, 1); continue;
 				case TEXT(','): EmitPunctuation(OutTokens, ETokenKind::Comma, 1); continue;
 				case TEXT('.'): EmitPunctuation(OutTokens, ETokenKind::Dot, 1); continue;
 				case TEXT(':'): EmitPunctuation(OutTokens, ETokenKind::Colon, 1); continue;
@@ -877,6 +882,7 @@ namespace DreamUIText
 			{
 			case TEXT('-'): case TEXT('"'): case TEXT('#'): case TEXT('/'): case TEXT(';'):
 			case TEXT('{'): case TEXT('}'): case TEXT('('): case TEXT(')'): case TEXT(','):
+			case TEXT('['): case TEXT(']'):
 			case TEXT('.'): case TEXT(':'): case TEXT('='): case TEXT('+'): case TEXT('@'):
 				return false;
 			default:
@@ -4818,6 +4824,15 @@ namespace DreamUIText
 					return false;
 				}
 				break;
+			case ETokenKind::OpenBracket:
+			case ETokenKind::OpenBrace:
+				// A `{` reaches here only where a VALUE is expected -- after `=`, a comma, a map's `:` -- and nowhere a
+				// node's block can open: a block follows a header, never an operator. So it is a map.
+				if (!ParseContainer(OutValue))
+				{
+					return false;
+				}
+				break;
 			case ETokenKind::At:
 			{
 				// `@Accent` -- a reference into the resources block. The location is the '@', which
@@ -4930,6 +4945,76 @@ namespace DreamUIText
 
 			OutValue.Raw = Slice(OpenToken.Start, CloseEnd);
 			return bClosed;
+		}
+
+		/**
+		 * `[a, b, c]` or `{ k1: v1, k2: v2 }`: each element (each key and each value) parsed as a value of its own, so a list of
+		 * tuples or a map of colours reads exactly as the single values do. Newlines inside are whitespace, as in a tuple; a
+		 * trailing comma is tolerated, as in a tuple. Raw is the whole slice, delimiters included, for the write-back to
+		 * leave byte for byte when nothing in it changed.
+		 */
+		bool ParseContainer(FDreamUIValue& OutValue)
+		{
+			const FToken OpenToken = Current();
+			const bool bMap = OpenToken.Kind == ETokenKind::OpenBrace;
+			const ETokenKind CloseKind = bMap ? ETokenKind::CloseBrace : ETokenKind::CloseBracket;
+			OutValue.Kind = bMap ? EDreamUIValueKind::Map : EDreamUIValueKind::List;
+			OutValue.Location = OpenToken.Location;
+			Advance();
+
+			auto Refuse = [this, &OpenToken](const FString& InMessage)
+			{
+				Diagnostics.AddError(EDreamUIDiagnosticCode::MalformedContainer, OpenToken.Location, InMessage);
+			};
+			for (;;)
+			{
+				SkipSeparators();
+				if (Check(CloseKind))
+				{
+					OutValue.Raw = Slice(OpenToken.Start, Current().End);
+					Advance();
+					return true;
+				}
+				if (Check(ETokenKind::EndOfFile) || (!bMap && Check(ETokenKind::CloseBrace)))
+				{
+					Refuse(bMap ? TEXT("this '{' never reaches its '}'") : TEXT("this '[' never reaches its ']'"));
+					return false;
+				}
+				if (bMap)
+				{
+					FDreamUIValue Key;
+					if (!ParseValue(Key))
+					{
+						return false;
+					}
+					SkipSeparators();
+					if (!Check(ETokenKind::Colon))
+					{
+						Refuse(FString::Printf(TEXT("a map entry is written 'key: value', and '%s' has no ':' after it"), *Ellipsize(Key.Raw)));
+						return false;
+					}
+					Advance();
+					SkipSeparators();
+					OutValue.Keys.Add(MoveTemp(Key));
+				}
+				FDreamUIValue Item;
+				if (!ParseValue(Item))
+				{
+					return false;
+				}
+				OutValue.Items.Add(MoveTemp(Item));
+				SkipSeparators();
+				if (Check(ETokenKind::Comma))
+				{
+					Advance();
+					continue;
+				}
+				if (!Check(CloseKind))
+				{
+					Refuse(FString::Printf(TEXT("expected ',' or '%s' after an element, found '%s'"), bMap ? TEXT("}") : TEXT("]"), *DescribeCurrent()));
+					return false;
+				}
+			}
 		}
 
 		FString SliceTrimmed(int32 InStart, int32 InEnd) const

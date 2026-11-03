@@ -143,6 +143,11 @@ enum class EDreamUIDiagnosticCode : int32
 	 * `Type Name = parent ["Name"]`, or a `viewmodels` block written inside a node.
 	 */
 	MalformedViewModelsBlock = 2021,
+	/**
+	 * A list (`[a, b]`) or a map (`{ key: value }`) value that does not read: an opening bracket with no close, two elements
+	 * with no comma between them, or a map entry that is not `key: value`.
+	 */
+	MalformedContainer = 2023,
 
 	// --- 3xxx semantic ---
 	/**
@@ -263,6 +268,11 @@ enum class EDreamUIDiagnosticCode : int32
 	UnknownResource = 4007,
 	/** A `resources` entry whose declared type does not match its own literal (`Color Accent = 8`). */
 	ResourceTypeMismatch = 4008,
+	/**
+	 * A list written to a property that is not an array or a set, a map to one that is not a map, a container to a
+	 * property that is not one, or a set or map of nodes -- whose elements a node id cannot be resolved into.
+	 */
+	ContainerTypeMismatch = 4009,
 
 	// --- 5xxx builder ---
 	/** The node names an asset that could not be loaded. */

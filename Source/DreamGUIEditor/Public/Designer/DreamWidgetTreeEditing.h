@@ -140,7 +140,9 @@ namespace DreamWidgetTreeEditing
 	DREAMGUIEDITOR_API void ForEachWidgetInSubtree(UDreamWidget* InRoot, TFunctionRef<void(UDreamWidget*)> InPredicate);
 
 	/** InDesired, suffixed until no other widget in InTree (InIgnore excepted) answers to it. */
-	DREAMGUIEDITOR_API FString MakeUniqueDisplayName(const UDreamWidgetTree* InTree, const FString& InDesired, const UDreamWidget* InIgnore = nullptr);
+	/** InReserved: names taken without being in the tree -- the ids a `.dui` declares (DreamUITextAuthoring::CollectAuthoredNodeIds). */
+	DREAMGUIEDITOR_API FString MakeUniqueDisplayName(const UDreamWidgetTree* InTree, const FString& InDesired, const UDreamWidget* InIgnore = nullptr,
+		const TSet<FString>* InReserved = nullptr);
 
 	/** Whether InWidget is part of InBlueprint's authored tree at all. Guards every function here. */
 	DREAMGUIEDITOR_API bool IsTemplateWidgetOf(const UDreamWidgetBlueprint* InBlueprint, const UDreamWidget* InWidget);

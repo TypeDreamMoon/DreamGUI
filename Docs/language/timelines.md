@@ -25,3 +25,7 @@ optional `ease` from the tween library's names. A line with no path drives the w
 -> Name` is a key on the event track. `loop` is `Once`, `Loop` or `PingPong`; `duration` defaults to the last key. A
 track may drive what the animation editor offers -- a property marked `Interp`. `external` names an animation that
 lives in the asset and is edited in Sequencer. See also [Timelines](https://gui.toolchain.64hz.cn/en/docs/dui/timelines) on the docs site.
+
+A block the file owns can be edited in the animation editor too: each edit is written back into the block -- keys,
+eases, event keys, the duration, a track added or removed as a line -- and a key with tangents of its own is refused.
+See [Designer write-back](write-back.md).

@@ -55,6 +55,7 @@ DreamGUI 针对一个 `.dui` 给出的每一条消息都带有一个编码，`DU
 | [DUI2019](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui2xxx#dui2019) | `MalformedSlotDeclaration` | error | 出现两次 `default` 的 slot，或既声明又填充的块。 |
 | [DUI2020](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui2xxx#dui2020) | `MalformedRows` | error | 无法读取的 `rows` 表：列清单不是名称、某一列出现两次、某行的值数量不对。 |
 | [DUI2021](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui2xxx#dui2021) | `MalformedViewModelsBlock` | error | 不是 `Type Name`、`= new`、`= global ["Name"]` 或 `= parent ["Name"]` 的 `viewmodels` 行（包括为空的 `""` 名称），或位于节点内部的 `viewmodels` 块。 |
+| [DUI2023](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui2xxx#dui2023) | `MalformedContainer` | 错误 | 读不通的列表（`[a, b]`）或 Map（`{ 键: 值 }`）：括号没有闭合、两个元素之间缺逗号，或者 Map 的一项不是 `键: 值`。 |
 | [DUI3001](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui3xxx#dui3001) | `DuplicateNodeId` | error | 两个节点共享同一个 id。 |
 | [DUI3002](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui3xxx#dui3002) | `InvalidNodeId` | error | 不是标识符、以数字开头或是关键字的 id。 |
 | [DUI3003](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui3xxx#dui3003) | `UnknownNodeType` | error | 不是标签、容器、别名、已注册控件或路径的类型。 |
@@ -87,6 +88,7 @@ DreamGUI 针对一个 `.dui` 给出的每一条消息都带有一个编码，`DU
 | [DUI4006](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui4xxx#dui4006) | `PropertyNotWritable` | 错误 | 一个文本写不了的属性：瞬态的、已弃用的、属于对象图的，或者是委托。 |
 | [DUI4007](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui4xxx#dui4007) | `UnknownResource` | 错误 | 一个没有指向任何资源条目的 `@Name`。 |
 | [DUI4008](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui4xxx#dui4008) | `ResourceTypeMismatch` | 错误 | 一个值与声明的类型不符的资源，或者一个被当作节点类型、却不是 `Asset` 的资源。 |
+| [DUI4009](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui4xxx#dui4009) | `ContainerTypeMismatch` | 错误 | 列表写在了不是数组或 Set 的属性上、Map 写在了不是 Map 的属性上、单个值写在了容器属性上，或者节点的 Set/Map（只有数组能存节点 id）。 |
 | [DUI5001](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui5xxx#dui5001) | `AssetNotFound` | 错误 | 一个加载不出来的资产或类路径。 |
 | [DUI5002](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui5xxx#dui5002) | `NoVisualForProperty` | 错误 | 一个属于视觉对象、而节点的类型并不创建那个视觉对象的属性。 |
 | [DUI5003](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui5xxx#dui5003) | `NoPanelSlotForProperty` | 错误 | 一个父节点不布局面板、却写了 slot 行的节点。 |
@@ -138,4 +140,4 @@ DreamGUI 针对一个 `.dui` 给出的每一条消息都带有一个编码，`DU
 | [DUI7002](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui7xxx#dui7002) | `SourceFileChangedUnderEdit` | 错误 | 文件在一次待写入的编辑底下被改动了，于是什么都没有写入。 |
 | [DUI7003](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui7xxx#dui7003) | `PatchValueNotRepresentable` | 错误 | 一个这门语言写不出来的值（非有限的数），它所在的那一行保持原样。 |
 | [DUI7004](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui7xxx#dui7004) | `PatchSyntaxNotWritable` | 错误 | 对没有哪一行写着它的东西的一次编辑：由 `if` 决定的可见性，或者无法改写的简写。 |
-| [DUI7005](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui7xxx#dui7005) | `PatchStyleComponentNotWritable` | 错误 | 对样式 `+` 行给节点的值的一次编辑；要么给节点加上那一行，要么去改样式。 |
+| [DUI7005](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui7xxx#dui7005) | `PatchStyleComponentNotWritable` | 错误 | 对样式 `+` 行给节点的值的一次编辑，调用方又不写覆盖行。设计器会改为在节点上写一条 `+` 行；脚本可以自己加这一行，或者修改样式。 |

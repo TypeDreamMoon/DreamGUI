@@ -22,4 +22,6 @@ timeline Pulse {
 timeline Celebrate external
 ```
 
-每条轨道一行：一条节点 id 组成的路径（`Row/Title`），它驱动的属性，以及关键帧 `time = value`，每个关键帧后面可以跟一个取自补间库名字的 `ease`。没有路径的行驱动的是动画所在的那个控件。`@时间 -> 名称` is a key on the event track. `loop` is `Once`, `Loop` or `PingPong`; `duration` 默认取最后一个关键帧。轨道可以驱动动画编辑器提供的任何东西——一个标了 `Interp` 的属性。`external` 命名一个住在资产里、由 Sequencer 编辑的动画。另见文档站点上的[时间线](https://gui.toolchain.64hz.cn/en/docs/dui/timelines)。
+每条轨道一行：一条节点 id 组成的路径（`Row/Title`），它驱动的属性，以及关键帧 `time = value`，每个关键帧后面可以跟一个取自补间库名字的 `ease`。没有路径的行驱动的是动画所在的那个控件。`@时间 -> 名称` 是事件轨道上的一个关键帧。`loop` 取 `Once`、`Loop` 或 `PingPong`；`duration` 默认取最后一个关键帧。轨道可以驱动动画编辑器提供的任何东西——一个标了 `Interp` 的属性。`external` 命名一个住在资产里、由 Sequencer 编辑的动画。另见文档站点上的[时间线](https://gui.toolchain.64hz.cn/en/docs/dui/timelines)。
+
+文件拥有的块也可以在动画编辑器里编辑：每次编辑都会写回块里——关键帧、ease、事件关键帧、duration，加一条轨道就写一行、删一条就删一行——自定义切线的关键帧会被拒绝。见[设计器写回](write-back.md)。

@@ -12,6 +12,35 @@ class FDreamWidgetBlueprintEditor;
 class UDreamWidget;
 class UDreamWidgetBlueprint;
 class FMulticastDelegateProperty;
+class UK2Node_CustomEvent;
+
+/**
+ * The two writes behind the Events rows, kept out of the customization so a script or a test makes them exactly as a
+ * click does. A route is named by the compiler's variable name of the widget, which of its objects carries the event,
+ * and the event's name.
+ *
+ * On a text-authored class a route is its `Event -> Handler` line: the compile rebuilds the Blueprint's route list from
+ * the `.dui`, so the line is what is written (in the node's own `+` block for a behaviour the node writes, on the
+ * node's line otherwise), inside the same transaction as the handler, and the compile reads it back.
+ */
+namespace DreamWidgetEventRoutes
+{
+	/** The route the Blueprint holds for this event on this object, or null. */
+	DREAMGUIEDITOR_API const FDreamWidgetEventBinding* FindRoute(const UDreamWidgetBlueprint* InBlueprint, FName InWidgetVariableName,
+		EDreamWidgetBindingTarget InTarget, int32 InBehaviourIndex, FName InEventName);
+
+	/**
+	 * A handler for this event and the route that names it, made as one gesture: a custom event in the event graph with
+	 * the event's own signature, and the route. On a text-authored class the line is checked before anything is made.
+	 * Returns the handler, or null when nothing was made (and said why). A route that already exists is not doubled.
+	 */
+	DREAMGUIEDITOR_API UK2Node_CustomEvent* AddRouteWithHandler(UDreamWidgetBlueprint* InBlueprint, FName InWidgetVariableName,
+		EDreamWidgetBindingTarget InTarget, int32 InBehaviourIndex, FName InEventName);
+
+	/** Take the route out -- the list entry, or the `.dui` line. The handler stays in the event graph. False when nothing was removed. */
+	DREAMGUIEDITOR_API bool RemoveRoute(UDreamWidgetBlueprint* InBlueprint, FName InWidgetVariableName,
+		EDreamWidgetBindingTarget InTarget, int32 InBehaviourIndex, FName InEventName);
+}
 
 /**
  * UMG's green "+" for the DreamUI designer: one row per BlueprintAssignable event on whatever the

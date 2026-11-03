@@ -118,6 +118,28 @@ public:
 	void Poke() { OnPoked.Broadcast(); }
 };
 
+/** Containers of each kind the language writes -- a list, a set, a map, a list of short-form values -- and one plain value. */
+UCLASS(NotBlueprintable, NotBlueprintType, Transient, HideDropdown)
+class UDreamUIContainerTestBehaviour : public UDreamUIBehaviour
+{
+	GENERATED_BODY()
+public:
+	UPROPERTY(EditAnywhere, Category = "Test")
+	TArray<FString> Names;
+
+	UPROPERTY(EditAnywhere, Category = "Test")
+	TSet<FName> Tags;
+
+	UPROPERTY(EditAnywhere, Category = "Test")
+	TMap<FName, FLinearColor> Colors;
+
+	UPROPERTY(EditAnywhere, Category = "Test")
+	TArray<FVector2D> Sizes;
+
+	UPROPERTY(EditAnywhere, Category = "Test")
+	float Single = 0.0f;
+};
+
 /** A user widget parent with a handler, so a .dui can route an event without authoring a graph. */
 UCLASS(NotBlueprintable, NotBlueprintType, Transient, HideDropdown)
 class UDreamUIEventTestUserWidget : public UDreamTextUserWidget
