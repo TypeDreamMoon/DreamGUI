@@ -13,29 +13,27 @@ struct FDreamUIStructuralEdit;
  * What the designer is allowed to do to a hierarchy that came out of a `.dui`.
  *
  * The direction is "the text is the only truth and the designer is a graphical front end for it".
- * That buys a lot -- one place to read, one place to diff, one place to review -- and it costs
- * exactly one thing: the designer can no longer do everything it used to. Two kinds of edit stop
- * being possible, for two different reasons:
+ * That buys one place to read, one place to diff, one place to review -- and it means every edit the
+ * designer makes has to become a line of the file, or be refused before it is made. An edit that is
+ * neither -- one that appears, works, survives every check the author would think to make, and is
+ * gone at the next compile because the compile rebuilds the tree from the file -- is the failure
+ * this namespace exists to prevent.
  *
- *   STRUCTURE, because nothing writes it back. The write-back patcher replaces the text of ONE value
- *   or inserts ONE line; it never inserts a node, removes one, or reorders anything (see
- *   FDreamUITextPatcher's class comment, which says so as a design constraint rather than as a
- *   limitation to be lifted). So a create, a delete, a reparent, a rename or a paste performed here
- *   would live until the next compile and then be gone, because the next compile rebuilds the tree
- *   from the file.
+ * So the designer's edits are ASKED here first:
  *
- *   PROPERTIES THE WRITE-BACK WILL NOT CARRY, for five separate reasons that all end the same way.
- *   The details panel shows every UPROPERTY on a UDreamWidget; the language addresses a node, its
- *   panel slot and its behaviours, and the write-back covers a subset even of that. A property is
- *   refused when it is outside the writable set, when its VALUE has no `.dui` spelling (an asset
- *   reference -- a font, a texture, a material), when the file drives it with `<-`, when a loop line
- *   produced N copies of the widget, and -- for the Bind control rather than a value -- when a
- *   binding would be authored from the panel at all.
+ *   STRUCTURE -- creating, deleting, duplicating, pasting, moving, renaming, wrapping, behaviours,
+ *   panels, the class pickers, `rows` rows -- is written into the file by the write-back
+ *   (FDreamUITextWriteBack, through FDreamUITextPatcher's structural edits), and CheckStructuralEdit
+ *   applies the edit to a copy of the text first: a refusal there is the patcher's own reason, said
+ *   before the tree is touched (a loop template, a widget an `if` shows, the inside of another file's
+ *   component).
  *
- * Both failures have the same shape and it is the worst shape an editor can have: the edit appears,
- * works, survives every check the author would think to make, and is silently gone at the next
- * compile. So this exists to turn both into something visible BEFORE the edit -- a refusal that says
- * why, or a row that is drawn disabled.
+ *   STATEMENTS -- a binding, a route, a two-way binding, a value written in place of a binding -- are
+ *   placed by ResolveStatementSite and written by WriteStatementToText, as one line each.
+ *
+ *   PROPERTIES THE WRITE-BACK CANNOT CARRY are drawn disabled with the reason (GetPropertyEditVerdict):
+ *   outside the writable set, a value with no `.dui` spelling, a property the file drives with `<-`,
+ *   a widget a loop line made N copies of.
  *
  * WHY A GATE AND NOT A SECOND STORE. The rejected alternative was to let the designer edit anything
  * and keep the extra values on the asset, merging them back over the generated tree. That is a
@@ -43,22 +41,13 @@ struct FDreamUIStructuralEdit;
  * remove -- and the merge has no answer for the case that matters, where the file and the asset
  * disagree because a human edited both.
  *
- * WHERE THE REFUSALS LIVE, and why not all in one place: the five structural primitives are in
- * DreamWidgetTreeEditing, but PASTE is not one of them -- it is
- * FDreamWidgetBlueprintEditor::DesignerPasteWidgets, which builds its own copies straight onto the
- * tree. Adding a behaviour is a third shape again (DesignerAddComponentBy / DesignerRemoveComponent
- * call NotifyStructureChanged directly), replacing a panel is a fourth (ReplaceSelectedWidgetLayout),
- * and the hierarchy panel's drag-drop is a fifth -- it calls TrySetParent on the widgets itself.
- * Every one of those call sites asks this namespace, and the message is built here so ten refusals
- * cannot drift into ten different sentences.
- *
- * ONE RULE ENFORCED SOMEWHERE ELSE ENTIRELY, named here because the two halves have to agree: the
- * ROTATE and SCALE gizmos are withheld on a text-authored hierarchy, by
- * FDreamWidgetDesignerViewportClient::GetWidgetMode. The reason is the writable set -- the write-back
- * carries `AnchorData.*` and nothing else, so a MOVE survives (it recomputes the anchors, and those
- * are written) while a rotate or a scale writes only RelativeRotation / RelativeScale, which the
- * language has no spelling for. A panel that greyed the rotation while the gizmo went on writing it
- * would be the contradiction this pair exists to avoid.
+ * WHERE THE CALLS LIVE, and why not all in one place: the structural primitives are in
+ * DreamWidgetTreeEditing, but PASTE is FDreamWidgetBlueprintEditor::DesignerPasteWidgets, behaviours
+ * are DesignerAddComponentBy / DesignerRemoveComponent / DesignerMoveComponent, replacing a panel is
+ * ReplaceSelectedWidgetLayout, the hierarchy panel's drag-drop calls TrySetParent itself, the Bind
+ * control is DreamWidgetPropertyBindingExtension and the Events rows are DreamWidgetEventRoutes. Every
+ * one of those asks this namespace, and a refusal's message is built here so they cannot drift into
+ * different sentences.
  */
 namespace DreamUITextAuthoring
 {

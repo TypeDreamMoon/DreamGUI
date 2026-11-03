@@ -190,9 +190,9 @@ struct FDreamUIPropertyEdit
  * This is the component of the text pipeline that will be maintained for years, so its job is
  * deliberately the smallest one that makes the designer work: `.dui` is the single source of truth
  * and the designer is a graphical front end for it, which means a designer edit is a TEXT edit.
- * Structure is not editable from the designer at all -- no creating, deleting, reparenting or
- * renaming -- so this patcher never inserts a node, never removes one, and never reformats. It
- * replaces the text of one value, or inserts one line.
+ * Its first job is the smallest one: replace the text of one value, or insert one line. Its second,
+ * ApplyStructuralEdits, changes the shape of the file -- nodes, `+` blocks, rows, statements -- one
+ * whole statement at a time; see that function. Neither ever reformats.
  *
  * WHY IT EDITS TEXT INSTEAD OF PRINTING THE AST. A printer would be a hundred lines shorter and it
  * would rewrite the author's whole file on every save: their alignment, their blank lines, their
