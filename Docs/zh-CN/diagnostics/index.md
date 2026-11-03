@@ -140,4 +140,4 @@ DreamGUI 针对一个 `.dui` 给出的每一条消息都带有一个编码，`DU
 | [DUI7002](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui7xxx#dui7002) | `SourceFileChangedUnderEdit` | 错误 | 文件在一次待写入的编辑底下被改动了，于是什么都没有写入。 |
 | [DUI7003](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui7xxx#dui7003) | `PatchValueNotRepresentable` | 错误 | 一个这门语言写不出来的值（非有限的数），它所在的那一行保持原样。 |
 | [DUI7004](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui7xxx#dui7004) | `PatchSyntaxNotWritable` | 错误 | 对没有哪一行写着它的东西的一次编辑：由 `if` 决定的可见性，或者无法改写的简写。 |
-| [DUI7005](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui7xxx#dui7005) | `PatchStyleComponentNotWritable` | 错误 | 对样式 `+` 行给节点的值的一次编辑；要么给节点加上那一行，要么去改样式。 |
+| [DUI7005](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui7xxx#dui7005) | `PatchStyleComponentNotWritable` | 错误 | 对样式 `+` 行给节点的值的一次编辑，调用方又不写覆盖行。设计器会改为在节点上写一条 `+` 行；脚本可以自己加这一行，或者修改样式。 |

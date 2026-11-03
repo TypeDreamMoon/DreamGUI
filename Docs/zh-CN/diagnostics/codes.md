@@ -125,4 +125,4 @@ description: "诊断"
 | DUI7002 | SourceFileChangedUnderEdit | 文件在一个待处理的修改之下发生了变化；没有写入任何内容。 |
 | DUI7003 | PatchValueNotRepresentable | 一个这门语言无法拼写的值（一个非有限数字）；它所在的行保持不变。 |
 | DUI7004 | PatchSyntaxNotWritable | 一个对任何一行都无法拼写的东西的修改：由 `if` 决定的可见性、无法重写的简写。 |
-| DUI7005 | PatchStyleComponentNotWritable | 一个对接点值的修改，而这个值来自样式的 `+` 行；把这一行加到节点上，或者修改样式。 |
+| DUI7005 | PatchStyleComponentNotWritable | 一个对节点值的修改，而这个值来自样式的 `+` 行，调用方又不写覆盖行。设计器会改为在节点上写一条 `+` 行；脚本可以自己加这一行，或者修改样式。 |

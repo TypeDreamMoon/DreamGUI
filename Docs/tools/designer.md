@@ -125,6 +125,32 @@ A class's hierarchy can come from a `.dui` file. The *DreamUI Source* dropdown o
 A class can name a source file when it derives from `UDreamTextUserWidget`; the file is its class default
 `SourceFile`. Doing the same from a script is in [Scripting](scripting.md).
 
+### Converting a hand-built Blueprint
+
+**Convert to Text** on the toolbar (shown only for a Blueprint that names no `.dui`), **Convert to Text (.dui)** in the
+Content Browser's menu (several at once), or the `DreamUIConvertBlueprints` commandlet, turns a Blueprint whose
+hierarchy was built in the designer into one authored in a `.dui`:
+
+- The file is written by the same write-back the designer uses: the hierarchy, every value that differs from the
+  default, the behaviours and panels, the bindings (`<-`) and routes (`->`), and every animation the asset keeps as
+  `timeline Name external`. It goes to `DUI/<path under /Game>/<AssetName>.dui`, and never over a file that exists.
+- Node ids are the compiler's names for the widgets, so the event graph, the variables and every binding keep working.
+- What the file cannot hold is listed first -- a value with no spelling, a node or a binding with no line -- and the
+  conversion goes ahead only when you confirm it (the commandlet: only with `-AllowLoss`). That loss is final.
+- A backup of the asset, `<AssetName>_PreDui`, is made beside it before anything changes; delete it once you are happy.
+- A Blueprint whose parent is `UDreamUserWidget` is reparented to `UDreamTextUserWidget` (its subclass: the graph is
+  unaffected). A parent that is any other class not derived from `UDreamTextUserWidget` is refused -- make that C++ base
+  derive from `UDreamTextUserWidget` first.
+- After the compile the rebuilt tree is compared with the one it came from, and any difference is reported.
+
+```text
+UnrealEditor-Cmd.exe <project>.uproject -run=DreamUIConvertBlueprints -Path=/Game/UI [-DryRun] [-AllowLoss]
+UnrealEditor-Cmd.exe <project>.uproject -run=DreamUIConvertBlueprints -Assets=/Game/UI/WBP_A,/Game/UI/WBP_B
+```
+
+`-DryRun` prints the report and changes nothing. The commandlet saves each converted Blueprint and its backup, and exits
+non-zero when any Blueprint was skipped.
+
 ### The text is the only truth
 
 Once a class names a `.dui`, **the file is the only truth about its hierarchy, and the designer is a graphical front
@@ -135,13 +161,26 @@ quietly vanish.
 **Values are written back.** Change a property and the write-back lands on **the line that holds the value** —
 whatever the node's type is written as, inside a `@slot { … }` block when there is one, and on a node with no id
 by the id made for it. The designer never writes over a file that changed on disk (DUI7002). Moving a widget on
-the canvas is a value edit too: it recomputes the anchors, and `AnchorData.*` is written back.
+the canvas is a value edit too: it recomputes the anchors, and `AnchorData.*` is written back; a turn is written as
+`RelativeRotationEuler`, a scale as `RelativeScale`. Asset references (a font, a texture, a material) are written as
+their quoted paths, lists, sets and maps as `[a, b]` and `{ key: value }`, and a reference to another widget of the
+hierarchy as that node's id. A value a node takes from its **style's** `+ Component` line is written as an override on
+the node -- a `+ Component { … }` line of its own -- and the shared style is left alone.
 
-**Structure belongs to the file.** Creating, deleting, moving in the tree, renaming, duplicating and pasting
-widgets, adding, removing or reordering behaviours, replacing a panel — on a class backed by a `.dui` each of these
-is refused, with a message that names the file: *structure lives in the text; edit the file to change it; the
-designer edits values.* The rotate and scale gizmos are withheld too, since the write-back carries `AnchorData.*`
-and the language has no spelling for a relative rotation or scale.
+**Structure is written back too.** Creating, deleting, duplicating and pasting widgets, moving and reordering them,
+renaming (written with `(was: OldId)`, so the compile carries what the old name owned), wrapping in a panel and
+unwrapping, adding, removing and reordering behaviours, replacing a panel and the three class pickers (visual, panel,
+self layout) are each written into the file before the compile that rebuilds the tree from it, and undo with it. An
+edit the file cannot take is refused before anything changes, with the reason -- the template of a `for` or an `each`,
+a widget an `if` shows, the inside of another file's component, a row renamed or given a `+` block. A row of a `rows`
+table is removed, moved inside its table and duplicated as its line.
+
+**Bindings and routes are lines.** The Bind control writes `Property <- Function()` (and *Create Binding* checks the line
+before it makes the function); *Remove Binding* takes the line out. A bound property's value row stays read-only, and
+its Bind menu offers **Unbind and Set to This Value**, which writes the value it shows in place of the binding. A
+control that announces its value through `OnValueChangedBP` (a slider, a spin box, a toggle) offers **Two-Way Bind to
+Variable**: the class's own variables and viewmodel members of exactly the type the event hands over, written as
+`Value <-> Variable`.
 
 **Property rows that cannot be written back are disabled**, with the reason:
 
@@ -150,13 +189,12 @@ and the language has no spelling for a relative rotation or scale.
 | The file writes it as a binding | `Text <- GetTitle()` — a literal would delete the binding |
 | A loop made it | The N copies a `for` makes have no per-instance value to write |
 | Outside the writable set | The write-back has no home for the property, so an edit would not survive a compile |
-| The value has no `.dui` spelling | In practice, object references: a font, a texture, a material. Pick a new font in the panel and the preview changes, the file does not, and the change is gone at the next compile |
+| The value has no `.dui` spelling | A reference to an object inside another file's hierarchy, or a value the language cannot spell. The preview would change, the file would not, and the change would be gone at the next compile |
 
 The write-back also refuses a few cases out loud rather than writing them: a value that cannot be written as a literal
-the language reads back (today, only non-finite floats) is DUI7003; a visibility an `if` decides, or a shorthand that
-cannot take the change, is DUI7004; a value that comes from a `+ Component` line of the node's style is DUI7005 —
-the style is shared, and writing there would move every node that wears it. The codes are in
-[DUI7xxx](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui7xxx).
+the language reads back (today, only non-finite floats) is DUI7003; a visibility an `if` decides, or a line nobody
+wrote, is DUI7004. The codes are in [DUI7xxx](https://gui.toolchain.64hz.cn/en/docs/diagnostics/dui7xxx), and what
+each edit becomes in the text is in [Designer write-back](../language/write-back.md).
 
 A class whose hierarchy is built in the designer and names no `.dui` has none of these limits.
 
@@ -165,7 +203,9 @@ A class whose hierarchy is built in the designer and names no `.dui` has none of
 The details panel's **Events** section lists the events the selected widget can raise. The `+` (*Add Event Handler*)
 creates a custom event in the event graph with the right signature, **and** the route that names it — the same thing
 as `OnClick -> HandleConfirm` in a `.dui`. When a handler exists, the same button opens it. *Remove Event Route*
-takes the route away.
+takes the route away. On a class backed by a `.dui` the route is that line: written on the node's line, or in the
+node's own `+ Component` block for a behaviour the node writes, in the same transaction as the handler, and taken out
+by *Remove Event Route*. The handler stays in the event graph either way.
 
 A route names a function on the **user widget** — the class the hierarchy compiles into — which is where UMG puts event
 handling too. The compiler resolves every route into `UDreamWidgetBlueprint::EventBindings`, and
@@ -185,8 +225,13 @@ older `Interaction/` behaviours declare.
 ## The animation editor
 
 The animation editor is built on Sequencer. A `timeline` block in a `.dui` compiles into a `UDreamWidgetAnimation` on
-the class; because **the file owns it**, every compile rebuilds it, so the animation editor opens it **read-only**, says
-why in the log, and refuses to rename it ("rename it in the `.dui`'s timeline block").
+the class; because **the file owns it**, every compile rebuilds it. On a class whose `.dui` the editor can write, the
+animation editor opens it editable and **writes each edit back into the block**: a key's time and value, the ease
+between two keys (read back from the curve the compile sampled), event keys, the duration, and a track added or
+removed as a line written or taken out. A track whose keys did not change keeps its line byte for byte. A key Sequencer
+adds with automatic tangents becomes linear, in the sequence as well, so what you see is what the file builds; a key
+with tangents of its own, or stepped, has no spelling and is refused, with the way out. Renaming is refused ("rename it
+in the `.dui`'s timeline block").
 
 To hand an animation to Sequencer, make its block `external` — below, `Pulse` belongs to the file and `Celebrate` to
 the asset:
