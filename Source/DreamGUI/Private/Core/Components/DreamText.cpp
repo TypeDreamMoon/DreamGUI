@@ -2178,6 +2178,96 @@ bool UDreamText::IsTextTruncated()const
 	return CacheTextGeometryData.IsTextTruncated();
 }
 
+FDreamTextFit UDreamText::MeasureFit(const FString& InContent, const FString& InLanguage) const
+{
+	FDreamTextFit Fit;
+	const UDreamWidget* Widget = GetWidget();
+	if (Widget == nullptr || Font == nullptr)
+	{
+		return Fit;
+	}
+	FDreamTextLayoutInput Input = MakeLayoutInput(this, bBestFit ? BestFitMinSize : GetFontSize());
+	Input.Content = InContent;
+	switch (GetTextTransform())
+	{
+	case EDreamUITextTransformPolicy::ToLower: Input.Content = FTextTransformer::ToLower(Input.Content); break;
+	case EDreamUITextTransformPolicy::ToUpper: Input.Content = FTextTransformer::ToUpper(Input.Content); break;
+	default: break;
+	}
+	if (!InLanguage.IsEmpty())
+	{
+		Input.Language = InLanguage;
+	}
+	Fit.Box = FVector2f(Widget->GetWidth(), Widget->GetHeight());
+
+	// In its box, for what the overflow policy cuts; with no height, for how much room the paragraph wants.
+	FDreamUITextGeometryCache InBox;
+	InBox.SetLayoutInput(Input);
+	InBox.EnsureLayout();
+	FDreamTextLayoutInput Free = Input;
+	Free.Height = 0.0f;
+	FDreamUITextGeometryCache Unbounded;
+	Unbounded.SetLayoutInput(Free);
+	Unbounded.EnsureLayout();
+	const FVector2f Size = Unbounded.GetPreferredSize();
+	Fit.Needed = FVector2f(Size.X + Margin.Left + Margin.Right, Size.Y + Margin.Top + Margin.Bottom);
+	// A wrapping layout's preferred width is still the paragraph on one line (GetPreferredSizeWithin says the same);
+	// wrapped at its box it is no wider than the box.
+	if (OverflowType == EDreamUITextOverflowType::VerticalOverflow || bAutoWrapText)
+	{
+		Fit.Needed.X = FMath::Min(Fit.Needed.X, Fit.Box.X);
+	}
+	constexpr float Slack = 0.5f;
+	Fit.bOverflows = InBox.IsTextTruncated() || Fit.Needed.X > Fit.Box.X + Slack || Fit.Needed.Y > Fit.Box.Y + Slack;
+	Fit.bMeasured = true;
+	return Fit;
+}
+
+TArray<uint32> UDreamText::FindMissingGlyphs(const FString& InContent) const
+{
+	TArray<uint32> Missing;
+	if (Font == nullptr)
+	{
+		return Missing;
+	}
+	const int32 Faces = FMath::Max(1, Font->GetFaceCount());
+	TCHAR Skipping = 0;
+	for (int32 Index = 0; Index < InContent.Len(); ++Index)
+	{
+		uint32 Codepoint = static_cast<uint32>(InContent[Index]);
+		if (StringConv::IsHighSurrogate(Codepoint) && Index + 1 < InContent.Len() && StringConv::IsLowSurrogate(static_cast<uint32>(InContent[Index + 1])))
+		{
+			Codepoint = StringConv::EncodeSurrogate(static_cast<uint16>(Codepoint), static_cast<uint16>(InContent[Index + 1]));
+			++Index;
+		}
+		// What the game never draws: an argument's name (its value takes its place), a rich-text tag.
+		if (Skipping != 0)
+		{
+			Skipping = Codepoint == static_cast<uint32>(Skipping) ? 0 : Skipping;
+			continue;
+		}
+		if (Codepoint == TEXT('{') || (bRichText && Codepoint == TEXT('<')))
+		{
+			Skipping = Codepoint == TEXT('{') ? TEXT('}') : TEXT('>');
+			continue;
+		}
+		if (Codepoint < 0x20 || FChar::IsWhitespace(static_cast<TCHAR>(Codepoint <= 0xFFFF ? Codepoint : 0)) || Codepoint == 0x7F)
+		{
+			continue;
+		}
+		bool bHas = false;
+		for (int32 Face = 0; Face < Faces && !bHas; ++Face)
+		{
+			bHas = Font->FaceHasCodepoint(Face, Codepoint);
+		}
+		if (!bHas)
+		{
+			Missing.AddUnique(Codepoint);
+		}
+	}
+	return Missing;
+}
+
 
 
 void UDreamText::SetFont(UDreamUIFontData_BaseObject* Value) {

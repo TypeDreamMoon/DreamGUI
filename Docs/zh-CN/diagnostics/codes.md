@@ -39,6 +39,7 @@ description: "诊断"
 | DUI2019 | MalformedSlotDeclaration | 一个写了两次 `default` 的 slot，或者一个既声明又填充的块。 |
 | DUI2020 | MalformedRows | 一个读不通的 `rows` 表：列清单不是名称、某一列写了两次、某一行的值个数不对。 |
 | DUI2021 | MalformedViewModelsBlock | 一行不是 `Type Name`、`= new`、`= global ["Name"]` 或 `= parent ["Name"]` 的 `viewmodels`（包括空的 `""` 名称），或者写在节点里的 `viewmodels` 块。 |
+| DUI2022 | MalformedTextAnnotation | `@note(…)` 里不是一个字符串、`@max(…)` 里不是一个不小于 1 的整数、它们跟在不是字符串的值后面、同一个注解写了两次，或者 `@noloc` 和 `@key`、`@note`、`@max` 写在一起。 |
 | DUI2023 | MalformedContainer | 读不通的列表（`[a, b]`）或 Map（`{ 键: 值 }`）：括号没有闭合、两个元素之间缺逗号，或者 Map 的一项不是 `键: 值`。 |
 | DUI3001 | DuplicateNodeId | 两个节点共用一个 id。 |
 | DUI3002 | InvalidNodeId | 一个不是标识符、以数字开头，或者是关键字的 id。 |
@@ -121,6 +122,8 @@ description: "诊断"
 | DUI6021 | LoopItemMemberNotFound | `Item.Member`，而循环来源的元素类里没有它。 |
 | DUI6022 | LoopItemRouteMismatch | `-> Item.Func`，而元素类里没有它，或者它的参数既不是什么都不收、也不是事件发出的那些。 |
 | DUI6023 | SourceFileWritePending | 文档里的修改无法写入，所以拒绝编译旧文件。 |
+| DUI6024 | TranslationDoesNotFit | 工程里有 DreamLoc 时：某个语言的译文放进文字控件里排版后被截断，或排出了控件的框。警告。 |
+| DUI6025 | TranslationGlyphsMissing | 工程里有 DreamLoc 时：某个语言的译文里有字符，文字控件字体的所有字面都没有。警告。 |
 | DUI7001 | PatchTargetNotFound | 一个在文件里没有归属的设计器修改：未知的节点、一个绑定的属性、一个没有块的槽。 |
 | DUI7002 | SourceFileChangedUnderEdit | 文件在一个待处理的修改之下发生了变化；没有写入任何内容。 |
 | DUI7003 | PatchValueNotRepresentable | 一个这门语言无法拼写的值（一个非有限数字）；它所在的行保持不变。 |

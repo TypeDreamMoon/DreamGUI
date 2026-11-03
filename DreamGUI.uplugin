@@ -18,6 +18,11 @@
 		{
 			"Name": "EnhancedInput",
 			"Enabled": true
+		},
+		{
+			"Name": "DreamLoc",
+			"Enabled": true,
+			"Optional": true
 		}
 	],
 	"Modules": [

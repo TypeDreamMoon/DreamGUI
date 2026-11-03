@@ -141,4 +141,20 @@ DUI4009; a list or a map that does not read (a bracket never closed, a map entry
 
 A string can carry the key it is localized under: `Text = "OK" @key("Dialog.Confirm")`. Without one the key is
 `<node id>.<property>` -- with the component's class and position between the two for a line of a `+` block -- in the
-namespace the `class` line gives.
+namespace the `class` line gives. A file without a `class` line uses its path under its `DUI/` folder
+(`Panels/Settings.dui`, `Plugin.X:Panels/Settings.dui`), the same on every machine.
+
+Three more annotations say what a translator needs, after the string and in any order:
+
+```
+Text = "应用 {Count} 项更改" @note("Footer button; applies at once") @max(16)
+Text = "v1.0.3" @noloc
+```
+
+- `@note("…")` -- what the text is for. It reaches the localization tools with the text (and the engine's gather, as
+  the text's developer notes).
+- `@max(n)` -- the longest a translation may be, in display width: a full-width character counts 2.
+- `@noloc` -- the same text in every language, a version number or a name: it is never translated and no tool lists
+  it. It takes none of the other three.
+
+Each is written once; any of them on a value that is not a string, or written wrong, is DUI2022.

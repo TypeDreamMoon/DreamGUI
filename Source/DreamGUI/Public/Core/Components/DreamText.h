@@ -203,6 +203,19 @@ struct FDreamTextPaintState
 	TArray<TPair<TWeakObjectPtr<UDreamGradientAsset>, FDelegateHandle>> PresetBindings;
 };
 
+/** What UDreamText::MeasureFit found. */
+struct FDreamTextFit
+{
+	/** False when there was nothing to measure with: no widget, or no font. */
+	bool bMeasured = false;
+	/** The size the text needs, margins included: on one line, or as tall as it wraps at its box when it wraps. */
+	FVector2f Needed = FVector2f::ZeroVector;
+	/** The box it has: its widget's size. */
+	FVector2f Box = FVector2f::ZeroVector;
+	/** Cut by its overflow policy, or laid out past its box. */
+	bool bOverflows = false;
+};
+
 UCLASS(ClassGroup = (DreamGUI), Blueprintable)
 class DREAMGUI_API UDreamText : public UDreamVisualBatchMesh, public IDreamUICultureChangedInterface
 {
@@ -638,6 +651,19 @@ public:
 
 	/** indicating whether the text is Truncated or using Ellipsis */
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI") bool IsTextTruncated()const;
+
+	/**
+	 * How InContent would sit in this text's box as the text is set up now -- its font, size, wrapping and overflow
+	 * policy, its widget's size -- laid out in InLanguage (empty: the text's own), without changing what it shows. For a
+	 * translator's tool asking whether a translation fits. With Best Fit on, at the smallest size Best Fit goes to.
+	 */
+	FDreamTextFit MeasureFit(const FString& InContent, const FString& InLanguage) const;
+
+	/**
+	 * The characters of InContent no face of the font has (fallback faces included), each once, in order. Blanks, control
+	 * characters, `{argument}` and, on rich text, `<tag>` spans are not looked for: the game shows none of them.
+	 */
+	TArray<uint32> FindMissingGlyphs(const FString& InContent) const;
 
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
 		void SetFont(UDreamUIFontData_BaseObject* Value);

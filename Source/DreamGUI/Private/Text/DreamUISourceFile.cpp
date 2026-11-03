@@ -4857,7 +4857,7 @@ namespace DreamUIText
 				return false;
 			}
 
-			ParseOptionalKeyOverride(OutValue);
+			ParseTextAnnotations(OutValue);
 			return true;
 		}
 
@@ -5022,25 +5022,138 @@ namespace DreamUIText
 			return Slice(InStart, InEnd).TrimStartAndEnd();
 		}
 
-		void ParseOptionalKeyOverride(FDreamUIValue& OutValue)
+		/**
+		 * What a string value says about its translation, after the value: `@key("Some.Key")`, `@note("…")` for the
+		 * translator, `@max(n)` for the longest a translation may be, `@noloc` for a text that is never translated. Any
+		 * of them, in any order, each once.
+		 */
+		void ParseTextAnnotations(FDreamUIValue& OutValue)
 		{
-			if (!Check(ETokenKind::At) || Peek(1).Kind != ETokenKind::Identifier)
+			TSet<FString> Seen;
+			FDreamUISourceLocation NoLocLocation;
+			while (Check(ETokenKind::At) && Peek(1).Kind == ETokenKind::Identifier)
 			{
-				return;
+				const FDreamUISourceLocation AtLocation = Current().Location;
+				const FString Name = Peek(1).Text;
+				const bool bKnown = Name.Equals(TEXT("key"), ESearchCase::CaseSensitive) || Name.Equals(TEXT("note"), ESearchCase::CaseSensitive)
+					|| Name.Equals(TEXT("max"), ESearchCase::CaseSensitive) || Name.Equals(TEXT("noloc"), ESearchCase::CaseSensitive);
+				if (!bKnown)
+				{
+					// Left unconsumed: the statement's own recovery decides what to do with it, and this
+					// might well be the start of the next line's '@slot' after a value the author forgot
+					// to terminate.
+					Diagnostics.AddError(EDreamUIDiagnosticCode::UnexpectedToken, AtLocation,
+						FString::Printf(TEXT("'@key(\"...\")', '@note(\"...\")', '@max(n)' and '@noloc' are the annotations a value takes, found '@%s'"), *Name));
+					RecoverToStatementBoundary();
+					return;
+				}
+				if (Seen.Contains(Name))
+				{
+					Advance(); // '@'
+					Advance(); // the name
+					if (Check(ETokenKind::OpenParen))
+					{
+						SkipPastCloseParen();
+					}
+					Diagnostics.AddError(EDreamUIDiagnosticCode::MalformedTextAnnotation, AtLocation,
+						FString::Printf(TEXT("'@%s' is written twice on this value"), *Name));
+					continue;
+				}
+				Seen.Add(Name);
+				if (Name == TEXT("key"))
+				{
+					ParseKeyOverride(OutValue);
+				}
+				else if (Name == TEXT("noloc"))
+				{
+					NoLocLocation = AtLocation;
+					Advance(); // '@'
+					Advance(); // 'noloc'
+					if (OutValue.Kind != EDreamUIValueKind::String)
+					{
+						Diagnostics.AddError(EDreamUIDiagnosticCode::MalformedTextAnnotation, AtLocation,
+							TEXT("'@noloc' only follows a quoted string, which is the only value that gets localized"));
+						continue;
+					}
+					OutValue.bNoLocalize = true;
+				}
+				else
+				{
+					ParseNoteOrMax(OutValue, Name == TEXT("note"));
+				}
 			}
-
-			const FDreamUISourceLocation AtLocation = Current().Location;
-			if (!Peek(1).Text.Equals(TEXT("key"), ESearchCase::CaseSensitive))
+			if (OutValue.bNoLocalize && (!OutValue.LocalizationKeyOverride.IsEmpty() || !OutValue.LocalizationNote.IsEmpty() || OutValue.LocalizationMax >= 0))
 			{
-				// Left unconsumed: the statement's own recovery decides what to do with it, and this
-				// might well be the start of the next line's '@slot' after a value the author forgot
-				// to terminate.
-				Diagnostics.AddError(EDreamUIDiagnosticCode::UnexpectedToken, AtLocation,
-					FString::Printf(TEXT("'@key(\"...\")' is the only annotation a value takes, found '@%s'"), *Peek(1).Text));
+				// A text that is never translated has no entry for a key to name, nor a translator to tell anything.
+				Diagnostics.AddError(EDreamUIDiagnosticCode::MalformedTextAnnotation, NoLocLocation,
+					TEXT("'@noloc' says the text is never translated, so it takes no '@key', '@note' or '@max'"));
+			}
+		}
+
+		/** `@note("…")` or `@max(n)`: one string, or one whole number of at least 1. */
+		void ParseNoteOrMax(FDreamUIValue& OutValue, bool bInNote)
+		{
+			const FDreamUISourceLocation AtLocation = Current().Location;
+			const TCHAR* const Written = bInNote ? TEXT("'@note(\"What it is for\")'") : TEXT("'@max(16)'");
+			Advance(); // '@'
+			Advance(); // the name
+			if (!Check(ETokenKind::OpenParen))
+			{
+				Diagnostics.AddError(EDreamUIDiagnosticCode::MalformedTextAnnotation, AtLocation, FString::Printf(TEXT("it is written %s"), Written));
 				RecoverToStatementBoundary();
 				return;
 			}
+			Advance();
+			const ETokenKind Wanted = bInNote ? ETokenKind::String : ETokenKind::Number;
+			if (!Check(Wanted))
+			{
+				Diagnostics.AddError(EDreamUIDiagnosticCode::MalformedTextAnnotation, AtLocation,
+					FString::Printf(TEXT("it takes %s, written %s"), bInNote ? TEXT("one quoted string") : TEXT("one whole number"), Written));
+				SkipPastCloseParen();
+				RecoverToStatementBoundary();
+				return;
+			}
+			const FString Argument = Current().Text;
+			const FDreamUISourceLocation ArgumentLocation = Current().Location;
+			Advance();
+			if (!Check(ETokenKind::CloseParen))
+			{
+				Diagnostics.AddError(EDreamUIDiagnosticCode::MalformedTextAnnotation, AtLocation,
+					FString::Printf(TEXT("it takes %s and nothing else"), bInNote ? TEXT("one quoted string") : TEXT("one whole number")));
+				SkipPastCloseParen();
+				RecoverToStatementBoundary();
+				return;
+			}
+			Advance();
+			if (OutValue.Kind != EDreamUIValueKind::String)
+			{
+				Diagnostics.AddError(EDreamUIDiagnosticCode::MalformedTextAnnotation, AtLocation,
+					FString::Printf(TEXT("'@%s' only follows a quoted string, which is the only value that gets localized"), bInNote ? TEXT("note") : TEXT("max")));
+				return;
+			}
+			if (bInNote)
+			{
+				OutValue.LocalizationNote = Argument;
+				return;
+			}
+			bool bWhole = !Argument.IsEmpty() && Argument.Len() <= 6;
+			for (const TCHAR Char : Argument)
+			{
+				bWhole &= FChar::IsDigit(Char);
+			}
+			const int32 Max = bWhole ? FCString::Atoi(*Argument) : 0;
+			if (Max < 1)
+			{
+				Diagnostics.AddError(EDreamUIDiagnosticCode::MalformedTextAnnotation, ArgumentLocation,
+					FString::Printf(TEXT("'@max' is a whole number of at least 1 (display width; a full-width character counts 2), not '%s'"), *Argument));
+				return;
+			}
+			OutValue.LocalizationMax = Max;
+		}
 
+		void ParseKeyOverride(FDreamUIValue& OutValue)
+		{
+			const FDreamUISourceLocation AtLocation = Current().Location;
 			Advance(); // '@'
 			Advance(); // 'key'
 

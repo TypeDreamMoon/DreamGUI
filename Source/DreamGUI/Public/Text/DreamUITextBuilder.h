@@ -23,6 +23,12 @@ struct FDreamUILocalizableText
 	FString NodeType;
 	/** The key this text had before the node's `(was: OldId)` rename; empty when there is none or `@key` names it. */
 	FString RenamedFrom;
+	/** `@note("…")`: what the text is for, for its translator. */
+	FString Note;
+	/** `@max(n)`: the longest a translation may be, in display width; -1 for no limit. */
+	int32 Max = -1;
+	/** Where the string is written in the .dui. */
+	FDreamUISourceLocation Location;
 };
 
 /** Every localizable text of one build, under the namespace they share. */

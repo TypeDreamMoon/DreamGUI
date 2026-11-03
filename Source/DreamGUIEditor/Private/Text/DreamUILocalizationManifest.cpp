@@ -98,6 +98,14 @@ FString DreamUILocalizationManifest::ToJson(const FString& InSource, const FStri
 		AddMember(Members, TEXT("key"), Text.Key);
 		AddMember(Members, TEXT("src"), Text.Source);
 		AddMember(Members, TEXT("at"), Text.NodePath);
+		if (!Text.Note.IsEmpty())
+		{
+			AddMember(Members, TEXT("note"), Text.Note);
+		}
+		if (Text.Max >= 0)
+		{
+			Members.Add(FString::Printf(TEXT("\"max\": %d"), Text.Max));
+		}
 		if (!Text.NodeType.IsEmpty())
 		{
 			AddMember(Members, TEXT("kind"), Text.NodeType);
