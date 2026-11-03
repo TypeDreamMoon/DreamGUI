@@ -223,6 +223,35 @@ namespace DreamUITextAuthoring
 	DREAMGUIEDITOR_API bool ResolveComponentSource(const UDreamWidgetBlueprint* InBlueprint, const UDreamWidget* InWidget,
 		const UObject* InComponent, int32& OutLine, bool& bOutTypeIsContainer, FText& OutReason);
 
+	// ---------------------------------------------------------------------------------------------
+	// Statements: bindings (`<-`), routes (`->`), two-way bindings (`<->`), and a value written in place of a binding.
+	//
+	// On a text-authored hierarchy these are lines of the `.dui`, and the compile rebuilds the Blueprint's binding and
+	// route lists from them; so the Bind control, the Events rows and "unbind and set" write the line, and the compile
+	// that follows reads it back.
+	// ---------------------------------------------------------------------------------------------
+
+	/**
+	 * Which line a statement about InName on InTemplateOwner -- a template widget, its visual, or one of its behaviours --
+	 * is written on: fills OutEdit's NodeId, PropertyTarget, ComponentIndex and PropertyName. The kind, the statement and
+	 * the match are the caller's.
+	 *
+	 * A behaviour the node writes as a `+` line takes it in that block. One the node's style or type gives it takes it on
+	 * the node's own line, when that line reaches it -- the builder offers a bare name to the widget, its visual, the
+	 * panel its type names and its behaviours in that order, and the first that has the name takes it. False, with a
+	 * reason, when the line would reach another object, or the file does not write the node.
+	 */
+	DREAMGUIEDITOR_API bool ResolveStatementSite(const UDreamWidgetBlueprint* InBlueprint, const UObject* InTemplateOwner, FName InName,
+		FDreamUIStructuralEdit& OutEdit, FText& OutReason);
+
+	/**
+	 * Write one SetStatement or RemoveProperty into the Blueprint's `.dui`: checked first (CheckStructuralEdit, building
+	 * the result), then applied to the document through the open designer's write-back, or one of its own -- inside the
+	 * caller's transaction, so it undoes with whatever else the gesture did. The caller then marks the Blueprint
+	 * structurally modified, and the compile reads the line back. False, with the reason, when it was refused.
+	 */
+	DREAMGUIEDITOR_API bool WriteStatementToText(UDreamWidgetBlueprint* InBlueprint, const FDreamUIStructuralEdit& InEdit, FText& OutReason);
+
 	/** Why one property row is not editable. Ordered so the FIRST reason that applies is the one shown. */
 	enum class EPropertyEditVerdict : uint8
 	{

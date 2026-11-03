@@ -893,8 +893,10 @@ namespace DreamUITextAuthoring
 		FDreamUIDiagnosticBag PatchDiagnostics;
 		PatchDiagnostics.SourceName = FileName;
 		const bool bPlanned = FDreamUITextPatcher::ApplyStructuralEdits(Patched, Ast, MakeArrayView(&Edit, 1), PatchDiagnostics);
-		// A move to where the node already stands plans and changes nothing, and is no refusal: there is nothing to write.
-		if (bPlanned && Edit.Kind == EDreamUIStructuralEditKind::MoveNode && Patched.Equals(Text, ESearchCase::CaseSensitive))
+		// A move to where the node already stands, or a statement the file already says, plans and changes nothing, and
+		// is no refusal: there is nothing to write.
+		if (bPlanned && (Edit.Kind == EDreamUIStructuralEditKind::MoveNode || Edit.Kind == EDreamUIStructuralEditKind::SetStatement)
+			&& Patched.Equals(Text, ESearchCase::CaseSensitive))
 		{
 			return true;
 		}
@@ -1138,6 +1140,121 @@ namespace DreamUITextAuthoring
 		}
 		bOutTypeIsContainer = FDreamUITextBuilder::FindContainerClassForType(Node->TypeName) != nullptr;
 		OutLine = FDreamUITextWriteBack::FindComponentLine(*Node, InWidget, InComponent);
+		return true;
+	}
+
+	bool ResolveStatementSite(const UDreamWidgetBlueprint* InBlueprint, const UObject* InTemplateOwner, FName InName,
+		FDreamUIStructuralEdit& OutEdit, FText& OutReason)
+	{
+		const UDreamWidget* Widget = Local::FindOwningWidget(InTemplateOwner);
+		if (!IsTextAuthored(InBlueprint) || !IsValid(Widget) || InName.IsNone())
+		{
+			OutReason = LOCTEXT("Statement_NoSite", "only a widget of this text-authored hierarchy, its visual or one of its behaviours takes a binding or a route");
+			return false;
+		}
+		OutEdit.NodeId = Widget->GetDisplayName();
+		OutEdit.PropertyName = InName.ToString();
+		OutEdit.PropertyTarget = EDreamUIPatchTarget::Node;
+		OutEdit.ComponentIndex = INDEX_NONE;
+		if (InTemplateOwner == Widget)
+		{
+			return true;
+		}
+
+		bool bTypeIsContainer = false;
+		if (Cast<UDreamUIBehaviour>(InTemplateOwner) != nullptr)
+		{
+			int32 Line = INDEX_NONE;
+			if (!ResolveComponentSource(InBlueprint, Widget, InTemplateOwner, Line, bTypeIsContainer, OutReason))
+			{
+				return false;
+			}
+			if (Line != INDEX_NONE)
+			{
+				// The node writes this behaviour as a `+` line: its block is where its lines are.
+				OutEdit.PropertyTarget = EDreamUIPatchTarget::Component;
+				OutEdit.ComponentIndex = Line;
+				return true;
+			}
+		}
+		else if (Cast<UDreamVisual>(InTemplateOwner) == nullptr || Widget->GetVisual() != InTemplateOwner)
+		{
+			OutReason = LOCTEXT("Statement_NotAnObject", "only the widget, its visual and its behaviours take a binding or a route");
+			return false;
+		}
+
+		// On the node's own line, which reaches the first of these that has the name -- the order the builder offers a
+		// bare name in. It has to be this object, or the line would bind something else.
+		TArray<const UObject*> Reached;
+		Reached.Add(Widget);
+		if (const UDreamVisual* Visual = Widget->GetVisual())
+		{
+			Reached.Add(Visual);
+		}
+		if (bTypeIsContainer && IsValid(Widget->GetLayoutContainer()))
+		{
+			Reached.Add(Widget->GetLayoutContainer());
+		}
+		for (const UDreamUIBehaviour* Behaviour : Widget->GetAllComponents())
+		{
+			if (IsValid(Behaviour))
+			{
+				Reached.Add(Behaviour);
+			}
+		}
+		const UObject* const* First = Reached.FindByPredicate([InName](const UObject* InCandidate)
+		{
+			return InCandidate->GetClass()->FindPropertyByName(InName) != nullptr;
+		});
+		if (First != nullptr && *First == InTemplateOwner)
+		{
+			return true;
+		}
+		OutReason = FText::Format(LOCTEXT("Statement_LineReachesAnother",
+			"a '{0}' line on '{1}' would reach its {2} first, and this {3} comes from the node's style or type; write the {3} as a '+' line on the node in the text, and the line goes in its block"),
+			FText::FromName(InName), FText::FromString(Widget->GetDisplayName()),
+			FText::FromString(First != nullptr ? DescribeClassForAuthor((*First)->GetClass()) : FString(TEXT("nothing"))),
+			FText::FromString(DescribeClassForAuthor(InTemplateOwner->GetClass())));
+		return false;
+	}
+
+	bool WriteStatementToText(UDreamWidgetBlueprint* InBlueprint, const FDreamUIStructuralEdit& InEdit, FText& OutReason)
+	{
+		if (!IsTextAuthored(InBlueprint))
+		{
+			OutReason = LOCTEXT("Statement_NotText", "this Blueprint authors its own hierarchy, and has no .dui to write into");
+			return false;
+		}
+		if (InEdit.Kind != EDreamUIStructuralEditKind::SetStatement && InEdit.Kind != EDreamUIStructuralEditKind::RemoveProperty)
+		{
+			OutReason = LOCTEXT("Statement_NotAStatement", "only a statement -- a binding, a route, or a value -- is written this way");
+			return false;
+		}
+		if (!CheckStructuralEdit(InBlueprint, InEdit, /*bInVerifyBuild*/true, OutReason))
+		{
+			return false;
+		}
+		FString Error;
+		TSharedPtr<FDreamUITextWriteBack> WriteBack;
+		if (FDreamWidgetBlueprintEditor* Designer = FDreamWidgetBlueprintEditor::FindEditorForBlueprint(InBlueprint))
+		{
+			WriteBack = Designer->GetTextWriteBack();
+		}
+		if (!WriteBack.IsValid())
+		{
+			// The registry's one document for the file, as WriteStructureToText joins it with no designer open.
+			WriteBack = FDreamUITextWriteBack::Create(StructureLocal::ResolveAuthoredFile(InBlueprint), nullptr, Error);
+		}
+		if (!WriteBack.IsValid())
+		{
+			OutReason = FText::FromString(Error);
+			return false;
+		}
+		if (!WriteBack->ApplyStatementEdit(InEdit, Error))
+		{
+			OutReason = FText::FromString(Error);
+			return false;
+		}
 		return true;
 	}
 }
