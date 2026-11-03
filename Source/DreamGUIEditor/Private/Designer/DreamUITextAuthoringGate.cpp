@@ -1082,6 +1082,29 @@ namespace DreamUITextAuthoring
 		return false;
 	}
 
+	bool IsTableRow(const UDreamWidgetBlueprint* InBlueprint, const FString& InNodeId)
+	{
+		if (!IsTextAuthored(InBlueprint))
+		{
+			return false;
+		}
+		FString Text;
+		FText Unused;
+		if (!StructureLocal::ReadAuthoredText(InBlueprint, Text, Unused))
+		{
+			return false;
+		}
+		FDreamUIAst Ast;
+		FDreamUIDiagnosticBag Diagnostics;
+		Diagnostics.SourceName = GetAuthoredSourceFileName(InBlueprint);
+		if (!FDreamUISourceFile::Parse(Text, Diagnostics.SourceName, Ast, Diagnostics, FDreamUISourceFile::MakeFileImportReader()))
+		{
+			return false;
+		}
+		const FDreamUINode* Node = StructureLocal::FindNode(Ast, InNodeId);
+		return Node != nullptr && !Node->RowKey.IsEmpty();
+	}
+
 	bool ResolveComponentSource(const UDreamWidgetBlueprint* InBlueprint, const UDreamWidget* InWidget, const UObject* InComponent,
 		int32& OutLine, bool& bOutTypeIsContainer, FText& OutReason)
 	{

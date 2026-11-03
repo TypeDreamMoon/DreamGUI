@@ -368,6 +368,7 @@ namespace DreamWidgetTreeEditing
 		// here -- one with widgets an `each` or a component builds in it would be copied as plain nodes,
 		// machinery and all, which is not what the file means; that copy belongs in the text.
 		TSet<FString> FileIds;
+		bool bCopyAsRow = false;
 		if (DreamUITextAuthoring::IsTextAuthored(InBlueprint))
 		{
 			const FString Operation = FString::Printf(TEXT("duplicate '%s'"), *Local::DisplayNameOf(InSource));
@@ -389,8 +390,12 @@ namespace DreamWidgetTreeEditing
 						FText::FromString(Synthesised)));
 				return nullptr;
 			}
+			// A row of a `rows` table is copied as a row: its line, written again after it, in its own table. Anywhere
+			// else the copy would be a node beside the table, which a table's parent does not take from here.
+			bCopyAsRow = InNewParent == InSource->GetParent() && DreamUITextAuthoring::IsTableRow(InBlueprint, InSource->GetDisplayName());
 			FDreamUIStructuralEdit Planned;
-			Planned.Kind = EDreamUIStructuralEditKind::InsertNode;
+			Planned.Kind = bCopyAsRow ? EDreamUIStructuralEditKind::InsertRow : EDreamUIStructuralEditKind::InsertNode;
+			Planned.NodeId = InSource->GetDisplayName();
 			Planned.ParentId = InNewParent == Tree->RootWidget ? FString() : InNewParent->GetDisplayName();
 			Planned.ChildIndex = InSiblingIndex < 0 ? INDEX_NONE : InSiblingIndex;
 			Planned.NewId = MakeUniqueDisplayName(Tree, InSource->GetDisplayName(), nullptr, &FileIds);
@@ -440,6 +445,14 @@ namespace DreamWidgetTreeEditing
 				ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *InNewParent->GetDisplayName(), *InSource->GetDisplayName());
 			Copy->DestroyWidget();
 			return nullptr;
+		}
+		if (bCopyAsRow)
+		{
+			// Written as the copied line, which the builder names `<id>_1` -- the name the copy was given above.
+			FDreamUIStructuralEdit CopiedRow;
+			CopiedRow.Kind = EDreamUIStructuralEditKind::InsertRow;
+			CopiedRow.NodeId = InSource->GetDisplayName();
+			FDreamUITextWriteBack::QueueStructuralEdit(Tree, CopiedRow);
 		}
 		NotifyStructureChanged(InBlueprint);
 		return Copy;

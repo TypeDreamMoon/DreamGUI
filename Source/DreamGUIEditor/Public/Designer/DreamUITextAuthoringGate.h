@@ -217,6 +217,9 @@ namespace DreamUITextAuthoring
 	 * What a behaviour or panel gesture asks before it touches the template: only a line the node writes can be taken
 	 * out, moved, or swapped for another. False, with a reason, when the file cannot be read or does not write the node.
 	 */
+	/** Whether the `.dui` writes InNodeId as a row of a `rows` table. False for a hand-authored Blueprint or a file that does not parse. */
+	DREAMGUIEDITOR_API bool IsTableRow(const UDreamWidgetBlueprint* InBlueprint, const FString& InNodeId);
+
 	DREAMGUIEDITOR_API bool ResolveComponentSource(const UDreamWidgetBlueprint* InBlueprint, const UDreamWidget* InWidget,
 		const UObject* InComponent, int32& OutLine, bool& bOutTypeIsContainer, FText& OutReason);
 

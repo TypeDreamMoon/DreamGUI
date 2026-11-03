@@ -2671,6 +2671,209 @@ namespace DreamUIPatchLocal
 		return Start;
 	}
 
+	/**
+	 * A `rows` row's text: from the start of the line its first cell stands on to the end of its last cell, or of the
+	 * block it ends with. False when the row shares its line with anything else -- another row after a `;` -- because a
+	 * whole-line edit would take that too.
+	 */
+	bool MeasureRowExtent(const FString& InText, const FDreamUINode& InRow, int32& OutLineStart, int32& OutEnd)
+	{
+		const int32 Start = OffsetOf(InText, InRow.Location);
+		if (Start == INDEX_NONE || !LineBeforeIsBlank(InText, Start))
+		{
+			return false;
+		}
+		int32 End = Start;
+		for (const FDreamUIProperty& Cell : InRow.Properties)
+		{
+			if (!Cell.bRowCell)
+			{
+				continue;
+			}
+			const int32 CellOffset = OffsetOf(InText, Cell.Value.Location);
+			const int32 CellEnd = CellOffset == INDEX_NONE ? INDEX_NONE : MeasureValue(InText, CellOffset);
+			if (CellEnd == INDEX_NONE)
+			{
+				return false;
+			}
+			End = FMath::Max(End, CellEnd);
+		}
+		int32 After = End;
+		while (After < InText.Len() && IsInlineWhitespace(InText[After]))
+		{
+			++After;
+		}
+		if (After < InText.Len() && InText[After] == TEXT('{'))
+		{
+			const int32 BlockEnd = MeasureBracketed(InText, After, TEXT('{'), TEXT('}'));
+			if (BlockEnd == INDEX_NONE)
+			{
+				return false;
+			}
+			End = BlockEnd;
+		}
+		if (!RestOfLineIsBlank(InText, End, /*bInAllowTerminators*/ false))
+		{
+			return false;
+		}
+		OutLineStart = FindLineStart(InText, Start);
+		OutEnd = End;
+		return true;
+	}
+
+	/** The rows of InRow's table: its siblings that are rows of the same type, the run of them InRow stands in. */
+	void CollectTableRows(const FDreamUINode& InParent, const FDreamUINode& InRow, TArray<const FDreamUINode*>& OutRows)
+	{
+		OutRows.Reset();
+		TArray<const FDreamUINode*> Run;
+		bool bFound = false;
+		for (const FDreamUINode& Child : InParent.Children)
+		{
+			const bool bSameTable = !Child.RowKey.IsEmpty() && Child.TypeName == InRow.TypeName && Child.StyleName == InRow.StyleName;
+			if (bSameTable)
+			{
+				Run.Add(&Child);
+				bFound |= &Child == &InRow;
+				continue;
+			}
+			if (bFound)
+			{
+				break;
+			}
+			Run.Reset();
+		}
+		if (bFound)
+		{
+			OutRows = MoveTemp(Run);
+		}
+	}
+
+	bool PlanRemoveRow(const FString& InText, const FDreamUINode& InRow, TArray<FSplice>& OutSplices, int32& InOutOrder,
+		FDreamUIDiagnosticBag& OutDiagnostics)
+	{
+		int32 LineStart = INDEX_NONE;
+		int32 End = INDEX_NONE;
+		if (!MeasureRowExtent(InText, InRow, LineStart, End))
+		{
+			RefuseRowLine(OutDiagnostics, InRow, TEXT("it shares its line with another row, so it is removed in the text"));
+			return false;
+		}
+		FSplice& Splice = OutSplices.AddDefaulted_GetRef();
+		Splice.Offset = ExtendBackOverLineBreak(InText, LineStart);
+		Splice.Length = End - Splice.Offset;
+		Splice.Order = InOutOrder++;
+		return true;
+	}
+
+	/**
+	 * A row moved inside its own table: its line lifted and put back in front of the row it now stands before, or after
+	 * the table's last row. A row has no place outside its table -- its type, style and columns are the table's.
+	 */
+	bool PlanMoveRow(const FString& InText, const FDreamUIAst& InAst, const FDreamUIStructuralEdit& InEdit, const FDreamUINode& InRow,
+		TArray<FSplice>& OutSplices, int32& InOutOrder, FDreamUIDiagnosticBag& OutDiagnostics)
+	{
+		const FDreamUINode* Parent = FindParentOf(InAst, &InRow);
+		const FDreamUINode* Destination = InEdit.ParentId.IsEmpty() ? (InAst.bHasRoot ? &InAst.Root : nullptr) : FindNodeById(InAst, InEdit.ParentId);
+		if (Parent == nullptr || Destination != Parent || !InEdit.FillSlotName.IsEmpty())
+		{
+			RefuseRowLine(OutDiagnostics, InRow, TEXT("it is moved only among the rows of its own table"));
+			return false;
+		}
+		TArray<const FDreamUINode*> Rows;
+		CollectTableRows(*Parent, InRow, Rows);
+		int32 LineStart = INDEX_NONE;
+		int32 End = INDEX_NONE;
+		if (!MeasureRowExtent(InText, InRow, LineStart, End))
+		{
+			RefuseRowLine(OutDiagnostics, InRow, TEXT("it shares its line with another row, so it is moved in the text"));
+			return false;
+		}
+		// The place asked for, as the sibling the row now stands before; a place outside the table is its nearer end.
+		TArray<const FDreamUINode*> Siblings;
+		CollectAddressableChildren(*Parent, Siblings);
+		const int32 Index = ResolveChildIndex(*Parent, InEdit);
+		const FDreamUINode* Target = Siblings.IsValidIndex(Index) ? Siblings[Index] : nullptr;
+		if (Target == &InRow)
+		{
+			return true;
+		}
+		const FDreamUINode* Before = nullptr;
+		if (Target != nullptr && Rows.Contains(Target))
+		{
+			Before = Target;
+		}
+		else if (Target != nullptr && !Rows.IsEmpty() && Siblings.IndexOfByKey(Target) < Siblings.IndexOfByKey(Rows[0]))
+		{
+			Before = Rows[0];
+		}
+		const FDreamUINode* Last = nullptr;
+		for (const FDreamUINode* Row : Rows)
+		{
+			if (Row != &InRow)
+			{
+				Last = Row;
+			}
+		}
+		const FDreamUINode* Anchor = Before != nullptr ? Before : Last;
+		if (Anchor == nullptr || Anchor == &InRow || (Before == nullptr && Rows.Last() == &InRow))
+		{
+			return true;
+		}
+		int32 AnchorLineStart = INDEX_NONE;
+		int32 AnchorEnd = INDEX_NONE;
+		if (!MeasureRowExtent(InText, *Anchor, AnchorLineStart, AnchorEnd))
+		{
+			RefuseRowLine(OutDiagnostics, *Anchor, TEXT("it shares its line with another row, so nothing can be moved beside it from here"));
+			return false;
+		}
+		const FString Lifted = InText.Mid(LineStart, End - LineStart);
+		const FString LineEnding = DetectLineEnding(InText);
+		// Planned before the removal, so that at one offset the removal is applied first (see Apply).
+		FSplice& Insertion = OutSplices.AddDefaulted_GetRef();
+		Insertion.Length = 0;
+		if (Before != nullptr)
+		{
+			Insertion.Offset = AnchorLineStart;
+			Insertion.Text = Lifted + LineEnding;
+		}
+		else
+		{
+			Insertion.Offset = AnchorEnd;
+			Insertion.Text = LineEnding + Lifted;
+		}
+		Insertion.Order = InOutOrder++;
+		FSplice& Removal = OutSplices.AddDefaulted_GetRef();
+		Removal.Offset = ExtendBackOverLineBreak(InText, LineStart);
+		Removal.Length = End - Removal.Offset;
+		Removal.Order = InOutOrder++;
+		return true;
+	}
+
+	bool PlanInsertRow(const FString& InText, const FDreamUIAst& InAst, const FDreamUIStructuralEdit& InEdit,
+		TArray<FSplice>& OutSplices, int32& InOutOrder, FDreamUIDiagnosticBag& OutDiagnostics)
+	{
+		const FDreamUINode* Row = FindNodeById(InAst, InEdit.NodeId);
+		if (Row == nullptr || Row->RowKey.IsEmpty())
+		{
+			RefuseTarget(OutDiagnostics, Row != nullptr ? Row->Location : FDreamUISourceLocation(),
+				FString::Printf(TEXT("%s is not a row of a 'rows' table"), *Ellipsize(InEdit.NodeId)));
+			return false;
+		}
+		int32 LineStart = INDEX_NONE;
+		int32 End = INDEX_NONE;
+		if (!MeasureRowExtent(InText, *Row, LineStart, End))
+		{
+			RefuseRowLine(OutDiagnostics, *Row, TEXT("it shares its line with another row, so it is copied in the text"));
+			return false;
+		}
+		FSplice& Splice = OutSplices.AddDefaulted_GetRef();
+		Splice.Offset = End;
+		Splice.Length = 0;
+		Splice.Text = DetectLineEnding(InText) + InText.Mid(LineStart, End - LineStart);
+		Splice.Order = InOutOrder++;
+		return true;
+	}
+
 	bool PlanRemoveNode(const FString& InText, const FDreamUIAst& InAst, const FDreamUIStructuralEdit& InEdit,
 		TArray<FSplice>& OutSplices, int32& InOutOrder, FDreamUIDiagnosticBag& OutDiagnostics)
 	{
@@ -2683,8 +2886,7 @@ namespace DreamUIPatchLocal
 		}
 		if (!Node->RowKey.IsEmpty())
 		{
-			RefuseRowLine(OutDiagnostics, *Node, TEXT("a row is removed by deleting its line"));
-			return false;
+			return PlanRemoveRow(InText, *Node, OutSplices, InOutOrder, OutDiagnostics);
 		}
 		if (InAst.bHasRoot && Node == &InAst.Root)
 		{
@@ -2735,8 +2937,7 @@ namespace DreamUIPatchLocal
 		}
 		if (!Node->RowKey.IsEmpty())
 		{
-			RefuseRowLine(OutDiagnostics, *Node, TEXT("a row is moved by moving its line"));
-			return false;
+			return PlanMoveRow(InText, InAst, InEdit, *Node, OutSplices, InOutOrder, OutDiagnostics);
 		}
 		if (InAst.bHasRoot && Node == &InAst.Root)
 		{
@@ -3315,6 +3516,8 @@ namespace DreamUIPatchLocal
 			return PlanRetypeNode(InText, InAst, InEdit, OutSplices, InOutOrder, OutDiagnostics);
 		case EDreamUIStructuralEditKind::RemoveProperty:
 			return PlanRemoveProperty(InText, InAst, InEdit, OutSplices, InOutOrder, OutDiagnostics);
+		case EDreamUIStructuralEditKind::InsertRow:
+			return PlanInsertRow(InText, InAst, InEdit, OutSplices, InOutOrder, OutDiagnostics);
 		}
 		return false;
 	}

@@ -12,10 +12,10 @@
 /*
  * What the designer can write back into a `rows` table, and what it refuses.
  *
- * A row's "header" is a run of values, so the one edit with a place to land is a column's value -- replaced in its cell,
- * the rest of the line untouched -- or a property the row's own block spells. Everything else (a value outside the
- * columns, a `+` block, removing, moving, naming a row, a node placed beside the table) would have to invent a line
- * inside a table, and is refused with the reason, leaving the text as it was.
+ * A row's "header" is a run of values, so a value lands in its cell -- replaced there, the rest of the line untouched --
+ * or in a property the row's own block spells; and a row as a whole is a line, removed, moved inside its table or
+ * copied as one. Everything else (a value outside the columns, a `+` block, naming a row, a node placed beside the
+ * table) would have to invent a line inside a table, and is refused with the reason, leaving the text as it was.
  */
 
 namespace DreamUIRowsWriteBackTestLocal
@@ -150,23 +150,18 @@ bool FDreamUIRowsRefusedWriteBackTest::RunTest(const FString& Parameters)
 		TestEqual(FString(InWhat) + TEXT(": the text untouched"), Text, FString(Source));
 	};
 
-	FDreamUIStructuralEdit Remove;
-	Remove.Kind = EDreamUIStructuralEditKind::RemoveNode;
-	Remove.NodeId = TEXT("Page__Text_Save");
-	Structural(TEXT("removing a row"), Remove, EDreamUIDiagnosticCode::PatchSyntaxNotWritable);
-
 	FDreamUIStructuralEdit Rename;
 	Rename.Kind = EDreamUIStructuralEditKind::RenameNode;
 	Rename.NodeId = TEXT("Page__Text_Load");
 	Rename.NewId = TEXT("LoadRow");
 	Structural(TEXT("naming a row"), Rename, EDreamUIDiagnosticCode::PatchSyntaxNotWritable);
 
+	// A row has no place outside its table: its type, style and columns are the table's.
 	FDreamUIStructuralEdit Move;
 	Move.Kind = EDreamUIStructuralEditKind::MoveNode;
 	Move.NodeId = TEXT("Page__Text_Load");
-	Move.ParentId = TEXT("Page");
-	Move.ChildIndex = 0;
-	Structural(TEXT("moving a row"), Move, EDreamUIDiagnosticCode::PatchSyntaxNotWritable);
+	Move.ParentId = TEXT("Page__Text_Save");
+	Structural(TEXT("moving a row out of its table"), Move, EDreamUIDiagnosticCode::PatchSyntaxNotWritable);
 
 	FDreamUIStructuralEdit Component;
 	Component.Kind = EDreamUIStructuralEditKind::InsertComponent;

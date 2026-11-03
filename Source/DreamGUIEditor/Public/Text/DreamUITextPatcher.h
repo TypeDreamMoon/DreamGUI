@@ -75,6 +75,11 @@ enum class EDreamUIStructuralEditKind : uint8
 	 * value the new type has no property for, which the next compile would otherwise refuse.
 	 */
 	RemoveProperty,
+	/**
+	 * A copy of the `rows` line of NodeId -- a row -- written on the line after it: what duplicating a row is. The copy
+	 * has the same key, so the builder names it `<id>_1` (DUI3023, a warning), which is the name a duplicate is given.
+	 */
+	InsertRow,
 };
 
 /**
