@@ -1,8 +1,3 @@
----
-title: "UDreamListView"
-description: "UDreamListView"
----
-
 <a id="udreamlistview"></a>
 
 # UDreamListView
@@ -15,12 +10,9 @@ description: "UDreamListView"
 
 一个层级结构由代码而非资产定义的列表：行由来源构建，处于可滚动的视口中。
 
-DreamGUI 风格下的 UMG ListView —— 并且刻意比它更小。没有需要实现的 entry-widget
-协议，也没有需要编写的数据源：设计师真正会去使用的两个属性（一组条目，以及选中哪一个）都是 UPROPERTY，因此 .dui、设计器、蓝图
-以及 `<->` 绑定都可以驱动它们，而无需任何人编写一行胶水代码。
+DreamGUI 风格下的 UMG ListView —— 并且刻意比它更小。没有需要实现的 entry-widget 协议，也没有需要编写的数据源：设计师真正会去使用的两个属性（一组条目，以及选中哪一个）都是 UPROPERTY，因此 .dui、设计器、蓝图以及 `<->` 绑定都可以驱动它们，而无需任何人编写一行胶水代码。
 
-关于树的形态、为何行是被放置而不是被排列、
-何时开始回收它们，以及 Native.List 如何与 `each` 语言特性并立，请参阅 UDreamListViewBase。
+关于树的形态、为何行是被放置而不是被排列、何时开始回收它们，以及 Native.List 如何与 `each` 语言特性并立，请参阅 UDreamListViewBase。
 
 <a id="properties"></a>
 
@@ -158,3 +150,4 @@ UMG 类中每一个面向蓝图的成员，以及它去了哪里。*adopt*：同
 | `UListViewBase` | `bAllowKeepPreselectedItems` | adopt | `bAllowKeepPreselectedItems` | 与实时索引集合并存的停放索引集合：ReconcileSelection 会在源长到足以容纳停放索引的瞬间重新应用它，而不是丢弃它。一个在数据加载前就恢复“第 7 行曾被选中”的界面，否则就会静默地丢失它。关闭该开关会丢弃停放集合。 |
 | `UListViewBase` | `BP_OnEntryReleased` | map | `OnRowReleased` | 在新索引写入之前触发，因此询问 GetRowItemIndex 的处理器仍会被告知正在释放的那一个。 |
 | `UListViewBase` | `NumDesignerPreviewEntries` | reject |  | 仅设计时使用的行数。此控件没有世界、也没有布局过程，直接从编写的 Items 构建它的行，因此设计器已经看到真实的列表——没有什么需要预览计数来替代。 |
+

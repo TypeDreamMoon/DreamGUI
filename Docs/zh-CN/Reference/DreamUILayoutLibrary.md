@@ -1,8 +1,3 @@
----
-title: "UDreamUILayoutLibrary"
-description: "UDreamUILayoutLibrary"
----
-
 <a id="udreamuilayoutlibrary"></a>
 
 # UDreamUILayoutLibrary
@@ -15,10 +10,7 @@ description: "UDreamUILayoutLibrary"
 
 视口、鼠标和屏幕——本框架的 UWidgetLayoutLibrary。
 
-这里的一切过去只能从 C++ 访问，除此之外别无他法：视口的大小、它的 DPI 缩放、
-鼠标在 UI 实际使用的坐标系中的位置，以及世界位置落在屏幕上的何处。想在敌人身上钉一个标记的
-蓝图，必须绕道 UMG 库——它的答案位于 Slate 的坐标系中，而不是本框架的坐标系，
-然后祈祷两者一致。
+这里的一切过去只能从 C++ 访问，除此之外别无他法：视口的大小、它的 DPI 缩放、鼠标在 UI 实际使用的坐标系中的位置，以及世界位置落在屏幕上的何处。想在敌人身上钉一个标记的蓝图，必须绕道 UMG 库——它的答案位于 Slate 的坐标系中，而不是本框架的坐标系，然后祈祷两者一致。
 
 <a id="functions"></a>
 
@@ -70,3 +62,4 @@ UMG 类中每一个面向蓝图的成员，以及它们的去向。*adopt*：名
 | `UWidgetLayoutLibrary` | `SlotAsWidgetSwitcherSlot` | map | `SlotAsPanelSlot` |  |
 | `UWidgetLayoutLibrary` | `RemoveAllWidgets` | adopt | `RemoveAllWidgets` | 通过 UDreamScreenUISubsystem 将每个被跟踪的页面从屏幕上移除。 |
 | `UWidgetLayoutLibrary` | `GetDesignTimeInfo` | map | `UDreamUserWidget::IsDesignTime` | UMG 的结构体携带设计器的预览大小和标志。这里只有其中一部分在运行时有意义，即“我是否处于设计器中”，这也是图使用它的目的。 |
+

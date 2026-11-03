@@ -1,8 +1,3 @@
----
-title: "UDreamLayoutContainerSafeZone"
-description: "UDreamLayoutContainerSafeZone"
----
-
 <a id="udreamlayoutcontainersafezone"></a>
 
 # UDreamLayoutContainerSafeZone
@@ -59,3 +54,4 @@ UMG 类中所有面向蓝图的成员，以及它们在此处的去向。*adopt*
 | `USafeZone` | `PadRight` | map | `bPadRight` |  |
 | `USafeZone` | `PadTop` | map | `bPadTop` |  |
 | `USafeZone` | `PadBottom` | map | `bPadBottom` |  |
+

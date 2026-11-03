@@ -1,8 +1,3 @@
----
-title: "UDreamInputKeySelector"
-description: "UDreamInputKeySelector"
----
-
 <a id="udreaminputkeyselector"></a>
 
 # UDreamInputKeySelector
@@ -20,8 +15,7 @@ description: "UDreamInputKeySelector"
 按键从何而来，直白地说，因为这个插件没有可以提供它的钩子，这个类也不假装有。这里存在的是：
   - UDreamUIActionRouter，它从数据表路由具名动作。它把按键解析为一个动作并触发该动作的回调；它无法报告按键本身，而重绑定需要的是按键，不是含义。
   - ADreamStandaloneInputEventSystemActor，它确实持有真实的 FKey——其 AnyKey 绑定就是它们到达的地方——但会直接将它们转发到导航和路由器，不广播任何内容。OnAnyKeyPressed 是私有的且非虚。
-  - UDreamUserWidget 的蓝图接口，涉及指针、拖拽、焦点和导航。没有按键。
-（UUITextInput 确实会捕获原始按键，方法是生成一个使用 AutoReceiveInput 的 actor 并在其上绑定每个按键。那是文本框的代价——每个活动文本框一个 actor，消费它所绑定的内容——而在一 个控件内部悄悄发明它的第二份副本，不是这个类会做的事。）
+  - UDreamUserWidget 的蓝图接口，涉及指针、拖拽、焦点和导航。没有按键。（UUITextInput 确实会捕获原始按键，方法是生成一个使用 AutoReceiveInput 的 actor 并在其上绑定每个按键。那是文本框的代价——每个活动文本框一个 actor，消费它所绑定的内容——而在一 个控件内部悄悄发明它的第二份副本，不是这个类会做的事。）
 
 所以待命、状态、视觉呈现和值都在这里，而按键是被喂进来的：当它处于监听状态时，项目的输入层用玩家按下的任何按键调用 NotifyKeyPressed，当它接受该按键时返回 true。那一层就是项目已经能看到按键的地方——它的 PlayerController、一个 Enhanced Input 动作，或者一个覆写 BindActionRouting（正是为这类扩展而设为虚）的 ADreamStandaloneInputEventSystemActor 子类。SetSelectedKey 在不涉及监听的情况下写入值，用于设置界面恢复已保存的绑定。
 
@@ -126,3 +120,4 @@ UMG 类中每个面向蓝图的成员，以及它们的去向。*adopt*：同名
 | `UInputKeySelector` | `GetIsSelectingKey` | adopt | `GetIsSelectingKey` | 待命状态在 UMG 中的名称；GetIsListening 是本库对同一标志自己的拼写。 |
 | `UInputKeySelector` | `SetTextBlockVisibility` | adopt | `SetTextBlockVisibility` | 接受 EDreamWidgetVisibility，即本库对同一问题的五个自有答案。仅限标签：表面保持其可见性，因此选择器仍可点击，这是从待命状态退出的已记录方式。 |
 | `UInputKeySelector` | `SetEscapeKeys` | adopt | `SetEscapeKeys` |  |
+

@@ -1,10 +1,9 @@
 ---
-title: "控件模型"
-description: "UDreamWidget 是什么 —— 一个携带矩形、锚点和轴心的 UObject，挂着视觉、布局、槽和行为，排列成一棵树 —— 外加渲染变换、不透明度与可见性，以及它与 UMG 在尺寸上的差异。"
+title: 控件模型
+description: UDreamWidget 是什么 —— 一个携带矩形、锚点和轴心的 UObject，挂着视觉、布局、槽和行为，排列成一棵树 —— 外加渲染变换、不透明度与可见性，以及它与 UMG 在尺寸上的差异。
 ---
 
-DreamGUI 中的控件是一个 `UDreamWidget`：一个带矩形、轴心和锚点的 `UObject`，排列成一棵树，由 [画布](canvas.md) 绘制，后者会把整棵树尽可能合批成最少的绘制调用。这是 Unity 的
-uGUI 形态，而非 Slate 的形态。它不是 Actor，也不是 Actor 组件；其背后没有 `SWidget`，因此 UMG 的任何控件、样式或绑定都不适用。
+DreamGUI 中的控件是一个 `UDreamWidget`：一个带矩形、轴心和锚点的 `UObject`，排列成一棵树，由 [画布](canvas.md) 绘制，后者会把整棵树尽可能合批成最少的绘制调用。这是 Unity 的 uGUI 形态，而非 Slate 的形态。它不是 Actor，也不是 Actor 组件；其背后没有 `SWidget`，因此 UMG 的任何控件、样式或绑定都不适用。
 
 控件本身不绘制任何东西，也不排列任何东西。它绘制什么、如何排列子级、父级把它放在哪里、它运行什么逻辑，都由它携带的子对象决定 —— 用 `ConstructWidget` 的注释里的话说，"panel" 在这里是一个子对象，而不是一个单独的类。
 
@@ -22,8 +21,7 @@ uGUI 形态，而非 Slate 的形态。它不是 Actor，也不是 Actor 组件�
 | 行为 | 组件数组：`AddComponent`、`GetComponent`、`GetComponents` | 逻辑：按钮、画布、导航作用域…… |
 | 子级 | `GetChildren`、`AddChild`、`SetParent` | 树 |
 
-在 `.dui` 中，各部分很容易区分：节点类型是视觉（`Text`、`Image`）或布局容器
-（`VerticalBox`），`+ Class { }` 挂载行为或容器，`@slot` 行则是父级面板对该节点的处理方式。
+在 `.dui` 中，各部分很容易区分：节点类型是视觉（`Text`、`Image`）或布局容器（`VerticalBox`），`+ Class { }` 挂载行为或容器，`@slot` 行则是父级面板对该节点的处理方式。
 
 ```dui
 Widget Root {
@@ -72,9 +70,7 @@ Widget Root {
 
 坐标 y 轴向上：`Pivot`、`RenderTransformPivot` 和 `PerspectiveOrigin` 都把原点放在左下角，与 UMG 的左上角原点不同 —— 这是有意为之，因为插件内部的一致比与其他引擎的一致更重要。
 
-运行时每个字段都有对应的 setter：`SetAnchorMin`、`SetAnchorMax`、`SetAnchoredPosition`、`SetSizeDelta`、
-`SetPivot`，以及面向结果的 `SetWidth`、`SetHeight` 和 `SetAnchorOffset`（拉伸控件的四条边距离）。每个也有对应的补间 —— `AnchoredPositionTo`、`SizeDeltaTo`、`WidthTo`、`HeightTo` —— 返回一个 `UDreamTweener`
-（见[动画](animation.md)）。
+运行时每个字段都有对应的 setter：`SetAnchorMin`、`SetAnchorMax`、`SetAnchoredPosition`、`SetSizeDelta`、 `SetPivot`，以及面向结果的 `SetWidth`、`SetHeight` 和 `SetAnchorOffset`（拉伸控件的四条边距离）。每个也有对应的补间 —— `AnchoredPositionTo`、`SizeDeltaTo`、`WidthTo`、`HeightTo` —— 返回一个 `UDreamTweener` （见[动画](animation.md)）。
 
 `RelativeLocation` 也可以设置，但它的 setter 会重新计算锚点并请求父级重新布局；而 `.dui` 只写 `AnchorData`，因此同一位置永远不会被写两次。
 
@@ -93,20 +89,15 @@ Widget Root {
 | 复用 | Widget Blueprint 子类化 | Widget Blueprint 子类化，外加用于内容的命名槽位 |
 | 世界中 | `WidgetComponent`，一个渲染的四边形 | 一种一等的渲染模式 |
 
-文本那一行最让人意外。UMG 的 `TextBlock` 不会溢出，因为它的盒子由文本推导而来。而这里盒子是编写的，因此文本可以溢出盒子，也就有了 UMG 不需要的控件 —— `Margin`、
-`LineHeightPercentage`、`WrapTextAt` 和 Best Fit；见[文本](text.md)。
+文本那一行最让人意外。UMG 的 `TextBlock` 不会溢出，因为它的盒子由文本推导而来。而这里盒子是编写的，因此文本可以溢出盒子，也就有了 UMG 不需要的控件 —— `Margin`、 `LineHeightPercentage`、`WrapTextAt` 和 Best Fit；见[文本](text.md)。
 
-盒子优先并不意味着没有内容尺寸。一旦控件位于面板中，面板会询问它想要多大
-（`GetDesiredSize`），并把排列后的矩形写回它的 `AnchorData`。视觉以负数回答该问题时表示弃权，此时使用编写的矩形；`0` 是一个真实的回答。完整规则见
-[布局](layout.md)。
+盒子优先并不意味着没有内容尺寸。一旦控件位于面板中，面板会询问它想要多大（`GetDesiredSize`），并把排列后的矩形写回它的 `AnchorData`。视觉以负数回答该问题时表示弃权，此时使用编写的矩形；`0` 是一个真实的回答。完整规则见[布局](layout.md)。
 
 <a id="visuals-what-a-widget-draws"></a>
 
 ## 视觉：控件绘制什么
 
-视觉（`UDreamVisual`）是其控件的子对象，每个控件至多一个。没有视觉的控件就是一个矩形 —— `Widget`
-中的 `.dui` —— 这正是纯容器的形态。每个视觉都有 `Color`（sRGB，可在 Sequencer 中打关键帧）、`bRaycastTarget`
-和 `RaycastType`（`Rect`、`Mesh`、`VisiblePixel`、`Custom`）。
+视觉（`UDreamVisual`）是其控件的子对象，每个控件至多一个。没有视觉的控件就是一个矩形 —— `Widget` 中的 `.dui` —— 这正是纯容器的形态。每个视觉都有 `Color`（sRGB，可在 Sequencer 中打关键帧）、`bRaycastTarget` 和 `RaycastType`（`Rect`、`Mesh`、`VisiblePixel`、`Custom`）。
 
 | `.dui` 标签 | 类 | 模块 | 绘制 |
 | --- | --- | --- | --- |
@@ -203,18 +194,13 @@ Blueprint 侧是 **13 个 `Receive*` 事件**（6 个时机 + 7 个回调），�
 | `RenderOpacity` | 透明度，沿树向下相乘；`GetFinalRenderOpacity` 是乘完的值 |
 | `SetContentTint` | 给**后代**的视觉染色（不含自己），像 UMG 的 content colour |
 
-`Shown` 永远不会改掉隐藏或不可命中：一个 `Hidden` 的控件被设成 shown 以后还是 `Hidden`。剪裁是
-`Clipping`（`Inherit`、`ClipToBounds`、`ClipToBoundsWithoutIntersecting`、`Disabled`），另有 `ClippingCornerRadius` 和
-`ClippingMargin`。`OnVisibilityChanged`、`OnFocusReceived` 和 `OnFocusLost` 是控件上可绑定的三个事件。
+`Shown` 永远不会改掉隐藏或不可命中：一个 `Hidden` 的控件被设成 shown 以后还是 `Hidden`。剪裁是 `Clipping`（`Inherit`、`ClipToBounds`、`ClipToBoundsWithoutIntersecting`、`Disabled`），另有 `ClippingCornerRadius` 和 `ClippingMargin`。`OnVisibilityChanged`、`OnFocusReceived` 和 `OnFocusLost` 是控件上可绑定的三个事件。
 
 <a id="making-widgets-in-code"></a>
 
 ## 在代码里建控件
 
-`UDreamUIBPLibrary::ConstructWidget(WorldContext, DisplayName, VisualClass)` 是 UMG 的
-`WidgetTree::ConstructWidget<T>()` 的对应物：控件存在但不在屏幕上。它不画任何东西，行为也不会
-运行，直到你把它交给 `AddChild` 或 `AddToViewport`；在此之前 DreamUI 的管理器持有它，所以你在配置它时它不会被回收。纯容器就把 `VisualClass` 留空，然后给它一个布局容器，就成
-面板了。
+`UDreamUIBPLibrary::ConstructWidget(WorldContext, DisplayName, VisualClass)` 是 UMG 的 `WidgetTree::ConstructWidget<T>()` 的对应物：控件存在但不在屏幕上。它不画任何东西，行为也不会运行，直到你把它交给 `AddChild` 或 `AddToViewport`；在此之前 DreamUI 的管理器持有它，所以你在配置它时它不会被回收。纯容器就把 `VisualClass` 留空，然后给它一个布局容器，就成面板了。
 
 | 调用 | 结果 |
 | --- | --- |
@@ -223,7 +209,4 @@ Blueprint 侧是 **13 个 `Receive*` 事件**（6 个时机 + 7 个回调），�
 | `DestroyChild` / `DestroyWidget` | 拆掉整棵子树；之后 `IsValid` 返回假 |
 | `FindChildByDisplayName` | 按显示名找孩子，支持路径，如 `"Content/ListItem/NameLabel"` |
 
-一个 Widget Blueprint 的实例在蓝图里用 **Create Dream Widget** 节点建，C++ 里用
-`UDreamUIBPLibrary::CreateDreamWidgetOfClass` 或 `AddWidgetOfClassToViewport` 建；见
-[Widget Blueprint](widget-blueprints.md)。每个属性和函数都列在
-[`UDreamWidget` 参考](../Reference/DreamWidget.md)里，末尾有与 UMG `UWidget` 的逐项对照。
+一个 Widget Blueprint 的实例在蓝图里用 **Create Dream Widget** 节点建，C++ 里用 `UDreamUIBPLibrary::CreateDreamWidgetOfClass` 或 `AddWidgetOfClassToViewport` 建；见 [Widget Blueprint](widget-blueprints.md)。每个属性和函数都列在 [`UDreamWidget` 参考](../Reference/DreamWidget.md)里，末尾有与 UMG `UWidget` 的逐项对照。

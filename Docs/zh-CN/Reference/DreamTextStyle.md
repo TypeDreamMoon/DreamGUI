@@ -1,8 +1,3 @@
----
-title: "FDreamTextStyle"
-description: "FDreamTextStyle"
----
-
 <a id="fdreamtextstyle"></a>
 
 # FDreamTextStyle
@@ -41,3 +36,4 @@ description: "FDreamTextStyle"
 | `OverlayBlend` | `EDreamTextOverlayBlend` | 绘制 | 是 | 读 / 写 |  |
 | `PaintBoxHorizontal` | `EDreamTextPaintBox` | 绘制 | 是 | 读 / 写 | 文本的绘制是以什么为基准测量的，横向和纵向；两者都以文本作为块，即 CSS 的 background box，为默认值。 |
 | `PaintBoxVertical` | `EDreamTextPaintBox` | 绘制 | 是 | 读 / 写 |  |
+

@@ -1,8 +1,3 @@
----
-title: "UDreamLayoutContainerBorder"
-description: "UMG 的 UBorder：单个子项、可设置内边距，由边框本身而非子项槽位决定对齐。"
----
-
 <a id="udreamlayoutcontainerborder"></a>
 
 # UDreamLayoutContainerBorder
@@ -50,3 +45,4 @@ SBorder 在其画刷之上添加的内容这里也有：ContentColorAndOpacity �
 | `void SetPadding(FMargin Value)` | 可调用 | 设置内边距 |
 | `void SetShowEffectWhenDisabled(bool Value)` | 可调用 | 设置禁用时显示效果 |
 | `void SetVerticalAlignment(EDreamPanelVerticalAlignment Value)` | 可调用 | 设置垂直对齐 |
+

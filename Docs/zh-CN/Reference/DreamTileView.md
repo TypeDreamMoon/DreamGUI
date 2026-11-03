@@ -1,8 +1,3 @@
----
-title: "UDreamTileView"
-description: "UDreamTileView"
----
-
 <a id="udreamtileview"></a>
 
 # UDreamTileView
@@ -15,14 +10,17 @@ description: "UDreamTileView"
 
 一个层级结构由代码而非资产定义的磁贴视图：一种行既横向排布又纵向堆叠的列表。
 
-UMG 的 TileView 继承自它的 ListView 并添加了一个条目 WIDTH；这里的关系相同，理由也相同。
-构成列表的一切——视口、滚动条、滚动列、行模板、对象池、选择、回收阈值——都归 UDreamListViewBase 所有，此处不再重述。磁贴视图所添加的，是一个以不同方式回答的问题：多少行并排存在。
+UMG 的 TileView 继承自它的 ListView 并添加了一个条目 WIDTH；这里的关系相同，理由也相同。构成列表的一切——视口、滚动条、滚动列、行模板、对象池、选择、回收阈值——都归 UDreamListViewBase 所有，此处不再重述。磁贴视图所添加的，是一个以不同方式回答的问题：多少行并排存在。
+
+<a id="the-column-count-is-measured-not-authored"></a>
 
 列数是测量出来的，不是作者填写的
 ------------------------------------------
 UMG 的磁贴视图在宽度允许的范围内尽可能多地横向容纳条目，并在宽度变化时重新排布，这里也是如此：ResolveColumnCount 用视口除以磁贴间距。作者填写的数量会成为第二个必须与宽度保持一致的数字，而第一次调整尺寸就会终结这种一致——这正是重写行放置逻辑所要消除的同一个公式出现在两个地方的问题。
 
 下限始终为一：视口窄于一个磁贴时，每行显示一个磁贴并对其裁剪，这是可见且可恢复的；而零列则意味着除以零和一个空白控件。
+
+<a id="what-a-tiles-size-is"></a>
 
 磁贴的尺寸是什么
 ---------------------
@@ -78,3 +76,4 @@ UMG 该类中每一个面向蓝图的成员，以及它去了哪里。*adopt*：
 | `UTileView` | `bWrapHorizontalNavigation` | adopt | `bWrapHorizontalNavigation` | 在 UDreamTileView::GetNavigationTarget 中按索引回答，而非按几何：从一行末端出去就是下一行的第一个磁贴，而它落到的那个磁贴位于控件的「对侧」边缘——正是最近矩形导航器无法完成的那一步。磁贴上的导航按键步进所依据的就是 GetNavigationTarget，因此该开关能传达到玩家。默认关闭，与 UMG 相同：此时从一行末端按键会离开磁贴视图。 |
 | `UTileView` | `ScrollbarDisabledVisibility` | map | `ScrollBarVisibility` | AutoHide 已经表示「全部容纳时隐藏」，这正是 UMG 的 disabled 可见性所描述的状态。为 disabled 情形再设一个枚举就会是第二个答案。 |
 | `UTileView` | `bEntrySizeIncludesEntrySpacing` | reject |  | 一个用于切换所填尺寸是磁贴本身还是磁贴加其间隙的开关。在这里它们是两个从不相加的字段：TileWidth 是磁贴，TileSpacing 是它旁边的间隙，因此不存在需要标志来消解的歧义。 |
+

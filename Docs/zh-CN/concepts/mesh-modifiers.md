@@ -1,6 +1,6 @@
 ---
-title: "网格修改器与文字动画"
-description: "在视觉交出的几何上做加法：七个修改器、文字动画那一族的三个维度与二十个类，以及它们的顶点预算与 UV 通道约束。"
+title: 网格修改器与文字动画
+description: 在视觉交出的几何上做加法：七个修改器、文字动画那一族的三个维度与二十个类，以及它们的顶点预算与 UV 通道约束。
 ---
 
 视觉把几何交出去**之后**，还能动它吗？这一页讲的就是那件事 —— **不换视觉、不改布局**，只动顶点、颜色和 UV。
@@ -82,13 +82,9 @@ description: "在视觉交出的几何上做加法：七个修改器、文字动
 | **选择器**（4） | `_Selector`（抽象）/ `RangeSelector` / `RandomSelector` / `RichTextTagSelector` | 按 0–1 的**位置区间**选／**随机**选／按**富文本自定义标签**选范围 |
 | **属性**（12） | Alpha 1、Color 2、Position 3、Rotation 3、Scale 3 | 每个按「普通 / 随机 / 波」铺开 |
 
-**20 = 1 基类 + 3 中间基类 + 4 选择器 + 12 属性。** 「普通」与「随机」继承 `_PropertyWithEase`，
-「波」继承 `_PropertyWithWave` —— **缓动 / 波来自中间基类那一维，不是每个属性各写一遍**。
+**20 = 1 基类 + 3 中间基类 + 4 选择器 + 12 属性。** 「普通」与「随机」继承 `_PropertyWithEase`，「波」继承 `_PropertyWithWave` —— **缓动 / 波来自中间基类那一维，不是每个属性各写一遍**。
 
-⚠️ `_PropertyWithWave` 有一条**已修的历史 bug**：`Frequency`（值越大波长越短）与 `Speed`
-（波速）**曾经读写串了** —— `SetFrequency` 实际动的是 `Speed`。修对之后，
-**从蓝图调用 `SetFrequency` 的行为会静默改变**：节点还在、还能编译，只是动的属性变了。
-资产不受影响（两个都是 `EditAnywhere`、各自序列化）。
+⚠️ `_PropertyWithWave` 有一条**已修的历史 bug**：`Frequency`（值越大波长越短）与 `Speed` （波速）**曾经读写串了** —— `SetFrequency` 实际动的是 `Speed`。修对之后，**从蓝图调用 `SetFrequency` 的行为会静默改变**：节点还在、还能编译，只是动的属性变了。资产不受影响（两个都是 `EditAnywhere`、各自序列化）。
 
 <a id="using-it"></a>
 
@@ -107,21 +103,16 @@ Anim->SetProperties({ Alpha });
 // Sequencer pulls SelectorOffset from 0 to 1, and the characters light up one by one
 ```
 
-当 `SetProperties` / `SetProperty` 在**已登记**状态下换属性时，会把旧的 `Deinit`、新的
-`Init`。
+当 `SetProperties` / `SetProperty` 在**已登记**状态下换属性时，会把旧的 `Deinit`、新的 `Init`。
 
 <a id="when-it-does-not-serve"></a>
 
 ## 什么时候它不好用
 
-- **副本类修改器吃顶点**：`Outline` 4 或 8 份、`LongShadow` 每段一份。顶点多到一个绘制调用的索引装不下时（见
-  [渲染](rendering.md#indices-are-16-bit) 的「索引是 16 位的」），源码**每个修改器只报一次错、然后
-  不画那个副本** —— 「阴影突然没了」先看顶点预算。
+- **副本类修改器吃顶点**：`Outline` 4 或 8 份、`LongShadow` 每段一份。顶点多到一个绘制调用的索引装不下时（见[渲染](rendering.md#indices-are-16-bit) 的「索引是 16 位的」），源码**每个修改器只报一次错、然后不画那个副本** —— 「阴影突然没了」先看顶点预算。
 - **顺序不由你定**：`GetDuplicatesMesh` 为真的修改器**总排在就地修改的后面**。
-- **`PositionAsUV` 不能写 `UV1`**；写 `UV0` **会替换图像**；`UV2` / `UV3` 占没占要看
-  **具体视觉**。
-- **会移动顶点的修改器会让文字离开小字覆盖字形路径**（退回距离场）；
-  `Alpha` / `Color` / `ColorRandom` 除外。
+- **`PositionAsUV` 不能写 `UV1`**；写 `UV0` **会替换图像**；`UV2` / `UV3` 占没占要看**具体视觉**。
+- **会移动顶点的修改器会让文字离开小字覆盖字形路径**（退回距离场）； `Alpha` / `Color` / `ColorRandom` 除外。
 - **镜像只能绕控件矩形中心**，且反射会翻面、靠重绕三角形修 —— 用剔除背面的材质时尤其记得。
 - **修改器要挂在会建网格的视觉上**，文字动画要挂在有 `Text` 的控件上。
 
@@ -129,8 +120,6 @@ Anim->SetProperties({ Alpha });
 
 ## 还没证实的
 
-- 这块**没有任何 `Docs/Reference/` 页面**（搜 MeshModifier 为空），以上全部来自
-  源码头文件 —— 逐类的完整属性表要看生成的参考页。
-- `LongShadow` 的 `ShadowSize` 第三分量（Z = −1）与段数的几何关系**未
-  逐行核**。
+- 这块**没有任何 `Docs/Reference/` 页面**（搜 MeshModifier 为空），以上全部来自源码头文件 —— 逐类的完整属性表要看生成的参考页。
+- `LongShadow` 的 `ShadowSize` 第三分量（Z = −1）与段数的几何关系**未逐行核**。
 - `GradientColor` 的 `FourCorner` 四个颜色到四角的映射**未逐行核**。

@@ -1,8 +1,3 @@
----
-title: "FDreamScrollBoxStyle"
-description: "FDreamScrollBoxStyle"
----
-
 <a id="fdreamscrollboxstyle"></a>
 
 # FDreamScrollBoxStyle
@@ -24,3 +19,4 @@ Dream 滚动框样式
 | `CornerRadius` | `float` | Scroll Box Style | 是 | 读 / 写 |  |
 | `BackgroundBrush` | `FDreamUIFaceBrush` | Scroll Box Style | 是 | 读 / 写 |  |
 | `Bar` | `FDreamScrollBarStyle` | Scroll Box Style | 是 | 读 / 写 |  |
+

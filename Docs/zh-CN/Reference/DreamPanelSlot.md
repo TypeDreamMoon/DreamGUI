@@ -1,8 +1,3 @@
----
-title: "UDreamPanelSlot"
-description: "UDreamPanelSlot"
----
-
 <a id="udreampanelslot"></a>
 
 # UDreamPanelSlot
@@ -222,3 +217,4 @@ UMG 类中每个面向蓝图的成员，以及它们的去向。*adopt*：名称
 | `UWrapBoxSlot` | `SetHorizontalAlignment` | adopt | `SetHorizontalAlignment` |  |
 | `UWrapBoxSlot` | `SetVerticalAlignment` | adopt | `SetVerticalAlignment` |  |
 | `UWrapBoxSlot` | `SetNewLine` | adopt | `SetNewLine` |  |
+

@@ -1,8 +1,3 @@
----
-title: "UDreamMultiLineEditableText"
-description: "UDreamMultiLineEditableText"
----
-
 <a id="udreammultilineeditabletext"></a>
 
 # UDreamMultiLineEditableText
@@ -15,9 +10,5 @@ description: "UDreamMultiLineEditableText"
 
 同一个字段跨多行显示：UMG 的 MultiLineEditableText。
 
-与勾选 bMultiLine 的调色板条目不同，这里用的是子类，跟那对带框字段不一样——这个
-差异值得说明。`Native.TextInput` 加上 `bMultiLine = true` 就是多行带框
-字段，调色板把它作为同一个类的第二行提供（见注册表）。这里之所以存在一个类，
-是因为 UMG 有这样的类，因为 `.dui` 获得了一个读起来跟 UMG
-文档一致的标签，还因为想要子类化“多行无边框字段”的蓝图有东西可以继承。
-它只设置一个属性。
+与勾选 bMultiLine 的调色板条目不同，这里用的是子类，跟那对带框字段不一样——这个差异值得说明。`Native.TextInput` 加上 `bMultiLine = true` 就是多行带框字段，调色板把它作为同一个类的第二行提供（见注册表）。这里之所以存在一个类，是因为 UMG 有这样的类，因为 `.dui` 获得了一个读起来跟 UMG 文档一致的标签，还因为想要子类化“多行无边框字段”的蓝图有东西可以继承。它只设置一个属性。
+

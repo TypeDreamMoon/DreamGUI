@@ -7,8 +7,7 @@ description: "用 @slot 和 @fill 告诉父面板怎样摆这个节点，用 + C
 
 ## 槽位行：`@slot` 和 `@fill`
 
-一个 widget 在面板里——父节点的容器负责排布子节点（盒子、网格、叠放）——时，它有一个**面板
-槽位**：父节点怎么放它。`@slot` 行设的就是它：
+一个 widget 在面板里——父节点的容器负责排布子节点（盒子、网格、叠放）——时，它有一个**面板槽位**：父节点怎么放它。`@slot` 行设的就是它：
 
 ```
 Text Label {
@@ -46,7 +45,6 @@ Widget Confirm {
 }
 ```
 
-类按名字查找，会依次试插件的各种前缀：`VerticalBox` 找到竖排盒子容器，
-`UIButton` 找到按钮行为，写 `Button` 也行。完整的 `/Script/Module.Class` 路径同样可以。解析不到任何 widget 能挂的东西，是 DUI3006。
+类按名字查找，会依次试插件的各种前缀：`VerticalBox` 找到竖排盒子容器， `UIButton` 找到按钮行为，写 `Button` 也行。完整的 `/Script/Module.Class` 路径同样可以。解析不到任何 widget 能挂的东西，是 DUI3006。
 
 一个节点只有一个布局容器。在普通 `Widget` 上写 `+ VerticalBox` 和把类型写成容器类型是同一件事的两种写法，后者更短。

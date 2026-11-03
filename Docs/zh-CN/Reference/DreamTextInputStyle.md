@@ -1,8 +1,3 @@
----
-title: "FDreamTextInputStyle"
-description: "FDreamTextInputStyle"
----
-
 <a id="fdreamtextinputstyle"></a>
 
 # FDreamTextInputStyle
@@ -37,3 +32,4 @@ description: "FDreamTextInputStyle"
 | `CaretWidth` | `float` | Text Input Style | 是 | 读 / 写 |  |
 | `CaretBlinkRate` | `float` | Text Input Style | 是 | 读 / 写 |  |
 | `ErrorColor` | `FColor` | Text Input Style | 是 | 读 / 写 |  |
+

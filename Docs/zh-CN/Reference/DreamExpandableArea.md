@@ -1,8 +1,3 @@
----
-title: "UDreamExpandableArea"
-description: "UDreamExpandableArea"
----
-
 <a id="udreamexpandablearea"></a>
 
 # UDreamExpandableArea
@@ -93,3 +88,4 @@ UMG 类中每一个面向蓝图的成员，以及它们的去向。*adopt*：名
 | `UExpandableArea` | `SetIsExpanded` | adopt | `SetIsExpanded` |  |
 | `UExpandableArea` | `SetIsExpanded_Animated` | map | `ExpansionDuration` | 是一个时长而不是第二个函数：展开器是否做动画是展开器自身的属性，而不是调用方的属性，因此所有路径（点击、绑定、代码）都会得到相同的展开。零表示瞬间完成，这也是每个已创作过的展开器的行为。 |
 | `UExpandableArea` | `SetStyle` | adopt | `SetStyle` | UExpandableArea 根本没有样式设置器（它的 Style 仅为 EditAnywhere）；这是该家族在运行时替换外观的写法。 |
+

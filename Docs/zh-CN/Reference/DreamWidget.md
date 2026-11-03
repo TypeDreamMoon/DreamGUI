@@ -1,8 +1,3 @@
----
-title: "UDreamWidget"
-description: "UDreamWidget"
----
-
 <a id="udreamwidget"></a>
 
 # UDreamWidget
@@ -61,9 +56,9 @@ description: "UDreamWidget"
 | `LayoutSelf` | `TObjectPtr<UDreamLayoutSelf>` | LayoutSelf | yes | read only |  |
 | `PanelSlot` | `TObjectPtr<UDreamPanelSlot>` | PanelSlot | 是 | 只读 | 由父面板拥有的布局数据。它与 LayoutSelf 分开，以便旧版 Flex/Grid 资源仍然有效。 |
 | `bIsFocusable` | `bool` | Interaction|Focus | 是 | 只读 |  |
-| `bIsTabStop` | `bool` | Interaction|Focus | 是 | 只读 | 当它可以获得焦点且可以被导航到时，Tab 和 Shift+Tab 会停在这里。关闭则交给方向键、手柄、指针和代码——相当于浏览器的 tabindex="-1"。 |
-| `TabIndex` | `int32` | Interaction|Focus | 是 | 只读 | 它在同级控件中 Tab 顺序里的位置：索引较小的在前，索引相同的同级控件按层级中的顺序排列。只比较同级控件。 |
-| `TabNavigation` | `EDreamWidgetTabNavigation` | Interaction|Focus | 是 | 只读 | 它内部的 Tab 停靠点如何参与 Tab 顺序；请参见 EDreamWidgetTabNavigation。 |
+| `bIsTabStop` | `bool` | Interaction|Focus | 是 | 只读 | Tab and Shift+Tab stop here, when it is focusable and can be navigated to. Off leaves it to the arrows, the pad, a pointer and code -- a browser's tabindex="-1". |
+| `TabIndex` | `int32` | Interaction|Focus | 是 | 只读 | Its place in Tab order among its siblings: lower first, siblings with the same index in the hierarchy's order. Only siblings are compared. |
+| `TabNavigation` | `EDreamWidgetTabNavigation` | Interaction|Focus | 是 | 只读 | How the Tab stops inside it take part in Tab order; see EDreamWidgetTabNavigation. |
 | `Cursor` | `TEnumAsByte<EMouseCursor::Type>` | Interaction | 是 | 只读 |  |
 | `ToolTipText` | `FText` | Interaction | 是 | 只读 |  |
 | `ToolTipWidgetClass` | `TSubclassOf<UDreamUserWidget>` | Interaction | 是 | 只读 | 将此控件类本身显示为工具提示，而不是使用内置的文本气泡。当两者都设置时优先级高于 ToolTipText，与工具提示服务解析其两条内容路径的既有顺序一致。 |
@@ -448,3 +443,4 @@ UMG 类中每一个面向蓝图的成员，以及它们的去向。*adopt*：名
 | `UWidget` | `GetOwningLocalPlayer` | adopt | `GetOwningLocalPlayer` |  |
 | `UWidget` | `GetAccessibleText` | adopt | `GetAccessibleText` |  |
 | `UWidget` | `GetAccessibleSummaryText` | adopt | `GetAccessibleSummaryText` |  |
+

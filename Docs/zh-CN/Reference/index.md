@@ -1,8 +1,3 @@
----
-title: "DreamGUI 参考"
-description: "DreamGUI 参考"
----
-
 <a id="dreamgui-reference"></a>
 
 # DreamGUI 参考
@@ -115,3 +110,4 @@ description: "DreamGUI 参考"
 - [FDreamUIImageBrush](DreamUIImageBrush.md)
 - [FDreamUIStateFaces](DreamUIStateFaces.md)
 - [FDreamUIWidgetGeometry](DreamUIWidgetGeometry.md)
+

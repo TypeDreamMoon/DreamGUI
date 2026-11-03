@@ -1,10 +1,9 @@
 ---
-title: "控件树、停车与宿主"
-description: "控件活在一条树上，树决定由谁照看它们 —— 还有树上最容易被误读的那个状态，即“停放”。此外还有宿主契约与呈现器基类。"
+title: 控件树、停车与宿主
+description: 控件活在一条树上，树决定由谁照看它们 —— 还有树上最容易被误读的那个状态，即“停放”。此外还有宿主契约与呈现器基类。
 ---
 
-控件活在一条树上，树决定由谁照看它们。[控件模型](widgets.md)讲的是
-一个控件由什么组成；本页讲的是**树本身**，以及树上最容易被误读的那个状态。
+控件活在一条树上，树决定由谁照看它们。[控件模型](widgets.md)讲的是一个控件由什么组成；本页讲的是**树本身**，以及树上最容易被误读的那个状态。
 
 - 四个树动词、视觉与行为 → [控件模型](widgets.md)
 - 用户控件中的 `WidgetTree` → [控件蓝图](widget-blueprints.md)
@@ -19,9 +18,7 @@ description: "控件活在一条树上，树决定由谁照看它们 —— 还�
 
 要理解它，看看它取代了什么：早期 DreamGUI 把控件**扁平**地 outer 到 `UWorld`，层级只活在 prefab 的二进制块里，加载时再重建。那样引擎**没有对象图**可以序列化、复制或实例化 —— **这也正是一条树没法住在一个类模板上的原因**。树就是那个缺失的锚点。
 
-在树里，控件同样**保持扁平**，而不是嵌套在父级之下 —— 与 UMG 一致。
-`FObjectInstancingGraph` 跟随的是 **`Instanced` 属性，而不是 outer 链**，所以扁平 outer **不花任何代价**；而且
-**重新挂父级永远不必移动 outer**，这就把 `UObject::Rename`（对象一旦开始销毁就不安全）**挡在了挂接路径之外**。
+在树里，控件同样**保持扁平**，而不是嵌套在父级之下 —— 与 UMG 一致。 `FObjectInstancingGraph` 跟随的是 **`Instanced` 属性，而不是 outer 链**，所以扁平 outer **不花任何代价**；而且**重新挂父级永远不必移动 outer**，这就把 `UObject::Rename`（对象一旦开始销毁就不安全）**挡在了挂接路径之外**。
 
 有两件事它刻意不做：
 
@@ -34,8 +31,7 @@ description: "控件活在一条树上，树决定由谁照看它们 —— 还�
 
 真正拥有一条树的是一个**宿主**（`IDreamWidgetTreeHost`）：宿主是它每一棵树的 `Outer`，所以控件仍然能通过它找到自己的世界。
 
-每一条树都由宿主用一个 **`Transient` / `DuplicateTransient` / `TextExportTransient`** 属性持有 —— 所以
-**任何保存、复制或导出宿主的东西都不会顺手带走一条树**。
+每一条树都由宿主用一个 **`Transient` / `DuplicateTransient` / `TextExportTransient`** 属性持有 —— 所以**任何保存、复制或导出宿主的东西都不会顺手带走一条树**。
 
 管理器只**观察**：一条**已注册但失去了宿主**的树是**要报告出来的 bug**，而不是留给 GC 去清的东西。
 
@@ -51,8 +47,7 @@ description: "控件活在一条树上，树决定由谁照看它们 —— 还�
 
 ## 树上的查询与命名
 
-四个动词（`AddChild` / `RemoveChild` / `DestroyChild` / `FindChildByDisplayName`）在
-[控件模型](widgets.md)里。树多出来的是一组**查询与命名**的 API：
+四个动词（`AddChild` / `RemoveChild` / `DestroyChild` / `FindChildByDisplayName`）在[控件模型](widgets.md)里。树多出来的是一组**查询与命名**的 API：
 
 | 成员 | 做什么 |
 | --- | --- |
@@ -70,8 +65,7 @@ description: "控件活在一条树上，树决定由谁照看它们 —— 还�
 
 ## 停放状态底下是什么
 
-**“停放”是什么**（不画、行为不跑、被管理器持有、`IsWidgetParked` 查询）在
-[脚本](../tools/scripting.md)里。实现把一个控件状态位与管理器带时间戳的登记项结合起来：
+**“停放”是什么**（不画、行为不跑、被管理器持有、`IsWidgetParked` 查询）在[脚本](../tools/scripting.md)里。实现把一个控件状态位与管理器带时间戳的登记项结合起来：
 
 | 部件 | 在哪 | 作用 |
 | --- | --- | --- |
@@ -79,17 +73,13 @@ description: "控件活在一条树上，树决定由谁照看它们 —— 还�
 | `FDreamParkedWidgetEntry` | `DreamUIManager.h` | 一条登记：控件指针 + `ParkedAtSeconds` |
 | `ParkedWidgets`（`TArray`） | `DreamUIManager.h` | 管理器持有的列表 |
 
-⚠️ **`bParked` 故意是一个独立的位，不是 `bWidgetActive` 的一个状态** —— 借用 `bWidgetActive` 会让
-`SetWidgetActive` 在“调用方正在配置控件”的那段窗口里**静默地什么都不做**。所以这个位的含义是
-“**等一个父级**”，而**不是**“走到了人生的哪个阶段”：**一个停放的控件是已注册的，而且世界一开始跑，它就已经
-``BeginPlay`` 过了**。
+⚠️ **`bParked` 故意是一个独立的位，不是 `bWidgetActive` 的一个状态** —— 借用 `bWidgetActive` 会让 `SetWidgetActive` 在“调用方正在配置控件”的那段窗口里**静默地什么都不做**。所以这个位的含义是 “**等一个父级**”，而**不是**“走到了人生的哪个阶段”：**一个停放的控件是已注册的，而且世界一开始跑，它就已经 ``BeginPlay`` 过了**。
 
 **停车发生在两个地方**：`ConstructWidget` 建完一个控件时，以及 `RemoveChild` 把一个子级摘下来时。⚠️ 一段源码注释解释了**为什么不在通用的 detach 路径里**：**在两个父级之间移动也会中途 detach**，在那里停车会把行为**在一个并非移除的操作里关掉一瞬**。
 
 把控件移出停车位的是 `UnparkWidget`，它**每次挂接都会跑**，对一个从没停放过的控件**返回 `false`** —— **这是常态**。
 
-**“行为不跑”归结于一个判断**：在 `CalculateWidgetActive` 里，
-`if (!bWidgetActive || bParked) bResultActive = false;` —— **只要 `bParked` 为真，整棵子树都算作不激活**，于是它不被绘制、不参与布局，它的行为收到 `OnDisable`。
+**“行为不跑”归结于一个判断**：在 `CalculateWidgetActive` 里， `if (!bWidgetActive || bParked) bResultActive = false;` —— **只要 `bParked` 为真，整棵子树都算作不激活**，于是它不被绘制、不参与布局，它的行为收到 `OnDisable`。
 
 ⚠️ **别把两张表混为一谈**：
 
@@ -102,11 +92,9 @@ description: "控件活在一条树上，树决定由谁照看它们 —— 还�
 
 ## 清扫与泄漏探测
 
-停车位有一个可选的**泄漏探针**，**默认关闭**：`UDreamUISettings::ParkedWidgetLifetimeSeconds`，
-默认 **`0.0f`**（**`0` 会关掉这项检查，也是默认值**）。
+停车位有一个可选的**泄漏探针**，**默认关闭**：`UDreamUISettings::ParkedWidgetLifetimeSeconds`，默认 **`0.0f`**（**`0` 会关掉这项检查，也是默认值**）。
 
-⚠️ 它是一台**开发期泄漏探测器，不是寿命策略** —— 一条**正当的慢路径**（比如在等异步加载）从这里看
-**和泄漏一模一样**，而销毁这类调用方的控件**等于自己制造 bug**。
+⚠️ 它是一台**开发期泄漏探测器，不是寿命策略** —— 一条**正当的慢路径**（比如在等异步加载）从这里看**和泄漏一模一样**，而销毁这类调用方的控件**等于自己制造 bug**。
 
 扫描**每帧**都跑（它是 `TickDreamUI` 里的第一件事）。关键在于那句注释 **“Destroying is the point”**：控件是**已注册**的，单纯放手会让 GC 去收一个**仍处于注册态**的控件，而那条路径会从**一个和本源无关的调用栈**打出“not destroyed by its owner”错误。所以扫描**主动销毁**并警告，走 `DestroyWidget()` —— 它**按正确顺序**注销并结束 play，于是控件**永远不会在仍注册的状态下**走到 `BeginDestroy`。
 

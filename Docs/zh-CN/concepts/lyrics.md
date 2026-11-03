@@ -1,10 +1,9 @@
 ---
-title: "歌词"
-description: "UDreamLyricsView —— 逐词点亮、弹簧驱动的歌词视图，LRC 与 TTML 两种输入，以及它的分档参数。"
+title: 歌词
+description: UDreamLyricsView —— 逐词点亮、弹簧驱动的歌词视图，LRC 与 TTML 两种输入，以及它的分档参数。
 ---
 
-`UDreamLyricsView`（`DreamGUIExtensions`）是一个**逐词点亮**的歌词控件，插件自己的说法是
-**Apple Music 式**。
+`UDreamLyricsView`（`DreamGUIExtensions`）是一个**逐词点亮**的歌词控件，插件自己的说法是 **Apple Music 式**。
 
 <a id="what-it-looks-like"></a>
 
@@ -45,13 +44,10 @@ description: "UDreamLyricsView —— 逐词点亮、弹簧驱动的歌词视图
 | 运动 | 位置与缩放**各一套弹簧参数**；行间按 `StaggerSeconds` **0.04 秒**错开、最多累到 **8 行** |
 | 非当前行 | 缩放 **0.92**、透明度 **0.55**，**唱过的行 0.35**；每远一行加 **0.04 em** 的柔化（最多 4 行） |
 
-它建在**弹簧**上（见[动画](animation.md)的弹簧一节）—— 这正是
-「重定目标保留速度」那条性质的用武之地：一行歌词滑向新位置时**接着用原来的速度**，
-而不是从头再来一遍。
+它建在**弹簧**上（见[动画](animation.md)的弹簧一节）—— 这正是「重定目标保留速度」那条性质的用武之地：一行歌词滑向新位置时**接着用原来的速度**，而不是从头再来一遍。
 
 <a id="it-was-written-in-2026"></a>
 
 ## 它是 2026 年新写的
 
-文件头版权是 `Copyright 2026-Present TypeDreamMoon`，**没有 `Lex Liu` 那一行** —— 在插件里这是
-少数几个代码注释与版权都出自新作者的模块。
+文件头版权是 `Copyright 2026-Present TypeDreamMoon`，**没有 `Lex Liu` 那一行** —— 在插件里这是少数几个代码注释与版权都出自新作者的模块。

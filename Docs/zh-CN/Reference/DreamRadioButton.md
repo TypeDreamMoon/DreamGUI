@@ -1,8 +1,3 @@
----
-title: "UDreamRadioButton"
-description: "UDreamRadioButton"
----
-
 <a id="udreamradiobutton"></a>
 
 # UDreamRadioButton
@@ -68,3 +63,4 @@ description: "UDreamRadioButton"
 | `OnToggleChanged` | `void DreamRadioButtonChangedEvent__DelegateSignature(bool bIsOn)` | 由底层的开关触发，在此处重新广播，以便使用者永远无需深入内部部件。 |
 | `OnCheckStateChanged` | `void DreamRadioCheckStateChangedEvent__DelegateSignature(EDreamCheckState CheckedState)` | UMG 对同一时刻的表述，携带完整状态。每当 CheckedState 改变时触发——当布尔投影也发生变化时，与 OnToggleChanged 一同触发。 |
 | `OnValueChangedBP` | `void DreamRadioButtonChangedEvent__DelegateSignature(bool bIsOn)` | `<->` 约定：双向绑定会针对这个确切的名称合成其反向路由，因此值控件会将其与其所述事件一同携带。与它们一同触发。 |
+

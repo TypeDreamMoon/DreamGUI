@@ -1,8 +1,3 @@
----
-title: "UDreamLyricsLibrary"
-description: "UDreamLyricsLibrary"
----
-
 <a id="udreamlyricslibrary"></a>
 
 # UDreamLyricsLibrary
@@ -23,3 +18,4 @@ Dream Lyrics Library
 |---|---|---|
 | `bool ParseLRC(FString Text, FDreamLyrics& OutLyrics)` | callable | 解析 LRC："[mm:ss.xx]text" 行，若存在内联 <mm:ss.xx> 词级时间戳（增强型 LRC），则一并解析。行的结束时间为下一行的起始时间。 |
 | `bool ParseTTML(FString Xml, FDreamLyrics& OutLyrics, FString& OutError)` | callable | 解析 Apple Music 和 AMLL 所使用的 TTML：<p begin end> 行由 <span begin end> 词组成，使用 ttm:agent 表示第二声部，ttm:role="x-bg" span 表示背景人声，ttm:role="x-translation" / "x-roman" span 表示辅助文本。没有词级 span 的 <p> 会成为跨越整行的一个词。 |
+

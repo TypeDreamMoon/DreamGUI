@@ -1,6 +1,6 @@
 ---
-title: "你的第一个界面"
-description: "把插件的 HelloDreamGUI.dui 从文本带到屏幕上，逐行读懂这个文件，再把同一个类立进关卡里。"
+title: 你的第一个界面
+description: 把插件的 HelloDreamGUI.dui 从文本带到屏幕上，逐行读懂这个文件，再把同一个类立进关卡里。
 ---
 
 插件自带一个样例，`Content/Samples/HelloDreamGUI.dui`。它是仍然算作一个真实界面的最小 `.dui`——一个锚定的根、一个 Overlay、一张卡片、一列竖排的文字。下面这四步就是从文本到屏幕上 UI 的全部路径，其他什么都不用配置：屏幕根、射线检测器和事件系统都会按需创建。

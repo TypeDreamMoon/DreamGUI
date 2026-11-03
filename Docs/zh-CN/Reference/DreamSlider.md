@@ -1,8 +1,3 @@
----
-title: "UDreamSlider"
-description: "UDreamSlider"
----
-
 <a id="udreamslider"></a>
 
 # UDreamSlider
@@ -134,3 +129,4 @@ UMG 类中每一个面向蓝图的成员，以及它们的去向。*adopt*：名
 | `USlider` | `SetSliderBarColor` | adopt | `SetSliderBarColor` |  |
 | `USlider` | `SetSliderHandleColor` | adopt | `SetSliderHandleColor` |  |
 | `USlider` | `SetStyle` | adopt | `SetStyle` | 它不是 USlider 上的 UFUNCTION（其 Setter 元数据为其命名）；此处添加它以便在运行时替换外观。 |
+

@@ -1,8 +1,3 @@
----
-title: "UDreamUIInputModeLibrary"
-description: "UDreamUIInputModeLibrary"
----
-
 <a id="udreamuiinputmodelibrary"></a>
 
 # UDreamUIInputModeLibrary
@@ -15,11 +10,7 @@ description: "UDreamUIInputModeLibrary"
 
 输入模式与光标控制，通过 DreamGUI 的用户索引寻址，而非通过原始控制器。
 
-这里的一切都是对 APlayerController 的薄封装，忠实而直接：引擎拥有输入模式和
-光标，如果 UI 插件也试图拥有它们，那就会成为项目与之对抗的东西。
-这个封装增加的是用户索引——事件系统、指针和
-射线投射器都使用同一个索引——这样分屏游戏就不必在每个调用点
-重新发现某一块 UI 属于哪个控制器。
+这里的一切都是对 APlayerController 的薄封装，忠实而直接：引擎拥有输入模式和光标，如果 UI 插件也试图拥有它们，那就会成为项目与之对抗的东西。这个封装增加的是用户索引——事件系统、指针和射线投射器都使用同一个索引——这样分屏游戏就不必在每个调用点重新发现某一块 UI 属于哪个控制器。
 
 <a id="functions"></a>
 
@@ -34,3 +25,4 @@ description: "UDreamUIInputModeLibrary"
 | `void SetInputModeUIOnly(UObject* WorldContextObject, UDreamWidget* InWidgetToFocus, int32 UserIndex, EMouseLockMode MouseLockMode, bool bFlushInput)` | 可调用 | 只有 UI 能看到输入，并且显示光标——前提是玩家使用键盘和鼠标：启用 UDreamGUISettings::bHideCursorOnGamepad 时，只要该模式保持，DreamGUI 会在玩家使用手柄时隐藏光标，并在他们回到鼠标时再次显示。 |
 | `void SetMouseLockMode(UObject* WorldContextObject, EMouseLockMode MouseLockMode, int32 UserIndex)` | 可调用 | 将光标锁定到视口（或停止锁定），而不改变输入模式。 |
 | `void SetShowMouseCursor(UObject* WorldContextObject, bool bShowCursor, int32 UserIndex)` | 可调用 | 为某个玩家显示或隐藏硬件光标。 |
+

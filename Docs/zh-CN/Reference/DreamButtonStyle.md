@@ -1,8 +1,3 @@
----
-title: "FDreamButtonStyle"
-description: "FDreamButtonStyle"
----
-
 <a id="fdreambuttonstyle"></a>
 
 # FDreamButtonStyle
@@ -13,10 +8,7 @@ description: "FDreamButtonStyle"
 
 一个按钮：一个面，三种指针状态，一个标签。
 
-面的颜色是绝对值——笔刷保持白色，由可选择控件将这些颜色写入其中——
-而不是图库那种用彩色笔刷乘以近乎白色的过渡淡色的习惯做法。
-绝对颜色是样式表真正能够推演的颜色；两个来源的乘积
-是一种没人能命名的外观。
+面的颜色是绝对值——笔刷保持白色，由可选择控件将这些颜色写入其中—— 而不是图库那种用彩色笔刷乘以近乎白色的过渡淡色的习惯做法。绝对颜色是样式表真正能够推演的颜色；两个来源的乘积是一种没人能命名的外观。
 
 <a id="properties"></a>
 
@@ -35,3 +27,4 @@ description: "FDreamButtonStyle"
 | `CornerRadius` | `float` | Button Style | yes | read / write |  |
 | `FaceBrush` | `FDreamUIFaceBrush` | Button Style | yes | read / write |  |
 | `StateFaces` | `FDreamUIStateFaces` | Button Style | yes | read / write |  |
+

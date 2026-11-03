@@ -1,8 +1,3 @@
----
-title: "UDreamLayoutContainerWrapBox"
-description: "UDreamLayoutContainerWrapBox"
----
-
 <a id="udreamlayoutcontainerwrapbox"></a>
 
 # UDreamLayoutContainerWrapBox
@@ -59,3 +54,4 @@ UMG 类中所有面向蓝图的成员，以及它们在此处的去向。*adopt*
 | `UWrapBox` | `SetInnerSlotPadding` | adopt | `SetInnerSlotPadding` | 转发至 SetSpacing。 |
 | `UWrapBox` | `SetHorizontalAlignment` | adopt | `SetHorizontalAlignment` |  |
 | `UWrapBox` | `AddChildToWrapBox` | map | `AddChild` | 此处一个槽位类意味着一个动词；AddChild 返回该槽位。 |
+

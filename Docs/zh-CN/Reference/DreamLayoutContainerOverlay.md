@@ -1,8 +1,3 @@
----
-title: "UDreamLayoutContainerOverlay"
-description: "UDreamLayoutContainerOverlay"
----
-
 <a id="udreamlayoutcontaineroverlay"></a>
 
 # UDreamLayoutContainerOverlay
@@ -41,3 +36,4 @@ Every Blueprint-facing member of the UMG class, and where it went. *adopt*: same
 |---|---|---|---|---|
 | `UOverlay` | `AddChildToOverlay` | map | `AddChild` | One slot class here means one verb; AddChild returns the slot. |
 | `UOverlay` | `ReplaceOverlayChildAt` | map | `ReplaceChildAt` | On the panel base, so every panel has it rather than the two UMG happens to give it to. |
+
