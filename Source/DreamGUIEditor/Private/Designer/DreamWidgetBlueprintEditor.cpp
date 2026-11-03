@@ -10,6 +10,7 @@
 #include "Designer/DreamWidgetPreviewHost.h"
 #include "Designer/DreamWidgetTreeEditing.h"
 #include "Designer/DreamUITextAuthoringGate.h"
+#include "Text/DreamUIBlueprintConverter.h"
 #include "Text/DreamUIBridgeService.h"
 #include "Text/DreamUISourceFile.h"
 #include "Text/DreamUISourceWatcher.h"
@@ -2780,6 +2781,29 @@ void FDreamWidgetBlueprintEditor::ExtendDesignerToolbar(UToolMenu* ToolBar)
 						"This class builds its hierarchy from a .dui, and does not name one yet. Pick a file to author it in.")
 					: FText::FromString(UDreamTextUserWidget::ResolveDuiFilePath(Path));
 			}),
+			FSlateIcon(AppStyle, "Icons.Documentation")));
+	}
+	{
+		// The other way in: a hand-authored hierarchy written out as a .dui, shown only while there is one to convert.
+		FToolUIAction ConvertAction;
+		ConvertAction.ExecuteAction = FToolMenuExecuteAction::CreateLambda([WeakEditor](const FToolMenuContext&)
+		{
+			const TSharedPtr<FDreamWidgetBlueprintEditor> Editor = WeakEditor.Pin();
+			if (Editor.IsValid() && FDreamUIBlueprintConverter::IsConvertible(Editor->GetWidgetBlueprint()))
+			{
+				FDreamUIBlueprintConverter::ConvertWithConfirmation({ Editor->GetWidgetBlueprint() });
+			}
+		});
+		ConvertAction.IsActionVisibleDelegate = FToolMenuIsActionButtonVisible::CreateLambda([WeakEditor](const FToolMenuContext&)
+		{
+			const TSharedPtr<FDreamWidgetBlueprintEditor> Editor = WeakEditor.Pin();
+			return Editor.IsValid() && FDreamUIBlueprintConverter::IsConvertible(Editor->GetWidgetBlueprint());
+		});
+		SourceSection.AddEntry(FToolMenuEntry::InitToolBarButton(
+			"DreamWidgetConvertToText",
+			FToolUIActionChoice(ConvertAction),
+			LOCTEXT("ConvertToTextButton", "Convert to Text"),
+			LOCTEXT("ConvertToTextButtonTooltip", "Write this hierarchy, its bindings and its routes into a new .dui under DUI/, and build the class from it from now on. Anything the file cannot hold is listed first, and a backup of the asset is made before anything changes."),
 			FSlateIcon(AppStyle, "Icons.Documentation")));
 	}
 }
