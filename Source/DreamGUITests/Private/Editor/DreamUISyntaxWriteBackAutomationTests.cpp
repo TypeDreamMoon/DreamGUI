@@ -1010,8 +1010,8 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 /*
  * The same file, three values changed on the designer's tree in one gesture: the weight of an unnamed box written as
  * `@fill 2`, the spacing of a container-typed node, and the spacing of a container a STYLE gives its node. The first
- * two rewrite exactly their own lines -- the shorthand's number, the node's bare `Spacing` -- and the third is said
- * (DUI7005) and written nowhere: the style is shared, and the node has no `+` line of its own to hold it.
+ * two rewrite exactly their own lines -- the shorthand's number, the node's bare `Spacing` -- and the third becomes an
+ * override on the node, a `+` line of its own: the style is shared, and stays as it was.
  */
 bool FDreamUISyntaxWriteBackDesignerEditsTest::RunTest(const FString& Parameters)
 {
@@ -1053,8 +1053,9 @@ bool FDreamUISyntaxWriteBackDesignerEditsTest::RunTest(const FString& Parameters
 	TArray<FString> Expected = Lines;
 	Expected[25] = TEXT("            @fill 3");
 	Expected[41] = TEXT("        Spacing = 10");
-	TestEqualSensitive(TEXT("the shorthand's weight and the node's spacing are written, and nothing else moved"), Produced, Join(Expected));
-	TestTrue(*FString::Printf(TEXT("the style's spacing is said, not written (%s)"), *Diagnostics.ToString()),
+	Expected.Insert({ TEXT("        + VerticalBox {"), TEXT("            Spacing = 30"), TEXT("        }") }, 19);
+	TestEqualSensitive(TEXT("all three are written, the style's as an override on the node, and nothing else moved"), Produced, Join(Expected));
+	TestFalse(*FString::Printf(TEXT("and none is refused (%s)"), *Diagnostics.ToString()),
 		Reported(Diagnostics, EDreamUIDiagnosticCode::PatchStyleComponentNotWritable));
 	return true;
 }

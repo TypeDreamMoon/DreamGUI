@@ -280,7 +280,8 @@ public:
 	 *     container's values compared with its own and written as bare lines, as its author wrote them.
 	 *   - The `+` lines and `@slot` lines of a node's STYLE are in both trees, so untouched they cancel
 	 *     out; a changed slot value becomes an override on the node, and a changed value of a style's
-	 *     component is said (DUI7005), never written into the shared style.
+	 *     component is never written into the shared style: it is asked for as an override on the node
+	 *     (OutStyleOverrides), or said (DUI7005) when the caller does not ask.
 	 *   - `Shown` and Visibility are one value: only the face the file spells is compared.
 	 *   - A slot FILL is the component's slot, not a widget of this file, and a transient widget (the
 	 *     copies a `for` makes at run time) is nobody's line; both are left out.
@@ -294,11 +295,15 @@ public:
 	 * and every OTHER node writes only what the dirty set names, with no sweep to fall back on. A flush
 	 * that changed the shape is a designer gesture, and the sweep over untouched nodes is exactly what
 	 * would put a panel's layout arithmetic into lines nobody edited.
+	 *
+	 * OutStyleOverrides: when given, a changed value that the node's STYLE gives it through a `+ Class` line is not
+	 * refused (DUI7005) but asked for as an InsertComponent of that class on the node -- the override line the value is
+	 * then written into, leaving the shared style alone. ProduceText applies those and runs the pass again.
 	 */
 	static void CollectEdits(const FDreamUIAst& InAst, const UDreamWidgetTree* InLiveTree,
 		const UDreamWidgetTree* InTextTree, TArray<FDreamUIPropertyEdit>& OutEdits,
 		FDreamUIDiagnosticBag& OutDiagnostics, bool bInUseDirtySet = true,
-		const TSet<FString>* InSweepNodeIds = nullptr);
+		const TSet<FString>* InSweepNodeIds = nullptr, TArray<FDreamUIStructuralEdit>* OutStyleOverrides = nullptr);
 
 	/**
 	 * InText with the live tree's values in it. OutText equals InText when nothing had changed.

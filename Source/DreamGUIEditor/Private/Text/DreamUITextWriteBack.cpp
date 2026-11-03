@@ -1603,7 +1603,8 @@ UDreamWidgetTree* FDreamUITextWriteBack::BuildReferenceTree(const FString& InTex
 
 void FDreamUITextWriteBack::CollectEdits(const FDreamUIAst& InAst, const UDreamWidgetTree* InLiveTree,
 	const UDreamWidgetTree* InTextTree, TArray<FDreamUIPropertyEdit>& OutEdits,
-	FDreamUIDiagnosticBag& OutDiagnostics, bool bInUseDirtySet, const TSet<FString>* InSweepNodeIds)
+	FDreamUIDiagnosticBag& OutDiagnostics, bool bInUseDirtySet, const TSet<FString>* InSweepNodeIds,
+	TArray<FDreamUIStructuralEdit>* OutStyleOverrides)
 {
 	using namespace DreamUIWriteBackLocal;
 
@@ -1958,6 +1959,23 @@ void FDreamUITextWriteBack::CollectEdits(const FDreamUIAst& InAst, const UDreamW
 						}
 						Comparison.PropertyName = Name;
 						CompareAndAppend(Comparison, Differences, OutDiagnostics);
+					}
+					if (OutStyleOverrides != nullptr && !Differences.IsEmpty())
+					{
+						// The node's own `+ Class` line is where its value goes: the builder applies the style's line and
+						// then the node's to the same object, so a line on the node overrides for this node alone.
+						const bool bAsked = OutStyleOverrides->ContainsByPredicate([&InNode, &Component](const FDreamUIStructuralEdit& InEdit)
+						{
+							return InEdit.NodeId == InNode.Id && InEdit.ComponentClassName == Component.ClassName;
+						});
+						if (!bAsked)
+						{
+							FDreamUIStructuralEdit& Override = OutStyleOverrides->AddDefaulted_GetRef();
+							Override.Kind = EDreamUIStructuralEditKind::InsertComponent;
+							Override.NodeId = InNode.Id;
+							Override.ComponentClassName = Component.ClassName;
+						}
+						continue;
 					}
 					for (const FDreamUIPropertyEdit& Difference : Differences)
 					{
@@ -2792,6 +2810,52 @@ bool FDreamUITextWriteBack::ProduceText(const FString& InText, const UDreamWidge
 		}
 		OutResidue->Unsettled = Unsettled;
 		OutResidue->Dropped = Dropped;
+	}
+
+	// ---- between the two: OVERRIDES of a style's values ----------------------------------------------
+	//
+	// A value a node takes from its style's `+ Class` line has no line of its own to change. Asked of the value pass,
+	// such a change becomes a `+ Class { }` line on the node, written here, and the value pass below then writes the
+	// changed values into it: the node overrides the style for itself, and every other node wearing it is untouched.
+	{
+		TArray<FDreamUIPropertyEdit> Probe;
+		FDreamUIDiagnosticBag ProbeDiagnostics;
+		TArray<FDreamUIStructuralEdit> Overrides;
+		CollectEdits(Ast, InLiveTree, TextTree.Get(), Probe, ProbeDiagnostics, /*bInUseDirtySet*/true,
+			bShapeChanged ? &WrittenIds : nullptr, &Overrides);
+		if (!Overrides.IsEmpty())
+		{
+			const FString BeforeOverrides = Working;
+			FDreamUITextPatcher::ApplyStructuralEdits(Working, Ast, Overrides, OutDiagnostics);
+			if (!Working.Equals(BeforeOverrides, ESearchCase::CaseSensitive))
+			{
+				FDreamUIAst Rebuilt;
+				FDreamUIDiagnosticBag ReadBack;
+				ReadBack.SourceName = OutDiagnostics.SourceName;
+				TStrongObjectPtr<UDreamWidgetTree> RebuiltTree(BuildReferenceTree(Working, Rebuilt, ReadBack));
+				if (!RebuiltTree.IsValid())
+				{
+					for (FDreamUIDiagnostic& Diagnostic : ReadBack.Diagnostics)
+					{
+						OutDiagnostics.Add(MoveTemp(Diagnostic));
+					}
+					OutText = InText;
+					return false;
+				}
+				Ast = MoveTemp(Rebuilt);
+				TextTree = MoveTemp(RebuiltTree);
+				// Not a change of shape: the value that asked for the line is still the dirty set's (or the sweep's), and
+				// so is every other value of this flush. Only after a shape pass, which narrows the value pass to the
+				// nodes it wrote, does the new line join those.
+				if (bShapeChanged)
+				{
+					for (const FDreamUIStructuralEdit& Override : Overrides)
+					{
+						WrittenIds.Add(Override.NodeId + TEXT("+") + Override.ComponentClassName);
+					}
+				}
+			}
+		}
 	}
 
 	// ---- phase two: VALUES ----------------------------------------------------------------------
