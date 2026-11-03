@@ -8,6 +8,8 @@
 #include "DetailLayoutBuilder.h"
 #include "DreamWidgetEditorHierarchyView.h"
 #include "Designer/DreamUITextAuthoringGate.h"
+#include "Core/DreamWidgetTree.h"
+#include "Text/DreamUITextPatcher.h"
 #include "Widgets/Text/SInlineEditableTextBlock.h"
 #include "DragAndDrop/DecoratedDragDropOp.h"
 #include "Styling/CoreStyle.h"
@@ -173,18 +175,33 @@ TOptional<EItemDropZone> ProcessHierarchyDragDrop(const FDragDropEvent& DragDrop
 			}
 			return TOptional<EItemDropZone>();
 		}
-		// The same gate the drop will hit in CreateWidget, said during the drag: a text-authored
-		// class refuses structural edits from the designer, and finding that out on release reads
-		// as a broken palette rather than a rule.
-		if (Manager.IsValid() && DreamUITextAuthoring::IsTextAuthored(Manager->GetWidgetBlueprint()))
+		// The same check the drop will meet in CreateWidget, made during the drag: a text-authored class
+		// takes a new widget only where its .dui can write one, and finding that out on release reads as a
+		// broken palette rather than a rule. Parse and patch only -- this runs on every mouse move, and the
+		// build the drop adds is for what a hover cannot know anyway.
+		const UDreamWidgetBlueprint* Blueprint = Manager.IsValid() ? Manager->GetWidgetBlueprint() : nullptr;
+		if (DreamUITextAuthoring::IsTextAuthored(Blueprint))
 		{
-			if (Decorated.IsValid())
+			// The widget the new one would go inside. Template and preview share the name, which is the
+			// node's id in the file -- and the root is written as no parent at all.
+			const UDreamWidget* Parent = DropZone == EItemDropZone::OntoItem ? TargetItem : TargetItem->GetParent();
+			const UDreamWidget* TemplateRoot = IsValid(Blueprint->WidgetTree) ? Blueprint->WidgetTree->RootWidget.Get() : nullptr;
+			FDreamUIStructuralEdit Planned;
+			Planned.Kind = EDreamUIStructuralEditKind::InsertNode;
+			Planned.ParentId = !IsValid(Parent) || (TemplateRoot != nullptr && Parent->GetDisplayName() == TemplateRoot->GetDisplayName())
+				? FString() : Parent->GetDisplayName();
+			Planned.NewId = TEXT("DreamUIHoverProbe");
+			Planned.TypeName = TEXT("Widget");
+			FText Reason;
+			if (!DreamUITextAuthoring::CheckStructuralEdit(Blueprint, Planned, /*bInVerifyBuild*/false, Reason))
 			{
-				Decorated->CurrentIconBrush = FAppStyle::GetBrush(TEXT("Graph.ConnectorFeedback.Error"));
-				Decorated->CurrentHoverText = DreamUITextAuthoring::DescribeStructuralRefusal(
-					Manager->GetWidgetBlueprint(), TEXT("create a widget"));
+				if (Decorated.IsValid())
+				{
+					Decorated->CurrentIconBrush = FAppStyle::GetBrush(TEXT("Graph.ConnectorFeedback.Error"));
+					Decorated->CurrentHoverText = Reason;
+				}
+				return TOptional<EItemDropZone>();
 			}
-			return TOptional<EItemDropZone>();
 		}
 		if (Decorated.IsValid())
 		{
@@ -246,15 +263,32 @@ TOptional<EItemDropZone> ProcessHierarchyDragDrop(const FDragDropEvent& DragDrop
 			// A structural entry that does not pass through DreamWidgetTreeEditing directly: this
 			// drop calls TrySetParent on the PREVIEW widgets below, then mirrors the whole move onto
 			// the templates through ReparentTemplatesFrom -- the same two halves, in the same order,
-			// as the viewport's drag. Refused during the drag rather than at the drop, so the cursor
-			// says no before the author lets go -- which is what "visibly disabled" means for a
-			// gesture.
-			if (Manager.IsValid() && DreamUITextAuthoring::IsTextAuthored(Manager->GetWidgetBlueprint()))
+			// as the viewport's drag. On a text-authored class each dragged widget is checked against
+			// the .dui during the drag, the way the drop's ReparentWidget will check it, so the cursor
+			// says no before the author lets go. Parse and patch only: this runs on every mouse move.
+			const UDreamWidgetBlueprint* MoveBlueprint = Manager.IsValid() ? Manager->GetWidgetBlueprint() : nullptr;
+			if (DreamUITextAuthoring::IsTextAuthored(MoveBlueprint))
 			{
-				HierarchyDragDropOp->CurrentIconBrush = FAppStyle::GetBrush(TEXT("Graph.ConnectorFeedback.Error"));
-				HierarchyDragDropOp->CurrentHoverText = DreamUITextAuthoring::DescribeStructuralRefusal(
-					Manager->GetWidgetBlueprint(), TEXT("move a widget"));
-				return TOptional<EItemDropZone>();
+				const UDreamWidget* TemplateRoot = IsValid(MoveBlueprint->WidgetTree) ? MoveBlueprint->WidgetTree->RootWidget.Get() : nullptr;
+				TArray<UDreamWidget*> Siblings = NewParent->GetChildren();
+				Siblings.RemoveAll([&ProposedChildren](UDreamWidget* InSibling) { return ProposedChildren.Contains(InSibling); });
+				const int32 Landing = Index.IsSet() ? FMath::Clamp(Index.GetValue(), 0, Siblings.Num()) : Siblings.Num();
+				for (const UDreamWidget* Dragged : ProposedChildren)
+				{
+					FDreamUIStructuralEdit Planned;
+					Planned.Kind = EDreamUIStructuralEditKind::MoveNode;
+					Planned.NodeId = Dragged->GetDisplayName();
+					Planned.ParentId = TemplateRoot != nullptr && NewParent->GetDisplayName() == TemplateRoot->GetDisplayName()
+						? FString() : NewParent->GetDisplayName();
+					Planned.BeforeId = Siblings.IsValidIndex(Landing) && IsValid(Siblings[Landing]) ? Siblings[Landing]->GetDisplayName() : FString();
+					FText Reason;
+					if (!DreamUITextAuthoring::CheckStructuralEdit(MoveBlueprint, Planned, /*bInVerifyBuild*/false, Reason))
+					{
+						HierarchyDragDropOp->CurrentIconBrush = FAppStyle::GetBrush(TEXT("Graph.ConnectorFeedback.Error"));
+						HierarchyDragDropOp->CurrentHoverText = Reason;
+						return TOptional<EItemDropZone>();
+					}
+				}
 			}
 
 			if (bIsDrop)

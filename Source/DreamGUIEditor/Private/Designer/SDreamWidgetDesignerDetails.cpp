@@ -155,7 +155,7 @@ void SDreamWidgetDesignerDetails::Construct(const FArguments& Args, UWorld* InWo
 				[
 					SNew(SDreamWidgetDetailsHeader)
 					.NameAreaWidget(DetailsView->GetNameAreaWidget())
-					.CanEdit(this, &SDreamWidgetDesignerDetails::IsEditorAllowEditing)
+					.CanEdit(this, &SDreamWidgetDesignerDetails::IsNameEditable)
 					.GetEditedObject_Lambda([this]() -> UObject*
 					{
 						const TArray<TWeakObjectPtr<UObject>>& EditedObjects = DetailsView->GetSelectedObjects();
@@ -328,15 +328,18 @@ TArray<UObject*> SDreamWidgetDesignerDetails::GetEditedObjects() const
 
 bool SDreamWidgetDesignerDetails::IsEditorAllowEditing()const
 {
-	// Structural editing, which is what this gates: the rename box in the header, and the component
-	// list's add / remove / cut / paste. A `.dui` owns both -- the display name IS the node's id, and
-	// a behaviour is a `+ Class { }` line -- so they are drawn disabled rather than left live to fail
-	// on click. The primitives underneath refuse anyway; this is the half the author can see.
-	if (IsTextAuthoredHierarchy())
-	{
-		return false;
-	}
+	// The component list's add / remove / cut / paste. On a text-authored hierarchy a behaviour is a `+ Class { }`
+	// line of the .dui, which the write-back writes; the primitives check each edit against the file and say why when
+	// it cannot take one (a behaviour the node's style gives it, for one).
 	//no sub prefabs: nothing else in the design is owned by another asset
+	return true;
+}
+
+bool SDreamWidgetDesignerDetails::IsNameEditable()const
+{
+	// The rename box in the header. On a text-authored hierarchy the name is the node's id, and a rename
+	// is written into the .dui with `(was:)` (DreamWidgetTreeEditing::RenameWidget), which checks it
+	// against the file and says why when it cannot.
 	return true;
 }
 

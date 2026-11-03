@@ -105,8 +105,12 @@ AnchorData.SizeDelta = (400, 240)
 | 资产路径 | `/Game/UI/T_Icon`、`"/Game/UI/T_Icon.T_Icon"` | 对象或类引用。加引号也行。 |
 | 资源 | `@Accent` | 某个 `resources` 条目的值。见[资源](styles-and-resources.md#resources)。 |
 | 节点 id | `CheckMark` | 写在持有控件、视觉或行为的属性上时，指本文件里那个 id 的节点。 |
+| 列表 | `[1, 2, 3]`、`["A", "B"]`、`[(0, 0), (8, 8)]`、`[]` | 数组或 Set：每个元素是元素类型的一个值，数组里也可以是节点 id。Set 不保留顺序。可以跨行，末尾可以多一个逗号。 |
+| Map | `{ Hover: #FFCC00, Pressed: #AA8800 }`、`{}` | Map：`键: 值` 条目，两边各是对应类型的值。只有一个词的名字键可以不加引号。 |
 
 标志位枚举没有 `|`；组合写成各个标志相加得到的数字。
+
+列表写在不是数组或 Set 的属性上、Map 写在不是 Map 的属性上，或者节点的 Set/Map，报 DUI4009；读不通的列表或 Map（括号没闭合、Map 条目缺 `:`）报 DUI2023。
 
 字符串可以带上它本地化所依据的键：`Text = "OK" @key("Dialog.Confirm")`。不带键时，键为
 `<node id>.<property>`——对于 `+` 块的某一行，两段之间会加上组件的类和位置——位于

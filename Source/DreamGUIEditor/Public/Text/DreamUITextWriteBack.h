@@ -91,6 +91,37 @@ private:
 	TStrongObjectPtr<UDreamUIDocument> Document;
 };
 
+/**
+ * What a flush could not make the file's shape agree about, by node id.
+ *
+ * The compile that follows a structural edit rebuilds the tree from the file, so anything listed here
+ * is about to be undone by it: an Unwritten node disappears, an Unremoved one comes back. Reported so
+ * the author hears it from the designer instead of watching the edit revert. Empty when every shape
+ * change landed, which is the only state a flush of a value edit should ever produce.
+ */
+struct DREAMGUIEDITOR_API FDreamUIStructuralResidue
+{
+	/** On the live tree, and still nowhere in the text after every round. */
+	TArray<FString> Unwritten;
+	/** In the text, and gone from the live tree, but the file still declares it. */
+	TArray<FString> Unremoved;
+	/** In both, under a different parent in the text than in the live tree. */
+	TArray<FString> Unmoved;
+	/**
+	 * `Node: + Class` -- an object gone from the live node that no `+` line of the node built (its style's, its type's),
+	 * so nothing could be taken out of the file for it.
+	 */
+	TArray<FString> Unsettled;
+	/**
+	 * `Node.Property = value` -- lines a change of type or of panel took out because the new one has no such property.
+	 * Not a failure, and not part of IsEmpty: the change landed, and this is what it cost, for the author to hear.
+	 */
+	TArray<FString> Dropped;
+
+	bool IsEmpty() const { return Unwritten.IsEmpty() && Unremoved.IsEmpty() && Unmoved.IsEmpty() && Unsettled.IsEmpty(); }
+	void Reset() { Unwritten.Reset(); Unremoved.Reset(); Unmoved.Reset(); Unsettled.Reset(); Dropped.Reset(); }
+};
+
 /** The tree should be regenerated from the document's text, and this is why it changed. */
 DECLARE_MULTICAST_DELEGATE_OneParam(FDreamUIWriteBackRebuildRequested, EDreamUIDocumentChangeReason /*Reason*/);
 
@@ -187,6 +218,44 @@ public:
 		const UObject* InLiveDefaults = nullptr);
 
 	/**
+	 * One statement -- a SetStatement or a RemoveProperty: a binding, a route, a two-way binding, or a value written in
+	 * place of one -- applied to the document as it stands, in one transaction, with no tree compared.
+	 *
+	 * Not a flush, on purpose. A binding or a route is one line and no tree state; and a flush right after `Text = "Hi"`
+	 * became `Text <- GetTitle()` would read the template's "Hi" against a line that no longer holds a literal, and
+	 * offer it back as an edit the patcher refuses. The compile that follows rebuilds the template from the file.
+	 *
+	 * True when the line was written or the file already said it; false, with the patcher's reason, when it was refused.
+	 */
+	bool ApplyStatementEdit(const FDreamUIStructuralEdit& InEdit, FString& OutError);
+
+	/**
+	 * A new text for the document, made by a caller that edited it as a whole (the timeline write-back): checked to parse,
+	 * then written as one write of this write-back's own, in one transaction. True when written or unchanged.
+	 */
+	bool ApplyTextChange(const FString& InNewText, FString& OutError);
+
+	/** The document's text as it stands; empty when there is no document. */
+	FString GetDocumentText() const;
+
+	/**
+	 * A live value as a `.dui` literal, spelled the way the value pass spells it -- `24`, `(160, 48)`, `#1E1E1E`, `"OK"`,
+	 * `[1, 2]` -- or false when the type or this value has no spelling. A node reference has no tree to be spelled
+	 * against here, so only `None` prints.
+	 */
+	static bool PrintValueLiteral(const FProperty* InLeaf, const void* InValuePtr, FString& OutText);
+
+	/**
+	 * Every value the text tree does not hold as the live one does: OutEdits the ones a line could say (CollectEdits with
+	 * the dirty set off), OutUnwritable the ones no line can -- `Node.Property` for a value that differs and has no
+	 * spelling, or one whose value the language cannot spell. What a conversion asks of the file it made: both empty is
+	 * a file that builds the tree it came from.
+	 */
+	static void CollectUnwritableDifferences(const FDreamUIAst& InAst, const UDreamWidgetTree* InLiveTree,
+		const UDreamWidgetTree* InTextTree, TArray<FDreamUIPropertyEdit>& OutEdits, TArray<FString>& OutUnwritable,
+		FDreamUIDiagnosticBag& OutDiagnostics);
+
+	/**
 	 * The document's text changed and the tree has to be rebuilt from it.
 	 *
 	 * Not fired for this object's own writes: a flush derives the text FROM the tree, so
@@ -249,20 +318,30 @@ public:
 	 *     container's values compared with its own and written as bare lines, as its author wrote them.
 	 *   - The `+` lines and `@slot` lines of a node's STYLE are in both trees, so untouched they cancel
 	 *     out; a changed slot value becomes an override on the node, and a changed value of a style's
-	 *     component is said (DUI7005), never written into the shared style.
+	 *     component is never written into the shared style: it is asked for as an override on the node
+	 *     (OutStyleOverrides), or said (DUI7005) when the caller does not ask.
 	 *   - `Shown` and Visibility are one value: only the face the file spells is compared.
 	 *   - A slot FILL is the component's slot, not a widget of this file, and a transient widget (the
 	 *     copies a `for` makes at run time) is nobody's line; both are left out.
 	 */
 	/*
 	 * bInUseDirtySet: honour what NoteDirtyProperty was told about InLiveTree, when anything was.
-	 * False sweeps everything regardless, which is what a flush that has just changed the file's
-	 * SHAPE needs -- a node written into the file a moment ago has no dirty entries and its authored
-	 * values would go unwritten.
+	 * False sweeps everything regardless.
+	 *
+	 * InSweepNodeIds: the nodes a shape pass has just written into the file. When given, those nodes
+	 * are swept whole -- they have no dirty entries, and every value they hold is one the author made --
+	 * and every OTHER node writes only what the dirty set names, with no sweep to fall back on. A flush
+	 * that changed the shape is a designer gesture, and the sweep over untouched nodes is exactly what
+	 * would put a panel's layout arithmetic into lines nobody edited.
+	 *
+	 * OutStyleOverrides: when given, a changed value that the node's STYLE gives it through a `+ Class` line is not
+	 * refused (DUI7005) but asked for as an InsertComponent of that class on the node -- the override line the value is
+	 * then written into, leaving the shared style alone. ProduceText applies those and runs the pass again.
 	 */
 	static void CollectEdits(const FDreamUIAst& InAst, const UDreamWidgetTree* InLiveTree,
 		const UDreamWidgetTree* InTextTree, TArray<FDreamUIPropertyEdit>& OutEdits,
-		FDreamUIDiagnosticBag& OutDiagnostics, bool bInUseDirtySet = true);
+		FDreamUIDiagnosticBag& OutDiagnostics, bool bInUseDirtySet = true,
+		const TSet<FString>* InSweepNodeIds = nullptr, TArray<FDreamUIStructuralEdit>* OutStyleOverrides = nullptr);
 
 	/**
 	 * InText with the live tree's values in it. OutText equals InText when nothing had changed.
@@ -276,10 +355,28 @@ public:
 	 * flush can report a count without running the pipeline a second time -- one implementation of
 	 * a write-back is the whole point, and a second one kept for bookkeeping is how the two come to
 	 * disagree about what a flush did.
+	 *
+	 * THE SHAPE IS WRITTEN IN ROUNDS. A subtree added at once is one insert per node, and every insert
+	 * of a batch is planned against the text as it came in -- where the new parent of a new child does
+	 * not exist yet. So each round writes the nodes whose parent the CURRENT text already declares,
+	 * the text is read back, and the next round finds the children's parents there. Removals happen in
+	 * the first round only (a removal never waits for another), and an insert the patcher refused is
+	 * not asked again. A node written by a round is then checked once for the `+` lines it needs.
+	 *
+	 * OutResidue, when given, receives what the shape still disagrees about once every round is done:
+	 * see FDreamUIStructuralResidue.
 	 */
 	static bool ProduceText(const FString& InText, const UDreamWidgetTree* InLiveTree,
 		FString& OutText, FDreamUIDiagnosticBag& OutDiagnostics, TArray<FDreamUIPropertyEdit>* OutEdits = nullptr,
-		const UObject* InLiveDefaults = nullptr);
+		const UObject* InLiveDefaults = nullptr, FDreamUIStructuralResidue* OutResidue = nullptr);
+
+	/**
+	 * How a `.dui` would spell this widget's type in this file: its `use … as` alias, an `@Resource`, a
+	 * built-in tag, a layout container (`VerticalBox`), a registry tag (`Native.Button`) or the path of
+	 * the widget blueprint it nests. What an inserted node is written with, exported so that a check
+	 * made BEFORE the insert spells the node the way the insert will.
+	 */
+	static FString DescribeWidgetForText(const UDreamWidget* InWidget, const FDreamUIAst& InAst);
 
 	/**
 	 * How the two trees DISAGREE ABOUT SHAPE, as patcher commands: added, removed and reordered nodes.
@@ -301,9 +398,48 @@ public:
 	 * or the path; and a plain widget that lays out its children as the container (`VerticalBox Box`),
 	 * the one spelling that keeps the container through the next compile. Transient widgets -- what a
 	 * `for` makes at run time -- are never added, and a slot fill is never removed.
+	 *
+	 * A node is only inserted under a parent InAst already declares, and a removed node's descendants
+	 * are not removed on their own: they go with it, and a second removal over the same lines would
+	 * make the patcher refuse the pair. ProduceText calls this once per round; see there.
+	 *
+	 * bInIncludeRemovals: false collects inserts only. InSkipInsertIds: nodes not to insert (the ones a
+	 * round already failed to write). InComponentCheckIds: nodes this flush has just written, whose `+`
+	 * lines -- behaviours and a layout container their type does not already spell -- are added now that
+	 * the node is in the file.
+	 *
+	 * A node BOTH trees have is compared too, for what the designer can change about a node without
+	 * adding or removing one: its TYPE (a new visual, a different nested widget blueprint, another panel
+	 * when the type is the panel's name) becomes a RetypeNode, with a RemoveProperty for each line the new
+	 * type has no property for; and its `+` lines follow its objects -- one the live node gained is
+	 * inserted, one it lost is removed (only a line the node itself writes; one from its style or type is
+	 * reported in OutUnsettled), and behaviours the live node holds in another order are moved. Paired by
+	 * class, so whatever both trees build alike cancels out. A node is retyped or has its lines changed in
+	 * one round, and the next round reads the result back.
+	 *
+	 * OutSweepKeys: what the value pass should sweep whole -- a retyped node's id, and `Id+Class` for a `+`
+	 * line just inserted. OutDropped: `Id.Property = value` for each line a retype took out. InAttempted:
+	 * signatures of edits on existing nodes earlier rounds already tried, never emitted twice.
 	 */
 	static void CollectStructuralEdits(const FDreamUIAst& InAst, const UDreamWidgetTree* InLiveTree,
-		const UDreamWidgetTree* InTextTree, TArray<FDreamUIStructuralEdit>& OutEdits);
+		const UDreamWidgetTree* InTextTree, TArray<FDreamUIStructuralEdit>& OutEdits,
+		bool bInIncludeRemovals = true, const TSet<FString>* InSkipInsertIds = nullptr,
+		const TSet<FString>* InComponentCheckIds = nullptr, TSet<FString>* OutSweepKeys = nullptr,
+		TArray<FString>* OutDropped = nullptr, TArray<FString>* OutUnsettled = nullptr,
+		const TSet<FString>* InAttempted = nullptr);
+
+	/** The signature by which a round recognises an edit an earlier round already tried. */
+	static FString MakeEditSignature(const FDreamUIStructuralEdit& InEdit);
+
+	/**
+	 * Which of InNode's `+` lines built InComponent on InWidget -- the widget the text was built into, or the
+	 * designer's template before it is edited -- or INDEX_NONE when none did: the object came from the node's style,
+	 * from its type, or with another component. Paired the way the value pass pairs them.
+	 */
+	static int32 FindComponentLine(const FDreamUINode& InNode, const UDreamWidget* InWidget, const UObject* InComponent);
+
+	/** How a `+` line names this class, verified against the builder's reading of it, or empty when nothing does. */
+	static FString DescribeComponentForText(const UClass* InClass);
 
 	// -------------------------------------------------------------------------------------------
 	// The dirty set: what the designer says it touched
@@ -342,6 +478,36 @@ public:
 	/** How many properties this tree is carrying as dirty. For tests and for the log. */
 	static int32 NumDirtyProperties(const UDreamWidgetTree* InTree);
 
+	// -------------------------------------------------------------------------------------------
+	// The structural queue: what the designer says it did to the shape
+	// -------------------------------------------------------------------------------------------
+
+	/**
+	 * Note one change to the shape of InTree that the next flush has to write as it was made.
+	 *
+	 * WHY THIS EXISTS. Adding and removing a node can be read off the two trees, and the shape pass
+	 * does exactly that. A RENAME cannot: from the trees it is one node gone and another arrived, and
+	 * writing it that way deletes the node's whole block -- its values, its routes, its children -- and
+	 * writes a bare new one with no `(was:)` to carry its graph references across. A MOVE can be read
+	 * off but not its order against the other edits of one gesture. So the gestures that know they
+	 * renamed or moved something say so here, and the flush applies the queue first, one edit at a time
+	 * against the text as it stands, before the shape pass reads what is left off the trees.
+	 *
+	 * A MoveNode is placed where the node stands in the live tree WHEN THE FLUSH RUNS (its parent, the
+	 * fill of a named slot it is in, the sibling it now stands before), so a caller only has to say
+	 * which node moved. An edit that cannot be planned yet -- a move into a node this same gesture is
+	 * creating -- waits for the shape pass to write that node and is tried again.
+	 *
+	 * Keyed on the tree for the reasons the dirty set is, and consumed by the flush that writes it.
+	 */
+	static void QueueStructuralEdit(const UDreamWidgetTree* InTree, const FDreamUIStructuralEdit& InEdit);
+
+	/** Forget one tree's queue. The flush calls it once it has written. */
+	static void ClearQueuedStructuralEdits(const UDreamWidgetTree* InTree);
+
+	/** How many structural edits this tree is carrying. For tests and for the log. */
+	static int32 NumQueuedStructuralEdits(const UDreamWidgetTree* InTree);
+
 
 
 	/**
@@ -368,6 +534,8 @@ public:
 	int32 GetLastEditCount() const { return LastEditCount; }
 	/** What the last flush refused, in the patcher's own words. */
 	const FDreamUIDiagnosticBag& GetLastDiagnostics() const { return LastDiagnostics; }
+	/** What the last flush could not make the file's shape agree about. Empty when it all landed. */
+	const FDreamUIStructuralResidue& GetLastStructuralResidue() const { return LastResidue; }
 
 private:
 	FDreamUITextWriteBack() = default;
@@ -398,4 +566,5 @@ private:
 	int32 WriteCount = 0;
 	int32 LastEditCount = 0;
 	FDreamUIDiagnosticBag LastDiagnostics;
+	FDreamUIStructuralResidue LastResidue;
 };

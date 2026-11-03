@@ -56,6 +56,10 @@ enum class EDreamUIValueKind : uint8
 	AssetPath,
 	/** @Accent -- a reference into the file's `resources` block. Raw is the name, no '@'. */
 	ResourceRef,
+	/** ["A", "B"] -- an array's or a set's elements, each a value of its own in Items. Raw is the whole slice. */
+	List,
+	/** { Hover: #FFCC00, Pressed: #AA8800 } -- a map's entries: Keys[i] is the key of Items[i]. Raw is the whole slice. */
+	Map,
 };
 
 struct DREAMGUI_API FDreamUIValue
@@ -73,6 +77,15 @@ struct DREAMGUI_API FDreamUIValue
 
 	/** Tuple only: the elements, each already trimmed. */
 	TArray<FString> Elements;
+
+	/**
+	 * List and Map only: the elements (a list's) or the values (a map's), each parsed as a value of its own -- so an
+	 * element takes every spelling a property of its type takes, a tuple, a colour, an `@Resource` included.
+	 */
+	TArray<FDreamUIValue> Items;
+
+	/** Map only: the keys, Keys[i] being the key of Items[i]. */
+	TArray<FDreamUIValue> Keys;
 
 	/** String only: the key written in `@key("…")`, empty when the author did not override it. */
 	FString LocalizationKeyOverride;

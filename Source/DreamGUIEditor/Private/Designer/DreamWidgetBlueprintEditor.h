@@ -344,11 +344,12 @@ public:
 	bool GetPreviewDPIScale() const;
 	void TogglePreviewDPIScale();
 	/**
-	 * The application scale UUserInterfaceSettings would apply at this device resolution, or 1 when
-	 * the preview is switched off. Static and taking the answer as an argument so the arithmetic it
-	 * feeds can be tested without a project's settings.
+	 * The application scale UUserInterfaceSettings would apply at InDeviceSize, or 1 when the preview
+	 * is switched off. The device is an argument because most canvases worked out are for a size not
+	 * on screen: the one being picked, the screen-size menu's other entries, the other devices'
+	 * guides. Asked of the size on screen instead, each of them got that size's scale.
 	 */
-	float GetDesignerDPIScale() const;
+	float GetDesignerDPIScale(FIntPoint InDeviceSize) const;
 	/** The canvas a device resolution leaves once the DPI scale has taken its share. Never zero. */
 	static FIntPoint ApplyDPIScaleToViewportSize(FIntPoint InViewportSize, float InDPIScale);
 	/**
@@ -573,6 +574,12 @@ private:
 	 * Fill Screen it answers with the fill size, and "restore" restored it to itself.
 	 */
 	FIntPoint DesignerSizeBeforeFillScreen = FIntPoint::ZeroValue;
+	/**
+	 * The device resolution the design canvas was last sized for, recorded on the asset or not; zero
+	 * until one has been. Kept here because the agent canvas no longer holds it: its edit-mode size
+	 * is the design canvas itself (see ApplyDesignerViewportSize).
+	 */
+	FIntPoint AppliedDesignerViewportSize = FIntPoint::ZeroValue;
 	/** Size the canvas to the viewport, once per resize. A no-op when it already is. */
 	void ApplyFillScreenSize();
 private:
@@ -629,6 +636,8 @@ public:
 	void UnwrapSelectedWidget();
 	/** The .dui the designer writes its edits to; empty when it writes none (SyncTextWriteBackToSource). */
 	FString GetTextWriteBackFilePath() const;
+	/** The write-back bound to that file, for a structural edit that has to reach the text before its compile. */
+	TSharedPtr<FDreamUITextWriteBack> GetTextWriteBack() const { return TextWriteBack; }
 	/**
 	 * Find everything that names the selected widget: the Blueprint's own graphs, and the project.
 	 *

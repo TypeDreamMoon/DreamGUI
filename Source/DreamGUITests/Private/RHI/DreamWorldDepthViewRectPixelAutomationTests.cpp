@@ -143,6 +143,9 @@ namespace DreamWorldDepthViewRectPixelTestLocal
 		FIntPoint Size = FIntPoint::ZeroValue;
 	};
 
+	/** The aspect ratio the constrained camera asks for: narrower than any play viewport, so the view is pillarboxed. */
+	constexpr float ConstrainedAspect = 0.5f;
+
 	FIntPoint Probe(const FIntRect& InRect, float InLocalX)
 	{
 		return FIntPoint(InRect.Min.X + FMath::RoundToInt32(InRect.Width() * InLocalX),
@@ -185,11 +188,26 @@ namespace DreamWorldDepthViewRectPixelTestLocal
 				&& Rects[1].Min.Y == 0 && FMath::Abs(Rects[1].Max.X - Size.X) <= 1
 				&& Rects[0].Max.Y == Rects[1].Max.Y && FMath::Abs(Rects[0].Max.Y - Size.Y) <= 1);
 		}
+		else if (bConstrained)
+		{
+			// The camera's aspect at the viewport's full height, centred. Measured against the viewport the session
+			// actually got: the level editor's viewport, whose size is the host's editor layout's to decide. A width
+			// under half the viewport's held only while the viewport was wider than it was tall.
+			const int32 ExpectedWidth = FMath::RoundToInt32(Size.Y * ConstrainedAspect);
+			if (!InTest.TestTrue(*FString::Printf(TEXT("The play viewport %s is wider than the %.2f aspect asked for, so the view is pillarboxed"),
+				*Size.ToString(), ConstrainedAspect), Size.X > ExpectedWidth + 2))
+			{
+				return;
+			}
+			InTest.TestTrue(*FString::Printf(TEXT("The control has the requested constrained view rect: %s, expected %d wide, centred, full height"),
+				*Rects[0].ToString(), ExpectedWidth),
+				FMath::Abs(Rects[0].Width() - ExpectedWidth) <= 1
+				&& FMath::Abs(Rects[0].Min.X - (Size.X - Rects[0].Width()) / 2) <= 1
+				&& Rects[0].Min.Y == 0 && FMath::Abs(Rects[0].Max.Y - Size.Y) <= 1);
+		}
 		else
 		{
-			InTest.TestTrue(TEXT("The control has the requested full or constrained view rect"), bConstrained
-				? Rects[0].Min.X > 0 && Rects[0].Max.X < Size.X && Rects[0].Width() < Size.X / 2
-				: Rects[0] == FIntRect(FIntPoint::ZeroValue, Size));
+			InTest.TestTrue(TEXT("The control has the requested full view rect"), Rects[0] == FIntRect(FIntPoint::ZeroValue, Size));
 		}
 		for (int32 Index = 0; Index < Rects.Num(); ++Index)
 		{
@@ -314,7 +332,7 @@ bool FDreamWorldDepthUsesEachViewRectPictureTest::RunTest(const FString& Paramet
 		}
 		if (State->Camera.IsValid())
 		{
-			State->Camera->GetCameraComponent()->SetAspectRatio(0.5f);
+			State->Camera->GetCameraComponent()->SetAspectRatio(ConstrainedAspect);
 			State->Camera->GetCameraComponent()->SetConstraintAspectRatio(true);
 		}
 		if (State->Panel.IsValid()) State->Panel->SetVisibility(EDreamWidgetVisibility::Hidden);

@@ -593,8 +593,8 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 /*
  * `@fill` stands for `SizeRule = Fill`, and `@fill 2` adds `FillWeight = 2`. There is no SizeRule written for a splice
  * to land on, so each edit is decided on its own: a new weight replaces the number; a bare `@fill` given another rule
- * becomes the long spelling; and taking the Fill out of `@fill 2` -- which would leave a weight with nothing to say it
- * -- is refused under DUI7004 with the two lines to write instead.
+ * becomes the long spelling; and taking the Fill out of `@fill 2` becomes the two lines it stood for, the new rule and
+ * the weight it kept.
  */
 bool FDreamUISyntaxWriteBackFillShorthandTest::RunTest(const FString& Parameters)
 {
@@ -648,9 +648,11 @@ bool FDreamUISyntaxWriteBackFillShorthandTest::RunTest(const FString& Parameters
 	{
 		FString Text = Source;
 		FDreamUIDiagnosticBag Diagnostics;
-		const bool bWritten = Patch(Text, TEXT("Right"), EDreamUIPatchTarget::Slot, INDEX_NONE, TEXT("SizeRule"), TEXT("Auto"), Diagnostics);
-		ExpectRefusal(*this, TEXT("another rule for a shorthand that also holds a weight"), Source, Text, bWritten, Diagnostics,
-			EDreamUIDiagnosticCode::PatchSyntaxNotWritable);
+		TestTrue(TEXT("a shorthand that also holds a weight is given another rule"),
+			Patch(Text, TEXT("Right"), EDreamUIPatchTarget::Slot, INDEX_NONE, TEXT("SizeRule"), TEXT("Auto"), Diagnostics));
+		TestEqual(TEXT("and becomes its two slot lines"), Text,
+			Replacing(Lines, 7, TEXT("        @slot SizeRule = Auto\n        @slot FillWeight = 2")));
+		ExpectParses(*this, Text, TEXT("rewriting a shorthand with a weight"));
 	}
 	{
 		// A weight on a bare shorthand is not a made-up property -- the shorthand never said one -- so it is an
@@ -1010,8 +1012,8 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 /*
  * The same file, three values changed on the designer's tree in one gesture: the weight of an unnamed box written as
  * `@fill 2`, the spacing of a container-typed node, and the spacing of a container a STYLE gives its node. The first
- * two rewrite exactly their own lines -- the shorthand's number, the node's bare `Spacing` -- and the third is said
- * (DUI7005) and written nowhere: the style is shared, and the node has no `+` line of its own to hold it.
+ * two rewrite exactly their own lines -- the shorthand's number, the node's bare `Spacing` -- and the third becomes an
+ * override on the node, a `+` line of its own: the style is shared, and stays as it was.
  */
 bool FDreamUISyntaxWriteBackDesignerEditsTest::RunTest(const FString& Parameters)
 {
@@ -1053,8 +1055,9 @@ bool FDreamUISyntaxWriteBackDesignerEditsTest::RunTest(const FString& Parameters
 	TArray<FString> Expected = Lines;
 	Expected[25] = TEXT("            @fill 3");
 	Expected[41] = TEXT("        Spacing = 10");
-	TestEqualSensitive(TEXT("the shorthand's weight and the node's spacing are written, and nothing else moved"), Produced, Join(Expected));
-	TestTrue(*FString::Printf(TEXT("the style's spacing is said, not written (%s)"), *Diagnostics.ToString()),
+	Expected.Insert({ TEXT("        + VerticalBox {"), TEXT("            Spacing = 30"), TEXT("        }") }, 19);
+	TestEqualSensitive(TEXT("all three are written, the style's as an override on the node, and nothing else moved"), Produced, Join(Expected));
+	TestFalse(*FString::Printf(TEXT("and none is refused (%s)"), *Diagnostics.ToString()),
 		Reported(Diagnostics, EDreamUIDiagnosticCode::PatchStyleComponentNotWritable));
 	return true;
 }

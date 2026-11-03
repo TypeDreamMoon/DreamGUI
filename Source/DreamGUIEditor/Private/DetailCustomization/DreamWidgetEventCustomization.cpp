@@ -11,6 +11,7 @@
 #include "Designer/DreamWidgetDesignerModes.h"
 #include "Designer/DreamUITextAuthoringGate.h"
 #include "DreamWidgetBlueprint.h"
+#include "Text/DreamUITextPatcher.h"
 
 #include "Core/Components/DreamWidget.h"
 #include "Core/DreamUIBehaviour.h"
@@ -335,15 +336,8 @@ void FDreamWidgetEventCustomization::CustomizeDetails(IDetailLayoutBuilder& Deta
 		DisabledReason = LOCTEXT("Disabled_BehaviourMismatch",
 			"This behaviour has no counterpart on the widget's template, so a route cannot reach it.");
 	}
-	else if (DreamUITextAuthoring::IsTextAuthored(Blueprint))
-	{
-		// The .dui owns the binding lists: the next compile rebuilds them from the file, so a route
-		// added here would be silently dropped -- the exact loss the text gate exists to prevent.
-		bEnabled = false;
-		DisabledReason = FText::Format(LOCTEXT("Disabled_TextAuthored",
-			"This hierarchy is authored in {0}. Route events there instead, as a line on the widget: EventName -> YourHandler"),
-			FText::FromString(DreamUITextAuthoring::GetAuthoredSourceFileName(Blueprint)));
-	}
+	// A text-authored hierarchy is no reason any more: its routes are lines of its .dui, and the buttons write them
+	// (DreamWidgetEventRoutes). A line the file cannot take is refused at the click, with the reason.
 
 	// UMG puts every delegate in one "Events" category at the bottom, whatever category the property
 	// itself claims, and it is right: these rows are about the Blueprint, not about configuring the
@@ -454,17 +448,7 @@ void FDreamWidgetEventCustomization::AddEventRow(IDetailCategoryBuilder& InCateg
 const FDreamWidgetEventBinding* FDreamWidgetEventCustomization::FindRoute(
 	const UDreamWidgetBlueprint* InBlueprint, FName InEventName) const
 {
-	if (InBlueprint == nullptr)
-	{
-		return nullptr;
-	}
-	return InBlueprint->EventBindings.FindByPredicate([this, InEventName](const FDreamWidgetEventBinding& Route)
-	{
-		return Route.WidgetName == Context.WidgetVariableName
-			&& Route.Target == Context.Target
-			&& Route.BehaviourIndex == Context.BehaviourIndex
-			&& Route.EventName == InEventName;
-	});
+	return DreamWidgetEventRoutes::FindRoute(InBlueprint, Context.WidgetVariableName, Context.Target, Context.BehaviourIndex, InEventName);
 }
 
 bool FDreamWidgetEventCustomization::HasRoute(FName InEventName) const
@@ -581,46 +565,12 @@ FReply FDreamWidgetEventCustomization::HandleAddOrViewEvent(FName InEventName)
 		return FReply::Handled();
 	}
 
-	// No route yet: one transaction creates the pair -- a custom event with the delegate's own
-	// signature, and the route that names it. The same authored form the text pipeline produces, so
-	// the compiler's checks and the runtime's binder apply to both without knowing which wrote it.
-	UEdGraph* EventGraph = FBlueprintEditorUtils::FindEventGraph(Blueprint);
-	if (EventGraph == nullptr)
+	// No route yet: the handler and the route, made together (DreamWidgetEventRoutes).
+	if (UK2Node_CustomEvent* Handler = DreamWidgetEventRoutes::AddRouteWithHandler(Blueprint, Context.WidgetVariableName,
+		Context.Target, Context.BehaviourIndex, InEventName))
 	{
-		return FReply::Handled();
+		FocusHandler(*Editor, Handler);
 	}
-
-	// "Confirm_OnClick": the widget the author named, the event as displayed, both spelled through
-	// the same sanitizer the variable names go through. FindUniqueKismetName settles collisions with
-	// anything else on the Blueprint.
-	const FString HandlerBase = FString::Printf(TEXT("%s_%s"),
-		*Context.WidgetVariableName.ToString(),
-		*UDreamWidgetTree::SanitizeIdentifier(EventProperty->GetDisplayNameText().ToString()));
-	const FName HandlerName = FBlueprintEditorUtils::FindUniqueKismetName(Blueprint, HandlerBase);
-
-	const FScopedTransaction Transaction(LOCTEXT("AddEventRoute", "Add Event Handler"));
-	const FVector2D Position = EventGraph->GetGoodPlaceForNewNode();
-	UK2Node_CustomEvent* Handler = Delegate != nullptr
-		? UK2Node_CustomEvent::CreateFromFunction(
-			Position, EventGraph, HandlerName.ToString(), Delegate->SignatureFunction, /*bSelectNewNode*/true)
-		: CreateHandlerForDreamEvent(EventGraph, Position, HandlerName.ToString(), DreamParameterType);
-	if (Handler == nullptr)
-	{
-		return FReply::Handled();
-	}
-
-	Blueprint->Modify();
-	FDreamWidgetEventBinding& Route = Blueprint->EventBindings.AddDefaulted_GetRef();
-	Route.WidgetName = Context.WidgetVariableName;
-	Route.Target = Context.Target;
-	Route.BehaviourIndex = Context.BehaviourIndex;
-	Route.EventName = InEventName;
-	Route.FunctionName = HandlerName;
-
-	// Structurally: the class gained a member. This is also what refreshes the skeleton so the new
-	// event is a function the very next compile's route validation can find.
-	FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
-	FocusHandler(*Editor, Handler);
 	return FReply::Handled();
 }
 
@@ -628,23 +578,174 @@ FReply FDreamWidgetEventCustomization::HandleRemoveEvent(FName InEventName)
 {
 	TSharedPtr<FDreamWidgetBlueprintEditor> Editor = Context.Editor.Pin();
 	UDreamWidgetBlueprint* Blueprint = Editor.IsValid() ? Editor->GetWidgetBlueprint() : nullptr;
-	if (Blueprint == nullptr || FindRoute(Blueprint, InEventName) == nullptr)
+	if (Blueprint != nullptr)
 	{
-		return FReply::Handled();
+		DreamWidgetEventRoutes::RemoveRoute(Blueprint, Context.WidgetVariableName, Context.Target, Context.BehaviourIndex, InEventName);
+	}
+	return FReply::Handled();
+}
+
+namespace DreamWidgetEventRoutes
+{
+	const FDreamWidgetEventBinding* FindRoute(const UDreamWidgetBlueprint* InBlueprint, FName InWidgetVariableName,
+		EDreamWidgetBindingTarget InTarget, int32 InBehaviourIndex, FName InEventName)
+	{
+		if (InBlueprint == nullptr)
+		{
+			return nullptr;
+		}
+		return InBlueprint->EventBindings.FindByPredicate([&](const FDreamWidgetEventBinding& Route)
+		{
+			return Route.WidgetName == InWidgetVariableName
+				&& Route.Target == InTarget
+				&& Route.BehaviourIndex == InBehaviourIndex
+				&& Route.EventName == InEventName;
+		});
 	}
 
-	const FScopedTransaction Transaction(LOCTEXT("RemoveEventRoute", "Remove Event Route"));
-	Blueprint->Modify();
-	Blueprint->EventBindings.RemoveAll([this, InEventName](const FDreamWidgetEventBinding& Route)
+	UK2Node_CustomEvent* AddRouteWithHandler(UDreamWidgetBlueprint* InBlueprint, FName InWidgetVariableName,
+		EDreamWidgetBindingTarget InTarget, int32 InBehaviourIndex, FName InEventName)
 	{
-		return Route.WidgetName == Context.WidgetVariableName
-			&& Route.Target == Context.Target
-			&& Route.BehaviourIndex == Context.BehaviourIndex
-			&& Route.EventName == InEventName;
-	});
-	// The same mark UMG makes when a binding is removed: the class's compiled routes changed.
-	FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
-	return FReply::Handled();
+		if (InBlueprint == nullptr || FindRoute(InBlueprint, InWidgetVariableName, InTarget, InBehaviourIndex, InEventName) != nullptr)
+		{
+			return nullptr;
+		}
+		const UObject* Subject = ResolveTemplateSubject(*InBlueprint, InWidgetVariableName, InTarget, InBehaviourIndex);
+		const FProperty* EventProperty = Subject != nullptr ? Subject->GetClass()->FindPropertyByName(InEventName) : nullptr;
+		const FMulticastDelegateProperty* Delegate = CastField<FMulticastDelegateProperty>(EventProperty);
+		const FDreamUIEventDelegate* DreamEvent = AsDreamEvent(EventProperty, Subject);
+		if (Delegate == nullptr && DreamEvent == nullptr)
+		{
+			return nullptr;
+		}
+		const EDreamUIEventDelegateParameterType DreamParameterType = DreamEvent != nullptr
+			? DreamEvent->GetNativeParameterType() : EDreamUIEventDelegateParameterType::None;
+		UEdGraph* EventGraph = FBlueprintEditorUtils::FindEventGraph(InBlueprint);
+		if (EventGraph == nullptr)
+		{
+			return nullptr;
+		}
+
+		// "Confirm_OnClick": the widget the author named, the event as displayed, both spelled through
+		// the same sanitizer the variable names go through. FindUniqueKismetName settles collisions with
+		// anything else on the Blueprint.
+		const FString HandlerBase = FString::Printf(TEXT("%s_%s"),
+			*InWidgetVariableName.ToString(),
+			*UDreamWidgetTree::SanitizeIdentifier(EventProperty->GetDisplayNameText().ToString()));
+		const FName HandlerName = FBlueprintEditorUtils::FindUniqueKismetName(InBlueprint, HandlerBase);
+
+		// A text-authored class: the route is a line of its file, checked before the handler exists, so a refusal leaves
+		// no orphan custom event behind.
+		const bool bTextAuthored = DreamUITextAuthoring::IsTextAuthored(InBlueprint);
+		FDreamUIStructuralEdit Line;
+		if (bTextAuthored)
+		{
+			FText Reason;
+			bool bWritable = DreamUITextAuthoring::ResolveStatementSite(InBlueprint, Subject, InEventName, Line, Reason);
+			if (bWritable)
+			{
+				Line.Kind = EDreamUIStructuralEditKind::SetStatement;
+				Line.Statement = FString::Printf(TEXT("-> %s"), *HandlerName.ToString());
+				bWritable = DreamUITextAuthoring::CheckStructuralEdit(InBlueprint, Line, /*bInVerifyBuild*/true, Reason);
+			}
+			if (!bWritable)
+			{
+				DreamUITextAuthoring::ReportStructuralRefusal(InBlueprint, ANSI_TO_TCHAR(__FUNCTION__), __LINE__,
+					FString::Printf(TEXT("route '%s' on '%s'"), *InEventName.ToString(), *InWidgetVariableName.ToString()), Reason);
+				return nullptr;
+			}
+		}
+
+		// One transaction creates the pair -- a custom event with the delegate's own signature, and the route that names
+		// it. The same authored form the text pipeline produces, so the compiler's checks and the runtime's binder apply to
+		// both without knowing which wrote it.
+		const FScopedTransaction Transaction(LOCTEXT("AddEventRoute", "Add Event Handler"));
+		const FVector2D Position = EventGraph->GetGoodPlaceForNewNode();
+		UK2Node_CustomEvent* Handler = Delegate != nullptr
+			? UK2Node_CustomEvent::CreateFromFunction(
+				Position, EventGraph, HandlerName.ToString(), Delegate->SignatureFunction, /*bSelectNewNode*/true)
+			: CreateHandlerForDreamEvent(EventGraph, Position, HandlerName.ToString(), DreamParameterType);
+		if (Handler == nullptr)
+		{
+			return nullptr;
+		}
+
+		if (bTextAuthored)
+		{
+			FText Reason;
+			if (!DreamUITextAuthoring::WriteStatementToText(InBlueprint, Line, Reason))
+			{
+				// Checked a moment ago, so this is the file changing underneath: the handler goes again with the route.
+				FBlueprintEditorUtils::RemoveNode(InBlueprint, Handler, /*bDontRecompile*/true);
+				DreamUITextAuthoring::ReportStructuralRefusal(InBlueprint, ANSI_TO_TCHAR(__FUNCTION__), __LINE__,
+					FString::Printf(TEXT("route '%s' on '%s'"), *InEventName.ToString(), *InWidgetVariableName.ToString()), Reason);
+				return nullptr;
+			}
+		}
+		else
+		{
+			InBlueprint->Modify();
+			FDreamWidgetEventBinding& Route = InBlueprint->EventBindings.AddDefaulted_GetRef();
+			Route.WidgetName = InWidgetVariableName;
+			Route.Target = InTarget;
+			Route.BehaviourIndex = InBehaviourIndex;
+			Route.EventName = InEventName;
+			Route.FunctionName = HandlerName;
+		}
+
+		// Structurally: the class gained a member. This is also what refreshes the skeleton so the new event is a function
+		// the very next compile's route validation can find -- and, for a text-authored class, the compile that reads the
+		// route back from the file.
+		FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(InBlueprint);
+		return Handler;
+	}
+
+	bool RemoveRoute(UDreamWidgetBlueprint* InBlueprint, FName InWidgetVariableName,
+		EDreamWidgetBindingTarget InTarget, int32 InBehaviourIndex, FName InEventName)
+	{
+		const FDreamWidgetEventBinding* Route = FindRoute(InBlueprint, InWidgetVariableName, InTarget, InBehaviourIndex, InEventName);
+		if (Route == nullptr)
+		{
+			return false;
+		}
+
+		const FScopedTransaction Transaction(LOCTEXT("RemoveEventRoute", "Remove Event Route"));
+		if (DreamUITextAuthoring::IsTextAuthored(InBlueprint))
+		{
+			// The line naming the route's handler -- or the event's only line, for a route the compiler made a handler for
+			// (`-> emit Picked(1)`, `-> Settings.Apply()`).
+			const UObject* Subject = ResolveTemplateSubject(*InBlueprint, InWidgetVariableName, InTarget, InBehaviourIndex);
+			FDreamUIStructuralEdit Line;
+			FText Reason;
+			bool bRemoved = Subject != nullptr && DreamUITextAuthoring::ResolveStatementSite(InBlueprint, Subject, InEventName, Line, Reason);
+			if (bRemoved)
+			{
+				Line.Kind = EDreamUIStructuralEditKind::RemoveProperty;
+				Line.StatementMatch = Route->FunctionName.ToString();
+				bRemoved = DreamUITextAuthoring::WriteStatementToText(InBlueprint, Line, Reason);
+			}
+			if (!bRemoved)
+			{
+				DreamUITextAuthoring::ReportStructuralRefusal(InBlueprint, ANSI_TO_TCHAR(__FUNCTION__), __LINE__,
+					FString::Printf(TEXT("remove the route of '%s' on '%s'"), *InEventName.ToString(), *InWidgetVariableName.ToString()), Reason);
+				return false;
+			}
+		}
+		else
+		{
+			InBlueprint->Modify();
+			InBlueprint->EventBindings.RemoveAll([&](const FDreamWidgetEventBinding& Candidate)
+			{
+				return Candidate.WidgetName == InWidgetVariableName
+					&& Candidate.Target == InTarget
+					&& Candidate.BehaviourIndex == InBehaviourIndex
+					&& Candidate.EventName == InEventName;
+			});
+		}
+		// The same mark UMG makes when a binding is removed: the class's compiled routes changed.
+		FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(InBlueprint);
+		return true;
+	}
 }
 
 #undef LOCTEXT_NAMESPACE
