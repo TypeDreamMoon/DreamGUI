@@ -218,6 +218,25 @@ public:
 		const UObject* InLiveDefaults = nullptr);
 
 	/**
+	 * One statement -- a SetStatement or a RemoveProperty: a binding, a route, a two-way binding, or a value written in
+	 * place of one -- applied to the document as it stands, in one transaction, with no tree compared.
+	 *
+	 * Not a flush, on purpose. A binding or a route is one line and no tree state; and a flush right after `Text = "Hi"`
+	 * became `Text <- GetTitle()` would read the template's "Hi" against a line that no longer holds a literal, and
+	 * offer it back as an edit the patcher refuses. The compile that follows rebuilds the template from the file.
+	 *
+	 * True when the line was written or the file already said it; false, with the patcher's reason, when it was refused.
+	 */
+	bool ApplyStatementEdit(const FDreamUIStructuralEdit& InEdit, FString& OutError);
+
+	/**
+	 * A live value as a `.dui` literal, spelled the way the value pass spells it -- `24`, `(160, 48)`, `#1E1E1E`, `"OK"`,
+	 * `[1, 2]` -- or false when the type or this value has no spelling. A node reference has no tree to be spelled
+	 * against here, so only `None` prints.
+	 */
+	static bool PrintValueLiteral(const FProperty* InLeaf, const void* InValuePtr, FString& OutText);
+
+	/**
 	 * The document's text changed and the tree has to be rebuilt from it.
 	 *
 	 * Not fired for this object's own writes: a flush derives the text FROM the tree, so

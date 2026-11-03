@@ -2652,9 +2652,15 @@ bool FDreamUITextWriteBack::ProduceText(const FString& InText, const UDreamWidge
 			const FString BeforeEdit = Working;
 			FDreamUIDiagnosticBag Attempt;
 			Attempt.SourceName = OutDiagnostics.SourceName;
-			FDreamUITextPatcher::ApplyStructuralEdits(Working, Ast, MakeArrayView(&Edit, 1), Attempt);
+			const bool bPlanned = FDreamUITextPatcher::ApplyStructuralEdits(Working, Ast, MakeArrayView(&Edit, 1), Attempt);
 			if (Working.Equals(BeforeEdit, ESearchCase::CaseSensitive))
 			{
+				if (bPlanned && !Attempt.HasErrors())
+				{
+					// The file already says it (a statement written twice): done, and nothing to report.
+					Pending.RemoveAt(Index);
+					continue;
+				}
 				Pending[Index].Refusal = Attempt.Diagnostics;
 				++Index;
 				continue;
@@ -2674,7 +2680,12 @@ bool FDreamUITextWriteBack::ProduceText(const FString& InText, const UDreamWidge
 			}
 			Ast = MoveTemp(Rebuilt);
 			TextTree = MoveTemp(RebuiltTree);
-			bShapeChanged = true;
+			// A binding, a route or a value line written or taken out is not a change of shape: the value pass stays the
+			// dirty set's (or the sweep's), as it is for the overrides below.
+			if (Edit.Kind != EDreamUIStructuralEditKind::SetStatement && Edit.Kind != EDreamUIStructuralEditKind::RemoveProperty)
+			{
+				bShapeChanged = true;
+			}
 			Pending.RemoveAt(Index);
 		}
 		return true;
@@ -2994,6 +3005,67 @@ bool FDreamUITextWriteBack::Flush(FString& OutError)
 		}
 	}
 	return FlushTree(Pinned->GetBlueprint()->WidgetTree, OutError, LiveDefaults);
+}
+
+bool FDreamUITextWriteBack::ApplyStatementEdit(const FDreamUIStructuralEdit& InEdit, FString& OutError)
+{
+	OutError.Reset();
+	LastDiagnostics.Reset();
+	UDreamUIDocument* Document = DocumentHandle.Get();
+	if (Document == nullptr)
+	{
+		OutError = TEXT("this write-back has no document");
+		return false;
+	}
+	LastDiagnostics.SourceName = FPaths::GetCleanFilename(GetFilePath());
+
+	const FString Current = Document->GetContent();
+	FDreamUIAst Ast;
+	if (!FDreamUISourceFile::Parse(Current, LastDiagnostics.SourceName, Ast, LastDiagnostics, FDreamUISourceFile::MakeFileImportReader()))
+	{
+		OutError = FString::Printf(TEXT("'%s' does not parse, so nothing was written into it"), *LastDiagnostics.SourceName);
+		return false;
+	}
+	FString Updated = Current;
+	const bool bPlanned = FDreamUITextPatcher::ApplyStructuralEdits(Updated, Ast, MakeArrayView(&InEdit, 1), LastDiagnostics);
+	if (!bPlanned)
+	{
+		const FDreamUIDiagnostic* First = LastDiagnostics.Diagnostics.FindByPredicate(
+			[](const FDreamUIDiagnostic& InDiagnostic) { return InDiagnostic.IsError(); });
+		OutError = First != nullptr ? First->ToString() : TEXT("the patcher refused the line");
+		return false;
+	}
+	if (Updated.Equals(Current, ESearchCase::CaseSensitive))
+	{
+		return true;
+	}
+	// Read back before it is written: a statement the patcher placed has to leave a file that still parses.
+	{
+		FDreamUIAst ReadBack;
+		FDreamUIDiagnosticBag ReadBackDiagnostics;
+		ReadBackDiagnostics.SourceName = LastDiagnostics.SourceName;
+		if (!FDreamUISourceFile::Parse(Updated, ReadBackDiagnostics.SourceName, ReadBack, ReadBackDiagnostics, FDreamUISourceFile::MakeFileImportReader()))
+		{
+			const FDreamUIDiagnostic* First = ReadBackDiagnostics.Diagnostics.FindByPredicate(
+				[](const FDreamUIDiagnostic& InDiagnostic) { return InDiagnostic.IsError(); });
+			OutError = First != nullptr ? First->ToString() : TEXT("the written file would not parse");
+			return false;
+		}
+	}
+
+	FScopedTransaction Transaction(LOCTEXT("DreamUIStatementTransaction", "Edit DreamUI Text"));
+	TGuardValue<bool> WritingBack(bIsWritingBack, true);
+	const bool bSet = Document->SetContent(Updated, OutError);
+	if (Document->GetContent().Equals(Updated, ESearchCase::CaseSensitive))
+	{
+		++WriteCount;
+	}
+	return bSet;
+}
+
+bool FDreamUITextWriteBack::PrintValueLiteral(const FProperty* InLeaf, const void* InValuePtr, FString& OutText)
+{
+	return DreamUIWriteBackLocal::PrintLiteral(InLeaf, InValuePtr, OutText, nullptr);
 }
 
 bool FDreamUITextWriteBack::FlushTree(const UDreamWidgetTree* InLiveTree, FString& OutError,
