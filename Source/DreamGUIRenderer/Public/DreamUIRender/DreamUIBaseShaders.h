@@ -142,7 +142,12 @@ public:
 	class FDepthFade : SHADER_PERMUTATION_BOOL("LEXUI_DEPTH_FADE");
 	/** Vertex colour only: the editor's widget outline frames, which have no widget record to read. */
 	class FPlainColor : SHADER_PERMUTATION_BOOL("DREAMUI_PLAIN_COLOR");
-	using FPermutationDomain = TShaderPermutationDomain<FBlendDepth, FDepthFade, FPlainColor>;
+	/**
+	 * Blended over a copy of what is behind (DreamUI_BackdropTex), for the modes the blend hardware cannot do
+	 * (DreamUIBlend::ReadsBackdrop).
+	 */
+	class FBackdrop : SHADER_PERMUTATION_BOOL("DREAMUI_BACKDROP");
+	using FPermutationDomain = TShaderPermutationDomain<FBlendDepth, FDepthFade, FPlainColor, FBackdrop>;
 
 	BEGIN_SHADER_PARAMETER_STRUCT(FParameters, )
 		SHADER_PARAMETER(FVector4f, DreamUI_GammaValues)
@@ -167,6 +172,13 @@ public:
 		SHADER_PARAMETER(float, DreamUI_SceneDepthBlend)
 		SHADER_PARAMETER(int32, DreamUI_SceneDepthFade)
 		SHADER_PARAMETER(FVector2f, DreamUI_ViewSizeInv)
+		/**
+		 * x: the draw's blend mode (EDreamUIBlendMode), y: 1 where what is behind is a viewport's, whose alpha says nothing,
+		 * zw: the target pixel of the backdrop copy's first texel.
+		 */
+		SHADER_PARAMETER(FVector4f, DreamUI_BlendParams)
+		/** What the draw covers of the target, copied before it: read by Load, where DREAMUI_BACKDROP is on. */
+		SHADER_PARAMETER_TEXTURE(Texture2D, DreamUI_BackdropTex)
 	END_SHADER_PARAMETER_STRUCT()
 
 	static bool ShouldCompilePermutation(const FGlobalShaderPermutationParameters& Parameters)
@@ -179,6 +191,11 @@ public:
 		}
 		// The plain-colour variant is editor helper geometry, which is never depth-blended.
 		if (PermutationVector.Get<FPlainColor>() && PermutationVector.Get<FBlendDepth>())
+		{
+			return false;
+		}
+		// A backdrop is read only on screen-space and render-target canvases, and never for helper geometry.
+		if (PermutationVector.Get<FBackdrop>() && (PermutationVector.Get<FPlainColor>() || PermutationVector.Get<FBlendDepth>()))
 		{
 			return false;
 		}

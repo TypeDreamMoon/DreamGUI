@@ -20,6 +20,19 @@ class FGlobalShaderMap;
 /** What a pass's built-in draws looked up and set last: see FDreamUIRenderer::DrawBuiltInBatch. */
 struct FDreamUIBuiltInDrawCache;
 
+/**
+ * What a built-in draw blends over, for a mode the blend hardware cannot do (DreamUIBlend::ReadsBackdrop): a copy of the
+ * part of the target it covers, made just before it. A draw of such a mode given none is drawn Normal.
+ */
+struct FDreamUIBuiltInBackdrop
+{
+	FRHITexture* Texture = nullptr;
+	/** The pixel of the target the copy's first texel was taken from. */
+	FIntPoint Origin = FIntPoint::ZeroValue;
+	/** What is behind is a viewport's picture, whose alpha says nothing: it counts as opaque. */
+	bool bOpaque = false;
+};
+
 class FDreamUIMeshElementCollector : public FMeshElementCollector//why use a custom collector? because default FMeshElementCollector have no public constructor
 {
 public:
@@ -196,6 +209,7 @@ private:
 		, uint8 NumSamples, float GammaValue, bool bIsDepthValid
 		, bool bBlendDepth, float BlendDepth, int DepthFade, const FVector4f& SceneDepthTexST, FRHITexture* SceneDepthTexture
 		, FDreamUIBuiltInDrawCache* InOutCache = nullptr
+		, const FDreamUIBuiltInBackdrop* InBackdrop = nullptr
 	);
 	struct FWorldSpaceRenderParameter
 	{

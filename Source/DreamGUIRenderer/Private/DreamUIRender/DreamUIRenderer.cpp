@@ -2,6 +2,7 @@
 // Modified by TypeDreamMoon.
 
 #include "DreamUIRender/DreamUIRenderer.h"
+#include "DreamUIRender/DreamUICompositor.h"
 #include "DreamUIRender/DreamUIShaders.h"
 #include "DreamUIRender/DreamUIBaseShaders.h"
 #include "Materials/Material.h"
@@ -613,14 +614,22 @@ void FDreamUIRenderer::CopyRenderTargetOnMeshRegion(
  */
 FRHIBlendState* FDreamUIRenderer::GetBuiltInBlendState(EDreamUIBlendMode InBlendMode)
 {
+	// What the shader gives each of these is DreamUIBlend_FixedOutput's: Multiply 1 - Sa + Sa * Cs, the rest the
+	// premultiplied colour. The modes added after Multiply composite the alpha as Alpha does.
 	switch (InBlendMode)
 	{
 	case EDreamUIBlendMode::Additive:
 		return TStaticBlendState<CW_RGBA, BO_Add, BF_One, BF_One, BO_Add, BF_Zero, BF_One>::GetRHI();
 	case EDreamUIBlendMode::Multiply:
 		return TStaticBlendState<CW_RGBA, BO_Add, BF_DestColor, BF_Zero, BO_Add, BF_Zero, BF_One>::GetRHI();
+	case EDreamUIBlendMode::Screen:
+		// S + D * (1 - S) = D + Sa * Cs * (1 - D)
+		return TStaticBlendState<CW_RGBA, BO_Add, BF_One, BF_InverseSourceColor, BO_Add, BF_One, BF_InverseSourceAlpha>::GetRHI();
+	case EDreamUIBlendMode::Exclusion:
+		// S * (1 - D) + D * (1 - S) = D + Sa * (Cs - 2 * Cs * D)
+		return TStaticBlendState<CW_RGBA, BO_Add, BF_InverseDestColor, BF_InverseSourceColor, BO_Add, BF_One, BF_InverseSourceAlpha>::GetRHI();
 	default:
-	case EDreamUIBlendMode::Alpha:
+		// Alpha, Dissolve, and every mode drawn over a copy of what is behind (DreamUIBlend_OverBackdrop).
 		return TStaticBlendState<CW_RGBA, BO_Add, BF_One, BF_InverseSourceAlpha, BO_Add, BF_One, BF_InverseSourceAlpha>::GetRHI();
 	}
 }
@@ -743,7 +752,9 @@ namespace DreamUIRendererLocal
 		{
 			if (Batch.bBuiltIn)
 			{
-				if (Batch.GetBuiltIn().BlendMode == EDreamUIBlendMode::Multiply)
+				// Only Normal, Dissolve and Additive come out the same through a transparent target composited after.
+				const EDreamUIBlendMode Mode = Batch.GetBuiltIn().BlendMode;
+				if (Mode != EDreamUIBlendMode::Alpha && Mode != EDreamUIBlendMode::Dissolve && Mode != EDreamUIBlendMode::Additive)
 				{
 					return true;
 				}
@@ -816,6 +827,12 @@ namespace DreamUIRendererLocal
 	}
 }
 
+/** A screen-space draw's pass: its targets, and the copy of what is behind a draw of a mode that reads it. */
+BEGIN_SHADER_PARAMETER_STRUCT(FDreamUIBackdropDrawPassParameters, )
+	RDG_TEXTURE_ACCESS(BackdropTexture, ERHIAccess::SRVGraphics)
+	RENDER_TARGET_BINDING_SLOTS()
+END_SHADER_PARAMETER_STRUCT()
+
 /**
  * What the built-in draws of one pass looked up and set last: the vertex shader and each permutation's pixel shader, and the
  * pipeline state by what it was made from. A wall of world-space panels draws with the built-in shader thousands of times
@@ -825,8 +842,8 @@ namespace DreamUIRendererLocal
 struct FDreamUIBuiltInDrawCache
 {
 	TShaderRef<FDreamUIBaseVS> VertexShader;
-	/** By permutation: 1 blends with the scene's depth, 2 fades by it. */
-	TShaderRef<FDreamUIBasePS> PixelShaders[4];
+	/** By permutation: 1 blends with the scene's depth, 2 fades by it, 4 blends over a copy of what is behind. */
+	TShaderRef<FDreamUIBasePS> PixelShaders[8];
 	struct FPipeline
 	{
 		bool bSet = false;
@@ -867,6 +884,7 @@ void FDreamUIRenderer::DrawBuiltInBatch(FRHICommandList& RHICmdList, FGraphicsPi
 	, uint8 NumSamples, float GammaValue, bool bIsDepthValid
 	, bool bBlendDepth, float BlendDepth, int DepthFade, const FVector4f& SceneDepthTexST, FRHITexture* SceneDepthTexture
 	, FDreamUIBuiltInDrawCache* InOutCache
+	, const FDreamUIBuiltInBackdrop* InBackdrop
 )
 {
 	const FDreamUIBuiltInDrawParams& Params = Batch.GetBuiltIn();
@@ -874,7 +892,11 @@ void FDreamUIRenderer::DrawBuiltInBatch(FRHICommandList& RHICmdList, FGraphicsPi
 	const ERHIFeatureLevel::Type FeatureLevel = View.GetFeatureLevel();
 
 	const bool bDepthFade = bBlendDepth && DepthFade > 0;
-	const int32 Permutation = (bBlendDepth ? 1 : 0) | (bDepthFade ? 2 : 0);
+	// A mode that reads what is behind is drawn over the copy it was given, and Normal where it was given none: on a
+	// world-space canvas, which copies nothing (FDreamUIBuiltInBackdrop).
+	const bool bBackdrop = InBackdrop != nullptr && InBackdrop->Texture != nullptr && !bBlendDepth;
+	const EDreamUIBlendMode BlendMode = DreamUIBlend::ReadsBackdrop(Params.BlendMode) && !bBackdrop ? EDreamUIBlendMode::Alpha : Params.BlendMode;
+	const int32 Permutation = (bBlendDepth ? 1 : 0) | (bDepthFade ? 2 : 0) | (bBackdrop ? 4 : 0);
 	TShaderRef<FDreamUIBaseVS> VertexShader;
 	TShaderRef<FDreamUIBasePS> PixelShader;
 	// The pass's cache has them after its first draw of each permutation (FDreamUIBuiltInDrawCache).
@@ -890,6 +912,7 @@ void FDreamUIRenderer::DrawBuiltInBatch(FRHICommandList& RHICmdList, FGraphicsPi
 		FDreamUIBasePS::FPermutationDomain PermutationVector;
 		PermutationVector.Set<FDreamUIBasePS::FBlendDepth>(bBlendDepth);
 		PermutationVector.Set<FDreamUIBasePS::FDepthFade>(bDepthFade);
+		PermutationVector.Set<FDreamUIBasePS::FBackdrop>(bBackdrop);
 		PixelShader = TShaderMapRef<FDreamUIBasePS>(GlobalShaderMap, PermutationVector);
 		if (InOutCache != nullptr)
 		{
@@ -908,12 +931,12 @@ void FDreamUIRenderer::DrawBuiltInBatch(FRHICommandList& RHICmdList, FGraphicsPi
 	 * FDreamUIDrawCall::CanConsumeUIGeometryForBatchMesh.
 	 */
 	// Set only when it differs from the one the pass's last built-in draw set: nothing else of it changes between draws.
-	if (InOutCache == nullptr || !InOutCache->Pipeline.Matches(Params.BlendMode, bIsDepthValid, Mesh.ReverseCulling, Permutation, NumSamples))
+	if (InOutCache == nullptr || !InOutCache->Pipeline.Matches(BlendMode, bIsDepthValid, Mesh.ReverseCulling, Permutation, NumSamples))
 	{
 		SetGraphicPipelineState_BlendDepthStencilRasterize(FeatureLevel, GraphicsPSOInit, BLEND_AlphaComposite
 			, false, true, false, bIsDepthValid, Mesh.ReverseCulling
 		);
-		GraphicsPSOInit.BlendState = GetBuiltInBlendState(Params.BlendMode);
+		GraphicsPSOInit.BlendState = GetBuiltInBlendState(BlendMode);
 		GraphicsPSOInit.BoundShaderState.VertexDeclarationRHI = GetDreamUIMeshVertexDeclaration();
 		GraphicsPSOInit.BoundShaderState.VertexShaderRHI = VertexShader.GetVertexShader();
 		GraphicsPSOInit.BoundShaderState.PixelShaderRHI = PixelShader.GetPixelShader();
@@ -922,7 +945,7 @@ void FDreamUIRenderer::DrawBuiltInBatch(FRHICommandList& RHICmdList, FGraphicsPi
 		SetGraphicsPipelineState(RHICmdList, GraphicsPSOInit, 0, EApplyRendertargetOption::CheckApply);
 		if (InOutCache != nullptr)
 		{
-			InOutCache->Pipeline.Remember(Params.BlendMode, bIsDepthValid, Mesh.ReverseCulling, Permutation, NumSamples);
+			InOutCache->Pipeline.Remember(BlendMode, bIsDepthValid, Mesh.ReverseCulling, Permutation, NumSamples);
 		}
 	}
 
@@ -968,6 +991,9 @@ void FDreamUIRenderer::DrawBuiltInBatch(FRHICommandList& RHICmdList, FGraphicsPi
 	PSParameters.DreamUI_SceneDepthFade = DepthFade;
 	const FIntPoint ViewSize = ViewRect.Size();
 	PSParameters.DreamUI_ViewSizeInv = FVector2f(1.0f / FMath::Max(ViewSize.X, 1), 1.0f / FMath::Max(ViewSize.Y, 1));
+	PSParameters.DreamUI_BlendParams = FVector4f(static_cast<float>(BlendMode), bBackdrop && InBackdrop->bOpaque ? 1.0f : 0.0f
+		, bBackdrop ? static_cast<float>(InBackdrop->Origin.X) : 0.0f, bBackdrop ? static_cast<float>(InBackdrop->Origin.Y) : 0.0f);
+	PSParameters.DreamUI_BackdropTex = bBackdrop ? InBackdrop->Texture : GBlackTexture->TextureRHI.GetReference();
 	SetShaderParameters(RHICmdList, PixelShader, PixelShader.GetPixelShader(), PSParameters);
 
 	RHICmdList.SetStreamSource(0, Batch.GetVertexBuffer(), 0);
@@ -1637,6 +1663,9 @@ void FDreamUIRenderer::RecordWorldSpace_RenderThread(FRDGBuilder& GraphBuilder, 
 				{
 					switch (RenderPrimitiveItem.Type)
 					{
+					case EDreamUIRendererPrimitiveType::Group:
+						// A world-space canvas draws no group apart: UDreamCanvas::InsertCompositeMarkers puts none there.
+						break;
 					case EDreamUIRendererPrimitiveType::PostProcess://render post process
 						{
 							// What is drawn so far goes in first: the post process reads it.
@@ -1948,7 +1977,8 @@ void FDreamUIRenderer::RecordScreenSpaceLayer_RenderThread(FRDGBuilder& GraphBui
 		bool bAnyPostProcess = false;
 		for (const auto& RenderSequenceItem : RenderSequenceArray)
 		{
-			if (RenderSequenceItem.Type == EDreamUIRendererPrimitiveType::PostProcess)
+			// A group, like a post process, blends over what is really behind it, which a scaled target does not hold.
+			if (RenderSequenceItem.Type == EDreamUIRendererPrimitiveType::PostProcess || RenderSequenceItem.Type == EDreamUIRendererPrimitiveType::Group)
 			{
 				bAnyPostProcess = true;
 				break;
@@ -2026,13 +2056,47 @@ void FDreamUIRenderer::RecordScreenSpaceLayer_RenderThread(FRDGBuilder& GraphBui
 
 	bool bIsDepthStencilCleared = false;
 	bool bIsRenderTarget = RendererType == EDreamUIRendererType::RenderTarget;
+	/**
+	 * What the draws below draw into: the target, and a group's texture above it for every group open (FDreamUICompositeStack).
+	 * A viewport's picture counts as opaque to what blends over it; a target drawn at gamma 1 holds linear light.
+	 */
+	FDreamUICompositeStack Stack(GraphBuilder, this, ScreenSpaceRenderTargetTexture
+		, RenderScaleTarget.IsValid() ? RenderScaleTarget->GetRHI() : ScreenColorRenderTargetTexture.GetReference()
+		, ViewRect, NumSamples, RenderView->ViewMatrices.GetWorldToClip()
+		, /*bInOpaqueBackdrop*/ !bIsRenderTarget && !RenderScaleTarget.IsValid(), /*bInLinearTarget*/ GammaValue == 1.0f, RenderView->GetFeatureLevel());
 	for (int32 SequenceIndex = 0; SequenceIndex < RenderSequenceArray.Num(); ++SequenceIndex)
 	{
 		auto& RenderSequenceItem = RenderSequenceArray[SequenceIndex];
 		switch (RenderSequenceItem.Type)
 		{
+		case EDreamUIRendererPrimitiveType::Group:
+		{
+			for (const FDreamUIPrimitiveSectionDataContainer& Section : RenderSequenceItem.Sections)
+			{
+				bool bBegin = false;
+				if (const FDreamUICompositeDesc* Desc = RenderSequenceItem.Primitive->DreamUI_GetCompositeElement(Section.SectionPointer, bBegin))
+				{
+					if (bBegin)
+					{
+						Stack.Begin(*Desc);
+					}
+					else
+					{
+						Stack.End(Desc->Id);
+					}
+				}
+			}
+		}
+		break;
 		case EDreamUIRendererPrimitiveType::PostProcess://render post process
 		{
+			// Inside a group, a post process reads and writes the group's texture: what the group has drawn so far.
+			if (!Stack.IsDrawing())
+			{
+				break;
+			}
+			const FIntRect PassViewport = Stack.GetCurrentViewport();
+			const FVector4f PassTextureScaleOffset = Stack.GetCurrentTextureScaleOffset(ColorTextureScaleOffset);
 			for (int i = 0; i < RenderSequenceItem.Sections.Num(); i++)
 			{
 				// See the world-space path above: the reference is what keeps the proxy alive until the
@@ -2045,16 +2109,16 @@ void FDreamUIRenderer::RecordScreenSpaceLayer_RenderThread(FRDGBuilder& GraphBui
 						GraphBuilder,
 						SceneDepth,
 						this,
-						ScreenColorRenderTargetTexture,
+						Stack.Current().TextureRHI,
 						GlobalShaderMap,
 						InLayer.ViewProjectionMatrix,
 						/*IsWorldSpace*/false,
 						/*IsRenderToRenderTarget*/bIsRenderTarget,
 						/*BlendDepthForWorld*/0.0f,//actually this value will not work because 'IsWorldSpace' is false
 						/*BlendDepthForWorld*/0.0f,//actually this value will not work because 'IsWorldSpace' is false
-						ViewRect,
+						PassViewport,
 						DepthTextureScaleOffset,
-						ColorTextureScaleOffset
+						PassTextureScaleOffset
 					);
 				}
 			}
@@ -2062,23 +2126,13 @@ void FDreamUIRenderer::RecordScreenSpaceLayer_RenderThread(FRDGBuilder& GraphBui
 		break;
 		case EDreamUIRendererPrimitiveType::Mesh:
 		{
-			auto* PassParameters = GraphBuilder.AllocParameters<FRenderTargetParameters>();
-			//the scaled target when render scale is on, the real one otherwise
-			PassParameters->RenderTargets[0] = FRenderTargetBinding(ScreenSpaceRenderTargetTexture, ERenderTargetLoadAction::ELoad);
-			if (DreamUIScreenSpaceDepthRDGTexture != nullptr)
-			{
-				if (bIsDepthStencilCleared)
-				{
-					PassParameters->RenderTargets.DepthStencil = FDepthStencilBinding(DreamUIScreenSpaceDepthRDGTexture, ERenderTargetLoadAction::ENoAction, ERenderTargetLoadAction::ENoAction, FExclusiveDepthStencil::DepthWrite_StencilWrite);
-				}
-				else
-				{
-					bIsDepthStencilCleared = true;//only clear depth stencil when first use depth texture
-					PassParameters->RenderTargets.DepthStencil = FDepthStencilBinding(DreamUIScreenSpaceDepthRDGTexture, ERenderTargetLoadAction::EClear, ERenderTargetLoadAction::EClear, FExclusiveDepthStencil::DepthWrite_StencilWrite);
-				}
-			}
 			// Collected while the pass is recorded, not when it runs: see the world-space mesh pass above.
 			auto* Collected = CollectedForScale.IsValidIndex(SequenceIndex) ? CollectedForScale[SequenceIndex] : nullptr;
+			if (!Stack.IsDrawing())
+			{
+				// Inside a group that is out of view: nothing of it is drawn.
+				break;
+			}
 			if (Collected == nullptr)
 			{
 				Collected = GraphBuilder.AllocObject<DreamUIRendererLocal::FCollectedMeshBatches>();
@@ -2091,119 +2145,180 @@ void FDreamUIRenderer::RecordScreenSpaceLayer_RenderThread(FRDGBuilder& GraphBui
 			{
 				MakeViewUniformBuffer();
 			}
-			GraphBuilder.AddPass(
-				RDG_EVENT_NAME("DreamUIRender_ScreenSpace"),
-				PassParameters,
-				ERDGPassFlags::Raster,
-				//FRHICommandList&: see the note on the world-space mesh pass above
-				[Collected, RenderView, ViewRect, SceneDepthTexST = DepthTextureScaleOffset
-					, NumSamples, ValidDepth = DreamUIScreenSpaceDepthRDGTexture != nullptr, GammaValue
-					, bRenderLit, bRenderWireframe, WireframeMaterialInstance](FRHICommandList& RHICmdList)
+			// The current target, and the depth with it only at the bottom: a group's texture is the size of what it covers.
+			const FDreamUICompositeStack::FFrame& Frame = Stack.Current();
+			const FIntRect PassViewport = Stack.GetCurrentViewport();
+			const uint8 PassSamples = Frame.NumSamples;
+			const FRDGTextureRef PassDepth = Stack.IsAtBottom() ? DreamUIScreenSpaceDepthRDGTexture : nullptr;
+			const bool bOpaqueBackdrop = Stack.IsBackdropOpaque();
+			/**
+			 * Batches [InFirst, InEnd) in one pass. A draw of a mode that reads what is behind is a pass of its own, after a copy of
+			 * what it covers (InBackdrop, its first texel the current target's pixel InBackdropOrigin).
+			 */
+			auto AddMeshPass = [&](int32 InFirst, int32 InEnd, FRDGTextureRef InBackdrop, FIntPoint InBackdropOrigin)
+			{
+				if (InFirst >= InEnd)
 				{
-					SCOPE_CYCLE_COUNTER(STAT_DreamGUI_RHIRenderMesh);
-					FGraphicsPipelineStateInitializer GraphicsPSOInit;
-					RHICmdList.ApplyCachedRenderTargets(GraphicsPSOInit);
-					RHICmdList.SetViewport(ViewRect.Min.X, ViewRect.Min.Y, 0.0f, ViewRect.Max.X, ViewRect.Max.Y, 1.0f);
-					const TArray<FDreamUIMeshBatchContainer>& MeshBatchArray = Collected->Batches;
-					// See FDreamUIBuiltInDrawCache: kept across this pass's draws.
-					FDreamUIBuiltInDrawCache BuiltInCache;
-
-					for (int MeshIndex = 0; MeshIndex < MeshBatchArray.Num(); MeshIndex++)
+					return;
+				}
+				auto* PassParameters = GraphBuilder.AllocParameters<FDreamUIBackdropDrawPassParameters>();
+				PassParameters->BackdropTexture = InBackdrop;
+				PassParameters->RenderTargets[0] = FRenderTargetBinding(Frame.Texture, ERenderTargetLoadAction::ELoad);
+				if (PassDepth != nullptr)
+				{
+					if (bIsDepthStencilCleared)
 					{
-						auto& MeshBatchContainer = MeshBatchArray[MeshIndex];
-						const FMeshBatch& Mesh = MeshBatchContainer.Mesh;
-
-						auto DoRender = [&](bool bWireframe)
-						{
-							const bool bDump = CVarDreamGUIDumpMaterialDraws.GetValueOnRenderThread() != 0;
-							if (!bWireframe && MeshBatchContainer.bBuiltIn)
-							{
-								if (bDump)
-								{
-									UE_LOG(LogDreamGUIRenderer, Display, TEXT("[DumpMaterialDraws] built-in batch, %d verts"), MeshBatchContainer.NumVerts);
-								}
-								DrawBuiltInBatch(RHICmdList, GraphicsPSOInit, *RenderView, ViewRect, MeshBatchContainer
-									, NumSamples, GammaValue, ValidDepth
-									, false, 0.0f, 0, SceneDepthTexST, nullptr, &BuiltInCache);
-								return;
-							}
-							auto MaterialRenderProxy = (bWireframe ? WireframeMaterialInstance : Mesh.MaterialRenderProxy);
-							if (!MaterialRenderProxy)
-							{
-								if (bDump) { UE_LOG(LogDreamGUIRenderer, Display, TEXT("[DumpMaterialDraws] EXIT no proxy")); }
-								return;
-							}
-							auto Material = MaterialRenderProxy->GetMaterialNoFallback(RenderView->GetFeatureLevel());//why not use "GetIncompleteMaterialWithFallback" here? because fallback material cann't render with DreamUIRenderer
-							if (!Material)
-							{
-								if (bDump)
-								{
-									UE_LOG(LogDreamGUIRenderer, Display, TEXT("[DumpMaterialDraws] EXIT no material (shader map not ready?) proxy=%s"),
-										*MaterialRenderProxy->GetMaterialName());
-								}
-								return;
-							}
-							
-							// Collected with a primitive uniform buffer, and the view's made, whenever it can be drawn through a material.
-							if (!ensure(Mesh.Elements[0].PrimitiveUniformBufferResource != nullptr && RenderView->ViewUniformBuffer.IsValid()))
-							{
-								return;
-							}
-							FMaterialShaderTypes ShaderTypes;
-							ShaderTypes.AddShaderType<FDreamUIScreenRenderVS>();
-							ShaderTypes.AddShaderType<FDreamUIScreenRenderPS>();
-							FMaterialShaders Shaders;
-							const bool bGotShaders = Material->TryGetShaders(ShaderTypes, nullptr, Shaders);
-							if (bDump)
-							{
-								UE_LOG(LogDreamGUIRenderer, Display, TEXT("[DumpMaterialDraws] material=%s verts=%d prims=%d shaders=%s"),
-									*Material->GetFriendlyName(), MeshBatchContainer.NumVerts,
-									Mesh.Elements.Num() > 0 ? Mesh.Elements[0].NumPrimitives : -1,
-									bGotShaders ? TEXT("OK") : TEXT("MISSING"));
-							}
-							if (bGotShaders)
-							{
-								TShaderRef<FDreamUIScreenRenderVS> VertexShader;
-								TShaderRef<FDreamUIScreenRenderPS> PixelShader;
-								Shaders.TryGetVertexShader(VertexShader);
-								Shaders.TryGetPixelShader(PixelShader);
-
-								FDreamUIRenderer::SetGraphicPipelineState_BlendDepthStencilRasterize(RenderView->GetFeatureLevel(), GraphicsPSOInit, Material->GetBlendMode()
-									, Material->IsWireframe() || bWireframe, Material->IsTwoSided(), Material->ShouldDisableDepthTest(), ValidDepth, Mesh.ReverseCulling
-								);
-
-								GraphicsPSOInit.BoundShaderState.VertexDeclarationRHI = GetDreamUIMeshVertexDeclaration();
-								GraphicsPSOInit.BoundShaderState.VertexShaderRHI = VertexShader.GetVertexShader();
-								GraphicsPSOInit.BoundShaderState.PixelShaderRHI = PixelShader.GetPixelShader();
-								GraphicsPSOInit.PrimitiveType = EPrimitiveType::PT_TriangleList;
-								GraphicsPSOInit.NumSamples = NumSamples;
-								SetGraphicsPipelineState(RHICmdList, GraphicsPSOInit, 0, EApplyRendertargetOption::CheckApply);
-								// The built-in draws' pipeline is no longer the one bound, as in the world-space pass: the next of them
-								// sets its own again. Kept, the cache let it draw through this material's shaders -- a text after a
-								// material-drawn image went blank or boxed, and the RHI ensured on parameters set for an unbound shader.
-								BuiltInCache.Pipeline.bSet = false;
-
-								VertexShader->SetMaterialShaderParameters(RHICmdList, *RenderView, MaterialRenderProxy, Material, Mesh.Elements[0].PrimitiveUniformBufferResource, MeshBatchContainer.GetBuiltIn().RenderLayerTableRHI.GetReference(), MeshBatchContainer.GetBuiltIn().WidgetDataTextureRHI.GetReference());
-								PixelShader->SetMaterialShaderParameters(RHICmdList, *RenderView, MaterialRenderProxy, Material, Mesh.Elements[0].PrimitiveUniformBufferResource);
-								PixelShader->SetGammaValue(RHICmdList, GammaValue);
-
-								RHICmdList.SetStreamSource(0, MeshBatchContainer.GetVertexBuffer(), 0);
-								RHICmdList.DrawIndexedPrimitive(MeshBatchContainer.GetIndexBuffer(), 0, 0, MeshBatchContainer.NumVerts, 0, Mesh.Elements[0].NumPrimitives, Mesh.Elements[0].NumInstances);
-							}
-						};
-						if (bRenderLit)
-						{
-							DoRender(false);
-						}
-						if (bRenderWireframe)
-						{
-							DoRender(true);
-						}
+						PassParameters->RenderTargets.DepthStencil = FDepthStencilBinding(PassDepth, ERenderTargetLoadAction::ENoAction, ERenderTargetLoadAction::ENoAction, FExclusiveDepthStencil::DepthWrite_StencilWrite);
 					}
-				});
+					else
+					{
+						bIsDepthStencilCleared = true;//only clear depth stencil when first use depth texture
+						PassParameters->RenderTargets.DepthStencil = FDepthStencilBinding(PassDepth, ERenderTargetLoadAction::EClear, ERenderTargetLoadAction::EClear, FExclusiveDepthStencil::DepthWrite_StencilWrite);
+					}
+				}
+				GraphBuilder.AddPass(
+					RDG_EVENT_NAME("DreamUIRender_ScreenSpace"),
+					PassParameters,
+					ERDGPassFlags::Raster,
+					//FRHICommandList&: see the note on the world-space mesh pass above
+					[Collected, InFirst, InEnd, InBackdrop, InBackdropOrigin, bOpaqueBackdrop, RenderView, ViewRect = PassViewport, SceneDepthTexST = DepthTextureScaleOffset
+						, NumSamples = PassSamples, ValidDepth = PassDepth != nullptr, GammaValue
+						, bRenderLit, bRenderWireframe, WireframeMaterialInstance](FRHICommandList& RHICmdList)
+					{
+						SCOPE_CYCLE_COUNTER(STAT_DreamGUI_RHIRenderMesh);
+						FGraphicsPipelineStateInitializer GraphicsPSOInit;
+						RHICmdList.ApplyCachedRenderTargets(GraphicsPSOInit);
+						RHICmdList.SetViewport(ViewRect.Min.X, ViewRect.Min.Y, 0.0f, ViewRect.Max.X, ViewRect.Max.Y, 1.0f);
+						const TArray<FDreamUIMeshBatchContainer>& MeshBatchArray = Collected->Batches;
+						// See FDreamUIBuiltInDrawCache: kept across this pass's draws.
+						FDreamUIBuiltInDrawCache BuiltInCache;
+						FDreamUIBuiltInBackdrop Backdrop;
+						if (InBackdrop != nullptr)
+						{
+							InBackdrop->MarkResourceAsUsed();
+							Backdrop.Texture = InBackdrop->GetRHI();
+							Backdrop.Origin = InBackdropOrigin;
+							Backdrop.bOpaque = bOpaqueBackdrop;
+						}
+
+						for (int MeshIndex = InFirst; MeshIndex < InEnd; MeshIndex++)
+						{
+							auto& MeshBatchContainer = MeshBatchArray[MeshIndex];
+							const FMeshBatch& Mesh = MeshBatchContainer.Mesh;
+
+							auto DoRender = [&](bool bWireframe)
+							{
+								const bool bDump = CVarDreamGUIDumpMaterialDraws.GetValueOnRenderThread() != 0;
+								if (!bWireframe && MeshBatchContainer.bBuiltIn)
+								{
+									if (bDump)
+									{
+										UE_LOG(LogDreamGUIRenderer, Display, TEXT("[DumpMaterialDraws] built-in batch, %d verts"), MeshBatchContainer.NumVerts);
+									}
+									DrawBuiltInBatch(RHICmdList, GraphicsPSOInit, *RenderView, ViewRect, MeshBatchContainer
+										, NumSamples, GammaValue, ValidDepth
+										, false, 0.0f, 0, SceneDepthTexST, nullptr, &BuiltInCache, Backdrop.Texture != nullptr ? &Backdrop : nullptr);
+									return;
+								}
+								auto MaterialRenderProxy = (bWireframe ? WireframeMaterialInstance : Mesh.MaterialRenderProxy);
+								if (!MaterialRenderProxy)
+								{
+									if (bDump) { UE_LOG(LogDreamGUIRenderer, Display, TEXT("[DumpMaterialDraws] EXIT no proxy")); }
+									return;
+								}
+								auto Material = MaterialRenderProxy->GetMaterialNoFallback(RenderView->GetFeatureLevel());//why not use "GetIncompleteMaterialWithFallback" here? because fallback material cann't render with DreamUIRenderer
+								if (!Material)
+								{
+									if (bDump)
+									{
+										UE_LOG(LogDreamGUIRenderer, Display, TEXT("[DumpMaterialDraws] EXIT no material (shader map not ready?) proxy=%s"),
+											*MaterialRenderProxy->GetMaterialName());
+									}
+									return;
+								}
+							
+								// Collected with a primitive uniform buffer, and the view's made, whenever it can be drawn through a material.
+								if (!ensure(Mesh.Elements[0].PrimitiveUniformBufferResource != nullptr && RenderView->ViewUniformBuffer.IsValid()))
+								{
+									return;
+								}
+								FMaterialShaderTypes ShaderTypes;
+								ShaderTypes.AddShaderType<FDreamUIScreenRenderVS>();
+								ShaderTypes.AddShaderType<FDreamUIScreenRenderPS>();
+								FMaterialShaders Shaders;
+								const bool bGotShaders = Material->TryGetShaders(ShaderTypes, nullptr, Shaders);
+								if (bDump)
+								{
+									UE_LOG(LogDreamGUIRenderer, Display, TEXT("[DumpMaterialDraws] material=%s verts=%d prims=%d shaders=%s"),
+										*Material->GetFriendlyName(), MeshBatchContainer.NumVerts,
+										Mesh.Elements.Num() > 0 ? Mesh.Elements[0].NumPrimitives : -1,
+										bGotShaders ? TEXT("OK") : TEXT("MISSING"));
+								}
+								if (bGotShaders)
+								{
+									TShaderRef<FDreamUIScreenRenderVS> VertexShader;
+									TShaderRef<FDreamUIScreenRenderPS> PixelShader;
+									Shaders.TryGetVertexShader(VertexShader);
+									Shaders.TryGetPixelShader(PixelShader);
+
+									FDreamUIRenderer::SetGraphicPipelineState_BlendDepthStencilRasterize(RenderView->GetFeatureLevel(), GraphicsPSOInit, Material->GetBlendMode()
+										, Material->IsWireframe() || bWireframe, Material->IsTwoSided(), Material->ShouldDisableDepthTest(), ValidDepth, Mesh.ReverseCulling
+									);
+
+									GraphicsPSOInit.BoundShaderState.VertexDeclarationRHI = GetDreamUIMeshVertexDeclaration();
+									GraphicsPSOInit.BoundShaderState.VertexShaderRHI = VertexShader.GetVertexShader();
+									GraphicsPSOInit.BoundShaderState.PixelShaderRHI = PixelShader.GetPixelShader();
+									GraphicsPSOInit.PrimitiveType = EPrimitiveType::PT_TriangleList;
+									GraphicsPSOInit.NumSamples = NumSamples;
+									SetGraphicsPipelineState(RHICmdList, GraphicsPSOInit, 0, EApplyRendertargetOption::CheckApply);
+									// The built-in draws' pipeline is no longer the one bound, as in the world-space pass: the next of them
+									// sets its own again. Kept, the cache let it draw through this material's shaders -- a text after a
+									// material-drawn image went blank or boxed, and the RHI ensured on parameters set for an unbound shader.
+									BuiltInCache.Pipeline.bSet = false;
+
+									VertexShader->SetMaterialShaderParameters(RHICmdList, *RenderView, MaterialRenderProxy, Material, Mesh.Elements[0].PrimitiveUniformBufferResource, MeshBatchContainer.GetBuiltIn().RenderLayerTableRHI.GetReference(), MeshBatchContainer.GetBuiltIn().WidgetDataTextureRHI.GetReference());
+									PixelShader->SetMaterialShaderParameters(RHICmdList, *RenderView, MaterialRenderProxy, Material, Mesh.Elements[0].PrimitiveUniformBufferResource);
+									PixelShader->SetGammaValue(RHICmdList, GammaValue);
+
+									RHICmdList.SetStreamSource(0, MeshBatchContainer.GetVertexBuffer(), 0);
+									RHICmdList.DrawIndexedPrimitive(MeshBatchContainer.GetIndexBuffer(), 0, 0, MeshBatchContainer.NumVerts, 0, Mesh.Elements[0].NumPrimitives, Mesh.Elements[0].NumInstances);
+								}
+							};
+							if (bRenderLit)
+							{
+								DoRender(false);
+							}
+							if (bRenderWireframe)
+							{
+								DoRender(true);
+							}
+						}
+					});
+			};
+			// Split at each draw that reads what is behind: what comes before it is drawn first, then what it covers is copied.
+			int32 RunStart = 0;
+			for (int32 BatchIndex = 0; BatchIndex < Collected->Batches.Num(); ++BatchIndex)
+			{
+				const FDreamUIMeshBatchContainer& Batch = Collected->Batches[BatchIndex];
+				if (!bRenderLit || !Batch.bBuiltIn || !DreamUIBlend::ReadsBackdrop(Batch.GetBuiltIn().BlendMode))
+				{
+					continue;
+				}
+				AddMeshPass(RunStart, BatchIndex, nullptr, FIntPoint::ZeroValue);
+				RunStart = BatchIndex + 1;
+				const FIntRect Covered = FDreamUICompositor::ProjectBounds(Batch.BackdropBounds, RenderView->ViewMatrices.GetWorldToClip(), ViewRect);
+				FIntPoint BackdropOrigin = FIntPoint::ZeroValue;
+				if (FRDGTextureRef Backdrop = Stack.CopyBackdrop(Covered, BackdropOrigin, TEXT("DreamUI_ElementBackdrop")))
+				{
+					AddMeshPass(BatchIndex, BatchIndex + 1, Backdrop, BackdropOrigin);
+				}
+			}
+			AddMeshPass(RunStart, Collected->Batches.Num(), nullptr, FIntPoint::ZeroValue);
 		}break;
 		}
 	}
+	// Whatever is still open is put down: the recording ends here.
+	Stack.EndAll();
 
 #if WITH_EDITOR
 	if (bInDrawGizmos)
