@@ -30,6 +30,14 @@ public:
 	 */
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
 		void SetPreviewMaterial(UMaterialInterface* Value);
+	/**
+	 * Draw the target as a group drawn already (bInComposite), put over this element's rect through the composite every
+	 * group goes through (FDreamUICompositeDesc::bExternal): by InBlendMode, at InOpacity times this element's own alpha,
+	 * through the clip this widget is drawn with, its own mask included. Where a canvas does not draw groups apart, and
+	 * while a preview material is set, the target is drawn as a textured quad, as it was before. UDreamRetainerBox sets it.
+	 */
+	void SetComposite(bool bInComposite, EDreamUIBlendMode InBlendMode, float InOpacity);
+	virtual bool GetCompositeSource(FDreamUICompositeDesc& OutDesc)const override;
 protected:
 	virtual void BeginPlay()override;
 	virtual void EndPlay() override;
@@ -48,6 +56,12 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "DreamGUI")
 	TObjectPtr<UMaterialInterface> Material;
 	FDreamUISpriteInfo SpriteInfo;
+	/** See SetComposite. */
+	bool bComposite = false;
+	EDreamUIBlendMode CompositeBlendMode = EDreamUIBlendMode::Alpha;
+	float CompositeOpacity = 1.0f;
+	/** Whether the target is drawn through the composite now: asked for, and no preview material in the way. */
+	void UpdateDrawsThroughComposite();
 
 	bool bHasRegisterRenderTargetChangedEvent = false;
 	void RegisterRenderTargetChangedEvent();
