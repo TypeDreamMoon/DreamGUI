@@ -236,8 +236,9 @@ Each switch decides one thing; do not use one for another:
 | `SetContentTint` | Tints the visuals of the **descendants** (not its own), as UMG's content colour does |
 
 `Shown` never undoes hidden or hit-test-invisible: a `Hidden` widget set to shown stays `Hidden`. Clipping is
-`Clipping` (`Inherit`, `ClipToBounds`, `ClipToBoundsWithoutIntersecting`, `Disabled`), with `ClippingCornerRadius` and
-`ClippingMargin`. `OnVisibilityChanged`, `OnFocusReceived` and `OnFocusLost` are the three events a widget offers for
+`Clipping` (`Inherit`, `ClipToBounds`, `ClipToBoundsWithoutIntersecting`, `Disabled`), with `ClippingCornerRadius`,
+`ClippingMargin` and a mask, `ClipMask`; `bClipToBelow` shows a widget only where the layer below it is drawn (see
+[Clip masks and clipping to the layer below](clip-masks.md)). `OnVisibilityChanged`, `OnFocusReceived` and `OnFocusLost` are the three events a widget offers for
 binding.
 
 ## Making widgets in code
