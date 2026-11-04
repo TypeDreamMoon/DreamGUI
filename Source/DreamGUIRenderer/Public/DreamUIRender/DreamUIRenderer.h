@@ -178,6 +178,11 @@ public:
 		, uint8 NumSamples
 		, FGlobalShaderMap* GlobalShaderMap
 	);
+	/**
+	 * The blend state one of DreamGUI's own blend modes maps to, for what the built-in shader and a group's composite give
+	 * it (DreamUIBlend_FixedOutput); Normal's for a mode drawn over a copy of what is behind.
+	 */
+	static FRHIBlendState* GetBuiltInBlendState(EDreamUIBlendMode InBlendMode);
 private:
 	static void SetGraphicPipelineState_BlendDepthStencilRasterize(ERHIFeatureLevel::Type FeatureLevel, FGraphicsPipelineStateInitializer& GraphicsPSOInit, EBlendMode BlendMode
 		, bool bIsWireFrame, bool bIsTwoSided, bool bDisableDepthTestForTransparent, bool bIsDepthValid, bool bReverseCulling
@@ -186,8 +191,6 @@ private:
 	 * Draw one batch with the built-in UI shader (no material). Used for both screen-space and world-space
 	 * canvases; bBlendDepth selects the world-space depth blend / fade permutation.
 	 */
-	/** The blend state one of DreamGUI's own blend modes maps to, for the built-in (material-less) path. */
-	static FRHIBlendState* GetBuiltInBlendState(EDreamUIBlendMode InBlendMode);
 	static void DrawBuiltInBatch(FRHICommandList& RHICmdList, FGraphicsPipelineStateInitializer& GraphicsPSOInit
 		, const FSceneView& View, const FIntRect& ViewRect, const struct FDreamUIMeshBatchContainer& Batch
 		, uint8 NumSamples, float GammaValue, bool bIsDepthValid
