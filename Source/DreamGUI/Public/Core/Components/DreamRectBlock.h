@@ -368,6 +368,9 @@ private:
 	void MarkNeedUpdateBlockData();
 	uint8 bNeedUpdateBlockData : 1;
 	uint8 bHasAddToSprite : 1;
+public:
+	/** Its body's rounded rect: what a widget clipping to it as the layer below is clipped to. */
+	virtual bool GetClipUnderlay(struct FDreamClipUnderlay& OutUnderlay)const override;
 protected:
 	bool LineTraceUI_CheckCornerRadius(const FVector2D& InLocalHitPoint)const;
 	virtual bool LineTraceUIRect(FDreamUIHitResult& OutHit, const FVector& Start, const FVector& End)const override;

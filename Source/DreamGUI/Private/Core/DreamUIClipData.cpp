@@ -5,6 +5,7 @@
 
 #include "DreamGUI.h"
 #include "Core/Components/DreamWidget.h"
+#include "Core/Components/DreamVisual.h"
 #include "Core/DreamUIDataAsTexture.h"
 #include "Core/Components/DreamCanvas.h"
 #include "Engine/Texture2D.h"
@@ -22,9 +23,10 @@ namespace DreamUIClipDataLocal
 	/** What a chain's state warns about, each once while it lasts. */
 	enum EWarning : uint32
 	{
-		ThirdTexture = 1u << 0,
-		UnreadableHitTexture = 1u << 1,
-		TooDeep = 1u << 2,
+		UnsupportedUnderlay = 1u << 0,
+		ThirdTexture = 1u << 1,
+		UnreadableHitTexture = 1u << 2,
+		TooDeep = 1u << 3,
 	};
 
 	/** The clip frame's centre, InCentre in InToWorld's local space, to world: the offset taken through the frame's own scale and rotation. */
@@ -54,11 +56,13 @@ namespace DreamUIClipDataLocal
 	}
 }
 
-FDreamUIClipData::FDreamUIClipData(const TSharedPtr<FDreamUIClipData>& InParent, UDreamUIDataAsTexture* InDataTexture, UDreamWidget* InWidget)
+FDreamUIClipData::FDreamUIClipData(const TSharedPtr<FDreamUIClipData>& InParent, UDreamUIDataAsTexture* InDataTexture, UDreamWidget* InWidget, EKind InKind, UDreamWidget* InUnderlay)
 {
 	this->Parent = InParent;
 	this->DataTexture = InDataTexture;
 	this->Widget = InWidget;
+	this->Kind = InKind;
+	this->Underlay = InUnderlay;
 	this->BufferStartPos = this->DataTexture->RegisterBuffer();
 }
 
@@ -89,8 +93,35 @@ FVector FDreamUIClipData::WorldPointToClipperLocal(const UDreamWidget* InWidget,
 	return FVector(GetClipperToWorldMatrix(InWidget).Inverse().TransformPosition(InWorldPoint));
 }
 
+bool FDreamUIClipData::DescribeUnderlay(const UDreamWidget* InUnderlay, FDreamClipUnderlay& OutUnderlay)
+{
+	OutUnderlay = FDreamClipUnderlay();
+	const UDreamVisual* Visual = IsValid(InUnderlay) ? InUnderlay->GetVisual() : nullptr;
+	if (Visual == nullptr)
+	{
+		OutUnderlay.Unsupported = TEXT("it draws nothing of its own");
+		return false;
+	}
+	if (!Visual->GetClipUnderlay(OutUnderlay))
+	{
+		OutUnderlay.Kind = FDreamClipUnderlay::EKind::None;
+		return false;
+	}
+	// Its own opacity: what is above it is above the widget clipping to it too, and fades both. Nothing while it is not
+	// drawn, as a hidden base layer hides what is clipped to it.
+	OutUnderlay.Opacity = InUnderlay->GetRenderVisibleInHierarchy()
+		? FDreamUIUtils::ByteToFloat01(Visual->GetColor().A) * Visual->GetColorMultiplier().A * InUnderlay->GetRenderOpacity()
+		: 0.0f;
+	return true;
+}
+
 bool FDreamUIClipData::FLevel::Pack(FVector4f OutMask[DreamUIClipLayout::MaskTexels]) const
 {
+	if (Node->GetKind() == EKind::Below)
+	{
+		FDreamUIClipMaskMath::PackUnderlay(Underlay, TextureSlot, OutMask);
+		return true;
+	}
 	return Mask != nullptr && FDreamUIClipMaskMath::PackMask(*Mask, HalfSize, TextureSlot, OutMask);
 }
 
@@ -99,22 +130,38 @@ bool FDreamUIClipData::DescribeLevel(FLevel& OutLevel) const
 	OutLevel = FLevel();
 	OutLevel.Node = this;
 	const UDreamWidget* Owner = Widget.Get();
-	if (!IsValid(Owner))
+	if (Kind == EKind::Bounds)
+	{
+		OutLevel.Frame = Owner;
+		FVector2D Centre = Owner->GetLocalSpaceCenter();
+		const FMargin ClippingMargin = Owner->GetClippingMargin();
+		Centre += FVector2D(ClippingMargin.Right - ClippingMargin.Left, ClippingMargin.Top - ClippingMargin.Bottom) * 0.5f;
+		OutLevel.CentreToWorld = DreamUIClipDataLocal::CentreToWorld(GetClipperToWorldMatrix(Owner), Centre);
+		OutLevel.HalfSize = (FVector2f(Owner->GetWidth(), Owner->GetHeight()) + ClippingMargin.GetDesiredSize2f()) * 0.5f;
+		OutLevel.CornerRadius = Owner->GetClippingCornerRadius();
+		const FDreamClipMask& Mask = Owner->GetClipMask();
+		if (Mask.IsActive())
+		{
+			OutLevel.Mask = &Mask;
+			OutLevel.Texture = Mask.GetActiveTexture();
+		}
+		return true;
+	}
+	const UDreamWidget* Below = Underlay.Get();
+	if (!IsValid(Below) || !DescribeUnderlay(Below, OutLevel.Underlay))
 	{
 		return false;
 	}
-	OutLevel.Frame = Owner;
-	FVector2D Centre = Owner->GetLocalSpaceCenter();
-	const FMargin ClippingMargin = Owner->GetClippingMargin();
-	Centre += FVector2D(ClippingMargin.Right - ClippingMargin.Left, ClippingMargin.Top - ClippingMargin.Bottom) * 0.5f;
-	OutLevel.CentreToWorld = DreamUIClipDataLocal::CentreToWorld(GetClipperToWorldMatrix(Owner), Centre);
-	OutLevel.HalfSize = (FVector2f(Owner->GetWidth(), Owner->GetHeight()) + ClippingMargin.GetDesiredSize2f()) * 0.5f;
-	OutLevel.CornerRadius = Owner->GetClippingCornerRadius();
-	const FDreamClipMask& Mask = Owner->GetClipMask();
-	if (Mask.IsActive())
+	OutLevel.Frame = Below;
+	OutLevel.CentreToWorld = DreamUIClipDataLocal::CentreToWorld(GetClipperToWorldMatrix(Below), FVector2D(OutLevel.Underlay.Center));
+	OutLevel.HalfSize = OutLevel.Underlay.HalfSize;
+	if (OutLevel.Underlay.Kind == FDreamClipUnderlay::EKind::Shape)
 	{
-		OutLevel.Mask = &Mask;
-		OutLevel.Texture = Mask.GetActiveTexture();
+		OutLevel.CornerRadius = OutLevel.Underlay.CornerRadius;
+	}
+	else
+	{
+		OutLevel.Texture = OutLevel.Underlay.Texture.Get();
 	}
 	return true;
 }
@@ -165,8 +212,17 @@ void FDreamUIClipData::GetMaskTextures(FDreamUIMaskTextures& OutTextures) const
 		{
 			break;
 		}
-		const FDreamClipMask& Mask = Owner->GetClipMask();
-		Textures.Add(Mask.IsActive() ? Mask.GetActiveTexture() : nullptr);
+		if (Node->Kind == EKind::Bounds)
+		{
+			const FDreamClipMask& Mask = Owner->GetClipMask();
+			Textures.Add(Mask.IsActive() ? Mask.GetActiveTexture() : nullptr);
+		}
+		else
+		{
+			FDreamClipUnderlay Below;
+			const bool bFollowed = Node->Underlay.IsValid() && DescribeUnderlay(Node->Underlay.Get(), Below);
+			Textures.Add(bFollowed && Below.Kind == FDreamClipUnderlay::EKind::Image ? Below.Texture.Get() : nullptr);
+		}
 		Held = Node->Parent.Pin();
 		Node = Held.Get();
 	}
@@ -188,6 +244,22 @@ void FDreamUIClipData::UpdateData()
 	{
 		return;
 	}
+	if (Kind == EKind::Below)
+	{
+		/**
+		 * The element below can change under this level without this widget being told: a sibling put in between, the one
+		 * below made to clip to the layer below itself, or its own clip made anew, which this level sits in. A level that no
+		 * longer matches is made again on the next update; until then it clips as it did.
+		 */
+		const UDreamWidget* Expected = Owner->FindClipToBelowUnderlay();
+		const bool bOwnParent = Owner->GetClipping() != EDreamWidgetClipping::ClipToBoundsWithoutIntersecting && Owner->GetClipping() != EDreamWidgetClipping::Disabled;
+		const TSharedPtr<FDreamUIClipData> ExpectedParent = (bOwnParent && IsValid(Expected)) ? Expected->GetClipData().Pin() : nullptr;
+		if (Expected != Underlay.Get() || ExpectedParent != Parent.Pin())
+		{
+			Owner->MarkClipDirty(true);
+		}
+	}
+
 	TArray<FLevel, TInlineAllocator<16>> Levels;
 	CollectLevels(Levels);
 
@@ -224,6 +296,16 @@ void FDreamUIClipData::UpdateData()
 			Node = Held.Get();
 		}
 	}
+	FString UnsupportedReason;
+	if (Kind == EKind::Below && Underlay.IsValid())
+	{
+		FDreamClipUnderlay Below;
+		if (!DescribeUnderlay(Underlay.Get(), Below) && !Below.bPending)
+		{
+			Warnings |= UnsupportedUnderlay;
+			UnsupportedReason = Below.Unsupported;
+		}
+	}
 	for (const FLevel& Level : Levels)
 	{
 		if (Level.Texture != nullptr && Level.TextureSlot == INDEX_NONE && Level.Node == this)
@@ -251,6 +333,11 @@ void FDreamUIClipData::UpdateData()
 			 */
 			UE_LOG(DreamGUI, Warning, TEXT("[%s].%d Widget '%s' is inside more than %d nested clipping widgets. Only the innermost %d clip it; the ones above are ignored.")
 				, ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *Name, InheritClipDepth, InheritClipDepth);
+		}
+		if (NewWarnings & UnsupportedUnderlay)
+		{
+			UE_LOG(DreamGUI, Warning, TEXT("Widget '%s' clips to the layer below, '%s', but %s, so it is not clipped. A simple or nine-sliced image or texture, or a rect block, can be clipped to.")
+				, *Name, *Underlay->GetDisplayName(), *UnsupportedReason);
 		}
 		if (NewWarnings & ThirdTexture)
 		{
@@ -315,7 +402,7 @@ bool FDreamUIClipData::IsPointVisible(const FVector& WorldPoint) const
 	CollectLevels(Levels);
 	for (const FLevel& Level : Levels)
 	{
-		if (Level.Mask == nullptr || Level.Mask->HitTest == EDreamClipMaskHitTest::Bounds)
+		if (Level.Node->GetKind() == EKind::Bounds && (Level.Mask == nullptr || Level.Mask->HitTest == EDreamClipMaskHitTest::Bounds))
 		{
 			// The clip rect alone, as it always was tested.
 			UDreamWidget* TargetWidget = const_cast<UDreamWidget*>(Level.Frame);
@@ -331,15 +418,20 @@ bool FDreamUIClipData::IsPointVisible(const FVector& WorldPoint) const
 		}
 		/**
 		 * The mask, through the frame and the formula the shader uses (FDreamUIClipMaskMath), with a hard edge: a point is
-		 * in where the picture is at least half there. Its texture is read because it asks to be (EDreamClipMaskHitTest::Mask).
+		 * in where the picture is at least half there. The layer below a clipped widget is hit wherever it is drawn at all;
+		 * its texture is not read, nor is a mask's unless it asks to be (EDreamClipMaskHitTest::Mask).
 		 */
-		const FLevel& HitLevel = Level;
+		FLevel HitLevel = Level;
+		if (HitLevel.Node->GetKind() == EKind::Below)
+		{
+			HitLevel.Underlay.Opacity = HitLevel.Underlay.Opacity > 0.0f ? 1.0f : 0.0f;
+		}
 		FDreamUIClipLevel Packed;
 		Packed.HalfSize = HitLevel.HalfSize;
 		Packed.CornerRadius = DreamUIClipDataLocal::FlipCornerRadius(HitLevel.CornerRadius);
 		Packed.bMasked = HitLevel.Pack(Packed.Mask);
 		const FVector Local = HitLevel.CentreToWorld.Inverse().TransformPosition(WorldPoint);
-		UTexture* const ReadTexture = HitLevel.Texture;
+		UTexture* const ReadTexture = HitLevel.Node->GetKind() == EKind::Bounds ? HitLevel.Texture : nullptr;
 		const float Alpha = FDreamUIClipMaskMath::EvaluateLevel(Packed, FVector2f(Local.Y, Local.Z), 0.0f,
 			[ReadTexture](FVector2f InUV, FLinearColor& OutTexel)
 			{

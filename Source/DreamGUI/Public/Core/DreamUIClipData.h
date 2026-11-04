@@ -11,21 +11,38 @@ class UTexture;
 
 /**
  * One level of a chain of clips, and the row of the clip data texture that holds the chain from it outwards
- * (DreamUIClip.ush says what a row holds): a clipping widget's own rect, with its mask if it has one (FDreamClipMask).
+ * (DreamUIClip.ush says what a row holds).
+ *
+ * A level is one of two kinds. Bounds is a clipping widget's own rect, with its mask if it has one (FDreamClipMask). Below
+ * is the level a widget that clips to the layer below it gets (UDreamWidget::bClipToBelow): the shape of the element
+ * below, in that element's frame. A widget that clips to the layer below and clips to its bounds as well owns two levels,
+ * its Bounds level inside its Below level.
  */
 class DREAMGUI_API FDreamUIClipData
 {
 public:
+	enum class EKind : uint8
+	{
+		Bounds,
+		Below,
+	};
+
 	static int InheritClipDepth;//max intersection clip bounds count, DreamUIClipLayout::Depth, which DREAMUI_CLIP_DEPTH in DreamUIClip.ush is held to
 	/** The bytes a row has room for: every level masked. */
 	static int BlockSizeInBytes;
 	/** The bytes of a level without a mask. */
 	static int SingleBlockSizeInBytes;
 
-	FDreamUIClipData(const TSharedPtr<FDreamUIClipData>& InParent, UDreamUIDataAsTexture* InDataTexture, UDreamWidget* InWidget);
+	/** InUnderlay: for a Below level, the element below InWidget that it clips to. */
+	FDreamUIClipData(const TSharedPtr<FDreamUIClipData>& InParent, UDreamUIDataAsTexture* InDataTexture, UDreamWidget* InWidget,
+		EKind InKind = EKind::Bounds, UDreamWidget* InUnderlay = nullptr);
 	~FDreamUIClipData();
 	int GetBufferStartPos() const{return BufferStartPos;}
+	/** The widget this level belongs to: the clipper, or the widget that clips to the layer below. */
 	UDreamWidget* GetWidget() const{return Widget.Get();}
+	EKind GetKind() const { return Kind; }
+	/** A Below level's element below; null for a Bounds level. */
+	UDreamWidget* GetUnderlay() const { return Underlay.Get(); }
 	TSharedPtr<FDreamUIClipData> GetParent() const { return Parent.Pin(); }
 	/**
 	 * Recompute this clip rectangle from the owner's current world transform and upload it if it changed.
@@ -61,31 +78,39 @@ public:
 	static FMatrix44d GetClipperToWorldMatrix(const UDreamWidget* InWidget);
 	/** World point in the clipper's own local frame, through the same derivation the GPU uses. */
 	static FVector WorldPointToClipperLocal(const UDreamWidget* InWidget, const FVector& InWorldPoint);
+	/**
+	 * What InUnderlay draws, as a widget clipping to it sees it: its visual's shape (UDreamVisual::GetClipUnderlay) at its
+	 * own opacity -- none while it is not drawn. False, with OutUnderlay.Unsupported saying why, for an element no level
+	 * can follow.
+	 */
+	static bool DescribeUnderlay(const UDreamWidget* InUnderlay, FDreamClipUnderlay& OutUnderlay);
 
 	/** A level as the row holds it, and what the CPU needs to test a point against it. */
 	struct FLevel
 	{
 		const FDreamUIClipData* Node = nullptr;
-		/** The widget whose frame the level is in: the clipper. */
+		/** The widget whose frame the level is in: the clipper, or the element below. */
 		const UDreamWidget* Frame = nullptr;
 		/** The frame's centre to world. */
 		FMatrix44d CentreToWorld = FMatrix44d::Identity;
 		FVector2f HalfSize = FVector2f::ZeroVector;
 		/** In UDreamWidget::ClippingCornerRadius's order. */
 		FVector4f CornerRadius = FVector4f::Zero();
-		/** The level's mask, when it has one. */
+		/** A Bounds level's mask, when it has one. */
 		const FDreamClipMask* Mask = nullptr;
+		/** A Below level's element. */
+		FDreamClipUnderlay Underlay;
 		/** The texture the level reads, and the slot it reads it from (INDEX_NONE for none, or for a third along the chain). */
 		UTexture* Texture = nullptr;
 		int32 TextureSlot = INDEX_NONE;
-		bool IsMasked() const { return Mask != nullptr; }
+		bool IsMasked() const { return Mask != nullptr || Node->GetKind() == EKind::Below; }
 		/** The level's texels after its matrix and corner radius, as the shader reads them. */
 		bool Pack(FVector4f OutMask[DreamUIClipLayout::MaskTexels]) const;
 	};
 	/** This chain's levels, innermost first, their textures given slots: what UpdateData writes and IsPointVisible tests. */
 	void CollectLevels(TArray<FLevel, TInlineAllocator<16>>& OutLevels) const;
 private:
-	/** This level, or false when it clips nothing: its widget gone. */
+	/** This level, or false when it clips nothing: its widget gone, or a Below level whose element cannot be followed. */
 	bool DescribeLevel(FLevel& OutLevel) const;
 	bool IsPointVisible_CheckCornerRadius(const FVector2D& InLocalHitPoint, UDreamWidget* InWidget)const;
 	/** Last block handed to the data texture; used to skip redundant uploads. Empty until the first upload. */
@@ -95,7 +120,9 @@ private:
 	/** What the last warnings were about, so that a state is warned about once rather than every frame. */
 	uint32 LastWarnings = 0;
 	int BufferStartPos;
+	EKind Kind = EKind::Bounds;
 	TWeakObjectPtr<UDreamWidget> Widget;
+	TWeakObjectPtr<UDreamWidget> Underlay;
 	TWeakObjectPtr<UDreamUIDataAsTexture> DataTexture;
 	TWeakPtr<FDreamUIClipData> Parent;
 };

@@ -179,6 +179,20 @@ public:
 	/** That layer's row of its world's render layer table (UDreamWidget::GetRenderLayerRow), 0 for none: what boxes it on the canvas. */
 	int32 RenderLayerRow = 0;
 	bool IsInRenderLayer()const { return RenderLayer != TObjectKey<UDreamWidget>(); }
+	/**
+	 * What the element's own vertices are, as a widget clipping to it as the layer below reads them
+	 * (UDreamVisualBatchMesh::GetClipUnderlay): set by the rect writers that make a simple or a nine-sliced quad, and
+	 * reset by Clear, so that anything else an element draws reads as neither. Not a batching key, and not copied.
+	 */
+	enum class EDrawnQuad : uint8
+	{
+		None,
+		Simple,
+		Sliced,
+		/** Nine-sliced without its centre. */
+		SlicedFrame,
+	};
+	EDrawnQuad DrawnQuad = EDrawnQuad::None;
 
 	void CopyDataForPrepare(const FDreamUIGeometry& Other)
 	{
@@ -238,6 +252,7 @@ public:
 		Vertices.Reset();
 		Triangles.Reset();
 		OriginVertices.Reset();
+		DrawnQuad = EDrawnQuad::None;
 	}
 
 	/**

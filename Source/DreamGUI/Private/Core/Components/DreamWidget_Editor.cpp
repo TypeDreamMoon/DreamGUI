@@ -91,6 +91,15 @@ void UDreamWidget::PostEditChangeProperty(FPropertyChangedEvent& PropertyChanged
 			MarkClipDirty(false);
 			MarkClipMaskTexturesChanged();
 		}
+		else if (MemberName == GET_MEMBER_NAME_CHECKED(UDreamWidget, bClipToBelow))
+		{
+			MarkClipDirty(true);
+			if (Parent.IsValid())
+			{
+				Parent->MarkChildrenClipToBelowDirty();
+			}
+			MarkClipMaskTexturesChanged();
+		}
 		else if (MemberName == GET_MEMBER_NAME_CHECKED(UDreamWidget, SiblingIndex))
 		{
 			// Same order as SetSiblingIndex: settle the value first, then broadcast it.

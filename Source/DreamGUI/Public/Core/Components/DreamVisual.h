@@ -223,6 +223,13 @@ public:
 	 */
 	virtual bool GetHitGeometryFitsWidgetRect()const;
 
+	/**
+	 * This element as the layer below a widget that clips to it (UDreamWidget::bClipToBelow): the shape it draws, in its
+	 * own frame, and the texture an image draws it from. False, with OutUnderlay.Unsupported saying why, for an element
+	 * whose shape a clip level cannot follow -- text, a tiled or filled image, a custom mesh -- which then clips nothing.
+	 */
+	virtual bool GetClipUnderlay(struct FDreamClipUnderlay& OutUnderlay) const;
+
 	int GetClipDataStartPosition()const;
 	UTexture* GetClipDataTexture()const;
 

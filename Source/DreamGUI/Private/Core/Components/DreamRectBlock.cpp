@@ -10,6 +10,7 @@
 #include "Core/Components/DreamCanvas.h"
 #include "DreamGUI.h"
 #include "Core/DreamUIGeometry.h"
+#include "Core/DreamUIClipMask.h"
 #include "Core/DreamUISpriteInfo.h"
 #include "Materials/MaterialInterface.h"
 #include "Materials/MaterialInstanceDynamic.h"
@@ -619,6 +620,17 @@ void UDreamRectBlock::MarkNeedUpdateBlockData()
 {
 	bNeedUpdateBlockData = true;
 	GetWidget()->MarkCanvasUpdate(false);
+}
+
+bool UDreamRectBlock::GetClipUnderlay(FDreamClipUnderlay& OutUnderlay) const
+{
+	OutUnderlay = FDreamClipUnderlay();
+	const UDreamWidget* Widget = GetWidget();
+	OutUnderlay.Kind = FDreamClipUnderlay::EKind::Shape;
+	OutUnderlay.Center = FVector2f(Widget->GetLocalSpaceCenter());
+	OutUnderlay.HalfSize = FVector2f(Widget->GetWidth(), Widget->GetHeight()) * 0.5f;
+	OutUnderlay.CornerRadius = GetValueWithUnitMode(CornerRadius, CornerRadiusUnitMode, Widget->GetWidth(), Widget->GetHeight(), 0.5f);
+	return true;
 }
 
 bool UDreamRectBlock::LineTraceUI_CheckCornerRadius(const FVector2D& InLocalHitPoint)const

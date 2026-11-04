@@ -187,6 +187,7 @@ void FDreamUIGeometry::UpdateUIRectSimpleVertex(FDreamUIGeometry* uiGeo,
 	auto& vertices = uiGeo->Vertices;
 	auto& originVertices = uiGeo->OriginVertices;
 	DreamUIGeometrySetArrayNum(vertices, 4);
+	uiGeo->DrawnQuad = EDrawnQuad::Simple;
 	DreamUIGeometrySetArrayNum(originVertices, 4);
 	if (InVertexUVChanged || InVertexPositionChanged || InVertexColorChanged)
 	{
@@ -418,6 +419,7 @@ void FDreamUIGeometry::UpdateUIRectBorderVertex(FDreamUIGeometry* uiGeo, bool fi
 	auto& vertices = uiGeo->Vertices;
 	auto& originVertices = uiGeo->OriginVertices;
 	auto verticesCount = 16;
+	uiGeo->DrawnQuad = fillCenter ? EDrawnQuad::Sliced : EDrawnQuad::SlicedFrame;
 	DreamUIGeometrySetArrayNum(vertices, verticesCount);
 	DreamUIGeometrySetArrayNum(originVertices, verticesCount);
 	if (InVertexUVChanged || InVertexPositionChanged || InVertexColorChanged)

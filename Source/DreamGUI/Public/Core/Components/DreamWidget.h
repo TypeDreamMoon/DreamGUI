@@ -1580,6 +1580,14 @@ protected:
 	 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "DreamGUI", Getter, Setter, meta = (AllowPrivateAccess = true, EditCondition="Clipping==EDreamWidgetClipping::ClipToBounds||Clipping==EDreamWidgetClipping::ClipToBoundsWithoutIntersecting"))
 	FDreamClipMask ClipMask;
+	/**
+	 * Shows this widget and everything under it only where the layer below it is drawn, and through that layer's opacity:
+	 * a clipping mask. The layer below is the sibling drawn before this one that does not clip to the layer below itself,
+	 * so siblings that clip to the layer below in a row share one. It can be a simple or nine-sliced image or texture, or
+	 * a rect block; anything else is not clipped to, with a warning. A hidden layer below hides this too.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "DreamGUI", Getter = "GetClipToBelow", Setter = "SetClipToBelow", meta = (AllowPrivateAccess = true, DisplayName = "Clip To Layer Below"))
+	bool bClipToBelow = false;
 #if WITH_EDITORONLY_DATA
 	UPROPERTY(EditAnywhere, Category = "DreamGUI")
 	bool bUniformSetClippingCornerRadius = true;
@@ -1741,6 +1749,16 @@ public:
 	const FDreamClipMask& GetClipMask()const { return ClipMask; }
 	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
 	void SetClipMask(const FDreamClipMask& Value);
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
+	bool GetClipToBelow()const { return bClipToBelow; }
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
+	void SetClipToBelow(bool Value);
+	/**
+	 * The layer this widget clips to while it clips to the layer below (bClipToBelow): the sibling drawn before it that
+	 * does not clip to the layer below itself. Null when it does not, or when nothing is drawn before it.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "DreamGUI")
+	UDreamWidget* FindClipToBelowUnderlay()const;
 	/**
 	 * The textures the clips around this widget read changed: everything drawn through them, this widget and what is under
 	 * it, is batched again, since a draw call binds them.
@@ -2358,6 +2376,7 @@ private:
 private:
 	friend class FDreamWidgetCustomization;
 	friend class UDreamCanvas;
+	friend class FDreamUIClipData;
 	friend class FDreamCanvasHierarchyOrderTest;
 	/** Swaps arranged geometry out of AnchorData around prefab serialization; raw access, no side effects. */
 	friend class FDreamUIAuthoredGeometrySaveScope;
@@ -2389,6 +2408,8 @@ private:
 	mutable uint32 bFlattenHierarchyIndexDirty : 1;
 	
 	void MarkClipDirty(bool InClipTypeChanged)const;
+	/** The children that clip to the layer below have their clips made again: which sibling is below one may have changed. */
+	void MarkChildrenClipToBelowDirty()const;
 	void MarkWidgetLayoutDirty();
 	
 	/** find root UIItem of hierarchy */

@@ -4748,7 +4748,19 @@ void UDreamCanvas::PushAsyncFunction_TransformVertices(TFunction<void()> InFunct
 
 void UDreamCanvas::RemoveClipData(const TSharedPtr<FDreamUIClipData>& InClipData)
 {
-	RootCanvas->ClipDataList.Remove(InClipData);
+	// A widget's levels: its own, and the one for the layer below it that its own sits in (FDreamUIClipData::EKind::Below).
+	const UDreamWidget* Owner = InClipData.IsValid() ? InClipData->GetWidget() : nullptr;
+	if (Owner == nullptr)
+	{
+		RootCanvas->ClipDataList.Remove(InClipData);
+		return;
+	}
+	for (TSharedPtr<FDreamUIClipData> Level = InClipData; Level.IsValid() && Level->GetWidget() == Owner; )
+	{
+		TSharedPtr<FDreamUIClipData> Outer = Level->GetParent();
+		RootCanvas->ClipDataList.Remove(Level);
+		Level = Outer;
+	}
 }
 UTexture* UDreamCanvas::GetClipDataTexture()const
 {
