@@ -33,12 +33,6 @@ FDreamUIClipData::~FDreamUIClipData()
 	}
 }
 
-void FDreamUIClipData::Add2DTranslationToMatrix(FMatrix44d& Matrix, const FVector2d& Translation)
-{
-	auto M = &Matrix.M[0][0];
-	M[13] += Translation.X;
-	M[14] += Translation.Y;
-}
 FMatrix44d FDreamUIClipData::GetClipperToWorldMatrix(const UDreamWidget* InWidget)
 {
 	// Outside a perspective scope this is the call it always was. FMatrix and FTransform inversion
@@ -87,7 +81,10 @@ void FDreamUIClipData::UpdateData()
 		auto ClippingMargin = TargetClip->Widget->GetClippingMargin();
 		auto CenterOffsetByMargin = FVector2D(ClippingMargin.Right - ClippingMargin.Left, ClippingMargin.Top - ClippingMargin.Bottom) * 0.5f;
 		WidgetLocalSpaceCenter += CenterOffsetByMargin;
-		Add2DTranslationToMatrix(WidgetToWorldMatrix, WidgetLocalSpaceCenter);
+		// The centre is a point of the clipper's own space, so it is taken through the clipper's scale and rotation, as the
+		// hit test takes it; added to the world translation as it was, it slid off the rect under a scaled or turned parent
+		// whenever the pivot was not the centre. Without a scale or a turn the two are the same matrix, bit for bit.
+		WidgetToWorldMatrix = FMatrix44d(FTranslationMatrix(FVector(0.0, WidgetLocalSpaceCenter.X, WidgetLocalSpaceCenter.Y))) * WidgetToWorldMatrix;
 		auto WorldToWidgetMatrix = WidgetToWorldMatrix.Inverse();
 		auto CanvasToWidgetMatrix = FMatrix44f(CanvasToWorldMatrix * WorldToWidgetMatrix);
 		auto& M = CanvasToWidgetMatrix.M;

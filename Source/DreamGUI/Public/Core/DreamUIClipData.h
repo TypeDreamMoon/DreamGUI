@@ -45,7 +45,6 @@ public:
 	/** World point in the clipper's own local frame, through the same derivation the GPU uses. */
 	static DREAMGUI_API FVector WorldPointToClipperLocal(const UDreamWidget* InWidget, const FVector& InWorldPoint);
 private:
-	static void Add2DTranslationToMatrix(FMatrix44d& Matrix, const FVector2d& Translation);
 	bool IsPointVisible_CheckCornerRadius(const FVector2D& InLocalHitPoint, UDreamWidget* InWidget)const;
 	/** Last block handed to the data texture; used to skip redundant uploads. Empty until the first upload. */
 	TArray<uint8> LastUploadedBlock;
